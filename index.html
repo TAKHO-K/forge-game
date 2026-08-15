@@ -6,15 +6,38 @@
 <title>forge-game</title>
 <style>
   html, body { margin: 0; padding: 0; background: #111; }
-  canvas { display: block; margin: 0 auto; background: #222; }
+  #gameWrap { position: relative; width: 800px; margin: 0 auto; }
+  canvas { display: block; background: #222; }
+  #ui { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 10px; }
+  #ui.hidden { display: none; }
+  #enhanceBtn, #enhanceHighBtn, #useTicketBtn { font-size: 16px; padding: 8px 16px; }
+  #autoEnhanceMsg { display: none; font-size: 14px; color: #ffe066; }
+  #useTicketBtn { display: none; }
+  #bossResultButtons { position: absolute; left: 50%; top: 70%; transform: translate(-50%, -50%); display: flex; gap: 10px; }
+  #bossResultButtons.hidden { display: none; }
+  #bossResultButtons button { font-size: 16px; padding: 8px 16px; }
 </style>
 </head>
 <body>
-<canvas id="game" width="800" height="600"></canvas>
+<div id="gameWrap">
+  <canvas id="game" width="800" height="600"></canvas>
+  <div id="bossResultButtons" class="hidden">
+    <button id="bossNextStageBtn">다음 단계로</button>
+    <button id="bossExitBtn">나가기</button>
+  </div>
+</div>
+<div id="ui" class="hidden">
+  <div id="autoEnhanceMsg">자동 강화 진행 중 (+10까지)</div>
+  <button id="enhanceBtn">일반 강화</button>
+  <button id="enhanceHighBtn">상급 강화</button>
+  <button id="useTicketBtn">확정 강화권 사용</button>
+</div>
 <script src="data/balance.js"></script>
 <script src="data/monsters.js"></script>
+<script src="data/enhance.js"></script>
 <script src="core/render.js"></script>
 <script src="core/combat.js"></script>
+<script src="core/enhance.js"></script>
 <script src="main.js"></script>
 </body>
 </html>
