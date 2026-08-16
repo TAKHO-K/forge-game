@@ -16,11 +16,16 @@
   #bossResultButtons { position: absolute; left: 50%; top: 70%; transform: translate(-50%, -50%); display: flex; gap: 10px; }
   #bossResultButtons.hidden { display: none; }
   #bossResultButtons button { font-size: 16px; padding: 8px 16px; }
+  #stageSelect { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+  #stageSelect button { font-size: 12px; padding: 4px 10px; cursor: pointer; }
+  #stageSelect button.active { outline: 2px solid #ffe066; font-weight: bold; }
+  #stageSelect button:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 </head>
 <body>
 <div id="gameWrap">
   <canvas id="game"></canvas>
+  <div id="stageSelect"></div>
   <div id="bossResultButtons" class="hidden">
     <button id="bossNextStageBtn">다음 단계로</button>
     <button id="bossExitBtn">나가기</button>
@@ -36,6 +41,7 @@
 <script src="data/monsters.js"></script>
 <script src="data/enhance.js"></script>
 <script src="data/items.js"></script>
+<script src="data/stages.js"></script>
 <script src="core/render.js"></script>
 <script src="core/combat.js"></script>
 <script src="core/enhance.js"></script>

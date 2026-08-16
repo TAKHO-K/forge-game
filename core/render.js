@@ -1,16 +1,31 @@
 // 화면 그리기
-function drawMapFloor(ctx, mapWidth, mapHeight, wallThickness, forgeHeight) {
-  ctx.fillStyle = "#2a2a2a";
-  ctx.fillRect(wallThickness, wallThickness, mapWidth - wallThickness * 2, mapHeight - wallThickness * 2);
+// 사냥터 영역 배경 - 던전(stageBackground)이 주어지면 세로 그라데이션으로 던전별 색조를 표현 (PRD 8.0)
+function drawMapFloor(ctx, mapWidth, mapHeight, wallThickness, forgeHeight, stageBackground) {
+  const innerX = wallThickness;
+  const innerY = wallThickness;
+  const innerW = mapWidth - wallThickness * 2;
+  const innerH = mapHeight - wallThickness * 2;
+  const groundY = innerY + forgeHeight;
+  const groundH = innerH - forgeHeight;
+
+  if (stageBackground) {
+    const grad = ctx.createLinearGradient(0, groundY, 0, groundY + groundH);
+    grad.addColorStop(0, stageBackground.top);
+    grad.addColorStop(1, stageBackground.bottom);
+    ctx.fillStyle = grad;
+  } else {
+    ctx.fillStyle = "#2a2a2a";
+  }
+  ctx.fillRect(innerX, groundY, innerW, groundH);
 
   ctx.fillStyle = "#3d3a5c";
-  ctx.fillRect(wallThickness, wallThickness, mapWidth - wallThickness * 2, forgeHeight);
+  ctx.fillRect(innerX, innerY, innerW, forgeHeight);
 
   ctx.strokeStyle = "#8877cc";
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(wallThickness, wallThickness + forgeHeight);
-  ctx.lineTo(mapWidth - wallThickness, wallThickness + forgeHeight);
+  ctx.moveTo(innerX, groundY);
+  ctx.lineTo(innerX + innerW, groundY);
   ctx.stroke();
 }
 

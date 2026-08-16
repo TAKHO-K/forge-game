@@ -32,7 +32,6 @@ const BALANCE = {
   leashRange: 400,
   returnSpeed: 120,
   respawnTime: 3,
-  zoneCount: 6,
   zoneYMargin: 120,
   forgeHeight: 320,
   forgeAutoMaxLevel: 10,

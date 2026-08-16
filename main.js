@@ -29,6 +29,7 @@ const camera = { x: 0, y: 0 };
 // 대장간(안전지대)은 맵 위쪽 forgeHeight 만큼. 그 아래는 전부 사냥터
 const FORGE_BOTTOM = BALANCE.wallThickness + BALANCE.forgeHeight;
 let wasInForge = false;
+let inForge = false;
 let bossTimeRemaining = BALANCE.bossTimerDuration;
 let forgeNoticeShown = false;
 let forgeNoticeTimer = 0;
@@ -163,14 +164,12 @@ function spawnMonster(x, y, type) {
 
 const RESPAWN_TIME = BALANCE.respawnTime;
 
-// 등급(tier)별 구역으로 맵을 나눠 배치 - 왼쪽(1등급)에서 오른쪽(6등급)으로 갈수록 강해짐
-const ZONE_COUNT = BALANCE.zoneCount;
+// 던전(PRD 8.0-2) 안에서 등급(tier)별 구역으로 나눠 배치 - 왼쪽(낮은 등급)에서 오른쪽(높은 등급)으로 갈수록 강해짐
 const ZONE_Y_MARGIN = BALANCE.zoneYMargin;
 const zoneLeft = BALANCE.wallThickness;
 const zoneRight = BALANCE.mapWidth - BALANCE.wallThickness;
 const zoneTop = FORGE_BOTTOM + ZONE_Y_MARGIN;
 const zoneBottom = BALANCE.mapHeight - BALANCE.wallThickness - ZONE_Y_MARGIN;
-const zoneWidth = (zoneRight - zoneLeft) / ZONE_COUNT;
 
 const monstersByTier = {};
 for (const type of MONSTER_ORDER) {
@@ -179,16 +178,34 @@ for (const type of MONSTER_ORDER) {
   monstersByTier[tier].push(type);
 }
 
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 던전 전환 시 몬스터 전부 새로 스폰 - 등급당 여러 종이면 순서를 섞어 랜덤 배치
 const monsters = [];
-for (let tier = 1; tier <= ZONE_COUNT; tier++) {
-  const types = monstersByTier[tier] || [];
-  const zoneCenterX = zoneLeft + zoneWidth * (tier - 1) + zoneWidth / 2;
-  const ySpacing = (zoneBottom - zoneTop) / (types.length + 1);
-  types.forEach((type, i) => {
-    const y = zoneTop + ySpacing * (i + 1);
-    monsters.push(spawnMonster(zoneCenterX, y, type));
+function buildMonstersForStage(stageIndex) {
+  monsters.length = 0;
+  const tiers = STAGES[stageIndex].tiers;
+  const zoneWidth = (zoneRight - zoneLeft) / tiers.length;
+  tiers.forEach((tier, zoneIdx) => {
+    const types = shuffleArray(monstersByTier[tier] || []);
+    const zoneCenterX = zoneLeft + zoneWidth * zoneIdx + zoneWidth / 2;
+    const ySpacing = (zoneBottom - zoneTop) / (types.length + 1);
+    types.forEach((type, i) => {
+      const y = zoneTop + ySpacing * (i + 1);
+      monsters.push(spawnMonster(zoneCenterX, y, type));
+    });
   });
 }
+
+let currentStageIndex = 0;
+buildMonstersForStage(currentStageIndex);
 
 const damageNumbers = [];
 function spawnDamageNumber(x, y, value, isCrit) {
@@ -348,6 +365,28 @@ const useTicketBtn = document.getElementById("useTicketBtn");
 const bossResultButtons = document.getElementById("bossResultButtons");
 const bossNextStageBtn = document.getElementById("bossNextStageBtn");
 const bossExitBtn = document.getElementById("bossExitBtn");
+
+// 던전 선택 UI (PRD 8.0-2) - STAGES 데이터로부터 버튼 생성, 대장간에서만 클릭 유효
+const stageSelectPanel = document.getElementById("stageSelect");
+const stageButtons = STAGES.map((stage, i) => {
+  const btn = document.createElement("button");
+  btn.textContent = stage.name;
+  btn.addEventListener("click", () => {
+    if (!inForge) return;
+    if (i === currentStageIndex) return;
+    currentStageIndex = i;
+    buildMonstersForStage(currentStageIndex);
+  });
+  stageSelectPanel.appendChild(btn);
+  return btn;
+});
+
+function updateStageButtons() {
+  stageButtons.forEach((btn, i) => {
+    btn.classList.toggle("active", i === currentStageIndex);
+    btn.disabled = !inForge;
+  });
+}
 
 function attemptEnhance(isHigh) {
   const cost = getEnhanceCost(weaponLevel, isHigh);
@@ -653,7 +692,7 @@ function update(dt) {
   }
 
   // 구역 판정 (PRD 8.0-1) - 대장간 진입 시 강화 UI 자동 오픈 + 자동 강화, 보스 타이머는 사냥터에서만 흐름
-  const inForge = currentMap === "hunt" && player.y <= FORGE_BOTTOM;
+  inForge = currentMap === "hunt" && player.y <= FORGE_BOTTOM;
   uiPanel.classList.toggle("hidden", !inForge);
   if (inForge && !wasInForge) {
     autoEnhanceInForge();
@@ -955,6 +994,7 @@ function update(dt) {
   }
 
   updateEnhanceButtons();
+  updateStageButtons();
 }
 
 function render() {
@@ -963,11 +1003,12 @@ function render() {
   const mapW = currentMap === "boss" ? BALANCE.bossMapWidth : BALANCE.mapWidth;
   const mapH = currentMap === "boss" ? BALANCE.bossMapHeight : BALANCE.mapHeight;
   const forgeHeightHere = currentMap === "boss" ? 0 : BALANCE.forgeHeight;
+  const stageBackground = currentMap === "hunt" ? STAGES[currentStageIndex].background : null;
 
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
 
-  drawMapFloor(ctx, mapW, mapH, BALANCE.wallThickness, forgeHeightHere);
+  drawMapFloor(ctx, mapW, mapH, BALANCE.wallThickness, forgeHeightHere, stageBackground);
   drawMapWalls(ctx, mapW, mapH, BALANCE.wallThickness);
   if (currentMap === "hunt") {
     for (const monster of monsters) drawMonster(ctx, monster, gameTime);
