@@ -1,6 +1,6 @@
 // 데미지 계산
 function calcDamage(attack, defense, critChance, critMultiplier) {
-  const baseDamage = Math.max(1, Math.round(attack - defense));
+  const baseDamage = Math.max(Math.round(attack * 0.1), Math.round(attack - defense));
   const isCrit = Math.random() < critChance;
   const damage = isCrit ? Math.round(baseDamage * critMultiplier) : baseDamage;
   return { damage, isCrit };

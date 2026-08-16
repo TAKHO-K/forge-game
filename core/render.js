@@ -129,13 +129,14 @@ function drawDamageNumbers(ctx, damageNumbers) {
   ctx.globalAlpha = 1;
 }
 
-function drawEnhanceInfo(ctx, weaponLevel, resultText, resultTimer, gold) {
+function drawEnhanceInfo(ctx, weaponLevel, resultText, resultTimer, gold, totalAttack) {
   ctx.fillStyle = "#ffffff";
   ctx.font = "16px sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.fillText(`강화 +${weaponLevel}`, 10, 10);
   ctx.fillText(`골드 ${gold}`, 10, 32);
+  ctx.fillText(`공격력 ${totalAttack}`, 10, 54);
 
   if (resultTimer > 0) {
     ctx.font = "bold 20px sans-serif";
@@ -273,6 +274,35 @@ function drawBossResult(ctx, result) {
   }
 
   ctx.restore();
+}
+
+function drawWeaponExpBar(ctx, level, progress) {
+  const x = 10;
+  const width = 150;
+  const height = 14;
+  const y = ctx.canvas.height - 50;
+  const barY = y + 16;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "13px sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(`무기 Lv.${level}`, x, y);
+
+  ctx.fillStyle = "#333333";
+  ctx.fillRect(x, barY, width, height);
+  ctx.fillStyle = "#66ccff";
+  ctx.fillRect(x, barY, width * progress.ratio, height);
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, barY, width, height);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const label = progress.needed > 0 ? `${progress.current} / ${progress.needed}` : "MAX";
+  ctx.fillText(label, x + width / 2, barY + height / 2 + 1);
 }
 
 function drawAutoIndicator(ctx, autoMode) {

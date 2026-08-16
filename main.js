@@ -27,9 +27,11 @@ let forgeNoticeShown = false;
 let forgeNoticeTimer = 0;
 const FORGE_NOTICE_TEXT = "싱글 모드에서는 대장간 진입 시 타이머가 멈춥니다";
 
-// 보스존은 사냥터 반대쪽 끝(맵 아래쪽 중앙)에 위치
-const BOSS_ZONE_X = BALANCE.mapWidth / 2;
-const BOSS_ZONE_Y = BALANCE.mapHeight - BALANCE.wallThickness - BALANCE.bossZoneOffsetFromBottom;
+// 보스존은 사냥터와 완전히 분리된 전용 맵 (PRD 8.0-6) - 좌표는 보스맵 기준
+const BOSS_ZONE_X = BALANCE.bossMapWidth / 2;
+const BOSS_ZONE_Y = BALANCE.bossMapHeight / 2;
+let currentMap = "hunt"; // "hunt" | "boss"
+let bossFreezeTimer = 0; // 보스존 진입 후 보스가 정지해 있는 준비 시간
 let bossCountdownActive = false;
 let bossCountdownTimer = 0;
 let bossZoneTriggered = false;
@@ -119,6 +121,7 @@ function spawnMonster(x, y, type) {
     maxHp: data.hp,
     hp: data.hp,
     goldDrop: data.goldDrop,
+    weaponExp: data.weaponExp,
     aggroRange: data.aggroRange,
     alive: true,
     respawnTimer: 0,
@@ -164,6 +167,10 @@ let weaponLevel = 0;
 let enhanceResultText = "";
 let enhanceResultTimer = 0;
 let gold = 0;
+
+// 무기 경험치 (PRD 4.2) - 강화(weaponLevel)와 별개 축
+let weaponExp = 0;
+let weaponExpLevel = getWeaponLevelFromExp(weaponExp);
 
 const ENHANCE_RESULT_LABEL = {
   success: (level) => `성공 +${level}`,
@@ -313,16 +320,19 @@ function update(dt) {
     player.y += (dy / len) * player.speed * dt;
   }
 
-  player.x = clamp(player.x, BALANCE.wallThickness + player.radius, BALANCE.mapWidth - BALANCE.wallThickness - player.radius);
-  player.y = clamp(player.y, BALANCE.wallThickness + player.radius, BALANCE.mapHeight - BALANCE.wallThickness - player.radius);
+  const mapW = currentMap === "boss" ? BALANCE.bossMapWidth : BALANCE.mapWidth;
+  const mapH = currentMap === "boss" ? BALANCE.bossMapHeight : BALANCE.mapHeight;
+
+  player.x = clamp(player.x, BALANCE.wallThickness + player.radius, mapW - BALANCE.wallThickness - player.radius);
+  player.y = clamp(player.y, BALANCE.wallThickness + player.radius, mapH - BALANCE.wallThickness - player.radius);
 
   if (player.dashCooldownTimer > 0) {
     player.dashCooldownTimer -= dt;
     if (player.dashCooldownTimer < 0) player.dashCooldownTimer = 0;
   }
 
-  camera.x = clamp(player.x - canvas.width / 2, 0, BALANCE.mapWidth - canvas.width);
-  camera.y = clamp(player.y - canvas.height / 2, 0, BALANCE.mapHeight - canvas.height);
+  camera.x = clamp(player.x - canvas.width / 2, 0, mapW - canvas.width);
+  camera.y = clamp(player.y - canvas.height / 2, 0, mapH - canvas.height);
 
   const worldMouseX = mouse.x + camera.x;
   const worldMouseY = mouse.y + camera.y;
@@ -350,6 +360,7 @@ function update(dt) {
     }
 
     if (monster.attack <= 0) continue;
+    if (currentMap !== "hunt") continue; // 보스존에서는 사냥터 몬스터 비활성 (PRD 8.0-6)
 
     const distToPlayer = Math.hypot(player.x - monster.x, player.y - monster.y);
     const distToSpawn = Math.hypot(monster.spawnX - monster.x, monster.spawnY - monster.y);
@@ -434,7 +445,7 @@ function update(dt) {
   }
 
   // 구역 판정 (PRD 8.0-1) - 대장간 진입 시 강화 UI 자동 오픈 + 자동 강화, 보스 타이머는 사냥터에서만 흐름
-  const inForge = player.y <= FORGE_BOTTOM;
+  const inForge = currentMap === "hunt" && player.y <= FORGE_BOTTOM;
   uiPanel.classList.toggle("hidden", !inForge);
   if (inForge && !wasInForge) {
     autoEnhanceInForge();
@@ -445,11 +456,11 @@ function update(dt) {
   }
   wasInForge = inForge;
 
-  if (!inForge) {
+  if (currentMap === "hunt" && !inForge) {
     bossTimeRemaining = Math.max(0, bossTimeRemaining - dt);
   }
 
-  if (bossTimeRemaining <= 0 && !bossCountdownActive && !bossZoneTriggered) {
+  if (currentMap === "hunt" && bossTimeRemaining <= 0 && !bossCountdownActive && !bossZoneTriggered) {
     bossCountdownActive = true;
     bossCountdownTimer = BALANCE.bossCountdown;
   }
@@ -458,9 +469,15 @@ function update(dt) {
     if (bossCountdownTimer <= 0) {
       bossCountdownActive = false;
       bossZoneTriggered = true;
-      player.x = BOSS_ZONE_X;
-      player.y = BOSS_ZONE_Y;
+      currentMap = "boss"; // 사냥터와 분리된 전용 보스맵으로 진입 (PRD 8.0-6)
       boss = spawnBoss(currentBossStageIndex);
+      player.x = BOSS_ZONE_X;
+      player.y = clamp(
+        BOSS_ZONE_Y - BALANCE.bossZoneEntryMinDistance,
+        BALANCE.wallThickness + player.radius,
+        BALANCE.bossMapHeight - BALANCE.wallThickness - player.radius
+      );
+      bossFreezeTimer = BALANCE.bossStartFreezeDuration;
       bossFightTimeRemaining = BOSSES[currentBossStageIndex].timeLimit;
       bossFightFailed = false;
       bossFightResultHandled = false;
@@ -468,49 +485,53 @@ function update(dt) {
   }
 
   if (boss && boss.alive && !bossFightFailed) {
-    const distToPlayer = Math.hypot(player.x - boss.x, player.y - boss.y);
-    const contactRange = player.radius + boss.radius;
-    if (distToPlayer > contactRange) {
-      const chaseAngle = Math.atan2(player.y - boss.y, player.x - boss.x);
-      const step = BALANCE.monsterApproachSpeed * dt;
-      let nx = boss.x + Math.cos(chaseAngle) * step;
-      let ny = boss.y + Math.sin(chaseAngle) * step;
-      const distFromZoneCenter = Math.hypot(nx - BOSS_ZONE_X, ny - BOSS_ZONE_Y);
-      if (distFromZoneCenter > BALANCE.bossZoneRadius) {
-        const angleFromCenter = Math.atan2(ny - BOSS_ZONE_Y, nx - BOSS_ZONE_X);
-        nx = BOSS_ZONE_X + Math.cos(angleFromCenter) * BALANCE.bossZoneRadius;
-        ny = BOSS_ZONE_Y + Math.sin(angleFromCenter) * BALANCE.bossZoneRadius;
-      }
-      boss.x = clamp(nx, BALANCE.wallThickness + boss.radius, BALANCE.mapWidth - BALANCE.wallThickness - boss.radius);
-      boss.y = clamp(ny, FORGE_BOTTOM + boss.radius, BALANCE.mapHeight - BALANCE.wallThickness - boss.radius);
-    } else if (player.iframeTimer <= 0) {
-      let damage = calcPlayerDamage(boss.attack, player.defense, player.maxHp, BALANCE.playerDamageCapRatio);
-      if (player.dashTimer > 0) {
-        damage = Math.round(damage * (1 - BALANCE.dashDamageReduction));
-      }
-      player.hp -= damage;
-      player.iframeTimer = BALANCE.playerIframeDuration;
-      player.noHitTimer = 0;
-      player.regenTimer = 0;
-
-      if (player.hp <= 0) {
-        player.hp = player.maxHp;
-        player.x = canvas.width / 2;
-        player.y = canvas.height / 2;
+    if (bossFreezeTimer > 0) {
+      // 보스존 진입 후 준비 시간 - 보스는 정지 (PRD 8.0-6)
+      bossFreezeTimer -= dt;
+      if (bossFreezeTimer < 0) bossFreezeTimer = 0;
+    } else {
+      const distToPlayer = Math.hypot(player.x - boss.x, player.y - boss.y);
+      const contactRange = player.radius + boss.radius;
+      if (distToPlayer > contactRange) {
+        const chaseAngle = Math.atan2(player.y - boss.y, player.x - boss.x);
+        const step = BALANCE.monsterApproachSpeed * dt;
+        boss.x += Math.cos(chaseAngle) * step;
+        boss.y += Math.sin(chaseAngle) * step;
+        boss.x = clamp(boss.x, BALANCE.wallThickness + boss.radius, BALANCE.bossMapWidth - BALANCE.wallThickness - boss.radius);
+        boss.y = clamp(boss.y, BALANCE.wallThickness + boss.radius, BALANCE.bossMapHeight - BALANCE.wallThickness - boss.radius);
+      } else if (player.iframeTimer <= 0) {
+        let damage = calcPlayerDamage(boss.attack, player.defense, player.maxHp, BALANCE.playerDamageCapRatio);
+        if (player.dashTimer > 0) {
+          damage = Math.round(damage * (1 - BALANCE.dashDamageReduction));
+        }
+        player.hp -= damage;
         player.iframeTimer = BALANCE.playerIframeDuration;
-        player.dashTimer = 0;
+        player.noHitTimer = 0;
+        player.regenTimer = 0;
+
+        if (player.hp <= 0) {
+          player.hp = player.maxHp;
+          player.x = boss.x;
+          player.y = clamp(
+            boss.y - BALANCE.bossZoneEntryMinDistance,
+            BALANCE.wallThickness + player.radius,
+            BALANCE.bossMapHeight - BALANCE.wallThickness - player.radius
+          );
+          player.iframeTimer = BALANCE.playerIframeDuration;
+          player.dashTimer = 0;
+        }
       }
-    }
 
-    if (!boss.enraged && boss.hp <= boss.maxHp * BALANCE.bossEnrageHpRatio) {
-      boss.enraged = true;
-      boss.attack = boss.baseAttack * BALANCE.bossEnrageAttackMultiplier;
-    }
+      if (!boss.enraged && boss.hp <= boss.maxHp * BALANCE.bossEnrageHpRatio) {
+        boss.enraged = true;
+        boss.attack = boss.baseAttack * BALANCE.bossEnrageAttackMultiplier;
+      }
 
-    bossFightTimeRemaining -= dt;
-    if (bossFightTimeRemaining <= 0) {
-      bossFightTimeRemaining = 0;
-      bossFightFailed = true;
+      bossFightTimeRemaining -= dt;
+      if (bossFightTimeRemaining <= 0) {
+        bossFightTimeRemaining = 0;
+        bossFightFailed = true;
+      }
     }
   }
 
@@ -541,22 +562,22 @@ function update(dt) {
 
     if (
       p.x - p.radius <= BALANCE.wallThickness ||
-      p.x + p.radius >= BALANCE.mapWidth - BALANCE.wallThickness ||
+      p.x + p.radius >= mapW - BALANCE.wallThickness ||
       p.y - p.radius <= BALANCE.wallThickness ||
-      p.y + p.radius >= BALANCE.mapHeight - BALANCE.wallThickness
+      p.y + p.radius >= mapH - BALANCE.wallThickness
     ) {
       projectiles.splice(i, 1);
       continue;
     }
 
-    const hitMonster = monsters.find((m) =>
+    const hitMonster = currentMap === "hunt" && monsters.find((m) =>
       m.alive && Math.hypot(p.x - m.x, p.y - m.y) <= p.radius + m.radius
     );
     const hitBoss = !hitMonster && boss && boss.alive && !bossFightFailed &&
       Math.hypot(p.x - boss.x, p.y - boss.y) <= p.radius + boss.radius;
 
     if (hitMonster) {
-      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel);
+      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel);
       const { damage, isCrit } = calcDamage(attack, hitMonster.defense, BALANCE.critChance, BALANCE.critMultiplier);
       hitMonster.hp -= damage;
       spawnDamageNumber(hitMonster.x, hitMonster.y - hitMonster.radius, damage, isCrit);
@@ -565,12 +586,14 @@ function update(dt) {
         hitMonster.alive = false;
         hitMonster.respawnTimer = RESPAWN_TIME;
         gold += hitMonster.goldDrop;
+        weaponExp += hitMonster.weaponExp;
+        weaponExpLevel = getWeaponLevelFromExp(weaponExp);
       }
       continue;
     }
 
     if (hitBoss) {
-      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel);
+      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel);
       const { damage, isCrit } = calcDamage(attack, boss.defense, BALANCE.critChance, BALANCE.critMultiplier);
       boss.hp -= damage;
       spawnDamageNumber(boss.x, boss.y - boss.radius, damage, isCrit);
@@ -620,6 +643,12 @@ function update(dt) {
 
     bossResultState = "won";
     bossResultInfo = { type: "won", grade, goldGained, ticketValue: data.clearTicketValue, ticketCount: data.clearTicketCount };
+
+    // 사냥터로 복귀 (PRD 8.0-6)
+    currentMap = "hunt";
+    boss = null;
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
   }
 
   // 보스 실패 판정 (PRD 9.4) - 재도전 2회까지 3분 추가 파밍 후 자동 재시작
@@ -634,6 +663,12 @@ function update(dt) {
     bossResultState = "lost";
     bossResultInfo = { type: "lost", retriesUsed: bossRetryCount, maxRetries: BALANCE.bossMaxRetries, retriesExhausted };
     bossResultAutoHideTimer = BALANCE.bossResultLostDisplayTime;
+
+    // 사냥터로 복귀 (PRD 8.0-6)
+    currentMap = "hunt";
+    boss = null;
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
   }
 
   if (bossResultState === "lost" && bossResultAutoHideTimer > 0) {
@@ -659,12 +694,18 @@ function update(dt) {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  const mapW = currentMap === "boss" ? BALANCE.bossMapWidth : BALANCE.mapWidth;
+  const mapH = currentMap === "boss" ? BALANCE.bossMapHeight : BALANCE.mapHeight;
+  const forgeHeightHere = currentMap === "boss" ? 0 : BALANCE.forgeHeight;
+
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
 
-  drawMapFloor(ctx, BALANCE.mapWidth, BALANCE.mapHeight, BALANCE.wallThickness, BALANCE.forgeHeight);
-  drawMapWalls(ctx, BALANCE.mapWidth, BALANCE.mapHeight, BALANCE.wallThickness);
-  for (const monster of monsters) drawMonster(ctx, monster);
+  drawMapFloor(ctx, mapW, mapH, BALANCE.wallThickness, forgeHeightHere);
+  drawMapWalls(ctx, mapW, mapH, BALANCE.wallThickness);
+  if (currentMap === "hunt") {
+    for (const monster of monsters) drawMonster(ctx, monster);
+  }
   drawBoss(ctx, boss);
 
   const playerAlpha = player.iframeTimer > 0
@@ -680,7 +721,7 @@ function render() {
   if (boss && boss.enraged) drawEnrageVignette(ctx);
 
   drawAutoIndicator(ctx, autoMode);
-  drawBossTimer(ctx, bossTimeRemaining, player.y <= FORGE_BOTTOM);
+  if (currentMap === "hunt") drawBossTimer(ctx, bossTimeRemaining, player.y <= FORGE_BOTTOM);
   if (forgeNoticeTimer > 0) drawForgeNotice(ctx, FORGE_NOTICE_TEXT);
   if (bossCountdownActive) drawBossCountdown(ctx, Math.ceil(bossCountdownTimer));
   if (boss) {
@@ -688,7 +729,9 @@ function render() {
     drawBossFightTimer(ctx, bossFightTimeRemaining, bossFightFailed);
   }
   if (bossResultState !== "none") drawBossResult(ctx, bossResultInfo);
-  drawEnhanceInfo(ctx, weaponLevel, enhanceResultText, enhanceResultTimer, gold);
+  const totalAttack = Math.round(BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel));
+  drawEnhanceInfo(ctx, weaponLevel, enhanceResultText, enhanceResultTimer, gold, totalAttack);
+  drawWeaponExpBar(ctx, weaponExpLevel, getWeaponExpProgress(weaponExp, weaponExpLevel));
   drawPlayerHealthBar(ctx, player.hp, player.maxHp, gameTime);
   drawDashCooldown(ctx, player.dashCooldownTimer, BALANCE.dashCooldown);
 }
