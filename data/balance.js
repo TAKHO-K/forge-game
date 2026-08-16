@@ -55,7 +55,19 @@ const BALANCE = {
   rareMaterialChance: 0.035,
   rareGoldMultiplier: 0.5,
   sparkleGradeChances: { legend: 0.9, relic: 0.09, primordial: 0.01 },
-  materialTicketByTier: [1, 1, 2, 2, 3, 3]
+  materialTicketByTier: [1, 1, 2, 2, 3, 3],
+  dropSlot2Multiplier: 0.3,
+  itemGroundLifetime: 60,
+  itemDropOffset: 14,
+  itemPickupRadius: 20,
+  inventoryBagSize: 20,
+  expTokenLifetime: 30,
+  expTokenAbsorbRadius: 80,
+  expTokenHomingSpeed: 300,
+  expTokenScatterRadius: 40,
+  expTokenCountByTier: [[1, 1], [1, 2], [1, 2], [1, 3], [2, 3], [2, 3]],
+  itemBaseSellValue: 10,
+  inventoryMessageDisplayTime: 2
 };
 
 // 무기 레벨별 누적 필요 경험치 (PRD 4.2) - index는 레벨-1, 값은 그 레벨 도달까지 누적 경험치

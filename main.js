@@ -34,6 +34,10 @@ let forgeNoticeShown = false;
 let forgeNoticeTimer = 0;
 const FORGE_NOTICE_TEXT = "싱글 모드에서는 대장간 진입 시 타이머가 멈춥니다";
 
+// 장비창이 게임을 멈추지 않으므로(멀티 대비), 대장간 진입 시마다 정리 타이밍을 안내
+let invenNoticeTimer = 0;
+const INVENTORY_NOTICE_TEXT = "I 키로 장비를 정리하세요";
+
 // 보스존은 사냥터와 완전히 분리된 전용 맵 (PRD 8.0-6) - 좌표는 보스맵 기준
 const BOSS_ZONE_X = BALANCE.bossMapWidth / 2;
 const BOSS_ZONE_Y = BALANCE.bossMapHeight / 2;
@@ -72,6 +76,7 @@ function spawnBoss(stageIndex) {
 }
 
 function tryDash() {
+  if (invenOpen) return;
   if (player.dashCooldownTimer > 0) return;
   let dirX = lastMoveDirX;
   let dirY = lastMoveDirY;
@@ -93,6 +98,10 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
     tryDash();
   }
+  if (e.key.toLowerCase() === "i") {
+    invenOpen = !invenOpen;
+    if (!invenOpen) pendingEquip = null;
+  }
 });
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 
@@ -101,6 +110,10 @@ canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
   mouse.x = e.clientX - rect.left;
   mouse.y = e.clientY - rect.top;
+  if (dragState && !dragState.dragging) {
+    const dist = Math.hypot(mouse.x - dragState.startX, mouse.y - dragState.startY);
+    if (dist > DRAG_START_THRESHOLD) dragState.dragging = true;
+  }
 });
 
 const projectiles = [];
@@ -140,6 +153,7 @@ function spawnMonster(x, y, type) {
     goldDrop: rareType ? Math.round(data.goldDrop * BALANCE.rareGoldMultiplier) : data.goldDrop,
     weaponExp: data.weaponExp,
     aggroRange: data.aggroRange,
+    dropChance: data.dropChance,
     rareType,
     alive: true,
     respawnTimer: 0,
@@ -181,6 +195,41 @@ function spawnDamageNumber(x, y, value, isCrit) {
   damageNumbers.push({ x, y, value, isCrit, age: 0 });
 }
 
+// 바닥 장비 드랍 (PRD 7.1) - 등급/부위는 rollDroppedItems가 판정, 등급만 바닥에 노출
+const groundItems = [];
+function spawnGroundItems(x, y, tier, dropChance) {
+  const drops = rollDroppedItems(tier, dropChance, BALANCE.dropSlot2Multiplier);
+  drops.forEach((drop, i) => {
+    const angle = Math.random() * Math.PI * 2;
+    const offset = i === 0 ? 0 : BALANCE.itemDropOffset;
+    groundItems.push({
+      x: x + Math.cos(angle) * offset,
+      y: y + Math.sin(angle) * offset,
+      grade: drop.grade,
+      part: drop.part,
+      age: 0
+    });
+  });
+}
+
+// 경험치 토큰 (PRD 7.1-1) - 흡수 반경 안에서 플레이어 쪽으로 끌려가다 닿으면 획득
+const expTokens = [];
+function spawnExpTokens(x, y, tier, baseValue) {
+  const count = rollExpTokenCount(tier);
+  for (let i = 0; i < count; i++) {
+    const size = rollExpTokenSize();
+    const angle = Math.random() * Math.PI * 2;
+    const offset = Math.random() * BALANCE.expTokenScatterRadius;
+    expTokens.push({
+      x: x + Math.cos(angle) * offset,
+      y: y + Math.sin(angle) * offset,
+      size,
+      value: Math.round(baseValue * EXP_TOKEN_TIERS[size].multiplier),
+      age: 0
+    });
+  }
+}
+
 let weaponLevel = 0;
 let enhanceResultText = "";
 let enhanceResultTimer = 0;
@@ -189,6 +238,98 @@ let gold = 0;
 // 무기 경험치 (PRD 4.2) - 강화(weaponLevel)와 별개 축
 let weaponExp = 0;
 let weaponExpLevel = getWeaponLevelFromExp(weaponExp);
+
+// 장비창 (PRD 7.3) - 착용 슬롯 3개 + 가방 20칸(빈 칸은 null 고정 슬롯)
+let invenOpen = false;
+const equipment = { armor: null, gloves: null, shoes: null };
+const bag = new Array(BALANCE.inventoryBagSize).fill(null);
+let equipBonuses = { defenseBonus: 0, attackMultiplier: 1, speedMultiplier: 1 };
+
+// 가방 등급 필터 - 기본 전부 체크, 장비창을 닫아도 유지
+const gradeFilter = {};
+for (const grade of ITEM_GRADE_ORDER) gradeFilter[grade] = true;
+
+// 하위 등급 착용 확인창 대기 상태 - { bagIndex } 또는 null
+let pendingEquip = null;
+let invenMessage = "";
+let invenMessageTimer = 0;
+
+// 가방 아이템 드래그 앤 드롭 - 같은 부위 슬롯에 놓아야 착용, 그 외엔 원위치 복귀 (상태 미변경으로 자연히 복귀됨)
+let dragState = null; // { bagIndex, startX, startY, dragging }
+const DRAG_START_THRESHOLD = 6;
+
+function equipFromBag(bagIndex) {
+  const item = bag[bagIndex];
+  if (!item) return;
+  const previous = equipment[item.part];
+  equipment[item.part] = item;
+  bag[bagIndex] = previous;
+}
+
+// 클릭/더블클릭/드래그드롭이 공통으로 쓰는 착용 판정 - 하위 등급이면 확인창 대기
+function tryEquipFromBag(bagIndex) {
+  const item = bag[bagIndex];
+  if (!item || !gradeFilter[item.grade]) return;
+  const current = equipment[item.part];
+  if (current && ITEM_GRADE_ORDER.indexOf(item.grade) < ITEM_GRADE_ORDER.indexOf(current.grade)) {
+    pendingEquip = { bagIndex };
+    return;
+  }
+  equipFromBag(bagIndex);
+}
+
+function handlePendingEquipClick(mx, my) {
+  const layout = getConfirmDialogLayout(ctx);
+  if (pointInRect(mx, my, layout.confirmBtn)) {
+    equipFromBag(pendingEquip.bagIndex);
+    pendingEquip = null;
+  } else if (pointInRect(mx, my, layout.cancelBtn)) {
+    pendingEquip = null;
+  }
+}
+
+function handleInventoryClick(button, mx, my) {
+  if (pendingEquip) {
+    handlePendingEquipClick(mx, my);
+    return;
+  }
+
+  const layout = getInventoryLayout(ctx);
+
+  for (const cb of layout.filterCheckboxes) {
+    if (pointInRect(mx, my, cb)) {
+      if (button === 0) gradeFilter[cb.grade] = !gradeFilter[cb.grade];
+      return;
+    }
+  }
+
+  const hovered = findHoveredInventorySlot(layout, mx, my);
+  if (!hovered) return;
+
+  if (button === 0) {
+    if (hovered.type === "bag") {
+      tryEquipFromBag(hovered.index);
+    } else if (hovered.type === "equip") {
+      const item = equipment[hovered.part];
+      if (!item) return;
+      const emptyIndex = bag.indexOf(null);
+      if (emptyIndex === -1) return; // 가방이 꽉 차면 해제 불가
+      equipment[hovered.part] = null;
+      bag[emptyIndex] = item;
+    }
+  } else if (button === 2) {
+    if (hovered.type === "bag") {
+      const item = bag[hovered.index];
+      if (!item || !gradeFilter[item.grade]) return;
+      gold += getItemSellValue(item);
+      bag[hovered.index] = null;
+    } else if (hovered.type === "equip") {
+      if (!equipment[hovered.part]) return;
+      invenMessage = "착용 중인 장비는 판매할 수 없습니다";
+      invenMessageTimer = BALANCE.inventoryMessageDisplayTime;
+    }
+  }
+}
 
 const ENHANCE_RESULT_LABEL = {
   success: (level) => `성공 +${level}`,
@@ -286,8 +427,10 @@ function updateEnhanceButtons() {
   }
   const normalCost = getEnhanceCost(weaponLevel, false);
   const highCost = getEnhanceCost(weaponLevel, true);
-  enhanceBtn.textContent = `일반 강화 (${normalCost}G)`;
-  enhanceHighBtn.textContent = `상급 강화 (${highCost}G)`;
+  const currentAttack = Math.round(BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier);
+  const nextAttack = Math.round(BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel + 1) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier);
+  enhanceBtn.textContent = `일반 강화 (${normalCost}G) → 공격력 ${nextAttack} (현재 ${currentAttack})`;
+  enhanceHighBtn.textContent = `상급 강화 (${highCost}G) → 공격력 ${nextAttack} (현재 ${currentAttack})`;
   enhanceBtn.disabled = gold < normalCost;
   enhanceHighBtn.disabled = gold < highCost;
 }
@@ -295,6 +438,21 @@ function updateEnhanceButtons() {
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 canvas.addEventListener("mousedown", (e) => {
+  if (invenOpen) {
+    if (e.button === 0 && !pendingEquip) {
+      const layout = getInventoryLayout(ctx);
+      const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
+      if (hovered && hovered.type === "bag") {
+        const item = bag[hovered.index];
+        if (item && gradeFilter[item.grade]) {
+          dragState = { bagIndex: hovered.index, startX: mouse.x, startY: mouse.y, dragging: false };
+          return;
+        }
+      }
+    }
+    handleInventoryClick(e.button, mouse.x, mouse.y);
+    return;
+  }
   if (e.button === 2) {
     tryDash();
     return;
@@ -304,7 +462,35 @@ canvas.addEventListener("mousedown", (e) => {
   fireProjectile();
 });
 
+// 드래그 종료 - 이동이 없었으면 클릭으로 처리, 드래그였으면 같은 부위 슬롯에서만 착용
+window.addEventListener("mouseup", (e) => {
+  if (!dragState) return;
+  const { bagIndex, dragging } = dragState;
+  dragState = null;
+  if (e.button !== 0 || !invenOpen) return;
+  const item = bag[bagIndex];
+  if (!item) return;
+
+  if (!dragging) {
+    tryEquipFromBag(bagIndex);
+    return;
+  }
+  const layout = getInventoryLayout(ctx);
+  const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
+  if (hovered && hovered.type === "equip" && hovered.part === item.part) {
+    tryEquipFromBag(bagIndex);
+  }
+  // 잘못된 슬롯에 드롭 - 가방 상태를 바꾸지 않아 자연히 원위치로 복귀
+});
+
 canvas.addEventListener("dblclick", (e) => {
+  if (invenOpen) {
+    if (e.button !== 0) return;
+    const layout = getInventoryLayout(ctx);
+    const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
+    if (hovered && hovered.type === "bag") tryEquipFromBag(hovered.index);
+    return;
+  }
   if (e.button !== 0) return;
   autoMode = !autoMode;
   attackTimer = 0;
@@ -358,8 +544,9 @@ function update(dt) {
 
   if (autoMode) {
     attackTimer += dt;
-    while (attackTimer >= BALANCE.attackInterval) {
-      attackTimer -= BALANCE.attackInterval;
+    const effectiveAttackInterval = BALANCE.attackInterval / equipBonuses.speedMultiplier;
+    while (attackTimer >= effectiveAttackInterval) {
+      attackTimer -= effectiveAttackInterval;
       fireProjectile();
     }
   }
@@ -474,6 +661,7 @@ function update(dt) {
       forgeNoticeShown = true;
       forgeNoticeTimer = BALANCE.forgeNoticeDuration;
     }
+    invenNoticeTimer = BALANCE.forgeNoticeDuration;
   }
   wasInForge = inForge;
 
@@ -560,6 +748,10 @@ function update(dt) {
     forgeNoticeTimer -= dt;
     if (forgeNoticeTimer < 0) forgeNoticeTimer = 0;
   }
+  if (invenNoticeTimer > 0) {
+    invenNoticeTimer -= dt;
+    if (invenNoticeTimer < 0) invenNoticeTimer = 0;
+  }
 
   player.noHitTimer += dt;
   if (player.iframeTimer > 0) {
@@ -598,7 +790,7 @@ function update(dt) {
       Math.hypot(p.x - boss.x, p.y - boss.y) <= p.radius + boss.radius;
 
     if (hitMonster) {
-      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel);
+      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier;
       const { damage, isCrit } = calcDamage(attack, hitMonster.defense, BALANCE.critChance, BALANCE.critMultiplier);
       hitMonster.hp -= damage;
       spawnDamageNumber(hitMonster.x, hitMonster.y - hitMonster.radius, damage, isCrit);
@@ -607,8 +799,8 @@ function update(dt) {
         hitMonster.alive = false;
         hitMonster.respawnTimer = RESPAWN_TIME;
         gold += hitMonster.goldDrop;
-        weaponExp += hitMonster.weaponExp;
-        weaponExpLevel = getWeaponLevelFromExp(weaponExp);
+        spawnGroundItems(hitMonster.x, hitMonster.y, hitMonster.tier, hitMonster.dropChance);
+        spawnExpTokens(hitMonster.x, hitMonster.y, hitMonster.tier, hitMonster.weaponExp);
 
         if (hitMonster.rareType === "sparkle") {
           const roll = Math.random();
@@ -625,7 +817,7 @@ function update(dt) {
     }
 
     if (hitBoss) {
-      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel);
+      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier;
       const { damage, isCrit } = calcDamage(attack, boss.defense, BALANCE.critChance, BALANCE.critMultiplier);
       boss.hp -= damage;
       spawnDamageNumber(boss.x, boss.y - boss.radius, damage, isCrit);
@@ -648,6 +840,48 @@ function update(dt) {
     dn.y -= BALANCE.damageNumberRiseSpeed * dt;
     if (dn.age >= BALANCE.damageNumberLifetime) {
       damageNumbers.splice(i, 1);
+    }
+  }
+
+  // 바닥 장비 드랍 - 60초 후 소멸, 플레이어가 닿으면 가방에 획득 (PRD 7.1)
+  for (let i = groundItems.length - 1; i >= 0; i--) {
+    const item = groundItems[i];
+    item.age += dt;
+    if (item.age >= BALANCE.itemGroundLifetime) {
+      groundItems.splice(i, 1);
+      continue;
+    }
+    const distToPlayer = Math.hypot(player.x - item.x, player.y - item.y);
+    if (distToPlayer <= player.radius + BALANCE.itemPickupRadius) {
+      const emptyIndex = bag.indexOf(null);
+      if (emptyIndex !== -1) {
+        bag[emptyIndex] = { grade: item.grade, part: item.part };
+        console.log(`[장비 획득] ${ITEM_GRADES[item.grade].name} ${ITEM_PART_NAMES[item.part]}`);
+        groundItems.splice(i, 1);
+      }
+    }
+  }
+
+  // 경험치 토큰 - 흡수 반경 안이면 플레이어 쪽으로 끌려가다 닿으면 획득, 30초 후 소멸 (PRD 7.1-1)
+  for (let i = expTokens.length - 1; i >= 0; i--) {
+    const token = expTokens[i];
+    token.age += dt;
+    if (token.age >= BALANCE.expTokenLifetime) {
+      expTokens.splice(i, 1);
+      continue;
+    }
+    const distToPlayer = Math.hypot(player.x - token.x, player.y - token.y);
+    if (distToPlayer <= player.radius) {
+      weaponExp += token.value;
+      weaponExpLevel = getWeaponLevelFromExp(weaponExp);
+      expTokens.splice(i, 1);
+      continue;
+    }
+    if (distToPlayer <= BALANCE.expTokenAbsorbRadius) {
+      const pullAngle = Math.atan2(player.y - token.y, player.x - token.x);
+      const step = BALANCE.expTokenHomingSpeed * dt;
+      token.x += Math.cos(pullAngle) * step;
+      token.y += Math.sin(pullAngle) * step;
     }
   }
 
@@ -737,6 +971,8 @@ function render() {
   drawMapWalls(ctx, mapW, mapH, BALANCE.wallThickness);
   if (currentMap === "hunt") {
     for (const monster of monsters) drawMonster(ctx, monster, gameTime);
+    drawGroundItems(ctx, groundItems, gameTime);
+    drawExpTokens(ctx, expTokens);
   }
   drawBoss(ctx, boss);
 
@@ -755,24 +991,39 @@ function render() {
   drawAutoIndicator(ctx, autoMode);
   if (currentMap === "hunt") drawOffscreenIndicators(ctx, camera, monsters);
   if (currentMap === "hunt") drawBossTimer(ctx, bossTimeRemaining, player.y <= FORGE_BOTTOM);
-  if (forgeNoticeTimer > 0) drawForgeNotice(ctx, FORGE_NOTICE_TEXT);
+  if (forgeNoticeTimer > 0) drawForgeNotice(ctx, FORGE_NOTICE_TEXT, 56);
+  if (invenNoticeTimer > 0) drawForgeNotice(ctx, INVENTORY_NOTICE_TEXT, 78);
   if (bossCountdownActive) drawBossCountdown(ctx, Math.ceil(bossCountdownTimer));
   if (boss) {
     drawBossHealthBar(ctx, boss);
     drawBossFightTimer(ctx, bossFightTimeRemaining, bossFightFailed);
   }
   if (bossResultState !== "none") drawBossResult(ctx, bossResultInfo);
-  const totalAttack = Math.round(BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel));
+  const totalAttack = Math.round(BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier);
   drawEnhanceInfo(ctx, weaponLevel, enhanceResultText, enhanceResultTimer, gold, totalAttack);
   drawWeaponExpBar(ctx, weaponExpLevel, getWeaponExpProgress(weaponExp, weaponExpLevel));
   drawPlayerHealthBar(ctx, player.hp, player.maxHp, gameTime);
   drawDashCooldown(ctx, player.dashCooldownTimer, BALANCE.dashCooldown);
+  if (invenOpen) {
+    const totalStats = { attack: totalAttack, defense: Math.round(player.defense), speed: Math.round(player.speed) };
+    drawInventory(ctx, {
+      equipment, bag, gameTime,
+      mouseX: mouse.x, mouseY: mouse.y,
+      totalStats, gradeFilter, pendingEquip, invenMessage, invenMessageTimer, dragState
+    });
+  }
 }
 
 function loop(now) {
   const dt = (now - lastTime) / 1000;
   lastTime = now;
-  update(dt);
+
+  equipBonuses = getEquipmentBonuses(equipment);
+  player.defense = BALANCE.playerDefense + equipBonuses.defenseBonus;
+  player.speed = BALANCE.playerSpeed * equipBonuses.speedMultiplier;
+  if (invenMessageTimer > 0) invenMessageTimer = Math.max(0, invenMessageTimer - dt);
+
+  update(dt); // 장비창이 열려 있어도 게임은 계속 진행 (멀티 대비)
   render();
   requestAnimationFrame(loop);
 }
