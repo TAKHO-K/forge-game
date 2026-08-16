@@ -110,19 +110,30 @@ function fireProjectile() {
 let autoMode = false;
 let attackTimer = 0;
 
+// 희귀 몬스터 판정 (PRD 8.0-5) - 스폰 시점마다 판정, 반짝이 0.5% > 재료 3.5% > 일반
+function rollRareType() {
+  const r = Math.random();
+  if (r < BALANCE.rareSparkleChance) return "sparkle";
+  if (r < BALANCE.rareSparkleChance + BALANCE.rareMaterialChance) return "material";
+  return null;
+}
+
 function spawnMonster(x, y, type) {
   const data = MONSTERS[type];
+  const rareType = rollRareType();
   return {
     x, y, spawnX: x, spawnY: y, type,
+    tier: data.tier,
     radius: data.radius,
     color: data.color,
     defense: data.defense,
     attack: data.attack,
     maxHp: data.hp,
     hp: data.hp,
-    goldDrop: data.goldDrop,
+    goldDrop: rareType ? Math.round(data.goldDrop * BALANCE.rareGoldMultiplier) : data.goldDrop,
     weaponExp: data.weaponExp,
     aggroRange: data.aggroRange,
+    rareType,
     alive: true,
     respawnTimer: 0,
     state: "idle"
@@ -355,6 +366,9 @@ function update(dt) {
         monster.hp = monster.maxHp;
         monster.alive = true;
         monster.state = "idle";
+        monster.rareType = rollRareType();
+        const baseGold = MONSTERS[monster.type].goldDrop;
+        monster.goldDrop = monster.rareType ? Math.round(baseGold * BALANCE.rareGoldMultiplier) : baseGold;
       }
       continue;
     }
@@ -588,6 +602,17 @@ function update(dt) {
         gold += hitMonster.goldDrop;
         weaponExp += hitMonster.weaponExp;
         weaponExpLevel = getWeaponLevelFromExp(weaponExp);
+
+        if (hitMonster.rareType === "sparkle") {
+          const roll = Math.random();
+          const chances = BALANCE.sparkleGradeChances;
+          const grade = roll < chances.primordial ? "태초"
+            : roll < chances.primordial + chances.relic ? "유물"
+            : "전설";
+          console.log(`[반짝이 몬스터 처치] ${grade} 등급 확정 드랍 (장비 시스템 도입 전 - 로그로만 표시)`);
+        } else if (hitMonster.rareType === "material") {
+          guaranteedTickets.push(BALANCE.materialTicketByTier[hitMonster.tier - 1]);
+        }
       }
       continue;
     }
@@ -704,7 +729,7 @@ function render() {
   drawMapFloor(ctx, mapW, mapH, BALANCE.wallThickness, forgeHeightHere);
   drawMapWalls(ctx, mapW, mapH, BALANCE.wallThickness);
   if (currentMap === "hunt") {
-    for (const monster of monsters) drawMonster(ctx, monster);
+    for (const monster of monsters) drawMonster(ctx, monster, gameTime);
   }
   drawBoss(ctx, boss);
 
@@ -721,6 +746,7 @@ function render() {
   if (boss && boss.enraged) drawEnrageVignette(ctx);
 
   drawAutoIndicator(ctx, autoMode);
+  if (currentMap === "hunt") drawOffscreenIndicators(ctx, camera, monsters);
   if (currentMap === "hunt") drawBossTimer(ctx, bossTimeRemaining, player.y <= FORGE_BOTTOM);
   if (forgeNoticeTimer > 0) drawForgeNotice(ctx, FORGE_NOTICE_TEXT);
   if (bossCountdownActive) drawBossCountdown(ctx, Math.ceil(bossCountdownTimer));

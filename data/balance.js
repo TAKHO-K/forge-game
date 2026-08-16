@@ -43,7 +43,12 @@ const BALANCE = {
   bossMaxRetries: 2,
   bossRetryFarmDuration: 180,
   bossResultLostDisplayTime: 3,
-  weaponExpAttackBonusPerLevel: 0.06
+  weaponExpAttackBonusPerLevel: 0.06,
+  rareSparkleChance: 0.005,
+  rareMaterialChance: 0.035,
+  rareGoldMultiplier: 0.5,
+  sparkleGradeChances: { legend: 0.9, relic: 0.09, primordial: 0.01 },
+  materialTicketByTier: [1, 1, 2, 2, 3, 3]
 };
 
 // 무기 레벨별 누적 필요 경험치 (PRD 4.2) - index는 레벨-1, 값은 그 레벨 도달까지 누적 경험치

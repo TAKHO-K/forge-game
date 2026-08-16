@@ -97,12 +97,48 @@ function drawProjectiles(ctx, projectiles) {
   }
 }
 
-function drawMonster(ctx, monster) {
+function drawMonster(ctx, monster, gameTime) {
   if (!monster.alive) return;
+
+  if (monster.rareType === "sparkle") {
+    const hue = (gameTime * 180) % 360;
+    ctx.save();
+    ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+    ctx.shadowBlur = 18;
+  } else if (monster.rareType === "material") {
+    ctx.save();
+    ctx.shadowColor = "#ffd700";
+    ctx.shadowBlur = 12;
+  }
+
   ctx.fillStyle = monster.color;
   ctx.beginPath();
   ctx.arc(monster.x, monster.y, monster.radius, 0, Math.PI * 2);
   ctx.fill();
+
+  if (monster.rareType === "sparkle") {
+    const hue = (gameTime * 180) % 360;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = `hsl(${hue}, 100%, 65%)`;
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    for (let i = 0; i < 5; i++) {
+      const pAngle = gameTime * 3 + (i * Math.PI * 2) / 5;
+      const pDist = monster.radius + 10 + Math.sin(gameTime * 4 + i) * 4;
+      const px = monster.x + Math.cos(pAngle) * pDist;
+      const py = monster.y + Math.sin(pAngle) * pDist;
+      ctx.beginPath();
+      ctx.arc(px, py, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  } else if (monster.rareType === "material") {
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#ffd700";
+    ctx.stroke();
+    ctx.restore();
+  }
 
   const barWidth = monster.radius * 2;
   const barHeight = 5;
@@ -114,6 +150,45 @@ function drawMonster(ctx, monster) {
   ctx.fillRect(barX, barY, barWidth, barHeight);
   ctx.fillStyle = "#e05c5c";
   ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
+}
+
+function drawOffscreenIndicators(ctx, camera, monsters) {
+  const margin = 30;
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+
+  for (const m of monsters) {
+    if (!m.alive || !m.rareType) continue;
+    const sx = m.x - camera.x;
+    const sy = m.y - camera.y;
+    if (sx >= margin && sx <= w - margin && sy >= margin && sy <= h - margin) continue;
+
+    const angle = Math.atan2(sy - cy, sx - cx);
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+    const scaleX = dx !== 0 ? (w / 2 - margin) / Math.abs(dx) : Infinity;
+    const scaleY = dy !== 0 ? (h / 2 - margin) / Math.abs(dy) : Infinity;
+    const scale = Math.min(scaleX, scaleY);
+    const ax = cx + dx * scale;
+    const ay = cy + dy * scale;
+
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(angle);
+    ctx.fillStyle = m.rareType === "sparkle" ? "#ff66ff" : "#ffd700";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(12, 0);
+    ctx.lineTo(-8, -8);
+    ctx.lineTo(-8, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function drawDamageNumbers(ctx, damageNumbers) {
