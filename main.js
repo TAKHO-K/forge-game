@@ -2,6 +2,13 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
 const player = {
   x: canvas.width / 2, y: canvas.height / 2, radius: BALANCE.playerRadius, speed: BALANCE.playerSpeed, angle: 0,
   hp: BALANCE.playerMaxHp, maxHp: BALANCE.playerMaxHp, defense: BALANCE.playerDefense,
@@ -342,8 +349,8 @@ function update(dt) {
     if (player.dashCooldownTimer < 0) player.dashCooldownTimer = 0;
   }
 
-  camera.x = clamp(player.x - canvas.width / 2, 0, mapW - canvas.width);
-  camera.y = clamp(player.y - canvas.height / 2, 0, mapH - canvas.height);
+  camera.x = mapW <= canvas.width ? (mapW - canvas.width) / 2 : clamp(player.x - canvas.width / 2, 0, mapW - canvas.width);
+  camera.y = mapH <= canvas.height ? (mapH - canvas.height) / 2 : clamp(player.y - canvas.height / 2, 0, mapH - canvas.height);
 
   const worldMouseX = mouse.x + camera.x;
   const worldMouseY = mouse.y + camera.y;
