@@ -1,10 +1,13 @@
 // 자주 만지는 수치 모음
 const BALANCE = {
+  playerRadius: 20,
+  playerSpeed: 200,
   projectileSpeed: 600,
   projectileRadius: 6,
   projectileRange: 400,
   attackInterval: 0.2,
   playerAttack: 10,
+  damageFloorRatio: 0.1,
   critChance: 0.3,
   critMultiplier: 1.8,
   damageNumberLifetime: 0.8,
@@ -16,6 +19,7 @@ const BALANCE = {
   playerIframeDuration: 0.8,
   playerRegenNoHitThreshold: 12,
   playerRegenInterval: 3,
+  playerRegenAmount: 1,
   monsterApproachSpeed: 80,
   dashDistance: 160, // 캐릭터 4칸 분량 (반지름 20 기준 지름 40 x 4)
   dashDuration: 0.3,
@@ -27,6 +31,9 @@ const BALANCE = {
   aggroRange: 250,
   leashRange: 400,
   returnSpeed: 120,
+  respawnTime: 3,
+  zoneCount: 6,
+  zoneYMargin: 120,
   forgeHeight: 320,
   forgeAutoMaxLevel: 10,
   bossTimerDuration: 600,

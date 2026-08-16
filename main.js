@@ -3,7 +3,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 const player = {
-  x: canvas.width / 2, y: canvas.height / 2, radius: 20, speed: 200, angle: 0,
+  x: canvas.width / 2, y: canvas.height / 2, radius: BALANCE.playerRadius, speed: BALANCE.playerSpeed, angle: 0,
   hp: BALANCE.playerMaxHp, maxHp: BALANCE.playerMaxHp, defense: BALANCE.playerDefense,
   iframeTimer: 0, noHitTimer: 0, regenTimer: 0,
   dashTimer: 0, dashCooldownTimer: 0, dashDirX: 1, dashDirY: 0
@@ -140,11 +140,11 @@ function spawnMonster(x, y, type) {
   };
 }
 
-const RESPAWN_TIME = 3;
+const RESPAWN_TIME = BALANCE.respawnTime;
 
 // 등급(tier)별 구역으로 맵을 나눠 배치 - 왼쪽(1등급)에서 오른쪽(6등급)으로 갈수록 강해짐
-const ZONE_COUNT = 6;
-const ZONE_Y_MARGIN = 120;
+const ZONE_COUNT = BALANCE.zoneCount;
+const ZONE_Y_MARGIN = BALANCE.zoneYMargin;
 const zoneLeft = BALANCE.wallThickness;
 const zoneRight = BALANCE.mapWidth - BALANCE.wallThickness;
 const zoneTop = FORGE_BOTTOM + ZONE_Y_MARGIN;
@@ -563,7 +563,7 @@ function update(dt) {
     player.regenTimer += dt;
     while (player.regenTimer >= BALANCE.playerRegenInterval && player.hp < player.maxHp) {
       player.regenTimer -= BALANCE.playerRegenInterval;
-      player.hp = Math.min(player.maxHp, player.hp + 1);
+      player.hp = Math.min(player.maxHp, player.hp + BALANCE.playerRegenAmount);
     }
   }
 
