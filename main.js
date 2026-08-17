@@ -23,6 +23,7 @@ let lastMoveDirY = 0;
 // 직업 선택 (PRD 4장) - 게임 시작 시 classSelect 화면에서 1택, 선택 전까지 update/render 전체 정지
 let selectedClass = null;
 let dealModeTimer = 0; // 힐러 딜링모드(E) 남은 시간 - 온/오프 상태만 (공격력 배율 없음)
+let qCooldownTimer = 0; // Q 스킬(PRD 4.3) 쿨다운 - 저장하지 않음(전투 중 순간 상태, dashCooldownTimer와 동일 취급)
 let meleeSwingTimer = 0; // 대검·쌍검 스윙 이펙트 표시 타이머
 let meleeSwingAngle = 0;
 let meleeSwingSide = 0; // 0=중앙, 1=오른쪽, -1=왼쪽 (쌍검 좌우 번갈아 공격 렌더용)
@@ -134,6 +135,24 @@ function tryActivateDealMode() {
   dealModeTimer = selectedClass.dealModeDuration;
 }
 
+// Q 스킬 캐스팅 (PRD 4.3) - 클래스별 전용 함수 없이 data/skills.js의 effects 조각을
+// 타입별로 해석한다. 새 조각 타입을 붙일 때는 이 switch에 case만 추가하면 된다.
+function tryCastSkill() {
+  if (!selectedClass || invenOpen) return;
+  const skill = SKILLS[selectedClass.id] && SKILLS[selectedClass.id].Q;
+  if (!skill || qCooldownTimer > 0) return;
+  for (const effect of skill.effects) {
+    switch (effect.type) {
+      case "heal": {
+        const { amount } = computeHealAmount(effect, selectedClass.healPower, selectedClass.critRate);
+        player.hp = Math.min(player.maxHp, player.hp + amount);
+        break;
+      }
+    }
+  }
+  qCooldownTimer = skill.cooldown;
+}
+
 const keys = {};
 window.addEventListener("keydown", (e) => {
   keys[e.key.toLowerCase()] = true;
@@ -153,6 +172,9 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.key.toLowerCase() === "e") {
     tryActivateDealMode();
+  }
+  if (e.key.toLowerCase() === "q") {
+    tryCastSkill();
   }
   if (e.key === "Escape") {
     if (invenOpen) {
@@ -1356,6 +1378,10 @@ function update(dt) {
   if (dealModeTimer > 0) {
     dealModeTimer -= dt;
     if (dealModeTimer < 0) dealModeTimer = 0;
+  }
+  if (qCooldownTimer > 0) {
+    qCooldownTimer -= dt;
+    if (qCooldownTimer < 0) qCooldownTimer = 0;
   }
   if (meleeSwingTimer > 0) {
     meleeSwingTimer -= dt;
