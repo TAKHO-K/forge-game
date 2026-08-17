@@ -256,6 +256,13 @@ function getPlayerAttack(level) {
     getEnhanceDamageMultiplier(lvl) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier;
 }
 
+// 공격 간격 - autoMode와 수동 클릭(mousedown)이 같은 값을 쓴다.
+// 예전엔 수동 클릭에 쿨다운이 없어 연타로 무제한 공격이 가능했다(활 Q 공속 버프가
+// 수동 플레이에선 의미가 없어지는 원인이기도 했음) - 이제 둘 다 이 함수 하나를 거친다.
+function getEffectiveAttackInterval() {
+  return BALANCE.attackInterval / (equipBonuses.speedMultiplier * selectedClass.atkSpeed);
+}
+
 // 몬스터·보스 피격 처리 - 투사체 명중과 근접 스윙 명중이 공유. isComboHit이면 comboHitMultiplier 적용 (3타 강타)
 function applyDamageToMonster(monster, isComboHit) {
   const attack = getPlayerAttack() * (isComboHit ? BALANCE.comboHitMultiplier : 1);
@@ -353,6 +360,7 @@ function performAttack() {
 
 let autoMode = false;
 let attackTimer = 0;
+let manualAttackCooldownTimer = 0; // 수동 클릭(mousedown) 공격 쿨다운 - autoMode와 같은 간격을 쓴다
 
 // 희귀 몬스터 판정 (PRD 8.0-5) - 스폰 시점마다 판정, 반짝이 0.5% > 재료 1.5% > 일반
 function rollRareType() {
@@ -1027,7 +1035,9 @@ canvas.addEventListener("mousedown", (e) => {
   if (e.button !== 0) return;
   if (autoMode) return;
   if (!selectedClass) return;
+  if (manualAttackCooldownTimer > 0) return;
   performAttack();
+  manualAttackCooldownTimer = getEffectiveAttackInterval();
 });
 
 // 드래그 종료 - 이동이 없었으면 클릭으로 처리, 드래그였으면 같은 부위 슬롯에서만 착용
@@ -1183,9 +1193,14 @@ function update(dt) {
   const worldMouseY = mouse.y + camera.y;
   player.angle = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
 
+  if (manualAttackCooldownTimer > 0) {
+    manualAttackCooldownTimer -= dt;
+    if (manualAttackCooldownTimer < 0) manualAttackCooldownTimer = 0;
+  }
+
   if (autoMode) {
     attackTimer += dt;
-    const effectiveAttackInterval = BALANCE.attackInterval / (equipBonuses.speedMultiplier * selectedClass.atkSpeed);
+    const effectiveAttackInterval = getEffectiveAttackInterval();
     while (attackTimer >= effectiveAttackInterval) {
       attackTimer -= effectiveAttackInterval;
       performAttack();
