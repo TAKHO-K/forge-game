@@ -1,5 +1,9 @@
 // 자주 만지는 수치 모음
 const BALANCE = {
+  // 탭이 백그라운드로 갔다 오면 dt = (now - lastTime)/1000 이 수십 초로 튈 수 있어 캡을 둔다.
+  // 0.1(최저 10fps 상당)은 실제 프레임 드랍은 자연스럽게 수용하면서 순간이동·타이머 급감 같은
+  // 비정상 점프는 막는, 게임 루프에서 흔히 쓰는 값
+  maxFrameDt: 0.1,
   playerRadius: 20,
   playerSpeed: 200,
   projectileSpeed: 600,

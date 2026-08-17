@@ -89,6 +89,10 @@ let ticketBoostSelection = null; // 강화 시도에 적용할 확률 강화권 
 let ticketNoticeText = "";
 let ticketNoticeTimer = 0;
 
+// 바닥 아이템을 주웠는데 가방이 꽉 찬 경우 - 사냥 중(장비창 닫힘)에도 보이도록 토스트로 안내 (ticketNoticeTimer와 같은 구조)
+let bagFullNoticeTimer = 0;
+const BAG_FULL_NOTICE_TEXT = "가방이 가득 찼습니다";
+
 function spawnBoss(stageIndex) {
   const data = BOSSES[stageIndex];
   return {
@@ -1230,6 +1234,10 @@ function update(dt) {
     ticketNoticeTimer -= dt;
     if (ticketNoticeTimer < 0) ticketNoticeTimer = 0;
   }
+  if (bagFullNoticeTimer > 0) {
+    bagFullNoticeTimer -= dt;
+    if (bagFullNoticeTimer < 0) bagFullNoticeTimer = 0;
+  }
 
   player.noHitTimer += dt;
   if (player.iframeTimer > 0) {
@@ -1324,8 +1332,7 @@ function update(dt) {
         bag[emptyIndex] = { grade: item.grade, part: item.part };
         groundItems.splice(i, 1);
       } else {
-        invenMessage = "가방이 가득 찼습니다";
-        invenMessageTimer = BALANCE.inventoryMessageDisplayTime;
+        bagFullNoticeTimer = BALANCE.inventoryMessageDisplayTime;
       }
     }
   }
@@ -1492,6 +1499,7 @@ function render() {
   if (forgeNoticeTimer > 0) drawForgeNotice(ctx, FORGE_NOTICE_TEXT, 110);
   if (invenNoticeTimer > 0) drawForgeNotice(ctx, INVENTORY_NOTICE_TEXT, 132);
   if (ticketNoticeTimer > 0) drawForgeNotice(ctx, ticketNoticeText, 154);
+  if (bagFullNoticeTimer > 0) drawForgeNotice(ctx, BAG_FULL_NOTICE_TEXT, 176);
   if (bossCountdownActive) drawBossCountdown(ctx, Math.ceil(bossCountdownTimer));
   if (boss) {
     drawBossHealthBar(ctx, boss);
@@ -1517,7 +1525,7 @@ function render() {
 }
 
 function loop(now) {
-  const dt = (now - lastTime) / 1000;
+  const dt = Math.min((now - lastTime) / 1000, BALANCE.maxFrameDt);
   lastTime = now;
 
   if (!selectedClass) {
