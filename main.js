@@ -31,6 +31,8 @@ let qDashDirX = 0;
 let qDashDirY = 0;
 let qDashSpeed = 0;
 let activeBuffs = []; // { stat, magnitude, timer } - 지속시간 기반 스킬 버프. 저장하지 않음(전투 중 순간 상태)
+let activeTaunt = null; // core/aggro.js의 { x, y, radius, timer } | null - 쌍검 Q 분신
+let pendingNextAttackEffects = []; // { guaranteedCrit, remaining, ... } - 다음 기본공격 N회에 걸리는 효과 대기열
 let meleeSwingTimer = 0; // 대검·쌍검 스윙 이펙트 표시 타이머
 let meleeSwingAngle = 0;
 let meleeSwingSide = 0; // 0=중앙, 1=오른쪽, -1=왼쪽 (쌍검 좌우 번갈아 공격 렌더용)
@@ -175,6 +177,14 @@ function tryCastSkill() {
         activeBuffs.push({ stat: effect.stat, magnitude, timer: effect.duration });
         break;
       }
+      case "summonDecoy": {
+        activeTaunt = createTaunt(player.x, player.y, effect.radius, effect.duration);
+        break;
+      }
+      case "nextAttack": {
+        pendingNextAttackEffects.push({ guaranteedCrit: !!effect.guaranteedCrit, remaining: effect.count });
+        break;
+      }
       case "hitOnDash": {
         if (!dashHitSegment) break;
         if (currentMap === "hunt") {
@@ -245,14 +255,15 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 const projectiles = [];
-function fireProjectile(isComboHit) {
+function fireProjectile(isComboHit, forceCrit) {
   projectiles.push({
     x: player.x,
     y: player.y,
     angle: player.angle,
     radius: BALANCE.projectileRadius,
     traveled: 0,
-    isComboHit
+    isComboHit,
+    forceCrit: !!forceCrit
   });
 }
 
@@ -277,9 +288,10 @@ function getActiveBuffMultiplier(stat, defaultValue) {
 }
 
 // 몬스터·보스 피격 처리 - 투사체 명중과 근접 스윙 명중이 공유. isComboHit이면 comboHitMultiplier 적용 (3타 강타)
-function applyDamageToMonster(monster, isComboHit) {
+// forceCrit: 확정 치명타(쌍검 Q) - 관통돌진 등 스킬 자체 데미지는 넘기지 않아 기본값 false로 빠진다
+function applyDamageToMonster(monster, isComboHit, forceCrit) {
   const attack = getPlayerAttack() * (isComboHit ? BALANCE.comboHitMultiplier : 1);
-  const { damage, isCrit } = calcDamage(attack, monster.defense, selectedClass.critRate, selectedClass.critDmg);
+  const { damage, isCrit } = calcDamage(attack, monster.defense, selectedClass.critRate, selectedClass.critDmg, forceCrit);
   monster.hp -= damage;
   spawnDamageNumber(monster.x, monster.y - monster.radius, damage, isCrit, isComboHit);
   if (monster.hp <= 0) {
@@ -302,9 +314,9 @@ function applyDamageToMonster(monster, isComboHit) {
   }
 }
 
-function applyDamageToBoss(isComboHit) {
+function applyDamageToBoss(isComboHit, forceCrit) {
   const attack = getPlayerAttack() * (isComboHit ? BALANCE.comboHitMultiplier : 1);
-  const { damage, isCrit } = calcDamage(attack, boss.defense, selectedClass.critRate, selectedClass.critDmg);
+  const { damage, isCrit } = calcDamage(attack, boss.defense, selectedClass.critRate, selectedClass.critDmg, forceCrit);
   boss.hp -= damage;
   spawnDamageNumber(boss.x, boss.y - boss.radius, damage, isCrit, isComboHit);
   if (boss.hp <= 0) {
@@ -322,7 +334,7 @@ let meleeAlternateSign = 1; // 쌍검 좌우 번갈아 공격 - 다음 스윙이
 
 // 대검·쌍검 근접 공격 (PRD 4.1) - 투사체 없이 전방 부채꼴 범위 내 대상을 즉시 판정
 // alternateSides 직업(쌍검)은 판정 중심을 좌우로 번갈아 치우쳐 공격 - meleeSwingSide로 렌더에 전달(0=중앙, 1=오른쪽, -1=왼쪽)
-function performMeleeAttack(isComboHit) {
+function performMeleeAttack(isComboHit, forceCrit) {
   let swingAngle = player.angle;
   let swingSide = 0;
   if (selectedClass.alternateSides) {
@@ -345,7 +357,7 @@ function performMeleeAttack(isComboHit) {
       const dist = Math.hypot(monster.x - player.x, monster.y - player.y);
       if (dist > range + monster.radius) continue;
       if (Math.abs(angleDiff(Math.atan2(monster.y - player.y, monster.x - player.x), swingAngle)) > halfArc) continue;
-      applyDamageToMonster(monster, isComboHit);
+      applyDamageToMonster(monster, isComboHit, forceCrit);
     }
   }
 
@@ -353,9 +365,24 @@ function performMeleeAttack(isComboHit) {
     const dist = Math.hypot(boss.x - player.x, boss.y - player.y);
     if (dist <= range + boss.radius &&
       Math.abs(angleDiff(Math.atan2(boss.y - player.y, boss.x - player.x), swingAngle)) <= halfArc) {
-      applyDamageToBoss(isComboHit);
+      applyDamageToBoss(isComboHit, forceCrit);
     }
   }
+}
+
+// 다음 기본공격에 걸린 확정 치명타(쌍검 Q)를 소비 - 공격 행동 1회당 한 번만 소비한다
+// (대검 근접 스윙처럼 한 번에 여러 대상을 때려도 그 행동 전체가 "기본공격 1회"라서)
+function consumeNextAttackGuaranteedCrit() {
+  let forceCrit = false;
+  for (let i = pendingNextAttackEffects.length - 1; i >= 0; i--) {
+    const e = pendingNextAttackEffects[i];
+    if (e.guaranteedCrit) {
+      forceCrit = true;
+      e.remaining--;
+      if (e.remaining <= 0) pendingNextAttackEffects.splice(i, 1);
+    }
+  }
+  return forceCrit;
 }
 
 // 3타 강타 (모든 직업 공통) - comboResetWindow 안에 이어친 공격 수를 세어 comboHitEvery번째마다 강타 (PRD 4.4 근처 요구사항)
@@ -363,11 +390,12 @@ function performAttack() {
   comboCount++;
   comboResetTimer = BALANCE.comboResetWindow;
   const isComboHit = comboCount % BALANCE.comboHitEvery === 0;
+  const forceCrit = consumeNextAttackGuaranteedCrit();
 
   if (selectedClass.attackType === "melee") {
-    performMeleeAttack(isComboHit);
+    performMeleeAttack(isComboHit, forceCrit);
   } else {
-    fireProjectile(isComboHit);
+    fireProjectile(isComboHit, forceCrit);
   }
 }
 
@@ -1239,10 +1267,14 @@ function update(dt) {
     if (monster.attack <= 0) continue;
     if (currentMap !== "hunt") continue; // 보스존에서는 사냥터 몬스터 비활성 (PRD 8.0-6)
 
+    // 도발 대상(쌍검 Q 분신) - 사냥터 몬스터에만 연결한다, 보스는 aggro.js 주석 참고
+    const target = resolveAggroTarget(player.x, player.y, player.radius, activeTaunt);
     const distToPlayer = Math.hypot(player.x - monster.x, player.y - monster.y);
+    const distToTarget = Math.hypot(target.x - monster.x, target.y - monster.y);
     const distToSpawn = Math.hypot(monster.spawnX - monster.x, monster.spawnY - monster.y);
     const aggroRange = monster.aggroRange !== undefined ? monster.aggroRange : BALANCE.aggroRange;
 
+    // idle→chase 진입 판정은 항상 player 기준 - 분신은 "이미 쫓기는 중인" 몹의 방향만 돌린다(어그로 유지지, 신규 획득이 아님)
     if (monster.state === "idle" && distToPlayer <= aggroRange) {
       monster.state = "chase";
     } else if (monster.state === "chase" && distToSpawn > BALANCE.leashRange) {
@@ -1250,15 +1282,15 @@ function update(dt) {
     }
 
     if (monster.state === "chase") {
-      const contactRange = player.radius + monster.radius;
-      if (distToPlayer > contactRange) {
-        const chaseAngle = Math.atan2(player.y - monster.y, player.x - monster.x);
+      const contactRange = target.radius + monster.radius;
+      if (distToTarget > contactRange) {
+        const chaseAngle = Math.atan2(target.y - monster.y, target.x - monster.x);
         const step = BALANCE.monsterApproachSpeed * dt;
         monster.x += Math.cos(chaseAngle) * step;
         monster.y += Math.sin(chaseAngle) * step;
         monster.x = clamp(monster.x, BALANCE.wallThickness + monster.radius, BALANCE.mapWidth - BALANCE.wallThickness - monster.radius);
         monster.y = clamp(monster.y, FORGE_BOTTOM + monster.radius, BALANCE.mapHeight - BALANCE.wallThickness - monster.radius);
-      } else if (player.iframeTimer <= 0) {
+      } else if (target.isPlayer && player.iframeTimer <= 0) {
         let damage = calcPlayerDamage(monster.attack, player.defense, player.maxHp, BALANCE.playerDamageCapRatio);
         if (player.dashTimer > 0) {
           damage = Math.round(damage * (1 - BALANCE.dashDamageReduction));
@@ -1456,6 +1488,7 @@ function update(dt) {
     for (const b of activeBuffs) b.timer -= dt;
     activeBuffs = activeBuffs.filter((b) => b.timer > 0);
   }
+  activeTaunt = tickTaunt(activeTaunt, dt);
   if (meleeSwingTimer > 0) {
     meleeSwingTimer -= dt;
     if (meleeSwingTimer < 0) meleeSwingTimer = 0;
@@ -1492,13 +1525,13 @@ function update(dt) {
       Math.hypot(p.x - boss.x, p.y - boss.y) <= p.radius + boss.radius;
 
     if (hitMonster) {
-      applyDamageToMonster(hitMonster, p.isComboHit);
+      applyDamageToMonster(hitMonster, p.isComboHit, p.forceCrit);
       projectiles.splice(i, 1);
       continue;
     }
 
     if (hitBoss) {
-      applyDamageToBoss(p.isComboHit);
+      applyDamageToBoss(p.isComboHit, p.forceCrit);
       projectiles.splice(i, 1);
       continue;
     }
@@ -1673,6 +1706,7 @@ function render() {
     drawGroundItems(ctx, groundItems, gameTime);
     drawExpTokens(ctx, expTokens);
     drawGroundTickets(ctx, groundTickets);
+    drawDecoy(ctx, activeTaunt);
   }
   drawBoss(ctx, boss);
 

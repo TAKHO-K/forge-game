@@ -12,6 +12,7 @@ const BALANCE = {
   attackInterval: 0.28,
   playerAttack: 10,
   damageFloorRatio: 0.1,
+  guaranteedCritOverflowBonus: 0.4, // 확정 치명타가 이미 100% 치확과 겹칠 때 대신 붙는 치명타 피해율 (PRD 4.3)
   meleeSwingVisualDuration: 0.15, // 대검·쌍검 부채꼴 스윙 이펙트 표시 시간
   meleeRangeIndicatorAlpha: 0.12, // 공격 안 할 때도 항상 보이는 옅은 판정 범위 표시
   comboHitEvery: 3, // N번째 공격마다 강타

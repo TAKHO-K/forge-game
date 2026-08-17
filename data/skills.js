@@ -11,6 +11,15 @@ const SKILLS = {
       ]
     }
   },
+  dualblade: {
+    Q: {
+      name: "그림자분신", cooldown: 14,
+      effects: [
+        { type: "summonDecoy", duration: 5, radius: 20 },
+        { type: "nextAttack", count: 1, guaranteedCrit: true }
+      ]
+    }
+  },
   bow: {
     Q: {
       name: "속사", cooldown: 18,

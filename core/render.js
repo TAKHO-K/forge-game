@@ -59,6 +59,20 @@ function drawPlayer(ctx, player, alpha) {
   ctx.globalAlpha = 1;
 }
 
+// 쌍검 Q 분신 (도발원) - 플레이어와 구분되도록 반투명 보라색, 남은 시간 비례로 옅어진다
+function drawDecoy(ctx, taunt) {
+  if (!taunt) return;
+  ctx.globalAlpha = Math.min(1, taunt.timer / 1) * 0.6 + 0.15;
+  ctx.fillStyle = "#a64dff";
+  ctx.beginPath();
+  ctx.arc(taunt.x, taunt.y, taunt.radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#e0b3ff";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
 function drawPlayerHealthBar(ctx, hp, maxHp, gameTime) {
   const slotWidth = 28;
   const slotHeight = 22;

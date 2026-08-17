@@ -1,8 +1,16 @@
 // 데미지 계산
-function calcDamage(attack, defense, critChance, critMultiplier) {
+// forceCrit: 확정 치명타(쌍검 Q 등) - critChance가 이미 100%면 확정치명타가 무의미해지므로
+// 대신 치명타 피해율을 guaranteedCritOverflowBonus만큼 올려준다(PRD 4.3 "확정 치명타의 초과분 처리")
+function calcDamage(attack, defense, critChance, critMultiplier, forceCrit = false) {
   const baseDamage = Math.max(Math.round(attack * BALANCE.damageFloorRatio), Math.round(attack - defense));
-  const isCrit = Math.random() < critChance;
-  const damage = isCrit ? Math.round(baseDamage * critMultiplier) : baseDamage;
+  let isCrit, finalMultiplier = critMultiplier;
+  if (forceCrit) {
+    isCrit = true;
+    if (critChance >= 1) finalMultiplier = critMultiplier + BALANCE.guaranteedCritOverflowBonus;
+  } else {
+    isCrit = Math.random() < critChance;
+  }
+  const damage = isCrit ? Math.round(baseDamage * finalMultiplier) : baseDamage;
   return { damage, isCrit };
 }
 
