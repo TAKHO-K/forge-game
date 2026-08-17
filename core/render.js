@@ -521,12 +521,13 @@ function pointInRect(x, y, rect) {
 }
 
 // 장비창 레이아웃 (PRD 7.3) - 클릭 판정(main.js)과 그리기가 같은 좌표를 쓰도록 공유
-function getInventoryLayout(ctx) {
+// offsetX: 대장간에서 강화 패널과 나란히 놓을 때 중앙에서 오른쪽으로 밀어내는 양 (main.js getInventoryOffsetX)
+function getInventoryLayout(ctx, offsetX) {
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
   const panelW = 620;
   const panelH = 470;
-  const px = w / 2 - panelW / 2;
+  const px = w / 2 - panelW / 2 + (offsetX || 0);
   const py = h / 2 - panelH / 2;
 
   const filterY = py + 44;
@@ -759,12 +760,14 @@ function wrapText(ctx, text, cx, y, maxWidth, lineHeight) {
 }
 
 // 하위 등급 착용 확인창 레이아웃 - 클릭 판정과 그리기가 같은 좌표를 쓰도록 공유
-function getConfirmDialogLayout(ctx) {
+// offsetX는 장비창과 같은 값을 받는다 - 확인창은 장비창 조작에서만 뜨므로 장비창 중앙을 따라가야 강화 패널과 안 겹친다
+function getConfirmDialogLayout(ctx, offsetX) {
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
   const boxW = 360;
   const boxH = 140;
-  const bx = w / 2 - boxW / 2;
+  const cx = w / 2 + (offsetX || 0);
+  const bx = cx - boxW / 2;
   const by = h / 2 - boxH / 2;
   const btnW = 100;
   const btnH = 36;
@@ -772,13 +775,13 @@ function getConfirmDialogLayout(ctx) {
   const btnY = by + boxH - 50;
   return {
     bx, by, boxW, boxH,
-    confirmBtn: { x: w / 2 - btnW - btnGap / 2, y: btnY, w: btnW, h: btnH },
-    cancelBtn: { x: w / 2 + btnGap / 2, y: btnY, w: btnW, h: btnH }
+    confirmBtn: { x: cx - btnW - btnGap / 2, y: btnY, w: btnW, h: btnH },
+    cancelBtn: { x: cx + btnGap / 2, y: btnY, w: btnW, h: btnH }
   };
 }
 
-function drawConfirmDialog(ctx, message, confirmLabel = "착용", confirmColor = "#4dd97e") {
-  const layout = getConfirmDialogLayout(ctx);
+function drawConfirmDialog(ctx, message, confirmLabel = "착용", confirmColor = "#4dd97e", offsetX = 0) {
+  const layout = getConfirmDialogLayout(ctx, offsetX);
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.6)";
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -839,9 +842,9 @@ function drawInventory(ctx, state) {
   const {
     equipment, bag, gameTime, mouseX, mouseY, totalStats, gradeFilter,
     pendingEquip, pendingSell, bulkSellConfirm, bulkSellGrade, bulkSellDropdownOpen, inventoryHoverSlot,
-    invenMessage, invenMessageTimer, dragState
+    invenMessage, invenMessageTimer, dragState, layoutOffsetX
   } = state;
-  const layout = getInventoryLayout(ctx);
+  const layout = getInventoryLayout(ctx, layoutOffsetX);
   const { px, py, panelW, panelH } = layout;
   const draggedItem = dragState && dragState.dragging ? bag[dragState.bagIndex] : null;
 
@@ -975,10 +978,10 @@ function drawInventory(ctx, state) {
   }
 
   if (pendingEquip) {
-    drawConfirmDialog(ctx, "현재 착용중인 장비보다 낮은 등급입니다. 착용할까요?");
+    drawConfirmDialog(ctx, "현재 착용중인 장비보다 낮은 등급입니다. 착용할까요?", "착용", "#4dd97e", layoutOffsetX);
   } else if (pendingSell) {
-    drawConfirmDialog(ctx, pendingSell.message, "판매", "#ff5c5c");
+    drawConfirmDialog(ctx, pendingSell.message, "판매", "#ff5c5c", layoutOffsetX);
   } else if (bulkSellConfirm) {
-    drawConfirmDialog(ctx, bulkSellConfirm.message, "판매", "#ff5c5c");
+    drawConfirmDialog(ctx, bulkSellConfirm.message, "판매", "#ff5c5c", layoutOffsetX);
   }
 }

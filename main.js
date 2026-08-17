@@ -454,8 +454,34 @@ let invenMessageTimer = 0;
 // 툴팁(판매 버튼 포함) 위일 때만 유지 - render()에서 매 프레임 갱신되므로 클릭 시점에도 항상 최신
 let inventoryHoverSlot = null;
 
+// 강화 패널(#ui)과 장비창은 둘 다 화면 중앙 기준이라 대장간에서 같이 열리면 겹친다.
+// 둘 다 열려 있을 때만 각자 절반씩 반대 방향으로 밀어 좌(강화)·우(장비창)로 나눈다.
+const PANEL_SPLIT_GAP = 24;
+const INVENTORY_PANEL_WIDTH = getInventoryLayout(ctx).panelW;
+let enhancePanelWidth = 0; // 대장간에서 패널이 처음 보일 때 실측 후 캐시 (CSS width가 유일한 출처)
+
+function isPanelSplit() {
+  return invenOpen && inForge;
+}
+
+function getInventoryOffsetX() {
+  return isPanelSplit() ? (enhancePanelWidth + PANEL_SPLIT_GAP) / 2 : 0;
+}
+
+// 강화 패널은 CSS transform으로 중앙 정렬돼 있으므로 같은 transform에 좌측 이동을 얹는다
+function updatePanelSplit() {
+  if (!enhancePanelWidth && inForge) enhancePanelWidth = uiPanel.offsetWidth;
+  const shift = isPanelSplit() ? (INVENTORY_PANEL_WIDTH + PANEL_SPLIT_GAP) / 2 : 0;
+  uiPanel.style.transform = `translate(calc(-50% - ${shift}px), -50%)`;
+}
+
+// 장비창 레이아웃 단일 진입점 - 클릭 판정과 그리기가 같은 오프셋을 쓰게 한다
+function invenLayout() {
+  return getInventoryLayout(ctx, getInventoryOffsetX());
+}
+
 function updateInventoryHoverSlot() {
-  const layout = getInventoryLayout(ctx);
+  const layout = invenLayout();
   const direct = findHoveredInventorySlot(layout, mouse.x, mouse.y);
   if (direct) {
     const item = direct.type === "equip" ? equipment[direct.part] : bag[direct.index];
@@ -493,7 +519,7 @@ function tryEquipFromBag(bagIndex) {
 }
 
 function handlePendingEquipClick(mx, my) {
-  const layout = getConfirmDialogLayout(ctx);
+  const layout = getConfirmDialogLayout(ctx, getInventoryOffsetX());
   if (pointInRect(mx, my, layout.confirmBtn)) {
     equipFromBag(pendingEquip.bagIndex);
     pendingEquip = null;
@@ -529,7 +555,7 @@ function trySellFromBag(bagIndex) {
 }
 
 function handlePendingSellClick(mx, my) {
-  const layout = getConfirmDialogLayout(ctx);
+  const layout = getConfirmDialogLayout(ctx, getInventoryOffsetX());
   if (pointInRect(mx, my, layout.confirmBtn)) {
     sellBagItem(pendingSell.bagIndex);
     pendingSell = null;
@@ -571,7 +597,7 @@ function tryBulkSell() {
 }
 
 function handleBulkSellConfirmClick(mx, my) {
-  const layout = getConfirmDialogLayout(ctx);
+  const layout = getConfirmDialogLayout(ctx, getInventoryOffsetX());
   if (pointInRect(mx, my, layout.confirmBtn)) {
     for (const index of bulkSellConfirm.indices) sellBagItem(index);
     bulkSellConfirm = null;
@@ -594,7 +620,7 @@ function handleInventoryClick(button, mx, my) {
     return;
   }
 
-  const layout = getInventoryLayout(ctx);
+  const layout = invenLayout();
 
   // 드롭다운이 열려있으면 이 클릭은 옵션 선택 또는 닫기 전용 - 아래 다른 동작과 안 겹치게 여기서 종료
   if (bulkSellDropdownOpen) {
@@ -882,7 +908,7 @@ canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 canvas.addEventListener("mousedown", (e) => {
   if (invenOpen) {
     if (e.button === 0 && !pendingEquip && !pendingSell && !bulkSellConfirm && !bulkSellDropdownOpen) {
-      const layout = getInventoryLayout(ctx);
+      const layout = invenLayout();
       const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
       if (hovered && hovered.type === "bag") {
         const item = bag[hovered.index];
@@ -918,7 +944,7 @@ window.addEventListener("mouseup", (e) => {
     tryEquipFromBag(bagIndex);
     return;
   }
-  const layout = getInventoryLayout(ctx);
+  const layout = invenLayout();
   const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
   if (hovered && hovered.type === "equip" && hovered.part === item.part) {
     tryEquipFromBag(bagIndex);
@@ -929,7 +955,7 @@ window.addEventListener("mouseup", (e) => {
 canvas.addEventListener("dblclick", (e) => {
   if (invenOpen) {
     if (e.button !== 0) return;
-    const layout = getInventoryLayout(ctx);
+    const layout = invenLayout();
     const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
     if (hovered && hovered.type === "bag") tryEquipFromBag(hovered.index);
     return;
@@ -1098,6 +1124,7 @@ function update(dt) {
   // 구역 판정 (PRD 8.0-1) - 대장간 진입 시 강화 UI 자동 오픈 + 자동 강화, 보스 타이머는 사냥터에서만 흐름
   inForge = currentMap === "hunt" && player.y <= FORGE_BOTTOM;
   uiPanel.classList.toggle("hidden", !inForge);
+  updatePanelSplit();
   if (inForge && !wasInForge) {
     if (autoEnhanceEnabled) autoEnhanceInForge();
     if (!forgeNoticeShown) {
@@ -1477,7 +1504,8 @@ function render() {
       equipment, bag, gameTime,
       mouseX: mouse.x, mouseY: mouse.y,
       totalStats, gradeFilter, pendingEquip, pendingSell, bulkSellConfirm, bulkSellGrade, bulkSellDropdownOpen,
-      inventoryHoverSlot, invenMessage, invenMessageTimer, dragState
+      inventoryHoverSlot, invenMessage, invenMessageTimer, dragState,
+      layoutOffsetX: getInventoryOffsetX()
     });
   }
 }
