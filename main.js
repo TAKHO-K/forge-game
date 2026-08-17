@@ -211,10 +211,10 @@ function applyDamageToMonster(monster, isComboHit) {
     if (monster.rareType === "sparkle") {
       const roll = Math.random();
       const chances = BALANCE.sparkleGradeChances;
-      const grade = roll < chances.primordial ? "태초"
-        : roll < chances.primordial + chances.ancient ? "고대"
-        : "유물";
-      console.log(`[반짝이 몬스터 처치] ${grade} 등급 확정 드랍 (장비 시스템 도입 전 - 로그로만 표시)`);
+      const grade = roll < chances.primordial ? "primordial"
+        : roll < chances.primordial + chances.ancient ? "ancient"
+        : "relic";
+      groundItems.push({ x: monster.x, y: monster.y, grade, part: rollItemPart(), age: 0 });
     } else if (monster.rareType === "material") {
       spawnGroundTicket(monster.x, monster.y);
     }
@@ -293,7 +293,7 @@ function performAttack() {
 let autoMode = false;
 let attackTimer = 0;
 
-// 희귀 몬스터 판정 (PRD 8.0-5) - 스폰 시점마다 판정, 반짝이 0.5% > 재료 3.5% > 일반
+// 희귀 몬스터 판정 (PRD 8.0-5) - 스폰 시점마다 판정, 반짝이 0.5% > 재료 1.5% > 일반
 function rollRareType() {
   const r = Math.random();
   if (r < BALANCE.rareSparkleChance) return "sparkle";
@@ -676,7 +676,11 @@ function handleInventoryClick(button, mx, my) {
       const item = equipment[hovered.part];
       if (!item) return;
       const emptyIndex = bag.indexOf(null);
-      if (emptyIndex === -1) return; // 가방이 꽉 차면 해제 불가
+      if (emptyIndex === -1) {
+        invenMessage = "가방이 가득 찼습니다";
+        invenMessageTimer = BALANCE.inventoryMessageDisplayTime;
+        return;
+      }
       equipment[hovered.part] = null;
       bag[emptyIndex] = item;
     }
@@ -1318,8 +1322,10 @@ function update(dt) {
       const emptyIndex = bag.indexOf(null);
       if (emptyIndex !== -1) {
         bag[emptyIndex] = { grade: item.grade, part: item.part };
-        console.log(`[장비 획득] ${ITEM_GRADES[item.grade].name} ${ITEM_PART_NAMES[item.part]}`);
         groundItems.splice(i, 1);
+      } else {
+        invenMessage = "가방이 가득 찼습니다";
+        invenMessageTimer = BALANCE.inventoryMessageDisplayTime;
       }
     }
   }
