@@ -2,6 +2,15 @@
 // core/skills.js의 범용 핸들러가 여기 effects 배열을 해석한다.
 // v1은 Q만 채운다. E는 다음 단계에서 조각 타입을 추가해 붙인다.
 const SKILLS = {
+  greatsword: {
+    Q: {
+      name: "관통돌진", cooldown: 10,
+      effects: [
+        { type: "dash", direction: "forward", distance: 220, duration: 0.3 },
+        { type: "hitOnDash", damageType: "physical" }
+      ]
+    }
+  },
   healer: {
     Q: {
       name: "치유", cooldown: 25,

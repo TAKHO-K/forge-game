@@ -24,6 +24,12 @@ let lastMoveDirY = 0;
 let selectedClass = null;
 let dealModeTimer = 0; // 힐러 딜링모드(E) 남은 시간 - 온/오프 상태만 (공격력 배율 없음)
 let qCooldownTimer = 0; // Q 스킬(PRD 4.3) 쿨다운 - 저장하지 않음(전투 중 순간 상태, dashCooldownTimer와 동일 취급)
+// Q 스킬 전용 돌진(관통돌진) 이동 상태 - Space 회피 대시(player.dashTimer)와 별도로 둔다.
+// player.dashTimer를 같이 쓰면 회피 대시의 피격 시 50% 경감(PRD엔 없는 효과)이 Q에도 묻어 들어간다.
+let qDashTimer = 0;
+let qDashDirX = 0;
+let qDashDirY = 0;
+let qDashSpeed = 0;
 let meleeSwingTimer = 0; // 대검·쌍검 스윙 이펙트 표시 타이머
 let meleeSwingAngle = 0;
 let meleeSwingSide = 0; // 0=중앙, 1=오른쪽, -1=왼쪽 (쌍검 좌우 번갈아 공격 렌더용)
@@ -141,11 +147,40 @@ function tryCastSkill() {
   if (!selectedClass || invenOpen) return;
   const skill = SKILLS[selectedClass.id] && SKILLS[selectedClass.id].Q;
   if (!skill || qCooldownTimer > 0) return;
+  let dashHitSegment = null; // dash 조각이 계산해두면 hitOnDash 조각이 같은 캐스팅 안에서 읽는다
   for (const effect of skill.effects) {
     switch (effect.type) {
       case "heal": {
         const { amount } = computeHealAmount(effect, selectedClass.healPower, selectedClass.critRate);
         player.hp = Math.min(player.maxHp, player.hp + amount);
+        break;
+      }
+      case "dash": {
+        const sign = effect.direction === "backward" ? -1 : 1;
+        qDashDirX = Math.cos(player.angle) * sign;
+        qDashDirY = Math.sin(player.angle) * sign;
+        qDashSpeed = effect.distance / effect.duration;
+        qDashTimer = effect.duration;
+        dashHitSegment = {
+          x1: player.x, y1: player.y,
+          x2: player.x + qDashDirX * effect.distance,
+          y2: player.y + qDashDirY * effect.distance
+        };
+        break;
+      }
+      case "hitOnDash": {
+        if (!dashHitSegment) break;
+        if (currentMap === "hunt") {
+          for (const monster of monsters) {
+            if (!monster.alive) continue;
+            const dist = pointSegmentDistance(monster.x, monster.y, dashHitSegment.x1, dashHitSegment.y1, dashHitSegment.x2, dashHitSegment.y2);
+            if (dist <= monster.radius + player.radius) applyDamageToMonster(monster, false);
+          }
+        }
+        if (boss && boss.alive && !bossFightFailed) {
+          const dist = pointSegmentDistance(boss.x, boss.y, dashHitSegment.x1, dashHitSegment.y1, dashHitSegment.x2, dashHitSegment.y2);
+          if (dist <= boss.radius + player.radius) applyDamageToBoss(false);
+        }
         break;
       }
     }
@@ -1112,7 +1147,13 @@ function update(dt) {
     lastMoveDirY = dy;
   }
 
-  if (player.dashTimer > 0) {
+  if (qDashTimer > 0) {
+    const step = qDashSpeed * dt;
+    player.x += qDashDirX * step;
+    player.y += qDashDirY * step;
+    qDashTimer -= dt;
+    if (qDashTimer < 0) qDashTimer = 0;
+  } else if (player.dashTimer > 0) {
     const step = (BALANCE.dashDistance / BALANCE.dashDuration) * dt;
     player.x += player.dashDirX * step;
     player.y += player.dashDirY * step;

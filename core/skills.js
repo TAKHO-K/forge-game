@@ -10,3 +10,14 @@ function computeHealAmount(effect, healPower, critRate) {
   const isCrit = !!effect.critDoubles && Math.random() < critRate;
   return { amount: isCrit ? base * 2 : base, isCrit };
 }
+
+// 점 (px,py)에서 선분 (ax,ay)-(bx,by)까지의 최단 거리 - hitOnDash 조각이
+// "돌진 경로상의 적"을 판정하는 데 쓴다
+function pointSegmentDistance(px, py, ax, ay, bx, by) {
+  const abx = bx - ax, aby = by - ay;
+  const abLenSq = abx * abx + aby * aby;
+  let t = abLenSq > 0 ? ((px - ax) * abx + (py - ay) * aby) / abLenSq : 0;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + abx * t, cy = ay + aby * t;
+  return Math.hypot(px - cx, py - cy);
+}
