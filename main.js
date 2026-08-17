@@ -30,6 +30,7 @@ let qDashTimer = 0;
 let qDashDirX = 0;
 let qDashDirY = 0;
 let qDashSpeed = 0;
+let activeBuffs = []; // { stat, magnitude, timer } - 지속시간 기반 스킬 버프. 저장하지 않음(전투 중 순간 상태)
 let meleeSwingTimer = 0; // 대검·쌍검 스윙 이펙트 표시 타이머
 let meleeSwingAngle = 0;
 let meleeSwingSide = 0; // 0=중앙, 1=오른쪽, -1=왼쪽 (쌍검 좌우 번갈아 공격 렌더용)
@@ -168,6 +169,12 @@ function tryCastSkill() {
         };
         break;
       }
+      case "buff": {
+        const magnitude = computeBuffMagnitude(effect, selectedClass.critRate);
+        activeBuffs = activeBuffs.filter((b) => b.stat !== effect.stat);
+        activeBuffs.push({ stat: effect.stat, magnitude, timer: effect.duration });
+        break;
+      }
       case "hitOnDash": {
         if (!dashHitSegment) break;
         if (currentMap === "hunt") {
@@ -260,7 +267,13 @@ function getPlayerAttack(level) {
 // 예전엔 수동 클릭에 쿨다운이 없어 연타로 무제한 공격이 가능했다(활 Q 공속 버프가
 // 수동 플레이에선 의미가 없어지는 원인이기도 했음) - 이제 둘 다 이 함수 하나를 거친다.
 function getEffectiveAttackInterval() {
-  return BALANCE.attackInterval / (equipBonuses.speedMultiplier * selectedClass.atkSpeed);
+  return BALANCE.attackInterval / (equipBonuses.speedMultiplier * selectedClass.atkSpeed * getActiveBuffMultiplier("attackSpeed", 1));
+}
+
+// activeBuffs에서 stat 하나의 배율/가산치를 조회 - 없으면 defaultValue(보너스 없음)
+function getActiveBuffMultiplier(stat, defaultValue) {
+  const buff = activeBuffs.find((b) => b.stat === stat);
+  return buff ? buff.magnitude : defaultValue;
 }
 
 // 몬스터·보스 피격 처리 - 투사체 명중과 근접 스윙 명중이 공유. isComboHit이면 comboHitMultiplier 적용 (3타 강타)
@@ -1438,6 +1451,10 @@ function update(dt) {
   if (qCooldownTimer > 0) {
     qCooldownTimer -= dt;
     if (qCooldownTimer < 0) qCooldownTimer = 0;
+  }
+  if (activeBuffs.length > 0) {
+    for (const b of activeBuffs) b.timer -= dt;
+    activeBuffs = activeBuffs.filter((b) => b.timer > 0);
   }
   if (meleeSwingTimer > 0) {
     meleeSwingTimer -= dt;

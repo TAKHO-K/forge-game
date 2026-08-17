@@ -11,6 +11,15 @@ const SKILLS = {
       ]
     }
   },
+  bow: {
+    Q: {
+      name: "속사", cooldown: 18,
+      effects: [
+        { type: "buff", stat: "attackSpeed", duration: 6,
+          formula: { base: 1.0, scaleFrom: "critChance", coefficient: 1.5, cap: 2.5 } }
+      ]
+    }
+  },
   healer: {
     Q: {
       name: "치유", cooldown: 25,

@@ -11,6 +11,15 @@ function computeHealAmount(effect, healPower, critRate) {
   return { amount: isCrit ? base * 2 : base, isCrit };
 }
 
+// buff 조각의 크기 계산 - formula가 있으면 시전 시점 스탯에서 1회 산출해 지속시간 내내
+// 고정값으로 쓴다(매 프레임 재계산 안 함). 없으면 effect.value를 그대로 쓴다.
+function computeBuffMagnitude(effect, critChance) {
+  if (!effect.formula) return effect.value;
+  const f = effect.formula;
+  const scaleStat = f.scaleFrom === "critChance" ? critChance : 0;
+  return Math.min(f.cap, f.base + scaleStat * f.coefficient);
+}
+
 // 점 (px,py)에서 선분 (ax,ay)-(bx,by)까지의 최단 거리 - hitOnDash 조각이
 // "돌진 경로상의 적"을 판정하는 데 쓴다
 function pointSegmentDistance(px, py, ax, ay, bx, by) {
