@@ -3,9 +3,10 @@
 // weaponExp: 경험치 토큰(PRD 7.1-1) 기본값의 기준. 임시로 goldDrop의 절반 수준, 추후 재조정
 // dropChance: 장비 드랍 판정(PRD 7.1) 슬롯1 확률. 전 몬스터 공통 임시값, 추후 재조정
 const MONSTERS = {
-  // 1등급
+  // 1등급 공격력은 playerDefense × 최소 직업 방어배율 이하로 유지한다
+  // (PRD 8.1 초반 안전 파밍 구간). 이 값을 넘기면 1등급이 무피해가 아니게 된다.
   larva_soft: { tier: 1, hp: 40,  defense: 0,   attack: 3,  radius: 12, color: "#a8e6a3", goldDrop: 4,  weaponExp: 2,   aggroRange: 180, dropChance: 0.25 }, // 말랑꼬물이 (물몸형)
-  larva_tank: { tier: 1, hp: 90,  defense: 4,   attack: 4,  radius: 16, color: "#6f9e4c", goldDrop: 8,  weaponExp: 4,   aggroRange: 320, dropChance: 0.25 }, // 딱딱꼬물이 (탱커형)
+  larva_tank: { tier: 1, hp: 90,  defense: 4,   attack: 3,  radius: 16, color: "#6f9e4c", goldDrop: 8,  weaponExp: 4,   aggroRange: 320, dropChance: 0.25 }, // 딱딱꼬물이 (탱커형)
 
   // 2등급
   slime_soft: { tier: 2, hp: 150, defense: 3,   attack: 7,  radius: 16, color: "#66cc99", goldDrop: 12, weaponExp: 6,   aggroRange: 180, dropChance: 0.25 }, // 물렁슬라임 (물몸형)

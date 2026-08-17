@@ -906,7 +906,8 @@ function updateEnhanceButtons() {
   enhanceBtn.disabled = gold < normalCost;
 
   enhanceHighBtn.textContent = `상급 강화 (${highCost}G) → 공격력 ${nextAttack}`;
-  enhanceHighSuccessInfo.innerHTML = successLineHTML(highProb);
+  enhanceHighSuccessInfo.innerHTML = successLineHTML(highProb) +
+    (highProb.success === baseProb.success ? ` <span class="noBenefit">이득 없음 - 일반 강화와 성공률 동일</span>` : "");
   enhanceHighProbInfo.textContent = formatFailureLine(highProb);
   enhanceHighBtn.disabled = gold < highCost;
 }
