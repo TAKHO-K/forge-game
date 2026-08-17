@@ -10,7 +10,7 @@ resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
 const player = {
-  x: canvas.width / 2, y: canvas.height / 2, radius: BALANCE.playerRadius, speed: BALANCE.playerSpeed, angle: 0,
+  x: BALANCE.huntSpawnX, y: BALANCE.huntSpawnY, radius: BALANCE.playerRadius, speed: BALANCE.playerSpeed, angle: 0,
   hp: BALANCE.playerMaxHp, maxHp: BALANCE.playerMaxHp, defense: BALANCE.playerDefense,
   iframeTimer: 0, noHitTimer: 0, regenTimer: 0,
   dashTimer: 0, dashCooldownTimer: 0, dashDirX: 1, dashDirY: 0
@@ -139,10 +139,28 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.key.toLowerCase() === "i") {
     invenOpen = !invenOpen;
-    if (!invenOpen) pendingEquip = null;
+    if (!invenOpen) {
+      pendingEquip = null;
+      pendingSell = null;
+      bulkSellConfirm = null;
+      bulkSellDropdownOpen = false;
+      inventoryHoverSlot = null;
+    }
   }
   if (e.key.toLowerCase() === "e") {
     tryActivateDealMode();
+  }
+  if (e.key === "Escape") {
+    if (invenOpen) {
+      invenOpen = false;
+      pendingEquip = null;
+      pendingSell = null;
+      bulkSellConfirm = null;
+      bulkSellDropdownOpen = false;
+      inventoryHoverSlot = null;
+    } else {
+      setSettingsOpen(!settingsOpen);
+    }
   }
 });
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
@@ -423,8 +441,32 @@ for (const grade of ITEM_GRADE_ORDER) gradeFilter[grade] = true;
 
 // 하위 등급 착용 확인창 대기 상태 - { bagIndex } 또는 null
 let pendingEquip = null;
+// 상위 등급 판매 확인창 대기 상태 - { bagIndex, message } 또는 null
+let pendingSell = null;
+// 일괄 판매 (요청사항 4) - 대상 등급 상한, 드롭다운 열림 여부, 확인창 대기 상태
+let bulkSellGrade = "normal";
+let bulkSellDropdownOpen = false;
+let bulkSellConfirm = null; // { indices, message } 또는 null
 let invenMessage = "";
 let invenMessageTimer = 0;
+
+// 장비창 호버 대상 - { type, part, index } 또는 null. 슬롯 직접 호버 우선, 아니면 직전 슬롯의
+// 툴팁(판매 버튼 포함) 위일 때만 유지 - render()에서 매 프레임 갱신되므로 클릭 시점에도 항상 최신
+let inventoryHoverSlot = null;
+
+function updateInventoryHoverSlot() {
+  const layout = getInventoryLayout(ctx);
+  const direct = findHoveredInventorySlot(layout, mouse.x, mouse.y);
+  if (direct) {
+    const item = direct.type === "equip" ? equipment[direct.part] : bag[direct.index];
+    const visible = direct.type === "equip" ? !!item : !!(item && gradeFilter[item.grade]);
+    inventoryHoverSlot = visible ? direct : null;
+    return;
+  }
+  const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot);
+  if (resolved && pointInRect(mouse.x, mouse.y, resolved.tooltip)) return; // 판매 버튼 쪽으로 이동 중 - 유지
+  inventoryHoverSlot = null;
+}
 
 // 가방 아이템 드래그 앤 드롭 - 같은 부위 슬롯에 놓아야 착용, 그 외엔 원위치 복귀 (상태 미변경으로 자연히 복귀됨)
 let dragState = null; // { bagIndex, startX, startY, dragging }
@@ -460,17 +502,140 @@ function handlePendingEquipClick(mx, my) {
   }
 }
 
+// 상위 등급(또는 고대·태초) 판매 확인 필요 여부 (요청사항 3)
+function shouldConfirmSell(item) {
+  if (item.grade === "ancient" || item.grade === "primordial") return true;
+  const equipped = equipment[item.part];
+  if (!equipped) return false;
+  return ITEM_GRADE_ORDER.indexOf(item.grade) > ITEM_GRADE_ORDER.indexOf(equipped.grade);
+}
+
+function sellBagItem(bagIndex) {
+  const item = bag[bagIndex];
+  if (!item) return;
+  gold += getItemSellValue(item);
+  bag[bagIndex] = null;
+}
+
+// 우클릭·판매 버튼 공용 판매 진입점 - 상위 등급이면 확인창 대기
+function trySellFromBag(bagIndex) {
+  const item = bag[bagIndex];
+  if (!item || !gradeFilter[item.grade]) return;
+  if (shouldConfirmSell(item)) {
+    pendingSell = { bagIndex, message: "착용 중인 장비보다 높은 등급입니다. 정말 판매할까요?" };
+    return;
+  }
+  sellBagItem(bagIndex);
+}
+
+function handlePendingSellClick(mx, my) {
+  const layout = getConfirmDialogLayout(ctx);
+  if (pointInRect(mx, my, layout.confirmBtn)) {
+    sellBagItem(pendingSell.bagIndex);
+    pendingSell = null;
+  } else if (pointInRect(mx, my, layout.cancelBtn)) {
+    pendingSell = null;
+  }
+}
+
+// 일괄 판매 대상 - 가방에 있고(착용 중인 장비는 별도 배열이라 자연히 제외), 고대·태초가 아니며, 선택 등급 이하
+function getBulkSellCandidates(maxGrade) {
+  const maxIndex = ITEM_GRADE_ORDER.indexOf(maxGrade);
+  const indices = [];
+  bag.forEach((item, index) => {
+    if (!item) return;
+    if (item.grade === "ancient" || item.grade === "primordial") return;
+    if (ITEM_GRADE_ORDER.indexOf(item.grade) <= maxIndex) indices.push(index);
+  });
+  return indices;
+}
+
+function buildBulkSellGradeLabel(maxGrade) {
+  const maxIndex = ITEM_GRADE_ORDER.indexOf(maxGrade);
+  return ITEM_GRADE_ORDER.slice(0, maxIndex + 1).map((g) => ITEM_GRADES[g].nameKo).join("·");
+}
+
+function tryBulkSell() {
+  const indices = getBulkSellCandidates(bulkSellGrade);
+  if (indices.length === 0) {
+    invenMessage = "판매할 장비가 없습니다";
+    invenMessageTimer = BALANCE.inventoryMessageDisplayTime;
+    return;
+  }
+  const total = indices.reduce((sum, i) => sum + getItemSellValue(bag[i]), 0);
+  const gradeLabel = buildBulkSellGradeLabel(bulkSellGrade);
+  bulkSellConfirm = {
+    indices,
+    message: `${gradeLabel} 장비 ${indices.length}개를 판매합니다. 총 ${total.toLocaleString()}골드. 진행할까요?`
+  };
+}
+
+function handleBulkSellConfirmClick(mx, my) {
+  const layout = getConfirmDialogLayout(ctx);
+  if (pointInRect(mx, my, layout.confirmBtn)) {
+    for (const index of bulkSellConfirm.indices) sellBagItem(index);
+    bulkSellConfirm = null;
+  } else if (pointInRect(mx, my, layout.cancelBtn)) {
+    bulkSellConfirm = null;
+  }
+}
+
 function handleInventoryClick(button, mx, my) {
   if (pendingEquip) {
     handlePendingEquipClick(mx, my);
     return;
   }
+  if (pendingSell) {
+    handlePendingSellClick(mx, my);
+    return;
+  }
+  if (bulkSellConfirm) {
+    handleBulkSellConfirmClick(mx, my);
+    return;
+  }
 
   const layout = getInventoryLayout(ctx);
+
+  // 드롭다운이 열려있으면 이 클릭은 옵션 선택 또는 닫기 전용 - 아래 다른 동작과 안 겹치게 여기서 종료
+  if (bulkSellDropdownOpen) {
+    if (button === 0) {
+      for (const opt of layout.bulkSell.options) {
+        if (pointInRect(mx, my, opt)) {
+          bulkSellGrade = opt.grade;
+          bulkSellDropdownOpen = false;
+          return;
+        }
+      }
+    }
+    bulkSellDropdownOpen = false;
+    return;
+  }
+
+  if (button === 0 && pointInRect(mx, my, layout.bulkSell.dropdown)) {
+    bulkSellDropdownOpen = true;
+    return;
+  }
+  if (button === 0 && pointInRect(mx, my, layout.bulkSell.button)) {
+    tryBulkSell();
+    return;
+  }
 
   for (const cb of layout.filterCheckboxes) {
     if (pointInRect(mx, my, cb)) {
       if (button === 0) gradeFilter[cb.grade] = !gradeFilter[cb.grade];
+      return;
+    }
+  }
+
+  if (button === 0) {
+    const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot);
+    if (resolved && pointInRect(mx, my, resolved.tooltip.sellBtn)) {
+      if (inventoryHoverSlot.type === "equip") {
+        invenMessage = "착용 중인 장비는 판매할 수 없습니다";
+        invenMessageTimer = BALANCE.inventoryMessageDisplayTime;
+      } else {
+        trySellFromBag(inventoryHoverSlot.index);
+      }
       return;
     }
   }
@@ -491,10 +656,7 @@ function handleInventoryClick(button, mx, my) {
     }
   } else if (button === 2) {
     if (hovered.type === "bag") {
-      const item = bag[hovered.index];
-      if (!item || !gradeFilter[item.grade]) return;
-      gold += getItemSellValue(item);
-      bag[hovered.index] = null;
+      trySellFromBag(hovered.index);
     } else if (hovered.type === "equip") {
       if (!equipment[hovered.part]) return;
       invenMessage = "착용 중인 장비는 판매할 수 없습니다";
@@ -513,12 +675,30 @@ const ENHANCE_RESULT_LABEL = {
 };
 
 const uiPanel = document.getElementById("ui");
-const autoEnhanceMsg = document.getElementById("autoEnhanceMsg");
+const enhanceTitle = document.getElementById("enhanceTitle");
+const activeTicketBadge = document.getElementById("activeTicketBadge");
+const autoEnhanceCheck = document.getElementById("autoEnhanceCheck");
 const enhanceBtn = document.getElementById("enhanceBtn");
-const enhanceHighBtn = document.getElementById("enhanceHighBtn");
+const enhanceSuccessInfo = document.getElementById("enhanceSuccessInfo");
 const enhanceProbInfo = document.getElementById("enhanceProbInfo");
+const enhanceHighBtn = document.getElementById("enhanceHighBtn");
+const enhanceHighSuccessInfo = document.getElementById("enhanceHighSuccessInfo");
 const enhanceHighProbInfo = document.getElementById("enhanceHighProbInfo");
 const useTicketBtn = document.getElementById("useTicketBtn");
+const settingsPanel = document.getElementById("settingsPanel");
+const settingsCloseBtn = document.getElementById("settingsCloseBtn");
+
+// 자동강화 기본값 끔 (요청사항 4) - 체크 시에만 대장간 진입 때 +10까지 자동 강화
+let autoEnhanceEnabled = false;
+autoEnhanceCheck.addEventListener("change", () => { autoEnhanceEnabled = autoEnhanceCheck.checked; });
+
+// ESC 우선순위 (요청사항 5) - 장비창 열려있으면 장비창만 닫고, 아니면 설정창 토글
+let settingsOpen = false;
+function setSettingsOpen(open) {
+  settingsOpen = open;
+  settingsPanel.classList.toggle("hidden", !open);
+}
+settingsCloseBtn.addEventListener("click", () => setSettingsOpen(false));
 const bossResultButtons = document.getElementById("bossResultButtons");
 const bossNextStageBtn = document.getElementById("bossNextStageBtn");
 const bossExitBtn = document.getElementById("bossExitBtn");
@@ -612,8 +792,8 @@ function startNextBossRun(stageIndex) {
   bossCountdownActive = false;
   bossRetryCount = 0;
   bossTimeRemaining = BALANCE.bossTimerDuration;
-  player.x = canvas.width / 2;
-  player.y = canvas.height / 2;
+  player.x = BALANCE.huntSpawnX;
+  player.y = BALANCE.huntSpawnY;
 }
 
 bossNextStageBtn.addEventListener("click", () => {
@@ -649,38 +829,51 @@ function formatFailureLine(prob) {
   return `실패 시: 유지 ${formatPercent(prob.maintain)}% / -1강 ${formatPercent(prob.down1)}% / -2강 ${formatPercent(prob.down2)}% / 초기화 ${formatPercent(prob.reset)}%`;
 }
 
+const TICKET_BOOST_LABEL = { small: "소 확률권", medium: "중 확률권", large: "대 확률권" };
+
+// 확률권 적용 전/후 성공률 표시 (요청사항 3) - boostedProb가 있으면 원래 값은 회색 취소선, 새 값은 초록 굵게
+function successLineHTML(baseProb, boostedProb) {
+  if (!boostedProb) return `성공 ${formatPercent(baseProb.success)}%`;
+  return `성공 <s>${formatPercent(baseProb.success)}%</s> → <span class="boosted">${formatPercent(boostedProb.success)}%</span>`;
+}
+
 function updateEnhanceButtons() {
-  const autoPhase = weaponLevel < BALANCE.forgeAutoMaxLevel;
-  autoEnhanceMsg.style.display = autoPhase ? "block" : "none";
-  enhanceBtn.style.display = autoPhase ? "none" : "inline-block";
-  enhanceHighBtn.style.display = autoPhase ? "none" : "inline-block";
-  enhanceProbInfo.style.display = autoPhase ? "none" : "block";
-  enhanceHighProbInfo.style.display = autoPhase ? "none" : "block";
-  if (autoPhase) return;
+  const currentAttack = Math.round(getPlayerAttack(weaponLevel));
 
   if (weaponLevel >= ENHANCE_MAX_LEVEL) {
+    enhanceTitle.textContent = `현재 +${weaponLevel} · 공격력 ${currentAttack} (최대)`;
+    activeTicketBadge.classList.remove("show");
     enhanceBtn.textContent = "일반 강화 (최대)";
     enhanceHighBtn.textContent = "상급 강화 (최대)";
     enhanceBtn.disabled = true;
     enhanceHighBtn.disabled = true;
+    enhanceSuccessInfo.textContent = "";
+    enhanceHighSuccessInfo.textContent = "";
     enhanceProbInfo.textContent = "";
     enhanceHighProbInfo.textContent = "";
     return;
   }
   const normalCost = getEnhanceCost(weaponLevel, false);
   const highCost = getEnhanceCost(weaponLevel, true);
-  const currentAttack = Math.round(getPlayerAttack(weaponLevel));
   const nextAttack = Math.round(getPlayerAttack(weaponLevel + 1));
 
   // 체크된 확률 강화권이 있으면 일반 강화 확률에 즉시 반영 (ticketBoostSelection은 체크박스 change에서 바로 갱신됨)
+  const baseProb = resolveProbability(weaponLevel, "none");
   const normalProb = resolveProbability(weaponLevel, ticketBoostSelection || "none");
   const highProb = resolveProbability(weaponLevel, "high");
 
-  enhanceBtn.textContent = `일반 강화 (${normalCost}G) · 성공 ${formatPercent(normalProb.success)}% → 공격력 ${nextAttack} (현재 ${currentAttack})`;
-  enhanceHighBtn.textContent = `상급 강화 (${highCost}G) · 성공 ${formatPercent(highProb.success)}% → 공격력 ${nextAttack} (현재 ${currentAttack})`;
+  enhanceTitle.textContent = `현재 +${weaponLevel} · 공격력 ${currentAttack}`;
+  activeTicketBadge.classList.toggle("show", !!ticketBoostSelection);
+  if (ticketBoostSelection) activeTicketBadge.textContent = `${TICKET_BOOST_LABEL[ticketBoostSelection]} 적용 중`;
+
+  enhanceBtn.textContent = `일반 강화 (${normalCost}G) → 공격력 ${nextAttack}`;
+  enhanceSuccessInfo.innerHTML = successLineHTML(baseProb, ticketBoostSelection ? normalProb : null);
   enhanceProbInfo.textContent = formatFailureLine(normalProb);
-  enhanceHighProbInfo.textContent = formatFailureLine(highProb);
   enhanceBtn.disabled = gold < normalCost;
+
+  enhanceHighBtn.textContent = `상급 강화 (${highCost}G) → 공격력 ${nextAttack}`;
+  enhanceHighSuccessInfo.innerHTML = successLineHTML(highProb);
+  enhanceHighProbInfo.textContent = formatFailureLine(highProb);
   enhanceHighBtn.disabled = gold < highCost;
 }
 
@@ -688,7 +881,7 @@ canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 canvas.addEventListener("mousedown", (e) => {
   if (invenOpen) {
-    if (e.button === 0 && !pendingEquip) {
+    if (e.button === 0 && !pendingEquip && !pendingSell && !bulkSellConfirm && !bulkSellDropdownOpen) {
       const layout = getInventoryLayout(ctx);
       const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
       if (hovered && hovered.type === "bag") {
@@ -851,8 +1044,8 @@ function update(dt) {
 
         if (player.hp <= 0) {
           player.hp = player.maxHp;
-          player.x = canvas.width / 2;
-          player.y = canvas.height / 2;
+          player.x = BALANCE.huntSpawnX;
+          player.y = BALANCE.huntSpawnY;
           player.iframeTimer = BALANCE.playerIframeDuration;
           player.dashTimer = 0;
         }
@@ -906,7 +1099,7 @@ function update(dt) {
   inForge = currentMap === "hunt" && player.y <= FORGE_BOTTOM;
   uiPanel.classList.toggle("hidden", !inForge);
   if (inForge && !wasInForge) {
-    autoEnhanceInForge();
+    if (autoEnhanceEnabled) autoEnhanceInForge();
     if (!forgeNoticeShown) {
       forgeNoticeShown = true;
       forgeNoticeTimer = BALANCE.forgeNoticeDuration;
@@ -1173,8 +1366,8 @@ function update(dt) {
     // 사냥터로 복귀 (PRD 8.0-6)
     currentMap = "hunt";
     boss = null;
-    player.x = canvas.width / 2;
-    player.y = canvas.height / 2;
+    player.x = BALANCE.huntSpawnX;
+    player.y = BALANCE.huntSpawnY;
   }
 
   // 보스 실패 판정 (PRD 9.4) - 재도전 2회까지 3분 추가 파밍 후 자동 재시작
@@ -1193,8 +1386,8 @@ function update(dt) {
     // 사냥터로 복귀 (PRD 8.0-6)
     currentMap = "hunt";
     boss = null;
-    player.x = canvas.width / 2;
-    player.y = canvas.height / 2;
+    player.x = BALANCE.huntSpawnX;
+    player.y = BALANCE.huntSpawnY;
   }
 
   if (bossResultState === "lost" && bossResultAutoHideTimer > 0) {
@@ -1263,9 +1456,9 @@ function render() {
   drawAutoIndicator(ctx, autoMode);
   if (currentMap === "hunt") drawOffscreenIndicators(ctx, camera, monsters);
   if (currentMap === "hunt") drawBossTimer(ctx, bossTimeRemaining, player.y <= FORGE_BOTTOM);
-  if (forgeNoticeTimer > 0) drawForgeNotice(ctx, FORGE_NOTICE_TEXT, 56);
-  if (invenNoticeTimer > 0) drawForgeNotice(ctx, INVENTORY_NOTICE_TEXT, 78);
-  if (ticketNoticeTimer > 0) drawForgeNotice(ctx, ticketNoticeText, 100);
+  if (forgeNoticeTimer > 0) drawForgeNotice(ctx, FORGE_NOTICE_TEXT, 110);
+  if (invenNoticeTimer > 0) drawForgeNotice(ctx, INVENTORY_NOTICE_TEXT, 132);
+  if (ticketNoticeTimer > 0) drawForgeNotice(ctx, ticketNoticeText, 154);
   if (bossCountdownActive) drawBossCountdown(ctx, Math.ceil(bossCountdownTimer));
   if (boss) {
     drawBossHealthBar(ctx, boss);
@@ -1278,11 +1471,13 @@ function render() {
   drawPlayerHealthBar(ctx, player.hp, player.maxHp, gameTime);
   drawDashCooldown(ctx, player.dashCooldownTimer, BALANCE.dashCooldown);
   if (invenOpen) {
+    updateInventoryHoverSlot();
     const totalStats = { attack: totalAttack, defense: Math.round(player.defense), speed: Math.round(player.speed) };
     drawInventory(ctx, {
       equipment, bag, gameTime,
       mouseX: mouse.x, mouseY: mouse.y,
-      totalStats, gradeFilter, pendingEquip, invenMessage, invenMessageTimer, dragState
+      totalStats, gradeFilter, pendingEquip, pendingSell, bulkSellConfirm, bulkSellGrade, bulkSellDropdownOpen,
+      inventoryHoverSlot, invenMessage, invenMessageTimer, dragState
     });
   }
 }

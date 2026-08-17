@@ -4,8 +4,10 @@ function getItemStatValue(item) {
   return ITEM_PART_BASE_STAT[item.part].base * ITEM_GRADES[item.grade].multiplier;
 }
 
+// 판매가 = 기본가 × 등급배율 × (1 + 강화단계×0.3) - enhanceLevel은 장비 강화(7.5, 미구현) 도입 전까지 항상 0
 function getItemSellValue(item) {
-  return Math.round(BALANCE.itemBaseSellValue * ITEM_GRADES[item.grade].multiplier);
+  const enhanceLevel = item.enhanceLevel || 0;
+  return Math.round(BALANCE.itemBaseSellValue * ITEM_GRADES[item.grade].sellMultiplier * (1 + enhanceLevel * 0.3));
 }
 
 // 착용 장비 3부위 합산 보너스 - defenseBonus는 가산, attack/speed는 배율(1 = 보너스 없음)

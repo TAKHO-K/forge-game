@@ -32,6 +32,8 @@ const BALANCE = {
   mapWidth: 2400,
   mapHeight: 1600,
   wallThickness: 20,
+  huntSpawnX: 1200, // 사냥터 시작·리스폰 좌표 (맵 기준) - 화면 크기와 무관해야 창을 줄여도 대장간 안에서 리스폰되지 않음
+  huntSpawnY: 600,
   aggroRange: 250,
   leashRange: 400,
   returnSpeed: 120,
@@ -72,7 +74,7 @@ const BALANCE = {
   expTokenHomingSpeed: 300,
   expTokenScatterRadius: 40,
   expTokenCountByTier: [[1, 1], [1, 2], [1, 2], [1, 3], [2, 3], [2, 3]],
-  itemBaseSellValue: 10,
+  itemBaseSellValue: 50,
   inventoryMessageDisplayTime: 2
 };
 

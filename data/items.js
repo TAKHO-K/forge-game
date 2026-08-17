@@ -2,16 +2,21 @@
 
 // 장비 등급 7단계 (7.0) - color는 바닥 드랍 표시에 사용, multiplier는 장비 스탯 계산에 쓸 예정(미구현)
 // 고대·태초는 enhanceable:false - 장비 강화 시스템은 아직 미구현(7.5)
+// nameKo: 판매 UI(툴팁·일괄판매)에서만 사용 - 기존 표시용 name(영문)은 그대로 둠
+// sellMultiplier: 판매가 전용 등급배율(7.6) - 스탯 계산용 multiplier와는 별개 수치
 const ITEM_GRADES = {
-  normal:     { name: "Common",    color: "#e6e6e6", multiplier: 1.0,  enhanceable: true },
-  rare:       { name: "Rare",      color: "#4da6ff", multiplier: 1.4,  enhanceable: true },
-  epic:       { name: "Epic",      color: "#a64dff", multiplier: 2.0,  enhanceable: true },
-  legendary:  { name: "Legendary", color: "#ff9933", multiplier: 3.0,  enhanceable: true },
-  relic:      { name: "Relic",     color: "#ffd700", multiplier: 4.5,  enhanceable: true },
-  ancient:    { name: "Ancient",   color: "#e0393e", multiplier: 8.0,  enhanceable: false },
-  primordial: { name: "Primordial", color: "rainbow", multiplier: 15.0, enhanceable: false } // color:"rainbow" -> 렌더에서 hue 순환 처리
+  normal:     { name: "Common",    nameKo: "일반", color: "#e6e6e6", multiplier: 1.0,  sellMultiplier: 1,  enhanceable: true },
+  rare:       { name: "Rare",      nameKo: "희귀", color: "#4da6ff", multiplier: 1.4,  sellMultiplier: 2,  enhanceable: true },
+  epic:       { name: "Epic",      nameKo: "영웅", color: "#a64dff", multiplier: 2.0,  sellMultiplier: 4,  enhanceable: true },
+  legendary:  { name: "Legendary", nameKo: "전설", color: "#ff9933", multiplier: 3.0,  sellMultiplier: 8,  enhanceable: true },
+  relic:      { name: "Relic",     nameKo: "유물", color: "#ffd700", multiplier: 4.5,  sellMultiplier: 16, enhanceable: true },
+  ancient:    { name: "Ancient",   nameKo: "고대", color: "#e0393e", multiplier: 8.0,  sellMultiplier: 35, enhanceable: false },
+  primordial: { name: "Primordial", nameKo: "태초", color: "rainbow", multiplier: 15.0, sellMultiplier: 80, enhanceable: false } // color:"rainbow" -> 렌더에서 hue 순환 처리
 };
 const ITEM_GRADE_ORDER = ["normal", "rare", "epic", "legendary", "relic", "ancient", "primordial"];
+
+// 일괄 판매 대상 등급 (7.4 근처) - 고대·태초는 항상 제외
+const BULK_SELLABLE_GRADES = ITEM_GRADE_ORDER.filter((g) => g !== "ancient" && g !== "primordial");
 
 // 장비 부위 (7.3) - 드랍 시점엔 등급만 노출, 부위는 주운 뒤 확인 (7.1)
 const ITEM_PARTS = ["armor", "gloves", "shoes"];

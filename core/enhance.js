@@ -24,14 +24,20 @@ function calcFixedSuccessProbability(prob, fixedSuccess) {
 }
 
 // boostType: "none" | "high" | "small" | "medium" | "large" - 확률권 3종은 상급 강화·서로 간 중복 불가라 한 번에 하나만 적용
+// 보정 결과가 기본 확률보다 낮으면 기본 확률을 그대로 쓴다 - 상한(90%)이나 고정값(대 확률권 50%)이
+// 저단계 기본 성공률(92%)보다 낮아, 그대로 두면 "보정"이 성공률을 깎는 페널티가 된다
 function resolveProbability(level, boostType) {
   const prob = ENHANCE_PROBABILITY[level];
-  if (boostType === "high") return calcBoostedProbability(prob, ENHANCE_HIGH_SUCCESS_MULTIPLIER, ENHANCE_HIGH_SUCCESS_CAP);
+  if (boostType === "high") return keepBetter(prob, calcBoostedProbability(prob, ENHANCE_HIGH_SUCCESS_MULTIPLIER, ENHANCE_HIGH_SUCCESS_CAP));
   const ticketBoost = ENHANCE_TICKET_BOOST[boostType];
   if (!ticketBoost) return prob;
-  return ticketBoost.fixedSuccess !== undefined
+  return keepBetter(prob, ticketBoost.fixedSuccess !== undefined
     ? calcFixedSuccessProbability(prob, ticketBoost.fixedSuccess)
-    : calcBoostedProbability(prob, ticketBoost.multiplier, ticketBoost.cap);
+    : calcBoostedProbability(prob, ticketBoost.multiplier, ticketBoost.cap));
+}
+
+function keepBetter(prob, boosted) {
+  return boosted.success >= prob.success ? boosted : prob;
 }
 
 // 강화 판정

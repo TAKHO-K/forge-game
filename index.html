@@ -8,16 +8,29 @@
   html, body { margin: 0; padding: 0; background: #111; height: 100%; overflow: hidden; }
   #gameWrap { position: relative; width: 100vw; height: 100vh; }
   canvas { display: block; background: #222; }
-  #ui { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; justify-content: center; align-items: center; gap: 10px; padding: 10px; }
+
+  /* 강화 패널 - 화면 중앙 모달. 체력바·대시 쿨다운(캔버스, 하단 중앙)과 겹치지 않도록 분리 */
+  #ui { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    background: rgba(15,15,15,0.94); border: 2px solid #777; border-radius: 10px;
+    padding: 20px 24px; width: 440px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
   #ui.hidden { display: none; }
-  #enhanceBtn, #enhanceHighBtn, #useTicketBtn { font-size: 16px; padding: 8px 16px; }
-  .enhanceCol { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .enhanceProbText { font-size: 11px; color: #ccc; }
-  #autoEnhanceMsg { display: none; font-size: 14px; color: #ffe066; }
+  #enhanceTitle { font-size: 22px; font-weight: bold; color: #ffe066; text-align: center; }
+  #activeTicketBadge { display: none; align-self: center; font-size: 13px; color: #111; background: #4dd97e;
+    border-radius: 12px; padding: 3px 12px; font-weight: bold; }
+  #activeTicketBadge.show { display: inline-block; }
+  .enhanceDivider { border: none; border-top: 1px solid #555; margin: 2px 0; }
+  .autoEnhanceRow { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #ccc; }
+  .enhanceRow { display: flex; flex-direction: column; gap: 3px; }
+  .enhanceRow button, #useTicketBtn { font-size: 16px; padding: 10px 12px; width: 100%; box-sizing: border-box; text-align: left; }
+  .enhanceSuccessLine { font-size: 14px; color: #ddd; padding-left: 2px; }
+  .enhanceSuccessLine s { color: #888; margin-right: 6px; }
+  .enhanceSuccessLine .boosted { color: #4dd97e; font-weight: bold; }
+  .enhanceProbText { font-size: 12px; color: #aaa; padding-left: 2px; }
+  .ticketCheckRow { display: flex; gap: 14px; flex-wrap: wrap; }
+  .ticketCheckRow label { font-size: 13px; color: #fff; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .ticketCheckRow label:has(input:disabled) { opacity: 0.4; }
   #useTicketBtn { display: none; }
-  #ticketBoostGroup { display: flex; gap: 8px; }
-  #ticketBoostGroup label { font-size: 13px; color: #fff; display: flex; align-items: center; gap: 3px; }
-  #ticketBoostGroup label:has(input:disabled) { opacity: 0.4; }
+
   #bossResultButtons { position: absolute; left: 50%; top: 70%; transform: translate(-50%, -50%); display: flex; gap: 10px; }
   #bossResultButtons.hidden { display: none; }
   #bossResultButtons button { font-size: 16px; padding: 8px 16px; }
@@ -33,6 +46,12 @@
   .classBtn:hover { border-color: #ffe066; }
   .classBtn strong { font-size: 18px; }
   .classBtn span { font-size: 12px; color: #ccc; }
+
+  #settingsPanel { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9; }
+  #settingsPanel.hidden { display: none; }
+  #settingsPanel .box { background: #1a1a1a; border: 2px solid #ffe066; border-radius: 8px; padding: 24px 32px; text-align: center; color: #fff; }
+  #settingsPanel h2 { margin: 0 0 12px; color: #ffe066; }
+  #settingsPanel button { font-size: 14px; padding: 6px 14px; margin-top: 16px; }
 </style>
 </head>
 <body>
@@ -45,25 +64,41 @@
   </div>
 </div>
 <div id="ui" class="hidden">
-  <div id="autoEnhanceMsg">자동 강화 진행 중 (+10까지)</div>
-  <div class="enhanceCol">
+  <div id="enhanceTitle"></div>
+  <div id="activeTicketBadge"></div>
+  <hr class="enhanceDivider">
+  <label class="autoEnhanceRow"><input type="checkbox" id="autoEnhanceCheck"><span>10강까지 자동 강화</span></label>
+  <div class="enhanceRow">
     <button id="enhanceBtn">일반 강화</button>
+    <div id="enhanceSuccessInfo" class="enhanceSuccessLine"></div>
     <div id="enhanceProbInfo" class="enhanceProbText"></div>
   </div>
-  <div class="enhanceCol">
+  <div class="enhanceRow">
     <button id="enhanceHighBtn">상급 강화</button>
+    <div id="enhanceHighSuccessInfo" class="enhanceSuccessLine"></div>
     <div id="enhanceHighProbInfo" class="enhanceProbText"></div>
   </div>
-  <div id="ticketBoostGroup">
+  <hr class="enhanceDivider">
+  <div class="ticketCheckRow">
     <label><input type="checkbox" id="ticketSmallCheck"><span id="ticketSmallLabel">소 확률권 (0개)</span></label>
     <label><input type="checkbox" id="ticketMediumCheck"><span id="ticketMediumLabel">중 확률권 (0개)</span></label>
     <label><input type="checkbox" id="ticketLargeCheck"><span id="ticketLargeLabel">대 확률권 (0개)</span></label>
+  </div>
+  <div class="ticketCheckRow">
+    <label><input type="checkbox" id="ticketDestroyPreventCheck" disabled><span>파괴방지권 (0개)</span></label>
   </div>
   <button id="useTicketBtn">확정 강화권 사용</button>
 </div>
 <div id="classSelect">
   <h1>직업 선택</h1>
   <div id="classSelectButtons"></div>
+</div>
+<div id="settingsPanel" class="hidden">
+  <div class="box">
+    <h2>설정</h2>
+    <div>준비 중입니다</div>
+    <button id="settingsCloseBtn">닫기</button>
+  </div>
 </div>
 <script src="data/balance.js"></script>
 <script src="data/monsters.js"></script>

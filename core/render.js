@@ -270,6 +270,9 @@ function drawEnhanceInfo(ctx, weaponLevel, resultText, resultTimer, gold, totalA
   }
 }
 
+// 던전 선택 버튼(top:8px, HTML) 아래 20px 여백을 두고 표시 (상단 중앙 레이아웃)
+const BOSS_TIMER_Y = 54;
+
 function drawBossTimer(ctx, timeRemaining, isPaused) {
   const minutes = Math.floor(timeRemaining / 60);
   const seconds = Math.floor(timeRemaining % 60);
@@ -279,11 +282,11 @@ function drawBossTimer(ctx, timeRemaining, isPaused) {
   ctx.textBaseline = "top";
   ctx.fillStyle = isPaused ? "#888888" : "#ffe066";
   ctx.font = "bold 24px sans-serif";
-  ctx.fillText(text, ctx.canvas.width / 2, 10);
+  ctx.fillText(text, ctx.canvas.width / 2, BOSS_TIMER_Y);
 
   if (isPaused) {
     ctx.font = "12px sans-serif";
-    ctx.fillText("대장간 - 정지", ctx.canvas.width / 2, 36);
+    ctx.fillText("대장간 - 정지", ctx.canvas.width / 2, BOSS_TIMER_Y + 26);
   }
 }
 
@@ -565,9 +568,28 @@ function getInventoryLayout(ctx) {
     });
   }
 
+  // 일괄 판매 (요청사항 4) - 패널 우측 상단, 등급 드롭다운 + 버튼
+  const bulkSellY = py + 14;
+  const bulkSellBtnW = 150;
+  const bulkSellDropdownW = 90;
+  const bulkSellGap = 8;
+  const bulkSellRight = px + panelW - 16;
+  const bulkSellButton = { x: bulkSellRight - bulkSellBtnW, y: bulkSellY, w: bulkSellBtnW, h: 22 };
+  const bulkSellDropdown = {
+    x: bulkSellButton.x - bulkSellGap - bulkSellDropdownW, y: bulkSellY, w: bulkSellDropdownW, h: 22
+  };
+  const bulkSellOptions = BULK_SELLABLE_GRADES.map((grade, i) => ({
+    grade,
+    x: bulkSellDropdown.x,
+    y: bulkSellDropdown.y + bulkSellDropdown.h + 2 + i * 24,
+    w: bulkSellDropdown.w,
+    h: 22
+  }));
+
   return {
     px, py, panelW, panelH,
     filterCheckboxes, equipSlots, bagSlots,
+    bulkSell: { button: bulkSellButton, dropdown: bulkSellDropdown, options: bulkSellOptions },
     statsY: py + panelH - 70,
     messageY: py + panelH - 44
   };
@@ -610,7 +632,17 @@ function buildEffectSegments(item, comparisonItem) {
   ];
 }
 
-function drawItemTooltip(ctx, item, mx, my, gameTime, comparisonItem) {
+// 판매가 한 줄 - 강화 보정(item.enhanceLevel, 7.5 미구현 전까지 항상 0)이 있으면 보정 포함 문구 추가
+function buildSellText(item) {
+  const price = getItemSellValue(item);
+  const level = item.enhanceLevel || 0;
+  const suffix = level > 0 ? ` (+${level}강 보정 포함)` : "";
+  return `판매가: ${price.toLocaleString()}G${suffix}`;
+}
+
+// 툴팁 레이아웃 - anchorSlot(장비창 슬롯 rect)에 붙여서 위치를 고정, 마우스를 따라다니지 않게 함
+// (마우스를 따라다니면 판매 버튼 쪽으로 마우스를 움직이는 동안 버튼도 같이 밀려나 클릭 불가능해짐)
+function getItemTooltipLayout(ctx, item, anchorSlot, comparisonItem) {
   const grade = ITEM_GRADES[item.grade];
   const plainLines = [
     `${grade.name} ${ITEM_PART_NAMES[item.part]}`,
@@ -618,40 +650,94 @@ function drawItemTooltip(ctx, item, mx, my, gameTime, comparisonItem) {
     `부위: ${ITEM_PART_NAMES[item.part]}`
   ];
   const effectSegments = buildEffectSegments(item, comparisonItem);
+  const sellText = buildSellText(item);
 
   ctx.save();
   ctx.font = "13px sans-serif";
   const padding = 8;
   const lineHeight = 18;
+  const btnW = 56;
+  const btnH = 22;
+  const btnGap = 10;
   const effectLineWidth = effectSegments.reduce((sum, seg) => sum + ctx.measureText(seg.text).width, 0);
-  const boxW = Math.max(...plainLines.map((l) => ctx.measureText(l).width), effectLineWidth) + padding * 2;
-  const boxH = lineHeight * (plainLines.length + 1) + padding * 2;
-  let tx = mx + 16;
-  let ty = my + 16;
-  if (tx + boxW > ctx.canvas.width) tx = mx - boxW - 16;
-  if (ty + boxH > ctx.canvas.height) ty = my - boxH - 16;
+  const sellRowWidth = ctx.measureText(sellText).width + btnGap + btnW;
+  const boxW = Math.max(...plainLines.map((l) => ctx.measureText(l).width), effectLineWidth, sellRowWidth) + padding * 2;
+  const boxH = lineHeight * (plainLines.length + 2) + padding * 2;
+  ctx.restore();
 
+  let x = anchorSlot.x + anchorSlot.w + 8;
+  let y = anchorSlot.y;
+  if (x + boxW > ctx.canvas.width) x = anchorSlot.x - boxW - 8;
+  if (y + boxH > ctx.canvas.height) y = ctx.canvas.height - boxH - 8;
+  if (y < 0) y = 0;
+
+  const sellY = y + padding + (plainLines.length + 1) * lineHeight;
+  const sellBtn = { x: x + boxW - padding - btnW, y: sellY - 3, w: btnW, h: btnH };
+
+  return { x, y, w: boxW, h: boxH, padding, lineHeight, plainLines, effectSegments, sellText, sellBtn };
+}
+
+function drawItemTooltip(ctx, item, layout, gameTime, isEquipped) {
+  const { x, y, w, h, padding, lineHeight, plainLines, effectSegments, sellText, sellBtn } = layout;
+
+  ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.92)";
-  ctx.fillRect(tx, ty, boxW, boxH);
+  ctx.fillRect(x, y, w, h);
   ctx.strokeStyle = resolveGradeColor(item.grade, gameTime);
   ctx.lineWidth = 1.5;
-  ctx.strokeRect(tx, ty, boxW, boxH);
+  ctx.strokeRect(x, y, w, h);
 
+  ctx.font = "13px sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   plainLines.forEach((line, i) => {
     ctx.fillStyle = i === 0 ? resolveGradeColor(item.grade, gameTime) : "#ffffff";
-    ctx.fillText(line, tx + padding, ty + padding + i * lineHeight);
+    ctx.fillText(line, x + padding, y + padding + i * lineHeight);
   });
 
-  let segX = tx + padding;
-  const segY = ty + padding + plainLines.length * lineHeight;
+  let segX = x + padding;
+  const segY = y + padding + plainLines.length * lineHeight;
   for (const seg of effectSegments) {
     ctx.fillStyle = seg.color;
     ctx.fillText(seg.text, segX, segY);
     segX += ctx.measureText(seg.text).width;
   }
+
+  const sellY = y + padding + (plainLines.length + 1) * lineHeight;
+  ctx.fillStyle = "#ffe066";
+  ctx.fillText(sellText, x + padding, sellY);
+
+  const btnColor = isEquipped ? "#666666" : "#4dd97e";
+  ctx.fillStyle = "#222222";
+  ctx.fillRect(sellBtn.x, sellBtn.y, sellBtn.w, sellBtn.h);
+  ctx.strokeStyle = btnColor;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(sellBtn.x, sellBtn.y, sellBtn.w, sellBtn.h);
+  ctx.fillStyle = btnColor;
+  ctx.font = "bold 12px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("판매", sellBtn.x + sellBtn.w / 2, sellBtn.y + sellBtn.h / 2 + 1);
   ctx.restore();
+}
+
+// 마우스가 슬롯 위 또는 그 슬롯의 툴팁(판매 버튼 포함) 위에 있으면 호버로 판정 -
+// 툴팁이 슬롯에 고정돼 있으므로 버튼까지 마우스를 이동해도 호버가 끊기지 않음
+// hoverSlot({type,part,index})의 아이템·툴팁 레이아웃을 계산 - 그리기(drawInventory)와
+// 클릭 판정(main.js handleInventoryClick)이 같은 결과를 쓰도록 공유. hoverSlot 자체는 main.js가
+// 프레임마다 갱신하는 "sticky" 상태(장비창 호버 상태 참고) - 여기서는 매 슬롯을 다시 스캔하지 않음
+// (모든 슬롯의 툴팁 영역을 매번 검사하면, 착용 슬롯처럼 화면에 고정된 툴팁이 그 아래 가방 칸과
+// 겹쳐서 엉뚱한 아이템의 툴팁이 뜨는 문제가 있었음)
+function resolveHoveredTooltip(ctx, layout, equipment, bag, hoverSlot) {
+  if (!hoverSlot) return null;
+  const item = hoverSlot.type === "equip" ? equipment[hoverSlot.part] : bag[hoverSlot.index];
+  if (!item) return null;
+  const slotRect = hoverSlot.type === "equip"
+    ? layout.equipSlots.find((s) => s.part === hoverSlot.part)
+    : layout.bagSlots[hoverSlot.index];
+  const comparisonItem = hoverSlot.type === "bag" ? equipment[item.part] : null;
+  const tooltip = getItemTooltipLayout(ctx, item, slotRect, comparisonItem);
+  return { item, tooltip, isEquipped: hoverSlot.type === "equip" };
 }
 
 function wrapText(ctx, text, cx, y, maxWidth, lineHeight) {
@@ -691,7 +777,7 @@ function getConfirmDialogLayout(ctx) {
   };
 }
 
-function drawConfirmDialog(ctx, message) {
+function drawConfirmDialog(ctx, message, confirmLabel = "착용", confirmColor = "#4dd97e") {
   const layout = getConfirmDialogLayout(ctx);
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.6)";
@@ -721,7 +807,7 @@ function drawConfirmDialog(ctx, message) {
     ctx.textBaseline = "middle";
     ctx.fillText(label, btn.x + btn.w / 2, btn.y + btn.h / 2);
   };
-  drawBtn(layout.confirmBtn, "착용", "#4dd97e");
+  drawBtn(layout.confirmBtn, confirmLabel, confirmColor);
   drawBtn(layout.cancelBtn, "취소", "#ff5c5c");
   ctx.restore();
 }
@@ -750,7 +836,11 @@ function drawDragGhost(ctx, item, mx, my, gameTime) {
 
 // 장비창 (PRD 7.3) - 왼쪽 착용 슬롯 3개 + 오른쪽 가방 20칸(등급 필터 적용), 하단 총 스탯, 호버 툴팁
 function drawInventory(ctx, state) {
-  const { equipment, bag, gameTime, mouseX, mouseY, totalStats, gradeFilter, pendingEquip, invenMessage, invenMessageTimer, dragState } = state;
+  const {
+    equipment, bag, gameTime, mouseX, mouseY, totalStats, gradeFilter,
+    pendingEquip, pendingSell, bulkSellConfirm, bulkSellGrade, bulkSellDropdownOpen, inventoryHoverSlot,
+    invenMessage, invenMessageTimer, dragState
+  } = state;
   const layout = getInventoryLayout(ctx);
   const { px, py, panelW, panelH } = layout;
   const draggedItem = dragState && dragState.dragging ? bag[dragState.bagIndex] : null;
@@ -782,6 +872,28 @@ function drawInventory(ctx, state) {
     ctx.textBaseline = "middle";
     ctx.fillText(ITEM_GRADES[cb.grade].name, cb.x + cb.w + 4, cb.y + cb.h / 2 + 1);
   }
+
+  // 일괄 판매 (요청사항 4)
+  const bs = layout.bulkSell;
+  ctx.fillStyle = "#222222";
+  ctx.fillRect(bs.dropdown.x, bs.dropdown.y, bs.dropdown.w, bs.dropdown.h);
+  ctx.strokeStyle = "#888888";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(bs.dropdown.x, bs.dropdown.y, bs.dropdown.w, bs.dropdown.h);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "12px sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`${ITEM_GRADES[bulkSellGrade].nameKo} ▼`, bs.dropdown.x + 8, bs.dropdown.y + bs.dropdown.h / 2 + 1);
+
+  ctx.fillStyle = "#333333";
+  ctx.fillRect(bs.button.x, bs.button.y, bs.button.w, bs.button.h);
+  ctx.strokeStyle = "#ffe066";
+  ctx.strokeRect(bs.button.x, bs.button.y, bs.button.w, bs.button.h);
+  ctx.fillStyle = "#ffe066";
+  ctx.font = "bold 12px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("이 등급 이하 전부 판매", bs.button.x + bs.button.w / 2, bs.button.y + bs.button.h / 2 + 1);
 
   for (const slot of layout.equipSlots) {
     const item = equipment[slot.part];
@@ -818,6 +930,22 @@ function drawInventory(ctx, state) {
     }
   }
 
+  // 펼친 드롭다운 목록은 슬롯 위로 겹치므로 슬롯을 다 그린 뒤에 그린다 (먼저 그리면 아래쪽 옵션이 가방 칸에 덮인다)
+  if (bulkSellDropdownOpen) {
+    for (const opt of bs.options) {
+      ctx.fillStyle = opt.grade === bulkSellGrade ? "#3a3a3a" : "#222222";
+      ctx.fillRect(opt.x, opt.y, opt.w, opt.h);
+      ctx.strokeStyle = "#666666";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(opt.x, opt.y, opt.w, opt.h);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "12px sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(ITEM_GRADES[opt.grade].nameKo, opt.x + 8, opt.y + opt.h / 2 + 1);
+    }
+  }
+
   ctx.fillStyle = "#ffe066";
   ctx.font = "14px sans-serif";
   ctx.textAlign = "left";
@@ -835,15 +963,10 @@ function drawInventory(ctx, state) {
   }
   ctx.restore();
 
-  if (!pendingEquip && !draggedItem) {
-    const hovered = findHoveredInventorySlot(layout, mouseX, mouseY);
-    if (hovered) {
-      const item = hovered.type === "equip" ? equipment[hovered.part] : bag[hovered.index];
-      const visible = hovered.type === "equip" ? !!item : !!(item && gradeFilter[item.grade]);
-      if (visible) {
-        const comparisonItem = hovered.type === "bag" ? equipment[item.part] : null;
-        drawItemTooltip(ctx, item, mouseX, mouseY, gameTime, comparisonItem);
-      }
+  if (!pendingEquip && !pendingSell && !bulkSellConfirm && !draggedItem && !bulkSellDropdownOpen) {
+    const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot);
+    if (resolved) {
+      drawItemTooltip(ctx, resolved.item, resolved.tooltip, gameTime, resolved.isEquipped);
     }
   }
 
@@ -853,5 +976,9 @@ function drawInventory(ctx, state) {
 
   if (pendingEquip) {
     drawConfirmDialog(ctx, "현재 착용중인 장비보다 낮은 등급입니다. 착용할까요?");
+  } else if (pendingSell) {
+    drawConfirmDialog(ctx, pendingSell.message, "판매", "#ff5c5c");
+  } else if (bulkSellConfirm) {
+    drawConfirmDialog(ctx, bulkSellConfirm.message, "판매", "#ff5c5c");
   }
 }
