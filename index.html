@@ -52,7 +52,13 @@
   #settingsPanel.hidden { display: none; }
   #settingsPanel .box { background: #1a1a1a; border: 2px solid #ffe066; border-radius: 8px; padding: 24px 32px; text-align: center; color: #fff; }
   #settingsPanel h2 { margin: 0 0 12px; color: #ffe066; }
-  #settingsPanel button { font-size: 14px; padding: 6px 14px; margin-top: 16px; }
+  #settingsPanel button { font-size: 14px; padding: 6px 14px; margin-top: 16px; display: block; width: 100%; box-sizing: border-box; }
+  #saveSummary { font-size: 13px; color: #ccc; margin: 4px 0 8px; }
+
+  #saveNotice { position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(40,20,20,0.95); border: 1px solid #ff6b6b; border-radius: 6px;
+    padding: 8px 16px; color: #fff; font-size: 14px; z-index: 20; }
+  #saveNotice.hidden { display: none; }
 </style>
 </head>
 <body>
@@ -97,10 +103,12 @@
 <div id="settingsPanel" class="hidden">
   <div class="box">
     <h2>설정</h2>
-    <div>준비 중입니다</div>
+    <div id="saveSummary"></div>
+    <button id="deleteSaveBtn">저장 삭제 후 처음부터</button>
     <button id="settingsCloseBtn">닫기</button>
   </div>
 </div>
+<div id="saveNotice" class="hidden"></div>
 <script src="data/balance.js"></script>
 <script src="data/monsters.js"></script>
 <script src="data/enhance.js"></script>
@@ -113,6 +121,7 @@
 <script src="core/weaponExp.js"></script>
 <script src="core/loot.js"></script>
 <script src="core/equipment.js"></script>
+<script src="core/save.js"></script>
 <script src="main.js"></script>
 </body>
 </html>

@@ -721,6 +721,8 @@ const enhanceHighProbInfo = document.getElementById("enhanceHighProbInfo");
 const useTicketBtn = document.getElementById("useTicketBtn");
 const settingsPanel = document.getElementById("settingsPanel");
 const settingsCloseBtn = document.getElementById("settingsCloseBtn");
+const saveSummaryEl = document.getElementById("saveSummary");
+const deleteSaveBtn = document.getElementById("deleteSaveBtn");
 
 // 자동강화 기본값 끔 (요청사항 4) - 체크 시에만 대장간 진입 때 +10까지 자동 강화
 let autoEnhanceEnabled = false;
@@ -728,11 +730,37 @@ autoEnhanceCheck.addEventListener("change", () => { autoEnhanceEnabled = autoEnh
 
 // ESC 우선순위 (요청사항 5) - 장비창 열려있으면 장비창만 닫고, 아니면 설정창 토글
 let settingsOpen = false;
+function updateSaveSummary() {
+  saveSummaryEl.textContent = selectedClass
+    ? `직업 ${selectedClass.name} · 강화 +${weaponLevel} · 골드 ${gold.toLocaleString()} · 무기 레벨 ${weaponExpLevel}`
+    : "저장된 진행 없음";
+}
 function setSettingsOpen(open) {
   settingsOpen = open;
   settingsPanel.classList.toggle("hidden", !open);
+  if (open) updateSaveSummary();
 }
 settingsCloseBtn.addEventListener("click", () => setSettingsOpen(false));
+
+// 저장 삭제 - JS confirm()은 claude-in-chrome 등 브라우저 자동화를 블록하므로 두 번 클릭 확인으로 대체
+let deleteArmTimeout = null;
+deleteSaveBtn.addEventListener("click", () => {
+  if (deleteArmTimeout) {
+    clearTimeout(deleteArmTimeout);
+    deleteArmTimeout = null;
+    clearSave();
+    // reload 도중에도 pagehide 핸들러가 살아있는 selectedClass를 보고 재저장해버리므로
+    // 먼저 비워서 doAutosave의 가드(!selectedClass)에 걸리게 한다
+    selectedClass = null;
+    location.reload();
+    return;
+  }
+  deleteSaveBtn.textContent = "정말 삭제? 다시 누르면 실행";
+  deleteArmTimeout = setTimeout(() => {
+    deleteSaveBtn.textContent = "저장 삭제 후 처음부터";
+    deleteArmTimeout = null;
+  }, 4000);
+});
 const bossResultButtons = document.getElementById("bossResultButtons");
 const bossNextStageBtn = document.getElementById("bossNextStageBtn");
 const bossExitBtn = document.getElementById("bossExitBtn");
@@ -800,6 +828,7 @@ function attemptEnhance(isHigh) {
     probabilityTicketCounts[ticketBoostSelection]--;
     if (probabilityTicketCounts[ticketBoostSelection] <= 0) ticketBoostSelection = null;
   }
+  doAutosave(); // 강화는 유일한 핵심 행위라 유실·되돌리기 둘 다 허용 못 함 - 주기 대기 없이 즉시저장
 }
 
 enhanceBtn.addEventListener("click", () => attemptEnhance(false));
@@ -812,6 +841,7 @@ function useGuaranteedTicket() {
   weaponLevel = Math.min(ENHANCE_MAX_LEVEL, weaponLevel + n);
   enhanceResultText = `확정 +${n} 사용`;
   enhanceResultTimer = BALANCE.enhanceResultDisplayTime;
+  doAutosave();
 }
 useTicketBtn.addEventListener("click", useGuaranteedTicket);
 
@@ -843,6 +873,7 @@ bossExitBtn.addEventListener("click", () => {
 
 // 대장간 진입 시 재료(골드)가 되는 만큼 +10까지 자동 강화 (PRD 8.0-1-b)
 function autoEnhanceInForge() {
+  let didEnhance = false;
   while (weaponLevel < BALANCE.forgeAutoMaxLevel) {
     const cost = getEnhanceCost(weaponLevel, false);
     if (gold < cost) break;
@@ -851,7 +882,9 @@ function autoEnhanceInForge() {
     weaponLevel = result.level;
     enhanceResultText = ENHANCE_RESULT_LABEL[result.result](weaponLevel);
     enhanceResultTimer = BALANCE.enhanceResultDisplayTime;
+    didEnhance = true;
   }
+  if (didEnhance) doAutosave();
 }
 
 // 확률을 % 문자열로 (6.2 확률표는 소수 비율) - 반올림이라 4개 합이 100%가 아닐 수 있음
@@ -973,6 +1006,73 @@ canvas.addEventListener("dblclick", (e) => {
   autoMode = !autoMode;
   attackTimer = 0;
 });
+
+// ===== 저장 로드/자동저장 (core/save.js) =====
+// 매 프레임 저장 대신: 강화 등 핵심 행위 직후 즉시저장(위 doAutosave 호출 지점들) +
+// 10초 주기 자동저장 + 탭 숨김/종료 시 저장. beforeunload는 모바일에서 호출이
+// 보장되지 않아 쓰지 않는다 - visibilitychange(hidden)와 pagehide로 대체.
+function collectSaveState() {
+  return {
+    selectedClass, gold, weaponLevel, weaponExp, equipment, bag,
+    probabilityTicketCounts, guaranteedTickets, currentStageIndex,
+    currentBossStageIndex, bossTimeRemaining, bossRetryCount, autoEnhanceEnabled
+  };
+}
+
+function doAutosave() {
+  if (!selectedClass) return; // 직업 선택 전에는 저장할 게 없음
+  saveGame(collectSaveState());
+}
+
+setInterval(doAutosave, 10000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") doAutosave();
+});
+window.addEventListener("pagehide", doAutosave);
+
+const saveNoticeEl = document.getElementById("saveNotice");
+function showSaveNotice(text) {
+  saveNoticeEl.textContent = text;
+  saveNoticeEl.classList.remove("hidden");
+  setTimeout(() => saveNoticeEl.classList.add("hidden"), 4000);
+}
+
+// 저장 로드 - 있으면 이어서 시작(직업 선택 건너뜀), 없으면 새 게임(정상, 안내 없음),
+// 깨졌으면 새 게임으로 떨어뜨리고 한 줄 안내
+const savedData = loadGame();
+if (savedData && !savedData.corrupted) {
+  selectedClass = CLASSES[savedData.classId];
+  gold = savedData.gold;
+  weaponLevel = savedData.weaponLevel;
+  weaponExp = savedData.weaponExp;
+  weaponExpLevel = getWeaponLevelFromExp(weaponExp);
+  equipment.armor = savedData.equipment.armor || null;
+  equipment.gloves = savedData.equipment.gloves || null;
+  equipment.shoes = savedData.equipment.shoes || null;
+  // 가방 길이를 현재 BALANCE.inventoryBagSize에 맞춰 보정 - 초과분은 버리고 모자라면 null로 채움
+  for (let i = 0; i < bag.length; i++) {
+    bag[i] = savedData.bag[i] !== undefined ? savedData.bag[i] : null;
+  }
+  probabilityTicketCounts.small = savedData.probabilityTicketCounts.small || 0;
+  probabilityTicketCounts.medium = savedData.probabilityTicketCounts.medium || 0;
+  probabilityTicketCounts.large = savedData.probabilityTicketCounts.large || 0;
+  guaranteedTickets = savedData.guaranteedTickets.slice();
+  currentStageIndex = clamp(savedData.currentStageIndex, 0, STAGES.length - 1);
+  buildMonstersForStage(currentStageIndex);
+  autoEnhanceEnabled = !!savedData.autoEnhanceEnabled;
+  autoEnhanceCheck.checked = autoEnhanceEnabled;
+
+  // 보스 상태 - startNextBossRun으로 "이 단계 파밍을 방금 시작한 상태"로 우선 리셋한 뒤
+  // (bossZoneTriggered=false 등도 여기서 정합됨), 진행도인 타이머·재도전 횟수만 그 위에 덮어쓴다.
+  // 이 순서가 아니면 안 됨 - startNextBossRun이 나중에 실행되면 방금 복원한 값을 지워버린다.
+  startNextBossRun(clamp(savedData.currentBossStageIndex, 0, BOSSES.length - 1));
+  bossTimeRemaining = Math.max(0, savedData.bossTimeRemaining);
+  bossRetryCount = Math.max(0, savedData.bossRetryCount);
+
+  classSelectPanel.classList.add("hidden");
+} else if (savedData && savedData.corrupted) {
+  showSaveNotice("저장 데이터를 읽을 수 없어 새 게임으로 시작합니다");
+}
 
 let lastTime = performance.now();
 
@@ -1409,6 +1509,7 @@ function update(dt) {
     boss = null;
     player.x = BALANCE.huntSpawnX;
     player.y = BALANCE.huntSpawnY;
+    doAutosave();
   }
 
   // 보스 실패 판정 (PRD 9.4) - 재도전 2회까지 3분 추가 파밍 후 자동 재시작
@@ -1429,6 +1530,8 @@ function update(dt) {
     boss = null;
     player.x = BALANCE.huntSpawnX;
     player.y = BALANCE.huntSpawnY;
+    // bossRetryCount·bossTimeRemaining은 진행도라 즉시저장 - 안 그러면 새로고침으로 재도전 횟수 제한(PRD 9.4)을 무한 우회 가능
+    doAutosave();
   }
 
   if (bossResultState === "lost" && bossResultAutoHideTimer > 0) {
