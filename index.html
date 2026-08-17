@@ -11,8 +11,13 @@
   #ui { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; justify-content: center; align-items: center; gap: 10px; padding: 10px; }
   #ui.hidden { display: none; }
   #enhanceBtn, #enhanceHighBtn, #useTicketBtn { font-size: 16px; padding: 8px 16px; }
+  .enhanceCol { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .enhanceProbText { font-size: 11px; color: #ccc; }
   #autoEnhanceMsg { display: none; font-size: 14px; color: #ffe066; }
   #useTicketBtn { display: none; }
+  #ticketBoostGroup { display: flex; gap: 8px; }
+  #ticketBoostGroup label { font-size: 13px; color: #fff; display: flex; align-items: center; gap: 3px; }
+  #ticketBoostGroup label:has(input:disabled) { opacity: 0.4; }
   #bossResultButtons { position: absolute; left: 50%; top: 70%; transform: translate(-50%, -50%); display: flex; gap: 10px; }
   #bossResultButtons.hidden { display: none; }
   #bossResultButtons button { font-size: 16px; padding: 8px 16px; }
@@ -20,6 +25,14 @@
   #stageSelect button { font-size: 12px; padding: 4px 10px; cursor: pointer; }
   #stageSelect button.active { outline: 2px solid #ffe066; font-weight: bold; }
   #stageSelect button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #classSelect { position: fixed; inset: 0; background: rgba(0,0,0,0.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; z-index: 10; }
+  #classSelect.hidden { display: none; }
+  #classSelect h1 { color: #ffe066; font-size: 26px; margin: 0; }
+  #classSelectButtons { display: flex; gap: 16px; }
+  .classBtn { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 160px; padding: 16px 10px; background: #222; border: 2px solid #666; border-radius: 6px; color: #fff; cursor: pointer; }
+  .classBtn:hover { border-color: #ffe066; }
+  .classBtn strong { font-size: 18px; }
+  .classBtn span { font-size: 12px; color: #ccc; }
 </style>
 </head>
 <body>
@@ -33,15 +46,31 @@
 </div>
 <div id="ui" class="hidden">
   <div id="autoEnhanceMsg">자동 강화 진행 중 (+10까지)</div>
-  <button id="enhanceBtn">일반 강화</button>
-  <button id="enhanceHighBtn">상급 강화</button>
+  <div class="enhanceCol">
+    <button id="enhanceBtn">일반 강화</button>
+    <div id="enhanceProbInfo" class="enhanceProbText"></div>
+  </div>
+  <div class="enhanceCol">
+    <button id="enhanceHighBtn">상급 강화</button>
+    <div id="enhanceHighProbInfo" class="enhanceProbText"></div>
+  </div>
+  <div id="ticketBoostGroup">
+    <label><input type="checkbox" id="ticketSmallCheck"><span id="ticketSmallLabel">소 확률권 (0개)</span></label>
+    <label><input type="checkbox" id="ticketMediumCheck"><span id="ticketMediumLabel">중 확률권 (0개)</span></label>
+    <label><input type="checkbox" id="ticketLargeCheck"><span id="ticketLargeLabel">대 확률권 (0개)</span></label>
+  </div>
   <button id="useTicketBtn">확정 강화권 사용</button>
+</div>
+<div id="classSelect">
+  <h1>직업 선택</h1>
+  <div id="classSelectButtons"></div>
 </div>
 <script src="data/balance.js"></script>
 <script src="data/monsters.js"></script>
 <script src="data/enhance.js"></script>
 <script src="data/items.js"></script>
 <script src="data/stages.js"></script>
+<script src="data/classes.js"></script>
 <script src="core/render.js"></script>
 <script src="core/combat.js"></script>
 <script src="core/enhance.js"></script>

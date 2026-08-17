@@ -112,6 +112,40 @@ function drawProjectiles(ctx, projectiles) {
   }
 }
 
+// 쌍검 좌우 번갈아 공격 색상 - 0=중앙(대검), 1=오른쪽, -1=왼쪽
+const MELEE_SWING_SIDE_COLORS = { 0: "#e0e0e0", 1: "#8fd6ff", "-1": "#ffb37d" };
+
+// 대검·쌍검 근접 스윙 이펙트 (PRD 4.1) - 전방 부채꼴 판정 범위를 그대로 시각화, ratio(1→0)에 따라 페이드아웃
+// side로 좌/우/중앙 색을 구분, scale(3타 강타 시 > 1)로 이펙트만 확대 - 실제 판정 range는 영향 없음
+function drawMeleeSwing(ctx, player, angle, range, arcDegrees, ratio, side, scale) {
+  const halfArc = (arcDegrees * Math.PI / 180) / 2;
+  const drawRange = range * (scale || 1);
+  const peakAlpha = scale && scale > 1 ? 0.65 : 0.5;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, ratio) * peakAlpha;
+  ctx.fillStyle = MELEE_SWING_SIDE_COLORS[side] || MELEE_SWING_SIDE_COLORS[0];
+  ctx.beginPath();
+  ctx.moveTo(player.x, player.y);
+  ctx.arc(player.x, player.y, drawRange, angle - halfArc, angle + halfArc);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// 근접 판정 범위 상시 표시 (요구사항 6) - 공격하지 않을 때도 옅게 항상 보여 사거리를 가늠할 수 있게
+function drawMeleeRangeIndicator(ctx, player, range, arcDegrees, alpha) {
+  const halfArc = (arcDegrees * Math.PI / 180) / 2;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(player.x, player.y);
+  ctx.arc(player.x, player.y, range, player.angle - halfArc, player.angle + halfArc);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawMonster(ctx, monster, gameTime) {
   if (!monster.alive) return;
 
@@ -213,7 +247,8 @@ function drawDamageNumbers(ctx, damageNumbers) {
     const alpha = Math.max(0, 1 - dn.age / BALANCE.damageNumberLifetime);
     ctx.globalAlpha = alpha;
     ctx.fillStyle = "#ffffff";
-    ctx.font = dn.isCrit ? "bold 30px sans-serif" : "20px sans-serif";
+    const fontSize = (dn.isCrit ? 30 : 20) + (dn.isComboHit ? 6 : 0);
+    ctx.font = `${dn.isCrit ? "bold " : ""}${fontSize}px sans-serif`;
     ctx.fillText(String(dn.value), dn.x, dn.y);
   }
   ctx.globalAlpha = 1;
@@ -346,8 +381,8 @@ function drawBossResult(ctx, result) {
     ctx.fillStyle = "#ffffff";
     ctx.font = "18px sans-serif";
     ctx.fillText(`골드 +${result.goldGained}`, cx, cy - 20);
-    if (result.ticketCount > 0) {
-      ctx.fillText(`확정 강화권 +${result.ticketValue} x${result.ticketCount} 획득`, cx, cy + 10);
+    if (result.gotTicket) {
+      ctx.fillText(`확정 강화권 +1 획득`, cx, cy + 10);
     }
   } else {
     ctx.fillStyle = "#ff5c5c";
@@ -457,6 +492,23 @@ function drawExpTokens(ctx, expTokens) {
     ctx.beginPath();
     ctx.arc(token.x, token.y, def.radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+  }
+}
+
+// 확률 강화권 바닥 드랍 (PRD 8.0-5) - 재료 몬스터가 드랍, 크기는 소/중/대 랜덤
+function drawGroundTickets(ctx, groundTickets) {
+  const color = ENHANCE_TICKET_TYPES.probability.color;
+  for (const ticket of groundTickets) {
+    const size = ENHANCE_TICKET_SIZES[ticket.size].radius;
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = color;
+    ctx.fillRect(ticket.x - size / 2, ticket.y - size / 2, size, size);
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ticket.x - size / 2, ticket.y - size / 2, size, size);
     ctx.restore();
   }
 }

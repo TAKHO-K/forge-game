@@ -20,6 +20,32 @@ let gameTime = 0;
 let lastMoveDirX = 1;
 let lastMoveDirY = 0;
 
+// 직업 선택 (PRD 4장) - 게임 시작 시 classSelect 화면에서 1택, 선택 전까지 update/render 전체 정지
+let selectedClass = null;
+let dealModeTimer = 0; // 힐러 딜링모드(E) 남은 시간 - 온/오프 상태만 (공격력 배율 없음)
+let meleeSwingTimer = 0; // 대검·쌍검 스윙 이펙트 표시 타이머
+let meleeSwingAngle = 0;
+let meleeSwingSide = 0; // 0=중앙, 1=오른쪽, -1=왼쪽 (쌍검 좌우 번갈아 공격 렌더용)
+let meleeSwingIsCombo = false; // 방금 스윙이 3타 강타였는지 - 렌더에서 이펙트 확대
+
+// 3타 강타 (모든 직업 공통) - comboResetWindow 안에 새 공격이 없으면 카운터 초기화
+let comboCount = 0;
+let comboResetTimer = 0;
+
+const classSelectPanel = document.getElementById("classSelect");
+const classSelectButtons = document.getElementById("classSelectButtons");
+CLASS_ORDER.forEach((id) => {
+  const cls = CLASSES[id];
+  const btn = document.createElement("button");
+  btn.className = "classBtn";
+  btn.innerHTML = `<strong>${cls.name}</strong><span>공격 ${cls.atk}x · 속도 ${cls.atkSpeed}x · 방어 ${cls.def}x</span>`;
+  btn.addEventListener("click", () => {
+    selectedClass = cls;
+    classSelectPanel.classList.add("hidden");
+  });
+  classSelectButtons.appendChild(btn);
+});
+
 function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v));
 }
@@ -57,7 +83,11 @@ let bossRetryCount = 0;
 let bossResultState = "none"; // "none" | "won" | "lost"
 let bossResultInfo = null;
 let bossResultAutoHideTimer = 0;
-let guaranteedTickets = []; // 확정 강화권 - 각 원소는 상승폭 N (9.6)
+let guaranteedTickets = []; // 확정 강화권 - 각 원소는 상승폭 N, 보스 클리어로만 획득 (9.6)
+const probabilityTicketCounts = { small: 0, medium: 0, large: 0 }; // 확률 강화권 보유 개수 - 재료 몬스터 드랍
+let ticketBoostSelection = null; // 강화 시도에 적용할 확률 강화권 크기 - "small"|"medium"|"large"|null, 상급 강화·서로 간 중복 불가
+let ticketNoticeText = "";
+let ticketNoticeTimer = 0;
 
 function spawnBoss(stageIndex) {
   const data = BOSSES[stageIndex];
@@ -92,6 +122,14 @@ function tryDash() {
   player.dashCooldownTimer = BALANCE.dashCooldown;
 }
 
+// 힐러 딜링모드(E) - 최대체력 dealModeHpCost칸 소모, 체력 2칸 이상일 때만 (재)발동 가능 (PRD 4.1-1)
+function tryActivateDealMode() {
+  if (!selectedClass || selectedClass.id !== "healer" || invenOpen) return;
+  if (player.hp < 2) return;
+  player.hp -= selectedClass.dealModeHpCost;
+  dealModeTimer = selectedClass.dealModeDuration;
+}
+
 const keys = {};
 window.addEventListener("keydown", (e) => {
   keys[e.key.toLowerCase()] = true;
@@ -102,6 +140,9 @@ window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "i") {
     invenOpen = !invenOpen;
     if (!invenOpen) pendingEquip = null;
+  }
+  if (e.key.toLowerCase() === "e") {
+    tryActivateDealMode();
   }
 });
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
@@ -118,14 +159,117 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 const projectiles = [];
-function fireProjectile() {
+function fireProjectile(isComboHit) {
   projectiles.push({
     x: player.x,
     y: player.y,
     angle: player.angle,
     radius: BALANCE.projectileRadius,
-    traveled: 0
+    traveled: 0,
+    isComboHit
   });
+}
+
+// 최종 공격력 - 강화/무기경험치/장비/직업배율을 한 곳에 모음, level 생략 시 현재 강화 단계 기준 (강화 버튼의 "다음 단계" 미리보기용으로 level 지정 가능)
+function getPlayerAttack(level) {
+  const lvl = level === undefined ? weaponLevel : level;
+  return BALANCE.playerAttack * selectedClass.atk *
+    getEnhanceDamageMultiplier(lvl) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier;
+}
+
+// 몬스터·보스 피격 처리 - 투사체 명중과 근접 스윙 명중이 공유. isComboHit이면 comboHitMultiplier 적용 (3타 강타)
+function applyDamageToMonster(monster, isComboHit) {
+  const attack = getPlayerAttack() * (isComboHit ? BALANCE.comboHitMultiplier : 1);
+  const { damage, isCrit } = calcDamage(attack, monster.defense, selectedClass.critRate, selectedClass.critDmg);
+  monster.hp -= damage;
+  spawnDamageNumber(monster.x, monster.y - monster.radius, damage, isCrit, isComboHit);
+  if (monster.hp <= 0) {
+    monster.alive = false;
+    monster.respawnTimer = RESPAWN_TIME;
+    gold += monster.goldDrop;
+    spawnGroundItems(monster.x, monster.y, monster.tier, monster.dropChance);
+    spawnExpTokens(monster.x, monster.y, monster.tier, monster.weaponExp);
+
+    if (monster.rareType === "sparkle") {
+      const roll = Math.random();
+      const chances = BALANCE.sparkleGradeChances;
+      const grade = roll < chances.primordial ? "태초"
+        : roll < chances.primordial + chances.ancient ? "고대"
+        : "유물";
+      console.log(`[반짝이 몬스터 처치] ${grade} 등급 확정 드랍 (장비 시스템 도입 전 - 로그로만 표시)`);
+    } else if (monster.rareType === "material") {
+      spawnGroundTicket(monster.x, monster.y);
+    }
+  }
+}
+
+function applyDamageToBoss(isComboHit) {
+  const attack = getPlayerAttack() * (isComboHit ? BALANCE.comboHitMultiplier : 1);
+  const { damage, isCrit } = calcDamage(attack, boss.defense, selectedClass.critRate, selectedClass.critDmg);
+  boss.hp -= damage;
+  spawnDamageNumber(boss.x, boss.y - boss.radius, damage, isCrit, isComboHit);
+  if (boss.hp <= 0) {
+    boss.hp = 0;
+    boss.alive = false;
+  }
+}
+
+// 두 각도 차이를 -PI~PI로 정규화 (근접 부채꼴 판정용)
+function angleDiff(a, b) {
+  return Math.atan2(Math.sin(a - b), Math.cos(a - b));
+}
+
+let meleeAlternateSign = 1; // 쌍검 좌우 번갈아 공격 - 다음 스윙이 오른쪽(+1)인지 왼쪽(-1)인지
+
+// 대검·쌍검 근접 공격 (PRD 4.1) - 투사체 없이 전방 부채꼴 범위 내 대상을 즉시 판정
+// alternateSides 직업(쌍검)은 판정 중심을 좌우로 번갈아 치우쳐 공격 - meleeSwingSide로 렌더에 전달(0=중앙, 1=오른쪽, -1=왼쪽)
+function performMeleeAttack(isComboHit) {
+  let swingAngle = player.angle;
+  let swingSide = 0;
+  if (selectedClass.alternateSides) {
+    swingSide = meleeAlternateSign;
+    swingAngle += meleeAlternateSign * (selectedClass.alternateOffsetDegrees * Math.PI / 180);
+    meleeAlternateSign *= -1;
+  }
+
+  meleeSwingTimer = BALANCE.meleeSwingVisualDuration;
+  meleeSwingAngle = swingAngle;
+  meleeSwingSide = swingSide;
+  meleeSwingIsCombo = !!isComboHit;
+
+  const range = selectedClass.meleeRange;
+  const halfArc = (selectedClass.meleeArc * Math.PI / 180) / 2;
+
+  if (currentMap === "hunt") {
+    for (const monster of monsters) {
+      if (!monster.alive) continue;
+      const dist = Math.hypot(monster.x - player.x, monster.y - player.y);
+      if (dist > range + monster.radius) continue;
+      if (Math.abs(angleDiff(Math.atan2(monster.y - player.y, monster.x - player.x), swingAngle)) > halfArc) continue;
+      applyDamageToMonster(monster, isComboHit);
+    }
+  }
+
+  if (boss && boss.alive && !bossFightFailed) {
+    const dist = Math.hypot(boss.x - player.x, boss.y - player.y);
+    if (dist <= range + boss.radius &&
+      Math.abs(angleDiff(Math.atan2(boss.y - player.y, boss.x - player.x), swingAngle)) <= halfArc) {
+      applyDamageToBoss(isComboHit);
+    }
+  }
+}
+
+// 3타 강타 (모든 직업 공통) - comboResetWindow 안에 이어친 공격 수를 세어 comboHitEvery번째마다 강타 (PRD 4.4 근처 요구사항)
+function performAttack() {
+  comboCount++;
+  comboResetTimer = BALANCE.comboResetWindow;
+  const isComboHit = comboCount % BALANCE.comboHitEvery === 0;
+
+  if (selectedClass.attackType === "melee") {
+    performMeleeAttack(isComboHit);
+  } else {
+    fireProjectile(isComboHit);
+  }
 }
 
 let autoMode = false;
@@ -208,8 +352,8 @@ let currentStageIndex = 0;
 buildMonstersForStage(currentStageIndex);
 
 const damageNumbers = [];
-function spawnDamageNumber(x, y, value, isCrit) {
-  damageNumbers.push({ x, y, value, isCrit, age: 0 });
+function spawnDamageNumber(x, y, value, isCrit, isComboHit) {
+  damageNumbers.push({ x, y, value, isCrit, isComboHit: !!isComboHit, age: 0 });
 }
 
 // 바닥 장비 드랍 (PRD 7.1) - 등급/부위는 rollDroppedItems가 판정, 등급만 바닥에 노출
@@ -245,6 +389,17 @@ function spawnExpTokens(x, y, tier, baseValue) {
       age: 0
     });
   }
+}
+
+// 재료 몬스터 확률 강화권 (8.0-5) - 바닥에 드랍, 주우면 획득. 30초 후 소멸. 크기는 드랍 시 랜덤 결정
+const groundTickets = [];
+function spawnGroundTicket(x, y) {
+  const chances = BALANCE.materialTicketSizeChances;
+  const roll = Math.random();
+  const size = roll < chances.small ? "small"
+    : roll < chances.small + chances.medium ? "medium"
+    : "large";
+  groundTickets.push({ x, y, size, age: 0 });
 }
 
 let weaponLevel = 0;
@@ -361,6 +516,8 @@ const uiPanel = document.getElementById("ui");
 const autoEnhanceMsg = document.getElementById("autoEnhanceMsg");
 const enhanceBtn = document.getElementById("enhanceBtn");
 const enhanceHighBtn = document.getElementById("enhanceHighBtn");
+const enhanceProbInfo = document.getElementById("enhanceProbInfo");
+const enhanceHighProbInfo = document.getElementById("enhanceHighProbInfo");
 const useTicketBtn = document.getElementById("useTicketBtn");
 const bossResultButtons = document.getElementById("bossResultButtons");
 const bossNextStageBtn = document.getElementById("bossNextStageBtn");
@@ -388,14 +545,47 @@ function updateStageButtons() {
   });
 }
 
+// 확률 강화권 3종 (9.6/8.0-5) - 체크한 크기를 일반 강화에 적용, 상급 강화·서로 간 중복 불가
+const ticketCheckboxes = {
+  small: document.getElementById("ticketSmallCheck"),
+  medium: document.getElementById("ticketMediumCheck"),
+  large: document.getElementById("ticketLargeCheck")
+};
+const ticketLabels = {
+  small: document.getElementById("ticketSmallLabel"),
+  medium: document.getElementById("ticketMediumLabel"),
+  large: document.getElementById("ticketLargeLabel")
+};
+for (const size of Object.keys(ticketCheckboxes)) {
+  ticketCheckboxes[size].addEventListener("change", () => {
+    ticketBoostSelection = ticketCheckboxes[size].checked ? size : null;
+  });
+}
+
+function updateTicketBoostUI() {
+  for (const size of Object.keys(ticketCheckboxes)) {
+    const count = probabilityTicketCounts[size];
+    const checkbox = ticketCheckboxes[size];
+    checkbox.checked = ticketBoostSelection === size;
+    checkbox.disabled = ticketBoostSelection ? ticketBoostSelection !== size : count <= 0;
+    ticketLabels[size].textContent = `${ENHANCE_TICKET_SIZES[size].label} 확률권 (${count}개)`;
+  }
+  if (ticketBoostSelection) enhanceHighBtn.disabled = true;
+}
+
 function attemptEnhance(isHigh) {
   const cost = getEnhanceCost(weaponLevel, isHigh);
   if (gold < cost) return;
+  const boostType = isHigh ? "high" : (ticketBoostSelection || "none");
   gold -= cost;
-  const result = tryEnhance(weaponLevel, isHigh);
+  const result = tryEnhance(weaponLevel, boostType);
   weaponLevel = result.level;
   enhanceResultText = ENHANCE_RESULT_LABEL[result.result](weaponLevel);
   enhanceResultTimer = BALANCE.enhanceResultDisplayTime;
+  if (!isHigh && ticketBoostSelection) {
+    probabilityTicketCounts[ticketBoostSelection]--;
+    if (probabilityTicketCounts[ticketBoostSelection] <= 0) ticketBoostSelection = null;
+  }
 }
 
 enhanceBtn.addEventListener("click", () => attemptEnhance(false));
@@ -443,11 +633,20 @@ function autoEnhanceInForge() {
     const cost = getEnhanceCost(weaponLevel, false);
     if (gold < cost) break;
     gold -= cost;
-    const result = tryEnhance(weaponLevel, false);
+    const result = tryEnhance(weaponLevel, "none");
     weaponLevel = result.level;
     enhanceResultText = ENHANCE_RESULT_LABEL[result.result](weaponLevel);
     enhanceResultTimer = BALANCE.enhanceResultDisplayTime;
   }
+}
+
+// 확률을 % 문자열로 (6.2 확률표는 소수 비율) - 반올림이라 4개 합이 100%가 아닐 수 있음
+function formatPercent(p) {
+  return Math.round(p * 100);
+}
+
+function formatFailureLine(prob) {
+  return `실패 시: 유지 ${formatPercent(prob.maintain)}% / -1강 ${formatPercent(prob.down1)}% / -2강 ${formatPercent(prob.down2)}% / 초기화 ${formatPercent(prob.reset)}%`;
 }
 
 function updateEnhanceButtons() {
@@ -455,6 +654,8 @@ function updateEnhanceButtons() {
   autoEnhanceMsg.style.display = autoPhase ? "block" : "none";
   enhanceBtn.style.display = autoPhase ? "none" : "inline-block";
   enhanceHighBtn.style.display = autoPhase ? "none" : "inline-block";
+  enhanceProbInfo.style.display = autoPhase ? "none" : "block";
+  enhanceHighProbInfo.style.display = autoPhase ? "none" : "block";
   if (autoPhase) return;
 
   if (weaponLevel >= ENHANCE_MAX_LEVEL) {
@@ -462,14 +663,23 @@ function updateEnhanceButtons() {
     enhanceHighBtn.textContent = "상급 강화 (최대)";
     enhanceBtn.disabled = true;
     enhanceHighBtn.disabled = true;
+    enhanceProbInfo.textContent = "";
+    enhanceHighProbInfo.textContent = "";
     return;
   }
   const normalCost = getEnhanceCost(weaponLevel, false);
   const highCost = getEnhanceCost(weaponLevel, true);
-  const currentAttack = Math.round(BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier);
-  const nextAttack = Math.round(BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel + 1) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier);
-  enhanceBtn.textContent = `일반 강화 (${normalCost}G) → 공격력 ${nextAttack} (현재 ${currentAttack})`;
-  enhanceHighBtn.textContent = `상급 강화 (${highCost}G) → 공격력 ${nextAttack} (현재 ${currentAttack})`;
+  const currentAttack = Math.round(getPlayerAttack(weaponLevel));
+  const nextAttack = Math.round(getPlayerAttack(weaponLevel + 1));
+
+  // 체크된 확률 강화권이 있으면 일반 강화 확률에 즉시 반영 (ticketBoostSelection은 체크박스 change에서 바로 갱신됨)
+  const normalProb = resolveProbability(weaponLevel, ticketBoostSelection || "none");
+  const highProb = resolveProbability(weaponLevel, "high");
+
+  enhanceBtn.textContent = `일반 강화 (${normalCost}G) · 성공 ${formatPercent(normalProb.success)}% → 공격력 ${nextAttack} (현재 ${currentAttack})`;
+  enhanceHighBtn.textContent = `상급 강화 (${highCost}G) · 성공 ${formatPercent(highProb.success)}% → 공격력 ${nextAttack} (현재 ${currentAttack})`;
+  enhanceProbInfo.textContent = formatFailureLine(normalProb);
+  enhanceHighProbInfo.textContent = formatFailureLine(highProb);
   enhanceBtn.disabled = gold < normalCost;
   enhanceHighBtn.disabled = gold < highCost;
 }
@@ -498,7 +708,8 @@ canvas.addEventListener("mousedown", (e) => {
   }
   if (e.button !== 0) return;
   if (autoMode) return;
-  fireProjectile();
+  if (!selectedClass) return;
+  performAttack();
 });
 
 // 드래그 종료 - 이동이 없었으면 클릭으로 처리, 드래그였으면 같은 부위 슬롯에서만 착용
@@ -583,10 +794,10 @@ function update(dt) {
 
   if (autoMode) {
     attackTimer += dt;
-    const effectiveAttackInterval = BALANCE.attackInterval / equipBonuses.speedMultiplier;
+    const effectiveAttackInterval = BALANCE.attackInterval / (equipBonuses.speedMultiplier * selectedClass.atkSpeed);
     while (attackTimer >= effectiveAttackInterval) {
       attackTimer -= effectiveAttackInterval;
-      fireProjectile();
+      performAttack();
     }
   }
 
@@ -791,6 +1002,10 @@ function update(dt) {
     invenNoticeTimer -= dt;
     if (invenNoticeTimer < 0) invenNoticeTimer = 0;
   }
+  if (ticketNoticeTimer > 0) {
+    ticketNoticeTimer -= dt;
+    if (ticketNoticeTimer < 0) ticketNoticeTimer = 0;
+  }
 
   player.noHitTimer += dt;
   if (player.iframeTimer > 0) {
@@ -802,6 +1017,22 @@ function update(dt) {
     while (player.regenTimer >= BALANCE.playerRegenInterval && player.hp < player.maxHp) {
       player.regenTimer -= BALANCE.playerRegenInterval;
       player.hp = Math.min(player.maxHp, player.hp + BALANCE.playerRegenAmount);
+    }
+  }
+
+  if (dealModeTimer > 0) {
+    dealModeTimer -= dt;
+    if (dealModeTimer < 0) dealModeTimer = 0;
+  }
+  if (meleeSwingTimer > 0) {
+    meleeSwingTimer -= dt;
+    if (meleeSwingTimer < 0) meleeSwingTimer = 0;
+  }
+  if (comboResetTimer > 0) {
+    comboResetTimer -= dt;
+    if (comboResetTimer <= 0) {
+      comboResetTimer = 0;
+      comboCount = 0;
     }
   }
 
@@ -829,42 +1060,14 @@ function update(dt) {
       Math.hypot(p.x - boss.x, p.y - boss.y) <= p.radius + boss.radius;
 
     if (hitMonster) {
-      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier;
-      const { damage, isCrit } = calcDamage(attack, hitMonster.defense, BALANCE.critChance, BALANCE.critMultiplier);
-      hitMonster.hp -= damage;
-      spawnDamageNumber(hitMonster.x, hitMonster.y - hitMonster.radius, damage, isCrit);
+      applyDamageToMonster(hitMonster, p.isComboHit);
       projectiles.splice(i, 1);
-      if (hitMonster.hp <= 0) {
-        hitMonster.alive = false;
-        hitMonster.respawnTimer = RESPAWN_TIME;
-        gold += hitMonster.goldDrop;
-        spawnGroundItems(hitMonster.x, hitMonster.y, hitMonster.tier, hitMonster.dropChance);
-        spawnExpTokens(hitMonster.x, hitMonster.y, hitMonster.tier, hitMonster.weaponExp);
-
-        if (hitMonster.rareType === "sparkle") {
-          const roll = Math.random();
-          const chances = BALANCE.sparkleGradeChances;
-          const grade = roll < chances.primordial ? "태초"
-            : roll < chances.primordial + chances.relic ? "유물"
-            : "전설";
-          console.log(`[반짝이 몬스터 처치] ${grade} 등급 확정 드랍 (장비 시스템 도입 전 - 로그로만 표시)`);
-        } else if (hitMonster.rareType === "material") {
-          guaranteedTickets.push(BALANCE.materialTicketByTier[hitMonster.tier - 1]);
-        }
-      }
       continue;
     }
 
     if (hitBoss) {
-      const attack = BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier;
-      const { damage, isCrit } = calcDamage(attack, boss.defense, BALANCE.critChance, BALANCE.critMultiplier);
-      boss.hp -= damage;
-      spawnDamageNumber(boss.x, boss.y - boss.radius, damage, isCrit);
+      applyDamageToBoss(p.isComboHit);
       projectiles.splice(i, 1);
-      if (boss.hp <= 0) {
-        boss.hp = 0;
-        boss.alive = false;
-      }
       continue;
     }
 
@@ -898,6 +1101,23 @@ function update(dt) {
         console.log(`[장비 획득] ${ITEM_GRADES[item.grade].name} ${ITEM_PART_NAMES[item.part]}`);
         groundItems.splice(i, 1);
       }
+    }
+  }
+
+  // 강화권 바닥 드랍 - 30초 후 소멸, 플레이어가 닿으면 획득 (PRD 9.6/8.0-5)
+  for (let i = groundTickets.length - 1; i >= 0; i--) {
+    const ticket = groundTickets[i];
+    ticket.age += dt;
+    if (ticket.age >= BALANCE.enhanceTicketGroundLifetime) {
+      groundTickets.splice(i, 1);
+      continue;
+    }
+    const distToPlayer = Math.hypot(player.x - ticket.x, player.y - ticket.y);
+    if (distToPlayer <= player.radius + BALANCE.itemPickupRadius) {
+      probabilityTicketCounts[ticket.size]++;
+      ticketNoticeText = `${ENHANCE_TICKET_TYPES.probability.name}(${ENHANCE_TICKET_SIZES[ticket.size].label}) 획득`;
+      ticketNoticeTimer = BALANCE.ticketPickupMessageDuration;
+      groundTickets.splice(i, 1);
     }
   }
 
@@ -944,10 +1164,11 @@ function update(dt) {
     const multiplier = BALANCE.bossGradeMultipliers[grade];
     const goldGained = Math.round(data.clearGoldReward * multiplier);
     gold += goldGained;
-    for (let i = 0; i < data.clearTicketCount; i++) guaranteedTickets.push(data.clearTicketValue);
+    const gotTicket = Math.random() < BALANCE.bossGuaranteedTicketChance;
+    if (gotTicket) guaranteedTickets.push(1);
 
     bossResultState = "won";
-    bossResultInfo = { type: "won", grade, goldGained, ticketValue: data.clearTicketValue, ticketCount: data.clearTicketCount };
+    bossResultInfo = { type: "won", grade, goldGained, gotTicket };
 
     // 사냥터로 복귀 (PRD 8.0-6)
     currentMap = "hunt";
@@ -994,6 +1215,7 @@ function update(dt) {
   }
 
   updateEnhanceButtons();
+  updateTicketBoostUI();
   updateStageButtons();
 }
 
@@ -1014,6 +1236,7 @@ function render() {
     for (const monster of monsters) drawMonster(ctx, monster, gameTime);
     drawGroundItems(ctx, groundItems, gameTime);
     drawExpTokens(ctx, expTokens);
+    drawGroundTickets(ctx, groundTickets);
   }
   drawBoss(ctx, boss);
 
@@ -1023,6 +1246,14 @@ function render() {
   drawPlayer(ctx, player, playerAlpha);
 
   drawProjectiles(ctx, projectiles);
+  if (selectedClass.attackType === "melee") {
+    drawMeleeRangeIndicator(ctx, player, selectedClass.meleeRange, selectedClass.meleeArc, BALANCE.meleeRangeIndicatorAlpha);
+  }
+  if (meleeSwingTimer > 0) {
+    const swingScale = meleeSwingIsCombo ? BALANCE.comboSwingScale : 1;
+    drawMeleeSwing(ctx, player, meleeSwingAngle, selectedClass.meleeRange, selectedClass.meleeArc,
+      meleeSwingTimer / BALANCE.meleeSwingVisualDuration, meleeSwingSide, swingScale);
+  }
   drawDamageNumbers(ctx, damageNumbers);
 
   ctx.restore();
@@ -1034,13 +1265,14 @@ function render() {
   if (currentMap === "hunt") drawBossTimer(ctx, bossTimeRemaining, player.y <= FORGE_BOTTOM);
   if (forgeNoticeTimer > 0) drawForgeNotice(ctx, FORGE_NOTICE_TEXT, 56);
   if (invenNoticeTimer > 0) drawForgeNotice(ctx, INVENTORY_NOTICE_TEXT, 78);
+  if (ticketNoticeTimer > 0) drawForgeNotice(ctx, ticketNoticeText, 100);
   if (bossCountdownActive) drawBossCountdown(ctx, Math.ceil(bossCountdownTimer));
   if (boss) {
     drawBossHealthBar(ctx, boss);
     drawBossFightTimer(ctx, bossFightTimeRemaining, bossFightFailed);
   }
   if (bossResultState !== "none") drawBossResult(ctx, bossResultInfo);
-  const totalAttack = Math.round(BALANCE.playerAttack * getEnhanceDamageMultiplier(weaponLevel) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier);
+  const totalAttack = Math.round(getPlayerAttack());
   drawEnhanceInfo(ctx, weaponLevel, enhanceResultText, enhanceResultTimer, gold, totalAttack);
   drawWeaponExpBar(ctx, weaponExpLevel, getWeaponExpProgress(weaponExp, weaponExpLevel));
   drawPlayerHealthBar(ctx, player.hp, player.maxHp, gameTime);
@@ -1059,8 +1291,13 @@ function loop(now) {
   const dt = (now - lastTime) / 1000;
   lastTime = now;
 
+  if (!selectedClass) {
+    requestAnimationFrame(loop);
+    return;
+  }
+
   equipBonuses = getEquipmentBonuses(equipment);
-  player.defense = BALANCE.playerDefense + equipBonuses.defenseBonus;
+  player.defense = BALANCE.playerDefense * selectedClass.def + equipBonuses.defenseBonus;
   player.speed = BALANCE.playerSpeed * equipBonuses.speedMultiplier;
   if (invenMessageTimer > 0) invenMessageTimer = Math.max(0, invenMessageTimer - dt);
 

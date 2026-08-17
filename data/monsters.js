@@ -32,12 +32,12 @@ const MONSTERS = {
 };
 
 // 보스 데이터 (PRD 9.1, 9.5, 9.6) - 단계 순서 배열, index 0부터 1단계
-// clearGoldReward: 기본보상(9.5, 등급배율 곱하기 전) / clearTicketValue·clearTicketCount: 클리어 주머니 확정 강화권(9.6)
+// clearGoldReward: 기본보상(9.5, 등급배율 곱하기 전). 확정 강화권은 클리어마다 BALANCE.bossGuaranteedTicketChance 확률로 +1 지급(9.6)
 const BOSSES = [
   { name: "고블린왕", hp: 4000, defense: 8, attack: 20, timeLimit: 60, radius: 45, color: "#c9a227", // hp/defense 테스트용 임시값 - 나중에 재조정
-    clearGoldReward: 3000, clearTicketValue: 1, clearTicketCount: 1 },
+    clearGoldReward: 3000 },
   { name: "오크로드", hp: 80000, defense: 80, attack: 30, timeLimit: 75, radius: 50, color: "#8b3a1a",
-    clearGoldReward: 8000, clearTicketValue: 1, clearTicketCount: 2 }
+    clearGoldReward: 8000 }
 ];
 
 // 배치 순서 (등급 낮은 순 - 맵 왼쪽부터 배치될 순서와 맞춤)

@@ -26,6 +26,14 @@ const ENHANCE_DAMAGE_COEFFICIENT = [
   9.10, 10.70, 12.30, 13.90, 15.50         // +21~+25
 ];
 
+// 확률 강화권 3종 (재료 몬스터 드랍) - 실제 강화 시도에 적용, 상급 강화·서로 간 중복 불가
+// 소/중은 상급 강화와 같은 배율+상한 방식, 대는 성공률을 50%로 고정
+const ENHANCE_TICKET_BOOST = {
+  small:  { multiplier: 1.5, cap: ENHANCE_HIGH_SUCCESS_CAP },
+  medium: { multiplier: 2.0, cap: ENHANCE_HIGH_SUCCESS_CAP },
+  large:  { fixedSuccess: 0.5 }
+};
+
 // 강화 확률표 (6.2) - index는 시도 전 현재 강화 단계. 실패는 형상유지/-1강/-2강/리셋 4종
 const ENHANCE_PROBABILITY = [
   { success: 0.92, maintain: 0.08, down1: 0,    down2: 0,    reset: 0 },    // +0 -> +1

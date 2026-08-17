@@ -5,11 +5,15 @@ const BALANCE = {
   projectileSpeed: 600,
   projectileRadius: 6,
   projectileRange: 400,
-  attackInterval: 0.2,
+  attackInterval: 0.28,
   playerAttack: 10,
   damageFloorRatio: 0.1,
-  critChance: 0.3,
-  critMultiplier: 1.8,
+  meleeSwingVisualDuration: 0.15, // 대검·쌍검 부채꼴 스윙 이펙트 표시 시간
+  meleeRangeIndicatorAlpha: 0.12, // 공격 안 할 때도 항상 보이는 옅은 판정 범위 표시
+  comboHitEvery: 3, // N번째 공격마다 강타
+  comboHitMultiplier: 1.8,
+  comboResetWindow: 2, // 이 시간(초) 동안 공격 없으면 콤보 카운터 초기화
+  comboSwingScale: 1.35, // 강타 시 근접 스윙 이펙트 확대 배율 (판정 범위 자체는 그대로)
   damageNumberLifetime: 0.8,
   damageNumberRiseSpeed: 40,
   enhanceResultDisplayTime: 1.5,
@@ -51,10 +55,13 @@ const BALANCE = {
   bossResultLostDisplayTime: 3,
   weaponExpAttackBonusPerLevel: 0.06,
   rareSparkleChance: 0.005,
-  rareMaterialChance: 0.035,
+  rareMaterialChance: 0.015,
   rareGoldMultiplier: 0.5,
-  sparkleGradeChances: { legend: 0.9, relic: 0.09, primordial: 0.01 },
-  materialTicketByTier: [1, 1, 2, 2, 3, 3],
+  sparkleGradeChances: { relic: 0.9, ancient: 0.09, primordial: 0.01 },
+  materialTicketSizeChances: { small: 0.6, medium: 0.3, large: 0.1 }, // 재료 몬스터 확률 강화권 크기 분포
+  bossGuaranteedTicketChance: 0.5, // 보스 클리어 시 확정 강화권 +1 지급 확률
+  enhanceTicketGroundLifetime: 30,
+  ticketPickupMessageDuration: 2,
   dropSlot2Multiplier: 0.3,
   itemGroundLifetime: 60,
   itemDropOffset: 14,

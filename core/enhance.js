@@ -1,9 +1,9 @@
-// 상급 강화 확률 계산 (6.2-1) - 성공률을 올리고 나머지 결과는 비율 유지하며 축소
-function calcHighProbability(prob) {
-  const successHigh = Math.min(ENHANCE_HIGH_SUCCESS_CAP, prob.success * ENHANCE_HIGH_SUCCESS_MULTIPLIER);
-  const scale = (1 - successHigh) / (1 - prob.success);
+// 성공률을 배율만큼 올리고 나머지 결과는 비율 유지하며 축소 (6.2-1, 확률 강화권 소/중 공용)
+function calcBoostedProbability(prob, multiplier, cap) {
+  const successBoosted = Math.min(cap, prob.success * multiplier);
+  const scale = (1 - successBoosted) / (1 - prob.success);
   return {
-    success: successHigh,
+    success: successBoosted,
     maintain: prob.maintain * scale,
     down1: prob.down1 * scale,
     down2: prob.down2 * scale,
@@ -11,13 +11,36 @@ function calcHighProbability(prob) {
   };
 }
 
+// 성공률을 고정값으로 맞추고 나머지 결과는 비율 유지하며 축소 (확률 강화권 대)
+function calcFixedSuccessProbability(prob, fixedSuccess) {
+  const scale = (1 - fixedSuccess) / (1 - prob.success);
+  return {
+    success: fixedSuccess,
+    maintain: prob.maintain * scale,
+    down1: prob.down1 * scale,
+    down2: prob.down2 * scale,
+    reset: prob.reset * scale
+  };
+}
+
+// boostType: "none" | "high" | "small" | "medium" | "large" - 확률권 3종은 상급 강화·서로 간 중복 불가라 한 번에 하나만 적용
+function resolveProbability(level, boostType) {
+  const prob = ENHANCE_PROBABILITY[level];
+  if (boostType === "high") return calcBoostedProbability(prob, ENHANCE_HIGH_SUCCESS_MULTIPLIER, ENHANCE_HIGH_SUCCESS_CAP);
+  const ticketBoost = ENHANCE_TICKET_BOOST[boostType];
+  if (!ticketBoost) return prob;
+  return ticketBoost.fixedSuccess !== undefined
+    ? calcFixedSuccessProbability(prob, ticketBoost.fixedSuccess)
+    : calcBoostedProbability(prob, ticketBoost.multiplier, ticketBoost.cap);
+}
+
 // 강화 판정
-function tryEnhance(level, isHigh) {
+function tryEnhance(level, boostType) {
   if (level >= ENHANCE_MAX_LEVEL) {
     return { result: "max", level };
   }
 
-  const prob = isHigh ? calcHighProbability(ENHANCE_PROBABILITY[level]) : ENHANCE_PROBABILITY[level];
+  const prob = resolveProbability(level, boostType);
   const roll = Math.random();
   let acc = 0;
 
