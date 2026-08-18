@@ -834,6 +834,25 @@ const deleteSaveBtn = document.getElementById("deleteSaveBtn");
 let autoEnhanceEnabled = false;
 autoEnhanceCheck.addEventListener("change", () => { autoEnhanceEnabled = autoEnhanceCheck.checked; });
 
+// 배속 - 파밍량은 배속과 무관하게 같아야 하므로 여기서는 선택값만 들고 있고,
+// 실제 dt 배율 적용과 보스맵 강제 1배속은 loop()에서 한다.
+const speedSelectPanel = document.getElementById("speedSelect");
+let gameSpeed = 1;
+const speedButtons = BALANCE.gameSpeedOptions.map((speed) => {
+  const btn = document.createElement("button");
+  btn.innerHTML = `<span>${speed}배속</span>` + (speed >= 3 ? `<span class="adNotice">광고 예정</span>` : "");
+  btn.addEventListener("click", () => {
+    gameSpeed = speed;
+    updateSpeedButtons();
+  });
+  speedSelectPanel.appendChild(btn);
+  return btn;
+});
+function updateSpeedButtons() {
+  speedButtons.forEach((btn, i) => btn.classList.toggle("active", BALANCE.gameSpeedOptions[i] === gameSpeed));
+}
+updateSpeedButtons();
+
 // ESC 우선순위 (요청사항 5) - 장비창 열려있으면 장비창만 닫고, 아니면 설정창 토글
 let settingsOpen = false;
 function updateSaveSummary() {
@@ -1123,7 +1142,7 @@ function collectSaveState() {
   return {
     selectedClass, gold, weaponLevel, weaponExp, equipment, bag,
     probabilityTicketCounts, guaranteedTickets, currentStageIndex,
-    currentBossStageIndex, bossTimeRemaining, bossRetryCount, autoEnhanceEnabled
+    currentBossStageIndex, bossTimeRemaining, bossRetryCount, autoEnhanceEnabled, gameSpeed
   };
 }
 
@@ -1169,6 +1188,9 @@ if (savedData && !savedData.corrupted) {
   buildMonstersForStage(currentStageIndex);
   autoEnhanceEnabled = !!savedData.autoEnhanceEnabled;
   autoEnhanceCheck.checked = autoEnhanceEnabled;
+  // 구버전 저장은 gameSpeed가 없음 - 기본값 1로 떨어뜨림 (SAVE_VERSION 유지, 근거는 core/save.js 주석)
+  gameSpeed = BALANCE.gameSpeedOptions.includes(savedData.gameSpeed) ? savedData.gameSpeed : 1;
+  updateSpeedButtons();
 
   // 보스 상태 - startNextBossRun으로 "이 단계 파밍을 방금 시작한 상태"로 우선 리셋한 뒤
   // (bossZoneTriggered=false 등도 여기서 정합됨), 진행도인 타이머·재도전 횟수만 그 위에 덮어쓴다.
@@ -1762,7 +1784,11 @@ function render() {
 }
 
 function loop(now) {
-  const dt = Math.min((now - lastTime) / 1000, BALANCE.maxFrameDt);
+  // 배속은 클램프 이후에 곱한다 - maxFrameDt(0.1)를 먼저 곱해버리면 3배속의 실제 dt(최대 0.3)가
+  // 0.1로 잘려 2배속과 구분이 안 됨. 보스맵에서는 난이도가 올라가지 않도록 배속을 1로 강제한다.
+  const rawDt = Math.min((now - lastTime) / 1000, BALANCE.maxFrameDt);
+  const effectiveSpeed = currentMap === "boss" ? 1 : gameSpeed;
+  const dt = rawDt * effectiveSpeed;
   lastTime = now;
 
   if (!selectedClass) {

@@ -46,7 +46,8 @@ const BALANCE = {
   zoneYMargin: 120,
   forgeHeight: 320,
   forgeAutoMaxLevel: 10,
-  bossTimerDuration: 600,
+  bossTimerDuration: 1800,
+  gameSpeedOptions: [1, 2, 3], // 배속 - 파밍량은 그대로 두고 실제 걸리는 시간만 압축 (loop()에서 dt에 곱함)
   forgeNoticeDuration: 3,
   bossCountdown: 5,
   bossMapWidth: 1200,
@@ -58,7 +59,7 @@ const BALANCE = {
   bossGradeThresholds: { S: 0.3, A: 0.5, B: 0.75, C: 1.0 },
   bossGradeMultipliers: { S: 2.0, A: 1.5, B: 1.2, C: 1.0 },
   bossMaxRetries: 2,
-  bossRetryFarmDuration: 180,
+  bossRetryFarmDuration: 180, // 30분 본 타이머와 별개로 유지 - 재도전 전 짧은 재정비 구간이라 3배로 늘리면 실패할수록 파밍 시간이 불어나는 부작용이 생김
   bossResultLostDisplayTime: 3,
   weaponExpAttackBonusPerLevel: 0.06,
   rareSparkleChance: 0.005,

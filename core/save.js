@@ -19,7 +19,8 @@ function buildSaveData(state) {
     currentBossStageIndex: state.currentBossStageIndex,
     bossTimeRemaining: state.bossTimeRemaining,
     bossRetryCount: state.bossRetryCount,
-    autoEnhanceEnabled: state.autoEnhanceEnabled
+    autoEnhanceEnabled: state.autoEnhanceEnabled,
+    gameSpeed: state.gameSpeed
   };
 }
 
@@ -41,6 +42,8 @@ function migrate(data) {
 // 저장 데이터가 게임에 바로 쓸 수 있는 최소 형태인지 검증 - 하나라도 어긋나면 깨진 저장으로 취급.
 // bag은 길이를 요구하지 않는다 - 가방 칸 수가 바뀐 뒤의 구버전 저장도 유효한 것으로 보고,
 // 실제 길이 보정은 main.js가 로드 시점에 BALANCE.inventoryBagSize 기준으로 한다.
+// gameSpeed는 여기 필수 필드로 넣지 않는다 - 없으면(구버전 저장) main.js가 로드 시 기본값 1로
+// 떨어뜨리면 충분해서 SAVE_VERSION을 올리거나 migrate()를 쓸 이유가 없다.
 function isValidSaveData(data) {
   return !!data && typeof data === "object" &&
     typeof data.version === "number" &&
