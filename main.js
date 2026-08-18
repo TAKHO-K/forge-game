@@ -217,6 +217,7 @@ window.addEventListener("keydown", (e) => {
     if (!invenOpen) {
       pendingEquip = null;
       pendingSell = null;
+      pendingEquipEnhance = null;
       bulkSellConfirm = null;
       bulkSellDropdownOpen = false;
       inventoryHoverSlot = null;
@@ -233,6 +234,7 @@ window.addEventListener("keydown", (e) => {
       invenOpen = false;
       pendingEquip = null;
       pendingSell = null;
+      pendingEquipEnhance = null;
       bulkSellConfirm = null;
       bulkSellDropdownOpen = false;
       inventoryHoverSlot = null;
@@ -539,6 +541,18 @@ let gold = 0;
 let weaponExp = 0;
 let weaponExpLevel = getWeaponLevelFromExp(weaponExp);
 
+// 캐릭터 레벨(PRD 7.0-1, 장비 강화 상한) - v1은 별도의 캐릭터 레벨 시스템이 없어 weaponExpLevel을 그대로 쓴다.
+// "사냥만 하면 확정으로 오르는 축"이라는 7.0-1의 정의와 무기 레벨(4.2)의 정의가 일치해서 대체 가능(설계 승인).
+// 나중에 진짜 캐릭터 레벨이 생기면 이 함수 내부만 바꾸면 된다.
+function getCharacterLevel() {
+  return weaponExpLevel;
+}
+
+// 장비창 툴팁의 강화 버튼 상태 계산에 필요한 값 묶음 - 호버 갱신·클릭 판정·렌더링 세 곳이 같은 값을 쓰게 한다
+function buildEnhanceCtx() {
+  return { characterLevel: getCharacterLevel(), gold, inForge };
+}
+
 // 장비창 (PRD 7.3) - 착용 슬롯 3개 + 가방 20칸(빈 칸은 null 고정 슬롯)
 let invenOpen = false;
 const equipment = { armor: null, gloves: null, shoes: null };
@@ -553,6 +567,9 @@ for (const grade of ITEM_GRADE_ORDER) gradeFilter[grade] = true;
 let pendingEquip = null;
 // 상위 등급 판매 확인창 대기 상태 - { bagIndex, message } 또는 null
 let pendingSell = null;
+// 장비 강화 확인창 대기 상태(PRD 7.5, 요청사항 2 - 파괴 확률이 낮은 시도는 확인 없이 즉시 진행) -
+// { slotType: "equip"|"bag", part 또는 index, message } 또는 null
+let pendingEquipEnhance = null;
 // 일괄 판매 (요청사항 4) - 대상 등급 상한, 드롭다운 열림 여부, 확인창 대기 상태
 let bulkSellGrade = "normal";
 let bulkSellDropdownOpen = false;
@@ -599,8 +616,8 @@ function updateInventoryHoverSlot() {
     inventoryHoverSlot = visible ? direct : null;
     return;
   }
-  const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot);
-  if (resolved && pointInRect(mouse.x, mouse.y, resolved.tooltip)) return; // 판매 버튼 쪽으로 이동 중 - 유지
+  const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot, buildEnhanceCtx());
+  if (resolved && pointInRect(mouse.x, mouse.y, resolved.tooltip)) return; // 판매·강화 버튼 쪽으로 이동 중 - 유지
   inventoryHoverSlot = null;
 }
 
@@ -674,6 +691,65 @@ function handlePendingSellClick(mx, my) {
   }
 }
 
+// 장비 강화 (PRD 7.5) - target: { slotType: "equip"|"bag", part 또는 index }
+function getEnhanceTargetItem(target) {
+  return target.slotType === "equip" ? equipment[target.part] : bag[target.index];
+}
+
+// 강화 결과 적용 - 파괴면 슬롯을 비운다(착용 중이었다면 equipBonuses가 다음 프레임 재계산에서 즉시 빠짐),
+// 성공이면 enhanceLevel만 올린다. maintain(파괴방지권 적용 시)은 아무 것도 바뀌지 않는다.
+function applyEquipEnhanceResult(target, result) {
+  const slot = target.slotType === "equip" ? equipment : bag;
+  const key = target.slotType === "equip" ? target.part : target.index;
+  if (result.result === "destroy") {
+    slot[key] = null;
+  } else if (result.result === "success") {
+    slot[key].enhanceLevel = result.level;
+  }
+}
+
+// 강화 실행 - 골드 차감, 판정, 결과 적용까지. 확인창을 거쳤든(handlePendingEquipEnhanceClick) 안 거쳤든
+// (tryEquipEnhanceFromSlot에서 바로) 여기로 모인다.
+function doEquipEnhance(target) {
+  const item = getEnhanceTargetItem(target);
+  if (!item || !canEquipEnhance(item, getCharacterLevel())) return;
+  const cost = getEquipEnhanceCost(item.enhanceLevel || 0, item.grade);
+  if (gold < cost) return;
+  gold -= cost;
+  // preventDestroy: 파괴방지권 연동 지점 - 파괴방지권 미구현이라 항상 false (core/equipEnhance.js 참고)
+  const result = tryEquipEnhance(item.enhanceLevel || 0, false);
+  applyEquipEnhanceResult(target, result);
+  doAutosave(); // 강화는 되돌릴 수 없는 핵심 행위 - 무기 강화와 동일하게 즉시저장
+}
+
+// 강화 버튼 클릭 진입점 - 대장간 밖·레벨 초과·골드 부족이면 무시(버튼이 이미 비활성 표시라 별도 메시지 없이 종료),
+// 파괴 확률이 낮으면(shouldConfirmEquipEnhance) 바로 진행, 높으면 확인창 대기
+function tryEquipEnhanceFromSlot(target) {
+  const item = getEnhanceTargetItem(target);
+  if (!item || !inForge || !canEquipEnhance(item, getCharacterLevel())) return;
+  const cost = getEquipEnhanceCost(item.enhanceLevel || 0, item.grade);
+  if (gold < cost) return;
+  if (shouldConfirmEquipEnhance(item)) {
+    const prob = getEquipEnhanceProbability(item.enhanceLevel || 0);
+    pendingEquipEnhance = {
+      ...target,
+      message: `강화를 시도하면 ${Math.round(prob.destroy * 100)}% 확률로 장비가 파괴됩니다. 진행할까요?`
+    };
+    return;
+  }
+  doEquipEnhance(target);
+}
+
+function handlePendingEquipEnhanceClick(mx, my) {
+  const layout = getConfirmDialogLayout(ctx, getInventoryOffsetX());
+  if (pointInRect(mx, my, layout.confirmBtn)) {
+    doEquipEnhance(pendingEquipEnhance);
+    pendingEquipEnhance = null;
+  } else if (pointInRect(mx, my, layout.cancelBtn)) {
+    pendingEquipEnhance = null;
+  }
+}
+
 // 일괄 판매 대상 - 가방에 있고(착용 중인 장비는 별도 배열이라 자연히 제외), 고대·태초가 아니며, 선택 등급 이하
 function getBulkSellCandidates(maxGrade) {
   const maxIndex = ITEM_GRADE_ORDER.indexOf(maxGrade);
@@ -725,6 +801,10 @@ function handleInventoryClick(button, mx, my) {
     handlePendingSellClick(mx, my);
     return;
   }
+  if (pendingEquipEnhance) {
+    handlePendingEquipEnhanceClick(mx, my);
+    return;
+  }
   if (bulkSellConfirm) {
     handleBulkSellConfirmClick(mx, my);
     return;
@@ -764,7 +844,7 @@ function handleInventoryClick(button, mx, my) {
   }
 
   if (button === 0) {
-    const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot);
+    const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot, buildEnhanceCtx());
     if (resolved && pointInRect(mx, my, resolved.tooltip.sellBtn)) {
       if (inventoryHoverSlot.type === "equip") {
         invenMessage = "착용 중인 장비는 판매할 수 없습니다";
@@ -772,6 +852,13 @@ function handleInventoryClick(button, mx, my) {
       } else {
         trySellFromBag(inventoryHoverSlot.index);
       }
+      return;
+    }
+    if (resolved && pointInRect(mx, my, resolved.tooltip.enhanceBtn)) {
+      const target = inventoryHoverSlot.type === "equip"
+        ? { slotType: "equip", part: inventoryHoverSlot.part }
+        : { slotType: "bag", index: inventoryHoverSlot.index };
+      tryEquipEnhanceFromSlot(target);
       return;
     }
   }
@@ -1074,7 +1161,7 @@ canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 canvas.addEventListener("mousedown", (e) => {
   if (invenOpen) {
-    if (e.button === 0 && !pendingEquip && !pendingSell && !bulkSellConfirm && !bulkSellDropdownOpen) {
+    if (e.button === 0 && !pendingEquip && !pendingSell && !pendingEquipEnhance && !bulkSellConfirm && !bulkSellDropdownOpen) {
       const layout = invenLayout();
       const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
       if (hovered && hovered.type === "bag") {
@@ -1584,7 +1671,7 @@ function update(dt) {
     if (distToPlayer <= player.radius + BALANCE.itemPickupRadius) {
       const emptyIndex = bag.indexOf(null);
       if (emptyIndex !== -1) {
-        bag[emptyIndex] = { grade: item.grade, part: item.part };
+        bag[emptyIndex] = { grade: item.grade, part: item.part, enhanceLevel: 0 };
         groundItems.splice(i, 1);
       } else {
         bagFullNoticeTimer = BALANCE.inventoryMessageDisplayTime;
@@ -1776,9 +1863,9 @@ function render() {
     drawInventory(ctx, {
       equipment, bag, gameTime,
       mouseX: mouse.x, mouseY: mouse.y,
-      totalStats, gradeFilter, pendingEquip, pendingSell, bulkSellConfirm, bulkSellGrade, bulkSellDropdownOpen,
+      totalStats, gradeFilter, pendingEquip, pendingSell, pendingEquipEnhance, bulkSellConfirm, bulkSellGrade, bulkSellDropdownOpen,
       inventoryHoverSlot, invenMessage, invenMessageTimer, dragState,
-      layoutOffsetX: getInventoryOffsetX()
+      layoutOffsetX: getInventoryOffsetX(), enhanceCtx: buildEnhanceCtx()
     });
   }
 }

@@ -1,5 +1,5 @@
 // 저장 슬롯 (PRD 9.1-1 단순화 - 슬롯 1개, 테스트 가능한 최소 저장)
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 const SAVE_KEY = "forge-game-save";
 
 // currentStageIndex처럼 재생성 가능한 값(monsters)과 equipBonuses·weaponExpLevel처럼
@@ -36,6 +36,20 @@ function saveGame(state) {
 // 다음 필드 추가 절차: 1) buildSaveData와 main.js의 적용/수집 로직에 필드 추가
 // 2) SAVE_VERSION을 올린다 3) 아래에 `if (data.version < N) { ...구버전 보정...; data.version = N; }` 블록 추가
 function migrate(data) {
+  if (data.version < 2) {
+    // 장비 강화(7.5) 도입 - equipment/bag의 기존 아이템에는 enhanceLevel이 없었으므로 0으로 채운다
+    if (data.equipment) {
+      for (const part of ITEM_PARTS) {
+        if (data.equipment[part]) data.equipment[part].enhanceLevel = data.equipment[part].enhanceLevel || 0;
+      }
+    }
+    if (Array.isArray(data.bag)) {
+      for (const item of data.bag) {
+        if (item) item.enhanceLevel = item.enhanceLevel || 0;
+      }
+    }
+    data.version = 2;
+  }
   return data;
 }
 

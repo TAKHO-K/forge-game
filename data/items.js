@@ -58,6 +58,21 @@ const DROP_GRADE_TABLE = [
 //   조합에서 시뮬레이션으로 확인).
 const EQUIPMENT_GRADE_BOOST = { capSteps: 1, weight: 0.15, maxMultiplier: 2.4 };
 
+// 장비 강화 확률표 (PRD 7.5, core/equipEnhance.js getEquipEnhanceProbability에서 사용) - 성공/파괴 2종뿐(무기 강화의
+// 강등·리셋 없음). minLevel은 이 구간이 적용되는 목표 레벨(강화 시도로 도달하려는 레벨, 예: +1은 0강->1강 시도)의
+// 하한. "+10 이상"이 무한히 이어지므로 고정 배열 대신 구간 오름차순 목록으로 표현한다.
+const ITEM_ENHANCE_PROBABILITY = [
+  { minLevel: 1, success: 0.90, destroy: 0.10 },
+  { minLevel: 4, success: 0.70, destroy: 0.30 },
+  { minLevel: 7, success: 0.45, destroy: 0.55 },
+  { minLevel: 10, success: 0.25, destroy: 0.75 }
+];
+
+// 강화 1단계당 스탯·판매가 증가율 - core/equipment.js의 getItemStatValue(전투력)와 getItemSellValue(판매가)가
+// 이 값을 공유해서 쓴다. 같은 계수를 쓰는 이유: 가격과 실전력이 같은 배율로 올라야 "비싼데 안 세다" 같은
+// 괴리가 안 생긴다. 값 자체(0.3)는 기존 판매가 공식이 이미 쓰던 계수를 그대로 승계.
+const ITEM_ENHANCE_STAT_BONUS_PER_LEVEL = 0.3;
+
 // 경험치 토큰 크기 (7.1-1) - value는 몬스터 weaponExp 기준 배율
 // 색은 장비 등급 색(ITEM_GRADES)과 겹치지 않는 하늘색~청록 계열로 통일 - 소/중/대는 색이 아니라 radius(대는 소의 2배)로 구분
 const EXP_TOKEN_TIERS = {

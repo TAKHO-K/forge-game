@@ -647,7 +647,7 @@ function buildEffectSegments(item, comparisonItem) {
   ];
 }
 
-// 판매가 한 줄 - 강화 보정(item.enhanceLevel, 7.5 미구현 전까지 항상 0)이 있으면 보정 포함 문구 추가
+// 판매가 한 줄 - 강화 보정(item.enhanceLevel)이 있으면 보정 포함 문구 추가
 function buildSellText(item) {
   const price = getItemSellValue(item);
   const level = item.enhanceLevel || 0;
@@ -655,17 +655,46 @@ function buildSellText(item) {
   return `판매가: ${price.toLocaleString()}G${suffix}`;
 }
 
+// 강화 버튼 상태·안내문 - enhanceCtx: { characterLevel, gold, inForge } (main.js에서 조립해 넘김)
+function buildEnhanceInfo(item, enhanceCtx) {
+  const grade = ITEM_GRADES[item.grade];
+  const level = item.enhanceLevel || 0;
+  const cost = getEquipEnhanceCost(level, item.grade);
+  const eligible = canEquipEnhance(item, enhanceCtx.characterLevel);
+  const label = grade.enhanceable ? `강화 (${cost.toLocaleString()}G)` : "강화 불가";
+
+  let enabled = false;
+  let note;
+  if (!grade.enhanceable) {
+    note = "고대·태초는 강화할 수 없습니다";
+  } else if (!eligible) {
+    note = `캐릭터 레벨 ${enhanceCtx.characterLevel}까지만 강화 가능`;
+  } else if (!enhanceCtx.inForge) {
+    note = "대장간에서만 강화할 수 있습니다";
+  } else if (enhanceCtx.gold < cost) {
+    note = "골드가 부족합니다";
+  } else {
+    enabled = true;
+    const prob = getEquipEnhanceProbability(level);
+    note = `성공 ${Math.round(prob.success * 100)}% · 파괴 ${Math.round(prob.destroy * 100)}%`;
+  }
+  return { label, note, enabled, cost };
+}
+
 // 툴팁 레이아웃 - anchorSlot(장비창 슬롯 rect)에 붙여서 위치를 고정, 마우스를 따라다니지 않게 함
 // (마우스를 따라다니면 판매 버튼 쪽으로 마우스를 움직이는 동안 버튼도 같이 밀려나 클릭 불가능해짐)
-function getItemTooltipLayout(ctx, item, anchorSlot, comparisonItem) {
+function getItemTooltipLayout(ctx, item, anchorSlot, comparisonItem, enhanceCtx) {
   const grade = ITEM_GRADES[item.grade];
+  const level = item.enhanceLevel || 0;
+  const titleSuffix = level > 0 ? ` +${level}` : "";
   const plainLines = [
-    `${grade.name} ${ITEM_PART_NAMES[item.part]}`,
+    `${grade.name} ${ITEM_PART_NAMES[item.part]}${titleSuffix}`,
     `등급: ${grade.name}`,
     `부위: ${ITEM_PART_NAMES[item.part]}`
   ];
   const effectSegments = buildEffectSegments(item, comparisonItem);
   const sellText = buildSellText(item);
+  const enhanceInfo = buildEnhanceInfo(item, enhanceCtx);
 
   ctx.save();
   ctx.font = "13px sans-serif";
@@ -676,8 +705,13 @@ function getItemTooltipLayout(ctx, item, anchorSlot, comparisonItem) {
   const btnGap = 10;
   const effectLineWidth = effectSegments.reduce((sum, seg) => sum + ctx.measureText(seg.text).width, 0);
   const sellRowWidth = ctx.measureText(sellText).width + btnGap + btnW;
-  const boxW = Math.max(...plainLines.map((l) => ctx.measureText(l).width), effectLineWidth, sellRowWidth) + padding * 2;
-  const boxH = lineHeight * (plainLines.length + 2) + padding * 2;
+  const enhanceRowWidth = ctx.measureText(enhanceInfo.label).width + btnGap + btnW;
+  const enhanceNoteWidth = ctx.measureText(enhanceInfo.note).width;
+  const boxW = Math.max(
+    ...plainLines.map((l) => ctx.measureText(l).width),
+    effectLineWidth, sellRowWidth, enhanceRowWidth, enhanceNoteWidth
+  ) + padding * 2;
+  const boxH = lineHeight * (plainLines.length + 4) + padding * 2;
   ctx.restore();
 
   let x = anchorSlot.x + anchorSlot.w + 8;
@@ -688,12 +722,21 @@ function getItemTooltipLayout(ctx, item, anchorSlot, comparisonItem) {
 
   const sellY = y + padding + (plainLines.length + 1) * lineHeight;
   const sellBtn = { x: x + boxW - padding - btnW, y: sellY - 3, w: btnW, h: btnH };
+  const enhanceY = y + padding + (plainLines.length + 2) * lineHeight;
+  const enhanceBtn = { x: x + boxW - padding - btnW, y: enhanceY - 3, w: btnW, h: btnH };
+  const enhanceNoteY = y + padding + (plainLines.length + 3) * lineHeight;
 
-  return { x, y, w: boxW, h: boxH, padding, lineHeight, plainLines, effectSegments, sellText, sellBtn };
+  return {
+    x, y, w: boxW, h: boxH, padding, lineHeight, plainLines, effectSegments,
+    sellText, sellBtn, enhanceInfo, enhanceBtn, enhanceY, enhanceNoteY
+  };
 }
 
 function drawItemTooltip(ctx, item, layout, gameTime, isEquipped) {
-  const { x, y, w, h, padding, lineHeight, plainLines, effectSegments, sellText, sellBtn } = layout;
+  const {
+    x, y, w, h, padding, lineHeight, plainLines, effectSegments, sellText, sellBtn,
+    enhanceInfo, enhanceBtn, enhanceY, enhanceNoteY
+  } = layout;
 
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.92)";
@@ -733,6 +776,30 @@ function drawItemTooltip(ctx, item, layout, gameTime, isEquipped) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("판매", sellBtn.x + sellBtn.w / 2, sellBtn.y + sellBtn.h / 2 + 1);
+
+  ctx.font = "13px sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#ffe066";
+  ctx.fillText(enhanceInfo.label, x + padding, enhanceY);
+
+  const enhanceColor = enhanceInfo.enabled ? "#4dd97e" : "#666666";
+  ctx.fillStyle = "#222222";
+  ctx.fillRect(enhanceBtn.x, enhanceBtn.y, enhanceBtn.w, enhanceBtn.h);
+  ctx.strokeStyle = enhanceColor;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(enhanceBtn.x, enhanceBtn.y, enhanceBtn.w, enhanceBtn.h);
+  ctx.fillStyle = enhanceColor;
+  ctx.font = "bold 12px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("강화", enhanceBtn.x + enhanceBtn.w / 2, enhanceBtn.y + enhanceBtn.h / 2 + 1);
+
+  ctx.font = "12px sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = enhanceInfo.enabled ? "#aaaaaa" : "#ff8080";
+  ctx.fillText(enhanceInfo.note, x + padding, enhanceNoteY);
   ctx.restore();
 }
 
@@ -743,7 +810,7 @@ function drawItemTooltip(ctx, item, layout, gameTime, isEquipped) {
 // 프레임마다 갱신하는 "sticky" 상태(장비창 호버 상태 참고) - 여기서는 매 슬롯을 다시 스캔하지 않음
 // (모든 슬롯의 툴팁 영역을 매번 검사하면, 착용 슬롯처럼 화면에 고정된 툴팁이 그 아래 가방 칸과
 // 겹쳐서 엉뚱한 아이템의 툴팁이 뜨는 문제가 있었음)
-function resolveHoveredTooltip(ctx, layout, equipment, bag, hoverSlot) {
+function resolveHoveredTooltip(ctx, layout, equipment, bag, hoverSlot, enhanceCtx) {
   if (!hoverSlot) return null;
   const item = hoverSlot.type === "equip" ? equipment[hoverSlot.part] : bag[hoverSlot.index];
   if (!item) return null;
@@ -751,7 +818,7 @@ function resolveHoveredTooltip(ctx, layout, equipment, bag, hoverSlot) {
     ? layout.equipSlots.find((s) => s.part === hoverSlot.part)
     : layout.bagSlots[hoverSlot.index];
   const comparisonItem = hoverSlot.type === "bag" ? equipment[item.part] : null;
-  const tooltip = getItemTooltipLayout(ctx, item, slotRect, comparisonItem);
+  const tooltip = getItemTooltipLayout(ctx, item, slotRect, comparisonItem, enhanceCtx);
   return { item, tooltip, isEquipped: hoverSlot.type === "equip" };
 }
 
@@ -855,8 +922,8 @@ function drawDragGhost(ctx, item, mx, my, gameTime) {
 function drawInventory(ctx, state) {
   const {
     equipment, bag, gameTime, mouseX, mouseY, totalStats, gradeFilter,
-    pendingEquip, pendingSell, bulkSellConfirm, bulkSellGrade, bulkSellDropdownOpen, inventoryHoverSlot,
-    invenMessage, invenMessageTimer, dragState, layoutOffsetX
+    pendingEquip, pendingSell, pendingEquipEnhance, bulkSellConfirm, bulkSellGrade, bulkSellDropdownOpen, inventoryHoverSlot,
+    invenMessage, invenMessageTimer, dragState, layoutOffsetX, enhanceCtx
   } = state;
   const layout = getInventoryLayout(ctx, layoutOffsetX);
   const { px, py, panelW, panelH } = layout;
@@ -925,6 +992,13 @@ function drawInventory(ctx, state) {
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText(ITEM_PART_NAMES[slot.part], slot.x + slot.w / 2, slot.y + slot.h + 4);
+    if (item && item.enhanceLevel) {
+      ctx.fillStyle = "#ffe066";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      ctx.fillText(`+${item.enhanceLevel}`, slot.x + slot.w - 3, slot.y + 3);
+    }
   }
 
   for (const slot of layout.bagSlots) {
@@ -944,6 +1018,13 @@ function drawInventory(ctx, state) {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(ITEM_PART_NAMES[item.part], slot.x + slot.w / 2, slot.y + slot.h / 2);
+      if (item.enhanceLevel) {
+        ctx.fillStyle = "#ffe066";
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "top";
+        ctx.fillText(`+${item.enhanceLevel}`, slot.x + slot.w - 3, slot.y + 3);
+      }
     }
   }
 
@@ -980,8 +1061,8 @@ function drawInventory(ctx, state) {
   }
   ctx.restore();
 
-  if (!pendingEquip && !pendingSell && !bulkSellConfirm && !draggedItem && !bulkSellDropdownOpen) {
-    const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot);
+  if (!pendingEquip && !pendingSell && !pendingEquipEnhance && !bulkSellConfirm && !draggedItem && !bulkSellDropdownOpen) {
+    const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot, enhanceCtx);
     if (resolved) {
       drawItemTooltip(ctx, resolved.item, resolved.tooltip, gameTime, resolved.isEquipped);
     }
@@ -995,6 +1076,8 @@ function drawInventory(ctx, state) {
     drawConfirmDialog(ctx, "현재 착용중인 장비보다 낮은 등급입니다. 착용할까요?", "착용", "#4dd97e", layoutOffsetX);
   } else if (pendingSell) {
     drawConfirmDialog(ctx, pendingSell.message, "판매", "#ff5c5c", layoutOffsetX);
+  } else if (pendingEquipEnhance) {
+    drawConfirmDialog(ctx, pendingEquipEnhance.message, "강화", "#ffe066", layoutOffsetX);
   } else if (bulkSellConfirm) {
     drawConfirmDialog(ctx, bulkSellConfirm.message, "판매", "#ff5c5c", layoutOffsetX);
   }
