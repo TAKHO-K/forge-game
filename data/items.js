@@ -41,16 +41,22 @@ const DROP_GRADE_TABLE = [
 ];
 
 // 착용 장비 기준 드랍 등급 보정 (core/loot.js getBoostedDropTable에서 사용)
-// capSteps: 기준 등급(착용 3부위 중 최하위, 미착용은 normal) + capSteps 등급에만 weight를 더하고 그 행을 재정규화.
+// capSteps: 기준 등급(착용 3부위 중 최하위, 미착용은 normal) + capSteps 등급에만 확률을 더한다(대상보다 낮은 등급에서만 차감).
 //   1로 고정 - 시뮬레이션 결과 capSteps=2는 등급을 한 단계 건너뛴다(예: tier4에서 올영웅 착용 시
-//   legendary가 아니라 relic이 바로 14% 근처까지 뛰고, legendary 자체는 보정 전보다도 낮아짐 - 성장 곡선이
-//   끊겨 보임). capSteps=1은 legendary만 약 9%→21%로 완만하게 올라가 "다음 등급이 조금 더 잘 나온다"는
-//   체감에 맞음.
-// weight: 0.15 - 대상 등급에 더한 뒤 재정규화하면 tier4 기준 legendary가 9%→약 20.9%(행 상대비 +11.9%p)로
-//   오른다. 0.10은 체감이 약하고(→17.3%) 0.25는 과함(→27.2%)해서 그 중간을 선택.
+//   legendary가 아니라 relic이 바로 뛰고 legendary는 보정 전보다도 낮아짐 - 성장 곡선이 끊겨 보임).
+//   capSteps=1은 legendary만 완만하게 올라가 "다음 등급이 조금 더 잘 나온다"는 체감에 맞음.
+// weight: 0.15 - 대상 등급에 더하는 최대 절대량. tier4 legendary(9%) 기준 weight만 적용되면 24%까지 갈 수 있지만
+//   maxMultiplier가 더 낮게 걸려 실제로는 그쪽이 상한이 된다(아래 참고).
+// maxMultiplier: 2.4 - 대상 등급의 보정 후 확률은 "원래 확률 x maxMultiplier"를 넘지 못한다. weight와 maxMultiplier 중
+//   더 낮은 쪽이 실제 상한이 된다. tier4 legendary(9%)는 2.4배=21.6%가 weight(24%)보다 낮아 이 상한이 적용되어
+//   기존 목표치(~21.5%)를 그대로 유지하고, tier4 relic(1%)은 2.4배=2.4%로 묶여 flat weight를 그대로 더했을 때
+//   나오는 16%(14배 폭증)를 막는다. 즉 2.4는 "legendary 성장폭은 유지하면서 relic 같은 희귀 등급의 폭증만 억제"하는
+//   지점으로 시뮬레이션에서 확인해 선택했다(2.0은 legendary가 18%로 줄어 성장폭이 약해지고, 3.0은 relic이 3%로
+//   여전히 3배 뛰어 희소성이 흔들리기 시작함).
 // target이 ancient·primordial이거나 해당 tier 표에 아예 없는 등급이면 보정을 걸지 않는다(getBoostedDropTable) -
-//   고대·태초 확률이 원래 표보다 높아지는 경우를 원천 차단한다(모든 tier x 기준등급 조합에서 시뮬레이션으로 확인).
-const EQUIPMENT_GRADE_BOOST = { capSteps: 1, weight: 0.15 };
+//   고대·태초는 항상 대상보다 높은 등급이라 차감 대상에도 들지 않아 원래 확률이 그대로 보존된다(모든 tier x 기준등급
+//   조합에서 시뮬레이션으로 확인).
+const EQUIPMENT_GRADE_BOOST = { capSteps: 1, weight: 0.15, maxMultiplier: 2.4 };
 
 // 경험치 토큰 크기 (7.1-1) - value는 몬스터 weaponExp 기준 배율
 // 색은 장비 등급 색(ITEM_GRADES)과 겹치지 않는 하늘색~청록 계열로 통일 - 소/중/대는 색이 아니라 radius(대는 소의 2배)로 구분
