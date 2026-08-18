@@ -487,7 +487,7 @@ function spawnDamageNumber(x, y, value, isCrit, isComboHit) {
 // 바닥 장비 드랍 (PRD 7.1) - 등급/부위는 rollDroppedItems가 판정, 등급만 바닥에 노출
 const groundItems = [];
 function spawnGroundItems(x, y, tier, dropChance) {
-  const drops = rollDroppedItems(tier, dropChance, BALANCE.dropSlot2Multiplier);
+  const drops = rollDroppedItems(tier, dropChance, BALANCE.dropSlot2Multiplier, equipment);
   drops.forEach((drop, i) => {
     const angle = Math.random() * Math.PI * 2;
     const offset = i === 0 ? 0 : BALANCE.itemDropOffset;

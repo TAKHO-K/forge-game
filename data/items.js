@@ -40,6 +40,18 @@ const DROP_GRADE_TABLE = [
   { rare: 0.10, epic: 0.30, legendary: 0.40, relic: 0.18, ancient: 0.019, primordial: 0.001 }
 ];
 
+// 착용 장비 기준 드랍 등급 보정 (core/loot.js getBoostedDropTable에서 사용)
+// capSteps: 기준 등급(착용 3부위 중 최하위, 미착용은 normal) + capSteps 등급에만 weight를 더하고 그 행을 재정규화.
+//   1로 고정 - 시뮬레이션 결과 capSteps=2는 등급을 한 단계 건너뛴다(예: tier4에서 올영웅 착용 시
+//   legendary가 아니라 relic이 바로 14% 근처까지 뛰고, legendary 자체는 보정 전보다도 낮아짐 - 성장 곡선이
+//   끊겨 보임). capSteps=1은 legendary만 약 9%→21%로 완만하게 올라가 "다음 등급이 조금 더 잘 나온다"는
+//   체감에 맞음.
+// weight: 0.15 - 대상 등급에 더한 뒤 재정규화하면 tier4 기준 legendary가 9%→약 20.9%(행 상대비 +11.9%p)로
+//   오른다. 0.10은 체감이 약하고(→17.3%) 0.25는 과함(→27.2%)해서 그 중간을 선택.
+// target이 ancient·primordial이거나 해당 tier 표에 아예 없는 등급이면 보정을 걸지 않는다(getBoostedDropTable) -
+//   고대·태초 확률이 원래 표보다 높아지는 경우를 원천 차단한다(모든 tier x 기준등급 조합에서 시뮬레이션으로 확인).
+const EQUIPMENT_GRADE_BOOST = { capSteps: 1, weight: 0.15 };
+
 // 경험치 토큰 크기 (7.1-1) - value는 몬스터 weaponExp 기준 배율
 // 색은 장비 등급 색(ITEM_GRADES)과 겹치지 않는 하늘색~청록 계열로 통일 - 소/중/대는 색이 아니라 radius(대는 소의 2배)로 구분
 const EXP_TOKEN_TIERS = {
