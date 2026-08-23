@@ -73,18 +73,53 @@ function drawDecoy(ctx, taunt) {
   ctx.globalAlpha = 1;
 }
 
-function drawPlayerHealthBar(ctx, hp, maxHp, gameTime) {
-  const slotWidth = 28;
-  const slotHeight = 22;
-  const gap = 4;
-  const totalWidth = maxHp * slotWidth + (maxHp - 1) * gap;
-  const startX = ctx.canvas.width / 2 - totalWidth / 2;
-  const y = ctx.canvas.height - 90;
+// 하단 HUD 공통 레이아웃 - 경험치 바(전체 폭) 위에 스탯 패널(좌)·체력(중앙)·스킬+대시(우)가
+// 한 줄로 나란히 놓인다. 좌표를 한 곳에서만 정해 그리기와 겹침 확인(장비창·강화 패널)이
+// 같은 수치를 쓰게 한다. 장비창(getInventoryLayout)이 화면 중앙에 세로로 고정 폭(470)을
+// 차지하므로, 이 band는 그 아래(canvas.height/2 + 235)에 완전히 들어가야 겹치지 않는다 -
+// bandTop이 항상 그보다 아래가 되도록 아래 budget을 720p 기준으로 여유 있게 잡았다.
+function getHudBottomLayout(ctx) {
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const sideMargin = 14;
+
+  const expBar = { x: sideMargin, y: h - 24, w: w - sideMargin * 2, h: 18 };
+
+  const bandGap = 8;
+  const bandHeight = 64;
+  const bandBottom = expBar.y - bandGap;
+  const bandTop = bandBottom - bandHeight;
+
+  const statPanel = { x: sideMargin, y: bandTop, w: 210, h: bandHeight };
+
+  const hpSlotW = 26, hpSlotH = 20, hpGap = 4, hpCount = 10;
+  const hpWidth = hpCount * hpSlotW + (hpCount - 1) * hpGap;
+  const hpBar = {
+    x: w / 2 - hpWidth / 2, y: bandBottom - hpSlotH, w: hpWidth, h: hpSlotH,
+    slotW: hpSlotW, slotH: hpSlotH, gap: hpGap, count: hpCount
+  };
+
+  // 스킬(Q)+대시 - 모바일 대응 시 오른손 엄지 영역이 될 자리라 조작 요소를 여기 모은다
+  const clusterW = 110;
+  const qIconSize = 44;
+  const dashBarW = 100, dashBarH = 10;
+  const clusterCenterX = w - sideMargin - clusterW / 2;
+  const cluster = {
+    x: w - sideMargin - clusterW, y: bandTop, w: clusterW, h: bandHeight,
+    qIcon: { x: clusterCenterX - qIconSize / 2, y: bandTop, w: qIconSize, h: qIconSize },
+    dashBar: { x: clusterCenterX - dashBarW / 2, y: bandTop + qIconSize + 6, w: dashBarW, h: dashBarH }
+  };
+
+  return { expBar, statPanel, hpBar, cluster, bandTop, bandBottom };
+}
+
+function drawPlayerHealthBar(ctx, layout, hp, maxHp, gameTime) {
+  const { x: startX, y, slotW: slotWidth, slotH: slotHeight, gap, count } = layout.hpBar;
 
   const isLow = hp <= 3;
   const blinkOn = Math.floor(gameTime * 4) % 2 === 0;
 
-  for (let i = 0; i < maxHp; i++) {
+  for (let i = 0; i < count; i++) {
     const x = startX + i * (slotWidth + gap);
     ctx.fillStyle = i < hp ? "#e05c5c" : "#333333";
     ctx.fillRect(x, y, slotWidth, slotHeight);
@@ -95,11 +130,8 @@ function drawPlayerHealthBar(ctx, hp, maxHp, gameTime) {
   }
 }
 
-function drawDashCooldown(ctx, cooldownTimer, cooldownMax) {
-  const width = 80;
-  const height = 10;
-  const x = ctx.canvas.width / 2 - width / 2;
-  const y = ctx.canvas.height - 30;
+function drawDashCooldown(ctx, layout, cooldownTimer, cooldownMax) {
+  const { x, y, w: width, h: height } = layout.cluster.dashBar;
   const ratio = Math.max(0, Math.min(1, 1 - cooldownTimer / cooldownMax));
 
   ctx.fillStyle = "#333333";
@@ -113,8 +145,66 @@ function drawDashCooldown(ctx, cooldownTimer, cooldownMax) {
   ctx.fillStyle = "#ffffff";
   ctx.font = "12px sans-serif";
   ctx.textAlign = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText(cooldownTimer <= 0 ? "대시 준비" : `대시 ${cooldownTimer.toFixed(1)}s`, x + width / 2, y - 4);
+  ctx.textBaseline = "top";
+  ctx.fillText(cooldownTimer <= 0 ? "대시 준비" : `대시 ${cooldownTimer.toFixed(1)}s`, x + width / 2, y + height + 3);
+}
+
+// Q 스킬 아이콘 - 쿨다운 중엔 위에서 아래로 줄어드는 반투명 오버레이 + 남은 초, 준비되면 "준비"
+function drawSkillCooldown(ctx, layout, skillName, cooldownTimer, cooldownMax) {
+  const { x, y, w: size } = layout.cluster.qIcon;
+  const ready = cooldownTimer <= 0;
+  const ratio = cooldownMax > 0 ? Math.max(0, Math.min(1, cooldownTimer / cooldownMax)) : 0;
+
+  ctx.fillStyle = "#222222";
+  ctx.fillRect(x, y, size, size);
+  ctx.strokeStyle = ready ? "#4dd97e" : "#666666";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, size, size);
+
+  if (!ready) {
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(x, y, size, size * ratio);
+  }
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#ffe066";
+  ctx.font = "bold 11px sans-serif";
+  ctx.fillText("Q", x + size / 2, y + 3);
+
+  ctx.font = "bold 13px sans-serif";
+  ctx.fillStyle = ready ? "#4dd97e" : "#ffffff";
+  ctx.fillText(ready ? "준비" : cooldownTimer.toFixed(1), x + size / 2, y + 20);
+}
+
+// 캐릭터 스탯 패널 (좌하단) - 흩어져 있던 공격력·방어력·이동속도·치명타율·치명타피해를 한곳에 모음
+function drawPlayerStatsPanel(ctx, layout, stats) {
+  const { x, y, w, h } = layout.statPanel;
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "#555555";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+
+  const padding = 8;
+  const rowH = (h - padding * 2) / 3;
+  const col1X = x + padding;
+  const col2X = x + w / 2;
+  const rows = [
+    [`공격력 ${stats.attack}`, `치명타율 ${stats.critRate}%`],
+    [`방어력 ${stats.defense}`, `치명타피해 ${stats.critDmg}%`],
+    [`이동속도 ${stats.speed}`, ""]
+  ];
+
+  ctx.font = "12px sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#ffffff";
+  rows.forEach((row, i) => {
+    const ty = y + padding + i * rowH;
+    ctx.fillText(row[0], col1X, ty);
+    if (row[1]) ctx.fillText(row[1], col2X, ty);
+  });
 }
 
 function drawProjectiles(ctx, projectiles) {
@@ -418,46 +508,36 @@ function drawBossResult(ctx, result) {
   ctx.restore();
 }
 
-function drawWeaponExpBar(ctx, level, progress) {
-  const x = 10;
-  const width = 150;
-  const height = 14;
-  const y = ctx.canvas.height - 64;
-  const previewY = y + 15;
-  const barY = previewY + 15;
+// 경험치 바 (메이플 스타일) - 화면 하단 전체 폭. 레벨업이 성장의 핵심 체감이라 항상 눈에 띄게
+function drawWeaponExpBar(ctx, layout, level, progress) {
+  const { x, y, w, h } = layout.expBar;
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "13px sans-serif";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(`무기 Lv.${level}`, x, y);
-
-  // 다음 레벨 도달 시 얻는 공격력 증가분 미리보기
-  const maxWeaponLevel = WEAPON_LEVEL_EXP.length;
-  ctx.font = "12px sans-serif";
-  ctx.fillStyle = "#8fd6ff";
-  if (level < maxWeaponLevel) {
-    const nextLevel = level + 1;
-    const gainRatio = getWeaponExpAttackMultiplier(nextLevel) - getWeaponExpAttackMultiplier(level);
-    ctx.fillText(`Lv${nextLevel} → 공격력 +${Math.round(gainRatio * 100)}%`, x, previewY);
-  } else {
-    ctx.fillText("최대 레벨", x, previewY);
-  }
-
-  ctx.fillStyle = "#333333";
-  ctx.fillRect(x, barY, width, height);
+  ctx.fillStyle = "#1a1a1a";
+  ctx.fillRect(x, y, w, h);
   ctx.fillStyle = "#66ccff";
-  ctx.fillRect(x, barY, width * progress.ratio, height);
+  ctx.fillRect(x, y, w * progress.ratio, h);
   ctx.strokeStyle = "#000000";
   ctx.lineWidth = 1;
-  ctx.strokeRect(x, barY, width, height);
+  ctx.strokeRect(x, y, w, h);
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "11px sans-serif";
-  ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const label = progress.needed > 0 ? `${progress.current} / ${progress.needed}` : "MAX";
-  ctx.fillText(label, x + width / 2, barY + height / 2 + 1);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(0,0,0,0.85)";
+  ctx.fillStyle = "#ffe066";
+  ctx.font = "bold 12px sans-serif";
+  ctx.textAlign = "left";
+  const levelText = `Lv.${level}`;
+  ctx.strokeText(levelText, x + 6, y + h / 2 + 1);
+  ctx.fillText(levelText, x + 6, y + h / 2 + 1);
+
+  ctx.font = "12px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffffff";
+  const label = progress.needed > 0
+    ? `${progress.current} / ${progress.needed} (${Math.round(progress.ratio * 100)}%)`
+    : "MAX";
+  ctx.strokeText(label, x + w / 2, y + h / 2 + 1);
+  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
 }
 
 function drawAutoIndicator(ctx, autoMode) {

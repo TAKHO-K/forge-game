@@ -1882,9 +1882,19 @@ function render() {
   if (bossResultState !== "none") drawBossResult(ctx, bossResultInfo);
   const totalAttack = Math.round(getPlayerAttack());
   drawEnhanceInfo(ctx, weaponLevel, enhanceResultText, enhanceResultTimer, gold, totalAttack);
-  drawWeaponExpBar(ctx, weaponExpLevel, getWeaponExpProgress(weaponExp, weaponExpLevel));
-  drawPlayerHealthBar(ctx, player.hp, player.maxHp, gameTime);
-  drawDashCooldown(ctx, player.dashCooldownTimer, BALANCE.dashCooldown);
+  const hudLayout = getHudBottomLayout(ctx);
+  drawWeaponExpBar(ctx, hudLayout, weaponExpLevel, getWeaponExpProgress(weaponExp, weaponExpLevel));
+  drawPlayerStatsPanel(ctx, hudLayout, {
+    attack: totalAttack,
+    defense: Math.round(player.defense),
+    speed: Math.round(player.speed),
+    critRate: Math.round(selectedClass.critRate * 100),
+    critDmg: Math.round(selectedClass.critDmg * 100)
+  });
+  drawPlayerHealthBar(ctx, hudLayout, player.hp, player.maxHp, gameTime);
+  const qSkill = SKILLS[selectedClass.id] && SKILLS[selectedClass.id].Q;
+  if (qSkill) drawSkillCooldown(ctx, hudLayout, qSkill.name, qCooldownTimer, qSkill.cooldown);
+  drawDashCooldown(ctx, hudLayout, player.dashCooldownTimer, BALANCE.dashCooldown);
   if (invenOpen) {
     updateInventoryHoverSlot();
     const totalStats = { attack: totalAttack, defense: Math.round(player.defense), speed: Math.round(player.speed) };
