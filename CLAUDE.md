@@ -10,6 +10,7 @@
 - 저장 구조 변경 시 SAVE_VERSION을 올리고 migrate()에 처리를 추가한다
 - 한 번에 한 단계씩만 구현한다. 다음 단계 전에 동작을 확인한다
 - 그리기는 render.js에만 둔다. 도형을 이미지로 교체할 때 한 곳만 고치기 위함
+- 작업을 마치고 커밋한 뒤에는 origin master로 푸시한다. 푸시해야 GitHub Pages에 반영되어 실제 플레이어가 볼 수 있다.
 
 # Behavioral Guidelines
 
