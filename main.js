@@ -617,7 +617,19 @@ function updateInventoryHoverSlot() {
     return;
   }
   const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot, buildEnhanceCtx());
-  if (resolved && pointInRect(mouse.x, mouse.y, resolved.tooltip)) return; // 판매·강화 버튼 쪽으로 이동 중 - 유지
+  // 슬롯과 툴팁 사이 여백(8px)도 호버로 쳐야 그 틈을 지나 버튼까지 마우스를 옮길 수 있음 -
+  // 슬롯 rect와 툴팁 rect를 모두 포함하는 bounding box로 판정 (툴팁이 좌측 재배치돼도 커버됨)
+  if (resolved) {
+    const { slotRect, tooltip } = resolved;
+    const bx = Math.min(slotRect.x, tooltip.x);
+    const by = Math.min(slotRect.y, tooltip.y);
+    const bounds = {
+      x: bx, y: by,
+      w: Math.max(slotRect.x + slotRect.w, tooltip.x + tooltip.w) - bx,
+      h: Math.max(slotRect.y + slotRect.h, tooltip.y + tooltip.h) - by
+    };
+    if (pointInRect(mouse.x, mouse.y, bounds)) return; // 판매·강화 버튼 쪽으로 이동 중 - 유지
+  }
   inventoryHoverSlot = null;
 }
 
@@ -1294,6 +1306,12 @@ if (savedData && !savedData.corrupted) {
 let lastTime = performance.now();
 
 function update(dt) {
+  // 보스 승리 결과창이 떠 있는 동안 시뮬레이션을 완전히 멈춘다 - 안 멈추면 결과창을 닫지 않고
+  // 사냥터(currentMap="hunt")에서 몬스터를 계속 잡아 무한 파밍이 된다. PRD 8.0-1-a가 대장간에서
+  // 타이머를 멈춰 "재료 획득량"을 유일한 진행 손잡이로 삼은 것과 같은 철학 - 진행을 막는 화면에서
+  // 파밍이 계속되면 그 손잡이가 무력화된다. render()는 loop()에서 계속 호출되므로 결과창·버튼
+  // 클릭(bossNextStageBtn/bossExitBtn)은 이 return과 무관하게 정상 동작한다.
+  if (bossResultState === "won") return;
   gameTime += dt;
 
   let dx = 0, dy = 0;
@@ -1497,6 +1515,16 @@ function update(dt) {
         BALANCE.wallThickness + player.radius,
         BALANCE.bossMapHeight - BALANCE.wallThickness - player.radius
       );
+      // 보스전은 파밍과 분리된 별도 도전이므로 사냥터에서의 체력·이동 상태를 물려받지 않는다.
+      // hp를 풀피로 하지 않으면 iframeTimer/dashTimer는 그대로 둬도 무해하지만, dashTimer(및 Q
+      // 돌진 qDashTimer)가 남아있으면 사냥터에서의 이동 방향으로 보스맵 진입 첫 프레임에 플레이어가
+      // BOSS_ZONE_X/Y에서 벗어나 버리므로 같이 초기화한다.
+      player.hp = player.maxHp;
+      player.iframeTimer = 0;
+      player.noHitTimer = 0;
+      player.regenTimer = 0;
+      player.dashTimer = 0;
+      qDashTimer = 0;
       bossFreezeTimer = BALANCE.bossStartFreezeDuration;
       bossFightTimeRemaining = BOSSES[currentBossStageIndex].timeLimit;
       bossFightFailed = false;

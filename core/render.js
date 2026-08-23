@@ -819,7 +819,7 @@ function resolveHoveredTooltip(ctx, layout, equipment, bag, hoverSlot, enhanceCt
     : layout.bagSlots[hoverSlot.index];
   const comparisonItem = hoverSlot.type === "bag" ? equipment[item.part] : null;
   const tooltip = getItemTooltipLayout(ctx, item, slotRect, comparisonItem, enhanceCtx);
-  return { item, tooltip, isEquipped: hoverSlot.type === "equip" };
+  return { item, tooltip, slotRect, isEquipped: hoverSlot.type === "equip" };
 }
 
 function wrapText(ctx, text, cx, y, maxWidth, lineHeight) {
