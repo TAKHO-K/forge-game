@@ -1,5 +1,5 @@
 // 저장 슬롯 (PRD 9.1-1 단순화 - 슬롯 1개, 테스트 가능한 최소 저장)
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const SAVE_KEY = "forge-game-save";
 
 // currentStageIndex처럼 재생성 가능한 값(monsters)과 equipBonuses·weaponExpLevel처럼
@@ -49,6 +49,31 @@ function migrate(data) {
       }
     }
     data.version = 2;
+  }
+  if (data.version < 3) {
+    // 장비 강화(7.5) 폐지 -> 아이템 레벨 각인으로 대체. enhanceLevel을 버리고 itemLevel을 채운다.
+    // 획득 시점을 알 수 없으므로 "지금까지 이만큼은 파밍했다"고 보고 저장된 weaponExp로 역산한
+    // 현재 캐릭터 레벨을 넣는다 - 1로 채우면 기존에 모은 장비가 전부 최약체로 주저앉아 migrate()의
+    // 취지(기존 저장 무손실 승계)에 반하고, 등급별 역산 추정은 이 단계에서 과설계다(설계 승인).
+    const migratedLevel = getWeaponLevelFromExp(data.weaponExp);
+    if (data.equipment) {
+      for (const part of ITEM_PARTS) {
+        const item = data.equipment[part];
+        if (item) {
+          delete item.enhanceLevel;
+          item.itemLevel = migratedLevel;
+        }
+      }
+    }
+    if (Array.isArray(data.bag)) {
+      for (const item of data.bag) {
+        if (item) {
+          delete item.enhanceLevel;
+          item.itemLevel = migratedLevel;
+        }
+      }
+    }
+    data.version = 3;
   }
   return data;
 }
