@@ -92,12 +92,9 @@ function getHudBottomLayout(ctx) {
 
   const statPanel = { x: sideMargin, y: bandTop, w: 210, h: bandHeight };
 
-  const hpSlotW = 26, hpSlotH = 20, hpGap = 4, hpCount = 10;
-  const hpWidth = hpCount * hpSlotW + (hpCount - 1) * hpGap;
-  const hpBar = {
-    x: w / 2 - hpWidth / 2, y: bandBottom - hpSlotH, w: hpWidth, h: hpSlotH,
-    slotW: hpSlotW, slotH: hpSlotH, gap: hpGap, count: hpCount
-  };
+  // 칸 그리드는 maxHp를 알아야 계산되므로(줄바꿈), 여기선 중심 x·바닥 y만 고정하고
+  // 실제 칸 배치는 drawPlayerHealthBar가 매 프레임 maxHp 기준으로 계산한다
+  const hpBar = { centerX: w / 2, bottomY: bandBottom };
 
   // 스킬(Q)+대시 - 모바일 대응 시 오른손 엄지 영역이 될 자리라 조작 요소를 여기 모은다
   const clusterW = 110;
@@ -113,20 +110,30 @@ function getHudBottomLayout(ctx) {
   return { expBar, statPanel, hpBar, cluster, bandTop, bandBottom };
 }
 
+// 마인크래프트 하트처럼 한 줄에 maxPerRow칸까지 채우고 넘치면 윗줄로 쌓는다 -
+// 아랫줄부터 꽉 채우고 맨 위 줄만 나머지 칸수로 남는 방식(인덱스가 클수록 위쪽 줄)
 function drawPlayerHealthBar(ctx, layout, hp, maxHp, gameTime) {
-  const { x: startX, y, slotW: slotWidth, slotH: slotHeight, gap, count } = layout.hpBar;
+  const { centerX, bottomY } = layout.hpBar;
+  const slotW = 32, slotH = 24, gap = 5;
+  const maxPerRow = BALANCE.hpBarMaxPerRow;
+  const rowWidth = maxPerRow * slotW + (maxPerRow - 1) * gap;
+  const leftX = centerX - rowWidth / 2;
 
   const isLow = hp <= 3;
   const blinkOn = Math.floor(gameTime * 4) % 2 === 0;
 
-  for (let i = 0; i < count; i++) {
-    const x = startX + i * (slotWidth + gap);
+  for (let i = 0; i < maxHp; i++) {
+    const row = Math.floor(i / maxPerRow);
+    const col = i % maxPerRow;
+    const x = leftX + col * (slotW + gap);
+    const y = bottomY - slotH - row * (slotH + gap);
+
     ctx.fillStyle = i < hp ? "#e05c5c" : "#333333";
-    ctx.fillRect(x, y, slotWidth, slotHeight);
+    ctx.fillRect(x, y, slotW, slotH);
 
     ctx.lineWidth = isLow && blinkOn ? 3 : 1;
     ctx.strokeStyle = isLow && blinkOn ? "#ff0000" : "#000000";
-    ctx.strokeRect(x, y, slotWidth, slotHeight);
+    ctx.strokeRect(x, y, slotW, slotH);
   }
 }
 
@@ -358,14 +365,13 @@ function drawDamageNumbers(ctx, damageNumbers) {
   ctx.globalAlpha = 1;
 }
 
-function drawEnhanceInfo(ctx, weaponLevel, resultText, resultTimer, gold, totalAttack) {
+function drawEnhanceInfo(ctx, weaponLevel, resultText, resultTimer, gold) {
   ctx.fillStyle = "#ffffff";
   ctx.font = "16px sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.fillText(`강화 +${weaponLevel}`, 10, 10);
   ctx.fillText(`골드 ${gold}`, 10, 32);
-  ctx.fillText(`공격력 ${totalAttack}`, 10, 54);
 
   if (resultTimer > 0) {
     ctx.font = "bold 20px sans-serif";

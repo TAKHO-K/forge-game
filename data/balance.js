@@ -23,6 +23,7 @@ const BALANCE = {
   damageNumberRiseSpeed: 40,
   enhanceResultDisplayTime: 1.5,
   playerMaxHp: 10,
+  hpBarMaxPerRow: 10, // 체력바 한 줄 최대 칸 수 - 넘으면 마인크래프트처럼 윗줄로 쌓임 (최대 체력 증가 시스템 대비)
   playerDefense: 5,
   playerDamageCapRatio: 0.3,
   playerIframeDuration: 0.8,

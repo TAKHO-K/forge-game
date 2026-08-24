@@ -604,13 +604,8 @@ function invenLayout() {
 
 function updateInventoryHoverSlot() {
   const layout = invenLayout();
-  const direct = findHoveredInventorySlot(layout, mouse.x, mouse.y);
-  if (direct) {
-    const item = direct.type === "equip" ? equipment[direct.part] : bag[direct.index];
-    const visible = direct.type === "equip" ? !!item : !!(item && gradeFilter[item.grade]);
-    inventoryHoverSlot = visible ? direct : null;
-    return;
-  }
+  // 툴팁은 항상 다른 슬롯 위에 겹쳐 그려지므로, direct 판정을 먼저 하면 그 아래 깔린 슬롯이
+  // 잡혀 툴팁이 끊긴다. 캔버스에서 나중에 그린 것이 위이듯, 판정도 툴팁(위) 영역을 먼저 검사한다.
   const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot);
   // 슬롯과 툴팁 사이 여백(8px)도 호버로 쳐야 그 틈을 지나 버튼까지 마우스를 옮길 수 있음 -
   // 슬롯 rect와 툴팁 rect를 모두 포함하는 bounding box로 판정 (툴팁이 좌측 재배치돼도 커버됨)
@@ -623,7 +618,14 @@ function updateInventoryHoverSlot() {
       w: Math.max(slotRect.x + slotRect.w, tooltip.x + tooltip.w) - bx,
       h: Math.max(slotRect.y + slotRect.h, tooltip.y + tooltip.h) - by
     };
-    if (pointInRect(mouse.x, mouse.y, bounds)) return; // 판매·강화 버튼 쪽으로 이동 중 - 유지
+    if (pointInRect(mouse.x, mouse.y, bounds)) return; // 판매 버튼 쪽으로 이동 중 - 유지
+  }
+  const direct = findHoveredInventorySlot(layout, mouse.x, mouse.y);
+  if (direct) {
+    const item = direct.type === "equip" ? equipment[direct.part] : bag[direct.index];
+    const visible = direct.type === "equip" ? !!item : !!(item && gradeFilter[item.grade]);
+    inventoryHoverSlot = visible ? direct : null;
+    return;
   }
   inventoryHoverSlot = null;
 }
@@ -1100,12 +1102,18 @@ canvas.addEventListener("mousedown", (e) => {
   if (invenOpen) {
     if (e.button === 0 && !pendingEquip && !pendingSell && !bulkSellConfirm && !bulkSellDropdownOpen) {
       const layout = invenLayout();
-      const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
-      if (hovered && hovered.type === "bag") {
-        const item = bag[hovered.index];
-        if (item && gradeFilter[item.grade]) {
-          dragState = { bagIndex: hovered.index, startX: mouse.x, startY: mouse.y, dragging: false };
-          return;
+      // 툴팁이 슬롯 위에 겹쳐 그려지므로, 판매 버튼 위 클릭은 그 아래 깔린 슬롯의 드래그 시작으로
+      // 잡히면 안 된다 - handleInventoryClick과 같은 우선순위(툴팁이 슬롯보다 위)를 여기서도 지킨다
+      const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot);
+      const onSellBtn = resolved && pointInRect(mouse.x, mouse.y, resolved.tooltip.sellBtn);
+      if (!onSellBtn) {
+        const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
+        if (hovered && hovered.type === "bag") {
+          const item = bag[hovered.index];
+          if (item && gradeFilter[item.grade]) {
+            dragState = { bagIndex: hovered.index, startX: mouse.x, startY: mouse.y, dragging: false };
+            return;
+          }
         }
       }
     }
@@ -1806,7 +1814,7 @@ function render() {
   }
   if (bossResultState !== "none") drawBossResult(ctx, bossResultInfo);
   const totalAttack = Math.round(getPlayerAttack());
-  drawEnhanceInfo(ctx, weaponLevel, enhanceResultText, enhanceResultTimer, gold, totalAttack);
+  drawEnhanceInfo(ctx, weaponLevel, enhanceResultText, enhanceResultTimer, gold);
   const hudLayout = getHudBottomLayout(ctx);
   drawWeaponExpBar(ctx, hudLayout, weaponExpLevel, getWeaponExpProgress(weaponExp, weaponExpLevel));
   drawPlayerStatsPanel(ctx, hudLayout, {
