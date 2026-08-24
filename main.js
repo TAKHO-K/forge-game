@@ -883,7 +883,7 @@ updateSpeedButtons();
 let settingsOpen = false;
 function updateSaveSummary() {
   saveSummaryEl.textContent = selectedClass
-    ? `직업 ${selectedClass.name} · 강화 +${weaponLevel} · 골드 ${gold.toLocaleString()} · 무기 레벨 ${weaponExpLevel}`
+    ? `직업 ${selectedClass.name} · 강화 +${weaponLevel} · 골드 ${formatAbbreviatedNumber(gold)} · 무기 레벨 ${weaponExpLevel}`
     : "저장된 진행 없음";
 }
 function setSettingsOpen(open) {
