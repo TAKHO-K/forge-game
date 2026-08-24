@@ -728,7 +728,7 @@ function tryBulkSell() {
   const gradeLabel = buildBulkSellGradeLabel(bulkSellGrade);
   bulkSellConfirm = {
     indices,
-    message: `${gradeLabel} 장비 ${indices.length}개를 판매합니다. 총 ${total.toLocaleString()}골드. 진행할까요?`
+    message: `${gradeLabel} 장비 ${indices.length}개를 판매합니다. 총 ${formatAbbreviatedNumber(total)}골드. 진행할까요?`
   };
 }
 
@@ -1059,7 +1059,7 @@ function updateEnhanceButtons() {
   const currentAttack = Math.round(getPlayerAttack(weaponLevel));
 
   if (weaponLevel >= ENHANCE_MAX_LEVEL) {
-    enhanceTitle.textContent = `현재 +${weaponLevel} · 공격력 ${currentAttack} (최대)`;
+    enhanceTitle.textContent = `현재 +${weaponLevel} · 공격력 ${formatAbbreviatedNumber(currentAttack)} (최대)`;
     activeTicketBadge.classList.remove("show");
     enhanceBtn.textContent = "일반 강화 (최대)";
     enhanceHighBtn.textContent = "상급 강화 (최대)";
@@ -1080,16 +1080,16 @@ function updateEnhanceButtons() {
   const normalProb = resolveProbability(weaponLevel, ticketBoostSelection || "none");
   const highProb = resolveProbability(weaponLevel, "high");
 
-  enhanceTitle.textContent = `현재 +${weaponLevel} · 공격력 ${currentAttack}`;
+  enhanceTitle.textContent = `현재 +${weaponLevel} · 공격력 ${formatAbbreviatedNumber(currentAttack)}`;
   activeTicketBadge.classList.toggle("show", !!ticketBoostSelection);
   if (ticketBoostSelection) activeTicketBadge.textContent = `${TICKET_BOOST_LABEL[ticketBoostSelection]} 적용 중`;
 
-  enhanceBtn.textContent = `일반 강화 (${normalCost}G) → 공격력 ${nextAttack}`;
+  enhanceBtn.textContent = `일반 강화 (${formatAbbreviatedNumber(normalCost)}G) → 공격력 ${formatAbbreviatedNumber(nextAttack)}`;
   enhanceSuccessInfo.innerHTML = successLineHTML(baseProb, ticketBoostSelection ? normalProb : null);
   enhanceProbInfo.textContent = formatFailureLine(normalProb);
   enhanceBtn.disabled = gold < normalCost;
 
-  enhanceHighBtn.textContent = `상급 강화 (${highCost}G) → 공격력 ${nextAttack}`;
+  enhanceHighBtn.textContent = `상급 강화 (${formatAbbreviatedNumber(highCost)}G) → 공격력 ${formatAbbreviatedNumber(nextAttack)}`;
   enhanceHighSuccessInfo.innerHTML = successLineHTML(highProb) +
     (highProb.success === baseProb.success ? ` <span class="noBenefit">이득 없음 - 일반 강화와 성공률 동일</span>` : "");
   enhanceHighProbInfo.textContent = formatFailureLine(highProb);

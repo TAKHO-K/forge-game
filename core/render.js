@@ -198,8 +198,8 @@ function drawPlayerStatsPanel(ctx, layout, stats) {
   const col1X = x + padding;
   const col2X = x + w / 2;
   const rows = [
-    [`공격력 ${stats.attack}`, `치명타율 ${stats.critRate}%`],
-    [`방어력 ${stats.defense}`, `치명타피해 ${stats.critDmg}%`],
+    [`공격력 ${formatAbbreviatedNumber(stats.attack)}`, `치명타율 ${stats.critRate}%`],
+    [`방어력 ${formatAbbreviatedNumber(stats.defense)}`, `치명타피해 ${stats.critDmg}%`],
     [`이동속도 ${stats.speed}`, ""]
   ];
 
@@ -360,7 +360,7 @@ function drawDamageNumbers(ctx, damageNumbers) {
     ctx.fillStyle = "#ffffff";
     const fontSize = (dn.isCrit ? 30 : 20) + (dn.isComboHit ? 6 : 0);
     ctx.font = `${dn.isCrit ? "bold " : ""}${fontSize}px sans-serif`;
-    ctx.fillText(String(dn.value), dn.x, dn.y);
+    ctx.fillText(formatAbbreviatedNumber(dn.value), dn.x, dn.y);
   }
   ctx.globalAlpha = 1;
 }
@@ -371,7 +371,7 @@ function drawEnhanceInfo(ctx, weaponLevel, resultText, resultTimer, gold) {
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.fillText(`강화 +${weaponLevel}`, 10, 10);
-  ctx.fillText(`골드 ${gold}`, 10, 32);
+  ctx.fillText(`골드 ${formatAbbreviatedNumber(gold)}`, 10, 32);
 
   if (resultTimer > 0) {
     ctx.font = "bold 20px sans-serif";
@@ -454,7 +454,8 @@ function drawBossHealthBar(ctx, boss) {
   ctx.font = "bold 16px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(`${boss.name}  ${Math.max(0, Math.ceil(boss.hp))} / ${boss.maxHp}`, x + width / 2, y + height / 2);
+  const bossHpText = `${formatAbbreviatedNumber(Math.max(0, Math.ceil(boss.hp)))} / ${formatAbbreviatedNumber(boss.maxHp)}`;
+  ctx.fillText(`${boss.name}  ${bossHpText}`, x + width / 2, y + height / 2);
 }
 
 function drawBossFightTimer(ctx, timeRemaining, failed) {
@@ -493,7 +494,7 @@ function drawBossResult(ctx, result) {
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "18px sans-serif";
-    ctx.fillText(`골드 +${result.goldGained}`, cx, cy - 20);
+    ctx.fillText(`골드 +${formatAbbreviatedNumber(result.goldGained)}`, cx, cy - 20);
     if (result.gotTicket) {
       ctx.fillText(`확정 강화권 +1 획득`, cx, cy + 10);
     }
@@ -540,7 +541,7 @@ function drawWeaponExpBar(ctx, layout, level, progress) {
   ctx.textAlign = "center";
   ctx.fillStyle = "#ffffff";
   const label = progress.needed > 0
-    ? `${progress.current} / ${progress.needed} (${Math.round(progress.ratio * 100)}%)`
+    ? `${formatAbbreviatedNumber(progress.current)} / ${formatAbbreviatedNumber(progress.needed)} (${Math.round(progress.ratio * 100)}%)`
     : "MAX";
   ctx.strokeText(label, x + w / 2, y + h / 2 + 1);
   ctx.fillText(label, x + w / 2, y + h / 2 + 1);
@@ -736,7 +737,7 @@ function buildEffectSegments(item, comparisonItem) {
 // 판매가 한 줄
 function buildSellText(item) {
   const price = getItemSellValue(item);
-  return `판매가: ${price.toLocaleString()}G`;
+  return `판매가: ${formatAbbreviatedNumber(price)}G`;
 }
 
 // 툴팁 레이아웃 - anchorSlot(장비창 슬롯 rect)에 붙여서 위치를 고정, 마우스를 따라다니지 않게 함
@@ -1072,7 +1073,7 @@ function drawInventory(ctx, state) {
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.fillText(
-    `공격력 ${totalStats.attack}  /  방어력 ${totalStats.defense}  /  이동속도 ${totalStats.speed}`,
+    `공격력 ${formatAbbreviatedNumber(totalStats.attack)}  /  방어력 ${formatAbbreviatedNumber(totalStats.defense)}  /  이동속도 ${totalStats.speed}`,
     px + 16,
     layout.statsY
   );
