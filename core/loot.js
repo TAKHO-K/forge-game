@@ -21,7 +21,9 @@ function getBoostedDropTable(tier, equipment) {
   const table = DROP_GRADE_TABLE[tier - 1];
   const baselineIndex = getEquipmentBaselineGradeIndex(equipment);
   const targetGrade = ITEM_GRADE_ORDER[baselineIndex + EQUIPMENT_GRADE_BOOST.capSteps];
-  if (!targetGrade || targetGrade === "ancient" || targetGrade === "primordial" || table[targetGrade] === undefined) {
+  // ancient는 보정 대상이 될 수 있다(3부위 유물 착용 시 고대 확률 상승, 밸런스 조정 승인).
+  // primordial은 최종 목표 아이템이라 과하게 안 풀리도록 계속 제외한다.
+  if (!targetGrade || targetGrade === "primordial" || table[targetGrade] === undefined) {
     return table;
   }
   const targetIndex = ITEM_GRADE_ORDER.indexOf(targetGrade);

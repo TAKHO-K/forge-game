@@ -23,10 +23,14 @@ const ITEM_PART_NAMES = { armor: "갑옷", gloves: "장갑", shoes: "신발" };
 
 // 부위별 기본 효과 (7.3) - 실제 값은 base × 등급 성능배율(ITEM_GRADES.multiplier)
 // armor: 방어력 +base, gloves/shoes: 공격력·이동속도 +base(비율)
+// gloves/shoes base: 0.05 -> 0.15 (밸런스 조정 승인) - 최종배율이 "1 + base×등급배율×레벨계수" 구조라
+// 밑깔림 1이 레벨 1->25 체감 증가폭을 갑옷(flat 가산이라 밑깔림 없음)보다 크게 눌러왔다. base를 올리면
+// 이 비율이 갑옷의 순수 증가율(2.44배)에 점근하므로(다만 완전히 도달하진 못함) 체감 격차를 줄인다 -
+// 전설 기준 Lv1->25 배율이 1.19배 -> 1.45배로 갑옷(클래스별 1.69~1.96배)에 가까워짐(시뮬레이션 확인).
 const ITEM_PART_BASE_STAT = {
   armor:  { statType: "defenseFlat",   base: 2 },
-  gloves: { statType: "attackPercent", base: 0.05 },
-  shoes:  { statType: "speedPercent",  base: 0.05 }
+  gloves: { statType: "attackPercent", base: 0.15 },
+  shoes:  { statType: "speedPercent",  base: 0.15 }
 };
 
 // 몬스터 등급(tier)별 드랍 등급 확률표 (7.2) - index는 tier-1, 각 행의 합은 1
@@ -46,16 +50,19 @@ const DROP_GRADE_TABLE = [
 //   capSteps=1은 legendary만 완만하게 올라가 "다음 등급이 조금 더 잘 나온다"는 체감에 맞음.
 // weight: 0.15 - 대상 등급에 더하는 최대 절대량. tier4 legendary(9%) 기준 weight만 적용되면 24%까지 갈 수 있지만
 //   maxMultiplier가 더 낮게 걸려 실제로는 그쪽이 상한이 된다(아래 참고).
-// maxMultiplier: 2.4 - 대상 등급의 보정 후 확률은 "원래 확률 x maxMultiplier"를 넘지 못한다. weight와 maxMultiplier 중
-//   더 낮은 쪽이 실제 상한이 된다. tier4 legendary(9%)는 2.4배=21.6%가 weight(24%)보다 낮아 이 상한이 적용되어
-//   기존 목표치(~21.5%)를 그대로 유지하고, tier4 relic(1%)은 2.4배=2.4%로 묶여 flat weight를 그대로 더했을 때
-//   나오는 16%(14배 폭증)를 막는다. 즉 2.4는 "legendary 성장폭은 유지하면서 relic 같은 희귀 등급의 폭증만 억제"하는
-//   지점으로 시뮬레이션에서 확인해 선택했다(2.0은 legendary가 18%로 줄어 성장폭이 약해지고, 3.0은 relic이 3%로
-//   여전히 3배 뛰어 희소성이 흔들리기 시작함).
-// target이 ancient·primordial이거나 해당 tier 표에 아예 없는 등급이면 보정을 걸지 않는다(getBoostedDropTable) -
-//   고대·태초는 항상 대상보다 높은 등급이라 차감 대상에도 들지 않아 원래 확률이 그대로 보존된다(모든 tier x 기준등급
-//   조합에서 시뮬레이션으로 확인).
-const EQUIPMENT_GRADE_BOOST = { capSteps: 1, weight: 0.15, maxMultiplier: 2.4 };
+// maxMultiplier: 2.4 -> 3.2 (밸런스 조정 승인) - 대상 등급의 보정 후 확률은 "원래 확률 x maxMultiplier"를
+//   넘지 못한다. weight와 maxMultiplier 중 더 낮은 쪽이 실제 상한이 된다. 3부위 유물 착용 시 대상이 ancient가
+//   되는데(아래 core/loot.js 참고), ancient처럼 원래 확률이 아주 작은 등급은 weight(0.15)가 항상 원래확률을
+//   압도해 사실상 maxMultiplier만이 실질 상한이 된다 - tier5 ancient(0.5%)가 목표치(3부위 유물 시 1.5%↑)에
+//   닿으려면 최소 3.0배가 필요해 3.2로 올렸다(결과 1.6%). 이 김에 legendary(tier4 9%->24%)·relic(tier4 1%->3.2%,
+//   tier5 4.5%->14.4%)도 같이 오른다 - 예전엔 "3.0은 relic이 3%로 뛰어 희소성이 흔들린다"고 2.4를 골랐지만,
+//   그건 그때 relic 구간을 더 키울 이유가 없었기 때문이고 지금은 전설->유물 체감 상승 자체가 목표라 유효하지 않다.
+//   장비에 랜덤 옵션이 붙는 다음 단계부터는 같은 등급 안에서도 옵션 조합으로 가치가 갈려 등급 희소성의
+//   일부가 옵션 희소성으로 옮겨가므로("원하는 옵션 붙은 유물"은 여전히 희소), 등급 자체의 문턱을 조금 낮추는
+//   이번 조정과 방향이 맞는다.
+// target이 primordial이거나 해당 tier 표에 아예 없는 등급이면 보정을 걸지 않는다(getBoostedDropTable) -
+//   태초는 최종 목표 아이템이라 과하게 풀리지 않도록 항상 대상에서 제외한다(3부위 고대 착용 시에도 보정 없음).
+const EQUIPMENT_GRADE_BOOST = { capSteps: 1, weight: 0.15, maxMultiplier: 3.2 };
 
 // 아이템 레벨 계수 (디아블로4식 - 획득 시점 캐릭터 레벨이 아이템에 각인, core/equipment.js
 // getItemLevelMultiplier에서 사용) - weaponExpAttackBonusPerLevel(data/balance.js)과 완전히 같은 값을

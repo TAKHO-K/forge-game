@@ -35,7 +35,10 @@ const MONSTERS = {
 // 보스 데이터 (PRD 9.1, 9.5, 9.6) - 단계 순서 배열, index 0부터 1단계
 // clearGoldReward: 기본보상(9.5, 등급배율 곱하기 전). 확정 강화권은 클리어마다 BALANCE.bossGuaranteedTicketChance 확률로 +1 지급(9.6)
 const BOSSES = [
-  { name: "고블린왕", hp: 4000, defense: 8, attack: 20, timeLimit: 60, radius: 45, color: "#c9a227", // hp/defense 테스트용 임시값 - 나중에 재조정
+  // hp: 4000 -> 12000 (밸런스 조정 승인, 근거: 무기+13·전설3세트Lv15 기준 DPS 시뮬레이션 - 기존 4000은
+  // 이 스냅샷 기준 전 직업 2.5~5초 만에 잡혀 "너무 빨리 죽는다"는 체감과 일치했음). 이 12000도 임시값이다 -
+  // 장비에 랜덤 옵션이 붙는 다음 단계에서 DPS가 다시 오르므로 그때 재계산해서 다시 조정할 예정.
+  { name: "고블린왕", hp: 12000, defense: 8, attack: 20, timeLimit: 60, radius: 45, color: "#c9a227",
     clearGoldReward: 3000 },
   { name: "오크로드", hp: 80000, defense: 80, attack: 30, timeLimit: 75, radius: 50, color: "#8b3a1a",
     clearGoldReward: 8000 }
