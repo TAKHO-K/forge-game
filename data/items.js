@@ -64,6 +64,14 @@ const DROP_GRADE_TABLE = [
 //   태초는 최종 목표 아이템이라 과하게 풀리지 않도록 항상 대상에서 제외한다(3부위 고대 착용 시에도 보정 없음).
 const EQUIPMENT_GRADE_BOOST = { capSteps: 1, weight: 0.15, maxMultiplier: 3.2 };
 
+// 랜덤 옵션 개수 (등급별 고정값, 랜덤 옵션 시스템 설계 승인) - core/loot.js rollItemOptions에서 사용.
+// 범위가 아니라 고정인 이유: 개수까지 랜덤이면 "등급+개수+스탯종류+수치"가 겹쳐 같은 등급 안 편차가
+// 너무 커진다. 등급이 결정하는 축(개수, 수치 상한)은 고정하고, 파밍 동기가 되는 랜덤은
+// "어떤 스탯이 붙는지 + 값 롤"로만 한정한다.
+const ITEM_OPTION_COUNT_BY_GRADE = {
+  normal: 0, rare: 1, epic: 2, legendary: 2, relic: 3, ancient: 3, primordial: 4
+};
+
 // 아이템 레벨 계수 (디아블로4식 - 획득 시점 캐릭터 레벨이 아이템에 각인, core/equipment.js
 // getItemLevelMultiplier에서 사용) - weaponExpAttackBonusPerLevel(data/balance.js)과 완전히 같은 값을
 // 그대로 재사용한다. 둘 다 "사냥만 하면 오르는 축"(getCharacterLevel 참고)에서 갈리는 배율이라

@@ -697,6 +697,37 @@ function getInventoryLayout(ctx, offsetX) {
   };
 }
 
+// 슬롯 하단 중앙에 옵션 개수만큼 점을 찍는다(랜덤 옵션 시스템 설계 승인) - 개수만 표시하고
+// 롤 품질은 넣지 않는다(설계 확정 유지). 100칸까지 훑어야 하는 슬롯은 "볼 가치가 있는지" 정도의
+// 신호면 충분하고, 정확한 값은 툴팁(buildOptionLines)에서 본다.
+function drawOptionDots(ctx, slot, count) {
+  if (!count) return;
+  const dotR = 2.5;
+  const gap = 7;
+  let dotX = slot.x + slot.w / 2 - ((count - 1) * gap) / 2;
+  const dotY = slot.y + slot.h - 7;
+  ctx.fillStyle = "#66ccff";
+  for (let i = 0; i < count; i++) {
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+    ctx.fill();
+    dotX += gap;
+  }
+}
+
+// 잠긴 아이템 표시 - 슬롯 좌상단(레벨 배지는 우상단이라 반대쪽), 호버 없이 항상 보이게
+function drawLockIcon(ctx, slot) {
+  const lx = slot.x + 9;
+  const ly = slot.y + 10;
+  ctx.strokeStyle = "#ffe066";
+  ctx.fillStyle = "#ffe066";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(lx, ly - 2, 3, Math.PI, 0);
+  ctx.stroke();
+  ctx.fillRect(lx - 4, ly - 2, 8, 6);
+}
+
 // 마우스가 올라간 슬롯 판정 - 클릭 처리(main.js)와 툴팁 표시(render.js) 양쪽에서 사용
 function findHoveredInventorySlot(layout, mx, my) {
   for (const slot of layout.equipSlots) {
@@ -740,6 +771,29 @@ function buildSellText(item) {
   return `판매가: ${formatAbbreviatedNumber(price)}G`;
 }
 
+function formatOptionValue(stat, value) {
+  if (stat.unit === "percent") return `${(value * 100).toFixed(1)}%`;
+  if (stat.unit === "seconds") return `${value.toFixed(1)}초`;
+  return value.toFixed(1);
+}
+
+// 랜덤 옵션 줄 (설계 승인 + 롤 품질 표시 추가) - rollFactor([0.7,1.3])를 0~100% 백분율로 보여줘
+// "같은 등급, 같은 스탯이라도 이건 좋은 롤/나쁜 롤"이 한눈에 보이게 한다(파밍 동기 유지 목적).
+// 색으로도 구분(초록=상위권, 회색=하위권)해서 숫자를 안 읽어도 대략적인 질이 보이게 한다.
+// 슬롯 배지에는 이 품질 정보를 넣지 않는다(설계 승인 유지) - 개별 아이템 툴팁과 20~100칸을
+// 훑는 슬롯은 요구가 다르다(정확한 값 vs 한눈에 훑기).
+function buildOptionLines(item) {
+  if (!item.options || item.options.length === 0) return [];
+  const [rangeMin, rangeMax] = OPTION_ROLL_FACTOR_RANGE;
+  return item.options.map((opt) => {
+    const stat = STAT_REGISTRY[opt.statId];
+    const rollPercent = Math.round(((opt.rollFactor - rangeMin) / (rangeMax - rangeMin)) * 100);
+    const clamped = Math.max(0, Math.min(100, rollPercent));
+    const color = clamped >= 70 ? "#4dd97e" : clamped < 30 ? "#999999" : "#ffffff";
+    return { text: `${stat.label} +${formatOptionValue(stat, opt.value)} (${clamped}%)`, color };
+  });
+}
+
 // 툴팁 레이아웃 - anchorSlot(장비창 슬롯 rect)에 붙여서 위치를 고정, 마우스를 따라다니지 않게 함
 // (마우스를 따라다니면 판매 버튼 쪽으로 마우스를 움직이는 동안 버튼도 같이 밀려나 클릭 불가능해짐)
 function getItemTooltipLayout(ctx, item, anchorSlot, comparisonItem) {
@@ -750,6 +804,7 @@ function getItemTooltipLayout(ctx, item, anchorSlot, comparisonItem) {
     `부위: ${ITEM_PART_NAMES[item.part]}`
   ];
   const effectSegments = buildEffectSegments(item, comparisonItem);
+  const optionLines = buildOptionLines(item);
   const sellText = buildSellText(item);
 
   ctx.save();
@@ -763,9 +818,10 @@ function getItemTooltipLayout(ctx, item, anchorSlot, comparisonItem) {
   const sellRowWidth = ctx.measureText(sellText).width + btnGap + btnW;
   const boxW = Math.max(
     ...plainLines.map((l) => ctx.measureText(l).width),
-    effectLineWidth, sellRowWidth
+    effectLineWidth, sellRowWidth,
+    ...optionLines.map((o) => ctx.measureText(o.text).width)
   ) + padding * 2;
-  const boxH = lineHeight * (plainLines.length + 2) + padding * 2;
+  const boxH = lineHeight * (plainLines.length + 2 + optionLines.length) + padding * 2;
   ctx.restore();
 
   let x = anchorSlot.x + anchorSlot.w + 8;
@@ -774,18 +830,20 @@ function getItemTooltipLayout(ctx, item, anchorSlot, comparisonItem) {
   if (y + boxH > ctx.canvas.height) y = ctx.canvas.height - boxH - 8;
   if (y < 0) y = 0;
 
-  const sellY = y + padding + (plainLines.length + 1) * lineHeight;
+  const optionsStartY = y + padding + (plainLines.length + 1) * lineHeight;
+  const sellY = optionsStartY + optionLines.length * lineHeight;
   const sellBtn = { x: x + boxW - padding - btnW, y: sellY - 3, w: btnW, h: btnH };
 
   return {
     x, y, w: boxW, h: boxH, padding, lineHeight, plainLines, effectSegments,
-    sellText, sellBtn
+    optionLines, optionsStartY, sellText, sellBtn
   };
 }
 
 function drawItemTooltip(ctx, item, layout, gameTime, isEquipped) {
   const {
-    x, y, w, h, padding, lineHeight, plainLines, effectSegments, sellText, sellBtn
+    x, y, w, h, padding, lineHeight, plainLines, effectSegments,
+    optionLines, optionsStartY, sellText, sellBtn
   } = layout;
 
   ctx.save();
@@ -811,11 +869,17 @@ function drawItemTooltip(ctx, item, layout, gameTime, isEquipped) {
     segX += ctx.measureText(seg.text).width;
   }
 
-  const sellY = y + padding + (plainLines.length + 1) * lineHeight;
+  optionLines.forEach((opt, i) => {
+    ctx.fillStyle = opt.color;
+    ctx.fillText(opt.text, x + padding, optionsStartY + i * lineHeight);
+  });
+
+  const sellY = optionsStartY + optionLines.length * lineHeight;
   ctx.fillStyle = "#ffe066";
   ctx.fillText(sellText, x + padding, sellY);
 
-  const btnColor = isEquipped ? "#666666" : "#4dd97e";
+  const locked = !!item.locked;
+  const btnColor = (isEquipped || locked) ? "#666666" : "#4dd97e";
   ctx.fillStyle = "#222222";
   ctx.fillRect(sellBtn.x, sellBtn.y, sellBtn.w, sellBtn.h);
   ctx.strokeStyle = btnColor;
@@ -1024,6 +1088,7 @@ function drawInventory(ctx, state) {
       ctx.textAlign = "right";
       ctx.textBaseline = "top";
       ctx.fillText(`Lv${item.itemLevel}`, slot.x + slot.w - 3, slot.y + 3);
+      drawOptionDots(ctx, slot, item.options ? item.options.length : 0);
     }
   }
 
@@ -1049,6 +1114,8 @@ function drawInventory(ctx, state) {
       ctx.textAlign = "right";
       ctx.textBaseline = "top";
       ctx.fillText(`Lv${item.itemLevel}`, slot.x + slot.w - 3, slot.y + 3);
+      drawOptionDots(ctx, slot, item.options ? item.options.length : 0);
+      if (item.locked) drawLockIcon(ctx, slot);
     }
   }
 

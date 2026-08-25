@@ -133,7 +133,7 @@ function tryDash() {
   player.dashDirX = dirX / len;
   player.dashDirY = dirY / len;
   player.dashTimer = BALANCE.dashDuration;
-  player.dashCooldownTimer = BALANCE.dashCooldown;
+  player.dashCooldownTimer = Math.max(0, BALANCE.dashCooldown - equipBonuses.byId.dashCooldownReduction);
 }
 
 // 힐러 딜링모드(E) - 최대체력 dealModeHpCost칸 소모, 체력 2칸 이상일 때만 (재)발동 가능 (PRD 4.1-1)
@@ -154,7 +154,8 @@ function tryCastSkill() {
   for (const effect of skill.effects) {
     switch (effect.type) {
       case "heal": {
-        const { amount } = computeHealAmount(effect, selectedClass.healPower, selectedClass.critRate);
+        const healPower = selectedClass.healPower + equipBonuses.byId.healPower;
+        const { amount } = computeHealAmount(effect, healPower, getEffectiveCritRate());
         player.hp = Math.min(player.maxHp, player.hp + amount);
         break;
       }
@@ -172,7 +173,7 @@ function tryCastSkill() {
         break;
       }
       case "buff": {
-        const magnitude = computeBuffMagnitude(effect, selectedClass.critRate);
+        const magnitude = computeBuffMagnitude(effect, getEffectiveCritRate());
         activeBuffs = activeBuffs.filter((b) => b.stat !== effect.stat);
         activeBuffs.push({ stat: effect.stat, magnitude, timer: effect.duration });
         break;
@@ -202,7 +203,7 @@ function tryCastSkill() {
       }
     }
   }
-  qCooldownTimer = skill.cooldown;
+  qCooldownTimer = skill.cooldown * (1 - Math.min(0.9, equipBonuses.byId.cooldownReduction));
 }
 
 const keys = {};
@@ -274,6 +275,15 @@ function getPlayerAttack(level) {
     getEnhanceDamageMultiplier(lvl) * getWeaponExpAttackMultiplier(weaponExpLevel) * equipBonuses.attackMultiplier;
 }
 
+// 치명타율·치명타피해 - 직업 기본값 + 장비 옵션 합산 (랜덤 옵션 시스템 설계 승인).
+// 치명타율은 PRD 4.3 "상한 100%"에 따라 클램프한다.
+function getEffectiveCritRate() {
+  return Math.min(1, selectedClass.critRate + equipBonuses.byId.critRate);
+}
+function getEffectiveCritDmg() {
+  return selectedClass.critDmg + equipBonuses.byId.critDmg;
+}
+
 // 공격 간격 - autoMode와 수동 클릭(mousedown)이 같은 값을 쓴다.
 // 예전엔 수동 클릭에 쿨다운이 없어 연타로 무제한 공격이 가능했다(활 Q 공속 버프가
 // 수동 플레이에선 의미가 없어지는 원인이기도 했음) - 이제 둘 다 이 함수 하나를 거친다.
@@ -291,7 +301,7 @@ function getActiveBuffMultiplier(stat, defaultValue) {
 // forceCrit: 확정 치명타(쌍검 Q) - 관통돌진 등 스킬 자체 데미지는 넘기지 않아 기본값 false로 빠진다
 function applyDamageToMonster(monster, isComboHit, forceCrit) {
   const attack = getPlayerAttack() * (isComboHit ? BALANCE.comboHitMultiplier : 1);
-  const { damage, isCrit } = calcDamage(attack, monster.defense, selectedClass.critRate, selectedClass.critDmg, forceCrit);
+  const { damage, isCrit } = calcDamage(attack, monster.defense, getEffectiveCritRate(), getEffectiveCritDmg(), forceCrit);
   monster.hp -= damage;
   spawnDamageNumber(monster.x, monster.y - monster.radius, damage, isCrit, isComboHit);
   if (monster.hp <= 0) {
@@ -307,7 +317,12 @@ function applyDamageToMonster(monster, isComboHit, forceCrit) {
       const grade = roll < chances.primordial ? "primordial"
         : roll < chances.primordial + chances.ancient ? "ancient"
         : "relic";
-      groundItems.push({ x: monster.x, y: monster.y, grade, part: rollItemPart(), itemLevel: getCharacterLevel(), age: 0 });
+      const sparklePart = rollItemPart();
+      const sparkleLevel = getCharacterLevel();
+      groundItems.push({
+        x: monster.x, y: monster.y, grade, part: sparklePart, itemLevel: sparkleLevel,
+        options: rollItemOptions(sparklePart, grade, sparkleLevel), age: 0
+      });
     } else if (monster.rareType === "material") {
       spawnGroundTicket(monster.x, monster.y);
     }
@@ -316,7 +331,7 @@ function applyDamageToMonster(monster, isComboHit, forceCrit) {
 
 function applyDamageToBoss(isComboHit, forceCrit) {
   const attack = getPlayerAttack() * (isComboHit ? BALANCE.comboHitMultiplier : 1);
-  const { damage, isCrit } = calcDamage(attack, boss.defense, selectedClass.critRate, selectedClass.critDmg, forceCrit);
+  const { damage, isCrit } = calcDamage(attack, boss.defense, getEffectiveCritRate(), getEffectiveCritDmg(), forceCrit);
   boss.hp -= damage;
   spawnDamageNumber(boss.x, boss.y - boss.radius, damage, isCrit, isComboHit);
   if (boss.hp <= 0) {
@@ -500,6 +515,7 @@ function spawnGroundItems(x, y, tier, dropChance) {
       grade: drop.grade,
       part: drop.part,
       itemLevel,
+      options: rollItemOptions(drop.part, drop.grade, itemLevel),
       age: 0
     });
   });
@@ -555,7 +571,7 @@ function getCharacterLevel() {
 let invenOpen = false;
 const equipment = { armor: null, gloves: null, shoes: null };
 const bag = new Array(BALANCE.inventoryBagSize).fill(null);
-let equipBonuses = { defenseBonus: 0, attackMultiplier: 1, speedMultiplier: 1 };
+let equipBonuses = getEquipmentBonuses({ armor: null, gloves: null, shoes: null });
 
 // 가방 등급 필터 - 기본 전부 체크, 장비창을 닫아도 유지
 const gradeFilter = {};
@@ -679,10 +695,23 @@ function sellBagItem(bagIndex) {
   bag[bagIndex] = null;
 }
 
-// 우클릭·판매 버튼 공용 판매 진입점 - 상위 등급이면 확인창 대기
+// 잠금 토글 (Shift+좌클릭, main.js mousedown 리스너) - 잠긴 아이템은 판매 사고 방지 대상(아래)
+function toggleItemLock(bagIndex) {
+  const item = bag[bagIndex];
+  if (!item) return;
+  item.locked = !item.locked;
+}
+
+// 우클릭·판매 버튼 공용 판매 진입점 - 상위 등급이면 확인창 대기. 잠긴 아이템은 여기서 차단되므로
+// 우클릭 판매와 툴팁 판매 버튼 양쪽 다 자동으로 막힌다 (일괄판매는 getBulkSellCandidates가 별도 차단)
 function trySellFromBag(bagIndex) {
   const item = bag[bagIndex];
   if (!item || !gradeFilter[item.grade]) return;
+  if (item.locked) {
+    invenMessage = "잠긴 아이템입니다";
+    invenMessageTimer = BALANCE.inventoryMessageDisplayTime;
+    return;
+  }
   if (shouldConfirmSell(item)) {
     pendingSell = { bagIndex, message: "착용 중인 장비보다 높은 등급입니다. 정말 판매할까요?" };
     return;
@@ -700,16 +729,30 @@ function handlePendingSellClick(mx, my) {
   }
 }
 
-// 일괄 판매 대상 - 가방에 있고(착용 중인 장비는 별도 배열이라 자연히 제외), 고대·태초가 아니며, 선택 등급 이하
+// 일괄 판매 대상 - 가방에 있고(착용 중인 장비는 별도 배열이라 자연히 제외), 고대·태초가 아니며,
+// 잠기지 않았고, 선택 등급 이하
 function getBulkSellCandidates(maxGrade) {
   const maxIndex = ITEM_GRADE_ORDER.indexOf(maxGrade);
   const indices = [];
   bag.forEach((item, index) => {
     if (!item) return;
     if (item.grade === "ancient" || item.grade === "primordial") return;
+    if (item.locked) return;
     if (ITEM_GRADE_ORDER.indexOf(item.grade) <= maxIndex) indices.push(index);
   });
   return indices;
+}
+
+// 일괄 판매 대상에서 잠금 때문에 빠진 개수 - 확인창에 "잠긴 N개 제외"로 표시(판매 사고 방지 가시성)
+function countLockedBulkSellExclusions(maxGrade) {
+  const maxIndex = ITEM_GRADE_ORDER.indexOf(maxGrade);
+  let count = 0;
+  bag.forEach((item) => {
+    if (!item || !item.locked) return;
+    if (item.grade === "ancient" || item.grade === "primordial") return;
+    if (ITEM_GRADE_ORDER.indexOf(item.grade) <= maxIndex) count++;
+  });
+  return count;
 }
 
 function buildBulkSellGradeLabel(maxGrade) {
@@ -719,8 +762,10 @@ function buildBulkSellGradeLabel(maxGrade) {
 
 function tryBulkSell() {
   const indices = getBulkSellCandidates(bulkSellGrade);
+  const lockedCount = countLockedBulkSellExclusions(bulkSellGrade);
+  const lockedSuffix = lockedCount > 0 ? ` (잠긴 ${lockedCount}개 제외)` : "";
   if (indices.length === 0) {
-    invenMessage = "판매할 장비가 없습니다";
+    invenMessage = `판매할 장비가 없습니다${lockedSuffix}`;
     invenMessageTimer = BALANCE.inventoryMessageDisplayTime;
     return;
   }
@@ -728,7 +773,7 @@ function tryBulkSell() {
   const gradeLabel = buildBulkSellGradeLabel(bulkSellGrade);
   bulkSellConfirm = {
     indices,
-    message: `${gradeLabel} 장비 ${indices.length}개를 판매합니다. 총 ${formatAbbreviatedNumber(total)}골드. 진행할까요?`
+    message: `${gradeLabel} 장비 ${indices.length}개를 판매합니다${lockedSuffix}. 총 ${formatAbbreviatedNumber(total)}골드. 진행할까요?`
   };
 }
 
@@ -1100,6 +1145,20 @@ canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 canvas.addEventListener("mousedown", (e) => {
   if (invenOpen) {
+    // 잠금 토글(Shift+좌클릭) - 착용/드래그(아래)보다 먼저 가로챈다. 판매 버튼 위는 제외해
+    // 기존 판매 동작과 겹치지 않게 한다(이 경우 아래로 흘러 기존 로직이 그대로 처리)
+    if (e.button === 0 && e.shiftKey && !pendingEquip && !pendingSell && !bulkSellConfirm && !bulkSellDropdownOpen) {
+      const layout = invenLayout();
+      const resolved = resolveHoveredTooltip(ctx, layout, equipment, bag, inventoryHoverSlot);
+      const onSellBtn = resolved && pointInRect(mouse.x, mouse.y, resolved.tooltip.sellBtn);
+      if (!onSellBtn) {
+        const hovered = findHoveredInventorySlot(layout, mouse.x, mouse.y);
+        if (hovered && hovered.type === "bag" && bag[hovered.index]) {
+          toggleItemLock(hovered.index);
+          return;
+        }
+      }
+    }
     if (e.button === 0 && !pendingEquip && !pendingSell && !bulkSellConfirm && !bulkSellDropdownOpen) {
       const layout = invenLayout();
       // 툴팁이 슬롯 위에 겹쳐 그려지므로, 판매 버튼 위 클릭은 그 아래 깔린 슬롯의 드래그 시작으로
@@ -1356,7 +1415,7 @@ function update(dt) {
           damage = Math.round(damage * (1 - BALANCE.dashDamageReduction));
         }
         player.hp -= damage;
-        player.iframeTimer = BALANCE.playerIframeDuration;
+        player.iframeTimer = BALANCE.playerIframeDuration + equipBonuses.byId.iframeBonus;
         player.noHitTimer = 0;
         player.regenTimer = 0;
 
@@ -1364,7 +1423,7 @@ function update(dt) {
           player.hp = player.maxHp;
           player.x = BALANCE.huntSpawnX;
           player.y = BALANCE.huntSpawnY;
-          player.iframeTimer = BALANCE.playerIframeDuration;
+          player.iframeTimer = BALANCE.playerIframeDuration + equipBonuses.byId.iframeBonus;
           player.dashTimer = 0;
         }
       }
@@ -1486,7 +1545,7 @@ function update(dt) {
           damage = Math.round(damage * (1 - BALANCE.dashDamageReduction));
         }
         player.hp -= damage;
-        player.iframeTimer = BALANCE.playerIframeDuration;
+        player.iframeTimer = BALANCE.playerIframeDuration + equipBonuses.byId.iframeBonus;
         player.noHitTimer = 0;
         player.regenTimer = 0;
 
@@ -1498,7 +1557,7 @@ function update(dt) {
             BALANCE.wallThickness + player.radius,
             BALANCE.bossMapHeight - BALANCE.wallThickness - player.radius
           );
-          player.iframeTimer = BALANCE.playerIframeDuration;
+          player.iframeTimer = BALANCE.playerIframeDuration + equipBonuses.byId.iframeBonus;
           player.dashTimer = 0;
         }
       }
@@ -1632,7 +1691,7 @@ function update(dt) {
     if (distToPlayer <= player.radius + BALANCE.itemPickupRadius) {
       const emptyIndex = bag.indexOf(null);
       if (emptyIndex !== -1) {
-        bag[emptyIndex] = { grade: item.grade, part: item.part, itemLevel: item.itemLevel };
+        bag[emptyIndex] = { grade: item.grade, part: item.part, itemLevel: item.itemLevel, options: item.options, locked: false };
         groundItems.splice(i, 1);
       } else {
         bagFullNoticeTimer = BALANCE.inventoryMessageDisplayTime;
@@ -1821,8 +1880,8 @@ function render() {
     attack: totalAttack,
     defense: Math.round(player.defense),
     speed: Math.round(player.speed),
-    critRate: Math.round(selectedClass.critRate * 100),
-    critDmg: Math.round(selectedClass.critDmg * 100)
+    critRate: Math.round(getEffectiveCritRate() * 100),
+    critDmg: Math.round(getEffectiveCritDmg() * 100)
   });
   drawPlayerHealthBar(ctx, hudLayout, player.hp, player.maxHp, gameTime);
   const qSkill = SKILLS[selectedClass.id] && SKILLS[selectedClass.id].Q;

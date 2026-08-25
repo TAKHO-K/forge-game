@@ -1,5 +1,5 @@
 // 저장 슬롯 (PRD 9.1-1 단순화 - 슬롯 1개, 테스트 가능한 최소 저장)
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 const SAVE_KEY = "forge-game-save";
 
 // currentStageIndex처럼 재생성 가능한 값(monsters)과 equipBonuses·weaponExpLevel처럼
@@ -74,6 +74,29 @@ function migrate(data) {
       }
     }
     data.version = 3;
+  }
+  if (data.version < 4) {
+    // 랜덤 옵션 시스템(설계 승인) 도입 - 기존 아이템은 옵션 시스템이 생기기 전에 드랍된 게 사실이므로
+    // 빈 배열이 맞다(소급 재굴림은 하지 않는다 - migrate()에 새 난수를 주입하면 재실행마다 결과가
+    // 달라질 위험이 있고, v2->v3에서도 같은 원칙으로 판단한 전례가 있다).
+    if (data.equipment) {
+      for (const part of ITEM_PARTS) {
+        const item = data.equipment[part];
+        if (item) {
+          item.options = item.options || [];
+          item.locked = item.locked || false;
+        }
+      }
+    }
+    if (Array.isArray(data.bag)) {
+      for (const item of data.bag) {
+        if (item) {
+          item.options = item.options || [];
+          item.locked = item.locked || false;
+        }
+      }
+    }
+    data.version = 4;
   }
   return data;
 }

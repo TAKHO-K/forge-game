@@ -15,18 +15,27 @@ function getItemSellValue(item) {
   return Math.round(BALANCE.itemBaseSellValue * ITEM_GRADES[item.grade].sellMultiplier * getItemLevelMultiplier(item.itemLevel));
 }
 
-// 착용 장비 3부위 합산 보너스 - defenseBonus는 가산, attack/speed는 배율(1 = 보너스 없음)
+// 착용 장비 3부위 합산 보너스 - 부위 기본효과 + 랜덤 옵션(item.options)을 스탯 id별로 순회하며
+// 합산한다(설계 승인, data/stats.js STAT_REGISTRY 참고). defenseBonus/attackMultiplier/
+// speedMultiplier는 기존 소비 코드 호환용 별칭 - 새 스탯은 byId로 읽는다.
 function getEquipmentBonuses(equipment) {
-  let defenseBonus = 0;
-  let attackMultiplier = 1;
-  let speedMultiplier = 1;
+  const totals = {};
+  for (const id of STAT_ID_ORDER) totals[id] = 0;
+
   for (const part of ITEM_PARTS) {
     const item = equipment[part];
     if (!item) continue;
-    const value = getItemStatValue(item);
-    if (part === "armor") defenseBonus += value;
-    else if (part === "gloves") attackMultiplier += value;
-    else if (part === "shoes") speedMultiplier += value;
+    const baseStatId = ITEM_PART_BASE_STAT[part].statType;
+    totals[baseStatId] += getItemStatValue(item);
+    if (item.options) {
+      for (const opt of item.options) totals[opt.statId] += opt.value;
+    }
   }
-  return { defenseBonus, attackMultiplier, speedMultiplier };
+
+  return {
+    byId: totals,
+    defenseBonus: totals.defenseFlat,
+    attackMultiplier: 1 + totals.attackPercent,
+    speedMultiplier: 1 + totals.speedPercent
+  };
 }

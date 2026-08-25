@@ -66,6 +66,34 @@ function rollItemPart() {
   return ITEM_PARTS[Math.floor(Math.random() * ITEM_PARTS.length)];
 }
 
+// 랜덤 옵션 부여 (설계 승인, PRD 7.3 개정관 "일반 옵션") - 부위 기본 스탯은 이미 보장되므로
+// 옵션 풀에서 제외한다(교차 조합 유도). 한 아이템 안에서 같은 스탯은 중복되지 않는다(비복원추출).
+function rollItemOptions(part, grade, itemLevel) {
+  const count = ITEM_OPTION_COUNT_BY_GRADE[grade] || 0;
+  if (count <= 0) return [];
+
+  const ownStatId = ITEM_PART_BASE_STAT[part].statType;
+  const pool = STAT_ID_ORDER.filter((id) => STAT_REGISTRY[id].rollable !== false && id !== ownStatId);
+
+  // Fisher-Yates로 섞은 뒤 앞에서 count개 - 무복원추출
+  const shuffled = pool.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = tmp;
+  }
+  const chosen = shuffled.slice(0, Math.min(count, shuffled.length));
+
+  const [rangeMin, rangeMax] = OPTION_ROLL_FACTOR_RANGE;
+  return chosen.map((statId) => {
+    const rollFactor = rangeMin + Math.random() * (rangeMax - rangeMin);
+    const value = STAT_REGISTRY[statId].optionBase * ITEM_GRADES[grade].multiplier *
+      getItemLevelMultiplier(itemLevel) * rollFactor;
+    return { statId, value, rollFactor };
+  });
+}
+
 // 슬롯 2회 판정 (7.1 다중 드랍) - 슬롯2 확률은 슬롯1의 dropSlot2Multiplier배
 function rollDroppedItems(tier, dropChance, slot2Multiplier, equipment) {
   const drops = [];
