@@ -26,6 +26,21 @@ const ENHANCE_DAMAGE_COEFFICIENT = [
   9.10, 10.70, 12.30, 13.90, 15.50         // +21~+25
 ];
 
+// 강화 부가 효과 마일스톤 (6.1-1) - 데미지 계수와 별개로 강화 단계에 붙는 "눈에 보이는" 변화.
+// type: "range"(사거리 배율, data/classes.js의 rangeBonusScale로 직업별 배분) |
+//   "hitMultiplier"(공격 1회당 명중 횟수 - 원거리는 투사체 수, 근접은 판정 반복 수. 보스 같은
+//   단일 대상에도 그대로 배수가 붙는 유일한 마일스톤이라 4직업 보스 DPS 체감을 맞추는 기준점) |
+//   "spread"(다중 대상 확장 - 원거리는 관통, 근접은 meleeArc 확대. 단일 대상엔 이득이 없어
+//   hitMultiplier와 대칭을 이룬다 - 설계 승인 근거)
+// PRD 원문은 "+18 투사체 수 2배"에 이어 의도 문단에서 "화살 1발→3발"이라 쓰지만, 수치 표(2배)를
+// 기준으로 삼는다 - 문단은 비유적 예시로 처리(설계 승인 시 확인).
+const ENHANCE_VISUAL_MILESTONES = [
+  { level: 15, type: "range", bonus: 0.20 },
+  { level: 18, type: "hitMultiplier", multiplier: 2 },
+  { level: 20, type: "range", bonus: 0.20 },
+  { level: 23, type: "spread", meleeArcBonus: 0.40, pierce: true }
+];
+
 // 확률 강화권 3종 (재료 몬스터 드랍) - 실제 강화 시도에 적용, 상급 강화·서로 간 중복 불가
 // 소/중은 상급 강화와 같은 배율+상한 방식, 대는 성공률을 50%로 고정
 const ENHANCE_TICKET_BOOST = {

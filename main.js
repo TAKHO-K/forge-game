@@ -37,6 +37,8 @@ let meleeSwingTimer = 0; // 대검·쌍검 스윙 이펙트 표시 타이머
 let meleeSwingAngle = 0;
 let meleeSwingSide = 0; // 0=중앙, 1=오른쪽, -1=왼쪽 (쌍검 좌우 번갈아 공격 렌더용)
 let meleeSwingIsCombo = false; // 방금 스윙이 3타 강타였는지 - 렌더에서 이펙트 확대
+let meleeSwingIsDoubleHit = false; // 강화 +18 이상(6.1-1 hitMultiplier) - 렌더에서 스윙을 한 번 더 겹쳐 그림
+let rangeIndicatorFlashTimer = 0; // 원거리 사거리 원 표시 타이머 - 사거리 마일스톤(+15/+20) 달성 직후에만 켜짐
 
 // 3타 강타 (모든 직업 공통) - comboResetWindow 안에 새 공격이 없으면 카운터 초기화
 let comboCount = 0;
@@ -256,15 +258,19 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 const projectiles = [];
-function fireProjectile(isComboHit, forceCrit) {
+// angleOffset(라디안): 투사체 수 마일스톤(6.1-1 +18)에서 여러 발을 부채꼴로 갈라 쏠 때 사용
+// pierce: 관통 마일스톤(6.1-1 +23) - 첫 명중에 사라지지 않고 사거리 끝까지 진행, hitTargets로 같은 대상 중복 타격을 막는다
+function fireProjectile(isComboHit, forceCrit, angleOffset, pierce) {
   projectiles.push({
     x: player.x,
     y: player.y,
-    angle: player.angle,
+    angle: player.angle + (angleOffset || 0),
     radius: BALANCE.projectileRadius,
     traveled: 0,
     isComboHit,
-    forceCrit: !!forceCrit
+    forceCrit: !!forceCrit,
+    pierce: !!pierce,
+    hitTargets: pierce ? new Set() : null
   });
 }
 
@@ -282,6 +288,43 @@ function getEffectiveCritRate() {
 }
 function getEffectiveCritDmg() {
   return selectedClass.critDmg + equipBonuses.byId.critDmg;
+}
+
+// 강화 부가 효과 (6.1-1, 설계 승인) - ENHANCE_VISUAL_MILESTONES를 읽어 현재 강화 단계 기준
+// 사거리 배율/명중 횟수/다중 대상 확장 여부를 계산. 데미지 계수(getPlayerAttack)와 독립된 축.
+function getEnhanceRangeMultiplier(level, rangeScale) {
+  let mult = 1;
+  for (const m of ENHANCE_VISUAL_MILESTONES) {
+    if (m.type === "range" && level >= m.level) mult *= (1 + m.bonus * rangeScale);
+  }
+  return mult;
+}
+function getAttackHitMultiplier(level) {
+  const m = ENHANCE_VISUAL_MILESTONES.find((x) => x.type === "hitMultiplier");
+  return m && level >= m.level ? m.multiplier : 1;
+}
+function getSpreadMilestone(level) {
+  const m = ENHANCE_VISUAL_MILESTONES.find((x) => x.type === "spread");
+  return m && level >= m.level ? m : null;
+}
+
+// 최대체력 (6.1-1, 설계 승인) - 강화 1단당 +1%, 체력바가 정수 칸이라 반올림한다.
+// 소수점 버림 대신 반올림을 쓴 이유: 강화는 성공/강등 양방향으로 움직이는 값이라, 버림만 쓰면
+// 항상 실제 증가분보다 적게 표시돼 손해 보는 쪽으로 치우친다 - 반올림이 양방향에 공평하다.
+function getEffectiveMaxHp(level) {
+  return Math.round(BALANCE.playerMaxHp * (1 + level * BALANCE.enhanceHpBonusPerLevel));
+}
+
+// 강화 단계를 갱신하고, 사거리 마일스톤(+15/+20)을 새로 넘었는지 확인해 원거리 사거리 표시를 잠깐 켠다.
+// 근접은 판정 부채꼴이 항상 보이므로 대상이 아니다(설계 승인).
+function setWeaponLevel(newLevel) {
+  const oldLevel = weaponLevel;
+  weaponLevel = newLevel;
+  for (const m of ENHANCE_VISUAL_MILESTONES) {
+    if (m.type === "range" && oldLevel < m.level && newLevel >= m.level) {
+      rangeIndicatorFlashTimer = BALANCE.rangeIndicatorFlashDuration;
+    }
+  }
 }
 
 // 공격 간격 - autoMode와 수동 클릭(mousedown)이 같은 값을 쓴다.
@@ -358,29 +401,36 @@ function performMeleeAttack(isComboHit, forceCrit) {
     meleeAlternateSign *= -1;
   }
 
+  const hitMultiplier = getAttackHitMultiplier(weaponLevel);
   meleeSwingTimer = BALANCE.meleeSwingVisualDuration;
   meleeSwingAngle = swingAngle;
   meleeSwingSide = swingSide;
   meleeSwingIsCombo = !!isComboHit;
+  meleeSwingIsDoubleHit = hitMultiplier > 1;
 
-  const range = selectedClass.meleeRange;
-  const halfArc = (selectedClass.meleeArc * Math.PI / 180) / 2;
+  const spread = getSpreadMilestone(weaponLevel);
+  const range = selectedClass.meleeRange * getEnhanceRangeMultiplier(weaponLevel, selectedClass.rangeBonusScale || 1);
+  const arcDegrees = selectedClass.meleeArc * (1 + (spread ? spread.meleeArcBonus : 0));
+  const halfArc = (arcDegrees * Math.PI / 180) / 2;
 
-  if (currentMap === "hunt") {
-    for (const monster of monsters) {
-      if (!monster.alive) continue;
-      const dist = Math.hypot(monster.x - player.x, monster.y - player.y);
-      if (dist > range + monster.radius) continue;
-      if (Math.abs(angleDiff(Math.atan2(monster.y - player.y, monster.x - player.x), swingAngle)) > halfArc) continue;
-      applyDamageToMonster(monster, isComboHit, forceCrit);
+  // hitMultiplier(6.1-1 +18) - 원거리의 "투사체 2배"와 보스 DPS 체감을 맞추기 위해 판정을 그대로 반복한다
+  for (let hit = 0; hit < hitMultiplier; hit++) {
+    if (currentMap === "hunt") {
+      for (const monster of monsters) {
+        if (!monster.alive) continue;
+        const dist = Math.hypot(monster.x - player.x, monster.y - player.y);
+        if (dist > range + monster.radius) continue;
+        if (Math.abs(angleDiff(Math.atan2(monster.y - player.y, monster.x - player.x), swingAngle)) > halfArc) continue;
+        applyDamageToMonster(monster, isComboHit, forceCrit);
+      }
     }
-  }
 
-  if (boss && boss.alive && !bossFightFailed) {
-    const dist = Math.hypot(boss.x - player.x, boss.y - player.y);
-    if (dist <= range + boss.radius &&
-      Math.abs(angleDiff(Math.atan2(boss.y - player.y, boss.x - player.x), swingAngle)) <= halfArc) {
-      applyDamageToBoss(isComboHit, forceCrit);
+    if (boss && boss.alive && !bossFightFailed) {
+      const dist = Math.hypot(boss.x - player.x, boss.y - player.y);
+      if (dist <= range + boss.radius &&
+        Math.abs(angleDiff(Math.atan2(boss.y - player.y, boss.x - player.x), swingAngle)) <= halfArc) {
+        applyDamageToBoss(isComboHit, forceCrit);
+      }
     }
   }
 }
@@ -410,7 +460,19 @@ function performAttack() {
   if (selectedClass.attackType === "melee") {
     performMeleeAttack(isComboHit, forceCrit);
   } else {
-    fireProjectile(isComboHit, forceCrit);
+    const hitMultiplier = getAttackHitMultiplier(weaponLevel);
+    const pierce = !!getSpreadMilestone(weaponLevel);
+    if (hitMultiplier > 1) {
+      // 투사체 수 마일스톤(6.1-1 +18) - 부채꼴로 갈라 쏘되, 대부분의 명중 판정 반경 안에서
+      // 같은 대상(보스 포함)에 다 맞을 만큼 좁게 벌린다 - 근접 hitMultiplier와 보스 DPS를 맞추기 위함
+      const totalSpread = BALANCE.multiShotSpreadDegrees * (hitMultiplier - 1);
+      for (let i = 0; i < hitMultiplier; i++) {
+        const offsetDeg = -totalSpread / 2 + i * BALANCE.multiShotSpreadDegrees;
+        fireProjectile(isComboHit, forceCrit, offsetDeg * Math.PI / 180, pierce);
+      }
+    } else {
+      fireProjectile(isComboHit, forceCrit, 0, pierce);
+    }
   }
 }
 
@@ -1017,7 +1079,7 @@ function attemptEnhance(isHigh) {
   const boostType = isHigh ? "high" : (ticketBoostSelection || "none");
   gold -= cost;
   const result = tryEnhance(weaponLevel, boostType);
-  weaponLevel = result.level;
+  setWeaponLevel(result.level);
   enhanceResultText = ENHANCE_RESULT_LABEL[result.result](weaponLevel);
   enhanceResultTimer = BALANCE.enhanceResultDisplayTime;
   if (!isHigh && ticketBoostSelection) {
@@ -1034,7 +1096,7 @@ enhanceHighBtn.addEventListener("click", () => attemptEnhance(true));
 function useGuaranteedTicket() {
   if (guaranteedTickets.length === 0) return;
   const n = guaranteedTickets.shift();
-  weaponLevel = Math.min(ENHANCE_MAX_LEVEL, weaponLevel + n);
+  setWeaponLevel(Math.min(ENHANCE_MAX_LEVEL, weaponLevel + n));
   enhanceResultText = `확정 +${n} 사용`;
   enhanceResultTimer = BALANCE.enhanceResultDisplayTime;
   doAutosave();
@@ -1075,7 +1137,7 @@ function autoEnhanceInForge() {
     if (gold < cost) break;
     gold -= cost;
     const result = tryEnhance(weaponLevel, "none");
-    weaponLevel = result.level;
+    setWeaponLevel(result.level);
     enhanceResultText = ENHANCE_RESULT_LABEL[result.result](weaponLevel);
     enhanceResultTimer = BALANCE.enhanceResultDisplayTime;
     didEnhance = true;
@@ -1262,6 +1324,8 @@ if (savedData && !savedData.corrupted) {
   selectedClass = CLASSES[savedData.classId];
   gold = savedData.gold;
   weaponLevel = savedData.weaponLevel;
+  player.maxHp = getEffectiveMaxHp(weaponLevel); // 로드 직후 loop()가 돌기 전에도 강화 단계에 맞는 최대체력으로 시작
+  player.hp = player.maxHp;
   weaponExp = savedData.weaponExp;
   weaponExpLevel = getWeaponLevelFromExp(weaponExp);
   equipment.armor = savedData.equipment.armor || null;
@@ -1630,6 +1694,11 @@ function update(dt) {
     }
   }
 
+  if (rangeIndicatorFlashTimer > 0) rangeIndicatorFlashTimer = Math.max(0, rangeIndicatorFlashTimer - dt);
+
+  const effectiveProjectileRange = BALANCE.projectileRange *
+    getEnhanceRangeMultiplier(weaponLevel, selectedClass.rangeBonusScale || 1);
+
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
     const step = BALANCE.projectileSpeed * dt;
@@ -1648,24 +1717,24 @@ function update(dt) {
     }
 
     const hitMonster = currentMap === "hunt" && monsters.find((m) =>
-      m.alive && Math.hypot(p.x - m.x, p.y - m.y) <= p.radius + m.radius
+      m.alive && Math.hypot(p.x - m.x, p.y - m.y) <= p.radius + m.radius && !(p.hitTargets && p.hitTargets.has(m))
     );
     const hitBoss = !hitMonster && boss && boss.alive && !bossFightFailed &&
-      Math.hypot(p.x - boss.x, p.y - boss.y) <= p.radius + boss.radius;
+      Math.hypot(p.x - boss.x, p.y - boss.y) <= p.radius + boss.radius && !(p.hitTargets && p.hitTargets.has(boss));
 
     if (hitMonster) {
       applyDamageToMonster(hitMonster, p.isComboHit, p.forceCrit);
-      projectiles.splice(i, 1);
-      continue;
+      if (p.pierce) p.hitTargets.add(hitMonster);
+      else { projectiles.splice(i, 1); continue; }
     }
 
     if (hitBoss) {
       applyDamageToBoss(p.isComboHit, p.forceCrit);
-      projectiles.splice(i, 1);
-      continue;
+      if (p.pierce) p.hitTargets.add(boss);
+      else { projectiles.splice(i, 1); continue; }
     }
 
-    if (p.traveled >= BALANCE.projectileRange) {
+    if (p.traveled >= effectiveProjectileRange) {
       projectiles.splice(i, 1);
     }
   }
@@ -1845,13 +1914,27 @@ function render() {
   drawPlayer(ctx, player, playerAlpha);
 
   drawProjectiles(ctx, projectiles);
+  // 강화 부가 효과(6.1-1) 시각화 - 사거리·부채꼴은 매 프레임 weaponLevel 기준으로 다시 계산한다(스냅샷 저장 안 함)
+  const enhanceSpread = getSpreadMilestone(weaponLevel);
   if (selectedClass.attackType === "melee") {
-    drawMeleeRangeIndicator(ctx, player, selectedClass.meleeRange, selectedClass.meleeArc, BALANCE.meleeRangeIndicatorAlpha);
-  }
-  if (meleeSwingTimer > 0) {
-    const swingScale = meleeSwingIsCombo ? BALANCE.comboSwingScale : 1;
-    drawMeleeSwing(ctx, player, meleeSwingAngle, selectedClass.meleeRange, selectedClass.meleeArc,
-      meleeSwingTimer / BALANCE.meleeSwingVisualDuration, meleeSwingSide, swingScale);
+    const effMeleeRange = selectedClass.meleeRange * getEnhanceRangeMultiplier(weaponLevel, selectedClass.rangeBonusScale || 1);
+    const effMeleeArc = selectedClass.meleeArc * (1 + (enhanceSpread ? enhanceSpread.meleeArcBonus : 0));
+    drawMeleeRangeIndicator(ctx, player, effMeleeRange, effMeleeArc, BALANCE.meleeRangeIndicatorAlpha);
+    if (meleeSwingTimer > 0) {
+      const swingScale = meleeSwingIsCombo ? BALANCE.comboSwingScale : 1;
+      const swingRatio = meleeSwingTimer / BALANCE.meleeSwingVisualDuration;
+      drawMeleeSwing(ctx, player, meleeSwingAngle, effMeleeRange, effMeleeArc, swingRatio, meleeSwingSide, swingScale);
+      if (meleeSwingIsDoubleHit) {
+        // 2연타 마일스톤(6.1-1 +18) - 살짝 어긋난 각도로 한 번 더 겹쳐 그려 "두 번 벤" 느낌을 준다
+        drawMeleeSwing(ctx, player, meleeSwingAngle + BALANCE.doubleHitEchoOffsetDegrees * Math.PI / 180,
+          effMeleeRange, effMeleeArc, swingRatio, meleeSwingSide, swingScale * 0.85);
+      }
+    }
+  } else if (rangeIndicatorFlashTimer > 0) {
+    // 원거리 사거리 표시 - 항상 켜두면 반경이 화면을 거의 덮어(요구사항) 마일스톤 달성 직후에만 잠깐 노출.
+    // arcDegrees=360으로 drawMeleeRangeIndicator를 그대로 재사용하면 원형 표시가 된다(신규 렌더 함수 불필요)
+    const effProjectileRange = BALANCE.projectileRange * getEnhanceRangeMultiplier(weaponLevel, selectedClass.rangeBonusScale || 1);
+    drawMeleeRangeIndicator(ctx, player, effProjectileRange, 360, BALANCE.rangeIndicatorAlpha);
   }
   drawDamageNumbers(ctx, damageNumbers);
 
@@ -1914,7 +1997,10 @@ function loop(now) {
   }
 
   equipBonuses = getEquipmentBonuses(equipment);
-  player.defense = BALANCE.playerDefense * selectedClass.def + equipBonuses.defenseBonus;
+  // 강화 1단당 방어력·최대체력 +1%(6.1-1, 설계 승인) - 장비 보너스는 이 배율 밖에서 그대로 더한다
+  player.defense = BALANCE.playerDefense * selectedClass.def * (1 + weaponLevel * BALANCE.enhanceDefenseBonusPerLevel) + equipBonuses.defenseBonus;
+  player.maxHp = getEffectiveMaxHp(weaponLevel);
+  player.hp = Math.min(player.hp, player.maxHp); // 강등으로 최대체력이 줄어드는 경우 클램프
   player.speed = BALANCE.playerSpeed * equipBonuses.speedMultiplier;
   if (invenMessageTimer > 0) invenMessageTimer = Math.max(0, invenMessageTimer - dt);
 

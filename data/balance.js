@@ -15,6 +15,10 @@ const BALANCE = {
   guaranteedCritOverflowBonus: 0.4, // 확정 치명타가 이미 100% 치확과 겹칠 때 대신 붙는 치명타 피해율 (PRD 4.3)
   meleeSwingVisualDuration: 0.15, // 대검·쌍검 부채꼴 스윙 이펙트 표시 시간
   meleeRangeIndicatorAlpha: 0.12, // 공격 안 할 때도 항상 보이는 옅은 판정 범위 표시
+  multiShotSpreadDegrees: 6, // 투사체 2발 마일스톤(6.1-1 +18)에서 두 발 사이 벌어지는 각도
+  doubleHitEchoOffsetDegrees: 10, // 근접 2연타 마일스톤(6.1-1 +18) 이펙트 - 두 번째 스윙을 이 각도만큼 어긋나게 그려 "겹쳐 벤" 느낌을 줌
+  rangeIndicatorAlpha: 0.10, // 원거리 사거리 원 표시 - 항상 켜두면 반경이 넓어(사거리 최대 680px) 화면을 거의 덮으므로 마일스톤 달성 직후에만 잠깐 보여준다
+  rangeIndicatorFlashDuration: 4, // 원거리 사거리 원 - 사거리 마일스톤(+15/+20) 달성 직후 몇 초간 표시할지
   comboHitEvery: 3, // N번째 공격마다 강타
   comboHitMultiplier: 1.8,
   comboResetWindow: 2, // 이 시간(초) 동안 공격 없으면 콤보 카운터 초기화
@@ -25,6 +29,8 @@ const BALANCE = {
   playerMaxHp: 10,
   hpBarMaxPerRow: 10, // 체력바 한 줄 최대 칸 수 - 넘으면 마인크래프트처럼 윗줄로 쌓임 (최대 체력 증가 시스템 대비)
   playerDefense: 5,
+  enhanceDefenseBonusPerLevel: 0.01, // 강화 1단당 방어력 +1% (6.1-1 "매 강화 시 소폭 상승", 승인된 계수)
+  enhanceHpBonusPerLevel: 0.01, // 강화 1단당 최대체력 +1% - 최종 칸 수는 정수 반올림(main.js getEffectiveMaxHp)
   playerDamageCapRatio: 0.3,
   playerIframeDuration: 0.8,
   playerRegenNoHitThreshold: 12,
