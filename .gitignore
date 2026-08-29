@@ -1,1 +1,7 @@
 assets/
+
+# Roblox Studio 산출물 - 바이너리라 git diff가 무의미해짐. 코드는 roblox/src/*를 Rojo로 동기화한다.
+*.rbxl
+*.rbxlx
+roblox/*.rbxl
+roblox/*.rbxlx
