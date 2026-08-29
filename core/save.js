@@ -1,5 +1,5 @@
 // 저장 슬롯 (PRD 9.1-1 단순화 - 슬롯 1개, 테스트 가능한 최소 저장)
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 const SAVE_KEY = "forge-game-save";
 
 // currentStageIndex처럼 재생성 가능한 값(monsters)과 equipBonuses·weaponExpLevel처럼
@@ -7,6 +7,7 @@ const SAVE_KEY = "forge-game-save";
 function buildSaveData(state) {
   return {
     version: SAVE_VERSION,
+    savedAt: state.savedAt, // 두 탭 동시 저장 감지용(main.js doAutosave) - "더 큰 진행도"가 아니라 "더 최근 저장" 기준
     classId: state.selectedClass.id,
     gold: state.gold,
     weaponLevel: state.weaponLevel,
@@ -98,6 +99,14 @@ function migrate(data) {
     }
     data.version = 4;
   }
+  if (data.version < 5) {
+    // 두 탭 동시 저장 감지(설계 승인) 도입 - 구버전 저장에는 savedAt이 없었으므로 가장
+    // 오래된 값(0)으로 채운다. 소급해서 지금 시각을 넣지 않는 이유: 그러면 이 저장이
+    // "방금 저장된 것"처럼 보여 실제로는 다른 탭이 그 뒤에 쓴 최신 저장을 오래된 것으로
+    // 오판할 수 있다 - 마이그레이션 시점의 데이터는 항상 가장 오래된 것으로 취급해야 안전하다.
+    data.savedAt = data.savedAt || 0;
+    data.version = 5;
+  }
   return data;
 }
 
@@ -109,6 +118,7 @@ function migrate(data) {
 function isValidSaveData(data) {
   return !!data && typeof data === "object" &&
     typeof data.version === "number" &&
+    typeof data.savedAt === "number" &&
     !!CLASSES[data.classId] &&
     typeof data.gold === "number" &&
     typeof data.weaponLevel === "number" &&

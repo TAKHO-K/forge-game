@@ -1311,9 +1311,27 @@ function collectSaveState() {
   };
 }
 
+// 두 탭 동시 저장 감지(낙관적 동시성 제어) - "어느 쪽 진행도가 더 큰가"는 기준이 될 수
+// 없다(골드는 쓰면 줄어드는 값이라 비교가 성립하지 않는다). 기준은 오직 "더 최근에 저장된
+// 쪽"이다. 이 탭이 마지막으로 읽거나 쓴 savedAt을 기억해뒀다가, 저장 직전 localStorage를
+// 다시 읽어 그보다 최신이면(=다른 탭이 그 사이에 썼다는 뜻) 이 탭은 덮어쓰지 않고 멈춘다.
+let lastKnownSavedAt = 0;
+let saveConflictDetected = false;
+
 function doAutosave() {
-  if (!selectedClass) return; // 직업 선택 전에는 저장할 게 없음
-  saveGame(collectSaveState());
+  if (!selectedClass || saveConflictDetected) return; // 직업 선택 전 또는 충돌 감지 후에는 저장 안 함
+  const latest = loadGame();
+  if (latest && !latest.corrupted && latest.savedAt > lastKnownSavedAt) {
+    // 다른 탭이 이 탭 모르게 그 사이 저장했다 - 여기서 덮어쓰면 그 진행이 사라진다.
+    // pagehide(탭 종료)로 들어온 호출도 이 검사를 그대로 거치므로, 오래된 메모리값으로
+    // 재덮어쓰던 기존 소실 경로가 여기서 막힌다.
+    saveConflictDetected = true;
+    showPersistentSaveNotice("다른 탭에서 플레이 중입니다. 이 탭의 진행은 저장되지 않습니다. 새로고침해 주세요.");
+    return;
+  }
+  const savedAt = Date.now();
+  saveGame({ ...collectSaveState(), savedAt });
+  lastKnownSavedAt = savedAt;
 }
 
 setInterval(doAutosave, 10000);
@@ -1328,11 +1346,17 @@ function showSaveNotice(text) {
   saveNoticeEl.classList.remove("hidden");
   setTimeout(() => saveNoticeEl.classList.add("hidden"), 4000);
 }
+// 위 showSaveNotice와 달리 자동으로 숨기지 않는다 - 새로고침 전까지 계속 보여야 하는 경고용.
+function showPersistentSaveNotice(text) {
+  saveNoticeEl.textContent = text;
+  saveNoticeEl.classList.remove("hidden");
+}
 
 // 저장 로드 - 있으면 이어서 시작(직업 선택 건너뜀), 없으면 새 게임(정상, 안내 없음),
 // 깨졌으면 새 게임으로 떨어뜨리고 한 줄 안내
 const savedData = loadGame();
 if (savedData && !savedData.corrupted) {
+  lastKnownSavedAt = savedData.savedAt; // 이 시각 이후로 다른 탭이 먼저 저장하면 충돌로 감지한다
   selectedClass = CLASSES[savedData.classId];
   gold = savedData.gold;
   weaponLevel = savedData.weaponLevel;
