@@ -1713,6 +1713,7 @@ function update(dt) {
 
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
+    const x0 = p.x, y0 = p.y; // 스윕 시작점 - 이동 전 위치를 먼저 잡아둔다
     const step = BALANCE.projectileSpeed * dt;
     p.x += Math.cos(p.angle) * step;
     p.y += Math.sin(p.angle) * step;
@@ -1728,23 +1729,43 @@ function update(dt) {
       continue;
     }
 
-    const hitMonster = currentMap === "hunt" && monsters.find((m) =>
-      m.alive && Math.hypot(p.x - m.x, p.y - m.y) <= p.radius + m.radius && !(p.hitTargets && p.hitTargets.has(m))
-    );
-    const hitBoss = !hitMonster && boss && boss.alive && !bossFightFailed &&
-      Math.hypot(p.x - boss.x, p.y - boss.y) <= p.radius + boss.radius && !(p.hitTargets && p.hitTargets.has(boss));
-
-    if (hitMonster) {
-      applyDamageToMonster(hitMonster, p.isComboHit, p.forceCrit);
-      if (p.pierce) p.hitTargets.add(hitMonster);
-      else { projectiles.splice(i, 1); continue; }
+    // 스윕(연속 충돌) 판정 - 이동 후 착지 지점 한 점이 아니라 이동 전(x0,y0)~이동 후(p.x,p.y)
+    // 선분과 대상 원의 교차를 본다. dt가 커도(랙·고배속) 그 사이를 관통하는 일이 수학적으로
+    // 없다. pointSegmentDistance는 core/skills.js의 hitOnDash와 같은 함수를 재사용한다.
+    const sweepHits = [];
+    if (currentMap === "hunt") {
+      for (const m of monsters) {
+        if (!m.alive || (p.hitTargets && p.hitTargets.has(m))) continue;
+        const dist = pointSegmentDistance(m.x, m.y, x0, y0, p.x, p.y);
+        if (dist <= p.radius + m.radius) {
+          sweepHits.push({ type: "monster", target: m, distFromStart: Math.hypot(m.x - x0, m.y - y0) });
+        }
+      }
     }
-
-    if (hitBoss) {
-      applyDamageToBoss(p.isComboHit, p.forceCrit);
-      if (p.pierce) p.hitTargets.add(boss);
-      else { projectiles.splice(i, 1); continue; }
+    if (boss && boss.alive && !bossFightFailed && !(p.hitTargets && p.hitTargets.has(boss))) {
+      const dist = pointSegmentDistance(boss.x, boss.y, x0, y0, p.x, p.y);
+      if (dist <= p.radius + boss.radius) {
+        sweepHits.push({ type: "boss", target: boss, distFromStart: Math.hypot(boss.x - x0, boss.y - y0) });
+      }
     }
+    // 관통이 아니면 시작점에서 가장 가까운 대상 하나만 맞힌다 - 관통이면 이 프레임 안에서
+    // 스친 대상 전부를 순서대로 맞힌다(한 대상당 hitTargets에 넣어 같은 프레임 재중복 방지).
+    sweepHits.sort((a, b) => a.distFromStart - b.distFromStart);
+
+    let consumed = false;
+    for (const hit of sweepHits) {
+      if (hit.type === "monster") applyDamageToMonster(hit.target, p.isComboHit, p.forceCrit);
+      else applyDamageToBoss(p.isComboHit, p.forceCrit);
+
+      if (p.pierce) {
+        p.hitTargets.add(hit.target);
+      } else {
+        projectiles.splice(i, 1);
+        consumed = true;
+        break;
+      }
+    }
+    if (consumed) continue;
 
     if (p.traveled >= effectiveProjectileRange) {
       projectiles.splice(i, 1);
