@@ -68,6 +68,16 @@ const camera = { x: 0, y: 0 };
 const FORGE_BOTTOM = BALANCE.wallThickness + BALANCE.forgeHeight;
 let wasInForge = false;
 let inForge = false;
+
+// 안전지대 판정 - 공격 판정(근접·투사체·Q 대시)이 전부 이 함수 하나를 거쳐야 한다.
+// 버그(치명적): 지금까지 각 공격 경로가 "currentMap === 'hunt'"만 확인하고 대장간/사냥터
+// 세부 구역(player.y vs FORGE_BOTTOM)은 확인하지 않아, 대장간 안에 서서 사거리로
+// 사냥터 몬스터를 무위험으로 잡을 수 있었다. 몬스터는 반대로 y가 FORGE_BOTTOM+radius
+// 아래로 클램프돼 대장간에 물리적으로 들어올 수 없으므로(1475·1536행) 플레이어를 때릴 수
+// 없다 - 이 비대칭(공격은 되는데 피격은 안 되는)이 무위험 파밍의 원인이었다.
+function isPlayerInSafeZone() {
+  return currentMap === "hunt" && player.y <= FORGE_BOTTOM;
+}
 let bossTimeRemaining = BALANCE.bossTimerDuration;
 let forgeNoticeShown = false;
 let forgeNoticeTimer = 0;
@@ -190,6 +200,7 @@ function tryCastSkill() {
       }
       case "hitOnDash": {
         if (!dashHitSegment) break;
+        if (isPlayerInSafeZone()) break; // 대장간에서 시전한 돌진은 데미지를 주지 않는다
         if (currentMap === "hunt") {
           for (const monster of monsters) {
             if (!monster.alive) continue;
@@ -452,6 +463,7 @@ function consumeNextAttackGuaranteedCrit() {
 
 // 3타 강타 (모든 직업 공통) - comboResetWindow 안에 이어친 공격 수를 세어 comboHitEvery번째마다 강타 (PRD 4.4 근처 요구사항)
 function performAttack() {
+  if (isPlayerInSafeZone()) return; // 안전지대에서는 공격 자체가 나가지 않는다 (무위험 파밍 버그 수정)
   comboCount++;
   comboResetTimer = BALANCE.comboResetWindow;
   const isComboHit = comboCount % BALANCE.comboHitEvery === 0;
@@ -1537,7 +1549,7 @@ function update(dt) {
   }
 
   // 구역 판정 (PRD 8.0-1) - 대장간 진입 시 강화 UI 자동 오픈 + 자동 강화, 보스 타이머는 사냥터에서만 흐름
-  inForge = currentMap === "hunt" && player.y <= FORGE_BOTTOM;
+  inForge = isPlayerInSafeZone();
   uiPanel.classList.toggle("hidden", !inForge);
   updatePanelSplit();
   if (inForge && !wasInForge) {
