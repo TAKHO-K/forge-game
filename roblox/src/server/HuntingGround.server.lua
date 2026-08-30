@@ -42,19 +42,22 @@ local function createPlayerSpawn(floor)
 	return spawnPart
 end
 
--- 몬스터 스폰 슬롯: 사냥터 중심 기준 원형 균등 배치. 그리드보다 마리 수가 안 맞아도
--- 빈 자리가 안 생기고, 전부 중심에서 같은 거리라 자동 타겟(가장 가까운 대상) 결과가
--- 플레이어 위치에 따라 고르게 갈린다.
+-- 몬스터 스폰 슬롯: 사냥터 중심 기준 격자 균등 배치(간격·맵 크기 유도는 WorldConfig 참고).
 local function monsterSpawnPositions(floor)
 	local floorTopY = floor.Position.Y + floor.Size.Y / 2
+	local sideCount = WorldConfig.spawns.gridSideCount
+	local spacing = WorldConfig.spawns.gridSpacingStuds
+	local halfSpan = spacing * (sideCount - 1) / 2
+
 	local positions = {}
-	for i = 0, WorldConfig.spawns.count - 1 do
-		local angle = (2 * math.pi / WorldConfig.spawns.count) * i
-		positions[i + 1] = Vector3.new(
-			floor.Position.X + WorldConfig.spawns.radius * math.cos(angle),
-			floorTopY + 1.5,
-			floor.Position.Z + WorldConfig.spawns.radius * math.sin(angle)
-		)
+	for row = 0, sideCount - 1 do
+		for col = 0, sideCount - 1 do
+			table.insert(positions, Vector3.new(
+				floor.Position.X - halfSpan + col * spacing,
+				floorTopY + 1.5,
+				floor.Position.Z - halfSpan + row * spacing
+			))
+		end
 	end
 	return positions
 end

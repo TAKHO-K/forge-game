@@ -18,4 +18,22 @@ return {
 	-- 웹의 BALANCE.damageNumberLifetime=0.8과 값이 다른데(0.6), 이번 세션 범위가 아니라
 	-- 맞추지 않았다 - 나중에 재검토 필요.
 	damageNumberLifetimeSeconds = 0.6,
+
+	-- 몬스터가 플레이어를 때릴 때 받는 데미지 계산(PRD-forge-game-roblox.md 20.11-4
+	-- "새 공식 - 비율 감소"). 뺄셈(공격력-방어력) 대신 비율식을 쓴다 - 웹에서 두 값이
+	-- 같은 속도로 커지면 뺄셈이 0 아니면 전부로 붕괴하는 무적 버그를 냈던 구조라서다.
+	--   피해감소율 = 방어력 / (방어력 + damageReductionAlpha × 몬스터공격력)
+	--   받는 데미지 = 몬스터공격력 × (1 − 피해감소율)
+	damageReductionAlpha = 0.072, -- PRD 확정 상수. 스테이지·등급 무관 고정값.
+
+	-- 웹 BALANCE.playerDefense=5 그대로(클래스 배율 없음 - CombatConfig.playerAttackPower와
+	-- 같은 이유로 아직 클래스가 없다).
+	playerDefense = 5,
+
+	-- 웹 BALANCE.playerMaxHp=10 그대로.
+	playerMaxHp = 10,
+
+	-- 웹 BALANCE.playerDamageCapRatio=0.3 그대로. 받는 데미지가 최대체력의 이 비율을
+	-- 넘지 못하게 잘라 한 방에 훅 깎이는 걸 막는다.
+	playerDamageCapRatio = 0.3,
 }

@@ -12,12 +12,25 @@
 -- 붙어서 대부분 5~9대 사이로 들어간다(예: 대검×물몸형=3대, 대검×탱커형=8대,
 -- 활×탱커형=6대) - 이게 "5~10대" 체감의 실제 근거다. Roblox는 아직 클래스가 없어서
 -- 같은 체감을 내는 hp=80(=8대, attack=10 그대로)을 잠정값으로 둔다.
+local CombatConfig = require(script.Parent.CombatConfig)
+
 return {
 	tier1 = {
 		id = "tier1",
 		displayName = "잔챙이",
 		hp = 80, -- 검증용 잠정값. 위 주석 참고 - 확정 곡선 아님.
-		attack = 8, -- 이번 세션은 전투가 없어 쓰이지 않는다. 자리만 만든다.
+		attack = 8, -- 반격 데미지 계산에 쓴다(CombatConfig.damageReductionAlpha 비율식).
 		radiusPx = 12,
+
+		-- 플레이어(16stud/s)보다 느려야 도망이 성립한다(9-4). 60% 속도로 잡아 쫓기긴 하되
+		-- 꾸준히 거리를 벌리면 확실히 따돌릴 수 있게 했다.
+		moveSpeedStuds = 10,
+
+		-- 근접 사거리는 플레이어 평타와 같은 척도(둘 다 "붙어서 때리는" 근접전이라
+		-- 별도 값을 새로 만들 이유가 없다).
+		attackRangeStuds = CombatConfig.attackRangeStuds,
+
+		-- 플레이어(0.28s)보다 느긋한 반격 속도.
+		attackCooldownSeconds = 1.0,
 	},
 }

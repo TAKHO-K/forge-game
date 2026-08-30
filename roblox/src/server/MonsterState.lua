@@ -8,7 +8,9 @@
 
 local MonsterState = {}
 
--- [Model] = { hp, maxHp, data(스폰에 쓴 MonsterData 항목), spawnPosition(리스폰 자리) }
+-- [Model] = { hp, maxHp, data(스폰에 쓴 MonsterData 항목), spawnPosition(리스폰 자리),
+--             aiState("idle"/"chasing"/"returning"), aiTarget(추격 중인 Player, 없으면 nil),
+--             lastAttackTick(반격 쿨다운 기준 시각, os.clock()) }
 local monsters = {}
 
 function MonsterState.init(model, data, spawnPosition)
@@ -17,6 +19,9 @@ function MonsterState.init(model, data, spawnPosition)
 		maxHp = data.hp,
 		data = data,
 		spawnPosition = spawnPosition,
+		aiState = "idle",
+		aiTarget = nil,
+		lastAttackTick = nil,
 	}
 end
 
@@ -45,6 +50,42 @@ end
 function MonsterState.getSpawnPosition(model)
 	local entry = monsters[model]
 	return entry and entry.spawnPosition
+end
+
+function MonsterState.getAiState(model)
+	local entry = monsters[model]
+	return entry and entry.aiState
+end
+
+function MonsterState.setAiState(model, value)
+	local entry = monsters[model]
+	if entry then
+		entry.aiState = value
+	end
+end
+
+function MonsterState.getAiTarget(model)
+	local entry = monsters[model]
+	return entry and entry.aiTarget
+end
+
+function MonsterState.setAiTarget(model, player)
+	local entry = monsters[model]
+	if entry then
+		entry.aiTarget = player
+	end
+end
+
+function MonsterState.getLastAttackTick(model)
+	local entry = monsters[model]
+	return entry and entry.lastAttackTick
+end
+
+function MonsterState.setLastAttackTick(model, value)
+	local entry = monsters[model]
+	if entry then
+		entry.lastAttackTick = value
+	end
 end
 
 function MonsterState.clear(model)
