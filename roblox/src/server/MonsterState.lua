@@ -26,4 +26,13 @@ function MonsterState.clear(model)
 	hpByModel[model] = nil
 end
 
+-- 사거리 판정 등 전체 몬스터를 훑어야 하는 로직용. 순서는 보장하지 않는다.
+function MonsterState.getAllModels()
+	local models = {}
+	for model in pairs(hpByModel) do
+		table.insert(models, model)
+	end
+	return models
+end
+
 return MonsterState
