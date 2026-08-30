@@ -15,9 +15,9 @@ return {
 
 	-- 데미지 숫자가 떠 있는 시간. 죽은 몬스터의 마지막 데미지 숫자가 사라질 시간을
 	-- 벌어줘야 해서 사망 처리(MonsterSpawner.despawn)의 시체 유지 시간도 이 값을 같이 쓴다.
-	-- 웹의 BALANCE.damageNumberLifetime=0.8과 값이 다른데(0.6), 이번 세션 범위가 아니라
-	-- 맞추지 않았다 - 나중에 재검토 필요.
-	damageNumberLifetimeSeconds = 0.6,
+	-- 웹 BALANCE.damageNumberLifetime과 통일(9-5 개정) - 로블록스만 0.6으로 다르게 둘
+	-- 이유가 없었고, 웹은 이미 실플레이로 검증된 값이라 그쪽에 맞췄다.
+	damageNumberLifetimeSeconds = 0.8,
 
 	-- 몬스터가 플레이어를 때릴 때 받는 데미지 계산(PRD-forge-game-roblox.md 20.11-4
 	-- "새 공식 - 비율 감소"). 뺄셈(공격력-방어력) 대신 비율식을 쓴다 - 웹에서 두 값이
@@ -33,7 +33,9 @@ return {
 	-- 웹 BALANCE.playerMaxHp=10 그대로.
 	playerMaxHp = 10,
 
-	-- 웹 BALANCE.playerDamageCapRatio=0.3 그대로. 받는 데미지가 최대체력의 이 비율을
-	-- 넘지 못하게 잘라 한 방에 훅 깎이는 걸 막는다.
-	playerDamageCapRatio = 0.3,
+	-- 피격 상한(playerDamageCapRatio)은 9-5에서 폐지했다(PRD-forge-game-roblox.md 20.11-4
+	-- "재확인 — 피격 상한 폐지" 참고) - 스펙이 모자란 구역에서 즉사하는 걸 "여기 오면
+	-- 안 된다"는 신호로 쓰기로 방향을 바꿨다. 상한이 있으면 그 신호가 뭉개진다. 파티
+	-- 모드가 생기면 그쪽에서만 별도로 상한을 되살려야 한다(같은 문서, 파티 관련 항목) -
+	-- 지금은 파티가 없으니 여기 죽은 필드로 남겨두지 않는다.
 }

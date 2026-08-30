@@ -62,8 +62,17 @@ local function stepToward(model, currentPosition, targetPosition, speedStuds, dt
 	model:PivotTo(CFrame.new(newPosition))
 end
 
+-- 몬스터 평타 1회가 실제로 얼마나 깎는지(감소율 적용 후). 체력바 눈금(9-5)과 실제
+-- 피격 데미지가 같은 계산을 써야 눈금이 "몇 대"를 정확히 의미한다.
+local function computeHitDamage(data)
+	local reduction = CombatConfig.playerDefense / (CombatConfig.playerDefense + CombatConfig.damageReductionAlpha * data.attack)
+	return data.attack * (1 - reduction)
+end
+
 -- 사거리 안이고 자기 쿨다운이 지났으면 플레이어를 때린다. 데미지는 PRD 확정 비율 모델
 -- (뺄셈이 아니라 감소율 나눗셈)을 쓴다 - 웹에서 뺄셈으로 만들었던 무적 버그 구조를 피한다.
+-- 9-5에서 피격 상한을 없앴다 - 상한은 즉사가 주는 "스펙이 모자란다"는 신호를 뭉갰다
+-- (PRD-forge-game-roblox.md 20.11-4 참고).
 local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	if PlayerState.getHp(targetPlayer) <= 0 then
 		return -- 죽어서 리스폰 대기 중인 시체는 때리지 않는다(사망 로그 중복 방지)
@@ -81,11 +90,7 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	end
 	MonsterState.setLastAttackTick(model, now)
 
-	local reduction = CombatConfig.playerDefense / (CombatConfig.playerDefense + CombatConfig.damageReductionAlpha * data.attack)
-	local rawDamage = data.attack * (1 - reduction)
-	local damageCap = PlayerState.getMaxHp(targetPlayer) * CombatConfig.playerDamageCapRatio
-	local damage = math.min(rawDamage, damageCap)
-
+	local damage = computeHitDamage(data)
 	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
 	PlayerState.setHp(targetPlayer, newHp)
 	syncHud(targetPlayer)
@@ -120,6 +125,10 @@ RunService.Heartbeat:Connect(function(dt)
 					MonsterState.setAiState(model, "chasing")
 					MonsterState.setAiTarget(model, player)
 					state = "chasing"
+					-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
+					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
+					-- (아래 else 분기의 clear까지) 고정한다.
+					player:SetAttribute("TickDamage", computeHitDamage(data))
 				end
 			end
 
@@ -139,6 +148,9 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 멀어졌다 - 포기하고 돌아간다.
 					MonsterState.setAiState(model, "returning")
 					MonsterState.setAiTarget(model, nil)
+					if target then
+						target:SetAttribute("TickDamage", 0) -- 전투 종료 - 눈금 기준을 지운다
+					end
 				else
 					stepToward(model, position, targetRoot.Position, data.moveSpeedStuds, dt)
 					tryAttack(model, data, position, target, targetRoot)

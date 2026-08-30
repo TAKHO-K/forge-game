@@ -17,20 +17,42 @@ screenGui.Name = "AttackGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
+-- 모바일 기준(9-5 개정): 고정 120px는 화면이 작은 폰에서 과하게 크고 태블릿에서는
+-- 작아 보인다 - 화면 비율(Scale) 기준으로 잡고, 로블록스가 권장하는 최소 터치 타깃
+-- (약 88px, 손가락 오조작 방지)과 최대 크기를 UISizeConstraint로 못박는다. 엄지가
+-- 자연스럽게 닿는 우하단 코너 위치는 그대로 유지한다.
 local attackButton = Instance.new("TextButton")
 attackButton.Name = "AttackButton"
 attackButton.AnchorPoint = Vector2.new(1, 1)
-attackButton.Position = UDim2.new(1, -20, 1, -20)
-attackButton.Size = UDim2.new(0, 120, 0, 120)
+attackButton.Position = UDim2.new(1, -24, 1, -24)
+attackButton.Size = UDim2.new(0.14, 0, 0.14, 0)
 attackButton.Text = "공격"
 attackButton.TextScaled = true
 attackButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 attackButton.Parent = screenGui
 
+local attackButtonAspectRatio = Instance.new("UIAspectRatioConstraint")
+attackButtonAspectRatio.AspectRatio = 1
+attackButtonAspectRatio.Parent = attackButton
+
+local attackButtonSizeConstraint = Instance.new("UISizeConstraint")
+attackButtonSizeConstraint.MinSize = Vector2.new(88, 88)
+attackButtonSizeConstraint.MaxSize = Vector2.new(150, 150)
+attackButtonSizeConstraint.Parent = attackButton
+
+local attackButtonCorner = Instance.new("UICorner")
+attackButtonCorner.CornerRadius = UDim.new(1, 0)
+attackButtonCorner.Parent = attackButton
+
 -- Activated는 마우스 클릭·터치 탭·게임패드를 전부 같은 이벤트로 받는다(모바일 대응).
 attackButton.Activated:Connect(function()
 	attackRequest:FireServer()
 end)
+
+-- 몬스터별로 동시에 떠 있는 데미지 숫자 개수(9-5 개정, 9-3에서 미루기만 했던
+-- 스택 오프셋). 약한 테이블 키라 몬스터가 사라지면(사망·리스폰) 항목도 같이
+-- 수거된다 - 죽은 몬스터 참조를 붙들고 있을 이유가 없다.
+local activeStacks = setmetatable({}, { __mode = "k" })
 
 local function showDamageNumber(monsterModel, damage)
 	local head = monsterModel and monsterModel:FindFirstChild("Head")
@@ -38,10 +60,15 @@ local function showDamageNumber(monsterModel, damage)
 		return
 	end
 
+	-- 짧은 시간에 여러 대를 때리면 숫자가 겹쳐 안 보인다 - 이미 떠 있는 개수만큼
+	-- 위로 밀어서 계단식으로 쌓는다.
+	local stackIndex = activeStacks[monsterModel] or 0
+	activeStacks[monsterModel] = stackIndex + 1
+
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "DamageNumberGui"
 	gui.Size = UDim2.new(3, 0, 1, 0)
-	gui.StudsOffset = Vector3.new(0, 2.6, 0)
+	gui.StudsOffset = Vector3.new(0, 2.6 + stackIndex * 0.9, 0)
 	gui.AlwaysOnTop = true
 	gui.Adornee = head
 	gui.Parent = head
@@ -56,6 +83,7 @@ local function showDamageNumber(monsterModel, damage)
 
 	task.delay(CombatConfig.damageNumberLifetimeSeconds, function()
 		gui:Destroy()
+		activeStacks[monsterModel] = math.max((activeStacks[monsterModel] or 1) - 1, 0)
 	end)
 end
 

@@ -26,10 +26,20 @@ local HALF_SPAN_STUDS = GRID_SPACING_STUDS * (GRID_SIDE_COUNT - 1) / 2
 local FLOOR_HALF_SIZE_STUDS = HALF_SPAN_STUDS + EDGE_MARGIN_STUDS
 local FLOOR_SIZE_STUDS = FLOOR_HALF_SIZE_STUDS * 2
 
--- 플레이어 스폰은 바닥 가장자리에 붙이되, 스폰 파트(6stud 정사각형, 반폭 3)가
--- 바닥 밖으로 안 나가도록 반폭만큼 안쪽으로 뺀다.
-local SPAWN_PART_HALF_SIZE_STUDS = 3
-local PLAYER_SPAWN_Z = -(FLOOR_HALF_SIZE_STUDS - SPAWN_PART_HALF_SIZE_STUDS)
+-- 어그로/리쉬는 격자 간격에서 유도한다(근거는 아래 aggro 필드 주석 참고). 스폰 안전
+-- 거리 계산에도 같은 값이 필요해 여기서 먼저 뽑아 둔다.
+local AGGRO_RANGE_STUDS = GRID_SPACING_STUDS * 0.4
+local LEASH_RANGE_STUDS = AGGRO_RANGE_STUDS * 1.5
+
+-- 플레이어 스폰 — 앞줄 몬스터 "집"에서부터 최소 얼마나 떨어져야 부활 직후 즉시
+-- 어그로가 안 붙는지를 구조적으로 계산한다(9-5 개정, 조건문 가드가 아니라 거리로 해결).
+-- 최악의 경우: 몬스터가 리쉬 한계(LEASH_RANGE_STUDS)까지 스폰 쪽으로 끌려나온 뒤 그
+-- 자리에서 다시 어그로를 잡으려면, 그 지점에서 스폰까지 거리가 최소 어그로 범위
+-- (AGGRO_RANGE_STUDS)는 넘어야 한다 - 즉 집~스폰 거리 > 리쉬+어그로가 하한이다.
+-- 등호에 걸리는 경계 사고를 피하려고 이 프로젝트에서 이미 쓰는 안전 여유 20%를
+-- 그대로 적용했다(어그로 범위 자체를 s/2 상한 대비 20% 낮춘 것과 같은 논리).
+local SPAWN_SAFE_DISTANCE_STUDS = (LEASH_RANGE_STUDS + AGGRO_RANGE_STUDS) * 1.2
+local PLAYER_SPAWN_Z = -(HALF_SPAN_STUDS + SPAWN_SAFE_DISTANCE_STUDS)
 
 return {
 	-- 1 stud = 웹 10px. 기준: 로블록스 기본 캐릭터(R15) 너비 약 4stud(반지름 2stud) vs
@@ -43,16 +53,14 @@ return {
 	},
 
 	-- 사냥터 중심 기준 XZ 오프셋. Y는 스크립트가 바닥 위 높이로 계산한다.
-	-- 가장 가까운 앞줄 몬스터(집 위치 기준 s만큼 떨어짐)까지 거리는
-	-- FLOOR_HALF_SIZE_STUDS - HALF_SPAN_STUDS = EDGE_MARGIN_STUDS(32stud)로,
-	-- 어그로 범위(25.6stud)보다 넉넉히 밖이라 스폰 직후 바로 어그로가 붙지 않는다.
-	--
-	-- [미결, 9-4] 여유가 3.4stud(0.2초)뿐이라 사실상 부활 직후 어그로가 붙는다. 방금 고친
-	-- "죽은 뒤 리쉬가 안 풀리는" 버그와 같은 계열이지만 반대쪽 - 이건 "부활 직후"를 안 본다.
-	-- 지금은 몬스터가 약해 죽기 전에 도망칠 시간이 있어 안 터지지만, 더 강한 몬스터가
-	-- 이 사냥터에 들어오면 "부활 -> 즉시 어그로 -> 즉사 -> 부활" 루프가 생긴다. 강화 맵과
-	-- 사냥 맵을 물리적으로 분리하기로 이미 정했으니 그때 근본 해결되지만, 그 전에 강한
-	-- 몬스터가 먼저 들어오면 터진다.
+	-- [9-5 개정, 9-4 미결 해결] 예전엔 어그로 범위(25.6stud)만 넘기면 된다고 보고
+	-- 여유 3.4stud(0.2초)만 뒀는데, 그건 "몬스터가 집에 가만히 있다"는 가정에서만
+	-- 맞는 계산이었다 - 죽기 직전까지 쫓아온 몬스터는 리쉬 한계(LEASH_RANGE_STUDS)까지
+	-- 집에서 떨어진 채로 돌아가는 중일 수 있고, 그 자리에서 다시 스폰을 덮칠 수 있었다.
+	-- 지금은 그 최악의 경우까지 계산에 넣은 SPAWN_SAFE_DISTANCE_STUDS만큼 떨어뜨려서,
+	-- 어떤 몬스터가 어디 있든(집이든 리쉬 끝이든) 부활 직후 재어그로가 구조적으로
+	-- 불가능하다 - 무적 시간 같은 조건문 가드를 따로 둘 필요가 없다. 피격 상한을
+	-- 없애 즉사가 가능해진 지금(20.11-4) 이 보장이 없으면 부활 루프가 실제로 생긴다.
 	playerSpawnOffset = Vector3.new(0, 0, PLAYER_SPAWN_Z),
 
 	-- 몬스터 배치: 사냥터 중심 기준 격자 균등 배치. 원형 배치는 중심에 있으면 모든 몬스터가
@@ -74,7 +82,7 @@ return {
 	-- 1.5배로, 플레이어가 살짝 끌어내는 것은 허용하되 옆 칸 몬스터의 집 자리(거리 s)까지
 	-- 침범하지 않게 잡았다.
 	aggro = {
-		rangeStuds = GRID_SPACING_STUDS * 0.4,
-		leashRangeStuds = GRID_SPACING_STUDS * 0.4 * 1.5,
+		rangeStuds = AGGRO_RANGE_STUDS,
+		leashRangeStuds = LEASH_RANGE_STUDS,
 	},
 }

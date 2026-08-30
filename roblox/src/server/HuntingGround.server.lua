@@ -30,6 +30,19 @@ local function positionOnFloor(floor, xzOffset, partHalfHeight)
 	)
 end
 
+-- Studio 베이스플레이트 템플릿이 기본으로 깔아 두는 SpawnLocation(보통 원점 근처)을
+-- 지운다. 로블록스는 SpawnLocation이 여러 개면 그중 하나를 무작위로 골라 리스폰시키므로,
+-- 이 기본 스폰이 남아 있으면 우리가 계산한 안전 거리(WorldConfig.playerSpawnOffset,
+-- 9-5)와 무관하게 몬스터 바로 옆에서 (재)스폰될 수 있다 - 실제로 이번 세션에 "즉사 후
+-- 몬스터 옆에서 다시 즉사"가 재현된 원인이 이거였다.
+local function removeDefaultSpawns(ourSpawnName)
+	for _, obj in ipairs(Workspace:GetChildren()) do
+		if obj:IsA("SpawnLocation") and obj.Name ~= ourSpawnName then
+			obj:Destroy()
+		end
+	end
+end
+
 local function createPlayerSpawn(floor)
 	local spawnPart = Instance.new("SpawnLocation")
 	spawnPart.Name = "HuntingGroundSpawn"
@@ -63,6 +76,7 @@ local function monsterSpawnPositions(floor)
 end
 
 local floor = createFloor()
+removeDefaultSpawns("HuntingGroundSpawn")
 createPlayerSpawn(floor)
 
 for _, position in ipairs(monsterSpawnPositions(floor)) do
