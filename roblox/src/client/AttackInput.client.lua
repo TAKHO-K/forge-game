@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 
 local attackRequest = ReplicatedStorage:WaitForChild("AttackRequest")
 local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
@@ -53,7 +54,7 @@ local function showDamageNumber(monsterModel, damage)
 	label.TextScaled = true
 	label.Parent = gui
 
-	task.delay(0.6, function()
+	task.delay(CombatConfig.damageNumberLifetimeSeconds, function()
 		gui:Destroy()
 	end)
 end

@@ -12,4 +12,10 @@ return {
 	-- 웹 playerAttack 그대로(고정 데미지값이라 stud 환산 대상이 아니다. 등급·스킬
 	-- 배율 미적용 - 그건 전투가 더 갖춰졌을 때 넣는다).
 	playerAttackPower = 10,
+
+	-- 데미지 숫자가 떠 있는 시간. 죽은 몬스터의 마지막 데미지 숫자가 사라질 시간을
+	-- 벌어줘야 해서 사망 처리(MonsterSpawner.despawn)의 시체 유지 시간도 이 값을 같이 쓴다.
+	-- 웹의 BALANCE.damageNumberLifetime=0.8과 값이 다른데(0.6), 이번 세션 범위가 아니라
+	-- 맞추지 않았다 - 나중에 재검토 필요.
+	damageNumberLifetimeSeconds = 0.6,
 }

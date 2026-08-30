@@ -13,5 +13,13 @@ return {
 
 	-- 사냥터 중심 기준 XZ 오프셋. Y는 스크립트가 바닥 위 높이로 계산한다.
 	playerSpawnOffset = Vector3.new(0, 0, -35),
-	monsterSpawnOffset = Vector3.new(15, 0, 15),
+
+	-- 몬스터 배치: 사냥터 중심 기준 원형 균등 배치. 그리드보다 마리 수가 안 맞아도
+	-- 빈 자리가 안 생기고, 전부 중심에서 같은 거리라 자동 타겟(가장 가까운 대상) 결과가
+	-- 플레이어 위치에 따라 고르게 바뀐다.
+	spawns = {
+		count = 8, -- 5~10마리 범위
+		radius = 30, -- 100x100 바닥(반폭 50) 안에 여유 있게 들어가는 반지름
+		respawnDelaySeconds = 5,
+	},
 }

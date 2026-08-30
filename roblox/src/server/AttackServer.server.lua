@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local MonsterState = require(script.Parent.MonsterState)
+local MonsterSpawner = require(script.Parent.MonsterSpawner)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -57,9 +58,15 @@ attackRequest.OnServerEvent:Connect(function(player)
 	end
 
 	local damage = CombatConfig.playerAttackPower
-	MonsterState.setHp(target, MonsterState.getHp(target) - damage)
+	local newHp = MonsterState.getHp(target) - damage
+	MonsterState.setHp(target, newHp)
+	MonsterSpawner.updateHpLabel(target)
 
 	attackResult:FireClient(player, target, damage)
+
+	if newHp <= 0 then
+		MonsterSpawner.despawn(target)
+	end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
