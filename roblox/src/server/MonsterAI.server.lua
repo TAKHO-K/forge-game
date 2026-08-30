@@ -10,10 +10,19 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerState = require(script.Parent.PlayerState)
 
+-- 클라이언트 체력바(PlayerHealthBar.client.lua)는 Humanoid.Health가 아니라 이 Attribute를
+-- 읽는다 - PlayerState가 유일한 HP 소스이므로 HP가 바뀌는 모든 지점에서 이걸 같이 불러야 한다.
+local function syncHud(player)
+	player:SetAttribute("Hp", PlayerState.getHp(player))
+	player:SetAttribute("MaxHp", PlayerState.getMaxHp(player))
+end
+
 Players.PlayerAdded:Connect(function(player)
 	PlayerState.init(player)
+	syncHud(player)
 	player.CharacterAdded:Connect(function()
 		PlayerState.reset(player) -- 죽었다 살아나든 처음 입장이든 항상 풀피로 시작
+		syncHud(player)
 	end)
 end)
 
@@ -79,6 +88,7 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 
 	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
 	PlayerState.setHp(targetPlayer, newHp)
+	syncHud(targetPlayer)
 
 	print(("[forge-game] 플레이어 피격: %s - %.2f 데미지 (남은 HP %.2f/%d)"):format(
 		targetPlayer.Name, damage, newHp, PlayerState.getMaxHp(targetPlayer)))
@@ -120,6 +130,9 @@ RunService.Heartbeat:Connect(function(dt)
 				local distanceFromHome = (position - home).Magnitude
 				local targetIsDead = target and PlayerState.getHp(target) <= 0
 
+				-- 추격을 그만두는 조건은 하나가 아니다 - 거리로 풀리는 것(리쉬)과 대상이
+				-- 사라져서 풀리는 것(퇴장·사망)은 별개라 각각 따로 체크해야 한다. 아래
+				-- targetIsDead를 빼고 거리만 봤다가 리스폰 직후 재사망 루프가 생겼었다(9-4).
 				if not targetRoot or targetIsDead or distanceFromHome > WorldConfig.aggro.leashRangeStuds then
 					-- 대상을 놓쳤거나(퇴장) 죽었거나(리스폰된 새 캐릭터를 이어서 쫓아가면 안 된다 -
 					-- 스폰 지점이 리쉬 범위 안이면 즉시 재사망 루프가 생긴다) 집에서 너무
