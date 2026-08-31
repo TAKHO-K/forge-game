@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
+local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -16,6 +17,12 @@ attackRequest.Parent = ReplicatedStorage
 local attackResult = Instance.new("RemoteEvent")
 attackResult.Name = "AttackResult"
 attackResult.Parent = ReplicatedStorage
+
+-- 처치 순간 골드 팝업(10-1)용. 골드 자체는 PlayerProfile.addGold가 Attribute로 이미
+-- 동기화한다 - 이 이벤트는 "방금 얼마 벌었다"는 일회성 연출 신호만 보낸다.
+local goldGained = Instance.new("RemoteEvent")
+goldGained.Name = "GoldGained"
+goldGained.Parent = ReplicatedStorage
 
 local lastAttackTick = {} -- [Player] = os.clock() 시각
 
@@ -65,6 +72,10 @@ attackRequest.OnServerEvent:Connect(function(player)
 	attackResult:FireClient(player, target, damage)
 
 	if newHp <= 0 then
+		-- despawn이 MonsterState.clear를 즉시 호출해 데이터를 지우므로, 그 전에 골드값을 먼저 읽는다.
+		local goldDrop = MonsterState.getData(target).goldDrop
+		PlayerProfile.addGold(player, goldDrop)
+		goldGained:FireClient(player, goldDrop)
 		MonsterSpawner.despawn(target)
 	end
 end)

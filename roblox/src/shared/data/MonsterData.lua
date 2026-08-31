@@ -22,6 +22,11 @@ return {
 		attack = 8, -- 반격 데미지 계산에 쓴다(CombatConfig.damageReductionAlpha 비율식).
 		radiusPx = 12,
 
+		-- 처치 골드(10-1). 웹 tier1 두 종(data/monsters.js larva_soft=4, larva_tank=8)의
+		-- 평균 - 여긴 아직 soft/tank로 안 갈라서 hp=80 잠정값(위 주석)과 같은 이유로
+		-- 대푯값 하나만 쓴다. 클래스 배율은 아직 없다(gold도 attack·hp처럼 배율 미적용).
+		goldDrop = 6,
+
 		-- 플레이어(16stud/s)보다 느려야 도망이 성립한다(9-4). 60% 속도로 잡아 쫓기긴 하되
 		-- 꾸준히 거리를 벌리면 확실히 따돌릴 수 있게 했다.
 		moveSpeedStuds = 10,
