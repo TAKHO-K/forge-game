@@ -9,11 +9,12 @@ local PlayerProfile = {}
 -- [Player] = profile 테이블(SaveSystem.defaultProfile()/migrate()와 같은 스키마)
 local profiles = {}
 
--- 로드가 끝난 뒤(SaveServer.server.lua) 호출한다. Gold Attribute도 여기서 같이 맞춰서
--- HUD가 접속 직후부터 정확한 값을 보게 한다.
+-- 로드가 끝난 뒤(SaveServer.server.lua) 호출한다. Gold·WeaponLevel Attribute도 여기서
+-- 같이 맞춰서 HUD·강화 UI가 접속 직후부터 정확한 값을 보게 한다.
 function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
+	player:SetAttribute("WeaponLevel", profile.equipment.weapon.level)
 end
 
 -- 저장 시점에 SaveSystem이 통째로 넘겨받아 쓴다.
@@ -35,6 +36,33 @@ function PlayerProfile.addGold(player, amount)
 	end
 	profile.gold += amount
 	player:SetAttribute("Gold", profile.gold)
+end
+
+-- 골드가 충분하면 차감하고 true, 부족하면 아무것도 바꾸지 않고 false(10-2 [3] - 확인과
+-- 차감을 분리하면 그 사이에 값이 바뀔 여지가 생긴다. 여긴 한 함수 안에서 원자적으로 처리).
+function PlayerProfile.trySpendGold(player, amount)
+	local profile = profiles[player]
+	if not profile or profile.gold < amount then
+		return false
+	end
+	profile.gold -= amount
+	player:SetAttribute("Gold", profile.gold)
+	return true
+end
+
+function PlayerProfile.getWeapon(player)
+	local profile = profiles[player]
+	return profile and profile.equipment.weapon
+end
+
+-- 서버만 호출한다(EnhanceServer의 강화 판정 직후). 클라이언트가 보낸 값을 믿지 않는다.
+function PlayerProfile.setWeaponLevel(player, level)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	profile.equipment.weapon.level = level
+	player:SetAttribute("WeaponLevel", level)
 end
 
 function PlayerProfile.clear(player)

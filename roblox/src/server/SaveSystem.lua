@@ -6,8 +6,15 @@ local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
+local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 
 local SaveSystem = {}
+
+-- 신규/구버전 프로필에 지급하는 시작 무기. 등급·기본공격력 등 정적 스탯은 WeaponData에만
+-- 있다 - 여기(저장 데이터)엔 계속 바뀌는 값(강화 단계)과 어떤 무기인지(id)만 남긴다.
+local function defaultWeapon()
+	return { id = WeaponData.starterId, level = 0 }
+end
 
 local store = DataStoreService:GetDataStore(SaveConfig.dataStoreName)
 
@@ -15,9 +22,9 @@ local function profileKey(player)
 	return "Player_" .. player.UserId
 end
 
--- 저장 구조 기본값. 지금 실제로 쓰는 필드는 gold뿐이지만, 곧 들어올 필드(클래스·장비·
--- 스테이지 진행도·인벤토리 칸 수·게임패스)의 자리를 미리 만들어 둔다 - 그래야 그 기능이
--- 생길 때 SAVE_VERSION을 또 올리지 않고 채워 넣을 수 있다.
+-- 저장 구조 기본값. 지금 실제로 쓰는 필드는 gold·equipment.weapon뿐이지만, 곧 들어올
+-- 필드(클래스·나머지 장비·스테이지 진행도·인벤토리 칸 수·게임패스)의 자리를 미리
+-- 만들어 둔다 - 그래야 그 기능이 생길 때 SAVE_VERSION을 또 올리지 않고 채워 넣을 수 있다.
 -- classId는 필드 자체를 안 넣는다(nil) - 클래스 선택 UI가 없는 지금은 "선택 안 함"이
 -- 유일하게 맞는 값이고, 억지 기본값(예: 첫 클래스 자동 지정)을 넣으면 나중에 클래스
 -- 선택 화면이 생겼을 때 "이미 골랐다"고 착각하게 만든다.
@@ -27,9 +34,10 @@ local function defaultProfile()
 		savedAt = 0, -- migrate() 시점 데이터는 항상 "가장 오래된 것"으로 본다(웹 core/save.js와 같은 원칙)
 		gold = 0,
 
-		-- 웹 core/equipment.js ITEM_PARTS(무기/갑옷/장갑/신발)와 같은 4슬롯. 드랍 시스템이
-		-- 아직 없어 전부 비어 있다(nil = 미장착) - 가짜 기본 장비를 채우면 안 된다.
-		equipment = { weapon = nil, armor = nil, gloves = nil, boots = nil },
+		-- 웹 core/equipment.js ITEM_PARTS(무기/갑옷/장갑/신발)와 같은 4슬롯. 무기만 시작
+		-- 지급한다(10-2 [1]) - 강화할 대상이 있어야 하기 때문이다. 갑옷·장갑·신발은 드랍
+		-- 시스템이 아직 없어 그대로 비어 있다(nil = 미장착) - 가짜 기본 장비를 채우지 않는다.
+		equipment = { weapon = defaultWeapon(), armor = nil, gloves = nil, boots = nil },
 
 		-- 일반/무한 모드 진행도. 스테이지 시스템이 없는 지금도 "1스테이지부터"는 실제로
 		-- 맞는 시작값이라 0이 아니라 1을 넣는다(무한 모드는 미진입 상태가 곧 0).
@@ -45,8 +53,7 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 0(스키마 버전 개념 자체가 없던 상태, 즉 이 시스템이 생기기 전) -> 1(골드 도입)
--- 한 단계뿐이다.
+-- 지금은 두 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기 지급).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -59,6 +66,13 @@ local function migrate(data)
 		data.version = 1
 	end
 
+	if data.version < 2 then
+		-- 10-2 도입 시점에 이미 있던 v1 저장은 equipment.weapon이 nil이다(그때는 무기
+		-- 자체가 없었으니 당연하다) - 강화할 대상이 있어야 하므로 지금 지급한다.
+		data.equipment.weapon = data.equipment.weapon or defaultWeapon()
+		data.version = 2
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -69,6 +83,8 @@ local function isValidProfile(data)
 		and type(data.version) == "number"
 		and type(data.gold) == "number"
 		and type(data.equipment) == "table"
+		and type(data.equipment.weapon) == "table"
+		and type(data.equipment.weapon.level) == "number"
 		and type(data.stageProgress) == "table"
 		and type(data.inventorySlots) == "number"
 		and type(data.gamepasses) == "table"

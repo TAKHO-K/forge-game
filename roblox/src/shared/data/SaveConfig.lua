@@ -3,7 +3,8 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
-	saveVersion = 1,
+	-- 2(10-2) - 시작 무기 지급(equipment.weapon). SaveSystem.migrate()의 v1->v2 참고.
+	saveVersion = 2,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",
@@ -16,9 +17,8 @@ return {
 	-- 유저는 "분명 있었는데 없어졌다"로 받아들인다 - 신뢰를 깎는 종류의 손실이라 60초로
 	-- 좁혔다. 반대로 몬스터 처치마다 저장하면 공격 쿨다운(0.28초)만으로 1인당 분당 최대
 	-- 약 214회라 그 자체로 예산을 넘는다 - "처치 즉시 저장"은 여전히 안 한다(주기+퇴장+
-	-- BindToClose 조합). 강화처럼 되돌릴 수 없는 사건이 생기면 그건 주기와 무관하게 그
-	-- 즉시 저장해야 한다 - 아직 강화가 없어 지금은 미결 항목으로만 남긴다
-	-- (PRD-forge-game-roblox.md 20.15 참고).
+	-- BindToClose 조합). 강화처럼 되돌릴 수 없는 사건은 주기와 무관하게 즉시 저장한다
+	-- (10-2, EnhanceServer.server.lua의 스로틀 로직·예산 검산 참고).
 	autosaveIntervalSeconds = 60,
 
 	-- 저장/불러오기 재시도 횟수(첫 시도 이후 추가로 몇 번 더 시도하는지)와 시도 사이 대기(초).

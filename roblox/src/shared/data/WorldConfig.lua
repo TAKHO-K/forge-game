@@ -41,6 +41,18 @@ local LEASH_RANGE_STUDS = AGGRO_RANGE_STUDS * 1.5
 local SPAWN_SAFE_DISTANCE_STUDS = (LEASH_RANGE_STUDS + AGGRO_RANGE_STUDS) * 1.2
 local PLAYER_SPAWN_Z = -(HALF_SPAN_STUDS + SPAWN_SAFE_DISTANCE_STUDS)
 
+-- 어그로 구역 울타리(PRD-forge-game-roblox.md 20.16) - 설계만 해두고 미구현이던 경계선을
+-- 여기서 처음 실제 값으로 만든다(10-2, 강화대가 그 첫 적용 사례). 몬스터 격자 바깥
+-- 경계에서 어그로 범위(r)×1.2(이 프로젝트의 20% 안전 여유 관례, 위 SPAWN_SAFE_DISTANCE_STUDS와
+-- 같은 논리)만큼 떨어진 선 - 이 선 안쪽에는 어떤 시설도 두지 않는다.
+local FENCE_DISTANCE_STUDS = HALF_SPAN_STUDS + AGGRO_RANGE_STUDS * 1.2
+
+-- 강화대는 스폰 바로 옆(X로 15stud)에 둔다. 스폰 자체가 이미 사냥터 중심에서
+-- SPAWN_SAFE_DISTANCE_STUDS(=140.8stud)만큼 떨어져 있어 울타리(94.72stud)보다 훨씬
+-- 바깥이다 - 15stud 옆으로 옮겨도 중심까지 거리는 sqrt(140.8²+15²)≈141.6stud로 여전히
+-- 안전하다(검산: 141.6 > FENCE_DISTANCE_STUDS).
+local ENHANCE_STATION_OFFSET = Vector3.new(15, 0, PLAYER_SPAWN_Z)
+
 return {
 	-- 1 stud = 웹 10px. 기준: 로블록스 기본 캐릭터(R15) 너비 약 4stud(반지름 2stud) vs
 	-- 웹 playerRadius=20px(지름 40px) -> 40px/4stud = 10px/stud.
@@ -84,5 +96,16 @@ return {
 	aggro = {
 		rangeStuds = AGGRO_RANGE_STUDS,
 		leashRangeStuds = LEASH_RANGE_STUDS,
+	},
+
+	-- 강화대 배치(10-2) - 울타리 규칙(20.16)의 첫 실제 적용. fenceDistanceStuds는 참고용
+	-- 검증치(강화대가 실제로 이 값보다 바깥인지 확인하는 용도)이고, 게임 로직이 직접
+	-- 쓰는 건 stationOffset·interactionRangeStuds뿐이다.
+	enhance = {
+		stationOffset = ENHANCE_STATION_OFFSET,
+		fenceDistanceStuds = FENCE_DISTANCE_STUDS,
+		-- 강화대 UI가 열리고 서버가 강화 요청을 받아주는 상호작용 거리. 클라이언트(UI
+		-- 표시)와 서버(요청 검증)가 같은 값을 써야 해서 여기 하나로 둔다.
+		interactionRangeStuds = 12,
 	},
 }

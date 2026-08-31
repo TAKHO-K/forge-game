@@ -3,8 +3,9 @@
 -- hp = 80은 검증용 잠정값이다(웹 스테이지1 값도, PRD 확정 곡선값도 아니다). 근거:
 -- 원래 여기 있던 38,896은 PRD-forge-game-roblox.md 20.11-4의 무한 모드 HP(N=1) 값인데,
 -- 그건 "무한 모드 진입 시점"(정상 모드 250+ 스테이지를 다 지난 시점) 기준이라 지금
--- Roblox에 있는 초기값 playerAttackPower=10(플레이어 성장 이전, data/balance.js
--- BALANCE.playerAttack)과 짝지으면 안 되는 값이었다 - 두 값 다 각자 맥락에서는 맞지만
+-- Roblox에 있는 초기값 공격력 10(10-2부터 WeaponData.weapons.starter_sword.baseAttack,
+-- 그전엔 CombatConfig.playerAttackPower - data/balance.js BALANCE.playerAttack과 같은 값)과
+-- 짝지으면 안 되는 값이었다 - 두 값 다 각자 맥락에서는 맞지만
 -- 서로 다른 진행도를 섞어 쓴 게 원인.
 -- 웹 실제 스테이지1 몬스터(data/monsters.js)로 확인한 타수: BALANCE.playerAttack=10을
 -- 클래스 배율 없이 그대로 쓰면 larva_soft(hp=40,def=0)=4대, larva_tank(hp=90,def=4)=15대로

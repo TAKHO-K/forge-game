@@ -6,6 +6,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
+local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -64,7 +66,15 @@ attackRequest.OnServerEvent:Connect(function(player)
 		return -- 사거리 안에 몬스터가 없다 - 헛스윙
 	end
 
-	local damage = CombatConfig.playerAttackPower
+	-- 프로필 로드가 아직 안 끝난 접속 직후에 공격이 들어올 수 있다(DataStore 왕복 지연) -
+	-- 무기가 없으면 공격력을 계산할 수 없으니 헛스윙으로 처리한다.
+	local weapon = PlayerProfile.getWeapon(player)
+	if not weapon then
+		return
+	end
+
+	-- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율(10-2 [1]).
+	local damage = Enhance.getPlayerAttack(WeaponData.weapons[weapon.id], weapon.level, CombatConfig.classAttackMultiplier)
 	local newHp = MonsterState.getHp(target) - damage
 	MonsterState.setHp(target, newHp)
 	MonsterSpawner.updateHpLabel(target)

@@ -9,9 +9,13 @@ return {
 	-- 웹 attackInterval 그대로(시간값이라 stud 환산 대상이 아니다).
 	attackCooldownSeconds = 0.28,
 
-	-- 웹 playerAttack 그대로(고정 데미지값이라 stud 환산 대상이 아니다. 등급·스킬
-	-- 배율 미적용 - 그건 전투가 더 갖춰졌을 때 넣는다).
-	playerAttackPower = 10,
+	-- 공격력은 10-2부터 여기 없다 - WeaponData.weapons.starter_sword.baseAttack(=10, 옮긴
+	-- 값 그대로)을 기준으로 무기 기본값×강화 배율×등급 배율×classAttackMultiplier로
+	-- 계산한다(Enhance.getPlayerAttack). 죽은 필드로 남겨두지 않는다.
+
+	-- 클래스 시스템 없음(10-2 시점). 클래스가 생기면 여기 대신 클래스별 값을 곱한다
+	-- (playerDefense와 같은 이유로 아직 자리만 만든다).
+	classAttackMultiplier = 1.0,
 
 	-- 데미지 숫자가 떠 있는 시간. 죽은 몬스터의 마지막 데미지 숫자가 사라질 시간을
 	-- 벌어줘야 해서 사망 처리(MonsterSpawner.despawn)의 시체 유지 시간도 이 값을 같이 쓴다.
@@ -26,8 +30,8 @@ return {
 	--   받는 데미지 = 몬스터공격력 × (1 − 피해감소율)
 	damageReductionAlpha = 0.072, -- PRD 확정 상수. 스테이지·등급 무관 고정값.
 
-	-- 웹 BALANCE.playerDefense=5 그대로(클래스 배율 없음 - CombatConfig.playerAttackPower와
-	-- 같은 이유로 아직 클래스가 없다).
+	-- 웹 BALANCE.playerDefense=5 그대로(클래스 배율 없음 - classAttackMultiplier와 같은
+	-- 이유로 아직 클래스가 없다).
 	playerDefense = 5,
 
 	-- 웹 BALANCE.playerMaxHp=10 그대로.
