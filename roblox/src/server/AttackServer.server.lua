@@ -6,8 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
-local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
-local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -47,9 +46,19 @@ local function findNearestMonsterInRange(originPosition)
 end
 
 attackRequest.OnServerEvent:Connect(function(player)
+	-- 프로필 로드가 아직 안 끝난 접속 직후, 혹은 클래스를 아직 안 고른 상태에서 공격이
+	-- 들어올 수 있다 - 공격력·쿨다운 둘 다 클래스가 있어야 계산할 수 있으니 헛스윙으로
+	-- 처리한다(10-3 [3] - 클래스 배율이 실제로 평타에 반영되는 첫 지점).
+	local weapon = PlayerProfile.getWeapon(player)
+	local classId = PlayerProfile.getClassId(player)
+	if not weapon or not classId then
+		return
+	end
+
 	local now = os.clock()
 	local last = lastAttackTick[player]
-	if last and now - last < CombatConfig.attackCooldownSeconds then
+	local cooldown = PlayerCombat.getAttackCooldown(classId)
+	if last and now - last < cooldown then
 		return -- 쿨다운이 안 지났다 - 조용히 무시
 	end
 
@@ -66,15 +75,9 @@ attackRequest.OnServerEvent:Connect(function(player)
 		return -- 사거리 안에 몬스터가 없다 - 헛스윙
 	end
 
-	-- 프로필 로드가 아직 안 끝난 접속 직후에 공격이 들어올 수 있다(DataStore 왕복 지연) -
-	-- 무기가 없으면 공격력을 계산할 수 없으니 헛스윙으로 처리한다.
-	local weapon = PlayerProfile.getWeapon(player)
-	if not weapon then
-		return
-	end
-
-	-- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율(10-2 [1]).
-	local damage = Enhance.getPlayerAttack(WeaponData.weapons[weapon.id], weapon.level, CombatConfig.classAttackMultiplier)
+	-- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율(10-2 [1], 10-3 [3]에서
+	-- 클래스 배율 자리에 실제 값이 들어갔다). 배율이 곱해지는 지점은 PlayerCombat 하나뿐이다.
+	local damage = PlayerCombat.getAttack(weapon, classId)
 	local newHp = MonsterState.getHp(target) - damage
 	MonsterState.setHp(target, newHp)
 	MonsterSpawner.updateHpLabel(target)

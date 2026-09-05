@@ -3,8 +3,8 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
-	-- 2(10-2) - 시작 무기 지급(equipment.weapon). SaveSystem.migrate()의 v1->v2 참고.
-	saveVersion = 2,
+	-- 3(10-3) - 클래스 선택 필드(classId) 추가. SaveSystem.migrate()의 v2->v3 참고.
+	saveVersion = 3,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

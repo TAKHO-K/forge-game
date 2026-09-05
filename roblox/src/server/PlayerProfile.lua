@@ -15,6 +15,9 @@ function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
 	player:SetAttribute("WeaponLevel", profile.equipment.weapon.level)
+	-- Attribute는 nil을 담지 못한다 - "선택 안 함"을 빈 문자열로 옮긴다. 클라이언트
+	-- (ClassSelectUI.client.lua)는 "" 또는 미설정을 "선택 안 함"으로 취급한다.
+	player:SetAttribute("ClassId", profile.classId or "")
 end
 
 -- 저장 시점에 SaveSystem이 통째로 넘겨받아 쓴다.
@@ -63,6 +66,22 @@ function PlayerProfile.setWeaponLevel(player, level)
 	end
 	profile.equipment.weapon.level = level
 	player:SetAttribute("WeaponLevel", level)
+end
+
+function PlayerProfile.getClassId(player)
+	local profile = profiles[player]
+	return profile and profile.classId
+end
+
+-- 서버만 호출한다(ClassServer의 검증 직후). 클라이언트가 보낸 classId를 그대로 믿지 않는다 -
+-- 존재하는 클래스인지는 호출부(ClassServer.server.lua)가 ClassData로 이미 확인했다.
+function PlayerProfile.setClassId(player, classId)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	profile.classId = classId
+	player:SetAttribute("ClassId", classId)
 end
 
 function PlayerProfile.clear(player)

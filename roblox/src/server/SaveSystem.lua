@@ -25,14 +25,18 @@ end
 -- 저장 구조 기본값. 지금 실제로 쓰는 필드는 gold·equipment.weapon뿐이지만, 곧 들어올
 -- 필드(클래스·나머지 장비·스테이지 진행도·인벤토리 칸 수·게임패스)의 자리를 미리
 -- 만들어 둔다 - 그래야 그 기능이 생길 때 SAVE_VERSION을 또 올리지 않고 채워 넣을 수 있다.
--- classId는 필드 자체를 안 넣는다(nil) - 클래스 선택 UI가 없는 지금은 "선택 안 함"이
--- 유일하게 맞는 값이고, 억지 기본값(예: 첫 클래스 자동 지정)을 넣으면 나중에 클래스
--- 선택 화면이 생겼을 때 "이미 골랐다"고 착각하게 만든다.
 local function defaultProfile()
 	return {
 		version = SaveConfig.saveVersion,
 		savedAt = 0, -- migrate() 시점 데이터는 항상 "가장 오래된 것"으로 본다(웹 core/save.js와 같은 원칙)
 		gold = 0,
+
+		-- 클래스 선택(10-3). 필드는 있지만 값은 nil - "아직 안 골랐다"가 지금은 실제로
+		-- 맞는 상태이고, 이 nil이 곧 클라이언트가 선택 UI를 띄우는 조건이 된다
+		-- (ClassSelectUI.client.lua, PlayerProfile.init이 Attribute로 옮길 때 빈 문자열로
+		-- 바꾼다 - Attribute는 nil을 담지 못한다). 억지 기본값(첫 클래스 자동 지정)을 넣으면
+		-- 이미 고른 것으로 착각해 선택 UI가 영원히 안 뜬다.
+		classId = nil,
 
 		-- 웹 core/equipment.js ITEM_PARTS(무기/갑옷/장갑/신발)와 같은 4슬롯. 무기만 시작
 		-- 지급한다(10-2 [1]) - 강화할 대상이 있어야 하기 때문이다. 갑옷·장갑·신발은 드랍
@@ -53,7 +57,8 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 두 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기 지급).
+-- 지금은 세 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기 지급)
+-- -> 3(클래스 선택 필드 도입).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -73,6 +78,12 @@ local function migrate(data)
 		data.version = 2
 	end
 
+	if data.version < 3 then
+		-- classId는 기본값이 nil이라 채울 값이 없다(defaultProfile 주석과 같은 이유) - 이
+		-- 블록은 스키마 버전을 명시적으로 올리는 용도다(SAVE_VERSION 규칙, CLAUDE.md).
+		data.version = 3
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -85,6 +96,7 @@ local function isValidProfile(data)
 		and type(data.equipment) == "table"
 		and type(data.equipment.weapon) == "table"
 		and type(data.equipment.weapon.level) == "number"
+		and (data.classId == nil or type(data.classId) == "string")
 		and type(data.stageProgress) == "table"
 		and type(data.inventorySlots) == "number"
 		and type(data.gamepasses) == "table"

@@ -7,8 +7,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerState = require(script.Parent.PlayerState)
+local PlayerProfile = require(script.Parent.PlayerProfile)
 
 -- 클라이언트 체력바(PlayerHealthBar.client.lua)는 Humanoid.Health가 아니라 이 Attribute를
 -- 읽는다 - PlayerState가 유일한 HP 소스이므로 HP가 바뀌는 모든 지점에서 이걸 같이 불러야 한다.
@@ -64,8 +66,12 @@ end
 
 -- 몬스터 평타 1회가 실제로 얼마나 깎는지(감소율 적용 후). 체력바 눈금(9-5)과 실제
 -- 피격 데미지가 같은 계산을 써야 눈금이 "몇 대"를 정확히 의미한다.
-local function computeHitDamage(data)
-	local reduction = CombatConfig.playerDefense / (CombatConfig.playerDefense + CombatConfig.damageReductionAlpha * data.attack)
+-- 방어력은 클래스 배율이 걸린다(10-3 [3] - 대검 1.3배로 더 튼튼하고 활 0.6배로 더 약하다).
+-- 클래스를 아직 안 고른 순간(접속 직후 선택 UI가 뜨기 전)은 배율 없는 기본값으로 방어한다.
+local function computeHitDamage(data, targetPlayer)
+	local classId = PlayerProfile.getClassId(targetPlayer)
+	local defense = classId and PlayerCombat.getDefense(classId, 0) or CombatConfig.playerDefense
+	local reduction = defense / (defense + CombatConfig.damageReductionAlpha * data.attack)
 	return data.attack * (1 - reduction)
 end
 
@@ -90,7 +96,7 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	end
 	MonsterState.setLastAttackTick(model, now)
 
-	local damage = computeHitDamage(data)
+	local damage = computeHitDamage(data, targetPlayer)
 	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
 	PlayerState.setHp(targetPlayer, newHp)
 	syncHud(targetPlayer)
@@ -128,7 +134,7 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
-					player:SetAttribute("TickDamage", computeHitDamage(data))
+					player:SetAttribute("TickDamage", computeHitDamage(data, player))
 				end
 			end
 

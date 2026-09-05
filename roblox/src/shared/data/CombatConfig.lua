@@ -10,12 +10,12 @@ return {
 	attackCooldownSeconds = 0.28,
 
 	-- 공격력은 10-2부터 여기 없다 - WeaponData.weapons.starter_sword.baseAttack(=10, 옮긴
-	-- 값 그대로)을 기준으로 무기 기본값×강화 배율×등급 배율×classAttackMultiplier로
-	-- 계산한다(Enhance.getPlayerAttack). 죽은 필드로 남겨두지 않는다.
-
-	-- 클래스 시스템 없음(10-2 시점). 클래스가 생기면 여기 대신 클래스별 값을 곱한다
-	-- (playerDefense와 같은 이유로 아직 자리만 만든다).
-	classAttackMultiplier = 1.0,
+	-- 값 그대로)을 기준으로 무기 기본값×강화 배율×등급 배율×클래스 배율로 계산한다
+	-- (PlayerCombat.getAttack). 죽은 필드로 남겨두지 않는다.
+	--
+	-- classAttackMultiplier(10-2가 만든 자리, 항상 1.0)도 10-3부터 여기 없다 - 실제 클래스별
+	-- 값(ClassData.lua)이 생겨서 자리만 있던 필드가 죽은 필드가 됐다. 이제 클래스 배율은
+	-- PlayerCombat이 ClassData에서 직접 읽는다.
 
 	-- 데미지 숫자가 떠 있는 시간. 죽은 몬스터의 마지막 데미지 숫자가 사라질 시간을
 	-- 벌어줘야 해서 사망 처리(MonsterSpawner.despawn)의 시체 유지 시간도 이 값을 같이 쓴다.
@@ -30,8 +30,8 @@ return {
 	--   받는 데미지 = 몬스터공격력 × (1 − 피해감소율)
 	damageReductionAlpha = 0.072, -- PRD 확정 상수. 스테이지·등급 무관 고정값.
 
-	-- 웹 BALANCE.playerDefense=5 그대로(클래스 배율 없음 - classAttackMultiplier와 같은
-	-- 이유로 아직 클래스가 없다).
+	-- 웹 BALANCE.playerDefense=5 그대로. 클래스 배율은 10-3부터 PlayerCombat.getDefense가
+	-- 이 값에 곱한다 - 여긴 배율 적용 전 기본값만 남는다.
 	playerDefense = 5,
 
 	-- 웹 BALANCE.playerMaxHp=10 그대로.
