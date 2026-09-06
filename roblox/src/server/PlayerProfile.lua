@@ -4,6 +4,9 @@
 -- 실제 로드/저장(DataStore)은 SaveSystem이 한다 - 이 모듈은 서버 메모리에 올라온
 -- 프로필을 들고 있다가 값을 읽고 쓰는 것만 한다.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Loot = require(ReplicatedStorage.Shared.Loot)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local InventorySync = require(script.Parent.InventorySync)
 
 local PlayerProfile = {}
@@ -190,6 +193,99 @@ function PlayerProfile.unequipArmor(player)
 	profile.equipment.armor = nil
 	table.insert(profile.inventory, current)
 
+	InventorySync.push(player, profile)
+	return true
+end
+
+-- 서버만 호출한다(InventoryServer의 SellRequest 처리 직후, 13-1). 잠긴 아이템은 개별 판매도 막는다([2] 판단 -
+-- 오클릭 방지가 목적이라면 일괄 판매만 막아서는 부족하다, 개별 판매 버튼도 같은 위험이 있다).
+-- 성공하면 실제로 받은 골드(0 이상의 수)를, 실패하면 false + 이유("not_found"/"locked")를
+-- 돌려준다 - 판매 자체는 되돌릴 수 없는 사건이라 호출부가 성공 시 ImmediateSave를 건다.
+function PlayerProfile.sellArmor(player, index)
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	local item = profile.inventory[index]
+	if not item then
+		return false, "not_found"
+	end
+	if item.locked then
+		return false, "locked"
+	end
+
+	local price = Loot.getSellPrice(item)
+	table.remove(profile.inventory, index)
+	profile.gold += price
+	player:SetAttribute("Gold", profile.gold)
+	InventorySync.push(player, profile)
+	return price
+end
+
+-- 서버만 호출한다(13-1). "gradeId 등급 이하 전부" 일괄 판매 - ArmorData.gradeOrder의 순서를
+-- 기준으로 삼는다(지금은 normal/rare 2종뿐이라 gradeId="normal"이면 일반만, "rare"면 전부).
+-- 잠긴 아이템은 대상에서 제외한다. 파는 아이템 목록·총 골드를 먼저 전부 계산한 뒤 한 번에
+-- 반영한다(중간에 task.wait 등 yield 지점이 없다 - 다른 요청이 이 사이에 끼어들 수 없으므로
+-- "절반만 팔리는" 상태가 구조적으로 생기지 않는다). 반환값: (판매 개수, 총 골드).
+function PlayerProfile.sellArmorBulkUpTo(player, gradeId)
+	local profile = profiles[player]
+	if not profile then
+		return 0, 0
+	end
+
+	local cutoffIndex
+	for i, id in ipairs(ArmorData.gradeOrder) do
+		if id == gradeId then
+			cutoffIndex = i
+			break
+		end
+	end
+	if not cutoffIndex then
+		return 0, 0
+	end
+
+	local remaining = {}
+	local totalGold = 0
+	local soldCount = 0
+	for _, item in ipairs(profile.inventory) do
+		local itemGradeIndex
+		for i, id in ipairs(ArmorData.gradeOrder) do
+			if id == item.grade then
+				itemGradeIndex = i
+				break
+			end
+		end
+		if not item.locked and itemGradeIndex and itemGradeIndex <= cutoffIndex then
+			totalGold += Loot.getSellPrice(item)
+			soldCount += 1
+		else
+			table.insert(remaining, item)
+		end
+	end
+
+	if soldCount == 0 then
+		return 0, 0
+	end
+
+	profile.inventory = remaining
+	profile.gold += totalGold
+	player:SetAttribute("Gold", profile.gold)
+	InventorySync.push(player, profile)
+	return soldCount, totalGold
+end
+
+-- 서버만 호출한다(13-1). 잠금은 착용/해제와 같은 되돌릴 수 있는 사건이라(다시 누르면 그만)
+-- 즉시저장하지 않는다.
+function PlayerProfile.setItemLocked(player, index, locked)
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	local item = profile.inventory[index]
+	if not item then
+		return false
+	end
+	item.locked = locked
 	InventorySync.push(player, profile)
 	return true
 end

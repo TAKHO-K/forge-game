@@ -64,9 +64,9 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 다섯 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지금은 여섯 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
 -- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
--- -> 5(인벤토리 배열 도입).
+-- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -108,6 +108,19 @@ local function migrate(data)
 		-- 이번에 처음 생기는 필드라 빈 배열이 정확한 기본값이다.
 		data.inventory = data.inventory or {}
 		data.version = 5
+	end
+
+	if data.version < 6 then
+		-- v5까지 있던 아이템엔 locked 필드 자체가 없었다(13-1에서 처음 생겼다) - "잠긴 적
+		-- 없다"가 정확한 과거 상태이므로 false로 채운다. 착용 중인 아이템(인벤토리 배열
+		-- 밖, equipment.armor)도 나중에 해제되면 인벤토리로 돌아가므로 같이 채워둔다.
+		for _, item in ipairs(data.inventory) do
+			item.locked = item.locked or false
+		end
+		if data.equipment.armor then
+			data.equipment.armor.locked = data.equipment.armor.locked or false
+		end
+		data.version = 6
 	end
 
 	data.savedAt = data.savedAt or 0
