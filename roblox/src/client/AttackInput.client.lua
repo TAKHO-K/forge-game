@@ -3,6 +3,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
@@ -54,7 +55,11 @@ end)
 -- 수거된다 - 죽은 몬스터 참조를 붙들고 있을 이유가 없다.
 local activeStacks = setmetatable({}, { __mode = "k" })
 
-local function showDamageNumber(monsterModel, damage)
+-- 치명타 크기 배율(PRD-forge-game.md 4.4 "크기 1.5배 + 굵게 + 튀어오르는 모션").
+-- 색은 그대로 두고(같은 흰색 계열) 크기·폰트·모션만 바꿔 구분한다.
+local CRIT_SIZE_SCALE = 1.5
+
+local function showDamageNumber(monsterModel, damage, isCrit)
 	local head = monsterModel and monsterModel:FindFirstChild("Head")
 	if not head then
 		return
@@ -65,9 +70,12 @@ local function showDamageNumber(monsterModel, damage)
 	local stackIndex = activeStacks[monsterModel] or 0
 	activeStacks[monsterModel] = stackIndex + 1
 
+	local scale = isCrit and CRIT_SIZE_SCALE or 1
+	local finalSize = UDim2.new(3 * scale, 0, 1 * scale, 0)
+
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "DamageNumberGui"
-	gui.Size = UDim2.new(3, 0, 1, 0)
+	gui.Size = finalSize
 	gui.StudsOffset = Vector3.new(0, 2.6 + stackIndex * 0.9, 0)
 	gui.AlwaysOnTop = true
 	gui.Adornee = head
@@ -79,7 +87,18 @@ local function showDamageNumber(monsterModel, damage)
 	label.Text = NumberFormat.format(damage)
 	label.TextColor3 = Color3.fromRGB(255, 220, 60)
 	label.TextScaled = true
+	label.Font = isCrit and Enum.Font.GothamBlack or Enum.Font.GothamMedium
 	label.Parent = gui
+
+	if isCrit then
+		-- 튀어오르는 모션: 작게 시작해서 목표 크기로 튕기듯 커진다.
+		gui.Size = UDim2.new(finalSize.X.Scale * 0.6, 0, finalSize.Y.Scale * 0.6, 0)
+		TweenService:Create(
+			gui,
+			TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+			{ Size = finalSize }
+		):Play()
+	end
 
 	task.delay(CombatConfig.damageNumberLifetimeSeconds, function()
 		gui:Destroy()

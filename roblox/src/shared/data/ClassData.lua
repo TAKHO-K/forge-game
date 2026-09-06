@@ -1,6 +1,10 @@
--- 클래스 4종 정의(10-3). atk/atkSpeed/def만 다룬다 - critRate/critDmg는 원본에 있지만
--- 이번엔 옮기지 않는다(치명타는 10-4 - 새 메커니즘이라 따로 다룬다, 지시 사항의
--- "하지 말 것" 참고).
+-- 클래스 4종 정의(10-3에서 atk/atkSpeed/def, 10-4에서 critRate/critDmg 추가).
+--
+-- critRate/critDmg 출처: PRD-forge-game.md 4.4(대검 12%/2.0, 쌍검 30%/2.0, 활 15%/2.3,
+-- 힐러 12%/1.8). `git log`로 확인한 결과 이 값을 담은 재배치 커밋(766db2e)은 PRD 파일만
+-- 고쳤고 `data/classes.js`는 건드리지 않았다 - atk/atkSpeed/def 때(위 주석)와 같은 누락
+-- 패턴이라 웹 코드(critRate 0.10/0.25/0.15/0.12, critDmg 1.8/1.6/2.6/1.8)는 갱신 전
+-- 값이고 참고하지 않는다.
 --
 -- 값의 출처가 두 갈래다 - 하나로 뭉뚱그려 "웹 그대로"라고 적으면 틀린다:
 --
@@ -30,6 +34,8 @@ return {
 			atk = 1.85,
 			atkSpeed = 0.7,
 			def = 1.3,
+			critRate = 0.12,
+			critDmg = 2.0,
 		},
 		dualblade = {
 			id = "dualblade",
@@ -37,6 +43,8 @@ return {
 			atk = 0.85,
 			atkSpeed = 1.6,
 			def = 0.6,
+			critRate = 0.30,
+			critDmg = 2.0,
 		},
 		bow = {
 			id = "bow",
@@ -44,6 +52,8 @@ return {
 			atk = 1.8,
 			atkSpeed = 1.0,
 			def = 0.6,
+			critRate = 0.15,
+			critDmg = 2.3,
 		},
 		healer = {
 			id = "healer",
@@ -51,6 +61,8 @@ return {
 			atk = 0.6,
 			atkSpeed = 1.25,
 			def = 1.0,
+			critRate = 0.12,
+			critDmg = 1.8,
 		},
 	},
 }

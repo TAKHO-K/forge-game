@@ -77,12 +77,14 @@ attackRequest.OnServerEvent:Connect(function(player)
 
 	-- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율(10-2 [1], 10-3 [3]에서
 	-- 클래스 배율 자리에 실제 값이 들어갔다). 배율이 곱해지는 지점은 PlayerCombat 하나뿐이다.
-	local damage = PlayerCombat.getAttack(weapon, classId)
+	-- 치명타(10-4)는 이 base를 calcDamage에 넘겨서 판정한다 - 판정도 서버 여기 한 곳뿐이다.
+	local base = PlayerCombat.getAttack(weapon, classId)
+	local damage, isCrit = PlayerCombat.calcDamage(base, classId)
 	local newHp = MonsterState.getHp(target) - damage
 	MonsterState.setHp(target, newHp)
 	MonsterSpawner.updateHpLabel(target)
 
-	attackResult:FireClient(player, target, damage)
+	attackResult:FireClient(player, target, damage, isCrit)
 
 	if newHp <= 0 then
 		-- despawn이 MonsterState.clear를 즉시 호출해 데이터를 지우므로, 그 전에 골드값을 먼저 읽는다.
