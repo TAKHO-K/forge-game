@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local Loot = require(ReplicatedStorage.Shared.Loot)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerState = require(script.Parent.PlayerState)
@@ -70,10 +71,13 @@ end
 -- 방어력은 클래스 배율이 걸린다(10-3 [3] - 대검 1.3배로 더 튼튼하고 활 0.6배로 더 약하다).
 -- 클래스를 아직 안 고른 순간(접속 직후 선택 UI가 뜨기 전)은 배율 없는 기본값으로 방어한다.
 -- attack은 호출부가 MonsterState.getAttack(model)로 넘긴다 - 무한 모드 스테이지 배율(11-1)이
--- 이미 적용된 값이라 여기선 그대로 쓰기만 한다.
+-- 이미 적용된 값이라 여기선 그대로 쓰기만 한다. 장비 방어력(12-1 [4])은 착용한 갑옷이
+-- 있으면 Loot.getArmorDefense가 계산하고, 없으면 0 - PlayerCombat.getDefense가
+-- "(기본값 + 장비 보너스) 전체에 클래스 배율을 곱한다"는 9-4/10-3 원칙을 그대로 지킨다.
 local function computeHitDamage(attack, targetPlayer)
 	local classId = PlayerProfile.getClassId(targetPlayer)
-	local defense = classId and PlayerCombat.getDefense(classId, 0) or CombatConfig.playerDefense
+	local armorBonus = Loot.getArmorDefense(PlayerProfile.getEquippedArmor(targetPlayer))
+	local defense = classId and PlayerCombat.getDefense(classId, armorBonus) or CombatConfig.playerDefense
 	local reduction = defense / (defense + CombatConfig.damageReductionAlpha * attack)
 	return attack * (1 - reduction)
 end

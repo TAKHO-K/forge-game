@@ -51,6 +51,11 @@ local function defaultProfile()
 
 		inventorySlots = SaveConfig.defaultInventorySlots,
 
+		-- 인벤토리 실제 내용물(12-1). 갑옷 드랍만 담는다 - { grade = "normal"/"rare",
+		-- dropStage = 주운 스테이지 }. 슬롯 수(inventorySlots)와 분리된 필드다 - 슬롯 수는
+		-- "몇 칸인가"고 이건 "무엇이 들었는가"다.
+		inventory = {},
+
 		-- 구매한 게임패스 id 집합. {[id]=true} 형태. 상점이 없어 항상 빈 테이블이다.
 		gamepasses = {},
 	}
@@ -59,8 +64,9 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 네 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기 지급)
--- -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리).
+-- 지금은 다섯 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
+-- -> 5(인벤토리 배열 도입).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -97,6 +103,13 @@ local function migrate(data)
 		data.version = 4
 	end
 
+	if data.version < 5 then
+		-- v4까지 인벤토리라는 실체 자체가 없었다(inventorySlots는 칸 "수"만 있었다) -
+		-- 이번에 처음 생기는 필드라 빈 배열이 정확한 기본값이다.
+		data.inventory = data.inventory or {}
+		data.version = 5
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -112,6 +125,7 @@ local function isValidProfile(data)
 		and (data.classId == nil or type(data.classId) == "string")
 		and type(data.stageProgress) == "table"
 		and type(data.inventorySlots) == "number"
+		and type(data.inventory) == "table"
 		and type(data.gamepasses) == "table"
 end
 

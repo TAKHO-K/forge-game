@@ -3,9 +3,10 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
-	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. SaveSystem.migrate()의
-	-- v3->v4 참고. 3(10-3) - 클래스 선택 필드(classId) 추가.
-	saveVersion = 4,
+	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
+	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
+	-- 필드(classId) 추가.
+	saveVersion = 5,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

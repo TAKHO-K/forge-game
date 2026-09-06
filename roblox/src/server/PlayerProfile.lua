@@ -4,6 +4,8 @@
 -- 실제 로드/저장(DataStore)은 SaveSystem이 한다 - 이 모듈은 서버 메모리에 올라온
 -- 프로필을 들고 있다가 값을 읽고 쓰는 것만 한다.
 
+local InventorySync = require(script.Parent.InventorySync)
+
 local PlayerProfile = {}
 
 -- [Player] = profile 테이블(SaveSystem.defaultProfile()/migrate()와 같은 스키마)
@@ -117,6 +119,79 @@ function PlayerProfile.setInfiniteStage(player, stage)
 		player:SetAttribute("InfiniteStageBest", stage)
 	end
 	return isNewBest
+end
+
+function PlayerProfile.getInventory(player)
+	local profile = profiles[player]
+	return profile and profile.inventory
+end
+
+function PlayerProfile.getEquippedArmor(player)
+	local profile = profiles[player]
+	return profile and profile.equipment.armor
+end
+
+-- 서버만 호출한다(AttackServer의 드랍 판정 직후). 칸이 가득 찼으면 false - 드랍 자체를
+-- 취소한다(12-1 [3] 판단 - 자동판매·알림만은 이번 범위 밖인 "판매" 기능을 몰래 들여오는
+-- 셈이라 뺐다. 알림은 InventorySync.notifyFull로 호출부가 따로 준다).
+function PlayerProfile.addArmorDrop(player, item)
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	if #profile.inventory >= profile.inventorySlots then
+		return false
+	end
+	table.insert(profile.inventory, item)
+	InventorySync.push(player, profile)
+	return true
+end
+
+-- 서버만 호출한다(InventoryServer의 검증 직후). index는 인벤토리 배열의 1부터 시작하는
+-- 위치 - 그 자리 아이템을 착용하고, 기존에 착용 중이던 아이템(있다면)은 인벤토리로
+-- 되돌린다. 먼저 빼고 나중에 넣으므로(순서 고정) 칸 수가 항상 그대로 맞아 용량 검사가
+-- 필요 없다 - 착용은 "교체"일 뿐 순수 추가가 아니다.
+function PlayerProfile.equipArmor(player, index)
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	local item = profile.inventory[index]
+	if not item then
+		return false
+	end
+
+	table.remove(profile.inventory, index)
+	local previous = profile.equipment.armor
+	if previous then
+		table.insert(profile.inventory, previous)
+	end
+	profile.equipment.armor = item
+
+	InventorySync.push(player, profile)
+	return true
+end
+
+-- 서버만 호출한다. 착용을 해제해 인벤토리로 되돌린다 - 순수 추가라 칸이 가득 차 있으면
+-- 실패한다(false, "full") - 벗을 자리가 없으면 벗을 수 없다.
+function PlayerProfile.unequipArmor(player)
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	local current = profile.equipment.armor
+	if not current then
+		return false, "not_equipped"
+	end
+	if #profile.inventory >= profile.inventorySlots then
+		return false, "full"
+	end
+
+	profile.equipment.armor = nil
+	table.insert(profile.inventory, current)
+
+	InventorySync.push(player, profile)
+	return true
 end
 
 function PlayerProfile.clear(player)

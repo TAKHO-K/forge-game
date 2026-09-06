@@ -17,6 +17,10 @@ local SaveCoordinator = require(script.Parent.SaveCoordinator)
 local IMMEDIATE_SAVE_THROTTLE_SECONDS = 6
 local lastSaveAt = setmetatable({}, { __mode = "k" })
 local pendingSaveScheduled = setmetatable({}, { __mode = "k" })
+-- task.delay가 돌려주는 스레드 핸들(12-1 [0]) - flush가 이 핸들로 예약된 trailing 저장을
+-- 취소할 수 있어야 한다. pendingSaveScheduled(bool)만으로는 "예약돼 있다"는 알지만
+-- 취소할 방법이 없었다.
+local pendingSaveThread = setmetatable({}, { __mode = "k" })
 
 local ImmediateSave = {}
 
@@ -33,11 +37,30 @@ function ImmediateSave.request(player)
 		return -- 이미 이번 창 끝에 저장이 예약돼 있다 - 최신 상태는 그 저장이 알아서 반영한다
 	end
 	pendingSaveScheduled[player] = true
-	task.delay(IMMEDIATE_SAVE_THROTTLE_SECONDS - (now - last), function()
+	pendingSaveThread[player] = task.delay(IMMEDIATE_SAVE_THROTTLE_SECONDS - (now - last), function()
 		pendingSaveScheduled[player] = nil
+		pendingSaveThread[player] = nil
 		lastSaveAt[player] = os.clock()
 		SaveCoordinator.saveForPlayer(player)
 	end)
+end
+
+-- 세션 종료 전용(PlayerRemoving/BindToClose, 12-1 [0]). "곧 저장될 예정"인 trailing
+-- 저장이 남아 있으면 그 예약을 취소하고 - 안 그러면 나중에(이미 지워진 프로필을 대상으로
+-- 공회전하거나, 지금 여기서 하는 저장과 겹쳐 낙관적 동시성 검사(SaveSystem.saveProfile의
+-- savedAt 비교)에서 서로 경합해 더 최신 쪽이 오히려 stale로 밀릴 수 있다 - 두 UpdateAsync
+-- 호출이 겹치면 안 된다 - 지금 이 자리에서 최신 상태를 즉시 한 번만 저장한다. 세션이
+-- 끝나는 순간이라 스로틀(다음 요청으로부터 DataStore 예산을 지키는 목적)을 지킬 이유도
+-- 없다 - 항상 지금 저장한다.
+function ImmediateSave.flush(player)
+	local thread = pendingSaveThread[player]
+	if thread then
+		task.cancel(thread)
+		pendingSaveThread[player] = nil
+		pendingSaveScheduled[player] = nil
+	end
+	lastSaveAt[player] = os.clock()
+	SaveCoordinator.saveForPlayer(player)
 end
 
 return ImmediateSave

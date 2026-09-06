@@ -7,9 +7,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local Loot = require(ReplicatedStorage.Shared.Loot)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local InventorySync = require(script.Parent.InventorySync)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -87,11 +89,22 @@ attackRequest.OnServerEvent:Connect(function(player)
 	attackResult:FireClient(player, target, damage, isCrit)
 
 	if newHp <= 0 then
-		-- despawn이 MonsterState.clear를 즉시 호출해 데이터를 지우므로, 그 전에 골드값을 먼저 읽는다.
-		-- getGoldDrop은 무한 모드 스테이지 배율(11-1)이 적용된 값이다 - 원본 goldDrop을 직접 읽지 않는다.
+		-- despawn이 MonsterState.clear를 즉시 호출해 데이터를 지우므로, 그 전에 골드값·스테이지를
+		-- 먼저 읽는다. getGoldDrop은 무한 모드 스테이지 배율(11-1)이 적용된 값이다.
 		local goldDrop = MonsterState.getGoldDrop(target)
+		local dropStage = MonsterState.getStage(target) or 1
 		PlayerProfile.addGold(player, goldDrop)
 		goldGained:FireClient(player, goldDrop)
+
+		-- 갑옷 드랍 판정(12-1 [2]). 서버가 여기서만 굴린다 - 클라이언트는 결과를
+		-- InventorySync 이벤트로만 통보받는다.
+		local armorDrop = Loot.rollArmorDrop(dropStage)
+		if armorDrop then
+			if not PlayerProfile.addArmorDrop(player, armorDrop) then
+				InventorySync.notifyFull(player) -- 칸이 가득 차 드랍을 포기했다(12-1 [3])
+			end
+		end
+
 		MonsterSpawner.despawn(target)
 	end
 end)
