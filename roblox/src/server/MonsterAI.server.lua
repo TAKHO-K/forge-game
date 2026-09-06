@@ -9,6 +9,7 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local MonsterState = require(script.Parent.MonsterState)
+local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
@@ -68,11 +69,13 @@ end
 -- 피격 데미지가 같은 계산을 써야 눈금이 "몇 대"를 정확히 의미한다.
 -- 방어력은 클래스 배율이 걸린다(10-3 [3] - 대검 1.3배로 더 튼튼하고 활 0.6배로 더 약하다).
 -- 클래스를 아직 안 고른 순간(접속 직후 선택 UI가 뜨기 전)은 배율 없는 기본값으로 방어한다.
-local function computeHitDamage(data, targetPlayer)
+-- attack은 호출부가 MonsterState.getAttack(model)로 넘긴다 - 무한 모드 스테이지 배율(11-1)이
+-- 이미 적용된 값이라 여기선 그대로 쓰기만 한다.
+local function computeHitDamage(attack, targetPlayer)
 	local classId = PlayerProfile.getClassId(targetPlayer)
 	local defense = classId and PlayerCombat.getDefense(classId, 0) or CombatConfig.playerDefense
-	local reduction = defense / (defense + CombatConfig.damageReductionAlpha * data.attack)
-	return data.attack * (1 - reduction)
+	local reduction = defense / (defense + CombatConfig.damageReductionAlpha * attack)
+	return attack * (1 - reduction)
 end
 
 -- 사거리 안이고 자기 쿨다운이 지났으면 플레이어를 때린다. 데미지는 PRD 확정 비율 모델
@@ -96,7 +99,7 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	end
 	MonsterState.setLastAttackTick(model, now)
 
-	local damage = computeHitDamage(data, targetPlayer)
+	local damage = computeHitDamage(MonsterState.getAttack(model), targetPlayer)
 	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
 	PlayerState.setHp(targetPlayer, newHp)
 	syncHud(targetPlayer)
@@ -131,10 +134,16 @@ RunService.Heartbeat:Connect(function(dt)
 					MonsterState.setAiState(model, "chasing")
 					MonsterState.setAiTarget(model, player)
 					state = "chasing"
+
+					-- 무한 모드 스테이지 배율(11-1) - 어그로가 붙는 이 순간에 상대 플레이어의
+					-- 현재 스테이지로 이 몬스터 인스턴스를 다시 스케일한다(이미 피해를 입은
+					-- 몬스터는 MonsterState.setStage가 조용히 건너뛴다 - 그쪽 주석 참고).
+					MonsterState.setStage(model, PlayerProfile.getInfiniteStage(player) or 1)
+					MonsterSpawner.updateHpLabel(model)
 					-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
-					player:SetAttribute("TickDamage", computeHitDamage(data, player))
+					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttack(model), player))
 				end
 			end
 

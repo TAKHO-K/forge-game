@@ -18,6 +18,10 @@ function PlayerProfile.init(player, profile)
 	-- Attribute는 nil을 담지 못한다 - "선택 안 함"을 빈 문자열로 옮긴다. 클라이언트
 	-- (ClassSelectUI.client.lua)는 "" 또는 미설정을 "선택 안 함"으로 취급한다.
 	player:SetAttribute("ClassId", profile.classId or "")
+	-- 무한 모드 스테이지(11-1). 둘 다 nil일 수 없는 필드라(SaveSystem.migrate v4 참고)
+	-- classId처럼 빈 문자열로 바꿔치기할 필요가 없다.
+	player:SetAttribute("InfiniteStage", profile.stageProgress.infinite)
+	player:SetAttribute("InfiniteStageBest", profile.stageProgress.infiniteBest)
 end
 
 -- 저장 시점에 SaveSystem이 통째로 넘겨받아 쓴다.
@@ -82,6 +86,37 @@ function PlayerProfile.setClassId(player, classId)
 	end
 	profile.classId = classId
 	player:SetAttribute("ClassId", classId)
+end
+
+function PlayerProfile.getInfiniteStage(player)
+	local profile = profiles[player]
+	return profile and profile.stageProgress.infinite
+end
+
+function PlayerProfile.getInfiniteStageBest(player)
+	local profile = profiles[player]
+	return profile and profile.stageProgress.infiniteBest
+end
+
+-- 서버만 호출한다(StageServer의 검증 직후). 새 최고 기록을 세웠으면 true를 돌려준다 -
+-- 호출부가 그때만 즉시저장(ImmediateSave)을 건다. 단순 이동(현재 스테이지 변경)은
+-- 골드처럼 잃을 자원이 없는 되돌릴 수 있는 사건이라 주기저장(60초)·퇴장저장으로
+-- 충분하다고 판단했다 - 최고 기록만 "다시 오르면 그만"이 아니라 경쟁 축(PRD 20.12)의
+-- 실제 성취라 크래시로 잃으면 아쉬움이 다르다.
+function PlayerProfile.setInfiniteStage(player, stage)
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	profile.stageProgress.infinite = stage
+	player:SetAttribute("InfiniteStage", stage)
+
+	local isNewBest = stage > profile.stageProgress.infiniteBest
+	if isNewBest then
+		profile.stageProgress.infiniteBest = stage
+		player:SetAttribute("InfiniteStageBest", stage)
+	end
+	return isNewBest
 end
 
 function PlayerProfile.clear(player)

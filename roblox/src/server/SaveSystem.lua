@@ -43,9 +43,11 @@ local function defaultProfile()
 		-- 시스템이 아직 없어 그대로 비어 있다(nil = 미장착) - 가짜 기본 장비를 채우지 않는다.
 		equipment = { weapon = defaultWeapon(), armor = nil, gloves = nil, boots = nil },
 
-		-- 일반/무한 모드 진행도. 스테이지 시스템이 없는 지금도 "1스테이지부터"는 실제로
-		-- 맞는 시작값이라 0이 아니라 1을 넣는다(무한 모드는 미진입 상태가 곧 0).
-		stageProgress = { normal = 1, infinite = 0 },
+		-- 일반/무한 모드 진행도(11-1 개정). 무한 모드가 이 게임의 유일한 모드가 되면서
+		-- "미진입=0" 개념이 없어졌다 - 접속하면 바로 1단계다. infiniteBest(최고 도달
+		-- 단계)는 현재 단계와 분리한다 - 파밍하러 내려가면 현재 단계는 낮아져도 최고
+		-- 기록은 그대로 남아야 한다(PRD 20.12 경쟁 축과도 맞다).
+		stageProgress = { normal = 1, infinite = 1, infiniteBest = 1 },
 
 		inventorySlots = SaveConfig.defaultInventorySlots,
 
@@ -57,8 +59,8 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 세 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기 지급)
--- -> 3(클래스 선택 필드 도입).
+-- 지금은 네 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기 지급)
+-- -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -82,6 +84,17 @@ local function migrate(data)
 		-- classId는 기본값이 nil이라 채울 값이 없다(defaultProfile 주석과 같은 이유) - 이
 		-- 블록은 스키마 버전을 명시적으로 올리는 용도다(SAVE_VERSION 규칙, CLAUDE.md).
 		data.version = 3
+	end
+
+	if data.version < 4 then
+		-- v3까지 infinite=0은 "무한 모드 미진입"의 잠정 자리였다(defaultProfile의 이전
+		-- 주석 참고) - 11-1부터 무한 모드가 유일한 모드가 되면서 그 개념이 없어졌다.
+		-- 기존 0은 실제로 아무 진행도 없었다는 뜻이라 1로 승격해도 정보 손실이 없다.
+		-- infiniteBest는 이번에 처음 생기는 필드라, 지금까지의 유일한 기준점(현재
+		-- 단계)을 그대로 최고 기록으로 물려받는다.
+		data.stageProgress.infinite = math.max(data.stageProgress.infinite or 0, 1)
+		data.stageProgress.infiniteBest = data.stageProgress.infiniteBest or data.stageProgress.infinite
+		data.version = 4
 	end
 
 	data.savedAt = data.savedAt or 0

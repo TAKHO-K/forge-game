@@ -88,7 +88,8 @@ attackRequest.OnServerEvent:Connect(function(player)
 
 	if newHp <= 0 then
 		-- despawn이 MonsterState.clear를 즉시 호출해 데이터를 지우므로, 그 전에 골드값을 먼저 읽는다.
-		local goldDrop = MonsterState.getData(target).goldDrop
+		-- getGoldDrop은 무한 모드 스테이지 배율(11-1)이 적용된 값이다 - 원본 goldDrop을 직접 읽지 않는다.
+		local goldDrop = MonsterState.getGoldDrop(target)
 		PlayerProfile.addGold(player, goldDrop)
 		goldGained:FireClient(player, goldDrop)
 		MonsterSpawner.despawn(target)
