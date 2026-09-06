@@ -2589,6 +2589,159 @@ export const BALANCE = {
   반영되어 실제 플레이어가 볼 수 있다.   ← [🔄 신규 추가]
 ```
 
+### 15.7 데이터 전수 대조표 (웹 v1 vs PRD, 로블록스 이관용) `[✅ 전수 대조 완료]`
+
+`data/classes.js`에서 "PRD는 갱신됐는데 코드는 옛 값"이 세 번 연속 발견된 뒤
+(atk/def, 치확/치피, 방어 등급 배율), 같은 패턴이 다른 데이터 파일에도 있을
+가능성을 확인하기 위해 웹 v1 `data/` 전 파일을 PRD와 항목별로 대조했다. 기준은
+"PRD냐 코드냐"가 아니라 **"어느 쪽을 더 나중에 손댔느냐"**다(10-3에서 세운
+원칙). `git log`로 각 값이 마지막으로 바뀐 커밋을 확인했다 — 파일 전체의
+마지막 수정 커밋만으로는 부정확할 수 있어(무관한 필드 추가가 마지막 커밋일
+수 있다, `classes.js`가 실제 사례), 어긋난 항목은 `git log -S`로 그 값 자체가
+바뀐 커밋을 따로 찾았다.
+
+**읽는 법**: "PRD 미수치화"는 PRD가 그 항목에 구체적인 숫자를 아예 안 정하고
+질적 설명만 준 경우다(시각 연출·구현 세부 등) — 대조 대상이 아니라 코드가
+사실상 유일한 기준이므로 "불일치"로 세지 않는다. "로블록스에서 채택할 값"은
+판단만 적고, 실제 반영은 그 값을 쓰는 기능을 만들 때 한다(이 절에서는 아무
+코드도 옮기지 않았다).
+
+#### classes.js — 재조사 없이 기존 결론 인용
+
+`atk`/`atkSpeed`/`def`/`critRate`/`critDmg`는 10-3(PRD-forge-game-roblox.md
+20.19)과 10-4에서 이미 전수 검증됐다. `ClassData.lua`가 이미 올바른(더 나중에
+수정된) 값을 채택했음을 확인했다 — 재조사하지 않고 결론만 인용한다.
+
+| 항목 | 코드 값(data/classes.js) | PRD 값(절 번호) | 일치 여부 | 나중에 수정된 쪽 | 로블록스에서 채택할 값 |
+|---|---|---|---|---|---|
+| 대검/쌍검/활 atk·atkSpeed·def | 대검1.6/0.6/1.3, 쌍검0.75/1.35/1.0, 활2.0/0.65/0.6 | 대검1.85/0.7/1.3, 쌍검0.85/1.6/0.6, 활1.8/1.0/0.6 (4.1, 766db2e) | 불일치 | PRD (766db2e, 2026-08-29) > 코드 (8905c6a, 2026-08-17) | PRD값 — `ClassData.lua`에 이미 반영됨(20.19) |
+| 대검/쌍검/활 critRate·critDmg | 대검0.10/1.8, 쌍검0.25/1.6, 활0.15/2.6 | 대검0.12/2.0, 쌍검0.30/2.0, 활0.15/2.3 (4.4, 766db2e) | 불일치 | PRD (766db2e) > 코드 (8905c6a) | PRD값 — `ClassData.lua`에 이미 반영됨(10-4) |
+| 힐러 atk·atkSpeed | 0.6/1.25 | 0.5/1.0 (4.1-1, 최초 커밋 이후 갱신 없음) | 불일치 | 코드 (그 뒤 라이브 튜닝) > PRD (3a750cf, 최초 커밋) | 코드값 — `ClassData.lua`에 이미 반영됨(20.19, 사용자 승인) |
+| 힐러 critRate·critDmg | 0.12/1.8 | 0.12/1.8 (4.4) | 일치 | — | 0.12/1.8 |
+
+#### balance.js
+
+| 항목 | 코드 값 | PRD 값(절 번호) | 일치 여부 | 나중에 수정된 쪽 | 로블록스에서 채택할 값 |
+|---|---|---|---|---|---|
+| attackInterval | 0.28 | 0.28초 (4.3 여러 곳에서 인용) | 일치 | — | 0.28 |
+| damageFloorRatio | 0.1 | 하한선 10% (5.1) | 일치 | — | 0.1 |
+| guaranteedCritOverflowBonus | 0.4 | 치명타피해율 +40%p (4.3 쌍검) | 일치 | — | 0.4 |
+| comboHitEvery / comboHitMultiplier | 3 / 1.8 | 평균배수 1.267로 4.3·4.4 여러 계산에 인용(3회당 1.8배 ⇒ (2×1.0+1.8)/3=1.267과 정확히 일치) | 일치 | — | 3 / 1.8 |
+| rangeIndicatorFlashDuration | 4 | 4초 (6.1-1) | 일치 | — | 4 |
+| damageNumberLifetime | 0.8 | 0.8초 (4.4) | 일치 | — | 0.8 |
+| playerMaxHp | 10 | 10칸 (5.5) | 일치 | — | 10 (이미 로블록스도 10, `PlayerState` 기본값) |
+| playerDefense | 5 | `BALANCE.playerDefense(5)` (8.1에서 그대로 인용) | 일치 | — | 5 (이미 `CombatConfig.playerDefense=5`) |
+| enhanceDefenseBonusPerLevel / enhanceHpBonusPerLevel | 0.01 / 0.01 | 강화 1단당 +1% (6.1-1) | 일치 | — | 0.01 / 0.01 |
+| **playerDamageCapRatio** | **0.3(웹 코드가 실제로 이 값으로 뺄셈+30%캡 공식을 계속 씀 — `core/combat.js:20`)** | **폐지(일반·무한 모드), 파티 모드만 유지 — 공식 자체가 뺄셈→비율감소로 교체됨(5.2)** | **불일치(수치가 아니라 공식 자체)** | **PRD (bcf25fd, 2026-08-29) > 웹 코드 (core/combat.js 마지막 수정 48a6ee4, 2026-08-18 — 값 자체는 f662ddb, 더 이전)** | **비율감소식 — 이미 로블록스가 채택함(`CombatConfig.damageReductionAlpha=0.072`, `PlayerCombat`/`MonsterAI`). 웹은 동결이라 그대로 두는 게 맞다(수정 대상 아님)** |
+| playerIframeDuration | 0.8 | 0.8초 (5.3) | 일치 | — | 0.8 |
+| playerRegenNoHitThreshold / Interval / Amount | 12 / 3 / 1 | 12초 / 3초당 / 1칸 (5.5) | 일치 | — | 12 / 3 / 1 |
+| dashDistance / Duration / Cooldown / DamageReduction | 160 / 0.3 / 8 / 0.5 | "4칸 분량" / 0.3초 / 8초 / 50% (5.4) | 일치 | — | 동일 (이미 `CombatConfig`류에 8초 쿨다운 등 일부 반영) |
+| mapWidth / mapHeight / wallThickness | 2400 / 1600 / 20 | 2400×1600 / 20px (8.0-1-d) | 일치 | — | 이미 `WorldConfig.lua`에 반영(확인 필요 — 다음 세션에서 대조 권장) |
+| forgeAutoMaxLevel | 10 | +1~+10 자동 (8.0-1-b) | 일치 | — | 10 |
+| bossTimerDuration | 1800 | 1,800초(30분) (8.0-1-a) | 일치 | — | `InfiniteStageConfig` 등에 시간 개념 없음 — 보스 유한 모드 이식 시 참고 |
+| gameSpeedOptions | [1,2,3] | 1x/2x/3x (8.0-1-a) | 일치 | — | 동일 |
+| bossMapWidth / bossMapHeight | 1200 / 900 | "1200×900 정도" (8.0-6) | 일치 | — | 동일 |
+| bossZoneEntryMinDistance | 400 | 최소 400px (8.0-6) | 일치 | — | 동일 |
+| bossStartFreezeDuration | 2 | 2초간 정지 (8.0-6) | 일치 | — | 동일 |
+| bossEnrageHpRatio / AttackMultiplier | 0.1 / 2 | 10% / 2배 (9.1) | 일치 | — | 동일 |
+| bossGradeThresholds / Multipliers | S0.3/A0.5/B0.75/C1.0, S2.0/A1.5/B1.2/C1.0 | 동일 (9.5) | 일치 | — | 동일 |
+| bossMaxRetries / bossRetryFarmDuration | 2 / 180 | 2회 / 3분 (9.4) | 일치 | — | 동일 |
+| weaponExpAttackBonusPerLevel | 0.06 | 0.06 (4.2, 7.5와 값 공유) | 일치 | — | 0.06 |
+| rareSparkleChance / rareMaterialChance | 0.005 / 0.015 | 0.5% / 1.5% (8.0-5) | 일치 | — | 동일 |
+| sparkleGradeChances | relic0.9/ancient0.09/primordial0.01 | 유물90%/고대9%/태초1% (8.0-5) | 일치 | — | 동일 |
+| materialTicketSizeChances | small0.6/medium0.3/large0.1 | 소60%/중30%/대10% (8.0-5) | 일치 | — | 동일 |
+| bossGuaranteedTicketChance | 0.5 | 50% (6.3, 9.6) | 일치 | — | 동일 |
+| enhanceTicketGroundLifetime / ticketPickupMessageDuration | 30 / 2 | 30초 / 2초 (8.0-5) | 일치 | — | 동일 |
+| dropSlot2Multiplier | 0.3 | 30%(2번 슬롯 = 1번의 30%) (7.1) | 일치 | — | 동일 |
+| itemGroundLifetime | 60 | 60초 (7.1) | 일치 | — | 동일 |
+| inventoryBagSize | 20 | 20칸 (7.3) | 일치 | — | 이미 로블록스 `inventorySlots=20`으로 반영(12-1) |
+| expTokenLifetime / AbsorbRadius | 30 / 80 | 30초 / 80px (7.1-1) | 일치 | — | 동일 |
+| expTokenCountByTier | 등급별 [1~3] 범위, 등급 오를수록 상한 증가 | "1~3개 랜덤(등급 높을수록 많이)" (7.1-1, 정확한 커브는 미지정) | 일치(정성적 부합) | — | 동일 |
+| **respawnTime** | **3 (몬스터 사망 후 재스폰 대기)** | **"리스폰 간격 하한 0.3초"(8.0-3, 코너파밍 성능 제한 표)** | **개념이 다를 수 있음 — 확인 필요** | 둘 다 08-15/16 (거의 동시, 판단 보류) | **로블록스 이식 시 "몬스터 슬롯 재스폰 딜레이"와 "코너파밍 폭주 방지 최소 간격"을 같은 값으로 볼지 별도 값으로 볼지부터 결정해야 한다 — 이번 세션은 판단만 남기고 확정하지 않는다** |
+| NUMBER_ABBREVIATION(minValue/step/decimals/letters) | 10000/1000/1자리/A~Z→AA~ | 동일 (14.3) | 일치 | — | 로블록스는 K/M/B/T→aa~ 자체 체계 채택(20.9-1, 의도적 차이) |
+| WEAPON_LEVEL_EXP (Lv5/10/15/20/25 누적치) | 500/2000/5500/12000/25000 | 동일 (4.2 표) | 일치 | — | 동일 |
+| playerRadius, playerSpeed, projectileSpeed/Radius/Range, meleeSwingVisualDuration, meleeRangeIndicatorAlpha, multiShotSpreadDegrees, doubleHitEchoOffsetDegrees, rangeIndicatorAlpha, comboResetWindow, comboSwingScale, damageNumberRiseSpeed, enhanceResultDisplayTime, hpBarMaxPerRow, monsterApproachSpeed, huntSpawnX/Y, zoneYMargin, forgeHeight, forgeNoticeDuration, bossCountdown, bossResultLostDisplayTime, rareGoldMultiplier, itemDropOffset, itemPickupRadius, expTokenHomingSpeed, expTokenScatterRadius, itemBaseSellValue, inventoryMessageDisplayTime | (각각 코드 값 그대로) | PRD 미수치화 — 시각 연출·구현 세부라 질적 설명만 있거나 언급 자체가 없음 | 해당없음 | — | 코드값이 사실상 유일한 기준. 로블록스 이식 시 새로 정해도 무방 |
+
+#### enhance.js
+
+| 항목 | 코드 값 | PRD 값(절 번호) | 일치 여부 | 나중에 수정된 쪽 | 로블록스에서 채택할 값 |
+|---|---|---|---|---|---|
+| ENHANCE_MAX_LEVEL | 25 | +25 상한 (6장 전체) | 일치 | — | `EnhanceConfig`에 이미 반영(확인 권장) |
+| ENHANCE_DAMAGE_COEFFICIENT (구간 끝 누적치) | +5=0.50/+10=1.50/+15=3.50/+20=7.50/+25=15.50 | 동일 (6.1) | 일치 | — | 동일 |
+| ENHANCE_PROBABILITY (8구간 성공/유지/-1/-2/리셋) | 92/8/0/0/0 … 12/5/38/42/3 | 동일 (6.2) | 일치 | — | 동일 |
+| ENHANCE_VISUAL_MILESTONES | Lv15 range+0.20, Lv18 hitMultiplier×2, Lv20 range+0.20, Lv23 spread(meleeArc+0.40,pierce) | 동일 (6.1-1) | 일치 | — | 동일(웹에만 있는 강화 부가효과 — 로블록스 미이식) |
+| ENHANCE_HIGH_SUCCESS_MULTIPLIER/CAP/COST_MULTIPLIER | 1.5 / 0.90 / 5 | ×1.5, 상한90%, 5배 (6.2-1) | 일치 | — | 동일 |
+| ENHANCE_GOLD_COST | 레벨별 세분값(25개) | "구간별 정성 표"(6.2-2) — 표 형태 자체가 다름(이미 헤더에 문서화됨) | 설계 차이(불일치 아님) | — | 코드값(세분화가 더 정밀) |
+| ENHANCE_TICKET_BOOST | small×1.5/medium×2.0(상한90%)/large 고정50% | 동일 (6.3) | 일치 | — | 동일(로블록스 12-1 범위 밖 — 이번엔 갑옷만 다룸) |
+
+#### items.js
+
+| 항목 | 코드 값 | PRD 값(절 번호) | 일치 여부 | 나중에 수정된 쪽 | 로블록스에서 채택할 값 |
+|---|---|---|---|---|---|
+| ITEM_GRADES (색상·multiplier 7단계) | 일반1.0~태초15.0, 색상 전부 | 동일 (7.0) | 일치 | — | `ArmorData.lua`가 별도 방어력 전용 배율표(1.184~15.0)를 씀 — 등급 성능배율과는 축이 다르다는 점을 이미 문서화(ArmorData.lua 주석) |
+| DROP_GRADE_TABLE (몬스터 등급별 6행) | 코드 표 전체 | 동일 (7.2) | 일치 | — | 동일(현재 로블록스는 무기 등급 드랍 자체가 없음 — 방어구만 12-1에서 별도 확률 채택) |
+| EQUIPMENT_GRADE_BOOST | capSteps1/weight0.15/maxMultiplier3.2 | 동일 (7.2-1) | 일치 | — | 동일(로블록스 미이식) |
+| ITEM_PART_BASE_STAT | armor defenseFlat base2, gloves/shoes base0.15 | 동일 (7.3, "5%→15%" 개정 반영됨) | 일치 | — | `ArmorData.baseDefense=5`는 웹의 base=2와 다른 축(`CombatConfig.playerDefense`에 맞춘 것, 이미 문서화) |
+| ITEM_OPTION_COUNT_BY_GRADE | 0/1/2/2/3/3/4 | 동일 (7.3-1) | 일치 | — | 동일(로블록스 미이식) |
+| ITEM_LEVEL_STAT_BONUS_PER_LEVEL | 0.06 | 0.06, weaponExpAttackBonusPerLevel과 공유 (7.5) | 일치 | — | 동일(로블록스 미이식) |
+| EXP_TOKEN_TIERS | small×1(70%)/medium×3(25%)/large×8(5%) | 동일 (7.1-1) | 일치 | — | 동일 |
+| BULK_SELLABLE_GRADES | 고대·태초 제외 | 동일 (7.4) | 일치 | — | 해당없음(판매 시스템 미이식) |
+| ENHANCE_TICKET_TYPES 색상 | guaranteed #ff44aa, probability #33cc66 | 자홍/초록 (7.1-1) | 일치 | — | 동일(로블록스 미이식) |
+| **옵션 풀 종수** | **9종 rollable**(라이프스틸 없음) | **10종**(라이프스틸 포함, 7.3-1 "🔄 라이프스틸 추가") | **불일치(신규 스탯, 웹에 필드 자체가 없음)** | PRD가 나중에 신설(설계 승인, 아직 웹 코드 미반영 — 의도적) | 로블록스에서 옵션 시스템을 만들 때는 라이프스틸 포함 10종 기준으로 시작 |
+
+#### monsters.js
+
+| 항목 | 코드 값 | PRD 값(절 번호) | 일치 여부 | 나중에 수정된 쪽 | 로블록스에서 채택할 값 |
+|---|---|---|---|---|---|
+| MONSTERS 15종 (hp/defense/attack/goldDrop) | 표 전체(1~6등급 × 유형) | 동일 (8.1 표) | 일치 | — | 로블록스는 `MonsterData.tier1`류로 이미 다른 기준값 사용 중(무한 모드 자체 스케일, 20.11-4) — 이 표는 유한 구간(1~6등급) 참고용 |
+| 유형별 aggroRange | 물몸180/탱커320/재료250 | 동일 (8.1) | 일치 | — | 동일 |
+| dropChance | 전 몬스터 균일 0.25 | 균일 25%, 세분화 전 임시값 (8.1, 7.1) | 일치 | — | `ArmorData.dropChance=0.25`가 이미 이 값을 그대로 재사용(12-1에서 명시적으로 재사용 판단) |
+| BOSSES (고블린왕/오크로드 hp·def·atk·timeLimit·clearGoldReward) | 12000/8/20/60초/3000, 80000/80/30/75초/8000 | 동일 (9.1, 실측 재조정치) | 일치 | — | 로블록스는 유한 보스 모드 자체가 미구현 — 향후 이식 시 참고 |
+
+#### skills.js
+
+| 항목 | 코드 값 | PRD 값(절 번호) | 일치 여부 | 나중에 수정된 쪽 | 로블록스에서 채택할 값 |
+|---|---|---|---|---|---|
+| 대검 Q(관통돌진) cooldown | 10 | 10초 (4.3) | 일치 | — | 로블록스 스킬 시스템 미착수 — 이식 시 참고 |
+| 대검 Q 데미지 계수 | 없음(필드 자체 없음) | 계수 5.5 (4.3, "⛔ 미구현, 설계 승인") | 불일치(신규, PRD가 미구현으로 이미 표시) | PRD가 나중에 설계(웹 미반영은 의도적 — "지금까지 데미지 계수가 없어 사실상 0딜") | 로블록스 스킬 이식 시 5.5 기준으로 시작 |
+| 쌍검 Q(그림자분신) cooldown / summonDecoy.duration | 14 / 5 | 14초 / 5초 (4.3) | 일치 | — | 동일 |
+| **쌍검 Q 확정치명타 형태** | **`nextAttack{count:1}`(다음 1타만)** | **`guaranteedCritWindow{duration:5}`(5초간 전체, 4.3)** | **불일치(설계 변경)** | **PRD (1e9e2b2, 2026-08-26) > 코드 (48a6ee4, 2026-08-18)** | **PRD 신형태 — 로블록스 스킬 이식 시 "1타"가 아니라 "5초 창"으로 시작해야 한다** |
+| 활 Q(속사) cooldown/duration/공식(base·coefficient·cap) | 18 / 6 / 1.0·1.5·2.5 | 동일 (4.3) | 일치 | — | 동일 — 웹·PRD가 완전히 일치하는 유일한 Q스킬 |
+| 힐러 Q(치유) cooldown/baseAmount | 25 / 3 | 25초 / 3칸 (4.1-1) | 일치 | — | 동일 |
+
+#### stages.js
+
+| 항목 | 코드 값 | PRD 값(절 번호) | 일치 여부 | 나중에 수정된 쪽 | 로블록스에서 채택할 값 |
+|---|---|---|---|---|---|
+| STAGES 4종의 tiers 범위 | [1,2,3]/[2,3,4]/[3,4,5]/[4,5,6] | 예시로 "1단계=1~3등급, 2단계=2~4등급" 언급, 동일 (8.0) | 일치 | — | 로블록스는 무한 모드 자체 스케일(11-1)이라 이 개념 자체를 안 씀 |
+| 5·6단계(구름 위/천공) | 없음 | 설계는 있으나 "⛔"(8.0) | 일치(이미 문서화된 미구현) | — | 해당없음 |
+
+#### stats.js
+
+| 항목 | 코드 값 | PRD 값(절 번호) | 일치 여부 | 나중에 수정된 쪽 | 로블록스에서 채택할 값 |
+|---|---|---|---|---|---|
+| defenseFlat / critRate / healPower optionBase | 0.2 / 0.00543 / 0.01087 | 동일 예시 (15.2-1) | 일치 | — | 동일(로블록스 옵션 시스템 미착수) |
+| OPTION_ROLL_FACTOR_RANGE | [0.7, 1.3] | rollFactor[0.7~1.3] (7.3-1) | 일치 | — | 동일 |
+| **lifesteal 항목** | **없음** | **있음(신규, 15.2-1 "🔄 라이프스틸 추가")** | **불일치(신규, 웹 미반영은 의도적)** | PRD가 나중에 신설 | 로블록스에서 스탯 레지스트리를 만들 때는 라이프스틸 포함(cap 0.20) |
+
+#### 지금 당장 문제가 되는 것 — 없음
+
+이번 대조에서 **"로블록스에 이미 잘못된(더 오래된) 값이 들어간 사례"는 없었다.**
+`classes.js`(20.19/10-4에서 이미 바로잡음), `playerDamageCapRatio`↔비율감소식
+(로블록스가 처음부터 새 공식으로 설계됨, 20.11-4), `dropChance`(`ArmorData`가
+`data/monsters.js` 값을 의도적으로 재사용, 12-1에서 명시)까지 전부 로블록스가
+이미 "더 나중에 수정된 값"을 쓰고 있었다. 유일하게 판단을 보류한 것은
+`respawnTime`(3초) ↔ PRD 8.0-3의 "리스폰 간격 하한 0.3초"인데, 이건 로블록스에
+아직 옮겨지지 않은 값이라 지금 당장의 위험은 아니다 — 몬스터 리스폰을 이식할
+때 "재스폰 대기시간"과 "코너파밍 폭주 방지 최소 간격"이 같은 개념인지부터
+정하고 넘어가야 한다.
+
+**부수 발견(수치 대조 범위 밖)**: PRD-forge-game.md 15.1/15.2의 예시 코드
+스니펫(대검 `atk:1.6, atkSpeed:0.6`, "치명타 계수 2.6" 등)이 4.1/4.4 개정 이전
+값을 그대로 쓰고 있다 — 예시일 뿐이라 동작에는 영향이 없지만, 20.19를 먼저
+안 읽고 15장만 보면 옛 값을 최신으로 오인할 수 있다(이번 세션에서는 예시
+코드이므로 고치지 않았다 — 별도 판단 필요).
+
 ---
 
 ## 16. 첫 출시 기간을 줄이는 방법 `[🔄 부분 진행 — 세부 상태는 각 절 참고]`
