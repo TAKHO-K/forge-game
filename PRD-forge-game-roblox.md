@@ -2842,24 +2842,23 @@ CombatConfig.lua에 계산식을 그대로 남겨(`0.072 * 2.44 * 1.155`) 사람
 고정값이 섞여 있으면 "완전무장 근접" 구간에서만 근사적으로 성립하고,
 미착용·경장비 구간은 별도로 확인해야 한다(위 [미결] 참고).
 
-### 20.24-1 미결 관찰 - MonsterAI 종료 시점 nil 비교 오류 (재현 조건 보강)
+### 20.24-1 MonsterAI 퇴장 경합 크래시 - 원인 정정 및 수정 완료 (14-1 [0]) `[✅ 수정 완료]`
 
 20.23이 기록한 `MonsterAI.server.lua:159`의 `attempt to compare nil <=
-number` 오류의 재현 조건을 이번 검증 중 다시 관찰하며 구체화한다(고치지
-않는다 - 지시대로).
+number` 오류. 20.24-1에서 처음 재현 조건을 구체화할 때 "`PlayerState.clear`가
+`SaveServer.server.lua`의 `PlayerRemoving` 핸들러에서 호출된다"고 적었는데
+**틀렸다** - 실제로는 `MonsterAI.server.lua` 자신의 `PlayerRemoving`
+핸들러(33-35행)가 `PlayerState.clear(player)`를 호출한다. 아래 원인·수정은
+정정된 사실 기준이다.
 
 원인 지점은 `local targetIsDead = target and PlayerState.getHp(target)
 <= 0`(159행) - `PlayerState.getHp(target)`가 `nil`을 돌려주면 발생한다.
-`PlayerState.clear(player)`는 `SaveServer.server.lua`의
-`Players.PlayerRemoving` 핸들러에서 호출된다. **재현 조건**: 어떤
-몬스터가 `aiState == "chasing"`으로 특정 플레이어를 쫓는 도중, 그
-플레이어의 `PlayerRemoving`이 발생해 `PlayerState.clear`가 먼저
-실행되고, 그 몬스터의 `aiTarget`이 아직 정리되지 않은 상태에서 다음
-`RunService.Heartbeat` 프레임이 그 몬스터를 처리하면 크래시한다.
-`MonsterAI.server.lua`는 `PlayerRemoving`을 직접 구독하지 않으므로
-(몬스터의 `aiTarget` 정리는 오직 자신의 Heartbeat 루프 안에서만
-일어난다), 이 정리와 `PlayerState.clear`의 실행 순서가 서로 다른
-이벤트 연결에 걸려 있어 순서가 보장되지 않는다.
+**재현 조건**: 어떤 몬스터가 `aiState == "chasing"`으로 특정 플레이어를
+쫓는 도중 그 플레이어가 퇴장해 `PlayerState.clear`가 실행되는데, 그
+몬스터의 `aiTarget` 정리는 오직 `MonsterAI`의 Heartbeat 루프 안 자기
+로직(대상 사망·리쉬 이탈 감지)에서만 일어나 `PlayerState.clear`와
+같은 핸들러 안에서도 순서가 이어지지 않았다 - 다음 Heartbeat 프레임이
+그 몬스터를 처리하면 크래시했다.
 
 **이번에 확인한 것 - 서버 종료 전용이 아니다.** 원래 "종료 시점
 경합"으로만 기록했으나, 이 조건 자체는 **일반 플레이 중 아무
@@ -2870,6 +2869,35 @@ number` 오류의 재현 조건을 이번 검증 중 다시 관찰하며 구체�
 그 프레임에서 `ipairs(MonsterState.getAllModels())` 순회가 그 지점에서
 중단되므로, 같은 프레임 뒤 순서의 다른 몬스터들이 그 프레임 갱신을
 한 번 건너뛴다(다음 프레임엔 정상 재개) - 체감상 크지 않아 보이지만
-확인된 사실은 아니다. 고치려면 `PlayerRemoving`에서 그 플레이어를
-`aiTarget`으로 둔 몬스터들을 함께 정리하거나, 159행에서 `nil` 방어
-분기를 추가하는 두 방향이 있다 - 이번 세션 범위 밖으로 남긴다.
+확인된 사실은 아니다. **서버 종료 전용이 아니라는 이 확인이 "미결로
+둘 수 없다"는 판단의 근거가 됐다** - 몬스터에게 쫓기다 앱을 닫는 것은
+실서버에서 하루에도 수백 번 일어나는 흔한 이탈 패턴이다.
+
+**출구 목록 - 세 번째가 빠져 있었다.** PRD가 이미 "추격을 그만두는
+조건은 하나가 아니다"라고 두 번 적어 뒀다(9-4가 거리 초과와 대상
+사망을 각각 따로 체크해야 한다고 못박은 자리) - 이번에 세 번째(대상
+퇴장)가 빠져 있었다는 게 드러났다. 같은 자리에서 세 번째로 걸린
+것이라 "출구를 전부 나열"하는 방식으로 고쳤다:
+
+1. **거리 초과(리쉬)** - `distanceFromHome > WorldConfig.aggro.leashRangeStuds`
+2. **대상 사망** - `targetHp <= 0`
+3. **대상 퇴장(이번에 추가)** - `MonsterAI.server.lua`의
+   `Players.PlayerRemoving` 핸들러에 `releaseChasersOf(player)`를
+   추가했다. 이 플레이어를 `aiTarget`으로 둔 몬스터를 전부 찾아
+   `aiState="returning"`, `aiTarget=nil`로 즉시 되돌린다 -
+   `PlayerState.clear(player)`보다 먼저 실행해 "떠나는 쪽이 자기
+   흔적을 지운다"를 구조적으로 보장한다(1차 방어).
+4. **2차 방어선** - 159행의 `targetIsDead` 계산에 `nil` 가드를
+   추가했다(`targetHp == nil or targetHp <= 0`). 1차 방어가 정상
+   작동하면 이 경로는 안 타지만, 앞으로 `PlayerState.clear`가 호출되는
+   다른 경로가 생겨도 크래시하지 않는다.
+
+다음에 네 번째 출구가 생기면 `MonsterAI.server.lua`의
+`releaseChasersOf` 주석에 추가할 것 - 주석에 출구 목록을 그대로
+남겨 뒀다.
+
+**Studio MCP 검증**: 플레이어를 몬스터 사거리 안에 두어 어그로(`chasing`,
+`TickDamage` 설정 확인)를 붙인 뒤, 죽기 전(HP 7.19/10, 1회 피격 상태)에
+`player:Kick()`으로 강제 퇴장시켰다 - 콘솔에 오류 없음, 킥 이후에도
+다른 몬스터의 처리가 정상적으로 계속됨을 확인했다(같은 플레이어를
+동시에 노리던 두 번째 몬스터의 피격 로그도 크래시 없이 출력됨).

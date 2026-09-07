@@ -30,7 +30,24 @@ Players.PlayerAdded:Connect(function(player)
 	end)
 end)
 
+-- 추격 상태를 빠져나오는 출구는 셋이다(20.24-1이 드러낸 세 번째 - 9-4가 거리·사망 둘을
+-- 각각 따로 체크해야 한다고 못박았는데 퇴장이 빠져 있었다): 거리 초과(리쉬) / 대상 사망 /
+-- 대상 퇴장. 이 함수가 세 번째(퇴장)를 처리한다 - "떠나는 쪽이 자기 흔적을 지운다"는
+-- 원칙으로, PlayerState.clear보다 먼저 이 플레이어를 쫓던 몬스터를 전부 "returning"으로
+-- 되돌려 다음 Heartbeat 틱에 이 플레이어를 가리키는 aiTarget이 하나도 안 남게 한다(1차
+-- 방어 - 아래 chasing 분기의 nil 가드는 2차 방어선일 뿐, 이게 먼저다). 다음에 네 번째
+-- 출구가 생기면 이 목록에 추가할 것.
+local function releaseChasersOf(player)
+	for _, model in ipairs(MonsterState.getAllModels()) do
+		if MonsterState.getAiTarget(model) == player then
+			MonsterState.setAiState(model, "returning")
+			MonsterState.setAiTarget(model, nil)
+		end
+	end
+end
+
 Players.PlayerRemoving:Connect(function(player)
+	releaseChasersOf(player)
 	PlayerState.clear(player)
 end)
 
@@ -156,11 +173,18 @@ RunService.Heartbeat:Connect(function(dt)
 				local targetCharacter = target and target.Character
 				local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
 				local distanceFromHome = (position - home).Magnitude
-				local targetIsDead = target and PlayerState.getHp(target) <= 0
+				-- 2차 방어선(1차는 위 releaseChasersOf) - target이 있는데도 PlayerState 항목이
+				-- 이미 지워져 nil을 돌려주는 경우를 죽은 것과 동일하게 취급한다. 1차 방어가
+				-- 정상 작동하면 이 경로는 절대 안 타지만, 앞으로 PlayerState.clear가 호출되는
+				-- 다른 경로가 생겨도(1차 방어를 안 거치는 경로) 여기서 막아 크래시를 방지한다.
+				local targetHp = target and PlayerState.getHp(target)
+				local targetIsDead = target ~= nil and (targetHp == nil or targetHp <= 0)
 
-				-- 추격을 그만두는 조건은 하나가 아니다 - 거리로 풀리는 것(리쉬)과 대상이
-				-- 사라져서 풀리는 것(퇴장·사망)은 별개라 각각 따로 체크해야 한다. 아래
-				-- targetIsDead를 빼고 거리만 봤다가 리스폰 직후 재사망 루프가 생겼었다(9-4).
+				-- 추격을 그만두는 조건은 하나가 아니다 - 거리 초과(리쉬) / 대상 사망 / 대상
+				-- 퇴장, 이 셋은 서로 별개라 각각 따로 체크해야 한다(퇴장은 releaseChasersOf가
+				-- 1차로 처리하지만, targetIsDead의 nil 가드가 그 경로를 놓쳐도 여기서 다시
+				-- 잡는다). 아래 targetIsDead를 빼고 거리만 봤다가 리스폰 직후 재사망 루프가
+				-- 생겼었다(9-4).
 				if not targetRoot or targetIsDead or distanceFromHome > WorldConfig.aggro.leashRangeStuds then
 					-- 대상을 놓쳤거나(퇴장) 죽었거나(리스폰된 새 캐릭터를 이어서 쫓아가면 안 된다 -
 					-- 스폰 지점이 리쉬 범위 안이면 즉시 재사망 루프가 생긴다) 집에서 너무
