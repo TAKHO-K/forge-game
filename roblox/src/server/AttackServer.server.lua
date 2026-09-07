@@ -27,6 +27,13 @@ local goldGained = Instance.new("RemoteEvent")
 goldGained.Name = "GoldGained"
 goldGained.Parent = ReplicatedStorage
 
+-- 레벨업 알림(13-2)용. characterExp 자체는 PlayerProfile.addCharacterExp가 Attribute로 이미
+-- 동기화한다 - 이 이벤트는 레벨이 실제로 오른 순간에만 쏘는 일회성 연출 신호다(매 처치마다
+-- 쏘지 않는다 - goldGained와 다르게 레벨업은 드물다).
+local levelUp = Instance.new("RemoteEvent")
+levelUp.Name = "LevelUp"
+levelUp.Parent = ReplicatedStorage
+
 local lastAttackTick = {} -- [Player] = os.clock() 시각
 
 -- 자동 타겟: 사거리 안에서 가장 가까운 몬스터 하나. 어느 몬스터를 때릴지는
@@ -77,10 +84,11 @@ attackRequest.OnServerEvent:Connect(function(player)
 		return -- 사거리 안에 몬스터가 없다 - 헛스윙
 	end
 
-	-- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율(10-2 [1], 10-3 [3]에서
-	-- 클래스 배율 자리에 실제 값이 들어갔다). 배율이 곱해지는 지점은 PlayerCombat 하나뿐이다.
+	-- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율 × 캐릭터 레벨계수(10-2 [1],
+	-- 10-3 [3], 13-2에서 레벨계수가 들어갔다). 배율이 곱해지는 지점은 PlayerCombat 하나뿐이다.
 	-- 치명타(10-4)는 이 base를 calcDamage에 넘겨서 판정한다 - 판정도 서버 여기 한 곳뿐이다.
-	local base = PlayerCombat.getAttack(weapon, classId)
+	local characterLevel = PlayerProfile.getCharacterLevel(player)
+	local base = PlayerCombat.getAttack(weapon, classId, characterLevel)
 	local damage, isCrit = PlayerCombat.calcDamage(base, classId)
 	local newHp = MonsterState.getHp(target) - damage
 	MonsterState.setHp(target, newHp)
@@ -89,16 +97,26 @@ attackRequest.OnServerEvent:Connect(function(player)
 	attackResult:FireClient(player, target, damage, isCrit)
 
 	if newHp <= 0 then
-		-- despawn이 MonsterState.clear를 즉시 호출해 데이터를 지우므로, 그 전에 골드값·스테이지를
-		-- 먼저 읽는다. getGoldDrop은 무한 모드 스테이지 배율(11-1)이 적용된 값이다.
+		-- despawn이 MonsterState.clear를 즉시 호출해 데이터를 지우므로, 그 전에 골드값·경험치·
+		-- 스테이지를 먼저 읽는다. getGoldDrop·getExpReward는 무한 모드 스테이지 배율(11-1)이
+		-- 적용된 값이다.
 		local goldDrop = MonsterState.getGoldDrop(target)
+		local expReward = MonsterState.getExpReward(target)
 		local dropStage = MonsterState.getStage(target) or 1
 		PlayerProfile.addGold(player, goldDrop)
 		goldGained:FireClient(player, goldDrop)
 
-		-- 갑옷 드랍 판정(12-1 [2]). 서버가 여기서만 굴린다 - 클라이언트는 결과를
-		-- InventorySync 이벤트로만 통보받는다.
-		local armorDrop = Loot.rollArmorDrop(dropStage)
+		-- 경험치 지급(13-2) - 골드와 같은 경로, 서버만 지급한다. 레벨업이 일어났으면 그
+		-- 순간에만 알림을 쏜다(매 처치마다 쏘는 goldGained와 다르게 레벨업은 드문 이벤트).
+		-- 아이템 레벨 각인(아래)보다 먼저 지급해야 이번 처치로 오른 레벨이 드랍에 반영된다.
+		local oldLevel, newLevel = PlayerProfile.addCharacterExp(player, expReward)
+		if newLevel and newLevel ~= oldLevel then
+			levelUp:FireClient(player, newLevel)
+		end
+
+		-- 갑옷 드랍 판정(12-1 [2], 13-2에서 itemLevel 각인 추가). 서버가 여기서만 굴린다 -
+		-- 클라이언트는 결과를 InventorySync 이벤트로만 통보받는다.
+		local armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel)
 		if armorDrop then
 			if not PlayerProfile.addArmorDrop(player, armorDrop) then
 				InventorySync.notifyFull(player) -- 칸이 가득 차 드랍을 포기했다(12-1 [3])

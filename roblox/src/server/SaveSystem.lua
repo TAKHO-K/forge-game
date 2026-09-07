@@ -31,6 +31,11 @@ local function defaultProfile()
 		savedAt = 0, -- migrate() 시점 데이터는 항상 "가장 오래된 것"으로 본다(웹 core/save.js와 같은 원칙)
 		gold = 0,
 
+		-- 캐릭터 레벨(13-2) - 누적 경험치만 저장하고 레벨은 항상 CharacterLevel.getLevelFromExp로
+		-- 파생시킨다(웹 core/save.js가 weaponExp만 저장하고 weaponExpLevel은 저장 안 하는 것과
+		-- 같은 원칙 - 파생값을 저장하면 곡선을 고칠 때마다 저장분과 어긋난다).
+		characterExp = 0,
+
 		-- 클래스 선택(10-3). 필드는 있지만 값은 nil - "아직 안 골랐다"가 지금은 실제로
 		-- 맞는 상태이고, 이 nil이 곧 클라이언트가 선택 UI를 띄우는 조건이 된다
 		-- (ClassSelectUI.client.lua, PlayerProfile.init이 Attribute로 옮길 때 빈 문자열로
@@ -64,9 +69,10 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 여섯 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지금은 일곱 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
 -- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
--- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입).
+-- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입) -> 7(캐릭터 레벨 도입 +
+-- 아이템 itemLevel 필드 도입).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -123,6 +129,27 @@ local function migrate(data)
 		data.version = 6
 	end
 
+	if data.version < 7 then
+		-- v6까지 characterExp 필드 자체가 없었다(13-2에서 처음 생겼다) - 과거 경험치를
+		-- 복원할 데이터가 없으니 0(레벨1)으로 시작한다(유일하게 가능한 값).
+		data.characterExp = data.characterExp or 0
+
+		-- v6까지 아이템엔 itemLevel이 없었다(방어력이 dropStage 기준이었다, 12-1). 레벨1로
+		-- 채우면 기존 장비가 전부 최약체가 되어 "저장 무손실 승계" 취지에 반한다(v2->v3
+		-- 마이그레이션 때와 같은 원칙, 14장 참고) - 대신 이 게임 자체가 이미 정의해 둔
+		-- 관계식(PRD 20.8-3 recommendedStage = characterLevel - 25의 역함수)을 그대로 써서
+		-- itemLevel = dropStage + 25로 추정한다. 임의의 짐작이 아니라 게임의 1:1 대응
+		-- 규칙을 반대로 적용한 것이다. dropStage 필드는 지우지 않는다 - getSellPrice가
+		-- 계속 쓴다(Loot.lua 주석 참고).
+		for _, item in ipairs(data.inventory) do
+			item.itemLevel = item.itemLevel or ((item.dropStage or 1) + 25)
+		end
+		if data.equipment.armor then
+			data.equipment.armor.itemLevel = data.equipment.armor.itemLevel or ((data.equipment.armor.dropStage or 1) + 25)
+		end
+		data.version = 7
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -132,6 +159,7 @@ local function isValidProfile(data)
 	return type(data) == "table"
 		and type(data.version) == "number"
 		and type(data.gold) == "number"
+		and type(data.characterExp) == "number"
 		and type(data.equipment) == "table"
 		and type(data.equipment.weapon) == "table"
 		and type(data.equipment.weapon.level) == "number"

@@ -91,6 +91,13 @@ function MonsterState.getGoldDrop(model)
 	return entry and InfiniteStage.getGoldReward(entry.data.goldDrop, entry.stage)
 end
 
+-- 무한 모드 스테이지 배율이 적용된 처치 경험치(13-2). AttackServer가 처치 판정 직후 쓴다 -
+-- getGoldDrop과 같은 패턴.
+function MonsterState.getExpReward(model)
+	local entry = monsters[model]
+	return entry and InfiniteStage.getExpReward(entry.data.expReward, entry.stage)
+end
+
 function MonsterState.getSpawnPosition(model)
 	local entry = monsters[model]
 	return entry and entry.spawnPosition

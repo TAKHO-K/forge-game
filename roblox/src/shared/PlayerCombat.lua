@@ -15,6 +15,7 @@ local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 
 -- math.random은 전역 시드를 다른 호출과 공유한다 - 치명타 판정만의 독립된 스트림을 쓴다
 -- (10-4 지시). 이 모듈은 서버 스크립트(AttackServer 등)에서만 damage 계산 목적으로
@@ -27,13 +28,15 @@ function PlayerCombat.getClass(classId)
 	return ClassData.classes[classId]
 end
 
--- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율(10-2에서 자리만 만들었던
--- classAttackMultiplier=1.0을 여기서 실제 클래스 값으로 대체한다). 치명타를 적용하기 전
--- 기본 데미지다 - calcDamage에 base로 넘긴다.
-function PlayerCombat.getAttack(weapon, classId)
+-- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율 × 캐릭터 레벨계수(13-2 -
+-- 웹 main.js의 getEnhanceDamageMultiplier×getWeaponExpAttackMultiplier와 같은 구조, PRD
+-- 20.8/20.10이 이미 "레벨이 무기 공격력 배율을 밀어올린다"고 확정해 둔 축을 여기서 실제로
+-- 채운다). 치명타를 적용하기 전 기본 데미지다 - calcDamage에 base로 넘긴다.
+function PlayerCombat.getAttack(weapon, classId, characterLevel)
 	local class = ClassData.classes[classId]
 	local weaponData = WeaponData.weapons[weapon.id]
-	return Enhance.getPlayerAttack(weaponData, weapon.level, class.atk)
+	local base = Enhance.getPlayerAttack(weaponData, weapon.level, class.atk)
+	return base * CharacterLevel.getWeaponExpMultiplier(characterLevel)
 end
 
 -- 치명타 판정 + 적용 - 유일한 위치(10-4 [3]). base는 평타의 getAttack 결과일 수도,

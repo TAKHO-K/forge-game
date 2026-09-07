@@ -19,11 +19,16 @@
 -- ITEM_PART_BASE_STAT.armor.base=2는 웹 자체 파워 스케일 기준이라 그대로 옮기면 안
 -- 된다 - ClassData critRate 주석과 같은 "출처가 다른 두 값" 원칙).
 --
--- 스테이지 스케일링(12-1 [2] 판단): 갑옷 방어력은 등급뿐 아니라 "주운 스테이지"에도
--- 비례한다(InfiniteStage의 growthRate 재사용, PRD-forge-game-roblox.md 20.11-4
--- "defenseFlat도 k로 키워야 방어력/몬스터공격력 비율이 스테이지 무관 상수로 수렴한다"와
--- 같은 이유) - 등급에만 의존하면 1단계에서 주운 희귀템이 영원히 가치를 유지해 "더 높은
--- 단계에서 파밍할 이유"가 사라진다. 실제 계산·검증은 Loot.lua와 이번 세션 커밋 메시지 참고.
+-- 레벨 스케일링(13-2로 12-1의 판단을 되돌림): 갑옷 방어력은 등급뿐 아니라 "획득 시점
+-- 캐릭터 레벨"(itemLevel)에도 비례한다(CharacterLevel.getItemLevelMultiplier,
+-- PRD-forge-game-roblox.md 20.11-4 "defenseFlat도 k로 키워야 방어력/몬스터공격력 비율이
+-- 스테이지 무관 상수로 수렴한다"). 12-1 시점엔 로블록스에 캐릭터 레벨 축 자체가 없어
+-- "주운 스테이지"(dropStage)를 대체재로 썼었다 - 20.22가 이 대체가 "막히면 아래에서
+-- 파밍한다"는 설계와 어긋남을 확인했고(낮은 스테이지에서 주운 장비가 영구히 무력해짐),
+-- 13-2가 캐릭터 레벨 축을 만들면서 원래 설계(itemLevel 기준)로 되돌렸다. 등급에만
+-- 의존하면 레벨1에서 주운 희귀템이 영원히 가치를 유지해 "레벨을 올릴 이유"가 사라진다는
+-- 점은 그대로다 - 축의 이름만 dropStage에서 itemLevel로 바뀌었다. 실제 계산·검증은
+-- Loot.lua와 PRD 20.23 참고.
 
 local CombatConfig = require(script.Parent.CombatConfig)
 

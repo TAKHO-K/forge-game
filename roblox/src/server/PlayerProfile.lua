@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local InventorySync = require(script.Parent.InventorySync)
 
 local PlayerProfile = {}
@@ -20,6 +21,10 @@ function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
 	player:SetAttribute("WeaponLevel", profile.equipment.weapon.level)
+	-- 캐릭터 레벨(13-2) - 저장에는 누적 경험치만 있고 레벨은 항상 여기서 파생시킨다(단일
+	-- 소스 원칙, InfiniteStage의 stage/multiplier 관계와 같은 구조).
+	player:SetAttribute("CharacterExp", profile.characterExp)
+	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(profile.characterExp))
 	-- Attribute는 nil을 담지 못한다 - "선택 안 함"을 빈 문자열로 옮긴다. 클라이언트
 	-- (ClassSelectUI.client.lua)는 "" 또는 미설정을 "선택 안 함"으로 취급한다.
 	player:SetAttribute("ClassId", profile.classId or "")
@@ -60,6 +65,30 @@ function PlayerProfile.trySpendGold(player, amount)
 	profile.gold -= amount
 	player:SetAttribute("Gold", profile.gold)
 	return true
+end
+
+function PlayerProfile.getCharacterLevel(player)
+	local profile = profiles[player]
+	return profile and CharacterLevel.getLevelFromExp(profile.characterExp)
+end
+
+-- 서버만 호출한다(AttackServer의 몬스터 처치 판정 직후, 골드와 같은 경로). 클라이언트가
+-- 보낸 값으로 경험치를 늘리는 경로는 없다 - 이 함수가 유일한 증가 통로다. 레벨업이
+-- 일어났으면(oldLevel ~= newLevel) 호출부가 그 사실로 연출(레벨업 알림)을 띄운다 -
+-- 이 함수 자체는 판정만 하고 연출은 모른다(단일 책임, AttackServer가 RemoteEvent를 쏜다).
+function PlayerProfile.addCharacterExp(player, amount)
+	local profile = profiles[player]
+	if not profile then
+		return nil, nil
+	end
+	local oldLevel = CharacterLevel.getLevelFromExp(profile.characterExp)
+	profile.characterExp += amount
+	local newLevel = CharacterLevel.getLevelFromExp(profile.characterExp)
+	player:SetAttribute("CharacterExp", profile.characterExp)
+	if newLevel ~= oldLevel then
+		player:SetAttribute("CharacterLevel", newLevel)
+	end
+	return oldLevel, newLevel
 end
 
 function PlayerProfile.getWeapon(player)
