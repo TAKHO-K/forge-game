@@ -108,4 +108,18 @@ return {
 		-- 표시)와 서버(요청 검증)가 같은 값을 써야 해서 여기 하나로 둔다.
 		interactionRangeStuds = 12,
 	},
+
+	-- 땅에 떨어진 아이템(14-1). pxPerStud=10 그대로 웹 값을 환산한다 - 경험치 토큰의
+	-- "자동 흡수"(80px=8stud, 멀리서도 끌려온다)보다 훨씬 좁다(웹 itemPickupRadius=20px=
+	-- 2stud) - 아이템은 토큰과 달리 "정확히 그 자리로 걸어가서 줍는다"는 웹의 원래
+	-- 구분을 그대로 유지한다(자석처럼 끌려오지 않는다).
+	items = {
+		pickupRangeStuds = 2,
+		-- 웹 BALANCE.itemGroundLifetime(60초) 그대로 - 이미 검증된 값을 재사용한다.
+		groundLifetimeSeconds = 60,
+		-- 튀어오르는 연출(ItemDropSpawner의 bounceSeconds)이 다 끝난 뒤에만 주워지게 하는
+		-- 최소 대기 - 몬스터를 잡은 자리에 이미 서 있으면 튀어오르기도 전에 주워져 연출을
+		-- 못 보는 문제를 막는다.
+		pickupDelaySeconds = 0.6,
+	},
 }

@@ -43,7 +43,9 @@ inventoryFetch.OnServerInvoke = function(player)
 	return { inventory = profile.inventory, armor = profile.equipment.armor }
 end
 
--- 칸이 가득 차서 드랍을 포기했을 때(12-1 [3] "드랍 안 됨 + 알림") 한 번 알린다.
+-- 칸이 가득 차서 줍지 못했을 때 한 번 알린다(12-1 [3]에서는 "드랍 자체를 포기"였으나
+-- 14-1부터는 "땅에 있는 아이템을 줍지 못했다"는 뜻으로 바뀌었다 - 아이템은 땅에 그대로
+-- 남는다, ItemDropServer.server.lua 참고).
 function InventorySync.notifyFull(player)
 	inventoryFull:FireClient(player)
 end

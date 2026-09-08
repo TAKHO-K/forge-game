@@ -11,7 +11,7 @@ local Loot = require(ReplicatedStorage.Shared.Loot)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
-local InventorySync = require(script.Parent.InventorySync)
+local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -103,6 +103,7 @@ attackRequest.OnServerEvent:Connect(function(player)
 		local goldDrop = MonsterState.getGoldDrop(target)
 		local expReward = MonsterState.getExpReward(target)
 		local dropStage = MonsterState.getStage(target) or 1
+		local deathPosition = target.PrimaryPart.Position
 		PlayerProfile.addGold(player, goldDrop)
 		goldGained:FireClient(player, goldDrop)
 
@@ -114,13 +115,14 @@ attackRequest.OnServerEvent:Connect(function(player)
 			levelUp:FireClient(player, newLevel)
 		end
 
-		-- 갑옷 드랍 판정(12-1 [2], 13-2에서 itemLevel 각인 추가). 서버가 여기서만 굴린다 -
-		-- 클라이언트는 결과를 InventorySync 이벤트로만 통보받는다.
+		-- 갑옷 드랍 판정(12-1 [2], 13-2에서 itemLevel 각인 추가). 서버가 여기서만 굴린다.
+		-- 14-1부터 인벤토리에 바로 들어가지 않는다 - 바닥에 떨어뜨리고(ItemDropSpawner),
+		-- 실제로 인벤토리에 반영되는 건 줍는 순간(ItemDropServer.server.lua의 거리 판정)이다.
+		-- 인벤토리가 가득 찬 경우도 여기서 취소하지 않는다 - "땅에 있는데 못 줍는" 상태로
+		-- 남겨 둔다(14-1 판단, ItemDropServer 참고).
 		local armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel)
 		if armorDrop then
-			if not PlayerProfile.addArmorDrop(player, armorDrop) then
-				InventorySync.notifyFull(player) -- 칸이 가득 차 드랍을 포기했다(12-1 [3])
-			end
+			ItemDropSpawner.spawn(armorDrop, deathPosition, player)
 		end
 
 		MonsterSpawner.despawn(target)

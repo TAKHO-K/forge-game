@@ -210,7 +210,9 @@ if ok and initialState then
 end
 
 inventoryFull.OnClientEvent:Connect(function()
-	equippedLabel.Text = "인벤토리가 가득 찼습니다 - 드랍을 놓쳤습니다"
+	-- 14-1부터 이 이벤트는 "드랍이 취소됐다"가 아니라 "땅에 있는 아이템을 못 주웠다"는
+	-- 뜻이다 - 아이템은 그대로 땅에 남아 있다(칸을 비우고 다시 가면 주울 수 있다).
+	equippedLabel.Text = "인벤토리가 가득 찼습니다 - 땅에 있는 아이템을 주울 수 없습니다"
 	task.delay(2, function()
 		local state = { inventory = {}, armor = nil }
 		local fetchOk, fetched = pcall(function()

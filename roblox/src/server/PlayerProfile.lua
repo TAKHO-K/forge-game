@@ -163,9 +163,11 @@ function PlayerProfile.getEquippedArmor(player)
 	return profile and profile.equipment.armor
 end
 
--- 서버만 호출한다(AttackServer의 드랍 판정 직후). 칸이 가득 찼으면 false - 드랍 자체를
--- 취소한다(12-1 [3] 판단 - 자동판매·알림만은 이번 범위 밖인 "판매" 기능을 몰래 들여오는
--- 셈이라 뺐다. 알림은 InventorySync.notifyFull로 호출부가 따로 준다).
+-- 서버만 호출한다(14-1부터 ItemDropServer.server.lua의 줍기 판정 직후 - 12-1 시점엔
+-- AttackServer의 드랍 판정 직후 바로 호출했으나, 14-1이 "바닥에 떨어뜨리고 나중에 줍는다"로
+-- 바꾸면서 호출 시점이 옮겨졌다). 칸이 가득 찼으면 false - 인벤토리에 반영하지 않는다.
+-- 14-1부터는 이게 "드랍 자체가 취소된다"는 뜻이 아니다 - 땅의 아이템은 그대로 남아
+-- 나중에 칸을 비우고 다시 주우러 오면 된다(호출부가 알림을 준다).
 function PlayerProfile.addArmorDrop(player, item)
 	local profile = profiles[player]
 	if not profile then
