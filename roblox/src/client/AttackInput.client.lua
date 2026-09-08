@@ -7,6 +7,9 @@ local TweenService = game:GetService("TweenService")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local WeaponVisual = require(script.Parent.WeaponVisual)
+local HitEffects = require(script.Parent.HitEffects)
 
 local attackRequest = ReplicatedStorage:WaitForChild("AttackRequest")
 local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
@@ -45,9 +48,29 @@ local attackButtonCorner = Instance.new("UICorner")
 attackButtonCorner.CornerRadius = UDim.new(1, 0)
 attackButtonCorner.Parent = attackButton
 
+-- 스윙 모션은 서버 확인 없이 여기서 바로 재생한다(지시 사항 - "모션은 클라이언트에서
+-- 재생한다. 판정은 여전히 서버다. 둘을 섞지 마라"). 다만 버튼을 쿨다운보다 빨리 연타하면
+-- (서버는 조용히 무시하는데) 모션만 계속 재생되면 실제 공격 속도보다 빨라 보여 오히려
+-- 거짓 피드백이 된다 - 그래서 여기서도 같은 쿨다운을 직접 계산해 재생 여부를 건너뛴다
+-- (서버 쿨다운과 별개의 클라이언트 판정 - 공격 자체를 막는 게 아니라 "모션을 또
+-- 보여줄지"만 결정한다. attackRequest는 클라이언트 쿨다운과 무관하게 항상 보낸다 -
+-- 헛스윙 판정은 여전히 서버 몫이다).
+local lastSwingTick = 0
+
 -- Activated는 마우스 클릭·터치 탭·게임패드를 전부 같은 이벤트로 받는다(모바일 대응).
 attackButton.Activated:Connect(function()
 	attackRequest:FireServer()
+
+	local classId = player:GetAttribute("ClassId")
+	if not classId or classId == "" then
+		return
+	end
+	local cooldown = PlayerCombat.getAttackCooldown(classId)
+	local now = os.clock()
+	if now - lastSwingTick >= cooldown then
+		lastSwingTick = now
+		WeaponVisual.playSwing(cooldown)
+	end
 end)
 
 -- 몬스터별로 동시에 떠 있는 데미지 숫자 개수(9-5 개정, 9-3에서 미루기만 했던
@@ -106,4 +129,17 @@ local function showDamageNumber(monsterModel, damage, isCrit)
 	end)
 end
 
-attackResult.OnClientEvent:Connect(showDamageNumber)
+-- died가 추가된 이유는 AttackServer.server.lua의 attackResult:FireClient 주석 참고.
+-- 죽었으면 피격 반응 대신 사망 연출을 재생한다(둘 다 재생하면 사망 직전 프레임에
+-- Body/Head 색을 흰색으로 바꿨다가 곧바로 사망 연출이 그 색을 지워버려 부자연스럽다).
+attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died)
+	showDamageNumber(monsterModel, damage, isCrit)
+	if not monsterModel then
+		return
+	end
+	if died then
+		HitEffects.playDeath(monsterModel)
+	else
+		HitEffects.playHit(monsterModel, isCrit)
+	end
+end)

@@ -94,7 +94,10 @@ attackRequest.OnServerEvent:Connect(function(player)
 	MonsterState.setHp(target, newHp)
 	MonsterSpawner.updateHpLabel(target)
 
-	attackResult:FireClient(player, target, damage, isCrit)
+	-- died(14-2)를 같이 보낸다 - 클라이언트가 사망 연출(HitEffects.playDeath)을 정확히
+	-- 이 타격에서만 재생하려면 "이 타격으로 죽었는가"를 알아야 한다. 새 이벤트를 따로
+	-- 만들지 않고 이미 있던 이벤트에 필드 하나만 얹었다(같은 타격의 결과이므로).
+	attackResult:FireClient(player, target, damage, isCrit, newHp <= 0)
 
 	if newHp <= 0 then
 		-- despawn이 MonsterState.clear를 즉시 호출해 데이터를 지우므로, 그 전에 골드값·경험치·
