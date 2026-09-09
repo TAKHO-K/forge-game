@@ -52,6 +52,18 @@ return {
 				trailWindow = { 0.35, 0.60 },
 			},
 		},
+		-- 어깨 관절 자체를 흔드는 스윙(14-2 2차 - "무기만 손 주위를 돌고 캐릭터는 가만히
+		-- 서 있다" 버그 수정). 무기 각도(위 keyframes)와 별개 축이다 - 정밀 튜닝은 이번
+		-- 범위 밖이라 무기 스윙과 같은 t/이징을 그대로 재사용했다("어색하지만 움직인다"가
+		-- 이번 통과 기준, 지시 사항).
+		armSwing = {
+			{ side = "Right", swingAxis = "X", keyframes = {
+				{ t = 0.0, angle = 0 },
+				{ t = 0.35, angle = -55, easing = IN_SINE },
+				{ t = 0.55, angle = 45, easing = OUT_BACK },
+				{ t = 1.0, angle = 0, easing = OUT_QUAD },
+			} },
+		},
 	},
 
 	dualblade = {
@@ -88,6 +100,21 @@ return {
 				trailWindow = { 0.3, 0.55 },
 			},
 		},
+		-- 쌍검은 양팔이 교차한다 - 왼팔·오른팔을 반대 부호로 함께 흔든다(greatsword 주석 참고).
+		armSwing = {
+			{ side = "Right", swingAxis = "X", keyframes = {
+				{ t = 0.0, angle = 0 },
+				{ t = 0.3, angle = 30, easing = IN_SINE },
+				{ t = 0.5, angle = -50, easing = OUT_BACK },
+				{ t = 1.0, angle = 0, easing = OUT_QUAD },
+			} },
+			{ side = "Left", swingAxis = "X", keyframes = {
+				{ t = 0.0, angle = 0 },
+				{ t = 0.3, angle = -30, easing = IN_SINE },
+				{ t = 0.5, angle = 50, easing = OUT_BACK },
+				{ t = 1.0, angle = 0, easing = OUT_QUAD },
+			} },
+		},
 	},
 
 	-- 활은 회전이 아니라 "당김"(nock 오프셋, +Z 방향 stud 값 - 시위 양 끝은
@@ -112,6 +139,16 @@ return {
 		-- 순간 실제로 날아가는 화살(Projectiles.lua)이 서버가 확인해 준 대상을 향해
 		-- 발사된다(아래 releaseT, AttackInput.client.lua가 사용).
 		releaseT = 0.78,
+		-- 시위를 당기는 오른팔 - 당김 구간(위 drawOffset)과 같은 타이밍으로 뒤로 당겼다가
+		-- 발사 시점에 앞으로 풀린다.
+		armSwing = {
+			{ side = "Right", swingAxis = "X", keyframes = {
+				{ t = 0.0, angle = 0 },
+				{ t = 0.55, angle = -35, easing = IN_SINE },
+				{ t = 0.8, angle = 10, easing = OUT_BACK },
+				{ t = 1.0, angle = 0, easing = OUT_QUAD },
+			} },
+		},
 	},
 
 	healer = {
@@ -133,6 +170,14 @@ return {
 		},
 		-- 구슬이 지팡이 끝을 떠나는 시점 - 활과 같은 개념.
 		releaseT = 0.55,
+		armSwing = {
+			{ side = "Right", swingAxis = "X", keyframes = {
+				{ t = 0.0, angle = 0 },
+				{ t = 0.35, angle = -20, easing = IN_SINE },
+				{ t = 0.55, angle = 30, easing = OUT_QUAD },
+				{ t = 1.0, angle = 0, easing = OUT_QUAD },
+			} },
+		},
 	},
 
 	-- WeaponVisual.lua가 이징을 계산할 때 쓰는 헬퍼 - 데이터 파일이지만 이징 계산

@@ -238,6 +238,64 @@ local function inTrailWindow(window, alpha)
 	return window and alpha >= window[1] and alpha <= window[2]
 end
 
+-- 어깨 관절 리그 타입 분기(14-2 2차 - "무기만 손 주위를 돌고 캐릭터는 가만히 서 있다"
+-- 수정). 이 캐릭터는 레거시 Motor6D가 하나도 없고 AnimationConstraint(Transform
+-- 프로퍼티)를 쓴다(실측 확인) - 다만 플레이어 아바타 종류에 따라 구형 Motor6D 리그가
+-- 나올 수도 있어 둘 다 처리한다. 리그 타입 분기는 이 함수 하나로만 - 나중에 다른
+-- 리그가 추가돼도 여기만 고치면 된다.
+local function findArmJoint(character, side)
+	local upperArm = character:FindFirstChild(side .. "UpperArm")
+	if not upperArm then
+		return nil
+	end
+	local joint = upperArm:FindFirstChild(side .. "Shoulder")
+	if not joint then
+		return nil
+	end
+	if joint:IsA("Motor6D") then
+		return joint, "motor6d"
+	elseif joint:IsA("AnimationConstraint") then
+		return joint, "constraint"
+	end
+	return nil
+end
+
+-- Motor6D.C0는 그립 위치+기본 자세를 통째로 담고 있어서 원본을 한 번 캡처해 보존해야
+-- 한다. AnimationConstraint.Transform은 애초에 "기본 자세 위에 얹는 추가 회전"으로
+-- 설계돼 있어서(기본값이 CFrame.new()) 원본 보존이 필요 없다.
+local baseC0ByJoint = setmetatable({}, { __mode = "k" })
+
+local function applyArmSwing(character, side, extraRotation)
+	local joint, kind = findArmJoint(character, side)
+	if not joint then
+		return
+	end
+	if kind == "constraint" then
+		joint.Transform = extraRotation
+	elseif kind == "motor6d" then
+		local base = baseC0ByJoint[joint]
+		if not base then
+			base = joint.C0
+			baseC0ByJoint[joint] = base
+		end
+		joint.C0 = base * extraRotation
+	end
+end
+
+-- 하체(걷기 애니메이션이 쓰는 골반·무릎)는 손대지 않는다 - 어깨 위만 건드려서 14-2가
+-- 원래 걱정했던 "걷기 애니메이션과 충돌"을 피한다(지시 사항 - 걸으면서 공격해도
+-- 이상하지 않아야 한다).
+local function updateArms(character, motion, alpha)
+	local armSwing = motion.armSwing
+	if not armSwing then
+		return
+	end
+	for _, spec in ipairs(armSwing) do
+		local angle = evalKeyframes(spec.keyframes, alpha, "angle")
+		applyArmSwing(character, spec.side, rotationCFrame(spec.swingAxis, angle))
+	end
+end
+
 local function updateMeleeAlike(hands, model, motion, instances, alpha, singlePart, pairParts)
 	for _, partMotion in ipairs(motion.parts) do
 		local part = singlePart or pairParts[partMotion.name]
@@ -344,6 +402,8 @@ local function updateFrame()
 	elseif current.kind == "specialmesh" then
 		updateStaff(rightHand, current.model, current.motion, current.instances, alpha)
 	end
+
+	updateArms(character, current.motion, alpha)
 end
 
 -- 서버 확인 없이 즉시 재생한다(지시 사항 - "모션은 클라이언트에서 재생한다. 판정은
