@@ -10,6 +10,11 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local WeaponVisual = require(script.Parent.WeaponVisual)
 local HitEffects = require(script.Parent.HitEffects)
+local Projectiles = require(script.Parent.Projectiles)
+
+-- 원거리 클래스(활·힐러)는 판정 결과를 곧바로 보여주지 않는다 - 투사체가 도착하는
+-- 순간까지 미룬다(아래 attackResult 핸들러 참고). 근접 두 클래스는 즉시 표시.
+local RANGED_PROJECTILE_KIND = { bow = "arrow", healer = "orb" }
 
 local attackRequest = ReplicatedStorage:WaitForChild("AttackRequest")
 local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
@@ -69,7 +74,7 @@ attackButton.Activated:Connect(function()
 	local now = os.clock()
 	if now - lastSwingTick >= cooldown then
 		lastSwingTick = now
-		WeaponVisual.playSwing(cooldown)
+		WeaponVisual.playSwing()
 	end
 end)
 
@@ -132,7 +137,7 @@ end
 -- died가 추가된 이유는 AttackServer.server.lua의 attackResult:FireClient 주석 참고.
 -- 죽었으면 피격 반응 대신 사망 연출을 재생한다(둘 다 재생하면 사망 직전 프레임에
 -- Body/Head 색을 흰색으로 바꿨다가 곧바로 사망 연출이 그 색을 지워버려 부자연스럽다).
-attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died)
+local function showResult(monsterModel, damage, isCrit, died)
 	showDamageNumber(monsterModel, damage, isCrit)
 	if not monsterModel then
 		return
@@ -142,4 +147,36 @@ attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died)
 	else
 		HitEffects.playHit(monsterModel, isCrit)
 	end
+end
+
+-- 활·힐러는 서버 판정 결과(이미 확정된 데미지·치명타·사망 여부)를 곧바로 보여주지
+-- 않는다 - 활시위가 아직 안 당겨졌거나 화살이 아직 날아가는 중인데 데미지 숫자가
+-- 먼저 뜨면 판정 시점과 화살 도달 시점이 어긋나 보인다(지시 사항). 서버는 이미
+-- 즉시 판정했으므로(9-2 서버 권위), 여기서 하는 일은 "이미 정해진 결과를 언제
+-- 보여줄지"를 투사체가 실제로 도착하는 순간으로 늦추는 것뿐 - 새로 판정하지 않는다.
+attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died)
+	local classId = player:GetAttribute("ClassId")
+	local projectileKind = RANGED_PROJECTILE_KIND[classId]
+
+	if not projectileKind then
+		showResult(monsterModel, damage, isCrit, died)
+		return
+	end
+
+	-- 스윙이 아직 "발사 시점"(releaseT)에 안 닿았으면 그때까지 기다렸다가 쏜다 - 서버
+	-- 응답이 스윙 애니메이션보다 먼저 와도(대개 그렇다) 시위가 안 당겨진 채로 화살이
+	-- 나가는 어색함을 막는다.
+	local releaseDelay = WeaponVisual.getReleaseDelay()
+	task.delay(releaseDelay, function()
+		local targetHead = monsterModel and monsterModel:FindFirstChild("Head")
+		local muzzle = WeaponVisual.getMuzzleWorldPosition()
+		if not targetHead or not muzzle then
+			-- 발사 시점에 대상이 이미 사라졌으면(드문 경우) 투사체 없이 즉시 표시로 대체한다.
+			showResult(monsterModel, damage, isCrit, died)
+			return
+		end
+		Projectiles.fire(projectileKind, muzzle, targetHead.Position, isCrit, function()
+			showResult(monsterModel, damage, isCrit, died)
+		end)
+	end)
 end)
