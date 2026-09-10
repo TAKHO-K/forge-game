@@ -48,6 +48,16 @@ function Loot.rollArmorDrop(monsterStage, itemLevel)
 	return nil -- 확률 합이 1 미만인 경우의 방어적 처리(지금 표는 정확히 1.0)
 end
 
+-- 보스 확정 드랍(15-1, 지시 [4] "드랍이 달라야 하는가"). 잡몹과 같은 25% 확률·등급 굴림을
+-- 그대로 쓰면 보스를 잡을 경제적 이유가 약하다 - 100%로 확정하고 등급도 이 프로젝트에
+-- 있는 최고 등급(ArmorData.gradeOrder의 마지막 항목, 지금은 "희귀")을 그대로 지급한다.
+-- 등급이 나중에 늘어도(영웅·전설 등) gradeOrder 마지막 항목을 그대로 참조하므로 이
+-- 함수를 다시 고칠 필요가 없다.
+function Loot.rollBossArmorDrop(monsterStage, itemLevel)
+	local topGrade = ArmorData.gradeOrder[#ArmorData.gradeOrder]
+	return { grade = topGrade, dropStage = monsterStage, itemLevel = itemLevel, locked = false }
+end
+
 -- 장비 방어력 보너스. item이 nil이면(미착용) 0 - PlayerCombat.getDefense의
 -- equipmentDefenseBonus 자리에 그대로 넘긴다. 13-2부터 dropStage가 아니라 itemLevel(획득
 -- 시점 캐릭터 레벨) 기준이다 - PRD 20.11-4가 정의한 "아이템 레벨 시스템" 그대로.

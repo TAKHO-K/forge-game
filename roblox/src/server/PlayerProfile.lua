@@ -32,6 +32,8 @@ function PlayerProfile.init(player, profile)
 	-- classId처럼 빈 문자열로 바꿔치기할 필요가 없다.
 	player:SetAttribute("InfiniteStage", profile.stageProgress.infinite)
 	player:SetAttribute("InfiniteStageBest", profile.stageProgress.infiniteBest)
+	-- 최고로 깬 보스 스테이지(15-1). StageServer의 게이트 검사가 쓰는 값과 같은 소스다.
+	player:SetAttribute("BestBossCleared", profile.stageProgress.bestBossCleared)
 end
 
 -- 저장 시점에 SaveSystem이 통째로 넘겨받아 쓴다.
@@ -151,6 +153,22 @@ function PlayerProfile.setInfiniteStage(player, stage)
 		player:SetAttribute("InfiniteStageBest", stage)
 	end
 	return isNewBest
+end
+
+function PlayerProfile.getBestBossCleared(player)
+	local profile = profiles[player]
+	return profile and profile.stageProgress.bestBossCleared
+end
+
+-- 서버만 호출한다(AttackServer의 보스 처치 판정 직후). stage가 이미 기록된 값 이하면
+-- 아무것도 안 한다 - 이 값은 "최고 기록"이라 내려갈 일이 없다(infiniteBest와 같은 원칙).
+function PlayerProfile.setBossCleared(player, stage)
+	local profile = profiles[player]
+	if not profile or stage <= profile.stageProgress.bestBossCleared then
+		return
+	end
+	profile.stageProgress.bestBossCleared = stage
+	player:SetAttribute("BestBossCleared", stage)
 end
 
 function PlayerProfile.getInventory(player)

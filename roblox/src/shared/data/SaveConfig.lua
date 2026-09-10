@@ -3,13 +3,15 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
+	-- 8(15-1) - 보스 처치 기록(stageProgress.bestBossCleared) 필드 추가. SaveSystem.migrate()의
+	-- v7->v8 참고.
 	-- 7(13-2) - characterExp 필드 신설 + 인벤토리 아이템에 itemLevel 필드 추가(기존
 	-- dropStage 기반 방어력 스케일링을 되돌림). SaveSystem.migrate()의 v6->v7 참고.
 	-- 6(13-1) - 인벤토리 아이템에 locked 필드 추가. SaveSystem.migrate()의 v5->v6 참고.
 	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
 	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
 	-- 필드(classId) 추가.
-	saveVersion = 7,
+	saveVersion = 8,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

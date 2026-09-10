@@ -12,6 +12,8 @@ local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
+local BossEncounter = require(script.Parent.BossEncounter)
+local ImmediateSave = require(script.Parent.ImmediateSave)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -100,9 +102,22 @@ attackRequest.OnServerEvent:Connect(function(player)
 	attackResult:FireClient(player, target, damage, isCrit, newHp <= 0)
 
 	if newHp <= 0 then
+		-- 처치 경합 가드(15-1 검증 중 재현) - 연타로 두 AttackRequest가 같은 처치 직전
+		-- 몬스터를 거의 동시에 때리면, 뒤 이은 ImmediateSave.request(DataStore 호출로 실제
+		-- yield한다)가 끝나기 전에 두 번째 요청이 여기 도달해 골드·경험치·드랍을 이중
+		-- 지급하는 경합이 실제로 재현됐다. MonsterState.tryClaimDeath는 확인과 표시를
+		-- 한 번에 처리해(그 사이 yield 없음) 오직 첫 번째 요청만 통과시킨다 - 뒤따르는
+		-- 요청은 조용히 물러난다(이미 처리된 처치이므로 보상도, 로그도 다시 내지 않는다).
+		if not MonsterState.tryClaimDeath(target) then
+			return
+		end
+
 		-- despawn이 MonsterState.clear를 즉시 호출해 데이터를 지우므로, 그 전에 골드값·경험치·
 		-- 스테이지를 먼저 읽는다. getGoldDrop·getExpReward는 무한 모드 스테이지 배율(11-1)이
-		-- 적용된 값이다.
+		-- 적용된 값이다(보스는 그 위에 BossRules.buildInstanceData가 미리 곱해 둔 배율까지
+		-- 포함된 최종값 - 15-1, MonsterState.setStage의 isBoss 가드 참고).
+		local monsterData = MonsterState.getData(target)
+		local isBoss = monsterData.isBoss
 		local goldDrop = MonsterState.getGoldDrop(target)
 		local expReward = MonsterState.getExpReward(target)
 		local dropStage = MonsterState.getStage(target) or 1
@@ -123,9 +138,22 @@ attackRequest.OnServerEvent:Connect(function(player)
 		-- 실제로 인벤토리에 반영되는 건 줍는 순간(ItemDropServer.server.lua의 거리 판정)이다.
 		-- 인벤토리가 가득 찬 경우도 여기서 취소하지 않는다 - "땅에 있는데 못 줍는" 상태로
 		-- 남겨 둔다(14-1 판단, ItemDropServer 참고).
-		local armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel)
+		-- 보스는 확정 드랍(15-1, 지시 [4]) - 잡몹과 같은 25% 확률·등급 굴림을 쓰지 않는다.
+		local armorDrop = isBoss
+			and Loot.rollBossArmorDrop(dropStage, newLevel or oldLevel)
+			or Loot.rollArmorDrop(dropStage, newLevel or oldLevel)
 		if armorDrop then
 			ItemDropSpawner.spawn(armorDrop, deathPosition, player)
+		end
+
+		if isBoss then
+			-- 보스 처치 기록(15-1) - 이 스테이지 이상으로 이동을 막던 게이트(StageServer)가
+			-- 이제부터 풀린다. infiniteBest와 같은 "다시 오르면 그만이 아닌 실제 성취"라
+			-- 즉시저장한다.
+			PlayerProfile.setBossCleared(player, monsterData.stageNumber)
+			ImmediateSave.request(player)
+			BossEncounter.clearFor(player)
+			print(("[forge-game] 보스 처치: %s - 스테이지 %d"):format(player.Name, monsterData.stageNumber))
 		end
 
 		MonsterSpawner.despawn(target)

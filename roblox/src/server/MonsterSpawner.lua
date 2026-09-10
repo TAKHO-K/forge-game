@@ -4,6 +4,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
@@ -12,15 +13,26 @@ local MonsterState = require(script.Parent.MonsterState)
 
 local MonsterSpawner = {}
 
+local DEFAULT_BODY_COLOR = Color3.fromRGB(150, 90, 200)
+local DEFAULT_HEAD_COLOR = Color3.fromRGB(180, 120, 220)
+
 -- 기본 파트 조합으로 "구분되는 덩어리" 하나를 만든다. Humanoid는 애니메이션·이름표 전용이고
 -- 실제 HP는 MonsterState가 관리한다(Humanoid.MaxHealth=100은 쓰이지 않는 더미값).
+--
+-- sizeScale/bodyColor/headColor(15-1, 기본값은 잡몹 그대로) - 보스를 "확실히 크게"
+-- 만들라는 지시를 아트 리소스 없이 기본 파트 크기·색만으로 만족시킨다(하지 말 것:
+-- 아트·모션 다듬기, 동결 상태).
 local function buildModel(data, position)
+	local sizeScale = data.sizeScale or 1
+	local bodyColor = data.bodyColor or DEFAULT_BODY_COLOR
+	local headColor = data.headColor or DEFAULT_HEAD_COLOR
+
 	local model = Instance.new("Model")
 	model.Name = data.displayName
 
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
-	root.Size = Vector3.new(2, 2, 1)
+	root.Size = Vector3.new(2, 2, 1) * sizeScale
 	root.Transparency = 1
 	root.CanCollide = false
 	root.Anchored = true
@@ -29,19 +41,19 @@ local function buildModel(data, position)
 
 	local body = Instance.new("Part")
 	body.Name = "Body"
-	body.Size = Vector3.new(2.4, 3, 1.2)
+	body.Size = Vector3.new(2.4, 3, 1.2) * sizeScale
 	body.Anchored = true
-	body.Color = Color3.fromRGB(150, 90, 200)
+	body.Color = bodyColor
 	body.Position = position
 	body.Parent = model
 
 	local head = Instance.new("Part")
 	head.Name = "Head"
 	head.Shape = Enum.PartType.Ball
-	head.Size = Vector3.new(1.6, 1.6, 1.6)
+	head.Size = Vector3.new(1.6, 1.6, 1.6) * sizeScale
 	head.Anchored = true
-	head.Color = Color3.fromRGB(180, 120, 220)
-	head.Position = position + Vector3.new(0, 2.3, 0)
+	head.Color = headColor
+	head.Position = position + Vector3.new(0, 2.3 * sizeScale, 0)
 	head.Parent = model
 
 	local humanoid = Instance.new("Humanoid")
@@ -53,8 +65,8 @@ local function buildModel(data, position)
 
 	local nameplateGui = Instance.new("BillboardGui")
 	nameplateGui.Name = "NameplateGui"
-	nameplateGui.Size = UDim2.new(4, 0, 1.2, 0)
-	nameplateGui.StudsOffset = Vector3.new(0, 1.4, 0)
+	nameplateGui.Size = UDim2.new(4 * sizeScale, 0, 1.2 * sizeScale, 0)
+	nameplateGui.StudsOffset = Vector3.new(0, 1.4 * sizeScale, 0)
 	nameplateGui.AlwaysOnTop = true
 	nameplateGui.Adornee = head
 	nameplateGui.Parent = head
@@ -81,6 +93,41 @@ local function buildModel(data, position)
 	return model
 end
 
+-- 등장 연출(15-1, 지시 [2] "그냥 나타나면 보스로 안 읽힌다"). 기본 파트만으로 만든다 -
+-- 바닥에서 퍼지는 경고 링 + 보스 본체 페이드인. 잡몹 스폰에는 안 쓴다(부르는 쪽에서
+-- data.isBoss일 때만 호출).
+local function playBossAppearEffect(model, position)
+	local ring = Instance.new("Part")
+	ring.Name = "BossAppearRing"
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Material = Enum.Material.Neon
+	ring.Color = Color3.fromRGB(200, 30, 30)
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.Transparency = 0.2
+	ring.Size = Vector3.new(0.2, 1, 1)
+	ring.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+	ring.Parent = Workspace
+
+	TweenService:Create(ring, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+		Size = Vector3.new(0.2, 40, 40),
+		Transparency = 1,
+	}):Play()
+	task.delay(0.6, function()
+		ring:Destroy()
+	end)
+
+	for _, part in ipairs(model:GetChildren()) do
+		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+			local targetTransparency = part.Transparency
+			part.Transparency = 1
+			TweenService:Create(part, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+				Transparency = targetTransparency,
+			}):Play()
+		end
+	end
+end
+
 -- 확정된 K/M/B/T 표기(NumberFormat)로 "현재HP/최대HP"를 갱신한다.
 function MonsterSpawner.updateHpLabel(model)
 	local head = model:FindFirstChild("Head")
@@ -100,11 +147,18 @@ function MonsterSpawner.spawn(data, position)
 	model.Parent = Workspace
 	MonsterState.init(model, data, position)
 	MonsterSpawner.updateHpLabel(model)
+	if data.isBoss then
+		playBossAppearEffect(model, position)
+	end
 	return model
 end
 
 -- 사망 처리. 정해진 스폰 자리에 그대로 리스폰한다 - 무작위 위치로 보내면 균등 배치가
 -- 흐트러지고 자리끼리 겹칠 수 있어서, 자리를 고정하는 편이 더 낫다고 판단했다.
+--
+-- 보스(isBoss)는 고정 스폰 격자(WorldConfig.spawns)에 속하지 않는 플레이어 전용 인스턴스라
+-- 리스폰시키지 않는다 - 다시 나타나는 시점은 BossEncounter.spawnFor가 "그 스테이지에
+-- 다시 들어왔을 때"로 직접 관리한다.
 function MonsterSpawner.despawn(model)
 	local data = MonsterState.getData(model)
 	local spawnPosition = MonsterState.getSpawnPosition(model)
@@ -117,9 +171,11 @@ function MonsterSpawner.despawn(model)
 		model:Destroy()
 	end)
 
-	task.delay(WorldConfig.spawns.respawnDelaySeconds, function()
-		MonsterSpawner.spawn(data, spawnPosition)
-	end)
+	if not data.isBoss then
+		task.delay(WorldConfig.spawns.respawnDelaySeconds, function()
+			MonsterSpawner.spawn(data, spawnPosition)
+		end)
+	end
 end
 
 return MonsterSpawner

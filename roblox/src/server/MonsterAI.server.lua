@@ -99,6 +99,30 @@ local function computeHitDamage(attack, targetPlayer)
 	return attack * (1 - reduction)
 end
 
+-- 데미지 적용 + 사망 처리 - tryAttack(잡몹·보스 평타)과 tryBossAttack(보스 예고 일격,
+-- 15-1)이 공유하는 유일한 지점이다. "때릴지 말지"(사거리·쿨다운)는 호출부마다 다르지만,
+-- "맞은 뒤에 뭘 하는가"는 공격 종류와 무관하게 항상 같다.
+local function applyHitToPlayer(targetPlayer, rawAttack)
+	local damage = computeHitDamage(rawAttack, targetPlayer)
+	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
+	PlayerState.setHp(targetPlayer, newHp)
+	syncHud(targetPlayer)
+
+	print(("[forge-game] 플레이어 피격: %s - %.2f 데미지 (남은 HP %.2f/%d)"):format(
+		targetPlayer.Name, damage, newHp, PlayerState.getMaxHp(targetPlayer)))
+
+	if newHp <= 0 then
+		print(("[forge-game] 플레이어 사망: %s"):format(targetPlayer.Name))
+		local character = targetPlayer.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			-- 실제 HP는 PlayerState가 관리한다. Humanoid.Health=0은 로블록스 리스폰
+			-- 처리(사냥터에 이미 있는 SpawnLocation으로 자동 복귀)를 트리거하는 신호일 뿐이다.
+			humanoid.Health = 0
+		end
+	end
+end
+
 -- 사거리 안이고 자기 쿨다운이 지났으면 플레이어를 때린다. 데미지는 PRD 확정 비율 모델
 -- (뺄셈이 아니라 감소율 나눗셈)을 쓴다 - 웹에서 뺄셈으로 만들었던 무적 버그 구조를 피한다.
 -- 9-5에서 피격 상한을 없앴다 - 상한은 즉사가 주는 "스펙이 모자란다"는 신호를 뭉갰다
@@ -120,24 +144,71 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	end
 	MonsterState.setLastAttackTick(model, now)
 
-	local damage = computeHitDamage(MonsterState.getAttack(model), targetPlayer)
-	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
-	PlayerState.setHp(targetPlayer, newHp)
-	syncHud(targetPlayer)
+	applyHitToPlayer(targetPlayer, MonsterState.getAttack(model))
+end
 
-	print(("[forge-game] 플레이어 피격: %s - %.2f 데미지 (남은 HP %.2f/%d)"):format(
-		targetPlayer.Name, damage, newHp, PlayerState.getMaxHp(targetPlayer)))
-
-	if newHp <= 0 then
-		print(("[forge-game] 플레이어 사망: %s"):format(targetPlayer.Name))
-		local character = targetPlayer.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			-- 실제 HP는 PlayerState가 관리한다. Humanoid.Health=0은 로블록스 리스폰
-			-- 처리(사냥터에 이미 있는 SpawnLocation으로 자동 복귀)를 트리거하는 신호일 뿐이다.
-			humanoid.Health = 0
-		end
+-- 추격을 놓치는 순간(대상 사망·퇴장·리쉬) 보스가 telegraph 도중이었으면 원상복구한다 -
+-- 안 하면 다음에 다시 어그로를 잡았을 때 이미 지난 예고 시각이 그대로 남아 재회 즉시
+-- "공짜 강타"가 나가거나, 색이 경고색으로 멈춘 채 남는다.
+local function resetBossPhaseIfNeeded(model, data)
+	if not data.isBoss or MonsterState.getBossPhase(model) ~= "telegraph" then
+		return
 	end
+	MonsterState.setBossPhase(model, "normal")
+	MonsterState.setBossNextHeavyAt(model, os.clock() + data.heavyAttackIntervalSeconds)
+	local body = model:FindFirstChild("Body")
+	if body then
+		body.Color = data.bodyColor
+	end
+end
+
+-- 보스 전용 - 예고 후 강한 일격(15-1, 지시 [3]에서 고른 유일한 긴장 장치). 평상시엔
+-- tryAttack과 완전히 같은 평타를 쓰다가, heavyAttackIntervalSeconds마다 한 번 "telegraph"
+-- 단계로 들어간다: telegraphWarmupSeconds 동안 제자리에 멈춰 색이 바뀌고(경고), 그 시간이
+-- 끝나는 순간 그 자리에 있던 플레이어만 heavyAttack(평타의 3배, 즉사급)을 맞는다 -
+-- 로블록스에 아직 웹의 대시·무적시간이 없으므로, 걸어서 attackRangeStuds 밖으로
+-- 벗어나는 것만으로 피할 수 있게 telegraphWarmupSeconds를 충분히 준다(플레이어 걷기
+-- 속도 16stud/s 기준 사거리 14stud를 벗어나기엔 1.5초로 넉넉하다).
+local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetRoot, dt)
+	local phase = MonsterState.getBossPhase(model)
+
+	if phase == "telegraph" then
+		local endsAt = MonsterState.getBossPhaseEndsAt(model)
+		if os.clock() < endsAt then
+			return -- 멈춰서 경고하는 중 - 움직이지도, 평타를 넣지도 않는다
+		end
+
+		-- 예고가 끝나는 이 순간의 거리만 본다 - 그 사이 벗어났으면 완전히 무효(빗나감).
+		if PlayerState.getHp(targetPlayer) > 0 then
+			local distance = (targetRoot.Position - monsterPosition).Magnitude
+			if distance <= data.attackRangeStuds then
+				applyHitToPlayer(targetPlayer, data.heavyAttack)
+			end
+		end
+
+		MonsterState.setBossPhase(model, "normal")
+		local body = model:FindFirstChild("Body")
+		if body then
+			body.Color = data.bodyColor
+		end
+		MonsterState.setBossNextHeavyAt(model, os.clock() + data.heavyAttackIntervalSeconds)
+		MonsterState.setLastAttackTick(model, os.clock()) -- 예고 직후 바로 평타가 또 나가지 않게
+		return
+	end
+
+	-- phase == "normal": 예고를 시작할 시점이 됐으면 멈춰 서서 경고색으로 바뀐다.
+	if os.clock() >= MonsterState.getBossNextHeavyAt(model) then
+		MonsterState.setBossPhase(model, "telegraph")
+		MonsterState.setBossPhaseEndsAt(model, os.clock() + data.telegraphWarmupSeconds)
+		local body = model:FindFirstChild("Body")
+		if body then
+			body.Color = data.telegraphColor
+		end
+		return
+	end
+
+	stepToward(model, monsterPosition, targetRoot.Position, data.moveSpeedStuds, dt)
+	tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 end
 
 RunService.Heartbeat:Connect(function(dt)
@@ -191,9 +262,12 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 멀어졌다 - 포기하고 돌아간다.
 					MonsterState.setAiState(model, "returning")
 					MonsterState.setAiTarget(model, nil)
+					resetBossPhaseIfNeeded(model, data)
 					if target then
 						target:SetAttribute("TickDamage", 0) -- 전투 종료 - 눈금 기준을 지운다
 					end
+				elseif data.isBoss then
+					tryBossAttack(model, data, position, target, targetRoot, dt)
 				else
 					stepToward(model, position, targetRoot.Position, data.moveSpeedStuds, dt)
 					tryAttack(model, data, position, target, targetRoot)

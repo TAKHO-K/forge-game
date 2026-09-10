@@ -93,9 +93,16 @@ player:GetAttributeChangedSignal("InfiniteStageBest"):Connect(updateLabels)
 updateLabels()
 
 -- 서버가 거절하면(최고+2 이상 등) Attribute가 안 바뀌므로 라벨은 그대로다 - 거절 자체를
--- 화면에 알리는 연출은 폴리시 단계로 미룬다(지시 [3] "기능 확인 수준").
+-- 화면에 알리는 연출은 폴리시 단계로 미룬다(지시 [3] "기능 확인 수준"). 15-1에서 이유가
+-- 두 가지로 늘었다 - 콘솔 메시지만이라도 구분해 둔다(reason 없는 옛 서버 응답도
+-- 방어적으로 처리).
 stageMoveResult.OnClientEvent:Connect(function(payload)
-	if payload.result == "rejected" then
+	if payload.result ~= "rejected" then
+		return
+	end
+	if payload.reason == "boss_locked" then
+		warn(("[forge-game] 스테이지 이동 거절됨 - 스테이지 %d 보스를 아직 못 깼다"):format(payload.requiredBossStage))
+	else
 		warn("[forge-game] 스테이지 이동 거절됨 - 요청 범위를 벗어났다")
 	end
 end)

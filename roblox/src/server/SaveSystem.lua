@@ -52,7 +52,10 @@ local function defaultProfile()
 		-- "미진입=0" 개념이 없어졌다 - 접속하면 바로 1단계다. infiniteBest(최고 도달
 		-- 단계)는 현재 단계와 분리한다 - 파밍하러 내려가면 현재 단계는 낮아져도 최고
 		-- 기록은 그대로 남아야 한다(PRD 20.12 경쟁 축과도 맞다).
-		stageProgress = { normal = 1, infinite = 1, infiniteBest = 1 },
+		-- bestBossCleared(15-1): 최고로 깬 보스 스테이지 - "0"은 아직 하나도 못 깼다는
+		-- 뜻이다(무한 진입 즉시 1단계인 infinite와 달리, 보스는 실제로 깨기 전엔 0이
+		-- 맞는 초기값이다). StageServer의 게이트 검사가 이 값을 기준으로 삼는다.
+		stageProgress = { normal = 1, infinite = 1, infiniteBest = 1, bestBossCleared = 0 },
 
 		inventorySlots = SaveConfig.defaultInventorySlots,
 
@@ -69,10 +72,10 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 일곱 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지금은 여덟 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
 -- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
 -- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입) -> 7(캐릭터 레벨 도입 +
--- 아이템 itemLevel 필드 도입).
+-- 아이템 itemLevel 필드 도입) -> 8(보스 처치 기록 bestBossCleared 도입, 15-1).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -148,6 +151,15 @@ local function migrate(data)
 			data.equipment.armor.itemLevel = data.equipment.armor.itemLevel or ((data.equipment.armor.dropStage or 1) + 25)
 		end
 		data.version = 7
+	end
+
+	if data.version < 8 then
+		-- v7까지 bestBossCleared 필드 자체가 없었다(보스가 15-1에서 처음 생겼다) - "아직
+		-- 하나도 못 깼다"가 정확한 과거 상태이므로 0으로 채운다(defaultProfile과 같은 값,
+		-- 유일하게 가능한 값이기도 하다 - 이 필드가 생기기 전엔 보스 자체가 없었으니
+		-- "이미 깬 보스"가 있을 수 없다).
+		data.stageProgress.bestBossCleared = data.stageProgress.bestBossCleared or 0
+		data.version = 8
 	end
 
 	data.savedAt = data.savedAt or 0
