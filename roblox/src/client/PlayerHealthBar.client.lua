@@ -10,12 +10,13 @@
 -- HP·눈금 기준값 전부 서버 Attribute(Hp/MaxHp/TickDamage)만 읽는다 - 서버
 -- PlayerState/MonsterAI.server.lua가 유일한 소스다.
 --
--- 16-1: 화면 상단 중앙에서 중앙 하단으로 옮긴다(디아블로·로스트아크식 - 전투 중 가장 많이
--- 보는 체력·쿨타임을 한곳에 모은다). 위치·부모만 바뀌고 게이지+눈금+숫자 구성은 그대로다.
--- 폭을 고정 픽셀(440)에서 화면 비율+상하한(SkillSlots·AttackInput과 같은 패턴)으로 바꿨다 -
--- 이 값이 화면 폭의 상당 부분을 차지하는 자리로 옮긴 만큼, 작은 폰에서 잘리면 안 된다.
--- 눈금(rebuildTicks)은 컨테이너 폭의 Scale 좌표로만 그려서 컨테이너가 늘어나거나 줄어도
--- 그대로 맞는다 - 폭 계산 방식을 바꿔도 눈금 로직은 손대지 않는다.
+-- 16-1: 화면 상단 중앙에서 중앙 하단으로 옮겼다(디아블로·로스트아크식). 16-2:
+-- `Claude outputs/hud-mockup.html`의 .hpbar 크기·색으로 다시 맞춘다 - 폭
+-- 440(16-1의 화면비율판) → 300 고정px, 높이 34 → 19. 화면 폭 상당 부분을 차지하던
+-- 16-1과 달리 300px면 어떤 폰 화면에서도 넉넉히 들어가 반응형 계산(Scale+상하한)이 더는
+-- 필요 없다 - 그래서 고정폭으로 되돌렸다(SkillSlots·AttackInput이 92/54px 고정값을 쓰는
+-- 것과 같은 이유). 눈금(rebuildTicks)은 컨테이너 폭의 Scale 좌표로만 그려서 폭이 바뀌어도
+-- 그대로 맞는다 - 이번에도 그 로직은 손대지 않았다.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,19 +25,17 @@ local RunService = game:GetService("RunService")
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
-local BAR_HEIGHT = 34
-local BAR_WIDTH_SCALE = 0.6
-local BAR_MIN_WIDTH, BAR_MAX_WIDTH = 260, 440
+local BAR_WIDTH, BAR_HEIGHT = 300, 19
 
--- 아래에서부터 쌓는 중앙 하단 묶음(체력바 → 스킬 슬롯)의 기준 오프셋. ExpBar(맨 하단, 높이
--- 26 + 여백 10)보다 위에 앉힌다 - SkillSlots.client.lua도 이 값 위에 자기 높이만큼 더 얹는다.
-local BOTTOM_OFFSET = 36
+-- 중앙 하단 묶음을 아래에서부터 쌓는다: 경험치바(15) + 여백(16) + 스킬행(92,
+-- SkillSlots.client.lua ROW_HEIGHT) + 여백(9, 목업 .cluster gap) = 132.
+local BOTTOM_OFFSET = 15 + 16 + 92 + 9
 
 -- 눈금이 이보다 많아지면(수십 개 이상) 낱개 가는 눈금 대신 대표 눈금 약 10개만
 -- 굵게 그린다 - 안 그러면 선이 겹쳐 안 보인다. 적을 땐 실제 타수를 그대로 보여준다.
 local MINOR_TICK_LIMIT = 20
 
-local NORMAL_FILL_COLOR = Color3.fromRGB(214, 60, 60)
+local NORMAL_FILL_TOP, NORMAL_FILL_BOTTOM = Color3.fromRGB(255, 90, 90), Color3.fromRGB(198, 40, 40)
 local DANGER_FILL_COLOR = Color3.fromRGB(255, 30, 30)
 
 local player = Players.LocalPlayer
@@ -50,23 +49,19 @@ local container = Instance.new("Frame")
 container.Name = "HealthBar"
 container.AnchorPoint = Vector2.new(0.5, 1)
 container.Position = UDim2.new(0.5, 0, 1, -BOTTOM_OFFSET)
-container.Size = UDim2.new(BAR_WIDTH_SCALE, 0, 0, BAR_HEIGHT)
-container.BackgroundColor3 = UIColors.panel
+container.Size = UDim2.new(0, BAR_WIDTH, 0, BAR_HEIGHT)
+container.BackgroundColor3 = UIColors.hpDark
 container.BorderSizePixel = 0
 container.ClipsDescendants = true
 container.Parent = screenGui
 
-local containerSizeConstraint = Instance.new("UISizeConstraint")
-containerSizeConstraint.MinSize = Vector2.new(BAR_MIN_WIDTH, BAR_HEIGHT)
-containerSizeConstraint.MaxSize = Vector2.new(BAR_MAX_WIDTH, BAR_HEIGHT)
-containerSizeConstraint.Parent = container
-
 local containerCorner = Instance.new("UICorner")
-containerCorner.CornerRadius = UDim.new(0, 6)
+containerCorner.CornerRadius = UDim.new(0, 4)
 containerCorner.Parent = container
 
 local containerStroke = Instance.new("UIStroke")
-containerStroke.Color = UIColors.border
+containerStroke.Color = UIColors.rim
+containerStroke.Transparency = UIColors.rimTransparency
 containerStroke.Thickness = 1
 containerStroke.Parent = container
 
@@ -82,10 +77,17 @@ dangerStroke.Parent = container
 local fill = Instance.new("Frame")
 fill.Name = "Fill"
 fill.BorderSizePixel = 0
-fill.BackgroundColor3 = NORMAL_FILL_COLOR
+fill.BackgroundColor3 = NORMAL_FILL_BOTTOM
 fill.Size = UDim2.new(1, 0, 1, 0)
 fill.ZIndex = 1
 fill.Parent = container
+
+-- 16-2: 목업의 linear-gradient(180deg,#FF5A5A,#C62828) - 위는 밝고 아래는 어둡다.
+-- Roblox UIGradient가 이 부분은 CSS보다 쉽다(이미지 없이 그대로 된다).
+local fillGradient = Instance.new("UIGradient")
+fillGradient.Color = ColorSequence.new(NORMAL_FILL_TOP, NORMAL_FILL_BOTTOM)
+fillGradient.Rotation = 90
+fillGradient.Parent = fill
 
 local tickHolder = Instance.new("Frame")
 tickHolder.Name = "Ticks"
@@ -100,13 +102,13 @@ hpLabel.BackgroundTransparency = 1
 hpLabel.Size = UDim2.new(1, 0, 1, 0)
 hpLabel.Text = ""
 hpLabel.Font = Enum.Font.GothamBold
-hpLabel.TextSize = 22
+hpLabel.TextSize = 12 -- 16-2: 바 높이가 34->19로 줄어든 만큼 글자도 목업 크기(11.5px)로.
 hpLabel.TextColor3 = Color3.new(1, 1, 1)
 hpLabel.ZIndex = 3
 hpLabel.Parent = container
 
 local hpLabelStroke = Instance.new("UIStroke")
-hpLabelStroke.Thickness = 2
+hpLabelStroke.Thickness = 1.5
 hpLabelStroke.Color = Color3.new(0, 0, 0)
 hpLabelStroke.Parent = hpLabel
 
@@ -191,11 +193,14 @@ updateTicks()
 
 RunService.RenderStepped:Connect(function()
 	if isDanger then
+		-- 위험 상태에선 그라디언트를 끄고 경고색 단색으로 덮는다 - 깜빡이는 빨강이
+		-- 두 톤 그라디언트보다 눈에 더 잘 띈다.
+		fillGradient.Enabled = false
 		fill.BackgroundColor3 = DANGER_FILL_COLOR
 		local pulse = (math.sin(os.clock() * 10) + 1) / 2
 		dangerStroke.Transparency = 1 - pulse
 	else
-		fill.BackgroundColor3 = NORMAL_FILL_COLOR
+		fillGradient.Enabled = true
 		dangerStroke.Transparency = 1
 	end
 end)

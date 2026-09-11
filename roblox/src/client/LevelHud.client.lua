@@ -1,48 +1,65 @@
--- 캐릭터 레벨 표시(16-1 [0]/목표 레이아웃의 "상단: 골드 / 경험치 레벨 / 현재 스테이지").
--- 골드(우상단)·스테이지(좌상단)는 이미 있었지만 레벨 상시 표시는 없었다(13-2 이후
--- LevelUpHud는 레벨업 "순간"에만 뜨는 토스트일 뿐 - 16-1 [0] 조사 결과). 상단 중앙의
--- 빈 자리에 작은 배지 하나만 놓는다. 진행률(%) 자체는 ExpBar.client.lua가 화면 맨 아래에서
--- 보여준다 - 여기는 숫자만 다룬다.
+-- 캐릭터 레벨 표시(16-1 신설 → 16-2에서 목업 재정렬). 상단 중앙 칩 행(TopChipsRow,
+-- StageUI.client.lua가 만든다)의 두 번째 칩(LayoutOrder=2, 골드=1·스테이지=3과 나란히).
+-- 진행률(%) 자체는 ExpBar.client.lua가 화면 맨 아래에서 보여준다 - 여기는 숫자만 다룬다.
+--
+-- 16-2: 목업의 .chip.lv는 테두리에 경험치 색(xp) 그라디언트를 줘서 다른 칩과 구분한다
+-- (CSS는 두 배경을 겹치는 트릭을 쓰지만, Roblox는 UIStroke에 UIGradient를 그대로 물릴 수
+-- 있어 오히려 더 간단하다 - "로블록스에 HTML엔 없는 게 있다"는 지시가 말한 경우).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local HudChip = require(script.Parent.HudChip)
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "LevelHudGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
+local topChipsRow = playerGui:WaitForChild("TopChipsGui"):WaitForChild("TopChipsRow")
+local chip = HudChip.new(topChipsRow, 2)
+chip.Name = "LevelChip"
 
--- 다른 상단 HUD(좌상단=스테이지, 우상단=골드)와 안 겹치는 상단 중앙에 둔다.
-local badge = Instance.new("Frame")
-badge.Name = "LevelBadge"
-badge.AnchorPoint = Vector2.new(0.5, 0)
-badge.Position = UDim2.new(0.5, 0, 0, 16)
-badge.Size = UDim2.new(0, 84, 0, 32)
-badge.BackgroundColor3 = UIColors.panel
-badge.BackgroundTransparency = UIColors.panelTransparency
-badge.BorderSizePixel = 0
-badge.Parent = screenGui
+-- 경험치색 그라디언트 테두리 - 위는 진하고 아래로 갈수록 옅어진다(목업의 세로 그라디언트
+-- 방향과 동일). Rim 테두리 위에 덧그리는 게 아니라 대체한다(같은 자리에 두 UIStroke를
+-- 두면 두꺼워지기만 하고 색은 나중 것만 보인다).
+local rimStroke = chip:FindFirstChild("Rim")
+if rimStroke then
+	rimStroke.Color = UIColors.xp
+	local gradient = Instance.new("UIGradient")
+	gradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.5),
+		NumberSequenceKeypoint.new(1, 0.88),
+	})
+	gradient.Rotation = 90
+	gradient.Parent = rimStroke
+end
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 6)
-corner.Parent = badge
+local prefixLabel = Instance.new("TextLabel")
+prefixLabel.Name = "Prefix"
+prefixLabel.LayoutOrder = 1
+prefixLabel.BackgroundTransparency = 1
+prefixLabel.AutomaticSize = Enum.AutomaticSize.X
+prefixLabel.Size = UDim2.new(0, 0, 1, 0)
+prefixLabel.Font = Enum.Font.GothamBold
+prefixLabel.TextSize = 13
+prefixLabel.TextColor3 = UIColors.textPrimary
+prefixLabel.Text = "Lv."
+prefixLabel.Parent = chip
 
-local label = Instance.new("TextLabel")
-label.Name = "LevelLabel"
-label.BackgroundTransparency = 1
-label.Size = UDim2.new(1, 0, 1, 0)
-label.Font = Enum.Font.GothamBold
-label.TextSize = 16
-label.TextColor3 = UIColors.textPrimary
-label.Text = "Lv.1"
-label.Parent = badge
+local levelLabel = Instance.new("TextLabel")
+levelLabel.Name = "LevelLabel"
+levelLabel.LayoutOrder = 2
+levelLabel.BackgroundTransparency = 1
+levelLabel.AutomaticSize = Enum.AutomaticSize.X
+levelLabel.Size = UDim2.new(0, 0, 1, 0)
+levelLabel.Font = Enum.Font.GothamBold
+levelLabel.TextSize = 13
+levelLabel.TextColor3 = UIColors.xp
+levelLabel.Text = "1"
+levelLabel.Parent = chip
 
 local function update()
-	label.Text = ("Lv.%d"):format(player:GetAttribute("CharacterLevel") or 1)
+	levelLabel.Text = tostring(player:GetAttribute("CharacterLevel") or 1)
 end
 
 player:GetAttributeChangedSignal("CharacterLevel"):Connect(update)

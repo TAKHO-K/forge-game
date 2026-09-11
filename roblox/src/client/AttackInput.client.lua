@@ -9,6 +9,7 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local HudIcons = require(script.Parent.HudIcons)
 local WeaponVisual = require(script.Parent.WeaponVisual)
 local HitEffects = require(script.Parent.HitEffects)
 local Projectiles = require(script.Parent.Projectiles)
@@ -21,66 +22,118 @@ local attackRequest = ReplicatedStorage:WaitForChild("AttackRequest")
 local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AttackGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
+-- 16-2: "플래시 게임 버튼 같다"는 피드백으로 만든 목업(Claude outputs/hud-mockup.html)의
+-- .attack을 옮긴다. 배치도 바뀌었다 - 화면 우하단 단독 버튼이 아니라 SkillSlots.client.lua가
+-- 만드는 중앙 하단 한 줄(Q·공격·E·대시)의 가운데 자리로 들어간다. 그 Row를 SkillSlots가
+-- 먼저 만들어 두므로 WaitForChild로 찾는다(두 파일이 이름·순서를 계약처럼 공유 - SkillSlots.
+-- client.lua 상단 주석 참고). 지름은 목업 값 92px 그대로 고정폭으로 쓴다 - SkillSlots가
+-- 행 높이(ROW_HEIGHT=92)를 이 값과 같다고 가정하고 있어서, 여기서 반응형 스케일을 넣으면
+-- 두 파일의 가정이 어긋난다(9-5의 "화면 비율로 키운다" 대신 목업처럼 고정값을 쓰기로
+-- 바꾼 이유). 92px는 9-5의 최소 터치 타깃(88px) 기준을 이미 넘는다.
+local skillSlotsGui = playerGui:WaitForChild("SkillSlotsGui")
+local centralRow = skillSlotsGui:WaitForChild("CentralRow")
 
--- 모바일 기준(9-5 개정): 고정 120px는 화면이 작은 폰에서 과하게 크고 태블릿에서는
--- 작아 보인다 - 화면 비율(Scale) 기준으로 잡고, 로블록스가 권장하는 최소 터치 타깃
--- (약 88px, 손가락 오조작 방지)과 최대 크기를 UISizeConstraint로 못박는다. 엄지가
--- 자연스럽게 닿는 우하단 코너 위치는 그대로 유지한다.
---
--- 16-1 [4] 폴리시: 크기·위치(위 기준)는 그대로 두고 밋밋했던 생김새만 다듬는다 - 팔레트
--- 색(UIColors.danger)로 통일하고, 테두리 링으로 눌리는 대상임을 분명히 하고, 눌렀을 때
--- 실제로 어두워지는 반응을 추가한다("눌린다" 기준). Activated는 탭이 끝나야 발화해 누르는
--- 즉시 반응을 못 주므로, 누르는 순간 자체는 InputBegan/InputEnded로 따로 잡는다.
+local ATTACK_DIAMETER = 92
+
 local attackButton = Instance.new("TextButton")
 attackButton.Name = "AttackButton"
-attackButton.AnchorPoint = Vector2.new(1, 1)
--- y오프셋 34: 맨 아래 경험치바(ExpBar.client.lua, 높이 26)와 겹치지 않게 8px 띄운다
--- (16-1 [0] Studio 실측으로 -24 그대로 두면 2px 겹치는 걸 확인했다).
-attackButton.Position = UDim2.new(1, -24, 1, -34)
-attackButton.Size = UDim2.new(0.14, 0, 0.14, 0)
-attackButton.Text = "공격"
-attackButton.TextScaled = true
-attackButton.Font = Enum.Font.GothamBold
-attackButton.TextColor3 = UIColors.textPrimary
-attackButton.BackgroundColor3 = UIColors.danger
+attackButton.LayoutOrder = 2 -- SkillSlots.client.lua의 ATTACK_LAYOUT_ORDER와 맞춘 값.
+attackButton.Size = UDim2.new(0, ATTACK_DIAMETER, 0, ATTACK_DIAMETER)
+attackButton.Text = "" -- 16-2: 글자를 없앤다 - "공격" 텍스트가 있으면 UI 요소로 읽힌다.
 attackButton.AutoButtonColor = false
-attackButton.Parent = screenGui
-
-local attackButtonAspectRatio = Instance.new("UIAspectRatioConstraint")
-attackButtonAspectRatio.AspectRatio = 1
-attackButtonAspectRatio.Parent = attackButton
-
-local attackButtonSizeConstraint = Instance.new("UISizeConstraint")
-attackButtonSizeConstraint.MinSize = Vector2.new(88, 88)
-attackButtonSizeConstraint.MaxSize = Vector2.new(150, 150)
-attackButtonSizeConstraint.Parent = attackButton
+-- 반투명(목업 --panel, transparency .28 근처) - 게임 화면이 버튼 너머로 비쳐야 한다.
+attackButton.BackgroundColor3 = UIColors.panel
+attackButton.BackgroundTransparency = UIColors.panelTransparency
+attackButton.Parent = centralRow
 
 local attackButtonCorner = Instance.new("UICorner")
 attackButtonCorner.CornerRadius = UDim.new(1, 0)
 attackButtonCorner.Parent = attackButton
 
-local attackButtonStroke = Instance.new("UIStroke")
-attackButtonStroke.Thickness = 3
-attackButtonStroke.Color = UIColors.textPrimary
-attackButtonStroke.Transparency = 0.4
-attackButtonStroke.Parent = attackButton
+-- 안쪽 온기(ember) 글로우 - CSS radial-gradient 대체. Roblox Frame엔 방사형 그라디언트가
+-- 없어 ember색 반투명 원을 버튼보다 작게 겹쳐 "가운데가 은은하게 밝다"는 인상만 옮긴다.
+local glow = Instance.new("Frame")
+glow.Name = "Glow"
+glow.AnchorPoint = Vector2.new(0.5, 0.5)
+glow.Position = UDim2.new(0.5, 0, 0.42, 0)
+glow.Size = UDim2.new(0.82, 0, 0.82, 0)
+glow.BackgroundColor3 = UIColors.ember
+glow.BackgroundTransparency = 0.88
+glow.BorderSizePixel = 0
+glow.ZIndex = 0
+glow.Parent = attackButton
 
-local ATTACK_BUTTON_PRESSED_COLOR = Color3.fromRGB(160, 40, 40)
+local glowCorner = Instance.new("UICorner")
+glowCorner.CornerRadius = UDim.new(1, 0)
+glowCorner.Parent = glow
+
+-- 굵은 흰 테두리 대신 얇은 두 겹 링(목업 .attack의 2px 메인 링 + ::before의 1px 바깥 보조
+-- 링). Roblox UIStroke는 하나만 붙일 수 있어(안팎 이중 테두리 불가) 보조 링은 버튼보다
+-- 살짝 큰 별도 프레임으로 만든다.
+local mainRing = Instance.new("UIStroke")
+mainRing.Thickness = 2
+mainRing.Color = UIColors.ember
+mainRing.Transparency = 0.38
+mainRing.Parent = attackButton
+
+local outerRing = Instance.new("Frame")
+outerRing.Name = "OuterRing"
+outerRing.AnchorPoint = Vector2.new(0.5, 0.5)
+outerRing.Position = UDim2.new(0.5, 0, 0.5, 0)
+outerRing.Size = UDim2.new(1, 12, 1, 12)
+outerRing.BackgroundTransparency = 1
+outerRing.ZIndex = 0
+outerRing.Parent = attackButton
+
+local outerRingCorner = Instance.new("UICorner")
+outerRingCorner.CornerRadius = UDim.new(1, 0)
+outerRingCorner.Parent = outerRing
+
+local outerRingStroke = Instance.new("UIStroke")
+outerRingStroke.Thickness = 1
+outerRingStroke.Color = UIColors.ember
+outerRingStroke.Transparency = 0.82
+outerRingStroke.Parent = outerRing
+
+-- 칼 아이콘(HudIcons.sword) - 텍스트 대신 이 하나만 남는다.
+local iconHolder = Instance.new("Frame")
+iconHolder.BackgroundTransparency = 1
+iconHolder.AnchorPoint = Vector2.new(0.5, 0.5)
+iconHolder.Position = UDim2.new(0.5, 0, 0.5, 0)
+iconHolder.Size = UDim2.new(0, 34, 0, 34)
+iconHolder.ZIndex = 2
+iconHolder.Parent = attackButton
+HudIcons.sword(iconHolder, 34)
+
+-- 눌림 반응 - 색이 아니라 스케일 0.93 + 글로우 강화(지시 2). UIScale로 버튼 전체를 줄이고,
+-- 글로우·링의 Transparency를 낮춰(더 진하게) "눌렸다"는 확실한 반응을 준다.
+local pressScale = Instance.new("UIScale")
+pressScale.Scale = 1
+pressScale.Parent = attackButton
+
+local function setPressed(pressed)
+	local scaleGoal = pressed and 0.93 or 1
+	local glowGoal = pressed and 0.7 or 0.88
+	local ringGoal = pressed and 0.15 or 0.38
+	local outerRingGoal = pressed and 0.55 or 0.82
+	local tweenInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(pressScale, tweenInfo, { Scale = scaleGoal }):Play()
+	TweenService:Create(glow, tweenInfo, { BackgroundTransparency = glowGoal }):Play()
+	TweenService:Create(mainRing, tweenInfo, { Transparency = ringGoal }):Play()
+	TweenService:Create(outerRingStroke, tweenInfo, { Transparency = outerRingGoal }):Play()
+end
 
 attackButton.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		attackButton.BackgroundColor3 = ATTACK_BUTTON_PRESSED_COLOR
+		setPressed(true)
 	end
 end)
 
 attackButton.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		attackButton.BackgroundColor3 = UIColors.danger
+		setPressed(false)
 	end
 end)
 

@@ -30,7 +30,7 @@ label.TextTransparency = 1
 label.BorderSizePixel = 0
 label.Font = Enum.Font.GothamBold
 label.TextSize = 28
-label.TextColor3 = UIColors.accent
+label.TextColor3 = UIColors.xp -- 16-2: accent 토큰이 gold/xp/ember로 갈라지면서 레벨업은 xp로.
 label.Text = ""
 label.Parent = screenGui
 

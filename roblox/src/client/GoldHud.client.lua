@@ -1,6 +1,7 @@
--- 골드 표시(10-1). 두 부분:
---   [1] 상시 카운터 - 화면 우상단, 작게. 체력바(상단 중앙)·공격 버튼(우하단)과 안 겹치는
---       빈 자리다. 서버 Attribute("Gold")만 읽는다 - PlayerProfile이 유일한 소스.
+-- 골드 표시(10-1 신설 → 16-2에서 목업 재정렬). 두 부분:
+--   [1] 상시 카운터 - 16-2부터 상단 중앙 칩 행(TopChipsRow, StageUI.client.lua가 만든다)의
+--       첫 칩. 목업 .chip.gold(색 점 + 숫자) 그대로. 서버 Attribute("Gold")만 읽는다 -
+--       PlayerProfile이 유일한 소스.
 --   [2] 처치 팝업 - 몬스터를 잡을 때마다 캐릭터 머리 위에 짧게 뜨는 "●골드 +N". 다른 UI를
 --       가리지 않게 화면 고정이 아니라 캐릭터에 붙는 BillboardGui로 만들었다.
 -- 골드 아이콘은 유니코드 이모지(🪙) 대신 동그란 색 Frame으로 그린다 - 로블록스 TextLabel은
@@ -15,12 +16,13 @@ local TweenService = game:GetService("TweenService")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local HudChip = require(script.Parent.HudChip)
 
 local goldGained = ReplicatedStorage:WaitForChild("GoldGained")
 
--- 16-1 [5]: 팔레트의 accent가 원래 이 골드색을 그대로 옮긴 값이라(주석 참고) 여기서
--- 팔레트를 참조하도록 바꿔도 실제로 보이는 색은 그대로다.
-local GOLD_COLOR = UIColors.accent
+-- 16-2: 팔레트가 재화·경험치·강조 색을 분리하면서(UIColors 16-2 개정 참고) 골드 전용
+-- "gold" 토큰이 생겼다 - 16-1까지 쓰던 "accent"는 이제 없다.
+local GOLD_COLOR = UIColors.gold
 
 -- 팝업이 화면에 떠 있는 시간. 데미지 숫자(CombatConfig.damageNumberLifetimeSeconds)와
 -- 다른 값이어도 되는 순수 연출 타이밍이라(9-5 개정 스택 오프셋처럼 이 파일에 로컬로 둔
@@ -28,14 +30,10 @@ local GOLD_COLOR = UIColors.accent
 local POPUP_LIFETIME_SECONDS = 1.0
 
 local player = Players.LocalPlayer
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "GoldHudGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
+local playerGui = player:WaitForChild("PlayerGui")
 
 -- 동그란 골드 아이콘 하나 만든다. parent만 다르게 재사용(카운터/팝업 둘 다 같은 모양).
-local function createCoinIcon(sizePixels)
+local function createCoinIcon(sizePixels, glow)
 	local icon = Instance.new("Frame")
 	icon.Name = "CoinIcon"
 	icon.BackgroundColor3 = GOLD_COLOR
@@ -44,31 +42,24 @@ local function createCoinIcon(sizePixels)
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(1, 0)
 	corner.Parent = icon
+	if glow then
+		-- 목업 .chip.gold .dot의 box-shadow 0 0 8px var(--gold) - Roblox엔 도형 자체의
+		-- 발광이 없어 UIStroke를 두껍고 흐리게(반투명) 둘러 은은한 번짐만 흉내 낸다.
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = GOLD_COLOR
+		stroke.Thickness = 3
+		stroke.Transparency = 0.7
+		stroke.Parent = icon
+	end
 	return icon
 end
 
-local counter = Instance.new("Frame")
-counter.Name = "GoldCounter"
-counter.AnchorPoint = Vector2.new(1, 0)
-counter.Position = UDim2.new(1, -16, 0, 16)
-counter.Size = UDim2.new(0, 110, 0, 32)
-counter.BackgroundColor3 = UIColors.panel
-counter.BackgroundTransparency = UIColors.panelTransparency
-counter.BorderSizePixel = 0
-counter.Parent = screenGui
+-- 16-2: 단독 카운터 패널 대신 상단 칩 행의 첫 칩(LayoutOrder=1, StageUI.client.lua 3번 참고).
+local topChipsRow = playerGui:WaitForChild("TopChipsGui"):WaitForChild("TopChipsRow")
+local counter = HudChip.new(topChipsRow, 1)
+counter.Name = "GoldChip"
 
-local counterCorner = Instance.new("UICorner")
-counterCorner.CornerRadius = UDim.new(0, 6)
-counterCorner.Parent = counter
-
-local counterLayout = Instance.new("UIListLayout")
-counterLayout.FillDirection = Enum.FillDirection.Horizontal
-counterLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-counterLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-counterLayout.Padding = UDim.new(0, 8)
-counterLayout.Parent = counter
-
-local counterCoin = createCoinIcon(16)
+local counterCoin = createCoinIcon(7, true)
 counterCoin.LayoutOrder = 1
 counterCoin.Parent = counter
 
@@ -76,11 +67,12 @@ local counterLabel = Instance.new("TextLabel")
 counterLabel.Name = "GoldLabel"
 counterLabel.LayoutOrder = 2
 counterLabel.BackgroundTransparency = 1
-counterLabel.Size = UDim2.new(0, 70, 1, 0)
+counterLabel.AutomaticSize = Enum.AutomaticSize.X
+counterLabel.Size = UDim2.new(0, 0, 1, 0)
 counterLabel.TextXAlignment = Enum.TextXAlignment.Left
 counterLabel.Font = Enum.Font.GothamBold
-counterLabel.TextSize = 18
-counterLabel.TextColor3 = GOLD_COLOR
+counterLabel.TextSize = 13
+counterLabel.TextColor3 = UIColors.textPrimary
 counterLabel.Text = "0"
 counterLabel.Parent = counter
 
