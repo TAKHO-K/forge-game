@@ -6,6 +6,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+
 local saveNotice = ReplicatedStorage:WaitForChild("SaveNotice")
 
 local DISPLAY_SECONDS = 6
@@ -22,14 +24,14 @@ label.Name = "SaveNoticeLabel"
 label.AnchorPoint = Vector2.new(0.5, 0)
 label.Position = UDim2.new(0.5, 0, 0, 64)
 label.Size = UDim2.new(0, 480, 0, 40)
-label.BackgroundColor3 = Color3.fromRGB(120, 20, 20)
+label.BackgroundColor3 = UIColors.danger
 label.BackgroundTransparency = 1
 label.TextTransparency = 1
 label.BorderSizePixel = 0
 label.Font = Enum.Font.GothamBold
 label.TextSize = 16
 label.TextWrapped = true
-label.TextColor3 = Color3.new(1, 1, 1)
+label.TextColor3 = UIColors.textPrimary
 label.Text = ""
 label.Parent = screenGui
 

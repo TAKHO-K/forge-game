@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local WeaponVisual = require(script.Parent.WeaponVisual)
 local HitEffects = require(script.Parent.HitEffects)
 local Projectiles = require(script.Parent.Projectiles)
@@ -30,14 +31,24 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 -- 작아 보인다 - 화면 비율(Scale) 기준으로 잡고, 로블록스가 권장하는 최소 터치 타깃
 -- (약 88px, 손가락 오조작 방지)과 최대 크기를 UISizeConstraint로 못박는다. 엄지가
 -- 자연스럽게 닿는 우하단 코너 위치는 그대로 유지한다.
+--
+-- 16-1 [4] 폴리시: 크기·위치(위 기준)는 그대로 두고 밋밋했던 생김새만 다듬는다 - 팔레트
+-- 색(UIColors.danger)로 통일하고, 테두리 링으로 눌리는 대상임을 분명히 하고, 눌렀을 때
+-- 실제로 어두워지는 반응을 추가한다("눌린다" 기준). Activated는 탭이 끝나야 발화해 누르는
+-- 즉시 반응을 못 주므로, 누르는 순간 자체는 InputBegan/InputEnded로 따로 잡는다.
 local attackButton = Instance.new("TextButton")
 attackButton.Name = "AttackButton"
 attackButton.AnchorPoint = Vector2.new(1, 1)
-attackButton.Position = UDim2.new(1, -24, 1, -24)
+-- y오프셋 34: 맨 아래 경험치바(ExpBar.client.lua, 높이 26)와 겹치지 않게 8px 띄운다
+-- (16-1 [0] Studio 실측으로 -24 그대로 두면 2px 겹치는 걸 확인했다).
+attackButton.Position = UDim2.new(1, -24, 1, -34)
 attackButton.Size = UDim2.new(0.14, 0, 0.14, 0)
 attackButton.Text = "공격"
 attackButton.TextScaled = true
-attackButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+attackButton.Font = Enum.Font.GothamBold
+attackButton.TextColor3 = UIColors.textPrimary
+attackButton.BackgroundColor3 = UIColors.danger
+attackButton.AutoButtonColor = false
 attackButton.Parent = screenGui
 
 local attackButtonAspectRatio = Instance.new("UIAspectRatioConstraint")
@@ -52,6 +63,26 @@ attackButtonSizeConstraint.Parent = attackButton
 local attackButtonCorner = Instance.new("UICorner")
 attackButtonCorner.CornerRadius = UDim.new(1, 0)
 attackButtonCorner.Parent = attackButton
+
+local attackButtonStroke = Instance.new("UIStroke")
+attackButtonStroke.Thickness = 3
+attackButtonStroke.Color = UIColors.textPrimary
+attackButtonStroke.Transparency = 0.4
+attackButtonStroke.Parent = attackButton
+
+local ATTACK_BUTTON_PRESSED_COLOR = Color3.fromRGB(160, 40, 40)
+
+attackButton.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		attackButton.BackgroundColor3 = ATTACK_BUTTON_PRESSED_COLOR
+	end
+end)
+
+attackButton.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		attackButton.BackgroundColor3 = UIColors.danger
+	end
+end)
 
 -- 스윙 모션은 서버 확인 없이 여기서 바로 재생한다(지시 사항 - "모션은 클라이언트에서
 -- 재생한다. 판정은 여전히 서버다. 둘을 섞지 마라"). 다만 버튼을 쿨다운보다 빨리 연타하면

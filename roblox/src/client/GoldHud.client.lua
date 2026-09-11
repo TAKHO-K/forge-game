@@ -14,10 +14,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
 local goldGained = ReplicatedStorage:WaitForChild("GoldGained")
 
-local GOLD_COLOR = Color3.fromRGB(255, 200, 60)
+-- 16-1 [5]: 팔레트의 accent가 원래 이 골드색을 그대로 옮긴 값이라(주석 참고) 여기서
+-- 팔레트를 참조하도록 바꿔도 실제로 보이는 색은 그대로다.
+local GOLD_COLOR = UIColors.accent
 
 -- 팝업이 화면에 떠 있는 시간. 데미지 숫자(CombatConfig.damageNumberLifetimeSeconds)와
 -- 다른 값이어도 되는 순수 연출 타이밍이라(9-5 개정 스택 오프셋처럼 이 파일에 로컬로 둔
@@ -49,8 +52,8 @@ counter.Name = "GoldCounter"
 counter.AnchorPoint = Vector2.new(1, 0)
 counter.Position = UDim2.new(1, -16, 0, 16)
 counter.Size = UDim2.new(0, 110, 0, 32)
-counter.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-counter.BackgroundTransparency = 0.2
+counter.BackgroundColor3 = UIColors.panel
+counter.BackgroundTransparency = UIColors.panelTransparency
 counter.BorderSizePixel = 0
 counter.Parent = screenGui
 

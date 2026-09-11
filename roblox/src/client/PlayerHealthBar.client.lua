@@ -9,14 +9,28 @@
 --       10,000 기준을 그대로 쓴다) + 이전보다 큰 글씨.
 -- HP·눈금 기준값 전부 서버 Attribute(Hp/MaxHp/TickDamage)만 읽는다 - 서버
 -- PlayerState/MonsterAI.server.lua가 유일한 소스다.
+--
+-- 16-1: 화면 상단 중앙에서 중앙 하단으로 옮긴다(디아블로·로스트아크식 - 전투 중 가장 많이
+-- 보는 체력·쿨타임을 한곳에 모은다). 위치·부모만 바뀌고 게이지+눈금+숫자 구성은 그대로다.
+-- 폭을 고정 픽셀(440)에서 화면 비율+상하한(SkillSlots·AttackInput과 같은 패턴)으로 바꿨다 -
+-- 이 값이 화면 폭의 상당 부분을 차지하는 자리로 옮긴 만큼, 작은 폰에서 잘리면 안 된다.
+-- 눈금(rebuildTicks)은 컨테이너 폭의 Scale 좌표로만 그려서 컨테이너가 늘어나거나 줄어도
+-- 그대로 맞는다 - 폭 계산 방식을 바꿔도 눈금 로직은 손대지 않는다.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
-local BAR_WIDTH, BAR_HEIGHT = 440, 34
+local BAR_HEIGHT = 34
+local BAR_WIDTH_SCALE = 0.6
+local BAR_MIN_WIDTH, BAR_MAX_WIDTH = 260, 440
+
+-- 아래에서부터 쌓는 중앙 하단 묶음(체력바 → 스킬 슬롯)의 기준 오프셋. ExpBar(맨 하단, 높이
+-- 26 + 여백 10)보다 위에 앉힌다 - SkillSlots.client.lua도 이 값 위에 자기 높이만큼 더 얹는다.
+local BOTTOM_OFFSET = 36
 
 -- 눈금이 이보다 많아지면(수십 개 이상) 낱개 가는 눈금 대신 대표 눈금 약 10개만
 -- 굵게 그린다 - 안 그러면 선이 겹쳐 안 보인다. 적을 땐 실제 타수를 그대로 보여준다.
@@ -34,17 +48,27 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local container = Instance.new("Frame")
 container.Name = "HealthBar"
-container.AnchorPoint = Vector2.new(0.5, 0)
-container.Position = UDim2.new(0.5, 0, 0, 20)
-container.Size = UDim2.new(0, BAR_WIDTH, 0, BAR_HEIGHT)
-container.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+container.AnchorPoint = Vector2.new(0.5, 1)
+container.Position = UDim2.new(0.5, 0, 1, -BOTTOM_OFFSET)
+container.Size = UDim2.new(BAR_WIDTH_SCALE, 0, 0, BAR_HEIGHT)
+container.BackgroundColor3 = UIColors.panel
 container.BorderSizePixel = 0
 container.ClipsDescendants = true
 container.Parent = screenGui
 
+local containerSizeConstraint = Instance.new("UISizeConstraint")
+containerSizeConstraint.MinSize = Vector2.new(BAR_MIN_WIDTH, BAR_HEIGHT)
+containerSizeConstraint.MaxSize = Vector2.new(BAR_MAX_WIDTH, BAR_HEIGHT)
+containerSizeConstraint.Parent = container
+
 local containerCorner = Instance.new("UICorner")
 containerCorner.CornerRadius = UDim.new(0, 6)
 containerCorner.Parent = container
+
+local containerStroke = Instance.new("UIStroke")
+containerStroke.Color = UIColors.border
+containerStroke.Thickness = 1
+containerStroke.Parent = container
 
 -- 위험 경고(9-5 개정) - "3칸 이하" 대신 "남은 눈금 1개 이하"로 다시 정의했다.
 -- 상한을 없앤 지금은 칸 개념 자체가 없고, 눈금이 진짜 위험도를 나타내기 때문이다.

@@ -6,6 +6,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+
 local levelUp = ReplicatedStorage:WaitForChild("LevelUp")
 
 local DISPLAY_SECONDS = 2
@@ -28,7 +30,7 @@ label.TextTransparency = 1
 label.BorderSizePixel = 0
 label.Font = Enum.Font.GothamBold
 label.TextSize = 28
-label.TextColor3 = Color3.fromRGB(255, 200, 60)
+label.TextColor3 = UIColors.accent
 label.Text = ""
 label.Parent = screenGui
 

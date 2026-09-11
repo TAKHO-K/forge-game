@@ -5,6 +5,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+
 local stageMoveRequest = ReplicatedStorage:WaitForChild("StageMoveRequest")
 local stageMoveResult = ReplicatedStorage:WaitForChild("StageMoveResult")
 
@@ -22,8 +24,8 @@ panel.Name = "StagePanel"
 panel.AnchorPoint = Vector2.new(0, 0)
 panel.Position = UDim2.new(0, 16, 0, 16)
 panel.Size = UDim2.new(0, 170, 0, 70)
-panel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-panel.BackgroundTransparency = 0.2
+panel.BackgroundColor3 = UIColors.panel
+panel.BackgroundTransparency = UIColors.panelTransparency
 panel.BorderSizePixel = 0
 panel.Parent = screenGui
 
@@ -38,7 +40,7 @@ stageLabel.Position = UDim2.new(0, 8, 0, 4)
 stageLabel.Size = UDim2.new(1, -16, 0, 24)
 stageLabel.Font = Enum.Font.GothamBold
 stageLabel.TextSize = 16
-stageLabel.TextColor3 = Color3.new(1, 1, 1)
+stageLabel.TextColor3 = UIColors.textPrimary
 stageLabel.TextXAlignment = Enum.TextXAlignment.Left
 stageLabel.Text = "스테이지 -"
 stageLabel.Parent = panel
@@ -50,7 +52,7 @@ bestLabel.Position = UDim2.new(0, 8, 0, 26)
 bestLabel.Size = UDim2.new(1, -16, 0, 18)
 bestLabel.Font = Enum.Font.Gotham
 bestLabel.TextSize = 13
-bestLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+bestLabel.TextColor3 = UIColors.textSecondary
 bestLabel.TextXAlignment = Enum.TextXAlignment.Left
 bestLabel.Text = "최고 기록 -"
 bestLabel.Parent = panel
@@ -61,8 +63,8 @@ local function makeMoveButton(text, xOffset)
 	button.Position = UDim2.new(0, xOffset, 0, 46)
 	button.Font = Enum.Font.GothamBold
 	button.TextSize = 14
-	button.TextColor3 = Color3.new(1, 1, 1)
-	button.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+	button.TextColor3 = UIColors.textPrimary
+	button.BackgroundColor3 = UIColors.border
 	button.Text = text
 	button.Parent = panel
 	return button

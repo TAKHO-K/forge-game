@@ -65,10 +65,12 @@ for i, classId in ipairs(ClassData.order) do
 end
 
 -- 재변경용 상시 버튼(좌하단 - 강화 UI는 화면 중앙 하단, 공격 버튼은 우하단이라 겹치지 않는다).
+-- y오프셋 34: 16-1에서 생긴 맨 아래 경험치바(ExpBar.client.lua, 높이 26)와 겹치지 않게
+-- 8px 띄운다(Studio 실측으로 -24 그대로 두면 2px 겹치는 걸 확인했다).
 local reopenButton = Instance.new("TextButton")
 reopenButton.Name = "ClassReopenButton"
 reopenButton.AnchorPoint = Vector2.new(0, 1)
-reopenButton.Position = UDim2.new(0, 24, 1, -24)
+reopenButton.Position = UDim2.new(0, 24, 1, -34)
 reopenButton.Size = UDim2.new(0, 90, 0, 36)
 reopenButton.Text = "직업 변경"
 reopenButton.Font = Enum.Font.Gotham
