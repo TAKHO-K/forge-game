@@ -33,13 +33,13 @@
 
 local ArmorData = require(script.Parent.ArmorData)
 local CombatConfig = require(script.Parent.CombatConfig)
+local CharacterLevelConfig = require(script.Parent.CharacterLevelConfig)
 
 local MonsterData = {}
 
 -- 드랍 등급 확률표(웹 data/items.js DROP_GRADE_TABLE, 16-5 조사로 확인한 값 그대로,
--- index=tier). 이번 세션은 이 표를 실제 드랍 판정에 연결하지 않는다(다음 세션 몫) - 지금은
--- tier별 "기대 장비 가치" E[g|t]를 계산하는 입력으로만 쓴다. 다음 세션이 드랍표를 열 때
--- 이 자리에서 그대로 가져다 쓰면 된다(단일 출처 유지).
+-- index=tier). tier별 "기대 장비 가치" E[g|t] 계산의 입력이자, 17-1부터 Loot.rollArmorDrop이
+-- 실제 드랍 판정에도 이 표를 그대로 읽는다(단일 출처 유지).
 MonsterData.dropGradeTableByTier = {
 	{ normal = 0.90, rare = 0.10 },
 	{ normal = 0.70, rare = 0.27, epic = 0.03 },
@@ -101,7 +101,7 @@ for tierIndex, info in ipairs(TIER_INFO) do
 	local hpMultiplier = r ^ p
 	local attackMultiplier = r ^ (p - 1)
 	local goldMultiplier = r ^ p
-	local itemLevelBonus = r ^ (p - 1) -- 다음 세션이 드랍표에 연결하기 전까지는 아무도 안 읽는다.
+	local itemLevelBonus = r ^ (p - 1) -- 17-1부터 Loot.rollArmorDrop이 드랍 itemLevel에 곱한다.
 	local sizeScale = r ^ 0.5
 
 	local hp = BASE_HP * hpMultiplier
@@ -114,10 +114,14 @@ for tierIndex, info in ipairs(TIER_INFO) do
 		displayName = info.displayName,
 		hp = hp,
 		attack = attack,
-		-- 처치 경험치(13-2) - tier1이 이미 goldDrop/2 비율을 썼다(웹 전 몬스터 공통 비율을
-		-- 재사용한 값, 원래 MonsterData.lua 주석 참고) - 다른 tier도 같은 비율을 유지한다.
 		goldDrop = goldDrop,
-		expReward = goldDrop / 2,
+		-- 처치 경험치(13-2, 17-1에서 공식 교체) - "몬스터 경험치는 그 몬스터의 최대 HP에
+		-- 비례한다"(17-1 [0] 설계)는 원칙대로 hp × monsterExpCoefficient로 계산한다.
+		-- InfiniteStage.getExpReward(entry.data.expReward, stage)가 이 stage1 기준값에
+		-- 그대로 stage 배율을 곱하므로(goldDrop·attack과 같은 패턴), 실제 처치 시점 경험치는
+		-- 결과적으로 "그 순간 몬스터의 최대 HP × coefficient"와 정확히 같다(HP도 같은
+		-- 배율로 스케일되므로).
+		expReward = hp * CharacterLevelConfig.monsterExpCoefficient,
 		itemLevelBonus = itemLevelBonus,
 		rewardRatio = r,
 

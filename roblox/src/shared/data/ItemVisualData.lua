@@ -12,8 +12,7 @@
 -- 갑옷만 별도 배율표(ArmorData.grades[].defenseGradeMultiplier, PRD 7.0 각주가 정의한
 -- "무한 모드 데미지 재설계용" 전용표)를 쓰고 나머지 두 부위는 웹의 일반 배율을 그대로
 -- 쓴다는 16-5 조사 결과를 그대로 반영했다 - 두 표를 섞으면 안 된다(단일 출처 원칙).
--- 지금 실제로 드랍되는 건 일반/희귀뿐이다(ArmorData.gradeRollTable) - 나머지 5등급은
--- 이 표에 값만 미리 채워 둔다(드랍표 자체를 여는 건 다음 세션 몫).
+-- 17-1부터 7등급 전부 실제로 드랍된다(ArmorData.gradeOrder, MonsterData.dropGradeTableByTier).
 return {
 	gradeVisuals = {
 		normal = {

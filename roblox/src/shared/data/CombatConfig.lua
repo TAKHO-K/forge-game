@@ -29,22 +29,27 @@ return {
 	--   피해감소율 = 방어력 / (방어력 + damageReductionAlpha × 몬스터공격력)
 	--   받는 데미지 = 몬스터공격력 × (1 − 피해감소율)
 	--
-	-- 13-3에서 0.072 -> 0.2029104로 재보정(PRD 20.24). 13-2가 장비 방어력 보너스의 기준을
-	-- dropStage에서 itemLevel로 바꾸면서, 보너스 자체가 정확히 c=2.44×1.155=2.8182배가
-	-- 됐다(등급·레벨 무관 - CharacterLevel 레벨25 정점 2.44에 InfiniteStageConfig.growthRate
-	-- 1.155가 곱해진 것). 피해감소율 = D/(D+αA)에서 D가 c배 되면 α도 c배 올려야
-	-- (cD)/(cD+cαA) = D/(D+αA)로 분자분모의 c가 약분되어 감소율이 그대로 보존된다 -
-	-- 20.11-4가 α를 역산했던 "완전무장" 앵커(장비 보너스가 CombatConfig.playerDefense=5를
-	-- 압도하는 상태)를 그대로 유지하는 선택이다(20.24, 사용자 승인).
-	--
-	-- 반올림하지 않는다 - 아래 값은 0.072 * 2.44 * 1.155의 정확한 곱이다.
-	--
-	-- 알아둘 것: 이 c배 보존은 "장비 보너스"에만 정확히 성립한다. CombatConfig.playerDefense
-	-- (레벨 무관 고정값 5)는 이번 스케일링의 영향을 받지 않고 그대로 더해지므로, 미착용·
-	-- 저레벨(장비 보너스가 5에 비해 작은) 구간은 이 상쇄가 근사적으로만 성립하고 완전히
-	-- 정확하지는 않다(20.24 - 미결 항목으로 기록). "완전무장"에 가까울수록(장비 보너스가
-	-- 5를 압도할수록) 근사가 정확해진다 - 이번 재보정은 그 완전무장 앵커를 우선한 결정이다.
-	damageReductionAlpha = 0.072 * 2.44 * 1.155, -- = 0.2029104
+	-- 17-1에서 0.2029104 -> 0.023846으로 재보정. 13-3(20.24)의 "완전무장 앵커"는 캐릭터
+	-- 레벨25 부근에서 역산한 값이라, 레벨100(itemLevel100, 스테이지100)까지 그대로 끌고
+	-- 가면 생존 타수가 사실상 0으로 붕괴한다는 게 17-1 [0] 실측으로 드러났다(maxHp가
+	-- CombatConfig.playerMaxHp=10에 고정된 채 몬스터공격력만 무한히 자랐던 게 근본
+	-- 원인 - 아래 maxHpBonusBase 도입으로 그 축을 새로 열었다). 새 앵커: 캐릭터레벨100 +
+	-- 갑옷/장갑/신발 전부 itemLevel100(일반등급), bow 클래스, 목표 생존 타수 7대.
+	-- maxHpBonusBase(300)를 반영한 뒤 이 앵커를 만족하도록 역산한 값이 아래 상수다 -
+	-- HP_BASE(300)와 defenseFlat이 몬스터공격력과 같은 k=1.155로 자라므로(CharacterLevel.
+	-- getItemLevelMultiplier), 이 α는 레벨50~200+ 전 구간에서 7대로 안정된다(단일
+	-- 레벨에서만 맞는 값이 아니다 - 17-1 [0] 보고서 참고). 반올림값이라 정확한 유도식은
+	-- 없다 - 목표식 hits=maxHp×(D+αA)/(αA²)=7을 α에 대해 풀어 역산했다.
+	damageReductionAlpha = 0.023846,
+
+	-- 최대체력 성장(17-1, PRD-forge-game-roblox.md 20.11-4 "maxHp 성장 경로"가 이미
+	-- 정해 둔 값을 그대로 가져온다 - 이번 세션 전까지 로블록스에 구현이 안 돼 있었다).
+	-- 갑옷에서만 나온다(defenseFlat과 나란히, 등급은 안 본다) - Loot.getMaxHpBonus 참고.
+	--   maxHpBonus(itemLevel) = maxHpBonusBase × CharacterLevel.getItemLevelMultiplier(itemLevel)
+	-- defenseFlat과 완전히 같은 함수(같은 k=1.155)를 재사용한다 - 그래야 몬스터공격력
+	-- 대비 "받는 피해/최대체력" 비율이 스테이지 무관 상수로 수렴한다(PRD 20.11-4 검증
+	-- 그대로, 17-1 [0]에서 레벨50~200+로 재확인).
+	maxHpBonusBase = 300,
 
 	-- 웹 BALANCE.playerDefense=5 그대로. 클래스 배율은 10-3부터 PlayerCombat.getDefense가
 	-- 이 값에 곱한다 - 여긴 배율 적용 전 기본값만 남는다.
@@ -64,4 +69,11 @@ return {
 	comboHitEvery = 3, -- N번째 공격마다 강타
 	comboHitMultiplier = 1.8,
 	comboResetWindowSeconds = 2, -- 이 시간 동안 공격 없으면 콤보 카운터 초기화
+
+	-- 자동 체력회복(17-1). 마지막 피격 후 이 시간이 지나면 회복이 시작되고, 피격되면 즉시
+	-- 중단·리셋된다(PlayerState.setLastHitAt). 회복 속도를 고정 수치가 아니라 "최대체력의
+	-- %/초"로 정의한 이유 - 최대체력이 레벨에 따라 지수적으로 커지므로(maxHpBonusBase),
+	-- 고정 수치는 후반에 무의미해진다(초당 1처럼 고정하면 레벨100에서 사실상 0%/초와 같다).
+	regenDelaySeconds = 5,
+	regenPercentPerSecond = 0.04, -- 25초면 만피
 }

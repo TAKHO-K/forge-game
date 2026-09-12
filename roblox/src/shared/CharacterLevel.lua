@@ -85,4 +85,15 @@ function CharacterLevel.getItemLevelMultiplier(level)
 	return PEAK_MULTIPLIER * (InfiniteStageConfig.growthRate ^ (level - MAX_FINITE_LEVEL))
 end
 
+-- 장갑·신발(attackPercent/speedPercent) 전용 - 레벨25에서 동결한다(PRD-forge-game-roblox.md
+-- 20.11-4 "attackPercent/speedPercent는 레벨25에서 동결, defenseFlat·maxHpBonus는 레벨25
+-- 이후 k=1.155로 재성장을 연다"). 이유: 공격력 계열은 이미 무기 배율
+-- (getWeaponExpMultiplier)이 레벨25 이후 지수 성장을 맡고 있다 - 장갑 공격력%까지 같이
+-- 무한 성장하면 두 지수가 곱으로 겹쳐(사실상 지수의 지수) 처치 시간이 순식간에 0으로
+-- 붕괴한다(17-1 [0]에서 실측 확인 - 레벨100에서 처치 시간이 1억분의 1초로 붕괴했었다).
+-- defenseFlat·maxHpBonus는 그런 이중 계산 상대가 없어 동결하지 않는다(위 함수 그대로 재사용).
+function CharacterLevel.getItemLevelMultiplierFrozen(level)
+	return CharacterLevel.getItemLevelMultiplier(math.min(level, MAX_FINITE_LEVEL))
+end
+
 return CharacterLevel

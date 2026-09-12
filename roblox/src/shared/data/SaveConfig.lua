@@ -3,6 +3,13 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
+	-- 12(17-1) - 인벤토리·착용 아이템에 없던 tierIndex 필드를 1로 소급 채움(드랍표를
+	-- tier별로 실제 연결하면서 생긴 필드 - 그 전엔 전부 tier1 표 하나로만 굴렸다).
+	-- SaveSystem.migrate()의 v11->v12 참고.
+	-- 11(17-1) - 캐릭터 레벨 EXP 곡선 26+ 구간 공비를 1.216->1.155로 재보정(몬스터 HP
+	-- 공비와 맞춤). 기존 characterExp를 옛 공식으로 레벨을 구한 뒤 새 공식의 그 레벨
+	-- 임계값으로 다시 맞춰 레벨이 그대로 유지되게 한다. SaveSystem.migrate()의
+	-- v10->v11 참고.
 	-- 10(16-6) - 기존 아이템(인벤토리·착용 갑옷)에 없던 part 필드를 "armor"로 소급 채움 -
 	-- 16-6 전엔 갑옷만 드랍돼 부위 구분이 없었다. SaveSystem.migrate()의 v9->v10 참고.
 	-- 9(16-6) - equipment.boots(항상 nil이던 죽은 필드명)를 equipment.shoes로 정리 + 장갑·
@@ -15,7 +22,7 @@ return {
 	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
 	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
 	-- 필드(classId) 추가.
-	saveVersion = 10,
+	saveVersion = 12,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

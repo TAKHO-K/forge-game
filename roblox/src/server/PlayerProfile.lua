@@ -8,9 +8,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local InventorySync = require(script.Parent.InventorySync)
+local PlayerState = require(script.Parent.PlayerState)
 
 local PlayerProfile = {}
 
@@ -41,6 +43,8 @@ function PlayerProfile.init(player, profile)
 	player:SetAttribute("BestBossCleared", profile.stageProgress.bestBossCleared)
 	-- 신발 배율(16-6) - 로드된 저장에 이미 신발이 있을 수 있으니 접속 직후 한 번 맞춘다.
 	PlayerProfile.refreshMovementSpeed(player)
+	-- 최대체력(17-1) - 로드된 저장에 이미 갑옷이 있을 수 있으니 접속 직후 한 번 맞춘다.
+	PlayerProfile.refreshMaxHp(player)
 end
 
 -- 저장 시점에 SaveSystem이 통째로 넘겨받아 쓴다.
@@ -206,6 +210,28 @@ function PlayerProfile.getAttackPercentBonus(player)
 	return Loot.getGlovesAttackPercent(profile and profile.equipment.gloves)
 end
 
+-- 최대체력 재계산(17-1) - 갑옷 장착/해제·로드 직후마다 호출한다(refreshMovementSpeed와
+-- 같은 패턴). 갑옷 미착용이면 Loot.getMaxHpBonus가 0을 돌려줘 CombatConfig.playerMaxHp
+-- 그대로 유지된다. Hp/MaxHp Attribute도 여기서 같이 맞춘다 - PlayerState가 유일한 HP
+-- 소스라는 원칙대로, HP가 바뀌는 이 지점에서도 클라이언트(PlayerHealthBar.client.lua)가
+-- 보는 Attribute를 동기화해야 한다(MonsterAI.server.lua의 syncHud와 같은 이유 - 그쪽은
+-- 피격·리스폰 경로만 알고 장비 교체는 모른다). 캐릭터가 아직 없어 PlayerState.init 전이면
+-- (로드 중) get 함수들이 nil을 돌려주는데, Attribute에 nil을 주면 그 값이 지워지므로
+-- 안전하게 건너뛴다.
+function PlayerProfile.refreshMaxHp(player)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	local bonus = Loot.getMaxHpBonus(profile.equipment.armor)
+	PlayerState.setMaxHp(player, CombatConfig.playerMaxHp + bonus)
+	local hp, maxHp = PlayerState.getHp(player), PlayerState.getMaxHp(player)
+	if hp and maxHp then
+		player:SetAttribute("Hp", hp)
+		player:SetAttribute("MaxHp", maxHp)
+	end
+end
+
 -- 신발 착용/해제·로드 직후마다 호출한다(16-6) - 실제 이동속도(Humanoid.WalkSpeed)와
 -- 클라이언트가 공격 쿨다운 예측에 쓰는 Attribute를 같이 맞춘다. 캐릭터가 아직 없으면
 -- (로드 중·리스폰 사이) WalkSpeed는 건너뛴다 - 아래 PlayerAdded/CharacterAdded 훅이
@@ -272,6 +298,8 @@ function PlayerProfile.equipItem(player, index)
 	InventorySync.push(player, profile)
 	if part == "shoes" then
 		PlayerProfile.refreshMovementSpeed(player)
+	elseif part == "armor" then
+		PlayerProfile.refreshMaxHp(player)
 	end
 	return true
 end
@@ -297,6 +325,8 @@ function PlayerProfile.unequipItem(player, part)
 	InventorySync.push(player, profile)
 	if part == "shoes" then
 		PlayerProfile.refreshMovementSpeed(player)
+	elseif part == "armor" then
+		PlayerProfile.refreshMaxHp(player)
 	end
 	return true
 end

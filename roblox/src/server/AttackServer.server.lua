@@ -156,9 +156,11 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		-- 인벤토리가 가득 찬 경우도 여기서 취소하지 않는다 - "땅에 있는데 못 줍는" 상태로
 		-- 남겨 둔다(14-1 판단, ItemDropServer 참고).
 		-- 보스는 확정 드랍(15-1, 지시 [4]) - 잡몹과 같은 25% 확률·등급 굴림을 쓰지 않는다.
+		-- 잡몹은 자기 tier(16-6, 17-1부터 드랍표에 실제로 연결)의 등급 확률표를 쓴다 - 보스는
+		-- 항상 tier1 기준(Loot.rollBossArmorDrop 내부에서 고정)이라 tierIndex를 안 넘긴다.
 		local armorDrop = isBoss
 			and Loot.rollBossArmorDrop(dropStage, newLevel or oldLevel)
-			or Loot.rollArmorDrop(dropStage, newLevel or oldLevel)
+			or Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex)
 		if armorDrop then
 			ItemDropSpawner.spawn(armorDrop, deathPosition, player)
 		end

@@ -8,13 +8,14 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 
 local PlayerState = {}
 
--- [Player] = { hp, maxHp }
+-- [Player] = { hp, maxHp, lastHitAt(17-1, 자동회복 5초 대기 타이머 기준 시각, os.clock()) }
 local players = {}
 
 function PlayerState.init(player)
 	players[player] = {
 		hp = CombatConfig.playerMaxHp,
 		maxHp = CombatConfig.playerMaxHp,
+		lastHitAt = nil,
 	}
 end
 
@@ -40,6 +41,33 @@ function PlayerState.setHp(player, value)
 	local entry = players[player]
 	if entry then
 		entry.hp = value
+	end
+end
+
+-- 갑옷 장착/해제·로드 직후마다 호출한다(17-1, PlayerProfile.refreshMaxHp). 최대체력이
+-- 늘어도 현재 체력을 자동으로 채우지 않는다 - 자동회복(PlayerRegen.server.lua)이 곧 채운다.
+-- 줄어드는 경우(장비 해제)엔 현재 체력을 새 상한으로 clamp만 한다 - 장비를 벗었다고
+-- 즉사하면 안 된다.
+function PlayerState.setMaxHp(player, newMaxHp)
+	local entry = players[player]
+	if not entry then
+		return
+	end
+	entry.maxHp = newMaxHp
+	entry.hp = math.min(entry.hp, entry.maxHp)
+end
+
+function PlayerState.getLastHitAt(player)
+	local entry = players[player]
+	return entry and entry.lastHitAt
+end
+
+-- 피격마다 호출한다(MonsterAI.server.lua의 applyHitToPlayer) - 자동회복의 "마지막 피격
+-- 후 5초" 타이머 기준점이다.
+function PlayerState.setLastHitAt(player, value)
+	local entry = players[player]
+	if entry then
+		entry.lastHitAt = value
 	end
 end
 

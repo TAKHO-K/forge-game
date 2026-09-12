@@ -7,6 +7,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
+local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 
 local SaveSystem = {}
 
@@ -75,11 +77,13 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 열 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지금은 12단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
 -- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
 -- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입) -> 7(캐릭터 레벨 도입 +
 -- 아이템 itemLevel 필드 도입) -> 8(보스 처치 기록 bestBossCleared 도입, 15-1)
--- -> 9(equipment.boots -> shoes 이름 정리, 16-6) -> 10(아이템 part 필드 소급 도입, 16-6).
+-- -> 9(equipment.boots -> shoes 이름 정리, 16-6) -> 10(아이템 part 필드 소급 도입, 16-6)
+-- -> 11(캐릭터 레벨 EXP 곡선 26+ 구간 재보정, 17-1) -> 12(아이템 tierIndex 필드 소급
+-- 도입, 17-1).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -189,6 +193,67 @@ local function migrate(data)
 			data.equipment.armor.part = data.equipment.armor.part or "armor"
 		end
 		data.version = 10
+	end
+
+	if data.version < 11 then
+		-- 17-1: 캐릭터 레벨 EXP 곡선 26+ 구간 공비를 1.216/0.216 -> 1.155/0.155로 바꿨다
+		-- (CharacterLevelConfig.lua 주석 참고). 이 재보정만으로 기존 characterExp가 새
+		-- 공식에서 다른 레벨로 재해석되면 안 된다 - 옛 공식(아래에 리터럴로 그대로 남긴다,
+		-- CharacterLevelConfig는 이미 새 값으로 바뀌어 있어 재사용할 수 없다)으로 먼저
+		-- 레벨을 구하고, 그 레벨의 새 공식 상 필요 누적치로 characterExp를 다시 맞춘다 -
+		-- 레벨은 그대로 유지되고 레벨 내 진행률만 0으로 리셋된다(레벨이 오르내리는 것보다
+		-- 안전한 쪽 - v7 마이그레이션의 "저장 무손실 승계" 원칙과 같다).
+		local OLD_RATIO, OLD_DIVISOR, OLD_BASE = 1.216, 0.216, 50
+		local MAX_FINITE_LEVEL = #CharacterLevelConfig.weaponLevelExp -- 25, 바뀐 적 없다
+
+		local function oldExpFormula(level)
+			return OLD_BASE * (OLD_RATIO ^ (level - 1) - 1) / OLD_DIVISOR
+		end
+		local oldPeakFormula = oldExpFormula(MAX_FINITE_LEVEL)
+
+		local function oldGetExpForLevel(level)
+			if level <= MAX_FINITE_LEVEL then
+				return CharacterLevelConfig.weaponLevelExp[level]
+			end
+			return CharacterLevelConfig.weaponLevelExp[MAX_FINITE_LEVEL] + (oldExpFormula(level) - oldPeakFormula)
+		end
+
+		local function oldGetLevelFromExp(exp)
+			local level = 1
+			for i = 1, MAX_FINITE_LEVEL do
+				if exp >= CharacterLevelConfig.weaponLevelExp[i] then
+					level = i
+				else
+					return level
+				end
+			end
+			while exp >= oldGetExpForLevel(level + 1) do
+				level += 1
+			end
+			return level
+		end
+
+		local oldLevel = oldGetLevelFromExp(data.characterExp or 0)
+		if oldLevel > MAX_FINITE_LEVEL then
+			data.characterExp = CharacterLevel.getExpForLevel(oldLevel)
+		end
+		data.version = 11
+	end
+
+	if data.version < 12 then
+		-- 17-1: 드랍표를 tier별로 실제 연결하면서 아이템에 tierIndex 필드가 처음 생겼다 -
+		-- 그 전엔 몬스터 tier 구분 없이 tier1의 확률표 하나로만 굴렸으니(v10까지)
+		-- "그 시절 나온 아이템은 전부 tier1"이 정확한 과거 상태다(v10의 part 소급과 같은
+		-- 원칙).
+		for _, item in ipairs(data.inventory) do
+			item.tierIndex = item.tierIndex or 1
+		end
+		for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+			if data.equipment and data.equipment[part] then
+				data.equipment[part].tierIndex = data.equipment[part].tierIndex or 1
+			end
+		end
+		data.version = 12
 	end
 
 	data.savedAt = data.savedAt or 0

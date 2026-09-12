@@ -37,6 +37,9 @@ local MINOR_TICK_LIMIT = 20
 
 local NORMAL_FILL_TOP, NORMAL_FILL_BOTTOM = Color3.fromRGB(255, 90, 90), Color3.fromRGB(198, 40, 40)
 local DANGER_FILL_COLOR = Color3.fromRGB(255, 30, 30)
+-- 자동회복 중 표시(17-1) - 서버 Regenerating Attribute가 켜져 있을 때만 초록 계열로
+-- 바꾼다. 위험 상태(isDanger)가 더 급한 정보라 danger가 우선한다(아래 RenderStepped 참고).
+local REGEN_FILL_TOP, REGEN_FILL_BOTTOM = Color3.fromRGB(120, 230, 130), Color3.fromRGB(56, 160, 70)
 
 local player = Players.LocalPlayer
 
@@ -202,5 +205,10 @@ RunService.RenderStepped:Connect(function()
 	else
 		fillGradient.Enabled = true
 		dangerStroke.Transparency = 1
+		if player:GetAttribute("Regenerating") then
+			fillGradient.Color = ColorSequence.new(REGEN_FILL_TOP, REGEN_FILL_BOTTOM)
+		else
+			fillGradient.Color = ColorSequence.new(NORMAL_FILL_TOP, NORMAL_FILL_BOTTOM)
+		end
 	end
 end)
