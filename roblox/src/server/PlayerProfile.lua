@@ -22,29 +22,48 @@ local BASE_WALK_SPEED_STUDS = 16
 -- [Player] = profile 테이블(SaveSystem.defaultProfile()/migrate()와 같은 스키마)
 local profiles = {}
 
--- 로드가 끝난 뒤(SaveServer.server.lua) 호출한다. Gold·WeaponLevel Attribute도 여기서
--- 같이 맞춰서 HUD·강화 UI가 접속 직후부터 정확한 값을 보게 한다.
+-- 직업별 분리 데이터(19-1)로 가는 유일한 진입점 - 캐릭터 레벨·무기·착용 장비·무한 모드
+-- 진행도를 다루는 함수는 전부 이 함수를 거쳐야 한다(profile 최상위에 그 필드들을 직접
+-- 두지 않는다는 스키마 배치가 곧 "공유/직업별 경계"의 강제 수단이다 - Luau엔 이걸
+-- 컴파일타임에 막을 도구가 없어 이 인디렉션 하나로 관례를 지킨다). classId를 아직 안
+-- 골랐으면(nil) nil을 돌려준다 - 호출부가 그 경우를 각자 처리한다.
+local function activeClassState(profile)
+	return profile.classId and profile.classes[profile.classId]
+end
+
+-- 로드 직후(PlayerProfile.init)와 직업 전환 직후(setClassId) 둘 다 "지금 활성 직업의
+-- 상태를 Attribute에 그대로 반영"해야 하므로 공유한다. classId가 nil이면(아직 선택 전)
+-- 직업별 Attribute는 건드리지 않는다 - ClassSelectUI가 빈 문자열로 이미 선택 UI를 띄운다.
+local function syncActiveClassAttributes(player, profile)
+	player:SetAttribute("ClassId", profile.classId or "")
+
+	local classState = activeClassState(profile)
+	if not classState then
+		return
+	end
+
+	player:SetAttribute("WeaponLevel", classState.weapon.level)
+	-- 캐릭터 레벨(13-2) - 저장에는 누적 경험치만 있고 레벨은 항상 여기서 파생시킨다(단일
+	-- 소스 원칙, InfiniteStage의 stage/multiplier 관계와 같은 구조).
+	player:SetAttribute("CharacterExp", classState.characterExp)
+	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(classState.characterExp))
+	-- 무한 모드 스테이지(11-1). 둘 다 nil일 수 없는 필드라(SaveSystem.migrate v4 참고)
+	-- classId처럼 빈 문자열로 바꿔치기할 필요가 없다.
+	player:SetAttribute("InfiniteStage", classState.stageProgress.infinite)
+	player:SetAttribute("InfiniteStageBest", classState.stageProgress.infiniteBest)
+	-- 최고로 깬 보스 스테이지(15-1). StageServer의 게이트 검사가 쓰는 값과 같은 소스다.
+	player:SetAttribute("BestBossCleared", classState.stageProgress.bestBossCleared)
+	-- 신발 배율(16-6)·최대체력(17-1) - 로드/전환된 직업에 이미 장비가 있을 수 있으니 매번 맞춘다.
+	PlayerProfile.refreshMovementSpeed(player)
+	PlayerProfile.refreshMaxHp(player)
+end
+
+-- 로드가 끝난 뒤(SaveServer.server.lua) 호출한다. Gold Attribute도 여기서 같이 맞춰서
+-- HUD·강화 UI가 접속 직후부터 정확한 값을 보게 한다.
 function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
-	player:SetAttribute("WeaponLevel", profile.equipment.weapon.level)
-	-- 캐릭터 레벨(13-2) - 저장에는 누적 경험치만 있고 레벨은 항상 여기서 파생시킨다(단일
-	-- 소스 원칙, InfiniteStage의 stage/multiplier 관계와 같은 구조).
-	player:SetAttribute("CharacterExp", profile.characterExp)
-	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(profile.characterExp))
-	-- Attribute는 nil을 담지 못한다 - "선택 안 함"을 빈 문자열로 옮긴다. 클라이언트
-	-- (ClassSelectUI.client.lua)는 "" 또는 미설정을 "선택 안 함"으로 취급한다.
-	player:SetAttribute("ClassId", profile.classId or "")
-	-- 무한 모드 스테이지(11-1). 둘 다 nil일 수 없는 필드라(SaveSystem.migrate v4 참고)
-	-- classId처럼 빈 문자열로 바꿔치기할 필요가 없다.
-	player:SetAttribute("InfiniteStage", profile.stageProgress.infinite)
-	player:SetAttribute("InfiniteStageBest", profile.stageProgress.infiniteBest)
-	-- 최고로 깬 보스 스테이지(15-1). StageServer의 게이트 검사가 쓰는 값과 같은 소스다.
-	player:SetAttribute("BestBossCleared", profile.stageProgress.bestBossCleared)
-	-- 신발 배율(16-6) - 로드된 저장에 이미 신발이 있을 수 있으니 접속 직후 한 번 맞춘다.
-	PlayerProfile.refreshMovementSpeed(player)
-	-- 최대체력(17-1) - 로드된 저장에 이미 갑옷이 있을 수 있으니 접속 직후 한 번 맞춘다.
-	PlayerProfile.refreshMaxHp(player)
+	syncActiveClassAttributes(player, profile)
 end
 
 -- 저장 시점에 SaveSystem이 통째로 넘겨받아 쓴다.
@@ -82,22 +101,25 @@ end
 
 function PlayerProfile.getCharacterLevel(player)
 	local profile = profiles[player]
-	return profile and CharacterLevel.getLevelFromExp(profile.characterExp)
+	local classState = profile and activeClassState(profile)
+	return classState and CharacterLevel.getLevelFromExp(classState.characterExp)
 end
 
 -- 서버만 호출한다(AttackServer의 몬스터 처치 판정 직후, 골드와 같은 경로). 클라이언트가
 -- 보낸 값으로 경험치를 늘리는 경로는 없다 - 이 함수가 유일한 증가 통로다. 레벨업이
 -- 일어났으면(oldLevel ~= newLevel) 호출부가 그 사실로 연출(레벨업 알림)을 띄운다 -
 -- 이 함수 자체는 판정만 하고 연출은 모른다(단일 책임, AttackServer가 RemoteEvent를 쏜다).
+-- 19-1: 활성 직업의 경험치만 오른다 - 다른 3직업은 지금 안 쓰고 있으니 그대로 멈춰 있다.
 function PlayerProfile.addCharacterExp(player, amount)
 	local profile = profiles[player]
-	if not profile then
+	local classState = profile and activeClassState(profile)
+	if not classState then
 		return nil, nil
 	end
-	local oldLevel = CharacterLevel.getLevelFromExp(profile.characterExp)
-	profile.characterExp += amount
-	local newLevel = CharacterLevel.getLevelFromExp(profile.characterExp)
-	player:SetAttribute("CharacterExp", profile.characterExp)
+	local oldLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
+	classState.characterExp += amount
+	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
+	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then
 		player:SetAttribute("CharacterLevel", newLevel)
 	end
@@ -106,16 +128,18 @@ end
 
 function PlayerProfile.getWeapon(player)
 	local profile = profiles[player]
-	return profile and profile.equipment.weapon
+	local classState = profile and activeClassState(profile)
+	return classState and classState.weapon
 end
 
 -- 서버만 호출한다(EnhanceServer의 강화 판정 직후). 클라이언트가 보낸 값을 믿지 않는다.
 function PlayerProfile.setWeaponLevel(player, level)
 	local profile = profiles[player]
-	if not profile then
+	local classState = profile and activeClassState(profile)
+	if not classState then
 		return
 	end
-	profile.equipment.weapon.level = level
+	classState.weapon.level = level
 	player:SetAttribute("WeaponLevel", level)
 end
 
@@ -126,23 +150,27 @@ end
 
 -- 서버만 호출한다(ClassServer의 검증 직후). 클라이언트가 보낸 classId를 그대로 믿지 않는다 -
 -- 존재하는 클래스인지는 호출부(ClassServer.server.lua)가 ClassData로 이미 확인했다.
+-- 19-1: 직업이 바뀌어도 각 직업의 진행도는 classes[classId] 아래에 그대로 남는다(삭제·
+-- 초기화 없음) - classId는 그중 "지금 어느 걸 쓰는가"만 가리키는 포인터로 바뀐다.
 function PlayerProfile.setClassId(player, classId)
 	local profile = profiles[player]
 	if not profile then
 		return
 	end
 	profile.classId = classId
-	player:SetAttribute("ClassId", classId)
+	syncActiveClassAttributes(player, profile)
 end
 
 function PlayerProfile.getInfiniteStage(player)
 	local profile = profiles[player]
-	return profile and profile.stageProgress.infinite
+	local classState = profile and activeClassState(profile)
+	return classState and classState.stageProgress.infinite
 end
 
 function PlayerProfile.getInfiniteStageBest(player)
 	local profile = profiles[player]
-	return profile and profile.stageProgress.infiniteBest
+	local classState = profile and activeClassState(profile)
+	return classState and classState.stageProgress.infiniteBest
 end
 
 -- 서버만 호출한다(StageServer의 검증 직후). 새 최고 기록을 세웠으면 true를 돌려준다 -
@@ -152,15 +180,16 @@ end
 -- 실제 성취라 크래시로 잃으면 아쉬움이 다르다.
 function PlayerProfile.setInfiniteStage(player, stage)
 	local profile = profiles[player]
-	if not profile then
+	local classState = profile and activeClassState(profile)
+	if not classState then
 		return false
 	end
-	profile.stageProgress.infinite = stage
+	classState.stageProgress.infinite = stage
 	player:SetAttribute("InfiniteStage", stage)
 
-	local isNewBest = stage > profile.stageProgress.infiniteBest
+	local isNewBest = stage > classState.stageProgress.infiniteBest
 	if isNewBest then
-		profile.stageProgress.infiniteBest = stage
+		classState.stageProgress.infiniteBest = stage
 		player:SetAttribute("InfiniteStageBest", stage)
 	end
 	return isNewBest
@@ -168,18 +197,39 @@ end
 
 function PlayerProfile.getBestBossCleared(player)
 	local profile = profiles[player]
-	return profile and profile.stageProgress.bestBossCleared
+	local classState = profile and activeClassState(profile)
+	return classState and classState.stageProgress.bestBossCleared
 end
 
 -- 서버만 호출한다(AttackServer의 보스 처치 판정 직후). stage가 이미 기록된 값 이하면
 -- 아무것도 안 한다 - 이 값은 "최고 기록"이라 내려갈 일이 없다(infiniteBest와 같은 원칙).
 function PlayerProfile.setBossCleared(player, stage)
 	local profile = profiles[player]
-	if not profile or stage <= profile.stageProgress.bestBossCleared then
+	local classState = profile and activeClassState(profile)
+	if not classState or stage <= classState.stageProgress.bestBossCleared then
 		return
 	end
-	profile.stageProgress.bestBossCleared = stage
+	classState.stageProgress.bestBossCleared = stage
 	player:SetAttribute("BestBossCleared", stage)
+end
+
+-- 직업 변경 확인창(19-1)이 "레벨 X · 최고 스테이지 Y로 이어집니다"를 보여주기 위해
+-- 4직업 전부의 요약을 한 번에 돌려준다. Attribute(CharacterLevel 등)는 활성 직업 하나만
+-- 알아서, 아직 켜지 않은 나머지 직업을 미리 보여줄 수 없어 따로 둔다(ClassServer의
+-- ClassSummaryFetch가 그대로 클라이언트에 전달).
+function PlayerProfile.getClassSummaries(player)
+	local profile = profiles[player]
+	if not profile then
+		return {}
+	end
+	local summaries = {}
+	for classId, classState in pairs(profile.classes) do
+		summaries[classId] = {
+			level = CharacterLevel.getLevelFromExp(classState.characterExp),
+			stageBest = classState.stageProgress.infiniteBest,
+		}
+	end
+	return summaries
 end
 
 function PlayerProfile.getInventory(player)
@@ -187,10 +237,12 @@ function PlayerProfile.getInventory(player)
 	return profile and profile.inventory
 end
 
--- 부위 무관 공용 조회(16-6, EquipSlots.order의 아무 부위나 받는다).
+-- 부위 무관 공용 조회(16-6, EquipSlots.order의 아무 부위나 받는다). 19-1부터 활성
+-- 직업의 장비를 본다 - 직업을 안 골랐으면(classState 없음) nil.
 function PlayerProfile.getEquipped(player, part)
 	local profile = profiles[player]
-	return profile and profile.equipment[part]
+	local classState = profile and activeClassState(profile)
+	return classState and classState.equipment[part]
 end
 
 function PlayerProfile.getEquippedArmor(player)
@@ -200,14 +252,12 @@ end
 -- 신발 이동+공속 비율 보너스(16-6). 미착용이면 0(Loot.getShoesSpeedPercent가 nil을 그렇게
 -- 처리한다).
 function PlayerProfile.getSpeedPercentBonus(player)
-	local profile = profiles[player]
-	return Loot.getShoesSpeedPercent(profile and profile.equipment.shoes)
+	return Loot.getShoesSpeedPercent(PlayerProfile.getEquipped(player, "shoes"))
 end
 
 -- 장갑 공격력 비율 보너스(16-6). AttackServer가 PlayerCombat.getAttack에 그대로 넘긴다.
 function PlayerProfile.getAttackPercentBonus(player)
-	local profile = profiles[player]
-	return Loot.getGlovesAttackPercent(profile and profile.equipment.gloves)
+	return Loot.getGlovesAttackPercent(PlayerProfile.getEquipped(player, "gloves"))
 end
 
 -- 최대체력 재계산(17-1) - 갑옷 장착/해제·로드 직후마다 호출한다(refreshMovementSpeed와
@@ -223,7 +273,7 @@ function PlayerProfile.refreshMaxHp(player)
 	if not profile then
 		return
 	end
-	local bonus = Loot.getMaxHpBonus(profile.equipment.armor)
+	local bonus = Loot.getMaxHpBonus(PlayerProfile.getEquipped(player, "armor"))
 	PlayerState.setMaxHp(player, CombatConfig.playerMaxHp + bonus)
 	local hp, maxHp = PlayerState.getHp(player), PlayerState.getMaxHp(player)
 	if hp and maxHp then
@@ -279,7 +329,8 @@ end
 -- 이전엔 equipArmor로 갑옷만 다뤘다).
 function PlayerProfile.equipItem(player, index)
 	local profile = profiles[player]
-	if not profile then
+	local classState = profile and activeClassState(profile)
+	if not classState then
 		return false
 	end
 	local item = profile.inventory[index]
@@ -289,11 +340,11 @@ function PlayerProfile.equipItem(player, index)
 
 	local part = item.part
 	table.remove(profile.inventory, index)
-	local previous = profile.equipment[part]
+	local previous = classState.equipment[part]
 	if previous then
 		table.insert(profile.inventory, previous)
 	end
-	profile.equipment[part] = item
+	classState.equipment[part] = item
 
 	InventorySync.push(player, profile)
 	if part == "shoes" then
@@ -308,10 +359,11 @@ end
 -- 칸이 가득 차 있으면 실패한다(false, "full") - 벗을 자리가 없으면 벗을 수 없다.
 function PlayerProfile.unequipItem(player, part)
 	local profile = profiles[player]
-	if not profile then
+	local classState = profile and activeClassState(profile)
+	if not classState then
 		return false
 	end
-	local current = profile.equipment[part]
+	local current = classState.equipment[part]
 	if not current then
 		return false, "not_equipped"
 	end
@@ -319,7 +371,7 @@ function PlayerProfile.unequipItem(player, part)
 		return false, "full"
 	end
 
-	profile.equipment[part] = nil
+	classState.equipment[part] = nil
 	table.insert(profile.inventory, current)
 
 	InventorySync.push(player, profile)

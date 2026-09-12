@@ -143,7 +143,7 @@ local function applyHitToPlayer(targetPlayer, rawAttack)
 	local damage = computeHitDamage(rawAttack, targetPlayer)
 	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
 	PlayerState.setHp(targetPlayer, newHp)
-	PlayerState.setLastHitAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)
+	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)
 	syncHud(targetPlayer)
 
 	print(("[forge-game] 플레이어 피격: %s - %.2f 데미지 (남은 HP %.2f/%d)"):format(

@@ -3,6 +3,10 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
+	-- 13(19-1) - 직업별 저장 분리. characterExp·무기·착용 장비 3부위·무한 모드 진행도가
+	-- 최상위에서 profile.classes[classId] 아래로 옮겨간다(직업마다 따로). gold·인벤토리는
+	-- 계정 전체 공유로 최상위에 그대로 남는다. classId 필드 자체는 없어지지 않는다 - "현재
+	-- 활성 직업" 포인터로 의미가 바뀔 뿐이다. SaveSystem.migrate()의 v12->v13 참고.
 	-- 12(17-1) - 인벤토리·착용 아이템에 없던 tierIndex 필드를 1로 소급 채움(드랍표를
 	-- tier별로 실제 연결하면서 생긴 필드 - 그 전엔 전부 tier1 표 하나로만 굴렸다).
 	-- SaveSystem.migrate()의 v11->v12 참고.
@@ -22,7 +26,7 @@ return {
 	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
 	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
 	-- 필드(classId) 추가.
-	saveVersion = 12,
+	saveVersion = 13,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

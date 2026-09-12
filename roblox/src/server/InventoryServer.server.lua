@@ -25,7 +25,8 @@ lockRequest.Parent = ReplicatedStorage
 -- action: "equip"(arg=index, 인벤토리 위치) 또는 "unequip"(arg=part, 16-6부터 부위를
 -- 명시해야 한다 - 갑옷 하나뿐이던 12-1 시절엔 필요 없었지만 이제 어느 슬롯을 벗을지
 -- 클라이언트가 골라야 한다). EquipSlots.order에 없는 문자열은 PlayerProfile.unequipItem이
--- profile.equipment[part]를 nil 조회로 조용히 거른다 - 여기선 타입만 확인한다.
+-- classState.equipment[part]를 nil 조회로 조용히 거른다(19-1부터 활성 직업 아래) - 여기선
+-- 타입만 확인한다.
 equipRequest.OnServerEvent:Connect(function(player, action, arg)
 	if not PlayerProfile.getProfile(player) then
 		return -- 프로필 로드가 아직 안 끝났다

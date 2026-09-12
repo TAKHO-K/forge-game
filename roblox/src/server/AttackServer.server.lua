@@ -13,6 +13,7 @@ local Loot = require(ReplicatedStorage.Shared.Loot)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local PlayerState = require(script.Parent.PlayerState)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 local BossEncounter = require(script.Parent.BossEncounter)
 local ImmediateSave = require(script.Parent.ImmediateSave)
@@ -76,6 +77,9 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	end
 
 	lastAttackTick[player] = now -- 헛스윙이어도 쿨다운은 소모한다
+	-- 19-1: 공격 시도(헛스윙 포함)도 "전투 중"이다 - 자동회복이 싸우는 동안엔 켜지지
+	-- 않아야 한다(PlayerRegen.server.lua 주석 참고).
+	PlayerState.setLastCombatActionAt(player, now)
 
 	-- 3타 강타 콤보 카운터 - 헛스윙도 포함해 이 시점에서 갱신한다(웹과 동일 지점).
 	local lastCombo = lastComboAttackTick[player]

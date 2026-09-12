@@ -8,14 +8,15 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 
 local PlayerState = {}
 
--- [Player] = { hp, maxHp, lastHitAt(17-1, 자동회복 5초 대기 타이머 기준 시각, os.clock()) }
+-- [Player] = { hp, maxHp, lastCombatActionAt(17-1 도입, 19-1에서 의미 확장 - 자동회복
+-- 5초 대기 타이머 기준 시각, os.clock()) }
 local players = {}
 
 function PlayerState.init(player)
 	players[player] = {
 		hp = CombatConfig.playerMaxHp,
 		maxHp = CombatConfig.playerMaxHp,
-		lastHitAt = nil,
+		lastCombatActionAt = nil,
 	}
 end
 
@@ -57,17 +58,19 @@ function PlayerState.setMaxHp(player, newMaxHp)
 	entry.hp = math.min(entry.hp, entry.maxHp)
 end
 
-function PlayerState.getLastHitAt(player)
+function PlayerState.getLastCombatActionAt(player)
 	local entry = players[player]
-	return entry and entry.lastHitAt
+	return entry and entry.lastCombatActionAt
 end
 
--- 피격마다 호출한다(MonsterAI.server.lua의 applyHitToPlayer) - 자동회복의 "마지막 피격
--- 후 5초" 타이머 기준점이다.
-function PlayerState.setLastHitAt(player, value)
+-- 피격마다(MonsterAI.server.lua의 applyHitToPlayer) + 공격을 시도할 때마다(AttackServer.
+-- server.lua, 헛스윙 포함) 호출한다 - 자동회복의 "전투 없이 5초" 타이머 기준점이다(19-1
+-- 전엔 피격만 봤다 - 공격 중에도 회복되는 게 이상하다는 지적으로 범위를 넓혔다,
+-- PRD-forge-game-roblox.md 20.36 참고).
+function PlayerState.setLastCombatActionAt(player, value)
 	local entry = players[player]
 	if entry then
-		entry.lastHitAt = value
+		entry.lastCombatActionAt = value
 	end
 end
 

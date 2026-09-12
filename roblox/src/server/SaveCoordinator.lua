@@ -43,8 +43,11 @@ function SaveCoordinator.saveForPlayer(player)
 
 	local ok, err = SaveSystem.saveProfile(player, profile)
 	if ok then
-		print(("[forge-game] 저장 성공: %s - gold=%d, weaponLevel=%d"):format(
-			player.Name, profile.gold, profile.equipment.weapon.level))
+		-- 19-1: 무기는 이제 활성 직업(profile.classId)에 딸려 있다 - 아직 직업을 안 골랐으면
+		-- (classId=nil) weapon 자체가 없으니 로그에서도 그 상태를 그대로 보여준다.
+		local weapon = PlayerProfile.getWeapon(player)
+		print(("[forge-game] 저장 성공: %s - gold=%d, classId=%s, weaponLevel=%s"):format(
+			player.Name, profile.gold, tostring(profile.classId), weapon and tostring(weapon.level) or "없음"))
 	else
 		if err == "stale_session" then
 			notify(player, "다른 서버에 더 최근 저장이 있어 지금 상태는 저장하지 않았습니다. 다시 접속해 주세요.")

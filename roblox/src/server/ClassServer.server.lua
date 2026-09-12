@@ -1,8 +1,10 @@
 -- 클래스 선택 서버 권위 처리(10-3 [2]). 클라이언트는 classId 문자열만 보낸다 - 존재하는
--- 클래스인지는 여기서만 검증한다(클라이언트가 보낸 값을 그대로 믿지 않는다). 지금은 자유
--- 변경을 허용한다 - 장비가 무기 하나뿐이라 변경해도 밸런스가 안 깨지고, 클래스별 배율을
--- 비교해 보는 개발 중 테스트에도 편하다. 나중에 장비가 늘어나면 이대로 둘지, 쿨다운을 둘지,
--- 유료 변경권으로 팔지를 다시 판단해야 한다(PRD-forge-game-roblox.md 10-3 절, 미결 항목).
+-- 클래스인지는 여기서만 검증한다(클라이언트가 보낸 값을 그대로 믿지 않는다). 자유 변경을
+-- 허용한다 - 직업별 저장 분리(19-1)로 각 직업이 자기 레벨·무기·장비·진행도를 따로 갖게
+-- 되면서, 전환은 "그 직업이 레벨 1부터 다시 시작"이라는 이미 충분한 페널티를 갖는다(하드
+-- 락을 걸면 "잘못 골랐다"는 후회가 이탈로 이어진다는 판단). 클라이언트(ClassSelectUI)가
+-- 이미 진행 중인 직업에서 다른 직업으로 바꿀 때만 확인창을 띄운다 - 여긴 서버 검증이라
+-- 그 확인을 건너뛴 요청이 와도 존재하는 classId이기만 하면 그대로 받아들인다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -14,6 +16,16 @@ local classSelectRequest = Instance.new("RemoteEvent")
 classSelectRequest.Name = "ClassSelectRequest"
 classSelectRequest.Parent = ReplicatedStorage
 
+-- 직업 변경 확인창(19-1)이 "레벨 X · 최고 스테이지 Y로 이어집니다"를 보여주기 위해
+-- 4직업 전부의 요약을 요청하는 통로. PlayerProfile.getClassSummaries를 그대로 전달한다.
+local classSummaryFetch = Instance.new("RemoteFunction")
+classSummaryFetch.Name = "ClassSummaryFetch"
+classSummaryFetch.Parent = ReplicatedStorage
+
+classSummaryFetch.OnServerInvoke = function(player)
+	return PlayerProfile.getClassSummaries(player)
+end
+
 classSelectRequest.OnServerEvent:Connect(function(player, classId)
 	if type(classId) ~= "string" or not ClassData.classes[classId] then
 		return -- 존재하지 않는 클래스 - 공격 사거리 밖 요청과 같은 취급으로 조용히 무시
@@ -21,6 +33,10 @@ classSelectRequest.OnServerEvent:Connect(function(player, classId)
 
 	if not PlayerProfile.getProfile(player) then
 		return -- 프로필 로드가 아직 안 끝났다
+	end
+
+	if PlayerProfile.getClassId(player) == classId then
+		return -- 이미 그 직업이다 - 확인창을 건너뛰고 재요청한 경우 등, 할 일이 없다
 	end
 
 	PlayerProfile.setClassId(player, classId)

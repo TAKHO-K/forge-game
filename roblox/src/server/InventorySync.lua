@@ -25,12 +25,20 @@ local PlayerProfile
 
 local InventorySync = {}
 
+-- 19-1: 장비는 이제 profile.classes[profile.classId] 아래에 있다. classId 미선택이면
+-- (classes 인덱스 자체가 없다) 셋 다 nil로 취급한다 - 아직 착용할 직업이 없는 상태다.
+local function activeEquipment(profile)
+	local classState = profile.classId and profile.classes[profile.classId]
+	return classState and classState.equipment or { armor = nil, gloves = nil, shoes = nil }
+end
+
 function InventorySync.push(player, profile)
+	local equipment = activeEquipment(profile)
 	inventorySync:FireClient(player, {
 		inventory = profile.inventory,
-		armor = profile.equipment.armor,
-		gloves = profile.equipment.gloves,
-		shoes = profile.equipment.shoes,
+		armor = equipment.armor,
+		gloves = equipment.gloves,
+		shoes = equipment.shoes,
 	})
 end
 
@@ -42,11 +50,12 @@ inventoryFetch.OnServerInvoke = function(player)
 	if not profile then
 		return { inventory = {}, armor = nil, gloves = nil, shoes = nil }
 	end
+	local equipment = activeEquipment(profile)
 	return {
 		inventory = profile.inventory,
-		armor = profile.equipment.armor,
-		gloves = profile.equipment.gloves,
-		shoes = profile.equipment.shoes,
+		armor = equipment.armor,
+		gloves = equipment.gloves,
+		shoes = equipment.shoes,
 	}
 end
 

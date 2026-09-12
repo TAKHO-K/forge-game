@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
+local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 
@@ -16,6 +17,33 @@ local SaveSystem = {}
 -- 있다 - 여기(저장 데이터)엔 계속 바뀌는 값(강화 단계)과 어떤 무기인지(id)만 남긴다.
 local function defaultWeapon()
 	return { id = WeaponData.starterId, level = 0 }
+end
+
+-- 직업 하나가 갖는 상태(19-1) - 캐릭터 레벨·무기·착용 장비 3부위·무한 모드 진행도.
+-- 4직업이 각자 이 테이블을 하나씩 갖는다(profile.classes[classId]). 골드·인벤토리처럼
+-- 계정 전체가 공유하는 값은 여기 들어오지 않는다 - defaultProfile 쪽 주석 참고.
+local function defaultClassState()
+	return {
+		characterExp = 0,
+		weapon = defaultWeapon(),
+		equipment = { armor = nil, gloves = nil, shoes = nil },
+
+		-- 무한 모드 진행도(11-1 개정, 19-1에서 직업별로 이동). infiniteBest(최고 도달
+		-- 단계)는 현재 단계와 분리한다 - 파밍하러 내려가면 현재 단계는 낮아져도 최고
+		-- 기록은 그대로 남아야 한다(PRD 20.12 경쟁 축과도 맞다). bestBossCleared(15-1):
+		-- 최고로 깬 보스 스테이지 - "0"은 아직 하나도 못 깼다는 뜻이다.
+		stageProgress = { infinite = 1, infiniteBest = 1, bestBossCleared = 0 },
+	}
+end
+
+-- ClassData.order를 순회해 만든다 - 직업이 4개든 6개든 이 함수는 그대로다(코드에 "4"를
+-- 박지 않는다는 19-1 지시).
+local function defaultClasses()
+	local classes = {}
+	for _, classId in ipairs(ClassData.order) do
+		classes[classId] = defaultClassState()
+	end
+	return classes
 end
 
 local store = DataStoreService:GetDataStore(SaveConfig.dataStoreName)
@@ -31,37 +59,11 @@ local function defaultProfile()
 	return {
 		version = SaveConfig.saveVersion,
 		savedAt = 0, -- migrate() 시점 데이터는 항상 "가장 오래된 것"으로 본다(웹 core/save.js와 같은 원칙)
+
+		-- 계정 전체 공유(19-1 확정 - 직업을 바꿔도 빈털터리가 되지 않고, 다른 직업이 쓸
+		-- 장비를 자유롭게 넘길 수 있어야 한다는 설계). 직업별로 갈라지는 값은 전부
+		-- classes 아래에 있다 - 이 아래(gold·inventory*·gamepasses)엔 절대 넣지 않는다.
 		gold = 0,
-
-		-- 캐릭터 레벨(13-2) - 누적 경험치만 저장하고 레벨은 항상 CharacterLevel.getLevelFromExp로
-		-- 파생시킨다(웹 core/save.js가 weaponExp만 저장하고 weaponExpLevel은 저장 안 하는 것과
-		-- 같은 원칙 - 파생값을 저장하면 곡선을 고칠 때마다 저장분과 어긋난다).
-		characterExp = 0,
-
-		-- 클래스 선택(10-3). 필드는 있지만 값은 nil - "아직 안 골랐다"가 지금은 실제로
-		-- 맞는 상태이고, 이 nil이 곧 클라이언트가 선택 UI를 띄우는 조건이 된다
-		-- (ClassSelectUI.client.lua, PlayerProfile.init이 Attribute로 옮길 때 빈 문자열로
-		-- 바꾼다 - Attribute는 nil을 담지 못한다). 억지 기본값(첫 클래스 자동 지정)을 넣으면
-		-- 이미 고른 것으로 착각해 선택 UI가 영원히 안 뜬다.
-		classId = nil,
-
-		-- 웹 core/equipment.js ITEM_PARTS(무기/갑옷/장갑/신발)와 같은 4슬롯. 무기만 시작
-		-- 지급한다(10-2 [1]) - 강화할 대상이 있어야 하기 때문이다. 갑옷·장갑·신발은 드랍으로만
-		-- 얻는다 - 가짜 기본 장비를 채우지 않는다(16-6부터 셋 다 실제로 드랍·장착된다,
-		-- 그 전엔 갑옷만 있었다). 필드명은 "shoes" - v8까지 쓰던 "boots"는 실제로 한 번도
-		-- 값이 채워진 적 없는 죽은 이름이라(드랍 시스템 자체가 없었다) migrate()에서
-		-- 그냥 이름만 바꾼다(아래 v9 참고).
-		equipment = { weapon = defaultWeapon(), armor = nil, gloves = nil, shoes = nil },
-
-		-- 일반/무한 모드 진행도(11-1 개정). 무한 모드가 이 게임의 유일한 모드가 되면서
-		-- "미진입=0" 개념이 없어졌다 - 접속하면 바로 1단계다. infiniteBest(최고 도달
-		-- 단계)는 현재 단계와 분리한다 - 파밍하러 내려가면 현재 단계는 낮아져도 최고
-		-- 기록은 그대로 남아야 한다(PRD 20.12 경쟁 축과도 맞다).
-		-- bestBossCleared(15-1): 최고로 깬 보스 스테이지 - "0"은 아직 하나도 못 깼다는
-		-- 뜻이다(무한 진입 즉시 1단계인 infinite와 달리, 보스는 실제로 깨기 전엔 0이
-		-- 맞는 초기값이다). StageServer의 게이트 검사가 이 값을 기준으로 삼는다.
-		stageProgress = { normal = 1, infinite = 1, infiniteBest = 1, bestBossCleared = 0 },
-
 		inventorySlots = SaveConfig.defaultInventorySlots,
 
 		-- 인벤토리 실제 내용물(12-1). 갑옷 드랍만 담는다 - { grade = "normal"/"rare",
@@ -71,19 +73,34 @@ local function defaultProfile()
 
 		-- 구매한 게임패스 id 집합. {[id]=true} 형태. 상점이 없어 항상 빈 테이블이다.
 		gamepasses = {},
+
+		-- 클래스 선택(10-3, 19-1부터 "현재 활성 직업" 포인터로 의미 확장). 필드는 있지만
+		-- 값은 nil - "아직 하나도 안 골랐다"가 지금은 실제로 맞는 상태이고, 이 nil이 곧
+		-- 클라이언트가 선택 UI를 띄우는 조건이 된다(ClassSelectUI.client.lua,
+		-- PlayerProfile.init이 Attribute로 옮길 때 빈 문자열로 바꾼다 - Attribute는 nil을
+		-- 담지 못한다). 억지 기본값(첫 클래스 자동 지정)을 넣으면 이미 고른 것으로 착각해
+		-- 선택 UI가 영원히 안 뜬다. 4직업 전부 classes 아래에 이미 만들어져 있으므로
+		-- (defaultClasses), classId는 "그중 어느 걸 지금 쓰고 있는가"만 가리킨다.
+		classId = nil,
+
+		-- 직업별 분리 데이터(19-1) - 캐릭터 레벨·무기·착용 장비 3부위·무한 모드 진행도.
+		-- 4직업 전부 처음부터 만들어 둔다(선택 여부와 무관) - 그래야 나중에 다른 직업으로
+		-- 갈아타도 그 직업은 이미 자기 자리를 갖고 있다.
+		classes = defaultClasses(),
 	}
 end
 
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 12단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지금은 13단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
 -- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
 -- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입) -> 7(캐릭터 레벨 도입 +
 -- 아이템 itemLevel 필드 도입) -> 8(보스 처치 기록 bestBossCleared 도입, 15-1)
 -- -> 9(equipment.boots -> shoes 이름 정리, 16-6) -> 10(아이템 part 필드 소급 도입, 16-6)
 -- -> 11(캐릭터 레벨 EXP 곡선 26+ 구간 재보정, 17-1) -> 12(아이템 tierIndex 필드 소급
--- 도입, 17-1).
+-- 도입, 17-1) -> 13(characterExp·무기·장비 3부위·무한 모드 진행도를 classes[classId]
+-- 아래로 직업별 분리, 19-1).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -256,24 +273,81 @@ local function migrate(data)
 		data.version = 12
 	end
 
+	if data.version < 13 then
+		-- 19-1: 직업별 저장 분리. characterExp·무기·착용 장비 3부위·무한 모드 진행도가
+		-- classes[classId] 아래로 옮겨간다. gold·인벤토리·게임패스는 계정 전체 공유라
+		-- 최상위에 그대로 둔다(움직이지 않는다).
+		local classes = defaultClasses()
+
+		if data.classId and classes[data.classId] then
+			-- 이미 직업을 골랐던 유저 - 지금까지 쌓아온 진행도는 "지금 하던 그 직업"으로만
+			-- 옮긴다(유일하게 맞는 귀속처 - 20.35 α 재보정 때처럼 "저장 무손실 승계"
+			-- 원칙, v7 마이그레이션과 같다). 나머지 3직업은 defaultClassState() 그대로
+			-- 둔다 - 한 번도 플레이한 적 없으니 레벨1·시작무기가 정확한 초기 상태다.
+			classes[data.classId] = {
+				characterExp = data.characterExp or 0,
+				weapon = data.equipment.weapon or defaultWeapon(),
+				equipment = {
+					armor = data.equipment.armor,
+					gloves = data.equipment.gloves,
+					shoes = data.equipment.shoes,
+				},
+				stageProgress = {
+					infinite = data.stageProgress.infinite or 1,
+					infiniteBest = data.stageProgress.infiniteBest or 1,
+					bestBossCleared = data.stageProgress.bestBossCleared or 0,
+				},
+			}
+		end
+		-- classId가 nil이면(한 번도 선택 안 한 계정) 옮길 데이터 자체가 없다 - 위에서 만든
+		-- 4직업 전부 초기 상태 그대로 둔다. classId는 계속 nil이라 클라이언트가 여전히
+		-- 선택 UI를 띄운다(defaultProfile과 같은 동작).
+
+		data.classes = classes
+		-- 예전 최상위 필드는 이제 이 자리에 없다 - 지우지 않으면 두 곳에 값이 남아 어느
+		-- 쪽이 진짜인지 헷갈린다(isValidProfile도 이 필드들의 부재를 전제로 검사한다).
+		data.characterExp = nil
+		data.equipment = nil
+		data.stageProgress = nil
+		-- data.classId 자체는 지우지 않는다 - 값 그대로(선택했으면 그 문자열, 아니면 nil)
+		-- "현재 활성 직업" 포인터로 의미만 넓어진다.
+		data.version = 13
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
 
 -- 저장 데이터가 게임에 바로 쓸 수 있는 최소 형태인지 검증(웹 isValidSaveData와 같은 목적).
+-- 19-1: classes[classId]마다 weapon.level 존재를 확인한다 - part 필드 소급을 빠뜨려
+-- 기존 장비를 영영 착용 못 하게 됐던 사고(16-6)와 같은 종류의 실수를 막는 지점이다.
 local function isValidProfile(data)
-	return type(data) == "table"
-		and type(data.version) == "number"
-		and type(data.gold) == "number"
-		and type(data.characterExp) == "number"
-		and type(data.equipment) == "table"
-		and type(data.equipment.weapon) == "table"
-		and type(data.equipment.weapon.level) == "number"
-		and (data.classId == nil or type(data.classId) == "string")
-		and type(data.stageProgress) == "table"
-		and type(data.inventorySlots) == "number"
-		and type(data.inventory) == "table"
-		and type(data.gamepasses) == "table"
+	if type(data) ~= "table"
+		or type(data.version) ~= "number"
+		or type(data.gold) ~= "number"
+		or (data.classId ~= nil and type(data.classId) ~= "string")
+		or type(data.classes) ~= "table"
+		or type(data.inventorySlots) ~= "number"
+		or type(data.inventory) ~= "table"
+		or type(data.gamepasses) ~= "table"
+	then
+		return false
+	end
+
+	for _, classId in ipairs(ClassData.order) do
+		local classState = data.classes[classId]
+		if type(classState) ~= "table"
+			or type(classState.characterExp) ~= "number"
+			or type(classState.weapon) ~= "table"
+			or type(classState.weapon.level) ~= "number"
+			or type(classState.equipment) ~= "table"
+			or type(classState.stageProgress) ~= "table"
+		then
+			return false
+		end
+	end
+
+	return true
 end
 
 SaveSystem.defaultProfile = defaultProfile
