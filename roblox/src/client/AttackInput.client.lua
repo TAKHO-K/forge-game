@@ -1,6 +1,6 @@
--- 공격 입력(버튼 + 클릭/탭 조준 공격, 16-7) + 서버 결과 수신. 사거리·대상·데미지 판정은
--- 전부 서버가 한다 - 여기는 조준점을 실어 클릭 신호를 보내고 서버가 알려준 결과를
--- 그리기만 한다.
+-- 공격 입력(클릭/탭 조준 공격, 16-7 → 18-2에서 버튼 제거) + 서버 결과 수신. 사거리·대상·
+-- 데미지 판정은 전부 서버가 한다 - 여기는 조준점을 실어 클릭 신호를 보내고 서버가 알려준
+-- 결과를 그리기만 한다.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,7 +12,6 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
-local HudIcons = require(script.Parent.HudIcons)
 local WeaponVisual = require(script.Parent.WeaponVisual)
 local HitEffects = require(script.Parent.HitEffects)
 local Projectiles = require(script.Parent.Projectiles)
@@ -31,122 +30,13 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local camera = workspace.CurrentCamera
 
--- 16-2: "플래시 게임 버튼 같다"는 피드백으로 만든 목업(Claude outputs/hud-mockup.html)의
--- .attack을 옮긴다. 배치도 바뀌었다 - 화면 우하단 단독 버튼이 아니라 SkillSlots.client.lua가
--- 만드는 중앙 하단 한 줄(Q·공격·E·대시)의 가운데 자리로 들어간다. 그 Row를 SkillSlots가
--- 먼저 만들어 두므로 WaitForChild로 찾는다(두 파일이 이름·순서를 계약처럼 공유 - SkillSlots.
--- client.lua 상단 주석 참고). 지름은 목업 값 92px 그대로 고정폭으로 쓴다 - SkillSlots가
--- 행 높이(ROW_HEIGHT=92)를 이 값과 같다고 가정하고 있어서, 여기서 반응형 스케일을 넣으면
--- 두 파일의 가정이 어긋난다(9-5의 "화면 비율로 키운다" 대신 목업처럼 고정값을 쓰기로
--- 바꾼 이유). 92px는 9-5의 최소 터치 타깃(88px) 기준을 이미 넘는다.
-local skillSlotsGui = playerGui:WaitForChild("SkillSlotsGui")
-local centralRow = skillSlotsGui:WaitForChild("CentralRow")
+-- 3타 강타 콤보 표시(16-7) - 18-2까지는 공격 버튼 위에 붙어 있었다. 버튼이 없어진 뒤로는
+-- 체력바 바로 위로 옮긴다 - PlayerHealthBar.client.lua가 만들어 두는 전용 앵커(ComboPipsAnchor)
+-- 를 WaitForChild로 찾는다(SkillSlots·AttackInput이 옛 CentralRow를 공유하던 것과 같은
+-- 계약 패턴). 서버 ComboUpdate가 보내는 comboCount(계속 증가하는 누적값)를 comboHitEvery로
+-- 감싸 "이번 3타 사이클의 몇 번째"로 바꿔서 켠다.
+local comboPipsAnchor = playerGui:WaitForChild("PlayerHealthBarGui"):WaitForChild("ComboPipsAnchor")
 
-local ATTACK_DIAMETER = 92
-
-local attackButton = Instance.new("TextButton")
-attackButton.Name = "AttackButton"
-attackButton.LayoutOrder = 2 -- SkillSlots.client.lua의 ATTACK_LAYOUT_ORDER와 맞춘 값.
-attackButton.Size = UDim2.new(0, ATTACK_DIAMETER, 0, ATTACK_DIAMETER)
-attackButton.Text = "" -- 16-2: 글자를 없앤다 - "공격" 텍스트가 있으면 UI 요소로 읽힌다.
-attackButton.AutoButtonColor = false
--- 반투명(목업 --panel, transparency .28 근처) - 게임 화면이 버튼 너머로 비쳐야 한다.
-attackButton.BackgroundColor3 = UIColors.panel
-attackButton.BackgroundTransparency = UIColors.panelTransparency
-attackButton.Parent = centralRow
-
-local attackButtonCorner = Instance.new("UICorner")
-attackButtonCorner.CornerRadius = UDim.new(1, 0)
-attackButtonCorner.Parent = attackButton
-
--- 안쪽 온기(ember) 글로우 - CSS radial-gradient 대체. Roblox Frame엔 방사형 그라디언트가
--- 없어 ember색 반투명 원을 버튼보다 작게 겹쳐 "가운데가 은은하게 밝다"는 인상만 옮긴다.
-local glow = Instance.new("Frame")
-glow.Name = "Glow"
-glow.AnchorPoint = Vector2.new(0.5, 0.5)
-glow.Position = UDim2.new(0.5, 0, 0.42, 0)
-glow.Size = UDim2.new(0.82, 0, 0.82, 0)
-glow.BackgroundColor3 = UIColors.ember
-glow.BackgroundTransparency = 0.88
-glow.BorderSizePixel = 0
-glow.ZIndex = 0
-glow.Parent = attackButton
-
-local glowCorner = Instance.new("UICorner")
-glowCorner.CornerRadius = UDim.new(1, 0)
-glowCorner.Parent = glow
-
--- 굵은 흰 테두리 대신 얇은 두 겹 링(목업 .attack의 2px 메인 링 + ::before의 1px 바깥 보조
--- 링). Roblox UIStroke는 하나만 붙일 수 있어(안팎 이중 테두리 불가) 보조 링은 버튼보다
--- 살짝 큰 별도 프레임으로 만든다.
-local mainRing = Instance.new("UIStroke")
-mainRing.Thickness = 2
-mainRing.Color = UIColors.ember
-mainRing.Transparency = 0.38
-mainRing.Parent = attackButton
-
-local outerRing = Instance.new("Frame")
-outerRing.Name = "OuterRing"
-outerRing.AnchorPoint = Vector2.new(0.5, 0.5)
-outerRing.Position = UDim2.new(0.5, 0, 0.5, 0)
-outerRing.Size = UDim2.new(1, 12, 1, 12)
-outerRing.BackgroundTransparency = 1
-outerRing.ZIndex = 0
-outerRing.Parent = attackButton
-
-local outerRingCorner = Instance.new("UICorner")
-outerRingCorner.CornerRadius = UDim.new(1, 0)
-outerRingCorner.Parent = outerRing
-
-local outerRingStroke = Instance.new("UIStroke")
-outerRingStroke.Thickness = 1
-outerRingStroke.Color = UIColors.ember
-outerRingStroke.Transparency = 0.82
-outerRingStroke.Parent = outerRing
-
--- 칼 아이콘(HudIcons.sword) - 텍스트 대신 이 하나만 남는다.
-local iconHolder = Instance.new("Frame")
-iconHolder.BackgroundTransparency = 1
-iconHolder.AnchorPoint = Vector2.new(0.5, 0.5)
-iconHolder.Position = UDim2.new(0.5, 0, 0.5, 0)
-iconHolder.Size = UDim2.new(0, 34, 0, 34)
-iconHolder.ZIndex = 2
-iconHolder.Parent = attackButton
-HudIcons.sword(iconHolder, 34)
-
--- 눌림 반응 - 색이 아니라 스케일 0.93 + 글로우 강화(지시 2). UIScale로 버튼 전체를 줄이고,
--- 글로우·링의 Transparency를 낮춰(더 진하게) "눌렸다"는 확실한 반응을 준다.
-local pressScale = Instance.new("UIScale")
-pressScale.Scale = 1
-pressScale.Parent = attackButton
-
-local function setPressed(pressed)
-	local scaleGoal = pressed and 0.93 or 1
-	local glowGoal = pressed and 0.7 or 0.88
-	local ringGoal = pressed and 0.15 or 0.38
-	local outerRingGoal = pressed and 0.55 or 0.82
-	local tweenInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(pressScale, tweenInfo, { Scale = scaleGoal }):Play()
-	TweenService:Create(glow, tweenInfo, { BackgroundTransparency = glowGoal }):Play()
-	TweenService:Create(mainRing, tweenInfo, { Transparency = ringGoal }):Play()
-	TweenService:Create(outerRingStroke, tweenInfo, { Transparency = outerRingGoal }):Play()
-end
-
-attackButton.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		setPressed(true)
-	end
-end)
-
-attackButton.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		setPressed(false)
-	end
-end)
-
--- 3타 강타 콤보 표시(16-7) - 공격 버튼 위에 점 3개. 지금 몇 타째인지 모르면 강공격이
--- 우연이 된다는 지시. 서버 ComboUpdate가 보내는 comboCount(계속 증가하는 누적값)를
--- comboHitEvery로 감싸 "이번 3타 사이클의 몇 번째"로 바꿔서 켠다.
 local COMBO_PIP_COUNT = CombatConfig.comboHitEvery
 local COMBO_PIP_SIZE = 10
 local COMBO_PIP_GAP = 6
@@ -157,12 +47,9 @@ local COMBO_PIP_HEAVY_COLOR = Color3.fromRGB(255, 230, 90)
 
 local comboPipsHolder = Instance.new("Frame")
 comboPipsHolder.Name = "ComboPips"
-comboPipsHolder.AnchorPoint = Vector2.new(0.5, 1)
-comboPipsHolder.Position = UDim2.new(0.5, 0, 0, -10)
 comboPipsHolder.Size = UDim2.new(0, COMBO_PIP_COUNT * (COMBO_PIP_SIZE + COMBO_PIP_GAP), 0, COMBO_PIP_SIZE)
 comboPipsHolder.BackgroundTransparency = 1
-comboPipsHolder.ZIndex = 3
-comboPipsHolder.Parent = attackButton
+comboPipsHolder.Parent = comboPipsAnchor
 
 local comboPipLayout = Instance.new("UIListLayout")
 comboPipLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -229,21 +116,16 @@ local function predictIsHeavyHit()
 	return predictedComboCount % CombatConfig.comboHitEvery == 0
 end
 
--- 버튼·클릭·탭이 전부 이 함수 하나로 모인다(지시 - "지금 누구를 때리려는가를 게임과
--- 유저가 같은 답으로 알게 한다 ... 따로 짜지 마라"). aimPoint가 있으면(클릭·탭) 그
--- 지점으로 캐릭터를 돌리고 AimTarget 하이라이트도 즉시 갱신한다. 없으면(버튼) 지금 이미
--- 조준 중인 방향(AimTarget의 최근 조준점) 그대로 공격한다 - 화면에 보이는 조준 대상과
--- 실제로 맞는 대상이 같아야 하므로.
-local function fireAttack(aimPointOverride)
+-- 클릭·탭이 이 함수 하나로 모인다(지시 - "지금 누구를 때리려는가를 게임과 유저가 같은
+-- 답으로 알게 한다 ... 따로 짜지 마라"). 18-2부터 공격 버튼이 없어져 aimPoint는 항상
+-- 클릭·탭 지점으로 넘어온다 - 그 지점으로 캐릭터를 돌리고 AimTarget 하이라이트도 즉시 갱신한다.
+local function fireAttack(aimPoint)
 	-- 18-1 [3]: gameProcessedEvent만 믿지 않는다 - modal 창이 열려 있으면 여기서 한 번 더
 	-- 막는다(딤 배경이 클릭을 못 먹는 경우가 생겨도 이중 방어가 된다).
 	if UIManager.isInputBlocked() then
 		return
 	end
-	if aimPointOverride then
-		AimTarget.refresh(aimPointOverride)
-	end
-	local aimPoint = aimPointOverride or AimTarget.getLastAimPoint()
+	AimTarget.refresh(aimPoint)
 	attackRequest:FireServer(aimPoint)
 
 	local character = player.Character
@@ -269,13 +151,9 @@ local function fireAttack(aimPointOverride)
 	end
 end
 
--- Activated는 마우스 클릭·터치 탭·게임패드를 전부 같은 이벤트로 받는다(모바일 대응).
-attackButton.Activated:Connect(function()
-	fireAttack(nil)
-end)
-
--- 클릭·탭한 곳으로 기본공격(16-7 [3]). gameProcessedEvent가 true면 이미 어떤 GuiObject가
--- 이 입력을 먹었다는 뜻(공격 버튼·인벤토리·이동 조이스틱 등) - 그때는 공격을 쏘지 않는다.
+-- 클릭·탭한 곳으로 기본공격(16-7 [3], 18-2부터 유일한 공격 수단). gameProcessedEvent가
+-- true면 이미 어떤 GuiObject가 이 입력을 먹었다는 뜻(인벤토리·이동 조이스틱 등) - 그때는
+-- 공격을 쏘지 않는다.
 -- PC는 기본 카메라가 좌클릭 드래그를 쓰지 않아(마우스 이동만으로 회전) 클릭 자체를 그냥
 -- 공격으로 써도 된다. 모바일은 UserInputService.TouchTap이 "드래그가 아닌 순수 탭"만
 -- 걸러서 보내주므로(카메라 회전 드래그는 별도 TouchPan으로 소비된다) 따로 탭/드래그

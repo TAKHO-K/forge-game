@@ -1232,9 +1232,9 @@ toggleButton.Activated:Connect(function()
 	UIManager.toggle("inventory")
 end)
 
-dim.Activated:Connect(function()
-	UIManager.close("inventory")
-end)
+-- 18-2 [7]: 딤 배경 클릭으로 닫지 않는다 - 클릭이 곧 공격인 게임이라 가방 정리 중 손이
+-- 미끄러지면 창이 사라진다(검증 중 발견). dim은 TextButton이라 Activated 연결이 없어도
+-- 클릭 자체는 계속 먹는다(뒤로 공격이 새 나가지 않는다) - 닫기는 X·I·Backspace만 한다.
 
 closeButton.Activated:Connect(function()
 	UIManager.close("inventory")

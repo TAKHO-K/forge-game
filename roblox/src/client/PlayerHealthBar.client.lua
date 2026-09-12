@@ -17,6 +17,11 @@
 -- 필요 없다 - 그래서 고정폭으로 되돌렸다(SkillSlots·AttackInput이 92/54px 고정값을 쓰는
 -- 것과 같은 이유). 눈금(rebuildTicks)은 컨테이너 폭의 Scale 좌표로만 그려서 폭이 바뀌어도
 -- 그대로 맞는다 - 이번에도 그 로직은 손대지 않았다.
+--
+-- 18-2: 공격 버튼 제거로 SkillSlots.client.lua의 스킬 행이 5칸+대시로 바뀌면서 그 전체
+-- 폭이 394px(5*54 + 4*11 + 26 + 54)가 됐다 - "정돈돼 보인다"는 지시대로 체력바 폭을 300 →
+-- 394로 맞춘다(SkillSlots.client.lua의 SLOT_SIZE/SLOT_GAP/DASH_GAP과 값을 공유하는 계약 -
+-- 그쪽이 바뀌면 이 숫자도 같이 고쳐야 한다).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,11 +30,18 @@ local RunService = game:GetService("RunService")
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
-local BAR_WIDTH, BAR_HEIGHT = 300, 19
+local BAR_WIDTH, BAR_HEIGHT = 394, 19
 
--- 중앙 하단 묶음을 아래에서부터 쌓는다: 경험치바(15) + 여백(16) + 스킬행(92,
--- SkillSlots.client.lua ROW_HEIGHT) + 여백(9, 목업 .cluster gap) = 132.
-local BOTTOM_OFFSET = 15 + 16 + 92 + 9
+-- 중앙 하단 묶음을 아래에서부터 쌓는다: 경험치바(15) + 여백(16) + 스킬행(54,
+-- SkillSlots.client.lua ROW_HEIGHT - 18-2에서 공격 버튼(92)이 없어져 슬롯 자신의
+-- 지름으로 줄었다) + 여백(9, 목업 .cluster gap) = 94.
+local BOTTOM_OFFSET = 15 + 16 + 54 + 9
+
+-- 18-2 [1]: 3타 콤보 점 3개가 있던 자리(공격 버튼)가 없어져 체력바 바로 위로 옮긴다.
+-- AttackInput.client.lua가 이 이름으로 WaitForChild해 자기 점들을 끼워 넣는다(SkillSlots·
+-- AttackInput이 옛 CentralRow를 공유하던 것과 같은 계약 패턴). 여기서는 자리만 만든다 -
+-- 점 자체의 개수·색·갱신은 전부 AttackInput.client.lua 소관(콤보 로직을 아는 파일).
+local COMBO_PIPS_GAP_ABOVE = 8
 
 -- 눈금이 이보다 많아지면(수십 개 이상) 낱개 가는 눈금 대신 대표 눈금 약 10개만
 -- 굵게 그린다 - 안 그러면 선이 겹쳐 안 보인다. 적을 땐 실제 타수를 그대로 보여준다.
@@ -61,6 +73,17 @@ container.Parent = screenGui
 local containerCorner = Instance.new("UICorner")
 containerCorner.CornerRadius = UDim.new(0, 4)
 containerCorner.Parent = container
+
+-- ComboPipsAnchor는 container 내부가 아니라 screenGui 바로 아래 형제로 둔다 - container는
+-- ClipsDescendants=true라 안쪽에 넣으면 점이 잘려 보인다.
+local comboPipsAnchor = Instance.new("Frame")
+comboPipsAnchor.Name = "ComboPipsAnchor"
+comboPipsAnchor.AnchorPoint = Vector2.new(0.5, 1)
+comboPipsAnchor.Position = UDim2.new(0.5, 0, 1, -(BOTTOM_OFFSET + BAR_HEIGHT + COMBO_PIPS_GAP_ABOVE))
+comboPipsAnchor.AutomaticSize = Enum.AutomaticSize.XY
+comboPipsAnchor.Size = UDim2.new(0, 0, 0, 0)
+comboPipsAnchor.BackgroundTransparency = 1
+comboPipsAnchor.Parent = screenGui
 
 local containerStroke = Instance.new("UIStroke")
 containerStroke.Color = UIColors.rim

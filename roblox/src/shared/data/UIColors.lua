@@ -54,4 +54,16 @@ return {
 	-- 16-3: 창을 열었을 때 뒤를 덮는 전체 화면 딤(목업 .dim, rgba(0,0,0,.42)).
 	overlayDim = Color3.fromRGB(0, 0, 0),
 	overlayDimTransparency = 0.58, -- alpha .42
+
+	-- 18-2: 스킬 슬롯 금속판 톤. panel/rim과는 별도 축이다 - 슬롯은 "얇은 유리질 패널"이
+	-- 아니라 "두꺼운 금속판"이어야 해서(지시 4) 더 불투명하고 톤이 좁다.
+	metalTop = Color3.fromRGB(52, 56, 64), -- 슬롯 배경 그라디언트 위쪽(빛이 위에서 온다는 암시)
+	metalBottom = Color3.fromRGB(22, 24, 29), -- 슬롯 배경 그라디언트 아래쪽
+	metalOuter = Color3.fromRGB(8, 9, 11), -- 바깥쪽 어두운 금속 테두리
+	metalInner = Color3.fromRGB(210, 220, 235), -- 안쪽 밝은 하이라이트 테두리
+	metalInnerTransparency = 0.55,
+	-- 잠긴 칸 - 채도를 거의 없앤 더 어두운 톤(발광 없음, 지시 4).
+	lockedBg = Color3.fromRGB(17, 18, 20),
+	lockedIcon = Color3.fromRGB(60, 62, 66),
+	lockedRim = Color3.fromRGB(70, 72, 76),
 }

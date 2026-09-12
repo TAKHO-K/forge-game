@@ -11,8 +11,8 @@
 -- 원칙을 GoldHud(이모지 tofu 문제)에서부터 지켜왔다 - 그 원칙을 깨면서까지 매끄러운
 -- conic을 만들 가치가 없다고 판단했다. 대신 스톱워치 눈금처럼 12개 조각(시계 숫자
 -- 위치)을 놓고 경과한 만큼 하나씩 밝아지게 한다 - 매끄럽진 않지만 "각도 진행"이라는
--- 정보 자체는 정확히 전달되고, 이미지도 필요 없다. 지금은 Q·E·대시 전부 기능이 없어
--- 아무도 이 링을 갱신하지 않는다(자리만 만들어 둔다는 16-1/16-2 지시를 그대로 따른다).
+-- 정보 자체는 정확히 전달되고, 이미지도 필요 없다. Q·E·대시는 18-2부터 더미 쿨다운으로
+-- 이 링을 실제로 돌린다(SkillSlots.client.lua 참고) - 진짜 스킬은 아직 없다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
@@ -160,9 +160,70 @@ function HudIcons.dash(parent, size, dim)
 	return canvas
 end
 
+-- 자물쇠 - 잠긴 스킬 슬롯(18-2). Roblox엔 아치(반원) primitive가 없어 shackle을 곡선 대신
+-- 각진 "⊓" 브라켓(세로 기둥 둘 + 가로대 하나, burst 아이콘과 같은 막대 조합 방식)으로 대체한다.
+function HudIcons.lock(parent, size)
+	local color = UIColors.lockedIcon
+	local canvas = Instance.new("Frame")
+	canvas.BackgroundTransparency = 1
+	canvas.Size = UDim2.new(0, size, 0, size)
+	canvas.Parent = parent
+
+	local armThickness = size * 0.12
+	local shackleWidth = size * 0.4
+	local shackleHeight = size * 0.26
+	local shackleTop = size * 0.14
+
+	local leftArm = newFrame(canvas, UDim2.new(0, armThickness, 0, shackleHeight), Vector2.new(0.5, 0),
+		UDim2.new(0.5, -shackleWidth / 2, 0, shackleTop), 0, color)
+	round(leftArm, armThickness / 2)
+
+	local rightArm = newFrame(canvas, UDim2.new(0, armThickness, 0, shackleHeight), Vector2.new(0.5, 0),
+		UDim2.new(0.5, shackleWidth / 2, 0, shackleTop), 0, color)
+	round(rightArm, armThickness / 2)
+
+	local topArm = newFrame(canvas, UDim2.new(0, shackleWidth + armThickness, 0, armThickness), Vector2.new(0.5, 0),
+		UDim2.new(0.5, 0, 0, shackleTop), 0, color)
+	round(topArm, armThickness / 2)
+
+	local bodyWidth, bodyHeight = size * 0.6, size * 0.42
+	local body = newFrame(canvas, UDim2.new(0, bodyWidth, 0, bodyHeight), Vector2.new(0.5, 0),
+		UDim2.new(0.5, 0, 0, shackleTop + shackleHeight - armThickness * 0.5), 0, color)
+	round(body, size * 0.08)
+
+	return canvas
+end
+
+-- 톱니(설정 버튼) - burst 아이콘과 같은 방사형 막대 6개 + 중앙 원. 실제 톱니바퀴 곡선은
+-- 아니지만 "설정"으로 읽히는 최소 형태(지시 5 - 이번엔 창 내용 없이 자리만).
+function HudIcons.gear(parent, size, color)
+	local iconColor = color or UIColors.textSecondary
+	local canvas = Instance.new("Frame")
+	canvas.BackgroundTransparency = 1
+	canvas.Size = UDim2.new(0, size, 0, size)
+	canvas.Parent = parent
+
+	local center = size / 2
+	for i = 0, 5 do
+		local angle = i * 60
+		local tooth = newFrame(canvas, UDim2.new(0, size * 0.16, 0, size * 0.5), Vector2.new(0.5, 0),
+			UDim2.new(0, center, 0, center), angle, iconColor)
+		tooth.ZIndex = 1
+		round(tooth, size * 0.03)
+	end
+
+	local hubRadius = size * 0.22
+	local hub = newFrame(canvas, UDim2.new(0, hubRadius * 2, 0, hubRadius * 2), Vector2.new(0.5, 0.5),
+		UDim2.new(0, center, 0, center), 0, iconColor)
+	hub.ZIndex = 2
+	round(hub, hubRadius)
+
+	return canvas
+end
+
 -- 쿨다운 링 - 위 모듈 설명 참고("스톱워치 눈금" 방식). diameter는 슬롯 지름과 같게 준다.
 -- 반환값은 update(remainingRatio) 함수 하나 - remainingRatio=1이면 전부 어둡게(막 씀),
--- 0이면 전부 밝게(사용 가능). 지금은 이 update를 아무도 부르지 않는다.
+-- 0이면 전부 밝게(사용 가능). SkillSlots.client.lua의 setCooldown이 이 update를 부른다.
 function HudIcons.buildCooldownRing(parent, diameter)
 	local TICK_COUNT = 12
 	local center = diameter / 2

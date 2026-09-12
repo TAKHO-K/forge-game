@@ -23,6 +23,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local HudChip = require(script.Parent.HudChip)
+local HudIcons = require(script.Parent.HudIcons)
 
 local stageMoveRequest = ReplicatedStorage:WaitForChild("StageMoveRequest")
 local stageMoveResult = ReplicatedStorage:WaitForChild("StageMoveResult")
@@ -181,6 +182,36 @@ updateLabels()
 -- 화면에 알리는 연출은 폴리시 단계로 미룬다(지시 [3] "기능 확인 수준"). 15-1에서 이유가
 -- 두 가지로 늘었다 - 콘솔 메시지만이라도 구분해 둔다(reason 없는 옛 서버 응답도
 -- 방어적으로 처리).
+-- 설정 버튼(18-2 [5]) - ESC를 못 쓰는 이유(CoreGUI 예약)는 UIManager.lua 18-1 [2] 참고.
+-- 우측 칩 스택 맨 아래에 자리만 만든다 - 설정창 내용은 다음 단계, 지금은 눌러도 아무 일 없다.
+local settingsButton = Instance.new("TextButton")
+settingsButton.Name = "SettingsButton"
+settingsButton.LayoutOrder = 4
+settingsButton.Size = UDim2.new(0, 34, 0, 34)
+settingsButton.Text = ""
+settingsButton.AutoButtonColor = false
+settingsButton.BackgroundColor3 = UIColors.panel
+settingsButton.BackgroundTransparency = UIColors.panelTransparency
+settingsButton.Parent = row
+
+local settingsCorner = Instance.new("UICorner")
+settingsCorner.CornerRadius = UDim.new(1, 0)
+settingsCorner.Parent = settingsButton
+
+local settingsStroke = Instance.new("UIStroke")
+settingsStroke.Color = UIColors.rim
+settingsStroke.Transparency = UIColors.rimTransparency
+settingsStroke.Thickness = 1
+settingsStroke.Parent = settingsButton
+
+local settingsIconHolder = Instance.new("Frame")
+settingsIconHolder.BackgroundTransparency = 1
+settingsIconHolder.AnchorPoint = Vector2.new(0.5, 0.5)
+settingsIconHolder.Position = UDim2.new(0.5, 0, 0.5, 0)
+settingsIconHolder.Size = UDim2.new(0, 18, 0, 18)
+settingsIconHolder.Parent = settingsButton
+HudIcons.gear(settingsIconHolder, 18)
+
 stageMoveResult.OnClientEvent:Connect(function(payload)
 	if payload.result ~= "rejected" then
 		return
