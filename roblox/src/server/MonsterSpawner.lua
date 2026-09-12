@@ -76,7 +76,7 @@ local function buildModel(data, position)
 	nameplateGui.AlwaysOnTop = true
 	nameplateGui.Adornee = head
 	nameplateGui.Parent = head
-	WorldLabelStyle.setupBillboard(nameplateGui, 100)
+	WorldLabelStyle.setupNameplateBillboard(nameplateGui, 100)
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
@@ -86,7 +86,7 @@ local function buildModel(data, position)
 	nameLabel.TextColor3 = Color3.new(1, 1, 1)
 	nameLabel.Visible = false -- 조준 대상일 때만 AimTarget.lua가 true로 바꾼다
 	nameLabel.Parent = nameplateGui
-	WorldLabelStyle.styleText(nameLabel, 16)
+	WorldLabelStyle.styleNameplateText(nameLabel, 16)
 
 	local barBackground = Instance.new("Frame")
 	barBackground.Name = "HpBarBackground"

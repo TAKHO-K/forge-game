@@ -212,12 +212,16 @@ for _, key in ipairs(WorldConfig.tierZoneOrder) do
 		FLOOR_Y + FLOOR_THICKNESS / 2 + 3,
 		zone.entrance.Z + directionUnit.Z * 10
 	)
-	TeleportPad.create(outboundPosition, padLabel, MonsterData[key].bodyColor, destinationInZone)
+	-- 표지판은 다가오는 플레이어를 마주봐야 한다(지시 - "판자 표면에 직접 그린다"는 곧
+	-- 각도가 카메라 시점에 고정된다는 뜻 - 방향까지 맞아야 정면으로 보인다). 출발 패드는
+	-- 스폰(원점) 쪽에서 걸어오므로 그 방향(-directionUnit)을 향하고, 복귀 패드는 구역
+	-- 안쪽에서 걸어나오므로 구역 방향(directionUnit)을 향한다.
+	TeleportPad.create(outboundPosition, padLabel, MonsterData[key].bodyColor, destinationInZone, -directionUnit)
 
 	-- 구역 쪽 복귀 패드 - 구역 입구 지점에 둔다.
 	local returnPosition = Vector3.new(zone.entrance.X, FLOOR_Y + FLOOR_THICKNESS / 2 + 0.6, zone.entrance.Z)
 	local spawnDestination = Vector3.new(spawnCenter.X, FLOOR_Y + FLOOR_THICKNESS / 2 + 3, spawnCenter.Z)
-	TeleportPad.create(returnPosition, "중앙 복귀", Color3.fromRGB(220, 220, 230), spawnDestination)
+	TeleportPad.create(returnPosition, "중앙 복귀", Color3.fromRGB(220, 220, 230), spawnDestination, directionUnit)
 end
 
 print(("[forge-game] 사냥터 생성 완료 - 9개 구역, tier 몬스터 %d마리 스폰됨"):format(totalMonsters))

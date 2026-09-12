@@ -22,13 +22,31 @@ local TeleportPad = {}
 local TELEPORT_COOLDOWN_SECONDS = 1.5
 local lastTeleportAt = setmetatable({}, { __mode = "k" }) -- [Player] = os.clock()
 
--- 표지판 크기(지시 - "멀리서 읽혀야 포탈을 고를 수 있다"). 물리적 signpost Part 위에
--- BillboardGui를 얹는다 - SurfaceGui는 각도에 따라 안 읽히지만 BillboardGui는 항상 정면을
--- 본다.
-local SIGN_HEIGHT_STUDS = 5
+-- 표지판(17-1 후속 - "포탈 표지판을 진짜 표지판으로"). BillboardGui는 항상 카메라를
+-- 향해 돌아서 탑다운 시점에서 화면이 난잡해졌다 - 이 게임의 카메라는 수평에서 아래로
+-- 약 15도 내려다보는 각도로 고정되어 있으므로(실측), 판자를 그 각도만큼 뒤로 젖혀
+-- 세워두면 카메라를 돌리지 않는 한 항상 정면으로 보인다. SurfaceGui로 판자 Part
+-- 표면에 직접 그린다 - 판자 자체가 배경이라 반투명 배경 Frame이 필요 없다.
+local POST_HEIGHT_STUDS = 3
+local BOARD_WIDTH_STUDS = 5.5
+local BOARD_HEIGHT_STUDS = 2.6
+local BOARD_THICKNESS_STUDS = 0.2
+local BOARD_TILT_DEGREES = 20 -- 실측 카메라 각도(15도)보다 약간 크게 잡아 근접 시야에서도 눕지 않게
 local SIGN_MAX_DISTANCE_STUDS = 200
 
-function TeleportPad.create(position, label, color, destination)
+-- 판자가 마주볼 수평 방향(플레이어가 다가오는 쪽). 없으면 기본값(-Z)을 쓴다.
+local function normalizeFacing(facingDirection)
+	if not facingDirection then
+		return Vector3.new(0, 0, -1)
+	end
+	local flat = Vector3.new(facingDirection.X, 0, facingDirection.Z)
+	if flat.Magnitude < 1e-3 then
+		return Vector3.new(0, 0, -1)
+	end
+	return flat.Unit
+end
+
+function TeleportPad.create(position, label, color, destination, facingDirection)
 	local pad = Instance.new("Part")
 	pad.Name = "TeleportPad"
 	pad.Shape = Enum.PartType.Cylinder
@@ -43,32 +61,44 @@ function TeleportPad.create(position, label, color, destination)
 
 	local signPost = Instance.new("Part")
 	signPost.Name = "SignPost"
-	signPost.Size = Vector3.new(0.6, SIGN_HEIGHT_STUDS, 0.6)
+	signPost.Size = Vector3.new(0.5, POST_HEIGHT_STUDS, 0.5)
 	signPost.Anchored = true
 	signPost.CanCollide = false
 	signPost.Material = Enum.Material.Metal
 	signPost.Color = Color3.fromRGB(60, 60, 65)
-	signPost.Position = position + Vector3.new(0, SIGN_HEIGHT_STUDS / 2, 0)
+	signPost.Position = position + Vector3.new(0, POST_HEIGHT_STUDS / 2, 0)
 	signPost.Parent = Workspace
 
-	local billboard = Instance.new("BillboardGui")
-	billboard.Size = UDim2.new(0, 320, 0, 130)
-	billboard.StudsOffset = Vector3.new(0, SIGN_HEIGHT_STUDS / 2 + 0.8, 0)
-	billboard.AlwaysOnTop = true
-	billboard.Adornee = signPost
-	billboard.Parent = signPost
-	WorldLabelStyle.setupBillboard(billboard, SIGN_MAX_DISTANCE_STUDS)
+	local facing = normalizeFacing(facingDirection)
+	local boardCenter = position + Vector3.new(0, POST_HEIGHT_STUDS + BOARD_HEIGHT_STUDS / 2, 0)
 
-	WorldLabelStyle.addBackground(billboard)
+	local board = Instance.new("Part")
+	board.Name = "SignBoard"
+	board.Size = Vector3.new(BOARD_WIDTH_STUDS, BOARD_HEIGHT_STUDS, BOARD_THICKNESS_STUDS)
+	board.Anchored = true
+	board.CanCollide = false
+	board.Material = Enum.Material.Metal
+	board.Color = color
+	board.CFrame = CFrame.lookAt(boardCenter, boardCenter + facing) * CFrame.Angles(math.rad(BOARD_TILT_DEGREES), 0, 0)
+	board.Parent = Workspace
+
+	local surfaceGui = Instance.new("SurfaceGui")
+	surfaceGui.Face = Enum.NormalId.Front
+	surfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	surfaceGui.PixelsPerStud = 50
+	surfaceGui.AlwaysOnTop = true
+	surfaceGui.Adornee = board
+	surfaceGui.Parent = board
+	WorldLabelStyle.setupSignSurface(surfaceGui, SIGN_MAX_DISTANCE_STUDS)
 
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
 	text.Size = UDim2.new(1, 0, 1, 0)
 	text.Text = label
-	text.TextColor3 = color
+	text.TextColor3 = Color3.fromRGB(245, 245, 245)
 	text.TextWrapped = true
-	text.Parent = billboard
-	WorldLabelStyle.styleText(text, 30)
+	text.Parent = surfaceGui
+	WorldLabelStyle.styleSignText(text, 44)
 
 	pad.Touched:Connect(function(hit)
 		local character = hit.Parent
