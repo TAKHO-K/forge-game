@@ -1,5 +1,6 @@
--- 전투 HUD 아이콘(16-2). `Claude outputs/hud-mockup.html`의 .ic-sword/.ic-spin/.ic-burst/
--- .ic-dash를 그대로 옮긴다 - 전부 이미지 없이 사각형(Frame)의 크기·회전·위치 조합이라
+-- 전투 HUD 아이콘(16-2, 19-3a에서 미사용 .ic-sword 이식분 제거). `Claude outputs/
+-- hud-mockup.html`의 .ic-spin/.ic-burst/.ic-dash를 그대로 옮긴다 - 전부 이미지 없이
+-- 사각형(Frame)의 크기·회전·위치 조합이라
 -- Roblox Frame.Rotation으로 1:1에 가깝게 옮길 수 있다(지시 3). AttackInput.client.lua와
 -- SkillSlots.client.lua 둘 다 쓰므로 ModuleScript로 뺐다 - 이 폴더의 HitEffects.lua/
 -- Projectiles.lua/WeaponVisual.lua와 같은 패턴(client 전용 공유 모듈, .client 접미사 없음).
@@ -36,36 +37,6 @@ local function round(frame, radius)
 	corner.CornerRadius = UDim.new(0, radius)
 	corner.Parent = frame
 	return corner
-end
-
--- 칼 - 공격 버튼 아이콘(목업 30x30 기준, size로 다른 크기에도 비례 적용).
-function HudIcons.sword(parent, size)
-	local f = size / 30
-	local canvas = Instance.new("Frame")
-	canvas.BackgroundTransparency = 1
-	canvas.Size = UDim2.new(0, size, 0, size)
-	canvas.Parent = parent
-
-	-- 날 - 위쪽 절반, 70% 지점을 축으로 45도 회전(CSS transform-origin:50% 70%와 동일).
-	local blade = newFrame(canvas, UDim2.new(0, 5 * f, 0, 20 * f), Vector2.new(0.5, 0.7),
-		UDim2.new(0, 15 * f, 0, 14 * f), 45, Color3.fromRGB(255, 154, 87))
-	round(blade, 2 * f)
-	local bladeGradient = Instance.new("UIGradient")
-	bladeGradient.Color = ColorSequence.new(Color3.fromRGB(255, 227, 207), Color3.fromRGB(255, 154, 87))
-	bladeGradient.Rotation = 90
-	bladeGradient.Parent = blade
-
-	-- 코등이 - 날 밑동을 가로지른다(자기 중심 축 회전).
-	local guard = newFrame(canvas, UDim2.new(0, 20 * f, 0, 4 * f), Vector2.new(0.5, 0.5),
-		UDim2.new(0, 15 * f, 0, 21 * f), 45, Color3.fromRGB(255, 199, 154))
-	round(guard, 2 * f)
-
-	-- 손잡이 - 코등이 아래, 자기 윗변을 축으로 회전(CSS transform-origin:50% 0).
-	local grip = newFrame(canvas, UDim2.new(0, 4 * f, 0, 9 * f), Vector2.new(0.5, 0),
-		UDim2.new(0, 15 * f, 0, 21 * f), 45, Color3.fromRGB(196, 115, 62))
-	round(grip, 2 * f)
-
-	return canvas
 end
 
 -- 대시 - 셋. 오른쪽을 가리키는 셰브런(">") 세 개를 왼쪽부터 옅게-짙게 이어붙여 "앞으로

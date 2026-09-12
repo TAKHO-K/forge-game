@@ -21,6 +21,14 @@ local SaveCoordinator = {}
 -- (AttackInput.client.lua의 activeStacks와 같은 이유, 퇴장 때 수동으로 지울 필요가 없다).
 local saveSuspended = setmetatable({}, { __mode = "k" })
 
+-- 19-3a: 밸런스 테스트 도구(DevTools.server.lua) 전용 저장 차단. saveSuspended와 일부러
+-- 분리한다 - 그쪽은 "저장이 실패해 안내가 필요한" 에러 상태고, 이건 "지금 프로필이 가짜
+-- 테스트값이라 정상 상태다"라는 다른 이유다. 여기 걸리면 클라이언트 알림(SaveNotice)도
+-- warn 로그도 없다 - 개발자가 의도적으로 켠 상태이지 사고가 아니다. 주기 자동저장
+-- (SaveServer.server.lua)과 퇴장 즉시저장(ImmediateSave.flush) 둘 다 saveForPlayer
+-- 하나만 거치므로, 여기 한 곳만 막으면 두 경로 모두 안전하다.
+local devToolsSuspended = setmetatable({}, { __mode = "k" })
+
 local function notify(player, message)
 	saveSuspended[player] = true
 	saveNotice:FireClient(player, message)
@@ -31,7 +39,20 @@ function SaveCoordinator.notify(player, message)
 	notify(player, message)
 end
 
+-- DevTools.server.lua만 호출한다. suspended=true인 동안 saveForPlayer는 조용히
+-- 아무것도 하지 않는다 - 테스트 조건이 DataStore에 반영되는 일을 원천 차단한다.
+function SaveCoordinator.setDevToolsSuspended(player, suspended)
+	if suspended then
+		devToolsSuspended[player] = true
+	else
+		devToolsSuspended[player] = nil
+	end
+end
+
 function SaveCoordinator.saveForPlayer(player)
+	if devToolsSuspended[player] then
+		return
+	end
 	if saveSuspended[player] then
 		return
 	end

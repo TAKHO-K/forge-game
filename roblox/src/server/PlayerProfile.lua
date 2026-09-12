@@ -483,4 +483,97 @@ function PlayerProfile.clear(player)
 	profiles[player] = nil
 end
 
+local function deepCopy(value)
+	if type(value) ~= "table" then
+		return value
+	end
+	local copy = {}
+	for k, v in pairs(value) do
+		copy[k] = deepCopy(v)
+	end
+	return copy
+end
+
+-- 19-3a: 밸런스 테스트 도구(DevTools.server.lua) 전용 스냅샷/복원 + 직접 세팅 함수.
+-- 일반 게임플레이 경로(강화·드랍·레벨업 등)는 절대 이 함수들을 쓰지 않는다 - 전부
+-- "서버가 검증한 결과"를 반영하는 기존 함수를 그대로 쓴다. 이 함수들은 개발자가
+-- 임의 조건을 즉시 세팅하기 위한 우회로이므로 DevTools 밖에서 호출하지 않는다.
+
+-- 활성 직업 하나의 전체 상태(직업 자체는 안 바뀐다 - classId는 snapshot 밖에서 별도 관리)를
+-- 깊은 복사로 백업한다. DevTools가 테스트 시작 전 원본을 보존하는 유일한 지점.
+function PlayerProfile.snapshotForDevTools(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	return {
+		classId = profile.classId,
+		gold = profile.gold,
+		classes = deepCopy(profile.classes),
+	}
+end
+
+-- snapshotForDevTools가 만든 백업을 통째로 되돌린다 - 저장(DataStore)에는 손대지 않는다
+-- (세션 메모리만 복원). 인벤토리·게임패스는 백업 대상이 아니다(DevTools가 건드리지 않는
+-- 필드라 원본 그대로 남아 있다).
+function PlayerProfile.restoreForDevTools(player, snapshot)
+	local profile = profiles[player]
+	if not profile or not snapshot then
+		return
+	end
+	profile.classId = snapshot.classId
+	profile.gold = snapshot.gold
+	profile.classes = deepCopy(snapshot.classes)
+	player:SetAttribute("Gold", profile.gold)
+	syncActiveClassAttributes(player, profile)
+end
+
+-- 캐릭터 레벨을 경험치로 직접 지정한다(addCharacterExp와 달리 "더하기"가 아니라 "그
+-- 값으로 고정" - 정상 플레이 경로엔 이런 연산이 없다, 몬스터 처치로만 오른다).
+function PlayerProfile.setCharacterExpDirect(player, exp)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return
+	end
+	classState.characterExp = exp
+	player:SetAttribute("CharacterExp", exp)
+	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(exp))
+end
+
+-- 인벤토리 경유 없이 장비를 직접 장착한다(equipItem과 달리 인벤토리 인덱스가 아니라
+-- 아이템 테이블을 직접 받는다 - 인벤토리에 있지도 않은 합성 아이템을 착용시켜야 해서다).
+-- 기존 착용품은 그냥 버린다 - 되돌릴 원본은 snapshotForDevTools가 이미 갖고 있다.
+function PlayerProfile.setEquippedDirect(player, part, item)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return
+	end
+	classState.equipment[part] = item
+	if part == "shoes" then
+		PlayerProfile.refreshMovementSpeed(player)
+	elseif part == "armor" then
+		PlayerProfile.refreshMaxHp(player)
+	end
+end
+
+-- 무한 모드 스테이지를 StageServer의 이동 규칙(최고+1까지만, 보스 게이트) 없이 즉시
+-- 지정한다. best가 그 값보다 낮으면 같이 끌어올린다(안 그러면 몬스터가 새로 어그로를
+-- 잡을 때 MonsterState.setStage가 이 값을 그대로 읽지 못할 이유는 없지만, best가 낮게
+-- 남아 있으면 다른 화면(HUD 등)이 모순된 값을 보여준다).
+function PlayerProfile.setInfiniteStageDirect(player, stage)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return
+	end
+	classState.stageProgress.infinite = stage
+	if stage > classState.stageProgress.infiniteBest then
+		classState.stageProgress.infiniteBest = stage
+	end
+	player:SetAttribute("InfiniteStage", stage)
+	player:SetAttribute("InfiniteStageBest", classState.stageProgress.infiniteBest)
+end
+
 return PlayerProfile
