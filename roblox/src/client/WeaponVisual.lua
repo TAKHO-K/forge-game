@@ -17,6 +17,13 @@ local WeaponVisual = {}
 
 local player = Players.LocalPlayer
 
+-- 3타 강타 전용 배율(16-7, PRD 8.5 근처 지시 - "새 애니메이션을 만들지 마라. 기존 3타째
+-- 모션을 변형해라"). 속도 0.7배 + 무기 스케일 1.3배 두 가지만 쓴다 - updateFrame(아래)이
+-- 이 값을 읽으므로 참조 지점보다 앞에 선언해야 한다(로컬은 선언 이후부터만 보인다 -
+-- 실측: 아래쪽에 선언했다가 updateFrame에서 nil로 읽혀 매 프레임 에러가 났다).
+local HEAVY_SPEED_SCALE = 0.7
+local HEAVY_WEAPON_SCALE = 1.3
+
 -- 지금 들고 있는 무기 상태 하나. 클래스가 바뀌거나 캐릭터가 다시 스폰되면 통째로 갈아
 -- 끼운다(부분 갱신 안 함 - 상태가 섞이면 이전 클래스의 파트가 남는 버그가 생기기 쉽다).
 local current = nil
@@ -373,8 +380,28 @@ local function updateStaff(hand, model, motion, instances, alpha)
 	instances.part.CFrame = hand.CFrame * model.gripOffset * rotationCFrame(partMotion.swingAxis, angle)
 end
 
-local function updateFrame()
+-- 3타 강타 히트스톱(16-7) - "타격감의 핵심"(지시). durationSeconds 동안 스윙 포즈를
+-- 그 자리에 얼린다(updateFrame이 current.frozen이면 아예 재계산을 건너뛴다). 끝나면
+-- swingStartTime을 얼린 시간만큼 밀어서, 다시 재생될 때 alpha가 멈췄던 지점부터 이어서
+-- 진행하게 한다(실시간이 그만큼 지나갔다고 스윙이 갑자기 앞으로 튀지 않도록).
+function WeaponVisual.applyHitstop(durationSeconds)
 	if not current then
+		return
+	end
+	current.frozen = true
+	task.delay(durationSeconds, function()
+		if not current then
+			return
+		end
+		if current.swingStartTime then
+			current.swingStartTime += durationSeconds
+		end
+		current.frozen = false
+	end)
+end
+
+local function updateFrame()
+	if not current or current.frozen then
 		return
 	end
 
@@ -388,9 +415,15 @@ local function updateFrame()
 	local leftHand = character:FindFirstChild("LeftHand")
 	local hands = { RightHand = rightHand, LeftHand = leftHand }
 
+	-- 3타 강타(16-7)는 0.7배 속도로 재생한다(지시 - "느리고 무겁게"). 총 재생 시간을
+	-- HEAVY_SPEED_SCALE로 나누면(=늘리면) 같은 경과시간에 alpha가 더 천천히 오른다.
+	local duration = current.motion.totalDurationSeconds
+	if current.heavy then
+		duration /= HEAVY_SPEED_SCALE
+	end
 	local alpha = 0
 	if current.swingStartTime then
-		alpha = math.clamp((os.clock() - current.swingStartTime) / current.motion.totalDurationSeconds, 0, 1)
+		alpha = math.clamp((os.clock() - current.swingStartTime) / duration, 0, 1)
 	end
 
 	if current.kind == "mesh" then
@@ -406,14 +439,56 @@ local function updateFrame()
 	updateArms(character, current.motion, alpha)
 end
 
+-- 지시가 제시한 세 옵션(속도·스케일·검기) 중 되돌리기가 간단한 두 개(속도·스케일)만
+-- 골랐다 - 트레일 두께는 매 프레임 재계산되는 값이 아니라 생성 시 고정값이라 되돌리는
+-- 로직이 따로 더 필요해진다.
+local baseSizeByPart = setmetatable({}, { __mode = "k" })
+
+local function forEachBasePart(value, fn)
+	if typeof(value) == "Instance" then
+		if value:IsA("BasePart") then
+			fn(value)
+		end
+	elseif type(value) == "table" then
+		for _, v in pairs(value) do
+			forEachBasePart(v, fn)
+		end
+	end
+end
+
+-- mesh/mesh_pair/specialmesh(대검·쌍검·지팡이)만 스케일한다 - bow는 활 자체가 여러
+-- 부품(팔·시위·화살)의 상대 배치로 조립돼 있어 통째로 스케일하면 비율이 깨진다. bow는
+-- 속도 저하만으로도 "다른 공격"이 충분히 읽힌다고 판단했다(활은 시위를 당기는 동작 자체가
+-- 느려지는 게 체감이 크다).
+local function scaleWeaponParts(scaledInstances, factor)
+	forEachBasePart(scaledInstances, function(part)
+		local base = baseSizeByPart[part]
+		if not base then
+			base = part.Size
+			baseSizeByPart[part] = base
+		end
+		part.Size = base * factor
+	end)
+end
+
 -- 서버 확인 없이 즉시 재생한다(지시 사항 - "모션은 클라이언트에서 재생한다. 판정은
 -- 여전히 서버다"). 스윙 길이는 클래스 데이터(AttackMotionData)가 고정으로 갖고 있다 -
--- 호출부는 "지금 재생해라"만 알려주면 된다.
-function WeaponVisual.playSwing()
+-- 호출부는 "지금 재생해라"만 알려주면 된다. isHeavy(16-7)면 3타 강타 변형을 얹는다.
+function WeaponVisual.playSwing(isHeavy)
 	if not current then
 		return
 	end
+	current.heavy = isHeavy
 	current.swingStartTime = os.clock()
+
+	if isHeavy and (current.kind == "mesh" or current.kind == "mesh_pair" or current.kind == "specialmesh") then
+		local scaledInstances = current.instances
+		scaleWeaponParts(scaledInstances, HEAVY_WEAPON_SCALE)
+		local duration = current.motion.totalDurationSeconds / HEAVY_SPEED_SCALE
+		task.delay(duration, function()
+			scaleWeaponParts(scaledInstances, 1) -- baseSizeByPart에 저장해 둔 원래 크기로 되돌린다
+		end)
+	end
 end
 
 -- 활/힐러 전용 - 지금 스윙이 "발사 시점"(releaseT)을 지났는지. AttackInput.client.lua가

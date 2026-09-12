@@ -2,13 +2,14 @@
 -- HP<=0인지 판단은 AttackServer가 하고(데미지를 적용한 직후라 그 값을 이미 들고 있다),
 -- 그 다음 처리(로그·MonsterState 정리·인스턴스 제거·리스폰 예약)는 여기 despawn()이 맡는다.
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
-local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 local MonsterState = require(script.Parent.MonsterState)
 
 local MonsterSpawner = {}
@@ -29,6 +30,7 @@ local function buildModel(data, position)
 
 	local model = Instance.new("Model")
 	model.Name = data.displayName
+	CollectionService:AddTag(model, "Monster") -- 클라이언트 AimTarget.lua가 이 태그로만 조준 후보를 찾는다
 
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
@@ -63,31 +65,62 @@ local function buildModel(data, position)
 	humanoid.NameDisplayDistance = 0
 	humanoid.Parent = model
 
+	-- 머리 위 표시(16-7 재설계) - 평소엔 HP바만(여러 마리가 모이면 이름 글씨가 겹친다,
+	-- 구역이 이미 tier를 말해줘서 이름은 중복 정보), 조준 대상일 때만 이름을 띄운다.
+	-- Visible/Highlight.Enabled 토글은 클라이언트(AimTarget.lua)가 한다 - LocalScript가
+	-- 바꾼 프로퍼티는 그 클라이언트에만 보이므로 플레이어마다 다른 대상을 조준해도 안전하다.
 	local nameplateGui = Instance.new("BillboardGui")
 	nameplateGui.Name = "NameplateGui"
-	nameplateGui.Size = UDim2.new(4 * sizeScale, 0, 1.2 * sizeScale, 0)
-	nameplateGui.StudsOffset = Vector3.new(0, 1.4 * sizeScale, 0)
+	nameplateGui.Size = UDim2.new(0, 130 * sizeScale, 0, 40 * sizeScale)
+	nameplateGui.StudsOffset = Vector3.new(0, 1.6 * sizeScale, 0)
 	nameplateGui.AlwaysOnTop = true
 	nameplateGui.Adornee = head
 	nameplateGui.Parent = head
+	WorldLabelStyle.setupBillboard(nameplateGui, 100)
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
-	nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+	nameLabel.Size = UDim2.new(1, 0, 0, 20)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Text = data.displayName
 	nameLabel.TextColor3 = Color3.new(1, 1, 1)
-	nameLabel.TextScaled = true
+	nameLabel.Visible = false -- 조준 대상일 때만 AimTarget.lua가 true로 바꾼다
 	nameLabel.Parent = nameplateGui
+	WorldLabelStyle.styleText(nameLabel, 16)
 
-	local hpLabel = Instance.new("TextLabel")
-	hpLabel.Name = "HpLabel"
-	hpLabel.Size = UDim2.new(1, 0, 0.5, 0)
-	hpLabel.Position = UDim2.new(0, 0, 0.5, 0)
-	hpLabel.BackgroundTransparency = 1
-	hpLabel.TextColor3 = Color3.new(1, 1, 1)
-	hpLabel.TextScaled = true
-	hpLabel.Parent = nameplateGui
+	local barBackground = Instance.new("Frame")
+	barBackground.Name = "HpBarBackground"
+	barBackground.Size = UDim2.new(1, 0, 0, 8)
+	barBackground.Position = UDim2.new(0, 0, 1, -8)
+	barBackground.BackgroundColor3 = Color3.new(0, 0, 0)
+	barBackground.BackgroundTransparency = 0.35
+	barBackground.BorderSizePixel = 0
+	barBackground.Parent = nameplateGui
+
+	local barBackgroundCorner = Instance.new("UICorner")
+	barBackgroundCorner.CornerRadius = UDim.new(1, 0)
+	barBackgroundCorner.Parent = barBackground
+
+	local barFill = Instance.new("Frame")
+	barFill.Name = "HpBarFill"
+	barFill.Size = UDim2.new(1, 0, 1, 0)
+	barFill.BackgroundColor3 = Color3.fromRGB(210, 60, 60)
+	barFill.BorderSizePixel = 0
+	barFill.Parent = barBackground
+
+	local barFillCorner = Instance.new("UICorner")
+	barFillCorner.CornerRadius = UDim.new(1, 0)
+	barFillCorner.Parent = barFill
+
+	-- 조준 대상 강조 외곽선(16-7) - 기본은 꺼져 있다. AimTarget.lua가 조준 대상 모델에서만
+	-- Enabled를 켠다.
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "AimHighlight"
+	highlight.Enabled = false
+	highlight.FillTransparency = 1
+	highlight.OutlineColor = Color3.fromRGB(255, 230, 90)
+	highlight.OutlineTransparency = 0
+	highlight.Parent = model
 
 	model.PrimaryPart = root
 	return model
@@ -128,18 +161,19 @@ local function playBossAppearEffect(model, position)
 	end
 end
 
--- 확정된 K/M/B/T 표기(NumberFormat)로 "현재HP/최대HP"를 갱신한다.
+-- HP 비율로 머리 위 HP바 너비를 갱신한다(16-7 - 숫자 대신 바 하나로 충분하다는 지시).
 function MonsterSpawner.updateHpLabel(model)
 	local head = model:FindFirstChild("Head")
 	local nameplateGui = head and head:FindFirstChild("NameplateGui")
-	local hpLabel = nameplateGui and nameplateGui:FindFirstChild("HpLabel")
-	if not hpLabel then
+	local barFill = nameplateGui and nameplateGui:FindFirstChild("HpBarBackground") and nameplateGui.HpBarBackground:FindFirstChild("HpBarFill")
+	if not barFill then
 		return
 	end
 
 	local hp = math.max(MonsterState.getHp(model) or 0, 0)
 	local maxHp = MonsterState.getMaxHp(model) or 0
-	hpLabel.Text = NumberFormat.format(hp) .. "/" .. NumberFormat.format(maxHp)
+	local ratio = maxHp > 0 and math.clamp(hp / maxHp, 0, 1) or 0
+	barFill.Size = UDim2.new(ratio, 0, 1, 0)
 end
 
 -- zoneKey(16-6, 선택값) - 그 몬스터가 속한 tier 구역 이름. jab몹(격자 스폰)만 갖고,

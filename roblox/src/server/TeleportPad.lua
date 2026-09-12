@@ -13,11 +13,20 @@
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 
 local TeleportPad = {}
 
 local TELEPORT_COOLDOWN_SECONDS = 1.5
 local lastTeleportAt = setmetatable({}, { __mode = "k" }) -- [Player] = os.clock()
+
+-- 표지판 크기(지시 - "멀리서 읽혀야 포탈을 고를 수 있다"). 물리적 signpost Part 위에
+-- BillboardGui를 얹는다 - SurfaceGui는 각도에 따라 안 읽히지만 BillboardGui는 항상 정면을
+-- 본다.
+local SIGN_HEIGHT_STUDS = 5
+local SIGN_MAX_DISTANCE_STUDS = 200
 
 function TeleportPad.create(position, label, color, destination)
 	local pad = Instance.new("Part")
@@ -32,22 +41,34 @@ function TeleportPad.create(position, label, color, destination)
 	pad.Transparency = 0.25
 	pad.Parent = Workspace
 
+	local signPost = Instance.new("Part")
+	signPost.Name = "SignPost"
+	signPost.Size = Vector3.new(0.6, SIGN_HEIGHT_STUDS, 0.6)
+	signPost.Anchored = true
+	signPost.CanCollide = false
+	signPost.Material = Enum.Material.Metal
+	signPost.Color = Color3.fromRGB(60, 60, 65)
+	signPost.Position = position + Vector3.new(0, SIGN_HEIGHT_STUDS / 2, 0)
+	signPost.Parent = Workspace
+
 	local billboard = Instance.new("BillboardGui")
-	billboard.Size = UDim2.new(5, 0, 1.8, 0)
-	billboard.StudsOffset = Vector3.new(0, 3, 0)
+	billboard.Size = UDim2.new(0, 320, 0, 130)
+	billboard.StudsOffset = Vector3.new(0, SIGN_HEIGHT_STUDS / 2 + 0.8, 0)
 	billboard.AlwaysOnTop = true
-	billboard.Adornee = pad
-	billboard.Parent = pad
+	billboard.Adornee = signPost
+	billboard.Parent = signPost
+	WorldLabelStyle.setupBillboard(billboard, SIGN_MAX_DISTANCE_STUDS)
+
+	WorldLabelStyle.addBackground(billboard)
 
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
 	text.Size = UDim2.new(1, 0, 1, 0)
 	text.Text = label
-	text.TextColor3 = Color3.new(1, 1, 1)
-	text.TextScaled = true
+	text.TextColor3 = color
 	text.TextWrapped = true
-	text.Font = Enum.Font.GothamBold
 	text.Parent = billboard
+	WorldLabelStyle.styleText(text, 30)
 
 	pad.Touched:Connect(function(hit)
 		local character = hit.Parent

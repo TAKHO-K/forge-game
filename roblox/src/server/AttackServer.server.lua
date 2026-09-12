@@ -1,12 +1,14 @@
--- 서버 권위 공격 판정. 클라이언트는 "공격하겠다"는 의사만 보낸다(RemoteEvent 인자 없음) -
--- 사거리 검증·대상 선정·쿨다운 관리·데미지 계산은 전부 여기서만 한다. 클라이언트가 보낸
--- 좌표·대상·데미지 값을 받는 코드는 없다(애초에 그런 인자를 받지 않는다).
+-- 서버 권위 공격 판정. 클라이언트는 "공격하겠다"는 의사 + 조준점(aimPoint, 16-7)만
+-- 보낸다 - 사거리 검증·대상 선정·쿨다운 관리·데미지 계산은 전부 여기서만 한다. aimPoint는
+-- "어느 방향으로 대상을 고를지"에만 쓰이는 힌트일 뿐(아래 AimPicker.pick), 사거리·데미지·
+-- 최종 대상 확정은 클라이언트 값을 그대로 믿지 않고 항상 서버가 다시 계산한다.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
@@ -38,25 +40,17 @@ levelUp.Parent = ReplicatedStorage
 
 local lastAttackTick = {} -- [Player] = os.clock() 시각
 
--- 자동 타겟: 사거리 안에서 가장 가까운 몬스터 하나. 어느 몬스터를 때릴지는
--- 클라이언트가 정하지 않는다 - 여기서만 정한다.
-local function findNearestMonsterInRange(originPosition)
-	local nearestModel, nearestDistance = nil, math.huge
+-- 3타 강타(16-7, 웹 main.js comboCount/comboResetWindow와 동일 값 CombatConfig 참고).
+-- 헛스윙도 콤보에 들어간다 - 웹 performAttack()이 대상 유무와 무관하게 매 공격 입력마다
+-- comboCount를 올리는 것과 같다.
+local comboCounts = {} -- [Player] = number
+local lastComboAttackTick = {} -- [Player] = os.clock() 시각
 
-	for _, model in ipairs(MonsterState.getAllModels()) do
-		local rootPart = model.PrimaryPart
-		if rootPart then
-			local distance = (rootPart.Position - originPosition).Magnitude
-			if distance <= CombatConfig.attackRangeStuds and distance < nearestDistance then
-				nearestModel, nearestDistance = model, distance
-			end
-		end
-	end
+local comboUpdate = Instance.new("RemoteEvent")
+comboUpdate.Name = "ComboUpdate"
+comboUpdate.Parent = ReplicatedStorage
 
-	return nearestModel
-end
-
-attackRequest.OnServerEvent:Connect(function(player)
+attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 프로필 로드가 아직 안 끝난 접속 직후, 혹은 클래스를 아직 안 고른 상태에서 공격이
 	-- 들어올 수 있다 - 공격력·쿨다운 둘 다 클래스가 있어야 계산할 수 있으니 헛스윙으로
 	-- 처리한다(10-3 [3] - 클래스 배율이 실제로 평타에 반영되는 첫 지점).
@@ -83,26 +77,46 @@ attackRequest.OnServerEvent:Connect(function(player)
 
 	lastAttackTick[player] = now -- 헛스윙이어도 쿨다운은 소모한다
 
-	local target = findNearestMonsterInRange(rootPart.Position)
+	-- 3타 강타 콤보 카운터 - 헛스윙도 포함해 이 시점에서 갱신한다(웹과 동일 지점).
+	local lastCombo = lastComboAttackTick[player]
+	if not lastCombo or now - lastCombo > CombatConfig.comboResetWindowSeconds then
+		comboCounts[player] = 0
+	end
+	comboCounts[player] += 1
+	lastComboAttackTick[player] = now
+	local isComboHit = comboCounts[player] % CombatConfig.comboHitEvery == 0
+	comboUpdate:FireClient(player, comboCounts[player], isComboHit)
+
+	-- aimPoint는 클릭·탭한 지점(AttackInput.client.lua) - 서버 검증: Vector3가 아니면
+	-- 무시한다(지시 - "클라가 보낸 방향을 그대로 믿으면 안 된다"). 방향이 없거나 이상한
+	-- 값이면 AimPicker가 사거리 안 최근접으로 대체하므로 안전하게 실패한다. 사거리·데미지는
+	-- 이 값과 무관하게 아래에서 항상 서버가 다시 계산한다.
+	local safeAimPoint = typeof(aimPoint) == "Vector3" and aimPoint or nil
+	local target = AimPicker.pick(rootPart.Position, safeAimPoint, CombatConfig.attackRangeStuds, MonsterState.getAllModels())
 	if not target then
 		return -- 사거리 안에 몬스터가 없다 - 헛스윙
 	end
 
 	-- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율 × 캐릭터 레벨계수(10-2 [1],
-	-- 10-3 [3], 13-2에서 레벨계수가 들어갔다) × (1+장갑 공격력%, 16-6). 배율이 곱해지는
-	-- 지점은 PlayerCombat 하나뿐이다. 치명타(10-4)는 이 base를 calcDamage에 넘겨서
-	-- 판정한다 - 판정도 서버 여기 한 곳뿐이다.
+	-- 10-3 [3], 13-2에서 레벨계수가 들어갔다) × (1+장갑 공격력%, 16-6) × 3타 강타 배율(16-7,
+	-- 웹 main.js "attack = getPlayerAttack() * (isComboHit ? comboHitMultiplier : 1)"과 같은
+	-- 순서 - 치명타 판정보다 먼저 곱한다). 배율이 곱해지는 지점은 PlayerCombat 하나뿐이다.
+	-- 치명타(10-4)는 이 base를 calcDamage에 넘겨서 판정한다 - 판정도 서버 여기 한 곳뿐이다.
 	local characterLevel = PlayerProfile.getCharacterLevel(player)
 	local base = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player))
+	if isComboHit then
+		base *= CombatConfig.comboHitMultiplier
+	end
 	local damage, isCrit = PlayerCombat.calcDamage(base, classId)
 	local newHp = MonsterState.getHp(target) - damage
 	MonsterState.setHp(target, newHp)
 	MonsterSpawner.updateHpLabel(target)
 
 	-- died(14-2)를 같이 보낸다 - 클라이언트가 사망 연출(HitEffects.playDeath)을 정확히
-	-- 이 타격에서만 재생하려면 "이 타격으로 죽었는가"를 알아야 한다. 새 이벤트를 따로
-	-- 만들지 않고 이미 있던 이벤트에 필드 하나만 얹었다(같은 타격의 결과이므로).
-	attackResult:FireClient(player, target, damage, isCrit, newHp <= 0)
+	-- 이 타격에서만 재생하려면 "이 타격으로 죽었는가"를 알아야 한다. isComboHit(16-7)은
+	-- 클라이언트가 강타 전용 피드백(히트스톱·카메라 흔들림·확대된 스윙)을 이 타격에서만
+	-- 재생하도록 같이 보낸다.
+	attackResult:FireClient(player, target, damage, isCrit, newHp <= 0, isComboHit)
 
 	if newHp <= 0 then
 		-- 처치 경합 가드(15-1 검증 중 재현) - 연타로 두 AttackRequest가 같은 처치 직전
@@ -165,4 +179,6 @@ end)
 
 Players.PlayerRemoving:Connect(function(player)
 	lastAttackTick[player] = nil
+	comboCounts[player] = nil
+	lastComboAttackTick[player] = nil
 end)

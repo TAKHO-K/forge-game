@@ -1,9 +1,12 @@
--- 공격 입력(버튼 하나, 모바일 탭 가능) + 서버 결과 수신. 사거리·대상·데미지 판정은
--- 전부 서버가 한다 - 여기는 클릭 신호를 보내고 서버가 알려준 결과를 그리기만 한다.
+-- 공격 입력(버튼 + 클릭/탭 조준 공격, 16-7) + 서버 결과 수신. 사거리·대상·데미지 판정은
+-- 전부 서버가 한다 - 여기는 조준점을 실어 클릭 신호를 보내고 서버가 알려준 결과를
+-- 그리기만 한다.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
@@ -13,6 +16,7 @@ local HudIcons = require(script.Parent.HudIcons)
 local WeaponVisual = require(script.Parent.WeaponVisual)
 local HitEffects = require(script.Parent.HitEffects)
 local Projectiles = require(script.Parent.Projectiles)
+local AimTarget = require(script.Parent.AimTarget)
 
 -- 원거리 클래스(활·힐러)는 판정 결과를 곧바로 보여주지 않는다 - 투사체가 도착하는
 -- 순간까지 미룬다(아래 attackResult 핸들러 참고). 근접 두 클래스는 즉시 표시.
@@ -20,9 +24,11 @@ local RANGED_PROJECTILE_KIND = { bow = "arrow", healer = "orb" }
 
 local attackRequest = ReplicatedStorage:WaitForChild("AttackRequest")
 local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
+local comboUpdate = ReplicatedStorage:WaitForChild("ComboUpdate")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local camera = workspace.CurrentCamera
 
 -- 16-2: "플래시 게임 버튼 같다"는 피드백으로 만든 목업(Claude outputs/hud-mockup.html)의
 -- .attack을 옮긴다. 배치도 바뀌었다 - 화면 우하단 단독 버튼이 아니라 SkillSlots.client.lua가
@@ -137,6 +143,63 @@ attackButton.InputEnded:Connect(function(input)
 	end
 end)
 
+-- 3타 강타 콤보 표시(16-7) - 공격 버튼 위에 점 3개. 지금 몇 타째인지 모르면 강공격이
+-- 우연이 된다는 지시. 서버 ComboUpdate가 보내는 comboCount(계속 증가하는 누적값)를
+-- comboHitEvery로 감싸 "이번 3타 사이클의 몇 번째"로 바꿔서 켠다.
+local COMBO_PIP_COUNT = CombatConfig.comboHitEvery
+local COMBO_PIP_SIZE = 10
+local COMBO_PIP_GAP = 6
+local COMBO_PIP_OFF_COLOR = Color3.fromRGB(255, 255, 255)
+local COMBO_PIP_OFF_TRANSPARENCY = 0.75
+local COMBO_PIP_ON_COLOR = UIColors.ember
+local COMBO_PIP_HEAVY_COLOR = Color3.fromRGB(255, 230, 90)
+
+local comboPipsHolder = Instance.new("Frame")
+comboPipsHolder.Name = "ComboPips"
+comboPipsHolder.AnchorPoint = Vector2.new(0.5, 1)
+comboPipsHolder.Position = UDim2.new(0.5, 0, 0, -10)
+comboPipsHolder.Size = UDim2.new(0, COMBO_PIP_COUNT * (COMBO_PIP_SIZE + COMBO_PIP_GAP), 0, COMBO_PIP_SIZE)
+comboPipsHolder.BackgroundTransparency = 1
+comboPipsHolder.ZIndex = 3
+comboPipsHolder.Parent = attackButton
+
+local comboPipLayout = Instance.new("UIListLayout")
+comboPipLayout.FillDirection = Enum.FillDirection.Horizontal
+comboPipLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+comboPipLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+comboPipLayout.Padding = UDim.new(0, COMBO_PIP_GAP)
+comboPipLayout.Parent = comboPipsHolder
+
+local comboPips = {}
+for i = 1, COMBO_PIP_COUNT do
+	local pip = Instance.new("Frame")
+	pip.Name = "Pip" .. i
+	pip.Size = UDim2.new(0, COMBO_PIP_SIZE, 0, COMBO_PIP_SIZE)
+	pip.BackgroundColor3 = COMBO_PIP_OFF_COLOR
+	pip.BackgroundTransparency = COMBO_PIP_OFF_TRANSPARENCY
+	pip.BorderSizePixel = 0
+	pip.Parent = comboPipsHolder
+
+	local pipCorner = Instance.new("UICorner")
+	pipCorner.CornerRadius = UDim.new(1, 0)
+	pipCorner.Parent = pip
+
+	comboPips[i] = pip
+end
+
+comboUpdate.OnClientEvent:Connect(function(comboCount, isHeavyHit)
+	local posInCycle = ((comboCount - 1) % COMBO_PIP_COUNT) + 1
+	for i, pip in ipairs(comboPips) do
+		if i <= posInCycle then
+			pip.BackgroundColor3 = isHeavyHit and COMBO_PIP_HEAVY_COLOR or COMBO_PIP_ON_COLOR
+			pip.BackgroundTransparency = 0
+		else
+			pip.BackgroundColor3 = COMBO_PIP_OFF_COLOR
+			pip.BackgroundTransparency = COMBO_PIP_OFF_TRANSPARENCY
+		end
+	end
+end)
+
 -- 스윙 모션은 서버 확인 없이 여기서 바로 재생한다(지시 사항 - "모션은 클라이언트에서
 -- 재생한다. 판정은 여전히 서버다. 둘을 섞지 마라"). 다만 버튼을 쿨다운보다 빨리 연타하면
 -- (서버는 조용히 무시하는데) 모션만 계속 재생되면 실제 공격 속도보다 빨라 보여 오히려
@@ -146,9 +209,45 @@ end)
 -- 헛스윙 판정은 여전히 서버 몫이다).
 local lastSwingTick = 0
 
--- Activated는 마우스 클릭·터치 탭·게임패드를 전부 같은 이벤트로 받는다(모바일 대응).
-attackButton.Activated:Connect(function()
-	attackRequest:FireServer()
+-- 3타 강타 예측(16-7) - 실제 콤보 카운트·강타 여부는 서버(AttackServer, ComboUpdate)가
+-- 확정한다. 다만 스윙 모션(속도 0.7배·스케일 1.3배)은 서버 왕복을 기다리면 늦으므로,
+-- 여기서 서버와 똑같은 규칙(comboHitEvery/comboResetWindowSeconds, 스윙을 실제로 재생하는
+-- 시점 = 서버 쿨다운 통과 시점과 사실상 같다)으로 미리 짐작해 모션만 먼저 튼다. 예측이
+-- 어긋나도(네트워크 지연 등) 피해를 주는 건 아니다 - 히트스톱·카메라 흔들림·콤보 점
+-- 표시 같은 실제 피드백은 전부 attackResult/ComboUpdate가 보내는 서버 확정값만 쓴다.
+local predictedComboCount = 0
+local lastPredictedComboTick = 0
+
+local function predictIsHeavyHit()
+	local now = os.clock()
+	if now - lastPredictedComboTick > CombatConfig.comboResetWindowSeconds then
+		predictedComboCount = 0
+	end
+	predictedComboCount += 1
+	lastPredictedComboTick = now
+	return predictedComboCount % CombatConfig.comboHitEvery == 0
+end
+
+-- 버튼·클릭·탭이 전부 이 함수 하나로 모인다(지시 - "지금 누구를 때리려는가를 게임과
+-- 유저가 같은 답으로 알게 한다 ... 따로 짜지 마라"). aimPoint가 있으면(클릭·탭) 그
+-- 지점으로 캐릭터를 돌리고 AimTarget 하이라이트도 즉시 갱신한다. 없으면(버튼) 지금 이미
+-- 조준 중인 방향(AimTarget의 최근 조준점) 그대로 공격한다 - 화면에 보이는 조준 대상과
+-- 실제로 맞는 대상이 같아야 하므로.
+local function fireAttack(aimPointOverride)
+	if aimPointOverride then
+		AimTarget.refresh(aimPointOverride)
+	end
+	local aimPoint = aimPointOverride or AimTarget.getLastAimPoint()
+	attackRequest:FireServer(aimPoint)
+
+	local character = player.Character
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	if aimPoint and rootPart then
+		local flat = Vector3.new(aimPoint.X - rootPart.Position.X, 0, aimPoint.Z - rootPart.Position.Z)
+		if flat.Magnitude > 0.5 then
+			rootPart.CFrame = CFrame.new(rootPart.Position, rootPart.Position + flat)
+		end
+	end
 
 	local classId = player:GetAttribute("ClassId")
 	if not classId or classId == "" then
@@ -160,7 +259,44 @@ attackButton.Activated:Connect(function()
 	local now = os.clock()
 	if now - lastSwingTick >= cooldown then
 		lastSwingTick = now
-		WeaponVisual.playSwing()
+		WeaponVisual.playSwing(predictIsHeavyHit())
+	end
+end
+
+-- Activated는 마우스 클릭·터치 탭·게임패드를 전부 같은 이벤트로 받는다(모바일 대응).
+attackButton.Activated:Connect(function()
+	fireAttack(nil)
+end)
+
+-- 클릭·탭한 곳으로 기본공격(16-7 [3]). gameProcessedEvent가 true면 이미 어떤 GuiObject가
+-- 이 입력을 먹었다는 뜻(공격 버튼·인벤토리·이동 조이스틱 등) - 그때는 공격을 쏘지 않는다.
+-- PC는 기본 카메라가 좌클릭 드래그를 쓰지 않아(마우스 이동만으로 회전) 클릭 자체를 그냥
+-- 공격으로 써도 된다. 모바일은 UserInputService.TouchTap이 "드래그가 아닌 순수 탭"만
+-- 걸러서 보내주므로(카메라 회전 드래그는 별도 TouchPan으로 소비된다) 따로 탭/드래그
+-- 구분 로직을 만들 필요가 없다.
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if gameProcessedEvent then
+		return
+	end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		local worldPoint = AimTarget.getWorldPointFromScreen(Vector2.new(input.Position.X, input.Position.Y))
+		if worldPoint then
+			fireAttack(worldPoint)
+		end
+	end
+end)
+
+UserInputService.TouchTap:Connect(function(touchPositions, gameProcessedEvent)
+	if gameProcessedEvent then
+		return
+	end
+	local screenPos = touchPositions[1]
+	if not screenPos then
+		return
+	end
+	local worldPoint = AimTarget.getWorldPointFromScreen(screenPos)
+	if worldPoint then
+		fireAttack(worldPoint)
 	end
 end)
 
@@ -220,18 +356,49 @@ local function showDamageNumber(monsterModel, damage, isCrit)
 	end)
 end
 
+-- 3타 강타 적중 피드백(16-7) - "타격감이 이번 작업의 진짜 목표"라는 지시. 히트스톱
+-- 0.05~0.12초 범위에서 실기로 맞춰본 값(0.08초 - 근접·원거리 전 클래스에서 "묵직하다"는
+-- 느낌과 "다음 입력이 막힌 것 같다"는 불편함 사이의 중간). 카메라 흔들림은 0.15초 안에
+-- 완전히 잦아든다(지시 - "과하면 멀미가 난다. 감쇠 속도가 중요하다").
+local HEAVY_HITSTOP_SECONDS = 0.08
+local CAMERA_SHAKE_SECONDS = 0.15
+local CAMERA_SHAKE_STUDS = 0.35
+
+local cameraShakeUntil = 0
+RunService:BindToRenderStep("ComboCameraShake", Enum.RenderPriority.Camera.Value + 1, function()
+	local remaining = cameraShakeUntil - os.clock()
+	if remaining <= 0 then
+		return
+	end
+	local decay = remaining / CAMERA_SHAKE_SECONDS
+	local offset = Vector3.new(
+		(math.random() * 2 - 1) * CAMERA_SHAKE_STUDS * decay,
+		(math.random() * 2 - 1) * CAMERA_SHAKE_STUDS * decay,
+		0
+	)
+	camera.CFrame *= CFrame.new(offset)
+end)
+
 -- died가 추가된 이유는 AttackServer.server.lua의 attackResult:FireClient 주석 참고.
 -- 죽었으면 피격 반응 대신 사망 연출을 재생한다(둘 다 재생하면 사망 직전 프레임에
 -- Body/Head 색을 흰색으로 바꿨다가 곧바로 사망 연출이 그 색을 지워버려 부자연스럽다).
-local function showResult(monsterModel, damage, isCrit, died)
+-- isComboHit(16-7)이면 죽었든 아니든 히트스톱·카메라 흔들림은 그대로 재생한다 - 강타가
+-- 처치를 낸 순간도 "강타였다"는 느낌은 여전히 필요하다.
+local function showResult(monsterModel, damage, isCrit, died, isComboHit)
 	showDamageNumber(monsterModel, damage, isCrit)
+
+	if isComboHit then
+		WeaponVisual.applyHitstop(HEAVY_HITSTOP_SECONDS)
+		cameraShakeUntil = os.clock() + CAMERA_SHAKE_SECONDS
+	end
+
 	if not monsterModel then
 		return
 	end
 	if died then
 		HitEffects.playDeath(monsterModel)
 	else
-		HitEffects.playHit(monsterModel, isCrit)
+		HitEffects.playHit(monsterModel, isCrit, isComboHit and HEAVY_HITSTOP_SECONDS or nil)
 	end
 end
 
@@ -240,12 +407,12 @@ end
 -- 먼저 뜨면 판정 시점과 화살 도달 시점이 어긋나 보인다(지시 사항). 서버는 이미
 -- 즉시 판정했으므로(9-2 서버 권위), 여기서 하는 일은 "이미 정해진 결과를 언제
 -- 보여줄지"를 투사체가 실제로 도착하는 순간으로 늦추는 것뿐 - 새로 판정하지 않는다.
-attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died)
+attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, isComboHit)
 	local classId = player:GetAttribute("ClassId")
 	local projectileKind = RANGED_PROJECTILE_KIND[classId]
 
 	if not projectileKind then
-		showResult(monsterModel, damage, isCrit, died)
+		showResult(monsterModel, damage, isCrit, died, isComboHit)
 		return
 	end
 
@@ -258,11 +425,11 @@ attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died)
 		local muzzle = WeaponVisual.getMuzzleWorldPosition()
 		if not targetHead or not muzzle then
 			-- 발사 시점에 대상이 이미 사라졌으면(드문 경우) 투사체 없이 즉시 표시로 대체한다.
-			showResult(monsterModel, damage, isCrit, died)
+			showResult(monsterModel, damage, isCrit, died, isComboHit)
 			return
 		end
 		Projectiles.fire(projectileKind, muzzle, targetHead.Position, isCrit, function()
-			showResult(monsterModel, damage, isCrit, died)
+			showResult(monsterModel, damage, isCrit, died, isComboHit)
 		end)
 	end)
 end)

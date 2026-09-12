@@ -72,22 +72,29 @@ end
 -- MonsterAI.server.lua가 매 프레임 위치를 되돌려 놓으므로, 클라이언트에서 CFrame을
 -- 건드리면 다음 서버 리플리케이션에 즉시 덮어써져 흔들리거나 안 보일 위험이 크다.
 -- Color3는 서버가 손대지 않는 프로퍼티라 이 충돌이 없다).
-local function flashMonster(monsterModel)
+--
+-- holdSeconds(16-7, 3타 강타 전용) - 흰 플래시를 곧바로 되돌리지 않고 그만큼 붙들었다가
+-- 되돌린다. 몬스터는 서버가 매 프레임 위치를 되돌리는 파트라 CFrame으로 "멈췄다"를
+-- 표현할 수 없으니(위 주석), 색 되돌림을 지연시키는 것으로 피격자 쪽 히트스톱을 흉내낸다.
+local function flashMonster(monsterModel, holdSeconds)
 	for _, partName in ipairs({ "Body", "Head" }) do
 		local part = monsterModel:FindFirstChild(partName)
 		if part then
 			local originalColor = part.Color
 			part.Color = FLASH_COLOR
-			TweenService:Create(part, TweenInfo.new(FLASH_BACK_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				Color = originalColor,
-			}):Play()
+			task.delay(holdSeconds or 0, function()
+				TweenService:Create(part, TweenInfo.new(FLASH_BACK_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					Color = originalColor,
+				}):Play()
+			end)
 		end
 	end
 end
 
 -- 일반/치명타 둘 다 이 진입점 하나 - 크기·색·지속시간만 다르다(치명타가 더 크고 진한
--- 색, 숫자 크기·폰트 구분과 같은 원칙).
-function HitEffects.playHit(monsterModel, isCrit)
+-- 색, 숫자 크기·폰트 구분과 같은 원칙). holdSeconds는 3타 강타 히트스톱 동안 플래시를
+-- 붙들어 두는 시간(AttackInput.client.lua가 넘긴다) - 없으면 즉시 되돌아간다(기존 동작).
+function HitEffects.playHit(monsterModel, isCrit, holdSeconds)
 	local head = monsterModel and monsterModel:FindFirstChild("Head")
 	if not head then
 		return
@@ -98,7 +105,7 @@ function HitEffects.playHit(monsterModel, isCrit)
 	else
 		burst(head.Position, NORMAL_COLOR, NORMAL_MAX_SIZE, NORMAL_DURATION)
 	end
-	flashMonster(monsterModel)
+	flashMonster(monsterModel, holdSeconds)
 end
 
 -- 사망 연출 - 큰 버스트(색은 몬스터 Body 색을 그대로 재사용, "이 몬스터가 터졌다"는
