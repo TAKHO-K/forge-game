@@ -18,7 +18,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
-local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
 
 local AimTarget = {}
@@ -101,8 +101,10 @@ function AimTarget.refresh(aimPoint)
 	if aimPoint then
 		lastAimPoint = aimPoint
 	end
+	local classId = player:GetAttribute("ClassId")
+	local rangeStuds = classId and classId ~= "" and PlayerCombat.getAttackRange(classId) or 0
 	local candidates = CollectionService:GetTagged("Monster")
-	setTarget(AimPicker.pick(rootPart.Position, lastAimPoint, CombatConfig.attackRangeStuds, candidates))
+	setTarget(AimPicker.pick(rootPart.Position, lastAimPoint, rangeStuds, candidates))
 end
 
 function AimTarget.getCurrentTarget()

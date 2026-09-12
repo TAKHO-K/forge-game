@@ -27,6 +27,12 @@
 return {
 	order = { "greatsword", "dualblade", "bow", "healer" },
 
+	-- rangeMultiplier(19-2) - CombatConfig.attackRangeStuds(=10, 대검 기준 웹 원본값)에
+	-- 곱하는 클래스별 사거리 배율. 쌍검은 그대로 1.0(지시 - "가장 짧은 사거리가 쌍검의
+	-- 정체성이고, 그 대가로 최고 단일 DPS를 갖는다. 여기를 건드리면 균형이 깨진다").
+	-- 활·힐러는 1.5배로 늘려 원거리 직업답게 만들고(WorldConfig.aggro.rangeStuds=25.6보다
+	-- 여전히 짧아 무한 안전 사냥은 안 생긴다 - 19-2 [3] 검증), 대검은 근접이지만 리치가 긴
+	-- 무기라 쌍검보다는 길게 1.3배로 둔다. 결과 서열: 쌍검(최단) < 대검 < 활 = 지팡이(최장).
 	classes = {
 		greatsword = {
 			id = "greatsword",
@@ -36,6 +42,7 @@ return {
 			def = 1.3,
 			critRate = 0.12,
 			critDmg = 2.0,
+			rangeMultiplier = 1.3,
 		},
 		dualblade = {
 			id = "dualblade",
@@ -45,6 +52,7 @@ return {
 			def = 0.6,
 			critRate = 0.30,
 			critDmg = 2.0,
+			rangeMultiplier = 1.0,
 		},
 		bow = {
 			id = "bow",
@@ -54,6 +62,7 @@ return {
 			def = 0.6,
 			critRate = 0.15,
 			critDmg = 2.3,
+			rangeMultiplier = 1.5,
 		},
 		healer = {
 			id = "healer",
@@ -63,6 +72,7 @@ return {
 			def = 1.0,
 			critRate = 0.12,
 			critDmg = 1.8,
+			rangeMultiplier = 1.5,
 		},
 	},
 }

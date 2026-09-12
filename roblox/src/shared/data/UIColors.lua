@@ -66,4 +66,16 @@ return {
 	lockedBg = Color3.fromRGB(17, 18, 20),
 	lockedIcon = Color3.fromRGB(60, 62, 66),
 	lockedRim = Color3.fromRGB(70, 72, 76),
+
+	-- 19-2 [5]: 스킬 슬롯(Q/E) 안쪽 하이라이트선에만 쓰는 직업색. 아이콘 자체엔 강한 색을
+	-- 안 입힌다(쿨다운 링과 색이 경쟁해서 둘 다 안 읽힌다는 지시) - 직업색은 이 테두리만
+	-- 담당한다. 대검 값(#FF7A2F)은 우연히 ember와, 힐러 값(#F2C43D)은 우연히 xp와 같다 -
+	-- 같은 값을 재사용하지 않고 그대로 새 항목으로 둔다(이 팔레트는 "직업"이라는 다른 축이라
+	-- ember/xp가 나중에 바뀌어도 같이 바뀌면 안 된다).
+	classAccent = {
+		greatsword = Color3.fromRGB(255, 122, 47),
+		dualblade = Color3.fromRGB(166, 77, 255),
+		bow = Color3.fromRGB(59, 209, 192),
+		healer = Color3.fromRGB(242, 196, 61),
+	},
 }

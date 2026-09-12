@@ -96,7 +96,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 값이면 AimPicker가 사거리 안 최근접으로 대체하므로 안전하게 실패한다. 사거리·데미지는
 	-- 이 값과 무관하게 아래에서 항상 서버가 다시 계산한다.
 	local safeAimPoint = typeof(aimPoint) == "Vector3" and aimPoint or nil
-	local target = AimPicker.pick(rootPart.Position, safeAimPoint, CombatConfig.attackRangeStuds, MonsterState.getAllModels())
+	local target = AimPicker.pick(rootPart.Position, safeAimPoint, PlayerCombat.getAttackRange(classId), MonsterState.getAllModels())
 	if not target then
 		return -- 사거리 안에 몬스터가 없다 - 헛스윙
 	end

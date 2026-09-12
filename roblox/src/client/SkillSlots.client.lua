@@ -17,13 +17,23 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local SkillIconData = require(ReplicatedStorage.Shared.data.SkillIconData)
 local HudIcons = require(script.Parent.HudIcons)
+
+local player = Players.LocalPlayer
 
 local SLOT_SIZE = 54
 local SLOT_GAP = 11 -- 5칸 사이 기본 간격
 local DASH_GAP = 26 -- 대시를 스킬 5칸과 분리해 보이게 하는 큰 간격(지시 2)
 local ROW_HEIGHT = 54 -- 공격 버튼이 없어진 뒤로는 슬롯 자신의 지름이 행에서 가장 큰 값이다.
 local ICON_SIZE = 26
+
+-- 19-2 [5]: Q/E 스킬 아이콘 - 슬롯(54px)의 약 70%. 꽉 채우면 테두리와 붙어 답답하다(지시).
+local SKILL_ICON_SIZE = math.floor(SLOT_SIZE * 0.7)
+-- 아이콘은 원래색을 거의 유지한다(ImageColor3로 살짝만 낮춘다) - 쿨다운 중에만 30% 밝기로
+-- 어둡게 덮는다(지시 그대로).
+local SKILL_ICON_READY_COLOR = Color3.fromRGB(230, 230, 230)
+local SKILL_ICON_COOLDOWN_COLOR = Color3.fromRGB(76, 76, 76)
 
 local CENTRAL_ROW_NAME = "CentralRow"
 
@@ -37,8 +47,8 @@ local COOLDOWN_OVERLAY_TRANSPARENCY = 0.55
 local READY_FLASH_TWEEN = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local SLOTS = {
-	{ id = "q", key = "Q", icon = "spin" },
-	{ id = "e", key = "E", icon = "burst" },
+	{ id = "q", key = "Q", skillIcon = true },
+	{ id = "e", key = "E", skillIcon = true },
 	{ id = "locked1", locked = true },
 	{ id = "locked2", locked = true },
 	{ id = "locked3", locked = true },
@@ -50,8 +60,6 @@ local SLOTS = {
 -- 바꾸면 되도록 상수로 뺀다.
 local ROW_ANCHOR_POINT = Vector2.new(0.5, 1)
 local ROW_POSITION = UDim2.new(0.5, 0, 1, -ROW_BOTTOM_OFFSET)
-
-local player = Players.LocalPlayer
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "SkillSlotsGui"
@@ -105,9 +113,12 @@ local function buildSlot(parent, layoutOrder, def)
 	outerStroke.Thickness = 1.5
 	outerStroke.Parent = slot
 
+	local innerHighlightStroke
 	if not def.locked then
 		-- 안쪽 밝은 하이라이트선 - UIStroke는 슬롯당 하나뿐이라(공격 버튼 outerRing과 같은
 		-- 이유) 2px 안쪽에 별도 프레임을 겹쳐 둘째 링을 만든다. 이 두 겹이 금속 두께감을 낸다.
+		-- 19-2 [5]: Q/E 슬롯은 이 선을 나중에(refreshClassIcons) 직업색으로 갈아 끼운다 -
+		-- 그래서 스트로크 자체를 handle로 밖에 내보낸다.
 		local innerHighlight = Instance.new("Frame")
 		innerHighlight.Name = "InnerHighlight"
 		innerHighlight.BackgroundTransparency = 1
@@ -120,7 +131,7 @@ local function buildSlot(parent, layoutOrder, def)
 		innerHighlightCorner.CornerRadius = UDim.new(0, 3)
 		innerHighlightCorner.Parent = innerHighlight
 
-		local innerHighlightStroke = Instance.new("UIStroke")
+		innerHighlightStroke = Instance.new("UIStroke")
 		innerHighlightStroke.Color = UIColors.metalInner
 		innerHighlightStroke.Transparency = UIColors.metalInnerTransparency
 		innerHighlightStroke.Thickness = 1
@@ -134,8 +145,20 @@ local function buildSlot(parent, layoutOrder, def)
 	iconHolder.Size = UDim2.new(0, ICON_SIZE, 0, ICON_SIZE)
 	iconHolder.Parent = slot
 
+	local iconImage
 	if def.locked then
 		HudIcons.lock(iconHolder, ICON_SIZE)
+	elseif def.skillIcon then
+		-- 19-2 [5]: 실제 아이콘은 아직 모른다(직업에 따라 갈린다) - refreshClassIcons가
+		-- Image를 채운다. ScaleType Fit으로 512×512 원본 비율이 안 깨지게 한다.
+		iconHolder.Size = UDim2.new(0, SKILL_ICON_SIZE, 0, SKILL_ICON_SIZE)
+		iconImage = Instance.new("ImageLabel")
+		iconImage.Name = "SkillIcon"
+		iconImage.BackgroundTransparency = 1
+		iconImage.Size = UDim2.new(1, 0, 1, 0)
+		iconImage.ScaleType = Enum.ScaleType.Fit
+		iconImage.ImageColor3 = SKILL_ICON_READY_COLOR
+		iconImage.Parent = iconHolder
 	else
 		HudIcons[def.icon](iconHolder, ICON_SIZE, true)
 	end
@@ -229,6 +252,8 @@ local function buildSlot(parent, layoutOrder, def)
 		overlay = overlay,
 		readyGlow = readyGlow,
 		wasCooling = false,
+		iconImage = iconImage,
+		innerHighlightStroke = innerHighlightStroke,
 	}
 end
 
@@ -255,6 +280,28 @@ end
 
 slotHandles["dash"] = buildSlot(row, 2, { id = "dash", key = "SHIFT", icon = "dash" })
 
+-- 19-2 [5]: 직업 전환 시 Q/E 아이콘·테두리색을 갱신한다(WeaponVisual.refresh와 같은
+-- ClassId Attribute 갱신 패턴). 직업을 안 골랐으면(빈 classId) 손대지 않는다 - 이전
+-- 직업의 아이콘이 남아있는 게 아니라, 아직 아무 것도 못 채운 초기 상태일 뿐이다.
+local function refreshClassIcons()
+	local classId = player:GetAttribute("ClassId")
+	local iconSet = classId and classId ~= "" and SkillIconData[classId]
+	if not iconSet then
+		return
+	end
+	local accentColor = UIColors.classAccent[classId]
+	for _, slotId in ipairs({ "q", "e" }) do
+		local handle = slotHandles[slotId]
+		handle.iconImage.Image = iconSet[slotId]
+		if accentColor then
+			handle.innerHighlightStroke.Color = accentColor
+		end
+	end
+end
+
+player:GetAttributeChangedSignal("ClassId"):Connect(refreshClassIcons)
+refreshClassIcons()
+
 -- remainingSeconds<=0이면 완전히 걷힌 "사용 가능" 상태로 되돌린다. wasCooling이 참이었다가
 -- 이번에 풀리는 순간(방금 완료된 순간)만 테두리를 한 번 밝게 번쩍인다(지시 3).
 local function setCooldown(slotId, remainingSeconds, totalSeconds)
@@ -271,10 +318,16 @@ local function setCooldown(slotId, remainingSeconds, totalSeconds)
 			or ("%d"):format(math.ceil(remainingSeconds))
 		handle.overlay.BackgroundTransparency = COOLDOWN_OVERLAY_TRANSPARENCY
 		handle.readyGlow.Transparency = 1
+		if handle.iconImage then
+			handle.iconImage.ImageColor3 = SKILL_ICON_COOLDOWN_COLOR
+		end
 	else
 		handle.updateRing(0)
 		handle.label.Text = ""
 		handle.overlay.BackgroundTransparency = 1
+		if handle.iconImage then
+			handle.iconImage.ImageColor3 = SKILL_ICON_READY_COLOR
+		end
 		if handle.wasCooling then
 			handle.readyGlow.Transparency = 0.05
 			TweenService:Create(handle.readyGlow, READY_FLASH_TWEEN, { Transparency = 0.78 }):Play()

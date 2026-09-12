@@ -58,6 +58,15 @@ function PlayerCombat.calcDamage(base, classId)
 	return damage, isCrit
 end
 
+-- 클래스별 유효 사거리(19-2) = 기본 사거리 × 클래스 배율(ClassData.rangeMultiplier).
+-- 서버(AttackServer, 대상 판정)와 클라이언트(AimTarget, 조준 표시) 둘 다 이 함수 하나로
+-- 계산한다 - 화면에 보이는 조준 대상과 실제로 맞는 대상이 어긋나면 안 된다(AimPicker와
+-- 같은 이유).
+function PlayerCombat.getAttackRange(classId)
+	local class = ClassData.classes[classId]
+	return CombatConfig.attackRangeStuds * class.rangeMultiplier
+end
+
 function PlayerCombat.getDefense(classId, equipmentDefenseBonus)
 	local class = ClassData.classes[classId]
 	return (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def

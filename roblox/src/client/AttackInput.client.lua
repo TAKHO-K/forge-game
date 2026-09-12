@@ -116,26 +116,95 @@ local function predictIsHeavyHit()
 	return predictedComboCount % CombatConfig.comboHitEvery == 0
 end
 
--- 클릭·탭이 이 함수 하나로 모인다(지시 - "지금 누구를 때리려는가를 게임과 유저가 같은
--- 답으로 알게 한다 ... 따로 짜지 마라"). 18-2부터 공격 버튼이 없어져 aimPoint는 항상
--- 클릭·탭 지점으로 넘어온다 - 그 지점으로 캐릭터를 돌리고 AimTarget 하이라이트도 즉시 갱신한다.
-local function fireAttack(aimPoint)
-	-- 18-1 [3]: gameProcessedEvent만 믿지 않는다 - modal 창이 열려 있으면 여기서 한 번 더
-	-- 막는다(딤 배경이 클릭을 못 먹는 경우가 생겨도 이중 방어가 된다).
-	if UIManager.isInputBlocked() then
+-- 공격 방향 회전(19-2 [1]) - 클릭하면 순간이동하듯 도는 대신, 720도/초로 최단 방향(시계/
+-- 반시계 중 가까운 쪽 - CFrame:Lerp의 쿼터니언 보간이 최단 호를 도는 성질을 그대로 써서
+-- 180도를 넘게 도는 일이 원천적으로 없다)으로 돌고 회전이 끝나야 공격이 나간다. 몬스터는
+-- 계속 움직이므로 각도 임계값(15도) 안이면 회전 없이 즉시 공격한다 - 없으면 몹이 조금
+-- 움직일 때마다 미세 회전 딜레이가 붙어 답답해진다(지시 사항).
+local TURN_SPEED_RAD_PER_SEC = math.rad(CombatConfig.turnSpeedDegPerSecond)
+local TURN_SNAP_THRESHOLD_RAD = math.rad(CombatConfig.turnSnapThresholdDeg)
+
+-- 회전 중 재클릭(다른 방향)은 목표만 갱신한다 - 공격 입력이 큐에 쌓이지 않고 회전이 끝나면
+-- 한 번만 때린다(아래 fireAttack). humanoid.AutoRotate를 회전 중엔 꺼 둔다 - 켜 둔 채로
+-- 매 프레임 rootPart.CFrame을 덮어쓰면 이동 중일 때 엔진의 자동 이동방향 회전과 매 프레임
+-- 서로 되돌리기 경합이 붙는다(이동은 그대로 되어야 하므로 위치는 건드리지 않는다 - 회전
+-- 중에도 자유롭게 걸을 수 있다).
+local activeRotation = nil -- { targetDir: Vector3(flat, unit), onComplete: function|nil, humanoid: Humanoid }
+
+local function angleBetweenDirs(a, b)
+	return math.acos(math.clamp(a:Dot(b), -1, 1))
+end
+
+local function flatDir(fromPos, toPos)
+	local d = Vector3.new(toPos.X - fromPos.X, 0, toPos.Z - fromPos.Z)
+	if d.Magnitude < 0.5 then
+		return nil
+	end
+	return d.Unit
+end
+
+local function currentFlatLookDir(rootPart)
+	local look = rootPart.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	if flat.Magnitude < 1e-4 then
+		return Vector3.new(0, 0, 1)
+	end
+	return flat.Unit
+end
+
+local function stopRotation()
+	if activeRotation and activeRotation.humanoid then
+		activeRotation.humanoid.AutoRotate = true
+	end
+	activeRotation = nil
+end
+
+RunService.RenderStepped:Connect(function(dt)
+	if not activeRotation then
 		return
 	end
-	AimTarget.refresh(aimPoint)
-	attackRequest:FireServer(aimPoint)
-
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-	if aimPoint and rootPart then
-		local flat = Vector3.new(aimPoint.X - rootPart.Position.X, 0, aimPoint.Z - rootPart.Position.Z)
-		if flat.Magnitude > 0.5 then
-			rootPart.CFrame = CFrame.new(rootPart.Position, rootPart.Position + flat)
-		end
+	if not rootPart then
+		stopRotation()
+		return
 	end
+
+	local currentDir = currentFlatLookDir(rootPart)
+	local targetDir = activeRotation.targetDir
+	local remaining = angleBetweenDirs(currentDir, targetDir)
+	local maxStep = TURN_SPEED_RAD_PER_SEC * dt
+
+	if remaining <= maxStep then
+		rootPart.CFrame = CFrame.new(rootPart.Position, rootPart.Position + targetDir)
+		local onComplete = activeRotation.onComplete
+		stopRotation()
+		if onComplete then
+			onComplete()
+		end
+	else
+		local alpha = maxStep / remaining
+		local fromCFrame = CFrame.new(rootPart.Position, rootPart.Position + currentDir)
+		local toCFrame = CFrame.new(rootPart.Position, rootPart.Position + targetDir)
+		rootPart.CFrame = fromCFrame:Lerp(toCFrame, alpha)
+	end
+end)
+
+-- 점프 중 기본공격 입력 버퍼(19-2 [2]) - 점프 중엔 공격이 나가지 않고 회전만 한다. 착지
+-- 순간 CombatConfig.jumpAttackBufferSeconds 안에 눌린 입력만 버퍼되어 발동한다(격투게임
+-- 입력 버퍼와 같은 개념 - "눌렀는데 씹혔다"가 아니라 "눌렀는데 늦게 나왔다"로 만드는 게
+-- 목적). 여러 번 클릭해도 마지막 클릭 하나만 남는다(매번 덮어쓴다) - 착지 시 한 번만 나간다.
+local bufferedJumpAttack = nil -- { aimPoint: Vector3, inputTime: number }
+
+local function isAirborne(humanoid)
+	local state = humanoid:GetState()
+	return state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.Jumping
+end
+
+-- 실제 서버 공격 요청 + 스윙 모션 재생(회전 완료 후에만 호출된다). 점프 착지 버퍼(아래)도
+-- 같은 함수를 쓴다 - 회전을 거쳤든 착지로 바로 나갔든 공격이 실제로 나가는 지점은 하나뿐이다.
+local function performAttack(aimPoint)
+	attackRequest:FireServer(aimPoint)
 
 	local classId = player:GetAttribute("ClassId")
 	if not classId or classId == "" then
@@ -149,6 +218,95 @@ local function fireAttack(aimPoint)
 		lastSwingTick = now
 		WeaponVisual.playSwing(predictIsHeavyHit())
 	end
+end
+
+local function hookJumpLanding(character)
+	local humanoid = character:WaitForChild("Humanoid")
+	humanoid.StateChanged:Connect(function(_, newState)
+		if newState ~= Enum.HumanoidStateType.Landed then
+			return
+		end
+		local buffered = bufferedJumpAttack
+		bufferedJumpAttack = nil
+		if not buffered or os.clock() - buffered.inputTime > CombatConfig.jumpAttackBufferSeconds then
+			return
+		end
+		-- 착지 순간 회전이 아직 안 끝났으면 즉시 목표 방향으로 스냅한다 - "착지하는 순간
+		-- 버퍼된 공격이 발동한다"는 회전 완료 여부와 무관하다(지시 사항 그대로).
+		if activeRotation then
+			local rootPart = character:FindFirstChild("HumanoidRootPart")
+			if rootPart then
+				rootPart.CFrame = CFrame.new(rootPart.Position, rootPart.Position + activeRotation.targetDir)
+			end
+			stopRotation()
+		end
+		performAttack(buffered.aimPoint)
+	end)
+end
+
+player.CharacterAdded:Connect(hookJumpLanding)
+if player.Character then
+	hookJumpLanding(player.Character)
+end
+
+-- 클릭·탭이 이 함수 하나로 모인다(지시 - "지금 누구를 때리려는가를 게임과 유저가 같은
+-- 답으로 알게 한다 ... 따로 짜지 마라"). 18-2부터 공격 버튼이 없어져 aimPoint는 항상
+-- 클릭·탭 지점으로 넘어온다 - 그 지점으로 캐릭터를 돌리고(즉시가 아니라 위 회전 시스템을
+-- 거쳐) AimTarget 하이라이트도 즉시 갱신한다.
+local function fireAttack(aimPoint)
+	-- 18-1 [3]: gameProcessedEvent만 믿지 않는다 - modal 창이 열려 있으면 여기서 한 번 더
+	-- 막는다(딤 배경이 클릭을 못 먹는 경우가 생겨도 이중 방어가 된다).
+	if UIManager.isInputBlocked() then
+		return
+	end
+	AimTarget.refresh(aimPoint)
+
+	local character = player.Character
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not rootPart or not humanoid or not aimPoint then
+		return
+	end
+
+	local airborne = isAirborne(humanoid)
+	local onComplete = nil
+	if airborne then
+		bufferedJumpAttack = { aimPoint = aimPoint, inputTime = os.clock() }
+	else
+		bufferedJumpAttack = nil -- 지상에서 새로 클릭하면 이전 공중 버퍼는 무효
+		onComplete = function()
+			performAttack(aimPoint)
+		end
+	end
+
+	local targetDir = flatDir(rootPart.Position, aimPoint)
+	if not targetDir then
+		if onComplete then
+			onComplete()
+		end
+		return
+	end
+
+	if activeRotation then
+		activeRotation.targetDir = targetDir
+		activeRotation.onComplete = onComplete
+		activeRotation.humanoid = humanoid
+		return
+	end
+
+	local currentDir = currentFlatLookDir(rootPart)
+	local angle = angleBetweenDirs(currentDir, targetDir)
+
+	if angle <= TURN_SNAP_THRESHOLD_RAD then
+		rootPart.CFrame = CFrame.new(rootPart.Position, rootPart.Position + targetDir)
+		if onComplete then
+			onComplete()
+		end
+		return
+	end
+
+	humanoid.AutoRotate = false
+	activeRotation = { targetDir = targetDir, onComplete = onComplete, humanoid = humanoid }
 end
 
 -- 클릭·탭한 곳으로 기본공격(16-7 [3], 18-2부터 유일한 공격 수단). gameProcessedEvent가
