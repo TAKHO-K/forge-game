@@ -30,6 +30,7 @@ local Loot = require(ReplicatedStorage.Shared.Loot)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local ItemIcons = require(script.Parent.ItemIcons)
+local UIManager = require(script.Parent.UIManager)
 
 local inventorySync = ReplicatedStorage:WaitForChild("InventorySync")
 local inventoryFetch = ReplicatedStorage:WaitForChild("InventoryFetch")
@@ -89,9 +90,8 @@ local rainbowGradients = {} -- 매 프레임 회전시켜야 하는 태초 등�
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "InventoryGui"
 screenGui.ResetOnSpawn = false
--- 창을 열면 뒤 HUD(공격 버튼 등)를 완전히 덮어야 한다 - 다른 HUD ScreenGui들은 전부
--- 기본 DisplayOrder(0)라 이 값을 더 높여야 딤 배경이 실제로 위에서 클릭을 먹는다.
-screenGui.DisplayOrder = 10
+-- DisplayOrder는 UIManager가 열림 스택 순서에 맞춰 매긴다(18-1) - 다른 HUD ScreenGui들은
+-- 전부 기본값(0)이라 창이 열려 있는 동안엔 항상 그 위에 뜬다.
 screenGui.Parent = playerGui
 
 -- ═══ 열기 버튼(HUD, 항상 보임) ═══
@@ -1199,45 +1199,45 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 end)
 
--- ═══ 열기/닫기 ═══
+-- ═══ 열기/닫기(18-1부터 UIManager에 위임 - 트윈·ESC 대체키·모바일 처리는 전부 거기서
+-- 공통으로 한다. 이 파일은 "열렸을 때 뭘 다시 그릴지"만 onOpen에 남긴다) ═══
 
-local function setOpen(open)
-	isOpen = open
-	if open then
-		dim.Visible = true
-		win.Visible = true
+UIManager.register("inventory", {
+	screenGui = screenGui,
+	frame = win,
+	extraVisible = { dim },
+	hotkey = Enum.KeyCode.I,
+	modal = true,
+	exclusive = true,
+	hasCloseButton = true,
+	tweens = {
+		{ instance = dim, property = "BackgroundTransparency", open = UIColors.overlayDimTransparency, closed = 1 },
+		{ instance = winBackground, property = "BackgroundTransparency", open = 0.14, closed = 1 },
+		{ instance = winStroke, property = "Transparency", open = UIColors.rimTransparency, closed = 1 },
+		{ instance = winScale, property = "Scale", open = 1, closed = 0.94 },
+	},
+	onOpen = function()
+		isOpen = true
 		fitWindow() -- 닫혀 있는 동안 화면 크기가 바뀌었을 수 있다(창 회전 등).
 		rebuildGearSlots()
 		rebuildGrid()
 		refreshStats()
-	end
-
-	local tweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(dim, tweenInfo, {
-		BackgroundTransparency = open and UIColors.overlayDimTransparency or 1,
-	}):Play()
-	TweenService:Create(winBackground, tweenInfo, { BackgroundTransparency = open and 0.14 or 1 }):Play()
-	TweenService:Create(winStroke, tweenInfo, { Transparency = open and UIColors.rimTransparency or 1 }):Play()
-	local scaleTween = TweenService:Create(winScale, tweenInfo, { Scale = open and 1 or 0.94 })
-	scaleTween:Play()
-
-	if not open then
-		scaleTween.Completed:Wait()
-		dim.Visible = false
-		win.Visible = false
-	end
-end
+	end,
+	onClose = function()
+		isOpen = false
+	end,
+})
 
 toggleButton.Activated:Connect(function()
-	setOpen(not isOpen)
+	UIManager.toggle("inventory")
 end)
 
 dim.Activated:Connect(function()
-	setOpen(false)
+	UIManager.close("inventory")
 end)
 
 closeButton.Activated:Connect(function()
-	setOpen(false)
+	UIManager.close("inventory")
 end)
 
 sortButton.Activated:Connect(function()

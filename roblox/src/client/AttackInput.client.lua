@@ -17,6 +17,7 @@ local WeaponVisual = require(script.Parent.WeaponVisual)
 local HitEffects = require(script.Parent.HitEffects)
 local Projectiles = require(script.Parent.Projectiles)
 local AimTarget = require(script.Parent.AimTarget)
+local UIManager = require(script.Parent.UIManager)
 
 -- 원거리 클래스(활·힐러)는 판정 결과를 곧바로 보여주지 않는다 - 투사체가 도착하는
 -- 순간까지 미룬다(아래 attackResult 핸들러 참고). 근접 두 클래스는 즉시 표시.
@@ -234,6 +235,11 @@ end
 -- 조준 중인 방향(AimTarget의 최근 조준점) 그대로 공격한다 - 화면에 보이는 조준 대상과
 -- 실제로 맞는 대상이 같아야 하므로.
 local function fireAttack(aimPointOverride)
+	-- 18-1 [3]: gameProcessedEvent만 믿지 않는다 - modal 창이 열려 있으면 여기서 한 번 더
+	-- 막는다(딤 배경이 클릭을 못 먹는 경우가 생겨도 이중 방어가 된다).
+	if UIManager.isInputBlocked() then
+		return
+	end
 	if aimPointOverride then
 		AimTarget.refresh(aimPointOverride)
 	end
