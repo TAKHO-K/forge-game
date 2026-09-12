@@ -29,6 +29,8 @@ function InventorySync.push(player, profile)
 	inventorySync:FireClient(player, {
 		inventory = profile.inventory,
 		armor = profile.equipment.armor,
+		gloves = profile.equipment.gloves,
+		shoes = profile.equipment.shoes,
 	})
 end
 
@@ -38,9 +40,14 @@ inventoryFetch.OnServerInvoke = function(player)
 	PlayerProfile = PlayerProfile or require(script.Parent.PlayerProfile)
 	local profile = PlayerProfile.getProfile(player)
 	if not profile then
-		return { inventory = {}, armor = nil }
+		return { inventory = {}, armor = nil, gloves = nil, shoes = nil }
 	end
-	return { inventory = profile.inventory, armor = profile.equipment.armor }
+	return {
+		inventory = profile.inventory,
+		armor = profile.equipment.armor,
+		gloves = profile.equipment.gloves,
+		shoes = profile.equipment.shoes,
+	}
 end
 
 -- 칸이 가득 차서 줍지 못했을 때 한 번 알린다(12-1 [3]에서는 "드랍 자체를 포기"였으나

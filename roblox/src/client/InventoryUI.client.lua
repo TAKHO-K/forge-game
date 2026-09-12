@@ -9,13 +9,11 @@
 -- 에셋 0개) - 무기 아이콘은 대각선으로 그렸다가 체크 표시처럼 보였다는 지시를 따라
 -- 처음부터 수직으로 그렸다(ItemIcons.weapon 참고).
 --
--- 실제 이 게임에서 드랍되는 부위는 갑옷 하나뿐이다(ArmorData - 장갑·신발·무기 드랍은
--- 아직 없다, 14-1 ItemVisualData 주석 "새 부위 추가 금지" 그대로 - 이번에도 새로 만들지
--- 않는다). 그래서 보관함 격자엔 갑옷 칸만 실제로 나타난다 - 장갑·신발 아이콘 함수는
--- 만들어 두되(ItemIcons.byPart가 이미 4종 전부 정의) 지금은 좌측 장비 패널의 "항상 빈"
--- 슬롯에만 쓰인다. 무기는 갑옷과 다른 시스템이다 - 드랍/착용 대상이 아니라 강화대
+-- 16-6부터 갑옷·장갑·신발 3부위 전부 드랍·장착된다(EquipSlots.lua 단일 출처 - 웹의
+-- ITEM_PARTS를 그대로 이식). 무기만 예외다 - 드랍/착용 대상이 아니라 강화대
 -- (EnhanceUI.client.lua)에서 레벨만 올리는 캐릭터 고유 장비라, 장비 패널에서는 항상
--- "차 있는" 정보 표시 전용 슬롯으로 다룬다(판매·잠금·해제 대상이 아니다).
+-- "차 있는" 정보 표시 전용 슬롯으로 다룬다(판매·잠금·해제 대상이 아니다 - 클릭해도
+-- 상세바에 정보만 보여주고 해제 버튼은 비활성).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,6 +23,7 @@ local TweenService = game:GetService("TweenService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
@@ -51,12 +50,31 @@ local CELL_SIZE, CELL_GAP = 78, 8
 local GRID_COLS = 5
 local GEAR_SLOT_SIZE = 95
 
-local GEAR_ORDER = { "weapon", "armor", "gloves", "shoes" }
-local PART_ORDER_INDEX = { weapon = 1, armor = 2, gloves = 3, shoes = 4 }
+-- 부위 목록은 EquipSlots.lua 하나에서만 나온다(지시 - "UI가 부위 목록을 하드코딩하면
+-- 안 된다"). 장비 패널은 무기도 같이 보여주므로 그 앞에 하나만 덧붙인다 - 무기는
+-- 드랍·장착 부위가 아니라서(EquipSlots.lua 주석) 거기 목록엔 없다.
+local GEAR_ORDER = { "weapon" }
+for _, part in ipairs(EquipSlots.order) do
+	table.insert(GEAR_ORDER, part)
+end
+
+local PART_ORDER_INDEX = {}
+for index, part in ipairs(GEAR_ORDER) do
+	PART_ORDER_INDEX[part] = index
+end
 
 -- 서버 상태(InventorySync가 미는 스냅샷 그대로 - 이 배열의 인덱스가 서버 인덱스다).
 local inventory = {}
 local equippedArmor = nil
+local equippedGloves = nil
+local equippedShoes = nil
+
+-- 부위 이름 -> 지금 착용 중인 아이템(nil이면 미착용). rebuildGearSlots/refreshDetail이
+-- armor/gloves/shoes를 하나씩 따로 취급하지 않고 이 표 하나로 조회한다(16-6 - 부위가
+-- 갑옷 하나였을 땐 없어도 됐지만 셋이 되니 하드코딩한 분기 3벌이 생길 뻔했다).
+local function equippedByPart()
+	return { armor = equippedArmor, gloves = equippedGloves, shoes = equippedShoes }
+end
 
 local sortMode = "grade" -- "grade" | "level" | "part" - 클라 전용 표시 순서, 서버 왕복 없음.
 local SORT_MODES = { "grade", "level", "part" }
@@ -250,7 +268,7 @@ countLabel.BackgroundTransparency = 1
 countLabel.AutomaticSize = Enum.AutomaticSize.X
 countLabel.Size = UDim2.new(0, 0, 1, 0)
 countLabel.Font = Enum.Font.Gotham
-countLabel.TextSize = 11.5
+countLabel.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
 countLabel.TextColor3 = UIColors.textTertiary
 countLabel.Text = "0 / 0"
 countLabel.Parent = headerLeft
@@ -263,7 +281,7 @@ local function makeHeaderPill(text, order, widthPadding)
 	pill.BackgroundColor3 = UIColors.panel
 	pill.BackgroundTransparency = UIColors.panelTransparency
 	pill.Font = Enum.Font.GothamBold
-	pill.TextSize = 11.5
+	pill.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
 	pill.TextColor3 = UIColors.textSecondary
 	pill.Text = text
 	pill.Parent = headerRight
@@ -354,7 +372,7 @@ local function makeSectionLabel(parent, text, y)
 	label.Position = UDim2.new(0, 14, 0, y)
 	label.Size = UDim2.new(1, -28, 0, 14)
 	label.Font = Enum.Font.GothamBold
-	label.TextSize = 10
+	label.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
 	label.TextColor3 = UIColors.textTertiary
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Text = text
@@ -383,7 +401,7 @@ reserved.BackgroundTransparency = 1
 reserved.Text = "특수 옵션 · 전설 이상에서 표시"
 reserved.TextWrapped = true
 reserved.Font = Enum.Font.GothamBold
-reserved.TextSize = 10
+reserved.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
 reserved.TextColor3 = UIColors.textTertiary
 reserved.Parent = gear
 do
@@ -417,7 +435,7 @@ local function makeStatRow(labelText, valueColor, y)
 	key.BackgroundTransparency = 1
 	key.Size = UDim2.new(0.5, 0, 1, 0)
 	key.Font = Enum.Font.GothamBold
-	key.TextSize = 11.5
+	key.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
 	key.TextColor3 = UIColors.textTertiary
 	key.TextXAlignment = Enum.TextXAlignment.Left
 	key.Text = labelText
@@ -503,7 +521,7 @@ local function makeFootPill(dangerStyle)
 	label.AutomaticSize = Enum.AutomaticSize.X
 	label.Size = UDim2.new(0, 0, 1, 0)
 	label.Font = Enum.Font.GothamBold
-	label.TextSize = 11.5
+	label.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
 	label.TextColor3 = dangerStyle and Color3.fromRGB(255, 141, 141) or UIColors.textSecondary
 	label.Text = ""
 	label.Parent = pill
@@ -576,7 +594,7 @@ dmeta.Position = UDim2.new(0, 0, 0, 36)
 dmeta.Size = UDim2.new(1, 0, 0, 16)
 dmeta.BackgroundTransparency = 1
 dmeta.Font = Enum.Font.Gotham
-dmeta.TextSize = 11.5
+dmeta.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
 dmeta.TextXAlignment = Enum.TextXAlignment.Left
 dmeta.TextColor3 = UIColors.textTertiary
 dmeta.Text = ""
@@ -779,6 +797,25 @@ local function describeItemName(item)
 	return (grade and grade.displayName or item.grade) .. " " .. partName
 end
 
+-- 착용 중 슬롯 상세 문구(16-6) - 부위마다 보여줄 스탯이 다르다(갑옷=방어력 flat, 장갑·
+-- 신발=비율%). EquipSlots.statType으로 어느 쪽인지 구분하지 않고 부위별로 직접 나열한
+-- 이유는 세 부위의 "어떻게 보여줄지"(단위·서식)까지 같지 않아서다 - statType은 서버
+-- 계산(PlayerCombat)이 쓰는 축이고, 이건 순수 표시 문제라 축을 하나 더 만들지 않았다.
+local PART_META_TEXT = {
+	armor = function(item)
+		return ("%s · Lv.%d · 방어력 %s"):format(
+			ItemVisualData.partDisplayNames.armor, item.itemLevel, NumberFormat.format(Loot.getArmorDefense(item)))
+	end,
+	gloves = function(item)
+		return ("%s · Lv.%d · 공격력 +%.0f%%"):format(
+			ItemVisualData.partDisplayNames.gloves, item.itemLevel, Loot.getGlovesAttackPercent(item) * 100)
+	end,
+	shoes = function(item)
+		return ("%s · Lv.%d · 이동+공속 +%.0f%%"):format(
+			ItemVisualData.partDisplayNames.shoes, item.itemLevel, Loot.getShoesSpeedPercent(item) * 100)
+	end,
+}
+
 local function clearDetail()
 	dname.Text = "선택된 아이템 없음"
 	dname.TextColor3 = UIColors.textTertiary
@@ -851,18 +888,15 @@ local function refreshDetail()
 		equipButton.Active = true
 		equipButton.TextTransparency = 0
 		equipButton.Text = "착용"
-	elseif selectedKind == "equip" and selectedValue == "armor" and equippedArmor then
-		local item = equippedArmor
+	elseif selectedKind == "equip" and selectedValue ~= "weapon" and equippedByPart()[selectedValue] then
+		local part = selectedValue
+		local item = equippedByPart()[part]
 		local visual = ItemVisualData.gradeVisuals[item.grade]
 		local color = visual and visual.color or UIColors.textPrimary
 		dname.Text = describeItemName(item) .. " (착용 중)"
 		dname.TextColor3 = color
-		dmeta.Text = ("%s · Lv.%d · 방어력 %s"):format(
-			ItemVisualData.partDisplayNames[item.part or "armor"] or "장비",
-			item.itemLevel,
-			NumberFormat.format(Loot.getArmorDefense(item))
-		)
-		setDpicIcon(item.part or "armor", color)
+		dmeta.Text = PART_META_TEXT[part](item)
+		setDpicIcon(item.part or part, color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
 
@@ -917,7 +951,9 @@ local function refreshStats()
 	local weaponLevel = player:GetAttribute("WeaponLevel") or 0
 	local characterLevel = player:GetAttribute("CharacterLevel") or 1
 	local weapon = { id = WeaponData.starterId, level = weaponLevel }
-	local attack = PlayerCombat.getAttack(weapon, classId, characterLevel)
+	-- 16-6: 장갑 공격력% 보너스가 공격력 계산에 들어간다 - 서버(AttackServer)와 같은
+	-- PlayerCombat.getAttack 4번째 인자를 그대로 쓴다.
+	local attack = PlayerCombat.getAttack(weapon, classId, characterLevel, Loot.getGlovesAttackPercent(equippedGloves))
 	local defense = PlayerCombat.getDefense(classId, Loot.getArmorDefense(equippedArmor))
 
 	atkValueLabel.Text = NumberFormat.format(attack)
@@ -933,9 +969,12 @@ local function rebuildGearSlots()
 		end
 	end
 
+	local equipped = equippedByPart()
+
 	for order, part in ipairs(GEAR_ORDER) do
-		local filled = part == "weapon" or (part == "armor" and equippedArmor ~= nil)
-		local interactive = part == "weapon" or part == "armor"
+		local filled = part == "weapon" or equipped[part] ~= nil
+		-- 16-6부터 갑옷·장갑·신발 전부 실제로 착용·해제할 수 있다 - 셋 다 클릭 가능.
+		local interactive = true
 
 		local slot = Instance.new(interactive and "TextButton" or "Frame")
 		slot.Name = "Gear_" .. part
@@ -963,7 +1002,7 @@ local function rebuildGearSlots()
 				stroke.Color = UIColors.rim
 				stroke.Transparency = UIColors.rimTransparency
 			else
-				local visual = ItemVisualData.gradeVisuals[equippedArmor.grade]
+				local visual = ItemVisualData.gradeVisuals[equipped[part].grade]
 				color = visual and visual.color or UIColors.textPrimary
 				stroke.Color = color
 				stroke.Transparency = 0
@@ -989,23 +1028,23 @@ local function rebuildGearSlots()
 		local nameLabel = Instance.new("TextLabel")
 		nameLabel.AnchorPoint = Vector2.new(0.5, 1)
 		nameLabel.Position = UDim2.new(0.5, 0, 1, -8)
-		nameLabel.Size = UDim2.new(1, -8, 0, 12)
+		nameLabel.Size = UDim2.new(1, -8, 0, 14) -- 16-6 [4]: 9.5->12px로 키운 만큼 높이도 12->14.
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.Font = Enum.Font.GothamBold
-		nameLabel.TextSize = 9.5
+		nameLabel.TextSize = 12
 		nameLabel.TextColor3 = filled and UIColors.textSecondary or UIColors.textTertiary
 		nameLabel.Text = ItemVisualData.partDisplayNames[part]
 		nameLabel.Parent = slot
 
 		if filled then
-			local level = part == "weapon" and (player:GetAttribute("WeaponLevel") or 0) or equippedArmor.itemLevel
+			local level = part == "weapon" and (player:GetAttribute("WeaponLevel") or 0) or equipped[part].itemLevel
 			local lvTag = Instance.new("TextLabel")
 			lvTag.AnchorPoint = Vector2.new(1, 1)
 			lvTag.Position = UDim2.new(1, -5, 1, -4)
-			lvTag.Size = UDim2.new(0, 34, 0, 12)
+			lvTag.Size = UDim2.new(0, 38, 0, 14) -- 16-6 [4]: 9->12px로 키운 만큼 높이도 12->14, 폭도 34->38.
 			lvTag.BackgroundTransparency = 1
 			lvTag.Font = Enum.Font.GothamBold
-			lvTag.TextSize = 9
+			lvTag.TextSize = 12
 			lvTag.TextXAlignment = Enum.TextXAlignment.Right
 			lvTag.TextColor3 = UIColors.textTertiary
 			lvTag.Text = ("Lv.%d"):format(level)
@@ -1017,9 +1056,9 @@ local function rebuildGearSlots()
 				if part == "weapon" then
 					selectedKind, selectedValue = "equip", "weapon"
 				elseif filled then
-					selectedKind, selectedValue = "equip", "armor"
+					selectedKind, selectedValue = "equip", part
 				else
-					return -- 빈 갑옷 슬롯은 선택할 게 없다.
+					return -- 빈 슬롯은 선택할 게 없다(착용된 것도, 보관함에서 고른 것도 아니다).
 				end
 				refreshDetail()
 			end)
@@ -1329,8 +1368,9 @@ end)
 equipButton.Activated:Connect(function()
 	if selectedKind == "bag" then
 		equipRequest:FireServer("equip", selectedValue)
-	elseif selectedKind == "equip" and selectedValue == "armor" then
-		equipRequest:FireServer("unequip")
+	elseif selectedKind == "equip" and selectedValue ~= "weapon" then
+		-- 16-6: 어느 부위를 벗을지 서버에 같이 알려야 한다(갑옷 하나였을 땐 필요 없었다).
+		equipRequest:FireServer("unequip", selectedValue)
 	end
 end)
 
@@ -1339,6 +1379,8 @@ end)
 local function onStateChanged(state)
 	inventory = state.inventory
 	equippedArmor = state.armor
+	equippedGloves = state.gloves
+	equippedShoes = state.shoes
 	if isOpen then
 		rebuildGearSlots()
 		rebuildGrid()

@@ -68,7 +68,9 @@ attackRequest.OnServerEvent:Connect(function(player)
 
 	local now = os.clock()
 	local last = lastAttackTick[player]
-	local cooldown = PlayerCombat.getAttackCooldown(classId)
+	-- 신발 공속 보너스(16-6) - 미착용이면 PlayerProfile.getSpeedPercentBonus가 0을 돌려줘
+	-- 기존과 똑같이 계산된다.
+	local cooldown = PlayerCombat.getAttackCooldown(classId, PlayerProfile.getSpeedPercentBonus(player))
 	if last and now - last < cooldown then
 		return -- 쿨다운이 안 지났다 - 조용히 무시
 	end
@@ -87,10 +89,11 @@ attackRequest.OnServerEvent:Connect(function(player)
 	end
 
 	-- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율 × 캐릭터 레벨계수(10-2 [1],
-	-- 10-3 [3], 13-2에서 레벨계수가 들어갔다). 배율이 곱해지는 지점은 PlayerCombat 하나뿐이다.
-	-- 치명타(10-4)는 이 base를 calcDamage에 넘겨서 판정한다 - 판정도 서버 여기 한 곳뿐이다.
+	-- 10-3 [3], 13-2에서 레벨계수가 들어갔다) × (1+장갑 공격력%, 16-6). 배율이 곱해지는
+	-- 지점은 PlayerCombat 하나뿐이다. 치명타(10-4)는 이 base를 calcDamage에 넘겨서
+	-- 판정한다 - 판정도 서버 여기 한 곳뿐이다.
 	local characterLevel = PlayerProfile.getCharacterLevel(player)
-	local base = PlayerCombat.getAttack(weapon, classId, characterLevel)
+	local base = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player))
 	local damage, isCrit = PlayerCombat.calcDamage(base, classId)
 	local newHp = MonsterState.getHp(target) - damage
 	MonsterState.setHp(target, newHp)

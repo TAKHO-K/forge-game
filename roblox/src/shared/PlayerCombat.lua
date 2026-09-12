@@ -31,12 +31,21 @@ end
 -- 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율 × 캐릭터 레벨계수(13-2 -
 -- 웹 main.js의 getEnhanceDamageMultiplier×getWeaponExpAttackMultiplier와 같은 구조, PRD
 -- 20.8/20.10이 이미 "레벨이 무기 공격력 배율을 밀어올린다"고 확정해 둔 축을 여기서 실제로
--- 채운다). 치명타를 적용하기 전 기본 데미지다 - calcDamage에 base로 넘긴다.
-function PlayerCombat.getAttack(weapon, classId, characterLevel)
+-- 채운다) × (1+장갑 공격력%, 16-6). 치명타를 적용하기 전 기본 데미지다 - calcDamage에
+-- base로 넘긴다. attackPercentBonus는 장갑 미착용이면 항상 0이 들어와 곱셈이 1이 되므로
+-- 기존 호출부(장갑 이식 전)와 결과가 똑같다.
+function PlayerCombat.getAttack(weapon, classId, characterLevel, attackPercentBonus)
 	local class = ClassData.classes[classId]
 	local weaponData = WeaponData.weapons[weapon.id]
 	local base = Enhance.getPlayerAttack(weaponData, weapon.level, class.atk)
-	return base * CharacterLevel.getWeaponExpMultiplier(characterLevel)
+	return base * CharacterLevel.getWeaponExpMultiplier(characterLevel) * (1 + (attackPercentBonus or 0))
+end
+
+-- 신발의 이동+공격속도 비율 보너스를 1+x 배율로 바꾼다(16-6, 웹 core/equipment.js
+-- speedMultiplier와 같은 형태) - WalkSpeed·공격 쿨다운 둘 다 이 하나의 배율을 공유한다
+-- (웹도 신발 하나가 "이동+공속"을 같이 준다, ITEM_PART_BASE_STAT.shoes 참고).
+function PlayerCombat.getSpeedMultiplier(speedPercentBonus)
+	return 1 + (speedPercentBonus or 0)
 end
 
 -- 치명타 판정 + 적용 - 유일한 위치(10-4 [3]). base는 평타의 getAttack 결과일 수도,
@@ -54,11 +63,12 @@ function PlayerCombat.getDefense(classId, equipmentDefenseBonus)
 	return (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def
 end
 
--- 공격 쿨다운 = 기본 쿨다운 ÷ 클래스 공격속도 배율(atkSpeed가 클수록 빠르다 - 웹
--- main.js calcAttackInterval과 같은 나눗셈 방향).
-function PlayerCombat.getAttackCooldown(classId)
+-- 공격 쿨다운 = 기본 쿨다운 ÷ (클래스 공격속도 배율 × 신발 공속 배율)(atkSpeed·배율이
+-- 클수록 빠르다 - 웹 main.js calcAttackInterval과 같은 나눗셈 방향). speedPercentBonus는
+-- 신발 미착용이면 0이 들어와 배율이 1이 되므로 기존 호출부와 결과가 똑같다.
+function PlayerCombat.getAttackCooldown(classId, speedPercentBonus)
 	local class = ClassData.classes[classId]
-	return CombatConfig.attackCooldownSeconds / class.atkSpeed
+	return CombatConfig.attackCooldownSeconds / (class.atkSpeed * PlayerCombat.getSpeedMultiplier(speedPercentBonus))
 end
 
 return PlayerCombat

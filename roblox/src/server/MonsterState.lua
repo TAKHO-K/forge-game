@@ -20,13 +20,14 @@ local MonsterState = {}
 --             강한 일격 상태 머신. MonsterAI.server.lua의 tryBossAttack 참고) }
 local monsters = {}
 
-function MonsterState.init(model, data, spawnPosition)
+function MonsterState.init(model, data, spawnPosition, zoneKey)
 	monsters[model] = {
 		hp = data.hp,
 		maxHp = data.hp,
 		stage = 1,
 		data = data,
 		spawnPosition = spawnPosition,
+		zoneKey = zoneKey, -- 16-6, tier 구역 몬스터만 있음(보스는 nil).
 		aiState = "idle",
 		aiTarget = nil,
 		lastAttackTick = nil,
@@ -34,6 +35,11 @@ function MonsterState.init(model, data, spawnPosition)
 		bossPhaseEndsAt = nil,
 		bossNextHeavyAt = data.isBoss and (os.clock() + data.heavyAttackIntervalSeconds) or nil,
 	}
+end
+
+function MonsterState.getZoneKey(model)
+	local entry = monsters[model]
+	return entry and entry.zoneKey
 end
 
 function MonsterState.getHp(model)

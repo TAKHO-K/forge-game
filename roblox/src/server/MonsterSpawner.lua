@@ -142,10 +142,15 @@ function MonsterSpawner.updateHpLabel(model)
 	hpLabel.Text = NumberFormat.format(hp) .. "/" .. NumberFormat.format(maxHp)
 end
 
-function MonsterSpawner.spawn(data, position)
+-- zoneKey(16-6, 선택값) - 그 몬스터가 속한 tier 구역 이름. jab몹(격자 스폰)만 갖고,
+-- 보스(isBoss, 플레이어별 개인 인스턴스)는 nil로 둔다 - 어차피 despawn에서 리스폰
+-- 자체를 안 하므로 zoneKey를 몰라도 상관없다. MonsterAI.server.lua가 이 값으로
+-- "이 몬스터의 구역에 지금 플레이어가 있는가"(성능 절전)와 "구역 경계를 벗어났는가"
+-- (리쉬 상한)를 둘 다 판정한다.
+function MonsterSpawner.spawn(data, position, zoneKey)
 	local model = buildModel(data, position)
 	model.Parent = Workspace
-	MonsterState.init(model, data, position)
+	MonsterState.init(model, data, position, zoneKey)
 	MonsterSpawner.updateHpLabel(model)
 	if data.isBoss then
 		playBossAppearEffect(model, position)
@@ -156,12 +161,13 @@ end
 -- 사망 처리. 정해진 스폰 자리에 그대로 리스폰한다 - 무작위 위치로 보내면 균등 배치가
 -- 흐트러지고 자리끼리 겹칠 수 있어서, 자리를 고정하는 편이 더 낫다고 판단했다.
 --
--- 보스(isBoss)는 고정 스폰 격자(WorldConfig.spawns)에 속하지 않는 플레이어 전용 인스턴스라
--- 리스폰시키지 않는다 - 다시 나타나는 시점은 BossEncounter.spawnFor가 "그 스테이지에
--- 다시 들어왔을 때"로 직접 관리한다.
+-- 보스(isBoss)는 고정 스폰 격자(WorldConfig.zoneMonsterGrid)에 속하지 않는 플레이어 전용
+-- 인스턴스라 리스폰시키지 않는다 - 다시 나타나는 시점은 BossEncounter.spawnFor가 "그
+-- 스테이지에 다시 들어왔을 때"로 직접 관리한다.
 function MonsterSpawner.despawn(model)
 	local data = MonsterState.getData(model)
 	local spawnPosition = MonsterState.getSpawnPosition(model)
+	local zoneKey = MonsterState.getZoneKey(model)
 
 	print(("[forge-game] 몬스터 사망: %s"):format(model.Name))
 	MonsterState.clear(model) -- 죽는 즉시 타겟 후보에서 제외(findNearestMonsterInRange가 더 이상 고르지 않는다)
@@ -172,8 +178,8 @@ function MonsterSpawner.despawn(model)
 	end)
 
 	if not data.isBoss then
-		task.delay(WorldConfig.spawns.respawnDelaySeconds, function()
-			MonsterSpawner.spawn(data, spawnPosition)
+		task.delay(WorldConfig.zoneMonsterGrid.respawnDelaySeconds, function()
+			MonsterSpawner.spawn(data, spawnPosition, zoneKey)
 		end)
 	end
 end

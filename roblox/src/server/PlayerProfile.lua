@@ -4,13 +4,18 @@
 -- 실제 로드/저장(DataStore)은 SaveSystem이 한다 - 이 모듈은 서버 메모리에 올라온
 -- 프로필을 들고 있다가 값을 읽고 쓰는 것만 한다.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local InventorySync = require(script.Parent.InventorySync)
 
 local PlayerProfile = {}
+
+-- 9-1이 확정한 StarterPlayer.CharacterWalkSpeed 기본값 - 신발 배율(16-6)의 기준점이다.
+local BASE_WALK_SPEED_STUDS = 16
 
 -- [Player] = profile 테이블(SaveSystem.defaultProfile()/migrate()와 같은 스키마)
 local profiles = {}
@@ -34,6 +39,8 @@ function PlayerProfile.init(player, profile)
 	player:SetAttribute("InfiniteStageBest", profile.stageProgress.infiniteBest)
 	-- 최고로 깬 보스 스테이지(15-1). StageServer의 게이트 검사가 쓰는 값과 같은 소스다.
 	player:SetAttribute("BestBossCleared", profile.stageProgress.bestBossCleared)
+	-- 신발 배율(16-6) - 로드된 저장에 이미 신발이 있을 수 있으니 접속 직후 한 번 맞춘다.
+	PlayerProfile.refreshMovementSpeed(player)
 end
 
 -- 저장 시점에 SaveSystem이 통째로 넘겨받아 쓴다.
@@ -176,10 +183,49 @@ function PlayerProfile.getInventory(player)
 	return profile and profile.inventory
 end
 
-function PlayerProfile.getEquippedArmor(player)
+-- 부위 무관 공용 조회(16-6, EquipSlots.order의 아무 부위나 받는다).
+function PlayerProfile.getEquipped(player, part)
 	local profile = profiles[player]
-	return profile and profile.equipment.armor
+	return profile and profile.equipment[part]
 end
+
+function PlayerProfile.getEquippedArmor(player)
+	return PlayerProfile.getEquipped(player, "armor")
+end
+
+-- 신발 이동+공속 비율 보너스(16-6). 미착용이면 0(Loot.getShoesSpeedPercent가 nil을 그렇게
+-- 처리한다).
+function PlayerProfile.getSpeedPercentBonus(player)
+	local profile = profiles[player]
+	return Loot.getShoesSpeedPercent(profile and profile.equipment.shoes)
+end
+
+-- 장갑 공격력 비율 보너스(16-6). AttackServer가 PlayerCombat.getAttack에 그대로 넘긴다.
+function PlayerProfile.getAttackPercentBonus(player)
+	local profile = profiles[player]
+	return Loot.getGlovesAttackPercent(profile and profile.equipment.gloves)
+end
+
+-- 신발 착용/해제·로드 직후마다 호출한다(16-6) - 실제 이동속도(Humanoid.WalkSpeed)와
+-- 클라이언트가 공격 쿨다운 예측에 쓰는 Attribute를 같이 맞춘다. 캐릭터가 아직 없으면
+-- (로드 중·리스폰 사이) WalkSpeed는 건너뛴다 - 아래 PlayerAdded/CharacterAdded 훅이
+-- 캐릭터가 생기는 시점에 다시 불러 결국 맞춰준다.
+function PlayerProfile.refreshMovementSpeed(player)
+	local bonus = PlayerProfile.getSpeedPercentBonus(player)
+	player:SetAttribute("SpeedPercentBonus", bonus)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = BASE_WALK_SPEED_STUDS * PlayerCombat.getSpeedMultiplier(bonus)
+	end
+end
+
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		-- 리스폰마다 WalkSpeed가 로블록스 기본값으로 되돌아간다 - 신발 배율을 매번 다시 건다.
+		PlayerProfile.refreshMovementSpeed(player)
+	end)
+end)
 
 -- 서버만 호출한다(14-1부터 ItemDropServer.server.lua의 줍기 판정 직후 - 12-1 시점엔
 -- AttackServer의 드랍 판정 직후 바로 호출했으나, 14-1이 "바닥에 떨어뜨리고 나중에 줍는다"로
@@ -200,38 +246,44 @@ function PlayerProfile.addArmorDrop(player, item)
 end
 
 -- 서버만 호출한다(InventoryServer의 검증 직후). index는 인벤토리 배열의 1부터 시작하는
--- 위치 - 그 자리 아이템을 착용하고, 기존에 착용 중이던 아이템(있다면)은 인벤토리로
--- 되돌린다. 먼저 빼고 나중에 넣으므로(순서 고정) 칸 수가 항상 그대로 맞아 용량 검사가
--- 필요 없다 - 착용은 "교체"일 뿐 순수 추가가 아니다.
-function PlayerProfile.equipArmor(player, index)
+-- 위치 - 그 자리 아이템을 착용하고, 기존에 그 부위에 착용 중이던 아이템(있다면)은
+-- 인벤토리로 되돌린다. 먼저 빼고 나중에 넣으므로(순서 고정) 칸 수가 항상 그대로 맞아
+-- 용량 검사가 필요 없다 - 착용은 "교체"일 뿐 순수 추가가 아니다. 어느 부위에 착용할지는
+-- item.part를 그대로 읽는다(16-6부터 갑옷·장갑·신발 3부위 전부 이 함수 하나로 처리 -
+-- 이전엔 equipArmor로 갑옷만 다뤘다).
+function PlayerProfile.equipItem(player, index)
 	local profile = profiles[player]
 	if not profile then
 		return false
 	end
 	local item = profile.inventory[index]
-	if not item then
+	if not item or not item.part then
 		return false
 	end
 
+	local part = item.part
 	table.remove(profile.inventory, index)
-	local previous = profile.equipment.armor
+	local previous = profile.equipment[part]
 	if previous then
 		table.insert(profile.inventory, previous)
 	end
-	profile.equipment.armor = item
+	profile.equipment[part] = item
 
 	InventorySync.push(player, profile)
+	if part == "shoes" then
+		PlayerProfile.refreshMovementSpeed(player)
+	end
 	return true
 end
 
--- 서버만 호출한다. 착용을 해제해 인벤토리로 되돌린다 - 순수 추가라 칸이 가득 차 있으면
--- 실패한다(false, "full") - 벗을 자리가 없으면 벗을 수 없다.
-function PlayerProfile.unequipArmor(player)
+-- 서버만 호출한다. part(갑옷/장갑/신발) 착용을 해제해 인벤토리로 되돌린다 - 순수 추가라
+-- 칸이 가득 차 있으면 실패한다(false, "full") - 벗을 자리가 없으면 벗을 수 없다.
+function PlayerProfile.unequipItem(player, part)
 	local profile = profiles[player]
 	if not profile then
 		return false
 	end
-	local current = profile.equipment.armor
+	local current = profile.equipment[part]
 	if not current then
 		return false, "not_equipped"
 	end
@@ -239,10 +291,13 @@ function PlayerProfile.unequipArmor(player)
 		return false, "full"
 	end
 
-	profile.equipment.armor = nil
+	profile.equipment[part] = nil
 	table.insert(profile.inventory, current)
 
 	InventorySync.push(player, profile)
+	if part == "shoes" then
+		PlayerProfile.refreshMovementSpeed(player)
+	end
 	return true
 end
 
@@ -250,7 +305,10 @@ end
 -- 오클릭 방지가 목적이라면 일괄 판매만 막아서는 부족하다, 개별 판매 버튼도 같은 위험이 있다).
 -- 성공하면 실제로 받은 골드(0 이상의 수)를, 실패하면 false + 이유("not_found"/"locked")를
 -- 돌려준다 - 판매 자체는 되돌릴 수 없는 사건이라 호출부가 성공 시 ImmediateSave를 건다.
-function PlayerProfile.sellArmor(player, index)
+-- 이름이 sellArmor였다가 sellItem으로 바뀌었다(16-6) - 인벤토리엔 이제 갑옷 말고도
+-- 장갑·신발이 들어오는데, index 하나로 아무 부위나 파는 로직 자체는 원래도 부위를
+-- 몰랐다(item.grade만 본다) - 이름만 실제 동작을 안 속이게 고쳤다.
+function PlayerProfile.sellItem(player, index)
 	local profile = profiles[player]
 	if not profile then
 		return false
@@ -276,7 +334,7 @@ end
 -- 잠긴 아이템은 대상에서 제외한다. 파는 아이템 목록·총 골드를 먼저 전부 계산한 뒤 한 번에
 -- 반영한다(중간에 task.wait 등 yield 지점이 없다 - 다른 요청이 이 사이에 끼어들 수 없으므로
 -- "절반만 팔리는" 상태가 구조적으로 생기지 않는다). 반환값: (판매 개수, 총 골드).
-function PlayerProfile.sellArmorBulkUpTo(player, gradeId)
+function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 	local profile = profiles[player]
 	if not profile then
 		return 0, 0

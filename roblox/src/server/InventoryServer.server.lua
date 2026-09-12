@@ -1,6 +1,7 @@
--- 갑옷 착용/해제 서버 권위 처리(12-1 [4]). 클라이언트는 인벤토리 안의 위치(index)만
+-- 장비 착용/해제 서버 권위 처리(12-1 [4] 신설 → 16-6에서 갑옷 전용 → 3부위 공용으로
+-- 일반화). 클라이언트는 인벤토리 안의 위치(index, 착용용) 또는 부위 이름(part, 해제용)만
 -- 보낸다 - 그 자리에 실제로 뭐가 있는지, 착용이 유효한지는 전부 여기서(정확히는
--- PlayerProfile.equipArmor/unequipArmor 안에서) 검증한다.
+-- PlayerProfile.equipItem/unequipItem 안에서) 검증한다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -21,19 +22,25 @@ local lockRequest = Instance.new("RemoteEvent")
 lockRequest.Name = "LockRequest"
 lockRequest.Parent = ReplicatedStorage
 
--- action: "equip"(index 필요) 또는 "unequip"(index 없음).
-equipRequest.OnServerEvent:Connect(function(player, action, index)
+-- action: "equip"(arg=index, 인벤토리 위치) 또는 "unequip"(arg=part, 16-6부터 부위를
+-- 명시해야 한다 - 갑옷 하나뿐이던 12-1 시절엔 필요 없었지만 이제 어느 슬롯을 벗을지
+-- 클라이언트가 골라야 한다). EquipSlots.order에 없는 문자열은 PlayerProfile.unequipItem이
+-- profile.equipment[part]를 nil 조회로 조용히 거른다 - 여기선 타입만 확인한다.
+equipRequest.OnServerEvent:Connect(function(player, action, arg)
 	if not PlayerProfile.getProfile(player) then
 		return -- 프로필 로드가 아직 안 끝났다
 	end
 
 	if action == "equip" then
-		if type(index) ~= "number" then
+		if type(arg) ~= "number" then
 			return
 		end
-		PlayerProfile.equipArmor(player, math.floor(index))
+		PlayerProfile.equipItem(player, math.floor(arg))
 	elseif action == "unequip" then
-		PlayerProfile.unequipArmor(player)
+		if type(arg) ~= "string" then
+			return
+		end
+		PlayerProfile.unequipItem(player, arg)
 	else
 		return
 	end
@@ -46,7 +53,7 @@ end)
 
 -- 판매는 되돌릴 수 없는 사건이다(13-1 [3]) - 강화·클래스 선택과 같은 즉시저장 경로
 -- (ImmediateSave.request)를 그대로 재사용한다. 가격 계산·잠금 검증은 전부
--- PlayerProfile.sellArmor/sellArmorBulkUpTo 안에서 서버가 한다 - 클라이언트는 "이
+-- PlayerProfile.sellItem/sellItemsBulkUpTo 안에서 서버가 한다 - 클라이언트는 "이
 -- 슬롯을(또는 이 등급 이하를) 팔겠다"는 의사만 보낸다.
 sellRequest.OnServerEvent:Connect(function(player, action, arg)
 	if not PlayerProfile.getProfile(player) then
@@ -57,7 +64,7 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg)
 		if type(arg) ~= "number" then
 			return
 		end
-		local price = PlayerProfile.sellArmor(player, math.floor(arg))
+		local price = PlayerProfile.sellItem(player, math.floor(arg))
 		if price then
 			ImmediateSave.request(player)
 		end
@@ -65,7 +72,7 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg)
 		if type(arg) ~= "string" then
 			return
 		end
-		local soldCount = PlayerProfile.sellArmorBulkUpTo(player, arg)
+		local soldCount = PlayerProfile.sellItemsBulkUpTo(player, arg)
 		if soldCount > 0 then
 			ImmediateSave.request(player)
 		end

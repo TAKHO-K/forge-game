@@ -35,8 +35,15 @@ local CombatConfig = require(script.Parent.CombatConfig)
 return {
 	baseDefense = CombatConfig.playerDefense,
 
+	-- 실제로 드랍되는 등급은 여전히 이 둘뿐이다(16-6 지시 - "드랍표 연결은 다음 작업").
+	-- gradeRollTable(아래)이 굴리는 등급, Loot.rollBossArmorDrop의 "마지막 항목", 인벤토리
+	-- 일괄판매 컷오프가 전부 이 배열만 본다 - 여기 없는 등급은 실제로 드랍될 수 없다.
 	gradeOrder = { "normal", "rare" },
 
+	-- grades 테이블 자체는 7등급 전부 채워 둔다(아래) - defenseGradeMultiplier가 몬스터
+	-- tier 공정성 계산(MonsterData.lua, 16-6)의 입력으로 쓰이기 때문에, 실제로 안 드랍되는
+	-- 등급도 배율값은 알아야 한다. gradeOrder에 없으므로 드랍·판매·장비창 어디에도 등장하지
+	-- 않는다 - "값 정의"와 "실제로 나온다"를 이 두 테이블로 분리했다.
 	grades = {
 		normal = {
 			id = "normal",
@@ -47,6 +54,34 @@ return {
 			id = "rare",
 			displayName = "희귀",
 			defenseGradeMultiplier = 2.397,
+		},
+		-- 아래 5등급은 PRD-forge-game.md 7.0 각주의 ARMOR_DEFENSE_GRADE_MULTIPLIER 표를
+		-- 그대로 옮긴 값이다(1.184/2.397/3.903/5.866/8.347/11.25/15.0, 일반~태초) - 16-5
+		-- 조사에서 이미 확인했고 이번에 값만 채운다. 새로 만든 숫자가 아니다.
+		epic = {
+			id = "epic",
+			displayName = "영웅",
+			defenseGradeMultiplier = 3.903,
+		},
+		legendary = {
+			id = "legendary",
+			displayName = "전설",
+			defenseGradeMultiplier = 5.866,
+		},
+		relic = {
+			id = "relic",
+			displayName = "유물",
+			defenseGradeMultiplier = 8.347,
+		},
+		ancient = {
+			id = "ancient",
+			displayName = "고대",
+			defenseGradeMultiplier = 11.25,
+		},
+		primordial = {
+			id = "primordial",
+			displayName = "태초",
+			defenseGradeMultiplier = 15.0,
 		},
 	},
 

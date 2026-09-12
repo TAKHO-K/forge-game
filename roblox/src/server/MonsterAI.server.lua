@@ -10,7 +10,6 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local MonsterState = require(script.Parent.MonsterState)
-local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
@@ -50,6 +49,44 @@ Players.PlayerRemoving:Connect(function(player)
 	releaseChasersOf(player)
 	PlayerState.clear(player)
 end)
+
+-- 구역 소속 판정(16-6) - "구역 경계가 리쉬의 상한이다. 거리로만 계산하지 말고 구역
+-- 소속으로 판정해라"(지시 그대로). zoneKey가 없으면(보스 등 구역 밖 개인 인스턴스)
+-- 이 검사 자체를 건너뛴다 - 원래 이 검사 대상이 아니다.
+local function isOutsideZoneBounds(position, zoneKey)
+	local zone = zoneKey and WorldConfig.zones[zoneKey]
+	if not zone then
+		return false
+	end
+	return math.abs(position.X - zone.center.X) > zone.halfSize
+		or math.abs(position.Z - zone.center.Z) > zone.halfSize
+end
+
+-- 지금 플레이어가 서 있는 tier 구역들의 집합(16-6 성능 절전 - 지시 "플레이어가 없는
+-- 구역은... AI를 정지시켜라"). Heartbeat 한 틱에 한 번만 계산해서 그 틱의 모든 몬스터가
+-- 재사용한다(몬스터마다 다시 계산하면 의미가 없다). idle 상태 스캔만 건너뛴다 - 이미
+-- chasing/returning 중인 몬스터는 그 구역이 방금 비었어도 하던 행동을 끝까지 마친다
+-- (갑자기 얼어붙는 것보다 자연스럽고, 어차피 리쉬·구역 이탈 조건으로 곧 스스로 끝난다).
+local function computeOccupiedZones()
+	local occupied = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		local character = player.Character
+		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+		if rootPart then
+			local position = rootPart.Position
+			for _, zoneKey in ipairs(WorldConfig.tierZoneOrder) do
+				if not occupied[zoneKey] then
+					local zone = WorldConfig.zones[zoneKey]
+					if math.abs(position.X - zone.center.X) <= zone.halfSize
+						and math.abs(position.Z - zone.center.Z) <= zone.halfSize then
+						occupied[zoneKey] = true
+					end
+				end
+			end
+		end
+	end
+	return occupied
+end
 
 -- 범위 안에서 가장 가까운 플레이어의 캐릭터 루트파트. 없으면 nil.
 local function findNearestPlayerRootInRange(position, maxRange)
@@ -212,6 +249,8 @@ local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetR
 end
 
 RunService.Heartbeat:Connect(function(dt)
+	local occupiedZones = computeOccupiedZones()
+
 	for _, model in ipairs(MonsterState.getAllModels()) do
 		local rootPart = model.PrimaryPart
 		if rootPart then
@@ -219,6 +258,13 @@ RunService.Heartbeat:Connect(function(dt)
 			local home = MonsterState.getSpawnPosition(model)
 			local data = MonsterState.getData(model)
 			local state = MonsterState.getAiState(model)
+			local zoneKey = MonsterState.getZoneKey(model)
+
+			-- zoneKey가 있는데(구역 소속 잡몹) 그 구역이 비어 있으면 idle 스캔 자체를
+			-- 건너뛴다 - 위 computeOccupiedZones 주석 참고.
+			if state == "idle" and zoneKey and not occupiedZones[zoneKey] then
+				continue
+			end
 
 			if state == "idle" then
 				local player, playerRoot = findNearestPlayerRootInRange(position, WorldConfig.aggro.rangeStuds)
@@ -227,11 +273,6 @@ RunService.Heartbeat:Connect(function(dt)
 					MonsterState.setAiTarget(model, player)
 					state = "chasing"
 
-					-- 무한 모드 스테이지 배율(11-1) - 어그로가 붙는 이 순간에 상대 플레이어의
-					-- 현재 스테이지로 이 몬스터 인스턴스를 다시 스케일한다(이미 피해를 입은
-					-- 몬스터는 MonsterState.setStage가 조용히 건너뛴다 - 그쪽 주석 참고).
-					MonsterState.setStage(model, PlayerProfile.getInfiniteStage(player) or 1)
-					MonsterSpawner.updateHpLabel(model)
 					-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
@@ -256,10 +297,13 @@ RunService.Heartbeat:Connect(function(dt)
 				-- 1차로 처리하지만, targetIsDead의 nil 가드가 그 경로를 놓쳐도 여기서 다시
 				-- 잡는다). 아래 targetIsDead를 빼고 거리만 봤다가 리스폰 직후 재사망 루프가
 				-- 생겼었다(9-4).
-				if not targetRoot or targetIsDead or distanceFromHome > WorldConfig.aggro.leashRangeStuds then
+				if not targetRoot or targetIsDead or distanceFromHome > WorldConfig.aggro.leashRangeStuds
+					or isOutsideZoneBounds(position, zoneKey) then
 					-- 대상을 놓쳤거나(퇴장) 죽었거나(리스폰된 새 캐릭터를 이어서 쫓아가면 안 된다 -
 					-- 스폰 지점이 리쉬 범위 안이면 즉시 재사망 루프가 생긴다) 집에서 너무
-					-- 멀어졌다 - 포기하고 돌아간다.
+					-- 멀어졌거나(리쉬), 구역 경계를 벗어났다(16-6 - 구역 경계가 리쉬의 진짜
+					-- 상한이다. 넓은 구역 가장자리 몬스터는 리쉬 거리(38.4)보다 먼저 경계에
+					-- 닿을 수 있다) - 포기하고 돌아간다.
 					MonsterState.setAiState(model, "returning")
 					MonsterState.setAiTarget(model, nil)
 					resetBossPhaseIfNeeded(model, data)

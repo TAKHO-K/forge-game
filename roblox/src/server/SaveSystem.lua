@@ -44,9 +44,12 @@ local function defaultProfile()
 		classId = nil,
 
 		-- 웹 core/equipment.js ITEM_PARTS(무기/갑옷/장갑/신발)와 같은 4슬롯. 무기만 시작
-		-- 지급한다(10-2 [1]) - 강화할 대상이 있어야 하기 때문이다. 갑옷·장갑·신발은 드랍
-		-- 시스템이 아직 없어 그대로 비어 있다(nil = 미장착) - 가짜 기본 장비를 채우지 않는다.
-		equipment = { weapon = defaultWeapon(), armor = nil, gloves = nil, boots = nil },
+		-- 지급한다(10-2 [1]) - 강화할 대상이 있어야 하기 때문이다. 갑옷·장갑·신발은 드랍으로만
+		-- 얻는다 - 가짜 기본 장비를 채우지 않는다(16-6부터 셋 다 실제로 드랍·장착된다,
+		-- 그 전엔 갑옷만 있었다). 필드명은 "shoes" - v8까지 쓰던 "boots"는 실제로 한 번도
+		-- 값이 채워진 적 없는 죽은 이름이라(드랍 시스템 자체가 없었다) migrate()에서
+		-- 그냥 이름만 바꾼다(아래 v9 참고).
+		equipment = { weapon = defaultWeapon(), armor = nil, gloves = nil, shoes = nil },
 
 		-- 일반/무한 모드 진행도(11-1 개정). 무한 모드가 이 게임의 유일한 모드가 되면서
 		-- "미진입=0" 개념이 없어졌다 - 접속하면 바로 1단계다. infiniteBest(최고 도달
@@ -72,16 +75,17 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 여덟 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지금은 열 단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
 -- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
 -- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입) -> 7(캐릭터 레벨 도입 +
--- 아이템 itemLevel 필드 도입) -> 8(보스 처치 기록 bestBossCleared 도입, 15-1).
+-- 아이템 itemLevel 필드 도입) -> 8(보스 처치 기록 bestBossCleared 도입, 15-1)
+-- -> 9(equipment.boots -> shoes 이름 정리, 16-6) -> 10(아이템 part 필드 소급 도입, 16-6).
 local function migrate(data)
 	data.version = data.version or 0
 
 	if data.version < 1 then
 		data.gold = data.gold or 0
-		data.equipment = data.equipment or { weapon = nil, armor = nil, gloves = nil, boots = nil }
+		data.equipment = data.equipment or { weapon = nil, armor = nil, gloves = nil, shoes = nil }
 		data.stageProgress = data.stageProgress or { normal = 1, infinite = 0 }
 		data.inventorySlots = data.inventorySlots or SaveConfig.defaultInventorySlots
 		data.gamepasses = data.gamepasses or {}
@@ -160,6 +164,31 @@ local function migrate(data)
 		-- "이미 깬 보스"가 있을 수 없다).
 		data.stageProgress.bestBossCleared = data.stageProgress.bestBossCleared or 0
 		data.version = 8
+	end
+
+	if data.version < 9 then
+		-- v8까지 "boots" 필드는 존재는 했지만(v1부터) 실제로 채워진 적이 없다(장갑·신발
+		-- 드랍 자체가 16-6 전엔 없었다) - 값을 옮길 데이터가 없으므로 이름만 정리한다.
+		-- 혹시 모를 값(예: 수동 편집된 저장)이 있으면 안전하게 이어받는다.
+		if data.equipment then
+			data.equipment.shoes = data.equipment.shoes or data.equipment.boots
+			data.equipment.boots = nil
+		end
+		data.version = 9
+	end
+
+	if data.version < 10 then
+		-- v9까지 아이템엔 part 필드 자체가 없었다(16-6 전엔 갑옷만 드랍됐으니 부위 구분이
+		-- 필요 없었다) - "그 시절 나온 아이템은 전부 갑옷이었다"가 정확한 과거 상태이므로
+		-- armor로 채운다. 이걸 안 하면 equipItem이 item.part 없이는 착용을 거부해(그대로
+		-- 조회) 예전에 얻은 아이템을 영영 착용할 수 없게 된다.
+		for _, item in ipairs(data.inventory) do
+			item.part = item.part or "armor"
+		end
+		if data.equipment and data.equipment.armor then
+			data.equipment.armor.part = data.equipment.armor.part or "armor"
+		end
+		data.version = 10
 	end
 
 	data.savedAt = data.savedAt or 0

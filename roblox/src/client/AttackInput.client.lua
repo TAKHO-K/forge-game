@@ -154,7 +154,9 @@ attackButton.Activated:Connect(function()
 	if not classId or classId == "" then
 		return
 	end
-	local cooldown = PlayerCombat.getAttackCooldown(classId)
+	-- 신발 공속 보너스(16-6) - 서버가 PlayerProfile.refreshMovementSpeed에서 동기화해 둔
+	-- Attribute를 그대로 읽는다(클라이언트가 장비 목록을 따로 계산하지 않는다).
+	local cooldown = PlayerCombat.getAttackCooldown(classId, player:GetAttribute("SpeedPercentBonus"))
 	local now = os.clock()
 	if now - lastSwingTick >= cooldown then
 		lastSwingTick = now
