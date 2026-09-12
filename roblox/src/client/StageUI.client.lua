@@ -3,10 +3,15 @@
 -- (StageMoveResult)을 거친다.
 --
 -- 16-2: `Claude outputs/hud-mockup.html`은 골드·레벨·스테이지를 상단 중앙에 한 줄로 붙은
--- 칩 세 개로 그린다(16-1까지는 좌상단/상단중앙/우상단으로 흩어져 있었다). 그 한 줄
--- (TopChipsRow)을 이 스크립트가 만든다 - GoldHud.client.lua/LevelHud.client.lua가
+-- 칩 세 개로 그린다. 16-3에서 다시 옮긴다 - 로블록스 기본 UI가 좌상단(채팅)·상단중앙
+-- (햄버거 메뉴)을 이미 차지하고 있어(끌 수 없다) 중앙 칩이 그 자리와 겹칠 수 있다(특히
+-- 모바일 세로모드에서 채팅 로그와 겹친다는 지적). 우측 세로 스택으로 바꾼다 - 우상단은
+-- 로블록스 플레이어 목록이 접힌 채로 살짝만 차지하고, 펼쳐도 이 스택이 그 아래(top:52)에
+-- 있어 겹치지 않는다(Studio에서 Tab으로 실제 펼쳐 확인함).
+--
+-- 이 한 스택(TopChipsRow)을 이 스크립트가 만든다 - GoldHud.client.lua/LevelHud.client.lua가
 -- WaitForChild로 찾아 자기 칩을 끼워 넣는다(AttackInput이 SkillSlots의 Row를 찾는 것과
--- 같은 패턴, 순서 계약: 골드=1, 레벨=2, 스테이지=3).
+-- 같은 패턴, 순서 계약: 골드=1, 레벨=2, 스테이지=3 - 위에서 아래로).
 --
 -- 목업의 스테이지 칩은 숫자만 보여주고 위/아래 이동 버튼이 없다(디자인 시안이라 순수
 -- 정보 표시만 다뤘을 것) - 이 프로젝트는 그 버튼이 실제 이동 기능이라 뺄 수 없다. 칩
@@ -29,23 +34,27 @@ screenGui.Name = "TopChipsGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
+-- 이름은 그대로 두지만(GoldHud/LevelHud와의 계약값) 이제 세로 스택이다 - 우상단
+-- 로블록스 UI(채팅은 좌상단이라 원래도 안 겹쳤지만, 상단중앙 햄버거 메뉴·우상단
+-- 플레이어 목록과는 겹칠 수 있었다) 아래로 내린다.
 local row = Instance.new("Frame")
 row.Name = "TopChipsRow"
-row.AnchorPoint = Vector2.new(0.5, 0)
-row.Position = UDim2.new(0.5, 0, 0, 14)
+row.AnchorPoint = Vector2.new(1, 0)
+row.Position = UDim2.new(1, -14, 0, 52)
 row.AutomaticSize = Enum.AutomaticSize.XY
 row.Size = UDim2.new(0, 0, 0, 0)
 row.BackgroundTransparency = 1
 row.Parent = screenGui
 
 local rowLayout = Instance.new("UIListLayout")
-rowLayout.FillDirection = Enum.FillDirection.Horizontal
-rowLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-rowLayout.Padding = UDim.new(0, 10)
+rowLayout.FillDirection = Enum.FillDirection.Vertical
+rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+rowLayout.Padding = UDim.new(0, 8)
 rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 rowLayout.Parent = row
 
 -- 스테이지 묶음(칩 + 최고기록 + 이동버튼) - 골드·레벨 칩과 달리 세로로 더 늘어난다.
+-- 세로 스택 안에서는 맨 아래(LayoutOrder=3)에 온다.
 local wrapper = Instance.new("Frame")
 wrapper.Name = "StageWrapper"
 wrapper.LayoutOrder = 3

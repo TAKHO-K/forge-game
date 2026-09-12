@@ -20,7 +20,14 @@
 --     같은 값으로 통일했다. 저장 실패 배너(SaveNoticeHud)도 결국 "빨간 경고"라 자연스럽다.
 --   success - 유지하되 목업의 --ok 값(53,208,165)으로 갱신.
 --
--- 등급 색 7단계(14-1, ItemVisualData.gradeVisuals)는 여전히 별도 축이라 안 건드린다.
+-- 등급 색 7단계(14-1, ItemVisualData.gradeVisuals)는 여전히 별도 축이라 안 건드린다 -
+-- 인벤토리 창(16-3)의 칸 테두리는 목업의 --g1~--g6 하드코딩을 쓰지 않고 그 색을 그대로
+-- 참조한다(지시 - "단일 출처를 유지한다").
+--
+-- 16-3 추가분(inventory-mockup.html) - slot/overlayDim 두 값만 새로 늘었다. 나머지는
+-- 16-2 팔레트를 그대로 재사용한다(창 배경 --panel-2는 panel과 색은 같고 불투명도만
+-- 다른데, 그 정도 차이는 BackgroundTransparency 인자 하나로 충분해 별도 토큰을
+-- 만들지 않았다 - 아래 slot 항목과 같은 이유로 꼭 필요한 것만 늘린다).
 return {
 	panel = Color3.fromRGB(12, 14, 19), -- 반투명 패널 바닥(목업 --panel)
 	panelTransparency = 0.28, -- CSS alpha .72 -> Roblox Transparency 1-.72
@@ -39,4 +46,12 @@ return {
 	textTertiary = Color3.fromRGB(87, 90, 96), -- 목업 --ink-3(alpha .34 실효색, panel-solid 기준)
 	danger = Color3.fromRGB(226, 59, 59), -- 목업에 별도 위험색이 없어 hp를 그대로 재사용
 	success = Color3.fromRGB(53, 208, 165), -- 목업 --ok
+
+	-- 16-3: 빈 칸·슬롯 바닥색(목업 --slot, rgba(30,35,45,.9)) - panel보다 밝고 더 불투명해서
+	-- 20칸이 나란히 있을 때 등급 테두리 색과 배경이 섞이지 않는다.
+	slot = Color3.fromRGB(30, 35, 45),
+	slotTransparency = 0.1, -- alpha .9
+	-- 16-3: 창을 열었을 때 뒤를 덮는 전체 화면 딤(목업 .dim, rgba(0,0,0,.42)).
+	overlayDim = Color3.fromRGB(0, 0, 0),
+	overlayDimTransparency = 0.58, -- alpha .42
 }
