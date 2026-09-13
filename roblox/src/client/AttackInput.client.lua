@@ -5,10 +5,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
-local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
@@ -17,6 +15,8 @@ local HitEffects = require(script.Parent.HitEffects)
 local Projectiles = require(script.Parent.Projectiles)
 local AimTarget = require(script.Parent.AimTarget)
 local UIManager = require(script.Parent.UIManager)
+local CameraShake = require(script.Parent.CameraShake)
+local DamageNumbers = require(script.Parent.DamageNumbers)
 
 -- 원거리 클래스(활·힐러)는 판정 결과를 곧바로 보여주지 않는다 - 투사체가 도착하는
 -- 순간까지 미룬다(아래 attackResult 핸들러 참고). 근접 두 클래스는 즉시 표시.
@@ -28,7 +28,6 @@ local comboUpdate = ReplicatedStorage:WaitForChild("ComboUpdate")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local camera = workspace.CurrentCamera
 
 -- 3타 강타 콤보 표시(16-7) - 18-2까지는 공격 버튼 위에 붙어 있었다. 버튼이 없어진 뒤로는
 -- 체력바 바로 위로 옮긴다 - PlayerHealthBar.client.lua가 만들어 두는 전용 앵커(ComboPipsAnchor)
@@ -342,84 +341,14 @@ UserInputService.TouchTap:Connect(function(touchPositions, gameProcessedEvent)
 	end
 end)
 
--- 몬스터별로 동시에 떠 있는 데미지 숫자 개수(9-5 개정, 9-3에서 미루기만 했던
--- 스택 오프셋). 약한 테이블 키라 몬스터가 사라지면(사망·리스폰) 항목도 같이
--- 수거된다 - 죽은 몬스터 참조를 붙들고 있을 이유가 없다.
-local activeStacks = setmetatable({}, { __mode = "k" })
-
--- 치명타 크기 배율(PRD-forge-game.md 4.4 "크기 1.5배 + 굵게 + 튀어오르는 모션").
--- 색은 그대로 두고(같은 흰색 계열) 크기·폰트·모션만 바꿔 구분한다.
-local CRIT_SIZE_SCALE = 1.5
-
-local function showDamageNumber(monsterModel, damage, isCrit)
-	local head = monsterModel and monsterModel:FindFirstChild("Head")
-	if not head then
-		return
-	end
-
-	-- 짧은 시간에 여러 대를 때리면 숫자가 겹쳐 안 보인다 - 이미 떠 있는 개수만큼
-	-- 위로 밀어서 계단식으로 쌓는다.
-	local stackIndex = activeStacks[monsterModel] or 0
-	activeStacks[monsterModel] = stackIndex + 1
-
-	local scale = isCrit and CRIT_SIZE_SCALE or 1
-	local finalSize = UDim2.new(3 * scale, 0, 1 * scale, 0)
-
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "DamageNumberGui"
-	gui.Size = finalSize
-	gui.StudsOffset = Vector3.new(0, 2.6 + stackIndex * 0.9, 0)
-	gui.AlwaysOnTop = true
-	gui.Adornee = head
-	gui.Parent = head
-
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.Size = UDim2.new(1, 0, 1, 0)
-	label.Text = NumberFormat.format(damage)
-	label.TextColor3 = Color3.fromRGB(255, 220, 60)
-	label.TextScaled = true
-	label.Font = isCrit and Enum.Font.GothamBlack or Enum.Font.GothamMedium
-	label.Parent = gui
-
-	if isCrit then
-		-- 튀어오르는 모션: 작게 시작해서 목표 크기로 튕기듯 커진다.
-		gui.Size = UDim2.new(finalSize.X.Scale * 0.6, 0, finalSize.Y.Scale * 0.6, 0)
-		TweenService:Create(
-			gui,
-			TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-			{ Size = finalSize }
-		):Play()
-	end
-
-	task.delay(CombatConfig.damageNumberLifetimeSeconds, function()
-		gui:Destroy()
-		activeStacks[monsterModel] = math.max((activeStacks[monsterModel] or 1) - 1, 0)
-	end)
-end
-
 -- 3타 강타 적중 피드백(16-7) - "타격감이 이번 작업의 진짜 목표"라는 지시. 히트스톱
 -- 0.05~0.12초 범위에서 실기로 맞춰본 값(0.08초 - 근접·원거리 전 클래스에서 "묵직하다"는
 -- 느낌과 "다음 입력이 막힌 것 같다"는 불편함 사이의 중간). 카메라 흔들림은 0.15초 안에
--- 완전히 잦아든다(지시 - "과하면 멀미가 난다. 감쇠 속도가 중요하다").
+-- 완전히 잦아든다(지시 - "과하면 멀미가 난다. 감쇠 속도가 중요하다"). 흔들림 자체의
+-- 메커니즘은 20-2a에서 CameraShake.lua로 뽑혀 스킬(SkillInput.client.lua)과 공유한다.
 local HEAVY_HITSTOP_SECONDS = 0.08
 local CAMERA_SHAKE_SECONDS = 0.15
 local CAMERA_SHAKE_STUDS = 0.35
-
-local cameraShakeUntil = 0
-RunService:BindToRenderStep("ComboCameraShake", Enum.RenderPriority.Camera.Value + 1, function()
-	local remaining = cameraShakeUntil - os.clock()
-	if remaining <= 0 then
-		return
-	end
-	local decay = remaining / CAMERA_SHAKE_SECONDS
-	local offset = Vector3.new(
-		(math.random() * 2 - 1) * CAMERA_SHAKE_STUDS * decay,
-		(math.random() * 2 - 1) * CAMERA_SHAKE_STUDS * decay,
-		0
-	)
-	camera.CFrame *= CFrame.new(offset)
-end)
 
 -- died가 추가된 이유는 AttackServer.server.lua의 attackResult:FireClient 주석 참고.
 -- 죽었으면 피격 반응 대신 사망 연출을 재생한다(둘 다 재생하면 사망 직전 프레임에
@@ -427,11 +356,11 @@ end)
 -- isComboHit(16-7)이면 죽었든 아니든 히트스톱·카메라 흔들림은 그대로 재생한다 - 강타가
 -- 처치를 낸 순간도 "강타였다"는 느낌은 여전히 필요하다.
 local function showResult(monsterModel, damage, isCrit, died, isComboHit)
-	showDamageNumber(monsterModel, damage, isCrit)
+	DamageNumbers.show(monsterModel, damage, isCrit)
 
 	if isComboHit then
 		WeaponVisual.applyHitstop(HEAVY_HITSTOP_SECONDS)
-		cameraShakeUntil = os.clock() + CAMERA_SHAKE_SECONDS
+		CameraShake.trigger(CAMERA_SHAKE_SECONDS, CAMERA_SHAKE_STUDS)
 	end
 
 	if not monsterModel then

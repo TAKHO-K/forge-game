@@ -8,9 +8,14 @@
 -- 특수 스킬·무기 스킬 후보가 있으나 미정이라 자리만 잡는다. 대시는 스킬이 아니라 이동
 -- 기능이라 5칸과 한 칸 띄워 오른쪽에 따로 둔다(DASH_GAP).
 --
--- 대시·Q·E 전부 실제 스킬은 아직 없다(스킬 자체는 18-3). 쿨다운 링·오버레이·번쩍임 UI가
--- 실제로 동작하는 걸 보여주기 위해 이 파일 하단에서 더미 쿨다운을 반복 재생한다 -
--- 스킬 시스템이 붙으면 이 데모 호출만 지우고 setCooldown을 실제 스킬 쿨다운에 연결하면 된다.
+-- 20-2a: 대검 Q(관통돌진)·E(회전베기)가 실제로 붙었다 - 더미 쿨다운 데모는 지웠다.
+-- 실제 쿨다운은 두 채널에서 온다: (1) SkillCastLocal(BindableEvent, 이 스크립트가 여기
+-- 만들어 SkillInput.client.lua에 공개한다) - 키를 누른 순간 낙관적으로 링을 돌리기
+-- 시작한다(지시 [1] "낙관적으로 먼저 돌아도 된다"). (2) SkillCastResult(RemoteEvent,
+-- 서버 SkillServer.server.lua가 쏜다) - 서버가 거부했으면(쿨다운 등) 이 스크립트가 직접
+-- 구독해 링을 정확한 서버 잔여 쿨다운으로 되돌린다(지시 [1] "서버 응답이 다르면 서버
+-- 상태로 되돌려라"). 대시(SHIFT)는 여전히 스킬이 아니라 이동 기능이라 데모 쿨다운을
+-- 그대로 남겨 둔다(범위 밖, 20-2a는 Q/E만 다룬다).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +24,8 @@ local TweenService = game:GetService("TweenService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local SkillIconData = require(ReplicatedStorage.Shared.data.SkillIconData)
 local HudIcons = require(script.Parent.HudIcons)
+
+local skillCastResult = ReplicatedStorage:WaitForChild("SkillCastResult")
 
 local player = Players.LocalPlayer
 
@@ -65,6 +72,14 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "SkillSlotsGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- SkillInput.client.lua가 WaitForChild로 찾는 로컬 전용 신호(20-2a) - ComboPipsAnchor
+-- (AttackInput.client.lua)와 같은 "잘 알려진 자리" 계약 패턴. RemoteEvent가 아니라
+-- BindableEvent다 - 같은 클라 안 두 LocalScript끼리만 오가고 네트워크를 안 탄다(그래서
+-- "낙관적"이라는 말이 성립한다 - 왕복 지연이 없다).
+local skillCastLocal = Instance.new("BindableEvent")
+skillCastLocal.Name = "SkillCastLocal"
+skillCastLocal.Parent = screenGui
 
 local row = Instance.new("Frame")
 row.Name = CENTRAL_ROW_NAME
@@ -339,9 +354,8 @@ local function setCooldown(slotId, remainingSeconds, totalSeconds)
 	handle.wasCooling = isCooling
 end
 
--- 더미 쿨다운 데모(지시 - "쿨다운 링이 도는 걸 확인할 수 있게") - 스킬 자체는 아직 없어서
--- 서로 다른 길이로 반복시켜 링·숫자·번쩍임을 눈으로 바로 검증할 수 있게 한다. 실제 스킬이
--- 붙으면 이 호출들을 지우고 setCooldown을 서버/클라이언트 쿨다운 값에 연결하면 된다.
+-- 대시(SHIFT)는 아직 스킬이 아니라 이동 기능이라(20-2a 범위 밖) 더미 쿨다운을 그대로
+-- 남긴다 - 실제 스킬(Q/E)만 아래에서 진짜 쿨다운으로 바꾼다.
 local function runDemoCooldown(slotId, totalSeconds, gapSeconds)
 	task.spawn(function()
 		while true do
@@ -360,6 +374,56 @@ local function runDemoCooldown(slotId, totalSeconds, gapSeconds)
 	end)
 end
 
-runDemoCooldown("q", 4, 2)
-runDemoCooldown("e", 6, 1.5)
 runDemoCooldown("dash", 8, 3)
+
+-- 실제 Q/E 쿨다운(20-2a) - [slotId(소문자)] = { startTick, totalSeconds } 또는 nil(대기
+-- 없음). SkillInput.client.lua는 이 상태를 직접 못 건드린다 - 아래 두 구독(로컬 낙관적
+-- 신호 + 서버 결과)이 유일한 갱신 경로다.
+local activeCooldown = {}
+
+local function startCooldown(slotId, totalSeconds)
+	activeCooldown[slotId] = { startTick = os.clock(), totalSeconds = totalSeconds }
+end
+
+local function driveCooldownLoop(slotId)
+	task.spawn(function()
+		while true do
+			local state = activeCooldown[slotId]
+			if state then
+				local remaining = state.totalSeconds - (os.clock() - state.startTick)
+				if remaining <= 0 then
+					setCooldown(slotId, 0, state.totalSeconds)
+					activeCooldown[slotId] = nil
+				else
+					setCooldown(slotId, remaining, state.totalSeconds)
+				end
+			end
+			task.wait()
+		end
+	end)
+end
+
+driveCooldownLoop("q")
+driveCooldownLoop("e")
+
+-- 낙관적 시작(지시 [1] "클라 UI는 낙관적으로 먼저 돌아도 된다") - SkillInput.client.lua가
+-- 키를 누른 그 순간(네트워크 왕복 전) 이 BindableEvent를 쏜다.
+skillCastLocal.Event:Connect(function(slot, cooldownSeconds)
+	startCooldown(slot:lower(), cooldownSeconds)
+end)
+
+-- 서버 진실(지시 [1] "서버 응답이 다르면 서버 상태로 되돌려라"). ok=true면 서버가 확정한
+-- cooldownSeconds로 다시 맞춘다 - "dash"(Q)·"channelStart"(E)에만 cooldownSeconds가
+-- 실려 온다("tick"은 없다 - 채널링 중 매 틱마다 링이 리셋되는 버그를 피한다). ok=false면
+-- (쿨다운 중 요청 등 드문 경합) 로컬 낙관적 표시를 지운다.
+skillCastResult.OnClientEvent:Connect(function(slot, data)
+	local slotId = slot:lower()
+	if not data.ok then
+		activeCooldown[slotId] = nil
+		setCooldown(slotId, 0, 0)
+		return
+	end
+	if data.cooldownSeconds then
+		startCooldown(slotId, data.cooldownSeconds)
+	end
+end)

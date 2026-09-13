@@ -138,6 +138,9 @@ end
 -- "맞은 뒤에 뭘 하는가"는 공격 종류와 무관하게 항상 같다.
 local function applyHitToPlayer(targetPlayer, rawAttack)
 	local damage = computeHitDamage(rawAttack, targetPlayer)
+	-- 20-2a: 대검 회전베기(E) 채널링 중 "받는 피해 50% 감소"(PRD-forge-game.md 4.3) - 평상시엔
+	-- PlayerState.getIncomingDamageMultiplier가 항상 1을 돌려줘 기존 동작과 같다.
+	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
 	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
 	PlayerState.setHp(targetPlayer, newHp)
 	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)

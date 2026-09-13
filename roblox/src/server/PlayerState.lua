@@ -9,7 +9,8 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerState = {}
 
 -- [Player] = { hp, maxHp, lastCombatActionAt(17-1 도입, 19-1에서 의미 확장 - 자동회복
--- 5초 대기 타이머 기준 시각, os.clock()) }
+-- 5초 대기 타이머 기준 시각, os.clock()), incomingDamageMultiplier·incomingDamageMultiplierUntil
+-- (20-2a, 대검 E "받는 피해 50% 감소" - os.clock() 기준 만료 시각) }
 local players = {}
 
 function PlayerState.init(player)
@@ -17,6 +18,8 @@ function PlayerState.init(player)
 		hp = CombatConfig.playerMaxHp,
 		maxHp = CombatConfig.playerMaxHp,
 		lastCombatActionAt = nil,
+		incomingDamageMultiplier = 1,
+		incomingDamageMultiplierUntil = nil,
 	}
 end
 
@@ -72,6 +75,30 @@ function PlayerState.setLastCombatActionAt(player, value)
 	if entry then
 		entry.lastCombatActionAt = value
 	end
+end
+
+-- 받는 피해 배율을 durationSeconds 동안 걸어 둔다(20-2a, PRD-forge-game.md 4.3 대검
+-- 회전베기 "받는 피해 50% 감소"). 만료 시각을 넘기면 getIncomingDamageMultiplier가
+-- 자동으로 1(정상)을 돌려준다 - 별도 해제 호출이 필요 없다(타이머 정리를 깜빡할 일이 없다).
+function PlayerState.setIncomingDamageMultiplierUntil(player, multiplier, durationSeconds)
+	local entry = players[player]
+	if not entry then
+		return
+	end
+	entry.incomingDamageMultiplier = multiplier
+	entry.incomingDamageMultiplierUntil = os.clock() + durationSeconds
+end
+
+-- MonsterAI.server.lua의 applyHitToPlayer가 매 피격마다 곱한다. 활성 구간이 아니면 1.
+function PlayerState.getIncomingDamageMultiplier(player)
+	local entry = players[player]
+	if not entry or not entry.incomingDamageMultiplierUntil then
+		return 1
+	end
+	if os.clock() >= entry.incomingDamageMultiplierUntil then
+		return 1
+	end
+	return entry.incomingDamageMultiplier
 end
 
 function PlayerState.clear(player)
