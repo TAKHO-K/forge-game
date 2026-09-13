@@ -62,9 +62,13 @@ end
 -- 치명타 판정 + 적용 - 유일한 위치(10-4 [3]). base는 평타의 getAttack 결과일 수도,
 -- 나중에 들어올 스킬의 계수(atk를 대체하는 값)일 수도 있다 - 여기 한 곳에만 크리를
 -- 넣어두면 스킬이 들어와도 자동으로 크리가 적용된다(평타 경로에만 붙이지 말라는 지시).
-function PlayerCombat.calcDamage(base, classId)
+-- critRateBonus(20-2b) - 활 백스텝샷처럼 "다음 N회 평타 치명타 확률 +Xp" 버프가 있을 때
+-- 호출부(AttackServer.server.lua)가 BuffState에서 읽어 넘긴다. 이 함수 자체는 BuffState를
+-- 모른다(공유 모듈이 서버 전용 상태를 직접 참조하면 안 된다) - 순수하게 "확률에 더할 값"만
+-- 받는다. 기본 0이라 기존 2-인자 호출부(SkillServer.server.lua 등)는 그대로 동작한다.
+function PlayerCombat.calcDamage(base, classId, critRateBonus)
 	local class = ClassData.classes[classId]
-	local isCrit = critRng:NextNumber() < class.critRate
+	local isCrit = critRng:NextNumber() < class.critRate + (critRateBonus or 0)
 	local damage = isCrit and base * class.critDmg or base
 	return damage, isCrit
 end
@@ -83,12 +87,17 @@ function PlayerCombat.getDefense(classId, equipmentDefenseBonus)
 	return (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def
 end
 
--- 공격 쿨다운 = 기본 쿨다운 ÷ (클래스 공격속도 배율 × 신발 공속 배율)(atkSpeed·배율이
--- 클수록 빠르다 - 웹 main.js calcAttackInterval과 같은 나눗셈 방향). speedPercentBonus는
--- 신발 미착용이면 0이 들어와 배율이 1이 되므로 기존 호출부와 결과가 똑같다.
-function PlayerCombat.getAttackCooldown(classId, speedPercentBonus)
+-- 공격 쿨다운 = 기본 쿨다운 ÷ (클래스 공격속도 배율 × 신발 공속 배율 × 버프 공속 배율)
+-- (atkSpeed·배율이 클수록 빠르다 - 웹 main.js calcAttackInterval과 같은 나눗셈 방향).
+-- speedPercentBonus는 신발 미착용이면 0이 들어와 배율이 1이 되므로 기존 호출부와 결과가
+-- 똑같다. buffSpeedMultiplier(20-2b, 기본 1) - 활 속사처럼 "치명타 확률에 비례해 최대
+-- 2.5배" 같은 자기 버프가 있을 때 호출부가 BuffState에서 읽어 넘긴다(신발과 같은
+-- 자리 - 곱셈 지점이 흩어지면 나중에 또 다른 공속 버프가 생겼을 때 어디에 곱해야
+-- 할지 매번 찾아야 한다).
+function PlayerCombat.getAttackCooldown(classId, speedPercentBonus, buffSpeedMultiplier)
 	local class = ClassData.classes[classId]
-	return CombatConfig.attackCooldownSeconds / (class.atkSpeed * PlayerCombat.getSpeedMultiplier(speedPercentBonus))
+	return CombatConfig.attackCooldownSeconds
+		/ (class.atkSpeed * PlayerCombat.getSpeedMultiplier(speedPercentBonus) * (buffSpeedMultiplier or 1))
 end
 
 return PlayerCombat

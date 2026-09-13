@@ -7,15 +7,18 @@
 -- HitEffects.lua와 같은 풀링 원칙 - 종류(화살/구슬)별로 고정 6개씩 재사용한다(둘 다
 -- 합쳐 12개, HitEffects와 같은 "9마리 동시" 근거를 그대로 쓴다 - 근거는 그쪽 주석 참고).
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+
+local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
 
 local Projectiles = {}
 
 local POOL_SIZE_PER_KIND = 6
 
-local ARROW_SPEED_STUDS_PER_SEC = 90
-local ORB_SPEED_STUDS_PER_SEC = 55
+-- 20-2b: 비행 속도가 서버(AttackServer.server.lua)의 도달 시점 계산과 반드시 같아야 해서
+-- ProjectileConfig.lua(단일 출처)로 옮겼다 - 여기 하드코딩하지 않는다.
 
 local ARROW_COLOR = Color3.fromRGB(200, 180, 140)
 local ARROW_CRIT_COLOR = Color3.fromRGB(255, 130, 60)
@@ -116,7 +119,7 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, onArrive)
 	local part, trail = slot.part, slot.trail
 
 	local distance = (toPosition - fromPosition).Magnitude
-	local speed = kind == "arrow" and ARROW_SPEED_STUDS_PER_SEC or ORB_SPEED_STUDS_PER_SEC
+	local speed = ProjectileConfig.speedStudsPerSec[kind]
 	local travelTime = math.max(distance / speed, 0.03)
 
 	part.Color = isCrit and (kind == "arrow" and ARROW_CRIT_COLOR or ORB_CRIT_COLOR) or (kind == "arrow" and ARROW_COLOR or ORB_COLOR)

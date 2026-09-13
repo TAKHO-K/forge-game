@@ -120,10 +120,13 @@ skillCastResult.OnClientEvent:Connect(function(slot, data)
 		local character = player.Character
 		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 		if rootPart then
-			local delta = data.endPosition - data.startPosition
-			local facingPoint = delta.Magnitude > 1e-3 and (data.endPosition + delta.Unit) or (data.endPosition + Vector3.new(0, 0, 1))
+			-- 회전은 건드리지 않는다 - 위치만 옮긴다. 관통돌진(전방)은 원래 보던 방향과
+			-- 이동 방향이 같아 문제가 안 됐지만, 백스텝샷(후방, 20-2b)은 이동 방향대로
+			-- 돌려버리면 뒤로 빠지면서 캐릭터가 홱 돌아 뒤를 보는 꼴이 된다 - 회피기는
+			-- 물러나는 동안에도 정면을 유지해야 자연스럽다.
+			local currentRotation = rootPart.CFrame - rootPart.CFrame.Position
 			TweenService:Create(rootPart, TweenInfo.new(data.durationSeconds, Enum.EasingStyle.Linear), {
-				CFrame = CFrame.new(data.endPosition, facingPoint),
+				CFrame = currentRotation + data.endPosition,
 			}):Play()
 		end
 		SkillEffects.dashAfterimage(data.startPosition, data.endPosition, color, data.durationSeconds)
@@ -133,6 +136,15 @@ skillCastResult.OnClientEvent:Connect(function(slot, data)
 		playHits(data.hits)
 		-- 광역(대회전)에만 카메라 흔들림(지시 [4] - "돌진마다 흔들리면 멀미가 난다").
 		CameraShake.trigger(E_CAMERA_SHAKE_SECONDS, E_CAMERA_SHAKE_STUDS)
+	elseif data.kind == "selfBuff" then
+		-- 활 속사(20-2b [1][3]) - "버프 중 캐릭터 주변에 빠른 느낌의 잔상 또는 링. 과하게
+		-- 하지 마라"는 지시대로 은은한 발등 링 하나만 지속시간 내내 따라다닌다. 실제 배율
+		-- 표시는 BuffHud.client.lua(체력바 근처)가 맡는다 - 이 이펙트는 순수 시각 강조.
+		local character = player.Character
+		if character then
+			local def = SkillData[player:GetAttribute("ClassId")][slot]
+			SkillEffects.selfBuffAura(character, 2.2, color, def.durationSeconds)
+		end
 	end
 	-- kind == "channelStart"는 별도 재생 없음 - WalkSpeed는 서버가 이미 바꿨고 Attribute
 	-- 복제로 클라가 자동으로 따라간다(PlayerProfile.refreshMovementSpeed와 같은 경로).

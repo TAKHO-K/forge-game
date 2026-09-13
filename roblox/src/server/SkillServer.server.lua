@@ -17,12 +17,14 @@ local Workspace = game:GetService("Workspace")
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local SkillCombat = require(ReplicatedStorage.Shared.SkillCombat)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
 local CombatResolution = require(script.Parent.CombatResolution)
+local BuffState = require(script.Parent.BuffState)
 
 local skillRequest = Instance.new("RemoteEvent")
 skillRequest.Name = "SkillRequest"
@@ -77,20 +79,11 @@ local function filterSameZone(casterPosition, candidates)
 	return filtered
 end
 
--- Q: 관통돌진. 서버는 "바라보는 방향"(rootPart.CFrame.LookVector, 클라 aimPoint를 안 믿는다)
--- 으로 사거리만큼 나아갈 때 담장에 막히는지 Raycast로 먼저 확인해 최종 도착점을 정하고,
--- 시작점~도착점 선분 위 적 전원을 즉시 때린다. 실제 이동은 이 결과를 받은 클라가 재생한다.
-local function castQ(player, def, classId, atk, rootPart, attackerStage)
-	local lookFlat = Vector3.new(rootPart.CFrame.LookVector.X, 0, rootPart.CFrame.LookVector.Z)
-	if lookFlat.Magnitude < 1e-3 then
-		return
-	end
-	local direction = lookFlat.Unit
-	local startPos = rootPart.Position
-
-	-- 몬스터 Body/Head는 기본 CanQuery=true라 그냥 두면 Raycast가 "몬스터에 막혔다"고
-	-- 오판한다(몬스터는 담장이 아니다 - 관통해서 때리는 게 이 스킬의 요점이다). 캐릭터
-	-- 자신 + 살아있는 몬스터 전원을 제외해 담장·지형에만 막히게 한다.
+-- 담장에 막히는지 Raycast로 확인해 최종 도착점을 정한다(20-2a 관통돌진, 20-2b 백스텝샷이
+-- 공유하는 "돌진형" 판정의 공통부 - 방향만 서로 다르다). 몬스터 Body/Head는 기본
+-- CanQuery=true라 그냥 두면 Raycast가 "몬스터에 막혔다"고 오판한다(몬스터는 담장이
+-- 아니다) - 캐릭터 자신 + 살아있는 몬스터 전원을 제외해 담장·지형에만 막히게 한다.
+local function computeDashEndpoint(player, startPos, direction, rangeStuds)
 	local raycastParams = RaycastParams.new()
 	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 	local excluded = { player.Character }
@@ -98,15 +91,28 @@ local function castQ(player, def, classId, atk, rootPart, attackerStage)
 		table.insert(excluded, model)
 	end
 	raycastParams.FilterDescendantsInstances = excluded
-	local rayResult = Workspace:Raycast(startPos, direction * def.rangeStuds, raycastParams)
+	local rayResult = Workspace:Raycast(startPos, direction * rangeStuds, raycastParams)
 
-	-- 벽에 막히면 그 앞에서 멈춘다(19-4 구역 담장을 뚫지 않는다, 20-2a [2]/[5]-3). 1stud
-	-- 여유를 둬 캐릭터가 벽에 파묻히지 않게 한다.
-	local finalDistance = def.rangeStuds
+	-- 벽에 막히면 그 앞에서 멈춘다(19-4 구역 담장을 뚫지 않는다). 1stud 여유를 둬 캐릭터가
+	-- 벽에 파묻히지 않게 한다.
+	local finalDistance = rangeStuds
 	if rayResult then
 		finalDistance = math.max(rayResult.Distance - 1, 0)
 	end
-	local finalEnd = startPos + direction * finalDistance
+	return startPos + direction * finalDistance
+end
+
+-- 관통돌진(대검 Q): "바라보는 방향"(rootPart.CFrame.LookVector, 클라 aimPoint를 안 믿는다)
+-- 으로 돌진하며 시작점~도착점 선분 위 적 전원을 즉시 때린다. 실제 이동은 이 결과를 받은
+-- 클라가 재생한다.
+local function castLineAttack(player, slot, def, classId, atk, rootPart, attackerStage)
+	local lookFlat = Vector3.new(rootPart.CFrame.LookVector.X, 0, rootPart.CFrame.LookVector.Z)
+	if lookFlat.Magnitude < 1e-3 then
+		return
+	end
+	local direction = lookFlat.Unit
+	local startPos = rootPart.Position
+	local finalEnd = computeDashEndpoint(player, startPos, direction, def.rangeStuds)
 
 	local candidates = filterSameZone(startPos, MonsterState.getAllModels())
 	local targets = SkillCombat.hitsOnSegment(startPos, finalEnd, def.hitRadiusStuds, candidates)
@@ -116,7 +122,7 @@ local function castQ(player, def, classId, atk, rootPart, attackerStage)
 		table.insert(hits, strikeTarget(player, classId, atk, target, def.coefficient, attackerStage))
 	end
 
-	skillCastResult:FireClient(player, "Q", {
+	skillCastResult:FireClient(player, slot, {
 		ok = true,
 		kind = "dash",
 		cooldownSeconds = def.cooldownSeconds,
@@ -127,14 +133,64 @@ local function castQ(player, def, classId, atk, rootPart, attackerStage)
 	})
 end
 
--- E: 회전베기. 채널링 3초간 이동속도를 낮추고(느려질 뿐 멈추지 않는다), 받는 피해를
+-- 백스텝샷(활 E, 20-2b [1][4], PRD-forge-game.md 4.3): "바라보는 방향의 반대"로 짧게
+-- 물러나며 아무도 때리지 않는다 - 대신 다음 평타 5발에 붙는 버프를 건다([1] 프레임워크,
+-- AttackServer.server.lua의 backstepShotBuff 소비 지점 참고).
+local function castDashBuff(player, slot, def, rootPart)
+	local lookFlat = Vector3.new(rootPart.CFrame.LookVector.X, 0, rootPart.CFrame.LookVector.Z)
+	local direction = lookFlat.Magnitude > 1e-3 and -lookFlat.Unit or Vector3.new(0, 0, 1)
+	local startPos = rootPart.Position
+	local finalEnd = computeDashEndpoint(player, startPos, direction, def.rangeStuds)
+
+	BuffState.apply(player, "backstepShotBuff", {
+		chargesRemaining = def.chargesGranted,
+		critRateBonus = def.critRateBonus,
+		damageCoefficient = def.damageCoefficient,
+		displayName = def.name,
+		colorName = "success",
+	})
+
+	skillCastResult:FireClient(player, slot, {
+		ok = true,
+		kind = "dash",
+		cooldownSeconds = def.cooldownSeconds,
+		startPosition = startPos,
+		endPosition = finalEnd,
+		durationSeconds = def.durationSeconds,
+		hits = {}, -- 백스텝샷 자체는 아무도 안 때린다 - 다음 평타들이 버프를 소모한다.
+	})
+end
+
+-- 속사(활 Q, 20-2b [1][3], PRD-forge-game.md 4.3): 순수 자기 버프 - [1] 프레임워크의
+-- 첫 사용자. 공식(웹·PRD 완전 일치): 공속배율 = min(cap, base + 치명타확률×critCoefficient).
+-- 치명타확률이 오르면 이 배율도 같이 오른다(ClassData.classes[classId].critRate를 그
+-- 순간 다시 읽으므로 - 확정된 값을 캐싱하지 않는다).
+local function castSelfBuff(player, slot, def, classId)
+	local critRate = ClassData.classes[classId].critRate
+	local multiplier = math.min(def.attackSpeedCap, def.attackSpeedBase + critRate * def.attackSpeedCritCoefficient)
+
+	BuffState.apply(player, "quickShot", {
+		durationSeconds = def.durationSeconds,
+		value = multiplier,
+		displayName = def.name,
+		colorName = "ember",
+	})
+
+	skillCastResult:FireClient(player, slot, {
+		ok = true,
+		kind = "selfBuff",
+		cooldownSeconds = def.cooldownSeconds,
+	})
+end
+
+-- 회전베기(대검 E): 채널링 3초간 이동속도를 낮추고(느려질 뿐 멈추지 않는다), 받는 피해를
 -- 50% 줄인 채로(PRD 4.3), tickCount번에 걸쳐 나눠 원형 판정으로 때린다(20-2a [0]/[3] -
 -- "채널링이 끝나는 시점에 한 번"이 아니라 PRD 4.3의 "지속 타격"을 따른다, 명세 상이 보고).
 -- 피격되어도 채널링은 끊기지 않는다(지시 [1] - 몬스터가 많을수록 못 쓰는 스킬이 되면
 -- 안 된다는 이유 그대로 채택, PlayerState의 HP 차감과 이 task.spawn 루프는 서로 무관하다).
-local function castE(player, def, classId, atk, attackerStage)
-	markCast(player, "E")
-	skillCastResult:FireClient(player, "E", {
+local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
+	markCast(player, slot)
+	skillCastResult:FireClient(player, slot, {
 		ok = true,
 		kind = "channelStart",
 		cooldownSeconds = def.cooldownSeconds,
@@ -174,7 +230,7 @@ local function castE(player, def, classId, atk, attackerStage)
 			table.insert(hits, strikeTarget(player, classId, atk, target, perTickCoefficient, attackerStage))
 		end
 
-		skillCastResult:FireClient(player, "E", {
+		skillCastResult:FireClient(player, slot, {
 			ok = true,
 			kind = "tick",
 			tickIndex = tickIndex,
@@ -222,13 +278,21 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player))
 	local attackerStage = PlayerProfile.getInfiniteStage(player) or 1
 
-	if slot == "Q" then
-		markCast(player, "Q")
-		castQ(player, def, classId, atk, rootPart, attackerStage)
-	else
-		-- castE가 자체적으로 markCast를 부른다(채널 시작 즉시 쿨다운이 걸려야 한다 -
-		-- 채널링 도중 같은 스킬을 또 요청받는 경합을 막는다).
-		castE(player, def, classId, atk, attackerStage)
+	-- 20-2b: 슬롯(Q/E)이 아니라 판정 유형(shape)으로 분기한다 - 대검 Q=line/E=circle이던
+	-- 우연한 대응이 깨졌다(활 Q=selfBuff/E=dash). "채널형"(castCircleChannel)만 자체적으로
+	-- markCast를 부른다(채널 시작 즉시 쿨다운이 걸려야 채널링 도중 같은 스킬 재요청 경합을
+	-- 막는다) - 나머지는 여기서 공통으로 찍는다.
+	if def.shape == "line" then
+		markCast(player, slot)
+		castLineAttack(player, slot, def, classId, atk, rootPart, attackerStage)
+	elseif def.shape == "circle" then
+		castCircleChannel(player, slot, def, classId, atk, attackerStage)
+	elseif def.shape == "selfBuff" then
+		markCast(player, slot)
+		castSelfBuff(player, slot, def, classId)
+	elseif def.shape == "dash" then
+		markCast(player, slot)
+		castDashBuff(player, slot, def, rootPart)
 	end
 end)
 
@@ -236,4 +300,4 @@ Players.PlayerRemoving:Connect(function(player)
 	lastCastTick[player] = nil
 end)
 
-print("[forge-game] SkillServer 로드됨 - 대검 Q(관통돌진)/E(회전베기) 판정 활성")
+print("[forge-game] SkillServer 로드됨 - 대검 Q/E, 활 Q(속사)/E(백스텝샷) 판정 활성")

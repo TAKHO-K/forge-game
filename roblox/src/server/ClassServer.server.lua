@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
+local BuffState = require(script.Parent.BuffState)
 
 local classSelectRequest = Instance.new("RemoteEvent")
 classSelectRequest.Name = "ClassSelectRequest"
@@ -40,6 +41,10 @@ classSelectRequest.OnServerEvent:Connect(function(player, classId)
 	end
 
 	PlayerProfile.setClassId(player, classId)
+	-- 20-2b [1] - 이전 직업에서 걸어 둔 자기 버프(활 속사 등)가 새 직업으로 넘어가면
+	-- 안 된다. 이 직업 전환 지점 하나만 지키면 된다(19-4가 겪은 유령 상태 문제 - 버프
+	-- 종류가 늘어날 때마다 정리 지점을 따로 추가하지 않도록 BuffState.clearAll로 통일).
+	BuffState.clearAll(player)
 	print(("[forge-game] 클래스 선택: %s -> %s"):format(player.Name, classId))
 
 	-- 클래스 선택도 강화 결과와 같은 "되돌릴 수 없는 사건"이다(10-3 [2] - 10-2의 즉시저장

@@ -5,8 +5,11 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
+local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
 local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
@@ -15,14 +18,25 @@ local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
 local CombatResolution = require(script.Parent.CombatResolution)
+local BuffState = require(script.Parent.BuffState)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
 attackRequest.Parent = ReplicatedStorage
 
+-- damage/isCrit/isDead/isComboHit는 기존 그대로. missed(20-2b, 신규)가 true면 나머지
+-- 필드는 의미 없다(전부 0/false로 채워 보낸다) - 원거리 투사체가 도달 시점에 빗나간
+-- 경우에만 true다. 근접(대검·쌍검)은 즉시 판정이라 missed가 아예 안 나온다(항상 false).
 local attackResult = Instance.new("RemoteEvent")
 attackResult.Name = "AttackResult"
 attackResult.Parent = ReplicatedStorage
+
+-- 원거리(활·힐러) 발사 즉시 신호 - 클라가 이 시점에 투사체 시각 재생을 시작한다(20-2b [2]).
+-- 실제 피해 판정은 attackResult로 따로, 화살/구슬이 도달하는 시점에 온다 - 이 이벤트는
+-- "쐈다"만 알린다.
+local attackLaunched = Instance.new("RemoteEvent")
+attackLaunched.Name = "AttackLaunched"
+attackLaunched.Parent = ReplicatedStorage
 
 -- 처치 순간 골드 팝업(10-1)용. 골드 자체는 PlayerProfile.addGold가 Attribute로 이미
 -- 동기화한다 - 이 이벤트는 "방금 얼마 벌었다"는 일회성 연출 신호만 보낸다.
@@ -85,8 +99,10 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	local now = os.clock()
 	local last = lastAttackTick[player]
 	-- 신발 공속 보너스(16-6) - 미착용이면 PlayerProfile.getSpeedPercentBonus가 0을 돌려줘
-	-- 기존과 똑같이 계산된다.
-	local cooldown = PlayerCombat.getAttackCooldown(classId, PlayerProfile.getSpeedPercentBonus(player))
+	-- 기존과 똑같이 계산된다. 활 속사(20-2b [1][3]) - 버프가 없으면 BuffState.getValue가
+	-- 기본값 1을 돌려줘 역시 기존과 똑같이 계산된다.
+	local buffSpeedMultiplier = BuffState.getValue(player, "quickShot", 1)
+	local cooldown = PlayerCombat.getAttackCooldown(classId, PlayerProfile.getSpeedPercentBonus(player), buffSpeedMultiplier)
 	if last and now - last < cooldown then
 		return -- 쿨다운이 안 지났다 - 조용히 무시
 	end
@@ -136,29 +152,100 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 웹 main.js "attack = getPlayerAttack() * (isComboHit ? comboHitMultiplier : 1)"과 같은
 	-- 순서 - 치명타 판정보다 먼저 곱한다). 배율이 곱해지는 지점은 PlayerCombat 하나뿐이다.
 	-- 치명타(10-4)는 이 base를 calcDamage에 넘겨서 판정한다 - 판정도 서버 여기 한 곳뿐이다.
+	-- 치명타 롤 자체는 여기서(발사 시점) 미리 정한다 - 원거리 투사체 색(화살/구슬)이 발사
+	-- 즉시 정해져야 클라가 "맞을지 미리 안다"는 위화감 없이 보인다(Projectiles.lua 원본
+	-- 주석과 같은 이유). 실제로 맞는지(도달 시점 재검증)는 아래에서 따로 판단한다.
 	local characterLevel = PlayerProfile.getCharacterLevel(player)
-	local base = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player))
+	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player))
+	local base = atk
 	if isComboHit then
 		base *= CombatConfig.comboHitMultiplier
 	end
-	local damage, isCrit = PlayerCombat.calcDamage(base, classId)
 
-	-- 19-4(C안) - 잡몹은 공유 HP(비율)라 "이 공격자의 stage 기준" 유효 최대체력으로 나눈
-	-- 비율만큼만 깎인다(MonsterState.applyDamage 참고). 보스는 기존 그대로 절대값 차감.
+	-- 활 백스텝샷(20-2b [1][4], PRD-forge-game.md 4.3) - "다음 평타 5발에 마법피해 추가 +
+	-- 그 5발 치명타 확률 +30%p". 버프가 없으면 두 값 다 0이라 기존과 똑같이 계산된다.
+	-- 이 평타 하나에 실제로 적용된 순간에만 충전을 소모한다(맞았는지와 무관 - 쐈다는
+	-- 사실 자체가 소모 조건이다, 근접도 같은 지점이라 대검/쌍검에 이 버프가 걸릴 일이
+	-- 생기면 자동으로 똑같이 동작한다).
+	local bonusDamageCoefficient = BuffState.getField(player, "backstepShotBuff", "damageCoefficient", 0)
+	local critRateBonus = BuffState.getField(player, "backstepShotBuff", "critRateBonus", 0)
+	if bonusDamageCoefficient > 0 or critRateBonus > 0 then
+		base += bonusDamageCoefficient * atk
+		BuffState.consumeCharge(player, "backstepShotBuff")
+	end
+
+	local damage, isCrit = PlayerCombat.calcDamage(base, classId, critRateBonus)
 	local attackerStage = PlayerProfile.getInfiniteStage(player) or 1
-	local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
-	MonsterSpawner.updateHpLabel(target)
 
-	-- died(14-2)를 같이 보낸다 - 클라이언트가 사망 연출(HitEffects.playDeath)을 정확히
-	-- 이 타격에서만 재생하려면 "이 타격으로 죽었는가"를 알아야 한다. isComboHit(16-7)은
-	-- 클라이언트가 강타 전용 피드백(히트스톱·카메라 흔들림·확대된 스윙)을 이 타격에서만
-	-- 재생하도록 같이 보낸다. damage는 이 공격자 본인 기준 절대값 그대로 보여준다(19-4 [1] -
-	-- "옆 사람과 숫자가 다른 건 이미 기본값"이라 데미지 숫자는 바꾸지 않는다, HP바만 비율).
-	attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit)
+	local projectileKind = ProjectileConfig.kindByClass[classId]
+	if not projectileKind then
+		-- 근접(대검·쌍검) - 즉시 판정(기존 동작 그대로, 20-2a까지와 완전히 같다).
+		local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
+		MonsterSpawner.updateHpLabel(target)
+		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false)
+		CombatResolution.resolveHit(player, target, isDead)
+		return
+	end
 
-	-- 죽음 처리(경합 가드·보상·despawn)는 CombatResolution이 맡는다(20-2a - 스킬도 같은
-	-- 경로를 타야 해서 뽑아냈다). 동작은 그대로다.
-	CombatResolution.resolveHit(player, target, isDead)
+	local targetRootAtLaunch = target.PrimaryPart
+	local launchPosition = targetRootAtLaunch and targetRootAtLaunch.Position
+	local distance = launchPosition and (launchPosition - rootPart.Position).Magnitude or 0
+
+	-- 벽 차단(20-2b [2]) - aimPoint가 담장 너머 몬스터를 가리켜도 실제로는 못 나간다.
+	-- SkillServer.server.lua computeDashEndpoint와 같은 원리(플레이어 자신 + 살아있는
+	-- 몬스터 전원을 제외해 담장·지형에만 막히게 한다) - 발사 자체를 취소한다(투사체를
+	-- 보여준 다음 중간에 없애면 "왜 사라졌지"가 되므로, 나갈 수 없으면 아예 안 나간다).
+	if launchPosition and distance > 0 then
+		local raycastParams = RaycastParams.new()
+		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+		local excluded = { character }
+		for _, model in ipairs(MonsterState.getAllModels()) do
+			table.insert(excluded, model)
+		end
+		raycastParams.FilterDescendantsInstances = excluded
+		local wallHit = Workspace:Raycast(rootPart.Position, launchPosition - rootPart.Position, raycastParams)
+		if wallHit and wallHit.Distance < distance - 1 then
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true)
+			return
+		end
+	end
+
+	-- 원거리(활·힐러, 20-2b [2]) - "클라가 맞았다고 보고하는 구조로 만들지 마라"는 지시대로
+	-- 서버가 도달 시점을 직접 계산해 그때 판정한다. 발사는 즉시 알려 클라가 투사체를
+	-- 그 순간부터 날아가게 하고(activeLaunched), 실제 피해 적용은 화살/구슬이 도달할
+	-- 시점(releaseDelay + travelTime 뒤)까지 미룬다.
+	attackLaunched:FireClient(player, target, isCrit)
+
+	-- releaseDelay - 활은 시위를 당기는 예비동작이 끝나야 실제로 발사된다(9-2/14-2,
+	-- WeaponVisual.getReleaseDelay와 같은 산식을 공유 정적 데이터로 재계산한다 - 서버는
+	-- 클라이언트 애니메이션 상태를 모르므로 "정상적으로 지금 막 스윙을 시작했다"고
+	-- 가정한 근사치다. 콤보로 스윙이 끊기고 새로 시작되는 드문 경우엔 클라 쪽 실제
+	-- 재생 시점과 몇십ms 어긋날 수 있지만, 피해 판정 자체(누가 맞았는가)에는 영향이 없다).
+	local motion = AttackMotionData[classId]
+	local releaseDelay = (motion and motion.releaseT) and motion.releaseT * motion.totalDurationSeconds or 0
+	local travelTime = distance / ProjectileConfig.speedStudsPerSec[projectileKind]
+
+	task.delay(releaseDelay + travelTime, function()
+		-- 도달 시점 재검증. 몬스터가 이미 없어졌으면(다른 공격자가 먼저 죽였거나 despawn)
+		-- MonsterState.getData가 nil을 돌려준다 - 조용히 빗나간다.
+		local currentRoot = target.Parent and target.PrimaryPart
+		if not currentRoot or not MonsterState.getData(target) then
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true)
+			return
+		end
+
+		-- 비행 중 이동한 거리가 허용 폭(ProjectileConfig.hitToleranceStuds)을 넘으면
+		-- 빗나간다 - "몬스터가 움직이므로 빗나갈 수 있다"는 지시를 그대로 구현한다.
+		if launchPosition and (currentRoot.Position - launchPosition).Magnitude > ProjectileConfig.hitToleranceStuds then
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true)
+			return
+		end
+
+		local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
+		MonsterSpawner.updateHpLabel(target)
+		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false)
+		CombatResolution.resolveHit(player, target, isDead)
+	end)
 end)
 
 Players.PlayerRemoving:Connect(function(player)

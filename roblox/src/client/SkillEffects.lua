@@ -3,6 +3,7 @@
 -- 판정 유형처럼 나머지 스킬 대부분이 "대시형"이나 "광역형"의 변형일 거라 여기 두 함수를
 -- 그대로 재사용할 수 있게 일부러 클래스·스킬 이름을 모른다(범용 기하 인자만 받는다).
 
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -76,6 +77,46 @@ function SkillEffects.expandingRing(center, radiusStuds, color, durationSeconds)
 
 	task.delay(durationSeconds, function()
 		ring:Destroy()
+	end)
+end
+
+-- 자기 버프 지속 오라(20-2b [3], 활 속사) - "버프 중 캐릭터 주변에 빠른 느낌의 잔상 또는
+-- 링. 과하게 하지 마라 - 6초 동안 계속 보이는 것이라 화려하면 피로하다"는 지시대로
+-- 발등 높이 얇은 링 하나만 캐릭터를 따라다니며 은은하게 유지한다(회전만 살짝 돈다 -
+-- 그게 "빠른 느낌"의 전부다). durationSeconds가 지나면 스스로 사라진다.
+local AURA_RING_THICKNESS_STUDS = 0.15
+local AURA_ROTATION_DEG_PER_SEC = 240
+
+function SkillEffects.selfBuffAura(character, radiusStuds, color, durationSeconds)
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then
+		return
+	end
+
+	local ring = Instance.new("Part")
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.CanQuery = false
+	ring.CastShadow = false
+	ring.Material = Enum.Material.Neon
+	ring.Color = color
+	ring.Transparency = 0.6
+	ring.Size = Vector3.new(AURA_RING_THICKNESS_STUDS, radiusStuds * 2, radiusStuds * 2)
+	ring.Parent = Workspace
+
+	local startTick = os.clock()
+	local connection
+	connection = RunService.Heartbeat:Connect(function()
+		local currentCharacter = rootPart.Parent
+		if not currentCharacter or os.clock() - startTick >= durationSeconds then
+			connection:Disconnect()
+			ring:Destroy()
+			return
+		end
+		local spinAngle = math.rad(AURA_ROTATION_DEG_PER_SEC * (os.clock() - startTick))
+		ring.CFrame = CFrame.new(rootPart.Position - Vector3.new(0, 2.8, 0))
+			* CFrame.Angles(0, spinAngle, math.rad(90))
 	end)
 end
 

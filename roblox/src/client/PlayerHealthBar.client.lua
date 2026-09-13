@@ -43,6 +43,14 @@ local BOTTOM_OFFSET = 15 + 16 + 54 + 9
 -- 점 자체의 개수·색·갱신은 전부 AttackInput.client.lua 소관(콤보 로직을 아는 파일).
 local COMBO_PIPS_GAP_ABOVE = 8
 
+-- 20-2b [1]: 버프 아이콘 행 자리 - "체력바 근처에" 지시대로 콤보 점보다 한 단 더 위에
+-- 둔다(콤보 점은 전투 중에만 짧게 보이는 반면 버프는 몇 초~십몇 초 지속돼 겹치면
+-- 헷갈린다). BuffHud.client.lua가 이 이름으로 WaitForChild해 자기 아이콘을 끼워 넣는다 -
+-- ComboPipsAnchor와 같은 계약 패턴. 콤보 점 자체 높이(10px, AttackInput.client.lua
+-- COMBO_PIP_SIZE)+여유를 더한 값 위에 둔다.
+local COMBO_PIPS_APPROX_HEIGHT = 10
+local BUFF_HUD_GAP_ABOVE = 10
+
 -- 눈금이 이보다 많아지면(수십 개 이상) 낱개 가는 눈금 대신 대표 눈금 약 10개만
 -- 굵게 그린다 - 안 그러면 선이 겹쳐 안 보인다. 적을 땐 실제 타수를 그대로 보여준다.
 local MINOR_TICK_LIMIT = 20
@@ -84,6 +92,18 @@ comboPipsAnchor.AutomaticSize = Enum.AutomaticSize.XY
 comboPipsAnchor.Size = UDim2.new(0, 0, 0, 0)
 comboPipsAnchor.BackgroundTransparency = 1
 comboPipsAnchor.Parent = screenGui
+
+local buffHudAnchor = Instance.new("Frame")
+buffHudAnchor.Name = "BuffHudAnchor"
+buffHudAnchor.AnchorPoint = Vector2.new(0.5, 1)
+buffHudAnchor.Position = UDim2.new(
+	0.5, 0,
+	1, -(BOTTOM_OFFSET + BAR_HEIGHT + COMBO_PIPS_GAP_ABOVE + COMBO_PIPS_APPROX_HEIGHT + BUFF_HUD_GAP_ABOVE)
+)
+buffHudAnchor.AutomaticSize = Enum.AutomaticSize.XY
+buffHudAnchor.Size = UDim2.new(0, 0, 0, 0)
+buffHudAnchor.BackgroundTransparency = 1
+buffHudAnchor.Parent = screenGui
 
 local containerStroke = Instance.new("UIStroke")
 containerStroke.Color = UIColors.rim

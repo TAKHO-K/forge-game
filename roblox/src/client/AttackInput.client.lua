@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local WeaponVisual = require(script.Parent.WeaponVisual)
@@ -18,12 +19,13 @@ local UIManager = require(script.Parent.UIManager)
 local CameraShake = require(script.Parent.CameraShake)
 local DamageNumbers = require(script.Parent.DamageNumbers)
 
--- 원거리 클래스(활·힐러)는 판정 결과를 곧바로 보여주지 않는다 - 투사체가 도착하는
--- 순간까지 미룬다(아래 attackResult 핸들러 참고). 근접 두 클래스는 즉시 표시.
-local RANGED_PROJECTILE_KIND = { bow = "arrow", healer = "orb" }
-
 local attackRequest = ReplicatedStorage:WaitForChild("AttackRequest")
 local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
+-- 20-2b: 발사 즉시 신호 - 원거리 클래스가 투사체 시각을 이 시점부터 재생한다. 실제 피해
+-- 판정(맞았는지·얼마나)은 서버가 도달 시점에 계산해 attackResult로 따로 보낸다 - 더 이상
+-- 클라이언트가 "이미 정해진 결과"를 늦게 보여주는 게 아니라, 서버 판정 자체가 그 시점에
+-- 일어난다(AttackServer.server.lua 참고).
+local attackLaunched = ReplicatedStorage:WaitForChild("AttackLaunched")
 local comboUpdate = ReplicatedStorage:WaitForChild("ComboUpdate")
 
 local player = Players.LocalPlayer
@@ -209,9 +211,14 @@ local function performAttack(aimPoint)
 	if not classId or classId == "" then
 		return
 	end
-	-- 신발 공속 보너스(16-6) - 서버가 PlayerProfile.refreshMovementSpeed에서 동기화해 둔
-	-- Attribute를 그대로 읽는다(클라이언트가 장비 목록을 따로 계산하지 않는다).
-	local cooldown = PlayerCombat.getAttackCooldown(classId, player:GetAttribute("SpeedPercentBonus"))
+	-- 신발 공속 보너스(16-6) + 활 속사 버프(20-2b) - 둘 다 서버가 동기화해 둔 Attribute를
+	-- 그대로 읽는다(클라이언트가 장비·버프 상태를 따로 계산하지 않는다). 이건 로컬
+	-- 예측(스윙 애니메이션을 지금 새로 재생할지)일 뿐 - 실제 쿨다운 판정은 언제나 서버다.
+	local cooldown = PlayerCombat.getAttackCooldown(
+		classId,
+		player:GetAttribute("SpeedPercentBonus"),
+		player:GetAttribute("AttackSpeedBuffMultiplier")
+	)
 	local now = os.clock()
 	if now - lastSwingTick >= cooldown then
 		lastSwingTick = now
@@ -373,34 +380,38 @@ local function showResult(monsterModel, damage, isCrit, died, isComboHit)
 	end
 end
 
--- 활·힐러는 서버 판정 결과(이미 확정된 데미지·치명타·사망 여부)를 곧바로 보여주지
--- 않는다 - 활시위가 아직 안 당겨졌거나 화살이 아직 날아가는 중인데 데미지 숫자가
--- 먼저 뜨면 판정 시점과 화살 도달 시점이 어긋나 보인다(지시 사항). 서버는 이미
--- 즉시 판정했으므로(9-2 서버 권위), 여기서 하는 일은 "이미 정해진 결과를 언제
--- 보여줄지"를 투사체가 실제로 도착하는 순간으로 늦추는 것뿐 - 새로 판정하지 않는다.
-attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, isComboHit)
+-- 20-2b: 원거리(활·힐러) 발사 즉시 신호 - 투사체 시각을 여기서 바로 시작한다. 피해
+-- 판정(맞았는지 자체를 포함)은 서버가 도달 시점에 따로 계산해 attackResult로 보낸다 -
+-- 이 핸들러는 "쐈다"만 알 뿐 결과를 모른다(그래서 onArrive 콜백이 없다 - 그냥 날아가는
+-- 모습만 보여준다).
+attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit)
 	local classId = player:GetAttribute("ClassId")
-	local projectileKind = RANGED_PROJECTILE_KIND[classId]
-
+	local projectileKind = ProjectileConfig.kindByClass[classId]
 	if not projectileKind then
-		showResult(monsterModel, damage, isCrit, died, isComboHit)
 		return
 	end
 
-	-- 스윙이 아직 "발사 시점"(releaseT)에 안 닿았으면 그때까지 기다렸다가 쏜다 - 서버
-	-- 응답이 스윙 애니메이션보다 먼저 와도(대개 그렇다) 시위가 안 당겨진 채로 화살이
-	-- 나가는 어색함을 막는다.
+	-- 스윙이 아직 "발사 시점"(releaseT)에 안 닿았으면 그때까지 기다렸다가 쏜다(9-2/14-2 -
+	-- 시위가 안 당겨진 채로 화살이 나가는 어색함을 막는다). 서버도 같은 releaseT를
+	-- AttackMotionData(공유 정적 데이터)에서 읽어 피해 판정 시점을 맞춘다.
 	local releaseDelay = WeaponVisual.getReleaseDelay()
 	task.delay(releaseDelay, function()
 		local targetHead = monsterModel and monsterModel:FindFirstChild("Head")
 		local muzzle = WeaponVisual.getMuzzleWorldPosition()
 		if not targetHead or not muzzle then
-			-- 발사 시점에 대상이 이미 사라졌으면(드문 경우) 투사체 없이 즉시 표시로 대체한다.
-			showResult(monsterModel, damage, isCrit, died, isComboHit)
-			return
+			return -- 발사 시점에 대상이 이미 사라졌다(드문 경우) - 보여줄 화살 자체가 없다.
 		end
-		Projectiles.fire(projectileKind, muzzle, targetHead.Position, isCrit, function()
-			showResult(monsterModel, damage, isCrit, died, isComboHit)
-		end)
+		Projectiles.fire(projectileKind, muzzle, targetHead.Position, isCrit)
 	end)
+end)
+
+-- 근접(대검·쌍검)은 즉시 표시, 원거리도 이제 서버가 도달 시점에 맞춰 이 이벤트를
+-- 보내주므로 똑같이 즉시 표시한다(더 이상 클라가 따로 늦출 필요가 없다 - 20-2b 이전엔
+-- 여기서 투사체 도착을 기다렸지만, 이제 그 기다림 자체를 서버가 이미 하고 왔다).
+-- missed(20-2b)면 빗나간 것 - 아무 이펙트도 재생하지 않는다.
+attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, isComboHit, missed)
+	if missed then
+		return
+	end
+	showResult(monsterModel, damage, isCrit, died, isComboHit)
 end)
