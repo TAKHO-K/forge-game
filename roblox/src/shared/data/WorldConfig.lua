@@ -104,6 +104,37 @@ for _, entry in ipairs(ZONE_LAYOUT) do
 	table.insert(zoneOrder, entry.key)
 end
 
+-- 보스 전용 격리 아레나(20-2b) - "맵 중앙에 보스가 스폰된다"는 버그 수정. 원인은
+-- StageServer.server.lua의 접속 시 복원이 "플레이어 20stud 앞"을 캐릭터가 막 스폰된
+-- 직후 위치(=사실상 리스폰 구역) 기준으로 계산했고, 보스에게 zoneKey가 없어 구역 경계
+-- 리쉬 자체가 안 걸렸던 것(38.4stud 리쉬 거리만 봤다)이 겹친 결과다. 위 3×3 슈퍼그리드
+-- (-160~160)와 절대 겹치지 않는 먼 곳에 서버 정원만큼(12명, PRD-forge-game-roblox.md
+-- 20.38 [6]) 슬롯을 미리 만들어 둔다 - BossEncounter.lua가 인원마다 하나씩 배정하고
+-- 퇴장하면 반납해 다음 사람이 재사용한다. zones[key]엔 등록하되 zoneOrder에는 일부러
+-- 안 넣는다(아래 for문 뒤 주석 참고) - HuntingGround.server.lua가 zoneOrder를 순회하며
+-- 세우는 사냥터 바닥·경계·담장이 아레나 위치까지 따라와 겹치는 걸 막는다. 벽은
+-- BossEncounter.lua가 직접 세운다(문이 없는 완전 밀폐라 gate 있는 기존 담장 생성 함수를
+-- 그대로 못 쓴다).
+local BOSS_ARENA_SLOT_COUNT = 12
+local BOSS_ARENA_HALF_SIZE_STUDS = ZONE_HALF_SIZE_STUDS -- 96, tier 구역과 같은 크기(일관된 체감).
+local BOSS_ARENA_BASE_Z_STUDS = -3000 -- 슈퍼그리드 가장자리(약 -256)에서 충분히 먼 값.
+local BOSS_ARENA_SPACING_STUDS = BOSS_ARENA_HALF_SIZE_STUDS * 2 + 100 -- 슬롯끼리 안 겹치는 여유.
+
+-- zoneOrder에는 일부러 안 넣는다 - HuntingGround.server.lua가 zoneOrder를 순회하며 바닥·
+-- 경계 장식을 자동으로 세우는데(각 구역에 맞는 스폰/문 배치 전제), 그 로직을 그대로 타면
+-- 아레나 위치에 엉뚱한 사냥터 장식이 겹쳐 생긴다. 보스 아레나는 zones[key]로 직접 조회만
+-- 하는 별도 계통이라(BossEncounter.lua), zoneOrder 순회 대상일 필요가 없다.
+for i = 1, BOSS_ARENA_SLOT_COUNT do
+	local key = "bossArena" .. i
+	zones[key] = {
+		key = key,
+		role = "bossArena",
+		center = Vector3.new(0, 0, BOSS_ARENA_BASE_Z_STUDS - (i - 1) * BOSS_ARENA_SPACING_STUDS),
+		halfSize = BOSS_ARENA_HALF_SIZE_STUDS,
+		gate = nil, -- 걸어 들어오는 문이 없다 - BossEncounter.lua가 텔레포트로만 입장시킨다.
+	}
+end
+
 local tierZoneOrder = {}
 for _, key in ipairs(zoneOrder) do
 	if zones[key].role == "tier" then
@@ -130,6 +161,13 @@ return {
 	zones = zones,
 	zoneOrder = zoneOrder,
 	tierZoneOrder = tierZoneOrder,
+
+	-- 보스 아레나 슬롯 정보(20-2b) - BossEncounter.lua가 이 개수만큼 순환 배정한다.
+	-- 실제 아레나 zone 자체는 zones["bossArena1"]..["bossArenaN"]에 이미 들어 있다.
+	bossArena = {
+		slotCount = BOSS_ARENA_SLOT_COUNT,
+		halfSizeStuds = BOSS_ARENA_HALF_SIZE_STUDS,
+	},
 
 	-- 구역 하나의 물리적 크기 + 안의 몬스터 격자.
 	zoneSize = {

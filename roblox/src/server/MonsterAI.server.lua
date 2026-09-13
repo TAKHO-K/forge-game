@@ -263,8 +263,11 @@ RunService.Heartbeat:Connect(function(dt)
 			local zoneKey = MonsterState.getZoneKey(model)
 
 			-- zoneKey가 있는데(구역 소속 잡몹) 그 구역이 비어 있으면 idle 스캔 자체를
-			-- 건너뛴다 - 위 computeOccupiedZones 주석 참고.
-			if state == "idle" and zoneKey and not occupiedZones[zoneKey] then
+			-- 건너뛴다 - 위 computeOccupiedZones 주석 참고. 보스는 예외다(20-2b) -
+			-- computeOccupiedZones가 tierZoneOrder만 보므로 보스 아레나는 항상
+			-- occupiedZones에 없어(never populated) 이 조건에 안 걸리면 보스가 영원히
+			-- idle에 갇힌다 - 아레나엔 몬스터가 하나뿐이라 이 최적화 자체가 필요 없다.
+			if state == "idle" and not data.isBoss and zoneKey and not occupiedZones[zoneKey] then
 				continue
 			end
 
