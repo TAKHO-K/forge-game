@@ -40,11 +40,11 @@ end
 -- buildLoadout(합성 아이템)과 buildLoadoutFromEquipment(실제 착용 아이템) 둘 다 여기로
 -- 모인다 - "장비 3부위 테이블에서 loadout을 뽑는다"는 계산 자체는 아이템이 합성이든
 -- 실제 드랍이든 완전히 같다(Loot.get*류 함수가 이미 item 테이블 형태만 본다).
-local function buildLoadoutCore(classId, level, weaponLevel, armorItem, glovesItem, shoesItem)
+local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem)
 	local class = ClassData.classes[classId]
 	assert(class, "알 수 없는 classId: " .. tostring(classId))
 
-	local weapon = { id = WeaponData.starterId, level = weaponLevel or 0 }
+	local weapon = { id = WeaponData.starterId, level = weaponLevel or 0, grade = weaponGrade or 0 }
 	local attackPercentBonus = Loot.getGlovesAttackPercent(glovesItem)
 	local speedPercentBonus = Loot.getShoesSpeedPercent(shoesItem)
 	local armorBonus = Loot.getArmorDefense(armorItem)
@@ -69,14 +69,15 @@ local function buildLoadoutCore(classId, level, weaponLevel, armorItem, glovesIt
 	}
 end
 
--- spec = { classId, level, weaponLevel = 0, gear = { armor=gearSpec, gloves=gearSpec, shoes=gearSpec } }
+-- spec = { classId, level, weaponLevel = 0, weaponGrade = 0(0~6), gear = { armor=gearSpec,
+-- gloves=gearSpec, shoes=gearSpec } }
 -- gearSpec = { grade, itemLevel } - 실측 시나리오를 가정해 만든 합성 아이템. 실제 드랍
 -- 확률(ArmorData.dropChance 등)은 거치지 않는다(이 시뮬레이터는 "이 조건이면"을 계산하는
 -- 도구이지 드랍을 재현하는 도구가 아니다).
 function BalanceSim.buildLoadout(spec)
 	local gear = spec.gear or {}
 	return buildLoadoutCore(
-		spec.classId, spec.level, spec.weaponLevel,
+		spec.classId, spec.level, spec.weaponLevel, spec.weaponGrade,
 		buildItem("armor", gear.armor), buildItem("gloves", gear.gloves), buildItem("shoes", gear.shoes)
 	)
 end
@@ -84,9 +85,9 @@ end
 -- 실제 플레이어의 현재 착용 아이템(PlayerProfile.getEquipped가 돌려주는 실제 item 테이블,
 -- 없으면 nil)으로 loadout을 만든다. DevTools의 "/gg measure"가 쓴다 - 합성 조건이 아니라
 -- 지금 이 플레이어가 실제로 들고 있는 장비 그대로 잰다.
-function BalanceSim.buildLoadoutFromEquipment(classId, level, weaponLevel, equipment)
+function BalanceSim.buildLoadoutFromEquipment(classId, level, weaponLevel, weaponGrade, equipment)
 	equipment = equipment or {}
-	return buildLoadoutCore(classId, level, weaponLevel, equipment.armor, equipment.gloves, equipment.shoes)
+	return buildLoadoutCore(classId, level, weaponLevel, weaponGrade, equipment.armor, equipment.gloves, equipment.shoes)
 end
 
 -- 생존 타수. CombatConfig.damageReductionAlpha 유도식(hits = maxHp×(D+αA)/(αA²))과 완전히

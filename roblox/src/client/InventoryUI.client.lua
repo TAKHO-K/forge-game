@@ -797,6 +797,13 @@ local function describeItemName(item)
 	return (grade and grade.displayName or item.grade) .. " " .. partName
 end
 
+-- 무기 등급(20-1) - 저장이 아니라 Attribute(WeaponGrade, 0~6)로만 온다. ArmorData.gradeOrder로
+-- index->id를 찾는다(등급 데이터의 단일 출처, describeItemName의 갑옷 쪽과 같은 원리).
+local function weaponGradeId()
+	local grade = player:GetAttribute("WeaponGrade") or 0
+	return ArmorData.gradeOrder[grade + 1]
+end
+
 -- 착용 중 슬롯 상세 문구(16-6) - 부위마다 보여줄 스탯이 다르다(갑옷=방어력 flat, 장갑·
 -- 신발=비율%). EquipSlots.statType으로 어느 쪽인지 구분하지 않고 부위별로 직접 나열한
 -- 이유는 세 부위의 "어떻게 보여줄지"(단위·서식)까지 같지 않아서다 - statType은 서버
@@ -913,12 +920,19 @@ local function refreshDetail()
 	elseif selectedKind == "equip" and selectedValue == "weapon" then
 		local weaponLevel = player:GetAttribute("WeaponLevel") or 0
 		local weaponData = WeaponData.weapons[WeaponData.starterId]
-		dname.Text = weaponData.displayName
-		dname.TextColor3 = UIColors.textPrimary
-		dmeta.Text = ("무기 · Lv.%d · 강화대에서 강화"):format(weaponLevel)
-		setDpicIcon("weapon", UIColors.textPrimary)
-		dpicStroke.Color = UIColors.rim
-		dpicStroke.Transparency = UIColors.rimTransparency
+		local gradeId = weaponGradeId()
+		local gradeInfo = gradeId and ArmorData.grades[gradeId]
+		local visual = gradeId and ItemVisualData.gradeVisuals[gradeId]
+		local color = visual and visual.color or UIColors.textPrimary
+		-- 이름에 등급을 붙인다(20-1 [2] 판단) - 갑옷·장갑·신발(describeItemName)이 이미
+		-- "등급 부위" 형식을 쓰고 있어, 무기만 색으로만 표시하면 이 창 안에서 두 가지 규칙이
+		-- 섞인다. 강화 단계(+N)는 기존처럼 dmeta 줄에 그대로 둔다(부위별 레벨 표시와 동일).
+		dname.Text = (gradeInfo and gradeInfo.displayName or "") .. " " .. weaponData.displayName
+		dname.TextColor3 = color
+		dmeta.Text = ("무기 · +%d · 강화대에서 강화"):format(weaponLevel)
+		setDpicIcon("weapon", color)
+		dpicStroke.Color = color
+		dpicStroke.Transparency = 0
 
 		lockButton.AutoButtonColor = false
 		lockButton.Active = false
@@ -949,8 +963,9 @@ local function refreshStats()
 	end
 
 	local weaponLevel = player:GetAttribute("WeaponLevel") or 0
+	local weaponGrade = player:GetAttribute("WeaponGrade") or 0
 	local characterLevel = player:GetAttribute("CharacterLevel") or 1
-	local weapon = { id = WeaponData.starterId, level = weaponLevel }
+	local weapon = { id = WeaponData.starterId, level = weaponLevel, grade = weaponGrade }
 	-- 16-6: 장갑 공격력% 보너스가 공격력 계산에 들어간다 - 서버(AttackServer)와 같은
 	-- PlayerCombat.getAttack 4번째 인자를 그대로 쓴다.
 	local attack = PlayerCombat.getAttack(weapon, classId, characterLevel, Loot.getGlovesAttackPercent(equippedGloves))
@@ -998,9 +1013,10 @@ local function rebuildGearSlots()
 		local color = UIColors.textTertiary
 		if filled then
 			if part == "weapon" then
-				color = UIColors.textPrimary
-				stroke.Color = UIColors.rim
-				stroke.Transparency = UIColors.rimTransparency
+				local visual = ItemVisualData.gradeVisuals[weaponGradeId()]
+				color = visual and visual.color or UIColors.textPrimary
+				stroke.Color = color
+				stroke.Transparency = 0
 			else
 				local visual = ItemVisualData.gradeVisuals[equipped[part].grade]
 				color = visual and visual.color or UIColors.textPrimary
@@ -1403,7 +1419,7 @@ player:GetAttributeChangedSignal("Gold"):Connect(function()
 	end
 end)
 
-for _, attr in ipairs({ "ClassId", "WeaponLevel", "CharacterLevel", "MaxHp" }) do
+for _, attr in ipairs({ "ClassId", "WeaponLevel", "WeaponGrade", "CharacterLevel", "MaxHp" }) do
 	player:GetAttributeChangedSignal(attr):Connect(function()
 		if isOpen then
 			refreshStats()

@@ -16,7 +16,7 @@ local SaveSystem = {}
 -- 신규/구버전 프로필에 지급하는 시작 무기. 등급·기본공격력 등 정적 스탯은 WeaponData에만
 -- 있다 - 여기(저장 데이터)엔 계속 바뀌는 값(강화 단계)과 어떤 무기인지(id)만 남긴다.
 local function defaultWeapon()
-	return { id = WeaponData.starterId, level = 0 }
+	return { id = WeaponData.starterId, level = 0, grade = 0 }
 end
 
 -- 직업 하나가 갖는 상태(19-1) - 캐릭터 레벨·무기·착용 장비 3부위·무한 모드 진행도.
@@ -93,14 +93,14 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 13단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지금은 14단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
 -- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
 -- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입) -> 7(캐릭터 레벨 도입 +
 -- 아이템 itemLevel 필드 도입) -> 8(보스 처치 기록 bestBossCleared 도입, 15-1)
 -- -> 9(equipment.boots -> shoes 이름 정리, 16-6) -> 10(아이템 part 필드 소급 도입, 16-6)
 -- -> 11(캐릭터 레벨 EXP 곡선 26+ 구간 재보정, 17-1) -> 12(아이템 tierIndex 필드 소급
 -- 도입, 17-1) -> 13(characterExp·무기·장비 3부위·무한 모드 진행도를 classes[classId]
--- 아래로 직업별 분리, 19-1).
+-- 아래로 직업별 분리, 19-1) -> 14(무기 등급 grade 필드 도입, 20-1).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -314,6 +314,17 @@ local function migrate(data)
 		data.version = 13
 	end
 
+	if data.version < 14 then
+		-- 20-1: 무기 등급 축 신설. v13까지 weapon엔 grade 필드 자체가 없었다(무기 등급이라는
+		-- 개념이 이번에 처음 생겼다) - "그 시절 무기는 전부 일반 등급이었다"가 정확한 과거
+		-- 상태이므로 0(일반)으로 채운다(v10의 part 소급과 같은 원칙). 강화 단계(weapon.level)는
+		-- 이 블록이 건드리지 않는다 - 그대로 보존된다.
+		for _, classState in pairs(data.classes) do
+			classState.weapon.grade = classState.weapon.grade or 0
+		end
+		data.version = 14
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -340,6 +351,7 @@ local function isValidProfile(data)
 			or type(classState.characterExp) ~= "number"
 			or type(classState.weapon) ~= "table"
 			or type(classState.weapon.level) ~= "number"
+			or type(classState.weapon.grade) ~= "number"
 			or type(classState.equipment) ~= "table"
 			or type(classState.stageProgress) ~= "table"
 		then

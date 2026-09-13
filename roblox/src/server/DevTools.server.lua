@@ -32,12 +32,15 @@ local PlayerProfile = require(script.Parent.PlayerProfile)
 local SaveCoordinator = require(script.Parent.SaveCoordinator)
 
 -- 앵커 조건(지시 [1] - "최소한 앵커 조건은 하나로 불러올 수 있어야 한다"): 레벨100 +
--- 일반등급 itemLevel100 3부위 + 강화+0, 스테이지 100.
+-- 일반등급 itemLevel100 3부위 + 강화+0 + 무기등급 일반(0), 스테이지 100. 무기 등급은
+-- 20-1 [3](가) 측정("등급 0~6 × 4직업 처치 시간")의 고정 기준점이라 앵커 자체는 항상
+-- 일반(0)에서 시작한다 - 등급은 별도로 "/gg weapon <n>"으로 바꿔가며 잰다.
 local ANCHOR = {
 	level = 100,
 	gearGrade = "normal",
 	gearItemLevel = 100,
 	weaponLevel = 0,
+	weaponGrade = 0,
 	stage = 100,
 }
 
@@ -121,6 +124,28 @@ local function applyEnhance(player, level)
 	PlayerProfile.setWeaponLevel(player, level)
 end
 
+-- gradeArg: 숫자 인덱스(0~6) 또는 등급명(ArmorData.gradeOrder의 id, 예 "ancient") 둘 다
+-- 받는다 - 채팅에서 숫자가 외우기 번거로울 수 있어 이름도 허용한다(gear 명령과 달리
+-- weapon은 숫자 축이 기본이라 둘 다 지원).
+local function applyWeaponGrade(player, gradeArg)
+	local gradeIndex = tonumber(gradeArg)
+	if not gradeIndex then
+		for i, id in ipairs(ArmorData.gradeOrder) do
+			if id == gradeArg then
+				gradeIndex = i - 1
+				break
+			end
+		end
+	end
+	if not gradeIndex or not ArmorData.gradeOrder[gradeIndex + 1] then
+		reply(player, ("알 수 없는 무기 등급: %s (0~%d 또는 등급명: %s)"):format(
+			tostring(gradeArg), #ArmorData.gradeOrder - 1, table.concat(ArmorData.gradeOrder, "/")))
+		return false
+	end
+	PlayerProfile.setWeaponGrade(player, gradeIndex)
+	return true
+end
+
 local function applyClass(player, classId)
 	if not ClassData.classes[classId] then
 		reply(player, ("알 수 없는 직업: %s (사용 가능: %s)"):format(tostring(classId), table.concat(ClassData.order, "/")))
@@ -152,13 +177,13 @@ local function measure(player, stageOverride)
 	}
 	local stage = stageOverride or PlayerProfile.getInfiniteStage(player) or 1
 
-	local loadout = BalanceSim.buildLoadoutFromEquipment(classId, level, weapon.level, equipment)
+	local loadout = BalanceSim.buildLoadoutFromEquipment(classId, level, weapon.level, weapon.grade, equipment)
 	local monsterAttack = BalanceSim.getMonsterAttack(stage, "tier1")
 	local surviveHits, dmgPerHit = BalanceSim.getSurviveHits(loadout, monsterAttack)
 	local autoAttack60 = BalanceSim.simulateAutoAttack(loadout, 60)
 
-	print(("[DevTools] === %s 실측 (직업=%s, 레벨=%d, 강화=+%d, 스테이지=%d) ==="):format(
-		player.Name, classId, level, weapon.level, stage))
+	print(("[DevTools] === %s 실측 (직업=%s, 레벨=%d, 무기등급=%s, 강화=+%d, 스테이지=%d) ==="):format(
+		player.Name, classId, level, ArmorData.gradeOrder[(weapon.grade or 0) + 1] or tostring(weapon.grade), weapon.level, stage))
 	print(("[DevTools] 공격력=%.2f 방어력=%.2f 최대체력=%.2f 공격쿨다운=%.3f초"):format(
 		loadout.atk, loadout.defense, loadout.maxHp, loadout.attackCooldown))
 	print(("[DevTools] tier1 몬스터 평타(스테이지%d 적용)=%.3f -> 실제 피해=%.3f/대 -> 생존 타수=%.2f대"):format(
@@ -176,9 +201,10 @@ local function applyAnchor(player, classId)
 	applyLevel(player, ANCHOR.level)
 	applyGear(player, ANCHOR.gearGrade, ANCHOR.gearItemLevel)
 	applyEnhance(player, ANCHOR.weaponLevel)
+	applyWeaponGrade(player, ANCHOR.weaponGrade)
 	applyStage(player, ANCHOR.stage)
-	reply(player, ("앵커 조건 적용 완료(레벨%d, %s등급 itemLevel%d 3부위, 강화+%d, 스테이지%d) - 직업=%s"):format(
-		ANCHOR.level, ANCHOR.gearGrade, ANCHOR.gearItemLevel, ANCHOR.weaponLevel, ANCHOR.stage,
+	reply(player, ("앵커 조건 적용 완료(레벨%d, %s등급 itemLevel%d 3부위, 강화+%d, 무기등급%d, 스테이지%d) - 직업=%s"):format(
+		ANCHOR.level, ANCHOR.gearGrade, ANCHOR.gearItemLevel, ANCHOR.weaponLevel, ANCHOR.weaponGrade, ANCHOR.stage,
 		tostring(PlayerProfile.getClassId(player))))
 	measure(player, ANCHOR.stage)
 end
@@ -188,6 +214,7 @@ local HELP_TEXT = table.concat({
 	"/gg level <n> - 캐릭터 레벨 직접 지정",
 	"/gg gear <grade> <itemLevel> - 갑옷/장갑/신발 3부위 동일 조건으로 장착",
 	"/gg enhance <n> - 무기 강화 단계 지정(0~" .. EnhanceConfig.maxLevel .. ")",
+	"/gg weapon <n|등급명> - 무기 등급 지정(0~6 또는 " .. table.concat(ArmorData.gradeOrder, "/") .. ")",
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
 	"/gg stage <n> - 무한 스테이지 지정(생존타수/보상 배율 계산용, 물리적 이동 아님)",
 	"/gg measure [stage] - 지금 조건의 생존 타수·60초 평타 총딜을 콘솔에 출력",
@@ -214,6 +241,11 @@ local function handleCommand(player, args)
 		ensureBackup(player)
 		applyEnhance(player, math.floor(tonumber(args[2])))
 		reply(player, "무기 강화 +" .. args[2] .. " 적용")
+	elseif sub == "weapon" and args[2] then
+		ensureBackup(player)
+		if applyWeaponGrade(player, args[2]) then
+			reply(player, "무기 등급 " .. args[2] .. " 적용")
+		end
 	elseif sub == "class" and args[2] then
 		ensureBackup(player)
 		if applyClass(player, args[2]) then

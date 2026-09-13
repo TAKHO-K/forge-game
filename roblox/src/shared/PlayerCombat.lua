@@ -14,8 +14,18 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+
+-- 무기 등급 배율 - 갑옷·장갑·신발과 같은 단일 출처(ArmorData.gradeOrder로 index->id,
+-- ItemVisualData.gradeVisuals[id].statMultiplier로 배율)를 쓴다(20-1, WeaponData.lua
+-- 주석 참고). 여기 한 곳에서만 조회한다 - BalanceSim도 이 함수를 거친다.
+local function gradeMultiplierForIndex(gradeIndex)
+	local gradeId = ArmorData.gradeOrder[(gradeIndex or 0) + 1]
+	return gradeId and ItemVisualData.gradeVisuals[gradeId].statMultiplier or 1.0
+end
 
 -- math.random은 전역 시드를 다른 호출과 공유한다 - 치명타 판정만의 독립된 스트림을 쓴다
 -- (10-4 지시). 이 모듈은 서버 스크립트(AttackServer 등)에서만 damage 계산 목적으로
@@ -37,7 +47,8 @@ end
 function PlayerCombat.getAttack(weapon, classId, characterLevel, attackPercentBonus)
 	local class = ClassData.classes[classId]
 	local weaponData = WeaponData.weapons[weapon.id]
-	local base = Enhance.getPlayerAttack(weaponData, weapon.level, class.atk)
+	local gradeMultiplier = gradeMultiplierForIndex(weapon.grade)
+	local base = Enhance.getPlayerAttack(weaponData, weapon.level, class.atk, gradeMultiplier)
 	return base * CharacterLevel.getWeaponExpMultiplier(characterLevel) * (1 + (attackPercentBonus or 0))
 end
 

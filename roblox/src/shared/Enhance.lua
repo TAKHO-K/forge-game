@@ -64,9 +64,11 @@ function Enhance.tryEnhance(level)
 	return { result = "reset", level = 1 }
 end
 
--- 최종 공격력 = 무기 기본값 × 강화 배율 × 등급 배율 × 클래스 배율(10-2 [1]).
-function Enhance.getPlayerAttack(weaponData, level, classMultiplier)
-	return weaponData.baseAttack * weaponData.gradeMultiplier * Enhance.getDamageMultiplier(level) * classMultiplier
+-- 최종 공격력 = 무기 기본값 × 등급 배율 × 강화 배율 × 클래스 배율(10-2 [1], 등급 배율은
+-- 20-1부터 인자로 받는다 - 실제 무기 등급(저장 데이터)을 읽는 건 호출부(PlayerCombat)
+-- 몫이다, WeaponData.lua 주석 참고).
+function Enhance.getPlayerAttack(weaponData, level, classMultiplier, gradeMultiplier)
+	return weaponData.baseAttack * gradeMultiplier * Enhance.getDamageMultiplier(level) * classMultiplier
 end
 
 return Enhance

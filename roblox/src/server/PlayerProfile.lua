@@ -43,6 +43,7 @@ local function syncActiveClassAttributes(player, profile)
 	end
 
 	player:SetAttribute("WeaponLevel", classState.weapon.level)
+	player:SetAttribute("WeaponGrade", classState.weapon.grade)
 	-- 캐릭터 레벨(13-2) - 저장에는 누적 경험치만 있고 레벨은 항상 여기서 파생시킨다(단일
 	-- 소스 원칙, InfiniteStage의 stage/multiplier 관계와 같은 구조).
 	player:SetAttribute("CharacterExp", classState.characterExp)
@@ -141,6 +142,18 @@ function PlayerProfile.setWeaponLevel(player, level)
 	end
 	classState.weapon.level = level
 	player:SetAttribute("WeaponLevel", level)
+end
+
+-- 서버만 호출한다(DevTools.server.lua "/gg weapon" - 20-1 [1], 정상 플레이 경로엔 아직
+-- 등급을 올리는 수단이 없다. 환생이 유일한 경로가 될 예정이고 그건 이번 범위 밖이다).
+function PlayerProfile.setWeaponGrade(player, grade)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return
+	end
+	classState.weapon.grade = grade
+	player:SetAttribute("WeaponGrade", grade)
 end
 
 function PlayerProfile.getClassId(player)

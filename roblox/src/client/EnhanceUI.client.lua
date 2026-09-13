@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 
 local enhanceRequest = ReplicatedStorage:WaitForChild("EnhanceRequest")
 local enhanceResult = ReplicatedStorage:WaitForChild("EnhanceResult")
@@ -74,13 +75,23 @@ resultLabel.TextColor3 = Color3.fromRGB(255, 220, 90)
 resultLabel.Text = ""
 resultLabel.Parent = panel
 
+-- 강화대가 등급을 몰랐던 것(20-1 [2] - "강화대에 현재 무기 등급 표시")을 여기서 연결한다.
+-- 등급 자체는 이 화면에서 바꾸지 않는다(환생 전용 축, EnhanceUI는 표시만).
+local function gradeDisplayName()
+	local grade = player:GetAttribute("WeaponGrade") or 0
+	local gradeId = ArmorData.gradeOrder[grade + 1]
+	local gradeInfo = gradeId and ArmorData.grades[gradeId]
+	return gradeInfo and gradeInfo.displayName or "일반"
+end
+
 local function updateInfo()
 	local level = player:GetAttribute("WeaponLevel") or 0
 	local gold = player:GetAttribute("Gold") or 0
 	local cost = Enhance.getCost(level)
+	local gradeName = gradeDisplayName()
 
 	if not cost then
-		infoLabel.Text = ("현재 +%d (최대 강화 단계)"):format(level)
+		infoLabel.Text = ("%s 등급 · 현재 +%d (최대 강화 단계)"):format(gradeName, level)
 		enhanceButton.Text = "최대"
 		enhanceButton.AutoButtonColor = false
 		return
@@ -89,8 +100,8 @@ local function updateInfo()
 	local prob = Enhance.getProbability(level)
 	enhanceButton.Text = "강화"
 	enhanceButton.AutoButtonColor = true
-	infoLabel.Text = ("현재 +%d\n다음 +%d 성공 확률 %.0f%%\n소모 골드 %s (보유 %s)"):format(
-		level, level + 1, prob.success * 100, NumberFormat.format(cost), NumberFormat.format(gold))
+	infoLabel.Text = ("%s 등급 · 현재 +%d\n다음 +%d 성공 확률 %.0f%%\n소모 골드 %s (보유 %s)"):format(
+		gradeName, level, level + 1, prob.success * 100, NumberFormat.format(cost), NumberFormat.format(gold))
 end
 
 enhanceButton.Activated:Connect(function()
@@ -109,6 +120,7 @@ enhanceResult.OnClientEvent:Connect(function(data)
 end)
 
 player:GetAttributeChangedSignal("WeaponLevel"):Connect(updateInfo)
+player:GetAttributeChangedSignal("WeaponGrade"):Connect(updateInfo)
 player:GetAttributeChangedSignal("Gold"):Connect(updateInfo)
 
 RunService.Heartbeat:Connect(function()
