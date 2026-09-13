@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
+local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local MonsterState = require(script.Parent.MonsterState)
 
 local MonsterSpawner = {}
@@ -17,20 +18,34 @@ local MonsterSpawner = {}
 local DEFAULT_BODY_COLOR = Color3.fromRGB(150, 90, 200)
 local DEFAULT_HEAD_COLOR = Color3.fromRGB(180, 120, 220)
 
+-- 반짝이 판정 전용 독립 스트림(10-4의 critRng·17-1의 lootRng와 같은 이유 - math.random의
+-- 전역 시드를 다른 판정과 공유하지 않는다).
+local sparkleRng = Random.new()
+
 -- 기본 파트 조합으로 "구분되는 덩어리" 하나를 만든다. Humanoid는 애니메이션·이름표 전용이고
 -- 실제 HP는 MonsterState가 관리한다(Humanoid.MaxHealth=100은 쓰이지 않는 더미값).
 --
 -- sizeScale/bodyColor/headColor(15-1, 기본값은 잡몹 그대로) - 보스를 "확실히 크게"
 -- 만들라는 지시를 아트 리소스 없이 기본 파트 크기·색만으로 만족시킨다(하지 말 것:
 -- 아트·모션 다듬기, 동결 상태).
-local function buildModel(data, position)
-	local sizeScale = data.sizeScale or 1
+local function buildModel(data, position, isSparkle)
+	local sizeScale = (data.sizeScale or 1) * (isSparkle and RareMonsterConfig.sizeMultiplier or 1)
 	local bodyColor = data.bodyColor or DEFAULT_BODY_COLOR
 	local headColor = data.headColor or DEFAULT_HEAD_COLOR
 
 	local model = Instance.new("Model")
 	model.Name = data.displayName
 	CollectionService:AddTag(model, "Monster") -- 클라이언트 AimTarget.lua가 이 태그로만 조준 후보를 찾는다
+
+	-- 반짝이 몬스터(19-4 [6]) - 이름표 대신 크기(위 sizeScale에 이미 반영됨)+발광으로
+	-- 구별한다(지시 "이름을 띄우는 대신 색이나 크기로 구별하는 것도 검토해라" - 조준 전에도
+	-- 항상 특별해 보여야 하므로 "조준해야만 보이는 이름표" 대신 상시 발광을 골랐다). 클라이언트
+	-- SparkleMonsterVisual.client.lua가 이 태그로 찾아 무지개색을 순환시킨다(PRD 8.0-5
+	-- "무지개빛 반짝임", 웹은 hue 순환 캔버스 렌더라 로블록스에선 PointLight.Color를 대신
+	-- 순환시킨다).
+	if isSparkle then
+		CollectionService:AddTag(model, "SparkleMonster")
+	end
 
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
@@ -48,6 +63,15 @@ local function buildModel(data, position)
 	body.Color = bodyColor
 	body.Position = position
 	body.Parent = model
+
+	if isSparkle then
+		local glow = Instance.new("PointLight")
+		glow.Name = "SparkleGlow"
+		glow.Color = Color3.fromRGB(255, 100, 255)
+		glow.Range = RareMonsterConfig.glowRangeStuds
+		glow.Brightness = RareMonsterConfig.glowBrightness
+		glow.Parent = body
+	end
 
 	local head = Instance.new("Part")
 	head.Name = "Head"
@@ -161,7 +185,9 @@ local function playBossAppearEffect(model, position)
 	end
 end
 
--- HP 비율로 머리 위 HP바 너비를 갱신한다(16-7 - 숫자 대신 바 하나로 충분하다는 지시).
+-- HP 비율로 머리 위 HP바 너비를 갱신한다(16-7 - 숫자 대신 바 하나로 충분하다는 지시,
+-- 19-4 - 잡몹은 공유 HP라 절대 숫자 자체가 "누구 기준인가"를 못 정하므로 비율만 쓴다,
+-- MonsterState.getHpRatio 참고).
 function MonsterSpawner.updateHpLabel(model)
 	local head = model:FindFirstChild("Head")
 	local nameplateGui = head and head:FindFirstChild("NameplateGui")
@@ -170,10 +196,7 @@ function MonsterSpawner.updateHpLabel(model)
 		return
 	end
 
-	local hp = math.max(MonsterState.getHp(model) or 0, 0)
-	local maxHp = MonsterState.getMaxHp(model) or 0
-	local ratio = maxHp > 0 and math.clamp(hp / maxHp, 0, 1) or 0
-	barFill.Size = UDim2.new(ratio, 0, 1, 0)
+	barFill.Size = UDim2.new(MonsterState.getHpRatio(model), 0, 1, 0)
 end
 
 -- zoneKey(16-6, 선택값) - 그 몬스터가 속한 tier 구역 이름. jab몹(격자 스폰)만 갖고,
@@ -182,9 +205,13 @@ end
 -- "이 몬스터의 구역에 지금 플레이어가 있는가"(성능 절전)와 "구역 경계를 벗어났는가"
 -- (리쉬 상한)를 둘 다 판정한다.
 function MonsterSpawner.spawn(data, position, zoneKey)
-	local model = buildModel(data, position)
+	-- 반짝이 판정(19-4 [6], PRD 8.0-5 "스폰 시점에 판정. 일반 몬스터를 대체한다") - 보스는
+	-- 대상이 아니다(플레이어 1인 전용 인스턴스라 "발견의 재미" 자체가 성립하지 않는다).
+	local isSparkle = (not data.isBoss) and sparkleRng:NextNumber() < RareMonsterConfig.sparkleChance
+
+	local model = buildModel(data, position, isSparkle)
 	model.Parent = Workspace
-	MonsterState.init(model, data, position, zoneKey)
+	MonsterState.init(model, data, position, zoneKey, isSparkle)
 	MonsterSpawner.updateHpLabel(model)
 	if data.isBoss then
 		playBossAppearEffect(model, position)

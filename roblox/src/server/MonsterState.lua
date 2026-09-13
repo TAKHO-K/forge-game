@@ -5,29 +5,47 @@
 -- 그 위는 bignum{m,e}로 넘어가므로 애초에 Humanoid.Health로는 표현이 불가능하다.
 -- 지금은 plain number로 두되, 나중에 bignum{m,e}로 바꿀 때 이 모듈만 고치면 되도록
 -- 읽기/쓰기를 한 곳으로 모은다.
+--
+-- 19-4: 사냥터 잡몹(공유)과 보스(개인 인스턴스)가 서로 다른 HP 모델을 쓴다 - 반드시
+-- isBoss로 분기해서 읽어야 한다.
+--   보스(isBoss=true): 기존 그대로 절대값 hp/maxHp. BossRules.buildInstanceData가
+--     스폰 시점에 이미 스테이지 배율을 곱해 최종값을 만들어 두므로(플레이어 1인 전용
+--     인스턴스라 "누구 기준인가" 문제 자체가 없다), 여기서 추가로 배율을 곱하지 않는다.
+--   잡몹(isBoss=false/nil): 절대값이 없다. hpRatio(0~1)만 저장한다 - 여러 플레이어가
+--     서로 다른 stage를 갖고 같은 몬스터를 때리므로 "이 몬스터의 최대체력"이라는 절대
+--     숫자 자체가 성립하지 않는다(19-4 [0] 조사, C안 채택). 대신 플레이어 P가 데미지 D를
+--     넣으면 "P의 stage 기준 이 몬스터의 유효 최대체력"(InfiniteStage.getMonsterHp(data.hp,
+--     P.stage))으로 나눈 비율만큼 공용 hpRatio 풀에서 뺀다 - 이 비율 자체는 "누구
+--     기준인가"를 묻지 않는 값이라(0~1 사이, 보는 사람과 무관) HP바에 그대로 쓸 수 있다.
+--     공격력·골드·경험치도 같은 이유로 "그 순간 계산 대상 플레이어의 stage"를 인자로
+--     받는다(getAttackFor/getGoldDropFor/getExpRewardFor) - 몬스터 인스턴스 자체엔
+--     stage를 저장하지 않는다(예전 setStage/getStage는 19-4에서 완전히 제거했다).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 
 local MonsterState = {}
 
--- [Model] = { hp, maxHp, stage(11-1, 이 인스턴스가 지금 스케일된 무한 모드 스테이지),
---             data(스폰에 쓴 MonsterData 항목 - 여러 몬스터 인스턴스가 같은 테이블을
---             공유하므로 절대 직접 고치지 않는다), spawnPosition(리스폰 자리),
+-- [Model] = { hp, maxHp(보스 전용, 잡몹은 nil), hpRatio(잡몹 전용, 보스는 nil),
+--             contributions(잡몹 전용 - [Player]=누적 기여 비율, 보스는 nil),
+--             data(스폰에 쓴 MonsterData/BossRules 항목 - 여러 몬스터 인스턴스가 같은
+--             테이블을 공유하므로 절대 직접 고치지 않는다), spawnPosition(리스폰 자리),
 --             aiState("idle"/"chasing"/"returning"), aiTarget(추격 중인 Player, 없으면 nil),
 --             lastAttackTick(반격 쿨다운 기준 시각, os.clock()),
 --             bossPhase/bossPhaseEndsAt/bossNextHeavyAt(15-1, isBoss 인스턴스만 - 예고 후
 --             강한 일격 상태 머신. MonsterAI.server.lua의 tryBossAttack 참고) }
 local monsters = {}
 
-function MonsterState.init(model, data, spawnPosition, zoneKey)
+function MonsterState.init(model, data, spawnPosition, zoneKey, isSparkle)
 	monsters[model] = {
-		hp = data.hp,
-		maxHp = data.hp,
-		stage = 1,
+		hp = data.isBoss and data.hp or nil,
+		maxHp = data.isBoss and data.hp or nil,
+		hpRatio = data.isBoss and nil or 1.0,
+		contributions = data.isBoss and nil or {},
 		data = data,
 		spawnPosition = spawnPosition,
 		zoneKey = zoneKey, -- 16-6, tier 구역 몬스터만 있음(보스는 nil).
+		isSparkle = isSparkle or false, -- 19-4 [6], 잡몹 전용(보스는 항상 false로 들어온다).
 		aiState = "idle",
 		aiTarget = nil,
 		lastAttackTick = nil,
@@ -37,26 +55,14 @@ function MonsterState.init(model, data, spawnPosition, zoneKey)
 	}
 end
 
+function MonsterState.isSparkle(model)
+	local entry = monsters[model]
+	return entry ~= nil and entry.isSparkle
+end
+
 function MonsterState.getZoneKey(model)
 	local entry = monsters[model]
 	return entry and entry.zoneKey
-end
-
-function MonsterState.getHp(model)
-	local entry = monsters[model]
-	return entry and entry.hp
-end
-
-function MonsterState.getMaxHp(model)
-	local entry = monsters[model]
-	return entry and entry.maxHp
-end
-
-function MonsterState.setHp(model, value)
-	local entry = monsters[model]
-	if entry then
-		entry.hp = value
-	end
 end
 
 function MonsterState.getData(model)
@@ -64,49 +70,100 @@ function MonsterState.getData(model)
 	return entry and entry.data
 end
 
-function MonsterState.getStage(model)
+-- HP 비율(0~1). 보스는 hp/maxHp를 그대로 나눈 값(기존과 동일한 절대값 기반), 잡몹은
+-- hpRatio를 그대로 돌려준다. MonsterSpawner.updateHpLabel(HP바)이 이 함수 하나만 본다 -
+-- "누구 기준인가"를 몰라도 되는 값이라 HP바가 유일하게 항상 정확한 표시다(19-4 [1] 지시 -
+-- 절대 숫자를 보여주지 않는다).
+function MonsterState.getHpRatio(model)
 	local entry = monsters[model]
-	return entry and entry.stage
-end
-
--- 무한 모드 스테이지 배율 재적용(11-1). 몬스터가 새 대상에게 어그로를 붙이는 순간
--- (MonsterAI.server.lua)마다 그 대상의 스테이지로 다시 스케일한다 - data(여러 몬스터
--- 인스턴스가 공유하는 MonsterData 원본 테이블)는 절대 고치지 않고, 이 인스턴스의
--- hp/maxHp/stage에만 배율을 적용한다.
---
--- 이미 피해를 입은(hp < maxHp) 몬스터는 다시 스케일하지 않는다 - 그러지 않으면 다른
--- 스테이지 플레이어가 다가오는 순간 풀피로 되돌아가는 "공짜 회복" 버그가 생긴다. 여러
--- 플레이어가 서로 다른 스테이지로 같은 몬스터를 동시에 다투는 경우(그 몬스터는 먼저
--- 어그로를 잡은 쪽의 스테이지 기준에 그대로 머문다)는 이번 단계의 범위 밖이다 - 이
--- 게임의 어그로 자체가 이미 "몬스터 한 마리당 대상 하나"로 설계돼 있다.
-function MonsterState.setStage(model, stage)
-	local entry = monsters[model]
-	if not entry or entry.data.isBoss or entry.stage == stage or entry.hp < entry.maxHp then
-		return
+	if not entry then
+		return 0
 	end
-	entry.stage = stage
-	entry.maxHp = InfiniteStage.getMonsterHp(entry.data.hp, stage)
-	entry.hp = entry.maxHp
+	if entry.data.isBoss then
+		return entry.maxHp > 0 and math.clamp(entry.hp / entry.maxHp, 0, 1) or 0
+	end
+	return math.clamp(entry.hpRatio, 0, 1)
 end
 
--- 무한 모드 스테이지 배율이 적용된 공격력(11-1). data.attack(원본, 스테이지1 기준)에
--- 이 인스턴스의 stage 배율을 곱한다 - MonsterAI.server.lua가 반격 데미지 계산에 쓴다.
-function MonsterState.getAttack(model)
+-- 데미지 적용(19-4 [1][2]). attackerStage는 잡몹 계산에만 쓰인다(보스는 무시) -
+-- attackerPlayer는 기여 비율 기록용(보스는 기록 자체를 안 한다, [3] 지시 "보스는
+-- 건드리지 마라" - 보스 보상은 지금처럼 처치한 플레이어 1인이 그대로 가져간다).
+-- 반환값: 이번 타격으로 죽었는가(bool).
+function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer)
 	local entry = monsters[model]
-	return entry and InfiniteStage.getMonsterAttack(entry.data.attack, entry.stage)
+	if not entry then
+		return false
+	end
+
+	if entry.data.isBoss then
+		entry.hp -= damage
+		return entry.hp <= 0
+	end
+
+	local effectiveMaxHp = InfiniteStage.getMonsterHp(entry.data.hp, attackerStage)
+	local ratioDealt = effectiveMaxHp > 0 and (damage / effectiveMaxHp) or 0
+	entry.hpRatio -= ratioDealt
+	if attackerPlayer then
+		entry.contributions[attackerPlayer] = (entry.contributions[attackerPlayer] or 0) + ratioDealt
+	end
+	return entry.hpRatio <= 0
 end
 
--- 무한 모드 스테이지 배율이 적용된 처치 골드(11-1). AttackServer가 처치 판정 직후 쓴다.
-function MonsterState.getGoldDrop(model)
+-- 이 몬스터에 기여한 [Player]=누적비율 테이블(잡몹 전용, 보스는 항상 빈 테이블 - 보스는
+-- 애초에 기록하지 않는다). AttackServer의 사망 처리가 이 테이블을 훑어 임계값
+-- (CombatConfig.contributionRewardThreshold) 이상인 플레이어 전원에게 각자 보상을 준다.
+function MonsterState.getContributors(model)
 	local entry = monsters[model]
-	return entry and InfiniteStage.getGoldReward(entry.data.goldDrop, entry.stage)
+	return (entry and entry.contributions) or {}
 end
 
--- 무한 모드 스테이지 배율이 적용된 처치 경험치(13-2). AttackServer가 처치 판정 직후 쓴다 -
--- getGoldDrop과 같은 패턴.
-function MonsterState.getExpReward(model)
+-- 플레이어 퇴장 시 호출한다(AttackServer의 PlayerRemoving). 그 플레이어가 아직 살아있는
+-- 모든 몬스터의 기여 기록에 남아 있을 수 있으므로 전부 지운다 - 안 지우면 이미 나간
+-- Player 인스턴스를 몬스터가 죽을 때까지 계속 들고 있게 된다(MonsterAI.server.lua의
+-- releaseChasersOf와 같은 "떠나는 쪽이 자기 흔적을 지운다" 원칙).
+function MonsterState.clearPlayerContributions(player)
+	for _, entry in pairs(monsters) do
+		if entry.contributions then
+			entry.contributions[player] = nil
+		end
+	end
+end
+
+-- 스테이지 배율이 적용된 공격력(19-4, InfiniteStage 직접 호출로 교체 - 예전
+-- setStage/entry.stage는 완전히 제거했다). 보스는 data.attack이 이미 최종값이라 그대로
+-- 돌려준다(BossRules.buildInstanceData 참고) - 잡몹은 targetStage로 매 호출마다 새로
+-- 계산한다(같은 몬스터를 서로 다른 stage의 플레이어가 때려도 각자 맞는 값이 나온다).
+function MonsterState.getAttackFor(model, targetStage)
 	local entry = monsters[model]
-	return entry and InfiniteStage.getExpReward(entry.data.expReward, entry.stage)
+	if not entry then
+		return 0
+	end
+	if entry.data.isBoss then
+		return entry.data.attack
+	end
+	return InfiniteStage.getMonsterAttack(entry.data.attack, targetStage)
+end
+
+function MonsterState.getGoldDropFor(model, stage)
+	local entry = monsters[model]
+	if not entry then
+		return 0
+	end
+	if entry.data.isBoss then
+		return entry.data.goldDrop
+	end
+	return InfiniteStage.getGoldReward(entry.data.goldDrop, stage)
+end
+
+function MonsterState.getExpRewardFor(model, stage)
+	local entry = monsters[model]
+	if not entry then
+		return 0
+	end
+	if entry.data.isBoss then
+		return entry.data.expReward
+	end
+	return InfiniteStage.getExpReward(entry.data.expReward, stage)
 end
 
 function MonsterState.getSpawnPosition(model)

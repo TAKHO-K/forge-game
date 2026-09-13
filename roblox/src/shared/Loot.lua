@@ -10,6 +10,7 @@ local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 
 local lootRng = Random.new()
 
@@ -91,6 +92,34 @@ function Loot.rollBossArmorDrop(monsterStage, itemLevel)
 		dropStage = monsterStage,
 		itemLevel = itemLevel,
 		tierIndex = 1,
+		locked = false,
+	}
+end
+
+-- 반짝이 몬스터 확정 드랍(19-4 [6], PRD 8.0-5 "유물 이상 확정 드랍" - 웹 BALANCE.
+-- sparkleGradeChances 그대로). 잡몹과 같은 dropChance(25%) 굴림 자체를 안 거친다 - 반짝이는
+-- 발견하면 100% 확정이다(웹 원문 "도망가지 않는다 - 발견하면 반드시 잡을 수 있어야
+-- 한다"와 짝을 이루는 지급 방식). tierIndex는 그 구역 그대로 넘긴다 - 등급만 강제로 위로
+-- 끌어올릴 뿐, itemLevel 보너스·판매가 계산(Loot.getSellPrice)은 일반 드랍과 같은
+-- 축을 그대로 쓴다(단일 출처 유지 - 반짝이 전용 별도 계산식을 만들지 않는다).
+function Loot.rollSparkleArmorDrop(monsterStage, itemLevel, tierIndex)
+	local roll = lootRng:NextNumber()
+	local acc = 0
+	local grade = "relic" -- 확률 합이 부동소수 오차로 1 미만이 되는 극단적인 경우의 방어적 기본값
+	for gradeId, chance in pairs(RareMonsterConfig.sparkleGradeChances) do
+		acc += chance
+		if roll < acc then
+			grade = gradeId
+			break
+		end
+	end
+
+	return {
+		grade = grade,
+		part = Loot.rollItemPart(),
+		dropStage = monsterStage,
+		itemLevel = itemLevel,
+		tierIndex = tierIndex or 1,
 		locked = false,
 	}
 end

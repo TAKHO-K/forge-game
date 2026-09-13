@@ -559,9 +559,9 @@ function PlayerProfile.setEquippedDirect(player, part, item)
 end
 
 -- 무한 모드 스테이지를 StageServer의 이동 규칙(최고+1까지만, 보스 게이트) 없이 즉시
--- 지정한다. best가 그 값보다 낮으면 같이 끌어올린다(안 그러면 몬스터가 새로 어그로를
--- 잡을 때 MonsterState.setStage가 이 값을 그대로 읽지 못할 이유는 없지만, best가 낮게
--- 남아 있으면 다른 화면(HUD 등)이 모순된 값을 보여준다).
+-- 지정한다. best가 그 값보다 낮으면 같이 끌어올린다 - 안 그러면 다른 화면(HUD 등)이
+-- 모순된 값을 보여준다(19-4부터 잡몹 피해·보상도 매 타격마다 이 stage를 직접 읽으므로
+-- - MonsterState.applyDamage/getAttackFor 등 - 이 값 자체가 즉시 실제 난이도에 반영된다).
 function PlayerProfile.setInfiniteStageDirect(player, stage)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)

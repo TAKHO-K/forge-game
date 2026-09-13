@@ -2,8 +2,10 @@
 -- 공간 하나뿐이라(HuntingGround.server.lua - 격자 9자리 고정), 보스는 그 안에 상주하는
 -- 대신 "이 플레이어가 지금 보스 스테이지에 있다"는 사실에 맞춰 그 플레이어 전용
 -- 인스턴스로 스폰한다 - 여러 플레이어가 서로 다른 스테이지에 있어도 서로의 보스를
--- 방해하지 않는다(잡몹의 "몬스터 한 마리당 대상 하나" 어그로 설계와 같은 선상의 타협 -
--- MonsterState.setStage 주석 참고).
+-- 방해하지 않는다. 19-4에서 잡몹은 반대로 완전히 공유(C안 - 여러 stage의 플레이어가
+-- 같은 몬스터를 같이 때리고, 피해·보상만 공격자 개인 기준으로 계산)로 확정됐다 - 보스는
+-- "한 사람이 도전하는 관문", 잡몹은 "여럿이 파밍하는 곳"이라 역할이 다르므로 구조가
+-- 달라도 된다는 게 그 세션의 결론이다(MonsterState.lua 주석 참고).
 
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

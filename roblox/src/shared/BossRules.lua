@@ -51,9 +51,9 @@ end
 -- 만든다 - 여러 몬스터가 공유하는 MonsterData 원본과 달리 이건 플레이어 1인 전용이라
 -- 공유 걱정이 없다.
 --
--- stage=1로 고정해 둔 게 아니라 MonsterState.setStage가 isBoss 데이터는 아예 건드리지
--- 않도록 만들어서(그쪽 주석 참고), 여기서 계산한 값이 최종값 그대로 유지된다 -
--- InfiniteStage 배율을 이중으로 다시 곱하는 사고를 구조적으로 막는다.
+-- 19-4: MonsterState.getAttackFor/getGoldDropFor/getExpRewardFor가 isBoss면 InfiniteStage를
+-- 다시 곱하지 않고 data 필드를 그대로 돌려주도록 짜여 있다 - 여기서 계산한 값이 최종값
+-- 그대로 유지된다. InfiniteStage 배율을 이중으로 다시 곱하는 사고를 구조적으로 막는다.
 function BossRules.buildInstanceData(stage)
 	local bossId = BossRules.pickBossId(stage)
 	if not bossId then

@@ -154,6 +154,65 @@ local function createCommunityPlaceholder(zone)
 	text.Parent = label
 end
 
+-- 안전지대 물리 담장(19-4 [4]-가) - tier 구역에만 세운다. 4면 중 zone.gate가 가리키는
+-- 한 면만 문 너비(WorldConfig.walls.doorwayWidthStuds)만큼 벽 두 조각으로 갈라 틈을
+-- 낸다 - 나머지 3면은 완전히 막힌 벽 하나씩이다. CanCollide=true라 플레이어·몬스터 둘
+-- 다 못 넘는다(대시도 이동 자체를 막으므로 대시로도 못 넘는다). AttackServer.server.lua의
+-- ZoneBounds 판정(2차 방어)과 별개로, 이 담장이 "몬스터가 안전지대로 흘러나오는 것" 자체를
+-- 물리적으로 막는 1차 방어다.
+local WALL_COLOR = Color3.fromRGB(70, 65, 60)
+
+local function createWallPart(centerX, centerZ, sizeX, sizeZ, wallY)
+	local wall = Instance.new("Part")
+	wall.Name = "ZoneWall"
+	wall.Anchored = true
+	wall.CanCollide = true
+	wall.Material = Enum.Material.Slate
+	wall.Color = WALL_COLOR
+	wall.Size = Vector3.new(sizeX, WorldConfig.walls.heightStuds, sizeZ)
+	wall.Position = Vector3.new(centerX, wallY, centerZ)
+	wall.Parent = Workspace
+end
+
+local function createZoneWalls(zone)
+	if not zone.gate then
+		return
+	end
+
+	local half = zone.halfSize
+	local thickness = WorldConfig.walls.thicknessStuds
+	local doorway = WorldConfig.walls.doorwayWidthStuds
+	local wallY = FLOOR_Y + FLOOR_THICKNESS / 2 + WorldConfig.walls.heightStuds / 2
+	local cx, cz = zone.center.X, zone.center.Z
+	-- 문이 있는 변은 완전한 한 조각 대신 이 길이의 벽 두 조각(양 끝) + 가운데 문틀로 나뉜다.
+	local segmentLength = half - doorway / 2
+
+	local sides = {
+		{ axis = "x", sign = 1 }, { axis = "x", sign = -1 },
+		{ axis = "z", sign = 1 }, { axis = "z", sign = -1 },
+	}
+	for _, side in ipairs(sides) do
+		local isGate = zone.gate.axis == side.axis and zone.gate.sign == side.sign
+		if side.axis == "x" then
+			local wallX = cx + side.sign * half
+			if isGate then
+				createWallPart(wallX, cz - half + segmentLength / 2, thickness, segmentLength, wallY)
+				createWallPart(wallX, cz + half - segmentLength / 2, thickness, segmentLength, wallY)
+			else
+				createWallPart(wallX, cz, thickness, half * 2, wallY)
+			end
+		else
+			local wallZ = cz + side.sign * half
+			if isGate then
+				createWallPart(cx - half + segmentLength / 2, wallZ, segmentLength, thickness, wallY)
+				createWallPart(cx + half - segmentLength / 2, wallZ, segmentLength, thickness, wallY)
+			else
+				createWallPart(cx, wallZ, half * 2, thickness, wallY)
+			end
+		end
+	end
+end
+
 local function spawnTierMonsters(zone)
 	local tierKey = MonsterData.tierOrder[zone.tierIndex]
 	local data = MonsterData[tierKey]
@@ -180,6 +239,10 @@ end
 removeDefaultSpawns("HuntingGroundSpawn")
 createPlayerSpawn(WorldConfig.zones.spawn)
 createCommunityPlaceholder(WorldConfig.zones.community)
+
+for _, key in ipairs(WorldConfig.tierZoneOrder) do
+	createZoneWalls(WorldConfig.zones[key])
+end
 
 local totalMonsters = 0
 for _, key in ipairs(WorldConfig.tierZoneOrder) do

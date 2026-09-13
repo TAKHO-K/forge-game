@@ -9,6 +9,7 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local Loot = require(ReplicatedStorage.Shared.Loot)
+local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -51,15 +52,10 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 -- 구역 소속 판정(16-6) - "구역 경계가 리쉬의 상한이다. 거리로만 계산하지 말고 구역
--- 소속으로 판정해라"(지시 그대로). zoneKey가 없으면(보스 등 구역 밖 개인 인스턴스)
--- 이 검사 자체를 건너뛴다 - 원래 이 검사 대상이 아니다.
+-- 소속으로 판정해라"(지시 그대로). ZoneBounds.lua로 뽑아냈다(19-4) - AttackServer.
+-- server.lua의 "구역 밖에서는 공격이 안 들어간다" 판정이 같은 식을 재사용해야 해서다.
 local function isOutsideZoneBounds(position, zoneKey)
-	local zone = zoneKey and WorldConfig.zones[zoneKey]
-	if not zone then
-		return false
-	end
-	return math.abs(position.X - zone.center.X) > zone.halfSize
-		or math.abs(position.Z - zone.center.Z) > zone.halfSize
+	return not ZoneBounds.isInside(position, zoneKey)
 end
 
 -- 지금 플레이어가 서 있는 tier 구역들의 집합(16-6 성능 절전 - 지시 "플레이어가 없는
@@ -124,8 +120,9 @@ end
 -- 피격 데미지가 같은 계산을 써야 눈금이 "몇 대"를 정확히 의미한다.
 -- 방어력은 클래스 배율이 걸린다(10-3 [3] - 대검 1.3배로 더 튼튼하고 활 0.6배로 더 약하다).
 -- 클래스를 아직 안 고른 순간(접속 직후 선택 UI가 뜨기 전)은 배율 없는 기본값으로 방어한다.
--- attack은 호출부가 MonsterState.getAttack(model)로 넘긴다 - 무한 모드 스테이지 배율(11-1)이
--- 이미 적용된 값이라 여기선 그대로 쓰기만 한다. 장비 방어력(12-1 [4])은 착용한 갑옷이
+-- attack은 호출부가 MonsterState.getAttackFor(model, targetPlayer의 stage)로 넘긴다(19-4,
+-- C안 - 잡몹은 공유 자원이라 "몬스터가 가진 stage"가 없다. 맞는 그 순간 상대 플레이어의
+-- stage로 매번 새로 계산한다, MonsterState.lua 주석 참고). 장비 방어력(12-1 [4])은 착용한 갑옷이
 -- 있으면 Loot.getArmorDefense가 계산하고, 없으면 0 - PlayerCombat.getDefense가
 -- "(기본값 + 장비 보너스) 전체에 클래스 배율을 곱한다"는 9-4/10-3 원칙을 그대로 지킨다.
 local function computeHitDamage(attack, targetPlayer)
@@ -182,7 +179,8 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	end
 	MonsterState.setLastAttackTick(model, now)
 
-	applyHitToPlayer(targetPlayer, MonsterState.getAttack(model))
+	local targetStage = PlayerProfile.getInfiniteStage(targetPlayer) or 1
+	applyHitToPlayer(targetPlayer, MonsterState.getAttackFor(model, targetStage))
 end
 
 -- 추격을 놓치는 순간(대상 사망·퇴장·리쉬) 보스가 telegraph 도중이었으면 원상복구한다 -
@@ -277,7 +275,8 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
-					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttack(model), player))
+					local aggroStage = PlayerProfile.getInfiniteStage(player) or 1
+					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player))
 				end
 			end
 
