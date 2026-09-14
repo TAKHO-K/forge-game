@@ -219,6 +219,9 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 	local originalWalkSpeed = humanoid.WalkSpeed
 	humanoid.WalkSpeed = originalWalkSpeed * def.channelMoveSpeedMultiplier
 	PlayerState.setIncomingDamageMultiplierUntil(player, def.incomingDamageMultiplier, def.channelSeconds)
+	-- 21-1 [1]-C: 채널링 중 평타 차단(PRD 4.3 "채널링 3초는 평타 시간에서 뺀다") - 이게
+	-- 계수 프리미엄의 대가다. AttackServer가 PlayerState.isChanneling으로 거부한다.
+	PlayerState.setChannelingUntil(player, def.channelSeconds)
 
 	local tickInterval = def.channelSeconds / def.tickCount
 	local perTickCoefficient = def.coefficient / def.tickCount
@@ -232,6 +235,7 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 		humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 		if not humanoid or not rootPart then
+			PlayerState.clearChanneling(player)
 			return
 		end
 
@@ -336,6 +340,10 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 		channelSeconds = def.channelSeconds,
 	})
 
+	-- 21-1 [1]-C: 난무 1초 동안도 평타 차단(대검 회전베기와 같은 규칙 - 채널형 공통).
+	-- 대상 사망·이탈로 일찍 끝나면 그 자리에서 풀어 평타를 바로 다시 열어 준다.
+	PlayerState.setChannelingUntil(player, def.channelSeconds)
+
 	local tickInterval = def.channelSeconds / def.tickCount
 	local perTickCoefficient = def.coefficient / def.tickCount
 
@@ -345,14 +353,17 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 		local character = player.Character
 		local rootNow = character and character:FindFirstChild("HumanoidRootPart")
 		if not rootNow then
+			PlayerState.clearChanneling(player)
 			return -- 캐스터가 사라졌다(사망·퇴장) - 조용히 멈춘다(castCircleChannel과 같은 가드)
 		end
 
 		if not (lockedTarget.Parent and MonsterState.getData(lockedTarget)) then
+			PlayerState.clearChanneling(player)
 			return -- 대상이 이미 죽었거나 사라졌다 - 남은 타격은 손실(재탐색 안 함)
 		end
 		local targetRoot = lockedTarget.PrimaryPart
 		if not targetRoot or (targetRoot.Position - rootNow.Position).Magnitude > def.rangeStuds then
+			PlayerState.clearChanneling(player)
 			return -- 대상이 사거리를 벗어났다
 		end
 
@@ -372,6 +383,7 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 		})
 
 		if hit.isDead then
+			PlayerState.clearChanneling(player)
 			return
 		end
 	end

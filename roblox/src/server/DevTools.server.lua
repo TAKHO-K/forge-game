@@ -26,6 +26,7 @@ local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
+local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -184,38 +185,60 @@ local function measure(player, stageOverride)
 	local stage = stageOverride or PlayerProfile.getInfiniteStage(player) or 1
 
 	local loadout = BalanceSim.buildLoadoutFromEquipment(classId, level, weapon.level, weapon.grade, equipment)
-	local monsterAttack = BalanceSim.getMonsterAttack(stage, "tier1")
-	local monsterHp = BalanceSim.getMonsterHp(stage, "tier1")
-	local surviveHits, dmgPerHit = BalanceSim.getSurviveHits(loadout, monsterAttack)
 	local autoAttack60 = BalanceSim.simulateAutoAttack(loadout, 60)
 
 	-- 20-7: 순수 평타(비행시간·콤보 카운터 반영) / 실전 로테이션(Q+E) / 광역(동시 2마리 - 격자
 	-- 64stud·어그로 25.6·리쉬 38.4 관계상 한 플레이어가 동시에 끌 수 있는 실질 최대치) /
 	-- tier1 1마리 처치 시간(새 대상으로 돌아서는 회전 지연 포함) - 전부 BalanceSim.simulateCombat.
+	-- 21-1: 생존 타수·처치 시간은 BalanceSim.measurePoint("/gg curve"와 같은 함수)로 뽑고,
+	-- 총딜은 raw와 함께 atk-단위(무기 기본 atk 기준 - PRD-forge-game.md 4.4 표와 같은 눈금)로도 찍는다.
+	local point = BalanceSim.measurePoint(loadout, stage)
 	local auto60 = BalanceSim.simulateCombat(loadout, { useSkills = false })
 	local rotation60 = BalanceSim.simulateCombat(loadout, { useSkills = true })
 	local aoe60 = BalanceSim.simulateCombat(loadout, { useSkills = true, targetCount = 2 })
-	local killAuto = BalanceSim.simulateCombat(loadout, { useSkills = false, targetHp = monsterHp, durationSeconds = 600, turnDelaySeconds = 0.125 })
-	local killRotation = BalanceSim.simulateCombat(loadout, { useSkills = true, targetHp = monsterHp, durationSeconds = 600, turnDelaySeconds = 0.125 })
+	local unit = point.unit
 
-	print(("[DevTools] === %s 실측 (직업=%s, 레벨=%d, 무기등급=%s, 강화=+%d, 스테이지=%d) ==="):format(
-		player.Name, classId, level, ArmorData.gradeOrder[(weapon.grade or 0) + 1] or tostring(weapon.grade), weapon.level, stage))
-	print(("[DevTools] 공격력=%.2f 방어력=%.2f 최대체력=%.2f 공격쿨다운=%.3f초"):format(
-		loadout.atk, loadout.defense, loadout.maxHp, loadout.attackCooldown))
+	print(("[DevTools] === %s 실측 (직업=%s, 레벨=%d, 무기등급=%s, 강화=+%d, 스테이지=%d, 권장 스테이지 rec(L)=%d / rec(L,g)=%d) ==="):format(
+		player.Name, classId, level, ArmorData.gradeOrder[(weapon.grade or 0) + 1] or tostring(weapon.grade), weapon.level, stage,
+		BalanceSim.recommendedStage(level, weapon.grade, false), BalanceSim.recommendedStage(level, weapon.grade, true)))
+	print(("[DevTools] 공격력=%.2f 방어력=%.2f 최대체력=%.2f 공격쿨다운=%.3f초 (atk-단위 1 = %.2f)"):format(
+		loadout.atk, loadout.defense, loadout.maxHp, loadout.attackCooldown, unit))
 	print(("[DevTools] tier1 몬스터 평타(스테이지%d 적용)=%.3f -> 실제 피해=%.3f/대 -> 생존 타수=%.2f대"):format(
-		stage, monsterAttack, dmgPerHit, surviveHits))
-	print(("[DevTools] 60초 순수 평타 총딜(평균 근사)=%.1f (%.1f회 타격, 평균 %.2f/타) / 시뮬레이션=%.1f (%d회)"):format(
-		autoAttack60.totalDamage, autoAttack60.hits, autoAttack60.avgHit, auto60.totalDamage, auto60.autoHits))
+		stage, point.monsterAttack, point.dmgPerHit, point.surviveHits))
+	print(("[DevTools] 60초 순수 평타 총딜(평균 근사)=%.1f (%.1f회 타격, 평균 %.2f/타) / 시뮬레이션=%.1f (%d회) = atk-단위 %.1f"):format(
+		autoAttack60.totalDamage, autoAttack60.hits, autoAttack60.avgHit, auto60.totalDamage, auto60.autoHits, auto60.totalDamage / unit))
 	local skillParts = {}
 	for name, casts in pairs(rotation60.casts) do
 		table.insert(skillParts, ("%s×%d=%.1f"):format(name, casts, rotation60.skillDamage[name] or 0))
 	end
 	table.sort(skillParts)
-	print(("[DevTools] 60초 실전 로테이션(Q+E) 단일 총딜=%.1f (평타 %.1f + 스킬 %.1f: %s)"):format(
-		rotation60.totalDamage, rotation60.autoDamage, rotation60.skillDamageTotal, table.concat(skillParts, ", ")))
-	print(("[DevTools] 60초 광역(동시 2마리) 총딜=%.1f"):format(aoe60.totalDamage))
+	print(("[DevTools] 60초 실전 로테이션(Q+E) 단일 총딜=%.1f (평타 %.1f + 스킬 %.1f: %s) = atk-단위 %.1f"):format(
+		rotation60.totalDamage, rotation60.autoDamage, rotation60.skillDamageTotal, table.concat(skillParts, ", "), rotation60.totalDamage / unit))
+	print(("[DevTools] 60초 광역(동시 2마리) 총딜=%.1f = atk-단위 %.1f"):format(aoe60.totalDamage, aoe60.totalDamage / unit))
 	print(("[DevTools] tier1 1마리(HP %.1f) 처치 시간: 평타만=%.2f초(%d타), 로테이션=%.2f초"):format(
-		monsterHp, killAuto.killTime or -1, killAuto.autoHits, killRotation.killTime or -1))
+		point.monsterHp, point.killAutoSeconds, point.killAutoHits, point.killRotationSeconds))
+end
+
+-- "/gg curve [classId]" - 앵커 곡선(21-1 [2], BalanceAnchorConfig) 위의 격자(레벨×무기등급)를
+-- 전부 재서 콘솔에 표로 낸다. 직업을 생략하면 지금 프로필의 직업. 원본 상수(α·계수·k·g·
+-- tier1 HP)가 바뀔 때마다 이 한 줄로 곡선을 다시 뽑는다 - 파생 표를 손으로 다시 계산하지 않는다.
+local function printCurve(player, classIdArg)
+	local classId = classIdArg or PlayerProfile.getClassId(player)
+	if not classId or not ClassData.classes[classId] then
+		reply(player, ("알 수 없는 직업: %s (사용 가능: %s)"):format(tostring(classIdArg), table.concat(ClassData.order, "/")))
+		return
+	end
+	local offset = BalanceSim.solveKillOffset()
+	print(("[DevTools] === 앵커 곡선 (%s) rec(L) = L %+.2f (기준 %s 레벨%d에서 로테이션 처치 %.1f초 역산) ==="):format(
+		classId, offset, BalanceAnchorConfig.referenceClassId, BalanceAnchorConfig.referenceLevel, BalanceAnchorConfig.killTargetSeconds))
+	print("[DevTools] 레벨 | 등급(Δ) | rec(L): 생존/처치 | rec(L,g): 생존/처치 | rec(L,g)+갑옷등급 짝: 생존/처치")
+	for _, row in ipairs(BalanceSim.measureCurve(classId)) do
+		print(("[DevTools] L%d | g%d(Δ%.1f) | S%d: %.2f타 / %.2f초 | S%d: %.2f타 / %.2f초 | S%d: %.2f타 / %.2f초"):format(
+			row.level, row.grade, BalanceSim.gradeStageShift(row.grade),
+			row.recFree, row.free.surviveHits, row.free.killRotationSeconds,
+			row.recGrade, row.graded.surviveHits, row.graded.killRotationSeconds,
+			row.recGrade, row.paired.surviveHits, row.paired.killRotationSeconds))
+	end
 end
 
 -- "/gg anchor [classId]" - classId를 주면 먼저 그 직업으로 전환한 뒤 앵커 조건을 건다.
@@ -243,7 +266,8 @@ local HELP_TEXT = table.concat({
 	"/gg weapon <n|등급명> - 무기 등급 지정(0~6 또는 " .. table.concat(ArmorData.gradeOrder, "/") .. ")",
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
 	"/gg stage <n> - 무한 스테이지 지정(생존타수/보상 배율 계산용, 물리적 이동 아님)",
-	"/gg measure [stage] - 지금 조건의 생존 타수·60초 평타 총딜을 콘솔에 출력",
+	"/gg measure [stage] - 지금 조건의 생존 타수·60초 총딜·처치 시간·권장 스테이지를 콘솔에 출력",
+	"/gg curve [classId] - 앵커 곡선(레벨×무기등급 격자)의 생존 타수·처치 시간 표를 콘솔에 출력",
 	"/gg rebirth <n> - 환생 횟수 스텁 직접 지정(보스 첫 처치 드랍 등급표 분기 검증용)",
 	"/gg bossreset [stage] - 보스 첫 처치 확정 드랍 기록 초기화(생략 시 전부, 재검증용)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
@@ -285,6 +309,8 @@ local function handleCommand(player, args)
 		reply(player, "무한 스테이지 " .. args[2] .. " 적용")
 	elseif sub == "measure" then
 		measure(player, tonumber(args[2]))
+	elseif sub == "curve" then
+		printCurve(player, args[2])
 	elseif sub == "rebirth" and tonumber(args[2]) then
 		ensureBackup(player)
 		applyRebirth(player, math.floor(tonumber(args[2])))

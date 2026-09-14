@@ -19,9 +19,10 @@
 --   · 치명타는 기대값 배율(확률 롤을 매번 시뮬레이션하지 않는다) - 단, 쌍검 Q 확정 치명타 창과
 --     활 백스텝샷의 치확 +30%p는 그 타격의 기대값에 정확히 반영한다
 --   · 대검 E/쌍검 E 채널링 틱은 서버(SkillServer castCircleChannel/castSingleChannel)와 같은
---     간격·분할 계수. 채널링 중에도 평타는 계속 나간다 - 서버에 채널링 중 AttackRequest를
---     막는 코드가 없다(20-7 [1]에서 확인. PRD 4.3의 "채널링 3초는 평타 시간에서 뺀다"는 구현과
---     다르다 - opts.channelBlocksAutoAttack=true로 PRD 가정값도 뽑을 수 있다)
+--     간격·분할 계수. 채널링 중엔 평타가 막힌다(21-1 [1]-C - PlayerState.isChanneling으로
+--     AttackServer가 거부, PRD 4.3 "채널링 3초는 평타 시간에서 뺀다"와 일치) - 20-7까지는
+--     막는 코드가 없어 opts.channelBlocksAutoAttack 기본값이 false였다. 이제 기본 true이고,
+--     false는 "차단 전 코드"와 비교할 때만 쓴다
 --   · 원거리(활·힐러)는 발사 예비동작(AttackMotionData.releaseT)+비행시간(ProjectileConfig)
 --     뒤에 피해가 들어간다 - 측정 창(60초) 안에 도달하지 못한 발은 손실
 --   · 활 꽂히는 화살: 속사 중 "쏜" 평타가 명중하면 0.8초 뒤 개별 폭발, 몬스터당 4개 상한
@@ -42,6 +43,10 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
 local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
+local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
+local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
@@ -165,7 +170,7 @@ end
 --   targetDistanceStuds      원거리 비행 거리(기본 = 몬스터 평타 사거리 - 몬스터가 여기까지
 --                            다가와 멈춘다, MonsterAI tryAttack)
 --   turnDelaySeconds         첫 대상을 향해 돌아서는 시간(기본 0). 처치 시간 측정에서만 의미가 있다
---   channelBlocksAutoAttack  true면 채널링 중 평타를 멈춘다(PRD 4.3 가정값 비교용, 기본 false=코드 동작)
+--   channelBlocksAutoAttack  채널링 중 평타 차단(기본 true=21-1 이후 코드 동작, false는 차단 전 비교용)
 --
 -- 반환: { totalDamage, autoDamage, skillDamage = {이름->값}, skillDamageTotal, autoHits,
 --         killTime(targetHp가 있을 때만), casts = {이름->횟수} }
@@ -176,7 +181,7 @@ function BalanceSim.simulateCombat(loadout, opts)
 	local targetCount = math.max(opts.targetCount or 1, 1)
 	local lineMaxTargets = math.min(opts.lineMaxTargets or targetCount, targetCount)
 	local targetDistance = opts.targetDistanceStuds or MonsterData.tier1.attackRangeStuds
-	local channelBlocksAutoAttack = opts.channelBlocksAutoAttack == true
+	local channelBlocksAutoAttack = opts.channelBlocksAutoAttack ~= false
 
 	local classId = loadout.classId
 	local class = loadout.class
@@ -634,6 +639,140 @@ function BalanceSim.simulateHealerCycle(params)
 		cycleSeconds = cycles > 0 and simSeconds / cycles or math.huge,
 		cycles = cycles,
 	}
+end
+
+-- 목표 가동률이 나오는 딜링모드 소모율을 이분법으로 역산한다(21-1 [1]-D). 소모율이 클수록
+-- 가동률은 단조 감소하므로 이분법이 성립한다. params는 simulateHealerCycle과 같다(drainPerSecond만
+-- 여기서 채운다).
+function BalanceSim.solveHealerDrain(targetUptime, params)
+	local lo, hi = 0, 0.2
+	for _ = 1, 30 do
+		local mid = (lo + hi) / 2
+		local p = table.clone(params)
+		p.drainPerSecond = mid
+		if BalanceSim.simulateHealerCycle(p).uptime > targetUptime then
+			lo = mid
+		else
+			hi = mid
+		end
+	end
+	return (lo + hi) / 2
+end
+
+-- ═══ 앵커 곡선(21-1 [2], BalanceAnchorConfig) ═══
+--
+-- 앵커 조건의 loadout - 레벨 L, itemLevel L(gearGrade 3부위), 무기 등급 g, 강화 +0.
+-- armorGradeId(선택)를 주면 갑옷만 그 등급으로 바꾼다(무기 등급과 갑옷 등급을 짝지어
+-- "등급 축이 생존에도 반영되면"을 재볼 때 쓴다 - 20.44 [2] 표의 세 번째 변형).
+function BalanceSim.buildAnchorLoadout(classId, level, weaponGrade, armorGradeId)
+	local gearGrade = BalanceAnchorConfig.gearGrade
+	return BalanceSim.buildLoadout({
+		classId = classId,
+		level = level,
+		weaponLevel = BalanceAnchorConfig.weaponLevel,
+		weaponGrade = weaponGrade or 0,
+		gear = {
+			armor = { grade = armorGradeId or gearGrade, itemLevel = level },
+			gloves = { grade = gearGrade, itemLevel = level },
+			shoes = { grade = gearGrade, itemLevel = level },
+		},
+	})
+end
+
+-- 한 점(loadout × stage)의 전부 - "/gg measure"와 "/gg curve"가 같은 함수를 쓴다.
+-- unit = 무기 기본 atk 단위(atk ÷ 클래스 배율) - PRD-forge-game.md 4.4의 "60초 딜 총합
+-- (atk-단위)" 표(쌍검 436.5·활 408.5·대검 330.8)와 같은 눈금이라 그 표와 바로 비교된다.
+-- stage는 정수가 아니어도 된다(InfiniteStage.getMultiplier가 실수 지수) - solveKillOffset이 쓴다.
+function BalanceSim.measurePoint(loadout, stage)
+	local monsterAttack = BalanceSim.getMonsterAttack(stage)
+	local monsterHp = BalanceSim.getMonsterHp(stage)
+	local surviveHits, dmgPerHit = BalanceSim.getSurviveHits(loadout, monsterAttack)
+	local killAuto = BalanceSim.simulateCombat(loadout, { useSkills = false, targetHp = monsterHp, durationSeconds = 600, turnDelaySeconds = 0.125 })
+	local killRotation = BalanceSim.simulateCombat(loadout, { useSkills = true, targetHp = monsterHp, durationSeconds = 600, turnDelaySeconds = 0.125 })
+	return {
+		stage = stage,
+		monsterAttack = monsterAttack,
+		monsterHp = monsterHp,
+		surviveHits = surviveHits,
+		dmgPerHit = dmgPerHit,
+		killAutoSeconds = killAuto.killTime or math.huge,
+		killAutoHits = killAuto.autoHits,
+		killRotationSeconds = killRotation.killTime or math.huge,
+		unit = loadout.atk / loadout.class.atk,
+	}
+end
+
+-- 무기 등급 g가 처치 시간 축에서 몇 스테이지에 해당하는가: atk가 statMultiplier(m_g)배가
+-- 되면 몬스터 HP가 k^Δ배일 때 처치 시간이 같으므로 Δ = ln(m_g)/ln(k). 생존 축은 무기 등급을
+-- 전혀 안 본다(방어력·최대체력에 무기 등급 항이 없다 - PlayerCombat.getDefense/Loot.getMaxHpBonus)
+-- - 그래서 이 Δ를 rec에 더하면 생존 타수가 k^(~1.6Δ)로 무너진다(20.44 [2] 측정 참고).
+function BalanceSim.gradeStageShift(weaponGrade)
+	local gradeId = ArmorData.gradeOrder[(weaponGrade or 0) + 1]
+	local m = gradeId and ItemVisualData.gradeVisuals[gradeId].statMultiplier or 1
+	return math.log(m) / math.log(InfiniteStageConfig.growthRate)
+end
+
+-- 기준 직업·기준 레벨·등급0에서 로테이션 처치 시간이 killTargetSeconds가 되는 스테이지를
+-- 이분법으로 찾아 "rec(L) = L + offset"의 offset을 돌려준다. 처치 시간은 스테이지에 단조
+-- 증가(HP가 k^S)라 이분법이 성립한다. 결과는 실수 - 곡선 자체는 실수, 표시할 때만 반올림.
+local cachedKillOffset = nil
+function BalanceSim.solveKillOffset()
+	if cachedKillOffset then
+		return cachedKillOffset
+	end
+	local level = BalanceAnchorConfig.referenceLevel
+	local loadout = BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, level, 0)
+	local lo, hi = 1, level + 60
+	for _ = 1, 40 do
+		local mid = (lo + hi) / 2
+		local point = BalanceSim.measurePoint(loadout, mid)
+		if point.killRotationSeconds < BalanceAnchorConfig.killTargetSeconds then
+			lo = mid
+		else
+			hi = mid
+		end
+	end
+	cachedKillOffset = (lo + hi) / 2 - level
+	return cachedKillOffset
+end
+
+-- 권장 스테이지 rec(L, g). includeGrade=false면 등급을 무시한 rec(L)(생존 축이 아는 유일한
+-- 곡선), true면 처치 축의 등급 환산(gradeStageShift)을 더한 rec(L, g). 둘 중 어느 쪽이
+-- 기준인지는 20.44 [2]의 측정 결과가 정한다 - 이 함수는 둘 다 계산해 준다.
+function BalanceSim.recommendedStage(level, weaponGrade, includeGrade)
+	local stage = level + BalanceSim.solveKillOffset()
+	if includeGrade then
+		stage += BalanceSim.gradeStageShift(weaponGrade)
+	end
+	return math.max(1, math.floor(stage + 0.5))
+end
+
+-- 앵커 곡선 위 격자(BalanceAnchorConfig.curveLevels × curveGrades)를 전부 잰다. 각 점마다
+-- 세 변형: (1) rec(L) 등급 무시, (2) rec(L,g) 등급 반영, (3) rec(L,g)에서 갑옷 등급까지
+-- 무기 등급과 짝지은 경우(생존 축이 등급을 알게 되면 얼마나 회복되는가).
+function BalanceSim.measureCurve(classId)
+	local rows = {}
+	for _, level in ipairs(BalanceAnchorConfig.curveLevels) do
+		for _, grade in ipairs(BalanceAnchorConfig.curveGrades) do
+			local loadout = BalanceSim.buildAnchorLoadout(classId, level, grade)
+			local recFree = BalanceSim.recommendedStage(level, grade, false)
+			local recGrade = BalanceSim.recommendedStage(level, grade, true)
+			local free = BalanceSim.measurePoint(loadout, recFree)
+			local graded = BalanceSim.measurePoint(loadout, recGrade)
+			local pairedLoadout = BalanceSim.buildAnchorLoadout(classId, level, grade, ArmorData.gradeOrder[grade + 1])
+			local paired = BalanceSim.measurePoint(pairedLoadout, recGrade)
+			table.insert(rows, {
+				level = level,
+				grade = grade,
+				recFree = recFree,
+				recGrade = recGrade,
+				free = free,
+				graded = graded,
+				paired = paired,
+			})
+		end
+	end
+	return rows
 end
 
 return BalanceSim

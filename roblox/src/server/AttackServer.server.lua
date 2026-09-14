@@ -97,6 +97,14 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		return
 	end
 
+	-- 21-1 [1]-C: 채널링(대검 회전베기 3초·쌍검 난무 1초) 중엔 평타를 받지 않는다 - PRD
+	-- 4.3의 "채널링 3초는 평타 시간에서 뺀다"가 명세다. 쿨다운·콤보 카운터도 건드리지
+	-- 않는다(요청 자체가 없었던 것과 같다) - 채널링이 끝나면 직전 평타 쿨다운 기준으로
+	-- 바로 이어진다(BalanceSim.simulateCombat의 nextAttackTime과 같은 규칙).
+	if PlayerState.isChanneling(player) then
+		return
+	end
+
 	local now = os.clock()
 	local last = lastAttackTick[player]
 	-- 신발 공속 보너스(16-6) - 미착용이면 PlayerProfile.getSpeedPercentBonus가 0을 돌려줘

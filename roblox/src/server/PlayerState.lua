@@ -10,7 +10,8 @@ local PlayerState = {}
 
 -- [Player] = { hp, maxHp, lastCombatActionAt(17-1 도입, 19-1에서 의미 확장 - 자동회복
 -- 5초 대기 타이머 기준 시각, os.clock()), incomingDamageMultiplier·incomingDamageMultiplierUntil
--- (20-2a, 대검 E "받는 피해 50% 감소" - os.clock() 기준 만료 시각) }
+-- (20-2a, 대검 E "받는 피해 50% 감소" - os.clock() 기준 만료 시각), channelingUntil(21-1,
+-- 채널링 스킬 진행 중 - 이 시각 전엔 평타 요청을 거부한다) }
 local players = {}
 
 function PlayerState.init(player)
@@ -20,6 +21,7 @@ function PlayerState.init(player)
 		lastCombatActionAt = nil,
 		incomingDamageMultiplier = 1,
 		incomingDamageMultiplierUntil = nil,
+		channelingUntil = nil,
 	}
 end
 
@@ -29,6 +31,48 @@ function PlayerState.reset(player)
 	if entry then
 		entry.hp = entry.maxHp
 	end
+	PlayerState.clearChanneling(player)
+end
+
+-- 채널링 중 평타 차단(21-1 [1]-C). PRD-forge-game.md 4.3 "채널링 3초는 평타 시간에서
+-- 뺀다"가 명세이고, 20-7까지의 코드는 채널링 중에도 AttackRequest를 그대로 받아
+-- 대가 없이 계수 프리미엄(0.15×(1-channelMoveSpeedMultiplier))만 받고 있었다 - 명세대로
+-- 고친다. 채널형 스킬(SkillServer castCircleChannel/castSingleChannel)이 시작할 때
+-- 부르고, AttackServer가 매 요청마다 isChanneling으로 거부한다. 클라(AttackInput.client.lua)는
+-- 서버 전용인 이 모듈을 못 읽으니 Attribute "IsChanneling"으로 같은 사실을 알린다
+-- (BuffState의 AttackSpeedBuffMultiplier와 같은 이유) - 클라 쪽은 스윙 모션·요청 자체를
+-- 안 보내는 UX 1차 방어일 뿐, 판정은 언제나 서버다.
+function PlayerState.setChannelingUntil(player, durationSeconds)
+	local entry = players[player]
+	if not entry then
+		return
+	end
+	local untilAt = os.clock() + durationSeconds
+	entry.channelingUntil = untilAt
+	player:SetAttribute("IsChanneling", true)
+	-- 만료 시각에 Attribute를 내린다 - 그 사이 새 채널링이 시작돼 untilAt이 바뀌었으면
+	-- 그쪽 task.delay가 맡는다(BuffState의 "아무도 안 치워서 남는 유령 상태" 방지와 같은 원칙).
+	task.delay(durationSeconds, function()
+		if entry.channelingUntil == untilAt then
+			PlayerState.clearChanneling(player)
+		end
+	end)
+end
+
+-- 채널링이 도중에 끊겼을 때(캐스터 사망·퇴장, 리스폰) 즉시 내린다.
+function PlayerState.clearChanneling(player)
+	local entry = players[player]
+	if entry then
+		entry.channelingUntil = nil
+	end
+	if player.Parent then
+		player:SetAttribute("IsChanneling", false)
+	end
+end
+
+function PlayerState.isChanneling(player)
+	local entry = players[player]
+	return entry ~= nil and entry.channelingUntil ~= nil and os.clock() < entry.channelingUntil
 end
 
 function PlayerState.getHp(player)

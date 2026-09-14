@@ -205,6 +205,12 @@ end
 -- 실제 서버 공격 요청 + 스윙 모션 재생(회전 완료 후에만 호출된다). 점프 착지 버퍼(아래)도
 -- 같은 함수를 쓴다 - 회전을 거쳤든 착지로 바로 나갔든 공격이 실제로 나가는 지점은 하나뿐이다.
 local function performAttack(aimPoint)
+	-- 21-1 [1]-C: 채널링 중(서버가 PlayerState.setChannelingUntil로 올려 둔 Attribute)엔
+	-- 요청도 스윙 모션도 내지 않는다 - 서버가 어차피 거부하지만, 모션만 재생되면 "쳤는데
+	-- 안 맞는다"는 거짓 피드백이 된다(위 lastSwingTick 주석과 같은 이유). 판정은 서버다.
+	if player:GetAttribute("IsChanneling") then
+		return
+	end
 	attackRequest:FireServer(aimPoint)
 
 	local classId = player:GetAttribute("ClassId")
@@ -264,6 +270,9 @@ local function fireAttack(aimPoint)
 	-- 막는다(딤 배경이 클릭을 못 먹는 경우가 생겨도 이중 방어가 된다).
 	if UIManager.isInputBlocked() then
 		return
+	end
+	if player:GetAttribute("IsChanneling") then
+		return -- 21-1 [1]-C: 채널링 중엔 회전조차 하지 않는다(돌기만 하고 안 때리면 더 어색하다)
 	end
 	AimTarget.refresh(aimPoint)
 
