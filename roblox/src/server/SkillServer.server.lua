@@ -28,6 +28,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
 local SummonState = require(script.Parent.SummonState)
+local DashEndpoint = require(script.Parent.DashEndpoint)
 
 local skillRequest = Instance.new("RemoteEvent")
 skillRequest.Name = "SkillRequest"
@@ -93,26 +94,10 @@ local function filterSameZone(casterPosition, candidates)
 end
 
 -- 담장에 막히는지 Raycast로 확인해 최종 도착점을 정한다(20-2a 관통돌진, 20-2b 백스텝샷이
--- 공유하는 "돌진형" 판정의 공통부 - 방향만 서로 다르다). 몬스터 Body/Head는 기본
--- CanQuery=true라 그냥 두면 Raycast가 "몬스터에 막혔다"고 오판한다(몬스터는 담장이
--- 아니다) - 캐릭터 자신 + 살아있는 몬스터 전원을 제외해 담장·지형에만 막히게 한다.
+-- 공유하는 "돌진형" 판정의 공통부 - 방향만 서로 다르다). 21-2부터 DashEndpoint.lua
+-- 모듈이다 - 대시(DashServer.server.lua)까지 세 곳이 같은 판정을 쓴다.
 local function computeDashEndpoint(player, startPos, direction, rangeStuds)
-	local raycastParams = RaycastParams.new()
-	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-	local excluded = { player.Character }
-	for _, model in ipairs(MonsterState.getAllModels()) do
-		table.insert(excluded, model)
-	end
-	raycastParams.FilterDescendantsInstances = excluded
-	local rayResult = Workspace:Raycast(startPos, direction * rangeStuds, raycastParams)
-
-	-- 벽에 막히면 그 앞에서 멈춘다(19-4 구역 담장을 뚫지 않는다). 1stud 여유를 둬 캐릭터가
-	-- 벽에 파묻히지 않게 한다.
-	local finalDistance = rangeStuds
-	if rayResult then
-		finalDistance = math.max(rayResult.Distance - 1, 0)
-	end
-	return startPos + direction * finalDistance
+	return DashEndpoint.compute(player, startPos, direction, rangeStuds)
 end
 
 -- 관통돌진(대검 Q): "바라보는 방향"(rootPart.CFrame.LookVector, 클라 aimPoint를 안 믿는다)

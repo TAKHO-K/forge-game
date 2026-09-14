@@ -106,6 +106,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	end
 end)
 
+-- 21-2 [3]: 슬롯 탭/클릭(모바일의 유일한 스킬 입력) - 키 입력과 같은 함수로 들어간다.
+local slotTapped = skillSlotsGui:WaitForChild("SkillSlotTapped")
+slotTapped.Event:Connect(function(slotId)
+	if slotId == "q" or slotId == "e" then
+		requestSkill(slotId:upper())
+	end
+end)
+
 skillCastResult.OnClientEvent:Connect(function(slot, data)
 	if not data.ok then
 		-- 서버가 거부했다(쿨다운 등) - 로컬 낙관적 잠금을 되돌려 바로 다시 시도할 수

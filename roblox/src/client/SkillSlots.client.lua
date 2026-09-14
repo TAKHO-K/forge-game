@@ -17,15 +17,26 @@
 -- 상태로 되돌려라"). 대시(SHIFT)는 여전히 스킬이 아니라 이동 기능이라 데모 쿨다운을
 -- 그대로 남겨 둔다(범위 밖, 20-2a는 Q/E만 다룬다).
 
+-- 21-2: (1) 대시(SHIFT) 슬롯이 실제 DashServer 쿨다운에 연결됐다 - 데모 쿨다운 제거.
+-- (2) 슬롯이 실제 버튼(TextButton)이다 - 탭/클릭하면 SkillSlotTapped(BindableEvent)로
+-- 슬롯 id를 쏘고, SkillInput/DashInput이 키 입력과 같은 함수로 처리한다. 버튼이라
+-- 그 위의 탭은 gameProcessedEvent=true가 되어 AttackInput의 탭 공격(16-7)으로 새지
+-- 않는다. (3) 18-2 [6]이 "구조만 준비"해 둔 플랫폼 분기를 실제로 켠다 - 터치 기기면
+-- 스킬 5칸을 우측(점프 버튼 위)으로, 대시를 좌측(조이스틱 위)으로 갈라 놓아 두 손으로
+-- 점프+대시를 동시에 누를 수 있게 한다(보스 공중 대시 회피의 전제, PRD 20.44 [3]).
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local SkillIconData = require(ReplicatedStorage.Shared.data.SkillIconData)
 local HudIcons = require(script.Parent.HudIcons)
 
 local skillCastResult = ReplicatedStorage:WaitForChild("SkillCastResult")
+local dashResult = ReplicatedStorage:WaitForChild("DashResult")
 
 local player = Players.LocalPlayer
 
@@ -62,16 +73,54 @@ local SLOTS = {
 }
 
 -- 18-2 [6]: 모바일은 좌하단 조이스틱·우하단 점프 버튼이 기본이라 중앙 하단 배치가 양손
--- 엄지 어느 쪽으로도 닿기 애매할 수 있다 - 실제 배치는 폰 실기로 보고 정한다(지시, 이번엔
--- 구조만 준비). 지금은 PC 기준으로 두되, 나중에 플랫폼 분기를 넣을 때 이 좌표 하나만
--- 바꾸면 되도록 상수로 뺀다.
+-- 엄지 어느 쪽으로도 닿기 애매하다 - PC는 이 좌표(중앙 하단) 그대로, 터치 기기는 아래
+-- TOUCH_* 좌표로 분기한다(21-2 [3]에서 실제로 켰다).
 local ROW_ANCHOR_POINT = Vector2.new(0.5, 1)
 local ROW_POSITION = UDim2.new(0.5, 0, 1, -ROW_BOTTOM_OFFSET)
+
+-- 터치 레이아웃(21-2 [3]). 로블록스 기본 터치 컨트롤(PlayerModule ControlModule.TouchJump)의
+-- 점프 버튼 기하를 그대로 재계산한다 - 화면 짧은 변이 500px 이하면 "작은 화면"(버튼 70px,
+-- 우하단에서 x -(70×1.5−10)=−95, y −(70+20)=−90), 아니면 큰 화면(120px, x −170, y
+-- −120×1.75=−210). 스킬 5칸은 그 점프 버튼 "위"에 우측 정렬로 앉히고(오른손 엄지 - 점프와
+-- 같은 손, 점프 중 스킬은 어차피 19-2가 착지 버퍼로 미룬다), 대시는 좌측(조이스틱 위,
+-- 왼손 엄지)에 따로 둔다 - 점프(오른손)+대시(왼손)를 동시에 누를 수 있어야 보스 공중
+-- 대시 회피가 성립한다(지시). 조이스틱은 동적(DynamicThumbstick)이라 좌하단 터치 지점에
+-- 생기므로, 대시 버튼은 그 영역 위쪽 가장자리에 두고 이 ScreenGui의 DisplayOrder를
+-- TouchGui(기본 0)보다 높게 잡아 버튼 위 터치가 조이스틱으로 안 새게 한다.
+local TOUCH_EDGE_MARGIN = 16
+local TOUCH_SMALL_SCREEN_MAX_AXIS = 500
+local TOUCH_DASH_LEFT = 24
+
+local function touchJumpGeometry()
+	local viewport = workspace.CurrentCamera.ViewportSize
+	local isSmall = math.min(viewport.X, viewport.Y) <= TOUCH_SMALL_SCREEN_MAX_AXIS
+	local size = isSmall and 70 or 120
+	local right = size * 1.5 - 10
+	local bottom = isSmall and (size + 20) or (size * 1.75)
+	return { size = size, right = right, bottom = bottom, isSmall = isSmall }
+end
+
+-- Studio는 TouchEnabled=false라 실제 터치 배치를 볼 수 없다 - Studio 한정으로 LocalPlayer
+-- Attribute ForceTouchLayout=true면 터치 레이아웃을 강제하고, 점프 버튼이 놓일 자리에
+-- 모의 원(JumpMock)을 그려 겹침을 눈으로 확인한다(에뮬레이션 - 실제 TouchGui가 아니다).
+local function isTouchLayout()
+	if UserInputService.TouchEnabled then
+		return true
+	end
+	return RunService:IsStudio() and player:GetAttribute("ForceTouchLayout") == true
+end
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "SkillSlotsGui"
 screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 5 -- TouchGui(0)보다 위, UIManager 창(100+)보다 아래.
 screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- 슬롯 탭/클릭 신호(21-2) - SkillInput.client.lua(q/e)·DashInput.client.lua(dash)가 구독한다.
+-- SkillCastLocal과 같은 "잘 알려진 자리" 계약.
+local slotTapped = Instance.new("BindableEvent")
+slotTapped.Name = "SkillSlotTapped"
+slotTapped.Parent = screenGui
 
 -- SkillInput.client.lua가 WaitForChild로 찾는 로컬 전용 신호(20-2a) - ComboPipsAnchor
 -- (AttackInput.client.lua)와 같은 "잘 알려진 자리" 계약 패턴. RemoteEvent가 아니라
@@ -100,7 +149,21 @@ rowLayout.Parent = row
 -- 슬롯 하나(잠김·정상 공용). 정상 슬롯만 그라디언트·안쪽 하이라이트·발광·쿨다운 UI를
 -- 받는다 - 잠긴 슬롯은 그 무엇도 없이 어둡고 채도 없는 판만 남는다(지시 4).
 local function buildSlot(parent, layoutOrder, def)
-	local slot = Instance.new("Frame")
+	-- 21-2: 정상 슬롯은 TextButton(탭/클릭 = 시전 요청, 그 위 터치가 탭 공격으로 안 샌다).
+	-- 잠긴 슬롯은 Frame이지만 Active=true로 둬 역시 입력을 삼킨다(잠긴 칸을 눌렀다고
+	-- 뒤의 몬스터를 때리면 안 된다).
+	local slot
+	if def.locked then
+		slot = Instance.new("Frame")
+		slot.Active = true
+	else
+		slot = Instance.new("TextButton")
+		slot.Text = ""
+		slot.AutoButtonColor = false
+		slot.Activated:Connect(function()
+			slotTapped:Fire(def.id)
+		end)
+	end
 	slot.Name = "Slot_" .. def.id
 	slot.LayoutOrder = layoutOrder
 	slot.Size = UDim2.new(0, SLOT_SIZE, 0, SLOT_SIZE)
@@ -203,10 +266,12 @@ local function buildSlot(parent, layoutOrder, def)
 		overlayCorner.Parent = overlay
 	end
 
+	local keyPill
 	if def.key then
 		-- 키 라벨 알약 - 슬롯 바깥 아래로 살짝 겹쳐 나온다. 잠긴 칸엔 만들지 않는다(지시 2 -
-		-- 무엇이 들어갈지 미정인데 키를 박으면 나중에 유저가 혼란스럽다).
-		local keyPill = Instance.new("TextLabel")
+		-- 무엇이 들어갈지 미정인데 키를 박으면 나중에 유저가 혼란스럽다). 터치 레이아웃에선
+		-- 숨긴다(키보드가 없는데 "Q"가 붙어 있으면 거짓 안내다 - 아래 applyLayout).
+		keyPill = Instance.new("TextLabel")
 		keyPill.Name = "KeyPill"
 		keyPill.AnchorPoint = Vector2.new(0.5, 0)
 		keyPill.Position = UDim2.new(0.5, 0, 1, 3)
@@ -269,6 +334,8 @@ local function buildSlot(parent, layoutOrder, def)
 		wasCooling = false,
 		iconImage = iconImage,
 		innerHighlightStroke = innerHighlightStroke,
+		keyPill = keyPill,
+		slot = slot,
 	}
 end
 
@@ -293,7 +360,83 @@ for i, def in ipairs(SLOTS) do
 	slotHandles[def.id] = buildSlot(skillGroup, i, def)
 end
 
-slotHandles["dash"] = buildSlot(row, 2, { id = "dash", key = "SHIFT", icon = "dash" })
+-- 대시 슬롯은 자기 홀더에 담는다 - PC 레이아웃에선 홀더가 row 안(스킬 5칸 오른쪽, DASH_GAP
+-- 간격)에 있고, 터치 레이아웃에선 홀더째 좌측으로 옮긴다(applyLayout). 슬롯 자체는 한 번만
+-- 만든다(쿨다운 링 상태가 재생성으로 끊기지 않게).
+local dashHolder = Instance.new("Frame")
+dashHolder.Name = "DashHolder"
+dashHolder.LayoutOrder = 2
+dashHolder.Size = UDim2.new(0, SLOT_SIZE, 0, ROW_HEIGHT)
+dashHolder.BackgroundTransparency = 1
+dashHolder.Parent = row
+
+slotHandles["dash"] = buildSlot(dashHolder, 1, { id = "dash", key = "SHIFT", icon = "dash" })
+slotHandles["dash"].slot.AnchorPoint = Vector2.new(0, 1)
+slotHandles["dash"].slot.Position = UDim2.new(0, 0, 1, 0)
+
+-- 에뮬레이션용 모의 점프 버튼(Studio + ForceTouchLayout에서만 생성).
+local jumpMock = nil
+
+local function applyLayout()
+	local touch = isTouchLayout()
+	for _, id in ipairs({ "q", "e", "dash" }) do
+		local handle = slotHandles[id]
+		if handle and handle.keyPill then
+			handle.keyPill.Visible = not touch
+		end
+	end
+
+	if not touch then
+		row.AnchorPoint = ROW_ANCHOR_POINT
+		row.Position = ROW_POSITION
+		dashHolder.Parent = row
+		if jumpMock then
+			jumpMock:Destroy()
+			jumpMock = nil
+		end
+		return
+	end
+
+	local jump = touchJumpGeometry()
+	-- 스킬 5칸: 점프 버튼 바로 위, 우측 정렬. 점프 버튼 상단(-jump.bottom)에서 여백만큼 더 위.
+	row.AnchorPoint = Vector2.new(1, 1)
+	row.Position = UDim2.new(1, -TOUCH_EDGE_MARGIN, 1, -(jump.bottom + TOUCH_EDGE_MARGIN))
+	-- 대시: 좌측, 조이스틱 영역 위쪽. 점프 버튼과 같은 높이대에 두어 왼손 엄지가 조이스틱에서
+	-- 살짝 올라가면 닿는 자리다.
+	dashHolder.Parent = screenGui
+	dashHolder.AnchorPoint = Vector2.new(0, 1)
+	dashHolder.Position = UDim2.new(0, TOUCH_DASH_LEFT, 1, -(jump.bottom + TOUCH_EDGE_MARGIN))
+
+	if RunService:IsStudio() and not UserInputService.TouchEnabled and not jumpMock then
+		jumpMock = Instance.new("Frame")
+		jumpMock.Name = "JumpMock"
+		jumpMock.AnchorPoint = Vector2.new(1, 1)
+		jumpMock.Size = UDim2.new(0, jump.size, 0, jump.size)
+		jumpMock.Position = UDim2.new(1, -jump.right + jump.size, 1, -jump.bottom + jump.size)
+		jumpMock.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		jumpMock.BackgroundTransparency = 0.6
+		jumpMock.Parent = screenGui
+		local mockCorner = Instance.new("UICorner")
+		mockCorner.CornerRadius = UDim.new(1, 0)
+		mockCorner.Parent = jumpMock
+		local mockLabel = Instance.new("TextLabel")
+		mockLabel.BackgroundTransparency = 1
+		mockLabel.Size = UDim2.new(1, 0, 1, 0)
+		mockLabel.Font = Enum.Font.GothamBold
+		mockLabel.TextSize = 12
+		mockLabel.TextColor3 = Color3.new(0, 0, 0)
+		mockLabel.Text = "JUMP\n(모의)"
+		mockLabel.Parent = jumpMock
+	end
+end
+
+applyLayout()
+player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(applyLayout)
+screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+	if isTouchLayout() then
+		applyLayout()
+	end
+end)
 
 -- 19-2 [5]: 직업 전환 시 Q/E 아이콘·테두리색을 갱신한다(WeaponVisual.refresh와 같은
 -- ClassId Attribute 갱신 패턴). 직업을 안 골랐으면(빈 classId) 손대지 않는다 - 이전
@@ -354,31 +497,9 @@ local function setCooldown(slotId, remainingSeconds, totalSeconds)
 	handle.wasCooling = isCooling
 end
 
--- 대시(SHIFT)는 아직 스킬이 아니라 이동 기능이라(20-2a 범위 밖) 더미 쿨다운을 그대로
--- 남긴다 - 실제 스킬(Q/E)만 아래에서 진짜 쿨다운으로 바꾼다.
-local function runDemoCooldown(slotId, totalSeconds, gapSeconds)
-	task.spawn(function()
-		while true do
-			local startTick = os.clock()
-			while true do
-				local remaining = totalSeconds - (os.clock() - startTick)
-				if remaining <= 0 then
-					setCooldown(slotId, 0, totalSeconds)
-					break
-				end
-				setCooldown(slotId, remaining, totalSeconds)
-				task.wait()
-			end
-			task.wait(gapSeconds)
-		end
-	end)
-end
-
-runDemoCooldown("dash", 8, 3)
-
--- 실제 Q/E 쿨다운(20-2a) - [slotId(소문자)] = { startTick, totalSeconds } 또는 nil(대기
--- 없음). SkillInput.client.lua는 이 상태를 직접 못 건드린다 - 아래 두 구독(로컬 낙관적
--- 신호 + 서버 결과)이 유일한 갱신 경로다.
+-- 실제 Q/E/대시 쿨다운(20-2a, 21-2에서 대시 합류 - 데모 쿨다운은 제거) - [slotId(소문자)] =
+-- { startTick, totalSeconds } 또는 nil(대기 없음). SkillInput/DashInput은 이 상태를 직접 못
+-- 건드린다 - 아래 구독(로컬 낙관적 신호 + 서버 결과)이 유일한 갱신 경로다.
 local activeCooldown = {}
 
 local function startCooldown(slotId, totalSeconds)
@@ -405,6 +526,7 @@ end
 
 driveCooldownLoop("q")
 driveCooldownLoop("e")
+driveCooldownLoop("dash")
 
 -- 낙관적 시작(지시 [1] "클라 UI는 낙관적으로 먼저 돌아도 된다") - SkillInput.client.lua가
 -- 키를 누른 그 순간(네트워크 왕복 전) 이 BindableEvent를 쏜다.
@@ -416,8 +538,7 @@ end)
 -- cooldownSeconds로 다시 맞춘다 - "dash"(Q)·"channelStart"(E)에만 cooldownSeconds가
 -- 실려 온다("tick"은 없다 - 채널링 중 매 틱마다 링이 리셋되는 버그를 피한다). ok=false면
 -- (쿨다운 중 요청 등 드문 경합) 로컬 낙관적 표시를 지운다.
-skillCastResult.OnClientEvent:Connect(function(slot, data)
-	local slotId = slot:lower()
+local function applyServerResult(slotId, data)
 	if not data.ok then
 		activeCooldown[slotId] = nil
 		setCooldown(slotId, 0, 0)
@@ -426,4 +547,13 @@ skillCastResult.OnClientEvent:Connect(function(slot, data)
 	if data.cooldownSeconds then
 		startCooldown(slotId, data.cooldownSeconds)
 	end
+end
+
+skillCastResult.OnClientEvent:Connect(function(slot, data)
+	applyServerResult(slot:lower(), data)
+end)
+
+-- 대시(21-2) - DashServer의 DashResult가 Q/E의 SkillCastResult와 같은 모양이라 같은 함수.
+dashResult.OnClientEvent:Connect(function(data)
+	applyServerResult("dash", data)
 end)

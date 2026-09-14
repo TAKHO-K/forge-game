@@ -129,8 +129,15 @@ function PlayerState.setIncomingDamageMultiplierUntil(player, multiplier, durati
 	if not entry then
 		return
 	end
+	-- 21-2: 대시(0.5, 0.3초)와 대검 회전베기(0.5, 3초)가 겹칠 수 있다 - 짧은 쪽이 나중에
+	-- 걸렸다고 긴 쪽의 만료 시각을 당겨 버리면 채널링 중인데 감소가 풀린다. 이미 같거나
+	-- 더 강한 감소가 더 오래 살아 있으면 그대로 둔다.
+	local newUntil = os.clock() + durationSeconds
+	if PlayerState.getIncomingDamageMultiplier(player) <= multiplier and (entry.incomingDamageMultiplierUntil or 0) >= newUntil then
+		return
+	end
 	entry.incomingDamageMultiplier = multiplier
-	entry.incomingDamageMultiplierUntil = os.clock() + durationSeconds
+	entry.incomingDamageMultiplierUntil = newUntil
 end
 
 -- MonsterAI.server.lua의 applyHitToPlayer가 매 피격마다 곱한다. 활성 구간이 아니면 1.
