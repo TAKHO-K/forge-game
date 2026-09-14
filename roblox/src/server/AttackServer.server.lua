@@ -19,6 +19,7 @@ local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
 local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
+local StuckArrowState = require(script.Parent.StuckArrowState)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -182,12 +183,25 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	local damage, isCrit = PlayerCombat.calcDamage(base, classId, critRateBonus)
 	local attackerStage = PlayerProfile.getInfiniteStage(player) or 1
 
+	-- 20-5 [1] 시각 구분용 - 백스텝샷이 이 평타에 실제로 적용됐는가("스킬이다"가 한눈에
+	-- 읽혀야 한다는 지시, Projectiles.lua/AttackInput.client.lua가 이 값으로 화살을
+	-- 굵고 밝게 그리고 적중 히트스톱을 준다).
+	local isBuffedShot = bonusDamageCoefficient > 0 or critRateBonus > 0
+	-- 20-5 [2] 꽂히는 화살 - 이 평타를 "쏜 시점"에 속사가 켜져 있었는가(지시 원문 "속사
+	-- 버프가 켜져 있는 동안 발사한 평타"). 도달까지 걸리는 시간 동안 버프가 꺼져도 이미
+	-- 쏜 화살의 성격은 바뀌지 않는다 - 백스텝샷 충전 소모와 같은 "쏘는 시점 스냅샷" 원칙.
+	-- requestedAt(실기 검증 중 발견) - 이 시점과 attach() 호출 시점(도달 후) 사이에
+	-- 플레이어가 퇴장·직업변경하면 StuckArrowState.clearForPlayer가 이미 지나간 이
+	-- 요청을 걸러낸다(StuckArrowState.lua clearedAt 주석 참고).
+	local wasQuickShotActive = BuffState.get(player, "quickShot") ~= nil
+	local requestedAt = os.clock()
+
 	local projectileKind = ProjectileConfig.kindByClass[classId]
 	if not projectileKind then
 		-- 근접(대검·쌍검) - 즉시 판정(기존 동작 그대로, 20-2a까지와 완전히 같다).
 		local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
 		MonsterSpawner.updateHpLabel(target)
-		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false)
+		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false, isBuffedShot)
 		CombatResolution.resolveHit(player, target, isDead)
 		return
 	end
@@ -210,7 +224,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		raycastParams.FilterDescendantsInstances = excluded
 		local wallHit = Workspace:Raycast(rootPart.Position, launchPosition - rootPart.Position, raycastParams)
 		if wallHit and wallHit.Distance < distance - 1 then
-			attackResult:FireClient(player, target, 0, false, false, isComboHit, true)
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot)
 			return
 		end
 	end
@@ -218,8 +232,9 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 원거리(활·힐러, 20-2b [2]) - "클라가 맞았다고 보고하는 구조로 만들지 마라"는 지시대로
 	-- 서버가 도달 시점을 직접 계산해 그때 판정한다. 발사는 즉시 알려 클라가 투사체를
 	-- 그 순간부터 날아가게 하고(activeLaunched), 실제 피해 적용은 화살/구슬이 도달할
-	-- 시점(releaseDelay + travelTime 뒤)까지 미룬다.
-	attackLaunched:FireClient(player, target, isCrit)
+	-- 시점(releaseDelay + travelTime 뒤)까지 미룬다. isBuffedShot(20-5 [1])도 같이 보내
+	-- 클라가 백스텝샷 적용 화살을 굵고 밝게 그리게 한다.
+	attackLaunched:FireClient(player, target, isCrit, isBuffedShot)
 
 	-- releaseDelay - 활은 시위를 당기는 예비동작이 끝나야 실제로 발사된다(9-2/14-2,
 	-- WeaponVisual.getReleaseDelay와 같은 산식을 공유 정적 데이터로 재계산한다 - 서버는
@@ -235,21 +250,32 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		-- MonsterState.getData가 nil을 돌려준다 - 조용히 빗나간다.
 		local currentRoot = target.Parent and target.PrimaryPart
 		if not currentRoot or not MonsterState.getData(target) then
-			attackResult:FireClient(player, target, 0, false, false, isComboHit, true)
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot)
 			return
 		end
 
 		-- 비행 중 이동한 거리가 허용 폭(ProjectileConfig.hitToleranceStuds)을 넘으면
 		-- 빗나간다 - "몬스터가 움직이므로 빗나갈 수 있다"는 지시를 그대로 구현한다.
 		if launchPosition and (currentRoot.Position - launchPosition).Magnitude > ProjectileConfig.hitToleranceStuds then
-			attackResult:FireClient(player, target, 0, false, false, isComboHit, true)
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot)
 			return
 		end
 
 		local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
 		MonsterSpawner.updateHpLabel(target)
-		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false)
+		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false, isBuffedShot)
 		CombatResolution.resolveHit(player, target, isDead)
+
+		-- 꽂히는 화살(20-5 [2]) - 활 전용(ProjectileConfig.kindByClass가 "arrow"인
+		-- 클래스만 - 힐러 "orb"는 대상이 아니다), 속사가 켜진 채로 쏜 평타가 실제로
+		-- 명중했을 때만 남는다. 이 평타 자체가 처치를 냈으면(isDead) 붙이지 않는다 -
+		-- CombatResolution.resolveHit이 바로 위에서 despawn까지 끝낸 대상이라, 화살을
+		-- 붙여도 의미 있는 폭발 없이 시체와 함께 사라질 뿐이다.
+		if not isDead and wasQuickShotActive and projectileKind == "arrow" then
+			local hitDirection = Vector3.new(currentRoot.Position.X - rootPart.Position.X, 0, currentRoot.Position.Z - rootPart.Position.Z)
+			hitDirection = hitDirection.Magnitude > 1e-3 and hitDirection.Unit or Vector3.new(0, 0, 1)
+			StuckArrowState.attach(target, player, atk, classId, attackerStage, hitDirection, requestedAt)
+		end
 	end)
 end)
 
@@ -262,4 +288,7 @@ Players.PlayerRemoving:Connect(function(player)
 	-- 경우) 몬스터가 죽을 때까지 계속 남는다 - 떠나는 쪽이 자기 흔적을 지운다(MonsterAI.
 	-- server.lua의 releaseChasersOf와 같은 원칙, 19-4 지시 - 이전 nil 비교 사고 반복 금지).
 	MonsterState.clearPlayerContributions(player)
+	-- 꽂히는 화살(20-5 [2]) - 퇴장 시점에 아직 안 터진 화살이 남아있으면 대상 몬스터가
+	-- 살아있는 한 계속 남는다(BuffState.clearAll과 같은 이유로 명시 정리가 필요하다).
+	StuckArrowState.clearForPlayer(player)
 end)

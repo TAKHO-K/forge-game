@@ -357,17 +357,32 @@ local HEAVY_HITSTOP_SECONDS = 0.08
 local CAMERA_SHAKE_SECONDS = 0.15
 local CAMERA_SHAKE_STUDS = 0.35
 
+-- 백스텝샷 적용 화살 적중(20-5 [1] - "적중 순간 16-7의 히트스톱을 짧게 적용해라").
+-- 3타 강타보다 짧게 잡는다 - 강타와 겹칠 일이 잦은 효과가 아니라 강타의 "묵직함"을
+-- 덮어써서는 안 된다(아래 showResult가 강타 쪽을 우선한다 - 두 조건이 겹치면 더 큰
+-- 값 하나만 재생하지 더하지 않는다).
+local BUFFED_HITSTOP_SECONDS = 0.05
+local BUFFED_CAMERA_SHAKE_SECONDS = 0.1
+local BUFFED_CAMERA_SHAKE_STUDS = 0.2
+
 -- died가 추가된 이유는 AttackServer.server.lua의 attackResult:FireClient 주석 참고.
 -- 죽었으면 피격 반응 대신 사망 연출을 재생한다(둘 다 재생하면 사망 직전 프레임에
 -- Body/Head 색을 흰색으로 바꿨다가 곧바로 사망 연출이 그 색을 지워버려 부자연스럽다).
 -- isComboHit(16-7)이면 죽었든 아니든 히트스톱·카메라 흔들림은 그대로 재생한다 - 강타가
--- 처치를 낸 순간도 "강타였다"는 느낌은 여전히 필요하다.
-local function showResult(monsterModel, damage, isCrit, died, isComboHit)
+-- 처치를 낸 순간도 "강타였다"는 느낌은 여전히 필요하다. isBuffedShot(20-5 [1])도 같은
+-- 원칙 - 강타와 겹치면 강타 값(더 큰 쪽)만 쓴다.
+local function showResult(monsterModel, damage, isCrit, died, isComboHit, isBuffedShot)
 	DamageNumbers.show(monsterModel, damage, isCrit)
 
+	local holdSeconds = nil
 	if isComboHit then
+		holdSeconds = HEAVY_HITSTOP_SECONDS
 		WeaponVisual.applyHitstop(HEAVY_HITSTOP_SECONDS)
 		CameraShake.trigger(CAMERA_SHAKE_SECONDS, CAMERA_SHAKE_STUDS)
+	elseif isBuffedShot then
+		holdSeconds = BUFFED_HITSTOP_SECONDS
+		WeaponVisual.applyHitstop(BUFFED_HITSTOP_SECONDS)
+		CameraShake.trigger(BUFFED_CAMERA_SHAKE_SECONDS, BUFFED_CAMERA_SHAKE_STUDS)
 	end
 
 	if not monsterModel then
@@ -376,15 +391,16 @@ local function showResult(monsterModel, damage, isCrit, died, isComboHit)
 	if died then
 		HitEffects.playDeath(monsterModel)
 	else
-		HitEffects.playHit(monsterModel, isCrit, isComboHit and HEAVY_HITSTOP_SECONDS or nil)
+		HitEffects.playHit(monsterModel, isCrit, holdSeconds)
 	end
 end
 
 -- 20-2b: 원거리(활·힐러) 발사 즉시 신호 - 투사체 시각을 여기서 바로 시작한다. 피해
 -- 판정(맞았는지 자체를 포함)은 서버가 도달 시점에 따로 계산해 attackResult로 보낸다 -
 -- 이 핸들러는 "쐈다"만 알 뿐 결과를 모른다(그래서 onArrive 콜백이 없다 - 그냥 날아가는
--- 모습만 보여준다).
-attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit)
+-- 모습만 보여준다). isBuffedShot(20-5 [1]) - 백스텝샷이 적용된 화살이면 Projectiles가
+-- 굵고 밝은 변형으로 그린다.
+attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit, isBuffedShot)
 	local classId = player:GetAttribute("ClassId")
 	local projectileKind = ProjectileConfig.kindByClass[classId]
 	if not projectileKind then
@@ -401,7 +417,7 @@ attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit)
 		if not targetHead or not muzzle then
 			return -- 발사 시점에 대상이 이미 사라졌다(드문 경우) - 보여줄 화살 자체가 없다.
 		end
-		Projectiles.fire(projectileKind, muzzle, targetHead.Position, isCrit)
+		Projectiles.fire(projectileKind, muzzle, targetHead.Position, isCrit, isBuffedShot and "empowered" or "normal")
 	end)
 end)
 
@@ -409,9 +425,9 @@ end)
 -- 보내주므로 똑같이 즉시 표시한다(더 이상 클라가 따로 늦출 필요가 없다 - 20-2b 이전엔
 -- 여기서 투사체 도착을 기다렸지만, 이제 그 기다림 자체를 서버가 이미 하고 왔다).
 -- missed(20-2b)면 빗나간 것 - 아무 이펙트도 재생하지 않는다.
-attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, isComboHit, missed)
+attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, isComboHit, missed, isBuffedShot)
 	if missed then
 		return
 	end
-	showResult(monsterModel, damage, isCrit, died, isComboHit)
+	showResult(monsterModel, damage, isCrit, died, isComboHit, isBuffedShot)
 end)
