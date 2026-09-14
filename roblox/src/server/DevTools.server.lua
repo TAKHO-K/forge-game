@@ -185,8 +185,18 @@ local function measure(player, stageOverride)
 
 	local loadout = BalanceSim.buildLoadoutFromEquipment(classId, level, weapon.level, weapon.grade, equipment)
 	local monsterAttack = BalanceSim.getMonsterAttack(stage, "tier1")
+	local monsterHp = BalanceSim.getMonsterHp(stage, "tier1")
 	local surviveHits, dmgPerHit = BalanceSim.getSurviveHits(loadout, monsterAttack)
 	local autoAttack60 = BalanceSim.simulateAutoAttack(loadout, 60)
+
+	-- 20-7: 순수 평타(비행시간·콤보 카운터 반영) / 실전 로테이션(Q+E) / 광역(동시 2마리 - 격자
+	-- 64stud·어그로 25.6·리쉬 38.4 관계상 한 플레이어가 동시에 끌 수 있는 실질 최대치) /
+	-- tier1 1마리 처치 시간(새 대상으로 돌아서는 회전 지연 포함) - 전부 BalanceSim.simulateCombat.
+	local auto60 = BalanceSim.simulateCombat(loadout, { useSkills = false })
+	local rotation60 = BalanceSim.simulateCombat(loadout, { useSkills = true })
+	local aoe60 = BalanceSim.simulateCombat(loadout, { useSkills = true, targetCount = 2 })
+	local killAuto = BalanceSim.simulateCombat(loadout, { useSkills = false, targetHp = monsterHp, durationSeconds = 600, turnDelaySeconds = 0.125 })
+	local killRotation = BalanceSim.simulateCombat(loadout, { useSkills = true, targetHp = monsterHp, durationSeconds = 600, turnDelaySeconds = 0.125 })
 
 	print(("[DevTools] === %s 실측 (직업=%s, 레벨=%d, 무기등급=%s, 강화=+%d, 스테이지=%d) ==="):format(
 		player.Name, classId, level, ArmorData.gradeOrder[(weapon.grade or 0) + 1] or tostring(weapon.grade), weapon.level, stage))
@@ -194,8 +204,18 @@ local function measure(player, stageOverride)
 		loadout.atk, loadout.defense, loadout.maxHp, loadout.attackCooldown))
 	print(("[DevTools] tier1 몬스터 평타(스테이지%d 적용)=%.3f -> 실제 피해=%.3f/대 -> 생존 타수=%.2f대"):format(
 		stage, monsterAttack, dmgPerHit, surviveHits))
-	print(("[DevTools] 60초 순수 평타 총딜(스킬 없음)=%.1f (%.1f회 타격, 평균 %.2f/타)"):format(
-		autoAttack60.totalDamage, autoAttack60.hits, autoAttack60.avgHit))
+	print(("[DevTools] 60초 순수 평타 총딜(평균 근사)=%.1f (%.1f회 타격, 평균 %.2f/타) / 시뮬레이션=%.1f (%d회)"):format(
+		autoAttack60.totalDamage, autoAttack60.hits, autoAttack60.avgHit, auto60.totalDamage, auto60.autoHits))
+	local skillParts = {}
+	for name, casts in pairs(rotation60.casts) do
+		table.insert(skillParts, ("%s×%d=%.1f"):format(name, casts, rotation60.skillDamage[name] or 0))
+	end
+	table.sort(skillParts)
+	print(("[DevTools] 60초 실전 로테이션(Q+E) 단일 총딜=%.1f (평타 %.1f + 스킬 %.1f: %s)"):format(
+		rotation60.totalDamage, rotation60.autoDamage, rotation60.skillDamageTotal, table.concat(skillParts, ", ")))
+	print(("[DevTools] 60초 광역(동시 2마리) 총딜=%.1f"):format(aoe60.totalDamage))
+	print(("[DevTools] tier1 1마리(HP %.1f) 처치 시간: 평타만=%.2f초(%d타), 로테이션=%.2f초"):format(
+		monsterHp, killAuto.killTime or -1, killAuto.autoHits, killRotation.killTime or -1))
 end
 
 -- "/gg anchor [classId]" - classId를 주면 먼저 그 직업으로 전환한 뒤 앵커 조건을 건다.
