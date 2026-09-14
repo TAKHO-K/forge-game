@@ -67,11 +67,32 @@ end
 -- 호출부(AttackServer.server.lua)가 BuffState에서 읽어 넘긴다. 이 함수 자체는 BuffState를
 -- 모른다(공유 모듈이 서버 전용 상태를 직접 참조하면 안 된다) - 순수하게 "확률에 더할 값"만
 -- 받는다. 기본 0이라 기존 2-인자 호출부(SkillServer.server.lua 등)는 그대로 동작한다.
-function PlayerCombat.calcDamage(base, classId, critRateBonus)
+-- forceCrit·critDmgBonus(20-6, 쌍검 Q 확정 치명타) - RNG 롤 자체를 건너뛰고 무조건
+-- 치명타로 처리하거나(forceCrit), 치명타 피해율에 값을 더한다(critDmgBonus, PRD 4.3
+-- "확률 100% 초과분은 피해율로 전환" - resolveGuaranteedCrit이 둘 중 하나만 세팅해서 넘긴다).
+-- 기본값 둘 다 false/0이라 기존 4-인자 이하 호출부는 그대로 동작한다.
+function PlayerCombat.calcDamage(base, classId, critRateBonus, forceCrit, critDmgBonus)
 	local class = ClassData.classes[classId]
-	local isCrit = critRng:NextNumber() < class.critRate + (critRateBonus or 0)
-	local damage = isCrit and base * class.critDmg or base
+	local isCrit = forceCrit or (critRng:NextNumber() < class.critRate + (critRateBonus or 0))
+	local damage = isCrit and base * (class.critDmg + (critDmgBonus or 0)) or base
 	return damage, isCrit
+end
+
+-- 확정 치명타 버프(20-6) 해석 - 호출부(AttackServer/SkillServer)가 BuffState.get으로 버프
+-- 활성 여부만 확인해 isActive로 넘긴다(이 모듈은 BuffState를 모른다, 위 calcDamage와 같은
+-- 원칙). 유효 치명타확률(클래스 기본값 + critRateBonus)이 100%를 넘겼으면 강제 발동 대신
+-- 치명타 피해율 보너스로 전환한다(PRD 4.3) - calcDamage에 넘길 (forceCrit, critDmgBonus)
+-- 쌍을 돌려준다.
+function PlayerCombat.resolveGuaranteedCrit(classId, isActive, critRateBonus)
+	if not isActive then
+		return false, 0
+	end
+	local class = ClassData.classes[classId]
+	local effectiveCritRate = class.critRate + (critRateBonus or 0)
+	if effectiveCritRate >= 1.0 then
+		return false, CombatConfig.guaranteedCritOverflowBonus
+	end
+	return true, 0
 end
 
 -- 클래스별 유효 사거리(19-2) = 기본 사거리 × 클래스 배율(ClassData.rangeMultiplier).

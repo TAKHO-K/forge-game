@@ -13,6 +13,7 @@ local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local SummonState = require(script.Parent.SummonState)
 
 -- 클라이언트 체력바(PlayerHealthBar.client.lua)는 Humanoid.Health가 아니라 이 Attribute를
 -- 읽는다 - PlayerState가 유일한 HP 소스이므로 HP가 바뀌는 모든 지점에서 이걸 같이 불러야 한다.
@@ -319,8 +320,21 @@ RunService.Heartbeat:Connect(function(dt)
 				elseif data.isBoss then
 					tryBossAttack(model, data, position, target, targetRoot, dt)
 				else
-					stepToward(model, position, targetRoot.Position, data.moveSpeedStuds, dt)
-					tryAttack(model, data, position, target, targetRoot)
+					-- 쌍검 Q 그림자분신(20-6 [2]) - "이미 쫓기는 중인" 몹의 방향만 분신 쪽으로
+					-- 돌린다(도발이지 신규 어그로 획득이 아니다 - idle→chasing 진입은 위에서
+					-- 항상 실제 플레이어 거리만 본다, 웹 core/aggro.js의 같은 원칙을 재사용).
+					-- aiTarget 자체는 절대 바꾸지 않는다 - 분신이 소멸하면 다음 틱에 이 조회가
+					-- 그냥 nil을 돌려줘 실제 플레이어로 자연히 돌아온다(분신을 직접 참조하는
+					-- 상태가 MonsterState 어디에도 남지 않으므로, 지시 [1]이 우려한 "소환체
+					-- 소멸 시 nil 참조" 사고 자체가 구조적으로 생기지 않는다).
+					local decoyPosition = SummonState.getPosition(target, "dualbladeDecoy")
+					stepToward(model, position, decoyPosition or targetRoot.Position, data.moveSpeedStuds, dt)
+					if not decoyPosition then
+						tryAttack(model, data, position, target, targetRoot)
+					end
+					-- 분신 쪽으로 도는 동안(decoyPosition ~= nil)은 다가가 제자리에 머물 뿐
+					-- 아무에게도 피해를 주지 않는다(PRD 4.3 "적을 도발해 어그로 유지" - 분신은
+					-- 피격판정이 없다, 웹 main.js의 "target.isPlayer일 때만 데미지" 분기와 같다).
 				end
 			elseif state == "returning" then
 				if (position - home).Magnitude <= 0.5 then

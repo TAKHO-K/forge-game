@@ -40,6 +40,14 @@ local function notify(player, buffId, buff)
 		player:SetAttribute("RangeMultiplier", buff and buff.rangeMultiplier or 1)
 	end
 
+	-- 딜링모드(20-6 [6], 힐러 E) - HUD(PlayerHealthBar.client.lua)가 "켜져 있는지가 항상
+	-- 명확히 보여야 한다"(지시)는 조건을 체력바 자체의 색/테두리로 만족시키려면 서버 전용인
+	-- BuffState를 직접 못 읽는 그 스크립트에 Attribute로 올려줘야 한다 - 공속 배율·사거리
+	-- 배율과 같은 이유.
+	if buffId == "dealingMode" then
+		player:SetAttribute("DealingModeActive", buff ~= nil)
+	end
+
 	if buff then
 		buffUpdate:FireClient(player, buffId, {
 			active = true,

@@ -19,12 +19,15 @@ local SkillCombat = require(ReplicatedStorage.Shared.SkillCombat)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
+local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
 local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
+local SummonState = require(script.Parent.SummonState)
 
 local skillRequest = Instance.new("RemoteEvent")
 skillRequest.Name = "SkillRequest"
@@ -58,13 +61,23 @@ end
 -- 몬스터 하나를 때린다 - 데미지 계산(계수×atk, 치명타는 calcDamage가 판정) + 적용 + 죽음
 -- 처리(CombatResolution, AttackServer와 같은 경로). 여러 대상을 때리는 Q/E가 공유한다.
 -- coefficient는 이미 "이번 타격 1회분"이다(E는 호출부가 tickCount로 미리 나눠서 넘긴다).
-local function strikeTarget(player, classId, atk, target, coefficient, attackerStage)
+-- forceCrit·critDmgBonus(20-6, 쌍검 Q 확정 치명타) - 기본 nil이라 기존 호출부(대검 Q/E,
+-- 이 아래 castLineAttack/castCircleChannel)는 그대로 동작한다.
+local function strikeTarget(player, classId, atk, target, coefficient, attackerStage, forceCrit, critDmgBonus)
 	local base = atk * coefficient
-	local damage, isCrit = PlayerCombat.calcDamage(base, classId)
+	local damage, isCrit = PlayerCombat.calcDamage(base, classId, nil, forceCrit, critDmgBonus)
 	local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
 	MonsterSpawner.updateHpLabel(target)
 	CombatResolution.resolveHit(player, target, isDead)
 	return { target = target, damage = damage, isCrit = isCrit, isDead = isDead }
+end
+
+-- 쌍검 Q 확정 치명타(20-6) 해석 - BuffState 조회는 이 서버 스크립트에서만 하고, 실제
+-- forceCrit/critDmgBonus 판단은 PlayerCombat.resolveGuaranteedCrit(순수 함수)에 맡긴다
+-- (AttackServer.server.lua의 평타 경로도 똑같이 이 함수를 부른다 - 계산 지점을 하나로 유지).
+local function resolveGuaranteedCrit(player, classId)
+	local isActive = BuffState.get(player, "guaranteedCrit") ~= nil
+	return PlayerCombat.resolveGuaranteedCrit(classId, isActive, 0)
 end
 
 -- 후보 몬스터 중 캐스터와 같은 구역(ZoneBounds) 안에 있는 것만 남긴다 - AttackServer의
@@ -245,6 +258,175 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 	humanoid.WalkSpeed = originalWalkSpeed
 end
 
+-- 그림자분신용 반투명 복제(20-6 [2], 지시 "새 모델을 만들지 마라. 기존 캐릭터를
+-- 복제하거나 단순 도형으로 대체해라" - 복제를 택했다). Script/LocalScript는 전부 지운다
+-- (Animate·Health 등 원본 캐릭터 전용 스크립트가 복제본에서 그대로 돌면 예측 못 할
+-- 부작용이 생길 수 있다 - 분신은 순수 정적 장식이라 스크립트가 전혀 필요 없다). 모든
+-- BasePart를 Anchor해 물리 시뮬레이션 없이 클론 당시 포즈 그대로 고정한다("그 자리에"
+-- 분신 생성 - PRD 4.3) - 그래서 별도 위치 지정도 필요 없다(clone이 원본과 같은 CFrame을
+-- 그대로 들고 있다). CanCollide/CanQuery를 끄는 이유는 실제 캐릭터 이동·Raycast(SkillServer
+-- 관통돌진 담장 판정 등)를 방해하면 안 되기 때문 - 몬스터의 목표 지점으로만 쓰인다.
+local DECOY_MIN_TRANSPARENCY = 0.5
+
+local function buildDecoyModel(character)
+	-- 플레이어 Character는 기본적으로 Archivable=false다(로블록스 기본값) - 이 상태로는
+	-- Clone()이 에러 없이 조용히 nil을 돌려준다(실기 검증 중 발견 - "attempt to index nil
+	-- with 'GetDescendants'"로 재현됨). 복제하는 동안만 잠깐 true로 바꿨다가 원래대로
+	-- 되돌린다 - 원본 캐릭터의 Archivable 값 자체를 바꾸는 게 목적이 아니다.
+	local originalArchivable = character.Archivable
+	character.Archivable = true
+	local decoy = character:Clone()
+	character.Archivable = originalArchivable
+	for _, inst in ipairs(decoy:GetDescendants()) do
+		if inst:IsA("Script") or inst:IsA("LocalScript") then
+			inst:Destroy()
+		elseif inst:IsA("BasePart") then
+			inst.Anchored = true
+			inst.CanCollide = false
+			inst.CanQuery = false
+			inst.Color = UIColors.classAccent.dualblade -- #A64DFF, 지시 원문 색 그대로
+			inst.Transparency = math.max(inst.Transparency, DECOY_MIN_TRANSPARENCY)
+		end
+	end
+	decoy.Name = "DualbladeDecoy"
+	decoy.PrimaryPart = decoy:FindFirstChild("HumanoidRootPart")
+	decoy.Parent = Workspace
+	return decoy
+end
+
+-- 그림자분신(쌍검 Q, 20-6 [2]) - 분신을 소환해 SummonState에 등록(생명주기는 그 모듈이
+-- 전담)하고, 같은 지속시간 동안 확정 치명타 버프를 건다(스킬 자체는 아무도 때리지 않는다 -
+-- PRD 4.3 "분신이 적을 도발해 어그로 유지"일 뿐 자체 피해가 없다, 20-6 [0] 확인).
+local function castSummonDecoy(player, slot, def, character)
+	local decoy = buildDecoyModel(character)
+	SummonState.spawn(player, def.summonId, decoy, def.durationSeconds)
+
+	BuffState.apply(player, "guaranteedCrit", {
+		durationSeconds = def.durationSeconds,
+		displayName = def.name,
+		colorName = "success",
+	})
+
+	skillCastResult:FireClient(player, slot, {
+		ok = true,
+		kind = "summon",
+		cooldownSeconds = def.cooldownSeconds,
+		durationSeconds = def.durationSeconds,
+		hits = {},
+	})
+end
+
+-- 난무(쌍검 E, 20-6 [3]) - 시전 시점에 고른 단일 대상을 tickCount번에 걸쳐 나눠 때린다
+-- (castCircleChannel과 같은 "채널링+틱분할" 뼈대를 재사용하되, 대상이 원 안 전원이 아니라
+-- 시전 시점에 고정된 하나뿐이라는 점만 다르다). 대상이 죽거나 사거리를 벗어나면 그 자리에서
+-- 멈춘다(재탐색하지 않는다 - SkillData.lua dualblade.E 주석 참고).
+local function castSingleChannel(player, slot, def, classId, atk, rootPart, attackerStage)
+	local candidates = filterSameZone(rootPart.Position, MonsterState.getAllModels())
+	local lockedTarget = AimPicker.pick(rootPart.Position, nil, def.rangeStuds, candidates)
+	if not lockedTarget then
+		reject(player, slot, "noTarget")
+		return
+	end
+
+	markCast(player, slot)
+	skillCastResult:FireClient(player, slot, {
+		ok = true,
+		kind = "channelStart",
+		cooldownSeconds = def.cooldownSeconds,
+		channelSeconds = def.channelSeconds,
+	})
+
+	local tickInterval = def.channelSeconds / def.tickCount
+	local perTickCoefficient = def.coefficient / def.tickCount
+
+	for tickIndex = 1, def.tickCount do
+		task.wait(tickInterval)
+
+		local character = player.Character
+		local rootNow = character and character:FindFirstChild("HumanoidRootPart")
+		if not rootNow then
+			return -- 캐스터가 사라졌다(사망·퇴장) - 조용히 멈춘다(castCircleChannel과 같은 가드)
+		end
+
+		if not (lockedTarget.Parent and MonsterState.getData(lockedTarget)) then
+			return -- 대상이 이미 죽었거나 사라졌다 - 남은 타격은 손실(재탐색 안 함)
+		end
+		local targetRoot = lockedTarget.PrimaryPart
+		if not targetRoot or (targetRoot.Position - rootNow.Position).Magnitude > def.rangeStuds then
+			return -- 대상이 사거리를 벗어났다
+		end
+
+		local forceCrit, critDmgBonus = nil, nil
+		if tickIndex <= (def.guaranteedCritHits or 0) then
+			forceCrit, critDmgBonus = resolveGuaranteedCrit(player, classId)
+		end
+
+		local hit = strikeTarget(player, classId, atk, lockedTarget, perTickCoefficient, attackerStage, forceCrit, critDmgBonus)
+
+		skillCastResult:FireClient(player, slot, {
+			ok = true,
+			kind = "flurryTick",
+			tickIndex = tickIndex,
+			tickCount = def.tickCount,
+			hits = { hit },
+		})
+
+		if hit.isDead then
+			return
+		end
+	end
+end
+
+-- 치유(힐러 Q, 20-6 [5]) - 결과 포맷 확장([4])의 첫 사용자: hits 배열 대신 self 필드
+-- ({healAmount, isCrit})를 보낸다. 기존 4종(대검 Q/E, 활 Q/E)은 이 필드를 아예 안 보내므로
+-- (위 함수들 그대로) 회귀 위험이 없다 - 클라(SkillInput.client.lua)도 kind로만 분기한다.
+local function castHeal(player, slot, def, classId)
+	markCast(player, slot)
+	local maxHp = PlayerState.getMaxHp(player)
+	local hp = PlayerState.getHp(player)
+	local baseHeal = maxHp * def.healPercentOfMaxHp
+	-- calcDamage를 그대로 쓰지 않는다 - 크리 롤(RNG 소스 하나로 통일)만 재사용하고, 배율은
+	-- SkillData의 critHealMultiplier(고정 2배, PRD 4.3)로 따로 곱한다. class.critDmg를 그대로
+	-- 썼다면 힐러 기준 1.8배가 나와 PRD 수치와 어긋난다.
+	local _, isCrit = PlayerCombat.calcDamage(baseHeal, classId)
+	local healAmount = isCrit and baseHeal * def.critHealMultiplier or baseHeal
+	local newHp = math.min(hp + healAmount, maxHp)
+	PlayerState.setHp(player, newHp)
+	player:SetAttribute("Hp", newHp) -- PlayerState가 유일한 HP 소스 - 바꾸는 모든 지점에서 동기화(MonsterAI.server.lua의 syncHud와 같은 원칙)
+
+	skillCastResult:FireClient(player, slot, {
+		ok = true,
+		kind = "heal",
+		cooldownSeconds = def.cooldownSeconds,
+		hits = {},
+		self = { healAmount = healAmount, isCrit = isCrit },
+	})
+end
+
+-- 딜링모드(힐러 E, 20-6 [6]) - 만료 없는 토글. 실제 체력 소모·평타 배율 적용은 여기서 하지
+-- 않는다(HealerDealingMode.server.lua가 Heartbeat로 소모를, AttackServer.server.lua가
+-- attackMultiplier를 각각 담당) - 이 함수는 BuffState를 켜고 끄는 스위치 역할만 한다.
+local function castToggle(player, slot, def)
+	local wasActive = BuffState.get(player, "dealingMode") ~= nil
+	if wasActive then
+		BuffState.clear(player, "dealingMode")
+	else
+		BuffState.apply(player, "dealingMode", {
+			attackMultiplier = def.attackMultiplier,
+			displayName = def.name,
+			colorName = "danger",
+		})
+	end
+
+	skillCastResult:FireClient(player, slot, {
+		ok = true,
+		kind = "toggle",
+		cooldownSeconds = def.cooldownSeconds,
+		active = not wasActive,
+		hits = {},
+	})
+end
+
 skillRequest.OnServerEvent:Connect(function(player, slot)
 	if slot ~= "Q" and slot ~= "E" then
 		return
@@ -294,6 +476,19 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 	elseif def.shape == "dash" then
 		markCast(player, slot)
 		castDashBuff(player, slot, def, rootPart)
+	elseif def.shape == "summon" then
+		markCast(player, slot)
+		castSummonDecoy(player, slot, def, character)
+	elseif def.shape == "singleChannel" then
+		-- castSingleChannel 자체가 대상을 못 찾으면 markCast 없이 거부한다(대상이 없으면
+		-- 쿨다운을 태우지 않는다 - "헛스윙도 쿨다운 소모" 원칙과 다른 지점이지만, 이 스킬은
+		-- 사거리 안에 아무도 없으면 시전 자체가 무의미해 되돌려주는 쪽이 낫다고 판단했다).
+		castSingleChannel(player, slot, def, classId, atk, rootPart, attackerStage)
+	elseif def.shape == "heal" then
+		castHeal(player, slot, def, classId)
+	elseif def.shape == "toggle" then
+		markCast(player, slot)
+		castToggle(player, slot, def)
 	end
 end)
 
@@ -301,4 +496,4 @@ Players.PlayerRemoving:Connect(function(player)
 	lastCastTick[player] = nil
 end)
 
-print("[forge-game] SkillServer 로드됨 - 대검 Q/E, 활 Q(속사)/E(백스텝샷) 판정 활성")
+print("[forge-game] SkillServer 로드됨 - 대검 Q/E, 활 Q/E, 쌍검 Q(그림자분신)/E(난무), 힐러 Q(치유)/E(딜링모드) 판정 활성")

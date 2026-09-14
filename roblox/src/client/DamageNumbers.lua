@@ -18,7 +18,10 @@ local activeStacks = setmetatable({}, { __mode = "k" })
 -- 그대로 두고(같은 흰색 계열) 크기·폰트·모션만 바꿔 구분한다.
 local CRIT_SIZE_SCALE = 1.5
 
-function DamageNumbers.show(monsterModel, damage, isCrit)
+-- isHeal(20-6 [5], 힐러 Q) - 몬스터가 아니라 캐릭터(플레이어 자신)에 붙일 때도 그대로
+-- 쓴다("Head"를 갖고 있으면 대상 종류를 안 가린다). true면 녹색 "+숫자"로 표시한다 - 기본값
+-- false·생략이라 기존 4개 호출부(대검/활)는 그대로 동작한다.
+function DamageNumbers.show(monsterModel, damage, isCrit, isHeal)
 	local head = monsterModel and monsterModel:FindFirstChild("Head")
 	if not head then
 		return
@@ -43,8 +46,8 @@ function DamageNumbers.show(monsterModel, damage, isCrit)
 	local label = Instance.new("TextLabel")
 	label.BackgroundTransparency = 1
 	label.Size = UDim2.new(1, 0, 1, 0)
-	label.Text = NumberFormat.format(damage)
-	label.TextColor3 = Color3.fromRGB(255, 220, 60)
+	label.Text = (isHeal and "+" or "") .. NumberFormat.format(damage)
+	label.TextColor3 = isHeal and Color3.fromRGB(120, 230, 130) or Color3.fromRGB(255, 220, 60)
 	label.TextScaled = true
 	label.Font = isCrit and Enum.Font.GothamBlack or Enum.Font.GothamMedium
 	label.Parent = gui

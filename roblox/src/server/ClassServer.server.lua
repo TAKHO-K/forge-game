@@ -13,6 +13,7 @@ local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local BuffState = require(script.Parent.BuffState)
 local StuckArrowState = require(script.Parent.StuckArrowState)
+local SummonState = require(script.Parent.SummonState)
 
 local classSelectRequest = Instance.new("RemoteEvent")
 classSelectRequest.Name = "ClassSelectRequest"
@@ -49,6 +50,9 @@ classSelectRequest.OnServerEvent:Connect(function(player, classId)
 	-- 20-5 [2] - 이전 직업(활)으로 몬스터에 꽂아 둔 화살이 새 직업으로 넘어가거나 유령
 	-- 상태로 남으면 안 된다(위 BuffState.clearAll과 같은 자리, 같은 이유).
 	StuckArrowState.clearForPlayer(player)
+	-- 20-6 [1] - 이전 직업(쌍검)으로 소환해 둔 분신이 새 직업으로 넘어가거나 유령 상태로
+	-- 남으면 안 된다(위 둘과 같은 자리, 같은 이유 - 지시 [1] "직업을 바꾸면 즉시 소멸").
+	SummonState.clearAll(player)
 	print(("[forge-game] 클래스 선택: %s -> %s"):format(player.Name, classId))
 
 	-- 클래스 선택도 강화 결과와 같은 "되돌릴 수 없는 사건"이다(10-3 [2] - 10-2의 즉시저장

@@ -136,6 +136,45 @@ skillCastResult.OnClientEvent:Connect(function(slot, data)
 		playHits(data.hits)
 		-- 광역(대회전)에만 카메라 흔들림(지시 [4] - "돌진마다 흔들리면 멀미가 난다").
 		CameraShake.trigger(E_CAMERA_SHAKE_SECONDS, E_CAMERA_SHAKE_STUDS)
+	elseif data.kind == "summon" then
+		-- 그림자분신(20-6 [2]) - Model 자체는 서버가 만들어 Workspace에 Parent하는 순간
+		-- 모든 클라에 자동 복제된다(SkillServer.server.lua) - 여기선 소환 순간을 강조하는
+		-- 짧은 퍼짐 링 하나만 더한다(대검 회전베기의 expandingRing을 그대로 재사용).
+		local character = player.Character
+		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+		if rootPart then
+			SkillEffects.expandingRing(rootPart.Position, 4, color, 0.3)
+		end
+	elseif data.kind == "flurryTick" then
+		-- 난무(20-6 [3]) - 매 타격마다 대상 위치에 교차 베기 이펙트(지시 [3] "이펙트: 한 점에
+		-- 모이는 교차 베기").
+		local hit = data.hits[1]
+		if hit then
+			local targetRoot = hit.target.PrimaryPart
+			if targetRoot then
+				SkillEffects.crossSlash(targetRoot.Position, color, 0.2)
+			end
+			playHits(data.hits)
+		end
+	elseif data.kind == "heal" then
+		-- 치유(힐러 Q, 20-6 [5]) - hits가 아니라 self 필드를 읽는다([4] 결과 포맷 확장의
+		-- 첫 사용자). 자기 자신에게만 뜬다 - playHits를 안 쓴다(대상이 몬스터가 아니다).
+		local character = player.Character
+		if character and data.self then
+			DamageNumbers.show(character, data.self.healAmount, data.self.isCrit, true)
+			SkillEffects.healRise(character, color, 1.0)
+		end
+	elseif data.kind == "toggle" then
+		-- 딜링모드(힐러 E, 20-6 [6]) - 상태 표시는 BuffHud(아이콘)와 PlayerHealthBar(체력바
+		-- 테두리/색)가 서버 Attribute를 직접 구독해서 맡는다(둘 다 "서버가 유일한 진실"
+		-- 원칙) - 여기서는 켜지는 순간의 작은 강조 이펙트만 더한다.
+		if data.active then
+			local character = player.Character
+			local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+			if rootPart then
+				SkillEffects.expandingRing(rootPart.Position, 3, color, 0.25)
+			end
+		end
 	elseif data.kind == "selfBuff" then
 		-- 활 속사(20-2b [1][3]) - "버프 중 캐릭터 주변에 빠른 느낌의 잔상 또는 링. 과하게
 		-- 하지 마라"는 지시대로 은은한 발등 링 하나만 지속시간 내내 따라다닌다. 실제 배율

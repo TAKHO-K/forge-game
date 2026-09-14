@@ -120,4 +120,68 @@ function SkillEffects.selfBuffAura(character, radiusStuds, color, durationSecond
 	end)
 end
 
+-- 난무(쌍검 E, 20-6 [3]) 타격 이펙트 - "한 점에 모이는 교차 베기"(지시, 아이콘
+-- skill_dualblade_E의 X자 모티프와 맞춘다). 대상 위치에 X자로 겹친 얇은 파트 둘을 잠깐
+-- 밝혔다가 살짝 벌어지며 사라지게 한다 - tickCount번(최대 6번) 짧은 간격으로 반복 호출돼도
+-- 무겁지 않도록 파트 2개짜리로 가볍게 유지한다.
+local CROSS_SLASH_LENGTH_STUDS = 4.5
+local CROSS_SLASH_THICKNESS_STUDS = 0.2
+
+function SkillEffects.crossSlash(position, color, durationSeconds)
+	for _, angleDeg in ipairs({ 45, -45 }) do
+		local part = newGhostPart(Vector3.new(CROSS_SLASH_THICKNESS_STUDS, CROSS_SLASH_LENGTH_STUDS, CROSS_SLASH_THICKNESS_STUDS), color)
+		part.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(angleDeg))
+		part.Transparency = 0.1
+		TweenService:Create(part, TweenInfo.new(durationSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Transparency = 1,
+			Size = part.Size + Vector3.new(0, 1.2, 0),
+		}):Play()
+		task.delay(durationSeconds, function()
+			part:Destroy()
+		end)
+	end
+end
+
+-- 치유(힐러 Q, 20-6 [5]) - "8종 중 유일하게 뾰족한 곳이 없어야 한다"(지시, 아이콘 발주
+-- 기준과 같다). 부드럽게 위로 떠오르는 작은 구체 몇 개뿐 - 링도 잔상도 없다. color는
+-- classAccentColor()가 넘기는 힐러 직업색(UIColors.classAccent.healer, 이미 따뜻한 금색
+-- 계열)을 그대로 쓴다 - 별도 색을 새로 만들지 않는다.
+local HEAL_PARTICLE_COUNT = 5
+local HEAL_RISE_STUDS = 4
+local HEAL_PARTICLE_SIZE = Vector3.new(0.5, 0.5, 0.5)
+
+function SkillEffects.healRise(character, color, durationSeconds)
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then
+		return
+	end
+
+	for i = 1, HEAL_PARTICLE_COUNT do
+		local offset = Vector3.new((math.random() - 0.5) * 3, 0, (math.random() - 0.5) * 3)
+		local part = Instance.new("Part")
+		part.Shape = Enum.PartType.Ball
+		part.Anchored = true
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CastShadow = false
+		part.Material = Enum.Material.Neon
+		part.Color = color
+		part.Size = HEAL_PARTICLE_SIZE
+		part.Transparency = 0.2
+		part.Position = rootPart.Position + offset
+		part.Parent = Workspace
+
+		local startDelay = (i - 1) * 0.05
+		task.delay(startDelay, function()
+			TweenService:Create(part, TweenInfo.new(durationSeconds, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+				Position = part.Position + Vector3.new(0, HEAL_RISE_STUDS, 0),
+				Transparency = 1,
+			}):Play()
+			task.delay(durationSeconds, function()
+				part:Destroy()
+			end)
+		end)
+	end
+end
+
 return SkillEffects

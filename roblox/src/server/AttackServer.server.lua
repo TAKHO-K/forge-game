@@ -168,6 +168,10 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		base *= CombatConfig.comboHitMultiplier
 	end
 
+	-- 딜링모드(힐러 E, 20-6 [6], PRD 4.3 "평타 배율을 딜로 환산") - 버프가 없으면
+	-- BuffState.getField가 기본값 1을 돌려줘 다른 3직업은 기존과 완전히 동일하게 계산된다.
+	base *= BuffState.getField(player, "dealingMode", "attackMultiplier", 1)
+
 	-- 활 백스텝샷(20-2b [1][4], PRD-forge-game.md 4.3) - "다음 평타 5발에 마법피해 추가 +
 	-- 그 5발 치명타 확률 +30%p". 버프가 없으면 두 값 다 0이라 기존과 똑같이 계산된다.
 	-- 이 평타 하나에 실제로 적용된 순간에만 충전을 소모한다(맞았는지와 무관 - 쐈다는
@@ -180,7 +184,12 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		BuffState.consumeCharge(player, "backstepShotBuff")
 	end
 
-	local damage, isCrit = PlayerCombat.calcDamage(base, classId, critRateBonus)
+	-- 쌍검 Q 확정 치명타(20-6, PRD 4.3 "5초간 기본공격 확정 치명타") - 평타 경로도 스킬
+	-- 경로(SkillServer.server.lua)와 같은 PlayerCombat.resolveGuaranteedCrit을 공유한다.
+	local isGuaranteedCritActive = BuffState.get(player, "guaranteedCrit") ~= nil
+	local forceCrit, critDmgBonus = PlayerCombat.resolveGuaranteedCrit(classId, isGuaranteedCritActive, critRateBonus)
+
+	local damage, isCrit = PlayerCombat.calcDamage(base, classId, critRateBonus, forceCrit, critDmgBonus)
 	local attackerStage = PlayerProfile.getInfiniteStage(player) or 1
 
 	-- 20-5 [1] 시각 구분용 - 백스텝샷이 이 평타에 실제로 적용됐는가("스킬이다"가 한눈에

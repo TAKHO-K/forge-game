@@ -60,6 +60,11 @@ local DANGER_FILL_COLOR = Color3.fromRGB(255, 30, 30)
 -- 자동회복 중 표시(17-1) - 서버 Regenerating Attribute가 켜져 있을 때만 초록 계열로
 -- 바꾼다. 위험 상태(isDanger)가 더 급한 정보라 danger가 우선한다(아래 RenderStepped 참고).
 local REGEN_FILL_TOP, REGEN_FILL_BOTTOM = Color3.fromRGB(120, 230, 130), Color3.fromRGB(56, 160, 70)
+-- 딜링모드 중 표시(20-6 [6], 힐러 E) - "켜져 있는지가 항상 명확히 보여야 한다"(지시) +
+-- "체력이 줄고 있다는 것도 읽혀야 한다"를 한 번에 만족시키려고 체력바 자체를 호박색으로
+-- 바꾸고 테두리를 계속 맥동시킨다(dangerStroke와 같은 펄스 기법 재사용, 새 애니메이션
+-- 방식을 만들지 않는다). danger보다는 아래, regen/평시보다는 위 우선순위(RenderStepped 참고).
+local DEALING_MODE_FILL_TOP, DEALING_MODE_FILL_BOTTOM = Color3.fromRGB(255, 176, 59), Color3.fromRGB(184, 110, 20)
 
 local player = Players.LocalPlayer
 
@@ -119,6 +124,15 @@ dangerStroke.Thickness = 3
 dangerStroke.Color = Color3.fromRGB(255, 60, 60)
 dangerStroke.Transparency = 1
 dangerStroke.Parent = container
+
+-- 딜링모드 펄스 테두리(20-6 [6]) - dangerStroke와 같은 자리, 같은 두께. 위험 상태가 아닐
+-- 때만 보인다(RenderStepped에서 danger가 우선).
+local dealingModeStroke = Instance.new("UIStroke")
+dealingModeStroke.Name = "DealingModeStroke"
+dealingModeStroke.Thickness = 3
+dealingModeStroke.Color = DEALING_MODE_FILL_TOP
+dealingModeStroke.Transparency = 1
+dealingModeStroke.Parent = container
 
 local fill = Instance.new("Frame")
 fill.Name = "Fill"
@@ -240,14 +254,25 @@ updateTicks()
 RunService.RenderStepped:Connect(function()
 	if isDanger then
 		-- 위험 상태에선 그라디언트를 끄고 경고색 단색으로 덮는다 - 깜빡이는 빨강이
-		-- 두 톤 그라디언트보다 눈에 더 잘 띈다.
+		-- 두 톤 그라디언트보다 눈에 더 잘 띈다. 딜링모드 중이어도 위험이 더 급한 정보라
+		-- 여기서 덮는다(우선순위: danger > 딜링모드 > 회복 > 평시).
 		fillGradient.Enabled = false
 		fill.BackgroundColor3 = DANGER_FILL_COLOR
 		local pulse = (math.sin(os.clock() * 10) + 1) / 2
 		dangerStroke.Transparency = 1 - pulse
+		dealingModeStroke.Transparency = 1
+	elseif player:GetAttribute("DealingModeActive") then
+		fillGradient.Enabled = true
+		dangerStroke.Transparency = 1
+		fillGradient.Color = ColorSequence.new(DEALING_MODE_FILL_TOP, DEALING_MODE_FILL_BOTTOM)
+		-- danger보다 느린 맥동 - "체력이 계속 줄고 있다"는 지속 경고이지 "당장 죽는다"는
+		-- 급박함이 아니므로 같은 세기로 깜빡이면 danger와 헷갈린다.
+		local pulse = (math.sin(os.clock() * 4) + 1) / 2
+		dealingModeStroke.Transparency = 0.4 - pulse * 0.4
 	else
 		fillGradient.Enabled = true
 		dangerStroke.Transparency = 1
+		dealingModeStroke.Transparency = 1
 		if player:GetAttribute("Regenerating") then
 			fillGradient.Color = ColorSequence.new(REGEN_FILL_TOP, REGEN_FILL_BOTTOM)
 		else
