@@ -31,6 +31,18 @@ local function activeClassState(profile)
 	return profile.classId and profile.classes[profile.classId]
 end
 
+-- 등급 하나의 ArmorData.gradeOrder 안 위치(1부터 시작). 목록에 없는 등급이면 nil -
+-- 오타·유효하지 않은 값을 조용히 걸러내는 신호로 쓴다(sellItemsBulkUpTo·
+-- setBulkSellCutoffGrade 공용, 20-3).
+local function gradeIndex(gradeId)
+	for i, id in ipairs(ArmorData.gradeOrder) do
+		if id == gradeId then
+			return i
+		end
+	end
+	return nil
+end
+
 -- 로드 직후(PlayerProfile.init)와 직업 전환 직후(setClassId) 둘 다 "지금 활성 직업의
 -- 상태를 Attribute에 그대로 반영"해야 하므로 공유한다. classId가 nil이면(아직 선택 전)
 -- 직업별 Attribute는 건드리지 않는다 - ClassSelectUI가 빈 문자열로 이미 선택 UI를 띄운다.
@@ -64,6 +76,7 @@ end
 function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
+	player:SetAttribute("BulkSellCutoffGrade", profile.bulkSellCutoffGrade)
 	syncActiveClassAttributes(player, profile)
 end
 
@@ -172,6 +185,7 @@ function PlayerProfile.setClassId(player, classId)
 	end
 	profile.classId = classId
 	syncActiveClassAttributes(player, profile)
+	InventorySync.push(player, profile)
 end
 
 function PlayerProfile.getInfiniteStage(player)
@@ -425,24 +439,24 @@ function PlayerProfile.sellItem(player, index)
 end
 
 -- 서버만 호출한다(13-1). "gradeId 등급 이하 전부" 일괄 판매 - ArmorData.gradeOrder의 순서를
--- 기준으로 삼는다(지금은 normal/rare 2종뿐이라 gradeId="normal"이면 일반만, "rare"면 전부).
--- 잠긴 아이템은 대상에서 제외한다. 파는 아이템 목록·총 골드를 먼저 전부 계산한 뒤 한 번에
--- 반영한다(중간에 task.wait 등 yield 지점이 없다 - 다른 요청이 이 사이에 끼어들 수 없으므로
--- "절반만 팔리는" 상태가 구조적으로 생기지 않는다). 반환값: (판매 개수, 총 골드).
+-- 기준으로 삼는다. ArmorData.bulkSellMaxGrade보다 높은 등급을 gradeId로 보내면(클라이언트가
+-- 목록에 안 보여주는 것과 별개로) 여기서도 거부한다(20-3 - 클라이언트가 보낸 값을 그대로
+-- 믿지 않는다는 원칙, 유물 이상은 어떤 경로로도 일괄판매되지 않는다).
+-- 잠긴 아이템은 대상에서 제외한다. 착용 중인 장비(classState.equipment)는 이 반복이 아예
+-- 모르는 자리다 - profile.inventory 배열만 순회하므로 착용품은 구조적으로 항상 제외된다
+-- (나중에 인벤토리·착용 자료구조를 합치려는 시도가 있다면 이 보호가 사라지지 않게 유의).
+-- 파는 아이템 목록·총 골드를 먼저 전부 계산한 뒤 한 번에 반영한다(중간에 task.wait 등
+-- yield 지점이 없다 - 다른 요청이 이 사이에 끼어들 수 없으므로 "절반만 팔리는" 상태가
+-- 구조적으로 생기지 않는다). 반환값: (판매 개수, 총 골드).
 function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 	local profile = profiles[player]
 	if not profile then
 		return 0, 0
 	end
 
-	local cutoffIndex
-	for i, id in ipairs(ArmorData.gradeOrder) do
-		if id == gradeId then
-			cutoffIndex = i
-			break
-		end
-	end
-	if not cutoffIndex then
+	local cutoffIndex = gradeIndex(gradeId)
+	local maxIndex = gradeIndex(ArmorData.bulkSellMaxGrade)
+	if not cutoffIndex or cutoffIndex > maxIndex then
 		return 0, 0
 	end
 
@@ -450,13 +464,7 @@ function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 	local totalGold = 0
 	local soldCount = 0
 	for _, item in ipairs(profile.inventory) do
-		local itemGradeIndex
-		for i, id in ipairs(ArmorData.gradeOrder) do
-			if id == item.grade then
-				itemGradeIndex = i
-				break
-			end
-		end
+		local itemGradeIndex = gradeIndex(item.grade)
 		if not item.locked and itemGradeIndex and itemGradeIndex <= cutoffIndex then
 			totalGold += Loot.getSellPrice(item)
 			soldCount += 1
@@ -474,6 +482,31 @@ function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 	player:SetAttribute("Gold", profile.gold)
 	InventorySync.push(player, profile)
 	return soldCount, totalGold
+end
+
+function PlayerProfile.getBulkSellCutoffGrade(player)
+	local profile = profiles[player]
+	return profile and profile.bulkSellCutoffGrade
+end
+
+-- 서버만 호출한다(InventoryServer의 BulkSellCutoffRequest 처리 직후, 20-3). 이 선택 자체는
+-- 되돌릴 수 있는 사건이라(잠금·착용해제와 같은 부류) 즉시저장하지 않는다 - 주기저장·퇴장
+-- 저장에 맡긴다. ArmorData.bulkSellMaxGrade보다 높은 등급이나 존재하지 않는 등급은 조용히
+-- 거부한다(false) - sellItemsBulkUpTo와 같은 상한을 여기서도 강제해야, 클라이언트 목록에
+-- 없는 값이 어떤 경로로든 저장되는 일이 없다.
+function PlayerProfile.setBulkSellCutoffGrade(player, gradeId)
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	local index = gradeIndex(gradeId)
+	local maxIndex = gradeIndex(ArmorData.bulkSellMaxGrade)
+	if not index or index > maxIndex then
+		return false
+	end
+	profile.bulkSellCutoffGrade = gradeId
+	player:SetAttribute("BulkSellCutoffGrade", gradeId)
+	return true
 end
 
 -- 서버만 호출한다(13-1). 잠금은 착용/해제와 같은 되돌릴 수 있는 사건이라(다시 누르면 그만)
@@ -539,6 +572,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.classes = deepCopy(snapshot.classes)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)
+	InventorySync.push(player, profile)
 end
 
 -- 캐릭터 레벨을 경험치로 직접 지정한다(addCharacterExp와 달리 "더하기"가 아니라 "그
@@ -564,6 +598,7 @@ function PlayerProfile.setEquippedDirect(player, part, item)
 		return
 	end
 	classState.equipment[part] = item
+	InventorySync.push(player, profile)
 	if part == "shoes" then
 		PlayerProfile.refreshMovementSpeed(player)
 	elseif part == "armor" then

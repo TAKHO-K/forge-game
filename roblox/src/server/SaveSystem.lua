@@ -66,6 +66,11 @@ local function defaultProfile()
 		gold = 0,
 		inventorySlots = SaveConfig.defaultInventorySlots,
 
+		-- 일괄판매 기준 등급(20-3) - 계정 전체 공유(gold·inventory와 같은 층). 매번 다시
+		-- 고르게 하지 않으려고 저장한다. 가장 안전한 기본값(일반)으로 시작한다 - 처음
+		-- 켰을 때 실수로 비싼 등급까지 팔리는 사고를 막는다.
+		bulkSellCutoffGrade = "normal",
+
 		-- 인벤토리 실제 내용물(12-1). 갑옷 드랍만 담는다 - { grade = "normal"/"rare",
 		-- dropStage = 주운 스테이지 }. 슬롯 수(inventorySlots)와 분리된 필드다 - 슬롯 수는
 		-- "몇 칸인가"고 이건 "무엇이 들었는가"다.
@@ -93,14 +98,15 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 14단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지금은 15단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
 -- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
 -- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입) -> 7(캐릭터 레벨 도입 +
 -- 아이템 itemLevel 필드 도입) -> 8(보스 처치 기록 bestBossCleared 도입, 15-1)
 -- -> 9(equipment.boots -> shoes 이름 정리, 16-6) -> 10(아이템 part 필드 소급 도입, 16-6)
 -- -> 11(캐릭터 레벨 EXP 곡선 26+ 구간 재보정, 17-1) -> 12(아이템 tierIndex 필드 소급
 -- 도입, 17-1) -> 13(characterExp·무기·장비 3부위·무한 모드 진행도를 classes[classId]
--- 아래로 직업별 분리, 19-1) -> 14(무기 등급 grade 필드 도입, 20-1).
+-- 아래로 직업별 분리, 19-1) -> 14(무기 등급 grade 필드 도입, 20-1) -> 15(일괄판매 기준
+-- 등급 선택 bulkSellCutoffGrade 필드 도입, 20-3).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -325,6 +331,13 @@ local function migrate(data)
 		data.version = 14
 	end
 
+	if data.version < 15 then
+		-- 20-3: 일괄판매 기준 등급 선택 신설. v14까지는 이 선택 개념 자체가 없었다(항상
+		-- "잠긴 것만 빼고 전부") - 가장 안전한 기본값(일반)으로 시작한다.
+		data.bulkSellCutoffGrade = data.bulkSellCutoffGrade or "normal"
+		data.version = 15
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -341,6 +354,7 @@ local function isValidProfile(data)
 		or type(data.inventorySlots) ~= "number"
 		or type(data.inventory) ~= "table"
 		or type(data.gamepasses) ~= "table"
+		or type(data.bulkSellCutoffGrade) ~= "string"
 	then
 		return false
 	end

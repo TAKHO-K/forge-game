@@ -22,6 +22,12 @@ local lockRequest = Instance.new("RemoteEvent")
 lockRequest.Name = "LockRequest"
 lockRequest.Parent = ReplicatedStorage
 
+-- 일괄판매 기준 등급 선택(20-3). gradeId(string) 필요 - ArmorData.bulkSellMaxGrade
+-- 이하인지는 PlayerProfile.setBulkSellCutoffGrade가 검증한다.
+local bulkSellCutoffRequest = Instance.new("RemoteEvent")
+bulkSellCutoffRequest.Name = "BulkSellCutoffRequest"
+bulkSellCutoffRequest.Parent = ReplicatedStorage
+
 -- action: "equip"(arg=index, 인벤토리 위치) 또는 "unequip"(arg=part, 16-6부터 부위를
 -- 명시해야 한다 - 갑옷 하나뿐이던 12-1 시절엔 필요 없었지만 이제 어느 슬롯을 벗을지
 -- 클라이언트가 골라야 한다). EquipSlots.order에 없는 문자열은 PlayerProfile.unequipItem이
@@ -91,4 +97,15 @@ lockRequest.OnServerEvent:Connect(function(player, index, locked)
 		return
 	end
 	PlayerProfile.setItemLocked(player, math.floor(index), locked)
+end)
+
+-- 일괄판매 기준 등급 선택도 잠금과 같은 되돌릴 수 있는 사건이다 - 즉시저장하지 않는다.
+bulkSellCutoffRequest.OnServerEvent:Connect(function(player, gradeId)
+	if not PlayerProfile.getProfile(player) then
+		return
+	end
+	if type(gradeId) ~= "string" then
+		return
+	end
+	PlayerProfile.setBulkSellCutoffGrade(player, gradeId)
 end)

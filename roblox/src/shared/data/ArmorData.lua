@@ -40,6 +40,12 @@ return {
 	-- Loot.rollBossArmorDrop의 "마지막 항목", 인벤토리 일괄판매 컷오프도 전부 이 배열을 본다.
 	gradeOrder = { "normal", "rare", "epic", "legendary", "relic", "ancient", "primordial" },
 
+	-- 일괄판매 기준 등급의 상한(지시 - 유물·고대·태초는 어떤 사용자 설정으로도 일괄판매
+	-- 대상이 되지 않는다. 귀한 등급을 확인창 한 번의 오클릭으로 잃는 사고를 막는다).
+	-- PlayerProfile.sellItemsBulkUpTo가 서버 쪽 강제 상한으로, InventoryUI.client.lua가
+	-- 선택지 목록을 이 등급까지만 만드는 데 같이 쓴다(단일 출처).
+	bulkSellMaxGrade = "legendary",
+
 	-- defenseGradeMultiplier - 몬스터 tier 공정성 계산(MonsterData.lua, 16-6)의 입력이자
 	-- Loot.getArmorDefense의 갑옷 배율이다.
 	grades = {

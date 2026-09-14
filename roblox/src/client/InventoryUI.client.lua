@@ -38,6 +38,7 @@ local inventoryFull = ReplicatedStorage:WaitForChild("InventoryFull")
 local equipRequest = ReplicatedStorage:WaitForChild("EquipRequest")
 local sellRequest = ReplicatedStorage:WaitForChild("SellRequest")
 local lockRequest = ReplicatedStorage:WaitForChild("LockRequest")
+local bulkSellCutoffRequest = ReplicatedStorage:WaitForChild("BulkSellCutoffRequest")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -80,6 +81,27 @@ end
 local sortMode = "grade" -- "grade" | "level" | "part" - 클라 전용 표시 순서, 서버 왕복 없음.
 local SORT_MODES = { "grade", "level", "part" }
 local SORT_LABELS = { grade = "등급순", level = "레벨순", part = "부위순" }
+
+-- 일괄판매 기준 등급 선택지(20-3) - ArmorData.gradeOrder에서 bulkSellMaxGrade까지만 잘라낸다
+-- (단일 출처 - 상한 등급을 여기 다시 하드코딩하지 않는다. 서버도 같은 두 값으로 같은 상한을
+-- 강제한다, PlayerProfile.sellItemsBulkUpTo/setBulkSellCutoffGrade 참고).
+local BULK_SELL_GRADE_CHOICES = {}
+for _, id in ipairs(ArmorData.gradeOrder) do
+	table.insert(BULK_SELL_GRADE_CHOICES, id)
+	if id == ArmorData.bulkSellMaxGrade then
+		break
+	end
+end
+
+-- 서버가 이미 골라 둔 값을 Attribute로 갖고 있으면(재접속) 그걸 초기값으로 쓴다 - 아직
+-- 안 왔으면(로드 중) 목록의 가장 낮은 등급으로 시작하고, Attribute가 오는 대로 아래
+-- GetAttributeChangedSignal 연결이 곧바로 맞춰준다.
+local bulkSellCutoffGrade = player:GetAttribute("BulkSellCutoffGrade") or BULK_SELL_GRADE_CHOICES[1]
+local bulkSellDropdownOpen = false
+-- 아래(드롭다운 UI 생성부)에서 실제로 채워진다 - UIManager onClose가 이 파일 위쪽에서
+-- 미리 참조해야 해서 선언만 여기로 끌어올렸다(Lua 클로저는 값이 아니라 upvalue를
+-- 잡으므로, 나중에 대입해도 onClose가 그 최신 값을 본다).
+local cutoffDropdown, cutoffDropdownDim
 
 -- 선택 상태: kind="bag"이면 value=서버 인덱스, kind="equip"이면 value="weapon"/"armor".
 local selectedKind, selectedValue = nil, nil
@@ -303,17 +325,14 @@ end
 
 local sortButton = makeHeaderPill(SORT_LABELS[sortMode] .. " ▾", 1)
 
--- 등급 이름은 ArmorData.gradeOrder 마지막 항목에서 매번 다시 읽는다 - 등급이 늘어도
--- (영웅·전설 등) 이 라벨이 자동으로 "그 시점 최고 등급 이하 일괄판매"를 가리키게 하려는
--- 것이다(Loot.rollBossArmorDrop이 이미 쓰는 것과 같은 "마지막 항목 참조" 패턴).
-local function highestGradeId()
-	return ArmorData.gradeOrder[#ArmorData.gradeOrder]
-end
+-- 일괄판매 기준 등급 선택 버튼(20-3) - 클릭하면 등급 목록(색 점 포함)이 드롭다운으로 열린다.
+-- 라벨은 rebuildGrid에서 bulkSellCutoffGrade가 바뀔 때마다 다시 맞춘다.
+local cutoffButton = makeHeaderPill("", 2)
 
-local bulkSellButton = makeHeaderPill("", 2)
+local bulkSellButton = makeHeaderPill("일괄판매", 3)
 
 local closeButton = Instance.new("TextButton")
-closeButton.LayoutOrder = 3
+closeButton.LayoutOrder = 4
 closeButton.Text = ""
 closeButton.AutoButtonColor = false
 closeButton.Size = UDim2.new(0, 26, 0, 26)
@@ -777,16 +796,24 @@ local function isSellableGrade(gradeId, cutoffId)
 	return false
 end
 
+-- 반환값에 highestSoldGradeId를 더했다(20-3) - 확인창이 "대상에 포함된 최고 등급"을
+-- 이름·색으로 보여주려면 기준 등급(bulkSellCutoffGrade)이 아니라 실제로 팔릴 아이템 중
+-- 가장 높은 등급을 알아야 한다(인벤토리에 그 기준보다 낮은 등급만 있을 수도 있다).
 local function bulkSellEstimate()
-	local cutoff = highestGradeId()
 	local count, total = 0, 0
+	local highestSoldGradeId, highestSoldGradeIndex = nil, 0
 	for _, item in ipairs(inventory) do
-		if not item.locked and isSellableGrade(item.grade, cutoff) then
+		if not item.locked and isSellableGrade(item.grade, bulkSellCutoffGrade) then
 			count += 1
 			total += Loot.getSellPrice(item)
+			for i, id in ipairs(ArmorData.gradeOrder) do
+				if id == item.grade and i > highestSoldGradeIndex then
+					highestSoldGradeId, highestSoldGradeIndex = id, i
+				end
+			end
 		end
 	end
-	return count, total
+	return count, total, highestSoldGradeId
 end
 
 -- ═══ 상세바 갱신 ═══
@@ -1196,7 +1223,7 @@ local function rebuildGrid()
 	countLabel.Text = ("%d / %d"):format(#inventory, totalSlots)
 	local sellCount, sellTotal = bulkSellEstimate()
 	bulkEstimatePillLabel.Text = ("일괄판매 예상 +%s"):format(NumberFormat.format(sellTotal))
-	bulkSellButton.Text = (highestGradeId() and ArmorData.grades[highestGradeId()].displayName or "") .. " 이하 일괄판매"
+	cutoffButton.Text = ArmorData.grades[bulkSellCutoffGrade].displayName .. " 이하 ▾"
 	goldPillLabel.Text = "보유 골드 " .. NumberFormat.format(player:GetAttribute("Gold") or 0)
 
 	if selectedKind == "bag" and not inventory[selectedValue] then
@@ -1241,6 +1268,11 @@ UIManager.register("inventory", {
 	end,
 	onClose = function()
 		isOpen = false
+		bulkSellDropdownOpen = false
+		if cutoffDropdown then
+			cutoffDropdown.Visible = false
+			cutoffDropdownDim.Visible = false
+		end
 	end,
 })
 
@@ -1280,7 +1312,7 @@ confirmOverlay.Parent = content
 local confirmBox = Instance.new("Frame")
 confirmBox.AnchorPoint = Vector2.new(0.5, 0.5)
 confirmBox.Position = UDim2.new(0.5, 0, 0.5, 0)
-confirmBox.Size = UDim2.new(0, 300, 0, 140)
+confirmBox.Size = UDim2.new(0, 300, 0, 168)
 confirmBox.BackgroundColor3 = UIColors.panel
 confirmBox.BackgroundTransparency = 0.05
 confirmBox.ZIndex = 21
@@ -1304,6 +1336,32 @@ confirmText.TextWrapped = true
 confirmText.TextColor3 = UIColors.textPrimary
 confirmText.Text = ""
 confirmText.Parent = confirmBox
+
+-- 대상에 포함된 최고 등급을 이름+색으로 보여준다(20-3, 지시 - "판매 개수·총액만으로는
+-- 어느 등급까지 쓸려가는지 한눈에 안 읽힌다"). 점 하나 + 색 입힌 이름 텍스트로 충분해서
+-- RichText 없이도 표현된다.
+local confirmHighestDot = Instance.new("Frame")
+confirmHighestDot.AnchorPoint = Vector2.new(0, 0.5)
+confirmHighestDot.Position = UDim2.new(0, 16, 0, 92)
+confirmHighestDot.Size = UDim2.new(0, 9, 0, 9)
+confirmHighestDot.BorderSizePixel = 0
+confirmHighestDot.ZIndex = 21
+confirmHighestDot.Parent = confirmBox
+local confirmHighestDotCorner = Instance.new("UICorner")
+confirmHighestDotCorner.CornerRadius = UDim.new(1, 0)
+confirmHighestDotCorner.Parent = confirmHighestDot
+
+local confirmHighestLabel = Instance.new("TextLabel")
+confirmHighestLabel.AnchorPoint = Vector2.new(0, 0.5)
+confirmHighestLabel.Position = UDim2.new(0, 31, 0, 92)
+confirmHighestLabel.Size = UDim2.new(1, -47, 0, 16)
+confirmHighestLabel.BackgroundTransparency = 1
+confirmHighestLabel.ZIndex = 21
+confirmHighestLabel.Font = Enum.Font.GothamBold
+confirmHighestLabel.TextSize = 12.5
+confirmHighestLabel.TextXAlignment = Enum.TextXAlignment.Left
+confirmHighestLabel.Text = ""
+confirmHighestLabel.Parent = confirmBox
 
 local confirmYes = Instance.new("TextButton")
 confirmYes.AnchorPoint = Vector2.new(1, 1)
@@ -1346,17 +1404,134 @@ end)
 
 confirmYes.Activated:Connect(function()
 	confirmOverlay.Visible = false
-	sellRequest:FireServer("sellBulk", highestGradeId())
+	sellRequest:FireServer("sellBulk", bulkSellCutoffGrade)
 end)
 
 bulkSellButton.Activated:Connect(function()
-	local count, total = bulkSellEstimate()
+	local count, total, highestSoldGradeId = bulkSellEstimate()
 	if count == 0 then
 		return
 	end
 	confirmText.Text = ("잠기지 않고 착용 중이 아닌 %d개를 팔아 %s골드를 받는다. 되돌릴 수 없다."):format(
 		count, NumberFormat.format(total))
+	local visual = highestSoldGradeId and ItemVisualData.gradeVisuals[highestSoldGradeId]
+	confirmHighestDot.BackgroundColor3 = visual and visual.color or UIColors.textTertiary
+	confirmHighestLabel.TextColor3 = visual and visual.color or UIColors.textTertiary
+	confirmHighestLabel.Text = highestSoldGradeId
+		and ("대상에 포함된 최고 등급: %s"):format(ArmorData.grades[highestSoldGradeId].displayName)
+		or ""
 	confirmOverlay.Visible = true
+end)
+
+-- ═══ 일괄판매 기준 등급 드롭다운(20-3) ═══
+-- confirmOverlay와 같은 패턴(딤 + 그 위 패널)이다 - 바깥을 클릭하면 닫힌다. cutoffButton의
+-- 자식으로 둬서(내용 프레임이 아니라) 스케일·레이아웃 계산 없이 항상 버튼 바로 아래에
+-- 붙는다.
+cutoffDropdownDim = Instance.new("TextButton")
+cutoffDropdownDim.Text = ""
+cutoffDropdownDim.AutoButtonColor = false
+cutoffDropdownDim.Size = UDim2.new(1, 0, 1, 0)
+cutoffDropdownDim.BackgroundTransparency = 1
+cutoffDropdownDim.ZIndex = 24
+cutoffDropdownDim.Visible = false
+cutoffDropdownDim.Parent = content
+
+cutoffDropdown = Instance.new("Frame")
+cutoffDropdown.Name = "CutoffDropdown"
+cutoffDropdown.Position = UDim2.new(0, 0, 1, 4)
+cutoffDropdown.Size = UDim2.new(0, 130, 0, 0)
+cutoffDropdown.AutomaticSize = Enum.AutomaticSize.Y
+cutoffDropdown.BackgroundColor3 = UIColors.panel
+cutoffDropdown.BackgroundTransparency = 0.05
+cutoffDropdown.ZIndex = 25
+cutoffDropdown.Visible = false
+cutoffDropdown.Parent = cutoffButton
+
+local cutoffDropdownCorner = Instance.new("UICorner")
+cutoffDropdownCorner.CornerRadius = UDim.new(0, 8)
+cutoffDropdownCorner.Parent = cutoffDropdown
+local cutoffDropdownStroke = Instance.new("UIStroke")
+cutoffDropdownStroke.Color = UIColors.rim
+cutoffDropdownStroke.Transparency = UIColors.rimTransparency
+cutoffDropdownStroke.Parent = cutoffDropdown
+
+local cutoffDropdownPadding = Instance.new("UIPadding")
+cutoffDropdownPadding.PaddingTop = UDim.new(0, 4)
+cutoffDropdownPadding.PaddingBottom = UDim.new(0, 4)
+cutoffDropdownPadding.Parent = cutoffDropdown
+
+local cutoffDropdownLayout = Instance.new("UIListLayout")
+cutoffDropdownLayout.SortOrder = Enum.SortOrder.LayoutOrder
+cutoffDropdownLayout.Parent = cutoffDropdown
+
+local function closeCutoffDropdown()
+	bulkSellDropdownOpen = false
+	cutoffDropdown.Visible = false
+	cutoffDropdownDim.Visible = false
+end
+
+-- 등급 목록에 색 점을 찍는다(지시 - "텍스트만으로는 서열이 안 읽힌다"). BULK_SELL_GRADE_CHOICES가
+-- 이미 bulkSellMaxGrade까지만 잘라낸 목록이라 유물 이상은 여기 나타날 수가 없다.
+for order, gradeId in ipairs(BULK_SELL_GRADE_CHOICES) do
+	local row = Instance.new("TextButton")
+	row.LayoutOrder = order
+	row.Text = ""
+	row.BackgroundTransparency = 1
+	row.Size = UDim2.new(1, 0, 0, 28)
+	row.ZIndex = 25
+	row.Parent = cutoffDropdown
+
+	local dot = Instance.new("Frame")
+	dot.AnchorPoint = Vector2.new(0, 0.5)
+	dot.Position = UDim2.new(0, 10, 0.5, 0)
+	dot.Size = UDim2.new(0, 8, 0, 8)
+	dot.BackgroundColor3 = ItemVisualData.gradeVisuals[gradeId].color
+	dot.BorderSizePixel = 0
+	dot.ZIndex = 25
+	dot.Parent = row
+	local dotCorner = Instance.new("UICorner")
+	dotCorner.CornerRadius = UDim.new(1, 0)
+	dotCorner.Parent = dot
+
+	local label = Instance.new("TextLabel")
+	label.AnchorPoint = Vector2.new(0, 0.5)
+	label.Position = UDim2.new(0, 26, 0.5, 0)
+	label.Size = UDim2.new(1, -34, 1, 0)
+	label.BackgroundTransparency = 1
+	label.ZIndex = 25
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 12.5
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextColor3 = UIColors.textPrimary
+	label.Text = ArmorData.grades[gradeId].displayName .. " 이하"
+	label.Parent = row
+
+	row.Activated:Connect(function()
+		bulkSellCutoffGrade = gradeId
+		bulkSellCutoffRequest:FireServer(gradeId)
+		closeCutoffDropdown()
+		rebuildGrid()
+	end)
+end
+
+cutoffButton.Activated:Connect(function()
+	bulkSellDropdownOpen = not bulkSellDropdownOpen
+	cutoffDropdown.Visible = bulkSellDropdownOpen
+	cutoffDropdownDim.Visible = bulkSellDropdownOpen
+end)
+
+cutoffDropdownDim.Activated:Connect(closeCutoffDropdown)
+
+-- 재접속 등으로 서버 값이 늦게 도착해도(로드 중엔 목록의 가장 낮은 등급으로 임시 시작했다)
+-- 실제 저장된 기준으로 맞춰준다 - ClassId 등 다른 Attribute와 같은 패턴.
+player:GetAttributeChangedSignal("BulkSellCutoffGrade"):Connect(function()
+	local grade = player:GetAttribute("BulkSellCutoffGrade")
+	if grade and grade ~= bulkSellCutoffGrade then
+		bulkSellCutoffGrade = grade
+		if isOpen then
+			rebuildGrid()
+		end
+	end
 end)
 
 lockButton.Activated:Connect(function()
