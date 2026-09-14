@@ -133,7 +133,12 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 값이면 AimPicker가 사거리 안 최근접으로 대체하므로 안전하게 실패한다. 사거리·데미지는
 	-- 이 값과 무관하게 아래에서 항상 서버가 다시 계산한다.
 	local safeAimPoint = typeof(aimPoint) == "Vector3" and aimPoint or nil
-	local target = AimPicker.pick(rootPart.Position, safeAimPoint, PlayerCombat.getAttackRange(classId), MonsterState.getAllModels())
+	-- 활 백스텝샷 사거리 버프(20-4 [2]) - 충전이 남아 있는 동안(BuffState.getField가 만료·
+	-- 소진된 버프는 자동으로 기본값 1을 돌려준다) 대상 판정 사거리를 넓힌다. 실제 상한은
+	-- PlayerCombat.getBuffedAttackRange가 어그로 범위 아래로 자른다(주석 참고).
+	local rangeMultiplier = BuffState.getField(player, "backstepShotBuff", "rangeMultiplier", 1)
+	local attackRange = PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier)
+	local target = AimPicker.pick(rootPart.Position, safeAimPoint, attackRange, MonsterState.getAllModels())
 	if not target then
 		return -- 사거리 안에 몬스터가 없다 - 헛스윙
 	end

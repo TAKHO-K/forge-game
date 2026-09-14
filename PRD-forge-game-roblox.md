@@ -3326,7 +3326,8 @@ MCP 캡처 왕복 지연(20.26에서도 같은 한계를 기록함) 안에서 �
 없다).
 
 **보상**: 확정 드랍(`Loot.rollBossArmorDrop` - 잡몹의 25% 확률·등급 굴림
-없이 최상위 등급 확정), 처치 기록(`bestBossCleared`, `SAVE_VERSION` 7→8
+없이 최상위 등급 확정 `[⛔ 20.40에서 폐기 — 재입장 무제한과 겹쳐 태초 무한
+파밍이 가능했다]`), 처치 기록(`bestBossCleared`, `SAVE_VERSION` 7→8
 마이그레이션) 저장.
 
 **검증 중 발견·수정한 버그 2건**: (1) 연타로 두 `AttackRequest`가 같은
@@ -4357,7 +4358,7 @@ Reserved Server였다면 파티 전용으로 격리돼 솔로 유저가 애초�
 - **활 개선 3종**(`SkillServer.server.lua`의 활 Q/E 판정 대상):
   1. 활 E(백스텝샷) 이후 날아가는 투사체에 시각 효과 추가(타격감 - 지금은
      투사체가 있어도 눈에 잘 안 읽힌다).
-  2. 백스텝 이후 공격 가능 사거리를 2배로.
+  2. 백스텝 이후 공격 가능 사거리를 2배로. `[✅ 20-4에서 구현 완료 — 20.41 참고]`
   3. 활 Q(속사) 중 쏜 화살이 대상에 꽂혔다가 지연 후 한 번 더 피해를 준다 -
      사용자 근거: "공격속도 버프는 체감이 약한데, 몸에 화살이 쌓이면
      '빨라졌다'가 눈으로 읽힌다."
@@ -4366,3 +4367,116 @@ Reserved Server였다면 파티 전용으로 격리돼 솔로 유저가 애초�
   4.3(Q5.5/E5.91, 쿨10/16)으로 바뀌었고 E가 3틱 구조가 됐다. 활도
   백스텝샷으로 명세가 달라졌다. **네 직업 스킬이 전부 붙은 뒤 한 번에
   정산한다 - 부분적으로 재지 않는다**(사용자 지시 원문).
+
+### 20.40 보스 드랍 규칙 개정 — 태초 희소성 복구 (20-4) `[✅ 구현 완료 — Studio 실플레이 검증까지]`
+
+**문제**: 20.28의 원래 규칙(`Loot.rollBossArmorDrop` - 매 처치마다 무조건
+최상위 등급 확정)은 보스 재입장이 무제한이라는 전제와 부딪혔다. 가장 약한
+보스를 반복 입장해서 잡으면 태초가 무한히 나온다 - 반짝이 몬스터의 확정
+드랍(`RareMonsterConfig.sparkleGradeChances`, 태초 0.5%대)과 같은 급을 두고
+공존할 수 없는 상태였다. 20.28 작성 시점엔 반짝이 몬스터(19-4)가 아직 없어서
+이 모순이 드러나지 않았다.
+
+**폐기·대체**: `Loot.rollBossArmorDrop`(등급 굴림 없이 최상위 등급 확정)을
+폐기하고 `Loot.rollBossFirstClearDrop`으로 대체했다. 새 규칙:
+
+| 조건 | 드랍 | 등급표 |
+|---|---|---|
+| 환생 0회 + 그 스테이지 보스 첫 처치 | 확정 | tier6 표를 등급 1단계 상향(영웅10/전설30/유물40/고대18/태초2) |
+| 환생 1회 이상 + 그 스테이지 첫 처치 | 확정 | tier6 표 그대로(태초 0.1%) |
+| 같은 스테이지 재도전 | 확정 아님 | 잡몹과 동일(`Loot.rollArmorDrop`, 25% 확률 · tierIndex=1 표) |
+
+재입장 자체는 막지 않는다 - 막는 것은 확정 보상뿐이다(보스전 연습·실패 후
+재도전은 그대로 자유롭다). 등급 1단계 상향 표는 숫자를 새로 만들지 않고
+`MonsterData.dropGradeTableByTier[6]`을 `ArmorData.gradeOrder` 기준으로 한
+칸씩 미는 변환(`MonsterData`의 로컬 함수 `shiftGradeTableUp`)으로 유도한다 -
+태초는 더 밀려날 자리가 없어 tier6의 ancient(1.9%)+primordial(0.1%)가
+그대로 합산되어 정확히 2%가 된다(지시가 준 "태초2"와 우연히 일치하는 게
+아니라 이 변환의 산출값이다).
+
+**첫 처치 판정**: `PlayerProfile`에 `classes[classId].stageProgress.
+bossFirstClearStages`({[stage]=true} 집합, 19-1의 직업별 분리 경계를
+따른다)를 신설해 "그 스테이지 확정 보상을 이미 받았는가"를 기록한다.
+기존의 `bestBossCleared`(StageServer 게이트가 쓰는 단조증가 최고 기록)와는
+별개 필드다 - 재사용하지 않았다. 재사용하면 마이그레이션 시점에 이미
+`bestBossCleared`가 채워진 기존 계정은 지나간 보스 스테이지를 전부 "이미
+받음"으로 오판하게 된다. `rebirthCount`는 환생 시스템 자체가 아직 없어서
+(20.37/20.38 "설계만, 구현 안 함") `classState`에 기본값 0인 스텁 필드로만
+추가했고, `DevTools`("/gg rebirth <n>")로만 바뀐다 - 실제 환생 시스템이
+생기면 그게 이 값을 올리는 유일한 통로가 되어야 한다.
+
+**마이그레이션**: `SAVE_VERSION` 15→16. `bossFirstClearStages`는 기존
+`bestBossCleared`에서 역산해 채우지 않고 빈 집합으로 시작한다 - 이미 깬
+보스도 이 변경 이후 한 번은 다시 확정 보상을 받는다는 뜻이다. 사용자 지시
+원문("다르게 해야 할 이유가 있으면 보고해라")에 대한 결정: 역산 채우기는
+"몇 번째 스테이지까지 깼는지"만 아는 `bestBossCleared`로는 "정확히 어느
+스테이지들을 깼는지" 집합을 복원할 수 없어(중간에 건너뛴 스테이지가
+있었는지 알 방법이 없다)애초에 선택지가 아니었다.
+
+**검증**(Studio, `Loot.rollBossFirstClearDrop`/`Loot.rollArmorDrop`을 실제
+코드 그대로 20만~3천 회 반복 호출):
+
+| 항목 | 결과 |
+|---|---|
+| 환생 0회 첫 처치 등급 분포(20만 회) | 영웅 10.0% · 전설 29.9% · 유물 39.9% · 고대 18.1% · 태초 2.0% |
+| 환생 1회 첫 처치 등급 분포(20만 회) | 희귀 10.0% · 영웅 30.2% · 전설 39.9% · 유물 17.9% · 고대 1.9% · 태초 0.10% |
+| 같은 스테이지 2,999회 재도전 | 드랍률 23.8%(≈dropChance 25%), 등급은 normal/rare만(tier1 표) - 태초 0건 |
+| SaveSystem.migrate(v15→v16) | `bossFirstClearStages`={}(빈 집합), `rebirthCount`=0, `bestBossCleared` 보존, `isValidProfile` 통과 |
+
+재입장을 반복해도 태초가 다시 나오지 않는다는 것을 2,999회 재도전
+시뮬레이션으로 직접 확인했다 - 이번 세션에서 가장 중요한 결과다.
+
+### 20.41 활 E — 백스텝 후 사거리 2배 (20-4 [2]) `[✅ 구현 완료 — Studio 실플레이 검증까지]`
+
+**요구**: 백스텝샷(활 E) 사용 후 부여되는 5충전이 남아 있는 동안 평타 사거리가
+2배가 된다. 20-2b가 만든 버프 시스템(`BuffState.lua`)을 그대로 쓴다 - 별도
+구현을 만들지 않았다.
+
+**충전에 시간 제한이 있는가(지시 확인 사항)**: 없다. `backstepShotBuff`는
+`chargesRemaining`만 있고 `durationSeconds`가 없다(`SkillServer.server.lua`의
+`castDashBuff`) - 시간이 아무리 지나도 5번 때리기 전까지는 유지된다. 사거리
+2배도 이 기존 동작을 그대로 따른다(별도 타이머를 추가하지 않았다).
+
+**어그로 범위 충돌(지시 - "깨지면 보고하고 멈춰라")**: 활 기본 사거리
+`CombatConfig.attackRangeStuds(10) × ClassData.bow.rangeMultiplier(1.5) = 15stud`를
+그대로 2배 하면 30stud로, `WorldConfig.aggro.rangeStuds(25.6, 19-2가 "몬스터가
+어그로하기 전에 때리는 무한 안전 사냥"을 막으려고 사거리보다 크게 잡아 둔
+값)`를 넘는다 - 실제로 깨졌다. 세션 중 사용자에게 보고하고 처리 방향을
+확인했다: **버프 사거리를 어그로 범위 직전까지만 허용**(권장안 채택).
+`PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier)`가
+`min(기본사거리 × rangeMultiplier, 어그로범위 − CombatConfig.
+rangeBuffAggroMarginStuds(1))`로 상한을 자른다 - "2배"라는 명세값
+(`SkillData.bow.E.rangeMultiplier = 2`)은 의도를 표현하는 필드일 뿐, 최종
+적용값의 보장이 아니다. 실제 적용값은 15→24.6stud(1.64배)로, 어그로 범위
+아래에서 항상 끊긴다.
+
+**구현 지점**:
+- `SkillData.bow.E.rangeMultiplier = 2` - 단일 출처.
+- `SkillServer.server.lua`의 `castDashBuff`가 `BuffState.apply`의
+  `backstepShotBuff` config에 `rangeMultiplier` 필드를 얹는다.
+- `AttackServer.server.lua`(서버 권위 대상 판정)는 `BuffState.getField(player,
+  "backstepShotBuff", "rangeMultiplier", 1)`로 읽어
+  `PlayerCombat.getBuffedAttackRange`에 넘긴다.
+- **가시성**("사거리가 늘어난 동안 그게 보여야 한다", 지시): 새 VFX를 만들지
+  않고 "조준 대상 표시가 더 먼 적까지 잡히는" 쪽을 택했다(지시가 제시한 두
+  선택지 중 더 단순한 쪽). `BuffState.notify`가 `quickShot`의
+  `AttackSpeedBuffMultiplier`와 같은 패턴으로 `RangeMultiplier` Attribute를
+  올리고, 클라이언트 `AimTarget.client.lua`가 서버와 **같은**
+  `PlayerCombat.getBuffedAttackRange` 함수로 조준 사거리를 계산한다 - 화면에
+  보이는 조준 대상과 실제로 맞는 대상이 어긋나지 않는다(`getAttackRange` 원래
+  주석의 원칙 그대로 확장).
+
+**검증**(Studio, `PlayerCombat`/`BuffState`를 실제 코드 그대로 호출):
+
+| 항목 | 결과 |
+|---|---|
+| 버프 없음 | 15stud(기존과 동일, 회귀 없음) |
+| 버프 적용 직후(`RangeMultiplier` Attribute) | 2 |
+| 버프 적용 중 계산된 사거리 | 24.6stud (`< 25.6` 어그로 범위, 안전) |
+| 평타 5회로 충전 소진 후 | `RangeMultiplier`=1로 원복, 사거리=15stud로 원복 |
+
+실제 클릭 연타로 보스를 잡는 라이브 플레이는 이번 세션 툴링(마우스 자동화가
+인벤토리 모달 상태와 꼬여 입력이 막히는 문제)으로 완주하지 못했다 - 대신
+서버가 실제로 호출하는 함수를 Studio에서 동일한 인자로 직접 실행해 위 표의
+결과를 얻었다(코드 경로 자체는 실제 게임과 동일). 화살 투사체 등 시각적
+체감은 사용자가 직접 게임에 들어가 확인하기로 했다.

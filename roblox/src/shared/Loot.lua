@@ -77,17 +77,40 @@ function Loot.rollArmorDrop(monsterStage, itemLevel, tierIndex)
 	return nil -- 확률 합이 1 미만인 경우의 방어적 처리(지금 표는 전부 정확히 1.0)
 end
 
--- 보스 확정 드랍(15-1, 지시 [4] "드랍이 달라야 하는가"). 잡몹과 같은 25% 확률·등급 굴림을
--- 그대로 쓰면 보스를 잡을 경제적 이유가 약하다 - 100%로 확정하고 등급도 이 프로젝트에
--- 있는 최고 등급(ArmorData.gradeOrder의 마지막 항목, 17-1부터 "태초")을 그대로 지급한다.
--- 등급이 나중에 늘어도 gradeOrder 마지막 항목을 그대로 참조하므로 이 함수를 다시 고칠
--- 필요가 없다. 부위는 잡몹과 같은 균등 랜덤(16-6). 보스는 항상 tier1 기준으로 계산되므로
--- (BossRules.buildInstanceData) tierIndex=1 고정 - itemLevel 보너스도 tier1의 값(=1.0)이라
--- 그대로 itemLevel을 쓴다.
-function Loot.rollBossArmorDrop(monsterStage, itemLevel)
-	local topGrade = ArmorData.gradeOrder[#ArmorData.gradeOrder]
+-- 보스 첫 처치 확정 드랍(20-4, 지시 [1] "태초 희소성 복구" - 15-1의 rollBossArmorDrop을
+-- 대체한다). 옛 방식(매 처치마다 무조건 최상위 등급 확정)은 보스 재입장이 무제한이라
+-- 가장 약한 보스를 반복하면 태초가 무한히 나왔다 - 반짝이 몬스터의 0.005%와 같은 급을
+-- 두고 공존할 수 없는 상태였다(PRD 20.28 원래 기록, 이번에 폐기). 이제 "그 스테이지
+-- 보스를 처음 깼을 때만" 이 함수를 타고(CombatResolution.grantKillReward가 분기), 등급은
+-- MonsterData.bossFirstClearGradeTable(환생 1회 이상, tier6 표 그대로 - 태초 0.1%) 또는
+-- bossFirstClearUpgradedGradeTable(환생 0회, 그 표를 1단계 상향 - 재무장 부트스트랩 특례,
+-- 태초 2%)에서 굴린다. 재도전(이미 첫 처치 기록이 있는 스테이지)은 이 함수를 아예 안 타고
+-- Loot.rollArmorDrop(잡몹과 동일, 확정 아님)으로 간다. 보스는 항상 tier1 기준으로
+-- 계산되므로(BossRules.buildInstanceData) tierIndex=1 고정 - itemLevel 보너스도 tier1의
+-- 값(=1.0)이라 그대로 itemLevel을 쓴다. roll이 표 끝까지 안 걸리는 부동소수 오차
+-- 극단값에도 확정 지급이 깨지면 안 되므로 방어적 기본값(rollSparkleArmorDrop과 같은
+-- 패턴)을 둔다 - 두 표 모두 실제로는 정확히 1.0으로 맞아떨어진다.
+function Loot.rollBossFirstClearDrop(monsterStage, itemLevel, rebirthCount)
+	local gradeTable = (rebirthCount and rebirthCount > 0)
+		and MonsterData.bossFirstClearGradeTable
+		or MonsterData.bossFirstClearUpgradedGradeTable
+
+	local roll = lootRng:NextNumber()
+	local acc = 0
+	local grade = ArmorData.gradeOrder[#ArmorData.gradeOrder]
+	for _, gradeId in ipairs(ArmorData.gradeOrder) do
+		local chance = gradeTable[gradeId]
+		if chance then
+			acc += chance
+			if roll < acc then
+				grade = gradeId
+				break
+			end
+		end
+	end
+
 	return {
-		grade = topGrade,
+		grade = grade,
 		part = Loot.rollItemPart(),
 		dropStage = monsterStage,
 		itemLevel = itemLevel,

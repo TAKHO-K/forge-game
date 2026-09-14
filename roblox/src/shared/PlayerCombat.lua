@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
@@ -80,6 +81,23 @@ end
 function PlayerCombat.getAttackRange(classId)
 	local class = ClassData.classes[classId]
 	return CombatConfig.attackRangeStuds * class.rangeMultiplier
+end
+
+-- 사거리 버프(20-4 [2], 활 백스텝샷)가 걸렸을 때 실제로 쓸 사거리. getAttackRange에
+-- rangeMultiplier를 그대로 곱하지 않는다 - WorldConfig.aggro.rangeStuds(19-2가 "몬스터가
+-- 어그로하기 전에 때리는 무한 안전 사냥"을 막으려고 사거리보다 일부러 크게 잡아 둔 값)를
+-- 넘으면 그 안전장치가 깨진다. 어그로 범위에서 CombatConfig.rangeBuffAggroMarginStuds만큼
+-- 뺀 선을 상한으로 자른다 - 서버(AttackServer, 실제 대상 판정)와 클라이언트(AimTarget,
+-- 조준 표시)가 같은 함수를 써야 화면과 실제 판정이 어긋나지 않는다(getAttackRange와 같은
+-- 이유). rangeMultiplier가 없거나 1 이하면(버프 없음) 기존 사거리 그대로 - 기존 호출부
+-- 동작을 안 바꾼다.
+function PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier)
+	local baseRange = PlayerCombat.getAttackRange(classId)
+	if not rangeMultiplier or rangeMultiplier <= 1 then
+		return baseRange
+	end
+	local safeMax = WorldConfig.aggro.rangeStuds - CombatConfig.rangeBuffAggroMarginStuds
+	return math.min(baseRange * rangeMultiplier, safeMax)
 end
 
 function PlayerCombat.getDefense(classId, equipmentDefenseBonus)

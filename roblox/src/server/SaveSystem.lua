@@ -31,8 +31,18 @@ local function defaultClassState()
 		-- 무한 모드 진행도(11-1 개정, 19-1에서 직업별로 이동). infiniteBest(최고 도달
 		-- 단계)는 현재 단계와 분리한다 - 파밍하러 내려가면 현재 단계는 낮아져도 최고
 		-- 기록은 그대로 남아야 한다(PRD 20.12 경쟁 축과도 맞다). bestBossCleared(15-1):
-		-- 최고로 깬 보스 스테이지 - "0"은 아직 하나도 못 깼다는 뜻이다.
-		stageProgress = { infinite = 1, infiniteBest = 1, bestBossCleared = 0 },
+		-- 최고로 깬 보스 스테이지 - "0"은 아직 하나도 못 깼다는 뜻이다. bossFirstClearStages
+		-- (20-4): "그 스테이지 보스를 확정 보상으로 이미 받았는가" 집합({[stage]=true}) -
+		-- bestBossCleared와 별개다. bestBossCleared는 StageServer 게이트가 쓰는 단조증가
+		-- 최고 기록이고, 이건 "재입장해도 확정 보상은 한 번만"만 판정한다(지시 [1]
+		-- "재입장 무제한 + 확정 보상 무한 파밍" 방지).
+		stageProgress = { infinite = 1, infiniteBest = 1, bestBossCleared = 0, bossFirstClearStages = {} },
+
+		-- 환생 횟수(20-4). 환생 시스템 자체는 아직 없다(PRD 20.37/20.38 "설계만, 구현 안
+		-- 함") - 이 필드는 보스 첫 처치 확정 드랍 등급표 분기(Loot.rollBossFirstClearDrop)
+		-- 전용 스텁이고, 지금은 DevTools("/gg rebirth")로만 바뀐다. 실제 환생 시스템이
+		-- 생기면 그게 이 값을 올리는 유일한 통로가 된다.
+		rebirthCount = 0,
 	}
 end
 
@@ -98,7 +108,7 @@ end
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
--- 지금은 15단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
+-- 지금은 16단계 - 0(스키마 버전 개념 자체가 없던 상태) -> 1(골드 도입) -> 2(시작 무기
 -- 지급) -> 3(클래스 선택 필드 도입) -> 4(무한 모드 스테이지 현재/최고 분리)
 -- -> 5(인벤토리 배열 도입) -> 6(인벤토리 아이템 locked 필드 도입) -> 7(캐릭터 레벨 도입 +
 -- 아이템 itemLevel 필드 도입) -> 8(보스 처치 기록 bestBossCleared 도입, 15-1)
@@ -106,7 +116,8 @@ end
 -- -> 11(캐릭터 레벨 EXP 곡선 26+ 구간 재보정, 17-1) -> 12(아이템 tierIndex 필드 소급
 -- 도입, 17-1) -> 13(characterExp·무기·장비 3부위·무한 모드 진행도를 classes[classId]
 -- 아래로 직업별 분리, 19-1) -> 14(무기 등급 grade 필드 도입, 20-1) -> 15(일괄판매 기준
--- 등급 선택 bulkSellCutoffGrade 필드 도입, 20-3).
+-- 등급 선택 bulkSellCutoffGrade 필드 도입, 20-3) -> 16(보스 첫 처치 확정 드랍 기록
+-- bossFirstClearStages + 환생 횟수 rebirthCount 스텁 도입, 20-4).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -338,6 +349,21 @@ local function migrate(data)
 		data.version = 15
 	end
 
+	if data.version < 16 then
+		-- 20-4: 보스 첫 처치 확정 드랍 규칙 신설(지시 [1]) - bossFirstClearStages(그
+		-- 스테이지 보스를 확정 보상으로 이미 받았는가)와 rebirthCount(환생 횟수 스텁,
+		-- 환생 시스템 자체는 아직 없다) 두 필드가 처음 생긴다. bossFirstClearStages는
+		-- 일부러 bestBossCleared에서 역산해 채우지 않는다 - 빈 집합으로 시작하면 기존
+		-- 계정도 이미 깬 보스를 한 번은 다시 확정 보상으로 받는다(지시 원문 그대로 채택 -
+		-- "다르게 해야 할 이유가 있으면 보고해라"에 대한 결정). rebirthCount는 과거 어떤
+		-- 계정도 환생한 적이 없으므로(환생 시스템 자체가 없었다) 0이 유일하게 맞는 값이다.
+		for _, classState in pairs(data.classes) do
+			classState.stageProgress.bossFirstClearStages = classState.stageProgress.bossFirstClearStages or {}
+			classState.rebirthCount = classState.rebirthCount or 0
+		end
+		data.version = 16
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -368,6 +394,7 @@ local function isValidProfile(data)
 			or type(classState.weapon.grade) ~= "number"
 			or type(classState.equipment) ~= "table"
 			or type(classState.stageProgress) ~= "table"
+			or type(classState.rebirthCount) ~= "number"
 		then
 			return false
 		end

@@ -146,6 +146,7 @@ local function castDashBuff(player, slot, def, rootPart)
 		chargesRemaining = def.chargesGranted,
 		critRateBonus = def.critRateBonus,
 		damageCoefficient = def.damageCoefficient,
+		rangeMultiplier = def.rangeMultiplier, -- 20-4 [2] - 사거리 2배(실제 상한은 PlayerCombat.getBuffedAttackRange)
 		displayName = def.name,
 		colorName = "success",
 	})

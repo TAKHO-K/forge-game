@@ -98,6 +98,13 @@ return {
 			-- 계수 원칙(atk 비율)을 지켜 0.5로 잠정 설정한다 - 실기로 조정이 필요한 값이라는
 			-- 걸 분명히 남긴다.
 			damageCoefficient = 0.5,
+
+			-- 사거리 2배(20-4 [2], 지시 원문 "백스텝샷 사용 후 부여되는 5충전이 남아 있는
+			-- 동안 평타 사거리가 2배가 된다"). 실제 적용값은 이 배율을 그대로 곱하지 않고
+			-- PlayerCombat.getBuffedAttackRange가 CombatConfig.rangeBuffAggroMarginStuds로
+			-- 어그로 범위 아래에서 자른다 - "2배"는 이 필드가 표현하는 의도이지 최종 적용값의
+			-- 보장이 아니다(그 이유는 CombatConfig.rangeBuffAggroMarginStuds 주석 참고).
+			rangeMultiplier = 2,
 		},
 	},
 

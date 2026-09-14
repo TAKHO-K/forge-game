@@ -74,6 +74,10 @@ function BossRules.buildInstanceData(stage)
 		displayName = boss.displayName,
 		isBoss = true,
 		stageNumber = stage,
+		-- 20-4: 재도전(첫 처치 아님) 드랍이 Loot.rollArmorDrop(dropGradeTableByTier)을 타면서
+		-- tierIndex가 필요해졌다. 보스는 항상 tier1 기준으로 계산되므로(위 trashHp 등) 1 고정 -
+		-- Loot.rollBossFirstClearDrop의 tierIndex=1 고정과 같은 이유.
+		tierIndex = 1,
 
 		hp = trashHp * boss.hpMultiplier,
 		attack = attack,

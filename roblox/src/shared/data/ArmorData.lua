@@ -37,7 +37,8 @@ return {
 	-- 17-1부터 7등급 전부 실제로 드랍된다(16-6이 미뤄 뒀던 "드랍표 연결"). 오름차순 순서 -
 	-- Loot.rollArmorDrop이 이 순서로 tier별 확률표를 굴리고(MonsterData.dropGradeTableByTier의
 	-- 각 줄은 맵이라 순회 순서가 없다 - 이 배열이 결정적 순서를 정한다),
-	-- Loot.rollBossArmorDrop의 "마지막 항목", 인벤토리 일괄판매 컷오프도 전부 이 배열을 본다.
+	-- Loot.rollBossFirstClearDrop의 등급 상향(MonsterData.shiftGradeTableUp), 인벤토리
+	-- 일괄판매 컷오프도 전부 이 배열을 본다.
 	gradeOrder = { "normal", "rare", "epic", "legendary", "relic", "ancient", "primordial" },
 
 	-- 일괄판매 기준 등급의 상한(지시 - 유물·고대·태초는 어떤 사용자 설정으로도 일괄판매

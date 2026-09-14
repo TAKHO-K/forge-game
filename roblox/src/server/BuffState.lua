@@ -33,6 +33,13 @@ local function notify(player, buffId, buff)
 		player:SetAttribute("AttackSpeedBuffMultiplier", buff and buff.value or 1)
 	end
 
+	-- 사거리 배율(20-4 [2], 활 백스텝샷)도 공속 배율과 같은 이유로 Attribute가 필요하다 -
+	-- AimTarget.client.lua(조준 표시)가 서버 전용인 BuffState를 직접 못 읽으니, PlayerCombat.
+	-- getBuffedAttackRange에 넘길 배율을 여기서 올려 준다. 버프가 없으면 1(배율 없음).
+	if buffId == "backstepShotBuff" then
+		player:SetAttribute("RangeMultiplier", buff and buff.rangeMultiplier or 1)
+	end
+
 	if buff then
 		buffUpdate:FireClient(player, buffId, {
 			active = true,

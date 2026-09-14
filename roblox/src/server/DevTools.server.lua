@@ -159,6 +159,12 @@ local function applyStage(player, stage)
 	PlayerProfile.setInfiniteStageDirect(player, stage)
 end
 
+-- "/gg rebirth <n>" - 20-4 [1] 검증용. 환생 시스템 자체는 없다 - rebirthCount를 직접
+-- 세팅해 보스 첫 처치 확정 드랍 등급표 분기(Loot.rollBossFirstClearDrop)만 바꿔본다.
+local function applyRebirth(player, count)
+	PlayerProfile.setRebirthCountDirect(player, count)
+end
+
 -- "/gg measure [stage]" - 지금 이 플레이어가 실제로 들고 있는 레벨·장비·강화·직업
 -- 그대로(합성 조건이 아니라 실측) 생존 타수와 60초 평타 총딜을 계산해 콘솔에 낸다.
 -- stage를 생략하면 지금 프로필의 무한 스테이지를 쓴다.
@@ -218,6 +224,8 @@ local HELP_TEXT = table.concat({
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
 	"/gg stage <n> - 무한 스테이지 지정(생존타수/보상 배율 계산용, 물리적 이동 아님)",
 	"/gg measure [stage] - 지금 조건의 생존 타수·60초 평타 총딜을 콘솔에 출력",
+	"/gg rebirth <n> - 환생 횟수 스텁 직접 지정(보스 첫 처치 드랍 등급표 분기 검증용)",
+	"/gg bossreset [stage] - 보스 첫 처치 확정 드랍 기록 초기화(생략 시 전부, 재검증용)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
 }, "\n")
 
@@ -257,6 +265,14 @@ local function handleCommand(player, args)
 		reply(player, "무한 스테이지 " .. args[2] .. " 적용")
 	elseif sub == "measure" then
 		measure(player, tonumber(args[2]))
+	elseif sub == "rebirth" and tonumber(args[2]) then
+		ensureBackup(player)
+		applyRebirth(player, math.floor(tonumber(args[2])))
+		reply(player, "환생 횟수(스텁) " .. args[2] .. " 적용")
+	elseif sub == "bossreset" then
+		ensureBackup(player)
+		PlayerProfile.clearBossFirstClearRewards(player, tonumber(args[2]))
+		reply(player, args[2] and ("스테이지 " .. args[2] .. " 첫 처치 기록 초기화") or "첫 처치 기록 전부 초기화")
 	elseif sub == "reset" then
 		restore(player)
 	else

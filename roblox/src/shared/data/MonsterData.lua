@@ -49,6 +49,37 @@ MonsterData.dropGradeTableByTier = {
 	{ rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = 0.001 },
 }
 
+-- gradeOrder 안에서 gradeId의 위치(1부터). PlayerProfile.lua의 같은 이름 로컬 함수와
+-- 동일한 패턴이다 - 공유 유틸이 아니라 각자의 파일 안에서만 쓰는 작은 헬퍼라 중복을
+-- 그대로 둔다(PlayerProfile.lua는 판매 컷오프용, 여긴 아래 shiftGradeTableUp 전용).
+local function gradeIndexOf(gradeId)
+	for i, id in ipairs(ArmorData.gradeOrder) do
+		if id == gradeId then
+			return i
+		end
+	end
+	return nil
+end
+
+-- 보스 첫 처치 확정 드랍 등급표(20-4, 지시 [1] "태초 희소성 복구"). tier6 표(환생 1회
+-- 이상 - 재무장 특례 없음)를 등급 1단계씩 위로 미는 변환이다(환생 0회 - "재무장
+-- 부트스트랩" 특례). 태초(gradeOrder 마지막)는 밀려날 자리가 없어 그대로 누적된다 -
+-- tier6의 ancient(1.9%)+primordial(0.1%)가 합쳐져 결과 표의 primordial이 정확히 2%가
+-- 된다(지시가 준 "태초2"와 일치 - 별도로 박아 넣은 숫자가 아니라 이 변환의 산출값이다).
+local function shiftGradeTableUp(sourceRow)
+	local shifted = {}
+	for gradeId, chance in pairs(sourceRow) do
+		local index = gradeIndexOf(gradeId)
+		local targetIndex = math.min(index + 1, #ArmorData.gradeOrder)
+		local targetGrade = ArmorData.gradeOrder[targetIndex]
+		shifted[targetGrade] = (shifted[targetGrade] or 0) + chance
+	end
+	return shifted
+end
+
+MonsterData.bossFirstClearGradeTable = MonsterData.dropGradeTableByTier[6]
+MonsterData.bossFirstClearUpgradedGradeTable = shiftGradeTableUp(MonsterData.dropGradeTableByTier[6])
+
 MonsterData.fairnessExponent = 2 -- p. 이 값 하나만 튜닝 노브다.
 
 local function expectedGradeValue(tierIndex)

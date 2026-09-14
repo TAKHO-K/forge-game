@@ -240,6 +240,61 @@ function PlayerProfile.setBossCleared(player, stage)
 	player:SetAttribute("BestBossCleared", stage)
 end
 
+-- 20-4 [1]. 환생 시스템 자체는 아직 없다(PRD 20.37/20.38 "설계만, 구현 안 함") - 이 값은
+-- 보스 첫 처치 확정 드랍 등급표 분기(Loot.rollBossFirstClearDrop)에만 쓰는 스텁이고,
+-- 지금은 DevTools("/gg rebirth")로만 바뀐다. 실제 환생 시스템이 생기면 그게 이 값을
+-- 올리는 유일한 통로가 되어야 한다 - setRebirthCountDirect는 DevTools 전용으로 남는다.
+function PlayerProfile.getRebirthCount(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	return (classState and classState.rebirthCount) or 0
+end
+
+-- 서버만 호출한다(DevTools "/gg rebirth <n>" 전용 - snapshotForDevTools/restoreForDevTools의
+-- deepCopy(profile.classes)가 rebirthCount도 같이 백업/복원한다).
+function PlayerProfile.setRebirthCountDirect(player, count)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return
+	end
+	classState.rebirthCount = count
+end
+
+-- "그 스테이지 보스를 확정 보상으로 이미 받았는가"(20-4 [1]) - bestBossCleared(단조증가
+-- 최고 기록, StageServer 게이트가 쓴다)와 별개의 집합이다. 재입장 자체는 막지 않되
+-- (지시 원문) 확정 보상은 스테이지당 한 번만 나가야 하므로 이 기록으로 판정한다.
+function PlayerProfile.hasBossFirstClearReward(player, stage)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	return classState ~= nil and classState.stageProgress.bossFirstClearStages[stage] == true
+end
+
+-- 서버만 호출한다(CombatResolution.grantKillReward, 확정 드랍을 이미 지급한 직후).
+function PlayerProfile.markBossFirstClearReward(player, stage)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return
+	end
+	classState.stageProgress.bossFirstClearStages[stage] = true
+end
+
+-- 서버만 호출한다(DevTools "/gg bossreset [stage]" 전용 - 같은 스테이지를 다른 rebirthCount
+-- 조건으로 반복 검증하려면 첫 처치 기록을 지워야 한다). stage를 생략하면 전부 지운다.
+function PlayerProfile.clearBossFirstClearRewards(player, stage)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return
+	end
+	if stage then
+		classState.stageProgress.bossFirstClearStages[stage] = nil
+	else
+		classState.stageProgress.bossFirstClearStages = {}
+	end
+end
+
 -- 직업 변경 확인창(19-1)이 "레벨 X · 최고 스테이지 Y로 이어집니다"를 보여주기 위해
 -- 4직업 전부의 요약을 한 번에 돌려준다. Attribute(CharacterLevel 등)는 활성 직업 하나만
 -- 알아서, 아직 켜지 않은 나머지 직업을 미리 보여줄 수 없어 따로 둔다(ClassServer의

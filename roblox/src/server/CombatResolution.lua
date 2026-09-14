@@ -51,7 +51,17 @@ local function grantKillReward(recipient, target, monsterData, deathPosition)
 
 	local armorDrop
 	if isBoss then
-		armorDrop = Loot.rollBossArmorDrop(dropStage, newLevel or oldLevel)
+		-- 20-4 [1]: "그 스테이지 보스를 처음 깼는가"로 분기한다. 첫 처치만 확정 드랍
+		-- (Loot.rollBossFirstClearDrop) - 재도전은 잡몹과 같은 25% 확률·등급 굴림
+		-- (Loot.rollArmorDrop)으로 떨어진다. 재입장 자체는 막지 않는다(지시 원문) - 막는
+		-- 것은 확정 보상뿐이다.
+		local stage = monsterData.stageNumber
+		if PlayerProfile.hasBossFirstClearReward(recipient, stage) then
+			armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex)
+		else
+			armorDrop = Loot.rollBossFirstClearDrop(dropStage, newLevel or oldLevel, PlayerProfile.getRebirthCount(recipient))
+			PlayerProfile.markBossFirstClearReward(recipient, stage)
+		end
 	elseif isSparkle then
 		armorDrop = Loot.rollSparkleArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex)
 	else
@@ -59,6 +69,8 @@ local function grantKillReward(recipient, target, monsterData, deathPosition)
 	end
 	if armorDrop then
 		ItemDropSpawner.spawn(armorDrop, deathPosition, recipient)
+		print(("[forge-game] 드랍: %s등급 %s (%s)"):format(armorDrop.grade, armorDrop.part,
+			isBoss and "보스" or (isSparkle and "반짝이" or "잡몹")))
 	end
 end
 
