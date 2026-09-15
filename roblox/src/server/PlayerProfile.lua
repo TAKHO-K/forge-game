@@ -10,6 +10,7 @@ local Loot = require(ReplicatedStorage.Shared.Loot)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
@@ -139,6 +140,17 @@ end
 -- 로 고정돼 있으므로, 목표레벨×25÷배수 = 25(k+1)×25÷(k+1) = 625). 여기 한 곳에서만
 -- 곱한다 - 호출부(CombatResolution.grantKillReward)는 몬스터가 주는 원래 경험치만 넘기면
 -- 된다(골드처럼 "증가 통로가 여기 하나"라는 원칙을 그대로 유지).
+-- 23-3: 환생 전(rebirthCount==0) 최초 레벨1~25 구간 경험치 배수(CharacterLevelConfig.
+-- firstRunExpMultiplier) - "초반 레벨업이 지루하다, 첫 환생까지는 10마리 안팎으로 1업"
+-- 지시. rebirthCount>=1은 그대로 (rebirthCount+1)을 쓴다(23-2, 625마리 항등식용) - 최초
+-- 구간과 환생 이후 구간은 서로 다른 목적(온보딩 속도 vs 항등식 유지)이라 배수도 분리한다.
+local function expMultiplierFor(classState)
+	if classState.rebirthCount == 0 then
+		return CharacterLevelConfig.firstRunExpMultiplier
+	end
+	return classState.rebirthCount + 1
+end
+
 function PlayerProfile.addCharacterExp(player, amount)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
@@ -147,7 +159,7 @@ function PlayerProfile.addCharacterExp(player, amount)
 	end
 	local useExponential = classState.rebirthCount > 0
 	local oldLevel = CharacterLevel.getLevelFromExp(classState.characterExp, useExponential)
-	classState.characterExp += amount * (classState.rebirthCount + 1)
+	classState.characterExp += amount * expMultiplierFor(classState)
 	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp, useExponential)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then
@@ -350,6 +362,11 @@ end
 -- (23-2, PRD 20.38 [3] "분해 가능 등급을 상위 5등급으로 확장"). 분해는 골드 없이 보석만
 -- 준다(20.37 [3] "분해는 보석만, 판매는 골드만" - 판매(sellItem)와 상호 배타적인 자원이라
 -- 별도 배율 조정이 필요 없다는 설계). 잠긴 아이템은 판매와 같은 이유로 분해도 막는다.
+--
+-- 23-3: optionId를 더 이상 여기서 굴리지 않는다(예전엔 Gem.rollOption(item.grade)를
+-- 불렀다) - 고대·태초 방어구를 반복 분해하면 옵션 변환권 없이 옵션을 공짜로 재굴림하는
+-- 구멍이었다(GemData.lua "[옵션 배정]" 주석). 분해로 나오는 보석은 항상 옵션 미배정
+-- (nil)이고, 장착 후 옵션 변환권을 써야 옵션이 생긴다.
 local DISMANTLE_MIN_GRADE_INDEX = 3 -- ArmorData.gradeOrder: 1=일반, 2=희귀, 3=영웅부터.
 
 function PlayerProfile.dismantleItem(player, index)
@@ -371,7 +388,7 @@ function PlayerProfile.dismantleItem(player, index)
 	end
 
 	table.remove(profile.inventory, index)
-	table.insert(classState.gemInventory, { grade = item.grade, optionId = Gem.rollOption(item.grade) })
+	table.insert(classState.gemInventory, { grade = item.grade, optionId = nil })
 	InventorySync.push(player, profile)
 	GemSync.push(player)
 	return true, item.grade
@@ -416,6 +433,13 @@ function PlayerProfile.equipGem(player, slot, gemInventoryIndex)
 	end
 	classState.weapon.gems[slot] = { optionId = pending.optionId }
 	GemSync.push(player)
+	-- 23-3: 교체된 보석의 축이 방어력·최대체력이면 그 자리에서 바로 반영해야 한다(장갑·
+	-- 갑옷 교체와 같은 지점, refreshMaxHp/refreshMovementSpeed 주석 참고) - 공격력·공속은
+	-- 다음 평타/이동 판정 때 PlayerProfile.getAttackPercentBonus/getSpeedPercentBonus가
+	-- 매번 새로 계산하므로 별도 갱신이 필요 없지만, 최대체력(PlayerState 캐시)과 WalkSpeed
+	-- (Humanoid 프로퍼티)는 그 지점에서만 반영되는 값이라 여기서 강제로 재계산해야 한다.
+	PlayerProfile.refreshMaxHp(player)
+	PlayerProfile.refreshMovementSpeed(player)
 	return true
 end
 
@@ -466,6 +490,9 @@ function PlayerProfile.rerollGemOption(player, slot)
 	local newOptionId = Gem.rollOption(gradeId)
 	classState.weapon.gems[slot].optionId = newOptionId
 	GemSync.push(player)
+	-- 23-3: equipGem과 같은 이유(축이 바뀌면 최대체력·이동속도가 그 자리에서 바뀔 수 있다).
+	PlayerProfile.refreshMaxHp(player)
+	PlayerProfile.refreshMovementSpeed(player)
 	return true, newOptionId
 end
 
@@ -607,10 +634,16 @@ function PlayerProfile.getEquippedArmor(player)
 	return PlayerProfile.getEquipped(player, "armor")
 end
 
--- 신발 이동+공속 비율 보너스(16-6). 미착용이면 0(Loot.getShoesSpeedPercent가 nil을 그렇게
--- 처리한다).
+-- 신발 이동+공속 비율 보너스(16-6) + 장착 보석 공속·이속% 보너스 합(23-3, Gem.
+-- totalSpeedPercentBonus, "속사의 흔적") - PlayerCombat.getAttackCooldown과
+-- refreshMovementSpeed(WalkSpeed) 둘 다 이 함수 하나를 거치므로 새 곱셈 지점 없이
+-- 자동으로 공속·이속 모두에 반영된다. 미착용/미배정이면 0(Loot.getShoesSpeedPercent가
+-- nil을, Gem.totalSpeedPercentBonus가 옵션 미배정 슬롯을 그렇게 처리한다).
 function PlayerProfile.getSpeedPercentBonus(player)
-	return Loot.getShoesSpeedPercent(PlayerProfile.getEquipped(player, "shoes"))
+	local shoesBonus = Loot.getShoesSpeedPercent(PlayerProfile.getEquipped(player, "shoes"))
+	local weapon = PlayerProfile.getWeapon(player)
+	local gemBonus = weapon and Gem.totalSpeedPercentBonus(weapon.gems) or 0
+	return shoesBonus + gemBonus
 end
 
 -- 장갑 공격력 비율 보너스(16-6) + 장착 보석 공격력% 보너스 합(23-2, Gem.
@@ -624,21 +657,32 @@ function PlayerProfile.getAttackPercentBonus(player)
 	return glovesBonus + gemBonus
 end
 
+-- 보석 방어력% 보너스(23-3, Gem.totalDefensePercentBonus, "심판의 표식") -
+-- PlayerDamage.computeHitDamage가 PlayerCombat.getDefense의 세 번째 자리로 그대로 넘긴다.
+function PlayerProfile.getDefensePercentBonus(player)
+	local weapon = PlayerProfile.getWeapon(player)
+	return weapon and Gem.totalDefensePercentBonus(weapon.gems) or 0
+end
+
 -- 최대체력 재계산(17-1) - 갑옷 장착/해제·로드 직후마다 호출한다(refreshMovementSpeed와
 -- 같은 패턴). 갑옷 미착용이면 Loot.getMaxHpBonus가 0을 돌려줘 CombatConfig.playerMaxHp
--- 그대로 유지된다. Hp/MaxHp Attribute도 여기서 같이 맞춘다 - PlayerState가 유일한 HP
--- 소스라는 원칙대로, HP가 바뀌는 이 지점에서도 클라이언트(PlayerHealthBar.client.lua)가
--- 보는 Attribute를 동기화해야 한다(MonsterAI.server.lua의 syncHud와 같은 이유 - 그쪽은
--- 피격·리스폰 경로만 알고 장비 교체는 모른다). 캐릭터가 아직 없어 PlayerState.init 전이면
--- (로드 중) get 함수들이 nil을 돌려주는데, Attribute에 nil을 주면 그 값이 지워지므로
--- 안전하게 건너뛴다.
+-- 그대로 유지된다. 23-3: 보석 최대체력%(Gem.totalMaxHpPercentBonus, "삼위일체")는 갑옷
+-- 보너스까지 합친 총합에 ×(1+x)로 곱한다(getDefense의 defensePercentBonus와 같은 자리
+-- 배치 - "기본값+장비보너스 전체에 곱한다"는 20.11-4 원칙 재사용). Hp/MaxHp Attribute도
+-- 여기서 같이 맞춘다 - PlayerState가 유일한 HP 소스라는 원칙대로, HP가 바뀌는 이 지점에서도
+-- 클라이언트(PlayerHealthBar.client.lua)가 보는 Attribute를 동기화해야 한다(MonsterAI.
+-- server.lua의 syncHud와 같은 이유 - 그쪽은 피격·리스폰 경로만 알고 장비 교체는 모른다).
+-- 캐릭터가 아직 없어 PlayerState.init 전이면(로드 중) get 함수들이 nil을 돌려주는데,
+-- Attribute에 nil을 주면 그 값이 지워지므로 안전하게 건너뛴다.
 function PlayerProfile.refreshMaxHp(player)
 	local profile = profiles[player]
 	if not profile then
 		return
 	end
 	local bonus = Loot.getMaxHpBonus(PlayerProfile.getEquipped(player, "armor"))
-	PlayerState.setMaxHp(player, CombatConfig.playerMaxHp + bonus)
+	local weapon = PlayerProfile.getWeapon(player)
+	local gemMaxHpPercent = weapon and Gem.totalMaxHpPercentBonus(weapon.gems) or 0
+	PlayerState.setMaxHp(player, (CombatConfig.playerMaxHp + bonus) * (1 + gemMaxHpPercent))
 	local hp, maxHp = PlayerState.getHp(player), PlayerState.getMaxHp(player)
 	if hp and maxHp then
 		player:SetAttribute("Hp", hp)

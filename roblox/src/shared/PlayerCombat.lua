@@ -121,9 +121,14 @@ function PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier)
 	return math.min(baseRange * rangeMultiplier, safeMax)
 end
 
-function PlayerCombat.getDefense(classId, equipmentDefenseBonus)
+-- defensePercentBonus(23-3, 보석 "심판의 표식") - 갑옷 보너스까지 합친 방어력 전체에
+-- ×(1+x)로 곱한다(attackPercentBonus가 getAttack 전체 결과에 곱하는 것과 같은 자리 -
+-- 기본 0이라 기존 2-인자 호출부(BalanceSim 등)는 그대로 동작한다). GemData.
+-- survivalReductionAtAnchor 주석 참고 - 방어력은 수확체감 축이라 이 값이 다른 보석 축
+-- (공격력%·공속%·최대체력%)보다 커야 같은 만큼 생존에 기여한다.
+function PlayerCombat.getDefense(classId, equipmentDefenseBonus, defensePercentBonus)
 	local class = ClassData.classes[classId]
-	return (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def
+	return (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def * (1 + (defensePercentBonus or 0))
 end
 
 -- 공격 쿨다운 = 기본 쿨다운 ÷ (클래스 공격속도 배율 × 신발 공속 배율 × 버프 공속 배율)

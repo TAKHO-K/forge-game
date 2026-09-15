@@ -399,7 +399,21 @@ local function updateGemTab()
 
 		local gem = currentGemState.gems[slot]
 		local filled = type(gem) == "table"
-		local optionText = filled and (gem.optionId or "옵션 없음") or "빈 슬롯"
+		-- 23-3: 옵션이 이제 스탯 축을 갖는다(GemData.optionAxis) - 실제 수치까지 보여준다.
+		-- 옵션 풀이 없는 등급(영웅~유물)은 항상 공격력% 하나뿐이고, 고대·태초는 옵션
+		-- 미배정(변환권 전) 상태를 "빈 슬롯"과 구분해 보여준다.
+		local optionText
+		if not filled then
+			optionText = "빈 슬롯"
+		elseif not Gem.isRerollableGrade(gradeId) then
+			optionText = ("공격력 +%.1f%%"):format(Gem.attackPercentBonusForGrade(gradeId) * 100)
+		elseif gem.optionId then
+			local axis = Gem.optionAxis(gem.optionId)
+			local axisName = GemData.axisDisplayNames[axis] or axis
+			optionText = ("%s(%s +%.1f%%)"):format(gem.optionId, axisName, Gem.magnitudeForGrade(gradeId, axis) * 100)
+		else
+			optionText = "옵션 미배정(변환권 필요)"
+		end
 		ui.label.Text = ("슬롯%d(%s) - %s"):format(slot, gradeInfo.displayName, optionText)
 
 		local matchCount = 0

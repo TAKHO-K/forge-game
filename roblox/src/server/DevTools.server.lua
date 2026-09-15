@@ -128,6 +128,19 @@ local function isValidGrade(grade)
 	return ArmorData.grades[grade] ~= nil and ItemVisualData.gradeVisuals[grade] ~= nil
 end
 
+-- 23-3: "/gg additem <grade> [itemLevel]" - 분해·판매 UI 클릭 검증용으로 인벤토리(장착이
+-- 아니라)에 잠기지 않은 아이템 하나를 직접 넣는다. buildGearItem은 locked=true라 분해가
+-- 막히므로 여기선 false로 만든다 - applyGear(장착)와 다른 목적의 별도 헬퍼.
+local function applyAddItem(player, part, grade, itemLevel)
+	if not isValidGrade(grade) then
+		reply(player, ("알 수 없는 등급: %s (사용 가능: %s)"):format(tostring(grade), table.concat(ArmorData.gradeOrder, "/")))
+		return false
+	end
+	local item = buildGearItem(part, grade, itemLevel)
+	item.locked = false
+	return PlayerProfile.addArmorDrop(player, item)
+end
+
 -- 갑옷·장갑·신발 3부위 전부 같은 등급·itemLevel로 즉시 장착시킨다.
 local function applyGear(player, grade, itemLevel)
 	if not isValidGrade(grade) then
@@ -538,6 +551,7 @@ local HELP_TEXT = table.concat({
 	"/gg anchor [classId] - 앵커 조건 적용(레벨100+일반itemLevel100 3부위+강화0+스테이지100)",
 	"/gg level <n> - 캐릭터 레벨 직접 지정",
 	"/gg gear <grade> <itemLevel> - 갑옷/장갑/신발 3부위 동일 조건으로 장착",
+	"/gg additem <part> <grade> <itemLevel> - 잠기지 않은 아이템 1개를 인벤토리에 직접 추가(분해·판매 UI 클릭 검증용, part=armor/gloves/shoes)",
 	"/gg enhance <n> - 무기 강화 단계 지정(0~" .. EnhanceConfig.maxLevel .. ")",
 	"/gg weapon <n|등급명> - 무기 등급 지정(0~6 또는 " .. table.concat(ArmorData.gradeOrder, "/") .. ")",
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
@@ -576,6 +590,13 @@ local function handleCommand(player, args)
 		ensureBackup(player)
 		if applyGear(player, args[2], math.floor(tonumber(args[3]))) then
 			reply(player, ("장비 3부위를 %s등급 itemLevel%s로 적용"):format(args[2], args[3]))
+		end
+	elseif sub == "additem" and args[2] and args[3] and tonumber(args[4]) then
+		ensureBackup(player)
+		if applyAddItem(player, args[2], args[3], math.floor(tonumber(args[4]))) then
+			reply(player, ("인벤토리에 %s %s등급 itemLevel%s 추가"):format(args[2], args[3], args[4]))
+		else
+			reply(player, "실패(인벤토리 가득 또는 잘못된 등급)")
 		end
 	elseif sub == "enhance" and tonumber(args[2]) then
 		ensureBackup(player)

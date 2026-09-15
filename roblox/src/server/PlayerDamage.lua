@@ -31,7 +31,9 @@ end
 function PlayerDamage.computeHitDamage(attack, targetPlayer)
 	local classId = PlayerProfile.getClassId(targetPlayer)
 	local armorBonus = Loot.getArmorDefense(PlayerProfile.getEquippedArmor(targetPlayer))
-	local defense = classId and PlayerCombat.getDefense(classId, armorBonus) or CombatConfig.playerDefense
+	-- 23-3: 보석 "심판의 표식"(defensePercent 축) - PlayerCombat.getDefense의 세 번째 자리.
+	local defensePercentBonus = PlayerProfile.getDefensePercentBonus(targetPlayer)
+	local defense = classId and PlayerCombat.getDefense(classId, armorBonus, defensePercentBonus) or CombatConfig.playerDefense
 	local reduction = defense / (defense + CombatConfig.damageReductionAlpha * attack)
 	return attack * (1 - reduction)
 end
