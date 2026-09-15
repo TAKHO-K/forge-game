@@ -573,6 +573,9 @@ local HELP_TEXT = table.concat({
 	"/gg chesttest - 가장 가까운 잡몹을 상자로 바꾼 뒤 피격 간격·다중 타격자·기록 정리를 서버 로그로 검증(22-2)",
 	"/gg killtest - 가장 가까운 잡몹을 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡고 골드·경험치·드랍 변화를 로그로 출력(22-2)",
 	"/gg boss [stage] - 보스 스테이지(기본 5)로 이동해 개인 아레나 보스전 시작(21-3 검증용)",
+	"/gg boss next - 다음(또는 지금 대기 중인) 보스가 누구인지 출력(23-5)",
+	"/gg boss history - 이 플레이어의 보스 등장 이력 출력(23-5)",
+	"/gg boss force <id> - 다음 보스 순환 뽑기를 강제 지정(1회용, 23-5)",
 	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
 	"/gg bosskilltest - 지금 보스를 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡는다(견습/무한 모드 처치 파이프라인 검증용, 23-1)",
@@ -646,6 +649,39 @@ local function handleCommand(player, args)
 			reply(player, ("보석 슬롯 %s 강제 지정 완료(id=%s)"):format(args[2], args[3]))
 		else
 			reply(player, "실패: " .. tostring(reason))
+		end
+	elseif sub == "boss" and args[2] == "next" then
+		-- 23-5 검증용 - 순환 알고리즘을 실제로 호출하지 않고(=뽑지 않고) 지금 상태만 읽는다.
+		-- pending이 있으면 그게 다음 진입에서 나올 확정값, 없으면 order[index]가 "정상
+		-- 순환대로면" 다음에 뽑힐 후보다(디버그 강제(force)가 걸려 있으면 그게 우선한다는
+		-- 사실도 같이 보여준다 - PlayerProfile.getBossForStage와 같은 우선순위).
+		local rotation = PlayerProfile.getBossRotationInfo(player)
+		if not rotation then
+			reply(player, "직업을 먼저 선택해야 합니다")
+		elseif rotation.debugForceNextId then
+			reply(player, ("다음 보스(강제 지정됨): %s"):format(rotation.debugForceNextId))
+		elseif rotation.pending then
+			reply(player, ("다음 보스(이미 확정, 스테이지 %d 대기 중): %s"):format(rotation.pending.stage, rotation.pending.bossId))
+		elseif rotation.order and rotation.order[rotation.index] then
+			reply(player, ("다음 보스(순환 예정, %d/%d번째): %s"):format(
+				rotation.index, #rotation.order, rotation.order[rotation.index]))
+		else
+			reply(player, "다음 보스: 아직 안 뽑음(첫 진입 때 새로 섞습니다)")
+		end
+	elseif sub == "boss" and args[2] == "history" then
+		local rotation = PlayerProfile.getBossRotationInfo(player)
+		if not rotation then
+			reply(player, "직업을 먼저 선택해야 합니다")
+		elseif not rotation.history or #rotation.history == 0 then
+			reply(player, "보스 이력 없음(아직 한 번도 등장 확정 안 됨)")
+		else
+			reply(player, ("보스 이력(%d회, 오래된 순): %s"):format(#rotation.history, table.concat(rotation.history, " -> ")))
+		end
+	elseif sub == "boss" and args[2] == "force" and args[3] then
+		if PlayerProfile.forceBossRotationNext(player, args[3]) then
+			reply(player, ("다음 보스를 강제 지정했습니다: %s (다음 보스 스테이지 진입 시 적용, 정상 순환은 그대로 보존됨)"):format(args[3]))
+		else
+			reply(player, "실패: 직업 미선택 또는 알 수 없는 보스 id " .. args[3])
 		end
 	elseif sub == "boss" then
 		ensureBackup(player)

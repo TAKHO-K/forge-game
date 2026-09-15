@@ -8050,3 +8050,270 @@ maxHp 곱셈)에 합류시켰다 - 보석 전용 계산식을 새로 안 만들�
 2탭으로 축소)·`client/InventoryUI.client.lua`(보석 탭 신설 - 무기 실루엣·
 홈 5개·드래그 장착·보유 보석 목록, 탭 바, 창 위치 재계산 + 헤더 드래그 +
 세션 영속, 레지스터 한도 회피용 `setupGemTab` 함수 분리).
+
+### 20.60 무한 모드 보스 순환 구현(6종) + 장비창 위치 저장 (23-5) `[✅ 구현 + Studio 실측 검증 완료 — 12회 연속 처치로 두 바퀴 실측, 검증 중 발견한 이력 누락 버그 1건 수정. 견습 격리는 코드 경로 확인(실제 견습 보스 처치는 목표 사냥량이 커서 미실행)]`
+
+20.50 [5]가 기록만 하고 넘긴 보스 순환 설계를 구현했다. 보스맵(20.50 [6])은
+이번 범위 밖이라 기존 아레나(20-2b)를 그대로 쓰고 등장 종·이름·색만 6종으로
+늘렸다.
+
+#### [1] 현재 코드 확인 - 6종이 실제로 다른 패턴을 쓰는가
+
+지시대로 구현 전에 먼저 확인했다: **구현 시작 시점엔 보스가 `section_guardian`
+단 1종뿐이었다**(20.46 "이번에 하지 않은 것" 목록에 "보스 6종 풀"이 그대로
+남아 있었다 - 21-4로 미뤄진 뒤 이후 세션에서도 구현되지 않았다). 즉 "6종이
+이름만 다르고 패턴이 같다"는 우려 자체가 성립하지 않는 상태(6종이 아예 없었다)
+에서 시작했다.
+
+6종을 새로 만들면서 패턴을 실제로 어떻게 다르게 할지는 20.44 (라)의 기존
+결정("6종 tier 계열을 따르되 스탯은 tier와 무관, **패턴 공유 + 외형(색·크기)만
+tier에서 빌린다**")을 그대로 따랐다 - **패턴(진동파·돌진·강공격·낙석·십자)과
+그 수치(간격·예고 시간·배율 등)를 6종이 전부 완전히 동일하게 공유**한다.
+20.44 (라)는 "같은 패턴, 다른 수치 세트"(예시: "파동 두 겹")도 언급했지만,
+그 예시 하나 말고는 **어느 종이 파동을 몇 겹으로 할지, 왜 그 값인지를 정하는
+근거식이 PRD 어디에도 없다** - 지시 "PRD에 없는 항목은 추측으로 화려하게
+채우지 마라"에 따라 수치 차별화는 하지 않았다(임의 결정 [1] 참고). 6종의
+차이는 **id·표시 이름·색(bodyColor/headColor)뿐**이고, 이 이름·색도 지어낸
+것이 아니라 20.50 [6]의 보스맵 컨셉표(6개 이름·`section_guardian`을 "공허"
+슬롯에 편입한다는 기존 결정)를 그대로 가져왔다(색은 그 표의 테마 프로즈
+대신 `MonsterData.tierOrder`의 실제 RGB 값을 재사용 - 20.44 (라) "MonsterData
+tier 색을 재사용"을 문자 그대로 따름, `section_guardian`은 기존 색 유지).
+
+```
+BossData.lua 구조(신규):
+SHARED_PATTERNS = { shockwave, charge, meteor, cross }   -- 20.46 그대로, 손 안 댐
+BASE_STATS = { hpMultiplier, attackMultiplier, ... patterns = SHARED_PATTERNS }  -- 6종 공유
+SPECIES = { {id, displayName, bodyColor, headColor} × 6 }
+bosses[id] = SPECIES[i] 위에 BASE_STATS를 그대로 얹은 것
+```
+
+**패턴 미설계 보스는 없다** - 6종 전부 20.46이 이미 구현·검증한 5패턴(진동파·
+돌진·강공격·낙석·십자)을 그대로 쓴다.
+
+#### [2] 등장 규칙 - 비복원 추출 + 주기 재셔플
+
+20.50 [5] 설계를 그대로 코드로 옮겼다. `BossRules.nextRotationBossId(rotation)`
+(순수 함수, `rotation = {order, index, pending, history}`을 받아 제자리에서
+갱신):
+
+```
+order가 비었거나 index가 끝(7)에 닿으면:
+    newOrder = 6종 id를 Fisher-Yates로 섞은 배열
+    if newOrder[1] == 직전 order의 마지막 then
+        newOrder[1]을 2~6 중 무작위 위치와 교환   -- 재셔플 반복 없이 1회 교환으로 해결
+    order, index = newOrder, 1
+bossId = order[index]; index += 1
+history에 bossId 기록(최근 50개, 관측용 - 알고리즘엔 안 쓰임)
+```
+
+**"처음 진입하는 순간" 판정**은 `PlayerProfile.getBossForStage(player, stage)`가
+한다 - `classState.bossRotation.pending`이 그 스테이지를 가리키고 있으면
+(사망 리셋·재도전·아레나 안팎 왕복) 이미 확정된 보스를 그대로 돌려주고,
+아니면(첫 진입, 또는 이미 깨서 `pending`이 지워진 스테이지에 다시 들어옴)
+순환에서 새로 뽑아 `pending`을 갱신한다 - "같은 보스 반복 금지가 우선"이라
+이미 깬 스테이지에 다시 들어와도 다음 보스를 뽑는다(20.50 [5] 명시 규칙).
+처치하면(`CombatResolution.handleBossDeath`) `PlayerProfile.
+clearBossRotationPending`이 `pending`을 지운다.
+
+**저장**: `classState.bossRotation = { order, index, pending, history,
+debugForceNextId }` - `weapon.gems`·`stageProgress`와 같은 층(직업별,
+19-4 개인 인스턴스 진행도와 정합). `SAVE_VERSION` 19→~~20~~21로 올리고
+`migrate()`에 빈 순환 추가(v21 블록, `inventoryWindowPosition` 신설과
+같이 묶었다 - 아래 [7]). **환생 시 초기화하지 않는다** - `PlayerProfile.
+rebirth`가 `bossRotation` 필드를 건드리지 않으므로 자동으로 유지된다.
+
+**견습 모드와 분리**: 견습 보스는 `BossRules.buildTutorialInstanceData` →
+`BossRules.pickBossId`(20.44 이전부터 있던 "풀에서 무작위 하나", 6종이
+됐어도 그대로 무작위)를 쓴다 - `classState.bossRotation`을 읽지도 쓰지도
+않는다. 처치 경로도 다르다(`CombatResolution.resolveHit`이 `monsterData.
+isTutorial`이면 `TutorialState.onBossCleared`로 가고 `handleBossDeath`
+(순환 pending을 지우는 그 함수)는 아예 안 탄다) - 두 시스템이 함수 호출
+단계에서 완전히 분리돼 있다(코드 경로 확인, 아래 [6] 참고).
+
+**Studio 실측**(`/gg boss 5` + `/gg bosskilltest` 12회 반복, `/gg boss
+history`로 실제 순서 확인):
+
+```
+1바퀴: crystal_queen → frost_giant → section_guardian → abyssal_lord → storm_lord → scorpion_queen
+2바퀴: section_guardian → crystal_queen → frost_giant → scorpion_queen → abyssal_lord → storm_lord
+```
+
+12회 전부 인접한 두 보스가 다르다(연속 없음), 바퀴 경계(scorpion_queen →
+section_guardian)도 다르다, 두 바퀴의 순서 자체가 완전히 다른 순열이다 -
+설계한 세 성질(연속 없음·경계 없음·매번 다른 순서) 전부 실측으로 확인됐다.
+
+**검증 중 발견한 버그**: `/gg boss force`로 강제 지정한 보스가 `history`에
+안 남았다(디버그 강제 경로가 `nextRotationBossId`를 안 거쳐서 그 안의
+`history` 기록 줄도 건너뛰었다). `BossRules.recordRotationHistory(rotation,
+bossId)`로 기록 로직을 분리해 `PlayerProfile.getBossForStage`의 강제 분기도
+같은 함수를 부르게 고쳤다 - 순환 알고리즘(`order`/`index`) 자체는 강제
+지정과 무관하게 그대로 보존된다(다음 정상 뽑기는 강제 이전 상태에서 이어진다).
+
+#### [3] 6종 예상 처치 시간표
+
+6종은 이름·색만 다르고 `hpMultiplier`·`attackMultiplier`·패턴 수치가 전부
+동일한 값을 공유한다([1] 참고) - 즉 보스 HP도, 플레이어가 넣는 DPS도 종과
+무관하다. **예상 처치 시간은 6종 전부 정확히 같다**(추정이 아니라 같은 상수를
+쓰므로 수학적으로 동일). 20.44 (가)가 이미 계산해 둔 값(회피에 쓰는 시간
+비중 약 35% 반영)을 그대로 인용한다 - 새로 계산하지 않았다.
+
+| 종 | HP 관계식 | 예상 실전 처치 시간(활 기준) |
+|---|---|---|
+| 심해 군주 | `trashHp(S) × 20` (M=1×R, 20.44 가) | ≈ 90초 |
+| 서리 거인 | 위와 동일 | ≈ 90초 |
+| 폭풍 군주 | 위와 동일 | ≈ 90초 |
+| 전갈 여왕 | 위와 동일 | ≈ 90초 |
+| 구간 수호자 | 위와 동일 | ≈ 90초 |
+| 수정 여왕 | 위와 동일 | ≈ 90초 |
+
+직업별 편차(대검 ≈120초, 쌍검 ≈85초)는 이미 20.44 (가)가 보고한 값 그대로고
+6종 사이에는 편차가 없다 - "특정 보스에서만 막힌다"는 지시의 우려가 구조적으로
+발생할 수 없다(막힌다면 6종 전부 똑같이 막힌다 - 즉 직업 밸런스 문제이지
+순환 문제가 아니다).
+
+#### [4] 재입장·보상 - 무한 파밍 경로 점검
+
+**결론: 새로 생기는 구멍은 없다.** 근거: 확정 보상 여부는 `PlayerProfile.
+hasBossFirstClearReward(player, stage)`가 판정하는데, 이 값은 **스테이지
+번호로만 키가 잡혀 있다**(`classState.stageProgress.bossFirstClearStages[stage]`)
+- 어느 종이 나왔는지는 이 판정에 전혀 관여하지 않는다. 순환이 매번 다른 종을
+보여줘도 "이 스테이지를 이미 첫 클리어했는가"라는 질문 자체가 안 바뀌므로,
+같은 스테이지를 반복 재입장(재입장 자체는 20.44 [3](다)부터 무제한 허용)해도
+두 번째부터는 항상 `Loot.rollArmorDrop`(25% 확률·일반 등급표)만 굴러간다 -
+`Loot.rollBossFirstClearDrop`(확정 지급)은 스테이지당 정확히 한 번만 탄다.
+
+**Studio 실측**: 스테이지5 첫 클리어 → `relic등급 shoes` 확정 지급(`Loot.
+rollBossFirstClearDrop`) 확인. 이후 같은 스테이지를 3회 더 재입장(매번 순환이
+다른 종을 냄 - 심해 군주·수정 여왕·서리 거인) → 드랍 없음·없음·`normal등급
+gloves` 1회만(25% 확률 통과) - 확정 지급이 반복되지 않음을 직접 확인했다.
+과거 발견됐던 "보스 태초 드랍 100% + 재입장 무제한" 구멍(사용자 지시가 언급한
+바로 그 사고)은 20-4 [1]에서 이미 이 스테이지-키 판정으로 막혀 있었고, 이번
+순환 구현이 그 판정 방식을 전혀 건드리지 않아 구멍이 다시 열리지 않았다.
+
+#### [5] 보스 HP - 인원수 배수 자리 분리
+
+`BossRules.partySizeHpMultiplier(player)` 신설 - 항상 `1`을 돌려준다.
+`buildInstanceDataFrom`의 HP 계산식(`trashHp × hpMultiplier ×
+hpMultiplierExtra × partySizeHpMultiplier(player)`)에 곱셈 자리 하나로
+끼워 넣었다 - 나중에 파티가 생기면 이 함수 안의 로직만 실제 인원수를 세도록
+바꾸면 되고, 호출부(`buildInstanceData`/`buildTutorialInstanceData`)는
+손댈 필요가 없다. 새 밸런스 상수는 아니다(상수가 아니라 곱셈 지점 자체를
+분리한 것 - 값은 여전히 1).
+
+#### [6] 견습 모드 격리 확인(코드 경로)
+
+`TutorialState.requestChallenge` → `BossEncounter.spawnTutorialFor` →
+`BossRules.buildTutorialInstanceData` → `BossRules.pickBossId` 체인 어디에도
+`classState.bossRotation` 읽기/쓰기가 없다(grep으로 직접 확인 - `PlayerProfile.
+getBossForStage`/`clearBossRotationPending`을 부르는 곳은 `BossEncounter.
+spawnFor`와 `CombatResolution.handleBossDeath` 단 두 곳뿐이고, 둘 다 무한
+모드 전용 함수다). 반대 방향도 확인: `handleBossDeath`는 `monsterData.
+isTutorial`이 아닌 경우에만 호출되므로(`CombatResolution.resolveHit`의 분기)
+견습 보스 처치가 이 함수를 타는 경로 자체가 없다.
+
+**실행 불가**: 실제로 견습 보스를 잡아 `/gg boss history`가 그대로인지
+확인하는 라이브 테스트는 이번 세션에 못 했다 - 견습 보스 도전은 그 단계의
+목표 사냥량(예: 6단계 28마리)을 실제로 채워야 `TutorialCanChallenge`가
+켜지는 구조라, `/gg tutorial N`으로 단계만 강제 이동해서는 보스가 안 뜬다
+(DevTools에 이 조건을 우회하는 명령이 없다). 위 코드 경로 분석(함수 호출
+그래프에 교차점이 없음)으로 대신했다 - 실제 관측이 아니라는 점을 명시한다.
+
+#### [7] 장비창 위치 저장(23-4 후속 지시)
+
+23-4에서 세션 로컬 변수로만 남겨 뒀던 장비창 위치를 계정 저장 필드로
+올렸다. `profile.inventoryWindowPosition`(top-level, `bulkSellCutoffGrade`와
+같은 층 - 계정 전체 공유, 직업 무관) - `false`(한 번도 안 옮김) 또는
+`{x, y}`. 드래그가 끝날 때(마우스 업) 한 번만 새 RemoteEvent
+(`SetInventoryWindowPosition`)로 서버에 보낸다 - 매 프레임 쏘지 않는다.
+접속 시 `PlayerProfile.init`이 저장된 값이 있으면 `InventoryWindowX/Y`
+Attribute로 클라에 보내고, 클라는 그 값이 있으면(아직 이번 세션에 직접
+드래그한 적 없을 때만) `fitWindow`의 기본 위치 계산 대신 그 좌표를 쓴다.
+
+**Studio 실측**: 헤더 드래그로 (676,30)→(127,112) 이동 → **Play 재시작**
+(재접속과 동일한 프로필 재로드 경로) → `InventoryWindowX/Y` Attribute가
+그대로 (127,112) 복원, 장비창을 열면 드래그 없이 바로 그 자리에서 뜸 -
+재접속 후 유지가 실측으로 확인됐다(DevTools 개입 없이 순수 드래그+재시작
+경로로 검증 - 아래 [8] 참고).
+
+#### [8] 검증 중 확인한 제약 - DevTools 저장 차단과 재현 가능한 재접속 테스트
+
+이번 세션에서 재확인: `/gg` 명령을 한 번이라도 쓰면 `SaveCoordinator.
+setDevToolsSuspended`가 그 플레이어의 저장을 세션이 끝날 때까지(또는 `/gg
+reset`까지) 전부 막는다(의도된 안전장치 - 실제 계정 데이터 오염 방지). 그래서
+"`/gg boss`로 스테이지5까지 빠르게 이동 → 재접속 후 이력이 유지되는지 확인"은
+**같은 세션 안에서 재현할 수 없다** - 스테이지 이동 자체가 이미 저장을
+막아 버리기 때문이다. 대신 (a) 장비창 위치는 DevTools를 전혀 안 쓴 새 세션에서
+드래그만으로 검증했고(위 [7], 실측 성공), (b) `bossRotation`은 `weapon.gems`·
+`stageProgress`와 완전히 같은 `classState` 직렬화 경로를 타므로(이미 23-4에서
+그 경로 자체는 재접속 유지가 실측 확인됨) 구조적으로 안전하다고 판단하되
+직접 재현하지는 못했다 - "확인 10항목" 표에 실행 방식을 그대로 밝힌다.
+
+#### [9] 성능 - 12인 기준 삼각형·파트 증감
+
+**증감 없음(0).** 6종은 `sizeScale`을 포함한 지오메트리 관련 값을 `BASE_STATS`
+하나로 완전히 공유한다([1]) - 어느 종이 나와도 파트 개수·크기·삼각형 수가
+같다. 실측(Studio `Stats.RenderBreakdown.Opaque`, 보스 아레나 1개 기준):
+**7580 tris, 6 draws** - 이 값은 6종 중 무엇이 스폰되든 동일하다(색상 속성만
+다르고 파트 구성이 같으므로). 12인 동시 접속 시에도 각자 자기 아레나에 이
+값이 그대로 곱해질 뿐, **종 다양화 이전(20.46 시점, section_guardian 1종)과
+총량이 완전히 같다** - 새 지오메트리·파티클을 하나도 추가하지 않았다(지시
+"기존 보스가 쓰는 표현 방식을 우선 재사용" 그대로 따름).
+
+#### [10] 임의 결정 목록
+
+1. **6종 전부 패턴·수치를 완전히 동일하게 공유, id·이름·색만 다름** - PRD가
+   "패턴 공유 + 수치만 다르게"의 실제 수치 차이를 정하는 근거식을 주지 않아서
+   (예시 "파동 두 겹" 하나뿐) 지어내지 않았다([1] 참고). 나중에 종별 수치
+   차별화를 설계하면 `SPECIES` 표에 필드를 추가하고 `BASE_STATS` 병합 루프만
+   바꾸면 된다 - 지금 구조를 갈아엎을 필요가 없다.
+2. **보스 이름·색은 20.50 [6] 맵 컨셉표에서 그대로 가져왔다** - 그 표가
+   유일하게 존재하는 6종 명명이라 새로 짓지 않았다. 색은 그 표의 테마
+   프로즈 대신 `MonsterData` tier 팔레트를 그대로 썼다(정확한 RGB 근거가
+   있는 쪽을 우선했다) - tier5(보라)는 `section_guardian` 기존 색과 겹쳐
+   건너뛰었다.
+3. **순환 상태는 계정이 아니라 직업별(`classState`) 저장** - `weapon.gems`·
+   `stageProgress`(무한 모드 진행도 자체)와 같은 층이 자연스럽다고 판단했다.
+   직업을 바꾸면 그 직업의 독립된 순환이 별도로 진행된다(PRD가 명시하지
+   않은 부분 - 19-4 "직업별 분리" 원칙을 그대로 연장 적용).
+4. **history는 최근 50개만 보관** - PRD가 상한을 안 줬다. 무한정 쌓으면
+   저장 용량이 계속 느는데(보스 스테이지는 5마다 하나뿐이라 매우 느리게
+   늘긴 하지만) 디버그/관측 용도라 원본 그대로 다 남길 필요가 없다고 판단.
+   순환 알고리즘 자체(`order`/`index`)는 이 상한과 무관하게 정확하다.
+5. **`/gg boss force`는 순환 인덱스를 소모하지 않는다** - 디버그 오버라이드가
+   실제 순환 진행(다음 정상 뽑기가 어디서 이어지는지)을 어지럽히면 검증이
+   더 어려워진다고 판단해, 강제 지정 후에도 다음 "정상" 뽑기는 강제 이전
+   상태 그대로 이어지게 했다(history엔 남긴다 - [2] 버그 수정 참고).
+
+**확인 10항목**:
+
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | 5스테이지마다 보스가 나오는가 | **O** - `BossData.stageInterval=5`, `/gg boss 5` 12회 전부 "보스 스테이지 5 진입" 로그로 확인(기존 20-4 게이트 로직 안 건드림) |
+| 2 | 두 바퀴 이상(12회) 관측해서 같은 보스가 연속으로 나오지 않는가 | **O** - 위 [2] 실측 로그, 인접 12쌍 전부 다름 |
+| 3 | 두 바퀴의 순서가 실제로 서로 다른가 | **O** - 1바퀴/2바퀴 순열이 완전히 다름(위 [2]) |
+| 4 | 재접속 후 보스 이력이 유지되는가 | **실행 불가(제한적) - 위 [8] 설명.** 같은 직렬화 경로(23-4에서 실측 확인된 `weapon.gems` 등)를 타므로 구조적으로는 안전하나, DevTools 저장 차단 때문에 이번 세션엔 직접 재현 못함 |
+| 5 | 견습 보스 순서가 무한 순환에 영향받지 않는가 | **코드 경로 확인(라이브 미실행) - 위 [6]** 함수 호출 그래프에 교차점 없음을 직접 확인 |
+| 6 | 6종이 실제로 다른 패턴을 쓰는가(스크린샷/로그) | **패턴은 동일(의도), 외형은 다름 - O.** 12회 로그로 6종 이름 전부 등장 확인 + 서리 거인(초록)·수정 여왕(빨강) 스크린샷 2장으로 색 차이 확인(위 [1][2]) |
+| 7 | 같은 보스 반복으로 보상을 무한히 얻는 경로가 없는가 | **O** - 위 [4] 실측(첫 클리어 확정 지급 1회, 이후 3회 재입장 중 확정 지급 0회) |
+| 8 | 장비창 위치가 재접속 후 유지되는가 | **O** - 위 [7] 실측(Play 재시작 후 좌표 그대로 복원) |
+| 9 | 12인 기준 성능 증감 | **증감 0** - 위 [9], 지오메트리 완전 공유라 종 다양화가 삼각형·파트 수에 영향 없음 |
+| 10 | 서버 에러·경고 0건 | **O** - 이번 세션 전체 콘솔에 게임 코드발 에러 없음(자체 테스트 스크립트의 경로 오타 1건은 게임과 무관) |
+
+#### 파일
+
+**신규** 없음. **수정** `shared/data/BossData.lua`(6종 확장 - `SHARED_PATTERNS`·
+`BASE_STATS`·`SPECIES` 분리 구조, `MonsterData` require 추가) ·
+`shared/BossRules.lua`(`nextRotationBossId`·`recordRotationHistory`·
+`partySizeHpMultiplier` 신설, `buildInstanceData`가 `bossId`·`player`를
+외부에서 받도록 시그니처 변경) · `server/PlayerProfile.lua`(`getBossForStage`·
+`clearBossRotationPending`·`getBossRotationInfo`·`forceBossRotationNext`·
+`getInventoryWindowPosition`·`setInventoryWindowPosition` 신설, `BossData`/
+`BossRules` require 추가) · `server/BossEncounter.lua`(`spawnFor`가
+`PlayerProfile.getBossForStage`로 bossId를 받도록 변경) ·
+`server/CombatResolution.lua`(`handleBossDeath`에 `clearBossRotationPending`
+호출 추가) · `server/SaveSystem.lua`(`bossRotation`·`inventoryWindowPosition`
+필드 신설, v21 마이그레이션, `isValidProfile` 갱신) ·
+`shared/data/SaveConfig.lua`(`saveVersion=21`) · `server/InventoryServer.
+server.lua`(`SetInventoryWindowPosition` 신설) · `client/InventoryUI.client.lua`
+(저장된 위치 초기 적용 + 드래그 종료 시 서버 전송) · `server/DevTools.server.lua`
+(`/gg boss next|history|force` 신설).

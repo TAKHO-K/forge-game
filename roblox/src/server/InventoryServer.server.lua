@@ -28,6 +28,12 @@ local bulkSellCutoffRequest = Instance.new("RemoteEvent")
 bulkSellCutoffRequest.Name = "BulkSellCutoffRequest"
 bulkSellCutoffRequest.Parent = ReplicatedStorage
 
+-- 장비창 위치 저장(23-5, 지시 "재접속해도 유지되게"). x, y(둘 다 number, 픽셀 좌표) 필요 -
+-- 드래그가 끝날 때(마우스 업) 한 번만 쏜다(매 프레임 쏘지 않는다).
+local setInventoryWindowPositionRequest = Instance.new("RemoteEvent")
+setInventoryWindowPositionRequest.Name = "SetInventoryWindowPosition"
+setInventoryWindowPositionRequest.Parent = ReplicatedStorage
+
 -- action: "equip"(arg=index, 인벤토리 위치) 또는 "unequip"(arg=part, 16-6부터 부위를
 -- 명시해야 한다 - 갑옷 하나뿐이던 12-1 시절엔 필요 없었지만 이제 어느 슬롯을 벗을지
 -- 클라이언트가 골라야 한다). EquipSlots.order에 없는 문자열은 PlayerProfile.unequipItem이
@@ -108,4 +114,12 @@ bulkSellCutoffRequest.OnServerEvent:Connect(function(player, gradeId)
 		return
 	end
 	PlayerProfile.setBulkSellCutoffGrade(player, gradeId)
+end)
+
+-- 장비창 위치도 잠금·일괄판매 기준과 같은 되돌릴 수 있는 UI 사건이다 - 즉시저장하지 않는다.
+setInventoryWindowPositionRequest.OnServerEvent:Connect(function(player, x, y)
+	if not PlayerProfile.getProfile(player) then
+		return
+	end
+	PlayerProfile.setInventoryWindowPosition(player, x, y)
 end)

@@ -66,6 +66,18 @@ local function defaultClassState()
 		-- 않았고, 분해 한 번에 방어구 한 개를 소모해야만 늘어나는 값이라 실제로는 많이
 		-- 쌓이지 않는다 - "임의 결정" 목록 참고).
 		gemInventory = {},
+
+		-- 무한 모드 보스 순환(23-5, PRD 20.50 [5]) - "비복원 추출 + 주기 재셔플"의 상태.
+		-- order: 이번 바퀴에 섞인 6종 순서. index: 다음에 뽑을 위치(1~7 - 7이면 다 썼다는
+		-- 뜻, 다음 뽑기에서 재셔플). pending: 지금 확정돼 있고 아직 못 깬 보스({stage=,
+		-- bossId=} 또는 false) - 사망 리셋·재도전은 이 값을 그대로 쓰고, 처치하면 지운다
+		-- (PlayerProfile.clearBossRotationPending). history: 실제로 등장 확정된 보스 id
+		-- 순서(관측용, 최근 50개만 - "임의 결정" 목록 참고, 순환 알고리즘 자체엔 안 쓰인다).
+		-- debugForceNextId: "/gg boss force" 전용 - 다음 뽑기를 한 번만 이 값으로 강제한다.
+		-- 직업별이다(19-4 개인 인스턴스 진행도와 같은 층 - 무한 모드 진행도 자체가 직업별).
+		-- 환생 시 초기화하지 않는다(PlayerProfile.rebirth가 이 필드를 건드리지 않는다 -
+		-- 20.50 [5] "환생은 진행 상태가 아니라 연출 다양성이므로 초기화하면 안 된다").
+		bossRotation = { order = {}, index = 1, pending = false, history = {}, debugForceNextId = false },
 	}
 end
 
@@ -103,6 +115,13 @@ local function defaultProfile()
 		-- 고르게 하지 않으려고 저장한다. 가장 안전한 기본값(일반)으로 시작한다 - 처음
 		-- 켰을 때 실수로 비싼 등급까지 팔리는 사고를 막는다.
 		bulkSellCutoffGrade = "normal",
+
+		-- 장비창 위치(23-5, 지시 "재접속해도 유지되게") - 계정 전체 공유(gold·
+		-- bulkSellCutoffGrade와 같은 층, UI 배치는 직업과 무관한 화면 설정이다).
+		-- false = "한 번도 직접 옮긴 적 없다"(InventoryUI.client.lua가 채팅·HUD를 피하는
+		-- 기본 계산 위치를 그대로 쓴다). 옮기면 {x=, y=} 픽셀 좌표를 그대로 저장한다 -
+		-- 뷰포트가 달라지면 클라이언트가 매번 화면 안으로 다시 잘라 넣는다(fitWindow).
+		inventoryWindowPosition = false,
 
 		-- 인벤토리 실제 내용물(12-1). 갑옷 드랍만 담는다 - { grade = "normal"/"rare",
 		-- dropStage = 주운 스테이지 }. 슬롯 수(inventorySlots)와 분리된 필드다 - 슬롯 수는
@@ -156,7 +175,8 @@ end
 -- bossFirstClearStages + 환생 횟수 rebirthCount 스텁 도입, 20-4) -> 17(견습 모드 진행도
 -- 도입, 23-1) -> 18(무기 보석 슬롯 도입, 23-2) -> 19(옵션 변환권 도입, 23-2) -> 20(보석
 -- 등급이 슬롯 고정에서 상한제로 바뀌며 gem.grade 필드 신설 + 슬롯 해금 상태 저장 필드
--- weapon.slotUnlocked 신설, 23-4).
+-- weapon.slotUnlocked 신설, 23-4) -> 21(무한 모드 보스 순환 상태 bossRotation 필드 +
+-- 장비창 위치 저장 필드 inventoryWindowPosition 신설, 23-5).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -478,6 +498,20 @@ local function migrate(data)
 		data.version = 20
 	end
 
+	if data.version < 21 then
+		-- 23-5: 무한 모드 보스 순환(PRD 20.50 [5]) + 장비창 위치 저장(23-4 후속 지시) 신설.
+		-- v20까지 둘 다 개념 자체가 없었다 - "빈 순환"(첫 진입 시 첫 뽑기가 알아서 채운다,
+		-- BossRules.nextRotationBossId가 order가 비었을 때 셔플하는 분기와 같다)과 "한 번도
+		-- 안 옮김"이 정확한 과거 상태이므로 defaultClassState/defaultProfile과 같은 값으로
+		-- 채운다 - 정보 손실이 없다(옛 세이브엔 애초에 없던 값).
+		for _, classState in pairs(data.classes) do
+			classState.bossRotation = classState.bossRotation
+				or { order = {}, index = 1, pending = false, history = {}, debugForceNextId = false }
+		end
+		data.inventoryWindowPosition = data.inventoryWindowPosition or false
+		data.version = 21
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -503,6 +537,7 @@ local function isValidProfile(data)
 		or type(data.purchases.optionRerollTickets) ~= "table"
 		or type(data.purchases.optionRerollTickets.ancient) ~= "number"
 		or type(data.purchases.optionRerollTickets.primordial) ~= "number"
+		or (data.inventoryWindowPosition ~= false and type(data.inventoryWindowPosition) ~= "table")
 	then
 		return false
 	end
@@ -520,6 +555,7 @@ local function isValidProfile(data)
 			or type(classState.stageProgress) ~= "table"
 			or type(classState.rebirthCount) ~= "number"
 			or type(classState.gemInventory) ~= "table"
+			or type(classState.bossRotation) ~= "table"
 		then
 			return false
 		end

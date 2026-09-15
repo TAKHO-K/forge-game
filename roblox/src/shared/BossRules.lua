@@ -9,8 +9,68 @@ local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 
 local bossPickRng = Random.new()
+local rotationRng = Random.new()
 
 local BossRules = {}
+
+-- 파티 인원수 보스 HP 배수(23-5, PRD 20.47 파티 설계용 자리 - 지시 "파티는 아직
+-- 구현 전이므로 1인 기준으로만 계산한다. 다만 나중에 인원수 배수가 붙을 자리를 함수
+-- 하나로 분리해둬라"). 지금은 항상 1 - 파티가 생기면 이 함수 안만 고치면 되고
+-- buildInstanceDataFrom 등 호출부는 손댈 필요가 없다.
+function BossRules.partySizeHpMultiplier(player)
+	return 1
+end
+
+-- 순환 상태(rotation = { order, index, pending, history })를 받아 다음 보스 id를
+-- 뽑고 rotation을 제자리에서 갱신한다(23-5, PRD 20.50 [5] 설계).
+--   - order가 비었거나 index가 이미 끝(6개 다 씀)에 도달했으면 다시 섞는다.
+--   - 새로 섞은 order[1]이 직전 바퀴의 마지막(order[#order])과 같으면 2~6 중
+--     무작위 위치와 맞바꾼다 - "같은 보스가 바퀴 경계에서 연속으로 나오지 않는다"를
+--     이 한 번의 교환으로 보장한다(다시 섞기를 반복하지 않는다 - 분포 차이가 없다).
+-- history는 관측·디버그용(DevTools "/gg boss history") - 순환 알고리즘 자체엔 안 쓰인다.
+local ROTATION_HISTORY_LIMIT = 50
+
+local function shuffleInPlace(rng, list)
+	for i = #list, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		list[i], list[j] = list[j], list[i]
+	end
+end
+
+-- history 기록 전용(23-5) - "/gg boss force"로 강제 지정된 보스도 실제로 등장은 했으므로
+-- 정상 순환 뽑기와 똑같이 이력에 남긴다(PlayerProfile.getBossForStage가 두 경로 모두에서
+-- 부른다) - 순환 알고리즘(order/index) 자체는 건드리지 않는다.
+function BossRules.recordRotationHistory(rotation, bossId)
+	rotation.history = rotation.history or {}
+	table.insert(rotation.history, bossId)
+	if #rotation.history > ROTATION_HISTORY_LIMIT then
+		table.remove(rotation.history, 1)
+	end
+end
+
+function BossRules.nextRotationBossId(rotation)
+	local allIds = BossData.pools[1].bossIds
+	if not rotation.order or #rotation.order == 0 or rotation.index > #rotation.order then
+		local previousLast = rotation.order and rotation.order[#rotation.order]
+		local newOrder = {}
+		for _, id in ipairs(allIds) do
+			table.insert(newOrder, id)
+		end
+		shuffleInPlace(rotationRng, newOrder)
+		if previousLast and newOrder[1] == previousLast and #newOrder > 1 then
+			local swapWith = rotationRng:NextInteger(2, #newOrder)
+			newOrder[1], newOrder[swapWith] = newOrder[swapWith], newOrder[1]
+		end
+		rotation.order = newOrder
+		rotation.index = 1
+	end
+
+	local bossId = rotation.order[rotation.index]
+	rotation.index += 1
+	BossRules.recordRotationHistory(rotation, bossId)
+
+	return bossId
+end
 
 function BossRules.isBossStage(stage)
 	return stage >= BossData.stageInterval and stage % BossData.stageInterval == 0
@@ -54,13 +114,17 @@ end
 -- 19-4: MonsterState.getAttackFor/getGoldDropFor/getExpRewardFor가 isBoss면 InfiniteStage를
 -- 다시 곱하지 않고 data 필드를 그대로 돌려주도록 짜여 있다 - 여기서 계산한 값이 최종값
 -- 그대로 유지된다. InfiniteStage 배율을 이중으로 다시 곱하는 사고를 구조적으로 막는다.
-function BossRules.buildInstanceData(stage)
-	local bossId = BossRules.pickBossId(stage)
-	if not bossId then
+--
+-- 23-5: bossId는 더 이상 여기서 무작위로 뽑지 않는다 - 호출부(BossEncounter.spawnFor)가
+-- PlayerProfile의 순환 상태(BossRules.nextRotationBossId)로 미리 정한 값을 넘긴다.
+-- BossRules는 여전히 "그 id로 인스턴스 데이터를 계산하는" 순수 함수만 갖는다 - PlayerProfile
+-- (상태)을 이 shared 모듈이 직접 require하지 않기 위함(순수 규칙 모듈 유지).
+function BossRules.buildInstanceData(stage, bossId, player)
+	local boss = BossData.bosses[bossId]
+	if not boss then
 		return nil
 	end
-	local boss = BossData.bosses[bossId]
-	return BossRules.buildInstanceDataFrom(MonsterData.tier1, stage, boss, 1, 1)
+	return BossRules.buildInstanceDataFrom(MonsterData.tier1, stage, boss, 1, 1, player)
 end
 
 -- 23-1 견습 모드 전용(BossData에 새 항목을 만들지 않는다 - 같은 보스 id에 patterns
@@ -75,7 +139,7 @@ function BossRules.buildTutorialInstanceData(tierIndex, stage, patternKeys, hpSc
 	local boss = BossData.bosses[bossId]
 	local tierBase = MonsterData[MonsterData.tierOrder[tierIndex]] or MonsterData.tier1
 
-	local data = BossRules.buildInstanceDataFrom(tierBase, stage, boss, tierIndex, hpScale * weaponMultiplier)
+	local data = BossRules.buildInstanceDataFrom(tierBase, stage, boss, tierIndex, hpScale * weaponMultiplier, nil)
 	data.isTutorial = true
 
 	-- 패턴 부분집합(21-3 상태 머신이 없는 키를 만나면 안 되므로 BossPatterns.lua도 방어
@@ -90,8 +154,10 @@ function BossRules.buildTutorialInstanceData(tierIndex, stage, patternKeys, hpSc
 end
 
 -- buildInstanceData/buildTutorialInstanceData 공용 - trashBase(MonsterData의 tier 항목)와
--- hpMultiplierExtra(견습 전용 배율, 일반 무한 모드는 1)만 다르다.
-function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra)
+-- hpMultiplierExtra(견습 전용 배율, 일반 무한 모드는 1)만 다르다. player(23-5)는
+-- partySizeHpMultiplier 전용 - 견습 호출부는 nil을 넘긴다(파티 미구현이라 항상 1, 값은
+-- 안 쓰인다).
+function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra, player)
 	local trashHp = InfiniteStage.getMonsterHp(trashBase.hp, stage)
 	local trashAttack = InfiniteStage.getMonsterAttack(trashBase.attack, stage)
 	local trashGold = InfiniteStage.getGoldReward(trashBase.goldDrop, stage)
@@ -112,7 +178,8 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 
 		-- hpMultiplierExtra(23-1) - 견습 전용 보정(TutorialData.bossHpScale × 대여 무기 배율).
 		-- 무한 모드는 항상 1이라(buildInstanceData 호출) 기존 계산과 완전히 같다.
-		hp = trashHp * boss.hpMultiplier * hpMultiplierExtra,
+		-- partySizeHpMultiplier(23-5) - 파티 미구현이라 항상 1, 자리만 분리해 둔다.
+		hp = trashHp * boss.hpMultiplier * hpMultiplierExtra * BossRules.partySizeHpMultiplier(player),
 		attack = attack,
 		-- 21-3: heavyAttack(=attack×3) 필드는 없앴다 - 배율은 공격력이 아니라 감소식을 거친
 		-- 피해에 곱한다(PlayerDamage.applyHit의 damageMultiplier, 이유는 그쪽 주석).

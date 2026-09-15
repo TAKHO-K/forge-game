@@ -29,6 +29,7 @@ local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossPatterns = require(script.Parent.BossPatterns)
 local GroundProbe = require(script.Parent.GroundProbe)
+local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local BossEncounter = {}
 
@@ -148,7 +149,16 @@ function BossEncounter.spawnFor(player, stage)
 		return
 	end
 
-	local data = BossRules.buildInstanceData(stage)
+	-- 23-5: 어느 종이 나올지는 더 이상 무작위가 아니라 이 플레이어의 순환 상태가 정한다
+	-- (PlayerProfile.getBossForStage, PRD 20.50 [5]) - 여기가 실제로 "이 스테이지에 처음
+	-- 진입하는 순간"이다(위 두 return이 이미 걸러낸 뒤 - 보스 스테이지가 아니거나 이미
+	-- 활성 보스가 있으면 순환을 건드리지 않는다).
+	local bossId = PlayerProfile.getBossForStage(player, stage)
+	if not bossId then
+		return
+	end
+
+	local data = BossRules.buildInstanceData(stage, bossId, player)
 	if not data then
 		return
 	end

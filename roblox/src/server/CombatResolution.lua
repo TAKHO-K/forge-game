@@ -94,6 +94,9 @@ local function handleBossDeath(attacker, target)
 	-- 그 캐스터가 attacker다(SkillServer.server.lua 호출부 참고).
 	grantKillReward(attacker, target, monsterData, deathPosition)
 	PlayerProfile.setBossCleared(attacker, monsterData.stageNumber)
+	-- 23-5: pending을 지워야 이 스테이지에 다시 들어왔을 때 순환이 "이미 확정된 보스"로
+	-- 읽지 않고 다음 보스를 새로 뽑는다(PRD 20.50 [5] "처치하면 pending을 지운다").
+	PlayerProfile.clearBossRotationPending(attacker)
 	ImmediateSave.request(attacker)
 	BossEncounter.clearFor(attacker)
 	print(("[forge-game] 보스 처치: %s - 스테이지 %d"):format(attacker.Name, monsterData.stageNumber))

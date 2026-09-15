@@ -57,6 +57,7 @@ local sellRequest = ReplicatedStorage:WaitForChild("SellRequest")
 local lockRequest = ReplicatedStorage:WaitForChild("LockRequest")
 local dismantleRequest = ReplicatedStorage:WaitForChild("DismantleRequest")
 local bulkSellCutoffRequest = ReplicatedStorage:WaitForChild("BulkSellCutoffRequest")
+local setInventoryWindowPositionRequest = ReplicatedStorage:WaitForChild("SetInventoryWindowPosition")
 
 -- 23-4: 보석 탭(강화대에서 옮겨옴, EnhanceUI.client.lua 주석 참고) - 원격 통로 이름은
 -- 그대로 재사용한다(새 RemoteEvent를 만들지 않는다, 서버 GemServer.server.lua는 그대로).
@@ -252,13 +253,12 @@ local CHAT_RIGHT_CLEARANCE = 500 -- 기본 채팅창 폭(~475px) + 여유
 local HUD_RIGHT_CLEARANCE = 90 -- TopChipsGui 칩 열(~70px) + 여유
 local TOP_MARGIN = 30 -- 지시 "조금만 더 위로" - 60에서 줄였다.
 
--- 23-4: 사용자가 헤더를 드래그해 옮긴 위치(지시 - "장비창 상단을 드래그하면 위치를
--- 옮길 수 있게, 껐다 켜도/직업변경·환생 등 무엇을 해도 유지"). nil이면 아직 한 번도
--- 안 옮겼다는 뜻이라 위 기본 계산(채팅·HUD 회피)을 그대로 쓴다. 한 번 옮기면 이 세션이
--- 끝날 때까지(스크립트가 다시 로드되기 전까지) 계속 이 값을 쓴다 - 창을 닫았다 열어도,
--- rebuildGearSlots 등 다른 갱신 함수가 호출돼도 이 로컬 변수 자체를 아무도 건드리지
--- 않으므로 자동으로 유지된다(별도 저장 로직이 필요 없다 - 저장 대상은 "그 세션 동안의
--- 화면 배치"일 뿐 계정 데이터가 아니다).
+-- 23-4/23-5: 사용자가 헤더를 드래그해 옮긴 위치(지시 - "장비창 상단을 드래그하면 위치를
+-- 옮길 수 있게, 껐다 켜도/직업변경·환생 등 무엇을 해도 유지, 재접속해도 유지"). nil이면
+-- 아직 한 번도 안 옮겼다는 뜻이라 위 기본 계산(채팅·HUD 회피)을 그대로 쓴다. 한 번
+-- 옮기면 이 세션이 끝날 때까지 계속 이 값을 쓴다(별도 로직 없이 자동 유지) - 23-5부터는
+-- 접속 시점에 서버가 이미 저장된 값을 Attribute(InventoryWindowX/Y)로 보내주므로, 그
+-- 값이 있으면 이 변수를 그걸로 먼저 채운다(아래 applySavedWindowPosition).
 local userWindowPosition = nil
 
 local function fitWindow()
@@ -294,8 +294,27 @@ local function fitWindow()
 	win.Position = UDim2.new(0, left, 0, TOP_MARGIN)
 end
 
+-- 23-5: 저장된 위치가 있으면(재접속 포함) 그걸로 시작한다 - 아직 한 번도 드래그하지
+-- 않은(userWindowPosition == nil) 이 세션에서만 덮어쓴다. 접속 직후 Attribute가 아직
+-- 안 왔을 수도 있어(프로필 로드가 이 스크립트 시작보다 늦을 수 있다) 초기 조회 +
+-- 변경 신호 둘 다 듣는다(BulkSellCutoffGrade와 같은 패턴).
+local function applySavedWindowPosition()
+	if userWindowPosition then
+		return
+	end
+	local x = player:GetAttribute("InventoryWindowX")
+	local y = player:GetAttribute("InventoryWindowY")
+	if x and y then
+		userWindowPosition = Vector2.new(x, y)
+		fitWindow()
+	end
+end
+
 fitWindow()
+applySavedWindowPosition()
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitWindow)
+player:GetAttributeChangedSignal("InventoryWindowX"):Connect(applySavedWindowPosition)
+player:GetAttributeChangedSignal("InventoryWindowY"):Connect(applySavedWindowPosition)
 
 -- ═══ 헤더 ═══
 local header = Instance.new("Frame")
@@ -349,6 +368,11 @@ end)
 UserInputService.InputEnded:Connect(function(input)
 	if headerDragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
 		headerDragging = false
+		-- 23-5: 드래그가 끝날 때 한 번만 서버에 저장한다(매 프레임 InputChanged마다 쏘지
+		-- 않는다 - 되돌릴 수 있는 UI 배치라 즉시저장까지는 필요 없고, 요청 자체를 줄인다).
+		if userWindowPosition then
+			setInventoryWindowPositionRequest:FireServer(userWindowPosition.X, userWindowPosition.Y)
+		end
 	end
 end)
 

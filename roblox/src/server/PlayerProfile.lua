@@ -14,6 +14,8 @@ local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLeve
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local InventorySync = require(script.Parent.InventorySync)
 local GemSync = require(script.Parent.GemSync)
 local PlayerState = require(script.Parent.PlayerState)
@@ -84,6 +86,12 @@ function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
 	player:SetAttribute("BulkSellCutoffGrade", profile.bulkSellCutoffGrade)
+	-- 23-5: 저장된 적 있을 때만 Attribute를 세운다 - false(한 번도 안 옮김)면 안 세워서
+	-- 클라가 GetAttribute nil을 "기본 위치 계산"의 신호로 그대로 쓸 수 있게 한다.
+	if profile.inventoryWindowPosition then
+		player:SetAttribute("InventoryWindowX", profile.inventoryWindowPosition.x)
+		player:SetAttribute("InventoryWindowY", profile.inventoryWindowPosition.y)
+	end
 	player:SetAttribute("TutorialStep", profile.tutorial.step)
 	player:SetAttribute("TutorialCompleted", profile.tutorial.completed)
 	syncActiveClassAttributes(player, profile)
@@ -266,6 +274,71 @@ function PlayerProfile.setBossCleared(player, stage)
 	end
 	classState.stageProgress.bestBossCleared = stage
 	player:SetAttribute("BestBossCleared", stage)
+end
+
+-- 무한 모드 보스 순환(23-5, PRD 20.50 [5]) - 이 스테이지에 지금 등장해야 할 보스 id를
+-- 돌려준다. "처음 진입하는 순간"의 판정은 pending.stage가 이 stage와 다른가로 한다 -
+-- 같으면(사망 리셋·재도전·아레나 안팎 이동) 이미 확정된 보스를 그대로 돌려주고, 다르면
+-- (첫 진입, 또는 이미 깨서 pending이 지워진 스테이지에 다시 들어옴) 순환에서 새로 뽑아
+-- pending을 그 스테이지로 새로 확정한다 - "같은 보스 반복 금지가 우선"(PRD 원문)이라
+-- 스테이지를 내려갔다 이미 깬 보스 스테이지에 다시 들어와도 다음 보스를 뽑는다.
+-- BossEncounter.spawnFor가 실제로 스폰을 진행하기 직전에만 부른다(스폰 안 하면 순환도
+-- 안 돈다 - 예: 이미 활성 보스가 있어 spawnFor가 조기 반환하는 경우).
+function PlayerProfile.getBossForStage(player, stage)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return nil
+	end
+	local rotation = classState.bossRotation
+	if rotation.pending and rotation.pending.stage == stage then
+		return rotation.pending.bossId
+	end
+
+	local bossId = rotation.debugForceNextId
+	if bossId then
+		rotation.debugForceNextId = false -- "/gg boss force"는 한 번만 강제한다(정상 순환은 안 건드린다).
+		BossRules.recordRotationHistory(rotation, bossId) -- 강제 등장도 실제 등장이니 이력엔 남긴다.
+	else
+		bossId = BossRules.nextRotationBossId(rotation)
+	end
+	rotation.pending = { stage = stage, bossId = bossId }
+	return bossId
+end
+
+-- 보스를 처치했을 때만 부른다(CombatResolution.handleBossDeath) - pending을 지워야
+-- 다음에 이 스테이지(또는 다른 보스 스테이지)에 들어왔을 때 순환이 다음 보스를 뽑는다.
+-- 지우지 않으면 이미 깬 보스가 pending.stage 일치로 계속 그대로 나온다.
+function PlayerProfile.clearBossRotationPending(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return
+	end
+	classState.bossRotation.pending = false
+end
+
+-- 읽기 전용 - DevTools "/gg boss next|history" 전용. 호출부가 직접 rotation 테이블을
+-- 고치지 않는다(state 변경은 위 두 함수로만).
+function PlayerProfile.getBossRotationInfo(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	return classState and classState.bossRotation
+end
+
+-- 서버만 호출한다(DevTools "/gg boss force <id>" 전용). 존재하지 않는 id는 거부한다 -
+-- 클라이언트 입력을 그대로 믿지 않는다는 원칙은 디버그 명령에도 그대로 적용한다.
+function PlayerProfile.forceBossRotationNext(player, bossId)
+	if not BossData.bosses[bossId] then
+		return false
+	end
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false
+	end
+	classState.bossRotation.debugForceNextId = bossId
+	return true
 end
 
 -- 20-4 [1] 신설, 23-2부터 PlayerProfile.rebirth가 이 값을 올리는 유일한 정식 통로다 -
@@ -899,6 +972,31 @@ function PlayerProfile.setBulkSellCutoffGrade(player, gradeId)
 	end
 	profile.bulkSellCutoffGrade = gradeId
 	player:SetAttribute("BulkSellCutoffGrade", gradeId)
+	return true
+end
+
+-- 장비창 위치(23-5, 지시 "재접속해도 유지되게" - bulkSellCutoffGrade와 같은 계정 전체
+-- 공유 층). false면 "한 번도 안 옮김" - Attribute 자체를 안 세운다(nil로 남는다, 클라가
+-- 기본 계산 위치를 쓴다). 되돌릴 수 있는 UI 배치일 뿐이라(위 setBulkSellCutoffGrade와
+-- 같은 판단) 즉시저장하지 않는다.
+function PlayerProfile.getInventoryWindowPosition(player)
+	local profile = profiles[player]
+	return profile and profile.inventoryWindowPosition or false
+end
+
+-- 서버만 호출한다(InventoryServer의 SetInventoryWindowPosition 처리 직후). 숫자 좌표만
+-- 받는다 - 클라이언트가 보낸 값을 그대로 믿지 않는다는 원칙 그대로, 여기서 타입만
+-- 검증한다(정확한 화면 범위 클램프는 클라가 매 프레임 다시 하므로 서버는 "숫자인가"만
+-- 확인해도 안전하다 - 저장된 값이 다음 접속 때 화면 밖이면 클라 fitWindow가 다시 잘라
+-- 넣는다).
+function PlayerProfile.setInventoryWindowPosition(player, x, y)
+	local profile = profiles[player]
+	if not profile or type(x) ~= "number" or type(y) ~= "number" then
+		return false
+	end
+	profile.inventoryWindowPosition = { x = x, y = y }
+	player:SetAttribute("InventoryWindowX", x)
+	player:SetAttribute("InventoryWindowY", y)
 	return true
 end
 
