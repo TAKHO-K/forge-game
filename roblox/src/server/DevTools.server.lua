@@ -41,6 +41,12 @@ local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
 -- 22-2 변종 검증 명령(/gg variant, /gg chesttest)용.
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
+-- 22-4 Y축 지형 검증 명령(/gg terrain)용.
+local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
+local GroundProbe = require(script.Parent.GroundProbe)
+local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
+local ServerStorage = game:GetService("ServerStorage")
 
 -- 앵커 조건(지시 [1] - "최소한 앵커 조건은 하나로 불러올 수 있어야 한다"): 레벨100 +
 -- 일반등급 itemLevel100 3부위 + 강화+0 + 무기등급 일반(0), 스테이지 100. 무기 등급은
@@ -268,6 +274,154 @@ local function applyAnchor(player, classId)
 	measure(player, ANCHOR.stage)
 end
 
+-- ═══ 22-4 테스트 지형 - tier1 구역 중앙 슬롯(-224, 0) 둘레에 세운다 ═══
+-- 고원(높이 9.6 > 높이차 상한 8) 위에 중앙 슬롯이 놓여 스폰 스냅을 시험하고, 네 변이 각각
+-- 30° 경사로(-Z, 오를 수 있음) / 계단 6단×1.6(+Z, 오를 수 있음) / 70° 경사(-X, 막힘) /
+-- 수직 절벽(+X, 막힘)이다. 여기에 tier1 바닥을 둘로 갈라 폭 12의 도랑(심연, 바닥 없음)을
+-- x∈[-178,-166]에 낸다(오른쪽 슬롯 열 x=-160의 집에서 6~18 - 리쉬 38.4 안이라 몬스터가 실제로 도랑 앞까지 온다) - 그 몬스터가 도랑 앞에서 멈추는지, 떨어진
+-- 플레이어가 입구로 복귀하는지 본다. "/gg terrain clear"가 전부 되돌린다.
+local TERRAIN_TEST_TAG = "TerrainTest"
+local TERRAIN_PLATEAU_HEIGHT = 9.6
+local terrainOriginalFloor = nil
+local terrainOriginalBase = nil -- 맵 밑판(MapBase) - 도랑이 진짜 심연이 되도록 테스트 중엔 치운다(복도도 심연이 된다).
+
+local function terrainPart(name, size, cframe, color)
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Size = size
+	part.CFrame = cframe
+	part.Anchored = true
+	part.Material = Enum.Material.Slate
+	part.Color = color or Color3.fromRGB(150, 130, 110)
+	part:AddTag(TERRAIN_TEST_TAG)
+	part.Parent = GroundProbe.folder()
+	return part
+end
+
+local function buildTestTerrain(player)
+	if #game:GetService("CollectionService"):GetTagged(TERRAIN_TEST_TAG) > 0 then
+		reply(player, "테스트 지형이 이미 있습니다 - /gg terrain clear 먼저")
+		return
+	end
+	local zone = WorldConfig.zones.tier1
+	local cx, cz = zone.center.X, zone.center.Z
+	local floorTop = 1
+	local h = TERRAIN_PLATEAU_HEIGHT
+
+	-- 고원 20×20, 윗면 floorTop+h
+	terrainPart("TestPlateau", Vector3.new(20, h, 20), CFrame.new(cx, floorTop + h / 2, cz), Color3.fromRGB(120, 110, 100))
+
+	-- -Z 변: 30° 경사로. 수평 run = h/tan30, 판 길이 L = sqrt(run²+h²). +Z 끝(고원 쪽)이 높다.
+	local angle30 = math.rad(30)
+	local run30 = h / math.tan(angle30)
+	local length30 = math.sqrt(run30 * run30 + h * h)
+	local thickness = 0.6
+	terrainPart("TestRamp30", Vector3.new(12, thickness, length30),
+		CFrame.new(cx, floorTop + h / 2 - (thickness / 2) / math.cos(angle30), cz - 10 - run30 / 2) * CFrame.Angles(-angle30, 0, 0),
+		Color3.fromRGB(110, 150, 110))
+
+	-- +Z 변: 계단 6단 × 1.6 (깊이 3). 고원에 가까운 단이 높다.
+	local stepCount = 6
+	local stepRise = h / stepCount
+	for i = 1, stepCount do
+		local z = cz + 10 + 3 * (stepCount - i) + 1.5
+		terrainPart("TestStair" .. i, Vector3.new(12, stepRise * i, 3), CFrame.new(cx, floorTop + stepRise * i / 2, z), Color3.fromRGB(110, 130, 160))
+	end
+
+	-- -X 변: 70° 급경사(막혀야 한다). +X 끝(고원 쪽)이 높다.
+	local angle70 = math.rad(70)
+	local run70 = h / math.tan(angle70)
+	local length70 = math.sqrt(run70 * run70 + h * h)
+	terrainPart("TestRamp70", Vector3.new(length70, thickness, 12),
+		CFrame.new(cx - 10 - run70 / 2, floorTop + h / 2 - (thickness / 2) / math.cos(angle70), cz) * CFrame.Angles(0, 0, angle70),
+		Color3.fromRGB(170, 100, 100))
+	-- +X 변: 수직 절벽(고원 옆면 그대로).
+
+	-- 도랑: tier1 바닥을 ServerStorage로 치우고 두 조각으로 다시 깐다(x∈[-198,-186] 비움).
+	local floor = GroundProbe.folder():FindFirstChild("ZoneFloor_tier1")
+	if floor then
+		terrainOriginalFloor = floor
+		local gapMin, gapMax = -178, -166
+		local zoneMin, zoneMax = cx - zone.halfSize, cx + zone.halfSize
+		for _, span in ipairs({ { zoneMin, gapMin }, { gapMax, zoneMax } }) do
+			local width = span[2] - span[1]
+			local piece = terrainPart("TestFloorPiece", Vector3.new(width, floor.Size.Y, floor.Size.Z),
+				CFrame.new((span[1] + span[2]) / 2, floor.Position.Y, floor.Position.Z), floor.Color)
+			piece.Material = floor.Material
+		end
+		floor.Parent = ServerStorage
+	end
+	local base = GroundProbe.folder():FindFirstChild("MapBase")
+	if base then
+		terrainOriginalBase = base
+		base.Parent = ServerStorage
+	end
+
+	reply(player, ("테스트 지형 생성: 고원 %.1f(상한 %d 초과) / 30° 경사로(-Z) / 계단 6×%.1f(+Z) / 70° 경사(-X) / 절벽(+X) / 도랑 x∈[-178,-166]. 중앙 슬롯 몬스터는 다음 리스폰부터 고원 위에 스폰")
+		:format(h, TerrainConfig.heightToleranceStuds, stepRise))
+end
+
+local function clearTestTerrain(player)
+	for _, part in ipairs(game:GetService("CollectionService"):GetTagged(TERRAIN_TEST_TAG)) do
+		part:Destroy()
+	end
+	if terrainOriginalFloor then
+		terrainOriginalFloor.Parent = GroundProbe.folder()
+		terrainOriginalFloor = nil
+	end
+	if terrainOriginalBase then
+		terrainOriginalBase.Parent = GroundProbe.folder()
+		terrainOriginalBase = nil
+	end
+	reply(player, "테스트 지형 제거 + tier1 바닥·맵 밑판 복원")
+end
+
+-- 지면 프로브 부하 실측: (1) 합성 벤치 - 지금 지면 폴더에 대해 10,000회 Raycast 소요 시간 →
+-- 1회당 µs, (2) 실측 - 5초 동안 실제 AI가 쏜 횟수·ms(GroundProbe.stats 두 시점 차).
+local function reportProbeCost(player)
+	local zone = WorldConfig.zones.tier1
+	local benchCount = 10000
+	local started = os.clock()
+	for i = 1, benchCount do
+		GroundProbe.groundY(zone.center.X + (i % 100) - 50, zone.center.Z + (i % 37) - 18, 1)
+	end
+	local benchSeconds = os.clock() - started
+	local perProbeMicro = benchSeconds / benchCount * 1e6
+	local monsterCount = #MonsterState.getAllModels()
+	local probesPerSecondWorst = monsterCount / TerrainConfig.probeIntervalSeconds
+	reply(player, ("[벤치] Raycast %d회 %.1fms → 1회 %.2fµs. 최악(%d마리 전부 이동, %.1f초 주기) %d회/초 ≈ %.2fms/초 = 서버 시간의 %.3f%%")
+		:format(benchCount, benchSeconds * 1000, perProbeMicro, monsterCount, TerrainConfig.probeIntervalSeconds,
+			probesPerSecondWorst, probesPerSecondWorst * perProbeMicro / 1000, probesPerSecondWorst * perProbeMicro / 1000 / 10))
+	local count0, seconds0 = GroundProbe.stats()
+	task.delay(5, function()
+		local count1, seconds1 = GroundProbe.stats()
+		reply(player, ("[실측 5초] AI 지면 프로브 %d회(%.1f회/초), %.2fms(%.3fms/초)")
+			:format(count1 - count0, (count1 - count0) / 5, (seconds1 - seconds0) * 1000, (seconds1 - seconds0) * 1000 / 5))
+	end)
+end
+
+-- 지형 검증 보조: 살아있는 몬스터 전부의 발 Y − 그 자리 지면 Y를 표로 찍는다(땅속·공중 검사).
+local function reportMonsterGrounding(player)
+	local lines = {}
+	local sunk, floating = 0, 0
+	for _, model in ipairs(MonsterState.getAllModels()) do
+		local root = model.PrimaryPart
+		local data = MonsterState.getData(model)
+		if root and data and not data.isBoss then
+			local footY = root.Position.Y - TerrainConfig.monsterFootOffsetStuds
+			local groundY = GroundProbe.surfaceY(root.Position.X, root.Position.Z, root.Position.Y)
+			local gap = groundY and footY - groundY or nil
+			if gap and gap < -0.3 then sunk += 1 end
+			if gap and gap > 0.3 then floating += 1 end
+			if MonsterState.getZoneKey(model) == "tier1" then
+				table.insert(lines, ("  %s @(%.0f,%.1f,%.0f) 지면=%s 간격=%s %s"):format(model.Name, root.Position.X, root.Position.Y, root.Position.Z,
+					groundY and ("%.2f"):format(groundY) or "없음", gap and ("%.2f"):format(gap) or "-", MonsterState.getAiState(model)))
+			end
+		end
+	end
+	reply(player, ("[접지] 전체 잡몹 중 땅속(<-0.3) %d, 공중(>0.3) %d\n%s"):format(sunk, floating, table.concat(lines, "\n")))
+end
+
 local HELP_TEXT = table.concat({
 	"/gg anchor [classId] - 앵커 조건 적용(레벨100+일반itemLevel100 3부위+강화0+스테이지100)",
 	"/gg level <n> - 캐릭터 레벨 직접 지정",
@@ -286,6 +440,7 @@ local HELP_TEXT = table.concat({
 	"/gg boss [stage] - 보스 스테이지(기본 5)로 이동해 개인 아레나 보스전 시작(21-3 검증용)",
 	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
+	"/gg terrain [clear|cost|ground|drop] - tier1에 테스트 지형(고원·30°경사·계단·70°경사·절벽·도랑) 생성 / 제거 / 지면 Raycast 부하 실측 / 잡몹 접지 상태 / 발밑 시험 드랍(22-4)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
 }, "\n")
 
@@ -530,6 +685,31 @@ local function handleCommand(player, args)
 			expBefore, player:GetAttribute("CharacterExp"), player:GetAttribute("CharacterExp") - expBefore,
 			dropsAfter - dropsBefore))
 		reply(player, "killtest 완료 - 서버 로그 참고")
+	elseif sub == "terrain" then
+		if args[2] == "clear" then
+			clearTestTerrain(player)
+		elseif args[2] == "cost" then
+			reportProbeCost(player)
+		elseif args[2] == "ground" then
+			reportMonsterGrounding(player)
+		elseif args[2] == "drop" then
+			-- 지금 서 있는 자리(루트 위치 = 지면보다 약 3 위)에 시험 드랍을 떨어뜨린다 - 경사면·고원
+			-- 위에서 스냅 Y를 확인한다(ItemDropSpawner.spawn이 지면으로 내린다).
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				local model = ItemDropSpawner.spawn(buildGearItem("armor", "normal", 1, 1), root.Position, player)
+				task.delay(ItemDropSpawner.bounceSeconds + 0.1, function()
+					if model.Parent and model.PrimaryPart then
+						local p = model.PrimaryPart.Position
+						local groundY = GroundProbe.surfaceY(p.X, p.Z, p.Y)
+						reply(player, ("시험 드랍 정지 위치 (%.1f, %.2f, %.1f) / 지면 %s / 지면 위 %.2f"):format(p.X, p.Y, p.Z,
+							groundY and ("%.2f"):format(groundY) or "없음", groundY and (p.Y - groundY) or -1))
+					end
+				end)
+			end
+		else
+			buildTestTerrain(player)
+		end
 	elseif sub == "bossreset" then
 		ensureBackup(player)
 		PlayerProfile.clearBossFirstClearRewards(player, tonumber(args[2]))

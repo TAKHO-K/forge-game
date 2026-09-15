@@ -7,6 +7,8 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
+local Reach = require(ReplicatedStorage.Shared.Reach)
 local ItemDropState = require(script.Parent.ItemDropState)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -54,8 +56,10 @@ RunService.Heartbeat:Connect(function()
 				local character = owner and owner.Character
 				local root = character and character:FindFirstChild("HumanoidRootPart")
 				if root and model.PrimaryPart then
-					local distance = (root.Position - model.PrimaryPart.Position).Magnitude
-					if distance <= WorldConfig.items.pickupRangeStuds then
+					-- 22-4: 수평 2stud + 높이차 상한 4(TerrainConfig.pickupHeightToleranceStuds) - 발밑만.
+					-- 언덕 아래 아이템은 위에서 못 줍는다(내려가야 한다).
+					if Reach.within(root.Position, model.PrimaryPart.Position, WorldConfig.items.pickupRangeStuds,
+						TerrainConfig.pickupHeightToleranceStuds) then
 						tryPickup(model, owner)
 					end
 				end

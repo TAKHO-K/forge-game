@@ -20,6 +20,7 @@ local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
+local Reach = require(ReplicatedStorage.Shared.Reach)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
@@ -347,9 +348,9 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 			return -- 대상이 이미 죽었거나 사라졌다 - 남은 타격은 손실(재탐색 안 함)
 		end
 		local targetRoot = lockedTarget.PrimaryPart
-		if not targetRoot or (targetRoot.Position - rootNow.Position).Magnitude > def.rangeStuds then
+		if not targetRoot or not Reach.within(targetRoot.Position, rootNow.Position, def.rangeStuds) then
 			PlayerState.clearChanneling(player)
-			return -- 대상이 사거리를 벗어났다
+			return -- 대상이 사거리를 벗어났다(22-4: 수평 거리 + 높이차 상한)
 		end
 
 		local forceCrit, critDmgBonus = nil, nil

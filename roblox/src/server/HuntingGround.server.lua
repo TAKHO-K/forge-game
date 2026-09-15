@@ -10,6 +10,7 @@ local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local TeleportPad = require(script.Parent.TeleportPad)
+local GroundProbe = require(script.Parent.GroundProbe)
 
 local FLOOR_THICKNESS = 2
 local FLOOR_Y = 0 -- 모든 구역 바닥 중심 Y(9-4 원본 huntingGround.center.Y=0과 동일 기준).
@@ -40,6 +41,27 @@ local function floorColorFor(zone)
 	return ROLE_FLOOR_COLOR[zone.role] or NEUTRAL_GROUND
 end
 
+-- 22-4: 맵 밑판. 플레이스 기본 Baseplate(윗면 y=0)가 사실상 복도(구역 사이 32stud)의 바닥
+-- 노릇을 하고 있었다 - Baseplate를 지우면서(removeDefaultBaseplate) 복도가 심연이 되므로,
+-- 슈퍼그리드 전체(3×224 = 672, 바깥 테두리 16 포함)를 덮는 밑판을 지면 폴더에 깐다. 윗면은
+-- 구역 바닥(1.0)보다 0.1 낮게(0.9) 둬 같은 높이의 두 면이 겹쳐 깜빡이는 것(z-fighting)을 막는다 -
+-- 0.1 단차는 플레이어·몬스터 모두 못 느낀다. 이 밑판 밖(맵 밖)은 진짜 심연 → 리스폰 복귀.
+local MAP_BASE_TOP_Y = FLOOR_Y + FLOOR_THICKNESS / 2 - 0.1
+local MAP_BASE_COLOR = Color3.fromRGB(120, 110, 95) -- 흙길(복도) 톤 - 텍스처(20.49 T2) 전까지 색만.
+
+local function createMapBase()
+	local extent = WorldConfig.superGrid.spacingStuds * 3
+	local base = Instance.new("Part")
+	base.Name = "MapBase"
+	base.Size = Vector3.new(extent, FLOOR_THICKNESS, extent)
+	base.Position = Vector3.new(0, MAP_BASE_TOP_Y - FLOOR_THICKNESS / 2, 0)
+	base.Anchored = true
+	base.Material = Enum.Material.Ground
+	base.Color = MAP_BASE_COLOR
+	base.Parent = GroundProbe.folder()
+	return base
+end
+
 local function createZoneFloor(zone)
 	local floor = Instance.new("Part")
 	floor.Name = "ZoneFloor_" .. zone.key
@@ -48,7 +70,9 @@ local function createZoneFloor(zone)
 	floor.Anchored = true
 	floor.Material = Enum.Material.Grass
 	floor.Color = floorColorFor(zone)
-	floor.Parent = Workspace
+	-- 22-4: 바닥은 Workspace.Ground 폴더에 둔다 - 몬스터 지면 추적·드랍 스냅·대시 지면 추종의
+	-- Raycast가 이 폴더만 지면으로 본다(GroundProbe.lua). 앞으로 만드는 언덕·계단도 여기.
+	floor.Parent = GroundProbe.folder()
 	return floor
 end
 
@@ -110,6 +134,16 @@ local function removeDefaultSpawns(ourSpawnName)
 		if obj:IsA("SpawnLocation") and obj.Name ~= ourSpawnName then
 			obj:Destroy()
 		end
+	end
+end
+
+-- 22-4: 플레이스 기본 Baseplate(2048×16, 윗면 y=0)를 지운다. 20.49 실측에서 잔존이 확인됐고,
+-- 남겨 두면 구역 바닥 사이 틈·심연이 전부 "1stud 아래 바닥"이 되어 심연 복귀(TerrainServer)와
+-- 몬스터의 "지면 없음" 판정이 절대 발동하지 않는다. removeDefaultSpawns와 같은 성격의 정리.
+local function removeDefaultBaseplate()
+	local baseplate = Workspace:FindFirstChild("Baseplate")
+	if baseplate and baseplate:IsA("BasePart") then
+		baseplate:Destroy()
 	end
 end
 
@@ -218,6 +252,8 @@ local function spawnTierMonsters(zone)
 	local tierKey = MonsterData.tierOrder[zone.tierIndex]
 	local data = MonsterData[tierKey]
 	for _, offset in ipairs(WorldConfig.zoneMonsterGrid.offsets) do
+		-- Y는 바닥 윗면 기준 관례값 - 실제 스폰 Y는 MonsterSpawner.spawn이 그 자리 지면으로
+		-- 스냅한다(22-4, 슬롯 위에 언덕이 있으면 언덕 위에 선다).
 		local position = Vector3.new(
 			zone.center.X + offset.X,
 			FLOOR_Y + FLOOR_THICKNESS / 2 + 1.5,
@@ -229,6 +265,7 @@ end
 
 -- ═══ 실행 ═══
 
+createMapBase()
 for _, key in ipairs(WorldConfig.zoneOrder) do
 	local zone = WorldConfig.zones[key]
 	createZoneFloor(zone)
@@ -238,6 +275,7 @@ for _, key in ipairs(WorldConfig.zoneOrder) do
 end
 
 removeDefaultSpawns("HuntingGroundSpawn")
+removeDefaultBaseplate()
 createPlayerSpawn(WorldConfig.zones.spawn)
 createCommunityPlaceholder(WorldConfig.zones.community)
 

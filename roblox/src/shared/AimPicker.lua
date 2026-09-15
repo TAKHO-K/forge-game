@@ -6,8 +6,13 @@
 -- 판정이 아니라 방향 기반이다 - 작은 몬스터를 정확히 클릭하기 어렵고, 탑다운 게임이라
 -- 방향 기반이 더 자연스럽다. 방향과 맞는(dot>0) 후보가 하나도 없으면(뒤쪽만 있거나
 -- aimPoint가 없으면) 사거리 안 최근접으로 대체한다.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Reach = require(ReplicatedStorage.Shared.Reach)
+
 local AimPicker = {}
 
+-- 22-4: 사거리는 XZ 수평 그대로, 높이차 상한(Reach.sameLayer)만 추가 - 절벽 위아래 몬스터는
+-- 후보에서 빠진다. 클라(AimTarget)와 서버(AttackServer)가 같은 함수라 조준 표시도 같이 빠진다.
 function AimPicker.pick(originPosition, aimPoint, rangeStuds, candidates)
 	local direction = nil
 	if aimPoint then
@@ -26,7 +31,7 @@ function AimPicker.pick(originPosition, aimPoint, rangeStuds, candidates)
 			local offset = root.Position - originPosition
 			local flat = Vector3.new(offset.X, 0, offset.Z)
 			local dist = flat.Magnitude
-			if dist <= rangeStuds then
+			if dist <= rangeStuds and Reach.sameLayer(root.Position, originPosition) then
 				if dist < nearestDist then
 					nearest, nearestDist = model, dist
 				end

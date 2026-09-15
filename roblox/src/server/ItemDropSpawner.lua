@@ -11,6 +11,7 @@ local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local ItemDropState = require(script.Parent.ItemDropState)
+local GroundProbe = require(script.Parent.GroundProbe)
 
 local ItemDropSpawner = {}
 
@@ -111,7 +112,25 @@ function ItemDropSpawner.spawn(item, deathPosition, owner)
 
 	local offsetX = (math.random() * 2 - 1) * SCATTER_RADIUS_STUDS
 	local offsetZ = (math.random() * 2 - 1) * SCATTER_RADIUS_STUDS
-	local groundPosition = deathPosition + Vector3.new(offsetX, 0, offsetZ)
+	-- 22-4: 지면에 스냅한다 - 경사면에서 공중에 뜨거나 파묻히지 않게, 심연 위엔 떨어지지 않게.
+	-- 순서: 흩뿌린 자리 → 흩뿌리지 않은 사망 지점 → 주인 발밑(주인은 지면 위에 서 있다) →
+	-- 그래도 없으면 옛 관례(사망 위치 그대로). 앵커드 파트라 스냅 뒤엔 움직이지 않는다.
+	local scatteredX, scatteredZ = deathPosition.X + offsetX, deathPosition.Z + offsetZ
+	local groundPosition = nil
+	local groundY = GroundProbe.surfaceY(scatteredX, scatteredZ, deathPosition.Y)
+	if groundY then
+		groundPosition = Vector3.new(scatteredX, groundY, scatteredZ)
+	else
+		groundY = GroundProbe.surfaceY(deathPosition.X, deathPosition.Z, deathPosition.Y)
+		if groundY then
+			groundPosition = Vector3.new(deathPosition.X, groundY, deathPosition.Z)
+		else
+			local ownerRoot = owner.Character and owner.Character:FindFirstChild("HumanoidRootPart")
+			local ownerGroundY = ownerRoot and GroundProbe.surfaceY(ownerRoot.Position.X, ownerRoot.Position.Z, ownerRoot.Position.Y)
+			groundPosition = ownerGroundY and Vector3.new(ownerRoot.Position.X, ownerGroundY, ownerRoot.Position.Z)
+				or deathPosition + Vector3.new(offsetX, 0, offsetZ)
+		end
+	end
 	local restPosition = groundPosition + Vector3.new(0, FLOAT_HEIGHT_STUDS, 0)
 	local peakPosition = groundPosition + Vector3.new(0, FLOAT_HEIGHT_STUDS + BOUNCE_HEIGHT_STUDS, 0)
 

@@ -28,6 +28,7 @@ local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossPatterns = require(script.Parent.BossPatterns)
+local GroundProbe = require(script.Parent.GroundProbe)
 
 local BossEncounter = {}
 
@@ -78,7 +79,7 @@ local function buildArena(zoneKey)
 	floor.Color = ARENA_FLOOR_COLOR
 	floor.Size = Vector3.new(half * 2, ARENA_FLOOR_THICKNESS_STUDS, half * 2)
 	floor.Position = Vector3.new(zone.center.X, 0, zone.center.Z)
-	floor.Parent = Workspace
+	floor.Parent = GroundProbe.folder() -- 22-4: 지면 폴더(보스 지면 추적·돌진 Y·드랍 스냅의 대상)
 
 	local wallY = ARENA_FLOOR_TOP_Y + wallsCfg.heightStuds / 2
 	local function wall(sizeX, sizeZ, offsetX, offsetZ)
@@ -127,6 +128,7 @@ end
 local function arenaEntryPosition(zone)
 	return zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 3, zone.halfSize - 10)
 end
+BossEncounter.entryPositionFor = arenaEntryPosition -- 22-4: 심연 복귀(TerrainServer)가 같은 입장점을 쓴다
 
 local function teleportTo(player, position)
 	local character = player.Character

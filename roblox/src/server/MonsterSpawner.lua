@@ -14,6 +14,19 @@ local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfi
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
 local MonsterState = require(script.Parent.MonsterState)
+local GroundProbe = require(script.Parent.GroundProbe)
+local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
+
+-- 22-4: 스폰·리스폰 위치를 그 자리 지면 위(발 오프셋 1.5)로 스냅한다. 첫 스폰(HuntingGround)·
+-- 리스폰(despawn의 spawnPosition 재사용)·보스(BossEncounter)·상자 전부 이 함수를 지나므로
+-- 여기 한 곳이 "리스폰 위치도 지면 위에 놓인다"를 보장한다. 지면을 못 찾으면 받은 Y 그대로.
+local function snapToGround(position)
+	local groundY = GroundProbe.surfaceY(position.X, position.Z, position.Y)
+	if groundY then
+		return Vector3.new(position.X, groundY + TerrainConfig.monsterFootOffsetStuds, position.Z)
+	end
+	return position
+end
 
 local MonsterSpawner = {}
 
@@ -389,6 +402,7 @@ function MonsterSpawner.spawn(data, position, zoneKey, forcedVariant)
 	-- 몬스터를 대체한다") - 보스는 대상이 아니다(플레이어 1인 전용 인스턴스라 "발견의 재미"
 	-- 자체가 성립하지 않는다).
 	local variant = data.isBoss and {} or (forcedVariant or rollVariant())
+	position = snapToGround(position)
 
 	if variant.isChest then
 		return MonsterSpawner.spawnChest(data, position, zoneKey)

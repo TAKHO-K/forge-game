@@ -18,10 +18,21 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
+local Reach = require(ReplicatedStorage.Shared.Reach)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
+local GroundProbe = require(script.Parent.GroundProbe)
 
 local BossPatterns = {}
+
+-- 22-4 높이 규칙(다음 세션 보스맵이 그대로 쓴다, PRD 20.50 [2]):
+--   · 모든 패턴 판정은 XZ 수평 + |ΔY| ≤ TerrainConfig.heightToleranceStuds(8). 파동·낙석·십자
+--     화염은 "그 패턴의 지면 Y"(파동 중심 = 보스 발밑, 낙석 = 낙하점 지면, 십자 = 보스 발밑)
+--     기준이라 8 넘게 높은 언덕 위 플레이어에겐 닿지 않는다(절벽 = 안전지대, 의도).
+--   · 돌진 이동은 매 틱 지면 Y를 따른다(GroundProbe) - 경사에서 땅에 박히거나 뜨지 않는다.
+--     경사 한계를 넘는 단차를 만나면 그 자리에서 돌진이 끝난다(헤롱 시작).
+--   · 낙석 낙하점 Y는 그 XZ의 지면 Y(못 찾으면 보스 발밑 floorY).
 
 -- 클라 연출 채널. 개인 아레나라 대상 플레이어 한 명에게만 보낸다(FireClient).
 local patternEvent = Instance.new("RemoteEvent")
@@ -112,8 +123,8 @@ local function isAirborne(character, clearanceStuds)
 end
 
 local function floorYUnder(position)
-	local hit = Workspace:Raycast(position, Vector3.new(0, -20, 0))
-	return hit and hit.Position.Y or (position.Y - 1.5)
+	-- 22-4: 지면 폴더만 본다(GroundProbe) - 옛 무필터 Raycast는 보스 자기 몸통을 맞힐 수 있었다.
+	return GroundProbe.surfaceY(position.X, position.Z, position.Y) or (position.Y - TerrainConfig.monsterFootOffsetStuds)
 end
 
 local function intervalOf(data, id)
@@ -255,7 +266,8 @@ local function startMeteor(model, st, data, now, targetRoot)
 		table.insert(positions, clampToZone(first + offset * cfg.scatterStuds, zone, 2))
 	end
 	for i, p in ipairs(positions) do
-		positions[i] = Vector3.new(p.X, st.floorY, p.Z)
+		-- 22-4: 낙하점 Y는 그 자리 지면(언덕 위면 언덕 위). 못 찾으면 보스 발밑.
+		positions[i] = Vector3.new(p.X, GroundProbe.surfaceY(p.X, p.Z, st.floorY) or st.floorY, p.Z)
 	end
 	st.meteorPositions = positions
 	st.phase = "meteorTelegraph"
@@ -352,7 +364,9 @@ local function updateWaves(model, st, data, now, target, targetRoot)
 	for _, wave in ipairs(st.waves) do
 		local radius = (now - wave.startedAt) * cfg.waveSpeedStuds
 		local d = (xz(targetRoot.Position) - wave.center).Magnitude
+		-- 22-4: 파동은 지면을 타고 퍼진다 - 파동 중심 지면(floorY)에서 높이차 상한 너머(절벽 위)는 안 닿는다.
 		local inBand = d <= radius and d >= radius - cfg.waveThicknessStuds
+			and Reach.sameLayer(targetRoot.Position, Vector3.new(0, st.floorY, 0))
 		if inBand then
 			wave.touched = true
 			if isAirborne(target.Character, cfg.airborneClearanceStuds) then
@@ -423,7 +437,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 			return true
 		end
 		-- 예고가 끝나는 이 순간의 거리만 본다 - 그 사이 벗어났으면 완전히 무효(15-1 그대로).
-		if (targetRoot.Position - position).Magnitude <= data.attackRangeStuds then
+		if Reach.within(targetRoot.Position, position, data.attackRangeStuds) then -- 22-4: 수평 + 높이차 상한
 			PlayerDamage.applyHit(target, data.attack, "강공격", data.heavyAttackMultiplier)
 		end
 		setBodyColor(model, data.bodyColor)
@@ -474,8 +488,19 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 		local prev = xz(position)
 		local progress = math.min((now - st.chargeStartedAt) / math.max(st.chargeSeconds, 1e-3), 1)
 		local newPos = st.chargeFrom:Lerp(st.chargeTo, progress)
+		-- 22-4: 돌진도 지면을 따른다. 발밑 기준 프로브 창(±4) 안에 지면이 있으면 그 위로, 계단 한
+		-- 단(maxStepHeight)보다 큰 단차·심연이면 여기서 돌진을 끝낸다(진행도 1로 강제 → 헤롱).
+		local footY = position.Y - TerrainConfig.monsterFootOffsetStuds
+		local groundY = GroundProbe.groundY(newPos.X, newPos.Z, footY)
+		if groundY == nil or math.abs(groundY - footY) > TerrainConfig.maxStepHeightStuds then
+			newPos = position
+			progress = 1
+		else
+			newPos = Vector3.new(newPos.X, groundY + TerrainConfig.monsterFootOffsetStuds, newPos.Z)
+		end
 		model:PivotTo(CFrame.new(newPos))
-		if not st.chargeHit and distanceToSegment(xz(targetRoot.Position), prev, xz(newPos)) <= cfg.pathHalfWidthStuds then
+		if not st.chargeHit and distanceToSegment(xz(targetRoot.Position), prev, xz(newPos)) <= cfg.pathHalfWidthStuds
+			and Reach.sameLayer(targetRoot.Position, newPos) then
 			st.chargeHit = true
 			PlayerDamage.applyMaxHpFraction(target, cfg.damageMaxHpFraction, "돌진")
 		end
@@ -506,7 +531,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 		local cfg = data.patterns.meteor
 		local p = xz(targetRoot.Position)
 		for _, spot in ipairs(st.meteorPositions) do
-			if (p - xz(spot)).Magnitude <= cfg.radiusStuds then
+			if (p - xz(spot)).Magnitude <= cfg.radiusStuds and Reach.sameLayer(targetRoot.Position, spot) then -- 22-4
 				PlayerDamage.applyHit(target, data.attack, "낙석", cfg.damageMultiplier)
 				break
 			end
@@ -524,7 +549,8 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 		local rel = xz(targetRoot.Position) - st.crossOrigin
 		for _, beam in ipairs(st.crossBeams) do
 			local along = rel:Dot(beam.dir)
-			if along >= 0 and along <= beam.length and (rel - beam.dir * along).Magnitude <= cfg.halfWidthStuds then
+			if along >= 0 and along <= beam.length and (rel - beam.dir * along).Magnitude <= cfg.halfWidthStuds
+				and Reach.sameLayer(targetRoot.Position, Vector3.new(0, st.floorY, 0)) then -- 22-4: 화염은 지면을 탄다
 				PlayerDamage.applyHit(target, data.attack, "십자 화염", cfg.damageMultiplier)
 				break
 			end
