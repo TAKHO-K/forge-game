@@ -52,6 +52,9 @@ local ServerStorage = game:GetService("ServerStorage")
 -- 23-1 견습 모드 검증 명령(/gg tutorial)용.
 local TutorialState = require(script.Parent.TutorialState)
 local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData)
+-- 23-2 환생·보석 검증 명령(/gg rebirth, /gg rebirthdo, /gg gem)용.
+local GemData = require(ReplicatedStorage.Shared.data.GemData)
+local Gem = require(ReplicatedStorage.Shared.Gem)
 
 -- 앵커 조건(지시 [1] - "최소한 앵커 조건은 하나로 불러올 수 있어야 한다"): 레벨100 +
 -- 일반등급 itemLevel100 3부위 + 강화+0 + 무기등급 일반(0), 스테이지 100. 무기 등급은
@@ -137,8 +140,12 @@ local function applyGear(player, grade, itemLevel)
 	return true
 end
 
+-- 23-2: rebirthCount>=1이면 레벨1~25 구간도 지수식이다(CharacterLevel.lua "useExponential"
+-- 분기) - 환생 후 상태를 재현할 때 "/gg level"도 같은 곡선을 써야 실제 플레이와 어긋나지
+-- 않는다.
 local function applyLevel(player, level)
-	PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(level))
+	local useExponential = PlayerProfile.getRebirthCount(player) > 0
+	PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(level, useExponential))
 end
 
 local function applyEnhance(player, level)
@@ -181,10 +188,31 @@ local function applyStage(player, stage)
 	PlayerProfile.setInfiniteStageDirect(player, stage)
 end
 
--- "/gg rebirth <n>" - 20-4 [1] 검증용. 환생 시스템 자체는 없다 - rebirthCount를 직접
--- 세팅해 보스 첫 처치 확정 드랍 등급표 분기(Loot.rollBossFirstClearDrop)만 바꿔본다.
+-- "/gg rebirth <0-5>" - rebirthCount만 강제로 바꾼다(20-4 [1]에서 신설된 스텁 용도 그대로
+-- 유지 - 보스 첫 처치 드랍표 분기, 보석 슬롯 개방 표시를 무기 등급·레벨과 무관하게 빠르게
+-- 확인할 때 쓴다). 실제 환생 전체 흐름(레벨 조건·무기 등급·보석 자동 지급)을 검증하려면
+-- "/gg rebirthdo"를 쓴다.
 local function applyRebirth(player, count)
+	count = math.clamp(count, 0, GemData.maxRebirthCount)
 	PlayerProfile.setRebirthCountDirect(player, count)
+	return count
+end
+
+-- "/gg gem <slot> <id>" - 슬롯(1~5)에 보석을 강제로 채운다(23-2 검증용). id가 "-"면
+-- optionId 없이 채운다(영웅~유물처럼 옵션 풀이 없는 등급 검증용), 그 외 문자열이면 그
+-- 이름으로 강제 지정한다(고대·태초 옵션 표시 검증용) - Studio MCP execute_luau가
+-- PlayerProfile을 직접 require하지 못해(DevTools.server.lua 상단 주석 패턴과 같은 제약)
+-- 이미 로드된 이 스크립트를 거쳐야 한다.
+local function applyGemSlot(player, slot, id)
+	local weapon = PlayerProfile.getWeapon(player)
+	if not weapon then
+		return false, "no_weapon"
+	end
+	if slot < 1 or slot > Gem.slotCount then
+		return false, "slot_range"
+	end
+	weapon.gems[slot] = { optionId = (id ~= "-" and id) or nil }
+	return true
 end
 
 -- "/gg measure [stage]" - 지금 이 플레이어가 실제로 들고 있는 레벨·장비·강화·직업
@@ -516,7 +544,9 @@ local HELP_TEXT = table.concat({
 	"/gg stage <n> - 무한 스테이지 지정(생존타수/보상 배율 계산용, 물리적 이동 아님)",
 	"/gg measure [stage] - 지금 조건의 생존 타수·60초 총딜·처치 시간·권장 스테이지를 콘솔에 출력",
 	"/gg curve [classId] - 앵커 곡선(레벨×무기등급 격자)의 생존 타수·처치 시간 표를 콘솔에 출력",
-	"/gg rebirth <n> - 환생 횟수 스텁 직접 지정(보스 첫 처치 드랍 등급표 분기 검증용)",
+	"/gg rebirth <0-5> - 환생 횟수 강제 지정(무기 등급·보석 슬롯은 안 건드림, 보스 첫 처치 드랍 등급표 분기·슬롯 개방 표시 검증용)",
+	"/gg rebirthdo - 실제 환생 실행(PlayerProfile.rebirth 그대로 - 레벨 조건 검증 + 무기 등급·보석 자동 지급까지 전체 흐름 검증용)",
+	"/gg gem <slot 1-5> <id|-> - 그 슬롯에 보석을 강제로 채운다(23-2 검증용, id=-면 옵션 없이)",
 	"/gg bossreset [stage] - 보스 첫 처치 확정 드랍 기록 초기화(생략 시 전부, 재검증용)",
 	"/gg variant <sparkle|chest|frail|sturdy|giant|none> - 가장 가까운 잡몹을 그 변종으로 즉시 교체(22-2 검증용)",
 	"/gg chesttest - 가장 가까운 잡몹을 상자로 바꾼 뒤 피격 간격·다중 타격자·기록 정리를 서버 로그로 검증(22-2)",
@@ -571,8 +601,24 @@ local function handleCommand(player, args)
 		printCurve(player, args[2])
 	elseif sub == "rebirth" and tonumber(args[2]) then
 		ensureBackup(player)
-		applyRebirth(player, math.floor(tonumber(args[2])))
-		reply(player, "환생 횟수(스텁) " .. args[2] .. " 적용")
+		local applied = applyRebirth(player, math.floor(tonumber(args[2])))
+		reply(player, "환생 횟수(스텁) " .. applied .. " 적용")
+	elseif sub == "rebirthdo" then
+		ensureBackup(player)
+		local success, reasonOrCount, requiredLevel = PlayerProfile.rebirth(player)
+		if success then
+			reply(player, ("환생 실행 성공 - rebirthCount %d"):format(reasonOrCount))
+		else
+			reply(player, ("환생 실행 실패 - %s%s"):format(reasonOrCount, requiredLevel and (" (필요 레벨 " .. requiredLevel .. ")") or ""))
+		end
+	elseif sub == "gem" and tonumber(args[2]) and args[3] then
+		ensureBackup(player)
+		local success, reason = applyGemSlot(player, math.floor(tonumber(args[2])), args[3])
+		if success then
+			reply(player, ("보석 슬롯 %s 강제 지정 완료(id=%s)"):format(args[2], args[3]))
+		else
+			reply(player, "실패: " .. tostring(reason))
+		end
 	elseif sub == "boss" then
 		ensureBackup(player)
 		local stage = tonumber(args[2]) and math.floor(tonumber(args[2])) or BossData.stageInterval

@@ -28,7 +28,19 @@ local FINITE_PEAK_FORMULA = expFormula(MAX_FINITE_LEVEL) -- 앵커 보정에만 
 
 -- 그 레벨에 도달하기 위한 누적 경험치. 1~25는 실측표, 26+는 25번째 실측값에서 공식의
 -- 증가분만 이어 붙인다(위 주석 참고).
-function CharacterLevel.getExpForLevel(level)
+--
+-- useExponential(23-2, PRD 20.38 [1]) - 환생을 한 번이라도 한 직업(rebirthCount>=1)은
+-- 1~25 구간도 실측표 대신 이 26+ 공식을 그대로 쓴다. expFormula(1)이 정확히 0이라(base×
+-- (ratio^0-1)/divisor = 0) 레벨1 시작점이 실측표와 똑같이 0으로 맞아떨어지고, 앵커 보정
+-- (FINITE_PEAK_EXP 이어붙이기)도 필요 없다 - 공식 하나로 전 구간이 매끄럽게 이어진다.
+-- 이렇게 해야 "레벨26+에서 레벨당 정확히 25마리" 항등식이 1~25 구간에도 그대로 적용돼,
+-- 환생마다 레벨 상한(25×(k+1))에 도달하는 데 필요한 처치 수가 회차 무관 625마리로
+-- 고정된다(실측표를 쓰면 1~25 구간이 약 1,404마리로 따로 놀아 회차마다 필요 처치 수가
+-- 달라진다 - PRD 20.37 [1] 실측).
+function CharacterLevel.getExpForLevel(level, useExponential)
+	if useExponential then
+		return expFormula(level)
+	end
 	if level <= MAX_FINITE_LEVEL then
 		return CharacterLevelConfig.weaponLevelExp[level]
 	end
@@ -38,7 +50,17 @@ end
 -- 누적 경험치로 현재 레벨을 구한다. 1~25는 배열을 훑고(웹 core/weaponExp.js와 동일 방식),
 -- 그 이상은 다음 임계값을 넘는지 반복 검사한다 - 경험치 증가율이 지수식이라 몬스터 한 마리
 -- 처치로 레벨이 여러 개씩 뛰는 일은 실제로 없어 반복 횟수가 크게 자라지 않는다.
-function CharacterLevel.getLevelFromExp(exp)
+-- useExponential - getExpForLevel과 같은 뜻(환생 1회 이상). 실측표를 아예 건너뛰고 공식만으로
+-- 반복 검사한다 - 1~25 구간의 판정 기준을 getExpForLevel과 반드시 같은 공식으로 맞춰야
+-- 레벨 임계값이 어긋나지 않는다.
+function CharacterLevel.getLevelFromExp(exp, useExponential)
+	if useExponential then
+		local level = 1
+		while exp >= expFormula(level + 1) do
+			level += 1
+		end
+		return level
+	end
 	local level = 1
 	for i = 1, MAX_FINITE_LEVEL do
 		if exp >= CharacterLevelConfig.weaponLevelExp[i] then
@@ -53,10 +75,11 @@ function CharacterLevel.getLevelFromExp(exp)
 	return level
 end
 
--- 다음 레벨까지 진행률(UI 표시용).
-function CharacterLevel.getProgress(exp, level)
-	local currentThreshold = CharacterLevel.getExpForLevel(level)
-	local nextThreshold = CharacterLevel.getExpForLevel(level + 1)
+-- 다음 레벨까지 진행률(UI 표시용). useExponential은 위 두 함수와 같은 뜻 - 호출부(ExpBar.
+-- client.lua)가 RebirthCount Attribute로 판정해 넘긴다.
+function CharacterLevel.getProgress(exp, level, useExponential)
+	local currentThreshold = CharacterLevel.getExpForLevel(level, useExponential)
+	local nextThreshold = CharacterLevel.getExpForLevel(level + 1, useExponential)
 	local needed = nextThreshold - currentThreshold
 	local current = exp - currentThreshold
 	return { current = current, needed = needed, ratio = needed > 0 and current / needed or 1 }

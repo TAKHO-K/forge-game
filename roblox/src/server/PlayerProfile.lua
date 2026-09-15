@@ -11,7 +11,10 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local GemData = require(ReplicatedStorage.Shared.data.GemData)
+local Gem = require(ReplicatedStorage.Shared.Gem)
 local InventorySync = require(script.Parent.InventorySync)
+local GemSync = require(script.Parent.GemSync)
 local PlayerState = require(script.Parent.PlayerState)
 
 local PlayerProfile = {}
@@ -56,10 +59,13 @@ local function syncActiveClassAttributes(player, profile)
 
 	player:SetAttribute("WeaponLevel", classState.weapon.level)
 	player:SetAttribute("WeaponGrade", classState.weapon.grade)
+	-- 환생 횟수(23-2) - CharacterLevel의 useExponential 분기(ExpBar.client.lua)와 환생 UI
+	-- (레벨 상한 표시)가 이 Attribute로 판정한다.
+	player:SetAttribute("RebirthCount", classState.rebirthCount)
 	-- 캐릭터 레벨(13-2) - 저장에는 누적 경험치만 있고 레벨은 항상 여기서 파생시킨다(단일
 	-- 소스 원칙, InfiniteStage의 stage/multiplier 관계와 같은 구조).
 	player:SetAttribute("CharacterExp", classState.characterExp)
-	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(classState.characterExp))
+	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(classState.characterExp, classState.rebirthCount > 0))
 	-- 무한 모드 스테이지(11-1). 둘 다 nil일 수 없는 필드라(SaveSystem.migrate v4 참고)
 	-- classId처럼 빈 문자열로 바꿔치기할 필요가 없다.
 	player:SetAttribute("InfiniteStage", classState.stageProgress.infinite)
@@ -118,7 +124,7 @@ end
 function PlayerProfile.getCharacterLevel(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
-	return classState and CharacterLevel.getLevelFromExp(classState.characterExp)
+	return classState and CharacterLevel.getLevelFromExp(classState.characterExp, classState.rebirthCount > 0)
 end
 
 -- 서버만 호출한다(AttackServer의 몬스터 처치 판정 직후, 골드와 같은 경로). 클라이언트가
@@ -126,15 +132,23 @@ end
 -- 일어났으면(oldLevel ~= newLevel) 호출부가 그 사실로 연출(레벨업 알림)을 띄운다 -
 -- 이 함수 자체는 판정만 하고 연출은 모른다(단일 책임, AttackServer가 RemoteEvent를 쏜다).
 -- 19-1: 활성 직업의 경험치만 오른다 - 다른 3직업은 지금 안 쓰고 있으니 그대로 멈춰 있다.
+--
+-- 23-2: 경험치 배수(×(rebirthCount+1), PRD 20.38 [1]) - 625마리 항등식의 절반이다. 레벨
+-- 상한이 회차마다 25×(rebirthCount+1)로 늘어나는 만큼 경험치도 같은 배수로 늘려야
+-- "목표 레벨까지 필요한 처치 수"가 회차 무관 625로 고정된다(레벨26+가 이미 "25마리/레벨"
+-- 로 고정돼 있으므로, 목표레벨×25÷배수 = 25(k+1)×25÷(k+1) = 625). 여기 한 곳에서만
+-- 곱한다 - 호출부(CombatResolution.grantKillReward)는 몬스터가 주는 원래 경험치만 넘기면
+-- 된다(골드처럼 "증가 통로가 여기 하나"라는 원칙을 그대로 유지).
 function PlayerProfile.addCharacterExp(player, amount)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
 		return nil, nil
 	end
-	local oldLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
-	classState.characterExp += amount
-	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
+	local useExponential = classState.rebirthCount > 0
+	local oldLevel = CharacterLevel.getLevelFromExp(classState.characterExp, useExponential)
+	classState.characterExp += amount * (classState.rebirthCount + 1)
+	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp, useExponential)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then
 		player:SetAttribute("CharacterLevel", newLevel)
@@ -242,18 +256,19 @@ function PlayerProfile.setBossCleared(player, stage)
 	player:SetAttribute("BestBossCleared", stage)
 end
 
--- 20-4 [1]. 환생 시스템 자체는 아직 없다(PRD 20.37/20.38 "설계만, 구현 안 함") - 이 값은
--- 보스 첫 처치 확정 드랍 등급표 분기(Loot.rollBossFirstClearDrop)에만 쓰는 스텁이고,
--- 지금은 DevTools("/gg rebirth")로만 바뀐다. 실제 환생 시스템이 생기면 그게 이 값을
--- 올리는 유일한 통로가 되어야 한다 - setRebirthCountDirect는 DevTools 전용으로 남는다.
+-- 20-4 [1] 신설, 23-2부터 PlayerProfile.rebirth가 이 값을 올리는 유일한 정식 통로다 -
+-- 보스 첫 처치 확정 드랍 등급표 분기(Loot.rollBossFirstClearDrop)도 여전히 이 값을 본다.
 function PlayerProfile.getRebirthCount(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	return (classState and classState.rebirthCount) or 0
 end
 
--- 서버만 호출한다(DevTools "/gg rebirth <n>" 전용 - snapshotForDevTools/restoreForDevTools의
--- deepCopy(profile.classes)가 rebirthCount도 같이 백업/복원한다).
+-- 서버만 호출한다(DevTools "/gg rebirth <n>" 전용 - rebirthCount만 강제로 바꾼다, 무기
+-- 등급·보석 슬롯은 건드리지 않는다 - 슬롯 UI가 "몇 칸 열렸는가"만 빠르게 확인하려는
+-- 용도라 실제 환생의 부수효과까지 재현할 필요가 없다. 실제 환생 전체 흐름 검증은
+-- PlayerProfile.rebirth를 직접 타는 "/gg rebirthdo"를 쓴다. snapshotForDevTools/
+-- restoreForDevTools의 deepCopy(profile.classes)가 rebirthCount도 같이 백업/복원한다).
 function PlayerProfile.setRebirthCountDirect(player, count)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
@@ -261,6 +276,197 @@ function PlayerProfile.setRebirthCountDirect(player, count)
 		return
 	end
 	classState.rebirthCount = count
+end
+
+-- 환생 실행(23-2, PRD 20.38 [1][2]). 되돌릴 수 없는 조작이다 - 서버에서만 처리하고
+-- (RebirthServer.server.lua의 RebirthRequest 핸들러가 이 함수만 부른다), 확인 없이 즉시
+-- 실행되지 않도록 클라이언트(EnhanceUI.client.lua 환생 탭)가 확인창을 먼저 띄운다(지시 그대로).
+--
+-- 반환값: (성공 여부, 실패 이유 또는 새 rebirthCount, 실패 시 필요 레벨).
+--   "no_class"       - 아직 직업을 안 골랐다.
+--   "max_rebirth"     - 이미 5회 전부 마쳤다(GemData.maxRebirthCount).
+--   "level_too_low"   - 그 회차의 목표 레벨(25×(rebirthCount+1))에 아직 못 미쳤다.
+--
+-- 625마리 항등식(PRD 20.38 [1])이 성립하려면 레벨1~25 구간도 지수식이어야 한다 - 이번
+-- 환생으로 characterExp가 0(레벨1)이 되는 순간부터 rebirthCount>=1이라 CharacterLevel의
+-- useExponential 분기가 이미 자동으로 켜진다(추가 처리 불필요, syncActiveClassAttributes가
+-- 그 분기로 CharacterLevel Attribute를 다시 계산한다).
+function PlayerProfile.rebirth(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	if classState.rebirthCount >= GemData.maxRebirthCount then
+		return false, "max_rebirth"
+	end
+
+	local requiredLevel = 25 * (classState.rebirthCount + 1)
+	local currentLevel = CharacterLevel.getLevelFromExp(classState.characterExp, classState.rebirthCount > 0)
+	if currentLevel < requiredLevel then
+		return false, "level_too_low", requiredLevel
+	end
+
+	classState.rebirthCount += 1
+	classState.characterExp = 0
+	-- 무한 스테이지도 1로 되돌린다(PRD에 명시된 문구는 없다 - "임의 결정" 목록 참고).
+	-- 근거: 625마리 항등식(20.38 [1])은 "레벨당 25마리"가 성립해야 하는데, 그 25는
+	-- 몬스터 스테이지=캐릭터 레벨(rec(L)=L, 20.44 앵커)일 때만 성립하는 비율이다
+	-- (CharacterLevelConfig.lua 주석 - expFormulaRatio-1==expFormulaDivisor 약분이
+	-- 몬스터 HP 성장률과 정확히 맞물리는 지점). 레벨은 1로 리셋되는데 스테이지가 예전
+	-- 그대로면(예: 환생 전 스테이지500) 몬스터가 압도적으로 강해 625마리 그라인드
+	-- 자체가 성립하지 않는다. infiniteBest(최고 기록)는 건드리지 않는다 - 그건 영구
+	-- 성취 기록이라 파밍 위치가 낮아져도 내려가면 안 된다(setInfiniteStage와 같은 원칙).
+	classState.stageProgress.infinite = 1
+	-- 무기 등급 = 환생 회차(0~5가 1~5 등급 index와 그대로 대응, 20.38 [2] 표).
+	classState.weapon.grade = classState.rebirthCount
+
+	-- 슬롯 k(=이번 회차)가 지금 열리고, 그 자리에 확정 보석 1개가 자동 지급된다(20.38 [2]
+	-- "슬롯이 열릴 때 그 등급의 보석 1개가 확정 지급된다").
+	local slot = classState.rebirthCount
+	classState.weapon.gems[slot] = Gem.buildGrantedGem(slot)
+
+	-- 태초(index6)는 환생만으로 못 간다 - "환생 5회 + 보석 5칸 전부 장착"이 별도 조건
+	-- (20.38 [2]). 슬롯이 열릴 때마다 자동으로 채워지므로(바로 위 줄) 5회차에 도달한
+	-- 순간 이 조건이 항상 같이 성립한다(PlayerProfile.equipGem은 "교체"만 하지 슬롯을
+	-- 비우지 않으므로, 나중에 다시 빈 슬롯이 생길 방법이 없다) - 그 우연한 정합성을
+	-- 20.38 [2]가 이미 기록해 뒀다.
+	if classState.rebirthCount == GemData.maxRebirthCount and Gem.allSlotsFilled(classState.weapon.gems) then
+		classState.weapon.grade = 6
+	end
+
+	-- 레벨·무기 등급·보석 슬롯 Attribute를 한 번에 맞춘다(setClassId와 같은 지점 - 과거
+	-- InventorySync.push를 빠뜨렸던 버그와 같은 종류의 실수를 막는다). 장비(갑옷/장갑/
+	-- 신발)는 환생으로 바뀌지 않지만, 무기 등급이 오르며 itemLevel 상대 가치가 달라지는
+	-- 것과 무관하게 인벤토리 스냅샷은 항상 최신으로 밀어 둔다.
+	syncActiveClassAttributes(player, profile)
+	InventorySync.push(player, profile)
+	GemSync.push(player)
+
+	return true, classState.rebirthCount
+end
+
+-- 상위 5등급(영웅~태초, ArmorData.gradeOrder index 3~7) 방어구 → 같은 등급 보석 1개
+-- (23-2, PRD 20.38 [3] "분해 가능 등급을 상위 5등급으로 확장"). 분해는 골드 없이 보석만
+-- 준다(20.37 [3] "분해는 보석만, 판매는 골드만" - 판매(sellItem)와 상호 배타적인 자원이라
+-- 별도 배율 조정이 필요 없다는 설계). 잠긴 아이템은 판매와 같은 이유로 분해도 막는다.
+local DISMANTLE_MIN_GRADE_INDEX = 3 -- ArmorData.gradeOrder: 1=일반, 2=희귀, 3=영웅부터.
+
+function PlayerProfile.dismantleItem(player, index)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	local item = profile.inventory[index]
+	if not item then
+		return false, "not_found"
+	end
+	if item.locked then
+		return false, "locked"
+	end
+	local itemGradeIndex = gradeIndex(item.grade)
+	if not itemGradeIndex or itemGradeIndex < DISMANTLE_MIN_GRADE_INDEX then
+		return false, "grade_too_low"
+	end
+
+	table.remove(profile.inventory, index)
+	table.insert(classState.gemInventory, { grade = item.grade, optionId = Gem.rollOption(item.grade) })
+	InventorySync.push(player, profile)
+	GemSync.push(player)
+	return true, item.grade
+end
+
+function PlayerProfile.getGemInventory(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	return classState and classState.gemInventory
+end
+
+function PlayerProfile.getWeaponGems(player)
+	local weapon = PlayerProfile.getWeapon(player)
+	return weapon and weapon.gems
+end
+
+-- 보석 인벤토리의 한 개를 슬롯에 장착한다(20.38 [2] "분해로 얻는 보석은 슬롯에 교체
+-- 장착하는 용도"). 슬롯은 항상 미리 자동 지급된 보석으로 채워져 있으므로(rebirth 참고)
+-- 이 동작은 언제나 "교체"다 - 기존 슬롯 보석은 버려지지 않고 인벤토리로 돌아간다
+-- (equipItem의 "먼저 빼고 나중에 넣는다" 순서와 같은 원칙).
+function PlayerProfile.equipGem(player, slot, gemInventoryIndex)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	if not Gem.isSlotUnlocked(slot, classState.rebirthCount) then
+		return false, "slot_locked"
+	end
+	local pending = classState.gemInventory[gemInventoryIndex]
+	if not pending then
+		return false, "not_found"
+	end
+	if pending.grade ~= Gem.gradeForSlot(slot) then
+		return false, "grade_mismatch"
+	end
+
+	table.remove(classState.gemInventory, gemInventoryIndex)
+	if Gem.isFilled(classState.weapon.gems, slot) then
+		local previous = classState.weapon.gems[slot]
+		table.insert(classState.gemInventory, { grade = Gem.gradeForSlot(slot), optionId = previous.optionId })
+	end
+	classState.weapon.gems[slot] = { optionId = pending.optionId }
+	GemSync.push(player)
+	return true
+end
+
+function PlayerProfile.getOptionRerollTickets(player)
+	local profile = profiles[player]
+	return profile and profile.purchases.optionRerollTickets
+end
+
+-- 골드로 변환권 하나를 산다(20.37 [5] - 가격은 "그 순간 몬스터 1마리당 골드×N", 계산은
+-- 호출부(GemServer.server.lua)가 InfiniteStage.getGoldReward로 매번 다시 구해 cost로
+-- 넘긴다 - 여기선 이미 계산된 가격을 원자적으로 차감·지급만 한다, EnhanceServer의 골드
+-- 확인+차감 분리 원칙과 같다).
+function PlayerProfile.tryBuyOptionRerollTicket(player, gradeId, cost)
+	local profile = profiles[player]
+	if not profile or not profile.purchases.optionRerollTickets[gradeId] then
+		return false
+	end
+	if not PlayerProfile.trySpendGold(player, cost) then
+		return false
+	end
+	profile.purchases.optionRerollTickets[gradeId] += 1
+	GemSync.push(player)
+	return true
+end
+
+-- 고대·태초 등급 보석의 옵션 이름만 재굴림한다(20.5-1 "옵션 변환권", GemData.
+-- optionPoolByGrade가 그 두 등급만 풀을 가져 재굴림 대상도 그 둘뿐이다 - Gem.
+-- isRerollableGrade). 변환권 1장을 소모한다.
+function PlayerProfile.rerollGemOption(player, slot)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	if not Gem.isFilled(classState.weapon.gems, slot) then
+		return false, "empty_slot"
+	end
+	local gradeId = Gem.gradeForSlot(slot)
+	if not Gem.isRerollableGrade(gradeId) then
+		return false, "not_rerollable"
+	end
+	local tickets = profile.purchases.optionRerollTickets
+	if (tickets[gradeId] or 0) < 1 then
+		return false, "no_ticket"
+	end
+
+	tickets[gradeId] -= 1
+	local newOptionId = Gem.rollOption(gradeId)
+	classState.weapon.gems[slot].optionId = newOptionId
+	GemSync.push(player)
+	return true, newOptionId
 end
 
 -- "그 스테이지 보스를 확정 보상으로 이미 받았는가"(20-4 [1]) - bestBossCleared(단조증가
@@ -377,7 +583,7 @@ function PlayerProfile.getClassSummaries(player)
 	local summaries = {}
 	for classId, classState in pairs(profile.classes) do
 		summaries[classId] = {
-			level = CharacterLevel.getLevelFromExp(classState.characterExp),
+			level = CharacterLevel.getLevelFromExp(classState.characterExp, classState.rebirthCount > 0),
 			stageBest = classState.stageProgress.infiniteBest,
 		}
 	end
@@ -407,9 +613,15 @@ function PlayerProfile.getSpeedPercentBonus(player)
 	return Loot.getShoesSpeedPercent(PlayerProfile.getEquipped(player, "shoes"))
 end
 
--- 장갑 공격력 비율 보너스(16-6). AttackServer가 PlayerCombat.getAttack에 그대로 넘긴다.
+-- 장갑 공격력 비율 보너스(16-6) + 장착 보석 공격력% 보너스 합(23-2, Gem.
+-- totalAttackPercentBonus) - AttackServer/SkillServer가 PlayerCombat.getAttack에 그대로
+-- 넘기는 단일 배율 자리다(PlayerCombat.lua 주석 "attackPercentBonus" 참고, 둘 다 같은
+-- 자리를 공유한다 - 보석 전용 곱셈 지점을 새로 만들지 않는다).
 function PlayerProfile.getAttackPercentBonus(player)
-	return Loot.getGlovesAttackPercent(PlayerProfile.getEquipped(player, "gloves"))
+	local glovesBonus = Loot.getGlovesAttackPercent(PlayerProfile.getEquipped(player, "gloves"))
+	local weapon = PlayerProfile.getWeapon(player)
+	local gemBonus = weapon and Gem.totalAttackPercentBonus(weapon.gems) or 0
+	return glovesBonus + gemBonus
 end
 
 -- 최대체력 재계산(17-1) - 갑옷 장착/해제·로드 직후마다 호출한다(refreshMovementSpeed와
@@ -710,7 +922,7 @@ function PlayerProfile.setCharacterExpDirect(player, exp)
 	end
 	classState.characterExp = exp
 	player:SetAttribute("CharacterExp", exp)
-	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(exp))
+	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(exp, classState.rebirthCount > 0))
 end
 
 -- 인벤토리 경유 없이 장비를 직접 장착한다(equipItem과 달리 인벤토리 인덱스가 아니라

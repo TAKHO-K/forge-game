@@ -16,8 +16,14 @@ local SaveSystem = {}
 
 -- 신규/구버전 프로필에 지급하는 시작 무기. 등급·기본공격력 등 정적 스탯은 WeaponData에만
 -- 있다 - 여기(저장 데이터)엔 계속 바뀌는 값(강화 단계)과 어떤 무기인지(id)만 남긴다.
+-- gems(23-2, PRD 20.38 [2]) - 5슬롯 고정 배열. 빈 슬롯은 nil이 아니라 false를 쓴다 -
+-- DataStore 왕복(테이블→JSON→테이블) 과정에서 배열 중간에 진짜 nil이 끼면 자리가 통째로
+-- 사라져 구멍(sparse array) 문제가 생길 수 있다(bossFirstClearStages처럼 "존재하는 키만
+-- 채우는" 딕셔너리와 달리, 이건 5칸 전부가 항상 "존재해야" 한다 - 슬롯 번호=배열 위치가
+-- 곧 등급을 뜻하므로 구멍이 뚫리면 안 된다). 채워진 슬롯은 항상 테이블(Gem.buildGrantedGem
+-- 참고, Gem.isFilled가 type()으로 구분한다).
 local function defaultWeapon()
-	return { id = WeaponData.starterId, level = 0, grade = 0 }
+	return { id = WeaponData.starterId, level = 0, grade = 0, gems = { false, false, false, false, false } }
 end
 
 -- 직업 하나가 갖는 상태(19-1) - 캐릭터 레벨·무기·착용 장비 3부위·무한 모드 진행도.
@@ -39,11 +45,18 @@ local function defaultClassState()
 		-- "재입장 무제한 + 확정 보상 무한 파밍" 방지).
 		stageProgress = { infinite = 1, infiniteBest = 1, bestBossCleared = 0, bossFirstClearStages = {} },
 
-		-- 환생 횟수(20-4). 환생 시스템 자체는 아직 없다(PRD 20.37/20.38 "설계만, 구현 안
-		-- 함") - 이 필드는 보스 첫 처치 확정 드랍 등급표 분기(Loot.rollBossFirstClearDrop)
-		-- 전용 스텁이고, 지금은 DevTools("/gg rebirth")로만 바뀐다. 실제 환생 시스템이
-		-- 생기면 그게 이 값을 올리는 유일한 통로가 된다.
+		-- 환생 횟수(20-4, 23-2부터 실제 환생 시스템이 이 값을 올리는 유일한 통로가 됐다 -
+		-- PlayerProfile.rebirth). 0~5(GemData.maxRebirthCount) - 무기 등급(weapon.grade)·
+		-- 보석 슬롯 개방(weapon.gems)과 1:1로 맞물린다(20.38 [2]).
 		rebirthCount = 0,
+
+		-- 분해로만 얻는 미장착 보석 보관함(23-2, PRD 20.37 [3] "2~5번 슬롯은 오직 분해로만
+		-- 얻는 보석"). 무기·보석은 무기에 딸린 자산이라 계정 공유가 아니라 직업별이다(20.37
+		-- [6] 저장 스키마 결정 - gold·inventory와 다른 층). 원소는 weapon.gems의 채워진
+		-- 슬롯과 같은 모양({ optionId }). 칸 수 상한을 두지 않는다(PRD가 값을 정해 두지
+		-- 않았고, 분해 한 번에 방어구 한 개를 소모해야만 늘어나는 값이라 실제로는 많이
+		-- 쌓이지 않는다 - "임의 결정" 목록 참고).
+		gemInventory = {},
 	}
 end
 
@@ -89,6 +102,12 @@ local function defaultProfile()
 
 		-- 구매한 게임패스 id 집합. {[id]=true} 형태. 상점이 없어 항상 빈 테이블이다.
 		gamepasses = {},
+
+		-- 옵션 변환권(23-2, PRD 20.37 [6] "계정 공유(신규)"). 골드로만 구매(20.5-1 - 로벅스
+		-- 판매 금지)하고 등급별로 따로 센다(고대 보석엔 고대 변환권만, 태초는 태초만) -
+		-- 두 등급만 있는 이유는 GemData.optionPoolByGrade가 그 둘만 옵션 풀을 갖기 때문이다
+		-- (영웅·전설·유물 보석은 재굴림할 옵션 자체가 없다).
+		purchases = { optionRerollTickets = { ancient = 0, primordial = 0 } },
 
 		-- 클래스 선택(10-3, 19-1부터 "현재 활성 직업" 포인터로 의미 확장). 필드는 있지만
 		-- 값은 nil - "아직 하나도 안 골랐다"가 지금은 실제로 맞는 상태이고, 이 nil이 곧
@@ -395,6 +414,29 @@ local function migrate(data)
 		data.version = 17
 	end
 
+	if data.version < 18 then
+		-- 23-2: 무기 보석 슬롯 신설(PRD 20.38 [2]). v17까지 weapon.gems·classState.
+		-- gemInventory 필드 자체가 없었다(보석 시스템 자체가 없었다) - "그 시절 무기는
+		-- 슬롯이 하나도 안 열려 있었다"가 정확한 과거 상태이므로 5칸 전부 빈 슬롯(false)으로
+		-- 채운다(v14의 weapon.grade 소급과 같은 원칙). rebirthCount는 이미 v16에서 스텁으로
+		-- 생겼으므로 손대지 않는다 - 그 값이 곧 "몇 번째 슬롯까지 열렸어야 하는가"를 뜻하지만,
+		-- 과거에 DevTools "/gg rebirth"로 스텁을 올려놨던 계정이라 해도 그건 정식 환생이
+		-- 아니었으니(보스 첫 처치 드랍표 분기 검증용) 슬롯까지 소급 개방하지 않는다 - 실제
+		-- 슬롯 보석은 이 버전부터 진짜 환생(PlayerProfile.rebirth)에서만 나온다.
+		for _, classState in pairs(data.classes) do
+			classState.weapon.gems = classState.weapon.gems or { false, false, false, false, false }
+			classState.gemInventory = classState.gemInventory or {}
+		end
+		data.version = 18
+	end
+
+	if data.version < 19 then
+		-- 23-2: 옵션 변환권 신설(PRD 20.37 [6]). v18까지 이 통화 개념 자체가 없었다 - 0개
+		-- 보유가 정확한 과거 상태다.
+		data.purchases = data.purchases or { optionRerollTickets = { ancient = 0, primordial = 0 } }
+		data.version = 19
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -416,6 +458,10 @@ local function isValidProfile(data)
 		or type(data.tutorial.completed) ~= "boolean"
 		or type(data.tutorial.step) ~= "number"
 		or type(data.tutorial.granted) ~= "table"
+		or type(data.purchases) ~= "table"
+		or type(data.purchases.optionRerollTickets) ~= "table"
+		or type(data.purchases.optionRerollTickets.ancient) ~= "number"
+		or type(data.purchases.optionRerollTickets.primordial) ~= "number"
 	then
 		return false
 	end
@@ -427,9 +473,11 @@ local function isValidProfile(data)
 			or type(classState.weapon) ~= "table"
 			or type(classState.weapon.level) ~= "number"
 			or type(classState.weapon.grade) ~= "number"
+			or type(classState.weapon.gems) ~= "table"
 			or type(classState.equipment) ~= "table"
 			or type(classState.stageProgress) ~= "table"
 			or type(classState.rebirthCount) ~= "number"
+			or type(classState.gemInventory) ~= "table"
 		then
 			return false
 		end

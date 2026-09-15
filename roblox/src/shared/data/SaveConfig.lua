@@ -3,6 +3,11 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
+	-- 19(23-2) - 옵션 변환권(purchases.optionRerollTickets = {ancient, primordial}) 필드
+	-- 신설. 계정 전체 공유. SaveSystem.migrate()의 v18->v19 참고.
+	-- 18(23-2) - 무기 보석 슬롯(weapon.gems, 5칸) + 보석 인벤토리(classState.gemInventory)
+	-- 필드 신설. 직업별(무기에 딸린 자산이라 gold와 다른 층). SaveSystem.migrate()의
+	-- v17->v18 참고.
 	-- 17(23-1) - 견습 모드 진행도(tutorial = {completed, step, granted, lendBaseline}) 필드
 	-- 신설. 계정 전체 공유(gold와 같은 층) - 무한 모드 stageProgress.infinite와 완전히
 	-- 독립이다. SaveSystem.migrate()의 v16->v17 참고.
@@ -35,7 +40,7 @@ return {
 	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
 	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
 	-- 필드(classId) 추가.
-	saveVersion = 17,
+	saveVersion = 19,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

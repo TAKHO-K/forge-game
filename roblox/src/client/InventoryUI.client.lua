@@ -32,12 +32,25 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local ItemIcons = require(script.Parent.ItemIcons)
 local UIManager = require(script.Parent.UIManager)
 
+-- 분해 가능 등급(23-2) - 서버(PlayerProfile.lua DISMANTLE_MIN_GRADE_INDEX)와 같은 문턱(영웅
+-- 이상, ArmorData.gradeOrder index 3). 버튼을 활성화할지 미리 판단하는 표시용일 뿐 실제
+-- 검증은 서버가 다시 한다(다른 등급 판정과 같은 원칙 - 클라이언트 값을 믿지 않는다).
+local function isDismantleEligibleGrade(gradeId)
+	for i, id in ipairs(ArmorData.gradeOrder) do
+		if id == gradeId then
+			return i >= 3
+		end
+	end
+	return false
+end
+
 local inventorySync = ReplicatedStorage:WaitForChild("InventorySync")
 local inventoryFetch = ReplicatedStorage:WaitForChild("InventoryFetch")
 local inventoryFull = ReplicatedStorage:WaitForChild("InventoryFull")
 local equipRequest = ReplicatedStorage:WaitForChild("EquipRequest")
 local sellRequest = ReplicatedStorage:WaitForChild("SellRequest")
 local lockRequest = ReplicatedStorage:WaitForChild("LockRequest")
+local dismantleRequest = ReplicatedStorage:WaitForChild("DismantleRequest")
 local bulkSellCutoffRequest = ReplicatedStorage:WaitForChild("BulkSellCutoffRequest")
 
 local player = Players.LocalPlayer
@@ -685,7 +698,13 @@ ItemIcons.lock(lockIconHolder, 14, UIColors.xp)
 local sellButton = makeActionButton(2, 76, "sell")
 sellButton.Text = "판매"
 
-local equipButton = makeActionButton(3, 84, "primary")
+-- 분해(23-2, PRD 20.38 [3] 확장) - 상위 5등급(영웅~태초)만 대상. 판매와 자리를 나란히
+-- 두되 서로 다른 결과를 준다(분해=보석만, 판매=골드만, PlayerProfile.dismantleItem 주석
+-- 참고) - 같은 "sell" 스타일(금색 테두리)을 재사용한다(새 색을 안 만든다는 지시).
+local dismantleButton = makeActionButton(3, 60, "sell")
+dismantleButton.Text = "분해"
+
+local equipButton = makeActionButton(4, 84, "primary")
 equipButton.Text = "착용"
 
 -- ═══ 등급 시각 효과 ═══
@@ -868,6 +887,9 @@ local function clearDetail()
 	sellButton.AutoButtonColor = false
 	sellButton.Active = false
 	sellButton.TextTransparency = 0.6
+	dismantleButton.AutoButtonColor = false
+	dismantleButton.Active = false
+	dismantleButton.TextTransparency = 0.6
 	equipButton.AutoButtonColor = false
 	equipButton.Active = false
 	equipButton.TextTransparency = 0.6
@@ -918,6 +940,10 @@ local function refreshDetail()
 		sellButton.AutoButtonColor = true
 		sellButton.Active = true
 		sellButton.TextTransparency = item.locked and 0.6 or 0
+		local dismantleEligible = not item.locked and isDismantleEligibleGrade(item.grade)
+		dismantleButton.AutoButtonColor = dismantleEligible
+		dismantleButton.Active = dismantleEligible
+		dismantleButton.TextTransparency = dismantleEligible and 0 or 0.6
 		equipButton.AutoButtonColor = true
 		equipButton.Active = true
 		equipButton.TextTransparency = 0
@@ -940,6 +966,9 @@ local function refreshDetail()
 		sellButton.AutoButtonColor = false
 		sellButton.Active = false
 		sellButton.TextTransparency = 0.6
+		dismantleButton.AutoButtonColor = false
+		dismantleButton.Active = false
+		dismantleButton.TextTransparency = 0.6
 		equipButton.AutoButtonColor = true
 		equipButton.Active = true
 		equipButton.TextTransparency = 0
@@ -967,6 +996,9 @@ local function refreshDetail()
 		sellButton.AutoButtonColor = false
 		sellButton.Active = false
 		sellButton.TextTransparency = 0.6
+		dismantleButton.AutoButtonColor = false
+		dismantleButton.Active = false
+		dismantleButton.TextTransparency = 0.6
 		equipButton.AutoButtonColor = false
 		equipButton.Active = false
 		equipButton.TextTransparency = 0.6
@@ -1554,6 +1586,17 @@ sellButton.Activated:Connect(function()
 		return
 	end
 	sellRequest:FireServer("sell", selectedValue)
+end)
+
+dismantleButton.Activated:Connect(function()
+	if selectedKind ~= "bag" then
+		return
+	end
+	local item = inventory[selectedValue]
+	if not item or item.locked or not isDismantleEligibleGrade(item.grade) then
+		return
+	end
+	dismantleRequest:FireServer(selectedValue)
 end)
 
 equipButton.Activated:Connect(function()
