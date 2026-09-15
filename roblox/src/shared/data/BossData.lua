@@ -59,6 +59,111 @@ return {
 			moveSpeedStuds = 8, -- 잡몹(10)보다 느리다 - 덩치가 큰 느낌 + 회피 난이도를 낮춘다.
 			attackRangeStuds = 14, -- 커진 몸집만큼 사거리도 조금 더 길다.
 			attackCooldownSeconds = 1.0,
+			-- 21-3: 추격 정지 거리. 보스 몸통 충돌을 껐으므로(MonsterSpawner - 진동파 호핑·돌진이
+			-- 캐릭터를 밀어내는 사고 방지) 이 값이 없으면 보스가 플레이어 좌표까지 파고들어 겹친다 -
+			-- 겹치면 진동파가 발밑(반경 0)에서 시작해 점프 창이 파동 통과 시간(0.17초)뿐이 된다.
+			-- 몸통 반폭 3.6 + 캐릭터 반폭 1 + 여유 = 8, 사거리 14 안이라 평타엔 영향이 없다.
+			chaseStopDistanceStuds = 8,
+
+			-- ═══ 패턴(21-3, PRD-forge-game-roblox.md 20.44 [3](나) 설계 → 20.46 구현) ═══
+			-- 모든 시간은 초, 거리는 stud(아레나 좌표계 = WorldConfig와 같은 stud). 회피 전제는
+			-- "걷기 16stud/s + 점프(높이 7.2, 체공 0.54초)"뿐이다 - 대시(21-2)는 보너스지 필수가
+			-- 아니다(지시). 예고 시간 하한 = 시각 반응 0.25 + 터치 입력 지연 0.1 + 서버→클라
+			-- 표시 지연 0.15 + 회피 동작 시간 + 여유 - 각 패턴 주석에 그 계산을 적어 둔다.
+			--
+			-- 스케줄링(BossPatterns.lua): 패턴은 한 번에 하나만 돈다(같은 상태 머신의 phase
+			-- 하나). 각 패턴은 자기 intervalSeconds 시계(직전 종료 시각 기준)를 갖고, 보스가
+			-- 평상 상태이고 직전 패턴 종료 후 patternMinGapSeconds가 지났을 때 가장 오래 기다린
+			-- 패턴부터 시작한다. 강공격(위 heavyAttack* 필드 - 15-1 현행 6초/1.5초/×3 그대로,
+			-- 21-3에서 확인만 했다)도 이 스케줄러를 같이 탄다 - 주기 6초는 "직전 강공격 종료
+			-- 기준"이라 다른 패턴이 끼면 그만큼 밀린다(겹침 방지가 주기 정확도보다 우선).
+			-- HP 구간별 빈도 변화는 PRD에 없어 고정이다(21-3 기록).
+			--
+			-- 패턴 간 최소 간격(패턴의 "보스 구속 종료" - 파동이 대상을 지나간 시점·돌진 후
+			-- 헤롱 종료 등 - 기준). 평소 6초: 패턴 사이에 평타 추격 구간이 확실히 있어 "패턴을
+			-- 연속으로 여러 개 쓰는" 일이 없다(사용자 지시 - 연속 사용은 체력 20% 이하에서만).
+			-- 격노(HP ≤ enragedHpFraction) 2.5초 = 착지 0.54(진동파 회피 직후) + 반응 0.5 +
+			-- 옆걸음 0.4 + 여유 1.0 - 연속으로 와도 "진동파 회피 직후 돌진을 착지 경직으로 못
+			-- 피한다"(지시 [5])는 일은 없는 하한.
+			patternMinGapSeconds = 6,
+			enragedHpFraction = 0.2,
+			enragedPatternMinGapSeconds = 2.5,
+			-- 입장·재도전 유예(20.44 [3](다) 채택) - 텔레포트 직후 예고 없이 맞지 않게 한다.
+			entryGraceSeconds = 2,
+
+			patterns = {
+				-- 패턴 1 진동파(20.44 [3](나) #1). 보스가 hopHeightStuds만큼 떠올랐다 찍는 동작
+				-- 자체가 예고(telegraphSeconds 1.2)이고, 찍는 순간 파동이 waveSpeedStuds로
+				-- 퍼진다. 피해 = 잡몹 평타 ×2(7타 앵커 기준 최대체력의 28.6%). 판정은 서버가
+				-- "파동 두께가 플레이어를 지나는 동안 한 순간이라도 공중이었는가"로 한다 - 점프
+				-- 입력 창 = 체공 0.54 + 통과 4/24=0.17 = 0.71초(서버가 보는 실측 체공은 0.6~0.7).
+				-- 24 > 걷기 16이라 뛰어서는 못 피한다(의도, 점프가 유일한 답). waveCount 3 =
+				-- "줄넘기" - repeatIntervalSeconds 1.5 ≥ 체공 0.54 + 반응·입력 0.35 + 통과 0.17
+				-- = 1.06 + 여유 0.44(첫 예고 1.2는 PRD값 - 첫 파동은 땅에 서서 시작하므로 체공
+				-- 항이 없어 1.2 > 0.5 + 0.17로 충분하다).
+				shockwave = {
+					intervalSeconds = 11,
+					telegraphSeconds = 1.2,
+					waveCount = 3,
+					repeatIntervalSeconds = 1.5,
+					waveSpeedStuds = 24,
+					waveThicknessStuds = 4,
+					damageMultiplier = 2,
+					hopHeightStuds = 4,
+					-- 공중 판정 여유 - 지면 거리(레이캐스트)가 서 있을 때(HipHeight + 루트 반높이)보다
+					-- 이만큼 더 크면 공중. 21-3 실측: 점프 중 이 문턱 위에 있는 시간 0.58초.
+					airborneClearanceStuds = 0.5,
+				},
+
+				-- 패턴 3 정신집중→돌진(20.44 [3](나) #3). 느낌표가 뜨는 "순간" 플레이어 좌표를
+				-- 고정하고(추적 안 함 - 회피가 실력이 되는 핵심), focusSeconds 뒤 그 좌표를 지나
+				-- 벽까지 speedStuds로 직진한다. 피해 = 최대체력의 damageMaxHpFraction(방어 무관 -
+				-- 직업 무관하게 회피를 강제). 회피 = 경로선에서 옆으로 6stud(0.375초, 채널링 50%
+				-- 속도여도 0.75초) - 1.5 ≥ 0.5 + 0.375 + 여유 0.625. 경로 폭 반경 4 + 캐릭터
+				-- 반폭 1 = 5 < 6. 벽·담장에 닿으면(arenaMarginStuds 안쪽) 멈춘다 - 아레나 밖으로
+				-- 절대 안 나간다(도착점을 시작 시점에 AABB로 자른다). 멈춘 뒤 recoverSeconds 동안
+				-- 헤롱거리며 주저앉는다(사용자 지시 - 5초 이내, 백어택 시간): 몸이 dazeSinkStuds
+				-- 내려앉고 dazeTiltDeg 기울며 머리 위에 어지럼 말풍선이 뜬다. 이 4초는 돌진을 피한
+				-- 사람에게만 주어지는 보상 딜타임이다(맞은 사람은 80%를 잃고 회복부터 해야 한다).
+				charge = {
+					intervalSeconds = 15,
+					focusSeconds = 1.5,
+					speedStuds = 60,
+					pathHalfWidthStuds = 4,
+					damageMaxHpFraction = 0.8,
+					recoverSeconds = 4.0,
+					dazeSinkStuds = 1.2,
+					dazeTiltDeg = 25,
+					arenaMarginStuds = 4, -- 보스 몸통 반폭(1.2×3=3.6)보다 조금 크게.
+				},
+
+				-- 패턴 4 낙석(21-3 추가). 표적 장판 count개(첫 장판은 플레이어 현재 위치, 나머지는
+				-- 그 주변 scatterStuds 안 랜덤) telegraphSeconds 뒤 radiusStuds 안에 있으면 피해
+				-- (잡몹 평타 ×2). 회피 = 걷기(반경 6 + 1 = 7stud, 0.44초 - 1.5 ≥ 0.5 + 0.44 +
+				-- 여유 0.56). 돌진처럼 좌표 고정형이라 "계속 움직이는 사람은 안 맞는다".
+				meteor = {
+					intervalSeconds = 13,
+					telegraphSeconds = 1.5,
+					count = 3,
+					radiusStuds = 6,
+					scatterStuds = 10,
+					damageMultiplier = 2,
+				},
+
+				-- 패턴 5 십자 화염(21-3 추가). 보스 중심에서 4방향(첫 볼리 각도는 플레이어 방향,
+				-- 90도 간격) 벽까지 뻗는 직선 halfWidthStuds 폭 - telegraphSeconds 예고 뒤 선
+				-- 위면 피해(잡몹 평타 ×2). 두 번째 볼리는 rotateDeg 돌려서 한 번 더 - 첫 볼리를
+				-- 피해 대각선에 섰으면 두 번째는 다시 옆으로 걸어야 한다. 회피 = 옆으로 4stud
+				-- (0.25초). 선은 아레나 AABB로 잘라 담장 밖으로 안 나간다.
+				cross = {
+					intervalSeconds = 17,
+					telegraphSeconds = 1.5,
+					volleys = 2,
+					rotateDeg = 45,
+					halfWidthStuds = 3,
+					damageMultiplier = 2,
+				},
+			},
 		},
 	},
 }

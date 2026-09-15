@@ -27,6 +27,7 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
+local BossPatterns = require(script.Parent.BossPatterns)
 
 local BossEncounter = {}
 
@@ -162,6 +163,7 @@ function BossEncounter.spawnFor(player, stage)
 	local spawnPosition = zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 1.5, 0)
 	local model = MonsterSpawner.spawn(data, spawnPosition, zoneKey)
 	activeBosses[player] = model
+	BossPatterns.setGrace(model, data, data.entryGraceSeconds) -- 입장 2초 유예(20.44 [3](다))
 	print(("[forge-game] 보스 등장: %s - 스테이지 %d, 대상 %s (아레나 %s)"):format(
 		data.displayName, stage, player.Name, zoneKey))
 end
@@ -192,18 +194,56 @@ function BossEncounter.getActive(player)
 	return activeBosses[player]
 end
 
+-- 플레이어 사망 시 보스 리셋(21-3 [1]). 죽음을 반복해 조금씩 깎아 이기는 구멍을 막는다 -
+-- HP 최대치 복구 + 진행 중인 패턴·파동·연출 취소 + 보스를 중앙 스폰 자리로 되돌려 idle.
+-- 재도전 횟수 제한은 없다(21-1 결정). 19-4 개인 인스턴스 구조와의 정합: activeBosses[player]
+-- 하나가 "이 플레이어의 보스"이므로 다른 플레이어의 보스는 건드리지 않는다.
+function BossEncounter.resetFor(player)
+	local model = activeBosses[player]
+	if not model or not model.Parent then
+		return
+	end
+	local data = MonsterState.getData(model)
+	if not data then
+		return
+	end
+	BossPatterns.reset(model, data)
+	MonsterState.resetBossHp(model)
+	MonsterSpawner.updateHpLabel(model)
+	MonsterState.setAiState(model, "idle")
+	MonsterState.setAiTarget(model, nil)
+	model:PivotTo(CFrame.new(MonsterState.getSpawnPosition(model)))
+	player:SetAttribute("TickDamage", 0)
+	print(("[forge-game] 보스 리셋: %s 사망 - %s HP 최대치 복구"):format(player.Name, data.displayName))
+end
+
 -- 보스전 도중 죽어도(사용자 지시) 그 아레나로 다시 스폰된다 - 스테이지를 실제로 옮길
 -- 때만(위 despawnFor/clearFor) 사냥터로 돌아간다. activeBosses에 아직 이 플레이어의
 -- 보스가 남아 있다는 것 자체가 "아직 그 보스전 중"이라는 뜻이므로, 이 하나의 조건만
 -- 보면 된다 - 별도 "보스전 중" 플래그를 새로 만들지 않는다(19-4가 겪은 유령 상태
 -- 문제를 반복하지 않으려면 진실의 출처를 하나로 유지해야 한다).
 Players.PlayerAdded:Connect(function(player)
-	player.CharacterAdded:Connect(function()
+	player.CharacterAdded:Connect(function(character)
+		-- 21-3 [1]: 죽는 순간(Humanoid.Died - PlayerDamage가 Health=0을 넣는 그 신호) 보스를
+		-- 리셋한다. task.defer로 한 틱 미룬다 - Died가 보스 패턴의 피해 적용 도중(BossPatterns.
+		-- step 안)에서 동기로 발화하면 진행 중인 상태 테이블을 그 함수가 아직 쓰고 있다.
+		local humanoid = character:WaitForChild("Humanoid")
+		humanoid.Died:Connect(function()
+			if activeBosses[player] then
+				task.defer(BossEncounter.resetFor, player)
+			end
+		end)
+
 		local slot = slotByPlayer[player]
-		if not activeBosses[player] or not slot then
+		local model = activeBosses[player]
+		if not model or not slot then
 			return
 		end
 		teleportTo(player, arenaEntryPosition(WorldConfig.zones[zoneKeyForSlot(slot)]))
+		local data = MonsterState.getData(model)
+		if data then
+			BossPatterns.setGrace(model, data, data.entryGraceSeconds) -- 재도전 2초 유예
+		end
 	end)
 end)
 

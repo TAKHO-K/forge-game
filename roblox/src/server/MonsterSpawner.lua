@@ -60,6 +60,11 @@ local function buildModel(data, position, isSparkle)
 	body.Name = "Body"
 	body.Size = Vector3.new(2.4, 3, 1.2) * sizeScale
 	body.Anchored = true
+	-- 21-3: 보스 몸통은 캐릭터와 충돌하지 않는다. 진동파(뛰었다 찍기)·돌진(60stud/s)으로
+	-- 움직이는 anchored 파트가 캐릭터를 밀어내면 물리가 캐릭터를 바닥 아래로 튕겨
+	-- FallenPartsDestroyHeight까지 떨어뜨려 "HP는 남았는데 죽는" 엔진 사망이 났다(21-3 검증
+	-- 중 재현). 피격 판정은 전부 거리 기반이라 충돌이 필요 없다. 잡몹은 그대로(밀림이 없다).
+	body.CanCollide = not data.isBoss
 	body.Color = bodyColor
 	body.Position = position
 	body.Parent = model
@@ -78,6 +83,7 @@ local function buildModel(data, position, isSparkle)
 	head.Shape = Enum.PartType.Ball
 	head.Size = Vector3.new(1.6, 1.6, 1.6) * sizeScale
 	head.Anchored = true
+	head.CanCollide = not data.isBoss -- 위 Body와 같은 이유(21-3)
 	head.Color = headColor
 	head.Position = position + Vector3.new(0, 2.3 * sizeScale, 0)
 	head.Parent = model

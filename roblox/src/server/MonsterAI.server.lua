@@ -6,21 +6,17 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
-local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
-local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
-local Loot = require(ReplicatedStorage.Shared.Loot)
 local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local SummonState = require(script.Parent.SummonState)
+-- 21-3: 피격 계산·적용(computeHitDamage/applyHitToPlayer/syncHud)은 PlayerDamage.lua로
+-- 옮겼다 - 보스 패턴(BossPatterns.lua)이 같은 경로로 피해를 넣어야 해서다. 동작은 그대로다.
+local PlayerDamage = require(script.Parent.PlayerDamage)
+local BossPatterns = require(script.Parent.BossPatterns)
 
--- 클라이언트 체력바(PlayerHealthBar.client.lua)는 Humanoid.Health가 아니라 이 Attribute를
--- 읽는다 - PlayerState가 유일한 HP 소스이므로 HP가 바뀌는 모든 지점에서 이걸 같이 불러야 한다.
-local function syncHud(player)
-	player:SetAttribute("Hp", PlayerState.getHp(player))
-	player:SetAttribute("MaxHp", PlayerState.getMaxHp(player))
-end
+local syncHud = PlayerDamage.syncHud
 
 Players.PlayerAdded:Connect(function(player)
 	PlayerState.init(player)
@@ -117,50 +113,11 @@ local function stepToward(model, currentPosition, targetPosition, speedStuds, dt
 	model:PivotTo(CFrame.new(newPosition))
 end
 
--- 몬스터 평타 1회가 실제로 얼마나 깎는지(감소율 적용 후). 체력바 눈금(9-5)과 실제
--- 피격 데미지가 같은 계산을 써야 눈금이 "몇 대"를 정확히 의미한다.
--- 방어력은 클래스 배율이 걸린다(10-3 [3] - 대검 1.3배로 더 튼튼하고 활 0.6배로 더 약하다).
--- 클래스를 아직 안 고른 순간(접속 직후 선택 UI가 뜨기 전)은 배율 없는 기본값으로 방어한다.
 -- attack은 호출부가 MonsterState.getAttackFor(model, targetPlayer의 stage)로 넘긴다(19-4,
 -- C안 - 잡몹은 공유 자원이라 "몬스터가 가진 stage"가 없다. 맞는 그 순간 상대 플레이어의
--- stage로 매번 새로 계산한다, MonsterState.lua 주석 참고). 장비 방어력(12-1 [4])은 착용한 갑옷이
--- 있으면 Loot.getArmorDefense가 계산하고, 없으면 0 - PlayerCombat.getDefense가
--- "(기본값 + 장비 보너스) 전체에 클래스 배율을 곱한다"는 9-4/10-3 원칙을 그대로 지킨다.
-local function computeHitDamage(attack, targetPlayer)
-	local classId = PlayerProfile.getClassId(targetPlayer)
-	local armorBonus = Loot.getArmorDefense(PlayerProfile.getEquippedArmor(targetPlayer))
-	local defense = classId and PlayerCombat.getDefense(classId, armorBonus) or CombatConfig.playerDefense
-	local reduction = defense / (defense + CombatConfig.damageReductionAlpha * attack)
-	return attack * (1 - reduction)
-end
-
--- 데미지 적용 + 사망 처리 - tryAttack(잡몹·보스 평타)과 tryBossAttack(보스 예고 일격,
--- 15-1)이 공유하는 유일한 지점이다. "때릴지 말지"(사거리·쿨다운)는 호출부마다 다르지만,
--- "맞은 뒤에 뭘 하는가"는 공격 종류와 무관하게 항상 같다.
-local function applyHitToPlayer(targetPlayer, rawAttack)
-	local damage = computeHitDamage(rawAttack, targetPlayer)
-	-- 20-2a: 대검 회전베기(E) 채널링 중 "받는 피해 50% 감소"(PRD-forge-game.md 4.3) - 평상시엔
-	-- PlayerState.getIncomingDamageMultiplier가 항상 1을 돌려줘 기존 동작과 같다.
-	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
-	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
-	PlayerState.setHp(targetPlayer, newHp)
-	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)
-	syncHud(targetPlayer)
-
-	print(("[forge-game] 플레이어 피격: %s - %.2f 데미지 (남은 HP %.2f/%d)"):format(
-		targetPlayer.Name, damage, newHp, PlayerState.getMaxHp(targetPlayer)))
-
-	if newHp <= 0 then
-		print(("[forge-game] 플레이어 사망: %s"):format(targetPlayer.Name))
-		local character = targetPlayer.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			-- 실제 HP는 PlayerState가 관리한다. Humanoid.Health=0은 로블록스 리스폰
-			-- 처리(사냥터에 이미 있는 SpawnLocation으로 자동 복귀)를 트리거하는 신호일 뿐이다.
-			humanoid.Health = 0
-		end
-	end
-end
+-- stage로 매번 새로 계산한다, MonsterState.lua 주석 참고). 감소식 자체는 PlayerDamage.lua.
+local computeHitDamage = PlayerDamage.computeHitDamage
+local applyHitToPlayer = PlayerDamage.applyHit
 
 -- 사거리 안이고 자기 쿨다운이 지났으면 플레이어를 때린다. 데미지는 PRD 확정 비율 모델
 -- (뺄셈이 아니라 감소율 나눗셈)을 쓴다 - 웹에서 뺄셈으로 만들었던 무적 버그 구조를 피한다.
@@ -187,67 +144,19 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	applyHitToPlayer(targetPlayer, MonsterState.getAttackFor(model, targetStage))
 end
 
--- 추격을 놓치는 순간(대상 사망·퇴장·리쉬) 보스가 telegraph 도중이었으면 원상복구한다 -
--- 안 하면 다음에 다시 어그로를 잡았을 때 이미 지난 예고 시각이 그대로 남아 재회 즉시
--- "공짜 강타"가 나가거나, 색이 경고색으로 멈춘 채 남는다.
-local function resetBossPhaseIfNeeded(model, data)
-	if not data.isBoss or MonsterState.getBossPhase(model) ~= "telegraph" then
-		return
-	end
-	MonsterState.setBossPhase(model, "normal")
-	MonsterState.setBossNextHeavyAt(model, os.clock() + data.heavyAttackIntervalSeconds)
-	local body = model:FindFirstChild("Body")
-	if body then
-		body.Color = data.bodyColor
-	end
-end
-
--- 보스 전용 - 예고 후 강한 일격(15-1, 지시 [3]에서 고른 유일한 긴장 장치). 평상시엔
--- tryAttack과 완전히 같은 평타를 쓰다가, heavyAttackIntervalSeconds마다 한 번 "telegraph"
--- 단계로 들어간다: telegraphWarmupSeconds 동안 제자리에 멈춰 색이 바뀌고(경고), 그 시간이
--- 끝나는 순간 그 자리에 있던 플레이어만 heavyAttack(평타의 3배, 즉사급)을 맞는다 -
--- 로블록스에 아직 웹의 대시·무적시간이 없으므로, 걸어서 attackRangeStuds 밖으로
--- 벗어나는 것만으로 피할 수 있게 telegraphWarmupSeconds를 충분히 준다(플레이어 걷기
--- 속도 16stud/s 기준 사거리 14stud를 벗어나기엔 1.5초로 넉넉하다).
+-- 보스 전용(15-1 → 21-3에서 BossPatterns.lua로 일반화). 패턴(강공격·진동파·낙석·돌진·
+-- 십자 화염)이 진행 중이면 BossPatterns.step이 true를 돌려주고 보스는 그 자리에 구속된다 -
+-- 평상시(false)엔 잡몹과 완전히 같은 추격·평타다. 어떤 패턴이 언제 시작되는지(간격·겹침
+-- 방지)는 전부 BossPatterns의 스케줄러가 정한다.
 local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetRoot, dt)
-	local phase = MonsterState.getBossPhase(model)
-
-	if phase == "telegraph" then
-		local endsAt = MonsterState.getBossPhaseEndsAt(model)
-		if os.clock() < endsAt then
-			return -- 멈춰서 경고하는 중 - 움직이지도, 평타를 넣지도 않는다
-		end
-
-		-- 예고가 끝나는 이 순간의 거리만 본다 - 그 사이 벗어났으면 완전히 무효(빗나감).
-		if PlayerState.getHp(targetPlayer) > 0 then
-			local distance = (targetRoot.Position - monsterPosition).Magnitude
-			if distance <= data.attackRangeStuds then
-				applyHitToPlayer(targetPlayer, data.heavyAttack)
-			end
-		end
-
-		MonsterState.setBossPhase(model, "normal")
-		local body = model:FindFirstChild("Body")
-		if body then
-			body.Color = data.bodyColor
-		end
-		MonsterState.setBossNextHeavyAt(model, os.clock() + data.heavyAttackIntervalSeconds)
-		MonsterState.setLastAttackTick(model, os.clock()) -- 예고 직후 바로 평타가 또 나가지 않게
+	if BossPatterns.step(model, data, monsterPosition, targetPlayer, targetRoot, dt) then
 		return
 	end
-
-	-- phase == "normal": 예고를 시작할 시점이 됐으면 멈춰 서서 경고색으로 바뀐다.
-	if os.clock() >= MonsterState.getBossNextHeavyAt(model) then
-		MonsterState.setBossPhase(model, "telegraph")
-		MonsterState.setBossPhaseEndsAt(model, os.clock() + data.telegraphWarmupSeconds)
-		local body = model:FindFirstChild("Body")
-		if body then
-			body.Color = data.telegraphColor
-		end
-		return
+	-- 정지 거리(BossData.chaseStopDistanceStuds) 밖에서만 다가간다 - 몸통 충돌이 없는 보스가
+	-- 플레이어와 겹치지 않게(21-3).
+	if (targetRoot.Position - monsterPosition).Magnitude > data.chaseStopDistanceStuds then
+		stepToward(model, monsterPosition, targetRoot.Position, data.moveSpeedStuds, dt)
 	end
-
-	stepToward(model, monsterPosition, targetRoot.Position, data.moveSpeedStuds, dt)
 	tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 end
 
@@ -284,6 +193,9 @@ RunService.Heartbeat:Connect(function(dt)
 					-- (아래 else 분기의 clear까지) 고정한다.
 					local aggroStage = PlayerProfile.getInfiniteStage(player) or 1
 					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player))
+					if data.isBoss then
+						BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)
+					end
 				end
 			end
 
@@ -304,7 +216,11 @@ RunService.Heartbeat:Connect(function(dt)
 				-- 1차로 처리하지만, targetIsDead의 nil 가드가 그 경로를 놓쳐도 여기서 다시
 				-- 잡는다). 아래 targetIsDead를 빼고 거리만 봤다가 리스폰 직후 재사망 루프가
 				-- 생겼었다(9-4).
-				if not targetRoot or targetIsDead or distanceFromHome > WorldConfig.aggro.leashRangeStuds
+				-- 21-3: 보스는 거리 리쉬(38.4)를 보지 않는다 - 돌진(패턴 3)이 아레나 벽(중심에서
+				-- 92stud)까지 달리므로 거리 리쉬가 매 돌진마다 "집으로 복귀"를 일으킨다. 아레나는
+				-- 4면이 막힌 개인 공간이라 구역 경계(zoneKey) 조건만으로 충분하다.
+				if not targetRoot or targetIsDead
+					or (not data.isBoss and distanceFromHome > WorldConfig.aggro.leashRangeStuds)
 					or isOutsideZoneBounds(position, zoneKey) then
 					-- 대상을 놓쳤거나(퇴장) 죽었거나(리스폰된 새 캐릭터를 이어서 쫓아가면 안 된다 -
 					-- 스폰 지점이 리쉬 범위 안이면 즉시 재사망 루프가 생긴다) 집에서 너무
@@ -313,7 +229,9 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 닿을 수 있다) - 포기하고 돌아간다.
 					MonsterState.setAiState(model, "returning")
 					MonsterState.setAiTarget(model, nil)
-					resetBossPhaseIfNeeded(model, data)
+					if data.isBoss then
+						BossPatterns.interrupt(model, data)
+					end
 					if target then
 						target:SetAttribute("TickDamage", 0) -- 전투 종료 - 눈금 기준을 지운다
 					end

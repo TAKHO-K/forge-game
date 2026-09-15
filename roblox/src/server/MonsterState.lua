@@ -32,8 +32,10 @@ local MonsterState = {}
 --             테이블을 공유하므로 절대 직접 고치지 않는다), spawnPosition(리스폰 자리),
 --             aiState("idle"/"chasing"/"returning"), aiTarget(추격 중인 Player, 없으면 nil),
 --             lastAttackTick(반격 쿨다운 기준 시각, os.clock()),
---             bossPhase/bossPhaseEndsAt/bossNextHeavyAt(15-1, isBoss 인스턴스만 - 예고 후
---             강한 일격 상태 머신. MonsterAI.server.lua의 tryBossAttack 참고) }
+--             bossPattern(21-3, isBoss 인스턴스만 - 패턴 상태 머신의 가변 테이블. 내용은
+--             BossPatterns.lua만 읽고 쓴다 - 15-1의 bossPhase/bossPhaseEndsAt/bossNextHeavyAt
+--             세 필드를 이 테이블 하나로 대체했다. 여기 두는 이유는 "몬스터 런타임 상태는
+--             이 모듈이 단일 통로"라는 원칙 - clear(model) 한 번에 같이 사라진다) }
 local monsters = {}
 
 function MonsterState.init(model, data, spawnPosition, zoneKey, isSparkle)
@@ -49,10 +51,23 @@ function MonsterState.init(model, data, spawnPosition, zoneKey, isSparkle)
 		aiState = "idle",
 		aiTarget = nil,
 		lastAttackTick = nil,
-		bossPhase = data.isBoss and "normal" or nil,
-		bossPhaseEndsAt = nil,
-		bossNextHeavyAt = data.isBoss and (os.clock() + data.heavyAttackIntervalSeconds) or nil,
+		bossPattern = data.isBoss and {} or nil,
 	}
+end
+
+-- 21-3 - 보스 패턴 상태 테이블(BossPatterns.lua 전용). 보스가 아니면 nil.
+function MonsterState.getBossPatternState(model)
+	local entry = monsters[model]
+	return entry and entry.bossPattern
+end
+
+-- 21-3 - 플레이어 사망 시 보스 HP를 최대치로 되돌린다(BossEncounter.resetFor). 잡몹은
+-- 대상이 아니다(공유 비율 HP라 "되돌릴 최대치" 자체가 없다).
+function MonsterState.resetBossHp(model)
+	local entry = monsters[model]
+	if entry and entry.data.isBoss then
+		entry.hp = entry.maxHp
+	end
 end
 
 function MonsterState.isSparkle(model)
@@ -204,43 +219,6 @@ function MonsterState.setLastAttackTick(model, value)
 	local entry = monsters[model]
 	if entry then
 		entry.lastAttackTick = value
-	end
-end
-
--- 15-1 - 예고 후 강한 일격 상태 머신(isBoss 인스턴스만 쓴다, MonsterAI.server.lua 참고).
-function MonsterState.getBossPhase(model)
-	local entry = monsters[model]
-	return entry and entry.bossPhase
-end
-
-function MonsterState.setBossPhase(model, value)
-	local entry = monsters[model]
-	if entry then
-		entry.bossPhase = value
-	end
-end
-
-function MonsterState.getBossPhaseEndsAt(model)
-	local entry = monsters[model]
-	return entry and entry.bossPhaseEndsAt
-end
-
-function MonsterState.setBossPhaseEndsAt(model, value)
-	local entry = monsters[model]
-	if entry then
-		entry.bossPhaseEndsAt = value
-	end
-end
-
-function MonsterState.getBossNextHeavyAt(model)
-	local entry = monsters[model]
-	return entry and entry.bossNextHeavyAt
-end
-
-function MonsterState.setBossNextHeavyAt(model, value)
-	local entry = monsters[model]
-	if entry then
-		entry.bossNextHeavyAt = value
 	end
 end
 

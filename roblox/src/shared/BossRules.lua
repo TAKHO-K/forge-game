@@ -81,7 +81,9 @@ function BossRules.buildInstanceData(stage)
 
 		hp = trashHp * boss.hpMultiplier,
 		attack = attack,
-		heavyAttack = attack * boss.heavyAttackMultiplier,
+		-- 21-3: heavyAttack(=attack×3) 필드는 없앴다 - 배율은 공격력이 아니라 감소식을 거친
+		-- 피해에 곱한다(PlayerDamage.applyHit의 damageMultiplier, 이유는 그쪽 주석).
+		heavyAttackMultiplier = boss.heavyAttackMultiplier,
 		heavyAttackIntervalSeconds = boss.heavyAttackIntervalSeconds,
 		telegraphWarmupSeconds = boss.telegraphWarmupSeconds,
 		telegraphColor = boss.telegraphColor,
@@ -96,6 +98,15 @@ function BossRules.buildInstanceData(stage)
 		moveSpeedStuds = boss.moveSpeedStuds,
 		attackRangeStuds = boss.attackRangeStuds,
 		attackCooldownSeconds = boss.attackCooldownSeconds,
+		chaseStopDistanceStuds = boss.chaseStopDistanceStuds,
+
+		-- 21-3 패턴 상수(BossPatterns.lua가 읽는다). 원본 테이블을 그대로 가리킨다 - 읽기
+		-- 전용이라 공유해도 안전하다(BossData는 절대 런타임에 고치지 않는다).
+		patterns = boss.patterns,
+		patternMinGapSeconds = boss.patternMinGapSeconds,
+		enragedHpFraction = boss.enragedHpFraction,
+		enragedPatternMinGapSeconds = boss.enragedPatternMinGapSeconds,
+		entryGraceSeconds = boss.entryGraceSeconds,
 	}
 end
 

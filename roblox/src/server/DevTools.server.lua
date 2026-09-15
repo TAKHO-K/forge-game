@@ -31,6 +31,13 @@ local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local SaveCoordinator = require(script.Parent.SaveCoordinator)
+-- 21-3 보스 검증 명령(/gg boss, /gg pattern)용.
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local BossRules = require(ReplicatedStorage.Shared.BossRules)
+local BossEncounter = require(script.Parent.BossEncounter)
+local BossPatterns = require(script.Parent.BossPatterns)
+local MonsterState = require(script.Parent.MonsterState)
+local MonsterSpawner = require(script.Parent.MonsterSpawner)
 
 -- 앵커 조건(지시 [1] - "최소한 앵커 조건은 하나로 불러올 수 있어야 한다"): 레벨100 +
 -- 일반등급 itemLevel100 3부위 + 강화+0 + 무기등급 일반(0), 스테이지 100. 무기 등급은
@@ -270,6 +277,9 @@ local HELP_TEXT = table.concat({
 	"/gg curve [classId] - 앵커 곡선(레벨×무기등급 격자)의 생존 타수·처치 시간 표를 콘솔에 출력",
 	"/gg rebirth <n> - 환생 횟수 스텁 직접 지정(보스 첫 처치 드랍 등급표 분기 검증용)",
 	"/gg bossreset [stage] - 보스 첫 처치 확정 드랍 기록 초기화(생략 시 전부, 재검증용)",
+	"/gg boss [stage] - 보스 스테이지(기본 5)로 이동해 개인 아레나 보스전 시작(21-3 검증용)",
+	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
+	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
 }, "\n")
 
@@ -315,6 +325,37 @@ local function handleCommand(player, args)
 		ensureBackup(player)
 		applyRebirth(player, math.floor(tonumber(args[2])))
 		reply(player, "환생 횟수(스텁) " .. args[2] .. " 적용")
+	elseif sub == "boss" then
+		ensureBackup(player)
+		local stage = tonumber(args[2]) and math.floor(tonumber(args[2])) or BossData.stageInterval
+		if not BossRules.isBossStage(stage) then
+			reply(player, ("스테이지 %d은(는) 보스 스테이지가 아닙니다(%d의 배수)"):format(stage, BossData.stageInterval))
+			return
+		end
+		BossEncounter.despawnFor(player)
+		applyStage(player, stage)
+		BossEncounter.spawnFor(player, stage)
+		reply(player, ("보스 스테이지 %d 진입 - 아레나로 이동"):format(stage))
+	elseif sub == "pattern" and args[2] then
+		local model = BossEncounter.getActive(player)
+		local data = model and MonsterState.getData(model)
+		if not data then
+			reply(player, "활성 보스가 없습니다(/gg boss 먼저)")
+		elseif BossPatterns.force(model, data, args[2]) then
+			reply(player, "패턴 강제 시작: " .. args[2])
+		else
+			reply(player, "알 수 없는 패턴: " .. args[2])
+		end
+	elseif sub == "bossdmg" and tonumber(args[2]) then
+		local model = BossEncounter.getActive(player)
+		local data = model and MonsterState.getData(model)
+		if not data then
+			reply(player, "활성 보스가 없습니다(/gg boss 먼저)")
+		else
+			MonsterState.applyDamage(model, data.hp * tonumber(args[2]), PlayerProfile.getInfiniteStage(player) or 1, player)
+			MonsterSpawner.updateHpLabel(model)
+			reply(player, ("보스 HP %.0f%% 차감 - 남은 비율 %.2f"):format(tonumber(args[2]) * 100, MonsterState.getHpRatio(model)))
+		end
 	elseif sub == "bossreset" then
 		ensureBackup(player)
 		PlayerProfile.clearBossFirstClearRewards(player, tonumber(args[2]))

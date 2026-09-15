@@ -67,11 +67,25 @@ dashResult.OnClientEvent:Connect(function(data)
 	if rootPart then
 		-- 회전은 건드리지 않고 위치만 옮긴다(SkillInput의 백스텝샷과 같은 이유 - 옆·뒤로
 		-- 대시할 때 캐릭터가 홱 돌면 어색하다). Y는 서버가 준 도착점 그대로(시작점과 같은
-		-- 높이) - 공중에서 눌러도 수평으로 미끄러지고 그 뒤 중력이 마저 떨어뜨린다.
+		-- 높이) - 공중에서 눌러도 수평으로 미끄러진다.
+		--
+		-- 21-3 공중 대시(지시 - "점프+대시로 체공을 늘려 줄넘기 패턴을 돕는다"): 트윈이 CFrame을
+		-- 매 프레임 덮어쓰는 0.3초 동안 높이는 유지되지만 물리 속도엔 중력이 계속 쌓인다 -
+		-- 그대로 두면 트윈이 끝나는 순간 쌓인 낙하 속도로 곤두박질쳐 "체공 연장"이 아니라
+		-- "순간 낙하"가 된다. 그래서 대시가 끝나는 순간 속도를 0으로 되돌려 그 높이에서 다시
+		-- 자연 낙하하게 한다(정점에서 대시하면 체공 0.54 → 0.27+0.3+0.27 ≈ 0.84초). 캐릭터
+		-- 물리는 이 클라가 소유하므로 여기서 바꿔도 서버와 어긋나지 않는다. 지면 대시엔 영향이
+		-- 없다(이미 속도 0 근처).
 		local currentRotation = rootPart.CFrame - rootPart.CFrame.Position
-		TweenService:Create(rootPart, TweenInfo.new(data.durationSeconds, Enum.EasingStyle.Linear), {
+		local tween = TweenService:Create(rootPart, TweenInfo.new(data.durationSeconds, Enum.EasingStyle.Linear), {
 			CFrame = currentRotation + data.endPosition,
-		}):Play()
+		})
+		tween.Completed:Connect(function()
+			if rootPart.Parent then
+				rootPart.AssemblyLinearVelocity = Vector3.zero
+			end
+		end)
+		tween:Play()
 	end
 	local classId = player:GetAttribute("ClassId")
 	local color = (classId and classId ~= "" and UIColors.classAccent[classId]) or UIColors.ember
