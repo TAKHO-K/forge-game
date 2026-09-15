@@ -12,22 +12,14 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
-local Gem = require(ReplicatedStorage.Shared.Gem)
-local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
-local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 
 local enhanceRequest = ReplicatedStorage:WaitForChild("EnhanceRequest")
 local enhanceResult = ReplicatedStorage:WaitForChild("EnhanceResult")
--- 23-2: 환생·분해·보석 슬롯·옵션 변환권(PRD 20.37/20.38) - 강화대가 무기 관련 상호작용의
--- 기존 허브라 같은 패널에 탭으로 붙인다(20.37 [3] "분해 UI는 강화대에 둔다"와 같은 판단을
--- 환생·보석에도 그대로 적용 - 새 UI 스타일을 만들지 않는다는 지시).
+-- 23-2: 환생·분해(PRD 20.37/20.38) - 강화대가 무기 관련 상호작용의 기존 허브라 같은
+-- 패널에 탭으로 붙인다(20.37 [3] "분해 UI는 강화대에 둔다"와 같은 판단을 환생에도 그대로
+-- 적용 - 새 UI 스타일을 만들지 않는다는 지시). 보석 탭은 23-4에서 장비창으로 옮겼다.
 local rebirthRequest = ReplicatedStorage:WaitForChild("RebirthRequest")
 local rebirthResult = ReplicatedStorage:WaitForChild("RebirthResult")
-local gemEquipRequest = ReplicatedStorage:WaitForChild("GemEquipRequest")
-local gemRerollRequest = ReplicatedStorage:WaitForChild("GemRerollRequest")
-local buyRerollTicketRequest = ReplicatedStorage:WaitForChild("BuyRerollTicketRequest")
-local gemSync = ReplicatedStorage:WaitForChild("GemSync")
-local gemFetch = ReplicatedStorage:WaitForChild("GemFetch")
 
 local RESULT_LABEL = {
 	success = "성공! +%d",
@@ -57,9 +49,9 @@ panel.BackgroundTransparency = 0.1
 panel.Visible = false
 panel.Parent = screenGui
 
--- 탭 3개(강화/환생/보석, 23-2 신설) - 기존 320px 패널 폭을 그대로 3등분한다. 같은 색
+-- 탭 2개(강화/환생, 23-2 신설·23-4에서 보석 탭 분리) - 320px 패널 폭을 2등분한다. 같은 색
 -- 규칙(선택 탭=골드, 나머지=어두운 회색)만 쓴다 - 새 색을 만들지 않는다.
-local TAB_NAMES = { "강화", "환생", "보석" }
+local TAB_NAMES = { "강화", "환생" }
 local tabButtons = {}
 local tabContents = {}
 local activeTab = "강화"
@@ -278,185 +270,10 @@ end)
 player:GetAttributeChangedSignal("RebirthCount"):Connect(updateRebirthInfo)
 player:GetAttributeChangedSignal("CharacterLevel"):Connect(updateRebirthInfo)
 
--- ═══ 보석 탭(23-2, PRD 20.37 [2][3][5]/20.38 [2]) ═══
-
-local gemTab = Instance.new("Frame")
-gemTab.Size = UDim2.new(1, 0, 1, -28)
-gemTab.Position = UDim2.new(0, 0, 0, 28)
-gemTab.BackgroundTransparency = 1
-gemTab.Visible = false
-gemTab.Parent = panel
-tabContents["보석"] = gemTab
-
-local gemScroll = Instance.new("ScrollingFrame")
-gemScroll.Size = UDim2.new(1, -8, 1, -8)
-gemScroll.Position = UDim2.new(0, 4, 0, 4)
-gemScroll.BackgroundTransparency = 1
-gemScroll.BorderSizePixel = 0
-gemScroll.ScrollBarThickness = 4
-gemScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-gemScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-gemScroll.Parent = gemTab
-
-local gemListLayout = Instance.new("UIListLayout")
-gemListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-gemListLayout.Padding = UDim.new(0, 4)
-gemListLayout.Parent = gemScroll
-
-local currentGemState = { gems = { false, false, false, false, false }, gemInventory = {}, rerollTickets = { ancient = 0, primordial = 0 } }
-local gemRows = {}
-
-for slot = 1, Gem.slotCount do
-	local row = Instance.new("Frame")
-	row.LayoutOrder = slot
-	row.Size = UDim2.new(1, 0, 0, 44)
-	row.BackgroundColor3 = Color3.fromRGB(40, 40, 46)
-	row.Parent = gemScroll
-
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.Size = UDim2.new(1, -8, 0, 20)
-	label.Position = UDim2.new(0, 6, 0, 2)
-	label.Font = Enum.Font.Gotham
-	label.TextSize = 13
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.Text = ""
-	label.Parent = row
-
-	local equipButton = Instance.new("TextButton")
-	equipButton.Size = UDim2.new(0, 80, 0, 18)
-	equipButton.Position = UDim2.new(0, 6, 1, -20)
-	equipButton.Font = Enum.Font.GothamBold
-	equipButton.TextSize = 12
-	equipButton.Text = "교체"
-	equipButton.BackgroundColor3 = Color3.fromRGB(200, 160, 40)
-	equipButton.Parent = row
-
-	local rerollButton = Instance.new("TextButton")
-	rerollButton.Size = UDim2.new(0, 80, 0, 18)
-	rerollButton.Position = UDim2.new(0, 92, 1, -20)
-	rerollButton.Font = Enum.Font.GothamBold
-	rerollButton.TextSize = 12
-	rerollButton.Text = "리롤"
-	rerollButton.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
-	rerollButton.Visible = false
-	rerollButton.Parent = row
-
-	local buyButton = Instance.new("TextButton")
-	buyButton.Size = UDim2.new(0, 110, 0, 18)
-	buyButton.Position = UDim2.new(0, 178, 1, -20)
-	buyButton.Font = Enum.Font.GothamBold
-	buyButton.TextSize = 12
-	buyButton.Text = "변환권 구매"
-	buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
-	buyButton.Visible = false
-	buyButton.Parent = row
-
-	gemRows[slot] = { row = row, label = label, equipButton = equipButton, rerollButton = rerollButton, buyButton = buyButton }
-
-	-- 픽커 UI 없이 인벤토리에서 같은 등급의 첫 번째 보석을 자동으로 고른다(23-2 "임의
-	-- 결정" - 같은 등급 보석이 여러 개면 옵션 이름이 달라도 선택창 없이 첫 항목을 쓴다,
-	-- 보수적 기본값 원칙).
-	equipButton.Activated:Connect(function()
-		local gradeId = Gem.gradeForSlot(slot)
-		for i, g in ipairs(currentGemState.gemInventory) do
-			if g.grade == gradeId then
-				gemEquipRequest:FireServer(slot, i)
-				break
-			end
-		end
-	end)
-
-	rerollButton.Activated:Connect(function()
-		gemRerollRequest:FireServer(slot)
-	end)
-
-	buyButton.Activated:Connect(function()
-		buyRerollTicketRequest:FireServer(Gem.gradeForSlot(slot))
-	end)
-end
-
-local function currentStageGoldReward()
-	local stage = player:GetAttribute("InfiniteStage") or 1
-	return InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage)
-end
-
-local function updateGemTab()
-	local rebirthCount = player:GetAttribute("RebirthCount") or 0
-	for slot = 1, Gem.slotCount do
-		local ui = gemRows[slot]
-		local gradeId = Gem.gradeForSlot(slot)
-		local gradeInfo = ArmorData.grades[gradeId]
-
-		if not Gem.isSlotUnlocked(slot, rebirthCount) then
-			ui.label.Text = ("슬롯%d(%s) - 잠김, 환생 %d회 필요"):format(slot, gradeInfo.displayName, slot)
-			ui.equipButton.Visible = false
-			ui.rerollButton.Visible = false
-			ui.buyButton.Visible = false
-			continue
-		end
-
-		local gem = currentGemState.gems[slot]
-		local filled = type(gem) == "table"
-		-- 23-3: 옵션이 이제 스탯 축을 갖는다(GemData.optionAxis) - 실제 수치까지 보여준다.
-		-- 옵션 풀이 없는 등급(영웅~유물)은 항상 공격력% 하나뿐이고, 고대·태초는 옵션
-		-- 미배정(변환권 전) 상태를 "빈 슬롯"과 구분해 보여준다.
-		local optionText
-		if not filled then
-			optionText = "빈 슬롯"
-		elseif not Gem.isRerollableGrade(gradeId) then
-			optionText = ("공격력 +%.1f%%"):format(Gem.attackPercentBonusForGrade(gradeId) * 100)
-		elseif gem.optionId then
-			local axis = Gem.optionAxis(gem.optionId)
-			local axisName = GemData.axisDisplayNames[axis] or axis
-			optionText = ("%s(%s +%.1f%%)"):format(gem.optionId, axisName, Gem.magnitudeForGrade(gradeId, axis) * 100)
-		else
-			optionText = "옵션 미배정(변환권 필요)"
-		end
-		ui.label.Text = ("슬롯%d(%s) - %s"):format(slot, gradeInfo.displayName, optionText)
-
-		local matchCount = 0
-		for _, g in ipairs(currentGemState.gemInventory) do
-			if g.grade == gradeId then
-				matchCount += 1
-			end
-		end
-		ui.equipButton.Visible = true
-		ui.equipButton.Text = ("교체(%d개 보유)"):format(matchCount)
-		ui.equipButton.AutoButtonColor = matchCount > 0
-		ui.equipButton.Active = matchCount > 0
-
-		local rerollable = Gem.isRerollableGrade(gradeId)
-		ui.rerollButton.Visible = rerollable
-		ui.buyButton.Visible = rerollable
-		if rerollable then
-			local tickets = currentGemState.rerollTickets[gradeId] or 0
-			ui.rerollButton.Text = ("리롤(%d장)"):format(tickets)
-			ui.rerollButton.AutoButtonColor = filled and tickets > 0
-			ui.rerollButton.Active = filled and tickets > 0
-			ui.buyButton.Text = ("변환권 구매(%s골드)"):format(NumberFormat.format(currentStageGoldReward() * GemData.rerollTicketGoldMultiplier))
-		end
-	end
-end
-
-gemSync.OnClientEvent:Connect(function(data)
-	currentGemState = data
-	updateGemTab()
-end)
-
-task.spawn(function()
-	local ok, data = pcall(function()
-		return gemFetch:InvokeServer()
-	end)
-	if ok and data then
-		currentGemState = data
-		updateGemTab()
-	end
-end)
-
-player:GetAttributeChangedSignal("RebirthCount"):Connect(updateGemTab)
-player:GetAttributeChangedSignal("InfiniteStage"):Connect(updateGemTab)
+-- 23-4: 보석 탭을 강화대에서 뗐다(PRD 20.58 지시 - "강화대까지 가야 보석을 볼 수 있는
+-- 문제"를 장비창 탭으로 옮겨 해결한다). 드래그 장착·무기 확대 실루엣 등 새 UI를 강화대
+-- (320x208 좁은 패널)에도 유지하면 같은 로직 두 벌을 관리해야 해서 통째로 InventoryUI.
+-- client.lua "보석" 탭으로 옮기고 여기선 정리했다 - 강화/환생 2탭만 남는다.
 
 selectTab("강화")
 
@@ -522,6 +339,5 @@ RunService.Heartbeat:Connect(function()
 	if panel.Visible and not wasVisible then
 		updateInfo()
 		updateRebirthInfo()
-		updateGemTab()
 	end
 end)

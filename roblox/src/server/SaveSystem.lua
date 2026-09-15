@@ -22,8 +22,17 @@ local SaveSystem = {}
 -- 채우는" 딕셔너리와 달리, 이건 5칸 전부가 항상 "존재해야" 한다 - 슬롯 번호=배열 위치가
 -- 곧 등급을 뜻하므로 구멍이 뚫리면 안 된다). 채워진 슬롯은 항상 테이블(Gem.buildGrantedGem
 -- 참고, Gem.isFilled가 type()으로 구분한다).
+-- slotUnlocked(23-4) - 슬롯별 해금 여부를 매번 rebirthCount에서 계산하지 않고 저장한다
+-- (GemData.slotUnlockRequiredRebirth 주석 참고 - PlayerProfile.rebirth가 조건을 만족하는
+-- 순간 여기 기록한다).
 local function defaultWeapon()
-	return { id = WeaponData.starterId, level = 0, grade = 0, gems = { false, false, false, false, false } }
+	return {
+		id = WeaponData.starterId,
+		level = 0,
+		grade = 0,
+		gems = { false, false, false, false, false },
+		slotUnlocked = { false, false, false, false, false },
+	}
 end
 
 -- 직업 하나가 갖는 상태(19-1) - 캐릭터 레벨·무기·착용 장비 3부위·무한 모드 진행도.
@@ -144,7 +153,10 @@ end
 -- 도입, 17-1) -> 13(characterExp·무기·장비 3부위·무한 모드 진행도를 classes[classId]
 -- 아래로 직업별 분리, 19-1) -> 14(무기 등급 grade 필드 도입, 20-1) -> 15(일괄판매 기준
 -- 등급 선택 bulkSellCutoffGrade 필드 도입, 20-3) -> 16(보스 첫 처치 확정 드랍 기록
--- bossFirstClearStages + 환생 횟수 rebirthCount 스텁 도입, 20-4).
+-- bossFirstClearStages + 환생 횟수 rebirthCount 스텁 도입, 20-4) -> 17(견습 모드 진행도
+-- 도입, 23-1) -> 18(무기 보석 슬롯 도입, 23-2) -> 19(옵션 변환권 도입, 23-2) -> 20(보석
+-- 등급이 슬롯 고정에서 상한제로 바뀌며 gem.grade 필드 신설 + 슬롯 해금 상태 저장 필드
+-- weapon.slotUnlocked 신설, 23-4).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -437,6 +449,35 @@ local function migrate(data)
 		data.version = 19
 	end
 
+	if data.version < 20 then
+		-- 23-4: 보석 슬롯이 "고정 등급"에서 "등급 상한"으로 바뀌었다(GemData.slotGradeCap).
+		-- v19까지 gems[slot]엔 grade 필드 자체가 없었다 - 그때는 슬롯 번호가 곧 등급이라
+		-- (그 시절의 slotGradeOrder, 지금은 이름이 바뀐 slotGradeCap과 값이 다르다) 따로
+		-- 저장할 필요가 없었다. 지금 새로 도입되는 slotGradeCap을 쓰면 과거 보석의 실제
+		-- 등급이 왜곡된다(예: 옛 슬롯1은 영웅이었는데 새 상한표는 슬롯1=태초다) - 그래서
+		-- 옛 매핑을 리터럴로 남겨 그 시절 실제 등급 그대로 백필한다(migrate v11의 "옛 공식
+		-- 리터럴 보존"과 같은 원칙). slotUnlocked도 이번에 처음 생기는 저장 필드라, 과거
+		-- 유일한 판정 기준이었던 "rebirthCount >= slot"으로 지금까지의 해금 상태를 그대로
+		-- 복원한다(정보 손실 없음 - 지금 조건표도 값이 같다).
+		local OLD_SLOT_GRADE_ORDER = { "epic", "legendary", "relic", "ancient", "primordial" }
+		for _, classState in pairs(data.classes) do
+			local gems = classState.weapon.gems
+			for slot = 1, 5 do
+				local gem = gems[slot]
+				if type(gem) == "table" and gem.grade == nil then
+					gem.grade = OLD_SLOT_GRADE_ORDER[slot]
+				end
+			end
+			classState.weapon.slotUnlocked = classState.weapon.slotUnlocked or {}
+			for slot = 1, 5 do
+				if classState.weapon.slotUnlocked[slot] == nil then
+					classState.weapon.slotUnlocked[slot] = (classState.rebirthCount or 0) >= slot
+				end
+			end
+		end
+		data.version = 20
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -474,6 +515,7 @@ local function isValidProfile(data)
 			or type(classState.weapon.level) ~= "number"
 			or type(classState.weapon.grade) ~= "number"
 			or type(classState.weapon.gems) ~= "table"
+			or type(classState.weapon.slotUnlocked) ~= "table"
 			or type(classState.equipment) ~= "table"
 			or type(classState.stageProgress) ~= "table"
 			or type(classState.rebirthCount) ~= "number"

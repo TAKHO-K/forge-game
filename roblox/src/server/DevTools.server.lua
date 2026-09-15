@@ -215,7 +215,9 @@ end
 -- optionId 없이 채운다(영웅~유물처럼 옵션 풀이 없는 등급 검증용), 그 외 문자열이면 그
 -- 이름으로 강제 지정한다(고대·태초 옵션 표시 검증용) - Studio MCP execute_luau가
 -- PlayerProfile을 직접 require하지 못해(DevTools.server.lua 상단 주석 패턴과 같은 제약)
--- 이미 로드된 이 스크립트를 거쳐야 한다.
+-- 이미 로드된 이 스크립트를 거쳐야 한다. 23-4: grade 필드가 생겨(등급 상한제) 그 슬롯의
+-- 현재 상한으로 채운다 - 실제 장착 검증(등급 상한 이하만 허용)은 PlayerProfile.equipGem이
+-- 따로 한다, 이 명령은 그 검증을 우회하는 강제 주입용이다.
 local function applyGemSlot(player, slot, id)
 	local weapon = PlayerProfile.getWeapon(player)
 	if not weapon then
@@ -224,7 +226,7 @@ local function applyGemSlot(player, slot, id)
 	if slot < 1 or slot > Gem.slotCount then
 		return false, "slot_range"
 	end
-	weapon.gems[slot] = { optionId = (id ~= "-" and id) or nil }
+	weapon.gems[slot] = { optionId = (id ~= "-" and id) or nil, grade = Gem.gradeCapForSlot(slot) }
 	return true
 end
 
@@ -246,7 +248,7 @@ local function measure(player, stageOverride)
 	}
 	local stage = stageOverride or PlayerProfile.getInfiniteStage(player) or 1
 
-	local loadout = BalanceSim.buildLoadoutFromEquipment(classId, level, weapon.level, weapon.grade, equipment)
+	local loadout = BalanceSim.buildLoadoutFromEquipment(classId, level, weapon.level, weapon.grade, equipment, weapon.gems)
 	local autoAttack60 = BalanceSim.simulateAutoAttack(loadout, 60)
 
 	-- 20-7: 순수 평타(비행시간·콤보 카운터 반영) / 실전 로테이션(Q+E) / 광역(동시 2마리 - 격자
@@ -265,6 +267,11 @@ local function measure(player, stageOverride)
 		BalanceSim.recommendedStage(level, weapon.grade, false), BalanceSim.recommendedStage(level, weapon.grade, true)))
 	print(("[DevTools] 공격력=%.2f 방어력=%.2f 최대체력=%.2f 공격쿨다운=%.3f초 (atk-단위 1 = %.2f)"):format(
 		loadout.atk, loadout.defense, loadout.maxHp, loadout.attackCooldown, unit))
+	-- 23-4: BalanceSim이 이제 weapon.gems를 읽는다 - 보석 장착 전/후 차이가 실제로
+	-- 반영됐는지 콘솔에서 바로 보이도록 축별 보너스를 따로 찍는다.
+	print(("[DevTools] 보석 보너스: 위력+%.1f%% 신속+%.1f%% 방어+%.1f%% 건강+%.1f%%"):format(
+		Gem.totalAttackPercentBonus(weapon.gems) * 100, Gem.totalSpeedPercentBonus(weapon.gems) * 100,
+		Gem.totalDefensePercentBonus(weapon.gems) * 100, Gem.totalMaxHpPercentBonus(weapon.gems) * 100))
 	print(("[DevTools] tier1 몬스터 평타(스테이지%d 적용)=%.3f -> 실제 피해=%.3f/대 -> 생존 타수=%.2f대"):format(
 		stage, point.monsterAttack, point.dmgPerHit, point.surviveHits))
 	print(("[DevTools] 60초 순수 평타 총딜(평균 근사)=%.1f (%.1f회 타격, 평균 %.2f/타) / 시뮬레이션=%.1f (%d회) = atk-단위 %.1f"):format(

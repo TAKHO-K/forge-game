@@ -29,10 +29,18 @@ local function snapshot(player)
 	PlayerProfile = PlayerProfile or require(script.Parent.PlayerProfile)
 	local weapon = PlayerProfile.getWeapon(player)
 	if not weapon then
-		return { gems = { false, false, false, false, false }, gemInventory = {}, rerollTickets = { ancient = 0, primordial = 0 } }
+		return {
+			gems = { false, false, false, false, false },
+			slotUnlocked = { false, false, false, false, false },
+			gemInventory = {},
+			rerollTickets = { ancient = 0, primordial = 0 },
+		}
 	end
 	return {
 		gems = weapon.gems,
+		-- 23-4: 클라이언트가 매번 rebirthCount에서 잠금 여부를 다시 계산하지 않고 저장된
+		-- 값을 그대로 받는다(Gem.isSlotUnlocked, GemData.slotUnlockRequiredRebirth 주석 참고).
+		slotUnlocked = weapon.slotUnlocked,
 		gemInventory = PlayerProfile.getGemInventory(player),
 		rerollTickets = PlayerProfile.getOptionRerollTickets(player),
 	}

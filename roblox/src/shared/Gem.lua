@@ -12,15 +12,20 @@ local gemRng = Random.new()
 
 local Gem = {}
 
-Gem.slotCount = #GemData.slotGradeOrder -- 5
+Gem.slotCount = #GemData.slotGradeCap -- 5
 
-function Gem.gradeForSlot(slot)
-	return GemData.slotGradeOrder[slot]
+-- 슬롯 i가 받아들이는 최고 등급(23-4, GemData.slotGradeCap 주석 참고) - 더 이상 "그 슬롯의
+-- 유일한 등급"이 아니라 상한이다. 이 상한 자체가 그 슬롯에 열릴 때 확정 지급되는 보석의
+-- 등급이기도 하다(Gem.buildGrantedGem).
+function Gem.gradeCapForSlot(slot)
+	return GemData.slotGradeCap[slot]
 end
 
--- 슬롯이 열렸는가 = 환생 회차가 그 슬롯 번호 이상(1:1 대응, 20.38 [2]).
-function Gem.isSlotUnlocked(slot, rebirthCount)
-	return (rebirthCount or 0) >= slot
+-- 슬롯이 열렸는가 - 23-4부터 매번 계산하지 않고 저장된 값(classState.weapon.slotUnlocked,
+-- PlayerProfile.rebirth가 그 순간 기록한다)을 그대로 읽는다(GemData.slotUnlockRequiredRebirth
+-- 주석 참고 - 나중에 환생 횟수만으로 못 나타내는 조건이 와도 저장 형태를 안 바꾸기 위함).
+function Gem.isSlotUnlocked(slotUnlocked, slot)
+	return slotUnlocked ~= nil and slotUnlocked[slot] == true
 end
 
 local function armorGradeIndex(gradeId)
@@ -30,6 +35,14 @@ local function armorGradeIndex(gradeId)
 		end
 	end
 	return nil
+end
+
+-- 보석 gradeId가 slot에 꽂힐 수 있는가 - "그 이하 등급은 전부 가능, 더 높은 등급은 불가"
+-- (23-4 지시 그대로, ArmorData.gradeOrder의 순서를 그대로 비교 기준으로 쓴다).
+function Gem.canSocket(gemGradeId, slot)
+	local capIndex = armorGradeIndex(Gem.gradeCapForSlot(slot))
+	local gemIndex = armorGradeIndex(gemGradeId)
+	return capIndex ~= nil and gemIndex ~= nil and gemIndex <= capIndex
 end
 
 -- 보석 하나가 주는 공격력% 보너스(PlayerCombat.getAttack의 attackPercentBonus 자리에
@@ -64,13 +77,14 @@ function Gem.rollOption(gradeId)
 end
 
 -- 슬롯이 열릴 때 자동 지급되는 확정 보석 하나(20.38 [2] "슬롯이 열릴 때 그 등급의 보석
--- 1개가 확정 지급된다"). 항상 테이블을 돌려준다(빈 슬롯은 false로 구분 - PlayerProfile.
--- rebirth 참고) - 23-3부터 optionId는 항상 nil로 시작한다(옵션은 오직 옵션 변환권으로만
--- 배정된다, 위 rollOption 주석 참고). 옵션이 없어도 영웅~유물 등급은 여전히 공격력%를
--- 주고(Gem.attackPercentBonusForGrade, 축 선택이 없는 무조건 보너스), 고대·태초는 변환권을
--- 쓰기 전까지 그 슬롯의 축 보너스가 0이다.
+-- 1개가 확정 지급된다") - 23-4부터 그 등급은 슬롯의 등급 상한(Gem.gradeCapForSlot)이다.
+-- 항상 테이블을 돌려준다(빈 슬롯은 false로 구분 - PlayerProfile.rebirth 참고) - 23-3부터
+-- optionId는 항상 nil로 시작한다(옵션은 오직 옵션 변환권으로만 배정된다, 위 rollOption
+-- 주석 참고). 옵션이 없어도 영웅~유물 등급은 여전히 공격력%를 주고(Gem.
+-- attackPercentBonusForGrade, 축 선택이 없는 무조건 보너스), 고대·태초는 변환권을 쓰기
+-- 전까지 그 슬롯의 축 보너스가 0이다.
 function Gem.buildGrantedGem(slot)
-	return { optionId = nil }
+	return { optionId = nil, grade = Gem.gradeCapForSlot(slot) }
 end
 
 function Gem.isFilled(gems, slot)
@@ -116,16 +130,18 @@ function Gem.magnitudeForGrade(gradeId, axis)
 	return Gem.attackPercentBonusForGrade(gradeId) * (AXIS_CORRECTION[axis] or 1)
 end
 
--- 슬롯 하나가 axis에 기여하는 보너스. 옵션 풀이 없는 등급(영웅~유물)은 축 선택 자체가
--- 없으므로 무조건 attackPercent에만 기여한다(기존 23-2 동작 그대로 유지). 옵션 풀이 있는
--- 등급(고대·태초)은 배정된 옵션의 축과 axis가 같을 때만 기여한다 - 옵션 미배정(nil)이면
--- 아무 축에도 기여하지 않는다(GemData.lua "[옵션 배정]" 주석).
+-- 슬롯 하나가 axis에 기여하는 보너스. 23-4부터 등급은 슬롯이 아니라 그 슬롯에 실제로 꽂힌
+-- 보석 자체가 갖는다(gem.grade) - 한 슬롯에 상한 이하 여러 등급이 들어올 수 있어졌기
+-- 때문이다(Gem.canSocket). 옵션 풀이 없는 등급(영웅~유물)은 축 선택 자체가 없으므로
+-- 무조건 attackPercent에만 기여한다(기존 23-2 동작 그대로 유지). 옵션 풀이 있는 등급
+-- (고대·태초)은 배정된 옵션의 축과 axis가 같을 때만 기여한다 - 옵션 미배정(nil)이면 아무
+-- 축에도 기여하지 않는다(GemData.lua "[옵션 배정]" 주석).
 local function slotBonusForAxis(gems, slot, axis)
-	local gradeId = Gem.gradeForSlot(slot)
+	local gem = gems[slot]
+	local gradeId = gem.grade
 	if not Gem.isRerollableGrade(gradeId) then
 		return axis == "attackPercent" and Gem.attackPercentBonusForGrade(gradeId) or 0
 	end
-	local gem = gems[slot]
 	local gemAxis = Gem.optionAxis(gem.optionId)
 	return gemAxis == axis and Gem.magnitudeForGrade(gradeId, axis) or 0
 end

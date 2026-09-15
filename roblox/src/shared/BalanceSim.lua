@@ -50,6 +50,7 @@ local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local Gem = require(ReplicatedStorage.Shared.Gem)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 
 local BalanceSim = {}
@@ -71,16 +72,38 @@ local function buildItem(part, gearSpec)
 	}
 end
 
+-- 빈 보석 보너스(23-4 "지난 세션 미완 항목" - BalanceSim이 보석을 전혀 안 읽던 문제를
+-- 고친다). gems가 nil이면(합성 조건 테스트처럼 보석을 아예 안 다루는 호출) 전부 0 -
+-- 보석 미장착과 계산이 완전히 같다.
+local ZERO_GEM_BONUS = { attackPercent = 0, speedPercent = 0, defensePercent = 0, maxHpPercent = 0 }
+
+local function gemBonusesFor(gems)
+	if not gems then
+		return ZERO_GEM_BONUS
+	end
+	return {
+		attackPercent = Gem.totalAttackPercentBonus(gems),
+		speedPercent = Gem.totalSpeedPercentBonus(gems),
+		defensePercent = Gem.totalDefensePercentBonus(gems),
+		maxHpPercent = Gem.totalMaxHpPercentBonus(gems),
+	}
+end
+
 -- buildLoadout(합성 아이템)과 buildLoadoutFromEquipment(실제 착용 아이템) 둘 다 여기로
 -- 모인다 - "장비 3부위 테이블에서 loadout을 뽑는다"는 계산 자체는 아이템이 합성이든
--- 실제 드랍이든 완전히 같다(Loot.get*류 함수가 이미 item 테이블 형태만 본다).
-local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem)
+-- 실제 드랍이든 완전히 같다(Loot.get*류 함수가 이미 item 테이블 형태만 본다). gems(23-4
+-- 신설, weapon.gems 형태 그대로 - 5칸 배열, 빈 슬롯은 false)는 선택 인자다 - PlayerProfile.
+-- getAttackPercentBonus/getSpeedPercentBonus/getDefensePercentBonus/refreshMaxHp가 실제
+-- 전투 경로에서 장갑·신발·갑옷 보너스에 더하는 자리에 똑같이 더한다(단일 계산 경로 -
+-- 여기서 새 공식을 만들지 않고 PlayerProfile과 같은 지점에 합류시킨다).
+local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems)
 	local class = ClassData.classes[classId]
 	assert(class, "알 수 없는 classId: " .. tostring(classId))
 
 	local weapon = { id = WeaponData.starterId, level = weaponLevel or 0, grade = weaponGrade or 0 }
-	local attackPercentBonus = Loot.getGlovesAttackPercent(glovesItem)
-	local speedPercentBonus = Loot.getShoesSpeedPercent(shoesItem)
+	local gemBonus = gemBonusesFor(gems)
+	local attackPercentBonus = Loot.getGlovesAttackPercent(glovesItem) + gemBonus.attackPercent
+	local speedPercentBonus = Loot.getShoesSpeedPercent(shoesItem) + gemBonus.speedPercent
 	local armorBonus = Loot.getArmorDefense(armorItem)
 	local maxHpBonus = Loot.getMaxHpBonus(armorItem)
 
@@ -89,8 +112,8 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 		level = level,
 		class = class,
 		atk = PlayerCombat.getAttack(weapon, classId, level, attackPercentBonus),
-		defense = PlayerCombat.getDefense(classId, armorBonus),
-		maxHp = CombatConfig.playerMaxHp + maxHpBonus,
+		defense = PlayerCombat.getDefense(classId, armorBonus, gemBonus.defensePercent),
+		maxHp = (CombatConfig.playerMaxHp + maxHpBonus) * (1 + gemBonus.maxHpPercent),
 		speedPercentBonus = speedPercentBonus,
 		attackCooldown = PlayerCombat.getAttackCooldown(classId, speedPercentBonus),
 		attackRange = PlayerCombat.getAttackRange(classId),
@@ -113,16 +136,18 @@ function BalanceSim.buildLoadout(spec)
 	local gear = spec.gear or {}
 	return buildLoadoutCore(
 		spec.classId, spec.level, spec.weaponLevel, spec.weaponGrade,
-		buildItem("armor", gear.armor), buildItem("gloves", gear.gloves), buildItem("shoes", gear.shoes)
+		buildItem("armor", gear.armor), buildItem("gloves", gear.gloves), buildItem("shoes", gear.shoes),
+		spec.gems
 	)
 end
 
 -- 실제 플레이어의 현재 착용 아이템(PlayerProfile.getEquipped가 돌려주는 실제 item 테이블,
 -- 없으면 nil)으로 loadout을 만든다. DevTools의 "/gg measure"가 쓴다 - 합성 조건이 아니라
--- 지금 이 플레이어가 실제로 들고 있는 장비 그대로 잰다.
-function BalanceSim.buildLoadoutFromEquipment(classId, level, weaponLevel, weaponGrade, equipment)
+-- 지금 이 플레이어가 실제로 들고 있는 장비 그대로 잰다. gems(23-4 신설) - weapon.gems를
+-- 그대로 넘기면 위력·신속·방어·건강 네 축 보너스가 전부 반영된다(gemBonusesFor).
+function BalanceSim.buildLoadoutFromEquipment(classId, level, weaponLevel, weaponGrade, equipment, gems)
 	equipment = equipment or {}
-	return buildLoadoutCore(classId, level, weaponLevel, weaponGrade, equipment.armor, equipment.gloves, equipment.shoes)
+	return buildLoadoutCore(classId, level, weaponLevel, weaponGrade, equipment.armor, equipment.gloves, equipment.shoes, gems)
 end
 
 -- 생존 타수. CombatConfig.damageReductionAlpha 유도식(hits = maxHp×(D+αA)/(αA²))과 완전히

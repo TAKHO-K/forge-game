@@ -334,9 +334,19 @@ function PlayerProfile.rebirth(player)
 	classState.weapon.grade = classState.rebirthCount
 
 	-- 슬롯 k(=이번 회차)가 지금 열리고, 그 자리에 확정 보석 1개가 자동 지급된다(20.38 [2]
-	-- "슬롯이 열릴 때 그 등급의 보석 1개가 확정 지급된다").
+	-- "슬롯이 열릴 때 그 등급의 보석 1개가 확정 지급된다", 23-4부터 등급은 그 슬롯의 상한).
 	local slot = classState.rebirthCount
 	classState.weapon.gems[slot] = Gem.buildGrantedGem(slot)
+
+	-- 23-4: 해금 상태를 저장 필드에 기록한다(GemData.slotUnlockRequiredRebirth 주석 참고) -
+	-- 매번 rebirthCount에서 다시 계산하지 않는다. 지금 조건은 여전히 1:1(slot i = 환생
+	-- i회)이라 이번 환생으로 딱 하나(slot)만 새로 열리지만, 나중에 조건표가 바뀌어도(예:
+	-- 한 회차에 두 슬롯이 같이 열림) 이 루프가 그대로 맞다.
+	for s = 1, Gem.slotCount do
+		if classState.rebirthCount >= GemData.slotUnlockRequiredRebirth[s] then
+			classState.weapon.slotUnlocked[s] = true
+		end
+	end
 
 	-- 태초(index6)는 환생만으로 못 간다 - "환생 5회 + 보석 5칸 전부 장착"이 별도 조건
 	-- (20.38 [2]). 슬롯이 열릴 때마다 자동으로 채워지므로(바로 위 줄) 5회차에 도달한
@@ -408,30 +418,32 @@ end
 -- 보석 인벤토리의 한 개를 슬롯에 장착한다(20.38 [2] "분해로 얻는 보석은 슬롯에 교체
 -- 장착하는 용도"). 슬롯은 항상 미리 자동 지급된 보석으로 채워져 있으므로(rebirth 참고)
 -- 이 동작은 언제나 "교체"다 - 기존 슬롯 보석은 버려지지 않고 인벤토리로 돌아간다
--- (equipItem의 "먼저 빼고 나중에 넣는다" 순서와 같은 원칙).
+-- (equipItem의 "먼저 빼고 나중에 넣는다" 순서와 같은 원칙). 23-4: "등급 일치"가 아니라
+-- "등급 상한 이하"로 검증한다(Gem.canSocket) - 낮은 등급 보석을 높은 등급 홈에 꽂을 수
+-- 있다(지시 "높은 등급 홈에는 그 이하 등급 보석을 모두 장착할 수 있다").
 function PlayerProfile.equipGem(player, slot, gemInventoryIndex)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
 		return false, "no_class"
 	end
-	if not Gem.isSlotUnlocked(slot, classState.rebirthCount) then
+	if not Gem.isSlotUnlocked(classState.weapon.slotUnlocked, slot) then
 		return false, "slot_locked"
 	end
 	local pending = classState.gemInventory[gemInventoryIndex]
 	if not pending then
 		return false, "not_found"
 	end
-	if pending.grade ~= Gem.gradeForSlot(slot) then
-		return false, "grade_mismatch"
+	if not Gem.canSocket(pending.grade, slot) then
+		return false, "grade_too_high"
 	end
 
 	table.remove(classState.gemInventory, gemInventoryIndex)
 	if Gem.isFilled(classState.weapon.gems, slot) then
 		local previous = classState.weapon.gems[slot]
-		table.insert(classState.gemInventory, { grade = Gem.gradeForSlot(slot), optionId = previous.optionId })
+		table.insert(classState.gemInventory, { grade = previous.grade, optionId = previous.optionId })
 	end
-	classState.weapon.gems[slot] = { optionId = pending.optionId }
+	classState.weapon.gems[slot] = { optionId = pending.optionId, grade = pending.grade }
 	GemSync.push(player)
 	-- 23-3: 교체된 보석의 축이 방어력·최대체력이면 그 자리에서 바로 반영해야 한다(장갑·
 	-- 갑옷 교체와 같은 지점, refreshMaxHp/refreshMovementSpeed 주석 참고) - 공격력·공속은
@@ -477,7 +489,7 @@ function PlayerProfile.rerollGemOption(player, slot)
 	if not Gem.isFilled(classState.weapon.gems, slot) then
 		return false, "empty_slot"
 	end
-	local gradeId = Gem.gradeForSlot(slot)
+	local gradeId = classState.weapon.gems[slot].grade
 	if not Gem.isRerollableGrade(gradeId) then
 		return false, "not_rerollable"
 	end

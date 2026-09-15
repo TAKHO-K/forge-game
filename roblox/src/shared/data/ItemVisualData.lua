@@ -57,11 +57,17 @@ return {
 			burstOnDrop = true,
 			toastTextSize = 30,
 		},
-		-- 웹은 태초를 "rainbow"(렌더에서 hue 순환)로 처리한다 - 로블록스에서 태초가 실제로
-		-- 드랍 가능해질 때 색상 애니메이션을 붙인다. 지금은 도달 불가능한 등급이라 흰색을
-		-- 자리표시자로만 두고 rainbow=true 플래그만 남긴다(미구현, 이번 범위 밖).
+		-- 웹은 태초를 "rainbow"(렌더에서 hue 순환)로 처리한다 - InventoryUI.client.lua의
+		-- applyGradeVisual이 rainbow=true일 때 이 color 대신 회전하는 무지개 UIGradient로
+		-- 테두리를 그린다(칸 테두리 한정). 그런데 그 특수 처리를 안 거치는 자리(장비창
+		-- 무기 슬롯 아이콘·레벨 태그, 강화대 등급명 등 .color를 직접 읽는 곳)에선 예전
+		-- 흰색이 그대로 나가 "일반(230,230,230 회색)과 구분이 안 된다"는 문제가 있었다
+		-- (23-4 지시로 발견) - 23-4부터 태초가 실제로 플레이 중 나오게 되면서(1번 홈 확정
+		-- 지급) 더는 "도달 불가능한 자리표시자"가 아니다. 흰색 대신 다른 6등급 어디와도
+		-- 겹치지 않는 청록을 기본색으로 준다 - rainbow 처리를 받는 자리는 여전히 그 위에
+		-- 애니메이션 테두리가 덧씌워진다(색만 바뀌고 rainbow 자체는 그대로).
 		primordial = {
-			color = Color3.fromRGB(255, 255, 255),
+			color = Color3.fromRGB(160, 255, 250),
 			statMultiplier = 15.0,
 			glowBrightness = 4.5, glowRange = 24,
 			burstOnDrop = true,

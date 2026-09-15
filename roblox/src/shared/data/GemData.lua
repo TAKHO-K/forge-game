@@ -4,12 +4,31 @@
 -- 배율은 Gem.lua가 ItemVisualData.gradeVisuals(statMultiplier)에서 매번 계산한다(단일 출처).
 
 return {
-	-- 환생 5회 = 슬롯 5칸(1:1). slot i(1~5)가 열리는 시점 = 환생 i회, 그 슬롯이 받는 보석
-	-- 등급은 상위 5등급(ArmorData.gradeOrder의 영웅~태초)을 그대로 오름차순으로 배정한다
-	-- (20.38 [2] 표 - "우연이 아니라 상위 5등급 중 다섯 번째"). 하위 2등급(일반·희귀)엔
-	-- 대응하는 슬롯이 없다.
+	-- 환생 5회 = 슬롯 5칸(1:1). slot i(1~5)가 열리는 시점 = 환생 i회.
 	maxRebirthCount = 5,
-	slotGradeOrder = { "epic", "legendary", "relic", "ancient", "primordial" },
+
+	-- 23-4: "등급 고정"에서 "등급 상한"으로 바뀌었다(지시 - "높은 등급 홈에는 그 이하 등급
+	-- 보석을 모두 장착할 수 있고, 낮은 등급 홈에는 더 높은 등급 보석을 장착할 수 없다").
+	-- slot i가 받아들이는 최고 등급 - 그 이하 등급 보석은 전부 그 슬롯에 꽂을 수 있다
+	-- (Gem.canSocket). 슬롯 번호(1~5)는 무기에서 눈에 덜 띄는 자리(1)부터 가장 두드러지는
+	-- 자리(5)까지의 "시각적 존재감" 순서이지, 등급 상한 순서와 더 이상 같지 않다 - 이번
+	-- 세션 지시로 **1번 홈만 예외로 태초 상한**을 받는다("1번만 환생으로 태초까지 등급
+	-- 올려주고 태초보석을 받는 것까지다") - 슬롯이 열리자마자(환생1회) 바로 태초 보석
+	-- 하나가 확정 지급된다(Gem.buildGrantedGem이 그 슬롯의 상한 등급으로 채운다). 2~5번은
+	-- "홈 숫자가 커질수록 이펙트는 더 좋은 위치에 박히지만, 실제로 플레이하며 조건을
+	-- 지켜야 하므로 태초 달성이 좀 더 어렵다"는 컨셉의 자리표시자 값이다 - 정확한 값과
+	-- 해금 조건은 나중에 설계한다(지시 원문). 지금은 태초에 못 미치는 임시값만 오름차순으로
+	-- 채워 뒀다 - 나중에 이 표의 값만 올리면 되고 코드(Gem.lua)는 손댈 필요가 없다.
+	slotGradeCap = { "primordial", "epic", "legendary", "relic", "ancient" },
+
+	-- 슬롯이 열리는 데 필요한 환생 횟수(현재는 slot i = 환생 i회, 기존 동작 그대로 유지 -
+	-- "구조만 만들고 조건은 나중에 설계"라는 지시를 "지금 있는 값을 유지"로 해석했다. 전부
+	-- 열어 버리면 20.58 [3]에서 이미 확인한 "환생마다 하나씩 열린다" 설계가 퇴행한다).
+	-- 실제 해금 여부는 이 값에서 매번 다시 계산하지 않고 PlayerProfile.rebirth가 그 순간
+	-- classState.weapon.slotUnlocked에 기록해 저장한다(Gem.isSlotUnlocked 참고) - 나중에
+	-- 환생 횟수만으로 표현 못 하는 조건(예: 특정 보스 처치)이 추가돼도 저장 필드 구조를
+	-- 다시 바꿀 필요가 없게 하기 위한 대비다.
+	slotUnlockRequiredRebirth = { 1, 2, 3, 4, 5 },
 
 	-- 고대·태초 전용 특수 옵션 이름 풀(PRD-forge-game.md 7.3-2 무기 행 4개 그대로 재사용).
 	-- 원 설계는 이 넷이 각자 다른 "규칙형" 전투 로직(예: 연속격 = 3타 강타 발동 간격 변경)을
@@ -42,12 +61,14 @@ return {
 		["삼위일체"] = "maxHpPercent",
 	},
 
-	-- 축 표시 이름(한국어 UI용, EnhanceUI.client.lua 보석 탭).
+	-- 축 표시 이름(한국어 UI용, InventoryUI.client.lua 보석 탭). 23-4: "공격력%"류 축 이름이
+	-- 곧 UI에 보이는 스탯명과 같아 다른 장비 스탯 문구와 헷갈린다는 지시로 짧은 고유 이름으로
+	-- 바꿨다 - 효과·수치(Gem.magnitudeForGrade)는 전혀 안 바뀐다, 표시 이름만 교체.
 	axisDisplayNames = {
-		attackPercent = "공격력",
-		speedPercent = "공속·이속",
-		defensePercent = "방어력",
-		maxHpPercent = "최대체력",
+		attackPercent = "위력",
+		speedPercent = "신속",
+		defensePercent = "방어",
+		maxHpPercent = "건강",
 	},
 
 	-- [옵션 배정] 23-2에선 슬롯 자동 지급(rebirth)과 분해(dismantle) 둘 다 Gem.rollOption을
