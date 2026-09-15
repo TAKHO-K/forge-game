@@ -170,6 +170,38 @@ function BossEncounter.spawnFor(player, stage)
 		data.displayName, stage, player.Name, zoneKey))
 end
 
+-- 23-1 견습 모드 전용 - targetStage 대신 (tierIndex, patternKeys, hpScale, weaponMultiplier)를
+-- 받아 BossRules.buildTutorialInstanceData로 인스턴스를 만든다는 점만 spawnFor와 다르다.
+-- 아레나 슬롯 배정·텔레포트·입장 유예는 완전히 같은 코드를 재사용한다(견습 보스도 결국
+-- "이 플레이어의 활성 보스" 하나이므로 activeBosses/slotByPlayer를 그대로 공유해도 안전하다 -
+-- 무한 모드 보스와 견습 보스가 동시에 뜰 일이 없다, 견습 중엔 무한 모드 진행 자체가 잠겨 있다).
+-- BossRules.isBossStage 검사를 하지 않는다 - 견습 스테이지(TutorialData.monsterStage=1)는
+-- BossData.stageInterval의 배수가 아니어도 된다.
+function BossEncounter.spawnTutorialFor(player, tierIndex, stage, patternKeys, hpScale, weaponMultiplier)
+	if activeBosses[player] then
+		return
+	end
+
+	local data = BossRules.buildTutorialInstanceData(tierIndex, stage, patternKeys, hpScale, weaponMultiplier)
+	if not data then
+		return
+	end
+
+	local slot = allocateSlot(player)
+	local zoneKey = zoneKeyForSlot(slot)
+	buildArena(zoneKey)
+	local zone = WorldConfig.zones[zoneKey]
+
+	teleportTo(player, arenaEntryPosition(zone))
+
+	local spawnPosition = zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 1.5, 0)
+	local model = MonsterSpawner.spawn(data, spawnPosition, zoneKey)
+	activeBosses[player] = model
+	BossPatterns.setGrace(model, data, data.entryGraceSeconds)
+	print(("[forge-game] 견습 보스 등장: %s - tier%d, 대상 %s (아레나 %s)"):format(
+		data.displayName, tierIndex, player.Name, zoneKey))
+end
+
 -- 처치되지 않은 채로 물러날 때(스테이지 하향/상향 이동, 퇴장)만 부른다 - 처치는
 -- CombatResolution.lua가 MonsterSpawner.despawn(죽음 연출 포함)을 직접 호출한 뒤
 -- clearFor로 이 테이블만 지운다. 스테이지를 실제로 옮기는 것이므로 사냥터로 돌려보낸다.

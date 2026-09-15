@@ -49,6 +49,9 @@ local ZoneTerrain = require(script.Parent.ZoneTerrain)
 local GroundProbe = require(script.Parent.GroundProbe)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 local ServerStorage = game:GetService("ServerStorage")
+-- 23-1 견습 모드 검증 명령(/gg tutorial)용.
+local TutorialState = require(script.Parent.TutorialState)
+local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData)
 
 -- 앵커 조건(지시 [1] - "최소한 앵커 조건은 하나로 불러올 수 있어야 한다"): 레벨100 +
 -- 일반등급 itemLevel100 3부위 + 강화+0 + 무기등급 일반(0), 스테이지 100. 무기 등급은
@@ -521,7 +524,10 @@ local HELP_TEXT = table.concat({
 	"/gg boss [stage] - 보스 스테이지(기본 5)로 이동해 개인 아레나 보스전 시작(21-3 검증용)",
 	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
+	"/gg bosskilltest - 지금 보스를 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡는다(견습/무한 모드 처치 파이프라인 검증용, 23-1)",
 	"/gg terrain [clear|cost|ground|drop|rules|parts] - tier1에 테스트 지형(고원·30°경사·계단·70°경사·절벽·도랑) 생성 / 제거 / 지면 Raycast 부하 실측 / 잡몹 접지 상태 / 발밑 시험 드랍(22-4) / 배치 규칙 강제 검증 / 파트 수 실측(22-5)",
+	"/gg tutorial <0-7> - 견습 단계 강제 이동(0=미시작으로 리셋, 1~7=그 단계로 즉시 진입)",
+	"/gg tutorial off - 견습 종료하고 무한 모드로 복귀(완료 처리)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
 }, "\n")
 
@@ -594,9 +600,38 @@ local function handleCommand(player, args)
 		if not data then
 			reply(player, "활성 보스가 없습니다(/gg boss 먼저)")
 		else
-			MonsterState.applyDamage(model, data.hp * tonumber(args[2]), PlayerProfile.getInfiniteStage(player) or 1, player)
+			MonsterState.applyDamage(model, data.hp * tonumber(args[2]), TutorialState.getMonsterStage(player), player)
 			MonsterSpawner.updateHpLabel(model)
 			reply(player, ("보스 HP %.0f%% 차감 - 남은 비율 %.2f"):format(tonumber(args[2]) * 100, MonsterState.getHpRatio(model)))
+		end
+	elseif sub == "tutorialstatus" then
+		-- 23-1 검증용 - execute_luau는 PlayerProfile을 직접 require하지 못해(별개 인스턴스가
+		-- 생긴다) 내부 상태를 못 읽는다 - 이 스크립트는 이미 로드된 실제 인스턴스를 갖고
+		-- 있으니 그 상태를 콘솔로 노출한다.
+		local weapon = PlayerProfile.getWeapon(player)
+		local parts = {}
+		for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+			local item = PlayerProfile.getEquipped(player, part)
+			table.insert(parts, ("%s=%s"):format(part, item and item.grade or "none"))
+		end
+		local baseline = PlayerProfile.getTutorialLendBaseline(player)
+		reply(player, ("step=%s completed=%s weaponGrade=%d %s lendBaseline=%s"):format(
+			tostring(PlayerProfile.getTutorialStep(player)), tostring(PlayerProfile.getTutorialCompleted(player)),
+			weapon.grade, table.concat(parts, " "), baseline and ("weaponGrade=" .. baseline.weaponGrade) or "nil"))
+	elseif sub == "bosskilltest" then
+		-- 23-1 검증용 - /gg bossdmg는 사망 리셋(플레이어 사망) 검증 전용이라 HP를 0으로
+		-- 만들어도 CombatResolution.resolveHit(처치 처리)을 부르지 않는다(killtest와 같은
+		-- 이유로, 실제 클릭 평타 없이도 견습/무한 모드 보스 처치 파이프라인 전체를 검증하려면
+		-- 이 경로가 필요하다).
+		local model = BossEncounter.getActive(player)
+		local data = model and MonsterState.getData(model)
+		if not data then
+			reply(player, "활성 보스가 없습니다")
+		else
+			local isDead = MonsterState.applyDamage(model, data.hp * 10, TutorialState.getMonsterStage(player), player)
+			MonsterSpawner.updateHpLabel(model)
+			CombatResolution.resolveHit(player, model, isDead)
+			reply(player, "bosskilltest 완료 - 서버 로그 참고")
 		end
 	elseif sub == "variant" and args[2] then
 		-- 가장 가까운 잡몹(보스·상자 제외)을 보상 없이 지우고 같은 자리에 지정 변종으로 다시
@@ -674,7 +709,7 @@ local function handleCommand(player, args)
 		MonsterState.clear(nearest)
 		nearest:Destroy()
 		local chest = MonsterSpawner.spawn(data, spawnPosition, zoneKey, { isChest = true })
-		local stage = PlayerProfile.getInfiniteStage(player) or 1
+		local stage = TutorialState.getMonsterStage(player)
 		local function hitters()
 			local n = 0
 			for _ in pairs(MonsterState.getChestHitters(chest)) do
@@ -750,7 +785,7 @@ local function handleCommand(player, args)
 				dropsBefore += 1
 			end
 		end
-		local stage = PlayerProfile.getInfiniteStage(player) or 1
+		local stage = TutorialState.getMonsterStage(player)
 		local isDead = MonsterState.applyDamage(nearest, 1e12, stage, player)
 		MonsterSpawner.updateHpLabel(nearest)
 		CombatResolution.resolveHit(player, nearest, isDead)
@@ -794,6 +829,27 @@ local function handleCommand(player, args)
 			end
 		else
 			buildTestTerrain(player)
+		end
+	elseif sub == "tutorial" and args[2] then
+		ensureBackup(player)
+		if args[2] == "off" then
+			TutorialState.stop(player, true)
+			reply(player, "견습 종료 - 완료 처리, 무한 모드로 복귀")
+		elseif tonumber(args[2]) and tonumber(args[2]) >= 0 and tonumber(args[2]) <= TutorialData.stepCount then
+			local step = math.floor(tonumber(args[2]))
+			if step == 0 then
+				TutorialState.stop(player, false)
+				PlayerProfile.setTutorialStep(player, 0)
+				PlayerProfile.setTutorialCompleted(player, false)
+				reply(player, "견습 진행도 초기화(0=미시작)")
+			else
+				TutorialState.stop(player, false) -- 이전 대여가 있었으면 먼저 반납
+				PlayerProfile.setTutorialCompleted(player, false)
+				TutorialState.start(player, step)
+				reply(player, ("견습 %d단계로 강제 이동"):format(step))
+			end
+		else
+			reply(player, "사용법: /gg tutorial <0-7> 또는 /gg tutorial off")
 		end
 	elseif sub == "bossreset" then
 		ensureBackup(player)

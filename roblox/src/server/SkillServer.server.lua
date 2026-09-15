@@ -25,6 +25,7 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local TutorialState = require(script.Parent.TutorialState)
 local PlayerState = require(script.Parent.PlayerState)
 local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
@@ -457,7 +458,8 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 
 	local characterLevel = PlayerProfile.getCharacterLevel(player)
 	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player))
-	local attackerStage = PlayerProfile.getInfiniteStage(player) or 1
+	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage를 쓴다.
+	local attackerStage = TutorialState.getMonsterStage(player)
 
 	-- 20-2b: 슬롯(Q/E)이 아니라 판정 유형(shape)으로 분기한다 - 대검 Q=line/E=circle이던
 	-- 우연한 대응이 깨졌다(활 Q=selfBuff/E=dash). "채널형"(castCircleChannel)만 자체적으로

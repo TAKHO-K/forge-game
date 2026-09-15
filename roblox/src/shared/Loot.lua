@@ -150,6 +150,21 @@ function Loot.rollSparkleArmorDrop(monsterStage, itemLevel, tierIndex)
 	}
 end
 
+-- 견습 모드 확정 지급(23-1, PRD 20.47[1] "rollBossFirstClearDrop 자리를 등급·부위 고정
+-- 드랍으로 재사용"). 등급·부위가 굴림이 아니라 그 단계가 정한 고정값이라는 점만
+-- rollBossFirstClearDrop과 다르다 - 반환 모양은 동일(TutorialState가 ItemDropSpawner.spawn에
+-- 그대로 넘긴다, 잡몹/보스 확정 드랍과 같은 "주웠다" 연출을 그대로 재사용).
+function Loot.buildFixedArmorDrop(grade, part, monsterStage, itemLevel, tierIndex)
+	return {
+		grade = grade,
+		part = part,
+		dropStage = monsterStage,
+		itemLevel = itemLevel,
+		tierIndex = tierIndex,
+		locked = false,
+	}
+end
+
 -- 장비 방어력 보너스(갑옷 전용). item이 nil이면(미착용) 0 - PlayerCombat.getDefense의
 -- equipmentDefenseBonus 자리에 그대로 넘긴다. 13-2부터 dropStage가 아니라 itemLevel(획득
 -- 시점 캐릭터 레벨) 기준이다 - PRD 20.11-4가 정의한 "아이템 레벨 시스템" 그대로. 갑옷만

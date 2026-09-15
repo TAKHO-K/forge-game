@@ -60,12 +60,42 @@ function BossRules.buildInstanceData(stage)
 		return nil
 	end
 	local boss = BossData.bosses[bossId]
-	local tier1 = MonsterData.tier1
+	return BossRules.buildInstanceDataFrom(MonsterData.tier1, stage, boss, 1, 1)
+end
 
-	local trashHp = InfiniteStage.getMonsterHp(tier1.hp, stage)
-	local trashAttack = InfiniteStage.getMonsterAttack(tier1.attack, stage)
-	local trashGold = InfiniteStage.getGoldReward(tier1.goldDrop, stage)
-	local trashExp = InfiniteStage.getExpReward(tier1.expReward, stage)
+-- 23-1 견습 모드 전용(BossData에 새 항목을 만들지 않는다 - 같은 보스 id에 patterns
+-- 부분집합·tier 기반 trash 베이스만 다르게 넘긴다). tierIndex는 TutorialData.steps[n].tierIndex,
+-- hpScale은 TutorialData.steps[n].bossHpScale(대여 무기 배율은 이 함수 밖에서 곱한다 -
+-- patternKeys 필터와 함께 결과 테이블만 조정하면 되므로 buildInstanceDataFrom을 그대로 쓴다).
+function BossRules.buildTutorialInstanceData(tierIndex, stage, patternKeys, hpScale, weaponMultiplier)
+	local bossId = BossRules.pickBossId(BossData.stageInterval) -- 견습은 스테이지 구간과 무관 - 유일한 풀(pools[1])을 그대로 쓴다.
+	if not bossId then
+		return nil
+	end
+	local boss = BossData.bosses[bossId]
+	local tierBase = MonsterData[MonsterData.tierOrder[tierIndex]] or MonsterData.tier1
+
+	local data = BossRules.buildInstanceDataFrom(tierBase, stage, boss, tierIndex, hpScale * weaponMultiplier)
+	data.isTutorial = true
+
+	-- 패턴 부분집합(21-3 상태 머신이 없는 키를 만나면 안 되므로 BossPatterns.lua도 방어
+	-- 처리를 같이 갖췄다 - 그쪽 주석 참고). heavy는 항상 포함(보스 데이터 자체의 상시 동작).
+	local filteredPatterns = {}
+	for _, key in ipairs(patternKeys) do
+		filteredPatterns[key] = boss.patterns[key]
+	end
+	data.patterns = filteredPatterns
+
+	return data
+end
+
+-- buildInstanceData/buildTutorialInstanceData 공용 - trashBase(MonsterData의 tier 항목)와
+-- hpMultiplierExtra(견습 전용 배율, 일반 무한 모드는 1)만 다르다.
+function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra)
+	local trashHp = InfiniteStage.getMonsterHp(trashBase.hp, stage)
+	local trashAttack = InfiniteStage.getMonsterAttack(trashBase.attack, stage)
+	local trashGold = InfiniteStage.getGoldReward(trashBase.goldDrop, stage)
+	local trashExp = InfiniteStage.getExpReward(trashBase.expReward, stage)
 
 	local attack = trashAttack * boss.attackMultiplier
 
@@ -75,11 +105,14 @@ function BossRules.buildInstanceData(stage)
 		isBoss = true,
 		stageNumber = stage,
 		-- 20-4: 재도전(첫 처치 아님) 드랍이 Loot.rollArmorDrop(dropGradeTableByTier)을 타면서
-		-- tierIndex가 필요해졌다. 보스는 항상 tier1 기준으로 계산되므로(위 trashHp 등) 1 고정 -
-		-- Loot.rollBossFirstClearDrop의 tierIndex=1 고정과 같은 이유.
-		tierIndex = 1,
+		-- tierIndex가 필요해졌다. 무한 모드 보스는 항상 tier1 기준으로 계산되므로(buildInstanceData가
+		-- 1을 넘긴다) 1 고정 - Loot.rollBossFirstClearDrop의 tierIndex=1 고정과 같은 이유. 견습
+		-- 모드 보스는 호출부(buildTutorialInstanceData)가 실제 tierIndex를 넘긴다.
+		tierIndex = tierIndex,
 
-		hp = trashHp * boss.hpMultiplier,
+		-- hpMultiplierExtra(23-1) - 견습 전용 보정(TutorialData.bossHpScale × 대여 무기 배율).
+		-- 무한 모드는 항상 1이라(buildInstanceData 호출) 기존 계산과 완전히 같다.
+		hp = trashHp * boss.hpMultiplier * hpMultiplierExtra,
 		attack = attack,
 		-- 21-3: heavyAttack(=attack×3) 필드는 없앴다 - 배율은 공격력이 아니라 감소식을 거친
 		-- 피해에 곱한다(PlayerDamage.applyHit의 damageMultiplier, 이유는 그쪽 주석).
@@ -91,7 +124,7 @@ function BossRules.buildInstanceData(stage)
 		goldDrop = math.floor(trashGold * boss.goldMultiplier),
 		expReward = math.floor(trashExp * boss.expMultiplier),
 
-		radiusPx = tier1.radiusPx * boss.sizeScale,
+		radiusPx = trashBase.radiusPx * boss.sizeScale,
 		sizeScale = boss.sizeScale,
 		bodyColor = boss.bodyColor,
 		headColor = boss.headColor,

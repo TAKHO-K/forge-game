@@ -16,7 +16,7 @@ local Reach = require(ReplicatedStorage.Shared.Reach)
 local GroundProbe = require(script.Parent.GroundProbe)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerState = require(script.Parent.PlayerState)
-local PlayerProfile = require(script.Parent.PlayerProfile)
+local TutorialState = require(script.Parent.TutorialState)
 local SummonState = require(script.Parent.SummonState)
 -- 21-3: 피격 계산·적용(computeHitDamage/applyHitToPlayer/syncHud)은 PlayerDamage.lua로
 -- 옮겼다 - 보스 패턴(BossPatterns.lua)이 같은 경로로 피해를 넣어야 해서다. 동작은 그대로다.
@@ -219,7 +219,8 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	end
 	MonsterState.setLastAttackTick(model, now)
 
-	local targetStage = PlayerProfile.getInfiniteStage(targetPlayer) or 1
+	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage로 맞는다(TutorialState.getMonsterStage).
+	local targetStage = TutorialState.getMonsterStage(targetPlayer)
 	applyHitToPlayer(targetPlayer, MonsterState.getAttackFor(model, targetStage))
 end
 
@@ -276,7 +277,7 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
-					local aggroStage = PlayerProfile.getInfiniteStage(player) or 1
+					local aggroStage = TutorialState.getMonsterStage(player)
 					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player))
 					if data.isBoss then
 						BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)

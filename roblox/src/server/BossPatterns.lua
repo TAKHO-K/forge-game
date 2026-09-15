@@ -135,10 +135,14 @@ local function intervalOf(data, id)
 end
 
 -- 패턴 시계를 "지금"부터 새로 잰다 - 스폰·어그로 시작·사망 리셋 때 부른다(재도전 = 처음부터).
+-- 23-1: 견습 모드는 data.patterns가 부분집합이다(BossRules.buildTutorialInstanceData) - 없는
+-- 패턴은 시계 자체를 만들지 않는다(nextAt에 없으면 아래 스케줄러가 자연히 후보에서 뺀다).
 local function restartClocks(st, data, now)
 	st.nextAt = {}
 	for _, id in ipairs(PATTERN_ORDER) do
-		st.nextAt[id] = now + intervalOf(data, id)
+		if id == "heavy" or data.patterns[id] then
+			st.nextAt[id] = now + intervalOf(data, id)
+		end
 	end
 	st.lastPatternEndAt = now
 end
@@ -421,7 +425,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 		local pick, pickAt = nil, math.huge
 		for _, id in ipairs(PATTERN_ORDER) do
 			local at = st.nextAt[id]
-			if now >= at and at < pickAt then
+			if at and now >= at and at < pickAt then
 				pick, pickAt = id, at
 			end
 		end
@@ -617,7 +621,8 @@ end
 -- 시계 전부 무시).
 function BossPatterns.force(model, data, id)
 	local st = ensureState(model, data)
-	if not st or not table.find(PATTERN_ORDER, id) then
+	-- 23-1: 견습 모드는 data.patterns가 부분집합이다 - 지금 이 보스에 없는 패턴은 강제 시작도 막는다.
+	if not st or not table.find(PATTERN_ORDER, id) or (id ~= "heavy" and not data.patterns[id]) then
 		return false
 	end
 	BossPatterns.interrupt(model, data)

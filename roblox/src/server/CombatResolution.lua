@@ -18,6 +18,7 @@ local PlayerProfile = require(script.Parent.PlayerProfile)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 local BossEncounter = require(script.Parent.BossEncounter)
 local ImmediateSave = require(script.Parent.ImmediateSave)
+local TutorialState = require(script.Parent.TutorialState)
 
 local CombatResolution = {}
 
@@ -37,7 +38,7 @@ end
 local function grantKillReward(recipient, target, monsterData, deathPosition)
 	local isBoss = monsterData.isBoss
 	local isSparkle = MonsterState.isSparkle(target)
-	local recipientStage = PlayerProfile.getInfiniteStage(recipient) or 1
+	local recipientStage = TutorialState.getMonsterStage(recipient)
 	local dropStage = isBoss and monsterData.stageNumber or recipientStage
 
 	local goldDrop = MonsterState.getGoldDropFor(target, recipientStage)
@@ -108,7 +109,7 @@ local function handleChestBreak(target)
 	local count = 0
 	for hitter in pairs(MonsterState.getChestHitters(target)) do
 		if hitter.Parent then
-			local stage = PlayerProfile.getInfiniteStage(hitter) or 1
+			local stage = TutorialState.getMonsterStage(hitter)
 			local gold = math.floor(InfiniteStage.getGoldReward(baseData.goldDrop, stage) * TreasureChestConfig.goldKillEquivalent)
 			PlayerProfile.addGold(hitter, gold)
 			CombatResolution.goldGained:FireClient(hitter, gold)
@@ -132,6 +133,12 @@ local function handleMobDeath(target)
 	for contributor, ratio in pairs(MonsterState.getContributors(target)) do
 		if ratio >= CombatConfig.contributionRewardThreshold and contributor.Parent then
 			grantKillReward(contributor, target, monsterData, deathPosition)
+			-- 23-1: 골드·경험치·드랍은 위 grantKillReward가 이미 견습 stage 기준으로 계산했다
+			-- (recipientStage가 TutorialState.getMonsterStage를 거친다) - 여기선 그 처치가
+			-- "지금 단계가 가르치는 구역"에서 났는지만 추가로 확인해 진행도를 올린다.
+			if TutorialState.isTutorialZoneKill(contributor, target) then
+				TutorialState.registerKill(contributor)
+			end
 		end
 	end
 end
@@ -153,7 +160,12 @@ function CombatResolution.resolveHit(attacker, target, isDead)
 	end
 
 	local monsterData = MonsterState.getData(target)
-	if monsterData.isBoss then
+	if monsterData.isTutorial then
+		-- 23-1: 견습 보스는 무한 모드 보상 경로(handleBossDeath - bestBossCleared·
+		-- rollBossFirstClearDrop)를 전혀 타지 않는다. 그 두 값 다 무한 모드 진행도라
+		-- 손대면 지시("무한 stage 필드는 건드리지 마라")를 어긴다 - 전용 경로가 필요한 이유.
+		TutorialState.onBossCleared(attacker, target)
+	elseif monsterData.isBoss then
 		handleBossDeath(attacker, target)
 	elseif monsterData.isChest then
 		handleChestBreak(target)

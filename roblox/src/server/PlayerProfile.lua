@@ -77,6 +77,8 @@ function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
 	player:SetAttribute("BulkSellCutoffGrade", profile.bulkSellCutoffGrade)
+	player:SetAttribute("TutorialStep", profile.tutorial.step)
+	player:SetAttribute("TutorialCompleted", profile.tutorial.completed)
 	syncActiveClassAttributes(player, profile)
 end
 
@@ -293,6 +295,74 @@ function PlayerProfile.clearBossFirstClearRewards(player, stage)
 	else
 		classState.stageProgress.bossFirstClearStages = {}
 	end
+end
+
+-- 23-1 견습 모드 진행도(profile.tutorial) - 계정 전체 공유(gold·classId와 같은 층, PRD
+-- 20.47[3] "완료 플래그는 계정 단위" 그대로). 직업별 진행도(classes[classId])와 절대 섞지
+-- 않는다 - 지시 "무한 모드 stage 필드는 건드리지 마라"의 구조적 보장이다.
+function PlayerProfile.getTutorialStep(player)
+	local profile = profiles[player]
+	return profile and profile.tutorial.step
+end
+
+function PlayerProfile.getTutorialCompleted(player)
+	local profile = profiles[player]
+	return profile ~= nil and profile.tutorial.completed
+end
+
+-- 서버만 호출한다(TutorialState). Attribute도 같이 맞춰 클라이언트 HUD(TutorialHud.client.lua)가
+-- 읽을 수 있게 한다 - InfiniteStage와 같은 패턴.
+function PlayerProfile.setTutorialStep(player, step)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	profile.tutorial.step = step
+	player:SetAttribute("TutorialStep", step)
+end
+
+function PlayerProfile.setTutorialCompleted(player, completed)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	profile.tutorial.completed = completed
+	player:SetAttribute("TutorialCompleted", completed)
+end
+
+-- "그 단계의 영구 지급(grant)을 이미 받았는가" - bossFirstClearStages와 같은 목적(재플레이
+-- 중복 지급 방지). 완료 보상(7단계, TutorialData.tutorialCompletionGold)도 stepIndex=7로
+-- 같은 집합을 쓴다 - 7단계는 grant 아이템이 없지만 완료 보상도 "그 단계 보상"이라는 점에서
+-- 동일하다.
+function PlayerProfile.hasTutorialGrant(player, stepIndex)
+	local profile = profiles[player]
+	return profile ~= nil and profile.tutorial.granted[stepIndex] == true
+end
+
+function PlayerProfile.markTutorialGrant(player, stepIndex)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	profile.tutorial.granted[stepIndex] = true
+end
+
+-- 대여 복원 원본(23-1) - 4단계 이상에서 무기 등급·장비 3부위를 일시적으로 덮어쓰기 전
+-- 원래 값을 저장해 둔다. 세션 메모리(TutorialState)가 아니라 저장 데이터에 두는 이유:
+-- 대여 중 자동저장(60초)이나 서버 크래시가 끼어들면 세션 메모리는 날아가도 이 값은
+-- 남아 있어야 재접속 시 무엇을 돌려줘야 할지 알 수 있다("빌린 태초 무기가 영구히 남는"
+-- 사고를 막는 유일한 안전장치). nil이면 "지금 대여 중이 아니다"라는 뜻이다.
+function PlayerProfile.getTutorialLendBaseline(player)
+	local profile = profiles[player]
+	return profile and profile.tutorial.lendBaseline
+end
+
+function PlayerProfile.setTutorialLendBaseline(player, baseline)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	profile.tutorial.lendBaseline = baseline
 end
 
 -- 직업 변경 확인창(19-1)이 "레벨 X · 최고 스테이지 Y로 이어집니다"를 보여주기 위해

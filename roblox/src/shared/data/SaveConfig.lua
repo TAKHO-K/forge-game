@@ -3,6 +3,9 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
+	-- 17(23-1) - 견습 모드 진행도(tutorial = {completed, step, granted, lendBaseline}) 필드
+	-- 신설. 계정 전체 공유(gold와 같은 층) - 무한 모드 stageProgress.infinite와 완전히
+	-- 독립이다. SaveSystem.migrate()의 v16->v17 참고.
 	-- 16(20-4) - 보스 첫 처치 확정 드랍 기록(stageProgress.bossFirstClearStages) + 환생
 	-- 횟수 스텁(rebirthCount) 필드 신설. SaveSystem.migrate()의 v15->v16 참고.
 	-- 15(20-3) - 일괄판매 기준 등급 선택(bulkSellCutoffGrade) 필드 신설. 이전엔 선택 개념
@@ -32,7 +35,7 @@ return {
 	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
 	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
 	-- 필드(classId) 추가.
-	saveVersion = 16,
+	saveVersion = 17,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

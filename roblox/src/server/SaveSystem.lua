@@ -10,6 +10,7 @@ local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
 
 local SaveSystem = {}
 
@@ -102,6 +103,13 @@ local function defaultProfile()
 		-- 4직업 전부 처음부터 만들어 둔다(선택 여부와 무관) - 그래야 나중에 다른 직업으로
 		-- 갈아타도 그 직업은 이미 자기 자리를 갖고 있다.
 		classes = defaultClasses(),
+
+		-- 견습 모드 진행도(23-1, 계정 전체 공유 - PRD 20.47[3] "완료 플래그는 계정 단위").
+		-- step: 0=미시작, 1~7=진행 중인 단계, completed=true가 되면 7단계를 깬 뒤다(step은
+		-- 7에 남아 있다 - "완료했다"는 사실은 completed 하나로만 판정한다, step 값 자체로
+		-- 겸용하지 않는다). granted: 재플레이 중복 지급 방지({[stepIndex]=true}, 1~3단계
+		-- 확정 지급 + 7단계 완료 보상). lendBaseline: 대여 복원 원본(nil=대여 중 아님).
+		tutorial = { completed = false, step = 0, granted = {}, lendBaseline = nil },
 	}
 end
 
@@ -364,6 +372,29 @@ local function migrate(data)
 		data.version = 16
 	end
 
+	if data.version < 17 then
+		-- 23-1: 견습 모드 진행도 신설. 기존 계정(어느 직업이든 이미 보스를 한 번이라도 깬
+		-- 적이 있으면)은 견습을 완료한 것으로 간주한다(지시 원문 그대로 - "이미 무한을
+		-- 플레이 중인 기존 플레이어는 견습 완료로 간주한다"). step은 무의미해지므로 완료
+		-- 표시와 함께 7(마지막 단계)로 채운다 - 0으로 두면 "완료했는데 미시작"이라는 모순된
+		-- 조합이 생긴다. 신규 계정(어느 직업도 보스를 못 깼음)은 completed=false, step=0 -
+		-- defaultProfile과 같은 시작 상태다.
+		local hasBeatenAnyBoss = false
+		for _, classState in pairs(data.classes) do
+			if (classState.stageProgress.bestBossCleared or 0) >= BossData.stageInterval then
+				hasBeatenAnyBoss = true
+				break
+			end
+		end
+		data.tutorial = data.tutorial or {
+			completed = hasBeatenAnyBoss,
+			step = hasBeatenAnyBoss and 7 or 0,
+			granted = {},
+			lendBaseline = nil,
+		}
+		data.version = 17
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -381,6 +412,10 @@ local function isValidProfile(data)
 		or type(data.inventory) ~= "table"
 		or type(data.gamepasses) ~= "table"
 		or type(data.bulkSellCutoffGrade) ~= "string"
+		or type(data.tutorial) ~= "table"
+		or type(data.tutorial.completed) ~= "boolean"
+		or type(data.tutorial.step) ~= "number"
+		or type(data.tutorial.granted) ~= "table"
 	then
 		return false
 	end

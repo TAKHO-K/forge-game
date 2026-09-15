@@ -20,6 +20,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
 local StuckArrowState = require(script.Parent.StuckArrowState)
+local TutorialState = require(script.Parent.TutorialState)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -198,7 +199,8 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	local forceCrit, critDmgBonus = PlayerCombat.resolveGuaranteedCrit(classId, isGuaranteedCritActive, critRateBonus)
 
 	local damage, isCrit = PlayerCombat.calcDamage(base, classId, critRateBonus, forceCrit, critDmgBonus)
-	local attackerStage = PlayerProfile.getInfiniteStage(player) or 1
+	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage를 쓴다(TutorialState.getMonsterStage).
+	local attackerStage = TutorialState.getMonsterStage(player)
 
 	-- 20-5 [1] 시각 구분용 - 백스텝샷이 이 평타에 실제로 적용됐는가("스킬이다"가 한눈에
 	-- 읽혀야 한다는 지시, Projectiles.lua/AttackInput.client.lua가 이 값으로 화살을
