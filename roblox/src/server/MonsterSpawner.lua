@@ -93,6 +93,9 @@ local function buildModel(data, position, variant)
 
 	local model = Instance.new("Model")
 	model.Name = displayName
+	-- 22-5(PRD 20.49 [1]): StreamingEnabled에서 3파트(루트·몸통·머리)가 따로따로 스트리밍되지 않게
+	-- 모델 단위로 묶는다 - 멀리서 Head만 먼저 오는 프레임을 없앤다(클라 수신부의 nil 가드는 그대로).
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 	CollectionService:AddTag(model, "Monster") -- 클라이언트 AimTarget.lua가 이 태그로만 조준 후보를 찾는다
 
 	-- 반짝이 몬스터(19-4 [6] → 22-2 [2]) - 서버는 태그만 붙인다. 발광·파티클·빛기둥은 전부
@@ -119,8 +122,15 @@ local function buildModel(data, position, variant)
 	-- 21-3: 보스 몸통은 캐릭터와 충돌하지 않는다. 진동파(뛰었다 찍기)·돌진(60stud/s)으로
 	-- 움직이는 anchored 파트가 캐릭터를 밀어내면 물리가 캐릭터를 바닥 아래로 튕겨
 	-- FallenPartsDestroyHeight까지 떨어뜨려 "HP는 남았는데 죽는" 엔진 사망이 났다(21-3 검증
-	-- 중 재현). 피격 판정은 전부 거리 기반이라 충돌이 필요 없다. 잡몹은 그대로(밀림이 없다).
-	body.CanCollide = not data.isBoss
+	-- 중 재현). 피격 판정은 전부 거리 기반이라 충돌이 필요 없다.
+	-- 22-5: 잡몹도 끈다. 22-4 검증 중 추격하는 잡몹 몸통(PivotTo로 순간 이동하는 anchored 파트)이
+	-- 플레이어를 밀어 고원 가장자리에서 떨어뜨리는 일이 두 번 있었다 - 평지에선 무해했던 밀림이
+	-- 높낮이가 생기자 위험 요소가 됐다. "밀려서 떨어짐"은 의도된 위험이 아니라 사고다(낙하 피해
+	-- 없음·절벽은 도달원 밖이라는 20.50 규칙 어디에도 "밀려 떨어짐"이 설계에 없다). 밀림 힘은
+	-- anchored 파트라 줄일 수 없고(물리가 겹침을 무조건 해소한다), 난간은 절벽마다 파트를 더한다.
+	-- 충돌을 끄면 겹침 자체가 없다 - 잡몹은 사거리(10) 밖에서 멈추지 않고 플레이어 자리까지
+	-- 오므로 겹치는 순간이 생기지만(PRD 20.51 [5] 실기 관찰) 탑다운 3인칭에서 어색하지 않았다.
+	body.CanCollide = false
 	body.Color = bodyColor
 	body.Position = position
 	body.Parent = model
@@ -130,7 +140,7 @@ local function buildModel(data, position, variant)
 	head.Shape = Enum.PartType.Ball
 	head.Size = Vector3.new(1.6, 1.6, 1.6) * sizeScale
 	head.Anchored = true
-	head.CanCollide = not data.isBoss -- 위 Body와 같은 이유(21-3)
+	head.CanCollide = false -- 위 Body와 같은 이유(21-3 보스 → 22-5 전체)
 	head.Color = headColor
 	head.Position = position + Vector3.new(0, 2.3 * sizeScale, 0)
 	head.Parent = model

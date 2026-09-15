@@ -336,7 +336,14 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 소멸 시 nil 참조" 사고 자체가 구조적으로 생기지 않는다).
 					local decoyPosition = SummonState.getPosition(target, "dualbladeDecoy")
 					-- 이동속도는 접두사 변종 배율이 곱해진 인스턴스 값(22-2 [1], MonsterState.getMoveSpeed).
-					local moved = stepToward(model, position, decoyPosition or targetRoot.Position, MonsterState.getMoveSpeed(model), dt)
+					-- 22-5: 정지 거리(MonsterData.chaseStopDistanceStuds) 안이면 더 다가가지 않는다 - 몸통 충돌을
+					-- 껐으므로 보스(tryBossAttack)와 같은 방식으로 겹침을 막는다. 정지 상태는 "전진"으로 친다
+					-- (막힘 시간 계산에 안 들어간다).
+					local goal = decoyPosition or targetRoot.Position
+					local moved = true
+					if Reach.horizontalDistance(goal, position) > data.chaseStopDistanceStuds then
+						moved = stepToward(model, position, goal, MonsterState.getMoveSpeed(model), dt)
+					end
 					if not decoyPosition then
 						tryAttack(model, data, position, target, targetRoot)
 					end

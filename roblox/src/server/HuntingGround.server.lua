@@ -10,7 +10,7 @@ local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local TeleportPad = require(script.Parent.TeleportPad)
-local GroundProbe = require(script.Parent.GroundProbe)
+local ZoneTerrain = require(script.Parent.ZoneTerrain)
 
 local FLOOR_THICKNESS = 2
 local FLOOR_Y = 0 -- 모든 구역 바닥 중심 Y(9-4 원본 huntingGround.center.Y=0과 동일 기준).
@@ -42,91 +42,50 @@ local function floorColorFor(zone)
 end
 
 -- 22-4: 맵 밑판. 플레이스 기본 Baseplate(윗면 y=0)가 사실상 복도(구역 사이 32stud)의 바닥
--- 노릇을 하고 있었다 - Baseplate를 지우면서(removeDefaultBaseplate) 복도가 심연이 되므로,
--- 슈퍼그리드 전체(3×224 = 672, 바깥 테두리 16 포함)를 덮는 밑판을 지면 폴더에 깐다. 윗면은
--- 구역 바닥(1.0)보다 0.1 낮게(0.9) 둬 같은 높이의 두 면이 겹쳐 깜빡이는 것(z-fighting)을 막는다 -
--- 0.1 단차는 플레이어·몬스터 모두 못 느낀다. 이 밑판 밖(맵 밖)은 진짜 심연 → 리스폰 복귀.
+-- 노릇을 하고 있었다 - Baseplate를 지우면서(removeDefaultBaseplate) 복도가 심연이 되므로 밑판을
+-- 지면 폴더에 깐다. 22-5: 맵 크기는 WorldConfig.superGrid.mapSizeStuds(단일 출처) + 바깥 테두리
+-- (복도 폭의 절반)이고, 구역 9개 자리는 비운다(ZoneTerrain.buildMapBase - 구역 바닥과 겹치지 않아
+-- 웅덩이 밑에 밑판이 비치지 않는다). 윗면은 구역 바닥(1.0)보다 0.1 낮게(0.9) - 복도와 구역이 맞닿는
+-- 선에서 두 면이 같은 높이로 겹치는 일이 없게 한 22-4 결정을 그대로 둔다. 이 밑판 밖(맵 밖)은 진짜
+-- 심연 → 리스폰 복귀(TerrainServer).
 local MAP_BASE_TOP_Y = FLOOR_Y + FLOOR_THICKNESS / 2 - 0.1
-local MAP_BASE_COLOR = Color3.fromRGB(120, 110, 95) -- 흙길(복도) 톤 - 텍스처(20.49 T2) 전까지 색만.
+local MAP_BASE_BORDER_STUDS = WorldConfig.superGrid.corridorWidthStuds / 2
 
-local function createMapBase()
-	local extent = WorldConfig.superGrid.spacingStuds * 3
-	local base = Instance.new("Part")
-	base.Name = "MapBase"
-	base.Size = Vector3.new(extent, FLOOR_THICKNESS, extent)
-	base.Position = Vector3.new(0, MAP_BASE_TOP_Y - FLOOR_THICKNESS / 2, 0)
-	base.Anchored = true
-	base.Material = Enum.Material.Ground
-	base.Color = MAP_BASE_COLOR
-	base.Parent = GroundProbe.folder()
-	return base
+-- 22-5 지시: 구역 담장 대신 "맵 밖으로만 못 나가게". 맵 가장자리(±mapSize/2) 바로 바깥에 보이지
+-- 않는 장벽 4장을 세운다 - 점프(7.2)·대시(수평)로 못 넘는 높이. 보이는 쪽은 ZoneTerrain의 바위 능선.
+local function createMapBarrier()
+	local halfMap = WorldConfig.superGrid.mapSizeStuds / 2
+	local cfg = WorldConfig.mapBoundary
+	local thickness = WorldConfig.walls.thicknessStuds
+	local length = halfMap * 2 + cfg.barrierOffsetStuds * 2 + thickness * 2
+	local y = FLOOR_Y + FLOOR_THICKNESS / 2 + cfg.barrierHeightStuds / 2 - 2 -- 바닥 아래 2까지 내려 틈 없음
+	for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+		local wall = Instance.new("Part")
+		wall.Name = "MapBarrier"
+		wall.Anchored = true
+		wall.CanCollide = true
+		wall.Transparency = 1
+		wall.CastShadow = false
+		local offset = halfMap + cfg.barrierOffsetStuds + thickness / 2
+		if side[1] ~= 0 then
+			wall.Size = Vector3.new(thickness, cfg.barrierHeightStuds, length)
+			wall.Position = Vector3.new(side[1] * offset, y, 0)
+		else
+			wall.Size = Vector3.new(length, cfg.barrierHeightStuds, thickness)
+			wall.Position = Vector3.new(0, y, side[2] * offset)
+		end
+		wall.Parent = Workspace
+	end
 end
 
-local function createZoneFloor(zone)
-	local floor = Instance.new("Part")
-	floor.Name = "ZoneFloor_" .. zone.key
-	floor.Size = Vector3.new(WorldConfig.zoneSize.sizeStuds, FLOOR_THICKNESS, WorldConfig.zoneSize.sizeStuds)
-	floor.Position = Vector3.new(zone.center.X, FLOOR_Y, zone.center.Z)
-	floor.Anchored = true
-	floor.Material = Enum.Material.Grass
-	floor.Color = floorColorFor(zone)
-	-- 22-4: 바닥은 Workspace.Ground 폴더에 둔다 - 몬스터 지면 추적·드랍 스냅·대시 지면 추종의
-	-- Raycast가 이 폴더만 지면으로 본다(GroundProbe.lua). 앞으로 만드는 언덕·계단도 여기.
-	floor.Parent = GroundProbe.folder()
-	return floor
-end
-
--- 구역 경계 표시(지시 - "유저가 실수로 드래곤 구역에 들어가는 일이 없어야 한다"). 네
--- 모서리에 기둥을 세우고, 네 변에 얇은 경계선(바닥과 다른 색)을 깐다 - 아트 세션으로
--- 미루는 "드래곤 둥지" 같은 꾸밈 없이도 경계 자체는 명확해야 한다는 지시를 도형만으로
--- 만족시킨다.
-local function createZoneBoundary(zone)
-	local half = zone.halfSize
-	local pillarColor = zone.role == "tier"
-		and MonsterData[MonsterData.tierOrder[zone.tierIndex]].bodyColor
-		or Color3.fromRGB(80, 80, 90)
-
-	for _, corner in ipairs({ Vector3.new(-1, 0, -1), Vector3.new(1, 0, -1), Vector3.new(-1, 0, 1), Vector3.new(1, 0, 1) }) do
-		local pillar = Instance.new("Part")
-		pillar.Name = "BoundaryPillar"
-		pillar.Size = Vector3.new(3, 10, 3)
-		pillar.Anchored = true
-		pillar.Material = Enum.Material.Neon
-		pillar.Color = pillarColor
-		pillar.Position = Vector3.new(
-			zone.center.X + corner.X * half,
-			FLOOR_Y + FLOOR_THICKNESS / 2 + 5,
-			zone.center.Z + corner.Z * half
-		)
-		pillar.Parent = Workspace
-	end
-
-	-- 경계선 4변(바닥보다 살짝 위, 대비되는 밝은 띠) - 지시의 "바닥 색이 바뀌거나"를
-	-- 그 구역 바닥색과는 별개로, 정확히 "여기가 끝"을 알리는 선으로 보강한다.
-	local stripThickness = 2
-	local stripColor = Color3.fromRGB(255, 255, 255)
-	local sides = {
-		{ size = Vector3.new(WorldConfig.zoneSize.sizeStuds, 0.2, stripThickness), offset = Vector3.new(0, 0, -half) },
-		{ size = Vector3.new(WorldConfig.zoneSize.sizeStuds, 0.2, stripThickness), offset = Vector3.new(0, 0, half) },
-		{ size = Vector3.new(stripThickness, 0.2, WorldConfig.zoneSize.sizeStuds), offset = Vector3.new(-half, 0, 0) },
-		{ size = Vector3.new(stripThickness, 0.2, WorldConfig.zoneSize.sizeStuds), offset = Vector3.new(half, 0, 0) },
-	}
-	for _, side in ipairs(sides) do
-		local strip = Instance.new("Part")
-		strip.Name = "BoundaryStrip"
-		strip.Size = side.size
-		strip.Anchored = true
-		strip.CanCollide = false
-		strip.Material = Enum.Material.Neon
-		strip.Color = stripColor
-		strip.Transparency = 0.3
-		strip.Position = Vector3.new(
-			zone.center.X + side.offset.X,
-			FLOOR_Y + FLOOR_THICKNESS / 2 + 0.15,
-			zone.center.Z + side.offset.Z
-		)
-		strip.Parent = Workspace
-	end
+-- 구역 바닥 + 지형(22-5). 바닥색은 여기서 정하고(tier 몬스터 색 혼합), 지형 요소는 ZoneTerrainData.
+local function buildZoneTerrain(zone)
+	local color = floorColorFor(zone)
+	return ZoneTerrain.build(zone, {
+		floorSurface = { material = "Grass", color = { math.floor(color.R * 255 + 0.5), math.floor(color.G * 255 + 0.5), math.floor(color.B * 255 + 0.5) } },
+		floorTopY = FLOOR_Y + FLOOR_THICKNESS / 2,
+		floorThickness = FLOOR_THICKNESS,
+	})
 end
 
 local function removeDefaultSpawns(ourSpawnName)
@@ -189,65 +148,6 @@ local function createCommunityPlaceholder(zone)
 	text.Parent = label
 end
 
--- 안전지대 물리 담장(19-4 [4]-가) - tier 구역에만 세운다. 4면 중 zone.gate가 가리키는
--- 한 면만 문 너비(WorldConfig.walls.doorwayWidthStuds)만큼 벽 두 조각으로 갈라 틈을
--- 낸다 - 나머지 3면은 완전히 막힌 벽 하나씩이다. CanCollide=true라 플레이어·몬스터 둘
--- 다 못 넘는다(대시도 이동 자체를 막으므로 대시로도 못 넘는다). AttackServer.server.lua의
--- ZoneBounds 판정(2차 방어)과 별개로, 이 담장이 "몬스터가 안전지대로 흘러나오는 것" 자체를
--- 물리적으로 막는 1차 방어다.
-local WALL_COLOR = Color3.fromRGB(70, 65, 60)
-
-local function createWallPart(centerX, centerZ, sizeX, sizeZ, wallY)
-	local wall = Instance.new("Part")
-	wall.Name = "ZoneWall"
-	wall.Anchored = true
-	wall.CanCollide = true
-	wall.Material = Enum.Material.Slate
-	wall.Color = WALL_COLOR
-	wall.Size = Vector3.new(sizeX, WorldConfig.walls.heightStuds, sizeZ)
-	wall.Position = Vector3.new(centerX, wallY, centerZ)
-	wall.Parent = Workspace
-end
-
-local function createZoneWalls(zone)
-	if not zone.gate then
-		return
-	end
-
-	local half = zone.halfSize
-	local thickness = WorldConfig.walls.thicknessStuds
-	local doorway = WorldConfig.walls.doorwayWidthStuds
-	local wallY = FLOOR_Y + FLOOR_THICKNESS / 2 + WorldConfig.walls.heightStuds / 2
-	local cx, cz = zone.center.X, zone.center.Z
-	-- 문이 있는 변은 완전한 한 조각 대신 이 길이의 벽 두 조각(양 끝) + 가운데 문틀로 나뉜다.
-	local segmentLength = half - doorway / 2
-
-	local sides = {
-		{ axis = "x", sign = 1 }, { axis = "x", sign = -1 },
-		{ axis = "z", sign = 1 }, { axis = "z", sign = -1 },
-	}
-	for _, side in ipairs(sides) do
-		local isGate = zone.gate.axis == side.axis and zone.gate.sign == side.sign
-		if side.axis == "x" then
-			local wallX = cx + side.sign * half
-			if isGate then
-				createWallPart(wallX, cz - half + segmentLength / 2, thickness, segmentLength, wallY)
-				createWallPart(wallX, cz + half - segmentLength / 2, thickness, segmentLength, wallY)
-			else
-				createWallPart(wallX, cz, thickness, half * 2, wallY)
-			end
-		else
-			local wallZ = cz + side.sign * half
-			if isGate then
-				createWallPart(cx - half + segmentLength / 2, wallZ, segmentLength, thickness, wallY)
-				createWallPart(cx + half - segmentLength / 2, wallZ, segmentLength, thickness, wallY)
-			else
-				createWallPart(cx, wallZ, half * 2, thickness, wallY)
-			end
-		end
-	end
-end
-
 local function spawnTierMonsters(zone)
 	local tierKey = MonsterData.tierOrder[zone.tierIndex]
 	local data = MonsterData[tierKey]
@@ -265,23 +165,44 @@ end
 
 -- ═══ 실행 ═══
 
-createMapBase()
+-- 22-5: 유도 상수를 부팅 때 로그로 찍는다 - WorldConfig 주석에 숫자를 박지 않는 대신(20.49에서
+-- "슈퍼그리드 160" 주석이 실제 224였다) 실제 값이 매 실행마다 눈에 보이게 한다.
+do
+	local zoneSize = WorldConfig.zoneSize
+	local grid = WorldConfig.superGrid
+	local tier6 = WorldConfig.zones.tier6
+	local diagonalStuds = Vector2.new(tier6.center.X - tier6.halfSize, tier6.center.Z + tier6.halfSize).Magnitude
+	local tier1 = WorldConfig.zones.tier1
+	local entranceMargin = tier1.entrance.X - (tier1.center.X + zoneSize.halfSizeStuds) -- 입구 ~ 구역 경계(스폰 쪽 면)
+	print(("[forge-game] 맵 상수 - 구역 %d(반 %d) / 복도 %d / 슈퍼그리드 %d / 맵 %d / 입구 마진 %d / 안전 띠(여백-리쉬) %.1f / 리스폰→tier6 모서리 %.0fstud(%.1f초)"):format(
+		zoneSize.sizeStuds, zoneSize.halfSizeStuds, grid.corridorWidthStuds, grid.spacingStuds, grid.mapSizeStuds,
+		entranceMargin, WorldConfig.zoneEdge.safeBandStuds, diagonalStuds, diagonalStuds / WorldConfig.playerWalkSpeedStuds))
+end
+
+local mapBaseParts = ZoneTerrain.buildMapBase({
+	topY = MAP_BASE_TOP_Y,
+	thickness = FLOOR_THICKNESS,
+	borderStuds = MAP_BASE_BORDER_STUDS,
+	surface = "dirtPath",
+})
+local terrainParts = 0
 for _, key in ipairs(WorldConfig.zoneOrder) do
 	local zone = WorldConfig.zones[key]
-	createZoneFloor(zone)
-	if zone.role ~= "spawn" then
-		createZoneBoundary(zone)
+	local counts = buildZoneTerrain(zone)
+	terrainParts += counts.parts
+	if counts.featureCount > 0 then
+		print(("[forge-game] 지형 %s - 요소 %d개 → 파트 %d(바닥 %d·지면 %d·장식 %d), 배치 거부 %d"):format(
+			key, counts.featureCount, counts.parts, counts.floorParts, counts.groundParts - counts.floorParts, counts.decorParts, #counts.violations))
 	end
 end
+local ridgeParts = ZoneTerrain.buildPerimeterRidge(FLOOR_Y + FLOOR_THICKNESS / 2)
+createMapBarrier()
+print(("[forge-game] 맵 밑판 %d조각, 가장자리 능선 %d, 구역 지형 파트 합계 %d"):format(mapBaseParts, ridgeParts, terrainParts))
 
 removeDefaultSpawns("HuntingGroundSpawn")
 removeDefaultBaseplate()
 createPlayerSpawn(WorldConfig.zones.spawn)
 createCommunityPlaceholder(WorldConfig.zones.community)
-
-for _, key in ipairs(WorldConfig.tierZoneOrder) do
-	createZoneWalls(WorldConfig.zones[key])
-end
 
 local totalMonsters = 0
 for _, key in ipairs(WorldConfig.tierZoneOrder) do

@@ -44,6 +44,8 @@ local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixDat
 -- 22-4 Y축 지형 검증 명령(/gg terrain)용.
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
+local ZoneTerrainData = require(ReplicatedStorage.Shared.data.ZoneTerrainData)
+local ZoneTerrain = require(script.Parent.ZoneTerrain)
 local GroundProbe = require(script.Parent.GroundProbe)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 local ServerStorage = game:GetService("ServerStorage")
@@ -274,16 +276,19 @@ local function applyAnchor(player, classId)
 	measure(player, ANCHOR.stage)
 end
 
--- ═══ 22-4 테스트 지형 - tier1 구역 중앙 슬롯(-224, 0) 둘레에 세운다 ═══
+-- ═══ 22-4 테스트 지형 - tier1 구역 중앙 슬롯 둘레에 세운다 ═══
 -- 고원(높이 9.6 > 높이차 상한 8) 위에 중앙 슬롯이 놓여 스폰 스냅을 시험하고, 네 변이 각각
 -- 30° 경사로(-Z, 오를 수 있음) / 계단 6단×1.6(+Z, 오를 수 있음) / 70° 경사(-X, 막힘) /
--- 수직 절벽(+X, 막힘)이다. 여기에 tier1 바닥을 둘로 갈라 폭 12의 도랑(심연, 바닥 없음)을
--- x∈[-178,-166]에 낸다(오른쪽 슬롯 열 x=-160의 집에서 6~18 - 리쉬 38.4 안이라 몬스터가 실제로 도랑 앞까지 온다) - 그 몬스터가 도랑 앞에서 멈추는지, 떨어진
--- 플레이어가 입구로 복귀하는지 본다. "/gg terrain clear"가 전부 되돌린다.
+-- 수직 절벽(+X, 막힘)이다. 여기에 tier1 바닥을 갈라 폭 12의 도랑(심연, 바닥 없음)을 오른쪽
+-- 슬롯 열(중심 +64)의 집에서 6~18 자리에 낸다(리쉬 38.4 안이라 몬스터가 실제로 도랑 앞까지
+-- 온다) - 그 몬스터가 도랑 앞에서 멈추는지, 떨어진 플레이어가 입구로 복귀하는지 본다.
+-- 22-5: 바닥이 조각 여러 개(웅덩이 구멍)라 도랑 x 범위와 겹치는 조각 전부를 가른다. 실제 지형
+-- (언덕·웅덩이)과 겹쳐 세워지므로 이 명령은 접지·부하·드랍 검증(cost/ground/drop/rules) 보조용이다.
+-- "/gg terrain clear"가 전부 되돌린다.
 local TERRAIN_TEST_TAG = "TerrainTest"
 local TERRAIN_PLATEAU_HEIGHT = 9.6
-local terrainOriginalFloor = nil
-local terrainOriginalBase = nil -- 맵 밑판(MapBase) - 도랑이 진짜 심연이 되도록 테스트 중엔 치운다(복도도 심연이 된다).
+local terrainOriginalFloors = {} -- 22-5: 가른 바닥 조각들(ServerStorage에 치워 둔다)
+local terrainOriginalBases = {} -- 맵 밑판 조각들 - 도랑이 진짜 심연이 되도록 테스트 중엔 치운다(복도도 심연이 된다).
 
 local function terrainPart(name, size, cframe, color)
 	local part = Instance.new("Part")
@@ -337,43 +342,111 @@ local function buildTestTerrain(player)
 		Color3.fromRGB(170, 100, 100))
 	-- +X 변: 수직 절벽(고원 옆면 그대로).
 
-	-- 도랑: tier1 바닥을 ServerStorage로 치우고 두 조각으로 다시 깐다(x∈[-198,-186] 비움).
-	local floor = GroundProbe.folder():FindFirstChild("ZoneFloor_tier1")
-	if floor then
-		terrainOriginalFloor = floor
-		local gapMin, gapMax = -178, -166
-		local zoneMin, zoneMax = cx - zone.halfSize, cx + zone.halfSize
-		for _, span in ipairs({ { zoneMin, gapMin }, { gapMax, zoneMax } }) do
-			local width = span[2] - span[1]
-			local piece = terrainPart("TestFloorPiece", Vector3.new(width, floor.Size.Y, floor.Size.Z),
-				CFrame.new((span[1] + span[2]) / 2, floor.Position.Y, floor.Position.Z), floor.Color)
-			piece.Material = floor.Material
+	-- 도랑: 도랑 x 범위와 겹치는 tier1 바닥 조각을 ServerStorage로 치우고 좌우 조각으로 다시 깐다.
+	local gapMin = cx + WorldConfig.zoneMonsterGrid.spacingStuds + 6
+	local gapMax = gapMin + 12
+	for _, floor in ipairs(GroundProbe.folder():GetChildren()) do
+		if floor:IsA("BasePart") and floor.Name:sub(1, #"ZoneFloor_tier1") == "ZoneFloor_tier1" then
+			local minX, maxX = floor.Position.X - floor.Size.X / 2, floor.Position.X + floor.Size.X / 2
+			if gapMin < maxX and gapMax > minX then
+				table.insert(terrainOriginalFloors, floor)
+				for _, span in ipairs({ { minX, math.max(minX, gapMin) }, { math.min(maxX, gapMax), maxX } }) do
+					local width = span[2] - span[1]
+					if width > 0.01 then
+						local piece = terrainPart("TestFloorPiece", Vector3.new(width, floor.Size.Y, floor.Size.Z),
+							CFrame.new((span[1] + span[2]) / 2, floor.Position.Y, floor.Position.Z), floor.Color)
+						piece.Material = floor.Material
+					end
+				end
+				floor.Parent = ServerStorage
+			end
 		end
-		floor.Parent = ServerStorage
 	end
-	local base = GroundProbe.folder():FindFirstChild("MapBase")
-	if base then
-		terrainOriginalBase = base
-		base.Parent = ServerStorage
+	for _, base in ipairs(GroundProbe.folder():GetChildren()) do
+		if base:IsA("BasePart") and base.Name:sub(1, #"MapBase") == "MapBase" then
+			table.insert(terrainOriginalBases, base)
+			base.Parent = ServerStorage
+		end
 	end
 
-	reply(player, ("테스트 지형 생성: 고원 %.1f(상한 %d 초과) / 30° 경사로(-Z) / 계단 6×%.1f(+Z) / 70° 경사(-X) / 절벽(+X) / 도랑 x∈[-178,-166]. 중앙 슬롯 몬스터는 다음 리스폰부터 고원 위에 스폰")
-		:format(h, TerrainConfig.heightToleranceStuds, stepRise))
+	reply(player, ("테스트 지형 생성: 고원 %.1f(상한 %d 초과) / 30° 경사로(-Z) / 계단 6×%.1f(+Z) / 70° 경사(-X) / 절벽(+X) / 도랑 x∈[%d,%d]. 중앙 슬롯 몬스터는 다음 리스폰부터 고원 위에 스폰")
+		:format(h, TerrainConfig.heightToleranceStuds, stepRise, gapMin, gapMax))
 end
 
 local function clearTestTerrain(player)
 	for _, part in ipairs(game:GetService("CollectionService"):GetTagged(TERRAIN_TEST_TAG)) do
 		part:Destroy()
 	end
-	if terrainOriginalFloor then
-		terrainOriginalFloor.Parent = GroundProbe.folder()
-		terrainOriginalFloor = nil
+	for _, floor in ipairs(terrainOriginalFloors) do
+		floor.Parent = GroundProbe.folder()
 	end
-	if terrainOriginalBase then
-		terrainOriginalBase.Parent = GroundProbe.folder()
-		terrainOriginalBase = nil
+	terrainOriginalFloors = {}
+	for _, base in ipairs(terrainOriginalBases) do
+		base.Parent = GroundProbe.folder()
 	end
+	terrainOriginalBases = {}
 	reply(player, "테스트 지형 제거 + tier1 바닥·맵 밑판 복원")
+end
+
+-- 22-5: 배치 규칙 강제 검증. (1) 실제 tier1 데이터는 위반 0이어야 하고, (2) 일부러 규칙을 어긴 합성
+-- 요소 목록(도달원 안 절벽 박스·60° 경사·키 큰 바위·구멍·높이 9 언덕·절벽 단, 그리고 구역 밖 요소)은
+-- 전부 거부돼야 한다. 인스턴스를 만들지 않는 dry-run(ZoneTerrain.plan)이라 게임 상태를 안 건드린다.
+local function reportTerrainRules(player)
+	local zone = WorldConfig.zones.tier1
+	local floorTopY, floorThickness = 1, 2
+	local real = ZoneTerrain.plan(zone, ZoneTerrainData.zones.tier1.features, floorTopY, floorThickness)
+	local bad = {
+		{ kind = "box", x = 0, z = 0, size = { 8, 4, 8 }, ground = true, surface = "rock" }, -- 슬롯 위 절벽(단차 4)
+		{ kind = "wedge", x = 20, z = 0, size = { 8, 7, 4 }, tallDir = "+x", ground = true, surface = "rock" }, -- 60° 경사
+		{ kind = "box", x = -20, z = 20, size = { 4, 3, 4 }, surface = "rock" }, -- 키 큰 충돌 바위(높이 3)
+		{ kind = "hole", x = 0, z = 40, w = 10, d = 10 }, -- 심연
+		{ kind = "hill", x = 30, z = 30, top = { 10, 10 }, height = 9, run = 12, surface = "grass" }, -- 높이차 상한 초과
+		{ kind = "terrace", x = 60, z = 60, w = 20, d = 20, height = 4, stairsSide = "-z", surface = "grass" }, -- 절벽 면이 도달원 안
+		{ kind = "box", x = 130, z = 0, size = { 4, 3, 4 }, surface = "rock" }, -- 구역 밖
+		{ kind = "box", x = 112, z = 112, size = { 4, 3, 4 }, surface = "rock" }, -- 띠 안 - 통과해야 한다
+		{ kind = "hill", x = 32, z = -32, top = { 8, 8 }, height = 2, run = 6, surface = "grass" }, -- 도달원 안 완만 - 통과해야 한다
+	}
+	local synthetic = ZoneTerrain.plan(zone, bad, floorTopY, floorThickness)
+	local lines = { ("[규칙] 실제 tier1 데이터: 요소 %d, 위반 %d"):format(real.featureCount, #real.violations) }
+	for _, v in ipairs(real.violations) do
+		table.insert(lines, "  ! " .. v)
+	end
+	table.insert(lines, ("[규칙] 합성 목록 %d개 중 거부 %d(기대 7), 통과 %d(기대 2)"):format(#bad, #synthetic.violations, #synthetic.accepted))
+	for _, v in ipairs(synthetic.violations) do
+		table.insert(lines, "  - " .. v)
+	end
+	reply(player, table.concat(lines, "\n"))
+end
+
+-- 22-5: 파트 수 실측(예산 20.49 [1] 대조). 서버 Workspace 기준 - 클라이언트 화면 내 수는 스트리밍
+-- 때문에 클라에서 따로 센다.
+local function reportPartCounts(player)
+	local total, ground, decor, monsters, perZone = 0, 0, 0, 0, {}
+	local groundFolder = GroundProbe.folder()
+	local decorFolder = workspace:FindFirstChild("ZoneDecor")
+	for _, inst in ipairs(workspace:GetDescendants()) do
+		if inst:IsA("BasePart") then
+			total += 1
+			if inst:IsDescendantOf(groundFolder) then
+				ground += 1
+			elseif decorFolder and inst:IsDescendantOf(decorFolder) then
+				decor += 1
+			end
+			local zoneKey = inst:GetAttribute("ZoneKey")
+			if zoneKey then
+				perZone[zoneKey] = (perZone[zoneKey] or 0) + 1
+			end
+			if inst.Parent and inst.Parent:IsA("Model") and inst.Parent:HasTag("Monster") then
+				monsters += 1
+			end
+		end
+	end
+	local zoneLines = {}
+	for _, key in ipairs(WorldConfig.zoneOrder) do
+		table.insert(zoneLines, ("%s=%d"):format(key, perZone[key] or 0))
+	end
+	reply(player, ("[파트] Workspace BasePart 총 %d / 지면 폴더 %d / 장식 폴더 %d / 몬스터 %d / 구역별 지형(바닥 포함): %s"):format(
+		total, ground, decor, monsters, table.concat(zoneLines, " ")))
 end
 
 -- 지면 프로브 부하 실측: (1) 합성 벤치 - 지금 지면 폴더에 대해 10,000회 Raycast 소요 시간 →
@@ -440,7 +513,7 @@ local HELP_TEXT = table.concat({
 	"/gg boss [stage] - 보스 스테이지(기본 5)로 이동해 개인 아레나 보스전 시작(21-3 검증용)",
 	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
-	"/gg terrain [clear|cost|ground|drop] - tier1에 테스트 지형(고원·30°경사·계단·70°경사·절벽·도랑) 생성 / 제거 / 지면 Raycast 부하 실측 / 잡몹 접지 상태 / 발밑 시험 드랍(22-4)",
+	"/gg terrain [clear|cost|ground|drop|rules|parts] - tier1에 테스트 지형(고원·30°경사·계단·70°경사·절벽·도랑) 생성 / 제거 / 지면 Raycast 부하 실측 / 잡몹 접지 상태 / 발밑 시험 드랍(22-4) / 배치 규칙 강제 검증 / 파트 수 실측(22-5)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
 }, "\n")
 
@@ -692,6 +765,10 @@ local function handleCommand(player, args)
 			reportProbeCost(player)
 		elseif args[2] == "ground" then
 			reportMonsterGrounding(player)
+		elseif args[2] == "rules" then
+			reportTerrainRules(player)
+		elseif args[2] == "parts" then
+			reportPartCounts(player)
 		elseif args[2] == "drop" then
 			-- 지금 서 있는 자리(루트 위치 = 지면보다 약 3 위)에 시험 드랍을 떨어뜨린다 - 경사면·고원
 			-- 위에서 스냅 Y를 확인한다(ItemDropSpawner.spawn이 지면으로 내린다).

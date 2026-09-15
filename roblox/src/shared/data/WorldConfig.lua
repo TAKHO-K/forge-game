@@ -17,9 +17,13 @@ local GRID_SPACING_STUDS = 64 -- t=4초 x v=16stud/s, WorldConfig 원본 산식 
 -- 사라졌으므로(같이 때리면 서로 이득), 정확한 밀도 숫자보다 "충분한 수"가 더 중요하다.
 local ZONE_MONSTER_SIDE_COUNT = 3
 local ZONE_MONSTER_HALF_SPAN = GRID_SPACING_STUDS * (ZONE_MONSTER_SIDE_COUNT - 1) / 2
-local ZONE_EDGE_MARGIN_STUDS = GRID_SPACING_STUDS / 2
-local ZONE_HALF_SIZE_STUDS = ZONE_MONSTER_HALF_SPAN + ZONE_EDGE_MARGIN_STUDS -- 96(19-4, 이전 64)
-local ZONE_SIZE_STUDS = ZONE_HALF_SIZE_STUDS * 2 -- 192(19-4, 이전 128) - SIDE_COUNT 3으로 자동 반영.
+-- 22-5(PRD 20.49 [3]): 외곽 슬롯~담장 여백을 격자 절반(32)에서 격자 하나(64)로. 여백이 리쉬
+-- (38.4)를 넘어야 담장 안쪽에 몬스터가 절대 못 오는 "장식 띠"(여백 - 리쉬 = 25.6)가 생긴다 -
+-- 급경사·오두막·바위 같은 키 큰 지형은 전부 이 띠에만 둔다(ZoneTerrain이 배치 시점에 강제).
+-- 이 조건을 만족하는 첫 격자 배수가 64. 슬롯 격자·어그로·리쉬는 그대로다(핵심부 밀도 불변).
+local ZONE_EDGE_MARGIN_STUDS = GRID_SPACING_STUDS
+local ZONE_HALF_SIZE_STUDS = ZONE_MONSTER_HALF_SPAN + ZONE_EDGE_MARGIN_STUDS
+local ZONE_SIZE_STUDS = ZONE_HALF_SIZE_STUDS * 2
 
 -- 어그로/리쉬 - 9-4 관계식 그대로(r=0.4s, 리쉬=1.5x). 구역이 넓어졌다고 늘리지 않는다 -
 -- 대신 "구역 경계 자체가 리쉬의 진짜 상한"이라는 새 규칙을 MonsterAI.server.lua가
@@ -28,9 +32,21 @@ local AGGRO_RANGE_STUDS = GRID_SPACING_STUDS * 0.4 -- 25.6
 local LEASH_RANGE_STUDS = AGGRO_RANGE_STUDS * 1.5 -- 38.4
 
 -- ═══ 3×3 슈퍼그리드(구역들의 배치) ═══
--- 복도 폭은 구역 안 여백과 같은 관례값(32stud)을 재사용한다 - 새 숫자를 만들지 않는다.
-local CORRIDOR_WIDTH_STUDS = ZONE_EDGE_MARGIN_STUDS -- 32
-local SUPER_GRID_SPACING_STUDS = ZONE_SIZE_STUDS + CORRIDOR_WIDTH_STUDS -- 160
+-- 복도 폭은 격자 절반(32stud)이다. 22-5 전까지는 ZONE_EDGE_MARGIN_STUDS(당시 32)를 재사용했지만
+-- 여백이 64로 오르면서 복도까지 넓어지면 안 되므로(걷는 시간만 늘어난다) 격자에서 직접 유도한다.
+-- 입구 마진(entrance - half = SUPER/2 - HALF = CORRIDOR/2 = 16)은 이 식에서 그대로 나온다.
+local CORRIDOR_WIDTH_STUDS = GRID_SPACING_STUDS / 2
+local SUPER_GRID_SPACING_STUDS = ZONE_SIZE_STUDS + CORRIDOR_WIDTH_STUDS
+-- 맵 전체 한 변(가장 바깥 구역의 바깥 담장까지) = 구역 3개 + 복도 2개. 맵 밑판(HuntingGround
+-- MapBase)·심연 판정이 이 값을 읽는다 - 여기 말고는 어디에도 맵 크기를 다시 적지 않는다.
+local MAP_SIZE_STUDS = SUPER_GRID_SPACING_STUDS * 3 - CORRIDOR_WIDTH_STUDS
+
+
+-- ═══ 유도값 한눈에(22-5) - 숫자를 주석에 박아 두면 값이 바뀔 때 주석이 남는다(20.49 실측에서
+-- "슈퍼그리드 160" 주석이 실제 224였다). 그래서 이 파일의 주석은 식만 적고, 실제 숫자는
+-- HuntingGround.server.lua가 부팅 로그에 찍는다(derived 테이블). 식은 다음과 같다:
+--   구역 = 2 × (격자 + 여백)          / 슈퍼그리드 = 구역 + 복도     / 맵 = 3 × 슈퍼그리드 - 복도
+--   담장 안쪽 안전 띠 = 여백 - 리쉬    / 입구 마진 = 복도 / 2          / 변 칸 문까지 = 슈퍼그리드/2 - 여백 + 격자
 
 -- 사용자가 확정한 배치표 그대로(16-6):
 --   1 tier5 | 2 강화소 | 3 tier6
@@ -39,13 +55,13 @@ local SUPER_GRID_SPACING_STUDS = ZONE_SIZE_STUDS + CORRIDOR_WIDTH_STUDS -- 160
 -- col/row는 리스폰(원점) 기준 격자 좌표 - world 좌표는 아래서 col/row × SUPER_GRID_SPACING로 뽑는다.
 local ZONE_LAYOUT = {
 	{ key = "tier5", role = "tier", tierIndex = 5, col = -1, row = -1 },
-	{ key = "enhance", role = "enhance", col = 0, row = -1 },
+	{ key = "enhance", role = "enhance", col = 0, row = -1, displayName = "강화소" },
 	{ key = "tier6", role = "tier", tierIndex = 6, col = 1, row = -1 },
 	{ key = "tier1", role = "tier", tierIndex = 1, col = -1, row = 0 },
-	{ key = "spawn", role = "spawn", col = 0, row = 0 },
+	{ key = "spawn", role = "spawn", col = 0, row = 0, displayName = "리스폰 마을" },
 	{ key = "tier2", role = "tier", tierIndex = 2, col = 1, row = 0 },
 	{ key = "tier3", role = "tier", tierIndex = 3, col = -1, row = 1 },
-	{ key = "community", role = "community", col = 0, row = 1 },
+	{ key = "community", role = "community", col = 0, row = 1, displayName = "커뮤니티 광장" },
 	{ key = "tier4", role = "tier", tierIndex = 4, col = 1, row = 1 },
 }
 
@@ -74,32 +90,24 @@ local zoneOrder = {}
 for _, entry in ipairs(ZONE_LAYOUT) do
 	local center = Vector3.new(entry.col * SUPER_GRID_SPACING_STUDS, 0, entry.row * SUPER_GRID_SPACING_STUDS)
 	-- 입구/포탈 도착점/중앙 복귀 패드 위치 - 리스폰(원점)과 구역 중심을 잇는 선분의
-	-- 정확히 중점이다. entrance - half = center*0.5 - half가 항상 16(=GRID_SPACING/4)로
-	-- 양수라(SUPER_GRID_SPACING=ZONE_SIZE+CORRIDOR_WIDTH, CORRIDOR_WIDTH=EDGE_MARGIN 관계
-	-- 덕분에 ZONE_HALF_SIZE_STUDS 값이 바뀌어도 이 마진은 항상 유지된다 - 19-4에서
-	-- SIDE_COUNT를 2->3으로 올려 64->96이 됐을 때도 재검산으로 확인) 변 칸이든 대각 칸이든
-	-- 이 중점은 항상 두 구역 경계 바깥이다. 리스폰(구역 자체가 없음)엔 입구가 없다.
+	-- 정확히 중점이다. entrance - half = SUPER/2 - HALF = CORRIDOR/2로 항상 양수라
+	-- (SUPER_GRID_SPACING = ZONE_SIZE + CORRIDOR_WIDTH 관계 덕분에 ZONE_HALF_SIZE_STUDS 값이
+	-- 바뀌어도 이 마진은 유지된다 - 19-4의 64->96, 22-5의 96->128 둘 다 재검산으로 확인) 변 칸이든
+	-- 대각 칸이든 이 중점은 항상 두 구역 경계 바깥이다. 리스폰(구역 자체가 없음)엔 입구가 없다.
 	local entrance = center * 0.5
 
-	-- 담장 입구(19-4 [4]) - 4면 중 스폰 쪽을 향한 한 면에만 문을 낸다. 변 칸(col 또는 row
-	-- 하나만 0이 아님)은 그 축이 곧 답이다. 대각 칸(툴 다 0이 아님, tier3~6)은 스폰까지
-	-- 거리가 X축·Z축 벽 어느 쪽이든 기하학적으로 완전히 같아(45도 대칭) 어느 쪽으로 내도
-	-- 틀리지 않는다 - X축으로 통일한다(임의 선택, 일관성이 유일한 기준).
-	local gate = nil
-	if entry.col ~= 0 then
-		gate = { axis = "x", sign = entry.col > 0 and -1 or 1 }
-	elseif entry.row ~= 0 then
-		gate = { axis = "z", sign = entry.row > 0 and -1 or 1 }
-	end
-
+	-- 22-5 지시로 구역 담장(19-4 [4]-가)과 문(gate)을 없앴다 - "담장을 둘러두면 답답하다". 구역은
+	-- 바닥색과 진입 토스트(ZoneBoundaryWarning.client.lua)로만 구분하고, 몬스터 봉쇄는 원래부터
+	-- 담장이 아니라 리쉬 + ZoneBounds(구역 경계 = 리쉬 상한, MonsterAI)가 하던 일이라 바뀌지 않는다.
+	-- 걸어가는 최단 경로는 이제 리스폰에서 구역 모서리까지의 직선이다(부팅 로그 참고).
 	zones[entry.key] = {
 		key = entry.key,
 		role = entry.role,
 		tierIndex = entry.tierIndex,
+		displayName = entry.displayName, -- tier 구역은 nil - 몬스터 이름(MonsterData)으로 부른다.
 		center = center,
 		halfSize = ZONE_HALF_SIZE_STUDS,
 		entrance = entrance,
-		gate = gate, -- role~="tier"면 담장을 안 세우니 안 쓰지만, spawn(col=row=0)만 nil이다.
 	}
 	table.insert(zoneOrder, entry.key)
 end
@@ -108,16 +116,18 @@ end
 -- StageServer.server.lua의 접속 시 복원이 "플레이어 20stud 앞"을 캐릭터가 막 스폰된
 -- 직후 위치(=사실상 리스폰 구역) 기준으로 계산했고, 보스에게 zoneKey가 없어 구역 경계
 -- 리쉬 자체가 안 걸렸던 것(38.4stud 리쉬 거리만 봤다)이 겹친 결과다. 위 3×3 슈퍼그리드
--- (-160~160)와 절대 겹치지 않는 먼 곳에 서버 정원만큼(12명, PRD-forge-game-roblox.md
+-- (±MAP_SIZE/2)와 절대 겹치지 않는 먼 곳에 서버 정원만큼(12명, PRD-forge-game-roblox.md
 -- 20.38 [6]) 슬롯을 미리 만들어 둔다 - BossEncounter.lua가 인원마다 하나씩 배정하고
 -- 퇴장하면 반납해 다음 사람이 재사용한다. zones[key]엔 등록하되 zoneOrder에는 일부러
 -- 안 넣는다(아래 for문 뒤 주석 참고) - HuntingGround.server.lua가 zoneOrder를 순회하며
--- 세우는 사냥터 바닥·경계·담장이 아레나 위치까지 따라와 겹치는 걸 막는다. 벽은
--- BossEncounter.lua가 직접 세운다(문이 없는 완전 밀폐라 gate 있는 기존 담장 생성 함수를
--- 그대로 못 쓴다).
+-- 세우는 사냥터 바닥·지형이 아레나 위치까지 따라와 겹치는 걸 막는다. 벽(문 없는 완전
+-- 밀폐)은 BossEncounter.lua가 직접 세운다.
 local BOSS_ARENA_SLOT_COUNT = 12
-local BOSS_ARENA_HALF_SIZE_STUDS = ZONE_HALF_SIZE_STUDS -- 96, tier 구역과 같은 크기(일관된 체감).
-local BOSS_ARENA_BASE_Z_STUDS = -3000 -- 슈퍼그리드 가장자리(약 -256)에서 충분히 먼 값.
+-- 22-5: tier 구역이 256으로 넓어졌지만 아레나는 21-3이 패턴(돌진 거리·파동 반경·경계 92)을
+-- 검증한 크기(격자 + 격자/2 = 96)에 묶어 둔다 - 보스맵 6종(20.50 [6])을 지을 때 그 세션이
+-- 아레나 크기를 다시 정한다. ZONE_HALF_SIZE를 따라가게 두면 검증 없이 패턴 기하가 바뀐다.
+local BOSS_ARENA_HALF_SIZE_STUDS = ZONE_MONSTER_HALF_SPAN + GRID_SPACING_STUDS / 2
+local BOSS_ARENA_BASE_Z_STUDS = -3000 -- 슈퍼그리드 가장자리(-MAP_SIZE/2)에서 충분히 먼 값.
 local BOSS_ARENA_SPACING_STUDS = BOSS_ARENA_HALF_SIZE_STUDS * 2 + 100 -- 슬롯끼리 안 겹치는 여유.
 
 -- zoneOrder에는 일부러 안 넣는다 - HuntingGround.server.lua가 zoneOrder를 순회하며 바닥·
@@ -130,8 +140,7 @@ for i = 1, BOSS_ARENA_SLOT_COUNT do
 		key = key,
 		role = "bossArena",
 		center = Vector3.new(0, 0, BOSS_ARENA_BASE_Z_STUDS - (i - 1) * BOSS_ARENA_SPACING_STUDS),
-		halfSize = BOSS_ARENA_HALF_SIZE_STUDS,
-		gate = nil, -- 걸어 들어오는 문이 없다 - BossEncounter.lua가 텔레포트로만 입장시킨다.
+		halfSize = BOSS_ARENA_HALF_SIZE_STUDS, -- 걸어 들어오는 문이 없다 - BossEncounter.lua가 텔레포트로만 입장시킨다.
 	}
 end
 
@@ -148,6 +157,7 @@ end)
 return {
 	-- 1 stud = 웹 10px(9-1 확정, 변경 없음).
 	pxPerStud = 10,
+	playerWalkSpeedStuds = PLAYER_WALK_SPEED_STUDS, -- 걷는 시간 계산(부팅 로그)용.
 
 	-- 무한 모드 보스존(15-1/20.31)이 참조하는 값이다 - 이번 지형 재설계와 무관한 별개
 	-- 시스템(플레이어별 개인 인스턴스)이라 건드리지 않는다. 실제로 렌더되는 바닥은 더 이상
@@ -195,19 +205,29 @@ return {
 	superGrid = {
 		spacingStuds = SUPER_GRID_SPACING_STUDS,
 		corridorWidthStuds = CORRIDOR_WIDTH_STUDS,
+		mapSizeStuds = MAP_SIZE_STUDS, -- 22-5: 맵 전체 한 변(맵 밑판·심연 경계의 단일 출처).
 	},
 
-	-- 안전지대 물리 담장(19-4 [4]-가). tier 구역에만 세운다(몬스터가 있는 곳만 봉쇄가
-	-- 필요하다 - enhance/community는 원래도 몬스터가 없다). 높이 12stud는 로블록스 기본
-	-- 점프 정점(약 7~8stud)보다 확실히 높게 잡아 대시·점프로도 못 넘게 하면서(지시 "대시로도
-	-- 못 넘게"), 3인칭 카메라(PRD 20.14 - 이 지도는 탑다운이 아니다)를 가리지 않는 선(기존
-	-- 장식용 BoundaryPillar가 이미 10stud라 비슷한 높이감)에서 잡았다. 문 너비 12stud는
-	-- 플레이어 하나가 편하게 지나갈 폭(캐릭터 폭 약 4stud의 3배) + 몬스터가 추격 중 좁은
-	-- 문틀에 낌 없이 빠져나갈 여유다.
+	-- 22-5: 지형 배치 규칙이 읽는 유도값. 담장 안쪽 안전 띠 = 여백 - 리쉬(> 0이어야 띠가 존재).
+	zoneEdge = {
+		marginStuds = ZONE_EDGE_MARGIN_STUDS,
+		safeBandStuds = ZONE_EDGE_MARGIN_STUDS - LEASH_RANGE_STUDS,
+	},
+
+	-- 담장 치수. 19-4 [4]-가가 tier 구역 담장에 쓰던 값인데 22-5에서 구역 담장을 없앴고, 지금은
+	-- 보스 아레나 벽(BossEncounter.lua)과 맵 가장자리 장벽 두께(HuntingGround MapBarrier)만 읽는다.
+	-- 높이 12는 로블록스 기본 점프 정점(약 7~8stud)보다 확실히 높아 대시·점프로 못 넘는 값.
 	walls = {
 		heightStuds = 12,
 		thicknessStuds = 2,
-		doorwayWidthStuds = 12,
+	},
+
+	-- 맵 가장자리 장벽(22-5 지시 - "완전 맵 밖으로는 못 나가게 장치"). 맵 한 변(superGrid.mapSizeStuds)
+	-- 바깥 barrierOffset 자리에 보이지 않는 벽. 높이는 담장 높이의 세 배 - 점프(7.2)·대시(수평 16)
+	-- 어느 조합으로도 못 넘고, 보이지 않으니 카메라를 가리지도 않는다. 보이는 능선은 ZoneTerrainData.perimeter.
+	mapBoundary = {
+		barrierHeightStuds = 36,
+		barrierOffsetStuds = 4,
 	},
 
 	-- 강화대(10-2) - 이제 2번 칸(강화소)에 있다. stationOffset은 huntingGround.center(원점)

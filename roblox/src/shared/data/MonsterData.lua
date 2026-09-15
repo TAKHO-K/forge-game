@@ -174,6 +174,12 @@ for tierIndex, info in ipairs(TIER_INFO) do
 		moveSpeedStuds = 10,
 		attackRangeStuds = CombatConfig.attackRangeStuds,
 		attackCooldownSeconds = 1.0,
+		-- 22-5: 잡몹 몸통 충돌을 껐으므로(MonsterSpawner, 밀려 떨어짐 사고 방지) 보스(BossData
+		-- chaseStopDistanceStuds 8)와 같은 정지 거리가 필요하다 - 없으면 플레이어 좌표까지
+		-- 파고들어 겹친다. 몸통 반폭(1.2×배율, tier6 1.8) + 캐릭터 반폭 1 + 여유 ≈ 4. 사거리
+		-- 10 안이라 평타엔 영향이 없고, 어그로 25.6·리쉬 38.4 사슬과도 무관하다(정지는 대상
+		-- 기준 거리, 리쉬는 집 기준 거리).
+		chaseStopDistanceStuds = 4,
 	}
 end
 
