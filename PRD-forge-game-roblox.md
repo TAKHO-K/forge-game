@@ -7021,3 +7021,115 @@ MicroProfiler·기기 에뮬레이터·실제 12클라는 MCP로 못 돌린다(2
 #### 파일
 
 변경 없음(문서만).
+
+### 20.54 Open Cloud 에셋 업로드 자동화 가능성 조사 + 힉스필드 리깅 파이프라인 예측 (22-8 조사) `[🔍 문서 조사만 — 실제 업로드·API 키 발급·스크립트 작성 없음. 결론: 부분 자동화 가능. [3] 절차와 [5] 체크리스트가 산출물]`
+
+목적: 외부 도구(힉스필드 등)에서 받은 GLB·텍스처를 로블록스에 올리는 과정이 지금은 Studio Asset Manager/3D 임포터
+수동 작업이다. Open Cloud Assets API로 자동화되는지 공식 문서로 확인하고, 사람이 하는 단계가 몇 개로 줄어드는지 센다.
+힉스필드로 몬스터 리깅까지 할 계획이라 그 경로가 순탄할지도 예측한다.
+
+#### [0] 결론 한 줄
+
+**된다 — 리깅 없는 에셋(장식·소품·무기·텍스처)은 업로드→assetId→심의 조회까지 스크립트로 끝난다.** 안 되는 것 셋:
+(가) Open Cloud로 올린 .glb가 3D 임포터와 **같은 결과(텍스처·리그·애니메이션 보존)를 내는지는 문서에 없다** — 첫 실제
+업로드에서 대조해야 한다. (나) **애니메이션은 .rbxm(Studio가 만든 KeyframeSequence)만 받는다** — GLB 안의 클립은
+Studio Animation Clip Editor를 거쳐 Publish해야 AnimationId가 나온다(사람 단계). (다) **현재 MCP 도구에 로컬 GLB
+업로드는 없다**([2]).
+
+#### [1] 근거 — 공식 문서 인용
+
+| 확인 항목 | 문서가 말하는 것 | 출처 |
+|---|---|---|
+| 지원 형식 | Model: `.fbx` `.gltf` **`.glb`** `.rbxm` `.rbxmx`(content type `model/gltf-binary` 등). "Imports custom 3D models as a `Model` container containing one or more `MeshPart` objects." "Will be uploaded as packages." Decal/Image: `.png` `.jpeg` `.bmp` `.tga`, "Must be smaller than 8000x8000 pixels." Mesh: "Roblox only … Only content downloaded from Asset delivery API is accepted." Animation: `.rbxm` `.rbxmx`. `.obj`는 목록에 없다 | [Usage guide for assets § Supported asset types and limits](https://create.roblox.com/docs/cloud/guides/usage-assets) |
+| 크기 | "For each call, you can only create or update one asset with the file size up to 20 MB" | 같은 문서 |
+| 권장 경로 | "Depending on your use-case, consider uploading custom 3D models manually using the Importer. The Importer provides a 3D preview, various error-checking, and many customizable import settings." / 2025-10-23 공지: "If you are trying to import 3D assets in standard formats, use the 3D Importer in Studio or upload Models using the Assets API with either an FBX or glTF file." | 같은 문서 · [DevForum 공지 4022082](https://devforum.roblox.com/t/open-cloud-upload-support-for-more-asset-types/4022082) |
+| 요청 형식 | `POST https://apis.roblox.com/assets/v1/assets`, `multipart/form-data`: `request`(JSON: `assetType`·`displayName`·`description`(필수, ≤1000자)·`creationContext.creator.userId` 또는 `groupId`) + `fileContent`(파일 + content type). 헤더 `x-api-key`. Scopes `asset:read`, `asset:write`. Rate limit "perApiKeyOwner: 120/minute"(Create), 100/minute(버전 조회 등) | [Assets API 레퍼런스](https://create.roblox.com/docs/cloud/reference/features/assets) |
+| assetId 회수 | 응답 `{ "path": "operations/${operationId}" }` → `GET https://apis.roblox.com/assets/v1/operations/{operationId}` → `done: true`이면 `response.assetId`, `response.path`("assets/2205400862"), `revisionId` | Usage guide § Retrieve asset operation status |
+| 심의 조회 | 같은 Operation 응답에 `"moderationResult": { "moderationState": "MODERATION_STATE_APPROVED" }`. 기존 에셋은 `GET /assets/v1/assets/{assetId}`(`asset:read`)가 `moderationResult`를 돌려준다. **APPROVED 외 값(심의 중·거부)의 이름은 문서에 안 적혀 있다** — DevForum에 "문서가 moderationState 가능 값을 빠뜨렸다"는 보고가 있다 | Usage guide · 레퍼런스 · [DevForum 2332713](https://devforum.roblox.com/t/open-cloud-assets-api-documentation-is-incorrect/2332713) |
+| API 키 | Creator Dashboard → API Keys → Create API Key → Access Permissions에서 **Assets API** 선택 → Operations **Read + Write** → (선택) IP 허용 목록(CIDR)·만료일. "Never store API keys directly in your source code, version control systems, or scripts." OAuth2도 가능(`asset:read`/`asset:write`) — 우리는 1인 도구라 API 키 | [Manage API keys](https://create.roblox.com/docs/cloud/auth/api-keys) |
+| 3D 임포터(비교 기준) | glTF: "Multiple mesh objects and hierarchies · Textures, including basic and PBR textures · Rigging and armature data · Animation data · Vertex colors". 설정: Rig Type `R15 / Custom / No Rig`, Scale Unit(기본 Studs), Merge Meshes, Upload to Roblox, Import as Package, Anchored | [3D Importer](https://create.roblox.com/docs/art/modeling/3d-importer) |
+| 리그 | "When imported into Studio, Roblox saves this influence assignment data to the `MeshPart` asset data." "Studio represents this rig structure with `Bone` instances." "When `Bone` objects are used in animation, they affect the appearance of the parts but don't change the physical shape in cases such as collision detection." R1(단일 메시 리그)도 애니메이션 가능하나 "will not be able to take full advantage of the animation and humanoid options available for R15" | [Rigging and skinning](https://create.roblox.com/docs/art/modeling/rigging) |
+| 애니메이션 가져오기 | Animation Clip Editor가 FBX·**glTF** 파일의 클립(한 파일 여러 클립)을 Import한다(2025 정식). Publish to Roblox 해야 AnimationId. 커뮤니티 보고: 루트 조인트가 (0,0,0)에 없으면 깨지고, R15가 아닌 리그는 변형될 수 있다 | [DevForum 4260501](https://devforum.roblox.com/t/full-release-animation-clip-editor-improved-importing-and-gltf-support/4260501) · [Animation Editor](https://create.roblox.com/docs/animation/editor) |
+| 힉스필드 출력 | "Every 3D generation returns a GLB file" (메시·텍스처·요청 시 스켈레톤·애니메이션 포함). 리깅은 "an auto-generated humanoid skeleton … works well on humanoid characters and poorly on animals or objects". A/T-pose 권장. `target_polycount` "from 100 up to 300,000 (default around 30,000)". PBR 맵은 선택. 678개 애니메이션 라이브러리. 엔진은 Meshy(image-to-3D·리깅)·Tripo(text-to-3D) | [scriptable.com Higgsfield 3D](https://scriptable.com/posts/higgsfield/3d-models/) · [Higgsfield 3D Jutsu](https://higgsfield.ai/blog/higgsfield-3d-jutsu) |
+
+#### [2] 현재 터미널의 Studio MCP 도구 — 업로드에 쓸 수 있는가
+
+| 도구 | 판정 | 이유 |
+|---|---|---|
+| `upload_image` | **이미지만, HTTP URL만** | "Upload a batch of images from http server … returning imagePath to assetId map". 로컬 파일은 `store_image`로 IMAGEID URI를 만들어도 `upload_image`가 받는 건 http(s) 경로다 → 로컬 PNG는 임시 `python -m http.server`로 서빙하면 통과할 수 있다(미시험) |
+| `store_image` | 보조 | 로컬 png/jpg ≤ 5MB를 다른 생성 도구에 넘기는 URI. 업로드 아님 |
+| `insert_asset` | **업로드 후 단계에 유효** | 이미 있는 assetId를 Workspace에 삽입 — Open Cloud로 받은 id를 여기에 넣으면 22-7 [1] 3~7단계가 이어진다 |
+| `generate_mesh` / `generate_texture` | 다른 경로 | AI 생성(maxTriangles 12~20,000 지정 가능). 힉스필드 GLB를 받는 입력이 아니다 |
+| `http_get` | 읽기 전용, 허용 도메인만 | create.roblox.com/docs 등만. apis.roblox.com POST 불가 |
+| `execute_luau` | 불가 | `HttpService`는 Studio 편집 모드에서 외부 POST에 쓸 수 있지만 API 키를 Luau에 넣어 돌리는 건 키 노출이라 쓰지 않는다 |
+
+→ **GLB 업로드는 MCP 밖에서 한다**: PowerShell `curl`/Python 스크립트(API 키는 환경 변수). MCP는 그 뒤 `insert_asset`
+·구조 확인·삼각형 측정(22-7 [0])에 쓴다.
+
+#### [3] 자동화 절차 — 리깅 없는 에셋(나무·바위·건물·무기·소품·텍스처)
+
+```
+[사람 1] GLB(+PNG) 받기 → 삼각형 수·색면 규칙(20.52) 눈검수 → assets/incoming/<이름>.glb
+[스크립트] for 파일:
+   POST apis.roblox.com/assets/v1/assets  (x-api-key, request={assetType:"Model"|"Decal", displayName, description,
+                                          creationContext:{creator:{userId}}}, fileContent=@파일;type=model/gltf-binary|image/png)
+   → operations/{id} 를 done:true 될 때까지 폴링(120/min 한도 안, 2~5초 간격)
+   → assetId · moderationState 를 assets/manifest.json 에 기록  (거부면 표시)
+[스크립트] Studio MCP insert_asset(assetId) → MeshPart 수·TextureID·Size·삼각형(22-7 [0]) 자동 읽기 → manifest에 추가
+[사람 2] Studio에서 시각 확인(스케일·색·심의 통과) → 데이터 파일(ZoneTerrainData 등)에 assetId 기입
+```
+
+**사람 단계: 수동 8 → 2.** 수동 절차(현재)는 (1) 파일 받기 (2) 3D 임포터 열기 (3) Scale/Rig/Anchored 설정 (4) Import=업로드
+(5) Asset Manager에서 assetId 찾기 (6) 텍스처 심의 결과 확인 (7) 삽입·속성 정리 (8) 데이터 파일 기입 — 8단계 × 에셋 수.
+자동화 후 (1)과 (8)의 시각 확인만 남고 나머지는 manifest가 대신한다. 단, **첫 1회는 같은 GLB를 두 경로(Open Cloud /
+3D 임포터)로 올려 MeshPart 수·TextureID·Size·삼각형이 같은지 대조**한다 — [0](가)의 미검증 항목이며, 다르면 Open Cloud는
+텍스처 없는 단일 메시(우리 발주 원칙 22-7 [1] "면 색만")에만 쓴다.
+
+주의: Model 업로드는 "packages"로 올라간다(문서) → Workspace에 넣으면 PackageLink가 붙는다. 배치 전 PackageLink를 떼거나
+`Import as Package` 없이 MeshId만 뽑아 쓰는 쪽이 22-5 ZoneTerrain(서버가 Part를 생성) 구조와 맞는다. 문서는 Decal 타입만
+예시하므로 텍스처는 Decal로 올린 뒤 `TextureID`에 넣어 보고 안 되면 Studio에서 Image id를 확인한다(미시험).
+
+#### [4] 힉스필드 → 몬스터 리깅 파이프라인 예측
+
+우리 몬스터 구조(`MonsterSpawner.lua`): `HumanoidRootPart`(PrimaryPart) + `Body` + `Head`, **Humanoid는 애니메이션·이름표
+전용**, 이동은 서버가 `PivotTo`로 옮기고 판정은 `Reach`(XZ + |ΔY| ≤ 8), 반짝이·조준은 태그 + PrimaryPart 기준(20.48 [2]).
+→ 메시 몬스터로 바꿀 때 지켜야 할 것은 "PrimaryPart=HumanoidRootPart, Humanoid 유지, Anchored·CanCollide=false"뿐이다.
+Bone은 충돌·판정에 영향이 없다(문서 인용) — 판정 코드는 안 바뀐다.
+
+예상 단계와 위험:
+
+| 단계 | 방법 | 위험 |
+|---|---|---|
+| 1. 생성 | 힉스필드 image-to-3D, **`target_polycount` 700**(잡몹)·3,000(보스) 명시. 기본 30,000이면 예산(22-7) 43배 초과 | 낮음 — 숫자만 넣으면 된다. 텍스처는 "source image를 그대로 재현"하므로 **원본 그림이 이미 20.52 색면 규칙**이어야 한다 |
+| 2. 리깅 | 힉스필드 humanoid 자동 리그, A-pose | **종별 차이**: 고블린·오크·트롤·골렘(인간형) 순탄 / 슬라임(사지 없음) 리그 불필요 — 스케일 튐 애니메이션이면 충분 / **드래곤(4족+날개) 고위험** — "poorly on animals" |
+| 3. 임포트 | **Studio 3D 임포터**(Open Cloud 경로는 리그 보존 미확인) Rig Type=Custom, Scale Unit=Studs, 키 3~5(잡몹)·10~14(보스) | 중간 — 루트 조인트 (0,0,0) 아니면 애니메이션이 깨진다는 보고. Blender에서 루트 위치만 고치면 된다 |
+| 4. 애니메이션 | GLB 안 클립(힉스필드 678 라이브러리) → Animation Clip Editor Import → Publish to Roblox → AnimationId | **사람 단계, 자동화 불가**(Open Cloud Animation은 .rbxm만). 몬스터 6종 × 클립 3~4(대기·걷기·공격·피격) = 18~24회 Publish |
+| 5. 연결 | `Humanoid:LoadAnimation` 또는 `Animator`, `MonsterData`에 AnimationId | 낮음 — 데이터 추가만 |
+
+**예측**: 인간형 4종은 순탄(위험은 3의 루트 조인트와 4의 반복 노동). 슬라임은 리깅 자체를 안 한다. 드래곤은 자동 리그가
+실패하면 (ㄱ) 리그 없는 단일 메시 + 서버 CFrame 부양·기울임(20.49 [2] 부양 2stud 이미 데이터에 있다) 또는 (ㄴ) 머리·날개·
+꼬리를 별도 메시로 나눠 Motor6D로 잇는 Part식 관절 — 둘 다 리깅 없이 된다. 힉스필드 무료/플랜 한도와 심의(텍스처 이미지가
+Decal 심의를 따로 탄다)는 실제 1회 업로드 전엔 알 수 없다.
+
+#### [5] 수동 체크리스트 — 22-7 [1] 7단계에 이어 붙임 (자동화 전 · 리깅 몬스터는 항상)
+
+| # | 단계 | 확인 |
+|---|---|---|
+| 8 | GLB 검수 | 삼각형 ≤ 22-7 [2] 발주값(Blender Statistics 또는 임포트 후 22-7 [0]) · 색면 5~7색 · 외곽선·구운 그림자 없음(20.52) · 크기 1 unit = 1 stud |
+| 9 | 3D 임포터 설정 | File → Import 3D → Scale Unit=Studs · Rig Type(장식 No Rig / 몬스터 Custom) · Anchored ✓ · Merge Meshes(장식은 ✓, 몬스터는 ✗) · Upload to Roblox ✓ |
+| 10 | Import | 경고 아이콘(텍스처 누락·케이지) 확인 → 업로드. 텍스처는 이미지 에셋으로 따로 심의 |
+| 11 | assetId 기록 | 속성창 `MeshId`/`TextureID` 또는 Asset Manager → `assets/manifest.json`(이름·assetId·삼각형·용도) |
+| 12 | 애니메이션(리깅 몬스터만) | Animation Clip Editor → Import(glTF 클립) → 루트 조인트 확인 → Publish to Roblox → AnimationId 기록 |
+| 13 | 속성 정리·배치 | 22-7 [1] 6단계(CanCollide/CanQuery/Atomic) → 데이터 파일에 id 기입 → 22-7 [0]으로 화면 삼각형 재측정 |
+
+수동 전체 = 13단계(7+6). Open Cloud 자동화 시 리깅 없는 에셋 = **사람 2단계**([3]). 리깅 몬스터 = 12번 때문에 **사람 6단계**
+(8·9·10·12·13의 시각 확인·데이터 기입).
+
+#### 이번에 하지 않은 것
+
+실제 업로드(Open Cloud·3D 임포터 둘 다) · API 키 발급 · 업로드 스크립트 작성 · `upload_image`의 로컬 http.server 경유 시험 ·
+moderationState 비승인 값 확인 · 힉스필드 계정·한도 확인. 다음 실행 세션의 첫 일은 [3]의 "두 경로 대조 1회"다.
+
+#### 파일
+
+변경 없음(문서만).
