@@ -98,15 +98,24 @@ function MonsterData.getRewardRatio(tierIndex)
 	return expectedGradeValue(tierIndex) / BASE_E
 end
 
--- tier 순서 + 웹에서 가져온 이름(각 tier의 "탱커형" 대표 하나, 16-6 조사)뿐 - 나머지는
+-- tier 순서 + 기본형 이름(22-2 [1] - 웹의 꼬물이~드래곤 계열에서 판타지 기본형으로 교체.
+-- 유저가 이름만 보고 무엇인지 즉시 알아야 한다는 지시). 접두사 변종(MonsterPrefixData)이
+-- 이 기본형 앞에 붙는다("단단한 슬라임"). 색은 20.27 아트 동결 그대로 둔다. 나머지는
 -- 전부 아래에서 관계식으로 계산한다.
+--   tier1 슬라임 - 판타지의 첫 몬스터, 젤리 실루엣. 초록 팔레트가 그대로 맞는다.
+--   tier2 고블린 - 소형 인간형, "슬라임 다음"으로 누구나 아는 순서.
+--   tier3 오크 - 대형 인간형, 고블린의 상위 종족이라는 관습.
+--   tier4 트롤 - 거인 계열, 오크보다 크고 느린 덩치(HP 계열이 커지는 tier와 맞는다).
+--   tier5 골렘 - 석상·정령 계열, 인간형 계보에서 벗어나 "다른 종류"로 읽힌다. 보라 팔레트가
+--            수정 골렘으로 읽힌다. 와이번은 tier6 드래곤과 실루엣이 겹쳐 제외했다.
+--   tier6 드래곤 - 최상위 관습. 붉은 팔레트 그대로.
 local TIER_INFO = {
-	{ key = "tier1", displayName = "딱딱꼬물이", bodyColor = Color3.fromRGB(111, 158, 76) },
-	{ key = "tier2", displayName = "찐득슬라임", bodyColor = Color3.fromRGB(63, 142, 92) },
-	{ key = "tier3", displayName = "굳센고블린", bodyColor = Color3.fromRGB(74, 122, 46) },
-	{ key = "tier4", displayName = "육중오크", bodyColor = Color3.fromRGB(168, 95, 38) },
-	{ key = "tier5", displayName = "거대트롤", bodyColor = Color3.fromRGB(106, 63, 142) },
-	{ key = "tier6", displayName = "폭군드래곤", bodyColor = Color3.fromRGB(224, 80, 92) },
+	{ key = "tier1", displayName = "슬라임", bodyColor = Color3.fromRGB(111, 158, 76) },
+	{ key = "tier2", displayName = "고블린", bodyColor = Color3.fromRGB(63, 142, 92) },
+	{ key = "tier3", displayName = "오크", bodyColor = Color3.fromRGB(74, 122, 46) },
+	{ key = "tier4", displayName = "트롤", bodyColor = Color3.fromRGB(168, 95, 38) },
+	{ key = "tier5", displayName = "골렘", bodyColor = Color3.fromRGB(106, 63, 142) },
+	{ key = "tier6", displayName = "드래곤", bodyColor = Color3.fromRGB(224, 80, 92) },
 }
 
 MonsterData.tierOrder = {}

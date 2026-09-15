@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local TeleportPad = require(script.Parent.TeleportPad)
 
@@ -293,4 +294,9 @@ print(("[forge-game] 사냥터 생성 완료 - 9개 구역, tier 몬스터 %d마
 for _, check in ipairs(MonsterData.fairnessCheck) do
 	print(("[forge-game] tier%d 공정성 검증 - r=%.4f, 시간당보상=%.4f"):format(
 		check.tier, check.r, check.rewardPerTime))
+end
+-- 접두사 변종 공평성(22-2 [1]) - 보상배율/HP배율이 접두사 무관하게 1인지 실행 시점에 확인.
+for _, check in ipairs(MonsterPrefixData.fairnessCheck) do
+	print(("[forge-game] 접두사 %s(%s) 공평성 검증 - HP×%.2f, 보상×%.2f, 시간당보상=%.4f"):format(
+		check.displayName, check.id, check.hpMultiplier, check.rewardMultiplier, check.rewardPerTime))
 end

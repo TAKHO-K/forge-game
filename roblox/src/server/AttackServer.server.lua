@@ -288,7 +288,9 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		-- 명중했을 때만 남는다. 이 평타 자체가 처치를 냈으면(isDead) 붙이지 않는다 -
 		-- CombatResolution.resolveHit이 바로 위에서 despawn까지 끝낸 대상이라, 화살을
 		-- 붙여도 의미 있는 폭발 없이 시체와 함께 사라질 뿐이다.
-		if not isDead and wasQuickShotActive and projectileKind == "arrow" then
+		-- 보물상자(22-2 [3])에는 화살이 안 꽂힌다 - 피해량이 무관한 대상에 지연 폭발을 남기면
+		-- "1초 간격" 규칙만 우회하는 셈이 된다.
+		if not isDead and wasQuickShotActive and projectileKind == "arrow" and not MonsterState.isChest(target) then
 			local hitDirection = Vector3.new(currentRoot.Position.X - rootPart.Position.X, 0, currentRoot.Position.Z - rootPart.Position.Z)
 			hitDirection = hitDirection.Magnitude > 1e-3 and hitDirection.Unit or Vector3.new(0, 0, 1)
 			StuckArrowState.attach(target, player, atk, classId, attackerStage, hitDirection, requestedAt)

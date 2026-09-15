@@ -10,6 +10,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
+local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -26,6 +28,8 @@ local CombatResolution = {}
 function CombatResolution.init(goldGainedEvent, levelUpEvent)
 	CombatResolution.goldGained = goldGainedEvent
 	CombatResolution.levelUp = levelUpEvent
+	-- 보물상자 알림 이벤트(22-2 [3])는 MonsterSpawner가 만든다 - 여기선 찾아만 둔다.
+	CombatResolution.treasureChestNotice = ReplicatedStorage:FindFirstChild("TreasureChestNotice")
 end
 
 -- 처치 보상 지급 1인분(19-4 [2]) - 보스(단독 수령)와 잡몹(기여자 각자)이 똑같이 이 함수
@@ -38,8 +42,13 @@ local function grantKillReward(recipient, target, monsterData, deathPosition)
 
 	local goldDrop = MonsterState.getGoldDropFor(target, recipientStage)
 	if isSparkle then
-		goldDrop = math.floor(goldDrop * RareMonsterConfig.goldMultiplier)
+		-- 반짝이 자신의 처치 골드는 절반(웹 규칙) + 전용 보상으로 "그 구역 잡몹 N마리분"
+		-- 골드를 얹는다(22-2 [2], RareMonsterConfig.goldBonusKillEquivalent 주석 - 등급표는
+		-- 절대 안 올린다). 기준은 접두사 없는 기본형 골드(InfiniteStage 배율만).
+		local baseGold = InfiniteStage.getGoldReward(monsterData.goldDrop, recipientStage)
+		goldDrop = math.floor(goldDrop * RareMonsterConfig.goldMultiplier + baseGold * RareMonsterConfig.goldBonusKillEquivalent)
 	end
+	goldDrop = math.floor(goldDrop)
 	PlayerProfile.addGold(recipient, goldDrop)
 	CombatResolution.goldGained:FireClient(recipient, goldDrop)
 
@@ -65,7 +74,8 @@ local function grantKillReward(recipient, target, monsterData, deathPosition)
 	elseif isSparkle then
 		armorDrop = Loot.rollSparkleArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex)
 	else
-		armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex)
+		-- 접두사 변종(22-2 [1]) - 드랍 확률에도 보상 배율(= HP 배율)을 곱한다(공평성).
+		armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex, MonsterState.getRewardMultiplier(target))
 	end
 	if armorDrop then
 		ItemDropSpawner.spawn(armorDrop, deathPosition, recipient)
@@ -86,6 +96,30 @@ local function handleBossDeath(attacker, target)
 	ImmediateSave.request(attacker)
 	BossEncounter.clearFor(attacker)
 	print(("[forge-game] 보스 처치: %s - 스테이지 %d"):format(attacker.Name, monsterData.stageNumber))
+end
+
+-- 보물상자 파괴(22-2 [3]) - 한 번이라도 유효 피격한 전원이 각자 독립적으로 골드를 받는다
+-- (나눠 갖지 않는다 - 19-4 잡몹 기여 지급과 같은 철학). 금액은 "그 구역 잡몹 N마리분"을
+-- 받는 사람의 스테이지 기준으로 계산한다(잡몹 골드와 같은 InfiniteStage 배율). 장비는
+-- 안 준다(등급 체계 밖의 축만 - TreasureChestConfig 주석).
+local function handleChestBreak(target)
+	local chestData = MonsterState.getData(target)
+	local baseData = chestData.baseData
+	local count = 0
+	for hitter in pairs(MonsterState.getChestHitters(target)) do
+		if hitter.Parent then
+			local stage = PlayerProfile.getInfiniteStage(hitter) or 1
+			local gold = math.floor(InfiniteStage.getGoldReward(baseData.goldDrop, stage) * TreasureChestConfig.goldKillEquivalent)
+			PlayerProfile.addGold(hitter, gold)
+			CombatResolution.goldGained:FireClient(hitter, gold)
+			count += 1
+			print(("[forge-game] 보물상자 보상: %s +%d 골드"):format(hitter.Name, gold))
+		end
+	end
+	print(("[forge-game] 보물상자 파괴 - %d명 보상"):format(count))
+	if CombatResolution.treasureChestNotice then
+		CombatResolution.treasureChestNotice:FireAllClients(("보물상자가 열렸습니다 - %d명이 보상을 받았습니다"):format(count))
+	end
 end
 
 local function handleMobDeath(target)
@@ -121,6 +155,8 @@ function CombatResolution.resolveHit(attacker, target, isDead)
 	local monsterData = MonsterState.getData(target)
 	if monsterData.isBoss then
 		handleBossDeath(attacker, target)
+	elseif monsterData.isChest then
+		handleChestBreak(target)
 	else
 		handleMobDeath(target)
 	end

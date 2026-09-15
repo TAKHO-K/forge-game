@@ -181,6 +181,12 @@ RunService.Heartbeat:Connect(function(dt)
 				continue
 			end
 
+			-- 보물상자(22-2 [3])는 몬스터가 아니다 - 어그로·추격·반격 전부 없다. 조준·피격
+			-- 경로만 공유하려고 MonsterState에 등록돼 있을 뿐이다.
+			if data.isChest then
+				continue
+			end
+
 			if state == "idle" then
 				local player, playerRoot = findNearestPlayerRootInRange(position, WorldConfig.aggro.rangeStuds)
 				if player then
@@ -246,7 +252,8 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 상태가 MonsterState 어디에도 남지 않으므로, 지시 [1]이 우려한 "소환체
 					-- 소멸 시 nil 참조" 사고 자체가 구조적으로 생기지 않는다).
 					local decoyPosition = SummonState.getPosition(target, "dualbladeDecoy")
-					stepToward(model, position, decoyPosition or targetRoot.Position, data.moveSpeedStuds, dt)
+					-- 이동속도는 접두사 변종 배율이 곱해진 인스턴스 값(22-2 [1], MonsterState.getMoveSpeed).
+					stepToward(model, position, decoyPosition or targetRoot.Position, MonsterState.getMoveSpeed(model), dt)
 					if not decoyPosition then
 						tryAttack(model, data, position, target, targetRoot)
 					end
@@ -259,7 +266,7 @@ RunService.Heartbeat:Connect(function(dt)
 					model:PivotTo(CFrame.new(home))
 					MonsterState.setAiState(model, "idle")
 				else
-					stepToward(model, position, home, data.moveSpeedStuds, dt)
+					stepToward(model, position, home, MonsterState.getMoveSpeed(model), dt)
 				end
 			end
 		end

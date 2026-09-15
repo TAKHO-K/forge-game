@@ -48,8 +48,11 @@ end
 -- 보장되지 않는다). itemLevel에는 그 tier의 itemLevelBonus(=r(t)^(p-1), MonsterData.lua
 -- 공정성 식 참고)를 곱한다 - "고tier일수록 같은 캐릭터 레벨이어도 더 좋은 장비가 나온다"는
 -- 16-6 설계를 실제로 반영하는 지점이 이번 세션 전까지 없었다.
-function Loot.rollArmorDrop(monsterStage, itemLevel, tierIndex)
-	if lootRng:NextNumber() >= ArmorData.dropChance then
+-- chanceMultiplier(22-2 [1], 선택값) - 접두사 변종의 보상 배율(= HP 배율). 드랍 확률에
+-- 그대로 곱한다(단단한 ×2 → 50%, 거대한 ×3 → 75%, 연약한 ×0.5 → 12.5%) - 시간당 드랍
+-- 기대값이 접두사 무관하게 같아지도록. 1을 넘지 않게 자른다(거대한 0.75가 현재 최대).
+function Loot.rollArmorDrop(monsterStage, itemLevel, tierIndex, chanceMultiplier)
+	if lootRng:NextNumber() >= math.min(ArmorData.dropChance * (chanceMultiplier or 1), 1) then
 		return nil
 	end
 

@@ -38,6 +38,9 @@ local BossEncounter = require(script.Parent.BossEncounter)
 local BossPatterns = require(script.Parent.BossPatterns)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
+local CombatResolution = require(script.Parent.CombatResolution)
+-- 22-2 변종 검증 명령(/gg variant, /gg chesttest)용.
+local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 
 -- 앵커 조건(지시 [1] - "최소한 앵커 조건은 하나로 불러올 수 있어야 한다"): 레벨100 +
 -- 일반등급 itemLevel100 3부위 + 강화+0 + 무기등급 일반(0), 스테이지 100. 무기 등급은
@@ -277,6 +280,9 @@ local HELP_TEXT = table.concat({
 	"/gg curve [classId] - 앵커 곡선(레벨×무기등급 격자)의 생존 타수·처치 시간 표를 콘솔에 출력",
 	"/gg rebirth <n> - 환생 횟수 스텁 직접 지정(보스 첫 처치 드랍 등급표 분기 검증용)",
 	"/gg bossreset [stage] - 보스 첫 처치 확정 드랍 기록 초기화(생략 시 전부, 재검증용)",
+	"/gg variant <sparkle|chest|frail|sturdy|giant|none> - 가장 가까운 잡몹을 그 변종으로 즉시 교체(22-2 검증용)",
+	"/gg chesttest - 가장 가까운 잡몹을 상자로 바꾼 뒤 피격 간격·다중 타격자·기록 정리를 서버 로그로 검증(22-2)",
+	"/gg killtest - 가장 가까운 잡몹을 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡고 골드·경험치·드랍 변화를 로그로 출력(22-2)",
 	"/gg boss [stage] - 보스 스테이지(기본 5)로 이동해 개인 아레나 보스전 시작(21-3 검증용)",
 	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
@@ -356,6 +362,174 @@ local function handleCommand(player, args)
 			MonsterSpawner.updateHpLabel(model)
 			reply(player, ("보스 HP %.0f%% 차감 - 남은 비율 %.2f"):format(tonumber(args[2]) * 100, MonsterState.getHpRatio(model)))
 		end
+	elseif sub == "variant" and args[2] then
+		-- 가장 가까운 잡몹(보스·상자 제외)을 보상 없이 지우고 같은 자리에 지정 변종으로 다시
+		-- 스폰한다. 저장에 손대지 않으므로 ensureBackup이 필요 없다.
+		local character = player.Character
+		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+		if not rootPart then
+			return
+		end
+		local kind = args[2]
+		local forced
+		if kind == "sparkle" then
+			forced = { isSparkle = true }
+		elseif kind == "chest" then
+			forced = { isChest = true }
+		elseif kind == "none" then
+			forced = {}
+		elseif MonsterPrefixData.byId[kind] then
+			forced = { prefix = MonsterPrefixData.byId[kind] }
+		else
+			reply(player, "알 수 없는 변종: " .. kind)
+			return
+		end
+		local nearest, nearestDist = nil, math.huge
+		for _, model in ipairs(MonsterState.getAllModels()) do
+			local data = MonsterState.getData(model)
+			if data and not data.isBoss and not data.isChest and model.PrimaryPart then
+				local d = (model.PrimaryPart.Position - rootPart.Position).Magnitude
+				if d < nearestDist then
+					nearest, nearestDist = model, d
+				end
+			end
+		end
+		if not nearest then
+			reply(player, "근처에 잡몹이 없습니다")
+			return
+		end
+		local data = MonsterState.getData(nearest)
+		local spawnPosition = MonsterState.getSpawnPosition(nearest)
+		local zoneKey = MonsterState.getZoneKey(nearest)
+		MonsterState.tryClaimDeath(nearest)
+		MonsterState.clear(nearest)
+		nearest:Destroy()
+		local model = MonsterSpawner.spawn(data, spawnPosition, zoneKey, forced)
+		reply(player, ("변종 스폰: %s (%s)"):format(model.Name, kind))
+	elseif sub == "chesttest" then
+		-- 22-2 [3] 검증: 실제 MonsterState.applyDamage/CombatResolution.resolveHit 경로로 (1) 1초
+		-- 안의 연타는 1회만 세는지, (2) 서로 다른 타격자 키가 각자 따로 세어지는지, (3) 퇴장
+		-- 정리(clearPlayerContributions)가 기록을 지우는지, (4) 파괴 후 entry가 사라지는지를
+		-- 로그로 찍는다. 두 번째 타격자는 Player가 아닌 스탠드인 테이블(Parent=nil)이라 파괴
+		-- 보상 루프의 Parent 가드에 걸러진다 - 그 가드가 실제로 동작하는지도 같이 본다.
+		local character = player.Character
+		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+		if not rootPart then
+			return
+		end
+		local nearest, nearestDist = nil, math.huge
+		for _, model in ipairs(MonsterState.getAllModels()) do
+			local data = MonsterState.getData(model)
+			if data and not data.isBoss and not data.isChest and model.PrimaryPart then
+				local d = (model.PrimaryPart.Position - rootPart.Position).Magnitude
+				if d < nearestDist then
+					nearest, nearestDist = model, d
+				end
+			end
+		end
+		if not nearest then
+			reply(player, "근처에 잡몹이 없습니다")
+			return
+		end
+		local data = MonsterState.getData(nearest)
+		local spawnPosition = MonsterState.getSpawnPosition(nearest)
+		local zoneKey = MonsterState.getZoneKey(nearest)
+		MonsterState.tryClaimDeath(nearest)
+		MonsterState.clear(nearest)
+		nearest:Destroy()
+		local chest = MonsterSpawner.spawn(data, spawnPosition, zoneKey, { isChest = true })
+		local stage = PlayerProfile.getInfiniteStage(player) or 1
+		local function hitters()
+			local n = 0
+			for _ in pairs(MonsterState.getChestHitters(chest)) do
+				n += 1
+			end
+			return n
+		end
+		task.spawn(function()
+			-- (1) 연타 20회를 0.05초 간격으로 - 유효 피격은 1회여야 한다.
+			for _ = 1, 20 do
+				MonsterState.applyDamage(chest, 999, stage, player)
+				task.wait(0.05)
+			end
+			MonsterSpawner.updateHpLabel(chest)
+			-- 20회 × 0.05초 ≈ 1.0~1.2초라 1초 경계를 한 번 넘는다 - 유효 피격은 1~2회.
+			print(("[chesttest] 연타 20회(약 1.1초) 후 HP비율 %.4f (기대 %.4f~%.4f = 1~2회만 인정), 타격자 %d명"):format(
+				MonsterState.getHpRatio(chest), 1 - 2 / 15, 1 - 1 / 15, hitters()))
+
+			-- (2) 스탠드인 타격자 - 같은 시각에 때려도 자기 간격은 따로 센다.
+			local standIn = { Name = "StandIn", Parent = nil }
+			MonsterState.applyDamage(chest, 1, stage, standIn)
+			print(("[chesttest] 스탠드인 1타 후 HP비율 %.4f (직전보다 1/15 감소), 타격자 %d명(기대 2)"):format(
+				MonsterState.getHpRatio(chest), hitters()))
+
+			-- (3) 퇴장 정리 - 스탠드인 기록을 지우면 타격자 1명으로 돌아가야 한다.
+			MonsterState.clearPlayerContributions(standIn)
+			print(("[chesttest] 스탠드인 정리 후 타격자 %d명(기대 1)"):format(hitters()))
+
+			-- (4) 혼자 1초 간격으로 남은 13회 - 첫 유효 피격부터 파괴까지 걸린 시간.
+			local startedAt = os.clock() - 20 * 0.05
+			local isDead = false
+			while not isDead do
+				task.wait(1.0)
+				isDead = MonsterState.applyDamage(chest, 999, stage, player)
+				MonsterSpawner.updateHpLabel(chest)
+			end
+			local elapsed = os.clock() - startedAt
+			CombatResolution.resolveHit(player, chest, isDead)
+			print(("[chesttest] 혼자 파괴까지 %.1f초 (기대 ≥ 14초 = 15타 사이 14간격), 파괴 후 entry=%s"):format(
+				elapsed, tostring(MonsterState.getData(chest))))
+		end)
+		reply(player, "chesttest 시작 - 서버 로그를 보세요(약 15초)")
+	elseif sub == "killtest" then
+		-- 22-2 검증: 잡몹 처치 경로(MonsterState.applyDamage → CombatResolution.resolveHit →
+		-- grantKillReward → ItemDropSpawner)가 변종 배율을 포함해 그대로 동작하는지. 평타
+		-- 입력(AttackRequest)만 건너뛴다 - 그 파일의 이번 변경은 꽂히는 화살의 상자 가드 한 줄뿐.
+		local character = player.Character
+		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+		if not rootPart then
+			return
+		end
+		local nearest, nearestDist = nil, math.huge
+		for _, model in ipairs(MonsterState.getAllModels()) do
+			local data = MonsterState.getData(model)
+			if data and not data.isBoss and not data.isChest and model.PrimaryPart then
+				local d = (model.PrimaryPart.Position - rootPart.Position).Magnitude
+				if d < nearestDist then
+					nearest, nearestDist = model, d
+				end
+			end
+		end
+		if not nearest then
+			reply(player, "근처에 잡몹이 없습니다")
+			return
+		end
+		local prefix = MonsterState.getPrefix(nearest)
+		local wasSparkle = MonsterState.isSparkle(nearest) -- resolveHit이 entry를 지우므로 미리 읽는다
+		local goldBefore = player:GetAttribute("Gold")
+		local expBefore = player:GetAttribute("CharacterExp")
+		local dropsBefore = 0
+		for _, c in ipairs(workspace:GetChildren()) do
+			if c.Name == "ItemDrop" then
+				dropsBefore += 1
+			end
+		end
+		local stage = PlayerProfile.getInfiniteStage(player) or 1
+		local isDead = MonsterState.applyDamage(nearest, 1e12, stage, player)
+		MonsterSpawner.updateHpLabel(nearest)
+		CombatResolution.resolveHit(player, nearest, isDead)
+		local dropsAfter = 0
+		for _, c in ipairs(workspace:GetChildren()) do
+			if c.Name == "ItemDrop" then
+				dropsAfter += 1
+			end
+		end
+		print(("[killtest] %s (접두사=%s, 반짝이=%s) 처치 - 골드 %d→%d (+%d), 경험치 %d→%d (+%d), 드랍 +%d"):format(
+			nearest.Name, prefix and prefix.id or "없음", tostring(wasSparkle),
+			goldBefore, player:GetAttribute("Gold"), player:GetAttribute("Gold") - goldBefore,
+			expBefore, player:GetAttribute("CharacterExp"), player:GetAttribute("CharacterExp") - expBefore,
+			dropsAfter - dropsBefore))
+		reply(player, "killtest 완료 - 서버 로그 참고")
 	elseif sub == "bossreset" then
 		ensureBackup(player)
 		PlayerProfile.clearBossFirstClearRewards(player, tonumber(args[2]))

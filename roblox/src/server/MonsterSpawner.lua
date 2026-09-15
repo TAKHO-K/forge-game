@@ -11,16 +11,58 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
+local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
+local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
 local MonsterState = require(script.Parent.MonsterState)
 
 local MonsterSpawner = {}
 
+-- 보물상자 등장 알림(22-2 [3]) - 서버 전체에 한 번 쏜다(클라 TreasureChestHud.client.lua가
+-- 토스트로 띄운다). 구역 한정이 아니라 서버 전체인 이유: "모여들게" 만드는 장치라 다른
+-- 구역에 있는 사람이 알아야 하고, 빈도가 반짝이의 1/5(약 17분에 1번)라 PRD 20.4의 스팸
+-- 기준(희귀 이상 드랍을 채팅에 띄우는 것보다 훨씬 드물다)을 한참 밑돈다.
+local treasureChestNotice = Instance.new("RemoteEvent")
+treasureChestNotice.Name = "TreasureChestNotice"
+treasureChestNotice.Parent = ReplicatedStorage
+
 local DEFAULT_BODY_COLOR = Color3.fromRGB(150, 90, 200)
 local DEFAULT_HEAD_COLOR = Color3.fromRGB(180, 120, 220)
 
--- 반짝이 판정 전용 독립 스트림(10-4의 critRng·17-1의 lootRng와 같은 이유 - math.random의
--- 전역 시드를 다른 판정과 공유하지 않는다).
-local sparkleRng = Random.new()
+-- 변종 판정 전용 독립 스트림(10-4의 critRng·17-1의 lootRng와 같은 이유 - math.random의
+-- 전역 시드를 다른 판정과 공유하지 않는다). 반짝이·접두사·보물상자 셋이 같은 스트림을
+-- 순서대로 쓴다(rollVariant).
+local variantRng = Random.new()
+
+-- 스폰 시점 변종 판정(22-2). 순서: 보물상자(0.1%) → 반짝이(0.5%) → 접두사(합 10%).
+-- 상자는 몬스터 자체를 대체하므로 가장 먼저, 반짝이는 접두사와 겹치지 않게(반짝이 자체가
+-- 이미 변종이라 "거대한 반짝이"까지 만들면 이름·크기·이펙트가 한 개체에 몰린다) 접두사보다
+-- 먼저 굴린다. 보스는 호출부(spawn)가 이 함수를 아예 안 부른다.
+local function rollVariant()
+	if variantRng:NextNumber() < TreasureChestConfig.spawnChance then
+		return { isChest = true }
+	end
+	if variantRng:NextNumber() < RareMonsterConfig.sparkleChance then
+		return { isSparkle = true }
+	end
+	local prefixRoll = variantRng:NextNumber()
+	local acc = 0
+	for _, prefix in ipairs(MonsterPrefixData.prefixes) do
+		acc += prefix.chance
+		if prefixRoll < acc then
+			return { prefix = prefix }
+		end
+	end
+	return {}
+end
+
+-- 표시 이름 - 접두사가 있으면 "단단한 슬라임"(22-2 [1]). 이름표는 조준 시에만 뜨는 16-7
+-- 규칙 그대로 - 평소 구별은 크기(prefix.sizeMultiplier)가 맡는다.
+local function displayNameFor(data, variant)
+	if variant.prefix then
+		return variant.prefix.displayName .. " " .. data.displayName
+	end
+	return data.displayName
+end
 
 -- 기본 파트 조합으로 "구분되는 덩어리" 하나를 만든다. Humanoid는 애니메이션·이름표 전용이고
 -- 실제 HP는 MonsterState가 관리한다(Humanoid.MaxHealth=100은 쓰이지 않는 더미값).
@@ -28,22 +70,23 @@ local sparkleRng = Random.new()
 -- sizeScale/bodyColor/headColor(15-1, 기본값은 잡몹 그대로) - 보스를 "확실히 크게"
 -- 만들라는 지시를 아트 리소스 없이 기본 파트 크기·색만으로 만족시킨다(하지 말 것:
 -- 아트·모션 다듬기, 동결 상태).
-local function buildModel(data, position, isSparkle)
-	local sizeScale = (data.sizeScale or 1) * (isSparkle and RareMonsterConfig.sizeMultiplier or 1)
+local function buildModel(data, position, variant)
+	-- 크기 축(22-2 [1]) - 접두사 변종만 쓴다. 반짝이는 더 이상 크기를 안 건드린다(모델 속성을
+	-- 바꾸면 최종 모델로 교체할 때 사라진다 - RareMonsterConfig.lua 주석).
+	local sizeScale = (data.sizeScale or 1) * (variant.prefix and variant.prefix.sizeMultiplier or 1)
 	local bodyColor = data.bodyColor or DEFAULT_BODY_COLOR
 	local headColor = data.headColor or DEFAULT_HEAD_COLOR
+	local displayName = displayNameFor(data, variant)
 
 	local model = Instance.new("Model")
-	model.Name = data.displayName
+	model.Name = displayName
 	CollectionService:AddTag(model, "Monster") -- 클라이언트 AimTarget.lua가 이 태그로만 조준 후보를 찾는다
 
-	-- 반짝이 몬스터(19-4 [6]) - 이름표 대신 크기(위 sizeScale에 이미 반영됨)+발광으로
-	-- 구별한다(지시 "이름을 띄우는 대신 색이나 크기로 구별하는 것도 검토해라" - 조준 전에도
-	-- 항상 특별해 보여야 하므로 "조준해야만 보이는 이름표" 대신 상시 발광을 골랐다). 클라이언트
-	-- SparkleMonsterVisual.client.lua가 이 태그로 찾아 무지개색을 순환시킨다(PRD 8.0-5
-	-- "무지개빛 반짝임", 웹은 hue 순환 캔버스 렌더라 로블록스에선 PointLight.Color를 대신
-	-- 순환시킨다).
-	if isSparkle then
+	-- 반짝이 몬스터(19-4 [6] → 22-2 [2]) - 서버는 태그만 붙인다. 발광·파티클·빛기둥은 전부
+	-- 클라이언트 SparkleMonsterVisual.client.lua가 모델 **밖에** 자기 이펙트 파트를 만들어
+	-- 피벗을 따라가게 한다 - 모델의 어떤 속성(크기·색·재질·자식)도 건드리지 않으므로 나중에
+	-- 최종 모델로 갈아끼워도(태그 + PrimaryPart만 유지되면) 반짝임이 그대로 산다.
+	if variant.isSparkle then
 		CollectionService:AddTag(model, "SparkleMonster")
 	end
 
@@ -68,15 +111,6 @@ local function buildModel(data, position, isSparkle)
 	body.Color = bodyColor
 	body.Position = position
 	body.Parent = model
-
-	if isSparkle then
-		local glow = Instance.new("PointLight")
-		glow.Name = "SparkleGlow"
-		glow.Color = Color3.fromRGB(255, 100, 255)
-		glow.Range = RareMonsterConfig.glowRangeStuds
-		glow.Brightness = RareMonsterConfig.glowBrightness
-		glow.Parent = body
-	end
 
 	local head = Instance.new("Part")
 	head.Name = "Head"
@@ -112,7 +146,7 @@ local function buildModel(data, position, isSparkle)
 	nameLabel.Name = "NameLabel"
 	nameLabel.Size = UDim2.new(1, 0, 0, 20)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.Text = data.displayName
+	nameLabel.Text = displayName
 	nameLabel.TextColor3 = Color3.new(1, 1, 1)
 	nameLabel.Visible = false -- 조준 대상일 때만 AimTarget.lua가 true로 바꾼다
 	nameLabel.Parent = nameplateGui
@@ -144,6 +178,145 @@ local function buildModel(data, position, isSparkle)
 
 	-- 조준 대상 강조 외곽선(16-7) - 기본은 꺼져 있다. AimTarget.lua가 조준 대상 모델에서만
 	-- Enabled를 켠다.
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "AimHighlight"
+	highlight.Enabled = false
+	highlight.FillTransparency = 1
+	highlight.OutlineColor = Color3.fromRGB(255, 230, 90)
+	highlight.OutlineTransparency = 0
+	highlight.Parent = model
+
+	model.PrimaryPart = root
+	return model
+end
+
+-- 보물상자 모델(22-2 [3]) - 기본 파트만(아트 동결). 조준·피격 경로가 잡몹과 같아야 하므로
+-- 구조(HumanoidRootPart PrimaryPart + Head + NameplateGui/HpBar + AimHighlight + "Monster"
+-- 태그)는 buildModel과 맞춘다 - AimTarget.lua·AimPicker·updateHpLabel이 그대로 동작한다.
+-- 멀리서 눈에 띄게: 잡몹보다 훨씬 큰 몸통 + 금테 + PointLight + 하늘로 뻗는 빛기둥(반짝이
+-- 이펙트 레이어와 같은 수단 - 상자는 우리가 만든 파트라 서버가 직접 붙여도 된다).
+local function buildChestModel(position)
+	local cfg = TreasureChestConfig
+	local model = Instance.new("Model")
+	model.Name = "보물상자"
+	CollectionService:AddTag(model, "Monster")
+	CollectionService:AddTag(model, "TreasureChest")
+
+	local root = Instance.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2, 2, 1)
+	root.Transparency = 1
+	root.CanCollide = false
+	root.Anchored = true
+	root.Position = position
+	root.Parent = model
+
+	local body = Instance.new("Part")
+	body.Name = "Body"
+	body.Size = cfg.sizeStuds
+	body.Anchored = true
+	body.CanCollide = true
+	body.Material = Enum.Material.WoodPlanks
+	body.Color = cfg.bodyColor
+	body.Position = position + Vector3.new(0, cfg.sizeStuds.Y / 2 - 1, 0)
+	body.Parent = model
+
+	local trim = Instance.new("Part")
+	trim.Name = "Trim"
+	trim.Size = Vector3.new(cfg.sizeStuds.X + 0.2, 0.6, cfg.sizeStuds.Z + 0.2)
+	trim.Anchored = true
+	trim.CanCollide = false
+	trim.Material = Enum.Material.Neon
+	trim.Color = cfg.trimColor
+	trim.Position = body.Position
+	trim.Parent = model
+
+	-- 머리 파트 - 이름표 앵커(buildModel의 Head 역할). 상자 뚜껑 위에 얹는 작은 금덩이.
+	local head = Instance.new("Part")
+	head.Name = "Head"
+	head.Shape = Enum.PartType.Ball
+	head.Size = Vector3.new(1.2, 1.2, 1.2)
+	head.Anchored = true
+	head.CanCollide = false
+	head.Material = Enum.Material.Neon
+	head.Color = cfg.trimColor
+	head.Position = position + Vector3.new(0, cfg.sizeStuds.Y + 0.2, 0)
+	head.Parent = model
+
+	local glow = Instance.new("PointLight")
+	glow.Color = cfg.trimColor
+	glow.Range = cfg.glowRangeStuds
+	glow.Brightness = cfg.glowBrightness
+	glow.Parent = head
+
+	-- 빛기둥 - 두 Attachment 사이 Beam. 상자 위에서 하늘로.
+	local bottom = Instance.new("Attachment")
+	bottom.Name = "PillarBottom"
+	bottom.Parent = head
+	local top = Instance.new("Attachment")
+	top.Name = "PillarTop"
+	top.Position = Vector3.new(0, cfg.pillarHeightStuds, 0)
+	top.Parent = head
+	local beam = Instance.new("Beam")
+	beam.Attachment0 = bottom
+	beam.Attachment1 = top
+	beam.Width0 = cfg.pillarWidthStuds
+	beam.Width1 = cfg.pillarWidthStuds * 0.4
+	beam.Color = ColorSequence.new(cfg.trimColor)
+	beam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+	beam.LightEmission = 1
+	beam.LightInfluence = 0
+	beam.FaceCamera = true
+	beam.Parent = head
+
+	local humanoid = Instance.new("Humanoid")
+	humanoid.MaxHealth = 100
+	humanoid.Health = 100
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	humanoid.NameDisplayDistance = 0
+	humanoid.Parent = model
+
+	local nameplateGui = Instance.new("BillboardGui")
+	nameplateGui.Name = "NameplateGui"
+	nameplateGui.Size = UDim2.new(0, 160, 0, 40)
+	nameplateGui.StudsOffset = Vector3.new(0, 1.6, 0)
+	nameplateGui.AlwaysOnTop = true
+	nameplateGui.Adornee = head
+	nameplateGui.Parent = head
+	WorldLabelStyle.setupNameplateBillboard(nameplateGui, 100)
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Name = "NameLabel"
+	nameLabel.Size = UDim2.new(1, 0, 0, 20)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = model.Name
+	nameLabel.TextColor3 = cfg.trimColor
+	nameLabel.Visible = false
+	nameLabel.Parent = nameplateGui
+	WorldLabelStyle.styleNameplateText(nameLabel, 16)
+
+	local barBackground = Instance.new("Frame")
+	barBackground.Name = "HpBarBackground"
+	barBackground.Size = UDim2.new(1, 0, 0, 8)
+	barBackground.Position = UDim2.new(0, 0, 1, -8)
+	barBackground.BackgroundColor3 = Color3.new(0, 0, 0)
+	barBackground.BackgroundTransparency = 0.35
+	barBackground.BorderSizePixel = 0
+	barBackground.Parent = nameplateGui
+	local barBackgroundCorner = Instance.new("UICorner")
+	barBackgroundCorner.CornerRadius = UDim.new(1, 0)
+	barBackgroundCorner.Parent = barBackground
+
+	local barFill = Instance.new("Frame")
+	barFill.Name = "HpBarFill"
+	barFill.Size = UDim2.new(1, 0, 1, 0)
+	barFill.BackgroundColor3 = cfg.trimColor
+	barFill.BorderSizePixel = 0
+	barFill.Parent = barBackground
+	local barFillCorner = Instance.new("UICorner")
+	barFillCorner.CornerRadius = UDim.new(1, 0)
+	barFillCorner.Parent = barFill
+
 	local highlight = Instance.new("Highlight")
 	highlight.Name = "AimHighlight"
 	highlight.Enabled = false
@@ -210,18 +383,70 @@ end
 -- 자체를 안 하므로 zoneKey를 몰라도 상관없다. MonsterAI.server.lua가 이 값으로
 -- "이 몬스터의 구역에 지금 플레이어가 있는가"(성능 절전)와 "구역 경계를 벗어났는가"
 -- (리쉬 상한)를 둘 다 판정한다.
-function MonsterSpawner.spawn(data, position, zoneKey)
-	-- 반짝이 판정(19-4 [6], PRD 8.0-5 "스폰 시점에 판정. 일반 몬스터를 대체한다") - 보스는
-	-- 대상이 아니다(플레이어 1인 전용 인스턴스라 "발견의 재미" 자체가 성립하지 않는다).
-	local isSparkle = (not data.isBoss) and sparkleRng:NextNumber() < RareMonsterConfig.sparkleChance
+-- forcedVariant(22-2, 선택값) - DevTools "/gg variant"가 검증용으로 변종을 강제할 때만 넘긴다.
+function MonsterSpawner.spawn(data, position, zoneKey, forcedVariant)
+	-- 변종 판정(19-4 [6] 반짝이, 22-2 접두사·보물상자 - PRD 8.0-5 "스폰 시점에 판정. 일반
+	-- 몬스터를 대체한다") - 보스는 대상이 아니다(플레이어 1인 전용 인스턴스라 "발견의 재미"
+	-- 자체가 성립하지 않는다).
+	local variant = data.isBoss and {} or (forcedVariant or rollVariant())
 
-	local model = buildModel(data, position, isSparkle)
+	if variant.isChest then
+		return MonsterSpawner.spawnChest(data, position, zoneKey)
+	end
+
+	local model = buildModel(data, position, variant)
 	model.Parent = Workspace
-	MonsterState.init(model, data, position, zoneKey, isSparkle)
+	MonsterState.init(model, data, position, zoneKey, variant)
 	MonsterSpawner.updateHpLabel(model)
 	if data.isBoss then
 		playBossAppearEffect(model, position)
 	end
+	return model
+end
+
+-- 보물상자 스폰(22-2 [3]) - 잡몹 슬롯 하나를 상자가 대체한다. data는 "이 슬롯의 원래 잡몹"
+-- 으로, 상자용 data 테이블(isChest + baseData)로 감싼다 - 파괴·소멸 뒤 despawn이 baseData로
+-- 원래 잡몹을 리스폰시킨다. 보상(CombatResolution)도 baseData의 tier 골드를 기준으로 준다.
+function MonsterSpawner.spawnChest(baseData, position, zoneKey)
+	local chestData = {
+		id = "treasure_chest",
+		displayName = "보물상자",
+		isChest = true,
+		baseData = baseData,
+		tierIndex = baseData.tierIndex,
+		-- MonsterAI가 이 몬스터를 건너뛰므로 이동·공격 값은 안 읽히지만, getAttackFor 같은
+		-- 공용 조회가 nil 산술을 만나지 않도록 0으로 채운다.
+		hp = 0,
+		attack = 0,
+		goldDrop = 0,
+		expReward = 0,
+		moveSpeedStuds = 0,
+		attackRangeStuds = 0,
+		attackCooldownSeconds = 1,
+	}
+
+	local model = buildChestModel(position)
+	model.Parent = Workspace
+	MonsterState.init(model, chestData, position, zoneKey, { isChest = true })
+	MonsterSpawner.updateHpLabel(model)
+
+	local zoneLabel = ("tier %d %s 구역"):format(baseData.tierIndex or 0, baseData.displayName or "")
+	print(("[forge-game] 보물상자 등장: %s (%.0f, %.0f)"):format(zoneLabel, position.X, position.Z))
+	treasureChestNotice:FireAllClients(("보물상자가 %s에 나타났습니다! 함께 부수면 모두가 보상을 받습니다"):format(zoneLabel))
+
+	-- 소멸 타이머 - 파괴(CombatResolution)와 같은 경합 가드(tryClaimDeath)를 쓴다. 둘 중
+	-- 먼저 claim한 쪽만 진행하므로 "파괴 직후 소멸 처리"나 그 반대가 겹치지 않는다.
+	task.delay(TreasureChestConfig.lifetimeSeconds, function()
+		if MonsterState.getData(model) ~= chestData then
+			return -- 이미 파괴돼 정리됐다
+		end
+		if not MonsterState.tryClaimDeath(model) then
+			return
+		end
+		print("[forge-game] 보물상자 소멸(시간 초과): " .. zoneLabel)
+		treasureChestNotice:FireAllClients(("%s의 보물상자가 사라졌습니다"):format(zoneLabel))
+		MonsterSpawner.despawn(model)
+	end)
 	return model
 end
 
@@ -237,7 +462,7 @@ function MonsterSpawner.despawn(model)
 	local zoneKey = MonsterState.getZoneKey(model)
 
 	print(("[forge-game] 몬스터 사망: %s"):format(model.Name))
-	MonsterState.clear(model) -- 죽는 즉시 타겟 후보에서 제외(findNearestMonsterInRange가 더 이상 고르지 않는다)
+	MonsterState.clear(model) -- 죽는 즉시 타겟 후보에서 제외(findNearestMonsterInRange가 더 이상 고르지 않는다) - 상자면 피격 기록도 여기서 같이 사라진다(22-2 [3])
 
 	-- 마지막 데미지 숫자가 화면에서 사라질 시간만큼은 시체를 남겨둔다.
 	task.delay(CombatConfig.damageNumberLifetimeSeconds, function()
@@ -245,8 +470,11 @@ function MonsterSpawner.despawn(model)
 	end)
 
 	if not data.isBoss then
+		-- 보물상자였던 슬롯은 원래 잡몹(baseData)으로 돌아간다(22-2 [3]) - 리스폰 때 변종을
+		-- 다시 굴리므로 드물게 상자가 연달아 나올 수도 있다(확률대로).
+		local respawnData = data.isChest and data.baseData or data
 		task.delay(WorldConfig.zoneMonsterGrid.respawnDelaySeconds, function()
-			MonsterSpawner.spawn(data, spawnPosition, zoneKey)
+			MonsterSpawner.spawn(respawnData, spawnPosition, zoneKey)
 		end)
 	end
 end

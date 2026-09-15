@@ -23,6 +23,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
+local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
 
 local MonsterState = {}
 
@@ -38,7 +40,16 @@ local MonsterState = {}
 --             이 모듈이 단일 통로"라는 원칙 - clear(model) 한 번에 같이 사라진다) }
 local monsters = {}
 
-function MonsterState.init(model, data, spawnPosition, zoneKey, isSparkle)
+-- variant(22-2) - 스폰 시점에 굴린 인스턴스별 변종 { isSparkle, prefix(MonsterPrefixData 항목
+-- 또는 nil), isChest }. data는 여러 인스턴스가 공유하는 원본 테이블이라 변종 배율을 data에
+-- 쓰지 않고 entry에만 둔다. 보스는 셋 다 없다(MonsterSpawner.spawn이 보스엔 안 굴린다).
+--
+-- 보물상자(isChest, 22-2 [3])는 HP 대신 피격 횟수를 센다 - chestHits(총 유효 피격 수),
+-- chestLastHitAt([Player]=마지막 유효 피격 시각), chestHitters([Player]=true, 한 번이라도
+-- 유효 피격을 낸 전원 - 보상 대상). 상자가 파괴·소멸되면 clear(model) 한 번에 이 셋이
+-- 같이 사라진다(지시 "정리 항목" - 기록을 entry 밖에 두지 않는 이유).
+function MonsterState.init(model, data, spawnPosition, zoneKey, variant)
+	variant = variant or {}
 	monsters[model] = {
 		hp = data.isBoss and data.hp or nil,
 		maxHp = data.isBoss and data.hp or nil,
@@ -47,12 +58,52 @@ function MonsterState.init(model, data, spawnPosition, zoneKey, isSparkle)
 		data = data,
 		spawnPosition = spawnPosition,
 		zoneKey = zoneKey, -- 16-6, tier 구역 몬스터만 있음(보스는 nil).
-		isSparkle = isSparkle or false, -- 19-4 [6], 잡몹 전용(보스는 항상 false로 들어온다).
+		isSparkle = variant.isSparkle or false, -- 19-4 [6], 잡몹 전용(보스는 항상 false로 들어온다).
+		prefix = variant.prefix, -- 22-2 [1], 잡몹 전용.
+		isChest = variant.isChest or false, -- 22-2 [3].
+		chestHits = 0,
+		chestLastHitAt = {},
+		chestHitters = {},
 		aiState = "idle",
 		aiTarget = nil,
 		lastAttackTick = nil,
 		bossPattern = data.isBoss and {} or nil,
 	}
+end
+
+function MonsterState.isChest(model)
+	local entry = monsters[model]
+	return entry ~= nil and entry.isChest
+end
+
+function MonsterState.getPrefix(model)
+	local entry = monsters[model]
+	return entry and entry.prefix
+end
+
+-- 접두사 보상 배율(22-2 [1]) - 골드·경험치·드랍 확률이 전부 이 값을 곱는다(= HP 배율,
+-- MonsterPrefixData 공평성 정의). 접두사가 없으면 1.
+function MonsterState.getRewardMultiplier(model)
+	local entry = monsters[model]
+	return MonsterPrefixData.getRewardMultiplier(entry and entry.prefix)
+end
+
+-- 이동속도(22-2 [1]) - data.moveSpeedStuds × 접두사 배율. MonsterAI가 data를 직접 읽지 않고
+-- 이 함수를 쓴다(인스턴스별 값이라 공유 data에 둘 수 없다).
+function MonsterState.getMoveSpeed(model)
+	local entry = monsters[model]
+	if not entry then
+		return 0
+	end
+	local multiplier = entry.prefix and entry.prefix.moveSpeedMultiplier or 1
+	return entry.data.moveSpeedStuds * multiplier
+end
+
+-- 보물상자를 한 번이라도 유효 피격한 [Player]=true 집합(22-2 [3] - 파괴 시 전원이 각자
+-- 보상을 받는다). 상자가 아니면 빈 테이블.
+function MonsterState.getChestHitters(model)
+	local entry = monsters[model]
+	return (entry and entry.isChest and entry.chestHitters) or {}
 end
 
 -- 21-3 - 보스 패턴 상태 테이블(BossPatterns.lua 전용). 보스가 아니면 nil.
@@ -97,6 +148,10 @@ function MonsterState.getHpRatio(model)
 	if entry.data.isBoss then
 		return entry.maxHp > 0 and math.clamp(entry.hp / entry.maxHp, 0, 1) or 0
 	end
+	if entry.isChest then
+		-- 상자는 "남은 피격 횟수" 비율 - HP바 하나로 진행도를 보여준다.
+		return math.clamp(1 - entry.chestHits / TreasureChestConfig.requiredHits, 0, 1)
+	end
 	return math.clamp(entry.hpRatio, 0, 1)
 end
 
@@ -115,7 +170,29 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer)
 		return entry.hp <= 0
 	end
 
-	local effectiveMaxHp = InfiniteStage.getMonsterHp(entry.data.hp, attackerStage)
+	-- 보물상자(22-2 [3]) - 피해량은 무관, 피격 "횟수"만 센다. 플레이어당 유효 피격 간격
+	-- (TreasureChestConfig.hitIntervalSeconds) 안의 연타는 세지 않는다 - 이게 없으면 한 명이
+	-- 0.28초 평타로 혼자 순식간에 깨서 "모두가 받는다"가 무의미해진다(설계의 핵심). 첫 유효
+	-- 피격을 낸 순간 보상 대상(chestHitters)에 들어간다 - 강한 사람도 15번, 약한 사람도 15번.
+	if entry.isChest then
+		if not attackerPlayer then
+			return false
+		end
+		local now = os.clock()
+		local last = entry.chestLastHitAt[attackerPlayer]
+		if last and now - last < TreasureChestConfig.hitIntervalSeconds then
+			return false
+		end
+		entry.chestLastHitAt[attackerPlayer] = now
+		entry.chestHitters[attackerPlayer] = true
+		entry.chestHits += 1
+		return entry.chestHits >= TreasureChestConfig.requiredHits
+	end
+
+	-- 접두사 변종(22-2 [1]) - HP 배율은 "이 인스턴스"의 값이라 공유 data가 아니라 entry에서
+	-- 곱한다. 비율 모델(19-4)은 그대로 - 유효 최대체력만 배율만큼 커진다.
+	local prefixHpMultiplier = entry.prefix and entry.prefix.hpMultiplier or 1
+	local effectiveMaxHp = InfiniteStage.getMonsterHp(entry.data.hp, attackerStage) * prefixHpMultiplier
 	local ratioDealt = effectiveMaxHp > 0 and (damage / effectiveMaxHp) or 0
 	entry.hpRatio -= ratioDealt
 	if attackerPlayer then
@@ -140,6 +217,12 @@ function MonsterState.clearPlayerContributions(player)
 	for _, entry in pairs(monsters) do
 		if entry.contributions then
 			entry.contributions[player] = nil
+		end
+		-- 보물상자 피격 기록도 같이 지운다(22-2 [3] 지시 "플레이어 퇴장 시 그 기록도 정리") -
+		-- 남겨 두면 파괴 시점에 이미 나간 Player를 보상 대상으로 순회하게 된다.
+		if entry.isChest then
+			entry.chestLastHitAt[player] = nil
+			entry.chestHitters[player] = nil
 		end
 	end
 end
@@ -167,7 +250,7 @@ function MonsterState.getGoldDropFor(model, stage)
 	if entry.data.isBoss then
 		return entry.data.goldDrop
 	end
-	return InfiniteStage.getGoldReward(entry.data.goldDrop, stage)
+	return InfiniteStage.getGoldReward(entry.data.goldDrop, stage) * MonsterPrefixData.getRewardMultiplier(entry.prefix)
 end
 
 function MonsterState.getExpRewardFor(model, stage)
@@ -178,7 +261,7 @@ function MonsterState.getExpRewardFor(model, stage)
 	if entry.data.isBoss then
 		return entry.data.expReward
 	end
-	return InfiniteStage.getExpReward(entry.data.expReward, stage)
+	return InfiniteStage.getExpReward(entry.data.expReward, stage) * MonsterPrefixData.getRewardMultiplier(entry.prefix)
 end
 
 function MonsterState.getSpawnPosition(model)
