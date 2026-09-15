@@ -394,7 +394,18 @@ end
 local function reportTerrainRules(player)
 	local zone = WorldConfig.zones.tier1
 	local floorTopY, floorThickness = 1, 2
-	local real = ZoneTerrain.plan(zone, ZoneTerrainData.zones.tier1.features, floorTopY, floorThickness)
+	local lines = {}
+	-- 22-6: 데이터가 있는 구역 전부를 검사한다(tier1·tier2·spawn…).
+	for _, key in ipairs(WorldConfig.zoneOrder) do
+		local data = ZoneTerrainData.zones[key]
+		if data then
+			local real = ZoneTerrain.plan(WorldConfig.zones[key], data.features, floorTopY, floorThickness)
+			table.insert(lines, ("[규칙] 실제 %s 데이터: 요소 %d, 위반 %d"):format(key, real.featureCount, #real.violations))
+			for _, v in ipairs(real.violations) do
+				table.insert(lines, "  ! " .. v)
+			end
+		end
+	end
 	local bad = {
 		{ kind = "box", x = 0, z = 0, size = { 8, 4, 8 }, ground = true, surface = "rock" }, -- 슬롯 위 절벽(단차 4)
 		{ kind = "wedge", x = 20, z = 0, size = { 8, 7, 4 }, tallDir = "+x", ground = true, surface = "rock" }, -- 60° 경사
@@ -407,10 +418,6 @@ local function reportTerrainRules(player)
 		{ kind = "hill", x = 32, z = -32, top = { 8, 8 }, height = 2, run = 6, surface = "grass" }, -- 도달원 안 완만 - 통과해야 한다
 	}
 	local synthetic = ZoneTerrain.plan(zone, bad, floorTopY, floorThickness)
-	local lines = { ("[규칙] 실제 tier1 데이터: 요소 %d, 위반 %d"):format(real.featureCount, #real.violations) }
-	for _, v in ipairs(real.violations) do
-		table.insert(lines, "  ! " .. v)
-	end
 	table.insert(lines, ("[규칙] 합성 목록 %d개 중 거부 %d(기대 7), 통과 %d(기대 2)"):format(#bad, #synthetic.violations, #synthetic.accepted))
 	for _, v in ipairs(synthetic.violations) do
 		table.insert(lines, "  - " .. v)
@@ -474,7 +481,8 @@ local function reportProbeCost(player)
 end
 
 -- 지형 검증 보조: 살아있는 몬스터 전부의 발 Y − 그 자리 지면 Y를 표로 찍는다(땅속·공중 검사).
-local function reportMonsterGrounding(player)
+local function reportMonsterGrounding(player, zoneKey)
+	zoneKey = zoneKey or "tier1"
 	local lines = {}
 	local sunk, floating = 0, 0
 	for _, model in ipairs(MonsterState.getAllModels()) do
@@ -486,7 +494,7 @@ local function reportMonsterGrounding(player)
 			local gap = groundY and footY - groundY or nil
 			if gap and gap < -0.3 then sunk += 1 end
 			if gap and gap > 0.3 then floating += 1 end
-			if MonsterState.getZoneKey(model) == "tier1" then
+			if MonsterState.getZoneKey(model) == zoneKey then
 				table.insert(lines, ("  %s @(%.0f,%.1f,%.0f) 지면=%s 간격=%s %s"):format(model.Name, root.Position.X, root.Position.Y, root.Position.Z,
 					groundY and ("%.2f"):format(groundY) or "없음", gap and ("%.2f"):format(gap) or "-", MonsterState.getAiState(model)))
 			end
@@ -764,7 +772,7 @@ local function handleCommand(player, args)
 		elseif args[2] == "cost" then
 			reportProbeCost(player)
 		elseif args[2] == "ground" then
-			reportMonsterGrounding(player)
+			reportMonsterGrounding(player, args[3])
 		elseif args[2] == "rules" then
 			reportTerrainRules(player)
 		elseif args[2] == "parts" then

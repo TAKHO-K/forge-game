@@ -172,6 +172,13 @@ end
 local function applySurface(part, s)
 	part.Material = Enum.Material[s.material]
 	part.Color = Color3.fromRGB(s.color[1], s.color[2], s.color[3])
+	-- 22-6: 물(반투명)·슬라이드(저마찰)는 재질 표의 필드로만 표현한다 - 요소 데이터에는 색·마찰이 없다.
+	if s.transparency then
+		part.Transparency = s.transparency
+	end
+	if s.friction then
+		part.CustomPhysicalProperties = PhysicalProperties.new(0.7, s.friction, 0, 100, 1)
+	end
 	-- 커스텀 텍스처(20.49 [4] 발주분)가 오면 surfaces 표의 textureId만 채운다 - 여기서 면마다 붙인다.
 	if s.textureId then
 		for _, faceName in ipairs(s.faces or { "Top" }) do
@@ -359,22 +366,68 @@ function expanders.hut(f, ctx, out)
 	table.insert(out.hazards, { kind = "obstacle", polygon = out.footprint })
 end
 
--- 나무: 줄기 원기둥(충돌) + 수관 구(비충돌 - 카메라·이동을 막지 않는다).
+-- 나무: 줄기(충돌) + 수관(비충돌 - 카메라·이동을 막지 않는다).
+--   canopyStyle "ball"(기본, 22-5): 구 1개 - 파트 2, 삼각형 96+432=528(22-7 실측: 구는 크기 무관 432).
+--   canopyStyle "cube"(22-6 숲용): 상자 2개를 45° 엇갈려 쌓는다(탑다운에서 8각 별로 읽힌다) - 삼각형 24.
+--   trunkShape "box"(22-6): 줄기도 상자(12) - 숲 40그루면 원기둥(96)과 3,400 삼각형 차이.
+--   → "cube"+"box" 나무 = 파트 3, 삼각형 36. 구 수관 나무의 1/15. 파트 예산엔 +1, 삼각형 예산엔 −492.
 function expanders.tree(f, ctx, out)
 	local cx, cz = ctx.center.X + f.x, ctx.center.Z + f.z
-	local top = ctx.floorTopY
+	local top = ctx.floorTopY + (f.y or 0)
 	local th, td = f.trunkHeight, f.trunkDiameter
-	table.insert(out.prims, {
-		shape = "Cylinder",
-		cframe = CFrame.new(cx, top + th / 2, cz) * CFrame.Angles(0, 0, math.pi / 2),
-		size = Vector3.new(th, td, td),
-		surface = f.trunkSurface,
-		collide = true,
-	})
+	if f.trunkShape == "box" then
+		table.insert(out.prims, { shape = "Block", cframe = CFrame.new(cx, top + th / 2, cz), size = Vector3.new(td, th, td), surface = f.trunkSurface, collide = true })
+	else
+		table.insert(out.prims, {
+			shape = "Cylinder",
+			cframe = CFrame.new(cx, top + th / 2, cz) * CFrame.Angles(0, 0, math.pi / 2),
+			size = Vector3.new(th, td, td),
+			surface = f.trunkSurface,
+			collide = true,
+		})
+	end
 	local cd = f.canopyDiameter
-	table.insert(out.prims, { shape = "Ball", cframe = CFrame.new(cx, top + th + cd * 0.3, cz), size = Vector3.new(cd, cd, cd), surface = f.canopySurface, collide = false })
+	if f.canopyStyle == "cube" then
+		local yaw = math.rad(f.rotation or 0)
+		local lowerH, upperH = cd * 0.55, cd * 0.5
+		local lowerY = top + th - cd * 0.15 -- 줄기 끝을 조금 덮는다
+		table.insert(out.prims, { shape = "Block", cframe = CFrame.new(cx, lowerY + lowerH / 2, cz) * CFrame.Angles(0, yaw, 0), size = Vector3.new(cd, lowerH, cd), surface = f.canopySurface, collide = false })
+		table.insert(out.prims, { shape = "Block", cframe = CFrame.new(cx, lowerY + lowerH + upperH / 2 - cd * 0.08, cz) * CFrame.Angles(0, yaw + math.pi / 4, 0), size = Vector3.new(cd * 0.72, upperH, cd * 0.72), surface = f.canopySurface, collide = false })
+	else
+		table.insert(out.prims, { shape = "Ball", cframe = CFrame.new(cx, top + th + cd * 0.3, cz), size = Vector3.new(cd, cd, cd), surface = f.canopySurface, collide = false })
+	end
 	out.footprint = rotatedCorners(cx, cz, td, td, 0)
 	table.insert(out.hazards, { kind = "obstacle", polygon = out.footprint })
+end
+
+-- 띠(strip, 22-6): 꺾은선 points를 따라 폭 width·두께 thickness의 상자를 잇는다 - 개울·흙길·낮은 성벽.
+-- 기본은 비충돌·비지면(시각 전용, y 위로 살짝 띄운 판). collide=true면 장애물(두께 > 단차면 obstacle
+-- 위험), ground=true면 밟는 지면(두께 ≤ 단차여야 도달원 안에 둘 수 있다). 각 마디는 폭만큼 길게 만들어
+-- 꺾이는 곳이 벌어지지 않게 한다.
+function expanders.strip(f, ctx, out)
+	local top = ctx.floorTopY + (f.y or 0)
+	local t = f.thickness or 0.2
+	local w = f.width
+	local minX, maxX, minZ, maxZ = math.huge, -math.huge, math.huge, -math.huge
+	for i = 1, #f.points - 1 do
+		local a, b = f.points[i], f.points[i + 1]
+		local ax, az = ctx.center.X + a[1], ctx.center.Z + a[2]
+		local bx, bz = ctx.center.X + b[1], ctx.center.Z + b[2]
+		local len = math.sqrt((bx - ax) ^ 2 + (bz - az) ^ 2)
+		local mid = Vector3.new((ax + bx) / 2, top + t / 2, (az + bz) / 2)
+		local cframe = CFrame.lookAt(mid, Vector3.new(bx, top + t / 2, bz))
+		table.insert(out.prims, { shape = "Block", cframe = cframe, size = Vector3.new(w, t, len + w), surface = f.surface, collide = f.collide == true, ground = f.ground == true })
+		-- 마디가 끝점 너머로 폭/2만큼 길므로 발자국도 그만큼 넓힌다(끝점이 구역 경계에서 폭/2 안쪽이어야 통과).
+		minX, maxX = math.min(minX, ax - w / 2, bx - w / 2), math.max(maxX, ax + w / 2, bx + w / 2)
+		minZ, maxZ = math.min(minZ, az - w / 2, bz - w / 2), math.max(maxZ, az + w / 2, bz + w / 2)
+	end
+	out.footprint = { Vector2.new(minX, minZ), Vector2.new(maxX, minZ), Vector2.new(maxX, maxZ), Vector2.new(minX, maxZ) }
+	local topAboveFloor = (f.y or 0) + t
+	if f.ground and topAboveFloor > TerrainConfig.maxStepHeightStuds then
+		table.insert(out.hazards, { kind = "cliff", polygon = out.footprint })
+	elseif f.collide and topAboveFloor > TerrainConfig.maxStepHeightStuds then
+		table.insert(out.hazards, { kind = "obstacle", polygon = out.footprint })
+	end
 end
 
 -- 원시 도형 공통: box / ball / cylinder / wedge.
@@ -472,6 +525,9 @@ local function violationOf(expanded, zone, circles)
 end
 
 local function describe(f)
+	if f.points then
+		return ("%s@(%s,%s)…"):format(f.kind, tostring(f.points[1][1]), tostring(f.points[1][2]))
+	end
 	return ("%s@(%s,%s)"):format(f.kind, tostring(f.x), tostring(f.z))
 end
 
