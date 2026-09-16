@@ -179,6 +179,15 @@ do
 		entranceMargin, WorldConfig.zoneEdge.safeBandStuds, diagonalStuds, diagonalStuds / WorldConfig.playerWalkSpeedStuds))
 end
 
+-- 24-5(PRD 20.51 [4] 예정분 시도 → 보류): `Workspace.StreamingTargetRadius`/`StreamingMinRadius`는
+-- 실측 결과 스크립트로 못 읽지도 못 쓰지도 않는다 - 실행 시 "StreamingTargetRadius is not a
+-- valid member of Workspace" 에러(공식 문서: 이 두 속성은 스크립트 불가, Studio 속성창
+-- 전용). Rojo 트리에 Workspace가 없어(default.project.json) 이 값을 커밋으로 못 남긴다 -
+-- 권장값(WorldConfig.superGrid.streamingTargetRadiusStuds = 600)만 데이터로 남기고 실제
+-- 적용은 사용자가 Studio 속성창에서 직접 한다(퍼블리시 전 체크리스트 5번).
+print(("[forge-game] 스트리밍 반경 권장값 %d(Studio 속성창에서 수동 설정 필요 - 코드로 불가)"):format(
+	WorldConfig.superGrid.streamingTargetRadiusStuds))
+
 local mapBaseParts = ZoneTerrain.buildMapBase({
 	topY = MAP_BASE_TOP_Y,
 	thickness = FLOOR_THICKNESS,

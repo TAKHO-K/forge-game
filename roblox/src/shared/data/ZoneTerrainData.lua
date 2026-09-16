@@ -360,7 +360,11 @@ local perimeter = {
 	insetJitter = 4,
 	colorJitter = 14,
 	surface = "rockDark",
-	boulder = { every = 2, diameterRange = { 3, 6 }, inset = 9, surface = "rock" },
+	-- 24-5 성능 예산(PRD 20.63 [3] 16인 화면 삼각형 초과) - 줄일 순서 1번(20.55 [3]).
+	-- 실측(Studio RenderBreakdown, 부품 단위 재검증): 둥근 바위(Ball 432tri)가 전체 지형
+	-- 69,210 tri 중 40,608(59%)로 단일 최대 소비원이었다 - every 2→4로 개수를 절반 근처로
+	-- 줄인다(94개 → 실측 후 정확한 값은 부팅 로그).
+	boulder = { every = 4, diameterRange = { 3, 6 }, inset = 9, surface = "rock" },
 }
 
 return {

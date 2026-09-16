@@ -41,6 +41,16 @@ local SUPER_GRID_SPACING_STUDS = ZONE_SIZE_STUDS + CORRIDOR_WIDTH_STUDS
 -- MapBase)·심연 판정이 이 값을 읽는다 - 여기 말고는 어디에도 맵 크기를 다시 적지 않는다.
 local MAP_SIZE_STUDS = SUPER_GRID_SPACING_STUDS * 3 - CORRIDOR_WIDTH_STUDS
 
+-- 24-5(PRD 20.51 [4]가 예정한 값): 맵 832가 기본 StreamingEnabled 반경 안이라 지금까지
+-- 스트리밍이 아무것도 걸러내지 않았다(20.51 [4]). 16인 클라 스트리밍 파트가 상한
+-- 1,500에 걸리면서(20.63 [3], 1,501) 처음으로 줄여야 하는 시점이 됐다 - "구역 1개 +
+-- 이웃"(슈퍼그리드 간격의 2배, 288×2=576) 정도로 잡으면 지금 서 있는 구역과 옆 구역까지는
+-- 보이고 그 너머(같은 대각선의 세 번째 구역)는 걸러진다. 성능/안전장치 값이라 새 밸런스
+-- 상수가 아니다. 24-5 실측: `Workspace.StreamingTargetRadius`는 스크립트로 못 쓴다(공식
+-- 문서 - Studio 속성창 전용, "not a valid member" 실행 에러로 확인) - 이 값은 적용될
+-- 목표치를 기록만 하고, 실제 적용은 사용자가 Studio에서 수동으로 한다
+-- (HuntingGround.server.lua 부팅 로그가 이 값을 안내한다).
+local STREAMING_TARGET_RADIUS_STUDS = 600
 
 -- ═══ 유도값 한눈에(22-5) - 숫자를 주석에 박아 두면 값이 바뀔 때 주석이 남는다(20.49 실측에서
 -- "슈퍼그리드 160" 주석이 실제 224였다). 그래서 이 파일의 주석은 식만 적고, 실제 숫자는
@@ -206,6 +216,7 @@ return {
 		spacingStuds = SUPER_GRID_SPACING_STUDS,
 		corridorWidthStuds = CORRIDOR_WIDTH_STUDS,
 		mapSizeStuds = MAP_SIZE_STUDS, -- 22-5: 맵 전체 한 변(맵 밑판·심연 경계의 단일 출처).
+		streamingTargetRadiusStuds = STREAMING_TARGET_RADIUS_STUDS, -- 24-5: 위 주석 참고.
 	},
 
 	-- 22-5: 지형 배치 규칙이 읽는 유도값. 담장 안쪽 안전 띠 = 여백 - 리쉬(> 0이어야 띠가 존재).

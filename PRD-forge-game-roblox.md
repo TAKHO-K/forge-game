@@ -9151,3 +9151,214 @@ HUD 위치(화면 왼쪽 세로 중앙)를 그대로 써서 채팅창과 안 겹
 `client/PartyHud.client.lua`(버프 마커). **24-4 수정** `shared/data/PartyConfig.lua`(b 재도출 -
 healerDpsRatio 추가, healerBuffFraction을 N/(N-1+r)-1로 교체) · `server/DevTools.server.lua`
 (`/gg heal buff` 출력을 r·부등식 근거로 교체).
+
+### 20.65 퍼블리시 준비 — 성능 예산 정리 + 실기 검증 체크리스트 (24-5) `[✅ 성능 예산 2건 중 1건 코드로 해소(능선 바위 절반), 1건은 엔진 제약으로 Studio 속성창 수동 설정으로 이관(아래 [1]) — /gg 차단·저장 경로 감사 완료(코드 변경 없음, 이미 안전) — 실기 검증 체크리스트([4])와 사용자 작업 목록([5])이 이 세션의 핵심 산출물]`
+
+시스템 구현은 대부분 끝났고 Studio MCP로 검증 못한 항목이 20.62~20.64에 걸쳐 흩어져
+있었다. 이번 세션은 새 기능이 아니라 **퍼블리시 직전 정리** - 성능 예산 초과 해소,
+치트 도구 차단 재확인, 저장 안전장치 재확인, 그리고 흩어진 "실행 불가" 항목을 한
+문서로 모으는 작업이다.
+
+#### [1] 성능 예산 초과 2건
+
+**클라 스트리밍 파트(16인 환산 1,501, 상한 1,500)와 화면 삼각형 최악(구 문서 176.5k,
+상한 150k) 둘 다 20.51 [4]가 예정한 `StreamingTargetRadius ≈ 600` 적용을 전제로
+계산됐다.** 실제로 적용을 시도한 결과:
+
+**`Workspace.StreamingMinRadius`·`StreamingTargetRadius`는 스크립트로 설정할 수 없다** -
+서버 스크립트에서 대입을 시도하면 즉시 `"StreamingTargetRadius is not a valid member of
+Workspace"` 런타임 에러가 난다(Studio 실측 재현, 공식 문서로도 재확인 - 두 속성은
+Studio 속성창 전용이고 코드에서 읽지도 쓰지도 못한다). `default.project.json`에
+`Workspace` 항목 자체가 없어(이 프로젝트는 Workspace를 Rojo로 관리하지 않는다) 애초에
+git으로 추적할 방법도 없다 - 코드로 처리할 수 없는 진짜 엔진 제약이다. `WorldConfig.
+superGrid.streamingTargetRadiusStuds = 600`(권장값, 슈퍼그리드 간격의 2배 - "구역 1개 +
+이웃")을 데이터로 남기고, `HuntingGround.server.lua` 부팅 로그가 이 값을 매번 안내하는
+선까지만 코드로 처리했다 - **실제 적용은 [5] 사용자 작업으로 넘긴다.**
+
+반경 조정이 막혔으므로 "마을의 파트·소품을 줄이는" 쪽으로 처리했다(지시 그대로). 정해둔
+순서(20.55 [3]) 중 **1번(능선 둥근 바위)만 적용하고 멈췄다** - 실측(Studio
+`Stats.RenderBreakdown`, 부품 단위 재검증)으로 능선 둥근 바위(Ball, 432tri/개)가 전체
+지형 69,210tri 중 40,608(59%)로 단일 최대 소비원임을 먼저 확인했고, `boulder.every`
+2→4(`ZoneTerrainData.lua` perimeter)로 94개 → 49개(실측)로 줄인 것만으로 두 예산 모두
+상한 아래로 내려가 2~5번(흩뿌린 장식·숲 나무·마을 소품·능선 간격)은 손대지 않았다 -
+지형 게임플레이(도달원·경사 규칙)에 영향 없는 순수 장식이라 밸런스는 그대로다.
+
+**측정 방법론 메모**: 기존 "탑다운 기본 카메라" 수치(20.51 41,870 → 20.55 28,310)는
+게임에 고정 카메라 스크립트가 없어(`CameraMode`·`FieldOfView` 지정 코드 없음 - grep
+확인) 매번 테스터가 손으로 줌한 값이라 재현할 수 없었다. 이번엔 카메라를
+`Scriptable`로 고정해 스폰 중심 위(0,350,20)에서 수직으로 내려다보는 좌표를
+명시하고(재현 가능), 그 프레임에 비친 값을 "지형(빈 프레임 대비)" + "아바타 1인
+(6,878, 20.53 실측)" 차분법(20.53 [0])으로 분리했다. 이 각도는 스폰 존(256×256) 경계를
+넘어 인접한 tier1·tier2 구역 일부까지 프러스텀에 걸친다 - 실전 "탑다운" 줌보다 넓게
+잡은 **보수적(더 나쁜 쪽) 추정**이다.
+
+| 항목 | 20.63 문서값(구) | 이번 세션 재실측(조정 전) | 조정 후(능선 바위 94→49) | 상한 | 판정 |
+|---|---|---|---|---|---|
+| 클라 스트리밍 파트(1인 실측 → 16인 환산) | 1,126 → **1,501** | 1,126 → 1,501(동일 - 이 항목은 파트 수 축, 아래에서 갱신) | **1,081 → 1,456**(16인 = 1인 + 15×25) | 1,500 | ✓ 여유 44(2.9%) |
+| 화면 삼각형 최악(16인, 스폰 마을 전원 동시) | **176.5k**(+18%, 구 산식) | 지형(빈 프레임 대비) 34,788 + 16×(6,878+500) = **152,836**(+1.9%) | 지형 27,876 + 16×7,378 = **145,924** | 150,000 | ✓ 여유 2.7% |
+| 화면 삼각형 평시(아바타 6) | 105k(구) | 재실측 안 함(최악 케이스만 확인) | — | 150,000 | 기존 O 유지(터전 자체가 줄었으니 악화 방향 아님) |
+
+두 항목 모두 **StreamingTargetRadius 없이(사용자 수동 적용 전 상태로) 이미 상한 안에
+들어왔다** - 반경을 적용하면 여유가 더 늘어난다(스트리밍이 실제로 걸러내기 시작하면
+파트·삼각형 둘 다 더 내려간다). 단, 아직 미완성 6개 구역(tier3~6·강화소·커뮤니티)이
+생기면 이 예산을 다시 재야 한다 - 지금 수치는 "3개 구역만 있는" 현재 상태 기준이다.
+
+#### [2] `/gg` 명령 프로덕션 차단 — 전수 확인
+
+**차단 방식**: 2단(`server/DevTools.server.lua`) - (1) 파일 맨 위 `if not RunService:
+IsStudio() then return end`(6-23행) - 라이브 서버에서는 이 스크립트 전체가 실행 즉시
+끝난다. 명령 파서·핸들러·`TextChatCommand` 등록(`ggCommand`)까지 전부 이 반환 뒤에
+있어 **라이브 서버에선 아예 생성되지 않는다**(RemoteEvent가 아니라 채팅 명령이라 클라가
+호출할 대상 자체가 없다). (2) `DevToolsConfig.allowedUserIds`(2차 방어, 지금 빈 배열 -
+"Studio 안의 아무나" 허용) - Team Create 다중 접속 대비.
+
+**진입점은 하나뿐이다**: `player.Chatted`와 `TextChatCommand.Triggered` 둘 다
+`onChatMessage`로 모이고, 거기서 `isAllowed(player)` 검사 뒤에야 `handleCommand`를
+부른다(1479-1502행) - `handleCommand` 안의 `sub == "..."` 분기 40개(`elseif` 체인
+하나) 전부 이 한 진입점을 거치므로, 하나씩 따로 확인할 필요 없이 진입점 하나만
+막으면 전수 차단이다. 40개 명령 전체: `help, anchor, level, gear, additem, enhance,
+weapon, class, stage, measure, curve, rebirth, rebirthdo, gem, boss next/history/
+force/(공백), pattern, bossdmg, tutorialstatus, bosskilltest, variant, chesttest,
+killtest, terrain, tutorial, bossinfo, bossreset, save unlock, party dummy/info/
+table/selftest/server/join/fakeremote/xtest/killsim, heal buff, reset`.
+
+**`/gg save unlock`(위험도 최고 - 저장 백업을 지워 가짜 상태가 실제로 저장되게 만드는
+명령)도 같은 경로 하나뿐이다** - 별도 RemoteEvent 없이 `handleCommand`의 한 분기일
+뿐이라 위 진입점 차단이 그대로 적용된다. 이 명령 자체도 "이미 `/gg`로 개입한
+세션에서만"(백업이 있어야) 동작해(1029행 `if not backups[player]`) 개입한 적 없는
+정상 플레이어에겐 애초에 의미가 없다.
+
+**우회 경로 확인 - RemoteEvent 직접 호출**: `/gg` 계열은 RemoteEvent를 전혀 쓰지 않는다
+(채팅 텍스트 파싱뿐이다) - 클라이언트가 흉내 낼 "그 RemoteEvent"가 존재하지 않는다.
+`IsStudio()` 게이트를 쓰는 서버 스크립트가 `DevTools.server.lua` 하나뿐임을
+grep으로 확인했다(다른 곳에 있는 "숨은 치트 경로" 없음). 진짜 프로덕션 RemoteEvent들
+(`StageServer`의 스테이지 이동, `EnhanceServer`/`GemServer`/`RebirthServer`/
+`ClassServer`/`InventoryServer`)을 대조로 훑었다 - 전부 클라 입력값을 서버 상태
+기준으로 검증한다(예: `StageServer`는 "최고 도달+1까지만, 보스 게이트 통과 여부 서버
+재검사" - 클라가 임의의 스테이지 번호를 보내도 범위 밖이면 조용히 거절). `/gg`가
+주는 "레벨·장비·강화·스테이지 임의 설정" 능력에 대응하는 프로덕션 RemoteEvent는
+존재하지 않는다 - 우회 경로 없음.
+
+#### [3] 퍼블리시 전 점검(코드 감사 - 전부 기존 코드가 이미 옳게 처리하고 있었다, 변경 없음)
+
+- **DataStore Studio vs 실서버**: `SaveSystem.lua`가 `DataStoreService:GetDataStore`를
+  표준 API로만 쓴다(Studio 전용 분기 없음) - Studio에서 저장이 되고 안 되고는 순전히
+  Studio 설정("Enable Studio Access to API Services")에 달렸고, **이 설정은 Studio
+  테스트 세션에만 영향을 준다 - 퍼블리시된 실제 서버는 이 설정과 무관하게 항상 정식
+  DataStore 접근 권한을 갖는다**(공식 동작). 이번 세션 내내 "저장 성공" 로그가 정상
+  찍혔다(이 Studio 프로젝트는 이미 그 설정이 켜져 있다는 뜻) - 그래도 퍼블리시 전에
+  사용자가 한 번 더 확인할 항목으로 [5]에 남긴다(다른 PC·다른 팀원 세션은 꺼져 있을 수
+  있다).
+- **`BindToClose`**: `Players:GetPlayers()` 전원을 순회하며 `ImmediateSave.flush`를
+  부른다(`SaveServer.server.lua` 54-58행) - `flush`는 예약된 지연 저장을 취소하고
+  `SaveCoordinator.saveForPlayer`를 즉시(동기) 부른다. 순차 처리라 재시도(최대 3회,
+  1/3/6초 대기)가 전원에게 동시에 걸리면 이론상 로블록스의 BindToClose 예산(약 30초)을
+  넘을 수 있다 - 다만 이건 DataStore 광범위 장애 상황에서만 문제고, 정상 상황(요청당
+  수백ms)에서는 16명이어도 여유가 크다. 병렬화는 이번 지시 범위(게임플레이 변경 없음,
+  성능·안전장치만) 안에서 검토했으나 정상 동작 확인만으로 충분하다고 판단해 코드를
+  건드리지 않았다(단순성 우선 - 요청되지 않은 리팩터).
+- **저장 뮤텍스(`SaveCoordinator.saving`)**: 24-2에서 고친 그대로 살아 있다 - `saving[
+  player]`가 true인 동안 두 번째 `saveForPlayer` 호출은 `task.wait()`로 대기했다가,
+  대기 중 프로필이 지워지거나(퇴장) 동결·중단됐으면 포기하고, 아니면 갱신된 baseline으로
+  다시 저장한다(76-97행). `devToolsSuspended`·`teleportFrozen`·`saveSuspended`(불러오기
+  실패·stale_session) 세 플래그 전부 이 한 함수(`saveForPlayer`)에서만 걸러지므로
+  주기 자동저장·퇴장 저장·`BindToClose`·즉시저장(강화 등) 네 경로가 전부 안전하다.
+- **불러오기 실패 시 데이터 손실 방지**: `SaveServer.loadForPlayer`가 `SaveSystem.
+  loadProfile` 실패 시 빈 `defaultProfile()`을 메모리에 올리되 `SaveCoordinator.notify`
+  를 호출해 `saveSuspended[player] = true`를 세운다 - 이후 이 세션의 어떤 저장 시도도
+  (자동저장·퇴장·`BindToClose`) `saveForPlayer` 맨 앞에서 조용히 무시된다. 즉 "불러오기가
+  실패했는데 빈 상태가 실제 저장 위에 덮어써지는" 사고가 구조적으로 막혀 있다.
+- **신규 플레이어 견습 1단계 진입**: `defaultProfile().tutorial = {step = 0, ...}` →
+  `TutorialState.tryResumeTutorial`(직업 선택 완료 시 `ClassId` Attribute 변경으로 호출)
+  이 `step > 0 and step or 1`로 계산해 `TutorialState.start(player, 1)`을 부른다(270-285행)
+  - `step=0`은 정확히 "1단계로 시작"으로 이어진다. 직업 선택 전이면 아예 시도하지 않는다
+  (`ClassSelectUI`가 먼저 뜨는 게 맞다). 코드 경로 확인 - 실제 신규 계정 라이브 테스트는
+  기존 세이브가 있는 이 Studio 세션에서 재현 못 해 [4] 체크리스트로 넘긴다.
+
+#### [4] 실기 검증 체크리스트 — 여러 세션에 걸쳐 "실행 불가"였던 항목 전부
+
+Studio MCP가 못 하는 것(다중 클라이언트·TeleportService·기기 성능·정밀 클릭)이라 이
+목록 전부 **사람이 직접** 확인해야 한다. 아래 순서대로 하면 된다 - 뒤로 갈수록 필요한
+준비(계정 수·퍼블리시 여부)가 많아진다.
+
+**A. 기기 성능(혼자, 폰 + PC)**
+
+| # | 항목 | 방법 | 합격 기준 |
+|---|---|---|---|
+| A1 | 폰 스폰 마을 fps | 그래픽 품질 1 고정, 스폰에 30초 서 있는다. 개발자 콘솔(설정 → 개발자 콘솔, 또는 채팅 `/console`)에서 fps 확인 | 30fps 유지 |
+| A2 | 폰 tier1 fps | 슬라임 구역 중앙(진입 토스트 확인 후), 몬스터 7마리 이상 화면 안 | 30fps 유지 |
+| A3 | 폰 tier2(숲)·spawn(마을) fps | 각 구역 중앙에서 30초 | 30fps 유지 |
+| A4 | 폰 16인 최악 근사 | 스폰에 친구를 최대한 모아(8명 이상 화면 안이면 절반 확인, 16명이면 완전 확인) | 30fps 유지 |
+| A5 | PC 기기 에뮬레이터 | Test 탭 → Device → 저사양 폰 프리셋 → Play → `Ctrl+F6` MicroProfiler → Render(Scene) 행 캡처 | 프레임 시간이 33ms(30fps) 안 |
+| A6 | PC 12~16클라 로컬 서버 | Test 탭 → Clients and Servers → Players 16 → Start | 서버 창 `Stats` Heartbeat(F9 콘솔 → Server) ≤ 5ms |
+| A7 | 폰 스트리밍 아웃 | [5]-2로 StreamingTargetRadius 적용 후, 한 구역에서 먼 구역으로 걸어가며 반대편 메시가 화면에서 사라지는지 | 사라짐(스트리밍이 실제로 걸러낸다는 뜻) |
+| A8 | 체감(재미) | 슬라이드가 "탄다"로 느껴지는지(너무 빠르면 `friction` 0.02→0.08), 마을 첫인상(성벽 높이 3이 "낮은 성벽"으로 읽히는지) | 사용자 판단 |
+
+**B. 2~4인 로컬 파티(같은 PC, 계정 1개면 충분)**
+
+| # | 항목 | 방법 | 합격 기준 |
+|---|---|---|---|
+| B1 | 2/3/4인 결성·추방·리더 승계·해산 | Test 탭 → Clients and Servers → Players 2~4 → Start, 파티 탭에서 실제 초대·수락·추방 클릭 | `/gg party selftest`(스탠드인) 통과 항목과 같은 동작이 실제 UI로도 재현 |
+| B2 | 힐러 포함 파티 처치 시간(1~4인, 힐러 유무) | 4인 파티(딜러3+힐러1) vs 4인 파티(딜러4)로 같은 보스를 실측 시간 비교 | 20.64 [8] 5행 검산표대로 딜러4인 ≈ 딜러3+힐러1(동률), 힐러 수가 늘수록 느려짐(역전 없음) |
+| B3 | 힐러 버프 실전 데미지 전/후 | 파티 상태에서 힐러가 Q(치유) 캐스트 전/후 같은 대상 평타 데미지 숫자 비교(콤보 아닌 평타, 논크리 기준) | 후/전 비율 ≈ 1.013(현재 b=0.0129) - 20.64 [8]-5가 3D 클릭 좌표 문제로 이번엔 못 한 항목 |
+| B4 | 견습 보스 격리 | 견습 계정으로 실제 그 단계 목표 사냥량을 채워 견습 보스를 띄우고 처치, `/gg boss history`가 무한 모드 이력과 안 섞이는지 | 이력 그대로(20.60 [6] 코드 경로 분석을 실측으로 대체) |
+
+**C. 크로스서버 파티(퍼블리시 후, 계정 2개 + 서버 2개)**
+
+| # | 항목 | 방법 | 합격 기준 |
+|---|---|---|---|
+| C1 | 두 계정·두 서버 결성·합류 | A가 "파티 만들기"로 코드 발급 → B(다른 서버)가 코드 입력 → A 서버로 이동 | B가 파티 탭 멤버로 뜬다, 도착 위치 리스폰 마을, 좌석 90초 안 |
+| C2 | 원격 초대 경로 | A가 "다른 서버에 있는 친구" 목록에서 B 초대 | B에게 "(다른 서버 - 수락 시 이동)" 토스트 → 수락 → 이동. 실패 시 코드로 대체되는지 |
+| C3 | 12인 초과(예약 슬롯) | [5]-1 설정(Max 16/Preferred 12) 후 12명 찬 서버에 13번째 파티원 합류 시도 | 텔레포트로 13~16번째가 채워지는가, 실패 시 "가득 찼습니다" 문구 확인 |
+| C4 | 파티장 이탈 도중 텔레포트 | B가 이동 중 A가 나간다(승계 또는 해산) | B 도착 후 올바른 알림(승계된 리더 또는 "파티가 해산되었습니다") |
+| C5 | 리더 서버 종료 | A 서버를 Shutdown All 한 채 B가 합류 시도 | 대기 취소 또는 "서버가 종료되었습니다" 류 문구 |
+| C6 | 보스전 중 합류 | A 파티가 보스전 중 B 합류 시도 | 대기 토스트 → 보스 종료 후 자동 이동·합류 |
+| C7 | 저장 정합 | B 이동 전/후 골드·인벤토리 비교 | 동일(flush+동결), 도착 서버에서 "저장 중단" 토스트 없음 |
+| C8 | TeleportInitFailed 문구별 확인 | 재현 가능한 것만(GameFull 등) | 상황별 문구가 사용자에게 뜬다 |
+| C9 | 폰 16인 최악 근사 | A4와 같은 방법, 크로스서버로 실제 16명 모아서 | 30fps(A4의 확장판) |
+
+**정리**: A는 혼자, B는 계정 1개로 되고, C만 퍼블리시(+계정 2개)가 필요하다 - 순서대로
+하면 준비물이 점점 늘어나는 구조다.
+
+#### [5] 사용자가 직접 해야 할 일
+
+| # | 항목 | 왜 코드로 못 하는가 |
+|---|---|---|
+| 1 | Creator Dashboard - Max Players 16 / Preferred Players 12(Server Fill: Customize) 설정(현재 60/60) | 대시보드 설정 - Studio·코드 밖. 24-2부터 설계값이었지만(`PartyConfig.serverCapacity=16`) 실제 플랫폼 설정은 한 번도 안 바뀐 채였다 |
+| 2 | Studio 속성창 - `Workspace.StreamingMinRadius`(기본 64 유지 권장)·`StreamingTargetRadius`(600 권장, [1] 근거) | 두 속성 다 스크립트로 읽지도 쓰지도 못한다(실측+공식 문서 확인) - Properties 패널에서 Workspace 선택 → Streaming 항목 |
+| 3 | 게임 퍼블리시(File → Publish to Roblox, 또는 이미 퍼블리시된 place라면 새 버전 게시) | 배포 행위 자체 - Studio GUI 조작이고 공개 범위에 영향을 준다 |
+| 4 | Studio 설정 - "Enable Studio Access to API Services" 켜짐 재확인(File → Game Settings → Security) | 이번 세션 Studio는 이미 켜져 있었지만([3] 근거), 이 값은 개인 Studio 설정이라 다른 PC·다른 팀원 세션엔 꺼져 있을 수 있다 - 확인 안 하면 테스트 세이브가 전부 "불러오기 실패"로 빈 프로필이 된다 |
+
+#### [6] 확인 7항목
+
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | 스트리밍 반경 적용 후 클라 스트리밍 파트가 상한 이하인가 | **부분(O, 다른 경로로)** - `StreamingTargetRadius` 자체는 스크립트 불가로 미적용([1]) - 대신 능선 바위 절반 축소만으로 1,501 → **1,456**(상한 1,500 이하, 여유 44) 달성. 반경을 실제로 적용하면([5]-2) 여유가 더 늘어난다 |
+| 2 | 화면 삼각형 최악값이 얼마까지 내려갔는가(전/후 표) | **O** - [1] 표: 구 문서값 176.5k → 재실측(조정 전) 152,836 → 조정 후 **145,924**(상한 150,000의 97.3%) |
+| 3 | `/gg` 전 명령이 프로덕션에서 차단되는가(명령 목록과 차단 방식) | **O** - [2]: `RunService:IsStudio()` 조기 반환(1차) + `allowedUserIds`(2차), 진입점 하나(`onChatMessage`)로 40개 명령 전수 차단 확인 |
+| 4 | `/gg` 차단을 우회할 경로가 없는가 | **O** - [2]: `/gg`는 RemoteEvent를 안 쓴다(채팅 전용, 흉내 낼 대상이 없다). `IsStudio()` 게이트 사용처가 `DevTools.server.lua` 하나뿐임을 grep 확인. 프로덕션 RemoteEvent 5종(스테이지·강화·보석·환생·직업) 대조 - 전부 서버 검증, `/gg`급 임의 설정 권한 없음 |
+| 5 | `BindToClose`가 전원 저장하는가 | **O(코드 확인)** - `Players:GetPlayers()` 순회 + `ImmediateSave.flush` 전원 호출([3]). 실측 실행은 서버 종료를 실제로 트리거해야 해 이번 세션엔 로그로 재확인 안 함(24-1 세션에서 이미 실측된 경로, 코드 변경 없음) |
+| 6 | 신규 플레이어가 견습 1단계로 정상 진입하는가 | **O(코드 확인)** - `defaultProfile` step=0 → `tryResumeTutorial`이 `step or 1`로 1단계 시작([3]). 실제 신규 계정 라이브 테스트는 [4] B4로 이관 |
+| 7 | 서버 에러·경고 0건 | **O** - 능선 바위 축소 적용 후 재부팅 콘솔 전체 확인, 우리 코드발 에러·경고 없음(`/gg terrain rules` 위반 0 그대로 - 능선은 규칙 검사 대상이 아니라 애초에 영향 없음) |
+
+#### [7] 임의 결정 목록
+
+| # | 결정 | 근거 |
+|---|---|---|
+| 1 | `StreamingTargetRadius` 미적용을 사용자 작업으로 이관(코드로 우회 안 함) | 지시("Rojo 파일에 쓰고 동기화") - 이 속성은 애초에 스크립트 대상이 아니라 우회할 방법 자체가 없다(예: Instance 복사·재부팅 트릭도 Workspace 자체 속성이라 무의미) |
+| 2 | 성능 예산 줄일 순서 중 1번(능선 바위)에서 멈춤 | 두 예산 모두 이미 상한 아래(여유 2.7~2.9%) - 2~5번(흩뿌린 장식·숲 나무 등)까지 건드리면 시각적 손실만 늘고 예산상 이득은 없다(단순성 우선, 필요 이상으로 안 줄인다) |
+| 3 | 재실측 카메라를 (0,350,20) 수직 하강으로 고정 | 게임에 고정 카메라 스크립트가 없어 "기존 탑다운 카메라"를 재현할 방법이 없다 - 재현 가능하고 스폰 존을 확실히 덮는 좌표를 새로 골랐다(인접 구역 일부 포함 - 보수적 추정) |
+| 4 | `BindToClose`·`SaveCoordinator` 코드 변경 없이 "확인만" | 지시("게임플레이 밸런스를 바꾸지 마라, 성능과 안전장치만") - 재확인 결과 이미 옳게 동작해 고칠 게 없었다. 병렬 저장 등 이론적 개선은 요청 범위 밖(불필요한 리팩터) |
+| 5 | 실기 체크리스트를 A(혼자)→B(계정1)→C(퍼블리시+계정2) 순서로 재배열 | 지시("순서대로 따라갈 수 있어야 한다") - PRD 원문 순서(20.62→20.63→20.64)가 아니라 "무엇이 더 필요한가" 기준으로 재정렬해야 실제로 순서대로 따라가기 쉽다 |
+
+#### 파일
+
+**수정** `shared/data/WorldConfig.lua`(streamingTargetRadiusStuds 권장값) ·
+`server/HuntingGround.server.lua`(부팅 로그 - 반경 권장값 안내, 실제 적용은 안 함) ·
+`shared/data/ZoneTerrainData.lua`(perimeter.boulder.every 2→4). **감사만(변경 없음)**
+`server/DevTools.server.lua`·`shared/data/DevToolsConfig.lua`(차단 경로) ·
+`server/SaveSystem.lua`·`server/SaveServer.server.lua`·`server/SaveCoordinator.lua`·
+`server/ImmediateSave.lua`(저장 경로) · `server/TutorialState.lua`(신규 플레이어 진입) ·
+`server/StageServer.server.lua`·`server/EnhanceServer.server.lua`·`server/GemServer.server.lua`·
+`server/RebirthServer.server.lua`·`server/ClassServer.server.lua`·`server/InventoryServer.server.lua`
+(RemoteEvent 우회 경로 대조).
