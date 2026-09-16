@@ -135,7 +135,10 @@ local function reply(player, message)
 	print(("[DevTools] %s: %s"):format(player.Name, message))
 end
 
-local function buildGearItem(part, grade, itemLevel, stage)
+-- 26-3 수정: classId를 받아 Option.rollFor로 옵션을 굴린다 - 이 헬퍼가 23-3부터 옵션
+-- 없이 아이템을 만들어서, 이 헬퍼로 만든 아이템으로는 26-3 옵션 표시·리롤을 테스트할 수
+-- 없었다(실제 드랍(Loot.lua)은 처음부터 옵션을 굴렸다 - 여기만 빠져 있었다).
+local function buildGearItem(part, grade, itemLevel, stage, classId)
 	return {
 		grade = grade,
 		part = part,
@@ -143,6 +146,7 @@ local function buildGearItem(part, grade, itemLevel, stage)
 		itemLevel = itemLevel,
 		tierIndex = 1,
 		locked = true,
+		option = Option.rollFor(grade, classId),
 	}
 end
 
@@ -158,7 +162,7 @@ local function applyAddItem(player, part, grade, itemLevel)
 		reply(player, ("알 수 없는 등급: %s (사용 가능: %s)"):format(tostring(grade), table.concat(ArmorData.gradeOrder, "/")))
 		return false
 	end
-	local item = buildGearItem(part, grade, itemLevel)
+	local item = buildGearItem(part, grade, itemLevel, nil, PlayerProfile.getClassId(player))
 	item.locked = false
 	return PlayerProfile.addArmorDrop(player, item)
 end
@@ -169,8 +173,9 @@ local function applyGear(player, grade, itemLevel)
 		reply(player, ("알 수 없는 등급: %s (사용 가능: %s)"):format(tostring(grade), table.concat(ArmorData.gradeOrder, "/")))
 		return false
 	end
+	local classId = PlayerProfile.getClassId(player)
 	for _, part in ipairs({ "armor", "gloves", "shoes" }) do
-		PlayerProfile.setEquippedDirect(player, part, buildGearItem(part, grade, itemLevel))
+		PlayerProfile.setEquippedDirect(player, part, buildGearItem(part, grade, itemLevel, nil, classId))
 	end
 	return true
 end
