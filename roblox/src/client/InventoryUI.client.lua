@@ -34,9 +34,9 @@ local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
 -- 26-2: 옛 4축 표시(Gem.attackPercentBonusForGrade/magnitudeForGrade/optionAxis, 이번
 -- 세션에 폐기)를 대신한다 - 값 조회는 서버와 같은 순수 함수(Option.valueOf) 하나만 쓴다.
-local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
-local Option = require(ReplicatedStorage.Shared.Option)
-local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
+-- 26-3 수정: OptionData/Option/SkillData는 여기 최상위에 두지 않는다 - 이 파일이 이미
+-- Luau 최상위 레지스터 200개 한계에 가까워(실제 초과 발생) 쓰는 함수 안에서 각자
+-- require한다(require는 로블록스에서 캐시되어 여러 곳에서 다시 불러도 안전하다).
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local ItemIcons = require(script.Parent.ItemIcons)
@@ -965,11 +965,19 @@ local rerollDetailButton = makeActionButton(5, 70, "sell")
 -- 26-3 실기 검증 중 발견: 이 파일이 이미 Luau 최상위 레지스터 200개 한계에 가까웠다
 -- ("Out of local registers ... exceeded limit 200"로 실제 실패) - setupGemTab/
 -- setupPartyTab과 같은 이유로 함수 하나로 감싸 내부 로컬(게이지 부품들)이 최상위
--- 레지스터를 안 먹게 한다. 밖에서 실제로 쓰는 건 optionRow·refreshOptionRow 둘뿐이다.
-local optionRow
+-- 레지스터를 안 먹게 한다. 밖에서 실제로 쓰는 건 refreshOptionRow 하나뿐이다(optionRow
+-- 자체는 26-3 수정으로 이 함수 내부 전용이 됐다 - 밖에서는 refreshOptionRow(nil)로
+-- 숨긴다).
 local refreshOptionRow
 
 local function setupOptionRow()
+	-- 26-3 수정: OptionData/Option/SkillData도 여기서만 쓰므로 여기서 require한다(최상위
+	-- 레지스터를 아끼기 위함 - 위 InfiniteStage 주석 참고).
+	local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+	local Option = require(ReplicatedStorage.Shared.Option)
+	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
+	local optionRow
+
 	-- "폭 120×높이 6, 트랙 UIColors.slot, 채움은 등급색으로 롤 위치까지, 중앙(기댓값)에
 	-- rimHi 눈금 1×10px. 양끝에 최소·최대 숫자" - 명세 그대로. compact(치명 전용 절반
 	-- 폭)는 최소·최대 숫자를 생략한다(한 줄에 게이지 두 개가 들어가야 해서 자리가 없다).
@@ -1329,7 +1337,7 @@ local function clearDetail()
 	equipButton.Active = false
 	equipButton.TextTransparency = 0.6
 	equipButton.Text = "착용"
-	optionRow.Visible = false
+	refreshOptionRow(nil) -- 26-3 수정: optionRow는 이제 setupOptionRow 내부 전용이다.
 	rerollDetailButton.Visible = false
 	rerollDetailButton.AutoButtonColor = false
 	rerollDetailButton.Active = false
@@ -1354,6 +1362,8 @@ end
 -- 26-3: 보석 이름(PRD 20.67 [9] "<등급> <옵션명> 보석 · Lv.<itemLevel>", 옵션 미배정은
 -- "<등급> 보석(옵션 미배정)"으로 - 이관된 고대·태초 보석 전용, Lv를 안 붙인다).
 local function describeGemName(gem)
+	local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 	local gradeInfo = ArmorData.grades[gem.grade]
 	local gradeName = gradeInfo and gradeInfo.displayName or gem.grade
 	if not gem.option then
@@ -1465,7 +1475,7 @@ local function refreshDetail()
 		setDpicIcon("weapon", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
-		optionRow.Visible = false -- 무기는 옵션 개념이 없다(20.67 [1] - 무기는 강화만 대상).
+		refreshOptionRow(nil) -- 무기는 옵션 개념이 없다(20.67 [1] - 무기는 강화만 대상).
 
 		lockButton.AutoButtonColor = false
 		lockButton.Active = false
@@ -1540,10 +1550,13 @@ end
 
 -- ═══ 총 스탯 갱신 ═══
 
--- 26-3: 옵션 보너스 계산도 함수 하나로 감싼다(위 setupOptionStatsBox와 같은 이유 - 200
--- 레지스터 한계 실측). 밖에서 실제로 쓰는 건 refreshOptionStats 하나뿐이다.
-local refreshOptionStats
-do
+local function refreshStats()
+	-- 26-3 수정: refreshOptionStats를 refreshStats 안으로 완전히 옮긴다(refreshStats가
+	-- 유일한 호출부다) - 최상위 레지스터를 하나도 안 먹게 한다(위 InfiniteStage 주석과
+	-- 같은 이유, 실제로 여기까지 옮겨도 여전히 200 한계를 넘겨 이렇게까지 해야 했다).
+	local Option = require(ReplicatedStorage.Shared.Option)
+	local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+
 	-- 장비 3부위 옵션 + 보석 5개를 한 목록으로 모은다(PlayerProfile.buildOptionSources와
 	-- 같은 모양 - 서버 전용 모듈이라 여기선 같은 필드({option,grade,itemLevel})를 그대로
 	-- 다시 조립한다. 계산 자체는 새로 만들지 않는다 - Option.sumAxisBonus 하나만 쓴다).
@@ -1574,7 +1587,7 @@ do
 		{ id = "lifesteal", label = "흡혈" },
 	}
 
-	refreshOptionStats = function(classId)
+	local function refreshOptionStats(classId)
 		local sources = clientOptionSources()
 		local shown = 0
 		for _, axis in ipairs(axes) do
@@ -1596,9 +1609,7 @@ do
 			optionStatsRows[i].Visible = false
 		end
 	end
-end
 
-local function refreshStats()
 	local classId = player:GetAttribute("ClassId")
 	local maxHp = player:GetAttribute("MaxHp")
 	hpValueLabel.Text = maxHp and NumberFormat.format(maxHp) or "-"
@@ -1627,6 +1638,8 @@ end
 -- ═══ 격자 다시 그리기 ═══
 
 local function rebuildGearSlots()
+	local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 	for _, child in ipairs(gearGrid:GetChildren()) do
 		if child:IsA("Frame") or child:IsA("TextButton") then
 			child:Destroy()
@@ -1775,6 +1788,8 @@ local function selectBagIndex(index)
 end
 
 local function rebuildGrid()
+	local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 	for _, child in ipairs(grid:GetChildren()) do
 		if child:IsA("Frame") or child:IsA("TextButton") then
 			child:Destroy()
@@ -2299,6 +2314,7 @@ end)
 -- 최상위 레지스터를 전혀 잡아먹지 않는다 - updateGemTab/cancelGemDrag만 최상위에 미리
 -- 선언해 둔 자리(위쪽 forward-declare)에 대입해 밖으로 내보낸다.
 local function setupGemTab()
+local Option = require(ReplicatedStorage.Shared.Option)
 
 local gemBody = Instance.new("Frame")
 gemBody.Name = "GemBody"
