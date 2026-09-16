@@ -44,14 +44,12 @@ local function isNearStation(rootPart)
 	return (rootPart.Position - stationPosition).Magnitude <= WorldConfig.enhance.interactionRangeStuds
 end
 
--- 분해는 판매(SellRequest)와 같은 층의 되돌릴 수 없는 사건이다 - 즉시저장.
+-- 분해는 판매(SellRequest)와 같은 층의 되돌릴 수 없는 사건이다 - 즉시저장. 사용자 지시로
+-- 판매와 똑같이 근접 제한을 없앤다(26-3 수정 - 원래는 PRD 20.37 [3] "분해 UI는 강화대에
+-- 둔다"를 따라 isNearStation을 걸었으나, 판매는 어디서나 되는데 분해만 강화대 근처로
+-- 막혀 있어 혼란을 줬다 - SellRequest와 같은 검증 수준으로 맞춘다).
 dismantleRequest.OnServerEvent:Connect(function(player, index)
 	if type(index) ~= "number" then
-		return
-	end
-	local character = player.Character
-	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-	if not rootPart or not isNearStation(rootPart) then
 		return
 	end
 
