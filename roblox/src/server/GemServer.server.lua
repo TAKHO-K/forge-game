@@ -80,17 +80,30 @@ gemEquipRequest.OnServerEvent:Connect(function(player, slot, gemInventoryIndex)
 	end
 end)
 
-rerollRequest.OnServerEvent:Connect(function(player, slot)
-	if type(slot) ~= "number" then
-		return
-	end
+-- 26-3(PRD 20.67 [10]): 리롤 대상이 보석 슬롯 하나에서 "홈 5 + 장비 3부위(가방·착용)"로
+-- 늘었다 - kind로 어느 함수를 부를지만 가른다(등급·변환권 검증은 PlayerProfile의 각 함수가
+-- 전부 동일하게 한다, 여기서 새로 검증하지 않는다). kind="gem"이면 key=슬롯(1~5, 기존
+-- 그대로), "equipped"면 key=부위명(armor/gloves/shoes), "bag"이면 key=인벤토리 index.
+local EQUIP_PARTS = { armor = true, gloves = true, shoes = true }
+
+rerollRequest.OnServerEvent:Connect(function(player, kind, key)
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if not rootPart or not isNearStation(rootPart) then
 		return
 	end
 
-	local success = PlayerProfile.rerollGemOption(player, math.floor(slot))
+	local success
+	if kind == "gem" and type(key) == "number" then
+		success = PlayerProfile.rerollGemOption(player, math.floor(key))
+	elseif kind == "equipped" and EQUIP_PARTS[key] then
+		success = PlayerProfile.rerollEquippedOption(player, key)
+	elseif kind == "bag" and type(key) == "number" then
+		success = PlayerProfile.rerollBagItemOption(player, math.floor(key))
+	else
+		return
+	end
+
 	if success then
 		ImmediateSave.request(player)
 	end

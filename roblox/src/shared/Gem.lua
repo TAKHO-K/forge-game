@@ -1,15 +1,13 @@
 -- 무기 보석 슬롯 순수 계산 로직(23-2). 데이터(GemData)와 분리해서 여기엔 공식만 둔다 -
--- Enhance.lua/Loot.lua와 같은 분리 원칙. math.random을 직접 굴리는 함수(rollOption)는
--- 반드시 서버(GemServer.server.lua)에서만 호출해야 한다 - 클라이언트는 조회 함수만 쓴다.
+-- Enhance.lua/Loot.lua와 같은 분리 원칙. 26-3부터 옵션 롤은 Gem.buildGrantedGem을 거쳐
+-- Option.rollFor(서버 전용, Option.lua 주석 참고)로만 굴린다 - 이 파일 자체엔 이제
+-- math.random 계열 호출이 없다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 -- 26-1: 환생 지급 보석이 옵션을 즉시 굴린다(PRD 20.67 [1] "지급 순간 옵션을 1회 굴린다").
 local Option = require(ReplicatedStorage.Shared.Option)
-
--- 보석 옵션 롤도 치명타 판정(PlayerCombat.critRng)과 같은 이유로 전역 시드와 분리한다.
-local gemRng = Random.new()
 
 local Gem = {}
 
@@ -44,19 +42,6 @@ function Gem.canSocket(gemGradeId, slot)
 	local capIndex = armorGradeIndex(Gem.gradeCapForSlot(slot))
 	local gemIndex = armorGradeIndex(gemGradeId)
 	return capIndex ~= nil and gemIndex ~= nil and gemIndex <= capIndex
-end
-
--- 고대·태초 등급만 이름 풀에서 하나를 무작위로 뽑는다(GemData 주석 참고 - 영웅/전설/
--- 유물은 풀 자체가 없어 항상 nil, "이름 없는" 보석이다). 서버 전용(math.random 계열).
--- 23-3부터 이 함수를 부르는 곳은 PlayerProfile.rerollGemOption(변환권 소모) 하나뿐이다 -
--- 자동 지급·분해는 더 이상 이 함수를 안 부른다(GemData.lua "[옵션 배정]" 주석 참고 -
--- 안 그러면 분해를 반복해 변환권 없이 옵션을 공짜로 재굴림하는 구멍이 생긴다).
-function Gem.rollOption(gradeId)
-	local pool = GemData.optionPoolByGrade[gradeId]
-	if not pool then
-		return nil
-	end
-	return pool[gemRng:NextInteger(1, #pool)]
 end
 
 -- 슬롯이 열릴 때 자동 지급되는 확정 보석 하나(20.38 [2] "슬롯이 열릴 때 그 등급의 보석

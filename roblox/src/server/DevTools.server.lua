@@ -31,6 +31,9 @@ local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+-- 26-3 자동 검증 블록이 인벤토리·보석 상태를 직접 되돌린 뒤 클라이언트에 다시 밀 때 씀.
+local InventorySync = require(script.Parent.InventorySync)
+local GemSync = require(script.Parent.GemSync)
 local SaveCoordinator = require(script.Parent.SaveCoordinator)
 -- 21-3 보스 검증 명령(/gg boss, /gg pattern)용.
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
@@ -314,6 +317,23 @@ local function applyOptionSet(player, targetArg, optionIdArg, gradeArg, rollArg)
 		local item = buildGearItem(targetArg, grade, itemLevel)
 		item.option = option
 		PlayerProfile.setEquippedDirect(player, targetArg, item) -- 부위별로 이미 refreshMaxHp/refreshMovementSpeed를 호출한다.
+	end
+	return true
+end
+
+-- "/gg option stack <id>" - 26-3, PRD 20.67 [14] 8단계 "8개 몰빵 후 /gg measure - [7] 표
+-- 재현". 장비 3부위 + 보석 5개 전부를 태초 등급·최대 롤로 그 옵션 하나로 채운다(applyOptionSet
+-- 재사용 - 새 계산 경로를 만들지 않는다). 실패하면 그 자리에서 멈추고 이유를 돌려준다.
+local OPTION_STACK_TARGETS = { "armor", "gloves", "shoes", "1", "2", "3", "4", "5" }
+local function applyOptionStack(player, optionId)
+	if not OptionData.options[optionId] then
+		return false, "bad_option"
+	end
+	for _, target in ipairs(OPTION_STACK_TARGETS) do
+		local success, reason = applyOptionSet(player, target, optionId, "primordial", "max")
+		if not success then
+			return false, ("%s(%s)"):format(reason, target)
+		end
 	end
 	return true
 end
@@ -942,6 +962,7 @@ local HELP_TEXT = table.concat({
 	"/gg option set <슬롯1-5|armor|gloves|shoes> <옵션id|-> [등급] [min|mid|max|롤숫자] - 그 자리에 옵션을 강제 배정(26-2, 등급·롤 생략 시 기존값 유지)",
 	"/gg option show - 옵션 8자리(장비3+보석5) 각각의 id·등급·롤·실제 수치 + 8축 합산(상한 적용됨)을 콘솔에 출력(26-2)",
 	"/gg option lifesteal - 흡혈 초당 회복 실측(3초, 요청량을 maxHp×10으로 크게 잡아 상한이 실제로 잘리는지 확인, 20.67 [6-1])",
+	"/gg option stack <id> - 장비3+보석5 전부를 태초·최대롤로 그 옵션 하나로 채운 뒤 /gg measure(26-3, PRD 20.67 [7] 표 재현)",
 	"/gg rebirth <0-5> - 환생 횟수 강제 지정(무기 등급·보석 슬롯은 안 건드림, 보스 첫 처치 드랍 등급표 분기·슬롯 개방 표시 검증용)",
 	"/gg rebirthdo - 실제 환생 실행(PlayerProfile.rebirth 그대로 - 레벨 조건 검증 + 무기 등급·보석 자동 지급까지 전체 흐름 검증용)",
 	"/gg gem <slot 1-5> <id|-> - 그 슬롯에 보석을 강제로 채운다(23-2 검증용, id=-면 옵션 없이)",
@@ -1040,6 +1061,15 @@ local function handleCommand(player, args)
 		printOptionShow(player)
 	elseif sub == "option" and args[2] == "lifesteal" then
 		runLifestealSelfTest(player)
+	elseif sub == "option" and args[2] == "stack" and args[3] then
+		ensureBackup(player)
+		local success, reason = applyOptionStack(player, args[3])
+		if success then
+			reply(player, ("옵션 8개 몰빵 완료(태초·최대롤): %s"):format(args[3]))
+			measure(player)
+		else
+			reply(player, "실패: " .. tostring(reason))
+		end
 	elseif sub == "rebirth" and tonumber(args[2]) then
 		ensureBackup(player)
 		local applied = applyRebirth(player, math.floor(tonumber(args[2])))
@@ -2127,4 +2157,135 @@ if RunService:IsStudio() then
 
 		print(("===26-2 검증 끝=== %d/%d 통과"):format(passCount, totalCount))
 	end)
+end
+
+-- ═══ 26-3 자동 검증 블록 ═══════════════════════════════════════════════════
+-- 26-2와 같은 이유(execute_luau의 require 제약) - 서버가 Studio에서 시작될 때 실제로
+-- 접속한 플레이어 프로필로 한 번 돈다(6단계 리롤 확장은 PlayerProfile 내부의 `profiles[player]`
+-- 상태가 필요해 26-2처럼 완전히 플레이어 없이는 못 돈다 - GemSync.push 등이 실제 Player
+-- 인스턴스를 요구한다). ensureBackup/restore(이 파일 기존 함수)로 감싸 실제 세이브를
+-- 건드리지 않는다 - 다만 restoreForDevTools는 profile.classes(직업별 상태)만 되돌리고
+-- profile.inventory·profile.purchases(계정 공유, 최상위)는 안 건드리므로 그 둘만 따로
+-- 스냅샷·복원한다.
+if RunService:IsStudio() then
+	local ran26_3 = false
+	local function run26_3Verification(player)
+		if ran26_3 then
+			return
+		end
+		ran26_3 = true
+		task.spawn(function()
+			local waited = 0
+			while not PlayerProfile.getProfile(player) and waited < 10 do
+				task.wait(0.5)
+				waited += 0.5
+			end
+			local profile = PlayerProfile.getProfile(player)
+			if not profile then
+				print("[26-3] 프로필 로드 실패(10초 대기) - 검증을 건너뜁니다")
+				return
+			end
+
+			print("===26-3 검증 시작===")
+			local passCount, totalCount = 0, 0
+			local function record(ok)
+				totalCount += 1
+				if ok then
+					passCount += 1
+				end
+				return ok and "O" or "X"
+			end
+
+			ensureBackup(player)
+			-- classes(직업별 상태)는 restoreForDevTools가 되돌린다 - inventory·purchases는
+			-- 최상위(계정 공유)라 여기서 직접 스냅샷한다.
+			local originalTickets = {
+				ancient = profile.purchases.optionRerollTickets.ancient,
+				primordial = profile.purchases.optionRerollTickets.primordial,
+			}
+
+			local classId = PlayerProfile.getClassId(player)
+			if not classId then
+				classId = ClassData.order[1]
+				PlayerProfile.setClassId(player, classId)
+			end
+			local weapon = PlayerProfile.getWeapon(player)
+			weapon.slotUnlocked[1] = true -- 슬롯 해금 여부와 무관하게 장착 경로만 검증한다.
+			profile.purchases.optionRerollTickets.primordial = 10
+
+			-- [1] 전체 경로: 드랍(합성) -> 분해 -> 보석 -> 장착(20.67 [14] 1~3단계가 이미
+			-- 만든 함수들을 실전과 같은 순서로 그대로 부른다 - 새 경로를 만들지 않는다).
+			local dropItem = {
+				grade = "primordial", part = "armor", dropStage = 1, itemLevel = 77,
+				tierIndex = 1, locked = false, option = { id = "lifesteal", roll = 1.1 },
+			}
+			table.insert(profile.inventory, dropItem)
+			local dropIndex = #profile.inventory
+
+			local dismantleOk = PlayerProfile.dismantleItem(player, dropIndex)
+			local gemInv = PlayerProfile.getGemInventory(player)
+			local newGem = gemInv[#gemInv]
+			local transferOk = dismantleOk and newGem ~= nil and newGem.grade == "primordial" and newGem.itemLevel == 77
+				and newGem.option ~= nil and newGem.option.id == "lifesteal" and math.abs(newGem.option.roll - 1.1) < 1e-6
+			print(("[26-3][1] 드랍(합성,옵션=lifesteal roll1.1,itemLevel77) -> 분해 -> 보석 이전(옵션·itemLevel 그대로 보존): %s"):format(record(transferOk)))
+
+			local equipOk = PlayerProfile.equipGem(player, 1, #gemInv)
+			local equippedGem = weapon.gems[1]
+			local equipVerified = equipOk and type(equippedGem) == "table" and equippedGem.option ~= nil
+				and equippedGem.option.id == "lifesteal" and equippedGem.itemLevel == 77
+			print(("[26-3][1] 보석 -> 슬롯1 장착(옵션·itemLevel 유지): %s"):format(record(equipVerified)))
+
+			-- [2] 리롤 확장(20.67 [10]) - 보석(gemSlot)·착용(equipped)·가방(bag) 세 경로.
+			local rerollGemOk, rerollGemId = PlayerProfile.rerollGemOption(player, 1)
+			local rerollGemVerified = rerollGemOk and weapon.gems[1].option ~= nil and OptionData.options[weapon.gems[1].option.id] ~= nil
+			print(("[26-3][2] 보석 리롤(슬롯1) -> %s: %s"):format(tostring(rerollGemId), record(rerollGemVerified)))
+
+			PlayerProfile.setEquippedDirect(player, "armor", {
+				grade = "primordial", part = "armor", dropStage = 1, itemLevel = 100,
+				tierIndex = 1, locked = false, option = nil,
+			})
+			local rerollEquipOk, rerollEquipId = PlayerProfile.rerollEquippedOption(player, "armor")
+			local equippedArmorAfter = PlayerProfile.getEquipped(player, "armor")
+			local rerollEquipVerified = rerollEquipOk and equippedArmorAfter.option ~= nil and OptionData.options[equippedArmorAfter.option.id] ~= nil
+			print(("[26-3][2] 착용 장비 리롤(armor) -> %s: %s"):format(tostring(rerollEquipId), record(rerollEquipVerified)))
+
+			table.insert(profile.inventory, {
+				grade = "primordial", part = "gloves", dropStage = 1, itemLevel = 100,
+				tierIndex = 1, locked = false, option = nil,
+			})
+			local bagIndex = #profile.inventory
+			local rerollBagOk, rerollBagId = PlayerProfile.rerollBagItemOption(player, bagIndex)
+			local bagItemAfter = profile.inventory[bagIndex]
+			local rerollBagVerified = rerollBagOk and bagItemAfter.option ~= nil and OptionData.options[bagItemAfter.option.id] ~= nil
+			print(("[26-3][2] 가방 장비 리롤(gloves) -> %s: %s"):format(tostring(rerollBagId), record(rerollBagVerified)))
+
+			-- [3] 리롤 등급 게이트(20.67 [10] "영웅·전설·유물은 리롤 불가 = 드랍 운") - 영웅
+			-- 등급은 변환권이 있어도 거부돼야 한다.
+			PlayerProfile.setEquippedDirect(player, "shoes", {
+				grade = "epic", part = "shoes", dropStage = 1, itemLevel = 100,
+				tierIndex = 1, locked = false, option = nil,
+			})
+			local rerollEpicOk, rerollEpicReason = PlayerProfile.rerollEquippedOption(player, "shoes")
+			print(("[26-3][3] 영웅 등급 리롤 거부(기대 false,\"not_rerollable\"): %s,%s %s"):format(
+				tostring(rerollEpicOk), tostring(rerollEpicReason),
+				record(rerollEpicOk == false and rerollEpicReason == "not_rerollable")))
+
+			-- 인벤토리·변환권(계정 공유, restoreForDevTools 대상 밖)을 직접 되돌린다.
+			if profile.inventory[bagIndex] then
+				table.remove(profile.inventory, bagIndex)
+			end
+			profile.purchases.optionRerollTickets.ancient = originalTickets.ancient
+			profile.purchases.optionRerollTickets.primordial = originalTickets.primordial
+			InventorySync.push(player, profile)
+			GemSync.push(player)
+
+			restore(player)
+			print(("===26-3 검증 끝=== %d/%d 통과"):format(passCount, totalCount))
+		end)
+	end
+
+	for _, existing in ipairs(Players:GetPlayers()) do
+		run26_3Verification(existing)
+	end
+	Players.PlayerAdded:Connect(run26_3Verification)
 end

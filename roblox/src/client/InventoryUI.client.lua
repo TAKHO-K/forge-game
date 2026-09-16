@@ -78,7 +78,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- ═══ 치수(inventory-mockup.html 1080p 기준값 그대로) ═══
 local WINDOW_WIDTH, WINDOW_HEIGHT = 720, 560
 local HEADER_HEIGHT = 44
-local DETAIL_HEIGHT = 86
+-- 26-3(PRD 20.67 [12]): 옵션 줄(18px) 자리를 위해 86→104로 늘린다.
+local DETAIL_HEIGHT = 104
 local GEAR_WIDTH = 228
 local CELL_SIZE, CELL_GAP = 78, 8
 local GRID_COLS = 5
@@ -142,8 +143,19 @@ local updateGemTab, cancelGemDrag
 local updatePartyTab
 local refreshFriends -- 24-2: 탭을 열 때 다른 서버 친구 목록을 서버에 묻는다
 
--- 선택 상태: kind="bag"이면 value=서버 인덱스, kind="equip"이면 value="weapon"/"armor".
+-- 선택 상태: kind="bag"이면 value=서버 인덱스, kind="equip"이면 value="weapon"/"armor",
+-- kind="gemSlot"이면 value=슬롯(1~5), kind="gemBag"이면 value=gemInventory 인덱스(26-3).
 local selectedKind, selectedValue = nil, nil
+
+-- 26-3: Detail의 리롤 버튼(장비 3부위 확장)이 보석 탭 상태(변환권 보유량)를 먼저 보려면
+-- 이 값이 refreshDetail보다 앞에서 선언돼 있어야 한다 - 실제 내용은 여전히 아래 보석 탭
+-- 섹션에서 채운다(GemSync 스냅샷 도착 시).
+local currentGemState = {
+	gems = { false, false, false, false, false },
+	slotUnlocked = { false, false, false, false, false },
+	gemInventory = {},
+	rerollTickets = { ancient = 0, primordial = 0 },
+}
 
 local isOpen = false
 local rainbowGradients = {} -- 매 프레임 회전시켜야 하는 태초 등급 테두리 그라디언트 목록.
@@ -617,24 +629,63 @@ gearGridLayout.CellPadding = UDim2.new(0, 9, 0, 9)
 gearGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gearGridLayout.Parent = gearGrid
 
-local reserved = Instance.new("TextLabel")
-reserved.Position = UDim2.new(0, 14, 0, 34 + GEAR_SLOT_SIZE * 2 + 9 + 12)
-reserved.Size = UDim2.new(1, -28, 0, 89)
-reserved.BackgroundTransparency = 1
-reserved.Text = "특수 옵션 · 전설 이상에서 표시"
-reserved.TextWrapped = true
-reserved.Font = Enum.Font.GothamBold
-reserved.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
-reserved.TextColor3 = UIColors.textTertiary
-reserved.Parent = gear
+-- 26-3(PRD 20.67 [12] "총 스탯 상한 표시") - 옛 "특수 옵션 · 전설 이상에서 표시" 자리
+-- 표시("연속격" 등 규칙형 옵션 시절의 미구현 placeholder, 지금 옵션 체계와 무관)를
+-- 재사용한다 - 총 스탯 3줄 위 89px가 이미 이 목적으로 예약돼 있었다(새 자리를 만들지
+-- 않는다). 활성 옵션 축(장비 3부위+보석 5개 합산, 0이 아닌 것만)을 위력→신속→방어→건강→
+-- 성장→재생→흡혈 순으로 최대 4개까지 보여준다.
+local optionStatsBox = Instance.new("Frame")
+optionStatsBox.Position = UDim2.new(0, 14, 0, 34 + GEAR_SLOT_SIZE * 2 + 9 + 12)
+optionStatsBox.Size = UDim2.new(1, -28, 0, 89)
+optionStatsBox.BackgroundTransparency = 1
+optionStatsBox.Parent = gear
 do
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 7)
-	corner.Parent = reserved
+	corner.Parent = optionStatsBox
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = UIColors.rim
 	stroke.Transparency = 0.84
-	stroke.Parent = reserved
+	stroke.Parent = optionStatsBox
+end
+
+local optionStatsPadding = Instance.new("UIPadding")
+optionStatsPadding.PaddingLeft = UDim.new(0, 8)
+optionStatsPadding.PaddingRight = UDim.new(0, 8)
+optionStatsPadding.PaddingTop = UDim.new(0, 6)
+optionStatsPadding.Parent = optionStatsBox
+
+local optionStatsLayout = Instance.new("UIListLayout")
+optionStatsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+optionStatsLayout.Padding = UDim.new(0, 2)
+optionStatsLayout.Parent = optionStatsBox
+
+local optionStatsHeader = Instance.new("TextLabel")
+optionStatsHeader.LayoutOrder = 0
+optionStatsHeader.BackgroundTransparency = 1
+optionStatsHeader.Size = UDim2.new(1, 0, 0, 14)
+optionStatsHeader.Font = Enum.Font.GothamBold
+optionStatsHeader.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+optionStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
+optionStatsHeader.TextColor3 = UIColors.textTertiary
+optionStatsHeader.Text = "옵션 보너스"
+optionStatsHeader.Parent = optionStatsBox
+
+local OPTION_STATS_MAX_ROWS = 4
+local optionStatsRows = {}
+for i = 1, OPTION_STATS_MAX_ROWS do
+	local row = Instance.new("TextLabel")
+	row.LayoutOrder = i
+	row.BackgroundTransparency = 1
+	row.Size = UDim2.new(1, 0, 0, 15)
+	row.Font = Enum.Font.GothamBold
+	row.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+	row.TextXAlignment = Enum.TextXAlignment.Left
+	row.TextColor3 = UIColors.textSecondary
+	row.Text = ""
+	row.Visible = false
+	row.Parent = optionStatsBox
+	table.insert(optionStatsRows, row)
 end
 
 -- 총 스탯 3줄. reserved 바로 아래, 위쪽 테두리로 구분한다(목업 .stats border-top).
@@ -898,6 +949,181 @@ dismantleButton.Text = "분해"
 local equipButton = makeActionButton(4, 84, "primary")
 equipButton.Text = "착용"
 
+-- 리롤(26-3, PRD 20.67 [10] "장비 3부위도 옵션 변환권으로 리롤할 수 있다") - 보석 탭
+-- rerollButton과 같은 자리(gold 테두리, "sell" 스타일 재사용 - 새 색을 안 만든다).
+-- 고대·태초 등급의 가방/착용 아이템에서만 보인다(Gem.isRerollableGrade).
+local rerollDetailButton = makeActionButton(5, 70, "sell")
+
+-- ═══ 옵션 줄(26-3, PRD 20.67 [12]) ═══
+-- "폭 120×높이 6, 트랙 UIColors.slot, 채움은 등급색으로 롤 위치까지, 중앙(기댓값)에
+-- rimHi 눈금 1×10px. 양끝에 최소·최대 숫자" - 명세 그대로. compact(치명 전용 절반 폭)는
+-- 최소·최대 숫자를 생략한다(한 줄에 게이지 두 개가 들어가야 해서 자리가 없다).
+local function buildOptionGauge(parent, compact)
+	local wrap = Instance.new("Frame")
+	wrap.BackgroundTransparency = 1
+	wrap.Size = UDim2.new(1, 0, 1, 0)
+	wrap.Parent = parent
+
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.Padding = UDim.new(0, 4)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = wrap
+
+	local valueText = Instance.new("TextLabel")
+	valueText.LayoutOrder = 1
+	valueText.BackgroundTransparency = 1
+	valueText.Size = UDim2.new(0, compact and 96 or 130, 1, 0)
+	valueText.Font = Enum.Font.GothamBold
+	valueText.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+	valueText.TextXAlignment = Enum.TextXAlignment.Left
+	valueText.TextColor3 = UIColors.textPrimary
+	valueText.TextTruncate = Enum.TextTruncate.AtEnd
+	valueText.Text = ""
+	valueText.Parent = wrap
+
+	local minText = Instance.new("TextLabel")
+	minText.LayoutOrder = 2
+	minText.Visible = not compact
+	minText.BackgroundTransparency = 1
+	minText.Size = UDim2.new(0, 26, 1, 0)
+	minText.Font = Enum.Font.Gotham
+	minText.TextSize = 10
+	minText.TextXAlignment = Enum.TextXAlignment.Right
+	minText.TextColor3 = UIColors.textTertiary
+	minText.Text = ""
+	minText.Parent = wrap
+
+	local track = Instance.new("Frame")
+	track.LayoutOrder = 3
+	track.Size = UDim2.new(0, compact and 44 or 120, 0, 6)
+	track.BackgroundColor3 = UIColors.slot
+	track.BorderSizePixel = 0
+	track.Parent = wrap
+	local trackCorner = Instance.new("UICorner")
+	trackCorner.CornerRadius = UDim.new(1, 0)
+	trackCorner.Parent = track
+
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.BackgroundColor3 = UIColors.textPrimary
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.new(0, 0, 1, 0)
+	fill.Parent = track
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = fill
+
+	-- 기댓값(중앙) 눈금 - 항상 트랙 정중앙(롤 U[0.875,1.125]의 중앙=1.0이 기댓값이다).
+	local tick = Instance.new("Frame")
+	tick.Name = "Tick"
+	tick.AnchorPoint = Vector2.new(0.5, 0.5)
+	tick.Position = UDim2.new(0.5, 0, 0.5, 0)
+	tick.Size = UDim2.new(0, 1, 0, 10)
+	tick.BackgroundColor3 = UIColors.rimHi
+	tick.BackgroundTransparency = UIColors.rimHiTransparency
+	tick.BorderSizePixel = 0
+	tick.ZIndex = 2
+	tick.Parent = track
+
+	local maxText = Instance.new("TextLabel")
+	maxText.LayoutOrder = 4
+	maxText.Visible = not compact
+	maxText.BackgroundTransparency = 1
+	maxText.Size = UDim2.new(0, 30, 1, 0)
+	maxText.Font = Enum.Font.Gotham
+	maxText.TextSize = 10
+	maxText.TextXAlignment = Enum.TextXAlignment.Left
+	maxText.TextColor3 = UIColors.textTertiary
+	maxText.Text = ""
+	maxText.Parent = wrap
+
+	return { wrap = wrap, valueText = valueText, minText = minText, track = track, fill = fill, maxText = maxText }
+end
+
+local optionRow = Instance.new("Frame")
+optionRow.Name = "OptionRow"
+optionRow.Position = UDim2.new(0, 0, 0, 58)
+optionRow.Size = UDim2.new(1, 0, 0, 18)
+optionRow.BackgroundTransparency = 1
+optionRow.Visible = false
+optionRow.Parent = dinfo
+
+local optionRowLayout = Instance.new("UIListLayout")
+optionRowLayout.FillDirection = Enum.FillDirection.Horizontal
+optionRowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+optionRowLayout.Padding = UDim.new(0, 10)
+optionRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+optionRowLayout.Parent = optionRow
+
+local optionGaugeA = buildOptionGauge(optionRow, false)
+local optionGaugeB = buildOptionGauge(optionRow, true)
+optionGaugeA.wrap.LayoutOrder = 1
+optionGaugeB.wrap.LayoutOrder = 2
+optionGaugeB.wrap.Visible = false
+
+-- 게이지 하나에 값·범위·롤 위치를 채운다. p(0~1)는 (roll-rollMin)/(rollMax-rollMin) - [12]
+-- "값 텍스트 색: p≥0.75 success, p≤0.25 textSecondary, 그 외 textPrimary".
+local function applyOptionGauge(gauge, text, minText, maxText, p, fillColor, dim)
+	p = math.clamp(p, 0, 1)
+	gauge.valueText.Text = text
+	gauge.valueText.TextColor3 = dim and UIColors.textTertiary
+		or (p >= 0.75 and UIColors.success or (p <= 0.25 and UIColors.textSecondary or UIColors.textPrimary))
+	gauge.minText.Text = minText or ""
+	gauge.maxText.Text = maxText or ""
+	gauge.fill.Size = UDim2.new(p, 0, 1, 0)
+	gauge.fill.BackgroundColor3 = dim and UIColors.textTertiary or fillColor
+end
+
+-- item(장비 아이템 또는 보석)의 option을 읽어 옵션 줄을 채운다. option이 없으면 숨긴다.
+-- classId는 지금 활성 직업(Attribute "ClassId") - 직업 특화 옵션의 불일치 판정에 쓰인다.
+local function refreshOptionRow(item)
+	if not item or not item.option then
+		optionRow.Visible = false
+		return
+	end
+	local classId = player:GetAttribute("ClassId")
+	local optionId = item.option.id
+	local def = OptionData.options[optionId]
+	if not def then
+		optionRow.Visible = false
+		return
+	end
+	local mismatched = def.classId ~= nil and def.classId ~= classId
+	local gradeVisual = ItemVisualData.gradeVisuals[item.grade]
+	local fillColor = (gradeVisual and not gradeVisual.rainbow) and gradeVisual.color or UIColors.textPrimary
+
+	local displayName = def.displayName
+	if not displayName and def.classId then
+		local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
+		displayName = skillDef and skillDef.name
+	end
+	displayName = displayName or optionId
+
+	optionRow.Visible = true
+	local rollSpan = OptionData.rollMax - OptionData.rollMin
+
+	if optionId == "crit" then
+		optionGaugeB.wrap.Visible = true
+		local currentValue = Option.valueOf(item.option, item.grade, item.itemLevel, classId)
+		local pRate = (item.option.roll - OptionData.rollMin) / rollSpan
+		local pDmg = ((item.option.roll2 or item.option.roll) - OptionData.rollMin) / rollSpan
+		applyOptionGauge(optionGaugeA, ("치확 %+.1f%%p"):format(currentValue.critRate * 100), nil, nil, pRate, fillColor, mismatched)
+		applyOptionGauge(optionGaugeB, ("치피 %+.2f"):format(currentValue.critDmg), nil, nil, pDmg, fillColor, mismatched)
+	else
+		optionGaugeB.wrap.Visible = false
+		local range = Option.rangeOf(optionId, item.grade, item.itemLevel, classId)
+		local currentValue = Option.valueOf(item.option, item.grade, item.itemLevel, classId)
+		local p = (item.option.roll - OptionData.rollMin) / rollSpan
+		local text = ("%s %+.1f%%"):format(displayName, currentValue * 100)
+		if mismatched then
+			text = text .. "(직업 불일치 · 효과 없음)"
+		end
+		applyOptionGauge(optionGaugeA, text, ("%.1f"):format(range.min * 100), ("%.1f"):format(range.max * 100), p, fillColor, mismatched)
+	end
+end
+
 -- ═══ 등급 시각 효과 ═══
 
 -- 등급색 + 발광. 칸 배경은 등급과 무관하게 동일해야 하지만(지시 - "칸 내부 배경은 모든
@@ -1085,6 +1311,10 @@ local function clearDetail()
 	equipButton.Active = false
 	equipButton.TextTransparency = 0.6
 	equipButton.Text = "착용"
+	optionRow.Visible = false
+	rerollDetailButton.Visible = false
+	rerollDetailButton.AutoButtonColor = false
+	rerollDetailButton.Active = false
 end
 
 local function setDpicIcon(partId, color)
@@ -1101,6 +1331,39 @@ local function setDpicIcon(partId, color)
 	holder.BackgroundTransparency = 1
 	holder.Parent = dpic
 	builder(holder, 28, color)
+end
+
+-- 26-3: 보석 이름(PRD 20.67 [9] "<등급> <옵션명> 보석 · Lv.<itemLevel>", 옵션 미배정은
+-- "<등급> 보석(옵션 미배정)"으로 - 이관된 고대·태초 보석 전용, Lv를 안 붙인다).
+local function describeGemName(gem)
+	local gradeInfo = ArmorData.grades[gem.grade]
+	local gradeName = gradeInfo and gradeInfo.displayName or gem.grade
+	if not gem.option then
+		return ("%s 보석(옵션 미배정)"):format(gradeName)
+	end
+	local def = OptionData.options[gem.option.id]
+	local optionName = def and def.displayName
+	if not optionName and def and def.classId then
+		local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
+		optionName = skillDef and skillDef.name
+	end
+	optionName = optionName or gem.option.id
+	return ("%s %s 보석 · Lv.%d"):format(gradeName, optionName, gem.itemLevel or 0)
+end
+
+-- 26-3: 리롤 버튼(Detail, bag·equip 전용 - gemSlot/gemBag은 보석 탭 자체 행 버튼이 이미
+-- 있어 여기선 숨긴다, 중복 UI를 만들지 않는다는 지시). eligible이 아니면 숨긴다.
+local function setRerollDetailButton(eligible, gradeId)
+	rerollDetailButton.Visible = eligible ~= nil
+	rerollDetailButton.AutoButtonColor = eligible == true
+	rerollDetailButton.Active = eligible == true
+	rerollDetailButton.TextTransparency = eligible and 0 or 0.6
+	if eligible then
+		local tickets = (currentGemState.rerollTickets and currentGemState.rerollTickets[gradeId]) or 0
+		rerollDetailButton.Text = ("리롤(%d장)"):format(tickets)
+	elseif eligible == false then
+		rerollDetailButton.Text = "리롤"
+	end
 end
 
 local function refreshDetail()
@@ -1124,6 +1387,7 @@ local function refreshDetail()
 		setDpicIcon(item.part or "armor", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
+		refreshOptionRow(item)
 
 		lockButton.AutoButtonColor = true
 		lockButton.Active = true
@@ -1139,6 +1403,7 @@ local function refreshDetail()
 		equipButton.Active = true
 		equipButton.TextTransparency = 0
 		equipButton.Text = "착용"
+		setRerollDetailButton(Gem.isRerollableGrade(item.grade), item.grade)
 	elseif selectedKind == "equip" and selectedValue ~= "weapon" and equippedByPart()[selectedValue] then
 		local part = selectedValue
 		local item = equippedByPart()[part]
@@ -1150,6 +1415,7 @@ local function refreshDetail()
 		setDpicIcon(item.part or part, color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
+		refreshOptionRow(item)
 
 		lockButton.AutoButtonColor = false
 		lockButton.Active = false
@@ -1164,6 +1430,7 @@ local function refreshDetail()
 		equipButton.Active = true
 		equipButton.TextTransparency = 0
 		equipButton.Text = "해제"
+		setRerollDetailButton(Gem.isRerollableGrade(item.grade), item.grade)
 	elseif selectedKind == "equip" and selectedValue == "weapon" then
 		local weaponLevel = player:GetAttribute("WeaponLevel") or 0
 		local weaponData = WeaponData.weapons[WeaponData.starterId]
@@ -1180,6 +1447,7 @@ local function refreshDetail()
 		setDpicIcon("weapon", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
+		optionRow.Visible = false -- 무기는 옵션 개념이 없다(20.67 [1] - 무기는 강화만 대상).
 
 		lockButton.AutoButtonColor = false
 		lockButton.Active = false
@@ -1194,12 +1462,117 @@ local function refreshDetail()
 		equipButton.Active = false
 		equipButton.TextTransparency = 0.6
 		equipButton.Text = "착용"
+		setRerollDetailButton(nil)
+	elseif selectedKind == "gemSlot" and type(selectedValue) == "number" and Gem.isFilled(currentGemState.gems, selectedValue) then
+		local gem = currentGemState.gems[selectedValue]
+		local visual = ItemVisualData.gradeVisuals[gem.grade]
+		local color = visual and visual.color or UIColors.textPrimary
+		dname.Text = ("%d번 홈 - %s"):format(selectedValue, describeGemName(gem))
+		dname.TextColor3 = color
+		dmeta.Text = ("상한 %s"):format(ArmorData.grades[Gem.gradeCapForSlot(selectedValue)].displayName)
+		setDpicIcon("weapon", color)
+		dpicStroke.Color = color
+		dpicStroke.Transparency = 0
+		refreshOptionRow(gem)
+
+		lockButton.AutoButtonColor = false
+		lockButton.Active = false
+		lockIconHolder.Visible = false
+		sellButton.AutoButtonColor = false
+		sellButton.Active = false
+		sellButton.TextTransparency = 0.6
+		dismantleButton.AutoButtonColor = false
+		dismantleButton.Active = false
+		dismantleButton.TextTransparency = 0.6
+		equipButton.AutoButtonColor = false
+		equipButton.Active = false
+		equipButton.TextTransparency = 0.6
+		equipButton.Text = "착용"
+		setRerollDetailButton(nil) -- 이 슬롯의 리롤 버튼은 보석 탭 행 자체에 있다(중복 방지).
+	elseif selectedKind == "gemBag" and type(selectedValue) == "number" and currentGemState.gemInventory[selectedValue] then
+		local gem = currentGemState.gemInventory[selectedValue]
+		local visual = ItemVisualData.gradeVisuals[gem.grade]
+		local color = visual and visual.color or UIColors.textPrimary
+		dname.Text = describeGemName(gem)
+		dname.TextColor3 = color
+		dmeta.Text = "보유 보석 - 드래그로 홈에 장착"
+		setDpicIcon("weapon", color)
+		dpicStroke.Color = color
+		dpicStroke.Transparency = 0
+		refreshOptionRow(gem)
+
+		lockButton.AutoButtonColor = false
+		lockButton.Active = false
+		lockIconHolder.Visible = false
+		sellButton.AutoButtonColor = false
+		sellButton.Active = false
+		sellButton.TextTransparency = 0.6
+		dismantleButton.AutoButtonColor = false
+		dismantleButton.Active = false
+		dismantleButton.TextTransparency = 0.6
+		equipButton.AutoButtonColor = false
+		equipButton.Active = false
+		equipButton.TextTransparency = 0.6
+		equipButton.Text = "착용"
+		setRerollDetailButton(nil)
 	else
 		clearDetail()
 	end
 end
 
 -- ═══ 총 스탯 갱신 ═══
+
+-- 26-3: 장비 3부위 옵션 + 보석 5개를 한 목록으로 모은다(PlayerProfile.buildOptionSources와
+-- 같은 모양 - 서버 전용 모듈이라 여기선 같은 필드({option,grade,itemLevel})를 그대로 다시
+-- 조립한다. 계산 자체는 새로 만들지 않는다 - Option.sumAxisBonus 하나만 쓴다).
+local function clientOptionSources()
+	local sources = {}
+	for _, item in ipairs({ equippedArmor, equippedGloves, equippedShoes }) do
+		if item then
+			table.insert(sources, item)
+		end
+	end
+	for slot = 1, Gem.slotCount do
+		if Gem.isFilled(currentGemState.gems, slot) then
+			table.insert(sources, currentGemState.gems[slot])
+		end
+	end
+	return sources
+end
+
+-- 옵션 보너스 박스(위 optionStatsRows)에 보일 축 순서 - [2] 표 순서(위력·신속 DPS, 방어·
+-- 건강 생존, 성장·재생·흡혈 유틸).
+local OPTION_STATS_AXES = {
+	{ id = "attackPercent", label = "위력" },
+	{ id = "speedPercent", label = "신속" },
+	{ id = "defensePercent", label = "방어" },
+	{ id = "maxHpPercent", label = "건강" },
+	{ id = "expGain", label = "성장" },
+	{ id = "healingPower", label = "재생" },
+	{ id = "lifesteal", label = "흡혈" },
+}
+
+local function refreshOptionStats(classId)
+	local sources = clientOptionSources()
+	local shown = 0
+	for _, axis in ipairs(OPTION_STATS_AXES) do
+		local value = Option.sumAxisBonus(sources, axis.id, classId)
+		if math.abs(value) > 0.0005 and shown < OPTION_STATS_MAX_ROWS then
+			shown += 1
+			local row = optionStatsRows[shown]
+			local def = OptionData.options[axis.id]
+			-- [12] "상한에 걸린 축은 총 스탯 패널에 (상한 N%)를 붙이고 값 텍스트를 ember로".
+			local capText = def.cap and (" (상한%d)"):format(math.floor(def.cap * 100 + 0.5)) or ""
+			local atCap = def.cap and value >= def.cap - 0.0005
+			row.Text = ("%s %+.1f%%%s"):format(axis.label, value * 100, capText)
+			row.TextColor3 = atCap and UIColors.ember or UIColors.textSecondary
+			row.Visible = true
+		end
+	end
+	for i = shown + 1, OPTION_STATS_MAX_ROWS do
+		optionStatsRows[i].Visible = false
+	end
+end
 
 local function refreshStats()
 	local classId = player:GetAttribute("ClassId")
@@ -1209,6 +1582,7 @@ local function refreshStats()
 	if not classId or classId == "" then
 		atkValueLabel.Text = "-"
 		defValueLabel.Text = "-"
+		refreshOptionStats(nil)
 		return
 	end
 
@@ -1223,6 +1597,7 @@ local function refreshStats()
 
 	atkValueLabel.Text = NumberFormat.format(attack)
 	defValueLabel.Text = NumberFormat.format(defense)
+	refreshOptionStats(classId)
 end
 
 -- ═══ 격자 다시 그리기 ═══
@@ -1315,6 +1690,36 @@ local function rebuildGearSlots()
 			lvTag.TextColor3 = UIColors.textTertiary
 			lvTag.Text = ("Lv.%d"):format(level)
 			lvTag.Parent = slot
+
+			-- 26-3(PRD 20.67 [12] "가방 셀 옵션 태그는 기존 lvTag와 같은 규격의 두 번째
+			-- 태그") - 착용 부위(무기 제외)에 옵션이 있으면 같은 방식으로 보여준다.
+			local optionItem = part ~= "weapon" and equipped[part]
+			if optionItem and optionItem.option then
+				local def = OptionData.options[optionItem.option.id]
+				local classId = player:GetAttribute("ClassId")
+				local mismatched = def and def.classId ~= nil and def.classId ~= classId
+				local tagName = def and def.displayName
+				if not tagName and def and def.classId then
+					local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
+					tagName = skillDef and skillDef.name
+				end
+				tagName = tagName or (def and optionItem.option.id)
+				if tagName then
+					local optionVisual = ItemVisualData.gradeVisuals[optionItem.grade]
+					local optionTag = Instance.new("TextLabel")
+					optionTag.AnchorPoint = Vector2.new(0, 1)
+					optionTag.Position = UDim2.new(0, 5, 1, -4)
+					optionTag.Size = UDim2.new(0, 44, 0, 14)
+					optionTag.BackgroundTransparency = 1
+					optionTag.Font = Enum.Font.GothamBold
+					optionTag.TextSize = 11
+					optionTag.TextXAlignment = Enum.TextXAlignment.Left
+					optionTag.TextTruncate = Enum.TextTruncate.AtEnd
+					optionTag.TextColor3 = mismatched and UIColors.textTertiary or (optionVisual and optionVisual.color or UIColors.textPrimary)
+					optionTag.Text = tagName
+					optionTag.Parent = slot
+				end
+			end
 		end
 
 		if interactive then
@@ -1418,6 +1823,47 @@ local function rebuildGrid()
 			lockHolder.BackgroundTransparency = 1
 			lockHolder.Parent = cell
 			ItemIcons.lock(lockHolder, 13, UIColors.xp)
+		end
+
+		-- 26-3(PRD 20.67 [12] "셀 하단 두 태그: [Lv.87] [위력]") - Lv 태그는 가방 셀에
+		-- 처음 생긴다(기존엔 착용 슬롯에만 있었다). 옵션 태그는 있을 때만(옵션 없으면 태그
+		-- 없음), 직업 불일치는 회색.
+		local lvTag = Instance.new("TextLabel")
+		lvTag.AnchorPoint = Vector2.new(1, 1)
+		lvTag.Position = UDim2.new(1, -5, 1, -4)
+		lvTag.Size = UDim2.new(0, 38, 0, 14)
+		lvTag.BackgroundTransparency = 1
+		lvTag.Font = Enum.Font.GothamBold
+		lvTag.TextSize = 12
+		lvTag.TextXAlignment = Enum.TextXAlignment.Right
+		lvTag.TextColor3 = UIColors.textTertiary
+		lvTag.Text = ("Lv.%d"):format(item.itemLevel)
+		lvTag.Parent = cell
+
+		if item.option then
+			local def = OptionData.options[item.option.id]
+			local classId = player:GetAttribute("ClassId")
+			local mismatched = def and def.classId ~= nil and def.classId ~= classId
+			local tagName = def and def.displayName
+			if not tagName and def and def.classId then
+				local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
+				tagName = skillDef and skillDef.name
+			end
+			tagName = tagName or (def and item.option.id)
+			if tagName then
+				local optionTag = Instance.new("TextLabel")
+				optionTag.AnchorPoint = Vector2.new(0, 1)
+				optionTag.Position = UDim2.new(0, 3, 1, -4)
+				optionTag.Size = UDim2.new(0, 38, 0, 14)
+				optionTag.BackgroundTransparency = 1
+				optionTag.Font = Enum.Font.GothamBold
+				optionTag.TextSize = 11
+				optionTag.TextXAlignment = Enum.TextXAlignment.Left
+				optionTag.TextTruncate = Enum.TextTruncate.AtEnd
+				optionTag.TextColor3 = mismatched and UIColors.textTertiary or iconColor
+				optionTag.Text = tagName
+				optionTag.Parent = cell
+			end
 		end
 
 		cell.Activated:Connect(function()
@@ -1803,6 +2249,16 @@ equipButton.Activated:Connect(function()
 	end
 end)
 
+-- 26-3(PRD 20.67 [10]) - 가방·착용 장비 리롤. GemServer.server.lua의 (kind, key) 프로토콜
+-- 그대로("bag"=인벤토리 index, "equipped"=부위명).
+rerollDetailButton.Activated:Connect(function()
+	if selectedKind == "bag" then
+		gemRerollRequest:FireServer("bag", selectedValue)
+	elseif selectedKind == "equip" and selectedValue ~= "weapon" then
+		gemRerollRequest:FireServer("equipped", selectedValue)
+	end
+end)
+
 -- ═══ 보석 탭(23-4, EnhanceUI.client.lua에서 이관 + 재설계) ═══
 -- 지시 3가지를 여기 한 화면에 담는다: "장비창 탭만 바꾸면 보석이 보인다"(탭 자체는 위쪽
 -- TAB_ROW_HEIGHT 블록), "자신 직업 무기가 더 크게"(왼쪽 무기 실루엣을 gear 슬롯 아이콘
@@ -1829,12 +2285,8 @@ gemBody.Visible = false
 gemBody.Parent = content
 equipTabContents["보석"] = gemBody
 
-local currentGemState = {
-	gems = { false, false, false, false, false },
-	slotUnlocked = { false, false, false, false, false },
-	gemInventory = {},
-	rerollTickets = { ancient = 0, primordial = 0 },
-}
+-- (currentGemState는 파일 위쪽에서 선언됐다 - 여기선 대입만 한다, Detail의 리롤 버튼도
+-- 같은 변환권 보유량을 봐야 하기 때문이다.)
 
 -- ── 왼쪽: 확대한 무기 실루엣 + 홈 5개(드롭 타깃) ──
 local WEAPON_ICON_SIZE = 176 -- gear 슬롯 무기 아이콘(26px)의 약 6.8배 - 지시 "자신 직업
@@ -1940,8 +2392,13 @@ slotListLayout.Parent = slotListScroll
 
 local slotRows = {}
 for slot = 1, Gem.slotCount do
-	local row = Instance.new("Frame")
+	-- 26-3(PRD 20.67 [12] "클릭하면 하단 Detail이 그 보석을 게이지와 함께 보여준다") - Frame이
+	-- 아니라 TextButton으로 만들어 행 전체를 클릭 대상으로 삼는다. 안쪽 리롤·변환권 버튼은
+	-- 그대로 자기 Activated를 먼저 받는다(자식이 부모보다 우선 - 로블록스 기본 동작).
+	local row = Instance.new("TextButton")
 	row.Name = "SlotRow" .. slot
+	row.Text = ""
+	row.AutoButtonColor = false
 	row.LayoutOrder = slot
 	row.Size = UDim2.new(1, 0, 0, 42)
 	row.BackgroundColor3 = UIColors.slot
@@ -1999,8 +2456,14 @@ for slot = 1, Gem.slotCount do
 
 	slotRows[slot] = { row = row, label = label, rerollButton = rerollButton, buyButton = buyButton }
 
+	row.Activated:Connect(function()
+		if Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot) and Gem.isFilled(currentGemState.gems, slot) then
+			selectedKind, selectedValue = "gemSlot", slot
+			refreshDetail()
+		end
+	end)
 	rerollButton.Activated:Connect(function()
-		gemRerollRequest:FireServer(slot)
+		gemRerollRequest:FireServer("gem", slot) -- 26-3: (kind, key) 프로토콜(GemServer.server.lua 참고)
 	end)
 	buyButton.Activated:Connect(function()
 		local gem = currentGemState.gems[slot]
@@ -2083,6 +2546,11 @@ local function endGemDrag(x, y)
 	cancelGemDrag()
 	if targetSlot and index then
 		gemEquipRequest:FireServer(targetSlot, index)
+	elseif index then
+		-- 26-3(PRD 20.67 [12] "보유 보석 셀도 클릭 = 선택(드래그는 그대로 장착)") - 홈에
+		-- 안 놓인 채 끝난 누름(=짧은 클릭)을 선택으로 처리한다.
+		selectedKind, selectedValue = "gemBag", index
+		refreshDetail()
 	end
 	-- 드래그가 홈에 안 맞았거나(targetSlot=nil) 서버가 거부해도(등급 상한 초과 등) 이
 	-- 클라이언트가 먼저 지운 하이라이트(cancelGemDrag)를 실제 상태(잠김/장착색)로 즉시
@@ -2231,35 +2699,22 @@ updateGemTab = function()
 
 		local gem = currentGemState.gems[slot]
 		local filled = type(gem) == "table"
-		local optionText
+		-- 26-3(PRD 20.67 [9][12]) - "N번 홈 · 상한 <등급> · <등급> <옵션명> 보석 · Lv.N · +X%"
+		-- 형식으로 통일한다(옛 "홈N(상한 X) - 등급: 옵션(값)" 형식을 대신한다).
 		if not filled then
-			optionText = "빈 홈"
-		elseif gem.option then
-			-- 26-2: 옛 4축(연속격 등) 표시를 대신한다 - 통합 옵션 표(OptionData)와 서버와
-			-- 같은 순수 함수(Option.valueOf)만 쓴다. 표시명이 없는 항목(직업 특화 8종)은
-			-- SkillData[classId][slot].name을 그대로 읽는다(20.67 [2] "이름 중복 정의 금지").
-			local def = OptionData.options[gem.option.id]
-			local displayName = def and def.displayName
-			if not displayName and def and def.classId then
-				local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
-				displayName = skillDef and skillDef.name
-			end
-			displayName = displayName or gem.option.id
-			local value = Option.valueOf(gem.option, gem.grade, gem.itemLevel, classId)
-			local valueText
-			if type(value) == "table" then
-				valueText = ("치확+%.1f%%p 치피+%.2f"):format(value.critRate * 100, value.critDmg * 100)
-			else
-				valueText = ("+%.1f%%"):format(value * 100)
-			end
-			optionText = ("%s(%s)"):format(displayName, valueText)
+			ui.label.Text = ("%d번 홈 · 상한 %s · 빈 홈"):format(slot, capInfo.displayName)
 		else
-			optionText = "옵션 미배정(변환권 필요)"
+			local valueText = ""
+			if gem.option then
+				local value = Option.valueOf(gem.option, gem.grade, gem.itemLevel, classId)
+				if type(value) == "table" then
+					valueText = (" · 치확+%.1f%%p 치피+%.2f"):format(value.critRate * 100, value.critDmg * 100)
+				else
+					valueText = (" · %+.1f%%"):format(value * 100)
+				end
+			end
+			ui.label.Text = ("%d번 홈 · 상한 %s · %s%s"):format(slot, capInfo.displayName, describeGemName(gem), valueText)
 		end
-		local gemGradeInfo = filled and ArmorData.grades[gem.grade]
-		ui.label.Text = filled
-			and ("홈%d(상한 %s) - %s: %s"):format(slot, capInfo.displayName, gemGradeInfo.displayName, optionText)
-			or ("홈%d(상한 %s) - 빈 홈"):format(slot, capInfo.displayName)
 
 		local rerollable = filled and Gem.isRerollableGrade(gem.grade)
 		ui.rerollButton.Visible = rerollable
@@ -2284,11 +2739,20 @@ updateGemTab = function()
 	end
 
 	rebuildGemInventory()
+	-- 26-3: 지금 Detail에 보석이 선택돼 있으면(리롤 등으로 옵션이 막 바뀌었을 수 있다) 같이 갱신한다.
+	if selectedKind == "gemSlot" or selectedKind == "gemBag" then
+		refreshDetail()
+	end
 end
 
+-- 26-3: 옵션 보너스 박스(gear 탭)가 보석 옵션도 합산한다 - GemSync가 올 때도 refreshStats를
+-- 불러야 리롤·장착 직후 그 자리가 바로 갱신된다(안 그러면 보석 탭을 오가야만 갱신됐다).
 gemSync.OnClientEvent:Connect(function(data)
 	currentGemState = data
 	updateGemTab()
+	if isOpen then
+		refreshStats()
+	end
 end)
 
 task.spawn(function()
@@ -2298,6 +2762,9 @@ task.spawn(function()
 	if ok and data then
 		currentGemState = data
 		updateGemTab()
+		if isOpen then
+			refreshStats()
+		end
 	end
 end)
 

@@ -608,9 +608,12 @@ function PlayerProfile.tryBuyOptionRerollTicket(player, gradeId, cost)
 	return true
 end
 
--- 고대·태초 등급 보석의 옵션 이름만 재굴림한다(20.5-1 "옵션 변환권", GemData.
--- optionPoolByGrade가 그 두 등급만 풀을 가져 재굴림 대상도 그 둘뿐이다 - Gem.
--- isRerollableGrade). 변환권 1장을 소모한다.
+-- 고대·태초 등급 보석의 옵션을 재굴림한다(20.5-1 "옵션 변환권", GemData.optionPoolByGrade가
+-- 그 두 등급만 풀을 가져 재굴림 대상도 그 둘뿐이다 - Gem.isRerollableGrade). 변환권 1장을
+-- 소모한다. 26-3(PRD 20.67 [10]): 옛 4개 이름 풀(Gem.rollOption)이 아니라 통합 옵션 풀
+-- (Option.rollFor, 공통 8 + 현재 직업 특화 2)에서 id·롤 둘 다 새로 굴린다 - "얼마나 잘
+-- 뽑았는지"가 보여야 리롤 욕구가 생긴다는 지시 그대로(옛 optionId 필드는 더 이상 쓰지
+-- 않는다 - 3단계에서 이미 폐기된 옛값 경로다).
 function PlayerProfile.rerollGemOption(player, slot)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
@@ -620,23 +623,79 @@ function PlayerProfile.rerollGemOption(player, slot)
 	if not Gem.isFilled(classState.weapon.gems, slot) then
 		return false, "empty_slot"
 	end
-	local gradeId = classState.weapon.gems[slot].grade
-	if not Gem.isRerollableGrade(gradeId) then
+	local gem = classState.weapon.gems[slot]
+	if not Gem.isRerollableGrade(gem.grade) then
 		return false, "not_rerollable"
 	end
 	local tickets = profile.purchases.optionRerollTickets
-	if (tickets[gradeId] or 0) < 1 then
+	if (tickets[gem.grade] or 0) < 1 then
 		return false, "no_ticket"
 	end
 
-	tickets[gradeId] -= 1
-	local newOptionId = Gem.rollOption(gradeId)
-	classState.weapon.gems[slot].optionId = newOptionId
+	tickets[gem.grade] -= 1
+	gem.optionId = nil
+	gem.option = Option.rollFor(gem.grade, profile.classId)
 	GemSync.push(player)
 	-- 23-3: equipGem과 같은 이유(축이 바뀌면 최대체력·이동속도가 그 자리에서 바뀔 수 있다).
 	PlayerProfile.refreshMaxHp(player)
 	PlayerProfile.refreshMovementSpeed(player)
-	return true, newOptionId
+	return true, gem.option and gem.option.id
+end
+
+-- 26-3(PRD 20.67 [10]): 착용 중인 장비도 보석과 같은 규칙으로 리롤한다(고대·태초만, 변환권
+-- 소모, 옵션 id·롤 둘 다 새로 굴림) - Gem.isRerollableGrade·Option.rollFor를 그대로
+-- 재사용한다(새 계산식을 만들지 않는다).
+function PlayerProfile.rerollEquippedOption(player, part)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	local item = classState.equipment[part]
+	if not item then
+		return false, "not_equipped"
+	end
+	if not Gem.isRerollableGrade(item.grade) then
+		return false, "not_rerollable"
+	end
+	local tickets = profile.purchases.optionRerollTickets
+	if (tickets[item.grade] or 0) < 1 then
+		return false, "no_ticket"
+	end
+
+	tickets[item.grade] -= 1
+	item.option = Option.rollFor(item.grade, profile.classId)
+	InventorySync.push(player, profile)
+	GemSync.push(player) -- 변환권 잔량도 이 스냅샷에 실려 간다(gem 탭·이 리롤 버튼 둘 다 이 값을 본다).
+	PlayerProfile.refreshMaxHp(player)
+	PlayerProfile.refreshMovementSpeed(player)
+	return true, item.option and item.option.id
+end
+
+-- 26-3: 가방 안(미착용) 장비 리롤 - 착용 리롤과 같은 규칙, 최대체력·이동속도에 영향이
+-- 없으므로 refresh 호출이 없다(미착용 아이템은 전투 스탯에 기여하지 않는다).
+function PlayerProfile.rerollBagItemOption(player, index)
+	local profile = profiles[player]
+	if not profile then
+		return false, "no_class"
+	end
+	local item = profile.inventory[index]
+	if not item then
+		return false, "not_found"
+	end
+	if not Gem.isRerollableGrade(item.grade) then
+		return false, "not_rerollable"
+	end
+	local tickets = profile.purchases.optionRerollTickets
+	if (tickets[item.grade] or 0) < 1 then
+		return false, "no_ticket"
+	end
+
+	tickets[item.grade] -= 1
+	item.option = Option.rollFor(item.grade, profile.classId)
+	InventorySync.push(player, profile)
+	GemSync.push(player)
+	return true, item.option and item.option.id
 end
 
 -- "그 스테이지 보스를 확정 보상으로 이미 받았는가"(20-4 [1]) - bestBossCleared(단조증가
