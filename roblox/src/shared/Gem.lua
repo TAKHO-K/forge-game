@@ -5,7 +5,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
-local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 -- 26-1: 환생 지급 보석이 옵션을 즉시 굴린다(PRD 20.67 [1] "지급 순간 옵션을 1회 굴린다").
 local Option = require(ReplicatedStorage.Shared.Option)
 
@@ -45,24 +44,6 @@ function Gem.canSocket(gemGradeId, slot)
 	local capIndex = armorGradeIndex(Gem.gradeCapForSlot(slot))
 	local gemIndex = armorGradeIndex(gemGradeId)
 	return capIndex ~= nil and gemIndex ~= nil and gemIndex <= capIndex
-end
-
--- 보석 하나가 주는 공격력% 보너스(PlayerCombat.getAttack의 attackPercentBonus 자리에
--- 장갑 보너스와 합산해 그대로 더해진다, PlayerProfile.getAttackPercentBonus 참고).
--- 값은 "등급표 인접비"(ItemVisualData.gradeVisuals.statMultiplier, 20.37 [2]가 이미
--- 인용한 "등급 한 단계는 공격력을 40~88% 올린다"는 그 비율) 그대로다 - 새 계수를 만들지
--- 않고 슬롯 k의 보석이 "무기가 그 등급에 도달했을 때의 한 단계 상승분"을 미리 하나 얹어
--- 준다는 뜻으로 재사용한다(슬롯 등급이 항상 무기의 "한 발 앞"이라는 20.38 [2] 정합성
--- 메모와도 맞는 비유).
-function Gem.attackPercentBonusForGrade(gradeId)
-	local index = armorGradeIndex(gradeId)
-	if not index or index <= 1 then
-		return 0
-	end
-	local currentMultiplier = ItemVisualData.gradeVisuals[gradeId].statMultiplier
-	local previousGradeId = ArmorData.gradeOrder[index - 1]
-	local previousMultiplier = ItemVisualData.gradeVisuals[previousGradeId].statMultiplier
-	return (currentMultiplier / previousMultiplier) - 1
 end
 
 -- 고대·태초 등급만 이름 풀에서 하나를 무작위로 뽑는다(GemData 주석 참고 - 영웅/전설/
@@ -111,78 +92,11 @@ function Gem.isRerollableGrade(gradeId)
 	return GemData.optionPoolByGrade[gradeId] ~= nil
 end
 
--- optionId가 배정된 스탯 축(GemData.optionAxis) - 미배정(nil)이거나 표에 없는 이름이면 nil.
-function Gem.optionAxis(optionId)
-	return optionId and GemData.optionAxis[optionId]
-end
-
--- 축별 보정 계수(23-3, GemData.survivalReductionAtAnchor 주석 참고) - 방어력만 피해감소식의
--- 수확체감 때문에 보정이 필요하고, 나머지 셋(공격력·공속·최대체력)은 전부 "1+r 배율"이
--- 그대로 DPS%나 생존타수%로 직결되는 선형 축이라 보정이 없다(1).
-local AXIS_CORRECTION = {
-	attackPercent = 1,
-	speedPercent = 1,
-	maxHpPercent = 1,
-	defensePercent = 1 / GemData.survivalReductionAtAnchor,
-}
-
--- 보석 하나가 그 등급에서 axis에 주는 보너스 크기. attackPercentBonusForGrade가 구하는
--- "등급표 인접비"를 축 전체의 공통 기준값으로 재사용하고(23-2 그대로), 축별 보정 계수만
--- 곱한다 - 그래야 같은 등급의 네 옵션이 서로 다른 축이어도 기대 가치(DPS%·생존타수%)가
--- 같아진다(보고서 "기대 가치 환산표" 참고).
-function Gem.magnitudeForGrade(gradeId, axis)
-	return Gem.attackPercentBonusForGrade(gradeId) * (AXIS_CORRECTION[axis] or 1)
-end
-
--- 슬롯 하나가 axis에 기여하는 보너스. 23-4부터 등급은 슬롯이 아니라 그 슬롯에 실제로 꽂힌
--- 보석 자체가 갖는다(gem.grade) - 한 슬롯에 상한 이하 여러 등급이 들어올 수 있어졌기
--- 때문이다(Gem.canSocket). 옵션 풀이 없는 등급(영웅~유물)은 축 선택 자체가 없으므로
--- 무조건 attackPercent에만 기여한다(기존 23-2 동작 그대로 유지). 옵션 풀이 있는 등급
--- (고대·태초)은 배정된 옵션의 축과 axis가 같을 때만 기여한다 - 옵션 미배정(nil)이면 아무
--- 축에도 기여하지 않는다(GemData.lua "[옵션 배정]" 주석).
-local function slotBonusForAxis(gems, slot, axis)
-	local gem = gems[slot]
-	local gradeId = gem.grade
-	if not Gem.isRerollableGrade(gradeId) then
-		return axis == "attackPercent" and Gem.attackPercentBonusForGrade(gradeId) or 0
-	end
-	local gemAxis = Gem.optionAxis(gem.optionId)
-	return gemAxis == axis and Gem.magnitudeForGrade(gradeId, axis) or 0
-end
-
-local function sumBonusForAxis(gems, axis)
-	local total = 0
-	for slot = 1, Gem.slotCount do
-		if Gem.isFilled(gems, slot) then
-			total += slotBonusForAxis(gems, slot, axis)
-		end
-	end
-	return total
-end
-
--- 장착된 보석 전체의 공격력% 보너스 합. PlayerProfile.getAttackPercentBonus가 장갑 보너스에
--- 그대로 더한다(같은 자리를 공유하는 단일 배율 슬롯, PlayerCombat.lua 주석).
-function Gem.totalAttackPercentBonus(gems)
-	return sumBonusForAxis(gems, "attackPercent")
-end
-
--- 공속·이속% 보너스 합(23-3 신설, 속사의 흔적) - PlayerProfile.getSpeedPercentBonus가
--- 신발 보너스에 그대로 더한다(같은 축, PlayerCombat.getAttackCooldown·WalkSpeed 둘 다에
--- 자동으로 반영된다).
-function Gem.totalSpeedPercentBonus(gems)
-	return sumBonusForAxis(gems, "speedPercent")
-end
-
--- 방어력% 보너스 합(23-3 신설, 심판의 표식) - PlayerCombat.getDefense의 새 defensePercentBonus
--- 자리로 들어간다(PlayerProfile.getDefensePercentBonus).
-function Gem.totalDefensePercentBonus(gems)
-	return sumBonusForAxis(gems, "defensePercent")
-end
-
--- 최대체력% 보너스 합(23-3 신설, 삼위일체) - PlayerProfile.refreshMaxHp가 갑옷 보너스를
--- 더한 총합에 곱한다.
-function Gem.totalMaxHpPercentBonus(gems)
-	return sumBonusForAxis(gems, "maxHpPercent")
-end
+-- 26-2(PRD 20.67 [14] 3단계): "옛 4축 = 등급표 인접비" 계산(attackPercentBonusForGrade·
+-- magnitudeForGrade·optionAxis·AXIS_CORRECTION, 슬롯별 합산 slotBonusForAxis/sumBonusForAxis,
+-- 그리고 그걸로 만든 Gem.total*PercentBonus 4종)을 여기서 폐기한다 - PlayerProfile의 4축
+-- 함수가 이제 장비 3부위 옵션 + 보석 5개를 Option.sumAxisBonus(Option.valueOf·Option.sumWithCap
+-- 합성)로 직접 합산한다(PlayerProfile.lua 참고). Gem.lua는 슬롯 구조(등급 상한·해금·장착
+-- 가능 여부)만 다루고, 값 계산은 전부 Option.lua가 유일한 출처다.
 
 return Gem

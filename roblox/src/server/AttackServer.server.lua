@@ -187,16 +187,22 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 사실 자체가 소모 조건이다, 근접도 같은 지점이라 대검/쌍검에 이 버프가 걸릴 일이
 	-- 생기면 자동으로 똑같이 동작한다).
 	local bonusDamageCoefficient = BuffState.getField(player, "backstepShotBuff", "damageCoefficient", 0)
-	local critRateBonus = BuffState.getField(player, "backstepShotBuff", "critRateBonus", 0)
-	if bonusDamageCoefficient > 0 or critRateBonus > 0 then
+	local buffCritRateBonus = BuffState.getField(player, "backstepShotBuff", "critRateBonus", 0)
+	if bonusDamageCoefficient > 0 or buffCritRateBonus > 0 then
 		base += bonusDamageCoefficient * atk
 		BuffState.consumeCharge(player, "backstepShotBuff")
 	end
 
 	-- 쌍검 Q 확정 치명타(20-6, PRD 4.3 "5초간 기본공격 확정 치명타") - 평타 경로도 스킬
 	-- 경로(SkillServer.server.lua)와 같은 PlayerCombat.resolveGuaranteedCrit을 공유한다.
+	-- 26-2(PRD 20.67 [14] 4단계 "치명"): 장비·보석 치명 옵션 합(optionCritRate/optionCritDmg)을
+	-- 버프 치확과 더해서 넘긴다 - 버프 소비 판정(위)은 옵션과 무관하게 버프 값만 본다(옵션이
+	-- 있다고 백스텝샷 충전을 대신 태우면 안 된다).
+	local optionCritRate, optionCritDmg = PlayerProfile.getCritBonus(player)
+	local critRateBonus = buffCritRateBonus + optionCritRate
 	local isGuaranteedCritActive = BuffState.get(player, "guaranteedCrit") ~= nil
-	local forceCrit, critDmgBonus = PlayerCombat.resolveGuaranteedCrit(classId, isGuaranteedCritActive, critRateBonus)
+	local forceCrit, guaranteedCritDmgBonus = PlayerCombat.resolveGuaranteedCrit(classId, isGuaranteedCritActive, critRateBonus)
+	local critDmgBonus = guaranteedCritDmgBonus + optionCritDmg
 
 	local damage, isCrit = PlayerCombat.calcDamage(base, classId, critRateBonus, forceCrit, critDmgBonus)
 	-- 힐러 버프(24-3, PRD 20.64) - SkillServer.strikeTarget과 같은 지점(calcDamage 직후,
@@ -208,7 +214,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 20-5 [1] 시각 구분용 - 백스텝샷이 이 평타에 실제로 적용됐는가("스킬이다"가 한눈에
 	-- 읽혀야 한다는 지시, Projectiles.lua/AttackInput.client.lua가 이 값으로 화살을
 	-- 굵고 밝게 그리고 적중 히트스톱을 준다).
-	local isBuffedShot = bonusDamageCoefficient > 0 or critRateBonus > 0
+	local isBuffedShot = bonusDamageCoefficient > 0 or buffCritRateBonus > 0
 	-- 20-5 [2] 꽂히는 화살 - 이 평타를 "쏜 시점"에 속사가 켜져 있었는가(지시 원문 "속사
 	-- 버프가 켜져 있는 동안 발사한 평타"). 도달까지 걸리는 시간 동안 버프가 꺼져도 이미
 	-- 쏜 화살의 성격은 바뀌지 않는다 - 백스텝샷 충전 소모와 같은 "쏘는 시점 스냅샷" 원칙.
@@ -223,6 +229,10 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		-- 근접(대검·쌍검) - 즉시 판정(기존 동작 그대로, 20-2a까지와 완전히 같다).
 		local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
 		MonsterSpawner.updateHpLabel(target)
+		-- 흡혈(26-2, PRD 20.67 [6-1]) - 실제로 데미지가 몬스터에게 들어간 직후에만 회복한다
+		-- (여기·아래 원거리 도달 판정 두 곳 - "damage 확정"을 "실제로 맞았다"로 해석했다,
+		-- 원거리가 빗나가는 경우까지 회복시키면 안 되므로).
+		PlayerProfile.applyLifesteal(player, damage)
 		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false, isBuffedShot)
 		CombatResolution.resolveHit(player, target, isDead)
 		return
@@ -285,6 +295,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 
 		local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
 		MonsterSpawner.updateHpLabel(target)
+		PlayerProfile.applyLifesteal(player, damage) -- 26-2, 위 근접 분기와 같은 지점(실제 명중 후)
 		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false, isBuffedShot)
 		CombatResolution.resolveHit(player, target, isDead)
 

@@ -243,6 +243,162 @@ local function applyGemSlot(player, slot, id)
 	return true
 end
 
+-- "/gg option set <slot 1-5|armor|gloves|shoes> <optionId|-> [grade] [min|mid|max|roll숫자]"
+-- (26-2, PRD 20.67 [14] 3~5단계 검증용 - "/gg gem"은 옛 4개 이름만 다룬다, 이 명령이 새
+-- 통합 옵션 체계를 강제 배정한다). id="-"면 옵션을 지운다(option=nil, 등급·itemLevel은
+-- 유지). grade·roll을 생략하면 기존 값(비어 있으면 태초·기댓값)을 그대로 쓴다 - 등급별
+-- min/mid/max 대조표를 뽑을 때 등급만 갈아 끼우거나 롤만 갈아 끼우기 쉽게 하기 위함.
+local OPTION_ROLL_KEYWORDS = { min = OptionData.rollMin, mid = 1.0, max = OptionData.rollMax }
+local OPTION_SET_EQUIP_PARTS = { armor = true, gloves = true, shoes = true }
+
+local function parseOptionRollArg(arg)
+	if arg == nil then
+		return 1.0
+	end
+	if OPTION_ROLL_KEYWORDS[arg] then
+		return OPTION_ROLL_KEYWORDS[arg]
+	end
+	return tonumber(arg)
+end
+
+local function applyOptionSet(player, targetArg, optionIdArg, gradeArg, rollArg)
+	local weapon = PlayerProfile.getWeapon(player)
+	if not weapon then
+		return false, "no_weapon"
+	end
+
+	local slot = tonumber(targetArg)
+	local isGemTarget = slot ~= nil
+	if isGemTarget and (slot < 1 or slot > Gem.slotCount) then
+		return false, "slot_range"
+	end
+	if not isGemTarget and not OPTION_SET_EQUIP_PARTS[targetArg] then
+		return false, "bad_target"
+	end
+
+	local option = nil
+	if optionIdArg ~= "-" then
+		if not OptionData.options[optionIdArg] then
+			return false, "bad_option"
+		end
+		local roll = parseOptionRollArg(rollArg)
+		if not roll then
+			return false, "bad_roll"
+		end
+		option = { id = optionIdArg, roll = roll }
+		if OptionData.options[optionIdArg].critRateBase then
+			option.roll2 = roll -- 치확·치피 같은 롤로 강제(검증 편의 - 실제 굴림은 독립).
+		end
+	end
+
+	local current = isGemTarget
+		and (Gem.isFilled(weapon.gems, slot) and weapon.gems[slot] or nil)
+		or PlayerProfile.getEquipped(player, targetArg)
+	local grade = gradeArg or (current and current.grade) or "primordial"
+	if not ItemVisualData.gradeVisuals[grade] then
+		return false, "bad_grade"
+	end
+	local itemLevel = (current and current.itemLevel) or 100
+
+	if isGemTarget then
+		weapon.gems[slot] = { grade = grade, itemLevel = itemLevel, option = option }
+		-- maxHpPercent·speedPercent는 PlayerState에 캐시돼 있다(setEquippedDirect는 이미
+		-- 갱신하지만 보석 슬롯 직접 대입은 그 경로를 안 탄다) - 여기서 직접 갱신한다.
+		PlayerProfile.refreshMaxHp(player)
+		PlayerProfile.refreshMovementSpeed(player)
+	else
+		local item = buildGearItem(targetArg, grade, itemLevel)
+		item.option = option
+		PlayerProfile.setEquippedDirect(player, targetArg, item) -- 부위별로 이미 refreshMaxHp/refreshMovementSpeed를 호출한다.
+	end
+	return true
+end
+
+-- "/gg option show" - 옵션을 가질 수 있는 8자리(장비 3부위 + 보석 5개) 각각의 id·등급·
+-- 롤값·실제 적용 수치를 전부 찍고, 마지막에 8축(위력·신속·방어·건강·성장·재생·흡혈·치명)
+-- 합산까지 낸다 - PlayerProfile.getOptionBonus/getCritBonus 그대로(서버 실전 경로와 같은
+-- 함수) - 확률 뽑기에 기대지 않고 특정 값을 강제 배정해 바로 대조할 수 있다.
+local function describeOptionSource(label, source, classId)
+	if not source then
+		print(("[DevTools]   %s: 미착용"):format(label))
+		return
+	end
+	if not source.option then
+		print(("[DevTools]   %s: %s등급 itemLevel%s, 옵션 없음"):format(label, tostring(source.grade), tostring(source.itemLevel)))
+		return
+	end
+	local value = Option.valueOf(source.option, source.grade, source.itemLevel, classId)
+	local valueText
+	if type(value) == "table" then
+		valueText = ("치확+%.2f%%p 치피+%.3f"):format(value.critRate * 100, value.critDmg * 100)
+	else
+		valueText = ("%.3f%%"):format(value * 100)
+	end
+	print(("[DevTools]   %s: %s등급 itemLevel%s, 옵션=%s 롤=%.4f(roll2=%s) -> %s"):format(
+		label, tostring(source.grade), tostring(source.itemLevel), source.option.id, source.option.roll,
+		source.option.roll2 and ("%.4f"):format(source.option.roll2) or "-", valueText))
+end
+
+local function printOptionShow(player)
+	local classId = PlayerProfile.getClassId(player)
+	local weapon = PlayerProfile.getWeapon(player)
+	if not classId or not weapon then
+		reply(player, "직업을 먼저 선택해야 합니다")
+		return
+	end
+
+	print(("[DevTools] === 옵션 장착 현황(직업=%s) ==="):format(classId))
+	describeOptionSource("armor", PlayerProfile.getEquipped(player, "armor"), classId)
+	describeOptionSource("gloves", PlayerProfile.getEquipped(player, "gloves"), classId)
+	describeOptionSource("shoes", PlayerProfile.getEquipped(player, "shoes"), classId)
+	for slot = 1, Gem.slotCount do
+		describeOptionSource("gem" .. slot, Gem.isFilled(weapon.gems, slot) and weapon.gems[slot] or nil, classId)
+	end
+
+	local optionCritRate, optionCritDmg = PlayerProfile.getCritBonus(player)
+	print(("[DevTools] === 합산(장비+보석 옵션, 상한 적용됨) === 위력=%.3f%% 신속=%.3f%% 방어=%.3f%% 건강=%.3f%% 성장=%.3f%% 재생=%.3f%% 흡혈=%.3f%% 치확=%.3f%%p 치피=%.4f"):format(
+		PlayerProfile.getOptionBonus(player, "attackPercent") * 100,
+		PlayerProfile.getOptionBonus(player, "speedPercent") * 100,
+		PlayerProfile.getOptionBonus(player, "defensePercent") * 100,
+		PlayerProfile.getOptionBonus(player, "maxHpPercent") * 100,
+		PlayerProfile.getOptionBonus(player, "expGain") * 100,
+		PlayerProfile.getOptionBonus(player, "healingPower") * 100,
+		PlayerProfile.getOptionBonus(player, "lifesteal") * 100,
+		optionCritRate * 100, optionCritDmg))
+	reply(player, "옵션 장착 현황을 콘솔에 출력했습니다")
+end
+
+-- "/gg option lifesteal" - 26-2, PRD 20.67 [6-1] 실측. AttackRequest는 RemoteEvent라
+-- execute_luau 클라이언트가 FireServer를 못 쏜다(Studio MCP 제약, 3D 월드 클릭도 자동화
+-- 불가) - 그래서 실전 경로가 실제로 부르는 함수(PlayerProfile.applyLifesteal →
+-- PlayerState.tryLifesteal, AttackServer/strikeTarget과 정확히 같은 호출)를 서버 스크립트
+-- 안에서 실시간(os.clock() 기준 task.wait)으로 반복 호출해 초당 회복량을 직접 잰다 - 새
+-- 계산 경로를 만들지 않는다. 요청량을 maxHp의 10배로 크게 잡아 "%가 아무리 커도 상한을
+-- 못 넘는지"를 확인한다.
+local function runLifestealSelfTest(player)
+	local maxHp = PlayerState.getMaxHp(player)
+	if not maxHp then
+		reply(player, "캐릭터가 로드되지 않았습니다")
+		return
+	end
+	PlayerState.setHp(player, maxHp * 0.5) -- 회복 관찰 여지를 만든다(만피면 상한에 막혀도 안 보인다).
+	local hugeDamage = maxHp * 10
+	local startHp = PlayerState.getHp(player)
+	local startAt = os.clock()
+	local sampleCount = 30
+	for _ = 1, sampleCount do
+		task.wait(0.1)
+		PlayerProfile.applyLifesteal(player, hugeDamage)
+	end
+	local elapsedSeconds = os.clock() - startAt
+	local recovered = math.min(PlayerState.getHp(player), maxHp) - startHp
+	local fractionPerSecond = recovered / maxHp / elapsedSeconds
+	print(("[DevTools] === 흡혈 초당 상한 실측(20.67 [6-1]) === %.2f초 동안 회복 %.2f/%.2f maxHp -> 초당 %.4f%%(상한 %.2f%%)"):format(
+		elapsedSeconds, recovered, maxHp, fractionPerSecond * 100, CombatConfig.lifestealMaxHpFractionPerSecond * 100))
+	reply(player, ("흡혈 초당 회복 실측 %.4f%% (상한 %.2f%%, 못 넘으면 정상)"):format(
+		fractionPerSecond * 100, CombatConfig.lifestealMaxHpFractionPerSecond * 100))
+end
+
 -- "/gg measure [stage]" - 지금 이 플레이어가 실제로 들고 있는 레벨·장비·강화·직업
 -- 그대로(합성 조건이 아니라 실측) 생존 타수와 60초 평타 총딜을 계산해 콘솔에 낸다.
 -- stage를 생략하면 지금 프로필의 무한 스테이지를 쓴다.
@@ -282,9 +438,12 @@ local function measure(player, stageOverride)
 		loadout.atk, loadout.defense, loadout.maxHp, loadout.attackCooldown, unit))
 	-- 23-4: BalanceSim이 이제 weapon.gems를 읽는다 - 보석 장착 전/후 차이가 실제로
 	-- 반영됐는지 콘솔에서 바로 보이도록 축별 보너스를 따로 찍는다.
-	print(("[DevTools] 보석 보너스: 위력+%.1f%% 신속+%.1f%% 방어+%.1f%% 건강+%.1f%%"):format(
-		Gem.totalAttackPercentBonus(weapon.gems) * 100, Gem.totalSpeedPercentBonus(weapon.gems) * 100,
-		Gem.totalDefensePercentBonus(weapon.gems) * 100, Gem.totalMaxHpPercentBonus(weapon.gems) * 100))
+	-- 26-2: Gem.total*PercentBonus 폐기(PRD 20.67 [14] 3단계) - PlayerProfile.getOptionBonus
+	-- 하나로 장비 3부위 옵션 + 보석 5개를 통합해 읽는다(장갑·신발·갑옷의 "기본효과"는 이
+	-- 값에 안 잡힌다 - 옛 "보석 보너스"와 같은 의미, 옵션 층만 따로 보는 진단 라인이다).
+	print(("[DevTools] 옵션 보너스(장비+보석): 위력+%.1f%% 신속+%.1f%% 방어+%.1f%% 건강+%.1f%%"):format(
+		PlayerProfile.getOptionBonus(player, "attackPercent") * 100, PlayerProfile.getOptionBonus(player, "speedPercent") * 100,
+		PlayerProfile.getOptionBonus(player, "defensePercent") * 100, PlayerProfile.getOptionBonus(player, "maxHpPercent") * 100))
 	print(("[DevTools] tier1 몬스터 평타(스테이지%d 적용)=%.3f -> 실제 피해=%.3f/대 -> 생존 타수=%.2f대"):format(
 		stage, point.monsterAttack, point.dmgPerHit, point.surviveHits))
 	print(("[DevTools] 60초 순수 평타 총딜(평균 근사)=%.1f (%.1f회 타격, 평균 %.2f/타) / 시뮬레이션=%.1f (%d회) = atk-단위 %.1f"):format(
@@ -776,6 +935,9 @@ local HELP_TEXT = table.concat({
 	"/gg curve migrate - v21 세이브 형태(옛 두 곡선)의 경험치를 migrate에 통과시켜 레벨·진행률 유지를 자체검증(25-1)",
 	"/gg option table - 옵션 통합 등급별 구간표·레벨계수 동결·롤 분포(1000회)를 콘솔에 출력(26-1, PRD 20.67 [3] 대조용 - Option.lua는 아직 게임에 연결 안 됨)",
 	"/gg option migrate - v22 세이브 형태(gem.optionId)의 보석을 migrate에 통과시켜 옵션 이관 규칙(20.67 [13])을 자체검증(26-1)",
+	"/gg option set <슬롯1-5|armor|gloves|shoes> <옵션id|-> [등급] [min|mid|max|롤숫자] - 그 자리에 옵션을 강제 배정(26-2, 등급·롤 생략 시 기존값 유지)",
+	"/gg option show - 옵션 8자리(장비3+보석5) 각각의 id·등급·롤·실제 수치 + 8축 합산(상한 적용됨)을 콘솔에 출력(26-2)",
+	"/gg option lifesteal - 흡혈 초당 회복 실측(3초, 요청량을 maxHp×10으로 크게 잡아 상한이 실제로 잘리는지 확인, 20.67 [6-1])",
 	"/gg rebirth <0-5> - 환생 횟수 강제 지정(무기 등급·보석 슬롯은 안 건드림, 보스 첫 처치 드랍 등급표 분기·슬롯 개방 표시 검증용)",
 	"/gg rebirthdo - 실제 환생 실행(PlayerProfile.rebirth 그대로 - 레벨 조건 검증 + 무기 등급·보석 자동 지급까지 전체 흐름 검증용)",
 	"/gg gem <slot 1-5> <id|-> - 그 슬롯에 보석을 강제로 채운다(23-2 검증용, id=-면 옵션 없이)",
@@ -861,6 +1023,19 @@ local function handleCommand(player, args)
 		printOptionTable(player)
 	elseif sub == "option" and args[2] == "migrate" then
 		runOptionMigrateSelfTest(player)
+	elseif sub == "option" and args[2] == "set" and args[3] and args[4] then
+		ensureBackup(player)
+		local success, reason = applyOptionSet(player, args[3], args[4], args[5], args[6])
+		if success then
+			reply(player, ("옵션 배정 완료: %s = %s%s%s"):format(
+				args[3], args[4], args[5] and (" " .. args[5]) or "", args[6] and (" roll=" .. args[6]) or ""))
+		else
+			reply(player, "실패: " .. tostring(reason))
+		end
+	elseif sub == "option" and args[2] == "show" then
+		printOptionShow(player)
+	elseif sub == "option" and args[2] == "lifesteal" then
+		runLifestealSelfTest(player)
 	elseif sub == "rebirth" and tonumber(args[2]) then
 		ensureBackup(player)
 		local applied = applyRebirth(player, math.floor(tonumber(args[2])))

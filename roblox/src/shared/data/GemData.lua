@@ -43,17 +43,17 @@ return {
 	--   삼위일체(하나로 합쳐진 전체 → "몸 자체가 단단해진다")→ 최대체력%
 	-- 영웅·전설·유물 등급(슬롯1~3)엔 옵션 풀이 없다 - purchases.optionRerollTickets 자체가
 	-- ancient/primordial 두 종류뿐이라(20.37 [6] 저장 스키마), 옵션 변환권으로 바꿀 대상이
-	-- 애초에 이 두 등급에만 있다는 뜻이다. 그 3등급 보석은 지금처럼 공격력%만 준다(축 선택
-	-- 자체가 없다 - 이름 있는 옵션이 아니라서 Gem.attackPercentBonusForGrade를 그대로 쓴다).
+	-- 애초에 이 두 등급에만 있다는 뜻이다(26-2 - 이 옛 4개 이름 풀은 여전히 rerollGemOption
+	-- 전용이다. 통합 옵션 체계에서는 영웅~유물도 실제 옵션을 굴린다 - shared/Option.lua·
+	-- PRD 20.67 [1] 참고, 이 표는 옛 리롤 경제 전용으로만 남는다).
 	optionPoolByGrade = {
 		ancient = { "연속격", "속사의 흔적" },
 		primordial = { "심판의 표식", "삼위일체" },
 	},
 
-	-- 옵션 → 스탯 축. Gem.lua의 totalXxxPercentBonus들이 이 표로 "이 보석이 지금 어느 축을
-	-- 담당하는가"를 판정한다. 슬롯이 비었거나(optionId=nil, 23-3부터 자동 지급/분해가 옵션을
-	-- 굴리지 않는다 - 아래 [옵션 배정] 주석과 PlayerProfile.rerollGemOption 참고) 이름이
-	-- 이 표에 없으면 어떤 축에도 기여하지 않는다.
+	-- 옵션 → 스탯 축. 26-2부터는 SaveSystem.migrate v23 블록이 옛 이름을 새 옵션 id로
+	-- 옮길 때만 이 표를 읽는다(Gem.lua의 옛 totalXxxPercentBonus 4종은 폐기됨, 26-2 세션
+	-- 참고) - 실제 축 계산은 이제 항상 shared/Option.lua다.
 	optionAxis = {
 		["연속격"] = "attackPercent",
 		["속사의 흔적"] = "speedPercent",
@@ -61,9 +61,10 @@ return {
 		["삼위일체"] = "maxHpPercent",
 	},
 
-	-- 축 표시 이름(한국어 UI용, InventoryUI.client.lua 보석 탭). 23-4: "공격력%"류 축 이름이
-	-- 곧 UI에 보이는 스탯명과 같아 다른 장비 스탯 문구와 헷갈린다는 지시로 짧은 고유 이름으로
-	-- 바꿨다 - 효과·수치(Gem.magnitudeForGrade)는 전혀 안 바뀐다, 표시 이름만 교체.
+	-- 축 표시 이름(한국어). 23-4: "공격력%"류 축 이름이 곧 UI에 보이는 스탯명과 같아 다른
+	-- 장비 스탯 문구와 헷갈린다는 지시로 짧은 고유 이름으로 바꿨다. 26-2부터 이 이름은
+	-- OptionData.options[id].displayName과 같은 값이다(위력·신속·방어·건강) - InventoryUI가
+	-- 이 표 대신 OptionData를 직접 읽는다(공통 8종에는 결국 같은 값).
 	axisDisplayNames = {
 		attackPercent = "위력",
 		speedPercent = "신속",
@@ -90,9 +91,10 @@ return {
 	-- maxHpBonusBase=300, CharacterLevelConfig의 레벨100 itemLevel계수, MonsterData.tier1.attack=8,
 	-- InfiniteStageConfig.growthRate=1.155로 계산, 보고서 "기대 가치 환산표" 참고) - ρ≈0.5885.
 	-- 방어력 보너스는 생존 타수에 ×(1+r×ρ)로만 반영되므로, 다른 축과 같은 만큼(+r) 생존을
-	-- 올리려면 실제로는 r/ρ만큼 방어력을 올려야 한다 - Gem.lua가 defensePercent 축에만
-	-- 이 역수를 곱한다. 새 상수가 아니라 기존 CombatConfig/MonsterData/InfiniteStageConfig
-	-- 값으로 앵커 식을 풀어 나온 값이다.
+	-- 올리려면 실제로는 r/ρ만큼 방어력을 올려야 한다. 새 상수가 아니라 기존 CombatConfig/
+	-- MonsterData/InfiniteStageConfig 값으로 앵커 식을 풀어 나온 값이다. 26-2부터는
+	-- OptionData.options.defensePercent.baseValue(=0.10/이 값)가 이 역수를 곱한 결과다
+	-- (shared/data/OptionData.lua 참고 - Gem.lua는 더 이상 이 계산을 하지 않는다).
 	survivalReductionAtAnchor = 0.5885,
 
 	-- 옵션 변환권 가격 배수(20.37 [5] "가격 = 그 순간 몬스터 1마리당 골드 × N, N≈30~50 -

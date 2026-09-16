@@ -20,6 +20,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local BuffState = require(script.Parent.BuffState)
 local PlayerState = require(script.Parent.PlayerState)
+local PlayerProfile = require(script.Parent.PlayerProfile)
 
 RunService.Heartbeat:Connect(function(dt)
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -41,7 +42,10 @@ RunService.Heartbeat:Connect(function(dt)
 
 		PlayerState.setLastCombatActionAt(player, os.clock())
 
-		local newHp = hp - maxHp * def.drainPercentPerSecond * dt
+		-- 26-2(PRD 20.67 [2] "딜링모드 - 체력 소모 ×(1-x)", 상한 90% - baseValue가 음수라
+		-- 1+합산이 곧 (1-x)다, Option.sumWithCap의 대칭 clamp가 0 이하로 못 내려가게 막는다).
+		local drainMultiplier = 1 + PlayerProfile.getOptionBonus(player, "skill_healer_E")
+		local newHp = hp - maxHp * def.drainPercentPerSecond * drainMultiplier * dt
 		if newHp <= 0 then
 			newHp = 0
 			BuffState.clear(player, "dealingMode")

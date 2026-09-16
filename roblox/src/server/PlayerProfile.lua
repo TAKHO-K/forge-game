@@ -13,6 +13,9 @@ local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+-- 26-2(PRD 20.67 [14] 3~5단계): 장비 3부위 옵션 + 보석 5개의 축 합산·치명·직업 특화 전부
+-- Option.lua 순수 함수(valueOf·sumWithCap·sumAxisBonus·critBonus)가 유일한 출처다.
+local Option = require(ReplicatedStorage.Shared.Option)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local InventorySync = require(script.Parent.InventorySync)
@@ -34,6 +37,52 @@ local profiles = {}
 -- 골랐으면(nil) nil을 돌려준다 - 호출부가 그 경우를 각자 처리한다.
 local function activeClassState(profile)
 	return profile.classId and profile.classes[profile.classId]
+end
+
+-- 26-2(PRD 20.67 [14] 3단계): 옵션을 가질 수 있는 모든 자리(장비 3부위 + 보석 5칸)를 한
+-- 목록으로 모은다. 각 원소는 { option, grade, itemLevel }를 갖는 아이템/보석 테이블 그대로
+-- 다시 쓴다(Option.sumAxisBonus·Option.critBonus가 이 모양을 그대로 읽는다, 20.67 [1]
+-- "장비 옵션 1개 ≙ 보석 1개" - 자리 종류가 달라도 값 계산식은 하나다).
+local function buildOptionSources(classState)
+	local sources = {}
+	for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+		local item = classState.equipment[part]
+		if item then
+			table.insert(sources, item)
+		end
+	end
+	local gems = classState.weapon.gems
+	for slot = 1, Gem.slotCount do
+		if Gem.isFilled(gems, slot) then
+			table.insert(sources, gems[slot])
+		end
+	end
+	return sources
+end
+
+-- 옵션 하나(axisId)가 지금 이 플레이어에게 실제로 얼마를 주는지 - 장비 3부위 옵션 + 보석
+-- 5개를 합쳐 Option.sumAxisBonus(=Option.valueOf + Option.sumWithCap 합성)로 계산한다.
+-- classId 불일치인 직업 특화 옵션은 Option.valueOf가 이미 0으로 처리한다(20.67 [8]).
+-- 위력·신속·방어·건강 4축(아래 getAttackPercentBonus 등)과 성장·재생·흡혈·직업 특화 8종이
+-- 전부 이 함수 하나로 계산된다 - Option.lua 밖에 새 계산식을 두지 않는다.
+function PlayerProfile.getOptionBonus(player, axisId)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return 0
+	end
+	return Option.sumAxisBonus(buildOptionSources(classState), axisId, profile.classId)
+end
+
+-- 치명(crit) 전용 - {critRate, critDmg} 두 값을 같이 돌려준다(20.67 [6-3], Option.critBonus
+-- 참고 - 둘 다 상한 없음).
+function PlayerProfile.getCritBonus(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return 0, 0
+	end
+	return Option.critBonus(buildOptionSources(classState), profile.classId)
 end
 
 -- 등급 하나의 ArmorData.gradeOrder 안 위치(1부터 시작). 목록에 없는 등급이면 nil -
@@ -147,11 +196,18 @@ end
 -- getExpGainMultiplier만 곱한다 - 여기 한 곳에서만 곱한다(호출부 CombatResolution.
 -- grantKillReward는 몬스터가 주는 원래 경험치만 넘긴다 - "증가 통로가 여기 하나" 원칙).
 
--- 경험치 획득량 배수. 다음 세션의 "경험치 획득량 증가 옵션(최대 +25%)"이 곱해질 자리 -
--- 지금은 항상 1.0이다. 옵션이 붙으면 profile/classState에서 읽어 1.0~1.25를 돌려주면 되고,
--- addCharacterExp·/gg curve(DevTools)가 이 함수 하나만 본다.
+-- 경험치 획득량 배수(26-2, PRD 20.67 [14] 4단계 "성장"). 성장(expGain) 옵션 합(상한 25%,
+-- OptionData.expGain.cap)을 1에 더한다 - addCharacterExp·/gg curve(DevTools)가 이 함수
+-- 하나만 본다.
 function PlayerProfile.getExpGainMultiplier(player)
-	return 1.0
+	return 1 + PlayerProfile.getOptionBonus(player, "expGain")
+end
+
+-- 재생(healingPower, 26-2) 배수 - 자동회복(PlayerRegen.server.lua)·힐러 치유(SkillServer
+-- castHeal) 둘 다 이 함수 하나로 회복량에 곱한다(20.67 [2] "회복량 ×(1+x). 흡혈엔 적용
+-- 안 함" - 흡혈은 이 함수를 안 쓴다, PlayerProfile.applyLifesteal 참고).
+function PlayerProfile.getHealingPowerMultiplier(player)
+	return 1 + PlayerProfile.getOptionBonus(player, "healingPower")
 end
 
 function PlayerProfile.addCharacterExp(player, amount)
@@ -721,60 +777,81 @@ function PlayerProfile.getEquippedArmor(player)
 	return PlayerProfile.getEquipped(player, "armor")
 end
 
--- 신발 이동+공속 비율 보너스(16-6) + 장착 보석 공속·이속% 보너스 합(23-3, Gem.
--- totalSpeedPercentBonus, "속사의 흔적") - PlayerCombat.getAttackCooldown과
--- refreshMovementSpeed(WalkSpeed) 둘 다 이 함수 하나를 거치므로 새 곱셈 지점 없이
--- 자동으로 공속·이속 모두에 반영된다. 미착용/미배정이면 0(Loot.getShoesSpeedPercent가
--- nil을, Gem.totalSpeedPercentBonus가 옵션 미배정 슬롯을 그렇게 처리한다).
+-- 신발 이동+공속 비율 보너스(16-6, 기존 장비 기본효과 - 옵션과 별개 층, 20.67 [1] "부위
+-- 기본 스탯 축을 제외하지 않는다") + 장비 3부위 옵션 + 보석 5개의 speedPercent 옵션 합
+-- (26-2, PlayerProfile.getOptionBonus) - PlayerCombat.getAttackCooldown과
+-- refreshMovementSpeed(WalkSpeed) 둘 다 이 함수 하나를 거치므로 새 곱셈 지점 없이 자동으로
+-- 공속·이속 모두에 반영된다. 미착용/미배정이면 0.
 function PlayerProfile.getSpeedPercentBonus(player)
 	local shoesBonus = Loot.getShoesSpeedPercent(PlayerProfile.getEquipped(player, "shoes"))
-	local weapon = PlayerProfile.getWeapon(player)
-	local gemBonus = weapon and Gem.totalSpeedPercentBonus(weapon.gems) or 0
-	return shoesBonus + gemBonus
+	return shoesBonus + PlayerProfile.getOptionBonus(player, "speedPercent")
 end
 
--- 장갑 공격력 비율 보너스(16-6) + 장착 보석 공격력% 보너스 합(23-2, Gem.
--- totalAttackPercentBonus) - AttackServer/SkillServer가 PlayerCombat.getAttack에 그대로
+-- 장갑 공격력 비율 보너스(16-6, 기존 장비 기본효과) + 장비 3부위 옵션 + 보석 5개의
+-- attackPercent 옵션 합(26-2) - AttackServer/SkillServer가 PlayerCombat.getAttack에 그대로
 -- 넘기는 단일 배율 자리다(PlayerCombat.lua 주석 "attackPercentBonus" 참고, 둘 다 같은
 -- 자리를 공유한다 - 보석 전용 곱셈 지점을 새로 만들지 않는다).
 function PlayerProfile.getAttackPercentBonus(player)
 	local glovesBonus = Loot.getGlovesAttackPercent(PlayerProfile.getEquipped(player, "gloves"))
-	local weapon = PlayerProfile.getWeapon(player)
-	local gemBonus = weapon and Gem.totalAttackPercentBonus(weapon.gems) or 0
-	return glovesBonus + gemBonus
+	return glovesBonus + PlayerProfile.getOptionBonus(player, "attackPercent")
 end
 
--- 보석 방어력% 보너스(23-3, Gem.totalDefensePercentBonus, "심판의 표식") -
+-- 장비 3부위 옵션 + 보석 5개의 defensePercent 옵션 합(26-2, PRD 20.67 [14] 3단계) -
 -- PlayerDamage.computeHitDamage가 PlayerCombat.getDefense의 세 번째 자리로 그대로 넘긴다.
+-- 방어력엔 장비 기본효과 층이 없다(갑옷 기본 방어력은 Loot.getArmorDefense가 절대값으로
+-- 따로 준다) - 옵션 합 자체가 전체 값이다.
 function PlayerProfile.getDefensePercentBonus(player)
-	local weapon = PlayerProfile.getWeapon(player)
-	return weapon and Gem.totalDefensePercentBonus(weapon.gems) or 0
+	return PlayerProfile.getOptionBonus(player, "defensePercent")
 end
 
 -- 최대체력 재계산(17-1) - 갑옷 장착/해제·로드 직후마다 호출한다(refreshMovementSpeed와
 -- 같은 패턴). 갑옷 미착용이면 Loot.getMaxHpBonus가 0을 돌려줘 CombatConfig.playerMaxHp
--- 그대로 유지된다. 23-3: 보석 최대체력%(Gem.totalMaxHpPercentBonus, "삼위일체")는 갑옷
--- 보너스까지 합친 총합에 ×(1+x)로 곱한다(getDefense의 defensePercentBonus와 같은 자리
--- 배치 - "기본값+장비보너스 전체에 곱한다"는 20.11-4 원칙 재사용). Hp/MaxHp Attribute도
--- 여기서 같이 맞춘다 - PlayerState가 유일한 HP 소스라는 원칙대로, HP가 바뀌는 이 지점에서도
--- 클라이언트(PlayerHealthBar.client.lua)가 보는 Attribute를 동기화해야 한다(MonsterAI.
--- server.lua의 syncHud와 같은 이유 - 그쪽은 피격·리스폰 경로만 알고 장비 교체는 모른다).
--- 캐릭터가 아직 없어 PlayerState.init 전이면(로드 중) get 함수들이 nil을 돌려주는데,
--- Attribute에 nil을 주면 그 값이 지워지므로 안전하게 건너뛴다.
+-- 그대로 유지된다. 26-2: 장비 3부위 옵션 + 보석 5개의 maxHpPercent 옵션 합(PlayerProfile.
+-- getOptionBonus)은 갑옷 보너스까지 합친 총합에 ×(1+x)로 곱한다(getDefense의
+-- defensePercentBonus와 같은 자리 배치 - "기본값+장비보너스 전체에 곱한다"는 20.11-4
+-- 원칙 재사용). Hp/MaxHp Attribute도 여기서 같이 맞춘다 - PlayerState가 유일한 HP 소스라는
+-- 원칙대로, HP가 바뀌는 이 지점에서도 클라이언트(PlayerHealthBar.client.lua)가 보는
+-- Attribute를 동기화해야 한다(MonsterAI.server.lua의 syncHud와 같은 이유 - 그쪽은 피격·
+-- 리스폰 경로만 알고 장비 교체는 모른다). 캐릭터가 아직 없어 PlayerState.init 전이면(로드
+-- 중) get 함수들이 nil을 돌려주는데, Attribute에 nil을 주면 그 값이 지워지므로 안전하게
+-- 건너뛴다.
 function PlayerProfile.refreshMaxHp(player)
 	local profile = profiles[player]
 	if not profile then
 		return
 	end
 	local bonus = Loot.getMaxHpBonus(PlayerProfile.getEquipped(player, "armor"))
-	local weapon = PlayerProfile.getWeapon(player)
-	local gemMaxHpPercent = weapon and Gem.totalMaxHpPercentBonus(weapon.gems) or 0
-	PlayerState.setMaxHp(player, (CombatConfig.playerMaxHp + bonus) * (1 + gemMaxHpPercent))
+	local optionMaxHpPercent = PlayerProfile.getOptionBonus(player, "maxHpPercent")
+	PlayerState.setMaxHp(player, (CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent))
 	local hp, maxHp = PlayerState.getHp(player), PlayerState.getMaxHp(player)
 	if hp and maxHp then
 		player:SetAttribute("Hp", hp)
 		player:SetAttribute("MaxHp", maxHp)
 	end
+end
+
+-- 흡혈(lifesteal, 26-2, PRD 20.67 [6-1]) - 피해 확정 지점에서 호출한다(AttackServer 평타
+-- 2경로 + SkillServer.strikeTarget). 옵션 합(fraction, %상한 없음)이 0 이하면 아무 일도
+-- 안 한다 - 흡혈 옵션이 없는 압도적 다수의 호출에서 여기서 바로 끝난다. 실제 회복은
+-- PlayerState.tryLifesteal의 토큰 버킷(초당 상한 CombatConfig.lifestealMaxHpFractionPerSecond)
+-- 을 거친다 - %가 아무리 커도 결과량 상한을 못 넘는다(20.67 [6-1] "회복량 자체에 초당
+-- 상한을 둔다").
+function PlayerProfile.applyLifesteal(player, damage)
+	local fraction = PlayerProfile.getOptionBonus(player, "lifesteal")
+	if fraction <= 0 or not damage or damage <= 0 then
+		return
+	end
+	local granted = PlayerState.tryLifesteal(player, damage * fraction)
+	if granted <= 0 then
+		return
+	end
+	local hp, maxHp = PlayerState.getHp(player), PlayerState.getMaxHp(player)
+	if not hp or not maxHp then
+		return
+	end
+	local newHp = math.min(hp + granted, maxHp)
+	PlayerState.setHp(player, newHp)
+	player:SetAttribute("Hp", newHp)
 end
 
 -- 신발 착용/해제·로드 직후마다 호출한다(16-6) - 실제 이동속도(Humanoid.WalkSpeed)와

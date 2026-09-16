@@ -32,6 +32,11 @@ local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+-- 26-2: 옛 4축 표시(Gem.attackPercentBonusForGrade/magnitudeForGrade/optionAxis, 이번
+-- 세션에 폐기)를 대신한다 - 값 조회는 서버와 같은 순수 함수(Option.valueOf) 하나만 쓴다.
+local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+local Option = require(ReplicatedStorage.Shared.Option)
+local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local ItemIcons = require(script.Parent.ItemIcons)
@@ -2229,12 +2234,25 @@ updateGemTab = function()
 		local optionText
 		if not filled then
 			optionText = "빈 홈"
-		elseif not Gem.isRerollableGrade(gem.grade) then
-			optionText = ("위력 +%.1f%%"):format(Gem.attackPercentBonusForGrade(gem.grade) * 100)
-		elseif gem.optionId then
-			local axis = Gem.optionAxis(gem.optionId)
-			local axisName = GemData.axisDisplayNames[axis] or axis
-			optionText = ("%s(%s +%.1f%%)"):format(gem.optionId, axisName, Gem.magnitudeForGrade(gem.grade, axis) * 100)
+		elseif gem.option then
+			-- 26-2: 옛 4축(연속격 등) 표시를 대신한다 - 통합 옵션 표(OptionData)와 서버와
+			-- 같은 순수 함수(Option.valueOf)만 쓴다. 표시명이 없는 항목(직업 특화 8종)은
+			-- SkillData[classId][slot].name을 그대로 읽는다(20.67 [2] "이름 중복 정의 금지").
+			local def = OptionData.options[gem.option.id]
+			local displayName = def and def.displayName
+			if not displayName and def and def.classId then
+				local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
+				displayName = skillDef and skillDef.name
+			end
+			displayName = displayName or gem.option.id
+			local value = Option.valueOf(gem.option, gem.grade, gem.itemLevel, classId)
+			local valueText
+			if type(value) == "table" then
+				valueText = ("치확+%.1f%%p 치피+%.2f"):format(value.critRate * 100, value.critDmg * 100)
+			else
+				valueText = ("+%.1f%%"):format(value * 100)
+			end
+			optionText = ("%s(%s)"):format(displayName, valueText)
 		else
 			optionText = "옵션 미배정(변환권 필요)"
 		end

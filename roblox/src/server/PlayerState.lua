@@ -11,7 +11,8 @@ local PlayerState = {}
 -- [Player] = { hp, maxHp, lastCombatActionAt(17-1 도입, 19-1에서 의미 확장 - 자동회복
 -- 5초 대기 타이머 기준 시각, os.clock()), incomingDamageMultiplier·incomingDamageMultiplierUntil
 -- (20-2a, 대검 E "받는 피해 50% 감소" - os.clock() 기준 만료 시각), channelingUntil(21-1,
--- 채널링 스킬 진행 중 - 이 시각 전엔 평타 요청을 거부한다) }
+-- 채널링 스킬 진행 중 - 이 시각 전엔 평타 요청을 거부한다), lifestealTokens·
+-- lifestealTokensUpdatedAt(26-2, 흡혈 초당 상한 토큰 버킷 - PlayerState.tryLifesteal) }
 local players = {}
 
 function PlayerState.init(player)
@@ -22,6 +23,8 @@ function PlayerState.init(player)
 		incomingDamageMultiplier = 1,
 		incomingDamageMultiplierUntil = nil,
 		channelingUntil = nil,
+		lifestealTokens = nil, -- 첫 사용 시 가득 찬 것으로 취급(아래 tryLifesteal)
+		lifestealTokensUpdatedAt = nil,
 	}
 end
 
@@ -150,6 +153,27 @@ function PlayerState.getIncomingDamageMultiplier(player)
 		return 1
 	end
 	return entry.incomingDamageMultiplier
+end
+
+-- 흡혈 토큰 버킷(26-2, PRD 20.67 [6-1]) - 용량·충전 모두 maxHp×
+-- CombatConfig.lifestealMaxHpFractionPerSecond(초당). 호출마다 마지막 계산 이후 지난 시간만큼
+-- 채우고(용량을 넘지 않게), requestedAmount와 남은 잔량 중 작은 쪽만 내어준다 - "타격마다
+-- min(피해×Σls, 잔량)만 회복"(20.67 [6-1] 구현 문구 그대로). 처음 쓰는 순간은 가득 찬
+-- 버킷으로 취급한다(lifestealTokens=nil). maxHp는 그때그때(장비 교체로 바뀔 수 있다) 다시
+-- 읽는다 - 캐싱하지 않는다.
+function PlayerState.tryLifesteal(player, requestedAmount)
+	local entry = players[player]
+	if not entry or not entry.maxHp then
+		return 0
+	end
+	local capacity = entry.maxHp * CombatConfig.lifestealMaxHpFractionPerSecond
+	local now = os.clock()
+	local elapsed = entry.lifestealTokensUpdatedAt and (now - entry.lifestealTokensUpdatedAt) or 0
+	local available = math.min(capacity, (entry.lifestealTokens or capacity) + capacity * elapsed)
+	local granted = math.min(requestedAmount, available)
+	entry.lifestealTokens = available - granted
+	entry.lifestealTokensUpdatedAt = now
+	return granted
 end
 
 function PlayerState.clear(player)

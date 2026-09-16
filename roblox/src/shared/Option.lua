@@ -136,6 +136,13 @@ end
 
 -- 값 목록(같은 optionId)을 더하고 그 옵션의 합산 상한(OptionData.options[id].cap)을 적용한다
 -- (20.67 [7] "합산은 min(cap, Σ)로 순서 무관"). 상한이 없으면(cap=nil) 그대로 합.
+--
+-- 26-2 수정: 대칭 clamp(-cap~cap)로 바꾼다. baseValue가 음수인 축(skill_bow_E·skill_healer_Q·
+-- skill_healer_E, "쿨다운/소모 ×(1-x)"류 - OptionData 주석 참고)은 합산값 자체가 항상 음수라
+-- 옛 `math.min(total, cap)`(cap이 양수라 음수 total엔 전혀 안 걸린다 - 8개를 몰빵해도 상한이
+-- 있는 것처럼 보이지만 실제로는 절대 안 잘렸다)로는 [7]의 상한(예: 딜링모드 Σ≤90%)이 코드에서
+-- 전혀 작동하지 않는다. 대칭 clamp는 baseValue가 양수인 기존 축(건강·방어·성장·재생·
+-- skill_dualblade_Q)에는 total이 항상 0 이상이라 결과가 그대로다(회귀 없음).
 function Option.sumWithCap(values, optionId)
 	local total = 0
 	for _, value in ipairs(values) do
@@ -144,9 +151,38 @@ function Option.sumWithCap(values, optionId)
 	local def = OptionData.options[optionId]
 	local cap = def and def.cap
 	if cap then
-		return math.min(total, cap)
+		return math.clamp(total, -cap, cap)
 	end
 	return total
+end
+
+-- sources: 배열의 각 원소가 { option, grade, itemLevel } 형태(장비 아이템 또는 보석 둘 다
+-- 이 모양을 공유한다, 20.67 [1] "장비 옵션 1개 ≙ 보석 1개"). axisId와 option.id가 같은
+-- 원소만 값을 낸다(다른 옵션이 붙은 자리는 기여가 없다). Option.valueOf·Option.sumWithCap
+-- 두 순수 함수를 그대로 합성한 것뿐 - 새 계산식을 만들지 않는다(20.67 [14] 3단계 지시).
+function Option.sumAxisBonus(sources, axisId, classId)
+	local values = {}
+	for _, source in ipairs(sources) do
+		if source and source.option and source.option.id == axisId then
+			table.insert(values, Option.valueOf(source.option, source.grade, source.itemLevel, classId))
+		end
+	end
+	return Option.sumWithCap(values, axisId)
+end
+
+-- 치명 전용 집계 - id="crit"인 원소만 모아 {critRate, critDmg} 두 값을 각각 sumWithCap한다
+-- (둘 다 상한 없음, OptionData.crit.cap=nil - 20.67 [6-3]). Option.valueOf가 crit id에는
+-- 이미 {critRate, critDmg} 테이블을 돌려주므로 그 값을 축별로 나눠 모으기만 한다.
+function Option.critBonus(sources, classId)
+	local critRates, critDmgs = {}, {}
+	for _, source in ipairs(sources) do
+		if source and source.option and source.option.id == "crit" then
+			local value = Option.valueOf(source.option, source.grade, source.itemLevel, classId)
+			table.insert(critRates, value.critRate)
+			table.insert(critDmgs, value.critDmg)
+		end
+	end
+	return Option.sumWithCap(critRates, "crit"), Option.sumWithCap(critDmgs, "crit")
 end
 
 return Option

@@ -51,6 +51,7 @@ local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local Option = require(ReplicatedStorage.Shared.Option)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 
 local BalanceSim = {}
@@ -72,20 +73,30 @@ local function buildItem(part, gearSpec)
 	}
 end
 
--- 빈 보석 보너스(23-4 "지난 세션 미완 항목" - BalanceSim이 보석을 전혀 안 읽던 문제를
--- 고친다). gems가 nil이면(합성 조건 테스트처럼 보석을 아예 안 다루는 호출) 전부 0 -
--- 보석 미장착과 계산이 완전히 같다.
-local ZERO_GEM_BONUS = { attackPercent = 0, speedPercent = 0, defensePercent = 0, maxHpPercent = 0 }
-
-local function gemBonusesFor(gems)
-	if not gems then
-		return ZERO_GEM_BONUS
+-- 옵션 보너스 4축(26-2, PRD 20.67 [14] 3단계 "BalanceSim.gemBonusesFor → 옵션 전체") - 장비
+-- 3부위(armorItem·glovesItem·shoesItem) + 보석 5개(gems)를 한 목록으로 모아 Option.
+-- sumAxisBonus(=Option.valueOf+Option.sumWithCap 합성, PlayerProfile.lua의 buildOptionSources와
+-- 같은 모양)로 계산한다 - 여기서 새 계산식을 만들지 않는다. 전부 nil/빈 슬롯이면 전부 0
+-- (보석·옵션 미장착과 계산이 완전히 같다).
+local function gemBonusesFor(classId, armorItem, glovesItem, shoesItem, gems)
+	local sources = {}
+	for _, item in ipairs({ armorItem, glovesItem, shoesItem }) do
+		if item then
+			table.insert(sources, item)
+		end
+	end
+	if gems then
+		for slot = 1, Gem.slotCount do
+			if Gem.isFilled(gems, slot) then
+				table.insert(sources, gems[slot])
+			end
+		end
 	end
 	return {
-		attackPercent = Gem.totalAttackPercentBonus(gems),
-		speedPercent = Gem.totalSpeedPercentBonus(gems),
-		defensePercent = Gem.totalDefensePercentBonus(gems),
-		maxHpPercent = Gem.totalMaxHpPercentBonus(gems),
+		attackPercent = Option.sumAxisBonus(sources, "attackPercent", classId),
+		speedPercent = Option.sumAxisBonus(sources, "speedPercent", classId),
+		defensePercent = Option.sumAxisBonus(sources, "defensePercent", classId),
+		maxHpPercent = Option.sumAxisBonus(sources, "maxHpPercent", classId),
 	}
 end
 
@@ -101,7 +112,7 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 	assert(class, "알 수 없는 classId: " .. tostring(classId))
 
 	local weapon = { id = WeaponData.starterId, level = weaponLevel or 0, grade = weaponGrade or 0 }
-	local gemBonus = gemBonusesFor(gems)
+	local gemBonus = gemBonusesFor(classId, armorItem, glovesItem, shoesItem, gems)
 	local attackPercentBonus = Loot.getGlovesAttackPercent(glovesItem) + gemBonus.attackPercent
 	local speedPercentBonus = Loot.getShoesSpeedPercent(shoesItem) + gemBonus.speedPercent
 	local armorBonus = Loot.getArmorDefense(armorItem)

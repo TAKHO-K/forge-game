@@ -70,7 +70,10 @@ end
 -- 이 아래 castLineAttack/castCircleChannel)는 그대로 동작한다.
 local function strikeTarget(player, classId, atk, target, coefficient, attackerStage, forceCrit, critDmgBonus)
 	local base = atk * coefficient
-	local damage, isCrit = PlayerCombat.calcDamage(base, classId, nil, forceCrit, critDmgBonus)
+	-- 26-2(PRD 20.67 [14] 4단계 "치명") - 장비·보석 치명 옵션 합을 더한다. critDmgBonus는
+	-- 호출부(쌍검 Q 확정 치명타)가 넘긴 값이 있으면 거기에 더한다(둘 다 기본 0/nil).
+	local optionCritRate, optionCritDmg = PlayerProfile.getCritBonus(player)
+	local damage, isCrit = PlayerCombat.calcDamage(base, classId, optionCritRate, forceCrit, (critDmgBonus or 0) + optionCritDmg)
 	-- 힐러 버프(24-3, PRD 20.64) - 방어력 감소·치명타 등 모든 계산이 끝난 "최종 피해"에
 	-- 곱한다. calcDamage가 크리까지 이미 반영한 damage가 이 시점의 값이고, 이 아래에는
 	-- 더 이상 배율을 곱하는 계산이 없다(15-1의 "감소식 앞에 곱해 앵커가 어긋난" 실수를
@@ -78,6 +81,7 @@ local function strikeTarget(player, classId, atk, target, coefficient, attackerS
 	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
 	local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
 	MonsterSpawner.updateHpLabel(target)
+	PlayerProfile.applyLifesteal(player, damage) -- 26-2, AttackServer 평타와 같은 지점(damage 확정 직후)
 	CombatResolution.resolveHit(player, target, isDead)
 	return { target = target, damage = damage, isCrit = isCrit, isDead = isDead }
 end
@@ -87,7 +91,10 @@ end
 -- (AttackServer.server.lua의 평타 경로도 똑같이 이 함수를 부른다 - 계산 지점을 하나로 유지).
 local function resolveGuaranteedCrit(player, classId)
 	local isActive = BuffState.get(player, "guaranteedCrit") ~= nil
-	return PlayerCombat.resolveGuaranteedCrit(classId, isActive, 0)
+	-- 26-2: 유효 치확(효과 100% 초과 판정)에 옵션 치확도 포함해야 "이미 100%를 넘겼다"는
+	-- 조건이 옵션 장착 여부와 무관하게 일관된다.
+	local optionCritRate = PlayerProfile.getCritBonus(player)
+	return PlayerCombat.resolveGuaranteedCrit(classId, isActive, optionCritRate)
 end
 
 -- 후보 몬스터 중 캐스터와 같은 구역(ZoneBounds) 안에 있는 것만 남긴다 - AttackServer의
@@ -124,9 +131,11 @@ local function castLineAttack(player, slot, def, classId, atk, rootPart, attacke
 	local candidates = filterSameZone(startPos, MonsterState.getAllModels())
 	local targets = SkillCombat.hitsOnSegment(startPos, finalEnd, def.hitRadiusStuds, candidates)
 
+	-- 26-2(PRD 20.67 [2] "관통돌진 - Q coefficient ×(1+x)").
+	local coefficient = def.coefficient * (1 + PlayerProfile.getOptionBonus(player, "skill_greatsword_Q"))
 	local hits = {}
 	for _, target in ipairs(targets) do
-		table.insert(hits, strikeTarget(player, classId, atk, target, def.coefficient, attackerStage))
+		table.insert(hits, strikeTarget(player, classId, atk, target, coefficient, attackerStage))
 	end
 
 	skillCastResult:FireClient(player, slot, {
@@ -142,8 +151,10 @@ end
 
 -- 백스텝샷(활 E, 20-2b [1][4], PRD-forge-game.md 4.3): "바라보는 방향의 반대"로 짧게
 -- 물러나며 아무도 때리지 않는다 - 대신 다음 평타 5발에 붙는 버프를 건다([1] 프레임워크,
--- AttackServer.server.lua의 backstepShotBuff 소비 지점 참고).
-local function castDashBuff(player, slot, def, rootPart)
+-- AttackServer.server.lua의 backstepShotBuff 소비 지점 참고). cooldownSeconds(26-2)는
+-- 호출부(dispatch)가 옵션 반영까지 끝낸 실제 값을 넘긴다 - 쿨다운 게이트가 본 값과 클라
+-- 표시값이 어긋나면 안 된다.
+local function castDashBuff(player, slot, def, rootPart, cooldownSeconds)
 	local lookFlat = Vector3.new(rootPart.CFrame.LookVector.X, 0, rootPart.CFrame.LookVector.Z)
 	local direction = lookFlat.Magnitude > 1e-3 and -lookFlat.Unit or Vector3.new(0, 0, 1)
 	local startPos = rootPart.Position
@@ -161,7 +172,7 @@ local function castDashBuff(player, slot, def, rootPart)
 	skillCastResult:FireClient(player, slot, {
 		ok = true,
 		kind = "dash",
-		cooldownSeconds = def.cooldownSeconds,
+		cooldownSeconds = cooldownSeconds,
 		startPosition = startPos,
 		endPosition = finalEnd,
 		durationSeconds = def.durationSeconds,
@@ -175,7 +186,10 @@ end
 -- 순간 다시 읽으므로 - 확정된 값을 캐싱하지 않는다).
 local function castSelfBuff(player, slot, def, classId)
 	local critRate = ClassData.classes[classId].critRate
-	local multiplier = math.min(def.attackSpeedCap, def.attackSpeedBase + critRate * def.attackSpeedCritCoefficient)
+	-- 26-2(PRD 20.67 [2] "속사 - 속사 공속 배율 ×(1+x), 기존 attackSpeedCap 유지") - 옵션
+	-- 배율은 cap으로 자르기 전에 곱한다(상한은 그대로 2.5).
+	local optionMultiplier = 1 + PlayerProfile.getOptionBonus(player, "skill_bow_Q")
+	local multiplier = math.min(def.attackSpeedCap, (def.attackSpeedBase + critRate * def.attackSpeedCritCoefficient) * optionMultiplier)
 
 	BuffState.apply(player, "quickShot", {
 		durationSeconds = def.durationSeconds,
@@ -218,7 +232,8 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 	PlayerState.setChannelingUntil(player, def.channelSeconds)
 
 	local tickInterval = def.channelSeconds / def.tickCount
-	local perTickCoefficient = def.coefficient / def.tickCount
+	-- 26-2(PRD 20.67 [2] "회전베기 - E 틱 피해 ×(1+x)").
+	local perTickCoefficient = def.coefficient * (1 + PlayerProfile.getOptionBonus(player, "skill_greatsword_E")) / def.tickCount
 
 	for tickIndex = 1, def.tickCount do
 		task.wait(tickInterval)
@@ -297,10 +312,15 @@ end
 -- PRD 4.3 "분신이 적을 도발해 어그로 유지"일 뿐 자체 피해가 없다, 20-6 [0] 확인).
 local function castSummonDecoy(player, slot, def, character)
 	local decoy = buildDecoyModel(character)
-	SummonState.spawn(player, def.summonId, decoy, def.durationSeconds)
+	-- 26-2(PRD 20.67 [2] "그림자분신 - 지속 ×(1+x)", 상한 180% = OptionData.
+	-- skill_dualblade_Q.cap - 5×(1+1.8)=14=def.cooldownSeconds와 정확히 일치, 20.67 [7]
+	-- "지속 ≤ 쿨다운 14초"). 분신 생존시간과 확정 치명타 창이 이 값을 그대로 공유한다
+	-- (SkillData.lua 주석 그대로 유지).
+	local durationSeconds = def.durationSeconds * (1 + PlayerProfile.getOptionBonus(player, "skill_dualblade_Q"))
+	SummonState.spawn(player, def.summonId, decoy, durationSeconds)
 
 	BuffState.apply(player, "guaranteedCrit", {
-		durationSeconds = def.durationSeconds,
+		durationSeconds = durationSeconds,
 		displayName = def.name,
 		colorName = "success",
 	})
@@ -309,7 +329,7 @@ local function castSummonDecoy(player, slot, def, character)
 		ok = true,
 		kind = "summon",
 		cooldownSeconds = def.cooldownSeconds,
-		durationSeconds = def.durationSeconds,
+		durationSeconds = durationSeconds,
 		hits = {},
 	})
 end
@@ -339,7 +359,8 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 	PlayerState.setChannelingUntil(player, def.channelSeconds)
 
 	local tickInterval = def.channelSeconds / def.tickCount
-	local perTickCoefficient = def.coefficient / def.tickCount
+	-- 26-2(PRD 20.67 [2] "난무 - E 틱 피해 ×(1+x)").
+	local perTickCoefficient = def.coefficient * (1 + PlayerProfile.getOptionBonus(player, "skill_dualblade_E")) / def.tickCount
 
 	for tickIndex = 1, def.tickCount do
 		task.wait(tickInterval)
@@ -386,11 +407,14 @@ end
 -- 치유(힐러 Q, 20-6 [5]) - 결과 포맷 확장([4])의 첫 사용자: hits 배열 대신 self 필드
 -- ({healAmount, isCrit})를 보낸다. 기존 4종(대검 Q/E, 활 Q/E)은 이 필드를 아예 안 보내므로
 -- (위 함수들 그대로) 회귀 위험이 없다 - 클라(SkillInput.client.lua)도 kind로만 분기한다.
-local function castHeal(player, slot, def, classId)
+-- cooldownSeconds(26-2)는 castDashBuff와 같은 이유로 dispatch가 넘긴다.
+local function castHeal(player, slot, def, classId, cooldownSeconds)
 	markCast(player, slot)
 	local maxHp = PlayerState.getMaxHp(player)
 	local hp = PlayerState.getHp(player)
-	local baseHeal = maxHp * def.healPercentOfMaxHp
+	-- 26-2(PRD 20.67 [2] "재생 - 힐러 치유 회복량 ×(1+x)") - PlayerProfile.
+	-- getHealingPowerMultiplier가 자동회복(PlayerRegen.server.lua)과 같은 배수를 쓴다.
+	local baseHeal = maxHp * def.healPercentOfMaxHp * PlayerProfile.getHealingPowerMultiplier(player)
 	-- calcDamage를 그대로 쓰지 않는다 - 크리 롤(RNG 소스 하나로 통일)만 재사용하고, 배율은
 	-- SkillData의 critHealMultiplier(고정 2배, PRD 4.3)로 따로 곱한다. class.critDmg를 그대로
 	-- 썼다면 힐러 기준 1.8배가 나와 PRD 수치와 어긋난다.
@@ -408,7 +432,10 @@ local function castHeal(player, slot, def, classId)
 	local party = PartyState.getParty(player)
 	if party then
 		local multiplier = 1 + PartyConfig.healerBuffFraction
-		local durationSeconds = def.cooldownSeconds * def.partyBuffDurationMultiplier
+		-- 26-2: 실제(옵션 반영) 쿨다운에서 파생시킨다 - 치유 쿨다운이 짧아지면 버프도 그만큼
+		-- 자주 갱신되므로 지속시간도 같이 짧아져야 SkillData.lua의 "제때 힐을 돌리면 안
+		-- 끊긴다" 관계가 유지된다.
+		local durationSeconds = cooldownSeconds * def.partyBuffDurationMultiplier
 		for _, member in ipairs(PartyState.getMemberPlayers(party)) do
 			BuffState.apply(member, "healerBuff", {
 				durationSeconds = durationSeconds,
@@ -422,7 +449,7 @@ local function castHeal(player, slot, def, classId)
 	skillCastResult:FireClient(player, slot, {
 		ok = true,
 		kind = "heal",
-		cooldownSeconds = def.cooldownSeconds,
+		cooldownSeconds = cooldownSeconds,
 		hits = {},
 		self = { healAmount = healAmount, isCrit = isCrit },
 	})
@@ -471,7 +498,16 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 		return
 	end
 
-	if isOnCooldown(player, slot, def.cooldownSeconds) then
+	-- 26-2(PRD 20.67 [2] "백스텝샷/치유 - 쿨다운 ×(1-x)") - 옵션 baseValue가 음수라 1+합산이
+	-- 곧 (1-x)다(Option.sumWithCap이 상한을 ±50%로 대칭 clamp해 0 이하로 못 내려간다). 이
+	-- 두 슬롯 외에는 1(옵션 없음)로 원래 쿨다운 그대로다.
+	local cooldownSeconds = def.cooldownSeconds
+	if classId == "bow" and slot == "E" then
+		cooldownSeconds *= 1 + PlayerProfile.getOptionBonus(player, "skill_bow_E")
+	elseif classId == "healer" and slot == "Q" then
+		cooldownSeconds *= 1 + PlayerProfile.getOptionBonus(player, "skill_healer_Q")
+	end
+	if isOnCooldown(player, slot, cooldownSeconds) then
 		reject(player, slot, "cooldown")
 		return
 	end
@@ -501,7 +537,7 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 		castSelfBuff(player, slot, def, classId)
 	elseif def.shape == "dash" then
 		markCast(player, slot)
-		castDashBuff(player, slot, def, rootPart)
+		castDashBuff(player, slot, def, rootPart, cooldownSeconds)
 	elseif def.shape == "summon" then
 		markCast(player, slot)
 		castSummonDecoy(player, slot, def, character)
@@ -511,7 +547,7 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 		-- 사거리 안에 아무도 없으면 시전 자체가 무의미해 되돌려주는 쪽이 낫다고 판단했다).
 		castSingleChannel(player, slot, def, classId, atk, rootPart, attackerStage)
 	elseif def.shape == "heal" then
-		castHeal(player, slot, def, classId)
+		castHeal(player, slot, def, classId, cooldownSeconds)
 	elseif def.shape == "toggle" then
 		markCast(player, slot)
 		castToggle(player, slot, def)

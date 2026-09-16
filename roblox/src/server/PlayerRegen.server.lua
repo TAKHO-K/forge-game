@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerState = require(script.Parent.PlayerState)
+local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local function setRegenerating(player, value)
 	if player:GetAttribute("Regenerating") ~= value then
@@ -38,7 +39,10 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 
 		setRegenerating(player, true)
-		local newHp = math.min(hp + maxHp * CombatConfig.regenPercentPerSecond * dt, maxHp)
+		-- 26-2(PRD 20.67 [2] "재생 - 자동회복 회복량 ×(1+x)") - 힐러 치유(SkillServer
+		-- castHeal)와 같은 배수(PlayerProfile.getHealingPowerMultiplier).
+		local healingMultiplier = PlayerProfile.getHealingPowerMultiplier(player)
+		local newHp = math.min(hp + maxHp * CombatConfig.regenPercentPerSecond * healingMultiplier * dt, maxHp)
 		PlayerState.setHp(player, newHp)
 		player:SetAttribute("Hp", newHp)
 	end
