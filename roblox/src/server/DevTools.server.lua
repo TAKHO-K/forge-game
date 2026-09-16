@@ -59,6 +59,10 @@ local Gem = require(ReplicatedStorage.Shared.Gem)
 -- 26-1 옵션 통합 순수 함수 검증 명령(/gg option table)용.
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local Option = require(ReplicatedStorage.Shared.Option)
+-- 26-2 자동 검증 블록(아래 "===26-2 검증 시작===")용.
+local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local PlayerState = require(script.Parent.PlayerState)
 -- 24-1 파티 검증 명령(/gg party dummy|info|table|killsim)용.
 local PartyState = require(script.Parent.PartyState)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
@@ -1915,3 +1919,212 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 print("[DevTools] 밸런스 테스트 도구 로드됨(Studio 전용) - 채팅창에 /gg help")
+
+-- ═══ 26-2 자동 검증 블록 ═══════════════════════════════════════════════════
+-- 서버가 Studio에서 시작될 때 한 번 돌고 결과를 전부 print한다(플레이어 접속과 무관 -
+-- 순수 함수·합성 데이터만 쓴다). execute_luau로 shared 모듈을 require하는 경로는 Edit·
+-- Play 모드 둘 다 Capabilities 제약으로 막혀 있어(2026-09-16 실측) 이 파일 자체(정상적으로
+-- Rojo가 동기화하고 Roblox 엔진이 그대로 불러오는 스크립트)에 검증 코드를 둔다 - 이 파일은
+-- 이미 이 지점까지 오는 동안 Option/OptionData/SkillData 등을 정상적으로 require해 왔다
+-- (그 require들은 execute_luau 브릿지를 거치지 않는다).
+-- RunService:IsStudio()로 다시 감싼다 - 파일 맨 위의 가드와 이중이지만(중복이라도) 이 블록만
+-- 떼어 다른 곳에 옮겨도 안전하도록 명시적으로 남긴다.
+if RunService:IsStudio() then
+	task.spawn(function()
+		local function checkmark(actual, expected, tolerance)
+			return math.abs(actual - expected) <= tolerance
+		end
+
+		print("===26-2 검증 시작===")
+		local passCount, totalCount = 0, 0
+		local function record(ok)
+			totalCount += 1
+			if ok then
+				passCount += 1
+			end
+			return ok and "O" or "X"
+		end
+
+		-- [1] 기존 4축(위력·신속·방어·건강) 등급별 최소·중앙·최대 - PRD 20.67 [3] 구간표 대조.
+		print("[26-2][1] 기존 4축 등급별 구간표 (itemLevel100, %) - PRD 20.67 [3] 대조")
+		local AXIS_GRADE_EXPECTED = {
+			attackPercent = {
+				epic = { 3.50, 4.00, 4.50 }, legendary = { 5.25, 6.00, 6.75 }, relic = { 7.88, 9.00, 10.12 },
+				ancient = { 14.00, 16.00, 18.00 }, primordial = { 26.25, 30.00, 33.75 },
+			},
+			speedPercent = {
+				epic = { 3.50, 4.00, 4.50 }, legendary = { 5.25, 6.00, 6.75 }, relic = { 7.88, 9.00, 10.12 },
+				ancient = { 14.00, 16.00, 18.00 }, primordial = { 26.25, 30.00, 33.75 },
+			},
+			maxHpPercent = {
+				epic = { 1.17, 1.33, 1.50 }, legendary = { 1.75, 2.00, 2.25 }, relic = { 2.62, 3.00, 3.38 },
+				ancient = { 4.67, 5.33, 6.00 }, primordial = { 8.75, 10.00, 11.25 },
+			},
+			defensePercent = {
+				epic = { 1.98, 2.27, 2.55 }, legendary = { 2.97, 3.40, 3.82 }, relic = { 4.46, 5.10, 5.73 },
+				ancient = { 7.93, 9.06, 10.20 }, primordial = { 14.87, 16.99, 19.12 },
+			},
+		}
+		local AXIS_ORDER = { "attackPercent", "speedPercent", "defensePercent", "maxHpPercent" }
+		local GRADE_ORDER = { "epic", "legendary", "relic", "ancient", "primordial" }
+		for _, axisId in ipairs(AXIS_ORDER) do
+			for _, gradeId in ipairs(GRADE_ORDER) do
+				local expected = AXIS_GRADE_EXPECTED[axisId][gradeId]
+				local range = Option.rangeOf(axisId, gradeId, 100, nil)
+				local minPct, midPct, maxPct = range.min * 100, range.mid * 100, range.max * 100
+				local ok = checkmark(minPct, expected[1], 0.02) and checkmark(midPct, expected[2], 0.02) and checkmark(maxPct, expected[3], 0.02)
+				print(("[26-2][1]   %s %s: 실측 %.3f/%.3f/%.3f (기대 %.2f/%.2f/%.2f) %s"):format(
+					OptionData.options[axisId].displayName, gradeId, minPct, midPct, maxPct,
+					expected[1], expected[2], expected[3], record(ok)))
+			end
+		end
+
+		-- [2] 새 옵션 12종(치명·성장·재생·흡혈 + 직업 특화 8종) 적용 전/후 수치(태초, itemLevel100, 최대롤).
+		print("[26-2][2] 새 옵션 12종 적용 전/후(태초·itemLevel100·최대롤 1.125)")
+		local ROLL_MAX = OptionData.rollMax
+		local function expectedRaw(optionId)
+			return OptionData.options[optionId].baseValue * ROLL_MAX
+		end
+
+		-- 공통 4종(축 자체가 곧 "전/후"다 - 배수 1.00 또는 흡혈률 0%가 "전").
+		local commonExpected = {
+			{ id = "expGain", before = 1.0, after = function(v) return 1 + v end, label = "성장(경험치 배수)" },
+			{ id = "healingPower", before = 1.0, after = function(v) return 1 + v end, label = "재생(회복 배수)" },
+			{ id = "lifesteal", before = 0.0, after = function(v) return v end, label = "흡혈(피해→회복 비율)" },
+		}
+		for _, spec in ipairs(commonExpected) do
+			local value = Option.valueOf({ id = spec.id, roll = ROLL_MAX }, "primordial", 100, nil)
+			local expected = expectedRaw(spec.id)
+			local ok = checkmark(value, expected, 0.0005)
+			print(("[26-2][2]   %s: %.6f -> %.6f (raw옵션값 기대 %.6f) %s"):format(
+				spec.label, spec.before, spec.after(value), expected, record(ok)))
+		end
+		-- 치명(치확·치피 둘 다 독립 롤이지만 여기선 둘 다 최대롤로 검산).
+		do
+			local value = Option.valueOf({ id = "crit", roll = ROLL_MAX, roll2 = ROLL_MAX }, "primordial", 100, nil)
+			local expectedCrit = OptionData.options.crit.critRateBase * ROLL_MAX
+			local expectedDmg = OptionData.options.crit.critDmgBase * ROLL_MAX
+			local ok = checkmark(value.critRate, expectedCrit, 0.0005) and checkmark(value.critDmg, expectedDmg, 0.0005)
+			print(("[26-2][2]   치명: 치확+0%%p 치피+0 -> 치확+%.4f%%p 치피+%.4f (기대 치확+%.4f%%p 치피+%.4f) %s"):format(
+				value.critRate * 100, value.critDmg, expectedCrit * 100, expectedDmg, record(ok)))
+		end
+		-- 직업 특화 8종 - SkillData의 실제 노브(coefficient·cooldownSeconds·durationSeconds·
+		-- drainPercentPerSecond)에 적용 전/후를 그대로 보여준다.
+		local CLASS_SKILL_KNOBS = {
+			{ id = "skill_greatsword_Q", classId = "greatsword", slot = "Q", knob = "coefficient", label = "관통돌진 coefficient" },
+			{ id = "skill_greatsword_E", classId = "greatsword", slot = "E", knob = "coefficient", label = "회전베기 coefficient" },
+			{ id = "skill_bow_Q", classId = "bow", slot = "Q", knob = nil, label = "속사 옵션 배율(기준 1.00)" },
+			{ id = "skill_bow_E", classId = "bow", slot = "E", knob = "cooldownSeconds", label = "백스텝샷 cooldownSeconds" },
+			{ id = "skill_dualblade_Q", classId = "dualblade", slot = "Q", knob = "durationSeconds", label = "그림자분신 durationSeconds" },
+			{ id = "skill_dualblade_E", classId = "dualblade", slot = "E", knob = "coefficient", label = "난무 coefficient" },
+			{ id = "skill_healer_Q", classId = "healer", slot = "Q", knob = "cooldownSeconds", label = "치유 cooldownSeconds" },
+			{ id = "skill_healer_E", classId = "healer", slot = "E", knob = "drainPercentPerSecond", label = "딜링모드 drainPercentPerSecond" },
+		}
+		for _, spec in ipairs(CLASS_SKILL_KNOBS) do
+			local value = Option.valueOf({ id = spec.id, roll = ROLL_MAX }, "primordial", 100, spec.classId)
+			local expectedValue = expectedRaw(spec.id)
+			local base = spec.knob and SkillData[spec.classId][spec.slot][spec.knob] or 1.0
+			local after = base * (1 + value)
+			local expectedAfter = base * (1 + expectedValue)
+			local ok = checkmark(value, expectedValue, 0.0005) and checkmark(after, expectedAfter, 0.0005)
+			print(("[26-2][2]   %s: %.4f -> %.4f (raw옵션값 %.6f, 기대 %.6f) %s"):format(
+				spec.label, base, after, value, expectedValue, record(ok)))
+		end
+
+		-- [3] 직업 특화 옵션이 다른 직업에서 어떻게 처리되는가(20.67 [8] "직업 불일치 - 효과 없음").
+		print("[26-2][3] 직업 특화 옵션의 직업 불일치 처리(기대: 전부 0)")
+		local MISMATCH_CASES = {
+			{ id = "skill_bow_Q", wrongClassId = "greatsword" },
+			{ id = "skill_healer_E", wrongClassId = "dualblade" },
+			{ id = "skill_dualblade_Q", wrongClassId = "healer" },
+			{ id = "skill_greatsword_E", wrongClassId = "bow" },
+		}
+		for _, case in ipairs(MISMATCH_CASES) do
+			local value = Option.valueOf({ id = case.id, roll = ROLL_MAX }, "primordial", 100, case.wrongClassId)
+			local ok = value == 0
+			print(("[26-2][3]   %s를 %s가 착용: %s (기대 0) %s"):format(case.id, case.wrongClassId, tostring(value), record(ok)))
+		end
+
+		-- [4] 건강·방어 8개 몰빵 합산 상한(Σ≤20%/Σ≤32%) + 그 조합의 생존 타수(9.98타 기대).
+		print("[26-2][4] 건강·방어 8개 몰빵 합산 상한 + 생존 타수(PRD 20.67 [6-2])")
+		local function repeatSource(optionId, count)
+			local sources = {}
+			for _ = 1, count do
+				table.insert(sources, { option = { id = optionId, roll = 1.0 }, grade = "primordial", itemLevel = 100 })
+			end
+			return sources
+		end
+		do
+			local healthSum = Option.sumAxisBonus(repeatSource("maxHpPercent", 8), "maxHpPercent", nil)
+			local ok = checkmark(healthSum * 100, 20.0, 0.01)
+			print(("[26-2][4]   건강 8개 몰빵(태초·기댓값) Σ=%.3f%% (기대 20.000%%, 상한=%.0f%%) %s"):format(
+				healthSum * 100, OptionData.options.maxHpPercent.cap * 100, record(ok)))
+		end
+		do
+			local defenseSum = Option.sumAxisBonus(repeatSource("defensePercent", 8), "defensePercent", nil)
+			local ok = checkmark(defenseSum * 100, 32.0, 0.01)
+			print(("[26-2][4]   방어 8개 몰빵(태초·기댓값) Σ=%.3f%% (기대 32.000%%, 상한=%.0f%%) %s"):format(
+				defenseSum * 100, OptionData.options.defensePercent.cap * 100, record(ok)))
+		end
+		do
+			-- 앵커(레벨100·bow·일반등급 itemLevel100 3부위·스테이지100) + 보석 5개(건강2+방어3,
+			-- 태초·기댓값) - 명세 계산은 7×1.20×1.188=9.98타(20.67 [6-2] 표 그대로).
+			local gearSpec = { grade = "normal", itemLevel = 100 }
+			local gems = {
+				{ grade = "primordial", itemLevel = 100, option = { id = "maxHpPercent", roll = 1.0 } },
+				{ grade = "primordial", itemLevel = 100, option = { id = "maxHpPercent", roll = 1.0 } },
+				{ grade = "primordial", itemLevel = 100, option = { id = "defensePercent", roll = 1.0 } },
+				{ grade = "primordial", itemLevel = 100, option = { id = "defensePercent", roll = 1.0 } },
+				{ grade = "primordial", itemLevel = 100, option = { id = "defensePercent", roll = 1.0 } },
+			}
+			local loadout = BalanceSim.buildLoadout({
+				classId = BalanceAnchorConfig.referenceClassId, level = BalanceAnchorConfig.referenceLevel,
+				weaponLevel = 0, weaponGrade = 0,
+				gear = { armor = gearSpec, gloves = gearSpec, shoes = gearSpec },
+				gems = gems,
+			})
+			local point = BalanceSim.measurePoint(loadout, BalanceAnchorConfig.referenceLevel)
+			local ok = checkmark(point.surviveHits, 9.98, 0.05)
+			print(("[26-2][4]   건강2+방어3(태초·기댓값) 장착 후 생존 타수=%.3f대 (기대 9.98대) %s"):format(
+				point.surviveHits, record(ok)))
+		end
+
+		-- [5] 경험치 8개 몰빵 합산 상한(Σ≤25%).
+		do
+			local expSum = Option.sumAxisBonus(repeatSource("expGain", 8), "expGain", nil)
+			local ok = checkmark(expSum * 100, 25.0, 0.01)
+			print(("[26-2][5] 경험치 8개 몰빵(태초·기댓값) Σ=%.3f%% (기대 25.000%%, 상한=%.0f%%) %s"):format(
+				expSum * 100, OptionData.options.expGain.cap * 100, record(ok)))
+		end
+
+		-- [6] 흡혈 초당 상한 실측(20.67 [6-1]) - 토큰 버킷을 먼저 완전히 비운 뒤(초기 가득 찬
+		-- 버킷이 평균을 왜곡하지 않도록), 그 다음 구간에서 실제 시간 경과(os.clock()) 동안
+		-- maxHp×10짜리 요청(어떤 직업의 DPS보다도 훨씬 큰 극단값)을 계속 넣어 정상 상태 회복률을
+		-- 잰다 - PlayerState.tryLifesteal은 AttackServer/SkillServer.strikeTarget이 실전에서
+		-- 부르는 그 함수 그대로다(합성 player 키만 다르다).
+		do
+			local fakePlayer = {}
+			local maxHp = 1e8
+			PlayerState.init(fakePlayer)
+			PlayerState.setMaxHp(fakePlayer, maxHp)
+			local hugeRequest = maxHp * 10
+			PlayerState.tryLifesteal(fakePlayer, hugeRequest) -- 초기 가득 찬 버킷을 비운다.
+
+			local totalGranted = 0
+			local startAt = os.clock()
+			for _ = 1, 20 do
+				task.wait(0.1)
+				totalGranted += PlayerState.tryLifesteal(fakePlayer, hugeRequest)
+			end
+			local elapsed = os.clock() - startAt
+			local ratePerSecond = (totalGranted / maxHp) / elapsed
+			local cap = CombatConfig.lifestealMaxHpFractionPerSecond
+			local ok = ratePerSecond <= cap + 0.005 -- 타이밍 오차 여유 0.5%p
+			print(("[26-2][6] 흡혈 초당 상한 실측: %.2f초 동안 회복 %.4f%%(maxHp 기준) -> 초당 %.4f%% (상한 %.2f%%, 못 넘으면 O) %s"):format(
+				elapsed, totalGranted / maxHp * 100, ratePerSecond * 100, cap * 100, record(ok)))
+			PlayerState.clear(fakePlayer) -- 합성 키 정리(실제 플레이어와 무관하지만 남겨둘 이유가 없다).
+		end
+
+		print(("===26-2 검증 끝=== %d/%d 통과"):format(passCount, totalCount))
+	end)
+end
