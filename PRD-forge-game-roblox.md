@@ -9570,7 +9570,7 @@ useExponential 인자 제거) · `server/PlayerProfile.lua`(회차 배수 삭제
 리터럴, v11 정정, v22 이관) · `shared/data/SaveConfig.lua`(v22) · `server/DevTools.server.lua`
 (`/gg curve`·`curve anchor`·`curve migrate`).
 
-### 20.67 보석·장비 옵션 통합 설계 (25-2) `[🚧 구현 중 — [14] 1~2단계 완료(26-1). 진행 상황은 [14] 하단 각주 참고]`
+### 20.67 보석·장비 옵션 통합 설계 (25-2) `[🚧 구현 중 — [14] 1~5단계 완료(26-1·26-2). 남은 건 6~8단계(리롤 확장·UI·도구 정리). 진행 상황은 [14] 하단 각주 참고]`
 
 20.57~20.59가 만든 보석 체계(무기 홈 5개, 고대·태초만 옵션 풀 2종, 옵션은 변환권으로만
 배정)와 장비 3부위(옵션 없음, 부위 기본 스탯만)를 **하나의 옵션 체계**로 합친다. 이 절은
@@ -10005,24 +10005,55 @@ purchases.optionRerollTickets = { ancient, primordial }          -- 변경 없�
    getAttackPercentBonus/getSpeedPercentBonus/getDefensePercentBonus/refreshMaxHp`가 장비 3부위
    옵션 + 보석 5개를 `Option.sumWithCap`으로 합산. `BalanceSim.gemBonusesFor` → 옵션 전체.
    `/gg measure`로 상한 적용 확인(건강 8개 → 20%).
-   `[⏸ 26-1 보류, 다음 세션]` 여기서부터 값이 실제로 바뀌는 지점이다 - [5]의 재조정(위력
-   87.5%→30%, 방어 148.7%→17.0%, 건강 87.5%→10.0%, 영웅~유물 "무조건 공격력%" 42.9/50/50%
-   →4/6/9%)이 이 연결의 직접 결과다. **그래서 3단계의 검증 기준은 "이전과 동일"이 아니라
-   "PRD 20.67 [3] 구간표와 일치"로 바뀐다** - 1~2단계(구조·이관, 값 불변)와 3단계(연결, 값
-   변경) 사이에 성격이 다른 경계가 있다는 뜻이다. 또한 **3단계만 단독 적용하면 기존 4축(위력·
-   신속·방어·건강)만 삭감되고 새 옵션 12종(치명·성장·재생·흡혈·직업 특화 8종)은 아직 안
-   붙어(4·5단계) 한쪽만 깎인 반쪽짜리 밸런스가 된다** - 따라서 3단계는 단독 세션으로 끝내지
-   말고 4~5단계(새 축 연결)까지 한 세션에서 묶어 진행해야 한다.
+   `[✅ 26-2 완료]` 계획대로 Gem.lua의 옛 4축 계산(magnitudeForGrade·attackPercentBonusForGrade·
+   optionAxis·슬롯 합산)을 폐기하고 `PlayerProfile.getOptionBonus`(신설, 장비 3부위+보석 5개를
+   `Option.sumAxisBonus`로 합산)로 교체했다. `BalanceSim.gemBonusesFor`도 같은 방식으로 교체.
+   `Option.sumWithCap`을 대칭 clamp(`-cap~cap`)로 수정하는 버그도 같이 고쳤다 - 음수 baseValue
+   축(백스텝샷·치유 쿨다운, 딜링모드 소모)의 상한이 옛 `min(total,cap)` 구현으로는 전혀 걸리지
+   않았다(음수 합에 양수 cap을 min 해도 항상 음수 쪽이 이긴다). 예상대로 값이 크게 바뀌었다 -
+   재조정은 설계 그대로다. 검증 기준을 "[3] 구간표 일치"로 바꿔 확인: Studio 자동 검증
+   블록(아래 각주)에서 4축×5등급=20건 전부 O.
 4. **새 축 4개** - 성장(`getExpGainMultiplier`), 재생(`PlayerRegen`·`castHeal`), 흡혈(피해 확정
    지점 2곳 + 토큰 버킷 `PlayerState`), 치명(`calcDamage` 인자). `/gg lifesteal`로 [6-1] 표
    재현(연속 피격 중 HP 단조 감소 확인).
+   `[✅ 26-2 완료]` 성장·재생은 `1+옵션합`을 각각 `getExpGainMultiplier`·신설
+   `getHealingPowerMultiplier`(PlayerRegen 자동회복·SkillServer castHeal 둘 다 사용)로 적용.
+   치명은 `PlayerProfile.getCritBonus`(신설, {critRate,critDmg})를 AttackServer 평타와
+   SkillServer.strikeTarget 양쪽의 calcDamage 인자에 기존 버프값과 더해 넣었다(버프 소비 판정
+   자체는 옵션과 무관하게 유지). 흡혈은 `PlayerProfile.applyLifesteal` + `PlayerState.
+   tryLifesteal`(토큰 버킷, 용량=초당 상한) 신설, `CombatConfig.lifestealMaxHpFractionPerSecond`
+   (=0.04, `regenPercentPerSecond`와 값만 같은 별도 필드, [15] 결정16 그대로) 추가 - AttackServer
+   근접·원거리 두 damage 확정 지점 + SkillServer.strikeTarget 세 곳에서 호출한다(원거리는
+   "쏜 시점"이 아니라 "실제로 맞은 시점"에 걸어 빗나간 화살까지 회복시키는 구멍을 막았다 -
+   명세엔 없는 판단이라 아래 "명세와 어긋난 점"에 남긴다). `/gg option lifesteal`(신설, 실시간
+   토큰 버킷 실측)과 Studio 자동 검증 블록 둘 다로 확인 - 초당 정확히 4.0000%에서 막힌다(못 넘음).
 5. **직업 특화 8종** - `SkillServer`(Q/E 계수·지속·쿨다운)·`HealerDealingMode`(소모)·
    `AttackServer`(속사 배율)에 `Option.classSkillMultiplier(player, classId, slot, knob)` 한 줄씩.
    직업 불일치 0 처리 검증(`/gg class` 전환 후 `/gg measure`).
+   `[✅ 26-2 완료]` `Option.classSkillMultiplier`라는 이름의 함수는 만들지 않았다 - `Option.lua`는
+   shared(순수 함수, player를 모른다)라 player 인자를 받는 함수를 여기 두면 server 모듈을
+   shared에서 참조하게 된다(client/server 경계 위반). 대신 이미 있는
+   `PlayerProfile.getOptionBonus(player, optionId)`를 각 호출부(SkillServer의 castLineAttack·
+   castCircleChannel·castSelfBuff·castSingleChannel·castSummonDecoy, dispatch의 쿨다운 게이트,
+   HealerDealingMode)에서 "한 줄씩" 곱하는 방식으로 구현했다 - PRD 문구의 의도(각 노브에 옵션을
+   한 줄로 반영)는 그대로 지켰다. 직업 불일치는 `Option.valueOf`가 이미 0을 돌려주므로 별도
+   분기가 필요 없었다. Studio 자동 검증 블록에서 12종 전부(적용 전/후 수치)와 불일치 4건 전부
+   O.
+
+**26-2 검증 방법(기록)** - Studio MCP의 `execute_luau`로 shared 모듈을 `require`하는 경로는
+Edit·Play 모드 둘 다 `Capabilities` 제약으로 막혀 있다(2026-09-16 실측, "The current thread
+cannot require 'Option'..."). 그래서 위 3~5단계는 `DevTools.server.lua` 자체에
+`RunService:IsStudio()`로 감싼 자동 검증 블록을 심어 서버 시작 시 한 번 돌게 했다(플레이어
+접속과 무관, 콘솔에 `===26-2 검증 시작===`~`===26-2 검증 끝===` 사이로 41개 항목을 O/X와
+기대값과 함께 출력) - 채팅 명령을 하나씩 보내는 것보다 훨씬 안정적이었다. 41/41 통과, 서버
+에러 0건. 다음 세션(3단계 이상 값 검산이 필요한 작업)도 이 패턴을 재사용할 것.
+
 6. **리롤 확장** - `GemServer`의 리롤을 장비(가방 index·착용 부위)로 확장, 풀은 현재 직업 특화만.
 7. **UI** - [12] Detail 옵션 줄·게이지, 가방 태그, 총 스탯 상한 표시, 보석 탭 행 텍스트·클릭 선택.
 8. **/gg 도구 정리** - `/gg option <id> [roll]`(강제 배정), `/gg option stack <id>`(8개 몰빵 후
    `/gg measure` - [7] 표 재현), `/gg heal cycle`로 딜링모드 특화 가동률 실측([16] 미결 1 해소).
+   `/gg option set`·`/gg option show`·`/gg option lifesteal`은 26-2에서 이미 만들었다(강제
+   배정·현황 출력·흡혈 실측) - 8단계에 남은 건 `/gg option stack`과 `/gg heal cycle`뿐이다.
 
 1~2가 끝난 지금까지는 기존 기능(보석 4축·분해·장착·리롤)이 새 체계 위에서 그대로 돈다 - 거기까지가
 "되돌릴 수 있는 지점"이었다. 3단계부터는 값이 실제로 바뀌므로 그 성격이 없어진다 - 다음 세션은
