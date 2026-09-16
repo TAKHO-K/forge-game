@@ -261,7 +261,10 @@ local function showToast(text, withButtons, seconds)
 end
 
 partyInviteNotice.OnClientEvent:Connect(function(data)
-	showToast(("%s님이 파티에 초대했습니다"):format(data.inviterName), true, data.seconds or 15)
+	-- 24-2: 다른 서버에서 온 초대(remote)는 수락하면 그 서버로 이동한다는 점을 문구로 알린다 - 버튼은 같다.
+	local text = data.remote and ("%s님이 파티에 초대했습니다 (다른 서버 - 수락 시 이동)"):format(data.inviterName)
+		or ("%s님이 파티에 초대했습니다"):format(data.inviterName)
+	showToast(text, true, data.seconds or 15)
 end)
 
 partyNotice.OnClientEvent:Connect(function(text)

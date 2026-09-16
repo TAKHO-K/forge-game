@@ -135,6 +135,7 @@ local cutoffDropdown, cutoffDropdownDim
 local updateGemTab, cancelGemDrag
 -- 24-1: 파티 탭도 같은 이유로 이름만 먼저 선언한다(setupPartyTab이 아래에서 채운다).
 local updatePartyTab
+local refreshFriends -- 24-2: 탭을 열 때 다른 서버 친구 목록을 서버에 묻는다
 
 -- 선택 상태: kind="bag"이면 value=서버 인덱스, kind="equip"이면 value="weapon"/"armor".
 local selectedKind, selectedValue = nil, nil
@@ -1478,6 +1479,7 @@ UIManager.register("inventory", {
 	},
 	onOpen = function()
 		isOpen = true
+		refreshFriends()
 		fitWindow() -- 닫혀 있는 동안 화면 크기가 바뀌었을 수 있다(창 회전 등).
 		rebuildGearSlots()
 		rebuildGrid()
@@ -2299,6 +2301,7 @@ local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local partyRequest = ReplicatedStorage:WaitForChild("PartyRequest")
 local partyStateChanged = ReplicatedStorage:WaitForChild("PartyStateChanged")
+local partyFriendsFetch = ReplicatedStorage:WaitForChild("PartyFriendsFetch") -- 24-2: 다른 서버의 온라인 친구
 
 local partyBody = Instance.new("Frame")
 partyBody.Name = "PartyBody"
@@ -2330,10 +2333,17 @@ local function makeColumn(x, titleText)
 	local title = makeSectionLabel(column, titleText, 12)
 	title.Position = UDim2.new(0, 0, 0, 12)
 
-	local listFrame = Instance.new("Frame")
+	-- 24-2: 서버 플레이어(최대 16) + 다른 서버 친구 목록이 한 열에 들어가야 해서 스크롤 프레임으로. 창 스타일은
+	-- 그대로(배경 투명·같은 행 틀), 스크롤바만 얇게.
+	local listFrame = Instance.new("ScrollingFrame")
 	listFrame.Position = UDim2.new(0, 0, 0, 40)
 	listFrame.Size = UDim2.new(1, 0, 1, -40)
 	listFrame.BackgroundTransparency = 1
+	listFrame.BorderSizePixel = 0
+	listFrame.ScrollBarThickness = 4
+	listFrame.ScrollBarImageColor3 = UIColors.rim
+	listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	listFrame.Parent = column
 
 	local layout = Instance.new("UIListLayout")
@@ -2410,7 +2420,96 @@ local function makeRow(parent, order)
 	return { frame = row, name = name, meta = meta, button = button, connection = nil }
 end
 
-local myRows, serverRows = {}, {}
+local myRows, serverRows, friendRows = {}, {}, {}
+
+-- ═══ 24-2 크로스서버: 파티 코드 · 코드로 합류 · 파티 만들기(내 파티 열, 멤버 4행 아래) ═══
+local MY_EXTRA_Y = 40 + PartyConfig.maxMembers * (ROW_HEIGHT + ROW_GAP) + 8
+
+local codeLabel = Instance.new("TextLabel")
+codeLabel.BackgroundTransparency = 1
+codeLabel.Position = UDim2.new(0, 0, 0, MY_EXTRA_Y)
+codeLabel.Size = UDim2.new(1, 0, 0, 16)
+codeLabel.Font = Enum.Font.GothamBold
+codeLabel.TextSize = 12
+codeLabel.TextXAlignment = Enum.TextXAlignment.Left
+codeLabel.TextColor3 = UIColors.gold
+codeLabel.Text = ""
+codeLabel.Visible = false
+codeLabel.Parent = myColumn
+
+local codeHint = Instance.new("TextLabel")
+codeHint.BackgroundTransparency = 1
+codeHint.Position = UDim2.new(0, 0, 0, MY_EXTRA_Y + 16)
+codeHint.Size = UDim2.new(1, 0, 0, 14)
+codeHint.Font = Enum.Font.Gotham
+codeHint.TextSize = 10.5
+codeHint.TextXAlignment = Enum.TextXAlignment.Left
+codeHint.TextColor3 = UIColors.textTertiary
+codeHint.Text = "다른 서버의 친구에게 이 코드를 알려 주면 코드로 합류할 수 있습니다"
+codeHint.Visible = false
+codeHint.Parent = myColumn
+
+-- 코드 입력 상자 - 장비 패널 슬롯 틀(slot 색 + rim 링)을 그대로 쓴다.
+local joinBox = Instance.new("TextBox")
+joinBox.Position = UDim2.new(0, 0, 0, MY_EXTRA_Y + 38)
+joinBox.Size = UDim2.new(0, 160, 0, 28)
+joinBox.Font = Enum.Font.GothamBold
+joinBox.TextSize = 13
+joinBox.PlaceholderText = "파티 코드 입력"
+joinBox.PlaceholderColor3 = UIColors.textTertiary
+joinBox.Text = ""
+joinBox.TextColor3 = UIColors.textPrimary
+joinBox.ClearTextOnFocus = false
+joinBox.BackgroundColor3 = UIColors.slot
+joinBox.BackgroundTransparency = UIColors.slotTransparency
+joinBox.Parent = myColumn
+local joinBoxCorner = Instance.new("UICorner")
+joinBoxCorner.CornerRadius = UDim.new(0, 8)
+joinBoxCorner.Parent = joinBox
+local joinBoxStroke = Instance.new("UIStroke")
+joinBoxStroke.Color = UIColors.rim
+joinBoxStroke.Transparency = UIColors.rimTransparency
+joinBoxStroke.Parent = joinBox
+
+local function makePillButton(parent, text, x, y, width, accent)
+	local button = Instance.new("TextButton")
+	button.Position = UDim2.new(0, x, 0, y)
+	button.Size = UDim2.new(0, width, 0, 28)
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 12
+	button.Text = text
+	button.TextColor3 = accent and Color3.new(0, 0, 0) or UIColors.textPrimary
+	button.BackgroundColor3 = accent and UIColors.gold or UIColors.panel
+	button.BackgroundTransparency = accent and 0.1 or UIColors.panelTransparency
+	button.Parent = parent
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = button
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = UIColors.rim
+	stroke.Transparency = UIColors.rimTransparency
+	stroke.Parent = button
+	return button
+end
+
+local joinButton = makePillButton(myColumn, "코드로 합류", 168, MY_EXTRA_Y + 38, 96, true)
+joinButton.Activated:Connect(function()
+	local code = joinBox.Text:gsub("%s", ""):upper()
+	if #code > 0 then
+		partyRequest:FireServer("joincode", code)
+		joinBox.Text = ""
+	end
+end)
+
+local createButton = makePillButton(myColumn, "파티 만들기 (코드 받기)", 0, MY_EXTRA_Y + 74, 160, false)
+createButton.Activated:Connect(function()
+	partyRequest:FireServer("create")
+end)
+
+local cancelJoinButton = makePillButton(myColumn, "합류 대기 취소", 168, MY_EXTRA_Y + 74, 96, false)
+cancelJoinButton.Activated:Connect(function()
+	partyRequest:FireServer("cancel_join")
+end)
 
 local function ensureRows(rowsTable, parent, count)
 	for i = #rowsTable + 1, count do
@@ -2458,12 +2557,25 @@ emptyLabel.TextSize = 12
 emptyLabel.TextWrapped = true
 emptyLabel.TextXAlignment = Enum.TextXAlignment.Left
 emptyLabel.TextColor3 = UIColors.textTertiary
-emptyLabel.Text = "파티가 없습니다. 오른쪽 목록에서 초대하면 리더가 됩니다.\n보스 스테이지는 리더가 열고, 파티원 전원이 같은 아레나로 들어갑니다."
+emptyLabel.Text = "파티가 없습니다. 오른쪽 목록에서 초대하면 리더가 됩니다.\n다른 서버 친구는 코드를 받아 아래에 입력하거나, 친구 목록의 초대 버튼으로 부릅니다."
 emptyLabel.Parent = myColumn
 
 local function isMeLeader()
 	return partyState ~= nil and partyState.leaderUserId == player.UserId
 end
+
+-- 24-2: 다른 서버의 온라인 친구 목록(서버 응답 캐시)과 그 구분 라벨(서버 플레이어 행들 아래 끼운다).
+local friendsElsewhere = {}
+local friendsHeader = Instance.new("TextLabel")
+friendsHeader.BackgroundTransparency = 1
+friendsHeader.Size = UDim2.new(1, 0, 0, 18)
+friendsHeader.Font = Enum.Font.GothamBold
+friendsHeader.TextSize = 11
+friendsHeader.TextXAlignment = Enum.TextXAlignment.Left
+friendsHeader.TextColor3 = UIColors.textTertiary
+friendsHeader.Text = ""
+friendsHeader.Visible = false
+friendsHeader.Parent = serverList
 
 updatePartyTab = function()
 	if not isOpen then
@@ -2471,10 +2583,17 @@ updatePartyTab = function()
 	end
 	-- ── 내 파티 ──
 	local members = partyState and partyState.members or {}
-	myTitle.Text = ("내 파티 (%d/%d)"):format(#members, PartyConfig.maxMembers)
+	local pending = partyState and partyState.pending or {} -- 24-2: 다른 서버에서 이동 중인 좌석
+	myTitle.Text = ("내 파티 (%d/%d)%s"):format(#members + #pending, PartyConfig.maxMembers,
+		(partyState and partyState.bossActive) and " · 보스전 중" or "")
 	emptyLabel.Visible = #members == 0
 	leaveButton.Visible = #members > 0
-	ensureRows(myRows, myList, #members)
+	codeLabel.Visible = #members > 0
+	codeHint.Visible = #members > 0
+	codeLabel.Text = partyState and partyState.code and ("파티 코드  " .. partyState.code) or "파티 코드 발급 중…"
+	createButton.Visible = #members == 0
+	cancelJoinButton.Visible = #members == 0
+	ensureRows(myRows, myList, #members + #pending)
 	for i, member in ipairs(members) do
 		local row = myRows[i]
 		local target = (not member.isDummy) and Players:GetPlayerByUserId(member.userId) or nil
@@ -2493,6 +2612,19 @@ updatePartyTab = function()
 			end)
 		end
 	end
+	for i, seat in ipairs(pending) do
+		local row = myRows[#members + i]
+		row.name.Text = seat.name
+		row.name.TextColor3 = UIColors.textSecondary
+		row.meta.Text = "다른 서버에서 이동 중…"
+		row.button.Visible = isMeLeader()
+		row.button.Text = "취소"
+		if isMeLeader() then
+			row.connection = row.button.Activated:Connect(function()
+				partyRequest:FireServer("kick", seat.userId)
+			end)
+		end
+	end
 
 	-- ── 서버 플레이어(나 제외) ──
 	local others = {}
@@ -2504,13 +2636,16 @@ updatePartyTab = function()
 	table.sort(others, function(a, b)
 		return a.Name < b.Name
 	end)
-	serverTitle.Text = ("서버 플레이어 (%d)"):format(#others)
+	serverTitle.Text = ("서버 플레이어 (%d) · 다른 서버 친구 (%d)"):format(#others, #friendsElsewhere)
 	ensureRows(serverRows, serverList, #others)
 	local inMyParty = {}
 	for _, member in ipairs(members) do
 		inMyParty[member.userId] = true
 	end
-	local canInvite = (partyState == nil) or (isMeLeader() and #members < PartyConfig.maxMembers)
+	for _, seat in ipairs(pending) do
+		inMyParty[seat.userId] = true
+	end
+	local canInvite = (partyState == nil) or (isMeLeader() and #members + #pending < PartyConfig.maxMembers)
 	for i, other in ipairs(others) do
 		local row = serverRows[i]
 		row.name.Text = other.Name
@@ -2529,6 +2664,49 @@ updatePartyTab = function()
 			end)
 		end
 	end
+
+	-- ── 24-2: 다른 서버의 온라인 친구(서버 플레이어 아래, 같은 행 틀) ──
+	friendsHeader.Visible = true
+	friendsHeader.LayoutOrder = #others + 1
+	friendsHeader.Text = #friendsElsewhere > 0 and "다른 서버에 있는 친구 (초대 → 상대가 수락하면 이 서버로 이동)" or "다른 서버에 있는 온라인 친구 없음"
+	ensureRows(friendRows, serverList, #friendsElsewhere)
+	for i, friend in ipairs(friendsElsewhere) do
+		local row = friendRows[i]
+		row.frame.LayoutOrder = #others + 1 + i
+		row.name.Text = friend.displayName and friend.displayName ~= friend.name and ("%s (@%s)"):format(friend.displayName, friend.name) or friend.name
+		row.name.TextColor3 = UIColors.textPrimary
+		row.meta.Text = "다른 서버 · 온라인"
+		local alreadyIn = inMyParty[friend.userId]
+		row.button.Visible = true
+		row.button.Text = alreadyIn and "파티원" or "초대"
+		row.button.AutoButtonColor = canInvite and not alreadyIn
+		row.button.BackgroundColor3 = (canInvite and not alreadyIn) and UIColors.gold or UIColors.panel
+		row.button.TextColor3 = (canInvite and not alreadyIn) and Color3.new(0, 0, 0) or UIColors.textTertiary
+		if canInvite and not alreadyIn then
+			row.connection = row.button.Activated:Connect(function()
+				partyRequest:FireServer("invite_remote", friend.userId)
+			end)
+		end
+	end
+end
+
+-- 친구 목록은 탭을 열 때 한 번 서버에 묻는다(RemoteFunction, 서버가 스로틀). 응답이 오면 다시 그린다.
+local fetchingFriends = false
+refreshFriends = function()
+	if fetchingFriends then
+		return
+	end
+	fetchingFriends = true
+	task.spawn(function()
+		local ok, list = pcall(function()
+			return partyFriendsFetch:InvokeServer()
+		end)
+		fetchingFriends = false
+		if ok and type(list) == "table" then
+			friendsElsewhere = list
+			updatePartyTab()
+		end
+	end)
 end
 
 partyStateChanged.OnClientEvent:Connect(function(state)

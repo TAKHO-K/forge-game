@@ -12,6 +12,14 @@
 --     (혼자 남은 파티는 의미가 없다 - 임의 결정, 보고서 참고).
 --   · 더미 멤버(DevTools "/gg party dummy") - Player 인스턴스가 없는 가짜 멤버. 인원수(보스 HP
 --     배수)·HUD 목록에는 들어가지만 텔레포트·피격·보상 대상이 아니다(isDummy).
+--
+-- 24-2 크로스서버(PRD 20.63): 이 모듈은 여전히 "이 서버 안의 멤버십"만 안다. 서버 밖(MemoryStore
+-- 레코드·MessagingService·텔레포트)은 PartyCrossServer.lua가 맡고, 이 모듈은 그쪽이 필요로 하는 세
+-- 가지만 더 든다 - (1) party.code(다른 서버에서 이 파티를 가리키는 6자리 코드, PartyCrossServer가
+-- 발급해 setCode로 넣는다), (2) party.pending(다른 서버에서 좌석을 예약하고 텔레포트 중인 사람 -
+-- 정원 계산에는 들어가고 보스 HP 배수 N에는 안 들어간다, 아직 여기 없으니까), (3) onChanged 리스너
+-- (결성·합류·이탈·승계·좌석 변화를 밖에 알린다 - PartyCrossServer가 레코드를 다시 쓴다). 역방향
+-- require는 여전히 없다.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -36,13 +44,22 @@ local partyNotice = Instance.new("RemoteEvent")
 partyNotice.Name = "PartyNotice"
 partyNotice.Parent = ReplicatedStorage
 
--- party = { id, leader = record, members = { record, ... }(가입 순), nextDummyIndex }
+-- party = { id, leader = record, members = { record, ... }(가입 순), nextDummyIndex,
+--           code = string|nil(24-2), pending = { {userId, name, since}, ... }(24-2 원격 좌석), bossActive = bool(24-2) }
 -- record = { player = Player|nil, name, userId, isDummy, joinedAt, dummy = { classId, level, stage }|nil }
-local parties = {}
+local parties = {} -- [id] = party (살아 있는 파티만)
 local partyOf = {} -- [Player] = party
 local invites = {} -- [invitee Player] = { party, inviter = Player, expiresAt, thread }
 local nextPartyId = 1
 local removedListeners = {} -- fn(player, party, reason)
+local changedListeners = {} -- fn(party, event) - event: "create"/"join"/"leave"/"leader"/"seat"/"boss"/"disband"
+
+-- 아래 좌석 헬퍼들이 먼저 쓰므로 선언 직후에 정의한다(Lua 지역 함수는 정의 순서를 따른다).
+local function fireChanged(party, event)
+	for _, fn in ipairs(changedListeners) do
+		task.spawn(fn, party, event)
+	end
+end
 
 local function now()
 	return os.clock()
@@ -83,6 +100,94 @@ function PartyState.getSize(party)
 	return party and #party.members or 0
 end
 
+-- ═══ 24-2 크로스서버 보조 ═══
+
+-- 정원 계산용 좌석 수 = 멤버(더미 포함) + 텔레포트 중인 원격 좌석. 초대·수락·코드 합류의 "만원" 판정은
+-- 전부 이 값으로 한다 - 좌석을 먼저 잡아 두지 않으면 "텔레포트하는 동안 파티가 찼다"가 생긴다.
+function PartyState.getSeatCount(party)
+	return party and (#party.members + #party.pending) or 0
+end
+
+function PartyState.getPendingSeats(party)
+	return party and party.pending or {}
+end
+
+function PartyState.hasPendingSeat(party, userId)
+	for _, seat in ipairs(party.pending) do
+		if seat.userId == userId then
+			return true
+		end
+	end
+	return false
+end
+
+function PartyState.isMemberUserId(party, userId)
+	for _, record in ipairs(party.members) do
+		if record.userId == userId then
+			return true
+		end
+	end
+	return false
+end
+
+-- 원격 좌석 추가(다른 서버에서 좌석을 예약하고 텔레포트를 시작한 사람). since는 예약 시각(os.time) -
+-- 리더 서버가 seatTimeoutSeconds가 지난 좌석을 회수한다(PartyCrossServer 하트비트).
+function PartyState.addPendingSeat(party, userId, name, since)
+	if PartyState.hasPendingSeat(party, userId) or PartyState.isMemberUserId(party, userId) then
+		return false
+	end
+	table.insert(party.pending, { userId = userId, name = name, since = since or os.time() })
+	PartyState.pushState(party)
+	fireChanged(party, "seat")
+	print(("[forge-game] 파티 원격 좌석 예약: #%d %s (좌석 %d/%d)"):format(party.id, name, PartyState.getSeatCount(party), PartyConfig.maxMembers))
+	return true
+end
+
+-- silent=true면 pushState/리스너를 부르지 않는다(attachMember처럼 바로 뒤에 더 큰 변화가 따라올 때).
+function PartyState.removePendingSeat(party, userId, silent)
+	for i, seat in ipairs(party.pending) do
+		if seat.userId == userId then
+			table.remove(party.pending, i)
+			if not silent then
+				PartyState.pushState(party)
+				fireChanged(party, "seat")
+				print(("[forge-game] 파티 원격 좌석 해제: #%d %s"):format(party.id, seat.name))
+			end
+			return true
+		end
+	end
+	return false
+end
+
+function PartyState.setCode(party, code)
+	party.code = code
+	PartyState.pushState(party)
+end
+
+function PartyState.getPartyByCode(code)
+	for _, party in pairs(parties) do
+		if party.code == code then
+			return party
+		end
+	end
+	return nil
+end
+
+function PartyState.getAllParties()
+	return parties
+end
+
+-- 보스전 진행 중 표시(BossEncounter가 파티 보스를 시작/끝낼 때 PartyCrossServer가 넣는다). 다른 서버의
+-- 합류 대기자가 이 값을 레코드에서 읽어 "보스전이 끝날 때까지" 기다린다.
+function PartyState.setBossActive(party, active)
+	if party.bossActive == active then
+		return
+	end
+	party.bossActive = active
+	PartyState.pushState(party)
+	fireChanged(party, "boss")
+end
+
 -- 실제 Player만(텔레포트·보상·피격 대상).
 function PartyState.getMemberPlayers(party)
 	local list = {}
@@ -114,7 +219,19 @@ local function snapshot(party)
 			dummy = record.dummy,
 		})
 	end
-	return { id = party.id, leaderUserId = party.leader.userId, members = members, maxMembers = PartyConfig.maxMembers }
+	local pending = {}
+	for _, seat in ipairs(party.pending) do
+		table.insert(pending, { userId = seat.userId, name = seat.name })
+	end
+	return {
+		id = party.id,
+		leaderUserId = party.leader.userId,
+		members = members,
+		pending = pending,
+		code = party.code,
+		bossActive = party.bossActive or false,
+		maxMembers = PartyConfig.maxMembers,
+	}
 end
 
 function PartyState.pushState(party)
@@ -138,12 +255,31 @@ local function fireRemoved(player, party, reason)
 	end
 end
 
+-- 24-2: 파티 구성이 바뀔 때마다 밖에 알린다(PartyCrossServer가 MemoryStore 레코드를 다시 쓴다).
+function PartyState.onChanged(fn)
+	table.insert(changedListeners, fn)
+end
+
 local function createParty(leader)
 	local record = { player = leader, name = leader.Name, userId = leader.UserId, isDummy = false, joinedAt = now() }
-	local party = { id = nextPartyId, leader = record, members = { record }, nextDummyIndex = 1 }
+	local party = { id = nextPartyId, leader = record, members = { record }, nextDummyIndex = 1, pending = {}, bossActive = false }
 	nextPartyId += 1
+	parties[party.id] = party
 	partyOf[leader] = party
 	print(("[forge-game] 파티 결성: #%d 리더 %s"):format(party.id, leader.Name))
+	fireChanged(party, "create")
+	return party
+end
+
+-- 24-2: 초대 없이 파티만 만든다(장비창 "파티 만들기" - 다른 서버의 친구에게 줄 코드를 먼저 받기 위해).
+-- 이미 파티가 있으면 그 파티를 돌려준다(멱등).
+function PartyState.create(leader)
+	local party = partyOf[leader]
+	if party then
+		return party, "already_in_party"
+	end
+	party = createParty(leader)
+	PartyState.pushState(party)
 	return party
 end
 
@@ -179,7 +315,13 @@ local function removeRecord(party, record, reason)
 		for _, remaining in ipairs(table.clone(party.members)) do
 			removeRecord(party, remaining, "disband")
 		end
+		party.pending = {}
+		parties[party.id] = nil
+		fireChanged(party, "disband")
 		return
+	end
+	if reason == "disband" then
+		return -- 해산 루프 안의 개별 제거 - 위에서 한 번만 알린다
 	end
 	if wasLeader then
 		for _, candidate in ipairs(party.members) do
@@ -191,6 +333,7 @@ local function removeRecord(party, record, reason)
 		end
 	end
 	PartyState.pushState(party)
+	fireChanged(party, wasLeader and "leader" or "leave")
 end
 
 -- 초대. 반환: ok, reason. inviter가 파티가 없으면 새 파티를 만들어 리더가 된다.
@@ -210,7 +353,7 @@ function PartyState.invite(inviter, invitee)
 	if party and party.leader.player ~= inviter then
 		return false, "not_leader"
 	end
-	if party and #party.members >= PartyConfig.maxMembers then
+	if party and PartyState.getSeatCount(party) >= PartyConfig.maxMembers then
 		return false, "party_full"
 	end
 	if not party then
@@ -251,15 +394,24 @@ function PartyState.respondInvite(invitee, accept)
 	if partyOf[inviter] ~= party or #party.members == 0 then
 		return false, "party_gone"
 	end
-	if #party.members >= PartyConfig.maxMembers then
+	if PartyState.getSeatCount(party) >= PartyConfig.maxMembers and not PartyState.hasPendingSeat(party, invitee.UserId) then
 		return false, "party_full"
 	end
-	local record = { player = invitee, name = invitee.Name, userId = invitee.UserId, isDummy = false, joinedAt = now() }
-	table.insert(party.members, record)
-	partyOf[invitee] = party
-	PartyState.pushState(party)
-	print(("[forge-game] 파티 합류: #%d %s (%d/%d)"):format(party.id, invitee.Name, #party.members, PartyConfig.maxMembers))
+	PartyState.attachMember(party, invitee)
 	return true, "joined"
+end
+
+-- 24-2: 초대 절차 없이 멤버로 붙인다(수락 확정·코드 합류·원격 도착 공통 마지막 단계). 이 사람의
+-- 원격 좌석(pending)이 있으면 그 좌석이 실제 멤버로 바뀐다. 정원 검사는 호출부가 한다.
+function PartyState.attachMember(party, player)
+	PartyState.removePendingSeat(party, player.UserId, true)
+	local record = { player = player, name = player.Name, userId = player.UserId, isDummy = false, joinedAt = now() }
+	table.insert(party.members, record)
+	partyOf[player] = party
+	PartyState.pushState(party)
+	print(("[forge-game] 파티 합류: #%d %s (%d/%d)"):format(party.id, player.Name, #party.members, PartyConfig.maxMembers))
+	fireChanged(party, "join")
+	return record
 end
 
 function PartyState.hasPendingInvite(player)
@@ -315,7 +467,7 @@ function PartyState.addDummies(player, count, template)
 		party = createParty(player)
 	end
 	local added = 0
-	while added < count and #party.members < PartyConfig.maxMembers do
+	while added < count and PartyState.getSeatCount(party) < PartyConfig.maxMembers do
 		local index = party.nextDummyIndex
 		party.nextDummyIndex += 1
 		table.insert(party.members, {
@@ -329,6 +481,7 @@ function PartyState.addDummies(player, count, template)
 		added += 1
 	end
 	PartyState.pushState(party)
+	fireChanged(party, "join")
 	return true, added
 end
 
@@ -349,8 +502,12 @@ function PartyState.clearDummies(player)
 		for _, remaining in ipairs(table.clone(party.members)) do
 			removeRecord(party, remaining, "disband")
 		end
+		party.pending = {}
+		parties[party.id] = nil
+		fireChanged(party, "disband")
 	else
 		PartyState.pushState(party)
+		fireChanged(party, "leave")
 	end
 	return removed
 end

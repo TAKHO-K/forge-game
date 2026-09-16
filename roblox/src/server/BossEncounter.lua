@@ -48,6 +48,26 @@ local BossEncounter = {}
 local encounterOf = {}
 local encounterByModel = {}
 
+-- 24-2 크로스서버 파티(PRD 20.63): 보스전 시작/종료를 밖에 알린다 - PartyCrossServer가 파티 레코드의
+-- bossActive를 켜고 꺼서 다른 서버의 합류자가 "보스전이 끝날 때까지" 기다리게 한다(HP 배수 N이 입장 순간에
+-- 고정되므로 도중 합류는 없다, PRD 20.47 [6](다)). 리스너는 encounter 하나를 받는다(party 필드로 파티 여부 판단).
+local startedListeners = {}
+local endedListeners = {}
+
+function BossEncounter.onEncounterStarted(fn)
+	table.insert(startedListeners, fn)
+end
+
+function BossEncounter.onEncounterEnded(fn)
+	table.insert(endedListeners, fn)
+end
+
+local function fireListeners(listeners, encounter)
+	for _, fn in ipairs(listeners) do
+		task.spawn(fn, encounter)
+	end
+end
+
 -- 아레나 슬롯 배정 - encounter 하나에 슬롯 하나. 반납되면 freeSlots로 돌아가 다음 팀이 쓴다.
 local freeSlots = {}
 for i = WorldConfig.bossArena.slotCount, 1, -1 do
@@ -257,6 +277,7 @@ local function spawnEncounter(data, stage, members, party, size, rotationOwner, 
 	end
 	encounterByModel[model] = encounter
 	BossPatterns.setGrace(model, data, data.entryGraceSeconds) -- 입장 2초 유예(20.44 [3](다))
+	fireListeners(startedListeners, encounter)
 	return encounter
 end
 
@@ -401,6 +422,7 @@ local function endEncounter(encounter, destroyModel)
 	end
 	releaseSlot(encounter.slot)
 	encounter.slot = nil
+	fireListeners(endedListeners, encounter)
 end
 
 -- 처치되지 않은 채로 물러날 때(스테이지 하향/상향 이동, 견습 중단)만 부른다 - 이 플레이어가

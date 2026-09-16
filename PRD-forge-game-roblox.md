@@ -5787,7 +5787,7 @@ Server로 분리하는 구조가 있는데 Place까지 늘리면"이라는 근�
   스테이지) + "초대" 목록(같은 서버 플레이어, 친구 우선 정렬).
 - 초대는 **같은 서버 안에서만**(MessagingService 크로스 서버 초대는 만들지
   않는다 - 친구 참여로 먼저 오면 된다). 받는 쪽 팝업 15초, 설정 "파티 초대
-  받기"(모두/친구만/거부)로 거른다.
+  받기"(모두/친구만/거부)로 거른다. `[⚠️ 24-2(20.63)에서 개정 - 다른 서버의 친구 초대(MessagingService)·파티 코드 합류·리더 서버로의 텔레포트를 구현했다. "같은 서버 안에서만"은 더 이상 맞지 않는다. 설정 "파티 초대 받기"는 여전히 미구현]`
 - 리더 = 결성자. 리더 퇴장 시 가장 오래된 멤버가 승계. 탈퇴·추방(리더)·해산(리더).
   파티 상태는 **서버 메모리만** - 저장하지 않는다(서버가 바뀌면 파티도 끝, 다시
   만들면 된다). SAVE_VERSION 영향 없음.
@@ -8735,3 +8735,208 @@ hitRatio 앵커)를 곱한 힐러 DPS = 50.93M × 0.599 = 30.5M/s(대검 32.1M�
 `server/BossPatterns.lua` · `server/MonsterAI.server.lua` · `server/MonsterState.lua` ·
 `server/CombatResolution.lua` · `server/StageServer.server.lua` · `server/TutorialState.lua` ·
 `server/DevTools.server.lua` · `client/InventoryUI.client.lua` · `client/StageUI.client.lua`.
+
+### 20.63 크로스서버 파티 — 서버 경계를 넘는 결성·합류 (24-2) `[✅ 구현 + Studio 검증 완료(텔레포트 제외) — MemoryStore 레코드·좌석 예약·대기·도착 처리 16항목 자체검증 통과, 실제 UI(파티 만들기·코드 합류) 클릭 재현, 견습 자동 탈퇴 실측. TeleportService는 공식 문서대로 Studio에서 동작하지 않아(실측 에러 "Request Context Failure") 실제 서버 이동·12인 초과·다중 계정은 아래 [10] 실기 목록. 12인 초과 자체는 플랫폼이 허용하지 않는다 — [0] 3번]`
+
+24-1(20.62)의 파티는 같은 서버 안에서만 결성됐다. 이 절은 파티 결성·합류를 서버 경계 밖으로
+확장한다 - 로비(접속 직후)에서 파티를 만들고, 다른 서버의 친구를 초대하거나 코드로 불러
+**리더가 있는 서버로 이동**시켜 합류시킨다. 플랫폼 제약이 설계를 결정하는 작업이라 조사([0])가
+먼저고, 그 결과가 "불가능"인 항목(12인 초과)은 우회하지 않고 대체 구조로 바꿨다([2]).
+
+**"로비"의 정의(전제 확인)**: 이 게임엔 모드 선택 화면이 없다(20.56 [5] 7번 - 견습 미완료 계정은
+직업을 고르는 즉시 견습 1단계로 자동 진입, 완료 계정은 접속하면 리스폰 마을에 선다). 그래서 이
+절의 "로비"는 **접속 직후 리스폰 마을에 서 있는 상태(프로필 로드 완료·직업 선택 완료·견습 비활성·
+보스전 아님)**이고, "모드 선택"은 (가) 견습 진입(자동) / (나) 무한 모드 = 스테이지 이동·사냥 두
+가지 행동을 가리킨다. 파티 결성은 24-1부터 이미 이 상태에서 가능했으므로(초대·수락에 스테이지
+조건이 없다) 이번에 새로 연 것은 "서버 밖"이다.
+
+#### [0] 조사 결과 — 가능 / 불가능 / 조건부 (공식 문서·실측 기준)
+
+| # | 조사 항목 | 판정 | 근거 |
+|---|---|---|---|
+| 1 | 서버 간 파티 상태 공유 수단 | **가능 - MemoryStoreService 해시맵**(진실의 출처) **+ MessagingService**(알림) 조합 | MemoryStore 공식 문서: "frequent and ephemeral data that change rapidly and don't need to be durable" - 파티 상태의 정의 그대로. 한도: 요청 1,000 + 120×동접/분, 메모리 64KB + 1.2KB×유저, 값 32KB, TTL 0~3,888,000초. 4인 파티 레코드 ≈ 0.5KB, 리더 서버 하트비트 30초 = 파티당 2회/분 + 합류 이벤트 - 서버 3파티면 분당 10회 미만(예산의 1%). MessagingService는 "Delivery is best effort and not guaranteed"(공식) - 그래서 정확성은 MemoryStore가, 지연 단축만 메시지가 맡는다. 한도 600 + 240×인원/분·1KB. DataStore는 부적합(영속 저장용, 쓰기 예산 60+10×인원/분이 파티 갱신 빈도에 낭비). **Studio 실측**: Play 서버에서 MemoryStore SetAsync/GetAsync/UpdateAsync 정상 동작(API 접근 켜짐, 데이터는 프로덕션과 격리). 단 같은 키에 UpdateAsync를 동시에 3개 보내면 `InternalError` - 파티당 쓰기를 직렬화해 해결([1]) |
+| 2 | 특정 서버 인스턴스로 합류시키는 수단 | **가능(조건부) - `TeleportService:TeleportAsync(placeId, {player}, TeleportOptions{ServerInstanceId = jobId})`** | 공식 문서(TeleportOptions.ServerInstanceId): "Indicates the DataModel.JobId of the server instance the user(s) should be teleported to". `TeleportToPlaceInstance`는 deprecated - "combined into a single method, TeleportAsync". 실패는 (가) 호출 자체의 에러(pcall) 또는 (나) 시작 뒤 마지막 순간의 `TeleportInitFailed`(player, TeleportResult, errorMessage) - "the player does not leave the current server". 꽉 찬 서버: `Enum.TeleportResult.GameFull` = "The game that this player attempted to teleport to is full"(공식 열거값 설명). 조건: **같은 Place 안 공개 서버만**(ReservedServerAccessCode·ShouldReserveServer와 동시 지정 불가 - 공식). 한 호출 ≤ 50명 |
+| 3 | 12인 초과가 실제로 가능한가 | **불가능 - Players.MaxPlayers는 플랫폼 하드캡** | 공식: "This property determines the maximum number of players that can be in a server. This property can only be set through a specific place's settings on the Creator Dashboard." 스크립트로 못 바꾸고 어떤 합류 경로(친구 따라가기·텔레포트)도 이 값을 넘지 못한다(Roblox 공지 "Experience Join Improvements: Server Size, Join Queues and Social Slots Reservations" - 소셜 슬롯은 MaxPlayers 안에서 예약될 뿐). **따라서 "12를 넘긴다"는 "MaxPlayers를 16으로 올리고 매치메이킹은 12까지만 채운다"로 바꿔야 한다**: `Players.PreferredPlayers`(공식: "the number of players to which Roblox's matchmaker will fill servers. This number will be less than the maximum") = 12, MaxPlayers = 16. 대시보드 Game Settings → Places → Server Fill(Customize/예약 슬롯 4)로 설정한다 - 코드로는 불가. **Studio 실측**: 현재 Place는 MaxPlayers=60, PreferredPlayers=60(로블록스 기본값) - 20.38 [6]의 "정원 12"는 설정에 반영돼 있지 않았다. 부팅 로그가 설계값(16/12)과 다르면 "설정 확인 필요"를 찍는다. 예약 슬롯 4칸이 텔레포트에도 열리는지(친구 따라가기 전용인지)는 문서에 없다 → [10] |
+| 4 | 텔레포트 실패·타임아웃 시 플레이어 위치 | **출발 서버 그 자리** | 공식(TeleportInitFailed): "fires ... when a request to teleport ... fails and the player does not leave the current server". 호출 에러(pcall)도 같다. 도착 뒤 리더 서버가 종료되면 플랫폼이 플레이어를 새 서버로 재접속시킨다 - 그 서버에서 도착 처리가 "파티 없음"을 알리고 리스폰 마을에 그대로 둔다. **Studio 실측**: 실제 플레이어 TeleportAsync → `Request Context Failure: response code is not 200`(pcall 에러) → 좌석 해제·저장 동결 해제·토스트 "서버 이동에 실패했습니다. 지금 자리에 그대로 있습니다" → 이후 자동저장 2회 정상 |
+| 5 | TeleportService가 Studio에서 테스트 가능한가 | **불가능** | 공식(TeleportService): "this service does not work during playtesting in Roblox Studio; to test aspects of your experience using it, you must publish the experience and play it in the Roblox application." 실측 에러는 4번. 그래서 텔레포트 **직전까지**(레코드·좌석·대기·저장 flush)와 **도착 후**(멤버 레코드 소비·파티 부착·보스전 보류)는 `/gg party join <code>`(simulateArrival - 텔레포트만 건너뛴다)·`/gg party xtest`로 같은 코드 경로를 밟았고, 이동 자체·다중 계정·12인 초과는 [10]으로 미룬다 |
+| 6 | (추가) 로블록스 플랫폼 Party API | **읽기 전용 - 이번엔 쓰지 않음** | 2025-06 공지 "Party API Is Here": `Player.PartyId`, `SocialService:GetPartyAsync(partyId)`(멤버의 PlaceId·JobId 포함), `GetPlayersByPartyId`. 실험이 파티를 만들거나 바꿀 수 없고(플랫폼 파티만 읽는다) "does not work during playtesting in Roblox Studio". 게임 안 파티(4인·리더·보스 규칙)와 별개 축이라 이번 구조의 대체가 못 된다. 후속: 플랫폼 파티로 같이 들어온 사람을 자동으로 같은 게임 파티에 붙이는 힌트로 쓸 수 있다(Studio 실측: `SocialService.GetPartyAsync` 함수 존재 확인) |
+| 7 | (추가) 텔레포트와 DataStore 경합 | **위험 있음 → 구조로 차단** | 출발 서버의 퇴장 저장(PlayerRemoving → flush)과 도착 서버의 로드가 경합하면 도착 서버가 옛 값을 읽거나 이후 저장이 `stale_session`으로 막힌다(SaveSystem의 savedAt 낙관적 동시성). 처리: 텔레포트 직전 `ImmediateSave.flush` → `SaveCoordinator.setTeleportFrozen` - 그 뒤 출발 서버는 이 플레이어를 저장하지 않는다(마지막 쓰기 = 텔레포트 호출 전에 끝난 flush). 검증 중 **별개의 기존 경합**을 실측했다 - 60초 자동저장이 UpdateAsync를 기다리는 사이 flush가 같은 baseline으로 두 번째 UpdateAsync를 시작해 `stale_session`(저장 중단) 발생. 플레이어당 저장 뮤텍스로 수정(SaveCoordinator) - 재현 시나리오 재실행에서 "저장 성공 → 텔레포트 시작 → 실패 → 저장 성공 ×2" |
+
+#### [1] 구조 — PartyState는 서버 안, PartyCrossServer가 서버 밖
+
+| 모듈 | 역할 |
+|---|---|
+| `shared/data/PartyConfig.lua` | 구조값 추가: `partiesPerServer=3`, `serverPreferredPlayers=12(=4×3)`, `serverCapacity=16(=12+4)`, 코드 알파벳(0/O·1/I/L 제외 30자)·6자리, `heartbeatSeconds=30`, `recordTtlSeconds=seatTimeoutSeconds=90(=30×3)`, `joinPollSeconds=5`, 해시맵·토픽 이름(`_v1`). 전부 구조·한도 값 - 밸런스 상수 아님([11]) |
+| `server/PartyState.lua` | 여전히 "이 서버 안의 멤버십"만. 추가: `party.code`, `party.pending`(원격 좌석 - 정원엔 들고 보스 N엔 안 든다), `party.bossActive`, `create`(초대 없는 결성), `attachMember`(수락·코드 합류·원격 도착 공통 마지막 단계), 좌석 헬퍼, `getPartyByCode`, `onChanged(fn(party, event))` 리스너. 만원 판정은 전부 `getSeatCount`(멤버+좌석) |
+| `server/PartyCrossServer.lua`(신규) | MemoryStore 해시맵 2개(`ForgeParty_v1[code]` 파티 레코드 - 리더 서버 소유·하트비트 갱신·TTL 90 / `ForgePartyMember_v1[userId]` "이 사람은 code 파티의 targetJobId로 가는 중" - 출발 서버가 쓰고 도착 서버가 소비), MessagingService 토픽(초대·좌석 예약/해제 알림 - 유실 시 하트비트 reconcile), 합류 파이프라인 `requestJoin`(검사 → 레코드 → 같은 서버면 즉시 → 좌석 예약(UpdateAsync 원자) + 멤버 레코드 → 대기(보스전·정원) → flush + 동결 → TeleportAsync), 도착 처리 `handleArrival`, `TeleportInitFailed` 회수, 온라인 친구 목록(`Players:GetFriendsAsync` 페이지 순회, 같은 서버 제외), `BindToClose` 레코드 삭제, 파티당 쓰기 직렬화. 텔레포트 데이터(`SetTeleportData{partyCode}`)는 힌트일 뿐 - 클라이언트가 볼 수 있고 위조 가능해서 권위는 멤버 레코드 |
+| `server/PartyServer.server.lua` | action 추가: `create`, `joincode`, `invite_remote`(같은 서버면 로컬 초대로), `cancel_join`. `accept/decline`은 로컬 초대와 원격 초대 둘 다(클라 버튼은 하나). `leave`는 합류 대기 중이면 취소. `kick`은 원격 좌석도 취소. RemoteFunction `PartyFriendsFetch`(5초 스로틀) |
+| `server/BossEncounter.lua` | `onEncounterStarted/Ended` 리스너 - PartyCrossServer가 `bossActive`를 켜고 끈다. 종료 시 보류 도착자 부착 |
+| `server/SaveCoordinator.lua` | `setTeleportFrozen`(텔레포트 직전 마지막 flush 이후 저장 차단) + 플레이어당 저장 뮤텍스([0] 7번) |
+| `server/DevTools.server.lua` | `/gg party server|join|fakeremote|xtest`([8]). 채팅 명령 수신을 `TextChatCommand("/gg").Triggered`로 - 24-2 실측에서 "/"로 시작하는 메시지가 `Player.Chatted`에 닿지 않았다(같은 세션에서 "hello"는 닿음) |
+| `client/InventoryUI.client.lua` | 파티 탭 확장(새 창 없음): 내 파티 열에 파티 코드 표시·"코드 입력" 상자 + "코드로 합류"·"파티 만들기 (코드 받기)"·"합류 대기 취소", 원격 좌석 행("다른 서버에서 이동 중…", 리더 취소 버튼), 오른쪽 열은 스크롤 프레임(서버 플레이어 ≤16 + "다른 서버에 있는 친구" 초대 버튼). 색·행 틀은 UIColors·기존 makeRow 그대로 |
+| `client/PartyHud.client.lua` | 원격 초대 토스트 문구 "(다른 서버 - 수락 시 이동)" - 버튼은 같다 |
+
+저장 구조 변경 없음(SAVE_VERSION 21 그대로 - 파티는 저장하지 않는다).
+
+#### [2] 인원 상한 = 16 (매치메이킹 12 + 파티 1팀 4) — 근거와 초과 처리
+
+- **왜 16인가.** (1) 플랫폼상 "12 초과"는 MaxPlayers를 올리는 것으로만 가능하다([0] 3번). 올린 폭은
+  **파티 한 팀(4)**이어야 한다 - 어느 순간에도 "매치메이킹으로 채워진 12 + 텔레포트로 들어온 파티
+  조각 ≤ 4"가 성립하고, 4 = `maxMembers`라 새 숫자가 아니다. (2) 성능([3]): 서버 파트·틱·AI는
+  16인에서 +33% 이내로 전부 예산 안이고, 유일한 초과는 "16명 아바타가 한 화면에 전부 보이는" 화면
+  삼각형 최악(174k > 150k, +16%)인데 그 장면은 스폰 마을 한정이며 12인 최악(147k)도 이미 실기
+  확인 항목이다. (3) 20인이면 삼각형 최악 202k(+35%), 클라 파트 1,600(> 1,500), 보스 아레나 12슬롯
+  초과 가능 - 두 예산을 동시에 넘는다. 그래서 16이 상한이고 그 위는 열지 않는다.
+- **적용 지점 두 곳.** (가) 대시보드: Max Players 16 / 매치메이킹 정원(Preferred) 12 - 코드로 못
+  바꾸며 현재 60/60이라 **반드시 손으로 바꿔야 한다**(부팅 로그 "설정 확인 필요"가 이를 찍는다).
+  (나) 코드: `PartyCrossServer.capacity() = min(16, Players.MaxPlayers)` - 레코드에 `playerCount/
+  capacity`를 실어 합류자가 텔레포트 전에 본다. 대시보드가 60이면 코드 상한 16이 걸리고, 대시보드가
+  12면 플랫폼 하드캡 12가 걸린다(그 경우 크로스서버 합류는 서버가 12 미만일 때만 된다).
+- **상한 초과 요청의 처리 = 대기.** 좌석은 예약된 채로 출발 서버가 5초마다 레코드를 다시 읽고,
+  `playerCount < capacity`가 되면(누가 나가면) 진행한다. 토스트 "파티 서버가 가득 찼습니다(n/16) -
+  자리가 나면 이동합니다". 파티장 쪽 자리 확보(솔로 플레이어 강퇴)는 하지 않는다 - 매치메이킹으로
+  들어온 사람을 파티 때문에 쫓아낼 근거가 없다. 대기 취소는 "합류 대기 취소" 버튼(또는 탈퇴).
+  레코드가 사라지면(리더 서버 종료·해산) 자동 취소. 플랫폼이 그래도 `GameFull`을 돌려주면
+  `TeleportInitFailed`로 좌석 회수 + "플랫폼 정원" 토스트 - 플레이어는 그 자리에 있다.
+
+#### [3] 16인 성능 계산표 (12인 기준 설계값 → 16인)
+
+플레이어 1인당 늘어나는 것: 아바타(R15 15파트 + 액세서리 ≈ 5) + 무기 모델 ≈ 25파트, 아바타 삼각형
+6,878(20.53 측정) + 무기 500. 잡몹 54·구역 지형·아레나는 인원과 무관(20.47 [5](가)).
+
+| 항목 | 12인 설계값 | 16인 계산 | 상한 | 판정 |
+|---|---|---|---|---|
+| 서버 BasePart 총수(9구역 환산) | 3,100(52%) | 3,100 + 4×25 = **3,200**(53%) | 6,000 | ✓ |
+| 클라 스트리밍 파트 | 1,126(1인 측정) + 11×25 = 1,401 | 1,126 + 15×25 = **1,501** | 1,500 | ⚠️ 상한선 - 20.51 [4]가 예정한 `StreamingTargetRadius ≈ 600` 조정으로 흡수(아바타는 스트리밍 대상이 아니라 지형 쪽을 줄인다) |
+| 화면 삼각형 평시(아바타 6) | 105k | **105k**(파티 4 + 지나가는 2 - 인원과 무관) | 150k | ✓ |
+| 화면 삼각형 최악(전원 한 화면) | 147k(12 아바타 83k) | 147k + 4×(6,878+500) = **176.5k** | 150k | ✗ +18% - 스폰 마을에 16명이 동시에 모여 전원이 탑다운 프러스텀 안에 들 때만. 완화: 지금 그런 장면을 만들 이벤트가 없다. 실기 3번(폰) 확인 항목을 16으로 확장 |
+| 서버 Heartbeat | 0.48ms(1인) → 12인 ≈ 3~5ms(20.53 선형 추정), 실측 파티 보스전 0.42ms | 16인 ≈ **4~6.7ms** | 16.7ms | ✓ ≤ 40% |
+| 몬스터 AI 거리 검사/틱 | 54×12 = 648 | 54×16 = **864**(+33%) | - | ✓ 20.62 [9] 11번 "차이 없음" 범위 |
+| 기여도 메모리 | 54×12 = 648 비율 | 54×16 = **864** | - | ✓ |
+| 보스 아레나 슬롯 | 12(= 정원) | 최악 16 솔로 보스전 → 4명이 1번 슬롯 공유(`allocateSlot` fallback) | 12 | ⚠️ 초과분 4는 파티 합류자라 파티 보스(파티당 1슬롯)를 쓴다 - 현실적 최악은 12. 16명 전부 솔로 보스는 파티 없이 16명이 모이는 경우로 크로스서버 합류로는 안 생긴다 |
+| 복제 대역/클라 | 상대 아바타 11 | **15**(+36%) | - | ✓ 20.53 실측 0.40kbps 정지 기준 - 문제 없음 |
+| MemoryStore 요청/분 | - | 파티 4 × 하트비트 2 + 합류 이벤트 ≈ **≤ 20** | 1,000 + 120×16 = 2,920 | ✓ <1% |
+| MessagingService 메시지/분 | - | 초대·좌석 이벤트 **≤ 10** | 600 + 240×16 | ✓ |
+
+#### [4] 로비 파티와 모드 선택
+
+- **결성·초대·수락은 로비(리스폰 마을)에서 그대로 된다** - 24-1의 초대·수락에 스테이지 조건이
+  없었고, 이번에 "파티 만들기 (코드 받기)" 버튼이 초대 없이 파티를 만든다(코드를 먼저 받아
+  다른 서버 친구에게 알려 주는 경로). 다른 서버의 친구 초대: 파티 탭 "다른 서버에 있는 친구"
+  목록(온라인 친구 - 같은 서버 제외)의 초대 버튼 → MessagingService → 상대 화면에 토스트
+  "(다른 서버 - 수락 시 이동)" → 수락 = 코드 합류와 같은 파이프라인. 메시지는 best effort라
+  상대에게 안 닿을 수 있다 - 그때는 코드로.
+- **파티 상태로 모드를 고르면**: (가) 견습 - 견습 시작 시 자동 탈퇴(24-1 그대로, 실측: 파티 #2
+  이탈(tutorial)·해산). 견습 중인 사람은 초대·수락·코드 합류·원격 도착 전부 거절(`tutorial_self`).
+  견습 미완료 계정은 접속 즉시 견습이라 로비 자체가 없다 - 파티가 생길 틈이 없다. (나) 무한 모드 -
+  **스테이지는 각자다.** 리더가 스테이지를 옮겨도 파티원은 따라가지 않는다(잡몹은 19-4 비율
+  모델로 각자 stage 기준이라 같은 잡몹을 함께 잡아도 무관). 보스 스테이지만 리더가 열고 전원
+  검사·전원 텔레포트(24-1 그대로). 즉 "파티장이 무한 모드를 고르면 나머지도 따라가는가" → 사냥은
+  아니오, 보스만 예.
+
+#### [5] 중도 난입과 보스전 처리
+
+- **어디로 떨어지는가**: 도착 서버의 기본 접속 지점(리스폰 마을). 리더 옆으로 옮기지 않는다 -
+  리더가 tier6에 있으면 도착자가 그 자리에서 바로 맞는다. 토스트 "○○님의 파티에 합류했습니다".
+  파티 HUD로 리더 위치(스테이지)를 보고 걸어가거나 패드를 탄다.
+- **보스전 중 합류 차단 = 대기 두 단계.** (1) 출발 서버: 레코드 `bossActive=true`면 좌석만 잡고
+  텔레포트를 보류(5초 폴링, 토스트 "파티가 보스전 중입니다 - 끝나면 이동합니다"). (2) 도착 서버:
+  텔레포트 도중 보스전이 시작됐으면 `arrivalWaiting`에 두고 `BossEncounter.onEncounterEnded`에서
+  부착(좌석 since를 갱신해 90초 만료를 피한다 - 보스전은 2분 리듬). 보스 HP 배수 N은 입장 순간
+  머릿수라 좌석은 N에 안 든다(실측 X13: 좌석 1 + 멤버 3 → N=3). 로컬(같은 서버) 초대·수락도 24-1의
+  `in_boss` 거절 그대로.
+- **stage 어긋남**: 합류자의 `InfiniteStage`는 그대로다(잡몹은 각자 기준). 다음 보스는 리더가 열
+  때 `checkPartyEntry`가 전원을 검사한다 - 합류자가 게이트(최고+1·직전 보스)나 밴드(rec(L)+1)에 걸리면
+  그 보스는 못 열고 리더에게 누가 왜 막혔는지 뜬다(24-1 그대로). 즉 어긋남은 "합류는 되지만 다음
+  보스 입장에서 걸린다"로 드러난다.
+
+#### [6] 이탈·예외 5종 + 추가
+
+| 상황 | 정의 | 확인 |
+|---|---|---|
+| 파티장이 텔레포트 중에 나간다 | 로컬 최고참이 승계하고 레코드 리더가 바뀐다(같은 서버라 jobId 불변 - 합류자는 그대로 도착해 붙는다). 리더 혼자였던 파티면 해산 → 레코드 삭제 → 합류자는 텔레포트 전이면 "파티가 해산되었습니다"로 취소, 이미 이동 중이면 도착 서버에서 같은 알림을 받고 리스폰 마을에 남는다 | X15(승계·레코드 리더 갱신), X10(대기 중 레코드 소멸 → 취소), X11(도착했는데 파티 없음) |
+| 합류하려는 서버가 종료된다 | `BindToClose`가 그 서버의 파티 레코드를 전부 지운다. 크래시로 못 지우면 TTL 90초(하트비트 3회 결손)에 소멸. 대기 중인 합류자는 폴링에서 "파티 없음" → 취소. 텔레포트가 이미 시작됐으면 플랫폼이 `GameEnded/GameNotFound`로 `TeleportInitFailed` → 좌석 회수·"파티 서버가 종료되었습니다" - 그 자리에 남는다 | X10(레코드 소멸 경로), TeleportInitFailed 핸들러는 코드 경로(Studio에서 텔레포트 불가) |
+| 파티원 두 명이 동시에 합류 | 좌석 예약이 `UpdateAsync` 하나(원자) - 멤버 + 살아 있는 좌석 ≥ 4면 `party_full`. 두 명이 마지막 자리를 동시에 잡으면 한 명만 성공 | X6: 4명 동시 요청 → 좌석 최대 3(리더 1 + 3), 4번째 `party_full` |
+| 합류 도중 파티가 만원 | 좌석이 정원에 포함되므로 "텔레포트 중에 자리가 사라지는" 일이 없다 - 로컬 초대·수락·더미도 `getSeatCount`로 판정. 좌석은 90초 안에 도착하지 않으면 리더 서버 하트비트가 회수(텔레포트+로딩 최악 60초를 덮는 길이) | X7(좌석 3칸 찬 파티에 5번째 거절), X14(4/4 파티 코드 합류 거절), 만료 회수는 코드 경로(90초 대기 미실행) |
+| 같은 사람이 두 파티에 동시에 | 세 겹: (1) 로컬 `partyOf` - 파티원의 다른 코드 합류 거절, (2) `joinState` - 합류 대기 중 두 번째 요청 거절(`already_joining`), (3) 멤버 레코드 `ForgePartyMember_v1[userId]` - 다른 서버에서 다른 코드로 가는 중이면 거절(서버 경계 밖에서도) | X5, X8b, X8c |
+| (추가) 합류 대기 중 접속 종료 | `PlayerRemoving` - 텔레포트 단계가 아니면 좌석·멤버 레코드 회수. 텔레포트로 나가는 중이면 좌석은 도착 서버가 소비 | 코드 경로 |
+| (추가) 텔레포트 실패 | pcall 에러 또는 `TeleportInitFailed` → 좌석 회수·저장 동결 해제·결과별 토스트(GameFull/GameEnded/Flooded/기타). 플레이어는 출발 서버 그 자리 | **실측**(실제 플레이어, Studio): "Request Context Failure" → 토스트 "서버 이동에 실패했습니다. 지금 자리에 그대로 있습니다", 이후 자동저장 2회 정상 |
+| (추가) 텔레포트 데이터 위조 | 클라이언트가 볼 수 있는 값이라 힌트로만 쓴다 - 도착 부착은 출발 서버가 쓴 멤버 레코드(userId 키)로만 | 코드 경로 |
+| (추가) 도착했는데 견습 중 | 견습 미완료 계정이 파티 서버로 이동해 오면 견습이 자동 시작되므로 부착 거절(`tutorial_self`), 좌석 회수 | 코드 경로 |
+
+#### [7] UI
+
+파티 탭(장비창 세 번째 탭) 안에서 끝낸다 - 새 창 없음. 내 파티 열: 멤버 4행 아래 "파티 코드 XXXXXX"
+(금색) + 한 줄 안내 + [파티 코드 입력][코드로 합류] + [파티 만들기 (코드 받기)][합류 대기 취소](파티
+없을 때만). 원격 좌석은 멤버 행과 같은 틀에 "다른 서버에서 이동 중…"(리더에게 취소 버튼). 오른쪽 열은
+스크롤(서버 16명 + 친구 목록이 한 열에 들어가야 한다) - "서버 플레이어 (n) · 다른 서버 친구 (m)"
+제목 아래 서버 플레이어 행, 그 아래 구분 라벨과 친구 행(초대 → `invite_remote`). 스크린샷으로 확인:
+"내 파티 (1/4)", "파티 코드 JJMQPV", HUD 좌측 멤버 행 - 채팅창·대시 버튼 침범 없음.
+
+#### [8] `/gg party` 명령 추가
+
+`server`(jobId·인원·플랫폼 MaxPlayers/PreferredPlayers·크로스서버 상한·파티/코드/좌석/합류 대기/도착
+보류 상태), `join <code>`(텔레포트만 건너뛰는 코드 합류 - 레코드·좌석·대기·flush·도착 처리는 라이브
+경로), `fakeremote [boss|full|clear]`(다른 서버에 있는 것처럼 꾸민 레코드 - jobId FAKE-REMOTE-JOB,
+boss=보스전 중, full=인원 99), `xtest`(크로스서버 규칙 16항목 자체검증 - 스탠드인 15명).
+
+#### [9] 확인 12항목
+
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | 로비에서 파티 결성·초대·수락 | **O** - 실제 클릭: 파티 탭 → "파티 만들기" → 파티 #2 결성·코드 JJMQPV 발급·탭에 "내 파티 (1/4)"·코드 표시. 초대·수락은 24-1 경로 그대로(코드 불변). 원격 초대(`invite_remote` → MessagingService → 상대 토스트)는 코드 경로 - 단일 서버라 수신 서버가 없다 |
+| 2 | 서버가 다른 두 계정이 같은 파티에 | **실행 불가: Studio는 단일 서버·단일 계정** - 대신 xtest X6·X12·X13이 "다른 jobId의 레코드에 좌석 예약 → 멤버 레코드 → 도착 처리 → 부착"을 스탠드인으로 밟았다(16/16 통과). 실기 [10] 1 |
+| 3 | 파티원이 파티장 서버로 실제 이동 | **실행 불가: TeleportService는 Studio에서 동작하지 않는다(공식 문서 + 실측 "Request Context Failure")** - 텔레포트 직전까지(저장 flush "저장 성공" → 텔레포트 시작 로그)와 실패 회수는 실측. 실기 [10] 2 |
+| 4 | 12인 초과 합류가 성공하는가 | **불가능(플랫폼)** - MaxPlayers 하드캡([0] 3). 대체: MaxPlayers 16 / Preferred 12 설정 + 코드 상한 16. 현재 대시보드 60/60이라 설정 변경 필요(부팅 로그 실측). 예약 슬롯이 텔레포트에 열리는지는 실기 [10] 3 |
+| 5 | 상한 초과 요청의 정의대로 처리 | **O(스탠드인)** - X9: playerCount 99 레코드 → phase=waiting(토스트 "가득 찼습니다(99/16)") → 취소 → 좌석 회수 pending 0 |
+| 6 | 사냥 중 중도 난입 | **O(스탠드인)** - X12: 리더가 사냥 중(보스전 아님) 좌석 예약자 도착 → 좌석이 멤버로(size 3, pending 0). 도착 위치는 리스폰 마을(기본 접속 지점 - 코드 경로) |
+| 7 | 보스전 중 합류가 막히는가 | **O** - X8a(출발 서버 대기 phase=waiting) → X8d(bossActive=false로 바뀐 뒤 진행). X13: 실제 파티 보스(스테이지 100, N=3) 진행 중 도착 → 보류(arrivalWaiting) → `despawnFor`로 종료 → 자동 합류(size 4). 보스 N에 좌석 미포함 확인 |
+| 8 | 텔레포트 실패 시 안전한 곳 | **O(실측)** - 실제 플레이어 코드 합류(FAKERM) → flush 저장 성공 → TeleportAsync 에러 → 토스트 "서버 이동에 실패했습니다. 지금 자리에 그대로 있습니다" → 자동저장 2회 정상(동결 해제 확인). 위치는 리스폰 마을 그대로 |
+| 9 | 예외 5종 | **O(스탠드인)** - [6] 표: X15/X10/X11(파티장 이탈·해산), X10(서버 종료 = 레코드 소멸), X6(동시 합류), X7/X14(만원), X5/X8b/X8c(두 파티 동시). TeleportInitFailed 분기는 코드 경로 |
+| 10 | 견습과 파티 분리 | **O(실측)** - 파티 #2 상태에서 `/gg tutorial 1` → "파티 이탈: #2 HoddyForge (tutorial)" → 해산 → 견습 1단계 시작. 견습 중 코드 합류·원격 도착 거절은 코드 경로 |
+| 11 | 16인 성능 계산표 | **O** - [3]. 초과 1건(화면 삼각형 최악 +18%, 스폰 마을 16명 동시 한정) 명시 |
+| 12 | 서버 에러·경고 0건 | **O(조건부)** - 3회 Play 세션에서 우리 코드의 에러 0. 경고는 (가) xtest가 의도적으로 밟는 텔레포트 실패 경로의 `warn`("크로스서버 텔레포트 호출 실패" - 스탠드인 4건 + 실제 플레이어 1건, 라이브에서 실제 실패 시에만 찍히는 신호라 남겼다), (나) 첫 xtest에서 MemoryStore `InternalError` 3건 → 파티당 쓰기 직렬화로 수정 후 재실행에서 0건, (다) MCP 도구 자체의 VirtualInput CoreGUI 안내(게임 코드 무관) |
+
+#### [10] 실기(퍼블리시 후 로블록스 앱)에서 확인할 목록
+
+1. **두 계정·두 서버**: A가 "파티 만들기" → 코드 → B(다른 서버)가 코드 입력 → B가 A 서버로 이동해
+   파티 탭에 멤버로 뜨는가. 도착 위치가 리스폰 마을인가. 소요 시간(좌석 90초 안).
+2. **원격 초대 경로**: A가 "다른 서버에 있는 친구"에서 B 초대 → B 토스트 "(다른 서버 - 수락 시 이동)"
+   → 수락 → 이동. MessagingService 유실 시 코드 경로로 대체되는가.
+3. **12인 초과**: 대시보드 Max Players 16 / Preferred 12(Server Fill Customize)로 바꾼 뒤, 12명 찬
+   서버로 13번째 파티원이 텔레포트되는가(예약 슬롯이 텔레포트에 열리는가) - `GameFull`이면 소셜
+   슬롯은 친구 따라가기 전용이라는 뜻이고, 그때는 Preferred를 12로 두고 Max를 16으로 두는 것만으로
+   텔레포트가 13~16번째를 채우는지 확인. 실패 토스트 "플랫폼 정원" 문구 확인.
+4. **파티장 이탈 도중 텔레포트**: B가 이동 중 A가 나감(승계 또는 해산) - B 도착 후 알림.
+5. **리더 서버 종료**: A 서버를 종료(Shutdown All)한 채 B 합류 → 대기 취소 또는 TeleportInitFailed 문구.
+6. **보스전 중 합류**: A 파티 보스전 중 B 합류 → 대기 토스트 → 보스 종료 후 이동·합류.
+7. **저장 정합**: B 이동 전후 골드·인벤토리 동일(flush + 동결). 도착 서버에서 "저장 중단" 토스트가
+   안 뜨는가.
+8. **폰 16인 최악 근사**([3] 삼각형): 스폰 마을에 아바타 8명 이상 한 화면 → 30fps 유지 여부(20.53 [5] 3번 확장).
+9. **TeleportInitFailed 결과별 문구**(GameFull/GameEnded/Flooded) - 각 상황을 만들 수 있는 것만.
+
+#### [11] 임의 결정 목록
+
+| # | 결정 | 근거 |
+|---|---|---|
+| 1 | 상한 16 = 12 + maxMembers | [2] - 파티 한 팀 분량, 새 숫자 없음. 20인은 두 예산 초과 |
+| 2 | 초과 요청 = 대기(자리 나면 진행), 강퇴 없음 | 매치메이킹으로 온 사람을 파티 때문에 쫓아낼 근거 없음 |
+| 3 | 도착 위치 = 리스폰 마을(리더 옆 아님) | 리더가 고티어 구역에 있으면 도착 즉시 피격. 스테이지는 각자라 이동 강제 근거 없음 |
+| 4 | 파티 상태 진실의 출처 = MemoryStore 레코드(리더 서버 소유), 메시지는 알림만 | MessagingService "best effort" 공식 문구 - 정확성을 메시지에 맡길 수 없다 |
+| 5 | 텔레포트 데이터는 힌트, 권위는 멤버 레코드(userId 키) | 공식 문서 "data is visible to the client and unencrypted" |
+| 6 | 좌석은 정원에 포함, 보스 N엔 미포함 | 텔레포트 중 만원 방지 / N은 "입장 머릿수"(20.47 [6](가)) |
+| 7 | 좌석·레코드 TTL 90 = 하트비트 30 × 3, 폴링 5초, 코드 6자리 30자 알파벳 | 구조·한도 값(PartyConfig 주석에 유도 기록). 폰 텔레포트+로딩 최악 60초를 덮고, 요청 예산의 1% 미만 |
+| 8 | 파티 만들기 버튼(초대 없는 결성) 추가 | 24-1 결정 1("첫 초대가 결성")을 유지하되, 다른 서버 친구에게 줄 코드가 먼저 필요해 추가 |
+| 9 | 텔레포트 직전 flush + 저장 동결 | [0] 7 - 도착 서버 로드와의 경합 차단. 실패 시 해제 |
+| 10 | 플레이어당 저장 뮤텍스(SaveCoordinator) | 검증 중 실측한 기존 경합(자동저장·flush 동시) 수정 - 24-2 범위 밖 파일이지만 크로스서버 flush가 이 경합을 더 자주 밟는다 |
+| 11 | DevTools 채팅 수신을 TextChatCommand로 | 실측: "/"로 시작하는 메시지가 Chatted에 안 옴. 실제 채팅창 입력도 같은 경로 |
+| 12 | 플랫폼 Party API 미사용 | 읽기 전용·Studio 불가([0] 6). 후속 힌트 후보로만 기록 |
+| 13 | 원격 초대는 온라인 친구만 | `GetFriendsAsync`가 유일한 "다른 서버의 사람" 조회 수단. 비친구는 코드로 |
+| 14 | 오른쪽 열 ScrollingFrame | 16명 + 친구 목록이 한 열에 - 새 창 스타일이 아니라 기존 열의 스크롤 |
+
+#### 파일
+
+**신규** `server/PartyCrossServer.lua`. **수정** `shared/data/PartyConfig.lua` · `server/PartyState.lua` ·
+`server/PartyServer.server.lua`(재작성) · `server/BossEncounter.lua`(리스너) · `server/SaveCoordinator.lua`
+(동결·뮤텍스) · `server/DevTools.server.lua`(명령 4종 + TextChatCommand) · `client/InventoryUI.client.lua`
+(파티 탭) · `client/PartyHud.client.lua`(토스트 문구).

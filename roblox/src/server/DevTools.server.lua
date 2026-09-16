@@ -58,6 +58,8 @@ local Gem = require(ReplicatedStorage.Shared.Gem)
 -- 24-1 파티 검증 명령(/gg party dummy|info|table|killsim)용.
 local PartyState = require(script.Parent.PartyState)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+-- 24-2 크로스서버 파티 검증 명령(/gg party server|join|fakeremote|xtest)용.
+local PartyCrossServer = require(script.Parent.PartyCrossServer)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 
@@ -593,6 +595,10 @@ local HELP_TEXT = table.concat({
 	"/gg party table [stage] - 1~4인 예상 보스 처치 시간표(지금 장비 + 앵커 4직업)를 콘솔에 출력(24-1)",
 	"/gg party killsim [uptime] - 지금 보스를 봇 DPS(로테이션 총딜×uptime×인원)로 실시간 처치해 시간을 잰다(24-1, 기본 uptime 0.65)",
 	"/gg party selftest - 스탠드인(가짜 Player) 3명으로 결성·만원·추방·승계·해산·접속종료·보스전 중 이탈·기여도 제외를 서버 로그로 검증(24-1)",
+	"/gg party server - 현재 서버 jobId·인원·플랫폼 정원·크로스서버 상한·파티/코드/원격 좌석/합류 대기 상태 출력(24-2)",
+	"/gg party join <code> - 텔레포트 없이 코드 합류 파이프라인(레코드·좌석·대기·도착 처리)만 밟아 파티 상태를 붙인다(24-2, Studio는 TeleportService 불가)",
+	"/gg party fakeremote [boss|full|clear] - 다른 서버에 있는 것처럼 꾸민 가짜 파티 레코드를 MemoryStore에 쓴다(코드 출력) - boss=보스전 중, full=서버 정원 초과(24-2)",
+	"/gg party xtest - 크로스서버 규칙 자체검증 16항목: 코드 발급·로컬 코드 합류·동시 좌석 예약·만원·텔레포트 실패 회수·두 파티 동시 합류 차단·보스전 대기·정원 대기·취소·해산 도착·보스전 중 도착 보류·승계·해산(24-2)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
@@ -1194,6 +1200,219 @@ local function handleCommand(player, args)
 		PartyState.leave(player, "leave")
 		check("S10 정리: 내 파티=" .. tostring(PartyState.getParty(player)), PartyState.getParty(player) == nil)
 		reply(player, "selftest 결과:\n" .. table.concat(results, "\n"))
+	elseif sub == "party" and args[2] == "server" then
+		reply(player, PartyCrossServer.describeServer())
+	elseif sub == "party" and args[2] == "join" and type(args[3]) == "string" then
+		-- 24-2: 실제 플레이어로 코드 합류 파이프라인을 밟되 텔레포트만 건너뛴다(simulateArrival) - 레코드 읽기·
+		-- 좌석 예약·대기·저장 flush·도착 처리(handleArrival) 전부 라이브 경로 그대로.
+		if BossEncounter.getActive(player) then
+			BossEncounter.despawnFor(player)
+		end
+		task.spawn(PartyCrossServer.requestJoin, player, args[3], { simulateArrival = true })
+	elseif sub == "party" and args[2] == "fakeremote" then
+		local mode = args[3]
+		local code = "FAKE" .. (mode == "boss" and "BS" or mode == "full" and "FL" or "RM")
+		if mode == "clear" then
+			for _, c in ipairs({ "FAKERM", "FAKEBS", "FAKEFL" }) do
+				PartyCrossServer.debugRemoveRecord(c)
+			end
+			reply(player, "가짜 원격 레코드 3종 삭제")
+		else
+			PartyCrossServer.debugWriteRecord(code, {
+				code = code, leaderUserId = -7777, leaderName = "RemoteLeader", jobId = "FAKE-REMOTE-JOB", placeId = game.PlaceId,
+				members = { { userId = -7777, name = "RemoteLeader" } }, pending = {},
+				bossActive = mode == "boss", playerCount = mode == "full" and 99 or 1, capacity = PartyConfig.serverCapacity,
+			})
+			reply(player, ("가짜 원격 파티 레코드 작성: 코드 %s (jobId FAKE-REMOTE-JOB, 보스전=%s, 인원 %s) - /gg party join %s 로 합류 시도"):format(
+				code, tostring(mode == "boss"), mode == "full" and "99(정원 초과)" or "1", code))
+		end
+	elseif sub == "party" and args[2] == "xtest" then
+		-- 24-2 크로스서버 자체검증. 스탠드인(가짜 Player 테이블)으로 requestJoin/handleArrival을 실제 코드 경로로
+		-- 돌린다. MemoryStore는 Studio에서도 실제로 동작한다(API 접근 활성, 데이터는 프로덕션과 격리). 텔레포트만
+		-- Studio에서 불가 - 스탠드인은 Instance가 아니라 TeleportAsync가 에러를 내고, 그 실패 회수 경로가 곧 검증 대상이다.
+		if PartyState.getParty(player) then
+			reply(player, "먼저 파티를 나가세요(/gg party dummy 0 또는 탈퇴)")
+			return
+		end
+		ensureBackup(player)
+		task.spawn(function()
+			local function standIn(name, userId)
+				return { Name = name, UserId = userId, Parent = workspace, Character = nil }
+			end
+			local results = {}
+			local function check(label, ok)
+				table.insert(results, ("%s %s"):format(ok and "O" or "X", label))
+			end
+			local function waitUntil(fn, timeout)
+				local deadline = os.clock() + (timeout or 10)
+				while os.clock() < deadline do
+					if fn() then
+						return true
+					end
+					task.wait(0.25)
+				end
+				return fn()
+			end
+			local function fakeRecord(code, fields)
+				local record = {
+					code = code, leaderUserId = -7777, leaderName = "RemoteLeader", jobId = "FAKE-REMOTE-JOB", placeId = game.PlaceId,
+					members = { { userId = -7777, name = "RemoteLeader" } }, pending = {}, bossActive = false, playerCount = 1,
+					capacity = PartyConfig.serverCapacity,
+				}
+				for k, v in pairs(fields or {}) do
+					record[k] = v
+				end
+				PartyCrossServer.debugWriteRecord(code, record)
+			end
+			local function pendingCount(code)
+				local record = PartyCrossServer.debugReadRecord(code)
+				return record and #record.pending or -1
+			end
+			-- X1 코드 발급
+			local party = PartyState.create(player)
+			waitUntil(function() return party.code ~= nil end, 10)
+			local code = party.code
+			check("X1 파티 만들기 + 코드 발급: " .. tostring(code), code ~= nil and #code == PartyConfig.codeLength)
+			if not code then
+				reply(player, "xtest 중단 - MemoryStore 코드 발급 실패(위 warn 참고):\n" .. table.concat(results, "\n"))
+				PartyState.leave(player, "leave")
+				return
+			end
+			local record = PartyCrossServer.debugReadRecord(code)
+			check(("X2 레코드 내용: jobId 일치=%s 리더=%s 멤버 %d"):format(tostring(record and record.jobId == game.JobId), tostring(record and record.leaderName), record and #record.members or 0),
+				record ~= nil and record.jobId == game.JobId and record.leaderUserId == player.UserId and #record.members == 1)
+			-- X3 같은 서버 코드 합류(스탠드인 B) - 텔레포트 없이 로컬 attach
+			local B = standIn("XStandB", -9101)
+			PartyCrossServer.requestJoin(B, code, { standIn = true })
+			check("X3 같은 서버 코드 합류: size=" .. PartyState.getSize(party), PartyState.getSize(party) == 2 and PartyState.getParty(B) == party)
+			-- X4 틀린 코드
+			local C = standIn("XStandC", -9102)
+			local okWrong = PartyCrossServer.requestJoin(C, "ZZZZZZ", { standIn = true })
+			check("X4 없는 코드 거절: " .. tostring(okWrong), okWrong == false and PartyState.getParty(C) == nil)
+			-- X5 이미 파티인 사람의 다른 코드 합류
+			local okDup = PartyCrossServer.requestJoin(B, "ZZZZZZ", { standIn = true })
+			check("X5 파티원의 다른 파티 합류 거절: " .. tostring(okDup), okDup == false)
+			-- X6 가짜 원격 파티(다른 jobId) - 동시 좌석 예약 4명 → 3명만 좌석, 텔레포트 실패로 전원 좌석 회수
+			local fakeCode = "FAKEXT"
+			fakeRecord(fakeCode)
+			local joiners = { standIn("XStandF", -9111), standIn("XStandG", -9112), standIn("XStandH", -9113), standIn("XStandI", -9114) }
+			local outcomes, reserved, done = {}, 0, 0
+			for i, J in ipairs(joiners) do
+				task.spawn(function()
+					outcomes[i] = PartyCrossServer.requestJoin(J, fakeCode, { standIn = true })
+					done += 1
+				end)
+			end
+			-- 좌석이 실제로 잡힌 순간을 잡는다(텔레포트 실패로 곧 풀리므로 예약 직후 상태를 폴링).
+			waitUntil(function()
+				for _, J in ipairs(joiners) do
+					local st = PartyCrossServer.getJoinState(J)
+					if st and st.seatReserved then
+						reserved = math.max(reserved, pendingCount(fakeCode))
+					end
+				end
+				return done == #joiners
+			end, 30)
+			local successes = 0
+			for _, ok in pairs(outcomes) do
+				if ok then successes += 1 end
+			end
+			check(("X6 동시 좌석 4명: 관측 최대 pending %d(기대 ≤3), 텔레포트 불가라 성공 0(=%d), 실패 후 남은 pending %d(기대 0)"):format(
+				reserved, successes, pendingCount(fakeCode)), reserved <= 3 and successes == 0 and pendingCount(fakeCode) == 0 and not PartyCrossServer.isJoining(joiners[1]))
+			-- X7 만원 판정 - pending 3칸이 이미 찬 가짜 레코드에 온 사람은 party_full
+			fakeRecord(fakeCode, { pending = { { userId = -9201, name = "P1", since = os.time() }, { userId = -9202, name = "P2", since = os.time() }, { userId = -9203, name = "P3", since = os.time() } } })
+			local K = standIn("XStandK", -9121)
+			local okFull = PartyCrossServer.requestJoin(K, fakeCode, { standIn = true })
+			check(("X7 만원 파티 합류 거절: 반환 %s, pending 유지 %d"):format(tostring(okFull), pendingCount(fakeCode)), okFull == false and pendingCount(fakeCode) == 3)
+			-- X8 보스전 중 대기 → 풀리면 진행 / 같은 사람 두 파티 차단
+			fakeRecord(fakeCode, { bossActive = true })
+			local L = standIn("XStandL", -9131)
+			local lResult = nil
+			task.spawn(function() lResult = PartyCrossServer.requestJoin(L, fakeCode, { standIn = true }) end)
+			waitUntil(function() local st = PartyCrossServer.getJoinState(L) return st ~= nil and st.phase == "waiting" end, 10)
+			local stL = PartyCrossServer.getJoinState(L)
+			check("X8a 보스전 중 합류 → 대기 phase=" .. tostring(stL and stL.phase), stL ~= nil and stL.phase == "waiting")
+			local okTwo = PartyCrossServer.requestJoin(L, code, { standIn = true })
+			check("X8b 합류 대기 중 두 번째 파티 합류 거절: " .. tostring(okTwo), okTwo == false)
+			local M = standIn("XStandM", -9141)
+			PartyCrossServer.debugWriteMemberRecord(M.UserId, "OTHERC", "SOME-JOB")
+			local okM = PartyCrossServer.requestJoin(M, fakeCode, { standIn = true })
+			local recM = PartyCrossServer.debugReadRecord(fakeCode)
+			local mSeatLeft = false
+			for _, seat in ipairs(recM and recM.pending or {}) do if seat.userId == M.UserId then mSeatLeft = true end end
+			check(("X8c 다른 파티로 가는 중인 사람(멤버 레코드) 차단: 반환 %s, 좌석 회수=%s"):format(tostring(okM), tostring(not mSeatLeft)), okM == false and not mSeatLeft)
+			local recBoss = PartyCrossServer.debugReadRecord(fakeCode)
+			recBoss.bossActive = false
+			PartyCrossServer.debugWriteRecord(fakeCode, recBoss)
+			waitUntil(function() return lResult ~= nil end, PartyConfig.joinPollSeconds + 10)
+			check(("X8d 보스전 종료 후 진행: 반환 %s(텔레포트 불가라 false), 남은 pending %d(기대 0)"):format(tostring(lResult), pendingCount(fakeCode)),
+				lResult == false and pendingCount(fakeCode) == 0)
+			-- X9 서버 정원 초과 대기 → 취소
+			fakeRecord(fakeCode, { playerCount = 99 })
+			local N = standIn("XStandN", -9151)
+			local nResult = nil
+			task.spawn(function() nResult = PartyCrossServer.requestJoin(N, fakeCode, { standIn = true }) end)
+			waitUntil(function() local st = PartyCrossServer.getJoinState(N) return st ~= nil and st.phase == "waiting" end, 10)
+			local stN = PartyCrossServer.getJoinState(N)
+			local cancelled = PartyCrossServer.cancelJoin(N)
+			waitUntil(function() return nResult ~= nil end, PartyConfig.joinPollSeconds + 10)
+			check(("X9 정원 초과 대기(phase=%s) → 취소 %s → 좌석 회수 pending %d"):format(tostring(stN and stN.phase), tostring(cancelled), pendingCount(fakeCode)),
+				stN ~= nil and stN.phase == "waiting" and cancelled and nResult == false and pendingCount(fakeCode) == 0)
+			-- X10 합류 대기 중 파티 해산(레코드 삭제) → 취소
+			fakeRecord(fakeCode, { bossActive = true })
+			local O = standIn("XStandO", -9161)
+			local oResult = nil
+			task.spawn(function() oResult = PartyCrossServer.requestJoin(O, fakeCode, { standIn = true }) end)
+			waitUntil(function() local st = PartyCrossServer.getJoinState(O) return st ~= nil and st.phase == "waiting" end, 10)
+			PartyCrossServer.debugRemoveRecord(fakeCode)
+			waitUntil(function() return oResult ~= nil end, PartyConfig.joinPollSeconds + 10)
+			check("X10 대기 중 파티 해산(레코드 소멸) → 취소: 반환 " .. tostring(oResult) .. " 합류중=" .. tostring(PartyCrossServer.isJoining(O)), oResult == false and not PartyCrossServer.isJoining(O))
+			-- X11 도착 처리 - 파티가 없는 코드로 도착
+			local P = standIn("XStandP", -9171)
+			PartyCrossServer.debugWriteMemberRecord(P.UserId, "GONE00", game.JobId)
+			local handledP = PartyCrossServer.handleArrival(P, true)
+			check(("X11 도착했는데 파티 해산: 처리=%s 멤버 레코드 소비=%s 파티 없음=%s"):format(tostring(handledP), tostring(PartyCrossServer.debugReadMemberRecord(P.UserId) == nil), tostring(PartyState.getParty(P) == nil)),
+				handledP == true and PartyCrossServer.debugReadMemberRecord(P.UserId) == nil and PartyState.getParty(P) == nil)
+			-- X12 도착 처리 - 정상(좌석 예약돼 있던 사람이 도착)
+			local Q = standIn("XStandQ", -9181)
+			PartyState.addPendingSeat(party, Q.UserId, Q.Name, os.time())
+			PartyCrossServer.debugWriteMemberRecord(Q.UserId, code, game.JobId)
+			PartyCrossServer.handleArrival(Q, true)
+			check(("X12 도착 → 좌석이 멤버로: size=%d pending=%d"):format(PartyState.getSize(party), #PartyState.getPendingSeats(party)),
+				PartyState.getParty(Q) == party and PartyState.getSize(party) == 3 and #PartyState.getPendingSeats(party) == 0)
+			-- X13 보스전 중 도착 → 보류 → 종료 후 합류(실제 파티 보스 스폰/철수)
+			BossEncounter.despawnFor(player)
+			applyStage(player, BossData.stageInterval * 20)
+			BossEncounter.spawnForParty(party, player, BossData.stageInterval * 20)
+			waitUntil(function() return party.bossActive end, 5)
+			local R = standIn("XStandR", -9191)
+			PartyState.addPendingSeat(party, R.UserId, R.Name, os.time())
+			PartyCrossServer.debugWriteMemberRecord(R.UserId, code, game.JobId)
+			PartyCrossServer.handleArrival(R, true)
+			local heldDuringBoss = PartyCrossServer.debugIsArrivalWaiting(R) and PartyState.getParty(R) == nil
+			local encounter = BossEncounter.getEncounter(player)
+			local sizeN = encounter and encounter.size or -1
+			BossEncounter.despawnFor(player)
+			waitUntil(function() return PartyState.getParty(R) == party end, 5)
+			check(("X13 보스전 중 도착 보류=%s(보스 N=%d, 좌석 미포함) → 종료 후 합류=%s size=%d"):format(tostring(heldDuringBoss), sizeN, tostring(PartyState.getParty(R) == party), PartyState.getSize(party)),
+				heldDuringBoss and sizeN == 3 and PartyState.getParty(R) == party and PartyState.getSize(party) == 4)
+			-- X14 만원 파티에 코드 합류
+			local S = standIn("XStandS", -9195)
+			local okS = PartyCrossServer.requestJoin(S, code, { standIn = true })
+			check("X14 만원(4/4) 파티 코드 합류 거절: " .. tostring(okS), okS == false)
+			-- X15 리더 이탈 → 승계 + 레코드 리더 갱신
+			PartyState.leave(player, "leave")
+			task.wait(1)
+			local recLead = PartyCrossServer.debugReadRecord(code)
+			check(("X15 리더 이탈 승계: 새 리더 %s, 레코드 리더 %s"):format(tostring(PartyState.getLeader(party) and PartyState.getLeader(party).Name), tostring(recLead and recLead.leaderName)),
+				PartyState.getLeader(party) == B and recLead ~= nil and recLead.leaderName == "XStandB")
+			-- X16 해산 → 레코드 삭제
+			PartyState.leave(B, "leave"); PartyState.leave(Q, "leave"); PartyState.leave(R, "leave")
+			task.wait(1)
+			check("X16 해산 후 레코드 삭제: " .. tostring(PartyCrossServer.debugReadRecord(code)), PartyCrossServer.debugReadRecord(code) == nil and PartyState.getPartyByCode(code) == nil)
+			PartyCrossServer.debugRemoveRecord(fakeCode)
+			reply(player, "xtest 결과:\n" .. table.concat(results, "\n"))
+		end)
 	elseif sub == "party" and args[2] == "killsim" then
 		-- 봇 DPS 실측: 실제 보스 인스턴스(실제 HP·배수)에 "입장 인원 × 내 로테이션 DPS × uptime"을
 		-- 0.25초마다 실제 applyDamage 경로로 넣고, 죽을 때까지의 벽시계 시간을 잰다. 클릭이 아니라
@@ -1239,26 +1458,53 @@ local function handleCommand(player, args)
 	end
 end
 
+-- 같은 메시지가 Chatted와 TextChatCommand.Triggered 양쪽에서 들어오는 경우(플랫폼 버전에 따라 다르다)를 한 번만 처리한다.
+local lastCommand = setmetatable({}, { __mode = "k" }) -- [Player] = { text, at }
+
+local function onChatMessage(player, message)
+	if not message:match("^/gg%s*") then
+		return
+	end
+	if not isAllowed(player) then
+		return -- 조용히 무시 - 허용 목록 밖 계정에게 "이런 명령이 존재한다"는 신호도 주지 않는다
+	end
+	local last = lastCommand[player]
+	if last and last.text == message and os.clock() - last.at < 0.5 then
+		return
+	end
+	lastCommand[player] = { text = message, at = os.clock() }
+
+	local args = {}
+	for word in message:gmatch("%S+") do
+		table.insert(args, word)
+	end
+	table.remove(args, 1) -- "/gg" 자체를 뗀다
+
+	local ok, err = pcall(handleCommand, player, args)
+	if not ok then
+		warn(("[DevTools] 명령 처리 실패: %s"):format(tostring(err)))
+	end
+end
+
 Players.PlayerAdded:Connect(function(player)
 	player.Chatted:Connect(function(message)
-		if not message:match("^/gg%s*") then
-			return
-		end
-		if not isAllowed(player) then
-			return -- 조용히 무시 - 허용 목록 밖 계정에게 "이런 명령이 존재한다"는 신호도 주지 않는다
-		end
-
-		local args = {}
-		for word in message:gmatch("%S+") do
-			table.insert(args, word)
-		end
-		table.remove(args, 1) -- "/gg" 자체를 뗀다
-
-		local ok, err = pcall(handleCommand, player, args)
-		if not ok then
-			warn(("[DevTools] 명령 처리 실패: %s"):format(tostring(err)))
-		end
+		onChatMessage(player, message)
 	end)
+end)
+
+-- 24-2 실측: TextChatService가 "/"로 시작하는 메시지를 명령으로 해석해 Player.Chatted에 넘기지 않는다(같은 세션에서
+-- "hello"는 Chatted에 닿고 "/gg ..."는 닿지 않았다). 명령을 정식으로 등록해 Triggered로 받는다 - 실제 채팅창 입력과
+-- 클라 TextChannel:SendAsync 둘 다 이 경로로 들어온다.
+local TextChatService = game:GetService("TextChatService")
+local ggCommand = Instance.new("TextChatCommand")
+ggCommand.Name = "ForgeGG"
+ggCommand.PrimaryAlias = "/gg"
+ggCommand.Parent = TextChatService
+ggCommand.Triggered:Connect(function(textSource, text)
+	local player = Players:GetPlayerByUserId(textSource.UserId)
+	if player then
+		onChatMessage(player, text)
+	end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
