@@ -9570,7 +9570,7 @@ useExponential 인자 제거) · `server/PlayerProfile.lua`(회차 배수 삭제
 리터럴, v11 정정, v22 이관) · `shared/data/SaveConfig.lua`(v22) · `server/DevTools.server.lua`
 (`/gg curve`·`curve anchor`·`curve migrate`).
 
-### 20.67 보석·장비 옵션 통합 설계 (25-2) `[🚧 구현 중 — [14] 1~5단계 완료(26-1·26-2). 남은 건 6~8단계(리롤 확장·UI·도구 정리). 진행 상황은 [14] 하단 각주 참고]`
+### 20.67 보석·장비 옵션 통합 설계 (25-2) `[✅ 구현 완료 — [14] 1~8단계 전부(26-1·26-2·26-3). 유일한 예외: 8단계의 /gg heal cycle은 [16] 미결 1과 겹쳐 의도적으로 안 만들었다. 진행 상황은 [14] 하단 각주 참고]`
 
 20.57~20.59가 만든 보석 체계(무기 홈 5개, 고대·태초만 옵션 풀 2종, 옵션은 변환권으로만
 배정)와 장비 3부위(옵션 없음, 부위 기본 스탯만)를 **하나의 옵션 체계**로 합친다. 이 절은
@@ -10049,15 +10049,56 @@ cannot require 'Option'..."). 그래서 위 3~5단계는 `DevTools.server.lua` �
 에러 0건. 다음 세션(3단계 이상 값 검산이 필요한 작업)도 이 패턴을 재사용할 것.
 
 6. **리롤 확장** - `GemServer`의 리롤을 장비(가방 index·착용 부위)로 확장, 풀은 현재 직업 특화만.
+   `[✅ 26-3 완료]` `GemRerollRequest`를 `(player, slot)`에서 `(player, kind, key)`로 바꿔
+   `kind∈{"gem","equipped","bag"}`로 셋을 가른다(등급·변환권 검증은 `PlayerProfile`의 각 함수가
+   전부 동일하게 한다). `PlayerProfile.rerollEquippedOption`/`rerollBagItemOption` 신설, 기존
+   `rerollGemOption`도 같이 고쳤다 - 26-2에서 축 읽기가 전부 `gem.option`으로 옮겨간 뒤에도 이
+   함수만 옛 `Gem.rollOption`(폐기 대상 필드 `gem.optionId`에 씀)을 그대로 쓰고 있어서, 보석
+   리롤이 겉보기엔 동작하지만 실제로는 아무 효과가 없는 조용한 회귀였다 - 6단계를 구현하기 위한
+   전제로 같이 고쳤다. 셋 다 `Gem.isRerollableGrade`(고대·태초)로 제한. Studio 자동 검증에서
+   보석·착용·가방 3경로 리롤 + 영웅 등급 거부(`"not_rerollable"`) 확인, 6/6 통과.
+   **명세를 벗어난 추가 변경(사용자 지시)**: 분해(`DismantleRequest`)의 강화대 근접 제한
+   (`isNearStation`)을 없앴다 - 판매(`SellRequest`)는 어디서나 되는데 분해만 근처로 막혀 있어
+   테스트 중 "분해가 안 된다"로 오인됐고, 사용자가 판매와 같은 수준으로 맞추라고 지시했다. 이건
+   20.67이 아니라 20.37/20.38 [3] "분해 UI는 강화대에 둔다"의 번복이다 - 저 절의 문구는 그대로
+   두고 여기 기록만 남긴다(리롤·보석장착·변환권구매는 여전히 강화대 근처에서만 된다, 안 건드림).
 7. **UI** - [12] Detail 옵션 줄·게이지, 가방 태그, 총 스탯 상한 표시, 보석 탭 행 텍스트·클릭 선택.
+   `[✅ 26-3 완료]` [12] 그대로 구현 - Detail 86→104px, 옵션 줄(120×6px 게이지, `UIColors.slot`
+   트랙, 등급색 채움, 기댓값 중앙 눈금, 양끝 최소·최대, 값 텍스트 색 규칙), 가방·장비 셀 Lv 태그
+   옆 옵션 태그, "옵션 보너스" 박스(총 스탯 패널, 상한 도달 시 `(상한N%)`+ember), 보석 탭 행을
+   `<등급> <옵션명> 보석 · Lv.N` 형식 + 클릭 선택으로, Detail 5번째 버튼(리롤, 고대·태초 가방·
+   착용에서만). 새 색·창 구조 없이 `UIColors`·기존 창만 재사용. 채팅창을 안 가리는 것도 확인.
+   구현 중 `InventoryUI.client.lua`가 Luau 최상위 레지스터 200개 한계를 실제로 넘겨(플레이
+   테스트에서 "Out of local registers" 에러로 실측) 세 차례에 걸쳐 고쳤다 - 근본 원인은 나중에
+   정의되는 클로저(`clearDetail`/`refreshDetail`/`rebuildGearSlots`/`rebuildGrid`/`setupGemTab`
+   등)가 업밸류로 계속 참조하는 최상위 로컬(특히 `OptionData`/`Option`/`SkillData` require 3개,
+   `optionRow`, `refreshOptionStats`)이 그 시점부터 파일 끝까지 레지스터를 영구히 붙잡고 있던
+   것 - `do...end`로 감싸는 걸로는 안 풀리고, 실제로 쓰는 함수 안으로 옮기거나(require 3개)
+   유일한 호출부 안으로 완전히 넣어야(`refreshOptionStats`→`refreshStats`) 풀렸다. 최종적으로
+   플레이 테스트에서 에러 없이 로드되고 옵션 게이지가 정상 표시됨을 사용자가 직접 확인.
 8. **/gg 도구 정리** - `/gg option <id> [roll]`(강제 배정), `/gg option stack <id>`(8개 몰빵 후
    `/gg measure` - [7] 표 재현), `/gg heal cycle`로 딜링모드 특화 가동률 실측([16] 미결 1 해소).
    `/gg option set`·`/gg option show`·`/gg option lifesteal`은 26-2에서 이미 만들었다(강제
    배정·현황 출력·흡혈 실측) - 8단계에 남은 건 `/gg option stack`과 `/gg heal cycle`뿐이다.
+   `[✅ 26-3 완료(부분)]` `/gg option stack <id>`만 구현했다(태초·최대 롤로 장비 3부위+보석
+   5개를 그 옵션 하나로 채운 뒤 `/gg measure`로 [7] 표 재현). `/gg heal cycle`은 의도적으로
+   만들지 않았다 - [16] 미결 1(힐러 딜링모드 가동률)을 그대로 해소해버려 이번 세션의 "미결 4항목
+   손대지 않기" 규칙과 정면으로 부딪힌다. 부수적으로 `DevTools.server.lua`의 `buildGearItem`
+   (23-3부터 있던 `/gg gear`·`/gg additem` 테스트 헬퍼)이 `option` 필드를 만들지 않고 있던 것도
+   고쳤다 - 실제 드랍(`Loot.lua`)은 26-1부터 옵션을 굴리는데 이 테스트 헬퍼만 안 그래서, 이
+   헬퍼로 만든 테스트 아이템으로는 7단계 UI를 검증할 수 없었다(1차 UI 검증에서 발견).
+   **비대칭 상한 점검(지시 - 고치지 말고 목록만)**: `Option.sumWithCap`과 같은 모양(값이 음수일
+   수 있는데 `math.min(v, cap)`만 걸어 하한이 안 걸리는 클램프)을 코드베이스 전체에서 찾았다.
+   실제 게임플레이 경로(`PlayerProfile`/`SkillServer`/`AttackServer`/`HealerDealingMode`)는 전부
+   이미 고쳐진 `Option.sumWithCap`/`Option.critBonus`를 거치므로 해당 사항 없음. 유일하게 같은
+   모양인 곳은 `shared/BalanceSim.lua:251`의 `critMultFor`(`math.min(class.critRate +
+   (critRateBonus or 0), 1)`) - 지금은 이 시뮬레이션에 들어오는 `critRateBonus`가 전부 0 이상인
+   옵션 축뿐이라 실제로 터지지 않지만, 나중에 음수 크리티컬 축(디버프 시뮬레이션 등)이 추가되면
+   같은 버그가 재발할 모양이다. 시뮬레이션 전용 파일이라 이번 세션에선 고치지 않는다.
 
-1~2가 끝난 지금까지는 기존 기능(보석 4축·분해·장착·리롤)이 새 체계 위에서 그대로 돈다 - 거기까지가
-"되돌릴 수 있는 지점"이었다. 3단계부터는 값이 실제로 바뀌므로 그 성격이 없어진다 - 다음 세션은
-3~5단계를 한 뭉치로 진행한다(위 3단계 각주 참고).
+1~8단계 전부 완료(26-1·26-2·26-3, 위 각 단계 각주 참고) - `/gg heal cycle`만 [16] 미결 1과
+겹쳐 의도적으로 남겨 뒀다. 남은 일은 [16]의 미결 4항목 자체를 다룰 다음 세션(25-3 파티 UX,
+25-4 보스 전조+스테이지 선택 등)의 몫이다.
 
 #### [15] 임의 결정 목록
 
