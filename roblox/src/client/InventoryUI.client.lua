@@ -633,59 +633,66 @@ gearGridLayout.Parent = gearGrid
 -- 표시("연속격" 등 규칙형 옵션 시절의 미구현 placeholder, 지금 옵션 체계와 무관)를
 -- 재사용한다 - 총 스탯 3줄 위 89px가 이미 이 목적으로 예약돼 있었다(새 자리를 만들지
 -- 않는다). 활성 옵션 축(장비 3부위+보석 5개 합산, 0이 아닌 것만)을 위력→신속→방어→건강→
--- 성장→재생→흡혈 순으로 최대 4개까지 보여준다.
-local optionStatsBox = Instance.new("Frame")
-optionStatsBox.Position = UDim2.new(0, 14, 0, 34 + GEAR_SLOT_SIZE * 2 + 9 + 12)
-optionStatsBox.Size = UDim2.new(1, -28, 0, 89)
-optionStatsBox.BackgroundTransparency = 1
-optionStatsBox.Parent = gear
+-- 성장→재생→흡혈 순으로 최대 4개까지 보여준다. 함수로 감싸 내부 부품(박스·패딩·레이아웃·
+-- 헤더)이 최상위 레지스터를 안 먹게 한다(setupOptionRow와 같은 이유 - 200개 한계 실측).
+local optionStatsRows
 do
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 7)
-	corner.Parent = optionStatsBox
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = UIColors.rim
-	stroke.Transparency = 0.84
-	stroke.Parent = optionStatsBox
-end
+	local function setupOptionStatsBox()
+		local optionStatsBox = Instance.new("Frame")
+		optionStatsBox.Position = UDim2.new(0, 14, 0, 34 + GEAR_SLOT_SIZE * 2 + 9 + 12)
+		optionStatsBox.Size = UDim2.new(1, -28, 0, 89)
+		optionStatsBox.BackgroundTransparency = 1
+		optionStatsBox.Parent = gear
+		do
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 7)
+			corner.Parent = optionStatsBox
+			local stroke = Instance.new("UIStroke")
+			stroke.Color = UIColors.rim
+			stroke.Transparency = 0.84
+			stroke.Parent = optionStatsBox
+		end
 
-local optionStatsPadding = Instance.new("UIPadding")
-optionStatsPadding.PaddingLeft = UDim.new(0, 8)
-optionStatsPadding.PaddingRight = UDim.new(0, 8)
-optionStatsPadding.PaddingTop = UDim.new(0, 6)
-optionStatsPadding.Parent = optionStatsBox
+		local optionStatsPadding = Instance.new("UIPadding")
+		optionStatsPadding.PaddingLeft = UDim.new(0, 8)
+		optionStatsPadding.PaddingRight = UDim.new(0, 8)
+		optionStatsPadding.PaddingTop = UDim.new(0, 6)
+		optionStatsPadding.Parent = optionStatsBox
 
-local optionStatsLayout = Instance.new("UIListLayout")
-optionStatsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-optionStatsLayout.Padding = UDim.new(0, 2)
-optionStatsLayout.Parent = optionStatsBox
+		local optionStatsLayout = Instance.new("UIListLayout")
+		optionStatsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		optionStatsLayout.Padding = UDim.new(0, 2)
+		optionStatsLayout.Parent = optionStatsBox
 
-local optionStatsHeader = Instance.new("TextLabel")
-optionStatsHeader.LayoutOrder = 0
-optionStatsHeader.BackgroundTransparency = 1
-optionStatsHeader.Size = UDim2.new(1, 0, 0, 14)
-optionStatsHeader.Font = Enum.Font.GothamBold
-optionStatsHeader.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
-optionStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
-optionStatsHeader.TextColor3 = UIColors.textTertiary
-optionStatsHeader.Text = "옵션 보너스"
-optionStatsHeader.Parent = optionStatsBox
+		local optionStatsHeader = Instance.new("TextLabel")
+		optionStatsHeader.LayoutOrder = 0
+		optionStatsHeader.BackgroundTransparency = 1
+		optionStatsHeader.Size = UDim2.new(1, 0, 0, 14)
+		optionStatsHeader.Font = Enum.Font.GothamBold
+		optionStatsHeader.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+		optionStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
+		optionStatsHeader.TextColor3 = UIColors.textTertiary
+		optionStatsHeader.Text = "옵션 보너스"
+		optionStatsHeader.Parent = optionStatsBox
 
-local OPTION_STATS_MAX_ROWS = 4
-local optionStatsRows = {}
-for i = 1, OPTION_STATS_MAX_ROWS do
-	local row = Instance.new("TextLabel")
-	row.LayoutOrder = i
-	row.BackgroundTransparency = 1
-	row.Size = UDim2.new(1, 0, 0, 15)
-	row.Font = Enum.Font.GothamBold
-	row.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
-	row.TextXAlignment = Enum.TextXAlignment.Left
-	row.TextColor3 = UIColors.textSecondary
-	row.Text = ""
-	row.Visible = false
-	row.Parent = optionStatsBox
-	table.insert(optionStatsRows, row)
+		local rows = {}
+		for i = 1, 4 do
+			local row = Instance.new("TextLabel")
+			row.LayoutOrder = i
+			row.BackgroundTransparency = 1
+			row.Size = UDim2.new(1, 0, 0, 15)
+			row.Font = Enum.Font.GothamBold
+			row.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+			row.TextXAlignment = Enum.TextXAlignment.Left
+			row.TextColor3 = UIColors.textSecondary
+			row.Text = ""
+			row.Visible = false
+			row.Parent = optionStatsBox
+			table.insert(rows, row)
+		end
+		return rows
+	end
+	optionStatsRows = setupOptionStatsBox()
 end
 
 -- 총 스탯 3줄. reserved 바로 아래, 위쪽 테두리로 구분한다(목업 .stats border-top).
@@ -955,174 +962,185 @@ equipButton.Text = "착용"
 local rerollDetailButton = makeActionButton(5, 70, "sell")
 
 -- ═══ 옵션 줄(26-3, PRD 20.67 [12]) ═══
--- "폭 120×높이 6, 트랙 UIColors.slot, 채움은 등급색으로 롤 위치까지, 중앙(기댓값)에
--- rimHi 눈금 1×10px. 양끝에 최소·최대 숫자" - 명세 그대로. compact(치명 전용 절반 폭)는
--- 최소·최대 숫자를 생략한다(한 줄에 게이지 두 개가 들어가야 해서 자리가 없다).
-local function buildOptionGauge(parent, compact)
-	local wrap = Instance.new("Frame")
-	wrap.BackgroundTransparency = 1
-	wrap.Size = UDim2.new(1, 0, 1, 0)
-	wrap.Parent = parent
+-- 26-3 실기 검증 중 발견: 이 파일이 이미 Luau 최상위 레지스터 200개 한계에 가까웠다
+-- ("Out of local registers ... exceeded limit 200"로 실제 실패) - setupGemTab/
+-- setupPartyTab과 같은 이유로 함수 하나로 감싸 내부 로컬(게이지 부품들)이 최상위
+-- 레지스터를 안 먹게 한다. 밖에서 실제로 쓰는 건 optionRow·refreshOptionRow 둘뿐이다.
+local optionRow
+local refreshOptionRow
 
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.VerticalAlignment = Enum.VerticalAlignment.Center
-	layout.Padding = UDim.new(0, 4)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = wrap
+local function setupOptionRow()
+	-- "폭 120×높이 6, 트랙 UIColors.slot, 채움은 등급색으로 롤 위치까지, 중앙(기댓값)에
+	-- rimHi 눈금 1×10px. 양끝에 최소·최대 숫자" - 명세 그대로. compact(치명 전용 절반
+	-- 폭)는 최소·최대 숫자를 생략한다(한 줄에 게이지 두 개가 들어가야 해서 자리가 없다).
+	local function buildOptionGauge(parent, compact)
+		local wrap = Instance.new("Frame")
+		wrap.BackgroundTransparency = 1
+		wrap.Size = UDim2.new(1, 0, 1, 0)
+		wrap.Parent = parent
 
-	local valueText = Instance.new("TextLabel")
-	valueText.LayoutOrder = 1
-	valueText.BackgroundTransparency = 1
-	valueText.Size = UDim2.new(0, compact and 96 or 130, 1, 0)
-	valueText.Font = Enum.Font.GothamBold
-	valueText.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
-	valueText.TextXAlignment = Enum.TextXAlignment.Left
-	valueText.TextColor3 = UIColors.textPrimary
-	valueText.TextTruncate = Enum.TextTruncate.AtEnd
-	valueText.Text = ""
-	valueText.Parent = wrap
+		local layout = Instance.new("UIListLayout")
+		layout.FillDirection = Enum.FillDirection.Horizontal
+		layout.VerticalAlignment = Enum.VerticalAlignment.Center
+		layout.Padding = UDim.new(0, 4)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Parent = wrap
 
-	local minText = Instance.new("TextLabel")
-	minText.LayoutOrder = 2
-	minText.Visible = not compact
-	minText.BackgroundTransparency = 1
-	minText.Size = UDim2.new(0, 26, 1, 0)
-	minText.Font = Enum.Font.Gotham
-	minText.TextSize = 10
-	minText.TextXAlignment = Enum.TextXAlignment.Right
-	minText.TextColor3 = UIColors.textTertiary
-	minText.Text = ""
-	minText.Parent = wrap
+		local valueText = Instance.new("TextLabel")
+		valueText.LayoutOrder = 1
+		valueText.BackgroundTransparency = 1
+		valueText.Size = UDim2.new(0, compact and 96 or 130, 1, 0)
+		valueText.Font = Enum.Font.GothamBold
+		valueText.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+		valueText.TextXAlignment = Enum.TextXAlignment.Left
+		valueText.TextColor3 = UIColors.textPrimary
+		valueText.TextTruncate = Enum.TextTruncate.AtEnd
+		valueText.Text = ""
+		valueText.Parent = wrap
 
-	local track = Instance.new("Frame")
-	track.LayoutOrder = 3
-	track.Size = UDim2.new(0, compact and 44 or 120, 0, 6)
-	track.BackgroundColor3 = UIColors.slot
-	track.BorderSizePixel = 0
-	track.Parent = wrap
-	local trackCorner = Instance.new("UICorner")
-	trackCorner.CornerRadius = UDim.new(1, 0)
-	trackCorner.Parent = track
+		local minText = Instance.new("TextLabel")
+		minText.LayoutOrder = 2
+		minText.Visible = not compact
+		minText.BackgroundTransparency = 1
+		minText.Size = UDim2.new(0, 26, 1, 0)
+		minText.Font = Enum.Font.Gotham
+		minText.TextSize = 10
+		minText.TextXAlignment = Enum.TextXAlignment.Right
+		minText.TextColor3 = UIColors.textTertiary
+		minText.Text = ""
+		minText.Parent = wrap
 
-	local fill = Instance.new("Frame")
-	fill.Name = "Fill"
-	fill.BackgroundColor3 = UIColors.textPrimary
-	fill.BorderSizePixel = 0
-	fill.Size = UDim2.new(0, 0, 1, 0)
-	fill.Parent = track
-	local fillCorner = Instance.new("UICorner")
-	fillCorner.CornerRadius = UDim.new(1, 0)
-	fillCorner.Parent = fill
+		local track = Instance.new("Frame")
+		track.LayoutOrder = 3
+		track.Size = UDim2.new(0, compact and 44 or 120, 0, 6)
+		track.BackgroundColor3 = UIColors.slot
+		track.BorderSizePixel = 0
+		track.Parent = wrap
+		local trackCorner = Instance.new("UICorner")
+		trackCorner.CornerRadius = UDim.new(1, 0)
+		trackCorner.Parent = track
 
-	-- 기댓값(중앙) 눈금 - 항상 트랙 정중앙(롤 U[0.875,1.125]의 중앙=1.0이 기댓값이다).
-	local tick = Instance.new("Frame")
-	tick.Name = "Tick"
-	tick.AnchorPoint = Vector2.new(0.5, 0.5)
-	tick.Position = UDim2.new(0.5, 0, 0.5, 0)
-	tick.Size = UDim2.new(0, 1, 0, 10)
-	tick.BackgroundColor3 = UIColors.rimHi
-	tick.BackgroundTransparency = UIColors.rimHiTransparency
-	tick.BorderSizePixel = 0
-	tick.ZIndex = 2
-	tick.Parent = track
+		local fill = Instance.new("Frame")
+		fill.Name = "Fill"
+		fill.BackgroundColor3 = UIColors.textPrimary
+		fill.BorderSizePixel = 0
+		fill.Size = UDim2.new(0, 0, 1, 0)
+		fill.Parent = track
+		local fillCorner = Instance.new("UICorner")
+		fillCorner.CornerRadius = UDim.new(1, 0)
+		fillCorner.Parent = fill
 
-	local maxText = Instance.new("TextLabel")
-	maxText.LayoutOrder = 4
-	maxText.Visible = not compact
-	maxText.BackgroundTransparency = 1
-	maxText.Size = UDim2.new(0, 30, 1, 0)
-	maxText.Font = Enum.Font.Gotham
-	maxText.TextSize = 10
-	maxText.TextXAlignment = Enum.TextXAlignment.Left
-	maxText.TextColor3 = UIColors.textTertiary
-	maxText.Text = ""
-	maxText.Parent = wrap
+		-- 기댓값(중앙) 눈금 - 항상 트랙 정중앙(롤 U[0.875,1.125]의 중앙=1.0이 기댓값이다).
+		local tick = Instance.new("Frame")
+		tick.Name = "Tick"
+		tick.AnchorPoint = Vector2.new(0.5, 0.5)
+		tick.Position = UDim2.new(0.5, 0, 0.5, 0)
+		tick.Size = UDim2.new(0, 1, 0, 10)
+		tick.BackgroundColor3 = UIColors.rimHi
+		tick.BackgroundTransparency = UIColors.rimHiTransparency
+		tick.BorderSizePixel = 0
+		tick.ZIndex = 2
+		tick.Parent = track
 
-	return { wrap = wrap, valueText = valueText, minText = minText, track = track, fill = fill, maxText = maxText }
-end
+		local maxText = Instance.new("TextLabel")
+		maxText.LayoutOrder = 4
+		maxText.Visible = not compact
+		maxText.BackgroundTransparency = 1
+		maxText.Size = UDim2.new(0, 30, 1, 0)
+		maxText.Font = Enum.Font.Gotham
+		maxText.TextSize = 10
+		maxText.TextXAlignment = Enum.TextXAlignment.Left
+		maxText.TextColor3 = UIColors.textTertiary
+		maxText.Text = ""
+		maxText.Parent = wrap
 
-local optionRow = Instance.new("Frame")
-optionRow.Name = "OptionRow"
-optionRow.Position = UDim2.new(0, 0, 0, 58)
-optionRow.Size = UDim2.new(1, 0, 0, 18)
-optionRow.BackgroundTransparency = 1
-optionRow.Visible = false
-optionRow.Parent = dinfo
-
-local optionRowLayout = Instance.new("UIListLayout")
-optionRowLayout.FillDirection = Enum.FillDirection.Horizontal
-optionRowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-optionRowLayout.Padding = UDim.new(0, 10)
-optionRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
-optionRowLayout.Parent = optionRow
-
-local optionGaugeA = buildOptionGauge(optionRow, false)
-local optionGaugeB = buildOptionGauge(optionRow, true)
-optionGaugeA.wrap.LayoutOrder = 1
-optionGaugeB.wrap.LayoutOrder = 2
-optionGaugeB.wrap.Visible = false
-
--- 게이지 하나에 값·범위·롤 위치를 채운다. p(0~1)는 (roll-rollMin)/(rollMax-rollMin) - [12]
--- "값 텍스트 색: p≥0.75 success, p≤0.25 textSecondary, 그 외 textPrimary".
-local function applyOptionGauge(gauge, text, minText, maxText, p, fillColor, dim)
-	p = math.clamp(p, 0, 1)
-	gauge.valueText.Text = text
-	gauge.valueText.TextColor3 = dim and UIColors.textTertiary
-		or (p >= 0.75 and UIColors.success or (p <= 0.25 and UIColors.textSecondary or UIColors.textPrimary))
-	gauge.minText.Text = minText or ""
-	gauge.maxText.Text = maxText or ""
-	gauge.fill.Size = UDim2.new(p, 0, 1, 0)
-	gauge.fill.BackgroundColor3 = dim and UIColors.textTertiary or fillColor
-end
-
--- item(장비 아이템 또는 보석)의 option을 읽어 옵션 줄을 채운다. option이 없으면 숨긴다.
--- classId는 지금 활성 직업(Attribute "ClassId") - 직업 특화 옵션의 불일치 판정에 쓰인다.
-local function refreshOptionRow(item)
-	if not item or not item.option then
-		optionRow.Visible = false
-		return
+		return { wrap = wrap, valueText = valueText, minText = minText, track = track, fill = fill, maxText = maxText }
 	end
-	local classId = player:GetAttribute("ClassId")
-	local optionId = item.option.id
-	local def = OptionData.options[optionId]
-	if not def then
-		optionRow.Visible = false
-		return
+
+	optionRow = Instance.new("Frame")
+	optionRow.Name = "OptionRow"
+	optionRow.Position = UDim2.new(0, 0, 0, 58)
+	optionRow.Size = UDim2.new(1, 0, 0, 18)
+	optionRow.BackgroundTransparency = 1
+	optionRow.Visible = false
+	optionRow.Parent = dinfo
+
+	local optionRowLayout = Instance.new("UIListLayout")
+	optionRowLayout.FillDirection = Enum.FillDirection.Horizontal
+	optionRowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	optionRowLayout.Padding = UDim.new(0, 10)
+	optionRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	optionRowLayout.Parent = optionRow
+
+	local optionGaugeA = buildOptionGauge(optionRow, false)
+	local optionGaugeB = buildOptionGauge(optionRow, true)
+	optionGaugeA.wrap.LayoutOrder = 1
+	optionGaugeB.wrap.LayoutOrder = 2
+	optionGaugeB.wrap.Visible = false
+
+	-- 게이지 하나에 값·범위·롤 위치를 채운다. p(0~1)는 (roll-rollMin)/(rollMax-rollMin) -
+	-- [12] "값 텍스트 색: p≥0.75 success, p≤0.25 textSecondary, 그 외 textPrimary".
+	local function applyOptionGauge(gauge, text, minText, maxText, p, fillColor, dim)
+		p = math.clamp(p, 0, 1)
+		gauge.valueText.Text = text
+		gauge.valueText.TextColor3 = dim and UIColors.textTertiary
+			or (p >= 0.75 and UIColors.success or (p <= 0.25 and UIColors.textSecondary or UIColors.textPrimary))
+		gauge.minText.Text = minText or ""
+		gauge.maxText.Text = maxText or ""
+		gauge.fill.Size = UDim2.new(p, 0, 1, 0)
+		gauge.fill.BackgroundColor3 = dim and UIColors.textTertiary or fillColor
 	end
-	local mismatched = def.classId ~= nil and def.classId ~= classId
-	local gradeVisual = ItemVisualData.gradeVisuals[item.grade]
-	local fillColor = (gradeVisual and not gradeVisual.rainbow) and gradeVisual.color or UIColors.textPrimary
 
-	local displayName = def.displayName
-	if not displayName and def.classId then
-		local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
-		displayName = skillDef and skillDef.name
-	end
-	displayName = displayName or optionId
-
-	optionRow.Visible = true
-	local rollSpan = OptionData.rollMax - OptionData.rollMin
-
-	if optionId == "crit" then
-		optionGaugeB.wrap.Visible = true
-		local currentValue = Option.valueOf(item.option, item.grade, item.itemLevel, classId)
-		local pRate = (item.option.roll - OptionData.rollMin) / rollSpan
-		local pDmg = ((item.option.roll2 or item.option.roll) - OptionData.rollMin) / rollSpan
-		applyOptionGauge(optionGaugeA, ("치확 %+.1f%%p"):format(currentValue.critRate * 100), nil, nil, pRate, fillColor, mismatched)
-		applyOptionGauge(optionGaugeB, ("치피 %+.2f"):format(currentValue.critDmg), nil, nil, pDmg, fillColor, mismatched)
-	else
-		optionGaugeB.wrap.Visible = false
-		local range = Option.rangeOf(optionId, item.grade, item.itemLevel, classId)
-		local currentValue = Option.valueOf(item.option, item.grade, item.itemLevel, classId)
-		local p = (item.option.roll - OptionData.rollMin) / rollSpan
-		local text = ("%s %+.1f%%"):format(displayName, currentValue * 100)
-		if mismatched then
-			text = text .. "(직업 불일치 · 효과 없음)"
+	-- item(장비 아이템 또는 보석)의 option을 읽어 옵션 줄을 채운다. option이 없으면
+	-- 숨긴다. classId는 지금 활성 직업(Attribute "ClassId") - 직업 특화 옵션의 불일치
+	-- 판정에 쓰인다.
+	refreshOptionRow = function(item)
+		if not item or not item.option then
+			optionRow.Visible = false
+			return
 		end
-		applyOptionGauge(optionGaugeA, text, ("%.1f"):format(range.min * 100), ("%.1f"):format(range.max * 100), p, fillColor, mismatched)
+		local classId = player:GetAttribute("ClassId")
+		local optionId = item.option.id
+		local def = OptionData.options[optionId]
+		if not def then
+			optionRow.Visible = false
+			return
+		end
+		local mismatched = def.classId ~= nil and def.classId ~= classId
+		local gradeVisual = ItemVisualData.gradeVisuals[item.grade]
+		local fillColor = (gradeVisual and not gradeVisual.rainbow) and gradeVisual.color or UIColors.textPrimary
+
+		local displayName = def.displayName
+		if not displayName and def.classId then
+			local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
+			displayName = skillDef and skillDef.name
+		end
+		displayName = displayName or optionId
+
+		optionRow.Visible = true
+		local rollSpan = OptionData.rollMax - OptionData.rollMin
+
+		if optionId == "crit" then
+			optionGaugeB.wrap.Visible = true
+			local currentValue = Option.valueOf(item.option, item.grade, item.itemLevel, classId)
+			local pRate = (item.option.roll - OptionData.rollMin) / rollSpan
+			local pDmg = ((item.option.roll2 or item.option.roll) - OptionData.rollMin) / rollSpan
+			applyOptionGauge(optionGaugeA, ("치확 %+.1f%%p"):format(currentValue.critRate * 100), nil, nil, pRate, fillColor, mismatched)
+			applyOptionGauge(optionGaugeB, ("치피 %+.2f"):format(currentValue.critDmg), nil, nil, pDmg, fillColor, mismatched)
+		else
+			optionGaugeB.wrap.Visible = false
+			local range = Option.rangeOf(optionId, item.grade, item.itemLevel, classId)
+			local currentValue = Option.valueOf(item.option, item.grade, item.itemLevel, classId)
+			local p = (item.option.roll - OptionData.rollMin) / rollSpan
+			local text = ("%s %+.1f%%"):format(displayName, currentValue * 100)
+			if mismatched then
+				text = text .. "(직업 불일치 · 효과 없음)"
+			end
+			applyOptionGauge(optionGaugeA, text, ("%.1f"):format(range.min * 100), ("%.1f"):format(range.max * 100), p, fillColor, mismatched)
+		end
 	end
 end
+setupOptionRow()
 
 -- ═══ 등급 시각 효과 ═══
 
@@ -1522,55 +1540,61 @@ end
 
 -- ═══ 총 스탯 갱신 ═══
 
--- 26-3: 장비 3부위 옵션 + 보석 5개를 한 목록으로 모은다(PlayerProfile.buildOptionSources와
--- 같은 모양 - 서버 전용 모듈이라 여기선 같은 필드({option,grade,itemLevel})를 그대로 다시
--- 조립한다. 계산 자체는 새로 만들지 않는다 - Option.sumAxisBonus 하나만 쓴다).
-local function clientOptionSources()
-	local sources = {}
-	for _, item in ipairs({ equippedArmor, equippedGloves, equippedShoes }) do
-		if item then
-			table.insert(sources, item)
+-- 26-3: 옵션 보너스 계산도 함수 하나로 감싼다(위 setupOptionStatsBox와 같은 이유 - 200
+-- 레지스터 한계 실측). 밖에서 실제로 쓰는 건 refreshOptionStats 하나뿐이다.
+local refreshOptionStats
+do
+	-- 장비 3부위 옵션 + 보석 5개를 한 목록으로 모은다(PlayerProfile.buildOptionSources와
+	-- 같은 모양 - 서버 전용 모듈이라 여기선 같은 필드({option,grade,itemLevel})를 그대로
+	-- 다시 조립한다. 계산 자체는 새로 만들지 않는다 - Option.sumAxisBonus 하나만 쓴다).
+	local function clientOptionSources()
+		local sources = {}
+		for _, item in ipairs({ equippedArmor, equippedGloves, equippedShoes }) do
+			if item then
+				table.insert(sources, item)
+			end
 		end
-	end
-	for slot = 1, Gem.slotCount do
-		if Gem.isFilled(currentGemState.gems, slot) then
-			table.insert(sources, currentGemState.gems[slot])
+		for slot = 1, Gem.slotCount do
+			if Gem.isFilled(currentGemState.gems, slot) then
+				table.insert(sources, currentGemState.gems[slot])
+			end
 		end
+		return sources
 	end
-	return sources
-end
 
--- 옵션 보너스 박스(위 optionStatsRows)에 보일 축 순서 - [2] 표 순서(위력·신속 DPS, 방어·
--- 건강 생존, 성장·재생·흡혈 유틸).
-local OPTION_STATS_AXES = {
-	{ id = "attackPercent", label = "위력" },
-	{ id = "speedPercent", label = "신속" },
-	{ id = "defensePercent", label = "방어" },
-	{ id = "maxHpPercent", label = "건강" },
-	{ id = "expGain", label = "성장" },
-	{ id = "healingPower", label = "재생" },
-	{ id = "lifesteal", label = "흡혈" },
-}
+	-- 옵션 보너스 박스(위 optionStatsRows)에 보일 축 순서 - [2] 표 순서(위력·신속 DPS,
+	-- 방어·건강 생존, 성장·재생·흡혈 유틸).
+	local axes = {
+		{ id = "attackPercent", label = "위력" },
+		{ id = "speedPercent", label = "신속" },
+		{ id = "defensePercent", label = "방어" },
+		{ id = "maxHpPercent", label = "건강" },
+		{ id = "expGain", label = "성장" },
+		{ id = "healingPower", label = "재생" },
+		{ id = "lifesteal", label = "흡혈" },
+	}
 
-local function refreshOptionStats(classId)
-	local sources = clientOptionSources()
-	local shown = 0
-	for _, axis in ipairs(OPTION_STATS_AXES) do
-		local value = Option.sumAxisBonus(sources, axis.id, classId)
-		if math.abs(value) > 0.0005 and shown < OPTION_STATS_MAX_ROWS then
-			shown += 1
-			local row = optionStatsRows[shown]
-			local def = OptionData.options[axis.id]
-			-- [12] "상한에 걸린 축은 총 스탯 패널에 (상한 N%)를 붙이고 값 텍스트를 ember로".
-			local capText = def.cap and (" (상한%d)"):format(math.floor(def.cap * 100 + 0.5)) or ""
-			local atCap = def.cap and value >= def.cap - 0.0005
-			row.Text = ("%s %+.1f%%%s"):format(axis.label, value * 100, capText)
-			row.TextColor3 = atCap and UIColors.ember or UIColors.textSecondary
-			row.Visible = true
+	refreshOptionStats = function(classId)
+		local sources = clientOptionSources()
+		local shown = 0
+		for _, axis in ipairs(axes) do
+			local value = Option.sumAxisBonus(sources, axis.id, classId)
+			if math.abs(value) > 0.0005 and shown < #optionStatsRows then
+				shown += 1
+				local row = optionStatsRows[shown]
+				local def = OptionData.options[axis.id]
+				-- [12] "상한에 걸린 축은 총 스탯 패널에 (상한 N%)를 붙이고 값 텍스트를
+				-- ember로".
+				local capText = def.cap and (" (상한%d)"):format(math.floor(def.cap * 100 + 0.5)) or ""
+				local atCap = def.cap and value >= def.cap - 0.0005
+				row.Text = ("%s %+.1f%%%s"):format(axis.label, value * 100, capText)
+				row.TextColor3 = atCap and UIColors.ember or UIColors.textSecondary
+				row.Visible = true
+			end
 		end
-	end
-	for i = shown + 1, OPTION_STATS_MAX_ROWS do
-		optionStatsRows[i].Visible = false
+		for i = shown + 1, #optionStatsRows do
+			optionStatsRows[i].Visible = false
+		end
 	end
 end
 
