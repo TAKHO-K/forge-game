@@ -11,6 +11,9 @@ local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
+-- 26-1: 장비 생성 지점에서 옵션을 굴린다(PRD 20.67 [1] "옵션 굴림 시점은 장비가 생성되는
+-- 모든 지점"). Option.rollFor가 알아서 옵션 풀이 없는 등급(일반·희귀)엔 nil을 돌려준다.
+local Option = require(ReplicatedStorage.Shared.Option)
 
 local lootRng = Random.new()
 
@@ -33,7 +36,9 @@ function Loot.rollItemPart()
 end
 
 -- 드랍 판정 1회(슬롯1만, 슬롯2 다중 드랍은 범위 밖). 드랍이 없으면 nil, 있으면
--- { grade, part, dropStage, itemLevel, tierIndex, locked = false }. part는 16-6에서 추가 -
+-- { grade, part, dropStage, itemLevel, tierIndex, locked = false, option }. option(26-1,
+-- PRD 20.67 [1])은 Option.rollFor(grade, classId)의 결과 - 일반·희귀는 항상 nil. part는
+-- 16-6에서 추가 -
 -- 웹처럼 드랍 순간엔 등급만 정해지고 부위는 균등 랜덤이다(rollItemPart). dropStage(몬스터를
 -- 잡은 스테이지)와 itemLevel(획득 시점 캐릭터 레벨)은 서로 다른 정보라 둘 다 남긴다 -
 -- dropStage는 getSellPrice의 "그 스테이지에서 사냥했다"는 경제적 맥락에, itemLevel은
@@ -51,7 +56,7 @@ end
 -- chanceMultiplier(22-2 [1], 선택값) - 접두사 변종의 보상 배율(= HP 배율). 드랍 확률에
 -- 그대로 곱한다(단단한 ×2 → 50%, 거대한 ×3 → 75%, 연약한 ×0.5 → 12.5%) - 시간당 드랍
 -- 기대값이 접두사 무관하게 같아지도록. 1을 넘지 않게 자른다(거대한 0.75가 현재 최대).
-function Loot.rollArmorDrop(monsterStage, itemLevel, tierIndex, chanceMultiplier)
+function Loot.rollArmorDrop(monsterStage, itemLevel, tierIndex, chanceMultiplier, classId)
 	if lootRng:NextNumber() >= math.min(ArmorData.dropChance * (chanceMultiplier or 1), 1) then
 		return nil
 	end
@@ -65,13 +70,15 @@ function Loot.rollArmorDrop(monsterStage, itemLevel, tierIndex, chanceMultiplier
 			acc += chance
 			if roll < acc then
 				local tierData = MonsterData[MonsterData.tierOrder[tierIndex]] or MonsterData.tier1
+				local dropItemLevel = math.floor(itemLevel * tierData.itemLevelBonus + 0.5)
 				return {
 					grade = gradeId,
 					part = Loot.rollItemPart(),
 					dropStage = monsterStage,
-					itemLevel = math.floor(itemLevel * tierData.itemLevelBonus + 0.5),
+					itemLevel = dropItemLevel,
 					tierIndex = tierIndex,
 					locked = false,
+					option = Option.rollFor(gradeId, classId),
 				}
 			end
 		end
@@ -93,7 +100,7 @@ end
 -- 값(=1.0)이라 그대로 itemLevel을 쓴다. roll이 표 끝까지 안 걸리는 부동소수 오차
 -- 극단값에도 확정 지급이 깨지면 안 되므로 방어적 기본값(rollSparkleArmorDrop과 같은
 -- 패턴)을 둔다 - 두 표 모두 실제로는 정확히 1.0으로 맞아떨어진다.
-function Loot.rollBossFirstClearDrop(monsterStage, itemLevel, rebirthCount)
+function Loot.rollBossFirstClearDrop(monsterStage, itemLevel, rebirthCount, classId)
 	local gradeTable = (rebirthCount and rebirthCount > 0)
 		and MonsterData.bossFirstClearGradeTable
 		or MonsterData.bossFirstClearUpgradedGradeTable
@@ -119,6 +126,7 @@ function Loot.rollBossFirstClearDrop(monsterStage, itemLevel, rebirthCount)
 		itemLevel = itemLevel,
 		tierIndex = 1,
 		locked = false,
+		option = Option.rollFor(grade, classId),
 	}
 end
 
@@ -128,7 +136,7 @@ end
 -- 한다"와 짝을 이루는 지급 방식). tierIndex는 그 구역 그대로 넘긴다 - 등급만 강제로 위로
 -- 끌어올릴 뿐, itemLevel 보너스·판매가 계산(Loot.getSellPrice)은 일반 드랍과 같은
 -- 축을 그대로 쓴다(단일 출처 유지 - 반짝이 전용 별도 계산식을 만들지 않는다).
-function Loot.rollSparkleArmorDrop(monsterStage, itemLevel, tierIndex)
+function Loot.rollSparkleArmorDrop(monsterStage, itemLevel, tierIndex, classId)
 	local roll = lootRng:NextNumber()
 	local acc = 0
 	local grade = "relic" -- 확률 합이 부동소수 오차로 1 미만이 되는 극단적인 경우의 방어적 기본값
@@ -147,6 +155,7 @@ function Loot.rollSparkleArmorDrop(monsterStage, itemLevel, tierIndex)
 		itemLevel = itemLevel,
 		tierIndex = tierIndex or 1,
 		locked = false,
+		option = Option.rollFor(grade, classId),
 	}
 end
 
@@ -154,7 +163,7 @@ end
 -- 드랍으로 재사용"). 등급·부위가 굴림이 아니라 그 단계가 정한 고정값이라는 점만
 -- rollBossFirstClearDrop과 다르다 - 반환 모양은 동일(TutorialState가 ItemDropSpawner.spawn에
 -- 그대로 넘긴다, 잡몹/보스 확정 드랍과 같은 "주웠다" 연출을 그대로 재사용).
-function Loot.buildFixedArmorDrop(grade, part, monsterStage, itemLevel, tierIndex)
+function Loot.buildFixedArmorDrop(grade, part, monsterStage, itemLevel, tierIndex, classId)
 	return {
 		grade = grade,
 		part = part,
@@ -162,6 +171,7 @@ function Loot.buildFixedArmorDrop(grade, part, monsterStage, itemLevel, tierInde
 		itemLevel = itemLevel,
 		tierIndex = tierIndex,
 		locked = false,
+		option = Option.rollFor(grade, classId),
 	}
 end
 

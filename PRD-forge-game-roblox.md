@@ -9570,7 +9570,7 @@ useExponential 인자 제거) · `server/PlayerProfile.lua`(회차 배수 삭제
 리터럴, v11 정정, v22 이관) · `shared/data/SaveConfig.lua`(v22) · `server/DevTools.server.lua`
 (`/gg curve`·`curve anchor`·`curve migrate`).
 
-### 20.67 보석·장비 옵션 통합 설계 (25-2) `[📐 설계 전용 — 코드 변경 없음. 25-2 지시 "구현 금지". 다음 세션은 이 절만 읽고 구현에 들어간다 — [14] 구현 순서 참고]`
+### 20.67 보석·장비 옵션 통합 설계 (25-2) `[🚧 구현 중 — [14] 1~2단계 완료(26-1). 진행 상황은 [14] 하단 각주 참고]`
 
 20.57~20.59가 만든 보석 체계(무기 홈 5개, 고대·태초만 옵션 풀 2종, 옵션은 변환권으로만
 배정)와 장비 3부위(옵션 없음, 부위 기본 스탯만)를 **하나의 옵션 체계**로 합친다. 이 절은
@@ -9985,13 +9985,34 @@ purchases.optionRerollTickets = { ancient, primordial }          -- 변경 없�
    기준값·상한·적용 노브·classId/slot) + `shared/Option.lua`(`rollFor(grade, classId)`,
    `valueOf(option, grade, itemLevel, classId)`, `rangeOf(...)`→{min,mid,max}, `sumWithCap(list,
    id)`, `levelFactor(L)`). `/gg option table`로 [3] 구간표를 콘솔에 찍어 이 절과 대조.
+   `[✅ 26-1 완료]` OptionData.lua·Option.lua 신설, `/gg option table`이 [3] 구간표·레벨계수
+   동결(f(100)=1.000/f(125)=f(130)=1.216)·롤 1000회 분포(평균 0.9985)를 콘솔에 찍어 이 절과
+   전수 대조 완료. **어느 서버 모듈도 아직 Option.lua를 require하지 않는다 - 완전히 미연결
+   상태다.**
 2. **저장 v23 + 생성 지점 굴림 + 분해 이전** - [13] 이관, `Loot` 4함수와 `Gem.buildGrantedGem`에
    옵션 굴림, `dismantleItem`이 option·itemLevel을 보석으로 이전. `/gg curve migrate`식 합성
    프로필 이관 자체검증.
+   `[✅ 26-1 완료]` SaveConfig.saveVersion 23, SaveSystem.migrate v22→v23([13] 그대로) +
+   isValidProfile option 형태 검사. `Loot`의 4개 드랍 함수·`Gem.buildGrantedGem`이
+   `Option.rollFor`로 옵션을 굴려 item/gem에 붙인다(classId는 호출부(CombatResolution·
+   TutorialState·PlayerProfile.rebirth)가 넘긴다). `dismantleItem`·`equipGem`이 새 필드
+   (itemLevel·option)를 보석 이동 경로 전체(분해→인벤토리→장착→교체)에서 보존하도록 같이
+   고쳤다 - 명세엔 없지만 안 고치면 슬롯 교체 한 번에 갓 생성된 옵션이 소리 없이 사라지는
+   구멍이라 2단계 "이전" 범위로 판단했다. `/gg option migrate` 자체검증 7/7, 기존
+   `/gg curve migrate` 회귀 9/9 통과, Studio 실측(레벨25→환생1→보석 조회)에서 보석 보너스
+   "위력/신속/방어/건강 전부 +0.0%"로 세션 전과 동일 확인. 서버 에러 0건.
 3. **기존 4축 연결** - `Gem.magnitudeForGrade`/`attackPercentBonusForGrade` 폐기, `PlayerProfile.
    getAttackPercentBonus/getSpeedPercentBonus/getDefensePercentBonus/refreshMaxHp`가 장비 3부위
    옵션 + 보석 5개를 `Option.sumWithCap`으로 합산. `BalanceSim.gemBonusesFor` → 옵션 전체.
    `/gg measure`로 상한 적용 확인(건강 8개 → 20%).
+   `[⏸ 26-1 보류, 다음 세션]` 여기서부터 값이 실제로 바뀌는 지점이다 - [5]의 재조정(위력
+   87.5%→30%, 방어 148.7%→17.0%, 건강 87.5%→10.0%, 영웅~유물 "무조건 공격력%" 42.9/50/50%
+   →4/6/9%)이 이 연결의 직접 결과다. **그래서 3단계의 검증 기준은 "이전과 동일"이 아니라
+   "PRD 20.67 [3] 구간표와 일치"로 바뀐다** - 1~2단계(구조·이관, 값 불변)와 3단계(연결, 값
+   변경) 사이에 성격이 다른 경계가 있다는 뜻이다. 또한 **3단계만 단독 적용하면 기존 4축(위력·
+   신속·방어·건강)만 삭감되고 새 옵션 12종(치명·성장·재생·흡혈·직업 특화 8종)은 아직 안
+   붙어(4·5단계) 한쪽만 깎인 반쪽짜리 밸런스가 된다** - 따라서 3단계는 단독 세션으로 끝내지
+   말고 4~5단계(새 축 연결)까지 한 세션에서 묶어 진행해야 한다.
 4. **새 축 4개** - 성장(`getExpGainMultiplier`), 재생(`PlayerRegen`·`castHeal`), 흡혈(피해 확정
    지점 2곳 + 토큰 버킷 `PlayerState`), 치명(`calcDamage` 인자). `/gg lifesteal`로 [6-1] 표
    재현(연속 피격 중 HP 단조 감소 확인).
@@ -10003,8 +10024,9 @@ purchases.optionRerollTickets = { ancient, primordial }          -- 변경 없�
 8. **/gg 도구 정리** - `/gg option <id> [roll]`(강제 배정), `/gg option stack <id>`(8개 몰빵 후
    `/gg measure` - [7] 표 재현), `/gg heal cycle`로 딜링모드 특화 가동률 실측([16] 미결 1 해소).
 
-1~3이 끝나면 기존 기능(보석 4축·분해·장착·리롤)이 새 체계 위에서 그대로 돌아야 한다 - 거기까지가
-"되돌릴 수 있는 지점"이고, 4 이후는 하나씩 켠다.
+1~2가 끝난 지금까지는 기존 기능(보석 4축·분해·장착·리롤)이 새 체계 위에서 그대로 돈다 - 거기까지가
+"되돌릴 수 있는 지점"이었다. 3단계부터는 값이 실제로 바뀌므로 그 성격이 없어진다 - 다음 세션은
+3~5단계를 한 뭉치로 진행한다(위 3단계 각주 참고).
 
 #### [15] 임의 결정 목록
 

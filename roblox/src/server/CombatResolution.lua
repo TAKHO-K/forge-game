@@ -59,6 +59,9 @@ local function grantKillReward(recipient, target, monsterData, deathPosition)
 		CombatResolution.levelUp:FireClient(recipient, newLevel)
 	end
 
+	-- 26-1: 드랍 옵션의 직업 특화 후보는 "그 순간 플레이어의 직업"(PRD 20.67 [1]).
+	local classId = PlayerProfile.getClassId(recipient)
+
 	local armorDrop
 	if isBoss then
 		-- 20-4 [1]: "그 스테이지 보스를 처음 깼는가"로 분기한다. 첫 처치만 확정 드랍
@@ -67,16 +70,16 @@ local function grantKillReward(recipient, target, monsterData, deathPosition)
 		-- 것은 확정 보상뿐이다.
 		local stage = monsterData.stageNumber
 		if PlayerProfile.hasBossFirstClearReward(recipient, stage) then
-			armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex)
+			armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex, nil, classId)
 		else
-			armorDrop = Loot.rollBossFirstClearDrop(dropStage, newLevel or oldLevel, PlayerProfile.getRebirthCount(recipient))
+			armorDrop = Loot.rollBossFirstClearDrop(dropStage, newLevel or oldLevel, PlayerProfile.getRebirthCount(recipient), classId)
 			PlayerProfile.markBossFirstClearReward(recipient, stage)
 		end
 	elseif isSparkle then
-		armorDrop = Loot.rollSparkleArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex)
+		armorDrop = Loot.rollSparkleArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex, classId)
 	else
 		-- 접두사 변종(22-2 [1]) - 드랍 확률에도 보상 배율(= HP 배율)을 곱한다(공평성).
-		armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex, MonsterState.getRewardMultiplier(target))
+		armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex, MonsterState.getRewardMultiplier(target), classId)
 	end
 	if armorDrop then
 		ItemDropSpawner.spawn(armorDrop, deathPosition, recipient)

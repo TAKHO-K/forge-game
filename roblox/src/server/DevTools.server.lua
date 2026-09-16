@@ -56,6 +56,9 @@ local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData)
 -- 23-2 환생·보석 검증 명령(/gg rebirth, /gg rebirthdo, /gg gem)용.
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+-- 26-1 옵션 통합 순수 함수 검증 명령(/gg option table)용.
+local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+local Option = require(ReplicatedStorage.Shared.Option)
 -- 24-1 파티 검증 명령(/gg party dummy|info|table|killsim)용.
 local PartyState = require(script.Parent.PartyState)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
@@ -413,6 +416,107 @@ local function runMigrateSelfTest(player)
 	reply(player, ("curve migrate 자체검증 %d/%d 통과"):format(pass, #cases))
 end
 
+-- "/gg option table" - 26-1, PRD 20.67 [14] 1단계 검증. Option.lua는 아직 게임에 연결되지
+-- 않았다(어떤 서버 모듈도 require하지 않는다) - 이 명령이 유일한 호출부다. [3]의 등급별
+-- 구간표·레벨 계수 동결·롤 분포 세 가지를 콘솔에 찍어 그 절과 직접 대조한다.
+local OPTION_TABLE_GRADES = { "epic", "legendary", "relic", "ancient", "primordial" }
+local OPTION_TABLE_ITEM_LEVEL = 100
+local function printOptionTable(player)
+	print("[DevTools] === 옵션 통합 구간표(20.67 [3], itemLevel100 기준, 최소/기댓값/최대) ===")
+	print("[DevTools] 옵션 | 영웅 | 전설 | 유물 | 고대 | 태초")
+	for _, optionId in ipairs(OptionData.commonOrder) do
+		local def = OptionData.options[optionId]
+		local cells = {}
+		for _, gradeId in ipairs(OPTION_TABLE_GRADES) do
+			local range = Option.rangeOf(optionId, gradeId, OPTION_TABLE_ITEM_LEVEL, nil)
+			if def.critRateBase then
+				-- 치명은 {critRate, critDmg} 테이블 - 치확만 표에 찍는다(치피는 같은 배율의
+				-- 다른 단위라 숫자가 같다, OptionData.crit 주석 참고).
+				table.insert(cells, ("%.2f/%.2f/%.2f"):format(range.min.critRate * 100, range.mid.critRate * 100, range.max.critRate * 100))
+			else
+				table.insert(cells, ("%.2f/%.2f/%.2f"):format(range.min * 100, range.mid * 100, range.max * 100))
+			end
+		end
+		print(("[DevTools] %s | %s"):format(def.displayName, table.concat(cells, " | ")))
+	end
+
+	print("[DevTools] === 레벨 계수 f(L)(20.67 [3], 기준100=1.0, 동결125) ===")
+	local levelSamples = { 1, 10, 25, 50, 75, 100, 125, 130 }
+	local levelCells = {}
+	for _, level in ipairs(levelSamples) do
+		table.insert(levelCells, ("L%d=%.3f"):format(level, Option.levelFactor(level)))
+	end
+	print("[DevTools] " .. table.concat(levelCells, " | "))
+	print(("[DevTools]   동결 확인: f(125)=%.4f, f(130)=%.4f (같아야 함)"):format(Option.levelFactor(125), Option.levelFactor(130)))
+	print(("[DevTools]   절대 최대 계수(20.67 [3]) = rollMax × f(125) = %.3f × %.4f = %.4f (기대 1.368)"):format(
+		OptionData.rollMax, Option.levelFactor(125), OptionData.rollMax * Option.levelFactor(125)))
+
+	local rollCount = 1000
+	local sum, minRoll, maxRoll = 0, math.huge, -math.huge
+	for _ = 1, rollCount do
+		local roll = Option.rollValue()
+		sum += roll
+		minRoll = math.min(minRoll, roll)
+		maxRoll = math.max(maxRoll, roll)
+	end
+	print(("[DevTools] === 롤 분포(1000회) === 평균=%.4f(기대 1.0) 최소=%.4f 최대=%.4f (범위 [%.3f, %.3f] 안이어야 함)"):format(
+		sum / rollCount, minRoll, maxRoll, OptionData.rollMin, OptionData.rollMax))
+
+	reply(player, "옵션 구간표·레벨계수·롤 분포를 콘솔에 출력했습니다")
+end
+
+-- "/gg option migrate" - 26-1, PRD 20.67 [14] 2단계 검증. v22 형태(gem.optionId)의 합성
+-- 보석을 실제 SaveSystem.migrate에 통과시켜 [13] 이관 규칙(옛 이름→새 옵션 id 기댓값 롤,
+-- 영웅~유물 무조건 승격, 고대·태초 미배정 유지, itemLevel 백필)을 자체검증한다("/gg curve
+-- migrate"와 같은 패턴 - 합성 프로필을 실제 migrate에 통과시킨다).
+local OPTION_MIGRATE_OLD_AXIS_ID = {
+	["연속격"] = "attackPercent", ["속사의 흔적"] = "speedPercent",
+	["심판의 표식"] = "defensePercent", ["삼위일체"] = "maxHpPercent",
+}
+local function runOptionMigrateSelfTest(player)
+	local classId = ClassData.order[1]
+	local cases = {
+		{ grade = "ancient", optionId = "연속격", rebirth = 1, level = 25, label = "고대+연속격(옛 이름)" },
+		{ grade = "primordial", optionId = "삼위일체", rebirth = 5, level = 125, label = "태초+삼위일체(옛 이름)" },
+		{ grade = "epic", optionId = nil, rebirth = 1, level = 25, label = "영웅 무조건 공격력%(옵션 풀 없는 등급)" },
+		{ grade = "legendary", optionId = nil, rebirth = 2, level = 50, label = "전설 무조건 공격력%" },
+		{ grade = "relic", optionId = nil, rebirth = 3, level = 75, label = "유물 무조건 공격력%" },
+		{ grade = "ancient", optionId = nil, rebirth = 4, level = 100, label = "고대 옵션 미배정(nil 유지)" },
+		{ grade = "primordial", optionId = nil, rebirth = 5, level = 125, label = "태초 옵션 미배정(nil 유지)" },
+	}
+
+	local pass = 0
+	for _, case in ipairs(cases) do
+		local profile = SaveSystem.defaultProfile()
+		profile.version = 22
+		local classState = profile.classes[classId]
+		classState.rebirthCount = case.rebirth
+		classState.characterExp = CharacterLevel.getExpForLevel(case.level)
+		classState.weapon.gems[1] = { grade = case.grade, optionId = case.optionId }
+
+		local migrated = SaveSystem.migrate(profile)
+		local gem = migrated.classes[classId].weapon.gems[1]
+
+		local expectOptionId
+		if case.optionId then
+			expectOptionId = OPTION_MIGRATE_OLD_AXIS_ID[case.optionId]
+		elseif not GemData.optionPoolByGrade[case.grade] then
+			expectOptionId = "attackPercent"
+		end
+		local expectedItemLevel = math.max(25 * case.rebirth, case.level, 1)
+
+		local optionOk = (expectOptionId == nil and gem.option == nil)
+			or (gem.option and gem.option.id == expectOptionId and gem.option.roll == 1.0)
+		local ok = migrated.version == SaveConfig.saveVersion and gem.optionId == nil
+			and optionOk and gem.itemLevel == expectedItemLevel and SaveSystem.isValidProfile(migrated)
+		pass += ok and 1 or 0
+		print(("[optionmigrate] %s %s: option=%s itemLevel=%d (기대 id=%s itemLevel=%d)"):format(
+			ok and "O" or "X", case.label, gem.option and gem.option.id or "nil", gem.itemLevel,
+			tostring(expectOptionId), expectedItemLevel))
+	end
+	reply(player, ("option migrate 자체검증 %d/%d 통과"):format(pass, #cases))
+end
+
 -- "/gg anchor [classId]" - classId를 주면 먼저 그 직업으로 전환한 뒤 앵커 조건을 건다.
 local function applyAnchor(player, classId)
 	ensureBackup(player)
@@ -670,6 +774,8 @@ local HELP_TEXT = table.concat({
 	"/gg curve - 레벨 1~125의 레벨당 목표 마릿수·실제 계산 마릿수·+25% 가정 마릿수 표를 콘솔에 출력(25-1)",
 	"/gg curve anchor [classId] - 앵커 곡선(레벨×무기등급 격자)의 생존 타수·처치 시간 표를 콘솔에 출력(25-1 전엔 /gg curve)",
 	"/gg curve migrate - v21 세이브 형태(옛 두 곡선)의 경험치를 migrate에 통과시켜 레벨·진행률 유지를 자체검증(25-1)",
+	"/gg option table - 옵션 통합 등급별 구간표·레벨계수 동결·롤 분포(1000회)를 콘솔에 출력(26-1, PRD 20.67 [3] 대조용 - Option.lua는 아직 게임에 연결 안 됨)",
+	"/gg option migrate - v22 세이브 형태(gem.optionId)의 보석을 migrate에 통과시켜 옵션 이관 규칙(20.67 [13])을 자체검증(26-1)",
 	"/gg rebirth <0-5> - 환생 횟수 강제 지정(무기 등급·보석 슬롯은 안 건드림, 보스 첫 처치 드랍 등급표 분기·슬롯 개방 표시 검증용)",
 	"/gg rebirthdo - 실제 환생 실행(PlayerProfile.rebirth 그대로 - 레벨 조건 검증 + 무기 등급·보석 자동 지급까지 전체 흐름 검증용)",
 	"/gg gem <slot 1-5> <id|-> - 그 슬롯에 보석을 강제로 채운다(23-2 검증용, id=-면 옵션 없이)",
@@ -751,6 +857,10 @@ local function handleCommand(player, args)
 		runMigrateSelfTest(player)
 	elseif sub == "curve" then
 		printLevelCurve(player)
+	elseif sub == "option" and args[2] == "table" then
+		printOptionTable(player)
+	elseif sub == "option" and args[2] == "migrate" then
+		runOptionMigrateSelfTest(player)
 	elseif sub == "rebirth" and tonumber(args[2]) then
 		ensureBackup(player)
 		local applied = applyRebirth(player, math.floor(tonumber(args[2])))

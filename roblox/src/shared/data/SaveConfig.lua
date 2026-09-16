@@ -3,6 +3,9 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
+	-- 23(26-1) - 보석·장비 옵션 통합(PRD 20.67 [13]). item(가방·착용)에 option 필드 신설
+	-- (없으면 nil), gem(홈·보유)은 optionId 필드가 option({id, roll, roll2})으로 바뀐다.
+	-- SaveSystem.migrate()의 v22->v23 참고.
 	-- 22(25-1) - 캐릭터 레벨 곡선을 "목표 마릿수 역산" 하나로 통일(회차별 두 곡선 폐지). 스키마
 	-- 필드 변화는 없고 characterExp 값을 옛 곡선의 레벨·진행률 그대로 새 곡선 위치로 옮긴다.
 	-- SaveSystem.migrate()의 v21->v22 참고.
@@ -43,7 +46,7 @@ return {
 	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
 	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
 	-- 필드(classId) 추가.
-	saveVersion = 22,
+	saveVersion = 23,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

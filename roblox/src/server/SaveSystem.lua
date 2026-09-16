@@ -10,6 +10,9 @@ local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
+-- 26-1 옵션 통합 이관(v22->v23)·isValidProfile 검사용.
+local GemData = require(ReplicatedStorage.Shared.data.GemData)
+local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 
 local SaveSystem = {}
 
@@ -218,7 +221,8 @@ end
 -- 등급이 슬롯 고정에서 상한제로 바뀌며 gem.grade 필드 신설 + 슬롯 해금 상태 저장 필드
 -- weapon.slotUnlocked 신설, 23-4) -> 21(무한 모드 보스 순환 상태 bossRotation 필드 +
 -- 장비창 위치 저장 필드 inventoryWindowPosition 신설, 23-5) -> 22(캐릭터 레벨 곡선을 목표
--- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1).
+-- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
+-- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -579,8 +583,59 @@ local function migrate(data)
 		data.version = 22
 	end
 
+	if data.version < 23 then
+		-- 26-1: 보석·장비 옵션 통합(PRD-forge-game-roblox.md 20.67 [13]). v22까지 보석은
+		-- optionId(이름 문자열 또는 nil)만 가졌다 - 그 자리를 option({id, roll} 또는 nil)으로
+		-- 바꾼다. 장비(가방·착용)는 이번에 처음 option 필드가 생긴다 - "그 시절 장비는 옵션
+		-- 개념 자체가 없었다"가 정확한 과거 상태이므로 손대지 않는다(nil, v10 part 소급과
+		-- 다르게 채울 값 자체가 없다 - 이번 세션부터 생성되는 장비만 Loot의 옵션 굴림을 거친다).
+		for _, classState in pairs(data.classes) do
+			local function migrateGem(gem)
+				if type(gem) ~= "table" then
+					return
+				end
+				local oldOptionId = gem.optionId
+				gem.optionId = nil
+				local newAxisId = oldOptionId and GemData.optionAxis[oldOptionId]
+				if newAxisId then
+					-- 옛 이름 있는 보석(연속격·속사의 흔적·심판의 표식·삼위일체) - 새 옵션 id로
+					-- 치환하고 기댓값 롤(1.0)을 준다. 값 자체는 옛 값과 다르다 - 20.67 [5]의
+					-- 재조정 자체가 이번 세션의 의도다.
+					gem.option = { id = newAxisId, roll = 1.0 }
+				elseif not GemData.optionPoolByGrade[gem.grade] then
+					-- 영웅·전설·유물(옛 "무조건 공격력%", 옵션 풀 자체가 없어 optionId가 항상
+					-- nil이던 등급) - attackPercent 기댓값으로 승격한다. 효과가 소리 없이
+					-- 사라지지 않게 하기 위함(20.67 [13] 임의 결정 13).
+					gem.option = { id = "attackPercent", roll = 1.0 }
+				else
+					-- 고대·태초의 옵션 미배정(nil) - nil 유지.
+					gem.option = nil
+				end
+				-- itemLevel 백필 - 환생 지급 보석의 실제 지급 레벨(25×회차)을 넘지 않는 결정적
+				-- 값(20.67 [13]). characterExp는 이 시점 이미 v22 블록을 거쳐 새 곡선 위다.
+				gem.itemLevel = gem.itemLevel
+					or math.max(25 * (classState.rebirthCount or 0), CharacterLevel.getLevelFromExp(classState.characterExp or 0), 1)
+			end
+
+			for slot = 1, 5 do
+				migrateGem(classState.weapon.gems[slot])
+			end
+			for _, gem in ipairs(classState.gemInventory) do
+				migrateGem(gem)
+			end
+		end
+		data.version = 23
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
+end
+
+-- option 필드 형태 검사(26-1, PRD 20.67 [13] "isValidProfile에 option 형태 검사 추가") -
+-- nil(미배정)이거나, {id=OptionData에 있는 문자열, ...} 테이블이어야 한다. item(장비)·gem(보석)
+-- 둘 다 이 형태를 공유한다(20.67 [1] "장비 옵션 1개 ≙ 보석 1개").
+local function isValidOption(option)
+	return option == nil or (type(option) == "table" and type(option.id) == "string" and OptionData.options[option.id] ~= nil)
 end
 
 -- 저장 데이터가 게임에 바로 쓸 수 있는 최소 형태인지 검증(웹 isValidSaveData와 같은 목적).
@@ -609,6 +664,12 @@ local function isValidProfile(data)
 		return false
 	end
 
+	for _, item in ipairs(data.inventory) do
+		if not isValidOption(item.option) then
+			return false
+		end
+	end
+
 	for _, classId in ipairs(ClassData.order) do
 		local classState = data.classes[classId]
 		if type(classState) ~= "table"
@@ -625,6 +686,24 @@ local function isValidProfile(data)
 			or type(classState.bossRotation) ~= "table"
 		then
 			return false
+		end
+
+		for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+			local item = classState.equipment[part]
+			if item and not isValidOption(item.option) then
+				return false
+			end
+		end
+		for slot = 1, 5 do
+			local gem = classState.weapon.gems[slot]
+			if type(gem) == "table" and not isValidOption(gem.option) then
+				return false
+			end
+		end
+		for _, gem in ipairs(classState.gemInventory) do
+			if not isValidOption(gem.option) then
+				return false
+			end
 		end
 	end
 

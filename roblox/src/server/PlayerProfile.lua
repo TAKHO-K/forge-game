@@ -399,7 +399,8 @@ function PlayerProfile.rebirth(player)
 	-- 슬롯 k(=이번 회차)가 지금 열리고, 그 자리에 확정 보석 1개가 자동 지급된다(20.38 [2]
 	-- "슬롯이 열릴 때 그 등급의 보석 1개가 확정 지급된다", 23-4부터 등급은 그 슬롯의 상한).
 	local slot = classState.rebirthCount
-	classState.weapon.gems[slot] = Gem.buildGrantedGem(slot)
+	-- 26-1: 환생 지급 보석의 itemLevel = 환생 순간 캐릭터 레벨(=25×회차, PRD 20.67 [3]).
+	classState.weapon.gems[slot] = Gem.buildGrantedGem(slot, profile.classId, 25 * classState.rebirthCount)
 
 	-- 23-4: 해금 상태를 저장 필드에 기록한다(GemData.slotUnlockRequiredRebirth 주석 참고) -
 	-- 매번 rebirthCount에서 다시 계산하지 않는다. 지금 조건은 여전히 1:1(slot i = 환생
@@ -438,8 +439,10 @@ end
 --
 -- 23-3: optionId를 더 이상 여기서 굴리지 않는다(예전엔 Gem.rollOption(item.grade)를
 -- 불렀다) - 고대·태초 방어구를 반복 분해하면 옵션 변환권 없이 옵션을 공짜로 재굴림하는
--- 구멍이었다(GemData.lua "[옵션 배정]" 주석). 분해로 나오는 보석은 항상 옵션 미배정
--- (nil)이고, 장착 후 옵션 변환권을 써야 옵션이 생긴다.
+-- 구멍이었다(GemData.lua "[옵션 배정]" 주석).
+-- 26-1(PRD 20.67 [1][13]): "분해 시 옵션 처리는 그대로 이전(재굴림 없음)"으로 바뀐다 - 위
+-- 23-3 결정(공짜 재굴림 방지)은 그대로 유지되면서(여기서 새로 옵션을 굴리지 않는다), 그
+-- 아이템이 생성 시점에 이미 가진 option·itemLevel을 그대로 보석으로 옮긴다.
 local DISMANTLE_MIN_GRADE_INDEX = 3 -- ArmorData.gradeOrder: 1=일반, 2=희귀, 3=영웅부터.
 
 function PlayerProfile.dismantleItem(player, index)
@@ -461,7 +464,7 @@ function PlayerProfile.dismantleItem(player, index)
 	end
 
 	table.remove(profile.inventory, index)
-	table.insert(classState.gemInventory, { grade = item.grade, optionId = nil })
+	table.insert(classState.gemInventory, { grade = item.grade, itemLevel = item.itemLevel, option = item.option })
 	InventorySync.push(player, profile)
 	GemSync.push(player)
 	return true, item.grade
@@ -503,10 +506,19 @@ function PlayerProfile.equipGem(player, slot, gemInventoryIndex)
 
 	table.remove(classState.gemInventory, gemInventoryIndex)
 	if Gem.isFilled(classState.weapon.gems, slot) then
+		-- 26-1: itemLevel·option(PRD 20.67 [13])도 같이 옮긴다 - 안 옮기면 슬롯 교체마다
+		-- 그 보석이 생성 시점에 굴린 옵션이 조용히 사라진다(optionId만 옮기던 23-2 그대로
+		-- 두면 새 필드가 여기서 빠진다).
 		local previous = classState.weapon.gems[slot]
-		table.insert(classState.gemInventory, { grade = previous.grade, optionId = previous.optionId })
+		table.insert(classState.gemInventory, {
+			grade = previous.grade, optionId = previous.optionId,
+			itemLevel = previous.itemLevel, option = previous.option,
+		})
 	end
-	classState.weapon.gems[slot] = { optionId = pending.optionId, grade = pending.grade }
+	classState.weapon.gems[slot] = {
+		optionId = pending.optionId, grade = pending.grade,
+		itemLevel = pending.itemLevel, option = pending.option,
+	}
 	GemSync.push(player)
 	-- 23-3: 교체된 보석의 축이 방어력·최대체력이면 그 자리에서 바로 반영해야 한다(장갑·
 	-- 갑옷 교체와 같은 지점, refreshMaxHp/refreshMovementSpeed 주석 참고) - 공격력·공속은

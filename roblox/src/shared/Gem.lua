@@ -6,6 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+-- 26-1: 환생 지급 보석이 옵션을 즉시 굴린다(PRD 20.67 [1] "지급 순간 옵션을 1회 굴린다").
+local Option = require(ReplicatedStorage.Shared.Option)
 
 -- 보석 옵션 롤도 치명타 판정(PlayerCombat.critRng)과 같은 이유로 전역 시드와 분리한다.
 local gemRng = Random.new()
@@ -78,13 +80,15 @@ end
 
 -- 슬롯이 열릴 때 자동 지급되는 확정 보석 하나(20.38 [2] "슬롯이 열릴 때 그 등급의 보석
 -- 1개가 확정 지급된다") - 23-4부터 그 등급은 슬롯의 등급 상한(Gem.gradeCapForSlot)이다.
--- 항상 테이블을 돌려준다(빈 슬롯은 false로 구분 - PlayerProfile.rebirth 참고) - 23-3부터
--- optionId는 항상 nil로 시작한다(옵션은 오직 옵션 변환권으로만 배정된다, 위 rollOption
--- 주석 참고). 옵션이 없어도 영웅~유물 등급은 여전히 공격력%를 주고(Gem.
--- attackPercentBonusForGrade, 축 선택이 없는 무조건 보너스), 고대·태초는 변환권을 쓰기
--- 전까지 그 슬롯의 축 보너스가 0이다.
-function Gem.buildGrantedGem(slot)
-	return { optionId = nil, grade = Gem.gradeCapForSlot(slot) }
+-- 항상 테이블을 돌려준다(빈 슬롯은 false로 구분 - PlayerProfile.rebirth 참고).
+--
+-- 26-1(PRD 20.67 [1][13]): 23-3의 "optionId=nil 지급"을 폐지한다 - 지급 순간 Option.rollFor로
+-- 옵션을 1회 굴린다(classId·itemLevel은 호출부(PlayerProfile.rebirth)가 넘긴다 - 환생 순간
+-- 캐릭터 레벨=25×회차). gem.optionId 필드는 이제 없다(gem.option으로 대체, SaveSystem.migrate
+-- v23 참고) - 이 함수가 호출되는 시점 자체가 이번 세션부터이므로 옛 필드를 쓸 이유가 없다.
+function Gem.buildGrantedGem(slot, classId, itemLevel)
+	local grade = Gem.gradeCapForSlot(slot)
+	return { grade = grade, itemLevel = itemLevel, option = Option.rollFor(grade, classId) }
 end
 
 function Gem.isFilled(gems, slot)
