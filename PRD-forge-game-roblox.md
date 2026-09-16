@@ -8940,3 +8940,107 @@ boss=보스전 중, full=인원 99), `xtest`(크로스서버 규칙 16항목 자
 `server/PartyServer.server.lua`(재작성) · `server/BossEncounter.lua`(리스너) · `server/SaveCoordinator.lua`
 (동결·뮤텍스) · `server/DevTools.server.lua`(명령 4종 + TextChatCommand) · `client/InventoryUI.client.lua`
 (파티 탭) · `client/PartyHud.client.lua`(토스트 문구).
+
+### 20.64 힐러 파티 버프 — 힐을 받으면 최종 피해 +1/(N−1) (24-3) `[✅ 구현 + Studio 단일 클라 실측 검증 — 실제 코드 경로(calcDamage 직후)에서 최종피해 16.26→21.68(×1.3333) 실측, b·지속시간·파티 전용 가드·중첩 안 됨·HUD 표시(자기 아이콘 + 파티 목록 마커) 전부 실측 또는 스크린샷 확인. 4인(힐러 포함) vs 4인(딜러만) 처치시간 실측 비교는 실제 2인 이상 동시 접속이 필요해 Studio MCP로 실행 불가(20.62 [9] 1번과 동일 제약) — 대신 개별 히트 배율이 설계값과 정확히 일치함을 실측해 3×(1+1/3)=4 항등식으로 대체]`
+
+20.62 [4]가 남긴 구멍을 메운다 - 힐러의 치유는 자기 회복뿐이라 파티에 주는 것이 DPS밖에
+없었고, 4인 기준 힐러를 넣으면 오히려 최대 8% 느렸다. 이 절은 힐을 받은 파티원에게 일정
+시간 최종 피해 증가 버프를 걸어 힐러를 데려갈 이유를 만든다.
+
+#### [1] 버프 수치 b - 새로 도출하지 않는다
+
+지시가 계산 근거를 그대로 줬다: 4인 파티에서 힐러 1명을 빼면 딜러는 3명이다.
+`3 × (1 + b) = 4`가 되도록 `b = 1/3`을 잡으면, 힐러가 낀 4인 파티의 총 DPS가 딜러 4인
+파티와 정확히 같아진다. 이게 중요한 이유는 보스 HP 배수 `p`(20.62 [2], `p ≈ 0.4803`)가
+"정원 4인의 DPS = 4배"를 전제로 도출됐기 때문이다 - b를 이 식으로 고정해야 그 전제가
+깨지지 않고 p를 다시 뽑지 않아도 된다.
+
+새 밸런스 상수로 박지 않고 `PartyConfig.healerBuffFraction = 1 / (maxMembers - 1)`로
+유도한다(`shared/data/PartyConfig.lua`) - 정원이 바뀌면 자동으로 따라간다. `/gg heal buff`
+실측: `b=0.3333(1/(maxMembers-1)=1/3) → 최종피해 ×1.333`.
+
+#### [2] 지속시간 - 힐 쿨타임에서 파생
+
+새 지속시간 상수를 만들지 않는다. `SkillData.healer.Q.partyBuffDurationMultiplier = 1.2`를
+힐 스킬의 기존 `cooldownSeconds`(25초)에 곱해 30초로 정한다 - 힐러가 쿨타임마다 제때
+힐을 돌리면 버프가 안 끊기지만, 한 번 놓치면 끊긴다(힐러에게 할 일을 주는 값이라는 게
+지시의 의도). 실측: 힐 캐스트 직후 `/gg heal buff`가 "남은시간 26.2초"(캐스트 후 약
+3.8초 경과) → 설계값(30초)과 일치.
+
+#### [3] 적용 지점 - calcDamage 직후, 이 아래엔 배율이 없다
+
+"최종 피해"는 이 게임의 실제 계산 구조에서 "치명타까지 반영된 damage 값, applyDamage로
+넘어가기 직전"이다(몬스터 쪽엔 방어력 감소식 자체가 없다 - 플레이어→몬스터 피해는
+공격력×배율들→치명타뿐이라 그 뒤가 곧 최종값이다). 15-1에서 배율을 감소식 앞에 곱해
+앵커가 어긋난 실수를 반복하지 않기 위해, 데미지 계산 지점이 이 게임에 정확히 둘뿐이라는
+점을 먼저 확인하고(`strikeTarget`이 스킬 4종 전부가 공유, 평타는 `AttackServer` 한 곳)
+그 두 곳에만 곱했다:
+
+- `server/SkillServer.server.lua` `strikeTarget` - `local damage, isCrit = PlayerCombat.calcDamage(...)` 바로
+  다음 줄 `damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)` (관통돌진·백스텝샷 등
+  스킬 4종이 전부 이 함수를 공유해서 한 곳만 고치면 된다).
+- `server/AttackServer.server.lua` - 같은 위치, `local damage, isCrit = PlayerCombat.calcDamage(...)` 다음 줄에
+  같은 한 줄(평타는 근접·원거리가 이 지점 하나를 공유한다).
+
+버프가 없으면 `BuffState.getField`가 기본값 1을 돌려줘 기존 3직업 계산과 완전히 같다.
+실측: 슬라임 평타 버프 전 16.26 데미지(논크리) → 힐러 버프 활성 후 같은 대상 21.68
+데미지(논크리) - 21.68/16.26 = 1.3333, 설계값과 정확히 일치.
+
+#### [4] 파티 전용 - BuffState + PartyState 조합, 새 모듈 없음
+
+`SkillServer.server.lua`의 `castHeal`이 자기 회복을 마친 뒤 `PartyState.getParty(player)`를
+확인한다 - nil(솔로)이면 그대로 끝난다(지시 6 - 자기힐로 자기버프를 받아 딜을 올리는
+경로 차단). 파티가 있으면 `PartyState.getMemberPlayers(party)`(더미를 걸러낸 실제
+Player만) 전원에게 서버가 직접 `BuffState.apply(member, "healerBuff", {...})`를 건다 -
+클라이언트는 이 버프를 주장할 방법이 없다. 같은 buffId를 다시 걸 때 `BuffState.apply`의
+기본 동작(mode 미지정 = refresh)이 그대로 덮어써 중첩되지 않고 지속시간만 갱신된다(새
+로직을 짜지 않았다).
+
+실측: 힐러 클래스로 전환 후 파티 없이 Q 캐스트 → `/gg heal buff` "현재 비활성"(솔로
+가드 확인). `/gg party dummy`로 파티 결성 후 Q 재캐스트 → "남은시간 26.2초"(파티에서만
+발동 확인).
+
+#### [5] 표시 - 새 UI를 만들지 않는다
+
+자기 화면: `BuffHud.client.lua`는 이미 모든 buffId를 범용으로 그린다(`BuffUpdate` 이벤트를
+받아 아이콘+카운트다운) - `healerBuff`도 다른 버프와 똑같이 자동으로 뜬다(코드 추가 없음).
+스크린샷에서 체력바 위 청록 아이콘이 남은 시간을 보여준다.
+
+파티 목록: `PartyHud.client.lua`가 다른 플레이어의 버프 여부는 서버 전용인 BuffState를
+직접 못 읽으므로, `dealingMode`·`quickShot`과 같은 방식(`BuffState.notify`가 Player
+Attribute를 올려준다)으로 `HealerBuffActive` Attribute를 추가했다. 파티 목록 행이 이
+Attribute를 읽어 이름 뒤에 "✚"를 붙이고 테두리 색을 `UIColors.success`로 바꾼다(새
+파티클·새 창 없음, 기존 rim/success 재사용). 스크린샷: 버프가 걸린 "★ HoddyForge ✚"
+행만 청록 테두리, 더미1·더미2 행은 기존 회색 테두리 그대로 - 구분됨을 확인. 기존 파티
+HUD 위치(화면 왼쪽 세로 중앙)를 그대로 써서 채팅창과 안 겹친다(20.62 [7]에서 이미 확인된
+자리 - 새 요소를 안 늘렸으니 재확인만).
+
+#### [6] 확인 9항목
+
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | b가 1/(maxMembers-1)로 계산되는가(하드코딩 아님) | **O** - `PartyConfig.healerBuffFraction = 1/(maxMembers-1)`, `/gg heal buff` 실측 출력 "b=0.3333(1/(maxMembers-1)=1/3)" |
+| 2 | 힐을 받으면 실제로 피해가 33.3% 늘어나는가(전/후 실측) | **O** - 버프 전 16.26 → 버프 후 21.68(둘 다 논크리 평타), 비율 1.3333 |
+| 3 | 배율이 방어력 감소 뒤(최종 피해)에 곱해지는가 | **O** - `calcDamage` 반환 직후 한 줄(`strikeTarget`/`AttackServer` 각 1곳, 위 [3] 코드 인용) - 몬스터 쪽에 방어력 감소식이 없어 이 지점이 곧 최종값 |
+| 4 | 중첩되지 않고 지속시간만 갱신되는가 | **O(코드)** - `BuffState.apply` 기본 mode="refresh"(새 로직 없음). 실측으로는 재캐스트 시 남은시간이 매번 설계값(30초) 근방으로 리셋되는 것으로 간접 확인 |
+| 5 | 지속시간이 힐 쿨타임 × 1.2인가 | **O** - 25 × 1.2 = 30초, 캐스트 후 약 3.8초 시점 실측 "남은시간 26.2초" |
+| 6 | 솔로에서는 발동하지 않는가 | **O** - 파티 탈퇴 상태에서 Q 캐스트 후 `/gg heal buff` "현재 비활성" |
+| 7 | 힐러 포함 4인의 보스 처치 시간이 딜러 4인과 비슷한가 | **실행 불가: 실제 2인 이상 동시 접속이 필요해 Studio MCP로 다중 클라이언트를 못 켠다(20.62 [9] 1번과 동일 제약).** 대신 [3]에서 실측한 개별 히트 배율이 설계값 1.3333과 정확히 일치하므로, `3 × (1+1/3) = 4`(딜러 3명 × 버프딜 = 딜러 4명분) 항등식이 그대로 성립 - 버프 가동률 100%(힐러가 25초 쿨마다 힐을 돌리면 30초 지속 버프가 끊기지 않는다, [2])를 전제로 한 수학적 동치이며, 실제 다중 클라 실측은 실기(퍼블리시 후)에서 필요 |
+| 8 | 버프 표시가 채팅창을 가리지 않는가 | **O** - 기존 PartyHud 자리(화면 왼쪽 세로 중앙)에 새 요소 없이 텍스트·색만 바꿨다 - 20.62 [7]에서 이미 확인된 비겹침 구조를 그대로 재사용. 스크린샷으로 재확인 |
+| 9 | 서버 에러·경고 0건 | **O** - Play 세션 전체 콘솔 로그에 우리 코드발 에러·경고 없음 |
+
+#### [7] 임의 결정 목록
+
+| # | 결정 | 근거 |
+|---|---|---|
+| 1 | 버프 표시명 "치유 버프", 파티 목록 마커 "✚", 링 색 `UIColors.success` | PRD·기존 코드에 지정이 없어 최소 결정 - success는 guaranteedCrit·backstepShotBuff 등 기존 "피해 상승" 버프가 쓰던 색을 그대로 재사용(새 색 없음) |
+| 2 | `/gg heal buff` 명령 위치·출력 형식 | 지시 7 그대로("현재 적용 중인 b 값과 남은 시간 출력") - `/gg party info` 등 기존 명령과 같은 `reply` 톤으로 통일 |
+| 3 | 버프 적용 대상 순회는 `PartyState.getMemberPlayers`(더미 제외) | 더미는 Player 인스턴스가 아니라 BuffState.apply(FireClient 포함)를 못 받는다 - 기존 `fireClient`의 `typeof=="Instance"` 가드와 같은 이유. 실제 플레이 영향 없음(더미는 Studio 검증 전용) |
+
+#### 파일
+
+**수정** `shared/data/PartyConfig.lua`(healerBuffFraction) · `shared/data/SkillData.lua`
+(partyBuffDurationMultiplier) · `server/BuffState.lua`(HealerBuffActive Attribute) ·
+`server/SkillServer.server.lua`(strikeTarget 배율 + castHeal 파티 브로드캐스트) ·
+`server/AttackServer.server.lua`(평타 배율) · `server/DevTools.server.lua`(`/gg heal buff`) ·
+`client/PartyHud.client.lua`(버프 마커).

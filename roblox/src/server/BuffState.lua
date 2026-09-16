@@ -48,6 +48,13 @@ local function notify(player, buffId, buff)
 		player:SetAttribute("DealingModeActive", buff ~= nil)
 	end
 
+	-- 힐러 버프(24-3, PRD 20.64) - 파티 HUD(PartyHud.client.lua)가 "누가 버프를 받고
+	-- 있는지" 다른 플레이어 기준으로 표시해야 한다(지시 5). 그 스크립트는 서버 전용인
+	-- BuffState를 직접 못 읽으니 dealingMode와 같은 이유로 Attribute를 올려준다.
+	if buffId == "healerBuff" then
+		player:SetAttribute("HealerBuffActive", buff ~= nil)
+	end
+
 	if buff then
 		buffUpdate:FireClient(player, buffId, {
 			active = true,

@@ -58,6 +58,7 @@ local Gem = require(ReplicatedStorage.Shared.Gem)
 -- 24-1 파티 검증 명령(/gg party dummy|info|table|killsim)용.
 local PartyState = require(script.Parent.PartyState)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local BuffState = require(script.Parent.BuffState)
 -- 24-2 크로스서버 파티 검증 명령(/gg party server|join|fakeremote|xtest)용.
 local PartyCrossServer = require(script.Parent.PartyCrossServer)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
@@ -598,6 +599,7 @@ local HELP_TEXT = table.concat({
 	"/gg party server - 현재 서버 jobId·인원·플랫폼 정원·크로스서버 상한·파티/코드/원격 좌석/합류 대기 상태 출력(24-2)",
 	"/gg party join <code> - 텔레포트 없이 코드 합류 파이프라인(레코드·좌석·대기·도착 처리)만 밟아 파티 상태를 붙인다(24-2, Studio는 TeleportService 불가)",
 	"/gg party fakeremote [boss|full|clear] - 다른 서버에 있는 것처럼 꾸민 가짜 파티 레코드를 MemoryStore에 쓴다(코드 출력) - boss=보스전 중, full=서버 정원 초과(24-2)",
+	"/gg heal buff - 힐러 버프(파티 최종피해 +1/(maxMembers-1))의 현재 b값과 내게 걸린 버프의 남은 시간을 출력(24-3)",
 	"/gg party xtest - 크로스서버 규칙 자체검증 16항목: 코드 발급·로컬 코드 합류·동시 좌석 예약·만원·텔레포트 실패 회수·두 파티 동시 합류 차단·보스전 대기·정원 대기·취소·해산 도착·보스전 중 도착 보류·승계·해산(24-2)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
@@ -1451,6 +1453,18 @@ local function handleCommand(player, args)
 			end
 			reply(player, "killsim 중단: 보스가 사라졌습니다")
 		end)
+	elseif sub == "heal" and args[2] == "buff" then
+		-- 24-3(PRD 20.64) 검증용 - b값과 내게 걸려 있는 버프의 남은 시간을 출력한다.
+		local b = PartyConfig.healerBuffFraction
+		local multiplier = 1 + b
+		local buff = BuffState.get(player, "healerBuff")
+		if buff then
+			reply(player, ("힐러 버프: b=%.4f(1/(maxMembers-1)=1/%d) → 최종피해 ×%.3f, 남은시간 %.1f초"):format(
+				b, PartyConfig.maxMembers - 1, buff.multiplier, buff.expiresAt - os.clock()))
+		else
+			reply(player, ("힐러 버프: b=%.4f(1/(maxMembers-1)=1/%d) → 최종피해 ×%.3f, 현재 비활성"):format(
+				b, PartyConfig.maxMembers - 1, multiplier))
+		end
 	elseif sub == "reset" then
 		restore(player)
 	else

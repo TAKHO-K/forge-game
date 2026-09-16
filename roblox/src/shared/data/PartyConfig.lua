@@ -2,6 +2,14 @@
 -- 보스 HP 배수의 지수 p는 여기 박지 않고 BossRules.partyHpExponent가 이 maxMembers·BossData.stageInterval·
 -- InfiniteStageConfig.growthRate에서 매번 유도한다(새 밸런스 상수를 만들지 않는다는 지시).
 local maxMembers = 4
+-- 힐러 버프(24-3, PRD 20.64) b = 1/(maxMembers-1) - 4인 파티에서 힐러 1명을 빼면 딜러는
+-- maxMembers-1명이다. 그 딜러 전원의 최종 피해를 (1+b)배 하면 (maxMembers-1)×(1+b) =
+-- maxMembers가 되어, 힐러가 낀 정원 파티의 총 DPS가 딜러 정원 파티와 정확히 같아진다.
+-- 보스 HP 배수 p(BossRules.partyHpExponent)가 "정원 파티 DPS = maxMembers배"를 전제로
+-- 도출됐으므로, b를 이 식으로 고정해야 그 전제가 깨지지 않는다(지시 - "다른 값을 쓰면
+-- p를 재도출해야 한다, b를 임의로 조정하지 마라"). 숫자 0.333을 하드코딩하지 않고
+-- maxMembers가 바뀌면 자동으로 따라간다.
+local healerBuffFraction = 1 / (maxMembers - 1)
 -- 서버 정원 12 = 4인 × 3파티(PRD 20.38 [6]·20.47 [5](가)). 24-2부터 "12"를 코드에 직접 적지 않고
 -- 이 두 값의 곱으로 유도한다 - 매치메이킹이 채우는 기준 인원(Players.PreferredPlayers에 해당).
 local partiesPerServer = 3
@@ -15,6 +23,9 @@ local heartbeatSeconds = 30
 return {
 	-- 5인 이상은 보스 패턴 구속 시간(돌진 ⌈N/2⌉회)이 패턴 최소 간격 규칙을 깨는 상한이다.
 	maxMembers = maxMembers,
+
+	-- 24-3: 힐러의 힐을 받은 파티원의 최종 피해 배율 계수. 위 healerBuffFraction 주석 참고.
+	healerBuffFraction = healerBuffFraction,
 
 	-- 초대 팝업 유지 시간(PRD 20.47 [5](라) "받는 쪽 팝업 15초"). 지나면 자동 거절.
 	inviteTimeoutSeconds = 15,

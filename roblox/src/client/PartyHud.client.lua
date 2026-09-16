@@ -113,7 +113,7 @@ local function makeRow(order)
 	fillCorner.CornerRadius = UDim.new(1, 0)
 	fillCorner.Parent = fill
 
-	return { frame = frame, name = name, meta = meta, fill = fill }
+	return { frame = frame, name = name, meta = meta, fill = fill, stroke = stroke }
 end
 
 local currentState = nil
@@ -130,7 +130,7 @@ local function refreshRows()
 			row.frame.Visible = false
 		else
 			row.frame.Visible = true
-			local hp, maxHp, level, stage, classId
+			local hp, maxHp, level, stage, classId, buffActive
 			if member.isDummy then
 				hp, maxHp = member.dummy.hp or 1, member.dummy.maxHp or 1
 				level, stage, classId = member.dummy.level, member.dummy.stage, member.dummy.classId
@@ -139,13 +139,20 @@ local function refreshRows()
 				if target then
 					hp, maxHp = target:GetAttribute("Hp"), target:GetAttribute("MaxHp")
 					level, stage, classId = target:GetAttribute("CharacterLevel"), target:GetAttribute("InfiniteStage"), target:GetAttribute("ClassId")
+					-- 24-3(PRD 20.64) 힐러 버프 - "파티원 목록에서 누가 버프를 받고 있는지
+					-- 구분되게" 하라는 지시. BuffState.lua가 올려주는 Attribute를 그대로
+					-- 읽는다(dealingMode를 PlayerHealthBar.client.lua가 읽는 것과 같은 패턴).
+					buffActive = target:GetAttribute("HealerBuffActive")
 				end
 			end
-			row.name.Text = (member.isLeader and "★ " or "") .. member.name .. (member.isDummy and " (더미)" or "")
+			row.name.Text = (member.isLeader and "★ " or "") .. member.name .. (member.isDummy and " (더미)" or "") .. (buffActive and " ✚" or "")
 			row.name.TextColor3 = member.isLeader and UIColors.gold or UIColors.textPrimary
 			row.meta.Text = ("%s · Lv %s · 스테이지 %s"):format(classNameOf(classId), tostring(level or "-"), tostring(stage or "-"))
 			local ratio = (hp and maxHp and maxHp > 0) and math.clamp(hp / maxHp, 0, 1) or 0
 			row.fill.Size = UDim2.new(ratio, 0, 1, 0)
+			-- 24-3: 링 색으로 버프 여부를 구분한다(새 파티클·새 색 없이 기존 rim/success 재사용).
+			row.stroke.Color = buffActive and UIColors.success or UIColors.rim
+			row.stroke.Transparency = buffActive and 0.2 or UIColors.rimTransparency
 		end
 	end
 end

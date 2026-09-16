@@ -31,6 +31,8 @@ local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
 local SummonState = require(script.Parent.SummonState)
 local DashEndpoint = require(script.Parent.DashEndpoint)
+local PartyState = require(script.Parent.PartyState)
+local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 
 local skillRequest = Instance.new("RemoteEvent")
 skillRequest.Name = "SkillRequest"
@@ -69,6 +71,11 @@ end
 local function strikeTarget(player, classId, atk, target, coefficient, attackerStage, forceCrit, critDmgBonus)
 	local base = atk * coefficient
 	local damage, isCrit = PlayerCombat.calcDamage(base, classId, nil, forceCrit, critDmgBonus)
+	-- 힐러 버프(24-3, PRD 20.64) - 방어력 감소·치명타 등 모든 계산이 끝난 "최종 피해"에
+	-- 곱한다. calcDamage가 크리까지 이미 반영한 damage가 이 시점의 값이고, 이 아래에는
+	-- 더 이상 배율을 곱하는 계산이 없다(15-1의 "감소식 앞에 곱해 앵커가 어긋난" 실수를
+	-- 반복하지 않는다). 버프가 없으면 getField가 기본값 1을 돌려줘 기존과 동일하다.
+	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
 	local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
 	MonsterSpawner.updateHpLabel(target)
 	CombatResolution.resolveHit(player, target, isDead)
@@ -392,6 +399,25 @@ local function castHeal(player, slot, def, classId)
 	local newHp = math.min(hp + healAmount, maxHp)
 	PlayerState.setHp(player, newHp)
 	player:SetAttribute("Hp", newHp) -- PlayerState가 유일한 HP 소스 - 바꾸는 모든 지점에서 동기화(MonsterAI.server.lua의 syncHud와 같은 원칙)
+
+	-- 힐러 버프(24-3, PRD 20.64) - 파티에서만 발동한다(지시 6, 솔로 자기힐로 자기버프를
+	-- 받아 딜을 올리는 경로 차단 - PartyState.getParty가 nil이면 여기서 끝난다). 멤버
+	-- 전원(힐러 자신 포함, PRD 20.64 [1] "힐러 자신도 대상이다")에게 서버가 직접 건다 -
+	-- 클라이언트가 버프를 주장할 길이 없다. 같은 buffId를 다시 걸면 BuffState.apply의
+	-- 기본 동작(mode 미지정 = refresh)이 그대로 덮어써 지속시간만 갱신되고 중첩되지 않는다.
+	local party = PartyState.getParty(player)
+	if party then
+		local multiplier = 1 + PartyConfig.healerBuffFraction
+		local durationSeconds = def.cooldownSeconds * def.partyBuffDurationMultiplier
+		for _, member in ipairs(PartyState.getMemberPlayers(party)) do
+			BuffState.apply(member, "healerBuff", {
+				durationSeconds = durationSeconds,
+				multiplier = multiplier,
+				displayName = "치유 버프",
+				colorName = "success",
+			})
+		end
+	end
 
 	skillCastResult:FireClient(player, slot, {
 		ok = true,

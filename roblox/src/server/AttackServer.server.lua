@@ -199,6 +199,9 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	local forceCrit, critDmgBonus = PlayerCombat.resolveGuaranteedCrit(classId, isGuaranteedCritActive, critRateBonus)
 
 	local damage, isCrit = PlayerCombat.calcDamage(base, classId, critRateBonus, forceCrit, critDmgBonus)
+	-- 힐러 버프(24-3, PRD 20.64) - SkillServer.strikeTarget과 같은 지점(calcDamage 직후,
+	-- "최종 피해") - 이 아래로는 배율 계산이 없다. 버프 없으면 getField 기본값 1로 무동작.
+	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
 	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage를 쓴다(TutorialState.getMonsterStage).
 	local attackerStage = TutorialState.getMonsterStage(player)
 
