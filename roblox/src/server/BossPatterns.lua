@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local PlayerState = require(script.Parent.PlayerState)
 local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
 local Reach = require(ReplicatedStorage.Shared.Reach)
 local MonsterState = require(script.Parent.MonsterState)
@@ -34,7 +35,7 @@ local BossPatterns = {}
 --     경사 한계를 넘는 단차를 만나면 그 자리에서 돌진이 끝난다(헤롱 시작).
 --   · 낙석 낙하점 Y는 그 XZ의 지면 Y(못 찾으면 보스 발밑 floorY).
 
--- 클라 연출 채널. 개인 아레나라 대상 플레이어 한 명에게만 보낸다(FireClient).
+-- 클라 연출 채널. 아레나 안 멤버 전원(st.members - 24-1 파티, 솔로면 그 한 명)에게 보낸다.
 local patternEvent = Instance.new("RemoteEvent")
 patternEvent.Name = "BossPatternEvent"
 patternEvent.Parent = ReplicatedStorage
@@ -169,9 +170,27 @@ local function setBodyColor(model, color)
 end
 
 local function send(st, kind, payload)
-	if st.target and st.target.Parent then
-		patternEvent:FireClient(st.target, kind, payload)
+	for _, member in ipairs(st.members or {}) do
+		if member.Parent then
+			patternEvent:FireClient(member, kind, payload)
+		end
 	end
+end
+
+-- 24-1 파티: 패턴 피해 판정 대상 = 아레나 안 멤버 전원(각자 따로 맞는다 - PRD 20.47 [6](나)
+-- 진동파·강공격·낙석·십자는 원래 범위 공격이라 전원 대상, 돌진은 경로 위 전원). 캐릭터가
+-- 없거나(리스폰 대기) 이미 죽은 멤버는 뺀다. 솔로면 st.members = { target } 하나뿐이라 21-3과
+-- 완전히 같은 판정이다.
+local function victims(st)
+	local list = {}
+	for _, member in ipairs(st.members or {}) do
+		local character = member.Parent and member.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if root and (PlayerState.getHp(member) or 0) > 0 then
+			table.insert(list, { player = member, root = root })
+		end
+	end
+	return list
 end
 
 -- 헤롱 자세 해제 - 똑바로 세운다(돌진 종료·중단·리셋 공통).
@@ -249,7 +268,7 @@ local function startCharge(model, st, data, now, position, targetRoot, dashIndex
 	st.chargeFrom = Vector3.new(origin.X, y, origin.Z)
 	st.chargeTo = st.chargeFrom + dir * length
 	st.chargeDir = dir
-	st.chargeHit = false
+	st.chargeHitBy = {} -- 24-1: 돌진 한 번에 멤버마다 한 번씩만(경로 위 전원 대상)
 	st.phase = "focus"
 	st.phaseEndsAt = now + cfg.focusSeconds
 	send(st, "focus", {
@@ -374,28 +393,40 @@ end
 -- 매 틱 모든 살아있는 파동에 대해: 파동 띠[반경-두께, 반경]가 대상 플레이어를 지나는 동안
 -- 한 순간이라도 공중이면 회피, 띠가 완전히 지나갔는데 한 번도 공중이 아니었으면 피격.
 -- "지나는 동안 한 순간이라도"라 점프 입력 창 = 체공 + 통과 시간(BossData 주석 참고).
-local function updateWaves(model, st, data, now, target, targetRoot)
+-- 24-1: 멤버마다 touched/dodged/resolved를 따로 기록한다(wave.byPlayer[player]) - 한 파동이 네
+-- 사람을 서로 다른 시각에 지나가므로 판정도 사람마다 독립이다. 파동은 최대 반경까지 살아 있다
+-- (예전엔 "대상 하나가 resolved되면 제거"였지만 이제 뒤에 선 멤버가 아직 남아 있을 수 있다).
+local function updateWaves(model, st, data, now)
 	local cfg = data.patterns.shockwave
 	local maxRadius = zoneOf(model).halfSize * WAVE_MAX_RADIUS_FACTOR
 	local alive = {}
+	local targets = victims(st)
 	for _, wave in ipairs(st.waves) do
 		local radius = (now - wave.startedAt) * cfg.waveSpeedStuds
-		local d = (xz(targetRoot.Position) - wave.center).Magnitude
-		-- 22-4: 파동은 지면을 타고 퍼진다 - 파동 중심 지면(floorY)에서 높이차 상한 너머(절벽 위)는 안 닿는다.
-		local inBand = d <= radius and d >= radius - cfg.waveThicknessStuds
-			and Reach.sameLayer(targetRoot.Position, Vector3.new(0, st.floorY, 0))
-		if inBand then
-			wave.touched = true
-			if isAirborne(target.Character, cfg.airborneClearanceStuds) then
-				wave.dodged = true
+		wave.byPlayer = wave.byPlayer or {}
+		for _, v in ipairs(targets) do
+			local rec = wave.byPlayer[v.player]
+			if not rec then
+				rec = {}
+				wave.byPlayer[v.player] = rec
 			end
-		elseif wave.touched and not wave.resolved and d < radius - cfg.waveThicknessStuds then
-			wave.resolved = true
-			if not wave.dodged then
-				PlayerDamage.applyHit(target, data.attack, "진동파", cfg.damageMultiplier)
+			local d = (xz(v.root.Position) - wave.center).Magnitude
+			-- 22-4: 파동은 지면을 타고 퍼진다 - 파동 중심 지면(floorY)에서 높이차 상한 너머(절벽 위)는 안 닿는다.
+			local inBand = d <= radius and d >= radius - cfg.waveThicknessStuds
+				and Reach.sameLayer(v.root.Position, Vector3.new(0, st.floorY, 0))
+			if inBand then
+				rec.touched = true
+				if isAirborne(v.player.Character, cfg.airborneClearanceStuds) then
+					rec.dodged = true
+				end
+			elseif rec.touched and not rec.resolved and d < radius - cfg.waveThicknessStuds then
+				rec.resolved = true
+				if not rec.dodged then
+					PlayerDamage.applyHit(v.player, data.attack, "진동파", cfg.damageMultiplier)
+				end
 			end
 		end
-		if not wave.resolved and radius <= maxRadius then
+		if radius <= maxRadius then
 			table.insert(alive, wave)
 		end
 	end
@@ -430,12 +461,15 @@ end
 -- ─────────────────────────── 틱 ───────────────────────────
 
 -- 반환: true면 패턴 진행 중(보스 구속 - MonsterAI는 추격·평타를 건너뛴다).
-function BossPatterns.step(model, data, position, target, targetRoot, dt)
+-- members(24-1): 이 보스와 싸우는 멤버 목록(BossEncounter.getMembersOfModel) - 피해·연출 대상.
+-- 생략하면 target 하나(솔로 호출부 호환).
+function BossPatterns.step(model, data, position, target, targetRoot, dt, members)
 	local st = ensureState(model, data)
 	if not st then
 		return false
 	end
 	st.target = target
+	st.members = (members and #members > 0) and members or { target }
 	local now = os.clock()
 
 	if st.phase == "normal" then
@@ -464,8 +498,11 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 			return true
 		end
 		-- 예고가 끝나는 이 순간의 거리만 본다 - 그 사이 벗어났으면 완전히 무효(15-1 그대로).
-		if Reach.within(targetRoot.Position, position, data.attackRangeStuds) then -- 22-4: 수평 + 높이차 상한
-			PlayerDamage.applyHit(target, data.attack, "강공격", data.heavyAttackMultiplier)
+		-- 24-1: 사거리 안 멤버 전원(범위 공격 - PRD 20.47 [6](나) "범위 안 전원 피격").
+		for _, v in ipairs(victims(st)) do
+			if Reach.within(v.root.Position, position, data.attackRangeStuds) then -- 22-4: 수평 + 높이차 상한
+				PlayerDamage.applyHit(v.player, data.attack, "강공격", data.heavyAttackMultiplier)
+			end
 		end
 		setBodyColor(model, data.bodyColor)
 		endPattern(model, st, data, now)
@@ -473,7 +510,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 	end
 
 	if st.phase == "shockHop" then
-		updateWaves(model, st, data, now, target, targetRoot)
+		updateWaves(model, st, data, now)
 		local cfg = data.patterns.shockwave
 		if now < st.phaseEndsAt then
 			local progress = (now - st.hopStartedAt) / st.hopSeconds
@@ -490,7 +527,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 	end
 
 	if st.phase == "shockWait" then
-		updateWaves(model, st, data, now, target, targetRoot)
+		updateWaves(model, st, data, now)
 		if #st.waves == 0 then
 			endPattern(model, st, data, now)
 		end
@@ -526,10 +563,12 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 			newPos = Vector3.new(newPos.X, groundY + TerrainConfig.monsterFootOffsetStuds, newPos.Z)
 		end
 		model:PivotTo(CFrame.new(newPos))
-		if not st.chargeHit and distanceToSegment(xz(targetRoot.Position), prev, xz(newPos)) <= cfg.pathHalfWidthStuds
-			and Reach.sameLayer(targetRoot.Position, newPos) then
-			st.chargeHit = true
-			PlayerDamage.applyMaxHpFraction(target, cfg.damageMaxHpFraction, "돌진")
+		for _, v in ipairs(victims(st)) do
+			if not st.chargeHitBy[v.player] and distanceToSegment(xz(v.root.Position), prev, xz(newPos)) <= cfg.pathHalfWidthStuds
+				and Reach.sameLayer(v.root.Position, newPos) then
+				st.chargeHitBy[v.player] = true
+				PlayerDamage.applyMaxHpFraction(v.player, cfg.damageMaxHpFraction, "돌진")
+			end
 		end
 		if progress >= 1 then
 			-- 23-6 [2] 돌진 2연속 변형: cfg.dashCount(기본 1)에 아직 못 미쳤으면 헤롱 없이
@@ -564,11 +603,13 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 			return true
 		end
 		local cfg = data.patterns.meteor
-		local p = xz(targetRoot.Position)
-		for _, spot in ipairs(st.meteorPositions) do
-			if (p - xz(spot)).Magnitude <= cfg.radiusStuds and Reach.sameLayer(targetRoot.Position, spot) then -- 22-4
-				PlayerDamage.applyHit(target, data.attack, "낙석", cfg.damageMultiplier)
-				break
+		for _, v in ipairs(victims(st)) do
+			local p = xz(v.root.Position)
+			for _, spot in ipairs(st.meteorPositions) do
+				if (p - xz(spot)).Magnitude <= cfg.radiusStuds and Reach.sameLayer(v.root.Position, spot) then -- 22-4
+					PlayerDamage.applyHit(v.player, data.attack, "낙석", cfg.damageMultiplier)
+					break
+				end
 			end
 		end
 		send(st, "meteorImpact", { positions = st.meteorPositions, radius = cfg.radiusStuds })
@@ -581,13 +622,15 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 			return true
 		end
 		local cfg = data.patterns.cross
-		local rel = xz(targetRoot.Position) - st.crossOrigin
-		for _, beam in ipairs(st.crossBeams) do
-			local along = rel:Dot(beam.dir)
-			if along >= 0 and along <= beam.length and (rel - beam.dir * along).Magnitude <= cfg.halfWidthStuds
-				and Reach.sameLayer(targetRoot.Position, Vector3.new(0, st.floorY, 0)) then -- 22-4: 화염은 지면을 탄다
-				PlayerDamage.applyHit(target, data.attack, "십자 화염", cfg.damageMultiplier)
-				break
+		for _, v in ipairs(victims(st)) do
+			local rel = xz(v.root.Position) - st.crossOrigin
+			for _, beam in ipairs(st.crossBeams) do
+				local along = rel:Dot(beam.dir)
+				if along >= 0 and along <= beam.length and (rel - beam.dir * along).Magnitude <= cfg.halfWidthStuds
+					and Reach.sameLayer(v.root.Position, Vector3.new(0, st.floorY, 0)) then -- 22-4: 화염은 지면을 탄다
+					PlayerDamage.applyHit(v.player, data.attack, "십자 화염", cfg.damageMultiplier)
+					break
+				end
 			end
 		end
 		send(st, "crossFire", { angleDeg = st.crossAngle })

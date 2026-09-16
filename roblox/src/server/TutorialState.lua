@@ -22,6 +22,7 @@ local MonsterState = require(script.Parent.MonsterState)
 local BossEncounter = require(script.Parent.BossEncounter)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 local ImmediateSave = require(script.Parent.ImmediateSave)
+local PartyState = require(script.Parent.PartyState)
 
 local TutorialState = {}
 
@@ -140,6 +141,12 @@ function TutorialState.start(player, step)
 	local stepData = TutorialData.steps[step]
 	if not stepData then
 		return
+	end
+	-- 24-1: 견습은 싱글이다 - 견습에 들어가는 순간 파티에서 자동 탈퇴한다(PRD 20.47 [5](라)).
+	-- 반대 방향(견습 중인 사람의 초대·수락)은 PartyServer.server.lua가 막는다.
+	if PartyState.getParty(player) then
+		PartyState.notify(player, "견습 모드 시작 - 파티에서 나왔습니다")
+		PartyState.leave(player, "tutorial")
 	end
 
 	PlayerProfile.setTutorialStep(player, step)

@@ -22,6 +22,9 @@ local SummonState = require(script.Parent.SummonState)
 -- 옮겼다 - 보스 패턴(BossPatterns.lua)이 같은 경로로 피해를 넣어야 해서다. 동작은 그대로다.
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local BossPatterns = require(script.Parent.BossPatterns)
+-- 24-1 파티: 보스의 평타·패턴 조준 대상을 "살아 있는 멤버 중 가장 가까운 사람"으로 매 틱
+-- 재선택하고(PRD 20.47 [6](나)), 패턴 피해·연출 대상 목록(멤버 전원)을 BossPatterns에 넘긴다.
+local BossEncounter = require(script.Parent.BossEncounter)
 
 local syncHud = PlayerDamage.syncHud
 
@@ -229,7 +232,7 @@ end
 -- 평상시(false)엔 잡몹과 완전히 같은 추격·평타다. 어떤 패턴이 언제 시작되는지(간격·겹침
 -- 방지)는 전부 BossPatterns의 스케줄러가 정한다.
 local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetRoot, dt)
-	if BossPatterns.step(model, data, monsterPosition, targetPlayer, targetRoot, dt) then
+	if BossPatterns.step(model, data, monsterPosition, targetPlayer, targetRoot, dt, BossEncounter.getMembersOfModel(model)) then
 		return
 	end
 	-- 정지 거리(BossData.chaseStopDistanceStuds) 밖에서만 다가간다 - 몸통 충돌이 없는 보스가
@@ -287,6 +290,20 @@ RunService.Heartbeat:Connect(function(dt)
 
 			if state == "chasing" then
 				local target = MonsterState.getAiTarget(model)
+				-- 24-1 파티 보스: 대상이 죽었거나 더 가까운 멤버가 있으면 그쪽으로 바꾼다(어그로 수치는
+				-- 만들지 않는다 - 단순·예측 가능). 살아 있는 멤버가 하나도 없으면 아래 기존 출구
+				-- (targetIsDead → returning + interrupt)가 그대로 처리한다.
+				if data.isBoss then
+					local nearest = BossEncounter.nearestLivingMember(model, position)
+					if nearest and nearest ~= target then
+						if target then
+							target:SetAttribute("TickDamage", 0)
+						end
+						target = nearest
+						MonsterState.setAiTarget(model, nearest)
+						nearest:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, TutorialState.getMonsterStage(nearest)), nearest))
+					end
+				end
 				local targetCharacter = target and target.Character
 				local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
 				-- 22-4: 리쉬는 XZ 수평 거리 - 언덕을 오르내려도 38.4가 그대로다(3D면 경사에서 줄어든다).

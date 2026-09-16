@@ -54,7 +54,9 @@ function MonsterState.init(model, data, spawnPosition, zoneKey, variant)
 		hp = data.isBoss and data.hp or nil,
 		maxHp = data.isBoss and data.hp or nil,
 		hpRatio = data.isBoss and nil or 1.0,
-		contributions = data.isBoss and nil or {},
+		-- 24-1: 보스도 기여 비율을 기록한다(damage/maxHp) - 파티 보스 보상이 잡몹과 같은 "기여
+		-- 10% 이상 각자 독립 지급" 규칙(CombatConfig.contributionRewardThreshold)을 쓴다(지시 4).
+		contributions = {},
 		data = data,
 		spawnPosition = spawnPosition,
 		zoneKey = zoneKey, -- 16-6, tier 구역 몬스터만 있음(보스는 nil).
@@ -118,7 +120,17 @@ function MonsterState.resetBossHp(model)
 	local entry = monsters[model]
 	if entry and entry.data.isBoss then
 		entry.hp = entry.maxHp
+		entry.contributions = {} -- 처음부터 다시 - 리셋 전 기여는 무효(HP가 복구됐으므로).
 	end
+end
+
+-- 24-1 DevTools "/gg party info" 전용 - 보스 절대 HP(현재/최대). 잡몹은 nil.
+function MonsterState.getBossHp(model)
+	local entry = monsters[model]
+	if entry and entry.data.isBoss then
+		return entry.hp, entry.maxHp
+	end
+	return nil
 end
 
 function MonsterState.isSparkle(model)
@@ -156,8 +168,8 @@ function MonsterState.getHpRatio(model)
 end
 
 -- 데미지 적용(19-4 [1][2]). attackerStage는 잡몹 계산에만 쓰인다(보스는 무시) -
--- attackerPlayer는 기여 비율 기록용(보스는 기록 자체를 안 한다, [3] 지시 "보스는
--- 건드리지 마라" - 보스 보상은 지금처럼 처치한 플레이어 1인이 그대로 가져간다).
+-- attackerPlayer는 기여 비율 기록용. 24-1부터 보스도 기록한다(damage/maxHp) - 파티 보스
+-- 보상이 잡몹과 같은 기여 임계값 규칙을 쓰기 때문(CombatResolution.handleBossDeath).
 -- 반환값: 이번 타격으로 죽었는가(bool).
 function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer)
 	local entry = monsters[model]
@@ -167,6 +179,9 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer)
 
 	if entry.data.isBoss then
 		entry.hp -= damage
+		if attackerPlayer and entry.maxHp > 0 then
+			entry.contributions[attackerPlayer] = (entry.contributions[attackerPlayer] or 0) + damage / entry.maxHp
+		end
 		return entry.hp <= 0
 	end
 

@@ -1,8 +1,8 @@
--- 플레이어별 보스 인스턴스 스폰·퇴장 단일 관리 통로(15-1, 20-2b에서 아레나 격리로 개정).
+-- 보스 인스턴스 스폰·퇴장 단일 관리 통로(15-1, 20-2b에서 아레나 격리, 24-1에서 파티 확장).
 -- 사냥터가 스테이지 무관 공용 공간 하나뿐이라(HuntingGround.server.lua - 격자 9자리 고정),
--- 보스는 그 안에 상주하는 대신 "이 플레이어가 지금 보스 스테이지에 있다"는 사실에 맞춰
--- 그 플레이어 전용 인스턴스로 스폰한다 - 여러 플레이어가 서로 다른 스테이지에 있어도
--- 서로의 보스를 방해하지 않는다.
+-- 보스는 그 안에 상주하는 대신 "이 플레이어(들)가 지금 보스 스테이지에 있다"는 사실에 맞춰
+-- 전용 인스턴스로 스폰한다 - 여러 플레이어가 서로 다른 스테이지에 있어도 서로의 보스를
+-- 방해하지 않는다.
 --
 -- 20-2b 개정 이유: "맵 중앙에 보스가 스폰된다"는 버그 - 옛 spawnPositionFor는 "플레이어
 -- 20stud 앞"을 계산했는데, 접속 시 복원(StageServer.server.lua PlayerAdded)이 캐릭터가
@@ -15,9 +15,16 @@
 -- 기존 구역 리쉬(16-6)를 그대로 재사용해 "아레나를 벗어나면 포기하고 돌아간다"가 자동
 -- 성립한다(이 파일은 새 리쉬 로직을 만들지 않는다).
 --
+-- 24-1 파티(PRD 20.47 [6](라) "activeBosses[Player] → 파티 단위"): 진실의 출처는 이제
+-- "encounter" 하나다 - { model, data, stage, members(실제 Player 목록), party, size(입장 머릿수,
+-- 더미 포함 - 보스 HP 배수의 N), rotationOwner(순환을 소모한 플레이어 = 리더), slot, zoneKey,
+-- isTutorial }. encounterOf[Player]가 그 플레이어의 활성 보스전이고, 솔로는 members 1명짜리
+-- encounter다(코드 경로 하나 - "솔로를 N=1 파티로 통일"). 옛 activeBosses[player]를 읽던
+-- 호출부는 getActive(player)(= encounterOf[player].model)로 그대로 동작한다.
+--
 -- 사용자 지시: 보스전 중 죽어도 그 아레나로 다시 스폰된다(아래 CharacterAdded 훅) -
--- 스테이지를 실제로 옮길 때만(StageServer.server.lua가 despawnFor를 부를 때) 사냥터로
--- 돌아간다.
+-- 스테이지를 실제로 옮길 때만(StageServer.server.lua가 despawnFor/leaveFor를 부를 때)
+-- 사냥터로 돌아간다.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -30,16 +37,18 @@ local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossPatterns = require(script.Parent.BossPatterns)
 local GroundProbe = require(script.Parent.GroundProbe)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local PlayerState = require(script.Parent.PlayerState)
+local PartyState = require(script.Parent.PartyState)
 
 local BossEncounter = {}
 
--- [Player] = Model. 죽여서 없어진 경우(CombatResolution이 clearFor를 부른다)와 스테이지를
--- 벗어나 물러난 경우(despawnFor) 둘 다 여기서 지운다 - 어느 쪽이든 "지금 이 플레이어의
--- 활성 보스"는 이 테이블 하나로만 판단한다.
-local activeBosses = {}
+-- [Player] = encounter / [Model] = encounter. 처치(CombatResolution → clearForModel)와 물러남
+-- (despawnFor/leaveFor) 둘 다 여기서 지운다 - 어느 쪽이든 "지금 이 플레이어의 활성 보스전"은
+-- 이 두 테이블로만 판단한다.
+local encounterOf = {}
+local encounterByModel = {}
 
--- [Player] = 1..slotCount. 아레나 슬롯 배정 - 반납되면 freeSlots로 돌아가 다음 사람이 쓴다.
-local slotByPlayer = {}
+-- 아레나 슬롯 배정 - encounter 하나에 슬롯 하나. 반납되면 freeSlots로 돌아가 다음 팀이 쓴다.
 local freeSlots = {}
 for i = WorldConfig.bossArena.slotCount, 1, -1 do
 	table.insert(freeSlots, i)
@@ -56,6 +65,9 @@ local ARENA_FLOOR_COLOR = Color3.fromRGB(30, 15, 15)
 -- 같은 기준을 안 쓰면 나중에 유지보수할 때 "이 파일의 Y는 왜 다른가"를 매번 되짚어야 한다.
 local ARENA_FLOOR_THICKNESS_STUDS = 2
 local ARENA_FLOOR_TOP_Y = ARENA_FLOOR_THICKNESS_STUDS / 2 -- 1
+
+-- 파티 입장 시 멤버끼리 겹치지 않게 입장점 좌우로 벌리는 간격(캐릭터 반폭 1의 4배 - 연출값).
+local ENTRY_SPREAD_STUDS = 4
 
 local function zoneKeyForSlot(slot)
 	return "bossArena" .. slot
@@ -102,25 +114,16 @@ local function buildArena(zoneKey)
 	wall(half * 2 + thickness * 2, thickness, 0, -half - thickness / 2)
 end
 
-local function allocateSlot(player)
-	local existing = slotByPlayer[player]
-	if existing then
-		return existing
-	end
+local function allocateSlot()
 	-- 서버 정원(12명)을 넘는 동시 보스전은 설계상 안 생겨야 하지만(PRD 20.38 [6]), 혹시
 	-- freeSlots가 바닥나면 1번을 같이 쓴다 - 아레나가 겹쳐 불편할 뿐 에러는 나지 않는다.
-	local slot = table.remove(freeSlots) or 1
-	slotByPlayer[player] = slot
-	return slot
+	return table.remove(freeSlots) or 1
 end
 
-local function releaseSlot(player)
-	local slot = slotByPlayer[player]
-	if not slot then
-		return
+local function releaseSlot(slot)
+	if slot then
+		table.insert(freeSlots, slot)
 	end
-	slotByPlayer[player] = nil
-	table.insert(freeSlots, slot)
 end
 
 -- 아레나 안쪽, 벽에서 10stud 떨어진 가장자리 - 보스(중앙 스폰)를 바로 마주보게 한다.
@@ -139,13 +142,131 @@ local function teleportTo(player, position)
 	end
 end
 
--- targetStage가 보스 스테이지이고 아직 이 플레이어의 보스가 없으면 스폰한다. 이미
+local function huntingGroundReturnPosition()
+	return WorldConfig.huntingGround.center + Vector3.new(0, 5, 0)
+end
+
+-- 멤버 index번째의 입장 위치 - 입장점을 중심으로 좌우로 벌린다(파티가 한 점에 겹쳐 서지 않게).
+local function entryPositionForIndex(zone, index, count)
+	local offset = (index - 1 - (count - 1) / 2) * ENTRY_SPREAD_STUDS
+	return arenaEntryPosition(zone) + Vector3.new(offset, 0, 0)
+end
+
+local function memberIndex(encounter, player)
+	return table.find(encounter.members, player) or 1
+end
+
+-- ═══ 조회 ═══
+
+function BossEncounter.getEncounter(player)
+	return encounterOf[player]
+end
+
+function BossEncounter.getEncounterByModel(model)
+	return encounterByModel[model]
+end
+
+-- 옛 activeBosses[player] 계약 - "이 플레이어의 활성 보스 모델"(없으면 nil).
+function BossEncounter.getActive(player)
+	local encounter = encounterOf[player]
+	return encounter and encounter.model
+end
+
+-- 이 보스와 싸우는 실제 멤버 목록(퇴장·탈퇴로 빠진 사람은 이미 없다). BossPatterns(피해·연출
+-- 대상)·CombatResolution(보상 후보)·MonsterAI(대상 재선택)가 읽는다. 없으면 빈 목록.
+function BossEncounter.getMembersOfModel(model)
+	local encounter = encounterByModel[model]
+	return encounter and encounter.members or {}
+end
+
+function BossEncounter.getRotationOwner(model)
+	local encounter = encounterByModel[model]
+	return encounter and encounter.rotationOwner
+end
+
+local function isAlive(player)
+	local hp = PlayerState.getHp(player)
+	local character = player.Character
+	return hp ~= nil and hp > 0 and character ~= nil and character:FindFirstChild("HumanoidRootPart") ~= nil
+end
+
+-- 살아 있는 멤버 중 position에 가장 가까운 사람(MonsterAI의 보스 평타·패턴 조준 대상 재선택 -
+-- PRD 20.47 [6](나) "평타 추격 대상 = 가장 가까운 멤버, 매 틱 재선택"). 없으면 nil.
+function BossEncounter.nearestLivingMember(model, position)
+	local best, bestDistance = nil, math.huge
+	for _, member in ipairs(BossEncounter.getMembersOfModel(model)) do
+		if isAlive(member) then
+			local root = member.Character:FindFirstChild("HumanoidRootPart")
+			local d = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(position.X, 0, position.Z)).Magnitude
+			if d < bestDistance then
+				best, bestDistance = member, d
+			end
+		end
+	end
+	return best
+end
+
+-- excludePlayer(선택): 이 사람은 죽은 것으로 센다 - Humanoid.Died 시점엔 PlayerDamage를 거치지 않은
+-- 죽음(로블록스 메뉴 리셋·낙사 등)이라 PlayerState.hp가 아직 0이 아닐 수 있다. 21-3 솔로 규칙
+-- ("죽으면 리셋")이 그런 죽음에도 그대로 성립해야 하므로 죽는 당사자는 항상 제외한다.
+function BossEncounter.livingMemberCount(encounter, excludePlayer)
+	local n = 0
+	for _, member in ipairs(encounter.members) do
+		if member ~= excludePlayer and isAlive(member) then
+			n += 1
+		end
+	end
+	return n
+end
+
+-- ═══ 스폰 ═══
+
+-- 공통 스폰 - members(실제 Player 목록)를 slot 하나의 아레나로 전원 텔레포트하고 보스를 세운다.
+-- size는 보스 HP 배수의 N(더미 포함 머릿수, PRD 20.47 [6](가) "N은 입장 인원이지 유효 DPS
+-- 환산이 아니다"). 이미 encounter가 있는 멤버가 섞여 있으면 호출부가 먼저 정리해야 한다.
+local function spawnEncounter(data, stage, members, party, size, rotationOwner, isTutorial)
+	local slot = allocateSlot()
+	local zoneKey = zoneKeyForSlot(slot)
+	buildArena(zoneKey)
+	local zone = WorldConfig.zones[zoneKey]
+
+	for i, member in ipairs(members) do
+		teleportTo(member, entryPositionForIndex(zone, i, #members))
+	end
+
+	-- Y는 바닥 윗면(ARENA_FLOOR_TOP_Y) + 1.5 - HuntingGround.server.lua의 tier 몬스터
+	-- 스폰 높이(FLOOR_Y+FLOOR_THICKNESS/2+1.5)와 같은 관례.
+	local spawnPosition = zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 1.5, 0)
+	local model = MonsterSpawner.spawn(data, spawnPosition, zoneKey)
+
+	local encounter = {
+		model = model,
+		data = data,
+		stage = stage,
+		members = table.clone(members),
+		party = party,
+		size = size,
+		rotationOwner = rotationOwner,
+		slot = slot,
+		zoneKey = zoneKey,
+		isTutorial = isTutorial or false,
+		startedAt = os.clock(),
+	}
+	for _, member in ipairs(members) do
+		encounterOf[member] = encounter
+	end
+	encounterByModel[model] = encounter
+	BossPatterns.setGrace(model, data, data.entryGraceSeconds) -- 입장 2초 유예(20.44 [3](다))
+	return encounter
+end
+
+-- targetStage가 보스 스테이지이고 아직 이 플레이어의 보스가 없으면 솔로로 스폰한다. 이미
 -- 있으면(예: 같은 스테이지 안에서 위/아래로 왔다 갔다) 아무것도 안 한다 - 중복 스폰 방지.
 function BossEncounter.spawnFor(player, stage)
 	if not BossRules.isBossStage(stage) then
 		return
 	end
-	if activeBosses[player] then
+	if encounterOf[player] then
 		return
 	end
 
@@ -158,37 +279,94 @@ function BossEncounter.spawnFor(player, stage)
 		return
 	end
 
-	local data = BossRules.buildInstanceData(stage, bossId, player)
+	local data = BossRules.buildInstanceData(stage, bossId, 1)
 	if not data then
 		return
 	end
 
-	local slot = allocateSlot(player)
-	local zoneKey = zoneKeyForSlot(slot)
-	buildArena(zoneKey)
-	local zone = WorldConfig.zones[zoneKey]
-
-	teleportTo(player, arenaEntryPosition(zone))
-
-	-- Y는 바닥 윗면(ARENA_FLOOR_TOP_Y) + 1.5 - HuntingGround.server.lua의 tier 몬스터
-	-- 스폰 높이(FLOOR_Y+FLOOR_THICKNESS/2+1.5)와 같은 관례.
-	local spawnPosition = zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 1.5, 0)
-	local model = MonsterSpawner.spawn(data, spawnPosition, zoneKey)
-	activeBosses[player] = model
-	BossPatterns.setGrace(model, data, data.entryGraceSeconds) -- 입장 2초 유예(20.44 [3](다))
+	local encounter = spawnEncounter(data, stage, { player }, nil, 1, player, false)
 	print(("[forge-game] 보스 등장: %s - 스테이지 %d, 대상 %s (아레나 %s)"):format(
-		data.displayName, stage, player.Name, zoneKey))
+		data.displayName, stage, player.Name, encounter.zoneKey))
+end
+
+-- 파티 보스 입장 검사(PRD 20.47 [6](라)) - 멤버 전원이 (1) StageServer 게이트(최고 도달+1 이내,
+-- 바로 아래 보스 클리어)와 (2) 밴드(bossStage ≤ rec(L_i) + band)를 통과해야 한다. 하나라도
+-- 막히면 { {player, reason}, ... } 목록을 돌려준다(빈 목록 = 통과). 밴드가 없으면 레벨 10 친구를
+-- 보스마다 데리고 가 최고 도달 스테이지를 100까지 끌어올리는 캐리(= 리더보드 조작)가 열린다.
+function BossEncounter.checkPartyEntry(party, stage)
+	local blocked = {}
+	for _, member in ipairs(PartyState.getMemberPlayers(party)) do
+		local best = PlayerProfile.getInfiniteStageBest(member)
+		local reason = nil
+		if not best then
+			reason = "no_profile"
+		elseif stage > best + 1 then
+			reason = "range"
+		else
+			local requiredBossStage = BossRules.getBossStageBelow(stage)
+			if requiredBossStage > 0 and requiredBossStage > (PlayerProfile.getBestBossCleared(member) or 0) then
+				reason = "boss_locked"
+			else
+				local level = PlayerProfile.getCharacterLevel(member) or 1
+				local cap = BossRules.partyEntryStageCap(level)
+				if stage > cap then
+					reason = ("band(권장 %d+%d)"):format(cap - BossRules.partyEntryBand(), BossRules.partyEntryBand())
+				end
+			end
+		end
+		if reason then
+			table.insert(blocked, { player = member, reason = reason })
+		end
+	end
+	return blocked
+end
+
+-- 파티 보스 스폰(리더가 보스 스테이지로 이동할 때 StageServer가 부른다). 검사는 호출부가
+-- checkPartyEntry로 먼저 끝냈다고 가정한다. 순환은 리더 것만 소모한다(rotationOwner) - 다른
+-- 멤버의 bossRotation은 읽지도 쓰지도 않는다(지시 4 "남의 순환 인덱스가 소모되면 안 된다").
+function BossEncounter.spawnForParty(party, leader, stage)
+	if not BossRules.isBossStage(stage) then
+		return false
+	end
+	if encounterOf[leader] then
+		return false
+	end
+	local members = PartyState.getMemberPlayers(party)
+	for _, member in ipairs(members) do
+		if encounterOf[member] then
+			BossEncounter.leaveFor(member) -- 남아 있던 솔로 보스전은 물러난다(PartyServer가 합류 시 이미 정리하지만 방어).
+		end
+	end
+
+	local bossId = PlayerProfile.getBossForStage(leader, stage)
+	if not bossId then
+		return false
+	end
+	local size = PartyState.getSize(party)
+	local data = BossRules.buildInstanceData(stage, bossId, size)
+	if not data then
+		return false
+	end
+
+	local encounter = spawnEncounter(data, stage, members, party, size, leader, false)
+	local names = {}
+	for _, member in ipairs(members) do
+		table.insert(names, member.Name)
+	end
+	print(("[forge-game] 파티 보스 등장: %s - 스테이지 %d, 인원 %d(실제 %d: %s), HP 배수 %.3f (아레나 %s)"):format(
+		data.displayName, stage, size, #members, table.concat(names, ","), data.partyHpMultiplier, encounter.zoneKey))
+	return true
 end
 
 -- 23-1 견습 모드 전용 - targetStage 대신 (tierIndex, patternKeys, hpScale, weaponMultiplier)를
 -- 받아 BossRules.buildTutorialInstanceData로 인스턴스를 만든다는 점만 spawnFor와 다르다.
 -- 아레나 슬롯 배정·텔레포트·입장 유예는 완전히 같은 코드를 재사용한다(견습 보스도 결국
--- "이 플레이어의 활성 보스" 하나이므로 activeBosses/slotByPlayer를 그대로 공유해도 안전하다 -
--- 무한 모드 보스와 견습 보스가 동시에 뜰 일이 없다, 견습 중엔 무한 모드 진행 자체가 잠겨 있다).
--- BossRules.isBossStage 검사를 하지 않는다 - 견습 스테이지(TutorialData.monsterStage=1)는
+-- "이 플레이어의 활성 보스" 하나이므로 encounter를 그대로 공유해도 안전하다 - 무한 모드
+-- 보스와 견습 보스가 동시에 뜰 일이 없다, 견습 중엔 무한 모드 진행 자체가 잠겨 있고 파티도
+-- 못 든다). BossRules.isBossStage 검사를 하지 않는다 - 견습 스테이지(TutorialData.monsterStage=1)는
 -- BossData.stageInterval의 배수가 아니어도 된다.
 function BossEncounter.spawnTutorialFor(player, tierIndex, stage, patternKeys, hpScale, weaponMultiplier)
-	if activeBosses[player] then
+	if encounterOf[player] then
 		return
 	end
 
@@ -197,54 +375,104 @@ function BossEncounter.spawnTutorialFor(player, tierIndex, stage, patternKeys, h
 		return
 	end
 
-	local slot = allocateSlot(player)
-	local zoneKey = zoneKeyForSlot(slot)
-	buildArena(zoneKey)
-	local zone = WorldConfig.zones[zoneKey]
-
-	teleportTo(player, arenaEntryPosition(zone))
-
-	local spawnPosition = zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 1.5, 0)
-	local model = MonsterSpawner.spawn(data, spawnPosition, zoneKey)
-	activeBosses[player] = model
-	BossPatterns.setGrace(model, data, data.entryGraceSeconds)
+	local encounter = spawnEncounter(data, stage, { player }, nil, 1, nil, true)
 	print(("[forge-game] 견습 보스 등장: %s - tier%d, 대상 %s (아레나 %s)"):format(
-		data.displayName, tierIndex, player.Name, zoneKey))
+		data.displayName, tierIndex, player.Name, encounter.zoneKey))
 end
 
--- 처치되지 않은 채로 물러날 때(스테이지 하향/상향 이동, 퇴장)만 부른다 - 처치는
--- CombatResolution.lua가 MonsterSpawner.despawn(죽음 연출 포함)을 직접 호출한 뒤
--- clearFor로 이 테이블만 지운다. 스테이지를 실제로 옮기는 것이므로 사냥터로 돌려보낸다.
+-- ═══ 퇴장 ═══
+
+-- encounter 전체를 끝낸다(처치는 destroyModel=false - MonsterSpawner.despawn이 사체 유지 후
+-- 정리한다 / 물러남은 true - 즉시 지운다). 남은 멤버 전원을 사냥터로 돌려보내고 슬롯을 반납한다.
+local function endEncounter(encounter, destroyModel)
+	for _, member in ipairs(encounter.members) do
+		if encounterOf[member] == encounter then
+			encounterOf[member] = nil
+		end
+		if member.Parent then
+			teleportTo(member, huntingGroundReturnPosition())
+		end
+	end
+	encounter.members = {}
+	encounterByModel[encounter.model] = nil
+	if destroyModel then
+		MonsterState.clear(encounter.model)
+		encounter.model:Destroy()
+	end
+	releaseSlot(encounter.slot)
+	encounter.slot = nil
+end
+
+-- 처치되지 않은 채로 물러날 때(스테이지 하향/상향 이동, 견습 중단)만 부른다 - 이 플레이어가
+-- 속한 보스전 전체가 끝난다(파티면 멤버 전원이 사냥터로 돌아간다 - 리더가 스테이지를 옮기면
+-- 파티 보스전이 끝난다는 뜻). 처치는 CombatResolution.lua가 MonsterSpawner.despawn(죽음 연출
+-- 포함)을 직접 호출한 뒤 clearForModel로 이 테이블만 지운다.
 function BossEncounter.despawnFor(player)
-	local model = activeBosses[player]
-	if not model then
+	local encounter = encounterOf[player]
+	if not encounter then
 		return
 	end
-	activeBosses[player] = nil
-	MonsterState.clear(model)
-	model:Destroy()
-	teleportTo(player, WorldConfig.huntingGround.center + Vector3.new(0, 5, 0))
+	endEncounter(encounter, true)
+end
+
+-- 이 플레이어만 보스전에서 빠진다(파티원의 스테이지 이동·퇴장·파티 이탈). 보스 HP·인원 배수는
+-- 입장 순간에 고정돼 있어 바뀌지 않는다(PRD 20.47 [6](다) "이탈의 대가는 파티가 진다" - 남은
+-- 사람이 더 큰 HP를 상대한다, HP를 낮추는 조작 불가). 마지막 한 명이 빠지면 보스도 물러난다.
+function BossEncounter.leaveFor(player)
+	local encounter = encounterOf[player]
+	if not encounter then
+		return
+	end
+	local index = table.find(encounter.members, player)
+	if index then
+		table.remove(encounter.members, index)
+	end
+	encounterOf[player] = nil
+	if player.Parent then
+		teleportTo(player, huntingGroundReturnPosition())
+	end
+	if #encounter.members == 0 then
+		endEncounter(encounter, true)
+		print(("[forge-game] 보스 물러남: 마지막 멤버 %s 이탈"):format(player.Name))
+	else
+		print(("[forge-game] 보스전 이탈: %s (남은 멤버 %d, HP 배수 %.3f 유지)"):format(
+			player.Name, #encounter.members, encounter.data.partyHpMultiplier or 1))
+	end
 end
 
 -- CombatResolution.lua가 보스를 죽인 직후 부른다 - 인스턴스 자체는 MonsterSpawner.despawn이
--- 이미(사체 유지 후) 정리하므로, 여기서는 추적 테이블만 지우고 사냥터로 돌려보낸다(처치도
--- "그 보스와의 볼일이 끝났다"는 점에서 despawnFor와 같은 결과 - 돌아간다).
-function BossEncounter.clearFor(player)
-	activeBosses[player] = nil
-	teleportTo(player, WorldConfig.huntingGround.center + Vector3.new(0, 5, 0))
+-- 이미(사체 유지 후) 정리하므로, 여기서는 추적 테이블만 지우고 멤버 전원을 사냥터로
+-- 돌려보낸다(처치도 "그 보스와의 볼일이 끝났다"는 점에서 despawnFor와 같은 결과 - 돌아간다).
+function BossEncounter.clearForModel(model)
+	local encounter = encounterByModel[model]
+	if encounter then
+		endEncounter(encounter, false)
+	end
 end
 
-function BossEncounter.getActive(player)
-	return activeBosses[player]
+-- 옛 계약(TutorialState.onBossCleared) - 이 플레이어의 보스전을 처치 후 정리한다.
+function BossEncounter.clearFor(player)
+	local encounter = encounterOf[player]
+	if encounter then
+		endEncounter(encounter, false)
+	end
 end
 
 -- 플레이어 사망 시 보스 리셋(21-3 [1]). 죽음을 반복해 조금씩 깎아 이기는 구멍을 막는다 -
 -- HP 최대치 복구 + 진행 중인 패턴·파동·연출 취소 + 보스를 중앙 스폰 자리로 되돌려 idle.
--- 재도전 횟수 제한은 없다(21-1 결정). 19-4 개인 인스턴스 구조와의 정합: activeBosses[player]
--- 하나가 "이 플레이어의 보스"이므로 다른 플레이어의 보스는 건드리지 않는다.
+-- 재도전 횟수 제한은 없다(21-1 결정).
+-- 24-1 파티: 살아 있는 멤버가 하나라도 남아 있으면 리셋하지 않는다(PRD 20.47 [6](다) "생존자
+-- 0명 → 즉시 전체 리셋", 솔로 N=1이면 정확히 21-3 규칙). 죽은 멤버는 리스폰 후 아레나로
+-- 돌아온다(아래 CharacterAdded 훅).
 function BossEncounter.resetFor(player)
-	local model = activeBosses[player]
+	local encounter = encounterOf[player]
+	local model = encounter and encounter.model
 	if not model or not model.Parent then
+		return
+	end
+	local survivors = BossEncounter.livingMemberCount(encounter, player)
+	if survivors > 0 then
+		print(("[forge-game] 파티원 사망: %s - 생존자 %d명 남아 보스 유지"):format(player.Name, survivors))
 		return
 	end
 	local data = MonsterState.getData(model)
@@ -257,13 +485,17 @@ function BossEncounter.resetFor(player)
 	MonsterState.setAiState(model, "idle")
 	MonsterState.setAiTarget(model, nil)
 	model:PivotTo(CFrame.new(MonsterState.getSpawnPosition(model)))
-	player:SetAttribute("TickDamage", 0)
-	print(("[forge-game] 보스 리셋: %s 사망 - %s HP 최대치 복구"):format(player.Name, data.displayName))
+	for _, member in ipairs(encounter.members) do
+		if typeof(member) == "Instance" then
+			member:SetAttribute("TickDamage", 0)
+		end
+	end
+	print(("[forge-game] 보스 리셋: %s 사망(생존자 0) - %s HP 최대치 복구"):format(player.Name, data.displayName))
 end
 
 -- 보스전 도중 죽어도(사용자 지시) 그 아레나로 다시 스폰된다 - 스테이지를 실제로 옮길
--- 때만(위 despawnFor/clearFor) 사냥터로 돌아간다. activeBosses에 아직 이 플레이어의
--- 보스가 남아 있다는 것 자체가 "아직 그 보스전 중"이라는 뜻이므로, 이 하나의 조건만
+-- 때만(위 despawnFor/leaveFor/clearFor) 사냥터로 돌아간다. encounterOf에 아직 이 플레이어의
+-- 보스전이 남아 있다는 것 자체가 "아직 그 보스전 중"이라는 뜻이므로, 이 하나의 조건만
 -- 보면 된다 - 별도 "보스전 중" 플래그를 새로 만들지 않는다(19-4가 겪은 유령 상태
 -- 문제를 반복하지 않으려면 진실의 출처를 하나로 유지해야 한다).
 Players.PlayerAdded:Connect(function(player)
@@ -273,26 +505,46 @@ Players.PlayerAdded:Connect(function(player)
 		-- step 안)에서 동기로 발화하면 진행 중인 상태 테이블을 그 함수가 아직 쓰고 있다.
 		local humanoid = character:WaitForChild("Humanoid")
 		humanoid.Died:Connect(function()
-			if activeBosses[player] then
+			if encounterOf[player] then
 				task.defer(BossEncounter.resetFor, player)
 			end
 		end)
 
-		local slot = slotByPlayer[player]
-		local model = activeBosses[player]
-		if not model or not slot then
+		local encounter = encounterOf[player]
+		if not encounter or not encounter.slot then
 			return
 		end
-		teleportTo(player, arenaEntryPosition(WorldConfig.zones[zoneKeyForSlot(slot)]))
-		local data = MonsterState.getData(model)
-		if data then
-			BossPatterns.setGrace(model, data, data.entryGraceSeconds) -- 재도전 2초 유예
+		local zone = WorldConfig.zones[encounter.zoneKey]
+		teleportTo(player, entryPositionForIndex(zone, memberIndex(encounter, player), #encounter.members))
+		-- 재도전 2초 유예 - 솔로(또는 전원 사망 리셋 직후)만. 파티에서 남이 싸우는 중에 부활자
+		-- 하나가 보스 패턴을 멈추게 할 수는 없다(PRD 20.47 [6](나) "부활자는 보스를 멈출 수 없다").
+		if BossEncounter.livingMemberCount(encounter) <= 1 then
+			local data = MonsterState.getData(encounter.model)
+			if data then
+				BossPatterns.setGrace(encounter.model, data, data.entryGraceSeconds)
+			end
 		end
 	end)
 end)
 
+-- 퇴장 - 자기 보스전에서만 빠진다(파티면 나머지가 이어서 싸운다, N·HP 배수 고정).
 Players.PlayerRemoving:Connect(function(player)
-	releaseSlot(player)
+	BossEncounter.leaveFor(player)
+end)
+
+-- 파티 이탈(탈퇴·추방·견습 진입·해산) - 파티 보스전 중이었으면 그 사람만 빠진다. "disband"(마지막
+-- 한 명이 남아 파티가 자동 해산)는 예외 - 남은 사람은 그 보스전을 혼자 이어간다(HP 배수는
+-- 그대로 - 이탈의 대가). 견습 진입("tutorial")도 빠진다 - 견습은 싱글이다.
+PartyState.onMemberRemoved(function(player, party, reason)
+	local encounter = encounterOf[player]
+	if not encounter or encounter.party ~= party then
+		return
+	end
+	if reason == "disband" then
+		encounter.party = nil
+		return
+	end
+	BossEncounter.leaveFor(player)
 end)
 
 return BossEncounter

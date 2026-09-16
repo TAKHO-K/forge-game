@@ -89,17 +89,39 @@ local function handleBossDeath(attacker, target)
 	local monsterData = MonsterState.getData(target)
 	local deathPosition = target.PrimaryPart.Position
 
-	-- 보스는 개인 인스턴스라 이 죽음을 처리하는 호출자(attacker) 1인이 그대로 가져간다
-	-- (19-4 [3] 지시 - "역할이 다르므로 구조가 달라도 된다"). 스킬로 막타를 낸 경우도
-	-- 그 캐스터가 attacker다(SkillServer.server.lua 호출부 참고).
-	grantKillReward(attacker, target, monsterData, deathPosition)
-	PlayerProfile.setBossCleared(attacker, monsterData.stageNumber)
+	-- 24-1 파티: 보상은 잡몹과 같은 규칙 - 기여 비율(damage/maxHp) 임계값 이상인 멤버 전원이
+	-- 각자 독립 1인분(나눠 갖지 않는다, 지시 4). 솔로면 멤버가 attacker 하나뿐이고 기여 1.0이라
+	-- 19-4 이후 동작과 완전히 같다. 후보는 encounter 멤버(BossEncounter)이지 attacker가 아니다 -
+	-- 막타 1인이 아니라 "같이 싸운 사람"이 기준이다. encounter가 없으면(DevTools 등) attacker.
+	local candidates = BossEncounter.getMembersOfModel(target)
+	if #candidates == 0 then
+		candidates = { attacker }
+	end
+	local contributions = MonsterState.getContributors(target)
+	local rewarded = {}
+	for _, member in ipairs(candidates) do
+		local ratio = contributions[member] or 0
+		if member.Parent and ratio >= CombatConfig.contributionRewardThreshold then
+			grantKillReward(member, target, monsterData, deathPosition)
+			-- 보스 이력(bestBossCleared·첫 처치 확정 드랍)은 멤버별로 따로 - 각자 자기 진행도에 기록된다.
+			PlayerProfile.setBossCleared(member, monsterData.stageNumber)
+			ImmediateSave.request(member)
+			table.insert(rewarded, ("%s(%.0f%%)"):format(member.Name, ratio * 100))
+		elseif member.Parent then
+			print(("[forge-game] 보스 보상 제외: %s - 기여 %.1f%% < %.0f%%"):format(member.Name, ratio * 100, CombatConfig.contributionRewardThreshold * 100))
+		end
+	end
 	-- 23-5: pending을 지워야 이 스테이지에 다시 들어왔을 때 순환이 "이미 확정된 보스"로
 	-- 읽지 않고 다음 보스를 새로 뽑는다(PRD 20.50 [5] "처치하면 pending을 지운다").
-	PlayerProfile.clearBossRotationPending(attacker)
-	ImmediateSave.request(attacker)
-	BossEncounter.clearFor(attacker)
-	print(("[forge-game] 보스 처치: %s - 스테이지 %d"):format(attacker.Name, monsterData.stageNumber))
+	-- 24-1: 순환을 소모한 사람(리더)의 것만 지운다 - 다른 멤버의 bossRotation은 건드리지 않는다.
+	local rotationOwner = BossEncounter.getRotationOwner(target) or attacker
+	if rotationOwner and rotationOwner.Parent then
+		PlayerProfile.clearBossRotationPending(rotationOwner)
+		ImmediateSave.request(rotationOwner)
+	end
+	BossEncounter.clearForModel(target)
+	print(("[forge-game] 보스 처치: 스테이지 %d - 보상 %d명 [%s], 순환 소모 %s"):format(
+		monsterData.stageNumber, #rewarded, table.concat(rewarded, ", "), rotationOwner and rotationOwner.Name or "-"))
 end
 
 -- 보물상자 파괴(22-2 [3]) - 한 번이라도 유효 피격한 전원이 각자 독립적으로 골드를 받는다

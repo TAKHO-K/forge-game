@@ -1,0 +1,282 @@
+-- 파티 HUD(24-1, PRD 20.47 [5](다) 4번 "파티원 HP 바"). 두 가지만 그린다:
+--   [1] 파티원 목록(이름·직업·레벨·스테이지·HP 바) - 화면 왼쪽 세로 중앙. 로블록스 기본 채팅창이
+--       좌상단을 차지하므로(끌 수 없다) 그 아래·세로 중앙에 두고, 모바일 대시 버튼(좌하단,
+--       SkillSlots.client.lua)과도 겹치지 않는 높이다. 채팅창을 가리지 않는다는 지시.
+--   [2] 초대 토스트(수락/거절 버튼) + 짧은 알림 토스트 - 상단 중앙 토스트 줄(SaveNotice 64 /
+--       ZoneBoundary 100 / ZoneBlocked 108 / TreasureChest 150 / Tutorial 160)의 맨 아래 y=210.
+-- 새 창을 만들지 않는다 - 초대·탈퇴·추방 조작은 장비창(InventoryUI.client.lua) "파티" 탭에 있다.
+-- 색·틀은 전부 UIColors + HudChip 계열(패널 + 링 + 알약 모서리)을 그대로 쓴다.
+--
+-- 실제 파티원의 HP·레벨·직업·스테이지는 서버가 Player Attribute(Hp/MaxHp/CharacterLevel/
+-- ClassId/InfiniteStage - 전 클라에 복제된다)로 이미 내보내고 있어 그대로 읽는다. 더미 멤버
+-- (DevTools)만 스냅샷(PartyStateChanged)에 실려 온 값을 쓴다.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+
+local partyStateChanged = ReplicatedStorage:WaitForChild("PartyStateChanged")
+local partyInviteNotice = ReplicatedStorage:WaitForChild("PartyInviteNotice")
+local partyNotice = ReplicatedStorage:WaitForChild("PartyNotice")
+local partyRequest = ReplicatedStorage:WaitForChild("PartyRequest")
+
+local player = Players.LocalPlayer
+
+local ROW_WIDTH, ROW_HEIGHT = 196, 44
+local TOAST_Y = 210
+local NOTICE_SECONDS = 3
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PartyHudGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- ═══ [1] 파티원 목록 ═══
+local list = Instance.new("Frame")
+list.Name = "PartyList"
+list.AnchorPoint = Vector2.new(0, 0.5)
+list.Position = UDim2.new(0, 14, 0.5, 0)
+list.AutomaticSize = Enum.AutomaticSize.XY
+list.Size = UDim2.new(0, 0, 0, 0)
+list.BackgroundTransparency = 1
+list.Visible = false
+list.Parent = screenGui
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.FillDirection = Enum.FillDirection.Vertical
+listLayout.Padding = UDim.new(0, 6)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Parent = list
+
+local rows = {} -- index -> { frame, name, meta, fill, userId, isDummy, dummy }
+
+local function makeRow(order)
+	local frame = Instance.new("Frame")
+	frame.LayoutOrder = order
+	frame.Size = UDim2.new(0, ROW_WIDTH, 0, ROW_HEIGHT)
+	frame.BackgroundColor3 = UIColors.panel
+	frame.BackgroundTransparency = UIColors.panelTransparency
+	frame.Parent = list
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = frame
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = UIColors.rim
+	stroke.Transparency = UIColors.rimTransparency
+	stroke.Thickness = 1
+	stroke.Parent = frame
+
+	local name = Instance.new("TextLabel")
+	name.BackgroundTransparency = 1
+	name.Position = UDim2.new(0, 10, 0, 5)
+	name.Size = UDim2.new(1, -20, 0, 15)
+	name.Font = Enum.Font.GothamBold
+	name.TextSize = 12.5
+	name.TextXAlignment = Enum.TextXAlignment.Left
+	name.TextColor3 = UIColors.textPrimary
+	name.Text = ""
+	name.Parent = frame
+
+	local meta = Instance.new("TextLabel")
+	meta.BackgroundTransparency = 1
+	meta.Position = UDim2.new(0, 10, 0, 20)
+	meta.Size = UDim2.new(1, -20, 0, 12)
+	meta.Font = Enum.Font.Gotham
+	meta.TextSize = 10.5
+	meta.TextXAlignment = Enum.TextXAlignment.Left
+	meta.TextColor3 = UIColors.textSecondary
+	meta.Text = ""
+	meta.Parent = frame
+
+	local track = Instance.new("Frame")
+	track.Position = UDim2.new(0, 10, 1, -9)
+	track.Size = UDim2.new(1, -20, 0, 5)
+	track.BackgroundColor3 = UIColors.hpDark
+	track.BorderSizePixel = 0
+	track.Parent = frame
+	local trackCorner = Instance.new("UICorner")
+	trackCorner.CornerRadius = UDim.new(1, 0)
+	trackCorner.Parent = track
+
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.new(1, 0, 1, 0)
+	fill.BackgroundColor3 = UIColors.hp
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = fill
+
+	return { frame = frame, name = name, meta = meta, fill = fill }
+end
+
+local currentState = nil
+
+local function classNameOf(classId)
+	local class = classId and ClassData.classes[classId]
+	return class and class.displayName or "-"
+end
+
+local function refreshRows()
+	for i, row in ipairs(rows) do
+		local member = currentState and currentState.members[i]
+		if not member then
+			row.frame.Visible = false
+		else
+			row.frame.Visible = true
+			local hp, maxHp, level, stage, classId
+			if member.isDummy then
+				hp, maxHp = member.dummy.hp or 1, member.dummy.maxHp or 1
+				level, stage, classId = member.dummy.level, member.dummy.stage, member.dummy.classId
+			else
+				local target = Players:GetPlayerByUserId(member.userId)
+				if target then
+					hp, maxHp = target:GetAttribute("Hp"), target:GetAttribute("MaxHp")
+					level, stage, classId = target:GetAttribute("CharacterLevel"), target:GetAttribute("InfiniteStage"), target:GetAttribute("ClassId")
+				end
+			end
+			row.name.Text = (member.isLeader and "★ " or "") .. member.name .. (member.isDummy and " (더미)" or "")
+			row.name.TextColor3 = member.isLeader and UIColors.gold or UIColors.textPrimary
+			row.meta.Text = ("%s · Lv %s · 스테이지 %s"):format(classNameOf(classId), tostring(level or "-"), tostring(stage or "-"))
+			local ratio = (hp and maxHp and maxHp > 0) and math.clamp(hp / maxHp, 0, 1) or 0
+			row.fill.Size = UDim2.new(ratio, 0, 1, 0)
+		end
+	end
+end
+
+local function applyState(state)
+	currentState = state
+	local count = state and #state.members or 0
+	for i = #rows + 1, count do
+		rows[i] = makeRow(i)
+	end
+	list.Visible = count > 0
+	refreshRows()
+end
+
+partyStateChanged.OnClientEvent:Connect(applyState)
+
+-- HP는 Attribute 변화 신호를 멤버마다 따로 걸기보다 0.2초마다 한 번 다시 읽는다 - 최대 4명이라
+-- 비용이 없고, 멤버가 바뀔 때 연결을 붙였다 뗐다 할 필요가 없다.
+local accumulated = 0
+RunService.Heartbeat:Connect(function(dt)
+	if not currentState then
+		return
+	end
+	accumulated += dt
+	if accumulated >= 0.2 then
+		accumulated = 0
+		refreshRows()
+	end
+end)
+
+-- ═══ [2] 토스트(초대 수락/거절 + 알림) ═══
+local toast = Instance.new("Frame")
+toast.Name = "PartyToast"
+toast.AnchorPoint = Vector2.new(0.5, 0)
+toast.Position = UDim2.new(0.5, 0, 0, TOAST_Y)
+toast.Size = UDim2.new(0, 420, 0, 40)
+toast.BackgroundColor3 = UIColors.panel
+toast.BackgroundTransparency = UIColors.panelTransparency
+toast.Visible = false
+toast.Parent = screenGui
+
+local toastCorner = Instance.new("UICorner")
+toastCorner.CornerRadius = UDim.new(0, 10)
+toastCorner.Parent = toast
+
+local toastStroke = Instance.new("UIStroke")
+toastStroke.Color = UIColors.rim
+toastStroke.Transparency = UIColors.rimTransparency
+toastStroke.Parent = toast
+
+local toastText = Instance.new("TextLabel")
+toastText.BackgroundTransparency = 1
+toastText.Position = UDim2.new(0, 12, 0, 0)
+toastText.Size = UDim2.new(1, -24, 1, 0)
+toastText.Font = Enum.Font.GothamBold
+toastText.TextSize = 13
+toastText.TextWrapped = true
+toastText.TextXAlignment = Enum.TextXAlignment.Left
+toastText.TextColor3 = UIColors.textPrimary
+toastText.Text = ""
+toastText.Parent = toast
+
+local function makeToastButton(text, order, accent)
+	local button = Instance.new("TextButton")
+	button.AnchorPoint = Vector2.new(1, 0.5)
+	button.Position = UDim2.new(1, -10 - (order - 1) * 66, 0.5, 0)
+	button.Size = UDim2.new(0, 60, 0, 26)
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 12
+	button.Text = text
+	button.TextColor3 = accent and Color3.new(0, 0, 0) or UIColors.textSecondary
+	button.BackgroundColor3 = accent and UIColors.gold or UIColors.panel
+	button.BackgroundTransparency = accent and 0.1 or UIColors.panelTransparency
+	button.Visible = false
+	button.Parent = toast
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = button
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = UIColors.rim
+	stroke.Transparency = UIColors.rimTransparency
+	stroke.Parent = button
+	return button
+end
+
+local declineButton = makeToastButton("거절", 1, false)
+local acceptButton = makeToastButton("수락", 2, true)
+
+local toastToken = 0
+local inviteOpen = false
+
+local function hideToast()
+	toast.Visible = false
+	acceptButton.Visible = false
+	declineButton.Visible = false
+	inviteOpen = false
+end
+
+local function showToast(text, withButtons, seconds)
+	toastToken += 1
+	local token = toastToken
+	toastText.Text = text
+	toastText.Size = UDim2.new(1, withButtons and -150 or -24, 1, 0)
+	toast.Visible = true
+	acceptButton.Visible = withButtons
+	declineButton.Visible = withButtons
+	inviteOpen = withButtons
+	task.delay(seconds, function()
+		if toastToken == token then
+			hideToast()
+		end
+	end)
+end
+
+partyInviteNotice.OnClientEvent:Connect(function(data)
+	showToast(("%s님이 파티에 초대했습니다"):format(data.inviterName), true, data.seconds or 15)
+end)
+
+partyNotice.OnClientEvent:Connect(function(text)
+	if inviteOpen then
+		return -- 초대 팝업이 떠 있는 동안은 덮어쓰지 않는다(수락/거절 버튼이 사라지면 안 된다).
+	end
+	showToast(text, false, NOTICE_SECONDS)
+end)
+
+acceptButton.Activated:Connect(function()
+	partyRequest:FireServer("accept")
+	hideToast()
+end)
+
+declineButton.Activated:Connect(function()
+	partyRequest:FireServer("decline")
+	hideToast()
+end)

@@ -7,18 +7,51 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
+local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 
 local bossPickRng = Random.new()
 local rotationRng = Random.new()
 
 local BossRules = {}
 
--- 파티 인원수 보스 HP 배수(23-5, PRD 20.47 파티 설계용 자리 - 지시 "파티는 아직
--- 구현 전이므로 1인 기준으로만 계산한다. 다만 나중에 인원수 배수가 붙을 자리를 함수
--- 하나로 분리해둬라"). 지금은 항상 1 - 파티가 생기면 이 함수 안만 고치면 되고
--- buildInstanceDataFrom 등 호출부는 손댈 필요가 없다.
-function BossRules.partySizeHpMultiplier(player)
-	return 1
+-- ═══ 파티 인원수 보스 HP 배수(23-5에서 자리만 분리 → 24-1에서 채움, PRD 20.62) ═══
+-- HP_party(N) = HP_solo × N^p. 파티 N명의 총 DPS는 대략 N배이고 패턴 피해는 각자 따로 받으므로
+-- 처치 시간은 T_N = T_1 × N^(p−1)이다 - p=1이면 이득 0, p=0이면 N배 빠르다.
+--
+-- p는 새 상수가 아니라 기존 값 셋에서 유도한다(지시 "BalanceAnchorConfig와 기존 지수식에서
+-- 파생"): "정원(maxMembers)이 꽉 찬 파티의 시간 이득은 정확히 보스 한 구간(stageInterval)만큼"
+-- - 4인 파티가 스테이지 S 보스를 잡는 시간 = 솔로가 직전 보스(S − stageInterval)를 잡는 시간.
+-- 보스 HP가 스테이지당 k배로 자라므로(InfiniteStage.getMonsterHp) 직전 보스의 HP 비율은
+-- k^(−stageInterval)이고, 이를 N_max^(p−1)과 같게 놓으면
+--     N_max^(p−1) = k^(−stageInterval)  →  p = 1 − stageInterval · ln(k) / ln(N_max)
+-- k=1.155, stageInterval=5, N_max=4 → p ≈ 0.480. 2/3/4인 처치 시간 = 솔로의 0.70/0.56/0.49배
+-- ("유리하되 4배 빠르지는 않다"). 파티 하나가 진행을 앞당길 수 있는 폭이 보스 한 칸을
+-- 넘지 않는다는 뜻이라 리더보드 축(최고 도달 스테이지)의 의미도 지킨다.
+function BossRules.partyHpExponent()
+	return 1 - BossData.stageInterval * math.log(InfiniteStageConfig.growthRate) / math.log(PartyConfig.maxMembers)
+end
+
+function BossRules.partySizeHpMultiplier(memberCount)
+	local n = math.max(memberCount or 1, 1)
+	return n ^ BossRules.partyHpExponent()
+end
+
+-- 파티 보스 입장 밴드(PRD 20.47 [6](라) "불가" 밴드 재사용). 멤버 전원이
+--     bossStage ≤ recommendedStage(L_i) + band
+-- 를 만족해야 한다. band는 PRD 20.8-3 ①의 4직업 공통 콤보 배수((1+1+1.8)/3 ≈ 1.267)를
+-- 스테이지로 환산한 값 ⌊ln(1.267)/ln(k)⌋ = 1 - "실력으로 메울 수 있는 격차"의 코드 기준 하한
+-- (직업별 E 스킬 상한 +2·+3은 PRD가 잠정으로 표시한 값이라 새 상수로 넣지 않는다). 권장
+-- 스테이지는 무기 등급을 안 본다(20.44 [2](나) 결정 그대로 - rec(L)).
+function BossRules.partyEntryBand()
+	local comboAvg = 1 + (CombatConfig.comboHitMultiplier - 1) / CombatConfig.comboHitEvery
+	return math.floor(math.log(comboAvg) / math.log(InfiniteStageConfig.growthRate))
+end
+
+function BossRules.partyEntryStageCap(level)
+	return BalanceSim.recommendedStage(level, 0, false) + BossRules.partyEntryBand()
 end
 
 -- 순환 상태(rotation = { order, index, pending, history })를 받아 다음 보스 id를
@@ -119,12 +152,13 @@ end
 -- PlayerProfile의 순환 상태(BossRules.nextRotationBossId)로 미리 정한 값을 넘긴다.
 -- BossRules는 여전히 "그 id로 인스턴스 데이터를 계산하는" 순수 함수만 갖는다 - PlayerProfile
 -- (상태)을 이 shared 모듈이 직접 require하지 않기 위함(순수 규칙 모듈 유지).
-function BossRules.buildInstanceData(stage, bossId, player)
+-- partySize(24-1): 입장 인원(더미 포함 머릿수). 솔로는 1 - N^p = 1이라 기존 계산과 완전히 같다.
+function BossRules.buildInstanceData(stage, bossId, partySize)
 	local boss = BossData.bosses[bossId]
 	if not boss then
 		return nil
 	end
-	return BossRules.buildInstanceDataFrom(MonsterData.tier1, stage, boss, 1, 1, player)
+	return BossRules.buildInstanceDataFrom(MonsterData.tier1, stage, boss, 1, 1, partySize or 1)
 end
 
 -- 23-1 견습 모드 전용(BossData에 새 항목을 만들지 않는다 - 같은 보스 id에 patterns
@@ -154,10 +188,9 @@ function BossRules.buildTutorialInstanceData(tierIndex, stage, patternKeys, hpSc
 end
 
 -- buildInstanceData/buildTutorialInstanceData 공용 - trashBase(MonsterData의 tier 항목)와
--- hpMultiplierExtra(견습 전용 배율, 일반 무한 모드는 1)만 다르다. player(23-5)는
--- partySizeHpMultiplier 전용 - 견습 호출부는 nil을 넘긴다(파티 미구현이라 항상 1, 값은
--- 안 쓰인다).
-function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra, player)
+-- hpMultiplierExtra(견습 전용 배율, 일반 무한 모드는 1)만 다르다. partySize(24-1)는
+-- partySizeHpMultiplier 전용 - 견습 호출부는 nil(=1)을 넘긴다(견습은 항상 싱글).
+function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra, partySize)
 	local trashHp = InfiniteStage.getMonsterHp(trashBase.hp, stage)
 	local trashAttack = InfiniteStage.getMonsterAttack(trashBase.attack, stage)
 	local trashGold = InfiniteStage.getGoldReward(trashBase.goldDrop, stage)
@@ -178,8 +211,10 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 
 		-- hpMultiplierExtra(23-1) - 견습 전용 보정(TutorialData.bossHpScale × 대여 무기 배율).
 		-- 무한 모드는 항상 1이라(buildInstanceData 호출) 기존 계산과 완전히 같다.
-		-- partySizeHpMultiplier(23-5) - 파티 미구현이라 항상 1, 자리만 분리해 둔다.
-		hp = trashHp * boss.hpMultiplier * hpMultiplierExtra * BossRules.partySizeHpMultiplier(player),
+		-- partySizeHpMultiplier(24-1) - 입장 인원 N의 N^p(위 partyHpExponent 주석). 솔로는 1.
+		hp = trashHp * boss.hpMultiplier * hpMultiplierExtra * BossRules.partySizeHpMultiplier(partySize),
+		partySize = partySize or 1,
+		partyHpMultiplier = BossRules.partySizeHpMultiplier(partySize),
 		attack = attack,
 		-- 21-3: heavyAttack(=attack×3) 필드는 없앴다 - 배율은 공격력이 아니라 감소식을 거친
 		-- 피해에 곱한다(PlayerDamage.applyHit의 damageMultiplier, 이유는 그쪽 주석).

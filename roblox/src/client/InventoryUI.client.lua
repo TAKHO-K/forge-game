@@ -133,6 +133,8 @@ local cutoffDropdown, cutoffDropdownDim
 -- 23-4: 보석 탭(아래쪽에서 정의)을 이 시점(UIManager.register의 onOpen/onClose)이 먼저
 -- 참조한다 - cutoffDropdown과 같은 이유로 이름만 먼저 선언해 둔다.
 local updateGemTab, cancelGemDrag
+-- 24-1: 파티 탭도 같은 이유로 이름만 먼저 선언한다(setupPartyTab이 아래에서 채운다).
+local updatePartyTab
 
 -- 선택 상태: kind="bag"이면 value=서버 인덱스, kind="equip"이면 value="weapon"/"armor".
 local selectedKind, selectedValue = nil, nil
@@ -502,7 +504,7 @@ end
 -- TAB_ROW_HEIGHT만큼 밀린다. 색 규칙은 EnhanceUI.client.lua 탭과 같은 것(선택=강조색,
 -- 나머지=패널색)을 이 창의 팔레트(UIColors)로 옮긴 것뿐 - 새 색을 안 만든다.
 local TAB_ROW_HEIGHT = 30
-local EQUIP_TAB_NAMES = { "장비", "보석" }
+local EQUIP_TAB_NAMES = { "장비", "보석", "파티" } -- 24-1: 파티 탭(초대·수락·탈퇴·추방)
 local equipTabButtons = {}
 local equipTabContents = {}
 local activeEquipTab = "장비"
@@ -1481,6 +1483,7 @@ UIManager.register("inventory", {
 		rebuildGrid()
 		refreshStats()
 		updateGemTab()
+		updatePartyTab()
 	end,
 	onClose = function()
 		isOpen = false
@@ -2285,6 +2288,261 @@ end
 end -- setupGemTab
 
 setupGemTab()
+
+-- ═══ 파티 탭(24-1, PRD 20.47 [5](라) "패널: 내 파티(멤버 4칸) + 초대 목록(같은 서버 플레이어)") ═══
+-- 지시 "새 창을 만들지 말고 기존 창 구조 안에 넣어라" - 장비창 탭 하나로 붙인다. 초대는 같은
+-- 서버 안에서만(Players:GetPlayers()). 판정은 전부 서버(PartyServer.server.lua) - 여기 버튼은
+-- 요청만 보낸다. 보석 탭과 같은 이유(Luau 로컬 레지스터 200개 상한)로 함수 하나에 감싼다.
+local function setupPartyTab()
+
+local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local partyRequest = ReplicatedStorage:WaitForChild("PartyRequest")
+local partyStateChanged = ReplicatedStorage:WaitForChild("PartyStateChanged")
+
+local partyBody = Instance.new("Frame")
+partyBody.Name = "PartyBody"
+partyBody.Position = body.Position
+partyBody.Size = body.Size
+partyBody.BackgroundTransparency = 1
+partyBody.Visible = false
+partyBody.Parent = content
+equipTabContents["파티"] = partyBody
+
+local partyState = nil -- 서버 스냅샷(PartyStateChanged) - nil이면 파티 없음.
+
+local COLUMN_WIDTH = 330
+local ROW_HEIGHT, ROW_GAP = 36, 6
+
+local function classNameOf(classId)
+	local class = classId and ClassData.classes[classId]
+	return class and class.displayName or "-"
+end
+
+-- 좌: 내 파티 / 우: 서버 플레이어 - 두 열의 틀은 같다(제목 + 세로 목록).
+local function makeColumn(x, titleText)
+	local column = Instance.new("Frame")
+	column.Position = UDim2.new(0, x, 0, 0)
+	column.Size = UDim2.new(0, COLUMN_WIDTH, 1, 0)
+	column.BackgroundTransparency = 1
+	column.Parent = partyBody
+
+	local title = makeSectionLabel(column, titleText, 12)
+	title.Position = UDim2.new(0, 0, 0, 12)
+
+	local listFrame = Instance.new("Frame")
+	listFrame.Position = UDim2.new(0, 0, 0, 40)
+	listFrame.Size = UDim2.new(1, 0, 1, -40)
+	listFrame.BackgroundTransparency = 1
+	listFrame.Parent = column
+
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Vertical
+	layout.Padding = UDim.new(0, ROW_GAP)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = listFrame
+
+	return column, title, listFrame
+end
+
+local myColumn, myTitle, myList = makeColumn(14, "내 파티")
+local serverColumn, serverTitle, serverList = makeColumn(14 + COLUMN_WIDTH + 30, "서버 플레이어")
+
+-- 열 사이 세로 구분선(장비 패널의 gearRightLine과 같은 선 스타일).
+local divider = Instance.new("Frame")
+divider.Position = UDim2.new(0, 14 + COLUMN_WIDTH + 14, 0, 12)
+divider.Size = UDim2.new(0, 1, 1, -24)
+divider.BackgroundColor3 = UIColors.rim
+divider.BackgroundTransparency = UIColors.rimTransparency
+divider.BorderSizePixel = 0
+divider.Parent = partyBody
+
+-- 행 하나: [이름] [직업 · Lv · 스테이지]            [버튼]
+local function makeRow(parent, order)
+	local row = Instance.new("Frame")
+	row.LayoutOrder = order
+	row.Size = UDim2.new(1, 0, 0, ROW_HEIGHT)
+	row.BackgroundColor3 = UIColors.slot
+	row.BackgroundTransparency = UIColors.slotTransparency
+	row.Parent = parent
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = row
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = UIColors.rim
+	stroke.Transparency = UIColors.rimTransparency
+	stroke.Parent = row
+
+	local name = Instance.new("TextLabel")
+	name.BackgroundTransparency = 1
+	name.Position = UDim2.new(0, 10, 0, 4)
+	name.Size = UDim2.new(1, -90, 0, 15)
+	name.Font = Enum.Font.GothamBold
+	name.TextSize = 13
+	name.TextXAlignment = Enum.TextXAlignment.Left
+	name.TextColor3 = UIColors.textPrimary
+	name.Parent = row
+
+	local meta = Instance.new("TextLabel")
+	meta.BackgroundTransparency = 1
+	meta.Position = UDim2.new(0, 10, 0, 19)
+	meta.Size = UDim2.new(1, -90, 0, 12)
+	meta.Font = Enum.Font.Gotham
+	meta.TextSize = 10.5
+	meta.TextXAlignment = Enum.TextXAlignment.Left
+	meta.TextColor3 = UIColors.textSecondary
+	meta.Parent = row
+
+	local button = Instance.new("TextButton")
+	button.AnchorPoint = Vector2.new(1, 0.5)
+	button.Position = UDim2.new(1, -8, 0.5, 0)
+	button.Size = UDim2.new(0, 64, 0, 24)
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 12
+	button.TextColor3 = Color3.new(0, 0, 0)
+	button.BackgroundColor3 = UIColors.gold
+	button.BackgroundTransparency = 0.1
+	button.Parent = row
+	local buttonCorner = Instance.new("UICorner")
+	buttonCorner.CornerRadius = UDim.new(1, 0)
+	buttonCorner.Parent = button
+
+	return { frame = row, name = name, meta = meta, button = button, connection = nil }
+end
+
+local myRows, serverRows = {}, {}
+
+local function ensureRows(rowsTable, parent, count)
+	for i = #rowsTable + 1, count do
+		rowsTable[i] = makeRow(parent, i)
+	end
+	for i, row in ipairs(rowsTable) do
+		row.frame.Visible = i <= count
+		if row.connection then
+			row.connection:Disconnect()
+			row.connection = nil
+		end
+	end
+end
+
+-- 탈퇴 버튼 - 내 파티 열 맨 아래(장비 패널 하단 버튼과 같은 알약 스타일, 위험 동작이라 hp색).
+local leaveButton = Instance.new("TextButton")
+leaveButton.AnchorPoint = Vector2.new(0, 1)
+leaveButton.Position = UDim2.new(0, 0, 1, -8)
+leaveButton.Size = UDim2.new(0, 110, 0, 28)
+leaveButton.Font = Enum.Font.GothamBold
+leaveButton.TextSize = 12
+leaveButton.Text = "파티 탈퇴"
+leaveButton.TextColor3 = UIColors.textPrimary
+leaveButton.BackgroundColor3 = UIColors.hpDark
+leaveButton.BackgroundTransparency = 0.1
+leaveButton.Visible = false
+leaveButton.Parent = myColumn
+local leaveCorner = Instance.new("UICorner")
+leaveCorner.CornerRadius = UDim.new(1, 0)
+leaveCorner.Parent = leaveButton
+local leaveStroke = Instance.new("UIStroke")
+leaveStroke.Color = UIColors.hp
+leaveStroke.Transparency = UIColors.rimTransparency
+leaveStroke.Parent = leaveButton
+leaveButton.Activated:Connect(function()
+	partyRequest:FireServer("leave")
+end)
+
+local emptyLabel = Instance.new("TextLabel")
+emptyLabel.BackgroundTransparency = 1
+emptyLabel.Position = UDim2.new(0, 0, 0, 44)
+emptyLabel.Size = UDim2.new(1, 0, 0, 40)
+emptyLabel.Font = Enum.Font.Gotham
+emptyLabel.TextSize = 12
+emptyLabel.TextWrapped = true
+emptyLabel.TextXAlignment = Enum.TextXAlignment.Left
+emptyLabel.TextColor3 = UIColors.textTertiary
+emptyLabel.Text = "파티가 없습니다. 오른쪽 목록에서 초대하면 리더가 됩니다.\n보스 스테이지는 리더가 열고, 파티원 전원이 같은 아레나로 들어갑니다."
+emptyLabel.Parent = myColumn
+
+local function isMeLeader()
+	return partyState ~= nil and partyState.leaderUserId == player.UserId
+end
+
+updatePartyTab = function()
+	if not isOpen then
+		return
+	end
+	-- ── 내 파티 ──
+	local members = partyState and partyState.members or {}
+	myTitle.Text = ("내 파티 (%d/%d)"):format(#members, PartyConfig.maxMembers)
+	emptyLabel.Visible = #members == 0
+	leaveButton.Visible = #members > 0
+	ensureRows(myRows, myList, #members)
+	for i, member in ipairs(members) do
+		local row = myRows[i]
+		local target = (not member.isDummy) and Players:GetPlayerByUserId(member.userId) or nil
+		local classId = member.isDummy and member.dummy.classId or (target and target:GetAttribute("ClassId"))
+		local level = member.isDummy and member.dummy.level or (target and target:GetAttribute("CharacterLevel"))
+		local stage = member.isDummy and member.dummy.stage or (target and target:GetAttribute("InfiniteStage"))
+		row.name.Text = (member.isLeader and "★ " or "") .. member.name .. (member.isDummy and " (더미)" or "")
+		row.name.TextColor3 = member.isLeader and UIColors.gold or UIColors.textPrimary
+		row.meta.Text = ("%s · Lv %s · 스테이지 %s"):format(classNameOf(classId), tostring(level or "-"), tostring(stage or "-"))
+		local canKick = isMeLeader() and member.userId ~= player.UserId
+		row.button.Visible = canKick
+		row.button.Text = "추방"
+		if canKick then
+			row.connection = row.button.Activated:Connect(function()
+				partyRequest:FireServer("kick", member.userId)
+			end)
+		end
+	end
+
+	-- ── 서버 플레이어(나 제외) ──
+	local others = {}
+	for _, other in ipairs(Players:GetPlayers()) do
+		if other ~= player then
+			table.insert(others, other)
+		end
+	end
+	table.sort(others, function(a, b)
+		return a.Name < b.Name
+	end)
+	serverTitle.Text = ("서버 플레이어 (%d)"):format(#others)
+	ensureRows(serverRows, serverList, #others)
+	local inMyParty = {}
+	for _, member in ipairs(members) do
+		inMyParty[member.userId] = true
+	end
+	local canInvite = (partyState == nil) or (isMeLeader() and #members < PartyConfig.maxMembers)
+	for i, other in ipairs(others) do
+		local row = serverRows[i]
+		row.name.Text = other.Name
+		row.name.TextColor3 = UIColors.textPrimary
+		row.meta.Text = ("%s · Lv %s · 스테이지 %s"):format(
+			classNameOf(other:GetAttribute("ClassId")), tostring(other:GetAttribute("CharacterLevel") or "-"), tostring(other:GetAttribute("InfiniteStage") or "-"))
+		local alreadyIn = inMyParty[other.UserId]
+		row.button.Visible = true
+		row.button.Text = alreadyIn and "파티원" or "초대"
+		row.button.AutoButtonColor = canInvite and not alreadyIn
+		row.button.BackgroundColor3 = (canInvite and not alreadyIn) and UIColors.gold or UIColors.panel
+		row.button.TextColor3 = (canInvite and not alreadyIn) and Color3.new(0, 0, 0) or UIColors.textTertiary
+		if canInvite and not alreadyIn then
+			row.connection = row.button.Activated:Connect(function()
+				partyRequest:FireServer("invite", other.UserId)
+			end)
+		end
+	end
+end
+
+partyStateChanged.OnClientEvent:Connect(function(state)
+	partyState = state
+	updatePartyTab()
+end)
+Players.PlayerAdded:Connect(updatePartyTab)
+Players.PlayerRemoving:Connect(function()
+	task.defer(updatePartyTab)
+end)
+
+end -- setupPartyTab
+
+setupPartyTab()
 
 -- ═══ 서버 동기화 ═══
 

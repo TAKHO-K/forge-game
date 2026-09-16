@@ -55,6 +55,11 @@ local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData)
 -- 23-2 환생·보석 검증 명령(/gg rebirth, /gg rebirthdo, /gg gem)용.
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+-- 24-1 파티 검증 명령(/gg party dummy|info|table|killsim)용.
+local PartyState = require(script.Parent.PartyState)
+local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 
 -- 앵커 조건(지시 [1] - "최소한 앵커 조건은 하나로 불러올 수 있어야 한다"): 레벨100 +
 -- 일반등급 itemLevel100 3부위 + 강화+0 + 무기등급 일반(0), 스테이지 100. 무기 등급은
@@ -583,6 +588,11 @@ local HELP_TEXT = table.concat({
 	"/gg terrain [clear|cost|ground|drop|rules|parts] - tier1에 테스트 지형(고원·30°경사·계단·70°경사·절벽·도랑) 생성 / 제거 / 지면 Raycast 부하 실측 / 잡몹 접지 상태 / 발밑 시험 드랍(22-4) / 배치 규칙 강제 검증 / 파트 수 실측(22-5)",
 	"/gg tutorial <0-7> - 견습 단계 강제 이동(0=미시작으로 리셋, 1~7=그 단계로 즉시 진입)",
 	"/gg tutorial off - 견습 종료하고 무한 모드로 복귀(완료 처리)",
+	"/gg party dummy <n> - 더미 파티원 n명을 붙인다(0이면 더미 제거) - 보스 HP 배수·HUD 검증용(24-1)",
+	"/gg party info - 지금 파티 상태·입장 밴드·적용 중인 보스 HP 배수(N^p)·기여도를 콘솔에 출력(24-1)",
+	"/gg party table [stage] - 1~4인 예상 보스 처치 시간표(지금 장비 + 앵커 4직업)를 콘솔에 출력(24-1)",
+	"/gg party killsim [uptime] - 지금 보스를 봇 DPS(로테이션 총딜×uptime×인원)로 실시간 처치해 시간을 잰다(24-1, 기본 uptime 0.65)",
+	"/gg party selftest - 스탠드인(가짜 Player) 3명으로 결성·만원·추방·승계·해산·접속종료·보스전 중 이탈·기여도 제외를 서버 로그로 검증(24-1)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
@@ -694,8 +704,21 @@ local function handleCommand(player, args)
 		end
 		BossEncounter.despawnFor(player)
 		applyStage(player, stage)
-		BossEncounter.spawnFor(player, stage)
-		reply(player, ("보스 스테이지 %d 진입 - 아레나로 이동"):format(stage))
+		-- 24-1: 파티 리더면 파티 보스(멤버 전원 텔레포트 + N^p HP). 입장 검사는 검증 편의상
+		-- 우회하되 결과는 찍는다 - 실제 경로(StageServer)는 막힌다.
+		local party = PartyState.getParty(player)
+		if party and PartyState.isLeader(player) then
+			local blocked = BossEncounter.checkPartyEntry(party, stage)
+			for _, entry in ipairs(blocked) do
+				reply(player, ("  (검사) %s 막힘: %s - DevTools라 우회"):format(entry.player.Name, entry.reason))
+			end
+			BossEncounter.spawnForParty(party, player, stage)
+			reply(player, ("파티 보스 스테이지 %d 진입 - 인원 %d, HP 배수 %.3f"):format(
+				stage, PartyState.getSize(party), BossRules.partySizeHpMultiplier(PartyState.getSize(party))))
+		else
+			BossEncounter.spawnFor(player, stage)
+			reply(player, ("보스 스테이지 %d 진입 - 아레나로 이동"):format(stage))
+		end
 	elseif sub == "pattern" and args[2] then
 		local model = BossEncounter.getActive(player)
 		local data = model and MonsterState.getData(model)
@@ -1003,6 +1026,212 @@ local function handleCommand(player, args)
 			SaveCoordinator.saveForPlayer(player)
 			reply(player, "저장 차단 해제 - 지금 상태(테스트 값 포함)가 실제로 저장됩니다. 원본 복원 불가(백업 삭제됨, 재접속 지속성 검증 전용)")
 		end
+	elseif sub == "party" and args[2] == "dummy" and tonumber(args[3]) then
+		local n = math.floor(tonumber(args[3]))
+		if n <= 0 then
+			reply(player, ("더미 %d명 제거"):format(PartyState.clearDummies(player)))
+		else
+			local level = PlayerProfile.getCharacterLevel(player) or 1
+			local stage = PlayerProfile.getInfiniteStage(player) or 1
+			local ok, added = PartyState.addDummies(player, n, function(index)
+				return { classId = ClassData.order[(index - 1) % #ClassData.order + 1], level = level, stage = stage, hp = 1, maxHp = 1 }
+			end)
+			if ok then
+				local party = PartyState.getParty(player)
+				reply(player, ("더미 %d명 추가 - 파티 인원 %d/%d, 다음 보스 HP 배수 %.3f (p=%.4f)"):format(
+					added, PartyState.getSize(party), PartyConfig.maxMembers,
+					BossRules.partySizeHpMultiplier(PartyState.getSize(party)), BossRules.partyHpExponent()))
+			else
+				reply(player, "실패: " .. tostring(added))
+			end
+		end
+	elseif sub == "party" and args[2] == "info" then
+		local p = BossRules.partyHpExponent()
+		reply(player, ("p = 1 - stageInterval(%d) × ln(k=%.3f) / ln(maxMembers=%d) = %.4f | N^p: 1→%.3f 2→%.3f 3→%.3f 4→%.3f"):format(
+			BossData.stageInterval, InfiniteStageConfig.growthRate, PartyConfig.maxMembers, p,
+			BossRules.partySizeHpMultiplier(1), BossRules.partySizeHpMultiplier(2), BossRules.partySizeHpMultiplier(3), BossRules.partySizeHpMultiplier(4)))
+		local level = PlayerProfile.getCharacterLevel(player) or 1
+		reply(player, ("내 입장 밴드: 레벨 %d → 권장 %d + band %d = 보스 스테이지 ≤ %d"):format(
+			level, BalanceSim.recommendedStage(level, 0, false), BossRules.partyEntryBand(), BossRules.partyEntryStageCap(level)))
+		local party = PartyState.getParty(player)
+		if not party then
+			reply(player, "파티 없음")
+		else
+			local names = {}
+			for _, record in ipairs(PartyState.getMemberRecords(party)) do
+				table.insert(names, ("%s%s%s"):format(record.name, record.isDummy and "(더미)" or "", record == party.leader and "★" or ""))
+			end
+			reply(player, ("파티 #%d 인원 %d/%d [%s] 리더=%s"):format(party.id, PartyState.getSize(party), PartyConfig.maxMembers,
+				table.concat(names, ", "), tostring(PartyState.getLeader(party) and PartyState.getLeader(party).Name)))
+		end
+		local encounter = BossEncounter.getEncounter(player)
+		if not encounter then
+			reply(player, "활성 보스전 없음")
+		else
+			local hp, maxHp = MonsterState.getBossHp(encounter.model)
+			local memberNames = {}
+			for _, member in ipairs(encounter.members) do
+				table.insert(memberNames, member.Name)
+			end
+			reply(player, ("보스전: 스테이지 %d, 입장 인원 %d(실제 %d: %s), 적용 HP 배수 %.3f, 보스 HP %.0f/%.0f (솔로 기준 %.0f), 생존 %d명, 순환 소모=%s"):format(
+				encounter.stage, encounter.size, #encounter.members, table.concat(memberNames, ","),
+				encounter.data.partyHpMultiplier or 1, hp or 0, maxHp or 0, (maxHp or 0) / (encounter.data.partyHpMultiplier or 1),
+				BossEncounter.livingMemberCount(encounter), encounter.rotationOwner and encounter.rotationOwner.Name or "-"))
+			local contrib = {}
+			for member, ratio in pairs(MonsterState.getContributors(encounter.model)) do
+				table.insert(contrib, ("%s=%.1f%%"):format(member.Name, ratio * 100))
+			end
+			reply(player, "기여도: " .. (#contrib > 0 and table.concat(contrib, " ") or "없음"))
+		end
+	elseif sub == "party" and args[2] == "table" then
+		-- 1~4인 예상 처치 시간표. 보스 HP(N) = trashHp(S)×20×N^p, 파티 DPS = N × (60초 로테이션
+		-- 총딜/60) × uptime(회피 35% → 0.65, PRD 20.44 (가)). T_N = HP(N) / DPS_N.
+		local stage = tonumber(args[3]) and math.floor(tonumber(args[3])) or (PlayerProfile.getInfiniteStage(player) or 1)
+		local uptime = 0.65
+		local p = BossRules.partyHpExponent()
+		local trashHp = BalanceSim.getMonsterHp(stage)
+		local bossSoloHp = trashHp * BossData.bosses[BossData.pools[1].bossIds[1]].hpMultiplier
+		local function rowFor(label, loadout)
+			local rotation = BalanceSim.simulateCombat(loadout, { useSkills = true })
+			local dps = rotation.totalDamage / 60
+			local parts = {}
+			for n = 1, PartyConfig.maxMembers do
+				local hp = bossSoloHp * (n ^ p)
+				local pure = hp / (n * dps)
+				table.insert(parts, ("%d인 %.1f초(순딜 %.1f)"):format(n, pure / uptime, pure))
+			end
+			reply(player, ("%s DPS=%.1f/s: %s"):format(label, dps, table.concat(parts, " | ")))
+		end
+		reply(player, ("=== 예상 처치 시간표 (스테이지 %d, 보스 솔로 HP %.0f, p=%.4f, uptime %.2f) ==="):format(stage, bossSoloHp, p, uptime))
+		local classId = PlayerProfile.getClassId(player)
+		if classId then
+			local weapon = PlayerProfile.getWeapon(player)
+			local equipment = { armor = PlayerProfile.getEquipped(player, "armor"), gloves = PlayerProfile.getEquipped(player, "gloves"), shoes = PlayerProfile.getEquipped(player, "shoes") }
+			rowFor(("[지금 장비 %s L%d]"):format(classId, PlayerProfile.getCharacterLevel(player) or 1),
+				BalanceSim.buildLoadoutFromEquipment(classId, PlayerProfile.getCharacterLevel(player) or 1, weapon.level, weapon.grade, equipment, weapon.gems))
+		end
+		for _, id in ipairs(ClassData.order) do
+			rowFor(("[앵커 %s L%d g0]"):format(id, stage), BalanceSim.buildAnchorLoadout(id, stage, 0))
+		end
+	elseif sub == "party" and args[2] == "selftest" then
+		-- 24-1 검증: Studio 단일 클라이언트로는 실제 2~4인 파티를 못 만든다 - chesttest의 standIn과 같은
+		-- 기법으로 Player 필드(Name/UserId/Parent)만 흉내 낸 테이블 3개를 멤버로 넣어 PartyState·
+		-- BossEncounter의 규칙을 실제 코드 경로로 돌린다. 스탠드인은 캐릭터·프로필이 없어 텔레포트·
+		-- 피격·보상 대상에서 자연히 빠지므로(각 모듈의 nil 가드가 그대로 동작하는지도 함께 본다),
+		-- 보상 검사는 "기여 10% 미만 제외" 경로만 스탠드인으로 밟고 실제 지급은 이 플레이어가 받는다.
+		if PartyState.getParty(player) then
+			reply(player, "먼저 파티를 나가세요(/gg party dummy 0 또는 탈퇴)")
+			return
+		end
+		ensureBackup(player)
+		local function standIn(name, userId)
+			return { Name = name, UserId = userId, Parent = workspace, Character = nil }
+		end
+		local B, C, D, E = standIn("StandInB", -9001), standIn("StandInC", -9002), standIn("StandInD", -9003), standIn("StandInE", -9004)
+		local results = {}
+		local function check(label, ok)
+			table.insert(results, ("%s %s"):format(ok and "O" or "X", label))
+		end
+		local function sizeOf()
+			return PartyState.getSize(PartyState.getParty(player) or PartyState.getParty(B) or PartyState.getParty(C))
+		end
+		-- S1 결성(초대→수락) 2인
+		local ok = PartyState.invite(player, B)
+		local ok2, why = PartyState.respondInvite(B, true)
+		check(("S1 결성 2인: invite=%s accept=%s(%s) size=%d leader=%s"):format(tostring(ok), tostring(ok2), tostring(why), sizeOf(), tostring(PartyState.isLeader(player))),
+			ok and ok2 and sizeOf() == 2 and PartyState.isLeader(player))
+		-- S2 리더 아닌 사람의 초대
+		local _, r2 = PartyState.invite(B, C)
+		check("S2 파티원 초대 거부: " .. tostring(r2), r2 == "not_leader")
+		-- S3 3·4인
+		PartyState.invite(player, C); PartyState.respondInvite(C, true)
+		PartyState.invite(player, D); PartyState.respondInvite(D, true)
+		check("S3 4인 결성: size=" .. sizeOf(), sizeOf() == 4)
+		-- S4 만원 초대
+		local _, r4 = PartyState.invite(player, E)
+		check("S4 만원 초대 거부: " .. tostring(r4), r4 == "party_full")
+		-- S5 추방
+		local k5 = PartyState.kick(player, D.UserId)
+		check(("S5 추방: %s size=%d"):format(tostring(k5), sizeOf()), k5 and sizeOf() == 3)
+		-- S6 리더 이탈 → 최고참 승계
+		PartyState.leave(player, "leave")
+		local partyB = PartyState.getParty(B)
+		check(("S6 리더 이탈 승계: 새 리더=%s size=%d 나=%s"):format(tostring(partyB and PartyState.getLeader(partyB) and PartyState.getLeader(partyB).Name), partyB and PartyState.getSize(partyB) or 0, tostring(PartyState.getParty(player))),
+			partyB ~= nil and PartyState.getLeader(partyB) == B and PartyState.getSize(partyB) == 2 and PartyState.getParty(player) == nil)
+		-- S7 1명 남으면 해산
+		PartyState.leave(C, "leave")
+		check("S7 1명 남아 해산: B파티=" .. tostring(PartyState.getParty(B)), PartyState.getParty(B) == nil)
+		-- S8 접속 종료
+		PartyState.invite(player, B); PartyState.respondInvite(B, true)
+		PartyState.invite(player, C); PartyState.respondInvite(C, true)
+		PartyState.leave(C, "disconnect")
+		check("S8 접속 종료 처리: size=" .. sizeOf(), sizeOf() == 2)
+		-- S9 보스전 중 이탈 - HP·배수 고정, 기여 10% 미만 제외
+		BossEncounter.despawnFor(player)
+		local stage = BossData.stageInterval * 20 -- 100
+		applyStage(player, stage)
+		local party = PartyState.getParty(player)
+		BossEncounter.spawnForParty(party, player, stage)
+		local encounter = BossEncounter.getEncounter(player)
+		local model = encounter and encounter.model
+		local _, maxHpBefore = MonsterState.getBossHp(model)
+		local mult = encounter and encounter.data.partyHpMultiplier or 0
+		MonsterState.applyDamage(model, maxHpBefore * 0.05, stage, B) -- B 5% (제외돼야 한다)
+		MonsterState.applyDamage(model, maxHpBefore * 0.30, stage, player)
+		PartyState.leave(B, "disconnect") -- 보스전 도중 접속 끊김
+		local hpAfter, maxHpAfter = MonsterState.getBossHp(model)
+		local enc2 = BossEncounter.getEncounter(player)
+		check(("S9a 보스전 중 이탈: 배수 %.3f(기대 1.395) 최대HP 유지=%s 남은HP=%.0f%% 멤버=%d 입장인원=%d"):format(
+			mult, tostring(maxHpAfter == maxHpBefore), hpAfter / maxHpAfter * 100, enc2 and #enc2.members or 0, enc2 and enc2.size or 0),
+			math.abs(mult - BossRules.partySizeHpMultiplier(2)) < 1e-6 and maxHpAfter == maxHpBefore and enc2 and #enc2.members == 1 and enc2.size == 2)
+		local goldBefore = player:GetAttribute("Gold")
+		local isDead = MonsterState.applyDamage(model, maxHpBefore, stage, player)
+		MonsterSpawner.updateHpLabel(model)
+		CombatResolution.resolveHit(player, model, isDead)
+		check(("S9b 처치 보상: 골드 %d→%d, 보스전 종료=%s"):format(goldBefore, player:GetAttribute("Gold"), tostring(BossEncounter.getEncounter(player) == nil)),
+			player:GetAttribute("Gold") > goldBefore and BossEncounter.getEncounter(player) == nil)
+		-- 정리
+		PartyState.leave(player, "leave")
+		check("S10 정리: 내 파티=" .. tostring(PartyState.getParty(player)), PartyState.getParty(player) == nil)
+		reply(player, "selftest 결과:\n" .. table.concat(results, "\n"))
+	elseif sub == "party" and args[2] == "killsim" then
+		-- 봇 DPS 실측: 실제 보스 인스턴스(실제 HP·배수)에 "입장 인원 × 내 로테이션 DPS × uptime"을
+		-- 0.25초마다 실제 applyDamage 경로로 넣고, 죽을 때까지의 벽시계 시간을 잰다. 클릭이 아니라
+		-- 봇이라 "예상표가 실제 HP·배수·처치 파이프라인에서 재현되는가"를 확인하는 도구다.
+		local encounter = BossEncounter.getEncounter(player)
+		if not encounter then
+			reply(player, "활성 보스전이 없습니다(/gg boss 먼저)")
+			return
+		end
+		local classId = PlayerProfile.getClassId(player)
+		local weapon = PlayerProfile.getWeapon(player)
+		local equipment = { armor = PlayerProfile.getEquipped(player, "armor"), gloves = PlayerProfile.getEquipped(player, "gloves"), shoes = PlayerProfile.getEquipped(player, "shoes") }
+		local loadout = BalanceSim.buildLoadoutFromEquipment(classId, PlayerProfile.getCharacterLevel(player) or 1, weapon.level, weapon.grade, equipment, weapon.gems)
+		local uptime = tonumber(args[3]) or 0.65
+		local dps = BalanceSim.simulateCombat(loadout, { useSkills = true }).totalDamage / 60
+		local totalDps = dps * encounter.size * uptime
+		local model = encounter.model
+		local _, maxHp = MonsterState.getBossHp(model)
+		local predicted = maxHp / totalDps
+		reply(player, ("killsim 시작: 인원 %d, HP 배수 %.3f, 보스 HP %.0f, 봇 DPS %.1f×%d×%.2f=%.1f/s → 예상 %.1f초"):format(
+			encounter.size, encounter.data.partyHpMultiplier or 1, maxHp, dps, encounter.size, uptime, totalDps, predicted))
+		task.spawn(function()
+			local startedAt = os.clock()
+			local stage = TutorialState.getMonsterStage(player)
+			local tick = 0.25
+			while model.Parent and MonsterState.getData(model) do
+				task.wait(tick)
+				local isDead = MonsterState.applyDamage(model, totalDps * tick, stage, player)
+				MonsterSpawner.updateHpLabel(model)
+				if isDead then
+					local elapsed = os.clock() - startedAt
+					CombatResolution.resolveHit(player, model, isDead)
+					reply(player, ("killsim 완료: 실측 %.1f초 (예상 %.1f초, 오차 %+.1f%%)"):format(elapsed, predicted, (elapsed / predicted - 1) * 100))
+					return
+				end
+			end
+			reply(player, "killsim 중단: 보스가 사라졌습니다")
+		end)
 	elseif sub == "reset" then
 		restore(player)
 	else

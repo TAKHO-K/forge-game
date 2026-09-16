@@ -218,6 +218,10 @@ stageMoveResult.OnClientEvent:Connect(function(payload)
 	end
 	if payload.reason == "boss_locked" then
 		warn(("[forge-game] 스테이지 이동 거절됨 - 스테이지 %d 보스를 아직 못 깼다"):format(payload.requiredBossStage))
+	elseif payload.reason == "party_not_leader" then
+		warn("[forge-game] 스테이지 이동 거절됨 - 보스 스테이지는 파티 리더만 연다")
+	elseif payload.reason == "party_blocked" then
+		warn("[forge-game] 스테이지 이동 거절됨 - 파티원 입장 불가: " .. table.concat(payload.blocked or {}, ", "))
 	else
 		warn("[forge-game] 스테이지 이동 거절됨 - 요청 범위를 벗어났다")
 	end
