@@ -10,7 +10,6 @@ local Loot = require(ReplicatedStorage.Shared.Loot)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
-local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
@@ -62,13 +61,13 @@ local function syncActiveClassAttributes(player, profile)
 
 	player:SetAttribute("WeaponLevel", classState.weapon.level)
 	player:SetAttribute("WeaponGrade", classState.weapon.grade)
-	-- 환생 횟수(23-2) - CharacterLevel의 useExponential 분기(ExpBar.client.lua)와 환생 UI
-	-- (레벨 상한 표시)가 이 Attribute로 판정한다.
+	-- 환생 횟수(23-2) - 환생 UI(레벨 상한 표시)가 이 Attribute로 판정한다(25-1까지는 ExpBar의
+	-- 곡선 분기도 봤지만, 곡선이 회차 무관 하나가 되면서 그 용도는 없어졌다).
 	player:SetAttribute("RebirthCount", classState.rebirthCount)
 	-- 캐릭터 레벨(13-2) - 저장에는 누적 경험치만 있고 레벨은 항상 여기서 파생시킨다(단일
 	-- 소스 원칙, InfiniteStage의 stage/multiplier 관계와 같은 구조).
 	player:SetAttribute("CharacterExp", classState.characterExp)
-	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(classState.characterExp, classState.rebirthCount > 0))
+	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(classState.characterExp))
 	-- 무한 모드 스테이지(11-1). 둘 다 nil일 수 없는 필드라(SaveSystem.migrate v4 참고)
 	-- classId처럼 빈 문자열로 바꿔치기할 필요가 없다.
 	player:SetAttribute("InfiniteStage", classState.stageProgress.infinite)
@@ -133,7 +132,7 @@ end
 function PlayerProfile.getCharacterLevel(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
-	return classState and CharacterLevel.getLevelFromExp(classState.characterExp, classState.rebirthCount > 0)
+	return classState and CharacterLevel.getLevelFromExp(classState.characterExp)
 end
 
 -- 서버만 호출한다(AttackServer의 몬스터 처치 판정 직후, 골드와 같은 경로). 클라이언트가
@@ -142,21 +141,17 @@ end
 -- 이 함수 자체는 판정만 하고 연출은 모른다(단일 책임, AttackServer가 RemoteEvent를 쏜다).
 -- 19-1: 활성 직업의 경험치만 오른다 - 다른 3직업은 지금 안 쓰고 있으니 그대로 멈춰 있다.
 --
--- 23-2: 경험치 배수(×(rebirthCount+1), PRD 20.38 [1]) - 625마리 항등식의 절반이다. 레벨
--- 상한이 회차마다 25×(rebirthCount+1)로 늘어나는 만큼 경험치도 같은 배수로 늘려야
--- "목표 레벨까지 필요한 처치 수"가 회차 무관 625로 고정된다(레벨26+가 이미 "25마리/레벨"
--- 로 고정돼 있으므로, 목표레벨×25÷배수 = 25(k+1)×25÷(k+1) = 625). 여기 한 곳에서만
--- 곱한다 - 호출부(CombatResolution.grantKillReward)는 몬스터가 주는 원래 경험치만 넘기면
--- 된다(골드처럼 "증가 통로가 여기 하나"라는 원칙을 그대로 유지).
--- 23-3: 환생 전(rebirthCount==0) 최초 레벨1~25 구간 경험치 배수(CharacterLevelConfig.
--- firstRunExpMultiplier) - "초반 레벨업이 지루하다, 첫 환생까지는 10마리 안팎으로 1업"
--- 지시. rebirthCount>=1은 그대로 (rebirthCount+1)을 쓴다(23-2, 625마리 항등식용) - 최초
--- 구간과 환생 이후 구간은 서로 다른 목적(온보딩 속도 vs 항등식 유지)이라 배수도 분리한다.
-local function expMultiplierFor(classState)
-	if classState.rebirthCount == 0 then
-		return CharacterLevelConfig.firstRunExpMultiplier
-	end
-	return classState.rebirthCount + 1
+-- 25-1: 회차 배수(23-2의 ×(rebirthCount+1), 23-3의 firstRunExpMultiplier)는 없앴다 - 경험치
+-- 요구치 자체가 "레벨당 목표 마릿수" 곡선(CharacterLevel, 회차 무관 하나)에서 역산되므로
+-- 배수로 마릿수를 조정할 이유가 사라졌다. 몬스터가 주는 경험치는 그대로 더하고, 아래
+-- getExpGainMultiplier만 곱한다 - 여기 한 곳에서만 곱한다(호출부 CombatResolution.
+-- grantKillReward는 몬스터가 주는 원래 경험치만 넘긴다 - "증가 통로가 여기 하나" 원칙).
+
+-- 경험치 획득량 배수. 다음 세션의 "경험치 획득량 증가 옵션(최대 +25%)"이 곱해질 자리 -
+-- 지금은 항상 1.0이다. 옵션이 붙으면 profile/classState에서 읽어 1.0~1.25를 돌려주면 되고,
+-- addCharacterExp·/gg curve(DevTools)가 이 함수 하나만 본다.
+function PlayerProfile.getExpGainMultiplier(player)
+	return 1.0
 end
 
 function PlayerProfile.addCharacterExp(player, amount)
@@ -165,10 +160,9 @@ function PlayerProfile.addCharacterExp(player, amount)
 	if not classState then
 		return nil, nil
 	end
-	local useExponential = classState.rebirthCount > 0
-	local oldLevel = CharacterLevel.getLevelFromExp(classState.characterExp, useExponential)
-	classState.characterExp += amount * expMultiplierFor(classState)
-	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp, useExponential)
+	local oldLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
+	classState.characterExp += amount * PlayerProfile.getExpGainMultiplier(player)
+	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then
 		player:SetAttribute("CharacterLevel", newLevel)
@@ -372,10 +366,8 @@ end
 --   "max_rebirth"     - 이미 5회 전부 마쳤다(GemData.maxRebirthCount).
 --   "level_too_low"   - 그 회차의 목표 레벨(25×(rebirthCount+1))에 아직 못 미쳤다.
 --
--- 625마리 항등식(PRD 20.38 [1])이 성립하려면 레벨1~25 구간도 지수식이어야 한다 - 이번
--- 환생으로 characterExp가 0(레벨1)이 되는 순간부터 rebirthCount>=1이라 CharacterLevel의
--- useExponential 분기가 이미 자동으로 켜진다(추가 처리 불필요, syncActiveClassAttributes가
--- 그 분기로 CharacterLevel Attribute를 다시 계산한다).
+-- 25-1: 레벨 곡선은 환생 회차와 무관하게 하나다(CharacterLevel 주석) - 환생은 characterExp를
+-- 0으로 되돌릴 뿐 곡선 분기를 바꾸지 않는다.
 function PlayerProfile.rebirth(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
@@ -387,7 +379,7 @@ function PlayerProfile.rebirth(player)
 	end
 
 	local requiredLevel = 25 * (classState.rebirthCount + 1)
-	local currentLevel = CharacterLevel.getLevelFromExp(classState.characterExp, classState.rebirthCount > 0)
+	local currentLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
 	if currentLevel < requiredLevel then
 		return false, "level_too_low", requiredLevel
 	end
@@ -395,11 +387,9 @@ function PlayerProfile.rebirth(player)
 	classState.rebirthCount += 1
 	classState.characterExp = 0
 	-- 무한 스테이지도 1로 되돌린다(PRD에 명시된 문구는 없다 - "임의 결정" 목록 참고).
-	-- 근거: 625마리 항등식(20.38 [1])은 "레벨당 25마리"가 성립해야 하는데, 그 25는
-	-- 몬스터 스테이지=캐릭터 레벨(rec(L)=L, 20.44 앵커)일 때만 성립하는 비율이다
-	-- (CharacterLevelConfig.lua 주석 - expFormulaRatio-1==expFormulaDivisor 약분이
-	-- 몬스터 HP 성장률과 정확히 맞물리는 지점). 레벨은 1로 리셋되는데 스테이지가 예전
-	-- 그대로면(예: 환생 전 스테이지500) 몬스터가 압도적으로 강해 625마리 그라인드
+	-- 근거: 목표 마릿수 곡선(25-1, CharacterLevelConfig.killTargetAnchors)은 "몬스터 스테이지=
+	-- 캐릭터 레벨(rec(L)=L, 20.44 앵커)에서 사냥할 때"가 전제다. 레벨은 1로 리셋되는데
+	-- 스테이지가 예전 그대로면(예: 환생 전 스테이지500) 몬스터가 압도적으로 강해 그라인드
 	-- 자체가 성립하지 않는다. infiniteBest(최고 기록)는 건드리지 않는다 - 그건 영구
 	-- 성취 기록이라 파밍 위치가 낮아져도 내려가면 안 된다(setInfiniteStage와 같은 원칙).
 	classState.stageProgress.infinite = 1
@@ -695,7 +685,7 @@ function PlayerProfile.getClassSummaries(player)
 	local summaries = {}
 	for classId, classState in pairs(profile.classes) do
 		summaries[classId] = {
-			level = CharacterLevel.getLevelFromExp(classState.characterExp, classState.rebirthCount > 0),
+			level = CharacterLevel.getLevelFromExp(classState.characterExp),
 			stageBest = classState.stageProgress.infiniteBest,
 		}
 	end
@@ -1076,7 +1066,7 @@ function PlayerProfile.setCharacterExpDirect(player, exp)
 	end
 	classState.characterExp = exp
 	player:SetAttribute("CharacterExp", exp)
-	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(exp, classState.rebirthCount > 0))
+	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(exp))
 end
 
 -- 인벤토리 경유 없이 장비를 직접 장착한다(equipItem과 달리 인벤토리 인덱스가 아니라

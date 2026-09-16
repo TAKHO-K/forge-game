@@ -2,97 +2,106 @@
 -- 같은 이유). 레벨을 소비하는 두 곳(무기 공격력 - PlayerCombat.getAttack, 아이템 레벨계수 -
 -- Loot.getArmorDefense) 모두 이 모듈을 거친다.
 --
--- 레벨25까지는 웹 WEAPON_LEVEL_EXP 배열을 그대로 쓴다. 26+ 경험치 곡선은 20.10의 공식을
--- 쓰되, "레벨25 실측 누적치(25,000)에서 정확히 이어 붙인다"는 원칙으로 앵커를 잡는다 -
--- 공식 자체의 절대값(Lv25=25,057)과 실측표(25,000) 사이의 0.2% 오차가 25->26 경계에서
--- 미세한 불연속(레벨업 없이 경험치만 손해 보는 구간)을 만들지 않도록, 공식은 "증가분"만
--- 가져오고 시작점은 실측표를 따른다.
+-- 25-1: 경험치 요구치는 "목표 마릿수 곡선"에서 역산한다(CharacterLevelConfig.killTargetAnchors
+-- 주석 참고). 순서가 중요하다 - 마릿수 K(L)을 먼저 정의하고, 레벨 L→L+1 필요 경험치를
+-- round(K(L) × E(L))로 만든다(E(L) = tier1 몬스터가 스테이지 L에서 실제로 주는 경험치,
+-- InfiniteStage.getExpReward와 같은 floor까지 그대로). 이렇게 하면 "자기 레벨 스테이지에서
+-- 사냥할 때 레벨당 K(L)마리"가 경험치 계수·성장률 k와 무관하게 구조적으로 성립한다.
+-- 곡선은 환생 회차와 무관하게 하나다 - 환생 후 스테이지가 1로 돌아가고 레벨도 1이라 같은
+-- 레벨에선 같은 몬스터를 잡으므로, 회차 배수(옛 firstRunExpMultiplier·rebirthCount+1)는 없앴다.
+-- 필요 경험치를 정수로 만드는 이유: E(L)도 정수라 누적치·증가분이 전부 2^53 아래 정수로
+-- 정확히 표현되고, "정확히 K마리째에 레벨업"이 부동소수점 오차로 K+1마리가 되는 일이 없다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 
 local CharacterLevel = {}
 
-local MAX_FINITE_LEVEL = #CharacterLevelConfig.weaponLevelExp -- 25
-local FINITE_PEAK_EXP = CharacterLevelConfig.weaponLevelExp[MAX_FINITE_LEVEL] -- 25000
-local PEAK_MULTIPLIER = 1 + CharacterLevelConfig.statBonusPerLevel * (MAX_FINITE_LEVEL - 1) -- 2.44
+local STAT_LINEAR_MAX_LEVEL = CharacterLevelConfig.statLinearMaxLevel -- 25
+local PEAK_MULTIPLIER = 1 + CharacterLevelConfig.statBonusPerLevel * (STAT_LINEAR_MAX_LEVEL - 1) -- 2.44
+local ANCHORS = CharacterLevelConfig.killTargetAnchors
 
-local function expFormula(level)
-	return CharacterLevelConfig.expFormulaBase
-		* (CharacterLevelConfig.expFormulaRatio ^ (level - 1) - 1)
-		/ CharacterLevelConfig.expFormulaDivisor
-end
-
-local FINITE_PEAK_FORMULA = expFormula(MAX_FINITE_LEVEL) -- 앵커 보정에만 쓰는 중간값(~25,057)
-
--- 그 레벨에 도달하기 위한 누적 경험치. 1~25는 실측표, 26+는 25번째 실측값에서 공식의
--- 증가분만 이어 붙인다(위 주석 참고).
---
--- useExponential(23-2, PRD 20.38 [1]) - 환생을 한 번이라도 한 직업(rebirthCount>=1)은
--- 1~25 구간도 실측표 대신 이 26+ 공식을 그대로 쓴다. expFormula(1)이 정확히 0이라(base×
--- (ratio^0-1)/divisor = 0) 레벨1 시작점이 실측표와 똑같이 0으로 맞아떨어지고, 앵커 보정
--- (FINITE_PEAK_EXP 이어붙이기)도 필요 없다 - 공식 하나로 전 구간이 매끄럽게 이어진다.
--- 이렇게 해야 "레벨26+에서 레벨당 정확히 25마리" 항등식이 1~25 구간에도 그대로 적용돼,
--- 환생마다 레벨 상한(25×(k+1))에 도달하는 데 필요한 처치 수가 회차 무관 625마리로
--- 고정된다(실측표를 쓰면 1~25 구간이 약 1,404마리로 따로 놀아 회차마다 필요 처치 수가
--- 달라진다 - PRD 20.37 [1] 실측).
-function CharacterLevel.getExpForLevel(level, useExponential)
-	if useExponential then
-		return expFormula(level)
+-- 레벨 L→L+1에 필요한 목표 처치 수 K(L). 앵커 사이 선형 보간, 첫 앵커 앞·마지막 앵커 뒤는
+-- 그 앵커 값으로 고정(레벨125 이후는 레벨당 25마리 - 옛 "625마리 항등식"이 여기서만 성립).
+function CharacterLevel.getTargetKills(level)
+	if level <= ANCHORS[1].level then
+		return ANCHORS[1].kills
 	end
-	if level <= MAX_FINITE_LEVEL then
-		return CharacterLevelConfig.weaponLevelExp[level]
-	end
-	return FINITE_PEAK_EXP + (expFormula(level) - FINITE_PEAK_FORMULA)
-end
-
--- 누적 경험치로 현재 레벨을 구한다. 1~25는 배열을 훑고(웹 core/weaponExp.js와 동일 방식),
--- 그 이상은 다음 임계값을 넘는지 반복 검사한다 - 경험치 증가율이 지수식이라 몬스터 한 마리
--- 처치로 레벨이 여러 개씩 뛰는 일은 실제로 없어 반복 횟수가 크게 자라지 않는다.
--- useExponential - getExpForLevel과 같은 뜻(환생 1회 이상). 실측표를 아예 건너뛰고 공식만으로
--- 반복 검사한다 - 1~25 구간의 판정 기준을 getExpForLevel과 반드시 같은 공식으로 맞춰야
--- 레벨 임계값이 어긋나지 않는다.
-function CharacterLevel.getLevelFromExp(exp, useExponential)
-	if useExponential then
-		local level = 1
-		while exp >= expFormula(level + 1) do
-			level += 1
+	for i = 2, #ANCHORS do
+		local a, b = ANCHORS[i - 1], ANCHORS[i]
+		if level <= b.level then
+			return a.kills + (b.kills - a.kills) * (level - a.level) / (b.level - a.level)
 		end
-		return level
 	end
+	return ANCHORS[#ANCHORS].kills
+end
+
+-- 스테이지 L에서 tier1 몬스터 1마리가 주는 경험치 E(L) - 실제 지급 경로(MonsterState.
+-- getExpRewardFor → InfiniteStage.getExpReward)와 같은 식·같은 floor. 목표 마릿수의 전제
+-- "자기 레벨에 맞는 스테이지에서 사냥"이 곧 stage = level이다.
+function CharacterLevel.getMonsterExpAtLevel(level)
+	return InfiniteStage.getExpReward(MonsterData.tier1.expReward, level)
+end
+
+-- 레벨 L→L+1 필요 경험치(정수). 위 모듈 주석 참고.
+function CharacterLevel.getExpToNextLevel(level)
+	return math.floor(CharacterLevel.getTargetKills(level) * CharacterLevel.getMonsterExpAtLevel(level) + 0.5)
+end
+
+-- 누적 임계값 메모(thresholds[level] = 그 레벨 도달 누적 경험치). 지수 성장이라 실제 도달
+-- 레벨은 수백을 넘지 않는다 - 필요한 만큼만 앞에서부터 채운다.
+local thresholds = { 0 }
+local function ensureThreshold(level)
+	for l = #thresholds + 1, level do
+		thresholds[l] = thresholds[l - 1] + CharacterLevel.getExpToNextLevel(l - 1)
+	end
+end
+
+-- 그 레벨에 도달하기 위한 누적 경험치. 레벨1은 0.
+function CharacterLevel.getExpForLevel(level)
+	ensureThreshold(level)
+	return thresholds[level]
+end
+
+-- 누적 경험치로 현재 레벨을 구한다. 다음 임계값을 넘는지 반복 검사한다 - 증가분이 지수식이라
+-- 몬스터 한 마리로 레벨이 여러 개 뛰는 일은 실제로 없어 반복 횟수가 크게 자라지 않는다.
+function CharacterLevel.getLevelFromExp(exp)
 	local level = 1
-	for i = 1, MAX_FINITE_LEVEL do
-		if exp >= CharacterLevelConfig.weaponLevelExp[i] then
-			level = i
-		else
-			return level
-		end
-	end
 	while exp >= CharacterLevel.getExpForLevel(level + 1) do
 		level += 1
 	end
 	return level
 end
 
--- 다음 레벨까지 진행률(UI 표시용). useExponential은 위 두 함수와 같은 뜻 - 호출부(ExpBar.
--- client.lua)가 RebirthCount Attribute로 판정해 넘긴다.
-function CharacterLevel.getProgress(exp, level, useExponential)
-	local currentThreshold = CharacterLevel.getExpForLevel(level, useExponential)
-	local nextThreshold = CharacterLevel.getExpForLevel(level + 1, useExponential)
+-- 다음 레벨까지 진행률(UI 표시용).
+function CharacterLevel.getProgress(exp, level)
+	local currentThreshold = CharacterLevel.getExpForLevel(level)
+	local nextThreshold = CharacterLevel.getExpForLevel(level + 1)
 	local needed = nextThreshold - currentThreshold
 	local current = exp - currentThreshold
 	return { current = current, needed = needed, ratio = needed > 0 and current / needed or 1 }
+end
+
+-- 레벨 L 임계값에서 출발해 스테이지 L의 tier1만 잡을 때 실제로 레벨업까지 걸리는 마릿수.
+-- expGainMultiplier는 획득 경험치 배수(PlayerProfile.getExpGainMultiplier - 지금은 1.0, 다음
+-- 세션의 "경험치 획득량 +최대 25%" 옵션이 곱해질 자리). 목표 K(L)이 정수가 아니면 올림이라
+-- K(L)보다 1 큰 값이 나올 수 있다(그 남는 경험치는 다음 레벨로 이월되므로 장기 평균은 K(L)).
+function CharacterLevel.getExpectedKills(level, expGainMultiplier)
+	local perKill = CharacterLevel.getMonsterExpAtLevel(level) * (expGainMultiplier or 1)
+	return math.ceil(CharacterLevel.getExpToNextLevel(level) / perKill - 1e-9)
 end
 
 -- 무기 공격력 배율(PlayerCombat.getAttack이 곱한다). 1~25는 웹과 완전히 같은 선형식,
 -- 26+는 20.10이 정한 지수식(g=1.15, 몬스터 k=1.155보다 살짝 낮게 - 스테이지가 오를수록
 -- 아주 조금씩 어려워지도록 의도된 격차).
 function CharacterLevel.getWeaponExpMultiplier(level)
-	if level <= MAX_FINITE_LEVEL then
+	if level <= STAT_LINEAR_MAX_LEVEL then
 		return 1 + CharacterLevelConfig.statBonusPerLevel * (level - 1)
 	end
-	return PEAK_MULTIPLIER * (CharacterLevelConfig.weaponMultGrowthRate ^ (level - MAX_FINITE_LEVEL))
+	return PEAK_MULTIPLIER * (CharacterLevelConfig.weaponMultGrowthRate ^ (level - STAT_LINEAR_MAX_LEVEL))
 end
 
 -- 아이템 레벨계수(Loot.getArmorDefense가 곱한다). 1~25는 무기 배율과 같은 선형식(레벨25
@@ -102,10 +111,10 @@ end
 -- 스테이지 무관 상수로 수렴한다") - g(1.15)가 아니라 k(1.155)를 쓰는 게 무기 배율과 다른
 -- 유일한 차이다.
 function CharacterLevel.getItemLevelMultiplier(level)
-	if level <= MAX_FINITE_LEVEL then
+	if level <= STAT_LINEAR_MAX_LEVEL then
 		return 1 + CharacterLevelConfig.statBonusPerLevel * (level - 1)
 	end
-	return PEAK_MULTIPLIER * (InfiniteStageConfig.growthRate ^ (level - MAX_FINITE_LEVEL))
+	return PEAK_MULTIPLIER * (InfiniteStageConfig.growthRate ^ (level - STAT_LINEAR_MAX_LEVEL))
 end
 
 -- 장갑·신발(attackPercent/speedPercent) 전용 - 레벨25에서 동결한다(PRD-forge-game-roblox.md
@@ -116,7 +125,7 @@ end
 -- 붕괴한다(17-1 [0]에서 실측 확인 - 레벨100에서 처치 시간이 1억분의 1초로 붕괴했었다).
 -- defenseFlat·maxHpBonus는 그런 이중 계산 상대가 없어 동결하지 않는다(위 함수 그대로 재사용).
 function CharacterLevel.getItemLevelMultiplierFrozen(level)
-	return CharacterLevel.getItemLevelMultiplier(math.min(level, MAX_FINITE_LEVEL))
+	return CharacterLevel.getItemLevelMultiplier(math.min(level, STAT_LINEAR_MAX_LEVEL))
 end
 
 return CharacterLevel

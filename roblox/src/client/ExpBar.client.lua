@@ -101,10 +101,8 @@ percentLabelStroke.Parent = percentLabel
 local function update()
 	local level = player:GetAttribute("CharacterLevel") or 1
 	local exp = player:GetAttribute("CharacterExp") or 0
-	-- 23-2: 환생 1회 이상이면 1~25 구간도 지수식이다(CharacterLevel.lua 주석 참고) -
-	-- RebirthCount Attribute(PlayerProfile.syncActiveClassAttributes)로 판정한다.
-	local useExponential = (player:GetAttribute("RebirthCount") or 0) > 0
-	local progress = CharacterLevel.getProgress(exp, level, useExponential)
+	-- 25-1: 곡선은 환생 회차와 무관하게 하나다(CharacterLevel.lua 주석) - RebirthCount 분기 없음.
+	local progress = CharacterLevel.getProgress(exp, level)
 	local ratio = math.clamp(progress.ratio, 0, 1)
 
 	fill.Size = UDim2.new(ratio, 0, 1, 0)
@@ -113,5 +111,4 @@ end
 
 player:GetAttributeChangedSignal("CharacterExp"):Connect(update)
 player:GetAttributeChangedSignal("CharacterLevel"):Connect(update)
-player:GetAttributeChangedSignal("RebirthCount"):Connect(update)
 update()

@@ -8,7 +8,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
-local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 
@@ -160,6 +159,48 @@ local function defaultProfile()
 	}
 end
 
+-- 25-1까지 쓰던 캐릭터 레벨 곡선(v11~v21 시절)을 리터럴로 보존한다 - CharacterLevel/
+-- CharacterLevelConfig는 이미 새 곡선(목표 마릿수 역산)으로 바뀌어 있어 재사용할 수 없다
+-- (migrate v11이 v10 공식을 리터럴로 남긴 것과 같은 원칙). 두 곳이 쓴다: v10->v11(그 시절
+-- "새 공식"이 곧 이 곡선이었다 - 여기서 CharacterLevel(지금 곡선)을 쓰면 v22 블록이 v21
+-- 곡선으로 레벨을 다시 읽을 때 어긋난다)과 v21->v22(레벨 보존 이관).
+local LegacyCurveV21 = {}
+do
+	local WEAPON_LEVEL_EXP = {
+		0, 50, 150, 300, 500, -- Lv1~5
+		600, 800, 1100, 1500, 2000, -- Lv6~10
+		2250, 2700, 3400, 4350, 5500, -- Lv11~15
+		5950, 6800, 8100, 9850, 12000, -- Lv16~20
+		12850, 14600, 17200, 20650, 25000, -- Lv21~25
+	}
+	local MAX_FINITE_LEVEL = #WEAPON_LEVEL_EXP -- 25
+	local BASE, RATIO, DIVISOR = 50, 1.155, 0.155
+
+	local function formula(level)
+		return BASE * (RATIO ^ (level - 1) - 1) / DIVISOR
+	end
+	local peakFormula = formula(MAX_FINITE_LEVEL)
+
+	-- useExponential: rebirthCount>=1인 직업은 1~25도 순수 지수식이었다(23-2).
+	function LegacyCurveV21.getExpForLevel(level, useExponential)
+		if useExponential then
+			return formula(level)
+		end
+		if level <= MAX_FINITE_LEVEL then
+			return WEAPON_LEVEL_EXP[level]
+		end
+		return WEAPON_LEVEL_EXP[MAX_FINITE_LEVEL] + (formula(level) - peakFormula)
+	end
+
+	function LegacyCurveV21.getLevelFromExp(exp, useExponential)
+		local level = 1
+		while exp >= LegacyCurveV21.getExpForLevel(level + 1, useExponential) do
+			level += 1
+		end
+		return level
+	end
+end
+
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
@@ -176,7 +217,8 @@ end
 -- 도입, 23-1) -> 18(무기 보석 슬롯 도입, 23-2) -> 19(옵션 변환권 도입, 23-2) -> 20(보석
 -- 등급이 슬롯 고정에서 상한제로 바뀌며 gem.grade 필드 신설 + 슬롯 해금 상태 저장 필드
 -- weapon.slotUnlocked 신설, 23-4) -> 21(무한 모드 보스 순환 상태 bossRotation 필드 +
--- 장비창 위치 저장 필드 inventoryWindowPosition 신설, 23-5).
+-- 장비창 위치 저장 필드 inventoryWindowPosition 신설, 23-5) -> 22(캐릭터 레벨 곡선을 목표
+-- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -297,7 +339,8 @@ local function migrate(data)
 		-- 레벨은 그대로 유지되고 레벨 내 진행률만 0으로 리셋된다(레벨이 오르내리는 것보다
 		-- 안전한 쪽 - v7 마이그레이션의 "저장 무손실 승계" 원칙과 같다).
 		local OLD_RATIO, OLD_DIVISOR, OLD_BASE = 1.216, 0.216, 50
-		local MAX_FINITE_LEVEL = #CharacterLevelConfig.weaponLevelExp -- 25, 바뀐 적 없다
+		local MAX_FINITE_LEVEL = 25 -- 그 시절 weaponLevelExp 표 길이, 바뀐 적 없다
+		local OLD_TABLE_EXP = function(level) return LegacyCurveV21.getExpForLevel(level, false) end -- 1~25 표 그대로
 
 		local function oldExpFormula(level)
 			return OLD_BASE * (OLD_RATIO ^ (level - 1) - 1) / OLD_DIVISOR
@@ -306,15 +349,15 @@ local function migrate(data)
 
 		local function oldGetExpForLevel(level)
 			if level <= MAX_FINITE_LEVEL then
-				return CharacterLevelConfig.weaponLevelExp[level]
+				return OLD_TABLE_EXP(level)
 			end
-			return CharacterLevelConfig.weaponLevelExp[MAX_FINITE_LEVEL] + (oldExpFormula(level) - oldPeakFormula)
+			return OLD_TABLE_EXP(MAX_FINITE_LEVEL) + (oldExpFormula(level) - oldPeakFormula)
 		end
 
 		local function oldGetLevelFromExp(exp)
 			local level = 1
 			for i = 1, MAX_FINITE_LEVEL do
-				if exp >= CharacterLevelConfig.weaponLevelExp[i] then
+				if exp >= OLD_TABLE_EXP(i) then
 					level = i
 				else
 					return level
@@ -328,7 +371,9 @@ local function migrate(data)
 
 		local oldLevel = oldGetLevelFromExp(data.characterExp or 0)
 		if oldLevel > MAX_FINITE_LEVEL then
-			data.characterExp = CharacterLevel.getExpForLevel(oldLevel)
+			-- 25-1: 이 시점의 "새 공식"은 v21까지의 곡선이다(LegacyCurveV21) - 지금의
+			-- CharacterLevel을 쓰면 아래 v22 블록이 레벨을 잘못 읽는다.
+			data.characterExp = LegacyCurveV21.getExpForLevel(oldLevel, false)
 		end
 		data.version = 11
 	end
@@ -512,6 +557,28 @@ local function migrate(data)
 		data.version = 21
 	end
 
+	if data.version < 22 then
+		-- 25-1: 캐릭터 레벨 곡선을 "목표 마릿수 역산" 하나로 통일했다(CharacterLevel 주석). v21까지는
+		-- 직업별로 두 곡선(rebirthCount 0 = 1~25 손튜닝표+26+ 지수식 / rebirthCount>=1 = 순수
+		-- 지수식) 중 하나였다 - 같은 characterExp가 새 곡선에서 다른 레벨로 읽히면 안 되므로,
+		-- 옛 곡선(LegacyCurveV21)으로 레벨과 레벨 내 진행률을 구한 뒤 새 곡선의 같은 레벨·같은
+		-- 진행률 위치로 characterExp를 다시 놓는다. 레벨은 정확히 유지되고(오르내림 없음), 새
+		-- 임계값은 0 이상 단조증가라 결과도 항상 0 이상이다. v11이 진행률을 버렸던 것과 달리
+		-- 진행률까지 옮긴다 - 비용이 같고 잃을 이유가 없다.
+		for _, classState in pairs(data.classes) do
+			local exp = classState.characterExp or 0
+			local useExponential = (classState.rebirthCount or 0) > 0
+			local level = LegacyCurveV21.getLevelFromExp(exp, useExponential)
+			local oldFrom = LegacyCurveV21.getExpForLevel(level, useExponential)
+			local oldTo = LegacyCurveV21.getExpForLevel(level + 1, useExponential)
+			local ratio = oldTo > oldFrom and math.clamp((exp - oldFrom) / (oldTo - oldFrom), 0, 1) or 0
+			local newFrom = CharacterLevel.getExpForLevel(level)
+			local newTo = CharacterLevel.getExpForLevel(level + 1)
+			classState.characterExp = newFrom + ratio * (newTo - newFrom)
+		end
+		data.version = 22
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -567,6 +634,8 @@ end
 SaveSystem.defaultProfile = defaultProfile
 SaveSystem.migrate = migrate
 SaveSystem.isValidProfile = isValidProfile
+-- 25-1: DevTools "/gg curve migrate" 자체검증 전용(옛 곡선 값을 합성해 migrate에 넣는다).
+SaveSystem.legacyCurveV21 = LegacyCurveV21
 
 -- 불러오기. 성공하면 profile을 돌려준다(신규 플레이어면 defaultProfile 형태를 migrate에
 -- 통과시킨 값). 실패하면 nil + 이유를 돌려준다 - 호출부(SaveServer.server.lua)가 이유에

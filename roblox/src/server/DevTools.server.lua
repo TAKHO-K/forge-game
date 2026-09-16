@@ -28,6 +28,7 @@ local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local SaveCoordinator = require(script.Parent.SaveCoordinator)
@@ -63,6 +64,9 @@ local BuffState = require(script.Parent.BuffState)
 local PartyCrossServer = require(script.Parent.PartyCrossServer)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+-- 25-1 레벨 곡선 검증 명령(/gg curve, /gg curve migrate)용.
+local SaveSystem = require(script.Parent.SaveSystem)
+local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 
 -- 앵커 조건(지시 [1] - "최소한 앵커 조건은 하나로 불러올 수 있어야 한다"): 레벨100 +
 -- 일반등급 itemLevel100 3부위 + 강화+0 + 무기등급 일반(0), 스테이지 100. 무기 등급은
@@ -161,12 +165,10 @@ local function applyGear(player, grade, itemLevel)
 	return true
 end
 
--- 23-2: rebirthCount>=1이면 레벨1~25 구간도 지수식이다(CharacterLevel.lua "useExponential"
--- 분기) - 환생 후 상태를 재현할 때 "/gg level"도 같은 곡선을 써야 실제 플레이와 어긋나지
--- 않는다.
+-- 25-1: 곡선은 환생 회차와 무관하게 하나다(CharacterLevel.lua 주석) - 그 레벨의 임계값에 정확히
+-- 세운다(레벨 내 진행률 0).
 local function applyLevel(player, level)
-	local useExponential = PlayerProfile.getRebirthCount(player) > 0
-	PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(level, useExponential))
+	PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(level))
 end
 
 local function applyEnhance(player, level)
@@ -296,7 +298,7 @@ local function measure(player, stageOverride)
 		point.monsterHp, point.killAutoSeconds, point.killAutoHits, point.killRotationSeconds))
 end
 
--- "/gg curve [classId]" - 앵커 곡선(21-1 [2], BalanceAnchorConfig) 위의 격자(레벨×무기등급)를
+-- "/gg curve anchor [classId]"(25-1 전엔 "/gg curve") - 앵커 곡선(21-1 [2], BalanceAnchorConfig) 위의 격자(레벨×무기등급)를
 -- 전부 재서 콘솔에 표로 낸다. 직업을 생략하면 지금 프로필의 직업. 원본 상수(α·계수·k·g·
 -- tier1 HP)가 바뀔 때마다 이 한 줄로 곡선을 다시 뽑는다 - 파생 표를 손으로 다시 계산하지 않는다.
 local function printCurve(player, classIdArg)
@@ -316,6 +318,99 @@ local function printCurve(player, classIdArg)
 			row.recGrade, row.graded.surviveHits, row.graded.killRotationSeconds,
 			row.recGrade, row.paired.surviveHits, row.paired.killRotationSeconds))
 	end
+end
+
+-- "/gg curve" - 25-1 레벨 곡선. 레벨 1~125의 목표 마릿수 K(L)(CharacterLevelConfig.
+-- killTargetAnchors 보간)와, 그 레벨 임계값에서 스테이지 L의 tier1만 잡을 때 실제로 계산되는
+-- 마릿수(CharacterLevel.getExpectedKills - 정수 경험치라 올림)를 지금 배수(PlayerProfile.
+-- getExpGainMultiplier)와 +25% 가정(다음 세션 옵션 최대치) 둘 다로 찍는다. 앵커·회차 합계도
+-- 같이 낸다 - 원본(앵커·k·경험치 계수)이 바뀔 때마다 이 한 줄로 표를 다시 뽑는다.
+local LEVEL_CURVE_MAX = 125
+local LEVEL_CURVE_OPTION_MAX = 1.25
+local function printLevelCurve(player)
+	local mult = PlayerProfile.getExpGainMultiplier(player)
+	print(("[DevTools] === 레벨 곡선(25-1) - 목표 K(L) vs 실제(경험치 배수 ×%.2f) vs +25%% 가정(×%.2f) - 전제: 스테이지=레벨에서 tier1 사냥 ==="):format(
+		mult, LEVEL_CURVE_OPTION_MAX))
+	print("[DevTools] L | K(L) | E(L)=tier1 경험치 | L→L+1 필요 경험치 | 실제 마릿수 | +25% 마릿수 | 누적 경험치")
+	local sumTarget, sumActual, sumOption = 0, 0, 0
+	local segments = { 25, 50, 75, 100, 125 }
+	local segIndex, segStart = 1, 1
+	local segTarget, segActual, segOption = 0, 0, 0
+	for level = 1, LEVEL_CURVE_MAX do
+		local k = CharacterLevel.getTargetKills(level)
+		local e = CharacterLevel.getMonsterExpAtLevel(level)
+		local need = CharacterLevel.getExpToNextLevel(level)
+		local actual = CharacterLevel.getExpectedKills(level, mult)
+		local option = CharacterLevel.getExpectedKills(level, mult * LEVEL_CURVE_OPTION_MAX)
+		print(("[DevTools] L%d | %.3f | %d | %d | %d | %d | %d"):format(
+			level, k, e, need, actual, option, CharacterLevel.getExpForLevel(level)))
+		if level < LEVEL_CURVE_MAX then
+			sumTarget += k
+			sumActual += actual
+			sumOption += option
+			segTarget += k
+			segActual += actual
+			segOption += option
+		end
+		if level + 1 == segments[segIndex] then
+			print(("[DevTools]   구간 %d→%d 합계: 목표 %.1f / 실제 %d / +25%% %d"):format(
+				segStart, segments[segIndex], segTarget, segActual, segOption))
+			segIndex += 1
+			segStart = level + 1
+			segTarget, segActual, segOption = 0, 0, 0
+		end
+	end
+	print(("[DevTools] 1→%d 전체 합계: 목표 %.1f / 실제 %d / +25%% %d"):format(LEVEL_CURVE_MAX, sumTarget, sumActual, sumOption))
+	for _, anchor in ipairs(CharacterLevelConfig.killTargetAnchors) do
+		print(("[DevTools]   앵커 L%d: 목표 %d → K(L)=%.3f"):format(anchor.level, anchor.kills, CharacterLevel.getTargetKills(anchor.level)))
+	end
+	-- 연속성: 인접 레벨 간 K(L) 차이의 최대값(계단이면 여기서 튄다).
+	local maxStep = 0
+	for level = 1, LEVEL_CURVE_MAX - 1 do
+		maxStep = math.max(maxStep, CharacterLevel.getTargetKills(level + 1) - CharacterLevel.getTargetKills(level))
+	end
+	print(("[DevTools]   연속성: 인접 레벨 K(L) 최대 증가폭 %.4f마리(계단 없음 기준 < 1)"):format(maxStep))
+end
+
+-- "/gg curve migrate" - v21(옛 두 곡선) 형태의 characterExp를 SaveSystem.migrate에 실제로 통과시켜
+-- 레벨이 그대로 유지되고 경험치가 음수가 되지 않는지 확인한다(25-1). 실제 세이브(DataStore)
+-- 이관은 Play 재시작으로 따로 본다 - 이건 경계값(0·표 끝·환생 직후)까지 합성해서 도는 자체검증.
+local function runMigrateSelfTest(player)
+	local legacy = SaveSystem.legacyCurveV21
+	local cases = {
+		{ rebirth = 0, exp = 0, label = "신규(0)" },
+		{ rebirth = 0, exp = 49, label = "레벨1 98%" },
+		{ rebirth = 0, exp = 3831, label = "표 안(레벨13 45%)" },
+		{ rebirth = 0, exp = 25000, label = "표 끝(레벨25 경계)" },
+		{ rebirth = 0, exp = legacy.getExpForLevel(60, false), label = "표+지수식 이어붙임(레벨60)" },
+		{ rebirth = 1, exp = 0, label = "환생 직후(0)" },
+		{ rebirth = 1, exp = legacy.getExpForLevel(40, true) * 1.0 + 0.5 * (legacy.getExpForLevel(41, true) - legacy.getExpForLevel(40, true)), label = "지수식(레벨40 50%)" },
+		{ rebirth = 3, exp = legacy.getExpForLevel(100, true), label = "지수식(레벨100)" },
+		{ rebirth = 5, exp = legacy.getExpForLevel(125, true), label = "지수식(레벨125)" },
+	}
+	local pass = 0
+	for _, case in ipairs(cases) do
+		local profile = SaveSystem.defaultProfile()
+		profile.version = 21
+		local classState = profile.classes[ClassData.order[1]]
+		classState.rebirthCount = case.rebirth
+		classState.characterExp = case.exp
+		local useExponential = case.rebirth > 0
+		local expectLevel = legacy.getLevelFromExp(case.exp, useExponential)
+		local from, to = legacy.getExpForLevel(expectLevel, useExponential), legacy.getExpForLevel(expectLevel + 1, useExponential)
+		local expectRatio = to > from and (case.exp - from) / (to - from) or 0
+
+		local migrated = SaveSystem.migrate(profile)
+		local newExp = migrated.classes[ClassData.order[1]].characterExp
+		local newLevel = CharacterLevel.getLevelFromExp(newExp)
+		local progress = CharacterLevel.getProgress(newExp, newLevel)
+		local ok = migrated.version == SaveConfig.saveVersion and newLevel == expectLevel and newExp >= 0
+			and math.abs(progress.ratio - expectRatio) < 1e-6 and SaveSystem.isValidProfile(migrated)
+		pass += ok and 1 or 0
+		print(("[curvemigrate] %s %s: rebirth=%d exp %.2f → %.2f, 레벨 %d → %d, 진행률 %.3f → %.3f"):format(
+			ok and "O" or "X", case.label, case.rebirth, case.exp, newExp, expectLevel, newLevel, expectRatio, progress.ratio))
+	end
+	reply(player, ("curve migrate 자체검증 %d/%d 통과"):format(pass, #cases))
 end
 
 -- "/gg anchor [classId]" - classId를 주면 먼저 그 직업으로 전환한 뒤 앵커 조건을 건다.
@@ -572,7 +667,9 @@ local HELP_TEXT = table.concat({
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
 	"/gg stage <n> - 무한 스테이지 지정(생존타수/보상 배율 계산용, 물리적 이동 아님)",
 	"/gg measure [stage] - 지금 조건의 생존 타수·60초 총딜·처치 시간·권장 스테이지를 콘솔에 출력",
-	"/gg curve [classId] - 앵커 곡선(레벨×무기등급 격자)의 생존 타수·처치 시간 표를 콘솔에 출력",
+	"/gg curve - 레벨 1~125의 레벨당 목표 마릿수·실제 계산 마릿수·+25% 가정 마릿수 표를 콘솔에 출력(25-1)",
+	"/gg curve anchor [classId] - 앵커 곡선(레벨×무기등급 격자)의 생존 타수·처치 시간 표를 콘솔에 출력(25-1 전엔 /gg curve)",
+	"/gg curve migrate - v21 세이브 형태(옛 두 곡선)의 경험치를 migrate에 통과시켜 레벨·진행률 유지를 자체검증(25-1)",
 	"/gg rebirth <0-5> - 환생 횟수 강제 지정(무기 등급·보석 슬롯은 안 건드림, 보스 첫 처치 드랍 등급표 분기·슬롯 개방 표시 검증용)",
 	"/gg rebirthdo - 실제 환생 실행(PlayerProfile.rebirth 그대로 - 레벨 조건 검증 + 무기 등급·보석 자동 지급까지 전체 흐름 검증용)",
 	"/gg gem <slot 1-5> <id|-> - 그 슬롯에 보석을 강제로 채운다(23-2 검증용, id=-면 옵션 없이)",
@@ -648,8 +745,12 @@ local function handleCommand(player, args)
 		reply(player, "무한 스테이지 " .. args[2] .. " 적용")
 	elseif sub == "measure" then
 		measure(player, tonumber(args[2]))
+	elseif sub == "curve" and args[2] == "anchor" then
+		printCurve(player, args[3])
+	elseif sub == "curve" and args[2] == "migrate" then
+		runMigrateSelfTest(player)
 	elseif sub == "curve" then
-		printCurve(player, args[2])
+		printLevelCurve(player)
 	elseif sub == "rebirth" and tonumber(args[2]) then
 		ensureBackup(player)
 		local applied = applyRebirth(player, math.floor(tonumber(args[2])))
