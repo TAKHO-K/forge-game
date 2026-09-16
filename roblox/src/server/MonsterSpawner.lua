@@ -80,15 +80,48 @@ end
 -- 기본 파트 조합으로 "구분되는 덩어리" 하나를 만든다. Humanoid는 애니메이션·이름표 전용이고
 -- 실제 HP는 MonsterState가 관리한다(Humanoid.MaxHealth=100은 쓰이지 않는 더미값).
 --
+-- 23-6 [3] 보스 실루엣 부착물(에셋 동결 - 기존 파트 조합만 쓴다). data.attachments는
+-- BossData의 6종 SPECIES 표에만 있다(잡몹·상자는 nil이라 이 함수가 통째로 no-op).
+-- anchor는 "body"|"head" - 그 파트의 실제 위치(bodyAspect 반영 후)를 기준으로 offset(사이즈
+-- 배율 전 스터드 단위)만큼 떨어뜨린다. 새 판정 함수는 없다 - CanCollide=false라 히트박스·
+-- 어그로·리쉬(전부 루트 위치 기준, 파트 크기 무관 - MonsterAI/Reach 확인됨)에 영향이 없다.
+local function buildAttachments(model, data, sizeScale, bodyColor, headColor, bodyPosition, headPosition)
+	for _, spec in ipairs(data.attachments or {}) do
+		local part
+		if spec.kind == "wedge" then
+			part = Instance.new("WedgePart")
+		else
+			part = Instance.new("Part")
+			if spec.kind == "ball" then
+				part.Shape = Enum.PartType.Ball
+			end
+		end
+		part.Name = spec.name or "BossAttachment"
+		part.Size = spec.size * sizeScale
+		part.Anchored = true
+		part.CanCollide = false
+		part.CastShadow = false
+		part.Color = (spec.color == "head") and headColor or bodyColor
+		local anchorPosition = (spec.anchor == "head") and headPosition or bodyPosition
+		local rot = spec.rotationDeg or Vector3.new(0, 0, 0)
+		part.CFrame = CFrame.new(anchorPosition + spec.offset * sizeScale) * CFrame.Angles(math.rad(rot.X), math.rad(rot.Y), math.rad(rot.Z))
+		part.Parent = model
+	end
+end
+
 -- sizeScale/bodyColor/headColor(15-1, 기본값은 잡몹 그대로) - 보스를 "확실히 크게"
 -- 만들라는 지시를 아트 리소스 없이 기본 파트 크기·색만으로 만족시킨다(하지 말 것:
--- 아트·모션 다듬기, 동결 상태).
+-- 아트·모션 다듬기, 동결 상태). bodyAspect(23-6, 기본 (1,1,1)) - 몸통 X/Y/Z축을 따로
+-- 늘여 6종 보스의 실루엣을 구분한다(거인은 높고 좁게, 전갈은 낮고 넓게 - BossData 참고).
+-- 높이(Y)만 바뀌어도 발이 땅에 그대로 붙어 있도록 몸통 중심을 발밑 기준으로 다시 잡는다 -
+-- 안 그러면 커진 절반만큼 발이 땅속에 파묻히거나 뜬다.
 local function buildModel(data, position, variant)
 	-- 크기 축(22-2 [1]) - 접두사 변종만 쓴다. 반짝이는 더 이상 크기를 안 건드린다(모델 속성을
 	-- 바꾸면 최종 모델로 교체할 때 사라진다 - RareMonsterConfig.lua 주석).
 	local sizeScale = (data.sizeScale or 1) * (variant.prefix and variant.prefix.sizeMultiplier or 1)
 	local bodyColor = data.bodyColor or DEFAULT_BODY_COLOR
 	local headColor = data.headColor or DEFAULT_HEAD_COLOR
+	local bodyAspect = data.bodyAspect or Vector3.new(1, 1, 1)
 	local displayName = displayNameFor(data, variant)
 
 	local model = Instance.new("Model")
@@ -115,9 +148,15 @@ local function buildModel(data, position, variant)
 	root.Position = position
 	root.Parent = model
 
+	-- 23-6: 높이(Y)가 바뀌어도 발이 원래 자리(position.Y - 1.5*sizeScale)에 그대로 붙도록
+	-- 몸통 중심을 다시 계산한다. bodyAspect=(1,1,1)이면 아래 식 전부 기존 값과 정확히 같다.
+	local bodyHalfHeight = 1.5 * sizeScale * bodyAspect.Y
+	local bodyBottomY = position.Y - 1.5 * sizeScale
+	local bodyCenterY = bodyBottomY + bodyHalfHeight
+
 	local body = Instance.new("Part")
 	body.Name = "Body"
-	body.Size = Vector3.new(2.4, 3, 1.2) * sizeScale
+	body.Size = Vector3.new(2.4 * bodyAspect.X, 3 * bodyAspect.Y, 1.2 * bodyAspect.Z) * sizeScale
 	body.Anchored = true
 	-- 21-3: 보스 몸통은 캐릭터와 충돌하지 않는다. 진동파(뛰었다 찍기)·돌진(60stud/s)으로
 	-- 움직이는 anchored 파트가 캐릭터를 밀어내면 물리가 캐릭터를 바닥 아래로 튕겨
@@ -132,7 +171,7 @@ local function buildModel(data, position, variant)
 	-- 오므로 겹치는 순간이 생기지만(PRD 20.51 [5] 실기 관찰) 탑다운 3인칭에서 어색하지 않았다.
 	body.CanCollide = false
 	body.Color = bodyColor
-	body.Position = position
+	body.Position = Vector3.new(position.X, bodyCenterY, position.Z)
 	body.Parent = model
 
 	local head = Instance.new("Part")
@@ -142,7 +181,10 @@ local function buildModel(data, position, variant)
 	head.Anchored = true
 	head.CanCollide = false -- 위 Body와 같은 이유(21-3 보스 → 22-5 전체)
 	head.Color = headColor
-	head.Position = position + Vector3.new(0, 2.3 * sizeScale, 0)
+	-- 몸통 꼭대기(bodyBottomY + 2*bodyHalfHeight)에 머리 반지름(0.8*sizeScale)만큼 얹는다 -
+	-- bodyAspect=(1,1,1)이면 bodyBottomY + 3*sizeScale + 0.8*sizeScale = position.Y + 2.3*sizeScale로
+	-- 기존 값과 정확히 같다.
+	head.Position = Vector3.new(position.X, bodyBottomY + 2 * bodyHalfHeight + 0.8 * sizeScale, position.Z)
 	head.Parent = model
 
 	local humanoid = Instance.new("Humanoid")
@@ -208,6 +250,8 @@ local function buildModel(data, position, variant)
 	highlight.OutlineColor = Color3.fromRGB(255, 230, 90)
 	highlight.OutlineTransparency = 0
 	highlight.Parent = model
+
+	buildAttachments(model, data, sizeScale, bodyColor, headColor, body.Position, head.Position)
 
 	model.PrimaryPart = root
 	return model

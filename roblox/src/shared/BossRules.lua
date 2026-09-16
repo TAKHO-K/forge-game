@@ -195,6 +195,12 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		sizeScale = boss.sizeScale,
 		bodyColor = boss.bodyColor,
 		headColor = boss.headColor,
+		-- 23-6 [3]: MonsterSpawner.buildModel이 실루엣(bodyAspect)·부착물(attachments)을
+		-- 읽는 곳이 바로 이 인스턴스 데이터라서 여기 안 넣으면 6종이 스폰 시 전부 다시
+		-- 똑같은 모양으로 보인다(BossData.bosses[id]에는 있어도 인스턴스 테이블로 안 넘어옴).
+		bodyAspect = boss.bodyAspect,
+		attachments = boss.attachments,
+		primaryPattern = boss.primaryPattern,
 		moveSpeedStuds = boss.moveSpeedStuds,
 		attackRangeStuds = boss.attackRangeStuds,
 		attackCooldownSeconds = boss.attackCooldownSeconds,

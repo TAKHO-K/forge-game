@@ -195,21 +195,180 @@ local stormBody, stormHead = tierColor("tier3")
 local scorpionBody, scorpionHead = tierColor("tier4")
 local crystalBody, crystalHead = tierColor("tier6")
 
+-- ═══ 23-6: 패턴 차별화 관계식(지시 [1]) ═══
+-- 각 보스는 5패턴 중 주력 패턴 하나를 갖는다(section_guardian은 없음 - 균등형, 기준선).
+-- 주력 발동 빈도 ×2(간격 ÷2), 나머지 4패턴 ×0.75(간격 ÷0.75) - 빈도 합 보존: 2 + 0.75×4 = 5
+-- (균등형도 1×5 = 5로 같다, "확인 10항목" #1의 근거). 배정은 사용자 지시 표를 그대로 따랐다 -
+-- 20.50 [6] 맵 컨셉(심해=물·서리=얼음·폭풍=번개·전갈=사막·수정=결정)과 대조해 확인한 결과
+-- 어긋나는 배정이 없어(진동파=파도, 강공격=거인의 일격, 돌진=전갈의 찌르기, 낙석=결정 낙하,
+-- 십자=번개, 균등형=수호자) 그대로 채택했다(임의 결정 없음, 컨셉 우선 원칙 위반 없음).
+local PRIMARY_FREQUENCY_MULTIPLIER = 2
+local OTHER_FREQUENCY_MULTIPLIER = 0.75
+local PATTERN_IDS = { "heavy", "shockwave", "charge", "meteor", "cross" }
+
+local function clonePatterns()
+	local copy = {}
+	for patternId, cfg in pairs(SHARED_PATTERNS) do
+		local cfgCopy = {}
+		for k, v in pairs(cfg) do
+			cfgCopy[k] = v
+		end
+		copy[patternId] = cfgCopy
+	end
+	return copy
+end
+
+-- heavy의 간격은 patterns 테이블 밖(heavyAttackIntervalSeconds, 강공격은 BossPatterns.lua가
+-- SHARED_PATTERNS이 아니라 이 필드로 스케줄링한다 - 파일 상단 BASE_STATS 주석 참고)에 있어
+-- 나머지 4패턴과 저장 위치가 다르다 - get/set 한 쌍으로 그 차이를 감춘다.
+local function getBaseInterval(id)
+	if id == "heavy" then
+		return BASE_STATS.heavyAttackIntervalSeconds
+	end
+	return SHARED_PATTERNS[id].intervalSeconds
+end
+
+local function setInterval(boss, id, seconds)
+	if id == "heavy" then
+		boss.heavyAttackIntervalSeconds = seconds
+	else
+		boss.patterns[id].intervalSeconds = seconds
+	end
+end
+
+local function applyPrimaryFrequency(boss, primaryId)
+	for _, id in ipairs(PATTERN_IDS) do
+		local multiplier = 1
+		if primaryId then
+			multiplier = (id == primaryId) and PRIMARY_FREQUENCY_MULTIPLIER or OTHER_FREQUENCY_MULTIPLIER
+		end
+		setInterval(boss, id, getBaseInterval(id) / multiplier)
+	end
+end
+
+-- ═══ 23-6: 주력 패턴 변형 한 가지(지시 [2]) ═══
+-- 전부 "모양만 바꾸고 기대 피해 총량은 그대로"를 만족하도록 값을 유도한다(새 상수를
+-- 만들지 않고 기존 앵커에서 나눗셈·곱셈만 한다).
+local VARIANTS = {
+	-- 진동파 → 두 겹. 한 겹 피해를 절반으로 낮추고(합쳐서 원래와 동일) waveCount만큼 두 번씩
+	-- slam한다(BossPatterns.slam이 layers를 읽는다). layerGapSeconds는 새 상수가 아니라
+	-- "파동 두께가 지나가는 시간"(두께÷속도)에서 유도 - 두 겹이 두께 하나 간격으로 붙어
+	-- 나가 겹으로 보이면서도 서로 다른 링으로 구별된다.
+	shockwave = function(boss)
+		local cfg = boss.patterns.shockwave
+		cfg.layers = 2
+		cfg.damageMultiplier = cfg.damageMultiplier / 2
+		cfg.layerGapSeconds = cfg.waveThicknessStuds / cfg.waveSpeedStuds
+	end,
+	-- 강공격 → 예비동작만 연장(피해는 그대로 - 주력이라 이미 빈도가 2배라는 지시 그대로).
+	-- 배율 근거가 없어 나머지 4패턴과 같은 원리(주력 2배)를 그대로 재사용 - 예고를 1.5배로
+	-- 늘린다(임의 결정 - 아래 PRD 기록 참고).
+	heavy = function(boss)
+		boss.telegraphWarmupSeconds = boss.telegraphWarmupSeconds * 1.5
+	end,
+	-- 낙석 → 개수를 1로 줄이고 반경을 늘려 총 피격 면적(count × 반경²에 비례)을 보존한다:
+	-- 반경_new = 반경 × √(원래 count) = 6 × √3 ≈ 10.39.
+	meteor = function(boss)
+		local cfg = boss.patterns.meteor
+		cfg.radiusStuds = cfg.radiusStuds * math.sqrt(cfg.count)
+		cfg.count = 1
+	end,
+	-- 돌진 → 2연속(BossPatterns가 dashCount를 읽어 반복한다). 1회당 피해를 절반으로 낮춰
+	-- 둘 다 맞을 때만 원래(0.8×최대체력)와 같아진다 - 회피 실력에 따라 총 피해는 오히려
+	-- 낮아질 수 있다(둘 중 하나만 피해도 절반을 던다 - 의도된 완화, 새 밸런스 상수 아님).
+	charge = function(boss)
+		local cfg = boss.patterns.charge
+		cfg.dashCount = 2
+		cfg.damageMaxHpFraction = cfg.damageMaxHpFraction / 2
+	end,
+	-- 십자 → 천천히 회전(BossPatternVisuals.client.lua가 rotateFromDeg가 있으면 스윕
+	-- 애니메이션을 그린다). 서버 판정(피해)은 완전히 그대로 - 각 볼리의 최종 각도·빔 좌표
+	-- 계산이 기존과 한 글자도 안 바뀐다(순수 연출 플래그).
+	cross = function(boss)
+		boss.patterns.cross.rotates = true
+	end,
+}
+
 local SPECIES = {
-	{ id = "abyssal_lord", displayName = "심해 군주", bodyColor = abyssalBody, headColor = abyssalHead },
-	{ id = "frost_giant", displayName = "서리 거인", bodyColor = frostBody, headColor = frostHead },
-	{ id = "storm_lord", displayName = "폭풍 군주", bodyColor = stormBody, headColor = stormHead },
-	{ id = "scorpion_queen", displayName = "전갈 여왕", bodyColor = scorpionBody, headColor = scorpionHead },
-	{ id = "section_guardian", displayName = "구간 수호자", bodyColor = Color3.fromRGB(60, 20, 70), headColor = Color3.fromRGB(90, 30, 100) },
-	{ id = "crystal_queen", displayName = "수정 여왕", bodyColor = crystalBody, headColor = crystalHead },
+	{ id = "abyssal_lord", displayName = "심해 군주", bodyColor = abyssalBody, headColor = abyssalHead,
+		primaryPattern = "shockwave",
+		-- 실루엣(지시 [3]) - 살짝 넓고 낮은 덩치(심해 생물) + 어깨 지느러미 2 + 등지느러미 1.
+		bodyAspect = Vector3.new(1.05, 0.95, 1.15),
+		attachments = {
+			{ anchor = "body", offset = Vector3.new(1.3, 0.9, 0), size = Vector3.new(0.9, 0.5, 0.9), rotationDeg = Vector3.new(0, 0, -30), kind = "wedge", color = "head", name = "LeftFin" },
+			{ anchor = "body", offset = Vector3.new(-1.3, 0.9, 0), size = Vector3.new(0.9, 0.5, 0.9), rotationDeg = Vector3.new(0, 180, 30), kind = "wedge", color = "head", name = "RightFin" },
+			{ anchor = "body", offset = Vector3.new(0, 0.7, -1.0), size = Vector3.new(0.6, 0.6, 1.0), rotationDeg = Vector3.new(0, 180, 0), kind = "wedge", color = "body", name = "TailFin" },
+		},
+	},
+	{ id = "frost_giant", displayName = "서리 거인", bodyColor = frostBody, headColor = frostHead,
+		primaryPattern = "heavy",
+		-- 실루엣 - 높고 좁게(지시 예시 그대로) + 머리 위 뿔 2개.
+		bodyAspect = Vector3.new(0.85, 1.35, 0.85),
+		attachments = {
+			{ anchor = "head", offset = Vector3.new(0.5, 0.6, 0), size = Vector3.new(0.3, 1.4, 0.3), rotationDeg = Vector3.new(0, 0, -25), kind = "wedge", color = "head", name = "LeftHorn" },
+			{ anchor = "head", offset = Vector3.new(-0.5, 0.6, 0), size = Vector3.new(0.3, 1.4, 0.3), rotationDeg = Vector3.new(0, 180, 25), kind = "wedge", color = "head", name = "RightHorn" },
+		},
+	},
+	{ id = "storm_lord", displayName = "폭풍 군주", bodyColor = stormBody, headColor = stormHead,
+		primaryPattern = "cross",
+		-- 실루엣 - 약간 늘씬하고 큰 키 + 어깨 위 날 2개(번개 피뢰침 인상).
+		bodyAspect = Vector3.new(0.9, 1.2, 0.9),
+		attachments = {
+			{ anchor = "body", offset = Vector3.new(1.2, 1.3, 0), size = Vector3.new(0.3, 1.8, 0.3), rotationDeg = Vector3.new(0, 0, -15), kind = "wedge", color = "head", name = "LeftBlade" },
+			{ anchor = "body", offset = Vector3.new(-1.2, 1.3, 0), size = Vector3.new(0.3, 1.8, 0.3), rotationDeg = Vector3.new(0, 180, 15), kind = "wedge", color = "head", name = "RightBlade" },
+		},
+	},
+	{ id = "scorpion_queen", displayName = "전갈 여왕", bodyColor = scorpionBody, headColor = scorpionHead,
+		primaryPattern = "charge",
+		-- 실루엣 - 낮고 넓게(지시 예시 그대로) + 앞발 집게 2개 + 꼬리 침 1개.
+		bodyAspect = Vector3.new(1.3, 0.65, 1.2),
+		attachments = {
+			{ anchor = "body", offset = Vector3.new(1.1, 0, -0.9), size = Vector3.new(0.9, 0.4, 0.9), rotationDeg = Vector3.new(0, -30, 0), kind = "wedge", color = "head", name = "LeftClaw" },
+			{ anchor = "body", offset = Vector3.new(-1.1, 0, -0.9), size = Vector3.new(0.9, 0.4, 0.9), rotationDeg = Vector3.new(0, 210, 0), kind = "wedge", color = "head", name = "RightClaw" },
+			{ anchor = "body", offset = Vector3.new(0, 0.8, 1.0), size = Vector3.new(0.35, 1.2, 0.35), rotationDeg = Vector3.new(-30, 0, 0), kind = "wedge", color = "body", name = "TailSpike" },
+		},
+	},
+	{ id = "section_guardian", displayName = "구간 수호자", bodyColor = Color3.fromRGB(60, 20, 70), headColor = Color3.fromRGB(90, 30, 100),
+		primaryPattern = nil, -- 균등형(기준선) - 패턴 빈도·실루엣 둘 다 원래 값에 가장 가깝게 남긴다(이미 검증된 보스).
+		bodyAspect = Vector3.new(1.0, 1.0, 1.0),
+		attachments = {
+			{ anchor = "body", offset = Vector3.new(1.2, 0.9, 0), size = Vector3.new(0.5, 0.5, 0.9), kind = "block", color = "head", name = "LeftPauldron" },
+			{ anchor = "body", offset = Vector3.new(-1.2, 0.9, 0), size = Vector3.new(0.5, 0.5, 0.9), kind = "block", color = "head", name = "RightPauldron" },
+		},
+	},
+	{ id = "crystal_queen", displayName = "수정 여왕", bodyColor = crystalBody, headColor = crystalHead,
+		primaryPattern = "meteor",
+		-- 실루엣 - 살짝 높게 + 어깨·등 결정 파편 3개.
+		bodyAspect = Vector3.new(1.0, 1.15, 1.0),
+		attachments = {
+			{ anchor = "body", offset = Vector3.new(0.9, 1.0, 0.2), size = Vector3.new(0.4, 1.3, 0.4), rotationDeg = Vector3.new(0, 0, -20), kind = "wedge", color = "head", name = "LeftShard" },
+			{ anchor = "body", offset = Vector3.new(-0.9, 1.0, 0.2), size = Vector3.new(0.4, 1.3, 0.4), rotationDeg = Vector3.new(0, 180, 20), kind = "wedge", color = "head", name = "RightShard" },
+			{ anchor = "body", offset = Vector3.new(0, 1.1, -0.7), size = Vector3.new(0.4, 1.6, 0.4), kind = "wedge", color = "head", name = "BackShard" },
+		},
+	},
 }
 
 local bosses = {}
 local rotationBossIds = {}
 for _, species in ipairs(SPECIES) do
-	local boss = { id = species.id, displayName = species.displayName, bodyColor = species.bodyColor, headColor = species.headColor }
+	local boss = {
+		id = species.id,
+		displayName = species.displayName,
+		bodyColor = species.bodyColor,
+		headColor = species.headColor,
+		primaryPattern = species.primaryPattern,
+		bodyAspect = species.bodyAspect,
+		attachments = species.attachments,
+	}
 	for key, value in pairs(BASE_STATS) do
-		boss[key] = value
+		if key ~= "patterns" then
+			boss[key] = value
+		end
+	end
+	boss.patterns = clonePatterns()
+	applyPrimaryFrequency(boss, species.primaryPattern)
+	if species.primaryPattern and VARIANTS[species.primaryPattern] then
+		VARIANTS[species.primaryPattern](boss)
 	end
 	bosses[species.id] = boss
 	table.insert(rotationBossIds, species.id)

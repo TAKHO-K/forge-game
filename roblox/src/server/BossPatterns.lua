@@ -225,7 +225,10 @@ local function startShockwave(model, st, data, now, position)
 	startShockHop(model, st, data, now, data.patterns.shockwave.telegraphSeconds)
 end
 
-local function startCharge(model, st, data, now, position, targetRoot)
+-- dashIndex(23-6, 돌진 2연속 변형 - PRD 20.50[6]과 무관하게 순수 지시 [2] 구현): 몇 번째
+-- 돌진인지. 첫 시작(startPattern)은 항상 1을 넘긴다 - cfg.dashCount(기본 1, 전갈 여왕만 2)에
+-- 도달할 때까지 step()의 charge 단계 종료 분기가 이 함수를 다시 불러 다음 돌진을 잇는다.
+local function startCharge(model, st, data, now, position, targetRoot, dashIndex)
 	local cfg = data.patterns.charge
 	local zone = zoneOf(model)
 	local origin = xz(position)
@@ -242,6 +245,7 @@ local function startCharge(model, st, data, now, position, targetRoot)
 	dir = dir.Unit
 	local length = clipToZone(origin, dir, zone, cfg.arenaMarginStuds)
 	local y = position.Y
+	st.chargeDashIndex = dashIndex
 	st.chargeFrom = Vector3.new(origin.X, y, origin.Z)
 	st.chargeTo = st.chargeFrom + dir * length
 	st.chargeDir = dir
@@ -291,9 +295,14 @@ local function crossBeams(model, st, data, angleDeg)
 	return origin, beams
 end
 
+-- 23-6 [2] 십자 회전 변형(storm_lord 전용, cfg.rotates): 판정(beams·lengths·angleDeg)은
+-- 한 글자도 안 바꾸고, previousAngle이 있으면 클라 연출에 rotateFromDeg를 얹어 보낸다 -
+-- BossPatternVisuals.client.lua가 그 값이 있을 때만 스윕 애니메이션을 그린다(순수 연출,
+-- 피해는 여전히 telegraphSeconds가 끝나는 순간의 angleDeg 하나로만 판정된다).
 local function startCrossVolley(model, st, data, now, angleDeg)
 	local cfg = data.patterns.cross
 	local origin, beams = crossBeams(model, st, data, angleDeg)
+	local previousAngle = st.crossAngle
 	st.crossOrigin = origin
 	st.crossBeams = beams
 	st.crossAngle = angleDeg
@@ -303,13 +312,17 @@ local function startCrossVolley(model, st, data, now, angleDeg)
 	for i, b in ipairs(beams) do
 		lengths[i] = b.length
 	end
-	send(st, "cross", {
+	local payload = {
 		center = Vector3.new(origin.X, st.floorY, origin.Z),
 		angleDeg = angleDeg,
 		lengths = lengths,
 		halfWidth = cfg.halfWidthStuds,
 		seconds = cfg.telegraphSeconds,
-	})
+	}
+	if cfg.rotates and previousAngle then
+		payload.rotateFromDeg = previousAngle
+	end
+	send(st, "cross", payload)
 end
 
 local function startCross(model, st, data, now, position, targetRoot)
@@ -348,7 +361,7 @@ local function startPattern(model, st, data, id, now, position, targetRoot)
 	elseif id == "shockwave" then
 		startShockwave(model, st, data, now, position)
 	elseif id == "charge" then
-		startCharge(model, st, data, now, position, targetRoot)
+		startCharge(model, st, data, now, position, targetRoot, 1)
 	elseif id == "meteor" then
 		startMeteor(model, st, data, now, targetRoot)
 	elseif id == "cross" then
@@ -389,19 +402,29 @@ local function updateWaves(model, st, data, now, target, targetRoot)
 	st.waves = alive
 end
 
+-- 23-6 [2] 진동파 두 겹 변형(abyssal_lord 전용, cfg.layers=2): 한 번 찍을 때 파동을
+-- layers개 낸다 - 겹마다 startedAt을 layerGapSeconds(두께÷속도, 파생값)만큼 늦춰 서로
+-- 다른 링으로 퍼지게 한다. 각 겹은 독립된 wave라 updateWaves가 항상 그래왔듯 겹마다
+-- 따로 판정한다 - cfg.damageMultiplier 자체가 이미 절반(BossData VARIANTS.shockwave)이라
+-- 둘 다 맞으면 원래(1겹 전체 피해)와 같아진다.
 local function slam(model, st, data, now)
 	local cfg = data.patterns.shockwave
 	model:PivotTo(CFrame.new(st.hopBase))
-	local wave = { center = xz(st.hopBase), startedAt = now }
-	table.insert(st.waves, wave)
+	local layers = cfg.layers or 1
+	local gap = cfg.layerGapSeconds or 0
+	local maxRadius = zoneOf(model).halfSize * WAVE_MAX_RADIUS_FACTOR
+	for layer = 1, layers do
+		local delay = (layer - 1) * gap
+		table.insert(st.waves, { center = xz(st.hopBase), startedAt = now + delay })
+		send(st, "shockwave", {
+			center = Vector3.new(st.hopBase.X, st.floorY, st.hopBase.Z),
+			serverStart = serverNow() + delay,
+			speed = cfg.waveSpeedStuds,
+			thickness = cfg.waveThicknessStuds,
+			maxRadius = maxRadius,
+		})
+	end
 	st.wavesSpawned += 1
-	send(st, "shockwave", {
-		center = Vector3.new(st.hopBase.X, st.floorY, st.hopBase.Z),
-		serverStart = serverNow(),
-		speed = cfg.waveSpeedStuds,
-		thickness = cfg.waveThicknessStuds,
-		maxRadius = zoneOf(model).halfSize * WAVE_MAX_RADIUS_FACTOR,
-	})
 end
 
 -- ─────────────────────────── 틱 ───────────────────────────
@@ -509,13 +532,21 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt)
 			PlayerDamage.applyMaxHpFraction(target, cfg.damageMaxHpFraction, "돌진")
 		end
 		if progress >= 1 then
-			-- 헤롱(주저앉기) - 몸을 내려 기울인다. 이 상태의 위치·기울기는 st.dazeBase로 기억해
-			-- 끝날 때(endPattern/interrupt) 똑바로 되돌린다.
-			st.phase = "chargeRecover"
-			st.phaseEndsAt = now + cfg.recoverSeconds
-			st.dazeBase = newPos
-			model:PivotTo(CFrame.new(newPos - Vector3.new(0, cfg.dazeSinkStuds, 0)) * CFrame.Angles(0, 0, math.rad(cfg.dazeTiltDeg)))
-			send(st, "daze", { seconds = cfg.recoverSeconds })
+			-- 23-6 [2] 돌진 2연속 변형: cfg.dashCount(기본 1)에 아직 못 미쳤으면 헤롱 없이
+			-- 바로 다음 돌진을 잇는다(현재 위치·현재 대상 좌표로 재조준 - startCharge가
+			-- 그 순간 좌표를 새로 고정한다). 마지막 돌진에서만 기존 헤롱(daze) 보상 구간으로
+			-- 진입한다.
+			if st.chargeDashIndex < (cfg.dashCount or 1) then
+				startCharge(model, st, data, now, newPos, targetRoot, st.chargeDashIndex + 1)
+			else
+				-- 헤롱(주저앉기) - 몸을 내려 기울인다. 이 상태의 위치·기울기는 st.dazeBase로
+				-- 기억해 끝날 때(endPattern/interrupt) 똑바로 되돌린다.
+				st.phase = "chargeRecover"
+				st.phaseEndsAt = now + cfg.recoverSeconds
+				st.dazeBase = newPos
+				model:PivotTo(CFrame.new(newPos - Vector3.new(0, cfg.dazeSinkStuds, 0)) * CFrame.Angles(0, 0, math.rad(cfg.dazeTiltDeg)))
+				send(st, "daze", { seconds = cfg.recoverSeconds })
+			end
 		end
 		return true
 	end

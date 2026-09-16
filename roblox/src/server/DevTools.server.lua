@@ -577,12 +577,14 @@ local HELP_TEXT = table.concat({
 	"/gg boss history - 이 플레이어의 보스 등장 이력 출력(23-5)",
 	"/gg boss force <id> - 다음 보스 순환 뽑기를 강제 지정(1회용, 23-5)",
 	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
+	"/gg bossinfo - 지금 보스 인스턴스의 주력 패턴·패턴별 간격·변형 필드·실루엣을 콘솔에 출력(23-6 검증용)",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
 	"/gg bosskilltest - 지금 보스를 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡는다(견습/무한 모드 처치 파이프라인 검증용, 23-1)",
 	"/gg terrain [clear|cost|ground|drop|rules|parts] - tier1에 테스트 지형(고원·30°경사·계단·70°경사·절벽·도랑) 생성 / 제거 / 지면 Raycast 부하 실측 / 잡몹 접지 상태 / 발밑 시험 드랍(22-4) / 배치 규칙 강제 검증 / 파트 수 실측(22-5)",
 	"/gg tutorial <0-7> - 견습 단계 강제 이동(0=미시작으로 리셋, 1~7=그 단계로 즉시 진입)",
 	"/gg tutorial off - 견습 종료하고 무한 모드로 복귀(완료 처리)",
 	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
+	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
 
 local function handleCommand(player, args)
@@ -961,10 +963,46 @@ local function handleCommand(player, args)
 		else
 			reply(player, "사용법: /gg tutorial <0-7> 또는 /gg tutorial off")
 		end
+	elseif sub == "bossinfo" then
+		-- 23-6 검증 전용 - 지금 아레나의 보스 인스턴스 데이터(패턴 간격·변형 필드·실루엣)를
+		-- 콘솔에 찍는다. execute_luau가 ModuleScript require를 capability 오류로 막아
+		-- BossData를 직접 못 읽으므로, 실제로 스폰된 인스턴스에서 값을 그대로 읽는다.
+		local model = BossEncounter.getActive(player)
+		local d = model and MonsterState.getData(model)
+		if not d then
+			reply(player, "지금 진행 중인 보스가 없습니다")
+		else
+			reply(player, ("%s primary=%s heavyInterval=%.3f telegraph=%.3f aspect=(%.2f,%.2f,%.2f) attachments=%d"):format(
+				d.id, tostring(d.primaryPattern), d.heavyAttackIntervalSeconds, d.telegraphWarmupSeconds,
+				d.bodyAspect.X, d.bodyAspect.Y, d.bodyAspect.Z, #d.attachments))
+			reply(player, ("  shockwave interval=%.3f mul=%s layers=%s gap=%s"):format(
+				d.patterns.shockwave.intervalSeconds, tostring(d.patterns.shockwave.damageMultiplier),
+				tostring(d.patterns.shockwave.layers), tostring(d.patterns.shockwave.layerGapSeconds)))
+			reply(player, ("  charge interval=%.3f dashCount=%s frac=%s"):format(
+				d.patterns.charge.intervalSeconds, tostring(d.patterns.charge.dashCount), tostring(d.patterns.charge.damageMaxHpFraction)))
+			reply(player, ("  meteor interval=%.3f count=%s radius=%s"):format(
+				d.patterns.meteor.intervalSeconds, tostring(d.patterns.meteor.count), tostring(d.patterns.meteor.radiusStuds)))
+			reply(player, ("  cross interval=%.3f rotates=%s"):format(
+				d.patterns.cross.intervalSeconds, tostring(d.patterns.cross.rotates)))
+		end
 	elseif sub == "bossreset" then
 		ensureBackup(player)
 		PlayerProfile.clearBossFirstClearRewards(player, tonumber(args[2]))
 		reply(player, args[2] and ("스테이지 " .. args[2] .. " 첫 처치 기록 초기화") or "첫 처치 기록 전부 초기화")
+	elseif sub == "save" and args[2] == "unlock" then
+		-- 23-6 [4]: "/gg reset"과 달리 원본으로 되돌리지 않는다 - 지금(테스트로 바뀐) 상태를
+		-- 그대로 "정상 상태"로 승격시켜 실제 저장이 되게 한다. backups[player]를 지워야
+		-- PlayerRemoving 핸들러(아래)가 나갈 때 자동으로 restore()를 불러 이 상태를 도로
+		-- 덮어쓰는 일이 없다 - "재접속 후에도 유지되는가"를 검증하려면 원본 복원 안전장치
+		-- 자체를 반드시 꺼야 한다(기본값은 여전히 차단 유지 - 이 명령을 쓸 때만 해제된다).
+		if not backups[player] then
+			reply(player, "저장 차단 상태가 아닙니다(백업 없음) - 이미 정상 저장 중입니다")
+		else
+			backups[player] = nil
+			SaveCoordinator.setDevToolsSuspended(player, false)
+			SaveCoordinator.saveForPlayer(player)
+			reply(player, "저장 차단 해제 - 지금 상태(테스트 값 포함)가 실제로 저장됩니다. 원본 복원 불가(백업 삭제됨, 재접속 지속성 검증 전용)")
+		end
 	elseif sub == "reset" then
 		restore(player)
 	else

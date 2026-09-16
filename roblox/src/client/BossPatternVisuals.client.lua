@@ -376,29 +376,68 @@ end
 -- ─────────────────────────── 십자 화염 ───────────────────────────
 
 local crossLines = {}
+local crossSweepConnection = nil
 
-local function cross(data)
-	for _, line in ipairs(crossLines) do
-		destroy(line)
+local function stopCrossSweep()
+	if crossSweepConnection then
+		crossSweepConnection:Disconnect()
+		crossSweepConnection = nil
 	end
-	crossLines = {}
+end
+
+-- 23-6 [2] 십자 회전 변형(storm_lord) 전용 - 4개 빔의 CFrame만 angleDeg 기준으로 다시
+-- 놓는다. 판정에 쓰이는 data.lengths(서버가 최종 angleDeg로 계산한 값)는 그대로 재사용 -
+-- 회전 중간의 길이는 근사지만 순수 연출이라 판정과 무관하다.
+local function placeCrossBeams(angleDeg, data)
 	for k = 0, 3 do
-		local a = math.rad(data.angleDeg + 90 * k)
-		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		local length = data.lengths[k + 1]
-		if length > 1 then
+		local line = crossLines[k + 1]
+		if line then
+			local a = math.rad(angleDeg + 90 * k)
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local length = data.lengths[k + 1]
 			local mid = data.center + dir * (length / 2)
-			local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), CROSS_COLOR, 0.8)
 			line.CFrame = CFrame.lookAt(mid + Vector3.new(0, 0.15, 0), data.center + dir * length + Vector3.new(0, 0.15, 0))
-			TweenService:Create(line, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-				Transparency = 0.35,
-			}):Play()
-			table.insert(crossLines, line)
 		end
 	end
 end
 
+local function cross(data)
+	stopCrossSweep()
+	for _, line in ipairs(crossLines) do
+		if line then
+			destroy(line)
+		end
+	end
+	crossLines = {}
+	for k = 0, 3 do
+		local length = data.lengths[k + 1]
+		if length > 1 then
+			local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), CROSS_COLOR, 0.8)
+			TweenService:Create(line, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+				Transparency = 0.35,
+			}):Play()
+			crossLines[k + 1] = line
+		else
+			crossLines[k + 1] = false
+		end
+	end
+	if data.rotateFromDeg then
+		local startedAt = os.clock()
+		placeCrossBeams(data.rotateFromDeg, data)
+		crossSweepConnection = RunService.RenderStepped:Connect(function()
+			local t = math.clamp((os.clock() - startedAt) / data.seconds, 0, 1)
+			placeCrossBeams(data.rotateFromDeg + (data.angleDeg - data.rotateFromDeg) * t, data)
+			if t >= 1 then
+				stopCrossSweep()
+			end
+		end)
+	else
+		placeCrossBeams(data.angleDeg, data)
+	end
+end
+
 local function crossFire()
+	stopCrossSweep()
 	for _, line in ipairs(crossLines) do
 		if live[line] then
 			line.Color = Color3.new(1, 1, 1)
@@ -414,6 +453,7 @@ end
 -- ─────────────────────────── 리셋 ───────────────────────────
 
 local function resetAll()
+	stopCrossSweep()
 	for part in pairs(live) do
 		part:Destroy()
 	end
