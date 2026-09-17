@@ -13,9 +13,9 @@
 -- WaitForChild로 찾아 자기 칩을 끼워 넣는다(AttackInput이 SkillSlots의 Row를 찾는 것과
 -- 같은 패턴, 순서 계약: 골드=1, 레벨=2, 스테이지=3 - 위에서 아래로).
 --
--- 목업의 스테이지 칩은 숫자만 보여주고 위/아래 이동 버튼이 없다(디자인 시안이라 순수
--- 정보 표시만 다뤘을 것) - 이 프로젝트는 그 버튼이 실제 이동 기능이라 뺄 수 없다. 칩
--- 자체는 목업과 똑같이 만들고, "최고 기록"과 이동 버튼은 칩 아래에 작게 이어 붙였다
+-- 목업의 스테이지 칩은 숫자만 보여준다 - 25-4에서 ▲▼ 한 칸씩 이동 버튼을 지우고 칩
+-- 자체를 누르면 스테이지 선택 패널(StageSelectPanel.lua, O/△/X 그리드)이 열리는 것으로
+-- 바꿨다. 칩 자체는 목업과 똑같이 만들고, "최고 기록"은 칩 아래에 작게 이어 붙였다
 -- (세로로 쌓은 한 묶음 - HudChip은 칩 틀만 만들고 이 묶음 구성은 이 파일이 맡는다).
 
 local Players = game:GetService("Players")
@@ -24,8 +24,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local HudChip = require(script.Parent.HudChip)
 local HudIcons = require(script.Parent.HudIcons)
+local StageSelectPanel = require(script.Parent.StageSelectPanel)
 
-local stageMoveRequest = ReplicatedStorage:WaitForChild("StageMoveRequest")
 local stageMoveResult = ReplicatedStorage:WaitForChild("StageMoveResult")
 
 local player = Players.LocalPlayer
@@ -109,64 +109,21 @@ bestLabel.TextColor3 = UIColors.textTertiary
 bestLabel.Text = "최고 기록 -"
 bestLabel.Parent = wrapper
 
-local buttonsRow = Instance.new("Frame")
-buttonsRow.Name = "MoveButtons"
-buttonsRow.LayoutOrder = 3
-buttonsRow.AutomaticSize = Enum.AutomaticSize.XY
-buttonsRow.Size = UDim2.new(0, 0, 0, 0)
-buttonsRow.BackgroundTransparency = 1
-buttonsRow.Parent = wrapper
-
-local buttonsRowLayout = Instance.new("UIListLayout")
-buttonsRowLayout.FillDirection = Enum.FillDirection.Horizontal
-buttonsRowLayout.Padding = UDim.new(0, 6)
-buttonsRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
-buttonsRowLayout.Parent = buttonsRow
-
-local function makeMoveButton(text, order)
-	local button = Instance.new("TextButton")
-	button.LayoutOrder = order
-	button.AutomaticSize = Enum.AutomaticSize.X
-	button.Size = UDim2.new(0, 0, 0, 22)
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 12
-	button.TextColor3 = UIColors.textSecondary
-	button.BackgroundColor3 = UIColors.panel
-	button.BackgroundTransparency = UIColors.panelTransparency
-	button.Text = text
-	button.Parent = buttonsRow
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(1, 0)
-	corner.Parent = button
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = UIColors.rim
-	stroke.Transparency = UIColors.rimTransparency
-	stroke.Thickness = 1
-	stroke.Parent = button
-
-	local padding = Instance.new("UIPadding")
-	padding.PaddingLeft = UDim.new(0, 10)
-	padding.PaddingRight = UDim.new(0, 10)
-	padding.Parent = button
-
-	return button
+-- 25-4: ▲▼ 한 칸씩 이동 버튼을 지우고 칩 자체를 눌러 스테이지 선택 패널을 연다(한눈에
+-- 보고 고르는 형태로 교체 - 지시). 견습 중엔 안 연다 - TutorialHud.client.lua가 이미 쓰는
+-- 판정(TutorialCompleted ~= true and (TutorialStep or 0) > 0)과 같은 기준: 견습은 선형
+-- 진행이라 "목록에서 고른다"는 개념 자체가 안 맞는다.
+local function isTutorialActive()
+	return player:GetAttribute("TutorialCompleted") ~= true and (player:GetAttribute("TutorialStep") or 0) > 0
 end
 
-local downButton = makeMoveButton("▼", 1)
-local upButton = makeMoveButton("▲", 2)
-
-local function currentStage()
-	return player:GetAttribute("InfiniteStage") or 1
-end
-
-downButton.Activated:Connect(function()
-	stageMoveRequest:FireServer(currentStage() - 1)
-end)
-
-upButton.Activated:Connect(function()
-	stageMoveRequest:FireServer(currentStage() + 1)
+chip.Active = true
+chip.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if not isTutorialActive() then
+			StageSelectPanel.open()
+		end
+	end
 end)
 
 local function updateLabels()
