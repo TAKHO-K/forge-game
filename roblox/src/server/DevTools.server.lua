@@ -2632,3 +2632,168 @@ if RunService:IsStudio() then
 	end
 	Players.PlayerAdded:Connect(run27_3bVerification)
 end
+
+-- ═══ 27-4 자동 검증 블록(가) - 보스 전조 이벤트(BossPatterns.step 직접 호출) ═══════════
+-- MonsterAI의 AiState="chasing" 전이(자연 어그로)는 이 검증에서 굳이 재현하지 않는다 -
+-- BossPatterns.step은 model/data/position/target/targetRoot/dt/members만 있으면 AI
+-- 상태와 무관하게 그대로 도는 순수 상태 머신이라(step 자체가 AiState를 안 읽는다) 직접
+-- 호출해도 실제 게임 경로와 같은 코드를 탄다. 진짜 플레이어를 타깃으로 써서 send()의
+-- patternEvent:FireClient가 실제 Instance에 정상적으로 나가는지까지 같이 확인한다(27-1이
+-- 스탠드인으로 "가짜 Player면 에러난다"를 검증했던 것과 반대 방향의 안전성 확인).
+if RunService:IsStudio() then
+	local ran27_4a = false
+	local function run27_4aVerification(player)
+		if ran27_4a then
+			return
+		end
+		ran27_4a = true
+		task.spawn(function()
+			local waited = 0
+			while not PlayerProfile.getProfile(player) and waited < 10 do
+				task.wait(0.5)
+				waited += 0.5
+			end
+			if not PlayerProfile.getProfile(player) then
+				print("[27-4] 프로필 로드 실패(10초 대기) - 검증을 건너뜁니다")
+				return
+			end
+			local backupWait = 0
+			while backups[player] and backupWait < 30 do
+				task.wait(0.5)
+				backupWait += 0.5
+			end
+
+			print("===27-4 검증 시작(가: 보스 전조 이벤트)===")
+			local passCount, totalCount = 0, 0
+			local function record(ok)
+				totalCount += 1
+				if ok then
+					passCount += 1
+				end
+				return ok and "O" or "X"
+			end
+
+			ensureBackup(player)
+			if not PlayerProfile.getClassId(player) then
+				PlayerProfile.setClassId(player, ClassData.order[1])
+			end
+
+			-- 패턴 id -> 한 스텝 뒤 기대하는 첫 단계 이름(BossPatterns.lua의 phase 값).
+			local EXPECTED_PHASE = {
+				heavy = "heavyTelegraph",
+				shockwave = "shockHop",
+				charge = "focus",
+				meteor = "meteorTelegraph",
+				cross = "crossTelegraph",
+			}
+			local ORDER = { "heavy", "shockwave", "charge", "meteor", "cross" }
+
+			for _, id in ipairs(ORDER) do
+				BossEncounter.despawnFor(player)
+				applyStage(player, BossData.stageInterval)
+				BossEncounter.spawnFor(player, BossData.stageInterval)
+				local model = BossEncounter.getActive(player)
+				local data = model and MonsterState.getData(model)
+				local character = player.Character
+				local root = character and character:FindFirstChild("HumanoidRootPart")
+				if not model or not data or not root then
+					print(("[27-4][가:%s] 보스/캐릭터 준비 실패 - 건너뜀 %s"):format(id, record(false)))
+				else
+					local ok = BossPatterns.force(model, data, id)
+					local stepOk, stepErr = pcall(function()
+						BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, { player })
+					end)
+					local phase = BossPatterns.getPhase(model)
+					local pass = ok and stepOk and phase == EXPECTED_PHASE[id]
+					print(("[27-4][가:%s] force+step 후 phase=%s(기대 %s) 에러=%s %s"):format(
+						id, tostring(phase), EXPECTED_PHASE[id], stepOk and "없음" or tostring(stepErr), record(pass)))
+				end
+			end
+			BossEncounter.despawnFor(player)
+
+			restore(player)
+			print(("===27-4 검증 끝(가)=== %d/%d 통과"):format(passCount, totalCount))
+		end)
+	end
+
+	for _, existing in ipairs(Players:GetPlayers()) do
+		run27_4aVerification(existing)
+	end
+	Players.PlayerAdded:Connect(run27_4aVerification)
+end
+
+-- ═══ 27-4 자동 검증 블록(나) - 스테이지 선택 UI가 읽는 Attribute 파이프라인 ═══════════
+-- computeStageStatus(StageSelectPanel.lua)는 클라 전용 순수 함수(3줄 - stage > best+1이면
+-- locked, stage <= bestBossCleared면 cleared, 아니면 inProgress)라 Studio 실측(스크린샷)
+-- 으로 이미 확인했다 - 여기서는 그 함수가 읽는 세 Attribute(InfiniteStage/
+-- InfiniteStageBest/BestBossCleared)가 서버에서 기대한 값으로 정확히 나가는지만 본다.
+if RunService:IsStudio() then
+	local ran27_4b = false
+	local function run27_4bVerification(player)
+		if ran27_4b then
+			return
+		end
+		ran27_4b = true
+		task.spawn(function()
+			local waited = 0
+			while not PlayerProfile.getProfile(player) and waited < 10 do
+				task.wait(0.5)
+				waited += 0.5
+			end
+			if not PlayerProfile.getProfile(player) then
+				print("[27-4] 프로필 로드 실패(10초 대기) - 검증을 건너뜁니다")
+				return
+			end
+			local backupWait = 0
+			while backups[player] and backupWait < 30 do
+				task.wait(0.5)
+				backupWait += 0.5
+			end
+
+			print("===27-4 검증 시작(나: 스테이지 Attribute 파이프라인)===")
+			local passCount, totalCount = 0, 0
+			local function record(ok)
+				totalCount += 1
+				if ok then
+					passCount += 1
+				end
+				return ok and "O" or "X"
+			end
+
+			ensureBackup(player)
+			applyStage(player, 7)
+			PlayerProfile.setBossCleared(player, 5)
+			local stage = player:GetAttribute("InfiniteStage")
+			local best = player:GetAttribute("InfiniteStageBest")
+			local bestBossCleared = player:GetAttribute("BestBossCleared")
+			print(("[27-4][나] Attribute 확인 - InfiniteStage=%s(기대 7) %s"):format(tostring(stage), record(stage == 7)))
+			print(("[27-4][나] Attribute 확인 - InfiniteStageBest=%s(기대 7) %s"):format(tostring(best), record(best == 7)))
+			print(("[27-4][나] Attribute 확인 - BestBossCleared=%s(기대 5) %s"):format(tostring(bestBossCleared), record(bestBossCleared == 5)))
+			-- computeStageStatus를 그대로 옮겨 세 구간 경계값을 이 서버 값으로 대조(6=cleared
+			-- 경계 안쪽, 7=inProgress 경계, 8=locked 경계 - 클라 스크린샷에서 이미 확인한 것과
+			-- 같은 로직을 데이터만 서버 기준으로 재확인).
+			local function computeStageStatus(s, b, c)
+				if s > b + 1 then
+					return "locked"
+				elseif s <= c then
+					return "cleared"
+				end
+				return "inProgress"
+			end
+			print(("[27-4][나] 상태 계산 - 5(=클리어 경계) -> %s(기대 cleared) %s"):format(
+				computeStageStatus(5, best, bestBossCleared), record(computeStageStatus(5, best, bestBossCleared) == "cleared")))
+			print(("[27-4][나] 상태 계산 - 7(=최고 도달) -> %s(기대 inProgress) %s"):format(
+				computeStageStatus(7, best, bestBossCleared), record(computeStageStatus(7, best, bestBossCleared) == "inProgress")))
+			print(("[27-4][나] 상태 계산 - 9(=최고+1 밖) -> %s(기대 locked) %s"):format(
+				computeStageStatus(9, best, bestBossCleared), record(computeStageStatus(9, best, bestBossCleared) == "locked")))
+
+			restore(player)
+			print(("===27-4 검증 끝(나)=== %d/%d 통과"):format(passCount, totalCount))
+		end)
+	end
+
+	for _, existing in ipairs(Players:GetPlayers()) do
+		run27_4bVerification(existing)
+	end
+	Players.PlayerAdded:Connect(run27_4bVerification)
+end
