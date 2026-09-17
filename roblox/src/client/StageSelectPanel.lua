@@ -81,6 +81,9 @@ panel.Position = UDim2.new(0.5, 0, 0.5, 0)
 panel.Size = UDim2.new(0, COLUMNS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 24, 0, 320)
 panel.BackgroundColor3 = UIColors.panel
 panel.BackgroundTransparency = 0.08
+-- Active=true - 안 그러면 셀 사이 여백(패딩)을 눌렀을 때 클릭이 패널을 그대로 통과해
+-- 뒤에 깔린 dim(바깥 탭 감지용)까지 닿아 패널이 의도치 않게 닫힌다(Studio 실측으로 발견).
+panel.Active = true
 panel.Parent = screenGui
 
 local panelCorner = Instance.new("UICorner")
