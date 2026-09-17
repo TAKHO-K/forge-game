@@ -23,6 +23,7 @@ local partyStateChanged = ReplicatedStorage:WaitForChild("PartyStateChanged")
 local partyInviteNotice = ReplicatedStorage:WaitForChild("PartyInviteNotice")
 local partyNotice = ReplicatedStorage:WaitForChild("PartyNotice")
 local partyRequest = ReplicatedStorage:WaitForChild("PartyRequest")
+local partyVoteNotice = ReplicatedStorage:WaitForChild("PartyVoteNotice")
 
 local player = Players.LocalPlayer
 
@@ -289,4 +290,115 @@ end)
 declineButton.Activated:Connect(function()
 	partyRequest:FireServer("decline")
 	hideToast()
+end)
+
+-- ═══ [3] 스테이지 이동 투표 패널(25-3, PRD 20.47 [6](라) "입장 수락 팝업"을 투표로 대체) ═══
+-- 화면 오른쪽 세로 중앙 - 파티 목록(왼쪽)의 반대편이라 화면 중앙·채팅창(좌상단)과 안 겹친다.
+local votePanel = Instance.new("Frame")
+votePanel.Name = "PartyVotePanel"
+votePanel.AnchorPoint = Vector2.new(1, 0.5)
+votePanel.Position = UDim2.new(1, -14, 0.5, 0)
+votePanel.Size = UDim2.new(0, 210, 0, 84)
+votePanel.BackgroundColor3 = UIColors.panel
+votePanel.BackgroundTransparency = UIColors.panelTransparency
+votePanel.Visible = false
+votePanel.Parent = screenGui
+
+local voteCorner = Instance.new("UICorner")
+voteCorner.CornerRadius = UDim.new(0, 10)
+voteCorner.Parent = votePanel
+
+local voteStroke = Instance.new("UIStroke")
+voteStroke.Color = UIColors.rim
+voteStroke.Transparency = UIColors.rimTransparency
+voteStroke.Parent = votePanel
+
+local voteText = Instance.new("TextLabel")
+voteText.BackgroundTransparency = 1
+voteText.Position = UDim2.new(0, 12, 0, 8)
+voteText.Size = UDim2.new(1, -24, 0, 40)
+voteText.Font = Enum.Font.GothamBold
+voteText.TextSize = 12.5
+voteText.TextWrapped = true
+voteText.TextXAlignment = Enum.TextXAlignment.Left
+voteText.TextYAlignment = Enum.TextYAlignment.Top
+voteText.TextColor3 = UIColors.textPrimary
+voteText.Text = ""
+voteText.Parent = votePanel
+
+local function makeVoteButton(text, leftSide, accent)
+	local button = Instance.new("TextButton")
+	button.AnchorPoint = Vector2.new(leftSide and 0 or 1, 1)
+	button.Position = UDim2.new(leftSide and 0 or 1, leftSide and 12 or -12, 1, -8)
+	button.Size = UDim2.new(0, 84, 0, 26)
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 12
+	button.Text = text
+	button.TextColor3 = accent and Color3.new(0, 0, 0) or UIColors.textSecondary
+	button.BackgroundColor3 = accent and UIColors.gold or UIColors.panel
+	button.BackgroundTransparency = accent and 0.1 or UIColors.panelTransparency
+	button.Visible = false
+	button.Parent = votePanel
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = button
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = UIColors.rim
+	stroke.Transparency = UIColors.rimTransparency
+	stroke.Parent = button
+	return button
+end
+
+local voteRejectButton = makeVoteButton("거절", true, false)
+local voteAgreeButton = makeVoteButton("동의", false, true)
+
+local voteToken = 0
+
+local function hideVote()
+	votePanel.Visible = false
+	voteAgreeButton.Visible = false
+	voteRejectButton.Visible = false
+end
+
+partyVoteNotice.OnClientEvent:Connect(function(data)
+	voteToken += 1
+	local token = voteToken
+	local autoHideSeconds = 2
+	if data.result == "start" then
+		votePanel.Visible = true
+		if data.isLeader then
+			voteText.Text = ("스테이지 %d 보스 진입 투표 중... 파티원 1명 동의 시 성립"):format(data.stage)
+		else
+			voteText.Text = ("%s님이 스테이지 %d 보스로 이동하려 합니다"):format(data.leaderName, data.stage)
+			voteAgreeButton.Visible = true
+			voteRejectButton.Visible = true
+		end
+		autoHideSeconds = data.seconds or 10
+	elseif data.result == "passed" then
+		voteText.Text = "투표 통과 - 이동합니다"
+		voteAgreeButton.Visible = false
+		voteRejectButton.Visible = false
+		autoHideSeconds = 1.5
+	elseif data.result == "failed" then
+		voteText.Text = "투표가 성립하지 않았습니다"
+		voteAgreeButton.Visible = false
+		voteRejectButton.Visible = false
+	end
+	task.delay(autoHideSeconds, function()
+		if voteToken == token then
+			hideVote()
+		end
+	end)
+end)
+
+voteAgreeButton.Activated:Connect(function()
+	partyRequest:FireServer("vote_agree")
+	voteAgreeButton.Visible = false
+	voteRejectButton.Visible = false
+end)
+
+voteRejectButton.Activated:Connect(function()
+	partyRequest:FireServer("vote_reject")
+	voteAgreeButton.Visible = false
+	voteRejectButton.Visible = false
 end)

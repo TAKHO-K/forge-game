@@ -18,6 +18,7 @@ local TutorialState = require(script.Parent.TutorialState)
 local BossEncounter = require(script.Parent.BossEncounter)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PartyCrossServer = require(script.Parent.PartyCrossServer)
+local PartyVote = require(script.Parent.PartyVote)
 
 local partyRequest = Instance.new("RemoteEvent")
 partyRequest.Name = "PartyRequest"
@@ -256,6 +257,13 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 				return
 			end
 			fail(player, reason)
+		end
+	elseif action == "vote_agree" or action == "vote_reject" then
+		-- 25-3: 스테이지 이동 투표 응답. 어느 파티의 어느 투표인지는 PartyVote가 자체
+		-- 상태로 안다 - 여기선 "이 사람이 지금 속한 파티"만 넘긴다.
+		local party = PartyState.getParty(player)
+		if party then
+			PartyVote.cast(party, player, action == "vote_agree")
 		end
 	end
 end)

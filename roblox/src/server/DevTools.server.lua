@@ -72,6 +72,8 @@ local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local BuffState = require(script.Parent.BuffState)
 -- 24-2 크로스서버 파티 검증 명령(/gg party server|join|fakeremote|xtest)용.
 local PartyCrossServer = require(script.Parent.PartyCrossServer)
+-- 25-3 스테이지 이동 투표 자동 검증(아래 "===27-3 검증 시작(가)===")용.
+local PartyVote = require(script.Parent.PartyVote)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 -- 25-1 레벨 곡선 검증 명령(/gg curve, /gg curve migrate)용.
@@ -2441,4 +2443,89 @@ if RunService:IsStudio() then
 		run27_1bVerification(existing)
 	end
 	Players.PlayerAdded:Connect(run27_1bVerification)
+end
+
+-- ═══ 27-3 자동 검증 블록(가) - 스테이지 이동 투표(PartyVote) 순수 로직 ═══════════════
+-- 실제 등록된 파티(PartyState)가 없어도 된다 - PartyVote.start/cast는 party 인자를 그냥
+-- 키로만 쓰고, 멤버 목록은 PartyState.getMemberPlayers(party)로 읽는데 그 함수는
+-- record.player가 truthy이기만 하면 된다(진짜 Instance인지는 안 본다). 27-1의
+-- debugAddMember와 같은 원리로 가짜 파티 테이블 + 가짜 멤버 테이블을 만들어 실제
+-- RemoteEvent 없이 해석 로직 전체를 검증한다. 리더만 접속한 진짜 플레이어를 써서
+-- PartyVoteNotice가 실제로도 한 번씩 나가는 걸 겸사겸사 확인한다.
+if RunService:IsStudio() then
+	local ran27_3a = false
+	local function run27_3aVerification(player)
+		if ran27_3a then
+			return
+		end
+		ran27_3a = true
+		task.spawn(function()
+			print("===27-3 검증 시작(가: 스테이지 이동 투표)===")
+			local passCount, totalCount = 0, 0
+			local function record(ok)
+				totalCount += 1
+				if ok then
+					passCount += 1
+				end
+				return ok and "O" or "X"
+			end
+
+			local function fakeParty(n)
+				local members = { { player = player } }
+				for i = 1, n do
+					table.insert(members, { player = { Name = "VoteStandIn" .. i } })
+				end
+				return { members = members }
+			end
+
+			-- [가1] 다른 멤버 0명 - 투표 없이 즉시 통과(솔로·2인 미만 파티 경로).
+			do
+				local party = fakeParty(0)
+				local resolved
+				local started = PartyVote.start(party, player, 5, function(passed)
+					resolved = passed
+				end)
+				print(("[27-3][가1] 다른 멤버 0명 - 즉시 통과 %s"):format(record(started and resolved == true)))
+			end
+
+			-- [가2] 다른 멤버 1명이 동의 - 리더 표 포함 2명으로 제한시간을 기다리지 않고 즉시 성립.
+			do
+				local party = fakeParty(1)
+				local other = party.members[2].player
+				local resolved
+				PartyVote.start(party, player, 5, function(passed)
+					resolved = passed
+				end)
+				PartyVote.cast(party, other, true)
+				print(("[27-3][가2] 1명 동의 - 즉시 성립 %s"):format(record(resolved == true)))
+			end
+
+			-- [가3] 다른 멤버 1명, 아무도 응답 안 함 - 제한시간(10초) 뒤 무산.
+			do
+				local party = fakeParty(1)
+				local resolved
+				PartyVote.start(party, player, 5, function(passed)
+					resolved = passed
+				end)
+				task.wait(PartyConfig.stageVoteTimeoutSeconds + 0.5)
+				print(("[27-3][가3] 무응답 - 제한시간 뒤 무산 %s"):format(record(resolved == false)))
+			end
+
+			-- [가4] 이미 진행 중인 투표가 있는 파티에 새 투표를 걸면 거절(경합 방지).
+			do
+				local party = fakeParty(2)
+				PartyVote.start(party, player, 5, function() end)
+				local secondStarted = PartyVote.start(party, player, 6, function() end)
+				PartyVote.cancel(party) -- 정리 - 타임아웃까지 안 기다리고 바로 다음으로
+				print(("[27-3][가4] 진행 중 투표에 새 투표 거절 %s"):format(record(secondStarted == false)))
+			end
+
+			print(("===27-3 검증 끝(가)=== %d/%d 통과"):format(passCount, totalCount))
+		end)
+	end
+
+	for _, existing in ipairs(Players:GetPlayers()) do
+		run27_3aVerification(existing)
+	end
+	Players.PlayerAdded:Connect(run27_3aVerification)
 end

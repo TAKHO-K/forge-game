@@ -59,6 +59,10 @@ return {
 	-- 초대 팝업 유지 시간(PRD 20.47 [5](라) "받는 쪽 팝업 15초"). 지나면 자동 거절.
 	inviteTimeoutSeconds = 15,
 
+	-- 25-3: 리더가 보스 스테이지로 이동할 때 뜨는 투표 제한 시간(PRD 20.47 [6](라)의 원래
+	-- 제안 "입장 수락 팝업 10초"를 그대로 가져온다). 시간 안에 아무도 동의하지 않으면 무산.
+	stageVoteTimeoutSeconds = 10,
+
 	-- ═══ 24-2 크로스서버(PRD 20.63) ═══
 	partiesPerServer = partiesPerServer,
 	serverPreferredPlayers = maxMembers * partiesPerServer, -- 12

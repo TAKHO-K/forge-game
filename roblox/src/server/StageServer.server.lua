@@ -21,6 +21,7 @@ local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local BossEncounter = require(script.Parent.BossEncounter)
 local PartyState = require(script.Parent.PartyState)
+local PartyVote = require(script.Parent.PartyVote)
 
 local stageMoveRequest = Instance.new("RemoteEvent")
 stageMoveRequest.Name = "StageMoveRequest"
@@ -90,34 +91,57 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 		isPartyBoss = true
 	end
 
-	local previousStage = PlayerProfile.getInfiniteStage(player)
-	local isNewBest = PlayerProfile.setInfiniteStage(player, targetStage)
-	stageMoveResult:FireClient(player, {
-		result = "ok",
-		stage = targetStage,
-		best = PlayerProfile.getInfiniteStageBest(player),
-	})
+	-- 실제 이동(스테이지 갱신 + 보스 스폰/despawn + 즉시저장) - 파티 보스면 아래 투표를
+	-- 통과한 뒤에만, 그 외에는 지금 바로 실행한다.
+	local function performMove()
+		local previousStage = PlayerProfile.getInfiniteStage(player)
+		local isNewBest = PlayerProfile.setInfiniteStage(player, targetStage)
+		stageMoveResult:FireClient(player, {
+			result = "ok",
+			stage = targetStage,
+			best = PlayerProfile.getInfiniteStageBest(player),
+		})
 
-	-- 보스 스테이지 진입/퇴장(15-1). 잡몹은 격자 스폰이 항상 그대로 있으니(HuntingGround)
-	-- 손댈 게 없다 - 보스만 이 전환에 맞춰 등장·퇴장한다.
-	if BossRules.isBossStage(targetStage) then
-		if isPartyBoss then
-			BossEncounter.spawnForParty(party, player, targetStage)
-		else
-			BossEncounter.spawnFor(player, targetStage)
+		-- 보스 스테이지 진입/퇴장(15-1). 잡몹은 격자 스폰이 항상 그대로 있으니(HuntingGround)
+		-- 손댈 게 없다 - 보스만 이 전환에 맞춰 등장·퇴장한다.
+		if BossRules.isBossStage(targetStage) then
+			if isPartyBoss then
+				BossEncounter.spawnForParty(party, player, targetStage)
+			else
+				BossEncounter.spawnFor(player, targetStage)
+			end
+		elseif BossRules.isBossStage(previousStage) then
+			-- 24-1: 리더(또는 솔로)면 보스전 전체 종료, 파티원이면 자기만 빠진다.
+			if party and not PartyState.isLeader(player) then
+				BossEncounter.leaveFor(player)
+			else
+				BossEncounter.despawnFor(player)
+			end
 		end
-	elseif BossRules.isBossStage(previousStage) then
-		-- 24-1: 리더(또는 솔로)면 보스전 전체 종료, 파티원이면 자기만 빠진다.
-		if party and not PartyState.isLeader(player) then
-			BossEncounter.leaveFor(player)
-		else
-			BossEncounter.despawnFor(player)
+
+		if isNewBest then
+			ImmediateSave.request(player)
 		end
 	end
 
-	if isNewBest then
-		ImmediateSave.request(player)
+	-- 25-3(PRD 20.47 [6](라) "입장 수락 팝업" 대체) - 파티 보스 진입만 투표를 거친다.
+	-- PartyVote.start는 다른 멤버가 없으면 투표 없이 바로 performMove를 부른다. 이미 진행
+	-- 중인 투표가 있으면(경합) 그 자리에서 거절한다 - "지금은 안 된다"는 보스전 중 합류
+	-- 차단과 같은 계통.
+	if isPartyBoss then
+		local started = PartyVote.start(party, player, targetStage, function(passed)
+			if passed then
+				performMove()
+			end
+		end)
+		if not started then
+			reject(player, "vote_pending")
+			PartyState.notify(player, "이미 진행 중인 투표가 있습니다")
+		end
+		return
 	end
+
+	performMove()
 end)
 
 -- 퇴장 - 자기 보스전에서만 빠진다(파티 보스전은 남은 멤버가 이어간다, BossEncounter.leaveFor).
