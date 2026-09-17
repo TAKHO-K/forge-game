@@ -59,12 +59,15 @@ function HelpTooltip.attach(parent, anchorPosition, text, panelSide)
 	catcher.Parent = screenGui
 
 	local left = panelSide == "left"
+	-- 고정 크기로 둔다(200×70, 2~3줄 설명 기준) - 부모(button)도 AutomaticSize를 쓰는 채로
+	-- 패널·텍스트를 둘 다 AutomaticSize.Y로 중첩하면 초기 레이아웃 패스에서 TextBounds가
+	-- 안 먹혀(실측 - 한 줄 폭 그대로 굳어버림) 줄바꿈이 깨지는 문제가 있었다. 고정 크기가
+	-- 더 단순하고 안전하다.
 	local panel = Instance.new("Frame")
 	panel.Name = "HelpPanel"
 	panel.AnchorPoint = Vector2.new(left and 1 or 0, 0)
 	panel.Position = UDim2.new(left and 0 or 1, left and -10 or 10, 0.5, -8)
-	panel.Size = UDim2.new(0, 200, 0, 0)
-	panel.AutomaticSize = Enum.AutomaticSize.Y
+	panel.Size = UDim2.new(0, 200, 0, 70)
 	panel.BackgroundColor3 = UIColors.panel
 	panel.BackgroundTransparency = UIColors.panelTransparency
 	panel.ZIndex = 52
@@ -80,21 +83,15 @@ function HelpTooltip.attach(parent, anchorPosition, text, panelSide)
 	panelStroke.Transparency = UIColors.rimTransparency
 	panelStroke.Parent = panel
 
-	local panelPadding = Instance.new("UIPadding")
-	panelPadding.PaddingLeft = UDim.new(0, 10)
-	panelPadding.PaddingRight = UDim.new(0, 10)
-	panelPadding.PaddingTop = UDim.new(0, 8)
-	panelPadding.PaddingBottom = UDim.new(0, 8)
-	panelPadding.Parent = panel
-
 	local panelText = Instance.new("TextLabel")
 	panelText.BackgroundTransparency = 1
-	panelText.Size = UDim2.new(1, 0, 0, 0)
-	panelText.AutomaticSize = Enum.AutomaticSize.Y
+	panelText.Position = UDim2.new(0, 10, 0, 8)
+	panelText.Size = UDim2.new(1, -20, 1, -16)
 	panelText.Font = Enum.Font.Gotham
 	panelText.TextSize = 12
 	panelText.TextWrapped = true
 	panelText.TextXAlignment = Enum.TextXAlignment.Left
+	panelText.TextYAlignment = Enum.TextYAlignment.Top
 	panelText.TextColor3 = UIColors.textPrimary
 	panelText.Text = text
 	panelText.ZIndex = 52
