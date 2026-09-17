@@ -313,6 +313,11 @@ local function removeRecord(party, record, reason)
 	if #party.members <= 1 and reason ~= "disband" then
 		print(("[forge-game] 파티 해산: #%d (남은 인원 %d)"):format(party.id, #party.members))
 		for _, remaining in ipairs(table.clone(party.members)) do
+			-- 25-4(B1 결함 수정): 추방 시엔 알림이 있는데(448행) 자동 해산엔 없었다 - 남은
+			-- 멤버(더미 제외)에게 알린다. removeRecord가 partyOf를 지우기 전에 보낸다.
+			if remaining.player then
+				PartyState.notify(remaining.player, "파티가 해산되었습니다")
+			end
 			removeRecord(party, remaining, "disband")
 		end
 		party.pending = {}
