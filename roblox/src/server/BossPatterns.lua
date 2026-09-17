@@ -217,10 +217,20 @@ end
 
 -- ─────────────────────────── 패턴 시작 ───────────────────────────
 
-local function startHeavy(model, st, data, now)
+-- 25-4: 강공격은 원래 지면 예고 도형이 없었다(몸 색 변화 + 말풍선뿐) - 사거리 원을
+-- 하나 보낸다. 새 상수 없음 - data.attackRangeStuds·data.telegraphWarmupSeconds
+-- 둘 다 기존 필드(변형 적용 시 이미 조정된 값이 그대로 들어온다, BossData VARIANTS.heavy
+-- 참고). 보스 중심 고정 반경인 이유: 피해 판정 자체가 Reach.within(맞은 사람, position
+-- (보스 좌표), attackRangeStuds)라 "대상 발밑"이 아니라 "보스 중심"이 실제 위험 범위다.
+local function startHeavy(model, st, data, now, position)
 	st.phase = "heavyTelegraph"
 	st.phaseEndsAt = now + data.telegraphWarmupSeconds
 	setBodyColor(model, data.telegraphColor)
+	send(st, "heavyTelegraph", {
+		center = Vector3.new(position.X, st.floorY, position.Z),
+		radius = data.attackRangeStuds,
+		seconds = data.telegraphWarmupSeconds,
+	})
 end
 
 local function startShockHop(model, st, data, now, seconds)
@@ -376,7 +386,7 @@ local function startPattern(model, st, data, id, now, position, targetRoot)
 	-- 모든 패턴이 예고 시작 순간 하나씩 띄운다. 그림은 클라(BossPatternVisuals)가 고른다.
 	send(st, "bubble", { pattern = id, seconds = bubbleSecondsOf(data, id) })
 	if id == "heavy" then
-		startHeavy(model, st, data, now)
+		startHeavy(model, st, data, now, position)
 	elseif id == "shockwave" then
 		startShockwave(model, st, data, now, position)
 	elseif id == "charge" then
@@ -504,6 +514,8 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 				PlayerDamage.applyHit(v.player, data.attack, "강공격", data.heavyAttackMultiplier)
 			end
 		end
+		-- 25-4: 판정 순간 흰 섬광 - 낙석·십자 화염과 같은 "임팩트 = 흰색" 언어를 강공격에도 맞춘다.
+		send(st, "heavyImpact", { center = Vector3.new(position.X, st.floorY, position.Z), radius = data.attackRangeStuds })
 		setBodyColor(model, data.bodyColor)
 		endPattern(model, st, data, now)
 		return true

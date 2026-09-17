@@ -5,13 +5,16 @@
 -- 아트 동결) - SkillEffects.lua와 같은 계열. 모든 연출 파트는 CanQuery=false라 서버의
 -- 레이캐스트(공중 판정·대시 담장 판정)에 걸리지 않는다.
 --
--- 예고 종류: 모든 패턴 공통으로 보스 머리 위 말풍선(사용자 지시 - 느낌표·물음표·바닥 그림
--- 으로 "스킬을 쓰겠구나"를 읽게: 강타 "!", 돌진 "‼", 낙석 "?", 진동파 "◎"(바닥 원), 십자
--- "✚") + 패턴별 바닥 예고: 진동파(보스 발밑 원판, 찍는 순간 실제 파동 링), 돌진(화면 경고 +
--- 바닥 경로선), 낙석(표적 원판 → 낙하 기둥), 십자 화염(4방향 선 → 점화). 강공격은 15-1
--- 그대로 서버가 몸 색을 바꾼다 + 말풍선. 돌진 뒤 헤롱(주저앉기)에는 어지럼 말풍선.
--- "reset"(사망 리셋·중단)이 오면 살아있는 연출을 전부 지운다 - 재도전 직후 남은 파동이
--- 플레이어를 때리는 일이 판정(서버)에서도 연출(여기)에서도 없게.
+-- 25-4: 기술명 텍스트(말풍선 이름표)와 화면 중앙 경고 문장을 전부 지웠다(지시 "글자를
+-- 없애고 그림으로 알려준다") - 이제 전조는 순수하게 그림(말풍선 그림 문자 + 지면 도형)
+-- 뿐이다. 예고 종류: 모든 패턴 공통으로 보스 머리 위 말풍선 그림 문자(강타 "!", 돌진
+-- "‼", 낙석 "?", 진동파 "◎", 십자 "✚") + 패턴별 바닥 예고: 강공격(보스 중심 고정 원),
+-- 진동파(보스 발밑 원판, 찍는 순간 실제 파동 링), 돌진(바닥 경로선), 낙석(표적 원판 →
+-- 낙하 기둥), 십자 화염(4방향 선 → 점화). 색 언어는 danger(위험 범위, 한 가지)/impact
+-- (임팩트 순간, 흰색) 두 가지로 통일했다 - PRD 20.71 표 참고. 돌진 뒤 헤롱(주저앉기)에는
+-- 어지럼 말풍선(위험이 아니라 기회 신호라 파랑 유지). "reset"(사망 리셋·중단)이 오면
+-- 살아있는 연출을 전부 지운다 - 재도전 직후 남은 파동이 플레이어를 때리는 일이 판정
+-- (서버)에서도 연출(여기)에서도 없게.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,15 +22,16 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 
-local WAVE_COLOR = Color3.fromRGB(255, 140, 40)
-local TELEGRAPH_COLOR = Color3.fromRGB(230, 40, 40)
-local CHARGE_COLOR = Color3.fromRGB(255, 60, 60)
-local METEOR_COLOR = Color3.fromRGB(255, 90, 30)
-local CROSS_COLOR = Color3.fromRGB(255, 120, 20)
+-- 25-4: 위험 범위는 전부 이 한 색(UIColors.danger, hp와 동일값)으로 통일한다 - 패턴은
+-- 스케줄러가 절대 동시에 안 돌게 막아서(BossPatterns.lua 상단 주석) 색을 하나로 합쳐도
+-- "지금 뭐가 위험한지" 헷갈릴 일이 없다. 흰색은 "임팩트(방금 명중/폭발)"라는 별개 의미로만 쓴다.
+local DANGER_COLOR = UIColors.danger
+local IMPACT_COLOR = Color3.new(1, 1, 1)
 
 local WAVE_SEGMENTS = 48
 local WAVE_HEIGHT_STUDS = 1.6
@@ -82,63 +86,7 @@ local function fadeOut(part, seconds)
 	end)
 end
 
--- ─────────────────────────── 화면 경고 ───────────────────────────
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BossWarningGui"
-screenGui.ResetOnSpawn = false
-screenGui.DisplayOrder = 4
-screenGui.Parent = playerGui
-
-local warningLabel = Instance.new("TextLabel")
-warningLabel.AnchorPoint = Vector2.new(0.5, 0)
-warningLabel.Position = UDim2.new(0.5, 0, 0, 160)
-warningLabel.Size = UDim2.new(0, 360, 0, 52)
-warningLabel.BackgroundColor3 = Color3.fromRGB(60, 10, 10)
-warningLabel.BackgroundTransparency = 1
-warningLabel.TextTransparency = 1
-warningLabel.BorderSizePixel = 0
-warningLabel.Font = Enum.Font.GothamBlack
-warningLabel.TextSize = 26
-warningLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
-warningLabel.Text = ""
-warningLabel.Parent = screenGui
-
-local warningCorner = Instance.new("UICorner")
-warningCorner.CornerRadius = UDim.new(0, 8)
-warningCorner.Parent = warningLabel
-
-local warningStroke = Instance.new("UIStroke")
-warningStroke.Color = Color3.fromRGB(255, 60, 60)
-warningStroke.Transparency = 1
-warningStroke.Parent = warningLabel
-
-local warningToken = 0
-
-local function showWarning(text, seconds)
-	warningToken += 1
-	local token = warningToken
-	warningLabel.Text = text
-	local tweenIn = TweenInfo.new(0.1)
-	TweenService:Create(warningLabel, tweenIn, { BackgroundTransparency = 0.2, TextTransparency = 0 }):Play()
-	TweenService:Create(warningStroke, tweenIn, { Transparency = 0 }):Play()
-	task.delay(seconds, function()
-		if warningToken == token then
-			local tweenOut = TweenInfo.new(0.3)
-			TweenService:Create(warningLabel, tweenOut, { BackgroundTransparency = 1, TextTransparency = 1 }):Play()
-			TweenService:Create(warningStroke, tweenOut, { Transparency = 1 }):Play()
-		end
-	end)
-end
-
-local function hideWarning()
-	warningToken += 1
-	warningLabel.BackgroundTransparency = 1
-	warningLabel.TextTransparency = 1
-	warningStroke.Transparency = 1
-end
-
--- 보스 머리 위 느낌표(지시 [3] "멀리서도 보여야 한다" - BillboardGui + 화면 경고 둘 다).
+-- 보스 머리 위 느낌표(지시 [3] "멀리서도 보여야 한다" - BillboardGui).
 -- 보스 모델은 Monster 태그 + isBoss 이름표뿐이라 "지금 내 보스"는 가장 가까운 Monster
 -- 모델 중 BossArena 안에 있는 것으로 찾는다 - 개인 아레나엔 몬스터가 하나뿐이다.
 local function findBossModel(nearPosition)
@@ -155,14 +103,17 @@ local function findBossModel(nearPosition)
 	return best
 end
 
--- 패턴별 말풍선 그림·이름·색. 글자 하나가 "그림"이다(이미지 에셋 없이).
+-- 25-4: 패턴별 말풍선 그림+색만 남긴다(기술명 텍스트 제거 - 지시 "글자를 없애고
+-- 그림으로 알려준다"). 그림 문자(!/‼/?/◎/✚)는 이름이 아니라 패턴마다 다른 모양의
+-- 픽토그램이라 남긴다 - 색약 대응(모양으로도 구분)에도 쓰인다. daze(헤롱)는 위험이
+-- 아니라 기회(반격 타이밍) 신호라 danger/impact와 다른 색(파랑)을 그대로 유지한다.
 local BUBBLES = {
-	heavy = { icon = "!", label = "강타", color = Color3.fromRGB(230, 40, 40) },
-	charge = { icon = "‼", label = "돌진", color = Color3.fromRGB(255, 60, 60) },
-	meteor = { icon = "?", label = "낙석", color = Color3.fromRGB(255, 120, 30) },
-	shockwave = { icon = "◎", label = "진동파", color = Color3.fromRGB(255, 150, 40) },
-	cross = { icon = "✚", label = "십자 화염", color = Color3.fromRGB(255, 120, 20) },
-	daze = { icon = "@_@", label = "헤롱… 뒤를 쳐라!", color = Color3.fromRGB(120, 200, 255) },
+	heavy = { icon = "!", color = Color3.fromRGB(230, 40, 40) },
+	charge = { icon = "‼", color = Color3.fromRGB(255, 60, 60) },
+	meteor = { icon = "?", color = Color3.fromRGB(255, 120, 30) },
+	shockwave = { icon = "◎", color = Color3.fromRGB(255, 150, 40) },
+	cross = { icon = "✚", color = Color3.fromRGB(255, 120, 20) },
+	daze = { icon = "@_@", color = Color3.fromRGB(120, 200, 255) },
 }
 
 local currentBubble = nil
@@ -194,7 +145,7 @@ local function showBubble(kind, seconds)
 	currentBubble = gui
 
 	local box = Instance.new("Frame")
-	box.Size = UDim2.new(1, 0, 0, 96)
+	box.Size = UDim2.new(1, 0, 0, 62)
 	box.BackgroundColor3 = Color3.new(1, 1, 1)
 	box.BorderSizePixel = 0
 	box.Parent = gui
@@ -224,16 +175,6 @@ local function showBubble(kind, seconds)
 	icon.TextColor3 = spec.color
 	icon.Parent = box
 
-	local name = Instance.new("TextLabel")
-	name.Position = UDim2.new(0, 0, 0, 62)
-	name.Size = UDim2.new(1, 0, 0, 28)
-	name.BackgroundTransparency = 1
-	name.Font = Enum.Font.GothamBold
-	name.TextSize = 18
-	name.Text = spec.label
-	name.TextColor3 = Color3.fromRGB(40, 30, 30)
-	name.Parent = box
-
 	-- 그림 글자가 두근거린다 - 정지 그림보다 눈에 띈다.
 	TweenService:Create(icon, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
 		Size = UDim2.new(1, 0, 0, 52),
@@ -246,11 +187,30 @@ local function showBubble(kind, seconds)
 	end)
 end
 
+-- ─────────────────────────── 강공격 ───────────────────────────
+
+-- 25-4: 보스 중심 고정 반경 원 - shockTelegraph와 같은 "예고 시간 동안 진해진다" 기법을
+-- 쓰되 크기는 안 자란다(사거리가 고정이라 진동파의 "자라는 원"과 모양으로 구분된다).
+local function heavyTelegraph(data)
+	local disc = newDisc(data.center, data.radius, DANGER_COLOR, 0.85)
+	TweenService:Create(disc, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Transparency = 0.25,
+	}):Play()
+	task.delay(data.seconds, function()
+		fadeOut(disc, 0.2)
+	end)
+end
+
+local function heavyImpact(data)
+	local flash = newDisc(data.center, data.radius, IMPACT_COLOR, 0.1)
+	fadeOut(flash, 0.35)
+end
+
 -- ─────────────────────────── 진동파 ───────────────────────────
 
 local function shockTelegraph(data)
 	-- 보스 발밑 원판 - 예고 시간 동안 점점 진해진다(찍는 순간을 예측할 수 있게).
-	local disc = newDisc(data.center, 8, TELEGRAPH_COLOR, 0.85)
+	local disc = newDisc(data.center, 8, DANGER_COLOR, 0.85)
 	TweenService:Create(disc, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		Transparency = 0.25,
 		Size = Vector3.new(0.2, 24, 24),
@@ -266,7 +226,7 @@ end
 local function shockwave(data)
 	local segments = {}
 	for i = 1, WAVE_SEGMENTS do
-		local part = newPart(Vector3.new(1, WAVE_HEIGHT_STUDS, data.thickness), WAVE_COLOR, 0.25)
+		local part = newPart(Vector3.new(1, WAVE_HEIGHT_STUDS, data.thickness), DANGER_COLOR, 0.25)
 		segments[i] = part
 	end
 	local center = data.center + Vector3.new(0, WAVE_HEIGHT_STUDS / 2, 0)
@@ -297,15 +257,13 @@ end
 local chargeLine = nil
 
 local function focus(data)
-	showWarning("!! 돌진 - 옆으로 피하세요 !!", data.seconds)
-
 	local delta = data.endPosition - data.bossPosition
 	local length = delta.Magnitude
 	if length < 1 then
 		return
 	end
 	local mid = (data.bossPosition + data.endPosition) / 2
-	local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), CHARGE_COLOR, 0.8)
+	local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), DANGER_COLOR, 0.8)
 	line.CFrame = CFrame.lookAt(Vector3.new(mid.X, data.floorY + 0.15, mid.Z), Vector3.new(data.endPosition.X, data.floorY + 0.15, data.endPosition.Z))
 	-- 예고 시간 동안 점점 진해진다.
 	TweenService:Create(line, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
@@ -322,7 +280,7 @@ local function charge(data)
 		if line then
 			fadeOut(line, 0.3)
 		end
-		local ring = newDisc(Vector3.new(data.endPosition.X, data.endPosition.Y - 1.3, data.endPosition.Z), 2, CHARGE_COLOR, 0.2)
+		local ring = newDisc(Vector3.new(data.endPosition.X, data.endPosition.Y - 1.3, data.endPosition.Z), 2, IMPACT_COLOR, 0.2)
 		TweenService:Create(ring, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Size = Vector3.new(0.2, 16, 16),
 			Transparency = 1,
@@ -339,12 +297,12 @@ local meteorDiscs = {}
 
 local function meteor(data)
 	for _, position in ipairs(data.positions) do
-		local disc = newDisc(position, data.radius, METEOR_COLOR, 0.8)
+		local disc = newDisc(position, data.radius, DANGER_COLOR, 0.8)
 		TweenService:Create(disc, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 			Transparency = 0.3,
 		}):Play()
-		-- 안쪽에서 커지는 두 번째 원판 - "떨어지기까지 남은 시간"이 읽히게.
-		local inner = newDisc(position, 0.5, Color3.new(1, 1, 1), 0.5)
+		-- 안쪽에서 커지는 두 번째 원판 - "떨어지기까지 남은 시간"이 읽히게(세 번째 색 의미).
+		local inner = newDisc(position, 0.5, IMPACT_COLOR, 0.5)
 		TweenService:Create(inner, TweenInfo.new(data.seconds, Enum.EasingStyle.Linear), {
 			Size = Vector3.new(0.2, data.radius * 2, data.radius * 2),
 		}):Play()
@@ -360,7 +318,7 @@ local function meteorImpact(data)
 	meteorDiscs = {}
 	for _, position in ipairs(data.positions) do
 		-- 위에서 내리꽂히는 기둥 + 바닥 섬광.
-		local pillar = newPart(Vector3.new(data.radius * 1.2, 30, data.radius * 1.2), METEOR_COLOR, 0.3)
+		local pillar = newPart(Vector3.new(data.radius * 1.2, 30, data.radius * 1.2), IMPACT_COLOR, 0.3)
 		pillar.CFrame = CFrame.new(position + Vector3.new(0, 30, 0))
 		TweenService:Create(pillar, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 			CFrame = CFrame.new(position + Vector3.new(0, 15, 0)),
@@ -368,7 +326,7 @@ local function meteorImpact(data)
 		task.delay(0.12, function()
 			fadeOut(pillar, 0.25)
 		end)
-		local flash = newDisc(position, data.radius, Color3.new(1, 1, 1), 0.1)
+		local flash = newDisc(position, data.radius, IMPACT_COLOR, 0.1)
 		fadeOut(flash, 0.35)
 	end
 end
@@ -412,7 +370,7 @@ local function cross(data)
 	for k = 0, 3 do
 		local length = data.lengths[k + 1]
 		if length > 1 then
-			local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), CROSS_COLOR, 0.8)
+			local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), DANGER_COLOR, 0.8)
 			TweenService:Create(line, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 				Transparency = 0.35,
 			}):Play()
@@ -440,7 +398,7 @@ local function crossFire()
 	stopCrossSweep()
 	for _, line in ipairs(crossLines) do
 		if live[line] then
-			line.Color = Color3.new(1, 1, 1)
+			line.Color = IMPACT_COLOR
 			line.Size = Vector3.new(line.Size.X, 3, line.Size.Z)
 			line.CFrame = line.CFrame + Vector3.new(0, 1.4, 0)
 			line.Transparency = 0
@@ -462,7 +420,6 @@ local function resetAll()
 	crossLines = {}
 	chargeLine = nil
 	currentBubble = nil
-	hideWarning()
 end
 
 patternEvent.OnClientEvent:Connect(function(kind, data)
@@ -470,7 +427,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		showBubble(data.pattern, data.seconds)
 	elseif kind == "daze" then
 		showBubble("daze", data.seconds)
-		showWarning("보스가 헤롱거린다 - 백어택 찬스!", math.min(data.seconds, 2.5))
+	elseif kind == "heavyTelegraph" then
+		heavyTelegraph(data)
+	elseif kind == "heavyImpact" then
+		heavyImpact(data)
 	elseif kind == "shockTelegraph" then
 		shockTelegraph(data)
 	elseif kind == "shockwave" then
