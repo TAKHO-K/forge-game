@@ -19,6 +19,7 @@ local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 local BossEncounter = require(script.Parent.BossEncounter)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local TutorialState = require(script.Parent.TutorialState)
+local PartyState = require(script.Parent.PartyState)
 
 local CombatResolution = {}
 
@@ -102,18 +103,42 @@ local function handleBossDeath(attacker, target)
 	end
 	local contributions = MonsterState.getContributors(target)
 	local rewarded = {}
+	local underThreshold = {}
 	for _, member in ipairs(candidates) do
 		local ratio = contributions[member] or 0
 		if member.Parent and ratio >= CombatConfig.contributionRewardThreshold then
 			grantKillReward(member, target, monsterData, deathPosition)
-			-- 보스 이력(bestBossCleared·첫 처치 확정 드랍)은 멤버별로 따로 - 각자 자기 진행도에 기록된다.
-			PlayerProfile.setBossCleared(member, monsterData.stageNumber)
 			ImmediateSave.request(member)
 			table.insert(rewarded, ("%s(%.0f%%)"):format(member.Name, ratio * 100))
 		elseif member.Parent then
+			table.insert(underThreshold, { player = member, ratio = ratio })
 			print(("[forge-game] 보스 보상 제외: %s - 기여 %.1f%% < %.0f%%"):format(member.Name, ratio * 100, CombatConfig.contributionRewardThreshold * 100))
 		end
 	end
+
+	-- 25-3(PRD 20.47 [6](라) "클리어 인정") - 스테이지 클리어 기록(bestBossCleared)은 위 보상
+	-- 지급과 별개다. 파티 전원이 기여 10% 이상일 때만 전원에게 남는다 - 한 명이라도 미달이면
+	-- 아무도 이 처치로는 기록을 얻지 못한다(보상은 각자 독립 지급 그대로, 절대 같은 분기에
+	-- 묶지 않는다). 못 깬 사람을 이미 깬 파티원들이 데려가 캐리하는 경로를 막는 장치다.
+	if #underThreshold == 0 then
+		for _, member in ipairs(candidates) do
+			if member.Parent then
+				PlayerProfile.setBossCleared(member, monsterData.stageNumber)
+			end
+		end
+	else
+		for _, entry in ipairs(underThreshold) do
+			PartyState.notify(entry.player, ("스테이지 클리어가 인정되지 않았습니다 - 기여 %.1f%%(최소 %.0f%% 필요)"):format(
+				entry.ratio * 100, CombatConfig.contributionRewardThreshold * 100))
+		end
+		for _, member in ipairs(candidates) do
+			local ratio = contributions[member] or 0
+			if member.Parent and ratio >= CombatConfig.contributionRewardThreshold then
+				PartyState.notify(member, "파티원 기여 미달로 이 처치는 스테이지 클리어로 기록되지 않았습니다")
+			end
+		end
+	end
+
 	-- 23-5: pending을 지워야 이 스테이지에 다시 들어왔을 때 순환이 "이미 확정된 보스"로
 	-- 읽지 않고 다음 보스를 새로 뽑는다(PRD 20.50 [5] "처치하면 pending을 지운다").
 	-- 24-1: 순환을 소모한 사람(리더)의 것만 지운다 - 다른 멤버의 bossRotation은 건드리지 않는다.

@@ -2529,3 +2529,100 @@ if RunService:IsStudio() then
 	end
 	Players.PlayerAdded:Connect(run27_3aVerification)
 end
+
+-- ═══ 27-3 자동 검증 블록(나) - 클리어 인정 게이트(보상과 분리) ═══════════════════════
+-- 27-1(나)와 같은 패턴(ensureBackup/restore + debugAddMember)에 이어서 돈다 - 그 검증이
+-- 끝난(backups[player]가 빈) 뒤에 시작한다. 여기서 확인하는 건 그 검증과 다른 축이다:
+-- 27-1(나)는 "보상이 9% 미만을 제외하는가", 이 블록은 "bestBossCleared가 보상과 같은
+-- 분기가 아니라 파티 전원 기준으로 따로 도는가"다 - 같은 9%/91% 스탠드인 시나리오를 다시
+-- 써서 27-1(나)에서 이미 확인한 보상 쪽은 안 건드렸는지까지 같이 재확인한다.
+if RunService:IsStudio() then
+	local ran27_3b = false
+	local function run27_3bVerification(player)
+		if ran27_3b then
+			return
+		end
+		ran27_3b = true
+		task.spawn(function()
+			local waited = 0
+			while not PlayerProfile.getProfile(player) and waited < 10 do
+				task.wait(0.5)
+				waited += 0.5
+			end
+			if not PlayerProfile.getProfile(player) then
+				print("[27-3] 프로필 로드 실패(10초 대기) - 검증을 건너뜁니다")
+				return
+			end
+			local backupWait = 0
+			while backups[player] and backupWait < 30 do
+				task.wait(0.5)
+				backupWait += 0.5
+			end
+
+			print("===27-3 검증 시작(나: 클리어 인정 게이트)===")
+			local passCount, totalCount = 0, 0
+			local function record(ok)
+				totalCount += 1
+				if ok then
+					passCount += 1
+				end
+				return ok and "O" or "X"
+			end
+
+			ensureBackup(player)
+			if not PlayerProfile.getClassId(player) then
+				PlayerProfile.setClassId(player, ClassData.order[1])
+			end
+
+			local function killBossWithStandInRatio(stage, standInRatio)
+				BossEncounter.despawnFor(player)
+				applyStage(player, stage)
+				BossEncounter.spawnFor(player, stage)
+				local model = BossEncounter.getActive(player)
+				if not model then
+					return false
+				end
+				local standIn = { Name = "ClearGateStandIn", Parent = true }
+				BossEncounter.debugAddMember(model, standIn)
+				local pStage = TutorialState.getMonsterStage(player)
+				local _, maxHp = MonsterState.getBossHp(model)
+				MonsterState.applyDamage(model, maxHp * standInRatio, pStage, standIn)
+				local isDead = MonsterState.applyDamage(model, maxHp, pStage, player)
+				MonsterSpawner.updateHpLabel(model)
+				CombatResolution.resolveHit(player, model, isDead)
+				BossEncounter.despawnFor(player)
+				return true
+			end
+
+			local before = PlayerProfile.getBestBossCleared(player) or 0
+
+			-- [나1] 전원 10%+ (스탠드인 20% + 본인 80%) - 보상과 별개로 bestBossCleared가
+			-- 이 스테이지까지 오른다.
+			local stageA = before + BossData.stageInterval
+			local spawnedA = killBossWithStandInRatio(stageA, 0.20)
+			local afterA = PlayerProfile.getBestBossCleared(player)
+			print(("[27-3][나1] 전원 10%%+ (스탠드인20%%+본인80%%) -> bestBossCleared %s -> %s %s"):format(
+				tostring(before), tostring(afterA), record(spawnedA and afterA == stageA)))
+
+			-- [나2] 스탠드인 9% 미달 - 보상은 그대로 나가지만(27-1(나) 회귀 없음 재확인)
+			-- bestBossCleared는 이번 처치로는 오르지 않아야 한다(더 높은 새 스테이지로 시도).
+			local stageB = stageA + BossData.stageInterval
+			local goldBefore = PlayerProfile.getGold(player)
+			local spawnedB = killBossWithStandInRatio(stageB, 0.09)
+			local goldAfter = PlayerProfile.getGold(player)
+			local afterB = PlayerProfile.getBestBossCleared(player)
+			print(("[27-3][나2] 스탠드인 9%% 미달 - 보상은 지급(골드 %d -> %d) %s"):format(
+				goldBefore, goldAfter, record(spawnedB and goldAfter > goldBefore)))
+			print(("[27-3][나2] 같은 처치에서 bestBossCleared는 안 오름(%s -> %s, 기대 %s 유지) %s"):format(
+				tostring(afterA), tostring(afterB), tostring(afterA), record(afterB == afterA)))
+
+			restore(player)
+			print(("===27-3 검증 끝(나)=== %d/%d 통과"):format(passCount, totalCount))
+		end)
+	end
+
+	for _, existing in ipairs(Players:GetPlayers()) do
+		run27_3bVerification(existing)
+	end
+	Players.PlayerAdded:Connect(run27_3bVerification)
+end
