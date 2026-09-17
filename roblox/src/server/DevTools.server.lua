@@ -2574,6 +2574,10 @@ if RunService:IsStudio() then
 				PlayerProfile.setClassId(player, ClassData.order[1])
 			end
 
+			-- standInRatio가 nil이면 스탠드인을 아예 안 넣는다(candidates={player} 하나뿐 -
+			-- 단일 후보도 "전원 통과" 분기를 그대로 탄다). 27-1(나) 주석 그대로: 스탠드인이
+			-- 10% 이상을 받으면 grantKillReward가 FireClient를 시도해 하드 에러가 나므로
+			-- (Player 아닌 테이블), 이 검증에서 스탠드인 비율은 항상 10% 미만으로만 쓴다.
 			local function killBossWithStandInRatio(stage, standInRatio)
 				BossEncounter.despawnFor(player)
 				applyStage(player, stage)
@@ -2582,11 +2586,13 @@ if RunService:IsStudio() then
 				if not model then
 					return false
 				end
-				local standIn = { Name = "ClearGateStandIn", Parent = true }
-				BossEncounter.debugAddMember(model, standIn)
 				local pStage = TutorialState.getMonsterStage(player)
 				local _, maxHp = MonsterState.getBossHp(model)
-				MonsterState.applyDamage(model, maxHp * standInRatio, pStage, standIn)
+				if standInRatio then
+					local standIn = { Name = "ClearGateStandIn", Parent = true }
+					BossEncounter.debugAddMember(model, standIn)
+					MonsterState.applyDamage(model, maxHp * standInRatio, pStage, standIn)
+				end
 				local isDead = MonsterState.applyDamage(model, maxHp, pStage, player)
 				MonsterSpawner.updateHpLabel(model)
 				CombatResolution.resolveHit(player, model, isDead)
@@ -2596,12 +2602,12 @@ if RunService:IsStudio() then
 
 			local before = PlayerProfile.getBestBossCleared(player) or 0
 
-			-- [나1] 전원 10%+ (스탠드인 20% + 본인 80%) - 보상과 별개로 bestBossCleared가
-			-- 이 스테이지까지 오른다.
+			-- [나1] 전원 10%+ (스탠드인 없이 본인 혼자, 기여 100% - 유일한 후보라 "전원 통과"
+			-- 분기를 그대로 탄다) - 보상과 별개로 bestBossCleared가 이 스테이지까지 오른다.
 			local stageA = before + BossData.stageInterval
-			local spawnedA = killBossWithStandInRatio(stageA, 0.20)
+			local spawnedA = killBossWithStandInRatio(stageA, nil)
 			local afterA = PlayerProfile.getBestBossCleared(player)
-			print(("[27-3][나1] 전원 10%%+ (스탠드인20%%+본인80%%) -> bestBossCleared %s -> %s %s"):format(
+			print(("[27-3][나1] 전원 10%%+ (단독 100%%) -> bestBossCleared %s -> %s %s"):format(
 				tostring(before), tostring(afterA), record(spawnedA and afterA == stageA)))
 
 			-- [나2] 스탠드인 9% 미달 - 보상은 그대로 나가지만(27-1(나) 회귀 없음 재확인)
