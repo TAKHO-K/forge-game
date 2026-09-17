@@ -204,6 +204,20 @@ function BossEncounter.getRotationOwner(model)
 	return encounter and encounter.rotationOwner
 end
 
+-- 27-1 Studio 자동 검증 전용 - 이미 스폰된 encounter의 members 목록에 텔레포트 없이 스탠드인을
+-- 끼워 넣는다. handleBossDeath의 보상 후보 목록(candidates = getMembersOfModel)에 실제로 들어가는
+-- 것 자체가 목적(PRD 20.62 [9] 5번 "10% 미만 제외 분기가 코드 경로만" 해소용) - 그래서 members에
+-- 직접 넣지, spawnEncounter처럼 teleportTo를 부르지 않는다(스탠드인은 Character가 없어 텔레포트가
+-- 에러난다). 호출부(DevTools)만 쓴다 - 실제 플레이 경로엔 이 함수를 부르는 곳이 없다.
+function BossEncounter.debugAddMember(model, fakeMember)
+	local encounter = encounterByModel[model]
+	if not encounter then
+		return false
+	end
+	table.insert(encounter.members, fakeMember)
+	return true
+end
+
 local function isAlive(player)
 	local hp = PlayerState.getHp(player)
 	local character = player.Character

@@ -2294,3 +2294,151 @@ if RunService:IsStudio() then
 	end
 	Players.PlayerAdded:Connect(run26_3Verification)
 end
+
+-- ═══ 27-1 자동 검증 블록(가) - 순수 함수, 플레이어 불필요 ═══════════════════════
+-- PRD 27-1: 여러 세션에 걸쳐 "실행 불가"·"코드 경로만"·"부분"으로 남은 검증 항목을 모아
+-- 지금 잡을 수 있는 것(A)을 해소한다. 26-2와 같은 이유(execute_luau의 require 제약)로
+-- 서버 시작 시 한 번 돈다(플레이어 접속과 무관, 순수 함수·합성 데이터만 쓴다).
+if RunService:IsStudio() then
+	task.spawn(function()
+		print("===27-1 검증 시작(가: 순수 함수)===")
+		local passCount, totalCount = 0, 0
+		local function record(ok)
+			totalCount += 1
+			if ok then
+				passCount += 1
+			end
+			return ok and "O" or "X"
+		end
+
+		-- [A2] PRD 20.67 [16] 미결 1 - 딜링모드 특화(소모 -60%)의 실제 가동률·DPS 환산치.
+		-- 먼저 기존 calibration(drain=0.012, hitsPerSecond=0.25, hitRatio=0.1026)이 문서화된
+		-- 가동률 0.599를 그대로 재현하는지 확인해 계산 도구 자체를 신뢰할 수 있는지 본다.
+		local baseDrain = SkillData.healer.E.drainPercentPerSecond
+		local baselineParams = { hitsPerSecond = 0.25, hitRatio = 0.1026, drainPerSecond = baseDrain }
+		local baselineResult = BalanceSim.simulateHealerCycle(baselineParams)
+		local baselineOk = math.abs(baselineResult.uptime - 0.599) <= 0.002
+		print(("[27-1][A2] 기존 calibration 재현(drain=%.4f, 20.44 [1]-D) -> 가동률 %.4f (기대 0.599) %s"):format(
+			baseDrain, baselineResult.uptime, record(baselineOk)))
+
+		-- 옵션 "딜링모드"(skill_healer_E)의 실제 적용식(HealerDealingMode.server.lua:47
+		-- "1 + getOptionBonus")을 그대로 재현 - Option.valueOf로 태초·itemLevel100·중앙롤(1.0)
+		-- 값을 구해 곱한다(하드코딩 없음, [2] 표의 "태초 기준값" -60%와 일치해야 한다).
+		local dealingModeBonus = Option.valueOf({ id = "skill_healer_E", roll = 1.0 }, "primordial", 100, "healer")
+		local dealingModeExpected = OptionData.options.skill_healer_E.baseValue
+		local dealingModeOk = math.abs(dealingModeBonus - dealingModeExpected) < 0.0005
+		local reducedDrain = baseDrain * (1 + dealingModeBonus)
+		local reducedParams = table.clone(baselineParams)
+		reducedParams.drainPerSecond = reducedDrain
+		local reducedResult = BalanceSim.simulateHealerCycle(reducedParams)
+		print(("[27-1][A2] 옵션값 확인: 태초 중앙 skill_healer_E = %.4f (기대 %.4f) %s"):format(
+			dealingModeBonus, dealingModeExpected, record(dealingModeOk)))
+		print(("[27-1][A2] 딜링모드 -60%% 적용(drain %.4f -> %.4f) -> 가동률 %.4f -> %.4f"):format(
+			baseDrain, reducedDrain, baselineResult.uptime, reducedResult.uptime))
+
+		-- DPS 환산 - 20.62 [4]가 이미 쓴 "가동률 × 힐러 DPS" 관계를 그대로 곱으로 적용한다
+		-- (딜링모드가 켜져 있는 동안의 순간 DPS는 옵션과 무관 - 소모가 줄어 가동 시간만 는다).
+		local dpsMultiplier = reducedResult.uptime / baselineResult.uptime
+		local dpsIncreasePercent = (dpsMultiplier - 1) * 100
+		print(("[27-1][A2] 힐러 DPS 환산: 가동률 배수 x%.4f -> DPS %+.1f%% (PRD 20.67 [8] 추정 '≈0.8, +30%% 안팎'과 대조 - 판단은 [16] 몫, 여기선 실측값만 보고)"):format(
+			dpsMultiplier, dpsIncreasePercent))
+		-- 상한(90%)에서의 참고값 - 8단계 [7] 상한표 대조용, 반영 여부는 판단 대상이 아니다.
+		local cappedBonus = -OptionData.options.skill_healer_E.cap
+		local cappedDrain = baseDrain * (1 + cappedBonus)
+		local cappedParams = table.clone(baselineParams)
+		cappedParams.drainPerSecond = cappedDrain
+		local cappedResult = BalanceSim.simulateHealerCycle(cappedParams)
+		print(("[27-1][A2] 참고 - 상한 90%% 적용(drain %.4f) -> 가동률 %.4f (조정하지 않음, 기록만)"):format(
+			cappedDrain, cappedResult.uptime))
+
+		print(("===27-1 검증 끝(가)=== %d/%d 통과"):format(passCount, totalCount))
+	end)
+end
+
+-- ═══ 27-1 자동 검증 블록(나) - 플레이어 필요(파티 기여도 10% 미만 제외 실사) ═══════
+-- 26-3과 같은 이유(PartyState/BossEncounter가 실제 Player 인스턴스를 요구하는 지점이
+-- 있다) - 접속한 플레이어 프로필로 한 번 돈다. ensureBackup/restore로 감싸 실제 세이브를
+-- 건드리지 않는다.
+if RunService:IsStudio() then
+	local ran27_1b = false
+	local function run27_1bVerification(player)
+		if ran27_1b then
+			return
+		end
+		ran27_1b = true
+		task.spawn(function()
+			local waited = 0
+			while not PlayerProfile.getProfile(player) and waited < 10 do
+				task.wait(0.5)
+				waited += 0.5
+			end
+			if not PlayerProfile.getProfile(player) then
+				print("[27-1] 프로필 로드 실패(10초 대기) - 검증을 건너뜁니다")
+				return
+			end
+			-- 26-3 자동 검증 블록도 같은 접속 시점에 ensureBackup/restore로 프로필을 건드린다 -
+			-- 겹치면 서로의 restore가 상대 트랜잭션을 중간에 되돌릴 수 있어(둘 다 backups[player]
+			-- 슬롯 하나를 공유), 그 트랜잭션이 끝날 때까지(backups[player]가 비워질 때까지) 먼저
+			-- 기다린다.
+			local backupWait = 0
+			while backups[player] and backupWait < 20 do
+				task.wait(0.5)
+				backupWait += 0.5
+			end
+
+			print("===27-1 검증 시작(나: 파티 기여도)===")
+			local passCount, totalCount = 0, 0
+			local function record(ok)
+				totalCount += 1
+				if ok then
+					passCount += 1
+				end
+				return ok and "O" or "X"
+			end
+
+			ensureBackup(player)
+			if not PlayerProfile.getClassId(player) then
+				PlayerProfile.setClassId(player, ClassData.order[1])
+			end
+
+			-- [A1] PRD 20.62 [9] 5번 "10% 미만 제외 분기는 코드 경로만(스탠드인이 처치 전
+			-- 이탈해 분기 미실행)" 해소 - 실제 보스를 스폰하고, 진짜 encounter 멤버 후보
+			-- 목록에(BossEncounter.debugAddMember, 27-1 신설) 기여 9%짜리 스탠드인을 끼워
+			-- 넣은 뒤 실제 handleBossDeath 경로(CombatResolution.resolveHit)를 그대로 태운다.
+			-- 회귀 시(9%도 보상받게 바뀌면) grantKillReward가 스탠드인에게
+			-- goldGained:FireClient를 시도해 "Player 아님" 하드 에러가 난다 - 그래서 이 검증은
+			-- "서버 에러 0건" 확인과 짝을 이룬다(에러가 나면 그 자체가 회귀 신호).
+			BossEncounter.despawnFor(player)
+			local stage = BossData.stageInterval
+			applyStage(player, stage)
+			BossEncounter.spawnFor(player, stage)
+			local model = BossEncounter.getActive(player)
+			if not model then
+				print(("[27-1][A1] 보스 스폰 실패 - 건너뜀 %s"):format(record(false)))
+			else
+				local lowContributor = { Name = "StandIn9pct", Parent = true }
+				BossEncounter.debugAddMember(model, lowContributor)
+				local pStage = TutorialState.getMonsterStage(player)
+				local _, maxHp = MonsterState.getBossHp(model)
+				MonsterState.applyDamage(model, maxHp * 0.09, pStage, lowContributor)
+				local goldBefore = PlayerProfile.getGold(player)
+				local isDead = MonsterState.applyDamage(model, maxHp, pStage, player)
+				MonsterSpawner.updateHpLabel(model)
+				CombatResolution.resolveHit(player, model, isDead)
+				local goldAfter = PlayerProfile.getGold(player)
+				local realRewarded = goldAfter > goldBefore
+				print(("[27-1][A1] 스탠드인 기여 9%% 제외 + 실제 플레이어(기여 91%%) 보상 지급: 골드 %d -> %d %s"):format(
+					goldBefore, goldAfter, record(realRewarded)))
+			end
+			BossEncounter.despawnFor(player)
+
+			restore(player)
+			print(("===27-1 검증 끝(나)=== %d/%d 통과"):format(passCount, totalCount))
+		end)
+	end
+
+	for _, existing in ipairs(Players:GetPlayers()) do
+		run27_1bVerification(existing)
+	end
+	Players.PlayerAdded:Connect(run27_1bVerification)
+end
