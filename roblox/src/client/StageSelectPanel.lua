@@ -61,7 +61,10 @@ local STATUS_SPEC = {
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "StageSelectGui"
 screenGui.ResetOnSpawn = false
-screenGui.DisplayOrder = 5
+-- 10 - SkillSlots.client.lua(대시 버튼 등 일반 HUD)가 이미 DisplayOrder=5를 쓴다. 같은
+-- 값이면 우선순위가 안 정해져 바깥 탭 감지(dim)가 그 버튼들에 클릭을 뺏길 수 있다(Studio
+-- 실측으로 발견) - 일반 HUD보다는 위, UIManager 모달 창(100+)보다는 아래로 둔다.
+screenGui.DisplayOrder = 10
 screenGui.Enabled = false
 screenGui.Parent = playerGui
 
