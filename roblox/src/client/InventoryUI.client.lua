@@ -676,9 +676,10 @@ do
 		optionStatsHeader.Text = "옵션 보너스"
 		optionStatsHeader.Parent = optionStatsBox
 
-		-- 25-3: `(상한N%)` 표기(26-3)가 왜 있는지 설명이 없어서 붙인다(단계 3).
+		-- 25-3: `(상한N%)` 표기(26-3)가 왜 있는지 설명이 없어서 붙인다(단계 3). 이 박스는
+		-- 창 왼쪽에 붙어 있어 패널을 왼쪽으로 열면 창 밖으로 잘린다 - 오른쪽(기본값)으로 연다.
 		HelpTooltip.attach(optionStatsHeader, UDim2.new(1, -8, 0.5, 0),
-			"스탯마다 상한이 있습니다. 상한에 도달하면 초과분은 버려집니다.", "left")
+			"스탯마다 상한이 있습니다. 상한에 도달하면 초과분은 버려집니다.")
 
 		local rows = {}
 		for i = 1, 4 do
