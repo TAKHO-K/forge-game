@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local HelpTooltip = require(script.Parent.HelpTooltip)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
@@ -118,6 +119,10 @@ enhanceButton.Font = Enum.Font.GothamBold
 enhanceButton.TextSize = 18
 enhanceButton.BackgroundColor3 = Color3.fromRGB(200, 160, 40)
 enhanceButton.Parent = enhanceTab
+
+-- 25-3: 실패의 구체적 결과(4종)가 화면 어디에도 안 보여서 붙인다(단계 3).
+HelpTooltip.attach(enhanceTab, UDim2.new(0.5, 78, 1, -28),
+	"강화 실패 시 형상유지·1강 하락·2강 하락·초기화 중 하나가 확률로 정해집니다. 단계가 오를수록 성공률이 낮아집니다.", "left")
 
 local resultLabel = Instance.new("TextLabel")
 resultLabel.BackgroundTransparency = 1

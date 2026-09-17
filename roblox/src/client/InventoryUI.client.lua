@@ -22,6 +22,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local HelpTooltip = require(script.Parent.HelpTooltip)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
@@ -674,6 +675,10 @@ do
 		optionStatsHeader.TextColor3 = UIColors.textTertiary
 		optionStatsHeader.Text = "옵션 보너스"
 		optionStatsHeader.Parent = optionStatsBox
+
+		-- 25-3: `(상한N%)` 표기(26-3)가 왜 있는지 설명이 없어서 붙인다(단계 3).
+		HelpTooltip.attach(optionStatsHeader, UDim2.new(1, -8, 0.5, 0),
+			"스탯마다 상한이 있습니다. 상한에 도달하면 초과분은 버려집니다.", "left")
 
 		local rows = {}
 		for i = 1, 4 do
@@ -2882,6 +2887,11 @@ end
 
 local myColumn, myTitle, myList = makeColumn(14, "내 파티")
 local serverColumn, serverTitle, serverList = makeColumn(14 + COLUMN_WIDTH + 30, "서버 플레이어")
+
+-- 25-3: 기여 10% 미만이면 보상은 받아도 스테이지 클리어(리더보드 기록)로는 인정되지
+-- 않는다는 규칙이 화면 어디에도 안 보여서 붙인다(단계 2, PRD 20.47 [6](라)).
+HelpTooltip.attach(myColumn, UDim2.new(0, 62, 0, 19),
+	"기여도가 낮으면(10% 미만) 보상은 받지만 스테이지 클리어(리더보드 기록)로는 인정되지 않습니다.")
 
 -- 열 사이 세로 구분선(장비 패널의 gearRightLine과 같은 선 스타일).
 local divider = Instance.new("Frame")
