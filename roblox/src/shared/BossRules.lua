@@ -39,6 +39,13 @@ function BossRules.partySizeHpMultiplier(memberCount)
 	return n ^ BossRules.partyHpExponent()
 end
 
+-- 파훼 게이트의 받는 피해 배율 g(29-1, PRD 20.73 [2-8] A-3) = N_max^(p−1) = 1/k^stageInterval ≈ 0.487.
+-- 새 상수가 아니라 p와 같은 세 값에서 나온다 - 뜻: "기믹을 무시하는 정원 파티의 딜 = 기믹을 푸는
+-- 솔로의 딜". 4명이 모여 기믹을 건너뛰어도 혼자 제대로 하는 것보다 나을 게 없다.
+function BossRules.gateDamageTakenMultiplier()
+	return PartyConfig.maxMembers ^ (BossRules.partyHpExponent() - 1)
+end
+
 -- 파티 보스 입장 밴드(PRD 20.47 [6](라) "불가" 밴드 재사용). 멤버 전원이
 --     bossStage ≤ recommendedStage(L_i) + band
 -- 를 만족해야 한다. band는 PRD 20.8-3 ①의 4직업 공통 콤보 배수((1+1+1.8)/3 ≈ 1.267)를
@@ -248,6 +255,8 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		enragedHpFraction = boss.enragedHpFraction,
 		enragedPatternMinGapSeconds = boss.enragedPatternMinGapSeconds,
 		entryGraceSeconds = boss.entryGraceSeconds,
+		-- 29-1: 보스별 잡힘·구출 종류(BossData SPECIES_MECHANICS, 구간 수호자는 nil).
+		mechanics = boss.mechanics,
 	}
 end
 

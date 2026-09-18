@@ -40,6 +40,11 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BossEncounter = require(script.Parent.BossEncounter)
 local BossPatterns = require(script.Parent.BossPatterns)
+-- 29-1 보스 공통 뼈대 검증 명령(/gg boss trap|gate|sim)과 자동 검증 블록용.
+local BossMechanics = require(script.Parent.BossMechanics)
+local BossTrap = require(script.Parent.BossTrap)
+local BossSim = require(ReplicatedStorage.Shared.BossSim)
+local BossMechanicsVerify = require(script.Parent.BossMechanicsVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -981,6 +986,9 @@ local HELP_TEXT = table.concat({
 	"/gg boss next - 다음(또는 지금 대기 중인) 보스가 누구인지 출력(23-5)",
 	"/gg boss history - 이 플레이어의 보스 등장 이력 출력(23-5)",
 	"/gg boss force <id> - 다음 보스 순환 뽑기를 강제 지정(1회용, 23-5)",
+	"/gg boss trap [플레이어] - 잡힘 상태 강제(다시 치면 해제, 생략 시 자신, 29-1)",
+	"/gg boss gate <on|off> - 지금 보스의 파훼 게이트(받는 피해 x0.487) 토글(29-1)",
+	"/gg boss sim <bossId> <인원> <break|failfirst|nobreak> - 처치 시간 모형(29-1)",
 	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
 	"/gg bossinfo - 지금 보스 인스턴스의 주력 패턴·패턴별 간격·변형 필드·실루엣을 콘솔에 출력(23-6 검증용)",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
@@ -1129,6 +1137,61 @@ local function handleCommand(player, args)
 			reply(player, ("다음 보스를 강제 지정했습니다: %s (다음 보스 스테이지 진입 시 적용, 정상 순환은 그대로 보존됨)"):format(args[3]))
 		else
 			reply(player, "실패: 직업 미선택 또는 알 수 없는 보스 id " .. args[3])
+		end
+	elseif sub == "boss" and args[2] == "trap" then
+		-- 29-1(PRD 20.73 [2-8] A-2): 잡힘 상태 강제. 대상 이름을 생략하면 자신. 종류는 지금 싸우는 보스의
+		-- 것(구간 수호자처럼 없으면 빙결). 이미 잡혀 있으면 풀어 준다(토글) - 자동 해제 9초를 안 기다려도 된다.
+		local target = player
+		if args[3] then
+			target = nil
+			for _, candidate in ipairs(Players:GetPlayers()) do
+				if candidate.Name:lower() == args[3]:lower() then
+					target = candidate
+				end
+			end
+		end
+		if not target then
+			reply(player, "그런 플레이어가 없습니다: " .. tostring(args[3]))
+		elseif BossTrap.isTrapped(target) then
+			BossTrap.release(target, "debug")
+			reply(player, ("%s 잡힘 해제"):format(target.Name))
+		else
+			local model = BossEncounter.getActive(target)
+			local data = model and MonsterState.getData(model)
+			local species = (data and data.mechanics) or BossData.bosses.frost_giant.mechanics
+			BossTrap.trap(target, { kind = species.trapKind, rescueType = species.rescueType })
+			reply(player, ("%s 잡힘 강제: %s(구출 %s) - 자동 해제 %.0f초, 다시 치면 즉시 해제"):format(
+				target.Name, species.trapKind, species.rescueType, BossData.mechanics.trap.autoReleaseSeconds))
+		end
+	elseif sub == "boss" and args[2] == "gate" and (args[3] == "on" or args[3] == "off") then
+		-- 29-1(PRD 20.73 [2-8] A-3): 지금 싸우는 보스의 파훼 게이트를 세우거나 연다.
+		local model = BossEncounter.getActive(player)
+		if not model then
+			reply(player, "활성 보스가 없습니다(/gg boss 먼저)")
+		else
+			BossMechanics.debugSetGate(model, args[3] == "on")
+			reply(player, ("파훼 게이트 %s - 보스가 받는 피해 x%.3f"):format(args[3], MonsterState.getDamageTakenMultiplier(model)))
+		end
+	elseif sub == "boss" and args[2] == "sim" and args[3] then
+		-- 29-1(PRD 20.73 [3]): 처치 시간 모형. /gg boss sim <bossId> <인원> <break|failfirst|nobreak>
+		-- 구간 수호자는 기믹·게이트가 없다. 나머지 5종은 현재 BossData 패턴표 + 공통 기믹 자리로 돈다.
+		local bossId = args[3]
+		local hasGimmick = BossData.bosses[bossId] ~= nil and BossData.bosses[bossId].mechanics ~= nil
+		local patterns, boss = BossSim.patternsFor(bossId, hasGimmick)
+		if not patterns then
+			reply(player, "알 수 없는 보스 id: " .. tostring(bossId))
+		else
+			local partySize = math.clamp(math.floor(tonumber(args[4]) or 1), 1, PartyConfig.maxMembers)
+			local breaks = ({ ["break"] = "always", failfirst = "failFirst", nobreak = "never" })[args[5] or "break"] or "always"
+			local result = BossSim.run(patterns, boss, { partySize = partySize, gate = hasGimmick, breaks = breaks })
+			local counts = {}
+			for id, count in pairs(result.counts) do
+				table.insert(counts, ("%s %d"):format(id, count))
+			end
+			table.sort(counts)
+			reply(player, ("sim %s %d인 %s: 처치 %.2f초(모형 눈금), 패턴 [%s], 첫 기믹 %s초, 게이트 x%.3f"):format(
+				bossId, partySize, breaks, result.seconds, table.concat(counts, " · "),
+				result.firstGimmickAt and ("%.1f"):format(result.firstGimmickAt) or "-", BossRules.gateDamageTakenMultiplier()))
 		end
 	elseif sub == "boss" then
 		ensureBackup(player)
@@ -2796,4 +2859,53 @@ if RunService:IsStudio() then
 		run27_4bVerification(existing)
 	end
 	Players.PlayerAdded:Connect(run27_4bVerification)
+end
+
+-- ═══ 29-1 자동 검증 블록 - 보스 공통 뼈대(체력 비례 피해·잡힘/구출·파훼 게이트·스케줄러·힌트) ═══
+-- 본문은 BossMechanicsVerify.lua(이 파일이 더 커지지 않게 뺐다). (나)는 실시간 스케줄러 측정 때문에
+-- 15초쯤 걸린다 - 다른 블록들이 "backups가 빌 때까지 최대 30초" 기다리므로, 이 블록이 중간에 끼면 뒤
+-- 블록의 대기가 30초를 넘겨 보스전이 겹칠 수 있다. 그래서 항상 맨 마지막에 돈다: backups가 1초 동안
+-- 계속 비어 있을 때(= 대기 중인 다른 블록이 없을 때)만 시작한다.
+if RunService:IsStudio() then
+	local ran29_1 = false
+	local function run29_1Verification(player)
+		if ran29_1 then
+			return
+		end
+		ran29_1 = true
+		task.spawn(function()
+			local waited = 0
+			while not PlayerProfile.getProfile(player) and waited < 10 do
+				task.wait(0.5)
+				waited += 0.5
+			end
+			if not PlayerProfile.getProfile(player) then
+				print("[29-1] 프로필 로드 실패(10초 대기) - 검증을 건너뜁니다")
+				return
+			end
+			local quiet, total = 0, 0
+			while quiet < 1 and total < 180 do
+				task.wait(0.25)
+				total += 0.25
+				quiet = backups[player] and 0 or quiet + 0.25
+			end
+			local ok, err = pcall(BossMechanicsVerify.run, player, {
+				ensureBackup = ensureBackup,
+				restore = restore,
+				applyStage = applyStage,
+				applyOptionStack = applyOptionStack,
+			})
+			if not ok then
+				warn(("[29-1] 검증 블록 에러: %s"):format(tostring(err)))
+				if backups[player] then
+					restore(player)
+				end
+			end
+		end)
+	end
+
+	for _, existing in ipairs(Players:GetPlayers()) do
+		run29_1Verification(existing)
+	end
+	Players.PlayerAdded:Connect(run29_1Verification)
 end

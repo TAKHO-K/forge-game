@@ -39,6 +39,9 @@ local GroundProbe = require(script.Parent.GroundProbe)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
 local PartyState = require(script.Parent.PartyState)
+-- 29-1(PRD 20.73 [2-8] A-2): 보스전이 끝나거나 리셋되면 잡힌 멤버를 푼다. 조준 대상은 안 잡힌 사람 우선.
+local BossTrap = require(script.Parent.BossTrap)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
 
 local BossEncounter = {}
 
@@ -66,6 +69,38 @@ local function fireListeners(listeners, encounter)
 	for _, fn in ipairs(listeners) do
 		task.spawn(fn, encounter)
 	end
+end
+
+-- ═══ 힌트 단계(29-1, PRD 20.73 [1-5] "전멸할 때마다 전조가 친절해진다") ═══
+-- [Player(순환 주인 = 리더, 솔로면 본인)] = { bossId, wipes }. 세션 메모리다 - 저장하지 않는다(재접속하면 0부터).
+-- 같은 보스에게 전멸(생존자 0 → 리셋)할 때마다 1씩 오르고, 그 보스를 처치하거나 다른 보스를 만나면 지운다.
+-- 단계가 무엇을 바꾸는지는 BossPatterns(기믹 예고 시간·말풍선 크기·안전지대 화살표)가 안다 - 여기는 횟수만 센다.
+-- 견습 보스는 세지 않는다(기믹이 없고, 견습은 자체 단계 진행이 힌트 역할을 한다).
+local hintWipes = {}
+
+local function hintOwnerOf(encounter)
+	return encounter.rotationOwner or encounter.members[1]
+end
+
+local function hintLevelFor(owner, bossId)
+	local record = owner and hintWipes[owner]
+	if not record or record.bossId ~= bossId then
+		return 0
+	end
+	return math.min(record.wipes, BossData.mechanics.hint.maxLevel)
+end
+
+-- 29-1 자동 검증 전용 - 검증이 올린 전멸 횟수를 지운다.
+function BossEncounter.debugClearHints(player)
+	hintWipes[player] = nil
+end
+
+function BossEncounter.getHintLevel(player)
+	local encounter = encounterOf[player]
+	if not encounter or encounter.isTutorial then
+		return 0
+	end
+	return hintLevelFor(encounter.hintOwner, encounter.data.id)
 end
 
 -- 아레나 슬롯 배정 - encounter 하나에 슬롯 하나. 반납되면 freeSlots로 돌아가 다음 팀이 쓴다.
@@ -227,13 +262,16 @@ end
 -- 살아 있는 멤버 중 position에 가장 가까운 사람(MonsterAI의 보스 평타·패턴 조준 대상 재선택 -
 -- PRD 20.47 [6](나) "평타 추격 대상 = 가장 가까운 멤버, 매 틱 재선택"). 없으면 nil.
 function BossEncounter.nearestLivingMember(model, position)
-	local best, bestDistance = nil, math.huge
+	-- 29-1: 안 잡힌 사람이 우선이다(잡힌 사람은 면역이라 쫓아가 봐야 0 피해다). 살아 있는 전원이 잡혀
+	-- 있을 때만 잡힌 사람 중 가장 가까운 사람을 본다(보스가 대상을 잃고 집으로 돌아가지 않게).
+	local best, bestDistance, bestTrapped = nil, math.huge, true
 	for _, member in ipairs(BossEncounter.getMembersOfModel(model)) do
 		if isAlive(member) then
 			local root = member.Character:FindFirstChild("HumanoidRootPart")
 			local d = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(position.X, 0, position.Z)).Magnitude
-			if d < bestDistance then
-				best, bestDistance = member, d
+			local trapped = BossTrap.isTrapped(member)
+			if (bestTrapped and not trapped) or (trapped == bestTrapped and d < bestDistance) then
+				best, bestDistance, bestTrapped = member, d, trapped
 			end
 		end
 	end
@@ -291,6 +329,11 @@ local function spawnEncounter(data, stage, members, party, size, rotationOwner, 
 	end
 	encounterByModel[model] = encounter
 	BossPatterns.setGrace(model, data, data.entryGraceSeconds) -- 입장 2초 유예(20.44 [3](다))
+	-- 29-1: 힌트 단계 - 같은 보스에게 이번 세션에 전멸한 적이 있으면 그 단계로 시작한다.
+	encounter.hintOwner = hintOwnerOf(encounter)
+	if not encounter.isTutorial then
+		BossPatterns.setHintLevel(model, data, hintLevelFor(encounter.hintOwner, data.id))
+	end
 	fireListeners(startedListeners, encounter)
 	return encounter
 end
@@ -420,6 +463,10 @@ end
 -- encounter 전체를 끝낸다(처치는 destroyModel=false - MonsterSpawner.despawn이 사체 유지 후
 -- 정리한다 / 물러남은 true - 즉시 지운다). 남은 멤버 전원을 사냥터로 돌려보내고 슬롯을 반납한다.
 local function endEncounter(encounter, destroyModel)
+	BossTrap.releaseAll(encounter.members, "reset") -- 29-1: 잡힌 채로 사냥터에 돌아가지 않는다
+	if not destroyModel and encounter.hintOwner then
+		hintWipes[encounter.hintOwner] = nil -- 처치 - 이 보스의 힌트 단계를 지운다(PRD 20.73 [1-5])
+	end
 	for _, member in ipairs(encounter.members) do
 		if encounterOf[member] == encounter then
 			encounterOf[member] = nil
@@ -464,6 +511,7 @@ function BossEncounter.leaveFor(player)
 		table.remove(encounter.members, index)
 	end
 	encounterOf[player] = nil
+	BossTrap.release(player, "reset") -- 29-1
 	if player.Parent then
 		teleportTo(player, huntingGroundReturnPosition())
 	end
@@ -517,6 +565,18 @@ function BossEncounter.resetFor(player)
 	end
 	BossPatterns.reset(model, data)
 	MonsterState.resetBossHp(model)
+	-- 29-1: 전멸 = 힌트 한 단계(견습 제외). 잡힘도 전부 푼다(리스폰하는 사람은 BossTrap이 이미 풀었다).
+	BossTrap.releaseAll(encounter.members, "reset")
+	if not encounter.isTutorial and encounter.hintOwner then
+		local record = hintWipes[encounter.hintOwner]
+		if not record or record.bossId ~= data.id then
+			record = { bossId = data.id, wipes = 0 }
+			hintWipes[encounter.hintOwner] = record
+		end
+		record.wipes += 1
+		BossPatterns.setHintLevel(model, data, hintLevelFor(encounter.hintOwner, data.id))
+		print(("[forge-game] 힌트 단계: %s에게 전멸 %d회 → %d단계"):format(data.displayName, record.wipes, hintLevelFor(encounter.hintOwner, data.id)))
+	end
 	MonsterSpawner.updateHpLabel(model)
 	MonsterState.setAiState(model, "idle")
 	MonsterState.setAiTarget(model, nil)
@@ -566,6 +626,7 @@ end)
 -- 퇴장 - 자기 보스전에서만 빠진다(파티면 나머지가 이어서 싸운다, N·HP 배수 고정).
 Players.PlayerRemoving:Connect(function(player)
 	BossEncounter.leaveFor(player)
+	hintWipes[player] = nil
 end)
 
 -- 파티 이탈(탈퇴·추방·견습 진입·해산) - 파티 보스전 중이었으면 그 사람만 빠진다. "disband"(마지막

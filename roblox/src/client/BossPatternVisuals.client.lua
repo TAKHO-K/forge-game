@@ -23,6 +23,8 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+-- 29-1: 힌트 화살표(기믹 예고에 안전지대 좌표가 실려 오면 그 위에 흰 ▼) - 그리기는 그 모듈에 있다.
+local BossGateView = require(script.Parent.BossGateView)
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
@@ -114,6 +116,10 @@ local BUBBLES = {
 	shockwave = { icon = "◎", color = Color3.fromRGB(255, 150, 40) },
 	cross = { icon = "✚", color = Color3.fromRGB(255, 120, 20) },
 	daze = { icon = "@_@", color = Color3.fromRGB(120, 200, 255) },
+	-- 29-1 공통 기믹 패턴의 자리(보스별 세션이 kind마다 자기 픽토그램으로 바꾼다) - 색은 강공격과 같은 위험색.
+	gimmick = { icon = "※", color = Color3.fromRGB(230, 40, 40) },
+	-- 29-1 파훼 성공 = 기회(헤롱과 같은 파랑).
+	gateBroken = { icon = "◇", color = Color3.fromRGB(120, 200, 255) },
 }
 
 local currentBubble = nil
@@ -121,7 +127,8 @@ local currentBubble = nil
 -- 보스 머리 위 말풍선(사용자 지시 "패턴별 전조에 느낌표·물음표·바닥 그림이 있는 말풍선 UI를
 -- 잘 보이게"). 흰 둥근 상자 + 아래 꼬리 + 큰 그림 글자 + 작은 이름. 한 번에 하나만 - 새
 -- 말풍선이 오면 이전 것을 지운다.
-local function showBubble(kind, seconds)
+-- scale(29-1, 선택): 힌트 1단계부터 기믹 말풍선이 BossData.mechanics.hint.bubbleScale배로 커진다.
+local function showBubble(kind, seconds, scale)
 	local spec = BUBBLES[kind]
 	local player_root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	local model = findBossModel(player_root and player_root.Position or Vector3.zero)
@@ -135,7 +142,7 @@ local function showBubble(kind, seconds)
 	end
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "BossBubble"
-	gui.Size = UDim2.new(0, 150, 0, 120)
+	gui.Size = UDim2.new(0, 150 * (scale or 1), 0, 120 * (scale or 1))
 	gui.StudsOffset = Vector3.new(0, 6, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 400
@@ -424,7 +431,15 @@ end
 
 patternEvent.OnClientEvent:Connect(function(kind, data)
 	if kind == "bubble" then
-		showBubble(data.pattern, data.seconds)
+		showBubble(data.pattern, data.seconds, data.scale)
+	elseif kind == "gimmickTelegraph" then
+		if data.safeSpots then
+			BossGateView.showHintArrows(data.safeSpots, data.seconds)
+		end
+	elseif kind == "gimmickResolve" then
+		if data.broken then
+			showBubble("gateBroken", data.windowSeconds or 2)
+		end
 	elseif kind == "daze" then
 		showBubble("daze", data.seconds)
 	elseif kind == "heavyTelegraph" then

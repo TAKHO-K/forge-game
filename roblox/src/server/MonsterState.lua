@@ -124,6 +124,19 @@ function MonsterState.resetBossHp(model)
 	end
 end
 
+-- 29-1 - 보스의 받는 피해 배율(파훼 게이트 ×g, 기회 창 ×m). BossMechanics만 쓴다. 기본 1.
+function MonsterState.setDamageTakenMultiplier(model, multiplier)
+	local entry = monsters[model]
+	if entry and entry.data.isBoss then
+		entry.damageTakenMultiplier = multiplier
+	end
+end
+
+function MonsterState.getDamageTakenMultiplier(model)
+	local entry = monsters[model]
+	return entry and entry.damageTakenMultiplier or 1
+end
+
 -- 24-1 DevTools "/gg party info" 전용 - 보스 절대 HP(현재/최대). 잡몹은 nil.
 function MonsterState.getBossHp(model)
 	local entry = monsters[model]
@@ -170,19 +183,23 @@ end
 -- 데미지 적용(19-4 [1][2]). attackerStage는 잡몹 계산에만 쓰인다(보스는 무시) -
 -- attackerPlayer는 기여 비율 기록용. 24-1부터 보스도 기록한다(damage/maxHp) - 파티 보스
 -- 보상이 잡몹과 같은 기여 임계값 규칙을 쓰기 때문(CombatResolution.handleBossDeath).
--- 반환값: 이번 타격으로 죽었는가(bool).
+-- 반환값: 이번 타격으로 죽었는가(bool), 실제로 들어간 피해(29-1 - 보스의 받는 피해 배율이
+-- 곱해진 값. 호출부가 데미지 숫자·흡혈에 이 값을 쓴다. 잡몹·상자는 넘긴 damage 그대로).
 function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer)
 	local entry = monsters[model]
 	if not entry then
-		return false
+		return false, 0
 	end
 
 	if entry.data.isBoss then
+		-- 29-1 파훼 게이트·기회 창(BossMechanics가 setDamageTakenMultiplier로 건다). 기여도도 실제로
+		-- 들어간 피해로 센다 - 그래야 합이 1(= maxHp)로 닫힌다.
+		damage *= entry.damageTakenMultiplier or 1
 		entry.hp -= damage
 		if attackerPlayer and entry.maxHp > 0 then
 			entry.contributions[attackerPlayer] = (entry.contributions[attackerPlayer] or 0) + damage / entry.maxHp
 		end
-		return entry.hp <= 0
+		return entry.hp <= 0, damage
 	end
 
 	-- 보물상자(22-2 [3]) - 피해량은 무관, 피격 "횟수"만 센다. 플레이어당 유효 피격 간격
@@ -191,17 +208,17 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer)
 	-- 피격을 낸 순간 보상 대상(chestHitters)에 들어간다 - 강한 사람도 15번, 약한 사람도 15번.
 	if entry.isChest then
 		if not attackerPlayer then
-			return false
+			return false, damage
 		end
 		local now = os.clock()
 		local last = entry.chestLastHitAt[attackerPlayer]
 		if last and now - last < TreasureChestConfig.hitIntervalSeconds then
-			return false
+			return false, damage
 		end
 		entry.chestLastHitAt[attackerPlayer] = now
 		entry.chestHitters[attackerPlayer] = true
 		entry.chestHits += 1
-		return entry.chestHits >= TreasureChestConfig.requiredHits
+		return entry.chestHits >= TreasureChestConfig.requiredHits, damage
 	end
 
 	-- 접두사 변종(22-2 [1]) - HP 배율은 "이 인스턴스"의 값이라 공유 data가 아니라 entry에서
@@ -213,7 +230,7 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer)
 	if attackerPlayer then
 		entry.contributions[attackerPlayer] = (entry.contributions[attackerPlayer] or 0) + ratioDealt
 	end
-	return entry.hpRatio <= 0
+	return entry.hpRatio <= 0, damage
 end
 
 -- 이 몬스터에 기여한 [Player]=누적비율 테이블(잡몹 전용, 보스는 항상 빈 테이블 - 보스는

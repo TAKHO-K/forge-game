@@ -87,7 +87,8 @@ local function explode(record)
 	end
 
 	local damage, isCrit = PlayerCombat.calcDamage(record.base, record.classId)
-	local isDead = MonsterState.applyDamage(model, damage, record.attackerStage, record.player)
+	local isDead, dealt = MonsterState.applyDamage(model, damage, record.attackerStage, record.player)
+	damage = dealt -- 29-1: 실제로 들어간 피해(보스 파훼 게이트 반영)
 
 	stuckArrowResult:FireClient(record.player, model, record.id, damage, isCrit, isDead)
 	CombatResolution.resolveHit(record.player, model, isDead)

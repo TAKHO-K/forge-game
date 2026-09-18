@@ -42,6 +42,15 @@ end
 -- 지점. 받는 피해 배율(대검 E 채널링·대시, PlayerState)은 여기서 곱한다.
 local function applyFinalDamage(targetPlayer, damage, label)
 	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
+	-- 29-1(PRD 20.73 [2-8] A-1 "잡힌 동안 받는 피해"): 잡히면 못 피하므로 모든 패턴이 확정 피격이다 -
+	-- 배율(지금은 0 = 면역)을 곱하고, 0이면 피격 자체가 없던 것으로 친다(자동회복 타이머도 안 건드린다).
+	local trapMultiplier = PlayerState.getTrapDamageMultiplier(targetPlayer)
+	if trapMultiplier then
+		damage *= trapMultiplier
+		if damage <= 0 then
+			return 0
+		end
+	end
 	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
 	PlayerState.setHp(targetPlayer, newHp)
 	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)

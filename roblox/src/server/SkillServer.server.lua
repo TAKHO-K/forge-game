@@ -79,7 +79,9 @@ local function strikeTarget(player, classId, atk, target, coefficient, attackerS
 	-- 더 이상 배율을 곱하는 계산이 없다(15-1의 "감소식 앞에 곱해 앵커가 어긋난" 실수를
 	-- 반복하지 않는다). 버프가 없으면 getField가 기본값 1을 돌려줘 기존과 동일하다.
 	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
-	local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
+	-- 29-1: 둘째 반환값 = 실제로 들어간 피해(보스 파훼 게이트 ×g 반영) - 숫자·흡혈이 이 값을 쓴다.
+	local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player)
+	damage = dealt
 	MonsterSpawner.updateHpLabel(target)
 	PlayerProfile.applyLifesteal(player, damage) -- 26-2, AttackServer 평타와 같은 지점(damage 확정 직후)
 	CombatResolution.resolveHit(player, target, isDead)
@@ -488,6 +490,11 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 	local weapon = PlayerProfile.getWeapon(player)
 	if not classId or not weapon then
 		return -- 로드 미완료·직업 미선택 - 헛스윙 취급(AttackServer와 같은 원칙)
+	end
+	-- 29-1(PRD 20.73 [2-8] A-2): 잡힌 동안엔 스킬을 못 쓴다(쿨다운도 안 돈다 - 요청이 없던 것과 같다).
+	if PlayerState.isTrapped(player) then
+		reject(player, slot, "trapped")
+		return
 	end
 
 	-- 20-2a: 지금은 대검만 채워져 있다(SkillData.lua) - 나머지 직업은 빈 테이블이라

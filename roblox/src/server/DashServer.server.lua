@@ -33,6 +33,11 @@ dashRequest.OnServerEvent:Connect(function(player)
 	if not PlayerProfile.getClassId(player) then
 		return -- 직업 미선택·로드 전 - 헛동작(AttackServer와 같은 원칙)
 	end
+	-- 29-1(PRD 20.73 [2-8] A-2): 잡힌 동안엔 대시도 못 쓴다.
+	if PlayerState.isTrapped(player) then
+		dashResult:FireClient(player, { ok = false, reason = "trapped" })
+		return
+	end
 
 	local now = os.clock()
 	local last = lastDashTick[player]

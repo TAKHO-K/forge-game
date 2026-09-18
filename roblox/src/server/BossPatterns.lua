@@ -24,6 +24,9 @@ local Reach = require(ReplicatedStorage.Shared.Reach)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local GroundProbe = require(script.Parent.GroundProbe)
+-- 29-1(PRD 20.73 [2-8]): 기믹 실패 피해·파훼 게이트·잡힘 구출 틱. 힌트 상수는 BossData.mechanics.hint.
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local BossMechanics = require(script.Parent.BossMechanics)
 
 local BossPatterns = {}
 
@@ -43,7 +46,10 @@ patternEvent.Parent = ReplicatedStorage
 -- 파동 최대 반경 - 아레나 대각선 반(96×√2≈136)보다 조금 크게. 여기까지 퍼지면 파동을 지운다.
 local WAVE_MAX_RADIUS_FACTOR = math.sqrt(2) + 0.05
 
-local PATTERN_ORDER = { "heavy", "shockwave", "meteor", "charge", "cross" }
+-- 29-1: "gimmick"은 6종 공통 기믹 패턴의 자리다(예고 → 파훼 판정, 아래 startGimmick) - data.patterns.gimmick이
+-- 있는 보스에서만 시계가 생긴다. 지금은 어느 보스 데이터에도 없다(보스별 세션에서 채운다) - 기존 5패턴
+-- 보스는 이 항목이 없는 것과 완전히 같게 돈다.
+local PATTERN_ORDER = { "heavy", "shockwave", "meteor", "charge", "cross", "gimmick" }
 
 local scatterRng = Random.new()
 
@@ -138,14 +144,60 @@ end
 -- 패턴 시계를 "지금"부터 새로 잰다 - 스폰·어그로 시작·사망 리셋 때 부른다(재도전 = 처음부터).
 -- 23-1: 견습 모드는 data.patterns가 부분집합이다(BossRules.buildTutorialInstanceData) - 없는
 -- 패턴은 시계 자체를 만들지 않는다(nextAt에 없으면 아래 스케줄러가 자연히 후보에서 뺀다).
+-- 29-1: 패턴 cfg에 firstAtSeconds가 있으면 첫 발동만 그 시각이다(이후는 intervalSeconds). seen은
+-- "이 시계 주기에서 한 번이라도 시작했는가" - 아래 자리 비우기(reservedUntil)가 읽는다.
 local function restartClocks(st, data, now)
 	st.nextAt = {}
+	st.seen = {}
 	for _, id in ipairs(PATTERN_ORDER) do
 		if id == "heavy" or data.patterns[id] then
-			st.nextAt[id] = now + intervalOf(data, id)
+			local cfg = data.patterns[id]
+			st.nextAt[id] = now + ((cfg and cfg.firstAtSeconds) or intervalOf(data, id))
 		end
 	end
 	st.lastPatternEndAt = now
+end
+
+local function isPriority(data, id)
+	local cfg = data.patterns[id]
+	return cfg ~= nil and cfg.priority == true
+end
+
+-- 패턴 하나가 보스를 구속하는 시간의 상한(자리 비우기 전용 - 넉넉하게 잡는다). 돌진은 아레나를
+-- 끝에서 끝까지 달리는 경우, 진동파는 마지막 파동이 최대 반경에 닿아 사라질 때까지.
+local function boundSecondsOf(model, data, id)
+	if id == "heavy" then
+		return data.telegraphWarmupSeconds
+	end
+	local cfg = data.patterns[id]
+	if id == "shockwave" then
+		local maxRadius = zoneOf(model).halfSize * WAVE_MAX_RADIUS_FACTOR
+		return cfg.telegraphSeconds + cfg.repeatIntervalSeconds * (cfg.waveCount - 1)
+			+ (cfg.layerGapSeconds or 0) * ((cfg.layers or 1) - 1) + maxRadius / cfg.waveSpeedStuds
+	elseif id == "charge" then
+		local maxLength = zoneOf(model).halfSize * 2
+		return (cfg.focusSeconds + maxLength / cfg.speedStuds) * (cfg.dashCount or 1) + cfg.recoverSeconds
+	elseif id == "cross" then
+		return cfg.telegraphSeconds * cfg.volleys
+	end
+	return cfg.telegraphSeconds
+end
+
+-- 자리 비우기(29-1, PRD 20.73 [2-0] 5번 (가)): firstAtSeconds를 가진 우선 패턴이 아직 한 번도 안
+-- 나왔으면, 그 시각을 넘겨 끝날 비우선 패턴은 시작하지 않는다. 없으면 6초에 시작한 강공격이 7.5초에
+-- 끝나고 최소 간격이 붙어 첫 기믹이 10초가 아니라 13.5초로 밀린다. 우선 패턴이 없는 보스(구간
+-- 수호자)는 항상 nil이라 기존 스케줄과 한 틱도 다르지 않다.
+local function reservedUntil(st, data)
+	local earliest = nil
+	for _, id in ipairs(PATTERN_ORDER) do
+		local cfg = data.patterns[id]
+		if cfg and cfg.priority and cfg.firstAtSeconds and st.nextAt[id] and not st.seen[id] then
+			if not earliest or st.nextAt[id] < earliest then
+				earliest = st.nextAt[id]
+			end
+		end
+	end
+	return earliest
 end
 
 local function ensureState(model, data)
@@ -378,12 +430,54 @@ local function bubbleSecondsOf(data, id)
 	return data.patterns[id].telegraphSeconds
 end
 
+-- ─────────────────────────── 기믹(29-1 공통 뼈대) ───────────────────────────
+
+-- 힌트 단계(PRD 20.73 [1-5]) - BossEncounter가 전멸 횟수로 정해 setHintLevel로 넣는다.
+--   0 기본 / 1 말풍선 ×bubbleScale + 안전지대 흰 화살표 / 2 이상 위에 더해 기믹 예고 ×telegraphMultiplier.
+local function gimmickTelegraphSeconds(st, data)
+	local seconds = data.patterns.gimmick.telegraphSeconds
+	if (st.hintLevel or 0) >= BossData.mechanics.hint.maxLevel then
+		seconds *= BossData.mechanics.hint.telegraphMultiplier
+	end
+	return seconds
+end
+
+-- 6종 공통 기믹 패턴의 뼈대: 예고(게이트가 서고 1인 누적 %피해가 비워진다) → 판정(보스별 파훼 조건은
+-- BossMechanics.registerJudge로 꽂힌다). 모양(전역 빨강 + 안전지대 비우기 등)은 보스별 세션이
+-- cfg.kind에 맞춰 클라에 그린다 - 뼈대는 kind·시간·힌트 단계·안전지대 좌표만 실어 보낸다.
+local function startGimmick(model, st, data, now, position)
+	local cfg = data.patterns.gimmick
+	local seconds = gimmickTelegraphSeconds(st, data)
+	local hintLevel = st.hintLevel or 0
+	BossMechanics.onGimmickStart(model)
+	st.phase = "gimmickTelegraph"
+	st.phaseEndsAt = now + seconds
+	send(st, "gimmickTelegraph", {
+		kind = cfg.kind,
+		center = Vector3.new(position.X, st.floorY, position.Z),
+		seconds = seconds,
+		hintLevel = hintLevel,
+		-- 힌트 1단계부터 클라가 흰 화살표를 세우는 자리. 보스별 세션이 cfg.safeSpots(model, data)를 채운다.
+		safeSpots = (hintLevel >= 1 and cfg.safeSpots) and cfg.safeSpots(model, data) or nil,
+	})
+end
+
 local function startPattern(model, st, data, id, now, position, targetRoot)
 	st.current = id
 	st.currentStartedAt = now
+	st.seen[id] = true
 	print(("[forge-game] 보스 패턴 시작: %s (직전 종료 후 %.2f초)"):format(id, now - st.lastPatternEndAt))
 	-- 전조 말풍선(사용자 지시 - 느낌표·물음표·바닥 그림으로 "스킬을 쓰겠구나"를 읽게) -
 	-- 모든 패턴이 예고 시작 순간 하나씩 띄운다. 그림은 클라(BossPatternVisuals)가 고른다.
+	if id == "gimmick" then
+		send(st, "bubble", {
+			pattern = id,
+			seconds = gimmickTelegraphSeconds(st, data),
+			scale = (st.hintLevel or 0) >= 1 and BossData.mechanics.hint.bubbleScale or nil,
+		})
+		startGimmick(model, st, data, now, position)
+		return
+	end
 	send(st, "bubble", { pattern = id, seconds = bubbleSecondsOf(data, id) })
 	if id == "heavy" then
 		startHeavy(model, st, data, now, position)
@@ -481,6 +575,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	st.target = target
 	st.members = (members and #members > 0) and members or { target }
 	local now = os.clock()
+	BossMechanics.tick(st.members, dt) -- 29-1: 잡힌 멤버의 구출 핸들러
 
 	if st.phase == "normal" then
 		-- 격노(HP ≤ 20%)에서만 패턴을 연속으로 쓴다(사용자 지시) - 평소엔 긴 간격.
@@ -489,11 +584,18 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 		if now < st.graceUntil or now < st.lastPatternEndAt + gap then
 			return false
 		end
-		local pick, pickAt = nil, math.huge
+		-- 29-1: 시간이 된 후보 중 우선 패턴(priority - 기믹)이 먼저다. 같은 급 안에서는 기존 규칙 그대로
+		-- 가장 오래 기다린 것부터. 비우선 후보는 자리 비우기(reservedUntil)에 걸리면 건너뛴다.
+		local reserved = reservedUntil(st, data)
+		local pick, pickAt, pickPriority = nil, math.huge, false
 		for _, id in ipairs(PATTERN_ORDER) do
 			local at = st.nextAt[id]
-			if at and now >= at and at < pickAt then
-				pick, pickAt = id, at
+			if at and now >= at then
+				local priority = isPriority(data, id)
+				local blocked = not priority and reserved ~= nil and now + boundSecondsOf(model, data, id) + gap > reserved
+				if not blocked and ((priority and not pickPriority) or (priority == pickPriority and at < pickAt)) then
+					pick, pickAt, pickPriority = id, at, priority
+				end
 			end
 		end
 		if pick then
@@ -501,6 +603,20 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 			return true
 		end
 		return false
+	end
+
+	if st.phase == "gimmickTelegraph" then
+		if now < st.phaseEndsAt then
+			return true
+		end
+		local cfg = data.patterns.gimmick
+		local broken = BossMechanics.resolveGimmick(model, data, cfg, victims(st), "기믹 실패")
+		send(st, "gimmickResolve", {
+			broken = broken,
+			windowSeconds = broken and cfg.breakWindow and cfg.breakWindow.seconds or nil,
+		})
+		endPattern(model, st, data, now)
+		return true
 	end
 
 	if st.phase == "heavyTelegraph" then
@@ -579,7 +695,8 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 			if not st.chargeHitBy[v.player] and distanceToSegment(xz(v.root.Position), prev, xz(newPos)) <= cfg.pathHalfWidthStuds
 				and Reach.sameLayer(v.root.Position, newPos) then
 				st.chargeHitBy[v.player] = true
-				PlayerDamage.applyMaxHpFraction(v.player, cfg.damageMaxHpFraction, "돌진")
+				-- 29-1: %최대체력 피해는 6종 공통 문으로(PRD 20.73 [2-8] A-1 - 돌진이 그 원칙의 첫 사례). 값은 그대로.
+				BossMechanics.applyMaxHpDamage(v.player, cfg.damageMaxHpFraction, "돌진")
 			end
 		end
 		if progress >= 1 then
@@ -693,6 +810,33 @@ function BossPatterns.reset(model, data)
 		restartClocks(st, data, os.clock())
 		st.target = nil
 	end
+	BossMechanics.reset(model) -- 29-1: 게이트도 처음 상태(안 선 상태)로
+end
+
+-- 29-1 힌트 단계(PRD 20.73 [1-5]) - BossEncounter가 스폰·전멸 리셋 때 넣는다.
+function BossPatterns.setHintLevel(model, data, level)
+	local st = ensureState(model, data)
+	if st then
+		st.hintLevel = level
+	end
+end
+
+function BossPatterns.getHintLevel(model)
+	local st = MonsterState.getBossPatternState(model)
+	return st and st.hintLevel or 0
+end
+
+-- 29-1 자동 검증 전용 - 각 패턴의 다음 발동까지 남은 시간(초) 사본.
+function BossPatterns.debugClocks(model)
+	local st = MonsterState.getBossPatternState(model)
+	local clocks = {}
+	if st and st.nextAt then
+		local now = os.clock()
+		for id, at in pairs(st.nextAt) do
+			clocks[id] = at - now
+		end
+	end
+	return clocks
 end
 
 -- 입장·재도전 유예(20.44 [3](다)) - 이 시각 전엔 패턴을 시작하지 않는다.

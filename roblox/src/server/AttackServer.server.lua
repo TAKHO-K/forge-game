@@ -105,6 +105,10 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	if PlayerState.isChanneling(player) then
 		return
 	end
+	-- 29-1(PRD 20.73 [2-8] A-2): 잡힌 동안엔 평타 요청 자체를 받지 않는다(채널링과 같은 처리).
+	if PlayerState.isTrapped(player) then
+		return
+	end
 
 	local now = os.clock()
 	local last = lastAttackTick[player]
@@ -227,7 +231,9 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	local projectileKind = ProjectileConfig.kindByClass[classId]
 	if not projectileKind then
 		-- 근접(대검·쌍검) - 즉시 판정(기존 동작 그대로, 20-2a까지와 완전히 같다).
-		local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
+		-- 29-1: applyDamage의 둘째 반환값 = 실제로 들어간 피해(보스 파훼 게이트 ×g 반영). 숫자·흡혈이 이 값을 쓴다.
+		local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player)
+		damage = dealt
 		MonsterSpawner.updateHpLabel(target)
 		-- 흡혈(26-2, PRD 20.67 [6-1]) - 실제로 데미지가 몬스터에게 들어간 직후에만 회복한다
 		-- (여기·아래 원거리 도달 판정 두 곳 - "damage 확정"을 "실제로 맞았다"로 해석했다,
@@ -293,10 +299,10 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 			return
 		end
 
-		local isDead = MonsterState.applyDamage(target, damage, attackerStage, player)
+		local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player) -- 29-1: 위 근접 분기와 같다
 		MonsterSpawner.updateHpLabel(target)
-		PlayerProfile.applyLifesteal(player, damage) -- 26-2, 위 근접 분기와 같은 지점(실제 명중 후)
-		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false, isBuffedShot)
+		PlayerProfile.applyLifesteal(player, dealt) -- 26-2, 위 근접 분기와 같은 지점(실제 명중 후)
+		attackResult:FireClient(player, target, dealt, isCrit, isDead, isComboHit, false, isBuffedShot)
 		CombatResolution.resolveHit(player, target, isDead)
 
 		-- 꽂히는 화살(20-5 [2]) - 활 전용(ProjectileConfig.kindByClass가 "arrow"인

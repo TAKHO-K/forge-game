@@ -39,6 +39,10 @@ RunService.Heartbeat:Connect(function(dt)
 		if not maxHp or not hp then
 			continue -- 캐릭터 로드 전/퇴장 중 - 다음 틱에 다시 시도.
 		end
+		-- 29-1(PRD 20.73 [2-8] A-1): 잡힌 동안엔 소모도 멈춘다 - 잡힘의 대가는 시간이지 체력이 아니다.
+		if PlayerState.isTrapped(player) then
+			continue
+		end
 
 		PlayerState.setLastCombatActionAt(player, os.clock())
 

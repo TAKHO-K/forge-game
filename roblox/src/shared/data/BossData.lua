@@ -348,6 +348,59 @@ local SPECIES = {
 	},
 }
 
+-- ═══ 29-1: 6종 공통 뼈대 상수(PRD 20.73 [2-8] 도출값 - 그 밖의 새 상수는 만들지 않는다) ═══
+-- 게이트의 받는 피해 배율 g는 여기 없다 - BossRules.gateDamageTakenMultiplier가
+-- PartyConfig.maxMembers·partyHpExponent에서 유도한다(N_max^(p−1) = 0.487, p와 같은 관례).
+local MECHANICS = {
+	-- A-1: 기믹 실패 1회 = 최대체력 × 이 값(방어 무관). 허용 구간 [50%, 57.1%) 안.
+	-- 기믹 1회 발동에서 한 사람이 받는 %피해의 합도 이 값을 넘지 않는다(BossMechanics가 자른다).
+	gimmickFailMaxHpFraction = 0.55,
+	-- 부분 실패형(분신 반격·갑각 반사) 1회 = 위 값 ÷ 이 값.
+	partialFailDivisor = 3,
+
+	-- A-2: 잡힘. 자동 해제 9초 = 구출 인시 6 ÷ (1 − 1/3) = 90초 앵커의 10%. 구출 동작 예산 1.5초.
+	-- damageTakenMultiplier 0 = 잡힌 동안 면역(잡힘의 대가는 시간이지 체력이 아니다).
+	trap = {
+		autoReleaseSeconds = 9,
+		rescueSeconds = 1.5,
+		damageTakenMultiplier = 0,
+	},
+
+	-- 기믹 패턴의 스케줄 기본값(28-2 [2-0] 5번 - 보스별 표가 덮어쓴다: 전갈 18초, 폭풍 12초·첫 8초).
+	gimmick = {
+		intervalSeconds = 20,
+		firstAtSeconds = 10,
+		priority = true,
+		telegraphSeconds = 3.0,
+	},
+
+	-- 28-2 [1-5] 힌트 단계: 전멸 1회 = 말풍선 ×bubbleScale + 안전지대 흰 화살표, 2회 이상 = 기믹 예고 ×telegraphMultiplier.
+	hint = {
+		maxLevel = 2,
+		bubbleScale = 1.5,
+		telegraphMultiplier = 1.5,
+	},
+
+	-- BossSim(처치 시간 모형) 전용 가정 - 20.44·20.73 [3]의 회피 비용표. 게임 판정에는 안 쓰인다.
+	sim = {
+		tickSeconds = 0.05,
+		referenceKillSeconds = 60, -- 보스 HP = 기준 플레이어 순딜 60초분
+		evadeSeconds = { center = 1.5, jump = 1.0, meteor = 1.0, meteorLarge = 1.25, line = 0.75, charge = 1.5, gimmick = 2.0 },
+		chargeTravelSeconds = 1.5, -- 아레나 중앙 → 벽 92stud ÷ 60stud/s
+	},
+}
+
+-- 보스별 잡힘·구출 종류(PRD 20.73 [2-8] A-4 표). 구간 수호자는 없다(기본형 - 코드·데이터 무변경).
+-- 보스별 기믹 패턴이 구현되기 전까지는 설계 데이터일 뿐이다 - 실제 전투에는 data.patterns.gimmick이
+-- 있는 보스만 기믹이 돈다(BossPatterns), 지금은 어느 보스에도 없다.
+local SPECIES_MECHANICS = {
+	frost_giant = { trapKind = "frozen", rescueType = "hitCount" },
+	abyssal_lord = { trapKind = "submerged", rescueType = "proximity" },
+	crystal_queen = { trapKind = "crystallized", rescueType = "gimmick" },
+	scorpion_queen = { trapKind = "buried", rescueType = "push" },
+	storm_lord = { trapKind = "shocked", rescueType = "touch" },
+}
+
 local bosses = {}
 local rotationBossIds = {}
 for _, species in ipairs(SPECIES) do
@@ -359,6 +412,7 @@ for _, species in ipairs(SPECIES) do
 		primaryPattern = species.primaryPattern,
 		bodyAspect = species.bodyAspect,
 		attachments = species.attachments,
+		mechanics = SPECIES_MECHANICS[species.id], -- 29-1, 구간 수호자는 nil
 	}
 	for key, value in pairs(BASE_STATS) do
 		if key ~= "patterns" then
@@ -382,4 +436,7 @@ return {
 	},
 
 	bosses = bosses,
+
+	-- 29-1: 6종 공통 뼈대 상수(위 MECHANICS 주석).
+	mechanics = MECHANICS,
 }

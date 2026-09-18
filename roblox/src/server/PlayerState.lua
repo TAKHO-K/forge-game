@@ -33,6 +33,7 @@ function PlayerState.reset(player)
 	local entry = players[player]
 	if entry then
 		entry.hp = entry.maxHp
+		entry.trapDamageMultiplier = nil -- 29-1: 리스폰하면 잡힘도 풀린다(BossTrap이 기록도 같이 지운다)
 	end
 	PlayerState.clearChanneling(player)
 end
@@ -174,6 +175,26 @@ function PlayerState.tryLifesteal(player, requestedAmount)
 	entry.lifestealTokens = available - granted
 	entry.lifestealTokensUpdatedAt = now
 	return granted
+end
+
+-- 잡힘(29-1, PRD 20.73 [2-8] A-2) - BossTrap.lua가 걸고 푼다. 값은 "잡힌 동안 받는 피해 배율"
+-- (BossData.mechanics.trap.damageTakenMultiplier, 0 = 면역)이고 nil이면 안 잡힌 상태다.
+-- PlayerDamage(피해)·AttackServer/SkillServer/DashServer(행동 거절)·HealerDealingMode(소모 정지)가 읽는다.
+function PlayerState.setTrapped(player, damageTakenMultiplier)
+	local entry = players[player]
+	if entry then
+		entry.trapDamageMultiplier = damageTakenMultiplier
+	end
+end
+
+function PlayerState.isTrapped(player)
+	local entry = players[player]
+	return entry ~= nil and entry.trapDamageMultiplier ~= nil
+end
+
+function PlayerState.getTrapDamageMultiplier(player)
+	local entry = players[player]
+	return entry and entry.trapDamageMultiplier
 end
 
 function PlayerState.clear(player)
