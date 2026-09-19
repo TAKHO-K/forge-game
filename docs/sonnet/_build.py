@@ -28,6 +28,8 @@ for path in sorted(glob.glob(os.path.join(HERE, "S[0-9][0-9]-*.md"))):
     out = body.rstrip() + "\n\n---\n\n" + BEGIN + "\n\n" + common + "\n\n" + END + "\n"
     # 구분선이 빌드할 때마다 쌓이지 않게
     out = re.sub(r"(\n---\n)+\n" + re.escape(BEGIN), "\n---\n\n" + BEGIN, out)
+    if out == text:
+        continue
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(out)
     count += 1
