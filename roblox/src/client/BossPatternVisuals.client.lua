@@ -194,23 +194,51 @@ local function showBubble(kind, seconds, scale)
 	end)
 end
 
--- ─────────────────────────── 강공격 ───────────────────────────
+-- ─────────────────────────── 보스 중심 원(강공격류) ───────────────────────────
+
+-- 29-2: 도넛(innerRadius가 있는 보스 중심 원 - 몸 쪽이 안전하다). 로블록스엔 속이 빈 원판이 없어 진동파 링과
+-- 같은 방식으로 얇은 파트를 원둘레에 놓되, 두께를 (바깥 - 안쪽)으로 잡아 띠 전체를 덮는다. 빈 가운데가 곧
+-- "빨강이 없는 곳 = 안전"(20.73 [2-0] 1번)이다.
+local RING_SEGMENTS = 40
+
+local function newRingBand(center, innerRadius, outerRadius, color, transparency)
+	local parts = {}
+	local mid = (innerRadius + outerRadius) / 2
+	local segmentLength = 2 * math.pi * outerRadius / RING_SEGMENTS * 1.08
+	for i = 1, RING_SEGMENTS do
+		local angle = (i / RING_SEGMENTS) * 2 * math.pi
+		local part = newPart(Vector3.new(segmentLength, 0.2, outerRadius - innerRadius), color, transparency)
+		part.CFrame = CFrame.new(center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * mid + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, -angle, 0)
+		parts[i] = part
+	end
+	return parts
+end
+
+-- 원판 하나 또는 도넛 띠(파트 여러 개)를 같은 방식으로 다루기 위한 목록.
+local function newCircleShape(data, color, transparency)
+	if data.innerRadius then
+		return newRingBand(data.center, data.innerRadius, data.radius, color, transparency)
+	end
+	return { newDisc(data.center, data.radius, color, transparency) }
+end
 
 -- 25-4: 보스 중심 고정 반경 원 - shockTelegraph와 같은 "예고 시간 동안 진해진다" 기법을
 -- 쓰되 크기는 안 자란다(사거리가 고정이라 진동파의 "자라는 원"과 모양으로 구분된다).
 local function heavyTelegraph(data)
-	local disc = newDisc(data.center, data.radius, DANGER_COLOR, 0.85)
-	TweenService:Create(disc, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-		Transparency = 0.25,
-	}):Play()
-	task.delay(data.seconds, function()
-		fadeOut(disc, 0.2)
-	end)
+	for _, part in ipairs(newCircleShape(data, DANGER_COLOR, 0.85)) do
+		TweenService:Create(part, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Transparency = 0.25,
+		}):Play()
+		task.delay(data.seconds, function()
+			fadeOut(part, 0.2)
+		end)
+	end
 end
 
 local function heavyImpact(data)
-	local flash = newDisc(data.center, data.radius, IMPACT_COLOR, 0.1)
-	fadeOut(flash, 0.35)
+	for _, part in ipairs(newCircleShape(data, IMPACT_COLOR, 0.1)) do
+		fadeOut(part, 0.35)
+	end
 end
 
 -- ─────────────────────────── 진동파 ───────────────────────────
@@ -341,23 +369,16 @@ end
 -- ─────────────────────────── 십자 화염 ───────────────────────────
 
 local crossLines = {}
-local crossSweepConnection = nil
 
-local function stopCrossSweep()
-	if crossSweepConnection then
-		crossSweepConnection:Disconnect()
-		crossSweepConnection = nil
-	end
-end
-
--- 23-6 [2] 십자 회전 변형(storm_lord) 전용 - 4개 빔의 CFrame만 angleDeg 기준으로 다시
--- 놓는다. 판정에 쓰이는 data.lengths(서버가 최종 angleDeg로 계산한 값)는 그대로 재사용 -
--- 회전 중간의 길이는 근사지만 순수 연출이라 판정과 무관하다.
+-- 29-2: 직선 빔은 보스 중심에서 angleDeg + stepDeg × k 방향으로 #lengths개다 - 십자(4개·90°)뿐 아니라 부채꼴
+-- (3개·35°)·단발(1개)도 같은 이벤트로 온다. stepDeg가 없으면 90(기존 십자). 23-6의 회전 스윕은 없앴다(20.73
+-- [1-2] 폐기 - 화면의 띠는 도는데 판정은 마지막 각도 하나라 "보이는 것 = 맞는 것"이 아니었다).
 local function placeCrossBeams(angleDeg, data)
-	for k = 0, 3 do
+	local stepDeg = data.stepDeg or 90
+	for k = 0, #data.lengths - 1 do
 		local line = crossLines[k + 1]
 		if line then
-			local a = math.rad(angleDeg + 90 * k)
+			local a = math.rad(angleDeg + stepDeg * k)
 			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 			local length = data.lengths[k + 1]
 			local mid = data.center + dir * (length / 2)
@@ -367,14 +388,13 @@ local function placeCrossBeams(angleDeg, data)
 end
 
 local function cross(data)
-	stopCrossSweep()
 	for _, line in ipairs(crossLines) do
 		if line then
 			destroy(line)
 		end
 	end
 	crossLines = {}
-	for k = 0, 3 do
+	for k = 0, #data.lengths - 1 do
 		local length = data.lengths[k + 1]
 		if length > 1 then
 			local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), DANGER_COLOR, 0.8)
@@ -386,23 +406,10 @@ local function cross(data)
 			crossLines[k + 1] = false
 		end
 	end
-	if data.rotateFromDeg then
-		local startedAt = os.clock()
-		placeCrossBeams(data.rotateFromDeg, data)
-		crossSweepConnection = RunService.RenderStepped:Connect(function()
-			local t = math.clamp((os.clock() - startedAt) / data.seconds, 0, 1)
-			placeCrossBeams(data.rotateFromDeg + (data.angleDeg - data.rotateFromDeg) * t, data)
-			if t >= 1 then
-				stopCrossSweep()
-			end
-		end)
-	else
-		placeCrossBeams(data.angleDeg, data)
-	end
+	placeCrossBeams(data.angleDeg, data)
 end
 
 local function crossFire()
-	stopCrossSweep()
 	for _, line in ipairs(crossLines) do
 		if live[line] then
 			line.Color = IMPACT_COLOR
@@ -418,7 +425,6 @@ end
 -- ─────────────────────────── 리셋 ───────────────────────────
 
 local function resetAll()
-	stopCrossSweep()
 	for part in pairs(live) do
 		part:Destroy()
 	end

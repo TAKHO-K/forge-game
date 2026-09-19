@@ -5,6 +5,10 @@
 --   (가) 도출값·처치 시간 모형 - 순수 계산(BossSim). python 모형(세션 스크래치패드)과 대조한 기대값.
 --   (나) 실제 서버 경로 - 보스를 스폰해 PlayerDamage·BossTrap·BossMechanics·BossPatterns를 직접 호출.
 -- env = { ensureBackup, restore, applyStage, applyOptionStack } - DevTools의 로컬 헬퍼(백업·복원 포함).
+--
+-- 29-2: 보스 데이터가 스킬표(data.skills)로 재편되면서 이 모듈도 새 이름으로 옮겼다(회귀용으로 계속 돈다).
+-- 보스별 처치 시간표는 29-2 검증(BossSkillVerify.lua)으로 옮겼고, 실시간 첫 기믹 측정은 "시계 시작 시각 기준"으로
+-- 고쳤다 - 29-1 Play에서 검증 중 보스에 어그로가 붙어 시계가 다시 시작되는 바람에 12초 창을 벗어났었다(20.74 [6]).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -29,17 +33,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local BossMechanicsVerify = {}
 
 local GUARDIAN = "section_guardian"
-local GIMMICK_BOSSES = { "frost_giant", "abyssal_lord", "crystal_queen", "scorpion_queen", "storm_lord" }
 
--- python 모형(bosssim3.py + current_data.py, 현재 BossData + 공통 기믹 자리)의 값 - { 솔로 파훼 후, 4인 파훼 후,
--- 솔로 파훼 전, 4인 파훼 전 }. BossSim이 이 값에서 벗어나면 두 모형이 어긋난 것이다.
-local EXPECTED_SECONDS = {
-	frost_giant = { 75.30, 36.25, 179.40, 78.80 },
-	abyssal_lord = { 75.35, 38.35, 188.50, 78.85 },
-	crystal_queen = { 75.55, 37.55, 189.25, 79.05 },
-	scorpion_queen = { 76.85, 38.35, 189.95, 83.40 },
-	storm_lord = { 75.30, 37.80, 189.00, 78.80 },
-}
 local EXPECTED_GUARDIAN = { 73.30, 37.85 }
 local SIM_TOLERANCE_SECONDS = 0.06
 
@@ -87,7 +81,7 @@ local function runPure()
 			PartyConfig.maxMembers * g / BossRules.partySizeHpMultiplier(PartyConfig.maxMembers)),
 			near(PartyConfig.maxMembers * g / BossRules.partySizeHpMultiplier(PartyConfig.maxMembers), 1, 1e-9))
 
-		local heavyShare = BossData.bosses[GUARDIAN].heavyAttackMultiplier / BalanceAnchorConfig.surviveTargetHits
+		local heavyShare = BossData.bosses[GUARDIAN].skills.heavy.damage.multiplier / BalanceAnchorConfig.surviveTargetHits
 		r.check(("기믹 실패 f = %.2f, 허용 구간 [0.50, %.4f) - 하한 2f>=1, 상한 f + 강타 %.4f < 1"):format(f, 1 - heavyShare, heavyShare),
 			f >= 0.5 and f < 1 - heavyShare)
 		r.check(("부분 실패 %.4f x %d = %.2f (기믹 1회 합계 상한 = f)"):format(f / mechanics.partialFailDivisor, mechanics.partialFailDivisor, f),
@@ -97,50 +91,19 @@ local function runPure()
 			mechanics.trap.autoReleaseSeconds / mechanics.trap.rescueSeconds, mechanics.trap.damageTakenMultiplier),
 			mechanics.trap.autoReleaseSeconds == 9 and mechanics.trap.rescueSeconds == 1.5 and mechanics.trap.damageTakenMultiplier == 0)
 		local lifestealSeconds = f / CombatConfig.lifestealMaxHpFractionPerSecond
-		r.check(("흡혈 상한 %.0f%%/초로 f 회복 = 공격 %.2f초(< 기믹 주기 %d초 + 예고) - 잡힘 %.0f초 동안은 0"):format(
-			CombatConfig.lifestealMaxHpFractionPerSecond * 100, lifestealSeconds, mechanics.gimmick.intervalSeconds, mechanics.trap.autoReleaseSeconds),
+		r.check(("흡혈 상한 %.0f%%/초로 f 회복 = 공격 %.2f초(< 기믹 주기 20초 + 예고) - 잡힘 %.0f초 동안은 0"):format(
+			CombatConfig.lifestealMaxHpFractionPerSecond * 100, lifestealSeconds, mechanics.trap.autoReleaseSeconds),
 			near(lifestealSeconds, 13.75, 1e-6))
 	end)
 
 	r.section("모형", function()
-		local patterns, boss = BossSim.patternsFor(GUARDIAN, false)
-		local solo = BossSim.run(patterns, boss, { partySize = 1 })
-		local party = BossSim.run(patterns, boss, { partySize = 4 })
+		local solo = BossSim.run(GUARDIAN, { partySize = 1 })
+		local party = BossSim.run(GUARDIAN, { partySize = 4 })
 		r.check(("구간 수호자(기믹·게이트 없음) 솔로 %.2f초(기대 %.2f) / 4인 %.2f초(기대 %.2f), 슬롯 강%d 진%d 낙%d 돌%d 십%d"):format(
 			solo.seconds, EXPECTED_GUARDIAN[1], party.seconds, EXPECTED_GUARDIAN[2],
 			solo.counts.heavy, solo.counts.shockwave, solo.counts.meteor, solo.counts.charge, solo.counts.cross),
 			near(solo.seconds, EXPECTED_GUARDIAN[1], SIM_TOLERANCE_SECONDS) and near(party.seconds, EXPECTED_GUARDIAN[2], SIM_TOLERANCE_SECONDS)
 				and solo.gimmickCount == 0)
-		local baseSeconds = solo.seconds
-
-		print("[29-1][가] 보스 | 솔로 파훼 후(기준 대비) · 첫 기믹만 실패 · 파훼 전 | 4인 파훼 후 · 파훼 전 | 4인 첫 기믹 시각 · 횟수")
-		local ratioSum = 0
-		for _, bossId in ipairs(GIMMICK_BOSSES) do
-			local p, b = BossSim.patternsFor(bossId, true)
-			local soloAfter = BossSim.run(p, b, { partySize = 1, gate = true, breaks = "always" })
-			local soloFailFirst = BossSim.run(p, b, { partySize = 1, gate = true, breaks = "failFirst" })
-			local soloNever = BossSim.run(p, b, { partySize = 1, gate = true, breaks = "never" })
-			local partyAfter = BossSim.run(p, b, { partySize = 4, gate = true, breaks = "always" })
-			local partyNever = BossSim.run(p, b, { partySize = 4, gate = true, breaks = "never" })
-			ratioSum += partyAfter.seconds / soloAfter.seconds
-			local expected = EXPECTED_SECONDS[bossId]
-			local matches = near(soloAfter.seconds, expected[1], SIM_TOLERANCE_SECONDS) and near(partyAfter.seconds, expected[2], SIM_TOLERANCE_SECONDS)
-				and near(soloNever.seconds, expected[3], SIM_TOLERANCE_SECONDS) and near(partyNever.seconds, expected[4], SIM_TOLERANCE_SECONDS)
-			local inBand = math.abs(soloAfter.seconds / baseSeconds - 1) <= 0.10
-			local gated = soloNever.seconds / soloAfter.seconds >= 2 and partyNever.seconds / partyAfter.seconds >= 2
-			local firstOk = near(partyAfter.firstGimmickAt, BossData.mechanics.gimmick.firstAtSeconds, 0.051) and partyAfter.gimmickCount >= 1
-			r.check(("%s | %.2f(%+.1f%%) · %.2f · %.2f(x%.2f) | %.2f · %.2f(x%.2f) | %.2f초 · %d회 - 모형 일치=%s 범위=%s 게이트=%s 첫기믹=%s"):format(
-				bossId, soloAfter.seconds, (soloAfter.seconds / baseSeconds - 1) * 100, soloFailFirst.seconds,
-				soloNever.seconds, soloNever.seconds / soloAfter.seconds,
-				partyAfter.seconds, partyNever.seconds, partyNever.seconds / partyAfter.seconds,
-				partyAfter.firstGimmickAt or -1, partyAfter.gimmickCount,
-				tostring(matches), tostring(inBand), tostring(gated), tostring(firstOk)),
-				matches and inBand and gated and firstOk)
-		end
-		local meanRatio = ratioSum / #GIMMICK_BOSSES
-		local targetRatio = PartyConfig.maxMembers ^ (BossRules.partyHpExponent() - 1)
-		r.check(("p 전제: T_4/T_1 평균 %.3f (목표 %.3f, 허용 +-0.03) - p 재도출 불필요"):format(meanRatio, targetRatio),
-			near(meanRatio, targetRatio, 0.03))
 	end)
 
 	local passCount, totalCount = r.summary()
@@ -167,23 +130,26 @@ local function hpFraction(player)
 	return PlayerState.getHp(player) / PlayerState.getMaxHp(player)
 end
 
--- 공통 기믹 패턴을 이 보스 인스턴스에만 얹는다. data는 스폰마다 새 테이블이지만 data.patterns는
--- BossData 원본을 가리키므로(읽기 전용) 복사본으로 갈아 끼운다 - 원본은 절대 안 건드린다.
+-- 공통 기믹 스킬을 이 보스 인스턴스에만 얹는다. data는 스폰마다 새 테이블이지만 data.skills·skillOrder는
+-- BossData 원본을 가리킬 수 있으므로(읽기 전용) 복사본으로 갈아 끼운다 - 원본은 절대 안 건드린다.
+-- 시계 값은 서리 거인의 포효(20초·첫 10초·자리 비우기·기믹 우선순위)를 그대로 빌린다.
 local function injectGimmick(model, data, telegraphSeconds)
-	local patterns = {}
-	for id, cfg in pairs(data.patterns) do
-		patterns[id] = cfg
-	end
-	local gimmick = BossData.mechanics.gimmick
-	patterns.gimmick = {
-		intervalSeconds = gimmick.intervalSeconds,
-		firstAtSeconds = gimmick.firstAtSeconds,
-		priority = gimmick.priority,
-		telegraphSeconds = telegraphSeconds or gimmick.telegraphSeconds,
-		kind = "verify29",
+	local design = BossData.bosses.frost_giant.skills.roar
+	local skills = table.clone(data.skills)
+	skills.gimmick = {
+		primitive = "gimmick", bubble = "gimmick", role = "gimmick", kind = "verify29",
+		cooldownSeconds = design.cooldownSeconds,
+		firstAvailableSeconds = design.firstAvailableSeconds,
+		reserveFirstUse = design.reserveFirstUse,
+		priority = design.priority,
+		telegraphSeconds = telegraphSeconds or design.telegraphSeconds,
+		damage = design.damage, damageLabel = "기믹 실패(검증)",
 	}
-	data.patterns = patterns
-	BossPatterns.onAggro(model, data) -- 새 패턴표로 시계를 다시 잰다
+	local order = table.clone(data.skillOrder)
+	table.insert(order, "gimmick")
+	data.skills, data.skillOrder = skills, order
+	BossPatterns.onAggro(model, data) -- 새 스킬표로 시계를 다시 잰다
+	return design.firstAvailableSeconds
 end
 
 local function runLive(player, env)
@@ -212,9 +178,9 @@ local function runLive(player, env)
 		local model, data = spawnGuardian(player, env)
 		local clocks = BossPatterns.debugClocks(model)
 		local source = BossData.bosses[GUARDIAN]
-		r.check(("구간 수호자: mechanics=%s, patterns.gimmick=%s, 패턴표가 BossData 원본 그대로=%s"):format(
-			tostring(data.mechanics), tostring(data.patterns.gimmick), tostring(data.patterns == source.patterns)),
-			data.id == GUARDIAN and data.mechanics == nil and data.patterns.gimmick == nil and data.patterns == source.patterns)
+		r.check(("구간 수호자: mechanics=%s, skills.gimmick=%s, 스킬표가 BossData 원본 그대로(스테이지 5 = 범위 배율 1)=%s"):format(
+			tostring(data.mechanics), tostring(data.skills.gimmick), tostring(data.skills == source.skills)),
+			data.id == GUARDIAN and data.mechanics == nil and data.skills.gimmick == nil and data.skills == source.skills)
 		r.check(("패턴 시계(초): 강공격 %.1f 진동파 %.1f 낙석 %.1f 돌진 %.1f 십자 %.1f 기믹 %s (기대 6/11/13/15/17/없음)"):format(
 			clocks.heavy or -1, clocks.shockwave or -1, clocks.meteor or -1, clocks.charge or -1, clocks.cross or -1, tostring(clocks.gimmick)),
 			near(clocks.heavy, 6, 0.5) and near(clocks.shockwave, 11, 0.5) and near(clocks.meteor, 13, 0.5)
@@ -229,9 +195,10 @@ local function runLive(player, env)
 		r.check(("보스 피해: 넣은 값 %.2f = 들어간 값 %.2f = HP 감소 %.2f"):format(maxHp * 0.01, dealt, hpBefore - hpAfter),
 			near(dealt, maxHp * 0.01, 1e-6) and near(hpBefore - hpAfter, maxHp * 0.01, 1e-6))
 		fullHeal(player)
-		local chargeFraction = data.patterns.charge.damageMaxHpFraction
-		BossMechanics.applyMaxHpDamage(player, chargeFraction, "돌진(검증)")
-		r.check(("돌진 %%피해 경로: 풀피에서 %.0f%% → 남은 %.1f%%(기대 %.1f%%) - 값 무변경, 생존"):format(
+		local chargeFraction = data.skills.charge.damage.fraction
+		BossMechanics.beginActivation(model)
+		BossMechanics.applyGimmickDamage(model, player, chargeFraction, "돌진(검증)")
+		r.check(("돌진 %%피해 경로: 풀피에서 %.0f%% → 남은 %.1f%%(기대 %.1f%%) - 29-2에서 80 → 55%%, 생존"):format(
 			chargeFraction * 100, hpFraction(player) * 100, (1 - chargeFraction) * 100),
 			near(hpFraction(player), 1 - chargeFraction, 1e-6) and PlayerState.getHp(player) > 0)
 		fullHeal(player)
@@ -422,38 +389,45 @@ local function runLive(player, env)
 			BossPatterns.getHintLevel(model) == mechanics.hint.maxLevel and BossEncounter.getHintLevel(player) == mechanics.hint.maxLevel)
 	end)
 
-	-- [2][11] 스케줄러 실시간 - 첫 기믹이 firstAtSeconds에 실제로 시작하는가 + 틱 비용
+	-- [2][11] 스케줄러 실시간 - 첫 기믹이 "시계 시작 + firstAvailableSeconds"에 실제로 시작하는가 + 틱 비용.
+	-- 시계는 어그로가 붙는 순간 다시 시작된다(MonsterAI → BossPatterns.onAggro) - 그래서 os.clock 절대 시각이 아니라
+	-- BossPatterns.debugClocks가 돌려주는 시계 시작 시각을 기준으로 잰다(29-1 Play의 교훈, 20.74 [6]).
 	r.section("스케줄러 실시간", function()
 		local model, data = spawnGuardian(player, env) -- 위 구역의 힌트 2단계가 이어진다(같은 보스) - 예고 x1.5 확인
 		BossMechanics.registerJudge("verify29", function()
 			return true
 		end)
-		injectGimmick(model, data, 0.4)
+		local firstAt = injectGimmick(model, data, 0.4)
 		local members = { player }
-		local startedAt = os.clock()
-		local gimmickAt, telegraphEndAt, earlier = nil, nil, nil
+		local loopStartedAt = os.clock()
+		local gimmickAt, telegraphEndAt, earlier, restarts = nil, nil, nil, 0
+		local _, clockStartedAt = BossPatterns.debugClocks(model)
 		local stepSeconds, stepCount = 0, 0
-		while os.clock() - startedAt < mechanics.gimmick.firstAtSeconds + 2 do
+		while os.clock() - loopStartedAt < firstAt * 4 do
 			RunService.Heartbeat:Wait()
 			local before = os.clock()
 			BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, members)
 			stepSeconds += os.clock() - before
 			stepCount += 1
-			local phase = BossPatterns.getPhase(model)
-			if phase == "gimmickTelegraph" and not gimmickAt then
-				gimmickAt = os.clock() - startedAt
-			elseif gimmickAt and not telegraphEndAt and phase ~= "gimmickTelegraph" then
-				telegraphEndAt = os.clock() - startedAt
-			elseif phase ~= "normal" and not gimmickAt then
-				earlier = phase
+			local _, startedAt, currentId = BossPatterns.debugClocks(model)
+			if startedAt ~= clockStartedAt then
+				clockStartedAt, earlier = startedAt, nil -- 어그로로 시계가 다시 시작됐다 - 거기서부터 다시 잰다
+				restarts += 1
+			end
+			if currentId == "gimmick" and not gimmickAt then
+				gimmickAt = os.clock() - clockStartedAt
+			elseif gimmickAt and not telegraphEndAt and currentId ~= "gimmick" then
+				telegraphEndAt = os.clock() - clockStartedAt
+			elseif currentId and not gimmickAt then
+				earlier = currentId
 			end
 			if telegraphEndAt then
 				break
 			end
 		end
-		r.check(("첫 기믹 시작 %.2f초(기대 firstAtSeconds=%d, 허용 +-0.25) - 그 전에 끼어든 패턴=%s(자리 비우기)"):format(
-			gimmickAt or -1, mechanics.gimmick.firstAtSeconds, tostring(earlier)),
-			near(gimmickAt, mechanics.gimmick.firstAtSeconds, 0.25) and earlier == nil)
+		r.check(("첫 기믹 시작 = 시계 시작 + %.2f초(기대 %d, 허용 +-0.25) - 그 전에 끼어든 스킬=%s(자리 비우기), 어그로 재시작 %d회"):format(
+			gimmickAt or -1, firstAt, tostring(earlier), restarts),
+			near(gimmickAt, firstAt, 0.25) and earlier == nil)
 		local telegraph = (telegraphEndAt or 0) - (gimmickAt or 0)
 		r.check(("힌트 2단계 예고 시간: %.2f초(기대 0.4 x %.1f = %.2f)"):format(telegraph, mechanics.hint.telegraphMultiplier, 0.4 * mechanics.hint.telegraphMultiplier),
 			near(telegraph, 0.4 * mechanics.hint.telegraphMultiplier, 0.1))

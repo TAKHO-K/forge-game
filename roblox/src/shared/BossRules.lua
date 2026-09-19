@@ -11,8 +11,10 @@ local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageC
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
+local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
+local Loot = require(ReplicatedStorage.Shared.Loot)
+local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 
-local bossPickRng = Random.new()
 local rotationRng = Random.new()
 
 local BossRules = {}
@@ -44,6 +46,25 @@ end
 -- 솔로의 딜". 4명이 모여 기믹을 건너뛰어도 혼자 제대로 하는 것보다 나을 게 없다.
 function BossRules.gateDamageTakenMultiplier()
 	return PartyConfig.maxMembers ^ (BossRules.partyHpExponent() - 1)
+end
+
+-- 스테이지 범위 배율(29-2, PRD 20.75 B-5 - 사용자 지시 "스테이지가 오를수록 더 넓게, 유저 이속이 오르므로").
+-- s(S) = 기준 장비의 이동 속도(S) ÷ 기준 장비의 이동 속도(첫 보스 스테이지). 기준 장비 = 밸런스 앵커와 같은 일반 등급
+-- (BalanceAnchorConfig.gearGrade) 신발, itemLevel = 스테이지. 신발의 itemLevel 계수는 25레벨에서 동결돼 있어(17-1)
+-- s는 스테이지 5에서 1.00, 25 이상에서 1.152로 멈춘다 - 그 뒤의 이속 상승은 등급·옵션에서 오고 스테이지가
+-- 보장하지 않으므로 범위에 반영하지 않는다(보장되지 않는 속도를 전제로 넓히면 "피할 수 없는 패턴"이 된다 -
+-- BossSim.checkDodge가 최대 배율 × 신발 없는 속도에서도 통과를 요구한다). 첫 보스 스테이지 이하는 1(견습 포함).
+local function referenceSpeedFactor(stage)
+	return 1 + Loot.getShoesSpeedPercent({ grade = BalanceAnchorConfig.gearGrade, itemLevel = stage })
+end
+
+function BossRules.skillRangeScale(stage)
+	return math.max(1, referenceSpeedFactor(stage) / referenceSpeedFactor(BossData.stageInterval))
+end
+
+-- 배율의 상한(스테이지가 아무리 올라도 이 값) - 검사기가 최악의 경우로 쓴다.
+function BossRules.maxSkillRangeScale()
+	return BossRules.skillRangeScale(math.huge)
 end
 
 -- 파티 보스 입장 밴드(PRD 20.47 [6](라) "불가" 밴드 재사용). 멤버 전원이
@@ -97,6 +118,14 @@ function BossRules.nextRotationBossId(rotation)
 			table.insert(newOrder, id)
 		end
 		shuffleInPlace(rotationRng, newOrder)
+		-- 28-2 [1-3]: 그 직업의 순환이 처음 만들어지는 순간에 한해 기본형(견습 보스와 같은 보스)을 첫 자리에 둔다 -
+		-- 견습을 건너뛴 사람도 첫 보스에서 전조 어휘를 배운다. 두 번째 바퀴부터는 아래 기존 규칙 그대로.
+		if not rotation.order then
+			local index = table.find(newOrder, BossData.tutorialBossId)
+			if index then
+				newOrder[1], newOrder[index] = newOrder[index], newOrder[1]
+			end
+		end
 		if previousLast and newOrder[1] == previousLast and #newOrder > 1 then
 			local swapWith = rotationRng:NextInteger(2, #newOrder)
 			newOrder[1], newOrder[swapWith] = newOrder[swapWith], newOrder[1]
@@ -121,29 +150,6 @@ end
 function BossRules.getBossStageBelow(targetStage)
 	local n = BossData.stageInterval
 	return n * math.floor((targetStage - 1) / n)
-end
-
--- 그 스테이지의 보스 풀 - minStage가 stage 이하인 것 중 가장 큰(가장 최근) 항목.
-local function findPool(stage)
-	local best = nil
-	for _, pool in ipairs(BossData.pools) do
-		if pool.minStage <= stage and (not best or pool.minStage > best.minStage) then
-			best = pool
-		end
-	end
-	return best
-end
-
--- 풀 안에서 랜덤 하나(PRD 20.8-6 "구간별 보스 풀 + 풀 안에서 랜덤"). 지금은 풀마다
--- 종이 하나뿐이라 사실상 결정적이지만, 풀에 종이 늘어나도 호출부(BossEncounter)는
--- 안 바뀐다.
-function BossRules.pickBossId(stage)
-	local pool = findPool(stage)
-	if not pool or #pool.bossIds == 0 then
-		return nil
-	end
-	local index = bossPickRng:NextInteger(1, #pool.bossIds)
-	return pool.bossIds[index]
 end
 
 -- 이 스테이지의 보스 인스턴스 데이터를 한 번만 계산해서 돌려준다(MonsterSpawner.spawn이
@@ -173,23 +179,20 @@ end
 -- hpScale은 TutorialData.steps[n].bossHpScale(대여 무기 배율은 이 함수 밖에서 곱한다 -
 -- patternKeys 필터와 함께 결과 테이블만 조정하면 되므로 buildInstanceDataFrom을 그대로 쓴다).
 function BossRules.buildTutorialInstanceData(tierIndex, stage, patternKeys, hpScale, weaponMultiplier)
-	local bossId = BossRules.pickBossId(BossData.stageInterval) -- 견습은 스테이지 구간과 무관 - 유일한 풀(pools[1])을 그대로 쓴다.
-	if not bossId then
-		return nil
-	end
-	local boss = BossData.bosses[bossId]
+	-- 29-2(28-2 [1-3]): 견습 보스는 기본형 고정이다 - 견습의 스킬 부분집합(patternKeys)은 5스킬 보스에만 뜻이 있다.
+	local boss = BossData.bosses[BossData.tutorialBossId]
 	local tierBase = MonsterData[MonsterData.tierOrder[tierIndex]] or MonsterData.tier1
 
 	local data = BossRules.buildInstanceDataFrom(tierBase, stage, boss, tierIndex, hpScale * weaponMultiplier, nil)
 	data.isTutorial = true
 
-	-- 패턴 부분집합(21-3 상태 머신이 없는 키를 만나면 안 되므로 BossPatterns.lua도 방어
-	-- 처리를 같이 갖췄다 - 그쪽 주석 참고). heavy는 항상 포함(보스 데이터 자체의 상시 동작).
-	local filteredPatterns = {}
+	-- 스킬 부분집합 - heavy는 항상 포함(15-1부터 이 보스의 상시 동작), 나머지는 견습 단계가 여는 만큼.
+	-- 시계는 data.skills에 있는 스킬에만 생긴다(BossScheduler.newState) - 순서(skillOrder)는 그대로 둬도 된다.
+	local filteredSkills = { heavy = data.skills.heavy }
 	for _, key in ipairs(patternKeys) do
-		filteredPatterns[key] = boss.patterns[key]
+		filteredSkills[key] = data.skills[key]
 	end
-	data.patterns = filteredPatterns
+	data.skills = filteredSkills
 
 	return data
 end
@@ -223,11 +226,6 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		partySize = partySize or 1,
 		partyHpMultiplier = BossRules.partySizeHpMultiplier(partySize),
 		attack = attack,
-		-- 21-3: heavyAttack(=attack×3) 필드는 없앴다 - 배율은 공격력이 아니라 감소식을 거친
-		-- 피해에 곱한다(PlayerDamage.applyHit의 damageMultiplier, 이유는 그쪽 주석).
-		heavyAttackMultiplier = boss.heavyAttackMultiplier,
-		heavyAttackIntervalSeconds = boss.heavyAttackIntervalSeconds,
-		telegraphWarmupSeconds = boss.telegraphWarmupSeconds,
 		telegraphColor = boss.telegraphColor,
 
 		goldDrop = math.floor(trashGold * boss.goldMultiplier),
@@ -242,19 +240,21 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		-- 똑같은 모양으로 보인다(BossData.bosses[id]에는 있어도 인스턴스 테이블로 안 넘어옴).
 		bodyAspect = boss.bodyAspect,
 		attachments = boss.attachments,
-		primaryPattern = boss.primaryPattern,
 		moveSpeedStuds = boss.moveSpeedStuds,
-		attackRangeStuds = boss.attackRangeStuds,
-		attackCooldownSeconds = boss.attackCooldownSeconds,
 		chaseStopDistanceStuds = boss.chaseStopDistanceStuds,
+		-- 29-2 기본 공격의 개성(주기·피해 배율·사거리). 배율은 공격력이 아니라 감소식을 거친 피해에 곱한다
+		-- (21-3 - 공격력에 곱하면 감소식이 비선형이라 앵커가 어긋난다). MonsterAI가 읽는다.
+		attackRangeStuds = boss.basicAttack.rangeStuds,
+		attackCooldownSeconds = boss.basicAttack.cooldownSeconds,
+		basicAttackDamageMultiplier = boss.basicAttack.damageMultiplier,
 
-		-- 21-3 패턴 상수(BossPatterns.lua가 읽는다). 원본 테이블을 그대로 가리킨다 - 읽기
-		-- 전용이라 공유해도 안전하다(BossData는 절대 런타임에 고치지 않는다).
-		patterns = boss.patterns,
-		patternMinGapSeconds = boss.patternMinGapSeconds,
-		enragedHpFraction = boss.enragedHpFraction,
-		enragedPatternMinGapSeconds = boss.enragedPatternMinGapSeconds,
-		entryGraceSeconds = boss.entryGraceSeconds,
+		-- 29-2 스킬표(BossPatterns.lua가 읽는다). 범위 배율이 1이면 원본 테이블을 그대로 가리키고(읽기 전용이라
+		-- 공유해도 안전하다 - BossData는 절대 런타임에 고치지 않는다), 아니면 넓힌 사본이다.
+		skills = BossSkillMath.scaleSkills(boss.skills, BossRules.skillRangeScale(stage)),
+		skillOrder = boss.skillOrder,
+		scheduler = boss.scheduler,
+		skillRangeScale = BossRules.skillRangeScale(stage),
+		arenaKit = boss.arenaKit,
 		-- 29-1: 보스별 잡힘·구출 종류(BossData SPECIES_MECHANICS, 구간 수호자는 nil).
 		mechanics = boss.mechanics,
 	}

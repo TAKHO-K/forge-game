@@ -42,6 +42,8 @@ local PartyState = require(script.Parent.PartyState)
 -- 29-1(PRD 20.73 [2-8] A-2): 보스전이 끝나거나 리셋되면 잡힌 멤버를 푼다. 조준 대상은 안 잡힌 사람 우선.
 local BossTrap = require(script.Parent.BossTrap)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
+-- 29-2: 보스별 정적 지형지물 kit - 보스전이 시작될 때 짓고 끝날 때 치운다(슬롯은 보스 종과 무관하게 재사용된다).
+local BossArenaKit = require(script.Parent.BossArenaKit)
 
 local BossEncounter = {}
 
@@ -328,7 +330,8 @@ local function spawnEncounter(data, stage, members, party, size, rotationOwner, 
 		encounterOf[member] = encounter
 	end
 	encounterByModel[model] = encounter
-	BossPatterns.setGrace(model, data, data.entryGraceSeconds) -- 입장 2초 유예(20.44 [3](다))
+	encounter.kitParts = BossArenaKit.build(data.arenaKit, zone, ARENA_FLOOR_TOP_Y)
+	BossPatterns.setGrace(model, data, data.scheduler.entryGraceSeconds) -- 입장 2초 유예(20.44 [3](다))
 	-- 29-1: 힌트 단계 - 같은 보스에게 이번 세션에 전멸한 적이 있으면 그 단계로 시작한다.
 	encounter.hintOwner = hintOwnerOf(encounter)
 	if not encounter.isTutorial then
@@ -481,6 +484,8 @@ local function endEncounter(encounter, destroyModel)
 		MonsterState.clear(encounter.model)
 		encounter.model:Destroy()
 	end
+	BossArenaKit.destroy(encounter.kitParts) -- 29-2: 다음 보스가 같은 슬롯을 깨끗한 아레나로 받는다
+	encounter.kitParts = nil
 	releaseSlot(encounter.slot)
 	encounter.slot = nil
 	fireListeners(endedListeners, encounter)
@@ -617,7 +622,7 @@ Players.PlayerAdded:Connect(function(player)
 		if BossEncounter.livingMemberCount(encounter) <= 1 then
 			local data = MonsterState.getData(encounter.model)
 			if data then
-				BossPatterns.setGrace(encounter.model, data, data.entryGraceSeconds)
+				BossPatterns.setGrace(encounter.model, data, data.scheduler.entryGraceSeconds)
 			end
 		end
 	end)

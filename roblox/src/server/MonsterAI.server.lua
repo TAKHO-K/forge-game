@@ -223,8 +223,10 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	MonsterState.setLastAttackTick(model, now)
 
 	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage로 맞는다(TutorialState.getMonsterStage).
+	-- 29-2: 보스는 기본 공격의 피해 배율(data.basicAttackDamageMultiplier - 느린 보스는 한 방이 크고 빠른 보스는
+	-- 가볍다, 주기 × 배율은 6종이 같다)을 감소식을 거친 피해에 곱한다. 잡몹은 nil이라 기존과 같다.
 	local targetStage = TutorialState.getMonsterStage(targetPlayer)
-	applyHitToPlayer(targetPlayer, MonsterState.getAttackFor(model, targetStage))
+	applyHitToPlayer(targetPlayer, MonsterState.getAttackFor(model, targetStage), nil, data.basicAttackDamageMultiplier)
 end
 
 -- 보스 전용(15-1 → 21-3에서 BossPatterns.lua로 일반화). 패턴(강공격·진동파·낙석·돌진·
@@ -281,7 +283,7 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
 					local aggroStage = TutorialState.getMonsterStage(player)
-					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player))
+					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player) * (data.basicAttackDamageMultiplier or 1))
 					if data.isBoss then
 						BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)
 					end
@@ -301,7 +303,7 @@ RunService.Heartbeat:Connect(function(dt)
 						end
 						target = nearest
 						MonsterState.setAiTarget(model, nearest)
-						nearest:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, TutorialState.getMonsterStage(nearest)), nearest))
+						nearest:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, TutorialState.getMonsterStage(nearest)), nearest) * (data.basicAttackDamageMultiplier or 1))
 					end
 				end
 				local targetCharacter = target and target.Character

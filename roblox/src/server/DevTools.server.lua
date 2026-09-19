@@ -45,6 +45,8 @@ local BossMechanics = require(script.Parent.BossMechanics)
 local BossTrap = require(script.Parent.BossTrap)
 local BossSim = require(ReplicatedStorage.Shared.BossSim)
 local BossMechanicsVerify = require(script.Parent.BossMechanicsVerify)
+-- 29-2 쿨타임·우선순위 구동 + 보스별 스킬표 자동 검증.
+local BossSkillVerify = require(script.Parent.BossSkillVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -988,7 +990,8 @@ local HELP_TEXT = table.concat({
 	"/gg boss force <id> - 다음 보스 순환 뽑기를 강제 지정(1회용, 23-5)",
 	"/gg boss trap [플레이어] - 잡힘 상태 강제(다시 치면 해제, 생략 시 자신, 29-1)",
 	"/gg boss gate <on|off> - 지금 보스의 파훼 게이트(받는 피해 x0.487) 토글(29-1)",
-	"/gg boss sim <bossId> <인원> <break|failfirst|nobreak> - 처치 시간 모형(29-1)",
+	"/gg boss sim <bossId> <인원> <break|failfirst|nobreak> [live] - 처치 시간 모형(29-2: 기본은 설계 기믹 포함, live면 지금 켜진 스킬만)",
+	"/gg boss check <bossId> - 그 보스 스킬표의 회피 부등식·인접 피해 합 검사(29-2)",
 	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
 	"/gg bossinfo - 지금 보스 인스턴스의 주력 패턴·패턴별 간격·변형 필드·실루엣을 콘솔에 출력(23-6 검증용)",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
@@ -1173,25 +1176,46 @@ local function handleCommand(player, args)
 			reply(player, ("파훼 게이트 %s - 보스가 받는 피해 x%.3f"):format(args[3], MonsterState.getDamageTakenMultiplier(model)))
 		end
 	elseif sub == "boss" and args[2] == "sim" and args[3] then
-		-- 29-1(PRD 20.73 [3]): 처치 시간 모형. /gg boss sim <bossId> <인원> <break|failfirst|nobreak>
-		-- 구간 수호자는 기믹·게이트가 없다. 나머지 5종은 현재 BossData 패턴표 + 공통 기믹 자리로 돈다.
+		-- 29-2(PRD 20.75 F-8): 처치 시간 모형. /gg boss sim <bossId> <인원> <break|failfirst|nobreak> [live]
+		-- 기본은 설계 스킬(enabled=false인 기믹)과 게이트까지 포함한 값, live를 붙이면 지금 실제로 도는 스킬만.
 		local bossId = args[3]
-		local hasGimmick = BossData.bosses[bossId] ~= nil and BossData.bosses[bossId].mechanics ~= nil
-		local patterns, boss = BossSim.patternsFor(bossId, hasGimmick)
-		if not patterns then
+		if not BossData.bosses[bossId] then
 			reply(player, "알 수 없는 보스 id: " .. tostring(bossId))
 		else
 			local partySize = math.clamp(math.floor(tonumber(args[4]) or 1), 1, PartyConfig.maxMembers)
 			local breaks = ({ ["break"] = "always", failfirst = "failFirst", nobreak = "never" })[args[5] or "break"] or "always"
-			local result = BossSim.run(patterns, boss, { partySize = partySize, gate = hasGimmick, breaks = breaks })
+			local options = { partySize = partySize, design = args[6] ~= "live", breaks = breaks }
+			local result = BossSim.run(bossId, options)
+			local mc = BossSim.monteCarlo(bossId, options, 100)
 			local counts = {}
 			for id, count in pairs(result.counts) do
 				table.insert(counts, ("%s %d"):format(id, count))
 			end
 			table.sort(counts)
-			reply(player, ("sim %s %d인 %s: 처치 %.2f초(모형 눈금), 패턴 [%s], 첫 기믹 %s초, 게이트 x%.3f"):format(
-				bossId, partySize, breaks, result.seconds, table.concat(counts, " · "),
-				result.firstGimmickAt and ("%.1f"):format(result.firstGimmickAt) or "-", BossRules.gateDamageTakenMultiplier()))
+			reply(player, ("sim %s %d인 %s%s: 결정 %.2f초 / 몬테카를로 100회 평균 %.1f초(p5 %.1f ~ p95 %.1f), 스킬 [%s], 첫 기믹 %s초, 최소 간격 %.2f초, 최악 인접 %s %.0f%%"):format(
+				bossId, partySize, breaks, options.design and "" or " live", result.seconds, mc.mean, mc.p5, mc.p95, table.concat(counts, " · "),
+				result.firstGimmickAt and ("%.1f"):format(result.firstGimmickAt) or "-", result.minGapSeconds,
+				tostring(result.worstAdjacentPair), result.worstAdjacentShare * 100))
+		end
+	elseif sub == "boss" and args[2] == "check" and args[3] then
+		-- 29-2(PRD 20.75 B·D): 스킬표를 고친 뒤 바로 돌려 보는 검사 - 회피 부등식(배율 1·최대)과 인접 피해 합.
+		local bossId = args[3]
+		if not BossData.bosses[bossId] then
+			reply(player, "알 수 없는 보스 id: " .. tostring(bossId))
+		else
+			local maxScale = BossRules.maxSkillRangeScale()
+			local rows, ok = BossSim.checkDodge(bossId, 1)
+			local wideRows, wideOk = BossSim.checkDodge(bossId, maxScale)
+			for index, row in ipairs(rows) do
+				local wide = wideRows[index]
+				print(("[DevTools]   %s %s: 거리 %.1f → %.1fstud, 필요 %.2f초(최대 배율 %.2f초) ≤ 전조 %.2f초 %s"):format(
+					row.skillId, row.label, row.distanceStuds, wide.distanceStuds, row.requiredSeconds, wide.requiredSeconds, row.availableSeconds,
+					(row.ok and wide.ok) and "O" or "X"))
+			end
+			local pairRows, violations = BossSim.checkPairs(bossId)
+			reply(player, ("check %s: 회피 부등식 %s(배율 1) · %s(배율 %.3f), 인접 쌍 %d개 중 100%% 이상 %d건(최악 %s→%s %.0f%%)"):format(
+				bossId, ok and "통과" or "실패", wideOk and "통과" or "실패", maxScale, #pairRows, violations,
+				pairRows[1].first, pairRows[1].second, pairRows[1].share * 100))
 		end
 	elseif sub == "boss" then
 		ensureBackup(player)
@@ -1485,26 +1509,28 @@ local function handleCommand(player, args)
 			reply(player, "사용법: /gg tutorial <0-7> 또는 /gg tutorial off")
 		end
 	elseif sub == "bossinfo" then
-		-- 23-6 검증 전용 - 지금 아레나의 보스 인스턴스 데이터(패턴 간격·변형 필드·실루엣)를
-		-- 콘솔에 찍는다. execute_luau가 ModuleScript require를 capability 오류로 막아
-		-- BossData를 직접 못 읽으므로, 실제로 스폰된 인스턴스에서 값을 그대로 읽는다.
+		-- 지금 아레나의 보스 인스턴스 데이터(29-2 스킬표·개성 필드·범위 배율)를 콘솔에 찍는다. execute_luau가
+		-- ModuleScript require를 막아 BossData를 직접 못 읽으므로, 실제로 스폰된 인스턴스에서 값을 그대로 읽는다.
 		local model = BossEncounter.getActive(player)
 		local d = model and MonsterState.getData(model)
 		if not d then
 			reply(player, "지금 진행 중인 보스가 없습니다")
 		else
-			reply(player, ("%s primary=%s heavyInterval=%.3f telegraph=%.3f aspect=(%.2f,%.2f,%.2f) attachments=%d"):format(
-				d.id, tostring(d.primaryPattern), d.heavyAttackIntervalSeconds, d.telegraphWarmupSeconds,
-				d.bodyAspect.X, d.bodyAspect.Y, d.bodyAspect.Z, #d.attachments))
-			reply(player, ("  shockwave interval=%.3f mul=%s layers=%s gap=%s"):format(
-				d.patterns.shockwave.intervalSeconds, tostring(d.patterns.shockwave.damageMultiplier),
-				tostring(d.patterns.shockwave.layers), tostring(d.patterns.shockwave.layerGapSeconds)))
-			reply(player, ("  charge interval=%.3f dashCount=%s frac=%s"):format(
-				d.patterns.charge.intervalSeconds, tostring(d.patterns.charge.dashCount), tostring(d.patterns.charge.damageMaxHpFraction)))
-			reply(player, ("  meteor interval=%.3f count=%s radius=%s"):format(
-				d.patterns.meteor.intervalSeconds, tostring(d.patterns.meteor.count), tostring(d.patterns.meteor.radiusStuds)))
-			reply(player, ("  cross interval=%.3f rotates=%s"):format(
-				d.patterns.cross.intervalSeconds, tostring(d.patterns.cross.rotates)))
+			reply(player, ("%s 스테이지 %d: 범위 배율 %.3f, 전역 쿨 %d초(격노 %.1f), 이동 %d, 평타 %.2f초 x%.2f 사거리 %d, 체격 %.1f aspect=(%.2f,%.2f,%.2f) 부착물 %d"):format(
+				d.id, d.stageNumber, d.skillRangeScale, d.scheduler.globalCooldownSeconds, d.scheduler.enragedGlobalCooldownSeconds,
+				d.moveSpeedStuds, d.attackCooldownSeconds, d.basicAttackDamageMultiplier, d.attackRangeStuds,
+				d.sizeScale, d.bodyAspect.X, d.bodyAspect.Y, d.bodyAspect.Z, #d.attachments))
+			local clocks = BossPatterns.debugClocks(model)
+			for _, id in ipairs(d.skillOrder) do
+				local skill = d.skills[id]
+				if skill then
+					local damage = skill.damage.kind == "maxHp" and ("최대체력 %.1f%%"):format(skill.damage.fraction * 100) or ("x%s"):format(tostring(skill.damage.multiplier))
+					reply(player, ("  %s [%s%s] 쿨 %s초 우선 %d 전조 %.2f초 %s 반경 %s%s - 다음까지 %s"):format(
+						id, skill.primitive, skill.role and ("·" .. skill.role) or "", tostring(skill.cooldownSeconds), skill.priority or 0,
+						skill.telegraphSeconds, damage, tostring(skill.radiusStuds or skill.halfWidthStuds or skill.pathHalfWidthStuds or "-"),
+						skill.enabled == false and " (설계만)" or "", clocks[id] and ("%.1f초"):format(clocks[id]) or "시계 없음"))
+				end
+			end
 		end
 	elseif sub == "bossreset" then
 		ensureBackup(player)
@@ -2754,6 +2780,8 @@ if RunService:IsStudio() then
 			for _, id in ipairs(ORDER) do
 				BossEncounter.despawnFor(player)
 				applyStage(player, BossData.stageInterval)
+				-- 29-2: 이 블록의 다섯 id는 기본형(구간 수호자)의 스킬이다 - 보스마다 스킬표가 달라졌으므로 기본형으로 고정한다.
+				PlayerProfile.forceBossRotationNext(player, BossData.tutorialBossId)
 				BossEncounter.spawnFor(player, BossData.stageInterval)
 				local model = BossEncounter.getActive(player)
 				local data = model and MonsterState.getData(model)
@@ -2889,16 +2917,25 @@ if RunService:IsStudio() then
 				total += 0.25
 				quiet = backups[player] and 0 or quiet + 0.25
 			end
-			local ok, err = pcall(BossMechanicsVerify.run, player, {
+			local env = {
 				ensureBackup = ensureBackup,
 				restore = restore,
 				applyStage = applyStage,
 				applyOptionStack = applyOptionStack,
-			})
-			if not ok then
-				warn(("[29-1] 검증 블록 에러: %s"):format(tostring(err)))
-				if backups[player] then
-					restore(player)
+			}
+			-- 29-1(뼈대 회귀) → 29-2(가: 순수 계산) → 29-2(나: 실제 서버 경로) 순서로 이어서 돈다 - 같은 플레이어·같은
+			-- 아레나를 쓰므로 겹치면 안 된다. 하나가 에러로 끊겨도 다음은 돈다.
+			for _, stage in ipairs({
+				{ "29-1", function() BossMechanicsVerify.run(player, env) end },
+				{ "29-2(가)", BossSkillVerify.runPure },
+				{ "29-2(나)", function() BossSkillVerify.runLive(player, env) end },
+			}) do
+				local ok, err = pcall(stage[2])
+				if not ok then
+					warn(("[%s] 검증 블록 에러: %s"):format(stage[1], tostring(err)))
+					if backups[player] then
+						restore(player)
+					end
 				end
 			end
 		end)

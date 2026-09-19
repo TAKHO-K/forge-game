@@ -2,10 +2,10 @@
 -- BossTrap.lua, 스케줄(priority·firstAtSeconds)과 기믹 패턴의 예고→판정 흐름은 BossPatterns.lua.
 --
 -- A-1 %최대체력 피해 문(門): 보스가 주는 방어 무시 피해는 전부 여기로 들어온다.
---   · applyMaxHpDamage - 기믹형 패턴(돌진). 값은 패턴 데이터 그대로.
---   · applyGimmickDamage - 기믹 실패. "기믹 1회 발동에서 한 사람이 받는 %피해 합 ≤
---     BossData.mechanics.gimmickFailMaxHpFraction"을 여기서 자른다 - "기믹 실패 1회로 죽지 않는다"가
---     보스별 수치가 아니라 구조로 보장된다. 누적은 onGimmickStart가 발동마다 비운다.
+--   · applyGimmickDamage - 스킬의 %최대체력 피해 전부(기믹 실패·돌진 - 29-2부터 돌진도 여기로 온다). "스킬 1회
+--     발동에서 한 사람이 받는 %피해 합 ≤ BossData.mechanics.gimmickFailMaxHpFraction"을 여기서 자른다 - "실수 한
+--     번으로 죽지 않는다"가 보스별 수치가 아니라 구조로 보장된다. 누적은 beginActivation이 발동마다 비운다.
+--   · applyMaxHpDamage - 상한 없는 날 경로(구출 "닿기"의 구출자 피해처럼 스킬 발동 밖에서 주는 %피해용).
 --   둘 다 PlayerDamage.applyMaxHpFraction을 탄다 - 받는 피해 배율(대시 50%)은 그대로 곱해지고
 --   ("방어 무관이지 감소 무관이 아니다", 21-3), 잡힌 사람은 면역이다(PlayerDamage).
 --
@@ -46,6 +46,11 @@ end
 -- window(선택) = { seconds, damageTakenMultiplier } - 파훼 직후의 기회 창(보스별 데이터).
 local function setGate(model, armed, window)
 	local st = stateOf(model)
+	if armed and not st.gateArmed then
+		st.armedSince = os.clock()
+	elseif not armed then
+		st.armedSince = nil
+	end
 	st.gateArmed = armed
 	st.windowToken += 1
 	local multiplier = 1
@@ -68,6 +73,18 @@ end
 
 function BossMechanics.isGateArmed(model)
 	return stateOf(model).gateArmed
+end
+
+-- 게이트가 이어서 서 있은 시간(초). 안 서 있으면 0 - 스킬 발동 조건 gateArmedFor가 읽는다(29-2).
+function BossMechanics.gateArmedSeconds(model)
+	local st = stateOf(model)
+	return st.armedSince and (os.clock() - st.armedSince) or 0
+end
+
+-- 스킬 하나가 시작될 때(BossPatterns.startSkill) - %최대체력 피해의 발동당 1인 누적을 비운다(29-2: 기믹뿐 아니라
+-- 돌진 같은 %최대체력 스킬도 같은 상한 아래 있다).
+function BossMechanics.beginActivation(model)
+	stateOf(model).gimmickDamage = {}
 end
 
 -- 기믹 패턴이 시작될 때(BossPatterns) - 1인 누적 %피해를 비우고, 첫 기믹이면 게이트를 세운다.

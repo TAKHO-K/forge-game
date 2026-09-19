@@ -38,7 +38,7 @@ local function bossHpScaleFor(tierIndex)
 	return BASE_TUTORIAL_BOSS_HP_SCALE / (r ^ MonsterData.fairnessExponent)
 end
 
--- 보스 패턴 부분집합(21-3 BossData.bosses.section_guardian.patterns의 부분집합, 새 보스 금지 -
+-- 보스 패턴 부분집합(BossData.bosses.section_guardian.skills의 부분집합 - 29-2부터 견습 보스는 이 보스로 고정, 새 보스 금지 -
 -- PRD 그대로 "같은 보스 id에 patterns 부분집합만 넘기는 방식"). 강공격(heavy)은 필드가 아니라
 -- BossData 자체의 상시 동작이라 목록에 없어도 항상 나온다(1단계 "강공격"이 그 뜻).
 local NO_PATTERNS = {}
