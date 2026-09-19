@@ -127,7 +127,7 @@ local function syncActiveClassAttributes(player, profile)
 
 	player:SetAttribute("WeaponLevel", classState.weapon.level)
 	player:SetAttribute("WeaponGrade", classState.weapon.grade)
-	player:SetAttribute("EnhanceGauge", classState.weapon.enhanceGauge or 0) -- 장인의 기운(28-1 S07) - 강화 UI가 접속 · 직업 전환 직후부터 읽는다
+	player:SetAttribute("EnhanceGauge", classState.weapon.enhanceGauge or 0) -- 불씨(28-1 S07) - 강화 UI가 접속 · 직업 전환 직후부터 읽는다
 	-- 환생 횟수(23-2) - 환생 UI(레벨 상한 표시)가 이 Attribute로 판정한다(25-1까지는 ExpBar의
 	-- 곡선 분기도 봤지만, 곡선이 회차 무관 하나가 되면서 그 용도는 없어졌다).
 	player:SetAttribute("RebirthCount", classState.rebirthCount)

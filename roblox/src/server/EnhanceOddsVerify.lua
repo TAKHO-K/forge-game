@@ -39,7 +39,7 @@ function EnhanceOddsVerify.runPure()
 		print(("[S07][가] %s %s"):format(label, ok and "O" or "X"))
 	end
 
-	-- 1. 0 ~ 24강 × 토글 4조합 × 기운 가득 / 아님 = 200칸: 합 1(1e-9).
+	-- 1. 0 ~ 24강 × 토글 4조합 × 불씨 가득 / 아님 = 200칸: 합 1(1e-9).
 	local cells, badSum = 0, 0
 	for level = 0, EnhanceConfig.maxLevel - 1 do
 		for _, gaugeFull in ipairs({ false, true }) do
@@ -55,7 +55,7 @@ function EnhanceOddsVerify.runPure()
 	end
 	check(("표의 합: %d칸 중 합이 1에서 어긋난 칸 %d(기대 200 · 0)"):format(cells, badSum), cells == 200 and badSum == 0)
 
-	-- 2. 토글이 쓸 수 없는 단계 · 기운 가득에서 켜도 서버가 실제로 쓰는 표와 같다: 서버는 resolveProtectionFlags로 플래그를 거른 뒤(보유는 넉넉히 5장) 그 값으로 판정한다.
+	-- 2. 토글이 쓸 수 없는 단계 · 불씨 가득에서 켜도 서버가 실제로 쓰는 표와 같다: 서버는 resolveProtectionFlags로 플래그를 거른 뒤(보유는 넉넉히 5장) 그 값으로 판정한다.
 	local mismatches, serverCells = 0, 0
 	for level = 0, EnhanceConfig.maxLevel - 1 do
 		for _, gaugeFull in ipairs({ false, true }) do
@@ -102,6 +102,16 @@ function EnhanceOddsVerify.runPure()
 		and Enhance.getWorstLevel(22) == EnhanceConfig.resetToLevel and Enhance.getWorstLevel(23) == EnhanceConfig.resetToLevel
 		and Enhance.getWorstLevel(24) == EnhanceConfig.resetToLevel and Enhance.getWorstLevel(EnhanceConfig.maxLevel) == nil
 	check(("최악의 단계: %s · 상한 nil(기대 0→0 · 10→10 · 18→18 · 19→18 · 20→18 · 21→19 · 22 ~ 24→12 · 상한 nil)"):format(table.concat(worst, " ")), okWorst)
+
+	-- 6. 표를 주면 그 표로 잰다(한 줄 안내가 방지권을 켠 표로 "최악의 경우"를 읽는다): +23 하락 방지 on = 12(초기화가 남는다) · 둘 다 on = 23(유지) · 불씨 가득 = 24 · 표를 안 주면 5번과 같다.
+	local function worstWith(level, gaugeFull, useDrop, useReset)
+		return Enhance.getWorstLevel(level, Enhance.getOutcomeTable(level, gaugeFull, useDrop, useReset))
+	end
+	local okWorstTable = worstWith(23, false, true, false) == EnhanceConfig.resetToLevel and worstWith(23, false, true, true) == 23
+		and worstWith(23, true, false, false) == 24 and worstWith(19, false, true, false) == 19 and Enhance.getWorstLevel(23) == EnhanceConfig.resetToLevel
+	check(("최악의 단계(표를 줄 때): +23 하락방지 = %s · 둘 다 = %s · 불씨 가득 = %s · +19 하락방지 = %s(기대 12 · 23 · 24 · 19)"):format(
+		tostring(worstWith(23, false, true, false)), tostring(worstWith(23, false, true, true)), tostring(worstWith(23, true, false, false)), tostring(worstWith(19, false, true, false))),
+		okWorstTable)
 
 	print(("===S07 검증 끝(가)=== %d/%d 통과"):format(passCount, totalCount))
 end

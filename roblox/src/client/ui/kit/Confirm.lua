@@ -1,5 +1,6 @@
 -- 확인창(30-0 S06, PRD 20.81 [D-3]). overlay 하나를 만들어 두고 재사용한다 - 환생 확인창 · 강화 구간 진입 · 구매가 같은 부품이다.
--- Confirm.ask({ title, body, primaryText, secondaryText, danger, parentId }, callback) : callback(true) = 주 버튼, callback(false) = 보조 버튼 · X · Backspace · 부모 패널이 닫힘.
+-- Confirm.ask({ title, body, primaryText, secondaryText, danger, parentId, primaryEnabled, reason }, callback) : callback(true) = 주 버튼, callback(false) = 보조 버튼 · X · Backspace · 부모 패널이 닫힘.
+--   primaryEnabled = false면 주 버튼이 비활성이다(눌러도 답이 안 나간다). reason = 버튼 위에 danger색으로 적는 한 줄(비활성 이유 - 주지 않으면 줄이 없다).
 --   danger = true면 주 버튼이 위험(danger) 모양이다. parentId의 패널이 닫히면 이 확인창도 같이 닫힌다(UIManager). 확인창이 떠 있는 동안 뒤의 패널 입력은 딤이 막는다.
 -- 처음 ask할 때 만든다(Theme.recompute()를 그때 다시 부르지 않는다 - 전시장이 열릴 때 부르므로 같은 값이다).
 
@@ -68,7 +69,14 @@ local function build()
 		UIManager.close(Confirm.id) -- onClose가 callback(false)를 낸다
 	end)
 
-	built = { panel = panelRefs, bodyLabel = bodyLabel, primary = primary, danger = danger, secondary = secondary }
+	local reasonLabel = Theme.label(content, "", "caption", "danger")
+	reasonLabel.Name = "Reason"
+	reasonLabel.AnchorPoint = Vector2.new(0, 1)
+	reasonLabel.Position = UDim2.new(0, PAD, 1, -(PAD + Theme.buttonHeight + 6))
+	reasonLabel.Size = UDim2.new(1, -PAD * 2, 0, Theme.textSize("caption") + 2)
+	reasonLabel.Visible = false
+
+	built = { panel = panelRefs, bodyLabel = bodyLabel, reasonLabel = reasonLabel, primary = primary, danger = danger, secondary = secondary }
 end
 
 -- 만든 확인창을 지운다(전시장이 Theme(모바일 판정)을 바꿔 다시 지을 때 쓴다).
@@ -97,6 +105,11 @@ function Confirm.ask(props, callback)
 	built.secondary.setText(props.secondaryText or "취소")
 	built.primary.root.Visible = props.danger ~= true
 	built.danger.root.Visible = props.danger == true
+	local primaryEnabled = props.primaryEnabled ~= false
+	built.primary.setEnabled(primaryEnabled)
+	built.danger.setEnabled(primaryEnabled)
+	built.reasonLabel.Text = props.reason or ""
+	built.reasonLabel.Visible = props.reason ~= nil and props.reason ~= ""
 
 	if not UIManager.open(Confirm.id, { parentId = props.parentId }) then
 		answer(false) -- 열리지 못했다(트윈 중 등) - 물음이 조용히 사라지지 않게 취소로 알린다

@@ -99,13 +99,14 @@ function Enhance.getRiskStartLevels()
 	return dropFrom, resetFrom
 end
 
--- 시도하기 전의 "최악의 경우" 단계 - 방지권 · 게이지 없이 확률이 0보다 큰 결과 중 되는 단계(getResultLevel)가 가장 낮은 것. 상한이면 nil.
-function Enhance.getWorstLevel(level)
-	local outcomes = Enhance.getOutcomeTable(level, false, false, false)
+-- 시도하기 전의 "최악의 경우" 단계 - 확률이 0보다 큰 결과 중 되는 단계(getResultLevel)가 가장 낮은 것. 상한이면 nil.
+-- outcomes(선택)를 주면 그 표(방지권 · 게이지를 반영한 getOutcomeTable 결과)로 잰다. 없으면 방지권 · 게이지 없는 표다.
+function Enhance.getWorstLevel(level, outcomes)
+	outcomes = outcomes or Enhance.getOutcomeTable(level, false, false, false)
 	if not outcomes then
 		return nil
 	end
-	local worst = level
+	local worst = math.huge -- 확률이 있는 결과만 센다 - 불씨 가득 표(성공 100%)는 유지가 없어 level이 최악이 아니다
 	for _, key in ipairs(RESULT_ORDER) do
 		if outcomes[key] > 0 then
 			worst = math.min(worst, Enhance.getResultLevel(level, key))

@@ -1,5 +1,5 @@
 -- 게이지(30-0 S06, PRD 20.81 [D-3]). 높이 3종(10 · 16 · 22) · 트랙 색 · 채움 색 · 숫자 오버레이(16 이상에서만) · 값 변화 0.15초 트윈.
--- 체력바 · 경험치바 · 장인의 기운 · 구출 막대가 같은 부품이 된다(지금 HUD는 아직 이걸 안 쓴다 - PRD [D-6] 순서).
+-- 체력바 · 경험치바 · 불씨 · 구출 막대가 같은 부품이 된다(지금 HUD는 아직 이걸 안 쓴다 - PRD [D-6] 순서).
 -- Gauge.build(props) -> refs. props = { parent, height(10|16|22), width, position, layoutOrder, trackColorName, fillColorName, value(0~1), text }.
 -- refs = { root, setValue(ratio, text), getValue() }. getValue는 트윈이 끝난 뒤의 목표값을 돌려준다.
 

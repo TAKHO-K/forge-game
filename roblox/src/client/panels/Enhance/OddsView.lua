@@ -1,4 +1,4 @@
--- 확률표 5행 + 합계 + 장인의 기운 줄(28-1 S07, PRD 20.72 [1-8]). 인스턴스 만들기(build)와 값 채우기(update)만 한다 - 값은 Controller가 준다.
+-- 확률표 5행 + 합계 + 불씨 줄 + 한 줄 안내(28-1 S07, PRD 20.72 [1-8]). 인스턴스 만들기(build)와 값 채우기(update)만 한다 - 값은 Controller가 준다.
 -- 표는 **항상 5행 고정**: 성공 · 실패 유지 · 1강 하락 · 2강 하락 · 초기화. 확률 0인 행은 "-"로 흐리게(textTertiary). 열 = 결과 · 확률 · 되는 단계(Enhance.getResultLevel).
 -- 합계는 표시값이 아니라 원값의 합으로 찍는다(반올림한 칸을 더하면 100%에서 어긋난다).
 
@@ -24,7 +24,7 @@ local RESULT_COL_WIDTH = 132
 local PROB_COL_RIGHT = 218 -- 확률 열의 오른쪽 끝 x(박스 안)
 local PROB_COL_WIDTH = 64
 local LEVEL_COL_WIDTH = 74 -- 되는 단계 열은 박스 오른쪽 끝에 붙는다
-local GAUGE_LABEL_WIDTH = 82
+local GAUGE_LABEL_WIDTH = 48
 
 -- 확률(0 ~ 1) → "4.5%" · "12%"(소수 첫째 자리까지, 끝의 ".0"은 뗀다). Controller의 확인창도 같은 표기를 쓴다.
 function OddsView.formatPercent(ratio)
@@ -36,7 +36,7 @@ local function rowHeight()
 	return Theme.textSize("caption") + 4
 end
 
--- 표 박스 + 기운 줄의 세로 크기(위에서부터 쌓는 호출부가 y를 계산하는 데 쓴다).
+-- 표 박스의 세로 크기(위에서부터 쌓는 호출부가 y를 계산하는 데 쓴다).
 function OddsView.tableHeight()
 	return rowHeight() * (#ROWS + 2) + 8
 end
@@ -44,6 +44,10 @@ end
 local GAUGE_HEIGHT = 16
 function OddsView.gaugeRowHeight()
 	return GAUGE_HEIGHT
+end
+
+function OddsView.hintHeight()
+	return (Theme.textSize("caption") + 2) * 2 -- 두 줄(문장이 안쪽 폭 한 줄에 안 들어간다)
 end
 
 local function cell(parent, name, xAlign, x, width, y, height, colorName)
@@ -120,10 +124,10 @@ function OddsView.updateTable(refs, level, outcomes)
 	refs.sumProb.Text = outcomes and OddsView.formatPercent(sum) or "-"
 end
 
--- 장인의 기운 줄: 왼쪽 이름 + Gauge(높이 16, 안에 "54% (실패 시 +6%)"). 반환 refs = { gauge }.
+-- 불씨 줄: 왼쪽 이름 + Gauge(높이 16, 안에 "54% (실패 시 +6%)"). 반환 refs = { gauge }.
 function OddsView.buildGaugeRow(parent, x, y, width)
 	local label = cell(parent, "GaugeLabel", Enum.TextXAlignment.Left, x, GAUGE_LABEL_WIDTH, y, GAUGE_HEIGHT, "textSecondary")
-	label.Text = "장인의 기운"
+	label.Text = "불씨"
 	local gauge = Gauge.build({
 		parent = parent,
 		name = "MasteryGauge",
@@ -148,6 +152,19 @@ function OddsView.updateGaugeRow(refs, state)
 		text = ("%s (실패 시 +%s)"):format(OddsView.formatPercent(ratio), OddsView.formatPercent(state.gaugeGain / state.gaugeMax))
 	end
 	refs.gauge.setValue(ratio, text)
+end
+
+-- 한 줄 안내("최악의 경우 …")의 라벨. 반환: label.
+function OddsView.buildHint(parent, x, y, width)
+	local label = cell(parent, "WorstHint", Enum.TextXAlignment.Left, x, width, y, OddsView.hintHeight(), "textSecondary")
+	label.TextWrapped = true
+	label.TextYAlignment = Enum.TextYAlignment.Top
+	return label
+end
+
+-- 최악의 단계는 화면에 보이는 표(방지권 토글을 반영한 표)에서 온다(Controller가 worstLevel로 준다). 상한이면 비운다.
+function OddsView.updateHint(label, state)
+	label.Text = state.worstLevel and ("최악의 경우: +%d강 · 방지권은 실제로 막았을 때만 1장 사라집니다"):format(state.worstLevel) or ""
 end
 
 return OddsView
