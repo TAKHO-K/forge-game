@@ -1,4 +1,5 @@
 -- 강화 계수표·확률표. 웹 v1(data/enhance.js)에서 확정된 수치를 그대로 옮긴다 - 새로 만들지
+-- (28-1 S03: 확률표의 실패 내용 · 골드표 · 천장은 PRD 20.72 [1]의 새 규칙으로 교체했다 - 아래 각 항목 주석 참고. 성공률 · 계수표 · 최대 단계는 그대로.)
 -- 않는다(10-2 지시). 인덱스는 로블록스(Lua) 1부터 시작하므로 "강화 단계 N에서의 값"은
 -- 이 테이블의 [N+1]번째 항목이다(N=0이 +0강, 즉 미강화 상태).
 --
@@ -14,35 +15,47 @@
 return {
 	maxLevel = 25,
 
-	-- 실패는 4종(형상유지/-1강/-2강/리셋) + 성공, 합계는 항상 1.0. 파괴(소멸)는 웹에도
-	-- 없었다 - 항목 자체가 없다.
+	-- 28-1(S03, PRD 20.72 [1-2]) 하락 · 초기화 규칙. 시도하는 순간의 단계로 읽는다 - 결과는 5종(success / maintain / down1 / down2 /
+	-- reset)이고 파괴(소멸)는 없다. 성공률은 옛 표 그대로(92 / 78 / 62 / 48 / 38 / 28 / 18 / 12%)이고 바뀐 것은 실패의 내용뿐이다:
+	-- 0 ~ 18강은 하락이 없다(옛 실패 확률 전체가 maintain), 19 ~ 21강은 하락(바닥 downFloorLevel), 22 ~ 24강은 하락 + 초기화(resetToLevel).
+	-- 한 행의 합은 항상 1 - Enhance 모듈이 로드될 때 25행 전부를 검사한다(어긋나면 서버 시작 시 에러).
 	probability = {
-		{ success = 0.92, maintain = 0.08, down1 = 0,    down2 = 0,    reset = 0 },    -- +0
-		{ success = 0.92, maintain = 0.08, down1 = 0,    down2 = 0,    reset = 0 },    -- +1
-		{ success = 0.92, maintain = 0.08, down1 = 0,    down2 = 0,    reset = 0 },    -- +2
-		{ success = 0.92, maintain = 0.08, down1 = 0,    down2 = 0,    reset = 0 },    -- +3
-		{ success = 0.92, maintain = 0.08, down1 = 0,    down2 = 0,    reset = 0 },    -- +4
-		{ success = 0.78, maintain = 0.12, down1 = 0.10, down2 = 0,    reset = 0 },    -- +5
-		{ success = 0.78, maintain = 0.12, down1 = 0.10, down2 = 0,    reset = 0 },    -- +6
-		{ success = 0.78, maintain = 0.12, down1 = 0.10, down2 = 0,    reset = 0 },    -- +7
-		{ success = 0.62, maintain = 0.13, down1 = 0.25, down2 = 0,    reset = 0 },    -- +8
-		{ success = 0.62, maintain = 0.13, down1 = 0.25, down2 = 0,    reset = 0 },    -- +9
-		{ success = 0.62, maintain = 0.13, down1 = 0.25, down2 = 0,    reset = 0 },    -- +10
-		{ success = 0.48, maintain = 0.12, down1 = 0.30, down2 = 0.10, reset = 0 },    -- +11
-		{ success = 0.48, maintain = 0.12, down1 = 0.30, down2 = 0.10, reset = 0 },    -- +12
-		{ success = 0.48, maintain = 0.12, down1 = 0.30, down2 = 0.10, reset = 0 },    -- +13
-		{ success = 0.38, maintain = 0.12, down1 = 0.32, down2 = 0.17, reset = 0.01 }, -- +14
-		{ success = 0.38, maintain = 0.12, down1 = 0.32, down2 = 0.17, reset = 0.01 }, -- +15
-		{ success = 0.38, maintain = 0.12, down1 = 0.32, down2 = 0.17, reset = 0.01 }, -- +16
-		{ success = 0.28, maintain = 0.10, down1 = 0.35, down2 = 0.26, reset = 0.01 }, -- +17
-		{ success = 0.28, maintain = 0.10, down1 = 0.35, down2 = 0.26, reset = 0.01 }, -- +18
-		{ success = 0.28, maintain = 0.10, down1 = 0.35, down2 = 0.26, reset = 0.01 }, -- +19
-		{ success = 0.18, maintain = 0.08, down1 = 0.38, down2 = 0.34, reset = 0.02 }, -- +20
-		{ success = 0.18, maintain = 0.08, down1 = 0.38, down2 = 0.34, reset = 0.02 }, -- +21
-		{ success = 0.18, maintain = 0.08, down1 = 0.38, down2 = 0.34, reset = 0.02 }, -- +22
-		{ success = 0.12, maintain = 0.05, down1 = 0.38, down2 = 0.42, reset = 0.03 }, -- +23
-		{ success = 0.12, maintain = 0.05, down1 = 0.38, down2 = 0.42, reset = 0.03 }, -- +24
+		{ success = 0.92, maintain = 0.08, down1 = 0, down2 = 0, reset = 0 }, -- +0
+		{ success = 0.92, maintain = 0.08, down1 = 0, down2 = 0, reset = 0 }, -- +1
+		{ success = 0.92, maintain = 0.08, down1 = 0, down2 = 0, reset = 0 }, -- +2
+		{ success = 0.92, maintain = 0.08, down1 = 0, down2 = 0, reset = 0 }, -- +3
+		{ success = 0.92, maintain = 0.08, down1 = 0, down2 = 0, reset = 0 }, -- +4
+		{ success = 0.78, maintain = 0.22, down1 = 0, down2 = 0, reset = 0 }, -- +5
+		{ success = 0.78, maintain = 0.22, down1 = 0, down2 = 0, reset = 0 }, -- +6
+		{ success = 0.78, maintain = 0.22, down1 = 0, down2 = 0, reset = 0 }, -- +7
+		{ success = 0.62, maintain = 0.38, down1 = 0, down2 = 0, reset = 0 }, -- +8
+		{ success = 0.62, maintain = 0.38, down1 = 0, down2 = 0, reset = 0 }, -- +9
+		{ success = 0.62, maintain = 0.38, down1 = 0, down2 = 0, reset = 0 }, -- +10
+		{ success = 0.48, maintain = 0.52, down1 = 0, down2 = 0, reset = 0 }, -- +11
+		{ success = 0.48, maintain = 0.52, down1 = 0, down2 = 0, reset = 0 }, -- +12
+		{ success = 0.48, maintain = 0.52, down1 = 0, down2 = 0, reset = 0 }, -- +13
+		{ success = 0.38, maintain = 0.62, down1 = 0, down2 = 0, reset = 0 }, -- +14
+		{ success = 0.38, maintain = 0.62, down1 = 0, down2 = 0, reset = 0 }, -- +15
+		{ success = 0.38, maintain = 0.62, down1 = 0, down2 = 0, reset = 0 }, -- +16
+		{ success = 0.28, maintain = 0.72, down1 = 0, down2 = 0, reset = 0 }, -- +17
+		{ success = 0.28, maintain = 0.72, down1 = 0, down2 = 0, reset = 0 }, -- +18
+		{ success = 0.28, maintain = 0.58, down1 = 0.14, down2 = 0, reset = 0 }, -- +19
+		{ success = 0.18, maintain = 0.775, down1 = 0, down2 = 0.045, reset = 0 }, -- +20
+		{ success = 0.18, maintain = 0.775, down1 = 0, down2 = 0.045, reset = 0 }, -- +21
+		{ success = 0.18, maintain = 0.72, down1 = 0.06, down2 = 0.03, reset = 0.01 }, -- +22
+		{ success = 0.12, maintain = 0.81, down1 = 0.04, down2 = 0.02, reset = 0.01 }, -- +23
+		{ success = 0.12, maintain = 0.81, down1 = 0.04, down2 = 0.02, reset = 0.01 }, -- +24
 	},
+
+	-- 하락은 어디서 시작해도 이 단계에서 멈춘다(19 → 18 · 20 → 18 · 21 → 19 · 22 → 21/20). 18강 이하는 하락이 없는 구간이라 더 내려갈 곳이 없다.
+	downFloorLevel = 18,
+	-- 초기화(reset)가 보내는 단계 - 옛 규칙의 "1강"이 아니다.
+	resetToLevel = 12,
+
+	-- 천장("장인의 기운", PRD 20.72 [1-6] 3번). 모든 실패(유지 · 하락 · 초기화)가 게이지를 채운다: 실패 1회당
+	-- += round(시도한 단계의 성공률 × gainPerSuccessRate)(천분율 정수, weapon.enhanceGauge에 저장). 게이지 ≥ max면 다음 시도는 성공 100%,
+	-- 성공하면 0으로. 하락 · 초기화로 단계가 바뀌어도 게이지는 유지된다. 성공률 p에서 ceil(2 / p)번 실패하면 확정이다("기대 시도 수의 2배").
+	gauge = { max = 1000, gainPerSuccessRate = 500},
 
 	-- 강화 단계별 데미지 계수(누적, 6.1). 최종 배율 = 1 + damageCoefficient[level+1].
 	damageCoefficient = {
@@ -54,12 +67,15 @@ return {
 		9.10, 10.70, 12.30, 13.90, 15.50,  -- +21~+25
 	},
 
-	-- 강화 시도 1회 골드 비용(6.2-2, 골드만). index는 "시도 전 현재 강화 단계+1".
+	-- 강화 시도 1회 골드 비용(28-1 S03, PRD 20.72 [1-5](가) - 골드만, 19강 이상의 강화석은 S04). index는 "시도 전 현재 강화 단계+1".
+	-- 하락이 없어지면 같은 성공률로도 기대 비용이 크게 줄어서(18 → 19: 390회 → 3.4회), 곡선을 안 흔들려고 "단계별 기대 골드"를 보존하도록
+	-- 시도 1회의 골드를 올렸다: 새 비용 = 유효숫자 3자리 반올림(옛 구조의 L → L+1 기대 골드 ÷ 천장 포함 기대 시도 수). 0 → 19강의 누적 기대
+	-- 골드는 옛 498,841 / 새 498,822이고 기대 시도 수는 679회 → 34.6회다. 19강 이상은 같은 식을 연장한 값이다.
 	goldCost = {
-		10, 20, 30, 40, 50,               -- +0~+4 -> +1~+5
-		100, 150, 200, 250, 300,          -- +5~+9 -> +6~+10
-		400, 500, 700, 850, 1000,         -- +10~+14 -> +11~+15
-		1500, 2000, 2600, 3300, 4100,     -- +15~+19 -> +16~+20
-		5000, 6500, 8500, 11000, 14000,   -- +20~+24 -> +21~+25
+		10, 20, 30, 40, 50,   -- +0~+4 -> +1~+5
+		106, 164, 221, 323, 433,   -- +5~+9 -> +6~+10
+		578, 958, 1610, 2410, 4250,   -- +10~+14 -> +11~+15
+		8140, 14900, 33700, 89300, 235000,   -- +15~+19 -> +16~+20
+		766000, 3480000, 15900000, 84200000, 624000000,   -- +20~+24 -> +21~+25
 	},
 }

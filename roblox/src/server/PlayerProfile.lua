@@ -247,6 +247,19 @@ function PlayerProfile.getWeapon(player)
 	return classState and classState.weapon
 end
 
+-- 강화 천장 게이지(28-1 S03) - 지금 직업의 무기에 딸린 0 ~ EnhanceConfig.gauge.max 정수. 서버만 쓴다(EnhanceService의 강화 판정 직후).
+function PlayerProfile.getEnhanceGauge(player)
+	local weapon = PlayerProfile.getWeapon(player)
+	return weapon and weapon.enhanceGauge or 0
+end
+
+function PlayerProfile.setEnhanceGauge(player, value)
+	local weapon = PlayerProfile.getWeapon(player)
+	if weapon then
+		weapon.enhanceGauge = value
+	end
+end
+
 -- 서버만 호출한다(EnhanceServer의 강화 판정 직후). 클라이언트가 보낸 값을 믿지 않는다.
 function PlayerProfile.setWeaponLevel(player, level)
 	local profile = profiles[player]

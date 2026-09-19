@@ -13,6 +13,8 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 -- 26-1 옵션 통합 이관(v22->v23)·isValidProfile 검사용.
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+-- 28-1 S03: 강화 천장 게이지(weapon.enhanceGauge)의 상한 검사용(v24->v25 · isValidProfile).
+local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 
 local SaveSystem = {}
 
@@ -32,6 +34,8 @@ local function defaultWeapon()
 		id = WeaponData.starterId,
 		level = 0,
 		grade = 0,
+		-- 강화 천장 게이지(28-1 S03, PRD 20.72 [1-6] 3번) - 0 ~ EnhanceConfig.gauge.max의 정수(천분율). 모든 강화 실패가 채우고 성공하면 0이 된다.
+		enhanceGauge = 0,
 		gems = { false, false, false, false, false },
 		slotUnlocked = { false, false, false, false, false },
 	}
@@ -226,7 +230,8 @@ end
 -- 장비창 위치 저장 필드 inventoryWindowPosition 신설, 23-5) -> 22(캐릭터 레벨 곡선을 목표
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
 -- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
--- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02).
+-- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
+-- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -679,6 +684,15 @@ local function migrate(data)
 		data.version = 24
 	end
 
+	if data.version < 25 then
+		-- 30-0 S03(PRD 20.72 [1-7]): 강화 천장 게이지 신설. v24까지 이 개념 자체가 없었다 - 0(게이지 비어 있음)이 정확한 과거 상태다.
+		-- 강화 단계(weapon.level)는 건드리지 않는다(이미 20강 이상인 무기는 그 단계에서 새 규칙을 다음 시도부터 적용받는다 - 소급 없음).
+		for _, classState in pairs(data.classes) do
+			classState.weapon.enhanceGauge = classState.weapon.enhanceGauge or 0
+		end
+		data.version = 25
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -729,6 +743,10 @@ local function isValidProfile(data)
 			or type(classState.weapon) ~= "table"
 			or type(classState.weapon.level) ~= "number"
 			or type(classState.weapon.grade) ~= "number"
+			or type(classState.weapon.enhanceGauge) ~= "number"
+			or classState.weapon.enhanceGauge % 1 ~= 0
+			or classState.weapon.enhanceGauge < 0
+			or classState.weapon.enhanceGauge > EnhanceConfig.gauge.max
 			or type(classState.weapon.gems) ~= "table"
 			or type(classState.weapon.slotUnlocked) ~= "table"
 			or type(classState.equipment) ~= "table"

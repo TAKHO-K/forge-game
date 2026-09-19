@@ -54,6 +54,8 @@ local BossGimmick5Verify = require(script.Parent.BossGimmick5Verify)
 local LootRuleVerify = require(script.Parent.LootRuleVerify)
 -- 30-0 S02 v23 -> v24 이관(부풀려진 itemLevel 절단) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(읽기 전용).
 local ItemLevelMigrateVerify = require(script.Parent.ItemLevelMigrateVerify)
+-- 30-0 S03 강화 확률표 · 골드표 · 천장 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(실제 EnhanceRequest 핸들러 경로).
+local EnhanceVerify = require(script.Parent.EnhanceVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -2931,6 +2933,7 @@ if RunService:IsStudio() then
 				{ "29-5(나)", function() BossGimmick5Verify.runLive(player, env) end },
 				{ "S01(나)", function() LootRuleVerify.runLive(player, env) end },
 				{ "S02(나)", function() ItemLevelMigrateVerify.runLive(player) end },
+				{ "S03(나)", function() EnhanceVerify.runLive(player, env) end },
 			}) do
 				local ok, err = pcall(stage[2])
 				if not ok then
@@ -2967,6 +2970,17 @@ if RunService:IsStudio() then
 		local ok, err = pcall(ItemLevelMigrateVerify.runPure)
 		if not ok then
 			warn(("[S02(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S03 자동 검증 블록(가) - 강화 확률표 · 골드표 · 천장(PRD 20.84) ═══
+-- 순수 함수 + 합성 프로필(플레이어 불필요). 분포 표본이 커서(25단계 × 20만 회) 단계마다 task.wait로 양보한다. (나)는 위 29-1 체인의 끝.
+if RunService:IsStudio() then
+	task.spawn(function()
+		local ok, err = pcall(EnhanceVerify.runPure)
+		if not ok then
+			warn(("[S03(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end
