@@ -15793,3 +15793,83 @@ UI 확인의 클릭 1회는 **실제 강화**라 개발 계정의 무기가 **+1
 **변경 파일**: `shared/data/DevToolsConfig.lua` · `SaveConfig.lua` · `server/DevTools.server.lua` · `SaveSystem.lua` · `PlayerProfile.lua` · `LootRuleVerify.lua`(헬퍼 2개 노출) · **새** `server/SaveKeyVerify.lua` · `docs/sonnet/COMMON.md` + 세션 파일 21개(`_build.py`). 커밋 `eb8c943` · `7fb6a8f`.
 
 **임의 결정**: ① 검증 블록 id를 기존 라벨(`"29-3(나)"` · `"S05(가)"`)과 같게 했다(체인 표의 첫 칸이 그대로 id). ② 새 블록 id는 `S05b`(S05 후속). ③ `COMMON.md` §5 3번의 "8 ~ 9분 기다린다"를 로그 폴링으로 바꿨다(스위치가 시간을 바꿔 옛 문구가 맞지 않고, 메모리에 있는 사용자의 "9분은 길다" 지적과도 같다). ④ 프로브 스테이지 15 · 견습 4단계는 개발 계정의 실제 기록과 안 겹치는 값으로 골랐다.
+
+### 20.88 S06 GUI 공통 틀: kit · UIManager 종류 확장 · ScreenMap · 겹침 검사 (S06) `[✅ 구현 + 로컬 검사(luau-compile 30개 파일 · 정적 표) + Studio Play 4회(2026-09-20): 규칙 검사 16/16(PC · 모바일 판정 각각) · 실제 키 · 클릭 검증 통과 · 회귀 전체(3분 55초) 블록별 이전과 같거나 더 좋음 · 스크립트 에러 0. 합격 기준 3번(겹침 · 중앙 침범)은 창 높이에 따라 △ - 미결 3건]`
+
+**틀만 만들었다. 기존 HUD · 창은 하나도 안 옮겼다**(`InventoryUI`는 단축키 한 줄이 `PanelRegistry` 표로 옮겨간 것뿐이다). 설계 출처는 20.81 [D] 전체.
+
+#### [1] 만든 것 · 바뀐 것
+
+| 종류 | 파일 | 내용 |
+|---|---|---|
+| kit(11) | `client/ui/kit/Theme` · `Button` · `Toggle` · `Tabs` · `ListRow` · `Gauge` · `Toast` · `HelpToggle` · `Badge` · `Confirm` · `Panel` | 전부 `build(props) → refs` · 고정 크기 · `AutomaticSize` 0 · 색 · 글씨는 `Theme` 경유. `Theme.text` 5단(모바일 ×1.15 → 23 · 18 · 16 · 14 · 21) · `Theme.isMobile` 판정은 이 파일 한 곳 |
+| 지도 | `client/ui/ScreenMap.lua` | 구역 10개 + 슬롯 표(**현재 HUD 좌표를 코드에서 그대로**: 칩 스택 · 토스트 6종 + 레벨업 · 파티 목록 · 투표 패널 · 스킬 줄 · 체력바 · 콤보 점 · 버프 줄 · 아이템 획득 · 경험치바) + 새 슬롯(`TR.dropFeed`(1, −14, 0, 96) 300 × 78 · `ML.menuBar`(0, 0.5) x 14 · 토스트 줄 3개) + 모바일 예약(BL · BR) + C 구역 40% × 50% |
+| 단축키 | `client/ui/PanelRegistry.lua` | `{ id, kind, hotkey, menuOrder, iconKey }` 표(지금 가방 I 한 줄) · 금지 키 표(W A S D Q E F Space Shift X Backspace Tab Esc + 숫자열) - 등록하면 `error` |
+| 관리자 | `client/UIManager.lua`(그 자리에서 확장) | `kind` window(기본) · station · overlay 규칙 · DisplayOrder 대역 표(station 10 ~ 19 · window 100 ~ 149 · overlay 200 ~ 249) · overlay `parentId` 종속 · `setBossFight` · `unregister` · `getKind` · `getStack` · `open`이 열렸는지 반환 |
+| 검사 | `client/ui/UiSelfCheck.client.lua` | Studio 전용 · 접속 8초 뒤 보이는 슬롯 겹침 쌍 · C 구역 침범 · (참고) 새 슬롯이 지금 HUD와 겹치는지 |
+| 전시장 | `client/panels/UiGallery/`(`init` · `Sections` · `RuleCheck`) + `client/ui/UiGalleryBoot.client.lua` | `/gg ui gallery`(부품 전부) · `/gg ui check`(규칙 자가 검사 16항목) · `/gg ui close`. 서버는 `DevTools`의 RemoteEvent(`UiDevCommand`) 한 개 + 명령 한 갈래뿐(프로덕션에서는 DevTools가 죽어 열 길이가 없다) |
+| 기타 | `client/HelpTooltip.lua` · `InventoryUI.client.lua`(1줄) · `shared/data/DevToolsConfig.lua`(`verify.current = {}`) | `HelpTooltip.attach`에 `options`(toggleOnly · 크기) 인자 추가 - 안 주면 기존 동작 그대로 |
+
+#### [2] 검증
+
+| 구분 | 내용 |
+|---|---|
+| 로컬 | 바뀐 · 새 Luau 30개 `luau-compile` 통과. 정적 표(`^local ` 줄 수 · 줄 수 · `AutomaticSize` 대입 · `TextSize` 리터럴): **최대 233줄 · 최상위 local 최대 18개 · AutomaticSize 사용 0 · 12 미만 글씨 0**(위반 파일 0개) |
+| Play 1(첫 실행) | 겹침 검사 첫 출력에서 **투명 토스트를 "보이는 것"으로 센 오검출**을 발견했다(토스트 HUD들은 `Visible`을 끄지 않고 투명도로 숨긴다) → `drawsItself` 판정 추가 |
+| Play 2 | (Rojo 재연결 뒤) 겹침 **0쌍** · 규칙 검사 **16/16**(PC) · 전시장 스크린샷에서 결함 2개: 버튼의 `UIStroke`가 글씨 외곽선으로 적용됨(기본 `Contextual`) · "✕" 글리프 없음 → `Theme.stroke`를 `Border`로 고정 · "X" |
+| Play 3 | 수정 뒤 스크린샷 · **실제 입력**: 기본 HUD(S06 전 스크린샷과 같은 배치 - 골드 8,784 · Lv 40 · STAGE 5 · 가방 · 스킬 · 체력 · 경험치 27%) · `I`로 가방 열기 · Backspace · X로 닫기(창 프레임 숨김 · `ModalEnabled=false`) · 전시장 열기 · 토스트 3종 실제 클릭(TR 3행 표시) · 확인창 열기 → **딤 뒤의 토스트 · station 버튼 클릭이 실제로 안 먹음**(상태 줄 그대로 · TC 줄 행 0 · station 안 열림) · Backspace **1회는 맨 위(확인창)만 닫음**(결과 줄 `취소(false)`) · 전시장이 열린 채 `I` → 전시장 닫힘 + 가방 열림 · `ForceTouchLayout`로 모바일 판정 → 전시장 "(모바일)" + 규칙 검사 **16/16** · ? 토글(누르면 열림 · 다시 누르면 닫힘) |
+| Play 4(**마지막 · `regression = true`**) | 회귀 전체 26-2 시작 → S05b (나) 끝 **3분 55초**(S05와 같다). 블록별 통과 수가 이전(S05 3회차)과 같거나 더 좋다: 27-4 (가) 0/5 → 5/5 · 29-3 (나) 24/25 → 25/25(둘 다 원인을 밝히지 않았다 - 타이밍 흔들림으로 추정) · 나머지 25개 동일(기존 X는 27-4 (나) 2/6 · 29-1 (나) 24/25 그대로). 서버 · 클라 스크립트 에러 0(로그의 `hits CoreGUI`는 MCP 마우스 도구 것) · 끝난 뒤 `regression = false` 커밋(`94ad96d`) |
+| **Play 횟수** | 세션 한도 3회를 **1회 넘겼다(4회)**: 1회차는 겹침 검사 오검출을 드러낸 첫 실행이었고, 그 뒤 Rojo 서버가 죽어(`[Rojo-Warn] Disconnected`) 수정본이 Studio에 안 넘어가 사용자에게 Connect를 부탁했다(사전 작업 중 `git stash`를 쓴 직후 - 아래 [5]) |
+
+규칙 검사 16항목(`/gg ui check`): ① window 열림 · 대역 · 모달 ② **window를 연 채 가방 열기 → 전시장 닫힘 · 가방 열림** ③ 닫으면 모달 해제 ④ station 열림 · 대역 · 비모달 ⑤ station 사이 교체 ⑥ station을 연 채 window 열기 ⑦ **window가 열린 채 station은 안 열림** ⑧ overlay 맨 위 · 딤이 화면 전체를 덮는 TextButton ⑨ overlay 1개 유지 ⑩ **부모를 닫으면 확인창도 닫힘** ⑪ 보스전 딤 끄기 ⑫ 금지 키 등록 error ⑬ 부품 규격 위반 error ⑭ 토스트 3행 · 대기열 8 · 묶기 ⑮ 글씨 12 미만 0 · 버튼 높이(PC 32 · 모바일 44) · X 44 × 44 · AutomaticSize 0 ⑯ 정리.
+
+##### 합격 기준
+
+| # | 항목 | 결과 | 근거 |
+|---|---|---|---|
+| 1 | 가방 열기 · 닫기 · 모달 · 리스폰 정리가 S06 전과 같다 | **O** | Play 3: 스크린샷(S06 전과 같은 HUD) + `I` · Backspace · X 실제 키 + `ModalEnabled` 복귀. 리스폰 정리는 `CharacterAdded` 훅 코드 변경 0(diff) - Play에서 리스폰을 유발하지는 않았다 |
+| 2 | 종류 규칙: window 연 채 `I` → 전시장 닫힘 · 가방 열림 / 확인창 뒤 버튼 안 눌림 / 부모 닫으면 확인창도 | **O** | 규칙 검사 ② ⑦ ⑩ 16/16 + **실제 키 · 클릭**(Play 3) |
+| 3 | 겹침 0쌍 · 중앙 침범 0건 | **△** | 창 높이(ScreenGui) 484에서 정상 Play: **겹침 0쌍 · 중앙 침범 1건**(콤보 점 자리 353 ~ 363이 C 구역 하단 363에 10px 걸림). 회귀 Play(투표 패널이 떠 있음): 겹침 1쌍(투표 패널 × 칩 스택, 30px) · 중앙 1건. 산술이 실측과 일치(353 · 200): **높이 524 미만이면 중앙 침범, 544 미만이면 투표 × 칩 겹침**, 그 이상에서는 0 · 0. 이 Studio 창은 484라 못 재 봤다 → 미결 1 |
+| 4 | 새 파일 최상위 local ≤ 120 · 800줄 이하 · AutomaticSize 중첩 0 | **O** | 위 정적 표(233줄 · 18개 · 0) |
+| 5 | 글씨 12 미만 0 · 모바일 전시장 버튼 높이 ≥ 44 | **O** | grep 0 + 규칙 검사 ⑮ 모바일: Button 22개 중 44 미만 0 · X 44 × 44 |
+| 6 | 기존 자동 검증 회귀 없음 · 에러 · 경고 0 | **O** | Play 4 회귀 전체 표 · 스크립트 에러 0 |
+
+**진짜 합격 기준**: ① 1번 **O** ② 2번 **O**.
+
+#### [3] 사람이 확인할 것
+
+| 항목 | 이유 |
+|---|---|
+| 전시장(`/gg ui gallery`)의 모양 · 글씨 가독성 · 눌림 색 | 체감 판단 - 지시서 규격(색 · 모서리 · 높이)은 그대로 따랐다. 비활성 버튼의 `lockedIcon` on `lockedBg`는 지시서 색이라 대비가 낮다 |
+| 실제 폰 가로 화면에서 전시장 · 확인창 크기 · 터치 | 이 세션의 모바일은 Studio `ForceTouchLayout` 흉내(판정 · 크기 규칙까지만) |
+| 창 높이 524 ~ 544 미만(작은 노트북 · 폰 가로)에서 HUD가 걸리는 모습 | 미결 1 |
+
+#### [4] 미결
+
+1. **미결: C 구역(화면 중앙 40% × 50%)과 겹침 0의 기준 해상도를 정해야 한다.** 왜: 위 합격 기준 3번. 지금 HUD는 창 높이 524 미만에서 콤보 점 자리가 C 구역에 걸리고 544 미만에서 파티 투표 패널이 칩 스택에 걸린다(이 Studio 창은 484). PRD 20.33이 손으로 잰 해상도가 기록에 없다. 선택지: (a) 기준을 "높이 ≥ 544"로 명시(작은 화면은 예외) (b) 콤보 점 · 투표 패널 자리를 옮긴다(HUD를 고치는 일 - 이 세션은 안 건드림) (c) C 구역을 높이 비례가 아니라 상한 px로 정의.
+2. **미결: `TR.dropFeed`(PRD [D-2] 값 (1, −14, 0, 96) 300 × 78)와 지금 칩 스택이 같은 세로 띠에서 겹친다.** 왜: 지도는 골드 · 스테이지 칩을 가로 한 줄로 그렸는데 코드의 `TopChipsRow`는 **세로 스택**(골드 · 레벨 · 스테이지 · 설정 · 견습, 실측 x 1234 · y 52 · 72 × 178)이다. 드랍 피드 3행이 뜨면 Play 3 스크린샷처럼 칩 위에 얹힌다(검사가 `[S06][UI][계획]`으로 찍는다). 같은 이유로 `ML.menuBar`는 `PartyList`와 같은 (14, 50%)다(PRD가 S18에서 파티 목록을 오른쪽 옆으로 옮기는 것으로 정해 뒀다). 선택지: (a) 드랍 피드를 칩 스택 왼쪽 옆이나 아래로(지도 값 변경) (b) 칩 스택을 가로로(S06 밖의 HUD 변경). **S10(드랍 피드)이 이 자리를 쓰기 전에 정해야 한다.**
+3. **미결: 보스전 여부를 클라가 아는 신호가 없어 `BossFightWatcher`를 만들지 못했다(지시서: "그런 신호가 없으면 이 항목만 빼고 미결").** 왜: 클라에는 `BossPatternEvent`(패턴 예고만) · `Monster` 태그(보스 모델은 이름표뿐)뿐이고 보스전 시작 · 끝 Attribute가 없다. `UIManager.setBossFight(bool)`은 만들었고 규칙 검사 ⑪이 통과한다(딤 트윈 `isDim` 표시 방식). 부르는 쪽 · "보스전 신호가 바뀔 때 `closeAll`"이 빠졌다. 선택지: (a) 서버가 플레이어 Attribute(예: `InBossFight`)를 새로 복제(서버 변경 - 이 세션 범위 밖) (b) 클라가 `Monster` 태그 + 아레나 좌표로 추정(오탐 위험). 가방의 딤(`InventoryUI`의 `extraVisible`)은 `isDim` 표시가 없어 이 스위치 대상이 아니다(옮길 때 표시).
+
+#### [5] 임의 결정 · 지시와 코드가 달랐던 점 · 보고
+
+**임의 결정**
+1. `Theme.corner`는 표(`Theme.corner.panel` = 12)이면서 함수(`Theme.corner(inst, px)`)여야 한다(지시서가 같은 이름을 둘 다 적었다) → `__call` 메타테이블로 겸용.
+2. `Theme.isMobile`은 Studio에서만 `ForceTouchLayout` Attribute를 따라 폰 화면을 흉내 낸다(`SkillSlots`와 같은 전례). 값이 바뀌므로 `Theme.recompute()`를 두고 전시장이 열릴 때마다 부른다(전시장은 열 때마다 전부 다시 짓는다 - 그래서 `UIManager.unregister` · `Confirm.reset`을 추가).
+3. `HelpTooltip.attach`에 `options`를 추가해 `HelpToggle`이 감쌌다 - 기존 호출부(가방)는 인자를 안 주므로 동작 그대로.
+4. `UIManager`의 `exclusive` 처리는 window 규칙("다른 window · station을 닫는다")이 대체한다(등록된 window가 가방 하나뿐이라 동작 같음). `modal`은 station이면 강제 false, 그 밖은 안 주면 true. `open`이 열렸는지 반환하고 `open(id, { parentId })`로 overlay 부모를 그때그때 받는다(확인창은 하나를 재사용하므로).
+5. `Panel`의 window 모바일 크기는 `UIScale`이 아니라 `UDim2(0.92, 0, 0.88, 0)` + `UISizeConstraint`(최대 720 × 480).
+6. `Toast`: 줄 크기는 `ScreenMap` 슬롯에서, 행 수 · 기본 시간(TC 3 · TR 5 · BC 3초)은 `Toast` 안 `LANES` 표에 둔다. 빈 줄은 `Visible = false`(겹침 검사에 안 잡히게).
+7. `ScreenMap`의 칩 스택은 슬롯 하나(자식 5개를 품는 스택)로 적었다 - 자식까지 따로 적으면 부모와 겹친 것으로 잡힌다.
+8. 겹침 검사는 "화면에 그려지는 것"만 센다(배경 · 글 · 이미지 중 하나가 불투명) - 토스트 HUD가 투명도로 숨기기 때문.
+9. `/gg ui close`를 추가했다(지시는 gallery만).
+10. "전" 스크린샷은 S05b Play A에서 찍어 둔 것(S06 코드 전, 같은 계정 상태)을 썼다. stash로 S06 이전 코드를 다시 띄워 찍으려 했으나 Rojo가 파일 삭제를 제때 반영하지 않아 중단했다.
+
+**지시와 코드가 달랐던 점**: 경험치바 높이가 PRD 지도는 26px이고 코드는 15px → 코드 값을 적었다(슬롯 note). PRD 지도의 "TC 레벨 배지"는 코드에서는 TR 칩 스택 안이다.
+
+**보고(범위 밖 - 고치지 않았다)**
+- **Rojo 서버가 죽는다**: 사전 작업 뒤 `git stash push -u -- roblox/src`(파일이 사라짐)를 쓰자 `rojo serve`가 끊기고(`[Rojo-Warn] Disconnected`) 이후 수정이 Studio로 안 넘어갔다. `rojo serve --port 34872`를 다시 띄우고 사용자가 Studio 플러그인에서 Connect를 눌러 복구했다. **Rojo가 도는 동안 `src` 파일을 통째로 치우는 git 조작(stash · checkout)을 하지 않는다.**
+- 토스트 HUD 여섯 개는 슬롯 표 기준으로 동시에 뜨면 겹친다: `ZoneBoundaryWarning`(y 100 ~ 148)이 `SaveNotice`(64 ~ 104)와 4px · `ZoneBlocked`(108 ~ 144)와 전부, `TreasureChest`(150 ~ 186)가 `TutorialToast`(160 ~ 210)와 겹친다. 코드 주석은 "동시에 떠도 안 겹친다"고 적혀 있으나 `ZoneBoundary`가 빠져 있다. S17(`Toast` 이관)이 해소한다.
+- 콤보 점(`ComboPipsAnchor`)은 슬롯 표에 크기 0으로 적었지만 실제로는 48 × 10으로 그려진다(`AttackInput`이 점을 끼운다).
+- 27-4 (가) 0/5 → 5/5 · 29-3 (나) 24/25 → 25/25(위 [2] Play 4): 고친 적이 없어 원인 미확인 - 타이밍으로 추정.
+
+**변경 파일**: 새 `client/ui/kit/` 11개 · `client/ui/ScreenMap.lua` · `PanelRegistry.lua` · `UiSelfCheck.client.lua` · `UiGalleryBoot.client.lua` · `client/panels/UiGallery/`(3) · 바뀐 `client/UIManager.lua` · `HelpTooltip.lua` · `InventoryUI.client.lua`(1줄) · `server/DevTools.server.lua`(`/gg ui` + RemoteEvent) · `shared/data/DevToolsConfig.lua`. 커밋 `7f30009` · `b3aa8bd` · `94ad96d`.
