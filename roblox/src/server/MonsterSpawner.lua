@@ -521,20 +521,28 @@ end
 -- 구출 대상(29-3, PRD 20.73 [2-8] A-4 "빙결 - 때려서 깬다"). 잡힌 친구를 감싼 얼음 덩어리 하나를 타격 대상으로
 -- 세운다 - 평타·스킬·투사체의 조준·피격 경로를 그대로 쓰기 위해서다(상자와 같은 이유). 모델은 buildModel 그대로
 -- (몸통 + 머리 + HP바 + "Monster" 태그)라 새 에셋이 없다. 잡힌 동안(≤ 9초)만 있고 풀리면 바로 치운다.
--- def = { displayName, color, bodyAspect, footPosition(바닥 좌표), onHit(player), remaining() → 1~0 }
+-- def = { displayName, color, bodyAspect, footPosition(바닥 좌표), onHit(player, hitInfo), remaining() → 1~0 }
+-- 29-5 분신(수정 여왕의 프리즘 분열): def.lookLike = 보스의 인스턴스 데이터 + def.position(보스 루트와 같은 높이)를 주면 그
+-- 보스와 **겉모습이 완전히 같은** 타격 대상이 된다(체격·색·실루엣·부착물·이름·HP바 - buildModel이 같은 필드를 읽는다).
+-- 몬스터가 아닌 것은 얼음과 같다: HP·AI·보상·기여도·어그로가 없고 맞을 때마다 onHit만 부른다.
 function MonsterSpawner.spawnRescueTarget(def, zoneKey)
+	local look = def.lookLike
 	local data = {
-		id = "rescue_target", displayName = def.displayName, isRescueTarget = true,
-		bodyColor = def.color, headColor = def.color, bodyAspect = def.bodyAspect,
+		id = "rescue_target", displayName = look and look.displayName or def.displayName, isRescueTarget = true, isDecoy = look ~= nil,
+		bodyColor = look and look.bodyColor or def.color, headColor = look and look.headColor or def.color,
+		bodyAspect = look and look.bodyAspect or def.bodyAspect,
+		sizeScale = look and look.sizeScale or nil, attachments = look and look.attachments or nil,
 		-- MonsterAI가 건너뛰므로 안 읽히지만 공용 조회가 nil 산술을 만나지 않게 0으로 채운다(상자와 같다).
 		hp = 0, attack = 0, goldDrop = 0, expReward = 0, moveSpeedStuds = 0, attackRangeStuds = 0, attackCooldownSeconds = 1,
 	}
-	local position = def.footPosition + Vector3.new(0, 1.5, 0) -- buildModel은 몸통 밑면을 position.Y − 1.5에 둔다
+	local position = def.position or (def.footPosition + Vector3.new(0, 1.5, 0)) -- buildModel은 몸통 밑면을 position.Y − 1.5에 둔다
 	local model = buildModel(data, position, {})
 	CollectionService:AddTag(model, "RescueTarget") -- 클라가 "보스"를 찾을 때 이 모델을 건너뛴다(BossPatternVisuals)
-	model.Body.Material = Enum.Material.Ice
-	model.Body.Transparency = 0.45
-	model.Head.Transparency = 1
+	if not look then
+		model.Body.Material = Enum.Material.Ice
+		model.Body.Transparency = 0.45
+		model.Head.Transparency = 1
+	end
 	model.Parent = Workspace
 	MonsterState.init(model, data, position, zoneKey, { isRescueTarget = true, onRescueHit = def.onHit, rescueRemaining = def.remaining })
 	MonsterSpawner.updateHpLabel(model)

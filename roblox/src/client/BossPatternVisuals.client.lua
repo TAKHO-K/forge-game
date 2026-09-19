@@ -28,6 +28,7 @@ local BossGateView = require(script.Parent.BossGateView)
 -- 29-3: 동적 지형(얼음 기둥)·전역 기믹 전조(빨강 바닥 + 그림자)와 보스 태세(빨강 고리·반사 선) - 그리기는 각 모듈에 있다.
 local BossArenaPropsView = require(script.Parent.BossArenaPropsView)
 local BossStanceView = require(script.Parent.BossStanceView)
+local BossSplitView = require(script.Parent.BossSplitView) -- 29-5 수정 여왕의 프리즘 분열(빨강 원 넷 + 진짜의 흰 카운트다운)
 local BossStormView = require(script.Parent.BossStormView) -- 29-3: 낙뢰(하늘에서 꽂히는 번개) · 맞으면 튕겨 나는 넉백
 local BossFloodView = require(script.Parent.BossFloodView) -- 29-4: 심해 군주의 단(내 시계로 가라앉는다) · "아직 이르다" 윗면 빨강
 
@@ -487,6 +488,13 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossArenaPropsView.clear()
 		BossFloodView.reset()
 		BossStormView.dischargeRods(false)
+		BossSplitView.clear()
+	elseif kind == "splitStart" then
+		BossSplitView.start(data)
+	elseif kind == "splitBreak" then
+		BossSplitView.breakDecoy(data)
+	elseif kind == "splitEnd" then
+		BossSplitView.clear()
 	elseif kind == "stanceStart" then
 		BossStanceView.start(data)
 	elseif kind == "stanceEnd" then
@@ -531,6 +539,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		resetAll()
 		BossArenaPropsView.clearTelegraph() -- 기둥 자체는 남는다(서버가 propsClear로 따로 치운다)
 		BossStanceView.clear()
+		BossSplitView.clear()
 		BossFloodView.reset()
 		BossStormView.dischargeRods(false)
 	end

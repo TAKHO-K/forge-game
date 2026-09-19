@@ -30,8 +30,9 @@ local PlayerState = require(script.Parent.PlayerState)
 local BossGimmickVerify = {}
 
 local FROST, SCORPION, GUARDIAN = "frost_giant", "scorpion_queen", "section_guardian"
--- 29-4: 심해 군주·폭풍 군주의 기믹이 켜졌다 - 그 둘의 값은 BossGimmick4Verify(29-4)가 본다. 여기 남는 것은 수정 여왕뿐이다.
-local UNTOUCHED = { "crystal_queen" }
+-- 29-4: 심해 군주·폭풍 군주의 기믹이 켜졌다 - 그 둘의 값은 BossGimmick4Verify(29-4)가 본다.
+-- 29-5: 수정 여왕의 분열도 켜졌다 - 그 값은 BossGimmick5Verify(29-5)가 본다. 이제 안 건드린 보스는 없다.
+local UNTOUCHED = {}
 -- 29-2 Play에서 찍힌 결정 모형 값(지금 솔로/4인 · 설계 파훼 후 솔로/4인 · 파훼 전 솔로/4인) - 아직 안 건드린 보스는 그대로여야 한다.
 local UNTOUCHED_SECONDS = {
 	crystal_queen = { 76.65, 37.80, 74.00, 36.10, 194.60, 83.80 },

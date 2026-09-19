@@ -90,6 +90,10 @@ local MECHANICS = {
 		-- 곁에서 끌어올린다(침수, 29-4): reachStuds 안에서 F 홀드(29-5 - 전에는 곁에 머물기만 하면 찼다). 가장 너그러운
 		-- 구출이다 - 거리가 넉넉하고, 방전 뒤 7.5초 동안 새 판정이 없다.
 		proximity = { reachStuds = 6 },
+		-- 진짜를 찾아 때린다(결정화, 29-5): 이 보스만의 길은 "누구든 진짜 여왕을 때리면 결정화된 전원이 풀린다"이고, 공통 입력
+		-- (곁 reachStuds에서 F 홀드)도 그대로 통한다 - 다른 보스에서 배운 F가 여기서만 안 되면 안 된다. 분열이 끝난 뒤(제한 시간을
+		-- 넘겼거나 진짜를 찾기 전)에 남은 친구는 F로 꺼낸다.
+		gimmick = { reachStuds = 6 },
 		-- 닿아서 푼다(감전, 29-4): 29-5부터 닿는 순간 즉시가 아니라 **몸이 닿는 거리(reachStuds 3)에서 F 홀드**다. rescuerMaxHpFraction = 구출자가 "나눠 받는" 최대체력
 		-- 비율 - 28-2·29-1의 18.3%(= 55% ÷ 3)를 **0으로 내렸다**(PRD 20.79): 보스전 중 기본 자동회복이 없어(29-3) 구출자가 낸
 		-- 체력은 전투 끝까지 돌아오지 않는다. 기믹 실패 55% + 강타류 42.9% = 97.9%의 여유 2.1%가 "한 번은 버틴다"의 전부인데
@@ -498,13 +502,26 @@ local SPECIES = {
 				telegraphSeconds = 1.5, directions = 1, stepDeg = 0, volleys = 2, rotateDeg = 0, reaim = true, halfWidthStuds = 3,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "반사 광선",
 			},
-			-- 프리즘 분열(기믹, 29-5). 제한 8초 안에 진짜를 찾아 때린다 - 진짜까지 20stud.
+			-- 프리즘 분열(기믹, 29-5 - 대상 선택). 여왕이 넷으로 갈라진다: 분열 중심(지금 자리)의 네 방위 radiusStuds에 진짜 1 + 분신 3.
+			-- 넷 다 발밑에 빨강 원(circleRadiusStuds)이 깔리고 **진짜의 원에서만 흰 원이 자란다**(제한 시간의 카운트다운 - 낙석의
+			-- "안쪽에서 자라는 흰 원"과 같은 문법). 분신은 겉모습이 진짜와 완전히 같다 - 구분은 색이 아니라 움직임이다(색약에서도 같다).
+			--   · 제한 8초 안에 진짜를 때리면: 분신 소멸 · 결정화된 친구 전원 해제 · 기절 4초(받는 피해 ×1.3, 파랑 말풍선).
+			--   · 분신을 때리면: 그 분신이 깨지고 **때린 사람에게** 55% ÷ 3 = 18.3% + 결정화. 8초를 넘기면 파편 폭풍 55%(잡힘 없음 -
+			--     failTraps). 둘 다 발동당 1인 상한을 같이 쓴다 - 한 번의 분열에서 받는 합은 55%를 넘지 않는다(BossPatterns.beginSplit).
+			--   · 말풍선이 없다(bubble = "none"): 말풍선은 "보스"의 머리 위에만 뜬다 - 띄우면 그것이 진짜를 가리킨다.
+			--   · 도달 가능성(29-3·29-4의 교훈 - 검사기는 "걸을 시간"만 묻는다): 발동 조건 memberWithin 40 → 그 사람이 가장 먼
+			--     자리의 진짜까지 40 + 20 = 60stud → 0.5 + 60 ÷ 16 × 1.25 = 5.19초 ≤ 8초. 닿을 수 있는 사람이 없으면 쏘지 않는다.
+			--   · 힌트 1단계 = 진짜의 자리 위에 흰 ▼, 2단계 = 제한 시간 8 → 12초.
 			split = {
-				primitive = "gimmick", bubble = "gimmick", role = "gimmick", enabled = false, kind = "hitReal",
+				primitive = "gimmick", bubble = "none", role = "gimmick", kind = "hitReal",
 				cooldownSeconds = 20, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
+				conditions = { { type = "memberWithin", studs = 40 } },
 				telegraphSeconds = 8.0, recoverSeconds = 4.0,
+				split = { count = 4, radiusStuds = 20, circleRadiusStuds = 6, decoyLabel = "분신 반격" },
+				failTraps = false,
+				recoverPose = true, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
 				breakWindow = { seconds = 4, damageTakenMultiplier = 1.3 },
-				dodge = { distanceStuds = 20 },
+				dodge = { distanceStuds = 60 }, -- memberWithin 40 + 분열 반경 20
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "파편 폭풍",
 				sim = { evadeSeconds = 2.5, resolveSeconds = 3.5 },
 			},

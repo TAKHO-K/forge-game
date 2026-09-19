@@ -37,6 +37,8 @@ local BossMechanics = require(script.Parent.BossMechanics)
 local BossArenaProps = require(script.Parent.BossArenaProps)
 local BossPropMath = require(ReplicatedStorage.Shared.BossPropMath)
 local BossTrap = require(script.Parent.BossTrap)
+-- 29-5: 분열의 분신은 구출 대상(얼음 덩어리)과 같은 타격 대상 엔티티다(MonsterSpawner.spawnRescueTarget).
+local MonsterSpawner = require(script.Parent.MonsterSpawner)
 require(script.Parent.BossGimmicks)
 
 local BossPatterns = {}
@@ -238,6 +240,14 @@ local function conditionMet(model, st, data, condition)
 			end
 		end
 		return true
+	elseif kind == "memberWithin" then
+		-- 29-5 분열: 성공이 파티 단위(한 명이 진짜를 때리면 전원이 산다)라 닿을 수 있는 사람이 한 명이면 된다.
+		for _, v in ipairs(victims(st)) do
+			if not BossTrap.isTrapped(v.player) and Reach.horizontalDistance(v.root.Position, st.position) <= condition.studs then
+				return true
+			end
+		end
+		return false
 	elseif kind == "membersNearZone" then
 		-- 29-4 과충전: 살아 있는(안 잡힌) 멤버 전원이 그 kit 구역(피뢰침)에서 studs 안인가 - 예고 안에 안전지대에 닿을 수 없는
 		-- 사람이 하나라도 있으면 쏘지 않는다(피할 수 없는 과충전은 없다).
@@ -1085,6 +1095,119 @@ local function endZones(c)
 	end
 end
 
+-- ── 분열(29-5, skill.split = { count, radiusStuds, circleRadiusStuds } - 수정 여왕의 프리즘 분열: 대상 선택) ──
+-- 예고가 시작되는 틱에 보스가 분열 중심(지금 자리 - 네 자리가 아레나 안에 들어오게 자른다)의 네 방위 중 한 자리로 옮겨 가고
+-- 나머지 자리에 분신이 선다. **분신·빨강 원·진짜의 흰 카운트다운이 같은 틱에 나온다** - 분신을 때릴 수 있는 순간에는 이미
+-- 진짜를 가릴 단서가 있다(20.79 [J]의 시작 확인). 분신은 겉모습이 진짜와 완전히 같다(MonsterSpawner.spawnRescueTarget
+-- lookLike - 체격·색·부착물·이름·HP바·게이트 표식). 구분은 색이 아니라 **움직임**이다: 진짜의 원에서만 흰 원이 자란다.
+--   · 진짜를 때리면: 그 틱에 판정으로 넘어간다 → 전원 성공(성공은 파티 단위) → 분신 소멸 · 결정화 전원 해제 · 기절(기회 창).
+--   · 분신을 때리면: 그 분신이 깨지고 **때린 사람에게만** 부분 실패 피해(55% ÷ 3) + 결정화. 제한 시간이 지나면 파편 폭풍
+--     (판정 실패 = 55%, 잡힘 없음 - failTraps = false). 둘 다 발동당 1인 상한(applyGimmickDamage)을 같이 쓴다 → 한 번의
+--     분열에서 받는 %피해의 합은 55%를 넘지 않는다(셋 다 틀린 사람에게 폭풍은 0이다).
+--   · 막을 수 없는 벌은 벌이 아니다(29-3 갑각 반사와 같은 원칙 - 같은 hitInfo를 본다): ① 분열 **전에** 시작한 공격(날아가던
+--     화살·이미 돌던 채널)은 분신을 깨지도 벌하지도 않고, 진짜에 닿아도 풀어 주지 않는다 ② 지연 폭발(indirect)은 언제나 무시
+--     ③ 같은 틱에 진짜도 같이 때린 광역기는 벌이 없다(벌은 그 틱이 끝난 뒤에 매긴다) ④ 벌은 reflect.windowSeconds(0.75초)에
+--     한 번 - 광역기 한 번에 분신 둘이 깨져도 한 번이다.
+-- 분신의 목록은 st가 아니라 이 표에 둔다 - 보스가 처치되면 MonsterState가 st를 비우므로(clearProps 주석) 끝나는 모든 길
+-- (판정·중단·전멸 리셋·처치·이탈)에서 치우려면 모델로 찾을 수 있어야 한다.
+local decoysOf = {} -- [보스 Model] = { [자리 번호] = 분신 Model }
+
+local function removeDecoys(model)
+	local decoys = decoysOf[model]
+	if decoys then
+		decoysOf[model] = nil
+		for _, decoy in pairs(decoys) do
+			MonsterSpawner.removeRescueTarget(decoy)
+		end
+	end
+end
+
+local function endSplit(c, solved)
+	local st = c.st
+	if not st.split then
+		return
+	end
+	st.split.resolved = true
+	st.split = nil
+	MonsterState.setHitListener(c.model, nil)
+	removeDecoys(c.model)
+	send(st, "splitEnd", { solved = solved == true })
+end
+
+local function beginSplit(c, seconds)
+	local st, skill, split = c.st, c.skill, c.skill.split
+	local zone = zoneOf(c.model)
+	local center = clampToZone(xz(c.position), zone, split.radiusStuds + split.circleRadiusStuds)
+	local realIndex = scatterRng:NextInteger(1, split.count)
+	local spots = {}
+	for i = 1, split.count do
+		local angle = (i - 1) / split.count * 2 * math.pi
+		spots[i] = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * split.radiusStuds
+	end
+	local state = { startedAt = c.now, realIndex = realIndex, spots = spots, solved = false, resolved = false, lastPunishAt = {} }
+	st.split = state
+	c.model:PivotTo(CFrame.new(Vector3.new(spots[realIndex].X, c.position.Y, spots[realIndex].Z)))
+
+	local model, data = c.model, c.data
+	local mechanics = BossData.mechanics
+	local fraction = mechanics.gimmickFailMaxHpFraction / mechanics.partialFailDivisor
+	local function blockedOrLate(hitInfo)
+		return (hitInfo and hitInfo.indirect) or ((hitInfo and hitInfo.committedAt) or os.clock()) < state.startedAt
+	end
+	local decoys = {}
+	decoysOf[model] = decoys
+	for i = 1, split.count do
+		if i ~= realIndex then
+			local decoy
+			decoy = MonsterSpawner.spawnRescueTarget({
+				lookLike = data,
+				position = Vector3.new(spots[i].X, c.position.Y, spots[i].Z),
+				remaining = function()
+					return MonsterState.getHpRatio(model) -- HP바도 진짜와 같다
+				end,
+				onHit = function(player, hitInfo)
+					if state.resolved or decoys[i] ~= decoy or blockedOrLate(hitInfo) then
+						return
+					end
+					decoys[i] = nil
+					MonsterSpawner.removeRescueTarget(decoy)
+					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+					send(st, "splitBreak", { index = i, to = root and root.Position or spots[i] })
+					task.defer(function() -- 같은 틱에 진짜도 맞았으면(광역기) 벌이 없다
+						local now = os.clock()
+						local last = state.lastPunishAt[player]
+						if state.solved or (last and now - last < mechanics.reflect.windowSeconds) then
+							return
+						end
+						state.lastPunishAt[player] = now
+						BossMechanics.applyGimmickDamage(model, player, fraction, split.decoyLabel)
+						if (PlayerState.getHp(player) or 0) > 0 then
+							BossMechanics.trapMember(model, data, player)
+						end
+					end)
+				end,
+			}, MonsterState.getZoneKey(model))
+			decoy:SetAttribute("GateArmed", true) -- 게이트 표식(◈)도 진짜와 같게 - 예고와 함께 게이트가 선 뒤다
+			decoys[i] = decoy
+		end
+	end
+	MonsterState.setHitListener(model, function(player, hitInfo)
+		if state.resolved or state.solved or blockedOrLate(hitInfo) then
+			return
+		end
+		state.solved = true
+		state.solvedBy = player
+		st.phaseEndsAt = os.clock() -- 다음 틱에 판정으로 넘어간다(제한 시간 전에 풀었다)
+	end)
+	local floorSpots = {}
+	for i, spot in ipairs(spots) do
+		floorSpots[i] = Vector3.new(spot.X, st.floorY, spot.Z)
+	end
+	send(st, "splitStart", { spots = floorSpots, realIndex = realIndex, radius = split.circleRadiusStuds, seconds = seconds })
+	print(("[forge-game] 분열: 진짜 = %d번 자리, 분신 %d체, 제한 %.1f초"):format(realIndex, split.count - 1, seconds))
+	return floorSpots[realIndex]
+end
+
 HANDLERS.gimmick = {
 	bubbleSeconds = function(c)
 		return gimmickTelegraphSeconds(c.st, c.skill)
@@ -1097,6 +1220,7 @@ HANDLERS.gimmick = {
 		BossMechanics.onGimmickStart(c.model)
 		st.phase = "gimmickTelegraph"
 		st.phaseEndsAt = c.now + seconds
+		local realSpot = skill.split and beginSplit(c, seconds) or nil -- 29-5: 게이트가 선 뒤에(분신의 표식이 진짜와 같게)
 		st.stanceAt = skill.stance and (c.now + seconds - (skill.telegraphSeconds - skill.stance.afterSeconds)) or nil
 		st.stanceOn = false
 		st.finisherCenter = nil
@@ -1141,7 +1265,7 @@ HANDLERS.gimmick = {
 			} or nil,
 			safeCircles = safeCircles,
 			-- 힌트 1단계부터 클라가 흰 화살표를 세우는 자리.
-			safeSpots = hintLevel >= 1 and (zoneSpots or (skill.safeProp and BossArenaProps.safeSpots(c.model, skill.safeProp, c.position, 2))) or nil,
+			safeSpots = hintLevel >= 1 and (zoneSpots or (realSpot and { realSpot }) or (skill.safeProp and BossArenaProps.safeSpots(c.model, skill.safeProp, c.position, 2))) or nil,
 		})
 	end,
 	step = function(c)
@@ -1180,6 +1304,18 @@ HANDLERS.gimmick = {
 			endStance(c)
 			local list = victims(st)
 			local broken = BossMechanics.resolveGimmick(c.model, c.data, skill, list, skill.damageLabel)
+			if st.split then
+				-- 29-5: 진짜를 찾았으면 결정화된 친구가 전부 풀린다("진짜를 찾아 때린다" - F 홀드와 나란히 있는 이 보스만의 길)
+				if broken then
+					for _, v in ipairs(list) do
+						local record = BossTrap.getRecord(v.player)
+						if record and record.kind == c.data.mechanics.trapKind then
+							BossTrap.release(v.player, "rescued")
+						end
+					end
+				end
+				endSplit(c, broken)
+			end
 			if finisher and st.finisherCenter then
 				for _, v in ipairs(list) do
 					if Reach.within(v.root.Position, st.finisherCenter, finisher.radiusStuds) and not BossTrap.isTrapped(v.player) then
@@ -1219,6 +1355,7 @@ HANDLERS.gimmick = {
 	interrupt = function(c)
 		endStance(c)
 		endZones(c)
+		endSplit(c, false)
 		clearDaze(c.model, c.st)
 	end,
 }
@@ -1336,6 +1473,7 @@ end
 function BossPatterns.clearProps(model, members)
 	local st = MonsterState.getBossPatternState(model)
 	BossArenaProps.clear(model)
+	removeDecoys(model) -- 29-5: 분열 도중에 보스전이 끝나도(처치·이탈) 분신이 남지 않는다
 	for _, member in ipairs(members or (st and st.members) or {}) do
 		BossPatterns.clearPropsFor(member)
 	end

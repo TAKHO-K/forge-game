@@ -35,7 +35,6 @@ local ALL = { GUARDIAN, "frost_giant", ABYSSAL, "crystal_queen", "scorpion_queen
 local UNTOUCHED_SECONDS = {
 	section_guardian = { 73.30, 37.85, 73.30, 37.85, 73.30, 37.85 },
 	frost_giant = { 73.40, 35.10, 73.40, 35.10, 197.95, 82.95 },
-	crystal_queen = { 76.65, 37.80, 74.00, 36.10, 194.60, 83.80 },
 	scorpion_queen = { 73.70, 35.45, 73.70, 35.45, 214.25, 83.70 },
 }
 local MONTE_CARLO_RUNS = 100
@@ -220,7 +219,7 @@ local function runPure()
 
 	-- [16] 안 건드린 네 보스 - 결정 모형 값이 29-3 Play와 같은가
 	r.section("회귀", function()
-		for _, bossId in ipairs({ GUARDIAN, "frost_giant", "crystal_queen", "scorpion_queen" }) do
+		for _, bossId in ipairs({ GUARDIAN, "frost_giant", "scorpion_queen" }) do -- 29-5: 수정 여왕은 BossGimmick5Verify가 본다
 			local expected = UNTOUCHED_SECONDS[bossId]
 			local values = {
 				BossSim.run(bossId, { partySize = 1 }).seconds, BossSim.run(bossId, { partySize = 4 }).seconds,
@@ -234,8 +233,6 @@ local function runPure()
 			r.check(("%s: 결정 모형 6값 29-3과 동일=%s(%.2f/%.2f · %.2f/%.2f · %.2f/%.2f)"):format(
 				bossId, tostring(same), values[1], values[2], values[3], values[4], values[5], values[6]), same)
 		end
-		local split = BossData.bosses.crystal_queen.skills.split
-		r.check(("수정 여왕의 기믹은 그대로 꺼져 있음=%s"):format(tostring(split.enabled == false)), split.enabled == false)
 	end)
 
 	-- [15] 기믹을 켠 상태의 몬테카를로 - 파훼 후 기준 ±10%, 초회(파훼 전)가 파훼 후의 1.8 ~ 2.7배

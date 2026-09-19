@@ -85,6 +85,13 @@ BossMechanics.registerJudge("nearZone", function(model, data, victim, cfg)
 	return false
 end)
 
+-- hitReal(수정 여왕의 프리즘 분열, 29-5): 제한 시간 안에 누군가 진짜를 때렸는가. 성공은 파티 단위다 - 한 명이 찾으면
+-- 전원이 파편 폭풍을 면한다(분신을 때린 값은 그 사람이 그 순간에 이미 치렀다 - BossPatterns.beginSplit).
+BossMechanics.registerJudge("hitReal", function(model)
+	local st = MonsterState.getBossPatternState(model)
+	return st ~= nil and st.split ~= nil and st.split.solved == true
+end)
+
 -- ─────────────────────────── 구출: F 홀드의 보스별 조각(29-5) ───────────────────────────
 -- 입력은 6종 공통이다(BossTrap의 F 홀드 - 거리·생존·잡힘·피격 리셋·둘이면 절반은 거기서 본다). 여기는 종류마다 다른 것만:
 --   touch(감전)     몸이 닿는 거리(reachStuds 3). rescuerMaxHpFraction > 0이면 구출자가 풀어 주는 순간 그만큼 나눠 받고,

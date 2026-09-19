@@ -11,6 +11,8 @@ local RunService = game:GetService("RunService")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
+local BossSim = require(ReplicatedStorage.Shared.BossSim)
+local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local BossEncounter = require(script.Parent.BossEncounter)
 local BossMechanics = require(script.Parent.BossMechanics)
 local BossPatterns = require(script.Parent.BossPatterns)
@@ -135,10 +137,47 @@ function BossGimmick5Verify.checkPlacement(r)
 	end)
 end
 
+-- 수정 여왕(PRD 20.80 [C]) - 분열이 켜진 스킬표의 회피 부등식·인접 피해 합·모형, 그리고 "한 번의 분열에서 받는 벌의 합 ≤ 55%"의 산수.
+local function checkCrystal(r)
+	local CRYSTAL = "crystal_queen"
+	r.section("수정 여왕 스킬표", function()
+		local boss = BossData.bosses[CRYSTAL]
+		local skill = boss.skills.split
+		local mechanics = BossData.mechanics
+		local _, dodgeOk = BossSim.checkDodge(CRYSTAL, 1, WorldConfig.playerWalkSpeedStuds)
+		local _, wideOk = BossSim.checkDodge(CRYSTAL, BossRules.maxSkillRangeScale(), WorldConfig.playerWalkSpeedStuds)
+		local _, violations = BossSim.checkPairs(CRYSTAL)
+		local reach, guard = skill.dodge.distanceStuds, nil
+		for _, condition in ipairs(skill.conditions or {}) do
+			if condition.type == "memberWithin" then
+				guard = condition.studs
+			end
+		end
+		local partial = mechanics.gimmickFailMaxHpFraction / mechanics.partialFailDivisor
+		local decoys = skill.split.count - 1
+		r.check(("분열 켜짐=%s · 회피 부등식 통과(배율 1·최대)=%s·%s · 인접 쌍 위반 %d건 · 도달 가능성: 발동 조건 %s + 분열 반경 %d = 회피 거리 %d · 벌의 합: 분신 %d체 × %.1f%% = %.1f%% ≤ 상한 %.0f%%(폭풍은 나머지까지만) · 말풍선 키 %s(보스 머리 위 말풍선은 진짜를 가리킨다)"):format(
+			tostring(skill.enabled ~= false), tostring(dodgeOk), tostring(wideOk), violations, tostring(guard), skill.split.radiusStuds, reach,
+			decoys, partial * 100, decoys * partial * 100, mechanics.gimmickFailMaxHpFraction * 100, tostring(skill.bubble)),
+			skill.enabled ~= false and dodgeOk and wideOk and violations == 0 and guard ~= nil and guard + skill.split.radiusStuds == reach
+				and decoys * partial <= mechanics.gimmickFailMaxHpFraction + 1e-9 and skill.bubble == "none" and skill.failTraps == false)
+	end)
+	r.section("수정 여왕 모형", function()
+		local base = BossSim.run("section_guardian", { partySize = 1 }).seconds
+		local live, live4 = BossSim.run(CRYSTAL, { partySize = 1 }).seconds, BossSim.run(CRYSTAL, { partySize = 4 }).seconds
+		local design = BossSim.run(CRYSTAL, { partySize = 1, design = true, breaks = "always" }).seconds
+		local never = BossSim.run(CRYSTAL, { partySize = 1, design = true, breaks = "never" }).seconds
+		local first = BossSim.run(CRYSTAL, { partySize = 1 }).sequence[1]
+		r.check(("결정 모형: 지금 %.2f / %.2f초 = 설계 %.2f초(기준 %.2f 대비 %+.1f%%) · 파훼 전 %.2f초(x%.2f) · 첫 스킬 %s@%.2f"):format(
+			live, live4, design, base, (live / base - 1) * 100, never, never / live, first.id, first.at),
+			math.abs(live - design) < 0.06 and math.abs(live / base - 1) <= 0.10 and never / live >= 1.8 and never / live <= 2.7)
+	end)
+end
+
 local function runPure()
-	print("===29-5 검증 시작(가: 배치표)===")
+	print("===29-5 검증 시작(가: 배치표·수정 여왕)===")
 	local r = newRecorder("가")
 	BossGimmick5Verify.checkPlacement(r)
+	checkCrystal(r)
 	local pass, total = r.summary()
 	print(("===29-5 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 end
@@ -239,7 +278,7 @@ local function runHoldRescue(player, env, r, root)
 		-- 모바일: 기본 스타일 + ClickablePrompt면 터치 기기에서 로블록스가 누르고 있을 수 있는 화면 버튼을 그린다(직접 짠 입력이 없다)
 		r.check(("잡힌 실제 Player의 루트에 구출 프롬프트(홀드 %.1f초 · 키 %s · 시야 무시 · 기본 스타일 + ClickablePrompt = 모바일 화면 버튼): %s · 끊김 알림 RemoteEvent=%s"):format(
 			holdSeconds, mechanics.rescue.hold.keyCode, table.concat(rows, " "), tostring(ReplicatedStorage:FindFirstChild("BossRescueHoldBroken") ~= nil)),
-			allOk and #rows >= 4 and ReplicatedStorage:FindFirstChild("BossRescueHoldBroken") ~= nil)
+			allOk and #rows == 5 and ReplicatedStorage:FindFirstChild("BossRescueHoldBroken") ~= nil)
 	end)
 
 	r.section("F 홀드 진행·피격 리셋", function()
@@ -318,6 +357,106 @@ local function runHoldRescue(player, env, r, root)
 	end)
 end
 
+-- [8][13] 수정 여왕의 프리즘 분열(PRD 20.80 [C]). 분신을 때리는 쪽은 **실제 Player**이고 실제 피해 경로(MonsterState.applyDamage -
+-- 평타·스킬·투사체가 전부 지나는 곳)로 때린다. 캐릭터는 어그로 밖(30stud - 발동 조건 40 안)에 둔다.
+local function decoyModels()
+	local list = {}
+	for _, model in ipairs(MonsterState.getAllModels()) do
+		local data = MonsterState.getData(model)
+		if data and data.isDecoy then
+			table.insert(list, model)
+		end
+	end
+	return list
+end
+
+local function runSplit(player, env, r, root)
+	local mechanics = BossData.mechanics
+	r.section("프리즘 분열", function()
+		local model, data = spawnBoss(player, env, "crystal_queen")
+		local st = MonsterState.getBossPatternState(model)
+		local bossPosition = model.PrimaryPart.Position
+		local members = { player }
+		moveTo(root, bossPosition + Vector3.new(30, 1.5, 0))
+		fullHeal(player)
+		local function step(count)
+			for _ = 1, count or 1 do
+				BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, members)
+			end
+		end
+		local skill = data.skills.split
+		local spawnStartedAt = os.clock()
+		BossPatterns.force(model, data, "split")
+		step(1)
+		local spawnSeconds = os.clock() - spawnStartedAt
+		local decoys = decoyModels()
+		local sameLook = #decoys == skill.split.count - 1
+		local bossParts = #model:GetDescendants()
+		for _, decoy in ipairs(decoys) do
+			sameLook = sameLook and decoy.Name == model.Name and decoy.Body.Size == model.Body.Size and decoy.Body.Color == model.Body.Color
+				and decoy.Head.Color == model.Head.Color and #decoy:GetDescendants() == bossParts and decoy:GetAttribute("GateArmed") == true
+				and MonsterState.getHpRatio(decoy) == MonsterState.getHpRatio(model)
+		end
+		local moved = (model.PrimaryPart.Position - bossPosition).Magnitude
+		r.check(("분열 시작: 분신 %d체 · 진짜와 겉모습이 같다(이름·몸통 크기·색·하위 인스턴스 %d개·게이트 표식·HP바)=%s · 보스가 분열 반경 %dstud 자리로 옮겨 감 %.1f · 게이트 x%.3f · 켜짐=%s"):format(
+			#decoys, bossParts, tostring(sameLook), skill.split.radiusStuds, moved, MonsterState.getDamageTakenMultiplier(model), tostring(skill.enabled ~= false)),
+			sameLook and math.abs(moved - skill.split.radiusStuds) < 0.5 and BossMechanics.isGateArmed(model) and skill.enabled ~= false)
+
+		-- 분신을 때린다(실제 Player · 실제 피해 경로) → 18.3% + 결정화 + 그 분신만 깨진다. 결정화에도 F 홀드 프롬프트가 붙는다
+		local _, dealt = MonsterState.applyDamage(decoys[1], 1e9, BossData.stageInterval, player)
+		task.wait() -- 벌은 그 틱이 끝난 뒤에 매긴다(task.defer - 같은 틱에 진짜도 맞은 광역기를 면제하려고)
+		step(1)
+		local hpAfterDecoy = PlayerState.getHp(player) / PlayerState.getMaxHp(player)
+		local kind = player:GetAttribute("BossTrapKind")
+		local prompt = root:FindFirstChild("BossRescuePrompt")
+		r.check(("분신을 때림: 들어간 피해 %.0f(기대 0 - 보상·흡혈 없음), 체력 %.1f%%(기대 %.1f), 잡힘 %s, 남은 분신 %d, 결정화에도 구출 프롬프트=%s"):format(
+			dealt, hpAfterDecoy * 100, (1 - mechanics.gimmickFailMaxHpFraction / mechanics.partialFailDivisor) * 100, tostring(kind), #decoyModels(), tostring(prompt ~= nil)),
+			dealt == 0 and math.abs(hpAfterDecoy - (1 - mechanics.gimmickFailMaxHpFraction / mechanics.partialFailDivisor)) < 1e-6
+				and kind == "crystallized" and #decoyModels() == skill.split.count - 2 and prompt ~= nil)
+
+		-- 친구(스탠드인)가 진짜를 때린다 → 분신 소멸 · 결정화 해제 · 기절(기회 창)
+		local friend = newStandIn(model, members, "StandInFinder", model.PrimaryPart.Position + Vector3.new(8, 0, 0))
+		MonsterState.applyDamage(model, 1, BossData.stageInterval, friend)
+		step(2)
+		r.check(("진짜를 때림: 남은 분신 %d, 본인 결정화 풀림=%s, phase=%s, 받는 피해 x%.2f(기대 %.2f), 본인 체력 %.1f%%(폭풍 없음)"):format(
+			#decoyModels(), tostring(not BossTrap.isTrapped(player)), tostring(BossPatterns.getPhase(model)), MonsterState.getDamageTakenMultiplier(model),
+			skill.breakWindow.damageTakenMultiplier, PlayerState.getHp(player) / PlayerState.getMaxHp(player) * 100),
+			#decoyModels() == 0 and not BossTrap.isTrapped(player) and BossPatterns.getPhase(model) == "gimmickRecover"
+				and math.abs(MonsterState.getDamageTakenMultiplier(model) - skill.breakWindow.damageTakenMultiplier) < 1e-6)
+
+		-- 제한 시간을 넘긴다 → 파편 폭풍: 이미 받은 몫을 뺀 나머지까지만(합계 55%), 잡힘 없음. 셋 다 틀린 사람에게 폭풍은 0
+		task.wait(mechanics.trap.releaseGraceSeconds + 0.2)
+		BossPatterns.interrupt(model, data)
+		clearStandIns(player, members)
+		fullHeal(player)
+		BossPatterns.force(model, data, "split")
+		step(1)
+		MonsterState.applyDamage(decoyModels()[1], 1e9, BossData.stageInterval, player)
+		task.wait()
+		BossTrap.release(player, "debug")
+		task.wait(mechanics.trap.releaseGraceSeconds + 0.2) -- 풀려난 뒤의 유예 면역이 폭풍을 가리지 않게
+		st.phaseEndsAt = os.clock()
+		step(2)
+		local hpAfterStorm = PlayerState.getHp(player) / PlayerState.getMaxHp(player)
+		r.check(("분신 1회 + 제한 시간 초과: 체력 %.1f%%(기대 45.0 - 한 번의 분열에서 합계 55%% 상한), 폭풍은 잡지 않는다=%s, 남은 분신 %d, 게이트 유지=%s"):format(
+			hpAfterStorm * 100, tostring(not BossTrap.isTrapped(player)), #decoyModels(), tostring(BossMechanics.isGateArmed(model))),
+			math.abs(hpAfterStorm - (1 - mechanics.gimmickFailMaxHpFraction)) < 1e-6 and not BossTrap.isTrapped(player) and #decoyModels() == 0
+				and BossMechanics.isGateArmed(model))
+
+		-- 분열 도중에 보스전이 끝난다(이탈) → 분신이 남지 않는다 + 부하: 분신 3체를 세우는 데 걸린 시간
+		BossPatterns.interrupt(model, data)
+		fullHeal(player)
+		BossPatterns.force(model, data, "split")
+		step(1)
+		local during = #decoyModels()
+		BossEncounter.despawnFor(player)
+		r.check(("분열 도중 보스전 종료: 분신 %d → %d(기대 0) · 분신 %d체 세우기 %.2fms → 12 보스전이 같은 틱에 분열해도 %.1fms(20초에 한 번, 상시 비용 0)"):format(
+			during, #decoyModels(), skill.split.count - 1, spawnSeconds * 1000, spawnSeconds * 1000 * 12),
+			during == skill.split.count - 1 and #decoyModels() == 0 and spawnSeconds < 0.05)
+		fullHeal(player)
+	end)
+end
+
 local function activeClassState(player)
 	local profile = PlayerProfile.getProfile(player)
 	return profile and profile.classId and profile.classes[profile.classId]
@@ -387,6 +526,7 @@ local function runLive(player, env)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root then
 		runHoldRescue(player, env, r, root)
+		runSplit(player, env, r, root)
 	else
 		r.check("캐릭터가 없어 F 홀드 구역을 건너뜀", false)
 	end

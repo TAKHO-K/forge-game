@@ -300,7 +300,10 @@ function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 			else
 				failCount += 1
 				-- cfg.failPenalty == false: 실패의 대가를 판정 밖에서 이미 치렀다(갑각 반사 - 때릴 때마다 받았다). 게이트만 남는다.
-				if cfg.failPenalty ~= false then
+				-- cfg.failTraps == false(29-5 파편 폭풍): %피해만 - 이 보스의 잡힘은 판정이 아니라 분신을 때린 순간에 온다.
+				if cfg.failPenalty ~= false and cfg.failTraps == false then
+					BossMechanics.applyGimmickDamage(model, v.player, BossData.mechanics.gimmickFailMaxHpFraction, label)
+				elseif cfg.failPenalty ~= false then
 					BossMechanics.failGimmick(model, data, v.player, label)
 				end
 			end

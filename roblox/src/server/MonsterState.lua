@@ -233,7 +233,7 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	-- 들어간 피해 0 → 데미지 숫자 0·흡혈 0("구출에는 보상이 없다", 20.73 [2-8] A-2).
 	if entry.isRescueTarget then
 		if attackerPlayer and entry.onRescueHit then
-			entry.onRescueHit(attackerPlayer)
+			entry.onRescueHit(attackerPlayer, hitInfo) -- 29-5: 분신은 "막을 수 있었던 공격인가"(hitInfo)를 본다
 		end
 		return false, 0
 	end
