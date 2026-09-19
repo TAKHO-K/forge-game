@@ -410,10 +410,12 @@ local function runAbyssal(player, env, r, root)
 		end
 		step()
 		local gateAtTelegraph = BossMechanics.isGateArmed(model)
-		local earlyExpires = BossMechanics.zoneExpiresAt(model, early, 4)
 		local deadline = st.phaseEndsAt -- 예정된 방전 시각
-		local early2 = deadline - (earlyExpires or 0) -- 방전보다 몇 초 먼저 가라앉는가
 		drive(player, root, model, data, 1.2, members) -- "너무 이른" 1초가 지나간다
+		-- A의 기록은 drive 뒤에 읽는다: 강제 시작한 틱은 예고를 띄우기만 하고, 밟기 추적은 그다음 틱부터 돈다(29-4 Play 2회차 -
+		-- 첫 틱 직후에 읽어 nil이었다. 로그의 "판정까지 5.99초"가 실제 값이다).
+		local earlyExpires = BossMechanics.zoneExpiresAt(model, early, 4)
+		local early2 = deadline - (earlyExpires or 0) -- 방전보다 몇 초 먼저 가라앉는가
 		moveTo(root, top)
 		lateRoot.Position = platform.center + Vector3.new(-5, 0, -5)
 		edgeRoot.Position = platform.center + Vector3.new(platform.size.X / 2 + 0.9, 0, 0) -- 가장자리: 윗면 밖 0.9stud(몸통 반폭 1 안)
