@@ -22,8 +22,8 @@ local SaveKeyVerify = {}
 
 -- 지급 스테이지(방지권 - Enhance.getBossGrant)가 아닌 보스 스테이지 - 처치가 계정 지급(purchases)을 건드리지 않는다. 개발 계정의 기존 기록(5 · 10 · 20)과도 겹치지 않는다.
 local PROBE_STAGE = 3 * BossData.stageInterval
--- 견습 확정 지급 기록으로 쓰는 단계(1 ~ 3단계 지급 중 하나) - 재접속 검증에서 tutorial.granted를 확인하는 데 쓴다.
-local PROBE_TUTORIAL_STEP = 2
+-- 견습 지급 기록으로 쓰는 단계 - 재접속 검증에서 tutorial.granted를 확인하는 데 쓴다. 개발 계정이 실제로 갖고 있는 기록(2 · 5 · 6 · 7 - S05b 1회차 실측)과 겹치면 안 된다: 겹치면 keycheck save가 거절하고 clean이 실제 기록을 지운다.
+local PROBE_TUTORIAL_STEP = 4
 
 local function newRecorder(tag)
 	local passCount, totalCount = 0, 0
