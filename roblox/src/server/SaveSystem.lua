@@ -155,7 +155,13 @@ local function defaultProfile()
 		-- 판매 금지)하고 등급별로 따로 센다(고대 보석엔 고대 변환권만, 태초는 태초만) -
 		-- 두 등급만 있는 이유는 GemData.optionPoolByGrade가 그 둘만 옵션 풀을 갖기 때문이다
 		-- (영웅·전설·유물 보석은 재굴림할 옵션 자체가 없다).
-		purchases = { optionRerollTickets = { ancient = 0, primordial = 0 } },
+		-- protectionTickets(28-1 S05) = 방지권 보유 장수(하락 · 초기화). protectionClaimedStages = { [보스 스테이지] = true } - 보스 계정 첫 클리어 지급을 이미 받은
+		-- 스테이지(계정 단위 - 직업별 bossFirstClearStages와 별개 집합이라 부캐로 같은 스테이지를 다시 깨도 방지권은 안 나온다).
+		purchases = {
+			optionRerollTickets = { ancient = 0, primordial = 0 },
+			protectionTickets = { drop = 0, reset = 0 },
+			protectionClaimedStages = {},
+		},
 
 		-- 강화 재료 보유량(28-1 S04) - 계정 공유(gold · purchases와 같은 층). 무기는 직업별이지만 재료는 4직업이 나눠 쓴다. 처치 보상으로만 늘고
 		-- 강화(19 ~ 24강 시도)가 소모한다 - 증감은 PlayerProfile.addMaterial · trySpendMaterial 하나뿐이다.
@@ -246,7 +252,7 @@ end
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
 -- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
 -- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
--- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04).
+-- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -714,6 +720,14 @@ local function migrate(data)
 		data.version = 26
 	end
 
+	if data.version < 27 then
+		-- 30-0 S05(PRD 20.72 [1-7]): 방지권 신설. 0장 · 빈 집합이 정확한 과거 상태다 - protectionClaimedStages는 이미 깬 보스에서 역산하지 않는다(빈 집합에서 시작 -
+		-- 이미 깬 보스도 한 번 더 깨면 받는다. 20.40 v16의 bossFirstClearStages와 같은 원칙).
+		data.purchases.protectionTickets = data.purchases.protectionTickets or { drop = 0, reset = 0 }
+		data.purchases.protectionClaimedStages = data.purchases.protectionClaimedStages or {}
+		data.version = 27
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -748,8 +762,18 @@ local function isValidProfile(data)
 		or type(data.purchases.optionRerollTickets.primordial) ~= "number"
 		or (data.inventoryWindowPosition ~= false and type(data.inventoryWindowPosition) ~= "table")
 		or type(data.materials) ~= "table"
+		or type(data.purchases.protectionTickets) ~= "table"
+		or type(data.purchases.protectionClaimedStages) ~= "table"
 	then
 		return false
+	end
+
+	-- 방지권 보유 장수(28-1 S05): 하락 · 초기화 둘 다 0 이상의 정수(음수 · 소수는 거절).
+	for _, kind in ipairs({ "drop", "reset" }) do
+		local count = data.purchases.protectionTickets[kind]
+		if type(count) ~= "number" or count % 1 ~= 0 or count < 0 then
+			return false
+		end
 	end
 
 	-- 재료 보유량(28-1 S04): 재료 id마다 0 이상의 정수(음수 · 소수는 거절).

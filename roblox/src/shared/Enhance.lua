@@ -5,6 +5,9 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
+-- 28-1 S05: 방지권 상점가(getProtectionPrice)가 변환권과 같은 모양(잡몹 1마리당 골드 × 배수)이라 같은 두 모듈을 읽는다.
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 
 local Enhance = {}
 
@@ -90,21 +93,9 @@ function Enhance.getGaugeGain(level)
 	return math.floor(prob.success * EnhanceConfig.gauge.gainPerSuccessRate + 0.5)
 end
 
--- 강화 판정 1회(순수 함수 - 저장 · 골드는 호출부 몫). flags = { useDropTicket, useResetTicket }(순서 그대로 - 방지권은 S05, 서버는 지금
--- { false, false }만 넘긴다). roll은 검증용 주입(0 이상 1 미만, 없으면 math.random()).
--- 게이지가 가득이면(>= gauge.max) 확정 성공, 성공하면 게이지 0. **모든 실패**(maintain · down1 · down2 · reset)가 getGaugeGain(시도한 단계)만큼
--- 채운다(max에서 자른다) - 하락 · 초기화로 단계가 바뀌어도 게이지는 유지된다.
--- 반환: { result, level(다음 단계), gauge(다음 게이지), gaugeWasFull }. 상한이면 result = "max".
-function Enhance.tryEnhance(level, gauge, flags, roll)
-	if level >= EnhanceConfig.maxLevel then
-		return { result = "max", level = level, gauge = gauge, gaugeWasFull = false }
-	end
-
-	local gaugeMax = EnhanceConfig.gauge.max
-	local gaugeWasFull = gauge >= gaugeMax
-	local outcomes = Enhance.getOutcomeTable(level, gaugeWasFull, flags and flags[1], flags and flags[2])
-	roll = roll or math.random()
-
+-- 확률표 한 줄(outcomes)과 롤(0 이상 1 미만)로 결과 키를 고른다. 롤이 표 끝까지 안 걸리는 부동소수 극단값은 "확률이 있는 마지막 결과"로 둔다
+-- (확률 0인 결과가 나오지 않게). tryEnhance와 검증(방지권이 "막았을 때만" 빠지는지)이 같은 함수를 읽는다.
+function Enhance.rollResult(outcomes, roll)
 	local result, lastPossible, acc = nil, "success", 0
 	for _, key in ipairs(RESULT_ORDER) do
 		if outcomes[key] > 0 then
@@ -115,13 +106,73 @@ function Enhance.tryEnhance(level, gauge, flags, roll)
 			result = key
 		end
 	end
-	result = result or lastPossible -- 부동소수 합이 1에 모자란 극단값 - 확률이 있는 마지막 결과로 둔다(확률 0인 결과가 나오지 않게)
+	return result or lastPossible
+end
+
+-- 방지권 적용(28-1 S05, PRD 20.72 [1-3]) - **원래 확률표로 굴린 결과**를 받아, 하락(down1 · down2)이고 하락 방지 on이면 유지로, 초기화이고 초기화 방지 on이면
+-- 유지로 바꾼다. 돌려주는 값: 최종 결과, 막은 방지권 종류("drop" / "reset" / nil). 막은 경우에만 blockedBy가 있다 = 그때만 방지권 1장이 소모된다
+-- (성공 · 유지가 나온 시도에서는 절대 소모되지 않는다). getOutcomeTable(…, useDropTicket, useResetTicket)이 보여 주는 표(하락 확률이 유지에 합쳐진 표)와
+-- 수학적으로 같다.
+function Enhance.applyProtection(result, useDropTicket, useResetTicket)
+	if useDropTicket and (result == "down1" or result == "down2") then
+		return "maintain", "drop"
+	end
+	if useResetTicket and result == "reset" then
+		return "maintain", "reset"
+	end
+	return result, nil
+end
+
+-- 서버 재검증(28-1 S05): 요청한 방지권 플래그 중 이번 시도에서 **실제로 쓸 수 있는 것**만 true로 남긴다 - 보유 ≥ 1 · 시도하는 단계 ≥ usableFromLevel ·
+-- 게이지가 가득이 아님(가득이면 성공 100%라 무의미). 조건이 안 되면 요청을 거절하지 않고 그 플래그만 조용히 false로 바꾼다(토글을 켠 채 18강에서 눌러도
+-- 강화는 된다). 요청 값이 boolean true가 아니면 false.
+function Enhance.resolveProtectionFlags(level, gaugeFull, wantDrop, wantReset, haveDrop, haveReset)
+	if gaugeFull then
+		return false, false
+	end
+	local config = EnhanceConfig.protection
+	local useDrop = wantDrop == true and haveDrop >= 1 and level >= config.drop.usableFromLevel
+	local useReset = wantReset == true and haveReset >= 1 and level >= config.reset.usableFromLevel
+	return useDrop, useReset
+end
+
+-- 방지권 상점가(골드) = 계정 최고 스테이지의 잡몹(tier1) 1마리당 골드 × priceKillEquivalent. 지금 서 있는 스테이지가 아니라 **계정 최고 스테이지**가
+-- 기준이다(옵션 변환권과 같은 모양 - 스테이지 1로 내려가 싸게 사는 구멍을 막는다). kind = "drop" / "reset".
+function Enhance.getProtectionPrice(kind, accountBestStage)
+	return InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, accountBestStage) * EnhanceConfig.protection[kind].priceKillEquivalent
+end
+
+-- 보스 계정 첫 클리어 지급(28-1 S05) - 보스 스테이지 stage가 주는 방지권 장수. 반환: 하락 장수, 초기화 장수(0 또는 1). 식은 EnhanceConfig.protection.bossGrant.
+function Enhance.getBossGrant(stage)
+	local grant = EnhanceConfig.protection.bossGrant
+	if stage < grant.firstStage or (stage - grant.firstStage) % grant.stepStages ~= 0 then
+		return 0, 0
+	end
+	return 1, stage >= grant.resetFromStage and 1 or 0
+end
+
+-- 강화 판정 1회(순수 함수 - 저장 · 골드 · 재료 · 방지권 차감은 호출부 몫). flags = { useDropTicket, useResetTicket }(호출부가 resolveProtectionFlags로
+-- 이미 검증한 값). roll은 검증용 주입(0 이상 1 미만, 없으면 math.random()).
+-- 결과는 **방지권 없는 원래 확률표**로 굴린 뒤 applyProtection이 막을 수 있으면 유지로 바꾼다(S05 - 막았을 때만 소모). 게이지가 가득이면(>= gauge.max) 확정
+-- 성공, 성공하면 게이지 0. **모든 실패**(막힌 시도 포함 - 막힌 시도도 실패다)가 getGaugeGain(시도한 단계)만큼 채운다(max에서 자른다) - 하락 · 초기화로
+-- 단계가 바뀌어도 게이지는 유지된다.
+-- 반환: { result, level(다음 단계), gauge(다음 게이지), gaugeWasFull, blockedBy }. 상한이면 result = "max".
+function Enhance.tryEnhance(level, gauge, flags, roll)
+	if level >= EnhanceConfig.maxLevel then
+		return { result = "max", level = level, gauge = gauge, gaugeWasFull = false }
+	end
+
+	local gaugeMax = EnhanceConfig.gauge.max
+	local gaugeWasFull = gauge >= gaugeMax
+	local outcomes = Enhance.getOutcomeTable(level, gaugeWasFull, false, false)
+	local rolled = Enhance.rollResult(outcomes, roll or math.random())
+	local result, blockedBy = Enhance.applyProtection(rolled, flags and flags[1], flags and flags[2])
 
 	local nextGauge = 0
 	if result ~= "success" then
 		nextGauge = math.min(gaugeMax, gauge + Enhance.getGaugeGain(level))
 	end
-	return { result = result, level = Enhance.getResultLevel(level, result), gauge = nextGauge, gaugeWasFull = gaugeWasFull }
+	return { result = result, level = Enhance.getResultLevel(level, result), gauge = nextGauge, gaugeWasFull = gaugeWasFull, blockedBy = blockedBy }
 end
 
 -- 최종 공격력 = 무기 기본값 × 등급 배율 × 강화 배율 × 클래스 배율(10-2 [1], 등급 배율은

@@ -57,6 +57,7 @@ local ItemLevelMigrateVerify = require(script.Parent.ItemLevelMigrateVerify)
 -- 30-0 S03 강화 확률표 · 골드표 · 천장 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(실제 EnhanceRequest 핸들러 경로).
 local EnhanceVerify = require(script.Parent.EnhanceVerify)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData) -- 30-0 S04 재료 명령(/gg mat) · killtest 재료 줄.
+local ProtectionTickets = require(script.Parent.ProtectionTickets) -- 30-0 S05 방지권 명령(/gg ticket).
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -1037,6 +1038,7 @@ local HELP_TEXT = table.concat({
 	"/gg reset - 백업된 원본 프로필로 복원(가방 포함) + 저장 차단 해제",
 	"/gg bagclear - 실제 가방을 비우고 바로 저장(백업 없음 - 테스트 진행 중이면 거절, 28-1 S04 사전 작업)",
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
+	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
 
@@ -1553,6 +1555,35 @@ local function handleCommand(player, args)
 				end
 			end
 		end
+	elseif sub == "ticket" and args[2] == "buy" and args[3] then
+		-- 실제 상점 함수(ProtectionTickets.tryBuy)를 부른다 - 강화대 근접 · 계정 최고 스테이지 가격 · 골드 차감이 그대로 탄다. 골드가 빠지고 즉시 저장을 요청하므로 백업을 먼저 만든다.
+		ensureBackup(player)
+		local ok, priceOrReason = ProtectionTickets.tryBuy(player, args[3])
+		if ok then
+			reply(player, ("방지권 구매 성공: %s - 가격 %d · 보유 하락 %d · 초기화 %d"):format(args[3], priceOrReason, PlayerProfile.getProtectionTicket(player, "drop"), PlayerProfile.getProtectionTicket(player, "reset")))
+		else
+			reply(player, ("방지권 구매 거절: %s"):format(tostring(priceOrReason)))
+		end
+	elseif sub == "ticket" and args[2] == "claims" then
+		-- 받은 스테이지 집합의 실제 키 타입까지 찍는다(DataStore 왕복 뒤 숫자 키가 문자열로 바뀌는지 확인용 - 비교용으로 활성 직업의 bossFirstClearStages도 같이).
+		local profile = PlayerProfile.getProfile(player)
+		local function describe(set)
+			local parts = {}
+			for key in pairs(set) do
+				table.insert(parts, ("%s(%s)"):format(tostring(key), typeof(key)))
+			end
+			table.sort(parts)
+			return #parts > 0 and table.concat(parts, " ") or "없음"
+		end
+		local classState = profile and profile.classId and profile.classes[profile.classId]
+		reply(player, ("방지권 받은 스테이지(계정): %s / 활성 직업 첫 클리어(bossFirstClearStages): %s / 보유 하락 %s · 초기화 %s"):format(
+			profile and describe(profile.purchases.protectionClaimedStages) or "프로필 없음",
+			classState and describe(classState.stageProgress.bossFirstClearStages) or "없음",
+			tostring(PlayerProfile.getProtectionTicket(player, "drop")), tostring(PlayerProfile.getProtectionTicket(player, "reset"))))
+	elseif sub == "ticket" and (args[2] == "drop" or args[2] == "reset") and tonumber(args[3]) then
+		ensureBackup(player)
+		PlayerProfile.addProtectionTicket(player, args[2], math.floor(tonumber(args[3])))
+		reply(player, ("%s 방지권 %s장 지급 - 보유 %d장"):format(args[2], args[3], PlayerProfile.getProtectionTicket(player, args[2])))
 	elseif sub == "mat" and args[2] and tonumber(args[3]) then
 		-- 강화 재료 지급(28-1 S04) - 강화 소모 · 부족 거절 검증용. 다른 명령처럼 백업 뒤 세션 메모리만 바꾼다(/gg reset으로 복원).
 		local materialId = args[2]
@@ -3000,6 +3031,7 @@ if RunService:IsStudio() then
 				{ "S02(나)", function() ItemLevelMigrateVerify.runLive(player) end },
 				{ "S03(나)", function() EnhanceVerify.runLive(player, env) end },
 				{ "S04(나)", function() EnhanceVerify.runLiveS04(player, env) end },
+				{ "S05(나)", function() EnhanceVerify.runLiveS05(player, env) end },
 			}) do
 				local ok, err = pcall(stage[2])
 				if not ok then
@@ -3064,6 +3096,17 @@ if RunService:IsStudio() then
 		local ok, err = pcall(EnhanceVerify.runPureS04)
 		if not ok then
 			warn(("[S04(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S05 자동 검증 블록(가) - 방지권 순수 함수 · 분포 · 소모 · 규제 관문 · 저장 이관(PRD 20.86) ═══
+-- 순수 함수 + 합성 프로필(플레이어 불필요). 표본이 커서(20만 회 × 3 + 30만 회) 100,000회마다 task.wait로 양보한다. (나)는 위 29-1 체인의 끝(S04 (나) 다음).
+if RunService:IsStudio() then
+	task.spawn(function()
+		local ok, err = pcall(EnhanceVerify.runPureS05)
+		if not ok then
+			warn(("[S05(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

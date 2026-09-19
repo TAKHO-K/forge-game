@@ -157,12 +157,26 @@ local function syncMaterialAttributes(player, profile)
 	end
 end
 
+-- 방지권 보유 장수 Attribute(28-1 S05) - 재료와 같은 방식이다. kind "drop" / "reset" → ProtectionDrop / ProtectionReset.
+local PROTECTION_KINDS = { "drop", "reset" }
+
+local function protectionAttributeName(kind)
+	return "Protection" .. kind:sub(1, 1):upper() .. kind:sub(2)
+end
+
+local function syncProtectionAttributes(player, profile)
+	for _, kind in ipairs(PROTECTION_KINDS) do
+		player:SetAttribute(protectionAttributeName(kind), profile.purchases.protectionTickets[kind])
+	end
+end
+
 -- 로드가 끝난 뒤(SaveServer.server.lua) 호출한다. Gold Attribute도 여기서 같이 맞춰서
 -- HUD·강화 UI가 접속 직후부터 정확한 값을 보게 한다.
 function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
 	syncMaterialAttributes(player, profile)
+	syncProtectionAttributes(player, profile)
 	player:SetAttribute("BulkSellCutoffGrade", profile.bulkSellCutoffGrade)
 	-- 23-5: 저장된 적 있을 때만 Attribute를 세운다 - false(한 번도 안 옮김)면 안 세워서
 	-- 클라가 GetAttribute nil을 "기본 위치 계산"의 신호로 그대로 쓸 수 있게 한다.
@@ -232,6 +246,58 @@ function PlayerProfile.trySpendMaterial(player, materialId, amount)
 	profile.materials[materialId] -= amount
 	player:SetAttribute(materialAttributeName(materialId), profile.materials[materialId])
 	return true
+end
+
+-- 방지권(28-1 S05) - 계정 공유(purchases.protectionTickets). 증가 통로는 addProtectionTicket(보스 계정 첫 클리어 지급 · 상점 구매 · DevTools), 감소 통로는
+-- trySpendProtectionTicket 하나(강화가 실제로 막았을 때 1장)다. kind = "drop" / "reset".
+function PlayerProfile.getProtectionTicket(player, kind)
+	local profile = profiles[player]
+	return profile and profile.purchases.protectionTickets[kind]
+end
+
+function PlayerProfile.addProtectionTicket(player, kind, amount)
+	local profile = profiles[player]
+	if not profile or profile.purchases.protectionTickets[kind] == nil then
+		return
+	end
+	profile.purchases.protectionTickets[kind] += amount
+	player:SetAttribute(protectionAttributeName(kind), profile.purchases.protectionTickets[kind])
+end
+
+function PlayerProfile.trySpendProtectionTicket(player, kind, amount)
+	local profile = profiles[player]
+	if not profile or (profile.purchases.protectionTickets[kind] or 0) < amount then
+		return false
+	end
+	profile.purchases.protectionTickets[kind] -= amount
+	player:SetAttribute(protectionAttributeName(kind), profile.purchases.protectionTickets[kind])
+	return true
+end
+
+-- "그 보스 스테이지의 방지권을 계정으로 이미 받았는가" - 직업별 bossFirstClearStages와 별개 집합(계정 공유)이다. stage → true.
+function PlayerProfile.hasClaimedProtectionStage(player, stage)
+	local profile = profiles[player]
+	return profile ~= nil and profile.purchases.protectionClaimedStages[stage] == true
+end
+
+function PlayerProfile.markProtectionStageClaimed(player, stage)
+	local profile = profiles[player]
+	if profile then
+		profile.purchases.protectionClaimedStages[stage] = true
+	end
+end
+
+-- 받은 스테이지 목록(오름차순 숫자) - DevTools "/gg ticket claims" 전용. 키가 숫자든 문자열이든 숫자로 읽어 돌려준다.
+function PlayerProfile.getProtectionClaimedStages(player)
+	local profile = profiles[player]
+	local stages = {}
+	if profile then
+		for key in pairs(profile.purchases.protectionClaimedStages) do
+			table.insert(stages, tonumber(key) or key)
+		end
+	end
+	table.sort(stages, function(a, b) return (tonumber(a) or 0) < (tonumber(b) or 0) end)
+	return stages
 end
 
 function PlayerProfile.getCharacterLevel(player)
@@ -1203,6 +1269,9 @@ function PlayerProfile.snapshotForDevTools(player)
 		classes = deepCopy(profile.classes),
 		inventory = deepCopy(profile.inventory),
 		materials = deepCopy(profile.materials), -- 28-1 S04: 처치 보상이 재료를 실제 프로필에 쌓는다 - 가방과 같은 이유로 되돌린다.
+		-- 28-1 S05: 보스 처치가 방지권 · 지급 기록을 실제 프로필에 쌓는다 - purchases 전체가 아니라 이 둘만 되돌린다(옵션 변환권은 그것을 만지는 검증 블록이 각자 되돌린다).
+		protectionTickets = deepCopy(profile.purchases.protectionTickets),
+		protectionClaimedStages = deepCopy(profile.purchases.protectionClaimedStages),
 	}
 end
 
@@ -1225,6 +1294,9 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	end
 	profile.materials = deepCopy(snapshot.materials)
 	syncMaterialAttributes(player, profile)
+	profile.purchases.protectionTickets = deepCopy(snapshot.protectionTickets)
+	profile.purchases.protectionClaimedStages = deepCopy(snapshot.protectionClaimedStages)
+	syncProtectionAttributes(player, profile)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)
 	InventorySync.push(player, profile)

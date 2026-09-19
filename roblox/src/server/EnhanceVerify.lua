@@ -25,6 +25,11 @@ local MonsterState = require(script.Parent.MonsterState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local SaveSystem = require(script.Parent.SaveSystem)
 local TutorialState = require(script.Parent.TutorialState)
+-- S05(방지권) 검증용.
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local EnhancePolicy = require(script.Parent.EnhancePolicy)
+local ImmediateSave = require(script.Parent.ImmediateSave)
+local ProtectionTickets = require(script.Parent.ProtectionTickets)
 
 local EnhanceVerify = {}
 
@@ -979,6 +984,443 @@ function EnhanceVerify.runLiveS04(player, env)
 
 	local pass, total = r.summary()
 	print(("===S04 검증 끝(나)=== %d/%d 통과"):format(pass, total))
+end
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- S05(PRD 20.86) - 방지권 2종 · 상점 · 보스 계정 첫 클리어 지급 · 규제 관문
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- ─────────────────────────── S05 (가) 순수 함수 ───────────────────────────
+
+local function checkBossGrantFormula(r)
+	r.section("[1] bossGrant 식", function()
+		local expected = {
+			{ 45, 0, 0 }, { 50, 1, 0 }, { 55, 0, 0 }, { 75, 1, 0 }, { 100, 1, 1 }, { 125, 1, 1 }, { 130, 0, 0 }, { 150, 1, 1 },
+		}
+		local cells, ok = {}, true
+		for _, row in ipairs(expected) do
+			local dropCount, resetCount = Enhance.getBossGrant(row[1])
+			ok = ok and dropCount == row[2] and resetCount == row[3]
+			table.insert(cells, ("%d → 하락 %d · 초기화 %d"):format(row[1], dropCount, resetCount))
+		end
+		r.check(("%s (기대 없음 · 하락 · 없음 · 하락 · 둘 다 · 둘 다 · 없음 · 둘 다)"):format(table.concat(cells, " / ")), ok)
+	end)
+end
+
+local function checkProtectionPrice(r)
+	r.section("[2] 방지권 가격", function()
+		local perKill = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 83)
+		local dropPrice, resetPrice = Enhance.getProtectionPrice("drop", 83), Enhance.getProtectionPrice("reset", 83)
+		-- 가격 함수는 "계정 최고 스테이지" 하나만 받는다(지금 서 있는 스테이지 인자가 없다) - 서 있는 스테이지를 1로 바꿔도 같은 값인지는 실제 Player의 상점 경로로 (나) 17번이 잰다.
+		r.check(("계정 최고 83: 하락 %d(기대 스테이지 83 마리당 골드 %d × 300 = %d) · 초기화 %d(기대 × 900 = %d) · 스테이지 1 기준 하락 %d은 더 싸다(=스테이지 1로 내려가 사는 길이 있었다면 그 값) - 함수는 계정 최고만 받는다"):format(
+			dropPrice, perKill, perKill * 300, resetPrice, perKill * 900, Enhance.getProtectionPrice("drop", 1)),
+			dropPrice == perKill * 300 and resetPrice == perKill * 900 and Enhance.getProtectionPrice("drop", 1) < dropPrice)
+	end)
+end
+
+-- 23강(성공 12 · 하락 6 · 초기화 1 · 유지 81)을 samples회 굴려 결과 분포와 방지권 소모율을 잰다. 게이지는 매번 0(천장이 끼지 않게).
+local function measureProtection(level, flags, samples)
+	local counts = { success = 0, maintain = 0, down1 = 0, down2 = 0, reset = 0 }
+	local blocked = { drop = 0, reset = 0 }
+	for index = 1, samples do
+		local outcome = Enhance.tryEnhance(level, 0, flags)
+		counts[outcome.result] += 1
+		if outcome.blockedBy then
+			blocked[outcome.blockedBy] += 1
+		end
+		if index % 100000 == 0 then
+			task.wait()
+		end
+	end
+	return counts, blocked
+end
+
+local function distributionText(counts, samples)
+	local cells = {}
+	for _, key in ipairs(RESULT_KEYS) do
+		table.insert(cells, ("%.2f"):format(counts[key] / samples * 100))
+	end
+	return table.concat(cells, " / ")
+end
+
+local function distributionWithin(counts, samples, expected, tolerance)
+	for index, key in ipairs(RESULT_KEYS) do
+		if math.abs(counts[key] / samples - expected[index]) > tolerance then
+			return false
+		end
+	end
+	return true
+end
+
+local function checkProtectionDistribution(r)
+	local samples = 200000
+	local dropCounts, dropBlocked
+	r.section("[3] 23강 · 하락 방지 on", function()
+		dropCounts, dropBlocked = measureProtection(23, { true, false }, samples)
+		local usage = dropBlocked.drop / samples
+		r.check(("23강 · 하락 방지 on · %d회: 성공/유지/하락1/하락2/초기화 = %s %%(기대 12/87/0/0/1 ±0.3%%p) · 소모 장수 ÷ 시도 = %.4f(기대 0.06 ± 0.003) · 초기화 방지권 소모 %d(기대 0)"):format(
+			samples, distributionText(dropCounts, samples), usage, dropBlocked.reset),
+			distributionWithin(dropCounts, samples, { 0.12, 0.87, 0, 0, 0.01 }, 0.003) and math.abs(usage - 0.06) <= 0.003 and dropBlocked.reset == 0)
+	end)
+
+	r.section("[4] 3번의 분포 = getOutcomeTable", function()
+		local table23 = Enhance.getOutcomeTable(23, false, true, false)
+		local expected, cells = {}, {}
+		for _, key in ipairs(RESULT_KEYS) do
+			table.insert(expected, table23[key])
+			table.insert(cells, ("%.2f"):format(table23[key] * 100))
+		end
+		r.check(("getOutcomeTable(23, false, true, false) = %s %%: 3번의 실제 분포 %s %%와 ±0.3%%p 안에서 같다(같은 표)"):format(
+			table.concat(cells, " / "), dropCounts and distributionText(dropCounts, samples) or "3번 실패"),
+			dropCounts ~= nil and distributionWithin(dropCounts, samples, expected, 0.003))
+	end)
+
+	r.section("[5] 23강 · 둘 다 on", function()
+		local counts, blocked = measureProtection(23, { true, true }, samples)
+		local resetUsage = blocked.reset / samples
+		r.check(("23강 · 둘 다 on · %d회: 분포 %s %%(기대 12/88/0/0/0 ±0.3%%p) · 초기화 방지권 소모율 %.4f(기대 0.01 ± 0.002) · 하락 방지권 소모율 %.4f(기대 0.06)"):format(
+			samples, distributionText(counts, samples), resetUsage, blocked.drop / samples),
+			distributionWithin(counts, samples, { 0.12, 0.88, 0, 0, 0 }, 0.003) and math.abs(resetUsage - 0.01) <= 0.002)
+	end)
+end
+
+-- ★ 진짜 합격 기준: 막지 않은 시도에서 방지권이 빠진 적이 없다. 같은 롤로 **원래 확률표의 결과**(방지권 없음)를 따로 구해, 그 결과가 성공 · 유지인데 방지권이
+-- 소모된 시도(blockedBy가 있는 시도)를 센다. 하락 · 초기화인데 방지권이 안 빠진 시도도 같이 센다(막을 수 있었는데 안 막은 경우).
+local function checkNoWastedTickets(r)
+	r.section("[6] 성공 · 유지에서 방지권 소모", function()
+		local wasted, missed, blockedTotal, samples = 0, 0, 0, 0
+		for level = 19, 24 do
+			local original = Enhance.getOutcomeTable(level, false, false, false)
+			for index = 1, 50000 do
+				local roll = math.random()
+				local rolled = Enhance.rollResult(original, roll)
+				local outcome = Enhance.tryEnhance(level, 0, { true, true }, roll)
+				samples += 1
+				if outcome.blockedBy then
+					blockedTotal += 1
+				end
+				if (rolled == "success" or rolled == "maintain") and outcome.blockedBy ~= nil then
+					wasted += 1
+				end
+				-- 하락은 하락 방지권이, 초기화는 초기화 방지권이 (해당 단계에서 쓸 수 있으면) 반드시 막는다. 20 · 21강에는 초기화가 없고 19강엔 초기화 확률이 없다.
+				if (rolled == "down1" or rolled == "down2") and outcome.blockedBy ~= "drop" then
+					missed += 1
+				elseif rolled == "reset" and outcome.blockedBy ~= "reset" then
+					missed += 1
+				end
+				if index % 25000 == 0 then
+					task.wait()
+				end
+			end
+		end
+		r.check(("19 ~ 24강 × 5만 회(방지권 둘 다 on, 총 %d회 · 막은 시도 %d회): 원래 결과가 성공 · 유지인데 방지권이 빠진 시도 %d건(기대 0) ★진짜 합격 기준 · 막을 수 있는 하락 · 초기화를 못 막은 시도 %d건(기대 0)"):format(
+			samples, blockedTotal, wasted, missed), wasted == 0 and missed == 0 and blockedTotal > 0)
+	end)
+end
+
+local function checkFlagResolution(r)
+	r.section("[7] 요청 플래그 재검증", function()
+		local cases = {
+			{ "18강에서 하락 방지 on(보유 5)", { 18, false, true, false, 5, 5 }, { false, false } },
+			{ "21강에서 초기화 방지 on(보유 5)", { 21, false, false, true, 5, 5 }, { false, false } },
+			{ "23강에서 둘 다 on · 보유 0", { 23, false, true, true, 0, 0 }, { false, false } },
+			{ "19강에서 하락 방지 on(보유 1) - 쓸 수 있다", { 19, false, true, true, 1, 1 }, { true, false } },
+			{ "23강에서 둘 다 on(보유 1 · 1) - 쓸 수 있다", { 23, false, true, true, 1, 1 }, { true, true } },
+			{ "boolean이 아닌 값(문자열 · 숫자)", { 23, false, "yes", 1, 5, 5 }, { false, false } },
+		}
+		local cells, ok = {}, true
+		for _, case in ipairs(cases) do
+			local args = case[2]
+			local useDrop, useReset = Enhance.resolveProtectionFlags(args[1], args[2], args[3], args[4], args[5], args[6])
+			local same = useDrop == case[3][1] and useReset == case[3][2]
+			ok = ok and same
+			table.insert(cells, ("%s → %s/%s"):format(case[1], tostring(useDrop), tostring(useReset)))
+		end
+		-- 플래그가 false로 처리된 시도는 방지권을 안 쓰고 강화는 정상이다: flags = { false, false }로 만 회 굴려 blockedBy가 한 번도 없고 결과가 5종 안이다.
+		local blockedAny, outOfSet = 0, 0
+		for _ = 1, 10000 do
+			local outcome = Enhance.tryEnhance(23, 0, { false, false })
+			if outcome.blockedBy then
+				blockedAny += 1
+			end
+			if not RESULT_SET[outcome.result] then
+				outOfSet += 1
+			end
+		end
+		r.check(("%s · 플래그 false로 만 회 강화: 소모 %d건 · 5종 밖의 결과 %d건(기대 0 · 0)"):format(table.concat(cells, " / "), blockedAny, outOfSet), ok and blockedAny == 0 and outOfSet == 0)
+	end)
+end
+
+local function checkFullGauge(r)
+	r.section("[8] 게이지 가득 + 방지 on", function()
+		local useDrop, useReset = Enhance.resolveProtectionFlags(23, true, true, true, 5, 5)
+		local outcome = Enhance.tryEnhance(23, EnhanceConfig.gauge.max, { true, true })
+		r.check(("게이지 가득 · 23강 · 둘 다 on(보유 5 · 5): 플래그 %s/%s(기대 false/false) · 결과 %s(기대 success) · 방지권 소모 %s(기대 없음) · 게이지 %d(기대 0)"):format(
+			tostring(useDrop), tostring(useReset), outcome.result, tostring(outcome.blockedBy), outcome.gauge),
+			useDrop == false and useReset == false and outcome.result == "success" and outcome.blockedBy == nil and outcome.gauge == 0)
+	end)
+end
+
+local function checkBlockedGauge(r)
+	r.section("[9] 막힌 시도의 게이지", function()
+		-- 롤 0.95는 23강 원래 표(성공 0.12 · 유지 0.81 · 하락1 0.04 · 하락2 0.02 · 초기화 0.01)에서 하락1(0.93 ~ 0.97)이다.
+		local before = 100
+		local blockedByDrop = Enhance.tryEnhance(23, before, { true, false }, 0.95)
+		local plain = Enhance.tryEnhance(23, before, { false, false }, 0.95)
+		local gain = Enhance.getGaugeGain(23)
+		r.check(("23강 · 롤 0.95(원래 결과 하락) · 하락 방지 on: 결과 %s · 막은 것 %s · 게이지 %d → %d(기대 %d - 막힌 시도도 실패라 찬다) · 방지권 없이는 결과 %s · 게이지 %d(막힌 시도와 같다) · 단계 %d(기대 23 그대로)"):format(
+			blockedByDrop.result, tostring(blockedByDrop.blockedBy), before, blockedByDrop.gauge, before + gain, plain.result, plain.gauge, blockedByDrop.level),
+			blockedByDrop.result == "maintain" and blockedByDrop.blockedBy == "drop" and blockedByDrop.gauge == before + gain and plain.result == "down1"
+				and plain.gauge == blockedByDrop.gauge and blockedByDrop.level == 23)
+	end)
+end
+
+local function checkPolicy(r)
+	r.section("[10] EnhancePolicy", function()
+		local inputs = { "gold", "enhanceStone" }
+		local emptyTrue, emptyReason = EnhancePolicy.evaluate(inputs, EnhanceConfig.paidInputIds, true) -- 제품 데이터 표(빈 표) + 제한 true 주입
+		-- 검증 안에서만 "enhanceStone"을 넣은 사본 표 - 제품 데이터 표는 안 건드린다.
+		local copy = deepCopy(EnhanceConfig.paidInputIds)
+		table.insert(copy, "enhanceStone")
+		local restrictedOk, restrictedReason = EnhancePolicy.evaluate(inputs, copy, true)
+		local freeOk = EnhancePolicy.evaluate(inputs, copy, false)
+		local unrelatedOk = EnhancePolicy.evaluate({ "gold", "dropTicket" }, copy, true)
+		r.check(("paidInputIds %d개(기대 0): 제한 true를 주입해도 canAttempt 핵심 %s(기대 true - 이 분기는 절대 안 탄다) · 사본 표에 enhanceStone: 제한 true → %s %s(기대 false paid_random_restricted) · 제한 false → %s(기대 true) · 표에 없는 투입물(gold · dropTicket)만 → %s(기대 true)"):format(
+			#EnhanceConfig.paidInputIds, tostring(emptyTrue), tostring(restrictedOk), tostring(restrictedReason), tostring(freeOk), tostring(unrelatedOk)),
+			#EnhanceConfig.paidInputIds == 0 and emptyTrue == true and emptyReason == nil and restrictedOk == false and restrictedReason == "paid_random_restricted"
+				and freeOk == true and unrelatedOk == true)
+	end)
+end
+
+local function checkProtectionSave(r)
+	r.section("[11] 저장 이관 · 검사", function()
+		local profile = SaveSystem.defaultProfile()
+		profile.version = 26
+		profile.purchases.protectionTickets = nil -- v26까지는 이 필드가 없었다
+		profile.purchases.protectionClaimedStages = nil
+		local migrated = SaveSystem.migrate(profile)
+		local zeros = migrated.purchases.protectionTickets ~= nil and migrated.purchases.protectionTickets.drop == 0 and migrated.purchases.protectionTickets.reset == 0
+		local emptyClaims = migrated.purchases.protectionClaimedStages ~= nil and next(migrated.purchases.protectionClaimedStages) == nil
+		local validAfter = SaveSystem.isValidProfile(migrated)
+
+		local kept = SaveSystem.defaultProfile()
+		kept.version = 26
+		kept.purchases.protectionTickets = { drop = 4, reset = 2 }
+		kept.purchases.protectionClaimedStages = { [50] = true }
+		local keptMigrated = SaveSystem.migrate(kept)
+		local keeps = keptMigrated.purchases.protectionTickets.drop == 4 and keptMigrated.purchases.protectionTickets.reset == 2 and keptMigrated.purchases.protectionClaimedStages[50] == true
+
+		local function validWith(mutate)
+			local copy = deepCopy(migrated)
+			mutate(copy)
+			return SaveSystem.isValidProfile(copy)
+		end
+		local rejects = not validWith(function(copy) copy.purchases.protectionTickets.drop = -1 end)
+			and not validWith(function(copy) copy.purchases.protectionTickets.reset = 1.5 end)
+			and not validWith(function(copy) copy.purchases.protectionTickets.reset = nil end)
+			and not validWith(function(copy) copy.purchases.protectionTickets = 3 end)
+			and not validWith(function(copy) copy.purchases.protectionClaimedStages = nil end)
+		local edgeOk = validWith(function(copy) copy.purchases.protectionTickets.drop = 0 end) and validWith(function(copy) copy.purchases.protectionTickets.reset = 999 end)
+		r.check(("v26 → v%d: 0장 둘 다=%s · 받은 스테이지 빈 집합=%s · isValidProfile=%s(기대 true) · 이미 있는 값(4 · 2 · [50])은 유지=%s · 0 · 999 통과=%s · 음수 · 소수 · 빠짐 · 표 아님 · 집합 없음 거부=%s"):format(
+			migrated.version, tostring(zeros), tostring(emptyClaims), tostring(validAfter), tostring(keeps), tostring(edgeOk), tostring(rejects)),
+			migrated.version == SaveConfig.saveVersion and zeros and emptyClaims and validAfter and keeps and edgeOk and rejects)
+	end)
+end
+
+function EnhanceVerify.runPureS05()
+	print("===S05 검증 시작(가: 방지권 순수 함수)===")
+	local r = newRecorder("가", "S05")
+	checkBossGrantFormula(r)
+	checkProtectionPrice(r)
+	checkProtectionDistribution(r) -- 3 · 4 · 5번
+	checkNoWastedTickets(r)
+	checkFlagResolution(r)
+	checkFullGauge(r)
+	checkBlockedGauge(r)
+	checkPolicy(r)
+	checkProtectionSave(r)
+	local pass, total = r.summary()
+	print(("===S05 검증 끝(가)=== %d/%d 통과"):format(pass, total))
+end
+
+-- ─────────────────────────── S05 (나) 실제 처치 경로 · 상점 ───────────────────────────
+
+local function ticketCounts(player)
+	return PlayerProfile.getProtectionTicket(player, "drop"), PlayerProfile.getProtectionTicket(player, "reset")
+end
+
+function EnhanceVerify.runLiveS05(player, env)
+	print("===S05 검증 시작(나: 실제 처치 경로 · 상점)===")
+	local r = newRecorder("나", "S05")
+	local profile = PlayerProfile.getProfile(player)
+	local root = rootOf(player)
+	if not profile or not root then
+		r.check("프로필 또는 캐릭터가 없어 검증을 건너뜀", false)
+		local pass, total = r.summary()
+		print(("===S05 검증 끝(나)=== %d/%d 통과"):format(pass, total))
+		return
+	end
+
+	env.ensureBackup(player) -- classes · gold · 가방 · 재료 · 방지권 · 받은 스테이지는 env.restore가 되돌린다
+	local savedCFrame = root.CFrame
+	local bagBefore, monstersBefore = #profile.inventory, monsterSet()
+	local dropBefore, resetBefore = ticketCounts(player)
+	local claimsBefore = deepCopy(profile.purchases.protectionClaimedStages)
+	local classA, classB = ClassData.order[1], ClassData.order[2]
+	PlayerProfile.setClassId(player, classA)
+
+	-- 기준 상태: 방지권 0장 · 받은 스테이지 빈 집합(개발 계정에 남은 값이 결과를 흔들지 않게). 직업 둘의 첫 클리어 기록도 비운다.
+	PlayerProfile.trySpendProtectionTicket(player, "drop", dropBefore)
+	PlayerProfile.trySpendProtectionTicket(player, "reset", resetBefore)
+	table.clear(profile.purchases.protectionClaimedStages)
+	table.clear(profile.inventory) -- 보스 장비가 매번 가방으로 들어오므로 자리를 비운다(가방은 env.restore가 되돌린다)
+	for _, classId in ipairs({ classA, classB }) do
+		profile.classes[classId].stageProgress.bossFirstClearStages = {}
+	end
+
+	-- 보스를 실제 처치 경로로 잡고, 방지권 증가량 · 즉시 저장 요청 수 · 가방 증가를 함께 잰다.
+	local function killAndMeasure(stage, standInRatio)
+		local dropStart, resetStart = ticketCounts(player)
+		local bagStart, savesStart = #profile.inventory, ImmediateSave.getRequestCount()
+		local result = killBossOnce(player, env, stage, standInRatio)
+		if not result then
+			return nil
+		end
+		local dropEnd, resetEnd = ticketCounts(player)
+		result.dropGain, result.resetGain = dropEnd - dropStart, resetEnd - resetStart
+		result.bagGain, result.saves = #profile.inventory - bagStart, ImmediateSave.getRequestCount() - savesStart
+		return result
+	end
+
+	r.section("[12] 직업 A · 스테이지 50 보스", function()
+		local result = killAndMeasure(50, nil)
+		if not result then
+			r.check("보스 스폰 실패", false)
+			return
+		end
+		r.check(("직업 %s · 스테이지 50 보스 처치: 하락 방지권 +%d(기대 1) · 초기화 +%d(기대 0) · protectionClaimedStages[50]=%s(기대 true) · 즉시 저장 요청 %d회(기대 1) · resolveHit 에러=%s"):format(
+			classA, result.dropGain, result.resetGain, tostring(PlayerProfile.hasClaimedProtectionStage(player, 50)), result.saves, result.ok and "없음" or tostring(result.err)),
+			result.ok and result.dropGain == 1 and result.resetGain == 0 and PlayerProfile.hasClaimedProtectionStage(player, 50) and result.saves == 1)
+	end)
+
+	r.section("[13] 같은 보스를 한 번 더", function()
+		local result = killAndMeasure(50, nil)
+		if not result then
+			r.check("보스 스폰 실패", false)
+			return
+		end
+		r.check(("같은 스테이지 50 보스를 한 번 더: 방지권 하락 +%d · 초기화 +%d(기대 0 · 0 - 계정 단위 1회)"):format(result.dropGain, result.resetGain), result.ok and result.dropGain == 0 and result.resetGain == 0)
+	end)
+
+	r.section("[14] 직업 B로 같은 스테이지 50 보스", function()
+		PlayerProfile.setClassId(player, classB)
+		local firstClearBefore = PlayerProfile.hasBossFirstClearReward(player, 50)
+		local result = killAndMeasure(50, nil)
+		if not result then
+			r.check("보스 스폰 실패", false)
+			return
+		end
+		local firstClearAfter = PlayerProfile.hasBossFirstClearReward(player, 50)
+		-- 장비 확정 드랍은 직업별 첫 클리어라 나온다: 가방에 아이템이 들어오고(빈 가방) 직업 B의 첫 클리어 기록이 새로 찍힌다.
+		r.check(("직업 %s(직업 %s로 이미 받은 스테이지)로 스테이지 50 보스: 방지권 하락 +%d · 초기화 +%d(기대 0 · 0) ★진짜 합격 기준 · 장비 확정 드랍 - 직업 %s 첫 클리어 기록 %s → %s(기대 false → true) · 가방 +%d(기대 1)"):format(
+			classB, classA, result.dropGain, result.resetGain, classB, tostring(firstClearBefore), tostring(firstClearAfter), result.bagGain),
+			result.ok and result.dropGain == 0 and result.resetGain == 0 and firstClearBefore == false and firstClearAfter == true and result.bagGain == 1)
+		PlayerProfile.setClassId(player, classA)
+	end)
+
+	r.section("[15] 스테이지 100 보스", function()
+		local result = killAndMeasure(100, nil)
+		if not result then
+			r.check("보스 스폰 실패", false)
+			return
+		end
+		r.check(("스테이지 100 보스: 하락 +%d · 초기화 +%d(기대 1 · 1)"):format(result.dropGain, result.resetGain), result.ok and result.dropGain == 1 and result.resetGain == 1)
+	end)
+
+	r.section("[16] 기여 9% 스탠드인", function()
+		local result = killAndMeasure(75, 0.09)
+		if not result then
+			r.check("보스 스폰 실패", false)
+			return
+		end
+		-- 스탠드인이 지급 대상이면 grantForBoss의 FireClient에서 하드 에러가 났을 것이다 - 에러 없이 실제 Player만 받는다.
+		r.check(("스테이지 75 보스 · 스탠드인 기여 9%% + 실제 Player: 하락 +%d(기대 1 - 실제 Player만) · 스탠드인이 지급 대상이었다면 났을 하드 에러=%s(기대 없음)"):format(
+			result.dropGain, result.ok and "없음" or tostring(result.err)), result.ok and result.dropGain == 1 and PlayerProfile.hasClaimedProtectionStage(player, 75))
+	end)
+
+	r.section("[17] 상점", function()
+		-- 지금 서 있는 스테이지는 1, 계정 최고 스테이지는 83(모든 직업) - 가격 기준이 계정 최고인지 본다.
+		for _, classId in ipairs(ClassData.order) do
+			profile.classes[classId].stageProgress.infiniteBest = 83
+		end
+		env.applyStage(player, 1)
+		local prices = ProtectionTickets.getPrices(player)
+		local perKill = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 83)
+		local priceOk = prices.accountBestStage == 83 and prices.drop == perKill * 300 and prices.reset == perKill * 900
+
+		-- (a) 강화대 밖(보스 처치 뒤 사냥터로 복귀한 자리 - 강화대에서 멀다) - 골드가 충분해도 거절
+		PlayerProfile.addGold(player, prices.drop * 3)
+		local goldA, dropA = PlayerProfile.getGold(player), PlayerProfile.getProtectionTicket(player, "drop")
+		local okOutside, reasonOutside = ProtectionTickets.tryBuy(player, "drop")
+		local outsideOk = okOutside == false and reasonOutside == "not_near_station" and PlayerProfile.getGold(player) == goldA and PlayerProfile.getProtectionTicket(player, "drop") == dropA
+
+		-- (b) 강화대 안 · 골드 부족 - 거절, 골드 불변
+		local stationRoot = rootOf(player)
+		stationRoot.Anchored = true
+		stationRoot.CFrame = CFrame.new(WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset + Vector3.new(0, 3, 0))
+		PlayerProfile.trySpendGold(player, PlayerProfile.getGold(player)) -- 골드를 0으로
+		PlayerProfile.addGold(player, prices.drop - 1)
+		local goldB, dropB = PlayerProfile.getGold(player), PlayerProfile.getProtectionTicket(player, "drop")
+		local okPoor, reasonPoor = ProtectionTickets.tryBuy(player, "drop")
+		local poorOk = okPoor == false and reasonPoor == "insufficient_gold" and PlayerProfile.getGold(player) == goldB and PlayerProfile.getProtectionTicket(player, "drop") == dropB
+
+		-- (c) 강화대 안 · 골드 충분 - 장수 +1, 골드가 정확히 가격만큼
+		PlayerProfile.addGold(player, 1 + 500)
+		local goldC, dropC = PlayerProfile.getGold(player), PlayerProfile.getProtectionTicket(player, "drop")
+		local okBuy, priceOrReason = ProtectionTickets.tryBuy(player, "drop")
+		local buyOk = okBuy == true and PlayerProfile.getProtectionTicket(player, "drop") == dropC + 1 and goldC - PlayerProfile.getGold(player) == prices.drop and priceOrReason == prices.drop
+		local okInvalid, reasonInvalid = ProtectionTickets.tryBuy(player, "bossGrant")
+		r.check(("서 있는 스테이지 1 · 계정 최고 %d: 가격 하락 %d(기대 %d = 스테이지 83 × 300) · 초기화 %d(기대 %d = × 900)=%s / 강화대 밖 → %s %s · 골드 · 장수 불변=%s / 강화대 안 · 골드 %d(가격 %d 미만) → %s %s · 골드 불변=%s / 골드 충분 → %s · 장수 %d → %d(기대 +1) · 골드 %d → %d(차감 %d, 기대 가격 %d) · 잘못된 종류 → %s"):format(
+			prices.accountBestStage, prices.drop, perKill * 300, prices.reset, perKill * 900, tostring(priceOk),
+			tostring(okOutside), tostring(reasonOutside), tostring(outsideOk), goldB, prices.drop, tostring(okPoor), tostring(reasonPoor), tostring(poorOk),
+			tostring(okBuy), dropC, PlayerProfile.getProtectionTicket(player, "drop"), goldC, PlayerProfile.getGold(player), goldC - PlayerProfile.getGold(player), prices.drop, tostring(reasonInvalid)),
+			priceOk and outsideOk and poorOk and buyOk and okInvalid == false and reasonInvalid == "invalid_kind")
+	end)
+
+	-- [18] 되돌리기: classes · gold · 가방 · 재료 · 방지권 · 받은 스테이지는 env.restore가, 위치 · 고정은 직접. 검증이 만든 것은 전부 없어야 한다.
+	BossEncounter.despawnFor(player)
+	BossEncounter.debugClearHints(player)
+	env.restore(player)
+	local currentRoot = rootOf(player)
+	if currentRoot then
+		currentRoot.Anchored = false
+		currentRoot.CFrame = savedCFrame
+	end
+	local orphans, leftoverMonsters = 0, 0
+	for _, model in ipairs(MonsterState.getAllModels()) do
+		local data = MonsterState.getData(model)
+		if data and data.isBoss and not BossEncounter.getEncounterByModel(model) then
+			orphans += 1
+		end
+		if not monstersBefore[model] then
+			leftoverMonsters += 1
+		end
+	end
+	local dropAfter, resetAfter = ticketCounts(player)
+	local claimsSame = true
+	for stage in pairs(profile.purchases.protectionClaimedStages) do
+		claimsSame = claimsSame and claimsBefore[stage] == true
+	end
+	for stage in pairs(claimsBefore) do
+		claimsSame = claimsSame and profile.purchases.protectionClaimedStages[stage] == true
+	end
+	r.check(("검증 뒤 되돌림: encounter 없는 보스 모델 %d개 · 검증이 남긴 몬스터 %d개(기대 0 · 0) · 방지권 하락 %d → %d · 초기화 %d → %d · 받은 스테이지 같음=%s · 가방 %d → %d칸 · 직업 %s(기대 전부 같음)"):format(
+		orphans, leftoverMonsters, dropBefore, dropAfter, resetBefore, resetAfter, tostring(claimsSame), bagBefore, #profile.inventory, tostring(PlayerProfile.getClassId(player))),
+		orphans == 0 and leftoverMonsters == 0 and dropAfter == dropBefore and resetAfter == resetBefore and claimsSame and #profile.inventory == bagBefore)
+
+	local pass, total = r.summary()
+	print(("===S05 검증 끝(나)=== %d/%d 통과"):format(pass, total))
 end
 
 return EnhanceVerify

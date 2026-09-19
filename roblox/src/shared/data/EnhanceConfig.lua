@@ -57,6 +57,21 @@ return {
 	-- 성공하면 0으로. 하락 · 초기화로 단계가 바뀌어도 게이지는 유지된다. 성공률 p에서 ceil(2 / p)번 실패하면 확정이다("기대 시도 수의 2배").
 	gauge = { max = 1000, gainPerSuccessRate = 500},
 
+	-- 방지권 2종(28-1 S05, PRD 20.72 [1-3]) - 골드로만 산다. 결과를 원래 확률표로 굴린 뒤 **실제로 막았을 때만** 1장이 소모된다(하락 방지권: down1 · down2를
+	-- maintain으로, 초기화 방지권: reset을 maintain으로). usableFromLevel = 시도하는 단계가 이 값 이상일 때만 쓸 수 있다. priceKillEquivalent = 상점가 =
+	-- "계정 최고 스테이지의 잡몹(tier1) 1마리당 골드 × 이 값"(Enhance.getProtectionPrice).
+	protection = {
+		drop = { displayName = "하락 방지권", usableFromLevel = 19, priceKillEquivalent = 300 },
+		reset = { displayName = "초기화 방지권", usableFromLevel = 22, priceKillEquivalent = 900 },
+		-- 보스 계정 첫 클리어 지급(계정 단위 1회): 보스 스테이지 S가 S >= firstStage이고 (S - firstStage) % stepStages == 0이면 하락 1장, 그중
+		-- S >= resetFromStage이면 초기화도 1장 -> 50 · 75 = 하락 / 100 · 125 · 150 ... = 하락 + 초기화(Enhance.getBossGrant).
+		bossGrant = { firstStage = 50, stepStages = 25, resetFromStage = 100 },
+	},
+
+	-- 28-1 [1-6]: Robux로 살 수 있는 투입물의 id(gold · 재료 id · dropTicket · resetTicket). 지금은 비어 있다 - EnhancePolicy.canAttempt가 이 표에 든
+	-- 것이 이번 시도에 쓰이고 PolicyService가 "제한됨"이면 시도를 거부한다. 지금은 이 분기를 절대 안 탄다.
+	paidInputIds = {},
+
 	-- 강화 단계별 데미지 계수(누적, 6.1). 최종 배율 = 1 + damageCoefficient[level+1].
 	damageCoefficient = {
 		0,                                -- +0

@@ -24,7 +24,16 @@ local pendingSaveThread = setmetatable({}, { __mode = "k" })
 
 local ImmediateSave = {}
 
+-- request 호출 누계(검증용 카운터 - CombatResolution.dropStats와 같은 결) - 두 시점의 차로 "그 사건이 즉시 저장을 요청했는가"를 읽는다. 저장 자체는
+-- 스로틀되거나(DevTools 백업 중에는) 건너뛰어질 수 있어 요청 횟수가 가장 정직한 관측값이다.
+local requestCount = 0
+
+function ImmediateSave.getRequestCount()
+	return requestCount
+end
+
 function ImmediateSave.request(player)
+	requestCount += 1
 	local now = os.clock()
 	local last = lastSaveAt[player]
 	if not last or now - last >= IMMEDIATE_SAVE_THROTTLE_SECONDS then
