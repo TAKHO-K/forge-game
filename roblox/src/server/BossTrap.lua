@@ -104,6 +104,12 @@ function BossTrap.release(player, reason)
 	end
 	records[player] = nil
 	PlayerState.setTrapped(player, nil)
+	-- 29-3: 풀려난 직후 유예 - 잡힌 동안 시작된 예고는 피할 수 없었다(BossData.mechanics.trap.releaseGraceSeconds).
+	-- 보스전이 끝나거나 리셋돼 풀린 것("reset")은 유예가 필요 없다.
+	if reason == "auto" or reason == "rescued" then
+		local trapConfig = BossData.mechanics.trap
+		PlayerState.setIncomingDamageMultiplierUntil(player, trapConfig.damageTakenMultiplier, trapConfig.releaseGraceSeconds)
+	end
 	setAnchored(player, false)
 	syncAttributes(player, nil)
 	print(("[forge-game] 잡힘 해제: %s - %s(%s), %.2f초 만에"):format(

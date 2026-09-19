@@ -5,7 +5,8 @@
 --
 -- kit 정의는 BossData.bosses[id].arenaKit(지금은 어느 보스에도 없다 - 보스별 구현 세션이 채운다):
 --   arenaKit = { parts = { { name, size(Vector3), offset(Vector3 - 아레나 중심·바닥 윗면 기준), rotationDeg?(Vector3),
---                           color(Color3 - 기존 색만), material?(Enum.Material), ground?(bool), collide?(bool) }, ... } }
+--                           color(Color3 - 기존 색만), material?(Enum.Material), ground?(bool), collide?(bool),
+--                           shape?("cylinder" - 29-3 유사 웅덩이 같은 원판), tag?·radiusStuds?(스킬이 읽는 논리 구역) }, ... } }
 --   ground = true면 GroundProbe 폴더에 둔다 - 보스 지면 추적·돌진 Y·드랍 스냅이 그 위를 "땅"으로 본다(단·경사로).
 -- 상한(20.73 [2-7]): 정적 ≤ 40파트. 넘으면 짓지 않고 경고만 낸다 - 12인 예산("보스 아레나 몫 ≤ 900파트")의 전제다.
 -- 움직이는 지형(얼음 기둥·물 평면·먹구름)은 여기가 아니다 - 서버는 논리 상태만 갖고 클라가 그린다.
@@ -37,6 +38,9 @@ function BossArenaKit.build(kit, zone, floorTopY)
 		part.Material = spec.material or Enum.Material.Slate
 		part.Color = spec.color
 		part.Size = spec.size
+		if spec.shape == "cylinder" then
+			part.Shape = Enum.PartType.Cylinder
+		end
 		local rotation = spec.rotationDeg or Vector3.zero
 		part.CFrame = CFrame.new(origin + spec.offset) * CFrame.Angles(math.rad(rotation.X), math.rad(rotation.Y), math.rad(rotation.Z))
 		part.Parent = spec.ground and GroundProbe.folder() or Workspace

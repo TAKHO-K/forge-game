@@ -49,10 +49,15 @@ local MECHANICS = {
 	partialFailDivisor = 3,
 
 	-- 29-1 A-2: 잡힘. 자동 해제 9초 = 구출 인시 6 ÷ (1 − 1/3) = 90초 앵커의 10%. 0 = 잡힌 동안 면역.
+	-- releaseGraceSeconds(29-3): 풀려난 뒤에도 이만큼은 면역이다. 잡힌 동안 시작된 예고는 피할 수 없었다 - 판정 뒤 후딜
+	-- + 전역 쿨 + 다음 전조가 9.2 ~ 10.25초라(전갈 3 + 5 + 독침 1.2 / 서리 1 + 7 + 강타 2.25) 자동 해제(9초) 뒤 0.2 ~ 1.25초
+	-- 만에 다음 스킬이 떨어진다. 2초 = 가장 오래 걸리는 일반 스킬의 회피 필요 시간(빙결 강타 최대 배율 1.57초) + 여유.
+	-- 기믹은 쿨이 18초 이상이라 이 창에 다시 오지 않는다.
 	trap = {
 		autoReleaseSeconds = 9,
 		rescueSeconds = 1.5,
 		damageTakenMultiplier = 0,
+		releaseGraceSeconds = 2,
 	},
 
 	-- 29-3 구출 동작의 수치(20.73 [2-8] A-4). 둘 다 "혼자 하면 trap.rescueSeconds 안팎, 둘이 하면 절반"이 되게 잡는다.
@@ -211,6 +216,26 @@ MECHANICS.rescue.hitCount.blockColor = frostHead -- 구출 대상(얼음 덩어�
 local stormBody, stormHead = tierColor("tier3")
 local scorpionBody, scorpionHead = tierColor("tier4")
 local crystalBody, crystalHead = tierColor("tier6")
+
+-- 전갈 여왕의 아레나 kit(29-3) - 파트 10개(상한 40). offset은 아레나 중심·바닥 윗면 기준.
+local function scorpionKitParts(ruinColor, sandColor)
+	local parts = {}
+	for _, x in ipairs({ -87, 87 }) do -- 돌진은 벽에서 5stud 안쪽(중심에서 91)에서 멈춘다 - 웅덩이(반경 5)가 그 자리를 덮는다
+		table.insert(parts, {
+			name = "Quicksand", shape = "cylinder", size = Vector3.new(0.2, 10, 10), rotationDeg = Vector3.new(0, 0, 90),
+			offset = Vector3.new(x, 0.1, 0), color = sandColor, material = Enum.Material.Sand, collide = false,
+			tag = "quicksand", radiusStuds = 5,
+		})
+	end
+	for index, spot in ipairs({ { -60, -90 }, { 0, -90 }, { 60, -90 }, { -60, 90 }, { 0, 90 }, { 60, 90 }, { -90, -50 }, { 90, 50 } }) do
+		local height = 6 + (index % 3) * 3
+		table.insert(parts, {
+			name = "RuinPillar", size = Vector3.new(4, height, 4), offset = Vector3.new(spot[1], height / 2, spot[2]),
+			color = ruinColor, material = Enum.Material.Sandstone, collide = false,
+		})
+	end
+	return parts
+end
 
 -- ═══ 6종(29-2, PRD 20.75 C) ═══
 -- 개성 필드: basicAttack(주기·피해 배율·사거리 - 주기 × 배율 보존: 느린 보스는 한 방이 크고 빠른 보스는
@@ -418,6 +443,11 @@ local SPECIES = {
 		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.75, rangeStuds = 14 },
 		scheduler = scheduler(5),
 		skillOrder = { "claw", "sting", "stab", "shell" },
+		-- 29-3 모래 유적(정적 지형 - 보스전이 시작될 때 짓고 끝나면 치운다, BossArenaKit). 유사 웅덩이 2곳(지름 10)은
+		-- 동·서 벽 앞이다 - 돌진은 늘 벽까지 달리므로 "웅덩이 앞에 서서 돌진을 받으면" 마지막 돌진이 웅덩이에서 끝난다
+		-- (연속 찌르기의 recoverInZone). 무너진 기둥 8개는 네 벽 앞의 장식이다(충돌 없음 - 회피 동선을 막지 않는다).
+		-- 색은 기존 tier4 색 그대로. 모래 무덤(속박된 자리)은 동적이라 여기가 아니다 - 클라 BossTrapView가 그린다.
+		arenaKit = { parts = scorpionKitParts(scorpionBody, scorpionHead) },
 		skills = {
 			-- 집게 강타. 대상 쪽으로 펼친 부채꼴(직선 3개, ±35°) - 기본형 강공격은 "밖으로", 이건 "옆·뒤로".
 			-- 가까이 붙은 사람에게만 쓴다(멀리서는 부채가 너무 넓어져 못 피한다 - 회피 부등식이 12stud까지만 성립).
@@ -443,15 +473,31 @@ local SPECIES = {
 				conditions = { { type = "notAfter", skills = { "shell" } } },
 				telegraphSeconds = 1.5, speedStuds = 60, pathHalfWidthStuds = 4, dashCount = 2,
 				recoverSeconds = 4.0, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
+				-- 29-3: 마지막 돌진이 유사 웅덩이 안에서 끝나면 헤롱 6초(알면 이득인 유인 - 몰라도 손해는 없다, 20.73 [2-5]).
+				recoverInZone = { tag = "quicksand", seconds = 6.0 },
 				arenaMarginStuds = 5, -- 몸통 반폭 1.2 × 2.8 × 1.3 = 4.4보다 조금 크게
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction / 2 }, damageLabel = "연속 찌르기",
 			},
-			-- 갑각 태세(기믹, 29-3). 예고 1초 + 태세 3초 동안 때리면 반사 - 판정은 태세 끝. 회피는 이동이 아니라 "손을 뗀다".
+			-- 갑각 태세(기믹, 29-3). 예고 1초(몸을 낮춘다) → 태세 3초(빨강 고리 - 받는 피해 0, 때린 사람에게 반사) → 꼬리
+			-- 내려찍기(태세 마지막 1.5초가 예고) → 꼬리 박힘 3초(고리가 사라진다 - 때려도 되는 순간, 헤롱 자세).
+			--   · 회피는 이동이 아니라 "손을 뗀다"(dodge.noticeSeconds 1.0 ≥ 인지 0.5). 판정(noHit) = 태세 동안 반사를
+			--     한 번도 안 받았는가. 실패의 대가는 반사로 이미 치렀으므로 판정 실패에는 추가 피해·잡힘이 없다(failPenalty).
+			--   · 반사 1회 = 55% ÷ 3 = 18.3%, 0.75초 창당 1회, 합계는 발동당 상한 55%에서 잘린다(28-2의 20% × 3 = 60%는
+			--     "기믹 1회로 죽지 않는다"의 상한을 넘겨 29-1에서 내렸다). 상세는 BossMechanics.beginReflect.
+			--   · 꼬리 내려찍기(finisher): 보스 앞 8stud의 원 r8, ×2(방어 적용) + 속박(모래 무덤). 예고 1.5초 - 28-2의 1.0초는
+			--     원 한가운데의 근접 자리(9stud)에서 1.20초가 필요해 회피 부등식을 못 넘는다.
 			shell = {
-				primitive = "gimmick", bubble = "gimmick", role = "gimmick", enabled = false, kind = "noHit",
+				primitive = "gimmick", bubble = "shell", role = "gimmick", kind = "noHit",
 				cooldownSeconds = 18, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				conditions = { { type = "notAfter", skills = { "stab" } } },
 				telegraphSeconds = 4.0, recoverSeconds = 3.0,
+				stance = { afterSeconds = 1.0, damageTakenMultiplier = 0, ringRadiusStuds = 5, sinkStuds = 1.0 },
+				failPenalty = false,
+				finisher = {
+					telegraphSeconds = 1.5, radiusStuds = 8, offsetStuds = 8, trapOnHit = true,
+					damage = { kind = "attack", multiplier = 2 }, damageLabel = "꼬리 내려찍기",
+				},
+				recoverPose = true, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
 				breakWindow = { seconds = 3, damageTakenMultiplier = 1.5 },
 				dodge = { distanceStuds = 0, noticeSeconds = 1.0 }, -- 예고 1초 안에 공격을 멈추면 된다
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "갑각 반사",

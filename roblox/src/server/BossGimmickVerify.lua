@@ -111,6 +111,21 @@ local function runPure()
 			circles == 6 and circles <= boss.props.pillar.maxCount and boss.props.pillar.radiusStuds * 2 >= 2)
 	end)
 
+	-- [8] 갑각 태세의 뼈대 상한(데이터) - 한 번의 태세에서 받는 반사 합계가 55%를 넘지 못한다
+	r.section("반사 상한", function()
+		local mechanics = BossData.mechanics
+		local shell = BossData.bosses[SCORPION].skills.shell
+		local partial = mechanics.gimmickFailMaxHpFraction / mechanics.partialFailDivisor
+		local stanceSeconds = shell.telegraphSeconds - shell.stance.afterSeconds
+		local windows = math.ceil(stanceSeconds / mechanics.reflect.windowSeconds)
+		local tail = shell.finisher.damage.multiplier / 7
+		r.check(("반사 1회 %.2f%%(= %.0f%% ÷ %d), 태세 %.1f초 ÷ 창 %.2f초 = 최대 %d창 → %.1f%% 요청, 발동당 상한 %.0f%%에서 잘림(28-2의 20%% x 3 = 60%%는 상한 밖이었다) · 같은 태세의 꼬리 x%d(앵커 %.1f%%)까지 다 맞아도 %.1f%% < 100%%"):format(
+			partial * 100, mechanics.gimmickFailMaxHpFraction * 100, mechanics.partialFailDivisor, stanceSeconds, mechanics.reflect.windowSeconds, windows,
+			windows * partial * 100, mechanics.gimmickFailMaxHpFraction * 100, shell.finisher.damage.multiplier, tail * 100, (mechanics.gimmickFailMaxHpFraction + tail) * 100),
+			shell.enabled ~= false and shell.failPenalty == false and windows * partial >= mechanics.gimmickFailMaxHpFraction
+				and mechanics.gimmickFailMaxHpFraction + tail < 1 and shell.stance.damageTakenMultiplier == 0)
+	end)
+
 	-- [2][11][12] 두 보스의 /gg boss check 전 항목 + 6종 인접 쌍 재검사
 	r.section("스킬표 검사", function()
 		local maxScale = BossRules.maxSkillRangeScale()
@@ -399,6 +414,197 @@ local function runFrost(player, env, r, root)
 	return perStepRoar
 end
 
+local function runScorpion(player, env, r, root)
+	local mechanics = BossData.mechanics
+	local partial = mechanics.gimmickFailMaxHpFraction / mechanics.partialFailDivisor
+	local function newStandIn(name, position)
+		local fakeRoot = { Position = position }
+		local humanoid = { MoveDirection = Vector3.zero }
+		local fake = { Name = name, UserId = -9400, Parent = workspace }
+		fake.Character = {
+			FindFirstChild = function(_, child)
+				return child == "HumanoidRootPart" and fakeRoot or nil
+			end,
+			FindFirstChildOfClass = function()
+				return humanoid
+			end,
+		}
+		function fake:SetAttribute() end
+		function fake:GetAttribute()
+			return nil
+		end
+		PlayerState.init(fake)
+		return fake, fakeRoot, humanoid
+	end
+	local function lostOf(member)
+		return 1 - PlayerState.getHp(member) / PlayerState.getMaxHp(member)
+	end
+
+	-- [7][8][9] 반사 - 때린 사람에게만, 0.75초 창당 1회, 합계 55% 상한, 태세 전에 떠난 공격은 반사 없음
+	r.section("갑각 반사", function()
+		local model, data = spawnBoss(player, env, SCORPION)
+		local encounter = BossEncounter.getEncounter(player)
+		local kitCount, quicksand = #(encounter.kitParts or {}), 0
+		for _, part in ipairs(encounter.kitParts or {}) do
+			quicksand += (part.Name == "Quicksand") and 1 or 0
+		end
+		r.check(("전갈 여왕 아레나 kit: 파트 %d개(유사 웅덩이 %d, 상한 40)"):format(kitCount, quicksand), kitCount == #data.arenaKit.parts and quicksand == 2 and kitCount <= 40)
+
+		local bossPosition = model.PrimaryPart.Position
+		local hitterB = newStandIn("StandInHitterB", bossPosition + Vector3.new(0, 0, 40))
+		local archerC = newStandIn("StandInArcherC", bossPosition + Vector3.new(0, 0, -40))
+		local members = { player, hitterB, archerC }
+		BossEncounter.debugAddMember(model, hitterB)
+		BossEncounter.debugAddMember(model, archerC)
+		fullHeal(player)
+		local _, maxHp = MonsterState.getBossHp(model)
+		local probe = maxHp * 0.001
+		local function step()
+			BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, members)
+		end
+		local function hit(attacker, info)
+			local _, dealt = MonsterState.applyDamage(model, probe, BossData.stageInterval, attacker, info)
+			return dealt / probe
+		end
+
+		BossPatterns.force(model, data, "shell")
+		step()
+		local st = MonsterState.getBossPatternState(model)
+		local noticeDealt = hit(player)
+		r.check(("예고 1초(태세 전): phase=%s, 때리면 들어간 피해 x%.3f(게이트 g), 반사 %d회, 체력 %.0f%% - 아직 때려도 된다"):format(
+			BossPatterns.getPhase(model), noticeDealt, BossMechanics.reflectCount(model, player), hpFraction(player) * 100),
+			BossPatterns.getPhase(model) == "gimmickTelegraph" and near(noticeDealt, BossRules.gateDamageTakenMultiplier(), 1e-6)
+				and BossMechanics.reflectCount(model, player) == 0 and near(hpFraction(player), 1, 1e-9))
+
+		local beforeStance = os.clock()
+		task.wait(0.05)
+		st.stanceAt = os.clock() -- 예고 1초를 기다리지 않고 태세로
+		st.phaseEndsAt = os.clock() + 30 -- 판정은 아래에서 직접 당긴다
+		step()
+		local first = hit(player)
+		local afterFirst = 1 - hpFraction(player)
+		hit(player)
+		hit(player)
+		local afterSpam = 1 - hpFraction(player)
+		hit(hitterB)
+		local bLost = lostOf(hitterB)
+		hit(archerC, { committedAt = beforeStance }) -- 태세가 서기 전에 쏜 화살이 태세 중에 닿았다
+		hit(archerC, { indirect = true }) -- 꽂힌 화살의 지연 폭발
+		local cLost = lostOf(archerC)
+		r.check(("태세 중 1타: 보스에 들어간 피해 x%.1f, 때린 본인 -%.1f%%(기대 %.1f) → 같은 창의 연타 2회 뒤 -%.1f%%(그대로) | 다른 멤버 B가 때림: B -%.1f%%, 본인은 그대로 | C(태세 전에 쏜 화살·꽂힌 화살): -%.1f%%, 반사 %d회"):format(
+			first, afterFirst * 100, partial * 100, afterSpam * 100, bLost * 100, cLost * 100, BossMechanics.reflectCount(model, archerC)),
+			first == 0 and near(afterFirst, partial, 1e-6) and near(afterSpam, partial, 1e-6) and near(bLost, partial, 1e-6)
+				and cLost == 0 and BossMechanics.reflectCount(model, archerC) == 0)
+
+		for _ = 1, 3 do
+			task.wait(mechanics.reflect.windowSeconds + 0.05)
+			hit(player)
+		end
+		local total = 1 - hpFraction(player)
+		r.check(("0.75초마다 3번 더 때림(합 4창): 본인 -%.1f%%(기대 상한 %.0f%% - 한 번의 태세로 죽지 않는다), 반사 %d회, B는 여전히 -%.1f%%"):format(
+			total * 100, mechanics.gimmickFailMaxHpFraction * 100, BossMechanics.reflectCount(model, player), lostOf(hitterB) * 100),
+			near(total, mechanics.gimmickFailMaxHpFraction, 1e-6) and PlayerState.getHp(player) > 0 and near(lostOf(hitterB), partial, 1e-6))
+
+		st.phaseEndsAt = os.clock()
+		step()
+		local afterResolve = hit(archerC)
+		r.check(("판정: 반사 받은 둘은 실패(추가 피해·잡힘 없음 - 잡힘 %s/%s), 안 받은 C가 성공 → 게이트 %s, 꼬리 박힘 창 x%.2f(기대 %.1f), phase=%s(헤롱 자세 %d초), 태세 뒤에는 반사 없음(C 반사 %d회)"):format(
+			tostring(BossTrap.isTrapped(player)), tostring(BossTrap.isTrapped(hitterB)), tostring(BossMechanics.isGateArmed(model)), afterResolve,
+			data.skills.shell.breakWindow.damageTakenMultiplier, BossPatterns.getPhase(model), data.skills.shell.recoverSeconds, BossMechanics.reflectCount(model, archerC)),
+			not BossTrap.isTrapped(player) and not BossTrap.isTrapped(hitterB) and not BossMechanics.isGateArmed(model)
+				and near(afterResolve, data.skills.shell.breakWindow.damageTakenMultiplier, 1e-6) and BossPatterns.getPhase(model) == "gimmickRecover"
+				and near(total, 1 - hpFraction(player), 1e-6))
+		for _, fake in ipairs({ hitterB, archerC }) do
+			PlayerState.clear(fake)
+			table.remove(encounter.members, table.find(encounter.members, fake))
+		end
+		fullHeal(player)
+	end)
+
+	-- [10] 꼬리 내려찍기 → 속박(모래 무덤) → 밀어서 꺼낸다. 본인은 입장점(보스에서 86stud)에 둔다 - 보스 곁에 서면 어그로가
+	-- 붙어 MonsterAI도 같은 보스를 step하고(구출 틱이 두 번 돌아 시간이 절반으로 잡힌다), 스탠드인이 AI의 대상이 된다.
+	r.section("속박 push 구출", function()
+		local model, data = spawnBoss(player, env, SCORPION)
+		local encounter = BossEncounter.getEncounter(player)
+		local bossPosition = model.PrimaryPart.Position
+		local finisher = data.skills.shell.finisher
+		-- (1) 꼬리에 맞으면 속박되는가: 근접 자리(보스 앞 8stud = 꼬리가 떨어지는 원의 한가운데)의 스탠드인
+		local victim, victimRoot = newStandIn("StandInTailVictim", bossPosition + Vector3.new(0, 0, finisher.offsetStuds))
+		local bystander = newStandIn("StandInBystander", bossPosition + Vector3.new(0, 0, finisher.offsetStuds + finisher.radiusStuds + 2))
+		BossEncounter.debugAddMember(model, victim)
+		BossEncounter.debugAddMember(model, bystander)
+		local members = { victim, bystander, player }
+		BossPatterns.force(model, data, "shell")
+		BossPatterns.step(model, data, bossPosition, victim, victimRoot, 1 / 60, members)
+		MonsterState.getBossPatternState(model).phaseEndsAt = os.clock()
+		BossPatterns.step(model, data, bossPosition, victim, victimRoot, 1 / 60, members)
+		local victimRecord = BossTrap.getRecord(victim)
+		r.check(("꼬리 내려찍기(보스 앞 %dstud의 원 r%d): 원 한가운데의 멤버 잡힘=%s(%s, 구출 %s, 무덤 자리 기록=%s), 원 밖 %dstud의 멤버 잡힘=%s"):format(
+			finisher.offsetStuds, finisher.radiusStuds, tostring(victimRecord ~= nil), tostring(victimRecord and victimRecord.kind),
+			tostring(victimRecord and victimRecord.rescueType), tostring(victimRecord and victimRecord.context and victimRecord.context.origin ~= nil),
+			finisher.radiusStuds + 2, tostring(BossTrap.isTrapped(bystander))),
+			victimRecord ~= nil and victimRecord.kind == "buried" and victimRecord.rescueType == "push" and victimRecord.context.origin ~= nil
+				and not BossTrap.isTrapped(bystander))
+		BossTrap.release(victim, "reset")
+		for _, fake in ipairs({ victim, bystander }) do
+			PlayerState.clear(fake)
+			table.remove(encounter.members, table.find(encounter.members, fake))
+		end
+		BossPatterns.interrupt(model, data)
+
+		-- (2) 밀기: 본인을 같은 함수(BossMechanics.trapMember - 꼬리가 부르는 그 함수)로 묻고 스탠드인이 민다.
+		fullHeal(player)
+		BossMechanics.trapMember(model, data, player)
+		local origin = player:GetAttribute("BossTrapOrigin")
+		local rescuer, rescuerRoot, rescuerHumanoid = newStandIn("StandInPusher", root.Position - Vector3.new(3, 0, 0))
+		BossEncounter.debugAddMember(model, rescuer)
+		members = { player, rescuer }
+		local startPosition = root.Position
+		rescuerHumanoid.MoveDirection = Vector3.new(0, 0, 1) -- 먼저 엉뚱한 방향(친구 쪽이 아니다)
+		drive(player, root, model, data, 0.5, true)
+		local wrongDirection = player:GetAttribute("BossTrapRescue") or 0
+		rescuerHumanoid.MoveDirection = Vector3.new(1, 0, 0)
+		local pushStartedAt = os.clock()
+		local function pushStep()
+			rescuerRoot.Position = root.Position - Vector3.new(3, 0, 0) -- 밀리는 만큼 따라붙는다
+			BossPatterns.step(model, data, bossPosition, player, root, 1 / 60, members)
+		end
+		while BossTrap.isTrapped(player) and os.clock() - pushStartedAt < 4 do
+			RunService.Heartbeat:Wait()
+			pushStep()
+		end
+		local elapsed = os.clock() - pushStartedAt
+		local pushed = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(startPosition.X, 0, startPosition.Z)).Magnitude
+		r.check(("밀기: 잡힘 종류 %s·무덤 자리 Attribute=%s·루트 고정 → 엉뚱한 방향으로 걸으면 진행 %.2f(기대 0) → 친구 쪽으로 걸어 %.2f초 만에 풀림(기대 %.1f), 밀린 거리 %.1fstud(기대 무덤 반경 %d), 풀린 직후 유예 면역 x%.1f(%.0f초), 루트 고정 해제=%s"):format(
+			tostring(victimRecord and "buried"), tostring(origin ~= nil), wrongDirection, elapsed, mechanics.trap.rescueSeconds, pushed,
+			mechanics.rescue.push.graveRadiusStuds, PlayerState.getIncomingDamageMultiplier(player), mechanics.trap.releaseGraceSeconds, tostring(root.Anchored == false)),
+			origin ~= nil and wrongDirection == 0 and not BossTrap.isTrapped(player) and near(elapsed, mechanics.trap.rescueSeconds, 0.3)
+				and near(pushed, mechanics.rescue.push.graveRadiusStuds, 0.5) and PlayerState.getIncomingDamageMultiplier(player) == 0 and root.Anchored == false)
+		PlayerState.clear(rescuer)
+		table.remove(encounter.members, table.find(encounter.members, rescuer))
+	end)
+
+	-- 실시간: 첫 스킬 = 갑각 10초(자리 비우기) + step 비용(태세·반사 듣는 귀 포함)
+	local perStep = nil
+	r.section("전갈 여왕 실시간", function()
+		local model, data = spawnBoss(player, env, SCORPION)
+		local starts, lastCurrent = {}, nil
+		perStep = drive(player, root, model, data, 16, true, function()
+			local _, startedAt, current = BossPatterns.debugClocks(model)
+			if current ~= lastCurrent then
+				if current then
+					table.insert(starts, ("%s@+%.1f"):format(current, os.clock() - startedAt))
+				end
+				lastCurrent = current
+			end
+			return #starts >= 1 and current == nil
+		end)
+		r.check(("실시간 시퀀스: %s (기대 첫 스킬 = shell@+10 - 자리 비우기)"):format(table.concat(starts, " ")),
+			starts[1] ~= nil and starts[1]:match("^shell@%+10") ~= nil)
+	end)
+	return perStep
+end
+
 local function runRegen(player, env, r)
 	-- [14][15] 보스전 중 기본 자동회복 꺼짐 / 재생 옵션 몫은 작동 / 끝나면 다시 켜짐
 	r.section("자동회복", function()
@@ -450,7 +656,7 @@ local function runLive(player, env)
 		r.check("캐릭터 준비 실패 - (나) 전체 건너뜀", false)
 	else
 		local perStepFrost = runFrost(player, env, r, root)
-		local perStepScorpion = BossGimmickVerify.runScorpion and BossGimmickVerify.runScorpion(player, env, r, root, { spawnBoss = spawnBoss, fullHeal = fullHeal, hpFraction = hpFraction, drive = drive, moveTo = moveTo, near = near })
+		local perStepScorpion = runScorpion(player, env, r, root)
 		runRegen(player, env, r)
 		-- [18] step 비용 - 기둥·선행 조건(서리 거인)과 태세·반사(전갈 여왕)가 도는 구간
 		for label, perStep in pairs({ ["서리 거인(낙빙 → 포효 직전, 기둥 3개)"] = perStepFrost, ["전갈 여왕(갑각 태세 포함)"] = perStepScorpion }) do

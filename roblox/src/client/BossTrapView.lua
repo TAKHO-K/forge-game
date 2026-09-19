@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
 
 local BossTrapView = {}
 
@@ -117,6 +118,41 @@ function BossTrapView.start()
 	-- [Player] = { gui, countdown, rescue, icon } - 남의 머리 위 표시.
 	local billboards = {}
 
+	-- 29-3 모래 무덤(속박 - "밀어서 꺼낸다"): 잡힌 자리에 흰 원(정보 = 흰색)을 그린다 - 묻힌 친구가 이 원 밖으로 밀려
+	-- 나오면 풀린다. 어느 방향이든 원 밖이면 되므로 "어느 쪽으로 미는가"의 답이 그림에 있다: 가장 가까운 테두리 쪽.
+	-- [Player] = Part. 자리(BossTrapOrigin)는 서버가 잡는 순간 한 번 정하고, 밀려도 원은 그 자리에 남는다.
+	local graves = {}
+	local function updateGrave(target, kind)
+		local origin = kind == "buried" and target:GetAttribute("BossTrapOrigin") or nil
+		local grave = graves[target]
+		if not origin then
+			if grave then
+				graves[target] = nil
+				grave:Destroy()
+			end
+			return
+		end
+		if not grave then
+			local radius = BossData.mechanics.rescue.push.graveRadiusStuds
+			grave = Instance.new("Part")
+			grave.Name = "BossTrapGrave"
+			grave.Shape = Enum.PartType.Cylinder
+			grave.Anchored = true
+			grave.CanCollide = false
+			grave.CanQuery = false
+			grave.CanTouch = false
+			grave.CastShadow = false
+			grave.Material = Enum.Material.Neon
+			grave.Color = INFO_COLOR
+			grave.Transparency = 0.6
+			grave.Size = Vector3.new(0.2, radius * 2, radius * 2)
+			-- 루트 중심은 발에서 3stud 위다(HipHeight 2 + 루트 반높이 1).
+			grave.CFrame = CFrame.new(origin - Vector3.new(0, 2.85, 0)) * CFrame.Angles(0, 0, math.rad(90))
+			grave.Parent = Workspace
+			graves[target] = grave
+		end
+	end
+
 	local function removeBillboard(target)
 		local entry = billboards[target]
 		if entry then
@@ -171,6 +207,7 @@ function BossTrapView.start()
 	RunService.RenderStepped:Connect(function()
 		for _, target in ipairs(Players:GetPlayers()) do
 			local kind = target:GetAttribute("BossTrapKind")
+			updateGrave(target, kind)
 			if target == localPlayer then
 				panel.Visible = kind ~= nil
 				if kind then
@@ -193,7 +230,10 @@ function BossTrapView.start()
 		end
 	end)
 
-	Players.PlayerRemoving:Connect(removeBillboard)
+	Players.PlayerRemoving:Connect(function(target)
+		removeBillboard(target)
+		updateGrave(target, nil)
+	end)
 end
 
 return BossTrapView

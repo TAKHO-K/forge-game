@@ -633,11 +633,22 @@ HANDLERS.charge = {
 					startDash(c, newPos, st.chargeDashIndex + 1)
 				else
 					-- 헤롱(주저앉기) - 몸을 내려 기울인다. 끝날 때(endSkill/interrupt) 똑바로 되돌린다.
+					-- 29-3: 마지막 돌진이 아레나 kit의 논리 구역(tag) 안에서 끝났으면 헤롱이 길어진다(전갈 여왕의 유사 웅덩이).
+					local recoverSeconds = skill.recoverSeconds
+					local bonus = skill.recoverInZone
+					if bonus and c.data.arenaKit then
+						local zoneCenter = zoneOf(c.model).center
+						for _, part in ipairs(c.data.arenaKit.parts) do
+							if part.tag == bonus.tag and Reach.horizontalDistance(newPos, zoneCenter + part.offset) <= part.radiusStuds then
+								recoverSeconds = bonus.seconds
+							end
+						end
+					end
 					st.phase = "chargeRecover"
-					st.phaseEndsAt = c.now + skill.recoverSeconds
+					st.phaseEndsAt = c.now + recoverSeconds
 					st.dazeBase = newPos
 					c.model:PivotTo(CFrame.new(newPos - Vector3.new(0, skill.dazeSinkStuds, 0)) * CFrame.Angles(0, 0, math.rad(skill.dazeTiltDeg)))
-					send(st, "daze", { seconds = skill.recoverSeconds })
+					send(st, "daze", { seconds = recoverSeconds })
 				end
 			end
 		elseif c.now >= st.phaseEndsAt then -- chargeRecover
