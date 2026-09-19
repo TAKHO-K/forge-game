@@ -442,6 +442,9 @@ local function runLive(player, env)
 	r.section("흡혈", function()
 		local ok = env.applyOptionStack(player, "lifesteal")
 		local maxHp = PlayerState.getMaxHp(player)
+		-- 측정 구간 전체에서 자동회복이 끼지 않게 "전투 행위" 타이머부터 리셋한다(29-2 둘째 Play: 첫 0.1초의 자동회복
+		-- 0.4%가 새어 4.22%/초로 잡혔다).
+		PlayerState.setLastCombatActionAt(player, os.clock())
 		PlayerState.setHp(player, maxHp * (1 - f))
 		PlayerProfile.applyLifesteal(player, maxHp * 10) -- 가득 찬 버킷을 먼저 비운다
 		local startHp = PlayerState.getHp(player)
