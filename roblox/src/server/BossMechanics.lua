@@ -148,7 +148,7 @@ function BossMechanics.trapMember(model, data, player)
 	if not (species and species.trapKind) then
 		return false
 	end
-	local character = typeof(player) == "Instance" and player.Character
+	local character = player.Character -- 스탠드인(테이블 Player)도 자리를 남긴다
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	return BossTrap.trap(player, {
 		kind = species.trapKind, rescueType = species.rescueType,

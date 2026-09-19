@@ -17,8 +17,10 @@ local PlayerState = require(script.Parent.PlayerState)
 
 local BossGimmicks = {}
 
+-- 자동 검증의 스탠드인(테이블 Player)도 Character를 가질 수 있다 - Instance인지 묻지 않는다(29-3 Play: 스탠드인 구출자가
+-- 여기서 걸러져 밀기 검증이 한 걸음도 못 나갔다. 로컬 하네스의 typeof 스텁은 스탠드인을 Instance로 쳐서 통과했었다).
 local function rootOf(player)
-	local character = typeof(player) == "Instance" and player.Character
+	local character = player.Character
 	return character and character:FindFirstChild("HumanoidRootPart")
 end
 
@@ -56,7 +58,7 @@ local iceBlocks = {} -- [잡힌 Player] = { model, lastHitAt = { [구출자] = o
 local ICE_BODY_ASPECT = Vector3.new(1.7, 1.8, 3.4) -- buildModel의 몸통(2.4 × 3 × 1.2)을 캐릭터를 감싸는 4.1 × 5.4 × 4.1 덩어리로
 
 BossTrap.onTrapped(function(player, record)
-	if record.rescueType ~= "hitCount" then
+	if record.rescueType ~= "hitCount" or typeof(player) ~= "Instance" then -- 얼음 덩어리는 실제 플레이어에게만(진행 Attribute를 읽는다)
 		return
 	end
 	local root = rootOf(player)

@@ -439,6 +439,9 @@ local function runScorpion(player, env, r, root)
 	local function lostOf(member)
 		return 1 - PlayerState.getHp(member) / PlayerState.getMaxHp(member)
 	end
+	-- 서리 거인 구역의 빙결 구출이 남긴 해제 유예 면역(2초)이 끝나길 기다린다. 29-3 첫 Play: 구역들이 쉬지 않고 이어져
+	-- 구출 뒤 2초 안에 반사를 쟀고, 본인의 반사 피해가 0.00으로 찍혔다(같은 순간 스탠드인 B는 18.3%) - 유예가 일한 것이다.
+	task.wait(mechanics.trap.releaseGraceSeconds + 0.2)
 
 	-- [7][8][9] 반사 - 때린 사람에게만, 0.75초 창당 1회, 합계 55% 상한, 태세 전에 떠난 공격은 반사 없음
 	r.section("갑각 반사", function()
