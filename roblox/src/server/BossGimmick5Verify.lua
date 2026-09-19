@@ -7,13 +7,19 @@
 -- 전부 받을 수 있어야 하고, 상태는 그것을 만드는 틱이 **지난 뒤에** 읽는다(drive 뒤).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BossEncounter = require(script.Parent.BossEncounter)
+local BossMechanics = require(script.Parent.BossMechanics)
+local BossPatterns = require(script.Parent.BossPatterns)
+local BossTrap = require(script.Parent.BossTrap)
 local MonsterState = require(script.Parent.MonsterState)
 local PartyState = require(script.Parent.PartyState)
+local PlayerDamage = require(script.Parent.PlayerDamage)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local PlayerState = require(script.Parent.PlayerState)
 
 local BossGimmick5Verify = {}
 
@@ -147,6 +153,171 @@ local function spawnAt(player, env, stage)
 	return model, model and MonsterState.getData(model)
 end
 
+local function spawnBoss(player, env, bossId)
+	BossEncounter.setDebugForcedBoss(player, bossId)
+	return spawnAt(player, env, BossData.stageInterval)
+end
+
+local function fullHeal(player)
+	PlayerState.setHp(player, PlayerState.getMaxHp(player))
+	PlayerDamage.syncHud(player)
+end
+
+local function moveTo(root, position)
+	root.CFrame = CFrame.new(position)
+	RunService.Heartbeat:Wait()
+end
+
+-- 스탠드인 멤버(테이블 Player - Studio에서 Instance가 아니다). 실제 Player가 받는 호출을 전부 받는다(29-4의 교훈):
+-- 피해를 받으면 PlayerDamage.syncHud가 SetAttribute를, 잡히면 BossTrap이 Name·Character를 읽는다.
+local function newStandIn(model, members, name, position)
+	local fakeRoot = { Position = position, Anchored = false }
+	local attributes = {}
+	local fake = { Name = name, DisplayName = name, UserId = -9500 - #members, Parent = workspace }
+	fake.Character = {
+		FindFirstChild = function(_, child)
+			return child == "HumanoidRootPart" and fakeRoot or nil
+		end,
+		FindFirstChildOfClass = function()
+			return nil
+		end,
+	}
+	function fake:SetAttribute(key, value)
+		attributes[key] = value
+	end
+	function fake:GetAttribute(key)
+		return attributes[key]
+	end
+	PlayerState.init(fake)
+	table.insert(members, fake)
+	BossEncounter.debugAddMember(model, fake)
+	return fake, fakeRoot
+end
+
+local function clearStandIns(player, members)
+	local encounter = BossEncounter.getEncounter(player)
+	for index = #members, 2, -1 do
+		BossTrap.release(members[index], "reset")
+		PlayerState.clear(members[index])
+		if encounter then
+			local at = table.find(encounter.members, members[index])
+			if at then
+				table.remove(encounter.members, at)
+			end
+		end
+		table.remove(members, index)
+	end
+end
+
+-- [6] F 홀드 구출(PRD 20.80 [B]). 잡히는 쪽은 **실제 Player**다 - 실제 루트에 실제 ProximityPrompt가 붙는지(= PC F · 모바일 화면
+-- 버튼 · 게임패드)를 인스턴스로 본다. 누르는 쪽은 프롬프트의 신호가 부르는 바로 그 함수(BossTrap.beginHold/endHold)를 부른다.
+-- 캐릭터는 어그로 밖(60stud)에 둔다 - 가까우면 MonsterAI도 같은 보스를 step해 홀드가 두 배로 찬다(29-3의 교훈).
+local function runHoldRescue(player, env, r, root)
+	local mechanics = BossData.mechanics
+	local holdSeconds = mechanics.trap.rescueSeconds
+
+	r.section("F 홀드 프롬프트", function()
+		local rows, allOk = {}, true
+		for _, bossId in ipairs(BossData.pools[1].bossIds) do
+			local species = BossData.bosses[bossId].mechanics
+			local reach = species and mechanics.rescue[species.rescueType] and mechanics.rescue[species.rescueType].reachStuds
+			if reach then
+				local model, data = spawnBoss(player, env, bossId)
+				moveTo(root, model.PrimaryPart.Position + Vector3.new(60, 1.5, 0))
+				BossMechanics.trapMember(model, data, player)
+				local prompt = root:FindFirstChild("BossRescuePrompt")
+				local ok = prompt ~= nil and prompt:IsA("ProximityPrompt") and prompt.HoldDuration == holdSeconds
+					and prompt.KeyboardKeyCode == Enum.KeyCode[mechanics.rescue.hold.keyCode] and prompt.MaxActivationDistance == reach
+					and prompt.RequiresLineOfSight == false and prompt.ClickablePrompt == true and prompt.Enabled == true
+					and prompt.Style == Enum.ProximityPromptStyle.Default
+				BossTrap.release(player, "reset")
+				ok = ok and root:FindFirstChild("BossRescuePrompt") == nil -- 풀리면 프롬프트도 사라진다
+				allOk = allOk and ok
+				table.insert(rows, ("%s(%s·%dstud)=%s"):format(bossId, species.rescueType, reach, ok and "O" or "X"))
+			end
+		end
+		-- 모바일: 기본 스타일 + ClickablePrompt면 터치 기기에서 로블록스가 누르고 있을 수 있는 화면 버튼을 그린다(직접 짠 입력이 없다)
+		r.check(("잡힌 실제 Player의 루트에 구출 프롬프트(홀드 %.1f초 · 키 %s · 시야 무시 · 기본 스타일 + ClickablePrompt = 모바일 화면 버튼): %s · 끊김 알림 RemoteEvent=%s"):format(
+			holdSeconds, mechanics.rescue.hold.keyCode, table.concat(rows, " "), tostring(ReplicatedStorage:FindFirstChild("BossRescueHoldBroken") ~= nil)),
+			allOk and #rows >= 4 and ReplicatedStorage:FindFirstChild("BossRescueHoldBroken") ~= nil)
+	end)
+
+	r.section("F 홀드 진행·피격 리셋", function()
+		local model, data = spawnBoss(player, env, "frost_giant")
+		local st = MonsterState.getBossPatternState(model)
+		local bossPosition = model.PrimaryPart.Position
+		local members = { player }
+		moveTo(root, bossPosition + Vector3.new(60, 1.5, 0))
+		local function step(count)
+			for _ = 1, count or 1 do
+				BossPatterns.step(model, data, bossPosition, player, root, 1 / 60, members)
+			end
+		end
+		fullHeal(player)
+		BossMechanics.trapMember(model, data, player)
+		local rescuer, rescuerRoot = newStandIn(model, members, "StandInHolder", root.Position + Vector3.new(5, 0, 0))
+		step(30)
+		local idle = player:GetAttribute("BossTrapRescue") or 0
+		local accepted = BossTrap.beginHold(player, rescuer)
+		step(60)
+		local held = player:GetAttribute("BossTrapRescue") or 0
+		PlayerDamage.applyHit(rescuer, data.attack, nil, data.basicAttackDamageMultiplier) -- 보스 평타의 경로(MonsterAI가 부르는 함수)
+		step(1)
+		local afterBasic = player:GetAttribute("BossTrapRescue") or 0
+		-- 예고 있는 피격: 실제 스킬 경로 - 낙빙은 (안 잡힌) 멤버 각자의 발밑에 떨어진다. 가만히 서서 누르던 구출자가 맞는다.
+		BossPatterns.force(model, data, "icefall")
+		step(1)
+		st.phaseEndsAt = os.clock()
+		step(2)
+		local afterSkill = player:GetAttribute("BossTrapRescue") or 0
+		local rescuerHp = PlayerState.getHp(rescuer) / PlayerState.getMaxHp(rescuer)
+		step(30)
+		local withoutRepress = player:GetAttribute("BossTrapRescue") or 0
+		BossPatterns.interrupt(model, data)
+		BossTrap.beginHold(player, rescuer)
+		local ticks = 0
+		while BossTrap.isTrapped(player) and ticks < 150 do
+			step(1)
+			ticks += 1
+		end
+		r.check(("곁에 서 있기만 하면 진행 %.2f(기대 0) → F 홀드 받아들임=%s, 1.0초 뒤 %.2f(기대 0.67) → 보스 평타를 맞아도 %.2f(그대로 - 평타는 끊지 않는다) → 낙빙(예고 있는 스킬)에 맞음(체력 %.0f%%): %.2f(기대 0 - 처음부터) → 다시 안 누르면 %.2f → 다시 눌러 %d틱(기대 90 = %.1f초) 만에 풀림=%s"):format(
+			idle, tostring(accepted), held, afterBasic, rescuerHp * 100, afterSkill, withoutRepress, ticks, holdSeconds, tostring(not BossTrap.isTrapped(player))),
+			idle == 0 and accepted and math.abs(held - 60 / 90) < 0.03 and afterBasic >= held and rescuerHp < 1 and afterSkill == 0 and withoutRepress == 0
+				and ticks >= 89 and ticks <= 92 and not BossTrap.isTrapped(player))
+
+		-- 둘이 같이 누르면 절반 + 누르는 쪽이 실제 Player일 때(끊김 알림이 실제 클라로 간다)
+		task.wait(mechanics.trap.releaseGraceSeconds + 0.2)
+		BossPatterns.interrupt(model, data)
+		fullHeal(player)
+		BossMechanics.trapMember(model, data, player)
+		local second, secondRoot = newStandIn(model, members, "StandInHolder2", root.Position + Vector3.new(-5, 0, 0))
+		rescuerRoot.Position = root.Position + Vector3.new(5, 0, 0)
+		BossTrap.beginHold(player, rescuer)
+		BossTrap.beginHold(player, second)
+		local pairTicks = 0
+		while BossTrap.isTrapped(player) and pairTicks < 150 do
+			step(1)
+			pairTicks += 1
+		end
+
+		task.wait(mechanics.trap.releaseGraceSeconds + 0.2)
+		fullHeal(player)
+		BossTrap.trap(second, { kind = "frozen", rescueType = "hitCount", context = { origin = secondRoot.Position } })
+		moveTo(root, secondRoot.Position + Vector3.new(4, 0, 0))
+		local realAccepted = BossTrap.beginHold(second, player)
+		step(45)
+		local realHeld = second:GetAttribute("BossTrapRescue") or 0
+		BossMechanics.beginActivation(model)
+		BossMechanics.applyGimmickDamage(model, player, 0.1, "검증 - 예고 있는 피격") -- %피해 문(기믹 실패·돌진·구덩이·반사가 지나는 곳)
+		local realAfter = second:GetAttribute("BossTrapRescue") or 0
+		r.check(("둘이 같이 누르면 %d틱(기대 45 = %.2f초) · 실제 Player가 누르는 쪽: 받아들임=%s, 0.75초 뒤 %.2f(기대 0.50) → %%피해를 맞으면 %.2f(기대 0), 본인 체력 %.0f%%"):format(
+			pairTicks, holdSeconds / 2, tostring(realAccepted), realHeld, realAfter, PlayerState.getHp(player) / PlayerState.getMaxHp(player) * 100),
+			pairTicks >= 44 and pairTicks <= 47 and realAccepted and math.abs(realHeld - 0.5) < 0.03 and realAfter == 0)
+		clearStandIns(player, members)
+		fullHeal(player)
+	end)
+end
+
 local function activeClassState(player)
 	local profile = PlayerProfile.getProfile(player)
 	return profile and profile.classId and profile.classes[profile.classId]
@@ -211,6 +382,14 @@ local function runLive(player, env)
 			first ~= nil and first.id == GUARDIAN and partyData ~= nil and partyData.id == BossRules.bossIdForStage(stage) and partyData.partySize == 2
 				and forced ~= nil and forced.id == "scorpion_queen" and after ~= nil and after.id == BossRules.bossIdForStage(stage))
 	end)
+
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root then
+		runHoldRescue(player, env, r, root)
+	else
+		r.check("캐릭터가 없어 F 홀드 구역을 건너뜀", false)
+	end
 
 	BossEncounter.despawnFor(player)
 	BossEncounter.debugClearHints(player)

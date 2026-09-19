@@ -450,25 +450,32 @@ local function runAbyssal(player, env, r, root)
 		local hpAfter = hpFraction(player)
 		local kind, rescueType = player:GetAttribute("BossTrapKind"), player:GetAttribute("BossTrapRescueType")
 		local rescuer, rescuerRoot = newStandIn(model, members, "StandInRescuer", water + Vector3.new(5, 0, 0))
+		-- 29-5: 구출 입력 = F 홀드(PRD 20.80 [B]). 곁에 서 있기만 해서는 안 찬다 - beginHold는 프롬프트의 HoldBegan이 부르는 함수다.
+		for _ = 1, 30 do
+			step()
+		end
+		local withoutHold = player:GetAttribute("BossTrapRescue") or 0
+		BossTrap.beginHold(player, rescuer)
 		for _ = 1, 45 do -- 0.75초분(틱은 dt로 센다 - 실제 시간과 무관하다)
 			step()
 		end
 		local half = player:GetAttribute("BossTrapRescue")
-		rescuerRoot.Position = water + Vector3.new(12, 0, 0) -- 6stud 밖으로
+		rescuerRoot.Position = water + Vector3.new(12, 0, 0) -- 6stud(+ 오차 몫 2) 밖으로
 		step()
 		local afterLeave = player:GetAttribute("BossTrapRescue")
 		rescuerRoot.Position = water + Vector3.new(5, 0, 0)
+		BossTrap.beginHold(player, rescuer) -- 벗어나면 홀드도 끊긴다 - 다시 눌러야 한다
 		local ticks = 0
 		while BossTrap.isTrapped(player) and ticks < 120 do
 			step()
 			ticks += 1
 		end
 		local grace = PlayerState.getIncomingDamageMultiplier(player)
-		r.check(("단 밖에서 방전: 체력 %.1f%%(기대 45), 잡힘 %s(구출 %s) → 구출자가 5stud 곁에 0.75초: 진행 %.2f(기대 0.50) → 벗어남: %.2f(기대 0) → 다시 곁에 %d틱(기대 90 = 1.5초) 만에 풀림=%s, 구출자 체력 %.0f%%(기대 100 - 대가는 시간), 루트 고정 해제=%s, 풀린 직후 유예 면역 x%.1f"):format(
-			hpAfter * 100, tostring(kind), tostring(rescueType), half or -1, afterLeave or -1, ticks, tostring(not BossTrap.isTrapped(player)),
+		r.check(("단 밖에서 방전: 체력 %.1f%%(기대 45), 잡힘 %s(구출 %s) → 곁에 서 있기만 하면 진행 %.2f(기대 0) → 5stud 곁에서 F 홀드 0.75초: 진행 %.2f(기대 0.50) → 벗어남: %.2f(기대 0) → 다시 곁에서 홀드 %d틱(기대 90 = 1.5초) 만에 풀림=%s, 구출자 체력 %.0f%%(기대 100 - 대가는 시간), 루트 고정 해제=%s, 풀린 직후 유예 면역 x%.1f"):format(
+			hpAfter * 100, tostring(kind), tostring(rescueType), withoutHold, half or -1, afterLeave or -1, ticks, tostring(not BossTrap.isTrapped(player)),
 			PlayerState.getHp(rescuer) / PlayerState.getMaxHp(rescuer) * 100, tostring(root.Anchored == false), grace),
 			near(hpAfter, 1 - BossData.mechanics.gimmickFailMaxHpFraction, 1e-6) and kind == "submerged" and rescueType == "proximity"
-				and near(half, 0.5, 0.02) and afterLeave == 0 and ticks >= 89 and ticks <= 91 and not BossTrap.isTrapped(player)
+				and withoutHold == 0 and near(half, 0.5, 0.02) and afterLeave == 0 and ticks >= 89 and ticks <= 91 and not BossTrap.isTrapped(player)
 				and PlayerState.getHp(rescuer) == PlayerState.getMaxHp(rescuer) and root.Anchored == false and grace == 0)
 		clearStandIns(player, members)
 		fullHeal(player)
@@ -629,16 +636,25 @@ local function runStorm(player, env, r, root)
 				and not BossTrap.isTrapped(friend) and BossMechanics.isGateArmed(model) and near(MonsterState.getDamageTakenMultiplier(model), BossRules.gateDamageTakenMultiplier(), 1e-6))
 
 		local touch = BossData.mechanics.rescue.touch
-		friendRoot.Position = root.Position + Vector3.new(touch.reachStuds + 2, 0, 0)
+		-- 29-5: 닿는 순간 즉시 → 몸이 닿는 거리(3stud)에서 F 홀드(PRD 20.80 [B]). 멀리서는 홀드가 받아들여지지 않는다.
+		local farStuds = touch.reachStuds + BossData.mechanics.rescue.hold.reachSlackStuds + 1
+		friendRoot.Position = root.Position + Vector3.new(farStuds, 0, 0)
+		local acceptedFar = BossTrap.beginHold(player, friend)
 		step()
 		local stillTrapped = BossTrap.isTrapped(player)
 		friendRoot.Position = root.Position + Vector3.new(touch.reachStuds - 0.5, 0, 0)
-		step()
-		r.check(("감전 구출: %dstud 밖 = 그대로 잡힘=%s → %.1fstud 안에 닿은 그 틱에 풀림=%s, 구출자 체력 %.1f%%(기대 %.1f = 100 − 비용 %.1f%%), 풀린 직후 유예 면역 x%.1f, 루트 고정 해제=%s"):format(
-			touch.reachStuds + 2, tostring(stillTrapped), touch.reachStuds - 0.5, tostring(not BossTrap.isTrapped(player)),
+		local acceptedNear = BossTrap.beginHold(player, friend)
+		local holdTicks = 0
+		while BossTrap.isTrapped(player) and holdTicks < 120 do
+			step()
+			holdTicks += 1
+		end
+		r.check(("감전 구출: %dstud 밖에서는 홀드가 안 받아들여짐=%s·그대로 잡힘=%s → %.1fstud 안에서 F 홀드 %d틱(기대 90 = 1.5초) 만에 풀림=%s, 구출자 체력 %.1f%%(기대 %.1f = 100 − 비용 %.1f%%), 풀린 직후 유예 면역 x%.1f, 루트 고정 해제=%s"):format(
+			farStuds, tostring(not acceptedFar), tostring(stillTrapped), touch.reachStuds - 0.5, holdTicks, tostring(not BossTrap.isTrapped(player)),
 			PlayerState.getHp(friend) / PlayerState.getMaxHp(friend) * 100, (1 - touch.rescuerMaxHpFraction) * 100, touch.rescuerMaxHpFraction * 100,
 			PlayerState.getIncomingDamageMultiplier(player), tostring(root.Anchored == false)),
-			stillTrapped and not BossTrap.isTrapped(player) and near(PlayerState.getHp(friend) / PlayerState.getMaxHp(friend), 1 - touch.rescuerMaxHpFraction, 1e-6)
+			not acceptedFar and stillTrapped and acceptedNear and holdTicks >= 89 and holdTicks <= 91 and not BossTrap.isTrapped(player)
+				and near(PlayerState.getHp(friend) / PlayerState.getMaxHp(friend), 1 - touch.rescuerMaxHpFraction, 1e-6)
 				and PlayerState.getIncomingDamageMultiplier(player) == 0 and root.Anchored == false)
 		clearStandIns(player, members)
 		fullHeal(player)

@@ -179,8 +179,8 @@ local function applySkillDamage(model, data, skill, player)
 	local damage = skill.damage
 	if damage.kind == "maxHp" then
 		BossMechanics.applyGimmickDamage(model, player, damage.fraction, skill.damageLabel)
-	else
-		PlayerDamage.applyHit(player, data.attack, skill.damageLabel, damage.multiplier)
+	elseif PlayerDamage.applyHit(player, data.attack, skill.damageLabel, damage.multiplier) > 0 then
+		BossTrap.noteSkillHit(player) -- 29-5: 예고가 있는 피격은 누르고 있던 구출을 처음으로 돌린다(%피해 쪽은 BossMechanics가 부른다)
 	end
 end
 

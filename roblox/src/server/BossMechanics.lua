@@ -149,7 +149,11 @@ function BossMechanics.applyGimmickDamage(model, player, fraction, label)
 		return 0, 0
 	end
 	st.gimmickDamage[player] = taken + applied
-	return PlayerDamage.applyMaxHpFraction(player, applied, label), applied
+	local dealt = PlayerDamage.applyMaxHpFraction(player, applied, label)
+	if dealt > 0 then
+		BossTrap.noteSkillHit(player) -- 29-5: 예고가 있는 피격(기믹 실패·돌진·구덩이·반사)은 누르고 있던 구출을 처음으로 돌린다
+	end
+	return dealt, applied
 end
 
 -- 기믹 실패 1인분 = %피해 + 잡힘. fraction을 생략하면 전체 실패(gimmickFailMaxHpFraction).

@@ -2,6 +2,7 @@
 --   · BossMechanics.registerJudge(kind, fn)            "이 사람은 이번 기믹을 풀었는가"
 --   · BossTrap.registerRescueHandler(rescueType, ...)  "구출 진행은 언제 얼마나 차는가"
 -- 키는 보스 이름이 아니라 종류다(behindProp·noHit / hitCount·push) - 같은 종류를 쓰는 보스가 늘어도 이 파일은 그대로다.
+-- 29-5: 구출 입력은 F 홀드 하나로 통일됐다(BossTrap) - 여기의 구출 핸들러는 종류별 조건·그림·비용 조각만 갖는다.
 -- 수치는 전부 BossData.mechanics.rescue·dodge에 있다. BossPatterns가 require해서 서버가 뜰 때 한 번 등록된다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -84,55 +85,22 @@ BossMechanics.registerJudge("nearZone", function(model, data, victim, cfg)
 	return false
 end)
 
--- ─────────────────────────── 구출: 닿아서 푼다(touch, 29-4 감전) ───────────────────────────
--- 살아 있는(안 잡힌) 친구가 reachStuds 안에 닿는 순간 즉시 풀린다. rescuerMaxHpFraction > 0이면 구출자가 그만큼 나눠 받고
--- (상한 없는 %피해 경로), 구출자의 체력이 그 이하면 풀리지 않는다 - 지금 값은 0이다(BossData.mechanics.rescue.touch 주석).
+-- ─────────────────────────── 구출: F 홀드의 보스별 조각(29-5) ───────────────────────────
+-- 입력은 6종 공통이다(BossTrap의 F 홀드 - 거리·생존·잡힘·피격 리셋·둘이면 절반은 거기서 본다). 여기는 종류마다 다른 것만:
+--   touch(감전)     몸이 닿는 거리(reachStuds 3). rescuerMaxHpFraction > 0이면 구출자가 풀어 주는 순간 그만큼 나눠 받고,
+--                   체력이 그 이하면 누를 수 없다(구출로 죽는 일은 없다) - 지금 값은 0이다(BossData.mechanics.rescue.touch 주석).
+--   proximity(침수) 조각 없음 - 곁(6stud) 어디서나. 방전은 이미 지나갔고 7.5초 동안 새 판정이 없다.
+--   hitCount(빙결)  얼음 곁(6stud)에서 홀드 + 아래의 "얼음을 때린다"가 같은 진행을 채운다.
+--   push(속박)      아래 - 홀드가 차는 만큼 묻힌 친구가 구출자 쪽으로 끌려 나온다.
 BossTrap.registerRescueHandler("touch", {
-	tick = function(trapped, _, members)
-		local root = rootOf(trapped)
-		if not root then
-			return
-		end
-		local config = BossData.mechanics.rescue.touch
-		for _, rescuer in ipairs(members) do
-			local rescuerRoot = rescuer ~= trapped and rootOf(rescuer)
-			local hp = rescuerRoot and (PlayerState.getHp(rescuer) or 0) or 0
-			if hp > 0 and not BossTrap.isTrapped(rescuer) and Reach.horizontalDistance(rescuerRoot.Position, root.Position) <= config.reachStuds then
-				local cost = config.rescuerMaxHpFraction
-				if cost <= 0 or hp > (PlayerState.getMaxHp(rescuer) or 0) * cost then
-					if cost > 0 then
-						BossMechanics.applyMaxHpDamage(rescuer, cost, "감전 구출")
-					end
-					BossTrap.addRescueProgress(trapped, rescuer, 1)
-					return
-				end
-			end
-		end
+	canHold = function(_, _, rescuer)
+		local cost = BossData.mechanics.rescue.touch.rescuerMaxHpFraction
+		return cost <= 0 or (PlayerState.getHp(rescuer) or 0) > (PlayerState.getMaxHp(rescuer) or 0) * cost
 	end,
-})
-
--- ─────────────────────────── 구출: 곁에서 끌어올린다(proximity, 29-4 침수) ───────────────────────────
--- 잡힌 친구의 reachStuds 안에 머무는 동안 진행이 찬다(trap.rescueSeconds면 끝 - 구출자마다 더해져 둘이면 절반). 벗어난
--- 구출자가 쌓던 몫은 0으로 돌아간다(BossTrap.clearRescueBy). 방전은 이미 지나간 뒤다 - 구출자가 서는 자리는 물속이지만
--- 범람의 후딜 1.5초 + 전역 쿨 6초 동안 새 판정이 없다. 구출자의 대가는 체력이 아니라 보스를 못 때리는 1.5초다.
-BossTrap.registerRescueHandler("proximity", {
-	tick = function(trapped, _, members, dt)
-		local root = rootOf(trapped)
-		if not root then
-			return
-		end
-		local config = BossData.mechanics.rescue.proximity
-		for _, rescuer in ipairs(members) do
-			local rescuerRoot = rescuer ~= trapped and rootOf(rescuer)
-			if rescuerRoot and (PlayerState.getHp(rescuer) or 0) > 0 and not BossTrap.isTrapped(rescuer) then
-				if Reach.horizontalDistance(rescuerRoot.Position, root.Position) <= config.reachStuds then
-					if BossTrap.addRescueProgress(trapped, rescuer, dt / BossData.mechanics.trap.rescueSeconds) then
-						return
-					end
-				else
-					BossTrap.clearRescueBy(rescuer, trapped)
-				end
-			end
+	onComplete = function(_, _, rescuer)
+		local cost = BossData.mechanics.rescue.touch.rescuerMaxHpFraction
+		if cost > 0 then
+			BossMechanics.applyMaxHpDamage(rescuer, cost, "감전 구출")
 		end
 	end,
 })
@@ -187,42 +155,37 @@ BossTrap.onReleased(function(player)
 	end
 end)
 
--- ─────────────────────────── 구출: 밀어서 꺼낸다(push) ───────────────────────────
--- 이 게임의 이동은 서버 PivotTo 기반이고 잡힌 사람의 루트는 서버가 고정(Anchored)해 둔다 - 물리로 밀리지 않는다.
--- 그래서 "밀기"는 논리다: 구출자가 reachStuds 안에서 묻힌 친구 쪽으로 걷고 있으면(Humanoid.MoveDirection - 입력
--- 방향이라 몸이 막혀 속도가 0이어도 읽힌다) 서버가 친구를 그 방향으로 옮기고 진행을 채운다. 속도 = 무덤 반경 ÷
--- trap.rescueSeconds, 구출자마다 더해진다. 진행은 밀기를 멈춰도 줄지 않는다. 다 차면(= 무덤 반경만큼 밀렸으면) 풀린다.
+-- ─────────────────────────── 구출: 끌어낸다(push) ───────────────────────────
+-- 잡힌 사람의 루트는 서버가 고정(Anchored)해 둔다 - 물리로 움직이지 않는다. 그래서 "끌려 나온다"는 논리다: 홀드의 진행이
+-- 차는 만큼 서버가 친구를 **처음 당긴 구출자 쪽으로** 옮긴다(진행 1 = 무덤 반경, 단 구출자 앞 standoffStuds까지만).
+-- 구출자마다 더해진다 - 둘이 당기면 두 배로 빠르다. 29-3은 "붙어서 친구 쪽으로 걷는다"였다 - 입력만 F 홀드로 바뀌었고,
+-- 흰 원(무덤)과 "원 밖으로 끌려 나온다"는 그림은 그대로다.
 BossTrap.registerRescueHandler("push", {
-	tick = function(trapped, record, members, dt)
-		local root = rootOf(trapped)
-		if not root then
+	onProgress = function(trapped, record, rescuer, amount)
+		local root, rescuerRoot = rootOf(trapped), rootOf(rescuer)
+		if not (root and rescuerRoot) then
 			return
 		end
+		-- 방향과 거리는 처음 당긴 순간에 정한다 - 끌려오는 동안 다시 재면 구출자를 지나치는 순간 방향이 뒤집힌다.
 		local config = BossData.mechanics.rescue.push
-		local speed = config.graveRadiusStuds / BossData.mechanics.trap.rescueSeconds
-		local zone = record.context and WorldConfig.zones[record.context.zoneKey or ""]
-		for _, rescuer in ipairs(members) do
-			local rescuerRoot = rescuer ~= trapped and rootOf(rescuer)
-			local humanoid = rescuerRoot and rescuer.Character:FindFirstChildOfClass("Humanoid")
-			if humanoid and (PlayerState.getHp(rescuer) or 0) > 0 and not BossTrap.isTrapped(rescuer)
-				and Reach.horizontalDistance(rescuerRoot.Position, root.Position) <= config.reachStuds then
-				local move = Vector3.new(humanoid.MoveDirection.X, 0, humanoid.MoveDirection.Z)
-				local toward = Vector3.new(root.Position.X - rescuerRoot.Position.X, 0, root.Position.Z - rescuerRoot.Position.Z)
-				if move.Magnitude > 0.1 and toward.Magnitude > 1e-3 and move.Unit:Dot(toward.Unit) >= config.towardDot then
-					local target = root.Position + move.Unit * speed * dt
-					if zone then
-						target = Vector3.new(
-							math.clamp(target.X, zone.center.X - zone.halfSize + 2, zone.center.X + zone.halfSize - 2),
-							target.Y,
-							math.clamp(target.Z, zone.center.Z - zone.halfSize + 2, zone.center.Z + zone.halfSize - 2))
-					end
-					root.CFrame = root.CFrame.Rotation + target
-					if BossTrap.addRescueProgress(trapped, rescuer, speed * dt / config.graveRadiusStuds) then
-						return
-					end
-				end
-			end
+		local pull = record.pull
+		if not pull then
+			local toward = Vector3.new(rescuerRoot.Position.X - root.Position.X, 0, rescuerRoot.Position.Z - root.Position.Z)
+			pull = {
+				direction = toward.Magnitude > 1e-3 and toward.Unit or Vector3.new(1, 0, 0),
+				distance = math.clamp(toward.Magnitude - config.standoffStuds, 0, config.graveRadiusStuds),
+			}
+			record.pull = pull
 		end
+		local target = root.Position + pull.direction * pull.distance * amount
+		local zone = record.context and WorldConfig.zones[record.context.zoneKey or ""]
+		if zone then
+			target = Vector3.new(
+				math.clamp(target.X, zone.center.X - zone.halfSize + 2, zone.center.X + zone.halfSize - 2),
+				target.Y,
+				math.clamp(target.Z, zone.center.Z - zone.halfSize + 2, zone.center.Z + zone.halfSize - 2))
+		end
+		root.CFrame = root.CFrame.Rotation + target
 	end,
 })
 

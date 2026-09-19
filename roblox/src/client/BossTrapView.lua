@@ -4,6 +4,10 @@
 --   · 잡힌 본인: 화면 아래 가운데 고정 크기 패널 - 상태 이름 + 흰 막대(자동 해제까지 남은 시간이 줄어든다)
 --     + 파랑 막대(구출 진행이 차오른다). 조작이 안 되는 이유가 항상 보인다.
 --   · 남(구출자 시점): 잡힌 사람 머리 위 BillboardGui - 구출 동작 픽토그램 + 같은 두 막대.
+--   · 구출 입력(29-5, PRD 20.80 [B]): 서버가 잡힌 사람의 루트에 단 ProximityPrompt(F 홀드 - 모바일은 화면 버튼, 게임패드는
+--     버튼이 로블록스 기본 UI로 붙는다). 누르는 사람에게는 프롬프트의 원형 진행 + 친구 머리 위 파랑 막대가 같이 찬다.
+--     여기서 하는 일은 둘뿐이다: (1) 누를 수 없는 사람(잡힌 본인 · 자기도 잡혀 있는 사람)의 화면에서는 프롬프트를 끈다 -
+--     보이는 것 = 되는 것. (2) 서버가 "피격으로 끊겼다"(BossRescueHoldBroken)를 알리면 내 화면의 홀드를 끊는다.
 -- 색은 25-4 전조 색 언어 그대로다: 흰색 = 남은 시간·정보, 파랑 = 기회("여기서 할 일이 있다" - 헤롱
 -- 말풍선과 같은 값). 새 색·새 파티클·새 에셋 없음. 고정 크기만 쓴다(AutomaticSize 없음, 20.70 [5]).
 
@@ -28,13 +32,17 @@ local KIND_NAMES = {
 	buried = "속박",
 	shocked = "감전",
 }
+-- 29-5: 구출 입력이 F 홀드 하나로 통일됐다 - 픽토그램은 "손"(꾹 누른다) 하나이고, 다른 길이 있는 종류만 그 길을 덧붙인다
+-- (빙결 = 얼음을 때려도 된다 · 결정화 = 진짜를 찾아 때린다).
 local RESCUE_ICONS = {
-	hitCount = "⚔",
-	proximity = "◎",
+	hitCount = "✋ ⚔",
+	proximity = "✋",
 	gimmick = "?",
-	push = "➜",
+	push = "✋",
 	touch = "✋",
 }
+local PROMPT_NAME = "BossRescuePrompt" -- 서버 BossTrap.createPrompt와 같은 이름
+local HOLD_BREAK_SECONDS = 0.2 -- 피격으로 끊긴 뒤 프롬프트를 꺼 두는 시간(꺼지는 순간 홀드가 끝난다)
 
 local PANEL_WIDTH, PANEL_HEIGHT = 260, 58
 local BAR_HEIGHT = 8
@@ -153,6 +161,12 @@ function BossTrapView.start()
 		end
 	end
 
+	-- 29-5: 서버가 "예고 있는 피격으로 구출 홀드가 끊겼다"고 알리면 잠깐 프롬프트를 꺼서 내 화면의 홀드도 끊는다.
+	local promptsOffUntil = 0
+	ReplicatedStorage:WaitForChild("BossRescueHoldBroken").OnClientEvent:Connect(function()
+		promptsOffUntil = os.clock() + HOLD_BREAK_SECONDS
+	end)
+
 	local function removeBillboard(target)
 		local entry = billboards[target]
 		if entry then
@@ -205,14 +219,23 @@ function BossTrapView.start()
 	end
 
 	RunService.RenderStepped:Connect(function()
+		local canRescue = localPlayer:GetAttribute("BossTrapKind") == nil and os.clock() >= promptsOffUntil
 		for _, target in ipairs(Players:GetPlayers()) do
 			local kind = target:GetAttribute("BossTrapKind")
 			updateGrave(target, kind)
+			if kind then
+				-- 프롬프트는 서버 것이고 서버는 Enabled를 다시 쓰지 않는다 - 내 화면에서만 끄고 켠다.
+				local root = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+				local prompt = root and root:FindFirstChild(PROMPT_NAME)
+				if prompt then
+					prompt.Enabled = canRescue and target ~= localPlayer
+				end
+			end
 			if target == localPlayer then
 				panel.Visible = kind ~= nil
 				if kind then
 					local remaining, rescue = readBars(target)
-					title.Text = ("%s - 움직일 수 없습니다"):format(KIND_NAMES[kind] or "잡힘")
+					title.Text = (rescue > 0 and "%s - 친구가 구하는 중" or "%s - 움직일 수 없습니다"):format(KIND_NAMES[kind] or "잡힘")
 					ownCountdown.Size = UDim2.new(remaining, 0, 1, 0)
 					ownRescue.Size = UDim2.new(rescue, 0, 1, 0)
 				end

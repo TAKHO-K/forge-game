@@ -581,30 +581,28 @@ local function runScorpion(player, env, r, root)
 		fullHeal(player)
 		BossMechanics.trapMember(model, data, player)
 		local origin = player:GetAttribute("BossTrapOrigin")
-		local rescuer, rescuerRoot, rescuerHumanoid = newStandIn("StandInPusher", root.Position - Vector3.new(3, 0, 0))
+		-- 29-5: 구출 입력이 F 홀드로 통일됐다(PRD 20.80 [B]) - 곁에 서 있기만 해서는 안 차고, 홀드가 차는 만큼 구출자 쪽으로 끌려 나온다.
+		-- 구출자는 흰 원(무덤 r4) 바로 밖 6stud에 선다 → 무덤 반경만큼 끌려 나와 구출자 앞 2stud에서 풀린다.
+		local push = mechanics.rescue.push
+		local rescuer, rescuerRoot = newStandIn("StandInPuller", root.Position - Vector3.new(push.reachStuds, 0, 0))
 		BossEncounter.debugAddMember(model, rescuer)
 		members = { player, rescuer }
 		local startPosition = root.Position
-		rescuerHumanoid.MoveDirection = Vector3.new(0, 0, 1) -- 먼저 엉뚱한 방향(친구 쪽이 아니다)
-		drive(player, root, model, data, 0.5, true)
-		local wrongDirection = player:GetAttribute("BossTrapRescue") or 0
-		rescuerHumanoid.MoveDirection = Vector3.new(1, 0, 0)
-		local pushStartedAt = os.clock()
-		local function pushStep()
-			rescuerRoot.Position = root.Position - Vector3.new(3, 0, 0) -- 밀리는 만큼 따라붙는다
+		drive(player, root, model, data, 0.5, true) -- 곁에 서 있기만 한다(누르지 않는다)
+		local withoutHold = player:GetAttribute("BossTrapRescue") or 0
+		local accepted = BossTrap.beginHold(player, rescuer) -- 프롬프트의 HoldBegan이 부르는 바로 그 함수
+		local pullStartedAt = os.clock()
+		while BossTrap.isTrapped(player) and os.clock() - pullStartedAt < 4 do
+			RunService.Heartbeat:Wait()
 			BossPatterns.step(model, data, bossPosition, player, root, 1 / 60, members)
 		end
-		while BossTrap.isTrapped(player) and os.clock() - pushStartedAt < 4 do
-			RunService.Heartbeat:Wait()
-			pushStep()
-		end
-		local elapsed = os.clock() - pushStartedAt
-		local pushed = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(startPosition.X, 0, startPosition.Z)).Magnitude
-		r.check(("밀기: 잡힘 종류 %s·무덤 자리 Attribute=%s·루트 고정 → 엉뚱한 방향으로 걸으면 진행 %.2f(기대 0) → 친구 쪽으로 걸어 %.2f초 만에 풀림(기대 %.1f), 밀린 거리 %.1fstud(기대 무덤 반경 %d), 풀린 직후 유예 면역 x%.1f(%.0f초), 루트 고정 해제=%s"):format(
-			tostring(victimRecord and "buried"), tostring(origin ~= nil), wrongDirection, elapsed, mechanics.trap.rescueSeconds, pushed,
-			mechanics.rescue.push.graveRadiusStuds, PlayerState.getIncomingDamageMultiplier(player), mechanics.trap.releaseGraceSeconds, tostring(root.Anchored == false)),
-			origin ~= nil and wrongDirection == 0 and not BossTrap.isTrapped(player) and near(elapsed, mechanics.trap.rescueSeconds, 0.3)
-				and near(pushed, mechanics.rescue.push.graveRadiusStuds, 0.5) and PlayerState.getIncomingDamageMultiplier(player) == 0 and root.Anchored == false)
+		local elapsed = os.clock() - pullStartedAt
+		local pulled = startPosition.X - root.Position.X -- 구출자(−X 쪽)로 끌려온 거리
+		r.check(("끌어내기: 잡힘 종류 %s·무덤 자리 Attribute=%s·루트 고정 → 곁에 서 있기만 하면 진행 %.2f(기대 0) → F 홀드 받아들임=%s → %.2f초 만에 풀림(기대 %.1f), 구출자 쪽으로 끌려온 거리 %.1fstud(기대 무덤 반경 %d), 풀린 직후 유예 면역 x%.1f(%.0f초), 루트 고정 해제=%s"):format(
+			tostring(victimRecord and "buried"), tostring(origin ~= nil), withoutHold, tostring(accepted), elapsed, mechanics.trap.rescueSeconds, pulled,
+			push.graveRadiusStuds, PlayerState.getIncomingDamageMultiplier(player), mechanics.trap.releaseGraceSeconds, tostring(root.Anchored == false)),
+			origin ~= nil and withoutHold == 0 and accepted and not BossTrap.isTrapped(player) and near(elapsed, mechanics.trap.rescueSeconds, 0.3)
+				and near(pulled, push.graveRadiusStuds, 0.5) and PlayerState.getIncomingDamageMultiplier(player) == 0 and root.Anchored == false)
 		PlayerState.clear(rescuer)
 		table.remove(encounter.members, table.find(encounter.members, rescuer))
 	end)
