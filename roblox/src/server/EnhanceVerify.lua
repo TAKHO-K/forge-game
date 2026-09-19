@@ -437,6 +437,9 @@ function EnhanceVerify.runLive(player, env)
 
 	local goldStart, spentTotal = 0, 0
 	r.section("[나] 준비", function()
+		-- 루트를 고정(Anchored)한 채 옮긴다 - Play 시작 때 플레이어가 보스 아레나(z = -2900대)에 서 있으면(저장 스테이지가 보스 스테이지일 때) 2,600stud를
+		-- 순간이동한 자리의 지형을 클라이언트가 아직 못 받아 캐릭터가 추락하고, 심연 복귀로 강화대 밖에 서서 응답 10회가 전부 nil이 된다(S04 사전 Play에서 확인).
+		root.Anchored = true
 		root.CFrame = CFrame.new(WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset + Vector3.new(0, 3, 0))
 		PlayerProfile.setWeaponLevel(player, 0)
 		PlayerProfile.setEnhanceGauge(player, 0)
@@ -476,6 +479,7 @@ function EnhanceVerify.runLive(player, env)
 	env.restore(player)
 	local currentRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if currentRoot then
+		currentRoot.Anchored = false
 		currentRoot.CFrame = savedCFrame
 	end
 	local weaponAfter = PlayerProfile.getWeapon(player)
@@ -637,9 +641,10 @@ end
 
 -- ─────────────────────────── S04 (나) 실제 처치 경로 · 강화 소모 ───────────────────────────
 
--- 검증용 잡몹은 아무도 없는 먼 곳에 스폰한다. 잡몹은 죽으면 5초 뒤 같은 자리에 스스로 리스폰하므로(MonsterSpawner.despawn) 배치마다 그 시간을
+-- 검증용 잡몹은 플레이어에게서 먼 곳에 스폰한다. 잡몹은 죽으면 5초 뒤 같은 자리에 스스로 리스폰하므로(MonsterSpawner.despawn) 배치마다 그 시간을
 -- 기다렸다가 새로 생긴 몬스터 · 땅의 드랍을 전부 지운다 - "검증이 남긴 것 0"을 지키는 방법이다(제품 코드에 검증용 훅을 넣지 않는다).
-local FAR_POSITION = Vector3.new(0, 5, 4000)
+-- 자리는 **지면이 있는** 곳이어야 한다: 사망 지점에 지면이 없으면 ItemDropSpawner가 드랍을 주인 발밑에 떨어뜨려 자동 줍기가 가방을 채운다
+-- (처음 Play에서 지면 없는 (0, 5, 4000)에 세웠다가 그렇게 가방이 가득 차 보스 드랍이 땅으로 갔다). 그래서 플레이어에게서 가장 먼 tier 구역의 중심을 쓴다.
 local KILL_CHUNK = 200
 
 local function monsterSet()
@@ -682,12 +687,32 @@ local function materialGains(player, before)
 	return gains
 end
 
+local function rootOf(player)
+	local character = player.Character
+	return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+-- 플레이어에게서 가장 먼 tier 구역의 중심(지면 위 5).
+local function farSpotFrom(player)
+	local root = rootOf(player)
+	local best, bestDistance = nil, -1
+	for _, zoneKey in ipairs(WorldConfig.tierZoneOrder) do
+		local center = WorldConfig.zones[zoneKey].center
+		local distance = root and (center - root.Position).Magnitude or 0
+		if distance > bestDistance then
+			best, bestDistance = center, distance
+		end
+	end
+	return best + Vector3.new(0, 5, 0)
+end
+
 -- 실제 처치 경로로 count마리를 잡는다: 스폰 → applyDamage → resolveHit(handleMobDeath → grantKillReward → 재료). variant = {} 이면 접두사 · 반짝이 없는 기본형.
 local function killMobs(player, count, data, variant)
 	local monstersBefore, groundBefore = monsterSet(), groundSet()
 	local stage = TutorialState.getMonsterStage(player)
+	local spot = farSpotFrom(player)
 	for index = 1, count do
-		local model = MonsterSpawner.spawn(data, FAR_POSITION, nil, variant)
+		local model = MonsterSpawner.spawn(data, spot, nil, variant)
 		local isDead = MonsterState.applyDamage(model, 1e12, stage, player)
 		CombatResolution.resolveHit(player, model, isDead)
 		if index % 50 == 0 then
@@ -725,11 +750,6 @@ local function setMaterial(player, materialId, amount)
 	elseif have < amount then
 		PlayerProfile.addMaterial(player, materialId, amount - have)
 	end
-end
-
-local function rootOf(player)
-	local character = player.Character
-	return character and character:FindFirstChild("HumanoidRootPart")
 end
 
 -- 보스를 실제 처치 경로로 잡는다(27-1 (나)와 같은 호출 - resolveHit이 handleBossDeath · 복귀 텔레포트 · despawn까지 탄다). standInRatio가 있으면 그 기여의
