@@ -17,7 +17,7 @@ return {
 	--   regression = true: 과거 세션의 블록 전부 + current. **세션의 마지막 Play 1회에서만 켜고, 그 Play가 끝나면 다시 false로 되돌린다**(COMMON.md §3 · §5).
 	-- 새 세션을 시작할 때 current를 그 세션의 블록 id로 갈아 끼운다(전 세션의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
 	verify = {
-		regression = true, -- S06 마지막 Play 1회 동안만 켠다(끝나면 false로 되돌려 커밋)
+		regression = false,
 		current = {}, -- S06은 서버 검증 블록이 없다(클라 UI 세션 - 검증은 클라 콘솔 [S06][UI] · 마지막 Play가 회귀 전체)
 	},
 }
