@@ -181,7 +181,7 @@ function RuleCheck.run(gallery)
 	local gui = refs.window.screenGui
 	local smallText, smallButtons, buttonCount = countBadText(gui, 12), 0, 0
 	for _, inst in ipairs(gui:GetDescendants()) do
-		if inst:IsA("TextButton") and inst.Name == "Button" then
+		if inst:IsA("TextButton") and (inst.Name == "Button" or inst.Name:sub(1, 4) == "Btn_") then
 			buttonCount += 1
 			if inst.AbsoluteSize.Y < Theme.buttonHeight then
 				smallButtons += 1

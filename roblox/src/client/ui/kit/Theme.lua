@@ -73,6 +73,8 @@ function Theme.stroke(inst, colorName, transparency)
 	stroke.Color = colorName and Theme.color(colorName) or UIColors.rim
 	stroke.Transparency = transparency or UIColors.rimTransparency
 	stroke.Thickness = 1
+	-- 버튼 · 라벨(TextButton · TextLabel)에서는 기본값(Contextual)이 글씨 외곽선이 된다 - 언제나 테두리로 고정한다.
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = inst
 	return stroke
 end

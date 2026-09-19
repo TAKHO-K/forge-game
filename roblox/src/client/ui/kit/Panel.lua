@@ -86,7 +86,7 @@ function Panel.create(props)
 	closeButton.Size = UDim2.new(0, Panel.closeSize, 0, Panel.closeSize)
 	closeButton.Font = Theme.font
 	closeButton.TextSize = Theme.textSize("header")
-	closeButton.Text = "✕"
+	closeButton.Text = "X" -- "✕"는 폰트(Gotham)에 글리프가 없어 네모로 나온다
 	closeButton.TextColor3 = colors.textSecondary
 	closeButton.Parent = frame
 

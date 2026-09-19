@@ -1,7 +1,8 @@
 -- 겹침 자동 검사(30-0 S06, PRD 20.81 [D-2] 마지막 문단). Studio에서만 돈다. 접속 8초 뒤 PlayerGui에서 ScreenMap 슬롯 표에 이름이 있는 **보이는** HUD 프레임을 모아
 --   ① 서로 교차하는 쌍  ② C 구역(화면 중앙 40% × 50%)을 침범한 것  을 클라 콘솔에 찍는다: `[S06][UI] 겹침 n쌍 · 중앙 침범 m건`. 창(window · station · overlay)은 제외.
 -- 참고로 "new" 슬롯(아직 안 그려진 자리 - 드랍 피드 · 메뉴바)이 지금 보이는 HUD와 겹치는지도 별도 줄(`[S06][UI][계획]`)로 찍는다 - 점수에는 안 넣는다(PRD 20.88 미결).
--- 이 검사는 HUD 코드를 고치지 않는다. 화면에 안 보이는(Visible = false · 크기 0) 프레임은 세지 않으므로, 일시 토스트끼리 겹치는 것은 그 순간 같이 떠 있을 때만 잡힌다.
+-- 이 검사는 HUD 코드를 고치지 않는다. 화면에 안 보이는 프레임(Visible = false · 크기 0 · 배경 · 글 · 이미지가 전부 투명)은 세지 않으므로, 일시 토스트끼리 겹치는 것은 그 순간 같이 떠 있을 때만 잡힌다.
+-- 중앙(C 구역)은 화면 높이 비례(가운데 40% × 50%)라 창이 작을수록 바닥 HUD가 걸린다 - 결과 줄에 화면 크기를 같이 적는다.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -24,6 +25,33 @@ local function isShown(inst)
 			return node.Enabled
 		end
 		node = node.Parent
+	end
+	return false
+end
+
+-- 자기 자신이 화면에 그려지는가(배경 · 글 · 이미지 중 하나가 불투명하다). 토스트 HUD들은 Visible을 안 끄고 투명도로 숨기므로 이 검사가 필요하다.
+local function drawsItself(inst)
+	if inst:IsA("GuiObject") and inst.BackgroundTransparency < 1 then
+		return true
+	end
+	if (inst:IsA("TextLabel") or inst:IsA("TextButton")) and inst.Text ~= "" and inst.TextTransparency < 1 then
+		return true
+	end
+	if (inst:IsA("ImageLabel") or inst:IsA("ImageButton")) and inst.Image ~= "" and inst.ImageTransparency < 1 then
+		return true
+	end
+	return false
+end
+
+-- 프레임 자신이나 보이는 자손 중 하나라도 그려지면 true(칩 스택처럼 자기는 투명하고 자식이 그려지는 컨테이너 포함).
+local function draws(inst)
+	if drawsItself(inst) then
+		return true
+	end
+	for _, descendant in ipairs(inst:GetDescendants()) do
+		if descendant:IsA("GuiObject") and descendant.Visible and drawsItself(descendant) and isShown(descendant) then
+			return true
+		end
 	end
 	return false
 end
@@ -77,7 +105,7 @@ local function run()
 	local shown = {} -- { label, rect }
 	for zone, name, slot in ScreenMap.each() do
 		local inst = slot.instanceName and found[slot.instanceName]
-		if inst and isShown(inst) and inst.AbsoluteSize.X > 0 and inst.AbsoluteSize.Y > 0 then
+		if inst and isShown(inst) and inst.AbsoluteSize.X > 0 and inst.AbsoluteSize.Y > 0 and draws(inst) then
 			table.insert(shown, { label = zone .. "." .. name, rect = rectOf(inst), slot = slot })
 		end
 	end
@@ -104,7 +132,7 @@ local function run()
 	-- 참고: 아직 안 그려진 "new" 슬롯이 지금 보이는 HUD와 겹치는가.
 	for zone, name, slot in ScreenMap.each() do
 		local drawn = slot.instanceName and found[slot.instanceName]
-		if slot.status == "new" and not (drawn and isShown(drawn)) then
+		if slot.status == "new" and not (drawn and isShown(drawn) and draws(drawn)) then
 			local planned = plannedRect(slot, screenSize)
 			if planned then
 				for _, entry in ipairs(shown) do

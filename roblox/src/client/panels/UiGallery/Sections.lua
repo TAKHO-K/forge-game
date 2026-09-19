@@ -195,7 +195,7 @@ function Sections.toasts(parent, width, ctx)
 	}
 	for index, spec in ipairs(specs) do
 		Button.build({
-			parent = parent, kind = "secondary", text = spec[1], width = 130, position = UDim2.new(0, (index - 1) * 140, 0, y), onActivated = spec[2],
+			parent = parent, name = "Btn_toast_" .. index, kind = "secondary", text = spec[1], width = 130, position = UDim2.new(0, (index - 1) * 140, 0, y), onActivated = spec[2],
 		})
 	end
 	return y + Theme.buttonHeight + Theme.textSize("caption") + 16
@@ -212,11 +212,11 @@ function Sections.overlays(parent, width, ctx)
 			ctx.note("확인창 결과: " .. (accepted and "진행(true)" or "취소(false)"))
 		end)
 	end
-	Button.build({ parent = parent, kind = "primary", text = "확인창", width = 120, position = UDim2.new(0, 0, 0, y), onActivated = function() ask(false) end })
-	Button.build({ parent = parent, kind = "danger", text = "위험 확인창", width = 130, position = UDim2.new(0, 130, 0, y), onActivated = function() ask(true) end })
+	Button.build({ parent = parent, name = "Btn_confirm", kind = "primary", text = "확인창", width = 120, position = UDim2.new(0, 0, 0, y), onActivated = function() ask(false) end })
+	Button.build({ parent = parent, name = "Btn_confirmDanger", kind = "danger", text = "위험 확인창", width = 130, position = UDim2.new(0, 130, 0, y), onActivated = function() ask(true) end })
 	for index, id in ipairs({ ctx.ids.stationA, ctx.ids.stationB }) do
 		Button.build({
-			parent = parent, kind = "secondary", text = index == 1 and "station A" or "station B", width = 110, position = UDim2.new(0, 270 + (index - 1) * 120, 0, y),
+			parent = parent, name = "Btn_station" .. index, kind = "secondary", text = index == 1 and "station A" or "station B", width = 110, position = UDim2.new(0, 270 + (index - 1) * 120, 0, y),
 			onActivated = function()
 				local opened = UIManager.open(id)
 				ctx.note(("%s: %s"):format(id, opened and "열림" or "거절 - window가 열려 있으면 station은 열리지 않는다"))
