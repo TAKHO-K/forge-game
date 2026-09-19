@@ -374,43 +374,90 @@ function EnhanceVerify.runLive(player, env)
 	local weaponBefore = PlayerProfile.getWeapon(player)
 	local levelBefore, gaugeBefore = weaponBefore.level, PlayerProfile.getEnhanceGauge(player)
 
-	r.section("[나] +0에서 10회", function()
-		-- 강화대 옆으로 옮기고(핸들러가 근접을 확인한다) +0 · 게이지 0 · 넉넉한 골드로 시작한다.
+	-- 강화대 옆으로 옮기고(핸들러가 근접을 확인한다) 시작 상태를 만든 뒤, 실제 핸들러(EnhanceService.handleRequest)를 count번 부른다.
+	-- fixedLevel이 있으면 매 시도 전에 그 단계로 되돌린다(게이지는 그대로) - 하락 · 초기화가 나와도 같은 단계를 계속 시험한다.
+	-- 시도마다 payload · 프로필을 순수 함수(Enhance.getResultLevel · getGaugeGain)가 정한 기대값과 대조한다.
+	local function runAttempts(count, fixedLevel)
+		local stats = { attempts = 0, missing = 0, dropped = 0, mismatches = 0, badResult = 0, spent = 0, failures = 0, downs = 0, gaugeGained = 0, successes = 0, trace = {} }
+		for _ = 1, count do
+			task.wait(EnhanceService.requestCooldownSeconds + 0.1) -- 요청 쿨다운(0.5초)
+			if fixedLevel then
+				PlayerProfile.setWeaponLevel(player, fixedLevel)
+			end
+			local levelBeforeTry = PlayerProfile.getWeapon(player).level
+			local gaugeBeforeTry = PlayerProfile.getEnhanceGauge(player)
+			local payload = EnhanceService.handleRequest(player)
+			if not payload then
+				stats.missing += 1
+			else
+				stats.attempts += 1
+				stats.spent += payload.cost or 0
+				local weapon = PlayerProfile.getWeapon(player)
+				if payload.level < levelBeforeTry then
+					stats.dropped += 1
+				end
+				local isSuccess = payload.result == "success"
+				if isSuccess then
+					stats.successes += 1
+				else
+					stats.failures += 1
+					if payload.result == "down1" or payload.result == "down2" or payload.result == "reset" then
+						stats.downs += 1
+					end
+				end
+				-- 기대: 단계 = getResultLevel, 게이지 = 성공이면 0 / 실패면 min(max, 이전 + 시도한 단계의 gain), gaugeGain = 실제로 오른 양
+				local expectedLevel = Enhance.getResultLevel(levelBeforeTry, payload.result)
+				local expectedGauge = isSuccess and 0 or math.min(EnhanceConfig.gauge.max, gaugeBeforeTry + Enhance.getGaugeGain(levelBeforeTry))
+				stats.gaugeGained += math.max(0, payload.gauge - gaugeBeforeTry)
+				if payload.gauge ~= PlayerProfile.getEnhanceGauge(player) or payload.level ~= weapon.level or payload.gaugeMax ~= EnhanceConfig.gauge.max
+					or payload.level ~= expectedLevel or payload.gauge ~= expectedGauge or payload.gaugeGain ~= math.max(0, expectedGauge - gaugeBeforeTry)
+					or (gaugeBeforeTry >= EnhanceConfig.gauge.max and not isSuccess) then -- 천장: 게이지가 가득이면 이번 시도는 반드시 성공
+					stats.mismatches += 1
+				end
+				if fixedLevel == nil and not isSuccess and payload.result ~= "maintain" then
+					stats.badResult += 1
+				end
+				table.insert(stats.trace, ("+%d %s→+%d(게이지 %d)"):format(levelBeforeTry, payload.result, payload.level, payload.gauge))
+			end
+		end
+		return stats
+	end
+
+	local goldStart, spentTotal = 0, 0
+	r.section("[나] 준비", function()
 		root.CFrame = CFrame.new(WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset + Vector3.new(0, 3, 0))
 		PlayerProfile.setWeaponLevel(player, 0)
 		PlayerProfile.setEnhanceGauge(player, 0)
-		PlayerProfile.addGold(player, 100000)
-		local goldStart = PlayerProfile.getGold(player)
+		PlayerProfile.addGold(player, 20000000) -- 19강 시도 1회 23.5만 × 10회까지 넉넉히
+		goldStart = PlayerProfile.getGold(player)
+	end)
 
-		local attempts, drops, mismatches, spent, missing, badResult = 0, 0, 0, 0, 0, 0
-		local trace = {}
-		for _ = 1, 10 do
-			task.wait(EnhanceService.requestCooldownSeconds + 0.1) -- 요청 쿨다운(0.5초)
-			local levelBeforeTry = PlayerProfile.getWeapon(player).level
-			local payload = EnhanceService.handleRequest(player)
-			if not payload then
-				missing += 1
-			else
-				attempts += 1
-				spent += payload.cost or 0
-				local weapon = PlayerProfile.getWeapon(player)
-				if payload.level < levelBeforeTry or weapon.level < levelBeforeTry then
-					drops += 1
-				end
-				if payload.gauge ~= PlayerProfile.getEnhanceGauge(player) or payload.level ~= weapon.level or payload.gaugeMax ~= EnhanceConfig.gauge.max then
-					mismatches += 1
-				end
-				if payload.result ~= "success" and payload.result ~= "maintain" then
-					badResult += 1
-				end
-				table.insert(trace, ("%s→+%d(게이지 %d)"):format(payload.result, payload.level, payload.gauge))
-			end
-		end
+	r.section("[나] +0에서 10회", function()
+		local stats = runAttempts(10, nil)
+		spentTotal += stats.spent
+		r.check(("+0에서 시작 시도 %d회(응답 없음 %d): 단계가 내려간 적 %d(기대 0) · success/maintain 밖의 결과 %d(기대 0) ★진짜 합격 기준 · 경과: %s"):format(
+			stats.attempts, stats.missing, stats.dropped, stats.badResult, table.concat(stats.trace, " ")),
+			stats.attempts == 10 and stats.dropped == 0 and stats.badResult == 0)
+		r.check(("payload · 프로필이 기대와 같다(어긋난 시도 %d회, 기대 0 - 단계 · 게이지 · gaugeGain · gaugeMax) · 골드 차감 = payload.cost 합 %d"):format(stats.mismatches, stats.spent), stats.mismatches == 0)
+	end)
+
+	-- 위 10회는 거의 성공만 나와 게이지가 움직이지 않는다 - 실패 경로(게이지 적립 · 천장 · 하락 · 단계 유지)를 실제 핸들러로 밟는다.
+	r.section("[나] 실패 경로", function()
+		PlayerProfile.setEnhanceGauge(player, 0)
+		local at17 = runAttempts(12, 17) -- 성공률 0.28 - 하락 없음 · 게이지가 쌓이다 천장(9번째 이내)에서 성공
+		local at19 = runAttempts(10, 19) -- 성공률 0.28 - 하락(14%) · 유지 · 게이지는 하락해도 유지
+		spentTotal += at17.spent + at19.spent
+		r.check(("+17에서 12회: 실패 %d · 성공 %d · 게이지 적립 합 %d · 단계가 내려간 적 %d(기대 0) · 어긋남 %d(기대 0) / +19에서 10회: 실패 %d(하락 %d) · 성공 %d · 게이지 적립 합 %d · 어긋남 %d(기대 0) - 기대: 실패가 실제로 나왔고 게이지가 payload · 프로필 · 순수 함수와 같다"):format(
+			at17.failures, at17.successes, at17.gaugeGained, at17.dropped, at17.mismatches, at19.failures, at19.downs, at19.successes, at19.gaugeGained, at19.mismatches),
+			at17.failures > 0 and at17.gaugeGained > 0 and at17.dropped == 0 and at17.mismatches == 0 and at17.missing == 0
+				and at19.failures > 0 and at19.gaugeGained > 0 and at19.mismatches == 0 and at19.missing == 0)
+		print(("[S03][나]   +17 경과: %s"):format(table.concat(at17.trace, " ")))
+		print(("[S03][나]   +19 경과: %s"):format(table.concat(at19.trace, " ")))
+	end)
+
+	r.section("[나] 골드", function()
 		local goldSpent = goldStart - PlayerProfile.getGold(player)
-		r.check(("시도 %d회(응답 없음 %d): 단계가 내려간 적 %d(기대 0) · success/maintain 밖의 결과 %d(기대 0) ★진짜 합격 기준 · 경과: %s"):format(
-			attempts, missing, drops, badResult, table.concat(trace, " ")), attempts == 10 and drops == 0 and badResult == 0)
-		r.check(("payload의 gauge · level · gaugeMax가 프로필과 같다(어긋난 시도 %d회, 기대 0) · 골드 차감 %d = payload.cost 합 %d"):format(mismatches, goldSpent, spent),
-			mismatches == 0 and goldSpent == spent)
+		r.check(("골드 차감 합 %d = 모든 시도의 payload.cost 합 %d (기대 같음 - 19강 이상도 골드만 든다)"):format(goldSpent, spentTotal), goldSpent == spentTotal)
 	end)
 
 	-- 되돌리기: classes · gold는 env.restore가, 캐릭터 위치는 직접.
