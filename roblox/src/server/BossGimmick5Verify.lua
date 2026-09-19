@@ -434,10 +434,15 @@ local function runHoldRescue(player, env, r, root)
 		moveTo(root, secondRoot.Position + Vector3.new(4, 0, 0))
 		local realAccepted = BossTrap.beginHold(second, player)
 		step(45)
-		local realHeld = second:GetAttribute("BossTrapRescue") or 0
+		-- 진행은 기록에서 읽는다 - BossTrapRescue Attribute는 잡힌 쪽이 실제 Player일 때만 쓴다(1회차 Play: 스탠드인의 Attribute를 읽어 0이 나왔다)
+		local function progressOf(trapped, rescuer)
+			local record = BossTrap.getRecord(trapped)
+			return record and record.progressBy[rescuer] or 0
+		end
+		local realHeld = progressOf(second, player)
 		BossMechanics.beginActivation(model)
 		BossMechanics.applyGimmickDamage(model, player, 0.1, "검증 - 예고 있는 피격") -- %피해 문(기믹 실패·돌진·구덩이·반사가 지나는 곳)
-		local realAfter = second:GetAttribute("BossTrapRescue") or 0
+		local realAfter = progressOf(second, player)
 		r.check(("둘이 같이 누르면 %d틱(기대 45 = %.2f초) · 실제 Player가 누르는 쪽: 받아들임=%s, 0.75초 뒤 %.2f(기대 0.50) → %%피해를 맞으면 %.2f(기대 0), 본인 체력 %.0f%%"):format(
 			pairTicks, holdSeconds / 2, tostring(realAccepted), realHeld, realAfter, PlayerState.getHp(player) / PlayerState.getMaxHp(player) * 100),
 			pairTicks >= 44 and pairTicks <= 47 and realAccepted and math.abs(realHeld - 0.5) < 0.03 and realAfter == 0)
@@ -592,7 +597,9 @@ local function runLive(player, env)
 
 		BossEncounter.despawnFor(player)
 		local stage = 6 * interval
-		PartyState.addDummies(player, 1)
+		PartyState.addDummies(player, 1, function()
+			return { classId = "bow", level = 100, stage = stage, hp = 1, maxHp = 1 } -- "/gg party dummy"와 같은 모양(HUD 표시용 값)
+		end)
 		local party = PartyState.getParty(player)
 		env.applyStage(player, stage)
 		BossEncounter.spawnForParty(party, player, stage)
