@@ -32,10 +32,10 @@ local buyRerollTicketRequest = Instance.new("RemoteEvent")
 buyRerollTicketRequest.Name = "BuyRerollTicketRequest"
 buyRerollTicketRequest.Parent = ReplicatedStorage
 
--- 옵션 변환권 가격(20.37 [5] "그 순간 몬스터 1마리당 골드 × N") - 배수는 GemData.
--- rerollTicketGoldMultiplier(클라이언트 표시용과 단일 출처).
+-- 옵션 변환권 가격(20.37 [5] "몬스터 1마리당 골드 × N") - 배수는 GemData.rerollTicketGoldMultiplier(클라이언트 표시용과
+-- 단일 출처). 28-2 [8] 3번: 기준 스테이지는 지금 서 있는 곳이 아니라 계정 최고 스테이지다(스테이지 1로 내려가 싸게 사는 구멍).
 local function rerollTicketPrice(player)
-	local stage = PlayerProfile.getInfiniteStage(player) or 1
+	local stage = PlayerProfile.getAccountBestStage(player)
 	return InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage) * GemData.rerollTicketGoldMultiplier
 end
 

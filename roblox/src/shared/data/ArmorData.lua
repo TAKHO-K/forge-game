@@ -94,6 +94,22 @@ return {
 	-- "몬스터당 최대 2개" 다중 드랍은 다음이다.
 	dropChance = 0.25,
 
+	-- 28-1 [2-1]: 드랍 itemLevel = max(1, S + δ). S = 기준 스테이지(잡몹·반짝이 = 받는 사람 자신의 스테이지, 보스 = 보스
+	-- 스테이지), δ는 삼각 분포 1:2:3:2:1(11.1 / 22.2 / 33.3 / 22.2 / 11.1%). tier의 itemLevel 곱셈은 폐지했다 - tier는 등급표만 정한다.
+	itemLevelDelta = {
+		{ delta = -2, weight = 1 },
+		{ delta = -1, weight = 2 },
+		{ delta = 0, weight = 3 },
+		{ delta = 1, weight = 2 },
+		{ delta = 2, weight = 1 },
+	},
+	-- 28-1 [2-2]: 보스 드랍(첫 클리어 · 재도전)은 −가 없다. 3:2:1(평균 +0.67).
+	bossItemLevelDelta = {
+		{ delta = 0, weight = 3 },
+		{ delta = 1, weight = 2 },
+		{ delta = 2, weight = 1 },
+	},
+
 	-- 판매가 회수율(13-1). Loot.getSellPrice가 쓰는 유일한 상수 -
 	--   판매가 = (1 / (dropChance × 그 등급 확률)) × 그 스테이지 처치당 골드 × sellRecoveryRate
 	-- 이 관계식 자체가 "등급·드랍 스테이지가 바뀌어도 판매가가 자동으로 따라온다"는 지시를

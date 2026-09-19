@@ -214,9 +214,8 @@ function TutorialState.onBossCleared(player, target)
 
 	if not PlayerProfile.hasTutorialGrant(player, step) then
 		if stepData.grant then
-			local level = PlayerProfile.getCharacterLevel(player) or 1
 			local item = Loot.buildFixedArmorDrop(stepData.grant.grade, stepData.grant.part,
-				TutorialData.monsterStage, level, stepData.tierIndex, PlayerProfile.getClassId(player))
+				TutorialData.monsterStage, stepData.tierIndex, PlayerProfile.getClassId(player))
 			ItemDropSpawner.spawn(item, deathPosition, player)
 			print(("[forge-game] 견습 확정 드랍: %s - %s등급 %s"):format(player.Name, item.grade, item.part))
 		elseif stepData.isFinal then

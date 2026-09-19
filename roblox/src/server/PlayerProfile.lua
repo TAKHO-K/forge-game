@@ -95,11 +95,28 @@ local function gradeIndex(gradeId)
 	return nil
 end
 
+-- 계정 최고 스테이지(28-2 [8] 3번) = 전 직업 infiniteBest의 최댓값(최소 1). 옵션 변환권 가격(GemServer)과 클라의 가격 표시가
+-- 이 값 하나를 쓴다 - 지금 서 있는 스테이지가 아니라 "가장 멀리 간 기록"이 기준이라, 스테이지 1로 내려가 싸게 사는 길이 없다.
+-- 직업별 상태는 classes[classId] 아래에 전부 남아 있으므로(19-1) 활성 직업이 아니어도 읽힌다.
+local function accountBestStageOf(profile)
+	local best = 1
+	for _, classState in pairs(profile.classes) do
+		best = math.max(best, classState.stageProgress.infiniteBest)
+	end
+	return best
+end
+
+-- 클라가 가격을 미리 보여 줄 수 있게 Attribute로 내린다. infiniteBest가 바뀌는 자리(로드·전환·새 기록·직접 지정)에서 부른다.
+local function syncAccountBestStage(player, profile)
+	player:SetAttribute("AccountBestStage", accountBestStageOf(profile))
+end
+
 -- 로드 직후(PlayerProfile.init)와 직업 전환 직후(setClassId) 둘 다 "지금 활성 직업의
 -- 상태를 Attribute에 그대로 반영"해야 하므로 공유한다. classId가 nil이면(아직 선택 전)
 -- 직업별 Attribute는 건드리지 않는다 - ClassSelectUI가 빈 문자열로 이미 선택 UI를 띄운다.
 local function syncActiveClassAttributes(player, profile)
 	player:SetAttribute("ClassId", profile.classId or "")
+	syncAccountBestStage(player, profile)
 
 	local classState = activeClassState(profile)
 	if not classState then
@@ -284,6 +301,11 @@ function PlayerProfile.getInfiniteStageBest(player)
 	return classState and classState.stageProgress.infiniteBest
 end
 
+function PlayerProfile.getAccountBestStage(player)
+	local profile = profiles[player]
+	return profile and accountBestStageOf(profile) or 1
+end
+
 -- 서버만 호출한다(StageServer의 검증 직후). 새 최고 기록을 세웠으면 true를 돌려준다 -
 -- 호출부가 그때만 즉시저장(ImmediateSave)을 건다. 단순 이동(현재 스테이지 변경)은
 -- 골드처럼 잃을 자원이 없는 되돌릴 수 있는 사건이라 주기저장(60초)·퇴장저장으로
@@ -302,6 +324,7 @@ function PlayerProfile.setInfiniteStage(player, stage)
 	if isNewBest then
 		classState.stageProgress.infiniteBest = stage
 		player:SetAttribute("InfiniteStageBest", stage)
+		syncAccountBestStage(player, profile)
 	end
 	return isNewBest
 end
@@ -1188,6 +1211,7 @@ function PlayerProfile.setInfiniteStageDirect(player, stage)
 	end
 	player:SetAttribute("InfiniteStage", stage)
 	player:SetAttribute("InfiniteStageBest", classState.stageProgress.infiniteBest)
+	syncAccountBestStage(player, profile)
 end
 
 return PlayerProfile

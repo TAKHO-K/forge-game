@@ -16,6 +16,8 @@ local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
+local ItemDropState = require(script.Parent.ItemDropState)
+local InventorySync = require(script.Parent.InventorySync)
 local BossEncounter = require(script.Parent.BossEncounter)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local TutorialState = require(script.Parent.TutorialState)
@@ -34,9 +36,52 @@ function CombatResolution.init(goldGainedEvent, levelUpEvent)
 	CombatResolution.treasureChestNotice = ReplicatedStorage:FindFirstChild("TreasureChestNotice")
 end
 
+-- 보스 장비 드랍 통계(검증용 카운터 - GroundProbe.stats와 같은 결) - 두 시점의 차로 "가방 직행 몇 번 · 땅에 몇 번 ·
+-- 가득 알림 몇 번"을 읽는다.
+local dropStats = { toBag = 0, toGround = 0, fullNotices = 0 }
+
+function CombatResolution.dropStats()
+	return dropStats.toBag, dropStats.toGround, dropStats.fullNotices
+end
+
+-- 보스 장비 드랍은 땅이 아니라 가방으로 바로 간다(PRD 20.81 [C-1]) - 보스 처치 직후 멤버 전원이 사냥터로 돌아가서
+-- 아레나 땅에 남은 드랍은 주울 수 없었다. 성공하면 줍기와 같은 ItemPickedUp(획득 팝업)을 쏜다. 가방이 가득이면 false를
+-- 돌려주고 호출부가 deferred에 담는다 - 땅에 떨어뜨리는 일은 복귀 텔레포트 뒤(flushDeferredBossDrops)다.
+local function deliverBossDropToBag(recipient, item)
+	if not PlayerProfile.addArmorDrop(recipient, item) then
+		return false
+	end
+	-- ItemPickedUp은 ItemDropServer가 만든 인스턴스를 그대로 쓴다(새 이벤트를 만들지 않는다).
+	local pickedUp = ReplicatedStorage:FindFirstChild("ItemPickedUp")
+	if pickedUp then
+		pickedUp:FireClient(recipient, item)
+		dropStats.toBag += 1
+	end
+	return true
+end
+
+-- 가방이 가득이라 못 넣은 보스 드랍을 "그 사람이 사냥터로 돌아간 자리의 발밑"에 떨어뜨린다. handleBossDeath가
+-- BossEncounter.clearForModel(멤버 전원 복귀 텔레포트) 뒤에 부른다 - 텔레포트 전에 부르면 아레나에 떨어진다. 알림은 여기서
+-- 한 번 보내고, 모델에는 "알림 끝" 표시를 남겨 줍기 판정(ItemDropServer)이 같은 알림을 또 보내지 않게 한다.
+local function flushDeferredBossDrops(deferred, fallbackPosition)
+	for _, entry in ipairs(deferred) do
+		local player = entry.player
+		if player.Parent then
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			local model = ItemDropSpawner.spawn(entry.item, root and root.Position or fallbackPosition, player)
+			ItemDropState.setFullNotified(model, true)
+			InventorySync.notifyFull(player)
+			dropStats.toGround += 1
+			dropStats.fullNotices += 1
+		end
+	end
+end
+
 -- 처치 보상 지급 1인분(19-4 [2]) - 보스(단독 수령)와 잡몹(기여자 각자)이 똑같이 이 함수
 -- 하나로 받는다. AttackServer.server.lua의 grantKillReward를 그대로 옮겼다(동작 변경 없음).
-local function grantKillReward(recipient, target, monsterData, deathPosition)
+-- deferredBossDrops(보스 전용) - 가방이 가득이라 땅으로 가야 하는 보스 장비를 담는 목록. 호출부가 복귀 텔레포트 뒤에 비운다.
+local function grantKillReward(recipient, target, monsterData, deathPosition, deferredBossDrops)
 	local isBoss = monsterData.isBoss
 	local isSparkle = MonsterState.isSparkle(target)
 	local recipientStage = TutorialState.getMonsterStage(recipient)
@@ -63,29 +108,39 @@ local function grantKillReward(recipient, target, monsterData, deathPosition)
 	-- 26-1: 드랍 옵션의 직업 특화 후보는 "그 순간 플레이어의 직업"(PRD 20.67 [1]).
 	local classId = PlayerProfile.getClassId(recipient)
 
-	local armorDrop
+	-- 28-1(S01): 드랍 기준은 캐릭터 레벨이 아니라 스테이지다(dropStage - 보스는 보스 스테이지, 그 밖은 받는 사람 자신의
+	-- 스테이지). 잡몹은 0개 이상의 배열이 돌아온다(기대 개수가 1을 넘으면 여러 개).
+	local armorDrops
 	if isBoss then
-		-- 20-4 [1]: "그 스테이지 보스를 처음 깼는가"로 분기한다. 첫 처치만 확정 드랍
-		-- (Loot.rollBossFirstClearDrop) - 재도전은 잡몹과 같은 25% 확률·등급 굴림
-		-- (Loot.rollArmorDrop)으로 떨어진다. 재입장 자체는 막지 않는다(지시 원문) - 막는
-		-- 것은 확정 보상뿐이다.
+		-- 20-4 [1]: "그 스테이지 보스를 처음 깼는가"로 분기한다. 첫 처치는 등급을 끌어올린 확정 드랍
+		-- (Loot.rollBossFirstClearDrop), 재도전은 등급 상승 없는 확정 1개(Loot.rollBossRetryDrop, 28-1 [2-2]).
+		-- 재입장 자체는 막지 않는다(지시 원문) - 막는 것은 등급 상승뿐이다.
 		local stage = monsterData.stageNumber
 		if PlayerProfile.hasBossFirstClearReward(recipient, stage) then
-			armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex, nil, classId)
+			armorDrops = { Loot.rollBossRetryDrop(dropStage, classId) }
 		else
-			armorDrop = Loot.rollBossFirstClearDrop(dropStage, newLevel or oldLevel, PlayerProfile.getRebirthCount(recipient), classId)
+			armorDrops = { Loot.rollBossFirstClearDrop(dropStage, PlayerProfile.getRebirthCount(recipient), classId) }
 			PlayerProfile.markBossFirstClearReward(recipient, stage)
 		end
 	elseif isSparkle then
-		armorDrop = Loot.rollSparkleArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex, classId)
+		armorDrops = { Loot.rollSparkleArmorDrop(dropStage, monsterData.tierIndex, classId) }
 	else
-		-- 접두사 변종(22-2 [1]) - 드랍 확률에도 보상 배율(= HP 배율)을 곱한다(공평성).
-		armorDrop = Loot.rollArmorDrop(dropStage, newLevel or oldLevel, monsterData.tierIndex, MonsterState.getRewardMultiplier(target), classId)
+		-- 접두사 변종(22-2 [1]) - 기대 드랍 개수에도 보상 배율(= HP 배율)을 곱한다(공평성).
+		armorDrops = Loot.rollArmorDrop(dropStage, monsterData.tierIndex, MonsterState.getRewardMultiplier(target), classId)
 	end
-	if armorDrop then
-		ItemDropSpawner.spawn(armorDrop, deathPosition, recipient)
-		print(("[forge-game] 드랍: %s등급 %s (%s)"):format(armorDrop.grade, armorDrop.part,
-			isBoss and "보스" or (isSparkle and "반짝이" or "잡몹")))
+	for _, armorDrop in ipairs(armorDrops) do
+		local kind = isBoss and "보스" or (isSparkle and "반짝이" or "잡몹")
+		if isBoss then
+			-- 28-1 [C-1]: 보스 장비는 가방으로 직행한다. 가득이면 복귀 뒤 발밑(flushDeferredBossDrops).
+			local inBag = deliverBossDropToBag(recipient, armorDrop)
+			if not inBag then
+				table.insert(deferredBossDrops, { player = recipient, item = armorDrop })
+			end
+			print(("[forge-game] 드랍: %s등급 %s (%s) → %s"):format(armorDrop.grade, armorDrop.part, kind, inBag and "가방" or "땅(가방 가득)"))
+		else
+			ItemDropSpawner.spawn(armorDrop, deathPosition, recipient)
+			print(("[forge-game] 드랍: %s등급 %s (%s)"):format(armorDrop.grade, armorDrop.part, kind))
+		end
 	end
 end
 
@@ -104,10 +159,11 @@ local function handleBossDeath(attacker, target)
 	local contributions = MonsterState.getContributors(target)
 	local rewarded = {}
 	local underThreshold = {}
+	local deferredBossDrops = {}
 	for _, member in ipairs(candidates) do
 		local ratio = contributions[member] or 0
 		if member.Parent and ratio >= CombatConfig.contributionRewardThreshold then
-			grantKillReward(member, target, monsterData, deathPosition)
+			grantKillReward(member, target, monsterData, deathPosition, deferredBossDrops)
 			ImmediateSave.request(member)
 			table.insert(rewarded, ("%s(%.0f%%)"):format(member.Name, ratio * 100))
 		elseif member.Parent then
@@ -141,6 +197,8 @@ local function handleBossDeath(attacker, target)
 
 	-- 29-5: 보스의 정체가 스테이지만의 함수가 되면서(BossRules.bossIdForStage) 23-5의 "처치하면 pending을 지운다"는 없어졌다.
 	BossEncounter.clearForModel(target)
+	-- 28-1 [C-1]: 가방이 가득이라 못 넣은 장비는 멤버 전원이 사냥터로 돌아간 "뒤"에 그 발밑에 떨어뜨린다(위 clearForModel이 텔레포트).
+	flushDeferredBossDrops(deferredBossDrops, BossEncounter.huntingGroundReturnPosition())
 	print(("[forge-game] 보스 처치: %s(스테이지 %d) - 보상 %d명 [%s]"):format(
 		monsterData.displayName, monsterData.stageNumber, #rewarded, table.concat(rewarded, ", ")))
 end

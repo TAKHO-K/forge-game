@@ -50,6 +50,8 @@ local BossSkillVerify = require(script.Parent.BossSkillVerify)
 local BossGimmickVerify = require(script.Parent.BossGimmickVerify)
 local BossGimmick4Verify = require(script.Parent.BossGimmick4Verify)
 local BossGimmick5Verify = require(script.Parent.BossGimmick5Verify)
+-- 28-1(S01) 드랍 규칙 자동 검증 - (가)는 서버 시작 때, (나)는 위 보스 검증 체인의 끝에서 돈다.
+local LootRuleVerify = require(script.Parent.LootRuleVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -2031,6 +2033,10 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 print("[DevTools] 밸런스 테스트 도구 로드됨(Studio 전용) - 채팅창에 /gg help")
+-- 28-1(S01) [C-2] 6번: "/gg" 명령 인스턴스가 있는 조건 = IsStudio()와 같다는 것을 서버 시작 때 남긴다. 이 스크립트는 첫머리 가드가
+-- 라이브 서버에서 return하므로 명령 인스턴스 자체가 만들어지지 않는다(Studio에서는 둘 다 true만 확인된다 - 프로덕션 쪽은 호출 그래프가 증명이다).
+print(("[DevTools] /gg 명령 인스턴스 있음=%s · IsStudio=%s (기대: 같은 값)"):format(
+	tostring(TextChatService:FindFirstChild("ForgeGG") ~= nil), tostring(RunService:IsStudio())))
 
 -- ═══ 26-2 자동 검증 블록 ═══════════════════════════════════════════════════
 -- 서버가 Studio에서 시작될 때 한 번 돌고 결과를 전부 print한다(플레이어 접속과 무관 -
@@ -2921,6 +2927,7 @@ if RunService:IsStudio() then
 				{ "29-4(나)", function() BossGimmick4Verify.runLive(player, env) end },
 				{ "29-5(가)", BossGimmick5Verify.runPure },
 				{ "29-5(나)", function() BossGimmick5Verify.runLive(player, env) end },
+				{ "S01(나)", function() LootRuleVerify.runLive(player, env) end },
 			}) do
 				local ok, err = pcall(stage[2])
 				if not ok then
@@ -2937,4 +2944,15 @@ if RunService:IsStudio() then
 		run29_1Verification(existing)
 	end
 	Players.PlayerAdded:Connect(run29_1Verification)
+end
+
+-- ═══ S01 자동 검증 블록(가) - 드랍 규칙 순수 함수(PRD 20.82) ═══
+-- 플레이어 없이 서버 시작 때 돈다(난수 표본 20만 회쯤 - 서버 시작 직후 한 번). (나)는 위 29-1 체인의 끝에서 돈다.
+if RunService:IsStudio() then
+	task.spawn(function()
+		local ok, err = pcall(LootRuleVerify.runPure)
+		if not ok then
+			warn(("[S01(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
 end

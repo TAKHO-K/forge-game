@@ -141,7 +141,9 @@ for tierIndex, info in ipairs(TIER_INFO) do
 	local hpMultiplier = r ^ p
 	local attackMultiplier = r ^ (p - 1)
 	local goldMultiplier = r ^ p
-	local itemLevelBonus = r ^ (p - 1) -- 17-1부터 Loot.rollArmorDrop이 드랍 itemLevel에 곱한다.
+	-- 28-1 [2-1] 이름 변경(옛 itemLevelBonus, 값은 그대로): itemLevel에 곱하던 값이 "기대 드랍 개수에 곱하는 값"이 됐다 -
+	-- 공정성 항등식의 r^(p−1) 몫을 개수가 맡는다(Loot.expectedArmorDropCount). itemLevel은 스테이지가 정한다.
+	local dropCountMultiplier = r ^ (p - 1)
 	local sizeScale = r ^ 0.5
 
 	local hp = BASE_HP * hpMultiplier
@@ -162,7 +164,7 @@ for tierIndex, info in ipairs(TIER_INFO) do
 		-- 결과적으로 "그 순간 몬스터의 최대 HP × coefficient"와 정확히 같다(HP도 같은
 		-- 배율로 스케일되므로).
 		expReward = hp * CharacterLevelConfig.monsterExpCoefficient,
-		itemLevelBonus = itemLevelBonus,
+		dropCountMultiplier = dropCountMultiplier,
 		rewardRatio = r,
 
 		radiusPx = BASE_RADIUS_PX * sizeScale,
@@ -193,9 +195,9 @@ for tierIndex = 1, #TIER_INFO do
 	local r = MonsterData.getRewardRatio(tierIndex)
 	local p = MonsterData.fairnessExponent
 	local hpMultiplier = r ^ p
-	local itemLevelBonus = r ^ (p - 1)
+	local dropCountMultiplier = r ^ (p - 1)
 	local eGT = expectedGradeValue(tierIndex)
-	local rewardPerTime = (itemLevelBonus * eGT) / hpMultiplier
+	local rewardPerTime = (dropCountMultiplier * eGT) / hpMultiplier
 	table.insert(MonsterData.fairnessCheck, {
 		tier = tierIndex,
 		r = r,

@@ -202,6 +202,7 @@ end
 local function huntingGroundReturnPosition()
 	return WorldConfig.huntingGround.center + Vector3.new(0, 5, 0)
 end
+BossEncounter.huntingGroundReturnPosition = huntingGroundReturnPosition -- 28-1: 보스 드랍이 복귀 자리를 못 찾을 때의 대체 위치(CombatResolution)
 
 -- 멤버 index번째의 입장 위치 - 입장점을 중심으로 좌우로 벌린다(파티가 한 점에 겹쳐 서지 않게).
 local function entryPositionForIndex(zone, index, count)

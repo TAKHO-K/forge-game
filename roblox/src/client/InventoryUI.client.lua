@@ -2707,7 +2707,8 @@ local function rebuildGemInventory()
 end
 
 local function currentStageGoldReward()
-	local stage = player:GetAttribute("InfiniteStage") or 1
+	-- 28-2 [8] 3번: 변환권 가격의 기준은 계정 최고 스테이지다(서버 GemServer.rerollTicketPrice와 같은 값 - Attribute는 PlayerProfile이 내린다).
+	local stage = player:GetAttribute("AccountBestStage") or 1
 	return InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage)
 end
 
@@ -2814,7 +2815,7 @@ task.spawn(function()
 	end
 end)
 
-for _, attr in ipairs({ "RebirthCount", "InfiniteStage" }) do
+for _, attr in ipairs({ "RebirthCount", "InfiniteStage", "AccountBestStage" }) do
 	player:GetAttributeChangedSignal(attr):Connect(updateGemTab)
 end
 
