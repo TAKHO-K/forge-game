@@ -3,7 +3,7 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
-	-- 27(30-0 S05) - 방지권: purchases.protectionTickets = { drop, reset }(0 이상 정수) · purchases.protectionClaimedStages = { [보스 스테이지] = true }(계정 공유 - 보스
+	-- 27(30-0 S05) - 방지권: purchases.protectionTickets = { drop, reset }(0 이상 정수) · purchases.protectionClaimedStages = { ["보스 스테이지"] = true }(문자열 키 - DataStore가 숫자 키를 문자열로 바꾼다. 계정 공유 - 보스
 	-- 계정 첫 클리어 지급을 이미 받은 스테이지 집합, 직업별 bossFirstClearStages와 별개) 필드 신설. 기존 세이브는 0장 · 빈 집합으로 시작한다(이미 깬 보스도 한 번 더
 	-- 깨면 받는다 - PRD 20.72 [1-7]). SaveSystem.migrate()의 v26->v27 참고.
 	-- 26(30-0 S04) - 강화 재료 보유량 profile.materials = { enhanceStone, highEnhanceStone }(0 이상 정수, 계정 공유 - gold · purchases와 같은 층) 필드 신설.

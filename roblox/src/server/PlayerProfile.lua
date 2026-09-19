@@ -274,20 +274,33 @@ function PlayerProfile.trySpendProtectionTicket(player, kind, amount)
 	return true
 end
 
--- "그 보스 스테이지의 방지권을 계정으로 이미 받았는가" - 직업별 bossFirstClearStages와 별개 집합(계정 공유)이다. stage → true.
+-- "그 보스 스테이지의 방지권을 계정으로 이미 받았는가" - 직업별 bossFirstClearStages와 별개 집합(계정 공유)이다. **키는 문자열(tostring(stage))이다**: DataStore를 왕복하면
+-- 숫자 키가 문자열 키로 바뀌어 돌아온다(실측 - 개발 계정의 bossFirstClearStages가 로드 뒤 "5" · "10" · "20"이었다). 숫자 키로 저장하고 숫자로 조회하면 재접속 뒤 조회가
+-- 실패해 "계정 단위 1회"가 접속마다 풀린다 - 그래서 처음부터 문자열 키로 쓰고 읽는다.
 function PlayerProfile.hasClaimedProtectionStage(player, stage)
 	local profile = profiles[player]
-	return profile ~= nil and profile.purchases.protectionClaimedStages[stage] == true
+	return profile ~= nil and profile.purchases.protectionClaimedStages[tostring(stage)] == true
 end
 
 function PlayerProfile.markProtectionStageClaimed(player, stage)
 	local profile = profiles[player]
 	if profile then
-		profile.purchases.protectionClaimedStages[stage] = true
+		profile.purchases.protectionClaimedStages[tostring(stage)] = true
 	end
 end
 
--- 받은 스테이지 목록(오름차순 숫자) - DevTools "/gg ticket claims" 전용. 키가 숫자든 문자열이든 숫자로 읽어 돌려준다.
+-- DevTools "/gg ticket clear" 전용 - 방지권 보유 · 받은 스테이지 기록을 전부 비운다(Attribute 동기화 포함).
+function PlayerProfile.clearProtectionForDevTools(player)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	profile.purchases.protectionTickets = { drop = 0, reset = 0 }
+	profile.purchases.protectionClaimedStages = {}
+	syncProtectionAttributes(player, profile)
+end
+
+-- 받은 스테이지 목록(오름차순 숫자) - 키(문자열)를 숫자로 읽어 돌려준다.
 function PlayerProfile.getProtectionClaimedStages(player)
 	local profile = profiles[player]
 	local stages = {}

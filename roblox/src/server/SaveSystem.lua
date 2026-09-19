@@ -155,8 +155,9 @@ local function defaultProfile()
 		-- 판매 금지)하고 등급별로 따로 센다(고대 보석엔 고대 변환권만, 태초는 태초만) -
 		-- 두 등급만 있는 이유는 GemData.optionPoolByGrade가 그 둘만 옵션 풀을 갖기 때문이다
 		-- (영웅·전설·유물 보석은 재굴림할 옵션 자체가 없다).
-		-- protectionTickets(28-1 S05) = 방지권 보유 장수(하락 · 초기화). protectionClaimedStages = { [보스 스테이지] = true } - 보스 계정 첫 클리어 지급을 이미 받은
-		-- 스테이지(계정 단위 - 직업별 bossFirstClearStages와 별개 집합이라 부캐로 같은 스테이지를 다시 깨도 방지권은 안 나온다).
+		-- protectionTickets(28-1 S05) = 방지권 보유 장수(하락 · 초기화). protectionClaimedStages = { [tostring(보스 스테이지)] = true } - 보스 계정 첫 클리어 지급을 이미
+		-- 받은 스테이지(계정 단위 - 직업별 bossFirstClearStages와 별개 집합이라 부캐로 같은 스테이지를 다시 깨도 방지권은 안 나온다). 키는 문자열이다 - DataStore 왕복이
+		-- 숫자 키를 문자열로 바꾸므로(PlayerProfile.hasClaimedProtectionStage 주석) 처음부터 문자열로 쓴다.
 		purchases = {
 			optionRerollTickets = { ancient = 0, primordial = 0 },
 			protectionTickets = { drop = 0, reset = 0 },

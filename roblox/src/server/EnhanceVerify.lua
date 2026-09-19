@@ -1207,9 +1207,9 @@ local function checkProtectionSave(r)
 		local kept = SaveSystem.defaultProfile()
 		kept.version = 26
 		kept.purchases.protectionTickets = { drop = 4, reset = 2 }
-		kept.purchases.protectionClaimedStages = { [50] = true }
+		kept.purchases.protectionClaimedStages = { ["50"] = true }
 		local keptMigrated = SaveSystem.migrate(kept)
-		local keeps = keptMigrated.purchases.protectionTickets.drop == 4 and keptMigrated.purchases.protectionTickets.reset == 2 and keptMigrated.purchases.protectionClaimedStages[50] == true
+		local keeps = keptMigrated.purchases.protectionTickets.drop == 4 and keptMigrated.purchases.protectionTickets.reset == 2 and keptMigrated.purchases.protectionClaimedStages["50"] == true
 
 		local function validWith(mutate)
 			local copy = deepCopy(migrated)
@@ -1222,7 +1222,7 @@ local function checkProtectionSave(r)
 			and not validWith(function(copy) copy.purchases.protectionTickets = 3 end)
 			and not validWith(function(copy) copy.purchases.protectionClaimedStages = nil end)
 		local edgeOk = validWith(function(copy) copy.purchases.protectionTickets.drop = 0 end) and validWith(function(copy) copy.purchases.protectionTickets.reset = 999 end)
-		r.check(("v26 → v%d: 0장 둘 다=%s · 받은 스테이지 빈 집합=%s · isValidProfile=%s(기대 true) · 이미 있는 값(4 · 2 · [50])은 유지=%s · 0 · 999 통과=%s · 음수 · 소수 · 빠짐 · 표 아님 · 집합 없음 거부=%s"):format(
+		r.check(("v26 → v%d: 0장 둘 다=%s · 받은 스테이지 빈 집합=%s · isValidProfile=%s(기대 true) · 이미 있는 값(4 · 2 · 스테이지 50)은 유지=%s · 0 · 999 통과=%s · 음수 · 소수 · 빠짐 · 표 아님 · 집합 없음 거부=%s"):format(
 			migrated.version, tostring(zeros), tostring(emptyClaims), tostring(validAfter), tostring(keeps), tostring(edgeOk), tostring(rejects)),
 			migrated.version == SaveConfig.saveVersion and zeros and emptyClaims and validAfter and keeps and edgeOk and rejects)
 	end)
@@ -1299,9 +1299,11 @@ function EnhanceVerify.runLiveS05(player, env)
 			r.check("보스 스폰 실패", false)
 			return
 		end
-		r.check(("직업 %s · 스테이지 50 보스 처치: 하락 방지권 +%d(기대 1) · 초기화 +%d(기대 0) · protectionClaimedStages[50]=%s(기대 true) · 즉시 저장 요청 %d회(기대 1) · resolveHit 에러=%s"):format(
-			classA, result.dropGain, result.resetGain, tostring(PlayerProfile.hasClaimedProtectionStage(player, 50)), result.saves, result.ok and "없음" or tostring(result.err)),
-			result.ok and result.dropGain == 1 and result.resetGain == 0 and PlayerProfile.hasClaimedProtectionStage(player, 50) and result.saves == 1)
+		-- 저장 형식: 키가 문자열이어야 DataStore 왕복 뒤에도 같은 조회가 통한다(숫자 키는 문자열로 돌아온다 - PlayerProfile.hasClaimedProtectionStage 주석).
+		local claimKey = next(profile.purchases.protectionClaimedStages)
+		r.check(("직업 %s · 스테이지 50 보스 처치: 하락 방지권 +%d(기대 1) · 초기화 +%d(기대 0) · protectionClaimedStages[50]=%s(기대 true) · 저장 키 %s(%s, 기대 50 string) · 즉시 저장 요청 %d회(기대 1) · resolveHit 에러=%s"):format(
+			classA, result.dropGain, result.resetGain, tostring(PlayerProfile.hasClaimedProtectionStage(player, 50)), tostring(claimKey), typeof(claimKey), result.saves, result.ok and "없음" or tostring(result.err)),
+			result.ok and result.dropGain == 1 and result.resetGain == 0 and PlayerProfile.hasClaimedProtectionStage(player, 50) and claimKey == "50" and result.saves == 1)
 	end)
 
 	r.section("[13] 같은 보스를 한 번 더", function()
@@ -1409,11 +1411,11 @@ function EnhanceVerify.runLiveS05(player, env)
 	end
 	local dropAfter, resetAfter = ticketCounts(player)
 	local claimsSame = true
-	for stage in pairs(profile.purchases.protectionClaimedStages) do
-		claimsSame = claimsSame and claimsBefore[stage] == true
+	for key in pairs(profile.purchases.protectionClaimedStages) do
+		claimsSame = claimsSame and claimsBefore[key] == true
 	end
-	for stage in pairs(claimsBefore) do
-		claimsSame = claimsSame and profile.purchases.protectionClaimedStages[stage] == true
+	for key in pairs(claimsBefore) do
+		claimsSame = claimsSame and profile.purchases.protectionClaimedStages[key] == true
 	end
 	r.check(("검증 뒤 되돌림: encounter 없는 보스 모델 %d개 · 검증이 남긴 몬스터 %d개(기대 0 · 0) · 방지권 하락 %d → %d · 초기화 %d → %d · 받은 스테이지 같음=%s · 가방 %d → %d칸 · 직업 %s(기대 전부 같음)"):format(
 		orphans, leftoverMonsters, dropBefore, dropAfter, resetBefore, resetAfter, tostring(claimsSame), bagBefore, #profile.inventory, tostring(PlayerProfile.getClassId(player))),

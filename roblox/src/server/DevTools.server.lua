@@ -1038,7 +1038,7 @@ local HELP_TEXT = table.concat({
 	"/gg reset - 백업된 원본 프로필로 복원(가방 포함) + 저장 차단 해제",
 	"/gg bagclear - 실제 가방을 비우고 바로 저장(백업 없음 - 테스트 진행 중이면 거절, 28-1 S04 사전 작업)",
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
-	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록",
+	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록(실제 키 타입 포함) · /gg ticket grantboss <스테이지> - 처치 없이 보스 첫 클리어 지급 함수 호출 · /gg ticket clear - 방지권 · 받은 기록을 비우고 저장",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
 
@@ -1563,6 +1563,21 @@ local function handleCommand(player, args)
 			reply(player, ("방지권 구매 성공: %s - 가격 %d · 보유 하락 %d · 초기화 %d"):format(args[3], priceOrReason, PlayerProfile.getProtectionTicket(player, "drop"), PlayerProfile.getProtectionTicket(player, "reset")))
 		else
 			reply(player, ("방지권 구매 거절: %s"):format(tostring(priceOrReason)))
+		end
+	elseif sub == "ticket" and args[2] == "grantboss" and tonumber(args[3]) then
+		-- 보스 계정 첫 클리어 지급 함수(ProtectionTickets.grantForBoss)를 처치 없이 직접 부른다 - 재접속 뒤에도 "이미 받았다"가 유지되는지(문자열 키 저장) 실제 저장으로 확인할
+		-- 때 쓴다(백업을 만든다 - "/gg save unlock"으로 저장하고 Play를 다시 켠 뒤 "/gg ticket claims" · 같은 명령을 한 번 더).
+		ensureBackup(player)
+		local dropCount, resetCount = ProtectionTickets.grantForBoss(player, math.floor(tonumber(args[3])))
+		reply(player, ("보스 스테이지 %s 지급: 하락 +%d · 초기화 +%d (0 · 0이면 지급 스테이지가 아니거나 이미 받았다)"):format(args[3], dropCount, resetCount))
+	elseif sub == "ticket" and args[2] == "clear" then
+		-- 방지권 보유 · 받은 스테이지 기록을 비우고 바로 저장한다(개발 계정 정리용 - 백업이 살아 있으면 이어지는 복원이 되살리므로 거절, /gg bagclear와 같은 이유).
+		if backups[player] then
+			reply(player, "다른 테스트가 진행 중입니다(백업 있음) - /gg reset 뒤에 다시 쓰세요")
+		else
+			PlayerProfile.clearProtectionForDevTools(player)
+			SaveCoordinator.saveForPlayer(player)
+			reply(player, "방지권 보유 · 받은 스테이지 기록을 비우고 저장했습니다")
 		end
 	elseif sub == "ticket" and args[2] == "claims" then
 		-- 받은 스테이지 집합의 실제 키 타입까지 찍는다(DataStore 왕복 뒤 숫자 키가 문자열로 바뀌는지 확인용 - 비교용으로 활성 직업의 bossFirstClearStages도 같이).
