@@ -308,9 +308,20 @@ end
 local function newStandIn(model, members, name, position)
 	local fakeRoot = { Position = position }
 	local fake = { Name = name, UserId = -9400 - #members, Parent = workspace }
-	fake.Character = { FindFirstChild = function(_, child)
-		return child == "HumanoidRootPart" and fakeRoot or nil
-	end }
+	fake.Character = {
+		FindFirstChild = function(_, child)
+			return child == "HumanoidRootPart" and fakeRoot or nil
+		end,
+		FindFirstChildOfClass = function()
+			return nil
+		end,
+	}
+	-- 피해를 받는 스탠드인은 Attribute 스텁이 있어야 한다 - PlayerDamage.syncHud가 SetAttribute를 부른다(29-4 Play 1회차:
+	-- 방전·낙뢰가 스탠드인을 때리는 순간 여기서 에러가 나 두 구역이 통째로 X였다. 29-3의 전갈 구역 스탠드인과 같은 스텁이다).
+	function fake:SetAttribute() end
+	function fake:GetAttribute()
+		return nil
+	end
 	PlayerState.init(fake)
 	table.insert(members, fake)
 	BossEncounter.debugAddMember(model, fake)
