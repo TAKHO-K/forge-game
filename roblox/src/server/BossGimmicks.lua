@@ -68,6 +68,49 @@ BossMechanics.registerJudge("onZone", function(model, data, victim, cfg)
 	return false
 end)
 
+-- nearZone(폭풍 군주의 과충전, 29-4): 판정 순간 cfg.safeCircles.tag 구역(피뢰침)의 안전 반경(kit 파트의 radiusStuds) 안인가.
+-- 충전 여부는 보지 않는다 - 피뢰침은 늘 거기 있고, 과충전을 보게 되는 사람은 피뢰침을 못 채운 바로 그 사람이다.
+BossMechanics.registerJudge("nearZone", function(model, data, victim, cfg)
+	local arena = WorldConfig.zones[MonsterState.getZoneKey(model) or ""]
+	if not arena or not cfg.safeCircles then
+		return true
+	end
+	local half = BossData.mechanics.dodge.characterHalfWidthStuds
+	for _, zone in ipairs(BossPropMath.kitZones(data.arenaKit, arena.center, 0, cfg.safeCircles.tag)) do
+		if Reach.horizontalDistance(victim.root.Position, zone.center) <= zone.radius + half then
+			return true
+		end
+	end
+	return false
+end)
+
+-- ─────────────────────────── 구출: 닿아서 푼다(touch, 29-4 감전) ───────────────────────────
+-- 살아 있는(안 잡힌) 친구가 reachStuds 안에 닿는 순간 즉시 풀린다. rescuerMaxHpFraction > 0이면 구출자가 그만큼 나눠 받고
+-- (상한 없는 %피해 경로), 구출자의 체력이 그 이하면 풀리지 않는다 - 지금 값은 0이다(BossData.mechanics.rescue.touch 주석).
+BossTrap.registerRescueHandler("touch", {
+	tick = function(trapped, _, members)
+		local root = rootOf(trapped)
+		if not root then
+			return
+		end
+		local config = BossData.mechanics.rescue.touch
+		for _, rescuer in ipairs(members) do
+			local rescuerRoot = rescuer ~= trapped and rootOf(rescuer)
+			local hp = rescuerRoot and (PlayerState.getHp(rescuer) or 0) or 0
+			if hp > 0 and not BossTrap.isTrapped(rescuer) and Reach.horizontalDistance(rescuerRoot.Position, root.Position) <= config.reachStuds then
+				local cost = config.rescuerMaxHpFraction
+				if cost <= 0 or hp > (PlayerState.getMaxHp(rescuer) or 0) * cost then
+					if cost > 0 then
+						BossMechanics.applyMaxHpDamage(rescuer, cost, "감전 구출")
+					end
+					BossTrap.addRescueProgress(trapped, rescuer, 1)
+					return
+				end
+			end
+		end
+	end,
+})
+
 -- ─────────────────────────── 구출: 곁에서 끌어올린다(proximity, 29-4 침수) ───────────────────────────
 -- 잡힌 친구의 reachStuds 안에 머무는 동안 진행이 찬다(trap.rescueSeconds면 끝 - 구출자마다 더해져 둘이면 절반). 벗어난
 -- 구출자가 쌓던 몫은 0으로 돌아간다(BossTrap.clearRescueBy). 방전은 이미 지나간 뒤다 - 구출자가 서는 자리는 물속이지만

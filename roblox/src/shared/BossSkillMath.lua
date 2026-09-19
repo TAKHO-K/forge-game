@@ -82,6 +82,11 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		if skill.sequential and skill.count > 1 then
 			walk("연발", skill.repeatTelegraphSeconds or skill.telegraphSeconds, skill.radiusStuds + half)
 		end
+		-- 29-4 유인 경로(skill.route - 폭풍 군주의 낙뢰): 첫 발을 한 구역 곁에서 받고 다음 발의 예고 안에 다른 구역의 충전 거리
+		-- 안으로 걸어 들어가는 거리. 원이 넓어지면(범위 배율) 실제 거리는 줄지만 넓히지 않은 값으로 검사한다(보수적).
+		if skill.route then
+			walk("구역 사이", skill.repeatTelegraphSeconds or skill.telegraphSeconds, skill.route.distanceStuds)
+		end
 	elseif primitive == "charge" then
 		walk("경로 옆걸음", skill.telegraphSeconds, skill.pathHalfWidthStuds + half)
 	elseif primitive == "line" then

@@ -55,13 +55,13 @@ local function evadeSecondsOf(skill)
 end
 
 -- 이 스킬의 판정이 게이트를 바꾸는가 + 실패하면 잡히는가. 기믹 스킬은 켜져 있으면 실전이므로 live 모형에서도 게이트가
--- 선다(29-3 - 서리 거인·전갈 여왕). designGate(아직 코드에 없는 게이트 - 폭풍 군주의 낙뢰)는 design 모형에서만.
-local function gateRoleOf(skill, design)
+-- 선다(29-3 - 서리 거인·전갈 여왕). skill.gate(29-4 - 폭풍 군주의 낙뢰)는 기믹이 아닌 스킬이 게이트를 판정하는 경우다 -
+-- 실패해도 잡히지 않는다. judgesGate = false(과충전)는 게이트를 안 바꾸는 기믹이다.
+local function gateRoleOf(skill)
 	if skill.primitive == "gimmick" then
-		local judges = not (skill.sim and skill.sim.judgesGate == false)
-		return judges, true, skill.breakWindow
-	elseif skill.designGate and design then
-		return true, false, skill.designGate.breakWindow
+		return skill.judgesGate ~= false, true, skill.breakWindow
+	elseif skill.gate then
+		return true, false, skill.gate.breakWindow
 	end
 	return false, false, nil
 end
@@ -158,7 +158,7 @@ function BossSim.run(bossId, options)
 					chargeTravel = mc.chargeTravelMinSeconds + rng() * (mc.chargeTravelMaxSeconds - mc.chargeTravelMinSeconds)
 				end
 				local bound = BossSkillMath.boundSeconds(skill, arenaHalf, chargeTravel)
-				local judges = select(1, gateRoleOf(skill, design))
+				local judges = select(1, gateRoleOf(skill))
 				local succeed = breaks == "always" or (breaks == "failFirst" and judgedIndex >= 1)
 				if skill.primitive == "gimmick" and skill.sim and skill.sim.resolveSeconds and succeed then
 					bound = skill.sim.resolveSeconds + (skill.recoverSeconds or 0) -- 제한 시간 전에 풀었다
@@ -187,7 +187,7 @@ function BossSim.run(bossId, options)
 						worstPairSum, worstPair = a + b, previousId .. " → " .. pick
 					end
 				end
-				if skill.primitive == "gimmick" or (skill.designGate and design) then
+				if skill.primitive == "gimmick" or skill.gate then
 					gimmickCount += 1
 					firstGimmickAt = firstGimmickAt or t
 				end
@@ -204,7 +204,7 @@ function BossSim.run(bossId, options)
 		if pendingResolve and t >= pendingResolve then
 			local skill = pendingSkill
 			pendingResolve, pendingSkill = nil, nil
-			local judges, traps, window = gateRoleOf(skill, design)
+			local judges, traps, window = gateRoleOf(skill)
 			local succeed = breaks == "always" or (breaks == "failFirst" and judgedIndex >= 1)
 			judgedIndex += 1
 			if succeed then

@@ -149,6 +149,13 @@ function BossArenaPropsView.showGlobalTelegraph(data)
 	end
 	table.insert(telegraphParts, sheet)
 
+	-- 29-4 과충전: 원형 안전지대(피뢰침 곁) - 같은 문법이다. 빨강 위에 바닥색 원판을 얹어 "여기만 비어 있다"를 그린다.
+	for _, circle in ipairs(data.safeCircles or {}) do
+		local hole = newFlatDisc(Vector3.new(circle.center.X, data.zoneCenter.Y, circle.center.Z), circle.radius, ARENA_FLOOR_COLOR, Enum.Material.Slate, 0.28)
+		hole.Transparency = 0
+		table.insert(telegraphParts, hole)
+	end
+
 	for _, entry in pairs(props) do
 		local away = Vector3.new(entry.position.X - data.center.X, 0, entry.position.Z - data.center.Z)
 		if not entry.isPit and away.Magnitude > 1e-3 then

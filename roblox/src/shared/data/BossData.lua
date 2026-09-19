@@ -72,6 +72,12 @@ local MECHANICS = {
 		-- 곁에서 끌어올린다(침수, 29-4): reachStuds 안에 trap.rescueSeconds 동안 머문다. 구출자마다 더해지고(둘이면 0.75초),
 		-- 벗어난 구출자가 쌓던 몫은 0으로 돌아간다(20.73 A-4 "벗어나면 진행 0").
 		proximity = { reachStuds = 6 },
+		-- 닿아서 푼다(감전, 29-4): reachStuds 안에 닿는 순간 즉시 풀린다. rescuerMaxHpFraction = 구출자가 "나눠 받는" 최대체력
+		-- 비율 - 28-2·29-1의 18.3%(= 55% ÷ 3)를 **0으로 내렸다**(PRD 20.79): 보스전 중 기본 자동회복이 없어(29-3) 구출자가 낸
+		-- 체력은 전투 끝까지 돌아오지 않는다. 기믹 실패 55% + 강타류 42.9% = 97.9%의 여유 2.1%가 "한 번은 버틴다"의 전부인데
+		-- 18.3%를 내면 구출자는 다음 실수 한 번에 죽는다 - 친구를 구한 사람이 벌받는 구조다. 값이 0보다 크면 구출자는 그만큼
+		-- 받고, 체력이 그 이하면 풀리지 않는다(구출로 죽는 일은 없다) - 경로는 남겨 두고 값만 0이다.
+		touch = { reachStuds = 3, rescuerMaxHpFraction = 0 },
 	},
 
 	-- 29-3 반사(전갈 여왕 갑각 태세): 타격 수가 아니라 시간 창으로 센다 - windowSeconds에 한 번. 평타 빈도가 직업마다
@@ -255,6 +261,24 @@ local function abyssalKitParts(baseColor, topColor)
 		table.insert(parts, {
 			name = "FloodPlatform", size = Vector3.new(16, 1, 16), offset = Vector3.new(spot[1], 1.5, spot[2]),
 			color = topColor, ground = true, tag = "platform",
+		})
+	end
+	return parts
+end
+
+-- 폭풍 군주의 아레나 kit(29-4) - 피뢰침 2개 × 2파트 = 4파트. 중심에서 X ±8(간격 16): 낙뢰의 원(반경 6, 충전 판정은 + 1)
+-- 하나가 두 피뢰침을 한꺼번에 덮지 못하고(16 > 2 × 7.9 - 최대 범위 배율에서도), 솔로가 첫 낙뢰를 A 곁에서 받고 둘째 낙뢰의
+-- 예고(1.5초) 안에 B의 충전 거리(7) 안으로 걸어 들어갈 수 있는(16 − 7 = 9stud → 1.20초) 간격이다. 28-2의 24stud는 인지
+-- 0.5초·여유 ×1.25를 넣으면 1.83초가 필요해 성립하지 않았다(PRD 20.79). 기둥만 충돌한다(1 × 1 - 회피 동선을 안 막는다).
+local function stormKitParts(baseColor, rodColor)
+	local parts = {}
+	for _, x in ipairs({ -8, 8 }) do
+		table.insert(parts, {
+			name = "LightningRodBase", size = Vector3.new(3, 0.6, 3), offset = Vector3.new(x, 0.3, 0), color = baseColor, collide = false,
+		})
+		table.insert(parts, {
+			name = "LightningRod", size = Vector3.new(1, 12, 1), offset = Vector3.new(x, 6, 0), color = rodColor, material = Enum.Material.Metal,
+			tag = "rod", radiusStuds = 6, -- radiusStuds = 과충전 방전 때 이 피뢰침 곁의 안전 반경
 		})
 	end
 	return parts
@@ -576,7 +600,8 @@ local SPECIES = {
 		moveSpeedStuds = 9, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.75, rangeStuds = 14 },
 		scheduler = scheduler(5),
-		skillOrder = { "discharge", "chain", "strike", "overcharge" },
+		skillOrder = { "discharge", "whirl", "strike", "overcharge" },
+		arenaKit = { parts = stormKitParts(stormBody, stormHead) }, -- 29-4 폭풍 첨탑의 피뢰침 2개
 		skills = {
 			-- 방전 고리. 파동 하나 - 기본형 강공격 자리의 스킬이지만 걸어서가 아니라 **뛰어서** 피한다.
 			discharge = {
@@ -586,37 +611,62 @@ local SPECIES = {
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				damage = { kind = "attack", multiplier = 3 }, damageLabel = "방전 고리",
 			},
-			-- 연쇄 번개. 보스 → 대상 직선 하나(29-4에서 8stud 안의 다른 멤버로 이어진다 - "뭉쳐 있지 마라").
-			chain = {
-				primitive = "line", bubble = "cross",
+			-- 회오리(29-4 - 28-2의 "연쇄 번개" 직선 자리를 대신한다, PRD 20.77 [1] · 20.79). 대상 위치의 원 하나 - 맞으면 그 자리에서
+			-- 공중으로 떠올라 원을 그리며 돌다가 내려온다. 낙뢰의 넉백과 **같은 결과 조각**(onHit = launch)이고 파라미터만 늘었다:
+			--   heightStuds 6 · distanceStuds 0(날아가지 않는다 - 제자리) · holdSeconds 1.5(떠서 도는 시간) · spinRadiusStuds 3.
+			--   뜨는 것은 그 사람의 클라가 자기 캐릭터로 한다(BossStormView). 뜬 동안 카메라는 회오리 중심에 묶인다.
+			--   immuneSeconds 2.5 = 뜨기 0.3 + 돌기 1.5 + 내려오기 ≈ 0.25 + 일어나기 - 조작을 잃은 동안은 맞지 않는다(보스 평타는
+			--   피할 수 없는 확정 피격이 된다 - 20.77 [1]의 조건 ③). 회오리 자체의 피해(×2)는 그 전에 이미 들어갔다.
+			--   보스는 뜬 대상을 놓치지 않는다 - MonsterAI가 발밑 지면으로 층을 판단한다(GroundProbe.sameGroundLayer).
+			whirl = {
+				primitive = "circleTarget", bubble = "whirl",
 				cooldownSeconds = 13, priority = P.normal, starvationSeconds = 40,
-				telegraphSeconds = 1.5, directions = 1, stepDeg = 0, volleys = 1, rotateDeg = 0, halfWidthStuds = 3,
-				damage = { kind = "attack", multiplier = 2 }, damageLabel = "연쇄 번개",
+				telegraphSeconds = 1.5, count = 1, radiusStuds = 8, scatterStuds = 0,
+				damage = { kind = "attack", multiplier = 2 }, damageLabel = "회오리",
+				impactStyle = "whirl",
+				onHit = { { type = "launch", heightStuds = 6, distanceStuds = 0, holdSeconds = 1.5, spinRadiusStuds = 3, immuneSeconds = 2.5 } },
 			},
-			-- 낙뢰. 대상 위치에 2연발(둘째는 그 순간의 위치). 29-4에서 피뢰침 충전 수단이 되고 뇌운 장막(게이트)의
-			-- 판정이 이 스킬에 붙는다 - designGate는 그때까지 BossSim만 읽는다.
+			-- 낙뢰. 대상 위치에 2연발(둘째는 그 순간의 위치). 29-4: **피뢰침 충전 수단이자 뇌운 장막(게이트)의 판정**이다.
+			--   · 낙뢰의 원 안(+ chargeZone.reachStuds)에 피뢰침이 있으면 그 피뢰침이 seconds(12초) 동안 충전된다. 두 피뢰침이 동시에
+			--     충전 상태가 되는 순간 장막이 걷힌다(gate.breakWindow) + 두 피뢰침은 방전된다. 낙뢰가 끝났는데 못 채웠으면 장막이
+			--     선다/남는다. 장막은 첫 낙뢰 예고와 함께 선다(29-1 게이트 규칙 그대로 - 판정 스킬이 기믹이 아니라 낙뢰일 뿐이다).
+			--   · 솔로: 첫 낙뢰를 A 곁에서 받고(원은 예고 순간의 자리에 고정된다) 둘째 예고 1.5초 안에 B 곁으로 9stud(route).
+			--     맞아도 충전은 된다 - 충전은 "낙뢰가 어디에 떨어졌는가"이지 "피했는가"가 아니다.
+			--   · 파티(perMember): 낙뢰가 **멤버 각자의 자리**에 떨어진다(두 발 다). 둘이 피뢰침을 하나씩 맡으면 첫 발에 끝나고,
+			--     한 명뿐이면 솔로처럼 뛰면 된다 - 인원이 늘수록 쉬워진다. 12초 충전은 한 회차(3초)만 덮으므로 회차마다 다시 선다.
 			strike = {
 				primitive = "circleTarget", bubble = "meteor", role = "signature",
 				cooldownSeconds = 12, firstAvailableSeconds = 8, reserveFirstUse = true, priority = P.signature,
 				telegraphSeconds = 1.5, count = 2, sequential = true, repeatTelegraphSeconds = 1.5, radiusStuds = 6, scatterStuds = 0,
+				perMember = true,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "낙뢰",
+				onImpact = { { type = "chargeZone", tag = "rod", seconds = 12, reachStuds = 1 } },
+				route = { distanceStuds = 9 }, -- 회피 부등식의 "피뢰침 사이": 간격 16 − 충전 거리 7(BossGimmick4Verify가 kit에서 다시 잰다)
 				-- 29-3: 하늘에서 꽂히는 번개로 그리고(impactStyle), 맞은 사람은 팝콘처럼 판정 중심 반대쪽으로 튕겨 난다 - 높이 5
 				-- (판정의 높이차 상한 8·아레나 벽 12보다 낮다 - 보스가 대상을 놓치지 않고 맵 밖으로도 못 나간다), 거리 8, 체공 ≈ 0.45초.
 				-- 둘째 낙뢰는 첫 낙뢰가 떨어진 순간의 자리에 예고되므로, 튕겨 난 사람은 이미 그 원(r6) 밖이다.
 				impactStyle = "lightning",
 				onHit = { { type = "launch", heightStuds = 5, distanceStuds = 8 } },
-				designGate = { breakWindow = { seconds = 10, damageTakenMultiplier = 1.15 } }, -- 28-2의 ×1.3은 새 쿨 분포에서 −11.6%로 범위 밖(×1.15 = −6.5%)
+				gate = { zoneTag = "rod", breakWindow = { seconds = 10, damageTakenMultiplier = 1.15 } }, -- 28-2의 ×1.3은 새 쿨 분포에서 −11.6%로 범위 밖(×1.15 = −6.5%)
 				sim = { evadeSeconds = 2.5 },
 			},
-			-- 과충전 방전(기믹, 29-4). 장막이 30초 이어지면 전역 - 충전된 피뢰침 곁만 안전. 피뢰침까지 최대 30stud.
+			-- 과충전 방전(기믹, 29-4). 장막이 30초 이어지면 전역 55% + 감전 - **피뢰침 곁(반경 6)만 안전하다**(충전 여부와 무관).
+			--   · 28-2는 "충전된 피뢰침 곁"이었다. 그러면 피뢰침을 한 번도 못 채운 사람(= 과충전을 보게 되는 바로 그 사람)에게는
+			--     안전지대가 아예 없다 - 서리 거인의 "기둥 0개 포효"와 같은 파훼 불가 패턴이다. 피뢰침은 정적 kit이라 늘 있다.
+			--   · 장막(기믹)과의 연결: 과충전의 전조는 바닥 전체가 빨강이고 **두 피뢰침 둘레만 비어 있다** - 기믹을 못 푼 사람에게
+			--     "답은 피뢰침이다"를 그림으로 알려 주는 스킬이다. 살아남은 사람은 피뢰침 곁에 서 있고, 다음 낙뢰가 거기 떨어진다.
+			--   · 발동 조건: 장막 30초 + 살아 있는(안 잡힌) 전원이 피뢰침에서 nearStuds(30) 안 - 예고 3초에 닿을 수 없는 사람이
+			--     있으면 쏘지 않는다(피할 수 없는 과충전은 없다). 멀리 떨어져 싸우면 과충전은 안 오지만 장막도 영영 못 걷는다.
+			--   · 게이트를 바꾸지 않는다(judgesGate = false) - 장막을 걷는 것은 낙뢰뿐이다.
 			overcharge = {
-				primitive = "gimmick", bubble = "gimmick", role = "gimmick", enabled = false, kind = "nearProp",
+				primitive = "gimmick", bubble = "overcharge", role = "gimmick", kind = "nearZone",
 				cooldownSeconds = 30, priority = P.gimmick,
-				conditions = { { type = "gateArmedFor", seconds = 30 } },
+				conditions = { { type = "gateArmedFor", seconds = 30 }, { type = "membersNearZone", tag = "rod", studs = 30 } },
 				telegraphSeconds = 3.0, recoverSeconds = 0,
-				dodge = { distanceStuds = 30 },
+				safeCircles = { tag = "rod" }, judgesGate = false,
+				dodge = { distanceStuds = 25 }, -- 30 − 안전 반경 6 + 몸통 1
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "과충전 방전",
-				sim = { evadeSeconds = 2.0, judgesGate = false },
+				sim = { evadeSeconds = 2.0 },
 			},
 		},
 	},

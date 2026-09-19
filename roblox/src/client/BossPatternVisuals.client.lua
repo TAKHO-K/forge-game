@@ -130,6 +130,9 @@ local BUBBLES = {
 	shell = { icon = "✖", color = Color3.fromRGB(230, 40, 40) },
 	-- 29-4: 범람 = 물결.
 	flood = { icon = "≈", color = Color3.fromRGB(230, 40, 40) },
+	-- 29-4 폭풍 군주: 회오리 = 소용돌이(낙석 계열의 색), 과충전 = 번개.
+	whirl = { icon = "§", color = Color3.fromRGB(255, 120, 30) },
+	overcharge = { icon = "ϟ", color = Color3.fromRGB(230, 40, 40) },
 	-- 29-1 파훼 성공 = 기회(헤롱과 같은 파랑).
 	gateBroken = { icon = "◇", color = Color3.fromRGB(120, 200, 255) },
 }
@@ -369,6 +372,11 @@ local function meteorImpact(data)
 			BossStormView.bolt(position)
 			fadeOut(newDisc(position, data.radius, IMPACT_COLOR, 0.1), 0.35)
 			continue
+		elseif data.style == "whirl" then
+			-- 29-4: 회오리 - 흰 띠가 나선으로 돌며 솟는다(임팩트 = 흰색).
+			BossStormView.whirl(position, data.radius)
+			fadeOut(newDisc(position, data.radius, IMPACT_COLOR, 0.1), 0.35)
+			continue
 		end
 		-- 위에서 내리꽂히는 기둥 + 바닥 섬광.
 		local pillar = newPart(Vector3.new(data.radius * 1.2, 30, data.radius * 1.2), IMPACT_COLOR, 0.3)
@@ -457,7 +465,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	if kind == "bubble" then
 		showBubble(data.pattern, data.seconds, data.scale)
 	elseif kind == "gimmickTelegraph" then
-		if data.safeProp or data.safeZone then
+		if data.safeProp or data.safeZone or data.safeCircles then
 			BossArenaPropsView.showGlobalTelegraph(data)
 		end
 		if data.safeZone then
@@ -478,6 +486,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	elseif kind == "propsClear" then
 		BossArenaPropsView.clear()
 		BossFloodView.reset()
+		BossStormView.dischargeRods(false)
 	elseif kind == "stanceStart" then
 		BossStanceView.start(data)
 	elseif kind == "stanceEnd" then
@@ -486,6 +495,12 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossStanceView.reflect(data)
 	elseif kind == "launch" then
 		BossStormView.launch(data)
+	elseif kind == "hintArrows" then
+		BossGateView.showHintArrows(data.positions, data.seconds)
+	elseif kind == "zoneCharge" then
+		BossStormView.chargeRod(data)
+	elseif kind == "zoneDischarge" then
+		BossStormView.dischargeRods(true)
 	elseif kind == "zoneStep" then
 		BossFloodView.step(data)
 	elseif kind == "zonesReset" then
@@ -517,6 +532,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossArenaPropsView.clearTelegraph() -- 기둥 자체는 남는다(서버가 propsClear로 따로 치운다)
 		BossStanceView.clear()
 		BossFloodView.reset()
+		BossStormView.dischargeRods(false)
 	end
 end)
 

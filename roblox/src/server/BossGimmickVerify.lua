@@ -703,9 +703,11 @@ local function runExtras(player, env, r, root)
 		st.phaseEndsAt = os.clock()
 		BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, { player })
 		local launched = st.lastLaunch
-		r.check(("낙뢰에 맞음 → 넉백 대상=%s(본인), 둘째 낙뢰 예고로 이어짐 phase=%s, 폭풍 군주의 기믹은 여전히 꺼져 있음=%s"):format(
-			tostring(launched and launched.player and launched.player.Name), BossPatterns.getPhase(model), tostring(data.skills.overcharge.enabled == false)),
-			launched ~= nil and launched.player == player and BossPatterns.getPhase(model) == "meteorTelegraph" and data.skills.overcharge.enabled == false)
+		r.check(("낙뢰에 맞음 → 넉백 대상=%s(본인), 둘째 낙뢰 예고로 이어짐 phase=%s, 넉백은 29-3 값 그대로(높이 %s·거리 %s - 29-4의 회오리는 다른 스킬이다)"):format(
+			tostring(launched and launched.player and launched.player.Name), BossPatterns.getPhase(model),
+			tostring(launched and launched.effect.heightStuds), tostring(launched and launched.effect.distanceStuds)),
+			launched ~= nil and launched.player == player and BossPatterns.getPhase(model) == "meteorTelegraph"
+				and launched.effect.heightStuds == 5 and launched.effect.distanceStuds == 8 and launched.effect.holdSeconds == nil)
 		BossPatterns.interrupt(model, data)
 		task.wait(1) -- 튕겨 난 캐릭터가 내려앉을 시간
 		fullHeal(player)

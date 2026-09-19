@@ -21,6 +21,7 @@
 --   membersClustered { studs, count }   어떤 멤버 주변 studs 안에 멤버가 count명 이상
 --   gateArmed { value }                 파훼 게이트가 서 있는가
 --   gateArmedFor { seconds }            게이트가 이만큼 이어서 서 있었는가
+--   membersNearZone { tag, studs }      살아 있는(안 잡힌) 멤버 전원이 그 아레나 kit 구역에서 studs 안(29-4 과충전 - 닿을 수 없으면 안 쏜다)
 --   notAfter { skills = {...} }         직전 스킬이 이 목록에 없다(인접시키면 안 되는 조합을 데이터로 막는다)
 -- notAfter만 이 모듈이 직접 판정한다(직전 스킬은 스케줄러 상태다). 나머지는 호출부가 ctx.conditionMet으로 답한다 -
 -- 서버는 실제 월드에서, 모형은 가정에서.

@@ -99,6 +99,23 @@ function BossMechanics.onGimmickStart(model)
 	end
 end
 
+-- 29-4: 게이트의 판정이 기믹 스킬이 아니라 일반 스킬인 보스(폭풍 군주의 낙뢰 - skill.gate). 규칙은 같다: 첫 판정 스킬의
+-- 예고와 함께 서고(armGateOnce), 그 뒤로는 판정 순간에만 바뀐다(judgeGate). 실패해도 %피해·잡힘은 없다 - 게이트만 남는다.
+function BossMechanics.armGateOnce(model)
+	local st = stateOf(model)
+	if not st.gateStarted then
+		st.gateStarted = true
+		setGate(model, true)
+		print(("[forge-game] 파훼 게이트: 섰다(받는 피해 ×%.3f)"):format(BossRules.gateDamageTakenMultiplier()))
+	end
+end
+
+function BossMechanics.judgeGate(model, broken, window, kind)
+	setGate(model, not broken, broken and window or nil)
+	print(("[forge-game] 게이트 판정: %s - %s → 게이트 %s(받는 피해 ×%.3f)"):format(
+		tostring(kind), broken and "성공" or "실패", broken and "열림" or "유지", MonsterState.getDamageTakenMultiplier(model)))
+end
+
 -- 전멸 리셋(BossPatterns.reset) - 처음 상태로.
 function BossMechanics.reset(model)
 	local st = stateOf(model)
@@ -285,8 +302,11 @@ function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 			end
 		end
 	end
-	local broken = safeCount > 0
-	setGate(model, not broken, broken and cfg.breakWindow or nil)
+	-- cfg.judgesGate == false(29-4 과충전): 이 기믹은 게이트를 바꾸지 않는다 - 피했다고 장막이 걷히지 않는다(걷는 것은 낙뢰뿐).
+	local broken = safeCount > 0 and cfg.judgesGate ~= false
+	if cfg.judgesGate ~= false then
+		setGate(model, not broken, broken and cfg.breakWindow or nil)
+	end
 	print(("[forge-game] 기믹 판정: %s - 성공 %d명·실패 %d명 → 게이트 %s(받는 피해 ×%.3f)"):format(
 		tostring(cfg.kind), safeCount, failCount, broken and "열림" or "유지", MonsterState.getDamageTakenMultiplier(model)))
 	return broken, safeCount, failCount

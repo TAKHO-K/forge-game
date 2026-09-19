@@ -194,7 +194,7 @@ end
 
 -- ─────────────────────────── 발동 조건(실제 월드) ───────────────────────────
 -- 조각의 뜻은 BossScheduler.lua 주석. notAfter는 스케줄러가 직접 판정한다.
-local function conditionMet(model, st, condition)
+local function conditionMet(model, st, data, condition)
 	local kind = condition.type
 	if kind == "hpBelow" then
 		return MonsterState.getHpRatio(model) <= condition.value
@@ -238,6 +238,22 @@ local function conditionMet(model, st, condition)
 			end
 		end
 		return true
+	elseif kind == "membersNearZone" then
+		-- 29-4 과충전: 살아 있는(안 잡힌) 멤버 전원이 그 kit 구역(피뢰침)에서 studs 안인가 - 예고 안에 안전지대에 닿을 수 없는
+		-- 사람이 하나라도 있으면 쏘지 않는다(피할 수 없는 과충전은 없다).
+		local zones = kitZones(model, st, data, condition.tag)
+		for _, v in ipairs(victims(st)) do
+			if not BossTrap.isTrapped(v.player) then
+				local nearest = math.huge
+				for _, zone in ipairs(zones) do
+					nearest = math.min(nearest, Reach.horizontalDistance(v.root.Position, zone.center))
+				end
+				if nearest > condition.studs then
+					return false
+				end
+			end
+		end
+		return true
 	end
 	return true
 end
@@ -261,7 +277,7 @@ local function ensureState(model, data)
 		-- 스케줄러에 넘기는 문맥은 한 번만 만든다(매 틱 클로저를 새로 만들지 않는다).
 		st.pickCtx = {
 			conditionMet = function(condition)
-				return conditionMet(model, st, condition)
+				return conditionMet(model, st, data, condition)
 			end,
 			boundSeconds = function(id)
 				return BossSkillMath.boundSeconds(data.skills[id], zoneOf(model).halfSize)
@@ -303,6 +319,10 @@ end
 -- onHit(판정에 맞은 사람마다, runHitEffects):
 --   launch { heightStuds, distanceStuds } 맞은 사람이 판정 중심 반대쪽으로 튕겨 난다(폭풍 군주의 낙뢰). 서버는 그 사람의 클라에
 --                                         알릴 뿐이다 - 캐릭터 물리는 클라 소유다(BossStormView). 높이는 판정의 높이차 상한(8)보다 낮아야 한다.
+--   launch { …, holdSeconds, spinRadiusStuds, immuneSeconds }
+--                                         29-4 회오리: 같은 조각에 파라미터가 늘었다 - 제자리(distance 0)에서 떠올라 holdSeconds 동안
+--                                         중심 둘레를 돈다. 그동안은 맞지 않는다(immuneSeconds). 보스는 뜬 대상을 놓치지 않는다(MonsterAI).
+--   chargeZone { tag, seconds, reachStuds } 29-4(onImpact): 판정의 원 안의 아레나 kit 구역(피뢰침)이 충전된다 - 아래 chargeZones.
 -- 서버에는 인스턴스가 없다 - 논리 목록(BossArenaProps)만 바꾸고 멤버에게 알린다. 그리기·충돌은 클라 몫이다.
 local function sendPropsRemoved(st, ids)
 	if #ids > 0 then
@@ -310,8 +330,50 @@ local function sendPropsRemoved(st, ids)
 	end
 end
 
+-- 구역 충전(29-4, onImpact = chargeZone { tag, seconds, reachStuds } - 폭풍 군주의 피뢰침): 판정의 원(info.positions · info.radius)
+-- 안(+ reachStuds - 가장자리는 플레이어에게 유리하게)에 그 kit 구역이 있으면 seconds 동안 충전된다. 서버는 "언제까지
+-- 충전인가"만 갖고(인스턴스 속성은 안 바꾼다) 멤버에게 알린다 - 빛나는 그림은 클라가 그린다.
+-- 그 스킬이 게이트의 판정이면(skill.gate.zoneTag) 모든 구역이 동시에 충전 상태가 된 **그 순간** 게이트가 열린다 + 구역은
+-- 방전된다. 스킬이 끝날 때까지 못 채웠으면 게이트가 선다(circleTarget 핸들러의 끝) - "게이트는 판정 때만 바뀐다"(29-1) 그대로다.
+local function chargeZones(c, effect, info)
+	local st = c.st
+	local zones = kitZones(c.model, st, c.data, effect.tag)
+	st.zoneCharges = st.zoneCharges or {}
+	local charges = st.zoneCharges[effect.tag] or {}
+	st.zoneCharges[effect.tag] = charges
+	local reach = (info.radius or 0) + effect.reachStuds
+	for _, zone in ipairs(zones) do
+		for _, position in ipairs(info.positions) do
+			if Reach.horizontalDistance(position, zone.center) <= reach then
+				charges[zone.index] = c.now + effect.seconds
+				print(("[forge-game] 구역 충전: %s %d번 - %.0f초"):format(effect.tag, zone.index, effect.seconds))
+				send(st, "zoneCharge", { tag = effect.tag, index = zone.index, center = zone.center, size = zone.size, seconds = effect.seconds })
+				break
+			end
+		end
+	end
+	local gate = c.skill and c.skill.gate
+	if gate and gate.zoneTag == effect.tag and not st.gateJudged then
+		local all = #zones > 0
+		for _, zone in ipairs(zones) do
+			all = all and (charges[zone.index] or 0) > c.now
+		end
+		if all then
+			st.gateJudged = true
+			st.zoneCharges[effect.tag] = {}
+			BossMechanics.judgeGate(c.model, true, gate.breakWindow, "zonesCharged")
+			send(st, "zoneDischarge", { tag = effect.tag })
+			send(st, "gimmickResolve", { broken = true, windowSeconds = gate.breakWindow and gate.breakWindow.seconds or nil })
+		end
+	end
+end
+
 runEffects = function(c, effects, info)
 	for _, effect in ipairs(effects or {}) do
+		if effect.type == "chargeZone" then
+			chargeZones(c, effect, info)
+			continue
+		end
 		local def = c.data.props and c.data.props[effect.prop]
 		if not def then
 			continue
@@ -373,10 +435,19 @@ end
 local function runHitEffects(c, effects, v, from)
 	for _, effect in ipairs(effects or {}) do
 		if effect.type == "launch" and not BossTrap.isTrapped(v.player) then
-			c.st.lastLaunch = { player = v.player, at = c.now } -- 자동 검증이 읽는다
-			if typeof(v.player) == "Instance" and v.player.Parent then
-				patternEvent:FireClient(v.player, "launch", { from = from, heightStuds = effect.heightStuds, distanceStuds = effect.distanceStuds })
+			c.st.lastLaunch = { player = v.player, at = c.now, effect = effect } -- 자동 검증이 읽는다
+			-- 29-4 회오리(holdSeconds): 떠서 도는 동안은 조작을 잃는다 - 그동안은 맞지 않는다(immuneSeconds). 이 스킬의 피해는 이미 들어갔다.
+			if effect.immuneSeconds then
+				PlayerState.setIncomingDamageMultiplierUntil(v.player, 0, effect.immuneSeconds)
 			end
+			-- 도는 원(spinRadiusStuds)이 벽을 넘지 않게 중심을 그만큼 안쪽으로 자른다(맵 밖으로는 안 나간다 - 20.77 [1]).
+			if effect.spinRadiusStuds then
+				from = clampToZone(from, zoneOf(c.model), effect.spinRadiusStuds + 2)
+			end
+			sendTo(v.player, "launch", {
+				from = from, heightStuds = effect.heightStuds, distanceStuds = effect.distanceStuds,
+				holdSeconds = effect.holdSeconds, spinRadiusStuds = effect.spinRadiusStuds,
+			})
 		end
 	end
 end
@@ -595,31 +666,57 @@ local function beginCircles(c, positions, seconds)
 	send(st, "meteor", { positions = positions, radius = skill.radiusStuds, seconds = seconds, style = skill.impactStyle })
 end
 
-HANDLERS.circleTarget = {
-	bubbleSeconds = function(c)
-		local skill = c.skill
-		if skill.sequential then
-			return skill.telegraphSeconds + (skill.repeatTelegraphSeconds or skill.telegraphSeconds) * (circleCount(c.data, skill) - 1)
+-- 조준 자리: 대상의 자리 + (perMember면) 안 잡힌 다른 멤버 각자의 자리(29-3 낙빙 · 29-4 낙뢰의 두 발 모두).
+local function aimPositions(c, zone)
+	local positions = { clampToZone(xz(c.targetRoot.Position), zone, 2) }
+	if c.skill.perMember then
+		for _, v in ipairs(victims(c.st)) do
+			if v.root ~= c.targetRoot and not BossTrap.isTrapped(v.player) then
+				table.insert(positions, clampToZone(xz(v.root.Position), zone, 2))
+			end
 		end
-		return skill.telegraphSeconds
-	end,
+	end
+	return positions
+end
+
+-- 게이트의 판정 스킬(skill.gate - 폭풍 군주의 낙뢰)은 기믹 스킬과 같은 힌트를 받는다(20.73 [1-5]): 2단계 = 예고 × 1.5.
+local function hintedSeconds(st, skill, seconds)
+	if skill.gate and (st.hintLevel or 0) >= BossData.mechanics.hint.maxLevel then
+		return seconds * BossData.mechanics.hint.telegraphMultiplier
+	end
+	return seconds
+end
+
+local function circleBubbleSeconds(c)
+	local skill = c.skill
+	if skill.sequential then
+		return hintedSeconds(c.st, skill, skill.telegraphSeconds + (skill.repeatTelegraphSeconds or skill.telegraphSeconds) * (circleCount(c.data, skill) - 1))
+	end
+	return hintedSeconds(c.st, skill, skill.telegraphSeconds)
+end
+
+HANDLERS.circleTarget = {
+	bubbleSeconds = circleBubbleSeconds,
 	start = function(c)
 		local skill = c.skill
 		local zone = zoneOf(c.model)
 		local first = xz(c.targetRoot.Position)
-		local positions = { clampToZone(first, zone, 2) }
+		local positions = aimPositions(c, zone)
 		c.st.shotIndex = 1
-		if not skill.sequential then
-			local scattered = circleCount(c.data, skill) - 1
-			if skill.perMember then
-				-- 29-3: 멤버 각자의 발밑에 하나씩(대상은 위에서 이미 넣었다) - 나머지만 대상 주변에 흩는다. 잡힌 멤버는 뺀다.
-				for _, v in ipairs(victims(c.st)) do
-					if v.root ~= c.targetRoot and not BossTrap.isTrapped(v.player) then
-						table.insert(positions, clampToZone(xz(v.root.Position), zone, 2))
-						scattered -= 1
-					end
+		if skill.gate then
+			-- 29-4: 이 스킬이 게이트의 판정이다 - 첫 예고와 함께 게이트가 서고(29-1 규칙 ①), 이번 회차의 판정은 아직 안 났다.
+			c.st.gateJudged = false
+			BossMechanics.armGateOnce(c.model)
+			if (c.st.hintLevel or 0) >= 1 then -- 힌트 1단계: 채워야 할 구역(피뢰침) 위에 흰 화살표
+				local spots = {}
+				for _, z in ipairs(kitZones(c.model, c.st, c.data, skill.gate.zoneTag)) do
+					table.insert(spots, Vector3.new(z.center.X, c.st.floorY, z.center.Z))
 				end
+				send(c.st, "hintArrows", { positions = spots, seconds = circleBubbleSeconds(c) })
 			end
+		end
+		if not skill.sequential then
+			local scattered = circleCount(c.data, skill) - #positions -- 29-3: 멤버 각자의 발밑에 하나씩 - 나머지만 대상 주변에 흩는다
 			for _ = 1, scattered do
 				local offset = Vector3.new(scatterRng:NextNumber(-1, 1), 0, scatterRng:NextNumber(-1, 1))
 				if offset.Magnitude > 1 then
@@ -628,7 +725,7 @@ HANDLERS.circleTarget = {
 				table.insert(positions, clampToZone(first + offset * skill.scatterStuds, zone, 2))
 			end
 		end
-		beginCircles(c, positions, skill.telegraphSeconds)
+		beginCircles(c, positions, hintedSeconds(c.st, skill, skill.telegraphSeconds))
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
@@ -646,11 +743,16 @@ HANDLERS.circleTarget = {
 			end
 		end
 		send(st, "meteorImpact", { positions = st.meteorPositions, radius = skill.radiusStuds, style = skill.impactStyle })
-		runEffects(c, skill.onImpact, { positions = st.meteorPositions })
+		runEffects(c, skill.onImpact, { positions = st.meteorPositions, radius = skill.radiusStuds })
 		if skill.sequential and st.shotIndex < circleCount(c.data, skill) and c.targetRoot then
 			st.shotIndex += 1
-			beginCircles(c, { clampToZone(xz(c.targetRoot.Position), zoneOf(c.model), 2) }, skill.repeatTelegraphSeconds or skill.telegraphSeconds)
+			beginCircles(c, aimPositions(c, zoneOf(c.model)), hintedSeconds(st, skill, skill.repeatTelegraphSeconds or skill.telegraphSeconds))
 			return
+		end
+		if skill.gate and not st.gateJudged then
+			-- 29-4: 회차가 끝났는데 구역을 다 못 채웠다 - 게이트가 선다/남는다(실패의 대가는 게이트뿐이다 - 낙뢰 회차는 잡지 않는다).
+			st.gateJudged = true
+			BossMechanics.judgeGate(c.model, false, nil, "zonesCharged")
 		end
 		endSkill(c.model, st, c.data, c.now)
 	end,
@@ -1006,6 +1108,15 @@ HANDLERS.gimmick = {
 		local safeZone = skill.safeZone
 		local zones = safeZone and kitZones(c.model, st, c.data, safeZone.tag) or nil
 		local zoneSpots = nil
+		-- 29-4 원형 안전지대(skill.safeCircles = { tag } - 폭풍 군주의 과충전: 피뢰침 곁): 클라가 빨강 바닥에서 그 원만 비운다.
+		local safeCircles = nil
+		if skill.safeCircles then
+			safeCircles, zoneSpots = {}, {}
+			for _, z in ipairs(kitZones(c.model, st, c.data, skill.safeCircles.tag)) do
+				table.insert(safeCircles, { center = Vector3.new(z.center.X, st.floorY, z.center.Z), radius = z.radius })
+				table.insert(zoneSpots, Vector3.new(z.center.X, st.floorY, z.center.Z))
+			end
+		end
 		if safeZone then
 			st.zoneSinkSeconds = safeZone.sinkSeconds + (seconds - skill.telegraphSeconds)
 			BossMechanics.beginZones(c.model, st.phaseEndsAt)
@@ -1028,6 +1139,7 @@ HANDLERS.gimmick = {
 				zones = zones, sinkSeconds = st.zoneSinkSeconds, earlySeconds = seconds - st.zoneSinkSeconds,
 				riseStuds = safeZone.waterRiseStuds,
 			} or nil,
+			safeCircles = safeCircles,
 			-- 힌트 1단계부터 클라가 흰 화살표를 세우는 자리.
 			safeSpots = hintLevel >= 1 and (zoneSpots or (skill.safeProp and BossArenaProps.safeSpots(c.model, skill.safeProp, c.position, 2))) or nil,
 		})
@@ -1140,7 +1252,7 @@ local function startSkill(model, st, data, id, now, position, targetRoot)
 	send(st, "bubble", {
 		pattern = skill.bubble or id,
 		seconds = handler.bubbleSeconds(c),
-		scale = (skill.primitive == "gimmick" and (st.hintLevel or 0) >= 1) and BossData.mechanics.hint.bubbleScale or nil,
+		scale = ((skill.primitive == "gimmick" or skill.gate) and (st.hintLevel or 0) >= 1) and BossData.mechanics.hint.bubbleScale or nil,
 	})
 	handler.start(c)
 	runEffects(c, skill.onStart, {}) -- 29-3: 스킬이 시작되며 까는 것(모래 구덩이)
@@ -1213,6 +1325,7 @@ function BossPatterns.reset(model, data)
 	if st then
 		restartClocks(st, data, os.clock())
 		st.target = nil
+		st.zoneCharges = nil -- 29-4: 충전된 피뢰침도 처음 상태로(클라는 "reset"에서 빛을 끈다)
 	end
 	BossMechanics.reset(model)
 	BossPatterns.clearProps(model)
