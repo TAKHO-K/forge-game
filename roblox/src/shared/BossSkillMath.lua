@@ -44,6 +44,11 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 	return skill.telegraphSeconds
 end
 
+-- 29-5 탱커 훅 ①: 이 스킬을 탱커의 반사가 되돌릴 수 있는가(스킬 데이터의 reflectable - 없으면 false). 아직 읽는 곳이 없다.
+function BossSkillMath.isReflectable(skill)
+	return skill ~= nil and skill.reflectable == true
+end
+
 -- ─────────────────────────── 회피 부등식(B) ───────────────────────────
 -- telegraph ≥ perception + (회피 거리 ÷ 이동 속도) × margin. 점프 회피(ring)는 거리가 아니라 "다음 파동 전에 다시
 -- 뛸 수 있는가"(repeatInterval ≥ perception + 체공 × margin)와 "겹이 점프 한 번에 다 지나가는가"로 검사한다.

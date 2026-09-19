@@ -446,17 +446,20 @@ local function runHitEffects(c, effects, v, from)
 	for _, effect in ipairs(effects or {}) do
 		if effect.type == "launch" and not BossTrap.isTrapped(v.player) then
 			c.st.lastLaunch = { player = v.player, at = c.now, effect = effect } -- 자동 검증이 읽는다
+			-- 29-5 탱커 훅 ③: 무게 계수(지금은 전원 1.0 - BossMechanics.weightFactorOf). 무거울수록 낮게·가까이·짧게 뜬다 -
+			-- 높이·거리·체공·면역 시간을 계수로 나눈다(조작을 잃는 시간이 짧아지면 면역도 같이 짧아져야 공짜 면역이 안 된다).
+			local weight = BossMechanics.weightFactorOf(v.player)
 			-- 29-4 회오리(holdSeconds): 떠서 도는 동안은 조작을 잃는다 - 그동안은 맞지 않는다(immuneSeconds). 이 스킬의 피해는 이미 들어갔다.
 			if effect.immuneSeconds then
-				PlayerState.setIncomingDamageMultiplierUntil(v.player, 0, effect.immuneSeconds)
+				PlayerState.setIncomingDamageMultiplierUntil(v.player, 0, effect.immuneSeconds / weight)
 			end
 			-- 도는 원(spinRadiusStuds)이 벽을 넘지 않게 중심을 그만큼 안쪽으로 자른다(맵 밖으로는 안 나간다 - 20.77 [1]).
 			if effect.spinRadiusStuds then
 				from = clampToZone(from, zoneOf(c.model), effect.spinRadiusStuds + 2)
 			end
 			sendTo(v.player, "launch", {
-				from = from, heightStuds = effect.heightStuds, distanceStuds = effect.distanceStuds,
-				holdSeconds = effect.holdSeconds, spinRadiusStuds = effect.spinRadiusStuds,
+				from = from, heightStuds = effect.heightStuds / weight, distanceStuds = effect.distanceStuds / weight,
+				holdSeconds = effect.holdSeconds and effect.holdSeconds / weight, spinRadiusStuds = effect.spinRadiusStuds,
 			})
 		end
 	end
@@ -1445,6 +1448,21 @@ function BossPatterns.interrupt(model, data)
 	st.waves = {}
 	send(st, "reset", {})
 	endSkill(model, st, data, os.clock())
+end
+
+-- 29-5 탱커 훅 ②(PRD 20.80 [F]) - 도발 인터럽트의 진입점. 탱커의 도발 스킬이 생기면 SkillServer가 여기를 부른다.
+-- 지금은 **아무것도 바꾸지 않는다**: 시각만 적고(스케줄러·st) false를 돌려준다 - 스킬을 끊지도, 대상을 바꾸지도, 반격을 열지도 않는다.
+-- 채울 때 할 일(설계): ① 진행 중인 스킬이 interruptible이면 끊는다(interrupt) ② 대상을 도발한 사람으로 고정(MonsterAI가 st.tauntTarget을
+-- 읽는다) ③ BossScheduler가 전역 쿨을 건너뛰고 다음 스킬을 고른다(반격 - 도발이 공짜 스턴이 되지 않게).
+-- 반환: 도발이 먹혔는가(지금은 늘 false).
+function BossPatterns.onTaunt(model, data, player)
+	local st = ensureState(model, data)
+	if not st then
+		return false
+	end
+	st.lastTaunt = { player = player, at = os.clock() }
+	BossScheduler.noteTaunt(st.sched, os.clock())
+	return false
 end
 
 -- 어그로가 붙는 순간(idle→chasing) 시계를 새로 잰다 - "첫 예고는 전투 시작 뒤 쿨만큼"을 재도전·재어그로에도 유지한다.

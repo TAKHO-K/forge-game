@@ -12,6 +12,8 @@ local RunService = game:GetService("RunService")
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BossSim = require(ReplicatedStorage.Shared.BossSim)
+local BossScheduler = require(ReplicatedStorage.Shared.BossScheduler)
+local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local BossEncounter = require(script.Parent.BossEncounter)
 local BossMechanics = require(script.Parent.BossMechanics)
@@ -226,12 +228,45 @@ local function checkTuning(r)
 	end)
 end
 
+-- [12] 탱커 대비 훅 4종(PRD 20.80 [F]) - 자리가 있고, **비어 있는가**(지금의 전투를 하나도 바꾸지 않는가).
+local function checkTankHooks(r)
+	r.section("탱커 훅", function()
+		local flagged, total = {}, 0
+		for _, bossId in ipairs(BossData.pools[1].bossIds) do
+			for id, skill in pairs(BossData.bosses[bossId].skills) do
+				total += 1
+				if BossSkillMath.isReflectable(skill) then
+					table.insert(flagged, bossId .. "." .. id)
+				end
+			end
+		end
+		table.sort(flagged)
+		local state = BossScheduler.newState({ a = { cooldownSeconds = 5, priority = 0 } }, { "a" }, 0)
+		local beforeEnd, beforeLast = state.lastEndAt, state.lastSkillId
+		BossScheduler.noteTaunt(state, 3)
+		local untouched = state.lastEndAt == beforeEnd and state.lastSkillId == beforeLast and state.tauntedAt == 3
+		local fakeModel = {}
+		local emptyBefore = BossMechanics.reflectBufferOf(fakeModel) == nil
+		local buffer = BossMechanics.addToReflectBuffer(fakeModel, "tank", "dealer", 10)
+		BossMechanics.addToReflectBuffer(fakeModel, "tank", "dealer", 5)
+		local taken = BossMechanics.clearReflectBuffer(fakeModel)
+		local bufferOk = emptyBefore and buffer.total == 15 and buffer.byPlayer.dealer == 15 and buffer.bounces == 0 and buffer.owner == "tank"
+			and taken == buffer and BossMechanics.reflectBufferOf(fakeModel) == nil
+		r.check(("① 반사 가능 플래그: 스킬 %d개 중 %d개[%s] · ② 도발 진입점: BossPatterns.onTaunt=%s, 스케줄러는 시각만 적는다(전역 쿨·직전 스킬 그대로)=%s · ③ 무게 계수: 기본 %.1f(전원) = weightFactorOf %.1f · ④ 반사 버퍼: 비어 있음 → 쌓기 15 → 비우기=%s(채우는 제품 코드 없음)"):format(
+			total, #flagged, table.concat(flagged, " "), type(BossPatterns.onTaunt), tostring(untouched), BossData.mechanics.tank.defaultWeightFactor,
+			BossMechanics.weightFactorOf(nil), tostring(bufferOk)),
+			#flagged == 5 and type(BossPatterns.onTaunt) == "function" and untouched and BossData.mechanics.tank.defaultWeightFactor == 1
+				and BossMechanics.weightFactorOf(nil) == 1 and bufferOk)
+	end)
+end
+
 local function runPure()
-	print("===29-5 검증 시작(가: 배치표·수정 여왕·6종 튜닝)===")
+	print("===29-5 검증 시작(가: 배치표·수정 여왕·6종 튜닝·탱커 훅)===")
 	local r = newRecorder("가")
 	BossGimmick5Verify.checkPlacement(r)
 	checkCrystal(r)
 	checkTuning(r)
+	checkTankHooks(r)
 	local pass, total = r.summary()
 	print(("===29-5 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 end

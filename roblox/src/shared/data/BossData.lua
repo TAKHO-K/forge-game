@@ -106,6 +106,14 @@ local MECHANICS = {
 	-- 2.5~5.7타/초라 타격당으로 세면 쌍검만 두 배로 벌받는다(20.73 [2-5]). 1회 = gimmickFailMaxHpFraction ÷ partialFailDivisor.
 	reflect = { windowSeconds = 0.75 },
 
+	-- 29-5 탱커 대비 훅(PRD 20.80 [F]) - 탱커 직업은 아직 없다. 보스 코드를 나중에 다시 뜯지 않게 **자리만** 만들어 둔다:
+	--   ① 스킬의 reflectable 필드(아래 스킬표 - 없으면 false. BossSkillMath.isReflectable) - 직선·회오리·갑각의 반사만 true다.
+	--      바닥에 깔리는 원·퍼지는 고리·전역 기믹은 "날아오는 것"이 아니라 되돌릴 대상이 없다.
+	--   ② 도발 인터럽트: BossPatterns.onTaunt → BossScheduler.noteTaunt(지금은 기록만 하고 아무것도 바꾸지 않는다)
+	--   ③ 넉백·띄우기의 무게 계수: BossMechanics.weightFactorOf(player) → 높이·거리·체공·면역 시간을 나눈다(지금은 전원 defaultWeightFactor)
+	--   ④ 반사 누적 버퍼: BossMechanics.reflectBufferOf/addToReflectBuffer/clearReflectBuffer(아무도 채우지 않는다)
+	tank = { defaultWeightFactor = 1.0 },
+
 	-- 29-3 보스전 중에는 기본 자동회복(CombatConfig.regenPercentPerSecond)이 돌지 않는다 - 재생 옵션이 얹는 몫과 흡혈은
 	-- 그대로다(플레이어가 골라서 낀 빌드다). 견습 보스전은 예외(배우는 자리). PlayerRegen.server.lua가 읽는다.
 	bossFight = { baseRegenEnabled = false },
@@ -203,7 +211,7 @@ local function guardianSkills()
 		-- 십자 화염. 보스 중심 4방향(첫 볼리는 대상 방향, 90도 간격) 벽까지. 두 번째 볼리는 rotateDeg 돌려서 -
 		-- 첫 볼리를 피해 대각선에 섰으면 다시 옆으로 걸어야 한다. 회피 = 옆으로 3 + 1 = 4stud.
 		cross = {
-			primitive = "line", bubble = "cross",
+			primitive = "line", bubble = "cross", reflectable = true, -- 29-5 탱커 훅: 탱커의 반사가 되돌릴 수 있는 스킬(지금은 아무도 안 읽는다 - PRD 20.80 [F])
 			cooldownSeconds = 17, priority = P.normal,
 			telegraphSeconds = 1.5, directions = 4, stepDeg = 90, volleys = 2, rotateDeg = 45, halfWidthStuds = 3,
 			damage = { kind = "attack", multiplier = 2 }, damageLabel = "십자 화염",
@@ -370,7 +378,7 @@ local SPECIES = {
 			-- 얼음 가시. 보스 → 대상 직선 하나. 체력이 70% 아래로 내려가야 쓰기 시작한다(HP 구간 조건). 기둥에 닿으면
 			-- 거기서 끊기고 그 기둥이 부서진다(29-3) - 포효보다 싸게 "기둥이 막아 준다"를 보여 주는 스킬이다.
 			spike = {
-				primitive = "line", bubble = "cross",
+				primitive = "line", bubble = "cross", reflectable = true, -- 29-5 탱커 훅: 탱커의 반사가 되돌릴 수 있는 스킬(지금은 아무도 안 읽는다 - PRD 20.80 [F])
 				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
 				conditions = { { type = "hpBelow", value = 0.7 } },
 				telegraphSeconds = 1.5, directions = 1, stepDeg = 0, volleys = 1, rotateDeg = 0, halfWidthStuds = 3,
@@ -499,7 +507,7 @@ local SPECIES = {
 			},
 			-- 반사 광선. 직선 하나를 두 번 - 둘째는 그 순간의 대상 위치로 다시 겨눈다(29-5에서 벽 수정에 꺾인다).
 			beam = {
-				primitive = "line", bubble = "cross",
+				primitive = "line", bubble = "cross", reflectable = true, -- 29-5 탱커 훅: 탱커의 반사가 되돌릴 수 있는 스킬(지금은 아무도 안 읽는다 - PRD 20.80 [F])
 				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
 				telegraphSeconds = 1.5, directions = 1, stepDeg = 0, volleys = 2, rotateDeg = 0, reaim = true, halfWidthStuds = 3,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "반사 광선",
@@ -609,6 +617,7 @@ local SPECIES = {
 			--     원 한가운데의 근접 자리(9stud)에서 1.20초가 필요해 회피 부등식을 못 넘는다.
 			shell = {
 				primitive = "gimmick", bubble = "shell", role = "gimmick", kind = "noHit",
+				reflectable = true, -- 29-5 탱커 훅: 갑각의 반사는 탱커의 반사로 되돌릴 수 있다("반사 대 반사" - PRD 20.80 [F]). 지금은 아무도 안 읽는다
 				cooldownSeconds = 18, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				conditions = { { type = "notAfter", skills = { "stab" } } },
 				telegraphSeconds = 4.0, recoverSeconds = 3.0,
@@ -656,7 +665,7 @@ local SPECIES = {
 			--   피할 수 없는 확정 피격이 된다 - 20.77 [1]의 조건 ③). 회오리 자체의 피해(×2)는 그 전에 이미 들어갔다.
 			--   보스는 뜬 대상을 놓치지 않는다 - MonsterAI가 발밑 지면으로 층을 판단한다(GroundProbe.sameGroundLayer).
 			whirl = {
-				primitive = "circleTarget", bubble = "whirl",
+				primitive = "circleTarget", bubble = "whirl", reflectable = true, -- 29-5 탱커 훅: 탱커의 반사가 되돌릴 수 있는 스킬 - 되돌리면 보스가 뜬다(지금은 아무도 안 읽는다 - PRD 20.80 [F])
 				cooldownSeconds = 13, priority = P.normal, starvationSeconds = 40,
 				telegraphSeconds = 1.5, count = 1, radiusStuds = 8, scatterStuds = 0,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "회오리",

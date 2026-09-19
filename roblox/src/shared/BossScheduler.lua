@@ -167,6 +167,12 @@ function BossScheduler.onSkillEnd(state, skills, id, now)
 end
 
 -- DevTools 전용 - 다음 선택에서 이 스킬이 바로 나가게 한다(전역 쿨·유예·쿨 무시).
+-- 29-5 탱커 훅 ②(PRD 20.80 [F]): 도발이 들어온 시각을 적어 둔다. **pick은 아직 이 값을 읽지 않는다** - 탱커가 생기면 여기서
+-- "도발 직후의 반격"(전역 쿨을 건너뛰고 다음 스킬을 곧바로 고른다 - 전조는 그대로라 회피 부등식은 깨지지 않는다)을 연다.
+function BossScheduler.noteTaunt(state, now)
+	state.tauntedAt = now
+end
+
 function BossScheduler.force(state, id)
 	state.readyAt[id] = -math.huge
 	state.lastEndAt = -math.huge

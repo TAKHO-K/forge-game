@@ -116,9 +116,47 @@ function BossMechanics.judgeGate(model, broken, window, kind)
 		tostring(kind), broken and "성공" or "실패", broken and "열림" or "유지", MonsterState.getDamageTakenMultiplier(model)))
 end
 
+-- ─────────────────────────── 탱커 대비 훅(29-5, PRD 20.80 [F]) ───────────────────────────
+-- 탱커 직업은 아직 없다 - 아래 둘은 자리만 있다(값은 늘 기본값이고, 버퍼는 아무도 채우지 않는다).
+
+-- ③ 넉백·띄우기의 무게 계수. 1 = 기준, 클수록 무겁다(낮게·짧게 뜬다 - BossPatterns.runHitEffects가 나눈다). 무게 시스템
+-- (PRD 20.80 [G])이 생기면 여기서 그 플레이어의 장비 무게를 읽는다. 지금은 전원 BossData.mechanics.tank.defaultWeightFactor.
+function BossMechanics.weightFactorOf(_player)
+	return BossData.mechanics.tank.defaultWeightFactor
+end
+
+-- ④ 반사 누적 버퍼 - "반사 대 반사"(탱커의 반사 ↔ 보스의 반사 태세)가 겹치는 동안 보스에게 들어가려던 피해가 쌓이는 곳.
+--   { total = 쌓인 피해(보스 HP 눈금), byPlayer = { [때린 사람] = 피해 }, bounces = 오간 횟수, owner = 반사를 켠 탱커, startedAt }
+-- 먼저 끝난 쪽이 total을 받는다(탱커의 반사가 먼저 끝나면 탱커가, 보스의 태세가 먼저 끝나면 보스가). 튕김은 피해가 아니라 연출의
+-- 횟수라 서버가 도는 루프는 없다(bounces ≤ 태세 시간 ÷ reflect.windowSeconds). 지금은 아무도 add를 부르지 않는다.
+function BossMechanics.reflectBufferOf(model)
+	return stateOf(model).reflectBuffer
+end
+
+function BossMechanics.addToReflectBuffer(model, owner, attacker, damage)
+	local st = stateOf(model)
+	local buffer = st.reflectBuffer
+	if not buffer then
+		buffer = { total = 0, byPlayer = {}, bounces = 0, owner = owner, startedAt = os.clock() }
+		st.reflectBuffer = buffer
+	end
+	buffer.total += damage
+	buffer.byPlayer[attacker] = (buffer.byPlayer[attacker] or 0) + damage
+	return buffer
+end
+
+-- 반환: 비우기 전의 버퍼(없었으면 nil) - 받는 쪽이 total을 읽는다.
+function BossMechanics.clearReflectBuffer(model)
+	local st = stateOf(model)
+	local buffer = st.reflectBuffer
+	st.reflectBuffer = nil
+	return buffer
+end
+
 -- 전멸 리셋(BossPatterns.reset) - 처음 상태로.
 function BossMechanics.reset(model)
 	local st = stateOf(model)
+	st.reflectBuffer = nil
 	st.gateStarted = false
 	st.gimmickDamage = {}
 	st.zoneSteps = nil
