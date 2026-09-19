@@ -988,12 +988,12 @@ local HELP_TEXT = table.concat({
 	"/gg boss [stage] - 보스 스테이지(기본 5)로 이동해 개인 아레나 보스전 시작(21-3 검증용)",
 	"/gg boss next - 다음(또는 지금 대기 중인) 보스가 누구인지 출력(23-5)",
 	"/gg boss history - 이 플레이어의 보스 등장 이력 출력(23-5)",
-	"/gg boss force <id> - 다음 보스 순환 뽑기를 강제 지정(1회용, 23-5)",
+	"/gg boss force <id> - 다음 보스 순환 뽑기를 강제 지정(1회용, 23-5 · 29-3: 확정돼 있던 보스도 지운다 - 바로 뒤 /gg boss에 그 보스가 나온다)",
 	"/gg boss trap [플레이어] - 잡힘 상태 강제(다시 치면 해제, 생략 시 자신, 29-1)",
 	"/gg boss gate <on|off> - 지금 보스의 파훼 게이트(받는 피해 x0.487) 토글(29-1)",
 	"/gg boss sim <bossId> <인원> <break|failfirst|nobreak> [live] - 처치 시간 모형(29-2: 기본은 설계 기믹 포함, live면 지금 켜진 스킬만)",
 	"/gg boss check <bossId> - 그 보스 스킬표의 회피 부등식·인접 피해 합 검사(29-2)",
-	"/gg pattern <heavy|shockwave|meteor|charge|cross> - 지금 보스에게 그 패턴을 즉시 시작시킨다",
+	"/gg pattern <스킬 id> - 지금 보스에게 그 스킬을 즉시 시작시킨다(/gg bossinfo에 id 목록 - 예: roar, icefall, shell, stab)",
 	"/gg bossinfo - 지금 보스 인스턴스의 주력 패턴·패턴별 간격·변형 필드·실루엣을 콘솔에 출력(23-6 검증용)",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
 	"/gg bosskilltest - 지금 보스를 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡는다(견습/무한 모드 처치 파이프라인 검증용, 23-1)",
@@ -1138,6 +1138,9 @@ local function handleCommand(player, args)
 		end
 	elseif sub == "boss" and args[2] == "force" and args[3] then
 		if PlayerProfile.forceBossRotationNext(player, args[3]) then
+			-- 29-3: 같은 스테이지에 이미 확정된 보스(pending)가 있으면 강제 지정보다 그쪽이 먼저 나온다(23-5 - 재도전 때 보스가
+			-- 안 바뀌게). 사람이 "/gg boss force X" → "/gg boss"로 곧장 X를 보려면 pending부터 지워야 한다(29-2 첫 Play의 교훈).
+			PlayerProfile.clearBossRotationPending(player)
 			reply(player, ("다음 보스를 강제 지정했습니다: %s (다음 보스 스테이지 진입 시 적용, 정상 순환은 그대로 보존됨)"):format(args[3]))
 		else
 			reply(player, "실패: 직업 미선택 또는 알 수 없는 보스 id " .. args[3])

@@ -106,7 +106,7 @@ function BossSim.run(bossId, options)
 	local firstGimmickAt, gimmickCount = nil, 0
 	local minGap, previousEnd = math.huge, nil
 	local previousId, worstPair, worstPairSum = nil, nil, 0
-	local sequence = {} -- 처음 12개 스킬의 { id, at } - 기본형 회귀 검사용
+	local sequence = {} -- 처음 40개 스킬의 { id, at } - 기본형 회귀 검사 · 29-3 "실수 뒤 생존 확률" 계산(전투 하나가 다 들어간다)
 
 	local ctx = { graceUntil = config.entryGraceSeconds }
 	local positionalSample = {}
@@ -172,7 +172,7 @@ function BossSim.run(bossId, options)
 					end
 				end
 				counts[pick] += 1
-				if #sequence < 12 then
+				if #sequence < 40 then
 					table.insert(sequence, { id = pick, at = t })
 				end
 				maxWait[pick] = math.max(maxWait[pick], t - lastStartAt[pick])
