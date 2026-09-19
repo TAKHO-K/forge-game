@@ -11567,7 +11567,7 @@ k로 성장)이 같이 멈추고, 몬스터 공격력은 k^S로 계속 자라므
 2. **미결: 스테이지 125 이후 장갑·신발 드랍의 의미.** 왜: 기본 스탯은 itemLevel 25, 옵션은
    125에서 동결이라 ±2가 갑옷에만 효과가 있다([2-5]). "지속 성장"과 어긋나는 기존 구조인데
    동결을 푸는 것은 20.35의 "지수의 지수" 문제를 다시 연다.
-3. **`[✅ 20.73 [8] 3번에서 결정 — 계정 최고 스테이지 기준으로 닫는다]` 미결: 옵션 변환권 가격이 "현재 스테이지" 기준이라 스테이지 1로 내려가 240골드에 살 수
+3. **`[✅ 20.73 [8] 3번에서 결정 — 계정 최고 스테이지 기준으로 닫는다 · 30-0 S01(20.82)에서 구현]` 미결: 옵션 변환권 가격이 "현재 스테이지" 기준이라 스테이지 1로 내려가 240골드에 살 수
    있다.** 왜: `GemServer.rerollTicketPrice`가 `getInfiniteStage`를 읽는다. 방지권은 계정 최고
    스테이지로 막았지만 변환권은 이번 범위 밖이라 고치지 않았다.
 4. **미결: "골드 획득 배수 게임패스"(20.5-3) 출시 시 강화가 유료 랜덤 아이템에 해당하는지.**
@@ -11586,7 +11586,7 @@ k로 성장)이 같이 멈추고, 몬스터 공격력은 k^S로 계속 자라므
    흔들린다. 채택하지 않았다.
 10. **미결: 파티 보스 드랍의 기준이 보스 스테이지(멤버 공통)인 것.** 왜: 입장 밴드(+1) 덕에
     지금은 안전하지만 A안이 밴드를 넓히면 캐리 경로가 된다([4]).
-11. **미결: [2-0] tier × itemLevel 구멍은 1단계 구현 전까지 열려 있다.** 왜: 이 세션은 코드를
+11. **`[✅ 30-0 S01(20.82)에서 닫음 - 드랍 itemLevel = 기준 스테이지 ± 2로 구현, tier6 63,087개 전부 98 ~ 102]` 미결: [2-0] tier × itemLevel 구멍은 1단계 구현 전까지 열려 있다.** 왜: 이 세션은 코드를
     고치지 않는다.
 12. **미결: +25 이후 남는 강화석의 용도.** 왜: 다른 직업 무기 3자루 외에 소모처가 없다.
     판매·합성을 넣으면 새 경제 경로가 생기므로 이번에 정하지 않았다.
@@ -14871,10 +14871,10 @@ t=12.0 끝 → 전역 쿨 6초
 
 | # | 항목 | 현재 상태(코드 확인) | 설계 | 의존성 | 담당 · 세션 |
 |---|---|---|---|---|---|
-| 1 | 드랍 itemLevel ±2 규칙 | **열려 있다** - `Loot.lua:73` `floor(itemLevel × tier.itemLevelBonus + 0.5)`. 레벨 100 × tier6(4.21) = 420 | 20.72 [2-1] ~ [2-4] · [5] 1단계 | 없음 - **맨 먼저** | S · S01 |
-| 2 | 보스 드랍 가방 직행 | **열려 있다** - `CombatResolution.lua:86`이 보스 드랍도 `ItemDropSpawner.spawn`(땅). 처치 직후 멤버 전원이 사냥터로 돌아가므로 아레나(Z = −3000)에 남은 드랍은 주울 수 없다 | 이 절 [C-1] | 1번과 같은 함수를 고친다 | S · S01 |
-| 3 | 옵션 변환권 가격 = 계정 최고 스테이지 | **열려 있다** - `GemServer.lua:38`이 `getInfiniteStage`(지금 서 있는 곳). 스테이지 1로 내려가 240골드에 산다 | 20.73 [8] 3번 | 없음(헬퍼 `getAccountBestStage`를 여기서 만들고 S05 방지권이 재사용) | S · S01 |
-| 4 | /gg 프로덕션 차단 재확인 | 1차 가드는 있다(`DevTools.server.lua:20` `IsStudio` 아니면 return). 24-5 감사 뒤 명령 79분기 · 검증 모듈 5개 · `TextChatCommand` · `BossEncounter.setDebugForcedBoss` 등 **DevTools 밖의 디버그 진입점**이 늘었다 | 이 절 [C-2] | 없음 | S · S01 |
+| 1 | 드랍 itemLevel ±2 규칙 | `[✅ S01(20.82)에서 닫음]` **열려 있었다** - `Loot.lua:73` `floor(itemLevel × tier.itemLevelBonus + 0.5)`. 레벨 100 × tier6(4.21) = 420 | 20.72 [2-1] ~ [2-4] · [5] 1단계 | 없음 - **맨 먼저** | S · S01 |
+| 2 | 보스 드랍 가방 직행 | `[✅ S01(20.82)에서 닫음]` **열려 있었다** - `CombatResolution.lua:86`이 보스 드랍도 `ItemDropSpawner.spawn`(땅). 처치 직후 멤버 전원이 사냥터로 돌아가므로 아레나(Z = −3000)에 남은 드랍은 주울 수 없다 | 이 절 [C-1] | 1번과 같은 함수를 고친다 | S · S01 |
+| 3 | 옵션 변환권 가격 = 계정 최고 스테이지 | `[✅ S01(20.82)에서 닫음]` **열려 있었다** - `GemServer.lua:38`이 `getInfiniteStage`(지금 서 있는 곳). 스테이지 1로 내려가 240골드에 산다 | 20.73 [8] 3번 | 없음(헬퍼 `getAccountBestStage`를 여기서 만들고 S05 방지권이 재사용) | S · S01 |
+| 4 | /gg 프로덕션 차단 재확인 | `[✅ S01(20.82) 감사 - X 0건]` 1차 가드는 있다(`DevTools.server.lua:20` `IsStudio` 아니면 return). 24-5 감사 뒤 명령 79분기 · 검증 모듈 5개 · `TextChatCommand` · `BossEncounter.setDebugForcedBoss` 등 **DevTools 밖의 디버그 진입점**이 늘었다 | 이 절 [C-2] | 없음 | S · S01 |
 | 5 | 부풀려진 itemLevel 세이브 값 이관 | 개발 계정 세이브에 420급 아이템이 남아 있다 | 20.72 [2-7] · [5] 8단계(비가역) | 1번 검증 통과 뒤 | S · S02 |
 | 6 | 이동속도 상한 부재 | 태초 신발 하나로 +549%(104 stud/s) - 어그로 25.6 · 리쉬 38.4 사슬이 무력해진다 | 없음(20.67 [16] 미결 2) | 격자 관계식(20.44) 재검토 | **F** · F2 |
 
@@ -15271,3 +15271,113 @@ t=12.0 끝 → 전역 쿨 6초
 | 18 | S08은 28-1 [1-9]대로 · 여러 색 확장은 에셋 단계 | [E] 4 |
 
 **변경 파일**: `PRD-forge-game-roblox.md`(이 절 + 개정 표시) · `docs/sonnet/` 신규. 코드 · 데이터 파일은 `git diff --stat`으로 변경 0건 확인.
+
+
+---
+
+### 20.82 S01 구멍 막기: 드랍 itemLevel = 기준 스테이지 ± 2 · 보스 드랍 가방 직행 · 변환권 가격 = 계정 최고 스테이지 · /gg 차단 감사 (S01) `[✅ 구현 + 로컬 검증(luau-compile 전 파일 · (가) 하네스 9/9 × 3회) + Studio Play 자동 검증 1회(2026-09-19, MCP로 시작·정지 - Play 중 MCP 호출 없음): S01 (가) 9/9 · (나) 5/5, 기존 검증 회귀 없음. 미결 0. 사람 눈 확인 없음(연출 변경 0)]`
+
+20.81 [A](1) 구멍 1 ~ 4번을 닫았다(설계: 20.72 [2] · 20.73 [8] 3번 · 20.81 [C-1] · [C-2]). 지금까지 레벨 100이 tier6(드래곤)을 잡으면 itemLevel 420 장비가 나왔다(방어 · 체력 10^20배) - 강화(S03 ~)를 만들기 전에 닫았다.
+
+#### [1] 무엇을 했나
+
+| 단계 | 내용 | 파일 |
+|---|---|---|
+| 1 | 드랍 규칙 데이터 `ArmorData.itemLevelDelta`(−2 ~ +2, 1:2:3:2:1) · `bossItemLevelDelta`(0 ~ +2, 3:2:1). `MonsterData` tier 필드 `itemLevelBonus` → `dropCountMultiplier`(값 그대로, 공정성 식도 같은 이름) | `shared/data/ArmorData.lua` · `MonsterData.lua` |
+| 2 | `Loot`: `rollItemLevel(stage, deltaTable)` · `rollCount(expected)`(공용 - S04 강화석이 재사용) · `expectedArmorDropCount(tierIndex, rewardMultiplier)` 신설. `rollArmorDrop`은 캐릭터 레벨 인자를 빼고 **아이템 배열**을 돌려준다(tier 곱셈 삭제, 개수 = `rollCount(기대 개수)` - 1을 넘으면 여러 개). `rollBossFirstClearDrop` · `rollSparkleArmorDrop` · `buildFixedArmorDrop`은 레벨 인자 삭제(고정 지급은 δ = 0). `rollBossRetryDrop`(확정 1개 · tier1 등급표 · 보스 δ) 신설 | `shared/Loot.lua` |
+| 3 | 호출부: `grantKillReward`는 배열의 아이템마다 처리 · 보스 재도전은 `rollBossRetryDrop` · 견습 확정 지급은 `buildFixedArmorDrop(…, TutorialData.monsterStage, …)` | `server/CombatResolution.lua` · `TutorialState.lua` |
+| 4 | 보스 장비는 `PlayerProfile.addArmorDrop` → 성공이면 줍기와 같은 `ItemPickedUp`(ItemDropServer가 만든 인스턴스를 `ReplicatedStorage`에서 찾아 쓴다). 가방이 가득이면 목록에 담아 두고 `BossEncounter.clearForModel`(멤버 전원 복귀 텔레포트) **뒤에** 그 사람의 발밑에 `ItemDropSpawner.spawn` + `notifyFull` 1회. 드랍 로그 끝에 `→ 가방` / `→ 땅(가방 가득)` | `server/CombatResolution.lua` · `BossEncounter.lua`(복귀 위치 노출) |
+| 5 | `PlayerProfile.getAccountBestStage`(전 직업 `infiniteBest`의 최댓값, 최소 1) · `GemServer.rerollTicketPrice`가 이 값을 쓴다 · 클라 가격 표시(`InventoryUI`)는 Attribute `AccountBestStage`(PlayerProfile이 로드 · 직업 전환 · 새 기록 · 직접 지정 때 내린다)를 읽는다 | `PlayerProfile.lua` · `GemServer.server.lua` · `client/InventoryUI.client.lua` |
+| 6 | /gg 프로덕션 차단 감사(아래 [3]) - **X 0건, 코드 수정 0**. 서버 시작 로그 `[DevTools] /gg 명령 인스턴스 있음=true · IsStudio=true` 추가 | `server/DevTools.server.lua` |
+| 검증 | `LootRuleVerify.lua`((가) 9 · (나) 5) + DevTools 연결((가)는 서버 시작 때, (나)는 29-1 보스 검증 체인의 끝) | `server/LootRuleVerify.lua`(신규) · `DevTools.server.lua` |
+
+- 저장 구조 불변 - `SAVE_VERSION` 그대로. 새 상수는 `ArmorData`의 δ 표 두 개뿐(밸런스 수치는 data 안). `MonsterData.dropCountMultiplier` 값은 옛 `itemLevelBonus`와 같다.
+- 세이브에 이미 있는 부풀려진 아이템은 건드리지 않았다(S02).
+
+#### [2] 검증
+
+**로컬**: 바뀐 · 새 Luau 파일 10개 `luau-compile --binary` 전부 통과. 실제 `Loot` · `ArmorData` · `MonsterData` · `Option` 등을 스텁 하네스에 넣어 (가)를 돌렸다(3회 9/9). 하네스의 옛 LCG는 곱셈이 2^53을 넘어 편향이 있어 첫 실행에서 보스 δ 분포가 51.2%로 X가 났다 - 제품 원인이 아니라 하네스 난수였고, `math.random`으로 바꾸니 통과(실제 Roblox `Random`은 Play에서 통과). 공정성 `rewardPerTime`은 착수 전 하네스로 tier1 ~ 6 전부 1.305300000을 재 두었고 변경 뒤에도 같다.
+
+**Play 1회**(2026-09-19, 커밋 `b584321`): 콘솔이 앞부분이 잘려(`[TRUNCATED DUE TO LENGTH LIMIT]`) 뒤쪽만 보였으므로 **Studio 로그 파일**(`%LOCALAPPDATA%\Roblox\logs\…_Studio_…_last.log`)에서 `===… 검증 끝…===` 줄 전부와 `[S01]` 줄을 읽었다.
+
+| 검증 | 이번 Play | 비고 |
+|---|---|---|
+| **S01 (가)** | **9/9** | |
+| **S01 (나)** | **5/5** | |
+| 26-2 | 41/41 | 이전과 같음 |
+| 26-3 | 6/6 | 이전과 같음 |
+| 27-1 (가)(나) | 2/2 · 1/1 | 이전과 같음 |
+| 27-3 (가)(나) | 4/4 · 3/3 | 이전과 같음 |
+| 27-4 (가)(나) | 0/5 · 2/6 | **이전 Play(같은 로그 파일 앞쪽 2회)와 같은 수** - 기존 X, 이 세션 무관. (가)는 `보스/캐릭터 준비 실패 - 건너뜀`, (나)는 개발 계정의 `InfiniteStageBest`가 20이라 기대 7과 다르다(`setInfiniteStageDirect`는 best를 내리지 않는다) |
+| 29-1 (가)(나) | 7/7 · 24/25 | (나) X 1건은 이전 Play와 같은 항목(`파훼 실패: 플레이어 체력 100%(기대 45%)`) |
+| 29-2 (가)(나) | 41/41 · 32/32 | 이전과 같음 |
+| 29-3 (가)(나) | 13/13 · 25/25 | 앞선 Play 한 번은 (나) 24/25였다 - 이번엔 25/25 |
+| 29-4 (가)(나) | 18/18 · 19/19 | 이전과 같음 |
+| 29-5 (가)(나) | 13/13 · 11/11 | 이전과 같음 |
+
+서버 에러 · 경고: 내 Play 구간(약 8,500줄 이후)에 스크립트 에러 · `attempt to` · 스택 0건(로그 파일 전체 대조, Rojo · 그래픽 등 환경 경고만).
+
+#### [3] /gg 프로덕션 차단 감사 결과 (20.81 [C-2])
+
+방법: `roblox/src` 전체(server · shared · client)를 grep + 호출 그래프 스크립트(`audit.py` - 진입점마다 정의를 뺀 호출 줄을 파일별로 센다).
+
+| 항목 | 진입점 | 호출한 곳 | 판정 |
+|---|---|---|---|
+| `/gg` 명령 | `Player.Chatted` 연결 · `TextChatCommand("ForgeGG")` | `DevTools.server.lua` 안뿐. 스크립트 첫머리 `if not RunService:IsStudio() then return end`(20줄)가 모든 정의 앞에 있다 | O |
+| `debug` 접두 함수 | `BossEncounter.debugClearHints` · `debugAddMember` · `setDebugForcedBoss` · `BossMechanics.debugSetGate` · `BossPatterns.debugClocks` · `PartyCrossServer.debugWriteRecord` · `debugReadRecord` · `debugRemoveRecord` · `debugWriteMemberRecord` · `debugReadMemberRecord` · `debugIsArrivalWaiting` | 전부 `DevTools.server.lua` 또는 `*Verify.lua`뿐(그 밖 호출자 0) | O |
+| DevTools 전용 공개 함수(이름에 debug가 없는 것) | `BossPatterns.force`(→ `BossScheduler.force`는 이 함수만 부른다) · `PartyState.addDummies` · `clearDummies` · `PlayerProfile.setRebirthCountDirect` · `snapshotForDevTools` · `restoreForDevTools` · `setCharacterExpDirect` · `setInfiniteStageDirect` · `clearBossFirstClearRewards` · `TutorialState.stop` · `MonsterState.getBossHp` | `DevTools.server.lua` 또는 `*Verify.lua`뿐 | O |
+| 저장 차단 도구 | `SaveCoordinator.setDevToolsSuspended` | `DevTools.server.lua`뿐(3곳) | O |
+| `DevToolsConfig` | `allowedUserIds` | `DevTools.server.lua`의 `isAllowed`뿐 | O |
+| `*Verify` 모듈 5개 | `BossMechanicsVerify` · `BossSkillVerify` · `BossGimmickVerify` · `BossGimmick4Verify` · `BossGimmick5Verify`(+ 신규 `LootRuleVerify`) | `require`는 `DevTools.server.lua`뿐. 모듈 최상위(들여쓰기 0칸)에 `task.spawn` · `:Connect` · `Instance.new` 없음 - 공개 함수(`run` · `runPure` · `runLive` · `checkPlacement`)만 정의 | O |
+| 옵션 인자 | `PartyCrossServer.requestJoin(player, code, opts)`의 `opts.simulateArrival` · `opts.standIn` | 프로덕션 호출 2곳(`PartyServer.server.lua:181` · `PartyCrossServer.lua:710`)은 `opts`를 넘기지 않는다 | O |
+| RemoteEvent 핸들러 전수(22곳) | `AttackServer` · `ClassServer` · `DashServer` · `EnhanceServer` · `GemServer` 4 · `InventoryServer` 5 · `PartyServer` · `RebirthServer` · `SkillServer` · `StageServer` · `TutorialState` · `GemSync` · `InventorySync` | 전부 프로덕션 기능이다. 디버그 전용 핸들러 0. `PartyServer`의 action은 `invite · invite_remote · create · joincode · cancel_join · accept · decline`뿐 | O |
+| 클라의 `IsStudio` | `SkillSlots.client.lua` 110 · 410(터치 레이아웃 모의) | 표시 전용 - 서버 판정에 닿지 않는다 | 해당 없음 |
+
+**X 0건 → 가드를 추가한 곳 없음**(구조 변경 0). 자동 검증(6번): 서버 시작 때 `[DevTools] /gg 명령 인스턴스 있음=true · IsStudio=true (기대: 같은 값)` 출력 확인(Play 로그). 프로덕션 쪽은 "스크립트가 첫머리에서 return하므로 명령 인스턴스가 만들어지지 않는다"는 호출 그래프가 증명한다.
+
+참고(감사 대상 밖, 판정 변경 없음): `PlayerProfile.setWeaponGrade` · `setEquippedDirect`는 주석이 "DevTools 전용"이라 하지만 견습 모드의 무기 · 장비 대여(`TutorialState.applyLend`, 정식 경로)도 부른다 - 디버그 진입점이 아니라서 IsStudio 가드를 넣으면 프로덕션 견습이 깨지므로 넣지 않았다. 주석만 낡았다(보고).
+
+#### [4] 합격 기준
+
+| # | 항목 | 결과 | 근거 |
+|---|---|---|---|
+| 1 | (가) 9/9 · (나) 5/5 | **O** | `===S01 검증 끝(가)=== 9/9 통과` · `===S01 검증 끝(나)=== 5/5 통과` |
+| 2 | 기존 검증 회귀 없음 | **O** | 위 [2] 표 - 26-2 41/41 · 26-3 6/6 · 27-1 · 27-3 · 29-2 ~ 29-5 이전과 같은 수. 27-4 · 29-1(나)의 기존 X는 같은 수(이 세션 무관) |
+| 3 | 공정성 로그 tier1 ~ 6 동일 | **O** | 서버 시작 로그 `시간당보상=1.3053` × 6 · (가) 9번 |
+| 4 | /gg 감사 표에 X 0건 | **O** | [3] |
+| 5 | 서버 에러 · 경고 0(읽은 구간) | **O** | 로그 파일 전체 대조 |
+| 6 | `SAVE_VERSION` 불변 | **O** | 저장 스키마 변경 없음(`git diff`에 `SaveSystem.lua` 없음) |
+| ★① | (가) 6번 + (나) 10번: tier6에서도 itemLevel이 기준 스테이지 ±2 안 | **O** | (가) 63,087개 전부 98 ~ 102 · (나) 레벨 100 · 스테이지 40 · tier6 30마리 처치 → 드랍 35개 itemLevel 38 ~ 42 |
+| ★② | (나) 11 · 12번: 보스 드랍이 어떤 경우에도 아레나에 남지 않는다 | **O** | 첫 클리어: 가방 0→1 · 땅 0개 · `ItemPickedUp` 1회 / 재도전 + 가방 가득: 땅 1개가 플레이어에게서 4.3stud · 아레나에서 3,000stud · 복귀 확인 · 가득 알림 1회 |
+
+(나) 세부: 10 = 위 ★① · 11 = itemLevel 11(스테이지 10 + δ 1) · 12 = 재도전 등급 normal · 13 = 계정 최고 80(직업 A 80 · 직업 B 10 · 지금 스테이지 1) · Attribute 80 · 14 = 검증 뒤 고아 보스 0 · 남은 드랍 0 · 가방 15→15 · 골드 10,394→10,394.
+
+#### [5] 사람이 확인할 것
+
+없음 - 연출 · 밸런스 체감 변경이 없다(itemLevel 분포와 보스 드랍 경로는 자동 검증이 수치로 닫았다). 굳이 보고 싶다면: 보스를 깬 직후 획득 팝업이 가방에 바로 뜨는지(Studio Play에서 `/gg boss`로 보스 전투 후).
+
+#### [6] 미결
+
+없음.
+
+#### [7] 지시와 코드가 달랐던 점 · 임의 결정
+
+1. `Loot.rollBossRetryDrop`은 배열이 아니라 **아이템 하나**를 돌려준다(확정 1개, 지시의 시그니처 표에 반환형이 없어 첫 클리어 함수와 맞췄다). `rollArmorDrop`만 배열.
+2. 클라가 변환권 가격을 스스로 계산하고 있었다(`InventoryUI.currentStageGoldReward` - `InfiniteStage` Attribute). "같은 기준으로 맞춘다" 지시에 따라 Attribute `AccountBestStage`를 새로 내렸다(저장 필드 아님). 값 갱신 자리는 `PlayerProfile`의 로드 · 직업 전환 · `setInfiniteStage`(새 기록) · `setInfiniteStageDirect` 넷이다.
+3. 가방이 가득인 보스 드랍은 스폰 직후 `ItemDropState.setFullNotified(model, true)`로 표시한다 - 안 하면 줍기 판정(`ItemDropServer.tryPickup`)이 같은 모델에서 `notifyFull`을 한 번 더 보내 "가득 알림 1회" 합격 기준(나 12)을 깬다.
+4. 보스 드랍 통계 카운터 `CombatResolution.dropStats()`(가방 직행 · 땅 · 가득 알림 횟수)를 검증용으로 신설했다(`GroundProbe.stats`와 같은 결). 복귀 위치 함수는 `BossEncounter.huntingGroundReturnPosition`으로 노출(캐릭터 루트가 없을 때의 대체 위치).
+5. (나) 10번은 몬스터를 새로 만들지 않고 **실제 tier6 구역 몬스터**(구역당 9마리 · 5초 뒤 스스로 리스폰)를 30마리 잡는다(4바퀴 훑음). 접두사 · 반짝이 변종이 섞였다(itemLevel 범위 검사엔 무관). `MonsterSpawner.spawn(zoneKey=nil)`로 만들면 `despawn`이 고아 리스폰을 남기기 때문이다.
+6. (나) 13번의 가격 검사: 가격 함수가 `GemServer.server.lua`(Script)의 지역 함수라 검증이 직접 부를 수 없다. `getAccountBestStage` = 80 · Attribute = 80을 확인하고, 같은 식(`InfiniteStage.getGoldReward × rerollTicketGoldMultiplier`)에 80을 넣은 값(21,095,400)이 스테이지 1을 넣은 값(240)보다 큼을 확인했다. 서버가 그 식에 `getAccountBestStage`를 넣는 것은 코드 한 줄이다.
+7. 검증의 공정성 기준값 `1.3053`은 착수 전에 재 둔 값을 `LootRuleVerify`에 상수로 적었다(검증 기대값이지 밸런스 수치가 아니다).
+8. (가)는 서버 시작 때 DevTools 끝의 별도 `task.spawn`으로 돌고, (나)만 29-1 체인 끝(`S01(나)`)에 붙였다.
+9. 검증 (나)는 가방(`profile.inventory`)을 직접 백업 · 복원한다 - `snapshotForDevTools`는 `classes` · `gold`만 되돌린다. 캐릭터 위치도 검증 전 자리로 되돌린다.
+
+#### [8] 보고 (범위 밖 - 고치지 않았다)
+
+- 개발 계정 세이브에 옛 규칙의 부풀려진 itemLevel 아이템이 남아 있다 - S02(비가역 이관).
+- 27-4 (가) 0/5 · (나) 2/6 · 29-1 (나) 24/25는 이 세션 전부터 같은 수의 X다(위 [2]). 원인 조사는 하지 않았다.
+- 낡은 주석: `BossRules.lua:207` 근처(재도전이 `rollArmorDrop`을 탄다고 적혀 있다) · `PlayerProfile.setWeaponGrade` · `setEquippedDirect`("DevTools 전용" - 견습 대여가 부른다) · `ArmorData.lua` 머리 주석의 "획득 시점 캐릭터 레벨".
+- 콘솔 출력 도구는 앞부분이 잘리므로 Play 결과는 Studio 로그 파일에서 읽는 것이 확실하다.
+- 다음 세션이 알아야 할 것: `Loot.rollArmorDrop`의 반환이 **배열**로 바뀌었다(S04 이후 강화석 드랍이 `Loot.rollCount`를 쓴다). 잡몹이 한 번에 여러 개를 떨어뜨릴 수 있다 - tier6 거대한(×3)은 평균 3.15개.
+
+**변경 파일**: `roblox/src/shared/Loot.lua` · `shared/data/ArmorData.lua` · `shared/data/MonsterData.lua` · `server/CombatResolution.lua` · `TutorialState.lua` · `BossEncounter.lua` · `PlayerProfile.lua` · `GemServer.server.lua` · `DevTools.server.lua` · `LootRuleVerify.lua`(신규) · `client/InventoryUI.client.lua` · `PRD-forge-game-roblox.md`(이 절 + 20.72 [7] 미결 3 · 11 · 20.81 [A](1) 1 ~ 4번 표시) · `docs/sonnet/README.md`.
