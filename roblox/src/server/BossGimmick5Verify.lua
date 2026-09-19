@@ -173,11 +173,65 @@ local function checkCrystal(r)
 	end)
 end
 
+-- [9][10][11] 6종 튜닝(PRD 20.80 [D]) - 기믹이 전부 켜진 상태의 몬테카를로·회피 부등식·2연타·첫 기믹.
+--   파훼 후 = 구간 수호자의 같은 인원 평균 ±10% / 초회(파훼 전) = 파훼 후의 1.8 ~ 2.7배 / 회피 부등식은 배율 1과 최대 배율 둘 다 /
+--   인접 쌍의 "실수 2회" 합 100% 미만 / 첫 기믹은 자리 비우기로 보장된 시각(서리 16 · 폭풍 8 · 나머지 10초)에.
+local TUNING_RUNS = 100
+local function checkTuning(r)
+	local ids = BossData.pools[1].bossIds
+	r.section("6종 몬테카를로", function()
+		local base = {}
+		for _, n in ipairs({ 1, 4 }) do
+			base[n] = BossSim.monteCarlo(GUARDIAN, { partySize = n, breaks = "always" }, TUNING_RUNS).mean
+		end
+		for _, bossId in ipairs(ids) do
+			if bossId ~= GUARDIAN then
+				local cells, ok = {}, true
+				for _, n in ipairs({ 1, 4 }) do
+					local after = BossSim.monteCarlo(bossId, { partySize = n, breaks = "always" }, TUNING_RUNS)
+					local never = BossSim.monteCarlo(bossId, { partySize = n, breaks = "never" }, TUNING_RUNS)
+					local delta, ratio = after.mean / base[n] - 1, never.mean / after.mean
+					ok = ok and math.abs(delta) <= 0.10 and ratio >= 1.8 and ratio <= 2.7 and after.minGimmickCount >= 1
+					table.insert(cells, ("%d인 파훼 후 %.1f초(%+.1f%%) · 초회 %.1f초(x%.2f) · 첫 기믹 %.2f초·최소 %d회"):format(
+						n, after.mean, delta * 100, never.mean, ratio, after.latestFirstGimmickAt, after.minGimmickCount))
+				end
+				r.check(("%s: %s"):format(bossId, table.concat(cells, " | ")), ok)
+			end
+		end
+	end)
+	r.section("6종 회피 부등식·2연타", function()
+		local rows, failed, pairCount, violations, worst = 0, {}, 0, 0, 0
+		for _, bossId in ipairs(ids) do
+			for _, scale in ipairs({ 1, BossRules.maxSkillRangeScale() }) do
+				local checks = BossSim.checkDodge(bossId, scale, WorldConfig.playerWalkSpeedStuds)
+				for _, check in ipairs(checks) do
+					rows += 1
+					if not check.ok then
+						table.insert(failed, ("%s.%s x%.2f"):format(bossId, check.skillId, scale))
+					end
+				end
+			end
+			local pairRows, bad = BossSim.checkPairs(bossId)
+			pairCount += #pairRows
+			violations += bad
+			for _, row in ipairs(pairRows) do
+				if row.possible then
+					worst = math.max(worst, row.share)
+				end
+			end
+		end
+		r.check(("회피 부등식 %d판정(6종 × 배율 1·최대, 속도 %d) 실패 %d건%s · 인접 쌍 %d개 중 100%% 이상인 가능한 쌍 %d건(최악 %.1f%%)"):format(
+			rows, WorldConfig.playerWalkSpeedStuds, #failed, #failed > 0 and (" [" .. table.concat(failed, ", ") .. "]") or "", pairCount, violations, worst * 100),
+			#failed == 0 and violations == 0 and worst < 1)
+	end)
+end
+
 local function runPure()
-	print("===29-5 검증 시작(가: 배치표·수정 여왕)===")
+	print("===29-5 검증 시작(가: 배치표·수정 여왕·6종 튜닝)===")
 	local r = newRecorder("가")
 	BossGimmick5Verify.checkPlacement(r)
 	checkCrystal(r)
+	checkTuning(r)
 	local pass, total = r.summary()
 	print(("===29-5 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 end

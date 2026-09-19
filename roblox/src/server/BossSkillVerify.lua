@@ -36,10 +36,10 @@ local GUARDIAN_BASELINE = {
 }
 -- 결정 모형의 기대값(로컬 하네스와 같은 BossSim) - { live 솔로, live 4인, design 파훼 후 솔로, 4인, 파훼 전 솔로, 4인 }.
 local EXPECTED_SECONDS = {
-	frost_giant = { 73.40, 35.10, 73.40, 35.10, 197.95, 82.95 }, -- 29-3: 포효가 켜졌다(지금 = 설계). 첫 포효 16초·낙빙 선행
+	frost_giant = { 72.40, 35.10, 72.40, 35.10, 187.70, 72.50 }, -- 29-5 튜닝: 포효 쿨 20 → 21(전 73.40 · 197.95 / 82.95)
 	abyssal_lord = { 76.70, 36.10, 76.70, 36.10, 203.35, 92.80 }, -- 29-4: 범람이 켜졌다(지금 = 설계). 회피 3.5초 + 방전 뒤 3초 x1.3
 	crystal_queen = { 74.00, 36.10, 74.00, 36.10, 194.60, 83.80 }, -- 29-5: 분열이 켜져 지금 = 설계(전에는 76.65 / 37.80)
-	scorpion_queen = { 73.70, 35.45, 73.70, 35.45, 214.25, 83.70 }, -- 29-3: 갑각 태세가 켜졌다(지금 = 설계)
+	scorpion_queen = { 73.70, 35.45, 73.70, 35.45, 147.25, 66.15 }, -- 29-5: 모형 교정 - 갑각의 판정 실패는 잡지 않는다(전 214.25 / 83.70)
 	storm_lord = { 69.15, 34.50, 69.15, 34.50, 170.90, 74.35 }, -- 29-4: 장막(낙뢰가 판정)·과충전이 켜졌다(지금 = 설계). 연쇄 번개 → 회오리
 }
 local SIM_TOLERANCE_SECONDS = 0.06
@@ -203,7 +203,7 @@ local function runPure()
 				afterBySize[n] = after.mean
 				local hasGimmick = bossId ~= GUARDIAN
 				local inBand = math.abs(after.mean / reference[n] - 1) <= 0.10 and math.abs(live.mean / reference[n] - 1) <= 0.10
-				local gated = not hasGimmick or never.mean / after.mean >= 2
+				local gated = not hasGimmick or never.mean / after.mean >= 1.8 -- 29-5: 허용 구간의 아래 끝(1.8 ~ 2.7). 전갈 여왕은 모형 교정 뒤 x1.98 / x1.83
 				-- 첫 기믹 = 자리 비우기(reserveFirstUse)를 건 스킬의 첫 발동 시각(서리 거인 16 · 폭풍 군주 8 · 나머지 10).
 				local firstExpected = 0
 				for _, id in ipairs(BossData.bosses[bossId].skillOrder) do

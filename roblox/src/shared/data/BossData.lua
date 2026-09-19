@@ -388,7 +388,9 @@ local SPECIES = {
 			--     (dodge.distanceStuds, 2.92초 ≤ 3.0) - 남는 1stud가 여유다.
 			roar = {
 				primitive = "gimmick", bubble = "roar", role = "gimmick", kind = "behindProp",
-				cooldownSeconds = 20, firstAvailableSeconds = 16, reserveFirstUse = true, priority = P.gimmick,
+				-- 쿨 21(29-5 튜닝 - 전 20): 몬테카를로 200회에서 초회 ÷ 파훼 후가 x2.71로 허용 구간(1.8 ~ 2.7)을 넘었다 → x2.60. 세 박자
+				-- (낙빙 → 포효 → 강타)와 첫 포효 16초·기둥 3개는 그대로다(실제 BossPatterns 300초 로그).
+				cooldownSeconds = 21, firstAvailableSeconds = 16, reserveFirstUse = true, priority = P.gimmick,
 				precondition = { type = "membersNearSafeSpot", prop = "pillar", studs = 27, marginStuds = 2, otherwise = "icefall" },
 				telegraphSeconds = 3.0, recoverSeconds = 1.0,
 				dodge = { distanceStuds = 31 },

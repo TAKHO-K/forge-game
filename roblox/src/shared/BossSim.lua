@@ -59,7 +59,9 @@ end
 -- 실패해도 잡히지 않는다. judgesGate = false(과충전)는 게이트를 안 바꾸는 기믹이다.
 local function gateRoleOf(skill)
 	if skill.primitive == "gimmick" then
-		return skill.judgesGate ~= false, true, skill.breakWindow
+		-- failPenalty = false(29-3 갑각 태세): 판정 실패에 잡힘이 없다 - 실패의 값은 반사로 이미 치렀다(속박은 피할 수 있는 꼬리에서만
+		-- 온다). 29-5 튜닝에서 바로잡았다 - 그 전의 모형은 이 기믹도 실패마다 9초 잡힌다고 세어 전갈 여왕의 파훼 전 시간을 부풀렸다.
+		return skill.judgesGate ~= false, skill.failPenalty ~= false, skill.breakWindow
 	elseif skill.gate then
 		return true, false, skill.gate.breakWindow
 	end
