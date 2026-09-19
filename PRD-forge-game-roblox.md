@@ -11521,10 +11521,10 @@ k로 성장)이 같이 멈추고, 몬스터 공격력은 k^S로 계속 자라므
 | 1 | 드랍 itemLevel 규칙 | `Loot`의 4개 드랍 함수: itemLevel = S + δ(삼각), tier 곱셈 제거, 기대 드랍 수 헬퍼(`r^(p−1)`·접두사), 보스 편향·재도전 확정 1개. `CombatResolution` 호출부는 레벨 대신 스테이지를 넘긴다 | `/gg droptest <stage> <tier> <n>` - δ 분포 1:2:3:2:1, tier별 기대 개수, 보스 δ ≥ 0. 공정성 로그(`MonsterData.fairnessCheck`)를 새 식으로 | **가능** - `Loot.lua`·`MonsterData.lua` 복원. 저장 스키마 불변 |
 | 2 | `[✅ 30-0 S03(20.84)에서 구현]` 강화 확률표·골드표·천장 | `EnhanceConfig` 표 교체([1-2]·[1-5]), `Enhance.getOutcomeTable`·`tryEnhance(level, gauge, flags)`, 행 합 검사, `weapon.enhanceGauge`(SAVE +1). 19강 이상은 임시로 골드만 | 자동 검증 블록(26-2 패턴): 단계별 20만 회 샘플링 분포, 천장 n번째 확정, 바닥 18·12, 0→19 기대 골드 498,8xx | **가능** - 표 복원 + 필드 무시 |
 | 3 | `[✅ 30-0 S04(20.85)에서 구현]` 강화석 2종 | `shared/data/EnhanceMaterialData.lua`(id·minStage·dropChance·시도당 소모량), `materials`(SAVE +1), `grantKillReward`·보스·상자·반짝이 지급, `EnhanceServer` 소모, 획득 팝업 | `/gg killtest`로 스테이지 49/50/74/75 경계, tier·접두사 기대 개수, 부족 시 거절 | 이 단계부터 **새 재화가 세이브에 생긴다** - 되돌리면 재화가 고아가 된다(미퍼블리시라 실제 비용은 없음) |
-| 4 | 방지권 2종 | `purchases.protectionTickets`·`protectionClaimedStages`(SAVE +1), 요청 인자 2개, "막았을 때만 소모", 상점(계정 최고 스테이지 × 300/900), 보스 계정 첫 클리어 지급 | 자동 검증: 토글별 결과 분포, 소모 시점, 부캐로 같은 스테이지 재클리어 시 미지급, 가격 기준이 현재 스테이지가 아님 | 3과 같다 |
+| 4 | `[✅ 30-0 S05(20.86)에서 구현 - 받은 스테이지 키는 문자열]` 방지권 2종 | `purchases.protectionTickets`·`protectionClaimedStages`(SAVE +1), 요청 인자 2개, "막았을 때만 소모", 상점(계정 최고 스테이지 × 300/900), 보스 계정 첫 클리어 지급 | 자동 검증: 토글별 결과 분포, 소모 시점, 부캐로 같은 스테이지 재클리어 시 미지급, 가격 기준이 현재 스테이지가 아님 | 3과 같다 |
 | 5 | 강화 UI | [1-8] - `EnhanceOddsPanel.lua`, 확률표 5행·되는 단계·게이지·토글·구매·구간 진입 확인창·도움말 문구 | 스크린샷: 0~18 / 19 / 22강, 토글 전후 합 100%, 기운 100% 상태 | 가능(클라 전용) |
 | 6 | 이펙트·사거리 | [1-9] - `WeaponVisual`에 단계 → 이펙트 표(`data/`에 표), `PlayerCombat.getAttackRange`에 강화 사거리, 20강+ 채팅 공지 | 단계별 스크린샷, 사거리 상한 24.6 유지 | 가능 |
-| 7 | 규제 관문 | `server/EnhancePolicy.lua` + 접속 시 PolicyService 캐시, `paidInputIds = {}` | 빈 표에서 분기 미진입, 강제로 id를 넣고 제한=true 주입 시 거절 | 가능 |
+| 7 | `[✅ 30-0 S05(20.86)에서 구현]` 규제 관문 | `server/EnhancePolicy.lua` + 접속 시 PolicyService 캐시, `paidInputIds = {}` | 빈 표에서 분기 미진입, 강제로 id를 넣고 제한=true 주입 시 거절 | 가능 |
 | 8 | 세이브 값 이관 | [2-7] `itemLevel = min(itemLevel, dropStage + 2)` + `isValidProfile` 불변식(SAVE +1) | 합성 프로필(부풀려진 420·정상·경계) 자체검증 | **불가능** - 원래 값을 버린다. 그래서 1단계 검증이 끝난 뒤 맨 마지막에 둔다 |
 
 **되돌릴 수 있는 지점**: 1·2단계 끝까지는 데이터 표와 순수 함수 교체라 파일 복원으로 완전히
@@ -14884,8 +14884,8 @@ t=12.0 끝 → 전역 쿨 6초
 |---|---|---|---|---|
 | 7 | `[✅ S03(20.84)에서 구현]` 강화 확률표 · 골드표 · 천장("장인의 기운") | 20.72 [1-2] · [1-5] · [1-6] · [5] 2단계 | S02 | S · S03 |
 | 8 | `[✅ S04(20.85)에서 구현]` 강화석 2종 + 재료 × 경험치 배수 | 20.72 [1-5](나) · [2-8] · [5] 3단계 + **이 절 [B-4]** | S03 | S · S04 |
-| 9 | 방지권 2종 · 상점 · 보스 계정 첫 클리어 지급 | 20.72 [1-3] · [5] 4단계 | S04 · S01(헬퍼) | S · S05 |
-| 10 | 규제 관문 `EnhancePolicy` | 20.72 [1-6] 4번 · [5] 7단계 | S05 | S · S05(같은 세션 끝) |
+| 9 | `[✅ S05(20.86)에서 구현]` 방지권 2종 · 상점 · 보스 계정 첫 클리어 지급 | 20.72 [1-3] · [5] 4단계 | S04 · S01(헬퍼) | S · S05 |
+| 10 | `[✅ S05(20.86)에서 구현]` 규제 관문 `EnhancePolicy` | 20.72 [1-6] 4번 · [5] 7단계 | S05 | S · S05(같은 세션 끝) |
 | 11 | 강화 UI(확률표 5행 · 되는 단계 · 게이지 · 토글 · 구매 · 구간 진입 확인창) | 20.72 [1-8] · [5] 5단계 | S05 · **S06(GUI 틀)** | S · S07 |
 | 12 | 강화 이펙트 · 사거리 · 20강+ 채팅 공지 | 20.72 [1-9] · [5] 6단계 + [E] "보석 홈을 가리지 않는다" | S07 | S · S08 |
 | 13 | 파티 경험치 +10/15/20% · 경험치 칩 · 도움말 문구 교체 | 20.73 [5-1] · [6] | 없음(S04보다 뒤면 재료 배수가 자동으로 따라온다) | S · S09 |
@@ -15654,3 +15654,86 @@ UI 확인의 클릭 1회는 **실제 강화**라 개발 계정의 무기가 **+1
 - 진짜 합격 ★② (나) 9번은 m = 1.125에서 판별력이 약하다([3]) - 이 검사를 강하게 만들려면 tier6 × 접두사 ×3(기대 13.26 vs 14.9) 같은 개수가 큰 대상으로 재는 항목이 필요하다(Play 횟수 상한 때문에 이번에는 안 했다).
 
 **변경 파일**: `roblox/src/shared/data/EnhanceMaterialData.lua`(신규) · `shared/data/SaveConfig.lua` · `shared/Loot.lua` · `server/SaveSystem.lua` · `PlayerProfile.lua` · `MonsterState.lua` · `CombatResolution.lua` · `EnhanceService.lua` · `EnhanceVerify.lua` · `LootRuleVerify.lua`(주석만) · `DevTools.server.lua` · `client/MaterialHud.client.lua`(신규) · `client/EnhanceUI.client.lua` · `PRD-forge-game-roblox.md`(이 절 + 20.72 [5] 3단계 · 20.81 [A](2) 8번 · 20.73 미결 5 표시 · 20.83 [8] · 20.84 [8]에 닫힘 표시) · `docs/sonnet/README.md`.
+
+
+---
+
+### 20.86 S05 방지권 2종 · 상점 · 보스 계정 첫 클리어 지급 · 규제 관문 (S05) `[✅ 구현 + 로컬 하네스 (가) 11/11 · 서비스 배선 하네스 + Studio Play 3회(2026-09-20): (가) 11/11 · (나) 7/7 · 기존 검증 회귀 없음 · 재접속(DataStore 왕복) 검증 통과 · 팝업 확인. 미결 1건([6] - 범위 밖 기존 결함)]`
+
+20.72 [1-3] · [1-6] 4 · 5번 · [1-7] · [5] 4 · 7단계와 20.73 [4-1]을 구현했다. 하락 방지권 · 초기화 방지권 2종을 만들었다: 결과를 **원래 확률표로 굴린 뒤 실제로 막았을 때만 1장 소모**, 골드로만 산다(계정 최고 스테이지 × 300 / 900마리분), 보스 스테이지 50 · 75 · 100 · 125 · 이후 25마다 **계정 단위 1회** 공짜로 나온다. Robux 재료가 붙을 자리(`EnhancePolicy`)는 빈 채로 만들었다. UI(토글 · 구매 버튼 · 확인창)는 S07 몫이라 이 세션은 `/gg ticket`으로 같은 서버 함수를 부른다.
+
+#### [1] 무엇을 했나
+
+| 단계 | 내용 | 파일 |
+|---|---|---|
+| 1 | `EnhanceConfig.protection = { drop = {19강부터, 300마리분}, reset = {22강부터, 900마리분}, bossGrant = { firstStage = 50, stepStages = 25, resetFromStage = 100 } }` · `paidInputIds = {}`(지시서 그대로) | `shared/data/EnhanceConfig.lua` |
+| 2 | 저장 `purchases.protectionTickets = { drop, reset }` · `purchases.protectionClaimedStages`(계정 공유): `saveVersion` 26 → **27** · `migrate` v26 → v27(0장 · 빈 집합 - 이미 깬 보스도 한 번 더 깨면 받는다, 이미 있는 값은 유지) · `isValidProfile`(장수는 0 이상 정수). `PlayerProfile.getProtectionTicket` · `addProtectionTicket` · `trySpendProtectionTicket` · `hasClaimedProtectionStage` · `markProtectionStageClaimed`, Attribute `ProtectionDrop` · `ProtectionReset`. DevTools 백업 · 복원도 이 둘을 담는다. **받은 스테이지의 키는 문자열이다**([7] 1번) | `SaveConfig.lua` · `SaveSystem.lua` · `PlayerProfile.lua` |
+| 3 | 판정: `Enhance.rollResult` · `applyProtection` · `resolveProtectionFlags` · `tryEnhance`(방지권 없는 **원래 표**로 굴린 뒤 하락이고 하락 방지 on이면 유지로, 초기화이고 초기화 방지 on이면 유지로 바꾸고 `blockedBy`를 돌려준다 - 막힌 시도도 실패라 게이지가 찬다). `EnhanceRequest(useDropTicket, useResetTicket)` - 서버 재검증(보유 ≥ 1 · 단계 ≥ `usableFromLevel` · 게이지가 가득이 아님, 아니면 그 플래그만 **조용히 false** - 요청 거절이 아니다), `blockedBy`가 있을 때만 그 방지권 1장 차감, payload에 `blockedBy` · `ticketsLeft = { drop, reset }` | `shared/Enhance.lua` · `server/EnhanceService.lua` · `EnhanceServer.server.lua` |
+| 4 | 상점: `ProtectionTickets.tryBuy`(강화대 근접 필수 · 가격 = `InfiniteStage.getGoldReward(tier1.goldDrop, 계정 최고 스테이지) × priceKillEquivalent`(`Enhance.getProtectionPrice`) · 골드 차감 · 즉시 저장) / `getPrices` → `{ drop, reset, accountBestStage }`. RemoteEvent `ProtectionTicketBuyRequest(kind)` / `ProtectionTicketBuyResult` · RemoteFunction `ProtectionTicketPriceRequest` | `server/ProtectionTickets.lua`(신규) · `ProtectionTicketServer.server.lua`(신규) |
+| 5 | 보스 계정 첫 클리어 지급: `handleBossDeath`가 **기여 10%를 넘긴 수령자마다** `ProtectionTickets.grantForBoss(member, stage)` - 지급 스테이지(`Enhance.getBossGrant`)이고 `protectionClaimedStages`에 없으면 지급 + 표시 + RemoteEvent `ProtectionTicketGranted(kind, count, stage)`(클라 `MaterialHud`가 재료 팝업과 같은 모양으로 "+1 하락 방지권"). 저장은 바로 아래의 기존 `ImmediateSave.request`에 실린다(요청은 그대로 1회). **직업별 `bossFirstClearStages`와 별개 집합**이라 부캐로 같은 스테이지를 깨도 방지권은 안 나온다(장비 확정 드랍은 직업별이라 나온다). 견습 보스는 다른 경로라 대상이 아니다. `ImmediateSave.getRequestCount`(검증용 카운터 - `CombatResolution.dropStats`와 같은 결) 신설 | `CombatResolution.lua` · `ImmediateSave.lua` · `client/MaterialHud.client.lua` |
+| 6 | 규제 관문: `EnhancePolicy.cacheFor`(접속 시 1회 `GetPolicyInfoForPlayerAsync`를 `pcall` - 실패하면 "제한됨") · `canAttempt(player, inputIds)`(**캐시만 읽는다 - yield 없음**, 캐시가 아직 없어도 제한됨으로 본다) · 순수 핵심 `evaluate(inputIds, paidInputIds, restricted)` · `PlayerRemoving`에 캐시 삭제. 핸들러가 **차감 전**에 부른다(`inputIds` = `gold` · 재료 id · `dropTicket` · `resetTicket`). 지금은 `paidInputIds`가 비어 있어 이 분기는 절대 안 탄다 | `server/EnhancePolicy.lua`(신규) · `EnhanceService.lua` |
+| 7 | DevTools: `/gg ticket <drop\|reset> <n>` · `/gg ticket buy <kind>`(실제 상점 함수) · `/gg ticket claims`(받은 스테이지 + **실제 키 타입**) + 재접속 검증 보조 `/gg ticket grantboss <스테이지>` · `/gg ticket clear`(개발 계정 정리 - 백업이 살아 있으면 거절) · 도움말 등록 | `DevTools.server.lua` |
+| 검증 | `EnhanceVerify.lua`의 S05 구역: `runPureS05`((가) 11항목 - 서버 시작 때) · `runLiveS05`((나) 7항목 - 검증 체인의 끝, S04 (나) 다음) | `server/EnhanceVerify.lua` · `DevTools.server.lua` |
+
+#### [2] 검증
+
+**로컬**: 바뀐 · 새 파일 15개 `luau-compile --binary` 통과. 실제 `Enhance` · `Loot` · `SaveSystem` · `EnhancePolicy` 등을 하네스에 넣어 (가) **11/11 × 2회**(수정 전후) · 기존 S03 (가) 10/10 · S04 (가) 5/5(새 `tryEnhance`에서도). **`EnhanceService.handleRequest` 배선**은 (나)의 지시서 항목에 없어서(순수 함수만 (가)가 본다) 실제 서비스 코드를 가짜 프로필 위에서 돌리는 하네스로 따로 확인했다: 23강 · 방지권 충분 · 2만 시도에서 하락 방지 1,167회(5.8%) · 초기화 방지 177회(0.9%) · 소모 = 막은 횟수와 정확히 같고(어긋남 0) · 음수 0 · 막힌 시도는 항상 유지 + 게이지 참 / 보유 3 · 1장이면 3 · 1회 막고 바닥나면 이후는 그냥 강화 / 토글 off · 18강에서 on · 21강 초기화만 on · 보유 0에서 on은 소모 0. (이 하네스는 Play 횟수 상한 때문에 라이브로 못 잰 부분의 대체이고, 실제 Player 위에서의 서비스 호출은 UI가 붙는 S07에서 잰다.)
+
+**Play 3회**(2026-09-20, 결과는 Studio 로그 파일 폴링으로 읽었다):
+
+| 회차 | 커밋 | 내용 | 결과 |
+|---|---|---|---|
+| 1회차 | `5ed7077` | 자동 검증 체인: (가) **11/11** · (나) **7/7** · 기존 검증 수치 이전과 동일(S04 9/9 · S03 5/5 포함) · 가방 지문 0 → 0. 이어서 `/gg ticket claims`로 로드된 개발 계정의 키 타입을 읽었다 → `bossFirstClearStages`가 **`5(string) 10(string) 20(string)`**([7] 1번 - 저장 형식을 문자열 키로 바꾼 이유) | 통과 + 결함 발견 |
+| 2회차 | `007e507` | 문자열 키로 수정 후 체인 재실행 (가) 11/11 · (나) **7/7**(저장 키 `50`(string) 확인 추가). 이어서 **재접속 검증 A**: `/gg ticket grantboss 50`(하락 +1 · 받은 스테이지 50) → `/gg save unlock`(저장 성공) → Play 정지 | O |
+| 3회차 | 같은 커밋 | Play를 다시 켜서(프로필 재로드) 체인 재실행 (가) 11/11 · (나) 7/7 · 가방 지문 같음. **재접속 검증 B**: `/gg ticket claims` → `50(string)` · 하락 1장이 **유지**되고, `/gg ticket grantboss 50`을 다시 부르면 **`+0 · +0`**(이미 받음). 이어서 정리(`/gg reset` → `/gg ticket clear` → `받은 스테이지: 없음 · 보유 0 · 0` 저장). 팝업: 클라이언트에서 `MaterialPopupGui` 텍스트를 기록 `+1 초기화 방지권 | +1 하락 방지권`(`/gg ticket grantboss 100`), Attribute `ProtectionDrop` · `ProtectionReset`이 지급 뒤 복원 전까지 갱신됨 | O |
+
+기존 검증은 이전과 같은 수다: 26-2 41/41 · 26-3 6/6 · 27-1 2/2 · 1/1 · 27-3 4/4 · 3/3 · 29-1 7/7 · 24/25 · 29-2 41/41 · 32/32 · 29-3 13/13 · 25/25 · 29-4 18/18 · 19/19 · 29-5 13/13 · 11/11 · S01 9/9 · 5/5 · S02 9/9 · 1/1 · S03 10/10 · 5/5 · S04 5/5 · 9/9. 기존 X(27-4 (가) 0/5 · (나) 2/6 · 29-1 (나) 24/25)는 20.82 [2] · 20.84 [2] · 20.85 [2]와 같은 수. 서버 스크립트 에러 · 검증 블록 에러 0. 로그에 `invalid_schema` 없음 - 실제 계정이 v26 → v27로 로드됐다.
+
+**(가) 11항목**(3회차 Play 값): ① `bossGrant` 식: 45 · 50 · 55 · 75 · 100 · 125 · 130 · 150 → 없음 · 하락 · 없음 · 하락 · 둘 다 · 둘 다 · 없음 · 둘 다 ② 계정 최고 83: 하락 243,778,200 = 스테이지 83 잡몹 1마리당 골드 812,594 × 300 · 초기화 731,334,600 = × 900 ③ 23강 · 하락 방지 on · 20만 회: 성공/유지/하락/초기화 = 11.84/87.15/0/0/1.01%(기대 12/87/0/0/1) · 소모 ÷ 시도 0.0592(기대 0.06 ± 0.003) ④ 3번의 분포 = `getOutcomeTable(23, false, true, false)` ⑤ 23강 · 둘 다 on: 11.85/88.15/0/0/0%(기대 12/88/0/0/0) · 초기화 방지권 소모율 0.0099(기대 0.01 ± 0.002) · 하락 방지권 소모율 0.0604 ⑥ 19 ~ 24강 × 5만 회(총 30만 · 막은 시도 23,422): **원래 결과가 성공 · 유지인데 방지권이 빠진 시도 0건** ★ · 막을 수 있는 하락 · 초기화를 못 막은 시도 0건 ⑦ 18강 하락 방지 · 21강 초기화 방지 · 보유 0 · boolean 아닌 값 → 전부 false 처리 · 플래그 false로 1만 회 강화 소모 0 ⑧ 게이지 가득 + 방지 on → 성공 · 소모 0 · 게이지 0 ⑨ 롤 0.95(원래 하락) · 하락 방지 on → 유지 · 게이지 100 → 160(막힌 시도도 실패라 찬다) · 방지권 없이는 하락 · 게이지 160 ⑩ `EnhancePolicy.evaluate`: 제품 표(0개)에 제한 true를 넣어도 통과 · 사본 표에 `enhanceStone`을 넣으면 제한 true → `false, "paid_random_restricted"` · 제한 false → 통과 · 표에 없는 투입물만이면 통과 ⑪ v26 → v27 이관 · `isValidProfile`(0장 · 빈 집합 · 이미 있는 값 유지 · 음수 · 소수 · 빠짐 · 표 아님 · 집합 없음 거부).
+
+**(나) 7항목**(실제 처치 경로 `MonsterState.applyDamage → CombatResolution.resolveHit → handleBossDeath`): ⑫ 직업 A(`greatsword`) · 스테이지 50 보스 → 하락 +1 · 초기화 0 · `protectionClaimedStages["50"]` · 즉시 저장 요청 1회 ⑬ 같은 보스를 한 번 더 → +0 ⑭ **직업 B(`dualblade`)로 바꿔** 같은 스테이지 50 보스 → 방지권 **+0** ★ · 장비 확정 드랍은 나온다(직업 B의 첫 클리어 기록 false → true · 가방 +1) ⑮ 스테이지 100 보스 → 하락 +1 · 초기화 +1 ⑯ 스테이지 75 보스 · 기여 9% 스탠드인 → 실제 Player만 하락 +1 · 스탠드인이 대상이었다면 났을 하드 에러 없음 ⑰ 상점: 서 있는 스테이지 1 · 계정 최고 83에서 가격이 스테이지 83 기준 · 강화대 밖 → `not_near_station` · 골드 · 장수 불변 / 안 · 골드 1 부족 → `insufficient_gold` · 골드 불변 / 충분 → 장수 +1 · 골드 차감 = 가격 · 잘못된 종류 → `invalid_kind` ⑱ 되돌림: 고아 보스 0 · 남은 몬스터 0 · 방지권 · 받은 스테이지 · 가방 · 직업 복원.
+
+#### [3] 합격 기준
+
+| # | 항목 | 결과 | 근거 |
+|---|---|---|---|
+| 1 | (가) 11/11 · (나) 7/7 | **O** | 3회차 `===S05 검증 끝(가)=== 11/11` · `(나)=== 7/7` |
+| 2 | 기존 검증 회귀 없음 | **O** | [2] |
+| 3 | 서버 에러 · 경고 0 | **O** | 로그 파일 대조 |
+| ★① | (가) 6번 - 막지 않은 시도에서 방지권이 빠지는 일이 없다 | **O** | 30만 회 중 성공 · 유지에서 소모 0건 |
+| ★② | (나) 14번 - 부캐로 같은 스테이지를 다시 깨도 방지권이 안 나온다 | **O** | 직업 B로 스테이지 50 → +0 · +0(장비 확정 드랍은 나왔다). **재접속 뒤에도** 같다(3회차 B: `+0 · +0`) |
+
+#### [4] 실제 개발 계정에 일어난 일
+
+- 저장이 **v27**로 나갔다(`purchases.protectionTickets` 0 · 0 · `protectionClaimedStages` 빈 집합). 재접속 검증에서 잠깐 하락 방지권 1장 + 받은 스테이지 `50`을 실제로 저장했다가 `/gg ticket clear`로 다시 비우고 저장했다(현재 0장 · 빈 집합). 나머지 값(골드 8,784 · 활 무기 +13 · 스테이지 20 · 가방 0칸)은 그대로다.
+
+#### [5] 사람이 확인할 것
+
+| 항목 | 이유 |
+|---|---|
+| 방지권 지급 팝업이 읽히는가 | 재료 팝업(20.85)과 같은 모양 · 같은 자리(골드 팝업 위) - 체감 판단. 텍스트가 생성되는 것까지만 확인했다 |
+| 상점가의 체감(하락 300 · 초기화 900마리분) | 20.72 미결 5(초기값 · 실측 뒤 조정) · 미결 7(환생 직후 가격은 사실상 구매 불가 - 의도지만 체감 확인 필요)로 그대로 남는다. 계정 최고 83이면 하락 방지권 2.4억 골드다 |
+
+#### [6] 미결
+
+1. **미결: 직업별 `bossFirstClearStages`의 숫자 키가 DataStore 왕복 뒤 문자열이 된다 - 재접속 뒤 "이 스테이지를 이미 깼다" 판정이 깨진다. 어떻게 고칠 것인가.** 왜: 실측 - 로드된 개발 계정의 `bossFirstClearStages` 키가 `5(string) 10(string) 20(string)`이었다(`/gg ticket claims`가 키 타입을 찍는다). `PlayerProfile.hasBossFirstClearReward`는 `bossFirstClearStages[stage] == true`(숫자 키)로 조회하므로 저장된 기록을 재접속 뒤에는 못 찾는다 → 이미 받은 스테이지의 보스를 다시 깨면 "첫 클리어"로 판정돼 **등급을 끌어올린 확정 드랍이 접속마다 다시 나올 수 있다**(20.40이 막으려던 "재입장 무한 획득" 구멍이 재접속 경로로 열려 있다). 또 그때 `markBossFirstClearReward`가 숫자 키 `[stage] = true`를 더하면 같은 표에 `"5"`와 `5`가 섞이는데 DataStore가 이 표를 저장하는지(오류 · 덮어쓰기)는 확인하지 못했다. 이번 세션 범위 밖이라 **고치지 않았다**. 선택지: ① 조회 · 기록을 `tostring(stage)` 문자열 키로 통일 + `migrate`가 숫자 키를 문자열로 정규화(SAVE +1) ② 로드 직후 한 번 정규화하는 함수만 추가(저장 값은 안 바뀐다) ③ `bossFirstClearStages`를 `protectionClaimedStages`처럼 처음부터 문자열 키로 바꾼다. 다른 숫자 키 집합(`tutorial.granted[stepIndex]` 등)도 같은 문제가 있는지 함께 봐야 한다.
+
+#### [7] 지시와 코드가 달랐던 점 · 임의 결정
+
+1. **받은 스테이지의 저장 키는 문자열이다.** 지시서는 "저장 형식은 `bossFirstClearStages`가 쓰는 방식을 따른다"고 했지만 그 방식(숫자 키)은 위 [6]의 결함이 있다 - 그대로 따르면 재접속 뒤 방지권이 계정 단위 1회가 아니라 접속마다 다시 나온다(★②가 깨진다). 새 필드만 `tostring(stage)` 키로 쓰고 읽는다(`PlayerProfile.hasClaimedProtectionStage` · `markProtectionStageClaimed`). 의도(스테이지별 받음 표시)는 그대로이고 바깥에서 보이는 API는 안 바뀐다. 이 결정은 실제 저장 · 재접속으로 확인했다([2] 2 · 3회차).
+2. **`tryEnhance`의 의미를 바꿨다**: S03에서는 `flags`가 확률표에 합쳐졌다(`getOutcomeTable(…, flags)`). 지시서 단계 3대로 이제 방지권 없는 **원래 표**로 굴린 뒤 `applyProtection`이 바꾼다(막았을 때만 소모하려면 원래 결과를 알아야 한다). `getOutcomeTable`의 방지권 인자는 화면에 보여 줄 표용으로 그대로 남고 (가) 3 · 4 · 5번이 둘이 같은 분포임을 확인한다. 게이지 가득이면 결과는 성공이라 방지권이 안 빠진다.
+3. **payload**: 지시서는 "`blockedBy` · 남은 장수"라고만 했다 - `blockedBy`(`"drop"` / `"reset"` / nil) · `ticketsLeft = { drop, reset }`로 정했다. 규제 관문 거부 payload는 `{ result = "paid_random_restricted", level }`(지시서에 없음 - 지금은 안 탄다).
+4. **규제 관문의 순서 · 캐시 없음 처리**: 핸들러에서 최대 단계 확인 뒤 · 골드 확인 앞에서 부른다(차감 전이면 어디든 지시와 같다). 캐시가 아직 없을 때(접속 직후 조회 진행 중)도 "제한됨"으로 본다(안전한 기본값 - `paidInputIds`가 비어 있는 지금은 영향 0).
+5. **(가) 10번**은 `canAttempt` 자체가 아니라 그 순수 핵심 `EnhancePolicy.evaluate`(canAttempt가 실제 표와 캐시로 그대로 부른다)에 제한 값과 표 사본을 넣어 본다 - `canAttempt`에 값을 주입하려면 제품 코드에 테스트 훅이 필요해서다. 제품 표(`paidInputIds`)는 안 건드렸고 0개인지도 같이 확인한다.
+6. **(가) 2번의 "지금 서 있는 스테이지를 1로 바꿔도 같은 값"**은 (가)가 아니라 (나) 17번이 잰다: 가격 함수(`Enhance.getProtectionPrice`)는 계정 최고 스테이지 하나만 인자로 받아 서 있는 스테이지가 끼어들 자리가 없고, 실제 Player의 상점 경로를 (나)에서 서 있는 스테이지 1 · 계정 최고 83으로 확인한다.
+7. **상점 코드 위치**: 지시서는 `isNearStation`을 "공용 모듈로 뺄 때는 GemServer의 동작이 안 바뀌어야 한다"고 했다 - 공용 모듈로 빼지 않고 `ProtectionTickets`에 같은 식의 지역 함수를 뒀다(`EnhanceService` · `GemServer`의 기존 복사본을 안 건드렸다). RemoteEvent 이름은 `ProtectionTicketBuyRequest` / `ProtectionTicketBuyResult`(결과 이벤트 이름은 지시서에 없어 정했다) · `ProtectionTicketPriceRequest`는 RemoteFunction이다.
+8. **(나)의 보스는 5번 처치한다**(50 · 50 · 50(직업 B) · 100 · 75): 지시서의 12 ~ 16번을 그대로 밟았고, 16번(스탠드인)은 이미 받은 50이 아니라 아직 안 받은 스테이지 75로 했다(스탠드인이 대상이었다면 지급 경로에서 하드 에러가 나야 검증이 되므로 지급 스테이지여야 한다). 검증 시작 때 방지권 0 · 받은 스테이지 빈 집합 · 가방 비움 · 직업 둘의 첫 클리어 기록 비움을 기준 상태로 만들고 `env.restore`가 되돌린다.
+
+#### [8] 보고 (범위 밖 - 고치지 않았다)
+
+- [6]의 `bossFirstClearStages` 숫자 키 문제(미결).
+- 강화 UI가 아직 요청 인자(토글)를 안 보낸다(`EnhanceUI`는 `FireServer()` 그대로) - 방지권은 지금 화면에서 켤 수 없다(S07).
+- `EnhanceVerify.lua`가 약 1,430줄이다(지시서: "EnhanceVerify.lua에 S05 구역" - 800줄 제한은 클라 UI 규칙이라 적용하지 않았다). 다음 세션이 이 파일에 더 쌓기 전에 S03 · S04 · S05 구역을 파일로 나누는 것을 검토할 만하다.
+- 기존 X는 그대로: 27-4 (가) 0/5 · (나) 2/6 · 29-1 (나) 24/25. S02의 미결(불변식)도 그대로다.
+
+**변경 파일**: `roblox/src/shared/data/EnhanceConfig.lua` · `shared/data/SaveConfig.lua` · `shared/Enhance.lua` · `server/SaveSystem.lua` · `PlayerProfile.lua` · `EnhanceService.lua` · `EnhanceServer.server.lua` · `EnhanceVerify.lua` · `CombatResolution.lua` · `ImmediateSave.lua` · `DevTools.server.lua` · `EnhancePolicy.lua`(신규) · `ProtectionTickets.lua`(신규) · `ProtectionTicketServer.server.lua`(신규) · `client/MaterialHud.client.lua` · `PRD-forge-game-roblox.md`(이 절 + 20.72 [5] 4 · 7단계 · 20.81 [A](2) 9 · 10번 표시) · `docs/sonnet/README.md`.
