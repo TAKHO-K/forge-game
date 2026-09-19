@@ -225,7 +225,8 @@ end
 -- weapon.slotUnlocked 신설, 23-4) -> 21(무한 모드 보스 순환 상태 bossRotation 필드 +
 -- 장비창 위치 저장 필드 inventoryWindowPosition 신설, 23-5) -> 22(캐릭터 레벨 곡선을 목표
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
--- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1).
+-- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
+-- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -628,6 +629,54 @@ local function migrate(data)
 			end
 		end
 		data.version = 23
+	end
+
+	if data.version < 24 then
+		-- 30-0 S02(PRD 20.72 [2-7]): 드랍 itemLevel이 "캐릭터 레벨 × tier 보너스"에서 "기준 스테이지 ± 2"로 바뀌었다(S01).
+		-- 옛 규칙으로 얻은 장비(레벨 100이 tier6을 잡으면 420)를 새 규칙에서 가능한 최댓값 dropStage + 2로 자른다.
+		-- **되돌릴 수 없다**(원래 값을 버린다). 대상은 가방 + 모든 직업의 착용 장비 3부위뿐이다 - 보석은 dropStage가 없고
+		-- 옵션 계수 f(125에서 동결)에만 쓰여 부풀려진 값도 영향이 없다. 무기 · 강화 단계 · 옵션 · 등급 · dropStage · tierIndex는
+		-- 그대로다. dropStage가 없는 항목은 건드리지 않고 개수만 남긴다. 절단이라 두 번 돌려도 결과가 같다(멱등).
+		local total, cutCount, noStageCount = 0, 0, 0
+		local maxBefore, maxAfter
+		local function clampItem(item)
+			if type(item) ~= "table" then
+				return
+			end
+			total += 1
+			if type(item.itemLevel) ~= "number" then
+				return
+			end
+			if type(item.dropStage) ~= "number" then
+				noStageCount += 1
+				return
+			end
+			local clamped = math.min(item.itemLevel, item.dropStage + 2)
+			if clamped ~= item.itemLevel then
+				cutCount += 1
+				if not maxBefore or item.itemLevel > maxBefore then
+					maxBefore, maxAfter = item.itemLevel, clamped
+				end
+				item.itemLevel = clamped
+			end
+		end
+		for _, item in ipairs(data.inventory) do
+			clampItem(item)
+		end
+		for _, classState in pairs(data.classes) do
+			for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+				clampItem(classState.equipment[part])
+			end
+		end
+		if cutCount > 0 then
+			print(("[forge-game] v24 이관: 장비 %d개 중 %d개 itemLevel 절단(최대 %d → %d)"):format(total, cutCount, maxBefore, maxAfter))
+		else
+			print(("[forge-game] v24 이관: 장비 %d개 중 0개 itemLevel 절단"):format(total))
+		end
+		if noStageCount > 0 then
+			print(("[forge-game] v24 이관: dropStage가 없는 장비 %d개는 건드리지 않았다"):format(noStageCount))
+		end
+		data.version = 24
 	end
 
 	data.savedAt = data.savedAt or 0

@@ -52,6 +52,8 @@ local BossGimmick4Verify = require(script.Parent.BossGimmick4Verify)
 local BossGimmick5Verify = require(script.Parent.BossGimmick5Verify)
 -- 28-1(S01) 드랍 규칙 자동 검증 - (가)는 서버 시작 때, (나)는 위 보스 검증 체인의 끝에서 돈다.
 local LootRuleVerify = require(script.Parent.LootRuleVerify)
+-- 30-0 S02 v23 -> v24 이관(부풀려진 itemLevel 절단) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(읽기 전용).
+local ItemLevelMigrateVerify = require(script.Parent.ItemLevelMigrateVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -2928,6 +2930,7 @@ if RunService:IsStudio() then
 				{ "29-5(가)", BossGimmick5Verify.runPure },
 				{ "29-5(나)", function() BossGimmick5Verify.runLive(player, env) end },
 				{ "S01(나)", function() LootRuleVerify.runLive(player, env) end },
+				{ "S02(나)", function() ItemLevelMigrateVerify.runLive(player) end },
 			}) do
 				local ok, err = pcall(stage[2])
 				if not ok then
@@ -2953,6 +2956,17 @@ if RunService:IsStudio() then
 		local ok, err = pcall(LootRuleVerify.runPure)
 		if not ok then
 			warn(("[S01(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S02 자동 검증 블록(가) - v23 → v24 이관(PRD 20.83) ═══
+-- 합성 프로필을 실제 SaveSystem.migrate에 통과시킨다(플레이어 불필요). (나)는 위 29-1 체인의 끝에서 실제 프로필을 읽기만 한다.
+if RunService:IsStudio() then
+	task.spawn(function()
+		local ok, err = pcall(ItemLevelMigrateVerify.runPure)
+		if not ok then
+			warn(("[S02(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end
