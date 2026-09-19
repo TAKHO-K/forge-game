@@ -133,9 +133,14 @@ end
 
 -- 공통 기믹 스킬을 이 보스 인스턴스에만 얹는다. data는 스폰마다 새 테이블이지만 data.skills·skillOrder는
 -- BossData 원본을 가리킬 수 있으므로(읽기 전용) 복사본으로 갈아 끼운다 - 원본은 절대 안 건드린다.
--- 시계 값은 서리 거인의 포효(20초·첫 10초·자리 비우기·기믹 우선순위)를 그대로 빌린다.
+-- 시계 값은 29-1 뼈대의 공통 기믹 자리(20초·첫 10초·자리 비우기·기믹 우선순위)다. 29-3부터 여기 고정해 둔다 - 서리
+-- 거인의 포효에서 빌려 쓰다가 포효의 첫 발동이 16초로 바뀌자(낙빙이 먼저 와야 한다) "그 전에 끼어든 스킬 없음"이
+-- 더는 성립하지 않았다(강공격 6.0 + 1.5 + 전역 쿨 6 = 13.5 ≤ 16). 뼈대 검증은 보스별 튜닝에 묶이면 안 된다.
 local function injectGimmick(model, data, telegraphSeconds)
-	local design = BossData.bosses.frost_giant.skills.roar
+	local design = {
+		cooldownSeconds = 20, firstAvailableSeconds = 10, reserveFirstUse = true, priority = BossData.mechanics.priority.gimmick,
+		telegraphSeconds = 3.0, damage = { kind = "maxHp", fraction = BossData.mechanics.gimmickFailMaxHpFraction },
+	}
 	local skills = table.clone(data.skills)
 	skills.gimmick = {
 		primitive = "gimmick", bubble = "gimmick", role = "gimmick", kind = "verify29",

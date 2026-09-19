@@ -268,7 +268,7 @@ RunService.Heartbeat:Connect(function(dt)
 
 			-- 보물상자(22-2 [3])는 몬스터가 아니다 - 어그로·추격·반격 전부 없다. 조준·피격
 			-- 경로만 공유하려고 MonsterState에 등록돼 있을 뿐이다.
-			if data.isChest then
+			if data.isChest or data.isRescueTarget then -- 29-3 구출 대상(얼음 덩어리)도 같다
 				continue
 			end
 

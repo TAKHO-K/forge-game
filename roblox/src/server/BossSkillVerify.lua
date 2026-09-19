@@ -36,7 +36,7 @@ local GUARDIAN_BASELINE = {
 }
 -- 결정 모형의 기대값(로컬 하네스와 같은 BossSim) - { live 솔로, live 4인, design 파훼 후 솔로, 4인, 파훼 전 솔로, 4인 }.
 local EXPECTED_SECONDS = {
-	frost_giant = { 70.90, 35.05, 74.10, 35.00, 204.65, 90.50 },
+	frost_giant = { 73.40, 35.10, 73.40, 35.10, 197.95, 82.95 }, -- 29-3: 포효가 켜졌다(지금 = 설계). 첫 포효 16초·낙빙 선행
 	abyssal_lord = { 77.30, 37.75, 77.75, 38.30, 200.35, 89.75 },
 	crystal_queen = { 76.65, 37.80, 74.00, 36.10, 194.60, 83.80 },
 	scorpion_queen = { 73.55, 34.70, 73.70, 35.45, 214.25, 83.70 },
@@ -204,7 +204,15 @@ local function runPure()
 				local hasGimmick = bossId ~= GUARDIAN
 				local inBand = math.abs(after.mean / reference[n] - 1) <= 0.10 and math.abs(live.mean / reference[n] - 1) <= 0.10
 				local gated = not hasGimmick or never.mean / after.mean >= 2
-				local firstOk = not hasGimmick or (after.latestFirstGimmickAt <= 10.06 and after.minGimmickCount >= 1)
+				-- 첫 기믹 = 자리 비우기(reserveFirstUse)를 건 스킬의 첫 발동 시각(서리 거인 16 · 폭풍 군주 8 · 나머지 10).
+				local firstExpected = 0
+				for _, id in ipairs(BossData.bosses[bossId].skillOrder) do
+					local skill = BossData.bosses[bossId].skills[id]
+					if skill.reserveFirstUse then
+						firstExpected = math.max(firstExpected, skill.firstAvailableSeconds)
+					end
+				end
+				local firstOk = not hasGimmick or (after.latestFirstGimmickAt <= firstExpected + 0.06 and after.minGimmickCount >= 1)
 				r.check(("%s | %d인 | 지금 %.1f(%+.1f%%) · 파훼 후 %.1f(%.1f~%.1f, %+.1f%%) | 파훼 전 %.1f(x%.2f) | %.2f초 | %d회"):format(
 					bossId, n, live.mean, (live.mean / reference[n] - 1) * 100, after.mean, after.p5, after.p95, (after.mean / reference[n] - 1) * 100,
 					never.mean, never.mean / after.mean, after.latestFirstGimmickAt, after.minGimmickCount),

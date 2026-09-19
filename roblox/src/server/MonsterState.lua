@@ -63,6 +63,11 @@ function MonsterState.init(model, data, spawnPosition, zoneKey, variant)
 		isSparkle = variant.isSparkle or false, -- 19-4 [6], 잡몹 전용(보스는 항상 false로 들어온다).
 		prefix = variant.prefix, -- 22-2 [1], 잡몹 전용.
 		isChest = variant.isChest or false, -- 22-2 [3].
+		-- 29-3 구출 대상(빙결된 친구를 감싼 얼음 덩어리). 몬스터가 아니다 - 조준·피격 경로만 공유한다(상자와 같은 이유).
+		-- HP가 없고, 맞을 때마다 onRescueHit(때린 사람)을 부를 뿐이다. HP바는 rescueRemaining()(1 → 0)을 그린다.
+		isRescueTarget = variant.isRescueTarget or false,
+		onRescueHit = variant.onRescueHit,
+		rescueRemaining = variant.rescueRemaining,
 		chestHits = 0,
 		chestLastHitAt = {},
 		chestHitters = {},
@@ -76,6 +81,11 @@ end
 function MonsterState.isChest(model)
 	local entry = monsters[model]
 	return entry ~= nil and entry.isChest
+end
+
+function MonsterState.isRescueTarget(model)
+	local entry = monsters[model]
+	return entry ~= nil and entry.isRescueTarget
 end
 
 function MonsterState.getPrefix(model)
@@ -137,6 +147,15 @@ function MonsterState.getDamageTakenMultiplier(model)
 	return entry and entry.damageTakenMultiplier or 1
 end
 
+-- 29-3 - 보스가 플레이어에게 맞을 때마다 불리는 함수 하나(BossMechanics의 반사 태세만 쓴다). nil이면 끈다.
+-- 플레이어 → 보스 피해는 전부 applyDamage를 지나므로 평타·스킬·투사체·꽂힌 화살이 빠짐없이 여기로 온다.
+function MonsterState.setHitListener(model, fn)
+	local entry = monsters[model]
+	if entry and entry.data.isBoss then
+		entry.hitListener = fn
+	end
+end
+
 -- 24-1 DevTools "/gg party info" 전용 - 보스 절대 HP(현재/최대). 잡몹은 nil.
 function MonsterState.getBossHp(model)
 	local entry = monsters[model]
@@ -173,6 +192,9 @@ function MonsterState.getHpRatio(model)
 	if entry.data.isBoss then
 		return entry.maxHp > 0 and math.clamp(entry.hp / entry.maxHp, 0, 1) or 0
 	end
+	if entry.isRescueTarget then
+		return math.clamp(entry.rescueRemaining and entry.rescueRemaining() or 1, 0, 1)
+	end
 	if entry.isChest then
 		-- 상자는 "남은 피격 횟수" 비율 - HP바 하나로 진행도를 보여준다.
 		return math.clamp(1 - entry.chestHits / TreasureChestConfig.requiredHits, 0, 1)
@@ -185,13 +207,18 @@ end
 -- 보상이 잡몹과 같은 기여 임계값 규칙을 쓰기 때문(CombatResolution.handleBossDeath).
 -- 반환값: 이번 타격으로 죽었는가(bool), 실제로 들어간 피해(29-1 - 보스의 받는 피해 배율이
 -- 곱해진 값. 호출부가 데미지 숫자·흡혈에 이 값을 쓴다. 잡몹·상자는 넘긴 damage 그대로).
-function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer)
+-- hitInfo(29-3, 선택) = { committedAt = 이 공격을 시작한 시각(os.clock - 투사체는 쏜 순간, 채널링은 시전 순간. 없으면
+-- 지금), indirect = 지연 폭발·지속 피해 } - 보스의 반사 태세가 "막을 수 있었던 공격인가"를 가리는 데만 쓴다.
+function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, hitInfo)
 	local entry = monsters[model]
 	if not entry then
 		return false, 0
 	end
 
 	if entry.data.isBoss then
+		if entry.hitListener and attackerPlayer then
+			entry.hitListener(attackerPlayer, hitInfo)
+		end
 		-- 29-1 파훼 게이트·기회 창(BossMechanics가 setDamageTakenMultiplier로 건다). 기여도도 실제로
 		-- 들어간 피해로 센다 - 그래야 합이 1(= maxHp)로 닫힌다.
 		damage *= entry.damageTakenMultiplier or 1
@@ -200,6 +227,15 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer)
 			entry.contributions[attackerPlayer] = (entry.contributions[attackerPlayer] or 0) + damage / entry.maxHp
 		end
 		return entry.hp <= 0, damage
+	end
+
+	-- 구출 대상(29-3) - 피해도 죽음도 없다. 누가 때렸는지만 알린다(유효 타격 규칙은 BossGimmicks의 구출 핸들러가 안다).
+	-- 들어간 피해 0 → 데미지 숫자 0·흡혈 0("구출에는 보상이 없다", 20.73 [2-8] A-2).
+	if entry.isRescueTarget then
+		if attackerPlayer and entry.onRescueHit then
+			entry.onRescueHit(attackerPlayer)
+		end
+		return false, 0
 	end
 
 	-- 보물상자(22-2 [3]) - 피해량은 무관, 피격 "횟수"만 센다. 플레이어당 유효 피격 간격

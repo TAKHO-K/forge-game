@@ -518,6 +518,34 @@ function MonsterSpawner.spawnChest(baseData, position, zoneKey)
 	return model
 end
 
+-- 구출 대상(29-3, PRD 20.73 [2-8] A-4 "빙결 - 때려서 깬다"). 잡힌 친구를 감싼 얼음 덩어리 하나를 타격 대상으로
+-- 세운다 - 평타·스킬·투사체의 조준·피격 경로를 그대로 쓰기 위해서다(상자와 같은 이유). 모델은 buildModel 그대로
+-- (몸통 + 머리 + HP바 + "Monster" 태그)라 새 에셋이 없다. 잡힌 동안(≤ 9초)만 있고 풀리면 바로 치운다.
+-- def = { displayName, color, bodyAspect, footPosition(바닥 좌표), onHit(player), remaining() → 1~0 }
+function MonsterSpawner.spawnRescueTarget(def, zoneKey)
+	local data = {
+		id = "rescue_target", displayName = def.displayName, isRescueTarget = true,
+		bodyColor = def.color, headColor = def.color, bodyAspect = def.bodyAspect,
+		-- MonsterAI가 건너뛰므로 안 읽히지만 공용 조회가 nil 산술을 만나지 않게 0으로 채운다(상자와 같다).
+		hp = 0, attack = 0, goldDrop = 0, expReward = 0, moveSpeedStuds = 0, attackRangeStuds = 0, attackCooldownSeconds = 1,
+	}
+	local position = def.footPosition + Vector3.new(0, 1.5, 0) -- buildModel은 몸통 밑면을 position.Y − 1.5에 둔다
+	local model = buildModel(data, position, {})
+	CollectionService:AddTag(model, "RescueTarget") -- 클라가 "보스"를 찾을 때 이 모델을 건너뛴다(BossPatternVisuals)
+	model.Body.Material = Enum.Material.Ice
+	model.Body.Transparency = 0.45
+	model.Head.Transparency = 1
+	model.Parent = Workspace
+	MonsterState.init(model, data, position, zoneKey, { isRescueTarget = true, onRescueHit = def.onHit, rescueRemaining = def.remaining })
+	MonsterSpawner.updateHpLabel(model)
+	return model
+end
+
+function MonsterSpawner.removeRescueTarget(model)
+	MonsterState.clear(model)
+	model:Destroy()
+end
+
 -- 사망 처리. 정해진 스폰 자리에 그대로 리스폰한다 - 무작위 위치로 보내면 균등 배치가
 -- 흐트러지고 자리끼리 겹칠 수 있어서, 자리를 고정하는 편이 더 낫다고 판단했다.
 --

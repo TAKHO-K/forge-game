@@ -54,12 +54,13 @@ local function evadeSecondsOf(skill)
 	return 0
 end
 
--- 이 스킬의 판정이 게이트를 바꾸는가(design 모드에서만 뜻이 있다) + 실패하면 잡히는가.
-local function gateRoleOf(skill)
+-- 이 스킬의 판정이 게이트를 바꾸는가 + 실패하면 잡히는가. 기믹 스킬은 켜져 있으면 실전이므로 live 모형에서도 게이트가
+-- 선다(29-3 - 서리 거인·전갈 여왕). designGate(아직 코드에 없는 게이트 - 폭풍 군주의 낙뢰)는 design 모형에서만.
+local function gateRoleOf(skill, design)
 	if skill.primitive == "gimmick" then
 		local judges = not (skill.sim and skill.sim.judgesGate == false)
 		return judges, true, skill.breakWindow
-	elseif skill.designGate then
+	elseif skill.designGate and design then
 		return true, false, skill.designGate.breakWindow
 	end
 	return false, false, nil
@@ -109,9 +110,15 @@ function BossSim.run(bossId, options)
 
 	local ctx = { graceUntil = config.entryGraceSeconds }
 	local positionalSample = {}
+	-- 29-3 동적 지형의 개수(종류별). 모형의 가정: 지형은 그것을 세우는 스킬(onImpact spawnProp)이 나올 때마다 생기고
+	-- (상한 boss.props[kind].maxCount), 기믹을 풀 때마다 가려 준 하나가 부서진다. 강타가 부수는 몫은 0으로 둔다 -
+	-- "기둥을 강타 범위 밖에 만든다"가 이 보스의 해법이고 모형은 해법대로 싸우는 사람을 잰다.
+	local propCounts = {}
 	function ctx.conditionMet(condition)
 		local kind = condition.type
-		if kind == "hpBelow" then
+		if kind == "membersNearSafeSpot" then
+			return (propCounts[condition.prop] or 0) > 0
+		elseif kind == "hpBelow" then
 			return (options.fixedSeconds and (options.hpRatio or 0.5) or hp / maxHp) <= condition.value
 		elseif kind == "hpAbove" then
 			return (options.fixedSeconds and (options.hpRatio or 0.5) or hp / maxHp) > condition.value
@@ -151,13 +158,19 @@ function BossSim.run(bossId, options)
 					chargeTravel = mc.chargeTravelMinSeconds + rng() * (mc.chargeTravelMaxSeconds - mc.chargeTravelMinSeconds)
 				end
 				local bound = BossSkillMath.boundSeconds(skill, arenaHalf, chargeTravel)
-				local judges = design and select(1, gateRoleOf(skill))
+				local judges = select(1, gateRoleOf(skill, design))
 				local succeed = breaks == "always" or (breaks == "failFirst" and judgedIndex >= 1)
 				if skill.primitive == "gimmick" and skill.sim and skill.sim.resolveSeconds and succeed then
 					bound = skill.sim.resolveSeconds + (skill.recoverSeconds or 0) -- 제한 시간 전에 풀었다
 				end
 				current, currentEnd = pick, t + bound
 				evadeUntil = math.max(evadeUntil, t + evadeSecondsOf(skill) * jitter)
+				for _, effect in ipairs(skill.onImpact or {}) do
+					if effect.type == "spawnProp" and boss.props and boss.props[effect.prop] then
+						local made = skill.count + (skill.countPerMember or 0) * n
+						propCounts[effect.prop] = math.min((propCounts[effect.prop] or 0) + made, boss.props[effect.prop].maxCount)
+					end
+				end
 				counts[pick] += 1
 				if #sequence < 12 then
 					table.insert(sequence, { id = pick, at = t })
@@ -174,11 +187,11 @@ function BossSim.run(bossId, options)
 						worstPairSum, worstPair = a + b, previousId .. " → " .. pick
 					end
 				end
-				if skill.primitive == "gimmick" or skill.designGate then
+				if skill.primitive == "gimmick" or (skill.designGate and design) then
 					gimmickCount += 1
 					firstGimmickAt = firstGimmickAt or t
 				end
-				if design and (judges or skill.primitive == "gimmick") then
+				if judges or skill.primitive == "gimmick" then
 					if judges and not gateStarted then
 						gateStarted, armed, armedSince = true, true, t
 					end
@@ -191,9 +204,16 @@ function BossSim.run(bossId, options)
 		if pendingResolve and t >= pendingResolve then
 			local skill = pendingSkill
 			pendingResolve, pendingSkill = nil, nil
-			local judges, traps, window = gateRoleOf(skill)
+			local judges, traps, window = gateRoleOf(skill, design)
 			local succeed = breaks == "always" or (breaks == "failFirst" and judgedIndex >= 1)
 			judgedIndex += 1
+			if succeed then
+				for _, effect in ipairs(skill.onResolve or {}) do
+					if effect.type == "destroyProps" and effect.which == "shielding" then
+						propCounts[effect.prop] = math.max((propCounts[effect.prop] or 0) - 1, 0)
+					end
+				end
+			end
 			if judges then
 				if succeed then
 					armed, armedSince = false, nil

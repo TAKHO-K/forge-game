@@ -68,7 +68,9 @@ end
 -- coefficient는 이미 "이번 타격 1회분"이다(E는 호출부가 tickCount로 미리 나눠서 넘긴다).
 -- forceCrit·critDmgBonus(20-6, 쌍검 Q 확정 치명타) - 기본 nil이라 기존 호출부(대검 Q/E,
 -- 이 아래 castLineAttack/castCircleChannel)는 그대로 동작한다.
-local function strikeTarget(player, classId, atk, target, coefficient, attackerStage, forceCrit, critDmgBonus)
+-- committedAt(29-3, 선택): 이 타격이 속한 시전을 시작한 시각 - 채널링 틱만 넘긴다(즉발 스킬은 nil = 지금). 보스의 반사
+-- 태세가 "태세가 선 뒤에 시작한 공격"만 반사하는 데 쓴다(이미 돌던 회전베기·난무는 0 피해로 끝날 뿐이다).
+local function strikeTarget(player, classId, atk, target, coefficient, attackerStage, forceCrit, critDmgBonus, committedAt)
 	local base = atk * coefficient
 	-- 26-2(PRD 20.67 [14] 4단계 "치명") - 장비·보석 치명 옵션 합을 더한다. critDmgBonus는
 	-- 호출부(쌍검 Q 확정 치명타)가 넘긴 값이 있으면 거기에 더한다(둘 다 기본 0/nil).
@@ -80,7 +82,7 @@ local function strikeTarget(player, classId, atk, target, coefficient, attackerS
 	-- 반복하지 않는다). 버프가 없으면 getField가 기본값 1을 돌려줘 기존과 동일하다.
 	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
 	-- 29-1: 둘째 반환값 = 실제로 들어간 피해(보스 파훼 게이트 ×g 반영) - 숫자·흡혈이 이 값을 쓴다.
-	local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player)
+	local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player, committedAt and { committedAt = committedAt } or nil)
 	damage = dealt
 	MonsterSpawner.updateHpLabel(target)
 	PlayerProfile.applyLifesteal(player, damage) -- 26-2, AttackServer 평타와 같은 지점(damage 확정 직후)
@@ -234,6 +236,7 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 	PlayerState.setChannelingUntil(player, def.channelSeconds)
 
 	local tickInterval = def.channelSeconds / def.tickCount
+	local castAt = os.clock() -- 29-3: 채널링을 시작한 시각(strikeTarget의 committedAt)
 	-- 26-2(PRD 20.67 [2] "회전베기 - E 틱 피해 ×(1+x)").
 	local perTickCoefficient = def.coefficient * (1 + PlayerProfile.getOptionBonus(player, "skill_greatsword_E")) / def.tickCount
 
@@ -256,7 +259,7 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 
 		local hits = {}
 		for _, target in ipairs(targets) do
-			table.insert(hits, strikeTarget(player, classId, atk, target, perTickCoefficient, attackerStage))
+			table.insert(hits, strikeTarget(player, classId, atk, target, perTickCoefficient, attackerStage, nil, nil, castAt))
 		end
 
 		skillCastResult:FireClient(player, slot, {
@@ -361,6 +364,7 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 	PlayerState.setChannelingUntil(player, def.channelSeconds)
 
 	local tickInterval = def.channelSeconds / def.tickCount
+	local castAt = os.clock() -- 29-3: 채널링을 시작한 시각(strikeTarget의 committedAt)
 	-- 26-2(PRD 20.67 [2] "난무 - E 틱 피해 ×(1+x)").
 	local perTickCoefficient = def.coefficient * (1 + PlayerProfile.getOptionBonus(player, "skill_dualblade_E")) / def.tickCount
 
@@ -389,7 +393,7 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 			forceCrit, critDmgBonus = resolveGuaranteedCrit(player, classId)
 		end
 
-		local hit = strikeTarget(player, classId, atk, lockedTarget, perTickCoefficient, attackerStage, forceCrit, critDmgBonus)
+		local hit = strikeTarget(player, classId, atk, lockedTarget, perTickCoefficient, attackerStage, forceCrit, critDmgBonus, castAt)
 
 		skillCastResult:FireClient(player, slot, {
 			ok = true,

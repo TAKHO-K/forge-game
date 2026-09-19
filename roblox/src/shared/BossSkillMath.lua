@@ -115,6 +115,10 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 	elseif primitive == "gimmick" then
 		local d = skill.dodge or { distanceStuds = 0 }
 		walk("안전지대까지", d.noticeSeconds or skill.telegraphSeconds, d.distanceStuds, d.speedMultiplier)
+		-- 29-3 마무리 일격(보스 앞쪽 원): 최악의 자리 = 원의 한가운데(근접 자리가 곧 원의 중심이다) → 반경 + 몸통 반폭.
+		if skill.finisher then
+			walk("마무리 일격 밖으로", skill.finisher.telegraphSeconds, skill.finisher.radiusStuds + half)
+		end
 	end
 	return checks
 end
@@ -170,6 +174,10 @@ function BossSkillMath.scaleSkills(skills, scale)
 			if copy[field] then
 				copy[field] *= scale
 			end
+		end
+		if copy.finisher then -- 29-3: 마무리 일격의 원도 "걸어서 벗어나는 거리"다
+			copy.finisher = table.clone(copy.finisher)
+			copy.finisher.radiusStuds *= scale
 		end
 		if copy.pulses then
 			local pulses = {}

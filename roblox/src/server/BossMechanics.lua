@@ -103,6 +103,8 @@ function BossMechanics.reset(model)
 	local st = stateOf(model)
 	st.gateStarted = false
 	st.gimmickDamage = {}
+	st.reflect = nil
+	MonsterState.setHitListener(model, nil)
 	setGate(model, false)
 end
 
@@ -135,11 +137,76 @@ end
 -- 잡힘 종류는 그 보스의 data.mechanics(BossData SPECIES_MECHANICS) - 없으면 피해만.
 function BossMechanics.failGimmick(model, data, player, label, fraction)
 	local damage = BossMechanics.applyGimmickDamage(model, player, fraction or BossData.mechanics.gimmickFailMaxHpFraction, label)
-	local species = data.mechanics
-	if species and species.trapKind then
-		BossTrap.trap(player, { kind = species.trapKind, rescueType = species.rescueType })
-	end
+	BossMechanics.trapMember(model, data, player)
 	return damage
+end
+
+-- 그 보스의 잡힘 종류로 잡는다(29-3: 기믹 실패와 마무리 일격이 같이 쓴다). 잡힌 자리와 아레나를 같이 남긴다 - 구출
+-- 핸들러가 읽는다(얼음 덩어리를 세울 자리, 모래 무덤의 중심, 밀어도 벽 밖으로 안 나가게 하는 경계).
+function BossMechanics.trapMember(model, data, player)
+	local species = data.mechanics
+	if not (species and species.trapKind) then
+		return false
+	end
+	local character = typeof(player) == "Instance" and player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return BossTrap.trap(player, {
+		kind = species.trapKind, rescueType = species.rescueType,
+		context = { origin = root and root.Position or nil, zoneKey = MonsterState.getZoneKey(model) },
+	})
+end
+
+-- ─────────────────────────── 반사 태세(29-3) ───────────────────────────
+-- 보스가 "태세"인 동안(전갈 여왕의 갑각) 받는 피해 배율이 stance.damageTakenMultiplier(0)가 되고, 그동안 보스를 때린
+-- 사람에게 부분 실패 피해(gimmickFailMaxHpFraction ÷ partialFailDivisor)가 돌아간다.
+--   · 누가: **때린 사람만**. 파티의 다른 멤버는 아무것도 받지 않는다(한 사람의 실수가 남에게 번지지 않는다).
+--   · 몇 번: BossData.mechanics.reflect.windowSeconds(0.75초)에 한 번 - 그 사이 몇 번을 때려도 1회다. 합계는 발동당
+--     1인 상한(applyGimmickDamage, 55%)에서 잘린다.
+--   · 무엇이: **태세가 선 뒤에 시작한 직접 공격만**. 공격을 시작한 시각(hitInfo.committedAt - 평타·즉발 스킬은 맞은
+--     순간, 투사체는 쏜 순간, 채널링은 시전 순간)이 태세 시작보다 이르면 반사하지 않는다 - 날아가던 화살·이미 돌던
+--     회전베기는 0 피해로 끝날 뿐이다. 지연 폭발(꽂힌 화살)은 언제 꽂았든 반사하지 않는다(hitInfo.indirect).
+--     플레이어가 막을 수 없는 반사는 반사가 아니라 벌이다.
+-- 타격은 전부 MonsterState.applyDamage 한 곳을 지나므로 거기에 듣는 귀 하나만 단다(setHitListener).
+function BossMechanics.beginReflect(model, stance, label, onReflected)
+	local st = stateOf(model)
+	local reflect = { startedAt = os.clock(), lastAt = {}, count = {} }
+	st.reflect = reflect
+	st.windowToken += 1 -- 지난 기회 창의 복귀 타이머가 태세 중에 배율을 1로 되돌리지 못하게
+	MonsterState.setDamageTakenMultiplier(model, stance.damageTakenMultiplier)
+	local mechanics = BossData.mechanics
+	local fraction = mechanics.gimmickFailMaxHpFraction / mechanics.partialFailDivisor
+	MonsterState.setHitListener(model, function(player, hitInfo)
+		if hitInfo and hitInfo.indirect then
+			return
+		end
+		local now = os.clock()
+		if ((hitInfo and hitInfo.committedAt) or now) < reflect.startedAt then
+			return
+		end
+		local last = reflect.lastAt[player]
+		if last and now - last < mechanics.reflect.windowSeconds then
+			return
+		end
+		reflect.lastAt[player] = now
+		reflect.count[player] = (reflect.count[player] or 0) + 1
+		BossMechanics.applyGimmickDamage(model, player, fraction, label)
+		if onReflected then
+			onReflected(player)
+		end
+	end)
+end
+
+-- 태세 끝(판정 직전·중단). 받는 피해 배율을 게이트 상태로 되돌린다 - 판정(resolveGimmick)이 곧바로 다시 정한다.
+function BossMechanics.endReflect(model)
+	local st = stateOf(model)
+	MonsterState.setHitListener(model, nil)
+	MonsterState.setDamageTakenMultiplier(model, st.gateArmed and BossRules.gateDamageTakenMultiplier() or 1)
+end
+
+-- 이번(마지막) 태세에서 이 사람이 반사를 받은 횟수 - 파훼 판정 "noHit"이 읽는다.
+function BossMechanics.reflectCount(model, player)
+	local reflect = stateOf(model).reflect
+	return reflect and reflect.count[player] or 0
 end
 
 -- ─────────────────────────── 파훼 판정 ───────────────────────────
@@ -149,7 +216,8 @@ function BossMechanics.registerJudge(kind, fn)
 end
 
 -- 기믹 패턴의 예고가 끝나는 순간(BossPatterns) - victims = { { player, root }, ... }.
--- 사람마다 판정해 실패자에게 failGimmick을 넣고, 한 명이라도 성공했으면 게이트를 연다.
+-- 사람마다 판정해 실패자에게 failGimmick을 넣고, 한 명이라도 성공했으면 게이트를 연다. 판정 함수는
+-- fn(model, data, victim, cfg)를 받는다(29-3: cfg = 그 기믹 스킬 - 어느 지형이 안전지대인가 같은 것을 데이터에서 읽는다).
 -- 반환: broken(bool), 성공 인원, 실패 인원.
 function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 	local judge = judges[cfg.kind]
@@ -159,13 +227,16 @@ function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 		if not BossTrap.isTrapped(v.player) then
 			local safe = true
 			if judge then
-				safe = judge(model, data, v) == true
+				safe = judge(model, data, v, cfg) == true
 			end
 			if safe then
 				safeCount += 1
 			else
 				failCount += 1
-				BossMechanics.failGimmick(model, data, v.player, label)
+				-- cfg.failPenalty == false: 실패의 대가를 판정 밖에서 이미 치렀다(갑각 반사 - 때릴 때마다 받았다). 게이트만 남는다.
+				if cfg.failPenalty ~= false then
+					BossMechanics.failGimmick(model, data, v.player, label)
+				end
 			end
 		end
 	end

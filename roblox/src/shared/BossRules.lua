@@ -255,6 +255,7 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		scheduler = boss.scheduler,
 		skillRangeScale = BossRules.skillRangeScale(stage),
 		arenaKit = boss.arenaKit,
+		props = boss.props, -- 29-3 동적 지형의 종류·크기·상한(서버는 논리 상태만 - BossArenaProps)
 		-- 29-1: 보스별 잡힘·구출 종류(BossData SPECIES_MECHANICS, 구간 수호자는 nil).
 		mechanics = boss.mechanics,
 	}

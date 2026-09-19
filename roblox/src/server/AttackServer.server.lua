@@ -299,7 +299,9 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 			return
 		end
 
-		local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player) -- 29-1: 위 근접 분기와 같다
+		-- 29-3: 이 투사체를 "쏜" 시각을 같이 넘긴다 - 보스의 반사 태세는 태세가 선 뒤에 쏜 것만 반사한다(이미 날아가던
+		-- 화살·구슬은 0 피해로 끝날 뿐이다, BossMechanics.beginReflect).
+		local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player, { committedAt = requestedAt }) -- 29-1: 위 근접 분기와 같다
 		MonsterSpawner.updateHpLabel(target)
 		PlayerProfile.applyLifesteal(player, dealt) -- 26-2, 위 근접 분기와 같은 지점(실제 명중 후)
 		attackResult:FireClient(player, target, dealt, isCrit, isDead, isComboHit, false, isBuffedShot)
@@ -312,7 +314,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		-- 붙여도 의미 있는 폭발 없이 시체와 함께 사라질 뿐이다.
 		-- 보물상자(22-2 [3])에는 화살이 안 꽂힌다 - 피해량이 무관한 대상에 지연 폭발을 남기면
 		-- "1초 간격" 규칙만 우회하는 셈이 된다.
-		if not isDead and wasQuickShotActive and projectileKind == "arrow" and not MonsterState.isChest(target) then
+		if not isDead and wasQuickShotActive and projectileKind == "arrow" and not MonsterState.isChest(target) and not MonsterState.isRescueTarget(target) then
 			local hitDirection = Vector3.new(currentRoot.Position.X - rootPart.Position.X, 0, currentRoot.Position.Z - rootPart.Position.Z)
 			hitDirection = hitDirection.Magnitude > 1e-3 and hitDirection.Unit or Vector3.new(0, 0, 1)
 			StuckArrowState.attach(target, player, atk, classId, attackerStage, hitDirection, requestedAt)

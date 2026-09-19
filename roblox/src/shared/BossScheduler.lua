@@ -24,6 +24,10 @@
 --   notAfter { skills = {...} }         직전 스킬이 이 목록에 없다(인접시키면 안 되는 조합을 데이터로 막는다)
 -- notAfter만 이 모듈이 직접 판정한다(직전 스킬은 스케줄러 상태다). 나머지는 호출부가 ctx.conditionMet으로 답한다 -
 -- 서버는 실제 월드에서, 모형은 가정에서.
+--
+-- 선행 조건(skill.precondition = { type, ..., otherwise = 스킬 id }, 29-3 - 규칙 ⑦): conditions와 달리 "후보에서 빼는"
+-- 것이 아니라 "고른 뒤 다른 스킬로 바꿔 시작한다". 종류:
+--   membersNearSafeSpot { prop, studs, marginStuds } 살아 있는(안 잡힌) 멤버 전원에게 studs 안에 그 지형의 "뒤 자리"가 있다
 
 local BossScheduler = {}
 
@@ -124,11 +128,29 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 			best = candidate
 		end
 	end
-	return best and best.id
+	if not best then
+		return nil
+	end
+
+	-- ⑦ 선행 조건(29-3): 고른 스킬의 precondition이 거짓이면 그 스킬 대신 precondition.otherwise를 시작한다 - 고른
+	--    스킬의 쿨·자리 비우기는 그대로 남아 다음 선택에서 다시 나온다("피할 방법이 없는 포효는 없다": 기둥이 없으면
+	--    포효 대신 낙빙이 먼저 온다). 대신 시작한 스킬 바로 다음에는 조건을 다시 묻지 않는다 - 방금 발밑에 생긴 기둥을
+	--    스스로 떠난 것은 선택이고, 누군가 멀리 서 있는 것만으로 기믹(= 게이트)이 영영 안 서는 구멍도 막는다.
+	local pre = skills[best.id].precondition
+	if pre and state.readyAt[pre.otherwise] ~= nil
+		and not (state.substitutedFor == best.id and state.lastSkillId == pre.otherwise)
+		and not ctx.conditionMet(pre) then
+		state.substitutedFor, state.substituteId = best.id, pre.otherwise
+		return pre.otherwise
+	end
+	return best.id
 end
 
 function BossScheduler.onSkillStart(state, id)
 	state.seen[id] = true
+	if id ~= state.substituteId then
+		state.substitutedFor, state.substituteId = nil, nil
+	end
 end
 
 -- 스킬이 끝난 시각 now - 내부 쿨·전역 쿨·굶주림 시계가 전부 여기서 다시 돈다.

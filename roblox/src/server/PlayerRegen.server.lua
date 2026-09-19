@@ -14,8 +14,10 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local BossEncounter = require(script.Parent.BossEncounter)
 
 local function setRegenerating(player, value)
 	if player:GetAttribute("Regenerating") ~= value then
@@ -38,10 +40,23 @@ RunService.Heartbeat:Connect(function(dt)
 			continue
 		end
 
-		setRegenerating(player, true)
 		-- 26-2(PRD 20.67 [2] "재생 - 자동회복 회복량 ×(1+x)") - 힐러 치유(SkillServer
 		-- castHeal)와 같은 배수(PlayerProfile.getHealingPowerMultiplier).
 		local healingMultiplier = PlayerProfile.getHealingPowerMultiplier(player)
+		-- 29-3(PRD 20.76 [3]): 보스전 중에는 기본 자동회복(배수의 1)이 빠지고 재생 옵션이 얹는 몫(x)만 남는다 - 재생은
+		-- 독립된 회복이 아니라 자동회복의 배수라서, "옵션은 그대로 작동한다"는 곧 "옵션이 더해 주던 양은 그대로"다.
+		-- 보스전인가는 BossEncounter의 encounter 하나만 본다(별도 플래그 없음 - 처치·전멸 리셋·이탈·퇴장 어느 경로로
+		-- 끝나도 encounter가 사라지는 순간 자동회복이 돌아온다). 견습 보스전은 예외.
+		local encounter = BossEncounter.getEncounter(player)
+		if encounter and not encounter.isTutorial and not BossData.mechanics.bossFight.baseRegenEnabled then
+			healingMultiplier -= 1
+		end
+		if healingMultiplier <= 0 then
+			setRegenerating(player, false)
+			continue
+		end
+
+		setRegenerating(player, true)
 		local newHp = math.min(hp + maxHp * CombatConfig.regenPercentPerSecond * healingMultiplier * dt, maxHp)
 		PlayerState.setHp(player, newHp)
 		player:SetAttribute("Hp", newHp)

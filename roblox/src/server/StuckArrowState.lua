@@ -87,7 +87,8 @@ local function explode(record)
 	end
 
 	local damage, isCrit = PlayerCombat.calcDamage(record.base, record.classId)
-	local isDead, dealt = MonsterState.applyDamage(model, damage, record.attackerStage, record.player)
+	-- 29-3: 지연 폭발은 보스의 반사 태세에 반사되지 않는다(indirect) - 언제 꽂았든 터지는 시각은 플레이어가 고르지 못한다.
+	local isDead, dealt = MonsterState.applyDamage(model, damage, record.attackerStage, record.player, { indirect = true })
 	damage = dealt -- 29-1: 실제로 들어간 피해(보스 파훼 게이트 반영)
 
 	stuckArrowResult:FireClient(record.player, model, record.id, damage, isCrit, isDead)

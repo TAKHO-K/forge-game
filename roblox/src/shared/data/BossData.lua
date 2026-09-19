@@ -55,6 +55,25 @@ local MECHANICS = {
 		damageTakenMultiplier = 0,
 	},
 
+	-- 29-3 구출 동작의 수치(20.73 [2-8] A-4). 둘 다 "혼자 하면 trap.rescueSeconds 안팎, 둘이 하면 절반"이 되게 잡는다.
+	rescue = {
+		-- 때려서 깬다(빙결): 얼음에 유효 타격 requiredHits회. 구출자 1인당 hitIntervalSeconds에 한 번만 센다(보물상자와
+		-- 같은 규칙 - 평타 2.5~5.7타/초의 직업 차이를 지운다). 혼자 0 · 0.5 · 1.0초 = 1.0초, 둘이면 0.5초.
+		-- 근접·원거리·스킬 전부 센다(활·힐러 둘뿐인 파티도 서로를 구할 수 있어야 한다).
+		hitCount = { requiredHits = 3, hitIntervalSeconds = 0.5 },
+		-- 밀어서 꺼낸다(속박): reachStuds 안에서 묻힌 친구 쪽으로(towardDot = cos 60°) 걸으면 친구가 그 방향으로 밀린다.
+		-- 모래 무덤 반경을 trap.rescueSeconds에 다 민다(4 ÷ 1.5 = 2.67stud/s). 구출자마다 더해진다 - 둘이 밀면 0.75초.
+		push = { graveRadiusStuds = 4, reachStuds = 4, towardDot = 0.5 },
+	},
+
+	-- 29-3 반사(전갈 여왕 갑각 태세): 타격 수가 아니라 시간 창으로 센다 - windowSeconds에 한 번. 평타 빈도가 직업마다
+	-- 2.5~5.7타/초라 타격당으로 세면 쌍검만 두 배로 벌받는다(20.73 [2-5]). 1회 = gimmickFailMaxHpFraction ÷ partialFailDivisor.
+	reflect = { windowSeconds = 0.75 },
+
+	-- 29-3 보스전 중에는 기본 자동회복(CombatConfig.regenPercentPerSecond)이 돌지 않는다 - 재생 옵션이 얹는 몫과 흡혈은
+	-- 그대로다(플레이어가 골라서 낀 빌드다). 견습 보스전은 예외(배우는 자리). PlayerRegen.server.lua가 읽는다.
+	bossFight = { baseRegenEnabled = false },
+
 	-- 28-2 [1-5] 힌트 단계: 전멸 1회 = 말풍선 ×bubbleScale + 안전지대 흰 화살표, 2회 이상 = 기믹 예고 ×telegraphMultiplier.
 	hint = {
 		maxLevel = 2,
@@ -188,6 +207,7 @@ end
 
 local abyssalBody, abyssalHead = tierColor("tier1")
 local frostBody, frostHead = tierColor("tier2")
+MECHANICS.rescue.hitCount.blockColor = frostHead -- 구출 대상(얼음 덩어리)의 색 - 얼음 기둥과 같은 기존 색
 local stormBody, stormHead = tierColor("tier3")
 local scorpionBody, scorpionHead = tierColor("tier4")
 local crystalBody, crystalHead = tierColor("tier6")
@@ -227,36 +247,59 @@ local SPECIES = {
 		basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 1.5, rangeStuds = 14 },
 		scheduler = scheduler(7),
 		skillOrder = { "slam", "icefall", "spike", "roar" },
+		-- 29-3 동적 지형(논리 상태는 서버 BossArenaProps, 그리기·충돌은 클라 BossArenaPropsView). 얼음 기둥: 반경 3 ·
+		-- 높이 10 · 최대 6개(넘으면 가장 오래된 것부터 사라진다). 그림자 폭 6stud에 네 명이 한 줄로 선다 - 기둥 하나가
+		-- 파티 전원을 가린다(그림자는 벽까지 이어진다).
+		props = {
+			pillar = { radiusStuds = 3, heightStuds = 10, maxCount = 6, color = frostHead },
+		},
 		skills = {
 			-- 빙결 강타(23-6의 "긴 예비동작" 흡수). 기본형 강공격과 같은 동사(밖으로 걷기)지만 더 크고 더 느리다 -
-			-- 반경 18을 2.25초에. 29-3에서 범위 안의 얼음 기둥을 부순다.
+			-- 반경 18을 2.25초에. 범위에 걸친 얼음 기둥을 부순다(29-3) - 보스를 기둥 옆에서 싸우면 엄폐물을 잃는다.
 			slam = {
 				primitive = "circleBoss", bubble = "heavy", role = "signature",
 				cooldownSeconds = 9, priority = P.signature,
 				telegraphSeconds = 2.25, radiusStuds = 18,
 				damage = { kind = "attack", multiplier = 3 }, damageLabel = "빙결 강타",
+				onImpact = { { type = "destroyProps", prop = "pillar" } },
 			},
-			-- 낙빙. 원이 입장 인원 + 2개(솔로 3) - 29-3에서 낙하점마다 얼음 기둥이 남는다("어디서 피했는가" = "엄폐물이 어디 생기는가").
+			-- 낙빙. 원이 입장 인원 + 2개(솔로 3): 멤버 각자의 발밑에 하나씩 + 대상 주변에 2개. 낙하점마다 얼음 기둥이
+			-- 남는다(29-3) - "어디서 피했는가" = "엄폐물이 어디 생기는가". 각자의 발밑에 떨어지므로 4인 전원이 자기
+			-- 기둥을 하나씩 얻는다.
 			icefall = {
 				primitive = "circleTarget", bubble = "meteor",
 				cooldownSeconds = 12, firstAvailableSeconds = 4, priority = P.normal, starvationSeconds = 45,
-				telegraphSeconds = 1.5, count = 2, countPerMember = 1, radiusStuds = 5, scatterStuds = 12,
+				telegraphSeconds = 1.5, count = 2, countPerMember = 1, perMember = true, radiusStuds = 5, scatterStuds = 12,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "낙빙",
+				onImpact = { { type = "spawnProp", prop = "pillar" } },
 			},
-			-- 얼음 가시. 보스 → 대상 직선 하나. 체력이 70% 아래로 내려가야 쓰기 시작한다(HP 구간 조건).
+			-- 얼음 가시. 보스 → 대상 직선 하나. 체력이 70% 아래로 내려가야 쓰기 시작한다(HP 구간 조건). 기둥에 닿으면
+			-- 거기서 끊기고 그 기둥이 부서진다(29-3) - 포효보다 싸게 "기둥이 막아 준다"를 보여 주는 스킬이다.
 			spike = {
 				primitive = "line", bubble = "cross",
 				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
 				conditions = { { type = "hpBelow", value = 0.7 } },
 				telegraphSeconds = 1.5, directions = 1, stepDeg = 0, volleys = 1, rotateDeg = 0, halfWidthStuds = 3,
+				blockedByProp = "pillar",
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "얼음 가시",
 			},
-			-- 눈보라 포효(기믹, 29-3에서 켠다). 전역 - 얼음 기둥 뒤에서만 피한다. 기둥까지 최대 30stud(선행 조건).
+			-- 눈보라 포효(기믹, 29-3). 전역 - 얼음 기둥 뒤에서만 피한다(판정은 shared/BossPropMath.isShielded). 가려 준
+			-- 기둥은 부서진다.
+			--   · 순서 보장: 첫 포효 16초. 낙빙이 7.0초(전역 쿨 7)에 나와 8.5초에 기둥을 남기고, 전역 쿨 7초 뒤인
+			--     15.5초부터 포효가 나올 수 있다 - 자리 비우기(끝 + 전역 쿨 ≤ 첫 발동 시각)가 낙빙을 막지 않는 가장 이른
+			--     정수 시각이 16이다. 10초로 두면 낙빙(8.5 + 7 = 15.5 > 10)이 자리 비우기에 막혀 **기둥 0개로 첫 포효**가 온다.
+			--   · 그래도 안전지대가 없으면(강타가 기둥을 다 부쉈거나 누군가 멀리 있으면) 포효 대신 낙빙이 먼저 온다
+			--     (precondition, BossScheduler 규칙 ⑦). 걸을 수 있는 거리 = (전조 3.0 − 인지 0.5) ÷ 여유 1.25 × 속도 16 =
+			--     32stud. 기둥 뒤 자리까지의 직선 27 + 기둥을 돌아 들어가는 몫 4(반경 3의 반 바퀴 − 지름) = 회피 거리 31
+			--     (dodge.distanceStuds, 2.92초 ≤ 3.0) - 남는 1stud가 여유다.
 			roar = {
-				primitive = "gimmick", bubble = "gimmick", role = "gimmick", enabled = false, kind = "behindProp",
-				cooldownSeconds = 20, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
+				primitive = "gimmick", bubble = "roar", role = "gimmick", kind = "behindProp",
+				cooldownSeconds = 20, firstAvailableSeconds = 16, reserveFirstUse = true, priority = P.gimmick,
+				precondition = { type = "membersNearSafeSpot", prop = "pillar", studs = 27, marginStuds = 2, otherwise = "icefall" },
 				telegraphSeconds = 3.0, recoverSeconds = 1.0,
-				dodge = { distanceStuds = 30 },
+				dodge = { distanceStuds = 31 },
+				safeProp = "pillar", -- 클라가 이 지형의 그림자만 비우고 바닥 전체를 빨강으로 깐다 · 힌트 화살표의 자리
+				onResolve = { { type = "destroyProps", prop = "pillar", which = "shielding" } },
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "눈보라 포효",
 				sim = { evadeSeconds = 2.0 },
 			},

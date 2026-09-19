@@ -25,6 +25,9 @@ local Workspace = game:GetService("Workspace")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 -- 29-1: 힌트 화살표(기믹 예고에 안전지대 좌표가 실려 오면 그 위에 흰 ▼) - 그리기는 그 모듈에 있다.
 local BossGateView = require(script.Parent.BossGateView)
+-- 29-3: 동적 지형(얼음 기둥)·전역 기믹 전조(빨강 바닥 + 그림자)와 보스 태세(빨강 고리·반사 선) - 그리기는 각 모듈에 있다.
+local BossArenaPropsView = require(script.Parent.BossArenaPropsView)
+local BossStanceView = require(script.Parent.BossStanceView)
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
@@ -93,9 +96,11 @@ end
 -- 모델 중 BossArena 안에 있는 것으로 찾는다 - 개인 아레나엔 몬스터가 하나뿐이다.
 local function findBossModel(nearPosition)
 	local best, bestDistance = nil, math.huge
-	for _, model in ipairs(game:GetService("CollectionService"):GetTagged("Monster")) do
+	local CollectionService = game:GetService("CollectionService")
+	for _, model in ipairs(CollectionService:GetTagged("Monster")) do
 		local root = model.PrimaryPart
-		if root then
+		-- 29-3: 구출 대상(빙결된 친구의 얼음 덩어리)도 "Monster" 태그다 - 보스 말풍선이 거기 붙으면 안 된다.
+		if root and not CollectionService:HasTag(model, "RescueTarget") then
 			local d = (root.Position - nearPosition).Magnitude
 			if d < bestDistance then
 				best, bestDistance = model, d
@@ -118,6 +123,9 @@ local BUBBLES = {
 	daze = { icon = "@_@", color = Color3.fromRGB(120, 200, 255) },
 	-- 29-1 공통 기믹 패턴의 자리(보스별 세션이 kind마다 자기 픽토그램으로 바꾼다) - 색은 강공격과 같은 위험색.
 	gimmick = { icon = "※", color = Color3.fromRGB(230, 40, 40) },
+	-- 29-3 보스별 기믹 픽토그램(색은 같은 위험색 - 모양으로 구분한다): 포효 = 눈꽃, 갑각 태세 = "때리지 마라".
+	roar = { icon = "❄", color = Color3.fromRGB(230, 40, 40) },
+	shell = { icon = "✖", color = Color3.fromRGB(230, 40, 40) },
 	-- 29-1 파훼 성공 = 기회(헤롱과 같은 파랑).
 	gateBroken = { icon = "◇", color = Color3.fromRGB(120, 200, 255) },
 }
@@ -439,13 +447,29 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	if kind == "bubble" then
 		showBubble(data.pattern, data.seconds, data.scale)
 	elseif kind == "gimmickTelegraph" then
+		if data.safeProp then
+			BossArenaPropsView.showGlobalTelegraph(data)
+		end
 		if data.safeSpots then
 			BossGateView.showHintArrows(data.safeSpots, data.seconds)
 		end
 	elseif kind == "gimmickResolve" then
+		BossArenaPropsView.resolveTelegraph()
 		if data.broken then
 			showBubble("gateBroken", data.windowSeconds or 2)
 		end
+	elseif kind == "propSpawn" then
+		BossArenaPropsView.spawn(data)
+	elseif kind == "propRemove" then
+		BossArenaPropsView.remove(data.ids)
+	elseif kind == "propsClear" then
+		BossArenaPropsView.clear()
+	elseif kind == "stanceStart" then
+		BossStanceView.start(data)
+	elseif kind == "stanceEnd" then
+		BossStanceView.clear()
+	elseif kind == "reflectHit" then
+		BossStanceView.reflect(data)
 	elseif kind == "daze" then
 		showBubble("daze", data.seconds)
 	elseif kind == "heavyTelegraph" then
@@ -470,8 +494,12 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		crossFire()
 	elseif kind == "reset" then
 		resetAll()
+		BossArenaPropsView.clearTelegraph() -- 기둥 자체는 남는다(서버가 propsClear로 따로 치운다)
+		BossStanceView.clear()
 	end
 end)
+
+BossArenaPropsView.start()
 
 -- 내 캐릭터가 죽어 리스폰될 때도 남은 연출을 지운다(서버 reset과 이중 방어).
 player.CharacterAdded:Connect(resetAll)

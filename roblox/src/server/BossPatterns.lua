@@ -32,6 +32,11 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossScheduler = require(ReplicatedStorage.Shared.BossScheduler)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 local BossMechanics = require(script.Parent.BossMechanics)
+-- 29-3: 동적 지형의 논리 상태(얼음 기둥). 이 파일은 스킬의 "결과 조각"(onImpact·onResolve·blockedByProp)을 실행하고
+-- 바뀐 내용을 멤버에게 알린다. 보스별 파훼 판정·구출 동작은 BossGimmicks가 뼈대의 훅에 꽂는다(require만 하면 된다).
+local BossArenaProps = require(script.Parent.BossArenaProps)
+local BossTrap = require(script.Parent.BossTrap)
+require(script.Parent.BossGimmicks)
 
 local BossPatterns = {}
 
@@ -130,7 +135,7 @@ end
 
 local function send(st, kind, payload)
 	for _, member in ipairs(st.members or {}) do
-		if member.Parent then
+		if typeof(member) == "Instance" and member.Parent then -- 자동 검증의 스탠드인 멤버(테이블)에게는 보내지 않는다
 			patternEvent:FireClient(member, kind, payload)
 		end
 	end
@@ -204,6 +209,16 @@ local function conditionMet(model, st, condition)
 		return BossMechanics.isGateArmed(model) == condition.value
 	elseif kind == "gateArmedFor" then
 		return BossMechanics.gateArmedSeconds(model) >= condition.seconds
+	elseif kind == "membersNearSafeSpot" then
+		-- 29-3 선행 조건(포효): 살아 있는(안 잡힌) 멤버 전원에게 studs 안에 그 지형의 "뒤 자리"가 있는가. 지형이 하나도
+		-- 없으면 거리가 무한대라 거짓이다 - 스케줄러가 포효 대신 낙빙을 시작한다(BossScheduler 규칙 ⑦).
+		for _, v in ipairs(victims(st)) do
+			if not BossTrap.isTrapped(v.player)
+				and BossArenaProps.nearestSafeSpot(model, condition.prop, st.position, v.root.Position, condition.marginStuds) > condition.studs then
+				return false
+			end
+		end
+		return true
 	end
 	return true
 end
@@ -248,6 +263,44 @@ local function endSkill(model, st, data, now)
 	st.skill = nil
 	BossScheduler.onSkillEnd(st.sched, data.skills, id, now)
 	MonsterState.setLastAttackTick(model, now) -- 스킬 직후 바로 평타가 또 나가지 않게(15-1과 같다)
+end
+
+-- ─────────────────────────── 결과 조각(29-3) ───────────────────────────
+-- 스킬 데이터의 onImpact(판정 순간)·onResolve(기믹 판정 뒤) = { { type = ... }, ... }. 핸들러는 "무슨 일이 어디서
+-- 일어났는가"(info)만 넘기고, 그 결과로 지형이 생기거나 부서지는 것은 데이터가 정한다 - 보스 이름이 들어간 분기는 없다.
+--   spawnProp { prop }                    info.positions마다 그 지형을 세운다(낙빙 → 얼음 기둥)
+--   destroyProps { prop }                 info.center·info.radius 원에 걸친 그 지형을 부순다(빙결 강타)
+--   destroyProps { prop, which = "shielding" } 이번 판정에서 누군가를 가려 준 지형을 부순다(포효)
+-- 서버에는 인스턴스가 없다 - 논리 목록(BossArenaProps)만 바꾸고 멤버에게 알린다. 그리기·충돌은 클라 몫이다.
+local function sendPropsRemoved(st, ids)
+	if #ids > 0 then
+		send(st, "propRemove", { ids = ids })
+	end
+end
+
+local function runEffects(c, effects, info)
+	for _, effect in ipairs(effects or {}) do
+		local def = c.data.props and c.data.props[effect.prop]
+		if not def then
+			continue
+		end
+		if effect.type == "spawnProp" then
+			for _, position in ipairs(info.positions) do
+				local prop, evicted = BossArenaProps.spawn(c.model, effect.prop, def, position)
+				sendPropsRemoved(c.st, evicted)
+				send(c.st, "propSpawn", { id = prop.id, kind = prop.kind, position = position, radius = prop.radius, height = prop.height, color = def.color })
+			end
+		elseif effect.type == "destroyProps" then
+			sendPropsRemoved(c.st, BossArenaProps.removeWhere(c.model, function(prop)
+				if prop.kind ~= effect.prop then
+					return false
+				elseif effect.which == "shielding" then
+					return prop.shielded == true
+				end
+				return Reach.horizontalDistance(prop.position, info.center) <= info.radius + prop.radius
+			end))
+		end
+	end
 end
 
 -- ─────────────────────────── 프리미티브 핸들러 ───────────────────────────
@@ -301,6 +354,7 @@ HANDLERS.circleBoss = {
 			radius = pulse.radiusStuds,
 			innerRadius = inner > 0 and inner or nil,
 		})
+		runEffects(c, skill.onImpact, { center = c.position, radius = pulse.radiusStuds })
 		if st.pulseIndex < #pulses then
 			st.pulseIndex += 1
 			beginPulse(c)
@@ -457,7 +511,17 @@ HANDLERS.circleTarget = {
 		local positions = { clampToZone(first, zone, 2) }
 		c.st.shotIndex = 1
 		if not skill.sequential then
-			for _ = 2, circleCount(c.data, skill) do
+			local scattered = circleCount(c.data, skill) - 1
+			if skill.perMember then
+				-- 29-3: 멤버 각자의 발밑에 하나씩(대상은 위에서 이미 넣었다) - 나머지만 대상 주변에 흩는다. 잡힌 멤버는 뺀다.
+				for _, v in ipairs(victims(c.st)) do
+					if v.root ~= c.targetRoot and not BossTrap.isTrapped(v.player) then
+						table.insert(positions, clampToZone(xz(v.root.Position), zone, 2))
+						scattered -= 1
+					end
+				end
+			end
+			for _ = 1, scattered do
 				local offset = Vector3.new(scatterRng:NextNumber(-1, 1), 0, scatterRng:NextNumber(-1, 1))
 				if offset.Magnitude > 1 then
 					offset = offset.Unit
@@ -482,6 +546,7 @@ HANDLERS.circleTarget = {
 			end
 		end
 		send(st, "meteorImpact", { positions = st.meteorPositions, radius = skill.radiusStuds })
+		runEffects(c, skill.onImpact, { positions = st.meteorPositions })
 		if skill.sequential and st.shotIndex < circleCount(c.data, skill) and c.targetRoot then
 			st.shotIndex += 1
 			beginCircles(c, { clampToZone(xz(c.targetRoot.Position), zoneOf(c.model), 2) }, skill.repeatTelegraphSeconds or skill.telegraphSeconds)
@@ -607,7 +672,15 @@ local function startVolley(c, angleDeg)
 		local a = math.rad(angleDeg + skill.stepDeg * k)
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 		local length = clipToZone(origin, dir, zone, 1)
-		table.insert(beams, { dir = dir, length = length })
+		-- 29-3: 지형에 닿으면 거기서 끊긴다 - 예고 띠도 끊긴 길이로 그려진다(보이는 것 = 맞는 것). 막아 준 지형은 발사 때 부서진다.
+		local blocker = nil
+		if skill.blockedByProp then
+			local prop, hitDistance = BossArenaProps.firstHitOnRay(c.model, skill.blockedByProp, origin, dir, length, skill.halfWidthStuds)
+			if prop then
+				length, blocker = hitDistance, prop.id
+			end
+		end
+		table.insert(beams, { dir = dir, length = length, blocker = blocker })
 		lengths[k + 1] = length
 	end
 	st.crossOrigin = origin
@@ -650,6 +723,16 @@ HANDLERS.line = {
 			end
 		end
 		send(st, "crossFire", { angleDeg = st.crossAngle })
+		if skill.blockedByProp then
+			sendPropsRemoved(st, BossArenaProps.removeWhere(c.model, function(prop)
+				for _, beam in ipairs(st.crossBeams) do
+					if beam.blocker == prop.id then
+						return true
+					end
+				end
+				return false
+			end))
+		end
 		if st.crossVolley < (skill.volleys or 1) then
 			st.crossVolley += 1
 			startVolley(c, (skill.reaim and c.targetRoot) and firstBeamAngle(c) or (st.crossAngle + skill.rotateDeg))
@@ -661,12 +744,30 @@ HANDLERS.line = {
 
 -- ── gimmick: 전역 기믹의 뼈대(29-1). 예고(게이트가 선다) → 판정(보스별 파훼 조건은 BossMechanics.registerJudge) ──
 -- 힌트 단계(20.73 [1-5]): 1 = 말풍선 ×bubbleScale + 안전지대 흰 화살표, 2 이상 = 예고 ×telegraphMultiplier.
+-- 29-3에서 붙은 조각(전부 선택 - 없으면 29-1 뼈대 그대로다):
+--   safeProp = 지형 종류      그 지형의 "뒤"가 안전지대다 - 클라가 바닥 전체를 빨강으로 깔고 그림자만 비운다 · 힌트 화살표의 자리
+--   onResolve = { 조각 }      판정 뒤 실행(가려 준 기둥이 부서진다)
+--   stance = { afterSeconds, damageTakenMultiplier, ringRadiusStuds, sinkStuds }
+--                             예고 afterSeconds 뒤부터 판정까지 보스가 "태세"다 - 받는 피해 배율이 바뀌고, 그동안 때린 사람에게
+--                             반사가 돌아간다(BossMechanics.beginReflect). 힌트 2단계는 태세가 아니라 그 앞의 예고를 늘린다.
+--   finisher = { telegraphSeconds, radiusStuds, offsetStuds, damage, damageLabel, trapOnHit }
+--                             판정과 같은 순간의 마무리 일격(보스 앞쪽 원). 예고는 판정 telegraphSeconds 전에 뜬다. trapOnHit이면
+--                             맞은 사람이 그 자리에 잡힌다(전갈 여왕의 꼬리 내려찍기 → 모래 무덤).
+--   recoverPose = true        recoverSeconds 동안 헤롱 자세(dazeSinkStuds·dazeTiltDeg) - "지금 때려라"를 돌진 뒤 헤롱과 같은 그림으로
 local function gimmickTelegraphSeconds(st, skill)
-	local seconds = skill.telegraphSeconds
-	if (st.hintLevel or 0) >= BossData.mechanics.hint.maxLevel then
-		seconds *= BossData.mechanics.hint.telegraphMultiplier
+	local multiplier = (st.hintLevel or 0) >= BossData.mechanics.hint.maxLevel and BossData.mechanics.hint.telegraphMultiplier or 1
+	if skill.stance then
+		return skill.telegraphSeconds + skill.stance.afterSeconds * (multiplier - 1)
 	end
-	return seconds
+	return skill.telegraphSeconds * multiplier
+end
+
+local function endStance(c)
+	if c.st.stanceOn then
+		c.st.stanceOn = false
+		BossMechanics.endReflect(c.model)
+		send(c.st, "stanceEnd", {})
+	end
 end
 
 HANDLERS.gimmick = {
@@ -677,25 +778,73 @@ HANDLERS.gimmick = {
 		local st, skill = c.st, c.skill
 		local seconds = gimmickTelegraphSeconds(st, skill)
 		local hintLevel = st.hintLevel or 0
+		local zone = zoneOf(c.model)
 		BossMechanics.onGimmickStart(c.model)
 		st.phase = "gimmickTelegraph"
 		st.phaseEndsAt = c.now + seconds
+		st.stanceAt = skill.stance and (c.now + seconds - (skill.telegraphSeconds - skill.stance.afterSeconds)) or nil
+		st.stanceOn = false
+		st.finisherCenter = nil
+		if skill.safeProp then
+			print(("[forge-game] 기믹 예고: %s - %s %d개"):format(tostring(skill.kind), skill.safeProp, BossArenaProps.count(c.model, skill.safeProp)))
+		end
 		send(st, "gimmickTelegraph", {
 			kind = skill.kind,
 			center = Vector3.new(c.position.X, st.floorY, c.position.Z),
 			seconds = seconds,
 			hintLevel = hintLevel,
-			-- 힌트 1단계부터 클라가 흰 화살표를 세우는 자리. 보스별 세션이 skill.safeSpots(model, data)를 채운다.
-			safeSpots = (hintLevel >= 1 and skill.safeSpots) and skill.safeSpots(c.model, c.data) or nil,
+			safeProp = skill.safeProp,
+			zoneCenter = Vector3.new(zone.center.X, st.floorY, zone.center.Z),
+			zoneHalfSize = zone.halfSize,
+			-- 힌트 1단계부터 클라가 흰 화살표를 세우는 자리.
+			safeSpots = (hintLevel >= 1 and skill.safeProp) and BossArenaProps.safeSpots(c.model, skill.safeProp, c.position, 2) or nil,
 		})
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
 		if st.phase == "gimmickTelegraph" then
+			if skill.stance and not st.stanceOn and c.now >= st.stanceAt and c.now < st.phaseEndsAt then
+				st.stanceOn = true
+				BossMechanics.beginReflect(c.model, skill.stance, skill.damageLabel, function(player)
+					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+					send(st, "reflectHit", { from = c.position, to = root and root.Position or c.position })
+				end)
+				st.dazeBase = c.position
+				c.model:PivotTo(CFrame.new(c.position - Vector3.new(0, skill.stance.sinkStuds, 0)))
+				send(st, "stanceStart", {
+					center = Vector3.new(c.position.X, st.floorY, c.position.Z),
+					radius = skill.stance.ringRadiusStuds,
+					seconds = st.phaseEndsAt - c.now,
+				})
+			end
+			local finisher = skill.finisher
+			if finisher and not st.finisherCenter and c.now >= st.phaseEndsAt - finisher.telegraphSeconds then
+				-- 마무리 일격의 자리 = 보스에서 지금 대상 쪽으로 offsetStuds. 예고가 뜬 뒤에는 움직이지 않는다.
+				local origin = xz(st.dazeBase or c.position)
+				local toTarget = c.targetRoot and (xz(c.targetRoot.Position) - origin) or Vector3.new(0, 0, -1)
+				local dir = toTarget.Magnitude > 1e-3 and toTarget.Unit or Vector3.new(0, 0, -1)
+				local center = clampToZone(origin + dir * finisher.offsetStuds, zoneOf(c.model), 2)
+				st.finisherCenter = Vector3.new(center.X, st.floorY, center.Z)
+				send(st, "heavyTelegraph", { center = st.finisherCenter, radius = finisher.radiusStuds, seconds = st.phaseEndsAt - c.now })
+			end
 			if c.now < st.phaseEndsAt then
 				return
 			end
-			local broken = BossMechanics.resolveGimmick(c.model, c.data, skill, victims(st), skill.damageLabel)
+			endStance(c)
+			local list = victims(st)
+			local broken = BossMechanics.resolveGimmick(c.model, c.data, skill, list, skill.damageLabel)
+			if finisher and st.finisherCenter then
+				for _, v in ipairs(list) do
+					if Reach.within(v.root.Position, st.finisherCenter, finisher.radiusStuds) and not BossTrap.isTrapped(v.player) then
+						applySkillDamage(c.model, c.data, finisher, v.player)
+						if finisher.trapOnHit and (PlayerState.getHp(v.player) or 0) > 0 then
+							BossMechanics.trapMember(c.model, c.data, v.player)
+						end
+					end
+				end
+				send(st, "heavyImpact", { center = st.finisherCenter, radius = finisher.radiusStuds })
+			end
+			runEffects(c, skill.onResolve, {})
 			send(st, "gimmickResolve", {
 				broken = broken,
 				windowSeconds = broken and skill.breakWindow and skill.breakWindow.seconds or nil,
@@ -703,12 +852,25 @@ HANDLERS.gimmick = {
 			if (skill.recoverSeconds or 0) > 0 then
 				st.phase = "gimmickRecover"
 				st.phaseEndsAt = c.now + skill.recoverSeconds
+				if skill.recoverPose then
+					local base = st.dazeBase or c.position
+					st.dazeBase = base
+					c.model:PivotTo(CFrame.new(base - Vector3.new(0, skill.dazeSinkStuds, 0)) * CFrame.Angles(0, 0, math.rad(skill.dazeTiltDeg)))
+					if not broken then
+						send(st, "daze", { seconds = skill.recoverSeconds }) -- 파훼했으면 파랑 말풍선(gateBroken)이 이미 떠 있다
+					end
+				end
 				return
 			end
 		elseif c.now < st.phaseEndsAt then -- gimmickRecover
 			return
 		end
+		clearDaze(c.model, st)
 		endSkill(c.model, st, c.data, c.now)
+	end,
+	interrupt = function(c)
+		endStance(c)
+		clearDaze(c.model, c.st)
 	end,
 }
 
@@ -814,6 +976,24 @@ function BossPatterns.reset(model, data)
 		st.target = nil
 	end
 	BossMechanics.reset(model)
+	BossPatterns.clearProps(model)
+end
+
+-- 29-3: 동적 지형을 전부 치운다 - 전멸 리셋(재도전 = 처음부터)과 보스전 종료(BossEncounter.endEncounter).
+-- members를 직접 받는다 - 보스가 처치된 뒤에는 MonsterState가 이미 비워져 st.members를 읽을 수 없다.
+function BossPatterns.clearProps(model, members)
+	local st = MonsterState.getBossPatternState(model)
+	BossArenaProps.clear(model)
+	for _, member in ipairs(members or (st and st.members) or {}) do
+		BossPatterns.clearPropsFor(member)
+	end
+end
+
+-- 한 사람의 화면에서만 치운다(보스전 이탈 - 같은 슬롯의 다음 보스전에 옛 기둥이 남아 있으면 안 된다).
+function BossPatterns.clearPropsFor(player)
+	if typeof(player) == "Instance" and player.Parent then
+		patternEvent:FireClient(player, "propsClear", {})
+	end
 end
 
 -- 입장·재도전 유예(20.44 [3](다)) - 이 시각 전엔 스킬을 시작하지 않는다.

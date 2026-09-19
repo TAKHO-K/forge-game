@@ -467,6 +467,7 @@ end
 -- 정리한다 / 물러남은 true - 즉시 지운다). 남은 멤버 전원을 사냥터로 돌려보내고 슬롯을 반납한다.
 local function endEncounter(encounter, destroyModel)
 	BossTrap.releaseAll(encounter.members, "reset") -- 29-1: 잡힌 채로 사냥터에 돌아가지 않는다
+	BossPatterns.clearProps(encounter.model, encounter.members) -- 29-3: 동적 지형(얼음 기둥)은 보스전과 함께 사라진다
 	if not destroyModel and encounter.hintOwner then
 		hintWipes[encounter.hintOwner] = nil -- 처치 - 이 보스의 힌트 단계를 지운다(PRD 20.73 [1-5])
 	end
@@ -517,6 +518,7 @@ function BossEncounter.leaveFor(player)
 	end
 	encounterOf[player] = nil
 	BossTrap.release(player, "reset") -- 29-1
+	BossPatterns.clearPropsFor(player) -- 29-3
 	if player.Parent then
 		teleportTo(player, huntingGroundReturnPosition())
 	end

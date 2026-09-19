@@ -27,6 +27,7 @@ local records = {}
 -- rescueType → { tick = function(trappedPlayer, record, members, dt) } (보스별 세션에서 꽂는다)
 local rescueHandlers = {}
 local releasedListeners = {}
+local trappedListeners = {}
 
 local function isRealPlayer(player)
 	return typeof(player) == "Instance"
@@ -53,6 +54,8 @@ local function syncAttributes(player, record)
 	player:SetAttribute("BossTrapStartedAt", record and record.serverStartedAt or nil)
 	player:SetAttribute("BossTrapReleaseAt", record and record.serverReleaseAt or nil)
 	player:SetAttribute("BossTrapRescue", record and 0 or nil)
+	-- 29-3: 잡힌 자리(모래 무덤의 중심 - 클라 BossTrapView가 그 자리에 원을 그린다). 자리가 뜻이 없는 종류는 nil.
+	player:SetAttribute("BossTrapOrigin", record and record.context and record.context.origin or nil)
 end
 
 local function totalProgress(record)
@@ -86,6 +89,11 @@ end
 
 function BossTrap.onReleased(fn)
 	table.insert(releasedListeners, fn)
+end
+
+-- 29-3: 잡히는 순간 fn(player, record) - 구출 대상(얼음 덩어리)을 세우는 쪽이 듣는다(BossGimmicks).
+function BossTrap.onTrapped(fn)
+	table.insert(trappedListeners, fn)
 end
 
 -- reason: "auto"(자동 해제) / "rescued"(구출) / "reset"(전멸 리셋·보스전 종료·리스폰·퇴장) / "debug"
@@ -139,6 +147,10 @@ function BossTrap.trap(player, def)
 	syncAttributes(player, record)
 	print(("[forge-game] 잡힘: %s - %s(구출 %s, 자동 해제 %.1f초)"):format(
 		tostring(player.Name), tostring(def.kind), tostring(def.rescueType), seconds))
+
+	for _, fn in ipairs(trappedListeners) do
+		task.spawn(fn, player, record)
+	end
 
 	task.delay(seconds, function()
 		if records[player] == record then
