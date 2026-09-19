@@ -459,6 +459,10 @@ function EnhanceVerify.runLive(player, env)
 	-- 위 10회는 거의 성공만 나와 게이지가 움직이지 않는다 - 실패 경로(게이지 적립 · 천장 · 하락 · 단계 유지)를 실제 핸들러로 밟는다.
 	r.section("[나] 실패 경로", function()
 		PlayerProfile.setEnhanceGauge(player, 0)
+		-- S04부터 19강 시도는 강화석을 쓴다(EnhanceMaterialData.costByLevel[19]) - 이 구역은 게이지 · 골드 경로만 보므로 10회 몫의 두 배를 쥐여 준다
+		-- (재료 소모 · 부족 거절은 S04 (나)가 본다. env.restore가 되돌린다).
+		local cost19 = EnhanceMaterialData.costByLevel[19]
+		PlayerProfile.addMaterial(player, cost19.id, cost19.count * 20)
 		local at17 = runAttempts(12, 17) -- 성공률 0.28 - 하락 없음 · 게이지가 쌓이다 천장(9번째 이내)에서 성공
 		local at19 = runAttempts(10, 19) -- 성공률 0.28 - 하락(14%) · 유지 · 게이지는 하락해도 유지
 		spentTotal += at17.spent + at19.spent
@@ -472,7 +476,7 @@ function EnhanceVerify.runLive(player, env)
 
 	r.section("[나] 골드", function()
 		local goldSpent = goldStart - PlayerProfile.getGold(player)
-		r.check(("골드 차감 합 %d = 모든 시도의 payload.cost 합 %d (기대 같음 - 19강 이상도 골드만 든다)"):format(goldSpent, spentTotal), goldSpent == spentTotal)
+		r.check(("골드 차감 합 %d = 모든 시도의 payload.cost 합 %d (기대 같음 - 골드 차감은 재료와 별개로 payload.cost 그대로다)"):format(goldSpent, spentTotal), goldSpent == spentTotal)
 	end)
 
 	-- 되돌리기: classes · gold는 env.restore가, 캐릭터 위치는 직접.
