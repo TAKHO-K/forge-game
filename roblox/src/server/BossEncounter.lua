@@ -17,7 +17,7 @@
 --
 -- 24-1 파티(PRD 20.47 [6](라) "activeBosses[Player] → 파티 단위"): 진실의 출처는 이제
 -- "encounter" 하나다 - { model, data, stage, members(실제 Player 목록), party, size(입장 머릿수,
--- 더미 포함 - 보스 HP 배수의 N), rotationOwner(순환을 소모한 플레이어 = 리더), slot, zoneKey,
+-- 더미 포함 - 보스 HP 배수의 N), owner(보스전의 주인 = 리더, 솔로면 본인 - 힌트 단계의 기준), slot, zoneKey,
 -- isTutorial }. encounterOf[Player]가 그 플레이어의 활성 보스전이고, 솔로는 members 1명짜리
 -- encounter다(코드 경로 하나 - "솔로를 N=1 파티로 통일"). 옛 activeBosses[player]를 읽던
 -- 호출부는 getActive(player)(= encounterOf[player].model)로 그대로 동작한다.
@@ -74,14 +74,14 @@ local function fireListeners(listeners, encounter)
 end
 
 -- ═══ 힌트 단계(29-1, PRD 20.73 [1-5] "전멸할 때마다 전조가 친절해진다") ═══
--- [Player(순환 주인 = 리더, 솔로면 본인)] = { bossId, wipes }. 세션 메모리다 - 저장하지 않는다(재접속하면 0부터).
+-- [Player(보스전의 주인 = 리더, 솔로면 본인)] = { bossId, wipes }. 세션 메모리다 - 저장하지 않는다(재접속하면 0부터).
 -- 같은 보스에게 전멸(생존자 0 → 리셋)할 때마다 1씩 오르고, 그 보스를 처치하거나 다른 보스를 만나면 지운다.
 -- 단계가 무엇을 바꾸는지는 BossPatterns(기믹 예고 시간·말풍선 크기·안전지대 화살표)가 안다 - 여기는 횟수만 센다.
 -- 견습 보스는 세지 않는다(기믹이 없고, 견습은 자체 단계 진행이 힌트 역할을 한다).
 local hintWipes = {}
 
 local function hintOwnerOf(encounter)
-	return encounter.rotationOwner or encounter.members[1]
+	return encounter.owner or encounter.members[1]
 end
 
 local function hintLevelFor(owner, bossId)
@@ -236,11 +236,6 @@ function BossEncounter.getMembersOfModel(model)
 	return encounter and encounter.members or {}
 end
 
-function BossEncounter.getRotationOwner(model)
-	local encounter = encounterByModel[model]
-	return encounter and encounter.rotationOwner
-end
-
 -- 27-1 Studio 자동 검증 전용 - 이미 스폰된 encounter의 members 목록에 텔레포트 없이 스탠드인을
 -- 끼워 넣는다. handleBossDeath의 보상 후보 목록(candidates = getMembersOfModel)에 실제로 들어가는
 -- 것 자체가 목적(PRD 20.62 [9] 5번 "10% 미만 제외 분기가 코드 경로만" 해소용) - 그래서 members에
@@ -295,10 +290,32 @@ end
 
 -- ═══ 스폰 ═══
 
+-- 29-5(PRD 20.80 [A]): 보스 id는 스테이지만의 함수다. 단 하나의 예외가 "/gg boss force"(Studio 전용 - DevTools는
+-- 프로덕션에서 막혀 있다, 20.66 [2])다: 그 플레이어가 주인인 **다음 스폰 한 번**만 지정한 보스로 바꾼다. 세션
+-- 메모리이고 저장하지 않는다(23-5는 이것을 세이브의 debugForceNextId에 뒀다 - 이제 읽지 않는다).
+local debugForcedBossId = setmetatable({}, { __mode = "k" })
+
+function BossEncounter.setDebugForcedBoss(player, bossId)
+	if bossId ~= nil and not BossData.bosses[bossId] then
+		return false
+	end
+	debugForcedBossId[player] = bossId
+	return true
+end
+
+local function bossIdFor(owner, stage)
+	local forced = debugForcedBossId[owner]
+	if forced then
+		debugForcedBossId[owner] = nil
+		return forced
+	end
+	return BossRules.bossIdForStage(stage)
+end
+
 -- 공통 스폰 - members(실제 Player 목록)를 slot 하나의 아레나로 전원 텔레포트하고 보스를 세운다.
 -- size는 보스 HP 배수의 N(더미 포함 머릿수, PRD 20.47 [6](가) "N은 입장 인원이지 유효 DPS
 -- 환산이 아니다"). 이미 encounter가 있는 멤버가 섞여 있으면 호출부가 먼저 정리해야 한다.
-local function spawnEncounter(data, stage, members, party, size, rotationOwner, isTutorial)
+local function spawnEncounter(data, stage, members, party, size, owner, isTutorial)
 	local slot = allocateSlot()
 	local zoneKey = zoneKeyForSlot(slot)
 	buildArena(zoneKey)
@@ -320,7 +337,7 @@ local function spawnEncounter(data, stage, members, party, size, rotationOwner, 
 		members = table.clone(members),
 		party = party,
 		size = size,
-		rotationOwner = rotationOwner,
+		owner = owner,
 		slot = slot,
 		zoneKey = zoneKey,
 		isTutorial = isTutorial or false,
@@ -351,11 +368,8 @@ function BossEncounter.spawnFor(player, stage)
 		return
 	end
 
-	-- 23-5: 어느 종이 나올지는 더 이상 무작위가 아니라 이 플레이어의 순환 상태가 정한다
-	-- (PlayerProfile.getBossForStage, PRD 20.50 [5]) - 여기가 실제로 "이 스테이지에 처음
-	-- 진입하는 순간"이다(위 두 return이 이미 걸러낸 뒤 - 보스 스테이지가 아니거나 이미
-	-- 활성 보스가 있으면 순환을 건드리지 않는다).
-	local bossId = PlayerProfile.getBossForStage(player, stage)
+	-- 29-5: 어느 종이 나올지는 스테이지 번호만이 정한다(BossRules.bossIdForStage) - 플레이어 상태를 읽지 않는다.
+	local bossId = bossIdFor(player, stage)
 	if not bossId then
 		return
 	end
@@ -403,8 +417,7 @@ function BossEncounter.checkPartyEntry(party, stage)
 end
 
 -- 파티 보스 스폰(리더가 보스 스테이지로 이동할 때 StageServer가 부른다). 검사는 호출부가
--- checkPartyEntry로 먼저 끝냈다고 가정한다. 순환은 리더 것만 소모한다(rotationOwner) - 다른
--- 멤버의 bossRotation은 읽지도 쓰지도 않는다(지시 4 "남의 순환 인덱스가 소모되면 안 된다").
+-- checkPartyEntry로 먼저 끝냈다고 가정한다. 보스의 정체는 스테이지가 정하므로(29-5) 누가 리더든 같은 보스다.
 function BossEncounter.spawnForParty(party, leader, stage)
 	if not BossRules.isBossStage(stage) then
 		return false
@@ -419,7 +432,7 @@ function BossEncounter.spawnForParty(party, leader, stage)
 		end
 	end
 
-	local bossId = PlayerProfile.getBossForStage(leader, stage)
+	local bossId = bossIdFor(leader, stage)
 	if not bossId then
 		return false
 	end

@@ -139,17 +139,10 @@ local function handleBossDeath(attacker, target)
 		end
 	end
 
-	-- 23-5: pending을 지워야 이 스테이지에 다시 들어왔을 때 순환이 "이미 확정된 보스"로
-	-- 읽지 않고 다음 보스를 새로 뽑는다(PRD 20.50 [5] "처치하면 pending을 지운다").
-	-- 24-1: 순환을 소모한 사람(리더)의 것만 지운다 - 다른 멤버의 bossRotation은 건드리지 않는다.
-	local rotationOwner = BossEncounter.getRotationOwner(target) or attacker
-	if rotationOwner and rotationOwner.Parent then
-		PlayerProfile.clearBossRotationPending(rotationOwner)
-		ImmediateSave.request(rotationOwner)
-	end
+	-- 29-5: 보스의 정체가 스테이지만의 함수가 되면서(BossRules.bossIdForStage) 23-5의 "처치하면 pending을 지운다"는 없어졌다.
 	BossEncounter.clearForModel(target)
-	print(("[forge-game] 보스 처치: 스테이지 %d - 보상 %d명 [%s], 순환 소모 %s"):format(
-		monsterData.stageNumber, #rewarded, table.concat(rewarded, ", "), rotationOwner and rotationOwner.Name or "-"))
+	print(("[forge-game] 보스 처치: %s(스테이지 %d) - 보상 %d명 [%s]"):format(
+		monsterData.displayName, monsterData.stageNumber, #rewarded, table.concat(rewarded, ", ")))
 end
 
 -- 보물상자 파괴(22-2 [3]) - 한 번이라도 유효 피격한 전원이 각자 독립적으로 골드를 받는다

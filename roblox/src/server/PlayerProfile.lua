@@ -16,8 +16,6 @@ local Gem = require(ReplicatedStorage.Shared.Gem)
 -- 26-2(PRD 20.67 [14] 3~5단계): 장비 3부위 옵션 + 보석 5개의 축 합산·치명·직업 특화 전부
 -- Option.lua 순수 함수(valueOf·sumWithCap·sumAxisBonus·critBonus)가 유일한 출처다.
 local Option = require(ReplicatedStorage.Shared.Option)
-local BossData = require(ReplicatedStorage.Shared.data.BossData)
-local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local InventorySync = require(script.Parent.InventorySync)
 local GemSync = require(script.Parent.GemSync)
 local PlayerState = require(script.Parent.PlayerState)
@@ -326,70 +324,9 @@ function PlayerProfile.setBossCleared(player, stage)
 	player:SetAttribute("BestBossCleared", stage)
 end
 
--- 무한 모드 보스 순환(23-5, PRD 20.50 [5]) - 이 스테이지에 지금 등장해야 할 보스 id를
--- 돌려준다. "처음 진입하는 순간"의 판정은 pending.stage가 이 stage와 다른가로 한다 -
--- 같으면(사망 리셋·재도전·아레나 안팎 이동) 이미 확정된 보스를 그대로 돌려주고, 다르면
--- (첫 진입, 또는 이미 깨서 pending이 지워진 스테이지에 다시 들어옴) 순환에서 새로 뽑아
--- pending을 그 스테이지로 새로 확정한다 - "같은 보스 반복 금지가 우선"(PRD 원문)이라
--- 스테이지를 내려갔다 이미 깬 보스 스테이지에 다시 들어와도 다음 보스를 뽑는다.
--- BossEncounter.spawnFor가 실제로 스폰을 진행하기 직전에만 부른다(스폰 안 하면 순환도
--- 안 돈다 - 예: 이미 활성 보스가 있어 spawnFor가 조기 반환하는 경우).
-function PlayerProfile.getBossForStage(player, stage)
-	local profile = profiles[player]
-	local classState = profile and activeClassState(profile)
-	if not classState then
-		return nil
-	end
-	local rotation = classState.bossRotation
-	if rotation.pending and rotation.pending.stage == stage then
-		return rotation.pending.bossId
-	end
-
-	local bossId = rotation.debugForceNextId
-	if bossId then
-		rotation.debugForceNextId = false -- "/gg boss force"는 한 번만 강제한다(정상 순환은 안 건드린다).
-		BossRules.recordRotationHistory(rotation, bossId) -- 강제 등장도 실제 등장이니 이력엔 남긴다.
-	else
-		bossId = BossRules.nextRotationBossId(rotation)
-	end
-	rotation.pending = { stage = stage, bossId = bossId }
-	return bossId
-end
-
--- 보스를 처치했을 때만 부른다(CombatResolution.handleBossDeath) - pending을 지워야
--- 다음에 이 스테이지(또는 다른 보스 스테이지)에 들어왔을 때 순환이 다음 보스를 뽑는다.
--- 지우지 않으면 이미 깬 보스가 pending.stage 일치로 계속 그대로 나온다.
-function PlayerProfile.clearBossRotationPending(player)
-	local profile = profiles[player]
-	local classState = profile and activeClassState(profile)
-	if not classState then
-		return
-	end
-	classState.bossRotation.pending = false
-end
-
--- 읽기 전용 - DevTools "/gg boss next|history" 전용. 호출부가 직접 rotation 테이블을
--- 고치지 않는다(state 변경은 위 두 함수로만).
-function PlayerProfile.getBossRotationInfo(player)
-	local profile = profiles[player]
-	local classState = profile and activeClassState(profile)
-	return classState and classState.bossRotation
-end
-
--- 서버만 호출한다(DevTools "/gg boss force <id>" 전용). 존재하지 않는 id는 거부한다 -
--- 클라이언트 입력을 그대로 믿지 않는다는 원칙은 디버그 명령에도 그대로 적용한다.
-function PlayerProfile.forceBossRotationNext(player, bossId)
-	if not BossData.bosses[bossId] then
-		return false
-	end
-	local profile = profiles[player]
-	local classState = profile and activeClassState(profile)
-	if not classState then
-		return false
-	end
-	classState.bossRotation.debugForceNextId = bossId
-	return true
-end
+-- 29-5: 보스의 정체는 스테이지 번호만의 함수다(BossRules.bossIdForStage) - 23-5의 플레이어별 순환(getBossForStage ·
+-- pending · "/gg boss force"의 debugForceNextId)은 여기서 없앴다. 세이브의 classState.bossRotation 필드는 그대로 두고
+-- 읽지 않는다(SaveSystem - 옛 세이브가 검증·이관을 그대로 통과한다).
 
 -- 20-4 [1] 신설, 23-2부터 PlayerProfile.rebirth가 이 값을 올리는 유일한 정식 통로다 -
 -- 보스 첫 처치 확정 드랍 등급표 분기(Loot.rollBossFirstClearDrop)도 여전히 이 값을 본다.

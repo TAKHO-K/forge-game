@@ -115,8 +115,7 @@ end
 local function spawnGuardian(player, env)
 	BossEncounter.despawnFor(player)
 	env.applyStage(player, BossData.stageInterval)
-	PlayerProfile.clearBossRotationPending(player) -- 확정된 보스(pending)가 강제 지정보다 우선이라 먼저 지운다
-	PlayerProfile.forceBossRotationNext(player, GUARDIAN)
+	BossEncounter.setDebugForcedBoss(player, GUARDIAN)
 	BossEncounter.spawnFor(player, BossData.stageInterval)
 	local model = BossEncounter.getActive(player)
 	return model, model and MonsterState.getData(model)

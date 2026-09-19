@@ -15,8 +15,6 @@ local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorC
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 
-local rotationRng = Random.new()
-
 local BossRules = {}
 
 -- ═══ 파티 인원수 보스 HP 배수(23-5에서 자리만 분리 → 24-1에서 채움, PRD 20.62) ═══
@@ -82,63 +80,58 @@ function BossRules.partyEntryStageCap(level)
 	return BalanceSim.recommendedStage(level, 0, false) + BossRules.partyEntryBand()
 end
 
--- 순환 상태(rotation = { order, index, pending, history })를 받아 다음 보스 id를
--- 뽑고 rotation을 제자리에서 갱신한다(23-5, PRD 20.50 [5] 설계).
---   - order가 비었거나 index가 이미 끝(6개 다 씀)에 도달했으면 다시 섞는다.
---   - 새로 섞은 order[1]이 직전 바퀴의 마지막(order[#order])과 같으면 2~6 중
---     무작위 위치와 맞바꾼다 - "같은 보스가 바퀴 경계에서 연속으로 나오지 않는다"를
---     이 한 번의 교환으로 보장한다(다시 섞기를 반복하지 않는다 - 분포 차이가 없다).
--- history는 관측·디버그용(DevTools "/gg boss history") - 순환 알고리즘 자체엔 안 쓰인다.
-local ROTATION_HISTORY_LIMIT = 50
-
-local function shuffleInPlace(rng, list)
-	for i = #list, 2, -1 do
-		local j = rng:NextInteger(1, i)
-		list[i], list[j] = list[j], list[i]
+-- ═══ 보스 배치(29-5, PRD 20.80 [A]) - 보스의 정체는 스테이지 번호만의 함수다 ═══
+-- 23-5의 플레이어별 순환(비복원 셔플 + pending)은 폐기했다: 유저마다 순환이 달라 같은 스테이지에서 서로 다른 보스를
+-- 만났다. 이제 누가·언제·몇 번째로 들어오든 스테이지 S의 보스는 하나다 - 파티·견습 이후 첫 보스·첫 클리어 보상·
+-- 스테이지 선택 UI의 보스 이름·(예정) 건너뛰기·리더보드가 전부 이 함수 하나를 본다. 인자는 stage뿐이다 - 플레이어·
+-- 저장 데이터·난수·시각을 읽지 않는다(읽는 순간 "서로 다른 보스"가 다시 열린다). 세이브의 bossRotation 필드는 남아
+-- 있지만 아무도 읽지 않는다(지우지 않는 이유: 세이브 안전 - 옛 필드를 가진 데이터가 검증·이관을 그대로 통과한다).
+-- 표와 규칙은 BossData.placement.
+function BossRules.bossIdForStage(stage)
+	if not BossRules.isBossStage(stage) then
+		return nil
 	end
+	local laps = BossData.placement.laps
+	local perLap = #laps[1]
+	local bossIndex = stage // BossData.stageInterval -- 1번째, 2번째 … 보스 스테이지
+	local lap = ((bossIndex - 1) // perLap) % #laps + 1
+	local slot = (bossIndex - 1) % perLap + 1
+	return laps[lap][slot]
 end
 
--- history 기록 전용(23-5) - "/gg boss force"로 강제 지정된 보스도 실제로 등장은 했으므로
--- 정상 순환 뽑기와 똑같이 이력에 남긴다(PlayerProfile.getBossForStage가 두 경로 모두에서
--- 부른다) - 순환 알고리즘(order/index) 자체는 건드리지 않는다.
-function BossRules.recordRotationHistory(rotation, bossId)
-	rotation.history = rotation.history or {}
-	table.insert(rotation.history, bossId)
-	if #rotation.history > ROTATION_HISTORY_LIMIT then
-		table.remove(rotation.history, 1)
-	end
-end
-
-function BossRules.nextRotationBossId(rotation)
+-- 배치표 검사 - 위반 목록을 돌려준다(빈 목록 = 통과). 자동 검증과 "/gg boss table"이 부른다.
+--   ① 모든 줄이 6종 전부를 한 번씩 ② 첫 칸 = 기본형 ③ 같은 보스 사이의 간격 ≥ minRepeatGap(바퀴·주기 경계 포함)
+function BossRules.validatePlacement()
+	local problems = {}
+	local placement = BossData.placement
 	local allIds = BossData.pools[1].bossIds
-	if not rotation.order or #rotation.order == 0 or rotation.index > #rotation.order then
-		local previousLast = rotation.order and rotation.order[#rotation.order]
-		local newOrder = {}
-		for _, id in ipairs(allIds) do
-			table.insert(newOrder, id)
+	local sequence = {}
+	for lapIndex, lap in ipairs(placement.laps) do
+		local seen = {}
+		for _, id in ipairs(lap) do
+			if not BossData.bosses[id] then
+				table.insert(problems, ("%d번째 바퀴: 알 수 없는 보스 id %s"):format(lapIndex, tostring(id)))
+			elseif seen[id] then
+				table.insert(problems, ("%d번째 바퀴: %s 중복"):format(lapIndex, id))
+			end
+			seen[id] = true
+			table.insert(sequence, id)
 		end
-		shuffleInPlace(rotationRng, newOrder)
-		-- 28-2 [1-3]: 그 직업의 순환이 처음 만들어지는 순간에 한해 기본형(견습 보스와 같은 보스)을 첫 자리에 둔다 -
-		-- 견습을 건너뛴 사람도 첫 보스에서 전조 어휘를 배운다. 두 번째 바퀴부터는 아래 기존 규칙 그대로.
-		if not rotation.order then
-			local index = table.find(newOrder, BossData.tutorialBossId)
-			if index then
-				newOrder[1], newOrder[index] = newOrder[index], newOrder[1]
+		if #lap ~= #allIds then
+			table.insert(problems, ("%d번째 바퀴: %d마리(기대 %d - 전 종을 한 번씩)"):format(lapIndex, #lap, #allIds))
+		end
+	end
+	if sequence[1] ~= BossData.tutorialBossId then
+		table.insert(problems, ("첫 보스가 기본형이 아니다: %s"):format(tostring(sequence[1])))
+	end
+	for i, id in ipairs(sequence) do
+		for gap = 1, placement.minRepeatGap - 1 do
+			if sequence[(i - 1 + gap) % #sequence + 1] == id then
+				table.insert(problems, ("%d번째 보스 %s가 %d마리 만에 다시 나온다(최소 %d)"):format(i, id, gap, placement.minRepeatGap))
 			end
 		end
-		if previousLast and newOrder[1] == previousLast and #newOrder > 1 then
-			local swapWith = rotationRng:NextInteger(2, #newOrder)
-			newOrder[1], newOrder[swapWith] = newOrder[swapWith], newOrder[1]
-		end
-		rotation.order = newOrder
-		rotation.index = 1
 	end
-
-	local bossId = rotation.order[rotation.index]
-	rotation.index += 1
-	BossRules.recordRotationHistory(rotation, bossId)
-
-	return bossId
+	return problems
 end
 
 function BossRules.isBossStage(stage)
@@ -161,10 +154,8 @@ end
 -- 다시 곱하지 않고 data 필드를 그대로 돌려주도록 짜여 있다 - 여기서 계산한 값이 최종값
 -- 그대로 유지된다. InfiniteStage 배율을 이중으로 다시 곱하는 사고를 구조적으로 막는다.
 --
--- 23-5: bossId는 더 이상 여기서 무작위로 뽑지 않는다 - 호출부(BossEncounter.spawnFor)가
--- PlayerProfile의 순환 상태(BossRules.nextRotationBossId)로 미리 정한 값을 넘긴다.
--- BossRules는 여전히 "그 id로 인스턴스 데이터를 계산하는" 순수 함수만 갖는다 - PlayerProfile
--- (상태)을 이 shared 모듈이 직접 require하지 않기 위함(순수 규칙 모듈 유지).
+-- 29-5: bossId는 호출부(BossEncounter.spawnFor)가 BossRules.bossIdForStage(stage)로 정해 넘긴다
+-- (23-5의 플레이어별 순환은 폐기). 여기는 "그 id로 인스턴스 데이터를 계산하는" 순수 함수다.
 -- partySize(24-1): 입장 인원(더미 포함 머릿수). 솔로는 1 - N^p = 1이라 기존 계산과 완전히 같다.
 function BossRules.buildInstanceData(stage, bossId, partySize)
 	local boss = BossData.bosses[bossId]

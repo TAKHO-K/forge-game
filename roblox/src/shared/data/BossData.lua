@@ -5,8 +5,9 @@
 -- 5패턴의 간격만 바꾸는 방식은 "같은 보스의 다른 리듬"에 그쳤다. 이제 보스의 차이는 스킬마다의
 -- 쿨·우선순위·발동 조건·모양 파라미터로 적는다(구동은 shared/BossScheduler.lua).
 --
--- 어느 스테이지에 어느 종이 나오는가는 BossRules.nextRotationBossId가 플레이어별 순환 상태로 정한다
--- (23-5, PRD 20.50 [5]) - pools는 그 순환이 읽는 6종 목록 하나다. 견습 보스는 tutorialBossId 고정.
+-- 어느 스테이지에 어느 종이 나오는가는 스테이지 번호만의 함수다(29-5, BossRules.bossIdForStage - 아래 placement 표).
+-- 23-5의 플레이어별 순환은 폐기했다(같은 스테이지에서 유저마다 다른 보스를 만났다). pools는 6종 목록(선언 순) 하나다.
+-- 견습 보스는 tutorialBossId 고정.
 --
 -- stageInterval=5: 이 프로젝트엔 "몇 스테이지마다 보스"를 정한 기존 값이 없었다. (1) 로블록스 타워/
 -- 시뮬레이터 장르의 "10층마다 보스"보다 촘촘해야 초기 빌드에서 첫 보스를 금방 만나 검증할 수 있고,
@@ -704,9 +705,29 @@ return {
 		{ minStage = 1, bossIds = rotationBossIds },
 	},
 
-	-- 28-2 [1-3]: 견습 보스는 기본형 고정(견습의 패턴 부분집합은 5패턴 보스에만 뜻이 있다). 무한 모드 순환도
-	-- 맨 처음 한 번은 이 보스를 첫 자리에 둔다(BossRules.nextRotationBossId).
+	-- 28-2 [1-3]: 견습 보스는 기본형 고정(견습의 패턴 부분집합은 5패턴 보스에만 뜻이 있다). 무한 모드의 첫 보스
+	-- 스테이지도 이 보스다(placement.laps[1][1]).
 	tutorialBossId = "section_guardian",
+
+	-- 29-5 보스 배치(PRD 20.80 [A]): 보스의 정체는 **스테이지 번호만의 함수**이고 모든 유저에게 같다. n번째 보스
+	-- 스테이지(= 스테이지 ÷ stageInterval)는 laps의 칸을 순서대로 읽는다 - 한 줄이 한 바퀴(6마리), 마지막 줄 다음은
+	-- 첫 줄로 돌아간다(36마리 = 180스테이지 주기). 유저 상태·저장 데이터·난수를 읽지 않는다.
+	--   · 1줄 = 선언 순서: 첫 보스는 기본형(전조 어휘를 배운다), 그다음 다섯에서 나머지 5종을 한 번씩 전부 만난다.
+	--   · 2줄부터는 바퀴마다 순서가 다르다. 표는 6 × 6 행 완전 라틴 방진이다 - 각 보스가 바퀴의 각 자리에 한 번씩
+	--     서고, "A 다음에 B"라는 이웃 쌍 30가지가 36마리 안에서 정확히 한 번씩 나온다(같은 흐름이 되풀이되지 않는다).
+	--   · 같은 보스가 다시 나오기까지 최소 4마리(바퀴 경계·주기 경계 포함) - 연속 등장이 없다.
+	-- 표를 고치면 BossRules.validatePlacement(자동 검증 · "/gg boss table")가 규칙 위반을 잡는다.
+	placement = {
+		laps = {
+			{ "section_guardian", "frost_giant", "abyssal_lord", "crystal_queen", "scorpion_queen", "storm_lord" },
+			{ "frost_giant", "crystal_queen", "section_guardian", "storm_lord", "abyssal_lord", "scorpion_queen" },
+			{ "crystal_queen", "storm_lord", "frost_giant", "scorpion_queen", "section_guardian", "abyssal_lord" },
+			{ "storm_lord", "scorpion_queen", "crystal_queen", "abyssal_lord", "frost_giant", "section_guardian" },
+			{ "scorpion_queen", "abyssal_lord", "storm_lord", "section_guardian", "crystal_queen", "frost_giant" },
+			{ "abyssal_lord", "section_guardian", "scorpion_queen", "frost_giant", "storm_lord", "crystal_queen" },
+		},
+		minRepeatGap = 4, -- 같은 보스 사이의 최소 간격(보스 스테이지 수) - validatePlacement가 검사한다
+	},
 
 	bosses = bosses,
 	mechanics = MECHANICS,

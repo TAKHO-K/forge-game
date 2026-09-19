@@ -270,10 +270,8 @@ end
 local function spawnBoss(player, env, bossId, stage)
 	BossEncounter.despawnFor(player)
 	env.applyStage(player, stage)
-	-- 같은 스테이지에 이미 확정된 보스(pending)가 있으면 getBossForStage는 강제 지정보다 그것을 먼저 돌려준다(23-5 -
-	-- 재도전 때 보스가 바뀌지 않게). 검증은 매번 다른 보스를 불러야 하므로 pending부터 지운다(29-2 첫 Play의 교훈).
-	PlayerProfile.clearBossRotationPending(player)
-	PlayerProfile.forceBossRotationNext(player, bossId)
+	-- 29-5: 보스 id는 스테이지만의 함수다 - 검증은 Studio 전용 강제 지정(다음 스폰 한 번)으로 원하는 보스를 부른다.
+	BossEncounter.setDebugForcedBoss(player, bossId)
 	BossEncounter.spawnFor(player, stage)
 	local model = BossEncounter.getActive(player)
 	return model, model and MonsterState.getData(model)
@@ -353,14 +351,10 @@ local function runLive(player, env)
 		table.sort(keys)
 		r.check(("견습 보스 = %s(고정), 스킬 부분집합 = [%s]"):format(tutorial.id, table.concat(keys, ",")),
 			tutorial.id == BossData.tutorialBossId and #keys == 2 and keys[1] == "heavy" and keys[2] == "shockwave")
-		local allFirst = true
-		for _ = 1, 30 do
-			allFirst = allFirst and BossRules.nextRotationBossId({ index = 1 }) == BossData.tutorialBossId
-		end
-		local second = { order = { "a", "b", GUARDIAN }, index = 4 }
-		local secondId = BossRules.nextRotationBossId(second)
-		r.check(("새 순환의 첫 보스 30회 전부 %s=%s, 두 번째 바퀴 첫 보스 %s(직전 마지막과 다름=%s)"):format(
-			BossData.tutorialBossId, tostring(allFirst), tostring(secondId), tostring(secondId ~= GUARDIAN)), allFirst and secondId ~= GUARDIAN)
+		-- 29-5: 23-5의 순환은 폐기됐다 - 첫 보스 스테이지 = 기본형은 배치 함수가 보장한다(전체 검사는 29-5 (가)).
+		local firstId = BossRules.bossIdForStage(BossData.stageInterval)
+		r.check(("첫 보스 스테이지(%d)의 보스 = %s(기대 %s)"):format(BossData.stageInterval, tostring(firstId), BossData.tutorialBossId),
+			firstId == BossData.tutorialBossId)
 
 		local zone = WorldConfig.zones.bossArena1
 		local kit = { parts = {

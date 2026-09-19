@@ -49,6 +49,7 @@ local BossMechanicsVerify = require(script.Parent.BossMechanicsVerify)
 local BossSkillVerify = require(script.Parent.BossSkillVerify)
 local BossGimmickVerify = require(script.Parent.BossGimmickVerify)
 local BossGimmick4Verify = require(script.Parent.BossGimmick4Verify)
+local BossGimmick5Verify = require(script.Parent.BossGimmick5Verify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -987,9 +988,8 @@ local HELP_TEXT = table.concat({
 	"/gg chesttest - 가장 가까운 잡몹을 상자로 바꾼 뒤 피격 간격·다중 타격자·기록 정리를 서버 로그로 검증(22-2)",
 	"/gg killtest - 가장 가까운 잡몹을 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡고 골드·경험치·드랍 변화를 로그로 출력(22-2)",
 	"/gg boss [stage] - 보스 스테이지(기본 5)로 이동해 개인 아레나 보스전 시작(21-3 검증용)",
-	"/gg boss next - 다음(또는 지금 대기 중인) 보스가 누구인지 출력(23-5)",
-	"/gg boss history - 이 플레이어의 보스 등장 이력 출력(23-5)",
-	"/gg boss force <id> - 다음 보스 순환 뽑기를 강제 지정(1회용, 23-5 · 29-3: 확정돼 있던 보스도 지운다 - 바로 뒤 /gg boss에 그 보스가 나온다)",
+	"/gg boss table [끝 스테이지] - 보스 배치표(스테이지만의 함수)와 배치표 검사 결과(29-5 - 23-5의 boss next·history를 대체)",
+	"/gg boss force <id> - 내가 주인인 다음 보스 스폰 한 번만 그 보스로(Studio 전용·세션 메모리, 29-5) - 바로 뒤 /gg boss에 그 보스가 나온다",
 	"/gg boss trap [플레이어] - 잡힘 상태 강제(다시 치면 해제, 생략 시 자신, 29-1)",
 	"/gg boss gate <on|off> - 지금 보스의 파훼 게이트(받는 피해 x0.487) 토글(29-1)",
 	"/gg boss sim <bossId> <인원> <break|failfirst|nobreak> [live] - 처치 시간 모형(29-2: 기본은 설계 기믹 포함, live면 지금 켜진 스킬만)",
@@ -1110,41 +1110,22 @@ local function handleCommand(player, args)
 		else
 			reply(player, "실패: " .. tostring(reason))
 		end
-	elseif sub == "boss" and args[2] == "next" then
-		-- 23-5 검증용 - 순환 알고리즘을 실제로 호출하지 않고(=뽑지 않고) 지금 상태만 읽는다.
-		-- pending이 있으면 그게 다음 진입에서 나올 확정값, 없으면 order[index]가 "정상
-		-- 순환대로면" 다음에 뽑힐 후보다(디버그 강제(force)가 걸려 있으면 그게 우선한다는
-		-- 사실도 같이 보여준다 - PlayerProfile.getBossForStage와 같은 우선순위).
-		local rotation = PlayerProfile.getBossRotationInfo(player)
-		if not rotation then
-			reply(player, "직업을 먼저 선택해야 합니다")
-		elseif rotation.debugForceNextId then
-			reply(player, ("다음 보스(강제 지정됨): %s"):format(rotation.debugForceNextId))
-		elseif rotation.pending then
-			reply(player, ("다음 보스(이미 확정, 스테이지 %d 대기 중): %s"):format(rotation.pending.stage, rotation.pending.bossId))
-		elseif rotation.order and rotation.order[rotation.index] then
-			reply(player, ("다음 보스(순환 예정, %d/%d번째): %s"):format(
-				rotation.index, #rotation.order, rotation.order[rotation.index]))
-		else
-			reply(player, "다음 보스: 아직 안 뽑음(첫 진입 때 새로 섞습니다)")
+	elseif sub == "boss" and args[2] == "table" then
+		-- 29-5(PRD 20.80 [A]): 보스 배치표 - 스테이지만의 함수(BossRules.bossIdForStage). "/gg boss table [끝 스테이지]"
+		local untilStage = math.floor(tonumber(args[3]) or 60)
+		local cells = {}
+		for stage = BossData.stageInterval, untilStage, BossData.stageInterval do
+			table.insert(cells, ("%d=%s"):format(stage, BossRules.bossIdForStage(stage)))
 		end
-	elseif sub == "boss" and args[2] == "history" then
-		local rotation = PlayerProfile.getBossRotationInfo(player)
-		if not rotation then
-			reply(player, "직업을 먼저 선택해야 합니다")
-		elseif not rotation.history or #rotation.history == 0 then
-			reply(player, "보스 이력 없음(아직 한 번도 등장 확정 안 됨)")
-		else
-			reply(player, ("보스 이력(%d회, 오래된 순): %s"):format(#rotation.history, table.concat(rotation.history, " -> ")))
-		end
+		reply(player, "보스 배치: " .. table.concat(cells, " "))
+		local problems = BossRules.validatePlacement()
+		reply(player, #problems == 0 and "배치표 검사 통과" or ("배치표 위반: " .. table.concat(problems, " / ")))
 	elseif sub == "boss" and args[2] == "force" and args[3] then
-		if PlayerProfile.forceBossRotationNext(player, args[3]) then
-			-- 29-3: 같은 스테이지에 이미 확정된 보스(pending)가 있으면 강제 지정보다 그쪽이 먼저 나온다(23-5 - 재도전 때 보스가
-			-- 안 바뀌게). 사람이 "/gg boss force X" → "/gg boss"로 곧장 X를 보려면 pending부터 지워야 한다(29-2 첫 Play의 교훈).
-			PlayerProfile.clearBossRotationPending(player)
-			reply(player, ("다음 보스를 강제 지정했습니다: %s (다음 보스 스테이지 진입 시 적용, 정상 순환은 그대로 보존됨)"):format(args[3]))
+		-- 29-5: 보스 id는 스테이지만의 함수다 - 강제 지정은 Studio 전용 예외이고 세션 메모리다(다음 스폰 한 번, 저장 안 함).
+		if BossEncounter.setDebugForcedBoss(player, args[3]) then
+			reply(player, ("다음 보스를 강제 지정했습니다: %s (내가 주인인 다음 보스 스폰 한 번만 - 그 뒤로는 스테이지의 보스)"):format(args[3]))
 		else
-			reply(player, "실패: 직업 미선택 또는 알 수 없는 보스 id " .. args[3])
+			reply(player, "실패: 알 수 없는 보스 id " .. args[3])
 		end
 	elseif sub == "boss" and args[2] == "trap" then
 		-- 29-1(PRD 20.73 [2-8] A-2): 잡힘 상태 강제. 대상 이름을 생략하면 자신. 종류는 지금 싸우는 보스의
@@ -1602,10 +1583,10 @@ local function handleCommand(player, args)
 			for _, member in ipairs(encounter.members) do
 				table.insert(memberNames, member.Name)
 			end
-			reply(player, ("보스전: 스테이지 %d, 입장 인원 %d(실제 %d: %s), 적용 HP 배수 %.3f, 보스 HP %.0f/%.0f (솔로 기준 %.0f), 생존 %d명, 순환 소모=%s"):format(
+			reply(player, ("보스전: 스테이지 %d, 입장 인원 %d(실제 %d: %s), 적용 HP 배수 %.3f, 보스 HP %.0f/%.0f (솔로 기준 %.0f), 생존 %d명, 주인=%s"):format(
 				encounter.stage, encounter.size, #encounter.members, table.concat(memberNames, ","),
 				encounter.data.partyHpMultiplier or 1, hp or 0, maxHp or 0, (maxHp or 0) / (encounter.data.partyHpMultiplier or 1),
-				BossEncounter.livingMemberCount(encounter), encounter.rotationOwner and encounter.rotationOwner.Name or "-"))
+				BossEncounter.livingMemberCount(encounter), encounter.owner and encounter.owner.Name or "-"))
 			local contrib = {}
 			for member, ratio in pairs(MonsterState.getContributors(encounter.model)) do
 				table.insert(contrib, ("%s=%.1f%%"):format(member.Name, ratio * 100))
@@ -2786,8 +2767,7 @@ if RunService:IsStudio() then
 				BossEncounter.despawnFor(player)
 				applyStage(player, BossData.stageInterval)
 				-- 29-2: 이 블록의 다섯 id는 기본형(구간 수호자)의 스킬이다 - 보스마다 스킬표가 달라졌으므로 기본형으로 고정한다.
-				PlayerProfile.clearBossRotationPending(player) -- 확정된 보스(pending)가 강제 지정보다 우선이다
-				PlayerProfile.forceBossRotationNext(player, BossData.tutorialBossId)
+				BossEncounter.setDebugForcedBoss(player, BossData.tutorialBossId)
 				BossEncounter.spawnFor(player, BossData.stageInterval)
 				local model = BossEncounter.getActive(player)
 				local data = model and MonsterState.getData(model)
@@ -2939,6 +2919,8 @@ if RunService:IsStudio() then
 				{ "29-3(나)", function() BossGimmickVerify.runLive(player, env) end },
 				{ "29-4(가)", BossGimmick4Verify.runPure },
 				{ "29-4(나)", function() BossGimmick4Verify.runLive(player, env) end },
+				{ "29-5(가)", BossGimmick5Verify.runPure },
+				{ "29-5(나)", function() BossGimmick5Verify.runLive(player, env) end },
 			}) do
 				local ok, err = pcall(stage[2])
 				if not ok then
