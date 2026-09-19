@@ -150,7 +150,7 @@ local function onOpen()
 	end
 	place(built.panel.frame, built.panel.screenGui)
 	refresh()
-	task.defer(selfCheck) -- 열린 뒤 AbsoluteSize가 정해진 다음에 잰다
+	task.delay(0.3, selfCheck) -- 열림 트윈(UIScale 0.94 → 1, 0.12초)이 끝난 뒤에 잰다 - 도중에는 AbsoluteSize가 축소돼 있다
 end
 
 local function onClose()
