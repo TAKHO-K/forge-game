@@ -22,6 +22,7 @@ local BossMechanics = require(script.Parent.BossMechanics)
 local BossArenaProps = require(script.Parent.BossArenaProps)
 local BossTrap = require(script.Parent.BossTrap)
 local MonsterState = require(script.Parent.MonsterState)
+local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
@@ -29,12 +30,11 @@ local PlayerState = require(script.Parent.PlayerState)
 local BossGimmickVerify = {}
 
 local FROST, SCORPION, GUARDIAN = "frost_giant", "scorpion_queen", "section_guardian"
-local UNTOUCHED = { "abyssal_lord", "crystal_queen", "storm_lord" }
--- 29-2 Play에서 찍힌 결정 모형 값(지금 솔로/4인 · 설계 파훼 후 솔로/4인 · 파훼 전 솔로/4인) - 이번에 안 건드린 세 보스는 그대로여야 한다.
+-- 29-4: 심해 군주·폭풍 군주의 기믹이 켜졌다 - 그 둘의 값은 BossGimmick4Verify(29-4)가 본다. 여기 남는 것은 수정 여왕뿐이다.
+local UNTOUCHED = { "crystal_queen" }
+-- 29-2 Play에서 찍힌 결정 모형 값(지금 솔로/4인 · 설계 파훼 후 솔로/4인 · 파훼 전 솔로/4인) - 아직 안 건드린 보스는 그대로여야 한다.
 local UNTOUCHED_SECONDS = {
-	abyssal_lord = { 77.30, 37.75, 77.75, 38.30, 200.35, 89.75 },
 	crystal_queen = { 76.65, 37.80, 74.00, 36.10, 194.60, 83.80 },
-	storm_lord = { 72.30, 36.00, 68.55, 34.20, 169.90, 73.85 },
 }
 
 local function near(actual, expected, tolerance)
@@ -737,7 +737,11 @@ local function runRegen(player, env, r)
 		spawnBoss(player, env, GUARDIAN)
 		BossEncounter.resetFor(player) -- 전멸 리셋 - 보스전은 이어진다
 		local afterWipe = measure(0.5)
-		BossEncounter.clearFor(player) -- 처치와 같은 경로(endEncounter)
+		-- 처치와 같은 경로(endEncounter) - 실제 처치(CombatResolution.resolveHit)는 clearForModel 뒤에 despawn까지 부른다.
+		-- clearFor만 부르면 encounter만 지워지고 모델이 아레나에 고아로 남아, 같은 슬롯에 다음 보스가 들어올 때 두 마리가 된다.
+		local killed = BossEncounter.getActive(player)
+		BossEncounter.clearFor(player)
+		MonsterSpawner.despawn(killed)
 		local afterKill = measure(1)
 		local base = CombatConfig.regenPercentPerSecond
 		r.check(("자동회복 %%/초: 보스전 밖 %.2f(기대 %.0f) → 보스전 중 %.2f(기대 0, Regenerating=%s) → 재생 옵션 +%.0f%% %.2f(기대 %.2f = 옵션 몫만) → 이탈 뒤 %.2f → 전멸 리셋 뒤(보스전 계속) %.2f → 처치 뒤 %.2f"):format(
@@ -777,6 +781,15 @@ local function runLive(player, env)
 	end
 	BossEncounter.despawnFor(player)
 	BossEncounter.debugClearHints(player)
+	-- 검증이 끝난 뒤 encounter 없는 보스 모델이 남아 있으면 안 된다(29-4: 고아 수호자가 같은 슬롯의 다음 보스와 겹쳐 "보스 두 마리"가 됐다)
+	local orphans = 0
+	for _, model in ipairs(MonsterState.getAllModels()) do
+		local data = MonsterState.getData(model)
+		if data and data.isBoss and not BossEncounter.getEncounterByModel(model) then
+			orphans += 1
+		end
+	end
+	r.check(("검증 뒤 encounter 없는 보스 모델 %d개(기대 0)"):format(orphans), orphans == 0)
 	fullHeal(player)
 	env.restore(player)
 	local passCount, totalCount = r.summary()

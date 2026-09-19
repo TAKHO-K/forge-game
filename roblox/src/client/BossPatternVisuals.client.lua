@@ -29,6 +29,7 @@ local BossGateView = require(script.Parent.BossGateView)
 local BossArenaPropsView = require(script.Parent.BossArenaPropsView)
 local BossStanceView = require(script.Parent.BossStanceView)
 local BossStormView = require(script.Parent.BossStormView) -- 29-3: 낙뢰(하늘에서 꽂히는 번개) · 맞으면 튕겨 나는 넉백
+local BossFloodView = require(script.Parent.BossFloodView) -- 29-4: 심해 군주의 단(내 시계로 가라앉는다) · "아직 이르다" 윗면 빨강
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
@@ -127,6 +128,8 @@ local BUBBLES = {
 	-- 29-3 보스별 기믹 픽토그램(색은 같은 위험색 - 모양으로 구분한다): 포효 = 눈꽃, 갑각 태세 = "때리지 마라".
 	roar = { icon = "❄", color = Color3.fromRGB(230, 40, 40) },
 	shell = { icon = "✖", color = Color3.fromRGB(230, 40, 40) },
+	-- 29-4: 범람 = 물결.
+	flood = { icon = "≈", color = Color3.fromRGB(230, 40, 40) },
 	-- 29-1 파훼 성공 = 기회(헤롱과 같은 파랑).
 	gateBroken = { icon = "◇", color = Color3.fromRGB(120, 200, 255) },
 }
@@ -454,8 +457,11 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	if kind == "bubble" then
 		showBubble(data.pattern, data.seconds, data.scale)
 	elseif kind == "gimmickTelegraph" then
-		if data.safeProp then
+		if data.safeProp or data.safeZone then
 			BossArenaPropsView.showGlobalTelegraph(data)
+		end
+		if data.safeZone then
+			BossFloodView.telegraph(data.safeZone)
 		end
 		if data.safeSpots then
 			BossGateView.showHintArrows(data.safeSpots, data.seconds)
@@ -471,6 +477,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossArenaPropsView.remove(data.ids)
 	elseif kind == "propsClear" then
 		BossArenaPropsView.clear()
+		BossFloodView.reset()
 	elseif kind == "stanceStart" then
 		BossStanceView.start(data)
 	elseif kind == "stanceEnd" then
@@ -479,6 +486,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossStanceView.reflect(data)
 	elseif kind == "launch" then
 		BossStormView.launch(data)
+	elseif kind == "zoneStep" then
+		BossFloodView.step(data)
+	elseif kind == "zonesReset" then
+		BossFloodView.reset()
 	elseif kind == "daze" then
 		showBubble("daze", data.seconds)
 	elseif kind == "heavyTelegraph" then
@@ -505,6 +516,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		resetAll()
 		BossArenaPropsView.clearTelegraph() -- 기둥 자체는 남는다(서버가 propsClear로 따로 치운다)
 		BossStanceView.clear()
+		BossFloodView.reset()
 	end
 end)
 

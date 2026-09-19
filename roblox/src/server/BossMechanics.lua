@@ -91,6 +91,7 @@ end
 function BossMechanics.onGimmickStart(model)
 	local st = stateOf(model)
 	st.gimmickDamage = {}
+	st.zoneSteps = nil -- 29-4: 시한 안전 구역의 멤버별 기록은 기믹마다 새로 잰다
 	if not st.gateStarted then
 		st.gateStarted = true
 		setGate(model, true)
@@ -103,6 +104,7 @@ function BossMechanics.reset(model)
 	local st = stateOf(model)
 	st.gateStarted = false
 	st.gimmickDamage = {}
+	st.zoneSteps = nil
 	st.reflect = nil
 	MonsterState.setHitListener(model, nil)
 	setGate(model, false)
@@ -201,6 +203,49 @@ function BossMechanics.endReflect(model)
 	local st = stateOf(model)
 	MonsterState.setHitListener(model, nil)
 	MonsterState.setDamageTakenMultiplier(model, st.gateArmed and BossRules.gateDamageTakenMultiplier() or 1)
+end
+
+-- ─────────────────────────── 시한 안전 구역(29-4) ───────────────────────────
+-- 심해 군주의 단: 기믹이 도는 동안 **멤버마다** "그 구역을 처음 밟은 순간부터 언제까지 안전한가"를 적는다(BossPatterns가
+-- 밟는 순간을 보고 적고, 파훼 판정 "onZone"이 읽는다). 한 사람의 시계는 다른 사람의 구역에 아무 영향이 없다.
+-- 기록은 기믹이 시작될 때마다 비운다(onGimmickStart) - 범람마다 모든 단이 전원에게 새것이다.
+-- beginZones(deadline): deadline = 판정(방전)이 예정된 시각. "버틴다"는 그 시각과 비교한다 - 판정 틱의 실제 시각(한두
+-- 프레임 늦다)과 비교하면 정확히 제때 밟은 사람이 1/60초 차로 진다.
+local ZONE_EDGE_SECONDS = 0.05 -- 가장자리는 플레이어에게 유리하게(3틱)
+
+function BossMechanics.beginZones(model, deadline)
+	local st = stateOf(model)
+	st.zoneSteps = {}
+	st.zoneDeadline = deadline
+end
+
+-- 반환: 이번 호출이 첫 밟기였으면 true.
+function BossMechanics.noteZoneStep(model, player, zoneIndex, expiresAt)
+	local st = stateOf(model)
+	st.zoneSteps = st.zoneSteps or {}
+	local mine = st.zoneSteps[player]
+	if not mine then
+		mine = {}
+		st.zoneSteps[player] = mine
+	end
+	if mine[zoneIndex] then
+		return false
+	end
+	mine[zoneIndex] = expiresAt
+	return true
+end
+
+-- 이 사람에게 그 구역이 가라앉는 시각(os.clock 기준). 아직 안 밟았으면 nil.
+function BossMechanics.zoneExpiresAt(model, player, zoneIndex)
+	local steps = stateOf(model).zoneSteps
+	return steps and steps[player] and steps[player][zoneIndex] or nil
+end
+
+-- 그 구역이 이 사람에게 판정 시각까지 버티는가. 아직 안 밟은 구역은 버틴다(방금 올라선 사람).
+function BossMechanics.zoneHolds(model, player, zoneIndex)
+	local expiresAt = BossMechanics.zoneExpiresAt(model, player, zoneIndex)
+	local deadline = stateOf(model).zoneDeadline
+	return expiresAt == nil or deadline == nil or expiresAt >= deadline - ZONE_EDGE_SECONDS
 end
 
 -- 이번(마지막) 태세에서 이 사람이 반사를 받은 횟수 - 파훼 판정 "noHit"이 읽는다.

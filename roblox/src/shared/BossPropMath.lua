@@ -65,4 +65,34 @@ function BossPropMath.rayHitDistance(origin, dir, maxLengthStuds, halfWidthStuds
 	return math.max(along - radiusStuds, 0)
 end
 
+-- ─────────────────────────── 아레나 kit의 논리 구역(29-4) ───────────────────────────
+-- 정적 kit 파트에 tag가 붙으면 스킬이 읽는 논리 구역이다(심해 군주의 단 "platform" · 폭풍 군주의 피뢰침 "rod").
+-- zoneCenter = 아레나 중심, floorY = 바닥 윗면. 반환: { { index, center(파트 중심), size, radius }, ... }(kit에 적힌 순서).
+function BossPropMath.kitZones(kit, zoneCenter, floorY, tag)
+	local zones = {}
+	for _, part in ipairs(kit and kit.parts or {}) do
+		if part.tag == tag then
+			table.insert(zones, {
+				index = #zones + 1,
+				center = Vector3.new(zoneCenter.X + part.offset.X, floorY + part.offset.Y, zoneCenter.Z + part.offset.Z),
+				size = part.size, radius = part.radiusStuds,
+			})
+		end
+	end
+	return zones
+end
+
+-- position이 상자(center·size)의 XZ 윗면 안인가. 가장자리는 플레이어에게 유리하게 marginStuds만큼 너그럽다(안전지대는
+-- "좁게 그리고 넓게 판정한다" - 위 기둥 그림자와 같은 원칙).
+function BossPropMath.insideBox(position, center, size, marginStuds)
+	return math.abs(position.X - center.X) <= size.X / 2 + marginStuds and math.abs(position.Z - center.Z) <= size.Z / 2 + marginStuds
+end
+
+-- 점에서 상자(XZ)까지의 거리(안이면 0) - 회피 부등식의 "가장 가까운 단까지"를 아레나 격자 위에서 잰다.
+function BossPropMath.distanceToBox(position, center, size)
+	local dx = math.max(math.abs(position.X - center.X) - size.X / 2, 0)
+	local dz = math.max(math.abs(position.Z - center.Z) - size.Z / 2, 0)
+	return math.sqrt(dx * dx + dz * dz)
+end
+
 return BossPropMath

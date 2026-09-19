@@ -57,6 +57,22 @@ function GroundProbe.surfaceY(x, z, referenceY)
 	return GroundProbe.groundY(x, z, referenceY, 60, 60)
 end
 
+-- 몬스터와 추격 대상이 같은 "층"인가(MonsterAI의 네 번째 출구 - 절벽 위아래로 갈라졌는가, 29-4).
+-- 루트 중심끼리의 높이차(Reach.sameLayer)가 상한 안이면 그대로 참이다(Raycast 0회 - 평소의 길). 상한을 넘을 때만
+-- 대상의 **발밑 지면**을 찾아 몬스터의 발 높이와 다시 비교한다 - 층은 지형의 성질이지 공중에 뜬 몸의 성질이 아니다.
+-- 왜 필요한가: 몬스터 루트는 지면 + monsterFootOffsetStuds(1.5), 플레이어 루트는 지면 + 3(HipHeight 2 + 루트 반높이 1)이라
+-- 같은 바닥에 서 있기만 해도 높이차가 1.5다. 상한 8은 "점프 7.2 + 여유 0.8"로 잡혔으므로 곁에서 점프하면 꼭대기
+-- 0.17초 동안 8.7 > 8이 되어 추격을 포기(= 보스 스킬 중단)할 수 있었다. 띄우기(회오리)·넉백·단 위 점프도 같은 경우다.
+-- 발밑에 지면이 없으면(심연 위) 루트 비교의 결과(거짓)를 그대로 둔다.
+function GroundProbe.sameGroundLayer(monsterPosition, targetPosition)
+	local tolerance = TerrainConfig.heightToleranceStuds
+	if math.abs(monsterPosition.Y - targetPosition.Y) <= tolerance then
+		return true
+	end
+	local groundY = GroundProbe.groundY(targetPosition.X, targetPosition.Z, targetPosition.Y, 0, TerrainConfig.airborneProbeDownStuds)
+	return groundY ~= nil and math.abs(groundY - (monsterPosition.Y - TerrainConfig.monsterFootOffsetStuds)) <= tolerance
+end
+
 function GroundProbe.stats()
 	return probeCount, probeSeconds
 end

@@ -69,6 +69,9 @@ local MECHANICS = {
 		-- 밀어서 꺼낸다(속박): reachStuds 안에서 묻힌 친구 쪽으로(towardDot = cos 60°) 걸으면 친구가 그 방향으로 밀린다.
 		-- 모래 무덤 반경을 trap.rescueSeconds에 다 민다(4 ÷ 1.5 = 2.67stud/s). 구출자마다 더해진다 - 둘이 밀면 0.75초.
 		push = { graveRadiusStuds = 4, reachStuds = 4, towardDot = 0.5 },
+		-- 곁에서 끌어올린다(침수, 29-4): reachStuds 안에 trap.rescueSeconds 동안 머문다. 구출자마다 더해지고(둘이면 0.75초),
+		-- 벗어난 구출자가 쌓던 몫은 0으로 돌아간다(20.73 A-4 "벗어나면 진행 0").
+		proximity = { reachStuds = 6 },
 	},
 
 	-- 29-3 반사(전갈 여왕 갑각 태세): 타격 수가 아니라 시간 창으로 센다 - windowSeconds에 한 번. 평타 빈도가 직업마다
@@ -237,6 +240,26 @@ local function scorpionKitParts(ruinColor, sandColor)
 	return parts
 end
 
+-- 심해 군주의 아레나 kit(29-4) - 돌단 4곳 × 2파트 = 8파트(상한 40). 단은 사분면의 한가운데(±48, ±48)에 있다 - 아레나의
+-- 어느 자리에서도 가장 가까운 단 윗면까지 56.6stud를 넘지 않는 배치다(중심·네 귀퉁이·벽 한가운데가 전부 같은 거리).
+-- 두 단 계단: 아랫단(20 × 20, 윗면 1) → 윗단(16 × 16, 윗면 2). 한 단이 1stud라 경사로 없이 걸어 오른다(지면 폴더 -
+-- 드랍은 윗면에 놓이고 보스도 밟고 지나간다). 범람의 안전지대는 tag가 붙은 **윗단**뿐이다 - 아랫단은 물에 잠긴다.
+-- 넷이 한 단에 넉넉히 선다(윗면 16 × 16, 몸통 폭 2).
+local function abyssalKitParts(baseColor, topColor)
+	local parts = {}
+	for _, spot in ipairs({ { -48, -48 }, { 48, -48 }, { -48, 48 }, { 48, 48 } }) do
+		table.insert(parts, {
+			name = "FloodPlatform", size = Vector3.new(20, 1, 20), offset = Vector3.new(spot[1], 0.5, spot[2]),
+			color = baseColor, ground = true,
+		})
+		table.insert(parts, {
+			name = "FloodPlatform", size = Vector3.new(16, 1, 16), offset = Vector3.new(spot[1], 1.5, spot[2]),
+			color = topColor, ground = true, tag = "platform",
+		})
+	end
+	return parts
+end
+
 -- ═══ 6종(29-2, PRD 20.75 C) ═══
 -- 개성 필드: basicAttack(주기·피해 배율·사거리 - 주기 × 배율 보존: 느린 보스는 한 방이 크고 빠른 보스는
 -- 잦다, 초당 기대 피해는 6종이 같다) / sizeScale·bodyAspect·attachments(체격·실루엣) / moveSpeedStuds(추격
@@ -342,6 +365,7 @@ local SPECIES = {
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 1, rangeStuds = 14 },
 		scheduler = scheduler(6),
 		skillOrder = { "sweep", "tide", "spout", "flood" },
+		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단 4곳
 		skills = {
 			-- 꼬리 휩쓸기. 도넛(안쪽 9 ~ 바깥 24) - 기본형 강공격과 반대로 **몸 쪽이 안전하다**. 누군가 바깥 반경
 			-- 안에 있을 때만 쓴다(거리 조건).
@@ -370,14 +394,28 @@ local SPECIES = {
 				telegraphSeconds = 1.5, count = 3, sequential = true, repeatTelegraphSeconds = 1.2, radiusStuds = 6, scatterStuds = 0,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "물기둥",
 			},
-			-- 범람(기믹, 29-4). 예고 시작 6초 뒤 방전 - 그때 가라앉지 않은 단 위여야 한다. 단까지 최대 51stud, 물속 −20%.
+			-- 범람(기믹, 29-4 - 타이밍). 예고 시작 6초 뒤 방전 - 그 순간 "아직 가라앉지 않은 단(윗단) 위"여야 한다.
+			--   · 단은 **그 사람이** 밟은 뒤 sinkSeconds(5초)면 **그 사람에게만** 가라앉는다 - 친구가 먼저 밟았다고 내 단이
+			--     가라앉지 않는다(서버는 멤버별로 밟은 시각만 갖고, 가라앉는 그림과 발밑 충돌은 각자의 클라가 자기 시계로 한다).
+			--     → 예고 뒤 1초(= 전조 − sinkSeconds) 안에 밟으면 방전 전에 발판을 잃는다. 미리 올라가 있던 사람은 예고와 함께
+			--     밟은 것으로 친다. 그 1초 동안은 단 윗면도 빨강이다("아직 올라가지 마라") - 빨강이 걷히면 올라간다.
+			--   · 시계는 범람이 도는 동안에만 돈다 - 범람이 시작될 때마다 네 단이 전원에게 새것이고, 끝나면 전부 돌아온다.
+			--     그래서 "첫 방전 전에 밟을 단이 없다"는 상태가 구조적으로 없다(단은 정적 kit이라 스킬 순서와도 무관하다).
+			--   · 물속 이동 −20%는 넣지 않았다(PRD 20.79) - 가장 먼 자리(56.6stud)에서 0.8배면 6.03초 > 전조 6.0으로 못 닿는다.
+			--     회피 거리 57 = 가장 먼 자리에서 윗단 가장자리까지 56.6(BossGimmickVerify가 격자로 잰다).
+			--   · 힌트 2단계(예고 × 1.5 = 9초)에서는 sinkSeconds도 같은 3초만큼 늘어난다 - "너무 이른" 창은 늘 1초다.
 			flood = {
-				primitive = "gimmick", bubble = "gimmick", role = "gimmick", enabled = false, kind = "onProp",
+				primitive = "gimmick", bubble = "flood", role = "gimmick", kind = "onZone",
 				cooldownSeconds = 20, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				telegraphSeconds = 6.0, recoverSeconds = 1.5,
-				dodge = { distanceStuds = 51, speedMultiplier = 0.8 },
+				safeZone = { tag = "platform", sinkSeconds = 5.0, shakeSeconds = 1.0, waterRiseStuds = 1.5 },
+				dodge = { distanceStuds = 57 },
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "방전",
-				sim = { evadeSeconds = 3.0 },
+				-- 방전을 쏟아낸 직후 3초는 기회 창이다(파랑 말풍선). 노브: 단이 사분면 한가운데로 옮겨 가며(어디서든 닿게) 오가는
+				-- 길이 길어졌다 - 회피 비용 3.0 → 3.5초(단 20stud 곁에서 싸우는 사람: 가기 1.25 + 오기 1.25 + 여유 1). 창이 없으면
+				-- 몬테카를로 +8.7%로 ±10%의 가장자리다.
+				breakWindow = { seconds = 3, damageTakenMultiplier = 1.3 },
+				sim = { evadeSeconds = 3.5 },
 			},
 		},
 	},

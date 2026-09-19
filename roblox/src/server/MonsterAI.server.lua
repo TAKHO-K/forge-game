@@ -334,7 +334,7 @@ RunService.Heartbeat:Connect(function(dt)
 				if not targetRoot or targetIsDead
 					or (not data.isBoss and distanceFromHome > WorldConfig.aggro.leashRangeStuds)
 					or isOutsideZoneBounds(position, zoneKey)
-					or (targetRoot and not Reach.sameLayer(position, targetRoot.Position)) then
+					or (targetRoot and not GroundProbe.sameGroundLayer(position, targetRoot.Position)) then -- 29-4: 뜬 대상은 발밑 지면으로 판단한다
 					-- 대상을 놓쳤거나(퇴장) 죽었거나(리스폰된 새 캐릭터를 이어서 쫓아가면 안 된다 -
 					-- 스폰 지점이 리쉬 범위 안이면 즉시 재사망 루프가 생긴다) 집에서 너무
 					-- 멀어졌거나(리쉬), 구역 경계를 벗어났다(16-6 - 구역 경계가 리쉬의 진짜

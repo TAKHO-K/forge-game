@@ -48,6 +48,7 @@ local BossMechanicsVerify = require(script.Parent.BossMechanicsVerify)
 -- 29-2 쿨타임·우선순위 구동 + 보스별 스킬표 자동 검증.
 local BossSkillVerify = require(script.Parent.BossSkillVerify)
 local BossGimmickVerify = require(script.Parent.BossGimmickVerify)
+local BossGimmick4Verify = require(script.Parent.BossGimmick4Verify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -2936,6 +2937,8 @@ if RunService:IsStudio() then
 				{ "29-2(나)", function() BossSkillVerify.runLive(player, env) end },
 				{ "29-3(가)", BossGimmickVerify.runPure },
 				{ "29-3(나)", function() BossGimmickVerify.runLive(player, env) end },
+				{ "29-4(가)", BossGimmick4Verify.runPure },
+				{ "29-4(나)", function() BossGimmick4Verify.runLive(player, env) end },
 			}) do
 				local ok, err = pcall(stage[2])
 				if not ok then

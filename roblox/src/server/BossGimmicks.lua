@@ -12,6 +12,8 @@ local Reach = require(ReplicatedStorage.Shared.Reach)
 local BossMechanics = require(script.Parent.BossMechanics)
 local BossTrap = require(script.Parent.BossTrap)
 local BossArenaProps = require(script.Parent.BossArenaProps)
+local BossPropMath = require(ReplicatedStorage.Shared.BossPropMath)
+local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerState = require(script.Parent.PlayerState)
 
@@ -48,6 +50,49 @@ end)
 BossMechanics.registerJudge("noHit", function(model, _, victim)
 	return BossMechanics.reflectCount(model, victim.player) == 0
 end)
+
+-- onZone(심해 군주의 범람, 29-4): 판정 순간 cfg.safeZone.tag 구역(아레나 kit의 단) 위에 있고, 그 단이 **이 사람에게** 아직
+-- 가라앉지 않았는가(BossMechanics.zoneHolds - 멤버별 시계). 가장자리는 몸통 반폭만큼 너그럽다. 같은 단에 선 친구가 언제
+-- 밟았는지는 보지 않는다 - 한 사람의 시계가 다른 사람을 벌하지 않는다.
+BossMechanics.registerJudge("onZone", function(model, data, victim, cfg)
+	local arena = WorldConfig.zones[MonsterState.getZoneKey(model) or ""]
+	if not arena or not cfg.safeZone then
+		return true
+	end
+	local half = BossData.mechanics.dodge.characterHalfWidthStuds
+	for _, zone in ipairs(BossPropMath.kitZones(data.arenaKit, arena.center, 0, cfg.safeZone.tag)) do
+		if BossPropMath.insideBox(victim.root.Position, zone.center, zone.size, half) then
+			return BossMechanics.zoneHolds(model, victim.player, zone.index)
+		end
+	end
+	return false
+end)
+
+-- ─────────────────────────── 구출: 곁에서 끌어올린다(proximity, 29-4 침수) ───────────────────────────
+-- 잡힌 친구의 reachStuds 안에 머무는 동안 진행이 찬다(trap.rescueSeconds면 끝 - 구출자마다 더해져 둘이면 절반). 벗어난
+-- 구출자가 쌓던 몫은 0으로 돌아간다(BossTrap.clearRescueBy). 방전은 이미 지나간 뒤다 - 구출자가 서는 자리는 물속이지만
+-- 범람의 후딜 1.5초 + 전역 쿨 6초 동안 새 판정이 없다. 구출자의 대가는 체력이 아니라 보스를 못 때리는 1.5초다.
+BossTrap.registerRescueHandler("proximity", {
+	tick = function(trapped, _, members, dt)
+		local root = rootOf(trapped)
+		if not root then
+			return
+		end
+		local config = BossData.mechanics.rescue.proximity
+		for _, rescuer in ipairs(members) do
+			local rescuerRoot = rescuer ~= trapped and rootOf(rescuer)
+			if rescuerRoot and (PlayerState.getHp(rescuer) or 0) > 0 and not BossTrap.isTrapped(rescuer) then
+				if Reach.horizontalDistance(rescuerRoot.Position, root.Position) <= config.reachStuds then
+					if BossTrap.addRescueProgress(trapped, rescuer, dt / BossData.mechanics.trap.rescueSeconds) then
+						return
+					end
+				else
+					BossTrap.clearRescueBy(rescuer, trapped)
+				end
+			end
+		end
+	end,
+})
 
 -- ─────────────────────────── 구출: 때려서 깬다(hitCount) ───────────────────────────
 -- 잡힌 친구를 감싼 얼음 덩어리를 타격 대상으로 세운다(MonsterSpawner.spawnRescueTarget - 평타·스킬·투사체가 그대로

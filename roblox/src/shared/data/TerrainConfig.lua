@@ -47,6 +47,10 @@ return {
 	-- 8 = 플레이어 점프 높이(JumpHeight 7.2) + 여유. "점프로 닿는 높이는 같은 층"이라는 기준 -
 	-- 이보다 높은 절벽 위아래로는 서로 못 때리고 어그로도 안 붙는다.
 	heightToleranceStuds = 8,
+	-- 공중에 뜬 추격 대상의 발밑 지면을 찾는 창(GroundProbe.sameGroundLayer, 29-4). 루트에서 아래로 이만큼 -
+	-- 점프 꼭대기(루트 = 지면 + 3 + 7.2) · 회오리 띄우기(+ 6) · 단 위 점프가 전부 들어오는 값이다. 같은 층인지는
+	-- 찾은 지면과 몬스터 발의 높이차(≤ heightToleranceStuds)로 정하므로 창이 넉넉해도 절벽 위의 대상을 같은 층으로 읽지 않는다.
+	airborneProbeDownStuds = 24,
 	-- 줍기는 더 좁다: 루트 중심이 지면에서 약 4(HipHeight 2 + 루트 반높이 1 + 바닥) - "발밑에
 	-- 있는 것만" 줍는다. 언덕 아래 아이템을 위에서 줍지 못한다(내려가야 한다).
 	pickupHeightToleranceStuds = 4,

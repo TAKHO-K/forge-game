@@ -141,6 +141,12 @@ function BossArenaPropsView.showGlobalTelegraph(data)
 	local sheet = newPart(Vector3.new(data.zoneHalfSize * 2, 0.2, data.zoneHalfSize * 2), DANGER_COLOR, 0.85, Enum.Material.Neon)
 	sheet.CFrame = CFrame.new(data.zoneCenter + Vector3.new(0, 0.12, 0))
 	TweenService:Create(sheet, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 0.4 }):Play()
+	-- 29-4 범람: 위험색 판이 곧 수면이다 - 예고 동안 riseStuds까지 차오른다(수면이 시계). 판보다 높은 단 윗면만 빨강 밖에 남는다.
+	if data.safeZone and data.safeZone.riseStuds then
+		TweenService:Create(sheet, TweenInfo.new(data.seconds, Enum.EasingStyle.Linear), {
+			CFrame = sheet.CFrame + Vector3.new(0, data.safeZone.riseStuds, 0),
+		}):Play()
+	end
 	table.insert(telegraphParts, sheet)
 
 	for _, entry in pairs(props) do

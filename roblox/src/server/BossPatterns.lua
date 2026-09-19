@@ -35,6 +35,7 @@ local BossMechanics = require(script.Parent.BossMechanics)
 -- 29-3: 동적 지형의 논리 상태(얼음 기둥). 이 파일은 스킬의 "결과 조각"(onImpact·onResolve·blockedByProp)을 실행하고
 -- 바뀐 내용을 멤버에게 알린다. 보스별 파훼 판정·구출 동작은 BossGimmicks가 뼈대의 훅에 꽂는다(require만 하면 된다).
 local BossArenaProps = require(script.Parent.BossArenaProps)
+local BossPropMath = require(ReplicatedStorage.Shared.BossPropMath)
 local BossTrap = require(script.Parent.BossTrap)
 require(script.Parent.BossGimmicks)
 
@@ -139,6 +140,24 @@ local function send(st, kind, payload)
 			patternEvent:FireClient(member, kind, payload)
 		end
 	end
+end
+
+-- 한 사람에게만(29-4: 내 단이 가라앉는 시계처럼 그 사람의 화면에만 뜻이 있는 사실).
+local function sendTo(player, kind, payload)
+	if typeof(player) == "Instance" and player.Parent then
+		patternEvent:FireClient(player, kind, payload)
+	end
+end
+
+-- 아레나 kit의 논리 구역(tag가 붙은 정적 파트 - 심해 군주의 단·폭풍 군주의 피뢰침). kit은 보스전 내내 그대로라 한 번만 만든다.
+local function kitZones(model, st, data, tag)
+	st.kitZones = st.kitZones or {}
+	local zones = st.kitZones[tag]
+	if not zones then
+		zones = BossPropMath.kitZones(data.arenaKit, zoneOf(model).center, st.floorY, tag)
+		st.kitZones[tag] = zones
+	end
+	return zones
 end
 
 -- 24-1 파티: 판정 대상 = 아레나 안 멤버 전원(각자 따로 맞는다). 캐릭터가 없거나 이미 죽은 멤버는 뺀다.
@@ -934,6 +953,36 @@ local function endStance(c)
 	end
 end
 
+-- 시한 안전 구역(29-4, skill.safeZone = { tag, sinkSeconds, shakeSeconds, waterRiseStuds } - 심해 군주의 단): 예고가 도는 동안
+-- 멤버가 그 구역(아레나 kit의 tag 파트)을 **처음 밟는 순간**을 멤버별로 적고 그 사람의 클라에만 알린다 - 가라앉는 그림과
+-- 발밑 충돌은 각자의 클라가 자기 시계로 한다(서버 인스턴스는 그대로다 - 누가 밟아도 남의 단은 안 움직인다).
+-- 잡힌 사람은 밟지 못한다. 가장자리는 몸통 반폭만큼 너그럽다(안전지대는 넓게 판정한다 - 29-3 기둥 그림자와 같다).
+local function trackZoneSteps(c)
+	local st, safeZone = c.st, c.skill.safeZone
+	local half = BossData.mechanics.dodge.characterHalfWidthStuds
+	for _, v in ipairs(victims(st)) do
+		if not BossTrap.isTrapped(v.player) then
+			for _, zone in ipairs(kitZones(c.model, st, c.data, safeZone.tag)) do
+				if BossPropMath.insideBox(v.root.Position, zone.center, zone.size, half)
+					and BossMechanics.noteZoneStep(c.model, v.player, zone.index, c.now + st.zoneSinkSeconds) then
+					print(("[forge-game] 단 밟음: %s - %d번, %.2f초 뒤 가라앉는다(판정까지 %.2f초)"):format(
+						tostring(v.player.Name), zone.index, st.zoneSinkSeconds, st.phaseEndsAt - c.now))
+					sendTo(v.player, "zoneStep", {
+						index = zone.index, center = zone.center, size = zone.size, floorY = st.floorY,
+						sinkSeconds = st.zoneSinkSeconds, shakeSeconds = safeZone.shakeSeconds,
+					})
+				end
+			end
+		end
+	end
+end
+
+local function endZones(c)
+	if c.skill.safeZone then
+		send(c.st, "zonesReset", {}) -- 범람이 끝나면(정상·중단·리셋) 가라앉은 단이 전부 돌아온다
+	end
+end
+
 HANDLERS.gimmick = {
 	bubbleSeconds = function(c)
 		return gimmickTelegraphSeconds(c.st, c.skill)
@@ -952,6 +1001,20 @@ HANDLERS.gimmick = {
 		if skill.safeProp then
 			print(("[forge-game] 기믹 예고: %s - %s %d개"):format(tostring(skill.kind), skill.safeProp, BossArenaProps.count(c.model, skill.safeProp)))
 		end
+		-- 29-4 시한 안전 구역: 힌트 2단계로 예고가 늘어나면 가라앉는 시간도 같은 만큼 늘린다 - "너무 이른" 창(예고 − sinkSeconds)은
+		-- 늘 같은 길이다(예고만 늘리면 친절해지는 게 아니라 일찍 밟아 실패하는 창이 1초 → 4초로 넓어진다).
+		local safeZone = skill.safeZone
+		local zones = safeZone and kitZones(c.model, st, c.data, safeZone.tag) or nil
+		local zoneSpots = nil
+		if safeZone then
+			st.zoneSinkSeconds = safeZone.sinkSeconds + (seconds - skill.telegraphSeconds)
+			BossMechanics.beginZones(c.model, st.phaseEndsAt)
+			print(("[forge-game] 기믹 예고: %s - %s %d곳, 밟은 뒤 %.1f초에 가라앉는다"):format(tostring(skill.kind), safeZone.tag, #zones, st.zoneSinkSeconds))
+			zoneSpots = {}
+			for _, zone in ipairs(zones) do
+				table.insert(zoneSpots, zone.center + Vector3.new(0, zone.size.Y / 2, 0))
+			end
+		end
 		send(st, "gimmickTelegraph", {
 			kind = skill.kind,
 			center = Vector3.new(c.position.X, st.floorY, c.position.Z),
@@ -960,8 +1023,13 @@ HANDLERS.gimmick = {
 			safeProp = skill.safeProp,
 			zoneCenter = Vector3.new(zone.center.X, st.floorY, zone.center.Z),
 			zoneHalfSize = zone.halfSize,
+			-- 29-4: 시한 안전 구역(단)의 자리와 시계 - 클라가 물(위험색 판이 차오른다)과 "아직 이르다"(윗면 빨강)를 그린다.
+			safeZone = safeZone and {
+				zones = zones, sinkSeconds = st.zoneSinkSeconds, earlySeconds = seconds - st.zoneSinkSeconds,
+				riseStuds = safeZone.waterRiseStuds,
+			} or nil,
 			-- 힌트 1단계부터 클라가 흰 화살표를 세우는 자리.
-			safeSpots = (hintLevel >= 1 and skill.safeProp) and BossArenaProps.safeSpots(c.model, skill.safeProp, c.position, 2) or nil,
+			safeSpots = hintLevel >= 1 and (zoneSpots or (skill.safeProp and BossArenaProps.safeSpots(c.model, skill.safeProp, c.position, 2))) or nil,
 		})
 	end,
 	step = function(c)
@@ -990,6 +1058,9 @@ HANDLERS.gimmick = {
 				local center = clampToZone(origin + dir * finisher.offsetStuds, zoneOf(c.model), 2)
 				st.finisherCenter = Vector3.new(center.X, st.floorY, center.Z)
 				send(st, "heavyTelegraph", { center = st.finisherCenter, radius = finisher.radiusStuds, seconds = st.phaseEndsAt - c.now })
+			end
+			if skill.safeZone then
+				trackZoneSteps(c) -- 판정 틱에도 먼저 돈다 - 마지막 순간에 올라선 사람도 기록된 뒤에 판정받는다
 			end
 			if c.now < st.phaseEndsAt then
 				return
@@ -1030,10 +1101,12 @@ HANDLERS.gimmick = {
 			return
 		end
 		clearDaze(c.model, st)
+		endZones(c)
 		endSkill(c.model, st, c.data, c.now)
 	end,
 	interrupt = function(c)
 		endStance(c)
+		endZones(c)
 		clearDaze(c.model, c.st)
 	end,
 }
