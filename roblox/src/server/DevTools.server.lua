@@ -2197,7 +2197,7 @@ print(("[DevTools] /gg 명령 인스턴스 있음=%s · IsStudio=%s (기대: 같
 	tostring(TextChatService:FindFirstChild("ForgeGG") ~= nil), tostring(RunService:IsStudio())))
 
 -- 자동 검증 블록 실행 스위치(DevToolsConfig.verify) - 아래 블록마다 id로 물어본다. 기본은 "지금 세션의 블록만"이고, 과거 블록 전체 회귀는
--- regression = true일 때만 돈다(세션 마지막 Play 1회). 건너뛴 블록은 파일 맨 끝에서 한 줄로 남긴다.
+-- regression = true일 때만 돈다(마일스톤 Play만 - COMMON.md §3). 건너뛴 블록은 파일 맨 끝에서 한 줄로 남긴다.
 local skippedVerifyBlocks = {}
 local function verifyEnabled(blockId)
 	local verify = DevToolsConfig.verify

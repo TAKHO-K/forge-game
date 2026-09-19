@@ -14,8 +14,8 @@ return {
 	-- 서버 시작 때 도는 자동 검증 블록의 실행 스위치(DevTools.server.lua의 verifyEnabled). 블록마다 id("26-2" · "29-3(나)" · "S05(가)" ...)가 있다.
 	-- 옛 세션의 블록이 Play마다 전부 돌면 한 번에 4분 가까이 걸린다(S05 실측 3분 55초) - 그래서 기본은 "지금 세션의 블록만"이다.
 	--   regression = false(기본): current에 적은 id의 블록만 돈다.
-	--   regression = true: 과거 세션의 블록 전부 + current. **세션의 마지막 Play 1회에서만 켜고, 그 Play가 끝나면 다시 false로 되돌린다**(COMMON.md §3 · §5).
-	-- 새 세션을 시작할 때 current를 그 세션의 블록 id로 갈아 끼운다(전 세션의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
+	--   regression = true: 과거 세션의 블록 전부 + current. **마일스톤(S10 · S15 · S21 종료 시 · Fable 세션 전 · 퍼블리시 전)에서만 켜고, 그 Play가 끝나면 다시 false로 되돌린다**(COMMON.md §3 · §5).
+	-- 새 세션을 시작할 때 current를 그 세션의 블록 id + 그 세션이 고친 모듈을 쓰는 옛 블록 id("동반 실행")로 갈아 끼운다(그 밖의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
 	verify = {
 		regression = false,
 		current = {}, -- S06은 서버 검증 블록이 없다(클라 UI 세션 - 검증은 클라 콘솔 [S06][UI] · 마지막 Play가 회귀 전체)
