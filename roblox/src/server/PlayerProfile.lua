@@ -19,6 +19,8 @@ local Option = require(ReplicatedStorage.Shared.Option)
 local InventorySync = require(script.Parent.InventorySync)
 local GemSync = require(script.Parent.GemSync)
 local PlayerState = require(script.Parent.PlayerState)
+-- 28-1 S04: 강화 재료 보유량(profile.materials)의 Attribute 이름 · 순서를 데이터에서 읽는다.
+local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 
 local PlayerProfile = {}
 
@@ -143,11 +145,24 @@ local function syncActiveClassAttributes(player, profile)
 	PlayerProfile.refreshMaxHp(player)
 end
 
+-- 재료 보유량 Attribute(28-1 S04) - 골드와 같은 방식이다(클라는 Attribute만 읽는다). 이름은 "Material" + 재료 id의 첫 글자를 대문자로
+-- (enhanceStone → MaterialEnhanceStone, highEnhanceStone → MaterialHighEnhanceStone).
+local function materialAttributeName(materialId)
+	return "Material" .. materialId:sub(1, 1):upper() .. materialId:sub(2)
+end
+
+local function syncMaterialAttributes(player, profile)
+	for _, materialId in ipairs(EnhanceMaterialData.order) do
+		player:SetAttribute(materialAttributeName(materialId), profile.materials[materialId])
+	end
+end
+
 -- 로드가 끝난 뒤(SaveServer.server.lua) 호출한다. Gold Attribute도 여기서 같이 맞춰서
 -- HUD·강화 UI가 접속 직후부터 정확한 값을 보게 한다.
 function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
+	syncMaterialAttributes(player, profile)
 	player:SetAttribute("BulkSellCutoffGrade", profile.bulkSellCutoffGrade)
 	-- 23-5: 저장된 적 있을 때만 Attribute를 세운다 - false(한 번도 안 옮김)면 안 세워서
 	-- 클라가 GetAttribute nil을 "기본 위치 계산"의 신호로 그대로 쓸 수 있게 한다.
@@ -190,6 +205,32 @@ function PlayerProfile.trySpendGold(player, amount)
 	end
 	profile.gold -= amount
 	player:SetAttribute("Gold", profile.gold)
+	return true
+end
+
+-- 강화 재료(28-1 S04) - 계정 공유. 증가 통로는 addMaterial 하나(서버의 처치 보상 지급뿐), 감소 통로는 trySpendMaterial 하나(강화 시도)다.
+function PlayerProfile.getMaterial(player, materialId)
+	local profile = profiles[player]
+	return profile and profile.materials[materialId]
+end
+
+function PlayerProfile.addMaterial(player, materialId, amount)
+	local profile = profiles[player]
+	if not profile or profile.materials[materialId] == nil then
+		return
+	end
+	profile.materials[materialId] += amount
+	player:SetAttribute(materialAttributeName(materialId), profile.materials[materialId])
+end
+
+-- 충분하면 차감하고 true, 부족하면 아무것도 바꾸지 않고 false(trySpendGold와 같은 원자성).
+function PlayerProfile.trySpendMaterial(player, materialId, amount)
+	local profile = profiles[player]
+	if not profile or (profile.materials[materialId] or 0) < amount then
+		return false
+	end
+	profile.materials[materialId] -= amount
+	player:SetAttribute(materialAttributeName(materialId), profile.materials[materialId])
 	return true
 end
 
@@ -1161,6 +1202,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		gold = profile.gold,
 		classes = deepCopy(profile.classes),
 		inventory = deepCopy(profile.inventory),
+		materials = deepCopy(profile.materials), -- 28-1 S04: 처치 보상이 재료를 실제 프로필에 쌓는다 - 가방과 같은 이유로 되돌린다.
 	}
 end
 
@@ -1181,6 +1223,8 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	for index, item in ipairs(restoredBag) do
 		profile.inventory[index] = item
 	end
+	profile.materials = deepCopy(snapshot.materials)
+	syncMaterialAttributes(player, profile)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)
 	InventorySync.push(player, profile)

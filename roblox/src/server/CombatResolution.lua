@@ -11,6 +11,8 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
@@ -24,6 +26,12 @@ local TutorialState = require(script.Parent.TutorialState)
 local PartyState = require(script.Parent.PartyState)
 
 local CombatResolution = {}
+
+-- 강화 재료 획득 알림(28-1 S04) - 재료는 골드처럼 즉시 지급이라 "방금 얼마를 받았다"는 일회성 연출 신호(클라 MaterialHud)만 보낸다. 보유량 자체는
+-- Attribute(PlayerProfile)가 유일한 소스다.
+local materialGained = Instance.new("RemoteEvent")
+materialGained.Name = "MaterialGained"
+materialGained.Parent = ReplicatedStorage
 
 -- AttackServer.server.lua/SkillServer.server.lua가 각자 만든 RemoteEvent 인스턴스를 여기
 -- 넘겨준다(둘 다 같은 골드/레벨업 팝업 이벤트를 공유해야 한다 - 새로 만들지 않는다). 두
@@ -78,6 +86,21 @@ local function flushDeferredBossDrops(deferred, fallbackPosition)
 	end
 end
 
+-- 강화 재료 지급 1인분(28-1 S04) - killUnits = 이 처치가 "몇 마리분"인가(호출부가 정한다). 기대 개수는 받는 사람의 스테이지(minStage 게이트) ·
+-- 경험치 배수(PlayerProfile.getExpGainMultiplier)로 정해지고(Loot.rollMaterialDrops), 땅이 아니라 즉시 프로필에 들어간다. 돌려주는 값 =
+-- { [재료 id] = 개수 }(검증이 읽는다). 호출부가 grantKillReward · handleChestBreak라 기여 10% 게이트를 자동으로 탄다.
+local function grantMaterials(recipient, recipientStage, killUnits)
+	local drops = Loot.rollMaterialDrops(recipientStage, killUnits, PlayerProfile.getExpGainMultiplier(recipient))
+	for _, materialId in ipairs(EnhanceMaterialData.order) do
+		local count = drops[materialId]
+		if count then
+			PlayerProfile.addMaterial(recipient, materialId, count)
+			materialGained:FireClient(recipient, materialId, count)
+		end
+	end
+	return drops
+end
+
 -- 처치 보상 지급 1인분(19-4 [2]) - 보스(단독 수령)와 잡몹(기여자 각자)이 똑같이 이 함수
 -- 하나로 받는다. AttackServer.server.lua의 grantKillReward를 그대로 옮겼다(동작 변경 없음).
 -- deferredBossDrops(보스 전용) - 가방이 가득이라 땅으로 가야 하는 보스 장비를 담는 목록. 호출부가 복귀 텔레포트 뒤에 비운다.
@@ -104,6 +127,18 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	if newLevel and newLevel ~= oldLevel then
 		CombatResolution.levelUp:FireClient(recipient, newLevel)
 	end
+
+	-- 28-1 S04: 강화 재료. 마릿수분 = 잡몹 tier r^p × 접두사(골드와 같은 배율) / 보스 hpMultiplier(20) / 반짝이 자기 몫 + 보너스(goldBonusKillEquivalent).
+	-- 견습 중에는 recipientStage(견습 단계의 스테이지)가 minStage 미만이라 자연히 안 나온다 - 별도 분기 없음.
+	local killUnits
+	if isBoss then
+		killUnits = BossData.bosses[monsterData.id].hpMultiplier
+	elseif isSparkle then
+		killUnits = MonsterState.getKillUnits(target) + RareMonsterConfig.goldBonusKillEquivalent
+	else
+		killUnits = MonsterState.getKillUnits(target)
+	end
+	grantMaterials(recipient, recipientStage, killUnits)
 
 	-- 26-1: 드랍 옵션의 직업 특화 후보는 "그 순간 플레이어의 직업"(PRD 20.67 [1]).
 	local classId = PlayerProfile.getClassId(recipient)
@@ -217,6 +252,8 @@ local function handleChestBreak(target)
 			local gold = math.floor(InfiniteStage.getGoldReward(baseData.goldDrop, stage) * TreasureChestConfig.goldKillEquivalent)
 			PlayerProfile.addGold(hitter, gold)
 			CombatResolution.goldGained:FireClient(hitter, gold)
+			-- 28-1 S04: 상자는 골드와 같은 "goldKillEquivalent(30)마리분" 재료도 준다(때린 사람 각자, 받는 사람의 스테이지 기준).
+			grantMaterials(hitter, stage, TreasureChestConfig.goldKillEquivalent)
 			count += 1
 			print(("[forge-game] 보물상자 보상: %s +%d 골드"):format(hitter.Name, gold))
 		end

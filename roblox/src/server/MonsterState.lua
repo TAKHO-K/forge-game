@@ -23,6 +23,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
 
@@ -319,6 +320,16 @@ function MonsterState.getGoldDropFor(model, stage)
 		return entry.data.goldDrop
 	end
 	return InfiniteStage.getGoldReward(entry.data.goldDrop, stage) * MonsterPrefixData.getRewardMultiplier(entry.prefix)
+end
+
+-- 이 잡몹 1마리가 강화 재료(28-1 S04)에서 "몇 마리분"인가 = 골드 식에서 스테이지 지수 성장(k^(S−1))만 뺀 배율 = tier r^p × 접두사 보상 배율.
+-- getGoldDropFor와 같은 두 인자(data.rewardRatio · MonsterData.fairnessExponent의 r^p, entry.prefix)를 쓴다 - 골드와 시간당 기대값이 같다.
+function MonsterState.getKillUnits(model)
+	local entry = monsters[model]
+	if not entry then
+		return 0
+	end
+	return (entry.data.rewardRatio ^ MonsterData.fairnessExponent) * MonsterPrefixData.getRewardMultiplier(entry.prefix)
 end
 
 function MonsterState.getExpRewardFor(model, stage)

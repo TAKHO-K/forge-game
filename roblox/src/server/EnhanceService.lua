@@ -1,5 +1,5 @@
 -- 강화 서버 권위 처리 본체(10-2, 28-1 S03에서 EnhanceServer.server.lua의 핸들러 본문을 모듈로 옮겼다). RemoteEvent 연결은 스크립트가 하고, 요청 1건의
--- 처리(강화대 근접 확인 · 상한 확인 · 골드 확인/차감 · 확률 판정 · 결과 반영)는 전부 여기 handleRequest 하나다 - 자동 검증(EnhanceVerify)이
+-- 처리(강화대 근접 확인 · 상한 확인 · 골드 · 재료 확인/차감 · 확률 판정 · 결과 반영)는 전부 여기 handleRequest 하나다 - 자동 검증(EnhanceVerify)이
 -- 스크립트를 require할 수 없어서(Script는 모듈이 아니다) 같은 함수를 바로 부를 수 있게 분리했다. 동작 변경 없음(아래 S03 항목 제외).
 --
 -- 원자성(PRD 20.18 [3]): 골드 확인/차감부터 결과 반영까지 **yield 지점이 없다** - RemoteEvent 핸들러 하나가 끝까지 실행된 뒤에야 같은 플레이어의
@@ -8,6 +8,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
+local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -40,6 +41,7 @@ end
 
 -- 반환: 클라에 보낸 결과 payload(요청이 조용히 무시되면 nil). payload = { result, level, cost, gauge, gaugeMax, gaugeGain } - 기존 필드
 -- 이름은 그대로고 gauge(다음 게이지) · gaugeMax · gaugeGain(이번 실패가 실제로 채운 양, 성공이면 0)이 S03에서 붙었다.
+-- 재료가 모자라면(S04) { result = "insufficient_material", level, cost, materialId, need, have } - 골드도 재료도 안 빠진다.
 function EnhanceService.handleRequest(player)
 	local now = os.clock()
 	local last = lastRequestTick[player]
@@ -65,9 +67,21 @@ function EnhanceService.handleRequest(player)
 		return send(player, { result = "max", level = weapon.level })
 	end
 
-	-- [3] 골드 확인+차감을 한 함수 안에서 원자적으로(PlayerProfile.trySpendGold). 19강 이상도 지금은 골드만 든다(강화석은 S04).
-	if not PlayerProfile.trySpendGold(player, cost) then
+	-- [3] 골드 · 재료를 **둘 다 확인한 뒤** 둘 다 차감한다(하나만 빠지는 경로 0). 확인 ~ 차감 ~ 판정 사이에 yield가 없어 확인이 그대로 유효하다.
+	-- 재료는 19 ~ 24강 시도에만 든다(EnhanceMaterialData.costByLevel - 0 ~ 18강은 골드만). 검사 순서: 최대 단계 → 골드 → 재료.
+	if (PlayerProfile.getGold(player) or 0) < cost then
 		return send(player, { result = "insufficient_gold", level = weapon.level, cost = cost })
+	end
+	local materialCost = EnhanceMaterialData.costByLevel[weapon.level]
+	if materialCost then
+		local have = PlayerProfile.getMaterial(player, materialCost.id) or 0
+		if have < materialCost.count then
+			return send(player, { result = "insufficient_material", level = weapon.level, cost = cost, materialId = materialCost.id, need = materialCost.count, have = have })
+		end
+	end
+	PlayerProfile.trySpendGold(player, cost)
+	if materialCost then
+		PlayerProfile.trySpendMaterial(player, materialCost.id, materialCost.count)
 	end
 
 	-- [3] 확률 판정 - 클라이언트가 보낸 값은 아무것도 쓰지 않는다. 여기까지 전부 동기 실행이라(yield 없음) 골드 차감과 결과 반영 사이에

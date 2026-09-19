@@ -15,8 +15,19 @@ local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 -- 28-1 S03: 강화 천장 게이지(weapon.enhanceGauge)의 상한 검사용(v24->v25 · isValidProfile).
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
+-- 28-1 S04: 강화 재료 보유량(profile.materials)의 기본값 · 이관(v25->v26) · isValidProfile 검사용.
+local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 
 local SaveSystem = {}
+
+-- 재료 id마다 0. defaultProfile · migrate 둘이 같은 모양을 만든다.
+local function defaultMaterials()
+	local materials = {}
+	for _, materialId in ipairs(EnhanceMaterialData.order) do
+		materials[materialId] = 0
+	end
+	return materials
+end
 
 -- 신규/구버전 프로필에 지급하는 시작 무기. 등급·기본공격력 등 정적 스탯은 WeaponData에만
 -- 있다 - 여기(저장 데이터)엔 계속 바뀌는 값(강화 단계)과 어떤 무기인지(id)만 남긴다.
@@ -146,6 +157,10 @@ local function defaultProfile()
 		-- (영웅·전설·유물 보석은 재굴림할 옵션 자체가 없다).
 		purchases = { optionRerollTickets = { ancient = 0, primordial = 0 } },
 
+		-- 강화 재료 보유량(28-1 S04) - 계정 공유(gold · purchases와 같은 층). 무기는 직업별이지만 재료는 4직업이 나눠 쓴다. 처치 보상으로만 늘고
+		-- 강화(19 ~ 24강 시도)가 소모한다 - 증감은 PlayerProfile.addMaterial · trySpendMaterial 하나뿐이다.
+		materials = defaultMaterials(),
+
 		-- 클래스 선택(10-3, 19-1부터 "현재 활성 직업" 포인터로 의미 확장). 필드는 있지만
 		-- 값은 nil - "아직 하나도 안 골랐다"가 지금은 실제로 맞는 상태이고, 이 nil이 곧
 		-- 클라이언트가 선택 UI를 띄우는 조건이 된다(ClassSelectUI.client.lua,
@@ -231,7 +246,7 @@ end
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
 -- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
 -- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
--- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03).
+-- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -693,6 +708,12 @@ local function migrate(data)
 		data.version = 25
 	end
 
+	if data.version < 26 then
+		-- 30-0 S04(PRD 20.72 [1-5](나)): 강화 재료 신설. v25까지 이 개념 자체가 없었다 - 전부 0이 정확한 과거 상태다(소급 지급 없음).
+		data.materials = data.materials or defaultMaterials()
+		data.version = 26
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -726,8 +747,17 @@ local function isValidProfile(data)
 		or type(data.purchases.optionRerollTickets.ancient) ~= "number"
 		or type(data.purchases.optionRerollTickets.primordial) ~= "number"
 		or (data.inventoryWindowPosition ~= false and type(data.inventoryWindowPosition) ~= "table")
+		or type(data.materials) ~= "table"
 	then
 		return false
+	end
+
+	-- 재료 보유량(28-1 S04): 재료 id마다 0 이상의 정수(음수 · 소수는 거절).
+	for _, materialId in ipairs(EnhanceMaterialData.order) do
+		local amount = data.materials[materialId]
+		if type(amount) ~= "number" or amount % 1 ~= 0 or amount < 0 then
+			return false
+		end
 	end
 
 	for _, item in ipairs(data.inventory) do

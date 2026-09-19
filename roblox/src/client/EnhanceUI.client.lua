@@ -13,6 +13,7 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
+local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 
 local enhanceRequest = ReplicatedStorage:WaitForChild("EnhanceRequest")
 local enhanceResult = ReplicatedStorage:WaitForChild("EnhanceResult")
@@ -318,7 +319,11 @@ end)
 enhanceResult.OnClientEvent:Connect(function(data)
 	local level = data.level or (player:GetAttribute("WeaponLevel") or 0)
 	local template = RESULT_LABEL[data.result] or data.result
-	if template:find("%%d") then
+	if data.result == "insufficient_material" then
+		-- 28-1 S04: 재료 부족 문구 한 줄(본격 UI는 S07). 재료 이름은 데이터에서 읽는다.
+		local material = EnhanceMaterialData.materials[data.materialId]
+		resultLabel.Text = ("%s이 부족합니다 (%d개 필요 · 보유 %d개)"):format(material and material.displayName or data.materialId, data.need, data.have)
+	elseif template:find("%%d") then
 		resultLabel.Text = template:format(level)
 	else
 		resultLabel.Text = template

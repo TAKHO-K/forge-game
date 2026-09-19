@@ -2,6 +2,7 @@
 --   (가) 순수 함수 + 합성 프로필 - 서버 시작 때(플레이어 없이).
 --   (나) 실제 Player · 실제 EnhanceService.handleRequest(= EnhanceRequest 핸들러 본문) 경로 - 보스 검증 체인의 끝에서 돈다.
 -- env = { ensureBackup, restore } - DevTools의 로컬 헬퍼. 검증이 바꾼 것(골드 · 무기 강화 단계 · 게이지 · 캐릭터 위치)은 (나)가 끝날 때 전부 되돌린다.
+-- S04 자동 검증(PRD 20.85) - 강화 재료 2종 + 재료 × 경험치 배수: 아래 "S04" 구역(runPureS04 · runLiveS04). 같은 규칙(가 = 서버 시작 때 · 나 = 체인 끝)이다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,17 +10,28 @@ local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local Loot = require(ReplicatedStorage.Shared.Loot)
+local BossEncounter = require(script.Parent.BossEncounter)
+local CombatResolution = require(script.Parent.CombatResolution)
 local EnhanceService = require(script.Parent.EnhanceService)
+local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
+local ItemDropState = require(script.Parent.ItemDropState)
+local MonsterSpawner = require(script.Parent.MonsterSpawner)
+local MonsterState = require(script.Parent.MonsterState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local SaveSystem = require(script.Parent.SaveSystem)
+local TutorialState = require(script.Parent.TutorialState)
 
 local EnhanceVerify = {}
 
 local RESULT_KEYS = { "success", "maintain", "down1", "down2", "reset" }
 local FLAGS_OFF = { false, false }
 
-local function newRecorder(tag)
+local function newRecorder(tag, session)
 	local passCount, totalCount = 0, 0
 	local recorder = {}
 	function recorder.check(label, ok)
@@ -27,7 +39,7 @@ local function newRecorder(tag)
 		if ok then
 			passCount += 1
 		end
-		print(("[S03][%s] %s %s"):format(tag, label, ok and "O" or "X"))
+		print(("[%s][%s] %s %s"):format(session or "S03", tag, label, ok and "O" or "X"))
 	end
 	function recorder.section(label, fn)
 		local ok, err = pcall(fn)
@@ -474,6 +486,475 @@ function EnhanceVerify.runLive(player, env)
 
 	local pass, total = r.summary()
 	print(("===S03 검증 끝(나)=== %d/%d 통과"):format(pass, total))
+end
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- S04(PRD 20.85) - 강화 재료 2종 + 재료 × 경험치 배수
+-- ═══════════════════════════════════════════════════════════════════════════
+
+local RESULT_SET = { success = true, maintain = true, down1 = true, down2 = true, reset = true }
+local ENHANCE_STONE, HIGH_STONE = "enhanceStone", "highEnhanceStone"
+
+-- ─────────────────────────── S04 (가) 순수 함수 ───────────────────────────
+
+local function checkRollCount(r)
+	r.section("[1] rollCount(0.25)", function()
+		local samples, sum, outside = 100000, 0, 0
+		for _ = 1, samples do
+			local value = Loot.rollCount(0.25)
+			sum += value
+			if value ~= 0 and value ~= 1 then
+				outside += 1
+			end
+		end
+		local mean = sum / samples
+		r.check(("rollCount(0.25) %d회: 평균 %.4f(기대 0.25 ± 0.005) · 0 또는 1이 아닌 값 %d개(기대 0)"):format(samples, mean, outside),
+			math.abs(mean - 0.25) <= 0.005 and outside == 0)
+	end)
+
+	r.section("[2] rollCount(5.0) · rollCount(7.5)", function()
+		local samples, notFive, notSevenEight, sum = 20000, 0, 0, 0
+		for _ = 1, samples do
+			if Loot.rollCount(5.0) ~= 5 then
+				notFive += 1
+			end
+			local value = Loot.rollCount(7.5)
+			sum += value
+			if value ~= 7 and value ~= 8 then
+				notSevenEight += 1
+			end
+		end
+		local mean = sum / samples
+		r.check(("rollCount(5.0) %d회 중 5가 아닌 것 %d개(기대 0) · rollCount(7.5): 7 · 8이 아닌 것 %d개(기대 0) · 평균 %.4f(기대 7.5 ± 0.05)"):format(
+			samples, notFive, notSevenEight, mean), notFive == 0 and notSevenEight == 0 and math.abs(mean - 7.5) <= 0.05)
+	end)
+end
+
+-- 기대 개수 식 표: tier1 ~ 6 × 접두사 배율(1 · 3) × 경험치 배수(1.0 · 1.2 · 1.5). 마릿수분은 MonsterState.getKillUnits(= tier r^p × 접두사)이고 골드가 쓰는
+-- 배율(goldDrop ÷ tier1.goldDrop × 접두사)과 같은지도 같이 본다. 가짜 모델(빈 테이블)을 MonsterState에 등록해 실제 함수를 그대로 부른다.
+local function checkExpectedFormula(r)
+	r.section("[3] 기대 개수 식", function()
+		local chance = EnhanceMaterialData.materials[ENHANCE_STONE].dropChancePerKill
+		local multipliers = { 1.0, 1.2, 1.5 }
+		local allOk, halfOk = true, true
+		for tierIndex, tierKey in ipairs(MonsterData.tierOrder) do
+			local data = MonsterData[tierKey]
+			local rows = {}
+			for _, prefixMultiplier in ipairs({ 1, 3 }) do
+				local fake = {}
+				MonsterState.init(fake, data, nil, nil, { prefix = prefixMultiplier ~= 1 and { hpMultiplier = prefixMultiplier } or nil })
+				local units = MonsterState.getKillUnits(fake)
+				MonsterState.clear(fake)
+				local goldRatio = data.goldDrop / MonsterData.tier1.goldDrop * prefixMultiplier
+				allOk = allOk and math.abs(units - goldRatio) <= 1e-9
+				local cells = {}
+				local baseCount
+				for _, multiplier in ipairs(multipliers) do
+					local expected = Loot.expectedMaterialCount(ENHANCE_STONE, units, multiplier)
+					allOk = allOk and math.abs(expected - chance * units * multiplier) <= 1e-9
+					baseCount = baseCount or expected
+					halfOk = halfOk and (multiplier ~= 1.5 or math.abs(expected - baseCount * 1.5) <= 1e-9)
+					table.insert(cells, ("%.3f"):format(expected))
+				end
+				table.insert(rows, ("접두사x%d 마릿수분 %.3f → 기대 %s"):format(prefixMultiplier, units, table.concat(cells, "/")))
+			end
+			print(("[S04][가]   tier%d(r^p=%.3f): %s (경험치 배수 1.0/1.2/1.5)"):format(tierIndex, data.goldDrop / MonsterData.tier1.goldDrop, table.concat(rows, " · ")))
+		end
+		r.check(("tier1 ~ 6 × 접두사 1 · 3 × 배수 1.0/1.2/1.5: 기대 개수 = 0.25 × 마릿수분 × 배수(오차 ≤ 1e-9) · 마릿수분 = 골드 배율(goldDrop ÷ tier1 × 접두사)=%s · 배수 1.5 = 1.0의 1.5배=%s ★진짜 합격 기준(경험치 배수가 곱해진다)"):format(
+			tostring(allOk), tostring(halfOk)), allOk and halfOk)
+	end)
+end
+
+local function checkCostTable(r)
+	r.section("[4] costByLevel", function()
+		local expected = { [19] = 8, [20] = 10, [21] = 12, [22] = 10, [23] = 13, [24] = 16 }
+		local cells, ok = {}, true
+		for level = 19, 24 do
+			local entry = EnhanceMaterialData.costByLevel[level]
+			ok = ok and entry ~= nil and entry.count == expected[level]
+			table.insert(cells, ("%d강 %s"):format(level, entry and ("%s %d개"):format(entry.id, entry.count) or "없음"))
+		end
+		ok = ok and EnhanceMaterialData.costByLevel[19].id == ENHANCE_STONE and EnhanceMaterialData.costByLevel[21].id == ENHANCE_STONE
+			and EnhanceMaterialData.costByLevel[22].id == HIGH_STONE and EnhanceMaterialData.costByLevel[24].id == HIGH_STONE
+		local below, above = 0, 0
+		for level = 0, 18 do
+			if EnhanceMaterialData.costByLevel[level] then
+				below += 1
+			end
+		end
+		if EnhanceMaterialData.costByLevel[25] then
+			above += 1
+		end
+		r.check(("%s · 0 ~ 18강에 재료 있는 단계 %d개(기대 0) · 25강 %d개(기대 0) - 기대 8 · 10 · 12 · 10 · 13 · 16"):format(table.concat(cells, " · "), below, above),
+			ok and below == 0 and above == 0)
+	end)
+end
+
+local function checkMaterialsSave(r)
+	r.section("[5] 저장 이관 · 검사", function()
+		local profile = SaveSystem.defaultProfile()
+		profile.version = 25
+		profile.materials = nil -- v25까지는 이 필드가 없었다
+		local migrated = SaveSystem.migrate(profile)
+		local zeros = migrated.materials ~= nil and migrated.materials[ENHANCE_STONE] == 0 and migrated.materials[HIGH_STONE] == 0
+		local validAfter = SaveSystem.isValidProfile(migrated)
+
+		local kept = SaveSystem.defaultProfile()
+		kept.version = 25
+		kept.materials = { [ENHANCE_STONE] = 7, [HIGH_STONE] = 3 }
+		local keptMigrated = SaveSystem.migrate(kept)
+		local keeps = keptMigrated.materials[ENHANCE_STONE] == 7 and keptMigrated.materials[HIGH_STONE] == 3
+
+		local function validWith(mutate)
+			local copy = deepCopy(migrated)
+			mutate(copy)
+			return SaveSystem.isValidProfile(copy)
+		end
+		local rejects = {
+			negative = validWith(function(copy) copy.materials[ENHANCE_STONE] = -1 end),
+			fraction = validWith(function(copy) copy.materials[HIGH_STONE] = 2.5 end),
+			missing = validWith(function(copy) copy.materials[HIGH_STONE] = nil end),
+			notTable = validWith(function(copy) copy.materials = 5 end),
+		}
+		local edgeOk = validWith(function(copy) copy.materials[ENHANCE_STONE] = 0 end) and validWith(function(copy) copy.materials[HIGH_STONE] = 123456 end)
+		local rejectsOk = not rejects.negative and not rejects.fraction and not rejects.missing and not rejects.notTable
+		r.check(("v25 → v%d: 재료 둘 다 0=%s · isValidProfile=%s(기대 true) · 이미 있는 값(7 · 3)은 유지=%s · 0 · 123456 통과=%s · 음수 · 소수 · 빠짐 · 표 아님 거부=%s"):format(
+			migrated.version, tostring(zeros), tostring(validAfter), tostring(keeps), tostring(edgeOk), tostring(rejectsOk)),
+			migrated.version == SaveConfig.saveVersion and zeros and validAfter and keeps and edgeOk and rejectsOk)
+	end)
+end
+
+function EnhanceVerify.runPureS04()
+	print("===S04 검증 시작(가: 재료 순수 함수)===")
+	local r = newRecorder("가", "S04")
+	checkRollCount(r)
+	checkExpectedFormula(r)
+	checkCostTable(r)
+	checkMaterialsSave(r)
+	local pass, total = r.summary()
+	print(("===S04 검증 끝(가)=== %d/%d 통과"):format(pass, total))
+end
+
+-- ─────────────────────────── S04 (나) 실제 처치 경로 · 강화 소모 ───────────────────────────
+
+-- 검증용 잡몹은 아무도 없는 먼 곳에 스폰한다. 잡몹은 죽으면 5초 뒤 같은 자리에 스스로 리스폰하므로(MonsterSpawner.despawn) 배치마다 그 시간을
+-- 기다렸다가 새로 생긴 몬스터 · 땅의 드랍을 전부 지운다 - "검증이 남긴 것 0"을 지키는 방법이다(제품 코드에 검증용 훅을 넣지 않는다).
+local FAR_POSITION = Vector3.new(0, 5, 4000)
+local KILL_CHUNK = 200
+
+local function monsterSet()
+	local set = {}
+	for _, model in ipairs(MonsterState.getAllModels()) do
+		set[model] = true
+	end
+	return set
+end
+
+local function groundSet()
+	local set = {}
+	for _, model in ipairs(ItemDropState.getAllModels()) do
+		set[model] = true
+	end
+	return set
+end
+
+local function clearNewGround(player, before)
+	for _, model in ipairs(ItemDropState.getAllModels()) do
+		if not before[model] and ItemDropState.getOwnerId(model) == player.UserId and model.Parent then
+			ItemDropSpawner.despawn(model)
+		end
+	end
+end
+
+local function materialSnapshot(player)
+	local values = {}
+	for _, materialId in ipairs(EnhanceMaterialData.order) do
+		values[materialId] = PlayerProfile.getMaterial(player, materialId)
+	end
+	return values
+end
+
+local function materialGains(player, before)
+	local gains = {}
+	for _, materialId in ipairs(EnhanceMaterialData.order) do
+		gains[materialId] = PlayerProfile.getMaterial(player, materialId) - before[materialId]
+	end
+	return gains
+end
+
+-- 실제 처치 경로로 count마리를 잡는다: 스폰 → applyDamage → resolveHit(handleMobDeath → grantKillReward → 재료). variant = {} 이면 접두사 · 반짝이 없는 기본형.
+local function killMobs(player, count, data, variant)
+	local monstersBefore, groundBefore = monsterSet(), groundSet()
+	local stage = TutorialState.getMonsterStage(player)
+	for index = 1, count do
+		local model = MonsterSpawner.spawn(data, FAR_POSITION, nil, variant)
+		local isDead = MonsterState.applyDamage(model, 1e12, stage, player)
+		CombatResolution.resolveHit(player, model, isDead)
+		if index % 50 == 0 then
+			task.wait()
+		end
+	end
+	task.wait(WorldConfig.zoneMonsterGrid.respawnDelaySeconds + 1)
+	for _, model in ipairs(MonsterState.getAllModels()) do
+		if not monstersBefore[model] then
+			MonsterState.clear(model)
+			if model.Parent then
+				model:Destroy()
+			end
+		end
+	end
+	clearNewGround(player, groundBefore)
+end
+
+-- count마리를 chunk씩 나눠 잡고(리스폰 폭주를 줄인다) 재료 증가량을 돌려준다.
+local function killAndMeasure(player, count, data, variant)
+	local before = materialSnapshot(player)
+	local remaining = count
+	while remaining > 0 do
+		local chunk = math.min(KILL_CHUNK, remaining)
+		killMobs(player, chunk, data, variant)
+		remaining -= chunk
+	end
+	return materialGains(player, before)
+end
+
+local function setMaterial(player, materialId, amount)
+	local have = PlayerProfile.getMaterial(player, materialId)
+	if have > amount then
+		PlayerProfile.trySpendMaterial(player, materialId, have - amount)
+	elseif have < amount then
+		PlayerProfile.addMaterial(player, materialId, amount - have)
+	end
+end
+
+local function rootOf(player)
+	local character = player.Character
+	return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+-- 보스를 실제 처치 경로로 잡는다(27-1 (나)와 같은 호출 - resolveHit이 handleBossDeath · 복귀 텔레포트 · despawn까지 탄다). standInRatio가 있으면 그 기여의
+-- 스탠드인(가짜 Player)을 encounter 후보에 끼운다. 스탠드인이 보상을 받으면 FireClient에서 하드 에러가 나므로 resolveHit은 pcall로 감싼다.
+local function killBossOnce(player, env, stage, standInRatio)
+	BossEncounter.despawnFor(player)
+	env.applyStage(player, stage)
+	BossEncounter.spawnFor(player, stage)
+	local model = BossEncounter.getActive(player)
+	if not model then
+		return nil
+	end
+	local data = MonsterState.getData(model)
+	local playerStage = TutorialState.getMonsterStage(player)
+	local _, maxHp = MonsterState.getBossHp(model)
+	if standInRatio then
+		local standIn = { Name = "S04StandIn", Parent = true }
+		BossEncounter.debugAddMember(model, standIn)
+		MonsterState.applyDamage(model, maxHp * standInRatio, playerStage, standIn)
+	end
+	local before = materialSnapshot(player)
+	local isDead = MonsterState.applyDamage(model, maxHp, playerStage, player)
+	MonsterSpawner.updateHpLabel(model)
+	local ok, err = pcall(CombatResolution.resolveHit, player, model, isDead)
+	BossEncounter.despawnFor(player)
+	return { gains = materialGains(player, before), ok = ok, err = err, units = BossData.bosses[data.id].hpMultiplier, playerStage = playerStage }
+end
+
+local function gainsText(gains)
+	return ("강화석 +%d · 상급 +%d"):format(gains[ENHANCE_STONE], gains[HIGH_STONE])
+end
+
+function EnhanceVerify.runLiveS04(player, env)
+	print("===S04 검증 시작(나: 실제 처치 경로 · 강화 소모)===")
+	local r = newRecorder("나", "S04")
+	local profile = PlayerProfile.getProfile(player)
+	local root = rootOf(player)
+	if not profile or not root then
+		r.check("프로필 또는 캐릭터가 없어 검증을 건너뜀", false)
+		local pass, total = r.summary()
+		print(("===S04 검증 끝(나)=== %d/%d 통과"):format(pass, total))
+		return
+	end
+
+	env.ensureBackup(player) -- classes · gold · 가방 · 재료는 env.restore가 되돌린다
+	local savedCFrame = root.CFrame
+	local materialsBefore, bagBefore, monstersBefore, groundBefore = materialSnapshot(player), #profile.inventory, monsterSet(), groundSet()
+	if not PlayerProfile.getClassId(player) then
+		PlayerProfile.setClassId(player, ClassData.order[1])
+	end
+
+	-- 기준 상태: 착용 장비 · 보석을 비워 경험치 배수가 1이 되게 한다(개발 계정의 성장 옵션이 기대값을 흔들지 않게). 9번만 성장 옵션 장비를 낀다.
+	for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+		PlayerProfile.setEquippedDirect(player, part, nil)
+	end
+	local weapon = PlayerProfile.getWeapon(player)
+	for slot = 1, #weapon.gems do
+		weapon.gems[slot] = false
+	end
+	local baseMultiplier = PlayerProfile.getExpGainMultiplier(player)
+	local chance = EnhanceMaterialData.materials[ENHANCE_STONE].dropChancePerKill
+	print(("[S04][나] 기준 상태: 경험치 배수 x%.3f(기대 1.000) · 처치 기준 스테이지는 아래 항목마다 지정한다"):format(baseMultiplier))
+
+	local function prepareStage(stage)
+		env.applyStage(player, stage)
+		return TutorialState.getMonsterStage(player) == stage
+	end
+
+	local tier1 = MonsterData.tier1
+
+	r.section("[6] 스테이지 49 · 200마리", function()
+		if not prepareStage(49) then
+			r.check(("준비 실패: 처치 기준 스테이지 %s(기대 49) - 견습 진행 중이면 그 단계의 스테이지가 쓰인다"):format(tostring(TutorialState.getMonsterStage(player))), false)
+			return
+		end
+		local gains = killAndMeasure(player, 200, tier1, {})
+		r.check(("스테이지 49 · tier1 200마리 처치: %s (기대 0 · 0 - 경계 바로 아래) ★진짜 합격 기준"):format(gainsText(gains)), gains[ENHANCE_STONE] == 0 and gains[HIGH_STONE] == 0)
+	end)
+
+	r.section("[7] 스테이지 50 · 400마리", function()
+		if not prepareStage(50) then
+			r.check("준비 실패: 처치 기준 스테이지가 50이 아니다", false)
+			return
+		end
+		local gains = killAndMeasure(player, 400, tier1, {})
+		local expected = 400 * chance * baseMultiplier
+		r.check(("스테이지 50 · tier1 · 접두사 없음 400마리 처치: %s (기대 강화석 %.0f ± 25 · 상급 0) ★진짜 합격 기준"):format(gainsText(gains), expected),
+			math.abs(gains[ENHANCE_STONE] - expected) <= 25 and gains[HIGH_STONE] == 0)
+	end)
+
+	r.section("[8] 스테이지 74 / 75", function()
+		if not prepareStage(74) then
+			r.check("준비 실패: 처치 기준 스테이지가 74가 아니다", false)
+			return
+		end
+		local at74 = killAndMeasure(player, 100, tier1, {})
+		if not prepareStage(75) then
+			r.check("준비 실패: 처치 기준 스테이지가 75가 아니다", false)
+			return
+		end
+		local at75 = killAndMeasure(player, 100, tier1, {})
+		r.check(("스테이지 74 · 100마리: %s (기대 강화석 > 0 · 상급 0) / 스테이지 75 · 100마리: %s (기대 둘 다 > 0) ★진짜 합격 기준"):format(gainsText(at74), gainsText(at75)),
+			at74[ENHANCE_STONE] > 0 and at74[HIGH_STONE] == 0 and at75[ENHANCE_STONE] > 0 and at75[HIGH_STONE] > 0)
+	end)
+
+	r.section("[9] 경험치 배수 m > 1 · 스테이지 50 · 400마리", function()
+		-- 성장(expGain) 옵션 장비를 낀다 - 26-2 검증이 옵션 장비를 만드는 방식(setEquippedDirect + option 테이블)을 따른다. 새 디버그 훅은 없다.
+		PlayerProfile.setEquippedDirect(player, "armor", {
+			grade = "primordial", part = "armor", dropStage = 100, itemLevel = 100, tierIndex = 1, locked = true, option = { id = "expGain", roll = 1.0 },
+		})
+		local multiplier = PlayerProfile.getExpGainMultiplier(player)
+		if multiplier <= baseMultiplier then
+			r.check(("성장 옵션이 안 걸림: 경험치 배수 x%.3f(기대 > 1)"):format(multiplier), false)
+			return
+		end
+		if not prepareStage(50) then
+			r.check("준비 실패: 처치 기준 스테이지가 50이 아니다", false)
+			return
+		end
+		local gains = killAndMeasure(player, 400, tier1, {})
+		local perKill = chance * multiplier -- < 1이면 매 처치 베르누이(확률 perKill)
+		local mean = 400 * perKill
+		local fraction = perKill - math.floor(perKill)
+		local sigma = math.sqrt(400 * fraction * (1 - fraction))
+		r.check(("경험치 배수 m = x%.3f(getExpGainMultiplier): 스테이지 50 · 400마리 처치: %s (기대 강화석 %.1f ± %.1f(3σ) = 100 × m ± 3σ · 상급 0) ★진짜 합격 기준"):format(
+			multiplier, gainsText(gains), mean, 3 * sigma), math.abs(gains[ENHANCE_STONE] - mean) <= 3 * sigma and gains[HIGH_STONE] == 0)
+		PlayerProfile.setEquippedDirect(player, "armor", nil)
+	end)
+
+	r.section("[10] 보스(스테이지 50) 처치", function()
+		local result = killBossOnce(player, env, 50, nil)
+		if not result then
+			r.check("보스 스폰 실패", false)
+			return
+		end
+		-- 기대 = 0.25 × 20 × 배수 = 5(배수 1) - 소수부가 없어 정확히 5다. 지시서의 범위는 4 ~ 6.
+		local expected = chance * result.units * baseMultiplier
+		r.check(("스테이지 50 보스 처치(마릿수분 %d, 받는 사람 스테이지 %d): %s (기대 강화석 4 ~ 6 · 상급 0) · resolveHit 에러=%s"):format(
+			result.units, result.playerStage, gainsText(result.gains), result.ok and "없음" or tostring(result.err)),
+			result.ok and result.gains[ENHANCE_STONE] >= 4 and result.gains[ENHANCE_STONE] <= 6 and math.abs(result.gains[ENHANCE_STONE] - expected) <= 1 and result.gains[HIGH_STONE] == 0)
+	end)
+
+	r.section("[11] 기여 9% 스탠드인 + 실제 Player 91%", function()
+		local result = killBossOnce(player, env, 50, 0.09)
+		if not result then
+			r.check("보스 스폰 실패", false)
+			return
+		end
+		-- 스탠드인이 보상을 받았다면 grantKillReward의 FireClient가 하드 에러를 냈을 것이다(27-1 A-기여도와 같은 구성) - 에러 없이 실제 Player만 받는다.
+		r.check(("스탠드인 기여 9%% + 실제 Player: %s (기대 강화석 4 ~ 6 - 실제 Player만 받는다) · 스탠드인이 받았다면 났을 하드 에러=%s(기대 없음)"):format(
+			gainsText(result.gains), result.ok and "없음" or tostring(result.err)),
+			result.ok and result.gains[ENHANCE_STONE] >= 4 and result.gains[ENHANCE_STONE] <= 6)
+	end)
+
+	-- 12 · 13: 강화대 옆에서 실제 EnhanceService.handleRequest 경로. 루트를 고정(Anchored)해 강화대로 옮긴다 - 옮긴 자리의 지형이 아직 스트리밍되지 않았을 때
+	-- 캐릭터가 추락해 "심연 복귀"로 강화대 밖에 서는 일을 막는다(S04 사전 Play에서 S03 (나)가 그렇게 실패했다).
+	local function standAtStation()
+		local currentRoot = rootOf(player)
+		currentRoot.Anchored = true
+		currentRoot.CFrame = CFrame.new(WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset + Vector3.new(0, 3, 0))
+	end
+
+	r.section("[12] 19강 · 강화석 7개 → 부족 거절", function()
+		standAtStation()
+		PlayerProfile.setWeaponLevel(player, 19)
+		PlayerProfile.setEnhanceGauge(player, 0)
+		PlayerProfile.addGold(player, 20000000)
+		setMaterial(player, ENHANCE_STONE, 7)
+		task.wait(EnhanceService.requestCooldownSeconds + 0.1)
+		local goldBefore = PlayerProfile.getGold(player)
+		local payload = EnhanceService.handleRequest(player)
+		local goldAfter, stonesAfter = PlayerProfile.getGold(player), PlayerProfile.getMaterial(player, ENHANCE_STONE)
+		r.check(("19강 · 강화석 7개 · 골드 충분: 결과 %s(기대 insufficient_material) · 필요 %s · 보유 %s(기대 8 · 7) · 골드 %d → %d(기대 그대로) · 강화석 %d개(기대 7) · 무기 +%d(기대 +19)"):format(
+			payload and payload.result or "응답 없음", tostring(payload and payload.need), tostring(payload and payload.have), goldBefore, goldAfter, stonesAfter,
+			PlayerProfile.getWeapon(player).level),
+			payload ~= nil and payload.result == "insufficient_material" and payload.materialId == ENHANCE_STONE and payload.need == 8 and payload.have == 7
+				and goldAfter == goldBefore and stonesAfter == 7 and PlayerProfile.getWeapon(player).level == 19)
+	end)
+
+	r.section("[13] 강화석 8개 → 시도", function()
+		setMaterial(player, ENHANCE_STONE, 8)
+		task.wait(EnhanceService.requestCooldownSeconds + 0.1)
+		local goldBefore = PlayerProfile.getGold(player)
+		local payload = EnhanceService.handleRequest(player)
+		local goldAfter, stonesAfter = PlayerProfile.getGold(player), PlayerProfile.getMaterial(player, ENHANCE_STONE)
+		local resultOk = payload ~= nil and RESULT_SET[payload.result] == true
+			and payload.level == Enhance.getResultLevel(19, payload.result) and PlayerProfile.getWeapon(player).level == payload.level
+		r.check(("강화석 8개 → 시도: 결과 %s · 무기 +%d · 강화석 8 → %d(기대 0) · 골드 %d → %d(차감 %d, 기대 235,000) · 결과가 정상(5종 중 하나 · 단계가 판정과 같음)=%s"):format(
+			payload and payload.result or "응답 없음", PlayerProfile.getWeapon(player).level, stonesAfter, goldBefore, goldAfter, goldBefore - goldAfter, tostring(resultOk)),
+			resultOk and stonesAfter == 0 and goldBefore - goldAfter == 235000 and goldBefore - goldAfter == Enhance.getCost(19))
+	end)
+
+	-- [14] 되돌리기: classes · gold · 가방 · 재료는 env.restore가, 위치 · 고정은 직접. 검증이 만든 것은 전부 없어야 한다.
+	BossEncounter.despawnFor(player)
+	BossEncounter.debugClearHints(player)
+	env.restore(player)
+	local currentRoot = rootOf(player)
+	if currentRoot then
+		currentRoot.Anchored = false
+		currentRoot.CFrame = savedCFrame
+	end
+	local orphans, leftoverMonsters = 0, 0
+	for _, model in ipairs(MonsterState.getAllModels()) do
+		local data = MonsterState.getData(model)
+		if data and data.isBoss and not BossEncounter.getEncounterByModel(model) then
+			orphans += 1
+		end
+		if not monstersBefore[model] then
+			leftoverMonsters += 1
+		end
+	end
+	local leftoverDrops = 0
+	for _, model in ipairs(ItemDropState.getAllModels()) do
+		if not groundBefore[model] and ItemDropState.getOwnerId(model) == player.UserId and model.Parent then
+			leftoverDrops += 1
+		end
+	end
+	local materialsAfter = materialSnapshot(player)
+	local materialsSame = materialsAfter[ENHANCE_STONE] == materialsBefore[ENHANCE_STONE] and materialsAfter[HIGH_STONE] == materialsBefore[HIGH_STONE]
+	r.check(("검증 뒤 되돌림: encounter 없는 보스 모델 %d개 · 검증이 남긴 몬스터 %d개 · 땅의 드랍 %d개(기대 0 · 0 · 0) · 재료 %d/%d → %d/%d(기대 같음) · 가방 %d → %d칸(기대 같음)"):format(
+		orphans, leftoverMonsters, leftoverDrops, materialsBefore[ENHANCE_STONE], materialsBefore[HIGH_STONE], materialsAfter[ENHANCE_STONE], materialsAfter[HIGH_STONE],
+		bagBefore, #profile.inventory), orphans == 0 and leftoverMonsters == 0 and leftoverDrops == 0 and materialsSame and #profile.inventory == bagBefore)
+
+	local pass, total = r.summary()
+	print(("===S04 검증 끝(나)=== %d/%d 통과"):format(pass, total))
 end
 
 return EnhanceVerify

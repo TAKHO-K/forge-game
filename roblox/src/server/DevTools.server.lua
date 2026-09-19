@@ -56,6 +56,7 @@ local LootRuleVerify = require(script.Parent.LootRuleVerify)
 local ItemLevelMigrateVerify = require(script.Parent.ItemLevelMigrateVerify)
 -- 30-0 S03 강화 확률표 · 골드표 · 천장 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(실제 EnhanceRequest 핸들러 경로).
 local EnhanceVerify = require(script.Parent.EnhanceVerify)
+local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData) -- 30-0 S04 재료 명령(/gg mat) · killtest 재료 줄.
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -1035,6 +1036,7 @@ local HELP_TEXT = table.concat({
 	"/gg party xtest - 크로스서버 규칙 자체검증 16항목: 코드 발급·로컬 코드 합류·동시 좌석 예약·만원·텔레포트 실패 회수·두 파티 동시 합류 차단·보스전 대기·정원 대기·취소·해산 도착·보스전 중 도착 보류·승계·해산(24-2)",
 	"/gg reset - 백업된 원본 프로필로 복원(가방 포함) + 저장 차단 해제",
 	"/gg bagclear - 실제 가방을 비우고 바로 저장(백업 없음 - 테스트 진행 중이면 거절, 28-1 S04 사전 작업)",
+	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
 
@@ -1451,10 +1453,20 @@ local function handleCommand(player, args)
 				dropsBefore += 1
 			end
 		end
+		local materialsBefore = {}
+		for _, materialId in ipairs(EnhanceMaterialData.order) do
+			materialsBefore[materialId] = PlayerProfile.getMaterial(player, materialId)
+		end
 		local stage = TutorialState.getMonsterStage(player)
 		local isDead = MonsterState.applyDamage(nearest, 1e12, stage, player)
 		MonsterSpawner.updateHpLabel(nearest)
 		CombatResolution.resolveHit(player, nearest, isDead)
+		local materialLines = {}
+		for _, materialId in ipairs(EnhanceMaterialData.order) do
+			table.insert(materialLines, ("%s +%d"):format(EnhanceMaterialData.materials[materialId].displayName,
+				PlayerProfile.getMaterial(player, materialId) - materialsBefore[materialId]))
+		end
+		print(("[killtest] 재료(스테이지 %d, 경험치 배수 x%.3f): %s"):format(stage, PlayerProfile.getExpGainMultiplier(player), table.concat(materialLines, " · ")))
 		local dropsAfter = 0
 		for _, c in ipairs(workspace:GetChildren()) do
 			if c.Name == "ItemDrop" then
@@ -1540,6 +1552,16 @@ local function handleCommand(player, args)
 						skill.enabled == false and " (설계만)" or "", clocks[id] and ("%.1f초"):format(clocks[id]) or "시계 없음"))
 				end
 			end
+		end
+	elseif sub == "mat" and args[2] and tonumber(args[3]) then
+		-- 강화 재료 지급(28-1 S04) - 강화 소모 · 부족 거절 검증용. 다른 명령처럼 백업 뒤 세션 메모리만 바꾼다(/gg reset으로 복원).
+		local materialId = args[2]
+		if not EnhanceMaterialData.materials[materialId] then
+			reply(player, ("알 수 없는 재료: %s (사용 가능: %s)"):format(materialId, table.concat(EnhanceMaterialData.order, "/")))
+		else
+			ensureBackup(player)
+			PlayerProfile.addMaterial(player, materialId, math.floor(tonumber(args[3])))
+			reply(player, ("%s %s개 지급 - 보유 %d개"):format(EnhanceMaterialData.materials[materialId].displayName, args[3], PlayerProfile.getMaterial(player, materialId)))
 		end
 	elseif sub == "bagclear" then
 		-- 개발 계정의 실제 가방을 비우고 곧바로 저장한다(28-1 S04 사전 작업 - 옛 검증 블록이 남긴 장비 청소). 다른 명령과 달리
@@ -2977,6 +2999,7 @@ if RunService:IsStudio() then
 				{ "S01(나)", function() LootRuleVerify.runLive(player, env) end },
 				{ "S02(나)", function() ItemLevelMigrateVerify.runLive(player) end },
 				{ "S03(나)", function() EnhanceVerify.runLive(player, env) end },
+				{ "S04(나)", function() EnhanceVerify.runLiveS04(player, env) end },
 			}) do
 				local ok, err = pcall(stage[2])
 				if not ok then
@@ -3030,6 +3053,17 @@ if RunService:IsStudio() then
 		local ok, err = pcall(EnhanceVerify.runPure)
 		if not ok then
 			warn(("[S03(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S04 자동 검증 블록(가) - 강화 재료 순수 함수 · 기대 개수 식 · 저장 이관(PRD 20.85) ═══
+-- 순수 함수 + 합성 프로필(플레이어 불필요). (나)는 위 29-1 체인의 끝(S03 (나) 다음).
+if RunService:IsStudio() then
+	task.spawn(function()
+		local ok, err = pcall(EnhanceVerify.runPureS04)
+		if not ok then
+			warn(("[S04(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

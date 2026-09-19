@@ -11,6 +11,7 @@ local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
+local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 -- 26-1: 장비 생성 지점에서 옵션을 굴린다(PRD 20.67 [1] "옵션 굴림 시점은 장비가 생성되는
 -- 모든 지점"). Option.rollFor가 알아서 옵션 풀이 없는 등급(일반·희귀)엔 nil을 돌려준다.
 local Option = require(ReplicatedStorage.Shared.Option)
@@ -126,6 +127,28 @@ function Loot.rollArmorDrop(monsterStage, tierIndex, rewardMultiplier, classId)
 		end
 	end
 	return items
+end
+
+-- 강화 재료(28-1 S04)의 처치당 기대 개수 = 재료의 처치당 확률 × 마릿수분(killUnits) × 받는 사람의 경험치 배수. 마릿수분은 호출부가 정한다
+-- (잡몹 = tier · 접두사 보상 배율, 보스 = 20, 반짝이 · 상자 = 보너스분 - CombatResolution). 경험치 배수를 곱하는 이유: 파티 보너스 · 성장 옵션은
+-- 레벨당 마릿수를 줄이는데 재료는 처치당으로 나오므로, 안 곱하면 같은 여정에서 재료가 덜 쌓인다(PRD 20.81 [B-4]).
+function Loot.expectedMaterialCount(materialId, killUnits, expGainMultiplier)
+	return EnhanceMaterialData.materials[materialId].dropChancePerKill * killUnits * expGainMultiplier
+end
+
+-- 처치 1회의 재료 드랍 판정 → { [재료 id] = 개수 }(0개인 재료는 없다). 받는 사람의 스테이지가 minStage 미만이면 그 재료는 굴리지 않는다.
+-- 두 재료는 각각 독립으로 굴려진다(스테이지 75+에서는 강화석도 같이 나온다). 개수 = rollCount(기대 개수) - 장비 드랍과 같은 헬퍼.
+function Loot.rollMaterialDrops(recipientStage, killUnits, expGainMultiplier)
+	local drops = {}
+	for _, materialId in ipairs(EnhanceMaterialData.order) do
+		if recipientStage >= EnhanceMaterialData.materials[materialId].minStage then
+			local count = Loot.rollCount(Loot.expectedMaterialCount(materialId, killUnits, expGainMultiplier))
+			if count > 0 then
+				drops[materialId] = count
+			end
+		end
+	end
+	return drops
 end
 
 -- 보스 첫 처치 확정 드랍(20-4, 지시 [1] "태초 희소성 복구" - 15-1의 rollBossArmorDrop을
