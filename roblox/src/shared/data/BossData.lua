@@ -692,7 +692,7 @@ for _, species in ipairs(SPECIES) do
 		boss[key] = value
 	end
 	boss.mechanics = SPECIES_MECHANICS[species.id]
-	-- arenaKit(29-2 훅): 보스별 정적 지형지물 목록. 아직 어느 보스에도 없다(보스별 세션이 채운다) - BossArenaKit.lua.
+	-- arenaKit(29-2 훅): 보스별 정적 지형지물 목록. 전갈 여왕·심해 군주·폭풍 군주가 갖는다 - BossArenaKit.lua. tag가 붙은 파트는 스킬이 읽는 논리 구역(shared/BossPropMath.kitZones).
 	bosses[species.id] = boss
 	table.insert(rotationBossIds, species.id)
 end

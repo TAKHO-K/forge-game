@@ -3,7 +3,7 @@
 -- 피뢰침·벽 수정·유사·장식)은 **보스전이 시작될 때 짓고 끝날 때 치운다**. 6종을 슬롯마다 미리 지어 두면
 -- 12 × 6 × 40 = 2,880파트라 기각됐다.
 --
--- kit 정의는 BossData.bosses[id].arenaKit(지금은 어느 보스에도 없다 - 보스별 구현 세션이 채운다):
+-- kit 정의는 BossData.bosses[id].arenaKit(29-3 전갈 여왕 · 29-4 심해 군주·폭풍 군주):
 --   arenaKit = { parts = { { name, size(Vector3), offset(Vector3 - 아레나 중심·바닥 윗면 기준), rotationDeg?(Vector3),
 --                           color(Color3 - 기존 색만), material?(Enum.Material), ground?(bool), collide?(bool),
 --                           shape?("cylinder" - 29-3 유사 웅덩이 같은 원판), tag?·radiusStuds?(스킬이 읽는 논리 구역) }, ... } }
