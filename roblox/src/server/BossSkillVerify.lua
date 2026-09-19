@@ -262,6 +262,9 @@ end
 local function spawnBoss(player, env, bossId, stage)
 	BossEncounter.despawnFor(player)
 	env.applyStage(player, stage)
+	-- 같은 스테이지에 이미 확정된 보스(pending)가 있으면 getBossForStage는 강제 지정보다 그것을 먼저 돌려준다(23-5 -
+	-- 재도전 때 보스가 바뀌지 않게). 검증은 매번 다른 보스를 불러야 하므로 pending부터 지운다(29-2 첫 Play의 교훈).
+	PlayerProfile.clearBossRotationPending(player)
 	PlayerProfile.forceBossRotationNext(player, bossId)
 	BossEncounter.spawnFor(player, stage)
 	local model = BossEncounter.getActive(player)

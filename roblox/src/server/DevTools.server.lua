@@ -2781,6 +2781,7 @@ if RunService:IsStudio() then
 				BossEncounter.despawnFor(player)
 				applyStage(player, BossData.stageInterval)
 				-- 29-2: 이 블록의 다섯 id는 기본형(구간 수호자)의 스킬이다 - 보스마다 스킬표가 달라졌으므로 기본형으로 고정한다.
+				PlayerProfile.clearBossRotationPending(player) -- 확정된 보스(pending)가 강제 지정보다 우선이다
 				PlayerProfile.forceBossRotationNext(player, BossData.tutorialBossId)
 				BossEncounter.spawnFor(player, BossData.stageInterval)
 				local model = BossEncounter.getActive(player)

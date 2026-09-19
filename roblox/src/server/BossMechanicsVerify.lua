@@ -115,6 +115,7 @@ end
 local function spawnGuardian(player, env)
 	BossEncounter.despawnFor(player)
 	env.applyStage(player, BossData.stageInterval)
+	PlayerProfile.clearBossRotationPending(player) -- 확정된 보스(pending)가 강제 지정보다 우선이라 먼저 지운다
 	PlayerProfile.forceBossRotationNext(player, GUARDIAN)
 	BossEncounter.spawnFor(player, BossData.stageInterval)
 	local model = BossEncounter.getActive(player)
@@ -447,6 +448,9 @@ local function runLive(player, env)
 		local startedAt = os.clock()
 		for _ = 1, 20 do
 			task.wait(0.1)
+			-- 실전에서는 공격이 매번 "전투 행위" 타이머를 리셋해 자동회복(4%/초)이 흡혈에 얹히지 않는다(AttackServer).
+			-- 검증은 공격 없이 흡혈 함수만 부르므로 같은 리셋을 직접 넣는다(29-2 Play에서 8.00%/초로 잡힌 원인).
+			PlayerState.setLastCombatActionAt(player, os.clock())
 			PlayerProfile.applyLifesteal(player, maxHp * 10)
 		end
 		local rate = (PlayerState.getHp(player) - startHp) / maxHp / (os.clock() - startedAt)
