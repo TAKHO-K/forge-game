@@ -15714,7 +15714,7 @@ UI 확인의 클릭 1회는 **실제 강화**라 개발 계정의 무기가 **+1
 | 방지권 지급 팝업이 읽히는가 | 재료 팝업(20.85)과 같은 모양 · 같은 자리(골드 팝업 위) - 체감 판단. 텍스트가 생성되는 것까지만 확인했다 |
 | 상점가의 체감(하락 300 · 초기화 900마리분) | 20.72 미결 5(초기값 · 실측 뒤 조정) · 미결 7(환생 직후 가격은 사실상 구매 불가 - 의도지만 체감 확인 필요)로 그대로 남는다. 계정 최고 83이면 하락 방지권 2.4억 골드다 |
 
-#### [6] 미결
+#### [6] 미결 `[✅ 20.87 [3]에서 닫힘 - SAVE_VERSION 28 · 실제 저장 → 재접속으로 확인]`
 
 1. **미결: 직업별 `bossFirstClearStages`의 숫자 키가 DataStore 왕복 뒤 문자열이 된다 - 재접속 뒤 "이 스테이지를 이미 깼다" 판정이 깨진다. 어떻게 고칠 것인가.** 왜: 실측 - 로드된 개발 계정의 `bossFirstClearStages` 키가 `5(string) 10(string) 20(string)`이었다(`/gg ticket claims`가 키 타입을 찍는다). `PlayerProfile.hasBossFirstClearReward`는 `bossFirstClearStages[stage] == true`(숫자 키)로 조회하므로 저장된 기록을 재접속 뒤에는 못 찾는다 → 이미 받은 스테이지의 보스를 다시 깨면 "첫 클리어"로 판정돼 **등급을 끌어올린 확정 드랍이 접속마다 다시 나올 수 있다**(20.40이 막으려던 "재입장 무한 획득" 구멍이 재접속 경로로 열려 있다). 또 그때 `markBossFirstClearReward`가 숫자 키 `[stage] = true`를 더하면 같은 표에 `"5"`와 `5`가 섞이는데 DataStore가 이 표를 저장하는지(오류 · 덮어쓰기)는 확인하지 못했다. 이번 세션 범위 밖이라 **고치지 않았다**. 선택지: ① 조회 · 기록을 `tostring(stage)` 문자열 키로 통일 + `migrate`가 숫자 키를 문자열로 정규화(SAVE +1) ② 로드 직후 한 번 정규화하는 함수만 추가(저장 값은 안 바뀐다) ③ `bossFirstClearStages`를 `protectionClaimedStages`처럼 처음부터 문자열 키로 바꾼다. 다른 숫자 키 집합(`tutorial.granted[stepIndex]` 등)도 같은 문제가 있는지 함께 봐야 한다.
 
@@ -15737,3 +15737,59 @@ UI 확인의 클릭 1회는 **실제 강화**라 개발 계정의 무기가 **+1
 - 기존 X는 그대로: 27-4 (가) 0/5 · (나) 2/6 · 29-1 (나) 24/25. S02의 미결(불변식)도 그대로다.
 
 **변경 파일**: `roblox/src/shared/data/EnhanceConfig.lua` · `shared/data/SaveConfig.lua` · `shared/Enhance.lua` · `server/SaveSystem.lua` · `PlayerProfile.lua` · `EnhanceService.lua` · `EnhanceServer.server.lua` · `EnhanceVerify.lua` · `CombatResolution.lua` · `ImmediateSave.lua` · `DevTools.server.lua` · `EnhancePolicy.lua`(신규) · `ProtectionTickets.lua`(신규) · `ProtectionTicketServer.server.lua`(신규) · `client/MaterialHud.client.lua` · `PRD-forge-game-roblox.md`(이 절 + 20.72 [5] 4 · 7단계 · 20.81 [A](2) 9 · 10번 표시) · `docs/sonnet/README.md`.
+
+### 20.87 S06 착수 전 사전 작업 3건: 검증 실행 스위치 · 치명타 적용 범위 확인 · 저장 집합 숫자 키 결함 수정 (S05 후속) `[✅ 구현 + 로컬 하네스 (가) 11/11(이관 블록을 끈 변이에서는 3/11) + Studio Play 3회(2026-09-20 - 전부 현재 세션 블록만): (가) 11/11 · (나) 5/5 · 저장 → 재접속 왕복 통과. 미결 0]`
+
+사용자 요청 3건. S06 본작업 전에 처리했다(S06 기록은 20.88).
+
+#### [1] 검증 실행 스위치(영구 규칙)
+
+| 항목 | 내용 |
+|---|---|
+| 문제 | 서버 시작 때 과거 세션의 검증 블록(보스 패턴 · 강화 등)이 전부 다시 돈다. S05 Play 3회 실측: 26-2 시작 → 마지막 (나) 끝 **3분 55초**(15:51:04 → 15:54:59 · 15:58:18 → 16:02:13 · 16:02:42 → 16:06:37 - 세 번 다 235초) |
+| 스위치 | `shared/data/DevToolsConfig.lua`의 `verify = { regression = false, current = { … } }`. `DevTools.server.lua`의 `verifyEnabled(id)`가 `regression`이거나 id가 `current`에 있을 때만 참. 블록 14개(26-2 · 26-3 · 27-1 · 27-3 · 27-4의 (가)/(나) · S01 ~ S05 (가))는 `if RunService:IsStudio() and verifyEnabled("<id>") then`으로, 29-x · S01 ~ S05 (나) 체인은 단계마다 `verifyEnabled(stage[1])`로 거른다. 콘솔 첫머리에 `[DevTools] 자동 검증 모드: …` · 건너뛴 블록 목록을 남긴다 |
+| 규칙 | **기본은 현재 세션의 블록만.** 과거 블록 전체 회귀는 **세션의 마지막 Play 1회에서만** `regression = true`(중간 Play에서는 켜지 않는다) · 그 Play가 끝나면 `false`로 되돌려 커밋한다. `COMMON.md` §3(스위치) · §5(대기 = 로그 폴링, 회귀 전체 약 4분 · 현재 세션만 1분 안팎) · §6(마지막 Play 뒤 `false` 복귀 확인)에 넣고 `python docs/sonnet/_build.py`로 세션 파일 21개에 반영 |
+| 부수 수정 | 체인 끝의 `[S04][가방]` 지문 줄은 체인이 백업을 한 번도 안 만들었으면(전부 건너뜀) 기준이 없어 X로 찍히므로 `firstBagCount[player] ~= nil`일 때만 찍는다 |
+| **전후** | 전: 검증 구간 **235초(3분 55초)** → 후: `S05b 검증 시작(가)` 16:31:00.179 → `S05b 검증 끝(나)` 16:31:01.220 = **약 1초**(현재 세션 블록만, Play 2 · 3회차 같은 값). Play 시작 명령 → 검증 끝 줄까지는 스튜디오 서버 부팅 · 프로필 로드가 대부분이라 로그 폴링으로 30초 안팎 |
+| 아직 안 잰 것 | 회귀 전체(`regression = true`) 시간은 이 세션에서 재지 않았다(S06의 마지막 Play에서 잰다). 기대는 전과 같은 약 4분 |
+
+#### [2] 치명타 적용 범위 확인(코드 수정 없음)
+
+**평타와 스킬 둘 다에 적용된다.** 판정은 `shared/PlayerCombat.calcDamage`(`critRng` 독립 스트림) 한 곳이고 경로는 셋이다.
+
+| 경로 | 호출 | 치확 · 치피에 들어가는 값 |
+|---|---|---|
+| 평타 | `AttackServer.server.lua:211` | 치확 = 직업 기본 `ClassData.critRate` + **활 백스텝샷 버프**(`BuffState` `critRateBonus`) + 옵션 치확(`PlayerProfile.getCritBonus`). 치피 = 직업 `critDmg` + 쌍검 Q 확정 치명타 보정 + 옵션 치피 |
+| 스킬(Q/E · 여러 대상 · 채널링 틱) | `SkillServer.server.lua:78`(`strikeTarget`) | 치확 = 직업 기본 + **옵션 치확만**(백스텝샷 버프는 안 읽는다 - 평타 전용). 치피 = 직업 `critDmg` + `critDmgBonus`(쌍검 Q) + 옵션 치피 |
+| 꽂힌 화살 폭발 | `StuckArrowState.lua:89` | `calcDamage(record.base, record.classId)` - **직업 기본만**(옵션 치확 · 치피를 안 읽는다) |
+| 힐러 치유 치명 | `SkillServer.server.lua:427` | 치확 = 직업 기본만(옵션 미반영) · 배율은 `critDmg`가 아니라 `SkillData.critHealMultiplier` 고정 |
+
+옵션 치명의 출처는 하나다: `PlayerProfile.getCritBonus(player)`(`PlayerProfile.lua:79`) → `Option.critBonus(buildOptionSources(classState), classId)` - 착용 장비 3부위 옵션 + 보석 5개 중 `id == "crit"`만 모아 `{critRate, critDmg}`를 각각 합산(상한 없음, `OptionData.crit.cap = nil`). `SkillServer`의 확정 치명타 해석(`resolveGuaranteedCrit`)도 옵션 치확을 포함해 "이미 100% 초과인가"를 본다. **눈에 띈 점(고치지 않았다)**: 꽂힌 화살 폭발과 힐러 치유는 옵션 치명을 읽지 않고, 활 백스텝샷의 치확 버프는 스킬 경로에 안 붙는다 - 의도인지 설계 결정이 필요하면 F2(치명 등가)에서 다룬다.
+
+#### [3] `bossFirstClearStages` · `tutorial.granted` 숫자 키 결함 수정(SAVE_VERSION 28)
+
+| 항목 | 내용 |
+|---|---|
+| 결함(20.86 [6]) | DataStore 왕복이 숫자 키를 문자열로 돌려줘 `hasBossFirstClearReward`가 저장된 기록을 못 찾았다 → 재접속마다 첫 클리어 확정 드랍이 다시 나올 수 있었다 |
+| 전수 확인 | 저장 프로필에서 숫자를 키로 쓰는 집합은 **두 곳**: `classes[*].stageProgress.bossFirstClearStages`(스테이지) · `tutorial.granted`(견습 단계, 개발 계정 실측 `2 · 5 · 6 · 7`). 둘 다 같은 문제라 함께 고쳤다. 나머지는 문자열 키(`materials` · `purchases.*` · `lendBaseline`) 또는 빈틈없는 배열(`inventory` · `gems` · `bossRotation.history`)이다. `gamepasses`(`{[id]=true}`)는 아무 코드도 안 쓰는 빈 테이블이라 손대지 않았다(쓰게 되면 문자열 키로). **1 ~ n이 빈틈없이 이어진 집합은 DataStore가 배열로 저장해 숫자 키로 돌려주기도 한다**(예: `granted = {[1],[2],[3]}`) - 그래서 이관은 숫자 · 문자열 · 섞임을 전부 받는다 |
+| 수정 | `SaveSystem.migrate` v27 → **v28**: `normalizeKeySet`이 두 집합의 키를 전부 `tostring`으로 옮긴다(값 그대로 · 같은 스테이지가 숫자 · 문자열로 둘 다면 하나로). `PlayerProfile.hasBossFirstClearReward` · `markBossFirstClearReward` · `clearBossFirstClearRewards` · `hasTutorialGrant` · `markTutorialGrant`가 `tostring` 키로 읽고 쓴다. **바깥 API(숫자 인자)는 그대로.** S05 방지권 집합(`protectionClaimedStages`)과 같은 방식 |
+| 로컬 | 파일 7개 `luau-compile` 통과 · `SaveKeyVerify.runPure` 하네스 **11/11**(실제 `SaveSystem.migrate` + 데이터 모듈) · 변이 확인: v28 블록을 끈 복사본에서는 **3/11**(8건 X) - 검증이 결함을 실제로 잡는다 |
+| (가) | `SaveKeyVerify.runPure` 11항목: 숫자 키 · 섞임 · 같은 스테이지 이중 · 이미 문자열(개발 계정 모양) · `granted` 숫자 · 통째 비교(다른 곳 0) · 멱등(v28 재통과 · 27로 되돌려 재이관) · isValidProfile · v26 시작 · 배열 모양 `granted` · 신규 계정 |
+| (나) | `SaveKeyVerify.runLive`(29-1 체인 끝, `S05b(나)`): ① 로드된 실제 프로필의 두 집합 숫자 키 0개 ② 실제 처치 경로(`applyDamage → resolveHit`)로 스테이지 15 보스를 깨며 `Loot.rollBossFirstClearDrop`을 감싸 **호출 횟수**를 센다(첫 처치 1회) ③ 같은 스테이지 다시 처치 0회 ④ `tutorial.granted` 문자열 키 ⑤ 되돌림(보스 모델 0 · 견습 기록 처음과 같음). 스테이지 15는 방지권 지급 스테이지(50, 75 …)가 아니라 `purchases`를 안 건드리고 개발 계정 기존 기록(5 · 10 · 20)과 안 겹친다 |
+| **저장 → 재접속 왕복** | 순수 검증은 왕복을 못 본다(S05 교훈). `/gg keycheck <스테이지> [save]` · `/gg keyclean <스테이지>`(`SaveKeyVerify.check` · `clean`)로 Play 두 번에 걸쳐 확인했다: **Play A** `keycheck 15 save` → 처치 전 기록 false · 견습 4단계 false → **확정 드랍 호출 1회** → 처치가 만든 것(가방 · 골드 · 경험치 · 재료)은 `restore`가 되돌리고 그 위에 **두 기록만** 표시해 저장(`저장 성공 gold=8784` - 골드 그대로) → Play 정지 · 재시작(DataStore 로드) → **Play B** `keycheck 15` → 처치 전 기록 **true** · 견습 4단계 **true** · 키 타입 전부 `string`(`10 · 15 · 20 · 5` / `2 · 4 · 5 · 6 · 7`) → **확정 드랍 호출 0회**. 이어서 `keyclean 15`로 두 기록을 지우고 저장(집합이 `10 · 20 · 5` / `2 · 5 · 6 · 7`로 검증 전과 같다) |
+| 실측이 바꾼 것 | 1회차에 견습 지급 기록으로 쓰려던 2단계가 개발 계정에 **이미 실제 기록으로 있었다**(`granted` = `2 · 5 · 6 · 7`). 저장 모드가 덮어쓰기를 거절하는 가드 덕에 실제 기록은 안 건드렸고, 4단계로 바꿨다(`7fb6a8f`). 반드시 저장 · 재접속 전에 "이미 그 기록이 있는가"를 먼저 읽는 이유다 |
+
+##### 합격 기준
+
+| # | 항목 | 결과 | 근거 |
+|---|---|---|---|
+| 1 | 새 검증 (가) | **O** | `S05b (가) 11/11`(Play 3회 모두) |
+| 2 | 새 검증 (나) | **O** | `S05b (나) 5/5` · ② `확정 드랍 호출 1회` · ③ `0회` |
+| 3 | ★진짜 합격 기준 - 보스를 한 번 깨고 재접속 후 다시 깨도 첫 클리어 확정 드랍이 다시 안 나온다 | **O** | Play A `호출 1회` → 저장 → 재시작 → Play B `기록=true · 호출 0회` |
+| 4 | 이관이 숫자 · 문자열 · 배열 모양을 전부 받는다 | **O** | (가) ① ~ ⑩ · 변이 3/11 |
+| 5 | 검증 구간 시간 | **O** | 235초 → 약 1초(현재 세션 블록만) |
+| 6 | 개발 계정이 원래대로 | **O** | `keyclean` 뒤 집합 · 골드 8,784 · 활 +13 그대로 |
+
+**변경 파일**: `shared/data/DevToolsConfig.lua` · `SaveConfig.lua` · `server/DevTools.server.lua` · `SaveSystem.lua` · `PlayerProfile.lua` · `LootRuleVerify.lua`(헬퍼 2개 노출) · **새** `server/SaveKeyVerify.lua` · `docs/sonnet/COMMON.md` + 세션 파일 21개(`_build.py`). 커밋 `eb8c943` · `7fb6a8f`.
+
+**임의 결정**: ① 검증 블록 id를 기존 라벨(`"29-3(나)"` · `"S05(가)"`)과 같게 했다(체인 표의 첫 칸이 그대로 id). ② 새 블록 id는 `S05b`(S05 후속). ③ `COMMON.md` §5 3번의 "8 ~ 9분 기다린다"를 로그 폴링으로 바꿨다(스위치가 시간을 바꿔 옛 문구가 맞지 않고, 메모리에 있는 사용자의 "9분은 길다" 지적과도 같다). ④ 프로브 스테이지 15 · 견습 4단계는 개발 계정의 실제 기록과 안 겹치는 값으로 골랐다.
