@@ -467,4 +467,8 @@ function LootRuleVerify.runLive(player, env)
 	print(("===S01 검증 끝(나)=== %d/%d 통과"):format(pass, total))
 end
 
+-- S05b(SaveKeyVerify)가 같은 보스 스폰 · 처치 헬퍼를 쓴다.
+LootRuleVerify.spawnBossAt = spawnBossAt
+LootRuleVerify.killBoss = killBoss
+
 return LootRuleVerify

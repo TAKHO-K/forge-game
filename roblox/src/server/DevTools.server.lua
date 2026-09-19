@@ -58,6 +58,8 @@ local ItemLevelMigrateVerify = require(script.Parent.ItemLevelMigrateVerify)
 local EnhanceVerify = require(script.Parent.EnhanceVerify)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData) -- 30-0 S04 재료 명령(/gg mat) · killtest 재료 줄.
 local ProtectionTickets = require(script.Parent.ProtectionTickets) -- 30-0 S05 방지권 명령(/gg ticket).
+-- 30-0 S05 후속(S05b) 저장 집합 키 문자열 통일 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝. 재접속 왕복은 /gg keycheck · keyclean.
+local SaveKeyVerify = require(script.Parent.SaveKeyVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -1039,6 +1041,7 @@ local HELP_TEXT = table.concat({
 	"/gg bagclear - 실제 가방을 비우고 바로 저장(백업 없음 - 테스트 진행 중이면 거절, 28-1 S04 사전 작업)",
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
 	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록(실제 키 타입 포함) · /gg ticket grantboss <스테이지> - 처치 없이 보스 첫 클리어 지급 함수 호출 · /gg ticket clear - 방지권 · 받은 기록을 비우고 저장",
+	"/gg keycheck <스테이지> [save] - 실제 보스 처치 1회로 첫 클리어 확정 드랍 호출 횟수 · 저장 집합의 실제 키 타입을 찍는다(S05b) - save를 붙이면 두 기록(스테이지 · 견습 2단계)만 남기고 저장, Play 재시작 뒤 다시 불러 왕복을 확인 · /gg keyclean <스테이지> - 그 두 기록을 지우고 저장",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
 
@@ -1591,10 +1594,35 @@ local function handleCommand(player, args)
 			return #parts > 0 and table.concat(parts, " ") or "없음"
 		end
 		local classState = profile and profile.classId and profile.classes[profile.classId]
-		reply(player, ("방지권 받은 스테이지(계정): %s / 활성 직업 첫 클리어(bossFirstClearStages): %s / 보유 하락 %s · 초기화 %s"):format(
+		reply(player, ("방지권 받은 스테이지(계정): %s / 활성 직업 첫 클리어(bossFirstClearStages): %s / 견습 지급(tutorial.granted): %s / 보유 하락 %s · 초기화 %s"):format(
 			profile and describe(profile.purchases.protectionClaimedStages) or "프로필 없음",
 			classState and describe(classState.stageProgress.bossFirstClearStages) or "없음",
+			profile and describe(profile.tutorial.granted) or "프로필 없음",
 			tostring(PlayerProfile.getProtectionTicket(player, "drop")), tostring(PlayerProfile.getProtectionTicket(player, "reset"))))
+	elseif sub == "keycheck" and tonumber(args[2]) then
+		-- 저장 → 재접속 왕복으로 첫 클리어 · 견습 지급 기록의 키를 확인한다(S05b, SaveKeyVerify.check). 실제 보스 처치 한 번을 돌린다 - 몇 초 걸린다.
+		local env = { ensureBackup = ensureBackup, restore = restore, applyStage = applyStage }
+		if backups[player] then
+			reply(player, "다른 테스트가 진행 중입니다(백업 있음) - /gg reset 뒤에 다시 쓰세요")
+		else
+			local ok, lines = pcall(SaveKeyVerify.check, player, env, math.floor(tonumber(args[2])), args[3] == "save")
+			if ok then
+				for _, line in ipairs(lines) do
+					reply(player, line)
+				end
+			else
+				if backups[player] then
+					restore(player)
+				end
+				reply(player, "keycheck 에러: " .. tostring(lines))
+			end
+		end
+	elseif sub == "keyclean" and tonumber(args[2]) then
+		if backups[player] then
+			reply(player, "다른 테스트가 진행 중입니다(백업 있음) - /gg reset 뒤에 다시 쓰세요")
+		else
+			reply(player, SaveKeyVerify.clean(player, math.floor(tonumber(args[2]))))
+		end
 	elseif sub == "ticket" and (args[2] == "drop" or args[2] == "reset") and tonumber(args[3]) then
 		ensureBackup(player)
 		PlayerProfile.addProtectionTicket(player, args[2], math.floor(tonumber(args[3])))
@@ -2153,6 +2181,20 @@ print("[DevTools] 밸런스 테스트 도구 로드됨(Studio 전용) - 채팅�
 print(("[DevTools] /gg 명령 인스턴스 있음=%s · IsStudio=%s (기대: 같은 값)"):format(
 	tostring(TextChatService:FindFirstChild("ForgeGG") ~= nil), tostring(RunService:IsStudio())))
 
+-- 자동 검증 블록 실행 스위치(DevToolsConfig.verify) - 아래 블록마다 id로 물어본다. 기본은 "지금 세션의 블록만"이고, 과거 블록 전체 회귀는
+-- regression = true일 때만 돈다(세션 마지막 Play 1회). 건너뛴 블록은 파일 맨 끝에서 한 줄로 남긴다.
+local skippedVerifyBlocks = {}
+local function verifyEnabled(blockId)
+	local verify = DevToolsConfig.verify
+	if verify.regression or table.find(verify.current, blockId) then
+		return true
+	end
+	table.insert(skippedVerifyBlocks, blockId)
+	return false
+end
+print(("[DevTools] 자동 검증 모드: %s (현재 세션 블록: %s)"):format(
+	DevToolsConfig.verify.regression and "회귀 전체(과거 블록 포함)" or "현재 세션 블록만", table.concat(DevToolsConfig.verify.current, " · ")))
+
 -- ═══ 26-2 자동 검증 블록 ═══════════════════════════════════════════════════
 -- 서버가 Studio에서 시작될 때 한 번 돌고 결과를 전부 print한다(플레이어 접속과 무관 -
 -- 순수 함수·합성 데이터만 쓴다). execute_luau로 shared 모듈을 require하는 경로는 Edit·
@@ -2162,7 +2204,7 @@ print(("[DevTools] /gg 명령 인스턴스 있음=%s · IsStudio=%s (기대: 같
 -- (그 require들은 execute_luau 브릿지를 거치지 않는다).
 -- RunService:IsStudio()로 다시 감싼다 - 파일 맨 위의 가드와 이중이지만(중복이라도) 이 블록만
 -- 떼어 다른 곳에 옮겨도 안전하도록 명시적으로 남긴다.
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("26-2") then
 	task.spawn(function()
 		local function checkmark(actual, expected, tolerance)
 			return math.abs(actual - expected) <= tolerance
@@ -2370,7 +2412,7 @@ end
 -- 건드리지 않는다 - 다만 restoreForDevTools는 profile.classes(직업별 상태)와 가방(inventory)만 되돌리고
 -- profile.purchases(계정 공유, 최상위)는 안 건드리므로 그것만 따로 스냅샷·복원한다(가방은 S04 사전
 -- 작업 전에는 이 블록이 따로 되돌렸다 - 아래 되돌림 코드는 그 흔적이고 이제는 중복이지만 무해하다).
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("26-3") then
 	local ran26_3 = false
 	local function run26_3Verification(player)
 		if ran26_3 then
@@ -2497,7 +2539,7 @@ end
 -- PRD 27-1: 여러 세션에 걸쳐 "실행 불가"·"코드 경로만"·"부분"으로 남은 검증 항목을 모아
 -- 지금 잡을 수 있는 것(A)을 해소한다. 26-2와 같은 이유(execute_luau의 require 제약)로
 -- 서버 시작 시 한 번 돈다(플레이어 접속과 무관, 순수 함수·합성 데이터만 쓴다).
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("27-1(가)") then
 	task.spawn(function()
 		print("===27-1 검증 시작(가: 순수 함수)===")
 		local passCount, totalCount = 0, 0
@@ -2557,7 +2599,7 @@ end
 -- 26-3과 같은 이유(PartyState/BossEncounter가 실제 Player 인스턴스를 요구하는 지점이
 -- 있다) - 접속한 플레이어 프로필로 한 번 돈다. ensureBackup/restore로 감싸 실제 세이브를
 -- 건드리지 않는다.
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("27-1(나)") then
 	local ran27_1b = false
 	local function run27_1bVerification(player)
 		if ran27_1b then
@@ -2648,7 +2690,7 @@ end
 -- debugAddMember와 같은 원리로 가짜 파티 테이블 + 가짜 멤버 테이블을 만들어 실제
 -- RemoteEvent 없이 해석 로직 전체를 검증한다. 리더만 접속한 진짜 플레이어를 써서
 -- PartyVoteNotice가 실제로도 한 번씩 나가는 걸 겸사겸사 확인한다.
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("27-3(가)") then
 	local ran27_3a = false
 	local function run27_3aVerification(player)
 		if ran27_3a then
@@ -2732,7 +2774,7 @@ end
 -- 27-1(나)는 "보상이 9% 미만을 제외하는가", 이 블록은 "bestBossCleared가 보상과 같은
 -- 분기가 아니라 파티 전원 기준으로 따로 도는가"다 - 같은 9%/91% 스탠드인 시나리오를 다시
 -- 써서 27-1(나)에서 이미 확인한 보상 쪽은 안 건드렸는지까지 같이 재확인한다.
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("27-3(나)") then
 	local ran27_3b = false
 	local function run27_3bVerification(player)
 		if ran27_3b then
@@ -2836,7 +2878,7 @@ end
 -- 호출해도 실제 게임 경로와 같은 코드를 탄다. 진짜 플레이어를 타깃으로 써서 send()의
 -- patternEvent:FireClient가 실제 Instance에 정상적으로 나가는지까지 같이 확인한다(27-1이
 -- 스탠드인으로 "가짜 Player면 에러난다"를 검증했던 것과 반대 방향의 안전성 확인).
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("27-4(가)") then
 	local ran27_4a = false
 	local function run27_4aVerification(player)
 		if ran27_4a then
@@ -2925,7 +2967,7 @@ end
 -- locked, stage <= bestBossCleared면 cleared, 아니면 inProgress)라 Studio 실측(스크린샷)
 -- 으로 이미 확인했다 - 여기서는 그 함수가 읽는 세 Attribute(InfiniteStage/
 -- InfiniteStageBest/BestBossCleared)가 서버에서 기대한 값으로 정확히 나가는지만 본다.
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("27-4(나)") then
 	local ran27_4b = false
 	local function run27_4bVerification(player)
 		if ran27_4b then
@@ -3047,21 +3089,26 @@ if RunService:IsStudio() then
 				{ "S03(나)", function() EnhanceVerify.runLive(player, env) end },
 				{ "S04(나)", function() EnhanceVerify.runLiveS04(player, env) end },
 				{ "S05(나)", function() EnhanceVerify.runLiveS05(player, env) end },
+				{ "S05b(나)", function() SaveKeyVerify.runLive(player, env) end },
 			}) do
-				local ok, err = pcall(stage[2])
-				if not ok then
-					warn(("[%s] 검증 블록 에러: %s"):format(stage[1], tostring(err)))
-					if backups[player] then
-						restore(player)
+				if verifyEnabled(stage[1]) then
+					local ok, err = pcall(stage[2])
+					if not ok then
+						warn(("[%s] 검증 블록 에러: %s"):format(stage[1], tostring(err)))
+						if backups[player] then
+							restore(player)
+						end
 					end
 				end
 			end
 			-- S04 사전 작업(PRD 20.83 [8]): 옛 블록을 포함한 검증 체인 전체가 실제 가방을 그대로 남겼는가. 기준은 이 서버의 첫 백업
 			-- 순간(=어떤 블록도 가방을 건드리기 전)의 지문이다. 예전에는 Play마다 보스 드랍 2 ~ 3개가 가방에 남았다.
-			local bagCount, bagPrint = bagFingerprint(player)
-			local bagSame = firstBagCount[player] == bagCount and firstBagFingerprint[player] == bagPrint
-			print(("[S04][가방] 검증 체인 전 %s칸 → 후 %d칸 · 내용 같음=%s (기대 같은 칸 · 같은 내용) %s"):format(
-				tostring(firstBagCount[player]), bagCount, tostring(bagSame), bagSame and "O" or "X"))
+			if firstBagCount[player] ~= nil then -- 체인이 전부 건너뛰어졌으면(DevToolsConfig.verify) 백업이 없어 기준도 없다
+				local bagCount, bagPrint = bagFingerprint(player)
+				local bagSame = firstBagCount[player] == bagCount and firstBagFingerprint[player] == bagPrint
+				print(("[S04][가방] 검증 체인 전 %s칸 → 후 %d칸 · 내용 같음=%s (기대 같은 칸 · 같은 내용) %s"):format(
+					tostring(firstBagCount[player]), bagCount, tostring(bagSame), bagSame and "O" or "X"))
+			end
 		end)
 	end
 
@@ -3073,7 +3120,7 @@ end
 
 -- ═══ S01 자동 검증 블록(가) - 드랍 규칙 순수 함수(PRD 20.82) ═══
 -- 플레이어 없이 서버 시작 때 돈다(난수 표본 20만 회쯤 - 서버 시작 직후 한 번). (나)는 위 29-1 체인의 끝에서 돈다.
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("S01(가)") then
 	task.spawn(function()
 		local ok, err = pcall(LootRuleVerify.runPure)
 		if not ok then
@@ -3084,7 +3131,7 @@ end
 
 -- ═══ S02 자동 검증 블록(가) - v23 → v24 이관(PRD 20.83) ═══
 -- 합성 프로필을 실제 SaveSystem.migrate에 통과시킨다(플레이어 불필요). (나)는 위 29-1 체인의 끝에서 실제 프로필을 읽기만 한다.
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("S02(가)") then
 	task.spawn(function()
 		local ok, err = pcall(ItemLevelMigrateVerify.runPure)
 		if not ok then
@@ -3095,7 +3142,7 @@ end
 
 -- ═══ S03 자동 검증 블록(가) - 강화 확률표 · 골드표 · 천장(PRD 20.84) ═══
 -- 순수 함수 + 합성 프로필(플레이어 불필요). 분포 표본이 커서(25단계 × 20만 회) 단계마다 task.wait로 양보한다. (나)는 위 29-1 체인의 끝.
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("S03(가)") then
 	task.spawn(function()
 		local ok, err = pcall(EnhanceVerify.runPure)
 		if not ok then
@@ -3106,7 +3153,7 @@ end
 
 -- ═══ S04 자동 검증 블록(가) - 강화 재료 순수 함수 · 기대 개수 식 · 저장 이관(PRD 20.85) ═══
 -- 순수 함수 + 합성 프로필(플레이어 불필요). (나)는 위 29-1 체인의 끝(S03 (나) 다음).
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("S04(가)") then
 	task.spawn(function()
 		local ok, err = pcall(EnhanceVerify.runPureS04)
 		if not ok then
@@ -3117,11 +3164,27 @@ end
 
 -- ═══ S05 자동 검증 블록(가) - 방지권 순수 함수 · 분포 · 소모 · 규제 관문 · 저장 이관(PRD 20.86) ═══
 -- 순수 함수 + 합성 프로필(플레이어 불필요). 표본이 커서(20만 회 × 3 + 30만 회) 100,000회마다 task.wait로 양보한다. (나)는 위 29-1 체인의 끝(S04 (나) 다음).
-if RunService:IsStudio() then
+if RunService:IsStudio() and verifyEnabled("S05(가)") then
 	task.spawn(function()
 		local ok, err = pcall(EnhanceVerify.runPureS05)
 		if not ok then
 			warn(("[S05(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
+end
+
+-- ═══ S05b 자동 검증 블록(가) - 저장 집합 키 문자열 통일 v27 → v28(PRD 20.87) ═══
+-- 합성 프로필을 실제 SaveSystem.migrate에 통과시킨다(플레이어 불필요). (나)는 위 29-1 체인의 끝(S05 (나) 다음).
+if RunService:IsStudio() and verifyEnabled("S05b(가)") then
+	task.spawn(function()
+		local ok, err = pcall(SaveKeyVerify.runPure)
+		if not ok then
+			warn(("[S05b(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- 이 서버에서 건너뛴 검증 블록(DevToolsConfig.verify) - 체인 단계는 접속 뒤에 걸러지므로 이 줄에는 서버 시작 때 정해지는 블록만 든다.
+if #skippedVerifyBlocks > 0 then
+	print(("[DevTools] 건너뛴 자동 검증 블록 %d개(서버 시작 시점): %s - 전체 회귀는 DevToolsConfig.verify.regression = true"):format(#skippedVerifyBlocks, table.concat(skippedVerifyBlocks, " · ")))
 end

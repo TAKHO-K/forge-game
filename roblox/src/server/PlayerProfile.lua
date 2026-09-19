@@ -797,17 +797,19 @@ end
 function PlayerProfile.hasBossFirstClearReward(player, stage)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
-	return classState ~= nil and classState.stageProgress.bossFirstClearStages[stage] == true
+	return classState ~= nil and classState.stageProgress.bossFirstClearStages[tostring(stage)] == true
 end
 
 -- 서버만 호출한다(CombatResolution.grantKillReward, 확정 드랍을 이미 지급한 직후).
+-- bossFirstClearStages · tutorial.granted의 키는 문자열(tostring)이다(v28) - DataStore 왕복이 숫자 키를 문자열로 바꿔 돌려주므로 숫자 키로 조회하면 재접속 뒤 못 찾는다
+-- (hasClaimedProtectionStage 주석). 바깥 API는 그대로 숫자를 받는다.
 function PlayerProfile.markBossFirstClearReward(player, stage)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
 		return
 	end
-	classState.stageProgress.bossFirstClearStages[stage] = true
+	classState.stageProgress.bossFirstClearStages[tostring(stage)] = true
 end
 
 -- 서버만 호출한다(DevTools "/gg bossreset [stage]" 전용 - 같은 스테이지를 다른 rebirthCount
@@ -819,7 +821,7 @@ function PlayerProfile.clearBossFirstClearRewards(player, stage)
 		return
 	end
 	if stage then
-		classState.stageProgress.bossFirstClearStages[stage] = nil
+		classState.stageProgress.bossFirstClearStages[tostring(stage)] = nil
 	else
 		classState.stageProgress.bossFirstClearStages = {}
 	end
@@ -864,7 +866,7 @@ end
 -- 동일하다.
 function PlayerProfile.hasTutorialGrant(player, stepIndex)
 	local profile = profiles[player]
-	return profile ~= nil and profile.tutorial.granted[stepIndex] == true
+	return profile ~= nil and profile.tutorial.granted[tostring(stepIndex)] == true
 end
 
 function PlayerProfile.markTutorialGrant(player, stepIndex)
@@ -872,7 +874,7 @@ function PlayerProfile.markTutorialGrant(player, stepIndex)
 	if not profile then
 		return
 	end
-	profile.tutorial.granted[stepIndex] = true
+	profile.tutorial.granted[tostring(stepIndex)] = true
 end
 
 -- 대여 복원 원본(23-1) - 4단계 이상에서 무기 등급·장비 3부위를 일시적으로 덮어쓰기 전

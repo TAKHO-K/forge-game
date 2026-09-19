@@ -65,7 +65,7 @@ local function defaultClassState()
 		-- 단계)는 현재 단계와 분리한다 - 파밍하러 내려가면 현재 단계는 낮아져도 최고
 		-- 기록은 그대로 남아야 한다(PRD 20.12 경쟁 축과도 맞다). bestBossCleared(15-1):
 		-- 최고로 깬 보스 스테이지 - "0"은 아직 하나도 못 깼다는 뜻이다. bossFirstClearStages
-		-- (20-4): "그 스테이지 보스를 확정 보상으로 이미 받았는가" 집합({[stage]=true}) -
+		-- (20-4): "그 스테이지 보스를 확정 보상으로 이미 받았는가" 집합({[tostring(stage)]=true} - 키는 문자열, v28) -
 		-- bestBossCleared와 별개다. bestBossCleared는 StageServer 게이트가 쓰는 단조증가
 		-- 최고 기록이고, 이건 "재입장해도 확정 보상은 한 번만"만 판정한다(지시 [1]
 		-- "재입장 무제한 + 확정 보상 무한 파밍" 방지).
@@ -185,7 +185,7 @@ local function defaultProfile()
 		-- 견습 모드 진행도(23-1, 계정 전체 공유 - PRD 20.47[3] "완료 플래그는 계정 단위").
 		-- step: 0=미시작, 1~7=진행 중인 단계, completed=true가 되면 7단계를 깬 뒤다(step은
 		-- 7에 남아 있다 - "완료했다"는 사실은 completed 하나로만 판정한다, step 값 자체로
-		-- 겸용하지 않는다). granted: 재플레이 중복 지급 방지({[stepIndex]=true}, 1~3단계
+		-- 겸용하지 않는다). granted: 재플레이 중복 지급 방지({[tostring(stepIndex)]=true} - 키는 문자열, v28, 1~3단계
 		-- 확정 지급 + 7단계 완료 보상). lendBaseline: 대여 복원 원본(nil=대여 중 아님).
 		tutorial = { completed = false, step = 0, granted = {}, lendBaseline = nil },
 	}
@@ -233,6 +233,15 @@ do
 	end
 end
 
+-- 키를 전부 문자열로 바꾼 새 집합을 돌려준다(값은 그대로). 숫자 5와 문자열 "5"가 같이 있으면 하나("5")로 합쳐진다. v27->v28 이관 전용.
+local function normalizeKeySet(set)
+	local normalized = {}
+	for key, value in pairs(set or {}) do
+		normalized[tostring(key)] = value
+	end
+	return normalized
+end
+
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
 -- 다음 필드 추가 절차: 1) defaultProfile에 필드 추가 2) SaveConfig.saveVersion을 올린다
 -- 3) 아래에 `if data.version < N then ... data.version = N end` 블록을 추가한다.
@@ -253,7 +262,7 @@ end
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
 -- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
 -- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
--- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05).
+-- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -727,6 +736,16 @@ local function migrate(data)
 		data.purchases.protectionTickets = data.purchases.protectionTickets or { drop = 0, reset = 0 }
 		data.purchases.protectionClaimedStages = data.purchases.protectionClaimedStages or {}
 		data.version = 27
+	end
+
+	if data.version < 28 then
+		-- 30-0 S05 후속: 스테이지 · 단계 번호를 키로 쓰는 저장 집합의 키를 문자열로 통일한다. DataStore 왕복이 숫자 키를 문자열로 바꿔 돌려주므로(1 ~ n이 빈틈없이 이어진
+		-- 집합은 배열로 저장돼 숫자 키로 돌아오기도 한다) 저장된 것은 숫자 · 문자열이 섞여 있다. 값은 그대로 옮기고 키만 tostring으로 맞춘다.
+		for _, classState in pairs(data.classes) do
+			classState.stageProgress.bossFirstClearStages = normalizeKeySet(classState.stageProgress.bossFirstClearStages)
+		end
+		data.tutorial.granted = normalizeKeySet(data.tutorial.granted)
+		data.version = 28
 	end
 
 	data.savedAt = data.savedAt or 0

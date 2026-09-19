@@ -3,6 +3,9 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
+	-- 28(30-0 S05 후속) - 스키마 필드 변화 없음. 스테이지 · 단계 번호를 키로 쓰는 저장 집합 두 곳(classes[*].stageProgress.bossFirstClearStages · tutorial.granted)의 키를
+	-- 전부 문자열로 통일한다 - DataStore 왕복이 숫자 키를 문자열로 바꿔 돌려주므로(배열처럼 이어진 1 ~ n 키는 숫자로 남기도 한다) 숫자 키 조회가 재접속 뒤 깨졌다.
+	-- 이제 쓰고 읽는 쪽이 tostring 키를 쓴다. SaveSystem.migrate()의 v27->v28 참고.
 	-- 27(30-0 S05) - 방지권: purchases.protectionTickets = { drop, reset }(0 이상 정수) · purchases.protectionClaimedStages = { ["보스 스테이지"] = true }(문자열 키 - DataStore가 숫자 키를 문자열로 바꾼다. 계정 공유 - 보스
 	-- 계정 첫 클리어 지급을 이미 받은 스테이지 집합, 직업별 bossFirstClearStages와 별개) 필드 신설. 기존 세이브는 0장 · 빈 집합으로 시작한다(이미 깬 보스도 한 번 더
 	-- 깨면 받는다 - PRD 20.72 [1-7]). SaveSystem.migrate()의 v26->v27 참고.
@@ -56,7 +59,7 @@ return {
 	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
 	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
 	-- 필드(classId) 추가.
-	saveVersion = 27,
+	saveVersion = 28,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",
