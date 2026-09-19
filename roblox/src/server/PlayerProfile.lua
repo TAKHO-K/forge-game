@@ -1149,6 +1149,8 @@ end
 
 -- 활성 직업 하나의 전체 상태(직업 자체는 안 바뀐다 - classId는 snapshot 밖에서 별도 관리)를
 -- 깊은 복사로 백업한다. DevTools가 테스트 시작 전 원본을 보존하는 유일한 지점.
+-- 가방(inventory)도 백업한다(28-1 S04 사전 작업) - 보스를 실제 처치 경로로 잡는 옛 검증 블록이 S01 이후 보스 장비를
+-- 가방으로 바로 넣게 되면서 Play마다 실제 가방에 장비를 남겼다(PRD 20.83 [8]).
 function PlayerProfile.snapshotForDevTools(player)
 	local profile = profiles[player]
 	if not profile then
@@ -1158,12 +1160,14 @@ function PlayerProfile.snapshotForDevTools(player)
 		classId = profile.classId,
 		gold = profile.gold,
 		classes = deepCopy(profile.classes),
+		inventory = deepCopy(profile.inventory),
 	}
 end
 
 -- snapshotForDevTools가 만든 백업을 통째로 되돌린다 - 저장(DataStore)에는 손대지 않는다
--- (세션 메모리만 복원). 인벤토리·게임패스는 백업 대상이 아니다(DevTools가 건드리지 않는
--- 필드라 원본 그대로 남아 있다).
+-- (세션 메모리만 복원). 게임패스(purchases)는 백업 대상이 아니다(DevTools가 건드리지 않는
+-- 필드라 원본 그대로 남아 있다 - 건드리는 검증 블록이 각자 되돌린다). 가방은 표를 새로 만들지 않고 제자리에서
+-- 되돌린다 - 검증 블록이 profile.inventory를 지역 변수로 들고 있어도 같은 표를 본다.
 function PlayerProfile.restoreForDevTools(player, snapshot)
 	local profile = profiles[player]
 	if not profile or not snapshot then
@@ -1172,6 +1176,11 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.classId = snapshot.classId
 	profile.gold = snapshot.gold
 	profile.classes = deepCopy(snapshot.classes)
+	local restoredBag = deepCopy(snapshot.inventory)
+	table.clear(profile.inventory)
+	for index, item in ipairs(restoredBag) do
+		profile.inventory[index] = item
+	end
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)
 	InventorySync.push(player, profile)

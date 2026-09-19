@@ -425,7 +425,7 @@ function LootRuleVerify.runLive(player, env)
 	end
 
 	env.ensureBackup(player)
-	-- 되돌릴 것: 가방(백업 대상이 아니다 - restoreForDevTools는 classes · gold만 되돌린다) · 캐릭터 위치 · 골드 · 땅의 드랍 모델.
+	-- 되돌릴 것: 가방(S04 사전 작업부터 restoreForDevTools도 되돌리지만 이 검증은 가방을 직접 채우고 비우므로 자기 손으로 한 번 더) · 캐릭터 위치 · 골드 · 땅의 드랍 모델.
 	local savedInventory = table.clone(profile.inventory)
 	local savedCFrame = root.CFrame
 	local goldBefore = PlayerProfile.getGold(player)

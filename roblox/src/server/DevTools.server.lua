@@ -123,18 +123,34 @@ end
 
 local backups = {} -- [Player] = { classId = 백업 시점 classId, snapshot = PlayerProfile.snapshotForDevTools 결과 }
 
+-- 가방 내용의 지문 - "칸 수 + 각 장비의 등급·부위·itemLevel·dropStage". 검증 체인이 가방을 그대로 남겼는지 비교한다(S04 사전 작업).
+local function bagFingerprint(player)
+	local bag = PlayerProfile.getInventory(player) or {}
+	local parts = {}
+	for _, item in ipairs(bag) do
+		table.insert(parts, ("%s:%s:%s:%s"):format(tostring(item.grade), tostring(item.part), tostring(item.itemLevel), tostring(item.dropStage)))
+	end
+	return #bag, table.concat(parts, "|")
+end
+
+-- 이 서버에서 플레이어의 "첫 백업" 순간의 가방 지문. 첫 백업은 옛 검증 블록(26-3)이라 아직 아무 블록도 가방을 건드리기 전이다.
+local firstBagCount, firstBagFingerprint = {}, {} -- [Player] = 칸 수 / 지문
+
 -- 이 세션에서 처음 개입하는 순간에만 백업한다 - 두 번째 "/gg anchor"가 방금 세팅한 가짜
 -- 값을 "원본"으로 덮어써버리면 되돌릴 방법이 없어진다.
 local function ensureBackup(player)
 	if backups[player] then
 		return
 	end
+	if firstBagCount[player] == nil then
+		firstBagCount[player], firstBagFingerprint[player] = bagFingerprint(player)
+	end
 	backups[player] = {
 		classId = PlayerProfile.getClassId(player),
 		snapshot = PlayerProfile.snapshotForDevTools(player),
 	}
 	SaveCoordinator.setDevToolsSuspended(player, true)
-	print(("[DevTools] %s 원본 프로필 백업 완료 - 저장이 차단됩니다(/gg reset으로 복원)"):format(player.Name))
+	print(("[DevTools] %s 원본 프로필 백업 완료(가방 %d칸 포함) - 저장이 차단됩니다(/gg reset으로 복원)"):format(player.Name, (bagFingerprint(player))))
 end
 
 local function restore(player)
@@ -146,7 +162,7 @@ local function restore(player)
 	PlayerProfile.restoreForDevTools(player, backup.snapshot)
 	SaveCoordinator.setDevToolsSuspended(player, false)
 	backups[player] = nil
-	print(("[DevTools] %s 원본 프로필로 복원 완료 - 저장 차단 해제"):format(player.Name))
+	print(("[DevTools] %s 원본 프로필로 복원 완료(가방 %d칸) - 저장 차단 해제"):format(player.Name, (bagFingerprint(player))))
 end
 
 local function reply(player, message)
@@ -1017,7 +1033,8 @@ local HELP_TEXT = table.concat({
 	"/gg party fakeremote [boss|full|clear] - 다른 서버에 있는 것처럼 꾸민 가짜 파티 레코드를 MemoryStore에 쓴다(코드 출력) - boss=보스전 중, full=서버 정원 초과(24-2)",
 	"/gg heal buff - 힐러 버프(파티 최종피해 +b, b=N/(N-1+r)-1)의 현재 b·r값과 내게 걸린 버프의 남은 시간을 출력(24-3, b 재도출 24-4)",
 	"/gg party xtest - 크로스서버 규칙 자체검증 16항목: 코드 발급·로컬 코드 합류·동시 좌석 예약·만원·텔레포트 실패 회수·두 파티 동시 합류 차단·보스전 대기·정원 대기·취소·해산 도착·보스전 중 도착 보류·승계·해산(24-2)",
-	"/gg reset - 백업된 원본 프로필로 복원 + 저장 차단 해제",
+	"/gg reset - 백업된 원본 프로필로 복원(가방 포함) + 저장 차단 해제",
+	"/gg bagclear - 실제 가방을 비우고 바로 저장(백업 없음 - 테스트 진행 중이면 거절, 28-1 S04 사전 작업)",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
 
@@ -1523,6 +1540,32 @@ local function handleCommand(player, args)
 						skill.enabled == false and " (설계만)" or "", clocks[id] and ("%.1f초"):format(clocks[id]) or "시계 없음"))
 				end
 			end
+		end
+	elseif sub == "bagclear" then
+		-- 개발 계정의 실제 가방을 비우고 곧바로 저장한다(28-1 S04 사전 작업 - 옛 검증 블록이 남긴 장비 청소). 다른 명령과 달리
+		-- 백업을 만들지 않는다 - 되돌릴 대상이 아니라 저장 값 자체를 바꾸는 것이라서다. 백업이 살아 있으면(테스트 진행 중) 거절한다:
+		-- 그때 비우면 이어지는 복원이 옛 가방을 되살린다.
+		local profile = PlayerProfile.getProfile(player)
+		if backups[player] then
+			reply(player, "다른 테스트가 진행 중입니다(백업 있음) - /gg reset 뒤에 다시 쓰세요")
+		elseif not profile then
+			reply(player, "프로필이 아직 없습니다")
+		else
+			local byGrade = {}
+			for _, item in ipairs(profile.inventory) do
+				byGrade[item.grade] = (byGrade[item.grade] or 0) + 1
+			end
+			local summary = {}
+			for _, grade in ipairs(ArmorData.gradeOrder) do
+				if byGrade[grade] then
+					table.insert(summary, ("%s %d"):format(grade, byGrade[grade]))
+				end
+			end
+			local count = #profile.inventory
+			table.clear(profile.inventory)
+			InventorySync.push(player, profile)
+			SaveCoordinator.saveForPlayer(player)
+			reply(player, ("가방 %d칸을 비우고 저장했습니다(지운 것: %s)"):format(count, #summary > 0 and table.concat(summary, " · ") or "없음"))
 		end
 	elseif sub == "bossreset" then
 		ensureBackup(player)
@@ -2256,9 +2299,9 @@ end
 -- 접속한 플레이어 프로필로 한 번 돈다(6단계 리롤 확장은 PlayerProfile 내부의 `profiles[player]`
 -- 상태가 필요해 26-2처럼 완전히 플레이어 없이는 못 돈다 - GemSync.push 등이 실제 Player
 -- 인스턴스를 요구한다). ensureBackup/restore(이 파일 기존 함수)로 감싸 실제 세이브를
--- 건드리지 않는다 - 다만 restoreForDevTools는 profile.classes(직업별 상태)만 되돌리고
--- profile.inventory·profile.purchases(계정 공유, 최상위)는 안 건드리므로 그 둘만 따로
--- 스냅샷·복원한다.
+-- 건드리지 않는다 - 다만 restoreForDevTools는 profile.classes(직업별 상태)와 가방(inventory)만 되돌리고
+-- profile.purchases(계정 공유, 최상위)는 안 건드리므로 그것만 따로 스냅샷·복원한다(가방은 S04 사전
+-- 작업 전에는 이 블록이 따로 되돌렸다 - 아래 되돌림 코드는 그 흔적이고 이제는 중복이지만 무해하다).
 if RunService:IsStudio() then
 	local ran26_3 = false
 	local function run26_3Verification(player)
@@ -2289,7 +2332,7 @@ if RunService:IsStudio() then
 			end
 
 			ensureBackup(player)
-			-- classes(직업별 상태)는 restoreForDevTools가 되돌린다 - inventory·purchases는
+			-- classes(직업별 상태)·가방은 restoreForDevTools가 되돌린다 - purchases는
 			-- 최상위(계정 공유)라 여기서 직접 스냅샷한다.
 			local originalTickets = {
 				ancient = profile.purchases.optionRerollTickets.ancient,
@@ -2362,7 +2405,7 @@ if RunService:IsStudio() then
 				tostring(rerollEpicOk), tostring(rerollEpicReason),
 				record(rerollEpicOk == false and rerollEpicReason == "not_rerollable")))
 
-			-- 인벤토리·변환권(계정 공유, restoreForDevTools 대상 밖)을 직접 되돌린다.
+			-- 변환권(계정 공유, restoreForDevTools 대상 밖)을 직접 되돌린다(가방도 여기서 한 번 더 - restore가 이미 되돌리므로 중복).
 			if profile.inventory[bagIndex] then
 				table.remove(profile.inventory, bagIndex)
 			end
@@ -2943,6 +2986,12 @@ if RunService:IsStudio() then
 					end
 				end
 			end
+			-- S04 사전 작업(PRD 20.83 [8]): 옛 블록을 포함한 검증 체인 전체가 실제 가방을 그대로 남겼는가. 기준은 이 서버의 첫 백업
+			-- 순간(=어떤 블록도 가방을 건드리기 전)의 지문이다. 예전에는 Play마다 보스 드랍 2 ~ 3개가 가방에 남았다.
+			local bagCount, bagPrint = bagFingerprint(player)
+			local bagSame = firstBagCount[player] == bagCount and firstBagFingerprint[player] == bagPrint
+			print(("[S04][가방] 검증 체인 전 %s칸 → 후 %d칸 · 내용 같음=%s (기대 같은 칸 · 같은 내용) %s"):format(
+				tostring(firstBagCount[player]), bagCount, tostring(bagSame), bagSame and "O" or "X"))
 		end)
 	end
 
