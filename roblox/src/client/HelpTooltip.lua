@@ -15,7 +15,12 @@ local HelpTooltip = {}
 
 -- parent: 버튼을 붙일 인스턴스. anchorPosition: UDim2(버튼 중심 위치, parent 기준).
 -- text: 설명(2~3줄 권장) - panelSide("right"|"left")로 패널이 버튼 어느 쪽에 펼쳐질지.
-function HelpTooltip.attach(parent, anchorPosition, text, panelSide)
+-- options(30-0 S06, ui/kit/HelpToggle가 쓴다 - 안 주면 위 기존 동작 그대로): { toggleOnly = true(hover 경로를 쓰지 않고 누를 때마다 열고 닫는다),
+--   buttonSize(기본 16), buttonTextSize(기본 11), panelSize(Vector2, 기본 200×70), panelTextSize(기본 12) }.
+function HelpTooltip.attach(parent, anchorPosition, text, panelSide, options)
+	local toggleOnly = options ~= nil and options.toggleOnly == true
+	local buttonSize = options and options.buttonSize or 16
+	local panelSize = options and options.panelSize or Vector2.new(200, 70)
 	local screenGui = parent
 	while screenGui and not screenGui:IsA("ScreenGui") do
 		screenGui = screenGui.Parent
@@ -26,9 +31,9 @@ function HelpTooltip.attach(parent, anchorPosition, text, panelSide)
 	button.Name = "HelpButton"
 	button.AnchorPoint = Vector2.new(0.5, 0.5)
 	button.Position = anchorPosition
-	button.Size = UDim2.new(0, 16, 0, 16)
+	button.Size = UDim2.new(0, buttonSize, 0, buttonSize)
 	button.Font = Enum.Font.GothamBold
-	button.TextSize = 11
+	button.TextSize = options and options.buttonTextSize or 11
 	button.Text = "?"
 	button.TextColor3 = UIColors.textSecondary
 	button.BackgroundColor3 = UIColors.panel
@@ -67,7 +72,7 @@ function HelpTooltip.attach(parent, anchorPosition, text, panelSide)
 	panel.Name = "HelpPanel"
 	panel.AnchorPoint = Vector2.new(left and 1 or 0, 0)
 	panel.Position = UDim2.new(left and 0 or 1, left and -10 or 10, 0.5, -8)
-	panel.Size = UDim2.new(0, 200, 0, 70)
+	panel.Size = UDim2.new(0, panelSize.X, 0, panelSize.Y)
 	panel.BackgroundColor3 = UIColors.panel
 	panel.BackgroundTransparency = UIColors.panelTransparency
 	panel.ZIndex = 52
@@ -88,7 +93,7 @@ function HelpTooltip.attach(parent, anchorPosition, text, panelSide)
 	panelText.Position = UDim2.new(0, 10, 0, 8)
 	panelText.Size = UDim2.new(1, -20, 1, -16)
 	panelText.Font = Enum.Font.Gotham
-	panelText.TextSize = 12
+	panelText.TextSize = options and options.panelTextSize or 12
 	panelText.TextWrapped = true
 	panelText.TextXAlignment = Enum.TextXAlignment.Left
 	panelText.TextYAlignment = Enum.TextYAlignment.Top
@@ -102,16 +107,23 @@ function HelpTooltip.attach(parent, anchorPosition, text, panelSide)
 		catcher.Visible = open
 	end
 
-	button.MouseEnter:Connect(function()
-		setOpen(true)
-	end)
-	button.MouseLeave:Connect(function()
-		setOpen(false)
-	end)
-	-- 클릭/탭 공통 - 이미 열려 있어도(PC hover) 다시 "연다"만 호출하므로 토글 경합이 없다.
-	button.Activated:Connect(function()
-		setOpen(true)
-	end)
+	if toggleOnly then
+		-- 누르면 열리고 다시 누르면 닫힌다(hover 없음 - PC · 모바일 같은 동작).
+		button.Activated:Connect(function()
+			setOpen(not panel.Visible)
+		end)
+	else
+		button.MouseEnter:Connect(function()
+			setOpen(true)
+		end)
+		button.MouseLeave:Connect(function()
+			setOpen(false)
+		end)
+		-- 클릭/탭 공통 - 이미 열려 있어도(PC hover) 다시 "연다"만 호출하므로 토글 경합이 없다.
+		button.Activated:Connect(function()
+			setOpen(true)
+		end)
+	end
 	catcher.Activated:Connect(function()
 		setOpen(false)
 	end)

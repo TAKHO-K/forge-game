@@ -1041,6 +1041,7 @@ local HELP_TEXT = table.concat({
 	"/gg bagclear - 실제 가방을 비우고 바로 저장(백업 없음 - 테스트 진행 중이면 거절, 28-1 S04 사전 작업)",
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
 	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록(실제 키 타입 포함) · /gg ticket grantboss <스테이지> - 처치 없이 보스 첫 클리어 지급 함수 호출 · /gg ticket clear - 방지권 · 받은 기록을 비우고 저장",
+	"/gg ui <gallery|check|close> - 클라 UI 부품 전시장 열기 · 패널 규칙 자가 검사 · 닫기(30-0 S06, 결과는 클라 콘솔 [S06][UI])",
 	"/gg keycheck <스테이지> [save] - 실제 보스 처치 1회로 첫 클리어 확정 드랍 호출 횟수 · 저장 집합의 실제 키 타입을 찍는다(S05b) - save를 붙이면 두 기록(스테이지 · 견습 4단계)만 남기고 저장, Play 재시작 뒤 다시 불러 왕복을 확인 · /gg keyclean <스테이지> - 그 두 기록을 지우고 저장",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
@@ -1617,6 +1618,15 @@ local function handleCommand(player, args)
 				reply(player, "keycheck 에러: " .. tostring(lines))
 			end
 		end
+	elseif sub == "ui" and (args[2] == "gallery" or args[2] == "check" or args[2] == "close") then
+		-- 클라 UI 부품 전시장 · 규칙 검사(30-0 S06) - 클라(UiGalleryBoot)에 신호만 보낸다. 서버 상태는 안 건드린다.
+		local uiDevCommand = ReplicatedStorage:FindFirstChild("UiDevCommand")
+		if uiDevCommand then
+			uiDevCommand:FireClient(player, args[2])
+			reply(player, "UI " .. args[2] .. " 신호를 보냈습니다(결과는 클라 콘솔 [S06][UI])")
+		else
+			reply(player, "UiDevCommand가 없습니다")
+		end
 	elseif sub == "keyclean" and tonumber(args[2]) then
 		if backups[player] then
 			reply(player, "다른 테스트가 진행 중입니다(백업 있음) - /gg reset 뒤에 다시 쓰세요")
@@ -2176,6 +2186,11 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 print("[DevTools] 밸런스 테스트 도구 로드됨(Studio 전용) - 채팅창에 /gg help")
+do -- 30-0 S06: 클라 UI 전시장 · 규칙 검사 신호(/gg ui) - 클라 ui/UiGalleryBoot.client.lua가 듣는다. 이 스크립트는 첫머리 가드로 Studio에서만 여기까지 온다.
+	local uiDevCommand = Instance.new("RemoteEvent")
+	uiDevCommand.Name = "UiDevCommand"
+	uiDevCommand.Parent = ReplicatedStorage
+end
 -- 28-1(S01) [C-2] 6번: "/gg" 명령 인스턴스가 있는 조건 = IsStudio()와 같다는 것을 서버 시작 때 남긴다. 이 스크립트는 첫머리 가드가
 -- 라이브 서버에서 return하므로 명령 인스턴스 자체가 만들어지지 않는다(Studio에서는 둘 다 true만 확인된다 - 프로덕션 쪽은 호출 그래프가 증명이다).
 print(("[DevTools] /gg 명령 인스턴스 있음=%s · IsStudio=%s (기대: 같은 값)"):format(
