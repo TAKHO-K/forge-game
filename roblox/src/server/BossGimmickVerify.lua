@@ -13,6 +13,8 @@ local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BossSim = require(ReplicatedStorage.Shared.BossSim)
 local BossPropMath = require(ReplicatedStorage.Shared.BossPropMath)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
+local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local BossEncounter = require(script.Parent.BossEncounter)
 local BossPatterns = require(script.Parent.BossPatterns)
@@ -124,6 +126,27 @@ local function runPure()
 			windows * partial * 100, mechanics.gimmickFailMaxHpFraction * 100, shell.finisher.damage.multiplier, tail * 100, (mechanics.gimmickFailMaxHpFraction + tail) * 100),
 			shell.enabled ~= false and shell.failPenalty == false and windows * partial >= mechanics.gimmickFailMaxHpFraction
 				and mechanics.gimmickFailMaxHpFraction + tail < 1 and shell.stance.damageTakenMultiplier == 0)
+	end)
+
+	-- 29-3 추가(잠행 찌르기·모래 구덩이·낙뢰 넉백)의 안전선 - 전부 데이터에서 읽는다
+	r.section("잠행·구덩이·넉백", function()
+		local scorpion, storm = BossData.bosses[SCORPION], BossData.bosses.storm_lord
+		local burrow, pit = scorpion.skills.stab.burrow, scorpion.props.pit
+		local spawn = scorpion.skills.stab.onStart[1]
+		local launch = storm.skills.strike.onHit[1]
+		local tolerance = TerrainConfig.heightToleranceStuds
+		r.check(("잠행 깊이 %.1fstud < 판정 높이차 상한 %d(보스가 대상을 놓치지 않는다) · 들어가기 %.1f초 ≤ 첫 예고 %.1f초 · 보이는 파트 = %s"):format(
+			burrow.depthStuds, tolerance, burrow.enterSeconds, scorpion.skills.stab.telegraphSeconds, table.concat(burrow.visibleParts, ",")),
+			burrow.depthStuds < tolerance and burrow.enterSeconds <= scorpion.skills.stab.telegraphSeconds)
+		local maxTicks = math.ceil(12 / pit.coreTickSeconds)
+		r.check(("모래 구덩이: 끌림 %dstud/s ≤ 걷기 %d의 절반(못 나오는 구덩이는 없다 - 빠져나오는 속도 %d) · 멤버에게서 반경 %d + %d 안에는 안 생긴다 · 바닥 %.2f%%/%.2f초 → 12초를 서 있어도(%d틱) 발동당 상한 %.0f%% · 무장 %.1f초 = 돌진 첫 예고"):format(
+			pit.pullStudsPerSecond, WorldConfig.playerWalkSpeedStuds, WorldConfig.playerWalkSpeedStuds - pit.pullStudsPerSecond, pit.radiusStuds, spawn.clearStuds,
+			pit.coreFraction * 100, pit.coreTickSeconds, maxTicks, BossData.mechanics.gimmickFailMaxHpFraction * 100, pit.armSeconds),
+			pit.pullStudsPerSecond <= WorldConfig.playerWalkSpeedStuds / 2 and spawn.clearStuds > 0 and spawn.minStuds >= pit.radiusStuds + spawn.clearStuds
+				and pit.coreFraction <= BossData.mechanics.gimmickFailMaxHpFraction and pit.armSeconds >= scorpion.skills.stab.telegraphSeconds)
+		r.check(("낙뢰 넉백: 높이 %d < 판정 높이차 상한 %d · 아레나 벽 %d(맵 밖으로 못 나간다) · 거리 %d > 낙뢰 반경 %d(둘째 낙뢰의 원 밖에 떨어진다)"):format(
+			launch.heightStuds, tolerance, WorldConfig.walls.heightStuds, launch.distanceStuds, storm.skills.strike.radiusStuds),
+			launch.heightStuds < tolerance and launch.heightStuds < WorldConfig.walls.heightStuds and launch.distanceStuds > storm.skills.strike.radiusStuds)
 	end)
 
 	-- [2][11][12] 두 보스의 /gg boss check 전 항목 + 6종 인접 쌍 재검사
@@ -608,6 +631,87 @@ local function runScorpion(player, env, r, root)
 	return perStep
 end
 
+-- 29-3 추가: 잠행 찌르기(겉모습만 바뀐 돌진)·모래 구덩이·낙뢰 넉백. 본인은 입장점(보스에서 86stud)에 둔다 - 어그로가 붙지 않는다.
+local function runExtras(player, env, r, root)
+	local mechanics = BossData.mechanics
+	task.wait(mechanics.trap.releaseGraceSeconds + 0.2) -- 앞 구역의 밀기 구출이 남긴 해제 유예 면역이 끝나길 기다린다
+
+	r.section("잠행 찌르기·모래 구덩이", function()
+		local model, data = spawnBoss(player, env, SCORPION)
+		local skill, pit = data.skills.stab, data.props.pit
+		local surfaceY = model.PrimaryPart.Position.Y
+		local head, tail = model:FindFirstChild("Head"), model:FindFirstChild("TailSpike")
+		fullHeal(player)
+		BossPatterns.force(model, data, "stab")
+		BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, { player })
+		local pits = BossArenaProps.list(model)
+		local nearest = math.huge
+		for _, prop in ipairs(pits) do
+			nearest = math.min(nearest, (Vector3.new(prop.position.X, 0, prop.position.Z) - Vector3.new(root.Position.X, 0, root.Position.Z)).Magnitude)
+		end
+		r.check(("잠행 찌르기 시작: 모래 구덩이 %d개(기대 3), 가장 가까운 구덩이 중심까지 %.1fstud(기대 ≥ 반경 %d + 여유 %d)"):format(
+			#pits, nearest, pit.radiusStuds, skill.onStart[1].clearStuds), #pits == 3 and nearest >= pit.radiusStuds + skill.onStart[1].clearStuds - 1e-3)
+
+		-- 구덩이 바닥에 서 있는다: 무장(1.5초) 직후 첫 틱만 잰다 - 돌진이 86stud를 달려오기(≈ 2.9초) 전이다.
+		local startedAt = os.clock()
+		moveTo(root, pits[1].position + Vector3.new(0, 3, 0))
+		local sunkY, headHidden, tailShown = nil, nil, nil
+		drive(player, root, model, data, 3, false, function()
+			local elapsed = os.clock() - startedAt
+			if not sunkY and elapsed > skill.burrow.enterSeconds + 0.2 then
+				sunkY, headHidden, tailShown = model.PrimaryPart.Position.Y, head and head.Transparency == 1, tail and tail.Transparency < 1
+			end
+			return elapsed > pit.armSeconds + 0.3
+		end)
+		local lost = 1 - hpFraction(player)
+		r.check(("들어가는 모션 뒤: 몸통 %.1fstud 아래(기대 %.1f), 머리 가림=%s · 꼬리 보임=%s | 구덩이 바닥에서 무장 %.1f초 뒤 첫 틱: 체력 -%.2f%%(기대 %.2f)"):format(
+			surfaceY - (sunkY or surfaceY), skill.burrow.depthStuds, tostring(headHidden), tostring(tailShown), pit.armSeconds, lost * 100, pit.coreFraction * 100),
+			near(surfaceY - (sunkY or surfaceY), skill.burrow.depthStuds, 0.05) and headHidden == true and tailShown == true and near(lost, pit.coreFraction, 1e-6))
+
+		BossPatterns.interrupt(model, data) -- 땅속에서 중단(대상 사망·전멸 리셋과 같은 길) - 땅속에 남으면 안 된다
+		r.check(("잠행 중 중단: 몸통 높이 복귀=%s(%.2f → %.2f), 머리 다시 보임=%s, 구덩이 %d개(기대 0), phase=%s"):format(
+			tostring(near(model.PrimaryPart.Position.Y, surfaceY, 0.01)), sunkY or -1, model.PrimaryPart.Position.Y, tostring(head and head.Transparency < 1),
+			BossArenaProps.count(model, "pit"), BossPatterns.getPhase(model)),
+			near(model.PrimaryPart.Position.Y, surfaceY, 0.01) and head ~= nil and head.Transparency < 1 and BossArenaProps.count(model, "pit") == 0
+				and BossPatterns.getPhase(model) == "normal")
+		fullHeal(player)
+
+		-- 끝까지: 두 번 달리고 솟아올라 헤롱, 끝나면 지표·전부 보임·구덩이 0. 본인은 매 틱 체력을 채운다(돌진을 안 피한다).
+		BossPatterns.force(model, data, "stab")
+		local phases, lastPhase = {}, nil
+		drive(player, root, model, data, 20, true, function()
+			local phase = BossPatterns.getPhase(model)
+			if phase ~= lastPhase then
+				table.insert(phases, phase)
+				lastPhase = phase
+			end
+			return phase == "normal" and #phases > 1
+		end)
+		r.check(("잠행 찌르기 끝까지: %s | 끝난 뒤 몸통 높이 복귀=%s, 머리 보임=%s, 구덩이 %d개"):format(table.concat(phases, " → "),
+			tostring(near(model.PrimaryPart.Position.Y, surfaceY, 0.01)), tostring(head and head.Transparency < 1), BossArenaProps.count(model, "pit")),
+			table.concat(phases, ">") == "focus>charge>focus>charge>chargeRecover>normal" and near(model.PrimaryPart.Position.Y, surfaceY, 0.01)
+				and head ~= nil and head.Transparency < 1 and BossArenaProps.count(model, "pit") == 0)
+		fullHeal(player)
+	end)
+
+	r.section("낙뢰 넉백", function()
+		local model, data = spawnBoss(player, env, "storm_lord")
+		fullHeal(player)
+		BossPatterns.force(model, data, "strike")
+		BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, { player })
+		local st = MonsterState.getBossPatternState(model)
+		st.phaseEndsAt = os.clock()
+		BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, { player })
+		local launched = st.lastLaunch
+		r.check(("낙뢰에 맞음 → 넉백 대상=%s(본인), 둘째 낙뢰 예고로 이어짐 phase=%s, 폭풍 군주의 기믹은 여전히 꺼져 있음=%s"):format(
+			tostring(launched and launched.player and launched.player.Name), BossPatterns.getPhase(model), tostring(data.skills.overcharge.enabled == false)),
+			launched ~= nil and launched.player == player and BossPatterns.getPhase(model) == "meteorTelegraph" and data.skills.overcharge.enabled == false)
+		BossPatterns.interrupt(model, data)
+		task.wait(1) -- 튕겨 난 캐릭터가 내려앉을 시간
+		fullHeal(player)
+	end)
+end
+
 local function runRegen(player, env, r)
 	-- [14][15] 보스전 중 기본 자동회복 꺼짐 / 재생 옵션 몫은 작동 / 끝나면 다시 켜짐
 	r.section("자동회복", function()
@@ -660,6 +764,7 @@ local function runLive(player, env)
 	else
 		local perStepFrost = runFrost(player, env, r, root)
 		local perStepScorpion = runScorpion(player, env, r, root)
+		runExtras(player, env, r, root)
 		runRegen(player, env, r)
 		-- [18] step 비용 - 기둥·선행 조건(서리 거인)과 태세·반사(전갈 여왕)가 도는 구간
 		for label, perStep in pairs({ ["서리 거인(낙빙 → 포효 직전, 기둥 3개)"] = perStepFrost, ["전갈 여왕(갑각 태세 포함)"] = perStepScorpion }) do

@@ -448,6 +448,20 @@ local SPECIES = {
 		-- (연속 찌르기의 recoverInZone). 무너진 기둥 8개는 네 벽 앞의 장식이다(충돌 없음 - 회피 동선을 막지 않는다).
 		-- 색은 기존 tier4 색 그대로. 모래 무덤(속박된 자리)은 동적이라 여기가 아니다 - 클라 BossTrapView가 그린다.
 		arenaKit = { parts = scorpionKitParts(scorpionBody, scorpionHead) },
+		-- 29-3 모래 구덩이(개미지옥 - 동적 지형: 서버는 자리만, 그리기와 끌어당김은 클라 BossArenaPropsView). 잠행 찌르기가
+		-- 시작될 때 생기고 마지막 돌진이 끝나면(헤롱 = 딜타임 전에) 사라진다 - 스킬은 한 번에 하나이므로 갑각 태세·속박과
+		-- 겹치지 않는다(속박된 사람 곁에 구덩이가 있는 일이 없다. 잡힌 사람은 어차피 면역이고 클라도 끌어당기지 않는다).
+		--   · 비탈(반경 8): armSeconds(1.5초 - 돌진의 첫 예고와 같다) 뒤부터 중심으로 pullStudsPerSecond 6으로 끌려간다.
+		--     걷기 16 − 6 = 10stud/s로 빠져나온다("좀 힘들다") - 끌림은 걷기의 절반을 넘지 않는다(못 나오는 구덩이는 없다).
+		--   · 바닥(중심부 반경 2.5): coreTickSeconds마다 최대체력의 55% ÷ 6 = 9.17%. 그 발동의 1인 상한 55%를 돌진과 같이 쓴다.
+		--   · 멤버에게서 반경 + 6stud 안에는 생기지 않는다(`spawnPropsAround.clearStuds`) - 들어가는 것은 걸어 들어간 것이다.
+		props = {
+			pit = {
+				radiusStuds = 8, coreRadiusStuds = 2.5, heightStuds = 0, maxCount = 3, armSeconds = 1.5,
+				pullStudsPerSecond = 6, coreTickSeconds = 0.75,
+				coreFraction = MECHANICS.gimmickFailMaxHpFraction / 6, damageLabel = "모래 구덩이", color = scorpionHead,
+			},
+		},
 		skills = {
 			-- 집게 강타. 대상 쪽으로 펼친 부채꼴(직선 3개, ±35°) - 기본형 강공격은 "밖으로", 이건 "옆·뒤로".
 			-- 가까이 붙은 사람에게만 쓴다(멀리서는 부채가 너무 넓어져 못 피한다 - 회피 부등식이 12stud까지만 성립).
@@ -465,8 +479,11 @@ local SPECIES = {
 				telegraphSeconds = 1.2, count = 3, radiusStuds = 5, scatterStuds = 10,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "독침 낙하",
 			},
-			-- 연속 찌르기(23-6 "돌진 2연속" 흡수). 첫 돌진을 피한 자리로 둘째가 다시 겨눈다 - 한 번 피하고 멈추면
+			-- 잠행 찌르기(23-6 "돌진 2연속" 흡수 → 29-3 잠행). 첫 돌진을 피한 자리로 둘째가 다시 겨눈다 - 한 번 피하고 멈추면
 			-- 맞는다. 회당 27.5% = 둘 다 맞아도 55%. 갑각 태세 직후에는 쓰지 않는다(55 + 55 = 110%를 인접시키지 않는다).
+			-- 29-3 잠행: 첫 예고의 앞 0.5초에 땅속으로 파고들고, 돌진하는 동안에는 꼬리만 지표를 가르며, 마지막 돌진 뒤 0.4초에
+			-- 솟아올라 헤롱한다. 경로·속도·판정은 돌진 그대로다 - 겉모습만 바뀐다(BossPatterns HANDLERS.charge). 시작과 함께 모래
+			-- 구덩이 3개가 대상 주변 14 ~ 26stud에 생긴다 - 둘째 돌진을 피할 때 "어디로 비킬 것인가"가 남는다.
 			stab = {
 				primitive = "charge", bubble = "charge", role = "signature",
 				cooldownSeconds = 14, priority = P.signature,
@@ -475,8 +492,13 @@ local SPECIES = {
 				recoverSeconds = 4.0, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
 				-- 29-3: 마지막 돌진이 유사 웅덩이 안에서 끝나면 헤롱 6초(알면 이득인 유인 - 몰라도 손해는 없다, 20.73 [2-5]).
 				recoverInZone = { tag = "quicksand", seconds = 6.0 },
+				-- depthStuds 2.0: 보스 루트는 바닥 + 1.5라 몸통 윗면이 바닥 위 2.76, 꼬리 끝이 3.8이다(sizeScale 2.8) → 2.0 내려가면
+				-- 몸통은 0.76만 남은 순간 가려지고 꼬리가 1.8stud 솟은 채 달린다. 더 내리면 꼬리까지 바닥 밑으로 들어간다.
+				burrow = { depthStuds = 2.0, enterSeconds = 0.5, exitSeconds = 0.4, visibleParts = { "TailSpike" } },
+				onStart = { { type = "spawnPropsAround", prop = "pit", count = 3, minStuds = 14, maxStuds = 26, clearStuds = 6 } },
+				onEnd = { { type = "destroyProps", prop = "pit", which = "all" } },
 				arenaMarginStuds = 5, -- 몸통 반폭 1.2 × 2.8 × 1.3 = 4.4보다 조금 크게
-				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction / 2 }, damageLabel = "연속 찌르기",
+				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction / 2 }, damageLabel = "잠행 찌르기",
 			},
 			-- 갑각 태세(기믹, 29-3). 예고 1초(몸을 낮춘다) → 태세 3초(빨강 고리 - 받는 피해 0, 때린 사람에게 반사) → 꼬리
 			-- 내려찍기(태세 마지막 1.5초가 예고) → 꼬리 박힘 3초(고리가 사라진다 - 때려도 되는 순간, 헤롱 자세).
@@ -540,6 +562,11 @@ local SPECIES = {
 				cooldownSeconds = 12, firstAvailableSeconds = 8, reserveFirstUse = true, priority = P.signature,
 				telegraphSeconds = 1.5, count = 2, sequential = true, repeatTelegraphSeconds = 1.5, radiusStuds = 6, scatterStuds = 0,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "낙뢰",
+				-- 29-3: 하늘에서 꽂히는 번개로 그리고(impactStyle), 맞은 사람은 팝콘처럼 판정 중심 반대쪽으로 튕겨 난다 - 높이 5
+				-- (판정의 높이차 상한 8·아레나 벽 12보다 낮다 - 보스가 대상을 놓치지 않고 맵 밖으로도 못 나간다), 거리 8, 체공 ≈ 0.45초.
+				-- 둘째 낙뢰는 첫 낙뢰가 떨어진 순간의 자리에 예고되므로, 튕겨 난 사람은 이미 그 원(r6) 밖이다.
+				impactStyle = "lightning",
+				onHit = { { type = "launch", heightStuds = 5, distanceStuds = 8 } },
 				designGate = { breakWindow = { seconds = 10, damageTakenMultiplier = 1.15 } }, -- 28-2의 ×1.3은 새 쿨 분포에서 −11.6%로 범위 밖(×1.15 = −6.5%)
 				sim = { evadeSeconds = 2.5 },
 			},

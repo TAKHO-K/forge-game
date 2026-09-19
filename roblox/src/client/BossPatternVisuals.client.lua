@@ -28,6 +28,7 @@ local BossGateView = require(script.Parent.BossGateView)
 -- 29-3: 동적 지형(얼음 기둥)·전역 기믹 전조(빨강 바닥 + 그림자)와 보스 태세(빨강 고리·반사 선) - 그리기는 각 모듈에 있다.
 local BossArenaPropsView = require(script.Parent.BossArenaPropsView)
 local BossStanceView = require(script.Parent.BossStanceView)
+local BossStormView = require(script.Parent.BossStormView) -- 29-3: 낙뢰(하늘에서 꽂히는 번개) · 맞으면 튕겨 나는 넉백
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
@@ -360,6 +361,12 @@ local function meteorImpact(data)
 	end
 	meteorDiscs = {}
 	for _, position in ipairs(data.positions) do
+		if data.style == "lightning" then
+			-- 29-3: 낙석 기둥 대신 번개(꺾인 흰 선). 색 언어는 같다 - 임팩트 = 흰색.
+			BossStormView.bolt(position)
+			fadeOut(newDisc(position, data.radius, IMPACT_COLOR, 0.1), 0.35)
+			continue
+		end
 		-- 위에서 내리꽂히는 기둥 + 바닥 섬광.
 		local pillar = newPart(Vector3.new(data.radius * 1.2, 30, data.radius * 1.2), IMPACT_COLOR, 0.3)
 		pillar.CFrame = CFrame.new(position + Vector3.new(0, 30, 0))
@@ -470,6 +477,8 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossStanceView.clear()
 	elseif kind == "reflectHit" then
 		BossStanceView.reflect(data)
+	elseif kind == "launch" then
+		BossStormView.launch(data)
 	elseif kind == "daze" then
 		showBubble("daze", data.seconds)
 	elseif kind == "heavyTelegraph" then

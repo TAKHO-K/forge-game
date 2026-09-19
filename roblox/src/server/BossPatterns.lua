@@ -253,10 +253,16 @@ local function ensureState(model, data)
 	return st
 end
 
+local runEffects -- 아래 "결과 조각"에서 정의한다(endSkill이 onEnd 조각을 돌린다)
+
 local function endSkill(model, st, data, now)
 	local id = st.current
 	if id then
 		print(("[forge-game] 보스 패턴 종료: %s (%.2f초 소요)"):format(id, now - (st.currentStartedAt or now)))
+	end
+	-- 29-3: 스킬이 어떻게 끝나든(정상·중단·리셋) onEnd 조각이 돈다 - 그 스킬이 깔아 둔 것(모래 구덩이)을 치우는 자리.
+	if st.skill and st.skill.onEnd then
+		runEffects({ model = model, st = st, data = data, position = st.position }, st.skill.onEnd, {})
 	end
 	st.phase = "normal"
 	st.current = nil
@@ -271,6 +277,13 @@ end
 --   spawnProp { prop }                    info.positions마다 그 지형을 세운다(낙빙 → 얼음 기둥)
 --   destroyProps { prop }                 info.center·info.radius 원에 걸친 그 지형을 부순다(빙결 강타)
 --   destroyProps { prop, which = "shielding" } 이번 판정에서 누군가를 가려 준 지형을 부순다(포효)
+--   destroyProps { prop, which = "all" }  그 지형을 전부 치운다(스킬이 끝나면 사라지는 모래 구덩이 - onEnd)
+--   spawnPropsAround { prop, count, minStuds, maxStuds, clearStuds }
+--                                         대상 주변 min~max 거리에 count개를 세운다(onStart). 어떤 멤버에게서도 반경 + clearStuds
+--                                         안에는 세우지 않는다 - 발밑에 위험이 "생기는" 일이 없다. 자리를 못 찾으면 덜 세운다.
+-- onHit(판정에 맞은 사람마다, runHitEffects):
+--   launch { heightStuds, distanceStuds } 맞은 사람이 판정 중심 반대쪽으로 튕겨 난다(폭풍 군주의 낙뢰). 서버는 그 사람의 클라에
+--                                         알릴 뿐이다 - 캐릭터 물리는 클라 소유다(BossStormView). 높이는 판정의 높이차 상한(8)보다 낮아야 한다.
 -- 서버에는 인스턴스가 없다 - 논리 목록(BossArenaProps)만 바꾸고 멤버에게 알린다. 그리기·충돌은 클라 몫이다.
 local function sendPropsRemoved(st, ids)
 	if #ids > 0 then
@@ -278,7 +291,7 @@ local function sendPropsRemoved(st, ids)
 	end
 end
 
-local function runEffects(c, effects, info)
+runEffects = function(c, effects, info)
 	for _, effect in ipairs(effects or {}) do
 		local def = c.data.props and c.data.props[effect.prop]
 		if not def then
@@ -290,15 +303,82 @@ local function runEffects(c, effects, info)
 				sendPropsRemoved(c.st, evicted)
 				send(c.st, "propSpawn", { id = prop.id, kind = prop.kind, position = position, radius = prop.radius, height = prop.height, color = def.color })
 			end
+		elseif effect.type == "spawnPropsAround" then
+			local zone = zoneOf(c.model)
+			local anchor = xz((c.targetRoot and c.targetRoot.Position) or c.position)
+			local members = victims(c.st)
+			local made = 0
+			for _ = 1, effect.count * 8 do
+				if made >= effect.count then
+					break
+				end
+				local angle = scatterRng:NextNumber(0, 2 * math.pi)
+				local distance = scatterRng:NextNumber(effect.minStuds, effect.maxStuds)
+				local spot = clampToZone(anchor + Vector3.new(math.cos(angle), 0, math.sin(angle)) * distance, zone, def.radiusStuds + 4)
+				local clear = true
+				for _, v in ipairs(members) do
+					clear = clear and Reach.horizontalDistance(v.root.Position, spot) >= def.radiusStuds + effect.clearStuds
+				end
+				for _, other in ipairs(BossArenaProps.list(c.model)) do
+					clear = clear and Reach.horizontalDistance(other.position, spot) >= def.radiusStuds + other.radius
+				end
+				if clear then
+					local position = Vector3.new(spot.X, GroundProbe.surfaceY(spot.X, spot.Z, c.st.floorY) or c.st.floorY, spot.Z)
+					local prop, evicted = BossArenaProps.spawn(c.model, effect.prop, def, position)
+					prop.armedAt = os.clock() + (def.armSeconds or 0)
+					prop.lastTickAt = {}
+					sendPropsRemoved(c.st, evicted)
+					send(c.st, "propSpawn", {
+						id = prop.id, kind = prop.kind, position = position, radius = prop.radius, color = def.color,
+						coreRadius = def.coreRadiusStuds, armSeconds = def.armSeconds, pullStudsPerSecond = def.pullStudsPerSecond,
+					})
+					made += 1
+				end
+			end
 		elseif effect.type == "destroyProps" then
 			sendPropsRemoved(c.st, BossArenaProps.removeWhere(c.model, function(prop)
 				if prop.kind ~= effect.prop then
 					return false
 				elseif effect.which == "shielding" then
 					return prop.shielded == true
+				elseif effect.which == "all" then
+					return true
 				end
 				return Reach.horizontalDistance(prop.position, info.center) <= info.radius + prop.radius
 			end))
+		end
+	end
+end
+
+-- 판정에 맞은 한 사람에게 도는 조각(onHit). from = 그 판정의 중심.
+local function runHitEffects(c, effects, v, from)
+	for _, effect in ipairs(effects or {}) do
+		if effect.type == "launch" and not BossTrap.isTrapped(v.player) then
+			c.st.lastLaunch = { player = v.player, at = c.now } -- 자동 검증이 읽는다
+			if typeof(v.player) == "Instance" and v.player.Parent then
+				patternEvent:FireClient(v.player, "launch", { from = from, heightStuds = effect.heightStuds, distanceStuds = effect.distanceStuds })
+			end
+		end
+	end
+end
+
+-- 위험 지형의 틱(29-3 모래 구덩이): 중심부(coreRadiusStuds) 안에 있는 사람에게 coreTickSeconds마다 %최대체력 피해.
+-- 구덩이를 깐 스킬의 발동당 1인 상한(55%)을 같이 쓴다(applyGimmickDamage) - 돌진에 다 맞고 구덩이에 빠져도 55%다.
+-- 지형 데이터가 없는 보스는 첫 줄에서 돌아간다. 잡힌 사람은 면역이다(PlayerDamage).
+local function tickHazards(model, st, data, now)
+	if not data.props then
+		return
+	end
+	for _, prop in ipairs(BossArenaProps.list(model)) do
+		local def = data.props[prop.kind]
+		if def and def.coreRadiusStuds and now >= (prop.armedAt or 0) then
+			for _, v in ipairs(victims(st)) do
+				local last = prop.lastTickAt[v.player]
+				if Reach.horizontalDistance(v.root.Position, prop.position) <= def.coreRadiusStuds and (not last or now - last >= def.coreTickSeconds) then
+					prop.lastTickAt[v.player] = now
+					BossMechanics.applyGimmickDamage(model, v.player, def.coreFraction, def.damageLabel)
+				end
+			end
 		end
 	end
 end
@@ -493,7 +573,7 @@ local function beginCircles(c, positions, seconds)
 	st.meteorPositions = positions
 	st.phase = "meteorTelegraph"
 	st.phaseEndsAt = c.now + seconds
-	send(st, "meteor", { positions = positions, radius = skill.radiusStuds, seconds = seconds })
+	send(st, "meteor", { positions = positions, radius = skill.radiusStuds, seconds = seconds, style = skill.impactStyle })
 end
 
 HANDLERS.circleTarget = {
@@ -541,11 +621,12 @@ HANDLERS.circleTarget = {
 			for _, spot in ipairs(st.meteorPositions) do
 				if (p - xz(spot)).Magnitude <= skill.radiusStuds and Reach.sameLayer(v.root.Position, spot) then -- 22-4
 					applySkillDamage(c.model, c.data, skill, v.player)
+					runHitEffects(c, skill.onHit, v, spot)
 					break
 				end
 			end
 		end
-		send(st, "meteorImpact", { positions = st.meteorPositions, radius = skill.radiusStuds })
+		send(st, "meteorImpact", { positions = st.meteorPositions, radius = skill.radiusStuds, style = skill.impactStyle })
 		runEffects(c, skill.onImpact, { positions = st.meteorPositions })
 		if skill.sequential and st.shotIndex < circleCount(c.data, skill) and c.targetRoot then
 			st.shotIndex += 1
@@ -576,6 +657,7 @@ local function startDash(c, fromPosition, dashIndex)
 	st.chargeFrom = Vector3.new(origin.X, fromPosition.Y, origin.Z)
 	st.chargeTo = st.chargeFrom + dir * length
 	st.chargeHitBy = {} -- 24-1: 돌진 한 번에 멤버마다 한 번씩만(경로 위 전원 대상)
+	st.focusStartedAt = c.now
 	st.phase = "focus"
 	st.phaseEndsAt = c.now + skill.telegraphSeconds
 	send(st, "focus", {
@@ -587,16 +669,64 @@ local function startDash(c, fromPosition, dashIndex)
 	})
 end
 
+-- 잠행(29-3, skill.burrow = { depthStuds, enterSeconds, exitSeconds, visibleParts }): 돌진의 **겉모습**만 바꾼다 - 첫 예고
+-- 동안 땅속으로 내려가고(enterSeconds), 돌진 중에는 visibleParts(꼬리)만 보이고, 마지막 돌진 뒤에 솟아올라(exitSeconds)
+-- 헤롱에 들어간다. 경로·속도·판정·지면 추적은 돌진 그대로다: 계산은 전부 "지표의 논리 위치"(st.burrowLogical)로 하고
+-- 모델만 depthStuds 아래에 그린다. MonsterAI도 그동안 보스의 위치로 논리 위치를 쓴다(getLogicalPosition) - 가라앉은
+-- 루트로 높이차를 재면 점프한 대상을 놓친다. 다 내려가면 visibleParts 말고는 투명하게 가린다(머리는 몸통보다 높다).
+local function setBurrowHidden(c, hidden)
+	local st = c.st
+	if hidden and not st.burrowHidden then
+		st.burrowHidden = {}
+		local visible = c.skill.burrow.visibleParts
+		for _, part in ipairs(c.model:GetDescendants()) do
+			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" and not table.find(visible, part.Name) then
+				st.burrowHidden[part] = part.Transparency
+				part.Transparency = 1
+			end
+		end
+	elseif not hidden and st.burrowHidden then
+		for part, transparency in pairs(st.burrowHidden) do
+			if part.Parent then
+				part.Transparency = transparency
+			end
+		end
+		st.burrowHidden = nil
+	end
+end
+
+-- 잠행을 끝낸다(중단·리셋) - 가린 파트를 되돌리고 지표로 올린다.
+local function surfaceNow(c)
+	local st = c.st
+	setBurrowHidden(c, false)
+	if st.burrowLogical then
+		c.model:PivotTo(CFrame.new(st.burrowLogical))
+		st.burrowLogical = nil
+	end
+	st.emergeFrom = nil
+end
+
 HANDLERS.charge = {
 	bubbleSeconds = function(c)
 		return c.skill.telegraphSeconds
 	end,
 	start = function(c)
+		if c.skill.burrow then
+			c.st.burrowLogical = c.position
+		end
 		startDash(c, c.position, 1)
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
+		local burrow = skill.burrow
 		if st.phase == "focus" then
+			if burrow and st.chargeDashIndex == 1 then -- 들어가는 모션: 첫 예고의 앞 enterSeconds 동안 내려간다
+				local progress = math.min((c.now - st.focusStartedAt) / burrow.enterSeconds, 1)
+				c.model:PivotTo(CFrame.new(st.burrowLogical - Vector3.new(0, burrow.depthStuds * progress, 0)))
+				if progress >= 1 then
+					setBurrowHidden(c, true)
+				end
+			end
 			if c.now < st.phaseEndsAt then
 				return
 			end
@@ -606,7 +736,7 @@ HANDLERS.charge = {
 			st.chargeSeconds = length / skill.speedStuds
 			send(st, "charge", { startPosition = st.chargeFrom, endPosition = st.chargeTo, durationSeconds = st.chargeSeconds })
 		elseif st.phase == "charge" then
-			local position = c.position
+			local position = st.burrowLogical or c.position -- 잠행 중에는 모델이 땅속에 있다 - 계산은 지표의 논리 위치로
 			local prev = xz(position)
 			local progress = math.min((c.now - st.chargeStartedAt) / math.max(st.chargeSeconds, 1e-3), 1)
 			local newPos = st.chargeFrom:Lerp(st.chargeTo, progress)
@@ -619,7 +749,12 @@ HANDLERS.charge = {
 			else
 				newPos = Vector3.new(newPos.X, groundY + TerrainConfig.monsterFootOffsetStuds, newPos.Z)
 			end
-			c.model:PivotTo(CFrame.new(newPos))
+			if burrow then
+				st.burrowLogical = newPos
+				c.model:PivotTo(CFrame.new(newPos - Vector3.new(0, burrow.depthStuds, 0)))
+			else
+				c.model:PivotTo(CFrame.new(newPos))
+			end
 			for _, v in ipairs(victims(st)) do
 				if not st.chargeHitBy[v.player] and distanceToSegment(xz(v.root.Position), prev, xz(newPos)) <= skill.pathHalfWidthStuds
 					and Reach.sameLayer(v.root.Position, newPos) then
@@ -647,16 +782,34 @@ HANDLERS.charge = {
 					st.phase = "chargeRecover"
 					st.phaseEndsAt = c.now + recoverSeconds
 					st.dazeBase = newPos
-					c.model:PivotTo(CFrame.new(newPos - Vector3.new(0, skill.dazeSinkStuds, 0)) * CFrame.Angles(0, 0, math.rad(skill.dazeTiltDeg)))
+					if burrow then -- 나오는 모션: 가린 파트를 되돌리고 exitSeconds 동안 헤롱 자세까지 솟아오른다(아래 chargeRecover)
+						setBurrowHidden(c, false)
+						st.burrowLogical = newPos -- 다 올라올 때까지는 논리 위치를 유지한다(getLogicalPosition)
+						st.emergeFrom = c.now
+					else
+						c.model:PivotTo(CFrame.new(newPos - Vector3.new(0, skill.dazeSinkStuds, 0)) * CFrame.Angles(0, 0, math.rad(skill.dazeTiltDeg)))
+					end
+					runEffects(c, skill.onEnd, {}) -- 헤롱(딜타임)에는 구덩이가 없다 - 다가가 때릴 수 있어야 한다
 					send(st, "daze", { seconds = recoverSeconds })
 				end
 			end
 		elseif c.now >= st.phaseEndsAt then -- chargeRecover
+			st.emergeFrom = nil
+			st.burrowLogical = nil
 			clearDaze(c.model, st)
 			endSkill(c.model, st, c.data, c.now)
+		elseif st.emergeFrom then
+			local progress = math.min((c.now - st.emergeFrom) / burrow.exitSeconds, 1)
+			local sink = burrow.depthStuds + (skill.dazeSinkStuds - burrow.depthStuds) * progress
+			c.model:PivotTo(CFrame.new(st.dazeBase - Vector3.new(0, sink, 0)) * CFrame.Angles(0, 0, math.rad(skill.dazeTiltDeg)))
+			if progress >= 1 then
+				st.emergeFrom = nil
+				st.burrowLogical = nil
+			end
 		end
 	end,
 	interrupt = function(c)
+		surfaceNow(c)
 		clearDaze(c.model, c.st)
 	end,
 }
@@ -917,6 +1070,7 @@ local function startSkill(model, st, data, id, now, position, targetRoot)
 		scale = (skill.primitive == "gimmick" and (st.hintLevel or 0) >= 1) and BossData.mechanics.hint.bubbleScale or nil,
 	})
 	handler.start(c)
+	runEffects(c, skill.onStart, {}) -- 29-3: 스킬이 시작되며 까는 것(모래 구덩이)
 end
 
 -- 반환: true면 스킬 진행 중(보스 구속 - MonsterAI는 추격·평타를 건너뛴다).
@@ -932,6 +1086,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	st.members = (members and #members > 0) and members or { target }
 	local now = os.clock()
 	BossMechanics.tick(st.members, dt) -- 29-1: 잡힌 멤버의 구출 핸들러
+	tickHazards(model, st, data, now) -- 29-3: 위험 지형(모래 구덩이)의 중심부 피해
 
 	if st.phase == "normal" then
 		local pickCtx = st.pickCtx
@@ -1025,6 +1180,13 @@ function BossPatterns.force(model, data, id)
 	BossScheduler.force(st.sched, id)
 	st.graceUntil = 0
 	return true
+end
+
+-- 29-3 잠행: 모델이 땅속에 그려져 있는 동안의 "지표의 논리 위치"(아니면 nil). MonsterAI가 보스의 위치로 이것을 쓴다 -
+-- 가라앉은 루트 좌표로 대상과의 높이차를 재면 점프한 대상을 "다른 층"으로 보고 추격을 포기(= 스킬 중단)한다.
+function BossPatterns.getLogicalPosition(model)
+	local st = MonsterState.getBossPatternState(model)
+	return st and st.burrowLogical or nil
 end
 
 function BossPatterns.getPhase(model)

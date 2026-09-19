@@ -254,6 +254,10 @@ RunService.Heartbeat:Connect(function(dt)
 			local position = rootPart.Position
 			local home = MonsterState.getSpawnPosition(model)
 			local data = MonsterState.getData(model)
+			-- 29-3 잠행: 보스 모델이 땅속에 그려져 있는 동안에는 지표의 논리 위치로 판단한다(높이차 출구가 잘못 열리지 않게).
+			if data.isBoss then
+				position = BossPatterns.getLogicalPosition(model) or position
+			end
 			local state = MonsterState.getAiState(model)
 			local zoneKey = MonsterState.getZoneKey(model)
 

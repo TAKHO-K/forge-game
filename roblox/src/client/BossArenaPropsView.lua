@@ -55,9 +55,35 @@ end
 
 -- ─────────────────────────── 지형 ───────────────────────────
 
+-- 모래 구덩이(29-3 개미지옥): 비탈 = 모래색 원판(기존 색), 바닥(중심부) = 위험색 원판("지금 여기 있으면 맞는다").
+-- armSeconds 동안 서서히 드러나고, 그 뒤부터 내 캐릭터가 비탈 위에 있으면 중심으로 끌려간다(아래 start의 루프).
+local function newFlatDisc(position, radius, color, material, lift)
+	local disc = newPart(Vector3.new(0.2, radius * 2, radius * 2), color, 1, material)
+	disc.Shape = Enum.PartType.Cylinder
+	disc.CFrame = CFrame.new(position + Vector3.new(0, lift, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	return disc
+end
+
+local function spawnPit(data)
+	local slope = newFlatDisc(data.position, data.radius, data.color, Enum.Material.Sand, 0.08)
+	local core = newFlatDisc(data.position, data.coreRadius, DANGER_COLOR, Enum.Material.Neon, 0.14)
+	slope.Name = "BossArenaPit"
+	local info = TweenInfo.new(data.armSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	TweenService:Create(slope, info, { Transparency = 0.15 }):Play()
+	TweenService:Create(core, info, { Transparency = 0.3 }):Play()
+	props[data.id] = {
+		part = slope, extra = core, position = data.position, radius = data.radius, isPit = true,
+		coreRadius = data.coreRadius, pull = data.pullStudsPerSecond, armedAt = os.clock() + data.armSeconds,
+	}
+end
+
 -- data = { id, kind, position(지면), radius, height, color }
 function BossArenaPropsView.spawn(data)
 	if props[data.id] then
+		return
+	end
+	if data.coreRadius then
+		spawnPit(data)
 		return
 	end
 	-- 세로 원기둥(Cylinder는 로컬 X축이 높이 - Z축으로 90도 돌려 세운다). 바닥에서 솟아오른다.
@@ -77,8 +103,13 @@ function BossArenaPropsView.remove(ids)
 		local entry = props[id]
 		if entry then
 			props[id] = nil
+			if entry.extra then
+				fadeAndDestroy(entry.extra, 0.3)
+			end
 			entry.part.CanCollide = false
-			entry.part.Color = IMPACT_COLOR -- 부서지는 순간 = 임팩트(흰색)
+			if not entry.isPit then
+				entry.part.Color = IMPACT_COLOR -- 부서지는 순간 = 임팩트(흰색)
+			end
 			fadeAndDestroy(entry.part, 0.3)
 		end
 	end
@@ -87,6 +118,9 @@ end
 function BossArenaPropsView.clear()
 	for id, entry in pairs(props) do
 		entry.part:Destroy()
+		if entry.extra then
+			entry.extra:Destroy()
+		end
 		props[id] = nil
 	end
 	BossArenaPropsView.clearTelegraph()
@@ -111,7 +145,7 @@ function BossArenaPropsView.showGlobalTelegraph(data)
 
 	for _, entry in pairs(props) do
 		local away = Vector3.new(entry.position.X - data.center.X, 0, entry.position.Z - data.center.Z)
-		if away.Magnitude > 1e-3 then
+		if not entry.isPit and away.Magnitude > 1e-3 then
 			local dir = away.Unit
 			local from = Vector3.new(entry.position.X, data.zoneCenter.Y + 0.28, entry.position.Z)
 			local shadow = newPart(Vector3.new(entry.radius * 2, 0.16, SHADOW_LENGTH_STUDS), ARENA_FLOOR_COLOR, 0, Enum.Material.Slate)
@@ -139,14 +173,23 @@ end
 -- 기둥의 충돌은 내 캐릭터가 그 기둥 밖으로 나온 뒤에 켠다 - 낙빙을 맞은 자리에 기둥이 솟으면 캐릭터가 기둥 속에
 -- 끼거나 위로 튕겨 오른다. (기둥 "안"은 포효의 안전지대가 아니다 - shared/BossPropMath.isShielded.)
 function BossArenaPropsView.start()
-	RunService.Heartbeat:Connect(function()
+	RunService.Heartbeat:Connect(function(dt)
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if not root then
 			return
 		end
 		for _, entry in pairs(props) do
-			if not entry.part.CanCollide then
+			if entry.isPit then
+				-- 비탈 위에 있으면 중심으로 끌려간다. 내 캐릭터의 물리는 이 클라 소유라 여기서 옮긴다(컨베이어와 같은 방식).
+				-- 잡힌 동안(루트가 서버에 고정돼 있다)·죽은 동안에는 끌지 않는다. 중심 0.5stud 안에서는 멈춘다(떨림 방지).
+				local toCenter = Vector3.new(entry.position.X - root.Position.X, 0, entry.position.Z - root.Position.Z)
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				if os.clock() >= entry.armedAt and toCenter.Magnitude <= entry.radius and toCenter.Magnitude > 0.5
+					and player:GetAttribute("BossTrapKind") == nil and humanoid and humanoid.Health > 0 then
+					root.CFrame += toCenter.Unit * math.min(entry.pull * dt, toCenter.Magnitude)
+				end
+			elseif not entry.part.CanCollide then
 				local dx, dz = root.Position.X - entry.position.X, root.Position.Z - entry.position.Z
 				if math.sqrt(dx * dx + dz * dz) > entry.radius + COLLIDE_CLEARANCE_STUDS then
 					entry.part.CanCollide = true
