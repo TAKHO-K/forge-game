@@ -18,6 +18,7 @@ return {
 	-- 새 세션을 시작할 때 current를 그 세션의 블록 id + 그 세션이 고친 모듈을 쓰는 옛 블록 id("동반 실행")로 갈아 끼운다(그 밖의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
 	verify = {
 		regression = false,
-		current = {}, -- S06은 서버 검증 블록이 없다(클라 UI 세션 - 검증은 클라 콘솔 [S06][UI] · 마지막 Play가 회귀 전체)
+		-- S07: 이번 세션 블록 S07(가) + 동반 실행(COMMON.md §3) - 이 세션이 고친 shared/Enhance.lua(순수 함수 2개 추가) · server/PlayerProfile.lua(EnhanceGauge Attribute)를 쓰는 옛 강화 블록.
+		current = { "S07(가)", "S03(가)", "S03(나)", "S04(나)", "S05(나)" },
 	},
 }

@@ -84,6 +84,36 @@ function Enhance.getResultLevel(level, result)
 	return level -- maintain
 end
 
+-- 위험이 시작되는 단계(28-1 S07): 확률표에서 처음으로 하락(down1 + down2)이 있는 단계, 처음으로 초기화(reset)가 있는 단계 - 구간 진입 확인창 · 도움말 문구가 "19강 · 22강"을
+-- 표에서 읽는다(숫자를 UI에 박지 않는다). 없으면 nil.
+function Enhance.getRiskStartLevels()
+	local dropFrom, resetFrom
+	for level, row in ipairs(EnhanceConfig.probability) do
+		if not dropFrom and row.down1 + row.down2 > 0 then
+			dropFrom = level - 1
+		end
+		if not resetFrom and row.reset > 0 then
+			resetFrom = level - 1
+		end
+	end
+	return dropFrom, resetFrom
+end
+
+-- 시도하기 전의 "최악의 경우" 단계 - 방지권 · 게이지 없이 확률이 0보다 큰 결과 중 되는 단계(getResultLevel)가 가장 낮은 것. 상한이면 nil.
+function Enhance.getWorstLevel(level)
+	local outcomes = Enhance.getOutcomeTable(level, false, false, false)
+	if not outcomes then
+		return nil
+	end
+	local worst = level
+	for _, key in ipairs(RESULT_ORDER) do
+		if outcomes[key] > 0 then
+			worst = math.min(worst, Enhance.getResultLevel(level, key))
+		end
+	end
+	return worst
+end
+
 -- 실패 1회가 채우는 천장 게이지(천분율 정수) = round(시도한 단계의 성공률 × gainPerSuccessRate). 상한이면 0.
 function Enhance.getGaugeGain(level)
 	local prob = Enhance.getProbability(level)

@@ -56,6 +56,7 @@ local LootRuleVerify = require(script.Parent.LootRuleVerify)
 local ItemLevelMigrateVerify = require(script.Parent.ItemLevelMigrateVerify)
 -- 30-0 S03 강화 확률표 · 골드표 · 천장 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(실제 EnhanceRequest 핸들러 경로).
 local EnhanceVerify = require(script.Parent.EnhanceVerify)
+local EnhanceOddsVerify = require(script.Parent.EnhanceOddsVerify)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData) -- 30-0 S04 재료 명령(/gg mat) · killtest 재료 줄.
 local ProtectionTickets = require(script.Parent.ProtectionTickets) -- 30-0 S05 방지권 명령(/gg ticket).
 -- 30-0 S05 후속(S05b) 저장 집합 키 문자열 통일 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝. 재접속 왕복은 /gg keycheck · keyclean.
@@ -3195,6 +3196,17 @@ if RunService:IsStudio() and verifyEnabled("S05b(가)") then
 		local ok, err = pcall(SaveKeyVerify.runPure)
 		if not ok then
 			warn(("[S05b(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S07 자동 검증 블록(가) - 강화 UI가 읽는 순수 함수(PRD 20.89) ═══
+-- 순수 함수(플레이어 불필요). UI 자체의 검증은 클라 콘솔([S07][UI]) · 스크린샷이다 - (나)는 없다.
+if RunService:IsStudio() and verifyEnabled("S07(가)") then
+	task.spawn(function()
+		local ok, err = pcall(EnhanceOddsVerify.runPure)
+		if not ok then
+			warn(("[S07(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

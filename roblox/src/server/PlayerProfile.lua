@@ -127,6 +127,7 @@ local function syncActiveClassAttributes(player, profile)
 
 	player:SetAttribute("WeaponLevel", classState.weapon.level)
 	player:SetAttribute("WeaponGrade", classState.weapon.grade)
+	player:SetAttribute("EnhanceGauge", classState.weapon.enhanceGauge or 0) -- 장인의 기운(28-1 S07) - 강화 UI가 접속 · 직업 전환 직후부터 읽는다
 	-- 환생 횟수(23-2) - 환생 UI(레벨 상한 표시)가 이 Attribute로 판정한다(25-1까지는 ExpBar의
 	-- 곡선 분기도 봤지만, 곡선이 회차 무관 하나가 되면서 그 용도는 없어졌다).
 	player:SetAttribute("RebirthCount", classState.rebirthCount)
@@ -367,7 +368,8 @@ function PlayerProfile.getWeapon(player)
 	return classState and classState.weapon
 end
 
--- 강화 천장 게이지(28-1 S03) - 지금 직업의 무기에 딸린 0 ~ EnhanceConfig.gauge.max 정수. 서버만 쓴다(EnhanceService의 강화 판정 직후).
+-- 강화 천장 게이지(28-1 S03) - 지금 직업의 무기에 딸린 0 ~ EnhanceConfig.gauge.max 정수. 서버만 쓴다(EnhanceService의 강화 판정 직후). 값이 바뀌면 Attribute
+-- EnhanceGauge(S07)로 내린다 - 클라(강화 UI)는 이 Attribute만 읽는다(WeaponLevel과 같은 방식).
 function PlayerProfile.getEnhanceGauge(player)
 	local weapon = PlayerProfile.getWeapon(player)
 	return weapon and weapon.enhanceGauge or 0
@@ -377,6 +379,7 @@ function PlayerProfile.setEnhanceGauge(player, value)
 	local weapon = PlayerProfile.getWeapon(player)
 	if weapon then
 		weapon.enhanceGauge = value
+		player:SetAttribute("EnhanceGauge", value)
 	end
 end
 
