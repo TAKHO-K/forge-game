@@ -33,6 +33,7 @@ return {
 		-- 파티 경로(BossRules.buildInstanceData의 밀도 사본을 그대로 타는 S12(나)(PartyTutorialVerify) · S12b(나)(SocialVerify) - 둘 다 BOSS_STAGE = 100). S04(나)는 계속 제외.
 		-- S15(2026-09-20): 스테이지 선택 10단위 UI(클라 전용) - 이번 세션 블록 S15(UI) + 동반 실행(COMMON.md §3): 이 세션이 고친 StageSelectPanel · UIManager · PanelRegistry를 쓰는 옛 검증 =
 		-- S12(UI)(PanelFitCheck - 스테이지 선택 패널 화면 안 · 도감 점) · S11(가)(StageSelectPanel이 도는 보상 띠 자체 점검) · S11(나)(서버 보상 미리보기 조회) · 27-4(가)(나)(스테이지 상태 Attribute 파이프라인).
-		current = { "S15(UI)", "S12(UI)", "S11(가)", "S11(나)", "27-4(가)", "27-4(나)" },
+		-- S16 사전 작업(2026-09-20): 잠긴 칩 글씨색 · 칸 번호 실효 12 · X 버튼 44 × 44(StageSelectPanel · UIColors - 클라 전용) - S15(UI)(항목 4개 추가) + 동반 S12(UI)(PanelFitCheck 글씨 줄) · S11(가)(StageSelectPanel 안의 보상 띠 점검).
+		current = { "S15(UI)", "S12(UI)", "S11(가)" },
 	},
 }

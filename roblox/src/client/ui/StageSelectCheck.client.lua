@@ -20,10 +20,33 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local PanelRegistry = require(script.Parent.PanelRegistry)
 local StageRewardBand = require(script.Parent.Parent.StageRewardBand)
 local StageSelectPanel = require(script.Parent.Parent.StageSelectPanel)
+local Theme = require(script.Parent.kit.Theme)
 local UIManager = require(script.Parent.Parent.UIManager)
 
 local player = Players.LocalPlayer
 local CHECK_DELAY = 30 -- PanelFitCheck(10초부터 패널을 차례로 연다)가 끝난 뒤
+
+-- WCAG 상대 휘도 · 명암비(sRGB) + "바탕 위에 반투명 색을 얹었을 때 보이는 색"(transparency = Roblox 투명도, 0이 불투명).
+local function channel(value)
+	return value <= 0.03928 and value / 12.92 or ((value + 0.055) / 1.055) ^ 2.4
+end
+
+local function luminance(color)
+	return 0.2126 * channel(color.R) + 0.7152 * channel(color.G) + 0.0722 * channel(color.B)
+end
+
+local function contrast(a, b)
+	local la, lb = luminance(a), luminance(b)
+	return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05)
+end
+
+local function blend(top, transparency, under)
+	return Color3.new(
+		top.R * (1 - transparency) + under.R * transparency,
+		top.G * (1 - transparency) + under.G * transparency,
+		top.B * (1 - transparency) + under.B * transparency
+	)
+end
 
 local function lineCount(text)
 	local count = 1
@@ -136,6 +159,64 @@ local function run()
 		windowStart = debug.getWindow()
 		check(("최고 12,340: 창 시작 %d · 칩 글이 칩 폭을 넘는 칩 %d개 · 가장 넓은 글 %.0fpx / 칩 폭 %.0fpx(기대 12341 · 0개)"):format(windowStart, overflow, widest, chips[1].button.AbsoluteSize.X),
 			windowStart == 12341 and overflow == 0)
+
+		-- S16 사전 작업 1: 잠긴 칩 글씨 대비(칩 바탕 · 패널 바탕 - 세계 검정/흰색 양쪽 최악) ≥ 4.5. 값은 실제 인스턴스에서 읽는다.
+		player:SetAttribute("InfiniteStageBest", 12)
+		player:SetAttribute("BestBossCleared", 0)
+		UIManager.closeAll()
+		task.wait(0.2)
+		UIManager.open("stageSelect")
+		task.wait(0.4)
+		local lockedChip = chips[3].button -- 최고 12 → 최전선 13(11-20)이라 21-30부터 잠김
+		local panelFrame = debug.panel
+		local worst = math.huge
+		local panelWorst = math.huge
+		for _, world in ipairs({ Color3.new(0, 0, 0), Color3.new(1, 1, 1) }) do
+			local panelSeen = blend(panelFrame.BackgroundColor3, panelFrame.BackgroundTransparency, world)
+			local chipSeen = blend(lockedChip.BackgroundColor3, lockedChip.BackgroundTransparency, panelSeen)
+			worst = math.min(worst, contrast(lockedChip.TextColor3, chipSeen))
+			panelWorst = math.min(panelWorst, contrast(lockedChip.TextColor3, panelSeen))
+		end
+		check(("잠긴 칩 글씨(%s) 대비: 칩 바탕 최악 %.2f · 패널 바탕 최악 %.2f(기대 둘 다 ≥ 4.5 · 예전 lockedIcon은 칩 바탕 %.2f) · 색 = UIColors.lockedText %s"):format(
+			flat(lockedChip.Text), worst, panelWorst, contrast(UIColors.lockedIcon, blend(lockedChip.BackgroundColor3, lockedChip.BackgroundTransparency, blend(panelFrame.BackgroundColor3, panelFrame.BackgroundTransparency, Color3.new(1, 1, 1)))),
+			tostring(lockedChip.TextColor3 == UIColors.lockedText)),
+			worst >= 4.5 and panelWorst >= 4.5 and lockedChip.TextColor3 == UIColors.lockedText)
+
+		-- S16 사전 작업 2: 칸 번호 실효 글씨 ≥ 12(10칸) · X 버튼 터치 영역 ≥ 44 × 44 · 칸 · 칩이 패널 폭 안(잘림 없음)
+		local smallest, smallCount = math.huge, 0
+		for _, cell in ipairs(cells) do
+			local size = Theme.effectiveTextSize(cell.number)
+			smallest = math.min(smallest, size)
+			if size < Theme.minTextSize then
+				smallCount += 1
+			end
+		end
+		check(("칸 번호 실효 글씨: 최소 %.1fpx · 12 미만 %d칸 / %d칸(기대 0 · 최소 ≥ 12)"):format(smallest, smallCount, #cells), smallCount == 0 and #cells == 10 and smallest >= Theme.minTextSize)
+		local closeSize, dotSize = debug.closeButton.AbsoluteSize, debug.closeDot.AbsoluteSize
+		local closeCenter = debug.closeButton.AbsolutePosition + closeSize / 2
+		local dotCenter = debug.closeDot.AbsolutePosition + dotSize / 2
+		local panelPos, panelSize = panelFrame.AbsolutePosition, panelFrame.AbsoluteSize
+		local closeInside = debug.closeButton.AbsolutePosition.X >= panelPos.X and debug.closeButton.AbsolutePosition.Y >= panelPos.Y
+			and debug.closeButton.AbsolutePosition.X + closeSize.X <= panelPos.X + panelSize.X and debug.closeButton.AbsolutePosition.Y + closeSize.Y <= panelPos.Y + panelSize.Y
+		check(("X 버튼: 터치 %.0f × %.0f(기대 ≥ 44 × 44) · 보이는 원 %.0f × %.0f · 두 중심 차 %.1fpx · 패널 안 %s"):format(
+			closeSize.X, closeSize.Y, dotSize.X, dotSize.Y, (closeCenter - dotCenter).Magnitude, tostring(closeInside)),
+			closeSize.X >= 44 and closeSize.Y >= 44 and (closeCenter - dotCenter).Magnitude < 1 and closeInside)
+		local clipped = 0
+		local function insideWidth(inst)
+			local left, right = inst.AbsolutePosition.X, inst.AbsolutePosition.X + inst.AbsoluteSize.X
+			return left >= panelPos.X - 0.5 and right <= panelPos.X + panelSize.X + 0.5
+		end
+		for _, cell in ipairs(cells) do
+			clipped += insideWidth(cell.button) and 0 or 1
+		end
+		for _, chip in ipairs(chips) do
+			clipped += insideWidth(chip.button) and 0 or 1
+		end
+		clipped += insideWidth(debug.chipPrevButton) and 0 or 1
+		clipped += insideWidth(debug.chipNextButton) and 0 or 1
+		local viewport = panelFrame:FindFirstAncestorOfClass("ScreenGui").AbsoluteSize
+		check(("폭 %.0f × 높이 %.0f 화면: 패널 폭 %.0f 안에서 잘린 칸 · 칩 · ◀ ▶ %d개(기대 0) · 패널 폭 ≤ 화면 폭 %s"):format(
+			viewport.X, viewport.Y, panelSize.X, clipped, tostring(panelSize.X <= viewport.X)), clipped == 0 and panelSize.X <= viewport.X)
 
 		-- 등록 규칙: 단축키 M · station · 가방(window)을 열면 닫힘 · window가 열려 있으면 안 열림 · 견습 중 안 열림
 		UIManager.closeAll()

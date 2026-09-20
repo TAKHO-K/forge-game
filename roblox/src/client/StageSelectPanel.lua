@@ -122,7 +122,7 @@ end
 local CHIP_SPEC = {
 	cleared = { symbol = "✓", color = UIColors.textTertiary },
 	front = { symbol = "●", color = UIColors.ember },
-	locked = { symbol = "", color = UIColors.lockedIcon },
+	locked = { symbol = "", color = UIColors.lockedText },
 	open = { symbol = "", color = UIColors.textSecondary },
 }
 
@@ -178,7 +178,7 @@ panelStroke.Parent = panel
 local title = Instance.new("TextLabel")
 title.BackgroundTransparency = 1
 title.Position = UDim2.new(0, 16, 0, 12)
-title.Size = UDim2.new(1, -60, 0, 20)
+title.Size = UDim2.new(1, -70, 0, 20)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 15
 title.TextXAlignment = Enum.TextXAlignment.Left
@@ -186,20 +186,34 @@ title.TextColor3 = UIColors.textPrimary
 title.Text = "스테이지 선택"
 title.Parent = panel
 
+-- S16 사전 작업 2: 터치 영역 44 × 44(모바일 하한). 보이는 원은 예전 그대로 26 × 26이고 같은 중심에 뒤 형제로 그린다(눌리는 것은 투명한 44 × 44 버튼).
+local CLOSE_TOUCH = 44
+local CLOSE_DOT = 26
+local CLOSE_CENTER_X = 25 -- 패널 오른쪽 끝에서 원 중심까지(12 + 26 / 2)
+local CLOSE_CENTER_Y = 23 -- 패널 위에서 원 중심까지(10 + 26 / 2)
+local closeDot = Instance.new("Frame")
+closeDot.Name = "CloseDot"
+closeDot.AnchorPoint = Vector2.new(0.5, 0.5)
+closeDot.Position = UDim2.new(1, -CLOSE_CENTER_X, 0, CLOSE_CENTER_Y)
+closeDot.Size = UDim2.new(0, CLOSE_DOT, 0, CLOSE_DOT)
+closeDot.BackgroundColor3 = UIColors.panel
+closeDot.BackgroundTransparency = UIColors.panelTransparency
+closeDot.Parent = panel
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(1, 0)
+closeCorner.Parent = closeDot
+
 local closeButton = Instance.new("TextButton")
-closeButton.AnchorPoint = Vector2.new(1, 0)
-closeButton.Position = UDim2.new(1, -12, 0, 10)
-closeButton.Size = UDim2.new(0, 26, 0, 26)
+closeButton.Name = "CloseButton"
+closeButton.AnchorPoint = Vector2.new(0.5, 0.5)
+closeButton.Position = UDim2.new(1, -CLOSE_CENTER_X, 0, CLOSE_CENTER_Y)
+closeButton.Size = UDim2.new(0, CLOSE_TOUCH, 0, CLOSE_TOUCH)
 closeButton.Font = Enum.Font.GothamBold
 closeButton.TextSize = 14
 closeButton.Text = "X"
 closeButton.TextColor3 = UIColors.textSecondary
-closeButton.BackgroundColor3 = UIColors.panel
-closeButton.BackgroundTransparency = UIColors.panelTransparency
+closeButton.BackgroundTransparency = 1
 closeButton.Parent = panel
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(1, 0)
-closeCorner.Parent = closeButton
 
 -- 본문 스크롤 영역(제목줄과 상태줄 사이).
 local body = Instance.new("ScrollingFrame")
@@ -326,17 +340,17 @@ for i = 1, WINDOW_SIZE do
 	local stageNumberLabel = Instance.new("TextLabel")
 	stageNumberLabel.Name = "Number"
 	stageNumberLabel.BackgroundTransparency = 1
-	stageNumberLabel.Position = UDim2.new(0, 0, 0, 4)
-	stageNumberLabel.Size = UDim2.new(1, 0, 0, 14)
+	stageNumberLabel.Position = UDim2.new(0, 0, 0, 2)
+	stageNumberLabel.Size = UDim2.new(1, 0, 0, 16)
 	stageNumberLabel.Font = Enum.Font.Gotham
-	stageNumberLabel.TextSize = 9.5
+	stageNumberLabel.TextSize = 12 -- S16 사전 작업 2: 실효 12 미만 금지(예전 9.5는 정수 속성이라 9로 저장돼 있었다). UIScale 조상이 없다 → 실효 = 12
 	stageNumberLabel.TextColor3 = UIColors.textTertiary
 	stageNumberLabel.Text = ""
 	stageNumberLabel.Parent = cell
 	local symbolLabel = Instance.new("TextLabel")
 	symbolLabel.Name = "Symbol"
 	symbolLabel.BackgroundTransparency = 1
-	symbolLabel.Position = UDim2.new(0, 0, 0, 16)
+	symbolLabel.Position = UDim2.new(0, 0, 0, 18)
 	symbolLabel.Size = UDim2.new(1, 0, 0, 22)
 	symbolLabel.Font = Enum.Font.GothamBlack
 	symbolLabel.TextSize = 18
@@ -716,6 +730,11 @@ StageSelectPanel.debug = {
 	chipTextSize = CHIP_TEXT_SIZE,
 	cells = cells,
 	chips = chips,
+	panel = panel,
+	closeButton = closeButton,
+	closeDot = closeDot,
+	chipPrevButton = chipPrevButton,
+	chipNextButton = chipNextButton,
 	getWindow = function()
 		return windowStart, chipStart
 	end,
