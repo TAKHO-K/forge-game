@@ -30,6 +30,7 @@ local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local EnhancePolicy = require(script.Parent.EnhancePolicy)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local ProtectionTickets = require(script.Parent.ProtectionTickets)
+local FreezeProbe = require(script.Parent.FreezeProbe) -- TEMP-PROBE(S15 1단계: S04(나) 멈춤 재조사 - 조사 뒤 지운다)
 
 local EnhanceVerify = {}
 
@@ -723,12 +724,16 @@ local function killMobs(player, count, data, variant)
 	for index = 1, count do
 		local model = MonsterSpawner.spawn(data, spot, nil, variant)
 		local isDead = MonsterState.applyDamage(model, 1e12, stage, player)
+		local resolveStart = os.clock() -- TEMP-PROBE
 		CombatResolution.resolveHit(player, model, isDead)
+		FreezeProbe.afterKill(os.clock() - resolveStart) -- TEMP-PROBE
 		if index % 50 == 0 then
 			task.wait()
 		end
 	end
+	FreezeProbe.sample("묶음 끝 · 리스폰 대기 전") -- TEMP-PROBE
 	task.wait(WorldConfig.zoneMonsterGrid.respawnDelaySeconds + 1)
+	FreezeProbe.sample("리스폰 대기 뒤 · 정리 전") -- TEMP-PROBE
 	for _, model in ipairs(MonsterState.getAllModels()) do
 		if not monstersBefore[model] then
 			MonsterState.clear(model)
@@ -738,6 +743,7 @@ local function killMobs(player, count, data, variant)
 		end
 	end
 	clearNewGround(player, groundBefore)
+	FreezeProbe.sample("정리 뒤") -- TEMP-PROBE
 end
 
 -- count마리를 chunk씩 나눠 잡고(리스폰 폭주를 줄인다) 재료 증가량을 돌려준다.
@@ -795,6 +801,8 @@ end
 
 function EnhanceVerify.runLiveS04(player, env)
 	print("===S04 검증 시작(나: 실제 처치 경로 · 강화 소모)===")
+	FreezeProbe.start() -- TEMP-PROBE
+	FreezeProbe.sample("S04(나) 시작") -- TEMP-PROBE
 	local r = newRecorder("나", "S04")
 	local profile = PlayerProfile.getProfile(player)
 	local root = rootOf(player)
@@ -984,6 +992,8 @@ function EnhanceVerify.runLiveS04(player, env)
 		orphans, leftoverMonsters, leftoverDrops, materialsBefore[ENHANCE_STONE], materialsBefore[HIGH_STONE], materialsAfter[ENHANCE_STONE], materialsAfter[HIGH_STONE],
 		bagBefore, #profile.inventory), orphans == 0 and leftoverMonsters == 0 and leftoverDrops == 0 and materialsSame and #profile.inventory == bagBefore)
 
+	FreezeProbe.sample("S04(나) 끝") -- TEMP-PROBE
+	FreezeProbe.stop() -- TEMP-PROBE
 	local pass, total = r.summary()
 	print(("===S04 검증 끝(나)=== %d/%d 통과"):format(pass, total))
 end
