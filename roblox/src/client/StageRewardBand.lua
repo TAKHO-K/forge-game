@@ -22,7 +22,14 @@ local Theme = require(script.Parent.ui.kit.Theme)
 local StageRewardBand = {}
 
 local MAX_ROWS = 4 -- 첫 클리어(장비) · 방지권 · 매번(골드 · 경험치 · 장비) · 매번(강화석)
-local CODEX_DOT = 22 -- 도감 점 한 칸의 폭(PC)
+local CODEX_DOT = 22 -- 도감 점 한 칸의 폭(보이는 자리 · PC 터치 폭)
+local TOUCH_DOT_WIDTH = 44 -- 모바일 터치 상자 폭(S12 사전 작업 3) - 보이는 점과 22 간격은 그대로, 상자만 넓혀 이웃과 겹친다
+
+-- 화면 X가 어느 점의 자리인가(1 ~ count). 터치 상자가 이웃과 겹치므로 눌린 버튼이 아니라 위치로 정한다(겹친 곳은 가장 가까운 점 · 양 끝 바깥 여유는 끝 점).
+-- 상자를 44로 넓혀도 점 하나가 실제로 차지하는 가로는 pitch(22)다 - 44 폭은 양 끝 점의 바깥쪽에서만 새로 생긴다(PRD 기록 미결).
+function StageRewardBand.dotIndexAt(x, firstLeft, pitch, count)
+	return math.clamp(math.floor((x - firstLeft) / pitch) + 1, 1, count)
+end
 
 -- BossRules.isBossStage와 같은 식이다(BossRules는 무거운 shared 모듈을 여럿 끌어와 클라 패널이 안 부른다).
 function StageRewardBand.isBossStage(stage)
@@ -205,9 +212,11 @@ function StageRewardBand.build(props)
 	local nameLabel = Theme.label(root, "", "caption", "textPrimary")
 	nameLabel.Name = "CodexName"
 	local dotsLeft = 36
+	local hitWidth = Theme.isMobile and TOUCH_DOT_WIDTH or CODEX_DOT
+	local overhang = (hitWidth - CODEX_DOT) / 2 -- 상자가 보이는 자리 양옆으로 나간 폭
 	nameLabel.Position = UDim2.new(0, dotsLeft + CODEX_DOT * #codexBossIds + 6, 0, codexTop)
 	nameLabel.Size = UDim2.new(0, width - (dotsLeft + CODEX_DOT * #codexBossIds + 6) - 96, 0, codexHeight)
-	for index, bossId in ipairs(codexBossIds) do
+	for index in ipairs(codexBossIds) do
 		local dot = Instance.new("TextButton")
 		dot.Name = "CodexDot" .. index
 		dot.BackgroundTransparency = 1
@@ -215,11 +224,15 @@ function StageRewardBand.build(props)
 		dot.Font = Theme.font
 		dot.TextSize = Theme.textSize("body")
 		dot.Text = "○"
-		dot.Position = UDim2.new(0, dotsLeft + CODEX_DOT * (index - 1), 0, codexTop)
-		dot.Size = UDim2.new(0, CODEX_DOT, 0, codexHeight)
+		dot.Position = UDim2.new(0, dotsLeft + CODEX_DOT * (index - 1) - overhang, 0, codexTop)
+		dot.Size = UDim2.new(0, hitWidth, 0, codexHeight)
 		dot.Parent = root
-		dot.Activated:Connect(function()
-			nameLabel.Text = BossData.bosses[bossId].displayName
+		dot.Activated:Connect(function(input)
+			local picked = index
+			if input and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+				picked = StageRewardBand.dotIndexAt(input.Position.X, dots[1].AbsolutePosition.X + overhang, CODEX_DOT, #codexBossIds)
+			end
+			nameLabel.Text = BossData.bosses[codexBossIds[picked]].displayName
 		end)
 		dots[index] = dot
 	end

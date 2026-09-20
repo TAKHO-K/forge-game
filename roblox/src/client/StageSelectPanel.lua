@@ -21,6 +21,7 @@ local BossRewardPreviewData = require(ReplicatedStorage.Shared.data.BossRewardPr
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local StageRewardBand = require(script.Parent.StageRewardBand)
+local UIManager = require(script.Parent.UIManager)
 
 local stageMoveRequest = ReplicatedStorage:WaitForChild("StageMoveRequest")
 local stageMoveResult = ReplicatedStorage:WaitForChild("StageMoveResult")
@@ -50,6 +51,11 @@ local CELL_GAP = 6
 local STEP = 10 -- "이전/다음" 버튼 한 번에 넘기는 칸 수.
 local PANEL_HEIGHT = 396 -- 보상 띠가 끼어 320 → 396(고정 - PRD 20.73 [4-2])
 local BAND_TOP = 60 + ROWS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 2 -- 그리드 아래 끝 바로 아래
+-- S12 사전 작업 2: 화면이 패널보다 낮으면(폰 가로 388) UIManager.fitToScreen이 패널 높이를 줄이고, 제목 · 상태줄은 고정한 채 이 사이(범례 ~ 페이지 줄)가 스크롤된다.
+-- 캔버스 높이는 패널이 안 줄었을 때 이 영역의 높이와 같다(그때는 스크롤이 없다). 안의 자리는 전부 offset이다(ScrollingFrame 자식의 Scale은 캔버스 기준이라 안 쓴다).
+local BODY_TOP = 32 -- 제목줄 아래
+local STATUS_RESERVE = 36 -- 아래 상태줄 자리
+local BODY_HEIGHT = PANEL_HEIGHT - BODY_TOP - STATUS_RESERVE
 
 -- 나중 확장 대비(파티원 진행 상황을 파티장이 보는 기능) - LocalPlayer에 묶지 않고
 -- (stage, best, bestBossCleared) 세 값만 받는 순수 함수로 둔다. 호출부가 나중에 다른
@@ -137,12 +143,24 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(1, 0)
 closeCorner.Parent = closeButton
 
+-- 본문 스크롤 영역(제목줄과 상태줄 사이).
+local body = Instance.new("ScrollingFrame")
+body.Name = "Body"
+body.Position = UDim2.new(0, 0, 0, BODY_TOP)
+body.Size = UDim2.new(1, 0, 1, -(BODY_TOP + STATUS_RESERVE))
+body.CanvasSize = UDim2.new(0, 0, 0, BODY_HEIGHT)
+body.ScrollingDirection = Enum.ScrollingDirection.Y
+body.ScrollBarThickness = 4
+body.BackgroundTransparency = 1
+body.BorderSizePixel = 0
+body.Parent = panel
+
 -- 범례 - 기호와 색을 같이 쓴다(색만으로 구분하지 않는다, 지시).
 local legend = Instance.new("Frame")
-legend.Position = UDim2.new(0, 16, 0, 36)
+legend.Position = UDim2.new(0, 16, 0, 36 - BODY_TOP)
 legend.Size = UDim2.new(1, -32, 0, 16)
 legend.BackgroundTransparency = 1
-legend.Parent = panel
+legend.Parent = body
 local legendLayout = Instance.new("UIListLayout")
 legendLayout.FillDirection = Enum.FillDirection.Horizontal
 legendLayout.Padding = UDim.new(0, 14)
@@ -170,10 +188,10 @@ end
 -- 그리드 - 고정 크기 셀(UIGridLayout CellSize) 21개. AutomaticSize를 아예 안 쓴다(25-3
 -- 함정 회피). 셀은 한 번만 만들고(재사용) 매번 텍스트·색만 새로 칠한다.
 local gridArea = Instance.new("Frame")
-gridArea.Position = UDim2.new(0, 12, 0, 60)
+gridArea.Position = UDim2.new(0, 12, 0, 60 - BODY_TOP)
 gridArea.Size = UDim2.new(0, COLUMNS * (CELL_SIZE + CELL_GAP) + CELL_GAP, 0, ROWS * (CELL_SIZE + CELL_GAP) + CELL_GAP)
 gridArea.BackgroundTransparency = 1
-gridArea.Parent = panel
+gridArea.Parent = body
 
 local gridLayout = Instance.new("UIGridLayout")
 gridLayout.CellSize = UDim2.new(0, CELL_SIZE, 0, CELL_SIZE)
@@ -234,10 +252,10 @@ end
 
 -- 페이지 이동 + 상태줄.
 local pageRow = Instance.new("Frame")
-pageRow.Position = UDim2.new(0, 12, 1, -68)
+pageRow.Position = UDim2.new(0, 12, 0, PANEL_HEIGHT - 68 - BODY_TOP)
 pageRow.Size = UDim2.new(1, -24, 0, 26)
 pageRow.BackgroundTransparency = 1
-pageRow.Parent = panel
+pageRow.Parent = body
 local pageLayout = Instance.new("UIListLayout")
 pageLayout.FillDirection = Enum.FillDirection.Horizontal
 pageLayout.Padding = UDim.new(0, 8)
@@ -295,8 +313,8 @@ local lastPreviewAt = 0
 local previewQueued = false
 
 local band = StageRewardBand.build({
-	parent = panel,
-	position = UDim2.new(0, 16, 0, BAND_TOP),
+	parent = body,
+	position = UDim2.new(0, 16, 0, BAND_TOP - BODY_TOP),
 	width = COLUMNS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 24 - 32,
 	onChallenge = function(stage)
 		stageMoveRequest:FireServer(stage)
@@ -460,6 +478,7 @@ end
 
 dim.Activated:Connect(close)
 closeButton.Activated:Connect(close)
+StageSelectPanel.close = close -- 자체 점검(ui/PanelFitCheck)이 연 뒤 닫는 데 쓴다
 
 function StageSelectPanel.open()
 	local _, best = attrs()
@@ -467,10 +486,19 @@ function StageSelectPanel.open()
 	isOpen = true
 	selectedStage = nil
 	screenGui.Enabled = true
+	UIManager.fitToScreen(panel, screenGui)
+	body.CanvasPosition = Vector2.new(0, 0)
 	setStatus("")
 	render()
 	requestPreview()
 end
+
+-- 열려 있는 동안 화면 크기가 바뀌면(창 회전 · 크기 조절) 높이를 다시 맞춘다.
+screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+	if isOpen then
+		UIManager.fitToScreen(panel, screenGui)
+	end
+end)
 
 -- 예외 3(목록을 연 채로 스테이지가 바뀔 때, 파티 투표 이동 포함): 세 Attribute를 구독해
 -- 열려 있는 동안은 그 자리에서 다시 그린다(windowStart는 유지 - 보던 자리를 안 바꾼다).

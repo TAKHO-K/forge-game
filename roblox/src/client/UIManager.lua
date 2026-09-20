@@ -23,7 +23,12 @@ local TWEEN_INFO = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirecti
 local KIND_BASE_ORDER = { station = 10, window = 100, overlay = 200 }
 local CLOSE_TOP_KEYS = { [Enum.KeyCode.X] = true, [Enum.KeyCode.Backspace] = true }
 
+-- 패널 높이 제한(S12 사전 작업 2 - COMMON.md §2 영구 규칙): window · station은 열 때 높이를 (화면 높이 − 위아래 안전 여백) 이하로 줄이고, 위 · 아래 끝이 화면 밖이면 안으로 민다.
+-- 넘치는 내용은 패널 안 ScrollingFrame이 맡는다(이 함수는 바깥 틀만 다룬다). 폰 가로(844 × 388)에서 396 고정 패널의 위 3px · 아래 5px가 잘렸던 일이 계기다.
+UIManager.safeMargin = 8
+
 local windows = {} -- id -> config(register가 받은 것 그대로)
+local fitStates = setmetatable({}, { __mode = "k" }) -- frame -> { baseMaxY = 패널이 원래 정한 높이 상한, position = 내가 마지막에 넣은 Position, shift = 그때 민 px }
 local stack = {} -- 열린 창 id들, LIFO(맨 뒤 = 맨 위)
 local debounce = {} -- id -> true(트윈 재생 중 - 이 동안 그 id의 열기/닫기 요청을 무시한다)
 local overlayParents = {} -- overlay id -> 지금 열려 있는 동안의 부모 패널 id(부모가 닫히면 같이 닫힌다)
@@ -109,6 +114,88 @@ function UIManager.isOpen(id)
 	return table.find(stack, id) ~= nil
 end
 
+-- frame의 높이를 (screenGui 높이 − 2 × safeMargin) 이하로 제한하고 위 · 아래 끝을 화면 안으로 민다. 계산은 Size · Position 값으로만 한다(레이아웃을 기다리지 않는다).
+-- 등록 없이 자기 ScreenGui를 쓰는 패널(StageSelectPanel)도 직접 부를 수 있다. 화면이 커져 여유가 생기면 다음 호출에서 원래 자리 · 높이로 돌아간다.
+-- 높이 상한은 UISizeConstraint로 건다(패널이 Size를 다시 정해도 안 부딪힌다) - Panel의 모바일 window가 이미 가진 상수 상한(720 × 480)은 그것을 그대로 쓰고 Y만 줄인다.
+function UIManager.fitToScreen(frame, screenGui)
+	local viewportHeight = screenGui.AbsoluteSize.Y
+	if viewportHeight <= 0 then
+		return
+	end
+	local state = fitStates[frame]
+	if not state then
+		local existing = frame:FindFirstChildOfClass("UISizeConstraint")
+		state = { baseMaxY = existing and existing.MaxSize.Y or math.huge, shift = 0 }
+		fitStates[frame] = state
+	end
+	local constraint = frame:FindFirstChildOfClass("UISizeConstraint")
+	if not constraint then
+		constraint = Instance.new("UISizeConstraint")
+		constraint.Name = "ScreenFit"
+		constraint.MaxSize = Vector2.new(math.huge, math.huge)
+		constraint.Parent = frame
+	end
+
+	local margin = UIManager.safeMargin
+	local maxHeight = viewportHeight - 2 * margin
+	local natural = math.min(frame.Size.Y.Scale * viewportHeight + frame.Size.Y.Offset, state.baseMaxY)
+	local height = math.min(natural, maxHeight)
+	constraint.MaxSize = Vector2.new(constraint.MaxSize.X, math.min(state.baseMaxY, maxHeight))
+
+	-- 지난번에 내가 민 만큼 되돌려 패널이 정한 자리에서 다시 계산한다(그 사이 패널이 Position을 새로 정했으면 그 값이 원래 자리다).
+	local position = frame.Position
+	if state.position == position then
+		position = UDim2.new(position.X.Scale, position.X.Offset, position.Y.Scale, position.Y.Offset - state.shift)
+	end
+	local top = position.Y.Scale * viewportHeight + position.Y.Offset - frame.AnchorPoint.Y * height
+	local shift = 0
+	if top + height > viewportHeight - margin then
+		shift = viewportHeight - margin - (top + height)
+	end
+	if top + shift < margin then
+		shift = margin - top
+	end
+	local fitted = UDim2.new(position.X.Scale, position.X.Offset, position.Y.Scale, position.Y.Offset + shift)
+	if fitted ~= frame.Position then
+		frame.Position = fitted
+	end
+	state.shift = shift
+	state.position = frame.Position
+end
+
+-- 열려 있는 동안 화면 크기가 바뀌면(창 회전 · 크기 조절) 다시 맞춘다. 창마다 한 번만 연결하고 닫힐 때 끊는다.
+local function connectFit(win)
+	if win.kind == "overlay" or not win.frame or not win.screenGui or win.fitConnection then
+		return
+	end
+	win.fitConnection = win.screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		UIManager.fitToScreen(win.frame, win.screenGui)
+	end)
+end
+
+local function disconnectFit(win)
+	if win.fitConnection then
+		win.fitConnection:Disconnect()
+		win.fitConnection = nil
+	end
+end
+
+-- 등록된 창의 본체 프레임과 ScreenGui(전수 검사용).
+function UIManager.getParts(id)
+	local win = windows[id]
+	return win and win.frame, win and win.screenGui
+end
+
+-- 등록된 창 id 목록(전수 검사용).
+function UIManager.getIds()
+	local ids = {}
+	for id in pairs(windows) do
+		table.insert(ids, id)
+	end
+	table.sort(ids)
+	return ids
+end
+
 -- config: { kind, parentId, screenGui, frame, hotkey, modal, exclusive, hasCloseButton, tweens, extraVisible, onOpen, onClose }
 -- kind(30-0 S06, PRD 20.81 [D-1]): "window"(기본 - 안 준 기존 등록(가방)은 그대로 window) · "station" · "overlay".
 --   window: 열리면 다른 window · station을 닫는다. 모달. / station: 열리면 다른 station을 닫고, window가 열려 있으면 **열리지 않는다**. 모달이 아니다(걸을 수 있다).
@@ -180,6 +267,11 @@ function UIManager.open(id, opts)
 	if win.onOpen then
 		win.onOpen()
 	end
+	-- onOpen 뒤에 맞춘다: 패널이 열릴 때 자기 크기 · 자리를 정하는 경우(가방의 fitWindow)를 먼저 끝내고 그 결과를 제한한다.
+	if kind ~= "overlay" and win.frame and win.screenGui then
+		UIManager.fitToScreen(win.frame, win.screenGui)
+		connectFit(win)
+	end
 	return true
 end
 
@@ -198,6 +290,7 @@ function UIManager.close(id, instant)
 
 	table.remove(stack, index)
 	overlayParents[id] = nil
+	disconnectFit(win)
 	applyStackOrder()
 	setWindowVisualState(id, false, instant)
 	updateModalEnabled()
