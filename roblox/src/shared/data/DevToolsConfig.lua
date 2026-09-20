@@ -47,6 +47,6 @@ return {
 		-- 본 작업(InventoryUI 파티 탭 분할)은 옮길 대상이 없어 코드 변경 0(PRD 20.105). 동반 실행(COMMON.md §3): 이 세션이 고친 클라 모듈을 쓰는 옛 클라 점검만 -
 		-- S18(UI)(PartyHudCheck - 목록 뷰 · 직업 이름) · S17(UI)(SystemToasts - Toast 등급 · 창 위 대역) · S16(UI)(메뉴바 · Toast TC) · S12b(UI)(SocialSelfCheck - Toast TC · 창 글씨 기준선) · S12(UI)(PanelFitCheck - 글씨 기준선) · S10(가)(DropFeed - Toast TR).
 		-- 서버 (나) 블록(27-3 · S12(나) · S09(나))은 서버 변경이 없어 뺀다. S04(나)는 계속 제외.
-		current = { "S18(UI)", "S17(UI)", "S16(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
+		current = { "S18(UI)", "S17(UI)", "S16(UI)", "S12b(UI)", "S12(UI)", "S10(가)", "27-3(가)", "27-3(나)", "S12(나)", "S09(나)" },
 	},
 }
