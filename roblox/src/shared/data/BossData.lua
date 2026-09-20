@@ -34,6 +34,7 @@
 --   role                 "signature"(그 보스를 기억하게 만드는 하나) / "gimmick"(파훼 대상)
 --   enabled = false      설계만 있고 아직 실제 전투에 안 나오는 스킬(보스별 구현 세션이 켠다). BossSim은 design 옵션으로 포함한다
 --   bubble               말풍선 픽토그램 키(클라 BossPatternVisuals의 BUBBLES)
+--   densityScalable      true면 스테이지 밀도(mechanics.stageDensity)가 count · scatterStuds를 늘린다(S14 - 조건은 BossSkillMath.densityEligible)
 --   sim                  BossSim 전용 가정(회피 비용 등) - 게임 판정에는 안 쓰인다
 -- 전조 뒤 마지막 판정까지의 시간(시전)과 후딜은 손으로 적지 않는다 - 모양 파라미터(waveCount·volleys·
 -- dashCount·recoverSeconds…)에서 BossSkillMath.boundSeconds가 계산한다(값이 두 군데 있으면 어긋난다).
@@ -125,6 +126,16 @@ local MECHANICS = {
 		telegraphMultiplier = 1.5,
 	},
 
+	-- S14(PRD 20.81 [C-3]) 스테이지 25 이후의 난이도는 범위가 아니라 **낙하 원의 개수**가 맡는다(범위 배율은 25에서 1.152로 멈춘다 -
+	-- 보장되지 않는 속도를 전제로 넓히면 "피할 수 없는 패턴"이 된다). extra(S) = min(maxExtra, floor((S - startStage) ÷ stepStages)) -
+	-- 스테이지 50부터 +1 · 75부터 +2 · 100부터 +3. densityScalable = true인 스킬의 count가 extra만큼 늘고 scatterStuds가
+	-- sqrt((count + extra) ÷ count)배로 넓어진다(면적당 밀도 보존). 대상 조건: circleTarget · 동시 산개(sequential 아님) · scatterStuds > 0 ·
+	-- 기믹 아님 · gate 없음(BossSkillMath.densityEligible). 검사기 BossSim.checkDensity가 합격 기준이다 - 실패하면 maxExtra = 0으로 끈다.
+	-- check(검사기 파라미터): 대상의 자리에서 어느 원에도 안 덮인 가장 가까운 점까지를 directions개 방위 × stepStuds 간격으로 찾고, 그 거리 d로
+	-- 필요 시간 t = perceptionSeconds + d ÷ 이동 속도 × marginFactor(회피 부등식 dodge와 같은 식)를 잰다. 합격 = t의 percentile 분위가 telegraphSeconds 이하 ·
+	-- 최댓값이 telegraphSeconds + maxOverSeconds 이하.
+	stageDensity = { startStage = 25, stepStages = 25, maxExtra = 3, check = { directions = 72, stepStuds = 0.5, percentile = 0.99, maxOverSeconds = 0.25 } },
+
 	-- 29-2 A: 우선순위 눈금(값 자체보다 순서가 뜻이다)과 굶주림 가산. 가산이 어떤 기본 우선순위보다도
 	-- 커서 굶은 스킬은 다음 선택에서 반드시 나간다(자리 비우기만 예외).
 	priority = { normal = 0, signature = 50, gimmick = 100 },
@@ -193,7 +204,7 @@ local function guardianSkills()
 		meteor = {
 			primitive = "circleTarget", bubble = "meteor",
 			cooldownSeconds = 13, priority = P.normal,
-			telegraphSeconds = 1.5, count = 3, radiusStuds = 6, scatterStuds = 10,
+			telegraphSeconds = 1.5, count = 3, radiusStuds = 6, scatterStuds = 10, densityScalable = true,
 			damage = { kind = "attack", multiplier = 2 }, damageLabel = "낙석",
 		},
 		-- 정신집중 → 돌진. 느낌표가 뜨는 순간 대상 좌표를 고정하고(추적 안 함 - 회피가 실력이 되는 핵심)
@@ -371,7 +382,7 @@ local SPECIES = {
 			icefall = {
 				primitive = "circleTarget", bubble = "meteor",
 				cooldownSeconds = 12, firstAvailableSeconds = 4, priority = P.normal, starvationSeconds = 45,
-				telegraphSeconds = 1.5, count = 2, countPerMember = 1, perMember = true, radiusStuds = 5, scatterStuds = 12,
+				telegraphSeconds = 1.5, count = 2, countPerMember = 1, perMember = true, radiusStuds = 5, scatterStuds = 12, densityScalable = true,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "낙빙",
 				onImpact = { { type = "spawnProp", prop = "pillar" } },
 			},
@@ -583,7 +594,7 @@ local SPECIES = {
 			sting = {
 				primitive = "circleTarget", bubble = "meteor",
 				cooldownSeconds = 12, priority = P.normal, starvationSeconds = 40,
-				telegraphSeconds = 1.2, count = 3, radiusStuds = 5, scatterStuds = 10,
+				telegraphSeconds = 1.2, count = 3, radiusStuds = 5, scatterStuds = 10, densityScalable = true,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "독침 낙하",
 			},
 			-- 잠행 찌르기(23-6 "돌진 2연속" 흡수 → 29-3 잠행). 첫 돌진을 피한 자리로 둘째가 다시 겨눈다 - 한 번 피하고 멈추면

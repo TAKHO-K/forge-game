@@ -1049,6 +1049,7 @@ local HELP_TEXT = table.concat({
 	"/gg boss gate <on|off> - 지금 보스의 파훼 게이트(받는 피해 x0.487) 토글(29-1)",
 	"/gg boss sim <bossId> <인원> <break|failfirst|nobreak> [live] - 처치 시간 모형(29-2: 기본은 설계 기믹 포함, live면 지금 켜진 스킬만)",
 	"/gg boss check <bossId> - 그 보스 스킬표의 회피 부등식·인접 피해 합 검사(29-2)",
+	"/gg boss density [스테이지] - 그 스테이지의 낙하 원 밀도(S14: extra · 솔로/4인 실제 원 개수 · 산개 거리)와 검사기(BossSim.checkDensity) 결과 표(기본 100)",
 	"/gg pattern <스킬 id> - 지금 보스에게 그 스킬을 즉시 시작시킨다(/gg bossinfo에 id 목록 - 예: roar, icefall, shell, stab)",
 	"/gg bossinfo - 지금 보스 인스턴스의 주력 패턴·패턴별 간격·변형 필드·실루엣을 콘솔에 출력(23-6 검증용)",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
@@ -1347,6 +1348,26 @@ local function handleCommand(player, args)
 			reply(player, ("check %s: 회피 부등식 %s(배율 1) · %s(배율 %.3f), 인접 쌍 %d개 중 100%% 이상 %d건(최악 %s→%s %.0f%%)"):format(
 				bossId, ok and "통과" or "실패", wideOk and "통과" or "실패", maxScale, #pairRows, violations,
 				pairRows[1].first, pairRows[1].second, pairRows[1].share * 100))
+		end
+	elseif sub == "boss" and args[2] == "density" then
+		-- S14(PRD 20.81 [C-3]): 스테이지의 밀도 표. 실제 스폰과 같은 함수(BossRules.buildInstanceData)의 사본에서 읽는다 - 솔로 · 4인의 원 개수(countPerMember 몫 포함)와 산개 거리.
+		local stage = math.floor(tonumber(args[3]) or 100)
+		local density = BossData.mechanics.stageDensity
+		reply(player, ("밀도 스테이지 %d: extra %d(시작 %d · 간격 %d · 상한 %d) · 범위 배율 %.3f"):format(
+			stage, BossRules.densityExtra(stage), density.startStage, density.stepStages, density.maxExtra, BossRules.skillRangeScale(stage)))
+		for _, bossId in ipairs(BossData.pools[1].bossIds) do
+			local solo, party = BossRules.buildInstanceData(stage, bossId, 1), BossRules.buildInstanceData(stage, bossId, PartyConfig.maxMembers)
+			for _, id in ipairs(BossData.bosses[bossId].skillOrder) do
+				local skill = solo.skills[id]
+				if skill.densityScalable then
+					local raw = BossData.bosses[bossId].skills[id]
+					local check = BossSim.checkDensity(bossId, id, solo.densityExtra, 10000, 1, { rangeScale = solo.skillRangeScale, partySize = PartyConfig.maxMembers })
+					reply(player, ("  %s.%s: 원 솔로 %d개 · %d인 %d개(기본 %d + extra %d + 인원 몫 %d) · 산개 %.1f → %.1fstud · 반경 %.1f · 검사기(%d인) p99 %.3f · 최대 %.3f ≤ 전조 %.2f(+%.2f) %s"):format(
+						bossId, id, skill.count + (skill.countPerMember or 0), PartyConfig.maxMembers, party.skills[id].count + (party.skills[id].countPerMember or 0) * PartyConfig.maxMembers,
+						raw.count, solo.densityExtra, (raw.countPerMember or 0) * PartyConfig.maxMembers, raw.scatterStuds * solo.skillRangeScale, skill.scatterStuds, skill.radiusStuds,
+						PartyConfig.maxMembers, check.p99, check.max, check.telegraphSeconds, density.check.maxOverSeconds, check.ok and "O" or "X"))
+				end
+			end
 		end
 	elseif sub == "boss" then
 		ensureBackup(player)
@@ -1661,6 +1682,7 @@ local function handleCommand(player, args)
 				d.id, d.stageNumber, d.skillRangeScale, d.scheduler.globalCooldownSeconds, d.scheduler.enragedGlobalCooldownSeconds,
 				d.moveSpeedStuds, d.attackCooldownSeconds, d.basicAttackDamageMultiplier, d.attackRangeStuds,
 				d.sizeScale, d.bodyAspect.X, d.bodyAspect.Y, d.bodyAspect.Z, #d.attachments))
+			reply(player, ("  스테이지 밀도(S14): extra %d(범위 배율과 별개 - 낙하 원 개수)"):format(d.densityExtra or 0))
 			local clocks = BossPatterns.debugClocks(model)
 			for _, id in ipairs(d.skillOrder) do
 				local skill = d.skills[id]
@@ -1670,6 +1692,11 @@ local function handleCommand(player, args)
 						id, skill.primitive, skill.role and ("·" .. skill.role) or "", tostring(skill.cooldownSeconds), skill.priority or 0,
 						skill.telegraphSeconds, damage, tostring(skill.radiusStuds or skill.halfWidthStuds or skill.pathHalfWidthStuds or "-"),
 						skill.enabled == false and " (설계만)" or "", clocks[id] and ("%.1f초"):format(clocks[id]) or "시계 없음"))
+					if skill.densityScalable then
+						reply(player, ("    밀도: 원 %d개(기본 %d + extra %d + 인원 %d × %d) · 산개 %.1fstud"):format(
+							skill.count + (skill.countPerMember or 0) * (d.partySize or 1), skill.count - (d.densityExtra or 0), d.densityExtra or 0,
+							skill.countPerMember or 0, d.partySize or 1, skill.scatterStuds))
+					end
 				end
 			end
 		end
@@ -3216,6 +3243,7 @@ if RunService:IsStudio() then
 				{ "S12b(나)", function() SocialVerify.runLive(player, env) end },
 				{ "S13(나)", function() BalanceDecisionVerify.runLive(player, env) end },
 				{ "S13b(나)", function() require(script.Parent.ShieldVerify).runLive(player, env) end }, -- S13b: 실제 HealCast 쉴드 · 피해 경로 흡수(모듈은 여기서 require - 최상위 local을 늘리지 않는다)
+				{ "S14(나)", function() require(script.Parent.BossDensityVerify).runLive(player, env) end }, -- S14: 스테이지 100 낙석 원 개수 · 겹친 원 한 번만(모듈은 여기서 require - 최상위 local을 늘리지 않는다)
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3394,6 +3422,17 @@ if RunService:IsStudio() and verifyEnabled("S13b(가)") then
 		local ok, err = pcall(require(script.Parent.ShieldVerify).runPure)
 		if not ok then
 			warn(("[S13b(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S14 자동 검증 블록(가) - 스테이지 밀도(낙하 원 개수) 식 · 사본 규칙 · 대상 조건 · 검사기 48칸 · 6종 몬테카를로 · 2연타 ═══
+-- 순수 함수(플레이어 불필요 - 검사기 48칸은 칸마다 양보하며 돈다). (나)는 위 29-1 체인의 끝(S13b (나) 다음) - 스테이지 100 구간 수호자 실제 스폰.
+if RunService:IsStudio() and verifyEnabled("S14(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.BossDensityVerify).runPure)
+		if not ok then
+			warn(("[S14(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

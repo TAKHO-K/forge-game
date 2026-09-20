@@ -23,10 +23,10 @@ return {
 		--   멈춘 자리가 두 번 다르다 - S10: `[12]` 결과 줄 뒤(`[13]` 강화 시도 전후) / S11: `[9]`의 두 번째 200마리 묶음 66번째 처치 직후 - 같은 코드 줄이 원인이 아니다.
 		--   이 블록은 잡몹 약 1200마리를 실제 처치 경로로 스폰 · 처치하고 5초 뒤 리스폰분을 다시 지운다(모델 + BillboardGui 수만 개 생성 · 파괴). 서버 코드의 while 루프는 처치 · 드랍 · 강화 경로에 없다(전수 grep) → 원인 미확정.
 		--   S15 회귀 전체 전에 다시 다룬다(회귀 전체를 켜면 이 블록도 돈다 - 그때 멈추면 위 두 자리 외의 세 번째 자리를 기록할 것).
-		-- S13b(2026-09-20): 이번 세션 블록 S13b(가)(층 규칙 · 데이터 · 공통 피해 함수 · 파티 조합 측정 · ★① 쌍검 ÷ 대검) · S13b(나)(실제 HealCast 쉴드 · applyHit 흡수 · ignoresShield · 만료 동기화 · 솔로) +
-		-- 동반 실행(COMMON.md §3): 피해 공통 함수(PlayerDamage.takeDamage - applyHit · applyMaxHpFraction 진입점)와 PlayerState(reset · clear)를 쓰는 옛 블록 = 보스 패턴 전부 - 29-1(BossMechanicsVerify) · 29-2(BossSkillVerify) ·
-		-- 29-3(BossGimmickVerify) · 29-4(BossGimmick4Verify) · 29-5(BossGimmick5Verify)의 (가)(나) · HealCast(반환값 추가 · 쉴드 분기)를 쓰는 S13(나) · SkillData(healer.Q.shield 추가)를 읽는 S13(가) · S08(가) ·
-		-- 사전 작업이 고친 HUD(스킬 키 라벨 · 상단 칩 · 경험치 %)의 글씨 · 겹침 점검 S12(UI)(칩 스택 높이가 2px 늘어 드랍 피드 자리에 영향) + S10(가) · S10(나). S04(나)는 계속 제외.
-		current = { "S13b(가)", "S13b(나)", "29-1", "29-2(가)", "29-2(나)", "29-3(가)", "29-3(나)", "29-4(가)", "29-4(나)", "29-5(가)", "29-5(나)", "S13(가)", "S13(나)", "S08(가)", "S12(UI)", "S10(가)", "S10(나)" },
+		-- S14(2026-09-20): 이번 세션 블록 S14(가)(밀도 식 · 사본 규칙 · 대상 조건 · 검사기 48칸 · 6종 몬테카를로 · 2연타) · S14(나)(스테이지 100 실제 스폰 · 겹친 원 한 번만 · 견습 · 스테이지 25) +
+		-- 동반 실행(COMMON.md §3): 이 세션이 고친 모듈(BossData.mechanics · circleTarget 스킬 3종의 densityScalable · BossRules.buildInstanceDataFrom · BossSkillMath · BossSim)을 쓰는 옛 블록 = 보스 패턴 전부 -
+		-- 29-1(BossMechanicsVerify) · 29-2(BossSkillVerify) · 29-3(BossGimmickVerify) · 29-4(BossGimmick4Verify) · 29-5(BossGimmick5Verify)의 (가)(나) + 스테이지 100 보스를 실제로 스폰하는
+		-- 파티 경로(BossRules.buildInstanceData의 밀도 사본을 그대로 타는 S12(나)(PartyTutorialVerify) · S12b(나)(SocialVerify) - 둘 다 BOSS_STAGE = 100). S04(나)는 계속 제외.
+		current = { "S14(가)", "S14(나)", "29-1", "29-2(가)", "29-2(나)", "29-3(가)", "29-3(나)", "29-4(가)", "29-4(나)", "29-5(가)", "29-5(나)", "S12(나)", "S12b(나)" },
 	},
 }

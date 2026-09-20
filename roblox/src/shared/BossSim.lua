@@ -6,6 +6,7 @@
 --   monteCarlo   run을 seed만 바꿔 여러 번(F-8) - 회피 비용·돌진 이동 시간·위치 조건을 흔든다
 --   checkDodge   회피 부등식 표(B) - 스킬표를 고치면 여기서 걸린다
 --   checkPairs   인접 가능한 스킬 쌍의 "실수 2회" 합계 전수 검사(D)
+--   checkDensity 스테이지 밀도(S14) - 원이 늘어난 산개 스킬이 예고 안에 벗어날 수 있는가(무작위 배치 · 분위 + 최댓값)
 --
 -- 모형의 가정(BossData.mechanics.sim): 보스 HP = 기준 플레이어 순딜 60초분 × N^p, 파티 딜 = N배. 스킬이 시작되면
 -- 회피 비용만큼 딜이 0. 게이트(20.73 [2-8] A-3): 첫 기믹 예고와 함께 서고(×g) 판정 때만 바뀐다 - 성공이면 열리고
@@ -84,7 +85,9 @@ function BossSim.run(bossId, options)
 	local n = options.partySize or 1
 	local design = options.design == true
 	local breaks = options.breaks or "always"
-	local skills, order, config = boss.skills, boss.skillOrder, boss.scheduler
+	-- densityExtra(S14): 스테이지 밀도로 낙하 원이 늘어난 표로 돌린다. 모형은 원의 개수를 회피 비용에 반영하지 않는다(evadeSecondsOf) -
+	-- 개수가 닿는 곳은 낙빙이 세우는 얼음 기둥 수(아래 propCounts)뿐이다.
+	local skills, order, config = BossSkillMath.densifySkills(boss.skills, options.densityExtra or 0), boss.skillOrder, boss.scheduler
 	local arenaHalf = WorldConfig.bossArena.halfSizeStuds
 	local gateMultiplier = BossRules.gateDamageTakenMultiplier()
 	local trapSeconds = BossData.mechanics.trap.autoReleaseSeconds
@@ -301,6 +304,86 @@ function BossSim.checkDodge(bossId, rangeScale, walkSpeedStuds)
 		end
 	end
 	return rows, allOk
+end
+
+-- 스테이지 밀도 검사기(S14, PRD 20.81 [C-3]): 밀도로 원이 늘어난 스킬이 여전히 "예고 안에 벗어날 수 있는가".
+-- 배치는 BossPatterns.HANDLERS.circleTarget.start와 같은 규칙이다 - 첫 원 = 대상의 자리(원점), 나머지 = 원점 + (x, z 각각 [-1, 1] 균등)을 길이 1로 잘라
+-- (밖은 단위원 둘레로 눌린다 - 코드가 단위원 안 균등이 아니라 상자 뽑기 + Unit이다) × scatterStuds'. 4인의 낙빙에서 다른 멤버 몫의 원은 실제로는 그 멤버의 발밑이지만
+-- (위치를 알 수 없다) 전부 산개 원으로 친다 - 대상 곁에 원이 가장 많이 몰리는 경우라 d가 커지는 쪽(보수적)이다. 아레나 벽의 눌림(clampToZone)은 열린 땅으로 본다.
+-- d = 원점에서 어느 원에도 안 덮인 가장 가까운 점까지(방위 directions개 × stepStuds 간격 - 격자라 실제보다 stepStuds 안쪽으로 크게 나온다 = 보수적).
+-- t = 인지 + d ÷ 걷기 속도 × 여유(dodge와 같은 식). 몸 반폭(dodge.characterHalfWidthStuds)은 기준식에 없다 - 참고 열(pBody · maxBody)로만 함께 낸다.
+-- options = { rangeScale(1), partySize(1), walkSpeedStuds(신발 없는 기본 걷기) }. 반환: nil(밀도 대상 스킬이 아님) 또는
+-- { p99, max, mean, pBody, maxBody, telegraphSeconds, count, scatterStuds, radiusStuds, ok }. 난수는 자체 LCG(seed) - 로컬 하네스와 서버가 같은 값을 낸다.
+function BossSim.checkDensity(bossId, skillId, extra, trials, seed, options)
+	options = options or {}
+	local boss = BossData.bosses[bossId]
+	if not boss or not boss.skills[skillId] or not boss.skills[skillId].densityScalable then
+		return nil
+	end
+	local density = BossData.mechanics.stageDensity
+	local dodge = BossData.mechanics.dodge
+	local skills = BossSkillMath.densifySkills(BossSkillMath.scaleSkills(boss.skills, options.rangeScale or 1), extra)
+	local skill = skills[skillId]
+	local total = skill.count + (skill.countPerMember or 0) * (options.partySize or 1)
+	local radius, scatter = skill.radiusStuds, skill.scatterStuds
+	local directions, step = density.check.directions, density.check.stepStuds
+	local secondsPerStud = dodge.marginFactor / (options.walkSpeedStuds or WorldConfig.playerWalkSpeedStuds)
+	local rng = newRng(seed)
+
+	local dirX, dirZ = {}, {}
+	for index = 1, directions do
+		local angle = 2 * math.pi * (index - 1) / directions
+		dirX[index], dirZ[index] = math.cos(angle), math.sin(angle)
+	end
+	-- 첫 원이 덮는 반경 이후의 첫 격자점부터 본다(그 안쪽은 정의상 덮여 있다).
+	local firstRing = (math.floor(radius / step) + 1) * step
+	local radiusSquared = radius * radius
+	local centerX, centerZ = table.create(total), table.create(total)
+	local samples, sum = table.create(trials), 0
+	for trial = 1, trials do
+		for index = 2, total do
+			local offsetX, offsetZ = rng() * 2 - 1, rng() * 2 - 1
+			local magnitude = math.sqrt(offsetX * offsetX + offsetZ * offsetZ)
+			if magnitude > 1 then
+				offsetX, offsetZ = offsetX / magnitude, offsetZ / magnitude
+			end
+			centerX[index], centerZ[index] = offsetX * scatter, offsetZ * scatter
+		end
+		local nearest = math.huge
+		for direction = 1, directions do
+			local ux, uz = dirX[direction], dirZ[direction]
+			local distance = firstRing
+			-- 이미 찾은 가장 가까운 점보다 먼 곳은 볼 필요가 없다.
+			while distance < nearest do
+				local px, pz = ux * distance, uz * distance
+				local covered = false
+				for index = 2, total do
+					local dx, dz = px - centerX[index], pz - centerZ[index]
+					if dx * dx + dz * dz <= radiusSquared then
+						covered = true
+						break
+					end
+				end
+				if not covered then
+					nearest = distance
+					break
+				end
+				distance += step
+			end
+		end
+		local seconds = dodge.perceptionSeconds + nearest * secondsPerStud
+		samples[trial] = seconds
+		sum += seconds
+	end
+	table.sort(samples)
+	local bodySeconds = dodge.characterHalfWidthStuds * secondsPerStud
+	local p99 = samples[math.clamp(math.ceil(density.check.percentile * trials), 1, trials)]
+	local max = samples[trials]
+	return {
+		p99 = p99, max = max, mean = sum / trials, pBody = p99 + bodySeconds, maxBody = max + bodySeconds,
+		telegraphSeconds = skill.telegraphSeconds, count = total, scatterStuds = scatter, radiusStuds = radius,
+		ok = p99 <= skill.telegraphSeconds + 1e-9 and max <= skill.telegraphSeconds + density.check.maxOverSeconds + 1e-9,
+	}
 end
 
 -- 인접 가능한 스킬 쌍 전수(설계 스킬 포함). b가 a 바로 다음에 올 수 있는가: b의 notAfter에 a가 없고, a == b면

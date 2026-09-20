@@ -201,4 +201,31 @@ function BossSkillMath.scaleSkills(skills, scale)
 	return scaled
 end
 
+-- ─────────────────────────── 스테이지 밀도(S14, PRD 20.81 [C-3]) ───────────────────────────
+-- 밀도 대상 조건: circleTarget · 동시 산개(sequential 아님) · scatterStuds > 0 · 기믹 아님 · gate 없음. 스킬의 densityScalable 플래그가
+-- 이 조건과 어긋나면 안 된다(검증이 6종 전부를 대조한다) - 플래그가 실제로 늘리는 것이고, 이 함수는 그 플래그가 맞는지 재는 잣대다.
+function BossSkillMath.densityEligible(skill)
+	return skill.primitive == "circleTarget" and not skill.sequential and (skill.scatterStuds or 0) > 0
+		and skill.role ~= "gimmick" and skill.gate == nil
+end
+
+-- 밀도 extra만큼 늘린 스킬표 사본(원본 BossData는 절대 안 건드린다). 대상 스킬의 count += extra, scatterStuds ×= sqrt((count + extra) ÷ count) -
+-- 여기서 count는 스킬의 원래 count 필드다(countPerMember 몫은 그대로 - 입장 인원 몫은 BossPatterns.circleCount가 따로 더한다).
+-- 범위 배율을 먼저 곱한 표(scaleSkills 결과)를 받는 것이 정해진 순서다: 배율 → 밀도. extra가 0이면 받은 표를 그대로 돌려준다.
+function BossSkillMath.densifySkills(skills, extra)
+	if extra <= 0 then
+		return skills
+	end
+	local dense = table.clone(skills)
+	for id, skill in pairs(skills) do
+		if skill.densityScalable then
+			local copy = table.clone(skill)
+			copy.scatterStuds = skill.scatterStuds * math.sqrt((skill.count + extra) / skill.count)
+			copy.count = skill.count + extra
+			dense[id] = copy
+		end
+	end
+	return dense
+end
+
 return BossSkillMath

@@ -65,6 +65,21 @@ function BossRules.maxSkillRangeScale()
 	return BossRules.skillRangeScale(math.huge)
 end
 
+-- 스테이지 밀도(S14, PRD 20.81 [C-3] - 상수는 BossData.mechanics.stageDensity): 범위 배율이 25에서 멈춘 뒤의 난이도는 낙하 원의 개수가 맡는다.
+-- 스테이지 50부터 +1 · 75부터 +2 · 100부터 +3(상한). 견습은 stage 1이라 0이다. isPairStage는 **자리만**이다 - 지금은 항상 false(쌍 스테이지 = 보스 2마리는
+-- 아직 없다). 20.80 E-1: 쌍 스테이지에서는 밀도 증가를 끈다(두 마리가 각자 원을 뿌리면 이미 두 배다).
+function BossRules.isPairStage(stage)
+	return false
+end
+
+function BossRules.densityExtra(stage)
+	local density = BossData.mechanics.stageDensity
+	if BossRules.isPairStage(stage) or stage <= density.startStage then
+		return 0
+	end
+	return math.min(density.maxExtra, math.floor((stage - density.startStage) / density.stepStages))
+end
+
 -- 파티 보스 입장 밴드(PRD 20.47 [6](라) "불가" 밴드 재사용). 멤버 전원이
 --     bossStage ≤ recommendedStage(L_i) + band
 -- 를 만족해야 한다. band는 PRD 20.8-3 ①의 4직업 공통 콤보 배수((1+1+1.8)/3 ≈ 1.267)를
@@ -162,7 +177,7 @@ function BossRules.buildInstanceData(stage, bossId, partySize)
 	if not boss then
 		return nil
 	end
-	return BossRules.buildInstanceDataFrom(MonsterData.tier1, stage, boss, 1, 1, partySize or 1)
+	return BossRules.buildInstanceDataFrom(MonsterData.tier1, stage, boss, 1, 1, partySize or 1, BossRules.densityExtra(stage))
 end
 
 -- 23-1 견습 모드 전용(BossData에 새 항목을 만들지 않는다 - 같은 보스 id에 patterns
@@ -190,8 +205,9 @@ end
 
 -- buildInstanceData/buildTutorialInstanceData 공용 - trashBase(MonsterData의 tier 항목)와
 -- hpMultiplierExtra(견습 전용 배율, 일반 무한 모드는 1)만 다르다. partySize(24-1)는
--- partySizeHpMultiplier 전용 - 견습 호출부는 nil(=1)을 넘긴다(견습은 항상 싱글).
-function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra, partySize)
+-- partySizeHpMultiplier 전용 - 견습 호출부는 nil(=1)을 넘긴다(견습은 항상 싱글). densityExtra(S14)는 스킬표 사본에 더하는 낙하 원 개수 -
+-- 견습 호출부는 안 넘겨서 0이다(견습 보스는 밀도 0).
+function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra, partySize, densityExtra)
 	local trashHp = InfiniteStage.getMonsterHp(trashBase.hp, stage)
 	local trashAttack = InfiniteStage.getMonsterAttack(trashBase.attack, stage)
 	local trashGold = InfiniteStage.getGoldReward(trashBase.goldDrop, stage)
@@ -241,10 +257,12 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 
 		-- 29-2 스킬표(BossPatterns.lua가 읽는다). 범위 배율이 1이면 원본 테이블을 그대로 가리키고(읽기 전용이라
 		-- 공유해도 안전하다 - BossData는 절대 런타임에 고치지 않는다), 아니면 넓힌 사본이다.
-		skills = BossSkillMath.scaleSkills(boss.skills, BossRules.skillRangeScale(stage)),
+		-- S14: 배율로 넓힌 뒤(배율 → 밀도 순서) 밀도만큼 원을 늘린다. 둘 다 사본이라 BossData 원본은 그대로다.
+		skills = BossSkillMath.densifySkills(BossSkillMath.scaleSkills(boss.skills, BossRules.skillRangeScale(stage)), densityExtra or 0),
 		skillOrder = boss.skillOrder,
 		scheduler = boss.scheduler,
 		skillRangeScale = BossRules.skillRangeScale(stage),
+		densityExtra = densityExtra or 0,
 		arenaKit = boss.arenaKit,
 		props = boss.props, -- 29-3 동적 지형의 종류·크기·상한(서버는 논리 상태만 - BossArenaProps)
 		-- 29-1: 보스별 잡힘·구출 종류(BossData SPECIES_MECHANICS, 구간 수호자는 nil).
