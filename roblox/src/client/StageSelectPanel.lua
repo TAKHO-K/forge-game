@@ -11,11 +11,16 @@
 -- 30-0 S11(PRD 20.73 [4-2]): 그리드와 페이지 버튼 사이에 보상 띠(StageRewardBand)가 끼었다 - 패널 높이 320 → 396. **보스 칸(5의 배수)만 2단계**다: 칸을 누르면 선택 +
 -- 띠가 채워지고 [도전]을 눌러야 이동 요청이 나간다(파티에서는 이 클릭이 투표와 전원 텔레포트를 일으킨다). 일반 칸은 지금처럼 한 번에 이동한다. 보스 칸의 받을 것 ★ / 다 받음 ✓
 -- 표시와 띠의 내용은 서버 조회(BossRewardPreviewRequest / Result)가 준다 - 클라는 판정하지 않는다(25-4 그대로: X 칸도 [도전]은 눌리고 서버 거절 사유가 상태줄에 뜬다).
+--
+-- 30-0 S15(PRD 20.81 [C-4] · [D-1]): 그리드가 **10칸(5 × 2) = 한 구간**(1 ~ 10 · 11 ~ 20 …)으로 바뀌었고 - 창의 시작이 항상 10의 배수 + 1이라 보스 칸이 늘 5번째 · 10번째 자리다 - 그리드 위에
+-- 구간 칩 5개(`41-50` …, 50스테이지 묶음) + 양끝 ◀ ▶가 생겼다. 패널은 `UIManager`의 station("stageSelect", 단축키 M은 ui/PanelRegistry)으로 등록돼 열기 · 닫기 · DisplayOrder · 딤 없음(걸을 수 있다)을
+-- 매니저가 맡는다(가방 window가 열리면 닫히고 · 강화 패널 station과 서로 닫는다 · 견습 중에는 canOpen이 막는다). 이동 요청 · 거절 · 투표 · 보상 띠의 코드 경로는 그대로다(클라 표시만 바뀌었다).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 
 local BossRewardPreviewData = require(ReplicatedStorage.Shared.data.BossRewardPreviewData)
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
@@ -43,14 +48,28 @@ local REASON_TEXT = {
 	vote_pending = "이미 진행 중인 투표가 있습니다",
 }
 
-local COLUMNS = 7
-local ROWS = 3
-local WINDOW_SIZE = COLUMNS * ROWS -- 21칸 고정 - 스테이지 번호가 아무리 커져도 렌더링 개수는 안 변한다.
-local CELL_SIZE = 42
+local COLUMNS = 5
+local ROWS = 2
+local WINDOW_SIZE = COLUMNS * ROWS -- 10칸 고정 = 한 구간 - 스테이지 번호가 아무리 커져도 렌더링 개수는 안 변한다.
+local STEP = WINDOW_SIZE -- "이전/다음" 버튼 한 번에 넘기는 칸 수(구간 하나).
+local CHIPS = 5 -- 구간 칩 개수(칩 묶음 = 5 × 10 = 50스테이지)
+local CHIP_SPAN = CHIPS * WINDOW_SIZE
 local CELL_GAP = 6
-local STEP = 10 -- "이전/다음" 버튼 한 번에 넘기는 칸 수.
-local PANEL_HEIGHT = 396 -- 보상 띠가 끼어 320 → 396(고정 - PRD 20.73 [4-2])
-local BAND_TOP = 60 + ROWS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 2 -- 그리드 아래 끝 바로 아래
+local PANEL_WIDTH = 366
+local GRID_WIDTH = PANEL_WIDTH - 24
+-- 칸 크기는 남는 폭에 맞춰 키운다(5열이라 예전 42보다 넓다 - 모바일 터치 44 이상). 높이는 구간 띠(32)가 들어가도 패널 높이 396이 그대로이게 정한다.
+local CELL_W = math.floor((GRID_WIDTH - CELL_GAP) / COLUMNS) - CELL_GAP
+local CELL_H = 48
+local PANEL_HEIGHT = 396 -- 보상 띠가 끼어 320 → 396(고정 - PRD 20.73 [4-2]) - S15에서도 그대로
+local STRIP_TOP = 56 -- 범례(36 ~ 52) 아래
+local STRIP_HEIGHT = 32
+local STRIP_ARROW = 32
+local STRIP_GAP = 4
+local GRID_TOP = STRIP_TOP + STRIP_HEIGHT + CELL_GAP
+local BAND_TOP = GRID_TOP + ROWS * (CELL_H + CELL_GAP) + CELL_GAP + 2 -- 그리드 아래 끝 바로 아래
+local CHIP_WIDTH = math.floor((GRID_WIDTH - 2 * STRIP_ARROW - (CHIPS + 1) * STRIP_GAP) / CHIPS)
+local CHIP_TEXT_SIZE = 12
+local CHIP_TEXT_ROOM = CHIP_WIDTH - 6
 -- S12 사전 작업 2: 화면이 패널보다 낮으면(폰 가로 388) UIManager.fitToScreen이 패널 높이를 줄이고, 제목 · 상태줄은 고정한 채 이 사이(범례 ~ 페이지 줄)가 스크롤된다.
 -- 캔버스 높이는 패널이 안 줄었을 때 이 영역의 높이와 같다(그때는 스크롤이 없다). 안의 자리는 전부 offset이다(ScrollingFrame 자식의 Scale은 캔버스 기준이라 안 쓴다).
 local BODY_TOP = 32 -- 제목줄 아래
@@ -77,35 +96,74 @@ local STATUS_SPEC = {
 	locked = { symbol = "X", color = UIColors.danger },
 }
 
+-- S15 순수 함수(서버 · Player 없이 - 아래 자체 점검이 합성 값으로 읽는다).
+-- 창의 시작 = 그 스테이지가 든 구간의 첫 스테이지(1 · 11 · 21 …) - 항상 구간에 정렬되므로 보스 칸(5의 배수)이 늘 5번째 · 10번째 자리다.
+local function alignedStart(stage)
+	return math.max(1, math.floor((stage - 1) / WINDOW_SIZE) * WINDOW_SIZE + 1)
+end
+
+-- 칩 묶음의 시작(1 · 51 · 101 …) - 50에 정렬한다.
+local function chipGroupOf(stage)
+	return math.max(1, math.floor((stage - 1) / CHIP_SPAN) * CHIP_SPAN + 1)
+end
+
+-- 구간 [first, last]의 칩 상태(PRD 20.81 [C-4]): cleared(끝 ≤ 최고 클리어 보스) → front(최전선 best + 1을 포함) → locked(첫 스테이지 > best + 1) → 그 밖(open: 일부만 깼고 최전선은 다른 구간).
+local function chipState(first, last, best, bestBossCleared)
+	if last <= bestBossCleared then
+		return "cleared"
+	elseif first <= best + 1 and best + 1 <= last then
+		return "front"
+	elseif first > best + 1 then
+		return "locked"
+	end
+	return "open"
+end
+
+local CHIP_SPEC = {
+	cleared = { symbol = "✓", color = UIColors.textTertiary },
+	front = { symbol = "●", color = UIColors.ember },
+	locked = { symbol = "", color = UIColors.lockedIcon },
+	open = { symbol = "", color = UIColors.textSecondary },
+}
+
+-- 칩 글. 한 줄("● 41-50")이 room 안에 들어가면 그대로, 안 들어가면 두 줄("● 1001" / "1010"), 그래도 기호까지 안 들어가면 기호를 뗀다(그때는 색으로만 구분 - 5자리 스테이지 번호).
+-- 글씨 크기는 늘 caption(12) 그대로다 - 번호를 "1234x"로 줄이지 않고 줄을 나눈다. measure(text) → 폭(px)은 부르는 쪽이 준다(TextService · 자체 점검의 가짜 자).
+local function chipText(symbol, first, last, room, measure)
+	local prefix = symbol ~= "" and (symbol .. " ") or ""
+	local oneLine = ("%s%d-%d"):format(prefix, first, last)
+	if measure(oneLine) <= room then
+		return oneLine
+	end
+	local twoLines = ("%s%d\n%d"):format(prefix, first, last)
+	if measure(twoLines) <= room then
+		return twoLines
+	end
+	return ("%d\n%d"):format(first, last)
+end
+
+local function measureChipText(text)
+	return TextService:GetTextSize(text, CHIP_TEXT_SIZE, Enum.Font.GothamBold, Vector2.new(1000, 100)).X
+end
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "StageSelectGui"
 screenGui.ResetOnSpawn = false
--- 10 - SkillSlots.client.lua(대시 버튼 등 일반 HUD)가 이미 DisplayOrder=5를 쓴다. 같은
--- 값이면 우선순위가 안 정해져 바깥 탭 감지(dim)가 그 버튼들에 클릭을 뺏길 수 있다(Studio
--- 실측으로 발견) - 일반 HUD보다는 위, UIManager 모달 창(100+)보다는 아래로 둔다.
+-- S15: 열림 · 닫힘은 UIManager가 panel.Visible로 다루고(station), DisplayOrder도 열릴 때 매니저가 station 대역(10 ~ 19)에서 정한다. 닫혀 있을 때의 10은 일반 HUD(SkillSlots 등 5)보다 위라는
+-- 뜻 그대로 두고, UiSelfCheck의 HUD 전수 조사(DisplayOrder 10 미만)에서 빠지게 한다.
 screenGui.DisplayOrder = 10
-screenGui.Enabled = false
 screenGui.Parent = playerGui
 
-local dim = Instance.new("TextButton")
-dim.Name = "Dim"
-dim.Size = UDim2.new(1, 0, 1, 0)
-dim.BackgroundColor3 = UIColors.overlayDim
-dim.BackgroundTransparency = UIColors.overlayDimTransparency
-dim.AutoButtonColor = false
-dim.Text = ""
-dim.Parent = screenGui
-
+-- 딤 없음(S15 - station은 걸을 수 있다. 예전의 "바깥을 눌러 닫기"는 없어졌다: 닫기 = X 버튼 · M · X/Backspace 키).
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-panel.Size = UDim2.new(0, COLUMNS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 24, 0, PANEL_HEIGHT)
+panel.Size = UDim2.new(0, PANEL_WIDTH, 0, PANEL_HEIGHT)
 panel.BackgroundColor3 = UIColors.panel
 panel.BackgroundTransparency = 0.08
--- Active=true - 안 그러면 셀 사이 여백(패딩)을 눌렀을 때 클릭이 패널을 그대로 통과해
--- 뒤에 깔린 dim(바깥 탭 감지용)까지 닿아 패널이 의도치 않게 닫힌다(Studio 실측으로 발견).
+-- Active=true - 안 그러면 셀 사이 여백(패딩)을 눌렀을 때 클릭이 패널을 그대로 통과해 뒤의 월드(공격 입력)까지 닿는다(Studio 실측으로 발견).
 panel.Active = true
+panel.Visible = false
 panel.Parent = screenGui
 
 local panelCorner = Instance.new("UICorner")
@@ -185,16 +243,64 @@ for i, key in ipairs(LEGEND_ORDER) do
 	label.Parent = legend
 end
 
--- 그리드 - 고정 크기 셀(UIGridLayout CellSize) 21개. AutomaticSize를 아예 안 쓴다(25-3
+-- 구간 띠(S15): [◀] 칩 5개 [▶]. 칩은 한 구간(10스테이지)이고 눌러서 그 구간으로 간다 - 잠긴 구간도 눌린다(다음 목표를 보는 것 - 이동 가능 여부는 서버가 판정한다).
+-- ◀ ▶는 칩 묶음을 50스테이지씩 옮긴다(보고 있는 구간은 안 바뀐다). 고정 크기(AutomaticSize 없음) - 폭은 모두 offset이다.
+local strip = Instance.new("Frame")
+strip.Name = "SectionStrip"
+strip.Position = UDim2.new(0, 12, 0, STRIP_TOP - BODY_TOP)
+strip.Size = UDim2.new(0, GRID_WIDTH, 0, STRIP_HEIGHT)
+strip.BackgroundTransparency = 1
+strip.Parent = body
+
+local function makeStripButton(name, x, width)
+	local button = Instance.new("TextButton")
+	button.Name = name
+	button.AutoButtonColor = false
+	button.Position = UDim2.new(0, x, 0, 0)
+	button.Size = UDim2.new(0, width, 1, 0)
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = CHIP_TEXT_SIZE
+	button.TextColor3 = UIColors.textSecondary
+	button.BackgroundColor3 = UIColors.slot
+	button.BackgroundTransparency = UIColors.slotTransparency
+	button.Text = ""
+	button.Parent = strip
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = button
+	local stroke = Instance.new("UIStroke")
+	stroke.Name = "Edge"
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- TextButton의 기본(Contextual)은 글씨 외곽선이라 테두리로 안 그려진다
+	stroke.Color = UIColors.rim
+	stroke.Transparency = UIColors.rimTransparency
+	stroke.Thickness = 1
+	stroke.Parent = button
+	return button, stroke
+end
+
+local chipPrevButton = makeStripButton("ChipPrev", 0, STRIP_ARROW)
+chipPrevButton.Text = "◀"
+local chips = {}
+for i = 1, CHIPS do
+	local button, stroke = makeStripButton("SectionChip" .. i, STRIP_ARROW + STRIP_GAP + (i - 1) * (CHIP_WIDTH + STRIP_GAP), CHIP_WIDTH)
+	button.TextWrapped = false
+	button.LineHeight = 1
+	chips[i] = { button = button, stroke = stroke, first = nil }
+end
+local chipNextButton = makeStripButton("ChipNext", STRIP_ARROW + STRIP_GAP + CHIPS * (CHIP_WIDTH + STRIP_GAP), STRIP_ARROW)
+chipNextButton.Text = "▶"
+
+-- 그리드 - 고정 크기 셀(UIGridLayout CellSize) 10개. AutomaticSize를 아예 안 쓴다(25-3
 -- 함정 회피). 셀은 한 번만 만들고(재사용) 매번 텍스트·색만 새로 칠한다.
 local gridArea = Instance.new("Frame")
-gridArea.Position = UDim2.new(0, 12, 0, 60 - BODY_TOP)
-gridArea.Size = UDim2.new(0, COLUMNS * (CELL_SIZE + CELL_GAP) + CELL_GAP, 0, ROWS * (CELL_SIZE + CELL_GAP) + CELL_GAP)
+gridArea.Name = "Grid"
+gridArea.Position = UDim2.new(0, 12, 0, GRID_TOP - BODY_TOP)
+gridArea.Size = UDim2.new(0, COLUMNS * (CELL_W + CELL_GAP) + CELL_GAP, 0, ROWS * (CELL_H + CELL_GAP) + CELL_GAP)
 gridArea.BackgroundTransparency = 1
 gridArea.Parent = body
 
 local gridLayout = Instance.new("UIGridLayout")
-gridLayout.CellSize = UDim2.new(0, CELL_SIZE, 0, CELL_SIZE)
+gridLayout.CellSize = UDim2.new(0, CELL_W, 0, CELL_H)
 gridLayout.CellPadding = UDim2.new(0, CELL_GAP, 0, CELL_GAP)
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.StartCorner = Enum.StartCorner.TopLeft
@@ -306,6 +412,7 @@ statusLine.Parent = panel
 
 local isOpen = false
 local windowStart = 1
+local chipStart = 1 -- 지금 보이는 칩 묶음의 첫 스테이지(1 · 51 · 101 …) - 창이 옮겨 가면 그 창이 든 묶음으로 따라간다(◀ ▶로 묶음만 따로 넘길 수도 있다)
 local selectedStage = nil -- 눌러 둔 보스 칸(띠가 이 스테이지를 보여 준다)
 local preview = {} -- [스테이지] = 서버 응답의 칸(BossRewardPreview) - 열 때 · 창을 넘길 때 · 보스 처치 뒤 다시 묻는다
 local codex = {} -- { [bossId] = true }
@@ -315,7 +422,7 @@ local previewQueued = false
 local band = StageRewardBand.build({
 	parent = body,
 	position = UDim2.new(0, 16, 0, BAND_TOP - BODY_TOP),
-	width = COLUMNS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 24 - 32,
+	width = PANEL_WIDTH - 32,
 	onChallenge = function(stage)
 		stageMoveRequest:FireServer(stage)
 	end,
@@ -373,6 +480,20 @@ local function render()
 		end
 	end
 	prevButton.Visible = windowStart > 1
+	-- 구간 칩: 상태 색 · 기호(✓ ●) + 지금 보고 있는 구간은 rimHi 테두리.
+	for i, chip in ipairs(chips) do
+		local first = chipStart + (i - 1) * WINDOW_SIZE
+		local last = first + WINDOW_SIZE - 1
+		local spec = CHIP_SPEC[chipState(first, last, best, bestBossCleared)]
+		chip.first = first
+		chip.button.Text = chipText(spec.symbol, first, last, CHIP_TEXT_ROOM, measureChipText)
+		chip.button.TextColor3 = spec.color
+		local viewing = first == windowStart
+		chip.stroke.Color = viewing and UIColors.rimHi or UIColors.rim
+		chip.stroke.Transparency = viewing and 0 or UIColors.rimTransparency
+		chip.stroke.Thickness = viewing and 2 or 1
+	end
+	chipPrevButton.TextTransparency = chipStart > 1 and 0 or 0.6
 	band.update(selectedStage, selectedStage and preview[selectedStage] or nil, player:GetAttribute("RebirthCount") or 0, codex)
 end
 
@@ -452,40 +573,62 @@ for _, cell in ipairs(cells) do
 	end)
 end
 
-prevButton.Activated:Connect(function()
-	windowStart = math.max(1, windowStart - STEP)
+-- 창을 옮긴 뒤(이전 · 다음 · 최전선)에는 칩 묶음도 그 창이 든 묶음으로 따라간다.
+local function moveWindow(newStart)
+	windowStart = math.max(1, newStart)
+	chipStart = chipGroupOf(windowStart)
 	render()
 	requestPreview()
+end
+
+prevButton.Activated:Connect(function()
+	moveWindow(windowStart - STEP)
 end)
 
 nextButton.Activated:Connect(function()
-	windowStart = windowStart + STEP
-	render()
-	requestPreview()
+	moveWindow(windowStart + STEP)
 end)
 
 frontierButton.Activated:Connect(function()
 	local _, best = attrs()
-	windowStart = math.max(1, best + 1 - math.floor(WINDOW_SIZE / 2))
-	render()
-	requestPreview()
+	moveWindow(alignedStart(best + 1))
 end)
 
-local function close()
-	isOpen = false
-	screenGui.Enabled = false
+-- 칩: 그 구간으로(잠긴 구간도 - 이동은 서버가 판정한다). 칩 묶음은 그대로다.
+for _, chip in ipairs(chips) do
+	chip.button.Activated:Connect(function()
+		if not chip.first then
+			return
+		end
+		windowStart = chip.first
+		render()
+		requestPreview()
+	end)
 end
 
-dim.Activated:Connect(close)
-closeButton.Activated:Connect(close)
-StageSelectPanel.close = close -- 자체 점검(ui/PanelFitCheck)이 연 뒤 닫는 데 쓴다
+-- ◀ ▶: 칩 묶음만 50스테이지씩(보고 있는 구간은 안 바뀐다).
+chipPrevButton.Activated:Connect(function()
+	chipStart = math.max(1, chipStart - CHIP_SPAN)
+	render()
+end)
 
-function StageSelectPanel.open()
+chipNextButton.Activated:Connect(function()
+	chipStart += CHIP_SPAN
+	render()
+end)
+
+-- 열기 · 닫기는 UIManager가 부른다(station "stageSelect" - 단축키 M은 ui/PanelRegistry, 닫기 = X 버튼 · M · X/Backspace). 견습 중에는 canOpen이 막는다(칩 · M 키 둘 다) -
+-- 견습은 선형 진행이라 "목록에서 고른다"가 안 맞는다(TutorialHud와 같은 판정).
+local function isTutorialActive()
+	return player:GetAttribute("TutorialCompleted") ~= true and (player:GetAttribute("TutorialStep") or 0) > 0
+end
+
+local function onOpen()
 	local _, best = attrs()
-	windowStart = math.max(1, best + 1 - math.floor(WINDOW_SIZE / 2))
+	windowStart = alignedStart(best + 1)
+	chipStart = chipGroupOf(windowStart)
 	isOpen = true
 	selectedStage = nil
-	screenGui.Enabled = true
 	UIManager.fitToScreen(panel, screenGui)
 	body.CanvasPosition = Vector2.new(0, 0)
 	setStatus("")
@@ -493,12 +636,33 @@ function StageSelectPanel.open()
 	requestPreview()
 end
 
--- 열려 있는 동안 화면 크기가 바뀌면(창 회전 · 크기 조절) 높이를 다시 맞춘다.
-screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-	if isOpen then
-		UIManager.fitToScreen(panel, screenGui)
-	end
+local function onClose()
+	isOpen = false
+end
+
+UIManager.register("stageSelect", {
+	kind = "station",
+	screenGui = screenGui,
+	frame = panel,
+	hasCloseButton = true,
+	canOpen = function()
+		return not isTutorialActive()
+	end,
+	onOpen = onOpen,
+	onClose = onClose,
+})
+closeButton.Activated:Connect(function()
+	UIManager.close("stageSelect")
 end)
+
+-- 칩 · 자체 점검(ui/PanelFitCheck)이 부르는 옛 이름 그대로 - 안에서는 UIManager로 간다.
+function StageSelectPanel.open()
+	return UIManager.open("stageSelect")
+end
+
+function StageSelectPanel.close()
+	UIManager.close("stageSelect", true)
+end
 
 -- 예외 3(목록을 연 채로 스테이지가 바뀔 때, 파티 투표 이동 포함): 세 Attribute를 구독해
 -- 열려 있는 동안은 그 자리에서 다시 그린다(windowStart는 유지 - 보던 자리를 안 바꾼다).
@@ -540,5 +704,27 @@ if RunService:IsStudio() and (DevToolsConfig.verify.regression or table.find(Dev
 		print(("===S11 검증 끝(UI)=== %d/%d 통과"):format(pass, total))
 	end)
 end
+
+-- 자체 점검(ui/StageSelectCheck.client.lua)이 읽는 내부(Studio 점검 전용 - 판정 · 그리기에는 안 쓴다).
+StageSelectPanel.debug = {
+	alignedStart = alignedStart,
+	chipGroupOf = chipGroupOf,
+	chipState = chipState,
+	chipText = chipText,
+	measureChipText = measureChipText,
+	chipTextRoom = CHIP_TEXT_ROOM,
+	chipTextSize = CHIP_TEXT_SIZE,
+	cells = cells,
+	chips = chips,
+	getWindow = function()
+		return windowStart, chipStart
+	end,
+	-- 열려 있는 패널을 그 창으로 다시 그린다(창 · 칩 묶음 시작을 직접 정한다).
+	showWindow = function(start)
+		windowStart = start
+		chipStart = chipGroupOf(start)
+		render()
+	end,
+}
 
 return StageSelectPanel

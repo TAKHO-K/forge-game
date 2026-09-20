@@ -196,7 +196,8 @@ function UIManager.getIds()
 	return ids
 end
 
--- config: { kind, parentId, screenGui, frame, hotkey, modal, exclusive, hasCloseButton, tweens, extraVisible, onOpen, onClose }
+-- config: { kind, parentId, screenGui, frame, hotkey, modal, exclusive, hasCloseButton, tweens, extraVisible, canOpen, onOpen, onClose }
+-- canOpen(선택, S15): () → boolean. false를 돌려주면 open이 아무것도 안 하고 false를 돌려준다(단축키 · 버튼 · 코드 모두 - 예: 견습 중에는 스테이지 선택이 안 열린다).
 -- kind(30-0 S06, PRD 20.81 [D-1]): "window"(기본 - 안 준 기존 등록(가방)은 그대로 window) · "station" · "overlay".
 --   window: 열리면 다른 window · station을 닫는다. 모달. / station: 열리면 다른 station을 닫고, window가 열려 있으면 **열리지 않는다**. 모달이 아니다(걸을 수 있다).
 --   overlay: 맨 위에 1개 - 열리면 다른 overlay를 닫는다. 모달. parentId(config 또는 open의 opts)의 패널이 닫히면 같이 닫힌다.
@@ -228,6 +229,9 @@ end
 function UIManager.open(id, opts)
 	local win = windows[id]
 	if not win or debounce[id] or UIManager.isOpen(id) then
+		return false
+	end
+	if win.canOpen and not win.canOpen() then
 		return false
 	end
 

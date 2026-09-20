@@ -110,19 +110,12 @@ bestLabel.Text = "최고 기록 -"
 bestLabel.Parent = wrapper
 
 -- 25-4: ▲▼ 한 칸씩 이동 버튼을 지우고 칩 자체를 눌러 스테이지 선택 패널을 연다(한눈에
--- 보고 고르는 형태로 교체 - 지시). 견습 중엔 안 연다 - TutorialHud.client.lua가 이미 쓰는
--- 판정(TutorialCompleted ~= true and (TutorialStep or 0) > 0)과 같은 기준: 견습은 선형
--- 진행이라 "목록에서 고른다"는 개념 자체가 안 맞는다.
-local function isTutorialActive()
-	return player:GetAttribute("TutorialCompleted") ~= true and (player:GetAttribute("TutorialStep") or 0) > 0
-end
-
+-- 보고 고르는 형태로 교체 - 지시). 견습 중엔 안 연다 - S15부터 그 검사는 패널의 UIManager 등록(canOpen)이 맡는다
+-- (단축키 M도 같은 검사를 지난다): 견습은 선형 진행이라 "목록에서 고른다"는 개념 자체가 안 맞는다.
 chip.Active = true
 chip.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		if not isTutorialActive() then
-			StageSelectPanel.open()
-		end
+		StageSelectPanel.open()
 	end
 end)
 

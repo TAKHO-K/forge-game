@@ -17,7 +17,11 @@ return {
 	--   regression = true: 과거 세션의 블록 전부 + current. **마일스톤(S10 · S15 · S21 종료 시 · Fable 세션 전 · 퍼블리시 전)에서만 켜고, 그 Play가 끝나면 다시 false로 되돌린다**(COMMON.md §3 · §5).
 	-- 새 세션을 시작할 때 current를 그 세션의 블록 id + 그 세션이 고친 모듈을 쓰는 옛 블록 id("동반 실행")로 갈아 끼운다(그 밖의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
 	verify = {
-		regression = true, -- TEMP(S15 1단계 실험 3: 실제 멈춤 조건 = 회귀 전체 체인 + FreezeProbe) - 끝나면 false로 되돌린다
+		regression = false,
+		-- exclude: regression = true여도 돌리지 않는 블록 id(DevTools.server.lua verifyEnabled가 먼저 본다).
+		exclude = { "S04(나)" },
+		-- S15 사전 작업 1(2026-09-20, 40분 제한 조사): S04(나)를 계측(처치 10회마다 몬스터 · 드랍 · workspace 후손 · 메모리 태그 · 하트비트 - 커밋 21ce309에 남아 있다)하며 3번 돌렸다 -
+		--   ① 단독 9/9 ② S04(나) 직전까지의 체인 + S04(나) 9/9 ③ 회귀 전체 체인 9/9. 멈춤은 재현되지 않았다(계속 늘어나는 값도 없다 - PRD 20.101). 원인 미확정이라 exclude로 회귀 전체에서도 뺀다.
 		-- 동반 실행에서 뺀 블록(2026-09-20, S12 사전 작업 1): "S04(나)". 최근 3회 Play 중 2회 이 블록 도중 Studio가 멈추거나 죽었다(S10 Play 1 · S11 Play 2).
 		--   로그로 확인한 것: 서버 스레드 자체가 멈춘 것이다(클라 "Server timeout: 322307ms" · 로그가 그 자리에서 끊기고 하트비트만 다른 스레드에서 이어짐 · Studio 크래시 덤프 생성).
 		--   멈춘 자리가 두 번 다르다 - S10: `[12]` 결과 줄 뒤(`[13]` 강화 시도 전후) / S11: `[9]`의 두 번째 200마리 묶음 66번째 처치 직후 - 같은 코드 줄이 원인이 아니다.
@@ -27,7 +31,8 @@ return {
 		-- 동반 실행(COMMON.md §3): 이 세션이 고친 모듈(BossData.mechanics · circleTarget 스킬 3종의 densityScalable · BossRules.buildInstanceDataFrom · BossSkillMath · BossSim)을 쓰는 옛 블록 = 보스 패턴 전부 -
 		-- 29-1(BossMechanicsVerify) · 29-2(BossSkillVerify) · 29-3(BossGimmickVerify) · 29-4(BossGimmick4Verify) · 29-5(BossGimmick5Verify)의 (가)(나) + 스테이지 100 보스를 실제로 스폰하는
 		-- 파티 경로(BossRules.buildInstanceData의 밀도 사본을 그대로 타는 S12(나)(PartyTutorialVerify) · S12b(나)(SocialVerify) - 둘 다 BOSS_STAGE = 100). S04(나)는 계속 제외.
-		-- S15 1단계(TEMP - 조사 뒤 되돌린다): S04(나) 단독 실행 + FreezeProbe 계측.
-		current = { "29-1", "29-2(가)", "29-2(나)", "29-3(가)", "29-3(나)", "29-4(가)", "29-4(나)", "29-5(가)", "29-5(나)", "S01(나)", "S02(나)", "S03(나)", "S04(나)" },
+		-- S15(2026-09-20): 스테이지 선택 10단위 UI(클라 전용) - 이번 세션 블록 S15(UI) + 동반 실행(COMMON.md §3): 이 세션이 고친 StageSelectPanel · UIManager · PanelRegistry를 쓰는 옛 검증 =
+		-- S12(UI)(PanelFitCheck - 스테이지 선택 패널 화면 안 · 도감 점) · S11(가)(StageSelectPanel이 도는 보상 띠 자체 점검) · S11(나)(서버 보상 미리보기 조회) · 27-4(가)(나)(스테이지 상태 Attribute 파이프라인).
+		current = { "S15(UI)", "S12(UI)", "S11(가)", "S11(나)", "27-4(가)", "27-4(나)" },
 	},
 }

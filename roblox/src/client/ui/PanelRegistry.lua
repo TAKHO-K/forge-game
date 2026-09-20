@@ -16,6 +16,7 @@ PanelRegistry.forbiddenKeys = {
 PanelRegistry.panels = {
 	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.I, menuOrder = 1, iconKey = "bag" },
 	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, menuOrder = 2, iconKey = "party" }, -- S12b: 파티창(panels/Party.lua). 채팅 입력 중 P는 UIManager가 gameProcessed로 무시한다.
+	{ id = "stageSelect", kind = "station", hotkey = Enum.KeyCode.M, menuOrder = 3, iconKey = "stage" }, -- S15: 스테이지 선택(StageSelectPanel.lua). 견습 중에는 UIManager의 canOpen이 막는다.
 }
 
 function PanelRegistry.assertAllowed(keyCode, ownerId)

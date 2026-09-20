@@ -2292,7 +2292,8 @@ print(("[DevTools] /gg 명령 인스턴스 있음=%s · IsStudio=%s (기대: 같
 local skippedVerifyBlocks = {}
 local function verifyEnabled(blockId)
 	local verify = DevToolsConfig.verify
-	if verify.regression or table.find(verify.current, blockId) then
+	-- exclude(S15): 회귀 전체에서도 돌리지 않는 블록(원인 미확정 멈춤 - DevToolsConfig 주석).
+	if not table.find(verify.exclude or {}, blockId) and (verify.regression or table.find(verify.current, blockId)) then
 		return true
 	end
 	table.insert(skippedVerifyBlocks, blockId)
