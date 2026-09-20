@@ -30,7 +30,8 @@ local function optionName(optionId)
 	return name or optionId
 end
 
--- 옵션 줄들: { { text, dim } }. 옵션이 없거나 데이터에 없는 id면 빈 목록.
+-- 옵션 줄들: { { text, dim, accentClassId } }. 옵션이 없거나 데이터에 없는 id면 빈 목록. accentClassId = 직업 특화 옵션이 내 직업과 맞을 때 그 직업(S13 - 클라가 UIColors.classAccent로 글씨색을 입힌다).
+-- 직업이 안 맞으면 dim(회색)이 우선이라 accentClassId를 안 준다. 공통 옵션 · 치명 옵션은 nil.
 local function optionLines(item, classId)
 	local option = item.option
 	local def = option and OptionData.options[option.id]
@@ -39,6 +40,7 @@ local function optionLines(item, classId)
 	end
 	local value = Option.valueOf(option, item.grade, item.itemLevel, classId)
 	local mismatched = def.classId ~= nil and def.classId ~= classId
+	local accentClassId = not mismatched and def.classId or nil
 	if option.id == "crit" then
 		return {
 			{ text = ("치확 %+.1f%%p"):format(value.critRate * 100), dim = mismatched },
@@ -49,7 +51,7 @@ local function optionLines(item, classId)
 	if mismatched then
 		text ..= "(직업 불일치 · 효과 없음)"
 	end
-	return { { text = text, dim = mismatched } }
+	return { { text = text, dim = mismatched, accentClassId = accentClassId } }
 end
 
 local PART_META = {

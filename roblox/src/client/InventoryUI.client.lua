@@ -1094,10 +1094,12 @@ local function setupOptionRow()
 
 	-- 게이지 하나에 값·범위·롤 위치를 채운다. p(0~1)는 (roll-rollMin)/(rollMax-rollMin) -
 	-- [12] "값 텍스트 색: p≥0.75 success, p≤0.25 textSecondary, 그 외 textPrimary".
-	local function applyOptionGauge(gauge, text, minText, maxText, p, fillColor, dim)
+	-- accent(S13) = 직업 특화 옵션이 내 직업과 맞을 때의 직업색(글씨색). 회색(dim)이 우선, 그 밖의 옵션은 nil이라 기존 규칙 그대로.
+	local function applyOptionGauge(gauge, text, minText, maxText, p, fillColor, dim, accent)
 		p = math.clamp(p, 0, 1)
 		gauge.valueText.Text = text
 		gauge.valueText.TextColor3 = dim and UIColors.textTertiary
+			or accent
 			or (p >= 0.75 and UIColors.success or (p <= 0.25 and UIColors.textSecondary or UIColors.textPrimary))
 		gauge.minText.Text = minText or ""
 		gauge.maxText.Text = maxText or ""
@@ -1150,7 +1152,8 @@ local function setupOptionRow()
 			if mismatched then
 				text = text .. "(직업 불일치 · 효과 없음)"
 			end
-			applyOptionGauge(optionGaugeA, text, ("%.1f"):format(range.min * 100), ("%.1f"):format(range.max * 100), p, fillColor, mismatched)
+			local accent = not mismatched and def.classId and UIColors.classAccent[def.classId] or nil
+			applyOptionGauge(optionGaugeA, text, ("%.1f"):format(range.min * 100), ("%.1f"):format(range.max * 100), p, fillColor, mismatched, accent)
 		end
 	end
 end

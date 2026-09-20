@@ -602,6 +602,7 @@ end
 --   returnSeconds        복귀 시간(기본 2)
 --   healQ                true면 힐러 Q 사용(기본 drainPerSecond>0일 때만)
 --   simSeconds           시뮬레이션 길이(기본 3600)
+--   regenPerSecond       자동 회복률(초당 최대체력 비율, 기본 CombatConfig.regenPercentPerSecond). 0이면 보스전 조건(자동 회복 없음 - S13 측정) - 이때 회복은 Q 치유뿐이다
 -- 반환: { uptime = 전투(딜링모드 켜짐) 시간 / 전체, fightSeconds, cycleSeconds, cycles }
 function BalanceSim.simulateHealerCycle(params)
 	local healerE = SkillData.healer.E
@@ -620,7 +621,10 @@ function BalanceSim.simulateHealerCycle(params)
 		useHealQ = drain > 0
 	end
 	local simSeconds = params.simSeconds or 3600
-	local regen = CombatConfig.regenPercentPerSecond
+	local regen = params.regenPerSecond
+	if regen == nil then
+		regen = CombatConfig.regenPercentPerSecond
+	end
 	local regenDelay = CombatConfig.regenDelaySeconds
 	local healAmount = healerQ.healPercentOfMaxHp * (1 + ClassData.classes.healer.critRate * (healerQ.critHealMultiplier - 1))
 

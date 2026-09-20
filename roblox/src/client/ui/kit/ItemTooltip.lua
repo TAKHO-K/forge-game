@@ -70,7 +70,8 @@ function ItemTooltip.build(props)
 			label.Visible = line ~= nil
 			if line then
 				label.Text = line.text
-				label.TextColor3 = line.dim and Theme.colors.textTertiary or Theme.colors.textPrimary
+				-- 회색(직업 불일치)이 우선 · 직업 특화 옵션이 내 직업과 맞으면 직업색(S13) · 그 밖에는 기본색.
+				label.TextColor3 = line.dim and Theme.colors.textTertiary or (line.accentClassId and Theme.colors.classAccent[line.accentClassId]) or Theme.colors.textPrimary
 			end
 		end
 		local optionCount = math.min(desc.options and #desc.options or 0, #optionLabels)

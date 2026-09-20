@@ -70,6 +70,8 @@ local DropNoticeVerify = require(script.Parent.DropNoticeVerify)
 local BossRewardPreviewVerify = require(script.Parent.BossRewardPreviewVerify)
 local PartyTutorialVerify = require(script.Parent.PartyTutorialVerify)
 local SocialVerify = require(script.Parent.SocialVerify)
+-- 30-0 S13 밸런스 결정(대검 계수 · 힐러 파티 회복 · 옵션 색 · 딜링모드 보스전 가동률) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(실제 HealCast 경로 · 스탠드인 파티).
+local BalanceDecisionVerify = require(script.Parent.BalanceDecisionVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -2668,6 +2670,12 @@ if RunService:IsStudio() and verifyEnabled("27-1(가)") then
 		print(("[27-1][A2] 참고 - 상한 90%% 적용(drain %.4f) -> 가동률 %.4f (조정하지 않음, 기록만)"):format(
 			cappedDrain, cappedResult.uptime))
 
+		-- S13(PRD 20.81 [B-1] · [G] 미결 1): 보스전 조건 - 자동 회복 없음(regenPerSecond = 0)에서의 가동률. 같은 도구에 회복률 인자만 0으로 준다. 기록만 - 옵션 값은 안 바꾼다.
+		local bossBaseline = BalanceSim.simulateHealerCycle({ hitsPerSecond = baselineParams.hitsPerSecond, hitRatio = baselineParams.hitRatio, drainPerSecond = baseDrain, regenPerSecond = 0 })
+		local bossReduced = BalanceSim.simulateHealerCycle({ hitsPerSecond = baselineParams.hitsPerSecond, hitRatio = baselineParams.hitRatio, drainPerSecond = reducedDrain, regenPerSecond = 0 })
+		print(("[27-1][A2] 보스전(회복률 0) 딜링모드 가동률: drain %.4f -> a0 %.4f · drain %.4f(옵션 -60%%) -> a1 %.4f · 환산 a1 / a0 - 1 = %+.1f%% (기록만 - S13)"):format(
+			baseDrain, bossBaseline.uptime, reducedDrain, bossReduced.uptime, (bossReduced.uptime / bossBaseline.uptime - 1) * 100))
+
 		print(("===27-1 검증 끝(가)=== %d/%d 통과"):format(passCount, totalCount))
 	end)
 end
@@ -3206,6 +3214,7 @@ if RunService:IsStudio() then
 				{ "S11(나)", function() BossRewardPreviewVerify.runLive(player, env) end },
 				{ "S12(나)", function() PartyTutorialVerify.runLive(player, env) end },
 				{ "S12b(나)", function() SocialVerify.runLive(player, env) end },
+				{ "S13(나)", function() BalanceDecisionVerify.runLive(player, env) end },
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3362,6 +3371,17 @@ if RunService:IsStudio() and verifyEnabled("S12b(가)") then
 		local ok, err = pcall(SocialVerify.runPure)
 		if not ok then
 			warn(("[S12b(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S13 자동 검증 블록(가) - 앵커 4직업 로테이션 DPS · 1.32 규칙 · 서열 · 활 기준 앵커 · p · b 불변 · 딜링모드 가동률 · 옵션 색 데이터 ═══
+-- 순수 함수(플레이어 불필요). (나)는 위 29-1 체인의 끝(S12b (나) 다음) - 실제 HealCast 경로 · 스탠드인 파티.
+if RunService:IsStudio() and verifyEnabled("S13(가)") then
+	task.spawn(function()
+		local ok, err = pcall(BalanceDecisionVerify.runPure)
+		if not ok then
+			warn(("[S13(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

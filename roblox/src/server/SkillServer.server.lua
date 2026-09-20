@@ -31,8 +31,7 @@ local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
 local SummonState = require(script.Parent.SummonState)
 local DashEndpoint = require(script.Parent.DashEndpoint)
-local PartyState = require(script.Parent.PartyState)
-local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local HealCast = require(script.Parent.HealCast)
 
 local skillRequest = Instance.new("RemoteEvent")
 skillRequest.Name = "SkillRequest"
@@ -413,44 +412,11 @@ end
 -- 치유(힐러 Q, 20-6 [5]) - 결과 포맷 확장([4])의 첫 사용자: hits 배열 대신 self 필드
 -- ({healAmount, isCrit})를 보낸다. 기존 4종(대검 Q/E, 활 Q/E)은 이 필드를 아예 안 보내므로
 -- (위 함수들 그대로) 회귀 위험이 없다 - 클라(SkillInput.client.lua)도 kind로만 분기한다.
--- cooldownSeconds(26-2)는 castDashBuff와 같은 이유로 dispatch가 넘긴다.
+-- cooldownSeconds(26-2)는 castDashBuff와 같은 이유로 dispatch가 넘긴다. 회복 · 버프 · 파티 회복(S13)의
+-- 서버 판정은 HealCast 모듈이 한다(자동 검증이 실제 경로를 밟게 모듈로 뺐다).
 local function castHeal(player, slot, def, classId, cooldownSeconds)
 	markCast(player, slot)
-	local maxHp = PlayerState.getMaxHp(player)
-	local hp = PlayerState.getHp(player)
-	-- 26-2(PRD 20.67 [2] "재생 - 힐러 치유 회복량 ×(1+x)") - PlayerProfile.
-	-- getHealingPowerMultiplier가 자동회복(PlayerRegen.server.lua)과 같은 배수를 쓴다.
-	local baseHeal = maxHp * def.healPercentOfMaxHp * PlayerProfile.getHealingPowerMultiplier(player)
-	-- calcDamage를 그대로 쓰지 않는다 - 크리 롤(RNG 소스 하나로 통일)만 재사용하고, 배율은
-	-- SkillData의 critHealMultiplier(고정 2배, PRD 4.3)로 따로 곱한다. class.critDmg를 그대로
-	-- 썼다면 힐러 기준 1.8배가 나와 PRD 수치와 어긋난다.
-	local _, isCrit = PlayerCombat.calcDamage(baseHeal, classId)
-	local healAmount = isCrit and baseHeal * def.critHealMultiplier or baseHeal
-	local newHp = math.min(hp + healAmount, maxHp)
-	PlayerState.setHp(player, newHp)
-	player:SetAttribute("Hp", newHp) -- PlayerState가 유일한 HP 소스 - 바꾸는 모든 지점에서 동기화(MonsterAI.server.lua의 syncHud와 같은 원칙)
-
-	-- 힐러 버프(24-3, PRD 20.64) - 파티에서만 발동한다(지시 6, 솔로 자기힐로 자기버프를
-	-- 받아 딜을 올리는 경로 차단 - PartyState.getParty가 nil이면 여기서 끝난다). 멤버
-	-- 전원(힐러 자신 포함, PRD 20.64 [1] "힐러 자신도 대상이다")에게 서버가 직접 건다 -
-	-- 클라이언트가 버프를 주장할 길이 없다. 같은 buffId를 다시 걸면 BuffState.apply의
-	-- 기본 동작(mode 미지정 = refresh)이 그대로 덮어써 지속시간만 갱신되고 중첩되지 않는다.
-	local party = PartyState.getParty(player)
-	if party then
-		local multiplier = 1 + PartyConfig.healerBuffFraction
-		-- 26-2: 실제(옵션 반영) 쿨다운에서 파생시킨다 - 치유 쿨다운이 짧아지면 버프도 그만큼
-		-- 자주 갱신되므로 지속시간도 같이 짧아져야 SkillData.lua의 "제때 힐을 돌리면 안
-		-- 끊긴다" 관계가 유지된다.
-		local durationSeconds = cooldownSeconds * def.partyBuffDurationMultiplier
-		for _, member in ipairs(PartyState.getMemberPlayers(party)) do
-			BuffState.apply(member, "healerBuff", {
-				durationSeconds = durationSeconds,
-				multiplier = multiplier,
-				displayName = "치유 버프",
-				colorName = "success",
-			})
-		end
-	end
+	local healAmount, isCrit = HealCast.cast(player, def, classId, cooldownSeconds)
 
 	skillCastResult:FireClient(player, slot, {
 		ok = true,
