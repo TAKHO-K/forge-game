@@ -500,8 +500,7 @@ local function followChipStack(button, gui)
 			return
 		end
 		local function reposition()
-			local inset = game:GetService("GuiService"):GetGuiInset()
-			local topLeft = stack.AbsolutePosition - inset -- ScreenGui 좌표(AbsolutePosition은 상단 인셋을 포함한다)
+			local topLeft = stack.AbsolutePosition -- 둘 다 상단 인셋이 있는 ScreenGui라 AbsolutePosition(ScreenGui 안 좌표)을 그대로 Position에 쓴다
 			button.AnchorPoint = Vector2.new(1, 0)
 			button.Position = UDim2.new(0, topLeft.X - CHIP_STACK_GAP, 0, topLeft.Y)
 		end

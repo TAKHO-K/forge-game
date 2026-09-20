@@ -2,7 +2,6 @@
 -- 알림 속 아이템(드랍 순간 스냅샷)과 장비 보기 창의 슬롯 상세가 같은 부품을 쓴다. 고정 폭 · 고정 줄 높이(AutomaticSize 없음) - 높이는 줄 수로 계산해 set이 돌려준다.
 -- ItemTooltip.build({ parent, width, name }) -> { root, set(desc) -> height, hide() }. root는 처음에 숨어 있다(Visible = false) - 자리는 호출부가 정한다(placeNear).
 
-local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
@@ -82,11 +81,9 @@ function ItemTooltip.build(props)
 end
 
 -- root를 anchorRect({ min, max } - GuiObject.AbsolutePosition 좌표) 옆에 놓는다: 왼쪽에 자리가 있으면 왼쪽, 없으면 아래(그것도 없으면 위)에 놓고 화면 안으로 민다.
--- root는 ScreenGui 직계여야 하고 screenSize는 그 ScreenGui의 AbsoluteSize다. AbsolutePosition은 상단 인셋을 포함하므로 여기서 뺀다(ScreenGui 좌표로 바꾼다).
+-- root는 ScreenGui 직계여야 하고 screenSize는 그 ScreenGui의 AbsoluteSize다. AbsolutePosition은 ScreenGui 안 좌표다(실측: Position (0, 52)인 칩 스택의 Abs Y = 52 - GuiInset 58과 무관) - 인셋을 더하거나 빼지 않는다.
 function ItemTooltip.placeNear(root, anchorRect, screenSize, gap)
 	gap = gap or 6
-	local inset = GuiService:GetGuiInset()
-	anchorRect = { min = anchorRect.min - inset, max = anchorRect.max - inset }
 	local width, height = root.Size.X.Offset, root.Size.Y.Offset -- 고정 크기(set이 정한 값)
 	local x, y
 	if anchorRect.min.X - gap - width >= 8 then

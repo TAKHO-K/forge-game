@@ -1,7 +1,7 @@
 -- 이름 클릭 메뉴(S12b A) - overlay. 진입점: 드랍 피드 · 태초 배너 · 파티창의 플레이어 이름(머리 위 이름표는 오터치 때문에 클릭이 없다).
 --   [친구 추가]  StarterGui:SetCore("PromptSendFriendRequest", player) - 이미 친구면 비활성.
---   [귓속말]     TextChatService 기본 귓속말만 쓴다: 기본 채팅 입력창(ChatInputBarConfiguration.TextBox)에 "/w 표시이름 "을 채우고 커서를 둔다. 문자열을 RemoteEvent로 보내지 않는다(채팅 필터 정책).
---                나나 상대가 채팅 제한이면(CanUserChatAsync · CanUsersChatAsync) 비활성 + 이유 한 줄.
+--   [귓속말]     TextChatService 기본 귓속말만 쓴다: 기본 명령 "/w 이름"을 RBXGeneral 채널로 보내 채팅창의 귓속말 대상을 그 사람으로 정한다(사용자가 쓴 글은 보내지 않는다 - 채팅 필터 정책 · RemoteEvent 없음).
+--                기본 채팅 입력줄에 글을 채우는 API는 없다(ChatInputBarConfiguration.TextBox는 기본 UI에서 nil - 2026-09-20 Studio 실측). 나나 상대가 채팅 제한이면(CanUserChatAsync · CanUsersChatAsync) 비활성 + 이유 한 줄.
 --   [장비 보기]  InspectWindow(장비 보기 창)를 연다.
 -- 자기 이름이면 [장비 보기]만. 대상이 서버를 떠났으면 세 버튼 모두 비활성 + "서버를 떠난 플레이어".
 -- 처음 열 때 만든다(Confirm과 같은 방식). PlayerMenu.open(target) - target = { userId, displayName, level, rebirth }.
@@ -72,11 +72,12 @@ local function build()
 		UIManager.close(PlayerMenu.id)
 	end)
 	rows.whisper = makeRow("WhisperButton", "귓속말", 2, function()
-		local displayName = current and current.displayName
-		if displayName and PlayerMenu.fillWhisper(displayName) then
+		local target = current and current.player
+		if target and PlayerMenu.whisperTo(target.Name) then
 			UIManager.close(PlayerMenu.id)
+			Toast.push("TC", { text = ("귓속말 대상: %s - 채팅창에 메시지를 입력하세요"):format(current.displayName), colorName = "textPrimary", seconds = 4 })
 		else
-			Toast.push("TC", { text = "귓속말 입력창을 열 수 없습니다", colorName = "danger" })
+			Toast.push("TC", { text = "귓속말 대상을 정할 수 없습니다", colorName = "danger" })
 		end
 	end)
 	rows.inspect = makeRow("InspectButton", "장비 보기", 3, function()
@@ -89,19 +90,20 @@ local function build()
 	built = { panel = panel, rows = rows }
 end
 
--- 기본 채팅 입력창에 "/w 표시이름 "을 채운다. 반환: 채웠으면 true. 입력창(ChatInputBarConfiguration.TextBox)이 없으면 false - 우회하지 않는다.
-function PlayerMenu.fillWhisper(displayName)
-	local ok, box = pcall(function()
-		local config = TextChatService:FindFirstChild("ChatInputBarConfiguration")
-		return config and config.Enabled and config.TextBox or nil
-	end)
-	if not ok or not box then
+-- 귓속말 대상 지정: 기본 명령 "/w 이름"을 RBXGeneral로 보낸다(TextChatService가 명령으로 소비해 귓속말 모드로 바꾼다 - 로컬 처리, 다른 사람에게 안 보인다). 이름 = username(Name) -
+-- 표시이름은 겹칠 수 있고 명령이 표시이름으로 찾는지 문서에 확실하지 않다(사람 눈 확인 항목). 반환: 명령을 보냈으면 true. RBXGeneral 채널이 없으면 false - 우회하지 않는다.
+function PlayerMenu.whisperTo(userName)
+	local channels = TextChatService:FindFirstChild("TextChannels")
+	local general = channels and channels:FindFirstChild("RBXGeneral")
+	if not general then
 		return false
 	end
-	local text = ("%s %s "):format(SocialData.whisper.command, displayName)
-	box:CaptureFocus()
-	box.Text = text
-	box.CursorPosition = #text + 1
+	task.spawn(function() -- SendAsync는 응답을 기다린다(Studio에서 길게 걸릴 수 있다) - 메뉴를 막지 않는다
+		local ok, err = pcall(general.SendAsync, general, ("%s %s"):format(SocialData.whisper.command, userName))
+		if not ok then
+			warn("[PlayerMenu] 귓속말 대상 지정 실패: " .. tostring(err))
+		end
+	end)
 	return true
 end
 

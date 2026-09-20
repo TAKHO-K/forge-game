@@ -24,7 +24,7 @@ return {
 		minIntervalSeconds = 0.5,
 	},
 
-	-- 귓속말: TextChatService 기본 명령. 입력창에 "<명령> <표시이름> "을 채우기만 한다(문자열을 서버로 보내지 않는다 - 채팅 필터 정책).
+	-- 귓속말: TextChatService 기본 명령("<명령> <username>")을 RBXGeneral로 보내 귓속말 대상을 정한다(사용자 글은 안 보낸다 - 채팅 필터 정책).
 	whisper = {
 		command = "/w",
 	},

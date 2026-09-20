@@ -3,8 +3,6 @@
 -- 툴팁 전용 hover에만 기대지 않는다 - 탭이 같은 일을 한다. 말풍선은 screenGui 직계 Frame 하나(재사용).
 -- FullTextTip.attach(root, screenGui) -> { hide(), truncatedIn(container) }.
 
-local GuiService = game:GetService("GuiService")
-
 local Theme = require(script.Parent.Theme)
 
 local FullTextTip = {}
@@ -54,8 +52,7 @@ function FullTextTip.attach(root, screenGui)
 		local width, height = math.min(MAX_WIDTH, bounds.X + 16), bounds.Y + 12
 		tip.Size = UDim2.new(0, width, 0, height)
 		tipLabel.Size = UDim2.new(0, width - 16, 0, bounds.Y)
-		local inset = GuiService:GetGuiInset()
-		local position = inst.AbsolutePosition - inset
+		local position = inst.AbsolutePosition -- ScreenGui 안 좌표(인셋 무관)
 		local screen = screenGui.AbsoluteSize
 		local x = math.clamp(position.X, 8, math.max(8, screen.X - width - 8))
 		local y = position.Y - height - 4

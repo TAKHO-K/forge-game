@@ -2,7 +2,6 @@
 -- 장비창 · 파티창 · 장비 보기 · 메뉴의 글씨 크기(12 미만 0개 · 4단 밖 0개 · 잘림 = 줄임표) · 새 HUD 버튼의 겹침. 알림 · 이름 메뉴 · 타이머는 hud/DropFeed.client.lua의 selfTestS12b가 본다.
 -- 결과: `===S12b 검증 시작(UI: 창 · 글씨)===` … `[S12b][UI] … O/X` … `===S12b 검증 끝(UI: 창 · 글씨)=== n/m 통과`. P 키 실제 입력(채팅 중 무시)은 MCP Play에서 사람 손 대신 키를 보내 확인한다.
 
-local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -100,7 +99,6 @@ local function selfTest()
 		print(("[S12b][UI] %s %s"):format(label, ok and "O" or "X"))
 	end
 	local playerGui = player:WaitForChild("PlayerGui")
-	local inset = GuiService:GetGuiInset()
 	local screen = playerGui:FindFirstChild("PartyToggleGui") and playerGui.PartyToggleGui.AbsoluteSize or Vector2.new(0, 0)
 	print(("[S12b][UI][측정] 화면 %d × %d(%s)"):format(screen.X, screen.Y, Theme.isMobile and "모바일" or "PC"))
 
@@ -190,12 +188,15 @@ local function selfTest()
 	UIManager.close("inspect")
 	task.wait(0.4)
 
-	-- 이름 클릭 메뉴 글씨(다른 검사에서 열린 적이 있다)
+	-- 이름 클릭 메뉴 글씨(열어 놓고 잰다 - 자기 이름이라 [장비 보기] 한 줄)
+	PlayerMenu.open({ userId = player.UserId, displayName = player.DisplayName, level = player:GetAttribute("CharacterLevel"), rebirth = player:GetAttribute("RebirthCount") })
+	task.wait(0.5)
 	local _, menuGui = UIManager.getParts("playerMenu")
 	if menuGui then
 		local menuScan = scanText(menuGui)
 		check(("이름 클릭 메뉴 글씨: 요소 %d개 · 12 미만 %d개(기대 0) · 4단 밖 %d개 [%s](기대 0) · 크기 %s"):format(menuScan.count, #menuScan.below12, #menuScan.offTier, table.concat(menuScan.offTier, ","), sizesLine(menuScan.sizes)),
-			#menuScan.below12 == 0 and #menuScan.offTier == 0)
+			menuScan.count >= 2 and #menuScan.below12 == 0 and #menuScan.offTier == 0)
+		UIManager.close("playerMenu", true)
 	end
 
 	-- 새 HUD 버튼(MR.partyToggle) 겹침: 화면에 보이는 다른 슬롯 · 투표 패널 자리(계획) · 중앙 금지 구역
@@ -216,17 +217,17 @@ local function selfTest()
 		local viewport = partyButton:FindFirstAncestorOfClass("ScreenGui").AbsoluteSize
 		local voteHeight, voteWidth = vote.size.Y.Offset, vote.size.X.Offset
 		local voteRect = {
-			min = Vector2.new(viewport.X + vote.position.X.Offset - voteWidth, viewport.Y * vote.position.Y.Scale + vote.position.Y.Offset - voteHeight * vote.anchor.Y + inset.Y),
+			min = Vector2.new(viewport.X + vote.position.X.Offset - voteWidth, viewport.Y * vote.position.Y.Scale + vote.position.Y.Offset - voteHeight * vote.anchor.Y),
 		}
 		voteRect.max = voteRect.min + Vector2.new(voteWidth, voteHeight)
 		local hitsVote = intersects(buttonRect, voteRect)
 		local centerRect = ScreenMap.centerRect(viewport)
-		local inCenter = intersects(buttonRect, { min = centerRect.min + inset, max = centerRect.max + inset })
+		local inCenter = intersects(buttonRect, { min = centerRect.min, max = centerRect.max })
 		local mobileHit = false
 		if Theme.isMobile then
 			for _, fractions in pairs(ScreenMap.mobileReserved) do
 				local reserved = ScreenMap.rectFromFractions(fractions, viewport)
-				mobileHit = mobileHit or intersects(buttonRect, { min = reserved.min + inset, max = reserved.max + inset })
+				mobileHit = mobileHit or intersects(buttonRect, { min = reserved.min, max = reserved.max })
 			end
 		end
 		print(("[S12b][UI][측정] 파티 버튼 (%d, %d) %d × %d · 비교한 보이는 슬롯 %d개"):format(buttonRect.min.X, buttonRect.min.Y, partyButton.AbsoluteSize.X, partyButton.AbsoluteSize.Y, tested))
