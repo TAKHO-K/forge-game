@@ -12,6 +12,9 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local DropNoticeData = require(ReplicatedStorage.Shared.data.DropNoticeData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
+local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
+local PlayerMenu = require(script.Parent.Parent.panels.PlayerMenu)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local FeedLayout = require(script.Parent.Parent.ui.FeedLayout)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
@@ -28,18 +31,45 @@ end
 
 local function primalLine(payload)
 	local gradeName, partName = gradeAndPart(payload)
-	return ("★ %s님이 %s %s을 얻었습니다"):format(tostring(payload.name), gradeName, partName)
+	return ("★ %s님이 %s %s을 얻었습니다"):format(PlayerLabelFormat.plain(payload.name, payload.level, payload.rebirth), gradeName, partName)
+end
+
+-- S12b: 알림의 이름 조각들("★n Lv.35 표시이름") - 이름을 누르면 이름 클릭 메뉴(userId가 있을 때만 - 합성 검증 이벤트에는 없다).
+local function nameParts(payload)
+	local parts = PlayerLabelFormat.parts(payload.name, payload.level, payload.rebirth, Theme.textSize("caption"), "textPrimary")
+	for _, part in ipairs(parts) do
+		if part.isName and payload.userId then
+			part.onActivate = function()
+				PlayerMenu.open({ userId = payload.userId, displayName = payload.name, level = payload.level, rebirth = payload.rebirth })
+			end
+		end
+	end
+	return parts
+end
+
+-- S12b: 아이템 이름 조각(굵게) - 누르면 옵션 툴팁 토글. 옵션은 드랍 순간 스냅샷(payload.option)이라 이후 강화 · 판매와 무관하다.
+local function itemPart(payload, gradeName, partName)
+	local visual = ItemVisualData.gradeVisuals[payload.grade]
+	local desc = ItemDescribe.item({ grade = payload.grade, part = payload.part or "armor", itemLevel = tonumber(payload.itemLevel) or 0, option = payload.option }, payload.classId)
+	return {
+		text = ("%s %s"):format(gradeName, partName),
+		color = visual and visual.color,
+		colorName = "textPrimary",
+		bold = true,
+		onActivate = function(handle)
+			handle.toggleTooltip(desc)
+		end,
+	}
 end
 
 local function showFeed(payload)
 	local gradeName, partName = gradeAndPart(payload)
-	local visual = ItemVisualData.gradeVisuals[payload.grade]
+	local parts = nameParts(payload)
+	table.insert(parts, { text = ": ", colorName = "textPrimary" })
+	table.insert(parts, itemPart(payload, gradeName, partName))
+	table.insert(parts, { text = (" Lv.%d"):format(tonumber(payload.itemLevel) or 0), colorName = "textPrimary" })
 	return Toast.push("TR", {
-		richParts = {
-			{ text = ("%s: "):format(tostring(payload.name)), colorName = "textPrimary" },
-			{ text = ("%s %s"):format(gradeName, partName), color = visual and visual.color, colorName = "textPrimary" },
-			{ text = (" Lv.%d"):format(tonumber(payload.itemLevel) or 0), colorName = "textPrimary" },
-		},
+		richParts = parts,
 		seconds = DropNoticeData.seconds,
 		fadeSeconds = DropNoticeData.fadeSeconds,
 		groupKey = payload.name,
@@ -49,13 +79,15 @@ end
 
 local function showPrimalBanner(payload, silentChat)
 	local gradeName, partName = gradeAndPart(payload)
-	local visual = ItemVisualData.gradeVisuals[payload.grade]
+	local parts = { { text = "★ ", colorName = "textPrimary" } }
+	for _, part in ipairs(nameParts(payload)) do
+		table.insert(parts, part)
+	end
+	table.insert(parts, { text = "님이 ", colorName = "textPrimary" })
+	table.insert(parts, itemPart(payload, gradeName, partName))
+	table.insert(parts, { text = "을 얻었습니다", colorName = "textPrimary" })
 	Toast.push("TC", {
-		richParts = {
-			{ text = ("★ %s님이 "):format(tostring(payload.name)), colorName = "textPrimary" },
-			{ text = ("%s %s"):format(gradeName, partName), color = visual and visual.color, colorName = "textPrimary" },
-			{ text = "을 얻었습니다", colorName = "textPrimary" },
-		},
+		richParts = parts,
 		seconds = DropNoticeData.seconds,
 		fadeSeconds = DropNoticeData.fadeSeconds,
 		rainbow = true,
@@ -244,6 +276,164 @@ if RunService:IsStudio() and (DevToolsConfig.verify.regression or table.find(Dev
 		local ok, err = pcall(selfTest)
 		if not ok then
 			warn("[S10][UI] 자체 점검 에러: " .. tostring(err))
+		end
+	end)
+end
+
+-- ── S12b 자체 점검: 알림 속 이름 · 아이템(누르기 · 옵션 툴팁 · 스냅샷) · 누르고 있는 동안 타이머 정지 · 이름 클릭 메뉴. 사람 손 대신 Toast.debugRows의 같은 핸들러를 부른다. ──
+-- S10 자체 점검(접속 12초 뒤 · 약 10초)이 줄을 쓰므로 그 뒤(32초)에 돈다. 실제 서버 → 클라 경로(DropNotice.publish)는 MCP Play에서 /gg dropnotice로 본다.
+
+local function selfTestS12b()
+	print("===S12b 검증 시작(UI: 알림 · 이름 메뉴)===")
+	local pass, total = 0, 0
+	local function check(label, ok)
+		total += 1
+		if ok then
+			pass += 1
+		end
+		print(("[S12b][UI] %s %s"):format(label, ok and "O" or "X"))
+	end
+	local UIManager = require(script.Parent.Parent.UIManager)
+	local classId = Players.LocalPlayer:GetAttribute("ClassId")
+	local ABSENT_ID = 8888888
+
+	local function payloadOf(name, userId, option)
+		return { name = name, userId = userId, level = 35, rebirth = 1, classId = classId, grade = "relic", part = "gloves", itemLevel = 52, scope = "party", option = option }
+	end
+
+	Toast.clear()
+	local option = { id = "attackPercent", roll = 1.05 }
+	local expectedDesc = ItemDescribe.item({ grade = "relic", part = "gloves", itemLevel = 52, option = { id = "attackPercent", roll = 1.05 } }, classId)
+	handle(payloadOf("철수", ABSENT_ID, option), true)
+	task.wait(0.3)
+	local rows = Toast.debugRows("TR")
+	local text = Toast.debugTexts("TR")[1] or ""
+	check(("알림 글 [%s](기대 ★1 Lv.35 철수: 유물 장갑 Lv.52) · 누르는 조각 %d개(기대 2 - 이름 · 아이템)"):format(text, rows[1] and rows[1].hitCount() or 0),
+		text == "★1 Lv.35 철수: 유물 장갑 Lv.52" and rows[1] ~= nil and rows[1].hitCount() == 2)
+
+	-- 이름 클릭 → 메뉴(서버를 떠난 사람: 세 버튼 모두 비활성 + 이유)
+	if rows[1] then
+		rows[1].activate(1)
+		task.wait(0.4)
+		local state = PlayerMenu.debugState()
+		local friend, whisper, inspect = state.friend, state.whisper, state.inspect
+		local menuOk = UIManager.isOpen("playerMenu") and friend ~= nil and whisper ~= nil and inspect ~= nil
+			and friend.visible and whisper.visible and inspect.visible
+			and not friend.enabled and not whisper.enabled and not inspect.enabled
+			and friend.reason == "서버를 떠난 플레이어" and inspect.reason == "서버를 떠난 플레이어"
+		check(("이름 클릭 → 메뉴 열림 %s · 서버를 떠난 사람: 친구 %s/%s · 귓속말 %s/%s · 장비 보기 %s/%s(기대 모두 보임 · 비활성 · 이유 표시) · 제목 [%s]"):format(
+			tostring(UIManager.isOpen("playerMenu")), tostring(friend and friend.visible), tostring(friend and friend.enabled), tostring(whisper and whisper.visible), tostring(whisper and whisper.enabled),
+			tostring(inspect and inspect.visible), tostring(inspect and inspect.enabled), (tostring(state.title):gsub("<[^>]+>", ""))), menuOk)
+		UIManager.close("playerMenu", true)
+		check(("메뉴 닫기: 열림 %s(기대 false)"):format(tostring(UIManager.isOpen("playerMenu"))), not UIManager.isOpen("playerMenu"))
+	else
+		check("이름 클릭 메뉴: 알림 행이 없다", false)
+	end
+	Toast.clear()
+
+	-- 자기 이름 → 장비 보기만
+	handle(payloadOf(Players.LocalPlayer.DisplayName, Players.LocalPlayer.UserId, option), true)
+	task.wait(0.3)
+	local selfRows = Toast.debugRows("TR")
+	if selfRows[1] then
+		selfRows[1].activate(1)
+		task.wait(0.4)
+		local state = PlayerMenu.debugState()
+		check(("자기 이름 클릭: 친구 보임=%s · 귓속말 보임=%s · 장비 보기 보임=%s 활성=%s(기대 false · false · true · true)"):format(
+			tostring(state.friend and state.friend.visible), tostring(state.whisper and state.whisper.visible), tostring(state.inspect and state.inspect.visible), tostring(state.inspect and state.inspect.enabled)),
+			state.friend ~= nil and not state.friend.visible and not state.whisper.visible and state.inspect.visible and state.inspect.enabled == true)
+		UIManager.close("playerMenu", true)
+	else
+		check("자기 이름 클릭: 알림 행이 없다", false)
+	end
+	Toast.clear()
+
+	-- 아이템 클릭 → 옵션 툴팁 토글 + 드랍 순간 스냅샷
+	option = { id = "attackPercent", roll = 1.05 }
+	handle(payloadOf("철수", ABSENT_ID, option), true)
+	task.wait(0.3)
+	rows = Toast.debugRows("TR")
+	option.roll = 0.05 -- 드랍 뒤 원본이 바뀌어도(재굴림 · 강화) 알림의 옵션은 그대로여야 한다
+	if rows[1] then
+		rows[1].activate(2)
+		local openAfterTap, pinnedAfterTap = rows[1].tooltipOpen(), rows[1].pinned()
+		local toastGui = Players.LocalPlayer.PlayerGui:FindFirstChild("ToastGui")
+		local tip = toastGui and toastGui:FindFirstChild("ToastItemTooltip")
+		local shownTitle = tip and tip:FindFirstChild("Title") and tip.Title.Text or ""
+		local shownOption = tip and tip:FindFirstChild("Option1") and tip.Option1.Text or ""
+		local expectedOption = expectedDesc.options[1] and expectedDesc.options[1].text or "?"
+		check(("아이템 탭 → 툴팁 열림 %s · 타이머 정지 %s · 제목 [%s](기대 %s) · 옵션 [%s](기대 %s - 원본 roll을 0.05로 바꿔도 드랍 순간 값)"):format(
+			tostring(openAfterTap), tostring(pinnedAfterTap), shownTitle, expectedDesc.title, shownOption, expectedOption),
+			openAfterTap == true and pinnedAfterTap == true and shownTitle == expectedDesc.title and shownOption == expectedOption)
+		rows[1].activate(2)
+		check(("같은 아이템 다시 탭 → 툴팁 닫힘 %s(기대 true) · 타이머 정지 해제 %s(기대 true)"):format(tostring(not rows[1].tooltipOpen()), tostring(not rows[1].pinned())), not rows[1].tooltipOpen() and not rows[1].pinned())
+	else
+		check("아이템 툴팁: 알림 행이 없다", false)
+	end
+	Toast.clear()
+
+	-- 타이머 정지: 누르고 있는 동안 · 툴팁이 열린 동안 안 사라진다. 놓으면 seconds를 다시 센다.
+	local function shortRow()
+		local shortPayload = payloadOf("타이머", ABSENT_ID, { id = "attackPercent", roll = 1.0 })
+		local parts = nameParts(shortPayload)
+		table.insert(parts, { text = ": ", colorName = "textPrimary" })
+		table.insert(parts, itemPart(shortPayload, "유물", "장갑"))
+		Toast.push("TR", { richParts = parts, seconds = 1, fadeSeconds = 0.2 })
+		task.wait(0.2)
+		return Toast.debugRows("TR")[1]
+	end
+	local pressRow = shortRow()
+	pressRow.press()
+	task.wait(1.9) -- 1초 + 흐림 0.2를 지나도
+	local stillWhileHeld = not pressRow.removed()
+	pressRow.release()
+	task.wait(0.6)
+	local stillAfterRelease = not pressRow.removed() -- 놓은 순간부터 1초를 다시 센다
+	task.wait(1.0)
+	check(("누르고 있는 동안: 1.9초 뒤에도 남음 %s(기대 true) · 놓고 0.6초 뒤 남음 %s(기대 true - 다시 셈) · 놓고 1.6초 뒤 사라짐 %s(기대 true)"):format(tostring(stillWhileHeld), tostring(stillAfterRelease), tostring(pressRow.removed())),
+		stillWhileHeld and stillAfterRelease and pressRow.removed())
+	Toast.clear()
+
+	local tipRow = shortRow()
+	tipRow.activate(2)
+	task.wait(1.9)
+	local stillWithTooltip = not tipRow.removed() and tipRow.tooltipOpen()
+	tipRow.activate(2) -- 툴팁 닫기 = 정지 해제
+	task.wait(0.6)
+	local stillAfterClose = not tipRow.removed()
+	task.wait(1.0)
+	check(("툴팁이 열린 동안: 1.9초 뒤에도 남음 %s(기대 true) · 닫고 0.6초 뒤 남음 %s(기대 true) · 닫고 1.6초 뒤 사라짐 %s(기대 true)"):format(tostring(stillWithTooltip), tostring(stillAfterClose), tostring(tipRow.removed())),
+		stillWithTooltip and stillAfterClose and tipRow.removed())
+	Toast.clear()
+
+	-- 툴팁이 열린 행이 밀려나면 툴팁도 닫힌다(줄 수 1로 강제).
+	Toast.debugSetCapacity("TR", 1)
+	local evictRow = shortRow()
+	evictRow.activate(2)
+	local wasOpen = evictRow.tooltipOpen()
+	handle(payloadOf("새치기", ABSENT_ID, nil), true)
+	task.wait(0.2)
+	check(("툴팁이 열린 행이 밀려남: 열림 %s → 행 사라짐 %s · 툴팁 %s(기대 true · true · 닫힘)"):format(tostring(wasOpen), tostring(evictRow.removed()), evictRow.tooltipOpen() and "열림" or "닫힘"),
+		wasOpen == true and evictRow.removed() and not evictRow.tooltipOpen())
+	Toast.clear()
+
+	-- 태초 배너(TC): 이름 · 아이템 두 조각이 눌린다.
+	handle({ name = "태초러", userId = ABSENT_ID, level = 99, rebirth = 5, classId = classId, grade = "primordial", part = "shoes", itemLevel = 99, scope = "server" }, true)
+	task.wait(0.3)
+	local bannerRows = Toast.debugRows("TC")
+	local bannerText = Toast.debugTexts("TC")[1] or ""
+	check(("태초 배너: 글 [%s](기대 ★ ★5 Lv.99 태초러님이 태초 신발을 얻었습니다) · 누르는 조각 %d개(기대 2)"):format(bannerText, bannerRows[1] and bannerRows[1].hitCount() or 0),
+		bannerText == "★ ★5 Lv.99 태초러님이 태초 신발을 얻었습니다" and bannerRows[1] ~= nil and bannerRows[1].hitCount() == 2)
+	Toast.clear()
+
+	print(("===S12b 검증 끝(UI: 알림 · 이름 메뉴)=== %d/%d 통과"):format(pass, total))
+end
+
+if RunService:IsStudio() and (DevToolsConfig.verify.regression or table.find(DevToolsConfig.verify.current, "S12b(UI)")) then
+	task.delay(32, function()
+		local ok, err = pcall(selfTestS12b)
+		if not ok then
+			warn("[S12b][UI] 알림 자체 점검 에러: " .. tostring(err))
 		end
 	end)
 end

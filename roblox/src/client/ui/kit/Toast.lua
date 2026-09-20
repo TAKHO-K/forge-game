@@ -1,6 +1,6 @@
 -- 토스트(30-0 S06, PRD 20.81 [D-3]). 줄(lane) 3개: TC(시스템 · 1행 · 3초) · TR(드랍 피드 · 3줄 · 4초) · BC(획득 팝업 · 1행 · 3초).
 -- 새 알림은 직접 Frame을 세우지 않고 Toast.push(lane, { text, colorName, seconds, priority, groupKey, richParts, fadeSeconds, moreFormat, rainbow })로만 낸다.
---   · richParts = { { text, colorName | color(Color3) }, ... } - 한 행 안에서 부분마다 색을 다르게(RichText). 없으면 text 한 색.
+--   · richParts = { { text, colorName | color(Color3), size?(px), bold?, onActivate? }, ... } - 한 행 안에서 부분마다 색을 다르게(RichText). 없으면 text 한 색.
 --   · TC · BC: 행이 다 차면 대기열(최대 8)에 쌓는다. 넘치면 priority가 가장 낮은 것부터(같으면 오래된 것부터) 버린다.
 --   · TR(S10 - 사용자 결정 2026-09-20, PRD 20.93 · 보완): 대기열이 없다. 새 알림이 맨 위에 쌓이고 줄 수(capacity)가 차면 가장 오래된 줄이 밀려난다.
 --     줄 수 = 칩 스택 아래 끝 ~ 그 아래 첫 HUD 위 끝 사이에 들어가는 줄 수(최대 3) - FeedLayout이 잰다. 창 크기 · 칩 · 투표 패널이 바뀌면 다시 재고, 줄어들면 오래된 줄부터 밀어낸다.
@@ -8,16 +8,20 @@
 --   · TC: 화면 높이가 낮아 슬롯(y 64 + 높이 40)이 중앙 금지 구역 위 경계(화면 높이 25%)를 넘으면 행 높이를 줄이고 글씨를 한 단계 낮춘다(centerSafe).
 --   · 같은 groupKey가 1초 안에 오면 새 행을 세우지 않고 한 행으로 묶는다("… ×3" - moreFormat이 있으면 "… 외 2" 꼴) - 20.73 [5-3](드랍 피드)의 요구.
 --   · fadeSeconds가 있으면 seconds가 지난 뒤 그 시간 동안 흐려지며 사라진다(없으면 바로 사라진다). rainbow = true면 테두리가 무지개로 흐른다(태초 배너).
+--   · S12b: richParts 항목에 bold = true(굵게) · onActivate = function(handle)(그 부분을 누르면 부른다 - 이름 클릭 메뉴 · 아이템 옵션 툴팁)를 줄 수 있다. handle = { toggleTooltip(desc) - ItemTooltip을 그 행 옆에 토글 }.
+--     행을 **누르고 있는 동안**(또는 툴팁이 열려 있는 동안) 사라지는 타이머가 멈춘다 - 손을 떼거나 툴팁을 닫으면 seconds를 다시 센다. 툴팁이 열린 행이 밀려나면 툴팁도 닫힌다.
 -- 자리 · 크기는 ScreenMap의 슬롯(TC.toastLane · TR.dropFeed · BC.pickupPopup)에서 온다. 모양 = panel + rim + 모서리 10.
 -- 기존 토스트 5종(SaveNotice · LevelUp · ZoneBlocked · TreasureChest · ItemPickup)은 아직 이걸 안 쓴다(S17).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local FeedLayout = require(script.Parent.Parent.FeedLayout)
+local ItemTooltip = require(script.Parent.ItemTooltip)
 local ScreenMap = require(script.Parent.Parent.ScreenMap)
 local Theme = require(script.Parent.Theme)
 
@@ -37,6 +41,8 @@ local LANES = {
 }
 
 local gui
+local tooltip -- 알림 속 아이템 옵션 툴팁(ItemTooltip) - 처음 열 때 만든다. 한 번에 하나
+local tooltipOwner -- 툴팁이 떠 있는 행
 local lanes = {} -- 줄 이름 -> { frame, cfg, rowHeight, capacity, strip, active = {행...}, queue = {item...}, evicted }
 local relayoutFeed -- 아래에서 정의(TC 줄의 행이 늘고 줄 때도 부른다 - 띠가 배너 아래로 가야 한다)
 local rainbowGradients = {} -- 흐르는 무지개 테두리(태초 배너)의 UIGradient들 - 사라진 것은 돌 때 치운다
@@ -120,7 +126,15 @@ local function buildText(item, count)
 	if item.richParts then
 		local parts = {}
 		for _, part in ipairs(item.richParts) do
-			table.insert(parts, ('<font color="%s">%s</font>'):format(partHex(part), escape(part.text)))
+			local text = escape(part.text)
+			if part.bold then
+				text = "<b>" .. text .. "</b>"
+			end
+			if part.size then -- S12b: 조각마다 글씨 크기(이름 표시의 "Lv" 조각이 한 단계 작다)
+				table.insert(parts, ('<font size="%d" color="%s">%s</font>'):format(part.size, partHex(part), text))
+			else
+				table.insert(parts, ('<font color="%s">%s</font>'):format(partHex(part), text))
+			end
 		end
 		body = table.concat(parts)
 	else
@@ -140,6 +154,10 @@ local function removeRow(lane, row)
 		return
 	end
 	row.removed = true
+	if tooltipOwner == row then
+		tooltipOwner = nil
+		tooltip.hide()
+	end
 	local index = table.find(lane.active, row)
 	if index then
 		table.remove(lane.active, index)
@@ -162,21 +180,181 @@ local function scheduleExpire(lane, row, seconds)
 		if row.token ~= token or row.removed then
 			return
 		end
+		if row.holdCount > 0 or row.pinned then
+			row.expireDeferred = true -- 누르고 있거나 툴팁이 열려 있다 - 놓는 순간 다시 센다
+			return
+		end
 		local fade = row.item.fadeSeconds
 		if not fade or fade <= 0 then
 			removeRow(lane, row)
 			return
 		end
+		row.fading = true
 		local info = TweenInfo.new(fade, Enum.EasingStyle.Linear)
-		TweenService:Create(row.frame, info, { BackgroundTransparency = 1 }):Play()
-		TweenService:Create(row.label, info, { TextTransparency = 1 }):Play()
-		TweenService:Create(row.stroke, info, { Transparency = 1 }):Play()
+		row.fadeTweens = {
+			TweenService:Create(row.frame, info, { BackgroundTransparency = 1 }),
+			TweenService:Create(row.label, info, { TextTransparency = 1 }),
+			TweenService:Create(row.stroke, info, { Transparency = 1 }),
+		}
+		for _, tween in ipairs(row.fadeTweens) do
+			tween:Play()
+		end
 		task.delay(fade, function()
 			if row.token == token then
 				removeRow(lane, row)
 			end
 		end)
 	end)
+end
+
+-- ═══ S12b: 누르고 있는 동안 · 툴팁이 열린 동안 타이머 정지 ═══
+
+-- 흐려지던 중에 눌렀으면 되돌린다(진행 중인 사라짐을 취소하고 다시 또렷하게).
+local function restoreVisual(row)
+	if not row.fading then
+		return
+	end
+	row.fading = false
+	row.token += 1 -- 진행 중이던 사라짐 예약을 무효로
+	for _, tween in ipairs(row.fadeTweens or {}) do
+		tween:Cancel()
+	end
+	row.frame.BackgroundTransparency = Theme.colors.panelTransparency
+	row.label.TextTransparency = 0
+	row.stroke.Transparency = row.item.rainbow and 0 or Theme.colors.rimTransparency
+	row.expireDeferred = true
+end
+
+-- 누르지도 않고 툴팁도 없으면, 미뤄 둔 사라짐을 seconds부터 다시 센다.
+local function releaseIfIdle(lane, row)
+	if row.removed or row.holdCount > 0 or row.pinned or not row.expireDeferred then
+		return
+	end
+	row.expireDeferred = false
+	scheduleExpire(lane, row, row.item.seconds)
+end
+
+local function setPressing(lane, row, pressing)
+	local wanted = pressing and 1 or 0
+	if row.holdCount == wanted then
+		return
+	end
+	row.holdCount = wanted
+	if pressing then
+		restoreVisual(row)
+	else
+		releaseIfIdle(lane, row)
+	end
+end
+
+local function closeTooltip()
+	local owner = tooltipOwner
+	if not owner then
+		return
+	end
+	tooltipOwner = nil
+	tooltip.hide()
+	owner.pinned = false
+	releaseIfIdle(owner.lane, owner)
+end
+
+local function toggleTooltip(lane, row, desc)
+	if tooltipOwner == row then
+		closeTooltip()
+		return
+	end
+	if not tooltip then
+		tooltip = ItemTooltip.build({ parent = gui, name = "ToastItemTooltip" })
+		tooltip.root.ZIndex = 10
+	end
+	closeTooltip()
+	tooltip.set(desc)
+	tooltip.root.Visible = true
+	local position = row.frame.AbsolutePosition
+	ItemTooltip.placeNear(tooltip.root, { min = position, max = position + row.frame.AbsoluteSize }, gui.AbsoluteSize)
+	tooltipOwner = row
+	row.pinned = true
+	restoreVisual(row)
+end
+
+local function isPress(input)
+	return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+end
+
+-- 히트 영역 하나에 "누르는 동안" 신호를 잇는다.
+local function connectHitPressing(lane, row, hit)
+	hit.InputBegan:Connect(function(input)
+		if isPress(input) then
+			setPressing(lane, row, true)
+		end
+	end)
+	hit.InputEnded:Connect(function(input)
+		if isPress(input) then
+			setPressing(lane, row, false)
+		end
+	end)
+end
+
+-- 행의 글 조각 중 onActivate가 있는 것마다 그 글자 폭만큼 투명 버튼(히트 영역)을 깐다. 라벨은 가운데 정렬이라 조각 폭(TextService)의 합으로 시작 x를 구한다.
+-- 폭은 근사값이다(굵게 조각은 GothamBold로 잰다) - 양쪽 2px만 넓힌다. 모바일은 폭 44 이상.
+local function layoutHits(lane, row)
+	for _, hit in ipairs(row.hits) do
+		hit:Destroy()
+	end
+	row.hits = {}
+	local parts = row.item.richParts
+	if not parts then
+		return
+	end
+	local size, font = row.label.TextSize, row.label.Font
+	local big = Vector2.new(2000, 100)
+	local widths, total = {}, 0
+	for index, part in ipairs(parts) do
+		widths[index] = TextService:GetTextSize(part.text, part.size or size, part.bold and Enum.Font.GothamBold or font, big).X
+		total += widths[index]
+	end
+	if row.count > 1 then
+		local suffix = row.item.moreFormat and row.item.moreFormat:format(row.count - 1) or (" ×%d"):format(row.count)
+		total += TextService:GetTextSize(suffix, size, font, big).X
+	end
+	local rowWidth = lane.frame.Size.X.Offset
+	local x = TEXT_PAD + math.max(0, (rowWidth - TEXT_PAD * 2 - total) / 2)
+	row.handle = {
+		toggleTooltip = function(desc)
+			toggleTooltip(lane, row, desc)
+		end,
+	}
+	for index, part in ipairs(parts) do
+		if part.onActivate then
+			local width = math.max(widths[index] + 4, Theme.isMobile and Theme.touchMin or 0)
+			local hit = Instance.new("TextButton")
+			hit.Name = "Hit" .. index
+			hit.AutoButtonColor = false
+			hit.Text = ""
+			hit.BackgroundTransparency = 1
+			hit.AnchorPoint = Vector2.new(0.5, 0)
+			hit.Position = UDim2.new(0, math.clamp(x + widths[index] / 2, width / 2, rowWidth - width / 2), 0, 0)
+			hit.Size = UDim2.new(0, width, 1, 0)
+			hit.ZIndex = 2
+			hit.Parent = row.frame
+			hit.Activated:Connect(function()
+				part.onActivate(row.handle)
+			end)
+			table.insert(row.hits, hit)
+		end
+		x += widths[index]
+	end
+end
+
+-- 행을 누르는 동안(마우스 · 터치) 사라지는 타이머를 멈춘다. 행 전체 + 히트 영역 어디서 누르든 같다.
+local function connectPressing(lane, row)
+	connectHitPressing(lane, row, row.frame)
+	row.frame.MouseLeave:Connect(function()
+		setPressing(lane, row, false)
+	end)
+	for _, hit in ipairs(row.hits) do
+		connectHitPressing(lane, row, hit)
+	end
 end
 
 -- 중앙 금지 구역 위 경계(화면 높이 25%)가 슬롯 아래 끝(y + 높이)보다 위로 올라오면 행 높이를 위 경계 1px 위까지로 줄인다(nil = 줄일 필요 없음). 순수 함수 - screenHeight만 본다.
@@ -229,7 +407,20 @@ local function showRow(lane, item)
 	local count = item.count or 1 -- 대기 중에 합쳐진 것은 그 횟수로 시작한다
 	label.Text = buildText(item, count)
 
-	local row = { frame = frame, label = label, stroke = stroke, item = item, count = count, lastAt = os.clock(), token = 0, removed = false }
+	local row = {
+		frame = frame, label = label, stroke = stroke, item = item, count = count, lastAt = os.clock(), token = 0, removed = false,
+		lane = lane, holdCount = 0, pinned = false, expireDeferred = false, fading = false, hits = {},
+	}
+	if item.richParts then
+		for _, part in ipairs(item.richParts) do
+			if part.onActivate then
+				frame.Active = true -- 행 위를 눌러도 뒤(기본공격)로 새지 않는다
+				layoutHits(lane, row)
+				connectPressing(lane, row)
+				break
+			end
+		end
+	end
 	table.insert(lane.active, row)
 	lane.frame.Visible = true
 	scheduleExpire(lane, row, item.seconds)
@@ -252,6 +443,12 @@ local function tryMerge(lane, item)
 			row.count += 1
 			row.lastAt = now
 			row.label.Text = buildText(row.item, row.count)
+			if #row.hits > 0 then
+				layoutHits(lane, row)
+				for _, hit in ipairs(row.hits) do
+					connectHitPressing(lane, row, hit)
+				end
+			end
 			scheduleExpire(lane, row, row.item.seconds)
 			return true
 		end
@@ -387,6 +584,50 @@ function Toast.debugTexts(laneName)
 		table.insert(texts, (row.label.Text:gsub("<[^>]+>", "")))
 	end
 	return texts
+end
+
+-- 검사용: 줄의 보이는 행을 화면 순서로 돌려준다. 각 항목 = { activate(partIndex), press(), release(), pinned(), held(), removed(), tooltipOpen(), hitCount() } - 사람 손 대신 그 행을 누르는 함수들.
+function Toast.debugRows(laneName)
+	local lane = lanes[laneName]
+	local rows = {}
+	if lane then
+		for _, row in ipairs(lane.active) do
+			table.insert(rows, row)
+		end
+		table.sort(rows, function(a, b)
+			return a.frame.LayoutOrder < b.frame.LayoutOrder
+		end)
+	end
+	local list = {}
+	for _, row in ipairs(rows) do
+		table.insert(list, {
+			activate = function(partIndex)
+				row.item.richParts[partIndex].onActivate(row.handle)
+			end,
+			press = function()
+				setPressing(lane, row, true)
+			end,
+			release = function()
+				setPressing(lane, row, false)
+			end,
+			pinned = function()
+				return row.pinned
+			end,
+			held = function()
+				return row.holdCount > 0
+			end,
+			removed = function()
+				return row.removed
+			end,
+			tooltipOpen = function()
+				return tooltipOwner == row and tooltip ~= nil and tooltip.root.Visible
+			end,
+			hitCount = function()
+				return #row.hits
+			end,
+		})
+	end
+	return list
 end
 
 -- 보이는 행 · 대기열을 전부 지운다(전시장 정리용).

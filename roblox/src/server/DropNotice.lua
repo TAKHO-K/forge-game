@@ -33,9 +33,23 @@ function DropNotice.scopeFor(grade, inParty)
 	return nil
 end
 
--- 클라로 가는 내용. 이름 · 등급 · 부위 · itemLevel(+ 어디까지 알리는지)만 싣는다 - 옵션 · 능력치는 싣지 않는다(PRD 20.73 [5-3] 전송).
-function DropNotice.buildPayload(name, item, scope)
-	return { name = name, grade = item.grade, part = item.part, itemLevel = item.itemLevel, scope = scope }
+-- 클라로 가는 내용. 이름 · 등급 · 부위 · itemLevel(+ 어디까지 알리는지)에 S12b가 붙인 것: 누가 얻었는가(userId · 그 순간 레벨 · 환생 · 직업 - 이름 클릭 메뉴와 "Lv.35 이름" 표시)와
+-- **드랍 순간의 옵션 스냅샷**(option = { id, roll, roll2 } - 알림을 눌러 옵션 툴팁을 볼 수 있게. 이후 강화 · 판매와 무관하다). 그 밖의 필드(dropStage · locked · 방어력 등)는 싣지 않는다.
+-- who = { userId, level, rebirth, classId } - 없으면 그 필드는 빠진다(합성 검증 · 더미).
+function DropNotice.buildPayload(name, item, scope, who)
+	local option = item.option
+	return {
+		name = name,
+		grade = item.grade,
+		part = item.part,
+		itemLevel = item.itemLevel,
+		scope = scope,
+		userId = who and who.userId,
+		level = who and who.level,
+		rebirth = who and who.rebirth,
+		classId = who and who.classId,
+		option = option and { id = option.id, roll = option.roll, roll2 = option.roll2 } or nil,
+	}
 end
 
 -- 실제 Player 인스턴스에만 보낸다(더미 · 검증 스탠드인은 Player가 아니라 FireClient 대상이 될 수 없다).
@@ -74,7 +88,14 @@ function DropNotice.publish(recipient, item, nameOverride, forceScope)
 	if not scope then
 		return nil, {}
 	end
-	local payload = DropNotice.buildPayload(nameOverride or recipient.DisplayName, item, scope)
+	-- 누가 얻었는가: 실제 Player면 Attribute에서 레벨 · 환생 · 직업을 읽는다(스탠드인 표는 userId뿐).
+	local who = { userId = recipient.UserId }
+	if typeof(recipient) == "Instance" then
+		who.level = recipient:GetAttribute("CharacterLevel")
+		who.rebirth = recipient:GetAttribute("RebirthCount")
+		who.classId = recipient:GetAttribute("ClassId")
+	end
+	local payload = DropNotice.buildPayload(nameOverride or recipient.DisplayName, item, scope, who)
 	local sent = recipientsFor(scope, recipient, party)
 	for _, player in ipairs(sent) do
 		remote:FireClient(player, payload)

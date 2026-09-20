@@ -9,6 +9,29 @@ local GemData = require(ReplicatedStorage.Shared.data.GemData)
 
 local RebirthView = {}
 
+-- S12b F: 강화대 환생 탭의 확인창과 커뮤니티 환생 제단(RebirthAltar.client.lua)이 같은 문구 · 같은 조건식을 쓴다 - 한 곳에서 내보낸다.
+RebirthView.confirmText = "정말 환생하시겠습니까?\n레벨과 무한 스테이지가 1로 초기화됩니다 - 되돌릴 수 없습니다."
+
+function RebirthView.requiredLevel(rebirthCount)
+	return 25 * (rebirthCount + 1)
+end
+
+-- 서버 결과(RebirthResult) → 한 줄 문구(기존 문구 그대로 + 보스전 · 강화 중 두 줄).
+function RebirthView.resultText(data)
+	if data.success then
+		return ("환생 성공! %d회차"):format(data.rebirthCount)
+	elseif data.reason == "level_too_low" then
+		return ("레벨이 부족합니다(필요 레벨 %d)"):format(data.requiredLevel or 0)
+	elseif data.reason == "max_rebirth" then
+		return "이미 최대 환생 회차입니다"
+	elseif data.reason == "boss_fight" then
+		return "보스전 중에는 환생할 수 없습니다"
+	elseif data.reason == "enhancing" then
+		return "강화 직후에는 잠시 뒤 다시 시도하세요"
+	end
+	return "환생 실패: " .. tostring(data.reason)
+end
+
 local player = Players.LocalPlayer
 local rebirthRequest = ReplicatedStorage:WaitForChild("RebirthRequest")
 
@@ -71,7 +94,7 @@ function RebirthView.build(parent, overlayParent)
 	confirmLabel.TextSize = 15
 	confirmLabel.TextColor3 = Color3.new(1, 1, 1)
 	confirmLabel.ZIndex = 11
-	confirmLabel.Text = "정말 환생하시겠습니까?\n레벨과 무한 스테이지가 1로 초기화됩니다 - 되돌릴 수 없습니다."
+	confirmLabel.Text = RebirthView.confirmText
 	confirmLabel.Parent = box
 
 	local confirmYes = Instance.new("TextButton")
@@ -106,7 +129,7 @@ function RebirthView.build(parent, overlayParent)
 			return
 		end
 
-		local requiredLevel = 25 * (rebirthCount + 1)
+		local requiredLevel = RebirthView.requiredLevel(rebirthCount)
 		button.Text = "환생"
 		button.AutoButtonColor = true
 		infoLabel.Text = ("환생 %d/%d회 · 현재 레벨 %d\n필요 레벨 %d - 레벨을 1로 초기화하고 무기 등급·보석 슬롯을 1단계 올립니다.\n경험치 배수 ×%d → ×%d"):format(
@@ -114,15 +137,7 @@ function RebirthView.build(parent, overlayParent)
 	end
 
 	function refs.handleResult(data)
-		if data.success then
-			resultLabel.Text = ("환생 성공! %d회차"):format(data.rebirthCount)
-		elseif data.reason == "level_too_low" then
-			resultLabel.Text = ("레벨이 부족합니다(필요 레벨 %d)"):format(data.requiredLevel or 0)
-		elseif data.reason == "max_rebirth" then
-			resultLabel.Text = "이미 최대 환생 회차입니다"
-		else
-			resultLabel.Text = "환생 실패: " .. tostring(data.reason)
-		end
+		resultLabel.Text = RebirthView.resultText(data)
 		refs.update()
 	end
 

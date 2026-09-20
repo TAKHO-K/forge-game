@@ -69,6 +69,7 @@ local PartyExpVerify = require(script.Parent.PartyExpVerify)
 local DropNoticeVerify = require(script.Parent.DropNoticeVerify)
 local BossRewardPreviewVerify = require(script.Parent.BossRewardPreviewVerify)
 local PartyTutorialVerify = require(script.Parent.PartyTutorialVerify)
+local SocialVerify = require(script.Parent.SocialVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -3204,6 +3205,7 @@ if RunService:IsStudio() then
 				{ "S10(나)", function() DropNoticeVerify.runLive(player, env) end },
 				{ "S11(나)", function() BossRewardPreviewVerify.runLive(player, env) end },
 				{ "S12(나)", function() PartyTutorialVerify.runLive(player, env) end },
+				{ "S12b(나)", function() SocialVerify.runLive(player, env) end },
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3349,6 +3351,17 @@ if RunService:IsStudio() and verifyEnabled("S11(가)") then
 		local ok, err = pcall(BossRewardPreviewVerify.runPure)
 		if not ok then
 			warn(("[S11(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S12b 자동 검증 블록(가) - 이름 표시 형식 · 툴팁 글 · 장비 조회 공개 필드 · 속도 제한 · 환생 접근 판정표 · 데이터 정합 ═══
+-- 순수 함수(플레이어 불필요). (나)는 위 29-1 체인의 끝(S12 (나) 다음) - 실제 조회 · 제단 반경 안 / 밖 환생 · 보스전 · 강화 중. 클라 쪽은 SocialSelfCheck.client.lua([S12b][UI]).
+if RunService:IsStudio() and verifyEnabled("S12b(가)") then
+	task.spawn(function()
+		local ok, err = pcall(SocialVerify.runPure)
+		if not ok then
+			warn(("[S12b(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

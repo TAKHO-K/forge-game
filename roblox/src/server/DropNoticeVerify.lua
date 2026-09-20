@@ -98,16 +98,23 @@ function DropNoticeVerify.runPure()
 		#unknown, tostring(DropNoticeData.feedRows), tostring(DropNoticeData.seconds), tostring(DropNoticeData.groupWindowSeconds)),
 		#unknown == 0 and DropNoticeData.feedRows == 3 and DropNoticeData.seconds == 4 and DropNoticeData.groupWindowSeconds == 1)
 
-	-- payload: 옵션 · 능력치를 보내지 않는다(옵션이 붙은 실제 모양의 아이템을 넣어도 5개 필드뿐).
+	-- payload: S12b가 옵션 스냅샷 · 누가(userId · 레벨 · 환생 · 직업)를 더했다(사용자 지시 2026-09-20 - 알림을 눌러 옵션을 본다). 그 밖의 필드(dropStage · locked · 방어력 · 공격력)는 여전히 안 나간다.
 	local item = {
 		grade = "relic", part = "gloves", itemLevel = 52, dropStage = 40, tierIndex = 6, locked = false,
-		option = { id = "expGain", roll = 0.9 }, defense = 123, attackPercent = 0.5,
+		option = { id = "expGain", roll = 0.9, roll2 = 0.4, secret = "x" }, defense = 123, attackPercent = 0.5,
 	}
-	local payload = DropNotice.buildPayload("철수", item, "party")
+	local payload = DropNotice.buildPayload("철수", item, "party", { userId = 77, level = 35, rebirth = 2, classId = "warrior" })
 	local keys = sortedKeys(payload)
-	r.check(("payload 필드 [%s](기대 grade · itemLevel · name · part · scope - 옵션 · 능력치 없음) · 값 %s %s %s"):format(
-		table.concat(keys, ","), payload.name, payload.grade, tostring(payload.itemLevel)),
-		table.concat(keys, ",") == "grade,itemLevel,name,part,scope" and payload.name == "철수" and payload.grade == "relic" and payload.itemLevel == 52)
+	local optionKeys = sortedKeys(payload.option or {})
+	local expectedKeys = "classId,grade,itemLevel,level,name,option,part,rebirth,scope,userId"
+	r.check(("payload 필드 [%s](기대 %s - dropStage · locked · 방어력 · 공격력 없음) · 옵션 [%s](기대 id,roll,roll2 - 임의 필드 없음) · 값 %s %s %s"):format(
+		table.concat(keys, ","), expectedKeys, table.concat(optionKeys, ","), payload.name, payload.grade, tostring(payload.itemLevel)),
+		table.concat(keys, ",") == expectedKeys and table.concat(optionKeys, ",") == "id,roll,roll2" and payload.name == "철수" and payload.grade == "relic"
+			and payload.itemLevel == 52 and payload.userId == 77 and payload.level == 35 and payload.rebirth == 2)
+
+	-- 스냅샷은 값 복사다: 드랍 뒤 원본 옵션이 바뀌어도(강화 · 재굴림) payload는 그대로.
+	item.option.roll = 0.1
+	r.check(("옵션 스냅샷은 원본과 분리된다: 원본 roll을 0.9 → 0.1로 바꿔도 payload roll %s(기대 0.9)"):format(tostring(payload.option.roll)), payload.option.roll == 0.9)
 
 	local pass, total = r.summary()
 	print(("===S10 검증 끝(가)=== %d/%d 통과"):format(pass, total))

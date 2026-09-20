@@ -250,6 +250,17 @@ return {
 		interactionRangeStuds = 12,
 	},
 
+	-- 환생 제단(S12b F) - 커뮤니티 구역(8번 칸)의 환생 전용 상호작용 물체(모델은 임시 - F5에서 교체). 위치 = 커뮤니티 구역 중심 + offsetFromCommunity(커뮤니티 센터 블록의
+	-- 리스폰 쪽 면 앞). 서버는 요청 시점에 플레이어가 이 자리 interactionRangeStuds 안에 있는지 직접 잰다(클라의 ProximityPrompt 거리만 믿지 않는다).
+	-- promptDistanceStuds는 서버 반경보다 작다 - 프롬프트가 뜬 자리에서 누른 요청은 항상 서버 반경 안이다.
+	rebirthAltar = {
+		offsetFromCommunity = Vector3.new(0, 0, -26),
+		interactionRangeStuds = 12,
+		promptDistanceStuds = 10,
+		objectText = "환생의 제단",
+		actionText = "환생",
+	},
+
 	-- 땅에 떨어진 아이템(14-1) - 구역 재설계와 무관, 값 변경 없음.
 	items = {
 		pickupRangeStuds = 2,

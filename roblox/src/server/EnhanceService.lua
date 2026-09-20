@@ -25,6 +25,12 @@ local ENHANCE_REQUEST_COOLDOWN_SECONDS = 0.5
 EnhanceService.requestCooldownSeconds = ENHANCE_REQUEST_COOLDOWN_SECONDS
 local lastRequestTick = setmetatable({}, { __mode = "k" })
 
+-- "강화 중"인가(S12b F - 환생 요청이 이 동안 거절된다). 강화는 한 요청 안에서 끝나는 동기 처리라 진행 중인 구간이 없다 - 마지막 요청 처리 직후 요청 쿨다운(결과를 화면에 보여줄 시간) 안이면 "강화 중"으로 본다.
+function EnhanceService.isBusy(player)
+	local last = lastRequestTick[player]
+	return last ~= nil and os.clock() - last < ENHANCE_REQUEST_COOLDOWN_SECONDS
+end
+
 function EnhanceService.init(resultEvent, announceEvent)
 	enhanceResult = resultEvent
 	enhanceAnnounce = announceEvent

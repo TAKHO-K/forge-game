@@ -182,7 +182,7 @@ challengeButton.Activated:Connect(function()
 	tutorialChallengeBossRequest:FireServer()
 end)
 
--- [친구 부르기](S12) - 견습 1단계에서만 보인다(ember 테두리로 강조). 2단계부터는 숨기고 장비창 파티 탭의 같은 버튼이 남는다. 초대를 못 보내는 환경이면 아예 안 보인다.
+-- [친구 부르기](S12) - 견습 1단계에서만 보인다(ember 테두리로 강조). 2단계부터는 숨기고 파티창(S12b - 옛 장비창 파티 탭)의 같은 버튼이 남는다. 초대를 못 보내는 환경이면 아예 안 보인다.
 local inviteButton = Instance.new("TextButton")
 inviteButton.Name = "InviteFriendButton"
 inviteButton.LayoutOrder = 3

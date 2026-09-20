@@ -4,7 +4,7 @@
 --       SkillSlots.client.lua)과도 겹치지 않는 높이다. 채팅창을 가리지 않는다는 지시.
 --   [2] 초대 토스트(수락/거절 버튼) + 짧은 알림 토스트 - 상단 중앙 토스트 줄(SaveNotice 64 /
 --       ZoneBoundary 100 / ZoneBlocked 108 / TreasureChest 150 / Tutorial 160)의 맨 아래 y=210.
--- 새 창을 만들지 않는다 - 초대·탈퇴·추방 조작은 장비창(InventoryUI.client.lua) "파티" 탭에 있다.
+-- 새 창을 만들지 않는다 - 초대·탈퇴·추방 조작은 파티창(panels/Party.lua - S12b에서 장비창 "파티" 탭이 독립 창이 됐다)에 있다.
 -- 색·틀은 전부 UIColors + HudChip 계열(패널 + 링 + 알약 모서리)을 그대로 쓴다.
 --
 -- 실제 파티원의 HP·레벨·직업·스테이지는 서버가 Player Attribute(Hp/MaxHp/CharacterLevel/
@@ -18,6 +18,7 @@ local TweenService = game:GetService("TweenService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
 
 local partyStateChanged = ReplicatedStorage:WaitForChild("PartyStateChanged")
 local partyInviteNotice = ReplicatedStorage:WaitForChild("PartyInviteNotice")
@@ -120,6 +121,7 @@ local function makeRow(order)
 	name.Size = UDim2.new(1, -20, 0, 15)
 	name.Font = Enum.Font.GothamBold
 	name.TextSize = 12.5
+	name.RichText = true -- S12b D: "★n Lv.35 표시이름"
 	name.TextXAlignment = Enum.TextXAlignment.Left
 	name.TextColor3 = UIColors.textPrimary
 	name.Text = ""
@@ -172,7 +174,8 @@ local function refreshRows()
 			row.frame.Visible = false
 		else
 			row.frame.Visible = true
-			local hp, maxHp, level, stage, classId, buffActive
+			local hp, maxHp, level, stage, classId, buffActive, rebirth
+			local displayName = member.name -- 서버 기록은 username - 살아 있는 Player면 DisplayName으로 바꾼다(S12b D)
 			if member.isDummy then
 				hp, maxHp = member.dummy.hp or 1, member.dummy.maxHp or 1
 				level, stage, classId = member.dummy.level, member.dummy.stage, member.dummy.classId
@@ -185,11 +188,14 @@ local function refreshRows()
 					-- 구분되게" 하라는 지시. BuffState.lua가 올려주는 Attribute를 그대로
 					-- 읽는다(dealingMode를 PlayerHealthBar.client.lua가 읽는 것과 같은 패턴).
 					buffActive = target:GetAttribute("HealerBuffActive")
+					rebirth = target:GetAttribute("RebirthCount")
+					displayName = target.DisplayName
 				end
 			end
-			row.name.Text = (member.isLeader and "★ " or "") .. member.name .. (member.isDummy and " (더미)" or "") .. (buffActive and " ✚" or "")
+			-- S12b D: 이름 줄 = "★n Lv.35 표시이름"(파티장은 이름이 금색 - 옛 "★ " 표시는 환생 ★n과 헷갈려 뺐다). 레벨은 이름 줄로 옮겨 갔다.
+			row.name.Text = PlayerLabelFormat.richText(displayName .. (member.isDummy and " (더미)" or "") .. (buffActive and " ✚" or ""), level, rebirth, 12.5)
 			row.name.TextColor3 = member.isLeader and UIColors.gold or UIColors.textPrimary
-			row.meta.Text = ("%s · Lv %s · 스테이지 %s"):format(classNameOf(classId), tostring(level or "-"), tostring(stage or "-"))
+			row.meta.Text = ("%s · 스테이지 %s"):format(classNameOf(classId), tostring(stage or "-"))
 			local ratio = (hp and maxHp and maxHp > 0) and math.clamp(hp / maxHp, 0, 1) or 0
 			row.fill.Size = UDim2.new(ratio, 0, 1, 0)
 			-- 24-3: 링 색으로 버프 여부를 구분한다(새 파티클·새 색 없이 기존 rim/success 재사용).

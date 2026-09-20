@@ -6,9 +6,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
-local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
+local RebirthAccess = require(script.Parent.RebirthAccess)
 
 local rebirthRequest = Instance.new("RemoteEvent")
 rebirthRequest.Name = "RebirthRequest"
@@ -23,11 +22,6 @@ rebirthResult.Parent = ReplicatedStorage
 local REBIRTH_REQUEST_COOLDOWN_SECONDS = 1.0
 local lastRequestTick = setmetatable({}, { __mode = "k" })
 
-local function isNearStation(rootPart)
-	local stationPosition = WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset
-	return (rootPart.Position - stationPosition).Magnitude <= WorldConfig.enhance.interactionRangeStuds
-end
-
 rebirthRequest.OnServerEvent:Connect(function(player)
 	local now = os.clock()
 	local last = lastRequestTick[player]
@@ -38,19 +32,17 @@ rebirthRequest.OnServerEvent:Connect(function(player)
 
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-	if not rootPart or not isNearStation(rootPart) then
-		return -- 강화대(무기 관련 상호작용의 허브, PRD 20.37 [3]) 밖 - 조용히 무시
+	-- 어느 자리(강화대 환생 탭 · 커뮤니티 환생 제단)에서든 서버가 위치 · 보스전 · 강화 중을 직접 잰다(RebirthAccess.attempt). 클라가 어디서 눌렀는지는 믿지 않는다.
+	local payload = RebirthAccess.attempt(player, rootPart and rootPart.Position)
+	if not payload then
+		return -- 자리 밖 · 캐릭터 없음은 조용히 무시
 	end
-
-	local success, reasonOrCount, requiredLevel = PlayerProfile.rebirth(player)
-	if success then
-		rebirthResult:FireClient(player, { success = true, rebirthCount = reasonOrCount })
+	rebirthResult:FireClient(player, payload)
+	if payload.success then
 		-- 보석 탭 갱신(무기 등급·슬롯 자동 지급 포함)은 PlayerProfile.rebirth 안에서
 		-- GemSync.push가 이미 처리한다 - 여기서 또 챙길 필요가 없다(GemSync.lua 주석 참고).
-		print(("[forge-game] 환생: %s - rebirthCount %d"):format(player.Name, reasonOrCount))
+		print(("[forge-game] 환생: %s - rebirthCount %d"):format(player.Name, payload.rebirthCount))
 		-- 되돌릴 수 없는 사건(강화·클래스 선택과 같은 층) - 즉시저장한다.
 		ImmediateSave.request(player)
-	else
-		rebirthResult:FireClient(player, { success = false, reason = reasonOrCount, requiredLevel = requiredLevel })
 	end
 end)

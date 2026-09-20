@@ -148,6 +148,68 @@ local function createCommunityPlaceholder(zone)
 	text.Parent = label
 end
 
+-- 환생 제단(S12b F) - 커뮤니티 센터 블록의 리스폰 쪽 면 앞에 놓는 환생 전용 상호작용 물체. 모델은 임시(F5에서 교체) - 강화대와 같은 도형 두 개 + ProximityPrompt.
+-- 위치 = WorldConfig.rebirthAltar(RebirthAccess.altarPosition이 서버 판정에 같은 식으로 쓴다). 프롬프트는 클라(RebirthAltar.client.lua)가 받아 확인창을 연다 -
+-- 실제 환생 여부는 서버(RebirthAccess)가 요청 시점의 위치로 다시 잰다.
+local function createRebirthAltar(communityZone)
+	local altar = WorldConfig.rebirthAltar
+	local position = WorldConfig.huntingGround.center + communityZone.center + altar.offsetFromCommunity
+	local floorTop = FLOOR_Y + FLOOR_THICKNESS / 2
+
+	local model = Instance.new("Model")
+	model.Name = "RebirthAltar"
+
+	local base = Instance.new("Part")
+	base.Name = "Base"
+	base.Size = Vector3.new(5, 2, 5)
+	base.Anchored = true
+	base.CanCollide = true
+	base.Color = Color3.fromRGB(90, 90, 100)
+	base.Position = Vector3.new(position.X, floorTop + 1, position.Z)
+	base.Parent = model
+
+	local orb = Instance.new("Part")
+	orb.Name = "Orb"
+	orb.Shape = Enum.PartType.Ball
+	orb.Size = Vector3.new(2.6, 2.6, 2.6)
+	orb.Anchored = true
+	orb.CanCollide = false
+	orb.Color = Color3.fromRGB(160, 130, 60)
+	orb.Material = Enum.Material.Neon
+	orb.Position = Vector3.new(position.X, floorTop + 3.6, position.Z)
+	orb.Parent = model
+
+	local label = Instance.new("BillboardGui")
+	label.Name = "NameplateGui"
+	label.Size = UDim2.new(4, 0, 1, 0)
+	label.StudsOffset = Vector3.new(0, 2.2, 0)
+	label.AlwaysOnTop = true
+	label.Adornee = orb
+	label.Parent = orb
+
+	local labelText = Instance.new("TextLabel")
+	labelText.BackgroundTransparency = 1
+	labelText.Size = UDim2.new(1, 0, 1, 0)
+	labelText.Text = altar.objectText
+	labelText.TextColor3 = Color3.new(1, 1, 1)
+	labelText.TextScaled = true
+	labelText.Parent = label
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "RebirthAltarPrompt"
+	prompt.ObjectText = altar.objectText
+	prompt.ActionText = altar.actionText
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 0
+	prompt.RequiresLineOfSight = false
+	prompt.MaxActivationDistance = altar.promptDistanceStuds
+	prompt.Parent = orb
+
+	model.PrimaryPart = base
+	model.Parent = Workspace
+	return model
+end
+
 local function spawnTierMonsters(zone)
 	local tierKey = MonsterData.tierOrder[zone.tierIndex]
 	local data = MonsterData[tierKey]
@@ -212,6 +274,7 @@ removeDefaultSpawns("HuntingGroundSpawn")
 removeDefaultBaseplate()
 createPlayerSpawn(WorldConfig.zones.spawn)
 createCommunityPlaceholder(WorldConfig.zones.community)
+createRebirthAltar(WorldConfig.zones.community)
 
 local totalMonsters = 0
 for _, key in ipairs(WorldConfig.tierZoneOrder) do

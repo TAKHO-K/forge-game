@@ -23,6 +23,8 @@ local UserInputService = game:GetService("UserInputService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local HelpTooltip = require(script.Parent.HelpTooltip)
+local FullTextTip = require(script.Parent.ui.kit.FullTextTip)
+local Theme = require(script.Parent.ui.kit.Theme)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
@@ -140,9 +142,7 @@ local cutoffDropdown, cutoffDropdownDim
 -- 23-4: 보석 탭(아래쪽에서 정의)을 이 시점(UIManager.register의 onOpen/onClose)이 먼저
 -- 참조한다 - cutoffDropdown과 같은 이유로 이름만 먼저 선언해 둔다.
 local updateGemTab, cancelGemDrag
--- 24-1: 파티 탭도 같은 이유로 이름만 먼저 선언한다(setupPartyTab이 아래에서 채운다).
-local updatePartyTab
-local refreshFriends -- 24-2: 탭을 열 때 다른 서버 친구 목록을 서버에 묻는다
+-- S12b: 파티 탭은 독립 창(panels/Party.lua, HUD [파티] 버튼 + P 키)으로 옮겨 갔다.
 
 -- 선택 상태: kind="bag"이면 value=서버 인덱스, kind="equip"이면 value="weapon"/"armor",
 -- kind="gemSlot"이면 value=슬롯(1~5), kind="gemBag"이면 value=gemInventory 인덱스(26-3).
@@ -176,7 +176,7 @@ toggleButton.Position = UDim2.new(1, -16, 0.5, 0)
 toggleButton.Size = UDim2.new(0, 90, 0, 36)
 toggleButton.Text = "가방"
 toggleButton.Font = Enum.Font.GothamBold
-toggleButton.TextSize = 14
+toggleButton.TextSize = Theme.textSize("body")
 toggleButton.TextColor3 = UIColors.textPrimary
 toggleButton.BackgroundColor3 = UIColors.panel
 toggleButton.BackgroundTransparency = UIColors.panelTransparency
@@ -436,7 +436,7 @@ title.BackgroundTransparency = 1
 title.AutomaticSize = Enum.AutomaticSize.X
 title.Size = UDim2.new(0, 0, 1, 0)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 14.5
+title.TextSize = Theme.textSize("header")
 title.TextColor3 = UIColors.textPrimary
 title.Text = "가방"
 title.Parent = headerLeft
@@ -447,7 +447,7 @@ countLabel.BackgroundTransparency = 1
 countLabel.AutomaticSize = Enum.AutomaticSize.X
 countLabel.Size = UDim2.new(0, 0, 1, 0)
 countLabel.Font = Enum.Font.Gotham
-countLabel.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+countLabel.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 countLabel.TextColor3 = UIColors.textTertiary
 countLabel.Text = "0 / 0"
 countLabel.Parent = headerLeft
@@ -460,7 +460,7 @@ local function makeHeaderPill(text, order, widthPadding)
 	pill.BackgroundColor3 = UIColors.panel
 	pill.BackgroundTransparency = UIColors.panelTransparency
 	pill.Font = Enum.Font.GothamBold
-	pill.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+	pill.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 	pill.TextColor3 = UIColors.textSecondary
 	pill.Text = text
 	pill.Parent = headerRight
@@ -523,7 +523,7 @@ end
 -- TAB_ROW_HEIGHT만큼 밀린다. 색 규칙은 EnhanceUI.client.lua 탭과 같은 것(선택=강조색,
 -- 나머지=패널색)을 이 창의 팔레트(UIColors)로 옮긴 것뿐 - 새 색을 안 만든다.
 local TAB_ROW_HEIGHT = 30
-local EQUIP_TAB_NAMES = { "장비", "보석", "파티" } -- 24-1: 파티 탭(초대·수락·탈퇴·추방)
+local EQUIP_TAB_NAMES = { "장비", "보석" } -- S12b: 파티 탭(24-1)은 파티창(panels/Party.lua)으로 분리
 local equipTabButtons = {}
 local equipTabContents = {}
 local activeEquipTab = "장비"
@@ -563,7 +563,7 @@ for i, name in ipairs(EQUIP_TAB_NAMES) do
 	btn.Position = UDim2.new(0, 14 + (i - 1) * 104, 0, 4)
 	btn.Text = name
 	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 13
+	btn.TextSize = Theme.textSize("body")
 	btn.BackgroundColor3 = UIColors.panel
 	btn.BackgroundTransparency = UIColors.panelTransparency
 	btn.TextColor3 = UIColors.textSecondary
@@ -608,7 +608,7 @@ local function makeSectionLabel(parent, text, y)
 	label.Position = UDim2.new(0, 14, 0, y)
 	label.Size = UDim2.new(1, -28, 0, 14)
 	label.Font = Enum.Font.GothamBold
-	label.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+	label.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 	label.TextColor3 = UIColors.textTertiary
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Text = text
@@ -670,7 +670,7 @@ do
 		optionStatsHeader.BackgroundTransparency = 1
 		optionStatsHeader.Size = UDim2.new(1, 0, 0, 14)
 		optionStatsHeader.Font = Enum.Font.GothamBold
-		optionStatsHeader.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+		optionStatsHeader.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 		optionStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
 		optionStatsHeader.TextColor3 = UIColors.textTertiary
 		optionStatsHeader.Text = "옵션 보너스"
@@ -688,7 +688,7 @@ do
 			row.BackgroundTransparency = 1
 			row.Size = UDim2.new(1, 0, 0, 15)
 			row.Font = Enum.Font.GothamBold
-			row.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+			row.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 			row.TextXAlignment = Enum.TextXAlignment.Left
 			row.TextColor3 = UIColors.textSecondary
 			row.Text = ""
@@ -722,7 +722,7 @@ local function makeStatRow(labelText, valueColor, y)
 	key.BackgroundTransparency = 1
 	key.Size = UDim2.new(0.5, 0, 1, 0)
 	key.Font = Enum.Font.GothamBold
-	key.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+	key.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 	key.TextColor3 = UIColors.textTertiary
 	key.TextXAlignment = Enum.TextXAlignment.Left
 	key.Text = labelText
@@ -734,7 +734,7 @@ local function makeStatRow(labelText, valueColor, y)
 	value.Size = UDim2.new(0.5, 0, 1, 0)
 	value.BackgroundTransparency = 1
 	value.Font = Enum.Font.GothamBold
-	value.TextSize = 13
+	value.TextSize = Theme.textSize("body")
 	value.TextColor3 = valueColor
 	value.TextXAlignment = Enum.TextXAlignment.Right
 	value.Text = "-"
@@ -808,7 +808,7 @@ local function makeFootPill(dangerStyle)
 	label.AutomaticSize = Enum.AutomaticSize.X
 	label.Size = UDim2.new(0, 0, 1, 0)
 	label.Font = Enum.Font.GothamBold
-	label.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+	label.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 	label.TextColor3 = dangerStyle and Color3.fromRGB(255, 141, 141) or UIColors.textSecondary
 	label.Text = ""
 	label.Parent = pill
@@ -870,7 +870,7 @@ dname.Position = UDim2.new(0, 0, 0, 14)
 dname.Size = UDim2.new(1, 0, 0, 18)
 dname.BackgroundTransparency = 1
 dname.Font = Enum.Font.GothamBold
-dname.TextSize = 14
+dname.TextSize = Theme.textSize("body")
 dname.TextXAlignment = Enum.TextXAlignment.Left
 dname.TextColor3 = UIColors.textPrimary
 dname.Text = "선택된 아이템 없음"
@@ -881,7 +881,7 @@ dmeta.Position = UDim2.new(0, 0, 0, 36)
 dmeta.Size = UDim2.new(1, 0, 0, 16)
 dmeta.BackgroundTransparency = 1
 dmeta.Font = Enum.Font.Gotham
-dmeta.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+dmeta.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 dmeta.TextXAlignment = Enum.TextXAlignment.Left
 dmeta.TextColor3 = UIColors.textTertiary
 dmeta.Text = ""
@@ -909,7 +909,7 @@ local function makeActionButton(order, width, style)
 	btn.Text = ""
 	btn.Size = UDim2.new(0, width, 0, 34)
 	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 12.5
+	btn.TextSize = Theme.textSize("body")
 	btn.Parent = dact
 
 	local corner = Instance.new("UICorner")
@@ -1005,7 +1005,7 @@ local function setupOptionRow()
 		valueText.BackgroundTransparency = 1
 		valueText.Size = UDim2.new(0, compact and 96 or 130, 1, 0)
 		valueText.Font = Enum.Font.GothamBold
-		valueText.TextSize = 12 -- 16-6 [4]: 12px 미만 금지.
+		valueText.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 		valueText.TextXAlignment = Enum.TextXAlignment.Left
 		valueText.TextColor3 = UIColors.textPrimary
 		valueText.TextTruncate = Enum.TextTruncate.AtEnd
@@ -1018,7 +1018,7 @@ local function setupOptionRow()
 		minText.BackgroundTransparency = 1
 		minText.Size = UDim2.new(0, 26, 1, 0)
 		minText.Font = Enum.Font.Gotham
-		minText.TextSize = 10
+		minText.TextSize = Theme.textSize("caption")
 		minText.TextXAlignment = Enum.TextXAlignment.Right
 		minText.TextColor3 = UIColors.textTertiary
 		minText.Text = ""
@@ -1062,7 +1062,7 @@ local function setupOptionRow()
 		maxText.BackgroundTransparency = 1
 		maxText.Size = UDim2.new(0, 30, 1, 0)
 		maxText.Font = Enum.Font.Gotham
-		maxText.TextSize = 10
+		maxText.TextSize = Theme.textSize("caption")
 		maxText.TextXAlignment = Enum.TextXAlignment.Left
 		maxText.TextColor3 = UIColors.textTertiary
 		maxText.Text = ""
@@ -1715,7 +1715,7 @@ local function rebuildGearSlots()
 		nameLabel.Size = UDim2.new(1, -8, 0, 14) -- 16-6 [4]: 9.5->12px로 키운 만큼 높이도 12->14.
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.Font = Enum.Font.GothamBold
-		nameLabel.TextSize = 12
+		nameLabel.TextSize = Theme.textSize("caption")
 		nameLabel.TextColor3 = filled and UIColors.textSecondary or UIColors.textTertiary
 		nameLabel.Text = ItemVisualData.partDisplayNames[part]
 		nameLabel.Parent = slot
@@ -1728,7 +1728,7 @@ local function rebuildGearSlots()
 			lvTag.Size = UDim2.new(0, 38, 0, 14) -- 16-6 [4]: 9->12px로 키운 만큼 높이도 12->14, 폭도 34->38.
 			lvTag.BackgroundTransparency = 1
 			lvTag.Font = Enum.Font.GothamBold
-			lvTag.TextSize = 12
+			lvTag.TextSize = Theme.textSize("caption")
 			lvTag.TextXAlignment = Enum.TextXAlignment.Right
 			lvTag.TextColor3 = UIColors.textTertiary
 			lvTag.Text = ("Lv.%d"):format(level)
@@ -1755,7 +1755,7 @@ local function rebuildGearSlots()
 					optionTag.Size = UDim2.new(0, 44, 0, 14)
 					optionTag.BackgroundTransparency = 1
 					optionTag.Font = Enum.Font.GothamBold
-					optionTag.TextSize = 11
+					optionTag.TextSize = Theme.textSize("caption")
 					optionTag.TextXAlignment = Enum.TextXAlignment.Left
 					optionTag.TextTruncate = Enum.TextTruncate.AtEnd
 					optionTag.TextColor3 = mismatched and UIColors.textTertiary or (optionVisual and optionVisual.color or UIColors.textPrimary)
@@ -1879,7 +1879,7 @@ local function rebuildGrid()
 		lvTag.Size = UDim2.new(0, 38, 0, 14)
 		lvTag.BackgroundTransparency = 1
 		lvTag.Font = Enum.Font.GothamBold
-		lvTag.TextSize = 12
+		lvTag.TextSize = Theme.textSize("caption")
 		lvTag.TextXAlignment = Enum.TextXAlignment.Right
 		lvTag.TextColor3 = UIColors.textTertiary
 		lvTag.Text = ("Lv.%d"):format(item.itemLevel)
@@ -1902,7 +1902,7 @@ local function rebuildGrid()
 				optionTag.Size = UDim2.new(0, 38, 0, 14)
 				optionTag.BackgroundTransparency = 1
 				optionTag.Font = Enum.Font.GothamBold
-				optionTag.TextSize = 11
+				optionTag.TextSize = Theme.textSize("caption")
 				optionTag.TextXAlignment = Enum.TextXAlignment.Left
 				optionTag.TextTruncate = Enum.TextTruncate.AtEnd
 				optionTag.TextColor3 = mismatched and UIColors.textTertiary or iconColor
@@ -1975,13 +1975,11 @@ UIManager.register("inventory", {
 	},
 	onOpen = function()
 		isOpen = true
-		refreshFriends()
 		fitWindow() -- 닫혀 있는 동안 화면 크기가 바뀌었을 수 있다(창 회전 등).
 		rebuildGearSlots()
 		rebuildGrid()
 		refreshStats()
 		updateGemTab()
-		updatePartyTab()
 	end,
 	onClose = function()
 		isOpen = false
@@ -2049,7 +2047,7 @@ confirmText.Size = UDim2.new(1, -32, 0, 64)
 confirmText.BackgroundTransparency = 1
 confirmText.ZIndex = 21
 confirmText.Font = Enum.Font.GothamBold
-confirmText.TextSize = 13
+confirmText.TextSize = Theme.textSize("body")
 confirmText.TextWrapped = true
 confirmText.TextColor3 = UIColors.textPrimary
 confirmText.Text = ""
@@ -2076,7 +2074,7 @@ confirmHighestLabel.Size = UDim2.new(1, -47, 0, 16)
 confirmHighestLabel.BackgroundTransparency = 1
 confirmHighestLabel.ZIndex = 21
 confirmHighestLabel.Font = Enum.Font.GothamBold
-confirmHighestLabel.TextSize = 12.5
+confirmHighestLabel.TextSize = Theme.textSize("body")
 confirmHighestLabel.TextXAlignment = Enum.TextXAlignment.Left
 confirmHighestLabel.Text = ""
 confirmHighestLabel.Parent = confirmBox
@@ -2089,7 +2087,7 @@ confirmYes.BackgroundColor3 = UIColors.danger
 confirmYes.BackgroundTransparency = 0.55
 confirmYes.Text = "판매한다"
 confirmYes.Font = Enum.Font.GothamBold
-confirmYes.TextSize = 12.5
+confirmYes.TextSize = Theme.textSize("body")
 confirmYes.TextColor3 = Color3.fromRGB(255, 200, 200)
 confirmYes.ZIndex = 21
 confirmYes.Parent = confirmBox
@@ -2105,7 +2103,7 @@ confirmNo.BackgroundColor3 = UIColors.panel
 confirmNo.BackgroundTransparency = UIColors.panelTransparency
 confirmNo.Text = "취소"
 confirmNo.Font = Enum.Font.GothamBold
-confirmNo.TextSize = 12.5
+confirmNo.TextSize = Theme.textSize("body")
 confirmNo.TextColor3 = UIColors.textPrimary
 confirmNo.ZIndex = 21
 confirmNo.Parent = confirmBox
@@ -2218,7 +2216,7 @@ for order, gradeId in ipairs(BULK_SELL_GRADE_CHOICES) do
 	label.BackgroundTransparency = 1
 	label.ZIndex = 25
 	label.Font = Enum.Font.GothamBold
-	label.TextSize = 12.5
+	label.TextSize = Theme.textSize("body")
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextColor3 = UIColors.textPrimary
 	label.Text = ArmorData.grades[gradeId].displayName .. " 이하"
@@ -2463,7 +2461,7 @@ for slot = 1, Gem.slotCount do
 	label.Position = UDim2.new(0, 8, 0, 3)
 	label.Size = UDim2.new(1, -16, 0, 18)
 	label.Font = Enum.Font.Gotham
-	label.TextSize = 13.5 -- 강화대 옛 보석 탭(13px)보다 키웠다(지시 "글씨도 작고").
+	label.TextSize = Theme.textSize("body") -- 강화대 옛 보석 탭(13px)보다 키웠다(지시 "글씨도 작고").
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextColor3 = UIColors.textPrimary
 	label.TextTruncate = Enum.TextTruncate.AtEnd
@@ -2474,7 +2472,7 @@ for slot = 1, Gem.slotCount do
 	rerollButton.Size = UDim2.new(0, 64, 0, 17)
 	rerollButton.Position = UDim2.new(0, 8, 1, -20)
 	rerollButton.Font = Enum.Font.GothamBold
-	rerollButton.TextSize = 11.5
+	rerollButton.TextSize = Theme.textSize("caption")
 	rerollButton.Text = "리롤"
 	rerollButton.BackgroundColor3 = UIColors.panel
 	rerollButton.BackgroundTransparency = UIColors.panelTransparency
@@ -2489,7 +2487,7 @@ for slot = 1, Gem.slotCount do
 	buyButton.Size = UDim2.new(0, 160, 0, 17)
 	buyButton.Position = UDim2.new(0, 78, 1, -20)
 	buyButton.Font = Enum.Font.GothamBold
-	buyButton.TextSize = 11.5
+	buyButton.TextSize = Theme.textSize("caption")
 	buyButton.Text = "변환권 구매"
 	buyButton.BackgroundColor3 = UIColors.panel
 	buyButton.BackgroundTransparency = UIColors.panelTransparency
@@ -2691,7 +2689,7 @@ local function rebuildGemInventory()
 		gradeLabel.Size = UDim2.new(1, -6, 0, 15)
 		gradeLabel.Position = UDim2.new(0, 3, 1, -17)
 		gradeLabel.Font = Enum.Font.GothamBold
-		gradeLabel.TextSize = 11
+		gradeLabel.TextSize = Theme.textSize("caption")
 		gradeLabel.TextColor3 = UIColors.textPrimary
 		gradeLabel.Text = ArmorData.grades[gem.grade].displayName
 		gradeLabel.Parent = cell
@@ -2823,471 +2821,8 @@ end -- setupGemTab
 
 setupGemTab()
 
--- ═══ 파티 탭(24-1, PRD 20.47 [5](라) "패널: 내 파티(멤버 4칸) + 초대 목록(같은 서버 플레이어)") ═══
--- 지시 "새 창을 만들지 말고 기존 창 구조 안에 넣어라" - 장비창 탭 하나로 붙인다. 초대는 같은
--- 서버 안에서만(Players:GetPlayers()). 판정은 전부 서버(PartyServer.server.lua) - 여기 버튼은
--- 요청만 보낸다. 보석 탭과 같은 이유(Luau 로컬 레지스터 200개 상한)로 함수 하나에 감싼다.
-local function setupPartyTab()
-
-local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
-local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
-local partyRequest = ReplicatedStorage:WaitForChild("PartyRequest")
-local partyStateChanged = ReplicatedStorage:WaitForChild("PartyStateChanged")
-local partyFriendsFetch = ReplicatedStorage:WaitForChild("PartyFriendsFetch") -- 24-2: 다른 서버의 온라인 친구
-
-local partyBody = Instance.new("Frame")
-partyBody.Name = "PartyBody"
-partyBody.Position = body.Position
-partyBody.Size = body.Size
-partyBody.BackgroundTransparency = 1
-partyBody.Visible = false
-partyBody.Parent = content
-equipTabContents["파티"] = partyBody
-
-local partyState = nil -- 서버 스냅샷(PartyStateChanged) - nil이면 파티 없음.
-
-local COLUMN_WIDTH = 330
-local ROW_HEIGHT, ROW_GAP = 36, 6
-
-local function classNameOf(classId)
-	local class = classId and ClassData.classes[classId]
-	return class and class.displayName or "-"
-end
-
--- 좌: 내 파티 / 우: 서버 플레이어 - 두 열의 틀은 같다(제목 + 세로 목록).
-local function makeColumn(x, titleText)
-	local column = Instance.new("Frame")
-	column.Position = UDim2.new(0, x, 0, 0)
-	column.Size = UDim2.new(0, COLUMN_WIDTH, 1, 0)
-	column.BackgroundTransparency = 1
-	column.Parent = partyBody
-
-	local title = makeSectionLabel(column, titleText, 12)
-	title.Position = UDim2.new(0, 0, 0, 12)
-
-	-- 24-2: 서버 플레이어(최대 16) + 다른 서버 친구 목록이 한 열에 들어가야 해서 스크롤 프레임으로. 창 스타일은
-	-- 그대로(배경 투명·같은 행 틀), 스크롤바만 얇게.
-	local listFrame = Instance.new("ScrollingFrame")
-	listFrame.Position = UDim2.new(0, 0, 0, 40)
-	listFrame.Size = UDim2.new(1, 0, 1, -40)
-	listFrame.BackgroundTransparency = 1
-	listFrame.BorderSizePixel = 0
-	listFrame.ScrollBarThickness = 4
-	listFrame.ScrollBarImageColor3 = UIColors.rim
-	listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-	listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	listFrame.Parent = column
-
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Vertical
-	layout.Padding = UDim.new(0, ROW_GAP)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = listFrame
-
-	return column, title, listFrame
-end
-
-local myColumn, myTitle, myList = makeColumn(14, "내 파티")
-local serverColumn, serverTitle, serverList = makeColumn(14 + COLUMN_WIDTH + 30, "서버 플레이어")
-
--- 25-3에서 붙인 파티 도움말("?"). 30-0 S09(PRD 20.73 [6])가 문구를 교체했다 - 옛 문구("기여도가 낮으면 보상은 받지만…")는 사실과 달랐다(10% 미만이면 보상 자체가 없다).
--- 숫자(기여 10% · 경험치 보너스 · 투표 10초)는 데이터에서 읽어 끼운다. 패널은 280 × 176 고정(HelpTooltip options.panelSize - 다른 두 곳은 기본 200 × 70 그대로).
--- 문장은 한 줄로 이어 두고 패널이 줄바꿈한다(PRD 초안의 손 줄바꿈 + 들여쓰기는 260폭에서 더 많이 꺾여 높이가 넘친다 - 이어 쓴 문구는 156 / 160).
-do
-	local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
-	local gatePercent = math.floor(CombatConfig.contributionRewardThreshold * 100 + 0.5)
-	local bonusParts = {}
-	for memberCount = 2, PartyConfig.maxMembers do
-		table.insert(bonusParts, ("%d인 +%d%%"):format(memberCount, math.floor(PartyConfig.expBonusByMemberCount[memberCount] * 100 + 0.5)))
-	end
-	HelpTooltip.attach(myColumn, UDim2.new(0, 62, 0, 19), table.concat({
-		("■ 기여 %d%%"):format(gatePercent),
-		("몬스터에게 준 피해가 %d%%에 못 미치면 파티여도 골드·경험치·아이템·강화석을 받지 못합니다. 보스는 파티원 전원이 %d%%를 넘겨야 스테이지 클리어로 기록됩니다."):format(gatePercent, gatePercent),
-		"■ 파티 경험치",
-		table.concat(bonusParts, " · ") .. ". 장비의 경험치 옵션과 곱해집니다.",
-		"■ 드랍 알림",
-		"유물 등급 이상이 나오면 파티 전원에게 표시됩니다. 태초는 서버 전체에 알려집니다.",
-		"■ 보스 스테이지 이동",
-		("파티장이 신청하고 파티원 1명이 동의하면 전원이 이동합니다. %d초 안에 동의가 없으면 취소됩니다."):format(PartyConfig.stageVoteTimeoutSeconds),
-	}, "\n"), nil, { panelSize = Vector2.new(280, 176) })
-end
-
--- 열 사이 세로 구분선(장비 패널의 gearRightLine과 같은 선 스타일).
-local divider = Instance.new("Frame")
-divider.Position = UDim2.new(0, 14 + COLUMN_WIDTH + 14, 0, 12)
-divider.Size = UDim2.new(0, 1, 1, -24)
-divider.BackgroundColor3 = UIColors.rim
-divider.BackgroundTransparency = UIColors.rimTransparency
-divider.BorderSizePixel = 0
-divider.Parent = partyBody
-
--- 행 하나: [이름] [직업 · Lv · 스테이지]            [버튼]
-local function makeRow(parent, order)
-	local row = Instance.new("Frame")
-	row.LayoutOrder = order
-	row.Size = UDim2.new(1, 0, 0, ROW_HEIGHT)
-	row.BackgroundColor3 = UIColors.slot
-	row.BackgroundTransparency = UIColors.slotTransparency
-	row.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = row
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = UIColors.rim
-	stroke.Transparency = UIColors.rimTransparency
-	stroke.Parent = row
-
-	local name = Instance.new("TextLabel")
-	name.BackgroundTransparency = 1
-	name.Position = UDim2.new(0, 10, 0, 4)
-	name.Size = UDim2.new(1, -90, 0, 15)
-	name.Font = Enum.Font.GothamBold
-	name.TextSize = 13
-	name.TextXAlignment = Enum.TextXAlignment.Left
-	name.TextColor3 = UIColors.textPrimary
-	name.Parent = row
-
-	local meta = Instance.new("TextLabel")
-	meta.BackgroundTransparency = 1
-	meta.Position = UDim2.new(0, 10, 0, 19)
-	meta.Size = UDim2.new(1, -90, 0, 12)
-	meta.Font = Enum.Font.Gotham
-	meta.TextSize = 10.5
-	meta.TextXAlignment = Enum.TextXAlignment.Left
-	meta.TextColor3 = UIColors.textSecondary
-	meta.Parent = row
-
-	local button = Instance.new("TextButton")
-	button.AnchorPoint = Vector2.new(1, 0.5)
-	button.Position = UDim2.new(1, -8, 0.5, 0)
-	button.Size = UDim2.new(0, 64, 0, 24)
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 12
-	button.TextColor3 = Color3.new(0, 0, 0)
-	button.BackgroundColor3 = UIColors.gold
-	button.BackgroundTransparency = 0.1
-	button.Parent = row
-	local buttonCorner = Instance.new("UICorner")
-	buttonCorner.CornerRadius = UDim.new(1, 0)
-	buttonCorner.Parent = button
-
-	return { frame = row, name = name, meta = meta, button = button, connection = nil }
-end
-
-local myRows, serverRows, friendRows = {}, {}, {}
-
--- ═══ 24-2 크로스서버: 파티 코드 · 코드로 합류 · 파티 만들기(내 파티 열, 멤버 4행 아래) ═══
-local MY_EXTRA_Y = 40 + PartyConfig.maxMembers * (ROW_HEIGHT + ROW_GAP) + 8
-
-local codeLabel = Instance.new("TextLabel")
-codeLabel.BackgroundTransparency = 1
-codeLabel.Position = UDim2.new(0, 0, 0, MY_EXTRA_Y)
-codeLabel.Size = UDim2.new(1, 0, 0, 16)
-codeLabel.Font = Enum.Font.GothamBold
-codeLabel.TextSize = 12
-codeLabel.TextXAlignment = Enum.TextXAlignment.Left
-codeLabel.TextColor3 = UIColors.gold
-codeLabel.Text = ""
-codeLabel.Visible = false
-codeLabel.Parent = myColumn
-
-local codeHint = Instance.new("TextLabel")
-codeHint.BackgroundTransparency = 1
-codeHint.Position = UDim2.new(0, 0, 0, MY_EXTRA_Y + 16)
-codeHint.Size = UDim2.new(1, 0, 0, 14)
-codeHint.Font = Enum.Font.Gotham
-codeHint.TextSize = 10.5
-codeHint.TextXAlignment = Enum.TextXAlignment.Left
-codeHint.TextColor3 = UIColors.textTertiary
-codeHint.Text = "다른 서버의 친구에게 이 코드를 알려 주면 코드로 합류할 수 있습니다"
-codeHint.Visible = false
-codeHint.Parent = myColumn
-
--- 코드 입력 상자 - 장비 패널 슬롯 틀(slot 색 + rim 링)을 그대로 쓴다.
-local joinBox = Instance.new("TextBox")
-joinBox.Position = UDim2.new(0, 0, 0, MY_EXTRA_Y + 38)
-joinBox.Size = UDim2.new(0, 160, 0, 28)
-joinBox.Font = Enum.Font.GothamBold
-joinBox.TextSize = 13
-joinBox.PlaceholderText = "파티 코드 입력"
-joinBox.PlaceholderColor3 = UIColors.textTertiary
-joinBox.Text = ""
-joinBox.TextColor3 = UIColors.textPrimary
-joinBox.ClearTextOnFocus = false
-joinBox.BackgroundColor3 = UIColors.slot
-joinBox.BackgroundTransparency = UIColors.slotTransparency
-joinBox.Parent = myColumn
-local joinBoxCorner = Instance.new("UICorner")
-joinBoxCorner.CornerRadius = UDim.new(0, 8)
-joinBoxCorner.Parent = joinBox
-local joinBoxStroke = Instance.new("UIStroke")
-joinBoxStroke.Color = UIColors.rim
-joinBoxStroke.Transparency = UIColors.rimTransparency
-joinBoxStroke.Parent = joinBox
-
-local function makePillButton(parent, text, x, y, width, accent)
-	local button = Instance.new("TextButton")
-	button.Position = UDim2.new(0, x, 0, y)
-	button.Size = UDim2.new(0, width, 0, 28)
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 12
-	button.Text = text
-	button.TextColor3 = accent and Color3.new(0, 0, 0) or UIColors.textPrimary
-	button.BackgroundColor3 = accent and UIColors.gold or UIColors.panel
-	button.BackgroundTransparency = accent and 0.1 or UIColors.panelTransparency
-	button.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(1, 0)
-	corner.Parent = button
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = UIColors.rim
-	stroke.Transparency = UIColors.rimTransparency
-	stroke.Parent = button
-	return button
-end
-
-local joinButton = makePillButton(myColumn, "코드로 합류", 168, MY_EXTRA_Y + 38, 96, true)
-joinButton.Activated:Connect(function()
-	local code = joinBox.Text:gsub("%s", ""):upper()
-	if #code > 0 then
-		partyRequest:FireServer("joincode", code)
-		joinBox.Text = ""
-	end
-end)
-
-local createButton = makePillButton(myColumn, "파티 만들기 (코드 받기)", 0, MY_EXTRA_Y + 74, 160, false)
-createButton.Activated:Connect(function()
-	partyRequest:FireServer("create")
-end)
-
-local cancelJoinButton = makePillButton(myColumn, "합류 대기 취소", 168, MY_EXTRA_Y + 74, 96, false)
-cancelJoinButton.Activated:Connect(function()
-	partyRequest:FireServer("cancel_join")
-end)
-
--- S12: [친구 부르기] - 로블록스 기본 초대 창. 견습 1단계에서는 TutorialHud의 같은 버튼이 강조되고, 여기는 상시다. 초대를 못 보내는 환경이면 숨긴다.
-local FriendInvite = require(script.Parent.FriendInvite)
-local inviteFriendButton = makePillButton(myColumn, "친구 부르기", 0, MY_EXTRA_Y + 110, 160, true)
-inviteFriendButton.Name = "InviteFriendButton"
-inviteFriendButton.Size = UDim2.new(0, 160, 0, UserInputService.TouchEnabled and 44 or 28)
-inviteFriendButton.Visible = false
-FriendInvite.onAvailability(function(canShow)
-	inviteFriendButton.Visible = canShow
-end)
-inviteFriendButton.Activated:Connect(function()
-	FriendInvite.prompt()
-end)
-
-local function ensureRows(rowsTable, parent, count)
-	for i = #rowsTable + 1, count do
-		rowsTable[i] = makeRow(parent, i)
-	end
-	for i, row in ipairs(rowsTable) do
-		row.frame.Visible = i <= count
-		if row.connection then
-			row.connection:Disconnect()
-			row.connection = nil
-		end
-	end
-end
-
--- 탈퇴 버튼 - 내 파티 열 맨 아래(장비 패널 하단 버튼과 같은 알약 스타일, 위험 동작이라 hp색).
-local leaveButton = Instance.new("TextButton")
-leaveButton.AnchorPoint = Vector2.new(0, 1)
-leaveButton.Position = UDim2.new(0, 0, 1, -8)
-leaveButton.Size = UDim2.new(0, 110, 0, 28)
-leaveButton.Font = Enum.Font.GothamBold
-leaveButton.TextSize = 12
-leaveButton.Text = "파티 탈퇴"
-leaveButton.TextColor3 = UIColors.textPrimary
-leaveButton.BackgroundColor3 = UIColors.hpDark
-leaveButton.BackgroundTransparency = 0.1
-leaveButton.Visible = false
-leaveButton.Parent = myColumn
-local leaveCorner = Instance.new("UICorner")
-leaveCorner.CornerRadius = UDim.new(1, 0)
-leaveCorner.Parent = leaveButton
-local leaveStroke = Instance.new("UIStroke")
-leaveStroke.Color = UIColors.hp
-leaveStroke.Transparency = UIColors.rimTransparency
-leaveStroke.Parent = leaveButton
-leaveButton.Activated:Connect(function()
-	partyRequest:FireServer("leave")
-end)
-
-local emptyLabel = Instance.new("TextLabel")
-emptyLabel.BackgroundTransparency = 1
-emptyLabel.Position = UDim2.new(0, 0, 0, 44)
-emptyLabel.Size = UDim2.new(1, 0, 0, 40)
-emptyLabel.Font = Enum.Font.Gotham
-emptyLabel.TextSize = 12
-emptyLabel.TextWrapped = true
-emptyLabel.TextXAlignment = Enum.TextXAlignment.Left
-emptyLabel.TextColor3 = UIColors.textTertiary
-emptyLabel.Text = "파티가 없습니다. 오른쪽 목록에서 초대하면 리더가 됩니다.\n다른 서버 친구는 코드를 받아 아래에 입력하거나, 친구 목록의 초대 버튼으로 부릅니다."
-emptyLabel.Parent = myColumn
-
-local function isMeLeader()
-	return partyState ~= nil and partyState.leaderUserId == player.UserId
-end
-
--- 24-2: 다른 서버의 온라인 친구 목록(서버 응답 캐시)과 그 구분 라벨(서버 플레이어 행들 아래 끼운다).
-local friendsElsewhere = {}
-local friendsHeader = Instance.new("TextLabel")
-friendsHeader.BackgroundTransparency = 1
-friendsHeader.Size = UDim2.new(1, 0, 0, 18)
-friendsHeader.Font = Enum.Font.GothamBold
-friendsHeader.TextSize = 11
-friendsHeader.TextXAlignment = Enum.TextXAlignment.Left
-friendsHeader.TextColor3 = UIColors.textTertiary
-friendsHeader.Text = ""
-friendsHeader.Visible = false
-friendsHeader.Parent = serverList
-
-updatePartyTab = function()
-	if not isOpen then
-		return
-	end
-	-- ── 내 파티 ──
-	local members = partyState and partyState.members or {}
-	local pending = partyState and partyState.pending or {} -- 24-2: 다른 서버에서 이동 중인 좌석
-	myTitle.Text = ("내 파티 (%d/%d)%s"):format(#members + #pending, PartyConfig.maxMembers,
-		(partyState and partyState.bossActive) and " · 보스전 중" or "")
-	emptyLabel.Visible = #members == 0
-	leaveButton.Visible = #members > 0
-	codeLabel.Visible = #members > 0
-	codeHint.Visible = #members > 0
-	codeLabel.Text = partyState and partyState.code and ("파티 코드  " .. partyState.code) or "파티 코드 발급 중…"
-	createButton.Visible = #members == 0
-	cancelJoinButton.Visible = #members == 0
-	ensureRows(myRows, myList, #members + #pending)
-	for i, member in ipairs(members) do
-		local row = myRows[i]
-		local target = (not member.isDummy) and Players:GetPlayerByUserId(member.userId) or nil
-		local classId = member.isDummy and member.dummy.classId or (target and target:GetAttribute("ClassId"))
-		local level = member.isDummy and member.dummy.level or (target and target:GetAttribute("CharacterLevel"))
-		local stage = member.isDummy and member.dummy.stage or (target and target:GetAttribute("InfiniteStage"))
-		row.name.Text = (member.isLeader and "★ " or "") .. member.name .. (member.isDummy and " (더미)" or "")
-		row.name.TextColor3 = member.isLeader and UIColors.gold or UIColors.textPrimary
-		row.meta.Text = ("%s · Lv %s · 스테이지 %s"):format(classNameOf(classId), tostring(level or "-"), tostring(stage or "-"))
-		local canKick = isMeLeader() and member.userId ~= player.UserId
-		row.button.Visible = canKick
-		row.button.Text = "추방"
-		if canKick then
-			row.connection = row.button.Activated:Connect(function()
-				partyRequest:FireServer("kick", member.userId)
-			end)
-		end
-	end
-	for i, seat in ipairs(pending) do
-		local row = myRows[#members + i]
-		row.name.Text = seat.name
-		row.name.TextColor3 = UIColors.textSecondary
-		row.meta.Text = "다른 서버에서 이동 중…"
-		row.button.Visible = isMeLeader()
-		row.button.Text = "취소"
-		if isMeLeader() then
-			row.connection = row.button.Activated:Connect(function()
-				partyRequest:FireServer("kick", seat.userId)
-			end)
-		end
-	end
-
-	-- ── 서버 플레이어(나 제외) ──
-	local others = {}
-	for _, other in ipairs(Players:GetPlayers()) do
-		if other ~= player then
-			table.insert(others, other)
-		end
-	end
-	table.sort(others, function(a, b)
-		return a.Name < b.Name
-	end)
-	serverTitle.Text = ("서버 플레이어 (%d) · 다른 서버 친구 (%d)"):format(#others, #friendsElsewhere)
-	ensureRows(serverRows, serverList, #others)
-	local inMyParty = {}
-	for _, member in ipairs(members) do
-		inMyParty[member.userId] = true
-	end
-	for _, seat in ipairs(pending) do
-		inMyParty[seat.userId] = true
-	end
-	local canInvite = (partyState == nil) or (isMeLeader() and #members + #pending < PartyConfig.maxMembers)
-	for i, other in ipairs(others) do
-		local row = serverRows[i]
-		row.name.Text = other.Name
-		row.name.TextColor3 = UIColors.textPrimary
-		row.meta.Text = ("%s · Lv %s · 스테이지 %s"):format(
-			classNameOf(other:GetAttribute("ClassId")), tostring(other:GetAttribute("CharacterLevel") or "-"), tostring(other:GetAttribute("InfiniteStage") or "-"))
-		local alreadyIn = inMyParty[other.UserId]
-		row.button.Visible = true
-		row.button.Text = alreadyIn and "파티원" or "초대"
-		row.button.AutoButtonColor = canInvite and not alreadyIn
-		row.button.BackgroundColor3 = (canInvite and not alreadyIn) and UIColors.gold or UIColors.panel
-		row.button.TextColor3 = (canInvite and not alreadyIn) and Color3.new(0, 0, 0) or UIColors.textTertiary
-		if canInvite and not alreadyIn then
-			row.connection = row.button.Activated:Connect(function()
-				partyRequest:FireServer("invite", other.UserId)
-			end)
-		end
-	end
-
-	-- ── 24-2: 다른 서버의 온라인 친구(서버 플레이어 아래, 같은 행 틀) ──
-	friendsHeader.Visible = true
-	friendsHeader.LayoutOrder = #others + 1
-	friendsHeader.Text = #friendsElsewhere > 0 and "다른 서버에 있는 친구 (초대 → 상대가 수락하면 이 서버로 이동)" or "다른 서버에 있는 온라인 친구 없음"
-	ensureRows(friendRows, serverList, #friendsElsewhere)
-	for i, friend in ipairs(friendsElsewhere) do
-		local row = friendRows[i]
-		row.frame.LayoutOrder = #others + 1 + i
-		row.name.Text = friend.displayName and friend.displayName ~= friend.name and ("%s (@%s)"):format(friend.displayName, friend.name) or friend.name
-		row.name.TextColor3 = UIColors.textPrimary
-		row.meta.Text = "다른 서버 · 온라인"
-		local alreadyIn = inMyParty[friend.userId]
-		row.button.Visible = true
-		row.button.Text = alreadyIn and "파티원" or "초대"
-		row.button.AutoButtonColor = canInvite and not alreadyIn
-		row.button.BackgroundColor3 = (canInvite and not alreadyIn) and UIColors.gold or UIColors.panel
-		row.button.TextColor3 = (canInvite and not alreadyIn) and Color3.new(0, 0, 0) or UIColors.textTertiary
-		if canInvite and not alreadyIn then
-			row.connection = row.button.Activated:Connect(function()
-				partyRequest:FireServer("invite_remote", friend.userId)
-			end)
-		end
-	end
-end
-
--- 친구 목록은 탭을 열 때 한 번 서버에 묻는다(RemoteFunction, 서버가 스로틀). 응답이 오면 다시 그린다.
-local fetchingFriends = false
-refreshFriends = function()
-	if fetchingFriends then
-		return
-	end
-	fetchingFriends = true
-	task.spawn(function()
-		local ok, list = pcall(function()
-			return partyFriendsFetch:InvokeServer()
-		end)
-		fetchingFriends = false
-		if ok and type(list) == "table" then
-			friendsElsewhere = list
-			updatePartyTab()
-		end
-	end)
-end
-
-partyStateChanged.OnClientEvent:Connect(function(state)
-	partyState = state
-	updatePartyTab()
-end)
-Players.PlayerAdded:Connect(updatePartyTab)
-Players.PlayerRemoving:Connect(function()
-	task.defer(updatePartyTab)
-end)
-
-end -- setupPartyTab
-
-setupPartyTab()
+-- S12b G: 글씨를 4단(20 · 16 · 14 · 12)으로 키우면서 넘칠 수 있는 고정 폭 글은 줄임표 + 가리키거나 누르면 전체 글(FullTextTip). 나중에 지어지는 행에도 자동으로 붙는다.
+FullTextTip.attach(content, screenGui)
 
 -- ═══ 서버 동기화 ═══
 
@@ -3339,7 +2874,7 @@ fullToast.BackgroundTransparency = 1
 fullToast.TextTransparency = 1
 fullToast.TextStrokeTransparency = 0.6
 fullToast.Font = Enum.Font.GothamBold
-fullToast.TextSize = 15
+fullToast.TextSize = Theme.textSize("header")
 fullToast.TextColor3 = UIColors.danger
 fullToast.Text = "인벤토리가 가득 찼습니다 - 땅에 있는 아이템을 주울 수 없습니다"
 fullToast.Parent = screenGui

@@ -44,7 +44,7 @@ ScreenMap.zones = {
 	TC = { anchor = Vector2.new(0.5, 0), note = "레벨업 연출 · 시스템 토스트 줄(y 64 ~ 210) · 태초 서버 전체 알림 배너(4초) · 드랍 피드가 자리 없을 때 옮겨 오는 띠" },
 	TR = { anchor = Vector2.new(1, 0), note = "칩 스택(골드 · 레벨 · 스테이지 · 설정 · 견습) · 그 아래 드랍 피드" },
 	ML = { anchor = Vector2.new(0, 0.5), note = "파티 목록 · 메뉴바" },
-	MR = { anchor = Vector2.new(1, 0.5), note = "가방 버튼 · 요청 배너(파티 투표 · 초대)" },
+	MR = { anchor = Vector2.new(1, 0.5), note = "파티 버튼(S12b) · 가방 버튼 · 요청 배너(파티 투표 · 초대)" },
 	C = { anchor = Vector2.new(0.5, 0.5), note = "전투 시야 - 비운다(화면 중앙 40% × 50%에 2D UI 없음)" },
 	BL = { anchor = Vector2.new(0, 1), note = "직업 변경 버튼 · 모바일 조이스틱 - 예약(좌 40% × 하 45%)" },
 	BC = { anchor = Vector2.new(0.5, 1), note = "버프 줄 → 스킬 슬롯 → 체력바 · 획득 팝업" },
@@ -79,6 +79,7 @@ ScreenMap.slots = {
 	MR = {
 		inventoryToggle = blocksFeed(slot("existing", 1, 0.5, UDim2.new(1, -16, 0.5, 0), UDim2.new(0, 90, 0, 36), "InventoryToggleButton", "InventoryUI.client.lua - '가방' 열기 버튼(항상 보임). 투표 패널과 같은 세로 중앙이라 투표 중에는 서로 겹친다(기존 - 20.94 미결)")),
 		partyVote = blocksFeed(slot("existing", 1, 0.5, UDim2.new(1, -14, 0.5, 0), UDim2.new(0, 210, 0, 84), "PartyVotePanel", "PartyHud.client.lua")),
+		partyToggle = blocksFeed(slot("existing", 1, 1, UDim2.new(1, -16, 0.5, -48), UDim2.new(0, 90, 0, 36), "PartyToggleButton", "panels/Party.lua(S12b) - '파티' 열기 버튼(P 키와 같은 창). 가방 버튼 위 - 아래 끝을 투표 패널 위 끝(세로 중앙 - 42)보다 6px 위(- 48)에 둬 투표 중에도 안 겹친다. 모바일은 높이 44")),
 	},
 	BC = {
 		buffRow = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -141), nil, "BuffHudAnchor", "PlayerHealthBar.client.lua - 버프 아이콘 28px 행(BOTTOM_OFFSET 94 + 체력바 19 + 8 + 10 + 10)"),

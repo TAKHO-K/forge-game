@@ -1,5 +1,5 @@
 -- 패널 표(30-0 S06, PRD 20.81 [D-1] · [D-4]): { id, kind, hotkey, menuOrder, iconKey } 목록. UIManager의 단축키 루프가 이 표를 읽는다.
--- 지금은 가방(I) 한 줄뿐이다 - 나머지(P 파티 · M 스테이지 · O 상점 · K 펫 · J 보상)는 그 창을 만드는 세션(S16 ~)이 한 줄씩 넣는다.
+-- 가방(I) · 파티(P, S12b) - 나머지(M 스테이지 · O 상점 · K 펫 · J 보상)는 그 창을 만드는 세션(S16 ~)이 한 줄씩 넣는다.
 -- 금지 키(PRD 20.81 [D-1]): W A S D Q E F Space Shift X Backspace Tab Esc + 숫자열(스킬 슬롯 확장 몫) - 등록하면 error.
 
 local PanelRegistry = {}
@@ -15,6 +15,7 @@ PanelRegistry.forbiddenKeys = {
 
 PanelRegistry.panels = {
 	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.I, menuOrder = 1, iconKey = "bag" },
+	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, menuOrder = 2, iconKey = "party" }, -- S12b: 파티창(panels/Party.lua). 채팅 입력 중 P는 UIManager가 gameProcessed로 무시한다.
 }
 
 function PanelRegistry.assertAllowed(keyCode, ownerId)
