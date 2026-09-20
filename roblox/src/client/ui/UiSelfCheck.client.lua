@@ -1,6 +1,7 @@
 -- 겹침 자동 검사(30-0 S06, PRD 20.81 [D-2] 마지막 문단). Studio에서만 돈다. 접속 8초 뒤 PlayerGui에서 ScreenMap 슬롯 표에 이름이 있는 **보이는** HUD 프레임을 모아
 --   ① 서로 교차하는 쌍  ② C 구역(화면 중앙 40% × 50%)을 침범한 것  을 클라 콘솔에 찍는다: `[S06][UI] 겹침 n쌍 · 중앙 침범 m건`. 창(window · station · overlay)은 제외.
 -- 참고로 "new" 슬롯(아직 안 그려진 자리 - 드랍 피드 · 메뉴바)이 지금 보이는 HUD와 겹치는지도 별도 줄(`[S06][UI][계획]`)로 찍는다 - 점수에는 안 넣는다(PRD 20.88 미결).
+-- 표에 없는 HUD를 찾는 전수 조사도 같이 돈다(`[S06][UI][미등록]`).
 -- 이 검사는 HUD 코드를 고치지 않는다. 화면에 안 보이는 프레임(Visible = false · 크기 0 · 배경 · 글 · 이미지가 전부 투명)은 세지 않으므로, 일시 토스트끼리 겹치는 것은 그 순간 같이 떠 있을 때만 잡힌다.
 -- 중앙(C 구역)은 화면 높이 비례(가운데 40% × 50%)라 창이 작을수록 바닥 HUD가 걸린다 - 결과 줄에 화면 크기를 같이 적는다.
 
@@ -14,6 +15,7 @@ end
 local ScreenMap = require(script.Parent.ScreenMap)
 
 local CHECK_DELAY = 8
+local ENGINE_GUIS = { TouchGui = true, Freecam = true } -- 로블록스 · Studio가 만드는 ScreenGui(우리 HUD가 아니다)
 
 local function isShown(inst)
 	local node = inst
@@ -128,6 +130,21 @@ local function run()
 		end
 	end
 	print(("[S06][UI] 겹침 %d쌍 · 중앙 침범 %d건 (검사한 보이는 슬롯 %d개 · 화면 %d × %d)"):format(overlapCount, centerCount, #shown, screenSize.X, screenSize.Y))
+
+	-- 전수 조사(COMMON.md §2 "새 UI를 놓기 전에 표에 없는 기존 HUD가 있는지 먼저 확인한다"): 화면에 그려지는 HUD(ScreenGui 중 DisplayOrder 10 미만의 직계 GuiObject)가 표에 없으면 찍는다.
+	-- 창(DisplayOrder 10 이상 · ScreenMap.windowNames)과 로블록스 내장 ScreenGui는 뺀다. 일시 토스트는 그 순간 그려질 때만 잡히므로 표에 있는지는 위 표의 이름으로도 본다.
+	local unregistered = {}
+	for _, gui in ipairs(playerGui:GetChildren()) do
+		if gui:IsA("ScreenGui") and gui.Enabled and gui.DisplayOrder < 10 and not ENGINE_GUIS[gui.Name] then
+			for _, child in ipairs(gui:GetChildren()) do
+				if child:IsA("GuiObject") and not wanted[child.Name] and not ScreenMap.windowNames[child.Name] and isShown(child) and child.AbsoluteSize.X > 0 and child.AbsoluteSize.Y > 0 and draws(child) then
+					table.insert(unregistered, gui.Name .. "." .. child.Name)
+					print(("[S06][UI][미등록] %s.%s %s [%s]가 슬롯 표에 없다"):format(gui.Name, child.Name, describe(rectOf(child)), child.ClassName))
+				end
+			end
+		end
+	end
+	print(("[S06][UI][미등록] 표에 없는 보이는 HUD %d개(기대 0)"):format(#unregistered))
 
 	-- 참고: 아직 안 그려진 "new" 슬롯이 지금 보이는 HUD와 겹치는가.
 	for zone, name, slot in ScreenMap.each() do

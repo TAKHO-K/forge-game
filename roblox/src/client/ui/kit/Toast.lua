@@ -2,7 +2,10 @@
 -- 새 알림은 직접 Frame을 세우지 않고 Toast.push(lane, { text, colorName, seconds, priority, groupKey, richParts, fadeSeconds, moreFormat, rainbow })로만 낸다.
 --   · richParts = { { text, colorName | color(Color3) }, ... } - 한 행 안에서 부분마다 색을 다르게(RichText). 없으면 text 한 색.
 --   · TC · BC: 행이 다 차면 대기열(최대 8)에 쌓는다. 넘치면 priority가 가장 낮은 것부터(같으면 오래된 것부터) 버린다.
---   · TR(S10 - 사용자 결정 2026-09-20, PRD 20.93): 대기열이 없다. 새 알림이 맨 위에 쌓이고 3줄이 넘으면 가장 오래된 줄이 밀려난다. 자리는 칩 스택 바로 아래를 따라간다(ScreenMap.followBelow).
+--   · TR(S10 - 사용자 결정 2026-09-20, PRD 20.93 · 보완): 대기열이 없다. 새 알림이 맨 위에 쌓이고 줄 수(capacity)가 차면 가장 오래된 줄이 밀려난다.
+--     줄 수 = 칩 스택 아래 끝 ~ 그 아래 첫 HUD 위 끝 사이에 들어가는 줄 수(최대 3) - FeedLayout이 잰다. 창 크기 · 칩 · 투표 패널이 바뀌면 다시 재고, 줄어들면 오래된 줄부터 밀어낸다.
+--     0줄이면 상단 가운데 띠(1줄)로 옮겨 가고, 태초 배너(TC)가 떠 있으면 그 바로 아래에 붙는다.
+--   · TC: 화면 높이가 낮아 슬롯(y 64 + 높이 40)이 중앙 금지 구역 위 경계(화면 높이 25%)를 넘으면 행 높이를 줄이고 글씨를 한 단계 낮춘다(centerSafe).
 --   · 같은 groupKey가 1초 안에 오면 새 행을 세우지 않고 한 행으로 묶는다("… ×3" - moreFormat이 있으면 "… 외 2" 꼴) - 20.73 [5-3](드랍 피드)의 요구.
 --   · fadeSeconds가 있으면 seconds가 지난 뒤 그 시간 동안 흐려지며 사라진다(없으면 바로 사라진다). rainbow = true면 테두리가 무지개로 흐른다(태초 배너).
 -- 자리 · 크기는 ScreenMap의 슬롯(TC.toastLane · TR.dropFeed · BC.pickupPopup)에서 온다. 모양 = panel + rim + 모서리 10.
@@ -14,6 +17,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local FeedLayout = require(script.Parent.Parent.FeedLayout)
 local ScreenMap = require(script.Parent.Parent.ScreenMap)
 local Theme = require(script.Parent.Theme)
 
@@ -25,15 +29,16 @@ local ROW_GAP = 3
 local TEXT_PAD = 10
 
 -- 줄 정의: 구역 · 슬롯(ScreenMap) · 최대 행 수 · 기본 시간(초). 행 높이는 슬롯 높이에서 나온다.
---   evict = 행이 다 차면 대기열이 아니라 가장 오래된 행을 밀어낸다 · newestOnTop = 새 행이 맨 위.
+--   evict = 행이 다 차면 대기열이 아니라 가장 오래된 행을 밀어낸다 · newestOnTop = 새 행이 맨 위 · fit = 남은 자리로 줄 수(capacity)를 정한다(rows는 그 최대) · centerSafe = 낮은 화면에서 행이 중앙 금지 구역을 안 건드리게 줄인다.
 local LANES = {
-	TC = { zone = "TC", slot = "toastLane", rows = 1, seconds = 3, align = Enum.VerticalAlignment.Top },
-	TR = { zone = "TR", slot = "dropFeed", rows = 3, seconds = 4, align = Enum.VerticalAlignment.Top, evict = true, newestOnTop = true },
+	TC = { zone = "TC", slot = "toastLane", rows = 1, seconds = 3, align = Enum.VerticalAlignment.Top, centerSafe = true },
+	TR = { zone = "TR", slot = "dropFeed", rows = 3, seconds = 4, align = Enum.VerticalAlignment.Top, evict = true, newestOnTop = true, fit = true },
 	BC = { zone = "BC", slot = "pickupPopup", rows = 1, seconds = 3, align = Enum.VerticalAlignment.Bottom },
 }
 
 local gui
-local lanes = {} -- 줄 이름 -> { frame, cfg, rowHeight, active = {행...}, queue = {item...}, evicted }
+local lanes = {} -- 줄 이름 -> { frame, cfg, rowHeight, capacity, strip, active = {행...}, queue = {item...}, evicted }
+local relayoutFeed -- 아래에서 정의(TC 줄의 행이 늘고 줄 때도 부른다 - 띠가 배너 아래로 가야 한다)
 local rainbowGradients = {} -- 흐르는 무지개 테두리(태초 배너)의 UIGradient들 - 사라진 것은 돌 때 치운다
 
 local function ensureGui()
@@ -55,9 +60,6 @@ local function ensureGui()
 		frame.Visible = false -- 행이 있을 때만 보인다(빈 줄이 겹침 검사에 잡히지 않게)
 		ScreenMap.place(frame, cfg.zone, cfg.slot)
 		frame.Parent = gui
-		if slotDef.below then
-			ScreenMap.followBelow(frame, cfg.zone, cfg.slot, gui.Parent)
-		end
 
 		local layout = Instance.new("UIListLayout")
 		layout.FillDirection = Enum.FillDirection.Vertical
@@ -71,11 +73,21 @@ local function ensureGui()
 			frame = frame,
 			cfg = cfg,
 			rowHeight = (slotDef.size.Y.Offset - (cfg.rows - 1) * ROW_GAP) / cfg.rows,
+			baseRowHeight = (slotDef.size.Y.Offset - (cfg.rows - 1) * ROW_GAP) / cfg.rows,
+			capacity = cfg.rows,
+			strip = false,
 			active = {},
 			queue = {},
 			nextOrder = 0,
 			evicted = 0,
 		}
+	end
+
+	if lanes.TR and lanes.TR.cfg.fit then
+		FeedLayout.bind(gui.Parent, gui, function()
+			relayoutFeed()
+		end)
+		relayoutFeed()
 	end
 
 	RunService.RenderStepped:Connect(function(dt)
@@ -137,6 +149,9 @@ local function removeRow(lane, row)
 	if #lane.active == 0 then
 		lane.frame.Visible = false
 	end
+	if lane.cfg.zone == "TC" then
+		relayoutFeed()
+	end
 end
 
 -- seconds 뒤에 사라진다. fadeSeconds가 있으면 그 시간 동안 흐려진 뒤 지운다(묶임으로 다시 예약되면 이전 예약은 token으로 무효).
@@ -164,8 +179,25 @@ local function scheduleExpire(lane, row, seconds)
 	end)
 end
 
+-- 중앙 금지 구역 위 경계(화면 높이 25%)가 슬롯 아래 끝(y + 높이)보다 위로 올라오면 행 높이를 위 경계 1px 위까지로 줄인다(nil = 줄일 필요 없음). 순수 함수 - screenHeight만 본다.
+function Toast.centerSafeRowHeight(screenHeight)
+	local slotDef = ScreenMap.slot("TC", "toastLane")
+	local top = slotDef.position.Y.Offset
+	local zoneTop = math.floor(screenHeight * ScreenMap.centerFraction.top)
+	if zoneTop >= top + slotDef.size.Y.Offset then
+		return nil
+	end
+	return math.max(zoneTop - 1 - top, Theme.text.caption + 4)
+end
+
 local function showRow(lane, item)
 	lane.nextOrder += 1
+	local compactHeight = lane.cfg.centerSafe and Toast.centerSafeRowHeight(gui.AbsoluteSize.Y) or nil
+	lane.rowHeight = compactHeight or lane.baseRowHeight
+	if lane.cfg.centerSafe then
+		local slotDef = ScreenMap.slot(lane.cfg.zone, lane.cfg.slot)
+		lane.frame.Size = UDim2.new(slotDef.size.X.Scale, slotDef.size.X.Offset, 0, lane.rowHeight)
+	end
 	local frame = Instance.new("Frame")
 	frame.Name = "ToastRow"
 	frame.LayoutOrder = lane.cfg.newestOnTop and -lane.nextOrder or lane.nextOrder
@@ -191,6 +223,9 @@ local function showRow(lane, item)
 	label.Position = UDim2.new(0, TEXT_PAD, 0, 0)
 	label.Size = UDim2.new(1, -TEXT_PAD * 2, 1, 0)
 	label.TextXAlignment = Enum.TextXAlignment.Center
+	if compactHeight then
+		label.TextSize = Theme.text.caption -- 한 단계 낮춤: 모바일 확대(x1.15)를 뺀 기본 caption(12 - 12 미만 금지선)
+	end
 	local count = item.count or 1 -- 대기 중에 합쳐진 것은 그 횟수로 시작한다
 	label.Text = buildText(item, count)
 
@@ -198,10 +233,13 @@ local function showRow(lane, item)
 	table.insert(lane.active, row)
 	lane.frame.Visible = true
 	scheduleExpire(lane, row, item.seconds)
+	if lane.cfg.zone == "TC" then
+		relayoutFeed()
+	end
 end
 
 showNext = function(lane)
-	while #lane.queue > 0 and #lane.active < lane.cfg.rows do
+	while #lane.queue > 0 and #lane.active < lane.capacity do
 		showRow(lane, table.remove(lane.queue, 1))
 	end
 end
@@ -226,6 +264,43 @@ local function tryMerge(lane, item)
 		end
 	end
 	return false
+end
+
+-- 줄 수(capacity)를 바꾼다. 보이는 행이 새 줄 수를 넘으면 가장 오래된 것부터 밀어낸다(active는 들어온 순서).
+local function applyCapacity(lane, rows)
+	lane.capacity = rows
+	while #lane.active > rows do
+		removeRow(lane, lane.active[1])
+		lane.evicted += 1
+	end
+end
+
+-- 태초 배너(TC 줄)가 떠 있으면 그 아래 끝 y(없으면 nil). 행 높이는 showRow가 정한 값이다(낮은 화면에서는 줄어든다).
+local function bannerBottom()
+	local banner = lanes.TC
+	if not banner or #banner.active == 0 then
+		return nil
+	end
+	return ScreenMap.slot(banner.cfg.zone, banner.cfg.slot).position.Y.Offset + banner.rowHeight
+end
+
+relayoutFeed = function()
+	local lane = lanes.TR
+	if not gui or not lane or not lane.cfg.fit then
+		return
+	end
+	local placement = FeedLayout.measure(gui.Parent, gui.AbsoluteSize, {
+		rowHeight = lane.rowHeight,
+		gap = ROW_GAP,
+		maxRows = lane.cfg.rows,
+		bannerBottom = bannerBottom(),
+	})
+	applyCapacity(lane, placement.rows)
+	lane.strip = placement.strip
+	local slotDef = ScreenMap.slot(lane.cfg.zone, lane.cfg.slot)
+	lane.frame.AnchorPoint = placement.anchor
+	lane.frame.Position = placement.position
+	lane.frame.Size = UDim2.new(0, slotDef.size.X.Offset, 0, placement.rows * lane.rowHeight + (placement.rows - 1) * ROW_GAP)
 end
 
 -- 대기열이 넘치면 priority가 가장 낮은 것(같으면 가장 오래된 것)을 버린다.
@@ -260,7 +335,7 @@ function Toast.push(laneName, item)
 	if entry.groupKey and tryMerge(lane, entry) then
 		return "merged"
 	end
-	if #lane.active < lane.cfg.rows then
+	if #lane.active < lane.capacity then
 		showRow(lane, entry)
 		return "shown"
 	end
@@ -277,13 +352,22 @@ function Toast.push(laneName, item)
 	return "queued"
 end
 
--- 줄의 지금 상태({ rows = 보이는 행 수, queued = 대기 수, maxRows, evicted = 밀려난 누계 }). 아직 줄을 만들기 전이면 0.
+-- 줄의 지금 상태({ rows = 보이는 행 수, queued = 대기 수, maxRows, capacity = 지금 들어가는 줄 수, strip = 상단 띠로 옮겨 갔는가, evicted = 밀려난 누계 }). 아직 줄을 만들기 전이면 0.
 function Toast.debugState(laneName)
 	local lane = lanes[laneName]
 	if not lane then
-		return { rows = 0, queued = 0, maxRows = LANES[laneName] and LANES[laneName].rows or 0, evicted = 0 }
+		return { rows = 0, queued = 0, maxRows = LANES[laneName] and LANES[laneName].rows or 0, capacity = 0, strip = false, evicted = 0 }
 	end
-	return { rows = #lane.active, queued = #lane.queue, maxRows = lane.cfg.rows, evicted = lane.evicted }
+	return { rows = #lane.active, queued = #lane.queue, maxRows = lane.cfg.rows, capacity = lane.capacity, strip = lane.strip, evicted = lane.evicted }
+end
+
+-- 검사용: 줄 수를 강제로 바꾼다(줄어들면 오래된 행이 밀려난다 - 실제 재배치와 같은 함수). Toast.debugRelayout()이나 Toast.clear()로 실제 값으로 되돌린다.
+function Toast.debugSetCapacity(laneName, rows)
+	applyCapacity(lanes[laneName], rows)
+end
+
+function Toast.debugRelayout()
+	relayoutFeed()
 end
 
 -- 줄의 보이는 행 글자(위에서 아래 순서 · 태그 없는 글) - 검사용. 행 Frame의 LayoutOrder 순서 = 화면 순서.
@@ -314,6 +398,7 @@ function Toast.clear()
 			removeRow(lane, row)
 		end
 	end
+	relayoutFeed() -- 검사가 강제로 바꾼 줄 수를 실제 값으로 되돌린다
 end
 
 return Toast

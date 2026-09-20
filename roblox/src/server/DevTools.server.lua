@@ -2995,18 +2995,50 @@ if RunService:IsStudio() and verifyEnabled("27-4(가)") then
 			}
 			local ORDER = { "heavy", "shockwave", "charge", "meteor", "cross" }
 
+			-- S10 보완(2026-09-20): 이 블록은 프로필만 기다려서 서버 시작 직후에 돌면 캐릭터 · 보스가 아직 없어 "준비 실패 - 건너뜀"(0/5)이 났다(S05 · S10 회귀에서 재현).
+			-- 캐릭터(HumanoidRootPart) · 보스 모델 · 보스 데이터가 갖춰질 때까지 기다리고, 제한 시간(READY_TIMEOUT 초)이 지나면 X와 함께 무엇이 없는지 찍는다. 판정(기대 phase)은 그대로다.
+			local READY_TIMEOUT = 20
+			local function readiness()
+				local character = player.Character
+				local root = character and character:FindFirstChild("HumanoidRootPart")
+				local model = BossEncounter.getActive(player)
+				local data = model and MonsterState.getData(model)
+				return model, data, root
+			end
+			local function waitUntilReady(needBoss)
+				local waitedReady = 0
+				local model, data, root = readiness()
+				while (not root or (needBoss and (not model or not data))) and waitedReady < READY_TIMEOUT do
+					task.wait(0.25)
+					waitedReady += 0.25
+					model, data, root = readiness()
+				end
+				return model, data, root, waitedReady
+			end
+			local function missingText(model, data, root)
+				local missing = {}
+				if not root then
+					table.insert(missing, player.Character and "HumanoidRootPart" or "캐릭터")
+				end
+				if not model then
+					table.insert(missing, "보스 모델")
+				elseif not data then
+					table.insert(missing, "보스 데이터")
+				end
+				return table.concat(missing, " · ")
+			end
+
 			for _, id in ipairs(ORDER) do
+				local _, _, rootBefore = waitUntilReady(false) -- 스폰은 플레이어를 아레나로 옮긴다 - 캐릭터가 먼저 있어야 한다
 				BossEncounter.despawnFor(player)
 				applyStage(player, BossData.stageInterval)
 				-- 29-2: 이 블록의 다섯 id는 기본형(구간 수호자)의 스킬이다 - 보스마다 스킬표가 달라졌으므로 기본형으로 고정한다.
 				BossEncounter.setDebugForcedBoss(player, BossData.tutorialBossId)
 				BossEncounter.spawnFor(player, BossData.stageInterval)
-				local model = BossEncounter.getActive(player)
-				local data = model and MonsterState.getData(model)
-				local character = player.Character
-				local root = character and character:FindFirstChild("HumanoidRootPart")
+				local model, data, root, waitedReady = waitUntilReady(true)
 				if not model or not data or not root then
-					print(("[27-4][가:%s] 보스/캐릭터 준비 실패 - 건너뜀 %s"):format(id, record(false)))
+					print(("[27-4][가:%s] 준비 시간 초과(%d초 기다림) - 없는 것: %s(스폰 전 캐릭터 %s) %s"):format(
+						id, waitedReady, missingText(model, data, root), rootBefore and "있음" or "없음", record(false)))
 				else
 					local ok = BossPatterns.force(model, data, id)
 					local stepOk, stepErr = pcall(function()

@@ -7,8 +7,12 @@
 --   "new"      - 새 기능이 받을 자리(PRD [D-2] 값). 아직 그 자리에 그려지는 것이 없다.
 -- 값이 PRD 지도와 다른 곳은 코드가 맞다(20.81 [D-2] 지도의 경험치바 26px → 코드 15px 등).
 -- instanceName: 겹침 검사가 PlayerGui에서 이 이름의 인스턴스를 찾아 화면에 보이는 동안의 AbsolutePosition · AbsoluteSize를 잰다.
--- below = { zone, slot, gap }: 고정 y를 쓰지 않고 그 슬롯(인스턴스)의 아래 끝 + gap에 놓인다 - ScreenMap.followBelow가 그 인스턴스 크기를 따라 내려간다. position은 그 슬롯이 비어 있을 때의 자리다.
+-- below = { zone, slot, gap }: 고정 y를 쓰지 않고 그 슬롯(인스턴스)의 아래 끝 + gap에 놓인다 - FeedLayout(ui/FeedLayout.lua)이 그 인스턴스 크기를 따라 재고, 남은 자리만큼만 줄을 세운다. position은 그 슬롯이 비어 있을 때의 자리다.
+-- fallback = { zone, slot, gap }: below 자리에 한 줄도 안 들어갈 때 옮겨 가는 자리(그 슬롯의 좌표, 상단 가운데 띠). 태초 배너가 떠 있으면 배너 아래 끝 + gap.
+-- blocksDropFeed = true: 이 HUD가 보이는 동안 드랍 피드가 그 위 끝 아래로 못 내려온다(FeedLayout이 읽는다). 새 HUD를 피드 아래에 놓으면 여기에 표시한다.
 --   size = nil은 AutomaticSize(내용 크기)다. 슬롯 하나가 자식 여럿을 품는 스택이면(chipStack) 자식은 따로 적지 않는다(겹침 검사에서 부모와 겹친 것으로 잘못 잡히지 않게).
+-- **새 UI를 놓기 전에 이 표에 없는 기존 HUD가 있는지 먼저 확인한다**(COMMON.md §2). 화면에 뜨는 HUD 전수 = PlayerGui의 ScreenGui(DisplayOrder 0 ~ 8) 직계 GuiObject - UiSelfCheck가 표에 없는 것을 [S06][UI][미등록]으로 찍는다.
+-- 표에 안 넣는 것(사유): 창(window · station · overlay - UIManager · PanelRegistry가 자리를 정한다 · 직업 선택창 ClassSelectPanel · ClassConfirmPanel은 ScreenMap.windowNames) · 월드에 붙는 BillboardGui(데미지 숫자 · 골드 · 재료 팝업 · 보스 머리 위 표시) · 로블록스 CoreGui(채팅 · 플레이어 목록 · TouchGui).
 
 local ScreenMap = {}
 
@@ -26,15 +30,23 @@ local function slot(status, anchorX, anchorY, position, size, instanceName, note
 	}
 end
 
+local function blocksFeed(entry)
+	entry.blocksDropFeed = true
+	return entry
+end
+
+-- 창으로 취급해 HUD 표에서 뺀 인스턴스 이름(UiSelfCheck의 미등록 탐지가 건너뛴다). 이 밖의 창은 DisplayOrder 10 이상 ScreenGui라 자동으로 빠진다.
+ScreenMap.windowNames = { ClassSelectPanel = true, ClassConfirmPanel = true }
+
 -- 구역: 앵커(가장자리 기준점). C는 슬롯이 없다("영구히 없음" - window · overlay 제외).
 ScreenMap.zones = {
 	TL = { anchor = Vector2.new(0, 0), note = "로블록스 채팅창 - 손대지 않는다" },
-	TC = { anchor = Vector2.new(0.5, 0), note = "레벨업 연출 · 시스템 토스트 줄(y 64 ~ 210) · 태초 서버 전체 알림 배너(4초)" },
+	TC = { anchor = Vector2.new(0.5, 0), note = "레벨업 연출 · 시스템 토스트 줄(y 64 ~ 210) · 태초 서버 전체 알림 배너(4초) · 드랍 피드가 자리 없을 때 옮겨 오는 띠" },
 	TR = { anchor = Vector2.new(1, 0), note = "칩 스택(골드 · 레벨 · 스테이지 · 설정 · 견습) · 그 아래 드랍 피드" },
 	ML = { anchor = Vector2.new(0, 0.5), note = "파티 목록 · 메뉴바" },
-	MR = { anchor = Vector2.new(1, 0.5), note = "요청 배너(파티 투표 · 초대)" },
+	MR = { anchor = Vector2.new(1, 0.5), note = "가방 버튼 · 요청 배너(파티 투표 · 초대)" },
 	C = { anchor = Vector2.new(0.5, 0.5), note = "전투 시야 - 비운다(화면 중앙 40% × 50%에 2D UI 없음)" },
-	BL = { anchor = Vector2.new(0, 1), note = "모바일 조이스틱 - 예약(좌 40% × 하 45%), 슬롯 없음" },
+	BL = { anchor = Vector2.new(0, 1), note = "직업 변경 버튼 · 모바일 조이스틱 - 예약(좌 40% × 하 45%)" },
 	BC = { anchor = Vector2.new(0.5, 1), note = "버프 줄 → 스킬 슬롯 → 체력바 · 획득 팝업" },
 	BR = { anchor = Vector2.new(1, 1), note = "모바일 공격 · 스킬 · 대시 - 예약(우 30% × 하 50%), 슬롯 없음" },
 	XP = { anchor = Vector2.new(0.5, 1), note = "경험치바(전체 폭)" },
@@ -54,15 +66,19 @@ ScreenMap.slots = {
 	TR = {
 		chipStack = slot("existing", 1, 0, UDim2.new(1, -14, 0, 52), nil, "TopChipsRow", "StageUI.client.lua - 골드(LayoutOrder 1) · 레벨(2) · 스테이지(3) · 설정(4) · 견습(5) 세로 스택, 간격 8. PRD 지도의 '골드 · 스테이지 칩'이 코드에서는 이 스택이다"),
 		dropFeed = slot("new", 1, 0, UDim2.new(1, -14, 0, 52), UDim2.new(0, 300, 0, 78), "ToastLane_TR",
-			"Toast 줄 TR(드랍 피드 · 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 3줄 넘으면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93): 칩 스택 바로 아래 같은 세로 줄. 고정 y 없이 칩 스택의 아래 끝 + 8을 따라 내려간다(칩이 0개면 52 = 칩 스택 윗줄 자리)",
+			"Toast 줄 TR(드랍 피드 · 최대 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 넘치면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93 · 보완): 칩 스택 바로 아래(아래 끝 + 8)에 남은 자리만큼(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 구역 위 끝까지, 최대 3줄), 0줄이면 상단 가운데 띠 1줄(태초 배너가 있으면 그 아래 3)",
 			{ zone = "TR", slot = "chipStack", gap = 8 }),
 	},
 	ML = {
 		partyList = slot("existing", 0, 0.5, UDim2.new(0, 14, 0.5, 0), nil, "PartyList", "PartyHud.client.lua - 행 196 × 44"),
 		menuBar = slot("new", 0, 0.5, UDim2.new(0, 14, 0.5, 0), nil, "MenuBar", "메뉴바(S16) - PRD [D-2] 값. 파티 목록이 x = 14 + 48 + 8로 옮겨가야 한다(S18)"),
 	},
+	BL = {
+		classReopen = slot("existing", 0, 1, UDim2.new(0, 24, 1, -34), UDim2.new(0, 90, 0, 36), "ClassReopenButton", "ClassSelectUI.client.lua - '직업 변경' 상시 버튼(y 오프셋 34는 경험치바와 8px 띄운 값). 모바일에서는 조이스틱 예약 구역 안이다(기존)"),
+	},
 	MR = {
-		partyVote = slot("existing", 1, 0.5, UDim2.new(1, -14, 0.5, 0), UDim2.new(0, 210, 0, 84), "PartyVotePanel", "PartyHud.client.lua"),
+		inventoryToggle = blocksFeed(slot("existing", 1, 0.5, UDim2.new(1, -16, 0.5, 0), UDim2.new(0, 90, 0, 36), "InventoryToggleButton", "InventoryUI.client.lua - '가방' 열기 버튼(항상 보임). 투표 패널과 같은 세로 중앙이라 투표 중에는 서로 겹친다(기존 - 20.94 미결)")),
+		partyVote = blocksFeed(slot("existing", 1, 0.5, UDim2.new(1, -14, 0.5, 0), UDim2.new(0, 210, 0, 84), "PartyVotePanel", "PartyHud.client.lua")),
 	},
 	BC = {
 		buffRow = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -141), nil, "BuffHudAnchor", "PlayerHealthBar.client.lua - 버프 아이콘 28px 행(BOTTOM_OFFSET 94 + 체력바 19 + 8 + 10 + 10)"),
@@ -71,11 +87,15 @@ ScreenMap.slots = {
 		skillRow = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -31), nil, "CentralRow", "SkillSlots.client.lua - 슬롯 54 · 높이 54(모바일 터치 배치는 SkillSlots가 따로 정한다)"),
 		itemPickup = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -140), UDim2.new(0, 360, 0, 40), "ItemPickupLabel", "ItemPickupHud.client.lua"),
 		pickupPopup = slot("new", 0.5, 1, UDim2.new(0.5, 0, 1, -140), UDim2.new(0, 360, 0, 40), "ToastLane_BC", "Toast 줄 BC(획득 팝업 · 1행 · 묶기)"),
+		bossTrap = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -170), UDim2.new(0, 260, 0, 58), "BossTrapPanel", "BossTrapView.lua - 보스 잡기 기믹에 잡혔을 때만 뜨는 카운트다운 · 구출 막대 패널(평소엔 숨김)"),
 	},
 	XP = {
 		expBar = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, 0), UDim2.new(1, 0, 0, 15), "ExpTrack", "ExpBar.client.lua - 높이 15(PRD 지도의 26px이 아니라 코드 값)"),
 	},
 }
+
+-- 드랍 피드가 남은 자리에 한 줄도 안 들어갈 때 옮겨 가는 자리 = 상단 가운데 토스트 줄(태초 배너가 있으면 그 아래 3px).
+ScreenMap.slots.TR.dropFeed.fallback = { zone = "TC", slot = "toastLane", gap = 3 }
 
 -- 모바일 터치 컨트롤 예약 구역(화면 비율) - 슬롯 없음. { left, top, right, bottom } 비율.
 ScreenMap.mobileReserved = {
@@ -99,41 +119,6 @@ function ScreenMap.place(frame, zone, slotName)
 	frame.AnchorPoint = found.anchor
 	frame.Position = found.position
 	return found
-end
-
--- 슬롯이 다른 슬롯의 "바로 아래"(slot.below)로 정해져 있으면, 그 인스턴스의 아래 끝 + gap을 frame.Position의 y로 따라간다(크기가 바뀔 때마다 - 칩이 늘고 줄어도 겹치지 않는다).
--- root = 그 인스턴스를 찾을 PlayerGui. 아직 없으면 생기는 순간 붙는다. 그 슬롯이 비어 있으면(높이 0) 이 슬롯 자신의 position.y다.
--- 가정: 대상 인스턴스는 y 앵커 0 · Position.Y.Scale 0이고 이 frame과 같은 ScreenGui 좌표계(같은 IgnoreGuiInset)에 있다(칩 스택 TopChipsRow가 그렇다).
-function ScreenMap.followBelow(frame, zone, slotName, root)
-	local found = ScreenMap.slot(zone, slotName)
-	local below = found.below
-	assert(below, ("ScreenMap.followBelow: below가 없는 슬롯 - %s.%s"):format(zone, slotName))
-	local target = ScreenMap.slot(below.zone, below.slot)
-	local function apply(inst)
-		local y = found.position.Y.Offset
-		if inst.AbsoluteSize.Y > 0 then
-			y = inst.Position.Y.Offset + inst.AbsoluteSize.Y + below.gap
-		end
-		frame.Position = UDim2.new(found.position.X.Scale, found.position.X.Offset, 0, y)
-	end
-	local function bind(inst)
-		apply(inst)
-		inst:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-			apply(inst)
-		end)
-	end
-	local inst = root:FindFirstChild(target.instanceName, true)
-	if inst then
-		bind(inst)
-		return
-	end
-	local connection
-	connection = root.DescendantAdded:Connect(function(added)
-		if added.Name == target.instanceName then
-			connection:Disconnect()
-			bind(added)
-		end
-	end)
 end
 
 -- 슬롯을 (zone, name, slot)로 돌려주는 반복자.

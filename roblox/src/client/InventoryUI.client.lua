@@ -3318,6 +3318,7 @@ end
 -- 알린다(ItemPickupHud.client.lua와 같은 가벼운 패턴). 새 창을 새로 열 만한 무게의
 -- 이벤트가 아니다.
 local fullToast = Instance.new("TextLabel")
+fullToast.Name = "InventoryFullToast" -- ScreenMap 슬롯 표(TC.inventoryFull)가 이 이름으로 찾는다
 fullToast.AnchorPoint = Vector2.new(0.5, 0.5)
 fullToast.Position = UDim2.new(0.5, 0, 0.4, 0)
 fullToast.Size = UDim2.new(0, 360, 0, 40)

@@ -1,9 +1,10 @@
 -- 파티원 드랍 알림 표시(30-0 S10, PRD 20.73 [5-3]). 서버(DropNotice)가 유물 · 고대 · 태초 장비가 굴려진 순간 { name, grade, part, itemLevel, scope }를 보낸다 - 판정 · 수신자는 전부 서버다.
---   scope "party"  → 드랍 피드(Toast TR): "OOO: 유물 장갑 Lv.52"(등급명만 등급색). 칩 스택 바로 아래 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 3줄 넘으면 오래된 줄이 밀림. 같은 사람 1초 안 여러 건은 "… 외 1".
+--   scope "party"  → 드랍 피드(Toast TR): "OOO: 유물 장갑 Lv.52"(등급명만 등급색). 칩 스택 바로 아래 남은 자리만큼(최대 3줄 - FeedLayout, 0줄이면 상단 띠 1줄) · 새 알림이 위 · 4초 뒤 흐려짐 · 넘치면 오래된 줄이 밀림. 같은 사람 1초 안 여러 건은 "… 외 1".
 --   scope "server" → 태초: 피드가 아니라 화면 상단 가운데 배너 한 줄(Toast TC · 4초 · 무지개 테두리) + 채팅 시스템 메시지 1줄.
 -- 끄기 설정은 없다. Studio에서는 접속 12초 뒤 합성 이벤트로 자체 점검(selfTest)을 돌려 [S10][UI] 줄을 찍는다(DevToolsConfig.verify에 S10(가)가 있을 때만).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TextChatService = game:GetService("TextChatService")
 
@@ -11,6 +12,8 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local DropNoticeData = require(ReplicatedStorage.Shared.data.DropNoticeData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local FeedLayout = require(script.Parent.Parent.ui.FeedLayout)
+local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local Toast = require(script.Parent.Parent.ui.kit.Toast)
 
 local dropNotice = ReplicatedStorage:WaitForChild("DropNotice")
@@ -78,6 +81,15 @@ dropNotice.OnClientEvent:Connect(function(payload)
 end)
 
 -- ── Studio 자체 점검: 합성 이벤트 12건(유물 9 · 고대 2 · 태초 1)을 넣고 피드 규칙을 읽는다. 서버 없이 클라만으로 도는 (가)다. ──
+-- 피드 줄 수(capacity)는 화면에 따라 1 ~ 3이다(남은 자리 - FeedLayout). 기대값은 지금 화면의 capacity로 계산한다.
+
+local function intersects(a, b)
+	return a.min.X < b.max.X and b.min.X < a.max.X and a.min.Y < b.max.Y and b.min.Y < a.max.Y
+end
+
+local function rectOfGui(inst)
+	return { min = inst.AbsolutePosition, max = inst.AbsolutePosition + inst.AbsoluteSize }
+end
 
 local function selfTest()
 	print("===S10 검증 시작(UI: 클라 자체 점검)===")
@@ -94,6 +106,11 @@ local function selfTest()
 	end
 
 	Toast.clear()
+	handle(relic(0), true) -- 줄을 처음 세운다(ToastGui가 이때 만들어진다)
+	task.wait(0.3) -- 배치가 자리를 잡게
+	local capacity = Toast.debugState("TR").capacity
+	Toast.clear()
+
 	for index = 1, 9 do
 		handle(relic(index), true)
 	end
@@ -105,14 +122,40 @@ local function selfTest()
 	handle({ name = "태초러", grade = "primordial", part = "shoes", itemLevel = 99, scope = "server" }, true)
 	local feed, banner = Toast.debugState("TR"), Toast.debugState("TC")
 	local feedTexts = Toast.debugTexts("TR")
-	check(("합성 12건(유물 9 · 고대 2 · 태초 1): 피드 표시 %d줄(기대 %d) · 대기 %d(기대 0 - 대기열 없음) · 밀려난 줄 %d(기대 8 = 피드 11건 - 3줄) · 태초 배너 %d줄(기대 1)"):format(
-		feed.rows, DropNoticeData.feedRows, feed.queued, feed.evicted, banner.rows),
-		feed.rows == DropNoticeData.feedRows and feed.queued == 0 and feed.evicted == 8 and banner.rows == 1)
-	check(("새 알림이 맨 위: 유물 9건 뒤 맨 위 [%s](기대 유물러9) · 12건 뒤 위에서부터 [%s](기대 고대러2 · 고대러1 · 유물러9)"):format(topAfterRelics, table.concat(feedTexts, " | ")),
-		string.find(topAfterRelics, "유물러9", 1, true) ~= nil and #feedTexts == 3 and string.find(feedTexts[1], "고대러2", 1, true) ~= nil
-			and string.find(feedTexts[2], "고대러1", 1, true) ~= nil and string.find(feedTexts[3], "유물러9", 1, true) ~= nil and afterRelics.rows == 3)
+	check(("합성 12건(유물 9 · 고대 2 · 태초 1): 지금 화면의 줄 수 %d(기대 1 ~ %d · %s) · 피드 표시 %d줄(기대 %d) · 대기 %d(기대 0 - 대기열 없음) · 밀려난 줄 %d(기대 %d = 피드 11건 - %d줄) · 태초 배너 %d줄(기대 1)"):format(
+		capacity, DropNoticeData.feedRows, feed.strip and "상단 띠" or "칩 스택 아래", feed.rows, capacity, feed.queued, feed.evicted, 11 - capacity, capacity, banner.rows),
+		capacity >= 1 and capacity <= DropNoticeData.feedRows and feed.rows == capacity and feed.queued == 0 and feed.evicted == 11 - capacity and banner.rows == 1)
+	local expectedOrder = { "고대러2", "고대러1", "유물러9", "유물러8", "유물러7" } -- 위에서부터(새 알림이 위)
+	local orderOk = #feedTexts == capacity and afterRelics.rows == capacity and string.find(topAfterRelics, "유물러9", 1, true) ~= nil
+	for index = 1, capacity do
+		orderOk = orderOk and feedTexts[index] ~= nil and string.find(feedTexts[index], expectedOrder[index], 1, true) ~= nil
+	end
+	check(("새 알림이 맨 위: 유물 9건 뒤 맨 위 [%s](기대 유물러9) · 12건 뒤 위에서부터 [%s](기대 %s)"):format(topAfterRelics, table.concat(feedTexts, " | "),
+		table.concat(table.move(expectedOrder, 1, capacity, 1, {}), " · ")), orderOk)
 	check(("피드에 태초가 없다: 피드 글 [%s] 중 '태초' 포함 %s(기대 false)"):format(table.concat(feedTexts, " | "), tostring(string.find(table.concat(feedTexts), "태초", 1, true) ~= nil)),
 		string.find(table.concat(feedTexts), "태초", 1, true) == nil)
+
+	-- 측정: 피드 프레임이 실제로 어떤 HUD와도 겹치지 않는다(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 금지 구역 · 화면 아래 + 태초 배너)
+	task.wait(0.2)
+	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local toastGui = playerGui:WaitForChild("ToastGui")
+	local screen = toastGui.AbsoluteSize
+	local feedFrame, bannerFrame = toastGui:FindFirstChild("ToastLane_TR"), toastGui:FindFirstChild("ToastLane_TC")
+	local feedRect = rectOfGui(feedFrame)
+	local hits, targets = {}, {}
+	for _, blocker in ipairs(FeedLayout.blockers(playerGui, screen)) do
+		table.insert(targets, blocker.label)
+		if intersects(feedRect, blocker) then
+			table.insert(hits, blocker.label)
+		end
+	end
+	if bannerFrame.Visible and intersects(feedRect, rectOfGui(bannerFrame)) then
+		table.insert(hits, "태초 배너")
+	end
+	print(("[S10][UI][측정] 화면 %d × %d(%s) · 피드 (%d, %d) %d × %d · %s %d줄 · 피해야 할 자리 %s · 배너 %s"):format(screen.X, screen.Y, Theme.isMobile and "모바일" or "PC",
+		feedRect.min.X, feedRect.min.Y, feedFrame.AbsoluteSize.X, feedFrame.AbsoluteSize.Y, feed.strip and "상단 띠" or "칩 스택 아래", feed.rows, table.concat(targets, " · "),
+		bannerFrame.Visible and ("(%d, %d) %d × %d"):format(bannerFrame.AbsolutePosition.X, bannerFrame.AbsolutePosition.Y, bannerFrame.AbsoluteSize.X, bannerFrame.AbsoluteSize.Y) or "없음"))
+	check(("피드 프레임이 겹치는 자리 %d개(기대 0): [%s]"):format(#hits, table.concat(hits, " · ")), #hits == 0)
 
 	Toast.clear()
 	handle({ name = "같은이", grade = "relic", part = "gloves", itemLevel = 52, scope = "party" }, true)
@@ -121,6 +164,51 @@ local function selfTest()
 	local groupedText = Toast.debugTexts("TR")[1] or ""
 	check(("같은 사람 2건(1초 안) 묶음: 줄 %d(기대 1) · 글 [%s](기대 '… 외 1' 끝)"):format(grouped.rows, groupedText),
 		grouped.rows == 1 and string.find(groupedText, "외 1", 1, true) ~= nil)
+
+	-- 줄 수가 줄어들면(창이 작아짐 · 투표 패널이 뜸) 오래된 줄부터 밀린다 - 재배치와 같은 함수로 강제 확인
+	Toast.clear()
+	Toast.debugSetCapacity("TR", 3)
+	for index = 1, 3 do
+		handle(relic(index), true)
+	end
+	local beforeShrink = Toast.debugState("TR")
+	Toast.debugSetCapacity("TR", 1)
+	local afterShrink = Toast.debugState("TR")
+	local shrinkTop = Toast.debugTexts("TR")[1] or ""
+	handle(relic(4), true)
+	local afterNew = Toast.debugState("TR")
+	local newTop = Toast.debugTexts("TR")[1] or ""
+	check(("줄 수 3 → 1: 3줄 %d → %d줄(기대 3 → 1) · 남은 줄 [%s](기대 유물러3 - 가장 오래된 줄부터 밀림) · 밀려난 +%d(기대 2) · 새 알림 뒤 %d줄 [%s](기대 1줄 유물러4) · 밀려난 +%d(기대 3)"):format(
+		beforeShrink.rows, afterShrink.rows, shrinkTop, afterShrink.evicted - beforeShrink.evicted, afterNew.rows, newTop, afterNew.evicted - beforeShrink.evicted),
+		beforeShrink.rows == 3 and afterShrink.rows == 1 and string.find(shrinkTop, "유물러3", 1, true) ~= nil and afterShrink.evicted - beforeShrink.evicted == 2
+			and afterNew.rows == 1 and string.find(newTop, "유물러4", 1, true) ~= nil and afterNew.evicted - beforeShrink.evicted == 3)
+	Toast.clear() -- 실제 줄 수로 되돌린다
+
+	-- 줄 수 계산(순수): 칩 스택 아래 y 238 · 가로 1007 ~ 1307 · 줄 24 · 간격 3
+	local function block(minX, minY, maxX, maxY)
+		return { min = Vector2.new(minX, minY), max = Vector2.new(maxX, maxY) }
+	end
+	local function fit(...)
+		return FeedLayout.fitRows(238, 1007, 1307, 24, 3, 3, { ... })
+	end
+	local fitOk = fit() == 3 -- 막는 것 없음
+		and fit(block(1215, 316, 1305, 352)) == 3 -- 위 끝 316 = 3줄이 딱 들어감(238 + 78)
+		and fit(block(1215, 315, 1305, 351)) == 2
+		and fit(block(1215, 289, 1305, 325)) == 2 -- 2줄 = 51
+		and fit(block(1215, 288, 1305, 324)) == 1
+		and fit(block(1215, 262, 1305, 298)) == 1
+		and fit(block(1215, 261, 1305, 297)) == 0
+		and fit(block(1215, 224, 1305, 260)) == 0 -- 피드 위 끝이 가방 버튼 안 - 0줄(띠로)
+		and fit(block(0, 262, 900, 298)) == 3 -- 가로가 안 겹치면 무시
+		and fit(block(1215, 100, 1305, 200)) == 3 -- 이미 지나간(위쪽) HUD는 무시
+		and fit(block(1215, 316, 1305, 352), block(1100, 262, 1305, 346)) == 1 -- 여럿이면 가장 위 끝
+	check("줄 수 계산(순수 11건: 막는 것 없음 3 · 위 끝 316/315/289/288/262/261/224 → 3/2/2/1/1/0/0 · 가로 밖 · 지나간 HUD 무시 · 여럿이면 가장 위 끝)", fitOk)
+
+	-- 배너 행 높이(순수): 화면 높이 416 미만에서만 줄고, 줄인 배너는 중앙 금지 구역 위 경계 안에 든다
+	local compact388, compact415 = Toast.centerSafeRowHeight(388), Toast.centerSafeRowHeight(415)
+	check(("배너 행 높이: 388 → %s(기대 32 - 슬롯 y 64 + 32 = 96 < 위 경계 97) · 415 → %s(기대 38) · 416 → %s · 484 → %s(기대 nil nil) · 글씨 %d(기대 12 이상)"):format(
+		tostring(compact388), tostring(compact415), tostring(Toast.centerSafeRowHeight(416)), tostring(Toast.centerSafeRowHeight(484)), Theme.text.caption),
+		compact388 == 32 and compact415 == 38 and Toast.centerSafeRowHeight(416) == nil and Toast.centerSafeRowHeight(484) == nil and Theme.text.caption >= 12)
 
 	Toast.clear()
 	handle(relic(1), true)

@@ -103,6 +103,7 @@ function BossTrapView.start()
 	screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
 
 	local panel = Instance.new("Frame")
+	panel.Name = "BossTrapPanel" -- ScreenMap 슬롯 표(BC.bossTrap)가 이 이름으로 찾는다
 	panel.AnchorPoint = Vector2.new(0.5, 1)
 	panel.Position = UDim2.new(0.5, 0, 1, -170) -- 스킬 단축바·경험치 바 위
 	panel.Size = UDim2.new(0, PANEL_WIDTH, 0, PANEL_HEIGHT)
