@@ -27,15 +27,19 @@ function TextAudit.visibleTexts(root)
 	return result
 end
 
--- 보이는 글의 실효 최소 크기와 12 미만 목록. low의 항목은 "이름=명목×배율(글 앞 10자)".
+-- 보이는 글의 실효 최소 크기와 12 미만 목록. low의 항목은 "이름=명목×배율(글 앞 10자)". TextScaled 글은 TextSize 속성이 실제 크기가 아니라 잴 수 없다 - scaled에 이름만 모은다.
 function TextAudit.report(root)
-	local report = { count = 0, minEffective = math.huge, low = {} }
+	local report = { count = 0, minEffective = math.huge, low = {}, scaled = {} }
 	for _, inst in ipairs(TextAudit.visibleTexts(root)) do
+		if inst.TextScaled then
+			table.insert(report.scaled, inst.Name)
+			continue
+		end
 		local effective = Theme.effectiveTextSize(inst)
 		report.count += 1
 		report.minEffective = math.min(report.minEffective, effective)
 		if effective < Theme.minTextSize - 0.01 then
-			table.insert(report.low, ("%s=%d×%.2f(%s)"):format(inst.Name, inst.TextSize, effective / inst.TextSize, inst.Text:gsub("<[^>]+>", ""):sub(1, 10)))
+			table.insert(report.low, ("%s=%g×%.2f(%s)"):format(inst.Name, inst.TextSize, effective / inst.TextSize, inst.Text:gsub("<[^>]+>", ""):sub(1, 10)))
 		end
 	end
 	return report

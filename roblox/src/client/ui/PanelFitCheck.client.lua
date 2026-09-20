@@ -50,7 +50,8 @@ local function run()
 	local function textReport(label, root)
 		local report = TextAudit.report(root)
 		local listed = #report.low > 0 and (" [" .. table.concat(report.low, " · ", 1, math.min(#report.low, 8)) .. (#report.low > 8 and " · …" or "") .. "]") or ""
-		print(("[S12][UI][글씨] %s: 보이는 글 %d개 · 실효 최소 %.1f px · 실효 12 미만 %d개%s"):format(label, report.count, report.count > 0 and report.minEffective or 0, #report.low, listed))
+		print(("[S12][UI][글씨] %s: 보이는 글 %d개 · 실효 최소 %.1f px · 실효 12 미만 %d개%s · TextScaled(잴 수 없음) %d개%s"):format(
+			label, report.count, report.count > 0 and report.minEffective or 0, #report.low, listed, #report.scaled, #report.scaled > 0 and (" [" .. table.concat(report.scaled, ",", 1, math.min(#report.scaled, 4)) .. "]") or ""))
 	end
 
 	local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.zero
@@ -113,7 +114,7 @@ local function run()
 	-- 패널이 모두 닫힌 상태의 HUD: 화면에 지금 보이는 글만 잰다(평소 숨어 있는 토스트 · 배너 · 강화 패널은 안 보이면 못 잰다).
 	task.wait(STEP_WAIT)
 	for _, gui in ipairs(playerGui:GetChildren()) do
-		if gui:IsA("ScreenGui") and gui.Enabled and gui.DisplayOrder < 10 and #TextAudit.report(gui).low > 0 then
+		if gui:IsA("ScreenGui") and gui.Enabled and gui.DisplayOrder < 10 and (#TextAudit.report(gui).low > 0 or #TextAudit.report(gui).scaled > 0) then
 			textReport("HUD " .. gui.Name, gui)
 		end
 	end

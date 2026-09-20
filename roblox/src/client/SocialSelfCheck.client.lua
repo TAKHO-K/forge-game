@@ -60,7 +60,7 @@ local function scanText(root, tipRoot)
 				result.minEffective = math.min(result.minEffective, effective)
 				result.sizes[inst.TextSize] = (result.sizes[inst.TextSize] or 0) + 1
 				if effective < Theme.minTextSize - 0.01 then
-					table.insert(result.below12, ("%s=%d×%.2f"):format(inst.Name, inst.TextSize, effective / inst.TextSize))
+					table.insert(result.below12, ("%s=%g×%.2f"):format(inst.Name, inst.TextSize, effective / inst.TextSize))
 				end
 				if not allowed[inst.TextSize] then
 					table.insert(result.offTier, inst.Name .. "=" .. inst.TextSize)
