@@ -79,13 +79,19 @@ function BalanceDecisionVerify.runPure()
 	end)
 
 	r.section("[4] 활 기준 앵커 · p · b 불변", function()
-		local stage = BalanceAnchorConfig.referenceLevel + BalanceSim.solveKillOffset()
-		local point = BalanceSim.measurePoint(BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, BalanceAnchorConfig.referenceLevel, 0), stage)
+		-- 처치 시간은 타수(정수)로 정해지는 계단 함수라 rec 스테이지(이분법이 찾은 경계)에서 정확히 2.5초가 나오지 않는다 - 경계 양쪽이 목표를 사이에 끼는지로 잰다.
+		local offset = BalanceSim.solveKillOffset()
+		local stage = BalanceAnchorConfig.referenceLevel + offset
+		local bowLoadout = BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, BalanceAnchorConfig.referenceLevel, 0)
+		local point = BalanceSim.measurePoint(bowLoadout, stage)
+		local below = BalanceSim.measurePoint(bowLoadout, stage - 0.05).killRotationSeconds
+		local above = BalanceSim.measurePoint(bowLoadout, stage + 0.05).killRotationSeconds
+		local target = BalanceAnchorConfig.killTargetSeconds
 		local p = BossRules.partyHpExponent()
 		local b = PartyConfig.healerBuffFraction
-		r.check(("4 활 앵커(rec 스테이지 %.2f): 생존 %.3f타(기대 7 ± 0.02) · 처치(로테이션) %.3f초(기대 2.5 ± 0.02) · 보스 p %.4f(기대 0.4803 ± 0.001) · 힐러 b %.5f(기대 0.01289 ± 0.0001) - 전부 이 세션 전 문서값 그대로"):format(
-			stage, point.surviveHits, point.killRotationSeconds, p, b),
-			near(point.surviveHits, BalanceAnchorConfig.surviveTargetHits, 0.02) and near(point.killRotationSeconds, BalanceAnchorConfig.killTargetSeconds, 0.02)
+		r.check(("4 활 앵커(rec 스테이지 %.2f = 레벨 100 + 오프셋 %+.3f): 생존 %.3f타(기대 7 ± 0.02) · 처치(로테이션) 경계 %.3f초 < %.1f ≤ %.3f초(기대 경계가 목표를 낀다) · 오프셋 |%.3f| ≤ 0.1 · 보스 p %.4f(기대 0.4803 ± 0.001) · 힐러 b %.5f(기대 0.01289 ± 0.0001) - 전부 이 세션 전 문서값 그대로"):format(
+			stage, offset, point.surviveHits, below, target, above, offset, p, b),
+			near(point.surviveHits, BalanceAnchorConfig.surviveTargetHits, 0.02) and below < target and above >= target and math.abs(offset) <= 0.1
 				and near(p, 0.4803, 0.001) and near(b, 0.01289, 0.0001))
 		-- 참고(합격 조건 아님): b는 r = 힐러 실효 DPS ÷ 대검 DPS(PartyConfig 주석 · 24-4)에서 나왔다. 대검이 598.6 → 615.5로 올랐으므로 같은 식의 r · b를 다시 적어 둔다.
 		if dps.greatsword and dps.healer then
@@ -239,6 +245,7 @@ function BalanceDecisionVerify.runLive(player, env)
 	end)
 
 	r.section("[10] 솔로 힐러", function()
+		BuffState.clear(player, "healerBuff") -- 앞의 파티 시전([7] · [8])이 실제 Player인 힐러 자신에게 남긴 버프를 먼저 치운다 - 솔로 시전이 새로 거는지를 보려는 것
 		setHpFraction(player, 0.45)
 		local castOk, healAmount, isCrit, healed = pcall(HealCast.cast, player, def, "healer", cooldown)
 		local expected = math.min(0.45 + def.healPercentOfMaxHp * baseMultiplier * (isCrit and def.critHealMultiplier or 1), 1)
