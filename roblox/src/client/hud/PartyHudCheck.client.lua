@@ -23,8 +23,12 @@ end
 
 local player = Players.LocalPlayer
 local CHECK_DELAY = 125
--- SkillSlots.client.lua 터치 레이아웃의 값(대시 버튼 = 왼쪽 24 · 크기 54 · 아래 끝 = 점프 버튼 높이(작은 화면 70 + 20) + 여백 16). 그 파일이 바뀌면 여기도 바꾼다(폰 배율 스크린샷 Play가 실제 인스턴스와 대조한다).
-local TOUCH = { dashLeft = 24, dashSize = 54, dashBottom = 90 + 16 }
+-- SkillSlots.client.lua 터치 레이아웃의 값(대시 버튼 = 왼쪽 24 · 크기 54 · 아래 끝 = 점프 버튼 자리(작은 화면 = 화면 짧은 변 ≤ 500이면 70 + 20 · 아니면 120 × 1.75) + 여백 16). 그 파일이 바뀌면 여기도 바꾼다.
+-- 폰 배율 스크린샷 Play(S18, 842 × 534 - 짧은 변 592 > 500이라 큰 화면 값)의 실제 인스턴스 대시 (24, 254) 54 × 54와 이 식이 같음을 확인했다.
+local TOUCH = { dashLeft = 24, dashSize = 54, smallAxis = 500, smallBottom = 70 + 20, largeBottom = 120 * 1.75, margin = 16 }
+local function dashBottom(width, screenHeight, inset)
+	return (math.min(width, screenHeight + inset) <= TOUCH.smallAxis and TOUCH.smallBottom or TOUCH.largeBottom) + TOUCH.margin
+end
 local OLD_LIST = { width = 196, height = 222 } -- 옛 PartyHud 목록(폭 196 · 4행 44 · 간격 6 · 경험치 칩 22 + 6) - 겹침 재현용
 
 local function rect(x, y, w, h)
@@ -160,12 +164,15 @@ local function selfCheck()
 		local healthSlot = ScreenMap.slot("BC", "healthBar")
 		local listSlot = ScreenMap.slot("ML", "partyList")
 		local lines, allClear = {}, true
+		local inset = game:GetService("GuiService"):GetGuiInset().Y
+		-- 388 · 414 = 폰 가로(작은 화면 값) - 겹침 0이어야 한다. 534 = Studio 뷰포트 최대(큰 화면 값 - 대시가 더 높이 올라온다): 실측 겹침(대시 8 × 40)이 재현되는지만 본다(참고 - 합격 조건 아님).
 		for _, height in ipairs({ 388, 414, 534 }) do
 			local listHeight = PartyListView.heightFor(4, true, true)
 			local shift = ScreenMap.mobileMenuBarShiftUp(height, listHeight)
 			local left = listSlot.position.X.Offset
 			local listRect = rect(left, height / 2 - listHeight / 2 - shift, PartyListView.compact.width, listHeight)
-			local dash = rect(TOUCH.dashLeft, height - TOUCH.dashBottom - TOUCH.dashSize, TOUCH.dashSize, TOUCH.dashSize)
+			local dashY = height - dashBottom(phoneWidth, height, inset)
+			local dash = rect(TOUCH.dashLeft, dashY - TOUCH.dashSize, TOUCH.dashSize, TOUCH.dashSize)
 			local health = rect((phoneWidth - healthSlot.size.X.Offset) / 2, height + healthSlot.position.Y.Offset - healthSlot.size.Y.Offset, healthSlot.size.X.Offset, healthSlot.size.Y.Offset)
 			local joystick = ScreenMap.rectFromFractions(ScreenMap.mobileReserved.BL, Vector2.new(phoneWidth, height))
 			local dashW, dashH = overlapSize(listRect, dash)
@@ -175,11 +182,16 @@ local function selfCheck()
 			local oldDashW, oldDashH = overlapSize(oldRect, dash)
 			local oldHealthW, oldHealthH = overlapSize(oldRect, health)
 			local clear = dashW == 0 and healthW == 0 and joyW == 0 and listRect.min.Y >= ScreenMap.menuBar.topMargin - 1e-6
-			allClear = allClear and clear and (height ~= 388 or (oldDashW > 0 and oldHealthW > 0)) -- 388에서는 옛 배치의 겹침(대시 · 체력바)이 재현돼야 계산이 맞다
+			if height <= 414 then
+				allClear = allClear and clear
+			else
+				allClear = allClear and dashW == 8 and dashH == 40 -- 참고 재현: 폰 배율 Play 실측 대시 8 × 40
+			end
+			allClear = allClear and (height ~= 388 or (oldDashW > 0 and oldHealthW > 0)) -- 388에서는 옛 배치의 겹침(대시 · 체력바)이 재현돼야 계산이 맞다
 			table.insert(lines, ("H%d 위로 %.0f → 목록 (%d, %.0f) ~ 아래 %.0f · 대시 %d×%d · 체력바 %d×%d · 조이스틱 %d×%d %s / 옛 배치 대시 %d×%d · 체력바 %d×%d"):format(
 				height, shift, left, listRect.min.Y, listRect.max.Y, dashW, dashH, healthW, healthH, joyW, joyH, clear and "O" or "X", oldDashW, oldDashH, oldHealthW, oldHealthH))
 		end
-		check("폰 가로 844 · 파티 4인 겹침 0(재구성): " .. table.concat(lines, " · "), allClear)
+		check("폰 가로 844 · 파티 4인 겹침 0(388 · 414 재구성 · 534는 참고 재현): " .. table.concat(lines, " · "), allClear)
 		compact.destroy()
 
 		-- ④ 요청 배너
@@ -226,6 +238,21 @@ local function selfCheck()
 			ScreenMap.centerRect(viewportNow).max.X, tostring(frame.AbsolutePosition.X >= ScreenMap.centerRect(viewportNow).max.X), frame.Parent.DisplayOrder, #bannerReport.low, table.concat(bannerReport.low, ","), bannerReport.count),
 			math.abs(frame.AbsoluteSize.X - 224) < 1 and math.abs(frame.AbsoluteSize.Y - ScreenMap.slot("MR", "requestBanner").size.Y.Offset) < 1 and frame.AbsolutePosition.X + frame.AbsoluteSize.X <= viewportNow.X + 0.5
 				and frame.AbsolutePosition.X >= ScreenMap.centerRect(viewportNow).max.X and frame.Parent.DisplayOrder > 150 and frame.Parent.DisplayOrder < 200 and #bannerReport.low == 0 and bannerReport.count == 4)
+
+		-- PC 겹침: 화면에 보이는 ScreenMap 슬롯(가방 버튼 · 칩 스택 · 파티 버튼 등)과 겹치는 자리가 0개(투표 패널이 가방 버튼과 겹치던 옛 배치의 개선)
+		local bannerRect = rect(frame.AbsolutePosition.X, frame.AbsolutePosition.Y, frame.AbsoluteSize.X, frame.AbsoluteSize.Y)
+		local bannerHits, compared = {}, 0
+		for zone, name, slot in ScreenMap.each() do
+			local inst = slot.instanceName and slot.instanceName ~= "RequestBanner" and playerGui:FindFirstChild(slot.instanceName, true)
+			if inst and inst:IsA("GuiObject") and inst.Visible and inst.AbsoluteSize.X > 0 and inst.AbsoluteSize.Y > 0 then
+				compared += 1
+				local w = overlapSize(bannerRect, rect(inst.AbsolutePosition.X, inst.AbsolutePosition.Y, inst.AbsoluteSize.X, inst.AbsoluteSize.Y))
+				if w > 0 then
+					table.insert(bannerHits, zone .. "." .. name)
+				end
+			end
+		end
+		check(("배너 PC 겹침: 보이는 슬롯 %d개와 비교 · 겹친 것 %d개 [%s](기대 0)"):format(compared, #bannerHits, table.concat(bannerHits, ",")), #bannerHits == 0 and compared >= 3)
 
 		RequestBanner.debugPress("decline")
 		local afterDecline = RequestBanner.debugState()

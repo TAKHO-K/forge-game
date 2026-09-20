@@ -78,8 +78,8 @@ ScreenMap.slots = {
 	},
 	MR = {
 		inventoryToggle = blocksFeed(slot("existing", 1, 0.5, UDim2.new(1, -16, 0.5, 0), UDim2.new(0, 90, 0, 36), "InventoryToggleButton", "InventoryUI.client.lua - '가방' 열기 버튼(항상 보임). 투표 패널과 같은 세로 중앙이라 투표 중에는 서로 겹친다(기존 - 20.94 미결)")),
-		requestBanner = blocksFeed(slot("new", 1, 0.5, UDim2.new(1, -14, 0.5, 0), UDim2.new(0, 224, 0, 138), "RequestBanner",
-			"hud/RequestBanner.lua(S18) - 수락 · 거절이 필요한 요청 전부(파티 투표 · 초대) - 한 번에 하나 · 대기열. 크기는 PC 기준(버튼 있는 배너) - 정보 배너는 더 낮다. 모바일은 아래 끝을 BR 터치 예약 구역 위 끝(화면 높이 0.5)에 맞춰 위로 올린다. 옛 partyVote(PartyVotePanel 210 × 84)의 자리")),
+		requestBanner = blocksFeed(slot("new", 1, 0, UDim2.new(1, -14, 0.5, 26), UDim2.new(0, 224, 0, 138), "RequestBanner",
+			"hud/RequestBanner.lua(S18) - 수락 · 거절이 필요한 요청 전부(파티 투표 · 초대) - 한 번에 하나 · 대기열. PC: 위 끝 = 세로 중앙 + 26(가방 버튼 높이 36의 절반 18 + 8 - 가방 버튼 · 칩 스택을 안 덮는다). 크기는 PC 기준(버튼 있는 배너) - 정보 배너는 더 낮다. 모바일: 아래 끝을 BR 터치 예약 구역 위 끝(화면 높이 0.5)에서 같은 26만큼 위에 맞춘다(공격 · 스킬 버튼 · 가방 버튼을 안 덮는다 - 위쪽 칩 스택은 덮는다). 옛 partyVote(PartyVotePanel 210 × 84 · 세로 중앙 · 가방 버튼과 겹침)의 자리")),
 	},
 	BC = {
 		buffRow = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -141), nil, "BuffHudAnchor", "PlayerHealthBar.client.lua - 버프 아이콘 28px 행(BOTTOM_OFFSET 94 + 체력바 19 + 8 + 10 + 10)"),

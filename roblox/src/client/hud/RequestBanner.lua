@@ -33,13 +33,13 @@ local function textHeights()
 	return Theme.textSize("body") + 4, (Theme.textSize("caption") + 2) * RequestBanner.bodyLines
 end
 
--- 배너 자리. 모바일은 세로 중앙 슬롯에서 아래 끝이 BR 예약 구역 위 끝(화면 높이 × mobileReserved.BR.top)에 오게 위로 올린다.
+-- 배너 자리. PC는 슬롯 그대로(세로 중앙 + 26 = 가방 버튼 바로 아래). 모바일은 아래 끝이 BR 예약 구역 위 끝(화면 높이 × mobileReserved.BR.top)에서 슬롯의 오프셋(26)만큼 위에 오게 올린다(가방 버튼 위).
 local function applyPosition()
 	local slotDef = ScreenMap.slot("MR", "requestBanner")
 	frame.AnchorPoint = slotDef.anchor
 	local offsetY = slotDef.position.Y.Offset
 	if Theme.isMobile then
-		offsetY = gui.AbsoluteSize.Y * (ScreenMap.mobileReserved.BR.top - slotDef.position.Y.Scale) - frame.Size.Y.Offset * (1 - slotDef.anchor.Y)
+		offsetY = gui.AbsoluteSize.Y * (ScreenMap.mobileReserved.BR.top - slotDef.position.Y.Scale) - frame.Size.Y.Offset * (1 - slotDef.anchor.Y) - slotDef.position.Y.Offset
 	end
 	frame.Position = UDim2.new(slotDef.position.X.Scale, slotDef.position.X.Offset, slotDef.position.Y.Scale, offsetY)
 end
