@@ -47,6 +47,8 @@ return {
 		-- 본 작업(InventoryUI 파티 탭 분할)은 옮길 대상이 없어 코드 변경 0(PRD 20.105). 동반 실행(COMMON.md §3): 이 세션이 고친 클라 모듈을 쓰는 옛 클라 점검만 -
 		-- S18(UI)(PartyHudCheck - 목록 뷰 · 직업 이름) · S17(UI)(SystemToasts - Toast 등급 · 창 위 대역) · S16(UI)(메뉴바 · Toast TC) · S12b(UI)(SocialSelfCheck - Toast TC · 창 글씨 기준선) · S12(UI)(PanelFitCheck - 글씨 기준선) · S10(가)(DropFeed - Toast TR).
 		-- 서버 (나) 블록(27-3 · S12(나) · S09(나))은 서버 변경이 없어 뺀다. S04(나)는 계속 제외.
-		current = { "S18(UI)", "S17(UI)", "S16(UI)", "S12b(UI)", "S12(UI)", "S10(가)", "27-3(가)", "27-3(나)", "S12(나)", "S09(나)" },
+		-- 주의(S19 실측): 서버 (나) 블록(특히 S12(나) - 견습을 잠시 켰다가 블록 끝에서 복원)을 도중에 Play를 멈추면 개발 계정의 견습 상태가 저장 프로필에 남는다(DevTools 스냅샷은 tutorial을 백업하지 않는다) -
+		--   그러면 S12(UI) 스테이지 선택 · S18(UI) 배너 겹침 · S12(나) [0](파티 보스 스폰)이 X로 바뀐다. 복구: Play에서 `/gg tutorial off` → `/gg save unlock` → Play 정지.
+		current = { "S18(UI)", "S17(UI)", "S16(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
 	},
 }
