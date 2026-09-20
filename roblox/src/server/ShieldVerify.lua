@@ -2,7 +2,7 @@
 --   (가) 순수 - 서버 시작 때(플레이어 없이): 층 순서 · 다 깎인 층 제거 · 만료 제거 · 3 · 4번째 층 반감 · 5겹째 거절 · 같은 시전자 교체 · 데이터(가동률 초안) ·
 --     공통 피해 함수(PlayerDamage.takeDamage · applyMaxHpFraction 진입점 · ignoresShield · 죽음 시 쉴드 제거) · 측정(PartyShieldSim 5개 조합 - 기록 + 어긋난 값) · ★① 쌍검 ÷ 대검 1.3201.
  --   (나) 실제 Player + 스탠드인 파티 - 보스 검증 체인의 끝에서: 실제 HealCast 경로 쉴드(자신 포함 · 힐 HP 그대로) · 치명 2배 · 재시전 교체 · 반감 · 5겹째 거절 · 버프 유지 ·
- --     실제 피해 경로 흡수(applyHit) · ignoresShield · 만료 Attribute 동기화 · 솔로는 기존 회복.
+ --     실제 피해 경로 흡수(applyHit) · ignoresShield · 만료 Attribute 동기화 · 솔로는 기존 회복 · 실제 딜링모드 소모 루프.
 -- env = { ensureBackup, restore, applyOptionStack } - DevTools의 로컬 헬퍼(S13과 같다). 검증이 바꾼 것(파티 · 옵션 · HP · 버프 · 쉴드)은 (나)가 끝날 때 전부 되돌린다.
 -- "우회 피해 경로 0"은 자동 검증 밖이다 - 소스 전수 grep(PRD 20.99 [3])으로 확인하고, 여기서는 그 결과 위에서 진입점(applyHit · applyMaxHpFraction · 딜링모드 소모 = takeDamage)이 쉴드를 거치는지만 잰다.
 
@@ -467,6 +467,28 @@ function ShieldVerify.runLive(player, env)
 		r.check(("16 솔로 딜링모드: 쉴드 모드=%s(기대 false) · 에러 없음=%s · 자기 HP %.0f(기대 %.0f = 기존 자기 회복) · 쉴드 %.0f(기대 0) · 시전한 쉴드 %d건(기대 0)"):format(
 			tostring(usesShield), tostring(ok), PlayerState.getHp(player), expected, shieldOf(player), #(shielded or {})),
 			not usesShield and ok and healAmount > 0 and near(PlayerState.getHp(player), expected, 1e-6 * playerMax) and shieldOf(player) == 0 and #shielded == 0)
+	end)
+
+	r.section("[17] 실제 딜링모드 소모 루프(HealerDealingMode - PlayerDamage.takeDamage · ignoresShield 경로): 쉴드 그대로 · HP만", function()
+		PlayerShield.clear(player)
+		local maxHp = PlayerState.getMaxHp(player)
+		PlayerState.setHp(player, maxHp)
+		player:SetAttribute("Hp", maxHp)
+		PlayerShield.add(player, extra[1], maxHp, 60) -- 소모가 쉴드를 깎는다면 눈에 띄게 줄 만큼 크게
+		BuffState.apply(player, "dealingMode", { attackMultiplier = SkillData.healer.E.attackMultiplier, displayName = SkillData.healer.E.name, colorName = "danger" })
+		local startedAt = os.clock()
+		task.wait(0.5)
+		BuffState.clear(player, "dealingMode")
+		local elapsed = os.clock() - startedAt
+		local dropped = maxHp - PlayerState.getHp(player)
+		local expected = maxHp * SkillData.healer.E.drainPercentPerSecond * (1 + PlayerProfile.getOptionBonus(player, "skill_healer_E")) * elapsed
+		local shieldLeft = shieldOf(player)
+		r.check(("17 실제 소모 %.2f초: HP 손실 %.0f(기대 %.0f ± 35%% = 최대체력 × %.3f/초 × 시간) · 쉴드 %.0f(기대 %.0f 그대로) · Shield Attribute %.0f"):format(
+			elapsed, dropped, expected, SkillData.healer.E.drainPercentPerSecond, shieldLeft, maxHp, player:GetAttribute("Shield") or -1),
+			dropped > 0 and near(dropped / expected, 1, 0.35) and near(shieldLeft, maxHp, 1e-6 * maxHp) and near(player:GetAttribute("Shield") or -1, maxHp, 1e-6 * maxHp))
+		PlayerShield.clear(player)
+		PlayerState.setHp(player, savedHp)
+		player:SetAttribute("Hp", savedHp)
 	end)
 
 	-- 되돌리기: 굴림 함수 · 파티 · 버프 · 쉴드 · 스탠드인 · 옵션 · HP.
