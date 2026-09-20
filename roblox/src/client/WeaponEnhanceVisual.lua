@@ -175,9 +175,9 @@ local function applyBody(weapon, state)
 	for _, part in ipairs(bodyParts(weapon)) do
 		part.Color = state.tint and baseColor:Lerp(colorOf(state.tint.color), state.tint.alpha) or baseColor
 	end
-	local trailWidth = weapon.motion.trailWidth * (state.trailWidthScale or 1)
+	-- Trail은 근접 무기(mesh · mesh_pair)에만 있다 - 활 · 지팡이는 motion.trailWidth 자체가 없어 trailsOf가 빈 목록이다.
 	for _, trail in ipairs(trailsOf(weapon)) do
-		trail.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, trailWidth), NumberSequenceKeypoint.new(1, 0) })
+		trail.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, weapon.motion.trailWidth * (state.trailWidthScale or 1)), NumberSequenceKeypoint.new(1, 0) })
 		trail.Color = ColorSequence.new(state.trailColor and colorOf(state.trailColor) or weapon.motion.trailColor)
 	end
 end
