@@ -17,7 +17,7 @@ return {
 	--   regression = true: 과거 세션의 블록 전부 + current. **마일스톤(S10 · S15 · S21 종료 시 · Fable 세션 전 · 퍼블리시 전)에서만 켜고, 그 Play가 끝나면 다시 false로 되돌린다**(COMMON.md §3 · §5).
 	-- 새 세션을 시작할 때 current를 그 세션의 블록 id + 그 세션이 고친 모듈을 쓰는 옛 블록 id("동반 실행")로 갈아 끼운다(그 밖의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
 	verify = {
-		regression = true, -- TEMP(S15 회귀 전체 Play) - 끝나면 false로 되돌려 커밋한다
+		regression = false,
 		-- exclude: regression = true여도 돌리지 않는 블록 id(DevTools.server.lua verifyEnabled가 먼저 본다).
 		exclude = { "S04(나)" },
 		-- S15 사전 작업 1(2026-09-20, 40분 제한 조사): S04(나)를 계측(처치 10회마다 몬스터 · 드랍 · workspace 후손 · 메모리 태그 · 하트비트 - 커밋 21ce309에 남아 있다)하며 3번 돌렸다 -
