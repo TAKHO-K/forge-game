@@ -322,11 +322,13 @@ function PartyTutorialVerify.runLive(player, env)
 		BossEncounter.spawnForParty(party, player, BOSS_STAGE)
 		local encounter = BossEncounter.getEncounter(player)
 		local multiplier = encounter and encounter.data.partyHpMultiplier or 0
-		r.check(("입장: 멤버 %d(기대 1) · N %d(기대 1) · HP 배수 %.4f(기대 1인분 %.4f) · 검사 막힘 %d명(기대 0 - 리더만 검사)"):format(
-			encounter and #encounter.members or 0, encounter and encounter.size or 0, multiplier, BossRules.partySizeHpMultiplier(1),
-			#BossEncounter.checkPartyEntry(party, BOSS_STAGE)),
+		-- 입장 검사는 리더만 본다(스테이지 게이트 · 밴드는 개발 계정 값에 달렸으니 리더가 막히는지는 따지지 않는다) - 견습 멤버 셋은 막힘 목록에 없어야 한다.
+		local blockedNow = blockedPlayers(BossEncounter.checkPartyEntry(party, BOSS_STAGE))
+		local tutorialBlocked = contains(blockedNow, B) or contains(blockedNow, C) or contains(blockedNow, D)
+		r.check(("입장: 멤버 %d(기대 1) · N %d(기대 1) · HP 배수 %.4f(기대 1인분 %.4f) · 검사 막힘 목록에 견습 멤버 %s(기대 false - 리더만 검사)"):format(
+			encounter and #encounter.members or 0, encounter and encounter.size or 0, multiplier, BossRules.partySizeHpMultiplier(1), tostring(tutorialBlocked)),
 			encounter ~= nil and #encounter.members == 1 and encounter.size == 1 and math.abs(multiplier - BossRules.partySizeHpMultiplier(1)) < 1e-9
-				and #BossEncounter.checkPartyEntry(party, BOSS_STAGE) == 0)
+				and not tutorialBlocked)
 		BossEncounter.despawnFor(player)
 		fakeTutorial[B], fakeTutorial[C], fakeTutorial[D] = nil, nil, nil
 		dissolve()
