@@ -55,6 +55,23 @@ function Theme.textSize(name)
 	return base
 end
 
+-- 글씨 하한(px). 판정은 명목 TextSize가 아니라 화면에서 실제로 보이는 크기(effectiveTextSize)로 한다.
+Theme.minTextSize = 12
+
+-- 화면에서 실제로 보이는 글씨 크기(px) = TextSize × 자기와 모든 조상의 UIScale 누적 배율. UIScale로 축소한 창(장비창 · 열림 트윈 중인 패널)은 명목 12여도 실효가 12 미만이다.
+function Theme.effectiveTextSize(inst)
+	local scale = 1
+	local node = inst
+	while node do
+		local uiScale = node:FindFirstChildOfClass("UIScale")
+		if uiScale then
+			scale *= uiScale.Scale
+		end
+		node = node.Parent
+	end
+	return inst.TextSize * scale
+end
+
 function Theme.color(name)
 	local color = UIColors[name]
 	assert(typeof(color) == "Color3", "Theme.color: UIColors에 없는 색 - " .. tostring(name))

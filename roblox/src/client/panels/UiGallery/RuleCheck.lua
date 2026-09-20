@@ -20,10 +20,11 @@ local function inBand(order, low, high)
 	return order >= low and order <= high
 end
 
+-- 실효 크기(TextSize × 조상 UIScale 누적 배율 - Theme.effectiveTextSize)가 minSize 미만인 글 요소 수.
 local function countBadText(root, minSize)
 	local bad = 0
 	for _, inst in ipairs(root:GetDescendants()) do
-		if (inst:IsA("TextLabel") or inst:IsA("TextButton")) and inst.Text ~= "" and inst.TextSize < minSize then
+		if (inst:IsA("TextLabel") or inst:IsA("TextButton")) and inst.Text ~= "" and Theme.effectiveTextSize(inst) < minSize - 0.01 then
 			bad += 1
 		end
 	end
@@ -188,7 +189,7 @@ function RuleCheck.run(gallery)
 
 	-- ⑮ 전시장 안: 글씨 12 미만 0 · 버튼 높이 · AutomaticSize 0
 	local gui = refs.window.screenGui
-	local smallText, smallButtons, buttonCount = countBadText(gui, 12), 0, 0
+	local smallText, smallButtons, buttonCount = countBadText(gui, Theme.minTextSize), 0, 0
 	for _, inst in ipairs(gui:GetDescendants()) do
 		if inst:IsA("TextButton") and (inst.Name == "Button" or inst.Name:sub(1, 4) == "Btn_") then
 			buttonCount += 1
@@ -198,7 +199,7 @@ function RuleCheck.run(gallery)
 		end
 	end
 	local closeSize = refs.window.closeButton.AbsoluteSize
-	check(("⑮ 전시장 안 검사(%s): 글씨 12 미만 %d개(기대 0) · Button %d개 중 높이 %d 미만 %d개(기대 0) · X 버튼 %d × %d(기대 44 × 44 이상) · AutomaticSize %d개(기대 0)"):format(
+	check(("⑮ 전시장 안 검사(%s): 실효 글씨 12 미만 %d개(기대 0) · Button %d개 중 높이 %d 미만 %d개(기대 0) · X 버튼 %d × %d(기대 44 × 44 이상) · AutomaticSize %d개(기대 0)"):format(
 		Theme.isMobile and "모바일" or "PC", smallText, buttonCount, Theme.buttonHeight, smallButtons, closeSize.X, closeSize.Y, countAutomaticSize(gui)),
 		smallText == 0 and buttonCount > 0 and smallButtons == 0 and closeSize.X >= 44 and closeSize.Y >= 44 and countAutomaticSize(gui) == 0)
 

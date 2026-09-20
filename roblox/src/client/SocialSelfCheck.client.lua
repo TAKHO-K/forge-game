@@ -35,13 +35,13 @@ local function intersects(a, b)
 	return a.min.X < b.max.X and b.min.X < a.max.X and a.min.Y < b.max.Y and b.min.Y < a.max.Y
 end
 
--- root 아래 글 요소를 훑는다: 보이는 것만(자기와 조상이 모두 Visible) · TextSize 목록 · 12 미만 · 4단 밖 · 넘치는데 줄임표가 없는 것 · 줄임표가 걸린 채 실제로 잘린 것.
+-- root 아래 글 요소를 훑는다: 보이는 것만(자기와 조상이 모두 Visible) · TextSize 목록 · 실효 12 미만(TextSize × 조상 UIScale 누적 배율 - COMMON.md §2) · 4단 밖(명목 TextSize) · 넘치는데 줄임표가 없는 것 · 줄임표가 걸린 채 실제로 잘린 것.
 local function scanText(root, tipRoot)
 	local allowed = {}
 	for _, name in ipairs({ "title", "header", "body", "caption" }) do
 		allowed[Theme.textSize(name)] = true
 	end
-	local result = { count = 0, min = math.huge, below12 = {}, offTier = {}, overflowNoEllipsis = {}, ellipsized = {}, sizes = {} }
+	local result = { count = 0, min = math.huge, minEffective = math.huge, below12 = {}, offTier = {}, overflowNoEllipsis = {}, ellipsized = {}, sizes = {} }
 	for _, inst in ipairs(root:GetDescendants()) do
 		if (inst:IsA("TextLabel") or inst:IsA("TextButton")) and (tipRoot == nil or not inst:IsDescendantOf(tipRoot)) then
 			local shown = true
@@ -55,10 +55,12 @@ local function scanText(root, tipRoot)
 			end
 			if shown and inst.Text ~= "" and inst.AbsoluteSize.X > 0 then
 				result.count += 1
+				local effective = Theme.effectiveTextSize(inst)
 				result.min = math.min(result.min, inst.TextSize)
+				result.minEffective = math.min(result.minEffective, effective)
 				result.sizes[inst.TextSize] = (result.sizes[inst.TextSize] or 0) + 1
-				if inst.TextSize < 12 then
-					table.insert(result.below12, inst:GetFullName() .. "=" .. inst.TextSize)
+				if effective < Theme.minTextSize - 0.01 then
+					table.insert(result.below12, ("%s=%d×%.2f"):format(inst.Name, inst.TextSize, effective / inst.TextSize))
 				end
 				if not allowed[inst.TextSize] then
 					table.insert(result.offTier, inst.Name .. "=" .. inst.TextSize)
@@ -133,8 +135,8 @@ local function selfTest()
 		tostring(opened), tostring(UIManager.isOpen("party")), tostring(partyFrame and partyFrame.Visible), partyState.myTitle, tostring(fits), tostring(partyState.canvas)),
 		opened == true and UIManager.isOpen("party") and partyFrame.Visible and partyState.myTitle:find("내 파티", 1, true) ~= nil and fits == true)
 	local partyScan = scanText(partyGui)
-	check(("파티창 글씨: 요소 %d개 · 최소 %s · 12 미만 %d개(기대 0) · 4단 밖 %d개 [%s](기대 0) · 넘치는데 줄임표 없음 %d개 [%s](기대 0) · 줄임표로 잘림 %d개 · 크기 %s"):format(
-		partyScan.count, tostring(partyScan.min), #partyScan.below12, #partyScan.offTier, table.concat(partyScan.offTier, ","), #partyScan.overflowNoEllipsis, table.concat(partyScan.overflowNoEllipsis, ","),
+	check(("파티창 글씨: 요소 %d개 · 최소 %s(실효 %.1f) · 실효 12 미만 %d개(기대 0) · 4단 밖 %d개 [%s](기대 0) · 넘치는데 줄임표 없음 %d개 [%s](기대 0) · 줄임표로 잘림 %d개 · 크기 %s"):format(
+		partyScan.count, tostring(partyScan.min), partyScan.minEffective, #partyScan.below12, #partyScan.offTier, table.concat(partyScan.offTier, ","), #partyScan.overflowNoEllipsis, table.concat(partyScan.overflowNoEllipsis, ","),
 		#partyScan.ellipsized, sizesLine(partyScan.sizes)), #partyScan.below12 == 0 and #partyScan.offTier == 0 and #partyScan.overflowNoEllipsis == 0)
 	UIManager.close("party")
 	task.wait(0.4)
@@ -157,11 +159,11 @@ local function selfTest()
 	local contentScale = inventoryGui and inventoryGui.Window.Content:FindFirstChildOfClass("UIScale")
 	local inventoryScan = scanText(inventoryGui.Window.Content, nil)
 	check(("장비창 탭 [%s](기대 보석 · 장비 - 파티 탭 없음)"):format(table.concat(tabNames, " · ")), #tabNames == 2 and tabNames[1] == "보석" and tabNames[2] == "장비")
-	check(("장비창 글씨(장비 탭): 요소 %d개 · 최소 %s · 12 미만 %d개(기대 0) · 4단 밖 %d개 [%s](기대 0) · 넘치는데 줄임표 없음 %d개 [%s](기대 0) · 줄임표로 잘림 %d개 [%s] · 크기 %s"):format(
-		inventoryScan.count, tostring(inventoryScan.min), #inventoryScan.below12, #inventoryScan.offTier, table.concat(inventoryScan.offTier, ","), #inventoryScan.overflowNoEllipsis,
+	check(("장비창 글씨(장비 탭): 요소 %d개 · 최소 %s(실효 %.1f) · 실효 12 미만 %d개 [%s](기대 0 - 알려진 X: S19 · S20에서 폰용 스크롤 창으로 재구성하면 해소) · 4단 밖 %d개 [%s](기대 0) · 넘치는데 줄임표 없음 %d개 [%s](기대 0) · 줄임표로 잘림 %d개 [%s] · 크기 %s"):format(
+		inventoryScan.count, tostring(inventoryScan.min), inventoryScan.minEffective, #inventoryScan.below12, table.concat(inventoryScan.below12, ",", 1, math.min(#inventoryScan.below12, 6)), #inventoryScan.offTier, table.concat(inventoryScan.offTier, ","), #inventoryScan.overflowNoEllipsis,
 		table.concat(inventoryScan.overflowNoEllipsis, ","), #inventoryScan.ellipsized, table.concat(inventoryScan.ellipsized, ","), sizesLine(inventoryScan.sizes)),
 		#inventoryScan.below12 == 0 and #inventoryScan.offTier == 0 and #inventoryScan.overflowNoEllipsis == 0)
-	print(("[S12b][UI][측정] 장비창 화면 배율(UIScale) %.3f → 화면에서 보이는 최소 글씨 %.1f px(명목 %s × 배율)"):format(contentScale and contentScale.Scale or 1, inventoryScan.min * (contentScale and contentScale.Scale or 1), tostring(inventoryScan.min)))
+	print(("[S12b][UI][측정] 장비창 안쪽 UIScale %.3f → 화면에서 보이는 최소 글씨 %.1f px(명목 %s · 조상 UIScale 전부 곱한 실효값)"):format(contentScale and contentScale.Scale or 1, inventoryScan.minEffective, tostring(inventoryScan.min)))
 	UIManager.close("inventory")
 	task.wait(0.4)
 
@@ -182,7 +184,7 @@ local function selfTest()
 		UIManager.isOpen("inspect") and usernameLabel ~= nil and usernameLabel.Text == "@" .. player.Name and (rowsText[1] or ""):find("기본 무기", 1, true) ~= nil and tipVisible == true)
 	local inspectScan = scanText(inspectGui, inspectGui:FindFirstChild("InspectTooltip"))
 	local tipAfterSecondTap = Inspect.debugSelect("weapon") -- 같은 줄을 다시 탭하면 닫힌다
-	check(("장비 보기 툴팁 토글: 같은 줄 다시 탭 → 툴팁 보임 %s(기대 false) · 글씨 12 미만 %d개(기대 0) · 4단 밖 %d개 [%s](기대 0) · 넘치는데 줄임표 없음 %d개(기대 0) · 크기 %s"):format(
+	check(("장비 보기 툴팁 토글: 같은 줄 다시 탭 → 툴팁 보임 %s(기대 false) · 실효 글씨 12 미만 %d개(기대 0) · 4단 밖 %d개 [%s](기대 0) · 넘치는데 줄임표 없음 %d개(기대 0) · 크기 %s"):format(
 		tostring(tipAfterSecondTap), #inspectScan.below12, #inspectScan.offTier, table.concat(inspectScan.offTier, ","), #inspectScan.overflowNoEllipsis, sizesLine(inspectScan.sizes)),
 		tipAfterSecondTap == false and #inspectScan.below12 == 0 and #inspectScan.offTier == 0 and #inspectScan.overflowNoEllipsis == 0)
 	UIManager.close("inspect")
@@ -194,7 +196,7 @@ local function selfTest()
 	local _, menuGui = UIManager.getParts("playerMenu")
 	if menuGui then
 		local menuScan = scanText(menuGui)
-		check(("이름 클릭 메뉴 글씨: 요소 %d개 · 12 미만 %d개(기대 0) · 4단 밖 %d개 [%s](기대 0) · 크기 %s"):format(menuScan.count, #menuScan.below12, #menuScan.offTier, table.concat(menuScan.offTier, ","), sizesLine(menuScan.sizes)),
+		check(("이름 클릭 메뉴 글씨: 요소 %d개 · 실효 12 미만 %d개(기대 0) · 4단 밖 %d개 [%s](기대 0) · 크기 %s"):format(menuScan.count, #menuScan.below12, #menuScan.offTier, table.concat(menuScan.offTier, ","), sizesLine(menuScan.sizes)),
 			menuScan.count >= 2 and #menuScan.below12 == 0 and #menuScan.offTier == 0)
 		UIManager.close("playerMenu", true)
 	end
