@@ -312,7 +312,7 @@ function PartyExpVerify.runLive(player, env)
 	end
 	r.check(("검증 뒤 되돌림: 파티 %s(기대 nil) · 스탠드인 파티 %s %s %s(기대 nil) · Attribute %s(기대 0) · 직업 %s → %s · 검증이 남긴 몬스터 %d · 땅의 드랍 %d(기대 0 · 0)"):format(
 		tostring(PartyState.getParty(player)), tostring(PartyState.getParty(B)), tostring(PartyState.getParty(C)), tostring(PartyState.getParty(D)),
-		tostring(player:GetAttribute("PartyExpBonus")), tostring(savedClassId), tostring(PlayerProfile.getClassId(player))),
+		tostring(player:GetAttribute("PartyExpBonus")), tostring(savedClassId), tostring(PlayerProfile.getClassId(player)), leftoverMonsters, leftoverGround),
 		PartyState.getParty(player) == nil and PartyState.getParty(B) == nil and PartyState.getParty(C) == nil and PartyState.getParty(D) == nil
 			and player:GetAttribute("PartyExpBonus") == 0 and PlayerProfile.getClassId(player) == savedClassId and leftoverMonsters == 0 and leftoverGround == 0)
 
