@@ -169,8 +169,23 @@ skillCastResult.OnClientEvent:Connect(function(slot, data)
 		-- 첫 사용자). 자기 자신에게만 뜬다 - playHits를 안 쓴다(대상이 몬스터가 아니다).
 		local character = player.Character
 		if character and data.self then
-			DamageNumbers.show(character, data.self.healAmount, data.self.isCrit, true)
-			SkillEffects.healRise(character, color, 1.0)
+			if data.self.shieldMode then
+				-- S13b: 딜링모드 쉴드 시전 - 회복이 아니라 쉴드라 초록 숫자 · 상승 이펙트 대신 퍼짐 링만 그린다(쉴드량은 체력바 위 흰 막대가 보여 준다).
+				local rootPart = character:FindFirstChild("HumanoidRootPart")
+				if rootPart then
+					SkillEffects.expandingRing(rootPart.Position, 4, color, 0.3)
+				end
+				-- 쉴드 모드의 쿨다운은 서버가 정한다(SkillData.healer.Q.shield.cooldownSeconds) - 로컬 낙관적 잠금(def.cooldownSeconds)과 다르면 서버 값으로 맞춘다.
+				local classId = player:GetAttribute("ClassId")
+				local def = classId and SkillData[classId] and SkillData[classId][slot]
+				if def and data.cooldownSeconds and math.abs(data.cooldownSeconds - def.cooldownSeconds) > 0.01 then
+					localCooldownUntil[slot] = os.clock() + data.cooldownSeconds
+					localCastSignal:Fire(slot, data.cooldownSeconds)
+				end
+			else
+				DamageNumbers.show(character, data.self.healAmount, data.self.isCrit, true)
+				SkillEffects.healRise(character, color, 1.0)
+			end
 		end
 	elseif data.kind == "toggle" then
 		-- 딜링모드(힐러 E, 20-6 [6]) - 상태 표시는 BuffHud(아이콘)와 PlayerHealthBar(체력바

@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local BuffState = require(script.Parent.BuffState)
+local PlayerDamage = require(script.Parent.PlayerDamage)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
@@ -49,18 +50,11 @@ RunService.Heartbeat:Connect(function(dt)
 		-- 26-2(PRD 20.67 [2] "딜링모드 - 체력 소모 ×(1-x)", 상한 90% - baseValue가 음수라
 		-- 1+합산이 곧 (1-x)다, Option.sumWithCap의 대칭 clamp가 0 이하로 못 내려가게 막는다).
 		local drainMultiplier = 1 + PlayerProfile.getOptionBonus(player, "skill_healer_E")
-		local newHp = hp - maxHp * def.drainPercentPerSecond * drainMultiplier * dt
-		if newHp <= 0 then
-			newHp = 0
+		-- S13b: HP를 깎는 곳은 PlayerDamage.takeDamage 하나다(사망 처리 · Hp 동기화 포함). 소모는 피해가 아니라 비용이라 쉴드를 건드리지 않고(ignoresShield), 매 프레임이라 로그를 안 남긴다(silent).
+		local _, _, died = PlayerDamage.takeDamage(player, maxHp * def.drainPercentPerSecond * drainMultiplier * dt, { ignoresShield = true, silent = true })
+		if died then
 			BuffState.clear(player, "dealingMode")
-			local character = player.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				humanoid.Health = 0
-			end
 		end
-		PlayerState.setHp(player, newHp)
-		player:SetAttribute("Hp", newHp)
 	end
 end)
 

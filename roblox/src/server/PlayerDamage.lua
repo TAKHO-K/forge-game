@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local Loot = require(ReplicatedStorage.Shared.Loot)
+local PlayerShield = require(script.Parent.PlayerShield)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
@@ -38,6 +39,46 @@ function PlayerDamage.computeHitDamage(attack, targetPlayer)
 	return attack * (1 - reduction)
 end
 
+-- 플레이어 HP를 깎는 유일한 통로(S13b) - "쉴드 흡수 → HP" 순서와 사망 처리를 여기서만 한다. HP를 직접 낮추는 다른 코드(PlayerState.setHp · Humanoid:TakeDamage ·
+-- Humanoid.Health 대입)는 쉴드를 우회하므로 두지 않는다(우회 경로 전수 조사 결과는 PRD 20.99). 피해 배율(대시 · 잡힘)은 이 함수 앞에서 곱한다 - 여기 오는 damage는 최종 피해다.
+-- opts.ignoresShield: true면 쉴드를 건드리지 않고 HP를 깎는다 - 낙사 같은 판정형 피해 · 딜링모드 자기 소모(피해가 아니라 비용이라 쉴드로 막으면 안 된다).
+--   보스 즉사 패턴이 쉴드를 뚫는지는 Fable이 정한다(지금 그 패턴에 이 플래그를 주는 곳은 없다).
+-- opts.label: 로그 꼬리표. opts.silent: 로그를 안 남긴다(매 프레임 소모용).
+-- 반환: 쉴드 흡수 전 피해(= damage), 쉴드가 흡수한 양, 이번에 죽었는가.
+function PlayerDamage.takeDamage(targetPlayer, damage, opts)
+	opts = opts or {}
+	local hpDamage, absorbed = damage, 0
+	if not opts.ignoresShield then
+		hpDamage, absorbed = PlayerShield.absorb(targetPlayer, damage)
+	end
+	local newHp = math.max(PlayerState.getHp(targetPlayer) - hpDamage, 0)
+	PlayerState.setHp(targetPlayer, newHp)
+	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)
+	PlayerDamage.syncHud(targetPlayer)
+
+	if not opts.silent then
+		print(("[forge-game] 플레이어 피격%s: %s - %.2f 데미지%s (남은 HP %.2f/%d)"):format(
+			opts.label and ("(" .. opts.label .. ")") or "", targetPlayer.Name, damage,
+			absorbed > 0 and (" (쉴드 흡수 %.2f)"):format(absorbed) or "", newHp, PlayerState.getMaxHp(targetPlayer)))
+	end
+
+	local died = newHp <= 0
+	if died then
+		PlayerShield.clear(targetPlayer)
+		if not opts.silent then
+			print(("[forge-game] 플레이어 사망: %s"):format(targetPlayer.Name))
+		end
+		local character = targetPlayer.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			-- 실제 HP는 PlayerState가 관리한다. Humanoid.Health=0은 로블록스 리스폰
+			-- 처리(사냥터에 이미 있는 SpawnLocation으로 자동 복귀)를 트리거하는 신호일 뿐이다.
+			humanoid.Health = 0
+		end
+	end
+	return damage, absorbed, died
+end
+
 -- 감소율까지 적용된 최종 피해를 넣고 사망 처리까지 한다 - 모든 피격 경로의 마지막 공통
 -- 지점. 받는 피해 배율(대검 E 채널링·대시, PlayerState)은 여기서 곱한다.
 local function applyFinalDamage(targetPlayer, damage, label)
@@ -51,25 +92,8 @@ local function applyFinalDamage(targetPlayer, damage, label)
 			return 0
 		end
 	end
-	local newHp = math.max(PlayerState.getHp(targetPlayer) - damage, 0)
-	PlayerState.setHp(targetPlayer, newHp)
-	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)
-	PlayerDamage.syncHud(targetPlayer)
-
-	print(("[forge-game] 플레이어 피격%s: %s - %.2f 데미지 (남은 HP %.2f/%d)"):format(
-		label and ("(" .. label .. ")") or "", targetPlayer.Name, damage, newHp, PlayerState.getMaxHp(targetPlayer)))
-
-	if newHp <= 0 then
-		print(("[forge-game] 플레이어 사망: %s"):format(targetPlayer.Name))
-		local character = targetPlayer.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			-- 실제 HP는 PlayerState가 관리한다. Humanoid.Health=0은 로블록스 리스폰
-			-- 처리(사냥터에 이미 있는 SpawnLocation으로 자동 복귀)를 트리거하는 신호일 뿐이다.
-			humanoid.Health = 0
-		end
-	end
-	return damage
+	-- 반환은 지금까지처럼 피해 하나(호출자들이 "피격이 있었나"로 읽는다) - 쉴드가 다 막아도 피격은 피격이다. 흡수량이 필요한 곳은 takeDamage를 직접 부른다.
+	return (PlayerDamage.takeDamage(targetPlayer, damage, { label = label }))
 end
 
 -- 몬스터 공격력(rawAttack)을 방어력 감소식에 넣어 적용한다 - 잡몹 평타·보스 평타·강공격·

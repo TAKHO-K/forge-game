@@ -5,6 +5,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local PlayerShield = require(script.Parent.PlayerShield)
 
 local PlayerState = {}
 
@@ -35,6 +36,7 @@ function PlayerState.reset(player)
 		entry.hp = entry.maxHp
 		entry.trapDamageMultiplier = nil -- 29-1: 리스폰하면 잡힘도 풀린다(BossTrap이 기록도 같이 지운다)
 	end
+	PlayerShield.clear(player) -- S13b: 리스폰하면 쉴드도 풀린다
 	PlayerState.clearChanneling(player)
 end
 
@@ -89,6 +91,7 @@ function PlayerState.getMaxHp(player)
 	return entry and entry.maxHp
 end
 
+-- S13b: HP를 **깎는** 곳은 PlayerDamage.takeDamage 하나뿐이다(쉴드 흡수 → HP 순서 - 여기서 직접 낮추면 쉴드를 우회한다). setHp는 회복(HealCast · PlayerRegen · 흡혈) · 복구 · 검증 세팅용이다.
 function PlayerState.setHp(player, value)
 	local entry = players[player]
 	if entry then
@@ -199,6 +202,7 @@ end
 
 function PlayerState.clear(player)
 	players[player] = nil
+	PlayerShield.clear(player)
 end
 
 return PlayerState

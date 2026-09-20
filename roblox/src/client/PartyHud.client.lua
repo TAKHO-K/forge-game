@@ -157,7 +157,17 @@ local function makeRow(order)
 	fillCorner.CornerRadius = UDim.new(1, 0)
 	fillCorner.Parent = fill
 
-	return { frame = frame, name = name, meta = meta, fill = fill, stroke = stroke }
+	-- S13b: 쉴드 총량 - 체력 막대 위쪽 절반에 겹쳐 그리는 흰 띠(새 HUD 요소 없음). 폭 = 쉴드 ÷ 최대체력(최대 100%).
+	local shieldFill = Instance.new("Frame")
+	shieldFill.Name = "ShieldFill"
+	shieldFill.Size = UDim2.new(0, 0, 0, 3)
+	shieldFill.BackgroundColor3 = Color3.new(1, 1, 1)
+	shieldFill.BorderSizePixel = 0
+	shieldFill.Visible = false
+	shieldFill.ZIndex = 2
+	shieldFill.Parent = track
+
+	return { frame = frame, name = name, meta = meta, fill = fill, shieldFill = shieldFill, stroke = stroke }
 end
 
 local currentState = nil
@@ -174,7 +184,7 @@ local function refreshRows()
 			row.frame.Visible = false
 		else
 			row.frame.Visible = true
-			local hp, maxHp, level, stage, classId, buffActive, rebirth
+			local hp, maxHp, level, stage, classId, buffActive, rebirth, shield
 			local displayName = member.name -- 서버 기록은 username - 살아 있는 Player면 DisplayName으로 바꾼다(S12b D)
 			if member.isDummy then
 				hp, maxHp = member.dummy.hp or 1, member.dummy.maxHp or 1
@@ -183,6 +193,7 @@ local function refreshRows()
 				local target = Players:GetPlayerByUserId(member.userId)
 				if target then
 					hp, maxHp = target:GetAttribute("Hp"), target:GetAttribute("MaxHp")
+					shield = target:GetAttribute("Shield") -- S13b: 서버 PlayerShield가 올리는 쉴드 총량
 					level, stage, classId = target:GetAttribute("CharacterLevel"), target:GetAttribute("InfiniteStage"), target:GetAttribute("ClassId")
 					-- 24-3(PRD 20.64) 힐러 버프 - "파티원 목록에서 누가 버프를 받고 있는지
 					-- 구분되게" 하라는 지시. BuffState.lua가 올려주는 Attribute를 그대로
@@ -198,6 +209,9 @@ local function refreshRows()
 			row.meta.Text = ("%s · 스테이지 %s"):format(classNameOf(classId), tostring(stage or "-"))
 			local ratio = (hp and maxHp and maxHp > 0) and math.clamp(hp / maxHp, 0, 1) or 0
 			row.fill.Size = UDim2.new(ratio, 0, 1, 0)
+			local shieldRatio = (shield and maxHp and maxHp > 0) and math.clamp(shield / maxHp, 0, 1) or 0
+			row.shieldFill.Visible = shieldRatio > 0
+			row.shieldFill.Size = UDim2.new(shieldRatio, 0, 0, 3)
 			-- 24-3: 링 색으로 버프 여부를 구분한다(새 파티클·새 색 없이 기존 rim/success 재사용).
 			row.stroke.Color = buffActive and UIColors.success or UIColors.rim
 			row.stroke.Transparency = buffActive and 0.2 or UIColors.rimTransparency

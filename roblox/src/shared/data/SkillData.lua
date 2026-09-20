@@ -223,6 +223,15 @@ return {
 			-- 않고 cooldownSeconds에서 파생시킨다(지시). 1.2배인 이유: 힐러가 쿨타임마다 제때
 			-- 힐을 돌리면 버프가 안 끊기지만, 한 번 놓치면 끊긴다 - 힐러에게 할 일을 주는 값.
 			partyBuffDurationMultiplier = 1.2,
+			-- S13b(사용자 지시 2026-09-20): 딜링모드(E)가 켜져 있고 파티가 있으면 치유는 회복 대신 자신 포함 파티원 전원에게 쉴드를 준다(HealCast.usesShield).
+			-- 쉴드량 = (그 멤버의 최대체력 × healPercentOfMaxHp × 힐러의 재생 배수 = "힐량") × healRatio × 치명 배율(critHealMultiplier - 힐과 같은 굴림) × (반감이면 ShieldConfig.halveMultiplier).
+			-- 층이 쌓이는 규칙(최대 4겹 · 3번째부터 반감 · 시전자당 대상별 1겹)은 ShieldConfig. 힐러 버프(partyBuffDurationMultiplier)는 쉴드를 줄 때도 그대로 건다.
+			-- 대상별 쉴드 가동률(힐러 1명) = durationSeconds ÷ cooldownSeconds = 11 ÷ 25 = 44%(초안 목표 40 ~ 50%). 값은 측정 보고 뒤 Fable이 확정한다.
+			shield = {
+				healRatio = 0.6,
+				durationSeconds = 11,
+				cooldownSeconds = 25,
+			},
 		},
 		E = {
 			name = "딜링모드",

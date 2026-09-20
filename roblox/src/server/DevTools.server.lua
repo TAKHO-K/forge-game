@@ -3215,6 +3215,7 @@ if RunService:IsStudio() then
 				{ "S12(나)", function() PartyTutorialVerify.runLive(player, env) end },
 				{ "S12b(나)", function() SocialVerify.runLive(player, env) end },
 				{ "S13(나)", function() BalanceDecisionVerify.runLive(player, env) end },
+				{ "S13b(나)", function() require(script.Parent.ShieldVerify).runLive(player, env) end }, -- S13b: 실제 HealCast 쉴드 · 피해 경로 흡수(모듈은 여기서 require - 최상위 local을 늘리지 않는다)
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3382,6 +3383,17 @@ if RunService:IsStudio() and verifyEnabled("S13(가)") then
 		local ok, err = pcall(BalanceDecisionVerify.runPure)
 		if not ok then
 			warn(("[S13(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S13b 자동 검증 블록(가) - 쉴드 층 규칙 · 데이터 · 공통 피해 함수 · 파티 조합 측정(PartyShieldSim) · ★① 쌍검 ÷ 대검 ═══
+-- 순수 함수(플레이어 불필요). (나)는 위 29-1 체인의 끝(S13 (나) 다음).
+if RunService:IsStudio() and verifyEnabled("S13b(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.ShieldVerify).runPure)
+		if not ok then
+			warn(("[S13b(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

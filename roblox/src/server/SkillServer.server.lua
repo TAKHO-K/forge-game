@@ -416,6 +416,7 @@ end
 -- 서버 판정은 HealCast 모듈이 한다(자동 검증이 실제 경로를 밟게 모듈로 뺐다).
 local function castHeal(player, slot, def, classId, cooldownSeconds)
 	markCast(player, slot)
+	local shieldMode = HealCast.usesShield(player, def)
 	local healAmount, isCrit = HealCast.cast(player, def, classId, cooldownSeconds)
 
 	skillCastResult:FireClient(player, slot, {
@@ -423,7 +424,8 @@ local function castHeal(player, slot, def, classId, cooldownSeconds)
 		kind = "heal",
 		cooldownSeconds = cooldownSeconds,
 		hits = {},
-		self = { healAmount = healAmount, isCrit = isCrit },
+		-- S13b: 딜링모드 쉴드 시전이면 healAmount = 0이고 shieldMode = true - 클라는 숫자 대신 링만 그린다.
+		self = { healAmount = healAmount, isCrit = isCrit, shieldMode = shieldMode },
 	})
 end
 
@@ -482,6 +484,9 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 	if classId == "bow" and slot == "E" then
 		cooldownSeconds *= 1 + PlayerProfile.getOptionBonus(player, "skill_bow_E")
 	elseif classId == "healer" and slot == "Q" then
+		if HealCast.usesShield(player, def) then
+			cooldownSeconds = def.shield.cooldownSeconds -- S13b: 딜링모드 쉴드 시전은 쉴드의 쿨다운(치유 옵션은 그대로 곱한다)
+		end
 		cooldownSeconds *= 1 + PlayerProfile.getOptionBonus(player, "skill_healer_Q")
 	end
 	if isOnCooldown(player, slot, cooldownSeconds) then

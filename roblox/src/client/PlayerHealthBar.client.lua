@@ -156,6 +156,17 @@ tickHolder.Size = UDim2.new(1, 0, 1, 0)
 tickHolder.ZIndex = 2
 tickHolder.Parent = container
 
+-- S13b: 쉴드 막대 - 서버 Attribute Shield(총량, PlayerShield)를 최대체력 대비 비율로 바 위쪽에 흰 띠로 겹쳐 그린다. 새 HUD 요소가 아니라 이 바 안의 한 층이다(글자 아래 · 눈금 위).
+local SHIELD_BAR_HEIGHT = 5
+local shieldBar = Instance.new("Frame")
+shieldBar.Name = "ShieldBar"
+shieldBar.BorderSizePixel = 0
+shieldBar.BackgroundColor3 = Color3.new(1, 1, 1)
+shieldBar.Size = UDim2.new(0, 0, 0, SHIELD_BAR_HEIGHT)
+shieldBar.ZIndex = 2
+shieldBar.Visible = false
+shieldBar.Parent = container
+
 local hpLabel = Instance.new("TextLabel")
 hpLabel.Name = "HpLabel"
 hpLabel.BackgroundTransparency = 1
@@ -233,6 +244,17 @@ local function updateFillAndLabel()
 	isDanger = remainingHits <= 1
 end
 
+local function updateShield()
+	local shield = player:GetAttribute("Shield") or 0
+	local maxHp = player:GetAttribute("MaxHp")
+	if shield <= 0 or not maxHp or maxHp <= 0 then
+		shieldBar.Visible = false
+		return
+	end
+	shieldBar.Visible = true
+	shieldBar.Size = UDim2.new(math.clamp(shield / maxHp, 0, 1), 0, 0, SHIELD_BAR_HEIGHT) -- 최대체력을 넘는 쉴드는 꽉 찬 띠로 끝난다
+end
+
 local function updateTicks()
 	local maxHp = player:GetAttribute("MaxHp") or 0
 	local tickDamage = player:GetAttribute("TickDamage") or 0
@@ -240,8 +262,10 @@ local function updateTicks()
 end
 
 player:GetAttributeChangedSignal("Hp"):Connect(updateFillAndLabel)
+player:GetAttributeChangedSignal("Shield"):Connect(updateShield)
 player:GetAttributeChangedSignal("MaxHp"):Connect(function()
 	updateFillAndLabel()
+	updateShield()
 	updateTicks()
 end)
 player:GetAttributeChangedSignal("TickDamage"):Connect(function()
@@ -249,6 +273,7 @@ player:GetAttributeChangedSignal("TickDamage"):Connect(function()
 	updateTicks()
 end)
 updateFillAndLabel()
+updateShield()
 updateTicks()
 
 RunService.RenderStepped:Connect(function()
