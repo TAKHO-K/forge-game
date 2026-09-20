@@ -297,6 +297,16 @@ local function selfTestS12b()
 	local classId = Players.LocalPlayer:GetAttribute("ClassId")
 	local ABSENT_ID = 8888888
 
+	-- 행의 글 조각 중 key(isName = 이름 · bold = 아이템)가 있는 조각의 번호. ★n · Lv 조각이 앞에 붙으므로 번호는 고정이 아니다.
+	local function partIndex(row, key)
+		for index, part in ipairs(row.parts) do
+			if part[key] then
+				return index
+			end
+		end
+		return nil
+	end
+
 	local function payloadOf(name, userId, option)
 		return { name = name, userId = userId, level = 35, rebirth = 1, classId = classId, grade = "relic", part = "gloves", itemLevel = 52, scope = "party", option = option }
 	end
@@ -313,7 +323,7 @@ local function selfTestS12b()
 
 	-- 이름 클릭 → 메뉴(서버를 떠난 사람: 세 버튼 모두 비활성 + 이유)
 	if rows[1] then
-		rows[1].activate(1)
+		rows[1].activate(partIndex(rows[1], "isName"))
 		task.wait(0.4)
 		local state = PlayerMenu.debugState()
 		local friend, whisper, inspect = state.friend, state.whisper, state.inspect
@@ -336,7 +346,7 @@ local function selfTestS12b()
 	task.wait(0.3)
 	local selfRows = Toast.debugRows("TR")
 	if selfRows[1] then
-		selfRows[1].activate(1)
+		selfRows[1].activate(partIndex(selfRows[1], "isName"))
 		task.wait(0.4)
 		local state = PlayerMenu.debugState()
 		check(("자기 이름 클릭: 친구 보임=%s · 귓속말 보임=%s · 장비 보기 보임=%s 활성=%s(기대 false · false · true · true)"):format(
@@ -355,7 +365,8 @@ local function selfTestS12b()
 	rows = Toast.debugRows("TR")
 	option.roll = 0.05 -- 드랍 뒤 원본이 바뀌어도(재굴림 · 강화) 알림의 옵션은 그대로여야 한다
 	if rows[1] then
-		rows[1].activate(2)
+		local itemIndex = partIndex(rows[1], "bold")
+		rows[1].activate(itemIndex)
 		local openAfterTap, pinnedAfterTap = rows[1].tooltipOpen(), rows[1].pinned()
 		local toastGui = Players.LocalPlayer.PlayerGui:FindFirstChild("ToastGui")
 		local tip = toastGui and toastGui:FindFirstChild("ToastItemTooltip")
@@ -365,7 +376,7 @@ local function selfTestS12b()
 		check(("아이템 탭 → 툴팁 열림 %s · 타이머 정지 %s · 제목 [%s](기대 %s) · 옵션 [%s](기대 %s - 원본 roll을 0.05로 바꿔도 드랍 순간 값)"):format(
 			tostring(openAfterTap), tostring(pinnedAfterTap), shownTitle, expectedDesc.title, shownOption, expectedOption),
 			openAfterTap == true and pinnedAfterTap == true and shownTitle == expectedDesc.title and shownOption == expectedOption)
-		rows[1].activate(2)
+		rows[1].activate(itemIndex)
 		check(("같은 아이템 다시 탭 → 툴팁 닫힘 %s(기대 true) · 타이머 정지 해제 %s(기대 true)"):format(tostring(not rows[1].tooltipOpen()), tostring(not rows[1].pinned())), not rows[1].tooltipOpen() and not rows[1].pinned())
 	else
 		check("아이템 툴팁: 알림 행이 없다", false)
@@ -395,10 +406,10 @@ local function selfTestS12b()
 	Toast.clear()
 
 	local tipRow = shortRow()
-	tipRow.activate(2)
+	tipRow.activate(partIndex(tipRow, "bold"))
 	task.wait(1.9)
 	local stillWithTooltip = not tipRow.removed() and tipRow.tooltipOpen()
-	tipRow.activate(2) -- 툴팁 닫기 = 정지 해제
+	tipRow.activate(partIndex(tipRow, "bold")) -- 툴팁 닫기 = 정지 해제
 	task.wait(0.6)
 	local stillAfterClose = not tipRow.removed()
 	task.wait(1.0)
@@ -409,7 +420,7 @@ local function selfTestS12b()
 	-- 툴팁이 열린 행이 밀려나면 툴팁도 닫힌다(줄 수 1로 강제).
 	Toast.debugSetCapacity("TR", 1)
 	local evictRow = shortRow()
-	evictRow.activate(2)
+	evictRow.activate(partIndex(evictRow, "bold"))
 	local wasOpen = evictRow.tooltipOpen()
 	handle(payloadOf("새치기", ABSENT_ID, nil), true)
 	task.wait(0.2)

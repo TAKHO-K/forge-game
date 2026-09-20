@@ -601,6 +601,7 @@ function Toast.debugRows(laneName)
 	local list = {}
 	for _, row in ipairs(rows) do
 		table.insert(list, {
+			parts = row.item.richParts,
 			activate = function(partIndex)
 				row.item.richParts[partIndex].onActivate(row.handle)
 			end,

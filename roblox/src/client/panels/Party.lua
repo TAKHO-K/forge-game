@@ -1,5 +1,5 @@
 -- 파티창(S12b E) - 독립 window. 예전에는 장비창(InventoryUI)의 "파티" 탭이었다(24-1 · 24-2) - 같은 내용(내 파티 · 서버 플레이어 · 다른 서버 친구 · 코드 · 만들기 · 탈퇴)을 그대로 옮겼고 동작 변경은 없다.
--- 열기: HUD [파티] 버튼(MR.partyToggle) + P 키(PanelRegistry - 채팅 입력 중이면 UIManager가 gameProcessed로 무시한다). 모바일은 버튼.
+-- 열기: HUD [파티] 버튼(TR.partyToggle - 칩 스택 왼쪽) + P 키(PanelRegistry - 채팅 입력 중이면 UIManager가 gameProcessed로 무시한다). 모바일은 버튼.
 -- S12b가 바꾼 것: ① 이름 줄 = "★n Lv.35 표시이름"(D - 레벨은 이름 줄로 옮겨 가 meta에서 뺐다) ② 이름을 누르면 이름 클릭 메뉴(A - 자기 · 서버 플레이어 · 파티원, 더미 · 다른 서버 친구는 제외)
 -- ③ 글씨 4단(G - 20 · 16 · 14 · 12, 모바일 × 1.15는 Theme.textSize) · 모바일 버튼 44 이상 ④ 본문 고정 캔버스 + 창 안 스크롤(화면보다 작은 창에서 잘리지 않게 - COMMON.md §2).
 -- 판정은 전부 서버(PartyServer.server.lua) - 여기 버튼은 요청만 보낸다. Party.init()이 창과 HUD 버튼을 짓고 서버 스냅샷(PartyStateChanged)을 듣는다.
@@ -483,7 +483,36 @@ local function build()
 	refs = { panel = panel, update = update, refreshFriends = refreshFriends, myRows = myRows, serverRows = serverRows, myTitle = myTitle, scroll = scroll }
 end
 
--- HUD [파티] 버튼(항상 보임) - 가방 버튼 위 MR.partyToggle 자리. 누르면 파티창을 토글한다.
+-- 칩 스택(TopChipsRow - 골드 · 레벨 · 스테이지 ...)의 왼쪽에 붙인다: 위 끝을 스택과 맞추고 오른쪽 끝 = 스택 왼쪽 끝 - 8. 칩은 자릿수에 따라 폭이 변하므로 스택 크기가 바뀔 때마다 다시 붙인다.
+-- 스택이 아직 없거나 못 찾으면 ScreenMap 슬롯의 기본 자리(폭 77일 때)에 둔다.
+local CHIP_STACK_GAP = 8
+local function followChipStack(button, gui)
+	task.spawn(function()
+		local stack
+		for _ = 1, 40 do
+			stack = player.PlayerGui:FindFirstChild("TopChipsRow", true)
+			if stack then
+				break
+			end
+			task.wait(0.25)
+		end
+		if not stack then
+			return
+		end
+		local function reposition()
+			local inset = game:GetService("GuiService"):GetGuiInset()
+			local topLeft = stack.AbsolutePosition - inset -- ScreenGui 좌표(AbsolutePosition은 상단 인셋을 포함한다)
+			button.AnchorPoint = Vector2.new(1, 0)
+			button.Position = UDim2.new(0, topLeft.X - CHIP_STACK_GAP, 0, topLeft.Y)
+		end
+		reposition()
+		stack:GetPropertyChangedSignal("AbsoluteSize"):Connect(reposition)
+		stack:GetPropertyChangedSignal("AbsolutePosition"):Connect(reposition)
+		local _ = gui
+	end)
+end
+
+-- HUD [파티] 버튼(항상 보임) - 칩 스택 왼쪽 TR.partyToggle 자리. 누르면 파티창을 토글한다.
 local function buildToggleButton()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "PartyToggleGui"
@@ -492,8 +521,8 @@ local function buildToggleButton()
 
 	local button = Instance.new("TextButton")
 	button.Name = "PartyToggleButton"
-	ScreenMap.place(button, "MR", "partyToggle")
-	button.Size = UDim2.new(0, 90, 0, Theme.isMobile and Theme.touchMin or 36)
+	ScreenMap.place(button, "TR", "partyToggle")
+	button.Size = UDim2.new(0, 72, 0, Theme.isMobile and Theme.touchMin or 36)
 	button.Text = "파티"
 	button.Font = Theme.font
 	button.TextSize = Theme.textSize("body")
@@ -506,6 +535,7 @@ local function buildToggleButton()
 	button.Activated:Connect(function()
 		UIManager.toggle(Party.id)
 	end)
+	followChipStack(button, gui)
 	return button
 end
 

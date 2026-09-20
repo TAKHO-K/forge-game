@@ -16,7 +16,7 @@ local HelpTooltip = {}
 -- parent: 버튼을 붙일 인스턴스. anchorPosition: UDim2(버튼 중심 위치, parent 기준).
 -- text: 설명(2~3줄 권장) - panelSide("right"|"left")로 패널이 버튼 어느 쪽에 펼쳐질지.
 -- options(30-0 S06, ui/kit/HelpToggle가 쓴다 - 안 주면 위 기존 동작 그대로): { toggleOnly = true(hover 경로를 쓰지 않고 누를 때마다 열고 닫는다),
---   buttonSize(기본 16), buttonTextSize(기본 11), panelSize(Vector2, 기본 200×70), panelTextSize(기본 12) }.
+--   buttonSize(기본 16), buttonTextSize(기본 12), panelSize(Vector2, 기본 200×70), panelTextSize(기본 12) }.
 function HelpTooltip.attach(parent, anchorPosition, text, panelSide, options)
 	local toggleOnly = options ~= nil and options.toggleOnly == true
 	local buttonSize = options and options.buttonSize or 16
@@ -33,7 +33,7 @@ function HelpTooltip.attach(parent, anchorPosition, text, panelSide, options)
 	button.Position = anchorPosition
 	button.Size = UDim2.new(0, buttonSize, 0, buttonSize)
 	button.Font = Enum.Font.GothamBold
-	button.TextSize = options and options.buttonTextSize or 11
+	button.TextSize = options and options.buttonTextSize or 12 -- S12b G: 11 → 12(12 미만 금지)
 	button.Text = "?"
 	button.TextColor3 = UIColors.textSecondary
 	button.BackgroundColor3 = UIColors.panel

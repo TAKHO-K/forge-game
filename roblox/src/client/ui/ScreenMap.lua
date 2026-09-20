@@ -42,9 +42,9 @@ ScreenMap.windowNames = { ClassSelectPanel = true, ClassConfirmPanel = true }
 ScreenMap.zones = {
 	TL = { anchor = Vector2.new(0, 0), note = "로블록스 채팅창 - 손대지 않는다" },
 	TC = { anchor = Vector2.new(0.5, 0), note = "레벨업 연출 · 시스템 토스트 줄(y 64 ~ 210) · 태초 서버 전체 알림 배너(4초) · 드랍 피드가 자리 없을 때 옮겨 오는 띠" },
-	TR = { anchor = Vector2.new(1, 0), note = "칩 스택(골드 · 레벨 · 스테이지 · 설정 · 견습) · 그 아래 드랍 피드" },
+	TR = { anchor = Vector2.new(1, 0), note = "칩 스택(골드 · 레벨 · 스테이지 · 설정 · 견습) · 그 왼쪽 파티 버튼(S12b) · 칩 스택 아래 드랍 피드" },
 	ML = { anchor = Vector2.new(0, 0.5), note = "파티 목록 · 메뉴바" },
-	MR = { anchor = Vector2.new(1, 0.5), note = "파티 버튼(S12b) · 가방 버튼 · 요청 배너(파티 투표 · 초대)" },
+	MR = { anchor = Vector2.new(1, 0.5), note = "가방 버튼 · 요청 배너(파티 투표 · 초대)" },
 	C = { anchor = Vector2.new(0.5, 0.5), note = "전투 시야 - 비운다(화면 중앙 40% × 50%에 2D UI 없음)" },
 	BL = { anchor = Vector2.new(0, 1), note = "직업 변경 버튼 · 모바일 조이스틱 - 예약(좌 40% × 하 45%)" },
 	BC = { anchor = Vector2.new(0.5, 1), note = "버프 줄 → 스킬 슬롯 → 체력바 · 획득 팝업" },
@@ -65,6 +65,8 @@ ScreenMap.slots = {
 	},
 	TR = {
 		chipStack = slot("existing", 1, 0, UDim2.new(1, -14, 0, 52), nil, "TopChipsRow", "StageUI.client.lua - 골드(LayoutOrder 1) · 레벨(2) · 스테이지(3) · 설정(4) · 견습(5) 세로 스택, 간격 8. PRD 지도의 '골드 · 스테이지 칩'이 코드에서는 이 스택이다"),
+		partyToggle = slot("existing", 1, 0, UDim2.new(1, -99, 0, 52), UDim2.new(0, 72, 0, 36), "PartyToggleButton",
+			"panels/Party.lua(S12b) - '파티' 열기 버튼(P 키와 같은 창). 칩 스택 **왼쪽**, 위 끝을 칩 스택과 맞춘다(y 52). 오른쪽 끝 = 칩 스택 왼쪽 끝 - 8 - 칩 스택 폭이 늘면(골드 자릿수) 따라 움직인다(Party.lua followChipStack). 여기 기본값(-99)은 스택 폭 77일 때다. 세로 중앙 열(가방 버튼 · 투표 패널)은 이미 겹침이 있어 새 버튼을 놓지 않았다. 모바일은 높이 44"),
 		dropFeed = slot("new", 1, 0, UDim2.new(1, -14, 0, 52), UDim2.new(0, 300, 0, 78), "ToastLane_TR",
 			"Toast 줄 TR(드랍 피드 · 최대 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 넘치면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93 · 보완): 칩 스택 바로 아래(아래 끝 + 8)에 남은 자리만큼(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 구역 위 끝까지, 최대 3줄), 0줄이면 상단 가운데 띠 1줄(태초 배너가 있으면 그 아래 3)",
 			{ zone = "TR", slot = "chipStack", gap = 8 }),
@@ -79,7 +81,6 @@ ScreenMap.slots = {
 	MR = {
 		inventoryToggle = blocksFeed(slot("existing", 1, 0.5, UDim2.new(1, -16, 0.5, 0), UDim2.new(0, 90, 0, 36), "InventoryToggleButton", "InventoryUI.client.lua - '가방' 열기 버튼(항상 보임). 투표 패널과 같은 세로 중앙이라 투표 중에는 서로 겹친다(기존 - 20.94 미결)")),
 		partyVote = blocksFeed(slot("existing", 1, 0.5, UDim2.new(1, -14, 0.5, 0), UDim2.new(0, 210, 0, 84), "PartyVotePanel", "PartyHud.client.lua")),
-		partyToggle = blocksFeed(slot("existing", 1, 1, UDim2.new(1, -16, 0.5, -48), UDim2.new(0, 90, 0, 36), "PartyToggleButton", "panels/Party.lua(S12b) - '파티' 열기 버튼(P 키와 같은 창). 가방 버튼 위 - 아래 끝을 투표 패널 위 끝(세로 중앙 - 42)보다 6px 위(- 48)에 둬 투표 중에도 안 겹친다. 모바일은 높이 44")),
 	},
 	BC = {
 		buffRow = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -141), nil, "BuffHudAnchor", "PlayerHealthBar.client.lua - 버프 아이콘 28px 행(BOTTOM_OFFSET 94 + 체력바 19 + 8 + 10 + 10)"),
