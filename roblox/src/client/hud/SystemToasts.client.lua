@@ -74,8 +74,8 @@ local function selfCheck()
 		print(("[S17][UI] %s %s"):format(label, passed and "O" or "X"))
 	end
 	local function laneRow(laneName)
-		local gui = player.PlayerGui:FindFirstChild("ToastGui")
-		local lane = gui and gui:FindFirstChild(laneName == "TC" and "ToastLane_TC" or "ToastLane_BC")
+		-- 줄마다 자기 ScreenGui에 있을 수 있다(TC는 ToastGuiTC - S19) - 이름으로 PlayerGui 전체에서 찾는다.
+		local lane = player.PlayerGui:FindFirstChild(laneName == "TC" and "ToastLane_TC" or "ToastLane_BC", true)
 		return lane and lane:FindFirstChild("ToastRow")
 	end
 
@@ -157,8 +157,7 @@ local function selfCheck()
 		local state = Toast.debugState("TC")
 		local visibleRows = 0
 		local rowRects = {}
-		local gui = player.PlayerGui:FindFirstChild("ToastGui")
-		local tcLane = gui and gui:FindFirstChild("ToastLane_TC")
+		local tcLane = player.PlayerGui:FindFirstChild("ToastLane_TC", true)
 		for _, child in ipairs(tcLane and tcLane:GetChildren() or {}) do
 			if child.Name == "ToastRow" then
 				visibleRows += 1

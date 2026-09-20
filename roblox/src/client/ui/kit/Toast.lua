@@ -11,6 +11,7 @@
 --   · S12b: richParts 항목에 bold = true(굵게) · onActivate = function(handle)(그 부분을 누르면 부른다 - 이름 클릭 메뉴 · 아이템 옵션 툴팁)를 줄 수 있다. handle = { toggleTooltip(desc) - ItemTooltip을 그 행 옆에 토글 }.
 --     행을 **누르고 있는 동안**(또는 툴팁이 열려 있는 동안) 사라지는 타이머가 멈춘다 - 손을 떼거나 툴팁을 닫으면 seconds를 다시 센다. 툴팁이 열린 행이 밀려나면 툴팁도 닫힌다.
 -- 자리 · 크기는 ScreenMap의 슬롯(TC.toastLane · TR.dropFeed · BC.pickupPopup)에서 온다. 모양 = panel + rim + 모서리 10.
+--   · 레이어(S19 사전 작업): TC 줄은 자기 ScreenGui(ToastGuiTC)에 있다 - 등급 알림(aboveWindows)이 떠 있는 동안 그 줄만 창 · 확인창 위로 올라오고, TR 드랍 피드 · BC 줍기 팝업은 원래 대역(8)에 남는다(같이 올라오면 창의 장비 칸 · 보관함을 가렸다).
 --   · 등급(S17 미결 결정 2026-09-20, PRD 20.103 [10]): item.grade = "important"(16pt 굵게 + 강조색) · "critical"(빨간 바탕 + 16pt · 최소 6초 · 표시 중 다른 알림이 밀어내지 못한다). 없으면 일반(위 그대로).
 --     치명이 아닌 행은 같은 줄 대기열에 알림이 있으면 Toast.passOnSeconds(2초)만 보이고 넘어간다(치명은 전체 시간을 채운다). 값은 아래 Toast.grades · passOnSeconds.
 --     낮은 화면(centerSafe로 행이 줄어든 때)에서 16pt가 안 들어가면(행 높이 < 글씨 + 8) 일반 compact와 같이 12로 낮춘다 - 행 높이가 늘지 않으니 태초 배너 · 중앙 금지 구역 계산은 그대로다.
@@ -34,7 +35,7 @@ Toast.queueMax = 8
 -- 대기 규칙(S17 미결 1): 같은 줄 대기열에 알림이 있으면 치명이 아닌 행은 처음 보인 뒤 이 시간만 남고 넘어간다(원래 표시 시간이 더 짧으면 그대로).
 Toast.passOnSeconds = 2
 -- 등급 표(S17 미결 2): textSize = 글씨(px) · bold · colorName = 글씨 기본색(item.colorName이 있으면 그것) · textColorName = 글씨색 고정 · backgroundName/backgroundTransparency = 행 바탕(없으면 panel)
---   · minSeconds = 최소 표시 시간 · priority = 대기열이 넘칠 때 버려지는 순서(낮은 것부터) · protected = 표시 중 밀어냄 · 대기 단축(passOnSeconds) 대상이 아니다 · aboveWindows = 떠 있는 동안 ToastGui를 창 · 확인창 위로 올린다.
+--   · minSeconds = 최소 표시 시간 · priority = 대기열이 넘칠 때 버려지는 순서(낮은 것부터) · protected = 표시 중 밀어냄 · 대기 단축(passOnSeconds) 대상이 아니다 · aboveWindows = 떠 있는 동안 그 행이 속한 줄의 ScreenGui를 창 · 확인창 위로 올린다.
 Toast.grades = {
 	important = { textSize = 16, bold = true, colorName = "ember", priority = 1, aboveWindows = true }, -- S19 사전 작업(S18 미결 5 - 사용자 결정): 레벨업 등 중요 알림도 창을 연 채로 보인다
 	critical = { textSize = 16, bold = true, textColorName = "textPrimary", backgroundName = "danger", backgroundTransparency = 0.1, minSeconds = 6, priority = 2, protected = true, aboveWindows = true },
@@ -43,13 +44,13 @@ local ROW_GAP = 3
 local TEXT_PAD = 10
 local GRADE_TEXT_MARGIN = 8 -- 등급 글씨가 행 높이 안에 들어가려면 위아래 4씩 남는다
 local BASE_DISPLAY_ORDER = 8
--- aboveWindows(치명) 행이 하나라도 떠 있는 동안 ToastGui를 overlay 대역(200 ~ 249) 위로 올린다. 평소 8이면 창(100 ~ 149) · 딤 뒤에 가려져 창을 연 채 저장이 실패하면 안 보인다(S17 사전 작업 Play에서 실측).
+-- aboveWindows(치명 · 중요) 행이 떠 있는 동안 그 행이 속한 줄의 ScreenGui를 overlay 대역(200 ~ 249) 위로 올린다. 평소 8이면 창(100 ~ 149) · 딤 뒤에 가려져 창을 연 채 저장이 실패하면 안 보인다(S17 사전 작업 Play에서 실측).
 Toast.raisedDisplayOrder = 250
 
--- 줄 정의: 구역 · 슬롯(ScreenMap) · 최대 행 수 · 기본 시간(초). 행 높이는 슬롯 높이에서 나온다.
+-- 줄 정의: 구역 · 슬롯(ScreenMap) · 최대 행 수 · 기본 시간(초). 행 높이는 슬롯 높이에서 나온다. ownGui = 자기 ScreenGui("ToastGui" + 줄 이름)에 둔다(등급 알림만 창 위로 올리려고 - 위 레이어 설명).
 --   evict = 행이 다 차면 대기열이 아니라 가장 오래된 행을 밀어낸다 · newestOnTop = 새 행이 맨 위 · fit = 남은 자리로 줄 수(capacity)를 정한다(rows는 그 최대) · centerSafe = 낮은 화면에서 행이 중앙 금지 구역을 안 건드리게 줄인다.
 local LANES = {
-	TC = { zone = "TC", slot = "toastLane", rows = 1, seconds = 3, align = Enum.VerticalAlignment.Top, centerSafe = true },
+	TC = { zone = "TC", slot = "toastLane", rows = 1, seconds = 3, align = Enum.VerticalAlignment.Top, centerSafe = true, ownGui = true },
 	TR = { zone = "TR", slot = "dropFeed", rows = 3, seconds = 4, align = Enum.VerticalAlignment.Top, evict = true, newestOnTop = true, fit = true },
 	BC = { zone = "BC", slot = "pickupPopup", rows = 1, seconds = 3, align = Enum.VerticalAlignment.Bottom },
 }
@@ -61,17 +62,23 @@ local lanes = {} -- 줄 이름 -> { frame, cfg, rowHeight, capacity, strip, acti
 local relayoutFeed -- 아래에서 정의(TC 줄의 행이 늘고 줄 때도 부른다 - 띠가 배너 아래로 가야 한다)
 local rainbowGradients = {} -- 흐르는 무지개 테두리(태초 배너)의 UIGradient들 - 사라진 것은 돌 때 치운다
 
+local function newGui(name)
+	local newOne = Instance.new("ScreenGui")
+	newOne.Name = name
+	newOne.ResetOnSpawn = false
+	newOne.DisplayOrder = BASE_DISPLAY_ORDER -- 피드 · 토스트 대역(PRD [D-1]) - HUD(0 ~ 5)보다 위, station(10 ~)보다 아래
+	newOne.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	return newOne
+end
+
 local function ensureGui()
 	if gui then
 		return
 	end
-	gui = Instance.new("ScreenGui")
-	gui.Name = "ToastGui"
-	gui.ResetOnSpawn = false
-	gui.DisplayOrder = BASE_DISPLAY_ORDER -- 피드 · 토스트 대역(PRD [D-1]) - HUD(0 ~ 5)보다 위, station(10 ~)보다 아래
-	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	gui = newGui("ToastGui") -- ownGui가 아닌 줄(TR · BC)이 쓰는 ScreenGui. 화면 크기 재기 · 툴팁도 이것을 쓴다(ScreenGui 크기는 다 같다).
 
 	for laneName, cfg in pairs(LANES) do
+		local laneGui = cfg.ownGui and newGui("ToastGui" .. laneName) or gui
 		local slotDef = ScreenMap.slot(cfg.zone, cfg.slot)
 		local frame = Instance.new("Frame")
 		frame.Name = slotDef.instanceName
@@ -79,7 +86,7 @@ local function ensureGui()
 		frame.Size = slotDef.size
 		frame.Visible = false -- 행이 있을 때만 보인다(빈 줄이 겹침 검사에 잡히지 않게)
 		ScreenMap.place(frame, cfg.zone, cfg.slot)
-		frame.Parent = gui
+		frame.Parent = laneGui
 
 		local layout = Instance.new("UIListLayout")
 		layout.FillDirection = Enum.FillDirection.Vertical
@@ -91,6 +98,7 @@ local function ensureGui()
 
 		lanes[laneName] = {
 			frame = frame,
+			gui = laneGui,
 			cfg = cfg,
 			rowHeight = (slotDef.size.Y.Offset - (cfg.rows - 1) * ROW_GAP) / cfg.rows,
 			baseRowHeight = (slotDef.size.Y.Offset - (cfg.rows - 1) * ROW_GAP) / cfg.rows,
@@ -163,17 +171,19 @@ end
 
 local showNext
 
--- aboveWindows 행이 하나라도 떠 있으면 ToastGui를 창 위로, 없으면 원래 대역으로.
+-- ScreenGui마다: 그 안의 줄에 aboveWindows 행이 하나라도 떠 있으면 창 위로, 없으면 원래 대역으로.
 local function refreshDisplayOrder()
-	local raised = false
+	local raised = {}
 	for _, lane in pairs(lanes) do
 		for _, row in ipairs(lane.active) do
 			if row.gradeDef and row.gradeDef.aboveWindows then
-				raised = true
+				raised[lane.gui] = true
 			end
 		end
 	end
-	gui.DisplayOrder = raised and Toast.raisedDisplayOrder or BASE_DISPLAY_ORDER
+	for _, lane in pairs(lanes) do
+		lane.gui.DisplayOrder = raised[lane.gui] and Toast.raisedDisplayOrder or BASE_DISPLAY_ORDER
+	end
 end
 
 local function removeRow(lane, row)

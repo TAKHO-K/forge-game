@@ -174,7 +174,7 @@ local function selfTest()
 		task.wait(0.3)
 		local toastGui = playerGui:WaitForChild("ToastGui")
 		local screen = toastGui.AbsoluteSize
-		local feedFrame, bannerFrame = toastGui:FindFirstChild("ToastLane_TR"), toastGui:FindFirstChild("ToastLane_TC")
+		local feedFrame, bannerFrame = toastGui:FindFirstChild("ToastLane_TR"), playerGui:FindFirstChild("ToastLane_TC", true) -- TC 줄은 자기 ScreenGui(ToastGuiTC - S19)
 		local state = Toast.debugState("TR")
 		local feedRect = rectOfGui(feedFrame)
 		local hits, targets = {}, {}
