@@ -1,6 +1,7 @@
--- 메뉴바(S16, PRD 20.81 [D-2] · [D-1]). 화면 왼쪽 세로 중앙의 세로 1열 - 칸 = PanelRegistry의 menuOrder 항목(지금은 가방 · 파티 · 스테이지 선택, 상한 5). 누르면 UIManager.toggle이고 단축키는 PanelRegistry가 이미 문다 -
+-- 메뉴바(S16, PRD 20.81 [D-2] · [D-1]). 화면 왼쪽 세로 중앙의 세로 1열 - 칸 = PanelRegistry의 menuOrder 항목(지금은 가방 · 파티 · 스테이지 선택, 상한 5). 누르면 UIManager.switchTo(열려 있으면 닫고 · 다른 창이 열려 있으면 그 창을 닫고 연다 - S17 사전 작업)이고 단축키는 PanelRegistry가 이미 문다 -
 -- 이 파일은 단축키 표를 따로 갖지 않는다(라벨도 PanelRegistry의 hotkey 이름에서 읽는다). 빈 버튼은 만들지 않는다: 상점 · 펫 · 보상은 그 창을 등록하는 세션이 표에 한 줄 넣으면 칸이 생긴다.
 --   · 열린 패널의 버튼 = ember 테두리(UIManager.changed를 듣는다 - 단축키 · 다른 버튼 · 밀려 닫힘 모두).
+--   · 전환을 막는 이유가 있는 버튼(UIManager.switchBlockedReason: 확인창(overlay)이 떠 있다 · 그 창의 canOpen이 막는다) = 회색(lockedBg · lockedIcon). 눌러도 받고 이유를 TC 토스트로 낸다(같은 글 3초에 한 번).
 --   · PC는 버튼 오른쪽 위에 단축키 글자(caption 12 · textSecondary), 모바일은 없다. 첫 접속 8초 동안만 버튼 오른쪽에 이름표를 띄운다(저장 없음 - 이 스크립트가 도는 동안의 메모리뿐).
 --   · 가방 버튼에 빨간 점(Badge) - 서버의 InventoryFull 신호(가방이 가득이라 줍기 실패)를 들으면 켜지고 가방을 열면 꺼진다. 그 밖의 배지 규칙은 없다.
 --   · 견습 중 · 직업 선택 전에는 PanelRegistry의 menuHiddenWhile을 가진 칸(스테이지)이 숨는다 - 가방 · 파티는 보인다. 숨으면 남은 칸이 세로 중앙에서 다시 정렬된다.
@@ -20,6 +21,8 @@ local PanelRegistry = require(script.Parent.Parent.ui.PanelRegistry)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local Badge = require(script.Parent.Parent.ui.kit.Badge)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
+local Confirm = require(script.Parent.Parent.ui.kit.Confirm)
+local Toast = require(script.Parent.Parent.ui.kit.Toast)
 local UIManager = require(script.Parent.Parent.UIManager)
 
 local player = Players.LocalPlayer
@@ -54,10 +57,41 @@ local function buttonSize()
 	return Theme.isMobile and ScreenMap.menuBar.mobileButton or ScreenMap.menuBar.button
 end
 
-local function setOpenLook(item, open)
-	item.stroke.Color = open and UIColors.ember or UIColors.rim
-	item.stroke.Transparency = open and 0 or UIColors.rimTransparency
-	item.stroke.Thickness = open and 2 or 1
+-- 열림(ember 테두리) · 비활성(회색: 전환을 막는 이유가 있다 - 확인창이 떠 있다 · canOpen이 막는다). 비활성이 열림보다 우선한다. 비활성이어도 눌림은 받는다(이유를 토스트로 알린다).
+local function applyLook(item)
+	local open = UIManager.isOpen(item.entry.id)
+	local blocked = UIManager.switchBlockedReason(item.entry.id) ~= nil
+	item.stroke.Color = blocked and UIColors.lockedRim or open and UIColors.ember or UIColors.rim
+	item.stroke.Transparency = blocked and 0.3 or open and 0 or UIColors.rimTransparency
+	item.stroke.Thickness = not blocked and open and 2 or 1
+	item.button.BackgroundColor3 = blocked and UIColors.lockedBg or UIColors.slot
+	item.button.BackgroundTransparency = blocked and 0 or UIColors.slotTransparency
+	for frame, color in pairs(item.iconColors) do
+		frame.BackgroundColor3 = blocked and UIColors.lockedIcon or color
+	end
+	item.letter.TextColor3 = blocked and UIColors.lockedIcon or UIColors.textSecondary
+	item.blocked = blocked
+end
+
+-- 막힌 이유 토스트(TC 줄). 같은 글은 3초에 한 번만(연타해도 "×3"이 쌓이지 않는다).
+local BLOCKED_TOAST_GAP = 3
+local lastBlockedToast = { text = nil, at = 0 }
+local function notifyBlocked(text)
+	local now = os.clock()
+	if lastBlockedToast.text == text and now - lastBlockedToast.at < BLOCKED_TOAST_GAP then
+		return
+	end
+	lastBlockedToast.text, lastBlockedToast.at = text, now
+	Toast.push("TC", { text = text, colorName = "textPrimary" })
+end
+
+-- 버튼을 누른 처리(Activated와 자체 점검이 같은 함수를 부른다): UIManager.switchTo가 전환하거나, 막혔으면 이유를 토스트로 낸다.
+local function onButtonPressed(id)
+	local ok, text = UIManager.switchTo(id)
+	if not ok and text then
+		notifyBlocked(text)
+	end
+	return ok, text
 end
 
 -- 첫 접속 이름표(버튼 오른쪽) - 버튼의 자식이라 버튼이 숨으면 같이 숨는다. 8초 뒤 지운다.
@@ -140,7 +174,12 @@ local function build()
 		letter.Text = entry.hotkey and entry.hotkey.Name or ""
 		letter.Parent = button
 
-		local item = { entry = entry, button = button, stroke = stroke, icon = icon, letter = letter }
+		local item = { entry = entry, button = button, stroke = stroke, icon = icon, letter = letter, iconColors = {}, blocked = false }
+		for _, part in ipairs(icon:GetDescendants()) do
+			if part:IsA("Frame") then
+				item.iconColors[part] = part.BackgroundColor3 -- 비활성 회색에서 되돌릴 원래 색
+			end
+		end
 		if entry.id == BADGE_PANEL then
 			item.badge = Badge.build({
 				parent = button, kind = "dot", name = "FullBadge",
@@ -148,7 +187,7 @@ local function build()
 			})
 		end
 		button.Activated:Connect(function()
-			UIManager.toggle(entry.id)
+			onButtonPressed(entry.id)
 		end)
 		table.insert(refs.items, item)
 	end
@@ -190,9 +229,9 @@ local function relayout()
 	refs.bar.Position = UDim2.new(placed.position.X.Scale, placed.position.X.Offset, placed.position.Y.Scale, placed.position.Y.Offset - shift)
 end
 
-local function refreshOpenLook()
+local function refreshLook()
 	for _, item in ipairs(refs.items) do
-		setOpenLook(item, UIManager.isOpen(item.entry.id))
+		applyLook(item)
 	end
 end
 
@@ -215,11 +254,11 @@ end
 
 applyMetrics()
 relayout()
-refreshOpenLook()
+refreshLook()
 showNameTags(refs.items)
 
 UIManager.changed:Connect(function(id, isOpen)
-	refreshOpenLook()
+	refreshLook()
 	local item = findItem(id)
 	if item and item.badge and isOpen then
 		item.badge.setCount(0)
@@ -248,7 +287,7 @@ end
 
 -- ═══ 자체 점검 [S16][UI] (Studio · verify에 "S16(UI)"가 있을 때) ═══
 -- 다른 클라 점검(PanelFitCheck 10초 · S10 12초 · StageSelectCheck 30초 · SocialSelfCheck 50초)이 끝난 뒤에 돈다. 로컬 Attribute(Tutorial* · ClassId)를 잠깐 바꾸고 끝에 되돌린다.
--- 클릭 · 실제 키 입력은 여기서 못 한다 - 별도 Play에서 MCP로 확인한다. 버튼 Activated는 UIManager.toggle을 부를 뿐이라 여기서는 같은 UIManager.toggle로 대신한다.
+-- 클릭 · 실제 키 입력은 여기서 못 한다 - 별도 Play에서 MCP로 확인한다. 버튼 Activated는 onButtonPressed(→ UIManager.switchTo)를 부를 뿐이라 여기서는 같은 함수로 대신한다(창 → 창 전환 · 막힘 토스트까지).
 local CHECK_DELAY = 75
 
 local function selfCheck()
@@ -383,6 +422,87 @@ local function selfCheck()
 		UIManager.closeAll()
 		task.wait(0.3)
 		check(("규칙 그대로: 스테이지(station)를 연 채 가방(window) → 스테이지 닫힘 · 가방 열림 · 테두리 %s / 가방을 연 채 스테이지 → 안 열림 %s(기대 true · true)"):format(tostring(windowWins), tostring(stageBlocked)), windowWins and stageBlocked)
+
+		-- 3b. 전환(S17 사전 작업 - S16 결정 2): 버튼 Activated가 부르는 onButtonPressed로 잰다. 창 → 스테이지 · 스테이지 → 가방 · 창 → 창 · 막힘(회색 + 토스트)
+		local function settle()
+			task.wait(0.4)
+		end
+		local partyItem = findItem("party")
+		UIManager.closeAll()
+		settle()
+		onButtonPressed("inventory")
+		settle()
+		local windowToStage = onButtonPressed("stageSelect")
+		settle()
+		local switchedToStage = windowToStage and UIManager.isOpen("stageSelect") and not UIManager.isOpen("inventory")
+			and stageItem.stroke.Color == UIColors.ember and bagItem.stroke.Color == UIColors.rim and not stageItem.blocked and not bagItem.blocked
+		onButtonPressed("party") -- station이 열린 채 window(파티) 버튼: 스테이지가 닫히고 파티가 열린다
+		settle()
+		local stageToParty = UIManager.isOpen("party") and not UIManager.isOpen("stageSelect")
+		onButtonPressed("inventory") -- window → window
+		settle()
+		local windowToWindow = UIManager.isOpen("inventory") and not UIManager.isOpen("party") and #UIManager.getStack() == 1
+		onButtonPressed("inventory") -- 열린 버튼을 다시 누르면 닫힌다
+		settle()
+		local closedAgain = #UIManager.getStack() == 0
+		check(("전환: 가방 → 스테이지 버튼 = 가방 닫히고 스테이지 열림 %s · 스테이지 → 파티 버튼 %s · 파티 → 가방 버튼(window → window, 스택 1개) %s · 열린 버튼 다시 = 닫힘 %s(기대 전부 true)"):format(
+			tostring(switchedToStage), tostring(stageToParty), tostring(windowToWindow), tostring(closedAgain)),
+			switchedToStage and stageToParty and windowToWindow and closedAgain)
+
+		-- 막힘 (1) overlay(확인창)가 떠 있다: 세 버튼 전부 회색 · 눌러도 안 열리고 이유 토스트
+		Toast.clear()
+		lastBlockedToast.text = nil
+		Confirm.ask({ title = "자체 점검", body = "메뉴바 비활성 확인" }, function() end)
+		settle()
+		local allGray, noneBlockedOpen = true, true
+		for _, item in ipairs(refs.items) do
+			allGray = allGray and item.blocked and item.stroke.Color == UIColors.lockedRim and item.button.BackgroundColor3 == UIColors.lockedBg
+		end
+		local pressedOk, pressedText = onButtonPressed("inventory")
+		settle()
+		noneBlockedOpen = not pressedOk and not UIManager.isOpen("inventory") and UIManager.isOpen(Confirm.id)
+		local overlayToast = table.concat(Toast.debugTexts("TC"), "|")
+		local overlayToastOk = overlayToast:find(UIManager.blockedTexts.overlay, 1, true) ~= nil
+		local iconGray = true
+		for frame in pairs(bagItem.iconColors) do
+			iconGray = iconGray and frame.BackgroundColor3 == UIColors.lockedIcon
+		end
+		UIManager.close(Confirm.id, true)
+		settle()
+		local restored = true
+		for _, item in ipairs(refs.items) do
+			restored = restored and not item.blocked and item.stroke.Color == UIColors.rim and item.button.BackgroundColor3 == UIColors.slot
+		end
+		for frame, color in pairs(bagItem.iconColors) do
+			restored = restored and frame.BackgroundColor3 == color
+		end
+		check(("막힘 ① 확인창(overlay): 세 버튼 회색 %s · 아이콘 회색 %s · 눌러도 안 열림(확인창 그대로) %s · 토스트 '%s' %s · 확인창이 닫히면 원래 모양 %s(기대 전부 true - 실제 마우스는 딤이 먼저 먹는다: 클릭 재현은 별도 Play)"):format(
+			tostring(allGray), tostring(iconGray), tostring(noneBlockedOpen), tostring(pressedText), tostring(overlayToastOk), tostring(restored)),
+			allGray and iconGray and noneBlockedOpen and overlayToastOk and restored)
+
+		-- 막힘 (2) canOpen(견습 중 스테이지 선택): 눌러도 안 열리고 이유 토스트 · 스테이지 버튼만 회색(버튼은 원래 견습 중 숨는다 - 그 숨김을 잠깐 무시하고 상태만 잰다)
+		Toast.clear()
+		lastBlockedToast.text = nil
+		player:SetAttribute("TutorialCompleted", false)
+		player:SetAttribute("TutorialStep", 2)
+		settle()
+		local tutorialOk, tutorialText = onButtonPressed("stageSelect")
+		settle()
+		local stageGray = stageItem.blocked and not bagItem.blocked and not partyItem.blocked
+		local tutorialToast = table.concat(Toast.debugTexts("TC"), "|")
+		local tutorialToastOk = tutorialToast:find("견습 중에는 스테이지를 고를 수 없습니다", 1, true) ~= nil
+		onButtonPressed("stageSelect") -- 같은 글은 3초에 한 번만
+		local stackedOnce = #Toast.debugTexts("TC") == 1
+		player:SetAttribute("TutorialCompleted", true)
+		player:SetAttribute("TutorialStep", saved[2])
+		settle()
+		local stageBack = not stageItem.blocked
+		Toast.clear()
+		check(("막힘 ② canOpen(견습): 안 열림 %s · 스테이지만 회색 %s · 토스트 '%s' %s · 연타해도 1개 %s · 견습이 끝나면 회색 풀림 %s(기대 전부 true)"):format(
+			tostring(not tutorialOk and not UIManager.isOpen("stageSelect")), tostring(stageGray), tostring(tutorialText), tostring(tutorialToastOk), tostring(stackedOnce), tostring(stageBack)),
+			not tutorialOk and not UIManager.isOpen("stageSelect") and stageGray and tutorialToastOk and stackedOnce and stageBack)
+		UIManager.closeAll()
+		settle()
 
 		-- 4. 배지(가방 버튼만)
 		local badgeOff = bagItem.badge.root.Visible == false

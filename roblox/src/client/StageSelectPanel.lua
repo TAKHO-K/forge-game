@@ -677,6 +677,7 @@ UIManager.register("stageSelect", {
 	canOpen = function()
 		return not isTutorialActive()
 	end,
+	blockedText = "견습 중에는 스테이지를 고를 수 없습니다", -- 메뉴바 버튼의 비활성 토스트(UIManager.switchTo)
 	onOpen = onOpen,
 	onClose = onClose,
 })

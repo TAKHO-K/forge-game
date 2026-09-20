@@ -200,8 +200,9 @@ function UIManager.getIds()
 	return ids
 end
 
--- config: { kind, parentId, screenGui, frame, hotkey, modal, exclusive, hasCloseButton, tweens, extraVisible, canOpen, onOpen, onClose }
+-- config: { kind, parentId, screenGui, frame, hotkey, modal, exclusive, hasCloseButton, tweens, extraVisible, canOpen, blockedText, onOpen, onClose }
 -- canOpen(선택, S15): () → boolean. false를 돌려주면 open이 아무것도 안 하고 false를 돌려준다(단축키 · 버튼 · 코드 모두 - 예: 견습 중에는 스테이지 선택이 안 열린다).
+-- blockedText(선택, S17 사전 작업): canOpen이 막았을 때 메뉴바 버튼이 토스트로 보여 줄 이유 한 줄.
 -- kind(30-0 S06, PRD 20.81 [D-1]): "window"(기본 - 안 준 기존 등록(가방)은 그대로 window) · "station" · "overlay".
 --   window: 열리면 다른 window · station을 닫는다. 모달. / station: 열리면 다른 station을 닫고, window가 열려 있으면 **열리지 않는다**. 모달이 아니다(걸을 수 있다).
 --   overlay: 맨 위에 1개 - 열리면 다른 overlay를 닫는다. 모달. parentId(config 또는 open의 opts)의 패널이 닫히면 같이 닫힌다.
@@ -334,6 +335,48 @@ function UIManager.toggle(id)
 	else
 		UIManager.open(id)
 	end
+end
+
+-- S17 사전 작업(S16 결정 2): 메뉴바 버튼이 쓰는 "전환" 규칙. 단축키 · 다른 열기 버튼은 위 open의 규칙(window가 열려 있으면 station은 안 열린다)을 그대로 쓴다.
+-- 전환을 막는 이유(없으면 nil)와 토스트에 쓸 글: "overlay" = 확인 · 구매창이 떠 있다(뒤 패널은 그 창에 답한 뒤에) · "canOpen" = 그 창의 canOpen이 false(견습 중 스테이지 선택 등 - config.blockedText가 글).
+UIManager.blockedTexts = { overlay = "확인창을 먼저 닫아 주세요", canOpen = "지금은 열 수 없습니다" }
+
+function UIManager.switchBlockedReason(id)
+	local win = windows[id]
+	if not win then
+		return nil
+	end
+	for _, otherId in ipairs(stack) do
+		if windows[otherId].kind == "overlay" then
+			return "overlay", UIManager.blockedTexts.overlay
+		end
+	end
+	if not UIManager.isOpen(id) and win.canOpen and not win.canOpen() then
+		return "canOpen", win.blockedText or UIManager.blockedTexts.canOpen
+	end
+	return nil
+end
+
+-- 열려 있으면 닫고, 아니면 연다. station을 열 때 window가 열려 있으면 그 window를 먼저 닫는다(window → window · station → window는 open이 이미 그렇게 한다).
+-- 돌려주는 값: 성공하면 true, 막혔으면 false + 이유 글(토스트용), 트윈 중이라 무시됐으면 false + nil(조용히).
+function UIManager.switchTo(id)
+	local reason, text = UIManager.switchBlockedReason(id)
+	if reason then
+		return false, text
+	end
+	if UIManager.isOpen(id) then
+		UIManager.close(id)
+		return true
+	end
+	local win = windows[id]
+	if win and win.kind == "station" then
+		for _, otherId in ipairs(table.clone(stack)) do
+			if windows[otherId].kind == "window" then
+				UIManager.close(otherId)
+			end
+		end
+	end
+	return UIManager.open(id)
 end
 
 function UIManager.closeTop()
