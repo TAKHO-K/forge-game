@@ -151,7 +151,8 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 소진된 버프는 자동으로 기본값 1을 돌려준다) 대상 판정 사거리를 넓힌다. 실제 상한은
 	-- PlayerCombat.getBuffedAttackRange가 어그로 범위 아래로 자른다(주석 참고).
 	local rangeMultiplier = BuffState.getField(player, "backstepShotBuff", "rangeMultiplier", 1)
-	local attackRange = PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier)
+	-- 강화 단계(+15 · +20)의 사거리 보너스(30-0 S08)도 같은 함수가 곱한다 - 클라 조준(AimTarget)은 WeaponLevel Attribute로 같은 값을 넘긴다.
+	local attackRange = PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier, weapon.level)
 	local target = AimPicker.pick(rootPart.Position, safeAimPoint, attackRange, MonsterState.getAllModels())
 	if not target then
 		return -- 사거리 안에 몬스터가 없다 - 헛스윙

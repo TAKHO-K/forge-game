@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
 local WeaponModelData = require(ReplicatedStorage.Shared.data.WeaponModelData)
+local WeaponEnhanceVisual = require(script.Parent.WeaponEnhanceVisual) -- 강화 단계 이펙트(30-0 S08) - 이 파일은 부르기만 한다
 
 local WeaponVisual = {}
 
@@ -48,6 +49,7 @@ end
 
 local function clearCurrent()
 	if current then
+		WeaponEnhanceVisual.clear()
 		destroyDeep(current.instances)
 		current = nil
 	end
@@ -212,6 +214,9 @@ local function refresh()
 	local classId = player:GetAttribute("ClassId")
 	if classId and classId ~= "" then
 		current = buildWeapon(classId)
+		if current then
+			WeaponEnhanceVisual.apply(current, player:GetAttribute("WeaponLevel") or 0)
+		end
 	end
 end
 
@@ -520,6 +525,9 @@ end
 
 player.CharacterAdded:Connect(refresh)
 player:GetAttributeChangedSignal("ClassId"):Connect(refresh)
+WeaponEnhanceVisual.init(function()
+	return current
+end)
 refresh()
 
 RunService.RenderStepped:Connect(updateFrame)

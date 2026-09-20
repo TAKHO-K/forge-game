@@ -42,6 +42,7 @@ return {
 		gripOffset = CFrame.new(0.15, -0.1, -0.1) * GREATSWORD_GRIP_ROTATION,
 		trailTop = Vector3.new(0, 0, 2.6), -- 칼끝(로컬 +Z 방향) - Trail 두 Attachment 중 하나
 		trailBottom = Vector3.new(0, 0, 0.3), -- 칼밑(가드 근처)
+		effectAnchor = Vector3.new(0, 0, 1.45), -- 강화 이펙트(빛 · 파티클)가 붙는 자리(30-0 S08) = 날의 몸통(칼끝과 칼밑의 가운데). 보석 홈(가드 · 손잡이 · 폼멜 - PRD 20.38 [3])을 피한다.
 	},
 
 	dualblade = {
@@ -58,6 +59,8 @@ return {
 		},
 		trailTop = Vector3.new(0, 0, 0.95),
 		trailBottom = Vector3.new(0, 0, 0.1),
+		effectPart = "BladeRight", -- 강화 이펙트(빛 · 파티클)를 다는 칼 하나(30-0 S08 - 무기당 빛 1 · 파티클 1이 상한이라 두 칼 중 주 손 쪽만)
+		effectAnchor = Vector3.new(0, 0, 0.525), -- 날의 몸통(칼끝과 칼밑의 가운데)
 	},
 
 	bow = {
@@ -88,6 +91,7 @@ return {
 		stringColor = Color3.fromRGB(235, 235, 235),
 		arrowSize = Vector3.new(0.06, 0.06, 1.5),
 		arrowColor = Color3.fromRGB(200, 180, 140),
+		effectAnchor = Vector3.new(0, 0, 0), -- 강화 이펙트(30-0 S08)가 붙는 자리 = 활 몸체의 가운데(root 원점)
 	},
 
 	healer = {
@@ -97,5 +101,6 @@ return {
 		size = Vector3.new(1, 1, 5.6),
 		color = Color3.fromRGB(215, 200, 235),
 		gripOffset = CFrame.new(0.15, -0.1, -0.15),
+		effectAnchor = Vector3.new(0, 0, 1.4), -- 강화 이펙트(30-0 S08)가 붙는 자리 = 지팡이 상단 1/4(머리 쪽, size.Z/4) - 밑동 · 그립은 피한다
 	},
 }

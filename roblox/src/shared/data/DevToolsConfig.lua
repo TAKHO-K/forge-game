@@ -18,7 +18,8 @@ return {
 	-- 새 세션을 시작할 때 current를 그 세션의 블록 id + 그 세션이 고친 모듈을 쓰는 옛 블록 id("동반 실행")로 갈아 끼운다(그 밖의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
 	verify = {
 		regression = false,
-		-- S07: 이번 세션 블록 S07(가) + 동반 실행(COMMON.md §3) - 이 세션이 고친 shared/Enhance.lua(순수 함수 2개 추가) · server/PlayerProfile.lua(EnhanceGauge Attribute)를 쓰는 옛 강화 블록.
-		current = { "S07(가)", "S03(가)", "S03(나)", "S04(나)", "S05(나)" },
+		-- S08: 이번 세션 블록 S08(가) · S08(나) + 동반 실행(COMMON.md §3) - 이 세션이 고친 server/EnhanceService.lua(공지 발신 · init 인자) · shared/data/EnhanceConfig.lua(announceFromLevel)를
+		-- 쓰는 옛 강화 블록(S03 (가) · (나) · S04 (나) · S05 (나) · S07 (가))과, shared/PlayerCombat.lua(getAttackRange · getBuffedAttackRange에 단계 인자)를 BalanceSim이 부르는 26-2(measurePoint) · 27-1(가).
+		current = { "S08(가)", "S08(나)", "S03(가)", "S03(나)", "S04(나)", "S05(나)", "S07(가)", "26-2", "27-1(가)" },
 	},
 }

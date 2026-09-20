@@ -106,7 +106,9 @@ function AimTarget.refresh(aimPoint)
 	-- 그대로 서버와 같은 함수(getBuffedAttackRange)에 넘긴다 - 화면에 보이는 조준 대상과
 	-- 실제로 맞는 대상이 어긋나면 안 된다(getAttackRange 주석과 같은 원칙).
 	local rangeMultiplier = player:GetAttribute("RangeMultiplier") or 1
-	local rangeStuds = classId and classId ~= "" and PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier) or 0
+	-- 강화 단계의 사거리 보너스(30-0 S08) - 서버(AttackServer)가 weapon.level로 넘기는 값과 같은 WeaponLevel Attribute.
+	local weaponLevel = player:GetAttribute("WeaponLevel") or 0
+	local rangeStuds = classId and classId ~= "" and PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier, weaponLevel) or 0
 	local candidates = CollectionService:GetTagged("Monster")
 	setTarget(AimPicker.pick(rootPart.Position, lastAimPoint, rangeStuds, candidates))
 end

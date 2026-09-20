@@ -18,6 +18,7 @@ local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local EnhanceEffect = require(ReplicatedStorage.Shared.EnhanceEffect)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 
 -- 무기 등급 배율 - 갑옷·장갑·신발과 같은 단일 출처(ArmorData.gradeOrder로 index->id,
@@ -99,9 +100,21 @@ end
 -- 서버(AttackServer, 대상 판정)와 클라이언트(AimTarget, 조준 표시) 둘 다 이 함수 하나로
 -- 계산한다 - 화면에 보이는 조준 대상과 실제로 맞는 대상이 어긋나면 안 된다(AimPicker와
 -- 같은 이유).
-function PlayerCombat.getAttackRange(classId)
+--
+-- weaponLevel(30-0 S08, PRD 20.72 [1-9]) - 강화 단계의 사거리 보너스(+15 · +20 - EnhanceVisualData.rangeBonusByLevel)를 곱한다. 없으면(nil · 0) 보너스 없이 기존 값 그대로라
+-- 기존 호출부(BalanceSim 등)는 동작이 같다. 보너스가 붙은 값은 아래 getBuffedAttackRange와 같은 상한(어그로 범위 - 여유값)에서 자른다.
+local function safeMaxRange()
+	return WorldConfig.aggro.rangeStuds - CombatConfig.rangeBuffAggroMarginStuds
+end
+
+function PlayerCombat.getAttackRange(classId, weaponLevel)
 	local class = ClassData.classes[classId]
-	return CombatConfig.attackRangeStuds * class.rangeMultiplier
+	local baseRange = CombatConfig.attackRangeStuds * class.rangeMultiplier
+	local bonus = EnhanceEffect.getRangeBonus(classId, weaponLevel)
+	if bonus <= 0 then
+		return baseRange
+	end
+	return math.min(baseRange * (1 + bonus), safeMaxRange())
 end
 
 -- 사거리 버프(20-4 [2], 활 백스텝샷)가 걸렸을 때 실제로 쓸 사거리. getAttackRange에
@@ -112,13 +125,13 @@ end
 -- 조준 표시)가 같은 함수를 써야 화면과 실제 판정이 어긋나지 않는다(getAttackRange와 같은
 -- 이유). rangeMultiplier가 없거나 1 이하면(버프 없음) 기존 사거리 그대로 - 기존 호출부
 -- 동작을 안 바꾼다.
-function PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier)
-	local baseRange = PlayerCombat.getAttackRange(classId)
+-- weaponLevel(S08) - 강화 사거리 보너스가 붙은 사거리에 버프 배율을 곱하고, 같은 상한에서 자른다(강화 +20 활 24.0 × 백스텝샷 2 → 24.6).
+function PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier, weaponLevel)
+	local baseRange = PlayerCombat.getAttackRange(classId, weaponLevel)
 	if not rangeMultiplier or rangeMultiplier <= 1 then
 		return baseRange
 	end
-	local safeMax = WorldConfig.aggro.rangeStuds - CombatConfig.rangeBuffAggroMarginStuds
-	return math.min(baseRange * rangeMultiplier, safeMax)
+	return math.min(baseRange * rangeMultiplier, safeMaxRange())
 end
 
 -- defensePercentBonus(23-3, 보석 "심판의 표식") - 갑옷 보너스까지 합친 방어력 전체에

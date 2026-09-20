@@ -15,6 +15,9 @@
 return {
 	maxLevel = 25,
 
+	-- 30-0 S08: 이 단계 이상으로 **성공**했을 때(새 단계 기준) 같은 서버 전원에게 채팅 시스템 메시지 1줄(EnhanceService · 클라 EnhanceAnnounceClient).
+	announceFromLevel = 20,
+
 	-- 28-1(S03, PRD 20.72 [1-2]) 하락 · 초기화 규칙. 시도하는 순간의 단계로 읽는다 - 결과는 5종(success / maintain / down1 / down2 /
 	-- reset)이고 파괴(소멸)는 없다. 성공률은 옛 표 그대로(92 / 78 / 62 / 48 / 38 / 28 / 18 / 12%)이고 바뀐 것은 실패의 내용뿐이다:
 	-- 0 ~ 18강은 하락이 없다(옛 실패 확률 전체가 maintain), 19 ~ 21강은 하락(바닥 downFloorLevel), 22 ~ 24강은 하락 + 초기화(resetToLevel).

@@ -14,7 +14,12 @@ local enhanceResult = Instance.new("RemoteEvent")
 enhanceResult.Name = "EnhanceResult"
 enhanceResult.Parent = ReplicatedStorage
 
-EnhanceService.init(enhanceResult)
+-- 30-0 S08: 20강+ 성공 공지(같은 서버 전원 - 인자 = 표시 이름 · 새 단계). 채팅 시스템 메시지로 바꾸는 것은 클라(client/EnhanceAnnounceClient.client.lua).
+local enhanceAnnounce = Instance.new("RemoteEvent")
+enhanceAnnounce.Name = "EnhanceAnnounce"
+enhanceAnnounce.Parent = ReplicatedStorage
+
+EnhanceService.init(enhanceResult, enhanceAnnounce)
 
 -- 28-1 S05: 요청 인자 2개(useDropTicket · useResetTicket - boolean, 없으면 false). 값 검증은 EnhanceService가 한다(boolean true만 인정).
 enhanceRequest.OnServerEvent:Connect(function(player, useDropTicket, useResetTicket)

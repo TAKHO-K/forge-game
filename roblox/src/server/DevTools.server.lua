@@ -61,6 +61,8 @@ local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMateria
 local ProtectionTickets = require(script.Parent.ProtectionTickets) -- 30-0 S05 방지권 명령(/gg ticket).
 -- 30-0 S05 후속(S05b) 저장 집합 키 문자열 통일 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝. 재접속 왕복은 /gg keycheck · keyclean.
 local SaveKeyVerify = require(script.Parent.SaveKeyVerify)
+-- 30-0 S08 강화 이펙트 표 · 사거리 · 20강+ 공지 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝.
+local EnhanceEffectVerify = require(script.Parent.EnhanceEffectVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -3117,6 +3119,7 @@ if RunService:IsStudio() then
 				{ "S04(나)", function() EnhanceVerify.runLiveS04(player, env) end },
 				{ "S05(나)", function() EnhanceVerify.runLiveS05(player, env) end },
 				{ "S05b(나)", function() SaveKeyVerify.runLive(player, env) end },
+				{ "S08(나)", function() EnhanceEffectVerify.runLive(player, env) end },
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3218,6 +3221,17 @@ if RunService:IsStudio() and verifyEnabled("S07(가)") then
 		local ok, err = pcall(EnhanceOddsVerify.runPure)
 		if not ok then
 			warn(("[S07(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S08 자동 검증 블록(가) - 강화 이펙트 표 · 사거리(PRD 20.72 [1-9]) ═══
+-- 순수 함수(플레이어 불필요). (나)는 위 29-1 체인의 끝(S05b (나) 다음) - 실제 Player의 사거리 · 20강+ 공지 발신.
+if RunService:IsStudio() and verifyEnabled("S08(가)") then
+	task.spawn(function()
+		local ok, err = pcall(EnhanceEffectVerify.runPure)
+		if not ok then
+			warn(("[S08(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

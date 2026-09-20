@@ -18,14 +18,16 @@ local ImmediateSave = require(script.Parent.ImmediateSave)
 local EnhanceService = {}
 
 local enhanceResult -- 결과 RemoteEvent(EnhanceServer.server.lua가 init으로 넘긴다). 없으면 발신만 건너뛴다(검증 하네스).
+local enhanceAnnounce -- 20강+ 성공 공지 RemoteEvent(30-0 S08) - 같은 서버 전원에게 FireAllClients. 없으면 공지만 건너뛴다(검증 하네스).
 
 -- 요청 자체의 연타 방지. 결과를 화면에 보여줄 시간도 필요하고, 매크로성 연타로 서버 연산(및 ImmediateSave 타이머 갱신)이 낭비되는 것도 막는다.
 local ENHANCE_REQUEST_COOLDOWN_SECONDS = 0.5
 EnhanceService.requestCooldownSeconds = ENHANCE_REQUEST_COOLDOWN_SECONDS
 local lastRequestTick = setmetatable({}, { __mode = "k" })
 
-function EnhanceService.init(resultEvent)
+function EnhanceService.init(resultEvent, announceEvent)
 	enhanceResult = resultEvent
+	enhanceAnnounce = announceEvent
 end
 
 local function isNearStation(rootPart)
@@ -132,6 +134,11 @@ function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 	print(("[forge-game] 강화 결과: %s - %s (레벨 %d -> %d, 비용 %d, 게이지 %d -> %d%s)"):format(
 		player.Name, outcome.result, oldLevel, outcome.level, cost, oldGauge, outcome.gauge,
 		outcome.blockedBy and (", 방지권 " .. outcome.blockedBy .. " 소모") or ""))
+
+	-- 30-0 S08: 새 단계가 announceFromLevel(20) 이상인 **성공**은 같은 서버 전원에게 알린다(채팅 시스템 메시지는 클라 EnhanceAnnounceClient가 만든다). 실패 · 방지권 · 19강 이하 성공은 없다.
+	if outcome.result == "success" and outcome.level >= EnhanceConfig.announceFromLevel and enhanceAnnounce then
+		enhanceAnnounce:FireAllClients(player.DisplayName, outcome.level)
+	end
 
 	-- [4] 즉시 저장. 골드 차감과 레벨 · 게이지 변경은 이미 같은 profile 테이블에 함께 반영됐다 - SaveSystem.saveProfile이 그 테이블 전체를 한 번의
 	-- UpdateAsync로 쓰므로, 이 저장이 실패해도(재시도 소진·stale_session) "골드만 빠지고 강화는 안 남는" 중간 상태는 구조적으로 생기지 않는다 - 다음
