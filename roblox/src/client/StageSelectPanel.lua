@@ -25,6 +25,7 @@ local TextService = game:GetService("TextService")
 local BossRewardPreviewData = require(ReplicatedStorage.Shared.data.BossRewardPreviewData)
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local HudIcons = require(script.Parent.HudIcons)
 local StageRewardBand = require(script.Parent.StageRewardBand)
 local UIManager = require(script.Parent.UIManager)
 
@@ -70,6 +71,10 @@ local BAND_TOP = GRID_TOP + ROWS * (CELL_H + CELL_GAP) + CELL_GAP + 2 -- 그리�
 local CHIP_WIDTH = math.floor((GRID_WIDTH - 2 * STRIP_ARROW - (CHIPS + 1) * STRIP_GAP) / CHIPS)
 local CHIP_TEXT_SIZE = 12
 local CHIP_TEXT_ROOM = CHIP_WIDTH - 6
+-- S16 사전 작업: 잠긴 칩은 왼쪽에 자물쇠(HudIcons.lock - 기존 도형 아이콘)를 그리고 글은 그 오른쪽으로 민다(UIPadding 왼쪽 LOCK_PAD). 자물쇠 그림은 실효 12px 이상이 되게 캔버스 20(그려진 높이 = 캔버스 × 0.62).
+local LOCK_ICON_SIZE = 20
+local LOCK_PAD = 16
+local LOCK_TEXT_ROOM = CHIP_WIDTH - LOCK_PAD - 4 -- 글 자리(칩 폭 − 자물쇠 자리 − 양쪽 여유 2)
 -- S12 사전 작업 2: 화면이 패널보다 낮으면(폰 가로 388) UIManager.fitToScreen이 패널 높이를 줄이고, 제목 · 상태줄은 고정한 채 이 사이(범례 ~ 페이지 줄)가 스크롤된다.
 -- 캔버스 높이는 패널이 안 줄었을 때 이 영역의 높이와 같다(그때는 스크롤이 없다). 안의 자리는 전부 offset이다(ScrollingFrame 자식의 Scale은 캔버스 기준이라 안 쓴다).
 local BODY_TOP = 32 -- 제목줄 아래
@@ -122,7 +127,7 @@ end
 local CHIP_SPEC = {
 	cleared = { symbol = "✓", color = UIColors.textTertiary },
 	front = { symbol = "●", color = UIColors.ember },
-	locked = { symbol = "", color = UIColors.lockedText },
+	locked = { symbol = "", color = UIColors.lockedText, lockIcon = true }, -- 색만으로 구분하지 않는다: 자물쇠 그림이 붙는다(글자 · 그림 모두 lockedText - 명암비 4.5 이상)
 	open = { symbol = "", color = UIColors.textSecondary },
 }
 
@@ -299,7 +304,14 @@ for i = 1, CHIPS do
 	local button, stroke = makeStripButton("SectionChip" .. i, STRIP_ARROW + STRIP_GAP + (i - 1) * (CHIP_WIDTH + STRIP_GAP), CHIP_WIDTH)
 	button.TextWrapped = false
 	button.LineHeight = 1
-	chips[i] = { button = button, stroke = stroke, first = nil }
+	-- 잠긴 칩의 자물쇠. UIPadding은 글뿐 아니라 자식 자리의 원점도 밀므로 캔버스 x에 -LOCK_PAD를 더해 칩 왼쪽 끝에서 -1이 되게 한다(잠겼을 때만 패딩이 LOCK_PAD다). 세로는 그려진 부분(캔버스의 0.14 ~ 0.76)이 칩 세로 중앙에 온다.
+	local padding = Instance.new("UIPadding")
+	padding.Parent = button
+	local lock = HudIcons.lock(button, LOCK_ICON_SIZE, UIColors.lockedText)
+	lock.Name = "LockIcon"
+	lock.Position = UDim2.new(0, -1 - LOCK_PAD, 0, math.floor(STRIP_HEIGHT / 2 - LOCK_ICON_SIZE * 0.45 + 0.5))
+	lock.Visible = false
+	chips[i] = { button = button, stroke = stroke, first = nil, padding = padding, lock = lock }
 end
 local chipNextButton = makeStripButton("ChipNext", STRIP_ARROW + STRIP_GAP + CHIPS * (CHIP_WIDTH + STRIP_GAP), STRIP_ARROW)
 chipNextButton.Text = "▶"
@@ -344,7 +356,7 @@ for i = 1, WINDOW_SIZE do
 	stageNumberLabel.Size = UDim2.new(1, 0, 0, 16)
 	stageNumberLabel.Font = Enum.Font.Gotham
 	stageNumberLabel.TextSize = 12 -- S16 사전 작업 2: 실효 12 미만 금지(예전 9.5는 정수 속성이라 9로 저장돼 있었다). UIScale 조상이 없다 → 실효 = 12
-	stageNumberLabel.TextColor3 = UIColors.textTertiary
+	stageNumberLabel.TextColor3 = UIColors.textSecondary -- S16 사전 작업: 칸 바탕 대비 4.5 이상(textTertiary는 2.3 - 자체 점검 [S15][UI]가 10칸을 잰다)
 	stageNumberLabel.Text = ""
 	stageNumberLabel.Parent = cell
 	local symbolLabel = Instance.new("TextLabel")
@@ -500,7 +512,10 @@ local function render()
 		local last = first + WINDOW_SIZE - 1
 		local spec = CHIP_SPEC[chipState(first, last, best, bestBossCleared)]
 		chip.first = first
-		chip.button.Text = chipText(spec.symbol, first, last, CHIP_TEXT_ROOM, measureChipText)
+		local locked = spec.lockIcon == true
+		chip.padding.PaddingLeft = UDim.new(0, locked and LOCK_PAD or 0)
+		chip.lock.Visible = locked
+		chip.button.Text = chipText(spec.symbol, first, last, locked and LOCK_TEXT_ROOM or CHIP_TEXT_ROOM, measureChipText)
 		chip.button.TextColor3 = spec.color
 		local viewing = first == windowStart
 		chip.stroke.Color = viewing and UIColors.rimHi or UIColors.rim
@@ -727,6 +742,7 @@ StageSelectPanel.debug = {
 	chipText = chipText,
 	measureChipText = measureChipText,
 	chipTextRoom = CHIP_TEXT_ROOM,
+	lockTextRoom = LOCK_TEXT_ROOM,
 	chipTextSize = CHIP_TEXT_SIZE,
 	cells = cells,
 	chips = chips,

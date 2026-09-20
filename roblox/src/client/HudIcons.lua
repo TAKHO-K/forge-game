@@ -72,8 +72,9 @@ end
 
 -- 자물쇠 - 잠긴 스킬 슬롯(18-2). Roblox엔 아치(반원) primitive가 없어 shackle을 곡선 대신
 -- 각진 "⊓" 브라켓(세로 기둥 둘 + 가로대 하나, burst 아이콘과 같은 막대 조합 방식)으로 대체한다.
-function HudIcons.lock(parent, size)
-	local color = UIColors.lockedIcon
+-- color를 안 주면 기존 잠긴 슬롯 색(lockedIcon). 눌러서 읽어야 하는 곳(스테이지 선택의 잠긴 구간 칩)은 명암비를 지킨 lockedText를 넘긴다.
+function HudIcons.lock(parent, size, iconColor)
+	local color = iconColor or UIColors.lockedIcon
 	local canvas = Instance.new("Frame")
 	canvas.BackgroundTransparency = 1
 	canvas.Size = UDim2.new(0, size, 0, size)

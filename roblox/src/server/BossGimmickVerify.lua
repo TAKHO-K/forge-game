@@ -248,6 +248,21 @@ local function moveTo(root, position)
 	RunService.Heartbeat:Wait()
 end
 
+-- 구덩이 목록(BossArenaProps.list)의 거리 조건: (대상까지 가장 가까운 중심 거리, 구덩이끼리 가장 가까운 중심 간격 - 1개면 math.huge). XZ 평면.
+local function pitDistances(pits, root)
+	local nearest, spacing = math.huge, math.huge
+	local function flat(v)
+		return Vector3.new(v.X, 0, v.Z)
+	end
+	for i, prop in ipairs(pits) do
+		nearest = math.min(nearest, (flat(prop.position) - flat(root.Position)).Magnitude)
+		for j = i + 1, #pits do
+			spacing = math.min(spacing, (flat(prop.position) - flat(pits[j].position)).Magnitude)
+		end
+	end
+	return nearest, spacing
+end
+
 local function runFrost(player, env, r, root)
 	-- [3] 첫 포효 전에 기둥이 반드시 존재하는가 - 실제 스케줄러를 실시간으로. 플레이어는 가만히 서 있는다(최악의 경우).
 	local perStepRoar = nil
@@ -643,12 +658,12 @@ local function runExtras(player, env, r, root)
 		BossPatterns.force(model, data, "stab")
 		BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, { player })
 		local pits = BossArenaProps.list(model)
-		local nearest = math.huge
-		for _, prop in ipairs(pits) do
-			nearest = math.min(nearest, (Vector3.new(prop.position.X, 0, prop.position.Z) - Vector3.new(root.Position.X, 0, root.Position.Z)).Magnitude)
-		end
-		r.check(("잠행 찌르기 시작: 모래 구덩이 %d개(기대 3), 가장 가까운 구덩이 중심까지 %.1fstud(기대 ≥ 반경 %d + 여유 %d)"):format(
-			#pits, nearest, pit.radiusStuds, skill.onStart[1].clearStuds), #pits == 3 and nearest >= pit.radiusStuds + skill.onStart[1].clearStuds - 1e-3)
+		-- 입장점은 벽에서 10stud라 구덩이가 놓일 자리가 반쪽 도넛뿐이다 - spawnPropsAround는 24번 시도해 자리를 못 찾으면 덜 세운다("자리를 못 찾으면 덜 세운다", 난수 시드 없음 - 입장점에서 약 4.5%가 2개).
+		-- 그래서 여기서는 개수를 1 ~ 3으로 보고 "거리 조건"만 본다. 3개 확인은 아래 별도 구역(아레나 중앙 쪽)이 한다. 벽 · 모서리에서 줄어드는 것은 F3(원형 맵)에서 "항상 3개"로 다시 정한다(PRD 20.102).
+		local nearest, spacing = pitDistances(pits, root)
+		r.check(("잠행 찌르기 시작(입장점 - 벽 근처): 모래 구덩이 %d개(기대 1 ~ 3 - 벽 근처는 덜 생길 수 있다), 가장 가까운 구덩이 중심까지 %.1fstud(기대 ≥ 반경 %d + 여유 %d), 구덩이끼리 가장 가까운 중심 간격 %s(기대 ≥ 반경 합 %d)"):format(
+			#pits, nearest, pit.radiusStuds, skill.onStart[1].clearStuds, spacing == math.huge and "없음(1개)" or ("%.1fstud"):format(spacing), pit.radiusStuds * 2),
+			#pits >= 1 and #pits <= skill.onStart[1].count and nearest >= pit.radiusStuds + skill.onStart[1].clearStuds - 1e-3 and spacing >= pit.radiusStuds * 2 - 1e-3)
 
 		-- 구덩이 바닥에 서 있는다: 무장(1.5초) 직후 첫 틱만 잰다 - 돌진이 86stud를 달려오기(≈ 2.9초) 전이다.
 		local startedAt = os.clock()
@@ -689,6 +704,24 @@ local function runExtras(player, env, r, root)
 			tostring(near(model.PrimaryPart.Position.Y, surfaceY, 0.01)), tostring(head and head.Transparency < 1), BossArenaProps.count(model, "pit")),
 			table.concat(phases, ">") == "focus>charge>focus>charge>chargeRecover>normal" and near(model.PrimaryPart.Position.Y, surfaceY, 0.01)
 				and head ~= nil and head.Transparency < 1 and BossArenaProps.count(model, "pit") == 0)
+		fullHeal(player)
+	end)
+
+	-- 3개 확인: 대상이 아레나 중앙 쪽(보스에서 40stud - 어그로 반경 25.6 밖)에 서면 14 ~ 26stud 도넛이 벽 여백 안에 통째로 들어가 자리를 못 찾을 일이 없다(같은 알고리즘을 Python으로 옮긴 재현: 100만 회 중 2개 이하 0회).
+	r.section("모래 구덩이 3개(아레나 중앙 쪽)", function()
+		local model, data = spawnBoss(player, env, SCORPION)
+		local skill, pit = data.skills.stab, data.props.pit
+		fullHeal(player)
+		local bossPosition = model.PrimaryPart.Position
+		moveTo(root, Vector3.new(bossPosition.X, root.Position.Y, bossPosition.Z + 40))
+		BossPatterns.force(model, data, "stab")
+		BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, { player })
+		local pits = BossArenaProps.list(model)
+		local nearest, spacing = pitDistances(pits, root)
+		r.check(("잠행 찌르기 시작(중앙 쪽): 모래 구덩이 %d개(기대 3), 가장 가까운 구덩이 중심까지 %.1fstud(기대 ≥ %d), 구덩이끼리 가장 가까운 중심 간격 %s(기대 ≥ %d)"):format(
+			#pits, nearest, pit.radiusStuds + skill.onStart[1].clearStuds, spacing == math.huge and "없음" or ("%.1fstud"):format(spacing), pit.radiusStuds * 2),
+			#pits == skill.onStart[1].count and nearest >= pit.radiusStuds + skill.onStart[1].clearStuds - 1e-3 and spacing >= pit.radiusStuds * 2 - 1e-3)
+		BossPatterns.interrupt(model, data)
 		fullHeal(player)
 	end)
 

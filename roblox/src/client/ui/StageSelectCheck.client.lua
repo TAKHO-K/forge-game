@@ -182,6 +182,78 @@ local function run()
 			tostring(lockedChip.TextColor3 == UIColors.lockedText)),
 			worst >= 4.5 and panelWorst >= 4.5 and lockedChip.TextColor3 == UIColors.lockedText)
 
+		-- S16 사전 작업(사용자 결정): 색만으로 구분하지 않는다 - 잠긴 칩에는 자물쇠 그림. 그림 · 글 모두 실효 12px 이상 · 명암비 4.5 이상 · 서로 안 겹침 · 안 잠긴 칩에는 없다.
+		local function lockLayout(chip)
+			local button = chip.button
+			local minX, maxX, minY, maxY = math.huge, -math.huge, math.huge, -math.huge
+			local iconWorst = math.huge
+			local chipPos, chipSize = button.AbsolutePosition, button.AbsoluteSize
+			for _, world in ipairs({ Color3.new(0, 0, 0), Color3.new(1, 1, 1) }) do
+				local seen = blend(button.BackgroundColor3, button.BackgroundTransparency, blend(panelFrame.BackgroundColor3, panelFrame.BackgroundTransparency, world))
+				for _, part in ipairs(chip.lock:GetChildren()) do
+					if part:IsA("Frame") then
+						iconWorst = math.min(iconWorst, contrast(part.BackgroundColor3, seen))
+					end
+				end
+			end
+			for _, part in ipairs(chip.lock:GetChildren()) do
+				if part:IsA("Frame") then
+					minX, minY = math.min(minX, part.AbsolutePosition.X), math.min(minY, part.AbsolutePosition.Y)
+					maxX, maxY = math.max(maxX, part.AbsolutePosition.X + part.AbsoluteSize.X), math.max(maxY, part.AbsolutePosition.Y + part.AbsoluteSize.Y)
+				end
+			end
+			local pad = chip.padding.PaddingLeft.Offset
+			local textLeft = chipPos.X + pad + (chipSize.X - pad - button.TextBounds.X) / 2
+			local textRight = textLeft + button.TextBounds.X
+			local insideChip = minX >= chipPos.X - 2 and maxX <= chipPos.X + chipSize.X and minY >= chipPos.Y and maxY <= chipPos.Y + chipSize.Y
+			return {
+				drawnW = maxX - minX, drawnH = maxY - minY, iconWorst = iconWorst, gap = textLeft - maxX, insideChip = insideChip,
+				textInside = textRight <= chipPos.X + chipSize.X - 1, visible = chip.lock.Visible,
+			}
+		end
+		local lockInfo = lockLayout(chips[3])
+		local unlockedNoLock = not chips[1].lock.Visible and not chips[2].lock.Visible and chips[2].padding.PaddingLeft.Offset == 0
+		check(("잠긴 칩 자물쇠(%s): 그려진 크기 %.1f × %.1f px(기대 ≥ 12) · 명암비 최악 %.2f(기대 ≥ 4.5) · 칩 안 %s · 글과의 간격 %.1fpx(기대 ≥ 1) · 글 안 잘림 %s · 안 잠긴 칩에는 없음 %s"):format(
+			flat(chips[3].button.Text), lockInfo.drawnW, lockInfo.drawnH, lockInfo.iconWorst, tostring(lockInfo.insideChip), lockInfo.gap, tostring(lockInfo.textInside), tostring(unlockedNoLock)),
+			lockInfo.visible and lockInfo.drawnW >= 12 and lockInfo.drawnH >= 12 and lockInfo.iconWorst >= 4.5 and lockInfo.insideChip and lockInfo.gap >= 1 and lockInfo.textInside and unlockedNoLock)
+		-- 잠긴 칩 4자리(두 줄) · 3자리 글도 자물쇠와 안 겹치고 칩 안에 든다.
+		local lockSamples, lockSamplesOk = {}, true
+		for _, best in ipairs({ 100, 1000 }) do
+			player:SetAttribute("InfiniteStageBest", best)
+			player:SetAttribute("BestBossCleared", best - 5)
+			UIManager.closeAll()
+			task.wait(0.2)
+			UIManager.open("stageSelect")
+			task.wait(0.4)
+			for index, chip in ipairs(chips) do
+				if chip.lock.Visible then
+					local info = lockLayout(chip)
+					table.insert(lockSamples, ("최고 %d 칩%d %s(%.0f × %.0f · 간격 %.1f)"):format(best, index, flat(chip.button.Text), info.drawnW, info.drawnH, info.gap))
+					lockSamplesOk = lockSamplesOk and info.insideChip and info.gap >= 1 and info.textInside and lineCount(chip.button.Text) <= 2
+					break
+				end
+			end
+		end
+		check(("잠긴 칩 3 · 4자리 글: %s(기대 칩 안 · 자물쇠와 간격 ≥ 1 · 2줄 이내)"):format(table.concat(lockSamples, " · ")), #lockSamples == 2 and lockSamplesOk)
+		player:SetAttribute("InfiniteStageBest", 12)
+		player:SetAttribute("BestBossCleared", 0)
+		UIManager.closeAll()
+		task.wait(0.2)
+		UIManager.open("stageSelect")
+		task.wait(0.4)
+
+		-- S16 사전 작업(사용자 결정): 칸 번호 색 - 칸 바탕 대비 4.5 이상(10칸, 세계 검정/흰색 최악)
+		local numberWorst = math.huge
+		for _, cell in ipairs(cells) do
+			for _, world in ipairs({ Color3.new(0, 0, 0), Color3.new(1, 1, 1) }) do
+				local seen = blend(cell.button.BackgroundColor3, cell.button.BackgroundTransparency, blend(panelFrame.BackgroundColor3, panelFrame.BackgroundTransparency, world))
+				numberWorst = math.min(numberWorst, contrast(cell.number.TextColor3, seen))
+			end
+		end
+		check(("칸 번호 색 대비: 10칸 최악 %.2f(기대 ≥ 4.5 · 예전 textTertiary는 %.2f) · 색 = textSecondary %s"):format(
+			numberWorst, contrast(UIColors.textTertiary, blend(cells[1].button.BackgroundColor3, cells[1].button.BackgroundTransparency, blend(panelFrame.BackgroundColor3, panelFrame.BackgroundTransparency, Color3.new(1, 1, 1)))),
+			tostring(cells[1].number.TextColor3 == UIColors.textSecondary)), numberWorst >= 4.5 and cells[1].number.TextColor3 == UIColors.textSecondary)
+
 		-- S16 사전 작업 2: 칸 번호 실효 글씨 ≥ 12(10칸) · X 버튼 터치 영역 ≥ 44 × 44 · 칸 · 칩이 패널 폭 안(잘림 없음)
 		local smallest, smallCount = math.huge, 0
 		for _, cell in ipairs(cells) do
