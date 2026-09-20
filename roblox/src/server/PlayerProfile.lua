@@ -19,6 +19,8 @@ local Option = require(ReplicatedStorage.Shared.Option)
 local InventorySync = require(script.Parent.InventorySync)
 local GemSync = require(script.Parent.GemSync)
 local PlayerState = require(script.Parent.PlayerState)
+-- 30-0 S09: 파티 경험치 보너스(getExpGainMultiplier). PartyState는 PartyConfig만 require하므로 순환이 없다.
+local PartyState = require(script.Parent.PartyState)
 -- 28-1 S04: 강화 재료 보유량(profile.materials)의 Attribute 이름 · 순서를 데이터에서 읽는다.
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 
@@ -332,11 +334,15 @@ end
 -- getExpGainMultiplier만 곱한다 - 여기 한 곳에서만 곱한다(호출부 CombatResolution.
 -- grantKillReward는 몬스터가 주는 원래 경험치만 넘긴다 - "증가 통로가 여기 하나" 원칙).
 
--- 경험치 획득량 배수(26-2, PRD 20.67 [14] 4단계 "성장"). 성장(expGain) 옵션 합(상한 25%,
--- OptionData.expGain.cap)을 1에 더한다 - addCharacterExp·/gg curve(DevTools)가 이 함수
--- 하나만 본다.
+-- 경험치 획득량 배수 = (1 + 성장 옵션 합) × (1 + 파티 보너스). 옵션 합은 26-2(PRD 20.67 [14] 4단계 "성장")가 상한 25%(OptionData.expGain.cap)로 자른 값이고,
+-- 파티 보너스는 30-0 S09(PRD 20.73 [5-1])의 같은 서버 실제 Player 인원별 값이다 - 같은 축 안은 합, 축끼리는 곱(20.67 [7]). 순수 식이라 검증이 표로 대조한다.
+function PlayerProfile.combineExpMultiplier(optionBonus, partyBonus)
+	return (1 + optionBonus) * (1 + partyBonus)
+end
+
+-- addCharacterExp · 재료 기대 개수(CombatResolution.grantMaterials) · /gg curve(DevTools)가 이 함수 하나만 본다.
 function PlayerProfile.getExpGainMultiplier(player)
-	return 1 + PlayerProfile.getOptionBonus(player, "expGain")
+	return PlayerProfile.combineExpMultiplier(PlayerProfile.getOptionBonus(player, "expGain"), PartyState.getExpBonus(PartyState.getParty(player)))
 end
 
 -- 재생(healingPower, 26-2) 배수 - 자동회복(PlayerRegen.server.lua)·힐러 치유(SkillServer

@@ -53,6 +53,46 @@ listLayout.Padding = UDim.new(0, 6)
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = list
 
+-- 30-0 S09(PRD 20.73 [6]): 목록 맨 위의 "경험치 +20%" 칩 - 도움말을 안 열어도 파티의 이득이 보인다. 값은 서버가 PartyState에서 내려주는 Attribute PartyExpBonus
+-- (0 / 0.10 / 0.15 / 0.20 - 같은 서버의 실제 Player 인원 기준)를 그대로 읽는다. 0이면(솔로 · 더미만 있는 파티) 숨긴다. 목록 자체가 파티가 없으면 숨어 있다.
+local expChip = Instance.new("Frame")
+expChip.Name = "PartyExpChip"
+expChip.LayoutOrder = 0
+expChip.Size = UDim2.new(0, 108, 0, 22)
+expChip.BackgroundColor3 = UIColors.panel
+expChip.BackgroundTransparency = UIColors.panelTransparency
+expChip.Visible = false
+expChip.Parent = list
+
+local expChipCorner = Instance.new("UICorner")
+expChipCorner.CornerRadius = UDim.new(1, 0)
+expChipCorner.Parent = expChip
+
+local expChipStroke = Instance.new("UIStroke")
+expChipStroke.Color = UIColors.success
+expChipStroke.Transparency = 0.4
+expChipStroke.Thickness = 1
+expChipStroke.Parent = expChip
+
+local expChipText = Instance.new("TextLabel")
+expChipText.BackgroundTransparency = 1
+expChipText.Size = UDim2.new(1, 0, 1, 0)
+expChipText.Font = Enum.Font.GothamBold
+expChipText.TextSize = 12
+expChipText.TextColor3 = UIColors.success
+expChipText.Text = ""
+expChipText.Parent = expChip
+
+local function refreshExpChip()
+	local bonus = player:GetAttribute("PartyExpBonus") or 0
+	expChip.Visible = bonus > 0
+	if bonus > 0 then
+		expChipText.Text = ("경험치 +%d%%"):format(math.floor(bonus * 100 + 0.5))
+	end
+end
+player:GetAttributeChangedSignal("PartyExpBonus"):Connect(refreshExpChip)
+refreshExpChip()
+
 local rows = {} -- index -> { frame, name, meta, fill, userId, isDummy, dummy }
 
 local function makeRow(order)

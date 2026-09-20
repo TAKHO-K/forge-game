@@ -18,8 +18,9 @@ return {
 	-- 새 세션을 시작할 때 current를 그 세션의 블록 id + 그 세션이 고친 모듈을 쓰는 옛 블록 id("동반 실행")로 갈아 끼운다(그 밖의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
 	verify = {
 		regression = false,
-		-- S08: 이번 세션 블록 S08(가) · S08(나) + 동반 실행(COMMON.md §3) - 이 세션이 고친 server/EnhanceService.lua(공지 발신 · init 인자) · shared/data/EnhanceConfig.lua(announceFromLevel)를
-		-- 쓰는 옛 강화 블록(S03 (가) · (나) · S04 (나) · S05 (나) · S07 (가))과, shared/PlayerCombat.lua(getAttackRange · getBuffedAttackRange에 단계 인자)를 BalanceSim이 부르는 26-2(measurePoint) · 27-1(가).
-		current = { "S08(가)", "S08(나)", "S03(가)", "S03(나)", "S04(나)", "S05(나)", "S07(가)", "26-2", "27-1(가)" },
+		-- S09: 이번 세션 블록 S09(가) · S09(나) + 동반 실행(COMMON.md §3) - 이 세션이 고친 server/PlayerProfile.lua(getExpGainMultiplier - 파티 곱)를 쓰는 옛 블록: 26-2(성장 옵션 축 · 경험치 옵션 항목) ·
+		-- S04(나)(재료 기대 개수 × 경험치 배수) · S05(나)(처치 경로의 재료 지급). server/PartyState.lua(getExpBonus · pushState · removeRecord의 Attribute)를 쓰는 옛 블록: 29-5(나)(BossGimmick5Verify가
+		-- addDummies · leave로 파티를 만든다) · 27-3(가) · 27-3(나)(PartyVote가 PartyState.getMemberPlayers · onMemberRemoved를 쓴다).
+		current = { "S09(가)", "S09(나)", "26-2", "S04(나)", "S05(나)", "29-5(나)", "27-3(가)", "27-3(나)" },
 	},
 }

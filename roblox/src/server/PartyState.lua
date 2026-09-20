@@ -73,6 +73,13 @@ local function fireClient(remote, player, ...)
 	end
 end
 
+-- 30-0 S09: 파티 경험치 보너스를 클라(파티 목록의 "경험치 +N%" 칩)가 읽을 Attribute로 내린다. 스탠드인(테이블)에는 Attribute가 없어 여기서 걸러진다.
+local function syncExpBonusAttribute(player, bonus)
+	if typeof(player) == "Instance" and player.Parent then
+		player:SetAttribute("PartyExpBonus", bonus)
+	end
+end
+
 local function recordOf(party, player)
 	for _, record in ipairs(party.members) do
 		if record.player == player then
@@ -98,6 +105,19 @@ end
 -- 인원수 - 더미 포함(보스 HP 배수는 "입장 머릿수"다, PRD 20.47 [6](가)).
 function PartyState.getSize(party)
 	return party and #party.members or 0
+end
+
+-- 30-0 S09(PRD 20.73 [5-1]): 파티 경험치 보너스. 인원 = 실제 Player 멤버 수(더미 · 텔레포트 중인 원격 좌석은 안 센다). 이 함수 둘이 유일한 출처다 -
+-- PlayerProfile.getExpGainMultiplier(서버 판정)와 pushState의 Attribute(클라 칩)가 같은 값을 본다.
+function PartyState.getExpBonusForCount(memberCount)
+	return PartyConfig.expBonusByMemberCount[memberCount] or 0
+end
+
+function PartyState.getExpBonus(party)
+	if not party then
+		return 0
+	end
+	return PartyState.getExpBonusForCount(#PartyState.getMemberPlayers(party))
 end
 
 -- ═══ 24-2 크로스서버 보조 ═══
@@ -236,8 +256,10 @@ end
 
 function PartyState.pushState(party)
 	local data = snapshot(party)
+	local expBonus = PartyState.getExpBonus(party)
 	for _, player in ipairs(PartyState.getMemberPlayers(party)) do
 		fireClient(partyStateChanged, player, data)
+		syncExpBonusAttribute(player, expBonus)
 	end
 end
 
@@ -304,6 +326,7 @@ local function removeRecord(party, record, reason)
 	if record.player then
 		partyOf[record.player] = nil
 		fireClient(partyStateChanged, record.player, nil)
+		syncExpBonusAttribute(record.player, 0)
 		fireRemoved(record.player, party, reason)
 	end
 

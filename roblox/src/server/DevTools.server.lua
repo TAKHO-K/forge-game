@@ -63,6 +63,8 @@ local ProtectionTickets = require(script.Parent.ProtectionTickets) -- 30-0 S05 �
 local SaveKeyVerify = require(script.Parent.SaveKeyVerify)
 -- 30-0 S08 강화 이펙트 표 · 사거리 · 20강+ 공지 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝.
 local EnhanceEffectVerify = require(script.Parent.EnhanceEffectVerify)
+-- 30-0 S09 파티 경험치 보너스(+10 / 15 / 20%) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(스탠드인 파티 · 실제 처치 경로).
+local PartyExpVerify = require(script.Parent.PartyExpVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -563,8 +565,17 @@ local function printLevelCurve(player)
 	local mult = PlayerProfile.getExpGainMultiplier(player)
 	print(("[DevTools] === 레벨 곡선(25-1) - 목표 K(L) vs 실제(경험치 배수 ×%.2f) vs +25%% 가정(×%.2f) - 전제: 스테이지=레벨에서 tier1 사냥 ==="):format(
 		mult, LEVEL_CURVE_OPTION_MAX))
-	print("[DevTools] L | K(L) | E(L)=tier1 경험치 | L→L+1 필요 경험치 | 실제 마릿수 | +25% 마릿수 | 누적 경험치")
+	-- 30-0 S09: 파티 인원 열. 배수 = (1 + 내 옵션 합) × (1 + 파티 보너스) - 지금 파티에 있어도 옵션만 떼어 솔로 ×1.0 / 2인 / 3인 / 4인을 나란히 낸다.
+	local optionMult = 1 + PlayerProfile.getOptionBonus(player, "expGain")
+	local partyMults, partyLabels = {}, {}
+	for memberCount = 2, PartyConfig.maxMembers do
+		partyMults[memberCount] = PlayerProfile.combineExpMultiplier(optionMult - 1, PartyState.getExpBonusForCount(memberCount))
+		table.insert(partyLabels, ("%d인 ×%.3f"):format(memberCount, partyMults[memberCount]))
+	end
+	print(("[DevTools] 파티 배수(내 옵션 ×%.3f 기준): 솔로 ×%.3f / %s"):format(optionMult, optionMult, table.concat(partyLabels, " / ")))
+	print("[DevTools] L | K(L) | E(L)=tier1 경험치 | L→L+1 필요 경험치 | 실제 마릿수 | +25% 마릿수 | 2인 마릿수 | 3인 마릿수 | 4인 마릿수 | 누적 경험치")
 	local sumTarget, sumActual, sumOption = 0, 0, 0
+	local sumParty = {}
 	local segments = { 25, 50, 75, 100, 125 }
 	local segIndex, segStart = 1, 1
 	local segTarget, segActual, segOption = 0, 0, 0
@@ -574,8 +585,15 @@ local function printLevelCurve(player)
 		local need = CharacterLevel.getExpToNextLevel(level)
 		local actual = CharacterLevel.getExpectedKills(level, mult)
 		local option = CharacterLevel.getExpectedKills(level, mult * LEVEL_CURVE_OPTION_MAX)
-		print(("[DevTools] L%d | %.3f | %d | %d | %d | %d | %d"):format(
-			level, k, e, need, actual, option, CharacterLevel.getExpForLevel(level)))
+		local partyKills = {}
+		for memberCount = 2, PartyConfig.maxMembers do
+			partyKills[memberCount] = CharacterLevel.getExpectedKills(level, partyMults[memberCount])
+			if level < LEVEL_CURVE_MAX then
+				sumParty[memberCount] = (sumParty[memberCount] or 0) + partyKills[memberCount]
+			end
+		end
+		print(("[DevTools] L%d | %.3f | %d | %d | %d | %d | %d | %d | %d | %d"):format(
+			level, k, e, need, actual, option, partyKills[2], partyKills[3], partyKills[4], CharacterLevel.getExpForLevel(level)))
 		if level < LEVEL_CURVE_MAX then
 			sumTarget += k
 			sumActual += actual
@@ -592,7 +610,8 @@ local function printLevelCurve(player)
 			segTarget, segActual, segOption = 0, 0, 0
 		end
 	end
-	print(("[DevTools] 1→%d 전체 합계: 목표 %.1f / 실제 %d / +25%% %d"):format(LEVEL_CURVE_MAX, sumTarget, sumActual, sumOption))
+	print(("[DevTools] 1→%d 전체 합계: 목표 %.1f / 실제 %d / +25%% %d / 2인 %d / 3인 %d / 4인 %d"):format(
+		LEVEL_CURVE_MAX, sumTarget, sumActual, sumOption, sumParty[2] or 0, sumParty[3] or 0, sumParty[4] or 0))
 	for _, anchor in ipairs(CharacterLevelConfig.killTargetAnchors) do
 		print(("[DevTools]   앵커 L%d: 목표 %d → K(L)=%.3f"):format(anchor.level, anchor.kills, CharacterLevel.getTargetKills(anchor.level)))
 	end
@@ -3120,6 +3139,7 @@ if RunService:IsStudio() then
 				{ "S05(나)", function() EnhanceVerify.runLiveS05(player, env) end },
 				{ "S05b(나)", function() SaveKeyVerify.runLive(player, env) end },
 				{ "S08(나)", function() EnhanceEffectVerify.runLive(player, env) end },
+				{ "S09(나)", function() PartyExpVerify.runLive(player, env) end },
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3232,6 +3252,17 @@ if RunService:IsStudio() and verifyEnabled("S08(가)") then
 		local ok, err = pcall(EnhanceEffectVerify.runPure)
 		if not ok then
 			warn(("[S08(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S09 자동 검증 블록(가) - 파티 경험치 배수표 12칸 · 곱 · p · b 불변(PRD 20.73 [5-1]) ═══
+-- 순수 함수(플레이어 불필요). (나)는 위 29-1 체인의 끝(S08 (나) 다음) - 스탠드인 파티 · 더미 · 실제 처치 경로 · 탈퇴 뒤 Attribute.
+if RunService:IsStudio() and verifyEnabled("S09(가)") then
+	task.spawn(function()
+		local ok, err = pcall(PartyExpVerify.runPure)
+		if not ok then
+			warn(("[S09(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

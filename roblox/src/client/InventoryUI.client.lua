@@ -2890,10 +2890,27 @@ end
 local myColumn, myTitle, myList = makeColumn(14, "내 파티")
 local serverColumn, serverTitle, serverList = makeColumn(14 + COLUMN_WIDTH + 30, "서버 플레이어")
 
--- 25-3: 기여 10% 미만이면 보상은 받아도 스테이지 클리어(리더보드 기록)로는 인정되지
--- 않는다는 규칙이 화면 어디에도 안 보여서 붙인다(단계 2, PRD 20.47 [6](라)).
-HelpTooltip.attach(myColumn, UDim2.new(0, 62, 0, 19),
-	"기여도가 낮으면(10% 미만) 보상은 받지만 스테이지 클리어(리더보드 기록)로는 인정되지 않습니다.")
+-- 25-3에서 붙인 파티 도움말("?"). 30-0 S09(PRD 20.73 [6])가 문구를 교체했다 - 옛 문구("기여도가 낮으면 보상은 받지만…")는 사실과 달랐다(10% 미만이면 보상 자체가 없다).
+-- 숫자(기여 10% · 경험치 보너스 · 투표 10초)는 데이터에서 읽어 끼운다. 패널은 280 × 176 고정(HelpTooltip options.panelSize - 다른 두 곳은 기본 200 × 70 그대로).
+-- 문장은 한 줄로 이어 두고 패널이 줄바꿈한다(PRD 초안의 손 줄바꿈 + 들여쓰기는 260폭에서 더 많이 꺾여 높이가 넘친다 - 이어 쓴 문구는 156 / 160).
+do
+	local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+	local gatePercent = math.floor(CombatConfig.contributionRewardThreshold * 100 + 0.5)
+	local bonusParts = {}
+	for memberCount = 2, PartyConfig.maxMembers do
+		table.insert(bonusParts, ("%d인 +%d%%"):format(memberCount, math.floor(PartyConfig.expBonusByMemberCount[memberCount] * 100 + 0.5)))
+	end
+	HelpTooltip.attach(myColumn, UDim2.new(0, 62, 0, 19), table.concat({
+		("■ 기여 %d%%"):format(gatePercent),
+		("몬스터에게 준 피해가 %d%%에 못 미치면 파티여도 골드·경험치·아이템·강화석을 받지 못합니다. 보스는 파티원 전원이 %d%%를 넘겨야 스테이지 클리어로 기록됩니다."):format(gatePercent, gatePercent),
+		"■ 파티 경험치",
+		table.concat(bonusParts, " · ") .. ". 장비의 경험치 옵션과 곱해집니다.",
+		"■ 드랍 알림",
+		"유물 등급 이상이 나오면 파티 전원에게 표시됩니다. 태초는 서버 전체에 알려집니다.",
+		"■ 보스 스테이지 이동",
+		("파티장이 신청하고 파티원 1명이 동의하면 전원이 이동합니다. %d초 안에 동의가 없으면 취소됩니다."):format(PartyConfig.stageVoteTimeoutSeconds),
+	}, "\n"), nil, { panelSize = Vector2.new(280, 176) })
+end
 
 -- 열 사이 세로 구분선(장비 패널의 gearRightLine과 같은 선 스타일).
 local divider = Instance.new("Frame")
