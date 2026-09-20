@@ -6,7 +6,7 @@
 --   · 가방 버튼에 빨간 점(Badge) - 서버의 InventoryFull 신호(가방이 가득이라 줍기 실패)를 들으면 켜지고 가방을 열면 꺼진다. 그 밖의 배지 규칙은 없다.
 --   · 견습 중 · 직업 선택 전에는 PanelRegistry의 menuHiddenWhile을 가진 칸(스테이지)이 숨는다 - 가방 · 파티는 보인다. 숨으면 남은 칸이 세로 중앙에서 다시 정렬된다.
 --   · 모바일은 아래 끝이 BL 터치 예약 구역에 닿으면 ScreenMap.mobileMenuBarShiftUp만큼(겹침 0이 되는 최소 이동) 위로 민다.
--- 파티 목록은 이 바 오른쪽 옆으로 옮겼다(ScreenMap ML.partyList - PartyHud가 place로 받는다). 기존 열기 버튼(가방 · 파티 · 스테이지 칩)은 그대로 둔다 - 중복 허용(지시).
+-- 파티 목록은 이 바 오른쪽 옆으로 옮겼다(ScreenMap ML.partyList - hud/PartyListView가 place로 받는다). 기존 열기 버튼(가방 · 파티 · 스테이지 칩)은 그대로 둔다 - 중복 허용(지시).
 -- 자체 점검(`[S16][UI]`)은 이 파일 끝에 있다: Studio에서 DevToolsConfig.verify에 "S16(UI)"가 있을 때만(또는 회귀 전체).
 
 local Players = game:GetService("Players")
