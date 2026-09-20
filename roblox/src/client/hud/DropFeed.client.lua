@@ -12,6 +12,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local DropNoticeData = require(ReplicatedStorage.Shared.data.DropNoticeData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local FeedLayout = require(script.Parent.Parent.ui.FeedLayout)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local Toast = require(script.Parent.Parent.ui.kit.Toast)
@@ -135,27 +136,45 @@ local function selfTest()
 	check(("피드에 태초가 없다: 피드 글 [%s] 중 '태초' 포함 %s(기대 false)"):format(table.concat(feedTexts, " | "), tostring(string.find(table.concat(feedTexts), "태초", 1, true) ~= nil)),
 		string.find(table.concat(feedTexts), "태초", 1, true) == nil)
 
-	-- 측정: 피드 프레임이 실제로 어떤 HUD와도 겹치지 않는다(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 금지 구역 · 화면 아래 + 태초 배너)
-	task.wait(0.2)
+	-- 측정 A(태초 배너 없음): 피드 프레임이 실제로 어떤 자리와도 겹치지 않는다(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 금지 구역 · 화면 아래)
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-	local toastGui = playerGui:WaitForChild("ToastGui")
-	local screen = toastGui.AbsoluteSize
-	local feedFrame, bannerFrame = toastGui:FindFirstChild("ToastLane_TR"), toastGui:FindFirstChild("ToastLane_TC")
-	local feedRect = rectOfGui(feedFrame)
-	local hits, targets = {}, {}
-	for _, blocker in ipairs(FeedLayout.blockers(playerGui, screen)) do
-		table.insert(targets, blocker.label)
-		if intersects(feedRect, blocker) then
-			table.insert(hits, blocker.label)
+	local function measure()
+		task.wait(0.3)
+		local toastGui = playerGui:WaitForChild("ToastGui")
+		local screen = toastGui.AbsoluteSize
+		local feedFrame, bannerFrame = toastGui:FindFirstChild("ToastLane_TR"), toastGui:FindFirstChild("ToastLane_TC")
+		local state = Toast.debugState("TR")
+		local feedRect = rectOfGui(feedFrame)
+		local hits, targets = {}, {}
+		for _, blocker in ipairs(FeedLayout.blockers(playerGui, screen)) do
+			table.insert(targets, blocker.label)
+			if intersects(feedRect, blocker) then
+				table.insert(hits, blocker.label)
+			end
 		end
+		local bannerRect = bannerFrame.Visible and rectOfGui(bannerFrame) or nil
+		print(("[S10][UI][측정] 화면 %d × %d(%s) · 피드 (%d, %d) %d × %d · %s %d줄 · 피해야 할 자리 %s · 배너 %s"):format(screen.X, screen.Y, Theme.isMobile and "모바일" or "PC",
+			feedRect.min.X, feedRect.min.Y, feedFrame.AbsoluteSize.X, feedFrame.AbsoluteSize.Y, state.strip and "상단 띠" or "칩 스택 아래", state.rows, table.concat(targets, " · "),
+			bannerRect and ("(%d, %d) %d × %d"):format(bannerRect.min.X, bannerRect.min.Y, bannerFrame.AbsoluteSize.X, bannerFrame.AbsoluteSize.Y) or "없음"))
+		return { hits = hits, feedRect = feedRect, bannerRect = bannerRect, state = state, screen = screen }
 	end
-	if bannerFrame.Visible and intersects(feedRect, rectOfGui(bannerFrame)) then
-		table.insert(hits, "태초 배너")
+	Toast.clear()
+	handle(relic(1), true)
+	local plain = measure()
+	check(("피드 프레임이 겹치는 자리 %d개(기대 0 - 태초 배너 없음): [%s]"):format(#plain.hits, table.concat(plain.hits, " · ")), #plain.hits == 0)
+
+	-- 측정 B(태초 배너 있음): 사용자 규칙 - 띠(0줄일 때)는 배너 바로 아래에 붙는다. 낮은 화면에서는 이 자리가 중앙 금지 구역에 닿을 수 있다(PRD 20.94 미결) - 규칙대로인지만 검사하고 닿는 양은 참고로 찍는다.
+	handle({ name = "태초러", grade = "primordial", part = "shoes", itemLevel = 99, scope = "server" }, true)
+	local withBanner = measure()
+	if withBanner.state.strip then
+		local gap = withBanner.feedRect.min.Y - withBanner.bannerRect.max.Y
+		check(("태초 배너가 떠 있고 피드가 상단 띠일 때: 띠 위 끝 %d - 배너 아래 끝 %d = %d(기대 3 - 바로 아래)"):format(withBanner.feedRect.min.Y, withBanner.bannerRect.max.Y, gap), math.abs(gap - 3) <= 1)
+	else
+		check("태초 배너가 떠 있고 피드가 칩 스택 아래일 때: 배너와 겹치지 않는다", not intersects(withBanner.feedRect, withBanner.bannerRect))
 	end
-	print(("[S10][UI][측정] 화면 %d × %d(%s) · 피드 (%d, %d) %d × %d · %s %d줄 · 피해야 할 자리 %s · 배너 %s"):format(screen.X, screen.Y, Theme.isMobile and "모바일" or "PC",
-		feedRect.min.X, feedRect.min.Y, feedFrame.AbsoluteSize.X, feedFrame.AbsoluteSize.Y, feed.strip and "상단 띠" or "칩 스택 아래", feed.rows, table.concat(targets, " · "),
-		bannerFrame.Visible and ("(%d, %d) %d × %d"):format(bannerFrame.AbsolutePosition.X, bannerFrame.AbsolutePosition.Y, bannerFrame.AbsoluteSize.X, bannerFrame.AbsoluteSize.Y) or "없음"))
-	check(("피드 프레임이 겹치는 자리 %d개(기대 0): [%s]"):format(#hits, table.concat(hits, " · ")), #hits == 0)
+	local centerRect = ScreenMap.centerRect(withBanner.screen)
+	print(("[S10][UI][측정][참고] 배너 + 피드 동시: 피드 (%d ~ %d) vs 중앙 금지 구역 위 경계 %d → %s"):format(withBanner.feedRect.min.Y, withBanner.feedRect.max.Y, centerRect.min.Y,
+		intersects(withBanner.feedRect, centerRect) and "닿음(미결)" or "안 닿음"))
 
 	Toast.clear()
 	handle({ name = "같은이", grade = "relic", part = "gloves", itemLevel = 52, scope = "party" }, true)
