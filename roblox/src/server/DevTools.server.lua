@@ -67,6 +67,7 @@ local EnhanceEffectVerify = require(script.Parent.EnhanceEffectVerify)
 local PartyExpVerify = require(script.Parent.PartyExpVerify)
 -- 30-0 S10 파티원 드랍 알림(DropNotice) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(더미 · 스탠드인 파티 · 견습 경로 · 보스 첫 클리어).
 local DropNoticeVerify = require(script.Parent.DropNoticeVerify)
+local BossRewardPreviewVerify = require(script.Parent.BossRewardPreviewVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -3194,6 +3195,7 @@ if RunService:IsStudio() then
 				{ "S08(나)", function() EnhanceEffectVerify.runLive(player, env) end },
 				{ "S09(나)", function() PartyExpVerify.runLive(player, env) end },
 				{ "S10(나)", function() DropNoticeVerify.runLive(player, env) end },
+				{ "S11(나)", function() BossRewardPreviewVerify.runLive(player, env) end },
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3328,6 +3330,17 @@ if RunService:IsStudio() and verifyEnabled("S10(가)") then
 		local ok, err = pcall(DropNoticeVerify.runPure)
 		if not ok then
 			warn(("[S10(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S11 자동 검증 블록(가) - 보스 첫 클리어 보상 미리보기 데이터 식 · 입력 검사 · 저장 이관(PRD 20.73 [4-1] · [4-2]) ═══
+-- 순수 함수(플레이어 불필요). (나)는 위 29-1 체인의 끝(S10 (나) 다음) - 실제 보스 처치 경로로 조회 응답을 읽는다. 클라 쪽 문자열 생성은 StageRewardBand.selfTest([S11][UI]).
+if RunService:IsStudio() and verifyEnabled("S11(가)") then
+	task.spawn(function()
+		local ok, err = pcall(BossRewardPreviewVerify.runPure)
+		if not ok then
+			warn(("[S11(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

@@ -23,6 +23,8 @@ local PlayerState = require(script.Parent.PlayerState)
 local PartyState = require(script.Parent.PartyState)
 -- 28-1 S04: 강화 재료 보유량(profile.materials)의 Attribute 이름 · 순서를 데이터에서 읽는다.
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
+-- 30-0 S11: 보스 도감 도장(purchases.bossCodex)의 키 검사(BossData.bosses의 id).
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
 
 local PlayerProfile = {}
 
@@ -290,6 +292,34 @@ function PlayerProfile.markProtectionStageClaimed(player, stage)
 	if profile then
 		profile.purchases.protectionClaimedStages[tostring(stage)] = true
 	end
+end
+
+-- 보스 도감 도장(30-0 S11, PRD 20.73 [4-1]) - purchases.bossCodex(계정 공유). 서버만 부른다: CombatResolution.handleBossDeath(기여 10% 이상 수령자 · 견습 보스 제외).
+-- markBossCodex는 새로 찍혔을 때만 true(호출부가 그때만 즉시 저장을 챙긴다). 이 집합은 Attribute로 복제하지 않는다 - 클라는 BossRewardPreview 응답으로 읽는다.
+function PlayerProfile.hasBossCodex(player, bossId)
+	local profile = profiles[player]
+	return profile ~= nil and profile.purchases.bossCodex[bossId] == true
+end
+
+function PlayerProfile.markBossCodex(player, bossId)
+	local profile = profiles[player]
+	if not profile or BossData.bosses[bossId] == nil or profile.purchases.bossCodex[bossId] == true then
+		return false
+	end
+	profile.purchases.bossCodex[bossId] = true
+	return true
+end
+
+-- 도감 도장 사본({ [bossId] = true }) - 스테이지 선택 패널의 응답용.
+function PlayerProfile.getBossCodex(player)
+	local profile = profiles[player]
+	local copy = {}
+	if profile then
+		for bossId, stamped in pairs(profile.purchases.bossCodex) do
+			copy[bossId] = stamped
+		end
+	end
+	return copy
 end
 
 -- DevTools "/gg ticket clear" 전용 - 방지권 보유 · 받은 스테이지 기록을 전부 비운다(Attribute 동기화 포함).
@@ -1296,6 +1326,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		-- 28-1 S05: 보스 처치가 방지권 · 지급 기록을 실제 프로필에 쌓는다 - purchases 전체가 아니라 이 둘만 되돌린다(옵션 변환권은 그것을 만지는 검증 블록이 각자 되돌린다).
 		protectionTickets = deepCopy(profile.purchases.protectionTickets),
 		protectionClaimedStages = deepCopy(profile.purchases.protectionClaimedStages),
+		bossCodex = deepCopy(profile.purchases.bossCodex), -- 30-0 S11: 보스 처치가 도감 도장을 실제 프로필에 찍는다 - 같은 이유로 되돌린다.
 	}
 end
 
@@ -1320,6 +1351,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	syncMaterialAttributes(player, profile)
 	profile.purchases.protectionTickets = deepCopy(snapshot.protectionTickets)
 	profile.purchases.protectionClaimedStages = deepCopy(snapshot.protectionClaimedStages)
+	profile.purchases.bossCodex = deepCopy(snapshot.bossCodex)
 	syncProtectionAttributes(player, profile)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)

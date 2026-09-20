@@ -7,14 +7,25 @@
 -- 25-3에서 겪은 함정 회피: AutomaticSize.Y를 부모·자식에 중첩하지 않는다(그리드 셀·
 -- 패널 전부 고정 크기). 레지스터 대응으로 이 로직 전부를 독립 모듈로 뽑았다 - StageUI.
 -- client.lua에는 StageSelectPanel.open() 호출 한 줄만 늘어난다.
+--
+-- 30-0 S11(PRD 20.73 [4-2]): 그리드와 페이지 버튼 사이에 보상 띠(StageRewardBand)가 끼었다 - 패널 높이 320 → 396. **보스 칸(5의 배수)만 2단계**다: 칸을 누르면 선택 +
+-- 띠가 채워지고 [도전]을 눌러야 이동 요청이 나간다(파티에서는 이 클릭이 투표와 전원 텔레포트를 일으킨다). 일반 칸은 지금처럼 한 번에 이동한다. 보스 칸의 받을 것 ★ / 다 받음 ✓
+-- 표시와 띠의 내용은 서버 조회(BossRewardPreviewRequest / Result)가 준다 - 클라는 판정하지 않는다(25-4 그대로: X 칸도 [도전]은 눌리고 서버 거절 사유가 상태줄에 뜬다).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local RunService = game:GetService("RunService")
+
+local BossRewardPreviewData = require(ReplicatedStorage.Shared.data.BossRewardPreviewData)
+local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local StageRewardBand = require(script.Parent.StageRewardBand)
 
 local stageMoveRequest = ReplicatedStorage:WaitForChild("StageMoveRequest")
 local stageMoveResult = ReplicatedStorage:WaitForChild("StageMoveResult")
+local previewRequest = ReplicatedStorage:WaitForChild("BossRewardPreviewRequest")
+local previewResult = ReplicatedStorage:WaitForChild("BossRewardPreviewResult")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -37,6 +48,8 @@ local WINDOW_SIZE = COLUMNS * ROWS -- 21칸 고정 - 스테이지 번호가 아�
 local CELL_SIZE = 42
 local CELL_GAP = 6
 local STEP = 10 -- "이전/다음" 버튼 한 번에 넘기는 칸 수.
+local PANEL_HEIGHT = 396 -- 보상 띠가 끼어 320 → 396(고정 - PRD 20.73 [4-2])
+local BAND_TOP = 60 + ROWS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 2 -- 그리드 아래 끝 바로 아래
 
 -- 나중 확장 대비(파티원 진행 상황을 파티장이 보는 기능) - LocalPlayer에 묶지 않고
 -- (stage, best, bestBossCleared) 세 값만 받는 순수 함수로 둔다. 호출부가 나중에 다른
@@ -81,7 +94,7 @@ local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-panel.Size = UDim2.new(0, COLUMNS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 24, 0, 320)
+panel.Size = UDim2.new(0, COLUMNS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 24, 0, PANEL_HEIGHT)
 panel.BackgroundColor3 = UIColors.panel
 panel.BackgroundTransparency = 0.08
 -- Active=true - 안 그러면 셀 사이 여백(패딩)을 눌렀을 때 클릭이 패널을 그대로 통과해
@@ -136,10 +149,12 @@ legendLayout.Padding = UDim.new(0, 14)
 legendLayout.SortOrder = Enum.SortOrder.LayoutOrder
 legendLayout.Parent = legend
 
-local LEGEND_ORDER = { "cleared", "inProgress", "locked" }
-local LEGEND_TEXT = { cleared = "클리어함", inProgress = "도전 중", locked = "진입 못 함" }
+-- ★ = 그 보스 칸에 첫 클리어 보상이 남음(gold), ✓ = 전부 받음(textTertiary - 범례에는 안 적는다).
+local REWARD_SPEC = { symbol = "★", color = UIColors.gold }
+local LEGEND_ORDER = { "cleared", "inProgress", "locked", "reward" }
+local LEGEND_TEXT = { cleared = "클리어함", inProgress = "도전 중", locked = "진입 못 함", reward = "첫 클리어 보상 남음" }
 for i, key in ipairs(LEGEND_ORDER) do
-	local spec = STATUS_SPEC[key]
+	local spec = key == "reward" and REWARD_SPEC or STATUS_SPEC[key]
 	local label = Instance.new("TextLabel")
 	label.LayoutOrder = i
 	label.BackgroundTransparency = 1
@@ -203,7 +218,18 @@ for i = 1, WINDOW_SIZE do
 	symbolLabel.TextSize = 18
 	symbolLabel.Text = ""
 	symbolLabel.Parent = cell
-	cells[i] = { button = cell, number = stageNumberLabel, symbol = symbolLabel, stroke = stroke, stage = nil }
+	-- 보스 칸 오른쪽 아래의 ★ / ✓(서버 응답이 온 뒤에만 - 12 미만 금지).
+	local markLabel = Instance.new("TextLabel")
+	markLabel.Name = "RewardMark"
+	markLabel.BackgroundTransparency = 1
+	markLabel.AnchorPoint = Vector2.new(1, 1)
+	markLabel.Position = UDim2.new(1, -1, 1, -1)
+	markLabel.Size = UDim2.new(0, 14, 0, 14)
+	markLabel.Font = Enum.Font.GothamBold
+	markLabel.TextSize = 12
+	markLabel.Text = ""
+	markLabel.Parent = cell
+	cells[i] = { button = cell, number = stageNumberLabel, symbol = symbolLabel, stroke = stroke, mark = markLabel, stage = nil }
 end
 
 -- 페이지 이동 + 상태줄.
@@ -262,6 +288,20 @@ statusLine.Parent = panel
 
 local isOpen = false
 local windowStart = 1
+local selectedStage = nil -- 눌러 둔 보스 칸(띠가 이 스테이지를 보여 준다)
+local preview = {} -- [스테이지] = 서버 응답의 칸(BossRewardPreview) - 열 때 · 창을 넘길 때 · 보스 처치 뒤 다시 묻는다
+local codex = {} -- { [bossId] = true }
+local lastPreviewAt = 0
+local previewQueued = false
+
+local band = StageRewardBand.build({
+	parent = panel,
+	position = UDim2.new(0, 16, 0, BAND_TOP),
+	width = COLUMNS * (CELL_SIZE + CELL_GAP) + CELL_GAP + 24 - 32,
+	onChallenge = function(stage)
+		stageMoveRequest:FireServer(stage)
+	end,
+})
 
 local function attrs()
 	-- 예외 1(세이브 없는 신규 플레이어): 프로필 로드 전엔 Attribute가 nil일 수 있다 -
@@ -293,18 +333,91 @@ local function render()
 			cell.symbol.TextColor3 = spec.color
 			cell.stroke.Color = spec.color
 			cell.stroke.Transparency = 0.3
+			-- 보스 칸: ★(받을 것이 남음) / ✓(전부 받음) - 서버 응답이 온 칸만. 선택된 칸은 테두리가 굵다.
+			local entry = StageRewardBand.isBossStage(stage) and preview[stage] or nil
+			if entry == nil then
+				cell.mark.Text = ""
+			elseif StageRewardBand.hasRemaining(entry) then
+				cell.mark.Text = REWARD_SPEC.symbol
+				cell.mark.TextColor3 = REWARD_SPEC.color
+			else
+				cell.mark.Text = "✓"
+				cell.mark.TextColor3 = UIColors.textTertiary
+			end
+			cell.stroke.Thickness = stage == selectedStage and 3 or 1.5
 		end
 	end
 	prevButton.Visible = windowStart > 1
+	band.update(selectedStage, selectedStage and preview[selectedStage] or nil, player:GetAttribute("RebirthCount") or 0, codex)
 end
 
 local function setStatus(text)
 	statusLine.Text = text or ""
 end
 
+-- 지금 창 안의 보스 스테이지(최대 maxStages개 - 21칸 안에는 4 ~ 5개)를 서버에 묻는다. 요청 간격 하한(서버가 "rate"로 거절한다)보다 촘촘하지 않게 한 번으로 모아 보낸다.
+local function requestPreview()
+	if not isOpen or previewQueued then
+		return
+	end
+	previewQueued = true
+	local wait = math.max(0, lastPreviewAt + BossRewardPreviewData.minIntervalSeconds + 0.05 - os.clock())
+	task.delay(wait, function()
+		previewQueued = false
+		if not isOpen then
+			return
+		end
+		local stages = {}
+		for _, cell in ipairs(cells) do
+			if cell.stage and cell.stage >= 1 and StageRewardBand.isBossStage(cell.stage) and #stages < BossRewardPreviewData.maxStages then
+				table.insert(stages, cell.stage)
+			end
+		end
+		if selectedStage and not table.find(stages, selectedStage) and #stages < BossRewardPreviewData.maxStages then
+			table.insert(stages, selectedStage)
+		end
+		if #stages == 0 then
+			return
+		end
+		lastPreviewAt = os.clock()
+		previewRequest:FireServer(stages)
+	end)
+end
+
+previewResult.OnClientEvent:Connect(function(payload)
+	if type(payload) ~= "table" then
+		return
+	end
+	if not payload.ok then
+		if payload.reason == "rate" then
+			task.delay(BossRewardPreviewData.minIntervalSeconds + 0.1, requestPreview)
+		end
+		return
+	end
+	for _, entry in ipairs(payload.entries) do
+		preview[entry.stage] = entry
+	end
+	codex = payload.codex or {}
+	render()
+end)
+
+-- 보스 칸은 선택만(띠가 채워진다) - [도전]을 눌러야 이동한다. 일반 칸은 그대로 한 번에 이동.
+local function selectBossStage(stage)
+	selectedStage = stage
+	setStatus("")
+	render()
+	if preview[stage] == nil then
+		requestPreview()
+	end
+end
+
 for _, cell in ipairs(cells) do
 	cell.button.Activated:Connect(function()
 		if not cell.stage then
+			return
+		end
+		if StageRewardBand.isBossStage(cell.stage) then
+			selectBossStage(cell.stage)
 			return
 		end
 		setStatus("")
@@ -317,17 +430,20 @@ end
 prevButton.Activated:Connect(function()
 	windowStart = math.max(1, windowStart - STEP)
 	render()
+	requestPreview()
 end)
 
 nextButton.Activated:Connect(function()
 	windowStart = windowStart + STEP
 	render()
+	requestPreview()
 end)
 
 frontierButton.Activated:Connect(function()
 	local _, best = attrs()
 	windowStart = math.max(1, best + 1 - math.floor(WINDOW_SIZE / 2))
 	render()
+	requestPreview()
 end)
 
 local function close()
@@ -342,15 +458,21 @@ function StageSelectPanel.open()
 	local _, best = attrs()
 	windowStart = math.max(1, best + 1 - math.floor(WINDOW_SIZE / 2))
 	isOpen = true
+	selectedStage = nil
 	screenGui.Enabled = true
 	setStatus("")
 	render()
+	requestPreview()
 end
 
 -- 예외 3(목록을 연 채로 스테이지가 바뀔 때, 파티 투표 이동 포함): 세 Attribute를 구독해
 -- 열려 있는 동안은 그 자리에서 다시 그린다(windowStart는 유지 - 보던 자리를 안 바꾼다).
-for _, attr in ipairs({ "InfiniteStage", "InfiniteStageBest", "BestBossCleared" }) do
+for _, attr in ipairs({ "InfiniteStage", "InfiniteStageBest", "BestBossCleared", "RebirthCount" }) do
 	player:GetAttributeChangedSignal(attr):Connect(render)
+end
+-- 보스를 잡았거나(BestBossCleared) 직업이 바뀌면(ClassId - 장비 수령 기록이 직업별) 열려 있는 동안 다시 묻는다.
+for _, attr in ipairs({ "BestBossCleared", "ClassId" }) do
+	player:GetAttributeChangedSignal(attr):Connect(requestPreview)
 end
 
 stageMoveResult.OnClientEvent:Connect(function(payload)
@@ -363,5 +485,25 @@ stageMoveResult.OnClientEvent:Connect(function(payload)
 		setStatus(REASON_TEXT[payload.reason] or ("이동할 수 없습니다(" .. tostring(payload.reason) .. ")"))
 	end
 end)
+
+-- Studio 자체 점검: 띠의 문자열 생성(순수 함수)을 합성 응답으로 읽는다(DevToolsConfig.verify에 S11(가)가 있을 때만). 서버 없이 클라만으로 도는 (가)다.
+if RunService:IsStudio() and (DevToolsConfig.verify.regression or table.find(DevToolsConfig.verify.current, "S11(가)")) then
+	task.delay(10, function()
+		print("===S11 검증 시작(UI: 보상 띠 문자열 자체 점검)===")
+		local pass, total = 0, 0
+		local ok, err = pcall(StageRewardBand.selfTest, function(label, passed)
+			total += 1
+			if passed then
+				pass += 1
+			end
+			print(("[S11][UI] %s %s"):format(label, passed and "O" or "X"))
+		end)
+		if not ok then
+			total += 1
+			print(("[S11][UI] 자체 점검 실행 중 에러: %s X"):format(tostring(err)))
+		end
+		print(("===S11 검증 끝(UI)=== %d/%d 통과"):format(pass, total))
+	end)
+end
 
 return StageSelectPanel

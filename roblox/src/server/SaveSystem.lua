@@ -162,6 +162,8 @@ local function defaultProfile()
 			optionRerollTickets = { ancient = 0, primordial = 0 },
 			protectionTickets = { drop = 0, reset = 0 },
 			protectionClaimedStages = {},
+			-- bossCodex(30-0 S11) = { [bossId] = true } - 기여 10% 이상으로 처치한 보스 종(계정 공유 · 표시는 스테이지 선택 패널의 도감 줄뿐, 성능 보상 없음). 키는 BossData.bosses의 id.
+			bossCodex = {},
 		},
 
 		-- 강화 재료 보유량(28-1 S04) - 계정 공유(gold · purchases와 같은 층). 무기는 직업별이지만 재료는 4직업이 나눠 쓴다. 처치 보상으로만 늘고
@@ -262,7 +264,7 @@ end
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
 -- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
 -- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
--- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속).
+-- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -748,6 +750,12 @@ local function migrate(data)
 		data.version = 28
 	end
 
+	if data.version < 29 then
+		-- 30-0 S11(PRD 20.73 [4-1]): 보스 도감 도장 신설. 빈 집합이 정확한 과거 상태다 - 이미 깬 보스에서 역산하지 않는다(한 번 더 깨면 찍힌다. protectionClaimedStages와 같은 원칙).
+		data.purchases.bossCodex = data.purchases.bossCodex or {}
+		data.version = 29
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -784,8 +792,16 @@ local function isValidProfile(data)
 		or type(data.materials) ~= "table"
 		or type(data.purchases.protectionTickets) ~= "table"
 		or type(data.purchases.protectionClaimedStages) ~= "table"
+		or type(data.purchases.bossCodex) ~= "table"
 	then
 		return false
+	end
+
+	-- 도감 도장(30-0 S11): 키는 BossData에 있는 보스 id, 값은 true뿐.
+	for bossId, stamped in pairs(data.purchases.bossCodex) do
+		if type(bossId) ~= "string" or BossData.bosses[bossId] == nil or stamped ~= true then
+			return false
+		end
 	end
 
 	-- 방지권 보유 장수(28-1 S05): 하락 · 초기화 둘 다 0 이상의 정수(음수 · 소수는 거절).

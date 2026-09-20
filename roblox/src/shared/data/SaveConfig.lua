@@ -3,6 +3,8 @@
 -- server/SaveSystem.lua에 있다 - 그건 로직이라 core/에 안 둔다.
 
 return {
+	-- 29(30-0 S11) - 보스 도감 도장: purchases.bossCodex = { [bossId] = true }(키는 BossData.bosses의 id 문자열 - 계정 공유, 빈 집합에서 시작. 기여 10% 이상으로 그 보스를 처치한 순간
+	-- 찍힌다 - 표시는 스테이지 선택 패널의 보상 띠 한 곳뿐). 기존 세이브는 빈 집합으로 시작한다(이미 깬 보스에서 역산하지 않는다 - 한 번 더 깨면 찍힌다). SaveSystem.migrate()의 v28->v29 참고.
 	-- 28(30-0 S05 후속) - 스키마 필드 변화 없음. 스테이지 · 단계 번호를 키로 쓰는 저장 집합 두 곳(classes[*].stageProgress.bossFirstClearStages · tutorial.granted)의 키를
 	-- 전부 문자열로 통일한다 - DataStore 왕복이 숫자 키를 문자열로 바꿔 돌려주므로(배열처럼 이어진 1 ~ n 키는 숫자로 남기도 한다) 숫자 키 조회가 재접속 뒤 깨졌다.
 	-- 이제 쓰고 읽는 쪽이 tostring 키를 쓴다. SaveSystem.migrate()의 v27->v28 참고.
@@ -59,7 +61,7 @@ return {
 	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
 	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
 	-- 필드(classId) 추가.
-	saveVersion = 28,
+	saveVersion = 29,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

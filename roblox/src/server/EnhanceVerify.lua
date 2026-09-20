@@ -784,8 +784,10 @@ local function killBossOnce(player, env, stage, standInRatio)
 	MonsterSpawner.updateHpLabel(model)
 	local ok, err = pcall(CombatResolution.resolveHit, player, model, isDead)
 	BossEncounter.despawnFor(player)
-	return { gains = materialGains(player, before), ok = ok, err = err, units = BossData.bosses[data.id].hpMultiplier, playerStage = playerStage }
+	return { gains = materialGains(player, before), ok = ok, err = err, units = BossData.bosses[data.id].hpMultiplier, playerStage = playerStage, bossId = data.id }
 end
+-- S11(보스 도감 검증)이 같은 실제 처치 경로를 쓴다.
+EnhanceVerify.killBossOnce = killBossOnce
 
 local function gainsText(gains)
 	return ("강화석 +%d · 상급 +%d"):format(gains[ENHANCE_STONE], gains[HIGH_STONE])
