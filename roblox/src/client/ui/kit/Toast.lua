@@ -11,7 +11,9 @@
 --   · S12b: richParts 항목에 bold = true(굵게) · onActivate = function(handle)(그 부분을 누르면 부른다 - 이름 클릭 메뉴 · 아이템 옵션 툴팁)를 줄 수 있다. handle = { toggleTooltip(desc) - ItemTooltip을 그 행 옆에 토글 }.
 --     행을 **누르고 있는 동안**(또는 툴팁이 열려 있는 동안) 사라지는 타이머가 멈춘다 - 손을 떼거나 툴팁을 닫으면 seconds를 다시 센다. 툴팁이 열린 행이 밀려나면 툴팁도 닫힌다.
 -- 자리 · 크기는 ScreenMap의 슬롯(TC.toastLane · TR.dropFeed · BC.pickupPopup)에서 온다. 모양 = panel + rim + 모서리 10.
--- 기존 토스트 5종(SaveNotice · LevelUp · ZoneBlocked · TreasureChest · ItemPickup)은 아직 이걸 안 쓴다(S17).
+--   · 등급(S17 미결 결정 2026-09-20, PRD 20.103 [10]): item.grade = "important"(16pt 굵게 + 강조색) · "critical"(빨간 바탕 + 16pt · 최소 6초 · 표시 중 다른 알림이 밀어내지 못한다). 없으면 일반(위 그대로).
+--     치명이 아닌 행은 같은 줄 대기열에 알림이 있으면 Toast.passOnSeconds(2초)만 보이고 넘어간다(치명은 전체 시간을 채운다). 값은 아래 Toast.grades · passOnSeconds.
+--     낮은 화면(centerSafe로 행이 줄어든 때)에서 16pt가 안 들어가면(행 높이 < 글씨 + 8) 일반 compact와 같이 12로 낮춘다 - 행 높이가 늘지 않으니 태초 배너 · 중앙 금지 구역 계산은 그대로다.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,8 +31,17 @@ local Toast = {}
 
 Toast.groupWindowSeconds = 1
 Toast.queueMax = 8
+-- 대기 규칙(S17 미결 1): 같은 줄 대기열에 알림이 있으면 치명이 아닌 행은 처음 보인 뒤 이 시간만 남고 넘어간다(원래 표시 시간이 더 짧으면 그대로).
+Toast.passOnSeconds = 2
+-- 등급 표(S17 미결 2): textSize = 글씨(px) · bold · colorName = 글씨 기본색(item.colorName이 있으면 그것) · textColorName = 글씨색 고정 · backgroundName/backgroundTransparency = 행 바탕(없으면 panel)
+--   · minSeconds = 최소 표시 시간 · priority = 대기열이 넘칠 때 버려지는 순서(낮은 것부터) · protected = 표시 중 밀어냄 · 대기 단축(passOnSeconds) 대상이 아니다.
+Toast.grades = {
+	important = { textSize = 16, bold = true, colorName = "ember", priority = 1 },
+	critical = { textSize = 16, bold = true, textColorName = "textPrimary", backgroundName = "danger", backgroundTransparency = 0.1, minSeconds = 6, priority = 2, protected = true },
+}
 local ROW_GAP = 3
 local TEXT_PAD = 10
+local GRADE_TEXT_MARGIN = 8 -- 등급 글씨가 행 높이 안에 들어가려면 위아래 4씩 남는다
 
 -- 줄 정의: 구역 · 슬롯(ScreenMap) · 최대 행 수 · 기본 시간(초). 행 높이는 슬롯 높이에서 나온다.
 --   evict = 행이 다 차면 대기열이 아니라 가장 오래된 행을 밀어낸다 · newestOnTop = 새 행이 맨 위 · fit = 남은 자리로 줄 수(capacity)를 정한다(rows는 그 최대) · centerSafe = 낮은 화면에서 행이 중앙 금지 구역을 안 건드리게 줄인다.
@@ -172,10 +183,20 @@ local function removeRow(lane, row)
 	end
 end
 
+-- 대기 규칙: 이 줄 대기열에 알림이 있으면 치명이 아닌 행은 처음 보인 뒤 passOnSeconds까지만 남긴다(이미 지났으면 0 - 바로 넘긴다).
+local function passOnLimit(lane, row, seconds)
+	if #lane.queue == 0 or (row.gradeDef and row.gradeDef.protected) then
+		return seconds
+	end
+	return math.min(seconds, math.max(0, Toast.passOnSeconds - (os.clock() - row.shownAt)))
+end
+
 -- seconds 뒤에 사라진다. fadeSeconds가 있으면 그 시간 동안 흐려진 뒤 지운다(묶임으로 다시 예약되면 이전 예약은 token으로 무효).
 local function scheduleExpire(lane, row, seconds)
 	row.token += 1
 	local token = row.token
+	seconds = passOnLimit(lane, row, seconds)
+	row.expireAt = os.clock() + seconds
 	task.delay(seconds, function()
 		if row.token ~= token or row.removed then
 			return
@@ -219,7 +240,7 @@ local function restoreVisual(row)
 	for _, tween in ipairs(row.fadeTweens or {}) do
 		tween:Cancel()
 	end
-	row.frame.BackgroundTransparency = Theme.colors.panelTransparency
+	row.frame.BackgroundTransparency = row.baseTransparency
 	row.label.TextTransparency = 0
 	row.stroke.Transparency = row.item.rainbow and 0 or Theme.colors.rimTransparency
 	row.expireDeferred = true
@@ -367,8 +388,17 @@ function Toast.centerSafeRowHeight(screenHeight)
 	return math.max(zoneTop - 1 - top, Theme.text.caption + 4)
 end
 
+-- 등급 글씨 크기: 행 높이 안에 (글씨 + 위아래 여백)이 들어가면 등급 크기, 아니면 caption(12). 순수 함수.
+function Toast.gradeTextSize(rowHeight, gradeDef)
+	if rowHeight >= gradeDef.textSize + GRADE_TEXT_MARGIN then
+		return gradeDef.textSize
+	end
+	return Theme.text.caption
+end
+
 local function showRow(lane, item)
 	lane.nextOrder += 1
+	local gradeDef = item.grade and Toast.grades[item.grade]
 	local compactHeight = lane.cfg.centerSafe and Toast.centerSafeRowHeight(gui.AbsoluteSize.Y) or nil
 	lane.rowHeight = compactHeight or lane.baseRowHeight
 	if lane.cfg.centerSafe then
@@ -379,8 +409,9 @@ local function showRow(lane, item)
 	frame.Name = "ToastRow"
 	frame.LayoutOrder = lane.cfg.newestOnTop and -lane.nextOrder or lane.nextOrder
 	frame.Size = UDim2.new(1, 0, 0, lane.rowHeight)
-	frame.BackgroundColor3 = Theme.colors.panel
-	frame.BackgroundTransparency = Theme.colors.panelTransparency
+	local baseTransparency = gradeDef and gradeDef.backgroundTransparency or Theme.colors.panelTransparency
+	frame.BackgroundColor3 = gradeDef and gradeDef.backgroundName and Theme.color(gradeDef.backgroundName) or Theme.colors.panel
+	frame.BackgroundTransparency = baseTransparency
 	frame.Parent = lane.frame
 	Theme.corner(frame, Theme.corner.button)
 	local stroke = Theme.stroke(frame)
@@ -394,13 +425,19 @@ local function showRow(lane, item)
 		table.insert(rainbowGradients, gradient)
 	end
 
-	local label = Theme.label(frame, "", "caption", item.colorName or "textPrimary")
+	local textColorName = gradeDef and gradeDef.textColorName or item.colorName or gradeDef and gradeDef.colorName or "textPrimary"
+	local label = Theme.label(frame, "", "caption", textColorName)
 	label.Name = "Text"
 	label.RichText = true
 	label.Position = UDim2.new(0, TEXT_PAD, 0, 0)
 	label.Size = UDim2.new(1, -TEXT_PAD * 2, 1, 0)
 	label.TextXAlignment = Enum.TextXAlignment.Center
-	if compactHeight then
+	if gradeDef then
+		label.TextSize = Toast.gradeTextSize(lane.rowHeight, gradeDef)
+		if gradeDef.bold then
+			label.Font = Theme.font
+		end
+	elseif compactHeight then
 		label.TextSize = Theme.text.caption -- 한 단계 낮춤: 모바일 확대(x1.15)를 뺀 기본 caption(12 - 12 미만 금지선)
 	end
 	local count = item.count or 1 -- 대기 중에 합쳐진 것은 그 횟수로 시작한다
@@ -409,6 +446,7 @@ local function showRow(lane, item)
 	local row = {
 		frame = frame, label = label, stroke = stroke, item = item, count = count, lastAt = os.clock(), token = 0, removed = false,
 		lane = lane, holdCount = 0, pinned = false, expireDeferred = false, fading = false, hits = {},
+		gradeDef = gradeDef, baseTransparency = baseTransparency, shownAt = os.clock(), expireAt = 0,
 	}
 	if item.richParts then
 		for _, part in ipairs(item.richParts) do
@@ -510,18 +548,32 @@ local function dropLowest(lane)
 	table.remove(lane.queue, lowestIndex)
 end
 
--- item = { text, colorName, seconds, priority, groupKey, richParts, fadeSeconds, moreFormat, rainbow }.
+-- 대기열에 새 알림이 생겼다 - 이미 보이는 행(치명 제외)이 처음 보인 뒤 passOnSeconds를 넘겨 남지 않게 사라짐을 다시 예약한다.
+-- 누르는 중 · 툴팁이 열린 행(expireDeferred)과 이미 흐려지는 행은 그대로 둔다(손을 떼면 scheduleExpire가 같은 규칙을 적용한다).
+local function passOn(lane)
+	for _, row in ipairs(lane.active) do
+		if not row.removed and not row.fading and not row.expireDeferred and row.holdCount == 0 and not row.pinned then
+			scheduleExpire(lane, row, math.max(0, row.expireAt - os.clock()))
+		end
+	end
+end
+
+-- item = { text, colorName, seconds, priority, groupKey, richParts, fadeSeconds, moreFormat, rainbow, grade }.
+-- grade = nil(일반) · "important" · "critical" (Toast.grades).
 -- 반환: "shown" · "merged" · "queued" · "evicted"(TR: 보이긴 했고 가장 오래된 줄이 밀려났다) (전시장 · 검사용).
 function Toast.push(laneName, item)
 	ensureGui()
 	local lane = lanes[laneName]
 	assert(lane, "Toast.push: 알 수 없는 줄 - " .. tostring(laneName) .. " (TC · TR · BC)")
+	local gradeDef = item.grade and Toast.grades[item.grade]
+	assert(not item.grade or gradeDef, "Toast.push: 알 수 없는 등급 - " .. tostring(item.grade) .. " (important · critical)")
 	local entry = {
 		text = item.text,
 		richParts = item.richParts,
 		colorName = item.colorName,
-		seconds = item.seconds or lane.cfg.seconds,
-		priority = item.priority or 0,
+		grade = item.grade,
+		seconds = math.max(item.seconds or lane.cfg.seconds, gradeDef and gradeDef.minSeconds or 0),
+		priority = item.priority or gradeDef and gradeDef.priority or 0,
 		groupKey = item.groupKey,
 		fadeSeconds = item.fadeSeconds,
 		moreFormat = item.moreFormat,
@@ -536,15 +588,25 @@ function Toast.push(laneName, item)
 		return "shown"
 	end
 	if lane.cfg.evict then
-		removeRow(lane, lane.active[1]) -- active는 들어온 순서라 첫 행이 가장 오래된 것이다
-		lane.evicted += 1
-		showRow(lane, entry)
-		return "evicted"
+		local oldest -- active는 들어온 순서라 앞에서부터 처음 만나는 밀 수 있는 행이 가장 오래된 것이다(protected 행은 못 민다)
+		for _, row in ipairs(lane.active) do
+			if not (row.gradeDef and row.gradeDef.protected) then
+				oldest = row
+				break
+			end
+		end
+		if oldest then
+			removeRow(lane, oldest)
+			lane.evicted += 1
+			showRow(lane, entry)
+			return "evicted"
+		end
 	end
 	table.insert(lane.queue, entry)
 	if #lane.queue > Toast.queueMax then
 		dropLowest(lane)
 	end
+	passOn(lane)
 	return "queued"
 end
 
