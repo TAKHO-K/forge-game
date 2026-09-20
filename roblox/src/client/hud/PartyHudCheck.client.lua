@@ -185,7 +185,7 @@ local function selfCheck()
 			if height <= 414 then
 				allClear = allClear and clear
 			else
-				allClear = allClear and dashW == 8 and dashH == 40 -- 참고 재현: 폰 배율 Play 실측 대시 8 × 40
+				allClear = allClear and math.abs(dashW - 8) < 1 and math.abs(dashH - 40) < 1 -- 참고 재현: 폰 배율 Play 실측 대시 8 × 40(계산은 아래 끝 = 높이 × 0.55라 39.7)
 			end
 			allClear = allClear and (height ~= 388 or (oldDashW > 0 and oldHealthW > 0)) -- 388에서는 옛 배치의 겹침(대시 · 체력바)이 재현돼야 계산이 맞다
 			table.insert(lines, ("H%d 위로 %.0f → 목록 (%d, %.0f) ~ 아래 %.0f · 대시 %d×%d · 체력바 %d×%d · 조이스틱 %d×%d %s / 옛 배치 대시 %d×%d · 체력바 %d×%d"):format(
