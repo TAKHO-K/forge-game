@@ -344,7 +344,14 @@ local function render()
 				cell.mark.Text = "✓"
 				cell.mark.TextColor3 = UIColors.textTertiary
 			end
-			cell.stroke.Thickness = stage == selectedStage and 3 or 1.5
+			-- 선택된 칸만 눈에 보이는 테두리를 준다(기존 셀의 UIStroke는 TextButton에서 글씨 외곽선 모드라 테두리로 안 그려진다 - 다른 칸의 모양은 그대로 둔다).
+			local selected = stage == selectedStage
+			cell.stroke.ApplyStrokeMode = selected and Enum.ApplyStrokeMode.Border or Enum.ApplyStrokeMode.Contextual
+			cell.stroke.Thickness = selected and 2 or 1.5
+			if selected then
+				cell.stroke.Color = UIColors.textPrimary
+				cell.stroke.Transparency = 0
+			end
 		end
 	end
 	prevButton.Visible = windowStart > 1
