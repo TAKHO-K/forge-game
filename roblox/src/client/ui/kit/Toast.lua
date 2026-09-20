@@ -34,14 +34,17 @@ Toast.queueMax = 8
 -- 대기 규칙(S17 미결 1): 같은 줄 대기열에 알림이 있으면 치명이 아닌 행은 처음 보인 뒤 이 시간만 남고 넘어간다(원래 표시 시간이 더 짧으면 그대로).
 Toast.passOnSeconds = 2
 -- 등급 표(S17 미결 2): textSize = 글씨(px) · bold · colorName = 글씨 기본색(item.colorName이 있으면 그것) · textColorName = 글씨색 고정 · backgroundName/backgroundTransparency = 행 바탕(없으면 panel)
---   · minSeconds = 최소 표시 시간 · priority = 대기열이 넘칠 때 버려지는 순서(낮은 것부터) · protected = 표시 중 밀어냄 · 대기 단축(passOnSeconds) 대상이 아니다.
+--   · minSeconds = 최소 표시 시간 · priority = 대기열이 넘칠 때 버려지는 순서(낮은 것부터) · protected = 표시 중 밀어냄 · 대기 단축(passOnSeconds) 대상이 아니다 · aboveWindows = 떠 있는 동안 ToastGui를 창 · 확인창 위로 올린다.
 Toast.grades = {
 	important = { textSize = 16, bold = true, colorName = "ember", priority = 1 },
-	critical = { textSize = 16, bold = true, textColorName = "textPrimary", backgroundName = "danger", backgroundTransparency = 0.1, minSeconds = 6, priority = 2, protected = true },
+	critical = { textSize = 16, bold = true, textColorName = "textPrimary", backgroundName = "danger", backgroundTransparency = 0.1, minSeconds = 6, priority = 2, protected = true, aboveWindows = true },
 }
 local ROW_GAP = 3
 local TEXT_PAD = 10
 local GRADE_TEXT_MARGIN = 8 -- 등급 글씨가 행 높이 안에 들어가려면 위아래 4씩 남는다
+local BASE_DISPLAY_ORDER = 8
+-- aboveWindows(치명) 행이 하나라도 떠 있는 동안 ToastGui를 overlay 대역(200 ~ 249) 위로 올린다. 평소 8이면 창(100 ~ 149) · 딤 뒤에 가려져 창을 연 채 저장이 실패하면 안 보인다(S17 사전 작업 Play에서 실측).
+Toast.raisedDisplayOrder = 250
 
 -- 줄 정의: 구역 · 슬롯(ScreenMap) · 최대 행 수 · 기본 시간(초). 행 높이는 슬롯 높이에서 나온다.
 --   evict = 행이 다 차면 대기열이 아니라 가장 오래된 행을 밀어낸다 · newestOnTop = 새 행이 맨 위 · fit = 남은 자리로 줄 수(capacity)를 정한다(rows는 그 최대) · centerSafe = 낮은 화면에서 행이 중앙 금지 구역을 안 건드리게 줄인다.
@@ -65,7 +68,7 @@ local function ensureGui()
 	gui = Instance.new("ScreenGui")
 	gui.Name = "ToastGui"
 	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 8 -- 피드 · 토스트 대역(PRD [D-1]) - HUD(0 ~ 5)보다 위, station(10 ~)보다 아래
+	gui.DisplayOrder = BASE_DISPLAY_ORDER -- 피드 · 토스트 대역(PRD [D-1]) - HUD(0 ~ 5)보다 위, station(10 ~)보다 아래
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 	for laneName, cfg in pairs(LANES) do
@@ -160,6 +163,19 @@ end
 
 local showNext
 
+-- aboveWindows 행이 하나라도 떠 있으면 ToastGui를 창 위로, 없으면 원래 대역으로.
+local function refreshDisplayOrder()
+	local raised = false
+	for _, lane in pairs(lanes) do
+		for _, row in ipairs(lane.active) do
+			if row.gradeDef and row.gradeDef.aboveWindows then
+				raised = true
+			end
+		end
+	end
+	gui.DisplayOrder = raised and Toast.raisedDisplayOrder or BASE_DISPLAY_ORDER
+end
+
 local function removeRow(lane, row)
 	if row.removed then
 		return
@@ -172,6 +188,7 @@ local function removeRow(lane, row)
 	local index = table.find(lane.active, row)
 	if index then
 		table.remove(lane.active, index)
+		refreshDisplayOrder()
 	end
 	row.frame:Destroy()
 	showNext(lane)
@@ -459,6 +476,7 @@ local function showRow(lane, item)
 		end
 	end
 	table.insert(lane.active, row)
+	refreshDisplayOrder()
 	lane.frame.Visible = true
 	scheduleExpire(lane, row, item.seconds)
 	if lane.cfg.zone == "TC" then

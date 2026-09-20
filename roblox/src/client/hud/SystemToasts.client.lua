@@ -123,8 +123,10 @@ local function selfCheck()
 				specOk = specOk and part.color == visual.color and part.size == visual.toastTextSize and item.groupKey == "itemPickup"
 				colorText = ("등급색 %s · 글씨 %d(등급표 %d)"):format(tostring(part.color), part.size, visual.toastTextSize)
 			else
-				specOk = specOk and item.colorName == case.color
-				colorText = "글씨색 " .. tostring(item.colorName)
+				local gradeDef = item.grade and Toast.grades[item.grade]
+				local effectiveColor = gradeDef and gradeDef.textColorName or item.colorName -- 치명은 글씨색을 등급 표가 고정한다
+				specOk = specOk and effectiveColor == case.color
+				colorText = "글씨색 " .. tostring(effectiveColor)
 			end
 			local result = Toast.push(SIGNALS[index].lane, item)
 			task.wait(0.2)
@@ -224,7 +226,7 @@ local function selfCheck()
 				local label = row and row:FindFirstChild("Text")
 				local text = label and label.Text
 				if text and text ~= lastText then
-					table.insert(events, { at = os.clock() - start, text = Toast.debugTexts("TC")[1] or "", size = label.TextSize, bold = label.Font == Theme.font, danger = row.BackgroundColor3 == UIColors.danger, height = row.AbsoluteSize.Y })
+					table.insert(events, { at = os.clock() - start, text = Toast.debugTexts("TC")[1] or "", size = label.TextSize, bold = label.Font == Theme.font, danger = row.BackgroundColor3 == UIColors.danger, height = row.AbsoluteSize.Y, order = row.Parent.Parent.DisplayOrder })
 				end
 				lastText = text
 				if not row and Toast.debugState("TC").queued == 0 then
@@ -249,15 +251,15 @@ local function selfCheck()
 		Toast.push("TC", SIGNALS[3].make(cases[3].value))
 		local events, total = watchTC(14)
 		local function line(event)
-			return event and ("%.2f초 '%s'(글씨 %d · 굵게 %s · 빨간 바탕 %s · 행 높이 %d)"):format(event.at, event.text:sub(1, 8), event.size, tostring(event.bold), tostring(event.danger), event.height) or "없음"
+			return event and ("%.2f초 '%s'(글씨 %d · 굵게 %s · 빨간 바탕 %s · 행 높이 %d · ToastGui 대역 %d)"):format(event.at, event.text:sub(1, 8), event.size, tostring(event.bold), tostring(event.danger), event.height, event.order) or "없음"
 		end
 		local sequenceOk = #events == 3
 			and events[1].text == cases[1].text and events[2].text == cases[2].text and events[3].text == cases[3].text
-			and events[1].at < 0.5 and events[1].danger and events[1].bold and events[1].size == Toast.gradeTextSize(events[1].height, Toast.grades.critical)
-			and events[2].at >= 6.2 and events[2].at <= 7.0 and not events[2].danger and events[2].bold and events[2].size == Toast.gradeTextSize(events[2].height, Toast.grades.important)
+			and events[1].at < 0.5 and events[1].danger and events[1].order == Toast.raisedDisplayOrder and events[1].bold and events[1].size == Toast.gradeTextSize(events[1].height, Toast.grades.critical)
+			and events[2].at >= 6.2 and events[2].at <= 7.0 and not events[2].danger and events[2].order < 10 and events[2].bold and events[2].size == Toast.gradeTextSize(events[2].height, Toast.grades.important)
 			and events[3].at >= 8.7 and events[3].at <= 9.5 and not events[3].danger and not events[3].bold and events[3].size >= Theme.minTextSize
 			and total >= 10.9 and total <= 11.9
-		check(("동시 3개 순서 · 크기 · 시간: ① 저장(치명) %s ② 레벨업(중요) %s ③ 구역 차단(일반) %s · 전체 %.2f초(기대 ② 6.2 ~ 7.0초 = 6 + 0.5 · ③ 8.7 ~ 9.5초 = + 2 + 0.5 · 전체 10.9 ~ 11.9초)"):format(
+		check(("동시 3개 순서 · 크기 · 시간: ① 저장(치명) %s ② 레벨업(중요) %s ③ 구역 차단(일반) %s · 전체 %.2f초(기대 ② 6.2 ~ 7.0초 = 6 + 0.5 · ③ 8.7 ~ 9.5초 = + 2 + 0.5 · 전체 10.9 ~ 11.9초 · ToastGui 대역: 치명 동안만 창 · 확인창 위 250, 그 뒤 8)"):format(
 			line(events[1]), line(events[2]), line(events[3]), total), sequenceOk)
 	end)
 	if not ok then
