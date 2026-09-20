@@ -211,6 +211,12 @@ local function applyMetrics()
 	end
 end
 
+local function refreshLook()
+	for _, item in ipairs(refs.items) do
+		applyLook(item)
+	end
+end
+
 -- 보이는 칸 수로 바 크기를 다시 재고(고정 크기) 세로 중앙 · 모바일 위로 밀기를 적용한다.
 local function relayout()
 	local size = buttonSize()
@@ -227,12 +233,7 @@ local function relayout()
 	local placed = ScreenMap.slot("ML", "menuBar")
 	local shift = Theme.isMobile and ScreenMap.mobileMenuBarShiftUp(refs.gui.AbsoluteSize.Y, height) or 0
 	refs.bar.Position = UDim2.new(placed.position.X.Scale, placed.position.X.Offset, placed.position.Y.Scale, placed.position.Y.Offset - shift)
-end
-
-local function refreshLook()
-	for _, item in ipairs(refs.items) do
-		applyLook(item)
-	end
+	refreshLook() -- 견습 · 직업 선택 속성이 바뀌면 canOpen 막힘(회색)도 달라진다
 end
 
 local function findItem(id)
