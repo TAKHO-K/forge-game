@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
 local classSelectRequest = ReplicatedStorage:WaitForChild("ClassSelectRequest")
 local classSummaryFetch = ReplicatedStorage:WaitForChild("ClassSummaryFetch")
@@ -24,7 +25,7 @@ local panel = Instance.new("Frame")
 panel.Name = "ClassSelectPanel"
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-panel.Size = UDim2.new(0, 380, 0, 260)
+panel.Size = UDim2.new(0, 380, 0, 300) -- 260 + 안내 한 줄(S12)
 panel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 panel.BackgroundTransparency = 0.05
 panel.Visible = false
@@ -33,12 +34,25 @@ panel.Parent = screenGui
 local title = Instance.new("TextLabel")
 title.BackgroundTransparency = 1
 title.Size = UDim2.new(1, 0, 0, 30)
-title.LayoutOrder = 0
+title.LayoutOrder = -1
 title.Text = "직업을 선택하세요"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Parent = panel
+
+-- 패널 맨 위 안내 한 줄(S12, PRD 20.73 [7-1] 초안 그대로) - "레벨이 달라도 바로 같이 사냥"을 첫 화면에서 말한다.
+local hint = Instance.new("TextLabel")
+hint.Name = "FriendHint"
+hint.BackgroundTransparency = 1
+hint.Size = UDim2.new(0, 356, 0, 32)
+hint.LayoutOrder = 0
+hint.Font = Enum.Font.Gotham
+hint.TextSize = 12
+hint.TextWrapped = true
+hint.TextColor3 = UIColors.textSecondary
+hint.Text = "친구와 레벨이 달라도 바로 같이 사냥할 수 있어요. 직업은 언제든 바꿀 수 있습니다."
+hint.Parent = panel
 
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 8)

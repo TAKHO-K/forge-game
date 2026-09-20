@@ -19,6 +19,8 @@ local BossEncounter = require(script.Parent.BossEncounter)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PartyCrossServer = require(script.Parent.PartyCrossServer)
 local PartyVote = require(script.Parent.PartyVote)
+local PartyJoinRules = require(script.Parent.PartyJoinRules)
+local FriendNotice = require(script.Parent.FriendNotice)
 
 local partyRequest = Instance.new("RemoteEvent")
 partyRequest.Name = "PartyRequest"
@@ -38,8 +40,7 @@ local REASON_TEXT = {
 	already_in_party = "이미 파티에 속해 있습니다",
 	party_gone = "그 파티는 더 이상 없습니다",
 	not_member = "파티원이 아닙니다",
-	tutorial_self = "견습 모드 중에는 파티에 들어갈 수 없습니다",
-	tutorial_target = "견습 모드 중인 플레이어는 초대할 수 없습니다",
+	tutorial_self = "견습 모드 중에는 파티에 들어갈 수 없습니다", -- 다른 서버로 가는 길(코드 파티 만들기 · 코드 합류 · 원격 초대)만 남았다 - 같은 서버의 초대 · 수락은 견습 중에도 된다(S12)
 	in_boss = "보스전 중에는 파티원을 바꿀 수 없습니다",
 	no_profile = "아직 준비되지 않은 플레이어입니다",
 	joining = "합류 중에는 할 수 없습니다",
@@ -50,29 +51,10 @@ local function fail(player, reason)
 	PartyState.notify(player, REASON_TEXT[reason] or PartyCrossServer.REASON_TEXT[reason] or ("실패: " .. tostring(reason)))
 end
 
--- 파티 구성 변경(초대·수락)의 공통 금지 조건 - 견습 중(어느 쪽이든)·보스전 중(파티 쪽).
--- 견습은 싱글이다(지시 1) - 견습 중인 플레이어가 파티에 들어가는 길도, 파티원이 견습에
--- 들어가는 길(TutorialState.start의 자동 탈퇴)도 둘 다 막는다.
-local function checkJoinable(inviter, invitee)
-	if not PlayerProfile.getProfile(inviter) or not PlayerProfile.getProfile(invitee) then
-		return "no_profile"
-	end
-	if TutorialState.isActive(inviter) then
-		return "tutorial_self"
-	end
-	if TutorialState.isActive(invitee) then
-		return "tutorial_target"
-	end
-	if BossEncounter.getActive(inviter) then
-		return "in_boss" -- 보스 HP가 입장 인원에 고정돼 있어 중간 합류는 없다(PRD 20.47 [6](다)).
-	end
-	if PartyCrossServer.isJoining(invitee) then
-		return "joining"
-	end
-	return nil
-end
+-- 파티 구성 변경(초대·수락)의 공통 금지 조건은 PartyJoinRules에 있다(S12 - 자동 검증이 같은 함수를 부른다).
+local checkJoinable = PartyJoinRules.checkJoinable
 
--- 내가 파티를 만들거나 다른 서버로 초대를 보낼 수 있는 상태인가(프로필·견습·합류 중).
+-- 내가 파티를 만들거나 다른 서버로 초대를 보낼 수 있는 상태인가(프로필·견습·합류 중). 견습 중이면 다른 서버로 나가는 길은 여전히 막는다(S12 범위 밖 - 텔레포트 뒤 견습 재개는 검증한 적이 없다).
 local function checkSelf(player)
 	if not PlayerProfile.getProfile(player) then
 		return "no_profile"
@@ -196,7 +178,7 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 				end
 				local blocked = checkJoinable(leader, player)
 				if blocked then
-					fail(player, blocked == "tutorial_target" and "tutorial_self" or blocked)
+					fail(player, blocked)
 					PartyState.respondInvite(player, false)
 					return
 				end
@@ -267,5 +249,8 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 		end
 	end
 end)
+
+-- 친구가 같은 서버에 들어오면 기존 멤버에게 [파티 초대] 토스트(S12).
+FriendNotice.start()
 
 print("[forge-game] PartyServer 로드됨 - 파티 초대/수락/탈퇴/추방 + 크로스서버(코드·원격 초대) 활성")

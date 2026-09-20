@@ -10,7 +10,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local FriendInvite = require(script.Parent.FriendInvite)
 local HudChip = require(script.Parent.HudChip)
+local Theme = require(script.Parent.ui.kit.Theme)
 
 local tutorialStepNotice = ReplicatedStorage:WaitForChild("TutorialStepNotice")
 local tutorialChallengeBossRequest = ReplicatedStorage:WaitForChild("TutorialChallengeBossRequest")
@@ -117,7 +119,8 @@ tutorialStepNotice.OnClientEvent:Connect(function(payload)
 		return
 	end
 	local title = ("견습 %d/%d단계 - %s 구역"):format(payload.step, payload.stepCount, payload.zoneName)
-	showToast(title, payload.text)
+	-- 1단계만 안내 뒤에 친구 부르기 한 줄이 붙는다(S12 - 문구는 TutorialData.steps[1].friendHintText).
+	showToast(title, payload.friendHint and (payload.text .. "\n" .. payload.friendHint) or payload.text)
 end)
 
 -- ═══ 진행 칩 + 보스 도전 버튼(TopChipsRow에 끼워 넣는다) ═══
@@ -179,6 +182,40 @@ challengeButton.Activated:Connect(function()
 	tutorialChallengeBossRequest:FireServer()
 end)
 
+-- [친구 부르기](S12) - 견습 1단계에서만 보인다(ember 테두리로 강조). 2단계부터는 숨기고 장비창 파티 탭의 같은 버튼이 남는다. 초대를 못 보내는 환경이면 아예 안 보인다.
+local inviteButton = Instance.new("TextButton")
+inviteButton.Name = "InviteFriendButton"
+inviteButton.LayoutOrder = 3
+inviteButton.AutomaticSize = Enum.AutomaticSize.X
+inviteButton.Size = UDim2.new(0, 0, 0, Theme.isMobile and 44 or 26)
+inviteButton.Font = Enum.Font.GothamBold
+inviteButton.TextSize = 12
+inviteButton.Text = "친구 부르기"
+inviteButton.BackgroundColor3 = UIColors.panel
+inviteButton.BackgroundTransparency = UIColors.panelTransparency
+inviteButton.TextColor3 = UIColors.textPrimary
+inviteButton.AutoButtonColor = true
+inviteButton.Visible = false
+inviteButton.Parent = wrapper
+
+local inviteCorner = Instance.new("UICorner")
+inviteCorner.CornerRadius = UDim.new(1, 0)
+inviteCorner.Parent = inviteButton
+
+local invitePadding = Instance.new("UIPadding")
+invitePadding.PaddingLeft = UDim.new(0, 12)
+invitePadding.PaddingRight = UDim.new(0, 12)
+invitePadding.Parent = inviteButton
+
+local inviteStroke = Instance.new("UIStroke")
+inviteStroke.Color = UIColors.ember
+inviteStroke.Thickness = 2
+inviteStroke.Parent = inviteButton
+
+inviteButton.Activated:Connect(function()
+	FriendInvite.prompt()
+end)
+
 local function updateHud()
 	local completed = player:GetAttribute("TutorialCompleted")
 	local step = player:GetAttribute("TutorialStep") or 0
@@ -193,7 +230,13 @@ local function updateHud()
 	local canChallenge = player:GetAttribute("TutorialCanChallenge")
 	chipLabel.Text = ("견습 %d/7 · %d/%d마리"):format(step, math.min(count, target), target)
 	challengeButton.Visible = canChallenge == true
+	inviteButton.Visible = step == 1 and FriendInvite.isAvailable()
 end
+FriendInvite.onAvailability(function()
+	task.defer(function()
+		updateHud()
+	end)
+end)
 
 for _, attr in ipairs({ "TutorialCompleted", "TutorialStep", "TutorialKillTarget", "TutorialKillCount", "TutorialCanChallenge" }) do
 	player:GetAttributeChangedSignal(attr):Connect(updateHud)

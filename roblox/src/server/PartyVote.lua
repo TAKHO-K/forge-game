@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local PartyState = require(script.Parent.PartyState)
+local BossEncounter = require(script.Parent.BossEncounter)
 
 local partyVoteNotice = Instance.new("RemoteEvent")
 partyVoteNotice.Name = "PartyVoteNotice"
@@ -59,8 +60,9 @@ function PartyVote.start(party, leader, targetStage, onResolve)
 		return false
 	end
 
+	-- 투표 대상은 보스에 들어가는 멤버뿐이다(S12 - 견습 중인 멤버는 사냥터에 남는다). 대상이 리더뿐이면 아래에서 솔로처럼 즉시 성립한다.
 	local others = {}
-	for _, member in ipairs(PartyState.getMemberPlayers(party)) do
+	for _, member in ipairs((BossEncounter.getEntryMembers(party))) do
 		if member ~= leader then
 			table.insert(others, member)
 		end

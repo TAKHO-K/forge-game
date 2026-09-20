@@ -22,7 +22,6 @@ local MonsterState = require(script.Parent.MonsterState)
 local BossEncounter = require(script.Parent.BossEncounter)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 local ImmediateSave = require(script.Parent.ImmediateSave)
-local PartyState = require(script.Parent.PartyState)
 
 local TutorialState = {}
 
@@ -142,12 +141,7 @@ function TutorialState.start(player, step)
 	if not stepData then
 		return
 	end
-	-- 24-1: 견습은 싱글이다 - 견습에 들어가는 순간 파티에서 자동 탈퇴한다(PRD 20.47 [5](라)).
-	-- 반대 방향(견습 중인 사람의 초대·수락)은 PartyServer.server.lua가 막는다.
-	if PartyState.getParty(player) then
-		PartyState.notify(player, "견습 모드 시작 - 파티에서 나왔습니다")
-		PartyState.leave(player, "tutorial")
-	end
+	-- S12(PRD 20.73 [7-2]): 견습에 들어가도 파티에서 나오지 않는다 - 견습은 보스만 싱글이다(spawnTutorialFor). 파티 보스는 견습 중인 멤버를 뺀 채 간다(BossEncounter.getEntryMembers).
 
 	PlayerProfile.setTutorialStep(player, step)
 	activeStep[player] = step
@@ -165,6 +159,7 @@ function TutorialState.start(player, step)
 		step = step,
 		stepCount = TutorialData.stepCount,
 		text = stepData.lessonText,
+		friendHint = stepData.friendHintText,
 		zoneName = zoneName,
 		killTarget = stepData.killTarget,
 	})
@@ -307,6 +302,12 @@ Players.PlayerRemoving:Connect(function(player)
 	cancelTimer(player)
 	activeStep[player] = nil
 	killCounts[player] = nil
+end)
+
+-- S12: 파티 보스(입장 검사 · 머릿수 · 투표)는 견습 중인 멤버를 뺀다. BossEncounter는 이 모듈을 require할 수 없어(순환) 여기서 자기를 등록한다.
+-- 함수 값이 아니라 TutorialState.isActive를 매번 찾아 부르므로 검증이 그 필드를 잠깐 감싸 스탠드인을 견습으로 만들 수 있다.
+BossEncounter.setEntryExclusion(function(player)
+	return TutorialState.isActive(player)
 end)
 
 return TutorialState

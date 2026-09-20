@@ -3065,6 +3065,19 @@ cancelJoinButton.Activated:Connect(function()
 	partyRequest:FireServer("cancel_join")
 end)
 
+-- S12: [친구 부르기] - 로블록스 기본 초대 창. 견습 1단계에서는 TutorialHud의 같은 버튼이 강조되고, 여기는 상시다. 초대를 못 보내는 환경이면 숨긴다.
+local FriendInvite = require(script.Parent.FriendInvite)
+local inviteFriendButton = makePillButton(myColumn, "친구 부르기", 0, MY_EXTRA_Y + 110, 160, true)
+inviteFriendButton.Name = "InviteFriendButton"
+inviteFriendButton.Size = UDim2.new(0, 160, 0, UserInputService.TouchEnabled and 44 or 28)
+inviteFriendButton.Visible = false
+FriendInvite.onAvailability(function(canShow)
+	inviteFriendButton.Visible = canShow
+end)
+inviteFriendButton.Activated:Connect(function()
+	FriendInvite.prompt()
+end)
+
 local function ensureRows(rowsTable, parent, count)
 	for i = #rowsTable + 1, count do
 		rowsTable[i] = makeRow(parent, i)

@@ -385,13 +385,37 @@ function BossEncounter.spawnFor(player, stage)
 		data.displayName, stage, player.Name, encounter.zoneKey))
 end
 
--- 파티 보스 입장 검사(PRD 20.47 [6](라)) - 멤버 전원이 (1) StageServer 게이트(최고 도달+1 이내,
+-- 파티 보스에서 뺄 멤버를 가리는 함수(S12, PRD 20.73 [7-2] - 견습 중인 멤버). TutorialState가 자기를 등록한다(TutorialState → BossEncounter 방향이라 여기서 require하면 순환).
+local entryExclusion = function()
+	return false
+end
+
+function BossEncounter.setEntryExclusion(fn)
+	entryExclusion = fn
+end
+
+-- 파티 보스에 들어가는 실제 멤버와 빠지는 실제 멤버(견습 중). 더미는 원래 텔레포트 · 피격 · 보상 대상이 아니라 어느 쪽에도 없다(머릿수 N에는 PartyState.getSize가 센다).
+-- 입장 검사 · 투표 · 스폰이 모두 이 함수로 같은 대상을 본다.
+function BossEncounter.getEntryMembers(party)
+	local entering, excluded = {}, {}
+	for _, member in ipairs(PartyState.getMemberPlayers(party)) do
+		table.insert(entryExclusion(member) and excluded or entering, member)
+	end
+	return entering, excluded
+end
+
+-- 파티 보스 입장 검사(PRD 20.47 [6](라)) - 입장하는 멤버 전원이 (1) StageServer 게이트(최고 도달+1 이내,
 -- 바로 아래 보스 클리어)와 (2) 밴드(bossStage ≤ rec(L_i) + band)를 통과해야 한다. 하나라도
 -- 막히면 { {player, reason}, ... } 목록을 돌려준다(빈 목록 = 통과). 밴드가 없으면 레벨 10 친구를
 -- 보스마다 데리고 가 최고 도달 스테이지를 100까지 끌어올리는 캐리(= 리더보드 조작)가 열린다.
+-- 견습 중인 멤버는 들어가지 않으므로 검사하지 않는다(S12). 리더가 견습 중이면 파티 보스를 열 수 없다(reason "tutorial" - 견습은 스테이지 선택 자체가 잠겨 있다).
 function BossEncounter.checkPartyEntry(party, stage)
+	local leader = PartyState.getLeader(party)
+	if leader and entryExclusion(leader) then
+		return { { player = leader, reason = "tutorial" } }
+	end
 	local blocked = {}
-	for _, member in ipairs(PartyState.getMemberPlayers(party)) do
+	for _, member in ipairs((BossEncounter.getEntryMembers(party))) do
 		local best = PlayerProfile.getInfiniteStageBest(member)
 		local reason = nil
 		if not best then
@@ -426,7 +450,7 @@ function BossEncounter.spawnForParty(party, leader, stage)
 	if encounterOf[leader] then
 		return false
 	end
-	local members = PartyState.getMemberPlayers(party)
+	local members, excluded = BossEncounter.getEntryMembers(party)
 	for _, member in ipairs(members) do
 		if encounterOf[member] then
 			BossEncounter.leaveFor(member) -- 남아 있던 솔로 보스전은 물러난다(PartyServer가 합류 시 이미 정리하지만 방어).
@@ -437,13 +461,16 @@ function BossEncounter.spawnForParty(party, leader, stage)
 	if not bossId then
 		return false
 	end
-	local size = PartyState.getSize(party)
+	local size = PartyState.getSize(party) - #excluded -- 입장 머릿수 N(보스 HP 배수)은 들어가는 사람 수다 - 견습 중인 멤버는 뺀다(더미는 그대로 센다)
 	local data = BossRules.buildInstanceData(stage, bossId, size)
 	if not data then
 		return false
 	end
 
 	local encounter = spawnEncounter(data, stage, members, party, size, leader, false)
+	for _, member in ipairs(excluded) do
+		PartyState.notify(member, "파티가 보스전에 들어갔습니다") -- 견습 중인 멤버는 사냥터에 남는다
+	end
 	local names = {}
 	for _, member in ipairs(members) do
 		table.insert(names, member.Name)
@@ -652,7 +679,7 @@ end)
 
 -- 파티 이탈(탈퇴·추방·견습 진입·해산) - 파티 보스전 중이었으면 그 사람만 빠진다. "disband"(마지막
 -- 한 명이 남아 파티가 자동 해산)는 예외 - 남은 사람은 그 보스전을 혼자 이어간다(HP 배수는
--- 그대로 - 이탈의 대가). 견습 진입("tutorial")도 빠진다 - 견습은 싱글이다.
+-- 그대로 - 이탈의 대가). (S12부터 견습 진입은 파티를 떠나게 하지 않는다 - 견습 멤버는 애초에 파티 보스에 안 들어간다.)
 PartyState.onMemberRemoved(function(player, party, reason)
 	local encounter = encounterOf[player]
 	if not encounter or encounter.party ~= party then

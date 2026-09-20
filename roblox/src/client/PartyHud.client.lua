@@ -22,6 +22,7 @@ local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local partyStateChanged = ReplicatedStorage:WaitForChild("PartyStateChanged")
 local partyInviteNotice = ReplicatedStorage:WaitForChild("PartyInviteNotice")
 local partyNotice = ReplicatedStorage:WaitForChild("PartyNotice")
+local friendJoinedNotice = ReplicatedStorage:WaitForChild("FriendJoinedNotice")
 local partyRequest = ReplicatedStorage:WaitForChild("PartyRequest")
 local partyVoteNotice = ReplicatedStorage:WaitForChild("PartyVoteNotice")
 
@@ -281,25 +282,34 @@ end
 
 local declineButton = makeToastButton("거절", 1, false)
 local acceptButton = makeToastButton("수락", 2, true)
+-- S12: 친구가 같은 서버에 들어왔다는 토스트의 [파티 초대] - 기존 초대 요청("invite")을 그대로 쏜다.
+local friendButton = makeToastButton("파티 초대", 1, true)
+friendButton.Size = UDim2.new(0, 76, 0, 26)
 
 local toastToken = 0
 local inviteOpen = false
+local friendUserId = nil
 
 local function hideToast()
 	toast.Visible = false
 	acceptButton.Visible = false
 	declineButton.Visible = false
+	friendButton.Visible = false
+	friendUserId = nil
 	inviteOpen = false
 end
 
-local function showToast(text, withButtons, seconds)
+-- withButtons = 초대 수락/거절 버튼 · friendId = 친구 토스트의 [파티 초대] 대상 userId(둘은 같이 안 쓴다).
+local function showToast(text, withButtons, seconds, friendId)
 	toastToken += 1
 	local token = toastToken
 	toastText.Text = text
-	toastText.Size = UDim2.new(1, withButtons and -150 or -24, 1, 0)
+	toastText.Size = UDim2.new(1, withButtons and -150 or (friendId and -100 or -24), 1, 0)
 	toast.Visible = true
 	acceptButton.Visible = withButtons
 	declineButton.Visible = withButtons
+	friendUserId = friendId
+	friendButton.Visible = friendId ~= nil
 	inviteOpen = withButtons
 	task.delay(seconds, function()
 		if toastToken == token then
@@ -320,6 +330,20 @@ partyNotice.OnClientEvent:Connect(function(text)
 		return -- 초대 팝업이 떠 있는 동안은 덮어쓰지 않는다(수락/거절 버튼이 사라지면 안 된다).
 	end
 	showToast(text, false, NOTICE_SECONDS)
+end)
+
+friendJoinedNotice.OnClientEvent:Connect(function(data)
+	if inviteOpen then
+		return
+	end
+	showToast(("친구 %s님이 들어왔습니다"):format(data.name), false, data.seconds or NOTICE_SECONDS, data.userId)
+end)
+
+friendButton.Activated:Connect(function()
+	if friendUserId then
+		partyRequest:FireServer("invite", friendUserId)
+	end
+	hideToast()
 end)
 
 acceptButton.Activated:Connect(function()

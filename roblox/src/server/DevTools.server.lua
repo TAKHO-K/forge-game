@@ -68,6 +68,7 @@ local PartyExpVerify = require(script.Parent.PartyExpVerify)
 -- 30-0 S10 파티원 드랍 알림(DropNotice) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(더미 · 스탠드인 파티 · 견습 경로 · 보스 첫 클리어).
 local DropNoticeVerify = require(script.Parent.DropNoticeVerify)
 local BossRewardPreviewVerify = require(script.Parent.BossRewardPreviewVerify)
+local PartyTutorialVerify = require(script.Parent.PartyTutorialVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -1073,6 +1074,89 @@ local HELP_TEXT = table.concat({
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 }, "\n")
 
+-- /gg party selftest의 본문(24-1) - 자동 검증(S12(나))이 같은 코드를 회귀 확인으로 돌리려고 함수로 뺐다. 반환 = results(줄 목록) 또는 nil, 안내 문구.
+local function runPartySelfTest(player)
+	-- 24-1 검증: Studio 단일 클라이언트로는 실제 2~4인 파티를 못 만든다 - chesttest의 standIn과 같은
+	-- 기법으로 Player 필드(Name/UserId/Parent)만 흉내 낸 테이블 3개를 멤버로 넣어 PartyState·
+	-- BossEncounter의 규칙을 실제 코드 경로로 돌린다. 스탠드인은 캐릭터·프로필이 없어 텔레포트·
+	-- 피격·보상 대상에서 자연히 빠지므로(각 모듈의 nil 가드가 그대로 동작하는지도 함께 본다),
+	-- 보상 검사는 "기여 10% 미만 제외" 경로만 스탠드인으로 밟고 실제 지급은 이 플레이어가 받는다.
+	if PartyState.getParty(player) then
+		return nil, "먼저 파티를 나가세요(/gg party dummy 0 또는 탈퇴)"
+	end
+	ensureBackup(player)
+	local function standIn(name, userId)
+		return { Name = name, UserId = userId, Parent = workspace, Character = nil }
+	end
+	local B, C, D, E = standIn("StandInB", -9001), standIn("StandInC", -9002), standIn("StandInD", -9003), standIn("StandInE", -9004)
+	local results = {}
+	local function check(label, ok)
+		table.insert(results, ("%s %s"):format(ok and "O" or "X", label))
+	end
+	local function sizeOf()
+		return PartyState.getSize(PartyState.getParty(player) or PartyState.getParty(B) or PartyState.getParty(C))
+	end
+	-- S1 결성(초대→수락) 2인
+	local ok = PartyState.invite(player, B)
+	local ok2, why = PartyState.respondInvite(B, true)
+	check(("S1 결성 2인: invite=%s accept=%s(%s) size=%d leader=%s"):format(tostring(ok), tostring(ok2), tostring(why), sizeOf(), tostring(PartyState.isLeader(player))),
+		ok and ok2 and sizeOf() == 2 and PartyState.isLeader(player))
+	-- S2 리더 아닌 사람의 초대
+	local _, r2 = PartyState.invite(B, C)
+	check("S2 파티원 초대 거부: " .. tostring(r2), r2 == "not_leader")
+	-- S3 3·4인
+	PartyState.invite(player, C); PartyState.respondInvite(C, true)
+	PartyState.invite(player, D); PartyState.respondInvite(D, true)
+	check("S3 4인 결성: size=" .. sizeOf(), sizeOf() == 4)
+	-- S4 만원 초대
+	local _, r4 = PartyState.invite(player, E)
+	check("S4 만원 초대 거부: " .. tostring(r4), r4 == "party_full")
+	-- S5 추방
+	local k5 = PartyState.kick(player, D.UserId)
+	check(("S5 추방: %s size=%d"):format(tostring(k5), sizeOf()), k5 and sizeOf() == 3)
+	-- S6 리더 이탈 → 최고참 승계
+	PartyState.leave(player, "leave")
+	local partyB = PartyState.getParty(B)
+	check(("S6 리더 이탈 승계: 새 리더=%s size=%d 나=%s"):format(tostring(partyB and PartyState.getLeader(partyB) and PartyState.getLeader(partyB).Name), partyB and PartyState.getSize(partyB) or 0, tostring(PartyState.getParty(player))),
+		partyB ~= nil and PartyState.getLeader(partyB) == B and PartyState.getSize(partyB) == 2 and PartyState.getParty(player) == nil)
+	-- S7 1명 남으면 해산
+	PartyState.leave(C, "leave")
+	check("S7 1명 남아 해산: B파티=" .. tostring(PartyState.getParty(B)), PartyState.getParty(B) == nil)
+	-- S8 접속 종료
+	PartyState.invite(player, B); PartyState.respondInvite(B, true)
+	PartyState.invite(player, C); PartyState.respondInvite(C, true)
+	PartyState.leave(C, "disconnect")
+	check("S8 접속 종료 처리: size=" .. sizeOf(), sizeOf() == 2)
+	-- S9 보스전 중 이탈 - HP·배수 고정, 기여 10% 미만 제외
+	BossEncounter.despawnFor(player)
+	local stage = BossData.stageInterval * 20 -- 100
+	applyStage(player, stage)
+	local party = PartyState.getParty(player)
+	BossEncounter.spawnForParty(party, player, stage)
+	local encounter = BossEncounter.getEncounter(player)
+	local model = encounter and encounter.model
+	local _, maxHpBefore = MonsterState.getBossHp(model)
+	local mult = encounter and encounter.data.partyHpMultiplier or 0
+	MonsterState.applyDamage(model, maxHpBefore * 0.05, stage, B) -- B 5% (제외돼야 한다)
+	MonsterState.applyDamage(model, maxHpBefore * 0.30, stage, player)
+	PartyState.leave(B, "disconnect") -- 보스전 도중 접속 끊김
+	local hpAfter, maxHpAfter = MonsterState.getBossHp(model)
+	local enc2 = BossEncounter.getEncounter(player)
+	check(("S9a 보스전 중 이탈: 배수 %.3f(기대 1.395) 최대HP 유지=%s 남은HP=%.0f%% 멤버=%d 입장인원=%d"):format(
+		mult, tostring(maxHpAfter == maxHpBefore), hpAfter / maxHpAfter * 100, enc2 and #enc2.members or 0, enc2 and enc2.size or 0),
+		math.abs(mult - BossRules.partySizeHpMultiplier(2)) < 1e-6 and maxHpAfter == maxHpBefore and enc2 and #enc2.members == 1 and enc2.size == 2)
+	local goldBefore = player:GetAttribute("Gold")
+	local isDead = MonsterState.applyDamage(model, maxHpBefore, stage, player)
+	MonsterSpawner.updateHpLabel(model)
+	CombatResolution.resolveHit(player, model, isDead)
+	check(("S9b 처치 보상: 골드 %d→%d, 보스전 종료=%s"):format(goldBefore, player:GetAttribute("Gold"), tostring(BossEncounter.getEncounter(player) == nil)),
+		player:GetAttribute("Gold") > goldBefore and BossEncounter.getEncounter(player) == nil)
+	-- 정리
+	PartyState.leave(player, "leave")
+	check("S10 정리: 내 파티=" .. tostring(PartyState.getParty(player)), PartyState.getParty(player) == nil)
+	return results
+end
+
 local function handleCommand(player, args)
 	local sub = args[1]
 
@@ -1834,86 +1918,8 @@ local function handleCommand(player, args)
 			rowFor(("[앵커 %s L%d g0]"):format(id, stage), BalanceSim.buildAnchorLoadout(id, stage, 0))
 		end
 	elseif sub == "party" and args[2] == "selftest" then
-		-- 24-1 검증: Studio 단일 클라이언트로는 실제 2~4인 파티를 못 만든다 - chesttest의 standIn과 같은
-		-- 기법으로 Player 필드(Name/UserId/Parent)만 흉내 낸 테이블 3개를 멤버로 넣어 PartyState·
-		-- BossEncounter의 규칙을 실제 코드 경로로 돌린다. 스탠드인은 캐릭터·프로필이 없어 텔레포트·
-		-- 피격·보상 대상에서 자연히 빠지므로(각 모듈의 nil 가드가 그대로 동작하는지도 함께 본다),
-		-- 보상 검사는 "기여 10% 미만 제외" 경로만 스탠드인으로 밟고 실제 지급은 이 플레이어가 받는다.
-		if PartyState.getParty(player) then
-			reply(player, "먼저 파티를 나가세요(/gg party dummy 0 또는 탈퇴)")
-			return
-		end
-		ensureBackup(player)
-		local function standIn(name, userId)
-			return { Name = name, UserId = userId, Parent = workspace, Character = nil }
-		end
-		local B, C, D, E = standIn("StandInB", -9001), standIn("StandInC", -9002), standIn("StandInD", -9003), standIn("StandInE", -9004)
-		local results = {}
-		local function check(label, ok)
-			table.insert(results, ("%s %s"):format(ok and "O" or "X", label))
-		end
-		local function sizeOf()
-			return PartyState.getSize(PartyState.getParty(player) or PartyState.getParty(B) or PartyState.getParty(C))
-		end
-		-- S1 결성(초대→수락) 2인
-		local ok = PartyState.invite(player, B)
-		local ok2, why = PartyState.respondInvite(B, true)
-		check(("S1 결성 2인: invite=%s accept=%s(%s) size=%d leader=%s"):format(tostring(ok), tostring(ok2), tostring(why), sizeOf(), tostring(PartyState.isLeader(player))),
-			ok and ok2 and sizeOf() == 2 and PartyState.isLeader(player))
-		-- S2 리더 아닌 사람의 초대
-		local _, r2 = PartyState.invite(B, C)
-		check("S2 파티원 초대 거부: " .. tostring(r2), r2 == "not_leader")
-		-- S3 3·4인
-		PartyState.invite(player, C); PartyState.respondInvite(C, true)
-		PartyState.invite(player, D); PartyState.respondInvite(D, true)
-		check("S3 4인 결성: size=" .. sizeOf(), sizeOf() == 4)
-		-- S4 만원 초대
-		local _, r4 = PartyState.invite(player, E)
-		check("S4 만원 초대 거부: " .. tostring(r4), r4 == "party_full")
-		-- S5 추방
-		local k5 = PartyState.kick(player, D.UserId)
-		check(("S5 추방: %s size=%d"):format(tostring(k5), sizeOf()), k5 and sizeOf() == 3)
-		-- S6 리더 이탈 → 최고참 승계
-		PartyState.leave(player, "leave")
-		local partyB = PartyState.getParty(B)
-		check(("S6 리더 이탈 승계: 새 리더=%s size=%d 나=%s"):format(tostring(partyB and PartyState.getLeader(partyB) and PartyState.getLeader(partyB).Name), partyB and PartyState.getSize(partyB) or 0, tostring(PartyState.getParty(player))),
-			partyB ~= nil and PartyState.getLeader(partyB) == B and PartyState.getSize(partyB) == 2 and PartyState.getParty(player) == nil)
-		-- S7 1명 남으면 해산
-		PartyState.leave(C, "leave")
-		check("S7 1명 남아 해산: B파티=" .. tostring(PartyState.getParty(B)), PartyState.getParty(B) == nil)
-		-- S8 접속 종료
-		PartyState.invite(player, B); PartyState.respondInvite(B, true)
-		PartyState.invite(player, C); PartyState.respondInvite(C, true)
-		PartyState.leave(C, "disconnect")
-		check("S8 접속 종료 처리: size=" .. sizeOf(), sizeOf() == 2)
-		-- S9 보스전 중 이탈 - HP·배수 고정, 기여 10% 미만 제외
-		BossEncounter.despawnFor(player)
-		local stage = BossData.stageInterval * 20 -- 100
-		applyStage(player, stage)
-		local party = PartyState.getParty(player)
-		BossEncounter.spawnForParty(party, player, stage)
-		local encounter = BossEncounter.getEncounter(player)
-		local model = encounter and encounter.model
-		local _, maxHpBefore = MonsterState.getBossHp(model)
-		local mult = encounter and encounter.data.partyHpMultiplier or 0
-		MonsterState.applyDamage(model, maxHpBefore * 0.05, stage, B) -- B 5% (제외돼야 한다)
-		MonsterState.applyDamage(model, maxHpBefore * 0.30, stage, player)
-		PartyState.leave(B, "disconnect") -- 보스전 도중 접속 끊김
-		local hpAfter, maxHpAfter = MonsterState.getBossHp(model)
-		local enc2 = BossEncounter.getEncounter(player)
-		check(("S9a 보스전 중 이탈: 배수 %.3f(기대 1.395) 최대HP 유지=%s 남은HP=%.0f%% 멤버=%d 입장인원=%d"):format(
-			mult, tostring(maxHpAfter == maxHpBefore), hpAfter / maxHpAfter * 100, enc2 and #enc2.members or 0, enc2 and enc2.size or 0),
-			math.abs(mult - BossRules.partySizeHpMultiplier(2)) < 1e-6 and maxHpAfter == maxHpBefore and enc2 and #enc2.members == 1 and enc2.size == 2)
-		local goldBefore = player:GetAttribute("Gold")
-		local isDead = MonsterState.applyDamage(model, maxHpBefore, stage, player)
-		MonsterSpawner.updateHpLabel(model)
-		CombatResolution.resolveHit(player, model, isDead)
-		check(("S9b 처치 보상: 골드 %d→%d, 보스전 종료=%s"):format(goldBefore, player:GetAttribute("Gold"), tostring(BossEncounter.getEncounter(player) == nil)),
-			player:GetAttribute("Gold") > goldBefore and BossEncounter.getEncounter(player) == nil)
-		-- 정리
-		PartyState.leave(player, "leave")
-		check("S10 정리: 내 파티=" .. tostring(PartyState.getParty(player)), PartyState.getParty(player) == nil)
-		reply(player, "selftest 결과:\n" .. table.concat(results, "\n"))
+		local results, blockedMessage = runPartySelfTest(player)
+		reply(player, blockedMessage or ("selftest 결과:\n" .. table.concat(results, "\n")))
 	elseif sub == "party" and args[2] == "server" then
 		reply(player, PartyCrossServer.describeServer())
 	elseif sub == "party" and args[2] == "join" and type(args[3]) == "string" then
@@ -3173,6 +3179,7 @@ if RunService:IsStudio() then
 				restore = restore,
 				applyStage = applyStage,
 				applyOptionStack = applyOptionStack,
+				partySelfTest = runPartySelfTest,
 			}
 			-- 29-1(뼈대 회귀) → 29-2(가: 순수 계산) → 29-2(나: 실제 서버 경로) 순서로 이어서 돈다 - 같은 플레이어·같은
 			-- 아레나를 쓰므로 겹치면 안 된다. 하나가 에러로 끊겨도 다음은 돈다.
@@ -3196,6 +3203,7 @@ if RunService:IsStudio() then
 				{ "S09(나)", function() PartyExpVerify.runLive(player, env) end },
 				{ "S10(나)", function() DropNoticeVerify.runLive(player, env) end },
 				{ "S11(나)", function() BossRewardPreviewVerify.runLive(player, env) end },
+				{ "S12(나)", function() PartyTutorialVerify.runLive(player, env) end },
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
