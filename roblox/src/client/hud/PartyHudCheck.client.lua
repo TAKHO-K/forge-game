@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
@@ -88,10 +89,11 @@ local function selfCheck()
 				and playerGui:FindFirstChild("PartyToast", true) == nil and playerGui:FindFirstChild("PartyVotePanel", true) == nil)
 
 		-- ② 목록 뷰 두 모드 - 합성 4인(파티장 · 환생 · 쉴드 · 버프 · 체력 각각)
-		local classNames = { "대검", "활", "쌍검", "힐러" }
+		-- 직업은 내부 id로 고르고 표시 이름은 ClassData에서 읽는다(표시 이름이 바뀌어도 이 점검이 안 깨진다).
+		local classIds = { "greatsword", "bow", "dualblade", "healer" }
 		local members = {}
 		for index = 1, 4 do
-			members[index] = { nameText = "멤버" .. index, level = 30 + index, rebirth = index == 2 and 1 or nil, className = classNames[index], stage = 12,
+			members[index] = { nameText = "멤버" .. index, level = 30 + index, rebirth = index == 2 and 1 or nil, classId = classIds[index], className = ClassData.classes[classIds[index]].displayName, stage = 12,
 				ratio = ({ 1, 0.5, 0.25, 0 })[index], shieldRatio = index == 3 and 0.4 or 0, buffActive = index == 4, isLeader = index == 1 }
 		end
 		local viewport = testGui.AbsoluteSize
@@ -109,11 +111,17 @@ local function selfCheck()
 		end
 		local blockSize = pc.rows[1].block.AbsoluteSize
 		local expectPc = PartyListView.heightFor(4, true, false)
-		check(("PC 목록 4인: 행 %d · 블록 %d × %d(기대 220 × 52 = ListRow 40 + 2 + Gauge 10) · 목록 %d × %d(기대 220 × %d) · 제목 [%s](기대 파티장 이름에 '멤버1' · 환생 ★1) · 부제 '%s'(기대 '대검 · 스테이지 12') · 왼쪽 칸 '%s'(기대 '대')"):format(
+		local firstClassName = members[1].className
+		local firstClassChar = firstClassName:sub(1, utf8.offset(firstClassName, 2) - 1)
+		local iconColorsOk = true
+		for index = 1, 4 do
+			iconColorsOk = iconColorsOk and pc.rows[index].icon.TextColor3 == UIColors.classAccent[classIds[index]]
+		end
+		check(("PC 목록 4인: 행 %d · 블록 %d × %d(기대 220 × 52 = ListRow 40 + 2 + Gauge 10) · 목록 %d × %d(기대 220 × %d) · 제목 [%s](기대 파티장 이름에 '멤버1' · 환생 ★1) · 부제 '%s'(기대 '%s · 스테이지 12') · 왼쪽 칸 '%s'(기대 '%s') · 왼쪽 칸 직업색 4개 %s(기대 true)"):format(
 			pc.rowCount(), blockSize.X, blockSize.Y, pc.list.AbsoluteSize.X, pc.list.AbsoluteSize.Y, expectPc, table.concat(titles, " | "),
-			pc.rows[1].row.root:FindFirstChild("Subtitle").Text, pc.rows[1].icon.Text),
+			pc.rows[1].row.root:FindFirstChild("Subtitle").Text, firstClassName, pc.rows[1].icon.Text, firstClassChar, tostring(iconColorsOk)),
 			pc.rowCount() == 4 and blockSize.X == 220 and blockSize.Y == 52 and math.abs(pc.list.AbsoluteSize.X - 220) < 1 and math.abs(pc.list.AbsoluteSize.Y - expectPc) < 1
-				and titles[1]:find("멤버1", 1, true) ~= nil and titles[2]:find("★1", 1, true) ~= nil and pc.rows[1].row.root:FindFirstChild("Subtitle").Text == "대검 · 스테이지 12" and pc.rows[1].icon.Text == "대")
+				and titles[1]:find("멤버1", 1, true) ~= nil and titles[2]:find("★1", 1, true) ~= nil and pc.rows[1].row.root:FindFirstChild("Subtitle").Text == firstClassName .. " · 스테이지 12" and pc.rows[1].icon.Text == firstClassChar and iconColorsOk)
 		local shieldRow = pc.rows[3]
 		check(("PC 색 · 값: 파티장 이름 금색 %s · 다른 멤버 기본색 %s · 체력 줄 값 %.2f/%.2f/%.2f/%.2f(기대 1/0.5/0.25/0) · 쉴드 띠 3번 %s 폭 %.2f(기대 true 0.40) · 1번 %s(기대 false) · 버프 링 4번 초록 %s · 다른 멤버 링 기본 %s · 경험치 칩 '%s' 보임 %s(기대 '경험치 +15%%' true)"):format(
 			tostring(pc.rows[1].title.TextColor3 == UIColors.gold), tostring(pc.rows[2].title.TextColor3 == UIColors.textPrimary),
@@ -147,6 +155,14 @@ local function selfCheck()
 			rowSizes[index] = row.block.AbsoluteSize.X .. "×" .. row.block.AbsoluteSize.Y
 		end
 		local expectCompact = PartyListView.heightFor(4, true, true)
+		local classTexts, classColorsOk, classFits = {}, true, true
+		for index, row in ipairs(compact.rows) do
+			classTexts[index] = row.classLabel.Text
+			classColorsOk = classColorsOk and row.classLabel.TextColor3 == UIColors.classAccent[classIds[index]] and row.classLabel.Text == members[index].className
+			classFits = classFits and row.classLabel.TextBounds.X <= row.classLabel.AbsoluteSize.X and row.classLabel.AbsolutePosition.Y + row.classLabel.AbsoluteSize.Y <= row.gauge.root.AbsolutePosition.Y
+		end
+		check(("모바일 축약형 직업 이름: [%s](기대 ClassData 표시 이름 4개) · 직업색 %s(기대 true) · 글이 78폭 안(잘림 없음) · 체력 줄 위에 %s(기대 true)"):format(
+			table.concat(classTexts, ","), tostring(classColorsOk), tostring(classFits)), classColorsOk and classFits)
 		check(("모바일 축약형 4인: 목록 %d × %d(기대 96 × %d = 행 44 × 4 + 칩 26) · 행 [%s](기대 96×44) · 체력 줄 폭 [%s](기대 78) · 파티장 ● [%s](기대 true false false false) · 이름 표시 없음(Title 라벨 %s · 처음에 이름 팁 %s)"):format(
 			compact.list.AbsoluteSize.X, compact.list.AbsoluteSize.Y, expectCompact, table.concat(rowSizes, ","), table.concat(gaugeWidths, ","), table.concat({ tostring(dots[1]), tostring(dots[2]), tostring(dots[3]), tostring(dots[4]) }, " "),
 			tostring(compact.list:FindFirstChild("Title", true) ~= nil), tostring(compact.rows[2].tip.Visible)),

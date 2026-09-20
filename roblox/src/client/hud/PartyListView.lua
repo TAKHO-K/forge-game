@@ -1,10 +1,10 @@
 -- 파티 목록 뷰(S18, PRD 20.81 [D-2] ML · [D-3] ListRow + Gauge · [D-5] 모바일 축약형). 데이터를 받아 그리기만 한다 - 서버 신호 · Attribute 읽기는 PartyList.client.lua가 한다.
 -- 자체 점검(PartyHudCheck)이 두 모드를 직접 지어 보므로 ScreenGui 없이 parent만 받는다.
---   PC(compact = false): 멤버 블록 = ListRow(40: 제목 "★n Lv.35 이름" · 부제 "직업 · 스테이지 N" · 왼쪽 칸 = 직업 첫 글자) + Gauge(10) 체력 줄 - 폭 220. 버프 링(초록) · 쉴드 띠(흰) · 파티장 = 금색 이름은 옛 PartyHud 그대로다.
---   모바일 축약형(compact = true): 이름 없이 체력 줄 4개 · 폭 96 · 파티장은 줄 왼쪽 작은 ●. 행(44)을 누르면 2초간 이름이 뜬다(hover 아님). 경험치 칩도 폭 96.
+--   PC(compact = false): 멤버 블록 = ListRow(40: 제목 "★n Lv.35 이름" · 부제 "직업 · 스테이지 N" · 왼쪽 칸 = 직업 첫 글자 - 직업색) + Gauge(10) 체력 줄 - 폭 220. 버프 링(초록) · 쉴드 띠(흰) · 파티장 = 금색 이름은 옛 PartyHud 그대로다.
+--   모바일 축약형(compact = true): 이름 없이 체력 줄 4개 + 줄 위에 직업 전체 이름(직업색) · 폭 96 · 파티장은 줄 왼쪽 작은 ●. 행(44)을 누르면 2초간 이름이 뜬다(hover 아님). 경험치 칩도 폭 96.
 --   모바일은 세로 중앙에 놓인 목록의 아래 끝이 BL 터치 예약 구역(조이스틱 · 대시 버튼)에 닿으면 메뉴바와 같은 규칙(ScreenMap.mobileMenuBarShiftUp)으로 위로 민다.
 -- view = { list, setMembers(members), setExpBonus(bonus), applyPosition(viewportHeight), height(), rowCount(), rows, chip, destroy() }.
--- members[i] = { nameText, level, rebirth, className, stage, ratio(체력 0~1), shieldRatio(0~1), buffActive, isLeader } - nameText는 표시이름(+ "(더미)" · "✚" 꼬리).
+-- members[i] = { nameText, level, rebirth, classId(직업색 - 없으면 회색), className, stage, ratio(체력 0~1), shieldRatio(0~1), buffActive, isLeader } - nameText는 표시이름(+ "(더미)" · "✚" 꼬리).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -82,6 +82,7 @@ local function buildPcMember(list, order)
 		title.Text = PlayerLabelFormat.richText(data.nameText, data.level, data.rebirth, NAME_SIZE)
 		title.TextColor3 = data.isLeader and UIColors.gold or UIColors.textPrimary
 		icon.Text = firstChar(data.className)
+		icon.TextColor3 = UIColors.classAccent[data.classId] or UIColors.textSecondary
 		row.setSubtitle(("%s · 스테이지 %s"):format(data.className, tostring(data.stage or "-")))
 		setGauge(gauge, shield, data.ratio, data.shieldRatio)
 		-- 24-3: 링 색으로 버프 여부를 구분한다(새 파티클 · 새 색 없이 기존 rim/success 재사용).
@@ -136,9 +137,18 @@ local function buildCompactMember(list, order)
 	tipLabel.Size = UDim2.new(1, -12, 1, 0)
 	tipLabel.ZIndex = 4
 
-	local refs = { block = button, gauge = gauge, dot = dot, tip = tip, tipLabel = tipLabel, shield = shield, tipToken = 0 }
+	-- 직업 이름: 체력 줄 위에 전체 이름을 직업색으로 쓴다(폭 78에 "치유사"도 들어간다). 이름 팁(2초)이 뜨면 그 아래로 가려진다.
+	local classLabel = Theme.label(button, "", "caption", "textSecondary")
+	classLabel.Name = "ClassName"
+	classLabel.Font = Theme.font
+	classLabel.Position = UDim2.new(0, m.gaugeLeft, 0, m.gaugeTop - CHIP_HEIGHT + 2)
+	classLabel.Size = UDim2.new(0, m.gaugeWidth, 0, CHIP_HEIGHT - 6)
+
+	local refs = { block = button, gauge = gauge, dot = dot, tip = tip, tipLabel = tipLabel, classLabel = classLabel, shield = shield, tipToken = 0 }
 	function refs.apply(data)
 		dot.Visible = data.isLeader == true
+		classLabel.Text = data.className
+		classLabel.TextColor3 = UIColors.classAccent[data.classId] or UIColors.textSecondary
 		tipLabel.Text = PlayerLabelFormat.richText(data.nameText, data.level, data.rebirth, Theme.textSize("caption"))
 		setGauge(gauge, shield, data.ratio, data.shieldRatio)
 	end

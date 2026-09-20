@@ -57,6 +57,7 @@ local function readMember(member)
 		nameText = displayName .. (member.isDummy and " (더미)" or "") .. (buffActive and " ✚" or ""),
 		level = level,
 		rebirth = rebirth,
+		classId = classId,
 		className = classNameOf(classId),
 		stage = stage,
 		ratio = (hp and maxHp and maxHp > 0) and math.clamp(hp / maxHp, 0, 1) or 0,

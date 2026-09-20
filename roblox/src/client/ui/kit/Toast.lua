@@ -36,7 +36,7 @@ Toast.passOnSeconds = 2
 -- 등급 표(S17 미결 2): textSize = 글씨(px) · bold · colorName = 글씨 기본색(item.colorName이 있으면 그것) · textColorName = 글씨색 고정 · backgroundName/backgroundTransparency = 행 바탕(없으면 panel)
 --   · minSeconds = 최소 표시 시간 · priority = 대기열이 넘칠 때 버려지는 순서(낮은 것부터) · protected = 표시 중 밀어냄 · 대기 단축(passOnSeconds) 대상이 아니다 · aboveWindows = 떠 있는 동안 ToastGui를 창 · 확인창 위로 올린다.
 Toast.grades = {
-	important = { textSize = 16, bold = true, colorName = "ember", priority = 1 },
+	important = { textSize = 16, bold = true, colorName = "ember", priority = 1, aboveWindows = true }, -- S19 사전 작업(S18 미결 5 - 사용자 결정): 레벨업 등 중요 알림도 창을 연 채로 보인다
 	critical = { textSize = 16, bold = true, textColorName = "textPrimary", backgroundName = "danger", backgroundTransparency = 0.1, minSeconds = 6, priority = 2, protected = true, aboveWindows = true },
 }
 local ROW_GAP = 3

@@ -33,10 +33,11 @@ return {
 	-- 활·힐러는 1.5배로 늘려 원거리 직업답게 만들고(WorldConfig.aggro.rangeStuds=25.6보다
 	-- 여전히 짧아 무한 안전 사냥은 안 생긴다 - 19-2 [3] 검증), 대검은 근접이지만 리치가 긴
 	-- 무기라 쌍검보다는 길게 1.3배로 둔다. 결과 서열: 쌍검(최단) < 대검 < 활 = 지팡이(최장).
+	-- displayName = 화면에 보이는 이름의 유일한 출처(내부 id · 저장 값 · 아이콘 에셋 이름은 그대로 - 대검 = greatsword · 쌍검 = dualblade · 활 = bow · 힐러 = healer).
 	classes = {
 		greatsword = {
 			id = "greatsword",
-			displayName = "대검",
+			displayName = "검사",
 			atk = 1.85,
 			atkSpeed = 0.7,
 			def = 1.3,
@@ -46,7 +47,7 @@ return {
 		},
 		dualblade = {
 			id = "dualblade",
-			displayName = "쌍검",
+			displayName = "도적",
 			atk = 0.85,
 			atkSpeed = 1.6,
 			def = 0.6,
@@ -56,7 +57,7 @@ return {
 		},
 		bow = {
 			id = "bow",
-			displayName = "활",
+			displayName = "궁수",
 			atk = 1.8,
 			-- 21-1 [1]-A: 1.0 → 0.85. 20-7/21-1 재측정(BalanceSim, 앵커 레벨100·스테이지100)에서
 			-- 활 60초 로테이션 929.7(atk-단위)이 최저 직업 대검(채널링 차단+계수 +25% 후 598.6)의
@@ -73,7 +74,7 @@ return {
 		},
 		healer = {
 			id = "healer",
-			displayName = "힐러",
+			displayName = "치유사",
 			atk = 0.6,
 			atkSpeed = 1.25,
 			def = 1.0,

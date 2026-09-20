@@ -256,10 +256,10 @@ local function selfCheck()
 		local sequenceOk = #events == 3
 			and events[1].text == cases[1].text and events[2].text == cases[2].text and events[3].text == cases[3].text
 			and events[1].at < 0.5 and events[1].danger and events[1].order == Toast.raisedDisplayOrder and events[1].bold and events[1].size == Toast.gradeTextSize(events[1].height, Toast.grades.critical)
-			and events[2].at >= 6.2 and events[2].at <= 7.0 and not events[2].danger and events[2].order < 10 and events[2].bold and events[2].size == Toast.gradeTextSize(events[2].height, Toast.grades.important)
-			and events[3].at >= 8.7 and events[3].at <= 9.5 and not events[3].danger and not events[3].bold and events[3].size >= Theme.minTextSize
+			and events[2].at >= 6.2 and events[2].at <= 7.0 and not events[2].danger and events[2].order == Toast.raisedDisplayOrder and events[2].bold and events[2].size == Toast.gradeTextSize(events[2].height, Toast.grades.important)
+			and events[3].at >= 8.7 and events[3].at <= 9.5 and not events[3].danger and events[3].order < 10 and not events[3].bold and events[3].size >= Theme.minTextSize
 			and total >= 10.9 and total <= 11.9
-		check(("동시 3개 순서 · 크기 · 시간: ① 저장(치명) %s ② 레벨업(중요) %s ③ 구역 차단(일반) %s · 전체 %.2f초(기대 ② 6.2 ~ 7.0초 = 6 + 0.5 · ③ 8.7 ~ 9.5초 = + 2 + 0.5 · 전체 10.9 ~ 11.9초 · ToastGui 대역: 치명 동안만 창 · 확인창 위 250, 그 뒤 8)"):format(
+		check(("동시 3개 순서 · 크기 · 시간: ① 저장(치명) %s ② 레벨업(중요) %s ③ 구역 차단(일반) %s · 전체 %.2f초(기대 ② 6.2 ~ 7.0초 = 6 + 0.5 · ③ 8.7 ~ 9.5초 = + 2 + 0.5 · 전체 10.9 ~ 11.9초 · ToastGui 대역: 치명 · 중요(레벨업 - S19 사전 작업 결정)가 떠 있는 동안 창 · 확인창 위 250, 일반은 8)"):format(
 			line(events[1]), line(events[2]), line(events[3]), total), sequenceOk)
 	end)
 	if not ok then

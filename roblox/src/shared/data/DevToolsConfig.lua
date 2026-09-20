@@ -43,6 +43,10 @@ return {
 		-- S18(2026-09-20): PartyHud 분할(목록 · 요청 배너 · 알림 - 클라 전용, 서버 변경 0) - 이번 세션 블록 S18(UI) + 동반 실행(COMMON.md §3): 이 세션이 고친 것 = ScreenMap 슬롯(옛 partyToast 삭제 · partyVote → requestBanner) · 파티 클라 HUD 전체 · Toast 사용처 ->
 		-- S17(UI)(SystemToasts · Toast 창 위 올리기 - 사전 작업 수정 뒤 재실행) · S16(UI)(메뉴바 - PartyList 자리 · ScreenMap 겹침) · S12b(UI)(SocialSelfCheck - requestBanner 슬롯 · 알림) · S12(UI)(PanelFitCheck - 등록 창 · HUD 글씨) · S10(가)(드랍 피드 - blocksDropFeed 슬롯 · FeedLayout) +
 		-- 지시서 검증 항목: 27-3(가)(나)(투표 서버 경로) · S12(나)(/gg party selftest 포함 - 파티 서버 경로 회귀) · S09(나)(PartyExpBonus Attribute - 경험치 칩). S04(나)는 계속 제외.
-		current = { "S18(UI)", "S17(UI)", "S16(UI)", "S12b(UI)", "S12(UI)", "S10(가)", "27-3(가)", "27-3(나)", "S12(나)", "S09(나)" },
+		-- S19(2026-09-20): 사전 작업(클라 전용 - 서버 변경 0) - 직업 표시 이름 개명(ClassData.displayName) · 파티 목록 직업색 + 축약형 직업 이름(PartyListView · PartyList) · Toast 중요 등급 창 위 올리기(Toast · SystemToasts) · I 키 조사.
+		-- 본 작업(InventoryUI 파티 탭 분할)은 옮길 대상이 없어 코드 변경 0(PRD 20.105). 동반 실행(COMMON.md §3): 이 세션이 고친 클라 모듈을 쓰는 옛 클라 점검만 -
+		-- S18(UI)(PartyHudCheck - 목록 뷰 · 직업 이름) · S17(UI)(SystemToasts - Toast 등급 · 창 위 대역) · S16(UI)(메뉴바 · Toast TC) · S12b(UI)(SocialSelfCheck - Toast TC · 창 글씨 기준선) · S12(UI)(PanelFitCheck - 글씨 기준선) · S10(가)(DropFeed - Toast TR).
+		-- 서버 (나) 블록(27-3 · S12(나) · S09(나))은 서버 변경이 없어 뺀다. S04(나)는 계속 제외.
+		current = { "S18(UI)", "S17(UI)", "S16(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
 	},
 }
