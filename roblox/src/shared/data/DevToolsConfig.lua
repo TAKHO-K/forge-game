@@ -35,6 +35,9 @@ return {
 		-- S12(UI)(PanelFitCheck - 스테이지 선택 패널 화면 안 · 도감 점) · S11(가)(StageSelectPanel이 도는 보상 띠 자체 점검) · S11(나)(서버 보상 미리보기 조회) · 27-4(가)(나)(스테이지 상태 Attribute 파이프라인).
 		-- S16 사전 작업(2026-09-20): 잠긴 칩 글씨색 + 자물쇠 · 칸 번호 실효 12 + 색 대비 · X 버튼 44 × 44(StageSelectPanel · HudIcons · UIColors - 클라 전용) - S15(UI)(항목 추가) + 동반 S12(UI)(PanelFitCheck 글씨 줄) · S11(가)(StageSelectPanel 안의 보상 띠 점검) +
 		-- 29-3(나)(BossGimmickVerify 구덩이 개수 검증 수정 - 5회 반복 확인).
-		current = { "S15(UI)", "S12(UI)", "S11(가)", "29-3(나)" },
+		-- S16(2026-09-20): 메뉴바 + 단축키 표의 PanelRegistry 한 곳 집중(클라 전용 - 서버 변경 0) - 이번 세션 블록 S16(UI) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈(UIManager · PanelRegistry · ScreenMap ·
+		-- HudIcons · PartyHud · UiSelfCheck)을 쓰는 옛 클라 점검 = S12(UI)(PanelFitCheck - 등록 창 전수 화면 안) · S12b(UI)(SocialSelfCheck - 파티창 등록 · 알림 · 창 글씨) · S15(UI)(스테이지 선택 station 등록 규칙 ·
+		-- HudIcons.lock 칩) · S10(가)(드랍 피드 [S10][UI] - ScreenMap 슬롯 · FeedLayout). S04(나)는 계속 제외.
+		current = { "S16(UI)", "S12(UI)", "S12b(UI)", "S15(UI)", "S10(가)" },
 	},
 }

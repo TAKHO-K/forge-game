@@ -13,6 +13,7 @@ if not RunService:IsStudio() then
 end
 
 local ScreenMap = require(script.Parent.ScreenMap)
+local Theme = require(script.Parent.kit.Theme)
 
 local CHECK_DELAY = 8
 local ENGINE_GUIS = { TouchGui = true, Freecam = true } -- 로블록스 · Studio가 만드는 ScreenGui(우리 HUD가 아니다)
@@ -130,6 +131,24 @@ local function run()
 		end
 	end
 	print(("[S06][UI] 겹침 %d쌍 · 중앙 침범 %d건 (검사한 보이는 슬롯 %d개 · 화면 %d × %d)"):format(overlapCount, centerCount, #shown, screenSize.X, screenSize.Y))
+
+	-- S16: 메뉴바 아래 끝 × 모바일 BL 터치 예약 구역(좌 40% × 하 45%). 모바일 판정이면 실제 자리로 잰다(겹치면 X 표시). PC는 예약 구역이 없어 겹쳐도 무방하지만, 같은 화면 크기를 폰이라고 가정한 값도 같이 찍는다
+	-- (ScreenMap.mobileMenuBarShiftUp - 겹침이 0이 되는 최소 이동 후의 아래 끝).
+	local menuBar = found.MenuBar
+	if menuBar and isShown(menuBar) and menuBar.AbsoluteSize.Y > 0 then
+		local reserved = ScreenMap.rectFromFractions(ScreenMap.mobileReserved.BL, screenSize)
+		local rect = rectOf(menuBar)
+		local touching = intersects(rect, reserved)
+		if Theme.isMobile then
+			print(("[S06][UI][모바일] 메뉴바 %s × BL 터치 예약 구역 %s: %s %s"):format(describe(rect), describe(reserved), touching and "겹침" or "겹침 0", touching and "X" or "O"))
+		else
+			local mobileHeight = 3 * ScreenMap.menuBar.mobileButton + 2 * ScreenMap.menuBar.gap
+			local shift = ScreenMap.mobileMenuBarShiftUp(screenSize.Y, mobileHeight)
+			local bottom = screenSize.Y / 2 + mobileHeight / 2 - shift
+			print(("[S06][UI][모바일] PC 화면(예약 구역 없음): 메뉴바 %s · 폰이라면(3칸 %d) 위로 %d 밀어 아래 끝 %d ≤ BL 예약 구역 위 끝 %d %s"):format(
+				describe(rect), mobileHeight, shift, bottom, reserved.min.Y, bottom <= reserved.min.Y + 0.5 and "O" or "X"))
+		end
+	end
 
 	-- 전수 조사(COMMON.md §2 "새 UI를 놓기 전에 표에 없는 기존 HUD가 있는지 먼저 확인한다"): 화면에 그려지는 HUD(ScreenGui 중 DisplayOrder 10 미만의 직계 GuiObject)가 표에 없으면 찍는다.
 	-- 창(DisplayOrder 10 이상 · ScreenMap.windowNames)과 로블록스 내장 ScreenGui는 뺀다. 일시 토스트는 그 순간 그려질 때만 잡히므로 표에 있는지는 위 표의 이름으로도 본다.

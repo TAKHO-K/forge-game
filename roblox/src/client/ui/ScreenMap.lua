@@ -72,8 +72,10 @@ ScreenMap.slots = {
 			{ zone = "TR", slot = "chipStack", gap = 8 }),
 	},
 	ML = {
-		partyList = slot("existing", 0, 0.5, UDim2.new(0, 14, 0.5, 0), nil, "PartyList", "PartyHud.client.lua - 행 196 × 44"),
-		menuBar = slot("new", 0, 0.5, UDim2.new(0, 14, 0.5, 0), nil, "MenuBar", "메뉴바(S16) - PRD [D-2] 값. 파티 목록이 x = 14 + 48 + 8로 옮겨가야 한다(S18)"),
+		-- S16: 파티 목록은 메뉴바 오른쪽 옆(x = 14 + 48 + 8 - 모바일 버튼 폭 48 기준이라 PC(44)에서는 4px 더 뜬다)으로 옮겼다. 모바일 축약형(이름 없이 체력 줄 4개 · 폭 96)은 S18.
+		partyList = slot("existing", 0, 0.5, UDim2.new(0, ScreenMap.edgeMargin + 48 + 8, 0.5, 0), nil, "PartyList", "PartyHud.client.lua - 행 196 × 44 · 메뉴바 오른쪽 옆(S16)"),
+		menuBar = slot("existing", 0, 0.5, UDim2.new(0, ScreenMap.edgeMargin, 0.5, 0), nil, "MenuBar",
+			"hud/MenuBar.client.lua(S16) - 세로 1열 · 버튼 44(모바일 48) · 간격 6 · 칸 = PanelRegistry의 menuOrder(상한 5) · 크기는 보이는 칸 수로 정해진다(고정 크기 - 칸이 숨거나 나타날 때 다시 잰다). 모바일은 아래 끝이 BL 터치 예약 구역(위 끝 = 화면 높이 × 0.55)에 닿으면 mobileMenuBarShiftUp만큼 위로 민다"),
 	},
 	BL = {
 		classReopen = slot("existing", 0, 1, UDim2.new(0, 24, 1, -34), UDim2.new(0, 90, 0, 36), "ClassReopenButton", "ClassSelectUI.client.lua - '직업 변경' 상시 버튼(y 오프셋 34는 경험치바와 8px 띄운 값). 모바일에서는 조이스틱 예약 구역 안이다(기존)"),
@@ -104,6 +106,19 @@ ScreenMap.mobileReserved = {
 	BL = { left = 0, top = 0.55, right = 0.4, bottom = 1 },
 	BR = { left = 0.7, top = 0.5, right = 1, bottom = 1 },
 }
+
+-- 메뉴바 규격(PRD 20.81 [D-2]): 버튼 44 × 44(모바일 48) · 간격 6 · 위로 밀 때 화면 위 끝에서 남기는 여백.
+ScreenMap.menuBar = { button = 44, mobileButton = 48, gap = 6, topMargin = 8 }
+
+-- 모바일에서 세로 중앙에 놓인 메뉴바(높이 barHeight)의 아래 끝이 BL 터치 예약 구역 위 끝(화면 높이 × mobileReserved.BL.top)에 닿으면, 닿지 않을 만큼(= 겹침이 0이 되는 최소 이동)만 위로 민다.
+-- 위 끝이 topMargin 아래로는 못 올라간다 - 그래도 못 피하면(칸이 많고 화면이 낮을 때) 밀 수 있는 만큼만 민다(그 경우는 자체 점검이 X로 찍는다). 반환 = 올릴 px(0 이상).
+function ScreenMap.mobileMenuBarShiftUp(screenHeight, barHeight)
+	local limit = screenHeight * ScreenMap.mobileReserved.BL.top
+	local bottom = screenHeight / 2 + barHeight / 2
+	local shift = math.max(0, bottom - limit)
+	local room = math.max(0, screenHeight / 2 - barHeight / 2 - ScreenMap.menuBar.topMargin)
+	return math.min(shift, room)
+end
 
 -- C 구역(전투 시야): 화면 중앙 40% × 50%.
 ScreenMap.centerFraction = { left = 0.3, top = 0.25, right = 0.7, bottom = 0.75 }

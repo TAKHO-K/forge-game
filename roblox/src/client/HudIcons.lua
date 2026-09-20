@@ -132,6 +132,74 @@ function HudIcons.gear(parent, size, color)
 	return canvas
 end
 
+-- 메뉴바 아이콘 3종(S16, PRD 20.81 [D-2]) - 새 이미지 에셋 없이 위 아이콘들과 같은 방식(Frame 조합)으로 그린다. 전부 (parent, size, color)를 받고 size × size 캔버스를 돌려준다(color 기본 textPrimary).
+-- 가방: 손잡이(⊓ 브라켓) + 덮개 + 몸통. 덮개와 몸통 사이 틈이 "가방" 모양을 만든다.
+function HudIcons.bag(parent, size, color)
+	local iconColor = color or UIColors.textPrimary
+	local canvas = Instance.new("Frame")
+	canvas.BackgroundTransparency = 1
+	canvas.Size = UDim2.new(0, size, 0, size)
+	canvas.Parent = parent
+
+	local arm = size * 0.09
+	local handleWidth, handleHeight = size * 0.34, size * 0.22
+	local handleTop = size * 0.06
+	for _, x in ipairs({ -handleWidth / 2, handleWidth / 2 }) do
+		round(newFrame(canvas, UDim2.new(0, arm, 0, handleHeight), Vector2.new(0.5, 0), UDim2.new(0.5, x, 0, handleTop), 0, iconColor), arm / 2)
+	end
+	round(newFrame(canvas, UDim2.new(0, handleWidth + arm, 0, arm), Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, handleTop), 0, iconColor), arm / 2)
+
+	local bodyWidth = size * 0.82
+	local flapTop = size * 0.28
+	local flapHeight = size * 0.2
+	local gap = math.max(1, size * 0.05)
+	round(newFrame(canvas, UDim2.new(0, bodyWidth, 0, flapHeight), Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, flapTop), 0, iconColor), size * 0.08)
+	round(newFrame(canvas, UDim2.new(0, bodyWidth, 0, size * 0.42), Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, flapTop + flapHeight + gap), 0, iconColor), size * 0.1)
+	return canvas
+end
+
+-- 파티: 사람 셋(머리 원 + 어깨 몸통). 가운데가 크고 양옆이 작다.
+function HudIcons.party(parent, size, color)
+	local iconColor = color or UIColors.textPrimary
+	local canvas = Instance.new("Frame")
+	canvas.BackgroundTransparency = 1
+	canvas.Size = UDim2.new(0, size, 0, size)
+	canvas.Parent = parent
+
+	local function person(centerX, headDiameter, headTop, bodyWidth, bodyTop, bodyHeight)
+		local head = newFrame(canvas, UDim2.new(0, headDiameter, 0, headDiameter), Vector2.new(0.5, 0), UDim2.new(0, centerX, 0, headTop), 0, iconColor)
+		round(head, headDiameter / 2)
+		local body = newFrame(canvas, UDim2.new(0, bodyWidth, 0, bodyHeight), Vector2.new(0.5, 0), UDim2.new(0, centerX, 0, bodyTop), 0, iconColor)
+		round(body, bodyWidth * 0.4)
+	end
+	person(size * 0.2, size * 0.2, size * 0.28, size * 0.3, size * 0.52, size * 0.26)
+	person(size * 0.8, size * 0.2, size * 0.28, size * 0.3, size * 0.52, size * 0.26)
+	person(size * 0.5, size * 0.26, size * 0.14, size * 0.42, size * 0.44, size * 0.38)
+	return canvas
+end
+
+-- 스테이지: 올라가는 계단 막대 셋 + 맨 위 깃발(가장 높은 막대 위에 서 있다 = 목표 지점).
+function HudIcons.stage(parent, size, color)
+	local iconColor = color or UIColors.textPrimary
+	local canvas = Instance.new("Frame")
+	canvas.BackgroundTransparency = 1
+	canvas.Size = UDim2.new(0, size, 0, size)
+	canvas.Parent = parent
+
+	local barWidth = size * 0.24
+	local bottom = size * 0.9
+	local heights = { size * 0.26, size * 0.44, size * 0.62 }
+	for i, height in ipairs(heights) do
+		local x = size * 0.1 + (i - 1) * (barWidth + size * 0.06)
+		round(newFrame(canvas, UDim2.new(0, barWidth, 0, height), Vector2.new(0, 1), UDim2.new(0, x, 0, bottom), 0, iconColor), size * 0.05)
+	end
+	local poleX = size * 0.1 + 2 * (barWidth + size * 0.06) + barWidth / 2
+	local poleTop = bottom - heights[3] - size * 0.28
+	round(newFrame(canvas, UDim2.new(0, math.max(2, size * 0.07), 0, size * 0.28), Vector2.new(0.5, 0), UDim2.new(0, poleX, 0, poleTop), 0, iconColor), 1)
+	round(newFrame(canvas, UDim2.new(0, size * 0.2, 0, size * 0.12), Vector2.new(0, 0), UDim2.new(0, poleX + size * 0.03, 0, poleTop), 0, iconColor), 1)
+	return canvas
+end
+
 -- 쿨다운 링 - 위 모듈 설명 참고("스톱워치 눈금" 방식). diameter는 슬롯 지름과 같게 준다.
 -- 반환값은 update(remainingRatio) 함수 하나 - remainingRatio=1이면 전부 어둡게(막 씀),
 -- 0이면 전부 밝게(사용 가능). SkillSlots.client.lua의 setCooldown이 이 update를 부른다.

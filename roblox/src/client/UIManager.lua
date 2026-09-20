@@ -17,6 +17,10 @@ local PanelRegistry = require(script.Parent.ui.PanelRegistry)
 
 local UIManager = {}
 
+-- S16: 창이 열리거나 닫힐 때마다 changed(id, isOpen)가 울린다(메뉴바가 열린 패널의 버튼 테두리를 바꾼다). 다른 창이 밀려 닫히는 것도 각자 한 번씩 울린다.
+local changedEvent = Instance.new("BindableEvent")
+UIManager.changed = changedEvent.Event
+
 local TWEEN_INFO = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 -- 종류별 DisplayOrder 대역(30-0 S06, PRD 20.81 [D-1]): station 10 ~ 19 · window 100 ~ 149 · overlay 200 ~ 249. 다른 HUD ScreenGui(기본값 0 ~ 8)보다 항상 위.
 -- window의 값은 S06 전과 같다(BASE 100 + 스택 안 순번 = 가방 101).
@@ -271,6 +275,7 @@ function UIManager.open(id, opts)
 	if win.onOpen then
 		win.onOpen()
 	end
+	changedEvent:Fire(id, true)
 	-- onOpen 뒤에 맞춘다: 패널이 열릴 때 자기 크기 · 자리를 정하는 경우(가방의 fitWindow)를 먼저 끝내고 그 결과를 제한한다.
 	if kind ~= "overlay" and win.frame and win.screenGui then
 		UIManager.fitToScreen(win.frame, win.screenGui)
@@ -301,6 +306,7 @@ function UIManager.close(id, instant)
 	if win.onClose then
 		win.onClose()
 	end
+	changedEvent:Fire(id, false)
 	-- 부모가 닫히면 그 부모의 overlay도 같이 닫는다(트윈을 기다리지 않는다).
 	if win.kind ~= "overlay" then
 		for _, otherId in ipairs(table.clone(stack)) do

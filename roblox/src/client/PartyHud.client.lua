@@ -19,6 +19,7 @@ local TweenService = game:GetService("TweenService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
+local ScreenMap = require(script.Parent.ui.ScreenMap)
 
 local partyStateChanged = ReplicatedStorage:WaitForChild("PartyStateChanged")
 local partyInviteNotice = ReplicatedStorage:WaitForChild("PartyInviteNotice")
@@ -41,8 +42,7 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 -- ═══ [1] 파티원 목록 ═══
 local list = Instance.new("Frame")
 list.Name = "PartyList"
-list.AnchorPoint = Vector2.new(0, 0.5)
-list.Position = UDim2.new(0, 14, 0.5, 0)
+ScreenMap.place(list, "ML", "partyList") -- S16: 메뉴바 오른쪽 옆(x = 14 + 48 + 8)
 list.AutomaticSize = Enum.AutomaticSize.XY
 list.Size = UDim2.new(0, 0, 0, 0)
 list.BackgroundTransparency = 1
