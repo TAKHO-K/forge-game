@@ -56,7 +56,6 @@ ScreenMap.slots = {
 	TC = {
 		zoneBoundary = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 100), UDim2.new(0, 420, 0, 48), "ZoneWarningLabel", "ZoneBoundaryWarning.client.lua"),
 		tutorialToast = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 160), UDim2.new(0, 480, 0, 0), "TutorialToast", "TutorialHud.client.lua - 높이는 내용(AutomaticSize.Y)"),
-		partyToast = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 210), UDim2.new(0, 420, 0, 40), "PartyToast", "PartyHud.client.lua(TOAST_Y = 210)"),
 		toastLane = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 64), UDim2.new(0, 480, 0, 40), "ToastLane_TC", "Toast 줄 TC(시스템 · 1행 · 3초)"),
 	},
 	TR = {
@@ -68,8 +67,9 @@ ScreenMap.slots = {
 			{ zone = "TR", slot = "chipStack", gap = 8 }),
 	},
 	ML = {
-		-- S16: 파티 목록은 메뉴바 오른쪽 옆(x = 14 + 48 + 8 - 모바일 버튼 폭 48 기준이라 PC(44)에서는 4px 더 뜬다)으로 옮겼다. 모바일 축약형(이름 없이 체력 줄 4개 · 폭 96)은 S18.
-		partyList = slot("existing", 0, 0.5, UDim2.new(0, ScreenMap.edgeMargin + 48 + 8, 0.5, 0), nil, "PartyList", "PartyHud.client.lua - 행 196 × 44 · 메뉴바 오른쪽 옆(S16)"),
+		-- S16: 파티 목록은 메뉴바 오른쪽 옆(x = 14 + 48 + 8 - 모바일 버튼 폭 48 기준이라 PC(44)에서는 4px 더 뜬다)으로 옮겼다.
+		-- S18: hud/PartyList.client.lua(뷰 = hud/PartyListView.lua) - PC 폭 220 · 멤버 블록 = ListRow(40) + Gauge(10) / 모바일 축약형 폭 96 · 체력 줄만(행 44) - 모바일은 아래 끝이 BL 터치 예약 구역에 닿으면 위로 밀린다(메뉴바와 같은 규칙).
+		partyList = slot("existing", 0, 0.5, UDim2.new(0, ScreenMap.edgeMargin + 48 + 8, 0.5, 0), nil, "PartyList", "hud/PartyList.client.lua - 세로 중앙 · 메뉴바 오른쪽 옆(S16) · 크기는 멤버 수 · 경험치 칩으로 정해진다(AutomaticSize)"),
 		menuBar = slot("existing", 0, 0.5, UDim2.new(0, ScreenMap.edgeMargin, 0.5, 0), nil, "MenuBar",
 			"hud/MenuBar.client.lua(S16) - 세로 1열 · 버튼 44(모바일 48) · 간격 6 · 칸 = PanelRegistry의 menuOrder(상한 5) · 크기는 보이는 칸 수로 정해진다(고정 크기 - 칸이 숨거나 나타날 때 다시 잰다). 모바일은 아래 끝이 BL 터치 예약 구역(위 끝 = 화면 높이 × 0.55)에 닿으면 mobileMenuBarShiftUp만큼 위로 민다"),
 	},
@@ -78,7 +78,8 @@ ScreenMap.slots = {
 	},
 	MR = {
 		inventoryToggle = blocksFeed(slot("existing", 1, 0.5, UDim2.new(1, -16, 0.5, 0), UDim2.new(0, 90, 0, 36), "InventoryToggleButton", "InventoryUI.client.lua - '가방' 열기 버튼(항상 보임). 투표 패널과 같은 세로 중앙이라 투표 중에는 서로 겹친다(기존 - 20.94 미결)")),
-		partyVote = blocksFeed(slot("existing", 1, 0.5, UDim2.new(1, -14, 0.5, 0), UDim2.new(0, 210, 0, 84), "PartyVotePanel", "PartyHud.client.lua")),
+		requestBanner = blocksFeed(slot("new", 1, 0.5, UDim2.new(1, -14, 0.5, 0), UDim2.new(0, 224, 0, 138), "RequestBanner",
+			"hud/RequestBanner.lua(S18) - 수락 · 거절이 필요한 요청 전부(파티 투표 · 초대) - 한 번에 하나 · 대기열. 크기는 PC 기준(버튼 있는 배너) - 정보 배너는 더 낮다. 모바일은 아래 끝을 BR 터치 예약 구역 위 끝(화면 높이 0.5)에 맞춰 위로 올린다. 옛 partyVote(PartyVotePanel 210 × 84)의 자리")),
 	},
 	BC = {
 		buffRow = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -141), nil, "BuffHudAnchor", "PlayerHealthBar.client.lua - 버프 아이콘 28px 행(BOTTOM_OFFSET 94 + 체력바 19 + 8 + 10 + 10)"),

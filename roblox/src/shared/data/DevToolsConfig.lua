@@ -40,6 +40,9 @@ return {
 		-- HudIcons.lock 칩) · S10(가)(드랍 피드 [S10][UI] - ScreenMap 슬롯 · FeedLayout). S04(나)는 계속 제외.
 		-- S17(2026-09-20): 시스템 토스트 5종 → Toast(클라 전용 - 서버 변경 0) - 이번 세션 블록 S17(UI) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈(ScreenMap 옛 슬롯 5개 삭제 · Toast의 새 사용처)을 쓰는 옛 클라 점검 =
 		-- S16(UI)(메뉴바 - ScreenMap 슬롯 겹침 · Toast TC 줄) · S12b(UI)(SocialSelfCheck - Toast TC 알림 · 드랍 피드) · S10(가)(DropFeed의 [S10][UI] - ScreenMap 슬롯 · FeedLayout · Toast TR). `[S06][UI]` 겹침 검사는 항상 돈다. S04(나)는 계속 제외.
-		current = { "S17(UI)", "S16(UI)", "S12b(UI)", "S10(가)" },
+		-- S18(2026-09-20): PartyHud 분할(목록 · 요청 배너 · 알림 - 클라 전용, 서버 변경 0) - 이번 세션 블록 S18(UI) + 동반 실행(COMMON.md §3): 이 세션이 고친 것 = ScreenMap 슬롯(옛 partyToast 삭제 · partyVote → requestBanner) · 파티 클라 HUD 전체 · Toast 사용처 ->
+		-- S17(UI)(SystemToasts · Toast 창 위 올리기 - 사전 작업 수정 뒤 재실행) · S16(UI)(메뉴바 - PartyList 자리 · ScreenMap 겹침) · S12b(UI)(SocialSelfCheck - requestBanner 슬롯 · 알림) · S12(UI)(PanelFitCheck - 등록 창 · HUD 글씨) · S10(가)(드랍 피드 - blocksDropFeed 슬롯 · FeedLayout) +
+		-- 지시서 검증 항목: 27-3(가)(나)(투표 서버 경로) · S12(나)(/gg party selftest 포함 - 파티 서버 경로 회귀) · S09(나)(PartyExpBonus Attribute - 경험치 칩). S04(나)는 계속 제외.
+		current = { "S18(UI)", "S17(UI)", "S16(UI)", "S12b(UI)", "S12(UI)", "S10(가)", "27-3(가)", "27-3(나)", "S12(나)", "S09(나)" },
 	},
 }

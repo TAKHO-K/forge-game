@@ -215,7 +215,7 @@ local function selfTest()
 			end
 		end
 		-- 투표 패널은 평소 숨어 있다 - 슬롯 표(고정 크기)의 자리를 그대로 계산해 본다.
-		local vote = ScreenMap.slot("MR", "partyVote")
+		local vote = ScreenMap.slot("MR", "requestBanner")
 		local viewport = partyButton:FindFirstAncestorOfClass("ScreenGui").AbsoluteSize
 		local voteHeight, voteWidth = vote.size.Y.Offset, vote.size.X.Offset
 		local voteRect = {
