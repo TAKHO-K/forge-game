@@ -235,6 +235,13 @@ if RunService:IsStudio() then
 		applyMetrics()
 		relayout()
 	end)
+	-- 스크린샷용: 이름표(첫 8초)를 다시 띄운다. Attribute ShowMenuBarTags = true를 넣으면 한 번 띄우고 지운다.
+	player:GetAttributeChangedSignal("ShowMenuBarTags"):Connect(function()
+		if player:GetAttribute("ShowMenuBarTags") then
+			player:SetAttribute("ShowMenuBarTags", nil)
+			showNameTags(refs.items)
+		end
+	end)
 end
 
 -- ═══ 자체 점검 [S16][UI] (Studio · verify에 "S16(UI)"가 있을 때) ═══
