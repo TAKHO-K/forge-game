@@ -71,8 +71,8 @@ local BAND_TOP = GRID_TOP + ROWS * (CELL_H + CELL_GAP) + CELL_GAP + 2 -- 그리�
 local CHIP_WIDTH = math.floor((GRID_WIDTH - 2 * STRIP_ARROW - (CHIPS + 1) * STRIP_GAP) / CHIPS)
 local CHIP_TEXT_SIZE = 12
 local CHIP_TEXT_ROOM = CHIP_WIDTH - 6
--- S16 사전 작업: 잠긴 칩은 왼쪽에 자물쇠(HudIcons.lock - 기존 도형 아이콘)를 그리고 글은 그 오른쪽으로 민다(UIPadding 왼쪽 LOCK_PAD). 자물쇠 그림은 실효 12px 이상이 되게 캔버스 20(그려진 높이 = 캔버스 × 0.62).
-local LOCK_ICON_SIZE = 20
+-- S16 사전 작업: 잠긴 칩은 왼쪽에 자물쇠(HudIcons.lock - 기존 도형 아이콘)를 그리고 글은 그 오른쪽으로 민다(UIPadding 왼쪽 LOCK_PAD). 자물쇠 그림은 실효 12px 이상이 되게 캔버스 22(그려진 높이 = 캔버스 × 0.62 - 20은 픽셀 반올림으로 12.0이라 여유가 없었다).
+local LOCK_ICON_SIZE = 22
 local LOCK_PAD = 16
 local LOCK_TEXT_ROOM = CHIP_WIDTH - LOCK_PAD - 4 -- 글 자리(칩 폭 − 자물쇠 자리 − 양쪽 여유 2)
 -- S12 사전 작업 2: 화면이 패널보다 낮으면(폰 가로 388) UIManager.fitToScreen이 패널 높이를 줄이고, 제목 · 상태줄은 고정한 채 이 사이(범례 ~ 페이지 줄)가 스크롤된다.
