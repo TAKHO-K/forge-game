@@ -92,7 +92,9 @@ local function build()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "MenuBarGui"
 	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 4
+	-- window(DisplayOrder 100 ~ 149)의 딤이 화면을 덮어도 메뉴바는 눌려야 한다("열린 버튼을 다시 누르면 닫힌다" · 창 → 창 전환) - window 대역 바로 위, overlay(200 ~ 249 - 확인창) 아래.
+	-- 실제 클릭으로 확인한 결함이다: 4일 때는 딤이 클릭을 먹어 열림 표시가 켜진 버튼을 눌러도 안 닫혔다. 창은 720 폭 상한이라 바(x 14 ~ 62)와 겹치는 것은 화면 폭 780 미만일 때 가장자리뿐이다.
+	gui.DisplayOrder = 150
 	gui.Parent = player:WaitForChild("PlayerGui")
 	refs.gui = gui
 
@@ -342,6 +344,11 @@ local function selfCheck()
 			Theme.isMobile and "모바일" or "PC", #shown, shown[1] and shown[1].button.AbsoluteSize.X or -1, shown[1] and shown[1].button.AbsoluteSize.Y or -1, size, table.concat(gapText, "/"), ScreenMap.menuBar.gap,
 			barPos.X, ScreenMap.edgeMargin, centerOffset, tostring(iconOk), tostring(letterOk), tostring(touchOk)),
 			#shown == 3 and sizeOk and gapsOk and math.abs(barPos.X - ScreenMap.edgeMargin) < 0.5 and (Theme.isMobile or centerOffset < 1) and iconOk and letterOk and touchOk)
+
+		-- 창 딤 위 · 확인창(overlay) 아래(실제 클릭은 별도 Play가 확인한다)
+		local windowTop = 149
+		local overlayBottom = 200
+		check(("메뉴바 DisplayOrder %d(기대 window 대역 149 초과 · overlay 200 미만 - 창 딤이 덮어도 눌린다 · 확인창은 메뉴바를 덮는다)"):format(refs.gui.DisplayOrder), refs.gui.DisplayOrder > windowTop and refs.gui.DisplayOrder < overlayBottom)
 
 		-- 3. 열림 표시(ember 테두리) · window ↔ station 규칙
 		local looks = {}
