@@ -221,11 +221,11 @@ local function selfCheck()
 			r1, r2, tostring(state.showing), table.concat(state.queued, ","), visibleBanners(), state.title, state.gaugeValue, tostring(state.buttonsShown)),
 			r1 == "shown" and r2 == "queued" and state.showing == "invite" and #state.queued == 1 and state.queued[1] == "vote" and visibleBanners() == 1 and state.gaugeValue > 0.9 and state.buttonsShown)
 		local viewportNow = frame.Parent.AbsoluteSize
-		check(("배너 모양 · 자리: 크기 %d × %d(기대 224 × %d = 슬롯 표) · 오른쪽 끝 %d ≤ 화면 %d · 중앙 금지 구역 오른쪽 %d 밖 %s · DisplayOrder %d(기대 150 초과 200 미만) · 글씨 실효 12 미만 %d개 [%s](기대 0 - 보이는 글 %d개)"):format(
+		check(("배너 모양 · 자리: 크기 %d × %d(기대 224 × %d = 슬롯 표) · 오른쪽 끝 %d ≤ 화면 %d · 중앙 금지 구역 오른쪽 %d 밖 %s · DisplayOrder %d(기대 150 초과 200 미만) · 글씨 실효 12 미만 %d개 [%s](기대 0 - 보이는 글 %d개 = 제목 · 본문 · 수락 · 거절)"):format(
 			frame.AbsoluteSize.X, frame.AbsoluteSize.Y, ScreenMap.slot("MR", "requestBanner").size.Y.Offset, frame.AbsolutePosition.X + frame.AbsoluteSize.X, viewportNow.X,
 			ScreenMap.centerRect(viewportNow).max.X, tostring(frame.AbsolutePosition.X >= ScreenMap.centerRect(viewportNow).max.X), frame.Parent.DisplayOrder, #bannerReport.low, table.concat(bannerReport.low, ","), bannerReport.count),
 			math.abs(frame.AbsoluteSize.X - 224) < 1 and math.abs(frame.AbsoluteSize.Y - ScreenMap.slot("MR", "requestBanner").size.Y.Offset) < 1 and frame.AbsolutePosition.X + frame.AbsoluteSize.X <= viewportNow.X + 0.5
-				and frame.AbsolutePosition.X >= ScreenMap.centerRect(viewportNow).max.X and frame.Parent.DisplayOrder > 150 and frame.Parent.DisplayOrder < 200 and #bannerReport.low == 0 and bannerReport.count >= 5)
+				and frame.AbsolutePosition.X >= ScreenMap.centerRect(viewportNow).max.X and frame.Parent.DisplayOrder > 150 and frame.Parent.DisplayOrder < 200 and #bannerReport.low == 0 and bannerReport.count == 4)
 
 		RequestBanner.debugPress("decline")
 		local afterDecline = RequestBanner.debugState()
