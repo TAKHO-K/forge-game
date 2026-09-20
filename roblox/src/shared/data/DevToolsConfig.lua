@@ -28,6 +28,6 @@ return {
 		-- 29-1(BossMechanicsVerify) · 29-2(BossSkillVerify) · 29-3(BossGimmickVerify) · 29-4(BossGimmick4Verify) · 29-5(BossGimmick5Verify)의 (가)(나) + 스테이지 100 보스를 실제로 스폰하는
 		-- 파티 경로(BossRules.buildInstanceData의 밀도 사본을 그대로 타는 S12(나)(PartyTutorialVerify) · S12b(나)(SocialVerify) - 둘 다 BOSS_STAGE = 100). S04(나)는 계속 제외.
 		-- S15 1단계(TEMP - 조사 뒤 되돌린다): S04(나) 단독 실행 + FreezeProbe 계측.
-		current = { "S04(나)" },
+		current = { "29-1", "29-2(가)", "29-2(나)", "29-3(가)", "29-3(나)", "29-4(가)", "29-4(나)", "29-5(가)", "29-5(나)", "S01(나)", "S02(나)", "S03(나)", "S04(나)" },
 	},
 }
