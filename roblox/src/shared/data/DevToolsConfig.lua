@@ -17,7 +17,7 @@ return {
 	--   regression = true: 과거 세션의 블록 전부 + current. **마일스톤(S10 · S15 · S21 종료 시 · Fable 세션 전 · 퍼블리시 전)에서만 켜고, 그 Play가 끝나면 다시 false로 되돌린다**(COMMON.md §3 · §5).
 	-- 새 세션을 시작할 때 current를 그 세션의 블록 id + 그 세션이 고친 모듈을 쓰는 옛 블록 id("동반 실행")로 갈아 끼운다(그 밖의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
 	verify = {
-		regression = false,
+		regression = true, -- S10 마일스톤: 마지막 회귀 전체 Play 동안만 true - 끝나면 바로 false로 되돌려 커밋한다
 		-- S10(회귀 전체 마일스톤): 이번 세션 블록 S10(가) · S10(나) + 동반 실행(COMMON.md §3) - 이 세션이 고친 server/CombatResolution.lua(grantKillReward에 DropNotice.publish)를 쓰는 옛 블록: S01(나)(보스 · 잡몹 처치 경로) ·
 		-- S04(나) · S05(나)(처치 경로의 재료 지급) · S05b(나)(SaveKeyVerify가 실제 보스 처치) · 29-5(나) · 27-3(가) · 27-3(나)(파티 · 투표). server/PartyState.lua는 읽기만(getParty · getMemberPlayers) - S09(나)도 같이. 마지막 Play는 regression = true로 전체를 돈다(끝나면 false로 되돌린다).
 		current = { "S10(가)", "S10(나)", "S01(나)", "S04(나)", "S05(나)", "S05b(나)", "S09(나)", "29-5(나)", "27-3(가)", "27-3(나)" },
