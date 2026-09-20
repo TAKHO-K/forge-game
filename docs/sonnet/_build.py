@@ -16,7 +16,7 @@ common = re.sub(r"^(#+) ", lambda m: "#" + m.group(1) + " ", common, flags=re.M)
 common = re.sub(r"^> 이 블록은.*\n\n?", "", common, flags=re.M)
 
 count = 0
-for path in sorted(glob.glob(os.path.join(HERE, "S[0-9][0-9]-*.md"))):
+for path in sorted(glob.glob(os.path.join(HERE, "S[0-9][0-9]*-*.md"))):
     with open(path, encoding="utf-8") as f:
         text = f.read()
     if BEGIN in text:
