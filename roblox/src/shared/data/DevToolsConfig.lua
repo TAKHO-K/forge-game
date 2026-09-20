@@ -38,6 +38,8 @@ return {
 		-- S16(2026-09-20): 메뉴바 + 단축키 표의 PanelRegistry 한 곳 집중(클라 전용 - 서버 변경 0) - 이번 세션 블록 S16(UI) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈(UIManager · PanelRegistry · ScreenMap ·
 		-- HudIcons · PartyHud · UiSelfCheck)을 쓰는 옛 클라 점검 = S12(UI)(PanelFitCheck - 등록 창 전수 화면 안) · S12b(UI)(SocialSelfCheck - 파티창 등록 · 알림 · 창 글씨) · S15(UI)(스테이지 선택 station 등록 규칙 ·
 		-- HudIcons.lock 칩) · S10(가)(드랍 피드 [S10][UI] - ScreenMap 슬롯 · FeedLayout). S04(나)는 계속 제외.
-		current = { "S16(UI)", "S12(UI)", "S12b(UI)", "S15(UI)", "S10(가)" },
+		-- S17(2026-09-20): 시스템 토스트 5종 → Toast(클라 전용 - 서버 변경 0) - 이번 세션 블록 S17(UI) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈(ScreenMap 옛 슬롯 5개 삭제 · Toast의 새 사용처)을 쓰는 옛 클라 점검 =
+		-- S16(UI)(메뉴바 - ScreenMap 슬롯 겹침 · Toast TC 줄) · S12b(UI)(SocialSelfCheck - Toast TC 알림 · 드랍 피드) · S10(가)(DropFeed의 [S10][UI] - ScreenMap 슬롯 · FeedLayout · Toast TR). `[S06][UI]` 겹침 검사는 항상 돈다. S04(나)는 계속 제외.
+		current = { "S17(UI)", "S16(UI)", "S12b(UI)", "S10(가)" },
 	},
 }

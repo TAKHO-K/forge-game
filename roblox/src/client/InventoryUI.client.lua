@@ -2866,7 +2866,7 @@ for _, attr in ipairs({ "ClassId", "WeaponLevel", "WeaponGrade", "CharacterLevel
 end
 
 -- 인벤토리가 가득 찼을 때(14-1부터 "땅의 아이템을 못 주웠다"는 뜻) - 간단한 중앙 토스트로만
--- 알린다(ItemPickupHud.client.lua와 같은 가벼운 패턴). 새 창을 새로 열 만한 무게의
+-- 알린다(옛 ItemPickupHud - S17부터 hud/SystemToasts.client.lua - 와 같은 가벼운 패턴). 새 창을 새로 열 만한 무게의
 -- 이벤트가 아니다.
 local fullToast = Instance.new("TextLabel")
 fullToast.Name = "InventoryFullToast" -- ScreenMap 슬롯 표(TC.inventoryFull)가 이 이름으로 찾는다

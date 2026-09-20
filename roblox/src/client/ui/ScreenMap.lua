@@ -41,7 +41,7 @@ ScreenMap.windowNames = { ClassSelectPanel = true, ClassConfirmPanel = true }
 -- 구역: 앵커(가장자리 기준점). C는 슬롯이 없다("영구히 없음" - window · overlay 제외).
 ScreenMap.zones = {
 	TL = { anchor = Vector2.new(0, 0), note = "로블록스 채팅창 - 손대지 않는다" },
-	TC = { anchor = Vector2.new(0.5, 0), note = "레벨업 연출 · 시스템 토스트 줄(y 64 ~ 210) · 태초 서버 전체 알림 배너(4초) · 드랍 피드가 자리 없을 때 옮겨 오는 띠" },
+	TC = { anchor = Vector2.new(0.5, 0), note = "시스템 토스트 줄(저장 · 레벨업 · 구역 차단 · 보물상자 - S17부터 hud/SystemToasts) · 태초 서버 전체 알림 배너(4초) · 드랍 피드가 자리 없을 때 옮겨 오는 띠" },
 	TR = { anchor = Vector2.new(1, 0), note = "칩 스택(골드 · 레벨 · 스테이지 · 설정 · 견습) · 그 왼쪽 파티 버튼(S12b) · 칩 스택 아래 드랍 피드" },
 	ML = { anchor = Vector2.new(0, 0.5), note = "파티 목록 · 메뉴바" },
 	MR = { anchor = Vector2.new(1, 0.5), note = "가방 버튼 · 요청 배너(파티 투표 · 초대)" },
@@ -54,13 +54,9 @@ ScreenMap.zones = {
 
 ScreenMap.slots = {
 	TC = {
-		saveNotice = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 64), UDim2.new(0, 480, 0, 40), "SaveNoticeLabel", "SaveNoticeHud.client.lua"),
 		zoneBoundary = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 100), UDim2.new(0, 420, 0, 48), "ZoneWarningLabel", "ZoneBoundaryWarning.client.lua"),
-		zoneBlocked = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 108), UDim2.new(0, 360, 0, 36), "ZoneBlockedLabel", "ZoneBlockedHud.client.lua"),
-		treasureChest = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 150), UDim2.new(0, 440, 0, 36), "TreasureChestLabel", "TreasureChestHud.client.lua"),
 		tutorialToast = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 160), UDim2.new(0, 480, 0, 0), "TutorialToast", "TutorialHud.client.lua - 높이는 내용(AutomaticSize.Y)"),
 		partyToast = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 210), UDim2.new(0, 420, 0, 40), "PartyToast", "PartyHud.client.lua(TOAST_Y = 210)"),
-		levelUp = slot("existing", 0.5, 0.5, UDim2.new(0.5, 0, 0.3, 0), UDim2.new(0, 320, 0, 56), "LevelUpLabel", "LevelUpHud.client.lua - 화면 높이 30%(C 구역 위쪽 경계 25% ~ 75% 안)의 일시 연출"),
 		toastLane = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 64), UDim2.new(0, 480, 0, 40), "ToastLane_TC", "Toast 줄 TC(시스템 · 1행 · 3초)"),
 	},
 	TR = {
@@ -89,7 +85,6 @@ ScreenMap.slots = {
 		comboPips = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -121), UDim2.new(0, 0, 0, 0), "ComboPipsAnchor", "PlayerHealthBar.client.lua - 콤보 점 자리(크기 0 - AttackInput이 자식을 끼운다)"),
 		healthBar = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -94), UDim2.new(0, 394, 0, 19), "HealthBar", "PlayerHealthBar.client.lua"),
 		skillRow = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -31), nil, "CentralRow", "SkillSlots.client.lua - 슬롯 54 · 높이 54(모바일 터치 배치는 SkillSlots가 따로 정한다)"),
-		itemPickup = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -140), UDim2.new(0, 360, 0, 40), "ItemPickupLabel", "ItemPickupHud.client.lua"),
 		pickupPopup = slot("new", 0.5, 1, UDim2.new(0.5, 0, 1, -140), UDim2.new(0, 360, 0, 40), "ToastLane_BC", "Toast 줄 BC(획득 팝업 · 1행 · 묶기)"),
 		bossTrap = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -170), UDim2.new(0, 260, 0, 58), "BossTrapPanel", "BossTrapView.lua - 보스 잡기 기믹에 잡혔을 때만 뜨는 카운트다운 · 구출 막대 패널(평소엔 숨김)"),
 	},
