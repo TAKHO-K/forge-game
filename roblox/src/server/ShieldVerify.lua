@@ -208,12 +208,23 @@ function ShieldVerify.runPure()
 				for healers = 0, 4 do
 					local result = run(4 - healers, healers, shield, regenValue)
 					table_[regen .. (shield and "S" or "H") .. healers] = result
-					print(("[S13b][가][측정] %s · %s · 딜러%d+힐러%d: 처치 %s초 · 받은 피해 %.2f · 쉴드 흡수 %.2f · 순 HP 손실 %.2f · 대상별 쉴드 가동률 %.1f%% · 평균 겹 %.2f(쉴드 있을 때 %.2f) · 힐러 전투 비율 %s · 시전 %d · 5겹 거절 %d · 반감 %d · 교체 %d"):format(
+					print(("[S13b][가][측정] %s · %s · 딜러%d+힐러%d: 처치 %s초 · 받은 피해 %.2f · 쉴드 흡수 %.2f(흡수율 %.1f%%) · 순 HP 손실 %.2f(초당 %.4f) · 대상별 쉴드 가동률 %.1f%% · 평균 겹 %.2f(쉴드 있을 때 %.2f) · 힐러 전투 비율 %s · 시전 %d · 5겹 거절 %d · 반감 %d · 교체 %d"):format(
 						regen == "boss" and "보스전(회복 0)" or "필드(회복 기본)", shield and "쉴드" or "치유(옛 동작)", 4 - healers, healers, result.killSeconds and ("%.1f"):format(result.killSeconds) or "상한",
-						result.damageIn, result.absorbed, result.hpLoss, result.shieldUptime * 100, result.avgLayers, result.avgLayersWhileShielded,
+						result.damageIn, result.absorbed, result.damageIn > 0 and result.absorbed / result.damageIn * 100 or 0, result.hpLoss, result.hpLoss / result.elapsed, result.shieldUptime * 100, result.avgLayers, result.avgLayersWhileShielded,
 						result.healerFightRatio and ("%.3f"):format(result.healerFightRatio) or "-", result.casts, result.rejected, result.halved, result.replaced))
 				end
 			end
+		end
+
+		-- 참고: 힐러가 이탈하지 않고 계속 전투하는 경우(딜링모드 소모 0 · 이탈 없음) - 층 겹침 규칙(반감 · 5겹)과 가동률 상한만 본다. 설계 가동률은 지속 ÷ 쿨타임이고, 실제는 피격이 쉴드를 깎아 그보다 낮다.
+		for healers = 1, 4 do
+			local result = PartyShieldSim.run({
+				dealers = 4 - healers, healers = healers, healerRaw = healerRaw, bossHpUnits = 4 * referenceSeconds, hitsPerSecond = hits.hitsPerSecond, hitRatio = hits.hitRatio,
+				shield = true, reserveRatio = -100, drainPerSecond = 0, maxSeconds = referenceSeconds,
+			})
+			print(("[S13b][가][측정][참고] 힐러가 이탈하지 않는 경우 · 딜러%d+힐러%d(%d초): 대상별 쉴드 가동률 %.1f%%(설계 %.0f%% = 지속 ÷ 쿨타임) · 평균 겹 %.2f(쉴드 있을 때 %.2f) · 흡수율 %.1f%% · 시전 %d · 반감 %d · 5겹 거절 %d"):format(
+				4 - healers, healers, referenceSeconds, result.shieldUptime * 100, shieldDef.durationSeconds / shieldDef.cooldownSeconds * 100, result.avgLayers, result.avgLayersWhileShielded,
+				result.damageIn > 0 and result.absorbed / result.damageIn * 100 or 0, result.casts, result.halved, result.rejected))
 		end
 
 		-- 모형 정합: 힐러 1명 치유 모드의 전투 비율 = BalanceSim.simulateHealerCycle(같은 조건) 가동률 · 딜러 4명 = 기준 처치 시간.
@@ -239,8 +250,9 @@ function ShieldVerify.runPure()
 			if not (d2h2.killSeconds > d4.killSeconds and d2h2.killSeconds <= d4.killSeconds * 1.10) then
 				miss(("딜러2+힐러2 '약간 느림'(딜러4 초과 · +10%% 이내) 어긋남: %+.1f%%"):format((d2h2.killSeconds / d4.killSeconds - 1) * 100))
 			end
-			if not (d2h2.hpLoss <= d4.hpLoss * 0.8) then
-				miss(("딜러2+힐러2 '받은 피해 크게 적음'(딜러4의 80%% 이하) 어긋남: 순 HP 손실 %.2f vs 딜러4 %.2f(%.0f%%)"):format(d2h2.hpLoss, d4.hpLoss, d2h2.hpLoss / d4.hpLoss * 100))
+			local d4Rate, d2h2Rate = d4.hpLoss / d4.elapsed, d2h2.hpLoss / d2h2.elapsed
+			if not (d2h2Rate <= d4Rate * 0.8) then
+				miss(("딜러2+힐러2 '받은 피해 크게 적음'(딜러4의 80%% 이하 - 초당 순 HP 손실) 어긋남: %.4f vs 딜러4 %.4f(%.0f%%)"):format(d2h2Rate, d4Rate, d2h2Rate / d4Rate * 100))
 			end
 			for _, entry in ipairs({ { "딜러1+힐러3", d1h3 }, { "힐러4", h4 } }) do
 				if not (entry[2].killSeconds >= d4.killSeconds * 1.10) then
@@ -250,15 +262,18 @@ function ShieldVerify.runPure()
 			if not (d1h3.shieldUptime > d3h1.shieldUptime and h4.shieldUptime > d3h1.shieldUptime) then
 				miss(("힐러3~4 '가동률은 높음'(힐러1보다 높음) 어긋남: 힐러1 %.1f%% · 힐러3 %.1f%% · 힐러4 %.1f%%"):format(d3h1.shieldUptime * 100, d1h3.shieldUptime * 100, h4.shieldUptime * 100))
 			end
-			local gain12 = d2h2.absorbed - d3h1.absorbed
-			local gain34 = h4.absorbed - d1h3.absorbed
-			local gain23 = d1h3.absorbed - d2h2.absorbed
-			if not (gain23 < gain12 or gain34 < gain12) then
-				miss(("힐러3~4 '반감 때문에 흡수량 증가가 둔함' 어긋남: 힐러 1→2 흡수 %+.2f · 2→3 %+.2f · 3→4 %+.2f"):format(gain12, gain23, gain34))
+			local function absorbRate(result)
+				return result.damageIn > 0 and result.absorbed / result.damageIn or 0
+			end
+			local gain12 = absorbRate(d2h2) - absorbRate(d3h1)
+			local gain23 = absorbRate(d1h3) - absorbRate(d2h2)
+			local gain34 = absorbRate(h4) - absorbRate(d1h3)
+			if not (gain23 < gain12 and gain34 < gain12) then
+				miss(("힐러3~4 '반감 때문에 흡수량 증가가 둔함'(흡수율 = 흡수 ÷ 받은 피해의 증가분이 힐러 1→2보다 작음) 어긋남: 1→2 %+.1f%%p · 2→3 %+.1f%%p · 3→4 %+.1f%%p"):format(gain12 * 100, gain23 * 100, gain34 * 100))
 			end
 			print(("[S13b][가][어긋남] %s: %s"):format(regen == "field" and "필드(회복 기본)" or "보스전(회복 0)", #misses == 0 and "없음" or table.concat(misses, " / ")))
 		end
-		print("[S13b][가][어긋남] 판정 기준(임의): ≈ = ±2% · 약간 느림 = 딜러4 초과 ~ +10% · 크게 적음 = 딜러4 순 HP 손실의 80% 이하 · 확실히 느림 = +10% 이상 · 가동률 높음 = 힐러1보다 높음 · 증가 둔함 = 힐러 1→2 증가분보다 작음")
+		print("[S13b][가][어긋남] 판정 기준(임의): ≈ = ±2% · 약간 느림 = 딜러4 초과 ~ +10% · 크게 적음 = 딜러4 초당 순 HP 손실의 80% 이하 · 확실히 느림 = +10% 이상 · 가동률 높음 = 힐러1보다 높음 · 증가 둔함 = 흡수율 증가분이 힐러 1→2 증가분보다 작음")
 		report("field")
 		report("boss")
 	end)
@@ -385,7 +400,12 @@ function ShieldVerify.runLive(player, env)
 		PlayerShield.add(member, extra[1], 1000, 60)
 		PlayerShield.add(member, extra[2], 1000, 60)
 		local _, _, _, _, shielded = cast() -- 멤버에게 이미 2겹 → 힐러의 층이 3번째 = 반감
-		local result = shielded and shielded[1] and shielded[1].result
+		local result
+		for _, entry in ipairs(shielded or {}) do
+			if entry.member == member then -- 목록 순서는 파티 순서(힐러 자신이 먼저) - 멤버 몫을 찾는다
+				result = entry.result
+			end
+		end
 		local base = memberMax * def.healPercentOfMaxHp * healingPower * shieldDef.healRatio
 		local thirdOk = result and result.applied and result.halved and near(result.amount, base * ShieldConfig.halveMultiplier, 1e-6)
 		local fourth = PlayerShield.add(member, extra[3], 1000, 60)
@@ -399,7 +419,12 @@ function ShieldVerify.runLive(player, env)
 
 	r.section("[15] 실제 피해 경로(PlayerDamage.applyHit)가 쉴드를 먼저 깎는다 · 만료 동기화", function()
 		BuffState.clear(player, "dealingMode") -- 딜링모드 소모(Heartbeat)가 HP 차이 측정을 흔들지 않게 - [16]에서 다시 켠다
-		local attack = 10
+		-- 개발 계정은 방어력이 커서 작은 공격력은 피해가 0에 가깝다 - 한 방이 최대체력의 0.01% 안팎이 되도록 공격력을 키운다(방어 감소식은 공격력에 단조 증가).
+		local attack = 1
+		local targetHit = PlayerState.getMaxHp(player) * 1e-4
+		while PlayerDamage.computeHitDamage(attack, player) < targetHit and attack < 1e15 do
+			attack *= 2
+		end
 		local hit = PlayerDamage.computeHitDamage(attack, player)
 		PlayerShield.add(player, extra[1], hit * 3.5, 60)
 		local hpBefore = PlayerState.getHp(player)
