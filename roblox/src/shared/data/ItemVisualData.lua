@@ -93,4 +93,15 @@ return {
 		shoes = "신발",
 		weapon = "무기",
 	},
+
+	-- 태초(rainbow = true) 테두리의 무지개 ColorSequence(30-0 S10부터 Toast의 태초 배너도 쓴다). 값은 InventoryUI.client.lua의 RAINBOW_SEQUENCE와 같다(그쪽은 그대로 두었다).
+	rainbowSequence = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
+		ColorSequenceKeypoint.new(1 / 6, Color3.fromRGB(242, 196, 61)),
+		ColorSequenceKeypoint.new(2 / 6, Color3.fromRGB(95, 211, 107)),
+		ColorSequenceKeypoint.new(3 / 6, Color3.fromRGB(59, 209, 192)),
+		ColorSequenceKeypoint.new(4 / 6, Color3.fromRGB(74, 158, 232)),
+		ColorSequenceKeypoint.new(5 / 6, Color3.fromRGB(169, 123, 232)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 90, 90)),
+	}),
 }

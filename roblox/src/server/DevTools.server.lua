@@ -65,6 +65,8 @@ local SaveKeyVerify = require(script.Parent.SaveKeyVerify)
 local EnhanceEffectVerify = require(script.Parent.EnhanceEffectVerify)
 -- 30-0 S09 파티 경험치 보너스(+10 / 15 / 20%) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(스탠드인 파티 · 실제 처치 경로).
 local PartyExpVerify = require(script.Parent.PartyExpVerify)
+-- 30-0 S10 파티원 드랍 알림(DropNotice) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(더미 · 스탠드인 파티 · 견습 경로 · 보스 첫 클리어).
+local DropNoticeVerify = require(script.Parent.DropNoticeVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -1064,6 +1066,7 @@ local HELP_TEXT = table.concat({
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
 	"/gg gold <n> - 골드를 n으로 맞춘다(0 이상, /gg reset으로 복원 - 구매 · 골드 부족 화면 검증용)",
 	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록(실제 키 타입 포함) · /gg ticket grantboss <스테이지> - 처치 없이 보스 첫 클리어 지급 함수 호출 · /gg ticket clear - 방지권 · 받은 기록을 비우고 저장",
+	"/gg dropnotice <등급> [n] [same] - 가짜 드랍 알림 n건(기본 1)을 내 파티(솔로면 나 자신)에게 주입(30-0 S10, 스크린샷 · 검증용). 등급 = relic|ancient|primordial(태초는 서버 전체 배너 + 채팅 줄) · same = 같은 사람 이름으로(묶음 확인)",
 	"/gg ui <gallery|check|close> - 클라 UI 부품 전시장 열기 · 패널 규칙 자가 검사 · 닫기(30-0 S06, 결과는 클라 콘솔 [S06][UI])",
 	"/gg keycheck <스테이지> [save] - 실제 보스 처치 1회로 첫 클리어 확정 드랍 호출 횟수 · 저장 집합의 실제 키 타입을 찍는다(S05b) - save를 붙이면 두 기록(스테이지 · 견습 4단계)만 남기고 저장, Play 재시작 뒤 다시 불러 왕복을 확인 · /gg keyclean <스테이지> - 그 두 기록을 지우고 저장",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
@@ -1660,6 +1663,24 @@ local function handleCommand(player, args)
 		ensureBackup(player)
 		PlayerProfile.addProtectionTicket(player, args[2], math.floor(tonumber(args[3])))
 		reply(player, ("%s 방지권 %s장 지급 - 보유 %d장"):format(args[2], args[3], PlayerProfile.getProtectionTicket(player, args[2])))
+	elseif sub == "dropnotice" and args[2] then
+		-- 30-0 S10: 가짜 드랍 알림 주입(프로필은 안 건드린다 - 백업 불필요). 이름이 서로 달라야 묶이지 않으므로 기본은 파티원A · B · C ...
+		local grade = args[2]
+		if not isValidGrade(grade) then
+			reply(player, ("알 수 없는 등급: %s (사용 가능: %s)"):format(tostring(grade), table.concat(ArmorData.gradeOrder, "/")))
+		else
+			local DropNotice = require(script.Parent.DropNotice)
+			local count = math.clamp(math.floor(tonumber(args[3]) or 1), 1, 30)
+			local same = args[3] == "same" or args[4] == "same"
+			local parts = { "gloves", "armor", "shoes" }
+			local totalSent = 0
+			for index = 1, count do
+				local name = same and "파티원A" or ("파티원%s"):format(string.char(64 + ((index - 1) % 26) + 1))
+				local _, sent = DropNotice.publish(player, { grade = grade, part = parts[(index - 1) % 3 + 1], itemLevel = 50 + index }, name, "party")
+				totalSent = math.max(totalSent, #sent)
+			end
+			reply(player, ("드랍 알림 %d건(%s) 주입 - 받는 Player %d명"):format(count, grade, totalSent))
+		end
 	elseif sub == "gold" and tonumber(args[2]) then
 		-- 골드를 지정한 값으로 맞춘다(구매 화면 · 골드 부족 화면 검증용). 다른 명령처럼 백업 뒤 세션 메모리만 바꾼다(/gg reset으로 복원 · 그동안 저장 차단).
 		local target = math.floor(tonumber(args[2]))
@@ -3140,6 +3161,7 @@ if RunService:IsStudio() then
 				{ "S05b(나)", function() SaveKeyVerify.runLive(player, env) end },
 				{ "S08(나)", function() EnhanceEffectVerify.runLive(player, env) end },
 				{ "S09(나)", function() PartyExpVerify.runLive(player, env) end },
+				{ "S10(나)", function() DropNoticeVerify.runLive(player, env) end },
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3263,6 +3285,17 @@ if RunService:IsStudio() and verifyEnabled("S09(가)") then
 		local ok, err = pcall(PartyExpVerify.runPure)
 		if not ok then
 			warn(("[S09(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S10 자동 검증 블록(가) - 파티원 드랍 알림 발신 범위 · 데이터 정합 · payload(PRD 20.73 [5-3]) ═══
+-- 순수 함수(플레이어 불필요). (나)는 위 29-1 체인의 끝(S09 (나) 다음) - 더미 · 스탠드인 파티 · 견습 확정 지급 경로 · 보스 첫 클리어. 클라 쪽은 DropFeed.client.lua의 selfTest([S10][UI]).
+if RunService:IsStudio() and verifyEnabled("S10(가)") then
+	task.spawn(function()
+		local ok, err = pcall(DropNoticeVerify.runPure)
+		if not ok then
+			warn(("[S10(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

@@ -25,6 +25,7 @@ local ImmediateSave = require(script.Parent.ImmediateSave)
 local ProtectionTickets = require(script.Parent.ProtectionTickets)
 local TutorialState = require(script.Parent.TutorialState)
 local PartyState = require(script.Parent.PartyState)
+local DropNotice = require(script.Parent.DropNotice)
 
 local CombatResolution = {}
 
@@ -165,6 +166,8 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		armorDrops = Loot.rollArmorDrop(dropStage, monsterData.tierIndex, MonsterState.getRewardMultiplier(target), classId)
 	end
 	for _, armorDrop in ipairs(armorDrops) do
+		-- 30-0 S10: 굴려진 순간의 파티원 드랍 알림(PRD 20.73 [5-3]) - 땅 스폰 · 가방 직행 둘 다의 앞이다. 이 함수만 부른다(견습 지급 · 대여 · 분해 · 상점은 여기를 안 탄다).
+		DropNotice.publish(recipient, armorDrop)
 		local kind = isBoss and "보스" or (isSparkle and "반짝이" or "잡몹")
 		if isBoss then
 			-- 28-1 [C-1]: 보스 장비는 가방으로 직행한다. 가득이면 복귀 뒤 발밑(flushDeferredBossDrops).

@@ -158,24 +158,32 @@ function RuleCheck.run(gallery)
 		tostring(okSixTabs), tostring(okBadRow), tostring(okBadGauge), tostring(okBadBadge)),
 		not okSixTabs and not okBadRow and not okBadGauge and not okBadBadge)
 
-	-- ⑭ 토스트: TR 3행 · 대기열 · 묶기
+	-- ⑭ 토스트: TC 1행 · 대기열 8 · 낮은 priority부터 버림(TC · BC 규칙) / TR 3줄 · 새 알림이 위 · 오래된 줄이 밀림(S10 - 대기열 없음) · 묶기
 	Toast.clear()
 	for index = 1, 5 do
-		Toast.push("TR", { text = "항목 " .. index, priority = index, seconds = 30 })
+		Toast.push("TC", { text = "항목 " .. index, priority = index, seconds = 30 })
 	end
-	local afterFive = Toast.debugState("TR")
+	local afterFive = Toast.debugState("TC")
 	for index = 6, 16 do
-		Toast.push("TR", { text = "항목 " .. index, priority = index, seconds = 30 })
+		Toast.push("TC", { text = "항목 " .. index, priority = index, seconds = 30 })
 	end
-	local afterMany = Toast.debugState("TR")
+	local afterMany = Toast.debugState("TC")
+	Toast.clear()
+	for index = 1, 5 do
+		Toast.push("TR", { text = "항목 " .. index, seconds = 30 })
+	end
+	local feed = Toast.debugState("TR")
+	local feedTexts = table.concat(Toast.debugTexts("TR"), " · ")
 	Toast.clear()
 	Toast.push("TR", { text = "묶음", groupKey = "g", seconds = 30 })
 	local merged = Toast.push("TR", { text = "묶음", groupKey = "g", seconds = 30 })
 	local afterGroup = Toast.debugState("TR")
 	Toast.clear()
-	check(("⑭ 토스트 TR: 5개 → 보이는 행 %d(기대 3) · 대기 %d(기대 2) / 16개 → 대기 %d(기대 8, 넘치면 낮은 priority부터 버림) / 같은 groupKey 두 번 → %s · 행 %d(기대 merged · 1)"):format(
-		afterFive.rows, afterFive.queued, afterMany.queued, merged, afterGroup.rows),
-		afterFive.rows == 3 and afterFive.queued == 2 and afterMany.rows == 3 and afterMany.queued == Toast.queueMax and merged == "merged" and afterGroup.rows == 1)
+	check(("⑭ 토스트 TC: 5개 → 보이는 행 %d(기대 1) · 대기 %d(기대 4) / 16개 → 대기 %d(기대 8, 넘치면 낮은 priority부터 버림) · TR: 5개 → 행 %d(기대 3) · 대기 %d(기대 0) · 밀려난 %d(기대 2) · 위에서부터 [%s](기대 항목 5 · 항목 4 · 항목 3) · 같은 groupKey 두 번 → %s · 행 %d(기대 merged · 1)"):format(
+		afterFive.rows, afterFive.queued, afterMany.queued, feed.rows, feed.queued, feed.evicted, feedTexts, merged, afterGroup.rows),
+		afterFive.rows == 1 and afterFive.queued == 4 and afterMany.queued == Toast.queueMax
+			and feed.rows == 3 and feed.queued == 0 and feed.evicted == 2 and feedTexts == "항목 5 · 항목 4 · 항목 3"
+			and merged == "merged" and afterGroup.rows == 1)
 
 	-- ⑮ 전시장 안: 글씨 12 미만 0 · 버튼 높이 · AutomaticSize 0
 	local gui = refs.window.screenGui

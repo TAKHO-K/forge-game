@@ -70,7 +70,7 @@ end
 
 -- 슬롯 표만으로 계산한 자리(아직 안 그려진 슬롯용). size가 없으면 nil.
 local function plannedRect(slot, screen)
-	if not slot.size then
+	if not slot.size or slot.below then -- below 슬롯은 다른 슬롯의 아래 끝을 따라 정해지므로 표만으로는 자리를 못 잰다
 		return nil
 	end
 	local width = slot.size.X.Scale * screen.X + slot.size.X.Offset

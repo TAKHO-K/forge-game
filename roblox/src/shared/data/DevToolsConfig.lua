@@ -18,9 +18,8 @@ return {
 	-- 새 세션을 시작할 때 current를 그 세션의 블록 id + 그 세션이 고친 모듈을 쓰는 옛 블록 id("동반 실행")로 갈아 끼운다(그 밖의 id는 지운다 - regression이 켜질 때 어차피 다 돈다).
 	verify = {
 		regression = false,
-		-- S09: 이번 세션 블록 S09(가) · S09(나) + 동반 실행(COMMON.md §3) - 이 세션이 고친 server/PlayerProfile.lua(getExpGainMultiplier - 파티 곱)를 쓰는 옛 블록: 26-2(성장 옵션 축 · 경험치 옵션 항목) ·
-		-- S04(나)(재료 기대 개수 × 경험치 배수) · S05(나)(처치 경로의 재료 지급). server/PartyState.lua(getExpBonus · pushState · removeRecord의 Attribute)를 쓰는 옛 블록: 29-5(나)(BossGimmick5Verify가
-		-- addDummies · leave로 파티를 만든다) · 27-3(가) · 27-3(나)(PartyVote가 PartyState.getMemberPlayers · onMemberRemoved를 쓴다).
-		current = { "S09(가)", "S09(나)", "26-2", "S04(나)", "S05(나)", "29-5(나)", "27-3(가)", "27-3(나)" },
+		-- S10(회귀 전체 마일스톤): 이번 세션 블록 S10(가) · S10(나) + 동반 실행(COMMON.md §3) - 이 세션이 고친 server/CombatResolution.lua(grantKillReward에 DropNotice.publish)를 쓰는 옛 블록: S01(나)(보스 · 잡몹 처치 경로) ·
+		-- S04(나) · S05(나)(처치 경로의 재료 지급) · S05b(나)(SaveKeyVerify가 실제 보스 처치) · 29-5(나) · 27-3(가) · 27-3(나)(파티 · 투표). server/PartyState.lua는 읽기만(getParty · getMemberPlayers) - S09(나)도 같이. 마지막 Play는 regression = true로 전체를 돈다(끝나면 false로 되돌린다).
+		current = { "S10(가)", "S10(나)", "S01(나)", "S04(나)", "S05(나)", "S05b(나)", "S09(나)", "29-5(나)", "27-3(가)", "27-3(나)" },
 	},
 }

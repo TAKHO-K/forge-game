@@ -7,13 +7,14 @@
 --   "new"      - 새 기능이 받을 자리(PRD [D-2] 값). 아직 그 자리에 그려지는 것이 없다.
 -- 값이 PRD 지도와 다른 곳은 코드가 맞다(20.81 [D-2] 지도의 경험치바 26px → 코드 15px 등).
 -- instanceName: 겹침 검사가 PlayerGui에서 이 이름의 인스턴스를 찾아 화면에 보이는 동안의 AbsolutePosition · AbsoluteSize를 잰다.
+-- below = { zone, slot, gap }: 고정 y를 쓰지 않고 그 슬롯(인스턴스)의 아래 끝 + gap에 놓인다 - ScreenMap.followBelow가 그 인스턴스 크기를 따라 내려간다. position은 그 슬롯이 비어 있을 때의 자리다.
 --   size = nil은 AutomaticSize(내용 크기)다. 슬롯 하나가 자식 여럿을 품는 스택이면(chipStack) 자식은 따로 적지 않는다(겹침 검사에서 부모와 겹친 것으로 잘못 잡히지 않게).
 
 local ScreenMap = {}
 
 ScreenMap.edgeMargin = 14 -- 가장자리 여백(px)
 
-local function slot(status, anchorX, anchorY, position, size, instanceName, note)
+local function slot(status, anchorX, anchorY, position, size, instanceName, note, below)
 	return {
 		status = status,
 		anchor = Vector2.new(anchorX, anchorY),
@@ -21,14 +22,15 @@ local function slot(status, anchorX, anchorY, position, size, instanceName, note
 		size = size,
 		instanceName = instanceName,
 		note = note,
+		below = below,
 	}
 end
 
 -- 구역: 앵커(가장자리 기준점). C는 슬롯이 없다("영구히 없음" - window · overlay 제외).
 ScreenMap.zones = {
 	TL = { anchor = Vector2.new(0, 0), note = "로블록스 채팅창 - 손대지 않는다" },
-	TC = { anchor = Vector2.new(0.5, 0), note = "레벨업 연출 · 시스템 토스트 줄(y 64 ~ 210)" },
-	TR = { anchor = Vector2.new(1, 0), note = "칩 스택(골드 · 레벨 · 스테이지 · 설정 · 견습) · 드랍 피드" },
+	TC = { anchor = Vector2.new(0.5, 0), note = "레벨업 연출 · 시스템 토스트 줄(y 64 ~ 210) · 태초 서버 전체 알림 배너(4초)" },
+	TR = { anchor = Vector2.new(1, 0), note = "칩 스택(골드 · 레벨 · 스테이지 · 설정 · 견습) · 그 아래 드랍 피드" },
 	ML = { anchor = Vector2.new(0, 0.5), note = "파티 목록 · 메뉴바" },
 	MR = { anchor = Vector2.new(1, 0.5), note = "요청 배너(파티 투표 · 초대)" },
 	C = { anchor = Vector2.new(0.5, 0.5), note = "전투 시야 - 비운다(화면 중앙 40% × 50%에 2D UI 없음)" },
@@ -51,7 +53,9 @@ ScreenMap.slots = {
 	},
 	TR = {
 		chipStack = slot("existing", 1, 0, UDim2.new(1, -14, 0, 52), nil, "TopChipsRow", "StageUI.client.lua - 골드(LayoutOrder 1) · 레벨(2) · 스테이지(3) · 설정(4) · 견습(5) 세로 스택, 간격 8. PRD 지도의 '골드 · 스테이지 칩'이 코드에서는 이 스택이다"),
-		dropFeed = slot("new", 1, 0, UDim2.new(1, -14, 0, 96), UDim2.new(0, 300, 0, 78), "ToastLane_TR", "Toast 줄 TR(드랍 피드 · 3행 · 대기열 8) - PRD [D-2] 값. **지금 칩 스택과 같은 세로 띠에 겹친다(PRD 20.88 미결)**"),
+		dropFeed = slot("new", 1, 0, UDim2.new(1, -14, 0, 52), UDim2.new(0, 300, 0, 78), "ToastLane_TR",
+			"Toast 줄 TR(드랍 피드 · 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 3줄 넘으면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93): 칩 스택 바로 아래 같은 세로 줄. 고정 y 없이 칩 스택의 아래 끝 + 8을 따라 내려간다(칩이 0개면 52 = 칩 스택 윗줄 자리)",
+			{ zone = "TR", slot = "chipStack", gap = 8 }),
 	},
 	ML = {
 		partyList = slot("existing", 0, 0.5, UDim2.new(0, 14, 0.5, 0), nil, "PartyList", "PartyHud.client.lua - 행 196 × 44"),
@@ -95,6 +99,41 @@ function ScreenMap.place(frame, zone, slotName)
 	frame.AnchorPoint = found.anchor
 	frame.Position = found.position
 	return found
+end
+
+-- 슬롯이 다른 슬롯의 "바로 아래"(slot.below)로 정해져 있으면, 그 인스턴스의 아래 끝 + gap을 frame.Position의 y로 따라간다(크기가 바뀔 때마다 - 칩이 늘고 줄어도 겹치지 않는다).
+-- root = 그 인스턴스를 찾을 PlayerGui. 아직 없으면 생기는 순간 붙는다. 그 슬롯이 비어 있으면(높이 0) 이 슬롯 자신의 position.y다.
+-- 가정: 대상 인스턴스는 y 앵커 0 · Position.Y.Scale 0이고 이 frame과 같은 ScreenGui 좌표계(같은 IgnoreGuiInset)에 있다(칩 스택 TopChipsRow가 그렇다).
+function ScreenMap.followBelow(frame, zone, slotName, root)
+	local found = ScreenMap.slot(zone, slotName)
+	local below = found.below
+	assert(below, ("ScreenMap.followBelow: below가 없는 슬롯 - %s.%s"):format(zone, slotName))
+	local target = ScreenMap.slot(below.zone, below.slot)
+	local function apply(inst)
+		local y = found.position.Y.Offset
+		if inst.AbsoluteSize.Y > 0 then
+			y = inst.Position.Y.Offset + inst.AbsoluteSize.Y + below.gap
+		end
+		frame.Position = UDim2.new(found.position.X.Scale, found.position.X.Offset, 0, y)
+	end
+	local function bind(inst)
+		apply(inst)
+		inst:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			apply(inst)
+		end)
+	end
+	local inst = root:FindFirstChild(target.instanceName, true)
+	if inst then
+		bind(inst)
+		return
+	end
+	local connection
+	connection = root.DescendantAdded:Connect(function(added)
+		if added.Name == target.instanceName then
+			connection:Disconnect()
+			bind(added)
+		end
+	end)
 end
 
 -- 슬롯을 (zone, name, slot)로 돌려주는 반복자.
