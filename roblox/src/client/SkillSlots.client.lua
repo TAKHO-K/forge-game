@@ -274,13 +274,13 @@ local function buildSlot(parent, layoutOrder, def)
 		keyPill = Instance.new("TextLabel")
 		keyPill.Name = "KeyPill"
 		keyPill.AnchorPoint = Vector2.new(0.5, 0)
-		keyPill.Position = UDim2.new(0.5, 0, 1, 3)
+		keyPill.Position = UDim2.new(0.5, 0, 1, 2)
 		keyPill.AutomaticSize = Enum.AutomaticSize.X
-		keyPill.Size = UDim2.new(0, 0, 0, 15)
+		keyPill.Size = UDim2.new(0, 0, 0, 16)
 		keyPill.BackgroundColor3 = UIColors.panel
 		keyPill.BackgroundTransparency = 0
 		keyPill.Font = Enum.Font.GothamBold
-		keyPill.TextSize = 10
+		keyPill.TextSize = 12 -- S13b: 실효 12px 하한(COMMON.md §2). 알약 높이 15 -> 16, 아래 끝은 그대로
 		keyPill.TextColor3 = UIColors.textTertiary
 		keyPill.Text = def.key
 		keyPill.ZIndex = 2
