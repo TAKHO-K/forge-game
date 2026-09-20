@@ -86,16 +86,22 @@ function ItemTooltip.build(props)
 	return refs
 end
 
--- root를 anchorRect({ min, max } - GuiObject.AbsolutePosition 좌표) 옆에 놓는다: 왼쪽에 자리가 있으면 왼쪽, 없으면 아래(그것도 없으면 위)에 놓고 화면 안으로 민다.
+-- root를 anchorRect({ min, max } - GuiObject.AbsolutePosition 좌표) 옆에 놓는다. 화면 오른쪽 가장자리의 행(피드 줄)은 왼쪽 → 아래 → 위 순서, 그 밖의 행(가운데 띠 · 창 안 줄)은 아래 → 왼쪽 → 위 순서로 자리를 찾고 화면 안으로 민다
+-- (왼쪽 위 로블록스 채팅창 쪽으로 가운데 띠의 툴팁이 밀려가지 않게 - Play 4 스크린샷).
 -- root는 ScreenGui 직계여야 하고 screenSize는 그 ScreenGui의 AbsoluteSize다. AbsolutePosition은 ScreenGui 안 좌표다(실측: Position (0, 52)인 칩 스택의 Abs Y = 52 - GuiInset 58과 무관) - 인셋을 더하거나 빼지 않는다.
 function ItemTooltip.placeNear(root, anchorRect, screenSize, gap)
 	gap = gap or 6
 	local width, height = root.Size.X.Offset, root.Size.Y.Offset -- 고정 크기(set이 정한 값)
+	local leftFits = anchorRect.min.X - gap - width >= 8
+	local belowFits = anchorRect.max.Y + gap + height <= screenSize.Y - 8
+	local onRightEdge = (anchorRect.min.X + anchorRect.max.X) / 2 > screenSize.X * 0.6
 	local x, y
-	if anchorRect.min.X - gap - width >= 8 then
+	if onRightEdge and leftFits then
 		x, y = anchorRect.min.X - gap - width, anchorRect.min.Y
-	elseif anchorRect.max.Y + gap + height <= screenSize.Y - 8 then
+	elseif belowFits then
 		x, y = anchorRect.min.X, anchorRect.max.Y + gap
+	elseif leftFits then
+		x, y = anchorRect.min.X - gap - width, anchorRect.min.Y
 	else
 		x, y = anchorRect.min.X, anchorRect.min.Y - gap - height
 	end
