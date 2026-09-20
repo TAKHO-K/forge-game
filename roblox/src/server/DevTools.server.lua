@@ -1041,6 +1041,7 @@ local HELP_TEXT = table.concat({
 	"/gg reset - 백업된 원본 프로필로 복원(가방 포함) + 저장 차단 해제",
 	"/gg bagclear - 실제 가방을 비우고 바로 저장(백업 없음 - 테스트 진행 중이면 거절, 28-1 S04 사전 작업)",
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
+	"/gg gold <n> - 골드를 n으로 맞춘다(0 이상, /gg reset으로 복원 - 구매 · 골드 부족 화면 검증용)",
 	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록(실제 키 타입 포함) · /gg ticket grantboss <스테이지> - 처치 없이 보스 첫 클리어 지급 함수 호출 · /gg ticket clear - 방지권 · 받은 기록을 비우고 저장",
 	"/gg ui <gallery|check|close> - 클라 UI 부품 전시장 열기 · 패널 규칙 자가 검사 · 닫기(30-0 S06, 결과는 클라 콘솔 [S06][UI])",
 	"/gg keycheck <스테이지> [save] - 실제 보스 처치 1회로 첫 클리어 확정 드랍 호출 횟수 · 저장 집합의 실제 키 타입을 찍는다(S05b) - save를 붙이면 두 기록(스테이지 · 견습 4단계)만 남기고 저장, Play 재시작 뒤 다시 불러 왕복을 확인 · /gg keyclean <스테이지> - 그 두 기록을 지우고 저장",
@@ -1638,6 +1639,16 @@ local function handleCommand(player, args)
 		ensureBackup(player)
 		PlayerProfile.addProtectionTicket(player, args[2], math.floor(tonumber(args[3])))
 		reply(player, ("%s 방지권 %s장 지급 - 보유 %d장"):format(args[2], args[3], PlayerProfile.getProtectionTicket(player, args[2])))
+	elseif sub == "gold" and tonumber(args[2]) then
+		-- 골드를 지정한 값으로 맞춘다(구매 화면 · 골드 부족 화면 검증용). 다른 명령처럼 백업 뒤 세션 메모리만 바꾼다(/gg reset으로 복원 · 그동안 저장 차단).
+		local target = math.floor(tonumber(args[2]))
+		if target < 0 then
+			reply(player, "골드는 0 이상이어야 합니다")
+		else
+			ensureBackup(player)
+			PlayerProfile.addGold(player, target - PlayerProfile.getGold(player))
+			reply(player, ("골드를 %d로 설정 - 보유 %d"):format(target, PlayerProfile.getGold(player)))
+		end
 	elseif sub == "mat" and args[2] and tonumber(args[3]) then
 		-- 강화 재료 지급(28-1 S04) - 강화 소모 · 부족 거절 검증용. 다른 명령처럼 백업 뒤 세션 메모리만 바꾼다(/gg reset으로 복원).
 		local materialId = args[2]
