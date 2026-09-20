@@ -118,8 +118,7 @@ local function build()
 		makeRow("gem" .. slot, "보석 " .. slot, 4 + slot)
 	end
 
-	local tooltip = ItemTooltip.build({ parent = panel.screenGui, name = "InspectTooltip" })
-	tooltip.root.ZIndex = 5
+	local tooltip = ItemTooltip.build({ parent = panel.screenGui, name = "InspectTooltip", zIndex = 5 })
 
 	local function selectRow(name)
 		local row = rows[name]

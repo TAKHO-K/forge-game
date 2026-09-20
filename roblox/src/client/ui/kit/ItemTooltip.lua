@@ -16,7 +16,10 @@ local LINE_GAP = 2
 function ItemTooltip.build(props)
 	local width = props.width or ItemTooltip.defaultWidth
 
+	-- 겹쳐 그려질 때 위에 오게 zIndex를 줄 수 있다. 자식 라벨은 root보다 1 위여야 한다(ZIndexBehavior가 Global이면 자식이 root 뒤로 숨어 글이 안 보인다 - Play 3 스크린샷에서 발견).
+	local z = props.zIndex or 1
 	local root = Instance.new("Frame")
+	root.ZIndex = z
 	root.Name = props.name or "ItemTooltip"
 	root.Size = UDim2.new(0, width, 0, 60)
 	root.BackgroundColor3 = Theme.colors.panel
@@ -33,11 +36,13 @@ function ItemTooltip.build(props)
 
 	local title = Theme.label(root, "", "header", "textPrimary")
 	title.Name = "Title"
+	title.ZIndex = z + 1
 	title.Position = UDim2.new(0, PAD, 0, PAD)
 	title.Size = UDim2.new(1, -PAD * 2, 0, titleHeight)
 
 	local meta = Theme.label(root, "", "caption", "textSecondary")
 	meta.Name = "Meta"
+	meta.ZIndex = z + 1
 	meta.Position = UDim2.new(0, PAD, 0, PAD + titleHeight + LINE_GAP)
 	meta.Size = UDim2.new(1, -PAD * 2, 0, metaHeight)
 
@@ -45,6 +50,7 @@ function ItemTooltip.build(props)
 	for index = 1, 2 do -- 옵션 줄은 최대 2(치명 = 치확 · 치피)
 		local label = Theme.label(root, "", "body", "textPrimary")
 		label.Name = "Option" .. index
+		label.ZIndex = z + 1
 		label.Position = UDim2.new(0, PAD, 0, PAD + titleHeight + metaHeight + LINE_GAP * 2 + (index - 1) * optionHeight)
 		label.Size = UDim2.new(1, -PAD * 2, 0, optionHeight)
 		label.Visible = false

@@ -264,8 +264,7 @@ local function toggleTooltip(lane, row, desc)
 		return
 	end
 	if not tooltip then
-		tooltip = ItemTooltip.build({ parent = gui, name = "ToastItemTooltip" })
-		tooltip.root.ZIndex = 10
+		tooltip = ItemTooltip.build({ parent = gui, name = "ToastItemTooltip", zIndex = 10 })
 	end
 	closeTooltip()
 	tooltip.set(desc)
