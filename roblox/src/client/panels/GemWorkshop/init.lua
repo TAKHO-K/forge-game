@@ -31,6 +31,7 @@ GemWorkshop.id = "gemWorkshop"
 GemWorkshop.promptName = "GemMerchantPrompt"
 local PANEL_SIZE = Vector2.new(480, 380)
 local STATUS_HEIGHT = 26
+local TOP_OFFSET = 16 -- 화면 위에서 띄우는 간격 - 위쪽에 붙여 아래쪽 스킬 바 · 체력바(PC)를 가리지 않는다(창이 화면보다 크면 UIManager.fitToScreen이 줄인다)
 local PENDING_LIMIT = 3 -- 초. 서버 결과가 안 오면(서버가 조용히 버린 요청) 이 뒤에 입력이 풀린다
 local RANGE_MARGIN = 2 -- 서버 반경보다 이만큼 더 벗어나면 창을 닫는다(경계에서 깜빡이지 않게)
 
@@ -294,6 +295,8 @@ local function build()
 		kind = "station",
 		title = "보석 공방",
 		size = PANEL_SIZE,
+		anchorPoint = Vector2.new(0.5, 0),
+		position = UDim2.new(0.5, 0, 0, TOP_OFFSET),
 		help = "고대 · 태초 등급 장비 · 보석의 옵션을 변환권으로 다시 굴립니다. 변환권은 이곳에서 골드로 삽니다.\n보석 장착 · 교체는 어디서나 됩니다(가방 → 보석 탭).",
 		onOpen = onOpen,
 	})

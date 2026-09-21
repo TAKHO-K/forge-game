@@ -1,7 +1,8 @@
 -- [위치 안내](S20e) - 보석상인 위에 마커를 띄우고 캐릭터에서 그쪽으로 선(Beam)을 긋는다. 서버 호출 없이 클라만 하는 표시다(판정이 아니다).
 --   Guide.show() = WorldConfig.gemMerchant.guideSeconds(10초) 동안 표시(다시 부르면 처음부터) · Guide.hide() = 바로 끈다 · Guide.isShowing() · Guide.merchantPosition() = 보석상인 자리(월드 좌표).
 -- 자리는 서버 모델(HuntingGround.createGemMerchant)과 같은 식으로 WorldConfig에서 계산한다 - StreamingEnabled라 멀리 있으면 모델이 클라에 없으므로 모델을 찾지 않는다.
--- 표시 = 보이지 않는 앵커 파트(클라에만 있다) 위 BillboardGui("▼ 보석상인" + 거리) + 캐릭터 루트 → 앵커 Beam. 색은 기존 UIColors만 쓴다(새 색 · 새 에셋 · 새 파티클 없음).
+-- 표지는 AlwaysOnTop이라 건물 뒤에서도 보인다(Studio 캡처 도구는 AlwaysOnTop 빌보드를 못 찍는다 - 레이아웃은 AlwaysOnTop을 끈 사본으로 스크린샷 확인했다).
+-- 표시 = 보이지 않는 앵커 파트(클라에만 있다) 위 BillboardGui("보석상인" 글씨 + 거리 + 핀) + 캐릭터 루트 → 앵커 Beam. 색은 기존 UIColors만 쓴다(새 색 · 새 에셋 · 새 파티클 없음).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -82,7 +83,7 @@ function Guide.show()
 	title.TextSize = 24
 	title.Text = WorldConfig.gemMerchant.objectText -- "▼" 같은 도형 글리프는 폰트에 없어 네모로 나온다 - 아래 핀은 회전한 프레임으로 그린다
 	title.TextColor3 = UIColors.gold
-	title.TextStrokeTransparency = 0.3
+	title.TextStrokeTransparency = 0
 	title.Parent = marker
 
 	local distanceLabel = Instance.new("TextLabel")
@@ -92,8 +93,8 @@ function Guide.show()
 	distanceLabel.Font = Enum.Font.Gotham
 	distanceLabel.TextSize = Theme.text.body
 	distanceLabel.Text = ""
-	distanceLabel.TextColor3 = UIColors.textPrimary
-	distanceLabel.TextStrokeTransparency = 0.3
+	distanceLabel.TextStrokeTransparency = 0
+	distanceLabel.TextColor3 = UIColors.gold
 	distanceLabel.Parent = marker
 
 	local pin = Instance.new("Frame") -- 아래쪽을 가리키는 핀(회전한 정사각형)
