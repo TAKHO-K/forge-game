@@ -396,7 +396,8 @@ S.rebuildGearSlots = rebuildGearSlots
 -- 배치(S20b): 착용 칸 열 수 · 세로 위치를 폭에서 다시 정한다. 폰(폭 넓음)은 4칸이 한 줄, PC(폭 228)는 2 × 2.
 table.insert(R.layouts, function(L)
 	gear.Position = UDim2.new(0, 0, 0, L.bodyTop)
-	gear.Size = L.mode == "phone" and UDim2.new(1, 0, 0, L.bodyH) or UDim2.new(0, L.gearW, 0, L.bodyH)
+	local viewHeight = L.bodyH - S.sheetInset
+	gear.Size = L.mode == "phone" and UDim2.new(1, 0, 0, viewHeight) or UDim2.new(0, L.gearW, 0, viewHeight)
 	local cols = L.gearCols
 	local rows = math.ceil(#S.GEAR_ORDER / cols)
 	local gridHeight = rows * GEAR_SLOT_SIZE + (rows - 1) * 9

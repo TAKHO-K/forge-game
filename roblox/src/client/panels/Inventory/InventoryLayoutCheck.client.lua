@@ -203,13 +203,22 @@ local function run()
 				textOutside += 1
 			end
 		end
+		-- 시트가 올라오면 본문 프레임이 짧아져 시트와 겹치지 않는다(ZIndexBehavior Global이라 겹치면 뒤 프레임이 시트 위로 비친다 - 스크린샷 Play에서 발견) · 창은 메뉴바 오른쪽부터
+		local bodyAbove = true
+		for _, frame in ipairs({ R.gearFrame, R.bagFrame, R.gemFrame }) do
+			if frame.AbsolutePosition.Y + frame.AbsoluteSize.Y > detail.AbsolutePosition.Y + 0.5 then
+				bodyAbove = false
+			end
+		end
+		local menuClear = win.AbsolutePosition.X >= Layout.phoneLeftInset - 0.5
 		Store.selectedKind, Store.selectedValue = nil, nil
 		Store.refreshDetail()
-		task.wait(0.1)
-		check(("폰 %d × %d 상세 시트(%s): 올라옴 %s · 창 안 %s(시트 %d × %d) · 버튼 44 미만 %d개 [%s] · 닫기 버튼 %d × %d %s · 시트 밖으로 나간 글 %d개(기대 0) · 선택 비우면 숨음 %s"):format(
-			size[1], size[2], L.sheetWide and "한 줄" or "두 줄", tostring(detail.Visible or sheetInside), tostring(sheetInside), detail.AbsoluteSize.X, detail.AbsoluteSize.Y, #sheetSmall, table.concat(sheetSmall, ","),
-			closeButton.AbsoluteSize.X, closeButton.AbsoluteSize.Y, tostring(closeOk), textOutside, tostring(not detail.Visible)),
-			sheetInside and #sheetSmall == 0 and closeOk and textOutside == 0 and not detail.Visible)
+		task.wait(0.15)
+		local bodyRestored = R.gearFrame.AbsoluteSize.Y >= L.bodyH - 0.5
+		check(("폰 %d × %d 상세 시트(%s): 올라옴 %s · 창 안 %s(시트 %d × %d) · 본문이 시트 위에서 끝남(겹침 0) %s · 버튼 44 미만 %d개 [%s] · 닫기 버튼 %d × %d %s · 시트 밖으로 나간 글 %d개(기대 0) · 창이 메뉴바 오른쪽부터(x %d ≥ %d) %s · 선택 비우면 숨음 %s · 본문 원래 높이로 %s"):format(
+			size[1], size[2], L.sheetWide and "한 줄" or "두 줄", tostring(detail.Visible or sheetInside), tostring(sheetInside), detail.AbsoluteSize.X, detail.AbsoluteSize.Y, tostring(bodyAbove), #sheetSmall, table.concat(sheetSmall, ","),
+			closeButton.AbsoluteSize.X, closeButton.AbsoluteSize.Y, tostring(closeOk), textOutside, win.AbsolutePosition.X, Layout.phoneLeftInset, tostring(menuClear), tostring(not detail.Visible), tostring(bodyRestored)),
+			sheetInside and bodyAbove and #sheetSmall == 0 and closeOk and textOutside == 0 and menuClear and not detail.Visible and bodyRestored)
 	end
 
 	R.debugForceScreen(nil)

@@ -5,7 +5,7 @@
 --   근거: PC 2단은 장비 칸 228 + 가방 5열(78 × 5 + 8 × 4 + 여백 28 = 450)이 들어가는 폭 720 이상 · 상세 바(104) + 탭 + 헤더를 얹고도 본문이 보이는 높이 400 이상이 필요하다.
 --   800 × 360(ScreenGui 800 × 302) · 667 × 375(667 × 317) · 842 × 388(842 × 330)은 높이 400 미만이라 폰이고, 1024 × 768(1024 × 710) · 지금 Studio 창 1321 × 484(ScreenGui 1321 × 426)는 PC다.
 --   경계값은 COMMON.md §2 "모바일 기준 해상도"에도 적어 둔다.
--- 폰: 1단. 상단 탭 [장비 / 가방 / 보석] · 내용은 세로 스크롤 · 아이템 상세는 툴팁이 아니라 아래에서 올라오는 시트(닫기 44). 모든 버튼 · 칸 터치 44 이상.
+-- 폰: 창은 메뉴바 오른쪽부터 화면 오른쪽 끝(여백 8)까지 · 1단. 상단 탭 [장비 / 가방 / 보석] · 내용은 세로 스크롤 · 아이템 상세는 툴팁이 아니라 아래에서 올라오는 시트(닫기 44). 모든 버튼 · 칸 터치 44 이상.
 -- PC: 2단(장비 칸 + 가방) 그대로 · 낮은 창에서는 두 칸이 각각 세로 스크롤.
 
 local Layout = {}
@@ -20,7 +20,8 @@ Layout.gearSlot, Layout.gearGap = 95, 9
 Layout.pcWidth, Layout.pcHeight = 720, 560
 Layout.gearWidth = 228 -- PC 장비 칸 폭
 Layout.pcDetailHeight = 104 -- PC 하단 상세 바
-Layout.wideSheetWidth = 740 -- 폰에서 이 폭 이상이면 상세 시트가 한 줄(정보 + 버튼), 미만이면 두 줄(정보 위 · 버튼 아래)
+Layout.wideSheetWidth = 700 -- 폰에서 창 폭이 이 이상이면 상세 시트가 한 줄(정보 + 버튼), 미만이면 두 줄(정보 위 · 버튼 아래)
+Layout.phoneLeftInset = 72 -- 폰 창의 왼쪽 여백: 메뉴바(B · P · M - hud/MenuBar, 오른쪽 끝 66)가 창 위에 그려지므로 그 오른쪽부터 시작한다(스크린샷 Play에서 겹침 발견)
 
 -- 화면 크기로 판정(폰이면 true).
 function Layout.isPhone(screenWidth, screenHeight)
@@ -39,7 +40,8 @@ function Layout.compute(screenWidth, screenHeight)
 	local L = { screenW = screenWidth, screenH = screenHeight, mode = phone and "phone" or "pc" }
 	local margin = Layout.margin
 	if phone then
-		L.winW, L.winH = screenWidth - 2 * margin, screenHeight - 2 * margin
+		L.winX = Layout.phoneLeftInset
+		L.winW, L.winH = screenWidth - Layout.phoneLeftInset - margin, screenHeight - 2 * margin
 		L.headerH, L.tabH = 52, 44
 		L.pillH, L.closeSize, L.actionH, L.tabButtonH = 44, 44, 44, 44
 		L.tabNames = { "장비", "가방", "보석" }

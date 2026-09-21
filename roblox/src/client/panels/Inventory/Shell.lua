@@ -134,7 +134,7 @@ end
 local function positionWindow(L)
 	win.Size = UDim2.new(0, L.winW, 0, L.winH)
 	if L.mode == "phone" then
-		win.Position = UDim2.new(0, Layout.margin, 0, Layout.margin)
+		win.Position = UDim2.new(0, L.winX, 0, Layout.margin)
 		return
 	end
 	if userWindowPosition then

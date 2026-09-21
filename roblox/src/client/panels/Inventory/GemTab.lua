@@ -3,7 +3,7 @@
 --   deps(InventoryUI가 주는 공용 접점 - 전부 명시적이다):
 --     content · screenGui             Instance: 장비창 캔버스(보석 본문의 부모) · 드래그 유령 아이콘이 붙는 ScreenGui
 --     registerLayout(fn)              배치 함수 fn(L)을 등록한다(Shell.applyLayout이 화면 크기가 바뀔 때마다 부른다 - L은 Layout.compute의 결과)
---     isOpen() -> boolean             창이 열려 있는가
+--     isOpen() -> boolean             창이 열려 있는가 · sheetInset() -> number  폰 상세 시트가 올라와 있으면 그 높이(본문이 그만큼 짧아진다)
 --     getSelection() -> kind, value   공용 선택 상태 읽기 · select(kind, value) 쓰기(kind = "gemSlot" | "gemBag")
 --     refreshDetail() · refreshStats()  상세바 · 총 스탯 갱신(보석은 옵션 보너스에 합산된다)
 --     weaponGradeId() · applyGradeVisual(cell, stroke, glow, gradeId) · makeSectionLabel(parent, text, y)  InventoryUI가 함께 쓰는 헬퍼
@@ -568,7 +568,7 @@ end
 local function layout(L)
 	local phone = L.mode == "phone"
 	gemBody.Position = UDim2.new(0, 0, 0, L.bodyTop)
-	gemBody.Size = UDim2.new(1, 0, 0, L.bodyH)
+	gemBody.Size = UDim2.new(1, 0, 0, L.bodyH - deps.sheetInset()) -- 폰: 상세 시트가 올라와 있으면 그만큼 짧다
 	local rowHeight = phone and 76 or 42
 	local buttonHeight = phone and 44 or 17
 	for _, entry in ipairs(slotRows) do

@@ -31,7 +31,6 @@ detail.Position = UDim2.new(0, 0, 1, 0)
 detail.Size = UDim2.new(1, 0, 0, Layout.pcDetailHeight)
 detail.BackgroundColor3 = Color3.new(0, 0, 0)
 detail.BackgroundTransparency = 0.74
-detail.ZIndex = 10 -- 폰: 시트가 본문(스크롤 프레임) 위에 얹힌다
 detail.Parent = content
 R.detail = detail
 
@@ -619,7 +618,14 @@ end)
 
 -- 폰 시트: 선택이 없으면 숨는다(PC 바는 항상 보인다). refreshDetail이 끝날 때마다 다시 정한다.
 local function applySheetVisibility()
-	detail.Visible = S.mode ~= "phone" or S.selectedKind ~= nil
+	local shown = S.mode ~= "phone" or S.selectedKind ~= nil
+	detail.Visible = shown
+	-- 폰: 시트가 올라오면 본문 프레임이 그만큼 짧아진다(ZIndexBehavior가 Global이라 겹치면 뒤 프레임 · 도움말 버튼이 시트 위로 비친다). 값이 바뀔 때만 배치를 다시 적용한다.
+	local inset = (S.mode == "phone" and shown and R.layout) and R.layout.detailH or 0
+	if inset ~= S.sheetInset then
+		S.sheetInset = inset
+		R.applyLayout()
+	end
 end
 
 local function refreshDetail()

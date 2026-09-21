@@ -271,7 +271,8 @@ end)
 -- 배치(S20b): 열 수 · 격자 높이 · 알약 줄 위치를 폭에서 다시 정한다.
 table.insert(R.layouts, function(L)
 	bag.Position = UDim2.new(0, L.mode == "phone" and 0 or (L.gearW + 1), 0, L.bodyTop)
-	bag.Size = L.mode == "phone" and UDim2.new(1, 0, 0, L.bodyH) or UDim2.new(0, L.bagW, 0, L.bodyH)
+	local viewHeight = L.bodyH - S.sheetInset
+	bag.Size = L.mode == "phone" and UDim2.new(1, 0, 0, viewHeight) or UDim2.new(0, L.bagW, 0, viewHeight)
 	local cols = L.bagCols
 	local rows = math.ceil(SaveConfig.defaultInventorySlots / cols)
 	local gridHeight = rows * CELL_SIZE + (rows - 1) * CELL_GAP

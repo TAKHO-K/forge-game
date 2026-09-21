@@ -59,6 +59,9 @@ local gemTab = GemTab.create({
 	isOpen = function()
 		return S.isOpen
 	end,
+	sheetInset = function()
+		return S.sheetInset
+	end,
 	getSelection = function()
 		return S.selectedKind, S.selectedValue
 	end,

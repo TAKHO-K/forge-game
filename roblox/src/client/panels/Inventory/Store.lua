@@ -59,6 +59,7 @@ S.bulkSellDropdownOpen = false
 S.selectedKind, S.selectedValue = nil, nil
 S.isOpen = false
 S.rainbowGradients = {} -- 매 프레임 회전시켜야 하는 태초 등급 테두리 그라디언트 목록.
+S.sheetInset = 0 -- 폰: 상세 시트가 올라와 있으면 그 높이(본문 프레임이 그만큼 짧아져 시트와 겹치지 않는다) · 아니면 0
 S.mode = "pc" -- Layout.compute의 판정("pc" | "phone") - Shell.applyLayout이 매번 갱신한다.
 
 -- 분해 가능 등급(23-2) - 서버(PlayerProfile.lua DISMANTLE_MIN_GRADE_INDEX)와 같은 문턱(영웅
