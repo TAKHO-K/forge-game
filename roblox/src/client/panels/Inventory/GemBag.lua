@@ -88,12 +88,12 @@ function GemBag.create(parent, deps)
 			ring.Name = "Ring"
 			ring.AnchorPoint = Vector2.new(0.5, 0.5)
 			ring.Position = UDim2.new(0.5, 0, 0.5, 0)
-			ring.Size = UDim2.new(1, 6, 1, 6)
+			ring.Size = UDim2.new(1, -6, 1, -6)
 			ring.BackgroundTransparency = 1
 			ring.Visible = false
 			ring.ZIndex = cell.ZIndex + 3
 			ring.Parent = cell
-			corner(ring, 11)
+			corner(ring, 5)
 			local ringStroke = Instance.new("UIStroke")
 			ringStroke.Thickness = 3
 			ringStroke.Parent = ring

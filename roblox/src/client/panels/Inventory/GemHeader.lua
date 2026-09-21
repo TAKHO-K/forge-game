@@ -58,6 +58,18 @@ function GemHeader.createStatus(parent)
 		setHint = function(text)
 			hint.Text = text
 		end,
+		-- PC = 두 줄(상태 위 · 안내 아래) / 폰 = 한 줄(상태 왼쪽 · 안내 오른쪽) - 폰은 상세 시트가 올라오면 본문이 106밖에 안 남아 한 줄을 아낀다.
+		setLayout = function(phone)
+			if phone then
+				status.Size = UDim2.new(0, 190, 0, 18)
+				hint.Position = UDim2.new(0, 226, 0, 4)
+				hint.Size = UDim2.new(1, -240, 0, 18)
+			else
+				status.Size = UDim2.new(1, -42, 0, 18)
+				hint.Position = UDim2.new(0, 14, 0, 22)
+				hint.Size = UDim2.new(1, -28, 0, 18)
+			end
+		end,
 	}
 end
 

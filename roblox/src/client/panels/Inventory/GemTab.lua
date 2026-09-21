@@ -48,6 +48,8 @@ local player = Players.LocalPlayer
 local GemTab = {}
 
 local TOP = 42 -- 본문 맨 위 두 줄(강화대 상태 · 안내)이 차지하는 높이. 그 아래에 무기 칸 · 정보 칸이 놓인다.
+local TOP_PHONE = 24 -- 폰은 그 두 줄이 한 줄로 합쳐진다(GemHeader.setLayout)
+local PHONE_LEFT_WIDTH = 300 -- 폰: 홈 한 줄(5 × 48 + 4 × 8 = 272 + 여백)이 차지하는 왼쪽 폭 - 그 오른쪽이 보유 보석
 local CHIP_SIZE = { pc = 34, phone = 48 } -- 홈 칩 크기(폰은 터치 44 이상)
 local CHIP_GAP = { pc = 5, phone = 8 }
 local WEAPON_ICON_SIZE = 176 -- 무기 그림(PC 전용 장식 - 폰에서는 접는다)
@@ -251,13 +253,13 @@ local function hintText()
 	local kind = deps.getSelection()
 	local phone = tapMode()
 	if armedSlot() then
-		return phone and "교체할 보석을 탭하세요 - 밝은 보석만 가능 · 홈을 다시 탭하거나 빈 곳을 탭하면 취소" or "교체할 보석을 클릭하세요 - 밝은 보석만 가능 · Esc · 빈 곳 클릭 = 취소"
+		return phone and "교체할 보석을 탭 - 밝은 보석만 가능 · 빈 곳 탭 = 취소" or "교체할 보석을 클릭하세요 - 밝은 보석만 가능 · Esc · 빈 곳 클릭 = 취소"
 	elseif kind == "gemBag" then
-		return phone and "[장착] = 자동 장착 · 강조된 홈을 탭하면 그 홈에 장착" or "더블클릭 · 우클릭 · [장착] = 자동 장착 · 끌어서 원하는 홈에 놓기"
+		return phone and "[장착] = 자동 장착 · 강조된 홈을 탭 = 그 홈에 장착" or "더블클릭 · 우클릭 · [장착] = 자동 장착 · 끌어서 원하는 홈에 놓기"
 	elseif kind == "gemSlot" then
 		return "다른 보석으로 교체하려면 보석칸에서 선택"
 	end
-	return phone and "보석을 탭 → [장착] 또는 홈 탭 · 홈을 탭 → 보석 탭" or "보석 더블클릭 · 우클릭 = 자동 장착 · 홈 더블클릭 · 우클릭 = 홈 골라 교체"
+	return phone and "보석 탭 → [장착] 또는 홈 탭 · 홈 탭 → 보석 탭" or "보석 더블클릭 · 우클릭 = 자동 장착 · 홈 더블클릭 · 우클릭 = 홈 골라 교체"
 end
 
 local function paintHint()
@@ -702,14 +704,20 @@ local function layout(L)
 	weaponIconHolder.Visible = not phone
 	slots.row.Position = UDim2.new(0, 14, 0, phone and 4 or 26)
 	weaponIconHolder.Position = UDim2.new(0.5, 0, 0, 26 + chipSize + 12)
-	-- 정보 칸 순서: 보유 보석(끌어 오는 곳)이 위 · 홈 상세(행 · 리롤)가 아래. 무기 칸의 홈(드롭 대상)과 보유 보석이 스크롤 0에서 함께 보여야 낮은 PC 창(본문 232)에서도 끌어 놓을 수 있다.
-	invLabel.Text = phone and "보유 보석 - 탭해서 선택" or "보유 보석 - 더블클릭 · 우클릭 · 드래그"
-	local invHeight = phone and 152 or 134
-	local slotTop = 26 + invHeight + 12 -- 홈 상세 제목 y
+	-- 정보 칸: 보유 보석(끌어 오는 곳)이 위 · 홈 상세(행 · 리롤)가 아래. PC = 무기 칸의 홈(드롭 대상)과 보유 보석이 스크롤 0에서 함께 보여야 낮은 PC 창(본문 232)에서도 끌어 놓을 수 있다.
+	-- 폰 = 홈 한 줄(왼쪽 300)과 보유 보석(오른쪽)을 같은 높이에 나란히 놓는다 - 상세 시트(84)가 올라와 본문이 106만 남아도 홈과 보석이 스크롤 없이 함께 보여야 탭 → 탭 장착이 된다.
+	header.setLayout(phone)
+	invLabel.Visible = not phone
+	invLabel.Text = "보유 보석 - 더블클릭 · 우클릭 · 드래그"
+	local top = phone and TOP_PHONE or TOP
+	local bagTop = phone and 4 or 26
+	local invHeight = phone and 66 or 134
+	local slotTop = bagTop + invHeight + 12 -- 홈 상세 제목 y
 	local listHeight = phone and Gem.slotCount * (rowHeight + 4) or 216
+	local bagX = phone and 0 or 14
 	invLabel.Position = UDim2.new(0, 14, 0, 8)
-	gemInvScroll.Position = UDim2.new(0, 14, 0, 26)
-	gemInvScroll.Size = UDim2.new(1, -28, 0, invHeight)
+	gemInvScroll.Position = UDim2.new(0, bagX, 0, bagTop)
+	gemInvScroll.Size = UDim2.new(1, -(bagX + 14), 0, invHeight)
 	slotLabel.Position = UDim2.new(0, 14, 0, slotTop)
 	slotListScroll.Position = UDim2.new(0, 14, 0, slotTop + 18)
 	slotListScroll.Size = UDim2.new(1, -28, 0, listHeight)
@@ -717,19 +725,19 @@ local function layout(L)
 	local canvasHeight
 	if phone then
 		local weaponPaneHeight = 4 + chipSize + 8
-		weaponPane.Position = UDim2.new(0, 0, 0, TOP)
-		weaponPane.Size = UDim2.new(1, 0, 0, weaponPaneHeight)
+		weaponPane.Position = UDim2.new(0, 0, 0, top)
+		weaponPane.Size = UDim2.new(0, PHONE_LEFT_WIDTH, 0, weaponPaneHeight)
 		weaponPaneLine.Visible = false
-		infoPane.Position = UDim2.new(0, 0, 0, TOP + weaponPaneHeight)
-		infoPane.Size = UDim2.new(1, 0, 0, infoHeight)
-		canvasHeight = TOP + weaponPaneHeight + infoHeight
+		infoPane.Position = UDim2.new(0, PHONE_LEFT_WIDTH, 0, top)
+		infoPane.Size = UDim2.new(1, -PHONE_LEFT_WIDTH, 0, infoHeight)
+		canvasHeight = top + math.max(weaponPaneHeight, infoHeight)
 	else
-		canvasHeight = math.max(TOP + infoHeight, L.bodyH)
-		weaponPane.Position = UDim2.new(0, 0, 0, TOP)
-		weaponPane.Size = UDim2.new(0, 220, 0, canvasHeight - TOP)
+		canvasHeight = math.max(top + infoHeight, L.bodyH)
+		weaponPane.Position = UDim2.new(0, 0, 0, top)
+		weaponPane.Size = UDim2.new(0, 220, 0, canvasHeight - top)
 		weaponPaneLine.Visible = true
-		infoPane.Position = UDim2.new(0, 220, 0, TOP)
-		infoPane.Size = UDim2.new(1, -220, 0, canvasHeight - TOP)
+		infoPane.Position = UDim2.new(0, 220, 0, top)
+		infoPane.Size = UDim2.new(1, -220, 0, canvasHeight - top)
 	end
 	gemBody.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
 	paintAll() -- 폰 시트가 올라오거나 내려갈 때(선택이 바뀔 때)도 여기서 표시를 다시 맞춘다
