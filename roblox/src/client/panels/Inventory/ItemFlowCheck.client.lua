@@ -238,8 +238,8 @@ local function run()
 		select("gemBag", 1) -- 영웅 보석 → 자동 대상 2번 홈(영웅 26)
 		local hint = hintLabel()
 		local text = hint.Text
-		check(("보석 [장착] 위 한 줄: \"%s\" (교체될 보석 · 2번 홈 · 표시 %s)"):format(text, tostring(hint.Visible)),
-			hint.Visible and text:find("교체될 보석:", 1, true) ~= nil and text:find("(2번 홈)", 1, true) ~= nil and text:find("영웅", 1, true) ~= nil and text:find("Lv.26", 1, true) ~= nil and colorEq(hint.TextColor3, UIColors.textSecondary))
+		check(("보석 [장착] 위 한 줄: \"%s\" (교체될 보석 · 영웅 · 2번 홈 · 표시 %s - 시험 보석은 옵션이 없어 제목에 Lv가 안 붙는다)"):format(text, tostring(hint.Visible)),
+			hint.Visible and text:find("교체될 보석:", 1, true) ~= nil and text:find("(2번 홈)", 1, true) ~= nil and text:find("영웅", 1, true) ~= nil and colorEq(hint.TextColor3, UIColors.textSecondary))
 		gemTab.debugApply(gemState({ gemOf("primordial", 25), false, gemOf("legendary", 27), gemOf("relic", 28), false }))
 		task.wait(0.3)
 		select("gemBag", 1)
