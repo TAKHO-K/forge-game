@@ -32,6 +32,7 @@ local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe) -- S20: 장비 · 보석 · 무기 문구와 옵션 태그의 단일 출처(이 파일이 자기 코드로 같은 문구를 만들던 것을 없앴다)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
@@ -981,7 +982,6 @@ local function setupOptionRow()
 	-- 레지스터를 아끼기 위함 - 위 InfiniteStage 주석 참고).
 	local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 	local Option = require(ReplicatedStorage.Shared.Option)
-	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 	local optionRow
 
 	-- "폭 120×높이 6, 트랙 UIColors.slot, 채움은 등급색으로 롤 위치까지, 중앙(기댓값)에
@@ -1122,38 +1122,26 @@ local function setupOptionRow()
 			optionRow.Visible = false
 			return
 		end
-		local mismatched = def.classId ~= nil and def.classId ~= classId
 		local gradeVisual = ItemVisualData.gradeVisuals[item.grade]
 		local fillColor = (gradeVisual and not gradeVisual.rainbow) and gradeVisual.color or UIColors.textPrimary
-
-		local displayName = def.displayName
-		if not displayName and def.classId then
-			local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
-			displayName = skillDef and skillDef.name
-		end
-		displayName = displayName or optionId
+		-- 글 · 회색(직업 불일치) · 직업색은 ItemDescribe가 준다(S20 - 툴팁 · 장비 보기와 같은 문구).
+		local lines = ItemDescribe.optionLines(item, classId)
 
 		optionRow.Visible = true
 		local rollSpan = OptionData.rollMax - OptionData.rollMin
 
 		if optionId == "crit" then
 			optionGaugeB.wrap.Visible = true
-			local currentValue = Option.valueOf(item.option, item.grade, item.itemLevel, classId)
 			local pRate = (item.option.roll - OptionData.rollMin) / rollSpan
 			local pDmg = ((item.option.roll2 or item.option.roll) - OptionData.rollMin) / rollSpan
-			applyOptionGauge(optionGaugeA, ("치확 %+.1f%%p"):format(currentValue.critRate * 100), nil, nil, pRate, fillColor, mismatched)
-			applyOptionGauge(optionGaugeB, ("치피 %+.2f"):format(currentValue.critDmg), nil, nil, pDmg, fillColor, mismatched)
+			applyOptionGauge(optionGaugeA, lines[1].text, nil, nil, pRate, fillColor, lines[1].dim)
+			applyOptionGauge(optionGaugeB, lines[2].text, nil, nil, pDmg, fillColor, lines[2].dim)
 		else
 			optionGaugeB.wrap.Visible = false
 			local range = Option.rangeOf(optionId, item.grade, item.itemLevel, classId)
-			local currentValue = Option.valueOf(item.option, item.grade, item.itemLevel, classId)
 			local p = (item.option.roll - OptionData.rollMin) / rollSpan
-			local text = ("%s %+.1f%%"):format(displayName, currentValue * 100)
-			if mismatched then
-				text = text .. "(직업 불일치 · 효과 없음)"
-			end
-			local accent = not mismatched and def.classId and UIColors.classAccent[def.classId] or nil
-			applyOptionGauge(optionGaugeA, text, ("%.1f"):format(range.min * 100), ("%.1f"):format(range.max * 100), p, fillColor, mismatched, accent)
+			local accent = lines[1].accentClassId and UIColors.classAccent[lines[1].accentClassId] or nil
+			applyOptionGauge(optionGaugeA, lines[1].text, ("%.1f"):format(range.min * 100), ("%.1f"):format(range.max * 100), p, fillColor, lines[1].dim, accent)
 		end
 	end
 end
@@ -1289,37 +1277,12 @@ end
 
 -- ═══ 상세바 갱신 ═══
 
-local function describeItemName(item)
-	local grade = ArmorData.grades[item.grade]
-	local partName = ItemVisualData.partDisplayNames[item.part or "armor"] or "장비"
-	return (grade and grade.displayName or item.grade) .. " " .. partName
-end
-
 -- 무기 등급(20-1) - 저장이 아니라 Attribute(WeaponGrade, 0~6)로만 온다. ArmorData.gradeOrder로
--- index->id를 찾는다(등급 데이터의 단일 출처, describeItemName의 갑옷 쪽과 같은 원리).
+-- index->id를 찾는다(등급 데이터의 단일 출처).
 local function weaponGradeId()
 	local grade = player:GetAttribute("WeaponGrade") or 0
 	return ArmorData.gradeOrder[grade + 1]
 end
-
--- 착용 중 슬롯 상세 문구(16-6) - 부위마다 보여줄 스탯이 다르다(갑옷=방어력 flat, 장갑·
--- 신발=비율%). EquipSlots.statType으로 어느 쪽인지 구분하지 않고 부위별로 직접 나열한
--- 이유는 세 부위의 "어떻게 보여줄지"(단위·서식)까지 같지 않아서다 - statType은 서버
--- 계산(PlayerCombat)이 쓰는 축이고, 이건 순수 표시 문제라 축을 하나 더 만들지 않았다.
-local PART_META_TEXT = {
-	armor = function(item)
-		return ("%s · Lv.%d · 방어력 %s"):format(
-			ItemVisualData.partDisplayNames.armor, item.itemLevel, NumberFormat.format(Loot.getArmorDefense(item)))
-	end,
-	gloves = function(item)
-		return ("%s · Lv.%d · 공격력 +%.0f%%"):format(
-			ItemVisualData.partDisplayNames.gloves, item.itemLevel, Loot.getGlovesAttackPercent(item) * 100)
-	end,
-	shoes = function(item)
-		return ("%s · Lv.%d · 이동+공속 +%.0f%%"):format(
-			ItemVisualData.partDisplayNames.shoes, item.itemLevel, Loot.getShoesSpeedPercent(item) * 100)
-	end,
-}
 
 local function clearDetail()
 	dname.Text = "선택된 아이템 없음"
@@ -1368,26 +1331,6 @@ local function setDpicIcon(partId, color)
 	builder(holder, 28, color)
 end
 
--- 26-3: 보석 이름(PRD 20.67 [9] "<등급> <옵션명> 보석 · Lv.<itemLevel>", 옵션 미배정은
--- "<등급> 보석(옵션 미배정)"으로 - 이관된 고대·태초 보석 전용, Lv를 안 붙인다).
-local function describeGemName(gem)
-	local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
-	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
-	local gradeInfo = ArmorData.grades[gem.grade]
-	local gradeName = gradeInfo and gradeInfo.displayName or gem.grade
-	if not gem.option then
-		return ("%s 보석(옵션 미배정)"):format(gradeName)
-	end
-	local def = OptionData.options[gem.option.id]
-	local optionName = def and def.displayName
-	if not optionName and def and def.classId then
-		local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
-		optionName = skillDef and skillDef.name
-	end
-	optionName = optionName or gem.option.id
-	return ("%s %s 보석 · Lv.%d"):format(gradeName, optionName, gem.itemLevel or 0)
-end
-
 -- 26-3: 리롤 버튼(Detail, bag·equip 전용 - gemSlot/gemBag은 보석 탭 자체 행 버튼이 이미
 -- 있어 여기선 숨긴다, 중복 UI를 만들지 않는다는 지시). eligible이 아니면 숨긴다.
 local function setRerollDetailButton(eligible, gradeId)
@@ -1413,14 +1356,10 @@ local function refreshDetail()
 		end
 		local visual = ItemVisualData.gradeVisuals[item.grade]
 		local color = visual and visual.color or UIColors.textPrimary
-		dname.Text = describeItemName(item)
+		local described = ItemDescribe.item(item, player:GetAttribute("ClassId"))
+		dname.Text = described.title
 		dname.TextColor3 = color
-		dmeta.Text = ("%s · Lv.%d · 방어력 %s · 판매가 %s"):format(
-			ItemVisualData.partDisplayNames[item.part or "armor"] or "장비",
-			item.itemLevel,
-			NumberFormat.format(Loot.getArmorDefense(item)),
-			NumberFormat.format(Loot.getSellPrice(item))
-		)
+		dmeta.Text = ("%s · 판매가 %s"):format(described.meta, NumberFormat.format(Loot.getSellPrice(item)))
 		setDpicIcon(item.part or "armor", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -1446,9 +1385,10 @@ local function refreshDetail()
 		local item = equippedByPart()[part]
 		local visual = ItemVisualData.gradeVisuals[item.grade]
 		local color = visual and visual.color or UIColors.textPrimary
-		dname.Text = describeItemName(item) .. " (착용 중)"
+		local described = ItemDescribe.item(item, player:GetAttribute("ClassId"))
+		dname.Text = described.title .. " (착용 중)"
 		dname.TextColor3 = color
-		dmeta.Text = PART_META_TEXT[part](item)
+		dmeta.Text = described.meta
 		setDpicIcon(item.part or part, color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -1470,17 +1410,15 @@ local function refreshDetail()
 		setRerollDetailButton(Gem.isRerollableGrade(item.grade), item.grade)
 	elseif selectedKind == "equip" and selectedValue == "weapon" then
 		local weaponLevel = player:GetAttribute("WeaponLevel") or 0
-		local weaponData = WeaponData.weapons[WeaponData.starterId]
 		local gradeId = weaponGradeId()
-		local gradeInfo = gradeId and ArmorData.grades[gradeId]
 		local visual = gradeId and ItemVisualData.gradeVisuals[gradeId]
 		local color = visual and visual.color or UIColors.textPrimary
-		-- 이름에 등급을 붙인다(20-1 [2] 판단) - 갑옷·장갑·신발(describeItemName)이 이미
-		-- "등급 부위" 형식을 쓰고 있어, 무기만 색으로만 표시하면 이 창 안에서 두 가지 규칙이
-		-- 섞인다. 강화 단계(+N)는 기존처럼 dmeta 줄에 그대로 둔다(부위별 레벨 표시와 동일).
-		dname.Text = (gradeInfo and gradeInfo.displayName or "") .. " " .. weaponData.displayName
+		-- 이름에 등급을 붙인다(20-1 [2] 판단) - 갑옷·장갑·신발도 "등급 부위" 형식이라 무기만 색으로만 표시하면 이 창 안에서 두 가지 규칙이
+		-- 섞인다. 강화 단계(+N)는 기존처럼 dmeta 줄에 그대로 둔다(부위별 레벨 표시와 동일). 문구는 ItemDescribe.weapon(S20).
+		local described = ItemDescribe.weapon(gradeId, weaponLevel)
+		dname.Text = described.title
 		dname.TextColor3 = color
-		dmeta.Text = ("무기 · +%d · 강화대에서 강화"):format(weaponLevel)
+		dmeta.Text = described.meta .. " · 강화대에서 강화"
 		setDpicIcon("weapon", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -1504,7 +1442,7 @@ local function refreshDetail()
 		local gem = currentGemState.gems[selectedValue]
 		local visual = ItemVisualData.gradeVisuals[gem.grade]
 		local color = visual and visual.color or UIColors.textPrimary
-		dname.Text = ("%d번 홈 - %s"):format(selectedValue, describeGemName(gem))
+		dname.Text = ("%d번 홈 - %s"):format(selectedValue, ItemDescribe.gem(gem).title)
 		dname.TextColor3 = color
 		dmeta.Text = ("상한 %s"):format(ArmorData.grades[Gem.gradeCapForSlot(selectedValue)].displayName)
 		setDpicIcon("weapon", color)
@@ -1530,7 +1468,7 @@ local function refreshDetail()
 		local gem = currentGemState.gemInventory[selectedValue]
 		local visual = ItemVisualData.gradeVisuals[gem.grade]
 		local color = visual and visual.color or UIColors.textPrimary
-		dname.Text = describeGemName(gem)
+		dname.Text = ItemDescribe.gem(gem).title
 		dname.TextColor3 = color
 		dmeta.Text = "보유 보석 - 드래그로 홈에 장착"
 		setDpicIcon("weapon", color)
@@ -1647,8 +1585,6 @@ end
 -- ═══ 격자 다시 그리기 ═══
 
 local function rebuildGearSlots()
-	local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
-	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 	for _, child in ipairs(gearGrid:GetChildren()) do
 		if child:IsA("Frame") or child:IsA("TextButton") then
 			child:Destroy()
@@ -1741,16 +1677,9 @@ local function rebuildGearSlots()
 			-- 태그") - 착용 부위(무기 제외)에 옵션이 있으면 같은 방식으로 보여준다.
 			local optionItem = part ~= "weapon" and equipped[part]
 			if optionItem and optionItem.option then
-				local def = OptionData.options[optionItem.option.id]
-				local classId = player:GetAttribute("ClassId")
-				local mismatched = def and def.classId ~= nil and def.classId ~= classId
-				local tagName = def and def.displayName
-				if not tagName and def and def.classId then
-					local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
-					tagName = skillDef and skillDef.name
-				end
-				tagName = tagName or (def and optionItem.option.id)
-				if tagName then
+				-- 옵션 이름 · 직업 불일치 · 직업색은 ItemDescribe.optionTag(S20). 색: 불일치 = 회색이 우선 · 직업 특화 옵션 = 직업색(S13 미결 3) · 공통 옵션 = 등급색.
+				local tag = ItemDescribe.optionTag(optionItem, player:GetAttribute("ClassId"))
+				if tag then
 					local optionVisual = ItemVisualData.gradeVisuals[optionItem.grade]
 					local optionTag = Instance.new("TextLabel")
 					optionTag.AnchorPoint = Vector2.new(0, 1)
@@ -1761,8 +1690,10 @@ local function rebuildGearSlots()
 					optionTag.TextSize = Theme.textSize("caption")
 					optionTag.TextXAlignment = Enum.TextXAlignment.Left
 					optionTag.TextTruncate = Enum.TextTruncate.AtEnd
-					optionTag.TextColor3 = mismatched and UIColors.textTertiary or (optionVisual and optionVisual.color or UIColors.textPrimary)
-					optionTag.Text = tagName
+					optionTag.TextColor3 = tag.mismatched and UIColors.textTertiary
+						or (tag.accentClassId and UIColors.classAccent[tag.accentClassId])
+						or (optionVisual and optionVisual.color or UIColors.textPrimary)
+					optionTag.Text = tag.text
 					optionTag.Parent = slot
 				end
 			end
@@ -1797,8 +1728,6 @@ local function selectBagIndex(index)
 end
 
 local function rebuildGrid()
-	local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
-	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 	for _, child in ipairs(grid:GetChildren()) do
 		if child:IsA("Frame") or child:IsA("TextButton") then
 			child:Destroy()
@@ -1889,16 +1818,8 @@ local function rebuildGrid()
 		lvTag.Parent = cell
 
 		if item.option then
-			local def = OptionData.options[item.option.id]
-			local classId = player:GetAttribute("ClassId")
-			local mismatched = def and def.classId ~= nil and def.classId ~= classId
-			local tagName = def and def.displayName
-			if not tagName and def and def.classId then
-				local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
-				tagName = skillDef and skillDef.name
-			end
-			tagName = tagName or (def and item.option.id)
-			if tagName then
+			local tag = ItemDescribe.optionTag(item, player:GetAttribute("ClassId")) -- S20: 옵션 이름 · 불일치 · 직업색은 ItemDescribe가 준다
+			if tag then
 				local optionTag = Instance.new("TextLabel")
 				optionTag.AnchorPoint = Vector2.new(0, 1)
 				optionTag.Position = UDim2.new(0, 3, 1, -4)
@@ -1908,8 +1829,8 @@ local function rebuildGrid()
 				optionTag.TextSize = Theme.textSize("caption")
 				optionTag.TextXAlignment = Enum.TextXAlignment.Left
 				optionTag.TextTruncate = Enum.TextTruncate.AtEnd
-				optionTag.TextColor3 = mismatched and UIColors.textTertiary or iconColor
-				optionTag.Text = tagName
+				optionTag.TextColor3 = tag.mismatched and UIColors.textTertiary or (tag.accentClassId and UIColors.classAccent[tag.accentClassId]) or iconColor
+				optionTag.Text = tag.text
 				optionTag.Parent = cell
 			end
 		end
@@ -2761,7 +2682,7 @@ updateGemTab = function()
 					valueText = (" · %+.1f%%"):format(value * 100)
 				end
 			end
-			ui.label.Text = ("%d번 홈 · 상한 %s · %s%s"):format(slot, capInfo.displayName, describeGemName(gem), valueText)
+			ui.label.Text = ("%d번 홈 · 상한 %s · %s%s"):format(slot, capInfo.displayName, ItemDescribe.gem(gem).title, valueText)
 		end
 
 		local rerollable = filled and Gem.isRerollableGrade(gem.grade)

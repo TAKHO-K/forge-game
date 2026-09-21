@@ -1,5 +1,5 @@
 -- 장비 · 보석 · 무기 한 개를 툴팁 글로 바꾸는 순수 함수(S12b B · C). 알림 속 아이템 툴팁(드랍 순간 스냅샷)과 장비 보기 창이 같은 함수를 쓴다.
--- 가방 상세 패널(InventoryUI)은 자기 코드로 같은 문구를 만든다 - 이 모듈은 그 문구 형식(이름 · 부위/Lv/기본효과 · 옵션 줄)을 그대로 따른다(InventoryUI를 이 모듈로 옮기는 것은 S20 이후).
+-- S20부터 가방 상세 패널(InventoryUI)도 이 모듈로 문구를 만든다(이중 유지 0) - 이름 · 부위/Lv/기본효과 · 옵션 줄 · 가방 셀 옵션 태그가 전부 여기서 나온다(InventoryUI를 이 모듈로 옮기는 것은 S20 이후).
 -- 반환은 글 조각뿐이다(색은 gradeId로 클라가 ItemVisualData에서 고른다). classId = 그 아이템을 쥔 사람의 직업(직업 특화 옵션 불일치 판정).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -52,6 +52,20 @@ local function optionLines(item, classId)
 		text ..= "(직업 불일치 · 효과 없음)"
 	end
 	return { { text = text, dim = mismatched, accentClassId = accentClassId } }
+end
+
+ItemDescribe.optionLines = optionLines -- 옵션 줄(text · dim · accentClassId) - 가방 상세의 옵션 게이지가 글 · 회색 · 직업색을 여기서 받는다(S20)
+
+-- 가방 셀 · 착용 칸의 옵션 태그(S20 - 이름 유도가 셀 코드 두 곳에 복제돼 있던 것을 여기 하나로). 반환 { text = 옵션 이름, mismatched, accentClassId } | nil(옵션이 없거나 데이터에 없다).
+-- 색 규칙은 클라가 입힌다: 직업 불일치 = 회색이 우선 · 직업 특화 옵션 = accentClassId의 직업색 · 공통 옵션 = 기존 색(등급색).
+function ItemDescribe.optionTag(item, classId)
+	local option = item and item.option
+	local def = option and OptionData.options[option.id]
+	if not def then
+		return nil
+	end
+	local mismatched = def.classId ~= nil and def.classId ~= classId
+	return { text = optionName(option.id), mismatched = mismatched, accentClassId = not mismatched and def.classId or nil }
 end
 
 local PART_META = {
