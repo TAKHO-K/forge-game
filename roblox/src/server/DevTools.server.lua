@@ -2284,8 +2284,11 @@ do -- 30-0 S06: 클라 UI 전시장 · 규칙 검사 신호(/gg ui) - 클라 ui/
 end
 -- 28-1(S01) [C-2] 6번: "/gg" 명령 인스턴스가 있는 조건 = IsStudio()와 같다는 것을 서버 시작 때 남긴다. 이 스크립트는 첫머리 가드가
 -- 라이브 서버에서 return하므로 명령 인스턴스 자체가 만들어지지 않는다(Studio에서는 둘 다 true만 확인된다 - 프로덕션 쪽은 호출 그래프가 증명이다).
-print(("[DevTools] /gg 명령 인스턴스 있음=%s · IsStudio=%s (기대: 같은 값)"):format(
-	tostring(TextChatService:FindFirstChild("ForgeGG") ~= nil), tostring(RunService:IsStudio())))
+-- 검증 로그이므로 수동 Play 모드(DevToolsConfig.verifyArmed = false)에서는 찍지 않는다(S19b 사전 작업 1).
+if DevToolsConfig.verifyArmed then
+	print(("[DevTools] /gg 명령 인스턴스 있음=%s · IsStudio=%s (기대: 같은 값)"):format(
+		tostring(TextChatService:FindFirstChild("ForgeGG") ~= nil), tostring(RunService:IsStudio())))
+end
 
 -- 자동 검증 블록 실행 스위치(DevToolsConfig.verify) - 아래 블록마다 id로 물어본다. 기본은 "지금 세션의 블록만"이고, 과거 블록 전체 회귀는
 -- regression = true일 때만 돈다(마일스톤 Play만 - COMMON.md §3). 건너뛴 블록은 파일 맨 끝에서 한 줄로 남긴다.
@@ -2299,8 +2302,10 @@ local function verifyEnabled(blockId)
 	table.insert(skippedVerifyBlocks, blockId)
 	return false
 end
-print(("[DevTools] 자동 검증 모드: %s (현재 세션 블록: %s)"):format(
-	DevToolsConfig.verify.regression and "회귀 전체(과거 블록 포함)" or "현재 세션 블록만", table.concat(DevToolsConfig.verify.current, " · ")))
+if DevToolsConfig.verifyArmed then
+	print(("[DevTools] 자동 검증 모드: %s (현재 세션 블록: %s)"):format(
+		DevToolsConfig.verify.regression and "회귀 전체(과거 블록 포함)" or "현재 세션 블록만", table.concat(DevToolsConfig.verify.current, " · ")))
+end
 
 -- ═══ 26-2 자동 검증 블록 ═══════════════════════════════════════════════════
 -- 서버가 Studio에서 시작될 때 한 번 돌고 결과를 전부 print한다(플레이어 접속과 무관 -
@@ -3439,6 +3444,6 @@ if RunService:IsStudio() and verifyEnabled("S14(가)") then
 end
 
 -- 이 서버에서 건너뛴 검증 블록(DevToolsConfig.verify) - 체인 단계는 접속 뒤에 걸러지므로 이 줄에는 서버 시작 때 정해지는 블록만 든다.
-if #skippedVerifyBlocks > 0 then
+if DevToolsConfig.verifyArmed and #skippedVerifyBlocks > 0 then
 	print(("[DevTools] 건너뛴 자동 검증 블록 %d개(서버 시작 시점): %s - 전체 회귀는 DevToolsConfig.verify.regression = true"):format(#skippedVerifyBlocks, table.concat(skippedVerifyBlocks, " · ")))
 end

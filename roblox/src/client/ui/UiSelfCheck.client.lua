@@ -6,9 +6,15 @@
 -- 중앙(C 구역)은 화면 높이 비례(가운데 40% × 50%)라 창이 작을수록 바닥 HUD가 걸린다 - 결과 줄에 화면 크기를 같이 적는다.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 if not RunService:IsStudio() then
+	return
+end
+
+-- 수동 Play 모드(S19b 사전 작업 1)에서는 검사 줄을 찍지 않는다 - 터미널이 검증할 때만(DevToolsConfig.verifyArmed) 돈다.
+if not require(ReplicatedStorage.Shared.data.DevToolsConfig).verifyArmed then
 	return
 end
 

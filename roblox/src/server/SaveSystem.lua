@@ -17,6 +17,8 @@ local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 -- 28-1 S04: 강화 재료 보유량(profile.materials)의 기본값 · 이관(v25->v26) · isValidProfile 검사용.
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
+-- S19b 사전 작업 2: 검증 모드(verifyArmed - Studio에서 터미널이 켠 때만)의 저장 키 분리용.
+local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 
 local SaveSystem = {}
 
@@ -115,6 +117,36 @@ local store = DataStoreService:GetDataStore(SaveConfig.dataStoreName)
 
 local function profileKey(player)
 	return "Player_" .. player.UserId
+end
+
+-- S19b 사전 작업 2 - 검증용 저장 분리. 검증 모드(DevToolsConfig.verifyArmed)에서는 실제 프로필 키(Player_<id>)를 **읽기만** 하고, 쓰기 · 다시 읽기는 전부
+-- Player_<id>_verify 키로 한다. 그래서 검증 블록이 프로필을 바꿔 놓은 채 Play가 멈춰도(S19 실측: S12(나) 도중 정지 → 견습 상태가 저장에 남음) 실제 프로필은
+-- 그대로다. 이 서버에서 그 플레이어를 처음 읽을 때 검증 키를 비워 실제 프로필로 새로 시작한다(지난 Play의 검증 상태가 이어지지 않는다). 검증 모드가 꺼져
+-- 있으면(사용자가 그냥 누른 Play · 라이브 서버) 이 함수는 항상 실제 키다.
+local function storeKey(player)
+	if DevToolsConfig.verifyArmed then
+		return profileKey(player) .. "_verify"
+	end
+	return profileKey(player)
+end
+
+local verifySeeded = {} -- userId → true(이 서버에서 검증 키를 비운 플레이어)
+
+-- 저장된 원본(raw)을 읽는다. 검증 모드의 첫 읽기 = 검증 키를 비우고 실제 프로필을 시드로 읽는다. 그 뒤(재접속 · 왕복 검증)는 검증 키를 먼저 본다.
+local function readStored(player)
+	if not DevToolsConfig.verifyArmed then
+		return store:GetAsync(profileKey(player))
+	end
+	if not verifySeeded[player.UserId] then
+		store:RemoveAsync(storeKey(player))
+		verifySeeded[player.UserId] = true
+		print(("[SaveSystem] 검증 모드: %s 저장 키 = %s (실제 %s는 읽기만 - 쓰지 않는다)"):format(player.Name, storeKey(player), profileKey(player)))
+	end
+	local raw = store:GetAsync(storeKey(player))
+	if raw ~= nil then
+		return raw
+	end
+	return store:GetAsync(profileKey(player))
 end
 
 -- 저장 구조 기본값. 지금 실제로 쓰는 필드는 gold·equipment.weapon뿐이지만, 곧 들어올
@@ -884,13 +916,12 @@ SaveSystem.legacyCurveV21 = LegacyCurveV21
 --   "invalid_schema" - migrate 후에도 필수 필드가 이상하다.
 --   그 외 문자열      - DataStore 호출 자체가 재시도 끝에 계속 실패했다(pcall 에러 메시지).
 function SaveSystem.loadProfile(player)
-	local key = profileKey(player)
 	local lastErr
 	local totalAttempts = SaveConfig.saveRetryCount + 1 -- 첫 시도 + 재시도 횟수
 
 	for attempt = 1, totalAttempts do
 		local ok, result = pcall(function()
-			return store:GetAsync(key)
+			return readStored(player)
 		end)
 
 		if ok then
@@ -922,7 +953,7 @@ end
 -- 다른 서버가 이미 더 최근 저장을 남겼으면 - 내 메모리 상태로 덮어쓰지 않고 포기한다.
 -- 성공하면 true, 실패하면 false + 이유("stale_session" 또는 에러 메시지)를 돌려준다.
 function SaveSystem.saveProfile(player, profile)
-	local key = profileKey(player)
+	local key = storeKey(player)
 	local baselineSavedAt = profile.savedAt or 0
 	local newSavedAt = os.time()
 	local lastErr

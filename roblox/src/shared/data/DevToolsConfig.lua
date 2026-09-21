@@ -8,7 +8,18 @@
 -- 여러 명이 같은 Studio 세션에 들어와도 지정한 계정만 명령을 쓰게 좁힌다. 빈 배열이면
 -- "Studio 안의 아무나"를 허용한다(1차 방어만으로 이미 충분히 안전하다는 뜻).
 
-return {
+-- 수동 Play 모드(S19b 사전 작업 1): 자동 검증은 **기본 꺼짐**이다. Studio에서 그냥 Play를 누르면 아래 verify 표가 비어 있는 것으로 읽히고
+-- (verify.current = {} · regression = false), 자체 점검(UiSelfCheck)과 서버 시작 검증 줄도 안 찍힌다. 터미널(Claude)이 검증할 때만 Play 직전
+-- **edit 모드에서** ReplicatedStorage의 Attribute `VerifyArmedUntil`(os.time() + 초)을 켜고, Play가 끝나면 지운다:
+--   켜기: game:GetService("ReplicatedStorage"):SetAttribute("VerifyArmedUntil", os.time() + 1800)
+--   끄기: game:GetService("ReplicatedStorage"):SetAttribute("VerifyArmedUntil", nil)
+-- 왜 Attribute인가: Rojo는 이 파일(src)과 default.project.json에 적힌 것만 Studio에 반영하므로, project에 없는 ReplicatedStorage의 Attribute는
+-- 덮어쓰이지 않는다(실측은 PRD 20.106). 왜 만료 시각인가: 끄는 걸 잊어도 30분 뒤에는 저절로 꺼진다(사용자가 그냥 Play를 눌러 검증이 도는 일을 막는다).
+-- 켜진 동안(verifyArmed = true)에는 SaveSystem이 개발 계정 프로필을 `Player_<id>_verify` 키로 읽고 쓴다(S19b 사전 작업 2) - 검증 도중 Play가 멈춰도 실제 프로필은 그대로다.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local config = {
 	allowedUserIds = {},
 
 	-- 서버 시작 때 도는 자동 검증 블록의 실행 스위치(DevTools.server.lua의 verifyEnabled). 블록마다 id("26-2" · "29-3(나)" · "S05(가)" ...)가 있다.
@@ -52,3 +63,12 @@ return {
 		current = { "S18(UI)", "S17(UI)", "S16(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
 	},
 }
+
+local armedUntil = ReplicatedStorage:GetAttribute("VerifyArmedUntil")
+config.verifyArmed = RunService:IsStudio() and type(armedUntil) == "number" and os.time() < armedUntil
+if not config.verifyArmed then
+	config.verify.current = {}
+	config.verify.regression = false
+end
+
+return config
