@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local Gauge = require(script.Parent.Parent.ui.kit.Gauge)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
+local PartyListView = require(script.Parent.PartyListView)
 
 local REFRESH_SECONDS = 0.1
 local NAME_HEIGHT = 22
@@ -46,10 +47,29 @@ local function build()
 		position = UDim2.new(0, 0, 0, NAME_HEIGHT + GAP),
 		value = 1,
 	})
-	return { root = root, nameLabel = nameLabel, gauge = gauge }
+	return { root = root, nameLabel = nameLabel, gauge = gauge, screenGui = screenGui, slotWidth = slot.size.X.Offset }
 end
 
 local refs = build()
+
+-- 폰(모바일 축약형 파티 목록: 메뉴바 오른쪽 옆 x = 여백 14 + 버튼 48 + 8, 폭 96)에서는 화면 폭이 좁으면 슬롯 폭(360)이 목록과 겹친다 - 목록 오른쪽 끝 + 8보다 안쪽으로만 폭을 줄인다(가운데 정렬).
+-- PC는 슬롯 폭 그대로. 좁아도 160 아래로는 안 줄인다.
+local MIN_MOBILE_WIDTH = 160
+local function applyWidth()
+	local width = refs.slotWidth
+	if Theme.isMobile then
+		local listRight = ScreenMap.edgeMargin + ScreenMap.menuBar.mobileButton + 8 + PartyListView.compact.width
+		width = math.clamp(refs.screenGui.AbsoluteSize.X - 2 * (listRight + 8), MIN_MOBILE_WIDTH, refs.slotWidth)
+	end
+	refs.root.Size = UDim2.new(0, width, 0, refs.root.Size.Y.Offset)
+	refs.gauge.root.Size = UDim2.new(0, width, 0, refs.gauge.root.Size.Y.Offset)
+end
+applyWidth()
+refs.screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(applyWidth)
+-- Studio에서 폰 화면을 흉내 낼 때(ForceTouchLayout - MenuBar가 Theme.recompute를 한 뒤)만 다시 잰다. 실제 기기는 접속 때 판정이 정해진다.
+player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(function()
+	task.delay(0.1, applyWidth)
+end)
 local boss = nil -- 지금 표시 중인 보스 모델
 local shownRatio = nil
 

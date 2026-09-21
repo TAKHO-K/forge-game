@@ -144,8 +144,12 @@ local function run()
 	local center = ScreenMap.centerRect(screen)
 	check(("중앙 금지 구역 밖: 보스 바 %s · C 구역 %s"):format(describe(barRect), describe(center)), not intersects(barRect, center))
 	check(("화면 안: 화면 %d × %d"):format(screen.X, screen.Y), barRect.min.X >= 0 and barRect.min.Y >= 0 and barRect.max.X <= screen.X and barRect.max.Y <= screen.Y)
-	check(("슬롯 표 크기와 같다: 실제 %d × %d · 표 %d × %d"):format(root.AbsoluteSize.X, root.AbsoluteSize.Y, slot.size.X.Offset, slot.size.Y.Offset),
-		root.AbsoluteSize.X == slot.size.X.Offset and root.AbsoluteSize.Y == slot.size.Y.Offset)
+	local expectedWidth = slot.size.X.Offset
+	if Theme.isMobile then -- 폰: 축약형 파티 목록 오른쪽 끝 + 8 안쪽으로만(BossBar.applyWidth)
+		expectedWidth = math.clamp(screen.X - 2 * (ScreenMap.edgeMargin + ScreenMap.menuBar.mobileButton + 8 + PartyListView.compact.width + 8), 160, slot.size.X.Offset)
+	end
+	check(("슬롯 표 크기와 같다(폰은 폭만 좁힘): 실제 %d × %d · 기대 %d × %d"):format(root.AbsoluteSize.X, root.AbsoluteSize.Y, expectedWidth, slot.size.Y.Offset),
+		root.AbsoluteSize.X == expectedWidth and root.AbsoluteSize.Y == slot.size.Y.Offset)
 
 	local nameSize = nameLabel and Theme.effectiveTextSize(nameLabel) or 0
 	local numberSize = number and Theme.effectiveTextSize(number) or 0
