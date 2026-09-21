@@ -91,8 +91,9 @@ local function runPure()
 	local grace = PartyConfig.disconnectGraceSeconds
 	local removedLog = {}
 	local listenerActive = true
+	-- 이 블록의 점검 멤버(이름 "점검A1" · "점검단A" 꼴)만 센다 - (나)가 같은 시간에 도는 체인에서 자기 스탠드인("점검끊김B")의 disconnect를 이 리스너가 세는 경합이 있었다(S20 사전 작업 Play에서 X).
 	PartyState.onMemberRemoved(function(player, _, reason)
-		if listenerActive then
+		if listenerActive and (tostring(player.Name):find("^점검[ABC]%d") or tostring(player.Name):find("^점검단")) then
 			table.insert(removedLog, { player = player, reason = reason })
 		end
 	end)
@@ -217,7 +218,7 @@ local function runPure()
 	local leftover = 0
 	for _, party in pairs(PartyState.getAllParties()) do
 		for _, record in ipairs(PartyState.getMemberRecords(party)) do
-			if record.userId <= -190000 and record.userId >= -199999 then
+			if tostring(record.name):find("^점검[ABC]%d") or tostring(record.name):find("^점검단") or record.name == "점검낯선이" then
 				leftover += 1
 			end
 		end
