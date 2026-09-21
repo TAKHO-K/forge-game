@@ -72,7 +72,8 @@ local config = {
 		--   S15(UI) · S12b(UI) · S12(UI)(Theme 글씨 · 버튼 높이를 쓰는 HUD · 패널 점검) · S10(가)(ScreenMap · 토스트). S04(나)는 계속 제외.
 		-- S20b(2026-09-21) 사전 작업(클라 전용): 직업 선택창 fitToScreen + 스크롤(ClassSelectUI) · 요청 배너 첫 줄 보호 + 탭 펼침(RequestBanner · PartyRequests · PartyAway).
 		--   이번 세션 블록 S20(UI)(RequestBannerCheck에 ⑤ ⑥ ⑦ 추가) + 동반 실행: RequestBanner를 직접 쓰는 S18(UI)(PartyHudCheck) · PartyAway를 쓰는 S19b(UI)(BossBarCheck). 본 작업(GemTab 이동 · 장비창 재구성) 때 다시 갈아 끼운다.
-		current = { "S20(UI)", "S18(UI)", "S19b(UI)" },
+		-- S20b ① 보석 탭 이동(InventoryUI → panels/Inventory/GemTab · 클라 전용): 이번 세션 블록 S20(UI)(GemTabCheck 추가) + 동반 실행: InventoryUI를 여는 · 재는 옛 클라 점검 - S12b(UI)(장비창 글씨 · 탭 줄) · S12(UI)(패널 전수 fit) · S16(UI)(메뉴바 B 키 → 가방).
+		current = { "S20(UI)", "S12b(UI)", "S12(UI)", "S16(UI)" },
 	},
 }
 
