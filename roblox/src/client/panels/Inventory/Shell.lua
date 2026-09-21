@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
@@ -113,6 +114,13 @@ local userWindowPosition = nil
 local function screenSize()
 	if R.forcedScreen then
 		return R.forcedScreen
+	end
+	-- Studio 전용 훅(ForceTouchLayout과 같은 방식): 클라에서 player:SetAttribute("DebugInventoryScreen", Vector2.new(800, 302))를 주면 그 화면 크기로 배치한다(스크린샷 · 실제 클릭 확인용). nil이면 실제 화면.
+	if RunService:IsStudio() then
+		local forced = player:GetAttribute("DebugInventoryScreen")
+		if typeof(forced) == "Vector2" then
+			return forced
+		end
 	end
 	local size = screenGui.AbsoluteSize
 	if size.X > 0 and size.Y > 0 then
@@ -457,6 +465,11 @@ screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 end)
 player:GetAttributeChangedSignal("InventoryWindowX"):Connect(applySavedWindowPosition)
 player:GetAttributeChangedSignal("InventoryWindowY"):Connect(applySavedWindowPosition)
+player:GetAttributeChangedSignal("DebugInventoryScreen"):Connect(function()
+	if R.gemFrame then
+		R.applyLayout()
+	end
+end)
 
 R.header, R.countLabel = header, countLabel
 R.sortButton, R.cutoffButton, R.bulkSellButton, R.closeButton = sortButton, cutoffButton, bulkSellButton, closeButton
