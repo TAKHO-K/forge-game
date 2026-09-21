@@ -148,7 +148,7 @@ infoPane.Size = UDim2.new(1, -220, 1, 0)
 infoPane.BackgroundTransparency = 1
 infoPane.Parent = gemBody
 
-makeSectionLabel(infoPane, "홈 상세 (등급 상한 이하는 전부 장착 가능)", 8)
+local slotLabel = makeSectionLabel(infoPane, "홈 상세 (등급 상한 이하는 전부 장착 가능)", 8)
 
 local slotListScroll = Instance.new("ScrollingFrame")
 slotListScroll.Position = UDim2.new(0, 14, 0, 26)
@@ -563,28 +563,30 @@ local function layout(L)
 		entry.buyButton.Size = UDim2.new(0, 160, 0, buttonHeight)
 		entry.buyButton.Position = UDim2.new(0, 78, 1, -(buttonHeight + 3))
 	end
+	-- 정보 칸 순서: 보유 보석(끌어 오는 곳)이 위 · 홈 상세(행 · 리롤)가 아래. 무기 칸의 홈(드롭 대상)과 보유 보석이 스크롤 0에서 함께 보여야 낮은 PC 창(본문 232)에서도 끌어 놓을 수 있다.
+	local invHeight = phone and 152 or 134
+	local slotTop = 26 + invHeight + 12 -- 홈 상세 제목 y
+	local listHeight = phone and Gem.slotCount * (rowHeight + 4) or 216
+	invLabel.Position = UDim2.new(0, 14, 0, 8)
+	gemInvScroll.Position = UDim2.new(0, 14, 0, 26)
+	gemInvScroll.Size = UDim2.new(1, -28, 0, invHeight)
+	slotLabel.Position = UDim2.new(0, 14, 0, slotTop)
+	slotListScroll.Position = UDim2.new(0, 14, 0, slotTop + 18)
+	slotListScroll.Size = UDim2.new(1, -28, 0, listHeight)
+	local infoHeight = slotTop + 18 + listHeight + 14
 	local canvasHeight
 	if phone then
-		local listHeight = Gem.slotCount * (rowHeight + 4)
 		weaponPane.Size = UDim2.new(1, 0, 0, 240)
 		weaponPaneLine.Visible = false
 		infoPane.Position = UDim2.new(0, 0, 0, 240)
-		slotListScroll.Size = UDim2.new(1, -28, 0, listHeight)
-		invLabel.Position = UDim2.new(0, 14, 0, 26 + listHeight + 10)
-		gemInvScroll.Position = UDim2.new(0, 14, 0, 26 + listHeight + 30)
-		gemInvScroll.Size = UDim2.new(1, -28, 0, 152)
-		canvasHeight = 240 + 26 + listHeight + 30 + 152 + 14
-		infoPane.Size = UDim2.new(1, 0, 0, canvasHeight - 240)
+		infoPane.Size = UDim2.new(1, 0, 0, infoHeight)
+		canvasHeight = 240 + infoHeight
 	else
-		canvasHeight = math.max(560, L.bodyH)
+		canvasHeight = math.max(infoHeight, L.bodyH)
 		weaponPane.Size = UDim2.new(0, 220, 0, canvasHeight)
 		weaponPaneLine.Visible = true
 		infoPane.Position = UDim2.new(0, 220, 0, 0)
 		infoPane.Size = UDim2.new(1, -220, 0, canvasHeight)
-		slotListScroll.Size = UDim2.new(1, -28, 0, 216)
-		invLabel.Position = UDim2.new(0, 14, 0, 250)
-		gemInvScroll.Position = UDim2.new(0, 14, 0, 270)
-		gemInvScroll.Size = UDim2.new(1, -28, 0, canvasHeight - 280)
 	end
 	gemBody.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
 end
