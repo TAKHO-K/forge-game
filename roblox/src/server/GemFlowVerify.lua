@@ -188,6 +188,7 @@ function GemFlowVerify.runLive(player, env)
 	t.check(("자동 장착 대상을 서버가 받는다 %d/%d(홈 5 잠김이라 고대 보석은 1번 태초 홈)"):format(autoCount - autoBad, autoCount), autoBad == 0 and autoCount == 6)
 
 	env.restore(player)
+	GemSync.push(player) -- 복원(DevTools)은 클라 스냅샷을 밀지 않는다 - 안 밀면 같은 Play의 클라 점검(S20 보석 탭 칸 수 · S20c)이 시험 상태의 옛 보석칸을 계속 본다
 	t.check("검증 뒤 프로필(홈 · 보석칸)이 원래대로 돌아왔다", fingerprint(player) == originalPrint)
 	print(("===S20c 검증 끝(나)=== %d/%d 통과"):format(t.pass, t.total))
 end

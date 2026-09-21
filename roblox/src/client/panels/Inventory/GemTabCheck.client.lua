@@ -69,25 +69,17 @@ local function run()
 	end
 	check(("창을 열면 행 글이 채워진다(GemTab.update): %d/%d"):format(labelsFilled, Gem.slotCount), labelsFilled == Gem.slotCount)
 
-	-- 보유 보석 칸 수 = 서버 스냅샷의 gemInventory 수. 같은 Play의 서버 (나) 블록(S20c(나))이 이 시각에 보석칸을 잠깐 시험 상태로 바꿨다가 되돌리므로(GemSync 두 번)
-	-- 한 번 어긋나 보일 수 있다 - 칸이 다시 그려질 시간을 주며 몇 번 다시 읽고, 끝내 안 맞으면 X(검증 쪽 경합을 거르는 것이지 비교 기준을 낮춘 것이 아니다).
-	local cellCount, expected = -1, -2
-	for _ = 1, 5 do
-		local ok, snapshot = pcall(function()
-			return ReplicatedStorage.GemFetch:InvokeServer()
-		end)
-		cellCount = 0
-		for _, child in ipairs(gemBody:GetDescendants()) do
-			if child:IsA("TextButton") and child.Name:match("^GemCell%d+$") then
-				cellCount += 1
-			end
+	-- 보유 보석 칸 수 = 서버 스냅샷의 gemInventory 수
+	local ok, snapshot = pcall(function()
+		return ReplicatedStorage.GemFetch:InvokeServer()
+	end)
+	local cellCount = 0
+	for _, child in ipairs(gemBody:GetDescendants()) do
+		if child:IsA("TextButton") and child.Name:match("^GemCell%d+$") then
+			cellCount += 1
 		end
-		expected = ok and snapshot and #snapshot.gemInventory or -1
-		if cellCount == expected then
-			break
-		end
-		task.wait(0.6)
 	end
+	local expected = ok and snapshot and #snapshot.gemInventory or -1
 	check(("보유 보석 칸 %d = 서버 스냅샷 %d"):format(cellCount, expected), cellCount == expected)
 
 	-- 닫으면 드래그 유령 0
