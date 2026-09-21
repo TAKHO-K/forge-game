@@ -52,6 +52,7 @@ local state = {
 }
 local built = nil -- { panel, scroll, status, mobile, rows = { [행 이름] = 버튼 refs } }
 local pendingSince = nil
+local debugSkipRangeClose = false -- Studio 자체 점검 전용: 검증 캐릭터는 보석상인 반경 밖이라 창이 열리자마자 닫히지 않게 끈다
 local statusText, statusColorName = "", "textSecondary"
 
 -- 결과 이유 코드 → 한 줄(서버 GemServer의 workshopResult 주석과 같은 코드).
@@ -355,6 +356,9 @@ function GemWorkshop.debugApply(snapshot)
 	state.equipment = snapshot.equipment or state.equipment
 	refresh()
 end
+function GemWorkshop.debugSkipRangeClose(skip)
+	debugSkipRangeClose = skip == true
+end
 function GemWorkshop.debugBuilt()
 	return built
 end
@@ -365,7 +369,7 @@ end
 
 -- 걸어서 반경을 벗어나면 닫는다(서버가 요청마다 다시 재므로 표시 편의일 뿐이다).
 local function step()
-	if not built or not UIManager.isOpen(GemWorkshop.id) then
+	if debugSkipRangeClose or not built or not UIManager.isOpen(GemWorkshop.id) then
 		return
 	end
 	local character = player.Character

@@ -62,6 +62,7 @@ local function run()
 	print("===S20e(UI) 검증 시작(보석 공방 창 · 위치 안내 마커 · 진입점 토스트 · 서버 반경 거절 · station 상호 닫힘 · 폰 치수)===")
 
 	local originalGold = player:GetAttribute("Gold")
+	GemWorkshop.debugSkipRangeClose(true) -- 이 캐릭터는 반경 밖 - 걸어서 벗어나면 닫히는 규칙은 아래에서 따로 잰다
 	local function closeAll()
 		UIManager.close("gemWorkshop", true)
 		UIManager.close("stageSelect", true)
@@ -194,7 +195,7 @@ local function run()
 				table.insert(small, ("%s %d"):format(name, button.root.AbsoluteSize.Y))
 			end
 		end
-		check(("폰 배치: 모든 버튼 높이 44 이상(작은 것 %d개 %s · 행 %d개)"):format(#small, table.concat(small, ", "), countRows(built, "Ticket_") + countRows(built, "Target_")), #small == 0 and countRows(built, "Target_") == 4)
+		check(("폰 배치: 모든 버튼 높이 44 이상(작은 것 %d개 %s · 행 %d개 - 변환권 2 + 대상 5)"):format(#small, table.concat(small, ", "), countRows(built, "Ticket_") + countRows(built, "Target_")), #small == 0 and countRows(built, "Target_") == 5)
 		local lowPhone = TextAudit.report(built.panel.frame).low
 		check(("폰 배치: 글씨 실효 12 이상(12 미만 %d개) · 창이 화면 안 %s"):format(#lowPhone, tostring(insideScreen(built.panel.frame, built.panel.screenGui))), #lowPhone == 0 and insideScreen(built.panel.frame, built.panel.screenGui))
 		UIManager.close("gemWorkshop", true)
@@ -202,7 +203,17 @@ local function run()
 		task.wait(0.3)
 	end
 
+	-- ⑦ 걸어서 반경을 벗어나면 저절로 닫힌다(표시 편의 - 판정은 서버): 이 캐릭터는 반경 밖이라 열자마자 닫혀야 한다
+	do
+		GemWorkshop.debugSkipRangeClose(false)
+		GemWorkshop.open()
+		task.wait(0.8)
+		check(("반경 밖에서 열면 저절로 닫힌다(열림 %s)"):format(tostring(UIManager.isOpen("gemWorkshop"))), not UIManager.isOpen("gemWorkshop"))
+		GemWorkshop.debugSkipRangeClose(true)
+	end
+
 	-- 정리
+	GemWorkshop.debugSkipRangeClose(false)
 	player:SetAttribute("Gold", originalGold)
 	GemWorkshop.debugReset()
 	closeAll()
@@ -213,6 +224,7 @@ task.delay(START_DELAY, function()
 	local ok, err = pcall(run)
 	if not ok then
 		warn("[S20e][UI] 점검 에러: " .. tostring(err))
+		GemWorkshop.debugSkipRangeClose(false)
 		UIManager.close("gemWorkshop", true)
 		player:SetAttribute("ForceTouchLayout", nil)
 	end

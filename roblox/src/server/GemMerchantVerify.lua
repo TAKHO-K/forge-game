@@ -188,6 +188,7 @@ function GemMerchantVerify.runLive(player, env)
 	local okB, whyB = GemWorkshop.reroll(player, "bag", bagIndexAncient, alwaysNear)
 	t.check(("착용 갑옷 · 가방 장갑(고대) 리롤 -> 성공 · 고대 변환권 2 → %d"):format(tickets.ancient), okA == true and whyA == nil and okB == true and whyB == nil and tickets.ancient == 0)
 	tickets.ancient = 1
+	classState.equipment.gloves = nil -- 개발 계정은 장갑을 끼고 있을 수 있다 - "빈 착용 부위" 시험이 실제 상태에 기대지 않게 비운다(env.restore가 원래대로 되돌린다)
 	local okC, whyC = GemWorkshop.reroll(player, "bag", bagIndexEpic, alwaysNear)
 	local okD, whyD = GemWorkshop.reroll(player, "gem", 2, alwaysNear)
 	local okE, whyE = GemWorkshop.reroll(player, "equipped", "gloves", alwaysNear)
