@@ -70,7 +70,7 @@ local config = {
 		-- S20(2026-09-21) 사전 작업: I → B 단축키(PanelRegistry · MenuBar 점검 · TutorialData) · 파티 복귀 팝업 문구 + 카운트다운(PartyCrossServer · PartyRequests · RequestBanner · PartyAway) · 요청 배너 화면 안전 영역 · Theme.textSizeFor · buttonHeightFor.
 		--   이번 세션 블록 S20(UI)(RequestBannerCheck) + 동반 실행(COMMON.md §3): 고친 모듈을 쓰는 옛 블록 = S19b(가)(나)(UI)(PartyState · PartyCrossServer · 파티 목록) · S18(UI)(RequestBanner를 직접 쓰는 PartyHudCheck) · S17(UI) · S16(UI)(MenuBar 표 점검 - 단축키 B) ·
 		--   S15(UI) · S12b(UI) · S12(UI)(Theme 글씨 · 버튼 높이를 쓰는 HUD · 패널 점검) · S10(가)(ScreenMap · 토스트). S04(나)는 계속 제외.
-		current = { "S20(UI)", "S19b(가)", "S19b(나)", "S19b(UI)", "S18(UI)", "S17(UI)", "S16(UI)", "S15(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
+		current = { "S20(UI)", "S12b(나)", "S19b(가)", "S19b(나)", "S19b(UI)", "S18(UI)", "S17(UI)", "S16(UI)", "S15(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
 	},
 }
 
