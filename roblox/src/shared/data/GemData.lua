@@ -103,4 +103,8 @@ return {
 	-- (GemServer.server.lua)와 클라이언트(EnhanceUI.client.lua 표시용) 둘 다 이 값 하나만
 	-- 본다 - 가격 계산 자체는 여전히 서버가 매번 다시 한다(클라이언트 값을 믿지 않는다).
 	rerollTicketGoldMultiplier = 40,
+
+	-- S20c: 보석 장착 입력의 시간 값(밸런스가 아니라 입력 느낌 - 그래도 코드에 박지 않고 여기 둔다). 서버 규칙과 무관하다.
+	--   doubleClickSeconds = PC 더블클릭 판정 · returnTweenSeconds = 거절 시 원래 칸으로 돌아가는 트윈 · resultTimeoutSeconds = 서버 결과(GemEquipResult)를 기다리는 한도(넘으면 입력 잠금을 푼다).
+	ui = { doubleClickSeconds = 0.35, returnTweenSeconds = 0.2, resultTimeoutSeconds = 3 },
 }

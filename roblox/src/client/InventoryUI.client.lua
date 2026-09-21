@@ -62,6 +62,12 @@ local gemTab = GemTab.create({
 	sheetInset = function()
 		return S.sheetInset
 	end,
+	isPhone = function()
+		return S.mode == "phone"
+	end,
+	selectTab = function(name)
+		R.selectTab(name)
+	end,
 	getSelection = function()
 		return S.selectedKind, S.selectedValue
 	end,
@@ -78,6 +84,9 @@ R.gemFrame = gemTab.frame
 S.gemState = function()
 	return gemTab.state()
 end
+S.gemCanAutoEquip = gemTab.canAutoEquip -- 상세 시트의 [장착] 버튼(S20c) - 보석 탭의 GemActions 통로를 그대로 쓴다
+S.gemAutoEquip = gemTab.autoEquip
+R.gemTab = gemTab -- 점검(GemFlowCheck)이 debugApply · debugPaint를 부른다
 R.applyLayout() -- 모든 탭이 만들어진 뒤 첫 배치
 
 -- S12b G: 글씨를 4단(20 · 16 · 14 · 12)으로 키우면서 넘칠 수 있는 고정 폭 글은 줄임표 + 가리키거나 누르면 전체 글(FullTextTip). 나중에 지어지는 행에도 자동으로 붙는다.

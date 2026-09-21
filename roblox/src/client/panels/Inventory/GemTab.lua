@@ -1,22 +1,28 @@
--- 장비창 보석 탭(23-4 · 26-3 · S20b: InventoryUI.client.lua의 setupGemTab을 그대로 잘라 옮겼다 - 동작 변경 0).
--- GemTab.create(deps) -> { update, cancelDrag, state, frame }
+-- 장비창 보석 탭(23-4 · 26-3 · S20b: InventoryUI.client.lua의 setupGemTab을 그대로 잘라 옮겼다 · S20c: 홈 한 줄 · 장착 입력 재구성).
+-- GemTab.create(deps) -> { update, cancelDrag, state, frame, canAutoEquip, autoEquip }
 --   deps(InventoryUI가 주는 공용 접점 - 전부 명시적이다):
 --     content · screenGui             Instance: 장비창 캔버스(보석 본문의 부모) · 드래그 유령 아이콘이 붙는 ScreenGui
 --     registerLayout(fn)              배치 함수 fn(L)을 등록한다(Shell.applyLayout이 화면 크기가 바뀔 때마다 부른다 - L은 Layout.compute의 결과)
---     isOpen() -> boolean             창이 열려 있는가 · sheetInset() -> number  폰 상세 시트가 올라와 있으면 그 높이(본문이 그만큼 짧아진다)
---     getSelection() -> kind, value   공용 선택 상태 읽기 · select(kind, value) 쓰기(kind = "gemSlot" | "gemBag")
---     refreshDetail() · refreshStats()  상세바 · 총 스탯 갱신(보석은 옵션 보너스에 합산된다)
+--     isOpen() -> boolean             창이 열려 있는가 · sheetInset() -> number  폰 상세 시트가 올라와 있으면 그 높이(본문이 그만큼 짧아진다) · isPhone() -> boolean  폰 배치인가
+--     getSelection() -> kind, value   공용 선택 상태 읽기 · select(kind, value) 쓰기(kind = "gemSlot" | "gemBag" | nil)
+--     refreshDetail() · refreshStats()  상세바 · 총 스탯 갱신(보석은 옵션 보너스에 합산된다) · selectTab(name)  탭 전환(보석 획득 토스트의 [보석 탭 열기])
 --     weaponGradeId() · applyGradeVisual(cell, stroke, glow, gradeId) · makeSectionLabel(parent, text, y)  InventoryUI가 함께 쓰는 헬퍼
---   반환: update() = 보석 탭 다시 그리기(창 열 때 · 서버 동기화 때) · cancelDrag() = 드래그 취소(창 닫을 때) · state() = 현재 보석 상태 스냅샷(GemSync) · frame = 보석 본문.
--- S20b 재구성: 본문(GemBody)은 세로 스크롤 ScrollingFrame이다. PC = 무기 칸(왼쪽 220) + 정보 칸 2단 · 폰 = 무기 칸 위 · 정보 칸 아래 1단(홈 행 높이 76 · 리롤 / 변환권 버튼 높이 44).
--- 드래그 중의 전역 입력(UserInputService InputChanged · InputEnded)은 이 모듈 안에서 연결한다. 취소 경로: 창 닫기(InventoryUI onClose → cancelDrag) · 마우스 놓기(endGemDrag). (탭 전환 · 리스폰에는 취소가 없다 - 옛 코드와 같다, 아래 PRD 기록 참고)
+--   반환: update() = 보석 탭 다시 그리기(창 열 때 · 서버 동기화 때) · cancelDrag() = 창 닫을 때(드래그 취소 · 홈 먼저 취소 · NEW 확인) · state() = 현재 보석 상태 스냅샷(GemSync) · frame = 보석 본문
+--          canAutoEquip(index) · autoEquip(index) = 상세 시트의 [장착] 버튼이 부른다(입력 통로는 하나 - GemActions).
+-- S20b 재구성: 본문(GemBody)은 세로 스크롤 ScrollingFrame이다. PC = 무기 칸(왼쪽 220) + 정보 칸 2단 · 폰 = 홈 한 줄 위 · 정보 칸 아래 1단(홈 행 높이 76 · 리롤 / 변환권 버튼 높이 44).
+-- S20c 입력(서버 규칙은 그대로 - 장착은 항상 "교체"이고 기존 보석은 보석칸으로 돌아온다 · 해제는 서버에 없다). 모든 입력은 GemActions.equip 한 곳으로 간다:
+--   PC   보석 더블클릭(0.35초) · 우클릭 = 자동 장착(끼울 수 있는 열린 홈 중 상한이 가장 낮은 홈) / 홈 더블클릭 · 우클릭 = 그 홈을 "홈 먼저" 대상으로 고르기 → 밝게 보이는 보석을 클릭하면 교체(Esc · 빈 곳 클릭 = 취소) / 드래그(끼울 수 있는 홈은 빛나고 · 못 끼우는 홈은 어둡게 + ×).
+--   폰   더블탭 없음. 탭 = 선택 토글. 보석을 탭하면 [장착](상세 시트) + 가능한 홈 강조 → 강조된 홈을 탭 · 홈을 탭하면 그 홈이 대상 → 강조된 보석을 탭. 다시 탭하거나 빈 곳을 탭하면 선택 해제.
+--   거절(클라 미리 판정 · 서버 결과 모두) = 유령이 원래 칸으로 0.2초 복귀 + 이유 토스트. 강화대 12stud 안에서만 서버가 받으므로(GemServer) 탭 위에 상태를 보인다.
+-- 드래그 중의 전역 입력(UserInputService InputChanged · InputEnded)은 이 모듈 안에서 연결한다. 취소 경로: 창 닫기(InventoryUI onClose → cancelDrag) · 마우스 놓기(endGemDrag). (탭 전환 · 리스폰에는 취소가 없다 - 옛 코드와 같다, PRD 20.108 참고)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
-local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
@@ -24,10 +30,14 @@ local Gem = require(ReplicatedStorage.Shared.Gem)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
-local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
-local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
+local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast)
+local EnhanceController = require(script.Parent.Parent.Enhance.Controller)
+local GemActions = require(script.Parent.GemActions)
+local GemSlots = require(script.Parent.GemSlots)
+local GemSlotRows = require(script.Parent.GemSlotRows)
+local GemHeader = require(script.Parent.GemHeader)
+local GemBag = require(script.Parent.GemBag)
 
-local gemEquipRequest = ReplicatedStorage:WaitForChild("GemEquipRequest")
 local gemRerollRequest = ReplicatedStorage:WaitForChild("GemRerollRequest")
 local buyRerollTicketRequest = ReplicatedStorage:WaitForChild("BuyRerollTicketRequest")
 local gemSync = ReplicatedStorage:WaitForChild("GemSync")
@@ -37,10 +47,16 @@ local player = Players.LocalPlayer
 
 local GemTab = {}
 
+local TOP = 42 -- 본문 맨 위 두 줄(강화대 상태 · 안내)이 차지하는 높이. 그 아래에 무기 칸 · 정보 칸이 놓인다.
+local CHIP_SIZE = { pc = 34, phone = 48 } -- 홈 칩 크기(폰은 터치 44 이상)
+local CHIP_GAP = { pc = 5, phone = 8 }
+local WEAPON_ICON_SIZE = 176 -- 무기 그림(PC 전용 장식 - 폰에서는 접는다)
+
 function GemTab.create(deps)
 local content, screenGui = deps.content, deps.screenGui
 local makeSectionLabel, applyGradeVisual = deps.makeSectionLabel, deps.applyGradeVisual
 local weaponGradeId, refreshDetail, refreshStats = deps.weaponGradeId, deps.refreshDetail, deps.refreshStats
+local uiConfig = GemData.ui
 
 -- 26-3: Detail의 리롤 버튼(장비 3부위 확장)이 보석 탭 상태(변환권 보유량)를 봐야 한다 - 서버 GemSync 스냅샷이 오면 통째로 교체한다.
 local currentGemState = {
@@ -49,6 +65,8 @@ local currentGemState = {
 	gemInventory = {},
 	rerollTickets = { ancient = 0, primordial = 0 },
 }
+local initialized = false -- 첫 스냅샷을 받았는가(그 전의 보석은 "새 보석"이 아니다)
+local seenCount = 0 -- 이 수 이하의 보석칸 index는 이미 본 보석이다(그 위가 NEW - 분해로 새로 들어온 보석은 맨 끝에 붙는다)
 local updateGemTab, cancelGemDrag
 local Option = require(ReplicatedStorage.Shared.Option)
 
@@ -61,12 +79,10 @@ gemBody.CanvasSize = UDim2.new(0, 0, 0, 0)
 gemBody.Visible = false
 gemBody.Parent = content
 
--- (currentGemState는 이 모듈이 갖는다 - Detail의 리롤 버튼도 같은 변환권 보유량을 봐야 해서 GemTab.state()로 InventoryUI가 읽는다.)
+-- ── 맨 위 두 줄: 강화대 상태(가까우면 초록 · 멀면 회색) + 상황별 안내 ──
+local header = GemHeader.createStatus(gemBody)
 
--- ── 왼쪽: 확대한 무기 실루엣 + 홈 5개(드롭 타깃) ──
-local WEAPON_ICON_SIZE = 176 -- gear 슬롯 무기 아이콘(26px)의 약 6.8배 - 지시 "자신 직업
--- 무기가 좀 더 크게"를 이 탭에서 가장 큰 그림으로 구현한다.
-
+-- ── 왼쪽(폰은 위): 홈 한 줄 + 확대한 무기 그림(PC 장식) ──
 local weaponPane = Instance.new("Frame")
 weaponPane.Name = "WeaponPane"
 weaponPane.Size = UDim2.new(0, 220, 1, 0)
@@ -82,65 +98,15 @@ weaponPaneLine.BackgroundTransparency = UIColors.rimTransparency
 weaponPaneLine.BorderSizePixel = 0
 weaponPaneLine.Parent = weaponPane
 
-makeSectionLabel(weaponPane, "내 무기 - 홈 5칸", 8)
+local weaponLabel = makeSectionLabel(weaponPane, "내 무기 - 홈 5칸", 8)
 
-local weaponIconHolder = Instance.new("Frame")
-weaponIconHolder.AnchorPoint = Vector2.new(0.5, 0)
-weaponIconHolder.Position = UDim2.new(0.5, 0, 0, 40)
-weaponIconHolder.Size = UDim2.new(0, WEAPON_ICON_SIZE, 0, WEAPON_ICON_SIZE)
-weaponIconHolder.BackgroundTransparency = 1
-weaponIconHolder.Parent = weaponPane
+local slots = GemSlots.create(weaponPane) -- 홈 5칸(Socket1~5) - 드롭 · 탭 대상
+slots.row.Position = UDim2.new(0, 14, 0, 26)
 
--- 직업색 발광(지시 "자신 직업 무기") - 스킬 슬롯이 이미 쓰는 classAccent를 그대로
--- 재사용한다(새 색을 만들지 않는다).
-local weaponGlow = Instance.new("Frame")
-weaponGlow.AnchorPoint = Vector2.new(0.5, 0.5)
-weaponGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
-weaponGlow.Size = UDim2.new(0, WEAPON_ICON_SIZE * 1.2, 0, WEAPON_ICON_SIZE * 1.2)
-weaponGlow.BackgroundTransparency = 0.86
-weaponGlow.BackgroundColor3 = UIColors.textTertiary
-weaponGlow.ZIndex = 0
-weaponGlow.Parent = weaponIconHolder
-local weaponGlowCorner = Instance.new("UICorner")
-weaponGlowCorner.CornerRadius = UDim.new(1, 0)
-weaponGlowCorner.Parent = weaponGlow
+local weaponArt = GemHeader.createWeaponArt(weaponPane, WEAPON_ICON_SIZE)
+local weaponIconHolder = weaponArt.holder
 
-local weaponIconArt = Instance.new("Frame")
-weaponIconArt.BackgroundTransparency = 1
-weaponIconArt.Size = UDim2.new(1, 0, 1, 0)
-weaponIconArt.ZIndex = 2
-weaponIconArt.Parent = weaponIconHolder
-
--- 홈 5개 - "덜 띄는 자리(1)"는 자루 쪽, "가장 두드러지는 자리(5)"는 칼끝(무기의 핵심
--- 이펙트 자리, 지시 그대로). ItemIcons.weapon이 칼날을 y=0(끝)~0.72*size(자루 시작)로
--- 그린다(ItemIcons.lua 주석) - 그 축을 그대로 따라간다. 등급 상한(Gem.gradeCapForSlot)과는
--- 이제 별개 축이다 - 1번 홈만 태초 상한인 것과 무관하게 5번이 여전히 가장 크고 눈에 띈다.
-local SOCKET_Y_RATIO = { 0.92, 0.72, 0.50, 0.28, 0.06 }
-local SOCKET_SIZE = { 12, 15, 19, 23, 28 }
-
-local socketButtons = {}
-for slot = 1, Gem.slotCount do
-	local dot = Instance.new("TextButton")
-	dot.Name = "Socket" .. slot
-	dot.AnchorPoint = Vector2.new(0.5, 0.5)
-	dot.Position = UDim2.new(0.5, 0, SOCKET_Y_RATIO[slot], 0)
-	dot.Size = UDim2.new(0, SOCKET_SIZE[slot], 0, SOCKET_SIZE[slot])
-	dot.Text = ""
-	dot.AutoButtonColor = false
-	dot.ZIndex = 5
-	dot.BackgroundColor3 = UIColors.slot
-	dot.BackgroundTransparency = UIColors.slotTransparency
-	dot.Parent = weaponIconHolder
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(1, 0)
-	corner.Parent = dot
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 1.5 + slot * 0.4 -- 5번이 가장 두꺼운 테두리 - "가장 두드러지는 자리".
-	stroke.Parent = dot
-	socketButtons[slot] = { button = dot, stroke = stroke }
-end
-
--- ── 오른쪽: 슬롯 상세(리롤/변환권) + 보유 보석 목록(드래그 시작점) ──
+-- ── 오른쪽: 보유 보석 목록 + 홈 상세(리롤/변환권) ──
 local infoPane = Instance.new("Frame")
 infoPane.Name = "InfoPane"
 infoPane.Position = UDim2.new(0, 220, 0, 0)
@@ -150,147 +116,44 @@ infoPane.Parent = gemBody
 
 local slotLabel = makeSectionLabel(infoPane, "홈 상세 (등급 상한 이하는 전부 장착 가능)", 8)
 
-local slotListScroll = Instance.new("ScrollingFrame")
-slotListScroll.Position = UDim2.new(0, 14, 0, 26)
-slotListScroll.Size = UDim2.new(1, -28, 0, 216)
-slotListScroll.BackgroundTransparency = 1
-slotListScroll.BorderSizePixel = 0
-slotListScroll.ScrollBarThickness = 4
-slotListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-slotListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-slotListScroll.Parent = infoPane
-
-local slotListLayout = Instance.new("UIListLayout")
-slotListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-slotListLayout.Padding = UDim.new(0, 4)
-slotListLayout.Parent = slotListScroll
-
-local slotRows = {}
-for slot = 1, Gem.slotCount do
-	-- 26-3(PRD 20.67 [12] "클릭하면 하단 Detail이 그 보석을 게이지와 함께 보여준다") - Frame이
-	-- 아니라 TextButton으로 만들어 행 전체를 클릭 대상으로 삼는다. 안쪽 리롤·변환권 버튼은
-	-- 그대로 자기 Activated를 먼저 받는다(자식이 부모보다 우선 - 로블록스 기본 동작).
-	local row = Instance.new("TextButton")
-	row.Name = "SlotRow" .. slot
-	row.Text = ""
-	row.AutoButtonColor = false
-	row.LayoutOrder = slot
-	row.Size = UDim2.new(1, 0, 0, 42)
-	row.BackgroundColor3 = UIColors.slot
-	row.BackgroundTransparency = UIColors.slotTransparency
-	row.Parent = slotListScroll
-	local rowCorner = Instance.new("UICorner")
-	rowCorner.CornerRadius = UDim.new(0, 6)
-	rowCorner.Parent = row
-	local rowStroke = Instance.new("UIStroke")
-	rowStroke.Color = UIColors.rim
-	rowStroke.Transparency = UIColors.rimTransparency
-	rowStroke.Parent = row
-
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.Position = UDim2.new(0, 8, 0, 3)
-	label.Size = UDim2.new(1, -16, 0, 18)
-	label.Font = Enum.Font.Gotham
-	label.TextSize = Theme.textSize("body") -- 강화대 옛 보석 탭(13px)보다 키웠다(지시 "글씨도 작고").
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.TextColor3 = UIColors.textPrimary
-	label.TextTruncate = Enum.TextTruncate.AtEnd
-	label.Text = ""
-	label.Parent = row
-
-	local rerollButton = Instance.new("TextButton")
-	rerollButton.Size = UDim2.new(0, 64, 0, 17)
-	rerollButton.Position = UDim2.new(0, 8, 1, -20)
-	rerollButton.Font = Enum.Font.GothamBold
-	rerollButton.TextSize = Theme.textSize("caption")
-	rerollButton.Text = "리롤"
-	rerollButton.BackgroundColor3 = UIColors.panel
-	rerollButton.BackgroundTransparency = UIColors.panelTransparency
-	rerollButton.TextColor3 = UIColors.textPrimary
-	rerollButton.Visible = false
-	rerollButton.Parent = row
-	local rerollCorner = Instance.new("UICorner")
-	rerollCorner.CornerRadius = UDim.new(0, 5)
-	rerollCorner.Parent = rerollButton
-
-	local buyButton = Instance.new("TextButton")
-	buyButton.Size = UDim2.new(0, 160, 0, 17)
-	buyButton.Position = UDim2.new(0, 78, 1, -20)
-	buyButton.Font = Enum.Font.GothamBold
-	buyButton.TextSize = Theme.textSize("caption")
-	buyButton.Text = "변환권 구매"
-	buyButton.BackgroundColor3 = UIColors.panel
-	buyButton.BackgroundTransparency = UIColors.panelTransparency
-	buyButton.TextColor3 = UIColors.textPrimary
-	buyButton.Visible = false
-	buyButton.Parent = row
-	local buyCorner = Instance.new("UICorner")
-	buyCorner.CornerRadius = UDim.new(0, 5)
-	buyCorner.Parent = buyButton
-
-	slotRows[slot] = { row = row, label = label, rerollButton = rerollButton, buyButton = buyButton }
-
-	row.Activated:Connect(function()
-		if Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot) and Gem.isFilled(currentGemState.gems, slot) then
-			deps.select("gemSlot", slot)
-			refreshDetail()
-		end
-	end)
-	rerollButton.Activated:Connect(function()
+local slotList = GemSlotRows.create(infoPane, {
+	onReroll = function(slot)
 		gemRerollRequest:FireServer("gem", slot) -- 26-3: (kind, key) 프로토콜(GemServer.server.lua 참고)
-	end)
-	buyButton.Activated:Connect(function()
+	end,
+	onBuy = function(slot)
 		local gem = currentGemState.gems[slot]
 		if type(gem) == "table" and gem.grade then
 			buyRerollTicketRequest:FireServer(gem.grade)
 		end
-	end)
+	end,
+})
+local slotListScroll, slotRows = slotList.scroll, slotList.rows
+
+local invLabel = makeSectionLabel(infoPane, "보유 보석", 250)
+
+local bag = GemBag.create(infoPane, { applyGradeVisual = applyGradeVisual })
+local gemInvScroll = bag.scroll
+
+-- ═══ 상태 읽기 · 좌표 도우미 ═══
+
+-- 폰 배치이거나 마지막 입력이 터치면 "탭 방식"(더블탭 · 드래그 없음, 탭 = 선택 토글). 판정은 화면 크기(폰 배치)가 기본이다 - 터치 없는 Studio 창에서도 같은 결과.
+local function tapMode()
+	return deps.isPhone() or UserInputService:GetLastInputType() == Enum.UserInputType.Touch
 end
 
-local invLabel = makeSectionLabel(infoPane, "보유 보석 (끌어서 왼쪽 홈에 놓기)", 250)
-
-local gemInvScroll = Instance.new("ScrollingFrame")
-gemInvScroll.Position = UDim2.new(0, 14, 0, 270)
-gemInvScroll.Size = UDim2.new(1, -28, 1, -280)
-gemInvScroll.BackgroundTransparency = 1
-gemInvScroll.BorderSizePixel = 0
-gemInvScroll.ScrollBarThickness = 4
-gemInvScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-gemInvScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-gemInvScroll.Parent = infoPane
-
-local gemInvLayout = Instance.new("UIGridLayout")
-gemInvLayout.CellSize = UDim2.new(0, 64, 0, 64)
-gemInvLayout.CellPadding = UDim2.new(0, 6, 0, 6)
-gemInvLayout.SortOrder = Enum.SortOrder.LayoutOrder
-gemInvLayout.Parent = gemInvScroll
-
--- ── 드래그 앤 드롭(지시 "드래그로 보석 장착") ──
--- Roblox UI는 표준 드래그 API가 없다 - 마우스 다운(cell.InputBegan)에서 화면 최상위
--- (screenGui, win의 ClipsDescendants 밖) 프록시를 만들고, 전역 UserInputService로 위치를
--- 따라가다가(win 밖으로 나가도 계속 보여야 한다) 마우스 업에서 좌표가 홈 위에 있으면
--- 장착 요청을 보낸다 - 실제 서버 검증(Gem.canSocket)은 GemServer가 다시 한다(클라이언트
--- 판정은 표시·프리뷰 전용, 아래 하이라이트도 마찬가지).
-local dragProxy, dragInvIndex, dragGemGrade = nil, nil, nil
-
-local function clearSocketHighlight()
-	for _, entry in ipairs(socketButtons) do
-		entry.stroke.Color = UIColors.rim
-		entry.stroke.Transparency = UIColors.rimTransparency
+-- 강화대 근처인가(강화 패널과 같은 값 - EnhanceController.isNear). Studio 전용 훅 DebugGemNear(true/false)로 자동 검증이 근접 여부를 강제한다.
+local function isNear()
+	if RunService:IsStudio() then
+		local forced = player:GetAttribute("DebugGemNear")
+		if forced ~= nil then
+			return forced
+		end
 	end
+	return EnhanceController.isNear()
 end
 
-local function updateSocketHighlight()
-	if not dragGemGrade then
-		return
-	end
-	for slot, entry in ipairs(socketButtons) do
-		local unlocked = Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot)
-		local ok = unlocked and Gem.canSocket(dragGemGrade, slot)
-		entry.stroke.Color = ok and UIColors.success or UIColors.danger
-		entry.stroke.Transparency = unlocked and 0 or 0.6
-	end
+local function centerOf(frame)
+	return frame.AbsolutePosition + frame.AbsoluteSize / 2
 end
 
 local function screenPointInFrame(frame, x, y)
@@ -313,64 +176,200 @@ local function screenPointInVisible(frame, x, y)
 	return true
 end
 
+-- 홈 먼저(armed) 상태: 선택이 그 홈(gemSlot)일 때만 유효하다(다른 것을 선택하면 저절로 풀린다).
+local armedFlag = nil
+local function armedSlot()
+	local kind, value = deps.getSelection()
+	if armedFlag and kind == "gemSlot" and value == armedFlag then
+		return armedFlag
+	end
+	return nil
+end
+
+local function selectedBagIndex()
+	local kind, value = deps.getSelection()
+	if kind == "gemBag" and currentGemState.gemInventory[value] then
+		return value
+	end
+	return nil
+end
+
+-- ═══ 그리기: 홈 칩 · 보석칸 표시 · 상태 · 안내 ═══
+
+local dragIndex, dragGrade, dragProxy, dragOrigin = nil, nil, nil, nil
+
+local function slotMark(slot)
+	if armedSlot() then
+		return nil -- 홈 먼저 모드에서는 보석 쪽이 강조된다
+	end
+	local gradeId = dragGrade
+	if not gradeId then
+		local index = selectedBagIndex()
+		gradeId = index and currentGemState.gemInventory[index].grade
+	end
+	if not gradeId then
+		return nil
+	end
+	return Gem.socketBlockReason(currentGemState.slotUnlocked, slot, gradeId) and "blocked" or "ok"
+end
+
+local function paintSlots()
+	local kind, value = deps.getSelection()
+	for slot = 1, Gem.slotCount do
+		local gem = currentGemState.gems[slot]
+		local filled = type(gem) == "table"
+		slots.paint(slot, {
+			unlocked = Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot),
+			filled = filled,
+			gemGrade = filled and gem.grade or nil,
+			mark = slotMark(slot),
+			selected = kind == "gemSlot" and value == slot,
+		})
+	end
+end
+
+local function paintCells()
+	local armed = armedSlot()
+	local selected = selectedBagIndex()
+	bag.paint(function(index)
+		local gem = currentGemState.gemInventory[index]
+		local mark
+		if armed and gem then
+			mark = Gem.socketBlockReason(currentGemState.slotUnlocked, armed, gem.grade) and "blocked" or "ok"
+		end
+		return mark, selected == index, index > seenCount
+	end)
+end
+
+local function paintStatus()
+	local near = isNear()
+	header.paint(near)
+end
+
+-- 안내 한 줄(상황별). "끼운 보석을 선택하면 리롤 · 변환권과 함께 교체 방법을 알려 준다"(사용자 결정).
+local function hintText()
+	local kind = deps.getSelection()
+	local phone = tapMode()
+	if armedSlot() then
+		return phone and "교체할 보석을 탭하세요 - 밝은 보석만 가능 · 홈을 다시 탭하거나 빈 곳을 탭하면 취소" or "교체할 보석을 클릭하세요 - 밝은 보석만 가능 · Esc · 빈 곳 클릭 = 취소"
+	elseif kind == "gemBag" then
+		return phone and "[장착] = 자동 장착 · 강조된 홈을 탭하면 그 홈에 장착" or "더블클릭 · 우클릭 · [장착] = 자동 장착 · 끌어서 원하는 홈에 놓기"
+	elseif kind == "gemSlot" then
+		return "다른 보석으로 교체하려면 보석칸에서 선택"
+	end
+	return phone and "보석을 탭 → [장착] 또는 홈 탭 · 홈을 탭 → 보석 탭" or "보석 더블클릭 · 우클릭 = 자동 장착 · 홈 더블클릭 · 우클릭 = 홈 골라 교체"
+end
+
+local function paintHint()
+	header.setHint(hintText())
+end
+
+local function paintAll()
+	paintSlots()
+	paintCells()
+	paintStatus()
+	paintHint()
+end
+
+-- ═══ 장착 통로(GemActions) ═══
+
+local actions = GemActions.create({
+	screenGui = screenGui,
+	getState = function()
+		return currentGemState
+	end,
+	isNear = isNear,
+	slotCenter = function(slot)
+		return centerOf(slots.chips[slot].button)
+	end,
+	onEquipped = function(slot)
+		-- 성공: 방금 끼운 보석을 홈 상세로 이어서 보여 준다(선택이 보석칸 → 홈으로 옮겨 가며 깜빡이지 않는다).
+		armedFlag = nil
+		seenCount = #currentGemState.gemInventory
+		deps.select("gemSlot", slot)
+		refreshDetail()
+		paintAll()
+	end,
+	onPending = function()
+		refreshDetail() -- [장착] 버튼이 요청 중에는 잠긴다
+		paintHint()
+	end,
+})
+
+local function equipInto(slot, index)
+	return actions.equip(slot, index, { originPos = bag.center(index), fromPos = centerOf(slots.chips[slot].button) })
+end
+
+local function clearArm()
+	if armedFlag then
+		armedFlag = nil
+		paintAll()
+	end
+end
+
+local function armSlot(slot)
+	if not Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot) then
+		Toast.push("TC", { text = GemActions.reasonText("slot_locked", nil, slot), colorName = "danger", grade = "notice", seconds = 2.5, groupKey = "gemEquipReject" })
+		return
+	end
+	if armedFlag == slot and armedSlot() then
+		armedFlag = nil -- 같은 홈을 다시 고르면 취소
+		deps.select(nil, nil)
+	else
+		armedFlag = slot
+		deps.select("gemSlot", slot)
+	end
+	refreshDetail()
+	paintAll()
+end
+
+-- ═══ 드래그 앤 드롭(지시 "드래그로 보석 장착") ═══
+-- Roblox UI는 표준 드래그 API가 없다 - 마우스 다운(cell.InputBegan)에서 화면 최상위(screenGui, win의 ClipsDescendants 밖) 프록시를 만들고, 전역 UserInputService로 위치를
+-- 따라가다가(win 밖으로 나가도 계속 보여야 한다) 마우스 업에서 좌표가 홈 위에 있으면 GemActions.equip을 부른다 - 판정은 서버(GemEquipRequest)가 다시 한다(클라이언트 판정은 표시·프리뷰 전용).
+
+local function slotAt(x, y)
+	for slot = 1, Gem.slotCount do
+		if screenPointInVisible(slots.chips[slot].button, x, y) or screenPointInVisible(slotRows[slot].row, x, y) then
+			return slot
+		end
+	end
+	return nil
+end
+
 cancelGemDrag = function()
 	if dragProxy then
 		dragProxy:Destroy()
 	end
-	dragProxy, dragInvIndex, dragGemGrade = nil, nil, nil
-	clearSocketHighlight()
+	dragProxy, dragIndex, dragGrade, dragOrigin = nil, nil, nil, nil
+	paintSlots()
 end
 
 local function endGemDrag(x, y)
 	if not dragProxy then
 		return
 	end
-	local index = dragInvIndex
-	local targetSlot = nil
-	for slot = 1, Gem.slotCount do
-		if screenPointInVisible(socketButtons[slot].button, x, y) or screenPointInVisible(slotRows[slot].row, x, y) then
-			targetSlot = slot
-			break
+	local index, proxy, origin = dragIndex, dragProxy, dragOrigin
+	local targetSlot = slotAt(x, y)
+	dragProxy, dragIndex, dragGrade, dragOrigin = nil, nil, nil, nil -- 유령은 지우지 않고 GemActions에 넘긴다(거절이면 그 유령이 0.2초 동안 원래 칸으로 돌아간다)
+	if targetSlot and index then
+		actions.equip(targetSlot, index, { proxy = proxy, originPos = origin, fromPos = Vector2.new(x, y) })
+	else
+		proxy:Destroy()
+		if index then
+			-- 26-3(PRD 20.67 [12] "보유 보석 셀도 클릭 = 선택(드래그는 그대로 장착)") - 홈에 안 놓인 채 끝난 누름(=짧은 클릭)을 선택으로 처리한다.
+			deps.select("gemBag", index)
+			refreshDetail()
 		end
 	end
-	cancelGemDrag()
-	if targetSlot and index then
-		gemEquipRequest:FireServer(targetSlot, index)
-	elseif index then
-		-- 26-3(PRD 20.67 [12] "보유 보석 셀도 클릭 = 선택(드래그는 그대로 장착)") - 홈에
-		-- 안 놓인 채 끝난 누름(=짧은 클릭)을 선택으로 처리한다.
-		deps.select("gemBag", index)
-		refreshDetail()
-	end
-	-- 드래그가 홈에 안 맞았거나(targetSlot=nil) 서버가 거부해도(등급 상한 초과 등) 이
-	-- 클라이언트가 먼저 지운 하이라이트(cancelGemDrag)를 실제 상태(잠김/장착색)로 즉시
-	-- 되돌린다 - 서버 응답(GemSync push)이 안 오는 실패 케이스에서도 소켓이 무채색으로
-	-- 눌러붙어 있지 않게 한다.
-	updateGemTab()
+	paintAll()
 end
 
-local function startGemDrag(index, gradeId)
+local function startGemDrag(index, gradeId, cell)
 	cancelGemDrag()
-	dragInvIndex = index
-	dragGemGrade = gradeId
-	local mouse = UserInputService:GetMouseLocation()
-	local proxy = Instance.new("Frame")
-	proxy.Name = "GemDragProxy"
-	proxy.AnchorPoint = Vector2.new(0.5, 0.5)
-	proxy.Size = UDim2.new(0, 30, 0, 30)
-	proxy.Position = UDim2.new(0, mouse.X, 0, mouse.Y)
-	proxy.BackgroundColor3 = (ItemVisualData.gradeVisuals[gradeId] or {}).color or UIColors.textTertiary
-	proxy.ZIndex = 1000
-	proxy.Parent = screenGui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(1, 0)
-	corner.Parent = proxy
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.Color = Color3.new(1, 1, 1)
-	stroke.Parent = proxy
-	dragProxy = proxy
-	updateSocketHighlight()
+	dragIndex, dragGrade, dragOrigin = index, gradeId, centerOf(cell)
+	local mouse = UserInputService:GetMouseLocation() - GuiService:GetGuiInset() -- ScreenGui 좌표(입력 이벤트의 Position과 같은 기준)
+	dragProxy = GemActions.makeGhost(screenGui, mouse, gradeId)
+	paintSlots()
 end
 
 UserInputService.InputChanged:Connect(function(input)
@@ -391,63 +390,98 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
-local gemInvCells = {}
+-- ═══ 보석칸 · 홈의 입력 ═══
+
+local lastCellClick = { key = nil, at = 0 } -- 마지막 눌림(어느 보석 · 언제) - 같은 것을 doubleClickSeconds 안에 다시 누르면 더블클릭
+local lastSlotClick = { key = nil, at = 0 }
+
+local function isDoubleClick(last, key)
+	local now = os.clock()
+	local double = last.key == key and now - last.at <= uiConfig.doubleClickSeconds
+	last.key, last.at = (not double) and key or nil, now
+	return double
+end
+
+-- 보석 셀 탭(탭 방식): 홈 먼저 모드면 그 홈에 교체 · 아니면 선택 토글.
+local function onCellTap(index)
+	local armed = armedSlot()
+	if armed then
+		equipInto(armed, index)
+		return
+	end
+	if selectedBagIndex() == index then
+		deps.select(nil, nil)
+	else
+		deps.select("gemBag", index)
+	end
+	refreshDetail()
+	paintAll()
+end
+
+-- 홈 탭(탭 방식): 보석을 골라 둔 상태면 그 홈에 장착 · 아니면 그 홈을 "홈 먼저" 대상으로 고르기(다시 탭하면 취소).
+local function onSlotTap(slot)
+	local bagIndex = selectedBagIndex()
+	if bagIndex then
+		equipInto(slot, bagIndex)
+		return
+	end
+	armSlot(slot)
+end
+
+-- 홈에 입력을 붙인다(칩 · 행 공통): PC 더블클릭 · 우클릭 = 홈 먼저 고르기 · 한 번 클릭 = 홈 상세(기존) / 탭 방식은 onSlotTap.
+local function bindSlotInput(obj, slot)
+	obj.InputBegan:Connect(function(input)
+		local inputType = input.UserInputType
+		if inputType == Enum.UserInputType.MouseButton2 then
+			armSlot(slot)
+		elseif inputType == Enum.UserInputType.MouseButton1 and not tapMode() then
+			if isDoubleClick(lastSlotClick, slot) then
+				armSlot(slot)
+			end
+		end
+	end)
+	obj.Activated:Connect(function()
+		if tapMode() then
+			onSlotTap(slot)
+		elseif Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot) and Gem.isFilled(currentGemState.gems, slot) then
+			deps.select("gemSlot", slot)
+			refreshDetail()
+			paintAll()
+		end
+	end)
+end
+
+for slot = 1, Gem.slotCount do
+	bindSlotInput(slots.chips[slot].button, slot)
+	bindSlotInput(slotRows[slot].row, slot)
+end
+
+-- 보석 셀의 눌림(PC): 우클릭 = 자동 장착 · 왼쪽 = 홈 먼저 모드면 그 홈에 교체 / 더블클릭이면 자동 장착 / 아니면 드래그 시작(놓으면 홈 위면 장착, 아니면 선택 - 상세를 한 번만 그린다).
+local function onCellInput(input, index, gem, cell)
+	local inputType = input.UserInputType
+	if inputType == Enum.UserInputType.MouseButton2 then
+		actions.autoEquip(index, { originPos = centerOf(cell) })
+	elseif inputType == Enum.UserInputType.MouseButton1 and not tapMode() then
+		local armed = armedSlot()
+		if armed then
+			equipInto(armed, index)
+		elseif isDoubleClick(lastCellClick, index) then
+			actions.autoEquip(index, { originPos = centerOf(cell) })
+		else
+			startGemDrag(index, gem.grade, cell)
+		end
+	end
+end
 
 local function rebuildGemInventory()
-	for _, cell in ipairs(gemInvCells) do
-		cell:Destroy()
-	end
-	gemInvCells = {}
-
-	for i, gem in ipairs(currentGemState.gemInventory) do
-		local cell = Instance.new("TextButton")
-		cell.Name = "GemCell" .. i
-		cell.LayoutOrder = i
-		cell.Text = ""
-		cell.AutoButtonColor = false
-		cell.BackgroundColor3 = UIColors.slot
-		cell.BackgroundTransparency = UIColors.slotTransparency
-		cell.Parent = gemInvScroll
-
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = cell
-
-		local glow = Instance.new("Frame")
-		glow.AnchorPoint = Vector2.new(0.5, 0.5)
-		glow.Position = UDim2.new(0.5, 0, 0.5, 0)
-		glow.Size = UDim2.new(1, 8, 1, 8)
-		glow.BackgroundTransparency = 1
-		glow.ZIndex = cell.ZIndex - 1
-		glow.Parent = cell
-		local glowCorner = Instance.new("UICorner")
-		glowCorner.CornerRadius = UDim.new(0, 10)
-		glowCorner.Parent = glow
-
-		local gradeStroke = Instance.new("UIStroke")
-		gradeStroke.Thickness = 1.5
-		gradeStroke.Parent = cell
-
-		applyGradeVisual(cell, gradeStroke, glow, gem.grade)
-
-		local gradeLabel = Instance.new("TextLabel")
-		gradeLabel.BackgroundTransparency = 1
-		gradeLabel.Size = UDim2.new(1, -6, 0, 15)
-		gradeLabel.Position = UDim2.new(0, 3, 1, -17)
-		gradeLabel.Font = Enum.Font.GothamBold
-		gradeLabel.TextSize = Theme.textSize("caption")
-		gradeLabel.TextColor3 = UIColors.textPrimary
-		gradeLabel.Text = ArmorData.grades[gem.grade].displayName
-		gradeLabel.Parent = cell
-
-		cell.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
-				startGemDrag(i, gem.grade)
+	bag.rebuild(currentGemState.gemInventory, Gem.displayOrder(currentGemState.gemInventory), { -- 표시 순서 = 등급 높은 순(같은 등급은 획득 순) - 서버 index는 셀이 그대로 들고 간다
+		onInput = onCellInput,
+		onActivated = function(index)
+			if tapMode() then
+				onCellTap(index)
 			end
-		end)
-
-		table.insert(gemInvCells, cell)
-	end
+		end,
+	})
 end
 
 local function currentStageGoldReward()
@@ -463,17 +497,10 @@ updateGemTab = function()
 
 	local classId = player:GetAttribute("ClassId")
 	local weaponGrade = weaponGradeId()
-	local visual = weaponGrade and ItemVisualData.gradeVisuals[weaponGrade]
-	weaponGlow.BackgroundColor3 = (classId and UIColors.classAccent[classId]) or UIColors.textTertiary
-	for _, child in ipairs(weaponIconArt:GetChildren()) do
-		child:Destroy()
-	end
-	local iconColor = (visual and visual.rainbow) and Color3.new(1, 1, 1) or (visual and visual.color or UIColors.textPrimary)
-	ItemIcons.weapon(weaponIconArt, WEAPON_ICON_SIZE, iconColor)
+	weaponArt.update(weaponGrade, classId)
 
 	for slot = 1, Gem.slotCount do
 		local ui = slotRows[slot]
-		local socket = socketButtons[slot]
 		local unlocked = Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot)
 		local capGradeId = Gem.gradeCapForSlot(slot)
 		local capInfo = ArmorData.grades[capGradeId]
@@ -482,16 +509,12 @@ updateGemTab = function()
 			ui.label.Text = ("홈%d(상한 %s) - 잠김, 환생 %d회 필요"):format(slot, capInfo.displayName, GemData.slotUnlockRequiredRebirth[slot])
 			ui.rerollButton.Visible = false
 			ui.buyButton.Visible = false
-			socket.button.BackgroundColor3 = UIColors.slot
-			socket.stroke.Color = UIColors.rim
-			socket.stroke.Transparency = 0.7
 			continue
 		end
 
 		local gem = currentGemState.gems[slot]
 		local filled = type(gem) == "table"
-		-- 26-3(PRD 20.67 [9][12]) - "N번 홈 · 상한 <등급> · <등급> <옵션명> 보석 · Lv.N · +X%"
-		-- 형식으로 통일한다(옛 "홈N(상한 X) - 등급: 옵션(값)" 형식을 대신한다).
+		-- 26-3(PRD 20.67 [9][12]) - "N번 홈 · 상한 <등급> · <등급> <옵션명> 보석 · Lv.N · +X%" 형식으로 통일한다(옛 "홈N(상한 X) - 등급: 옵션(값)" 형식을 대신한다).
 		if not filled then
 			ui.label.Text = ("%d번 홈 · 상한 %s · 빈 홈"):format(slot, capInfo.displayName)
 		else
@@ -517,31 +540,56 @@ updateGemTab = function()
 			ui.rerollButton.Active = tickets > 0
 			ui.buyButton.Text = ("변환권(%s골드)"):format(NumberFormat.format(currentStageGoldReward() * GemData.rerollTicketGoldMultiplier))
 		end
-
-		if filled then
-			local gradeVisual = ItemVisualData.gradeVisuals[gem.grade]
-			socket.button.BackgroundColor3 = (gradeVisual and gradeVisual.color) or UIColors.textPrimary
-			socket.stroke.Transparency = 0
-		else
-			socket.button.BackgroundColor3 = UIColors.slot
-			socket.stroke.Color = UIColors.rim
-			socket.stroke.Transparency = 0.4
-		end
 	end
 
 	rebuildGemInventory()
-	-- 26-3: 지금 Detail에 보석이 선택돼 있으면(리롤 등으로 옵션이 막 바뀌었을 수 있다) 같이 갱신한다.
+	paintAll()
+	-- 26-3: 지금 Detail에 보석이 선택돼 있으면(리롤 등으로 옵션이 막 바뀌었을 수 있다) 같이 갱신한다. 장착 요청이 도는 중에는 건너뛴다 - 보석칸 index가 밀려 잠깐 다른 보석이 보이는 깜빡임을
+	-- 막는다(결과가 오면 onEquipped가 한 번에 갱신한다).
 	local selectedKind = deps.getSelection()
-	if selectedKind == "gemSlot" or selectedKind == "gemBag" then
+	if (selectedKind == "gemSlot" or selectedKind == "gemBag") and not actions.isPending() then
 		refreshDetail()
 	end
 end
 
--- 26-3: 옵션 보너스 박스(gear 탭)가 보석 옵션도 합산한다 - GemSync가 올 때도 refreshStats를
--- 불러야 리롤·장착 직후 그 자리가 바로 갱신된다(안 그러면 보석 탭을 오가야만 갱신됐다).
-gemSync.OnClientEvent:Connect(function(data)
+-- 분해로 보석이 늘면 토스트로 알린다(누르면 보석 탭). 보석칸 수가 늘어나는 경로는 분해뿐이다(교체는 1대1 · 환생 · 리롤은 수가 그대로다).
+local function pushGainToast()
+	Toast.push("TC", {
+		text = "보석 획득 [보석 탭 열기]",
+		richParts = {
+			{ text = "보석 획득 ", colorName = "textPrimary" },
+			{ text = "[보석 탭 열기]", colorName = "success", bold = true, onActivate = function()
+				deps.selectTab("보석")
+			end },
+		},
+		grade = "notice",
+		seconds = 4,
+		groupKey = "gemGain",
+	})
+end
+
+local lastClassId = nil
+local function applyState(data)
+	local previousCount = #currentGemState.gemInventory
 	currentGemState = data
+	local classId = player:GetAttribute("ClassId")
+	if not initialized or classId ~= lastClassId then
+		-- 첫 스냅샷 · 직업을 바꾼 뒤(다른 직업의 보석칸이 온다)의 보석은 새로 얻은 것이 아니다
+		initialized = true
+		lastClassId = classId
+		seenCount = #data.gemInventory
+	elseif #data.gemInventory > previousCount and not (gemBody.Visible and deps.isOpen()) then
+		pushGainToast()
+	end
+	if armedFlag and not Gem.isSlotUnlocked(data.slotUnlocked, armedFlag) then
+		armedFlag = nil
+	end
 	updateGemTab()
+end
+
+-- 26-3: 옵션 보너스 박스(gear 탭)가 보석 옵션도 합산한다 - GemSync가 올 때도 refreshStats를 불러야 리롤·장착 직후 그 자리가 바로 갱신된다(안 그러면 보석 탭을 오가야만 갱신됐다).
+gemSync.OnClientEvent:Connect(function(data)
+	applyState(data)
 	if deps.isOpen() then
 		refreshStats()
 	end
@@ -552,8 +600,7 @@ task.spawn(function()
 		return gemFetch:InvokeServer()
 	end)
 	if ok and data then
-		currentGemState = data
-		updateGemTab()
+		applyState(data)
 		if deps.isOpen() then
 			refreshStats()
 		end
@@ -564,7 +611,78 @@ for _, attr in ipairs({ "RebirthCount", "InfiniteStage", "AccountBestStage" }) d
 	player:GetAttributeChangedSignal(attr):Connect(updateGemTab)
 end
 
--- 배치(S20b) - 화면 크기가 정하는 L(Layout.compute)로 두 칸의 크기 · 위치와 터치 크기를 다시 정한다.
+-- ═══ 전역 입력: Esc · 빈 곳 클릭 = 취소 / 폰에서 빈 곳 탭 = 선택 해제 ═══
+
+-- 이 화면 좌표가 보석 탭의 조작 대상(홈 칩 · 홈 행 · 보석 셀) 위인가(빈 곳 판정용).
+local function overTarget(x, y)
+	for slot = 1, Gem.slotCount do
+		if screenPointInVisible(slots.chips[slot].button, x, y) or screenPointInVisible(slotRows[slot].row, x, y) then
+			return true
+		end
+	end
+	for _, ref in pairs(bag.refs) do
+		if ref.cell.Parent and screenPointInVisible(ref.cell, x, y) then
+			return true
+		end
+	end
+	return false
+end
+
+UserInputService.InputBegan:Connect(function(input)
+	if not (gemBody.Visible and deps.isOpen()) then
+		return
+	end
+	local inputType = input.UserInputType
+	if input.KeyCode == Enum.KeyCode.Escape then
+		if armedSlot() then
+			clearArm()
+		end
+	elseif inputType == Enum.UserInputType.MouseButton1 or inputType == Enum.UserInputType.Touch then
+		local x, y = input.Position.X, input.Position.Y
+		if not screenPointInFrame(gemBody, x, y) or overTarget(x, y) then
+			return
+		end
+		if armedSlot() then
+			clearArm() -- 홈 먼저 모드: 빈 곳 클릭 = 취소(선택은 그대로)
+		elseif tapMode() and (selectedBagIndex() or deps.getSelection() == "gemSlot") then
+			deps.select(nil, nil) -- 탭 방식: 빈 곳 탭 = 선택 해제
+			refreshDetail()
+			paintAll()
+		end
+	end
+end)
+
+-- 이 탭이 보이는 동안: 강화대 근접 상태를 0.25초마다 확인한다(바뀌면 표시 · [장착] 버튼을 다시 정한다). 탭이 보였다가 사라지면 그 사이 본 보석은 NEW가 아니다.
+local pollElapsed = 0
+local lastNear = nil
+RunService.Heartbeat:Connect(function(dt)
+	if not (gemBody.Visible and deps.isOpen()) then
+		return
+	end
+	pollElapsed += dt
+	if pollElapsed < 0.25 then
+		return
+	end
+	pollElapsed = 0
+	local near = isNear()
+	if near ~= lastNear then
+		lastNear = near
+		paintStatus()
+		refreshDetail()
+	end
+end)
+
+gemBody:GetPropertyChangedSignal("Visible"):Connect(function()
+	if gemBody.Visible then
+		lastNear = nil
+		updateGemTab()
+	else
+		seenCount = #currentGemState.gemInventory -- 이 탭을 본 뒤 떠났다 - 그 보석들은 더 이상 NEW가 아니다
+		armedFlag = nil
+	end
+end)
+
+-- 배치(S20b · S20c) - 화면 크기가 정하는 L(Layout.compute)로 두 칸의 크기 · 위치와 터치 크기를 다시 정한다.
 local function layout(L)
 	local phone = L.mode == "phone"
 	gemBody.Position = UDim2.new(0, 0, 0, L.bodyTop)
@@ -578,7 +696,14 @@ local function layout(L)
 		entry.buyButton.Size = UDim2.new(0, 160, 0, buttonHeight)
 		entry.buyButton.Position = UDim2.new(0, 78, 1, -(buttonHeight + 3))
 	end
+	local chipSize = phone and CHIP_SIZE.phone or CHIP_SIZE.pc
+	slots.setLayout(chipSize, phone and CHIP_GAP.phone or CHIP_GAP.pc)
+	weaponLabel.Visible = not phone
+	weaponIconHolder.Visible = not phone
+	slots.row.Position = UDim2.new(0, 14, 0, phone and 4 or 26)
+	weaponIconHolder.Position = UDim2.new(0.5, 0, 0, 26 + chipSize + 12)
 	-- 정보 칸 순서: 보유 보석(끌어 오는 곳)이 위 · 홈 상세(행 · 리롤)가 아래. 무기 칸의 홈(드롭 대상)과 보유 보석이 스크롤 0에서 함께 보여야 낮은 PC 창(본문 232)에서도 끌어 놓을 수 있다.
+	invLabel.Text = phone and "보유 보석 - 탭해서 선택" or "보유 보석 - 더블클릭 · 우클릭 · 드래그"
 	local invHeight = phone and 152 or 134
 	local slotTop = 26 + invHeight + 12 -- 홈 상세 제목 y
 	local listHeight = phone and Gem.slotCount * (rowHeight + 4) or 216
@@ -591,19 +716,23 @@ local function layout(L)
 	local infoHeight = slotTop + 18 + listHeight + 14
 	local canvasHeight
 	if phone then
-		weaponPane.Size = UDim2.new(1, 0, 0, 240)
+		local weaponPaneHeight = 4 + chipSize + 8
+		weaponPane.Position = UDim2.new(0, 0, 0, TOP)
+		weaponPane.Size = UDim2.new(1, 0, 0, weaponPaneHeight)
 		weaponPaneLine.Visible = false
-		infoPane.Position = UDim2.new(0, 0, 0, 240)
+		infoPane.Position = UDim2.new(0, 0, 0, TOP + weaponPaneHeight)
 		infoPane.Size = UDim2.new(1, 0, 0, infoHeight)
-		canvasHeight = 240 + infoHeight
+		canvasHeight = TOP + weaponPaneHeight + infoHeight
 	else
-		canvasHeight = math.max(infoHeight, L.bodyH)
-		weaponPane.Size = UDim2.new(0, 220, 0, canvasHeight)
+		canvasHeight = math.max(TOP + infoHeight, L.bodyH)
+		weaponPane.Position = UDim2.new(0, 0, 0, TOP)
+		weaponPane.Size = UDim2.new(0, 220, 0, canvasHeight - TOP)
 		weaponPaneLine.Visible = true
-		infoPane.Position = UDim2.new(0, 220, 0, 0)
-		infoPane.Size = UDim2.new(1, -220, 0, canvasHeight)
+		infoPane.Position = UDim2.new(0, 220, 0, TOP)
+		infoPane.Size = UDim2.new(1, -220, 0, canvasHeight - TOP)
 	end
 	gemBody.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
+	paintAll() -- 폰 시트가 올라오거나 내려갈 때(선택이 바뀔 때)도 여기서 표시를 다시 맞춘다
 end
 deps.registerLayout(layout)
 
@@ -612,12 +741,36 @@ return {
 		updateGemTab()
 	end,
 	cancelDrag = function()
+		-- 창을 닫을 때: 드래그 취소 + 홈 먼저 취소 + 이 탭을 보고 있었으면 NEW 확인
 		cancelGemDrag()
+		armedFlag = nil
+		if gemBody.Visible then
+			seenCount = #currentGemState.gemInventory
+		end
 	end,
 	state = function()
 		return currentGemState
 	end,
+	canAutoEquip = function(index)
+		return actions.canAutoEquip(index)
+	end,
+	autoEquip = function(index)
+		return actions.autoEquip(index, { originPos = bag.center(index) })
+	end,
 	frame = gemBody,
+	-- Studio 자체 점검 전용(GemFlowCheck): 서버 없이 상태를 넣어 그리고 · 다시 그리고 · 홈 먼저 상태를 강제한다.
+	debugApply = function(state)
+		applyState(state)
+	end,
+	debugPaint = function()
+		paintAll()
+	end,
+	debugArm = function(slot)
+		armedFlag = slot
+		deps.select("gemSlot", slot)
+		refreshDetail()
+		paintAll()
+	end,
 }
 end
 

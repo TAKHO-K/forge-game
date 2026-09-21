@@ -15,6 +15,7 @@ local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
+local GemEquip = require(script.Parent.GemEquip)
 
 local dismantleRequest = Instance.new("RemoteEvent")
 dismantleRequest.Name = "DismantleRequest"
@@ -23,6 +24,12 @@ dismantleRequest.Parent = ReplicatedStorage
 local gemEquipRequest = Instance.new("RemoteEvent")
 gemEquipRequest.Name = "GemEquipRequest"
 gemEquipRequest.Parent = ReplicatedStorage
+
+-- S20c: 장착 요청의 결과를 클라에 알린다(성공 여부 · 이유 코드 · 요청한 홈). 옛 코드는 실패하면 아무 신호도 안 보내 클라가 왜 안 됐는지 몰랐다. 규칙은 그대로이고 이유만 돌려준다.
+--   이유 코드: PlayerProfile.equipGem이 주는 no_class · slot_locked · not_found · grade_too_high + 여기서 거르는 far(강화대에서 멀다) · invalid(인자 모양이 틀렸다).
+local gemEquipResult = Instance.new("RemoteEvent")
+gemEquipResult.Name = "GemEquipResult"
+gemEquipResult.Parent = ReplicatedStorage
 
 local rerollRequest = Instance.new("RemoteEvent")
 rerollRequest.Name = "GemRerollRequest"
@@ -63,19 +70,15 @@ end)
 -- 보석 슬롯 장착(교체)도 판매·분해와 같은 층이다 - 되돌릴 수 없지는 않지만(다시 교체하면
 -- 그만) 무기 전투력이 바로 바뀌는 사건이라 즉시저장한다(강화 결과와 같은 판단).
 gemEquipRequest.OnServerEvent:Connect(function(player, slot, gemInventoryIndex)
-	if type(slot) ~= "number" or type(gemInventoryIndex) ~= "number" then
-		return
-	end
-	local character = player.Character
-	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-	if not rootPart or not isNearStation(rootPart) then
-		return
-	end
-
-	local success = PlayerProfile.equipGem(player, math.floor(slot), math.floor(gemInventoryIndex))
+	local success, reason = GemEquip.handle(player, slot, gemInventoryIndex, function(who)
+		local character = who.Character
+		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+		return rootPart ~= nil and isNearStation(rootPart)
+	end)
 	if success then
 		ImmediateSave.request(player)
 	end
+	gemEquipResult:FireClient(player, success, reason, type(slot) == "number" and slot or nil)
 end)
 
 -- 26-3(PRD 20.67 [10]): 리롤 대상이 보석 슬롯 하나에서 "홈 5 + 장비 3부위(가방·착용)"로

@@ -74,7 +74,11 @@ local config = {
 		--   이번 세션 블록 S20(UI)(RequestBannerCheck에 ⑤ ⑥ ⑦ 추가) + 동반 실행: RequestBanner를 직접 쓰는 S18(UI)(PartyHudCheck) · PartyAway를 쓰는 S19b(UI)(BossBarCheck). 본 작업(GemTab 이동 · 장비창 재구성) 때 다시 갈아 끼운다.
 		-- S20b ① 보석 탭 이동(InventoryUI → panels/Inventory/GemTab · 클라 전용): 이번 세션 블록 S20(UI)(GemTabCheck 추가) + 동반 실행: InventoryUI를 여는 · 재는 옛 클라 점검 - S12b(UI)(장비창 글씨 · 탭 줄) · S12(UI)(패널 전수 fit) · S16(UI)(메뉴바 B 키 → 가방).
 		-- S20b ② 장비창 재구성(InventoryUI를 Store · Layout · Shell · GearTab · BagTab · BulkSell · DetailSheet · GemTab으로 분할 + UIScale 제거 + 폰 배치): 같은 블록 + InventoryLayoutCheck(S20(UI)에 추가). 동반 실행은 위와 같다.
-		current = { "S20(UI)", "S12b(UI)", "S12(UI)", "S16(UI)" },
+		-- S20c(2026-09-21) 보석 동선 · 홈 표현 · 장착 입력(GemTab 재구성 · GemActions · GemEquipResult · Toast notice 등급): 이번 세션 블록 S20c(가)(Gem.autoSlot · socketBlockReason · displayOrder 순수 함수) ·
+		--   S20c(나)(GemEquip 이유 코드 · 교체 규칙 · 미리 판정 = 서버 30조합) · S20c(UI)(GemFlowCheck - 홈 3상태 · 정렬 · NEW · 강화대 상태 · 폰 치수) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈을 쓰는 옛 블록 -
+		--   26-2 · 26-3(PlayerProfile.equipGem · 보석 옵션 - GemServer가 GemEquip을 거치도록 바뀜 · Gem 모듈 함수 추가) · S20(UI)(GemTabCheck · InventoryLayoutCheck - 보석 탭 · 장비창 재구성 위에서 다시 앉음) · S12b(UI)(장비창 글씨) · S12(UI)(패널 전수 fit) ·
+		--   S16(UI)(메뉴바 B 키 → 가방 · Toast TC) · S17(UI)(Toast.grades에 notice 추가 - SystemToasts 등급 점검). S04(나)는 계속 제외.
+		current = { "S20c(가)", "S20c(나)", "S20c(UI)", "S20(UI)", "S12b(UI)", "S12(UI)", "S16(UI)", "S17(UI)", "26-2", "26-3" },
 	},
 }
 

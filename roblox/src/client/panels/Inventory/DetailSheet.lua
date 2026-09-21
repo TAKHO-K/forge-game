@@ -538,7 +538,7 @@ local function refreshDetailBody()
 		local color = visual and visual.color or UIColors.textPrimary
 		dname.Text = ItemDescribe.gem(gem).title
 		dname.TextColor3 = color
-		dmeta.Text = "보유 보석 - 드래그로 홈에 장착"
+		dmeta.Text = "보유 보석 - 장착하면 홈의 보석과 교체"
 		setDpicIcon("weapon", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -553,10 +553,12 @@ local function refreshDetailBody()
 		dismantleButton.AutoButtonColor = false
 		dismantleButton.Active = false
 		dismantleButton.TextTransparency = 0.6
-		equipButton.AutoButtonColor = false
-		equipButton.Active = false
-		equipButton.TextTransparency = 0.6
-		equipButton.Text = "착용"
+		-- S20c: [장착] = 자동 장착(GemActions - PC 더블클릭 · 우클릭 · 폰 탭 선택과 같은 통로). 강화대에서 멀거나 요청 중이면 회색.
+		local canEquip = S.gemCanAutoEquip(S.selectedValue)
+		equipButton.AutoButtonColor = canEquip
+		equipButton.Active = canEquip
+		equipButton.TextTransparency = canEquip and 0 or 0.6
+		equipButton.Text = "장착"
 		setRerollDetailButton(nil)
 	else
 		clearDetail()
@@ -597,7 +599,9 @@ dismantleButton.Activated:Connect(function()
 end)
 
 equipButton.Activated:Connect(function()
-	if S.selectedKind == "bag" then
+	if S.selectedKind == "gemBag" then
+		S.gemAutoEquip(S.selectedValue)
+	elseif S.selectedKind == "bag" then
 		equipRequest:FireServer("equip", S.selectedValue)
 	elseif S.selectedKind == "equip" and S.selectedValue ~= "weapon" then
 		-- 16-6: 어느 부위를 벗을지 서버에 같이 알려야 한다(갑옷 하나였을 땐 필요 없었다).

@@ -57,6 +57,56 @@ function Gem.buildGrantedGem(slot, classId, itemLevel)
 	return { grade = grade, itemLevel = itemLevel, option = Option.rollFor(grade, classId) }
 end
 
+-- S20c: 보석 gradeId를 slot에 끼울 수 없는 이유(nil = 끼울 수 있다). PlayerProfile.equipGem과 같은 순서(해금 → 등급 상한)라 클라가 미리 보여 주는 판정이 서버와 갈리지 않는다.
+-- 서버 규칙은 그대로이고(equipGem이 다시 검증한다) 이 함수는 그 규칙을 읽기만 한다.
+function Gem.socketBlockReason(slotUnlocked, slot, gradeId)
+	if not Gem.isSlotUnlocked(slotUnlocked, slot) then
+		return "slot_locked"
+	end
+	if not Gem.canSocket(gradeId, slot) then
+		return "grade_too_high"
+	end
+	return nil
+end
+
+-- S20c: 자동 장착 대상 = 끼울 수 있는 열린 홈 중 등급 상한이 가장 낮은 홈(상한이 같으면 번호가 작은 쪽). 빈 홈이 있으면 그 중에서 먼저 고른다(지금 규칙에서는 홈이 열리면 바로 채워져
+-- 빈 홈이 없다 - 옛 개발 계정만 예외). 반환: slot, 또는 nil + 이유("no_slot_open" = 열린 홈이 없다 · "grade_too_high" = 열린 홈 중 이 등급을 받는 곳이 없다).
+function Gem.autoSlot(slotUnlocked, gems, gradeId)
+	local bestSlot, bestKey
+	local anyOpen = false
+	for slot = 1, Gem.slotCount do
+		if Gem.isSlotUnlocked(slotUnlocked, slot) then
+			anyOpen = true
+			if Gem.canSocket(gradeId, slot) then
+				local key = (Gem.isFilled(gems, slot) and 1000 or 0) + armorGradeIndex(Gem.gradeCapForSlot(slot)) * 10 + slot
+				if not bestKey or key < bestKey then
+					bestSlot, bestKey = slot, key
+				end
+			end
+		end
+	end
+	if bestSlot then
+		return bestSlot
+	end
+	return nil, anyOpen and "grade_too_high" or "no_slot_open"
+end
+
+-- S20c: 보석칸 표시 순서 = 등급 높은 순(같은 등급은 획득 순 = 서버 index 순). 서버 index는 그대로 두고 표시 순서만 정한다. 반환: 서버 index 배열.
+function Gem.displayOrder(gemInventory)
+	local order = {}
+	for index = 1, #gemInventory do
+		order[index] = index
+	end
+	table.sort(order, function(a, b)
+		local ga, gb = armorGradeIndex(gemInventory[a].grade) or 0, armorGradeIndex(gemInventory[b].grade) or 0
+		if ga ~= gb then
+			return ga > gb
+		end
+		return a < b
+	end)
+	return order
+end
+
 function Gem.isFilled(gems, slot)
 	return type(gems[slot]) == "table"
 end

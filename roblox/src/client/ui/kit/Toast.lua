@@ -39,6 +39,8 @@ Toast.passOnSeconds = 2
 Toast.grades = {
 	important = { textSize = 16, bold = true, colorName = "ember", priority = 1, aboveWindows = true }, -- S19 사전 작업(S18 미결 5 - 사용자 결정): 레벨업 등 중요 알림도 창을 연 채로 보인다
 	critical = { textSize = 16, bold = true, textColorName = "textPrimary", backgroundName = "danger", backgroundTransparency = 0.1, minSeconds = 6, priority = 2, protected = true, aboveWindows = true },
+	-- S20c: 창 안에서 하는 조작의 결과 알림(보석 장착 거절 이유 · 보석 획득 [보석 탭 열기]). 일반 크기(14) 그대로이고 창 뒤에 가려지지 않게 창 위로만 올린다 - 일반 등급은 창을 연 채로는 창 뒤에 숨는다.
+	notice = { textSize = 14, aboveWindows = true },
 }
 local ROW_GAP = 3
 local TEXT_PAD = 10
@@ -587,14 +589,14 @@ local function passOn(lane)
 end
 
 -- item = { text, colorName, seconds, priority, groupKey, richParts, fadeSeconds, moreFormat, rainbow, grade }.
--- grade = nil(일반) · "important" · "critical" (Toast.grades).
+-- grade = nil(일반) · "important" · "critical" · "notice" (Toast.grades).
 -- 반환: "shown" · "merged" · "queued" · "evicted"(TR: 보이긴 했고 가장 오래된 줄이 밀려났다) (전시장 · 검사용).
 function Toast.push(laneName, item)
 	ensureGui()
 	local lane = lanes[laneName]
 	assert(lane, "Toast.push: 알 수 없는 줄 - " .. tostring(laneName) .. " (TC · TR · BC)")
 	local gradeDef = item.grade and Toast.grades[item.grade]
-	assert(not item.grade or gradeDef, "Toast.push: 알 수 없는 등급 - " .. tostring(item.grade) .. " (important · critical)")
+	assert(not item.grade or gradeDef, "Toast.push: 알 수 없는 등급 - " .. tostring(item.grade) .. " (important · critical · notice)")
 	local entry = {
 		text = item.text,
 		richParts = item.richParts,

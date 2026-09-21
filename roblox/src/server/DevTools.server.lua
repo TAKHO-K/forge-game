@@ -1256,6 +1256,11 @@ local function handleCommand(player, args)
 		else
 			reply(player, "실패: " .. tostring(reason))
 		end
+	elseif sub == "gemflow" then
+		-- S20c(수동 Play 확인용): 보석 장착 입력 시험 상태를 넣는다(홈 1 ~ 4 열림 · 채움, 홈 5 잠김 · 보석칸 6개) - "/gg reset"으로 되돌린다. 장착은 강화대 12stud 안에서만 된다.
+		ensureBackup(player)
+		require(script.Parent.GemFlowVerify).seed(player)
+		reply(player, "보석 장착 시험 상태 적용(홈 1 ~ 4 열림 · 보석칸 6개) - /gg reset으로 복원")
 	elseif sub == "boss" and args[2] == "table" then
 		-- 29-5(PRD 20.80 [A]): 보스 배치표 - 스테이지만의 함수(BossRules.bossIdForStage). "/gg boss table [끝 스테이지]"
 		local untilStage = math.floor(tonumber(args[3]) or 60)
@@ -3251,6 +3256,7 @@ if RunService:IsStudio() then
 				{ "S13b(나)", function() require(script.Parent.ShieldVerify).runLive(player, env) end }, -- S13b: 실제 HealCast 쉴드 · 피해 경로 흡수(모듈은 여기서 require - 최상위 local을 늘리지 않는다)
 				{ "S14(나)", function() require(script.Parent.BossDensityVerify).runLive(player, env) end }, -- S14: 스테이지 100 낙석 원 개수 · 겹친 원 한 번만(모듈은 여기서 require - 최상위 local을 늘리지 않는다)
 				{ "S19b(나)", function() require(script.Parent.S19bVerify).runLive(player, env) end }, -- S19b: 보스 체력바 Attribute · 끊긴 파티 멤버 · 보스 HP 불변
+				{ "S20c(나)", function() require(script.Parent.GemFlowVerify).runLive(player, env) end }, -- S20c: 보석 장착 이유 코드 · 교체 규칙 · 미리 판정 = 서버(모듈은 여기서 require - 최상위 local을 아낀다)
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3451,6 +3457,17 @@ if RunService:IsStudio() and verifyEnabled("S19b(가)") then
 		local ok, err = pcall(require(script.Parent.S19bVerify).runPure)
 		if not ok then
 			warn(("[S19b(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S20c 자동 검증 블록(가) - 보석 자동 장착 대상 · 미리 판정 사유 · 표시 순서(순수 함수) ═══
+-- 플레이어 불필요. (나)는 위 29-1 체인의 끝(S19b (나) 다음).
+if RunService:IsStudio() and verifyEnabled("S20c(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.GemFlowVerify).runPure)
+		if not ok then
+			warn(("[S20c(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end
