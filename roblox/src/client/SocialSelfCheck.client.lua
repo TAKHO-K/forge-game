@@ -159,7 +159,7 @@ local function selfTest()
 	local contentScale = inventoryGui and inventoryGui.Window.Content:FindFirstChildOfClass("UIScale")
 	local inventoryScan = scanText(inventoryGui.Window.Content, nil)
 	check(("장비창 탭 [%s](기대 보석 · 장비 - 파티 탭 없음)"):format(table.concat(tabNames, " · ")), #tabNames == 2 and tabNames[1] == "보석" and tabNames[2] == "장비")
-	check(("장비창 글씨(장비 탭): 요소 %d개 · 최소 %s(실효 %.1f) · 실효 12 미만 %d개 [%s](기대 0 - 알려진 X: S19 · S20에서 폰용 스크롤 창으로 재구성하면 해소) · 4단 밖 %d개 [%s](기대 0) · 넘치는데 줄임표 없음 %d개 [%s](기대 0) · 줄임표로 잘림 %d개 [%s] · 크기 %s"):format(
+	check(("장비창 글씨(장비 탭): 요소 %d개 · 최소 %s(실효 %.1f) · 실효 12 미만 %d개 [%s](기대 0 - S20b에서 UIScale을 없애 해소) · 4단 밖 %d개 [%s](기대 0) · 넘치는데 줄임표 없음 %d개 [%s](기대 0) · 줄임표로 잘림 %d개 [%s] · 크기 %s"):format(
 		inventoryScan.count, tostring(inventoryScan.min), inventoryScan.minEffective, #inventoryScan.below12, table.concat(inventoryScan.below12, ",", 1, math.min(#inventoryScan.below12, 6)), #inventoryScan.offTier, table.concat(inventoryScan.offTier, ","), #inventoryScan.overflowNoEllipsis,
 		table.concat(inventoryScan.overflowNoEllipsis, ","), #inventoryScan.ellipsized, table.concat(inventoryScan.ellipsized, ","), sizesLine(inventoryScan.sizes)),
 		#inventoryScan.below12 == 0 and #inventoryScan.offTier == 0 and #inventoryScan.overflowNoEllipsis == 0)

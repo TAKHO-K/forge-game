@@ -412,6 +412,17 @@ table.insert(R.layouts, function(L)
 	gear.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
 	gearRightLine.Size = UDim2.new(0, 1, 0, canvasHeight)
 	gearRightLine.Visible = L.mode == "pc"
+	-- 옵션 보너스 "?" 도움말 버튼: 폰에서는 터치 44(원을 없애고 "?"만 남긴다), PC는 원래 16 원형.
+	local help = R.optionStatsBox:FindFirstChild("HelpButton", true)
+	if help then
+		local phone = L.mode == "phone"
+		help.Size = UDim2.new(0, phone and 44 or 16, 0, phone and 44 or 16)
+		help.BackgroundTransparency = phone and 1 or UIColors.panelTransparency
+		local helpStroke = help:FindFirstChildOfClass("UIStroke")
+		if helpStroke then
+			helpStroke.Enabled = not phone
+		end
+	end
 end)
 end
 

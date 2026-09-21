@@ -24,7 +24,7 @@ local TextAudit = require(script.Parent.Parent.Parent.ui.TextAudit)
 local UIManager = require(script.Parent.Parent.Parent.UIManager)
 
 local player = Players.LocalPlayer
-local START_DELAY = 84 -- GemTabCheck(78) 뒤 - 같은 창을 열고 닫는다
+local START_DELAY = 96 -- S16(UI) 배지 점검(약 84초)이 같은 창을 토글하므로 그 뒤 - 겹치면 서로 창을 닫아 X가 난다(Play 2 실측)
 local INSET = 58 -- GetGuiInset 상단. ScreenGui 높이 = 뷰포트 높이 - INSET.
 local RESOLUTIONS = { { 800, 360 }, { 667, 375 }, { 842, 388 }, { 1024, 768 } }
 local TOUCH_MIN = 44
