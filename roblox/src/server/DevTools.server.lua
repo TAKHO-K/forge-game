@@ -217,6 +217,26 @@ local function applyAddItem(player, part, grade, itemLevel)
 	return PlayerProfile.addArmorDrop(player, item)
 end
 
+-- "/gg fillbag [n]" - 등급 · 부위가 섞인 잠기지 않은 장비를 n개 가방에 넣는다(기본 = 가방이 가득 찰 만큼). 가방 가득 참 상황(해제 거절 · 줍기 실패 · 정리 흐름)을 채팅 명령 하나로 만든다.
+-- 부위(3)와 등급(7)을 서로소 주기로 돌려 섞는다 - 20칸이면 등급 전부가 2 ~ 3개씩 들어간다. 가방이 차면 거기서 멈춘다. 반환: 넣은 수, 등급별 수.
+local function applyFillBag(player, want)
+	local classId = PlayerProfile.getClassId(player)
+	local parts = { "armor", "gloves", "shoes" }
+	local grades = ArmorData.gradeOrder
+	local added, byGrade = 0, {}
+	for i = 1, want do
+		local grade = grades[(i - 1) % #grades + 1]
+		local item = buildGearItem(parts[(i - 1) % #parts + 1], grade, 10 + i, nil, classId)
+		item.locked = false
+		if not PlayerProfile.addArmorDrop(player, item) then
+			break
+		end
+		added += 1
+		byGrade[grade] = (byGrade[grade] or 0) + 1
+	end
+	return added, byGrade
+end
+
 -- 갑옷·장갑·신발 3부위 전부 같은 등급·itemLevel로 즉시 장착시킨다.
 local function applyGear(player, grade, itemLevel)
 	if not isValidGrade(grade) then
@@ -1021,6 +1041,7 @@ local HELP_TEXT = table.concat({
 	"/gg level <n> - 캐릭터 레벨 직접 지정",
 	"/gg gear <grade> <itemLevel> - 갑옷/장갑/신발 3부위 동일 조건으로 장착",
 	"/gg additem <part> <grade> <itemLevel> - 잠기지 않은 아이템 1개를 인벤토리에 직접 추가(분해·판매 UI 클릭 검증용, part=armor/gloves/shoes)",
+	"/gg fillbag [n] - 등급 · 부위가 섞인 잠기지 않은 장비를 가방에 n개 지급(기본 = 가방이 가득 찰 만큼 · 가득 참 시험용 · /gg reset으로 복원)",
 	"/gg enhance <n> - 무기 강화 단계 지정(0~" .. EnhanceConfig.maxLevel .. ")",
 	"/gg weapon <n|등급명> - 무기 등급 지정(0~6 또는 " .. table.concat(ArmorData.gradeOrder, "/") .. ")",
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
@@ -1183,6 +1204,25 @@ local function handleCommand(player, args)
 			reply(player, ("인벤토리에 %s %s등급 itemLevel%s 추가"):format(args[2], args[3], args[4]))
 		else
 			reply(player, "실패(인벤토리 가득 또는 잘못된 등급)")
+		end
+	elseif sub == "fillbag" then
+		local profile = PlayerProfile.getProfile(player)
+		local free = profile and (profile.inventorySlots - #profile.inventory) or 0
+		local want = tonumber(args[2]) and math.floor(tonumber(args[2])) or free
+		if not profile then
+			reply(player, "프로필이 아직 없습니다")
+		elseif want < 1 then
+			reply(player, ("넣을 수 없습니다(빈 칸 %d · 요청 %d)"):format(free, want))
+		else
+			ensureBackup(player) -- 다른 명령처럼 백업 뒤 세션 메모리만 바꾼다(/gg reset으로 복원 · 그동안 저장 차단)
+			local added, byGrade = applyFillBag(player, want)
+			local summary = {}
+			for _, grade in ipairs(ArmorData.gradeOrder) do
+				if byGrade[grade] then
+					table.insert(summary, ("%s %d"):format(grade, byGrade[grade]))
+				end
+			end
+			reply(player, ("가방에 장비 %d개 지급(요청 %d) - 지금 %d / %d칸 · %s"):format(added, want, #profile.inventory, profile.inventorySlots, table.concat(summary, " · ")))
 		end
 	elseif sub == "enhance" and tonumber(args[2]) then
 		ensureBackup(player)
