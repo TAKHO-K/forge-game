@@ -57,6 +57,8 @@ ScreenMap.slots = {
 		zoneBoundary = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 100), UDim2.new(0, 420, 0, 48), "ZoneWarningLabel", "ZoneBoundaryWarning.client.lua"),
 		tutorialToast = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 160), UDim2.new(0, 480, 0, 0), "TutorialToast", "TutorialHud.client.lua - 높이는 내용(AutomaticSize.Y)"),
 		toastLane = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 64), UDim2.new(0, 480, 0, 40), "ToastLane_TC", "Toast 줄 TC(시스템 · 1행 · 3초)"),
+		-- S19b: 보스 이름(22) + 체력바(16) 사이 2. 위 끝 12 · 아래 끝 52 - 토스트 줄(64) 바로 위, 중앙 금지 구역(높이 388에서 위 끝 97) 위, 칩 스택 · 파티 버튼(TR)과 가로로 안 겹친다(폭 360).
+		bossBar = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 12), UDim2.new(0, 360, 0, 40), "BossBar", "hud/BossBar.client.lua(S19b) - 보스전 중에만 뜨는 보스 이름 + 체력바. 서버 모델 Attribute BossHpRatio를 0.1초마다 읽는다 - 머리 위 보스 바는 없다"),
 	},
 	TR = {
 		chipStack = slot("existing", 1, 0, UDim2.new(1, -14, 0, 52), nil, "TopChipsRow", "StageUI.client.lua - 골드(LayoutOrder 1) · 레벨(2) · 스테이지(3) · 설정(4) · 견습(5) 세로 스택, 간격 8. PRD 지도의 '골드 · 스테이지 칩'이 코드에서는 이 스택이다"),

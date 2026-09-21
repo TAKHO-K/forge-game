@@ -53,6 +53,15 @@ local BossEncounter = {}
 local encounterOf = {}
 local encounterByModel = {}
 
+-- S19b: 화면 보스 체력바(client/hud/BossBar)가 "내 보스"를 찾는 표식 - 보스전마다 번호 하나를 보스 모델과 멤버(실제 Player)의 Attribute BossEncounterId에 건다.
+-- 스탠드인(검증용 테이블 멤버)에는 Attribute가 없어 건너뛴다.
+local nextEncounterId = 0
+local function setEncounterAttribute(member, id)
+	if typeof(member) == "Instance" then
+		member:SetAttribute("BossEncounterId", id)
+	end
+end
+
 -- 24-2 크로스서버 파티(PRD 20.63): 보스전 시작/종료를 밖에 알린다 - PartyCrossServer가 파티 레코드의
 -- bossActive를 켜고 꺼서 다른 서버의 합류자가 "보스전이 끝날 때까지" 기다리게 한다(HP 배수 N이 입장 순간에
 -- 고정되므로 도중 합류는 없다, PRD 20.47 [6](다)). 리스너는 encounter 하나를 받는다(party 필드로 파티 여부 판단).
@@ -344,8 +353,12 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 		isTutorial = isTutorial or false,
 		startedAt = os.clock(),
 	}
+	nextEncounterId += 1
+	encounter.id = nextEncounterId
+	model:SetAttribute("BossEncounterId", encounter.id)
 	for _, member in ipairs(members) do
 		encounterOf[member] = encounter
+		setEncounterAttribute(member, encounter.id)
 	end
 	encounterByModel[model] = encounter
 	encounter.kitParts = BossArenaKit.build(data.arenaKit, zone, ARENA_FLOOR_TOP_Y)
@@ -515,6 +528,7 @@ local function endEncounter(encounter, destroyModel)
 	for _, member in ipairs(encounter.members) do
 		if encounterOf[member] == encounter then
 			encounterOf[member] = nil
+			setEncounterAttribute(member, nil)
 		end
 		if member.Parent then
 			teleportTo(member, huntingGroundReturnPosition())
@@ -558,6 +572,7 @@ function BossEncounter.leaveFor(player)
 		table.remove(encounter.members, index)
 	end
 	encounterOf[player] = nil
+	setEncounterAttribute(player, nil)
 	BossTrap.release(player, "reset") -- 29-1
 	BossPatterns.clearPropsFor(player) -- 29-3
 	if player.Parent then

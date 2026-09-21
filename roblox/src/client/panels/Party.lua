@@ -16,6 +16,7 @@ local FriendInvite = require(script.Parent.Parent.FriendInvite)
 local HelpTooltip = require(script.Parent.Parent.HelpTooltip)
 local PlayerMenu = require(script.Parent.PlayerMenu)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
+local PartyAway = require(script.Parent.Parent.hud.PartyAway)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 
@@ -368,15 +369,18 @@ local function build()
 		for i, member in ipairs(members) do
 			local row = myRows[i]
 			local target = (not member.isDummy) and Players:GetPlayerByUserId(member.userId) or nil
-			local classId = member.isDummy and member.dummy.classId or (target and target:GetAttribute("ClassId"))
-			local level = member.isDummy and member.dummy.level or (target and target:GetAttribute("CharacterLevel"))
-			local rebirth = target and target:GetAttribute("RebirthCount")
-			local stage = member.isDummy and member.dummy.stage or (target and target:GetAttribute("InfiniteStage"))
-			local displayName = (target and target.DisplayName) or member.name
+			local last = member.last -- S19b: 연결 끊김 유예 중인 멤버는 Player가 없다 - 끊기기 직전 값
+			local awayText = PartyAway.text(member, false)
+			local classId = member.isDummy and member.dummy.classId or (target and target:GetAttribute("ClassId")) or (last and last.classId)
+			local level = member.isDummy and member.dummy.level or (target and target:GetAttribute("CharacterLevel")) or (last and last.level)
+			local rebirth = (target and target:GetAttribute("RebirthCount")) or (last and last.rebirth)
+			local stage = member.isDummy and member.dummy.stage or (target and target:GetAttribute("InfiniteStage")) or (last and last.stage)
+			local displayName = (target and target.DisplayName) or (last and last.displayName) or member.name
 			-- 파티장 표시는 금색 이름(옛 "★ " 표시는 환생 ★n과 헷갈려 뺐다).
 			row.name.Text = PlayerLabelFormat.richText(displayName .. (member.isDummy and " (더미)" or ""), level, rebirth, nameSize)
-			row.name.TextColor3 = member.isLeader and UIColors.gold or UIColors.textPrimary
-			row.meta.Text = ("%s · 스테이지 %s"):format(classNameOf(classId), tostring(stage or "-"))
+			row.name.TextColor3 = awayText and UIColors.textSecondary or (member.isLeader and UIColors.gold or UIColors.textPrimary)
+			local meta = ("%s · 스테이지 %s"):format(classNameOf(classId), tostring(stage or "-"))
+			row.meta.Text = awayText and ("%s · %s"):format(awayText, meta) or meta
 			if target then
 				row.nameConnection = row.name.Activated:Connect(openMenu(member.userId, displayName, level, rebirth))
 			end
@@ -542,8 +546,22 @@ function Party.init()
 	build()
 	buildToggleButton()
 	partyStateChanged.OnClientEvent:Connect(function(state)
-		partyState = state
+		partyState = PartyAway.stamp(state)
 		refs.update()
+	end)
+	-- S19b: 연결 끊김 카운트다운 - 창이 열려 있고 끊긴 멤버가 있을 때만 1초마다 다시 그린다.
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			if windowOpen and partyState then
+				for _, member in ipairs(partyState.members) do
+					if member.awayEndsAt then
+						refs.update()
+						break
+					end
+				end
+			end
+		end
 	end)
 	Players.PlayerAdded:Connect(refs.update)
 	Players.PlayerRemoving:Connect(function()

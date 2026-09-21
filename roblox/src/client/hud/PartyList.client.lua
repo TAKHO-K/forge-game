@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local PartyListView = require(script.Parent.PartyListView)
+local PartyAway = require(script.Parent.PartyAway)
 
 local partyStateChanged = ReplicatedStorage:WaitForChild("PartyStateChanged")
 
@@ -37,7 +38,12 @@ end
 local function readMember(member)
 	local hp, maxHp, level, stage, classId, buffActive, rebirth, shield
 	local displayName = member.name -- 서버 기록은 username - 살아 있는 Player면 DisplayName으로 바꾼다(S12b D)
-	if member.isDummy then
+	local awayText = PartyAway.text(member, Theme.isMobile) -- S19b: 연결 끊김 유예 중 - Player가 없으니 끊기기 직전 값(member.last)으로 그리고 체력은 0
+	if awayText then
+		local last = member.last or {}
+		level, stage, classId, rebirth = last.level, last.stage, last.classId, last.rebirth
+		displayName = last.displayName or displayName
+	elseif member.isDummy then
 		hp, maxHp = member.dummy.hp or 1, member.dummy.maxHp or 1
 		level, stage, classId = member.dummy.level, member.dummy.stage, member.dummy.classId
 	else
@@ -64,6 +70,7 @@ local function readMember(member)
 		shieldRatio = (shield and maxHp and maxHp > 0) and math.clamp(shield / maxHp, 0, 1) or 0,
 		buffActive = buffActive == true,
 		isLeader = member.isLeader == true,
+		awayText = awayText,
 	}
 end
 
@@ -79,7 +86,7 @@ local function refresh()
 end
 
 partyStateChanged.OnClientEvent:Connect(function(state)
-	currentState = state
+	currentState = PartyAway.stamp(state)
 	refresh()
 end)
 

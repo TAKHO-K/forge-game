@@ -106,7 +106,12 @@ end
 local function buildRecord(party)
 	local members, pending = {}, {}
 	for _, record in ipairs(PartyState.getMemberRecords(party)) do
-		table.insert(members, { userId = record.userId, name = record.name })
+		if record.awayUntil then
+			-- S19b: 연결 끊김 유예 중인 멤버는 "지금 이 서버에 없는 사람의 예약 좌석"과 같다 - 다른 서버의 재접속 합류(reserveSeat)가 already_member로 막히지 않고, 자리는 유예가 끝날 때까지 잡혀 있다.
+			table.insert(pending, { userId = record.userId, name = record.name, since = os.time(), awayUntil = record.awayUntil })
+		else
+			table.insert(members, { userId = record.userId, name = record.name })
+		end
 	end
 	for _, seat in ipairs(PartyState.getPendingSeats(party)) do
 		table.insert(pending, { userId = seat.userId, name = seat.name, since = seat.since })
@@ -127,6 +132,9 @@ local function buildRecord(party)
 end
 
 local function seatExpired(seat)
+	if type(seat.awayUntil) == "number" then
+		return os.time() >= seat.awayUntil -- S19b: 연결 끊김 유예 좌석 · 재접속 표식은 유예 끝까지(seatTimeoutSeconds가 아니라)
+	end
 	return type(seat.since) ~= "number" or os.time() - seat.since >= PartyConfig.seatTimeoutSeconds
 end
 
@@ -448,6 +456,36 @@ local function attachLocal(player, party)
 	return true
 end
 
+-- ═══ S19b 연결 끊김 재접속 표식 ═══
+-- 파티 서버(이 파티가 있는 서버)가 멤버의 연결이 끊긴 순간 memberMap[userId] = { code, targetJobId = 이 서버, reconnect = true, awayUntil }을 쓴다(TTL = 남은 유예).
+-- 그 사람이 어느 서버로 재접속하든 handleArrival이 이 표식을 읽는다 - 같은 서버면 PartyState.reclaim이 이미 복귀시켰고, 다른 서버면 복귀 초대를 띄운다.
+local function writeReconnectMarker(party, record)
+	if not party.code then
+		return
+	end
+	task.spawn(function()
+		call("재접속 표식 쓰기", function()
+			return memberMap:SetAsync(tostring(record.userId), {
+				code = party.code, targetJobId = game.JobId, since = os.time(), reconnect = true, leaderName = party.leader.name, awayUntil = record.awayUntil,
+			}, math.max(1, record.awayUntil - os.time()))
+		end)
+	end)
+end
+
+-- 복귀 · 추방 · 만료로 유예가 끝났을 때 표식을 지운다(이 파티의 표식일 때만 - 그 사이 다른 파티 합류 기록으로 바뀌었으면 건드리지 않는다).
+local function clearReconnectMarker(userId, code)
+	task.spawn(function()
+		local old = call("재접속 표식 읽기", function()
+			return memberMap:GetAsync(tostring(userId))
+		end)
+		if type(old) == "table" and old.reconnect and old.code == code then
+			call("재접속 표식 삭제", function()
+				return memberMap:RemoveAsync(tostring(userId))
+			end)
+		end
+	end)
+end
+
 -- 도착 처리(리더 서버). 멤버 레코드가 이 서버를 가리키면 그 파티에 붙인다. simulate=true(DevTools)는 JobId
 -- 검사를 건너뛴다 - Studio에서 텔레포트 없이 같은 경로를 밟기 위해.
 local function handleArrival(player, simulate)
@@ -456,6 +494,26 @@ local function handleArrival(player, simulate)
 	end)
 	if type(record) ~= "table" or seatExpired(record) then
 		return false
+	end
+	if record.reconnect then
+		-- S19b: 파티에서 연결이 끊겼던 사람의 재접속. 같은 서버면 PartyState.reclaim이 이미 복귀시켰다(표식만 치운다).
+		if record.targetJobId == game.JobId then
+			clearReconnectMarker(player.UserId, record.code)
+			return true
+		end
+		-- 다른 서버면 파티는 targetJobId 서버에 남아 있다 - 복귀 초대를 띄운다. 수락하면 코드 합류와 같은 경로(requestJoin)로 그 서버로 이동한다(강제 이동은 안 한다).
+		if not PartyState.getParty(player) and not joinState[player] and not remoteInvites[player] and readRecord(record.code) then
+			local invite = { code = record.code, fromName = record.leaderName or "파티" }
+			remoteInvites[player] = invite
+			invite.thread = task.delay(PartyConfig.reconnectOfferSeconds, function()
+				if remoteInvites[player] == invite then
+					remoteInvites[player] = nil
+				end
+			end)
+			partyInviteNotice:FireClient(player, { inviterName = invite.fromName, seconds = PartyConfig.reconnectOfferSeconds, remote = true })
+			print(("[forge-game] 재접속 복귀 초대: %s -> 코드 %s (파티 서버 %s)"):format(player.Name, record.code, tostring(record.targetJobId)))
+		end
+		return true
 	end
 	if not simulate and record.targetJobId ~= game.JobId then
 		return false -- 다른 서버로 가는 사람이 우연히 여기 접속했다(텔레포트 실패 후 재접속 등) - 그쪽 좌석은 TTL로 회수된다
@@ -780,9 +838,18 @@ end
 -- ═══ 배선 ═══
 
 -- 파티 변화 → 레코드. "create"는 코드 발급(레코드도 그때 처음 쓴다), "disband"는 삭제, 나머지는 갱신.
-PartyState.onChanged(function(party, event)
+PartyState.onChanged(function(party, event, record)
 	if event == "create" then
 		PartyCrossServer.ensureCode(party)
+	elseif event == "away" then
+		publishRecord(party)
+		writeReconnectMarker(party, record)
+	elseif event == "return" then
+		publishRecord(party)
+		clearReconnectMarker(record.userId, party.code)
+	elseif (event == "leave" or event == "leader") and record and record.awayUntil then
+		publishRecord(party) -- 유예 중이던 멤버가 추방 · 만료로 빠졌다
+		clearReconnectMarker(record.userId, party.code)
 	elseif event == "disband" then
 		removeRecord(party.code, party)
 		for player, waiting in pairs(arrivalWaiting) do
@@ -859,6 +926,7 @@ Players.PlayerAdded:Connect(function(player)
 		task.wait()
 	end
 	if player.Parent then
+		PartyState.reclaim(player) -- S19b: 같은 서버로 재접속한 끊긴 멤버는 유예 안에서 파티로 복귀한다(프로필이 로드된 뒤 - 클라가 파티 상태를 받을 준비가 된 때)
 		handleArrival(player, false)
 	end
 end)

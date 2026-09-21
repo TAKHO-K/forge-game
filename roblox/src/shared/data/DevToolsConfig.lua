@@ -60,7 +60,11 @@ local config = {
 		-- 서버 (나) 블록(27-3 · S12(나) · S09(나))은 서버 변경이 없어 뺀다. S04(나)는 계속 제외.
 		-- 주의(S19 실측): 서버 (나) 블록(특히 S12(나) - 견습을 잠시 켰다가 블록 끝에서 복원)을 도중에 Play를 멈추면 개발 계정의 견습 상태가 저장 프로필에 남는다(DevTools 스냅샷은 tutorial을 백업하지 않는다) -
 		--   그러면 S12(UI) 스테이지 선택 · S18(UI) 배너 겹침 · S12(나) [0](파티 보스 스폰)이 X로 바뀐다. 복구: Play에서 `/gg tutorial off` → `/gg save unlock` → Play 정지.
-		current = { "S18(UI)", "S17(UI)", "S16(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
+		-- S19b(2026-09-21): 보스 체력바 화면 UI(A) · 파티 연결 끊김 유예(B) · 수동 Play 모드 + 검증용 저장 분리(사전 작업). 이번 세션 블록 S19b(가)(PartyState 유예 - 스탠드인) · S19b(나)(실제 보스 · 파티) · S19b(UI)(BossBarCheck).
+		-- 동반 실행(COMMON.md §3): 이 세션이 고친 모듈을 쓰는 옛 블록 - PartyState · PartyCrossServer · PartyConfig(27-3 투표 · S09 경험치 인원 · S10 드랍 알림 · S12 견습 파티 · S12b 소셜 · S13 · S13b 파티 경로 · 29-5(나)의 파티 보스),
+		--   MonsterSpawner(updateHpLabel · 보스 스폰) · BossEncounter(보스전 번호 Attribute · 스폰 · 이탈) = 29-1(보스 뼈대 · 수명) · S01(나)(보스 처치 경로) · S11(나) · S14(나)(보스 스폰) + 클라 UI(PartyListView · Party · ScreenMap · UiSelfCheck) = S18(UI) · S12b(UI) · S12(UI) · S10(가).
+		--   SaveSystem(검증용 키)은 모든 서버 (나) 블록이 실제 프로필을 읽고 쓰므로 위 서버 (나) 블록 전부가 그 경로를 지난다. S04(나)는 계속 제외.
+		current = { "S19b(가)", "S19b(나)", "S19b(UI)", "27-3(가)", "27-3(나)", "S09(나)", "S10(나)", "S12(나)", "S12b(나)", "S13(나)", "S13b(나)", "29-1", "29-5(나)", "S01(나)", "S11(나)", "S14(나)", "S18(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
 	},
 }
 

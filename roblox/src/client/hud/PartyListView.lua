@@ -4,7 +4,8 @@
 --   모바일 축약형(compact = true): 이름 없이 체력 줄 4개 + 줄 위에 직업 전체 이름(직업색) · 폭 96 · 파티장은 줄 왼쪽 작은 ●. 행(44)을 누르면 2초간 이름이 뜬다(hover 아님). 경험치 칩도 폭 96.
 --   모바일은 세로 중앙에 놓인 목록의 아래 끝이 BL 터치 예약 구역(조이스틱 · 대시 버튼)에 닿으면 메뉴바와 같은 규칙(ScreenMap.mobileMenuBarShiftUp)으로 위로 민다.
 -- view = { list, setMembers(members), setExpBonus(bonus), applyPosition(viewportHeight), height(), rowCount(), rows, chip, destroy() }.
--- members[i] = { nameText, level, rebirth, classId(직업색 - 없으면 회색), className, stage, ratio(체력 0~1), shieldRatio(0~1), buffActive, isLeader } - nameText는 표시이름(+ "(더미)" · "✚" 꼬리).
+-- members[i] = { nameText, level, rebirth, classId(직업색 - 없으면 회색), className, stage, ratio(체력 0~1), shieldRatio(0~1), buffActive, isLeader, awayText } - nameText는 표시이름(+ "(더미)" · "✚" 꼬리).
+--   awayText(S19b)가 있으면 연결 끊김 유예 중이다: PC는 부제 앞에 "연결 끊김 m:ss" · 이름 줄이 회색, 모바일 축약형은 직업 이름 자리에 "끊김 m:ss"를 쓴다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -80,10 +81,11 @@ local function buildPcMember(list, order)
 	local refs = { block = block, row = row, gauge = gauge, title = title, icon = icon, stroke = stroke, shield = shield }
 	function refs.apply(data)
 		title.Text = PlayerLabelFormat.richText(data.nameText, data.level, data.rebirth, NAME_SIZE)
-		title.TextColor3 = data.isLeader and UIColors.gold or UIColors.textPrimary
+		title.TextColor3 = data.awayText and UIColors.textSecondary or (data.isLeader and UIColors.gold or UIColors.textPrimary)
 		icon.Text = firstChar(data.className)
 		icon.TextColor3 = UIColors.classAccent[data.classId] or UIColors.textSecondary
-		row.setSubtitle(("%s · 스테이지 %s"):format(data.className, tostring(data.stage or "-")))
+		local subtitle = ("%s · 스테이지 %s"):format(data.className, tostring(data.stage or "-"))
+		row.setSubtitle(data.awayText and ("%s · %s"):format(data.awayText, subtitle) or subtitle)
 		setGauge(gauge, shield, data.ratio, data.shieldRatio)
 		-- 24-3: 링 색으로 버프 여부를 구분한다(새 파티클 · 새 색 없이 기존 rim/success 재사용).
 		stroke.Color = data.buffActive and UIColors.success or UIColors.rim
@@ -147,8 +149,8 @@ local function buildCompactMember(list, order)
 	local refs = { block = button, gauge = gauge, dot = dot, tip = tip, tipLabel = tipLabel, classLabel = classLabel, shield = shield, tipToken = 0 }
 	function refs.apply(data)
 		dot.Visible = data.isLeader == true
-		classLabel.Text = data.className
-		classLabel.TextColor3 = UIColors.classAccent[data.classId] or UIColors.textSecondary
+		classLabel.Text = data.awayText or data.className
+		classLabel.TextColor3 = data.awayText and UIColors.textSecondary or (UIColors.classAccent[data.classId] or UIColors.textSecondary)
 		tipLabel.Text = PlayerLabelFormat.richText(data.nameText, data.level, data.rebirth, Theme.textSize("caption"))
 		setGauge(gauge, shield, data.ratio, data.shieldRatio)
 	end

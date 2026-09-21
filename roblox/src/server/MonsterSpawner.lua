@@ -217,29 +217,33 @@ local function buildModel(data, position, variant)
 	nameLabel.Parent = nameplateGui
 	WorldLabelStyle.styleNameplateText(nameLabel, 16)
 
-	local barBackground = Instance.new("Frame")
-	barBackground.Name = "HpBarBackground"
-	barBackground.Size = UDim2.new(1, 0, 0, 8)
-	barBackground.Position = UDim2.new(0, 0, 1, -8)
-	barBackground.BackgroundColor3 = Color3.new(0, 0, 0)
-	barBackground.BackgroundTransparency = 0.35
-	barBackground.BorderSizePixel = 0
-	barBackground.Parent = nameplateGui
+	-- S19b: 보스 체력바는 화면 HUD(client/hud/BossBar.client.lua)가 그린다 - 보스 머리 위에는 바를 만들지 않는다(이름표는 조준할 때만 뜬다).
+	-- 비율은 updateHpLabel이 모델 Attribute BossHpRatio로 내린다(HP 계산은 서버만 - MonsterState).
+	if not data.isBoss then
+		local barBackground = Instance.new("Frame")
+		barBackground.Name = "HpBarBackground"
+		barBackground.Size = UDim2.new(1, 0, 0, 8)
+		barBackground.Position = UDim2.new(0, 0, 1, -8)
+		barBackground.BackgroundColor3 = Color3.new(0, 0, 0)
+		barBackground.BackgroundTransparency = 0.35
+		barBackground.BorderSizePixel = 0
+		barBackground.Parent = nameplateGui
 
-	local barBackgroundCorner = Instance.new("UICorner")
-	barBackgroundCorner.CornerRadius = UDim.new(1, 0)
-	barBackgroundCorner.Parent = barBackground
+		local barBackgroundCorner = Instance.new("UICorner")
+		barBackgroundCorner.CornerRadius = UDim.new(1, 0)
+		barBackgroundCorner.Parent = barBackground
 
-	local barFill = Instance.new("Frame")
-	barFill.Name = "HpBarFill"
-	barFill.Size = UDim2.new(1, 0, 1, 0)
-	barFill.BackgroundColor3 = Color3.fromRGB(210, 60, 60)
-	barFill.BorderSizePixel = 0
-	barFill.Parent = barBackground
+		local barFill = Instance.new("Frame")
+		barFill.Name = "HpBarFill"
+		barFill.Size = UDim2.new(1, 0, 1, 0)
+		barFill.BackgroundColor3 = Color3.fromRGB(210, 60, 60)
+		barFill.BorderSizePixel = 0
+		barFill.Parent = barBackground
 
-	local barFillCorner = Instance.new("UICorner")
-	barFillCorner.CornerRadius = UDim.new(1, 0)
-	barFillCorner.Parent = barFill
+		local barFillCorner = Instance.new("UICorner")
+		barFillCorner.CornerRadius = UDim.new(1, 0)
+		barFillCorner.Parent = barFill
+	end
 
 	-- 조준 대상 강조 외곽선(16-7) - 기본은 꺼져 있다. AimTarget.lua가 조준 대상 모델에서만
 	-- Enabled를 켠다.
@@ -435,6 +439,12 @@ end
 -- 19-4 - 잡몹은 공유 HP라 절대 숫자 자체가 "누구 기준인가"를 못 정하므로 비율만 쓴다,
 -- MonsterState.getHpRatio 참고).
 function MonsterSpawner.updateHpLabel(model)
+	-- S19b: 보스는 머리 위 바 대신 화면 체력바(client/hud/BossBar)가 이 Attribute 하나를 읽는다. 전달 = 모델 Attribute BossHpRatio(0 ~ 1) - RemoteEvent를 안 쏜다.
+	local bossData = MonsterState.getData(model)
+	if bossData and bossData.isBoss then
+		model:SetAttribute("BossHpRatio", MonsterState.getHpRatio(model))
+		return
+	end
 	local head = model:FindFirstChild("Head")
 	local nameplateGui = head and head:FindFirstChild("NameplateGui")
 	local barFill = nameplateGui and nameplateGui:FindFirstChild("HpBarBackground") and nameplateGui.HpBarBackground:FindFirstChild("HpBarFill")
@@ -467,6 +477,7 @@ function MonsterSpawner.spawn(data, position, zoneKey, forcedVariant)
 	MonsterState.init(model, data, position, zoneKey, variant)
 	MonsterSpawner.updateHpLabel(model)
 	if data.isBoss then
+		model:SetAttribute("BossName", data.displayName) -- 화면 체력바의 이름(S19b)
 		playBossAppearEffect(model, position)
 	end
 	return model

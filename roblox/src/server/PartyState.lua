@@ -52,12 +52,12 @@ local partyOf = {} -- [Player] = party
 local invites = {} -- [invitee Player] = { party, inviter = Player, expiresAt, thread }
 local nextPartyId = 1
 local removedListeners = {} -- fn(player, party, reason)
-local changedListeners = {} -- fn(party, event) - event: "create"/"join"/"leave"/"leader"/"seat"/"boss"/"disband"
+local changedListeners = {} -- fn(party, event, record) - event: "create"/"join"/"leave"/"leader"/"seat"/"boss"/"disband"/"away"(S19b 연결 끊김 유예 시작)/"return"(유예 중이던 멤버가 복귀)
 
 -- 아래 좌석 헬퍼들이 먼저 쓰므로 선언 직후에 정의한다(Lua 지역 함수는 정의 순서를 따른다).
-local function fireChanged(party, event)
+local function fireChanged(party, event, record)
 	for _, fn in ipairs(changedListeners) do
-		task.spawn(fn, party, event)
+		task.spawn(fn, party, event, record) -- record: "away"/"leave"/"leader"/"join"에서 그 멤버 기록(S19b - PartyCrossServer가 재접속 표식을 쓰고 지운다)
 	end
 end
 
@@ -102,9 +102,18 @@ function PartyState.getLeader(party)
 	return party and party.leader.player
 end
 
--- 인원수 - 더미 포함(보스 HP 배수는 "입장 머릿수"다, PRD 20.47 [6](가)).
+-- 인원수 - 더미 포함(보스 HP 배수는 "입장 머릿수"다, PRD 20.47 [6](가)). S19b: 연결이 끊겨 유예 중인 멤버(awayUntil)는 지금 입장할 수 없으므로 세지 않는다 -
+-- 자리(getSeatCount)는 그대로 차지하지만 보스 HP 배수 N에는 안 들어간다(좌석 예약과 같은 처리).
 function PartyState.getSize(party)
-	return party and #party.members or 0
+	local count = 0
+	if party then
+		for _, record in ipairs(party.members) do
+			if not record.awayUntil then
+				count += 1
+			end
+		end
+	end
+	return count
 end
 
 -- 30-0 S09(PRD 20.73 [5-1]): 파티 경험치 보너스. 인원 = 실제 Player 멤버 수(더미 · 텔레포트 중인 원격 좌석은 안 센다). 이 함수 둘이 유일한 출처다 -
@@ -237,6 +246,9 @@ local function snapshot(party)
 			isDummy = record.isDummy,
 			isLeader = record == party.leader,
 			dummy = record.dummy,
+			-- S19b: 연결 끊김 유예 중이면 남은 초(클라가 받은 시각 기준으로 m:ss를 센다 - 서버 · 클라 시계를 맞출 필요가 없다)와 끊기기 직전의 직업 · 레벨 · 스테이지
+			awayRemaining = record.awayUntil and math.max(0, record.awayUntil - os.time()) or nil,
+			last = record.last,
 		})
 	end
 	local pending = {}
@@ -253,6 +265,8 @@ local function snapshot(party)
 		maxMembers = PartyConfig.maxMembers,
 	}
 end
+
+PartyState.debugSnapshot = snapshot -- S19b 검증 전용(스냅샷을 클라 없이 읽는다)
 
 function PartyState.pushState(party)
 	local data = snapshot(party)
@@ -361,7 +375,32 @@ local function removeRecord(party, record, reason)
 		end
 	end
 	PartyState.pushState(party)
-	fireChanged(party, wasLeader and "leader" or "leave")
+	fireChanged(party, wasLeader and "leader" or "leave", record)
+end
+
+-- S19b 연결 끊김 유예: 끊긴 멤버 기록(record.awayUntil = 유예가 끝나는 os.time · record.player = nil · record.last = 끊기기 직전 직업 · 레벨 · 스테이지)은 members에 그대로 남아
+-- 자리를 차지한다(getSeatCount) - 접속 중인 멤버 목록(getMemberPlayers) · 입장 인원(getSize) · 경험치 보너스 인원에는 안 들어간다.
+local function findAway(party, userId)
+	for _, record in ipairs(party.members) do
+		if record.awayUntil and record.userId == userId then
+			return record
+		end
+	end
+	return nil
+end
+
+-- 유예 중이던 기록에 새 Player를 붙여 복귀시킨다(가입 순서 · 이전 자리 그대로. 파티장 자리는 이미 승계됐으므로 일반 멤버로 돌아온다).
+local function reviveRecord(party, record, player)
+	record.player = player
+	record.awayUntil = nil
+	record.awayToken = nil
+	record.last = nil
+	record.name = player.Name
+	partyOf[player] = party
+	PartyState.pushState(party)
+	PartyState.notify(player, "파티에 복귀했습니다")
+	print(("[forge-game] 파티 복귀: #%d %s (%d/%d)"):format(party.id, player.Name, #party.members, PartyConfig.maxMembers))
+	fireChanged(party, "return", record)
 end
 
 -- 초대. 반환: ok, reason. inviter가 파티가 없으면 새 파티를 만들어 리더가 된다.
@@ -433,6 +472,11 @@ end
 -- 원격 좌석(pending)이 있으면 그 좌석이 실제 멤버로 바뀐다. 정원 검사는 호출부가 한다.
 function PartyState.attachMember(party, player)
 	PartyState.removePendingSeat(party, player.UserId, true)
+	local away = findAway(party, player.UserId)
+	if away then
+		reviveRecord(party, away, player) -- S19b: 코드 합류 · 도착 · 수락으로 돌아온 사람이 유예 중이던 그 사람이면 새 기록을 만들지 않고 자리를 되찾는다
+		return away
+	end
 	local record = { player = player, name = player.Name, userId = player.UserId, isDummy = false, joinedAt = now() }
 	table.insert(party.members, record)
 	partyOf[player] = party
@@ -462,6 +506,84 @@ function PartyState.leave(player, reason)
 	print(("[forge-game] 파티 이탈: #%d %s (%s)"):format(party.id, player.Name, reason or "leave"))
 	removeRecord(party, record, reason or "leave")
 	return true
+end
+
+-- S19b: 끊긴 순간의 직업 · 레벨 · 스테이지(Player Attribute - 유예 중에는 Player가 없어 클라가 못 읽는다). 스탠드인(검증용 테이블)에는 없다.
+local function readLast(player)
+	if typeof(player) ~= "Instance" then
+		return nil
+	end
+	return {
+		classId = player:GetAttribute("ClassId"),
+		level = player:GetAttribute("CharacterLevel"),
+		rebirth = player:GetAttribute("RebirthCount"),
+		stage = player:GetAttribute("InfiniteStage"),
+		displayName = player.DisplayName,
+	}
+end
+
+-- S19b 연결 끊김(PlayerRemoving). 접속 중인 다른 실제 멤버가 있으면 바로 탈퇴시키지 않고 유예(graceSeconds - 기본 PartyConfig.disconnectGraceSeconds)를 준다:
+-- 그 사이 파티 목록에는 "연결 끊김 m:ss"로 남고(파티장은 추방할 수 있다), 같은 사람이 다시 접속하면 복귀(reclaim · attachMember), 시간이 지나면 자동 탈퇴한다.
+-- 유예를 못 주는 경우(파티 없음 · 유예 0 · 남은 접속자 없음 - 혼자 남거나 전원이 끊김)는 옛 동작 그대로 즉시 탈퇴(leave). 반환: true = 파티에서 빠졌거나 유예가 시작됨.
+-- 리스너(onMemberRemoved)에는 "disconnect"로 즉시 알린다 - 보스전에서 빠지고(BossEncounter) 진행 중이던 투표가 취소된다(PartyVote). 보스 HP 배수는 입장 순간 고정이라 안 바뀐다.
+function PartyState.disconnect(player, graceSeconds)
+	graceSeconds = graceSeconds or PartyConfig.disconnectGraceSeconds
+	local party = partyOf[player]
+	local hasOtherConnected = false
+	if party then
+		for _, other in ipairs(party.members) do
+			if other.player and other.player ~= player then
+				hasOtherConnected = true
+				break
+			end
+		end
+	end
+	if not party or graceSeconds <= 0 or not hasOtherConnected then
+		return PartyState.leave(player, "disconnect")
+	end
+
+	cancelInvite(player)
+	local record = recordOf(party, player)
+	record.awayUntil = os.time() + graceSeconds
+	record.last = readLast(player)
+	local token = {}
+	record.awayToken = token
+	record.player = nil
+	partyOf[player] = nil
+	print(("[forge-game] 파티 연결 끊김: #%d %s (유예 %d초)"):format(party.id, record.name, graceSeconds))
+	fireRemoved(player, party, "disconnect")
+	if party.leader == record then
+		for _, candidate in ipairs(party.members) do
+			if candidate.player then
+				party.leader = candidate
+				print(("[forge-game] 파티 리더 승계: #%d -> %s"):format(party.id, candidate.name))
+				break
+			end
+		end
+	end
+	PartyState.pushState(party)
+	fireChanged(party, "away", record)
+	task.delay(graceSeconds, function()
+		-- 그 사이 복귀 · 추방 · 해산이 있었으면(토큰이 지워졌거나 기록이 members에 없다) 아무것도 안 한다.
+		if record.awayToken == token and table.find(party.members, record) then
+			print(("[forge-game] 파티 유예 만료 - 자동 탈퇴: #%d %s"):format(party.id, record.name))
+			removeRecord(party, record, "grace")
+		end
+	end)
+	return true
+end
+
+-- S19b: 새로 접속한 Player가 어느 파티의 유예 중인 멤버였으면 그 파티로 복귀시킨다(같은 서버로 돌아온 경우 - PartyCrossServer가 프로필 로드 뒤에 부른다). 다른 서버로 접속했으면
+-- 이 서버에는 그 파티가 없어 못 찾는다 - 그 경우는 PartyCrossServer가 재접속 표식(memberMap)을 읽어 복귀 초대를 띄운다. 반환: true, party | false.
+function PartyState.reclaim(player)
+	for _, party in pairs(parties) do
+		local record = findAway(party, player.UserId)
+		if record then
+			reviveRecord(party, record, player)
+			return true, party
+		end
+	end
+	return false
 end
 
 function PartyState.kick(leader, targetUserId)
@@ -541,7 +663,7 @@ function PartyState.clearDummies(player)
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	PartyState.leave(player, "disconnect")
+	PartyState.disconnect(player)
 end)
 
 return PartyState
