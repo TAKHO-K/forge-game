@@ -119,6 +119,7 @@ local function run()
 	-- ⑥ 잘린 본문 탭 펼치기
 	do
 		local longBody = "파티에 초대했습니다 (다른 서버 - 수락 시 이동) 이 문장은 일부러 길게 써서 본문이 세 줄을 넘어 잘리게 하는 검사용 문장입니다 끝까지 보이는지 확인합니다"
+		longBody = longBody .. " " .. longBody -- Play 실측: 한글 12px ≈ 7px 폭이라 한 벌(약 85자)은 PC에서 3줄에 들어간다 → 두 벌
 		RequestBanner.clear()
 		RequestBanner.push({ key = "expandCheck", title = "{name}님 파티 초대", name = "홍길동", body = longBody, seconds = 20, accept = { text = "수락" }, decline = { text = "거절" } })
 		local collapsed = RequestBanner.debugState()
