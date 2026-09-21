@@ -1,13 +1,14 @@
 -- 장비창 보석 탭(23-4 · 26-3 · S20b: InventoryUI.client.lua의 setupGemTab을 그대로 잘라 옮겼다 - 동작 변경 0).
 -- GemTab.create(deps) -> { update, cancelDrag, state, frame }
 --   deps(InventoryUI가 주는 공용 접점 - 전부 명시적이다):
---     body · content · screenGui      Instance: 장비 탭 본문(자리 · 크기를 따른다) · 장비창 캔버스(보석 본문의 부모) · 드래그 유령 아이콘이 붙는 ScreenGui
---     registerTab(name, frame)        탭 표에 본문을 등록한다
+--     content · screenGui             Instance: 장비창 캔버스(보석 본문의 부모) · 드래그 유령 아이콘이 붙는 ScreenGui
+--     registerLayout(fn)              배치 함수 fn(L)을 등록한다(Shell.applyLayout이 화면 크기가 바뀔 때마다 부른다 - L은 Layout.compute의 결과)
 --     isOpen() -> boolean             창이 열려 있는가
 --     getSelection() -> kind, value   공용 선택 상태 읽기 · select(kind, value) 쓰기(kind = "gemSlot" | "gemBag")
 --     refreshDetail() · refreshStats()  상세바 · 총 스탯 갱신(보석은 옵션 보너스에 합산된다)
 --     weaponGradeId() · applyGradeVisual(cell, stroke, glow, gradeId) · makeSectionLabel(parent, text, y)  InventoryUI가 함께 쓰는 헬퍼
 --   반환: update() = 보석 탭 다시 그리기(창 열 때 · 서버 동기화 때) · cancelDrag() = 드래그 취소(창 닫을 때) · state() = 현재 보석 상태 스냅샷(GemSync) · frame = 보석 본문.
+-- S20b 재구성: 본문(GemBody)은 세로 스크롤 ScrollingFrame이다. PC = 무기 칸(왼쪽 220) + 정보 칸 2단 · 폰 = 무기 칸 위 · 정보 칸 아래 1단(홈 행 높이 76 · 리롤 / 변환권 버튼 높이 44).
 -- 드래그 중의 전역 입력(UserInputService InputChanged · InputEnded)은 이 모듈 안에서 연결한다. 취소 경로: 창 닫기(InventoryUI onClose → cancelDrag) · 마우스 놓기(endGemDrag). (탭 전환 · 리스폰에는 취소가 없다 - 옛 코드와 같다, 아래 PRD 기록 참고)
 
 local Players = game:GetService("Players")
@@ -37,7 +38,7 @@ local player = Players.LocalPlayer
 local GemTab = {}
 
 function GemTab.create(deps)
-local body, content, screenGui = deps.body, deps.content, deps.screenGui
+local content, screenGui = deps.content, deps.screenGui
 local makeSectionLabel, applyGradeVisual = deps.makeSectionLabel, deps.applyGradeVisual
 local weaponGradeId, refreshDetail, refreshStats = deps.weaponGradeId, deps.refreshDetail, deps.refreshStats
 
@@ -51,14 +52,14 @@ local currentGemState = {
 local updateGemTab, cancelGemDrag
 local Option = require(ReplicatedStorage.Shared.Option)
 
-local gemBody = Instance.new("Frame")
+local gemBody = Instance.new("ScrollingFrame")
 gemBody.Name = "GemBody"
-gemBody.Position = body.Position
-gemBody.Size = body.Size
 gemBody.BackgroundTransparency = 1
+gemBody.BorderSizePixel = 0
+gemBody.ScrollBarThickness = 4
+gemBody.CanvasSize = UDim2.new(0, 0, 0, 0)
 gemBody.Visible = false
 gemBody.Parent = content
-deps.registerTab("보석", gemBody)
 
 -- (currentGemState는 이 모듈이 갖는다 - Detail의 리롤 버튼도 같은 변환권 보유량을 봐야 해서 GemTab.state()로 InventoryUI가 읽는다.)
 
@@ -247,7 +248,7 @@ for slot = 1, Gem.slotCount do
 	end)
 end
 
-makeSectionLabel(infoPane, "보유 보석 (끌어서 왼쪽 홈에 놓기)", 250)
+local invLabel = makeSectionLabel(infoPane, "보유 보석 (끌어서 왼쪽 홈에 놓기)", 250)
 
 local gemInvScroll = Instance.new("ScrollingFrame")
 gemInvScroll.Position = UDim2.new(0, 14, 0, 270)
@@ -547,6 +548,47 @@ end)
 for _, attr in ipairs({ "RebirthCount", "InfiniteStage", "AccountBestStage" }) do
 	player:GetAttributeChangedSignal(attr):Connect(updateGemTab)
 end
+
+-- 배치(S20b) - 화면 크기가 정하는 L(Layout.compute)로 두 칸의 크기 · 위치와 터치 크기를 다시 정한다.
+local function layout(L)
+	local phone = L.mode == "phone"
+	gemBody.Position = UDim2.new(0, 0, 0, L.bodyTop)
+	gemBody.Size = UDim2.new(1, 0, 0, L.bodyH)
+	local rowHeight = phone and 76 or 42
+	local buttonHeight = phone and 44 or 17
+	for _, entry in ipairs(slotRows) do
+		entry.row.Size = UDim2.new(1, 0, 0, rowHeight)
+		entry.rerollButton.Size = UDim2.new(0, 64, 0, buttonHeight)
+		entry.rerollButton.Position = UDim2.new(0, 8, 1, -(buttonHeight + 3))
+		entry.buyButton.Size = UDim2.new(0, 160, 0, buttonHeight)
+		entry.buyButton.Position = UDim2.new(0, 78, 1, -(buttonHeight + 3))
+	end
+	local canvasHeight
+	if phone then
+		local listHeight = Gem.slotCount * (rowHeight + 4)
+		weaponPane.Size = UDim2.new(1, 0, 0, 240)
+		weaponPaneLine.Visible = false
+		infoPane.Position = UDim2.new(0, 0, 0, 240)
+		slotListScroll.Size = UDim2.new(1, -28, 0, listHeight)
+		invLabel.Position = UDim2.new(0, 14, 0, 26 + listHeight + 10)
+		gemInvScroll.Position = UDim2.new(0, 14, 0, 26 + listHeight + 30)
+		gemInvScroll.Size = UDim2.new(1, -28, 0, 152)
+		canvasHeight = 240 + 26 + listHeight + 30 + 152 + 14
+		infoPane.Size = UDim2.new(1, 0, 0, canvasHeight - 240)
+	else
+		canvasHeight = math.max(560, L.bodyH)
+		weaponPane.Size = UDim2.new(0, 220, 0, canvasHeight)
+		weaponPaneLine.Visible = true
+		infoPane.Position = UDim2.new(0, 220, 0, 0)
+		infoPane.Size = UDim2.new(1, -220, 0, canvasHeight)
+		slotListScroll.Size = UDim2.new(1, -28, 0, 216)
+		invLabel.Position = UDim2.new(0, 14, 0, 250)
+		gemInvScroll.Position = UDim2.new(0, 14, 0, 270)
+		gemInvScroll.Size = UDim2.new(1, -28, 0, canvasHeight - 280)
+	end
+	gemBody.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
+end
+deps.registerLayout(layout)
 
 return {
 	update = function()
