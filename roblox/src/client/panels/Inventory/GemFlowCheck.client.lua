@@ -41,7 +41,7 @@ local function run()
 			passed += 1
 		end
 	end
-	print("===S20c(UI) 검증 시작(보석 홈 표현 · 정렬 · NEW · 강화대 상태 · 폰 치수)===")
+	print("===S20c(UI) 검증 시작(보석 홈 표현 · 정렬 · NEW · 변환 · 리롤 안내 줄 · 폰 치수)===")
 
 	local playerGui = player:WaitForChild("PlayerGui")
 	local gui = playerGui:FindFirstChild("InventoryGui")
@@ -217,9 +217,8 @@ local function run()
 		task.wait(0.2)
 	end
 
-	-- ⑥ 강화대 상태(가까우면 초록 · 멀면 회색) + 상세 [장착] 버튼(멀면 비활성 · 가까우면 활성)
+	-- ⑥ S20e: 변환 · 리롤 안내 줄(안 써 봤다 = 눈에 띄는 [위치 안내] 줄 · 써 본 뒤 = 작은 회색 줄 + ? 도움말) + 상세 [장착] 버튼은 자리와 무관하게 활성(강화대 제한 제거)
 	do
-		local status = gemBody:FindFirstChild("StationStatus")
 		local function equipButton()
 			for _, inst in ipairs(gui:GetDescendants()) do
 				if inst:IsA("TextButton") and inst.Text == "장착" then
@@ -228,21 +227,26 @@ local function run()
 			end
 			return nil
 		end
+		local guide = gemBody:FindFirstChild("GuideLine")
+		local help = gemBody:FindFirstChild("HelpToggle")
+		local originalUsed = player:GetAttribute("GemMerchantUsed")
+		player:SetAttribute("GemMerchantUsed", false)
+		task.wait(0.4)
+		local unusedOk = guide ~= nil and guide.Active and guide.AbsoluteSize.Y >= 26 and guide.Text:find("위치 안내", 1, true) ~= nil and guide.Text:find("보석상인", 1, true) ~= nil
+			and colorEq(guide.TextColor3, UIColors.gold) and (help == nil or not help.Visible)
+		check(("안내 줄(안 써 봤다): 눈에 띄는 버튼 %s(높이 %d · \"%s\") · ? 없음"):format(tostring(unusedOk), guide and guide.AbsoluteSize.Y or -1, guide and guide.Text or "?"), unusedOk)
+		local unusedHeight = guide and guide.AbsoluteSize.Y or 0
+		player:SetAttribute("GemMerchantUsed", true)
+		task.wait(0.4)
+		local usedOk = guide ~= nil and not guide.Active and guide.AbsoluteSize.Y <= 20 and guide.BackgroundTransparency == 1 and colorEq(guide.TextColor3, UIColors.textTertiary)
+			and guide.Text:find("보석상인", 1, true) ~= nil and help ~= nil and help.Visible
+		check(("안내 줄(써 봤다): 작은 회색 한 줄 %s(높이 %d < %d) · ? 도움말 있음 %s"):format(tostring(usedOk), guide and guide.AbsoluteSize.Y or -1, unusedHeight, tostring(help ~= nil and help.Visible)), usedOk and (guide.AbsoluteSize.Y < unusedHeight))
 		Store.selectedKind, Store.selectedValue = "gemBag", 1
 		Store.refreshDetail()
-		player:SetAttribute("DebugGemNear", true)
-		task.wait(0.6) -- 근접 확인은 0.25초마다
-		local nearGreen = status ~= nil and colorEq(status.TextColor3, UIColors.success)
+		task.wait(0.3)
 		local button = equipButton()
-		local nearEnabled = button ~= nil and button.Active
-		player:SetAttribute("DebugGemNear", false)
-		task.wait(0.6)
-		local farGray = status ~= nil and colorEq(status.TextColor3, UIColors.textTertiary)
-		button = equipButton()
-		local farDisabled = button ~= nil and not button.Active
-		check(("강화대 상태: 가까우면 초록 %s · 멀면 회색 %s"):format(tostring(nearGreen), tostring(farGray)), nearGreen and farGray)
-		check(("상세 [장착] 버튼: 가까우면 활성 %s · 멀면 비활성 %s"):format(tostring(nearEnabled), tostring(farDisabled)), nearEnabled and farDisabled)
-		player:SetAttribute("DebugGemNear", true)
+		check(("상세 [장착] 버튼: 강화대 · 보석상인 근처가 아니어도 활성 %s(자리 제한 없음)"):format(tostring(button ~= nil and button.Active)), button ~= nil and button.Active)
+		player:SetAttribute("GemMerchantUsed", originalUsed)
 		Store.selectedKind, Store.selectedValue = nil, nil
 		task.wait(0.4)
 	end
@@ -299,7 +303,6 @@ local function run()
 	end
 
 	-- 정리: 원래 상태 · 화면 · 창으로
-	player:SetAttribute("DebugGemNear", nil)
 	Store.selectedKind, Store.selectedValue = nil, nil
 	gemTab.debugApply(originalState)
 	R.debugForceScreen(nil)
@@ -313,7 +316,6 @@ task.delay(START_DELAY, function()
 	local ok, err = pcall(run)
 	if not ok then
 		warn("[S20c][UI] 점검 에러: " .. tostring(err))
-		player:SetAttribute("DebugGemNear", nil)
-		UIManager.close("inventory", true)
+			UIManager.close("inventory", true)
 	end
 end)

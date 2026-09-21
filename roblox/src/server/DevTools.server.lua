@@ -3298,6 +3298,7 @@ if RunService:IsStudio() then
 				{ "S19b(나)", function() require(script.Parent.S19bVerify).runLive(player, env) end }, -- S19b: 보스 체력바 Attribute · 끊긴 파티 멤버 · 보스 HP 불변
 				{ "S20c(나)", function() require(script.Parent.GemFlowVerify).runLive(player, env) end }, -- S20c: 보석 장착 이유 코드 · 교체 규칙 · 미리 판정 = 서버(모듈은 여기서 require - 최상위 local을 아낀다)
 				{ "S20d(나)", function() require(script.Parent.ItemFlowVerify).runLive(player, env) end }, -- S20d: 장비 착용 · 해제 이유 코드 · 교체 · 가방 가득 참 · 미리 판정 = 서버
+				{ "S20e(나)", function() require(script.Parent.GemMerchantVerify).runLive(player, env) end }, -- S20e: 보석상인 반경 검사 · 이유 코드 · 안내 플래그 · 저장 왕복(모듈은 여기서 require)
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3520,6 +3521,17 @@ if RunService:IsStudio() and verifyEnabled("S20d(가)") then
 		local ok, err = pcall(require(script.Parent.ItemFlowVerify).runPure)
 		if not ok then
 			warn(("[S20d(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S20e 자동 검증 블록(가) - 보석상인 자리 판정 · 배치 · 저장 이관 v29 → v30(순수 함수) ═══
+-- 플레이어 불필요. (나)는 위 29-1 체인의 끝(S20d (나) 다음).
+if RunService:IsStudio() and verifyEnabled("S20e(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.GemMerchantVerify).runPure)
+		if not ok then
+			warn(("[S20e(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

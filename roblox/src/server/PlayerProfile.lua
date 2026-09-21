@@ -184,6 +184,7 @@ function PlayerProfile.init(player, profile)
 	syncMaterialAttributes(player, profile)
 	syncProtectionAttributes(player, profile)
 	player:SetAttribute("BulkSellCutoffGrade", profile.bulkSellCutoffGrade)
+	player:SetAttribute("GemMerchantUsed", profile.hints.gemMerchantUsed == true) -- 보석 탭 안내 줄(눈에 띄게 / 작게)이 읽는다
 	-- 23-5: 저장된 적 있을 때만 Attribute를 세운다 - false(한 번도 안 옮김)면 안 세워서
 	-- 클라가 GetAttribute nil을 "기본 위치 계산"의 신호로 그대로 쓸 수 있게 한다.
 	if profile.inventoryWindowPosition then
@@ -1232,6 +1233,23 @@ end
 -- 저장에 맡긴다. ArmorData.bulkSellMaxGrade보다 높은 등급이나 존재하지 않는 등급은 조용히
 -- 거부한다(false) - sellItemsBulkUpTo와 같은 상한을 여기서도 강제해야, 클라이언트 목록에
 -- 없는 값이 어떤 경로로든 저장되는 일이 없다.
+-- 보석상인에서 변환 · 리롤(변환권 구매 포함)을 한 번이라도 성공했다는 기록(S20e - 보석 탭 안내 줄이 눈에 띄는 모양에서 작은 회색 한 줄로 줄어든다). 새로 true가 되면 true, 이미 true였으면 false.
+-- 저장은 호출부(GemServer)가 성공 뒤 ImmediateSave로 이미 건다.
+function PlayerProfile.markGemMerchantUsed(player)
+	local profile = profiles[player]
+	if not profile or profile.hints.gemMerchantUsed == true then
+		return false
+	end
+	profile.hints.gemMerchantUsed = true
+	player:SetAttribute("GemMerchantUsed", true)
+	return true
+end
+
+function PlayerProfile.hasUsedGemMerchant(player)
+	local profile = profiles[player]
+	return profile ~= nil and profile.hints.gemMerchantUsed == true
+end
+
 function PlayerProfile.setBulkSellCutoffGrade(player, gradeId)
 	local profile = profiles[player]
 	if not profile then

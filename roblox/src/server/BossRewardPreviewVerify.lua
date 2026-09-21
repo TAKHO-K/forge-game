@@ -200,7 +200,7 @@ function BossRewardPreviewVerify.runPure()
 		end)
 		r.check(("v28 → v%d(기대 %d): 빈 집합=%s · isValidProfile=%s(기대 true) · 이미 있는 도장 유지=%s · 6종 전부 통과=%s · 집합 없음 · 표 아님 · 없는 보스 id · false · 숫자 값 · 숫자 키 거부=%s · 기본 프로필 v%d"):format(
 			migrated.version, SaveConfig.saveVersion, tostring(emptyCodex), tostring(validAfter), tostring(keeps), tostring(edgeOk), tostring(rejects), SaveSystem.defaultProfile().version),
-			migrated.version == SaveConfig.saveVersion and SaveConfig.saveVersion == 29 and emptyCodex and validAfter and keeps and edgeOk and rejects and SaveSystem.defaultProfile().version == SaveConfig.saveVersion)
+			migrated.version == SaveConfig.saveVersion and SaveConfig.saveVersion >= 29 and emptyCodex and validAfter and keeps and edgeOk and rejects and SaveSystem.defaultProfile().version == SaveConfig.saveVersion)
 	end)
 
 	local pass, total = r.summary()

@@ -18,28 +18,22 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
-local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
-local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
-local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast)
-local EnhanceController = require(script.Parent.Parent.Enhance.Controller)
+local Hint = require(script.Parent.Parent.GemWorkshop.Hint)
 local GemActions = require(script.Parent.GemActions)
 local GemSlots = require(script.Parent.GemSlots)
 local GemSlotRows = require(script.Parent.GemSlotRows)
 local GemHeader = require(script.Parent.GemHeader)
 local GemBag = require(script.Parent.GemBag)
 
-local gemRerollRequest = ReplicatedStorage:WaitForChild("GemRerollRequest")
-local buyRerollTicketRequest = ReplicatedStorage:WaitForChild("BuyRerollTicketRequest")
 local gemSync = ReplicatedStorage:WaitForChild("GemSync")
 local gemFetch = ReplicatedStorage:WaitForChild("GemFetch")
 
@@ -47,8 +41,7 @@ local player = Players.LocalPlayer
 
 local GemTab = {}
 
-local TOP = 42 -- 본문 맨 위 두 줄(강화대 상태 · 안내)이 차지하는 높이. 그 아래에 무기 칸 · 정보 칸이 놓인다.
-local TOP_PHONE = 24 -- 폰은 그 두 줄이 한 줄로 합쳐진다(GemHeader.setLayout)
+-- 본문 맨 위 안내 블록(변환 · 리롤 안내 줄 + 상황 안내 한 줄)의 높이는 GemHeader.height()가 정한다(안 써 본 상태는 눈에 띄는 줄이라 더 높다). 그 아래에 무기 칸 · 정보 칸이 놓인다.
 local PHONE_LEFT_WIDTH = 300 -- 폰: 홈 한 줄(5 × 48 + 4 × 8 = 272 + 여백)이 차지하는 왼쪽 폭 - 그 오른쪽이 보유 보석
 local CHIP_SIZE = { pc = 34, phone = 48 } -- 홈 칩 크기(폰은 터치 44 이상)
 local CHIP_GAP = { pc = 5, phone = 8 }
@@ -81,8 +74,8 @@ gemBody.CanvasSize = UDim2.new(0, 0, 0, 0)
 gemBody.Visible = false
 gemBody.Parent = content
 
--- ── 맨 위 두 줄: 강화대 상태(가까우면 초록 · 멀면 회색) + 상황별 안내 ──
-local header = GemHeader.createStatus(gemBody)
+-- ── 맨 위: 변환 · 리롤 안내 줄(S20e - 보석상인에게서만 된다) + 상황별 안내 한 줄 ──
+local header = GemHeader.createStatus(gemBody, { onLocate = Hint.locate })
 
 -- ── 왼쪽(폰은 위): 홈 한 줄 + 확대한 무기 그림(PC 장식) ──
 local weaponPane = Instance.new("Frame")
@@ -118,16 +111,9 @@ infoPane.Parent = gemBody
 
 local slotLabel = makeSectionLabel(infoPane, "홈 상세 (등급 상한 이하는 전부 장착 가능)", 8)
 
+-- S20e: 변환 · 리롤은 보석상인의 "보석 공방"에서만 된다 - 이 행의 [리롤]은 진입점으로만 남아 누르면 토스트 "보석상인에게서 가능" + [위치 안내]가 나온다(변환권 구매 버튼은 공방으로 옮겼다).
 local slotList = GemSlotRows.create(infoPane, {
-	onReroll = function(slot)
-		gemRerollRequest:FireServer("gem", slot) -- 26-3: (kind, key) 프로토콜(GemServer.server.lua 참고)
-	end,
-	onBuy = function(slot)
-		local gem = currentGemState.gems[slot]
-		if type(gem) == "table" and gem.grade then
-			buyRerollTicketRequest:FireServer(gem.grade)
-		end
-	end,
+	onReroll = Hint.toast,
 })
 local slotListScroll, slotRows = slotList.scroll, slotList.rows
 
@@ -141,17 +127,6 @@ local gemInvScroll = bag.scroll
 -- 폰 배치이거나 마지막 입력이 터치면 "탭 방식"(더블탭 · 드래그 없음, 탭 = 선택 토글). 판정은 화면 크기(폰 배치)가 기본이다 - 터치 없는 Studio 창에서도 같은 결과.
 local function tapMode()
 	return deps.isPhone() or UserInputService:GetLastInputType() == Enum.UserInputType.Touch
-end
-
--- 강화대 근처인가(강화 패널과 같은 값 - EnhanceController.isNear). Studio 전용 훅 DebugGemNear(true/false)로 자동 검증이 근접 여부를 강제한다.
-local function isNear()
-	if RunService:IsStudio() then
-		local forced = player:GetAttribute("DebugGemNear")
-		if forced ~= nil then
-			return forced
-		end
-	end
-	return EnhanceController.isNear()
 end
 
 local function centerOf(frame)
@@ -243,9 +218,14 @@ local function paintCells()
 	end)
 end
 
+-- 안내 줄: 보석상인을 써 본 적이 없으면 눈에 띄게, 써 본 뒤에는 작게(서버가 GemMerchantUsed Attribute로 알린다). 높이가 바뀌므로 배치를 다시 한다(아래 relayout).
+local relayout
 local function paintStatus()
-	local near = isNear()
-	header.paint(near)
+	local usedBefore = header.isUsed()
+	header.paint(player:GetAttribute("GemMerchantUsed") == true)
+	if header.isUsed() ~= usedBefore and relayout then
+		relayout()
+	end
 end
 
 -- 안내 한 줄(상황별). "끼운 보석을 선택하면 리롤 · 변환권과 함께 교체 방법을 알려 준다"(사용자 결정).
@@ -280,7 +260,6 @@ local actions = GemActions.create({
 	getState = function()
 		return currentGemState
 	end,
-	isNear = isNear,
 	slotCenter = function(slot)
 		return centerOf(slots.chips[slot].button)
 	end,
@@ -489,12 +468,6 @@ local function rebuildGemInventory()
 	})
 end
 
-local function currentStageGoldReward()
-	-- 28-2 [8] 3번: 변환권 가격의 기준은 계정 최고 스테이지다(서버 GemServer.rerollTicketPrice와 같은 값 - Attribute는 PlayerProfile이 내린다).
-	local stage = player:GetAttribute("AccountBestStage") or 1
-	return InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage)
-end
-
 updateGemTab = function()
 	if not deps.isOpen() then
 		return
@@ -513,7 +486,6 @@ updateGemTab = function()
 		if not unlocked then
 			ui.label.Text = ("홈%d(상한 %s) - 잠김, 환생 %d회 필요"):format(slot, capInfo.displayName, GemData.slotUnlockRequiredRebirth[slot])
 			ui.rerollButton.Visible = false
-			ui.buyButton.Visible = false
 			continue
 		end
 
@@ -537,13 +509,10 @@ updateGemTab = function()
 
 		local rerollable = filled and Gem.isRerollableGrade(gem.grade)
 		ui.rerollButton.Visible = rerollable
-		ui.buyButton.Visible = rerollable
 		if rerollable then
+			-- S20e: 진입점으로만 남는다 - 항상 눌린다(변환권이 없어도 "보석상인에게서 가능"을 알려야 하므로 회색으로 막지 않는다).
 			local tickets = currentGemState.rerollTickets[gem.grade] or 0
 			ui.rerollButton.Text = ("리롤(%d장)"):format(tickets)
-			ui.rerollButton.AutoButtonColor = tickets > 0
-			ui.rerollButton.Active = tickets > 0
-			ui.buyButton.Text = ("변환권(%s골드)"):format(NumberFormat.format(currentStageGoldReward() * GemData.rerollTicketGoldMultiplier))
 		end
 	end
 
@@ -657,29 +626,11 @@ UserInputService.InputBegan:Connect(function(input)
 	end
 end)
 
--- 이 탭이 보이는 동안: 강화대 근접 상태를 0.25초마다 확인한다(바뀌면 표시 · [장착] 버튼을 다시 정한다). 탭이 보였다가 사라지면 그 사이 본 보석은 NEW가 아니다.
-local pollElapsed = 0
-local lastNear = nil
-RunService.Heartbeat:Connect(function(dt)
-	if not (gemBody.Visible and deps.isOpen()) then
-		return
-	end
-	pollElapsed += dt
-	if pollElapsed < 0.25 then
-		return
-	end
-	pollElapsed = 0
-	local near = isNear()
-	if near ~= lastNear then
-		lastNear = near
-		paintStatus()
-		refreshDetail()
-	end
-end)
+-- 보석상인을 처음 써서 hints.gemMerchantUsed가 true가 되면(서버가 GemMerchantUsed Attribute로 알린다) 안내 줄이 눈에 띄는 모양에서 작은 회색 줄로 줄어든다. 탭이 보였다가 사라지면 그 사이 본 보석은 NEW가 아니다.
+player:GetAttributeChangedSignal("GemMerchantUsed"):Connect(paintStatus)
 
 gemBody:GetPropertyChangedSignal("Visible"):Connect(function()
 	if gemBody.Visible then
-		lastNear = nil
 		updateGemTab()
 	else
 		seenCount = #currentGemState.gemInventory -- 이 탭을 본 뒤 떠났다 - 그 보석들은 더 이상 NEW가 아니다
@@ -688,7 +639,9 @@ gemBody:GetPropertyChangedSignal("Visible"):Connect(function()
 end)
 
 -- 배치(S20b · S20c) - 화면 크기가 정하는 L(Layout.compute)로 두 칸의 크기 · 위치와 터치 크기를 다시 정한다.
+local lastLayout = nil
 local function layout(L)
+	lastLayout = L
 	local phone = L.mode == "phone"
 	gemBody.Position = UDim2.new(0, 0, 0, L.bodyTop)
 	gemBody.Size = UDim2.new(1, 0, 0, L.bodyH - deps.sheetInset()) -- 폰: 상세 시트가 올라와 있으면 그만큼 짧다
@@ -698,8 +651,6 @@ local function layout(L)
 		entry.row.Size = UDim2.new(1, 0, 0, rowHeight)
 		entry.rerollButton.Size = UDim2.new(0, 64, 0, buttonHeight)
 		entry.rerollButton.Position = UDim2.new(0, 8, 1, -(buttonHeight + 3))
-		entry.buyButton.Size = UDim2.new(0, 160, 0, buttonHeight)
-		entry.buyButton.Position = UDim2.new(0, 78, 1, -(buttonHeight + 3))
 	end
 	local chipSize = phone and CHIP_SIZE.phone or CHIP_SIZE.pc
 	slots.setLayout(chipSize, phone and CHIP_GAP.phone or CHIP_GAP.pc)
@@ -712,7 +663,7 @@ local function layout(L)
 	header.setLayout(phone)
 	invLabel.Visible = not phone
 	invLabel.Text = "보유 보석 - 더블클릭 · 우클릭 · 드래그"
-	local top = phone and TOP_PHONE or TOP
+	local top = header.height()
 	local bagTop = phone and 4 or 26
 	local invHeight = phone and 66 or 134
 	local slotTop = bagTop + invHeight + 12 -- 홈 상세 제목 y
@@ -746,6 +697,11 @@ local function layout(L)
 	paintAll() -- 폰 시트가 올라오거나 내려갈 때(선택이 바뀔 때)도 여기서 표시를 다시 맞춘다
 end
 deps.registerLayout(layout)
+relayout = function() -- 안내 줄 높이가 바뀌었을 때(paintStatus) 같은 화면 크기로 다시 배치한다
+	if lastLayout then
+		layout(lastLayout)
+	end
+end
 
 return {
 	update = function()

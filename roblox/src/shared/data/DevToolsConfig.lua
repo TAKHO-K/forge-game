@@ -83,7 +83,12 @@ local config = {
 		--   S20d(UI)(ItemFlowCheck - 버튼 · 이유 한 줄 · 더블클릭 판정기 · 폰 치수) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈을 쓰는 옛 블록 - PlayerProfile.equipItem · unequipItem을 쓰는 블록은 옛 검증에 없다(직접 호출은 InventoryServer뿐) 하지만
 		--   PlayerProfile을 통째로 쓰는 26-2 · 26-3(장비 옵션 · 보석) + 장비창을 여는 옛 점검 = S20c(UI)(GemActions.bounce 분리 · GemBag · 호버 툴팁) · S20c(가)(나)(Gem 모듈 함수 추가) · S20(UI)(GemTabCheck · InventoryLayoutCheck - 시트 높이) ·
 		--   S12b(UI)(장비창 글씨) · S12(UI)(패널 전수 fit) · S16(UI)(메뉴바 B → 가방) · S17(UI)(Toast). S04(나)는 계속 제외.
-		current = { "S20d(가)", "S20d(나)", "S20d(UI)", "S20c(가)", "S20c(나)", "S20c(UI)", "S20(UI)", "S12b(UI)", "S12(UI)", "S16(UI)", "S17(UI)", "26-2", "26-3" },
+		-- S20e 사전 작업(2026-09-21): 가방 칸 수 서버 전달(InventorySync · Store · BagTab · ItemActions) - 이번 블록 S20d(나)(스냅샷 slots) · S20d(UI)(bagSlots · 칸 수 24 점검) + 아래 S20d 동반 그대로.
+		-- S20e(2026-09-22) 보석상인 NPC + 보석 장착 제한 해제(GemEquip far 제거 · GemWorkshop · GemMerchantAccess · 보석 공방 station · 안내 줄 · [위치 안내] · SAVE_VERSION 30 hints): 이번 세션 블록 S20e(가)(자리 판정 · 배치 · 저장 이관) ·
+		--   S20e(나)(반경 밖 거절 · 이유 코드 · 플래그 · DataStore 왕복) · S20e(UI)(GemWorkshopCheck - 공방 창 · 마커 · 토스트 · 실제 요청 거절 · station 상호 닫힘 · 폰 치수) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈을 쓰는 옛 블록 =
+		--   S20c(가)(나)(UI)(GemEquip · GemActions · GemTab · GemHeader · GemSlotRows - S20c(나)는 far 항목이 "어디서나 성공"으로 바뀌었다) · S20d(UI)(GemTab 미리보기 · DetailSheet) · S20(UI)(GemTabCheck · 장비창) · S12b(UI)(장비창 글씨) ·
+		--   S12(UI)(PanelFitCheck - 새 station이 등록 창 전수에 들어간다) · S16(UI) · S17(UI)(Toast) · 26-2 · 26-3(PlayerProfile 옵션 · 리롤) + 저장 구조(SAVE_VERSION 30 · migrate · isValidProfile)를 쓰는 이관 블록 = S02(가) · S03(가) · S04(가) · S05(가) · S05b(가) · S11(가). S04(나)는 계속 제외.
+		current = { "S20e(가)", "S20e(나)", "S20e(UI)", "S20d(가)", "S20d(나)", "S20d(UI)", "S20c(가)", "S20c(나)", "S20c(UI)", "S20(UI)", "S12b(UI)", "S12(UI)", "S16(UI)", "S17(UI)", "26-2", "26-3", "S02(가)", "S03(가)", "S04(가)", "S05(가)", "S05b(가)", "S11(가)" },
 	},
 }
 

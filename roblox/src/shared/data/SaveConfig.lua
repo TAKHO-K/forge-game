@@ -61,7 +61,8 @@ return {
 	-- 5(12-1) - 인벤토리(갑옷 드랍) 배열 필드 추가. SaveSystem.migrate()의 v4->v5 참고.
 	-- 4(11-1) - 무한 모드 스테이지 진행도(현재/최고 구분) 추가. 3(10-3) - 클래스 선택
 	-- 필드(classId) 추가.
-	saveVersion = 29,
+	-- 30(30-0 S20e) - 계정 안내 플래그 표 hints 신설(hints.gemMerchantUsed = 보석상인에서 변환 · 리롤을 한 번이라도 성공했는가). SaveSystem.migrate()의 v29->v30 참고.
+	saveVersion = 30,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

@@ -4,7 +4,7 @@
 --   · 요청 중 입력 잠금: 장착마다 보석칸 index가 밀린다(교체된 보석이 맨 끝으로 간다) - 결과(GemEquipResult)가 오기 전에 다음 입력이 같은 index로 나가면 다른 보석이 끼워진다. 결과를 기다리는 동안 새 입력을 무시한다.
 --   · 거절(클라 미리 판정이든 서버 결과든) = 같은 연출: 보석 유령이 원래 칸으로 returnTweenSeconds(0.2초) 동안 돌아가고 + 이유 토스트 1줄.
 -- GemActions.create(deps) -> { equip, autoEquip, autoTarget, blockReason, isPending, makeGhost, ... }
---   deps: screenGui(유령이 붙는 곳) · getState() = 보석 상태 스냅샷 · isNear() = 강화대 근처인가(강화 패널과 같은 값) · slotCenter(slot) = 그 홈의 화면 중심(ScreenGui 좌표) · onEquipped(slot) = 성공 알림 · onPending() = 잠금 상태가 바뀔 때
+--   deps: screenGui(유령이 붙는 곳) · getState() = 보석 상태 스냅샷 · slotCenter(slot) = 그 홈의 화면 중심(ScreenGui 좌표) · onEquipped(slot) = 성공 알림 · onPending() = 잠금 상태가 바뀔 때
 --   ctx(입력이 넘기는 연출 정보): originPos = 돌아갈 자리(원래 보석 칸 중심) · fromPos = 거절 유령의 출발점(없으면 유령 없이 토스트만) · proxy = 이미 있는 드래그 유령(넘기면 이 모듈이 넘겨받아 정리한다)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,11 +27,9 @@ local function gradeName(gradeId)
 	return info and info.displayName or tostring(gradeId)
 end
 
--- 이유 코드 → 토스트 문구. slot = 요청한 홈(자동 장착이면 nil). 이유 코드는 서버 GemEquipResult의 것과 같다(far · slot_locked · grade_too_high · not_found · no_class · invalid) + 클라 미리 판정의 no_slot_open.
+-- 이유 코드 → 토스트 문구. slot = 요청한 홈(자동 장착이면 nil). 이유 코드는 서버 GemEquipResult의 것과 같다(slot_locked · grade_too_high · not_found · no_class · invalid) + 클라 미리 판정의 no_slot_open.
 function GemActions.reasonText(reason, gemGradeId, slot)
-	if reason == "far" then
-		return "강화대 근처에서만 보석을 장착할 수 있습니다"
-	elseif reason == "slot_locked" then
+	if reason == "slot_locked" then
 		return ("%d번 홈은 환생 %d회 뒤에 열립니다"):format(slot or 0, GemData.slotUnlockRequiredRebirth[slot or 1] or 0)
 	elseif reason == "grade_too_high" then
 		if slot then
@@ -119,21 +117,14 @@ function GemActions.create(deps)
 		return pending ~= nil
 	end
 
-	-- 미리 보이기: 이 보석(index)을 이 홈(slot)에 끼울 수 없는 이유(nil = 끼울 수 있다). 강화대에서 멀면 "far"(서버 규칙 - 서버가 같은 이유로 거절한다).
+	-- 미리 보이기: 이 보석(index)을 이 홈(slot)에 끼울 수 없는 이유(nil = 끼울 수 있다). 자리 제한은 없다(S20e - 어디서나 장착 · 교체) - 서버가 같은 shared/Gem 판정으로 다시 검증한다.
 	function self.blockReason(slot, index)
 		local state = deps.getState()
 		local gem = state.gemInventory[index]
 		if not gem then
 			return "not_found"
 		end
-		local reason = Gem.socketBlockReason(state.slotUnlocked, slot, gem.grade)
-		if reason then
-			return reason
-		end
-		if not deps.isNear() then
-			return "far"
-		end
-		return nil
+		return Gem.socketBlockReason(state.slotUnlocked, slot, gem.grade)
 	end
 
 	-- 자동 장착 대상(가장 낮은 상한의 열린 홈). 반환: slot 또는 nil + 이유.
@@ -168,9 +159,6 @@ function GemActions.create(deps)
 		local slot, reason = self.autoTarget(index)
 		if not slot then
 			return false, reason
-		end
-		if not deps.isNear() then
-			return false, "far"
 		end
 		return true
 	end

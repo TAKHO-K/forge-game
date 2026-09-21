@@ -210,6 +210,86 @@ local function createRebirthAltar(communityZone)
 	return model
 end
 
+-- 보석상인(S20e) - 환생 제단 옆(WorldConfig.gemMerchant.offsetFromCommunity)의 임시 NPC. 모델은 임시(F5에서 교체) - 좌판 · 몸통 · 머리 · 보석 모양 파트 + ProximityPrompt.
+-- 위치 = GemMerchantAccess.position이 서버 판정(변환 · 리롤 요청)에 같은 식으로 쓴다. 프롬프트는 클라(GemMerchant.client.lua)가 받아 "보석 공방" 창을 연다 -
+-- 변환 · 리롤을 해도 되는지는 서버(GemWorkshop → GemMerchantAccess)가 요청 시점의 위치로 다시 잰다. 클라의 [위치 안내] 마커도 이 모델(이름 GemMerchant) 위에 붙는다.
+local function createGemMerchant(communityZone)
+	local merchant = WorldConfig.gemMerchant
+	local position = WorldConfig.huntingGround.center + communityZone.center + merchant.offsetFromCommunity
+	local floorTop = FLOOR_Y + FLOOR_THICKNESS / 2
+
+	local model = Instance.new("Model")
+	model.Name = "GemMerchant"
+
+	local stall = Instance.new("Part")
+	stall.Name = "Stall"
+	stall.Size = Vector3.new(6, 2, 3)
+	stall.Anchored = true
+	stall.CanCollide = true
+	stall.Color = Color3.fromRGB(90, 70, 60)
+	stall.Position = Vector3.new(position.X, floorTop + 1, position.Z)
+	stall.Parent = model
+
+	local body = Instance.new("Part")
+	body.Name = "Body"
+	body.Size = Vector3.new(2, 2.6, 1.2)
+	body.Anchored = true
+	body.CanCollide = false
+	body.Color = Color3.fromRGB(70, 60, 110)
+	body.Position = Vector3.new(position.X, floorTop + 3.3, position.Z + 2)
+	body.Parent = model
+
+	local head = Instance.new("Part")
+	head.Name = "Head"
+	head.Shape = Enum.PartType.Ball
+	head.Size = Vector3.new(1.6, 1.6, 1.6)
+	head.Anchored = true
+	head.CanCollide = false
+	head.Color = Color3.fromRGB(230, 200, 170)
+	head.Position = Vector3.new(position.X, floorTop + 5.4, position.Z + 2)
+	head.Parent = model
+
+	local gem = Instance.new("Part")
+	gem.Name = "Gem"
+	gem.Size = Vector3.new(1.2, 1.2, 1.2)
+	gem.Anchored = true
+	gem.CanCollide = false
+	gem.Color = Color3.fromRGB(80, 200, 190)
+	gem.Material = Enum.Material.Neon
+	gem.CFrame = CFrame.new(position.X, floorTop + 2.9, position.Z - 0.4) * CFrame.Angles(math.rad(45), math.rad(45), 0)
+	gem.Parent = model
+
+	local label = Instance.new("BillboardGui")
+	label.Name = "NameplateGui"
+	label.Size = UDim2.new(4, 0, 1, 0)
+	label.StudsOffset = Vector3.new(0, 2.2, 0)
+	label.AlwaysOnTop = true
+	label.Adornee = head
+	label.Parent = head
+
+	local labelText = Instance.new("TextLabel")
+	labelText.BackgroundTransparency = 1
+	labelText.Size = UDim2.new(1, 0, 1, 0)
+	labelText.Text = merchant.objectText
+	labelText.TextColor3 = Color3.new(1, 1, 1)
+	labelText.TextScaled = true
+	labelText.Parent = label
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "GemMerchantPrompt"
+	prompt.ObjectText = merchant.objectText
+	prompt.ActionText = merchant.actionText
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 0
+	prompt.RequiresLineOfSight = false
+	prompt.MaxActivationDistance = merchant.promptDistanceStuds
+	prompt.Parent = stall -- 서버 반경의 기준점(= position)과 같은 자리 - 프롬프트가 뜬 곳에서 누른 요청은 항상 반경 안이다
+
+	model.PrimaryPart = stall
+	model.Parent = Workspace
+	return model
+end
+
 local function spawnTierMonsters(zone)
 	local tierKey = MonsterData.tierOrder[zone.tierIndex]
 	local data = MonsterData[tierKey]
@@ -275,6 +355,7 @@ removeDefaultBaseplate()
 createPlayerSpawn(WorldConfig.zones.spawn)
 createCommunityPlaceholder(WorldConfig.zones.community)
 createRebirthAltar(WorldConfig.zones.community)
+createGemMerchant(WorldConfig.zones.community)
 
 local totalMonsters = 0
 for _, key in ipairs(WorldConfig.tierZoneOrder) do

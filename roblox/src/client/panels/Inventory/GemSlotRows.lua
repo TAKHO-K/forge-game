@@ -1,6 +1,6 @@
--- 보석 탭 "홈 상세" 행 5개(리롤 · 변환권 구매 포함). S20c: GemTab.lua(800줄 한도)에서 그대로 잘라 옮겼다 - 동작 변경 0.
--- GemSlotRows.create(parent, hooks) -> { scroll, rows = { [slot] = { row, label, rerollButton, buyButton } } }
---   hooks.onReroll(slot) · hooks.onBuy(slot) = 안쪽 버튼을 누를 때(서버 요청은 GemTab이 보낸다). 행 자체의 입력(더블클릭 · 우클릭 · 탭)은 GemTab이 rows[slot].row에 붙인다.
+-- 보석 탭 "홈 상세" 행 5개. S20c: GemTab.lua(800줄 한도)에서 잘라 옮겼다. S20e: 변환권 구매 버튼은 보석상인의 "보석 공방"으로 옮겼고 [리롤]은 진입점(누르면 "보석상인에게서 가능" 토스트)으로만 남았다.
+-- GemSlotRows.create(parent, hooks) -> { scroll, rows = { [slot] = { row, label, rerollButton } } }
+--   hooks.onReroll(slot) = [리롤]을 누를 때(GemTab이 안내 토스트를 띄운다). 행 자체의 입력(더블클릭 · 우클릭 · 탭)은 GemTab이 rows[slot].row에 붙인다.
 --   자리 · 크기(scroll · 행 높이 · 버튼 높이)는 GemTab의 배치 함수가 정한다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -75,28 +75,10 @@ function GemSlotRows.create(parent, hooks)
 		rerollCorner.CornerRadius = UDim.new(0, 5)
 		rerollCorner.Parent = rerollButton
 
-		local buyButton = Instance.new("TextButton")
-		buyButton.Size = UDim2.new(0, 160, 0, 17)
-		buyButton.Position = UDim2.new(0, 78, 1, -20)
-		buyButton.Font = Enum.Font.GothamBold
-		buyButton.TextSize = Theme.textSize("caption")
-		buyButton.Text = "변환권 구매"
-		buyButton.BackgroundColor3 = UIColors.panel
-		buyButton.BackgroundTransparency = UIColors.panelTransparency
-		buyButton.TextColor3 = UIColors.textPrimary
-		buyButton.Visible = false
-		buyButton.Parent = row
-		local buyCorner = Instance.new("UICorner")
-		buyCorner.CornerRadius = UDim.new(0, 5)
-		buyCorner.Parent = buyButton
-
-		rows[slot] = { row = row, label = label, rerollButton = rerollButton, buyButton = buyButton }
+		rows[slot] = { row = row, label = label, rerollButton = rerollButton }
 
 		rerollButton.Activated:Connect(function()
 			hooks.onReroll(slot)
-		end)
-		buyButton.Activated:Connect(function()
-			hooks.onBuy(slot)
 		end)
 	end
 

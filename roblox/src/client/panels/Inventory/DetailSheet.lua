@@ -11,6 +11,7 @@ local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Layout = require(script.Parent.Layout)
 local ItemActions = require(script.Parent.ItemActions)
+local Hint = require(script.Parent.Parent.GemWorkshop.Hint)
 
 -- 상세(S20b: InventoryUI 분할) - PC는 하단 상세 바(104), 폰은 아래에서 올라오는 시트(선택이 있을 때만 · 닫기 44). 이름 · 메타 · 옵션 줄 · 잠금 / 판매 / 분해 / 착용 / 리롤 버튼과 그 서버 요청, refreshDetail이 전부 여기 있다.
 local DetailSheet = {}
@@ -21,7 +22,6 @@ local content = R.content
 local sellRequest = ReplicatedStorage:WaitForChild("SellRequest")
 local lockRequest = ReplicatedStorage:WaitForChild("LockRequest")
 local dismantleRequest = ReplicatedStorage:WaitForChild("DismantleRequest")
-local gemRerollRequest = ReplicatedStorage:WaitForChild("GemRerollRequest")
 
 -- ═══ 하단 상세바 ═══
 local detail = Instance.new("Frame")
@@ -585,7 +585,7 @@ local function refreshDetailBody()
 		dismantleButton.AutoButtonColor = false
 		dismantleButton.Active = false
 		dismantleButton.TextTransparency = 0.6
-		-- S20c: [장착] = 자동 장착(GemActions - PC 더블클릭 · 우클릭 · 폰 탭 선택과 같은 통로). 강화대에서 멀거나 요청 중이면 회색.
+		-- S20c: [장착] = 자동 장착(GemActions - PC 더블클릭 · 우클릭 · 폰 탭 선택과 같은 통로). 요청 중이면 회색(S20e: 자리 제한은 없다 - 어디서나 된다).
 		local canEquip = S.gemCanAutoEquip(S.selectedValue)
 		equipButton.AutoButtonColor = canEquip
 		equipButton.Active = canEquip
@@ -645,11 +645,10 @@ end)
 
 -- 26-3(PRD 20.67 [10]) - 가방·착용 장비 리롤. GemServer.server.lua의 (kind, key) 프로토콜
 -- 그대로("bag"=인벤토리 index, "equipped"=부위명).
+-- S20e: 변환 · 리롤은 보석상인의 "보석 공방"에서만 된다 - 이 버튼은 진입점으로만 남아 누르면 토스트 "보석상인에게서 가능" + [위치 안내]가 나온다(서버 요청 없음).
 rerollDetailButton.Activated:Connect(function()
-	if S.selectedKind == "bag" then
-		gemRerollRequest:FireServer("bag", S.selectedValue)
-	elseif S.selectedKind == "equip" and S.selectedValue ~= "weapon" then
-		gemRerollRequest:FireServer("equipped", S.selectedValue)
+	if S.selectedKind == "bag" or (S.selectedKind == "equip" and S.selectedValue ~= "weapon") then
+		Hint.toast()
 	end
 end)
 

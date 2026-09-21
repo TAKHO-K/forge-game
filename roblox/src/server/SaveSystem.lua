@@ -222,6 +222,10 @@ local function defaultProfile()
 		-- 겸용하지 않는다). granted: 재플레이 중복 지급 방지({[tostring(stepIndex)]=true} - 키는 문자열, v28, 1~3단계
 		-- 확정 지급 + 7단계 완료 보상). lendBaseline: 대여 복원 원본(nil=대여 중 아님).
 		tutorial = { completed = false, step = 0, granted = {}, lendBaseline = nil },
+
+		-- 안내 플래그(30-0 S20e, v30) - 계정 전체 공유. 한 번 하고 나면 안내 표시가 줄어드는 종류의 "본 적 있다/해 본 적 있다" 기록이다(값이 없으면 false로 본다).
+		--   gemMerchantUsed: 보석상인에서 변환 · 리롤(변환권 구매 포함)을 한 번이라도 성공했는가 - true면 보석 탭의 위치 안내 줄이 작은 회색 한 줄로 줄어든다.
+		hints = { gemMerchantUsed = false },
 	}
 end
 
@@ -788,6 +792,15 @@ local function migrate(data)
 		data.version = 29
 	end
 
+	if data.version < 30 then
+		-- 30-0 S20e: 안내 플래그 표 신설. false가 정확한 과거 상태다 - 이미 변환 · 리롤을 해 본 계정도 보석상인은 처음이므로 안내가 한 번 보이고, 보석상인에서 한 번 성공하면 줄어든다.
+		data.hints = data.hints or {}
+		if data.hints.gemMerchantUsed == nil then
+			data.hints.gemMerchantUsed = false
+		end
+		data.version = 30
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -825,6 +838,8 @@ local function isValidProfile(data)
 		or type(data.purchases.protectionTickets) ~= "table"
 		or type(data.purchases.protectionClaimedStages) ~= "table"
 		or type(data.purchases.bossCodex) ~= "table"
+		or type(data.hints) ~= "table"
+		or (data.hints.gemMerchantUsed ~= nil and type(data.hints.gemMerchantUsed) ~= "boolean")
 	then
 		return false
 	end

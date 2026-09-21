@@ -82,7 +82,6 @@ local function run()
 	if not saved.classId or saved.classId == "" then
 		player:SetAttribute("ClassId", ClassData.order[1]) -- 이 클라에서만 보이는 값(서버에 안 간다) - 직업이 있어야 착용 판정이 열린다
 	end
-	player:SetAttribute("DebugGemNear", true)
 
 	local function setState(inventory, armor)
 		Store.inventory = inventory
@@ -247,13 +246,9 @@ local function run()
 		select("gemBag", 1)
 		check("자동 대상 홈이 비어 있으면(교체 없음) 한 줄이 안 보인다", not hintLabel().Visible)
 		gemTab.debugApply(gemState({ gemOf("primordial", 25), gemOf("epic", 26), gemOf("legendary", 27), gemOf("relic", 28), false }))
-		player:SetAttribute("DebugGemNear", false)
-		task.wait(0.7)
+		task.wait(0.4)
 		select("gemBag", 1)
-		check("강화대에서 멀어 [장착]이 회색이면 미리보기 줄도 없다", not equipButton().Active and not hintLabel().Visible)
-		player:SetAttribute("DebugGemNear", true)
-		task.wait(0.7)
-		select("gemBag", 1)
+		check("S20e: 강화대 · 보석상인 근처가 아니어도(자리 제한 없음) [장착]이 활성이고 교체 미리보기 줄이 보인다", equipButton().Active and hintLabel().Visible and hintLabel().Text:find("교체될 보석:", 1, true) ~= nil)
 	end
 
 	-- ⑧ 폰 800 × 360 · 667 × 375 · 842 × 388: 상세 시트의 [장착] / [해제] 터치 44 · 이유 줄 · 미리보기 줄이 시트 안 · 버튼 묶음과 안 겹침 · 글씨 실효 12 이상
@@ -314,7 +309,6 @@ local function run()
 	end
 
 	-- 정리: 원래 상태 · 화면 · 창으로
-	player:SetAttribute("DebugGemNear", nil)
 	player:SetAttribute("ClassId", saved.classId)
 	Store.selectedKind, Store.selectedValue = nil, nil
 	gemTab.debugApply(originalGemState)
@@ -334,7 +328,6 @@ task.delay(START_DELAY, function()
 	local ok, err = pcall(run)
 	if not ok then
 		warn("[S20d][UI] 점검 에러: " .. tostring(err))
-		player:SetAttribute("DebugGemNear", nil)
-		UIManager.close("inventory", true)
+			UIManager.close("inventory", true)
 	end
 end)

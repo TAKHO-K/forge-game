@@ -261,6 +261,19 @@ return {
 		actionText = "환생",
 	},
 
+	-- 보석상인(S20e) - 커뮤니티 구역(8번 칸)의 환생 제단 옆에 놓는 NPC 자리(모델은 임시 - F5에서 교체). 보석 변환 · 리롤(옵션 리롤 · 변환권 구매)은 여기서만 된다 -
+	-- GemMerchantAccess가 요청 시점에 플레이어가 이 자리 interactionRangeStuds 안인지 서버가 직접 잰다(클라의 ProximityPrompt 거리 · 창 상태를 믿지 않는다).
+	-- offsetFromCommunity = 제단(0, 0, -26)의 옆(같은 면 앞, 동쪽 16stud). promptDistanceStuds는 서버 반경보다 작다 - 프롬프트가 뜬 자리에서 누른 요청은 항상 서버 반경 안이다.
+	-- guideSeconds = [위치 안내] 마커가 떠 있는 시간(클라 표시 - 서버 호출 없음).
+	gemMerchant = {
+		offsetFromCommunity = Vector3.new(16, 0, -26),
+		interactionRangeStuds = 12,
+		promptDistanceStuds = 10,
+		objectText = "보석상인",
+		actionText = "보석 공방",
+		guideSeconds = 10,
+	},
+
 	-- 땅에 떨어진 아이템(14-1) - 구역 재설계와 무관, 값 변경 없음.
 	items = {
 		pickupRangeStuds = 2,
