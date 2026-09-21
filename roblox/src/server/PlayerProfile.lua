@@ -1345,6 +1345,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		protectionTickets = deepCopy(profile.purchases.protectionTickets),
 		protectionClaimedStages = deepCopy(profile.purchases.protectionClaimedStages),
 		bossCodex = deepCopy(profile.purchases.bossCodex), -- 30-0 S11: 보스 처치가 도감 도장을 실제 프로필에 찍는다 - 같은 이유로 되돌린다.
+		hints = deepCopy(profile.hints), -- 30-0 S20e: 수동 Play에서 보석상인을 쓰면 안내 플래그가 켜지고 Play 종료 때 실제 프로필에 저장됐다(S20e 실측) - 같은 이유로 되돌린다.
 	}
 end
 
@@ -1370,6 +1371,8 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.purchases.protectionTickets = deepCopy(snapshot.protectionTickets)
 	profile.purchases.protectionClaimedStages = deepCopy(snapshot.protectionClaimedStages)
 	profile.purchases.bossCodex = deepCopy(snapshot.bossCodex)
+	profile.hints = deepCopy(snapshot.hints)
+	player:SetAttribute("GemMerchantUsed", profile.hints.gemMerchantUsed == true)
 	syncProtectionAttributes(player, profile)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)

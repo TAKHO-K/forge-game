@@ -41,6 +41,19 @@ function GemHeader.createStatus(parent, hooks)
 		end
 	end)
 
+	-- 써 본 뒤의 작은 회색 줄은 누르는 곳이 아니라 글일 뿐이다(버튼이면 폰 터치 44 규칙에 걸린다) - 눈에 띄는 안내 줄(GuideLine 버튼)과 따로 둔다.
+	local small = Instance.new("TextLabel")
+	small.Name = "GuideLineSmall"
+	small.BackgroundTransparency = 1
+	small.Font = Enum.Font.Gotham
+	small.TextSize = Theme.textSize("caption")
+	small.TextXAlignment = Enum.TextXAlignment.Left
+	small.TextYAlignment = Enum.TextYAlignment.Center
+	small.TextTruncate = Enum.TextTruncate.AtEnd
+	small.TextColor3 = UIColors.textTertiary
+	small.Text = ""
+	small.Parent = parent
+
 	local helpButton = HelpToggle.build({
 		parent = parent,
 		text = "변환 · 리롤(옵션 다시 굴리기)은 커뮤니티 센터의 보석상인에게서 할 수 있습니다. 환생의 제단 옆입니다.\n보석 장착 · 교체는 어디서나 됩니다.",
@@ -56,6 +69,7 @@ function GemHeader.createStatus(parent, hooks)
 	hint.TextXAlignment = Enum.TextXAlignment.Left
 	hint.TextTruncate = Enum.TextTruncate.AtEnd
 	hint.TextColor3 = UIColors.textSecondary
+	hint.TextYAlignment = Enum.TextYAlignment.Center
 	hint.Text = ""
 	hint.Parent = parent
 
@@ -64,36 +78,38 @@ function GemHeader.createStatus(parent, hooks)
 	local unusedText = "변환 · 리롤은 커뮤니티 센터 보석상인에게서 - 눌러서 [위치 안내]"
 	local self = {}
 
-	-- 줄 높이: 안 써 봤다 = 눈에 띄는 버튼(폰은 터치 44) · 써 봤다 = 작은 한 줄(18). 폰의 써 본 상태는 안내 한 줄과 같은 줄에 놓는다(상세 시트가 올라오면 본문이 106밖에 안 남는다).
+	-- 줄 높이: 안 써 봤다 = 눈에 띄는 버튼(폰은 터치 44) · 써 봤다 = 작은 회색 글 한 줄 + ? 도움말(폰은 ? 를 터치 44로 키우고 그 줄이 44라 안내 한 줄도 같은 줄에 놓는다).
 	local function apply()
 		if used then
-			guide.BackgroundTransparency = 1
-			guide.TextColor3 = UIColors.textTertiary
-			guide.Font = Enum.Font.Gotham
-			guide.Text = usedText
-			guideStroke.Transparency = 1
-			guide.Active = false -- 작은 회색 줄은 누르는 곳이 아니다(위치 안내는 토스트 · ? 도움말이 맡는다)
-			guide.Position = UDim2.new(0, 4, 0, 4)
-			guide.Size = UDim2.new(0, phone and 190 or 250, 0, 18)
+			guide.Visible = false
+			small.Visible = true
+			small.Text = usedText
 			helpButton.Visible = true
-			helpButton.Position = UDim2.new(0, (phone and 190 or 250) + 20, 0, 13)
 			if phone then
-				hint.Position = UDim2.new(0, 246, 0, 4)
-				hint.Size = UDim2.new(1, -260, 0, 18)
+				small.Position = UDim2.new(0, 4, 0, 4)
+				small.Size = UDim2.new(0, 190, 0, 44)
+				helpButton.Size = UDim2.new(0, 44, 0, 44)
+				helpButton.Position = UDim2.new(0, 4 + 190 + 22, 0, 4 + 22)
+				hint.Position = UDim2.new(0, 4 + 190 + 44 + 8, 0, 4)
+				hint.Size = UDim2.new(1, -(4 + 190 + 44 + 8 + 14), 0, 44)
 			else
+				small.Position = UDim2.new(0, 4, 0, 4)
+				small.Size = UDim2.new(0, 250, 0, 18)
+				helpButton.Size = UDim2.new(0, HelpToggle.size, 0, HelpToggle.size)
+				helpButton.Position = UDim2.new(0, 250 + 20, 0, 13)
 				hint.Position = UDim2.new(0, 14, 0, 22)
 				hint.Size = UDim2.new(1, -28, 0, 18)
 			end
 		else
 			local height = phone and 44 or 26
+			guide.Visible = true
+			small.Visible = false
 			guide.BackgroundColor3 = UIColors.slot
 			guide.BackgroundTransparency = UIColors.slotTransparency
 			guide.TextColor3 = UIColors.gold
-			guide.Font = Enum.Font.GothamBold
 			guide.Text = unusedText
 			guideStroke.Color = UIColors.gold
 			guideStroke.Transparency = 0.2
-			guide.Active = true
 			guide.Position = UDim2.new(0, 14, 0, 4)
 			guide.Size = UDim2.new(1, -28, 0, height)
 			helpButton.Visible = false
@@ -105,7 +121,7 @@ function GemHeader.createStatus(parent, hooks)
 	-- 안내 블록(안내 줄 + 상황 안내 한 줄)의 전체 높이 - GemTab이 그 아래에 본문을 놓는다.
 	function self.height()
 		if used then
-			return phone and 24 or 42
+			return phone and 52 or 42
 		end
 		return 4 + (phone and 44 or 26) + 4 + 18 + 4
 	end

@@ -228,19 +228,20 @@ local function run()
 			return nil
 		end
 		local guide = gemBody:FindFirstChild("GuideLine")
+		local small = gemBody:FindFirstChild("GuideLineSmall")
 		local help = gemBody:FindFirstChild("HelpToggle")
 		local originalUsed = player:GetAttribute("GemMerchantUsed")
 		player:SetAttribute("GemMerchantUsed", false)
 		task.wait(0.4)
-		local unusedOk = guide ~= nil and guide.Active and guide.AbsoluteSize.Y >= 26 and guide.Text:find("위치 안내", 1, true) ~= nil and guide.Text:find("보석상인", 1, true) ~= nil
-			and colorEq(guide.TextColor3, UIColors.gold) and (help == nil or not help.Visible)
+		local unusedOk = guide ~= nil and guide.Visible and guide.Active and guide.AbsoluteSize.Y >= 26 and guide.Text:find("위치 안내", 1, true) ~= nil and guide.Text:find("보석상인", 1, true) ~= nil
+			and colorEq(guide.TextColor3, UIColors.gold) and (help == nil or not help.Visible) and (small == nil or not small.Visible)
 		check(("안내 줄(안 써 봤다): 눈에 띄는 버튼 %s(높이 %d · \"%s\") · ? 없음"):format(tostring(unusedOk), guide and guide.AbsoluteSize.Y or -1, guide and guide.Text or "?"), unusedOk)
 		local unusedHeight = guide and guide.AbsoluteSize.Y or 0
 		player:SetAttribute("GemMerchantUsed", true)
 		task.wait(0.4)
-		local usedOk = guide ~= nil and not guide.Active and guide.AbsoluteSize.Y <= 20 and guide.BackgroundTransparency == 1 and colorEq(guide.TextColor3, UIColors.textTertiary)
-			and guide.Text:find("보석상인", 1, true) ~= nil and help ~= nil and help.Visible
-		check(("안내 줄(써 봤다): 작은 회색 한 줄 %s(높이 %d < %d) · ? 도움말 있음 %s"):format(tostring(usedOk), guide and guide.AbsoluteSize.Y or -1, unusedHeight, tostring(help ~= nil and help.Visible)), usedOk and (guide.AbsoluteSize.Y < unusedHeight))
+		local usedOk = guide ~= nil and not guide.Visible and small ~= nil and small.Visible and small.AbsoluteSize.Y <= 20 and small.Text:find("보석상인", 1, true) ~= nil
+			and colorEq(small.TextColor3, UIColors.textTertiary) and help ~= nil and help.Visible
+		check(("안내 줄(써 봤다): 작은 회색 글 한 줄 %s(높이 %d < 버튼 %d) · ? 도움말 있음 %s · 버튼은 숨음"):format(tostring(usedOk), small and small.AbsoluteSize.Y or -1, unusedHeight, tostring(help ~= nil and help.Visible)), usedOk and (small.AbsoluteSize.Y < unusedHeight))
 		Store.selectedKind, Store.selectedValue = "gemBag", 1
 		Store.refreshDetail()
 		task.wait(0.3)
