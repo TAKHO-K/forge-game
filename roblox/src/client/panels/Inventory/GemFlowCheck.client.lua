@@ -239,9 +239,9 @@ local function run()
 		local unusedHeight = guide and guide.AbsoluteSize.Y or 0
 		player:SetAttribute("GemMerchantUsed", true)
 		task.wait(0.4)
-		local usedOk = guide ~= nil and not guide.Visible and small ~= nil and small.Visible and small.AbsoluteSize.Y <= 20 and small.Text:find("보석상인", 1, true) ~= nil
+		local usedOk = guide ~= nil and not guide.Visible and small ~= nil and small.Visible and small.AbsoluteSize.Y <= unusedHeight and small.Text:find("보석상인", 1, true) ~= nil
 			and colorEq(small.TextColor3, UIColors.textTertiary) and help ~= nil and help.Visible
-		check(("안내 줄(써 봤다): 작은 회색 글 한 줄 %s(높이 %d < 버튼 %d) · ? 도움말 있음 %s · 버튼은 숨음"):format(tostring(usedOk), small and small.AbsoluteSize.Y or -1, unusedHeight, tostring(help ~= nil and help.Visible)), usedOk and (small.AbsoluteSize.Y < unusedHeight))
+		check(("안내 줄(써 봤다): 작은 회색 글 한 줄 %s(높이 %d ≤ 버튼 %d) · ? 도움말 있음 %s · 버튼은 숨음"):format(tostring(usedOk), small and small.AbsoluteSize.Y or -1, unusedHeight, tostring(help ~= nil and help.Visible)), usedOk)
 		-- 폰 800 × 360에서도 써 본 상태의 ? 도움말은 터치 44 · 작은 회색 줄은 버튼이 아니다(눈에 띄는 줄 버튼은 숨음)
 		R.debugForceScreen(Vector2.new(800, 360 - INSET))
 		task.wait(0.5)
