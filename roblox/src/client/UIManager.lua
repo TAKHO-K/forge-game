@@ -425,8 +425,15 @@ end
 -- 지시(18-1 [3]) - AttackInput.client.lua가 참조한다.
 UIManager.isInputBlocked = isModalOpen
 
+-- [InputDiag] 임시 진단 통로(S20 사전 작업 - I 키가 실제 키보드에서 안 열리는 원인 조사): InputDiag.client.lua가 함수를 꽂으면 아래 단계마다 한 줄을 남긴다. 원인 확인 뒤 제거한다.
+UIManager.inputDiag = nil
+
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	local diag = UIManager.inputDiag
 	if gameProcessedEvent then
+		if diag and input.UserInputType == Enum.UserInputType.Keyboard then
+			diag(("UIManager: gameProcessedEvent=true라 버림 key=%s"):format(input.KeyCode.Name))
+		end
 		return
 	end
 	if input.UserInputType ~= Enum.UserInputType.Keyboard then
@@ -440,9 +447,19 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 
 	for id, win in pairs(windows) do
 		if (PanelRegistry.hotkeyOf(id) or win.hotkey) == input.KeyCode then
+			if diag then
+				local canOpen = (not win.canOpen) and "canOpen 없음" or tostring(win.canOpen())
+				diag(("UIManager: 핫키 일치 id=%s key=%s 열림=%s debounce=%s canOpen=%s 모달열림=%s"):format(id, input.KeyCode.Name, tostring(UIManager.isOpen(id)), tostring(debounce[id]), canOpen, tostring(isModalOpen())))
+			end
 			UIManager.toggle(id)
+			if diag then
+				diag(("UIManager: toggle 뒤 id=%s 열림=%s 스택=%s"):format(id, tostring(UIManager.isOpen(id)), table.concat(stack, ",")))
+			end
 			return
 		end
+	end
+	if diag then
+		diag(("UIManager: 등록된 핫키가 아님 key=%s"):format(input.KeyCode.Name))
 	end
 end)
 
