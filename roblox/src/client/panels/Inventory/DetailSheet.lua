@@ -10,6 +10,7 @@ local Gem = require(ReplicatedStorage.Shared.Gem)
 local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Layout = require(script.Parent.Layout)
+local ItemActions = require(script.Parent.ItemActions)
 
 -- 상세(S20b: InventoryUI 분할) - PC는 하단 상세 바(104), 폰은 아래에서 올라오는 시트(선택이 있을 때만 · 닫기 44). 이름 · 메타 · 옵션 줄 · 잠금 / 판매 / 분해 / 착용 / 리롤 버튼과 그 서버 요청, refreshDetail이 전부 여기 있다.
 local DetailSheet = {}
@@ -17,7 +18,6 @@ local DetailSheet = {}
 function DetailSheet.create(S, R)
 local player = S.player
 local content = R.content
-local equipRequest = ReplicatedStorage:WaitForChild("EquipRequest")
 local sellRequest = ReplicatedStorage:WaitForChild("SellRequest")
 local lockRequest = ReplicatedStorage:WaitForChild("LockRequest")
 local dismantleRequest = ReplicatedStorage:WaitForChild("DismantleRequest")
@@ -108,6 +108,27 @@ dactLayout.Padding = UDim.new(0, 7)
 dactLayout.SortOrder = Enum.SortOrder.LayoutOrder
 dactLayout.Parent = dact
 
+-- S20d: 버튼 위 한 줄(dhint) - 착용 · 해제를 못 할 때의 이유(빨강) · 보석 [장착]이 밀어낼 보석 미리보기(보조색). 자리는 배치 함수가 버튼 묶음 바로 위 오른쪽에 정한다(PC 바 · 폰 시트 공통).
+local dhint = Instance.new("TextLabel")
+dhint.Name = "DetailHint"
+dhint.AnchorPoint = Vector2.new(1, 1)
+dhint.Size = UDim2.new(0, 400, 0, 16)
+dhint.BackgroundTransparency = 1
+dhint.Font = Enum.Font.Gotham
+dhint.TextSize = Theme.textSize("caption") -- 12px 미만 금지
+dhint.TextXAlignment = Enum.TextXAlignment.Right
+dhint.TextTruncate = Enum.TextTruncate.AtEnd
+dhint.TextColor3 = UIColors.textSecondary
+dhint.Text = ""
+dhint.Visible = false
+dhint.Parent = detail
+
+local function setHint(text, isReason)
+	dhint.Visible = text ~= nil and text ~= ""
+	dhint.Text = text or ""
+	dhint.TextColor3 = isReason and UIColors.danger or UIColors.textSecondary
+end
+
 local function makeActionButton(order, width, style)
 	local btn = Instance.new("TextButton")
 	btn.LayoutOrder = order
@@ -165,7 +186,7 @@ local dismantleButton = makeActionButton(3, 60, "sell")
 dismantleButton.Text = "분해"
 
 local equipButton = makeActionButton(4, 84, "primary")
-equipButton.Text = "착용"
+equipButton.Text = "장착"
 
 -- 리롤(26-3, PRD 20.67 [10] "장비 3부위도 옵션 변환권으로 리롤할 수 있다") - 보석 탭
 -- rerollButton과 같은 자리(gold 테두리, "sell" 스타일 재사용 - 새 색을 안 만든다).
@@ -376,7 +397,7 @@ local function clearDetail()
 	equipButton.AutoButtonColor = false
 	equipButton.Active = false
 	equipButton.TextTransparency = 0.6
-	equipButton.Text = "착용"
+	equipButton.Text = "장착"
 	refreshOptionRow(nil) -- 26-3 수정: optionRow는 이제 setupOptionRow 내부 전용이다.
 	rerollDetailButton.Visible = false
 	rerollDetailButton.AutoButtonColor = false
@@ -415,6 +436,7 @@ local function setRerollDetailButton(eligible, gradeId)
 end
 
 local function refreshDetailBody()
+	setHint(nil) -- 아래 분기가 필요한 것만 다시 채운다
 	if S.selectedKind == "bag" then
 		local item = S.inventory[S.selectedValue]
 		if not item then
@@ -443,10 +465,15 @@ local function refreshDetailBody()
 		dismantleButton.AutoButtonColor = dismantleEligible
 		dismantleButton.Active = dismantleEligible
 		dismantleButton.TextTransparency = dismantleEligible and 0 or 0.6
-		equipButton.AutoButtonColor = true
-		equipButton.Active = true
-		equipButton.TextTransparency = 0
-		equipButton.Text = "착용"
+		-- S20d: [장착] = 가방 칸 더블클릭 · 우클릭과 같은 통로(S.equipFromBag). 못 하면 회색 + 이유 1줄.
+		local canEquip, blockReason = S.itemActions.canEquip(S.selectedValue)
+		equipButton.AutoButtonColor = canEquip
+		equipButton.Active = canEquip
+		equipButton.TextTransparency = canEquip and 0 or 0.6
+		equipButton.Text = "장착"
+		if blockReason and blockReason ~= "busy" then
+			setHint(ItemActions.reasonText(blockReason), true)
+		end
 		setRerollDetailButton(Gem.isRerollableGrade(item.grade), item.grade)
 	elseif S.selectedKind == "equip" and S.selectedValue ~= "weapon" and S.equippedByPart()[S.selectedValue] then
 		local part = S.selectedValue
@@ -471,10 +498,15 @@ local function refreshDetailBody()
 		dismantleButton.AutoButtonColor = false
 		dismantleButton.Active = false
 		dismantleButton.TextTransparency = 0.6
-		equipButton.AutoButtonColor = true
-		equipButton.Active = true
-		equipButton.TextTransparency = 0
+		-- S20d: [해제] = 착용 칸 더블클릭 · 우클릭과 같은 통로(S.unequipToBag). 가방이 가득 차면 회색 + 이유 1줄(서버도 같은 이유로 거절한다).
+		local canUnequip, blockReason = S.itemActions.canUnequip(part)
+		equipButton.AutoButtonColor = canUnequip
+		equipButton.Active = canUnequip
+		equipButton.TextTransparency = canUnequip and 0 or 0.6
 		equipButton.Text = "해제"
+		if blockReason and blockReason ~= "busy" then
+			setHint(ItemActions.reasonText(blockReason), true)
+		end
 		setRerollDetailButton(Gem.isRerollableGrade(item.grade), item.grade)
 	elseif S.selectedKind == "equip" and S.selectedValue == "weapon" then
 		local weaponLevel = player:GetAttribute("WeaponLevel") or 0
@@ -504,7 +536,7 @@ local function refreshDetailBody()
 		equipButton.AutoButtonColor = false
 		equipButton.Active = false
 		equipButton.TextTransparency = 0.6
-		equipButton.Text = "착용"
+		equipButton.Text = "장착"
 		setRerollDetailButton(nil)
 	elseif S.selectedKind == "gemSlot" and type(S.selectedValue) == "number" and Gem.isFilled(S.gemState().gems, S.selectedValue) then
 		local gem = S.gemState().gems[S.selectedValue]
@@ -530,7 +562,7 @@ local function refreshDetailBody()
 		equipButton.AutoButtonColor = false
 		equipButton.Active = false
 		equipButton.TextTransparency = 0.6
-		equipButton.Text = "착용"
+		equipButton.Text = "장착"
 		setRerollDetailButton(nil) -- 이 슬롯의 리롤 버튼은 보석 탭 행 자체에 있다(중복 방지).
 	elseif S.selectedKind == "gemBag" and type(S.selectedValue) == "number" and S.gemState().gemInventory[S.selectedValue] then
 		local gem = S.gemState().gemInventory[S.selectedValue]
@@ -559,6 +591,9 @@ local function refreshDetailBody()
 		equipButton.Active = canEquip
 		equipButton.TextTransparency = canEquip and 0 or 0.6
 		equipButton.Text = "장착"
+		if canEquip then
+			setHint(S.gemReplaceText(S.selectedValue)) -- 밀려날 보석 미리보기(교체가 없으면 nil = 안 보인다)
+		end
 		setRerollDetailButton(nil)
 	else
 		clearDetail()
@@ -602,10 +637,9 @@ equipButton.Activated:Connect(function()
 	if S.selectedKind == "gemBag" then
 		S.gemAutoEquip(S.selectedValue)
 	elseif S.selectedKind == "bag" then
-		equipRequest:FireServer("equip", S.selectedValue)
+		S.equipFromBag(S.selectedValue) -- S20d: 더블클릭 · 우클릭과 같은 통로(ItemActions - 요청 중 잠금 · 이유 토스트)
 	elseif S.selectedKind == "equip" and S.selectedValue ~= "weapon" then
-		-- 16-6: 어느 부위를 벗을지 서버에 같이 알려야 한다(갑옷 하나였을 땐 필요 없었다).
-		equipRequest:FireServer("unequip", S.selectedValue)
+		S.unequipToBag(S.selectedValue) -- 16-6: 어느 부위를 벗을지 서버에 같이 알려야 한다(갑옷 하나였을 땐 필요 없었다)
 	end
 end)
 
@@ -633,6 +667,13 @@ local function applySheetVisibility()
 end
 
 local function refreshDetail()
+	if S.itemActions.isPending() then
+		-- S20d: 착용 · 해제 요청 중에는 서버 스냅샷이 먼저 와 가방 index가 밀려 있다 - 본문을 다시 그리면 잠깐 다른 아이템이 보인다. 버튼만 잠그고 결과가 오면(onDone) 한 번에 그린다.
+		equipButton.AutoButtonColor = false
+		equipButton.Active = false
+		equipButton.TextTransparency = 0.6
+		return
+	end
 	refreshDetailBody()
 	applySheetVisibility()
 end
@@ -704,6 +745,9 @@ table.insert(R.layouts, function(L)
 		dact.AnchorPoint, dact.Position = Vector2.new(1, 1), UDim2.new(1, 0, 1, -8)
 		sheetClose.AnchorPoint, sheetClose.Position = Vector2.new(1, 0), UDim2.new(1, 0, 0, 8)
 	end
+	-- S20d: 버튼 묶음 바로 위 오른쪽 한 줄(묶음의 위쪽 끝 - 2px가 이 줄의 아래쪽 끝). 묶음이 세로 가운데면 (바 높이 - 버튼 높이) / 2 · 폰 두 줄 시트에서는 아래 끝 - 8 - 버튼 높이.
+	local groupTop = (phone and not L.sheetWide) and (L.detailH - 8 - L.actionH) or ((L.detailH - L.actionH) / 2)
+	dhint.Position = UDim2.new(1, (phone and L.sheetWide) and -52 or 0, 0, groupTop - 2)
 	applySheetVisibility()
 end)
 end

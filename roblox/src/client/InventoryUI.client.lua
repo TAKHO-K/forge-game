@@ -33,6 +33,7 @@ local GearTab = require(script.Parent.panels.Inventory.GearTab)
 local GemTab = require(script.Parent.panels.Inventory.GemTab)
 local Shell = require(script.Parent.panels.Inventory.Shell)
 local Store = require(script.Parent.panels.Inventory.Store)
+local ItemActions = require(script.Parent.panels.Inventory.ItemActions)
 
 local inventorySync = ReplicatedStorage:WaitForChild("InventorySync")
 local inventoryFetch = ReplicatedStorage:WaitForChild("InventoryFetch")
@@ -44,6 +45,7 @@ local R = {}
 S.R = R -- 점검(InventoryLayoutCheck)이 R.debugForceScreen · R.selectTab을 부른다
 
 Shell.create(S, R)
+ItemActions.attach(S, R) -- S20d: 착용 · 해제 입력의 유일한 통로(S.equipFromBag · S.unequipToBag) - 세 탭이 만들어지기 전에 붙는다
 GearTab.create(S, R)
 BagTab.create(S, R)
 DetailSheet.create(S, R)
@@ -86,6 +88,7 @@ S.gemState = function()
 end
 S.gemCanAutoEquip = gemTab.canAutoEquip -- 상세 시트의 [장착] 버튼(S20c) - 보석 탭의 GemActions 통로를 그대로 쓴다
 S.gemAutoEquip = gemTab.autoEquip
+S.gemReplaceText = gemTab.replaceText -- 상세 시트의 [장착] 버튼 위 미리보기 한 줄(S20d)
 R.gemTab = gemTab -- 점검(GemFlowCheck)이 debugApply · debugPaint를 부른다
 R.applyLayout() -- 모든 탭이 만들어진 뒤 첫 배치
 

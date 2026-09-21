@@ -8,7 +8,7 @@
 --     refreshDetail() · refreshStats()  상세바 · 총 스탯 갱신(보석은 옵션 보너스에 합산된다) · selectTab(name)  탭 전환(보석 획득 토스트의 [보석 탭 열기])
 --     weaponGradeId() · applyGradeVisual(cell, stroke, glow, gradeId) · makeSectionLabel(parent, text, y)  InventoryUI가 함께 쓰는 헬퍼
 --   반환: update() = 보석 탭 다시 그리기(창 열 때 · 서버 동기화 때) · cancelDrag() = 창 닫을 때(드래그 취소 · 홈 먼저 취소 · NEW 확인) · state() = 현재 보석 상태 스냅샷(GemSync) · frame = 보석 본문
---          canAutoEquip(index) · autoEquip(index) = 상세 시트의 [장착] 버튼이 부른다(입력 통로는 하나 - GemActions).
+--          canAutoEquip(index) · autoEquip(index) = 상세 시트의 [장착] 버튼이 부른다(입력 통로는 하나 - GemActions) · replaceText(index) = 자동 장착이 밀어낼 보석 미리보기 글(S20d).
 -- S20b 재구성: 본문(GemBody)은 세로 스크롤 ScrollingFrame이다. PC = 무기 칸(왼쪽 220) + 정보 칸 2단 · 폰 = 홈 한 줄 위 · 정보 칸 아래 1단(홈 행 높이 76 · 리롤 / 변환권 버튼 높이 44).
 -- S20c 입력(서버 규칙은 그대로 - 장착은 항상 "교체"이고 기존 보석은 보석칸으로 돌아온다 · 해제는 서버에 없다). 모든 입력은 GemActions.equip 한 곳으로 간다:
 --   PC   보석 더블클릭(0.35초) · 우클릭 = 자동 장착(끼울 수 있는 열린 홈 중 상한이 가장 낮은 홈) / 홈 더블클릭 · 우클릭 = 그 홈을 "홈 먼저" 대상으로 고르기 → 밝게 보이는 보석을 클릭하면 교체(Esc · 빈 곳 클릭 = 취소) / 드래그(끼울 수 있는 홈은 빛나고 · 못 끼우는 홈은 어둡게 + ×).
@@ -133,7 +133,7 @@ local slotListScroll, slotRows = slotList.scroll, slotList.rows
 
 local invLabel = makeSectionLabel(infoPane, "보유 보석", 250)
 
-local bag = GemBag.create(infoPane, { applyGradeVisual = applyGradeVisual })
+local bag = GemBag.create(infoPane, { applyGradeVisual = applyGradeVisual, screenGui = screenGui })
 local gemInvScroll = bag.scroll
 
 -- ═══ 상태 읽기 · 좌표 도우미 ═══
@@ -343,6 +343,7 @@ cancelGemDrag = function()
 		dragProxy:Destroy()
 	end
 	dragProxy, dragIndex, dragGrade, dragOrigin = nil, nil, nil, nil
+	bag.hideTip()
 	paintSlots()
 end
 
@@ -478,6 +479,8 @@ end
 local function rebuildGemInventory()
 	bag.rebuild(currentGemState.gemInventory, Gem.displayOrder(currentGemState.gemInventory), { -- 표시 순서 = 등급 높은 순(같은 등급은 획득 순) - 서버 index는 셀이 그대로 들고 간다
 		onInput = onCellInput,
+		hoverText = actions.replaceText, -- S20d: PC 호버 = "교체될 보석: ..."(교체가 없으면 안 나온다)
+		tapMode = tapMode,
 		onActivated = function(index)
 			if tapMode() then
 				onCellTap(index)
@@ -765,6 +768,7 @@ return {
 	autoEquip = function(index)
 		return actions.autoEquip(index, { originPos = bag.center(index) })
 	end,
+	replaceText = actions.replaceText, -- 상세 시트의 [장착] 버튼 위 한 줄(S20d)
 	frame = gemBody,
 	-- Studio 자체 점검 전용(GemFlowCheck): 서버 없이 상태를 넣어 그리고 · 다시 그리고 · 홈 먼저 상태를 강제한다.
 	debugApply = function(state)

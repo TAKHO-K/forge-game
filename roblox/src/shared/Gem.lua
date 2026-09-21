@@ -91,6 +91,16 @@ function Gem.autoSlot(slotUnlocked, gems, gradeId)
 	return nil, anyOpen and "grade_too_high" or "no_slot_open"
 end
 
+-- S20d: 자동 장착으로 밀려날 보석 미리보기. 자동 장착 대상 홈(Gem.autoSlot)이 이미 차 있으면 그 보석 - 서버 규칙상 장착은 항상 "교체"라 밀려난 보석은 보석칸으로 돌아온다(사라지지 않는다).
+-- 반환: 밀려날 보석 표(gems[slot]), slot. 빈 홈으로 들어가거나(교체 없음) 대상 홈이 없으면 nil.
+function Gem.replacePreview(slotUnlocked, gems, gradeId)
+	local slot = Gem.autoSlot(slotUnlocked, gems, gradeId)
+	if slot and Gem.isFilled(gems, slot) then
+		return gems[slot], slot
+	end
+	return nil
+end
+
 -- S20c: 보석칸 표시 순서 = 등급 높은 순(같은 등급은 획득 순 = 서버 index 순). 서버 index는 그대로 두고 표시 순서만 정한다. 반환: 서버 index 배열.
 function Gem.displayOrder(gemInventory)
 	local order = {}

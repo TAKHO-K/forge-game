@@ -46,7 +46,7 @@ function Layout.compute(screenWidth, screenHeight)
 		L.pillH, L.closeSize, L.actionH, L.tabButtonH = 44, 44, 44, 44
 		L.tabNames = { "장비", "가방", "보석" }
 		L.sheetWide = L.winW >= Layout.wideSheetWidth
-		L.detailH = L.sheetWide and 84 or 140 -- 시트 높이
+		L.detailH = L.sheetWide and 84 or 158 -- 시트 높이(두 줄 시트는 정보 80 + 버튼 위 한 줄 + 버튼 44 + 여백 = 158 - S20d에서 140에서 늘렸다)
 		L.gearW, L.bagW = L.winW, L.winW
 		L.bodyH = L.winH - (L.headerH + L.tabH) -- 시트는 본문 위에 얹힌다(가린다)
 	else

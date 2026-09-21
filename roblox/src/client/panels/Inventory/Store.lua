@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
@@ -61,6 +62,26 @@ S.isOpen = false
 S.rainbowGradients = {} -- 매 프레임 회전시켜야 하는 태초 등급 테두리 그라디언트 목록.
 S.sheetInset = 0 -- 폰: 상세 시트가 올라와 있으면 그 높이(본문 프레임이 그만큼 짧아져 시트와 겹치지 않는다) · 아니면 0
 S.mode = "pc" -- Layout.compute의 판정("pc" | "phone") - Shell.applyLayout이 매번 갱신한다.
+
+-- 탭 방식인가(S20d - GemTab.tapMode와 같은 판정): 폰 배치이거나 마지막 입력이 터치면 더블클릭 · 우클릭 없이 "탭 = 선택 → 상세의 [장착] / [해제] 버튼"이다.
+function S.tapMode()
+	return S.mode == "phone" or UserInputService:GetLastInputType() == Enum.UserInputType.Touch
+end
+
+-- 화면에 보이는 프레임의 중심(ScreenGui 좌표) - 착용 · 해제 거절 유령이 오가는 자리. 프레임이 없거나 자기 · 조상이 숨어 있으면(폰의 다른 탭) nil이라 유령 없이 토스트만 나온다.
+function S.visibleCenter(frame)
+	local node = frame
+	while node and node:IsA("GuiObject") do
+		if not node.Visible then
+			return nil
+		end
+		node = node.Parent
+	end
+	if not frame or not frame.Parent then
+		return nil
+	end
+	return frame.AbsolutePosition + frame.AbsoluteSize / 2
+end
 
 -- 분해 가능 등급(23-2) - 서버(PlayerProfile.lua DISMANTLE_MIN_GRADE_INDEX)와 같은 문턱(영웅
 -- 이상, ArmorData.gradeOrder index 3). 버튼을 활성화할지 미리 판단하는 표시용일 뿐 실제

@@ -12,6 +12,7 @@ local HelpTooltip = require(script.Parent.Parent.Parent.HelpTooltip)
 local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Layout = require(script.Parent.Layout)
+local ItemActions = require(script.Parent.ItemActions)
 
 -- 장비 칸(S20b: InventoryUI 분할) - 착용 중 4칸(무기 · 갑옷 · 장갑 · 신발) · 옵션 보너스 박스 · 총 스탯 3줄. 세로 스크롤 ScrollingFrame이다(PC = 왼쪽 칸 · 폰 = "장비" 탭 본문).
 local GearTab = {}
@@ -262,6 +263,13 @@ end
 
 S.refreshStats = refreshStats
 
+local isDoubleClick = ItemActions.doubleClickTracker() -- S20d: 착용 중 칸 더블클릭(0.35초) = 해제
+
+-- 해제 거절 연출의 좌표(S20d): 그 부위 칸의 중심(폰에서 이 탭이 안 보이면 nil).
+function S.gearSlotCenter(part)
+	return S.visibleCenter(gearGrid:FindFirstChild("Gear_" .. part))
+end
+
 local function rebuildGearSlots()
 	for _, child in ipairs(gearGrid:GetChildren()) do
 		if child:IsA("Frame") or child:IsA("TextButton") then
@@ -382,12 +390,24 @@ local function rebuildGearSlots()
 				if part == "weapon" then
 					S.selectedKind, S.selectedValue = "equip", "weapon"
 				elseif filled then
+					-- S20d: PC 더블클릭 = 해제 / 한 번 클릭 · 탭 방식(폰) = 선택(해제는 상세의 [해제] 버튼). 착용 · 해제는 S.unequipToBag(ItemActions) 한 곳으로 간다.
+					if not S.tapMode() and isDoubleClick(part) then
+						S.unequipToBag(part)
+						return
+					end
 					S.selectedKind, S.selectedValue = "equip", part
 				else
 					return -- 빈 슬롯은 선택할 게 없다(착용된 것도, 보관함에서 고른 것도 아니다).
 				end
 				S.refreshDetail()
 			end)
+			if filled and part ~= "weapon" then
+				slot.InputBegan:Connect(function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton2 then
+						S.unequipToBag(part) -- 우클릭 = 해제(무기는 해제 대상이 아니다)
+					end
+				end)
+			end
 		end
 	end
 end

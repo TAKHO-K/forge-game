@@ -7,10 +7,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
+local ItemEquip = require(script.Parent.ItemEquip)
 
 local equipRequest = Instance.new("RemoteEvent")
 equipRequest.Name = "EquipRequest"
 equipRequest.Parent = ReplicatedStorage
+
+-- S20d: 착용 · 해제 요청의 결과(success, reason, action, part) - 클라 ItemActions가 요청 중 잠금을 풀고 거절 이유를 보인다(GemEquipResult와 같은 역할).
+--   reason은 ItemEquip.lua 머리 주석의 이유 코드. part는 unequip 요청일 때만 온다.
+local equipResult = Instance.new("RemoteEvent")
+equipResult.Name = "EquipResult"
+equipResult.Parent = ReplicatedStorage
 
 -- action: "sell"(index 필요) 또는 "sellBulk"(gradeId 필요, 13-1).
 local sellRequest = Instance.new("RemoteEvent")
@@ -40,23 +47,10 @@ setInventoryWindowPositionRequest.Parent = ReplicatedStorage
 -- classState.equipment[part]를 nil 조회로 조용히 거른다(19-1부터 활성 직업 아래) - 여기선
 -- 타입만 확인한다.
 equipRequest.OnServerEvent:Connect(function(player, action, arg)
-	if not PlayerProfile.getProfile(player) then
-		return -- 프로필 로드가 아직 안 끝났다
-	end
-
-	if action == "equip" then
-		if type(arg) ~= "number" then
-			return
-		end
-		PlayerProfile.equipItem(player, math.floor(arg))
-	elseif action == "unequip" then
-		if type(arg) ~= "string" then
-			return
-		end
-		PlayerProfile.unequipItem(player, arg)
-	else
-		return
-	end
+	-- S20d: 판정은 ItemEquip.handle(요청 모양 검사 + PlayerProfile) 한 곳이고, 결과(성공 여부 · 이유 코드)를 요청한 클라에 알린다 - 옛 코드는 실패하면 아무 신호도 안 보냈다.
+	-- InventorySync는 PlayerProfile 안에서 이미 밀렸으므로 결과 이벤트는 항상 그 스냅샷 뒤에 온다.
+	local success, reason = ItemEquip.handle(player, action, arg)
+	equipResult:FireClient(player, success, reason, action, type(arg) == "string" and arg or nil)
 
 	-- 착용/해제는 되돌릴 수 있는 사건이다(12-1 [4] 판단) - 골드를 쓰는 것도, 되돌릴 수
 	-- 없는 결과가 확정되는 것도 아니라 다시 반대로 누르면 그만이다. 그래서 강화·클래스

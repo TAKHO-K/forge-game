@@ -13,6 +13,7 @@ local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local Equip = require(ReplicatedStorage.Shared.Equip) -- S20d: 착용 · 해제 판정(클라 미리 판정과 같은 함수)
 -- 26-2(PRD 20.67 [14] 3~5단계): 장비 3부위 옵션 + 보석 5개의 축 합산·치명·직업 특화 전부
 -- Option.lua 순수 함수(valueOf·sumWithCap·sumAxisBonus·critBonus)가 유일한 출처다.
 local Option = require(ReplicatedStorage.Shared.Option)
@@ -1091,17 +1092,18 @@ end
 -- 인벤토리로 되돌린다. 먼저 빼고 나중에 넣으므로(순서 고정) 칸 수가 항상 그대로 맞아
 -- 용량 검사가 필요 없다 - 착용은 "교체"일 뿐 순수 추가가 아니다. 어느 부위에 착용할지는
 -- item.part를 그대로 읽는다(16-6부터 갑옷·장갑·신발 3부위 전부 이 함수 하나로 처리 -
--- 이전엔 equipArmor로 갑옷만 다뤘다).
+-- 이전엔 equipArmor로 갑옷만 다뤘다). S20d: 거절 판정은 shared/Equip(클라 미리 판정과 같은 함수) - 규칙은 그대로이고 실패하면 이유 코드(no_class · not_found)를 함께 돌려준다.
 function PlayerProfile.equipItem(player, index)
 	local profile = profiles[player]
-	local classState = profile and activeClassState(profile)
-	if not classState then
-		return false
+	if not profile then
+		return false, "no_class"
+	end
+	local classState = activeClassState(profile)
+	local reason = Equip.equipBlockReason(profile.inventory, index, classState ~= nil)
+	if reason then
+		return false, reason
 	end
 	local item = profile.inventory[index]
-	if not item or not item.part then
-		return false
-	end
 
 	local part = item.part
 	table.remove(profile.inventory, index)
@@ -1121,20 +1123,18 @@ function PlayerProfile.equipItem(player, index)
 end
 
 -- 서버만 호출한다. part(갑옷/장갑/신발) 착용을 해제해 인벤토리로 되돌린다 - 순수 추가라
--- 칸이 가득 차 있으면 실패한다(false, "full") - 벗을 자리가 없으면 벗을 수 없다.
+-- 칸이 가득 차 있으면 실패한다(false, "full") - 벗을 자리가 없으면 벗을 수 없다. S20d: 판정은 shared/Equip(no_class · not_equipped · full).
 function PlayerProfile.unequipItem(player, part)
 	local profile = profiles[player]
-	local classState = profile and activeClassState(profile)
-	if not classState then
-		return false
+	if not profile then
+		return false, "no_class"
+	end
+	local classState = activeClassState(profile)
+	local reason = Equip.unequipBlockReason(classState and classState.equipment or {}, part, #profile.inventory, profile.inventorySlots, classState ~= nil)
+	if reason then
+		return false, reason
 	end
 	local current = classState.equipment[part]
-	if not current then
-		return false, "not_equipped"
-	end
-	if #profile.inventory >= profile.inventorySlots then
-		return false, "full"
-	end
 
 	classState.equipment[part] = nil
 	table.insert(profile.inventory, current)

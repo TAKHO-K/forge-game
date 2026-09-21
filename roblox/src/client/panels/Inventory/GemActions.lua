@@ -14,6 +14,7 @@ local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast)
 
 local gemEquipRequest = ReplicatedStorage:WaitForChild("GemEquipRequest")
@@ -76,6 +77,29 @@ function GemActions.makeGhost(screenGui, pos, gradeId)
 	return ghost
 end
 
+-- 거절 연출(보석 · 장비 공통 - S20d부터 ItemActions도 이 함수를 쓴다): 유령이 원래 칸으로 돌아간다(returnTweenSeconds = 0.2초). 유령이 없고 출발점(ctx.fromPos)도 없으면 연출 없이 토스트만.
+--   ctx: proxy(이미 있는 유령 - 이 함수가 정리한다) · fromPos(유령의 출발점) · originPos(돌아갈 자리)
+function GemActions.bounce(screenGui, ctx, gradeId)
+	local ghost = ctx.proxy
+	if not (ghost and ghost.Parent) then
+		ghost = ctx.fromPos and GemActions.makeGhost(screenGui, ctx.fromPos, gradeId) or nil
+	end
+	if not ghost then
+		return
+	end
+	local target = ctx.originPos
+	if not target then
+		ghost:Destroy()
+		return
+	end
+	local seconds = GemData.ui.returnTweenSeconds
+	local tween = TweenService:Create(ghost, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0, target.X, 0, target.Y) })
+	tween:Play()
+	task.delay(seconds + 0.05, function()
+		ghost:Destroy()
+	end)
+end
+
 function GemActions.create(deps)
 	local self = {}
 	local pending -- { slot, index, ctx, gem } - 서버 결과를 기다리는 요청 하나
@@ -86,31 +110,9 @@ function GemActions.create(deps)
 		end
 	end
 
-	-- 거절 연출: 유령이 원래 칸으로 돌아간다(0.2초). 유령이 없고 출발점도 없으면 토스트만.
-	local function bounce(ctx, gradeId)
-		local ghost = ctx.proxy
-		if not (ghost and ghost.Parent) then
-			ghost = ctx.fromPos and GemActions.makeGhost(deps.screenGui, ctx.fromPos, gradeId) or nil
-		end
-		if not ghost then
-			return
-		end
-		local target = ctx.originPos
-		if not target then
-			ghost:Destroy()
-			return
-		end
-		local seconds = GemData.ui.returnTweenSeconds
-		local tween = TweenService:Create(ghost, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0, target.X, 0, target.Y) })
-		tween:Play()
-		task.delay(seconds + 0.05, function()
-			ghost:Destroy()
-		end)
-	end
-
 	local function reject(reason, gem, slot, ctx)
 		Toast.push("TC", { text = GemActions.reasonText(reason, gem and gem.grade, slot), colorName = "danger", grade = "notice", seconds = 2.5, groupKey = "gemEquipReject" })
-		bounce(ctx or {}, gem and gem.grade)
+		GemActions.bounce(deps.screenGui, ctx or {}, gem and gem.grade)
 	end
 
 	function self.isPending()
@@ -142,6 +144,20 @@ function GemActions.create(deps)
 			return nil, "not_found"
 		end
 		return Gem.autoSlot(state.slotUnlocked, state.gems, gem.grade)
+	end
+
+	-- 자동 장착이 밀어낼 보석 미리보기 글(S20d - PC 호버 툴팁 · 폰 [장착] 버튼 위 한 줄). 교체가 없으면(빈 홈으로 들어가거나 대상 홈이 없다) nil. 밀려난 보석은 보석칸으로 돌아온다(서버 규칙 그대로).
+	function self.replaceText(index)
+		local state = deps.getState()
+		local gem = state.gemInventory[index]
+		if not gem then
+			return nil
+		end
+		local replaced, slot = Gem.replacePreview(state.slotUnlocked, state.gems, gem.grade)
+		if not replaced then
+			return nil
+		end
+		return ("교체될 보석: %s (%d번 홈)"):format(ItemDescribe.gem(replaced).title, slot)
 	end
 
 	-- [장착] 버튼 · 강조용: 지금 자동 장착이 되는가. 반환: true 또는 false + 이유.

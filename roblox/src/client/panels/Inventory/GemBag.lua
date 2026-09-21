@@ -1,7 +1,8 @@
 -- 보석 탭 보유 보석 칸(S20c: GemTab.lua(800줄 한도)에서 분리 + 표시 3종 추가). 서버 index(= gemInventory 순서)는 셀마다 들고 다니고, 표시 순서(등급 높은 순)만 LayoutOrder로 정한다.
 -- GemBag.create(parent, deps) -> { scroll, refs, rebuild(gemInventory, order, hooks), paint(viewOf), center(index) }
---   deps.applyGradeVisual(cell, stroke, glow, gradeId)
+--   deps.applyGradeVisual(cell, stroke, glow, gradeId) · deps.screenGui(호버 툴팁이 붙는 곳 - S20d)
 --   rebuild: 셀을 전부 다시 만든다. hooks.onInput(input, index, gem, cell) = 셀의 InputBegan · hooks.onActivated(index) = 셀의 Activated(탭). 입력 해석(더블클릭 · 드래그 · 탭)은 GemTab이 한다.
+--     hooks.hoverText(index) -> 글 | nil · hooks.tapMode() -> boolean: PC(탭 방식이 아닐 때)에서 셀에 마우스를 올리면 hoverText 글을 툴팁으로 보인다(S20d - "교체될 보석: ..."). hideTip() = 툴팁 숨기기.
 --   paint(viewOf): viewOf(index) -> mark("ok" 끼울 수 있다 / "blocked" 못 끼운다 / nil), selected(선택), isNew(분해로 새로 들어온 보석)
 --   표시 3종: 링(선택 = 강조색 · 끼울 수 있음 = 성공색) · 어둡게(끼울 수 없음) · NEW 표시. refs[index] = { cell, ring, ringStroke, dimmer, newBadge }
 
@@ -10,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
+local GemReplaceTip = require(script.Parent.GemReplaceTip)
 
 local GemBag = {}
 
@@ -32,6 +34,11 @@ function GemBag.create(parent, deps)
 
 	local self = { scroll = scroll, refs = {} }
 	local cells = {}
+	local tip = GemReplaceTip.create(deps.screenGui)
+
+	function self.hideTip()
+		tip.hide()
+	end
 
 	local function corner(inst, radius)
 		local c = Instance.new("UICorner")
@@ -40,6 +47,7 @@ function GemBag.create(parent, deps)
 	end
 
 	function self.rebuild(gemInventory, order, hooks)
+		tip.hide() -- 셀이 통째로 새로 지어진다 - 마우스가 올라 있던 셀은 MouseLeave 없이 사라진다
 		for _, cell in ipairs(cells) do
 			cell:Destroy()
 		end
@@ -133,6 +141,12 @@ function GemBag.create(parent, deps)
 			cell.Activated:Connect(function()
 				hooks.onActivated(index)
 			end)
+			cell.MouseEnter:Connect(function()
+				if hooks.hoverText and not hooks.tapMode() then
+					tip.show(hooks.hoverText(index), cell)
+				end
+			end)
+			cell.MouseLeave:Connect(tip.hide)
 
 			table.insert(cells, cell)
 			self.refs[index] = { cell = cell, ring = ring, ringStroke = ringStroke, dimmer = dimmer, newBadge = newBadge }

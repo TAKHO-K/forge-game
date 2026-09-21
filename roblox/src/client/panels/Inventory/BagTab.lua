@@ -10,6 +10,7 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Layout = require(script.Parent.Layout)
+local ItemActions = require(script.Parent.ItemActions)
 
 -- 가방 칸(S20b: InventoryUI 분할) - 보관함 격자 · 골드 / 일괄판매 예상 알약 · 정렬. 세로 스크롤 ScrollingFrame이다(PC = 오른쪽 칸 · 폰 = "가방" 탭 본문). 열 수는 폭에서 정한다(PC 5 · 폰 800에서 9).
 local BagTab = {}
@@ -95,6 +96,15 @@ local bulkEstimatePillLabel = makeFootPill(true)
 R.goldPillLabel = goldPillLabel
 
 local cellFrames = {}
+local isDoubleClick = ItemActions.doubleClickTracker() -- S20d: 가방 칸 더블클릭(0.35초) = 착용(찬 부위면 교체)
+
+-- 착용 거절 연출의 좌표(S20d): 그 가방 칸 · 가방 영역의 중심(폰에서 이 탭이 안 보이면 nil).
+function S.bagCellCenter(index)
+	return S.visibleCenter(cellFrames[index])
+end
+function S.bagAreaCenter()
+	return S.visibleCenter(bag)
+end
 
 local function selectBagIndex(index)
 	S.selectedKind, S.selectedValue = "bag", index
@@ -156,7 +166,8 @@ local function rebuildGrid()
 		selectionStroke.Name = "SelectionStroke"
 		selectionStroke.Thickness = 2
 		selectionStroke.Color = UIColors.ember
-		selectionStroke.Transparency = (S.selectedKind == "bag" and S.selectedValue == entry.index) and 0 or 1
+		-- 착용 요청 중에는 index가 밀려 있어(교체된 장비가 끝으로 간다) 선택 표시를 켜지 않는다 - 결과가 오면 새 선택이 그려진다(S20d).
+		selectionStroke.Transparency = (S.selectedKind == "bag" and S.selectedValue == entry.index and not S.itemActions.isPending()) and 0 or 1
 		selectionStroke.Parent = cell
 
 		S.applyGradeVisual(cell, gradeStroke, glow, item.grade)
@@ -215,8 +226,18 @@ local function rebuildGrid()
 			end
 		end
 
+		-- S20d: PC 한 번 클릭 = 상세(기존) · 더블클릭 = 착용 · 우클릭 = 착용 / 탭 방식(폰)은 선택만 하고 상세의 [장착] 버튼이 착용한다. 착용 · 해제는 S.equipFromBag(ItemActions) 한 곳으로 간다.
 		cell.Activated:Connect(function()
+			if not S.tapMode() and isDoubleClick(entry.index) then
+				S.equipFromBag(entry.index)
+				return
+			end
 			selectBagIndex(entry.index)
+		end)
+		cell.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton2 then
+				S.equipFromBag(entry.index)
+			end
 		end)
 
 		cellFrames[entry.index] = cell

@@ -78,7 +78,12 @@ local config = {
 		--   S20c(나)(GemEquip 이유 코드 · 교체 규칙 · 미리 판정 = 서버 30조합) · S20c(UI)(GemFlowCheck - 홈 3상태 · 정렬 · NEW · 강화대 상태 · 폰 치수) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈을 쓰는 옛 블록 -
 		--   26-2 · 26-3(PlayerProfile.equipGem · 보석 옵션 - GemServer가 GemEquip을 거치도록 바뀜 · Gem 모듈 함수 추가) · S20(UI)(GemTabCheck · InventoryLayoutCheck - 보석 탭 · 장비창 재구성 위에서 다시 앉음) · S12b(UI)(장비창 글씨) · S12(UI)(패널 전수 fit) ·
 		--   S16(UI)(메뉴바 B 키 → 가방 · Toast TC) · S17(UI)(Toast.grades에 notice 추가 - SystemToasts 등급 점검). S04(나)는 계속 제외.
-		current = { "S20c(가)", "S20c(나)", "S20c(UI)", "S20(UI)", "S12b(UI)", "S12(UI)", "S16(UI)", "S17(UI)", "26-2", "26-3" },
+		-- S20d(2026-09-21) 장비 빠른 장착(PC 더블클릭 · 우클릭 · 폰 [장착] / [해제] 버튼) · 요청 중 입력 잠금 · EquipResult · shared/Equip · 보석 자동 장착 미리보기(Gem.replacePreview · GemReplaceTip) ·
+		--   상세 시트의 버튼 위 한 줄 + 폰 두 줄 시트 높이 140 → 158: 이번 세션 블록 S20d(가)(Equip · Gem.replacePreview 순수 함수) · S20d(나)(ItemEquip 이유 코드 · 교체 · 가방 가득 참 · 미리 판정 = 서버) ·
+		--   S20d(UI)(ItemFlowCheck - 버튼 · 이유 한 줄 · 더블클릭 판정기 · 폰 치수) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈을 쓰는 옛 블록 - PlayerProfile.equipItem · unequipItem을 쓰는 블록은 옛 검증에 없다(직접 호출은 InventoryServer뿐) 하지만
+		--   PlayerProfile을 통째로 쓰는 26-2 · 26-3(장비 옵션 · 보석) + 장비창을 여는 옛 점검 = S20c(UI)(GemActions.bounce 분리 · GemBag · 호버 툴팁) · S20c(가)(나)(Gem 모듈 함수 추가) · S20(UI)(GemTabCheck · InventoryLayoutCheck - 시트 높이) ·
+		--   S12b(UI)(장비창 글씨) · S12(UI)(패널 전수 fit) · S16(UI)(메뉴바 B → 가방) · S17(UI)(Toast). S04(나)는 계속 제외.
+		current = { "S20d(가)", "S20d(나)", "S20d(UI)", "S20c(가)", "S20c(나)", "S20c(UI)", "S20(UI)", "S12b(UI)", "S12(UI)", "S16(UI)", "S17(UI)", "26-2", "26-3" },
 	},
 }
 
