@@ -18,6 +18,7 @@ S.player = player
 
 -- 서버 상태(InventorySync가 미는 스냅샷 그대로 - 이 배열의 인덱스가 서버 인덱스다).
 S.inventory = {}
+S.bagSlots = 0 -- 가방 칸 수: 서버가 스냅샷의 slots로 알린다(상수를 읽지 않는다 - 첫 스냅샷이 오기 전까지 0).
 S.equippedArmor = nil
 S.equippedGloves = nil
 S.equippedShoes = nil

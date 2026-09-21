@@ -14,7 +14,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
-local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local Equip = require(ReplicatedStorage.Shared.Equip)
 local GemActions = require(script.Parent.GemActions)
 local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast)
@@ -166,7 +165,7 @@ function ItemActions.attach(S, R)
 	local actions = ItemActions.create({
 		screenGui = R.screenGui,
 		getState = function()
-			return { inventory = S.inventory, equipped = S.equippedByPart(), slots = SaveConfig.defaultInventorySlots }
+			return { inventory = S.inventory, equipped = S.equippedByPart(), slots = S.bagSlots }
 		end,
 		hasClass = function()
 			local classId = player:GetAttribute("ClassId")

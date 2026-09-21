@@ -18,7 +18,6 @@ end
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
-local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Store = require(script.Parent.Store)
 local ItemActions = require(script.Parent.ItemActions)
@@ -30,7 +29,6 @@ local player = Players.LocalPlayer
 local START_DELAY = 150 -- 창을 여는 다른 점검(S20(UI) 96초 · S20c(UI) 122초 + 약 25초)이 끝난 뒤
 local INSET = 58
 local TOUCH_MIN = 44
-local SLOTS = SaveConfig.defaultInventorySlots
 
 local function item(part, grade, itemLevel)
 	return { grade = grade, part = part, dropStage = 1, itemLevel = itemLevel, tierIndex = 1, locked = false }
@@ -73,6 +71,10 @@ local function run()
 		print(("===S20d(UI) 검증 끝=== %d/%d 통과"):format(passed, #results))
 		return
 	end
+
+	-- 가방 칸 수는 서버가 스냅샷으로 알린 값(Store.bagSlots)이다 - 상수가 아니다.
+	local SLOTS = Store.bagSlots
+	check(("서버가 가방 칸 수를 알렸다: Store.bagSlots %d (0이면 스냅샷 slots가 안 온 것)"):format(SLOTS), SLOTS > 0)
 
 	-- 원래 상태(끝에서 되돌린다)
 	local saved = { inventory = Store.inventory, armor = Store.equippedArmor, gloves = Store.equippedGloves, shoes = Store.equippedShoes, classId = player:GetAttribute("ClassId") }
@@ -294,6 +296,21 @@ local function run()
 			end
 		end
 		check(("폰 %d × %d: 상세 시트 %s · UIScale %d개"):format(size[1], size[2], table.concat(notes, " · "), scales), allOk and scales == 0)
+	end
+
+	-- ⑧ 칸 수를 바꾸면 격자 · 카운터가 따라간다(BagTab이 상수를 읽지 않는다는 증거 - 서버가 24칸을 알려 온 것처럼)
+	do
+		Store.bagSlots = SLOTS + 4
+		setState(bagOf(3), nil)
+		local cells = 0
+		for _, inst in ipairs(gui:GetDescendants()) do
+			if inst.Name:match("^Cell_") or inst.Name:match("^EmptyCell_") then
+				cells += 1
+			end
+		end
+		local counterText = R.countLabel.Text
+		check(("칸 수 %d로 바뀌면 격자 칸 %d개 · 카운터 \"3 / %d\" (실제 칸 %d · 카운터 \"%s\")"):format(SLOTS + 4, SLOTS + 4, SLOTS + 4, cells, counterText), cells == SLOTS + 4 and counterText == ("3 / %d"):format(SLOTS + 4))
+		Store.bagSlots = SLOTS
 	end
 
 	-- 정리: 원래 상태 · 화면 · 창으로

@@ -145,6 +145,11 @@ local function onStateChanged(state)
 	S.equippedArmor = state.armor
 	S.equippedGloves = state.gloves
 	S.equippedShoes = state.shoes
+	-- 칸 수는 서버가 알린 값(slots - 프로필이 아직 없을 때의 첫 응답에는 없다). 바뀌면 격자 높이가 칸 수에서 나오므로 배치를 다시 한다.
+	if type(state.slots) == "number" and state.slots ~= S.bagSlots then
+		S.bagSlots = state.slots
+		R.applyLayout()
+	end
 	if S.isOpen then
 		S.rebuildGearSlots()
 		S.rebuildGrid()

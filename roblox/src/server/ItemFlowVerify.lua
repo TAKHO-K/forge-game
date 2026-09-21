@@ -12,6 +12,7 @@ local Equip = require(ReplicatedStorage.Shared.Equip)
 local Gem = require(ReplicatedStorage.Shared.Gem)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ItemEquip = require(script.Parent.ItemEquip)
+local InventorySync = require(script.Parent.InventorySync)
 
 local ItemFlowVerify = {}
 
@@ -118,6 +119,10 @@ function ItemFlowVerify.runLive(player, env)
 	end
 	seed()
 	local seeded = fingerprint(player)
+
+	-- 사전 작업(가방 칸 수 서버 전달): 클라가 받는 스냅샷의 slots는 프로필 값 그대로다(push · fetch가 같은 InventorySync.snapshot).
+	local snap = InventorySync.snapshot(profile)
+	t.check(("스냅샷 slots = 프로필 칸 수(%s · %s) · 가방 배열 그대로"):format(tostring(snap.slots), tostring(slots)), snap.slots == slots and type(snap.slots) == "number" and snap.inventory == bag)
 
 	local ok1, why1 = ItemEquip.handle(player, "sell", 1)
 	t.check("모르는 action -> invalid", ok1 == false and why1 == "invalid")

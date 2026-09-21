@@ -32,14 +32,20 @@ local function activeEquipment(profile)
 	return classState and classState.equipment or { armor = nil, gloves = nil, shoes = nil }
 end
 
-function InventorySync.push(player, profile)
+-- 스냅샷 한 모양(push · fetch · 검증이 같은 함수). slots = 가방 칸 수의 단일 출처(profile.inventorySlots) - 클라는 이 값으로 "n / 칸 수" · 빈 칸 · 해제 미리 판정을 그린다(상수를 읽지 않는다).
+function InventorySync.snapshot(profile)
 	local equipment = activeEquipment(profile)
-	inventorySync:FireClient(player, {
+	return {
 		inventory = profile.inventory,
+		slots = profile.inventorySlots,
 		armor = equipment.armor,
 		gloves = equipment.gloves,
 		shoes = equipment.shoes,
-	})
+	}
+end
+
+function InventorySync.push(player, profile)
+	inventorySync:FireClient(player, InventorySync.snapshot(profile))
 end
 
 inventoryFetch.OnServerInvoke = function(player)
@@ -50,13 +56,7 @@ inventoryFetch.OnServerInvoke = function(player)
 	if not profile then
 		return { inventory = {}, armor = nil, gloves = nil, shoes = nil }
 	end
-	local equipment = activeEquipment(profile)
-	return {
-		inventory = profile.inventory,
-		armor = equipment.armor,
-		gloves = equipment.gloves,
-		shoes = equipment.shoes,
-	}
+	return InventorySync.snapshot(profile)
 end
 
 -- 칸이 가득 차서 줍지 못했을 때 한 번 알린다(12-1 [3]에서는 "드랍 자체를 포기"였으나

@@ -4,7 +4,6 @@ local RunService = game:GetService("RunService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
-local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
@@ -127,7 +126,7 @@ local function rebuildGrid()
 	S.rainbowGradients = {}
 
 	local entries = S.sortedEntries()
-	local totalSlots = SaveConfig.defaultInventorySlots
+	local totalSlots = S.bagSlots
 
 	for order, entry in ipairs(entries) do
 		local item = entry.item
@@ -295,7 +294,7 @@ table.insert(R.layouts, function(L)
 	local viewHeight = L.bodyH - S.sheetInset
 	bag.Size = L.mode == "phone" and UDim2.new(1, 0, 0, viewHeight) or UDim2.new(0, L.bagW, 0, viewHeight)
 	local cols = L.bagCols
-	local rows = math.ceil(SaveConfig.defaultInventorySlots / cols)
+	local rows = math.max(math.ceil(S.bagSlots / cols), 1)
 	local gridHeight = rows * CELL_SIZE + (rows - 1) * CELL_GAP
 	gridLayout.FillDirectionMaxCells = cols
 	grid.Size = UDim2.new(1, -28, 0, gridHeight)

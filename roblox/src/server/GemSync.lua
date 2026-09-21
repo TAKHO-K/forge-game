@@ -43,6 +43,7 @@ local function snapshot(player)
 		slotUnlocked = weapon.slotUnlocked,
 		gemInventory = PlayerProfile.getGemInventory(player),
 		rerollTickets = PlayerProfile.getOptionRerollTickets(player),
+		-- 보석칸 상한(gemSlots)은 아직 없다 = 이 키가 없으면 "상한 없음"(nil). 상한이 정해지면 InventorySync의 slots처럼 여기에 실어 보낸다 - 클라는 S.gemState().gemSlots로 읽는다.
 	}
 end
 
