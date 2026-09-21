@@ -33,6 +33,7 @@ local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local PartyState = require(script.Parent.PartyState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local TutorialState = require(script.Parent.TutorialState)
@@ -42,8 +43,12 @@ local SaveCoordinator = require(script.Parent.SaveCoordinator)
 
 local PartyCrossServer = {}
 
-local partyMap = MemoryStoreService:GetHashMap(PartyConfig.partyMapName)
-local memberMap = MemoryStoreService:GetHashMap(PartyConfig.memberMapName)
+-- S19b 사전 작업 2(확장): 검증 모드(DevToolsConfig.verifyArmed)에서는 파티 레코드 · 멤버 레코드 · 메시지 토픽을 모두 "_verify" 이름의 별도 저장소로 돌린다. Studio도 같은 유니버스의 MemoryStore ·
+-- MessagingService에 붙으므로, 검증이 만든 가짜 파티(스탠드인 · 임의 코드)가 라이브 서버의 파티 레코드 · 초대 메시지와 섞이지 않게 한다. 꺼져 있으면(사용자가 그냥 누른 Play · 라이브) 이름이 그대로다.
+local storeSuffix = DevToolsConfig.verifyArmed and "_verify" or ""
+local messagingTopic = PartyConfig.messagingTopic .. storeSuffix
+local partyMap = MemoryStoreService:GetHashMap(PartyConfig.partyMapName .. storeSuffix)
+local memberMap = MemoryStoreService:GetHashMap(PartyConfig.memberMapName .. storeSuffix)
 
 -- [Player] = { code, phase = "reserving"|"waiting"|"saving"|"teleporting", cancelled, seatReserved, standIn }
 local joinState = {}
@@ -262,7 +267,7 @@ end
 local function publish(message)
 	message.fromJobId = game.JobId
 	call("메시지 발행", function()
-		return MessagingService:PublishAsync(PartyConfig.messagingTopic, message)
+		return MessagingService:PublishAsync(messagingTopic, message)
 	end)
 end
 
@@ -917,7 +922,7 @@ task.spawn(function()
 end)
 
 call("토픽 구독", function()
-	return MessagingService:SubscribeAsync(PartyConfig.messagingTopic, onMessage)
+	return MessagingService:SubscribeAsync(messagingTopic, onMessage)
 end)
 
 Players.PlayerAdded:Connect(function(player)

@@ -219,7 +219,8 @@ local function buildModel(data, position, variant)
 
 	-- S19b: 보스 체력바는 화면 HUD(client/hud/BossBar.client.lua)가 그린다 - 보스 머리 위에는 바를 만들지 않는다(이름표는 조준할 때만 뜬다).
 	-- 비율은 updateHpLabel이 모델 Attribute BossHpRatio로 내린다(HP 계산은 서버만 - MonsterState).
-	if not data.isBoss then
+	-- 분신(29-5 - isDecoy)은 보스와 겉모습이 완전히 같아야 하므로(BossGimmick5Verify가 하위 인스턴스 수까지 대조) 보스처럼 바를 만들지 않는다. 얼음 덩어리(구출 대상)는 진행도 바가 필요해 그대로 둔다.
+	if not (data.isBoss or data.isDecoy) then
 		local barBackground = Instance.new("Frame")
 		barBackground.Name = "HpBarBackground"
 		barBackground.Size = UDim2.new(1, 0, 0, 8)
