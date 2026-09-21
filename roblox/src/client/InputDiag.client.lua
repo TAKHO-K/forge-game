@@ -59,3 +59,30 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	log(("입력 key=%s type=%s gameProcessed=%s 포커스TextBox=%s 메뉴열림=%s 열린창=%s%s"):format(
 		input.KeyCode.Name, input.UserInputType.Name, tostring(gameProcessedEvent), box and box:GetFullName() or "없음", tostring(GuiService.MenuIsOpen), table.concat(UIManager.getStack(), ",") ~= "" and table.concat(UIManager.getStack(), ",") or "없음", extra))
 end)
+
+-- ── 2차 진단: 이벤트가 아예 안 오는 키를 좁힌다 ──
+-- ① 원시 키 상태 폴링: UserInputService:GetKeysPressed()에 키가 잡히는데 InputBegan이 안 오면 이벤트 전달만 막힌 것이고, 폴링에도 안 잡히면 엔진이 그 키를 못 받는 것이다.
+-- ② ContextActionService에 I · O · U · K를 Pass로 묶어 본다(우선순위 최상): 여기 도달하는지.
+do
+	local previous = {}
+	RunService.Heartbeat:Connect(function()
+		local current = {}
+		for _, input in ipairs(UserInputService:GetKeysPressed()) do
+			current[input.KeyCode] = true
+			if not previous[input.KeyCode] then
+				log(("원시 키 눌림(GetKeysPressed): %s"):format(input.KeyCode.Name))
+			end
+		end
+		for keyCode in pairs(previous) do
+			if not current[keyCode] then
+				log(("원시 키 뗌(GetKeysPressed): %s"):format(keyCode.Name))
+			end
+		end
+		previous = current
+	end)
+	ContextActionService:BindActionAtPriority("InputDiagWatch", function(_, state, input)
+		log(("CAS 도달: key=%s state=%s"):format(input.KeyCode.Name, state.Name))
+		return Enum.ContextActionResult.Pass
+	end, false, 3000, Enum.KeyCode.I, Enum.KeyCode.O, Enum.KeyCode.U, Enum.KeyCode.K)
+	log("2차 진단 시작 - GetKeysPressed 폴링 + CAS 감시(I · O · U · K)")
+end
