@@ -298,6 +298,21 @@ local function screenPointInFrame(frame, x, y)
 	return x >= pos.X and x <= pos.X + size.X and y >= pos.Y and y <= pos.Y + size.Y
 end
 
+-- S20b: 본문이 스크롤 창이 되어 스크롤로 잘려 안 보이는 홈 · 행이 생겼다(옛 배치에선 전부 보였다) - 좌표가 프레임 안이어도 그 프레임을 가리는 ScrollingFrame 조상의 보이는 영역 밖이면 대상이 아니다.
+local function screenPointInVisible(frame, x, y)
+	if not screenPointInFrame(frame, x, y) then
+		return false
+	end
+	local node = frame.Parent
+	while node and node ~= content do
+		if node:IsA("ScrollingFrame") and not screenPointInFrame(node, x, y) then
+			return false
+		end
+		node = node.Parent
+	end
+	return true
+end
+
 cancelGemDrag = function()
 	if dragProxy then
 		dragProxy:Destroy()
@@ -313,7 +328,7 @@ local function endGemDrag(x, y)
 	local index = dragInvIndex
 	local targetSlot = nil
 	for slot = 1, Gem.slotCount do
-		if screenPointInFrame(socketButtons[slot].button, x, y) or screenPointInFrame(slotRows[slot].row, x, y) then
+		if screenPointInVisible(socketButtons[slot].button, x, y) or screenPointInVisible(slotRows[slot].row, x, y) then
 			targetSlot = slot
 			break
 		end
