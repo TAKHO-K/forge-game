@@ -3,6 +3,8 @@
 --      위 끝 >= 8 · 아래 끝 <= 높이 - 8(화면 밖 0) · 모바일 버튼 44 이상 · 본문 줄 수를 잰다. 폰(모바일 기하) · PC 기하 둘 다.
 --   ② 복귀 문구: `PartyAway.reconnectBody` 문구 · 배너에 실제로 밀어 넣어 남은 시간이 0.1초 단위로 줄어드는지(글 · 게이지).
 --   ③ 지금 화면에서 실제 배너가 ScreenGui 안에 그려지는지.
+--   ⑦ 직업 선택창(`ClassSelectPanel` - S20b 사전 작업 1): 4 해상도에서 안전 여백 8 · 직업 버튼 4개가 스크롤 없이 보이는지(진짜 패널 사본에 `UIManager.fitToScreen`을 가상 화면으로 불러 잰다).
+--   ⑤ 첫 줄 보호(S20b 사전 작업 2): 긴 이름이어도 제목 접미사("님 파티 초대")가 안 잘리고 한 줄에 들어가는지 · ⑥ 잘린 본문을 탭하면 펼쳐지고 화면 안전 영역 안에 남는지(4 해상도 계산 + 실제 배너).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -72,10 +74,9 @@ local function run()
 	RequestBanner.clear()
 	RequestBanner.push({
 		key = "reconnectCheck",
-		title = "파티로 돌아가기",
-		bodyFn = function(remaining)
-			return PartyAway.reconnectBody("홍길동", remaining)
-		end,
+		title = PartyAway.reconnectTitle, -- PartyRequests와 같은 모양: 제목 = 누가 · 무엇을 · 본문 = 남은 시간
+		name = "홍길동",
+		bodyFn = PartyAway.reconnectRemainingText,
 		seconds = 3,
 		accept = { text = "돌아가기" },
 		decline = { text = "나중에" },
@@ -83,9 +84,9 @@ local function run()
 	local first = RequestBanner.debugState()
 	task.wait(1.3)
 	local second = RequestBanner.debugState()
-	check(("복귀 배너 카운트다운: 처음 '%s' → 1.3초 뒤 '%s'(기대 0:03 → 0:02 · 게이지 %.2f → %.2f 줄어듦) · 제목 '%s' · 버튼 %s"):format(
+	check(("복귀 배너 카운트다운: 처음 '%s' → 1.3초 뒤 '%s'(기대 0:03 → 0:02 · 게이지 %.2f → %.2f 줄어듦 · 본문은 '남은 시간 m:ss'만) · 제목 '%s' · 버튼 %s"):format(
 		first.body, second.body, first.gaugeValue, second.gaugeValue, second.title, tostring(second.buttonsShown)),
-		first.body:find("남은 시간 0:03", 1, true) ~= nil and second.body:find("남은 시간 0:02", 1, true) ~= nil and second.gaugeValue < first.gaugeValue and second.title == "파티로 돌아가기" and second.buttonsShown)
+		first.body == "남은 시간 0:03" and second.body:find("남은 시간 0:02", 1, true) ~= nil and second.gaugeValue < first.gaugeValue and second.title == "홍길동님의 파티로 돌아가기" and second.buttonsShown)
 
 	-- ③ 실제 배너가 지금 ScreenGui 안에 그려진다
 	local gui = player:WaitForChild("PlayerGui"):FindFirstChild("RequestBannerGui")
@@ -98,6 +99,105 @@ local function run()
 		check("실제 배너 프레임을 못 찾음", false)
 	end
 	RequestBanner.clear()
+
+	-- ⑤ 첫 줄 보호: 제목 접미사가 안 잘린다
+	do
+		local template = "{name}님 파티 초대"
+		local rows, allOk = {}, true
+		for _, sample in ipairs({ { "홍길동", false }, { "ABCDEFGHIJKLMNOPQRST", false }, { "가나다라마바사아자차카타파하가나다라마바사아", false }, { "ABCDEFGHIJKLMNOPQRST", true }, { "가나다라마바사아자차카타파하가나다라마바사아", true } }) do
+			local name, mobile = sample[1], sample[2]
+			local fitted = RequestBanner.fitTitle(template, name, mobile)
+			local size = Theme.textSizeFor("body", mobile)
+			local width = game:GetService("TextService"):GetTextSize(fitted, size, Theme.font, Vector2.new(10000, 10000)).X
+			local ok = fitted:sub(-#"님 파티 초대") == "님 파티 초대" and width <= RequestBanner.width - 20 + 1e-6 and (name ~= "홍길동" or fitted == "홍길동님 파티 초대")
+			allOk = allOk and ok
+			table.insert(rows, ("'%s'(%s) → '%s' 폭 %.0f"):format(name, mobile and "모바일" or "PC", fitted, width))
+		end
+		check("배너 제목 첫 줄 보호(접미사 유지 · 폭 204 이하 · 짧은 이름은 그대로): " .. table.concat(rows, " / "), allOk)
+	end
+
+	-- ⑥ 잘린 본문 탭 펼치기
+	do
+		local longBody = "파티에 초대했습니다 (다른 서버 - 수락 시 이동) 이 문장은 일부러 길게 써서 본문이 세 줄을 넘어 잘리게 하는 검사용 문장입니다 끝까지 보이는지 확인합니다"
+		RequestBanner.clear()
+		RequestBanner.push({ key = "expandCheck", title = "{name}님 파티 초대", name = "홍길동", body = longBody, seconds = 20, accept = { text = "수락" }, decline = { text = "거절" } })
+		local collapsed = RequestBanner.debugState()
+		local collapsedHeight = collapsed.frame.Size.Y.Offset
+		RequestBanner.debugToggleExpand()
+		local expanded = RequestBanner.debugState()
+		local expandedHeight = expanded.frame.Size.Y.Offset
+		local guiNow = player:WaitForChild("PlayerGui"):FindFirstChild("RequestBannerGui")
+		local screenY = guiNow and guiNow.AbsoluteSize.Y or 0
+		local expandedTop = expanded.frame.Position.Y.Offset
+		local insideExpanded = expandedTop >= SAFE - 0.5 and expandedTop + expandedHeight <= screenY - SAFE + 0.5
+		RequestBanner.debugToggleExpand()
+		local folded = RequestBanner.debugState()
+		check(("잘린 본문 탭: 본문 필요 %d줄 > 자리 %d줄 → 탭 영역 %s · 펼치면 높이 %.0f → %.0f(커짐) · 안전 영역 안 %s · 다시 탭하면 접힘(높이 %.0f)"):format(
+			collapsed.rows, RequestBanner.bodyLines, tostring(collapsed.expandable), collapsedHeight, expandedHeight, tostring(insideExpanded), folded.frame.Size.Y.Offset),
+			collapsed.rows > RequestBanner.bodyLines and collapsed.expandable and expanded.expanded and expandedHeight > collapsedHeight and insideExpanded and not folded.expanded and folded.frame.Size.Y.Offset == collapsedHeight)
+		-- 안 잘린 짧은 본문은 탭 영역이 없다
+		RequestBanner.clear()
+		RequestBanner.push({ key = "shortCheck", title = "{name}님 파티 초대", name = "홍길동", body = "파티에 초대했습니다", seconds = 5 })
+		local short = RequestBanner.debugState()
+		check(("짧은 본문(%d줄): 탭 영역 없음 %s"):format(short.rows, tostring(not short.expandable)), not short.expandable)
+		RequestBanner.clear()
+		-- 4 해상도 계산: 펼친 배너(본문 6줄 요청)도 화면 안전 영역 안
+		local rows, allInside = {}, true
+		for _, mobile in ipairs({ true, false }) do
+			for _, size in ipairs(RESOLUTIONS) do
+				local screenHeight = size[2] - INSET
+				local lines, top, height = RequestBanner.placementFor(screenHeight, mobile, true, true, 6)
+				local inside = top >= SAFE - 1e-6 and top + height <= screenHeight - SAFE + 1e-6 and lines >= RequestBanner.bodyLines
+				allInside = allInside and inside
+				table.insert(rows, ("%s %d × %d → %d줄 위 %.0f 아래 %.0f %s"):format(mobile and "폰" or "PC", size[1], size[2], lines, top, top + height, inside and "안" or "밖"))
+			end
+		end
+		check("펼친 배너 자리 계산(본문 6줄 요청): " .. table.concat(rows, " / "), allInside)
+	end
+
+	-- ⑦ 직업 선택창 - 첫 접속 화면이라 4 해상도에서 안전 여백 8을 지키고 버튼 4개가 스크롤 없이 보여야 한다
+	do
+		local UIManager = require(script.Parent.Parent.UIManager)
+		local classGui = player:WaitForChild("PlayerGui"):FindFirstChild("ClassSelectGui")
+		local realPanel = classGui and classGui:FindFirstChild("ClassSelectPanel")
+		local body = realPanel and realPanel:FindFirstChild("ClassSelectBody")
+		if not (realPanel and body) then
+			check("직업 선택 패널(ClassSelectPanel · ClassSelectBody)을 못 찾음", false)
+		else
+			local list = body:FindFirstChildOfClass("UIListLayout")
+			local content, buttons, first = 0, 0, true
+			for _, child in ipairs(body:GetChildren()) do
+				if child:IsA("GuiObject") then
+					content += child.Size.Y.Offset + (first and 0 or list.Padding.Offset)
+					first = false
+					if child:IsA("TextButton") then
+						buttons += 1
+					end
+				end
+			end
+			local rows, allOk = {}, true
+			for _, size in ipairs(RESOLUTIONS) do
+				local screenHeight = size[2] - INSET
+				local clone = realPanel:Clone()
+				for _, child in ipairs(clone:GetChildren()) do
+					if child:IsA("UISizeConstraint") then
+						child:Destroy()
+					end
+				end
+				UIManager.fitToScreen(clone, { AbsoluteSize = Vector2.new(size[1], screenHeight) })
+				local constraint = clone:FindFirstChildOfClass("UISizeConstraint")
+				local height = math.min(clone.Size.Y.Offset, constraint and constraint.MaxSize.Y or math.huge)
+				local top = clone.Position.Y.Scale * screenHeight + clone.Position.Y.Offset - clone.AnchorPoint.Y * height
+				local bodyHeight = height - (body.Position.Y.Offset)
+				local inside = top >= SAFE - 1e-6 and top + height <= screenHeight - SAFE + 1e-6
+				local noScroll = content <= bodyHeight + 0.5
+				allOk = allOk and inside and noScroll
+				table.insert(rows, ("%d × %d(ScreenGui 높이 %d) → 패널 위 %.0f · 아래 %.0f %s · 본문 %.0f ≥ 내용 %.0f %s"):format(size[1], size[2], screenHeight, top, top + height, inside and "안" or "밖", bodyHeight, content, noScroll and "스크롤 없음" or "스크롤 필요(X)"))
+				clone:Destroy()
+			end
+			check(("직업 선택창(버튼 %d개 · 안전 여백 %d): %s"):format(buttons, SAFE, table.concat(rows, " / ")), allOk and buttons == 4)
+		end
+	end
 
 	-- ④ ItemDescribe 대조표(S20 §6-3): 가방 상세가 자기 코드로 만들던 문구(아래 OLD_* = 지운 코드 그대로의 사본)와 ItemDescribe가 만드는 문구가 같은가.
 	--    같지 않아야 정상인 것은 "가방 상세 메타(장갑 · 신발)" 둘뿐이다 - 옛 코드가 모든 부위에 갑옷 방어력 식을 썼다(착용 중 상세 · 툴팁은 부위별 스탯이었다). 그 밖에 다르면 X.

@@ -6,10 +6,13 @@
 --   · 버튼이 없으면(accept · decline 둘 다 nil) 정보 배너다(파티장 화면의 "투표 중"). keepOpen = true인 버튼은 눌러도 배너가 남고 버튼만 사라진다(투표: 서버 결과를 기다린다).
 --   · reason = "accept" | "decline" | "timeout" | "resolved" | "replaced" | "cleared".
 -- RequestBanner.resolve(key, { title?, body, seconds }) - 결과 안내로 바꾸고(버튼 · 게이지 없음) seconds 뒤에 닫는다. 그 key가 대기 중이면 버리고, 어디에도 없으면 결과만 띄운다.
+-- 첫 줄 보호(S20b 사전 작업 2): 제목이 "누가 · 무엇을"이다. title에 {name}을 쓰고 name에 사람 이름을 주면 제목이 한 줄 폭에 안 들어갈 때 **이름 뒤를 …로 줄여** 접미사("님 파티 초대")가 안 잘리게 한다(RequestBanner.fitTitle). 본문은 세부 내용이라 낮은 화면에서 줄임표로 잘려도 되고,
+--   잘렸으면 제목 · 본문 영역을 탭하면 필요한 줄만큼 펼쳐진다(다시 탭하면 접힌다 · 화면 안전 영역 안에서만 커진다).
 -- 자리: ScreenMap MR.requestBanner. 모바일은 아래 끝을 BR 터치 예약 구역 위 끝에 맞춘다(공격 · 스킬 버튼을 안 덮는다). ScreenGui는 window 대역(100 ~ 149)과 메뉴바(150) 위 · overlay(200 ~) 아래(창을 연 채 온 초대도 보이고 눌린다).
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local Gauge = require(script.Parent.Parent.ui.kit.Gauge)
@@ -25,13 +28,46 @@ local PAD, GAP, BUTTON_GAP, GAUGE_HEIGHT = 10, 6, 8, 10
 local SAFE_MARGIN = 8 -- 화면 위 · 아래 끝에서 남기는 여백(UIManager.safeMargin과 같은 값 - 창과 같은 안전 영역). ScreenGui는 IgnoreGuiInset = false라 AbsoluteSize에 이미 상단 인셋(GetGuiInset)이 빠져 있다.
 local TICK_SECONDS = 0.1
 
-local gui, frame, titleLabel, bodyLabel, gauge, acceptButton, declineButton
-local showing -- { req, expiresAt, total, hasGauge, buttonsShown, resolved }
+local TEXT_WIDTH = RequestBanner.width - PAD * 2 -- 제목 · 본문 글 폭
+
+local gui, frame, titleLabel, bodyLabel, gauge, acceptButton, declineButton, expandZone
+local showing -- { req, expiresAt, total, hasGauge, buttonsShown, resolved, rows(본문이 필요로 하는 줄 수), expanded }
 local queue = {}
 local close, showNext -- 아래에서 정의
 
 local function textHeights(lines, mobile)
 	return Theme.textSizeFor("body", mobile) + 4, (Theme.textSizeFor("caption", mobile) + 2) * (lines or RequestBanner.bodyLines)
+end
+
+-- 제목 첫 줄 보호: template의 {name}을 name으로 바꾸되 한 줄 폭(TEXT_WIDTH)에 안 들어가면 이름 뒤를 하나씩 줄이고 …를 붙인다(접미사는 그대로). 이름이 없으면 template 그대로.
+function RequestBanner.fitTitle(template, name, mobile)
+	if not name or not template:find("{name}", 1, true) then
+		return template
+	end
+	local size = Theme.textSizeFor("body", mobile)
+	local function build(shown)
+		return (template:gsub("{name}", function()
+			return shown
+		end))
+	end
+	local function width(text)
+		return TextService:GetTextSize(text, size, Theme.font, Vector2.new(10000, 10000)).X
+	end
+	local length = utf8.len(name) or #name
+	local shown = name
+	while length > 1 and width(build(shown)) > TEXT_WIDTH do
+		length -= 1
+		shown = name:sub(1, (utf8.offset(name, length + 1) or (#name + 1)) - 1) .. "…"
+	end
+	return build(shown)
+end
+
+-- 본문이 필요로 하는 줄 수(폭 TEXT_WIDTH에서 줄바꿈한 결과). 자리를 줄인 줄 수보다 크면 본문이 잘린 것이다.
+function RequestBanner.rowsFor(text, mobile)
+	local size = Theme.textSizeFor("caption", mobile)
+	local one = TextService:GetTextSize("가", size, Theme.fontBody, Vector2.new(10000, 10000)).Y
+	local full = TextService:GetTextSize(text, size, Theme.fontBody, Vector2.new(TEXT_WIDTH, 10000)).Y
+	return math.max(1, math.floor(full / one + 0.5))
 end
 
 -- 내용 높이(px): 제목 · 본문(lines줄) · (게이지) · (버튼 줄).
@@ -58,9 +94,16 @@ end
 
 -- 화면 안전 영역 안으로 고정(S20 사전 작업 2): 위 끝 >= SAFE_MARGIN · 아래 끝 <= 화면 높이 - SAFE_MARGIN. 낮은 화면(모바일 800 × 360 → ScreenGui 높이 302)에서 본문 3줄이 안 들어가면 본문을 2줄 → 1줄로 줄인다(긴 문장은 ...로 잘린다).
 -- 화면 높이는 ScreenGui 높이(상단 인셋 GetGuiInset이 이미 빠진 값)다. 순수 함수 - 자체 점검이 가상 화면(800 × 360 · 667 × 375 ...)으로 그대로 부른다. 반환: 본문 줄 수 · 위 끝 y · 높이.
-function RequestBanner.placementFor(screenHeight, mobile, hasGauge, hasButtons)
+-- expandLines(있으면): 탭해서 펼친 배너가 원하는 본문 줄 수 - 기본 줄 수보다 늘리되 화면 안전 영역(높이 - 2 × SAFE_MARGIN)에 들어가는 줄 수까지만.
+function RequestBanner.placementFor(screenHeight, mobile, hasGauge, hasButtons, expandLines)
 	local lines = RequestBanner.bodyLines
-	while lines > 1 and mobile and desiredTop(contentHeight(lines, hasGauge, hasButtons, mobile), screenHeight, mobile) < SAFE_MARGIN do
+	if expandLines and expandLines > lines then
+		lines = expandLines
+		while lines > RequestBanner.bodyLines and contentHeight(lines, hasGauge, hasButtons, mobile) > screenHeight - 2 * SAFE_MARGIN do
+			lines -= 1
+		end
+	end
+	while lines > 1 and mobile and lines <= RequestBanner.bodyLines and desiredTop(contentHeight(lines, hasGauge, hasButtons, mobile), screenHeight, mobile) < SAFE_MARGIN do
 		lines -= 1
 	end
 	local height = contentHeight(lines, hasGauge, hasButtons, mobile)
@@ -71,7 +114,8 @@ function RequestBanner.placementFor(screenHeight, mobile, hasGauge, hasButtons)
 end
 
 local function fitPlacement(hasGauge, hasButtons)
-	local lines, top = RequestBanner.placementFor(gui.AbsoluteSize.Y, Theme.isMobile, hasGauge, hasButtons)
+	local expandLines = showing and showing.expanded and showing.rows or nil
+	local lines, top = RequestBanner.placementFor(gui.AbsoluteSize.Y, Theme.isMobile, hasGauge, hasButtons, expandLines)
 	return lines, top
 end
 
@@ -95,6 +139,11 @@ local function layout(hasGauge, hasAccept, hasDecline)
 	y += titleHeight + 2
 	bodyLabel.Position = UDim2.new(0, PAD, 0, y)
 	bodyLabel.Size = UDim2.new(1, -PAD * 2, 0, bodyHeight)
+	-- 본문이 잘렸거나(필요한 줄 > 자리) 펼쳐 있으면 제목 · 본문 전체가 탭 영역이다(높이 >= 44 - 모바일 터치 타깃).
+	local expandable = showing ~= nil and (showing.expanded or showing.rows > lines)
+	expandZone.Visible = expandable
+	expandZone.Position = UDim2.new(0, 0, 0, 0)
+	expandZone.Size = UDim2.new(1, 0, 0, math.max(y + bodyHeight + GAP, Theme.touchMin))
 	y += bodyHeight + GAP
 	gauge.root.Visible = hasGauge
 	if hasGauge then
@@ -117,8 +166,10 @@ end
 local function show(entry)
 	local req = entry.req
 	showing = entry
-	titleLabel.Text = req.title or ""
+	titleLabel.Text = RequestBanner.fitTitle(req.title or "", req.name, Theme.isMobile)
 	bodyLabel.Text = req.bodyFn and req.bodyFn(req.seconds) or req.body or ""
+	entry.rows = RequestBanner.rowsFor(bodyLabel.Text, Theme.isMobile)
+	entry.expanded = false
 	if req.accept then
 		acceptButton.setText(req.accept.text)
 	end
@@ -198,6 +249,14 @@ local function ensureBuilt()
 	Theme.corner(frame, Theme.corner.panel)
 	Theme.stroke(frame)
 
+	expandZone = Instance.new("TextButton") -- 라벨보다 먼저 만들어 라벨 뒤에 깐다(글은 입력을 안 막는다)
+	expandZone.Name = "ExpandZone"
+	expandZone.BackgroundTransparency = 1
+	expandZone.Text = ""
+	expandZone.AutoButtonColor = false
+	expandZone.Visible = false
+	expandZone.Parent = frame
+
 	titleLabel = Theme.label(frame, "", "body", "textPrimary")
 	titleLabel.Name = "Title"
 	titleLabel.Font = Theme.font
@@ -214,6 +273,10 @@ local function ensureBuilt()
 	declineButton = Button.build({ parent = frame, name = "DeclineButton", kind = "secondary", text = "거절", width = buttonWidth, onActivated = function()
 		press("decline")
 	end })
+
+	expandZone.Activated:Connect(function()
+		RequestBanner.debugToggleExpand()
+	end)
 
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		if showing then
@@ -284,6 +347,8 @@ function RequestBanner.resolve(key, opts)
 			titleLabel.Text = opts.title
 		end
 		bodyLabel.Text = opts.body
+		showing.rows = RequestBanner.rowsFor(opts.body, Theme.isMobile)
+		showing.expanded = false
 		showing.buttonsShown = false
 		showing.hasGauge = false
 		showing.resolved = true
@@ -317,9 +382,22 @@ function RequestBanner.debugState()
 		body = bodyLabel and bodyLabel.Text or "",
 		buttonsShown = showing ~= nil and showing.buttonsShown == true,
 		gaugeValue = gauge and gauge.getValue() or 0,
+		rows = showing and showing.rows or 0,
+		expanded = showing ~= nil and showing.expanded == true,
+		expandable = expandZone ~= nil and expandZone.Visible,
 		visible = frame ~= nil and frame.Visible,
 		frame = frame,
 	}
+end
+
+-- 잘린 본문 펼치기 · 접기(expandZone을 탭한 것과 같은 함수). 펼칠 것이 없으면 아무 일도 없다. 검사용으로도 쓴다.
+function RequestBanner.debugToggleExpand()
+	local entry = showing
+	if not entry or not expandZone.Visible then
+		return
+	end
+	entry.expanded = not entry.expanded
+	layout(entry.hasGauge, entry.buttonsShown and entry.req.accept ~= nil, entry.buttonsShown and entry.req.decline ~= nil)
 end
 
 -- 검사용: 버튼을 사람 손 대신 누른다("accept" | "decline") - 실제 Button.Activated와 같은 함수를 부른다.

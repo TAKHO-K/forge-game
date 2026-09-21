@@ -26,10 +26,9 @@ partyInviteNotice.OnClientEvent:Connect(function(data)
 		-- S20 사전 작업 1: 다른 서버로 재접속한 끊긴 멤버의 복귀 초대 - 일반 원격 초대 문구와 구분하고, 남은 시간(= 파티 유예)을 글 · 게이지에 같이 센다.
 		RequestBanner.push({
 			key = "invite",
-			title = "파티로 돌아가기",
-			bodyFn = function(remaining)
-				return PartyAway.reconnectBody(data.inviterName, remaining)
-			end,
+			title = PartyAway.reconnectTitle,
+			name = data.inviterName,
+			bodyFn = PartyAway.reconnectRemainingText,
 			seconds = data.seconds,
 			accept = { text = "돌아가기", onActivated = function()
 				partyRequest:FireServer("accept")
@@ -41,11 +40,12 @@ partyInviteNotice.OnClientEvent:Connect(function(data)
 		return
 	end
 	-- 24-2: 다른 서버에서 온 초대(remote)는 수락하면 그 서버로 이동한다는 점을 문구로 알린다 - 버튼은 같다.
-	local text = data.remote and ("%s님이 파티에 초대했습니다 (다른 서버 - 수락 시 이동)"):format(data.inviterName)
-		or ("%s님이 파티에 초대했습니다"):format(data.inviterName)
+	-- S20b 사전 작업 2: 제목(첫 줄) = "누가 · 무엇을"(이름만 줄어든다), 본문 = 세부(낮은 화면에서 잘리면 탭해서 펼친다).
+	local text = data.remote and "파티에 초대했습니다 (다른 서버 - 수락 시 이동)" or "파티에 초대했습니다"
 	RequestBanner.push({
 		key = "invite",
-		title = "파티 초대",
+		title = "{name}님 파티 초대",
+		name = data.inviterName,
 		body = text,
 		seconds = data.seconds or PartyConfig.inviteTimeoutSeconds,
 		accept = { text = "수락", onActivated = function()
@@ -69,8 +69,8 @@ partyVoteNotice.OnClientEvent:Connect(function(data)
 			})
 		else
 			RequestBanner.push({
-				key = "vote", title = "스테이지 이동 투표", seconds = seconds,
-				body = ("%s님이 스테이지 %d 보스로 이동하려 합니다"):format(data.leaderName, data.stage),
+				key = "vote", title = "{name}님 이동 투표", name = data.leaderName, seconds = seconds,
+				body = ("스테이지 %d 보스로 이동하려 합니다"):format(data.stage),
 				accept = { text = "동의", keepOpen = true, onActivated = function()
 					partyRequest:FireServer("vote_agree")
 				end },

@@ -39,8 +39,13 @@ function PartyAway.text(member, compact)
 end
 
 -- 다른 서버로 재접속한 끊긴 멤버에게 뜨는 복귀 초대 문구(S20 사전 작업 1): "OOO님의 파티로 돌아가기 (남은 시간 m:ss)" - 남은 시간은 파티의 유예(연결 끊김 m:ss)와 같은 카운트다운이다.
+-- S20b 사전 작업 2: 요청 배너 첫 줄(제목) = 누가 · 무엇을 → "{name}님의 파티로 돌아가기"(RequestBanner.fitTitle이 이름만 줄인다) · 본문 = 남은 시간. 두 조각을 이으면 옛 한 줄 문구와 같다.
+PartyAway.reconnectTitle = "{name}님의 파티로 돌아가기"
+function PartyAway.reconnectRemainingText(remainingSeconds)
+	return ("남은 시간 %s"):format(PartyAway.clock(math.max(0, remainingSeconds)))
+end
 function PartyAway.reconnectBody(leaderName, remainingSeconds)
-	return ("%s님의 파티로 돌아가기 (남은 시간 %s)"):format(leaderName, PartyAway.clock(math.max(0, remainingSeconds)))
+	return ("%s (%s)"):format(PartyAway.reconnectTitle:gsub("{name}", leaderName), PartyAway.reconnectRemainingText(remainingSeconds))
 end
 
 return PartyAway

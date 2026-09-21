@@ -70,7 +70,9 @@ local config = {
 		-- S20(2026-09-21) 사전 작업: I → B 단축키(PanelRegistry · MenuBar 점검 · TutorialData) · 파티 복귀 팝업 문구 + 카운트다운(PartyCrossServer · PartyRequests · RequestBanner · PartyAway) · 요청 배너 화면 안전 영역 · Theme.textSizeFor · buttonHeightFor.
 		--   이번 세션 블록 S20(UI)(RequestBannerCheck) + 동반 실행(COMMON.md §3): 고친 모듈을 쓰는 옛 블록 = S19b(가)(나)(UI)(PartyState · PartyCrossServer · 파티 목록) · S18(UI)(RequestBanner를 직접 쓰는 PartyHudCheck) · S17(UI) · S16(UI)(MenuBar 표 점검 - 단축키 B) ·
 		--   S15(UI) · S12b(UI) · S12(UI)(Theme 글씨 · 버튼 높이를 쓰는 HUD · 패널 점검) · S10(가)(ScreenMap · 토스트). S04(나)는 계속 제외.
-		current = { "S20(UI)", "S12b(나)", "S19b(가)", "S19b(나)", "S19b(UI)", "S18(UI)", "S17(UI)", "S16(UI)", "S15(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
+		-- S20b(2026-09-21) 사전 작업(클라 전용): 직업 선택창 fitToScreen + 스크롤(ClassSelectUI) · 요청 배너 첫 줄 보호 + 탭 펼침(RequestBanner · PartyRequests · PartyAway).
+		--   이번 세션 블록 S20(UI)(RequestBannerCheck에 ⑤ ⑥ ⑦ 추가) + 동반 실행: RequestBanner를 직접 쓰는 S18(UI)(PartyHudCheck) · PartyAway를 쓰는 S19b(UI)(BossBarCheck). 본 작업(GemTab 이동 · 장비창 재구성) 때 다시 갈아 끼운다.
+		current = { "S20(UI)", "S18(UI)", "S19b(UI)" },
 	},
 }
 

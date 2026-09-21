@@ -4,10 +4,13 @@
 -- 고른 뒤에도 좌하단 버튼으로 다시 열 수 있다 - 다만 19-1부터는 이미 진행 중인 직업이
 -- 있을 때 다른 직업을 고르면 확인창(ClassConfirmPanel)을 먼저 띄운다. 최초 선택(아직
 -- 아무 직업도 없을 때)은 잃을 게 없으므로 확인 없이 바로 전환한다.
+-- S20b 사전 작업 1: 첫 접속 화면이라 모바일 기준 해상도(800 × 360 → ScreenGui 800 × 302)에서도 안전 여백 8을 지킨다 - UIManager.fitToScreen이 패널 높이를 (화면 높이 - 16) 이하로 줄이고,
+-- 제목은 고정 · 안내 + 직업 버튼 4개는 그 아래 ScrollingFrame이다(내용 248 = 302에서 남는 자리 248이라 스크롤 없이 다 보인다 - 더 낮은 화면에서만 안내부터 스크롤로 밀린다).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local UIManager = require(script.Parent.UIManager)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
@@ -34,12 +37,24 @@ panel.Parent = screenGui
 local title = Instance.new("TextLabel")
 title.BackgroundTransparency = 1
 title.Size = UDim2.new(1, 0, 0, 30)
-title.LayoutOrder = -1
 title.Text = "직업을 선택하세요"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Parent = panel
+
+local TITLE_HEIGHT, TITLE_GAP = 30, 8
+local body = Instance.new("ScrollingFrame") -- 안내 + 직업 버튼. 내용이 남는 자리보다 길 때만 스크롤된다.
+body.Name = "ClassSelectBody"
+body.BackgroundTransparency = 1
+body.BorderSizePixel = 0
+body.Position = UDim2.new(0, 0, 0, TITLE_HEIGHT + TITLE_GAP)
+body.Size = UDim2.new(1, 0, 1, -(TITLE_HEIGHT + TITLE_GAP))
+body.CanvasSize = UDim2.new(0, 0, 0, 0)
+body.AutomaticCanvasSize = Enum.AutomaticSize.Y
+body.ScrollingDirection = Enum.ScrollingDirection.Y
+body.ScrollBarThickness = 4
+body.Parent = panel
 
 -- 패널 맨 위 안내 한 줄(S12, PRD 20.73 [7-1] 초안 그대로) - "레벨이 달라도 바로 같이 사냥"을 첫 화면에서 말한다.
 local hint = Instance.new("TextLabel")
@@ -52,13 +67,13 @@ hint.TextSize = 12
 hint.TextWrapped = true
 hint.TextColor3 = UIColors.textSecondary
 hint.Text = "친구와 레벨이 달라도 바로 같이 사냥할 수 있어요. 직업은 언제든 바꿀 수 있습니다."
-hint.Parent = panel
+hint.Parent = body
 
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 8)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-layout.Parent = panel
+layout.Parent = body
 
 -- 전환 확인창(19-1) - 이미 진행 중인 직업이 있을 때만 뜬다. 별도 Frame으로 두고
 -- panel 위에 겹쳐 보인다(같은 screenGui 안, 나중에 그려져 위에 온다).
@@ -177,7 +192,7 @@ local function makeButton(classInfo, order)
 	button.LayoutOrder = order
 	button.Text = ("%s   공격 %.2fx / 방어 %.2fx / 속도 %.2fx"):format(
 		classInfo.displayName, classInfo.atk, classInfo.def, classInfo.atkSpeed)
-	button.Parent = panel
+	button.Parent = body
 
 	button.Activated:Connect(function()
 		requestClassChange(classInfo)
@@ -204,12 +219,14 @@ reopenButton.TextColor3 = Color3.new(1, 1, 1)
 reopenButton.Parent = screenGui
 reopenButton.Activated:Connect(function()
 	panel.Visible = true
+	UIManager.fitToScreen(panel, screenGui)
 end)
 
 local function onClassIdChanged()
 	local classId = player:GetAttribute("ClassId")
 	if classId == nil or classId == "" then
 		panel.Visible = true
+		UIManager.fitToScreen(panel, screenGui)
 	else
 		panel.Visible = false
 	end
@@ -218,6 +235,11 @@ local function onClassIdChanged()
 	pendingClassId = nil
 	confirmPanel.Visible = false
 end
+
+-- 화면 크기가 바뀌면(창 회전 · 크기 조절) 다시 맞춘다. ScreenGui 높이가 처음엔 0일 수 있어 fitToScreen은 그때 아무것도 안 하고, 크기가 정해지면 이 신호가 다시 맞춘다.
+screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+	UIManager.fitToScreen(panel, screenGui)
+end)
 
 player:GetAttributeChangedSignal("ClassId"):Connect(onClassIdChanged)
 onClassIdChanged()
