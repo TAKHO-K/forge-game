@@ -20,6 +20,15 @@ end
 local PartyAway = require(script.Parent.PartyAway)
 local RequestBanner = require(script.Parent.RequestBanner)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
+local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local Loot = require(ReplicatedStorage.Shared.Loot)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 
 local player = Players.LocalPlayer
 local START_DELAY = 66 -- 다른 클라 점검이 토스트 · 요청 배너를 쓰는 동안이 끝난 뒤
@@ -89,6 +98,98 @@ local function run()
 		check("실제 배너 프레임을 못 찾음", false)
 	end
 	RequestBanner.clear()
+
+	-- ④ ItemDescribe 대조표(S20 §6-3): 가방 상세가 자기 코드로 만들던 문구(아래 OLD_* = 지운 코드 그대로의 사본)와 ItemDescribe가 만드는 문구가 같은가.
+	--    같지 않아야 정상인 것은 "가방 상세 메타(장갑 · 신발)" 둘뿐이다 - 옛 코드가 모든 부위에 갑옷 방어력 식을 썼다(착용 중 상세 · 툴팁은 부위별 스탯이었다). 그 밖에 다르면 X.
+	local OLD_PART_META = {
+		armor = function(item) return ("%s · Lv.%d · 방어력 %s"):format(ItemVisualData.partDisplayNames.armor, item.itemLevel, NumberFormat.format(Loot.getArmorDefense(item))) end,
+		gloves = function(item) return ("%s · Lv.%d · 공격력 +%.0f%%"):format(ItemVisualData.partDisplayNames.gloves, item.itemLevel, Loot.getGlovesAttackPercent(item) * 100) end,
+		shoes = function(item) return ("%s · Lv.%d · 이동+공속 +%.0f%%"):format(ItemVisualData.partDisplayNames.shoes, item.itemLevel, Loot.getShoesSpeedPercent(item) * 100) end,
+	}
+	local function oldName(item)
+		local grade = ArmorData.grades[item.grade]
+		return (grade and grade.displayName or item.grade) .. " " .. (ItemVisualData.partDisplayNames[item.part or "armor"] or "장비")
+	end
+	local function oldOptionName(optionId)
+		local def = OptionData.options[optionId]
+		local name = def and def.displayName
+		if not name and def and def.classId then
+			local skillDef = SkillData[def.classId] and SkillData[def.classId][def.slot]
+			name = skillDef and skillDef.name
+		end
+		return name or optionId
+	end
+	local function oldGemName(gem)
+		local gradeInfo = ArmorData.grades[gem.grade]
+		local gradeName = gradeInfo and gradeInfo.displayName or gem.grade
+		if not gem.option then
+			return ("%s 보석(옵션 미배정)"):format(gradeName)
+		end
+		return ("%s %s 보석 · Lv.%d"):format(gradeName, oldOptionName(gem.option.id), gem.itemLevel or 0)
+	end
+	local classId = "bow"
+	local samples = {
+		{ grade = "ancient", part = "armor", itemLevel = 50, option = { id = "crit", roll = 1.0, roll2 = 1.05 } },
+		{ grade = "relic", part = "gloves", itemLevel = 40, option = { id = "skill_bow_Q", roll = 1.0 } },
+		{ grade = "legendary", part = "shoes", itemLevel = 35, option = { id = "skill_healer_Q", roll = 1.0 } },
+		{ grade = "epic", part = "armor", itemLevel = 20 },
+	}
+	local diffs, expectedDiffs, rows = {}, 0, {}
+	for _, item in ipairs(samples) do
+		local described = ItemDescribe.item(item, classId)
+		local sameTitle = described.title == oldName(item)
+		local sameEquipMeta = described.meta == OLD_PART_META[item.part](item)
+		local oldBagMeta = ("%s · Lv.%d · 방어력 %s"):format(ItemVisualData.partDisplayNames[item.part] or "장비", item.itemLevel, NumberFormat.format(Loot.getArmorDefense(item)))
+		local sameBagMeta = described.meta == oldBagMeta
+		if not sameBagMeta and item.part ~= "armor" then
+			expectedDiffs += 1 -- 의도한 차이(위 설명)
+		elseif not sameBagMeta then
+			table.insert(diffs, item.part .. " 가방 메타")
+		end
+		if not sameTitle then
+			table.insert(diffs, item.part .. " 이름")
+		end
+		if not sameEquipMeta then
+			table.insert(diffs, item.part .. " 착용 중 메타")
+		end
+		table.insert(rows, ("%s: 이름 %s · 착용 중 메타 %s · 가방 메타 %s"):format(item.part, sameTitle and "같음" or "다름", sameEquipMeta and "같음" or "다름", sameBagMeta and "같음" or (item.part == "armor" and "다름(X)" or "다름(의도)")))
+	end
+	-- 무기
+	local weapon = ItemDescribe.weapon("legendary", 13)
+	local weaponOld = (ArmorData.grades.legendary.displayName or "") .. " " .. WeaponData.weapons[WeaponData.starterId].displayName
+	local weaponMetaOld = ("무기 · +%d · 강화대에서 강화"):format(13)
+	if weapon.title ~= weaponOld then table.insert(diffs, "무기 이름") end
+	if weapon.meta .. " · 강화대에서 강화" ~= weaponMetaOld then table.insert(diffs, "무기 메타") end
+	-- 보석
+	local gemWith = { grade = "ancient", itemLevel = 30, option = { id = "skill_bow_Q", roll = 1.0 } }
+	local gemNone = { grade = "primordial", itemLevel = 30 }
+	if ItemDescribe.gem(gemWith, classId).title ~= oldGemName(gemWith) then table.insert(diffs, "보석 이름(옵션 있음)") end
+	if ItemDescribe.gem(gemNone, classId).title ~= oldGemName(gemNone) then table.insert(diffs, "보석 이름(옵션 미배정)") end
+	-- 옵션 태그 이름(가방 셀 · 착용 칸) + 직업색 규칙
+	local tagRows = {}
+	for _, item in ipairs(samples) do
+		local tag = ItemDescribe.optionTag(item, classId)
+		if item.option then
+			if not tag or tag.text ~= oldOptionName(item.option.id) then
+				table.insert(diffs, item.part .. " 옵션 태그 이름")
+			end
+			table.insert(tagRows, ("%s → %s%s"):format(item.option.id, tag and tag.text or "?", tag and (tag.mismatched and "(불일치 · 회색)" or (tag.accentClassId and ("(직업색 " .. tag.accentClassId .. ")") or "(공통)")) or ""))
+		elseif tag ~= nil then
+			table.insert(diffs, item.part .. " 옵션 없는데 태그")
+		end
+	end
+	local bowTag, healerTag, critTag = ItemDescribe.optionTag(samples[2], classId), ItemDescribe.optionTag(samples[3], classId), ItemDescribe.optionTag(samples[1], classId)
+	local colorRule = bowTag.accentClassId == "bow" and UIColors.classAccent[bowTag.accentClassId] ~= nil and healerTag.mismatched and healerTag.accentClassId == nil and critTag.accentClassId == nil and not critTag.mismatched
+	-- 옵션 줄(가방 상세 옵션 게이지가 받는 text · dim · accent): 일치 · 불일치 · 치명
+	local lineBow = ItemDescribe.optionLines(samples[2], classId)[1]
+	local lineHealer = ItemDescribe.optionLines(samples[3], classId)[1]
+	local lineCrit = ItemDescribe.optionLines(samples[1], classId)
+	local lineRule = lineBow.accentClassId == "bow" and not lineBow.dim and lineHealer.dim and lineHealer.accentClassId == nil and lineHealer.text:find("(직업 불일치 · 효과 없음)", 1, true) ~= nil
+		and #lineCrit == 2 and lineCrit[1].text:find("^치확 ") ~= nil and lineCrit[2].text:find("^치피 ") ~= nil
+	check(("ItemDescribe 대조표: %s · 무기 · 보석 · 옵션 태그 이름 이전과 다른 것 %s(기대 없음) · 의도한 차이(가방 메타 장갑 · 신발) %d건(기대 2)"):format(
+		table.concat(rows, " / "), #diffs == 0 and "없음" or table.concat(diffs, ", "), expectedDiffs), #diffs == 0 and expectedDiffs == 2)
+	check(("가방 셀 옵션 태그 색 규칙: %s · 직업 특화 일치 = 직업색 · 불일치 = 회색 우선 · 공통 = 기존색 %s · 옵션 줄(상세 게이지) 일치/불일치/치명 %s"):format(
+		table.concat(tagRows, " · "), tostring(colorRule), tostring(lineRule)), colorRule == true and lineRule == true)
 
 	print(("===S20(UI) 검증 끝=== %d/%d 통과"):format(passed, #results))
 end
