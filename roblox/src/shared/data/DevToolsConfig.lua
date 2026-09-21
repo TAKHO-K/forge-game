@@ -67,7 +67,10 @@ local config = {
 		-- 동반 실행(COMMON.md §3): 이 세션이 고친 모듈을 쓰는 옛 블록 - PartyState · PartyCrossServer · PartyConfig(27-3 투표 · S09 경험치 인원 · S10 드랍 알림 · S12 견습 파티 · S12b 소셜 · S13 · S13b 파티 경로 · 29-5(나)의 파티 보스),
 		--   MonsterSpawner(updateHpLabel · 보스 스폰) · BossEncounter(보스전 번호 Attribute · 스폰 · 이탈) = 29-1(보스 뼈대 · 수명) · S01(나)(보스 처치 경로) · S11(나) · S14(나)(보스 스폰) + 클라 UI(PartyListView · Party · ScreenMap · UiSelfCheck) = S18(UI) · S12b(UI) · S12(UI) · S10(가).
 		--   SaveSystem(검증용 키)은 모든 서버 (나) 블록이 실제 프로필을 읽고 쓰므로 위 서버 (나) 블록 전부가 그 경로를 지난다. S04(나)는 계속 제외.
-		current = { "S19b(가)", "S19b(나)", "S19b(UI)", "27-3(가)", "27-3(나)", "S09(나)", "S10(나)", "S12(나)", "S12b(나)", "S13(나)", "S13b(나)", "29-1", "29-5(나)", "S01(나)", "S11(나)", "S14(나)", "S18(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
+		-- S20(2026-09-21) 사전 작업: I → B 단축키(PanelRegistry · MenuBar 점검 · TutorialData) · 파티 복귀 팝업 문구 + 카운트다운(PartyCrossServer · PartyRequests · RequestBanner · PartyAway) · 요청 배너 화면 안전 영역 · Theme.textSizeFor · buttonHeightFor.
+		--   이번 세션 블록 S20(UI)(RequestBannerCheck) + 동반 실행(COMMON.md §3): 고친 모듈을 쓰는 옛 블록 = S19b(가)(나)(UI)(PartyState · PartyCrossServer · 파티 목록) · S18(UI)(RequestBanner를 직접 쓰는 PartyHudCheck) · S17(UI) · S16(UI)(MenuBar 표 점검 - 단축키 B) ·
+		--   S15(UI) · S12b(UI) · S12(UI)(Theme 글씨 · 버튼 높이를 쓰는 HUD · 패널 점검) · S10(가)(ScreenMap · 토스트). S04(나)는 계속 제외.
+		current = { "S20(UI)", "S19b(가)", "S19b(나)", "S19b(UI)", "S18(UI)", "S17(UI)", "S16(UI)", "S15(UI)", "S12b(UI)", "S12(UI)", "S10(가)" },
 	},
 }
 
