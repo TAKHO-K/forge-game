@@ -8,8 +8,8 @@ local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
-if not RunService:IsStudio() then
-	return
+if not RunService:IsStudio() or not require(game:GetService("ReplicatedStorage").Shared.data.DevToolsConfig).inputDiag then
+	return -- 기본 꺼짐(DevToolsConfig.inputDiag = true로 켠다)
 end
 
 local UIManager = require(script.Parent.UIManager)

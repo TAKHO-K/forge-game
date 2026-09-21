@@ -323,8 +323,8 @@ local function selfCheck()
 		for _, entry in ipairs(entries) do
 			table.insert(ids, ("%s(%s)"):format(entry.id, entry.hotkey and entry.hotkey.Name or "-"))
 		end
-		check(("등록 표: 메뉴 칸 %s(기대 inventory(I) · party(P) · stageSelect(M) 순) · 칸 상한 %d"):format(table.concat(ids, " · "), PanelRegistry.menuSlotLimit),
-			#entries == 3 and entries[1].id == "inventory" and entries[1].hotkey == Enum.KeyCode.I and entries[2].id == "party" and entries[2].hotkey == Enum.KeyCode.P
+		check(("등록 표: 메뉴 칸 %s(기대 inventory(B) · party(P) · stageSelect(M) 순) · 칸 상한 %d"):format(table.concat(ids, " · "), PanelRegistry.menuSlotLimit),
+			#entries == 3 and entries[1].id == "inventory" and entries[1].hotkey == Enum.KeyCode.B and entries[2].id == "party" and entries[2].hotkey == Enum.KeyCode.P
 				and entries[3].id == "stageSelect" and entries[3].hotkey == Enum.KeyCode.M and PanelRegistry.menuSlotLimit == 5)
 		-- 6번째 칸 · 금지 키 · 겹치는 키는 error(합성 표를 같은 validate에 넣는다)
 		local six = {}
@@ -334,7 +334,7 @@ local function selfCheck()
 		local okSix, errSix = pcall(PanelRegistry.validate, six)
 		local okFive = pcall(PanelRegistry.validate, { table.unpack(six, 1, 5) })
 		local okKey, errKey = pcall(PanelRegistry.validate, { { id = "a", hotkey = Enum.KeyCode.W } })
-		local okDup, errDup = pcall(PanelRegistry.validate, { { id = "a", hotkey = Enum.KeyCode.O }, { id = "b", hotkey = Enum.KeyCode.O } })
+		local okDup, errDup = pcall(PanelRegistry.validate, { { id = "a", hotkey = Enum.KeyCode.J }, { id = "b", hotkey = Enum.KeyCode.J } })
 		check(("칸 6개 = error %s · 5개 = 통과 %s · 금지 키(W) = error %s · 같은 키 두 번 = error %s (메시지: %s | %s)"):format(
 			tostring(not okSix and tostring(errSix):find("보상 창의 탭") ~= nil), tostring(okFive), tostring(not okKey and tostring(errKey):find("금지 키") ~= nil),
 			tostring(not okDup and tostring(errDup):find("겹친다") ~= nil), tostring(errSix):sub(1, 50), tostring(errKey):sub(1, 40)),

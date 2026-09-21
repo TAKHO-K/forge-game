@@ -1,5 +1,5 @@
 -- 패널 표(30-0 S06, PRD 20.81 [D-1] · [D-4]): { id, kind, hotkey, menuOrder, iconKey } 목록. UIManager의 단축키 루프가 이 표를 읽는다.
--- 가방(I) · 파티(P, S12b) · 스테이지 선택(M, S15) - 나머지(O 상점 · K 펫 · J 보상)는 그 창을 만드는 세션이 한 줄씩 넣는다. menuOrder가 있는 항목이 메뉴바(hud/MenuBar.client.lua)의 칸이 된다(S16).
+-- 가방(B, S20 사전 작업에서 I → B) · 파티(P, S12b) · 스테이지 선택(M, S15) - 나머지(상점 · 펫 · 보상)는 그 창을 만드는 세션이 한 줄씩 넣는다(O는 못 쓴다 - 아래 swallowedKeys). menuOrder가 있는 항목이 메뉴바(hud/MenuBar.client.lua)의 칸이 된다(S16).
 -- 금지 키(PRD 20.81 [D-1]): W A S D Q E F Space Shift X Backspace Tab Esc + 숫자열(스킬 슬롯 확장 몫) - 등록하면 error.
 
 local PanelRegistry = {}
@@ -13,8 +13,12 @@ PanelRegistry.forbiddenKeys = {
 	[Enum.KeyCode.Six] = true, [Enum.KeyCode.Seven] = true, [Enum.KeyCode.Eight] = true, [Enum.KeyCode.Nine] = true, [Enum.KeyCode.Zero] = true,
 }
 
+-- 엔진이 먼저 가져가는 키(S20 사전 작업 실측): 로블록스 기본 카메라의 줌 키 I · O는 **수정자 없이 누르면 KeyDown이 UserInputService · ContextActionService(우선순위 3000)에 도달하지 않는다**
+-- (KeyUp만 온다 - Shift + I는 온다. 한/영 상태와 무관하고 P · M · U · K는 정상). 가상 입력(MCP)은 통과해서 자동 입력 테스트가 이 결함을 못 잡았다. 그래서 단축키로 등록할 수 없다.
+PanelRegistry.swallowedKeys = { [Enum.KeyCode.I] = true, [Enum.KeyCode.O] = true }
+
 PanelRegistry.panels = {
-	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.I, menuOrder = 1, iconKey = "bag", menuLabel = "가방" },
+	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.B, menuOrder = 1, iconKey = "bag", menuLabel = "가방" },
 	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, menuOrder = 2, iconKey = "party", menuLabel = "파티" }, -- S12b: 파티창(panels/Party.lua). 채팅 입력 중 P는 UIManager가 gameProcessed로 무시한다.
 	-- S15: 스테이지 선택(StageSelectPanel.lua). 견습 중에는 UIManager의 canOpen이 막는다. S16: 메뉴바도 견습 중 · 직업 선택 전에는 이 버튼을 숨긴다(menuHiddenWhile).
 	{ id = "stageSelect", kind = "station", hotkey = Enum.KeyCode.M, menuOrder = 3, iconKey = "stage", menuLabel = "스테이지", menuHiddenWhile = { "tutorial", "noClass" } },
@@ -25,6 +29,7 @@ PanelRegistry.panels = {
 PanelRegistry.menuSlotLimit = 5
 
 function PanelRegistry.assertAllowed(keyCode, ownerId)
+	assert(not PanelRegistry.swallowedKeys[keyCode], ("PanelRegistry: %s는 엔진(기본 카메라 줌 키)이 먼저 가져가 단축키로 못 쓴다 - '%s'"):format(tostring(keyCode), tostring(ownerId)))
 	assert(not PanelRegistry.forbiddenKeys[keyCode], ("PanelRegistry: 금지 키 %s를 '%s'에 등록할 수 없다"):format(tostring(keyCode), tostring(ownerId)))
 end
 

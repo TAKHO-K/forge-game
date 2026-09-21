@@ -22,6 +22,9 @@ local RunService = game:GetService("RunService")
 local config = {
 	allowedUserIds = {},
 
+	-- 입력 진단 로거(client/InputDiag.client.lua - S20 사전 작업 [InputDiag]). 기본 꺼짐. 켜면 수동 Play에서도 모든 입력 · 단축키 처리 단계를 한 줄씩 찍는다.
+	inputDiag = false,
+
 	-- 서버 시작 때 도는 자동 검증 블록의 실행 스위치(DevTools.server.lua의 verifyEnabled). 블록마다 id("26-2" · "29-3(나)" · "S05(가)" ...)가 있다.
 	-- 옛 세션의 블록이 Play마다 전부 돌면 한 번에 4분 가까이 걸린다(S05 실측 3분 55초) - 그래서 기본은 "지금 세션의 블록만"이다.
 	--   regression = false(기본): current에 적은 id의 블록만 돈다.

@@ -1966,7 +1966,7 @@ UIManager.register("inventory", {
 	screenGui = screenGui,
 	frame = win,
 	extraVisible = { dim },
-	-- 단축키(I)는 ui/PanelRegistry.lua 표에 있다(30-0 S06) - UIManager의 hotkey 루프가 그 표를 읽는다.
+	-- 단축키(B - S20 사전 작업에서 I에서 바꿈)는 ui/PanelRegistry.lua 표에 있다(30-0 S06) - UIManager의 hotkey 루프가 그 표를 읽는다.
 	modal = true,
 	exclusive = true,
 	hasCloseButton = true,

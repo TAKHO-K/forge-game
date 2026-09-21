@@ -60,7 +60,7 @@ TutorialData.steps = {
 		grade = "normal",
 		tierIndex = 1,
 		killTarget = 25,
-		lessonText = "이동(WASD/조이스틱)과 클릭·탭 공격을 배워보세요. 슬라임을 처치하면 드랍이 떨어집니다 - I키로 가방을 열어 착용하세요.",
+		lessonText = "이동(WASD/조이스틱)과 클릭·탭 공격을 배워보세요. 슬라임을 처치하면 드랍이 떨어집니다 - B키로 가방을 열어 착용하세요.",
 		-- 안내 뒤에 한 줄 더(S12, PRD 20.73 [7-1]) - 클라 안내 토스트가 lessonText 아래에 붙이고, 같은 단계에서 [친구 부르기] 버튼이 강조된다. 다른 단계는 필드가 없다.
 		friendHintText = "친구가 있다면 지금 불러도 됩니다 - 레벨이 달라도 같은 슬라임을 같이 잡을 수 있어요.",
 		grant = { part = "armor", grade = "normal" },

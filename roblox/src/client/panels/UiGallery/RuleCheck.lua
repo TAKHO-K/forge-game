@@ -145,10 +145,11 @@ function RuleCheck.run(gallery)
 	-- ⑫ 금지 키 · 부품 규격 오류
 	local okForbidden = pcall(UIManager.register, "ruleCheckTmp", { hotkey = Enum.KeyCode.Q, hasCloseButton = true })
 	local okTab = pcall(PanelRegistry.assertAllowed, Enum.KeyCode.Tab, "tmp")
-	local okIKey = pcall(PanelRegistry.assertAllowed, Enum.KeyCode.I, "tmp")
-	check(("⑫ 금지 키 등록: Q → 성공=%s(기대 false) · Tab → 성공=%s(기대 false) · 허용 키 I → 성공=%s(기대 true) · 등록 안 남음=%s"):format(
-		tostring(okForbidden), tostring(okTab), tostring(okIKey), tostring(UIManager.getKind("ruleCheckTmp") == nil)),
-		not okForbidden and not okTab and okIKey and UIManager.getKind("ruleCheckTmp") == nil)
+	local okBKey = pcall(PanelRegistry.assertAllowed, Enum.KeyCode.B, "tmp")
+	local okSwallowed = pcall(PanelRegistry.assertAllowed, Enum.KeyCode.I, "tmp") -- 엔진이 먼저 가져가는 키(I · O)
+	check(("⑫ 금지 키 등록: Q → 성공=%s(기대 false) · Tab → 성공=%s(기대 false) · I(엔진이 가져감) → 성공=%s(기대 false) · 허용 키 B → 성공=%s(기대 true) · 등록 안 남음=%s"):format(
+		tostring(okForbidden), tostring(okTab), tostring(okSwallowed), tostring(okBKey), tostring(UIManager.getKind("ruleCheckTmp") == nil)),
+		not okForbidden and not okTab and not okSwallowed and okBKey and UIManager.getKind("ruleCheckTmp") == nil)
 	local probe = Instance.new("Frame")
 	local okSixTabs = pcall(Tabs.build, { parent = probe, tabs = { { id = "1", text = "1" }, { id = "2", text = "2" }, { id = "3", text = "3" }, { id = "4", text = "4" }, { id = "5", text = "5" }, { id = "6", text = "6" } } })
 	local okBadRow = pcall(ListRow.build, { parent = probe, height = 30, title = "x" })
