@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local PartyAway = require(script.Parent.PartyAway)
 local RequestBanner = require(script.Parent.RequestBanner)
 local Toast = require(script.Parent.Parent.ui.kit.Toast)
 
@@ -21,6 +22,24 @@ script:SetAttribute("Signals", "PartyInviteNotice,PartyNotice,FriendJoinedNotice
 
 -- ═══ 요청 배너: 초대 ═══
 partyInviteNotice.OnClientEvent:Connect(function(data)
+	if data.reconnect then
+		-- S20 사전 작업 1: 다른 서버로 재접속한 끊긴 멤버의 복귀 초대 - 일반 원격 초대 문구와 구분하고, 남은 시간(= 파티 유예)을 글 · 게이지에 같이 센다.
+		RequestBanner.push({
+			key = "invite",
+			title = "파티로 돌아가기",
+			bodyFn = function(remaining)
+				return PartyAway.reconnectBody(data.inviterName, remaining)
+			end,
+			seconds = data.seconds,
+			accept = { text = "돌아가기", onActivated = function()
+				partyRequest:FireServer("accept")
+			end },
+			decline = { text = "나중에", onActivated = function()
+				partyRequest:FireServer("decline")
+			end },
+		})
+		return
+	end
 	-- 24-2: 다른 서버에서 온 초대(remote)는 수락하면 그 서버로 이동한다는 점을 문구로 알린다 - 버튼은 같다.
 	local text = data.remote and ("%s님이 파티에 초대했습니다 (다른 서버 - 수락 시 이동)"):format(data.inviterName)
 		or ("%s님이 파티에 초대했습니다"):format(data.inviterName)
@@ -46,7 +65,7 @@ partyVoteNotice.OnClientEvent:Connect(function(data)
 		if data.isLeader then
 			RequestBanner.push({
 				key = "vote", title = "스테이지 이동 투표", seconds = seconds,
-				body = ("스테이지 %d 보스 진입 투표 중... 파티원 1명 동의 시 성립"):format(data.stage),
+				body = ("스테이지 %d 보스 진입 투표 중 (1명 동의 시 성립)"):format(data.stage),
 			})
 		else
 			RequestBanner.push({

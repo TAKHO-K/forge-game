@@ -40,19 +40,28 @@ function Theme.recompute()
 	local player = Players.LocalPlayer
 	local forced = RunService:IsStudio() and player ~= nil and player:GetAttribute("ForceTouchLayout") == true
 	Theme.isMobile = (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled) or forced
-	Theme.buttonHeight = Theme.isMobile and 44 or 32
+	Theme.buttonHeight = Theme.buttonHeightFor(Theme.isMobile)
 	Theme.tabHeight = Theme.isMobile and 40 or 28
+end
+
+-- 버튼 높이(모바일 44 = 터치 타깃 하한 · PC 32). 이 화면이 아닌 가상 화면(자체 점검의 폰 계산)에서도 같은 값을 쓰려고 함수로 뺐다.
+function Theme.buttonHeightFor(mobile)
+	return mobile and 44 or 32
 end
 Theme.recompute()
 
--- 글씨 크기: 모바일이면 ×1.15 반올림(title 23 · header 18 · body 16 · caption 14 · number 21).
-function Theme.textSize(name)
+-- 글씨 크기: 모바일이면 ×1.15 반올림(title 23 · header 18 · body 16 · caption 14 · number 21). textSizeFor는 모바일 여부를 인자로 받는다(가상 화면 계산용).
+function Theme.textSizeFor(name, mobile)
 	local base = Theme.text[name]
 	assert(base, "Theme.textSize: 알 수 없는 글씨 단 - " .. tostring(name))
-	if Theme.isMobile then
+	if mobile then
 		return math.floor(base * Theme.mobileTextScale + 0.5)
 	end
 	return base
+end
+
+function Theme.textSize(name)
+	return Theme.textSizeFor(name, Theme.isMobile)
 end
 
 -- 글씨 하한(px). 판정은 명목 TextSize가 아니라 화면에서 실제로 보이는 크기(effectiveTextSize)로 한다.

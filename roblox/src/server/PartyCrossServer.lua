@@ -507,15 +507,16 @@ local function handleArrival(player, simulate)
 			return true
 		end
 		-- 다른 서버면 파티는 targetJobId 서버에 남아 있다 - 복귀 초대를 띄운다. 수락하면 코드 합류와 같은 경로(requestJoin)로 그 서버로 이동한다(강제 이동은 안 한다).
-		if not PartyState.getParty(player) and not joinState[player] and not remoteInvites[player] and readRecord(record.code) then
+		local remaining = (record.awayUntil or 0) - os.time() -- 남은 유예(초) - 팝업 · 게이지 · 카운트다운이 이 값 하나로 간다
+		if remaining > 0 and not PartyState.getParty(player) and not joinState[player] and not remoteInvites[player] and readRecord(record.code) then
 			local invite = { code = record.code, fromName = record.leaderName or "파티" }
 			remoteInvites[player] = invite
-			invite.thread = task.delay(PartyConfig.reconnectOfferSeconds, function()
+			invite.thread = task.delay(remaining, function()
 				if remoteInvites[player] == invite then
 					remoteInvites[player] = nil
 				end
 			end)
-			partyInviteNotice:FireClient(player, { inviterName = invite.fromName, seconds = PartyConfig.reconnectOfferSeconds, remote = true })
+			partyInviteNotice:FireClient(player, { inviterName = invite.fromName, seconds = remaining, remote = true, reconnect = true })
 			print(("[forge-game] 재접속 복귀 초대: %s -> 코드 %s (파티 서버 %s)"):format(player.Name, record.code, tostring(record.targetJobId)))
 		end
 		return true
