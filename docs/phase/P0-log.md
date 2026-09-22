@@ -8,6 +8,26 @@
 
 1. [파트1] 자율 단계 규칙은 COMMON.md 새 절 §7로 넣고 `_build.py`로 세션 파일 27개에 반영했다(§0 "막히면 멈춘다"보다 §7이 우선한다고 명시).
 2. [파트1] 이 단계의 기록 위치는 사용자 지시대로 `docs/phase/P0-log.md` · `docs/phase/P0-report.md`. PRD에는 새 절을 쓰지 않는다 - 검증 조건 "diff에 EconSim · DevTools · docs 외 파일 없음"과 부딪히기 때문(PRD는 저장소 루트 파일).
+3. [파트2 · 파일] 새 파일 5개: `server/EconSim.lua`(덮어쓰기 · 전투 · 진행 시뮬 · 강화 몬테카를로) · `server/EconSimTables.lua`(E5 · E6 · 표본) · `server/EconSimReport.lua`(보고서 · 요약) · `server/EconSimVerify.lua`(P0(가)) · `shared/data/EconSimConfig.lua`(프로필 · 격자 · what-if - 전부 [가정]). 서버 폴더(ServerScriptService)에 둬서 클라에 복제되지 않는다. 설정 파일만 shared/data(데이터 규칙 - "수치는 data/에만").
+4. [파트2 · 차단] 라이브 실행 차단 = 세 겹: DevTools.server.lua가 라이브에서 첫 줄에 죽음 · `EconSim.isAllowed()` = `RunService:IsStudio() and DevToolsConfig.econSim` · 명령은 DevTools의 isAllowed 계정만. `/gg econ`은 명령 처리 안에서만 `require`(서버 시작 비용 0).
+5. [파트2 · 출력] Studio 서버는 저장소 파일을 못 쓴다 → 보고서는 `[ECONMD]` · `[ECONCSV:<표>]` 줄로 출력 창(= Studio 로그 파일)에 찍고, `docs/econ/_extract.py`가 로그에서 가장 최근 실행을 골라 `docs/econ/E1-<what-if>.md` + CSV로 옮긴다. 채팅(reply)에는 요약 한 줄.
+6. [파트2 · 한 번에 계산] 매 프레임 계산 없음. 한 번의 호출이 끝까지 계산하되, 스크립트 시간 초과를 피하려고 레벨업 사이에서 0.25초마다 `task.wait()`(`EconSimConfig.yieldSeconds`). 로컬 하네스에서 양보 사이 최대 간격을 재서(레벨 40회 단위일 때 1.13초) 시간 기준으로 바꿨다.
+7. [파트2 · what-if 구현] 게임 데이터 표(`InfiniteStageConfig.growthRate` · `CharacterLevelConfig.weaponMultGrowthRate` · `SkillData.healer.E.attackMultiplier` · `EnhanceConfig.goldCost`)를 **양보 없는 구간 안에서만** 바꾸고 pcall 뒤 되돌린다(`EconSim.withOverrides`) - 양보하는 순간에는 항상 원래 값이라 같은 서버의 전투 · 몬스터가 바뀐 값을 못 본다. 검증 [2]가 정상 · 에러 경로 둘 다 되돌림을 확인한다.
+8. [파트2 · levelFactor what-if] `Option.levelFactor`의 125 동결은 모듈 안 지역 상수라 바꿀 수 없다 → 동결 레벨을 게임 함수에서 찾아내고(`optionFreezeLevel` - 값이 안 커지는 첫 레벨), 동결 직전 두 점의 기울기로 선형 연장한 배율을 보석 roll에 곱한다(`Option.valueOf`가 roll에 선형이라 값이 정확히 연장값). 공식 상수를 옮겨 적지 않았다.
+9. [파트2 · 치명 옵션] `BalanceSim.buildLoadout`은 치명 옵션을 안 넣는다(게임은 평타에만 넣는다 - AttackServer가 `getCritBonus`를 넘기고 SkillServer 스킬은 안 읽는다). → 평타 피해 = 직업 치명을 옵션만큼 올린 사본으로 돌린 `simulateCombat`의 `autoDamage`, 스킬 피해 = 원본 실행의 `skillDamageTotal`. 활 속사 배율이 사본에서 달라지지 않게 `attackSpeedBase`를 같은 몫만큼 낮춰 둔다(게임에서 옵션 치명은 속사 배율을 안 올린다). 꽂힌 화살 폭발은 스킬 쪽(옵션 치명 없음)으로 셌다.
+10. [파트2 · 처치 시간 캐시] 처치 시간은 "HP ÷ atk"에만 달려 있다(모든 피해가 atk에 비례) → 직업 · 공속 · 목표 초가 같으면 "목표 초 안에 잡는 HP ÷ atk"를 한 번만 이분법으로 구해 재사용(`maxHpPerAtk`). 사냥 스테이지는 그 값과 `InfiniteStage.getMonsterHp`로 찾는다.
+11. [파트2 · 진행 모형 [가정]] 최고 스테이지 = 아직 못 깬 첫 보스 스테이지(보스 게이트만이 이동을 막는다 - StageServer). 보스 도전 조건 = 보스 평타에 최소 생존 타수 + 제한 시간 안 처치(파티 N명 = 딜 N배, 보스 HP는 BossRules가 N^p). 레벨은 사냥 경험치 + 보스 경험치. 환생은 조건이 되면 바로(5회). 사냥 구역 = 1 ~ 최대 tier 중 경험치/초 최고(95% 안이면 높은 tier).
+12. [파트2 · 교착 수정 1] 첫 모형(장비 교체 문턱 "점수 +x%")은 방어구가 영영 안 바뀌어 스테이지 29에서 모든 프로필이 멈췄다 - itemLevel 1칸 = ×1.155라 문턱 50%를 못 넘는데, 생존 타수가 사냥 스테이지를 방어구 레벨 근처에 묶는다. → 프로필 항목을 `gearCheckMinutes`(가방 점검 간격)로 바꾸고 "점수가 조금이라도 좋으면 교체"로 했다.
+13. [파트2 · 교착 수정 2] 드랍 itemLevel 편차(±2, `ArmorData.itemLevelDelta`)를 넣었다 - "잡은 스테이지 + 최대 +2"가 방어구가 오르는 유일한 길이다. 후보 = 기대 개수 ≥ 1인 (등급 ≥ g, 편차 ≥ d) 조합(등급 · 편차는 Loot에서 독립 굴림 → 곱).
+14. [파트2 · 교착 수정 3] 레벨 한 번을 점검 간격 단위로 쪼개 돈다(몇 시간짜리 레벨 안에서도 점검이 여러 번). 가방은 같은 사냥 자리(tier · 스테이지)에 있는 동안 누적 - 자리가 바뀌면 새로 센다.
+15. [파트2 · 교착 수정 4] 점검에서 방어구가 그대로인데 생존이 사냥 스테이지를 막으면 "장비 올리기 모드" - 1시간(안 되면 4배씩 최대 64시간) 사냥 뒤 기대 방어구 점수가 가장 높은 구역으로 간다. 방어구가 바뀌면 경험치 모드로 돌아온다. [가정]: "장비가 막히면 더 높은 스테이지를 도는" 플레이어.
+16. [파트2 · 성능] 아무것도 안 바뀐 점검에서는 사냥 선택 · 보스 판정을 다시 계산하지 않는다 - 로컬 194초 → 17초.
+17. [파트2 · 보석 모형 [가정]] 보석은 모두 위력(공격력%) 축으로 센다. 변환권 대상(고대 · 태초)이고 프로필이 다시 굴리면 원하는 축 + gemRoll(변환권 = 풀 크기 N장 - 기대 시도, 가격은 게임식 `tier1 골드(최고 스테이지) × 40`), 아니면 무작위 축의 기대값 = DPS 3축이 풀에서 나올 확률 × roll(카테고리 안 등가 - 20.67 [5]). 장비 옵션은 무작위 축이라 진행 시뮬에서 뺐다.
+18. [파트2 · 재료] 강화석 마릿수분 = `tier.rewardRatio ^ MonsterData.fairnessExponent`(MonsterState.getKillUnits와 같은 값 - 그 모듈은 몬스터 인스턴스 상태를 들고 있어 순수 계산에 못 쓴다, 접두사 평균 1).
+19. [파트2 · E6 전투 비율] S21-0 D2의 0.266 = PartyShieldSim "치유(옛 동작)" 모드 · 회복 0의 치유사 전투 비율(0.2658)이다(쉴드 모드는 0.2717). 처음에 쉴드 모드로 짰다가 표본 D2 r 보스전이 X(0.4187)로 나와 확인 - 치유모드 r은 치유 모드 값을 쓰고 쉴드 모드 값은 보고서에 참고로 적는다.
+20. [파트2 · E6 모형 [가정]] 치유모드 치유사의 딜 = 딜 옵션을 안 받은 딜링모드 총딜 × 전투 비율(사용자 전제 "치유모드 공격에 딜 옵션 미적용"). (가) a = 치유사가 같은 딜 옵션을 꼈을 때의 배율을 a만큼, (나) m = 같은 칸 · 등급 · 레벨 · roll의 "태초 기준값 m인 위력" 전용 보석(위력 roll × m/0.30). 장비 단계 3종의 보석 구성은 `EconSimConfig.healer.gearTiers`(없음 / 환생 3회 3칸 / 5칸 · 레벨 125 · 최고 roll).
+21. [파트2 · E5 모형 [가정]] A = tier6를 sB − Δ에서, B = tier1을 sB에서(sB = '일반' 프로필 목표 처치 3초 안의 최고 스테이지, 앵커 장비). 태초 가치 = 개수/분 × 확률 × 태초 위력 값. Δ가 sB보다 크면 스테이지 1에서 잘려 같은 행이 되므로 한 번만 센다. 격자 대신 행마다 손익분기 배수 M*(A÷B = 1이 되는 배수)를 같이 낸다 - A÷B가 배수에 비례해서 M* 하나로 격자 전체가 결정된다.
+22. [파트2 · 분석기] `luau-analyze`의 EconSimReport.lua 110행 TypeError 3건은 한글이 든 `string.format`의 인자 추론 오탐(값은 전부 숫자, 로컬 실행 정상) - 그대로 둔다.
 
 ## 결정 필요
 

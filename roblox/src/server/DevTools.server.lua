@@ -1038,6 +1038,7 @@ local function reportMonsterGrounding(player, zoneKey)
 end
 
 local HELP_TEXT = table.concat({
+	"/gg econ [all|casual|normal|top] [what-if] - P0 경제 시뮬(EconSimConfig). 표는 출력 창 [ECONMD] → docs/econ/_extract.py, 채팅엔 요약만",
 	"/gg anchor [classId] - 앵커 조건 적용(레벨100+일반itemLevel100 3부위+강화0+스테이지100)",
 	"/gg level <n> - 캐릭터 레벨 직접 지정",
 	"/gg gear <grade> <itemLevel> - 갑옷/장갑/신발 3부위 동일 조건으로 장착",
@@ -1188,6 +1189,15 @@ local function handleCommand(player, args)
 
 	if sub == "help" or sub == nil then
 		reply(player, "\n" .. HELP_TEXT)
+	elseif sub == "econ" then
+		-- P0 E8 경제 시뮬 - 한 번에 계산(수십 초, 중간중간 양보)하므로 명령 처리 스레드를 붙잡지 않게 따로 돌린다. 모듈은 여기서만 require(서버 시작 비용 0).
+		task.spawn(function()
+			local ok, summary = pcall(function()
+				return require(script.Parent.EconSimReport).run({ profileArg = args[2] or "all", whatIfName = args[3] or "baseline" })
+			end)
+			reply(player, ok and summary or ("econ 실패: " .. tostring(summary)))
+		end)
+		reply(player, ("econ %s %s 계산 시작 - 끝나면 요약이 한 줄 더 온다"):format(args[2] or "all", args[3] or "baseline"))
 	elseif sub == "anchor" then
 		applyAnchor(player, args[2])
 	elseif sub == "level" and tonumber(args[2]) then
@@ -3550,6 +3560,17 @@ if RunService:IsStudio() and verifyEnabled("S21-0(가)") then
 		local ok, err = pcall(require(script.Parent.S21_0Verify).runPure)
 		if not ok then
 			warn(("[S21-0(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ P0 자동 검증 블록(가) - 경제 시뮬(EconSim) 기준선 전체 실행 + 표본 대조 + 덮어쓰기 복원(순수 계산) ═══
+-- 플레이어 불필요. 기준선 보고서([ECONMD] 줄)를 그대로 출력 창에 남긴다 - docs/econ/_extract.py가 이 줄을 E1-baseline.md로 옮긴다.
+if RunService:IsStudio() and verifyEnabled("P0(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.EconSimVerify).runPure)
+		if not ok then
+			warn(("[P0(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

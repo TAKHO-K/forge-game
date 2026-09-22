@@ -22,6 +22,10 @@ local RunService = game:GetService("RunService")
 local config = {
 	allowedUserIds = {},
 
+	-- P0 경제 시뮬(server/EconSim* · /gg econ) 스위치. EconSim.isAllowed() = RunService:IsStudio() and 이 값 - 라이브 서버에서는 IsStudio가 거짓이라 켜져 있어도 안 돈다
+	-- (그 위에 DevTools.server.lua 자체가 라이브에서 첫 줄에서 죽는다 - 이중 차단). 끄면 Studio에서도 /gg econ · P0(가)가 에러로 멈춘다.
+	econSim = true,
+
 	-- 입력 진단 로거(client/InputDiag.client.lua - S20 사전 작업 [InputDiag]). 기본 꺼짐. 켜면 수동 Play에서도 모든 입력 · 단축키 처리 단계를 한 줄씩 찍는다.
 	inputDiag = false,
 
@@ -93,7 +97,9 @@ local config = {
 		-- PlayerDamage.computeHitDamage·applyHit(사실상 applyFinalDamage) · BalanceSim.getSurviveHits · StageServer(안전 상한 추가) · SaveSystem(sanitizeForSave))을 쓰는 옛 블록 =
 		-- S13(가)(나)(BalanceDecisionVerify - PlayerCombat·BalanceSim 앵커 DPS) · S13b(가)(나)(ShieldVerify - PlayerDamage·PlayerCombat·BalanceSim 쉴드 경로) ·
 		-- 29-1(BossMechanicsVerify - PlayerDamage.computeHitDamage 직접 호출) · 27-4(가)(나)(StageServer 파이프라인) · SaveSystem 이관 체인(S02(가)·S03(가)·S04(가)·S05(가)·S05b(가)·S11(가)).
-		current = { "S21-0(가)", "S21-0(나)", "S13(가)", "S13(나)", "S13b(가)", "S13b(나)", "29-1", "27-4(가)", "27-4(나)", "S02(가)", "S03(가)", "S04(가)", "S05(가)", "S05b(가)", "S11(가)" },
+		-- P0(2026-09-23): 경제 시뮬 도구(EconSim · EconSimTables · EconSimReport · EconSimVerify · EconSimConfig + /gg econ) - 게임 코드 무변경(새 모듈만 추가, DevTools는 명령 · 블록 연결만).
+		-- 이번 블록 P0(가). 동반 실행 없음: 이 단계가 고친 게임 모듈이 없다(새 모듈이 게임 모듈을 읽기만 한다 - what-if 덮어쓰기는 양보 없는 구간 안에서 되돌린다).
+		current = { "P0(가)" },
 	},
 }
 

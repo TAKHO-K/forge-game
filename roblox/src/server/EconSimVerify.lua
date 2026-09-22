@@ -1,0 +1,133 @@
+-- P0 자동 검증(가) - 경제 시뮬(EconSim). DevTools.server.lua의 verifyEnabled("P0(가)") 블록이 부른다(플레이어 불필요 · 순수 계산).
+-- ① Studio 전용 스위치 ② what-if 덮어쓰기 복원(정상 · 에러) ③ 기준선 전체 실행(/gg econ all baseline과 같은 함수 - 보고서 줄을 출력 창에 남긴다)
+-- ④ 표본 대조(S21a · S21-0) ⑤ E3 · E6 결과 모양 ⑥ 실행 뒤 게임 데이터 표가 그대로인지.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
+local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
+local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
+local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
+local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local EconSimConfig = require(ReplicatedStorage.Shared.data.EconSimConfig)
+local EconSim = require(script.Parent.EconSim)
+local EconSimReport = require(script.Parent.EconSimReport)
+
+local EconSimVerify = {}
+
+local function newRecorder()
+	local passCount, totalCount = 0, 0
+	local recorder = {}
+	function recorder.check(label, ok)
+		totalCount += 1
+		if ok then
+			passCount += 1
+		end
+		print(("[P0][가] %s %s"):format(label, ok and "O" or "X"))
+	end
+	function recorder.section(label, fn)
+		local ok, err = pcall(fn)
+		if not ok then
+			recorder.check(("%s 실행 중 에러: %s"):format(label, tostring(err)), false)
+		end
+	end
+	function recorder.summary()
+		return passCount, totalCount
+	end
+	return recorder
+end
+
+-- 게임 데이터 표의 지금 값(덮어쓰기가 되돌아왔는지 비교용).
+local function snapshot()
+	return {
+		growthRate = InfiniteStageConfig.growthRate,
+		weaponGrowthRate = CharacterLevelConfig.weaponMultGrowthRate,
+		dealing = SkillData.healer.E.attackMultiplier,
+		goldCost = EnhanceConfig.goldCost,
+		bowClass = ClassData.classes.bow,
+		healerClass = ClassData.classes.healer,
+		bowQuickShotBase = SkillData.bow.Q.attackSpeedBase,
+	}
+end
+
+local function sameSnapshot(a, b)
+	for key, value in pairs(a) do
+		if b[key] ~= value then
+			return false, key
+		end
+	end
+	return true
+end
+
+function EconSimVerify.runPure()
+	print("===P0 검증 시작(가)===")
+	local r = newRecorder()
+	local before = snapshot()
+
+	r.section("[1] 스위치", function()
+		r.check(("1 EconSim.isAllowed() = %s(기대 true - Studio + DevToolsConfig.econSim)"):format(tostring(EconSim.isAllowed())), EconSim.isAllowed() == true)
+	end)
+
+	r.section("[2] 덮어쓰기 복원", function()
+		local whatIf = { growthRate = 1.2, weaponGrowthRate = 1.3, dealingMultiplier = 0.5, enhanceCostScale = 2 }
+		local inside = EconSim.withOverrides(whatIf, function()
+			return { InfiniteStageConfig.growthRate, CharacterLevelConfig.weaponMultGrowthRate, SkillData.healer.E.attackMultiplier, EnhanceConfig.goldCost[1] }
+		end)
+		local restored = sameSnapshot(before, snapshot())
+		r.check(("2 정상 경로: 안 %s · %s · %s · %s(기대 1.2 · 1.3 · 절반 · 2배) → 밖 되돌림 %s"):format(tostring(inside[1]), tostring(inside[2]), tostring(inside[3]), tostring(inside[4]), tostring(restored)),
+			inside[1] == 1.2 and inside[2] == 1.3 and inside[3] == before.dealing * 0.5 and inside[4] == before.goldCost[1] * 2 and restored)
+		local ok, err = pcall(EconSim.withOverrides, whatIf, function()
+			error("의도한 에러")
+		end)
+		local restoredAfterError, key = sameSnapshot(before, snapshot())
+		r.check(("3 에러 경로: 에러 전달 %s(%s) · 되돌림 %s%s"):format(tostring(not ok), tostring(err), tostring(restoredAfterError), key and (" - 어긋난 칸 " .. key) or ""), not ok and restoredAfterError)
+	end)
+
+	local data
+	r.section("[3] 기준선 전체 실행", function()
+		local started = os.clock()
+		local summary
+		summary, data = EconSimReport.run({ profileArg = "all", whatIfName = "baseline" })
+		print(("[P0][가][요약] %s"):format(summary))
+		r.check(("4 /gg econ all baseline과 같은 함수 실행 성공 - %.1f초"):format(os.clock() - started), data ~= nil)
+	end)
+
+	if data then
+		r.section("[4] 표본 대조", function()
+			for index, sample in ipairs(data.samples) do
+				r.check(("5.%d 표본 %s: 시뮬 %.4f · 기대 %.4f"):format(index, sample.id, sample.value, sample.expected), sample.ok)
+			end
+		end)
+		r.section("[5] 결과 모양", function()
+			for _, id in ipairs(EconSimConfig.profileOrder) do
+				local run = data.runs[id]
+				local last = -1
+				local monotone = true
+				for _, milestone in ipairs(run.milestones) do
+					local record = run.reached[milestone]
+					if record then
+						monotone = monotone and record.seconds >= last
+						last = record.seconds
+					end
+				end
+				local reached100 = run.reached[100] ~= nil
+				local finished = run.stall ~= nil or run.final.reach >= InfiniteStageConfig.safeStageCap
+				r.check(("6 %s: 스테이지 100 도달 %s · 이정표 시간 단조 %s · 끝 = %s(최고 %d)"):format(id, tostring(reached100), tostring(monotone), run.stall and "진행 정지 사유 있음" or "SafeStageCap", run.final.reach),
+					reached100 and monotone and finished)
+			end
+			local tiers = data.healer.tiers
+			r.check(("7 E6 치유모드 비중 없음 %.2f%% ≥ 평균 %.2f%% ≥ 상위 %.2f%%(장비가 딜러만 키우면 비중이 준다)"):format(tiers.none.share * 100, tiers.average.share * 100, tiers.top.share * 100),
+				tiers.none.share >= tiers.average.share and tiers.average.share >= tiers.top.share)
+		end)
+	end
+
+	r.section("[6] 게임 데이터 표 불변", function()
+		local same, key = sameSnapshot(before, snapshot())
+		r.check(("8 실행 뒤 InfiniteStageConfig · CharacterLevelConfig · SkillData · EnhanceConfig · ClassData가 실행 전과 같은 값 · 같은 표 %s%s"):format(tostring(same), key and (" - 어긋난 칸 " .. key) or ""), same)
+	end)
+
+	local pass, total = r.summary()
+	print(("===P0 검증 끝(가)=== %d/%d 통과"):format(pass, total))
+end
+
+return EconSimVerify
