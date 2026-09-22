@@ -18902,3 +18902,136 @@ Studio Device Emulator의 사용자 지정 해상도(800 × 360 · 667 × 375 ·
 - 가방 상세 바(하단)가 반투명이라 뒤의 스킬 바 · 체력바가 비쳐 보인다(PC 스크린샷) - 기존 모양.
 - 기존 서버 라벨(환생 제단 · 보석상인 이름표 `NameplateGui`)은 `AlwaysOnTop`이라 Studio 캡처에 안 찍힌다(게임 자체 문제 아님 - 사람 눈 확인).
 - 콘솔의 `AssetDelivery403IncorrectAssetType`(asset 203785492)는 20.111에 적은 무료 에셋 문제 그대로다.
+
+### 20.113 S21-0 사전 작업: 수치 안전장치 · 판매 사고 방지 · 읽기 전용 확인 (S21-0)  `[✅ 구현 + 로컬 검사(luau-compile 바뀐 파일 전부) + Studio Play 3회(2026-09-23): 최종 S21-0(가) 15/15 · (나) 5/5 · 동반 S13(가)(나) 9/9 · 8/8 · S13b(가)(나) 13/13 · 11/11 · 29-1(가)(나) 7/7 · 24/25(기존 X) · 27-4(가)(나) 5/5 · 2/6(기존 X) · 저장 이관 체인 S02(가) · S03(가) · S04(가) · S05(가) · S05b(가) · S11(가) 전부 통과 · 스크립트 에러 0. B(판매 확인창)는 코드 리뷰로 확인 - Studio MCP 제약으로 실제 마우스 연타 확인은 못했다(미결 참고)]`
+
+밸런스 수치(공식 · 계수 · 드랍률 · 비용)는 바꾸지 않았다. docs/stage-scaling-audit.md(S21a) 결과를 근거로 수치 안전장치 · 버그 수정 · 판매 사고 방지만 했고, D 절은 읽기 전용 확인(수정 없음)이다.
+
+#### [1] A. 수치 안전장치
+
+- **A1** `shared/NumberFormat.lua`: `format`이 `value ~= value`(NaN) · `value == math.huge`(inf) · `value == -math.huge`(-inf)를 함수 맨 앞에서 즉시 가로챈다 - 기존 K/M/B/T 축약 루프(`while scaled >= STEP`)는 손대지 않았다(정상 값 경로 100% 동일 - 표본 20개 전수 O). 표시: nan → `"—"`, inf → `"∞"`, -inf → `"-∞"`. 경고(`warn`)는 `debug.info`로 잡은 호출 위치(source:line)당 1회만.
+- **A2** `shared/Sanitize.lua`(신설) - `Sanitize.number(value, fallback)`: `x ~= x` 또는 `math.abs(x) == math.huge`면 fallback + 호출 위치당 1회 경고, 아니면 그대로(비교 2회, 핫패스에도 가볍다). 적용 지점:
+  - 스탯 합산: `shared/PlayerCombat.lua` `getAttack`(fallback 0) · `getDefense`(fallback 0).
+  - 피해 계산: `server/PlayerDamage.lua` `computeHitDamage`(fallback 0, 반환 자체) · `applyFinalDamage`(모든 피해 경로의 HP 차감 직전 공통 출구, fallback 0).
+  - 보상 계산: `server/PlayerProfile.lua` `addGold`(더할 양만 fallback 0 - 오염된 보상 1회만 건너뜀) · `addCharacterExp`(동일).
+- **A3** `server/SaveSystem.lua` `sanitizeForSave`(신설, `saveProfile`의 `UpdateAsync` 콜백 안에서 호출) - **실측(S21-0(나), Studio DataStore)**: `UpdateAsync`에 NaN · inf가 든 테이블을 넘겨도 **에러 없이 성공하고 다시 읽으면 그 값 그대로 돌아온다**(저장 실패도 값 변형도 아니다 - 막지 않으면 영구히 남는다. 실제 배포 서버의 클라우드 DataStore까지는 이번 감사에서 확인 못함 - Studio 안에서만 테스트할 수 있었다). `sanitizeForSave`는 프로필을 재귀로 훑어 NaN · inf인 숫자 필드만 `UpdateAsync`의 `old`(그 키의 지금 DataStore 저장값)에서 같은 경로의 마지막 정상값으로 되돌리고, `old`에도 없으면(신규 필드 등) 0으로 둔다 - 나머지 필드는 그대로 정상 저장된다. 검증(S21-0(나)): `_verify` 프로필에서 gold=123456으로 한 번 저장 → gold를 NaN으로 오염시켜 다시 저장(저장 자체는 성공, 메모리 gold가 123456으로 되돌아옴) → DataStore에서 다시 읽어도 123456(NaN 아님) 확인 → 원복.
+- **A4** `shared/data/InfiniteStageConfig.lua` `safeStageCap = 4738` - "게임에서 쓰는 모든 수치가 1e300 미만인 마지막 스테이지"(감사 §1-1 공식 `1.155^(stage-1)`로 직접 계산: 가장 먼저 1e300을 넘는 항목은 보스 HP 4인 파티 - `1600 × 4^p × 1.155^(stage-1)`, p≈0.4803 - 이 항목이 스테이지 4739에서 1e300을 넘는다, 나머지 항목(잡몹 HP · 공격력 · 골드 · 경험치 · 보스 HP 1인 · 최대체력 보너스)은 전부 그보다 늦게 넘는다). `server/StageServer.server.lua`의 일반 스테이지 이동 요청만 이 상한에서 거절(`reason="safe_cap"`, 클라 문구 "현재 도달 가능한 최고 스테이지입니다" - `client/StageSelectPanel.lua` · `client/StageUI.client.lua`) - `/gg stage`(`server/DevTools.server.lua`)는 그대로 넘길 수 있되 넘기면 콘솔에 경고를 추가로 찍는다(측정 도구는 상한 밖도 봐야 하므로).
+- **A5**(보고만, 수정 안 함) - 2^53(9,007,199,254,740,992) 초과 스테이지: 잡몹 HP 226 · 골드 244 · 경험치 252, tier6 HP 206 · 골드 224, 보스 골드(1인) 223, 보스 HP(1인) 205(감사 §1-2 표 그대로 - 이번 세션이 재확인·재계산하지 않았다). 화면 · 획득 · 저장에서 체감 가능한 문제는 없다(오차 ~10⁻¹⁶, 강화 골드 차감은 "충분한지" 비교이지 등식 비교가 아니다) - 감사 원문 그대로 인용.
+- **A6** `shared/BalanceSim.lua` `getSurviveHits` - 옛 식 `alpha*A*A/(D+alpha*A)`(A² 직접 계산, 스테이지 ≈2,448부터 오버플로)를 `server/PlayerDamage.lua`의 `computeHitDamage`와 같은 연산 순서(`reduction = D/(D+alpha*A)` 먼저, 그다음 `A*(1-reduction)`)로 바꿨다. 검증(S21-0(가)): 스테이지 2448 · 2500 · 3000에서 `getSurviveHits`의 `dmgPerHit`이 `computeHitDamage`와 같은 독립 계산식과 소수 15자리까지 일치(유한값, 더 이상 A² 오버플로 없음).
+
+#### [2] B. 판매 · 분해 연타 사고 방지 (S20e 발견)
+
+`client/panels/Inventory/DetailSheet.lua`:
+- **B1** 판매 · 분해 요청을 서버에 보내는 즉시(`sellRequest`/`dismantleRequest` 호출 직전) `S.selectedKind, S.selectedValue = nil, nil` + `S.rebuildGrid()`로 선택을 비운다 - `PlayerProfile.sellItem`/`dismantleItem`이 `table.remove`로 배열을 당기면서 같은 index가 다음 장비를 가리키게 되기 전에 끊는다(옛 코드는 `rebuildGrid`가 index 범위 밖일 때만 선택을 지웠다 - 같은 index에 다른 아이템이 들어온 경우는 못 잡았다).
+- **B2** 개별 판매 · 분해에 확인창(`itemConfirmOverlay`, `BulkSell.confirmOverlay`와 같은 구조) 신설 - 영웅 등급 이상(`S.isDismantleEligibleGrade`, 분해 대상 문턱과 동일)만 뜬다. 분해는 애초에 영웅 이상만 되므로 **분해는 항상** 확인창을 거치고, 판매는 **영웅 이상일 때만** 거친다(일반 · 희귀 개별 판매는 선택 1클릭 + 판매 1클릭 그대로, 확인창 없음). 확인 · 취소 버튼은 항상 44 × 44(폰 요구 터치 크기 그대로 PC에도 적용 - 별도 폰 분기 불필요). 잠긴 아이템은 버튼 자체가 비활성이라(`sellButton.Active = item.locked and false or true` 등, 기존 로직) 이 핸들러에 아예 도달하지 않는다 - "잠금 장비 확인창" 분기는 코드상 도달 불가능이라 만들지 않았다(만들면 죽은 코드).
+- **B3(검증 상태)** 코드 리뷰로 로직 확인(위 B1 · B2, 기존에 실측 검증된 `BulkSell.confirmOverlay` 패턴과 구조 동일) + Play 1(S21-0(가)(나) 자동 검증)로 관련 서버 경로(`PlayerProfile.sellItem`) 무회귀 확인. **실제 마우스 연타 · 확인창 클릭은 이번 세션에서 실측하지 못했다** - Studio MCP로 세 가지 방법(①`execute_luau`로 직접 아이템 지급 - `require`가 라이브 모듈과 분리된 사본을 만들어 실제 프로필을 못 건드림, ②채팅 `TextChannel:SendAsync`로 `/gg fillbag` - 응답 없이 걸림, ③실제 키보드로 채팅 입력 - "CoreGUI has keyboard focus"로 거부)를 시도했으나 전부 막혔다. 아래 [9]에 사람 확인 항목으로 남긴다.
+
+#### [3] C. 정리
+
+- **C1** `docs/sonnet/COMMON.md` §1에 영구 규칙 2줄 추가: "새 저장 필드는 `snapshotForDevTools` 백업 대상에 반드시 넣는다"(S20e에서 `hints` 필드 누락 사고 재발 방지) · "수치 계산 결과는 sanitize 출구를 거친다"(이번 세션 A2). `python docs/sonnet/_build.py`로 세션 파일 27개(S01 ~ S21) 갱신.
+- **C2** 개발자 로그 · 검증 라벨의 옛 직업 이름(대검 · 쌍검 · 활 · 힐러) → 새 이름(검사 · 도적 · 궁수 · 치유사, `ClassData.lua` `displayName`과 통일). `print`/`warn`/`reply`/`r.check`/`r.section` 문자열만 대상으로 했다(설계 근거를 적은 주석은 손대지 않음 - 범위 밖). `server/BalanceDecisionVerify.lua` · `server/ShieldVerify.lua` · `server/DevTools.server.lua` · `server/EnhanceEffectVerify.lua` · `server/SkillServer.server.lua` 5개 파일, 26줄(사용자가 말한 "34개"와 정확히 안 맞는다 - 라벨 문맥(호출부)만 골라 바꿨고 설계 코멘트는 뺐다, 아래 [10] 참고).
+
+#### [4] D. 읽기 전용 확인(수정 금지 - 전부 보고만)
+
+**D1. 보스 드랍 itemLevel 기준** [코드] - `server/CombatResolution.lua:113`: `local dropStage = isBoss and monsterData.stageNumber or recipientStage`. 보스는 **보스 스테이지**(파티 전원 동일값) 기준이다 - 리더의 최고 스테이지도, 받는 사람 자신의 최고 스테이지도 아니다. 무작위 폭은 있지만 **±2가 아니다** - `shared/Loot.lua` `rollItemLevel(bossStage, ArmorData.bossItemLevelDelta)`, `bossItemLevelDelta`(`shared/data/ArmorData.lua:107-111`)는 `{0,+1,+2}` 가중치 3:2:1(평균 +0.67, **음수 없음**)이다. 일반 잡몹 드랍만 `itemLevelDelta`(±2 대칭, 가중치 1:2:3:2:1)를 쓴다. **사용자 기대("그 보스 스테이지 ±2")와 다르다** - 보스는 절대 낮게 안 나오고(0 이상만), 폭도 ±2가 아니라 0~+2다.
+
+**D2. 치유사 보스 보상 자격(설계 데이터)** - 보상 자격은 데미지 10% 문턱 하나만 쓴다(`server/CombatResolution.lua`, `shared/data/CombatConfig.lua:103` `contributionRewardThreshold = 0.10`) - 이번 세션에서 바꾸지 않았다. 아래는 그 문턱을 치유모드 치유사가 넘을 수 있는지 판단할 **설계 데이터**다(Studio 실측, `BalanceDecisionVerify.lua`/`ShieldVerify.lua` 기존 검증 블록의 실제 출력 - 앵커: 레벨 100 · 등급 0 · +0강 · 4직업 동일 장비).
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 딜링모드(100% 가동) DPS | 검사 615.4 / 도적 812.4 / 궁수 789.3 / **치유사 948.5** | `BalanceDecisionVerify.lua` `anchorRotationUnits` 실측(S13(가) 로그) |
+| r(딜링모드) = 치유사 ÷ 검사 | **1.5412** | 위 값 그대로 |
+| r(치유모드, 필드 기준) | **0.9236**(치유사 실효 568.4 = 948.5 × uptime 0.5972) | `uptime` = `BalanceSim.simulateHealerCycle({hitsPerSecond=0.25, hitRatio=0.1026})`(S13 앵커 시나리오 - [가정]: 초당 피격 0.25회 · 피해 10.26%, `PartyConfig` 튜닝 당시 실측치 재사용) |
+| r(치유모드, 보스전 딜러3+치유사1 기준) | **0.410**(= 1.5412 × 0.266, `치유사 전투 비율` 0.266) | `ShieldVerify.lua` `PartyShieldSim.run`(보스전 · 회복 0 시나리오, [가정]: 딜러 항상 전투 중·안 죽음, S13b(가) 로그) |
+
+파티 구성별 치유사 데미지 비중 = r ÷ (딜러 수 + r):
+
+| 구성 | r(필드) | 비중(필드) | O/X(≥10%) | r(보스전) | 비중(보스전) | O/X |
+|---|---|---|---|---|---|---|
+| 2인(딜러1+치유사1) | 0.9236 | 48.0% | O | [없음 - 2인 보스전 미측정] | | |
+| 3인(딜러2+치유사1) | 0.9236 | 31.6% | O | [없음 - 3인 보스전 미측정] | | |
+| 4인(딜러3+치유사1) | 0.9236 | 23.5% | O | 0.410 | **12.0%** | O(문턱에 근접) |
+
+기준선(4인 r≥0.333 · 3인 r≥0.222 · 2인 r≥0.111) 대비 필드 기준 r=0.9236은 전부 O(넉넉히 초과). 목표 앵커 대비:
+- 치유모드 r ≥ 0.35~0.40: 필드 0.9236 → **O**(목표의 2.3~2.6배) · 보스전(4인) 0.410 → **O**(목표 상단과 거의 같음, 근소).
+- 딜링모드 ≤ 대검 × 0.85~0.9: 실측 948.5 = 검사(615.4)의 **154.1%** → **X**(목표 상한의 약 1.7 ~ 1.8배 - 딜링모드 100% 가동 치유사가 가장 강한 딜러(도적 812.4)보다도 세다). 이 값은 이번 세션 전부터 있던 기존 수치이고(S13(가) 앵커, 본문에 대한 별도 합격 기준이 없었다), 이번 세션이 바꾸지 않았다.
+
+가장 중요한 발견: **보스전 4인 구성(딜러3+치유사1)의 치유사 데미지 비중은 12.0%로 10% 문턱에 근접**해 있다 - 필드 그라인딩(23.5%)보다 훨씬 여유가 적다. 다만 이건 `PartyShieldSim`의 특정 가정(딜러 항상 전투 중, 특정 피격 빈도) 아래의 값이라 실제 보스 패턴 · 파티 숙련도에 따라 달라질 수 있다([가정] 필요).
+
+보석 · 옵션이 딜러 DPS와 치유모드 DPS에서 차지하는 비율(없음 / 평균 / 상위 3단계): **[없음]** - 격자 계산(등급 × itemLevel × 직업 조합)에 다층 가정이 필요해 이번 세션에서 계산하지 않았다(억지로 채우면 근거 없는 표가 된다는 원칙, S21a 감사 §6-2와 같은 판단).
+
+치유모드 공격에 적용되지 않는 딜 옵션 목록 [코드]:
+- **공격력%**(`attackPercent`) - 전혀 적용 안 됨. 치유량 공식 자체에 공격력 항이 없다: `baseHeal = maxHp * def.healPercentOfMaxHp * healingPower`(`server/HealCast.lua:56`).
+- **치명타 확률 · 피해**(`crit` 축) - 전혀 적용 안 됨. `HealCast.rollCrit`(`server/HealCast.lua:39-40`)이 `PlayerCombat.calcDamage(baseHeal, classId)`를 **critRateBonus 없이** 불러 옵션이 붙인 치명 확률 보너스가 반영되지 않고, 치명타 배율도 `class.critDmg`(옵션 보너스 포함)가 아니라 **고정** `def.critHealMultiplier`(2배, `server/HealCast.lua:47-48` 주석 "class.critDmg를 그대로 썼다면 힐러 기준 1.8배가 나와 PRD 수치와 어긋난다")로 대체된다.
+- **공속%**(`speedPercent`) - 전혀 적용 안 됨. 힐 쿨다운은 공속%이 아니라 **전용** `skill_healer_Q` 옵션(`OptionData.lua:67`, baseValue -0.30 · cap 0.50)만 줄인다(`server/SkillServer.server.lua:490`).
+- 반대로 **딜링모드(E) 공격은 위 셋 다 정상 적용**된다 - `HealerDealingMode.server.lua` 주석 "평타 배율 적용은 여기서 하지 않는다 - `AttackServer.server.lua`가 attackMultiplier를 직접 읽는다"가 명시하듯 일반 직업과 같은 `AttackServer` 평타 경로를 그대로 타기 때문.
+
+계산만(수정 금지) - 치유모드 r을 0.35 이상으로 만드는 데 필요한 값: **이미 초과 달성**(필드 기준 r=0.9236, 보스전 4인 기준 r=0.410 - 둘 다 0.35 이상)이라 (가) 치유모드 공격 계수 배율도, (나) 치유모드 전용 보석 계수 m도, (다) 혼합 예도 **필요 없다**(최소 배율 ≤ 1.0). 딜링모드는 이 두 계수가 치유모드에만 걸리므로 정의상 변화 없음(948.5 그대로) - 계산할 필요조차 없다.
+
+현재 코드에서 10% 미만 치유사가 보스 보상을 못 받는지 [코드]: **그렇다.** `server/CombatResolution.lua`의 `handleBossDeath`가 `contributions[member] ≥ CombatConfig.contributionRewardThreshold(0.10)`만 통과시킨다(`shared/data/CombatConfig.lua:103`) - 회복 · 쉴드 · 버프는 기여도에 안 들어간다(S21a 감사 §5-2 재확인, 코드 안 바꿈).
+
+**D3. 다른 사냥 구역 · 스테이지의 파티원이 받는 파티 보상** [코드] - **경험치만** 있다. `server/PlayerProfile.lua:378-380` `getExpGainMultiplier` → `PartyState.getExpBonus`(`server/PartyState.lua:121-130`)는 `#PartyState.getMemberPlayers(party)`(파티 인원수)만 본다 - **거리 · 위치 조건이 코드에 없다**(`grep Distance PartyState.lua` 0건). 인원수별 +10/15/20%(`PartyConfig.expBonusByMemberCount`)가 파티원이 서로 다른 스테이지 · 사냥 구역에 있어도 그대로 적용된다. **골드 · 드랍에는 파티 보너스 자체가 없다**(`server/CombatResolution.lua`에서 `PartyState`는 알림(`notify`) 용도로만 쓰이고 보상 계산에는 안 쓰인다) - 골드 · 드랍은 순수히 "내가 낸 데미지 ÷ 내 스테이지 기준 몬스터 HP"만 본다(S21a §5-2).
+
+**D4. 유저 간 아이템 · 골드 이전 수단** [코드 + 없음] - **없다.** 거래 · 선물 · 우편 시스템은 코드에 0건(`client/hud/RequestBanner.lua:1`의 "앞으로는 ... 거래도 같은 배너다"는 **미구현 계획 주석**일 뿐). 바닥 드랍은 `ItemDropState.ownerId`(`server/ItemDropState.lua:6,11,25`)로 잠겨 있어 **주운 본인만** 집을 수 있다(`server/ItemDropServer.server.lua:54-56` `getOwnerId` 검사) - 남이 떨어뜨린 아이템을 줍는 경로 자체가 없다.
+
+**D5. 태초 드랍 "선택지"** - S21a 감사(§4-1 · §4-2 · §5-1)에서 이미 대부분 확인됐다. 이번 세션은 태초(primordial) 확률표를 추가로 뽑았다.
+
+| tier | 종 | normal | rare | epic | legendary | relic | ancient | **primordial** |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 슬라임 | 90% | 10% | - | - | - | - | **0%** |
+| 2 | 고블린 | 70% | 27% | 3% | - | - | - | **0%** |
+| 3 | 오크 | 45% | 40% | 14% | 1% | - | - | **0%** |
+| 4 | 트롤 | 20% | 40% | 30% | 9% | 1% | - | **0%** |
+| 5 | 골렘 | 5% | 25% | 40% | 25% | 4.5% | 0.5% | **0%** |
+| 6 | 드래곤 | - | 10% | 30% | 40% | 18% | 1.9% | **0.1%** |
+
+(`shared/data/MonsterData.lua:43-50` `dropGradeTableByTier`. 보스 확정 드랍은 별도: 첫 클리어 · 환생0 = tier6 한 단계 상향(태초 2%, `bossFirstClearUpgradedGradeTable`) · 환생1+ = tier6 그대로(태초 0.1%) · 재도전 확정 드랍은 tier1(태초 0%).) **태초는 tier6(드래곤) 구역에서만 나온다** - tier1~5는 확률 0%.
+
+- itemLevel 결정: 잡몹 = `recipientStage ± 2`(대칭, `shared/Loot.lua:44-46,95-97`) · 보스 = `bossStage + {0,+1,+2}`(D1과 동일 근거) - **몬스터 종류가 아니라 "잡은 사람 자신의 스테이지"(또는 보스 스테이지)만 본다.**
+- 같은 몬스터 종이 여러 레벨로 존재하는 구조: **없다.** `WorldConfig.lua:62-75`가 맵 9개 구역을 tier1~6 + 강화소 + 리스폰 + 커뮤니티로 1:1 고정 배치하고, `MonsterData.TIER_INFO`(`shared/data/MonsterData.lua:112-119`)도 tier마다 종 하나씩만 고정이다 - "몬스터 레벨"이라는 별도 필드 자체가 없다(effectiveMaxHp는 몬스터 인스턴스가 아니라 **공격자 자신의 스테이지**로 매번 다시 계산되는 값 - S21a §5-2).
+- `Option.levelFactor` 125 동결: `shared/Option.lua:22-34` `f(L) = (1+0.06×(min(L,125)-1)) / (1+0.06×99)`.
+
+  | itemLevel | levelFactor | 태초 `attackPercent` 옵션(min/mid/max) |
+  |---|---|---|
+  | 1 | 0.1441 | 0.038 / 0.043 / 0.049 |
+  | 14 | 0.2565 | 0.067 / 0.077 / 0.087 |
+  | 125 | 1.2161 | 0.319 / 0.365 / 0.410 |
+  | 500 | 1.2161(동일) | 0.319 / 0.365 / 0.410(동일) |
+
+- 결론(한 줄): **설계 없음.** tier(종)와 몬스터 레벨은 코드에서 아예 분리돼 있지 않다(종=tier 1:1 고정) - "낮은 레벨 고티어 몹 사냥" 자체가 성립하지 않는 개념이라 지배 전략 유불리를 판정할 대상이 없다(S21a §4-1 "설계 없음" 재확인).
+
+#### [5] 합격 기준
+
+| # | 항목 | 결과 | 근거 |
+|---|---|---|---|
+| 1 | A1 무한 루프 없음 · 표시 문자열 · 정상값 불변 | **O** | S21-0(가) 4항목 |
+| 2 | A2 sanitize 적용 지점 3종(스탯 · 피해 · 보상) | **O** | 코드 리뷰 + S21-0(가) Sanitize.number 단위 검사 + 동반 S13/S13b 무회귀 |
+| 3 | A3 저장 직전 NaN·inf만 되돌리고 나머지 정상 저장 | **O** | S21-0(나) gold NaN → 저장 성공 · 되돌림 · DataStore 재확인 |
+| 4 | A4 safeStageCap 계산값 · 일반 이동만 차단 · `/gg stage`는 경고만 | **O** | S21-0(가) 경계 2항목 + 코드 리뷰(StageServer · DevTools) |
+| 6 | A6 BalanceSim가 PlayerDamage와 일치(2448·2500·3000) | **O** | S21-0(가) 3항목 |
+| 7 | B1 선택 해제로 index 밀림 방지 | **△(코드 리뷰 O, 실제 클릭 미확인)** | 위 B3 |
+| 8 | B2 영웅+ 확인창, 일반·희귀 속도 유지 | **△(코드 리뷰 O, 실제 클릭 미확인)** | 위 B3 |
+| 9 | C1 COMMON.md 규칙 2줄 + 세션 파일 27개 갱신 | **O** | `git diff --stat` |
+| 10 | C2 옛 직업 이름 → 새 이름(로그 라벨) | **O(26줄 - "34개"와 불일치, [10] 참고)** | 5개 파일 diff |
+| 11 | 회귀 없음(동반 실행 블록) | **O** | S13·S13b·29-1·27-4·저장 이관 체인 전부 기존과 동일(기존 X 2건 불변) |
+
+#### [6] 사람이 확인할 것
+
+1. **판매 · 분해 버튼 실제 마우스 연타(B3)** - 일반 등급 아이템으로 빠르게 5번 클릭 → 1개만 팔리는지, 영웅 등급 아이템으로 확인창이 뜨는지 · 확인창 버튼이 폰 폭에서 손가락으로 눌리는지. 이번 세션은 Studio MCP 제약으로 실측 못했다.
+2. A4 `safeStageCap`(4738) 근처에서 실제 스테이지 이동 UI가 "현재 도달 가능한 최고 스테이지입니다" 문구를 제대로 보여주는지(코드 리뷰만 했다 - 실제 그 스테이지까지 도달하려면 `/gg stage`로 강제해야 해서 화면 확인은 사람 몫으로 남긴다).
+
+#### [7] 미결
+
+1. **C2 "34개"와 실제 변경 26줄의 차이** - 사용자가 기억한 숫자와 다르다. 이번 세션은 `print`/`warn`/`reply`/`r.check`/`r.section`(실행 시 콘솔에 찍히는 라벨)만 대상으로 했고, 같은 단어가 들어간 설계 코멘트(주석)는 범위 밖으로 보고 손대지 않았다 - 정확히 어떤 34곳을 가리켰는지는 이 세션에서 확인할 근거가 없다. 남은 곳이 있다면 알려주면 마저 고친다.
+2. **B3 실제 클릭 검증 미완** - 위 [2] B3 참고. Fable 또는 다음 세션에서 사람이 직접 확인하거나, Studio MCP의 다른 우회 경로가 생기면 마저 한다.
+3. **D2 "보석 · 옵션이 딜러/치유사 DPS에서 차지하는 비율(단계별)"** - [없음]으로 남김(다층 가정 필요, 위 [4] 참고). 필요하면 별도 세션에서 가정을 명시적으로 받아 계산한다.
+4. **D2 보스전 2 · 3인 구성의 치유사 전투 비율 미측정** - `ShieldVerify.lua`의 `PartyShieldSim` 기존 시나리오가 4인(딜러3+치유사1) 위주였다 - 2 · 3인 보스전 조합은 이번 세션에서 실측하지 않았다.
+5. Fable로 넘길 D5 결정(S21a §6번과 동일, 재인용): 보석 레벨 옵션 곡선 재설계(`Option.levelFactor` 125 동결).
+
+#### [8] 임의 결정(지시에 없어서 스스로 정한 것)
+
+1. **-inf 표시** - 지시는 "inf → ∞"만 명시했다. -inf는 대칭으로 `"-∞"`를 썼다(부호를 지우면 안 된다고 판단).
+2. **safeStageCap 기준 = "boss4 HP가 1e300을 처음 넘는 스테이지"** - 감사가 남긴 7개 지표(잡몹 HP·공격력·골드·경험치·보스 HP 1인·4인·최대체력 보너스) 중 double 붕괴(§1-2)가 가장 먼저 오는 지표(보스 HP 4인, 4,871)와 순서가 같다 - 가장 보수적인(가장 먼저 깨지는) 지표를 기준으로 잡았다.
+3. **A3 sanitizeForSave의 되돌림 기준값 = UpdateAsync의 `old`**(DataStore에 지금 저장된 값) - "마지막 정상값"을 프로필 로드 시점 스냅샷이 아니라 저장 시점의 DataStore 값으로 해석했다(재시도 · 동시 접속에도 항상 최신 정상값을 참조하게 된다).
+4. **B2 확인창 문턱 = 분해 가능 등급과 동일(영웅 이상)** - 지시가 별도 문턱을 안 줬고, 코드에 이미 있는 `S.isDismantleEligibleGrade`(영웅 이상)를 그대로 재사용했다(새 상수를 안 만든다는 COMMON.md 원칙).
+5. **B2 "잠금 장비 확인창"은 만들지 않았다** - 잠긴 아이템은 이미 판매 · 분해 버튼 자체가 비활성(`Active=false`)이라 그 경로에 확인창을 추가해도 죽은 코드가 된다(위 [2] B2 참고).
