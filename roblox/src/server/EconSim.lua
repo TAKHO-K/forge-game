@@ -50,6 +50,7 @@ end
 
 -- 표 값 몇 개를 잠깐 바꾸고 fn을 부른 뒤 되돌린다. fn 안에서 양보(task.wait)하면 안 된다(위 모듈 주석).
 function EconSim.withOverrides(whatIf, fn, ...)
+	assert(EconSim.isAllowed(), "EconSim: Studio · DevToolsConfig.econSim 전용")
 	whatIf = whatIf or {}
 	local restore = {}
 	local function set(tbl, key, value)
@@ -153,9 +154,12 @@ function EconSim.maxHpPerAtk(loadout, seconds)
 	if cached then
 		return cached
 	end
+	assert(loadout.atk > 0 and loadout.atk < math.huge, "EconSim.maxHpPerAtk: atk가 유한한 양수가 아니다")
 	local lo, hi = 0, 1
-	while EconSim.killSeconds(loadout, hi * loadout.atk, seconds) <= seconds do
+	local grow = 0
+	while EconSim.killSeconds(loadout, hi * loadout.atk, seconds) <= seconds and grow < 60 do
 		lo, hi = hi, hi * 4
+		grow += 1
 	end
 	for _ = 1, 40 do
 		local mid = (lo + hi) / 2
@@ -227,6 +231,7 @@ end
 -- 사본에서 활 속사 배율(castSelfBuff는 ClassData.critRate만 읽는다 - 게임에서 옵션 치명은 속사 배율을 안 올린다)이 달라지지 않게
 -- SkillData.bow.Q.attackSpeedBase를 같은 몫만큼 낮춰 둔다(속사 배율 = min(상한, base + 치확 × 계수)가 원본과 같다).
 function EconSim.rotationDamage(spec, gems, durationSeconds)
+	assert(EconSim.isAllowed(), "EconSim: Studio · DevToolsConfig.econSim 전용")
 	local loadoutSpec = table.clone(spec)
 	loadoutSpec.gems = gems
 	local base = BalanceSim.simulateCombat(BalanceSim.buildLoadout(loadoutSpec), { useSkills = true, durationSeconds = durationSeconds or 60 })
@@ -627,9 +632,16 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	local bossSecondsBefore, bossGoldBefore = state.bossSeconds, state.bossGold
 	local bossExpBefore = state.bossExp
 	local loadout, hunt, tier, expPerKill, perKillSeconds, goldPerKill, killUnits
+	local need = nil
 	local function refresh()
 		loadout = loadoutFor(state)
+		local expBeforeBoss = state.exp
 		fightBosses(state, profile, loadout, run)
+		-- 레벨 도중(장비가 바뀐 뒤) 깬 보스의 경험치는 이번 레벨의 남은 필요량에서 뺀다(리뷰 지적 1 - 전엔 끝에서 state.exp = -need가 덮어써 사라졌다).
+		if need then
+			need -= state.exp - expBeforeBoss
+			state.exp = expBeforeBoss
+		end
 		hunt = chooseHunt(loadout, profile, math.max(1, state.reach - 1), state.gearMode and { armor = state.gear.armor }) -- 보스 스테이지(state.reach)는 아레나라 잡몹이 없다
 		tier = tierData(hunt.tier)
 		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * run.expMult
@@ -642,7 +654,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	if hunt.killSeconds == math.huge then
 		return ("레벨 %d(환생 %d)에서 스테이지 %d의 tier%d 몬스터를 600초 안에 못 잡는다"):format(state.level, state.rebirth, hunt.stage, hunt.tier)
 	end
-	local need = CharacterLevel.getExpToNextLevel(state.level) - state.exp
+	need = CharacterLevel.getExpToNextLevel(state.level) - state.exp
 	local checkSeconds = profile.gearCheckMinutes * 60
 	local seconds, kills, gold, exp, replaced = 0, 0, 0, 0, 0
 	local firstStage = hunt.stage

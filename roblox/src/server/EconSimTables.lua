@@ -159,11 +159,17 @@ function EconSimTables.healer(whatIf)
 	result.fieldUptime = BalanceSim.simulateHealerCycle({ hitsPerSecond = scenario.hitsPerSecond, hitRatio = scenario.hitRatio }).uptime
 	local fight = result.fightRatio.heal
 
+	local mGainMemo = {}
 	local healModeFactor = function(tier, a, m)
 		local own = result.tiers[tier.id].healerOwnGain
 		local mGain = 1
 		if m and m > 0 then
-			mGain = EconSim.rotationDamage(anchorSpec("healer"), tierGems(tier, "attackPercent", m / attackBase)) / healerBase
+			local key = ("%s|%.6f"):format(tier.id, m)
+			mGain = mGainMemo[key]
+			if not mGain then
+				mGain = EconSim.rotationDamage(anchorSpec("healer"), tierGems(tier, "attackPercent", m / attackBase)) / healerBase
+				mGainMemo[key] = mGain
+			end
 		end
 		return (1 + (a or 0) * (own - 1)) * mGain
 	end

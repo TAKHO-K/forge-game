@@ -62,9 +62,6 @@ local function newWriter(runId)
 		print(("[ECON] BEGIN %s"):format(header))
 		for index, text in ipairs(writer.md) do
 			print(("[ECONMD] %s"):format(text))
-			if index % 200 == 0 then
-				task.wait() -- 출력 창 버퍼가 한 틱에 넘치지 않게
-			end
 		end
 		for _, tableName in ipairs(writer.csvOrder) do
 			for _, text in ipairs(writer.csv[tableName]) do
@@ -215,7 +212,7 @@ local function writeE5(w, rows, whatIf)
 	w.line("")
 	w.line("현재 게임(tier1 ~ 5 태초 0%)에서는 B의 태초가 0이라 모든 칸이 A 우세(∞)다 - 아래 배수 표는 \"B에도 태초를 준다면\"의 what-if다.")
 	w.line("")
-	w.row("e5", { "label", "player_level", "delta", "stage_a", "stage_b", "freeze", "multiplier", "p_a", "p_b", "value_a", "value_b", "kill_a", "kill_b", "ratio", "gold_ratio", "exp_ratio" })
+	w.row("e5", { "label", "player_level", "delta", "stage_a", "stage_b", "freeze", "multiplier", "p_a", "p_b", "value_a", "value_b", "kill_a", "kill_b", "ratio", "break_even", "gold_ratio", "exp_ratio" })
 	local custom = whatIf and whatIf.primordialByTier
 	local multipliers = custom and { "표" } or cfg.probabilityMultipliers
 	local groups = {}
@@ -455,7 +452,7 @@ function EconSimReport.run(opts)
 	w.line("")
 	writeProfiles(w, profileIds)
 	writeE3(w, runs, profileIds)
-	writeE4(w, runs, profileIds, enhanceTable)
+	EconSim.withOverrides(whatIf, writeE4, w, runs, profileIds, enhanceTable) -- 강화 1회 비용(Enhance.getCost)도 what-if(enhanceCostScale)를 따른다(리뷰 지적 3)
 	writeE5(w, primordial, whatIf)
 	writeE6(w, healer)
 	writeSamples(w, samples)
