@@ -921,12 +921,13 @@ SaveSystem.defaultProfile = defaultProfile
 SaveSystem.migrate = migrate
 SaveSystem.isValidProfile = isValidProfile
 
--- S21-0 A3: 저장 직전 NaN·inf 오염 차단. DataStore는 NaN·Infinity를 저장하지 못한다(실측:
--- UpdateAsync 콜백이 내부 직렬화 단계에서 에러를 던져 그 프로필 전체가 저장 실패한다 -
--- 오염된 필드 하나 때문에 정상 필드까지 전부 롤백되는 게 "오염 필드만 버리는" 것보다
--- 훨씬 나쁘다, PRD 20.NN [3] 참고). UpdateAsync 콜백의 old(그 키의 지금 DataStore
--- 저장값)가 있으면 그 자리의 마지막 정상값으로 되돌리고, old에도 없으면(신규 필드 등) 0으로
--- 둔다. 경고는 필드 경로당 1회.
+-- S21-0 A3: 저장 직전 NaN·inf 오염 차단. 실측(S21-0(나), Studio DataStore) - UpdateAsync에
+-- NaN·inf가 든 테이블을 넘겨도 에러 없이 "성공"하고 다시 읽으면 그 값 그대로 돌아온다(저장
+-- 실패도 값 변형도 아니다 - 그대로 저장된다). 즉 막지 않으면 NaN·inf가 DataStore에 영구히
+-- 남는다(실제 배포 서버의 클라우드 DataStore 동작까지는 이번 감사에서 확인 못함 - Studio
+-- 안에서만 테스트할 수 있었다). UpdateAsync 콜백의 old(그 키의 지금 DataStore 저장값)가
+-- 있으면 그 자리의 마지막 정상값으로 되돌리고, old에도 없으면(신규 필드 등) 0으로 둔다.
+-- 경고는 필드 경로당 1회.
 local warnedSaveFields = {}
 local function warnSaveField(path, value)
 	if warnedSaveFields[path] then
