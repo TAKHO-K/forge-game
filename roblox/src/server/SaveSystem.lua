@@ -920,6 +920,42 @@ end
 SaveSystem.defaultProfile = defaultProfile
 SaveSystem.migrate = migrate
 SaveSystem.isValidProfile = isValidProfile
+
+-- S21-0 A3: 저장 직전 NaN·inf 오염 차단. DataStore는 NaN·Infinity를 저장하지 못한다(실측:
+-- UpdateAsync 콜백이 내부 직렬화 단계에서 에러를 던져 그 프로필 전체가 저장 실패한다 -
+-- 오염된 필드 하나 때문에 정상 필드까지 전부 롤백되는 게 "오염 필드만 버리는" 것보다
+-- 훨씬 나쁘다, PRD 20.NN [3] 참고). UpdateAsync 콜백의 old(그 키의 지금 DataStore
+-- 저장값)가 있으면 그 자리의 마지막 정상값으로 되돌리고, old에도 없으면(신규 필드 등) 0으로
+-- 둔다. 경고는 필드 경로당 1회.
+local warnedSaveFields = {}
+local function warnSaveField(path, value)
+	if warnedSaveFields[path] then
+		return
+	end
+	warnedSaveFields[path] = true
+	warn(("[SaveSystem] 저장 직전 비정상 값(%s) 발견 - %s 필드를 이전 값으로 되돌림"):format(tostring(value), path))
+end
+
+local function isBadNumber(value)
+	return value ~= value or math.abs(value) == math.huge
+end
+
+local function sanitizeForSave(node, oldNode, path)
+	for key, value in pairs(node) do
+		local fieldPath = path .. "." .. tostring(key)
+		if type(value) == "number" and isBadNumber(value) then
+			local fallback = 0
+			if type(oldNode) == "table" and type(oldNode[key]) == "number" and not isBadNumber(oldNode[key]) then
+				fallback = oldNode[key]
+			end
+			warnSaveField(fieldPath, value)
+			node[key] = fallback
+		elseif type(value) == "table" then
+			sanitizeForSave(value, type(oldNode) == "table" and oldNode[key] or nil, fieldPath)
+		end
+	end
+end
+SaveSystem.sanitizeForSave = sanitizeForSave -- 검증(S21-0 (나))이 직접 부른다.
 -- 25-1: DevTools "/gg curve migrate" 자체검증 전용(옛 곡선 값을 합성해 migrate에 넣는다).
 SaveSystem.legacyCurveV21 = LegacyCurveV21
 
@@ -980,6 +1016,7 @@ function SaveSystem.saveProfile(player, profile)
 				if old ~= nil and type(old.savedAt) == "number" and old.savedAt > baselineSavedAt then
 					return nil -- 콜백이 nil을 돌려주면 UpdateAsync가 쓰기를 취소한다(로블록스 API 규칙)
 				end
+				sanitizeForSave(profile, old, "profile") -- S21-0 A3: NaN·inf가 저장 전체를 실패시키기 전에 그 필드만 되돌린다.
 				profile.savedAt = newSavedAt
 				profile.version = SaveConfig.saveVersion
 				return profile

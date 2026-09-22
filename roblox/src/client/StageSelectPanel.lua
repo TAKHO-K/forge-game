@@ -47,6 +47,8 @@ local REASON_TEXT = {
 	party_not_leader = "보스 스테이지는 파티 리더만 열 수 있습니다",
 	party_blocked = "파티원 중 입장 불가한 사람이 있습니다",
 	vote_pending = "이미 진행 중인 투표가 있습니다",
+	-- S21-0 A4: 수치가 double 붕괴 구간에 들어가기 전 임시로 막는 안전 상한(InfiniteStageConfig.safeStageCap).
+	safe_cap = "현재 도달 가능한 최고 스테이지입니다",
 }
 
 local COLUMNS = 5

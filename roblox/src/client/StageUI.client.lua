@@ -174,6 +174,8 @@ stageMoveResult.OnClientEvent:Connect(function(payload)
 		warn("[forge-game] 스테이지 이동 거절됨 - 파티원 입장 불가: " .. table.concat(payload.blocked or {}, ", "))
 	elseif payload.reason == "vote_pending" then
 		warn("[forge-game] 스테이지 이동 거절됨 - 이미 진행 중인 투표가 있다")
+	elseif payload.reason == "safe_cap" then
+		warn("[forge-game] 스테이지 이동 거절됨 - 임시 안전 상한(InfiniteStageConfig.safeStageCap)")
 	else
 		warn("[forge-game] 스테이지 이동 거절됨 - 요청 범위를 벗어났다")
 	end

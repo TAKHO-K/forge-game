@@ -26,6 +26,8 @@ local PartyState = require(script.Parent.PartyState)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 -- 30-0 S11: 보스 도감 도장(purchases.bossCodex)의 키 검사(BossData.bosses의 id).
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
+-- S21-0 A2: 보상 계산 출구(NaN·inf 오염 차단).
+local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 
 local PlayerProfile = {}
 
@@ -213,7 +215,7 @@ function PlayerProfile.addGold(player, amount)
 	if not profile then
 		return
 	end
-	profile.gold += amount
+	profile.gold += Sanitize.number(amount, 0) -- S21-0 A2: 보상 계산 출구 - 오염된 보상은 이번만 0으로 건너뛴다
 	player:SetAttribute("Gold", profile.gold)
 end
 
@@ -391,7 +393,8 @@ function PlayerProfile.addCharacterExp(player, amount)
 		return nil, nil
 	end
 	local oldLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
-	classState.characterExp += amount * PlayerProfile.getExpGainMultiplier(player)
+	-- S21-0 A2: 보상 계산 출구.
+	classState.characterExp += Sanitize.number(amount * PlayerProfile.getExpGainMultiplier(player), 0)
 	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then

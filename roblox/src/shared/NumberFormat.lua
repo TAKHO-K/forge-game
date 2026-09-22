@@ -65,7 +65,37 @@ local function withCommas(n)
 	return (reversed:reverse():gsub("^,", ""))
 end
 
+-- S21-0 A1(docs/stage-scaling-audit.md §1-2 ⑤): scaled가 inf가 되면 `while scaled >= STEP`
+-- 루프가 끝나지 않는다(inf/1000도 inf). nan은 애초에 그 루프를 안 돌지만(`nan >= 1000`이
+-- 항상 false) `%.1f` 포맷터가 "nan" 문자열을 그대로 찍는다 - 둘 다 여기서 값을 보기도
+-- 전에 즉시 가로챈다. 경고는 호출 위치당(그 NumberFormat.format을 부른 코드 줄) 1회만.
+local warnedCallSites = {}
+local function warnOnce(kind, value)
+	-- level 1=warnOnce 자신, level 2=NumberFormat.format, level 3=format을 부른 코드.
+	local source, line = debug.info(3, "sl")
+	local key = (source or "?") .. ":" .. tostring(line)
+	if warnedCallSites[key] then
+		return
+	end
+	warnedCallSites[key] = true
+	warn(("[NumberFormat] %s 값 입력(%s:%s) - 화면에는 %s로 표시"):format(
+		kind, tostring(source), tostring(line), kind == "nan" and "\"—\"" or "\"∞\""))
+end
+
 function NumberFormat.format(value)
+	if value ~= value then
+		warnOnce("nan", value)
+		return "—"
+	end
+	if value == math.huge then
+		warnOnce("inf", value)
+		return "∞"
+	end
+	if value == -math.huge then
+		warnOnce("-inf", value)
+		return "-∞"
+	end
+
 	local n = math.floor(value)
 	if n < MIN_VALUE then
 		return withCommas(n)

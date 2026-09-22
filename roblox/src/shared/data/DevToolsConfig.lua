@@ -88,7 +88,12 @@ local config = {
 		--   S20e(나)(반경 밖 거절 · 이유 코드 · 플래그 · DataStore 왕복) · S20e(UI)(GemWorkshopCheck - 공방 창 · 마커 · 토스트 · 실제 요청 거절 · station 상호 닫힘 · 폰 치수) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈을 쓰는 옛 블록 =
 		--   S20c(가)(나)(UI)(GemEquip · GemActions · GemTab · GemHeader · GemSlotRows - S20c(나)는 far 항목이 "어디서나 성공"으로 바뀌었다) · S20d(UI)(GemTab 미리보기 · DetailSheet) · S20(UI)(GemTabCheck · 장비창) · S12b(UI)(장비창 글씨) ·
 		--   S12(UI)(PanelFitCheck - 새 station이 등록 창 전수에 들어간다) · S16(UI) · S17(UI)(Toast) · 26-2 · 26-3(PlayerProfile 옵션 · 리롤) + 저장 구조(SAVE_VERSION 30 · migrate · isValidProfile)를 쓰는 이관 블록 = S02(가) · S03(가) · S04(가) · S05(가) · S05b(가) · S11(가). S04(나)는 계속 제외.
-		current = { "S20e(가)", "S20e(나)", "S20e(UI)", "S20d(가)", "S20d(나)", "S20d(UI)", "S20c(가)", "S20c(나)", "S20c(UI)", "S20(UI)", "S12b(UI)", "S12(UI)", "S16(UI)", "S17(UI)", "26-2", "26-3", "S02(가)", "S03(가)", "S04(가)", "S05(가)", "S05b(가)", "S11(가)" },
+		-- S21-0(2026-09-23): 수치 안전장치(A1 NumberFormat · A2 Sanitize · A3 SaveSystem · A4 safeStageCap · A6 BalanceSim) +
+		-- 판매·분해 확인창(B, 클라 전용) - 이번 세션 블록 S21-0(가)(나) + 동반 실행(COMMON.md §3): 이 세션이 고친 모듈(PlayerCombat.getAttack·getDefense ·
+		-- PlayerDamage.computeHitDamage·applyHit(사실상 applyFinalDamage) · BalanceSim.getSurviveHits · StageServer(안전 상한 추가) · SaveSystem(sanitizeForSave))을 쓰는 옛 블록 =
+		-- S13(가)(나)(BalanceDecisionVerify - PlayerCombat·BalanceSim 앵커 DPS) · S13b(가)(나)(ShieldVerify - PlayerDamage·PlayerCombat·BalanceSim 쉴드 경로) ·
+		-- 29-1(BossMechanicsVerify - PlayerDamage.computeHitDamage 직접 호출) · 27-4(가)(나)(StageServer 파이프라인) · SaveSystem 이관 체인(S02(가)·S03(가)·S04(가)·S05(가)·S05b(가)·S11(가)).
+		current = { "S21-0(가)", "S21-0(나)", "S13(가)", "S13(나)", "S13b(가)", "S13b(나)", "29-1", "27-4(가)", "27-4(나)", "S02(가)", "S03(가)", "S04(가)", "S05(가)", "S05b(가)", "S11(가)" },
 	},
 }
 

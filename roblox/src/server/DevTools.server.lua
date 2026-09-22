@@ -27,6 +27,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
+local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig) -- S21-0 A4: /gg stage가 안전 상한을 넘기면 경고용.
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
@@ -1240,8 +1241,13 @@ local function handleCommand(player, args)
 		end
 	elseif sub == "stage" and tonumber(args[2]) then
 		ensureBackup(player)
-		applyStage(player, math.floor(tonumber(args[2])))
+		local stage = math.floor(tonumber(args[2]))
+		applyStage(player, stage)
 		reply(player, "무한 스테이지 " .. args[2] .. " 적용")
+		-- S21-0 A4: 이 명령은 안전 상한을 넘길 수 있다(측정용 - InfiniteStageConfig.safeStageCap 주석 참고) - 넘겼을 때만 경고.
+		if stage > InfiniteStageConfig.safeStageCap then
+			reply(player, ("경고: 임시 안전 상한(%d)을 넘었다 - 생존타수/보상 배율이 double 붕괴 구간에 가까워진다"):format(InfiniteStageConfig.safeStageCap))
+		end
 	elseif sub == "measure" then
 		measure(player, tonumber(args[2]))
 	elseif sub == "curve" and args[2] == "anchor" then
@@ -2253,10 +2259,10 @@ local function handleCommand(player, args)
 		local multiplier = 1 + b
 		local buff = BuffState.get(player, "healerBuff")
 		if buff then
-			reply(player, ("힐러 버프: b=%.4f(N/(N-1+r)-1, r=%.4f) → 최종피해 ×%.3f, 남은시간 %.1f초"):format(
+			reply(player, ("치유사 버프: b=%.4f(N/(N-1+r)-1, r=%.4f) → 최종피해 ×%.3f, 남은시간 %.1f초"):format(
 				b, r, buff.multiplier, buff.expiresAt - os.clock()))
 		else
-			reply(player, ("힐러 버프: b=%.4f(N/(N-1+r)-1, r=%.4f) → 최종피해 ×%.3f, 현재 비활성"):format(
+			reply(player, ("치유사 버프: b=%.4f(N/(N-1+r)-1, r=%.4f) → 최종피해 ×%.3f, 현재 비활성"):format(
 				b, r, multiplier))
 		end
 	elseif sub == "reset" then
@@ -2737,7 +2743,7 @@ if RunService:IsStudio() and verifyEnabled("27-1(가)") then
 		-- (딜링모드가 켜져 있는 동안의 순간 DPS는 옵션과 무관 - 소모가 줄어 가동 시간만 는다).
 		local dpsMultiplier = reducedResult.uptime / baselineResult.uptime
 		local dpsIncreasePercent = (dpsMultiplier - 1) * 100
-		print(("[27-1][A2] 힐러 DPS 환산: 가동률 배수 x%.4f -> DPS %+.1f%% (PRD 20.67 [8] 추정 '≈0.8, +30%% 안팎'과 대조 - 판단은 [16] 몫, 여기선 실측값만 보고)"):format(
+		print(("[27-1][A2] 치유사 DPS 환산: 가동률 배수 x%.4f -> DPS %+.1f%% (PRD 20.67 [8] 추정 '≈0.8, +30%% 안팎'과 대조 - 판단은 [16] 몫, 여기선 실측값만 보고)"):format(
 			dpsMultiplier, dpsIncreasePercent))
 		-- 상한(90%)에서의 참고값 - 8단계 [7] 상한표 대조용, 반영 여부는 판단 대상이 아니다.
 		local cappedBonus = -OptionData.options.skill_healer_E.cap
@@ -3299,6 +3305,7 @@ if RunService:IsStudio() then
 				{ "S20c(나)", function() require(script.Parent.GemFlowVerify).runLive(player, env) end }, -- S20c: 보석 장착 이유 코드 · 교체 규칙 · 미리 판정 = 서버(모듈은 여기서 require - 최상위 local을 아낀다)
 				{ "S20d(나)", function() require(script.Parent.ItemFlowVerify).runLive(player, env) end }, -- S20d: 장비 착용 · 해제 이유 코드 · 교체 · 가방 가득 참 · 미리 판정 = 서버
 				{ "S20e(나)", function() require(script.Parent.GemMerchantVerify).runLive(player, env) end }, -- S20e: 보석상인 반경 검사 · 이유 코드 · 안내 플래그 · 저장 왕복(모듈은 여기서 require)
+				{ "S21-0(나)", function() require(script.Parent.S21_0Verify).runLive(player, env) end }, -- S21-0: A3 - DataStore NaN·inf 처리 + 저장 직전 sanitize 왕복(모듈은 여기서 require)
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3532,6 +3539,17 @@ if RunService:IsStudio() and verifyEnabled("S20e(가)") then
 		local ok, err = pcall(require(script.Parent.GemMerchantVerify).runPure)
 		if not ok then
 			warn(("[S20e(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S21-0 자동 검증 블록(가) - NumberFormat · Sanitize · safeStageCap · BalanceSim 오버플로 수정(순수 함수) ═══
+-- 플레이어 불필요. (나)는 위 29-1 체인의 끝(S20e (나) 다음).
+if RunService:IsStudio() and verifyEnabled("S21-0(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.S21_0Verify).runPure)
+		if not ok then
+			warn(("[S21-0(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

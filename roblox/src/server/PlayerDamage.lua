@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local Loot = require(ReplicatedStorage.Shared.Loot)
+local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 local PlayerShield = require(script.Parent.PlayerShield)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -36,7 +37,9 @@ function PlayerDamage.computeHitDamage(attack, targetPlayer)
 	local defensePercentBonus = PlayerProfile.getDefensePercentBonus(targetPlayer)
 	local defense = classId and PlayerCombat.getDefense(classId, armorBonus, defensePercentBonus) or CombatConfig.playerDefense
 	local reduction = defense / (defense + CombatConfig.damageReductionAlpha * attack)
-	return attack * (1 - reduction)
+	-- S21-0 A2: 피해 계산 출구. 공격력·방어력이 둘 다 inf가 되면 reduction = inf/inf = NaN이라
+	-- 매 히트 HP가 영구히 NaN으로 고장 난다(PRD 감사 §1-2 ④) - 여기서 0 데미지로 끊는다.
+	return Sanitize.number(attack * (1 - reduction), 0)
 end
 
 -- 플레이어 HP를 깎는 유일한 통로(S13b) - "쉴드 흡수 → HP" 순서와 사망 처리를 여기서만 한다. HP를 직접 낮추는 다른 코드(PlayerState.setHp · Humanoid:TakeDamage ·
@@ -92,6 +95,9 @@ local function applyFinalDamage(targetPlayer, damage, label)
 			return 0
 		end
 	end
+	-- S21-0 A2: 실제로 HP를 깎기 직전의 마지막 출구(모든 피해 경로의 공통 지점) - 배율들이
+	-- 오염된 값과 곱해져도 여기서 한 번 더 끊는다.
+	damage = Sanitize.number(damage, 0)
 	-- 반환은 지금까지처럼 피해 하나(호출자들이 "피격이 있었나"로 읽는다) - 쉴드가 다 막아도 피격은 피격이다. 흡수량이 필요한 곳은 takeDamage를 직접 부른다.
 	return (PlayerDamage.takeDamage(targetPlayer, damage, { label = label }))
 end

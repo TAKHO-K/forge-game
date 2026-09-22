@@ -163,7 +163,7 @@ function EnhanceEffectVerify.runPure()
 		local bow = function(level)
 			return PlayerCombat.getAttackRange("bow", level)
 		end
-		r.check(("활: +14 = %.2f · +15 = %.2f · +19 = %.2f · +20 = %.2f · +25 = %.2f · 단계 없음 = %.2f(기대 15 · 19.5 · 19.5 · 24.0 · 24.0 · 15)"):format(bow(14), bow(15), bow(19), bow(20), bow(25), PlayerCombat.getAttackRange("bow")),
+		r.check(("궁수: +14 = %.2f · +15 = %.2f · +19 = %.2f · +20 = %.2f · +25 = %.2f · 단계 없음 = %.2f(기대 15 · 19.5 · 19.5 · 24.0 · 24.0 · 15)"):format(bow(14), bow(15), bow(19), bow(20), bow(25), PlayerCombat.getAttackRange("bow")),
 			near(bow(14), 15) and near(bow(15), 19.5) and near(bow(19), 19.5) and near(bow(20), 24.0) and near(bow(25), 24.0) and near(PlayerCombat.getAttackRange("bow"), 15))
 
 		local rangeSummary = {}
@@ -186,7 +186,7 @@ function EnhanceEffectVerify.runPure()
 		table.sort(rangeSummary)
 		r.check(("4직업 × +0 ~ +25: 표 값과 일치=%s · 전부 상한 24.6 이하=%s · 단계가 오르면 줄지 않음=%s (%s)"):format(tostring(allMatch), tostring(allInside), tostring(allMonotonic), table.concat(rangeSummary, " · ")),
 			allMatch and allInside and allMonotonic)
-		r.check(("백스텝샷(×2) × 4직업 × +0 ~ +25: 전부 24.6 이하=%s · 배율 1 = 버프 없음과 같음 · 활 +20 ×2 = %.2f(기대 24.6)"):format(tostring(buffInside), PlayerCombat.getBuffedAttackRange("bow", 2, 20)),
+		r.check(("백스텝샷(×2) × 4직업 × +0 ~ +25: 전부 24.6 이하=%s · 배율 1 = 버프 없음과 같음 · 궁수 +20 ×2 = %.2f(기대 24.6)"):format(tostring(buffInside), PlayerCombat.getBuffedAttackRange("bow", 2, 20)),
 			buffInside and near(PlayerCombat.getBuffedAttackRange("bow", 2, 20), 24.6) and near(PlayerCombat.getBuffedAttackRange("bow", 2, 0), 24.6))
 		local legacyOk = true
 		for _, classId in ipairs(ClassData.order) do

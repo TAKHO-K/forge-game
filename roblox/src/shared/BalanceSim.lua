@@ -165,9 +165,15 @@ end
 -- 같은 식이다 - 그 상수를 역산할 때 쓴 공식을 그대로 재사용해 이 도구와 그 상수가 항상
 -- 같은 정의를 쓰게 한다. incomingDamageMultiplier(선택, 기본 1) - 대검 E 채널링 중 "받는
 -- 피해 50% 감소"(PlayerState.getIncomingDamageMultiplier)를 넣어 볼 때 쓴다.
+-- S21-0 A6(docs/stage-scaling-audit.md Fable 목록 5번, 버그): 예전 식 `alpha*A*A/(D+alpha*A)`은
+-- A²를 직접 계산해 A 자신보다 훨씬 일찍(스테이지 ≈2,448) 오버플로했다(A > sqrt(1.7977e308))
+-- - 실제 게임(server/PlayerDamage.lua computeHitDamage)은 애초에 제곱을 만들지 않는다.
+-- 수학적으로 같은 식을 PlayerDamage와 같은 연산 순서(reduction 먼저, 그다음 A에 곱)로 바꿔
+-- 이 측정 도구도 게임과 같은 붕괴 지점(§1-2, 스테이지 ≈4,871부터)을 갖게 한다.
 function BalanceSim.getSurviveHits(loadout, monsterAttack, incomingDamageMultiplier)
 	local D, A, alpha = loadout.defense, monsterAttack, CombatConfig.damageReductionAlpha
-	local dmgPerHit = (alpha * A * A) / (D + alpha * A) * (incomingDamageMultiplier or 1)
+	local reduction = D / (D + alpha * A)
+	local dmgPerHit = A * (1 - reduction) * (incomingDamageMultiplier or 1)
 	return loadout.maxHp / dmgPerHit, dmgPerHit
 end
 

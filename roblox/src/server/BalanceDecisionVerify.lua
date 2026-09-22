@@ -69,16 +69,16 @@ function BalanceDecisionVerify.runPure()
 		for _, classId in ipairs({ "greatsword", "dualblade", "bow", "healer" }) do
 			dps[classId] = anchorRotationUnits(classId)
 		end
-		print(("[S13][가][측정] 앵커(레벨 100 · 등급 0) 60초 로테이션 총딜(atk-단위): 대검 %.1f · 쌍검 %.1f · 활 %.1f · 힐러(딜링모드 100%% 가동) %.1f"):format(
+		print(("[S13][가][측정] 앵커(레벨 100 · 등급 0) 60초 로테이션 총딜(atk-단위): 검사 %.1f · 도적 %.1f · 궁수 %.1f · 치유사(딜링모드 100%% 가동) %.1f"):format(
 			dps.greatsword, dps.dualblade, dps.bow, dps.healer))
-		r.check(("1 대검 %.1f(기대 615.5 ± 1%%) · 쌍검 %.1f(기대 812.4 ± 1%%) · 활 %.1f(기대 789.3 ± 1%%)"):format(dps.greatsword, dps.dualblade, dps.bow),
+		r.check(("1 검사 %.1f(기대 615.5 ± 1%%) · 도적 %.1f(기대 812.4 ± 1%%) · 궁수 %.1f(기대 789.3 ± 1%%)"):format(dps.greatsword, dps.dualblade, dps.bow),
 			near(dps.greatsword, 615.5, 615.5 * 0.01) and near(dps.dualblade, 812.4, 812.4 * 0.01) and near(dps.bow, 789.3, 789.3 * 0.01))
 		local ratio = dps.dualblade / dps.greatsword
-		r.check(("2 쌍검 ÷ 대검 = %.4f(기대 ≤ 1.322 - 1.32 규칙 + 허용 오차 0.002) ★진짜 합격 기준"):format(ratio), ratio <= 1.322)
-		r.check(("3 서열 쌍검 %.1f > 활 %.1f > 대검 %.1f ★진짜 합격 기준"):format(dps.dualblade, dps.bow, dps.greatsword), dps.dualblade > dps.bow and dps.bow > dps.greatsword)
+		r.check(("2 도적 ÷ 검사 = %.4f(기대 ≤ 1.322 - 1.32 규칙 + 허용 오차 0.002) ★진짜 합격 기준"):format(ratio), ratio <= 1.322)
+		r.check(("3 서열 도적 %.1f > 궁수 %.1f > 검사 %.1f ★진짜 합격 기준"):format(dps.dualblade, dps.bow, dps.greatsword), dps.dualblade > dps.bow and dps.bow > dps.greatsword)
 	end)
 
-	r.section("[4] 활 기준 앵커 · p · b 불변", function()
+	r.section("[4] 궁수 기준 앵커 · p · b 불변", function()
 		-- 처치 시간은 타수(정수)로 정해지는 계단 함수라 rec 스테이지(이분법이 찾은 경계)에서 정확히 2.5초가 나오지 않는다 - 경계 양쪽이 목표를 사이에 끼는지로 잰다.
 		local offset = BalanceSim.solveKillOffset()
 		local stage = BalanceAnchorConfig.referenceLevel + offset
@@ -89,7 +89,7 @@ function BalanceDecisionVerify.runPure()
 		local target = BalanceAnchorConfig.killTargetSeconds
 		local p = BossRules.partyHpExponent()
 		local b = PartyConfig.healerBuffFraction
-		r.check(("4 활 앵커(rec 스테이지 %.2f = 레벨 100 + 오프셋 %+.3f): 생존 %.3f타(기대 7 ± 0.02) · 처치(로테이션) 경계 %.3f초 < %.1f ≤ %.3f초(기대 경계가 목표를 낀다) · 오프셋 |%.3f| ≤ 0.1 · 보스 p %.4f(기대 0.4803 ± 0.001) · 힐러 b %.5f(기대 0.01289 ± 0.0001) - 전부 이 세션 전 문서값 그대로"):format(
+		r.check(("4 궁수 앵커(rec 스테이지 %.2f = 레벨 100 + 오프셋 %+.3f): 생존 %.3f타(기대 7 ± 0.02) · 처치(로테이션) 경계 %.3f초 < %.1f ≤ %.3f초(기대 경계가 목표를 낀다) · 오프셋 |%.3f| ≤ 0.1 · 보스 p %.4f(기대 0.4803 ± 0.001) · 치유사 b %.5f(기대 0.01289 ± 0.0001) - 전부 이 세션 전 문서값 그대로"):format(
 			stage, offset, point.surviveHits, below, target, above, offset, p, b),
 			near(point.surviveHits, BalanceAnchorConfig.surviveTargetHits, 0.02) and below < target and above >= target and math.abs(offset) <= 0.1
 				and near(p, 0.4803, 0.001) and near(b, 0.01289, 0.0001))
@@ -98,7 +98,7 @@ function BalanceDecisionVerify.runPure()
 			local healerEffective = dps.healer * BalanceSim.simulateHealerCycle({ hitsPerSecond = 0.25, hitRatio = 0.1026 }).uptime
 			local rNow = healerEffective / dps.greatsword
 			local bNow = PartyConfig.maxMembers / (PartyConfig.maxMembers - 1 + rNow) - 1
-			print(("[S13][가][참고] r = 힐러 실효 %.1f ÷ 대검 %.1f = %.4f(PartyConfig.healerDpsRatio %.4f) → 같은 식의 b = %.5f(PartyConfig.healerBuffFraction %.5f) - 값은 안 바꾼다(PRD 20.98 미결)"):format(
+			print(("[S13][가][참고] r = 치유사 실효 %.1f ÷ 검사 %.1f = %.4f(PartyConfig.healerDpsRatio %.4f) → 같은 식의 b = %.5f(PartyConfig.healerBuffFraction %.5f) - 값은 안 바꾼다(PRD 20.98 미결)"):format(
 				healerEffective, dps.greatsword, rNow, PartyConfig.healerDpsRatio, bNow, PartyConfig.healerBuffFraction))
 		end
 	end)
@@ -119,9 +119,9 @@ function BalanceDecisionVerify.runPure()
 			baseDrain, a0, reducedDrain, a1, (a1 / a0 - 1) * 100), a0 > 0 and a1 > 0)
 	end)
 
-	r.section("[14] 데이터: 치유 파티 회복 · 대검 계수 · 옵션 색", function()
+	r.section("[14] 데이터: 치유 파티 회복 · 검사 계수 · 옵션 색", function()
 		local healQ, gsQ, gsE = SkillData.healer.Q, SkillData.greatsword.Q, SkillData.greatsword.E
-		r.check(("14 데이터: healer.Q.partyHeal %s(기대 true) · healPercentOfMaxHp %.2f(기대 0.30 그대로) · 대검 Q %.1f(기대 7.6) · E %.1f(기대 8.2)"):format(
+		r.check(("14 데이터: healer.Q.partyHeal %s(기대 true) · healPercentOfMaxHp %.2f(기대 0.30 그대로) · 검사 Q %.1f(기대 7.6) · E %.1f(기대 8.2)"):format(
 			tostring(healQ.partyHeal), healQ.healPercentOfMaxHp, gsQ.coefficient, gsE.coefficient),
 			healQ.partyHeal == true and healQ.healPercentOfMaxHp == 0.3 and gsQ.coefficient == 7.6 and gsE.coefficient == 8.2)
 
@@ -244,7 +244,7 @@ function BalanceDecisionVerify.runLive(player, env)
 		leaveAll(member, player)
 	end)
 
-	r.section("[10] 솔로 힐러", function()
+	r.section("[10] 솔로 치유사", function()
 		BuffState.clear(player, "healerBuff") -- 앞의 파티 시전([7] · [8])이 실제 Player인 힐러 자신에게 남긴 버프를 먼저 치운다 - 솔로 시전이 새로 거는지를 보려는 것
 		setHpFraction(player, 0.45)
 		local castOk, healAmount, isCrit, healed = pcall(HealCast.cast, player, def, "healer", cooldown)
@@ -254,7 +254,7 @@ function BalanceDecisionVerify.runLive(player, env)
 			PartyState.getParty(player) == nil and castOk and #healed == 0 and near(hpFraction(player), expected, 1e-6) and BuffState.get(player, "healerBuff") == nil)
 	end)
 
-	r.section("[11] 힐러의 재생 옵션 +100% → 멤버 +60%", function()
+	r.section("[11] 치유사의 재생 옵션 +100% → 멤버 +60%", function()
 		local okStack = env.applyOptionStack(player, "healingPower")
 		local multiplier = PlayerProfile.getHealingPowerMultiplier(player)
 		PartyState.create(player)
@@ -283,7 +283,7 @@ function BalanceDecisionVerify.runLive(player, env)
 		local expected = math.min(0.2 + def.healPercentOfMaxHp * 1 * (isCrit and def.critHealMultiplier or 1), 1)
 		local hp = hpFraction(player)
 		local attributeSynced = near((player:GetAttribute("Hp") or -1) / PlayerState.getMaxHp(player), hp, 1e-6)
-		r.check(("12 멤버(실제 Player)의 재생 배수 %.2f · 힐러 배수 1: 20%% → %.2f(기대 %.2f = 힐러 배수만 · %s) · 에러 없음=%s · 받은 멤버 %s명(기대 1) · Hp Attribute 동기화=%s"):format(
+		r.check(("12 멤버(실제 Player)의 재생 배수 %.2f · 치유사 배수 1: 20%% → %.2f(기대 %.2f = 치유사 배수만 · %s) · 에러 없음=%s · 받은 멤버 %s명(기대 1) · Hp Attribute 동기화=%s"):format(
 			memberMultiplier, hp, expected, isCrit and "치명" or "일반", tostring(castOk), castOk and tostring(#healed) or "-", tostring(attributeSynced)),
 			memberMultiplier > 1.5 and castOk and near(hp, expected, 1e-6) and #healed == 1 and healed[1] == player and attributeSynced)
 		local buff = BuffState.get(player, "healerBuff")

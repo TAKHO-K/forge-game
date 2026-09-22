@@ -188,7 +188,7 @@ function ShieldVerify.runPure()
 			dps[classId] = anchorRotationUnits(classId)
 		end
 		local ratio = dps.dualblade / dps.greatsword
-		r.check(("9 ★① 쌍검 ÷ 대검 = %.4f(기대 1.3201 ± 0.0005 - 이 세션 전과 같다 · 대검 %.1f · 쌍검 %.1f)"):format(ratio, dps.greatsword, dps.dualblade), near(ratio, 1.3201, 0.0005))
+		r.check(("9 ★① 도적 ÷ 검사 = %.4f(기대 1.3201 ± 0.0005 - 이 세션 전과 같다 · 검사 %.1f · 도적 %.1f)"):format(ratio, dps.greatsword, dps.dualblade), near(ratio, 1.3201, 0.0005))
 
 		local healerRaw = dps.healer / dps.greatsword
 		local referenceSeconds = 600
@@ -199,7 +199,7 @@ function ShieldVerify.runPure()
 				hitsPerSecond = hits.hitsPerSecond, hitRatio = hits.hitRatio, shield = shield, regenPerSecond = regen,
 			})
 		end
-		print(("[S13b][가][측정] 모형 가정: 딜러는 항상 전투 중 · 안 죽음 / 피격 초당 %.2f회 × 최대체력 %.2f%% / 힐러 딜 비 %.4f(대검 1) / 파티 딜 = (딜러 + 전투 중 힐러 × 비) × (1 + 힐러 버프 b) / 보스 HP = 딜러 4명이 %d초 / 쉴드는 쿨타임이 차면 바로 시전(시전이 겹치는 쪽) / 피해 단위 = 멤버 최대체력 비율의 합"):format(
+		print(("[S13b][가][측정] 모형 가정: 딜러는 항상 전투 중 · 안 죽음 / 피격 초당 %.2f회 × 최대체력 %.2f%% / 치유사 딜 비 %.4f(검사 1) / 파티 딜 = (딜러 + 전투 중 치유사 × 비) × (1 + 치유사 버프 b) / 보스 HP = 딜러 4명이 %d초 / 쉴드는 쿨타임이 차면 바로 시전(시전이 겹치는 쪽) / 피해 단위 = 멤버 최대체력 비율의 합"):format(
 			hits.hitsPerSecond, hits.hitRatio * 100, healerRaw, referenceSeconds))
 		local table_ = {}
 		for _, regen in ipairs({ "field", "boss" }) do
@@ -208,7 +208,7 @@ function ShieldVerify.runPure()
 				for healers = 0, 4 do
 					local result = run(4 - healers, healers, shield, regenValue)
 					table_[regen .. (shield and "S" or "H") .. healers] = result
-					print(("[S13b][가][측정] %s · %s · 딜러%d+힐러%d: 처치 %s초 · 받은 피해 %.2f · 쉴드 흡수 %.2f(흡수율 %.1f%%) · 순 HP 손실 %.2f(초당 %.4f) · 대상별 쉴드 가동률 %.1f%% · 평균 겹 %.2f(쉴드 있을 때 %.2f) · 힐러 전투 비율 %s · 시전 %d · 5겹 거절 %d · 반감 %d · 교체 %d"):format(
+					print(("[S13b][가][측정] %s · %s · 딜러%d+치유사%d: 처치 %s초 · 받은 피해 %.2f · 쉴드 흡수 %.2f(흡수율 %.1f%%) · 순 HP 손실 %.2f(초당 %.4f) · 대상별 쉴드 가동률 %.1f%% · 평균 겹 %.2f(쉴드 있을 때 %.2f) · 치유사 전투 비율 %s · 시전 %d · 5겹 거절 %d · 반감 %d · 교체 %d"):format(
 						regen == "boss" and "보스전(회복 0)" or "필드(회복 기본)", shield and "쉴드" or "치유(옛 동작)", 4 - healers, healers, result.killSeconds and ("%.1f"):format(result.killSeconds) or "상한",
 						result.damageIn, result.absorbed, result.damageIn > 0 and result.absorbed / result.damageIn * 100 or 0, result.hpLoss, result.hpLoss / result.elapsed, result.shieldUptime * 100, result.avgLayers, result.avgLayersWhileShielded,
 						result.healerFightRatio and ("%.3f"):format(result.healerFightRatio) or "-", result.casts, result.rejected, result.halved, result.replaced))
@@ -222,7 +222,7 @@ function ShieldVerify.runPure()
 				dealers = 4 - healers, healers = healers, healerRaw = healerRaw, bossHpUnits = 4 * referenceSeconds, hitsPerSecond = hits.hitsPerSecond, hitRatio = hits.hitRatio,
 				shield = true, reserveRatio = -100, drainPerSecond = 0, maxSeconds = referenceSeconds,
 			})
-			print(("[S13b][가][측정][참고] 힐러가 이탈하지 않는 경우 · 딜러%d+힐러%d(%d초): 대상별 쉴드 가동률 %.1f%%(설계 %.0f%% = 지속 ÷ 쿨타임) · 평균 겹 %.2f(쉴드 있을 때 %.2f) · 흡수율 %.1f%% · 시전 %d · 반감 %d · 5겹 거절 %d"):format(
+			print(("[S13b][가][측정][참고] 치유사가 이탈하지 않는 경우 · 딜러%d+치유사%d(%d초): 대상별 쉴드 가동률 %.1f%%(설계 %.0f%% = 지속 ÷ 쿨타임) · 평균 겹 %.2f(쉴드 있을 때 %.2f) · 흡수율 %.1f%% · 시전 %d · 반감 %d · 5겹 거절 %d"):format(
 				4 - healers, healers, referenceSeconds, result.shieldUptime * 100, shieldDef.durationSeconds / shieldDef.cooldownSeconds * 100, result.avgLayers, result.avgLayersWhileShielded,
 				result.damageIn > 0 and result.absorbed / result.damageIn * 100 or 0, result.casts, result.halved, result.rejected))
 		end
@@ -231,7 +231,7 @@ function ShieldVerify.runPure()
 		local cycle = BalanceSim.simulateHealerCycle({ hitsPerSecond = hits.hitsPerSecond, hitRatio = hits.hitRatio }).uptime
 		local base = table_.fieldH0
 		local oneHealer = table_.fieldH1
-		r.check(("9b 모형 정합: 딜러4 처치 %.1f초(기대 %d) · 치유 모드 힐러 1명 전투 비율 %.4f(기대 simulateHealerCycle %.4f ± 0.01) · 딜러3+힐러1 처치 %.1f초(딜러4 대비 %+.2f%% - 옛 앵커의 b 결과)"):format(
+		r.check(("9b 모형 정합: 딜러4 처치 %.1f초(기대 %d) · 치유 모드 치유사 1명 전투 비율 %.4f(기대 simulateHealerCycle %.4f ± 0.01) · 딜러3+치유사1 처치 %.1f초(딜러4 대비 %+.2f%% - 옛 앵커의 b 결과)"):format(
 			base.killSeconds, referenceSeconds, oneHealer.healerFightRatio, cycle, oneHealer.killSeconds, (oneHealer.killSeconds / base.killSeconds - 1) * 100),
 			near(base.killSeconds, referenceSeconds, 0.1) and near(oneHealer.healerFightRatio, cycle, 0.01))
 
@@ -273,7 +273,7 @@ function ShieldVerify.runPure()
 			end
 			print(("[S13b][가][어긋남] %s: %s"):format(regen == "field" and "필드(회복 기본)" or "보스전(회복 0)", #misses == 0 and "없음" or table.concat(misses, " / ")))
 		end
-		print("[S13b][가][어긋남] 판정 기준(임의): ≈ = ±2% · 약간 느림 = 딜러4 초과 ~ +10% · 크게 적음 = 딜러4 초당 순 HP 손실의 80% 이하 · 확실히 느림 = +10% 이상 · 가동률 높음 = 힐러1보다 높음 · 증가 둔함 = 흡수율 증가분이 힐러 1→2 증가분보다 작음")
+		print("[S13b][가][어긋남] 판정 기준(임의): ≈ = ±2% · 약간 느림 = 딜러4 초과 ~ +10% · 크게 적음 = 딜러4 초당 순 HP 손실의 80% 이하 · 확실히 느림 = +10% 이상 · 가동률 높음 = 치유사1보다 높음 · 증가 둔함 = 흡수율 증가분이 치유사 1→2 증가분보다 작음")
 		report("field")
 		report("boss")
 	end)
@@ -358,13 +358,13 @@ function ShieldVerify.runLive(player, env)
 			usesShield and ok and healAmount == 0 and #healed == 0 and #shielded == 2 and near(shieldOf(member), expectedMember, 1e-6) and near(shieldOf(player), expectedSelf, 1e-6)
 				and memberHpKept and selfHpKept and near(player:GetAttribute("Shield") or -1, expectedSelf, 1e-6))
 		local buff = BuffState.get(player, "healerBuff")
-		r.check(("11 힐러 버프는 쉴드를 줄 때도 걸린다: 걸림 %s · 배율 %.4f(기대 1 + b)"):format(tostring(buff ~= nil), buff and buff.multiplier or 0),
+		r.check(("11 치유사 버프는 쉴드를 줄 때도 걸린다: 걸림 %s · 배율 %.4f(기대 1 + b)"):format(tostring(buff ~= nil), buff and buff.multiplier or 0),
 			buff ~= nil and near(buff.multiplier, 1 + PartyConfig.healerBuffFraction, 1e-9))
 	end)
 
 	r.section("[12] 재시전: 교체(겹 수 불변)", function()
 		local ok, _, _, _, shielded = cast()
-		r.check(("12 같은 힐러 재시전: 에러 없음=%s · 겹 수 멤버 %d 자기 %d(기대 1 · 1) · 교체 %s · 멤버 쉴드 %.1f(기대 %.1f 그대로 - 새 층 아님)"):format(
+		r.check(("12 같은 치유사 재시전: 에러 없음=%s · 겹 수 멤버 %d 자기 %d(기대 1 · 1) · 교체 %s · 멤버 쉴드 %.1f(기대 %.1f 그대로 - 새 층 아님)"):format(
 			tostring(ok), PlayerShield.getLayerCount(member), PlayerShield.getLayerCount(player), tostring(ok and shielded[1].result.replaced),
 			shieldOf(member), memberMax * def.healPercentOfMaxHp * healingPower * shieldDef.healRatio),
 			ok and PlayerShield.getLayerCount(member) == 1 and PlayerShield.getLayerCount(player) == 1 and shielded[1].result.replaced

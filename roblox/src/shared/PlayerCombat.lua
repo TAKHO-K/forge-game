@@ -20,6 +20,7 @@ local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local EnhanceEffect = require(ReplicatedStorage.Shared.EnhanceEffect)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 
 -- 무기 등급 배율 - 갑옷·장갑·신발과 같은 단일 출처(ArmorData.gradeOrder로 index->id,
 -- ItemVisualData.gradeVisuals[id].statMultiplier로 배율)를 쓴다(20-1, WeaponData.lua
@@ -51,7 +52,8 @@ function PlayerCombat.getAttack(weapon, classId, characterLevel, attackPercentBo
 	local weaponData = WeaponData.weapons[weapon.id]
 	local gradeMultiplier = gradeMultiplierForIndex(weapon.grade)
 	local base = Enhance.getPlayerAttack(weaponData, weapon.level, class.atk, gradeMultiplier)
-	return base * CharacterLevel.getWeaponExpMultiplier(characterLevel) * (1 + (attackPercentBonus or 0))
+	local attack = base * CharacterLevel.getWeaponExpMultiplier(characterLevel) * (1 + (attackPercentBonus or 0))
+	return Sanitize.number(attack, 0) -- S21-0 A2: 스탯 합산 출구(고스테이지 double 붕괴 - PRD 감사 §1-2)
 end
 
 -- 신발의 이동+공격속도 비율 보너스를 1+x 배율로 바꾼다(16-6, 웹 core/equipment.js
@@ -141,7 +143,8 @@ end
 -- (공격력%·공속%·최대체력%)보다 커야 같은 만큼 생존에 기여한다.
 function PlayerCombat.getDefense(classId, equipmentDefenseBonus, defensePercentBonus)
 	local class = ClassData.classes[classId]
-	return (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def * (1 + (defensePercentBonus or 0))
+	local defense = (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def * (1 + (defensePercentBonus or 0))
+	return Sanitize.number(defense, 0) -- S21-0 A2: 스탯 합산 출구
 end
 
 -- 공격 쿨다운 = 기본 쿨다운 ÷ (클래스 공격속도 배율 × 신발 공속 배율 × 버프 공속 배율)

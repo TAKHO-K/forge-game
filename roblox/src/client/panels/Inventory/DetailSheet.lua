@@ -600,6 +600,109 @@ local function refreshDetailBody()
 	end
 end
 
+-- ═══ 개별 판매·분해 확인 창(S21-0 B2) ═══
+-- 영웅 등급 이상(분해 대상과 같은 문턱, S.isDismantleEligibleGrade)의 판매 · 분해는
+-- 되돌릴 수 없어 확인 팝업을 한 번 더 띄운다(BulkSell.confirmOverlay와 같은 구조 - 창
+-- 자식으로 딤 + 패널을 겹친다, ZIndex는 그 오버레이 위로 22/23을 쓴다). 일반 · 희귀
+-- 개별 판매는 기존 속도(선택 1클릭 + 판매 1클릭)를 그대로 유지한다. 잠긴 아이템은
+-- 애초에 이 버튼들이 비활성화라(아래 refreshDetailBody) 여기까지 못 온다.
+local itemConfirmOverlay = Instance.new("TextButton")
+itemConfirmOverlay.Text = ""
+itemConfirmOverlay.AutoButtonColor = false
+itemConfirmOverlay.Size = UDim2.new(1, 0, 1, 0)
+itemConfirmOverlay.BackgroundColor3 = Color3.new(0, 0, 0)
+itemConfirmOverlay.BackgroundTransparency = 0.5
+itemConfirmOverlay.Visible = false
+itemConfirmOverlay.ZIndex = 22
+itemConfirmOverlay.Parent = content
+
+local itemConfirmBox = Instance.new("Frame")
+itemConfirmBox.AnchorPoint = Vector2.new(0.5, 0.5)
+itemConfirmBox.Position = UDim2.new(0.5, 0, 0.5, 0)
+itemConfirmBox.Size = UDim2.new(0, 300, 0, 132)
+itemConfirmBox.BackgroundColor3 = UIColors.panel
+itemConfirmBox.BackgroundTransparency = 0.05
+itemConfirmBox.ZIndex = 23
+itemConfirmBox.Parent = itemConfirmOverlay
+local itemConfirmCorner = Instance.new("UICorner")
+itemConfirmCorner.CornerRadius = UDim.new(0, 10)
+itemConfirmCorner.Parent = itemConfirmBox
+local itemConfirmStroke = Instance.new("UIStroke")
+itemConfirmStroke.Color = UIColors.rim
+itemConfirmStroke.Transparency = UIColors.rimTransparency
+itemConfirmStroke.Parent = itemConfirmBox
+
+local itemConfirmText = Instance.new("TextLabel")
+itemConfirmText.Position = UDim2.new(0, 16, 0, 14)
+itemConfirmText.Size = UDim2.new(1, -32, 0, 60)
+itemConfirmText.BackgroundTransparency = 1
+itemConfirmText.ZIndex = 23
+itemConfirmText.Font = Enum.Font.GothamBold
+itemConfirmText.TextSize = Theme.textSize("body")
+itemConfirmText.TextWrapped = true
+itemConfirmText.TextColor3 = UIColors.textPrimary
+itemConfirmText.Text = ""
+itemConfirmText.Parent = itemConfirmBox
+
+local itemConfirmYes = Instance.new("TextButton")
+itemConfirmYes.AnchorPoint = Vector2.new(1, 1)
+itemConfirmYes.Position = UDim2.new(1, -12, 1, -12)
+itemConfirmYes.Size = UDim2.new(0, 44, 0, 44)
+itemConfirmYes.BackgroundColor3 = UIColors.danger
+itemConfirmYes.BackgroundTransparency = 0.55
+itemConfirmYes.Text = "확인"
+itemConfirmYes.Font = Enum.Font.GothamBold
+itemConfirmYes.TextSize = Theme.textSize("body")
+itemConfirmYes.TextColor3 = Color3.fromRGB(255, 200, 200)
+itemConfirmYes.ZIndex = 23
+itemConfirmYes.Parent = itemConfirmBox
+local itemConfirmYesCorner = Instance.new("UICorner")
+itemConfirmYesCorner.CornerRadius = UDim.new(0, 8)
+itemConfirmYesCorner.Parent = itemConfirmYes
+
+local itemConfirmNo = Instance.new("TextButton")
+itemConfirmNo.AnchorPoint = Vector2.new(1, 1)
+itemConfirmNo.Position = UDim2.new(1, -64, 1, -12)
+itemConfirmNo.Size = UDim2.new(0, 44, 0, 44)
+itemConfirmNo.BackgroundColor3 = UIColors.panel
+itemConfirmNo.BackgroundTransparency = UIColors.panelTransparency
+itemConfirmNo.Text = "취소"
+itemConfirmNo.Font = Enum.Font.GothamBold
+itemConfirmNo.TextSize = Theme.textSize("body")
+itemConfirmNo.TextColor3 = UIColors.textPrimary
+itemConfirmNo.ZIndex = 23
+itemConfirmNo.Parent = itemConfirmBox
+local itemConfirmNoCorner = Instance.new("UICorner")
+itemConfirmNoCorner.CornerRadius = UDim.new(0, 8)
+itemConfirmNoCorner.Parent = itemConfirmNo
+
+local pendingConfirmAction -- 확인을 누르면 실행할 함수(취소 · 바깥 클릭이면 버린다)
+
+local function closeItemConfirm()
+	itemConfirmOverlay.Visible = false
+	pendingConfirmAction = nil
+end
+itemConfirmNo.Activated:Connect(closeItemConfirm)
+itemConfirmOverlay.Activated:Connect(closeItemConfirm)
+itemConfirmYes.Activated:Connect(function()
+	local action = pendingConfirmAction
+	closeItemConfirm()
+	if action then
+		action()
+	end
+end)
+
+-- verb: "판매" | "분해". item: 대상 아이템. action: 확인 시 실행할 함수(B1 선택 해제 포함).
+local function confirmItemAction(verb, item, action)
+	local visual = ItemVisualData.gradeVisuals[item.grade]
+	local described = ItemDescribe.item(item, player:GetAttribute("ClassId"))
+	itemConfirmText.Text = ("%s(%s)를 %s하시겠습니까? 되돌릴 수 없습니다."):format(
+		described.title, ArmorData.grades[item.grade].displayName, verb)
+	itemConfirmText.TextColor3 = (visual and not visual.rainbow) and visual.color or UIColors.textPrimary
+	pendingConfirmAction = action
+	itemConfirmOverlay.Visible = true
+end
+
 lockButton.Activated:Connect(function()
 	if S.selectedKind ~= "bag" then
 		return
@@ -611,6 +714,9 @@ lockButton.Activated:Connect(function()
 	lockRequest:FireServer(S.selectedValue, not item.locked)
 end)
 
+-- S21-0 B1: 판매·분해 요청을 보내는 즉시 선택을 비운다(+화면을 바로 다시 그린다) - table.remove가
+-- 배열을 당겨서 같은 index가 다음 장비를 가리키게 되기 전에 끊는다. 실제 마우스로 이 버튼을
+-- 빠르게 연타해도(B3) 첫 클릭 뒤 버튼이 곧바로 비활성화(선택 없음)라 두 번째 클릭부터는 안 먹는다.
 sellButton.Activated:Connect(function()
 	if S.selectedKind ~= "bag" then
 		return
@@ -619,7 +725,17 @@ sellButton.Activated:Connect(function()
 	if not item or item.locked then
 		return
 	end
-	sellRequest:FireServer("sell", S.selectedValue)
+	local index = S.selectedValue
+	local function doSell()
+		S.selectedKind, S.selectedValue = nil, nil
+		S.rebuildGrid()
+		sellRequest:FireServer("sell", index)
+	end
+	if S.isDismantleEligibleGrade(item.grade) then -- 영웅 등급 이상(B2 - 분해 문턱과 같다)
+		confirmItemAction("판매", item, doSell)
+	else
+		doSell()
+	end
 end)
 
 dismantleButton.Activated:Connect(function()
@@ -630,7 +746,13 @@ dismantleButton.Activated:Connect(function()
 	if not item or item.locked or not S.isDismantleEligibleGrade(item.grade) then
 		return
 	end
-	dismantleRequest:FireServer(S.selectedValue)
+	local index = S.selectedValue
+	-- 분해는 항상 영웅 등급 이상만 대상이라(S.isDismantleEligibleGrade) 매번 확인창을 거친다.
+	confirmItemAction("분해", item, function()
+		S.selectedKind, S.selectedValue = nil, nil
+		S.rebuildGrid()
+		dismantleRequest:FireServer(index)
+	end)
 end)
 
 equipButton.Activated:Connect(function()

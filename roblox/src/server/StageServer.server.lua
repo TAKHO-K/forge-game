@@ -17,6 +17,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
+local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local BossEncounter = require(script.Parent.BossEncounter)
@@ -55,6 +56,13 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 	local best = PlayerProfile.getInfiniteStageBest(player)
 	if targetStage < 1 or targetStage > best + 1 then
 		reject(player, "range")
+		return
+	end
+
+	-- S21-0 A4: 임시 안전 상한(InfiniteStageConfig.safeStageCap 주석 참고) - 정상 진행(이
+	-- 요청 경로)만 막는다. `/gg stage`(DevTools.server.lua)는 이 검사를 거치지 않는다.
+	if targetStage > InfiniteStageConfig.safeStageCap then
+		reject(player, "safe_cap")
 		return
 	end
 

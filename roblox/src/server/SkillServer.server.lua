@@ -540,4 +540,4 @@ Players.PlayerRemoving:Connect(function(player)
 	lastCastTick[player] = nil
 end)
 
-print("[forge-game] SkillServer 로드됨 - 대검 Q/E, 활 Q/E, 쌍검 Q(그림자분신)/E(난무), 힐러 Q(치유)/E(딜링모드) 판정 활성")
+print("[forge-game] SkillServer 로드됨 - 검사 Q/E, 궁수 Q/E, 도적 Q(그림자분신)/E(난무), 치유사 Q(치유)/E(딜링모드) 판정 활성")
