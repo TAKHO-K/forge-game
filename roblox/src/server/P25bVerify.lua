@@ -435,7 +435,6 @@ function P25bVerify.runLive(player, env)
 		local nothing = PlayerProfile.claimMilestones(player, false)
 		classState.characterExp = CharacterLevel.getExpForLevel(155)
 		local payload = PlayerProfile.claimMilestones(player, false)
-		local stats = PlayerProfile.getStatSummary(player)
 		local expected = Milestone.multiplier(3)
 		r.check(("D1 1회차 Lv.49 → 없음(%s) · Lv.155 → +%d회 · 해금 %d개(%s) · 기록 1회차 = %s(기대 150) · 가방 칸 %d → %d(+5) · Attribute 배율 %.4f(기대 %.4f)"):format(
 			tostring(nothing), payload and payload.statGained or -1, payload and #payload.unlocks or -1, payload and payload.unlocks[1] and payload.unlocks[1].name or "-",

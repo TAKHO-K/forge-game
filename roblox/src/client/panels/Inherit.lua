@@ -7,7 +7,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local Inherit = require(ReplicatedStorage.Shared.Inherit)

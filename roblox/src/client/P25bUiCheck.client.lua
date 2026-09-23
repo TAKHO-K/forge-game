@@ -103,7 +103,7 @@ local function run()
 		local state = InheritPanel.debugState()
 		local refs = state.refs
 		local smallest, smallName, short, inside, geometry = measure(refs, { "InheritButton", "CancelButton", "KeepA", "KeepB" })
-		check(("① 계승 창(%s): 열림 %s · 최소 글씨 %.1f(%s - 기대 ≥ 12) · 짧은 버튼 [%s] · 화면 안 %s"):format(Theme.isMobile and "모바일" or "PC", tostring(state.open), smallest, smallName, table.concat(short, ", "), tostring(inside)),
+		check(("① 계승 창(%s · %s): 열림 %s · 최소 글씨 %.1f(%s - 기대 ≥ 12) · 짧은 버튼 [%s] · 화면 안 %s"):format(Theme.isMobile and "모바일" or "PC", geometry, tostring(state.open), smallest, smallName, table.concat(short, ", "), tostring(inside)),
 			state.open and smallest >= 12 and #short == 0 and inside)
 		local cardA, cardB = refs.cardA, refs.cardB
 		check(("① A 세트 선택 표시: A 테두리 ember %s · B 테두리 rim %s · 비교 표 공격력 '%s' → '%s' 변화 '%s' · 환급 '%s' · 비용 '%s' · [계승] 활성 %s"):format(
