@@ -43,7 +43,7 @@ end
 
 -- 이 패널이 읽는 Attribute 이름 전부(바뀌면 화면을 다시 그린다).
 function Controller.attributeNames()
-	local names = { "WeaponLevel", "WeaponGrade", "Gold", "EnhanceGauge" }
+	local names = { "WeaponLevel", "WeaponGrade", "Gold", "EnhanceGauge", "AccountBestStage" } -- P2 C1: 강화 비용이 계정 최고 스테이지를 따른다
 	for _, materialId in ipairs(EnhanceMaterialData.order) do
 		table.insert(names, materialAttributeName(materialId))
 	end

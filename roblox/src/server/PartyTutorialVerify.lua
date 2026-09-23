@@ -380,9 +380,10 @@ function PartyTutorialVerify.runLive(player, env)
 		r.check(("친구(견습 아님) 처치: 기준 스테이지 %s(기대 %d) · 경험치 +%.4f(기대 %.4f = 자기 스테이지 기준 × 파티 보너스 ×%.2f) · 견습 쪽보다 골드 %d > %d(기대 참)"):format(
 			tostring(friendStage), FRIEND_STAGE, friendExp, expectedFriend, 1 + partyBonus, friendGold, tutorialGold),
 			friendStage == FRIEND_STAGE and math.abs(friendExp - expectedFriend) <= 1 and friendGold > tutorialGold)
-		PartyExpBonus.debugSetPresence(player, nil)
-		PartyExpBonus.debugSetPresence(B, nil)
 	end)
+	-- P2 G: 가짜 위치는 섹션 밖에서 해제한다(섹션 도중 에러가 나도 남지 않게 - 리뷰 지적 7).
+	PartyExpBonus.debugSetPresence(player, nil)
+	PartyExpBonus.debugSetPresence(B, nil)
 
 	-- [8] 되돌리기: 파티 · 견습 진행도 · 감싼 함수 · 직업 · 장비 · 골드 · 가방 · 위치. 검증이 만든 것은 없어야 한다.
 	dissolve()

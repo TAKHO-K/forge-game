@@ -272,6 +272,14 @@ function P2Verify.runPure()
 		local relicPrice = Loot.getSellPrice({ grade = "relic", tierIndex = 6, dropStage = 80 })
 		local expectedRelic = math.floor(1 / (ArmorData.dropChance * 0.18) * InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 80) * ArmorData.sellRecoveryRate)
 		local primPrice = Loot.getSellPrice({ grade = "primordial", tierIndex = 1, dropStage = 80 })
+		local oldSame = true
+		for tier = 1, 5 do
+			for gradeId, chance in pairs(OLD_GRADE_TABLE[tier]) do
+				local expected = math.floor(1 / (ArmorData.dropChance * chance) * InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 300) * ArmorData.sellRecoveryRate)
+				oldSame = oldSame and Loot.getSellPrice({ grade = gradeId, tierIndex = tier, dropStage = 300 }) == expected
+			end
+		end
+		r.check(("E1.4b tier1 ~ 5 기존 등급 판매가(스테이지 300) = P2 전 식과 한 자리도 같다 %s(리뷰 지적 1)"):format(tostring(oldSame)), oldSame)
 		r.check(("E1.4 판매가: tier6 유물 %d(기대 P2 전 식 %d) · tier1 태초 %d(기대 > 0 - 전에는 표에 없어 0)"):format(relicPrice, expectedRelic, primPrice), relicPrice == expectedRelic and primPrice > 0)
 		local described = DropTableQuery.describe({ bestStage = 100 }, 3, 90, 1)
 		local gradeSum = 0

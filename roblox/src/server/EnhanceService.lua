@@ -137,7 +137,7 @@ function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 		ticketsLeft = { drop = PlayerProfile.getProtectionTicket(player, "drop"), reset = PlayerProfile.getProtectionTicket(player, "reset") },
 	})
 
-	print(("[forge-game] 강화 결과: %s - %s (레벨 %d -> %d, 비용 %d, 게이지 %d -> %d%s)"):format(
+	print(("[forge-game] 강화 결과: %s - %s (레벨 %d -> %d, 비용 %.0f, 게이지 %d -> %d%s)"):format(
 		player.Name, outcome.result, oldLevel, outcome.level, cost, oldGauge, outcome.gauge,
 		outcome.blockedBy and (", 방지권 " .. outcome.blockedBy .. " 소모") or ""))
 

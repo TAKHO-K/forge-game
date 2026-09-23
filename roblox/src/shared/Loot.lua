@@ -27,13 +27,13 @@ local Loot = {}
 -- 목적). MonsterData.dropGradeTableByTier[tierIndex]에 그 등급이 없으면(예: tier1엔
 -- "전설"이 없다) 0 - 그 tier에서는 절대 안 나온다는 뜻이다.
 -- P2 E1: DropTable.gradeChance(감쇠 전 기본 확률) - tier1 ~ 5의 태초(별도 굴림)도 여기서 확률을 얻는다(옛 표엔 없어 판매가 0이었을 자리).
--- 기본 표에 이미 있는 등급(tier6 태초 포함)은 표 값 그대로다(나눗셈 반올림 없이 - 판매가가 한 자리도 안 바뀐다).
+-- 기본 표에 이미 있는 등급(tier6 태초 포함)은 표 값 그대로다(판매가가 한 자리도 안 바뀐다 - 리뷰 지적 1: 전에는 tier1 ~ 5 기존 등급까지 ×(1 − 태초)가 곱해졌다).
 local function getGradeChance(tierIndex, gradeId)
 	local row = MonsterData.dropGradeTableByTier[tierIndex]
 	if not row then
 		return nil
 	end
-	if row[gradeId] and (row.primordial or 0) == DropTable.primordialBaseRate(tierIndex) then
+	if row[gradeId] then
 		return row[gradeId]
 	end
 	local chance = DropTable.gradeChance(tierIndex, gradeId)

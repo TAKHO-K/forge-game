@@ -724,7 +724,7 @@ local function printOptionTable(player)
 	end
 	print("[DevTools] " .. table.concat(levelCells, " | "))
 	print(("[DevTools]   125 이후 로그 곡선(P2 D1, p=%.3f): f(125)=%.4f, f(250)=%.4f, f(4738)=%.4f"):format(OptionData.levelLogSlope, Option.levelFactor(125), Option.levelFactor(250), Option.levelFactor(4738)))
-	print(("[DevTools]   절대 최대 계수(20.67 [3]) = rollMax × f(125) = %.3f × %.4f = %.4f (기대 1.368)"):format(
+	print(("[DevTools]   레벨 125 최대 계수(20.67 [3] - P2 D1 뒤로는 125 이후 계속 커진다) = rollMax × f(125) = %.3f × %.4f = %.4f (기대 1.368)"):format(
 		OptionData.rollMax, Option.levelFactor(125), OptionData.rollMax * Option.levelFactor(125)))
 
 	local rollCount = 1000

@@ -449,8 +449,8 @@ local function doRebirth(state, profile, whatIf)
 	state.exp = 0
 	state.weaponGrade = state.rebirth
 	local slot = state.rebirth
-	-- 환생 지급 보석(PlayerProfile.rebirth): 그 슬롯 상한 등급 · itemLevel = 환생 순간 레벨(그 회차 필요 레벨 - CharacterLevel.getRebirthRequiredLevel) · 옵션 무작위.
-	tryPlaceGem(state, profile, slot, Gem.gradeCapForSlot(slot), CharacterLevel.getRebirthRequiredLevel(state.rebirth - 1), whatIf, true)
+	-- 환생 지급 보석(PlayerProfile.rebirth): 그 슬롯 상한 등급 · itemLevel = 25 × 회차(P2 필요 레벨 변경과 무관하게 옛 값) · 옵션 무작위.
+	tryPlaceGem(state, profile, slot, Gem.gradeCapForSlot(slot), 25 * state.rebirth, whatIf, true)
 	if state.rebirth == GemData.maxRebirthCount and Gem.allSlotsFilled(state.gems) then
 		state.weaponGrade = #ArmorData.gradeOrder - 1
 	end

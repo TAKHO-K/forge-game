@@ -116,8 +116,8 @@ function PartyState.getSize(party)
 	return count
 end
 
--- 30-0 S09(PRD 20.73 [5-1]): 파티 경험치 보너스. 인원 = 실제 Player 멤버 수(더미 · 텔레포트 중인 원격 좌석은 안 센다). 이 함수 둘이 유일한 출처다 -
--- PlayerProfile.getExpGainMultiplier(서버 판정)와 pushState의 Attribute(클라 칩)가 같은 값을 본다.
+-- 30-0 S09(PRD 20.73 [5-1]): 파티 경험치 보너스. 인원 = 실제 Player 멤버 수(더미 · 텔레포트 중인 원격 좌석은 안 센다).
+-- P2 G부터 실제 지급(PlayerProfile.getExpGainMultiplier)은 조건부 getExpBonusFor를 쓰고, pushState의 Attribute(클라 칩)는 이 인원 보너스(조건을 채우면 받을 최대값)를 보인다.
 function PartyState.getExpBonusForCount(memberCount)
 	return PartyConfig.expBonusByMemberCount[memberCount] or 0
 end

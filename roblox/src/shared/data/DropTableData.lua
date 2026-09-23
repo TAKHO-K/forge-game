@@ -5,8 +5,9 @@
 --   이 표는 tier 공정성 식(MonsterData - r(t) → HP · 공격 · 골드 · 경험치 배율)의 입력이기도 하다. 그래서 P2의 tier1 ~ 5 태초는 이 표에 넣지 않고 아래 primordial의
 --   별도 굴림으로 준다 - 몬스터 수치가 한 자리도 안 바뀐다. tier6의 태초(0.1%)는 원래부터 이 표에 있던 값이고 primordial.dragonRate가 그 값을 채운다(숫자 하나).
 -- primordial(P2 E2 · E3): 잡몹 장비 1개가 태초일 확률 = dragonRate ÷ dragonOverTier[t] × 레벨 감쇠(DropTable.levelDecay). 칸이 없는 tier는 0.
---   dragonOverTier = "드래곤 확률 ÷ 이 tier 확률"(2면 드래곤의 1/2). tier가 낮을수록 크다(확률이 낮다). 값 = E5 손익분기 M*(Δ ≤ 5, 레벨 10 · 150 · 1000 최소)
---   아래로 고른 것 - tier1 1.92 · tier2 1.70 · tier3 1.38 · tier4 0.94 · tier5 0.70(tier4 · 5는 1 미만이라 "드래곤보다 낮게"와 동시에 못 맞춘다 - 1에 가깝게 두었다).
+--   dragonOverTier = "드래곤 확률 ÷ 이 tier 확률"(2면 드래곤의 1/2). tier가 낮을수록 크다(확률이 낮다). 값 1.9 · 1.7 · 1.35 · 1.1 · 1.05 = E5 손익분기 M*
+--   (Δ ≤ 5, 레벨 10 · 150 · 1000 최소 - tier1 1.94 · tier2 1.71 · tier3 1.39 · tier4 0.94 · tier5 0.71) 아래로 고른 것. tier4 · 5는 M*가 1 미만이라 "드래곤보다 낮게"와
+--   동시에 못 맞춘다 - 1에 가깝게 두었다.
 --   근거 · 대안 = docs/phase/P2-log.md.
 --   levelDecay: 사냥 스테이지가 본인 최고 스테이지보다 startGap 이상 낮으면, (격차 − startGap + 1)칸마다 perLevel씩 깎는다(0 미만 금지).
 --   태초 장비의 itemLevel = 그 몬스터를 잡은 사냥 스테이지("몬스터 레벨" - 편차 δ 없음, E4). 분해하면 그 레벨의 태초 보석이 된다.
