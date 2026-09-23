@@ -19117,3 +19117,21 @@ Studio Device Emulator의 사용자 지정 해상도(800 × 360 · 667 × 375 ·
 #### [5] 미결 = 결정 필요(P25a-report.md ⑨ - 10건)
 
 천장의 모양(사다리가 진행을 정함) · 초반 생존 · 환생 필요 레벨 · 구매력 절대값 · 보석 비중 75 ~ 87% · 보스 드랍 itemLevel 폭 · 태초 tier 배수 · k에서 유도되던 보스 값 처리 · 세이브 이관 없음(라이브 계정이면 필요) · 스테이지 번호 임계값(재료 해금 · 방지권 · 보스 밀도).
+
+### 20.116 P2.5b 장비 계승 · 보석 재련 · 보석 분해(가루) · 환생 후 레벨 마일스톤 (P2.5b - 자율 단계)  `[✅ 구현 + 로컬 검사(luau-compile 바뀐 · 새 파일 전부 · luau-analyze 새 문제 0 · 하네스 P25b(가) 27/27 · P25a(가) 18/18 · P2(가) 27/27) + Studio Play 3회(2026-09-23 · 41블록 - 3회차 X 1 = P0(가) 9(마일스톤이 천장을 없앤 결과 - 결정 필요 5): P25b(가) 27/27 · (나) 15/15 · (UI) 11/11 · 동반 38블록 통과 · 스크립트 에러 0) + 스크린샷 Play 3회(PC 11장 · 폰 10장 - Claude outputs/P25b). 결정 필요 6건 - docs/phase/P25b-report.md]`
+
+#### [1] 무엇을 했나
+
+- **A 계승**: 착용 A → 가방의 같은 부위 B. 옵션 세트(종류 + 굴림) 중 하나를 남기고 수치는 B 등급 · 레벨로 재계산 · A는 분해 재료로 환급(고르지 않은 쪽 옵션 - 복제 방지) · 비용 GoldCost "inherit" · 서버 미리보기(RemoteFunction `InheritPreview`) · 확인창 · 잠금(`a_locked` · `locked`) · B 등급이 낮으면 A 세트 불가. 장비에 강화 · 보석 칸이 없어 그 이전은 해당 없음(결정 필요 1).
+- **C 분해 · 가루**: `profile.gemDust`(v31) · 한 개 · 일괄(등급 이하) 분해 - 항상 확인창 · 변환권 = 골드 + 가루.
+- **B 재련**: 대상(홈 · 가방) ← 더 높은 레벨 가방 보석. 레벨만 오른다 · 골드 + 가루 · 확인창.
+- **D 마일스톤**: 환생 후 회차마다 레벨 50 = 영구 공격력 k^1.5 · 레벨 100k = 해금(가방 +5 · 계승 −10% · 예약 3) · `classes[*].milestones` · `milestoneUnlocks`(v32) · 달성 토스트 · 성장 보상 창.
+- **E**: `/gg econ` → `docs/econ/P25b-after.md` + what-if(noMilestone · m02 · milestoneSurvival).
+
+#### [2] 변경 파일
+
+새: `shared/Inherit.lua` · `GemCraft.lua` · `Milestone.lua` · `data/InheritConfig.lua` · `data/MilestoneData.lua` · `server/ItemInherit.lua` · `GemCraftRequest.lua` · `MilestoneNotice.lua` · `P25bVerify.lua` · `client/panels/Inherit.lua` · `GemForge.lua` · `Milestones.lua` · `MilestoneToast.client.lua` · `P25bUiCheck.client.lua`. 수정: `PlayerProfile` · `SaveSystem`(v32) · `SaveConfig` · `GemData` · `GoldCostConfig` · `Option` · `PlayerCombat.getAttack`(영구 배율 인자) · `AttackServer` · `SkillServer` · `BalanceSim` · `EconSim` · `EconSimReport` · `EconSimConfig` · `GemServer` · `GemWorkshop` · `InventoryServer` · `DetailSheet` · `GearTab` · `InventoryUI` · `RebirthView` · `GemWorkshop/init` · 옛 점검(GemMerchantVerify · GemWorkshopCheck · ItemFlowCheck) · DevTools 연결 · `DevToolsConfig.verify.current`.
+
+#### [3] 미결 = 결정 필요(P25b-report.md ⑤ - 6건)
+
+장비 강화 · 보석 칸 · 계승 비용 표 · 가루 수치와 변환권 가루 · 착용 장비 잠금 · 마일스톤과 천장(R2 충돌) · 성장 보상 창 입구.
