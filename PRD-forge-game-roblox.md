@@ -19073,3 +19073,47 @@ Studio Device Emulator의 사용자 지정 해상도(800 × 360 · 667 × 375 ·
 #### [4] 미결 = 결정 필요(P2-report.md ⑧ - 10건)
 
 강화 구매력 2000+ 하락 · 보석 비중 지표와 범위(태초 등급으로 71 ~ 73%) · 태초 tier 배수(요청 1/2 ~ 1/3과 E5 조건 양립 불가, tier4 · 5 구조적 우세) · 레벨 감쇠가 평소 사냥에도 걸림(상위 1% 공급 ×0.057) · 치유 치명의 옵션 적용 · 힐러 버프 b 재산정(3+1 = 딜러4의 86 ~ 90%) · 파티 경험치 칩 표시 · 딜링모드 비 상위 장비 0.93 · 환생 지급 보석 itemLevel(옛 25 × 회차 유지) · 헛스윙도 파티 활동.
+
+### 20.115 P2.5a 성장 모델 재설계(스테이지당 2%) · 강화 30강 · 등급 배율 · 골드 축소 · 성능 기준선 (P2.5a - 자율 단계)  `[✅ 구현 + 로컬 검사(luau-compile 바뀐 · 새 파일 전부 · luau-analyze 새 문제 0 · 하네스 P25a(가) 18/18 · P2(가) 27/27 · P0(가) 18/18) + Studio Play 3회(2026-09-23 - 1회차 X 43 = 옛 기대값 + 실제 결함 2 수정 · 2회차 X 2 = 기존 · 타이밍 · 3회차(리뷰 반영 뒤) X 0: P25a(가) 18/18 · (나) 5/5 · P2(가) 27/27 · (나) 4/4 · P0(가) 18/18 · 26-2 41/41 · 스크립트 에러 0) + 성능 Play 4회. 결정 필요 10건 - docs/phase/P25a-report.md]`
+
+사용자 확정 결정 R1 ~ R5 · 골드 · 레벨업 · P2 결정 5 ~ 10을 반영했다. 상세 = `docs/phase/P25a-report.md` · 결정 로그 = `docs/phase/P25a-log.md` · 수치 = `docs/econ/P25a-after.md` · `docs/econ/P25a-before.md` · 성능 = `docs/perf/baseline.md`.
+
+#### [1] 결정별 반영
+
+| 결정 | 반영 | 파일(데이터 · 공식) |
+|---|---|---|
+| R1 k = 1.02 | 몬스터 · 보스 성장 1.155 → 1.02. 옛 앵커가 1.155에 묶여 있어 생존 α 0.470951 · 최대체력 기준 15.19로 다시 풀었다 · 보스 파티 HP 지수 · 파훼 게이트는 옛 힘 비율(1.155^5)로 고정 | `InfiniteStageConfig` · `CombatConfig` · `BossData.intervalPowerRatio` · `BossRules` |
+| R2 설계 최대 스테이지 | **21,230**(상위 1% 누적 2,198시간) · 최대 수치 2.6e187(1e250 첫 돌파 28,508) · 안전 상한 4738 → 34,320 · 무기 성장 g = 1.02, 레벨 20,000부터 1.01(천장) | `InfiniteStageConfig` · `CharacterLevelConfig.weaponGrowthLate` · `CharacterLevel` |
+| R3 등급 1단계 ×1.45 | 무기 · 방어구 등급 배율 1.45^i(방어구 1.184 × 1.45^i) | `ItemVisualData.gradeStep` · `ArmorData` |
+| R4 · R5 강화 +30 | 성공 1회 = 최종 데미지 +3.5%(합 버킷) × 공격력 (1 + 0.07889)^L → +30 누적 ×20.00 · 25 ~ 29강 성공률 12 · 12 · 10 · 10 · 8% · 21 ~ 30강 골드 표 재설계 · 재료 상급 19 ~ 31 · +26 ~ +30 칭호 · 패널 "최대 +30" · 최종 데미지 = 공격력 × (1 + 강화 + 옵션 합) - 평타 · 스킬 · 치유량 | `EnhanceConfig` · `EnhanceMaterialData` · `EnhanceVisualData` · `Enhance` · `PlayerCombat.getFinalDamageBonus` |
+| 골드 축소 | 골드 성장률을 k와 분리(1.001) · GoldCost 함수는 그대로, 강화 기준 스테이지 1 · 구매력 천장 전 구간 ±8% | `InfiniteStageConfig.goldGrowthRate` · `GoldCostConfig` · `InfiniteStage.getGoldMultiplier` |
+| 레벨업 가속 | 경험치 기준 스테이지 = 레벨 + 167 · 첫 12시간 평균 0.71분(최대 3.6) · 뒤 2.4분 · 환생 필요 레벨 **78 · 155 · 202 · 248 · 279**(일반 5회차 11.99시간) | `CharacterLevelConfig` · `CharacterLevel.getStageForLevel` |
+| 태초 · 보석 | 감쇠 시작 70칸 · 한 칸 1.4% · tier 배수 1.30 · 1.20 · 1.08 · 0.85 · 0.64 · 1 · 보석 곡선 기울기 0.025 · 환생 보석 itemLevel = 환생 순간 레벨 + 167(스테이지 척도 통일) | `DropTableData` · `OptionData` · `PlayerProfile.rebirth` |
+| 5 치유 치명 | 옵션 치명 확률 · 치명 피해가 치유(자기 · 파티 · 쉴드)에 들어간다 | `HealCast` |
+| 6 힐러 버프 b | 데이터 · 보고만(게임 값 그대로) | `EconSimReport` |
+| 7 파티 경험치 칩 | 지급 순간 실제 적용한 조건부 보너스 | `PartyState` · `PlayerProfile.getExpGainMultiplier` |
+| 8 딜링모드 | 배율 1.574 × 투자 기울기 max(1, (I ÷ I_평균)^β) - 평균 검사 × 0.877 · 최상위 1.103(HealerTopScale 1.1) | `SkillData.healer.E.investmentScaling` · `PlayerCombat.getInvestmentScale` |
+| 9 환생 보석 레벨 | 환생 순간 캐릭터 레벨에서 | `PlayerProfile.rebirth` |
+| 10 파티 활동 | 적에게 실제 명중한 순간만 | `CombatResolution.resolveHit` |
+
+저장 구조 변경 없음(새 저장 필드 0 · SAVE_VERSION 그대로) - 단 기존 프로필의 수치 뜻이 바뀐다(결정 필요 9).
+
+#### [2] 성능 기준선
+
+마을 · 사냥 · 보스전 × PC · 폰 근사 측정, 변경 전후 같은 수준(Heartbeat 평균 0.4 ~ 0.7 ms). 일반 스테이지 전환은 인스턴스를 안 만든다 → 풀링 변경 없음. 예산 초안 = `docs/perf/baseline.md`. 측정 도구 `PerfProbe`(Studio 전용 · `/gg perf`).
+
+#### [3] 검증
+
+- 새 블록 P25a(가)(18항목 - k · 앵커 · 설계 최대 · 강화 30 · 등급 · 골드 · 레벨 · 태초 · 결정 5 ~ 10) · P25a(나)(5항목 - 실제 경로).
+- 옛 블록 기대값을 P2.5a 값으로(P2 · S21-0 · 파티 경험치 · 강화 3종 · 드랍 규칙 · 튜토리얼 · 소셜 · 밸런스 결정 · 보스 기믹 · 26-2) - 판정식 불변.
+- 리뷰 서브에이전트 11건: 고침 5(투자 기울기 하한 · +26 ~ +29 칭호 · NaN 레벨 · 낡은 주석) · 결정 필요 2 · 유지 4.
+
+#### [4] 사람이 확인할 것
+
+1. 강화 패널 제목 "최대 +30" · +26 ~ +30 칭호 · 빛기둥 연출(화면 확인 안 함).
+2. 환생 제단 필요 레벨 78 · 155 · 202 · 248 · 279 표시.
+3. 초반 체감(캐주얼 스테이지 10 = 1.0시간 - 옛 무적 → 앵커 생존).
+
+#### [5] 미결 = 결정 필요(P25a-report.md ⑨ - 10건)
+
+천장의 모양(사다리가 진행을 정함) · 초반 생존 · 환생 필요 레벨 · 구매력 절대값 · 보석 비중 75 ~ 87% · 보스 드랍 itemLevel 폭 · 태초 tier 배수 · k에서 유도되던 보스 값 처리 · 세이브 이관 없음(라이브 계정이면 필요) · 스테이지 번호 임계값(재료 해금 · 방지권 · 보스 밀도).
