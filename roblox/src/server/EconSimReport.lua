@@ -9,6 +9,7 @@ local EconSimConfig = require(ReplicatedStorage.Shared.data.EconSimConfig)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local DropTable = require(ReplicatedStorage.Shared.DropTable)
@@ -278,95 +279,46 @@ end
 
 local function writeE6(w, healer)
 	local cfg = EconSimConfig.healer
-	w.line("## E6 치유사 r과 장비 성장")
+	w.line("## E6 치유사(P2 F)")
 	w.line("")
-	w.line(("앵커: 레벨 100 · 무기 등급 0 · +0강(S21-0 D2와 같은 조건). 60초 로테이션 총딜, 치명 옵션은 평타에만(AttackServer와 같다). 치유모드 치유사 딜 = 딜 옵션 미적용 딜링모드 총딜 × 보스전 전투 비율 %.4f(PartyShieldSim · 치유 모드 · 회복 0 = S21-0 D2의 0.266 - 쉴드 모드였다면 %.4f). r = 그 딜 ÷ 검사 딜(같은 장비 단계). 비중 = r ÷ (딜러 3 + r). 보상 문턱 = %s(CombatConfig)."):format(
-		healer.fightRatio.heal, healer.fightRatio.shield, pct(healer.contributionThreshold)))
+	w.line(("앵커: 레벨 100 · 무기 등급 0 · +0강(S21-0 D2와 같은 조건). 60초 로테이션 총딜, 치명 옵션은 평타에만(AttackServer와 같다). **치유모드 딜 = 딜링모드를 끈 평타(배율 1) · 딜 옵션 100%%**(게임 AttackServer가 모드와 무관하게 옵션을 넣는다 - F1) × 보스전 전투 비율 %s([가정]). 비중 = 치유사 ÷ (딜러 3 + 치유사). 지금 값: `ClassData.healer.atk` %s · `SkillData.healer.E.attackMultiplier` %s · 힐러 버프 b %s. 보상 문턱 = %s(CombatConfig)."):format(
+		num(healer.healModeFightRatio, 2), num(ClassData.classes.healer.atk, 3), num(SkillData.healer.E.attackMultiplier, 3), pct(healer.healerBuff), pct(healer.contributionThreshold)))
 	w.line("")
-	w.line("| 장비 단계 | 검사 · 도적 · 궁수 60초 딜(atk 단위) | 검사 배율 | 치유사(딜 옵션 적용 시) 배율 | 치유모드 r | 4인 보스전 비중 | r(딜러 궁수 · 도적 · 검사) | 딜링모드 r(옵션 적용) |")
-	w.line("|---|---|---|---|---|---|---|---|")
-	w.row("e6_tiers", { "tier", "gs_dps", "dual_dps", "bow_dps", "dealer_gain", "healer_own_gain", "r_heal", "share", "r_bow", "r_dual", "r_gs", "r_dealing" })
-	local dropTier = nil
+	w.line("| 장비 단계 | 검사 · 도적 · 궁수 60초 딜 | 치유모드 딜 | 비중: 도적 3 · 검사 3 · 궁수 3 · 혼합(각 1) | 딜링모드 ÷ 검사 |")
+	w.line("|---|---|---|---|---|")
+	w.row("e6_tiers", { "tier", "gs_dps", "dual_dps", "bow_dps", "heal_mode", "dealing_mode", "share_dual3", "share_gs3", "share_bow3", "share_mixed", "r_dealing" })
 	for _, tier in ipairs(cfg.gearTiers) do
 		local row = healer.tiers[tier.id]
-		if not dropTier and row.share < cfg.shareFloor then
-			dropTier = tier.displayName
+		local function mark(value)
+			return value < cfg.shareTarget and ("**%s**"):format(pct(value)) or pct(value)
 		end
-		w.line(("| %s | %s · %s · %s | ×%s | ×%s | %s | %s %s | %s · %s · %s | %s |"):format(row.displayName,
-			num(row.dps.greatsword / healer.units.greatsword, 1), num(row.dps.dualblade / healer.units.dualblade, 1), num(row.dps.bow / healer.units.bow, 1),
-			num(row.dealerGain, 3), num(row.healerOwnGain, 3), num(row.r, 4), pct(row.share), row.share >= cfg.shareFloor and "O" or "**X(10% 미만)**",
-			num(row.rByDealer.bow, 4), num(row.rByDealer.dualblade, 4), num(row.rByDealer.greatsword, 4), num(row.rDealing, 4)))
-		w.row("e6_tiers", { tier.id, row.dps.greatsword, row.dps.dualblade, row.dps.bow, row.dealerGain, row.healerOwnGain, row.r, row.share, row.rByDealer.bow, row.rByDealer.dualblade, row.rByDealer.greatsword, row.rDealing })
+		w.line(("| %s | %s · %s · %s | %s | %s · %s · %s · %s | %s |"):format(tier.displayName, num(row.dps.greatsword, 0), num(row.dps.dualblade, 0), num(row.dps.bow, 0), num(row.healMode, 0),
+			mark(row.share.dualblade), mark(row.share.greatsword), mark(row.share.bow), mark(row.share.mixed), num(row.rDealing, 4)))
+		w.row("e6_tiers", { tier.id, row.dps.greatsword, row.dps.dualblade, row.dps.bow, row.healMode, row.dealingMode, row.share.dualblade, row.share.greatsword, row.share.bow, row.share.mixed, row.rDealing })
 	end
 	w.line("")
-	w.line(("- 10%% 아래로 떨어지는 장비 단계: **%s**. 연속값으로는 검사 딜이 장비로 ×%s가 되는 순간 비중이 10%%가 된다(r ÷ 1/3)."):format(dropTier or "없음(세 단계 모두 10% 이상)", num(healer.dealerGainAtFloor, 3)))
+	w.line(("굵은 글씨 = 목표 %s 미만. F2 풀이: \"도적 3 + 치유사 1\"이 세 장비 단계 모두 ≥ %s가 되는 최소 `ClassData.healer.atk` = **%s**(지금 %s). F3 풀이: 그 atk에서 딜링모드 = 검사 × %s(장비 없음)가 되는 `attackMultiplier` = **%s**(지금 %s)."):format(
+		pct(cfg.shareTarget), pct(cfg.shareTarget), num(healer.solvedAtk, 4), num(ClassData.classes.healer.atk, 3), num(cfg.dealingTarget, 3), num(healer.solvedDealingMultiplier, 4), num(SkillData.healer.E.attackMultiplier, 3)))
 	w.line("")
-	w.line("### (가) 치유모드에 딜 옵션 적용률 a")
+	w.line(("참고(딜링모드로 싸우는 치유사 - S13b 모형): 보스전 전투 비율 쉴드 %s · 치유 %s · 필드 가동률 %s."):format(num(healer.fightRatio.shield, 4), num(healer.fightRatio.heal, 4), num(healer.fieldUptime, 4)))
 	w.line("")
-	w.line("| a | " .. (function()
-		local heads = {}
-		for _, tier in ipairs(cfg.gearTiers) do
-			table.insert(heads, tier.displayName .. " 비중")
-		end
-		return table.concat(heads, " | ")
-	end)() .. " |")
-	w.line("|" .. string.rep("---|", 1 + #cfg.gearTiers))
-	w.row("e6_a", { "a", "none", "average", "top" })
-	for _, row in ipairs(healer.applyRates) do
-		local cells = {}
-		local csv = { row.a }
-		for _, tier in ipairs(cfg.gearTiers) do
-			table.insert(cells, pct(row.shares[tier.id]))
-			table.insert(csv, row.shares[tier.id])
-		end
-		w.line(("| %s | %s |"):format(num(row.a, 2), table.concat(cells, " | ")))
-		w.row("e6_a", csv)
-	end
+	w.line("### F4 파티 구성 속도(보스 처치 속도 ÷ 딜러 4명 - 보스 HP는 4인 배율로 같다)")
 	w.line("")
-	w.line(("- 세 단계 모두 비중 ≥ %s가 되는 a: **%s**."):format(pct(cfg.shareTarget), healer.minApplyRate and ("a ≥ " .. num(healer.minApplyRate, 2)) or "[없음] - a = 1(딜러와 똑같이 적용)이어도 모자라다"))
-	w.line("")
-	w.line("### (나) 치유모드 전용 보석 계수 m(태초 기준값 - 위력 0.30과 같은 눈금, 칸 수 · 등급 · 레벨 · roll은 그 장비 단계 그대로)")
-	w.line("")
-	w.line("| m | " .. (function()
-		local heads = {}
-		for _, tier in ipairs(cfg.gearTiers) do
-			table.insert(heads, tier.displayName .. " 비중")
-		end
-		return table.concat(heads, " | ")
-	end)() .. " |")
-	w.line("|" .. string.rep("---|", 1 + #cfg.gearTiers))
-	w.row("e6_m", { "m", "none", "average", "top" })
-	for _, row in ipairs(healer.gemCoefficients) do
-		local cells = {}
-		local csv = { row.m }
-		for _, tier in ipairs(cfg.gearTiers) do
-			table.insert(cells, pct(row.shares[tier.id]))
-			table.insert(csv, row.shares[tier.id])
-		end
-		w.line(("| %s | %s |"):format(num(row.m, 2), table.concat(cells, " | ")))
-		w.row("e6_m", csv)
-	end
-	w.line("")
-	w.line(("- 세 단계 모두 비중 ≥ %s가 되는 m: **%s**. (장비 '없음' 단계는 보석이 없어 m이 아무리 커도 그대로다 - 그 단계의 비중이 문턱 아래면 m만으로는 못 맞춘다.)"):format(
-		pct(cfg.shareTarget), healer.minGemCoefficient and ("m ≥ " .. num(healer.minGemCoefficient, 2)) or "[없음] - 격자(0 ~ 3) 안에서 못 맞춘다"))
-	if healer.whatIfRow then
-		local cells = {}
-		for _, tier in ipairs(cfg.gearTiers) do
-			table.insert(cells, ("%s %s"):format(tier.displayName, pct(healer.whatIfRow.shares[tier.id])))
-		end
-		w.line(("- what-if a = %s · m = %s: %s"):format(num(healer.whatIfRow.a, 2), num(healer.whatIfRow.m, 2), table.concat(cells, " · ")))
-	end
-	w.line("")
-	w.line(("### 딜링모드 배율(지금 r = %s = 치유사 %s ÷ 검사 %s atk 단위, 장비 없음)"):format(num(healer.healerDealing / healer.greatswordBase, 4),
-		num(healer.healerDealing / healer.units.healer, 1), num(healer.greatswordBase / healer.units.greatsword, 1)))
-	w.line("")
-	w.line("| 딜러 | 딜러 딜(atk 단위) | 목표 | 필요한 딜링모드 배율 | attackMultiplier(지금 값 × 배율) | 덮어써 다시 잰 치유사 ÷ 딜러 |")
-	w.line("|---|---|---|---|---|---|")
-	w.row("e6_dealing", { "dealer", "dealer_dps", "target", "factor", "attack_multiplier", "check_ratio" })
-	for _, row in ipairs(healer.dealers) do
-		for _, target in ipairs(row.targets) do
-			w.line(("| %s | %s | × %s | × %s | %s | %s |"):format(className(row.classId), num(row.dealer / healer.units[row.classId], 1), num(target.target, 2), num(target.factor, 4), num(target.attackMultiplier, 3), num(target.checkRatio, 4)))
-			w.row("e6_dealing", { row.classId, row.dealer, target.target, target.factor, target.attackMultiplier, target.checkRatio })
+	w.line("| 장비 | 딜러 | 치유사 모드 | 딜러4 · 딜러3+치유사1 · 딜러2+치유사2 · 딜러1+치유사3 · 치유사4 | 목표 순서(딜러4 ≈ 3+1 > 2+2 > 1+3 · 4) |")
+	w.line("|---|---|---|---|---|")
+	w.row("e6_comp", { "tier", "dealer", "mode", "d4", "d3h1", "d2h2", "d1h3", "h4" })
+	for _, entry in ipairs(healer.compositions) do
+		for _, mode in ipairs({ "healMode", "dealingMode", "rebuiltBuff" }) do
+			local v = {}
+			for index, speed in ipairs(entry.speeds) do
+				v[index] = speed[mode]
+			end
+			-- ≈ = 딜러4의 90% 이상(판정 기준 - 로그에 적었다)
+			local ok = v[2] >= 0.9 * v[1] and v[2] > v[3] and v[3] > math.max(v[4], v[5])
+			local modeName = mode == "healMode" and "치유모드" or (mode == "dealingMode" and "딜링모드" or ("치유모드 · 참고: b 재산정 %s"):format(pct(entry.rebuiltBuff)))
+			w.line(("| %s | %s | %s | %s · %s · %s · %s · %s | %s |"):format(entry.tier, className(entry.dealerClass), modeName,
+				num(v[1], 3), num(v[2], 3), num(v[3], 3), num(v[4], 3), num(v[5], 3), ok and "O" or "**X**"))
+			w.row("e6_comp", { entry.tier, entry.dealerClass, mode, v[1], v[2], v[3], v[4], v[5] })
 		end
 	end
 	w.line("")
@@ -434,9 +386,12 @@ function EconSimReport.run(opts)
 	task.wait()
 	local primordial = EconSim.withOverrides(whatIf, EconSimTables.primordial)
 	task.wait()
-	local healer = EconSim.withOverrides(whatIf, EconSimTables.healer, whatIf)
+	local healer = EconSim.withOverrides(whatIf, EconSimTables.healer)
 	task.wait()
-	local samples = EconSimTables.samples(EconSim.withOverrides({}, EconSimTables.healer, nil))
+	-- 표본(S21a · S21-0)은 P2 전 게임 값에서 잰 것이라 p2before 덮어쓰기 안에서 대조한다(도구가 옛 값을 그대로 재현하는가).
+	local samples = EconSim.withOverrides(EconSimConfig.whatIfs.p2before, function()
+		return EconSimTables.samples(EconSimTables.healer())
+	end)
 	local elapsed = os.clock() - started
 
 	local runId = ("%s-%s"):format(whatIfName, profileArg)
@@ -472,8 +427,8 @@ function EconSimReport.run(opts)
 			okSamples += 1
 		end
 	end
-	local summary = ("econ %s: %s · 치유사 4인 보스전 비중 %s → %s → %s · 표본 %d/%d O · %.1f초 - 전체 표는 출력 창 [ECONMD](docs/econ/_extract.py)"):format(
-		runId, table.concat(parts, " · "), pct(healer.tiers.none.share), pct(healer.tiers.average.share), pct(healer.tiers.top.share), okSamples, #samples, elapsed)
+	local summary = ("econ %s: %s · 치유사(도적 3 + 1) 비중 %s → %s → %s · 표본 %d/%d O · %.1f초 - 전체 표는 출력 창 [ECONMD](docs/econ/_extract.py)"):format(
+		runId, table.concat(parts, " · "), pct(healer.tiers.none.share.dualblade), pct(healer.tiers.average.share.dualblade), pct(healer.tiers.top.share.dualblade), okSamples, #samples, elapsed)
 	return summary, { runs = runs, enhance = enhanceTable, primordial = primordial, healer = healer, samples = samples }
 end
 

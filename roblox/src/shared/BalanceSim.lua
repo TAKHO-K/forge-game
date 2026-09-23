@@ -29,7 +29,7 @@
 --     (초과분은 가장 오래된 것이 즉시 폭발 - StuckArrowState와 같은 규칙)
 --   · 활 백스텝샷: 5충전, 충전이 남은 평타에 +0.5×atk(3타 강타 배율 밖에서 더한다 - AttackServer의
 --     base += coefficient×atk 순서 그대로) + 치확 +30%p
---   · 힐러 딜링모드: base(3타 강타 포함)에 3.13배, 치명타 전
+--   · 힐러 딜링모드: base(3타 강타 포함)에 SkillData.healer.E.attackMultiplier배(P2 F3 전 3.13), 치명타 전
 --   · 쌍검 난무: 시전 시점 대상 고정, 대상이 죽으면 남은 틱 손실, 1틱째만 확정 치명타(Q 활성 시)
 --   · 회전 지연(AttackInput.client.lua 720도/초·15도 스냅): 대상을 바꿀 때만 발생하므로 단일
 --     더미 60초 측정엔 0이고, 처치 시간 측정에서 opts.turnDelaySeconds로 "새 대상으로 돌아서는"

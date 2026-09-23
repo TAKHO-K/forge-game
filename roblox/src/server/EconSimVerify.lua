@@ -10,6 +10,9 @@ local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local EconSimConfig = require(ReplicatedStorage.Shared.data.EconSimConfig)
+local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+local GoldCostConfig = require(ReplicatedStorage.Shared.data.GoldCostConfig)
+local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 local EconSim = require(script.Parent.EconSim)
 local EconSimReport = require(script.Parent.EconSimReport)
 
@@ -47,6 +50,13 @@ local function snapshot()
 		bowClass = ClassData.classes.bow,
 		healerClass = ClassData.classes.healer,
 		bowQuickShotBase = SkillData.bow.Q.attackSpeedBase,
+		-- P2 덮어쓰기 칸(p2before what-if)
+		rebirthLevels = CharacterLevelConfig.rebirth.requiredLevels,
+		levelLogSlope = OptionData.levelLogSlope,
+		enhanceAnchor = GoldCostConfig.anchorStage.enhance,
+		dragonOverTier = DropTableData.primordial.dragonOverTier,
+		decayPerLevel = DropTableData.primordial.levelDecay.perLevel,
+		healerAtk = ClassData.classes.healer.atk,
 	}
 end
 
@@ -115,15 +125,17 @@ function EconSimVerify.runPure()
 				r.check(("6 %s: 스테이지 100 도달 %s · 이정표 시간 단조 %s · 끝 = %s(최고 %d)"):format(id, tostring(reached100), tostring(monotone), run.stall and "진행 정지 사유 있음" or "SafeStageCap", run.final.reach),
 					reached100 and monotone and finished)
 			end
+			-- P2 F: 치유모드에도 딜 옵션이 100% 들어가(게임과 같은 모형) 장비 단계가 올라도 비중이 거의 안 변한다 - 세 단계 모두 목표 이상인지(결과 모양).
 			local tiers = data.healer.tiers
-			r.check(("7 E6 치유모드 비중 없음 %.2f%% ≥ 평균 %.2f%% ≥ 상위 %.2f%%(장비가 딜러만 키우면 비중이 준다)"):format(tiers.none.share * 100, tiers.average.share * 100, tiers.top.share * 100),
-				tiers.none.share >= tiers.average.share and tiers.average.share >= tiers.top.share)
+			local target = EconSimConfig.healer.shareTarget
+			r.check(("7 E6 도적 3 + 치유사 1 비중 없음 %.2f%% · 평균 %.2f%% · 상위 %.2f%%(기대 전부 ≥ %.0f%%)"):format(tiers.none.share.dualblade * 100, tiers.average.share.dualblade * 100, tiers.top.share.dualblade * 100, target * 100),
+				tiers.none.share.dualblade >= target and tiers.average.share.dualblade >= target and tiers.top.share.dualblade >= target)
 		end)
 	end
 
 	r.section("[6] 게임 데이터 표 불변", function()
 		local same, key = sameSnapshot(before, snapshot())
-		r.check(("8 실행 뒤 InfiniteStageConfig · CharacterLevelConfig · SkillData · EnhanceConfig · ClassData가 실행 전과 같은 값 · 같은 표 %s%s"):format(tostring(same), key and (" - 어긋난 칸 " .. key) or ""), same)
+		r.check(("8 실행 뒤 InfiniteStageConfig · CharacterLevelConfig · SkillData · EnhanceConfig · ClassData · OptionData · GoldCostConfig · DropTableData가 실행 전과 같은 값 · 같은 표 %s%s"):format(tostring(same), key and (" - 어긋난 칸 " .. key) or ""), same)
 	end)
 
 	local pass, total = r.summary()

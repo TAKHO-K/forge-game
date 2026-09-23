@@ -6,9 +6,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EconSimConfig = require(ReplicatedStorage.Shared.data.EconSimConfig)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
-local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
-local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local Loot = require(ReplicatedStorage.Shared.Loot)
@@ -87,13 +87,13 @@ function EconSimTables.primordial()
 	return rows
 end
 
--- ═══ E6 치유사 r과 장비 성장 ═══
+-- ═══ E6 치유사(P2 F) ═══
 -- 앵커 조건(S21-0 D2와 같다): 레벨 100 · 무기 등급 0 · +0강 · 장비 일반 등급 itemLevel 100. 60초 로테이션 총딜(EconSim.rotationDamage - 치명 옵션은 평타만).
--- 치유모드 치유사의 딜 = 딜 옵션을 안 받은 딜링모드 총딜 × 보스전 전투 비율(PartyShieldSim - S13b 시나리오의 "치유" 모드 = Q가 회복. S21-0 D2의 0.266이
--- 이 값이다. 쉴드 모드(파티 + 딜링모드면 Q가 쉴드) 비율도 같이 재서 보고서에 참고로 적는다).
--- r = 치유모드 치유사 딜 ÷ 검사 딜(같은 장비 단계), 비중 = r ÷ (딜러 3 + r)(4인 = 딜러 3 + 치유사 1, D2와 같은 식).
--- (가) a: 치유모드 딜 × (1 + a × (치유사가 같은 딜 옵션을 꼈을 때의 배율 − 1)). (나) m: 치유모드 전용 보석 - 같은 칸 수 · 등급 · itemLevel · roll의 보석이
---   "태초 기준값 m인 위력"을 준다(위력 옵션의 roll을 m ÷ 위력 기준값 0.30배로 - Option.valueOf가 roll에 선형이라 정확히 그 값이다).
+-- 모형(P2 - P0-log 20의 "치유모드 공격에 딜 옵션 미적용"은 게임 코드와 달랐다: AttackServer는 직업 · 모드와 무관하게 평타에 위력% · 치명 · 신속 옵션을 넣는다):
+--   딜링모드 원딜 = 치유사 로테이션(BalanceSim이 딜링모드를 켠다 - SkillData.healer.E.attackMultiplier) · 딜 옵션 적용.
+--   치유모드 원딜 = 같은 로테이션을 attackMultiplier 1(딜링모드 꺼짐 = 평타 그대로)로 · 딜 옵션 100% 적용(F1 · 결정 7A).
+--   보스전 치유모드 딜 = 치유모드 원딜 × healModeFightRatio([가정] 1.0 - 치유모드는 소모가 없어 딜러처럼 계속 싸운다, 딜러 가동률도 1로 본다).
+--   비중 = 치유사 딜 ÷ (딜러 3명 딜 + 치유사 딜). 딜링모드 비 = 딜링모드 원딜 ÷ 검사 원딜(목표 0.875 - 결정 8A).
 local function anchorSpec(classId)
 	local level = BalanceAnchorConfig.referenceLevel
 	local grade = BalanceAnchorConfig.gearGrade
@@ -110,10 +110,10 @@ local function anchorSpec(classId)
 	}
 end
 
-local function tierGems(tier, optionOverride, rollScale)
+local function tierGems(tier)
 	local gems = {}
 	for slot, entry in ipairs(tier.gems) do
-		gems[slot] = EconSim.makeGem(optionOverride or entry[1], entry[2], entry[3], entry[4] * (rollScale or 1))
+		gems[slot] = EconSim.makeGem(entry[1], entry[2], entry[3], entry[4])
 	end
 	return gems
 end
@@ -123,18 +123,28 @@ local function share(r, dealers)
 end
 EconSimTables.healerShare = share
 
-function EconSimTables.healer(whatIf)
+-- 치유사 로테이션 60초 총딜(atk 단위가 아니라 게임 피해). dealing = true면 딜링모드 배율 그대로, false면 배율 1(치유모드).
+local function healerDamage(gems, dealing)
+	if dealing then
+		return EconSim.rotationDamage(anchorSpec("healer"), gems)
+	end
+	return EconSim.withOverrides({ dealingAttackMultiplier = 1 }, function()
+		return EconSim.rotationDamage(anchorSpec("healer"), gems)
+	end)
+end
+
+function EconSimTables.healer()
 	local cfg = EconSimConfig.healer
-	local attackBase = OptionData.options.attackPercent.baseValue
-	local result = { tiers = {}, dealers = {}, fightRatio = {}, applyRates = {}, gemCoefficients = {} }
+	local result = { tiers = {}, compositions = {}, dealerMixes = {} }
 
 	local healerBase = EconSim.rotationDamage(anchorSpec("healer"), {})
 	local gsBase = EconSim.rotationDamage(anchorSpec("greatsword"), {})
-	result.healerDealing = healerBase
+	result.healerDealing = healerBase -- 표본 D2가 읽는다(딜링모드 · 장비 없음)
 	result.greatswordBase = gsBase
 
-	-- 보스전 전투 비율(쉴드 · 치유 두 모드) + 필드 가동률(S13 simulateHealerCycle).
+	-- 보스전 전투 비율(딜링모드 - 쉴드 · 치유 두 모드) + 필드 가동률(S13 simulateHealerCycle) - 딜링모드로 싸우는 치유사의 참고값 · 표본 D2.
 	local scenario = cfg.fightRatioScenario
+	result.fightRatio = {}
 	for _, shield in ipairs({ true, false }) do
 		local run = PartyShieldSim.run({
 			dealers = 3, healers = 1, healerRaw = healerBase / gsBase, bossHpUnits = 4 * scenario.bossHpUnitsSeconds,
@@ -143,120 +153,65 @@ function EconSimTables.healer(whatIf)
 		result.fightRatio[shield and "shield" or "heal"] = run.healerFightRatio
 	end
 	result.fieldUptime = BalanceSim.simulateHealerCycle({ hitsPerSecond = scenario.hitsPerSecond, hitRatio = scenario.hitRatio }).uptime
-	local fight = result.fightRatio.heal
+	result.healModeFightRatio = cfg.healModeFightRatio
+	result.healerBuff = PartyConfig.healerBuffFraction
 
-	local mGainMemo = {}
-	local healModeFactor = function(tier, a, m)
-		local own = result.tiers[tier.id].healerOwnGain
-		local mGain = 1
-		if m and m > 0 then
-			local key = ("%s|%.6f"):format(tier.id, m)
-			mGain = mGainMemo[key]
-			if not mGain then
-				mGain = EconSim.rotationDamage(anchorSpec("healer"), tierGems(tier, "attackPercent", m / attackBase)) / healerBase
-				mGainMemo[key] = mGain
-			end
-		end
-		return (1 + (a or 0) * (own - 1)) * mGain
-	end
-
-	-- 표시 단위: 장비 없음 loadout의 무기 기본 atk 단위(D2 · S13 anchorRotationUnits와 같은 눈금 - 검사 615.4). 비율 계산에는 안 쓴다.
-	result.units = {}
-	for _, classId in ipairs({ "greatsword", "dualblade", "bow", "healer" }) do
-		local loadout = BalanceSim.buildLoadout(anchorSpec(classId))
-		result.units[classId] = loadout.atk / loadout.class.atk
-	end
 	for _, tier in ipairs(cfg.gearTiers) do
 		local gems = tierGems(tier)
 		local row = { id = tier.id, displayName = tier.displayName, dps = {} }
-		for _, classId in ipairs({ "greatsword", "dualblade", "bow" }) do
+		for _, classId in ipairs(cfg.dealerClasses) do
 			row.dps[classId] = EconSim.rotationDamage(anchorSpec(classId), gems)
 		end
-		row.healerWithOptions = EconSim.rotationDamage(anchorSpec("healer"), gems)
-		row.healerOwnGain = row.healerWithOptions / healerBase
-		row.dealerGain = row.dps.greatsword / gsBase
+		row.healMode = healerDamage(gems, false) * cfg.healModeFightRatio
+		row.dealingMode = healerDamage(gems, true)
+		row.rDealing = row.dealingMode / row.dps.greatsword
+		row.r = {}
+		row.share = {}
+		for _, classId in ipairs(cfg.dealerClasses) do
+			row.r[classId] = row.healMode / row.dps[classId]
+			row.share[classId] = share(row.r[classId], 3)
+		end
+		-- 혼합 구성(검사 · 도적 · 궁수 각 1 + 치유사 1)
+		local mixed = 0
+		for _, classId in ipairs(cfg.dealerClasses) do
+			mixed += row.dps[classId]
+		end
+		row.share.mixed = row.healMode / (mixed + row.healMode)
 		result.tiers[tier.id] = row
 	end
 
-	local function rFor(tier, a, m, dealerClass)
-		local row = result.tiers[tier.id]
-		return healerBase * healModeFactor(tier, a, m) * fight / row.dps[dealerClass or "greatsword"]
+	-- F2 · F3 풀이(지금 값과 무관하게 목표를 맞추는 값 - 게임 데이터에 넣을 값의 근거): 치유모드 딜은 ClassData.healer.atk에, 딜링모드 딜은 atk × attackMultiplier에 비례한다.
+	local atkNow = ClassData.classes.healer.atk
+	local need = 0
+	local rTarget = 3 * cfg.shareTarget / (1 - cfg.shareTarget)
+	for _, tier in ipairs(cfg.gearTiers) do
+		need = math.max(need, rTarget / result.tiers[tier.id].r[cfg.shareDealerClass])
 	end
-	result.rFor = rFor
+	result.solvedAtk = atkNow * need -- 이 값 이상이면 "도적 3 + 치유사 1"이 모든 장비 단계에서 비중 ≥ shareTarget
+	local noneRow = result.tiers[cfg.gearTiers[1].id]
+	local healModeAtSolved = noneRow.healMode / cfg.healModeFightRatio * need
+	result.solvedDealingMultiplier = cfg.dealingTarget * noneRow.dps.greatsword / healModeAtSolved -- 장비 없음에서 딜링모드 = 검사 × 목표
 
+	-- F4 파티 구성 속도: 파티 딜 = (딜러 딜 합 + 치유사 딜 합) × (치유사가 있으면 1 + 힐러 버프 b). 보스 HP는 인원(4)이 같아 같다 → 속도 = 파티 딜 ÷ 딜러 4명 딜.
+	--   치유사 모드 두 가지: 치유모드(위 healMode) · 딜링모드(딜링모드 원딜 × 보스전 전투 비율(쉴드) - 소모 · 이탈 포함, S13b 모형).
 	for _, tier in ipairs(cfg.gearTiers) do
 		local row = result.tiers[tier.id]
-		row.r = rFor(tier, 0, 0)
-		row.share = share(row.r, 3)
-		row.rByDealer = {}
-		for _, classId in ipairs(cfg.dealerClasses) do
-			row.rByDealer[classId] = rFor(tier, 0, 0, classId)
-		end
-		row.rDealing = row.healerWithOptions / row.dps.greatsword
-	end
-
-	-- 비중이 문턱(shareFloor)으로 떨어지는 검사 장비 배율(연속값): r = 치유모드 딜 × 전투 비율 ÷ (검사 기준 × G) → G* = r_없음 ÷ r*.
-	local rNone = result.tiers[cfg.gearTiers[1].id].r
-	local rAtFloor = 3 * cfg.shareFloor / (1 - cfg.shareFloor)
-	result.dealerGainAtFloor = rNone / rAtFloor
-
-	-- 모든 장비 단계에서 비중 ≥ shareTarget이 되는 최소 a · m(격자 0.01 · 0.01).
-	local function allTiersOk(a, m)
-		for _, tier in ipairs(cfg.gearTiers) do
-			if share(rFor(tier, a, m), 3) < cfg.shareTarget then
-				return false
+		for _, dealerClass in ipairs(cfg.compositionDealerClasses) do
+			local dealer = row.dps[dealerClass]
+			-- 참고: PartyConfig의 b 식(b = N ÷ (N − 1 + r) − 1, r = 치유사 딜 ÷ 딜러 딜)에 지금 치유모드 r을 넣은 값 - "딜러 3 + 치유사 1 = 딜러 4"가 되는 b(게임 값은 안 바꾼다).
+			local maxMembers = PartyConfig.maxMembers
+			local rebuiltBuff = maxMembers / (maxMembers - 1 + row.healMode / dealer) - 1
+			local entry = { tier = tier.id, dealerClass = dealerClass, speeds = {}, rebuiltBuff = rebuiltBuff }
+			for _, composition in ipairs(cfg.compositions) do
+				local hasHealer = composition.healers > 0
+				local buff = hasHealer and (1 + PartyConfig.healerBuffFraction) or 1
+				local heal = (composition.dealers * dealer + composition.healers * row.healMode) * buff
+				local deal = (composition.dealers * dealer + composition.healers * row.dealingMode * result.fightRatio.shield) * buff
+				local rebuilt = (composition.dealers * dealer + composition.healers * row.healMode) * (hasHealer and (1 + rebuiltBuff) or 1)
+				table.insert(entry.speeds, { dealers = composition.dealers, healers = composition.healers, healMode = heal / (4 * dealer), dealingMode = deal / (4 * dealer), rebuiltBuff = rebuilt / (4 * dealer) })
 			end
+			table.insert(result.compositions, entry)
 		end
-		return true
-	end
-	for _, a in ipairs(cfg.applyRates) do
-		local row = { a = a, shares = {} }
-		for _, tier in ipairs(cfg.gearTiers) do
-			row.shares[tier.id] = share(rFor(tier, a, 0), 3)
-		end
-		table.insert(result.applyRates, row)
-	end
-	for _, m in ipairs(cfg.gemCoefficients) do
-		local row = { m = m, shares = {} }
-		for _, tier in ipairs(cfg.gearTiers) do
-			row.shares[tier.id] = share(rFor(tier, 0, m), 3)
-		end
-		table.insert(result.gemCoefficients, row)
-	end
-	result.minApplyRate = nil
-	for step = 0, 100 do
-		if allTiersOk(step / 100, 0) then
-			result.minApplyRate = step / 100
-			break
-		end
-	end
-	result.minGemCoefficient = nil
-	for step = 0, 300 do
-		if allTiersOk(0, step / 100) then
-			result.minGemCoefficient = step / 100
-			break
-		end
-	end
-	if whatIf and (whatIf.healerApplyRate or whatIf.healerGemCoefficient) then
-		result.whatIfRow = { a = whatIf.healerApplyRate or 0, m = whatIf.healerGemCoefficient or 0, shares = {} }
-		for _, tier in ipairs(cfg.gearTiers) do
-			result.whatIfRow.shares[tier.id] = share(rFor(tier, result.whatIfRow.a, result.whatIfRow.m), 3)
-		end
-	end
-
-	-- 딜링모드 목표(딜러 × 0.85 ~ 0.9)에 필요한 배율 - 장비 없음 기준. 배율은 SkillData.healer.E.attackMultiplier에 곱한다(딜링모드 딜은 그 배율에 비례 -
-	-- 계산한 배율을 실제로 덮어써 다시 돌린 값으로 확인한다).
-	for _, classId in ipairs(cfg.dealerClasses) do
-		local dealer = result.tiers[cfg.gearTiers[1].id].dps[classId]
-		local row = { classId = classId, dealer = dealer, targets = {} }
-		for _, target in ipairs(cfg.dealingTargetRange) do
-			local factor = target * dealer / healerBase
-			local check = EconSim.withOverrides({ dealingMultiplier = factor }, function()
-				return EconSim.rotationDamage(anchorSpec("healer"), {})
-			end)
-			table.insert(row.targets, { target = target, factor = factor, attackMultiplier = SkillData.healer.E.attackMultiplier * factor, checkRatio = check / dealer })
-		end
-		table.insert(result.dealers, row)
 	end
 	result.contributionThreshold = CombatConfig.contributionRewardThreshold
 	return result

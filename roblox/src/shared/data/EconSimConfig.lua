@@ -76,7 +76,7 @@ return {
 		lowTiers = { 1, 2, 3, 4, 5 },
 	},
 
-	-- E6 치유사 r과 장비 성장. 장비 단계 = 딜러(와 what-if의 치유사)가 낀 딜 옵션 보석. 앵커 = 레벨 100 · 무기 등급 0 · +0강(S21-0 D2와 같은 조건).
+	-- E6 치유사(P2 F). 장비 단계 = 딜러와 치유사가 똑같이 낀 딜 옵션 보석(치유모드에도 옵션 100% - 게임 AttackServer와 같다). 앵커 = 레벨 100 · 무기 등급 0 · +0강(S21-0 D2와 같은 조건).
 	--   gems: { 옵션 id, 등급, itemLevel, roll } 목록(보석 칸 순서)
 	healer = {
 		fightRatioScenario = { hitsPerSecond = 0.25, hitRatio = 0.1026, bossHpUnitsSeconds = 600 }, -- S13b PartyShieldSim 기준 시나리오 그대로
@@ -97,17 +97,19 @@ return {
 				{ "speedPercent", "ancient", 125, 1.125 },
 			} },
 		},
-		applyRates = { 0, 0.5, 0.75, 1.0 }, -- (가) 치유모드에 딜 옵션 적용률 a
-		gemCoefficients = { 0, 0.3, 0.6, 0.9, 1.2, 1.5 }, -- (나) 치유모드 전용 보석 계수 m(태초 기준값 - 위력 0.30과 같은 눈금)
-		dealingTargetRange = { 0.85, 0.9 }, -- 딜링모드 목표 = 딜러 × 이 범위
+		dealingTarget = 0.875, -- F3 딜링모드 원딜 = 검사 × 이 값(장비 없음 기준)
+		dealingTargetRange = { 0.85, 0.9 }, -- 딜링모드 목표 범위(결정 8A)
+		shareDealerClass = "dualblade", -- F2 판정 구성 = 이 딜러 3 + 치유사 1
+		healModeFightRatio = 1.0, -- [가정] 보스전 치유모드 치유사의 전투 시간 비율(치유모드는 소모가 없다 - 딜러 가동률과 같게 1로 본다)
 		dealerClasses = { "bow", "dualblade", "greatsword" },
+		-- F4 파티 구성(4인). 딜러 직업은 compositionDealerClasses마다 따로 잰다.
+		compositions = { { dealers = 4, healers = 0 }, { dealers = 3, healers = 1 }, { dealers = 2, healers = 2 }, { dealers = 1, healers = 3 }, { dealers = 0, healers = 4 } },
+		compositionDealerClasses = { "dualblade", "greatsword" },
 	},
 
 	-- E7 what-if 덮어쓰기. 이름 = /gg econ의 둘째 인자. 빈 표 = 기준선. 모든 칸은 선택:
 	--   growthRate          InfiniteStageConfig.growthRate(몬스터 · 보상 · 아이템 계수 성장 k)
 	--   weaponGrowthRate    CharacterLevelConfig.weaponMultGrowthRate(g)
-	--   healerApplyRate     E6 (가)의 a를 한 값으로 고정해 표를 다시 낸다
-	--   healerGemCoefficient E6 (나)의 m
 	--   dealingMultiplier   SkillData.healer.E.attackMultiplier에 곱하는 배율
 	--   enhanceCostScale    EnhanceConfig.goldCost 전체에 곱하는 배율
 	--   (P2) rebirthRequiredLevels  CharacterLevelConfig.rebirth.requiredLevels · optionLevelLogSlope  OptionData.levelLogSlope · enhanceGoldAnchor  GoldCostConfig.anchorStage.enhance
@@ -117,8 +119,6 @@ return {
 		baseline = {},
 		k1150 = { growthRate = 1.150 },
 		g1155 = { weaponGrowthRate = 1.155 },
-		healA75 = { healerApplyRate = 0.75 },
-		healM09 = { healerGemCoefficient = 0.9 },
 		dealing087 = { dealingMultiplier = 0.87 },
 		enhanceHalf = { enhanceCostScale = 0.5 },
 		p2before = {

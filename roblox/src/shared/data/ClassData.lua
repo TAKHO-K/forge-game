@@ -75,7 +75,10 @@ return {
 		healer = {
 			id = "healer",
 			displayName = "치유사",
-			atk = 0.6,
+			-- P2 F2(결정 7A "치유모드 기본 딜 상향"): 0.6 → 0.66. 치유모드(딜링모드 꺼짐) 딜이 이 값에 비례한다 - 4인 보스전 "도적 3 + 치유사 1"에서 장비
+			-- 없음 · 평균 · 상위 세 단계 모두 치유사 비중 ≥ 12%가 되는 최솟값(EconSim E6 풀이 0.6580 → 0.66, 비중 최소 12.03%). 딜링모드는 이 값 × SkillData
+			-- healer.E.attackMultiplier라 그쪽을 같이 낮췄다(F3). 치유모드 평타의 딜 옵션(위력 · 치명 · 신속)은 AttackServer가 원래부터 100% 넣는다(F1).
+			atk = 0.66,
 			atkSpeed = 1.25,
 			def = 1.0,
 			critRate = 0.12,
