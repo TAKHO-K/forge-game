@@ -1,5 +1,5 @@
 -- "보석 공방" 창(S20e) - 커뮤니티 센터 보석상인(ProximityPrompt GemMerchantPrompt, PC E · 모바일 탭)이 여는 station. 보석 탭에 있던 변환 · 리롤 UI가 여기로 옮겨 왔다:
---   ① 변환권 구매(고대 · 태초 - 골드) ② 리롤할 대상 목록(홈 5 + 착용 3부위 + 가방 장비 중 고대 · 태초만) 각 행의 [리롤(n장)].
+--   ① 변환권 구매(고대 · 태초 - 골드 + 보석 가루(P2.5b C)) ② 리롤할 대상 목록(홈 5 + 착용 3부위 + 가방 장비 중 고대 · 태초만) 각 행의 [리롤(n장)].
 -- 기능 · 서버 규칙 · 비용은 그대로다(GemRerollRequest · BuyRerollTicketRequest). 달라진 것은 자리뿐 - 서버가 요청 시점에 보석상인 반경을 직접 잰다(GemWorkshop → GemMerchantAccess).
 -- 이 창은 서버 상태의 진실을 갖지 않는다: GemSync · InventorySync 스냅샷을 그리고, GemWorkshopResult(action, success, reason)를 한 줄로 보인다. 걸어서 반경을 벗어나면 저절로 닫힌다(표시 편의 - 판정은 서버).
 -- 처음 시작할 때 짓는다(Theme.recompute 뒤의 모바일 판정을 따르기 위해 - 판정이 바뀌면 다시 짓는다). 행은 상태가 바뀔 때마다 다시 그린다(행 수 최대 약 30).
@@ -16,6 +16,7 @@ local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local GemCraft = require(ReplicatedStorage.Shared.GemCraft) -- P2.5b C: 변환권 = 골드 + 보석 가루
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
@@ -63,6 +64,7 @@ local REASON_TEXT = {
 	invalid = "잘못된 요청입니다",
 	no_ticket = "변환권이 없습니다 - 위에서 구매하세요",
 	no_gold = "골드가 부족합니다",
+	no_dust = "보석 가루가 부족합니다 - 보석을 분해하면 얻습니다", -- P2.5b C
 	no_class = "직업을 먼저 고르세요",
 	empty_slot = "빈 홈은 리롤할 수 없습니다",
 	not_rerollable = "고대 · 태초 등급만 리롤할 수 있습니다",
@@ -215,17 +217,19 @@ refresh = function()
 		return order
 	end
 
-	buildSectionLabel(built.scroll, "변환권 - 골드로 구매(가격은 계정 최고 스테이지 기준)", nextOrder())
+	local dustOwned = player:GetAttribute("GemDust") or 0
+	buildSectionLabel(built.scroll, ("변환권 - 골드 + 보석 가루로 구매(가루 보유 %s · 골드 가격은 계정 최고 스테이지 기준)"):format(NumberFormat.format(dustOwned)), nextOrder())
 	for _, gradeId in ipairs({ "ancient", "primordial" }) do
 		local owned = state.tickets[gradeId] or 0
 		local ticketName = "Ticket_" .. gradeId
+		local dustPrice = GemCraft.ticketDust(gradeId)
 		local _, ticketButton = buildRow(built.scroll, width, {
 			name = ticketName,
 			order = nextOrder(),
 			title = ("%s 변환권 · 보유 %d장"):format(gradeName(gradeId), owned),
-			subtitle = ("가격 %s골드"):format(NumberFormat.format(price)),
+			subtitle = ("가격 %s골드 + 가루 %d"):format(NumberFormat.format(price), dustPrice),
 			buttonText = "구매",
-			enabled = gold >= price and not busy,
+			enabled = gold >= price and dustOwned >= dustPrice and not busy,
 			onActivated = function()
 				sendBuy(gradeId)
 			end,
@@ -410,6 +414,7 @@ function GemWorkshop.start()
 		refresh()
 	end)
 	player:GetAttributeChangedSignal("Gold"):Connect(refresh)
+	player:GetAttributeChangedSignal("GemDust"):Connect(refresh) -- P2.5b C
 	RunService.Heartbeat:Connect(step)
 	ensureBuilt()
 end

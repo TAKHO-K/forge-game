@@ -40,7 +40,7 @@ function GemWorkshop.reroll(player, kind, key, accessCheck)
 	return true, nil
 end
 
--- 변환권 구매. cost는 서버가 매번 다시 계산한 가격이다(GemServer - 클라가 보낸 값을 믿지 않는다). gradeId = "ancient" | "primordial".
+-- 변환권 구매(P2.5b C: 골드 + 보석 가루 - 이유 no_dust 추가). cost는 서버가 매번 다시 계산한 가격이다(GemServer - 클라가 보낸 값을 믿지 않는다). gradeId = "ancient" | "primordial".
 function GemWorkshop.buyTicket(player, gradeId, cost, accessCheck)
 	if gradeId ~= "ancient" and gradeId ~= "primordial" then
 		return false, "invalid"
@@ -49,8 +49,9 @@ function GemWorkshop.buyTicket(player, gradeId, cost, accessCheck)
 	if not near then
 		return false, whyNot
 	end
-	if not PlayerProfile.tryBuyOptionRerollTicket(player, gradeId, cost) then
-		return false, "no_gold"
+	local bought, whyNotBought = PlayerProfile.tryBuyOptionRerollTicket(player, gradeId, cost)
+	if not bought then
+		return false, whyNotBought or "no_gold" -- P2.5b C: 가루 부족(no_dust)도 따로 알린다
 	end
 	PlayerProfile.markGemMerchantUsed(player)
 	return true, nil

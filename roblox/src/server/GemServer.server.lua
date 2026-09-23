@@ -46,6 +46,25 @@ local workshopResult = Instance.new("RemoteEvent")
 workshopResult.Name = "GemWorkshopResult"
 workshopResult.Parent = ReplicatedStorage
 
+-- P2.5b C · B: 보석 가공(분해 → 가루 · 일괄 분해 · 재련) 요청과 결과(action, success, reason, data). 판정 = GemCraftRequest. 가루 · 보석 · 골드가 바뀌는 되돌릴 수 없는 사건이라 성공하면 즉시저장.
+local GemCraftRequest = require(script.Parent.GemCraftRequest)
+
+local gemCraftRequest = Instance.new("RemoteEvent")
+gemCraftRequest.Name = "GemCraftRequest"
+gemCraftRequest.Parent = ReplicatedStorage
+
+local gemCraftResult = Instance.new("RemoteEvent")
+gemCraftResult.Name = "GemCraftResult"
+gemCraftResult.Parent = ReplicatedStorage
+
+gemCraftRequest.OnServerEvent:Connect(function(player, action, a, b, c)
+	local success, reason, data = GemCraftRequest.handle(player, action, a, b, c)
+	if success then
+		ImmediateSave.request(player)
+	end
+	gemCraftResult:FireClient(player, type(action) == "string" and action or "", success, reason, data)
+end)
+
 -- 옵션 변환권 가격(20.37 [5] "몬스터 1마리당 골드 × N") - 배수는 GemData.rerollTicketGoldMultiplier(클라이언트 표시용과
 -- 단일 출처). 28-2 [8] 3번: 기준 스테이지는 지금 서 있는 곳이 아니라 계정 최고 스테이지다(스테이지 1로 내려가 싸게 사는 구멍).
 local function rerollTicketPrice(player)

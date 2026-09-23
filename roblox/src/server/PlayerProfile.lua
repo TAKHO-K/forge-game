@@ -30,6 +30,8 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 -- P2.5b A: 장비 계승 규칙(클라 미리 판정과 같은 순수 함수).
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
+-- P2.5b C · B: 보석 분해(가루) · 재련 규칙.
+local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
 
 local PlayerProfile = {}
 
@@ -189,6 +191,7 @@ function PlayerProfile.init(player, profile)
 	syncProtectionAttributes(player, profile)
 	player:SetAttribute("BulkSellCutoffGrade", profile.bulkSellCutoffGrade)
 	player:SetAttribute("GemMerchantUsed", profile.hints.gemMerchantUsed == true) -- 보석 탭 안내 줄(눈에 띄게 / 작게)이 읽는다
+	player:SetAttribute("GemDust", profile.gemDust) -- P2.5b C: 보석 가루 - 보석 가공 창 · 보석상인 창이 읽는다
 	-- 23-5: 저장된 적 있을 때만 Attribute를 세운다 - false(한 번도 안 옮김)면 안 세워서
 	-- 클라가 GetAttribute nil을 "기본 위치 계산"의 신호로 그대로 쓸 수 있게 한다.
 	if profile.inventoryWindowPosition then
@@ -669,6 +672,65 @@ function PlayerProfile.dismantleItem(player, index)
 	return true, item.grade
 end
 
+-- ═══ 보석 가루(P2.5b C) ═══
+-- 증감 통로는 이 함수 하나(분해가 더하고 재련 · 변환권 구매가 뺀다 - 빼는 쪽은 호출부가 먼저 잔량을 확인한다). Attribute GemDust로 클라에 내린다.
+function PlayerProfile.addGemDust(player, amount)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	profile.gemDust = math.max(0, profile.gemDust + math.floor(Sanitize.number(amount, 0)))
+	player:SetAttribute("GemDust", profile.gemDust)
+end
+
+function PlayerProfile.getGemDust(player)
+	local profile = profiles[player]
+	return profile and profile.gemDust or 0
+end
+
+-- 보석 가방의 보석 1개 → 가루(C1). 홈에 낀 보석은 대상이 아니다(가방 index만 받는다). 반환: true, 가루 | false, 이유("no_class" · "not_found").
+function PlayerProfile.dismantleGem(player, index)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	local gem = classState.gemInventory[index]
+	if not gem then
+		return false, "not_found"
+	end
+	local dust = GemCraft.dustYield(gem)
+	table.remove(classState.gemInventory, index)
+	PlayerProfile.addGemDust(player, dust)
+	GemSync.push(player)
+	return true, dust
+end
+
+-- 일괄 분해(C2): 가방 보석 중 cutoffGradeId 이하 등급 전부 → 가루. 목록을 먼저 다 계산한 뒤 한 번에 바꾼다(sellItemsBulkUpTo와 같은 원칙 - 중간 yield 없음). 반환: 개수, 가루.
+function PlayerProfile.dismantleGemsUpTo(player, cutoffGradeId)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState or type(cutoffGradeId) ~= "string" then
+		return 0, 0
+	end
+	local remaining, count, dust = {}, 0, 0
+	for _, gem in ipairs(classState.gemInventory) do
+		if GemCraft.isBulkTarget(gem, cutoffGradeId) then
+			count += 1
+			dust += GemCraft.dustYield(gem)
+		else
+			table.insert(remaining, gem)
+		end
+	end
+	if count == 0 then
+		return 0, 0
+	end
+	classState.gemInventory = remaining
+	PlayerProfile.addGemDust(player, dust)
+	GemSync.push(player)
+	return count, dust
+end
+
 function PlayerProfile.getGemInventory(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
@@ -738,14 +800,20 @@ end
 -- 호출부(GemServer.server.lua)가 InfiniteStage.getGoldReward로 매번 다시 구해 cost로
 -- 넘긴다 - 여기선 이미 계산된 가격을 원자적으로 차감·지급만 한다, EnhanceServer의 골드
 -- 확인+차감 분리 원칙과 같다).
+-- P2.5b C: 변환권 1장 = 골드 + 보석 가루(GemCraft.ticketDust). 둘 다 있어야 산다(가루 먼저 확인 - 골드만 빠지고 실패하는 일이 없다). 반환: true | false, 이유("invalid" · "no_dust" · "no_gold").
 function PlayerProfile.tryBuyOptionRerollTicket(player, gradeId, cost)
 	local profile = profiles[player]
 	if not profile or not profile.purchases.optionRerollTickets[gradeId] then
-		return false
+		return false, "invalid"
+	end
+	local dust = GemCraft.ticketDust(gradeId)
+	if profile.gemDust < dust then
+		return false, "no_dust"
 	end
 	if not PlayerProfile.trySpendGold(player, cost) then
-		return false
+		return false, "no_gold"
 	end
+	PlayerProfile.addGemDust(player, -dust)
 	profile.purchases.optionRerollTickets[gradeId] += 1
 	GemSync.push(player)
 	return true
@@ -1455,6 +1523,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		protectionTickets = deepCopy(profile.purchases.protectionTickets),
 		protectionClaimedStages = deepCopy(profile.purchases.protectionClaimedStages),
 		bossCodex = deepCopy(profile.purchases.bossCodex), -- 30-0 S11: 보스 처치가 도감 도장을 실제 프로필에 찍는다 - 같은 이유로 되돌린다.
+		gemDust = profile.gemDust, -- P2.5b C: 보석 분해 · 재련 · 변환권 구매 검증이 가루를 바꾼다 - 같은 이유로 되돌린다.
 		hints = deepCopy(profile.hints), -- 30-0 S20e: 수동 Play에서 보석상인을 쓰면 안내 플래그가 켜지고 Play 종료 때 실제 프로필에 저장됐다(S20e 실측) - 같은 이유로 되돌린다.
 	}
 end
@@ -1483,6 +1552,8 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.purchases.bossCodex = deepCopy(snapshot.bossCodex)
 	profile.hints = deepCopy(snapshot.hints)
 	player:SetAttribute("GemMerchantUsed", profile.hints.gemMerchantUsed == true)
+	profile.gemDust = snapshot.gemDust or profile.gemDust
+	player:SetAttribute("GemDust", profile.gemDust)
 	syncProtectionAttributes(player, profile)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)

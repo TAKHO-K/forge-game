@@ -10,6 +10,9 @@ local InheritConfig = require(ReplicatedStorage.Shared.data.InheritConfig)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+local GemData = require(ReplicatedStorage.Shared.data.GemData)
+local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
+local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
 local Loot = require(ReplicatedStorage.Shared.Loot)
@@ -128,6 +131,51 @@ function P25bVerify.runPure()
 			Inherit.isUpgrade(a, b) and not Inherit.isUpgrade(b, a) and not Inherit.isUpgrade(a, item("gloves", "primordial", 999)) and not Inherit.isUpgrade(nil, b))
 	end)
 
+	r.section("[C] 보석 분해 · 가루", function()
+		local yields = {}
+		local rising = true
+		local previous = 0
+		for _, gradeId in ipairs(GemCraft.bulkGradeChoices()) do
+			local dust = GemCraft.dustYield({ grade = gradeId, itemLevel = 100 })
+			table.insert(yields, ("%s %d"):format(gradeId, dust))
+			rising = rising and dust > previous
+			previous = dust
+		end
+		r.check(("C1 등급 기준(Lv.100 = levelFactor 1): %s - 등급이 오를수록 많다 · 기준량과 같다"):format(table.concat(yields, " · ")),
+			rising and GemCraft.dustYield({ grade = "primordial", itemLevel = 100 }) == GemData.dust.dustYield.primordial and #GemCraft.bulkGradeChoices() == 5)
+		local low, mid, high = GemCraft.dustYield({ grade = "relic", itemLevel = 1 }), GemCraft.dustYield({ grade = "relic", itemLevel = 100 }), GemCraft.dustYield({ grade = "relic", itemLevel = 20000 })
+		r.check(("C1 레벨 기준: 유물 Lv.1 %d · Lv.100 %d · Lv.20000 %d(오른다 · 최소 1) · 일반 등급 0"):format(low, mid, high),
+			low >= 1 and low < mid and mid < high and high == math.max(1, math.floor(GemData.dust.dustYield.relic * Option.levelFactor(20000) + 0.5)) and GemCraft.dustYield({ grade = "normal", itemLevel = 100 }) == 0)
+		local bag = { { grade = "epic", itemLevel = 100 }, { grade = "relic", itemLevel = 100 }, { grade = "primordial", itemLevel = 100 }, { grade = "legendary", itemLevel = 100 } }
+		local count, dust, highest = GemCraft.bulkEstimate(bag, "relic")
+		local expectedDust = GemData.dust.dustYield.epic + GemData.dust.dustYield.relic + GemData.dust.dustYield.legendary
+		r.check(("C2 일괄(유물 이하): %d개 · 가루 %d(기대 3 · %d) · 최고 %s(기대 relic) · 태초는 빠진다"):format(count, dust, expectedDust, tostring(highest)),
+			count == 3 and dust == expectedDust and highest == "relic" and not GemCraft.isBulkTarget(bag[3], "relic") and not GemCraft.isBulkTarget(bag[1], "nonsense"))
+		local refineDusts = {}
+		for _, gradeId in ipairs(GemCraft.bulkGradeChoices()) do
+			local _, dustCost = GemCraft.refineCost(gradeId, 1)
+			table.insert(refineDusts, tostring(dustCost))
+		end
+		r.check(("C1 가루 소모처: 변환권 고대 %d · 태초 %d · 재련 가루(영웅 ~ 태초) %s"):format(GemCraft.ticketDust("ancient"), GemCraft.ticketDust("primordial"), table.concat(refineDusts, " · ")),
+			GemCraft.ticketDust("ancient") > 0 and GemCraft.ticketDust("primordial") > GemCraft.ticketDust("ancient") and GemCraft.ticketDust("epic") == 0)
+	end)
+
+	r.section("[C] 저장 v31 gemDust", function()
+		local SaveSystem = require(script.Parent.SaveSystem)
+		local old = SaveSystem.defaultProfile()
+		old.version = 30
+		old.gemDust = nil
+		local migrated = SaveSystem.migrate(old)
+		local bad = SaveSystem.defaultProfile()
+		bad.gemDust = -1
+		local frac = SaveSystem.defaultProfile()
+		frac.gemDust = 1.5
+		r.check(("C 저장: SAVE_VERSION %d(기대 ≥ 31) · v30 → v%d gemDust = %s · isValid %s · 음수 %s · 소수 %s(기대 거절) · 기본 프로필 0"):format(
+			SaveConfig.saveVersion, migrated.version, tostring(migrated.gemDust), tostring(SaveSystem.isValidProfile(migrated)), tostring(SaveSystem.isValidProfile(bad)), tostring(SaveSystem.isValidProfile(frac))),
+			SaveConfig.saveVersion >= 31 and migrated.version == SaveConfig.saveVersion and migrated.gemDust == 0 and SaveSystem.isValidProfile(migrated)
+				and not SaveSystem.isValidProfile(bad) and not SaveSystem.isValidProfile(frac) and SaveSystem.defaultProfile().gemDust == 0)
+	end)
+
 	local pass, total = r.summary()
 	print(("===P25b 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
@@ -200,6 +248,46 @@ function P25bVerify.runLive(player, env)
 				and refundGem.option.id == "speedPercent" and refundKind == "gem")
 		r.check(("A2 실제 능력치: 계승 뒤 방어력 %.1f = 미리보기 A 세트 %.1f"):format(PlayerProfile.getStatSummary(player).defense, preview.stats.a.defense),
 			near(PlayerProfile.getStatSummary(player).defense, preview.stats.a.defense, 1e-9))
+	end)
+
+	r.section("[C] 보석 분해 실제 경로", function()
+		local GemCraftRequest = require(script.Parent.GemCraftRequest)
+		local GemWorkshop = require(script.Parent.GemWorkshop)
+		local gems = classState.gemInventory
+		table.clear(gems)
+		table.insert(gems, { grade = "epic", itemLevel = 100, option = { id = "attackPercent", roll = 1 } })
+		table.insert(gems, { grade = "primordial", itemLevel = 300, option = { id = "crit", roll = 1, roll2 = 1 } })
+		table.insert(gems, { grade = "legendary", itemLevel = 50, option = { id = "speedPercent", roll = 1 } })
+		profile.gemDust = 0
+		local expectOne = GemCraft.dustYield(gems[1])
+		local ok1, why1, data1 = GemCraftRequest.handle(player, "dismantle", 1)
+		r.check(("C1 한 개: %s · 가루 %s(기대 %d) · 보석 %d개(기대 2) · Attribute %s"):format(tostring(ok1), tostring(data1 and data1.dust), expectOne, #gems, tostring(player:GetAttribute("GemDust"))),
+			ok1 and why1 == nil and data1.dust == expectOne and profile.gemDust == expectOne and #gems == 2 and player:GetAttribute("GemDust") == expectOne)
+		local okBad, whyBad = GemCraftRequest.handle(player, "dismantle", 99)
+		local okShape, whyShape = GemCraftRequest.handle(player, "dismantle", "1")
+		local okNone, whyNone = GemCraftRequest.handle(player, "dismantleBulk", "normal")
+		r.check(("C 거절: 없는 칸 %s · 문자열 index %s · 대상 없음 %s(기대 not_found · invalid · none) · 가루 그대로"):format(tostring(whyBad), tostring(whyShape), tostring(whyNone)),
+			not okBad and whyBad == "not_found" and not okShape and whyShape == "invalid" and not okNone and whyNone == "none" and profile.gemDust == expectOne)
+		local expectBulk = GemCraft.dustYield(gems[1]) + GemCraft.dustYield(gems[2])
+		local okBulk, _, dataBulk = GemCraftRequest.handle(player, "dismantleBulk", "primordial")
+		r.check(("C2 일괄(태초 이하): %d개 · 가루 +%s(기대 2 · +%d) · 보석 가방 %d개(기대 0) · 홈의 보석은 그대로(%s)"):format(dataBulk and dataBulk.count or -1, tostring(dataBulk and dataBulk.dust), expectBulk, #classState.gemInventory, tostring(classState.weapon.gems[1] ~= nil)),
+			okBulk and dataBulk.count == 2 and dataBulk.dust == expectBulk and #classState.gemInventory == 0 and profile.gemDust == expectOne + expectBulk)
+		-- 변환권 = 골드 + 가루: 가루가 모자라면 no_dust(골드 그대로) · 있으면 둘 다 빠진다.
+		local alwaysNear = function()
+			return true
+		end
+		profile.gemDust = GemCraft.ticketDust("ancient") - 1
+		profile.gold = 1e9
+		local tickets = profile.purchases.optionRerollTickets
+		local ticketsBefore = tickets.ancient
+		local okNoDust, whyNoDust = GemWorkshop.buyTicket(player, "ancient", 1000, alwaysNear)
+		local goldAfterFail = profile.gold
+		profile.gemDust = GemCraft.ticketDust("ancient")
+		local okBuy = GemWorkshop.buyTicket(player, "ancient", 1000, alwaysNear)
+		r.check(("C1 변환권: 가루 부족 %s(기대 no_dust · 골드 그대로 %s) · 충분 %s · 가루 %d(기대 0) · 골드 -1000 · 변환권 +1"):format(tostring(whyNoDust), tostring(goldAfterFail == 1e9), tostring(okBuy), profile.gemDust),
+			not okNoDust and whyNoDust == "no_dust" and goldAfterFail == 1e9 and okBuy and profile.gemDust == 0 and profile.gold == 1e9 - 1000 and tickets.ancient == ticketsBefore + 1)
+		tickets.ancient = ticketsBefore -- purchases는 DevTools 백업 대상이 아니다(옵션 변환권은 만지는 블록이 되돌린다)
+		profile.hints.gemMerchantUsed = false -- buyTicket이 켠 안내 플래그(hints는 백업 대상 - env.restore가 원래 값으로 되돌린다)
 	end)
 
 	env.restore(player)

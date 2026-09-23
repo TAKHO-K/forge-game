@@ -16,6 +16,9 @@ local Hint = require(script.Parent.Parent.GemWorkshop.Hint)
 -- P2.5b A: 장비 비교 한 줄 + [계승](착용 중인 같은 부위보다 기본 효과가 좋은 가방 장비일 때만). 규칙 = shared/Inherit · 창 = panels/Inherit.
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
 local InheritPanel = require(script.Parent.Parent.Inherit)
+-- P2.5b B · C: 보석 분해(가루) · 재련 창.
+local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
+local GemForge = require(script.Parent.Parent.GemForge)
 
 -- "착용 대비" 한 줄(부위 기본 효과 차이). equipped가 없으면 nil.
 local function compareText(equipped, item)
@@ -213,6 +216,10 @@ local inheritButton = makeActionButton(6, 60, "primary") -- P2.5b A: 착용 중�
 inheritButton.Name = "InheritButton"
 inheritButton.Text = "계승"
 inheritButton.Visible = false
+local craftButton = makeActionButton(7, 60, "primary") -- P2.5b B: 보석(홈 · 가방)을 골랐을 때만 - 보석 가공 창(재련 · 일괄 분해)
+craftButton.Name = "CraftButton"
+craftButton.Text = "재련"
+craftButton.Visible = false
 -- ═══ 옵션 줄(26-3, PRD 20.67 [12]) ═══
 -- 26-3 실기 검증 중 발견: 이 파일이 이미 Luau 최상위 레지스터 200개 한계에 가까웠다
 -- ("Out of local registers ... exceeded limit 200"로 실제 실패) - setupGemTab/
@@ -458,8 +465,9 @@ end
 
 local function refreshDetailBody()
 	setHint(nil) -- 아래 분기가 필요한 것만 다시 채운다
-	local inheritWasVisible = inheritButton.Visible
+	local inheritWasVisible, craftWasVisible = inheritButton.Visible, craftButton.Visible
 	inheritButton.Visible = false -- P2.5b A: 가방 분기만 다시 켠다
+	craftButton.Visible = false -- P2.5b B: 보석 분기만 다시 켠다
 	if S.selectedKind == "bag" then
 		local item = S.inventory[S.selectedValue]
 		if not item then
@@ -591,13 +599,14 @@ local function refreshDetailBody()
 		equipButton.TextTransparency = 0.6
 		equipButton.Text = "장착"
 		setRerollDetailButton(nil) -- 이 슬롯의 리롤 버튼은 보석 탭 행 자체에 있다(중복 방지).
+		craftButton.Visible = true -- P2.5b B: 장착 중 보석도 재련된다(해제 불필요)
 	elseif S.selectedKind == "gemBag" and type(S.selectedValue) == "number" and S.gemState().gemInventory[S.selectedValue] then
 		local gem = S.gemState().gemInventory[S.selectedValue]
 		local visual = ItemVisualData.gradeVisuals[gem.grade]
 		local color = visual and visual.color or UIColors.textPrimary
 		dname.Text = ItemDescribe.gem(gem).title
 		dname.TextColor3 = color
-		dmeta.Text = "보유 보석 - 장착하면 홈의 보석과 교체"
+		dmeta.Text = ("보유 보석 - 장착하면 홈의 보석과 교체 · 분해하면 가루 %d"):format(GemCraft.dustYield(gem))
 		setDpicIcon("weapon", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -609,9 +618,11 @@ local function refreshDetailBody()
 		sellButton.AutoButtonColor = false
 		sellButton.Active = false
 		sellButton.TextTransparency = 0.6
-		dismantleButton.AutoButtonColor = false
-		dismantleButton.Active = false
-		dismantleButton.TextTransparency = 0.6
+		-- P2.5b C: 보석 분해(→ 가루) - 보석은 전부 영웅 이상이라 매번 확인창을 거친다(장비 분해와 같은 문턱).
+		dismantleButton.AutoButtonColor = true
+		dismantleButton.Active = true
+		dismantleButton.TextTransparency = 0
+		craftButton.Visible = true
 		-- S20c: [장착] = 자동 장착(GemActions - PC 더블클릭 · 우클릭 · 폰 탭 선택과 같은 통로). 요청 중이면 회색(S20e: 자리 제한은 없다 - 어디서나 된다).
 		local canEquip = S.gemCanAutoEquip(S.selectedValue)
 		equipButton.AutoButtonColor = canEquip
@@ -625,7 +636,7 @@ local function refreshDetailBody()
 	else
 		clearDetail()
 	end
-	if inheritButton.Visible ~= inheritWasVisible then
+	if inheritButton.Visible ~= inheritWasVisible or craftButton.Visible ~= craftWasVisible then
 		R.applyLayout() -- 버튼 묶음 폭이 바뀌었다(정보 칸 폭을 다시 정한다)
 	end
 end
@@ -722,12 +733,12 @@ itemConfirmYes.Activated:Connect(function()
 	end
 end)
 
--- verb: "판매" | "분해". item: 대상 아이템. action: 확인 시 실행할 함수(B1 선택 해제 포함).
-local function confirmItemAction(verb, item, action)
+-- verb: "판매" | "분해". item: 대상 아이템. action: 확인 시 실행할 함수(B1 선택 해제 포함). isGem(P2.5b C): 보석 분해 - 이름은 ItemDescribe.gem · 받을 가루를 같이 적는다.
+local function confirmItemAction(verb, item, action, isGem)
 	local visual = ItemVisualData.gradeVisuals[item.grade]
-	local described = ItemDescribe.item(item, player:GetAttribute("ClassId"))
-	itemConfirmText.Text = ("%s(%s)를 %s하시겠습니까? 되돌릴 수 없습니다."):format(
-		described.title, ArmorData.grades[item.grade].displayName, verb)
+	local described = isGem and ItemDescribe.gem(item) or ItemDescribe.item(item, player:GetAttribute("ClassId"))
+	itemConfirmText.Text = ("%s(%s)를 %s하시겠습니까?%s 되돌릴 수 없습니다."):format(
+		described.title, ArmorData.grades[item.grade].displayName, verb, isGem and (" 가루 %d를 얻습니다."):format(GemCraft.dustYield(item)) or "")
 	itemConfirmText.TextColor3 = (visual and not visual.rainbow) and visual.color or UIColors.textPrimary
 	pendingConfirmAction = action
 	itemConfirmOverlay.Visible = true
@@ -769,6 +780,19 @@ sellButton.Activated:Connect(function()
 end)
 
 dismantleButton.Activated:Connect(function()
+	if S.selectedKind == "gemBag" then -- P2.5b C: 보석 → 가루(확인창 뒤 GemCraftRequest - 결과 토스트는 GemForge가 낸다)
+		local gem = S.gemState().gemInventory[S.selectedValue]
+		if not gem then
+			return
+		end
+		local index = S.selectedValue
+		confirmItemAction("분해", gem, function()
+			S.selectedKind, S.selectedValue = nil, nil
+			S.rebuildGrid()
+			ReplicatedStorage:WaitForChild("GemCraftRequest"):FireServer("dismantle", index)
+		end, true)
+		return
+	end
 	if S.selectedKind ~= "bag" then
 		return
 	end
@@ -801,6 +825,15 @@ end)
 rerollDetailButton.Activated:Connect(function()
 	if S.selectedKind == "bag" or (S.selectedKind == "equip" and S.selectedValue ~= "weapon") then
 		Hint.toast()
+	end
+end)
+
+-- P2.5b B: [재련] - 보석 가공 창(window)을 연다(고른 보석이 재련 대상 - 홈이면 장착 중인 채로).
+craftButton.Activated:Connect(function()
+	if S.selectedKind == "gemSlot" and type(S.selectedValue) == "number" then
+		GemForge.open("slot", S.selectedValue, "refine")
+	elseif S.selectedKind == "gemBag" and type(S.selectedValue) == "number" then
+		GemForge.open("bag", S.selectedValue, "refine")
 	end
 end)
 
@@ -878,8 +911,8 @@ end)
 R.sheetClose = sheetClose
 
 -- 배치(S20b): PC = 원래 하단 바 · 폰 = 시트(넓으면 한 줄: 정보 + 버튼 + 닫기 · 좁으면 두 줄: 정보 위 · 버튼 아래). 버튼은 폰에서 높이 44 이상 · 폭 44 이상.
-local actionButtons = { lockButton, sellButton, dismantleButton, equipButton, rerollDetailButton, inheritButton }
-local ACTION_WIDTHS = { 36, 76, 60, 84, 70, 60 }
+local actionButtons = { lockButton, sellButton, dismantleButton, equipButton, rerollDetailButton, inheritButton, craftButton }
+local ACTION_WIDTHS = { 36, 76, 60, 84, 70, 60, 60 }
 local ACTION_GAP = 7
 table.insert(R.layouts, function(L)
 	local phone = L.mode == "phone"
@@ -888,7 +921,7 @@ table.insert(R.layouts, function(L)
 	for i, button in ipairs(actionButtons) do
 		local width = phone and math.max(ACTION_WIDTHS[i], 44) or ACTION_WIDTHS[i]
 		button.Size = UDim2.new(0, width, 0, L.actionH)
-		if button ~= inheritButton or button.Visible then -- P2.5b A: [계승]은 보일 때만 폭에 넣는다(다른 버튼은 옛 계산 그대로)
+		if (button ~= inheritButton and button ~= craftButton) or button.Visible then -- P2.5b: [계승] · [재련]은 보일 때만 폭에 넣는다(다른 버튼은 옛 계산 그대로)
 			groupWidth += width + ACTION_GAP
 		end
 	end

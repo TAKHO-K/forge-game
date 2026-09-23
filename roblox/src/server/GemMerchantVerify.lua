@@ -11,6 +11,7 @@ local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local GemCraft = require(ReplicatedStorage.Shared.GemCraft) -- P2.5b C: 변환권 가루
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local RebirthAccess = require(script.Parent.RebirthAccess)
 local SaveSystem = require(script.Parent.SaveSystem)
@@ -168,9 +169,12 @@ function GemMerchantVerify.runLive(player, env)
 	local ok8, why8 = GemWorkshop.reroll(player, "gem", 1, alwaysNear)
 	t.check("반경 안 · 변환권 0장 -> no_ticket + 상태 불변 + 플래그 그대로(실패는 안내를 줄이지 않는다)", ok8 == false and why8 == "no_ticket" and state() == base and profile.hints.gemMerchantUsed == false)
 	local goldBefore = PlayerProfile.getGold(player)
+	local dustBefore = PlayerProfile.getGemDust(player)
+	PlayerProfile.addGemDust(player, GemCraft.ticketDust("primordial")) -- P2.5b C: 변환권은 골드 + 보석 가루(가루는 이 한 장 몫만 - env.restore가 되돌린다)
 	local ok9, why9 = GemWorkshop.buyTicket(player, "primordial", 1000, alwaysNear)
 	t.check(("반경 안 변환권 구매 -> 성공 · 태초 변환권 +1 · 골드 -1000 · 플래그 켜짐 (골드 %d → %d · 태초 %d · 플래그 %s · Attribute %s)"):format(goldBefore, PlayerProfile.getGold(player), tickets.primordial, tostring(profile.hints.gemMerchantUsed), tostring(player:GetAttribute("GemMerchantUsed"))),
-		ok9 == true and why9 == nil and tickets.primordial == 1 and PlayerProfile.getGold(player) == goldBefore - 1000 and profile.hints.gemMerchantUsed == true and player:GetAttribute("GemMerchantUsed") == true)
+		ok9 == true and why9 == nil and tickets.primordial == 1 and PlayerProfile.getGold(player) == goldBefore - 1000 and profile.hints.gemMerchantUsed == true and player:GetAttribute("GemMerchantUsed") == true
+			and PlayerProfile.getGemDust(player) == dustBefore)
 	profile.hints.gemMerchantUsed = false
 	player:SetAttribute("GemMerchantUsed", false)
 	local ok10, why10 = GemWorkshop.reroll(player, "gem", 1, alwaysNear)

@@ -105,6 +105,17 @@ return {
 	-- 본다 - 가격 계산 자체는 여전히 서버가 매번 다시 한다(클라이언트 값을 믿지 않는다).
 	rerollTicketGoldMultiplier = 40,
 
+	-- P2.5b C · B: 보석 가루(분해 결과 - 계정 공유 profile.gemDust)와 그 소모처. 값은 P2.5b 제안(docs/phase/P25b-log.md 결정 필요) - 규칙은 shared/GemCraft.lua.
+	--   dustYield[등급] = 가루 기준량. 실제 가루 = max(1, 반올림(기준량 × Option.levelFactor(itemLevel))) - 옵션 값과 같은 레벨 곡선(레벨 100 = 1배 · 1 = 0.14배 · 설계 최대 약 1.37배).
+	--   ticketDust[등급] = 옵션 변환권 1장 구매에 골드와 함께 드는 가루(리롤 · 변환 1회 = 변환권 1장).
+	--   refineGoldKills[등급] = 재련 골드(잡몹 처치 몫 × tier1 골드 → GoldCost "refine") · refineDust[등급] = 재련 가루. 등급 = 재련 대상 보석의 등급.
+	dust = {
+		dustYield = { epic = 3, legendary = 5, relic = 8, ancient = 12, primordial = 20 },
+		ticketDust = { ancient = 6, primordial = 10 },
+		refineGoldKills = { epic = 40, legendary = 80, relic = 160, ancient = 320, primordial = 640 },
+		refineDust = { epic = 4, legendary = 6, relic = 10, ancient = 15, primordial = 25 },
+	},
+
 	-- S20c: 보석 장착 입력의 시간 값(밸런스가 아니라 입력 느낌 - 그래도 코드에 박지 않고 여기 둔다). 서버 규칙과 무관하다.
 	--   doubleClickSeconds = PC 더블클릭 판정 · returnTweenSeconds = 거절 시 원래 칸으로 돌아가는 트윈 · resultTimeoutSeconds = 서버 결과(GemEquipResult)를 기다리는 한도(넘으면 입력 잠금을 푼다).
 	ui = { doubleClickSeconds = 0.35, returnTweenSeconds = 0.2, resultTimeoutSeconds = 3 },

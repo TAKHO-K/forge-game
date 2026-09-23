@@ -83,6 +83,8 @@ local function run()
 	end
 
 	player:SetAttribute("Gold", 1e12) -- 이 클라에서만 보이는 값(구매 버튼이 활성이려면 골드가 가격 이상이어야 한다) - 끝에서 되돌린다
+	local originalDust = player:GetAttribute("GemDust")
+	player:SetAttribute("GemDust", 1e6) -- P2.5b C: 변환권 = 골드 + 가루 - 같은 이유로 이 클라에서만 넉넉히(끝에서 되돌린다)
 	GemWorkshop.debugApply({
 		gems = { { grade = "primordial", itemLevel = 30 }, { grade = "epic", itemLevel = 30 }, { grade = "ancient", itemLevel = 30 }, false, false },
 		tickets = { ancient = 1, primordial = 0 },
@@ -215,6 +217,7 @@ local function run()
 	-- 정리
 	GemWorkshop.debugSkipRangeClose(false)
 	player:SetAttribute("Gold", originalGold)
+	player:SetAttribute("GemDust", originalDust)
 	GemWorkshop.debugReset()
 	closeAll()
 	print(("===S20e(UI) 검증 끝=== %d/%d 통과"):format(passed, #results))

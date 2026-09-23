@@ -226,6 +226,9 @@ local function defaultProfile()
 		-- 안내 플래그(30-0 S20e, v30) - 계정 전체 공유. 한 번 하고 나면 안내 표시가 줄어드는 종류의 "본 적 있다/해 본 적 있다" 기록이다(값이 없으면 false로 본다).
 		--   gemMerchantUsed: 보석상인에서 변환 · 리롤(변환권 구매 포함)을 한 번이라도 성공했는가 - true면 보석 탭의 위치 안내 줄이 작은 회색 한 줄로 줄어든다.
 		hints = { gemMerchantUsed = false },
+
+		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
+		gemDust = 0,
 	}
 end
 
@@ -300,7 +303,7 @@ end
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
 -- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
 -- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
--- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11).
+-- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11) -> 30(안내 플래그 hints, S20e) -> 31(보석 가루 gemDust 신설 - 0, P2.5b C).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -801,6 +804,12 @@ local function migrate(data)
 		data.version = 30
 	end
 
+	if data.version < 31 then
+		-- P2.5b C: 보석 가루 신설. 0이 정확한 과거 상태다(가루는 이 버전부터 생긴다 - 이미 가진 보석은 그대로 두고, 분해하면 그때 가루가 된다).
+		data.gemDust = data.gemDust or 0
+		data.version = 31
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -840,6 +849,7 @@ local function isValidProfile(data)
 		or type(data.purchases.bossCodex) ~= "table"
 		or type(data.hints) ~= "table"
 		or (data.hints.gemMerchantUsed ~= nil and type(data.hints.gemMerchantUsed) ~= "boolean")
+		or type(data.gemDust) ~= "number" or data.gemDust % 1 ~= 0 or data.gemDust < 0
 	then
 		return false
 	end
