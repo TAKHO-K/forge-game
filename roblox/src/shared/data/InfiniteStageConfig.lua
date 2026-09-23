@@ -39,8 +39,9 @@ return {
 	safeStageCap = 34230,
 
 	-- P2.5a R2(사용자 확정): 설계 최대 스테이지 = 상위 1% 프로필(하루 12시간)이 약 2,190시간(6개월)에 닿는 스테이지(EconSim - 구간별 무기 성장 g의 천장
-	-- CharacterLevelConfig.weaponGrowthLate가 만든다). 여기까지 모든 수치 < 1e250(P25a(가) - 1e250을 처음 넘는 스테이지 28,508). 진행 판정 · 이동 제한에는 안 쓴다 -
+	-- CharacterLevelConfig.weaponGrowthSegments가 만든다 - P2.5c). 여기까지 모든 수치 < 1e250(P25a(가) - 1e250을 처음 넘는 스테이지 28,508). 진행 판정 · 이동 제한에는 안 쓴다 -
 	-- 시뮬 이정표 · 보고서 구간 끝 · 검증 기준값이다.
 	-- 값: 21,230 = 상위 1%가 누적 2,190시간에 선 최고 스테이지(EconSim 기준선 - 천장 fromLevel 20,000 · late 1.01). 그 지점 최대 수치 ≈ 2.6e187(레벨 경험치 누적).
-	designMaxStage = 21230,
+	-- P2.5c 결정 1: 21,230 → 25,300 - 점진 감속 천장(CharacterLevelConfig.weaponGrowthSegments) + 환생 · 마일스톤 재설계를 모두 넣은 상위 1%가 2,190시간에 선 최고 스테이지(하네스).
+	designMaxStage = 25300,
 }

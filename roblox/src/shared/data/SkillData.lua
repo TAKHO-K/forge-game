@@ -251,10 +251,11 @@ return {
 				topScale = 1.1, -- HealerTopScale
 				unscaledTopRatio = 0.918,
 				floor = 1, -- 평균 아래 투자는 기울기 없이 배율 그대로(리뷰 4 - 신규 · 환생 직후 치유사의 딜링모드가 평타 수준으로 떨어지지 않게)
-				-- P2.5c 결정 5: 보석 등급 몫(OptionData.gradeStep 1.45 → 1.35)으로 일반 프로필 보석 위력 합이 약 ×0.69가 되어 기준점 공격력%도 같은 비율로 옮겼다
-				-- (옛 0.666 · 0.912). 안 옮기면 최상위 딜링모드 ÷ 검사 1.103 → 1.070 - 옮기면 1.099 · 평균 0.891(목표 범위 0.85 ~ 0.9) · 치유모드 비중 그대로(P25c-after E6).
-				average = { enhance = 20, attackPercent = 0.46 },
-				top = { enhance = 30, attackPercent = 0.63 },
+				-- P2.5c 결정 5: 보석 등급 몫(OptionData.gradeStep 1.45 → 1.35)으로 보석 위력 합이 약 ×0.70이 되어 최상위 기준점 공격력%를 같은 비율로 옮겼다(옛 0.912).
+				-- 안 옮기면 최상위 딜링모드 ÷ 검사 1.103 → 1.070(HealerTopScale 1.1 이탈) - 옮기면 1.100. 평균 기준점(0.666)은 그대로 둔다: 평균 투자 E6(+20 · 공격력% 0.195)은
+				-- 하한(floor) 아래라 기준점과 무관하게 0.880이고(0.46으로 옮기면 0.891로 표본 0.875 ± 0.01을 벗어났다), 치유모드 비중도 그대로(P25c-after E6).
+				average = { enhance = 20, attackPercent = 0.666 },
+				top = { enhance = 30, attackPercent = 0.64 },
 			},
 			-- 초당 최대체력 소모율 - 새로 만드는 상수라 기존 관계식(PlayerRegen.server.lua의
 			-- regenPercentPerSecond=0.04)에서 역산한다. 목표 가동률 60%(지시 [6])라면

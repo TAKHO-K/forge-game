@@ -121,18 +121,26 @@ function CharacterLevel.getExpectedKills(level, expGainMultiplier)
 end
 
 -- 무기 공격력 배율(PlayerCombat.getAttack이 곱한다). 1~25는 웹과 완전히 같은 선형식,
--- (P2.5a: g = k = 1.02 · 레벨 20,000부터 1.01 - CharacterLevelConfig.weaponGrowthLate. 아래는 옛 설명)
+-- (P2.5a: g = k = 1.02 · P2.5c: 레벨 구간마다 g = k^kShare - CharacterLevelConfig.weaponGrowthSegments(점진 감속 천장). 아래는 옛 설명)
 -- 26+는 20.10이 정한 지수식(g=1.15, 몬스터 k=1.155보다 살짝 낮게 - 스테이지가 오를수록
 -- 아주 조금씩 어려워지도록 의도된 격차).
 function CharacterLevel.getWeaponExpMultiplier(level)
 	if level <= STAT_LINEAR_MAX_LEVEL then
 		return 1 + CharacterLevelConfig.statBonusPerLevel * (level - 1)
 	end
-	-- P2.5a C2 구간별 g: weaponGrowthLate.fromLevel까지 g, 그 뒤로 late.rate(< k - 천장).
-	local late = CharacterLevelConfig.weaponGrowthLate
-	local mainLevels = math.min(level, late.fromLevel) - STAT_LINEAR_MAX_LEVEL
-	local lateLevels = math.max(0, level - late.fromLevel)
-	return PEAK_MULTIPLIER * (CharacterLevelConfig.weaponMultGrowthRate ^ mainLevels) * (late.rate ^ lateLevels)
+	-- P2.5c 결정 1 구간별 g: 첫 구간 전은 weaponMultGrowthRate, 각 구간(fromLevel ~ 다음 fromLevel)은 k^kShare(천장 - 점진 감속).
+	local segments = CharacterLevelConfig.weaponGrowthSegments
+	local firstFrom = segments[1] and segments[1].fromLevel or math.huge
+	local mainLevels = math.min(level, firstFrom) - STAT_LINEAR_MAX_LEVEL
+	local shareLevels = 0 -- Σ 몫 × 그 구간 레벨 수
+	for index, segment in ipairs(segments) do
+		if level <= segment.fromLevel then
+			break
+		end
+		local nextFrom = segments[index + 1] and segments[index + 1].fromLevel or math.huge
+		shareLevels += segment.kShare * (math.min(level, nextFrom) - segment.fromLevel)
+	end
+	return PEAK_MULTIPLIER * (CharacterLevelConfig.weaponMultGrowthRate ^ mainLevels) * (InfiniteStageConfig.growthRate ^ shareLevels)
 end
 
 -- 아이템 레벨계수(Loot.getArmorDefense가 곱한다). 1~25는 무기 배율과 같은 선형식(레벨25

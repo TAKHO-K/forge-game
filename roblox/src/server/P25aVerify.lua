@@ -108,13 +108,21 @@ function P25aVerify.runPure()
 	end)
 
 	r.section("[C2 · C3] 무기 성장 · 경험치 · 환생", function()
-		local late = CharacterLevelConfig.weaponGrowthLate
+		-- P2.5c 결정 1: 천장 = 구간 목록(weaponGrowthSegments - g = k^kShare). 첫 구간 전 = g · 각 구간 첫 레벨 → 다음 레벨 = k^몫.
+		local segments = CharacterLevelConfig.weaponGrowthSegments
+		local late = segments[1]
 		local main = CharacterLevel.getWeaponExpMultiplier(101) / CharacterLevel.getWeaponExpMultiplier(100)
-		local lateRatio = CharacterLevel.getWeaponExpMultiplier(late.fromLevel + 1) / CharacterLevel.getWeaponExpMultiplier(late.fromLevel)
 		local before = CharacterLevel.getWeaponExpMultiplier(late.fromLevel) / CharacterLevel.getWeaponExpMultiplier(late.fromLevel - 1)
-		r.check(("C2.1 무기 계수 한 레벨 비: 100→101 %.6f(기대 g %.3f) · %d→%d %.6f(기대 g) · %d→%d %.6f(기대 천장 %.3f)"):format(
-			main, CharacterLevelConfig.weaponMultGrowthRate, late.fromLevel - 1, late.fromLevel, before, late.fromLevel, late.fromLevel + 1, lateRatio, late.rate),
-			near(main, CharacterLevelConfig.weaponMultGrowthRate, 1e-12) and near(before, CharacterLevelConfig.weaponMultGrowthRate, 1e-12) and near(lateRatio, late.rate, 1e-12))
+		local segOk, cells = true, {}
+		for _, segment in ipairs(segments) do
+			local ratio = CharacterLevel.getWeaponExpMultiplier(segment.fromLevel + 1) / CharacterLevel.getWeaponExpMultiplier(segment.fromLevel)
+			local expected = InfiniteStageConfig.growthRate ^ segment.kShare
+			segOk = segOk and near(ratio, expected, 1e-12)
+			table.insert(cells, ("%d→ %.6f(k^%.3f)"):format(segment.fromLevel, ratio, segment.kShare))
+		end
+		r.check(("C2.1 무기 계수 한 레벨 비: 100→101 %.6f(기대 g %.3f) · %d→%d %.6f(기대 g) · 구간 %d개 %s"):format(
+			main, CharacterLevelConfig.weaponMultGrowthRate, late.fromLevel - 1, late.fromLevel, before, #segments, table.concat(cells, " · ")),
+			near(main, CharacterLevelConfig.weaponMultGrowthRate, 1e-12) and near(before, CharacterLevelConfig.weaponMultGrowthRate, 1e-12) and segOk)
 		local expOk = true
 		for _, level in ipairs({ 1, 25, 100, 5000, 20000 }) do
 			local expected = math.floor(CharacterLevel.getTargetKills(level) * math.floor(MonsterData.tier1.expReward * InfiniteStage.getMultiplier(level + CharacterLevelConfig.levelStageOffset)) + 0.5)
