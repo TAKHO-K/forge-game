@@ -25,6 +25,10 @@
 
 1. [A] 위 표는 코드를 직접 읽어 확인했다(grep + 함수 전체 읽기). 드랍 itemLevel은 이미 "사냥 중인 스테이지 ± 2"라 C7의 드랍 기준 변경은 필요 없다.
 
+2. [B · 도구] 개발 전용 `server/PerfProbe.lua` + DevTools `/gg perf` · edit 모드 Attribute `PerfAutoRunUntil`(접속 25초 뒤 자동 - Studio 솔로 Play는 DevTools가 연결되기 전에 플레이어가 들어와 있어 기존 플레이어도 본다). 사냥 부하는 실제 평타와 같은 세 단계(applyDamage → AttackResult → resolveHit)를 서버가 부른다 - MCP는 3D 클릭 평타를 못 넣는다. 측정 중 HP를 최대로 유지(개발 계정 레벨 1 · HP 10이라 사냥 7초 만에 죽었다 - 1회차).
+3. [B · 결과] docs/perf/baseline.md. 일반 스테이지 전환은 이미 인스턴스 0개(잡몹 상시 + 공격자 스테이지 계산)라 **풀링 변경 없음**. 보스 스폰 2 ms · +25개(5스테이지마다, k와 무관).
+4. [B · 한계] 폰은 창 축소(842 × 592) + ForceTouchLayout 근사 - 800 × 360 Emulator 기기는 MCP로 못 만든다. 기기 성능은 반영되지 않는다(사람이 확인할 것).
+
 ## 결정 필요
 
 (파트 진행 중 채운다)
