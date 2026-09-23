@@ -111,6 +111,46 @@ local function sample(scene, seconds, tick)
 	return line
 end
 
+-- 예산 초안(B3)용 인구조사: 모델 하나의 파트 · 인스턴스 · 메시 수, 월드 전체의 파티클 · 텍스처 · 데칼 · 메시 수.
+local function modelCensus(model)
+	local parts, meshes, all = 0, 0, 0
+	for _, inst in ipairs(model:GetDescendants()) do
+		all += 1
+		if inst:IsA("MeshPart") or inst:IsA("SpecialMesh") then
+			meshes += 1
+		end
+		if inst:IsA("BasePart") then
+			parts += 1
+		end
+	end
+	return parts, meshes, all
+end
+
+local function worldCensus(label)
+	local counts = { ParticleEmitter = 0, Texture = 0, Decal = 0, MeshPart = 0, BillboardGui = 0, Beam = 0, Trail = 0 }
+	for _, inst in ipairs(workspace:GetDescendants()) do
+		for className in pairs(counts) do
+			if inst:IsA(className) then
+				counts[className] += 1
+			end
+		end
+	end
+	local seen = {}
+	local perModel = {}
+	for _, model in ipairs(MonsterState.getAllModels()) do
+		local data = MonsterState.getData(model)
+		local key = data and (data.isBoss and ("boss:" .. tostring(data.id)) or ("tier" .. tostring(data.tierIndex))) or "?"
+		if not seen[key] then
+			seen[key] = true
+			local parts, meshes, all = modelCensus(model)
+			table.insert(perModel, ("%s=parts%d/meshes%d/inst%d"):format(key, parts, meshes, all))
+		end
+	end
+	table.sort(perModel)
+	print(("[PERF] census=%s particles=%d textures=%d decals=%d meshParts=%d billboards=%d beams=%d trails=%d models: %s"):format(
+		label, counts.ParticleEmitter, counts.Texture, counts.Decal, counts.MeshPart, counts.BillboardGui, counts.Beam, counts.Trail, table.concat(perModel, " ")))
+end
+
 local function nearestMonster(player)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if not root then
@@ -177,6 +217,7 @@ function PerfProbe.run(player)
 	teleport(player, WorldConfig.zones.spawn.center + Vector3.new(0, 5, 0))
 	task.wait(4)
 	sample("town", SAMPLE_SECONDS.town)
+	worldCensus("world")
 
 	-- 2) 사냥(가운데 tier 구역 중심 - 격자 9마리가 둘러싼 자리). 스테이지 1이라 플레이어가 죽지 않는다.
 	local zoneKey = WorldConfig.tierZoneOrder[HUNT_ZONE_INDEX]
@@ -212,6 +253,7 @@ function PerfProbe.run(player)
 	local afterSpawn = countInstances()
 	print(("[PERF] scene=transition kind=bossSpawn ms=%.2f instanceDelta=%d"):format(spawnMs, afterSpawn - before))
 	task.wait(3)
+	worldCensus("boss")
 	sample("boss", SAMPLE_SECONDS.boss, function()
 		PlayerState.setHp(player, PlayerState.getMaxHp(player))
 	end)
