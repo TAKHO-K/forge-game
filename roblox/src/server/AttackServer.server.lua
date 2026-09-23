@@ -21,6 +21,7 @@ local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
 local StuckArrowState = require(script.Parent.StuckArrowState)
 local TutorialState = require(script.Parent.TutorialState)
+local PartyState = require(script.Parent.PartyState)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -128,6 +129,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	end
 
 	lastAttackTick[player] = now -- 헛스윙이어도 쿨다운은 소모한다
+	PartyState.noteActivity(player) -- P2 G: 파티 경험치 보너스의 "최근 활동"(공격 요청을 받아들인 순간)
 	-- 19-1: 공격 시도(헛스윙 포함)도 "전투 중"이다 - 자동회복이 싸우는 동안엔 켜지지
 	-- 않아야 한다(PlayerRegen.server.lua 주석 참고).
 	PlayerState.setLastCombatActionAt(player, now)

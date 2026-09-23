@@ -19,6 +19,7 @@ local ItemDropState = require(script.Parent.ItemDropState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local MonsterState = require(script.Parent.MonsterState)
 local PartyState = require(script.Parent.PartyState)
+local PartyExpBonus = require(script.Parent.PartyExpBonus)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local TutorialState = require(script.Parent.TutorialState)
 
@@ -211,6 +212,16 @@ function PartyExpVerify.runLive(player, env)
 	print(("[S09][나] 기준 상태: 성장 옵션 합 %.3f(기대 0.000) · 직업 %s"):format(optionBonus, tostring(PlayerProfile.getClassId(player))))
 
 	local B, C, D = standIn("S09StandB", -9301), standIn("S09StandC", -9302), standIn("S09StandD", -9303)
+	-- P2 G: 파티 보너스는 "같은 구역 · 반경 150 · 최근 60초 활동"을 만족한 파티원만 센다. 이 블록은 인원 → 배수(+10/15/20%)를 재는 옛 검증이라
+	-- 스탠드인 셋과 실제 Player를 같은 가상 구역 · 같은 자리에 두고(PartyExpBonus.debugSetPresence - Studio 전용) 스탠드인이 방금 활동한 것으로 기록한다.
+	-- 조건 자체의 검증은 P2(가) · P2(나)가 한다.
+	local presence = { zone = "S09-verify", position = Vector3.new(0, 0, 0) }
+	for _, member in ipairs({ player, B, C, D }) do
+		PartyExpBonus.debugSetPresence(member, presence)
+	end
+	for _, member in ipairs({ B, C, D }) do
+		PartyState.noteActivity(member)
+	end
 
 	r.section("[1] 솔로", function()
 		r.check(("솔로: %s(기대 인원 0 · 보너스 0.00 · 배수 ×1.0000 · Attribute 없음 또는 0)"):format(partyLine(player)),
@@ -290,6 +301,9 @@ function PartyExpVerify.runLive(player, env)
 	-- 되돌리기: 파티 · 직업 · 장비 · 경험치 · 가방 · 위치. 검증이 만든 것(스탠드인 파티 · 몬스터 · 땅의 드랍)은 없어야 한다.
 	for _, member in ipairs({ D, C, B }) do
 		PartyState.leave(member, "leave")
+	end
+	for _, member in ipairs({ player, B, C, D }) do
+		PartyExpBonus.debugSetPresence(member, nil)
 	end
 	if PartyState.getParty(player) then
 		PartyState.leave(player, "leave")

@@ -99,7 +99,18 @@ local config = {
 		-- 29-1(BossMechanicsVerify - PlayerDamage.computeHitDamage 직접 호출) · 27-4(가)(나)(StageServer 파이프라인) · SaveSystem 이관 체인(S02(가)·S03(가)·S04(가)·S05(가)·S05b(가)·S11(가)).
 		-- P0(2026-09-23): 경제 시뮬 도구(EconSim · EconSimTables · EconSimReport · EconSimVerify · EconSimConfig + /gg econ) - 게임 코드 무변경(새 모듈만 추가, DevTools는 명령 · 블록 연결만).
 		-- 이번 블록 P0(가). 동반 실행 없음: 이 단계가 고친 게임 모듈이 없다(새 모듈이 게임 모듈을 읽기만 한다 - what-if 덮어쓰기는 양보 없는 구간 안에서 되돌린다).
-		current = { "P0(가)" },
+		-- P2(2026-09-23): 경제 · 성장 · 보석 · 태초 · 치유사 · 파티 경험치(docs/phase/P2-log.md) - 이번 블록 P2(가) · P2(나) + 동반 실행(COMMON.md §3 - 이 단계가 고친 모듈을 require하는 옛 블록, grep):
+		--   P0(가)(EconSim 전체) · S01(가)(나)(Loot · CombatResolution · 변환권 가격 · CharacterLevel) · S03(가)(나) · S04(가) · S05(가)(나)(Enhance.getCost · 방지권 가격 = GoldCost) · S05b(가)(나)(Enhance · Loot) ·
+		--   S08(가)(나)(EnhanceService · 준비 골드) · S09(가)(나)(파티 경험치 - 조건부 보너스) · S10(가)(나)(드랍 · 환생) · S11(가)(나)(보스 드랍 미리보기 · Enhance) · S12(나)(처치 경험치 × 파티 보너스) ·
+		--   S12b(가)(나)(환생 필요 레벨 · 강화) · S13(가)(나) · S13b(가)(나)(치유사 atk · 딜링모드 배율 · HealCast) · S19b(가)(나)(PartyState) · S20e(가)(나)(환생 · 변환권 가격) · S21-0(가)(나)(NumberFormat) · 26-2 · 26-3(옵션 levelFactor).
+		--   뺀 것: 보스 블록 29-x(ClassData를 읽지만 치유사를 안 쓴다 - grep 0) · S04(나)(exclude 그대로).
+		current = {
+			"P2(가)", "P2(나)", "P0(가)",
+			"S01(가)", "S01(나)", "S03(가)", "S03(나)", "S04(가)", "S05(가)", "S05(나)", "S05b(가)", "S05b(나)",
+			"S08(가)", "S08(나)", "S09(가)", "S09(나)", "S10(가)", "S10(나)", "S11(가)", "S11(나)", "S12(나)",
+			"S12b(가)", "S12b(나)", "S13(가)", "S13(나)", "S13b(가)", "S13b(나)", "S19b(가)", "S19b(나)",
+			"S20e(가)", "S20e(나)", "S21-0(가)", "S21-0(나)", "26-2", "26-3",
+		},
 	},
 }
 

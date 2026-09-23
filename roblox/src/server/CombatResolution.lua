@@ -27,6 +27,8 @@ local ProtectionTickets = require(script.Parent.ProtectionTickets)
 local TutorialState = require(script.Parent.TutorialState)
 local PartyState = require(script.Parent.PartyState)
 local DropNotice = require(script.Parent.DropNotice)
+-- P2 G: 불러오는 순간 PartyState에 파티 경험치 조건 판정을 등록한다(경험치 지급 경로가 이 모듈을 지난다).
+require(script.Parent.PartyExpBonus)
 
 local CombatResolution = {}
 

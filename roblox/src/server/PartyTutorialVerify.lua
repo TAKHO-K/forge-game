@@ -23,6 +23,7 @@ local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local MonsterState = require(script.Parent.MonsterState)
 local PartyJoinRules = require(script.Parent.PartyJoinRules)
 local PartyState = require(script.Parent.PartyState)
+local PartyExpBonus = require(script.Parent.PartyExpBonus)
 local PartyVote = require(script.Parent.PartyVote)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local TutorialState = require(script.Parent.TutorialState)
@@ -360,7 +361,12 @@ function PartyTutorialVerify.runLive(player, env)
 
 	r.section("[7] 보상 기준: 견습 = 견습 스테이지 · 친구 = 자기 스테이지(파티 보너스는 둘 다)", function()
 		env.applyStage(player, FRIEND_STAGE)
-		local partyBonus = PartyState.getExpBonus(PartyState.getParty(player))
+		-- P2 G: 파티 보너스는 조건(같은 구역 · 반경 · 최근 활동)을 만족한 파티원만 센다 - 스탠드인 B를 실제 Player와 같은 가상 구역 · 자리에 두고 방금 활동한 것으로 기록한다.
+		local presence = { zone = "S12-verify", position = Vector3.new(0, 0, 0) }
+		PartyExpBonus.debugSetPresence(player, presence)
+		PartyExpBonus.debugSetPresence(B, presence)
+		PartyState.noteActivity(B)
+		local partyBonus = PartyState.getExpBonusFor(player)
 		local tutorialStage, tutorialGold, tutorialExp = killOne(player) -- 지금 견습 중
 		TutorialState.stop(player, false)
 		local friendStage, friendGold, friendExp = killOne(player) -- 견습 아님 = 같은 파티의 친구 처지
@@ -374,6 +380,8 @@ function PartyTutorialVerify.runLive(player, env)
 		r.check(("친구(견습 아님) 처치: 기준 스테이지 %s(기대 %d) · 경험치 +%.4f(기대 %.4f = 자기 스테이지 기준 × 파티 보너스 ×%.2f) · 견습 쪽보다 골드 %d > %d(기대 참)"):format(
 			tostring(friendStage), FRIEND_STAGE, friendExp, expectedFriend, 1 + partyBonus, friendGold, tutorialGold),
 			friendStage == FRIEND_STAGE and math.abs(friendExp - expectedFriend) <= 1 and friendGold > tutorialGold)
+		PartyExpBonus.debugSetPresence(player, nil)
+		PartyExpBonus.debugSetPresence(B, nil)
 	end)
 
 	-- [8] 되돌리기: 파티 · 견습 진행도 · 감싼 함수 · 직업 · 장비 · 골드 · 가방 · 위치. 검증이 만든 것은 없어야 한다.

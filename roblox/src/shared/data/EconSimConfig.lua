@@ -7,6 +7,7 @@
 
 return {
 	-- 시뮬 전체 공통
+	partyExpRequiresPresence = true, -- P2 G: 게임 규칙(파티 경험치 보너스 = 조건 충족 파티원만) - p2before what-if가 false로 끈다
 	seed = 20260923, -- 강화 시도 · 몬테카를로 난수 시드(같은 입력 → 같은 결과)
 	yieldSeconds = 0.25, -- 계산이 이만큼(초) 이어지면 레벨업 사이에서 task.wait() 한 번(한 번에 계산하되 스크립트 시간 초과를 피한다 - 매 프레임 계산이 아니다)
 	stallLevelHours = 200, -- 레벨업 한 번에 이 플레이 시간(시간)을 넘기면 "진행 정지"로 보고 끝낸다([없음] 사유)
@@ -31,7 +32,8 @@ return {
 	--   bossKillLimitSeconds 이 시간 안에 잡을 수 있으면 보스에 도전
 	--   bossAttemptsPerClear 클리어 1회에 드는 시도 수(실패 포함 - 보스 시간 = 처치 시간 × 이 값 + bossOverheadSeconds)
 	--   partySize          보스전 파티 인원(1 = 솔로). 사냥은 솔로로 본다(파티 사냥의 1인당 효율은 [가정] 범위 밖 - S21a §4-4)
-	--   partyExpBonus      사냥 중 파티 경험치 보너스를 받는가(파티 소속만 되면 거리 무관 - S21-0 D3)
+	--   partyExpBonus      사냥 중 파티 경험치 보너스를 받는가(P2 전 규칙: 파티 소속만 되면 거리 무관 - S21-0 D3)
+	--   partyHuntsTogether (P2 G) 사냥도 파티원과 같은 구역 · 반경 안에서 같이 하는가 - 새 규칙(partyExpRequiresPresence)에서는 이게 참이어야 보너스가 붙는다
 	--   enhanceTarget      무기 강화 목표 단계
 	--   useProtection      19강 이상에서 방지권을 사서 쓰는가
 	--   rebirth            환생 가능해지면 바로 하는가
@@ -59,7 +61,7 @@ return {
 			displayName = "상위 1%", hoursPerDay = 12, classId = "bow", huntTierMax = 6,
 			targetKillSeconds = 2.5, minSurviveHits = 3, dpsEfficiency = 0.95, moveOverheadSeconds = 0.6,
 			bossDpsEfficiency = 0.9, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.1, bossOverheadSeconds = 10,
-			partySize = 4, partyExpBonus = true,
+			partySize = 4, partyExpBonus = true, partyHuntsTogether = false,
 			enhanceTarget = 25, useProtection = true, rebirth = true,
 			gearCheckMinutes = 5, gemReroll = true, gemRoll = 1.1,
 		},
@@ -107,6 +109,9 @@ return {
 		compositionDealerClasses = { "dualblade", "greatsword" },
 	},
 
+	-- P2 H1 전후 비교(/gg econ <프로필> compare): 구매력의 기준 강화 단계(+20→+21 - 일반 프로필 목표 단계와 같다)
+	compare = { powerReferenceLevel = 20 },
+
 	-- E7 what-if 덮어쓰기. 이름 = /gg econ의 둘째 인자. 빈 표 = 기준선. 모든 칸은 선택:
 	--   growthRate          InfiniteStageConfig.growthRate(몬스터 · 보상 · 아이템 계수 성장 k)
 	--   weaponGrowthRate    CharacterLevelConfig.weaponMultGrowthRate(g)
@@ -129,6 +134,7 @@ return {
 			primordialDecayPerLevel = 0,
 			healerAtk = 0.6,
 			dealingAttackMultiplier = 3.13,
+			partyExpRequiresPresence = false,
 		},
 	},
 }

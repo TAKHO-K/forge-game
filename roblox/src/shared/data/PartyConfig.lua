@@ -59,6 +59,10 @@ return {
 	-- 30-0 S09(PRD 20.73 [5-1]): 같은 서버의 파티 인원(실제 Player만 - 더미 · 텔레포트 중인 원격 좌석 제외)별 경험치 보너스. 없는 인원(솔로)은 0.
 	-- 성장 옵션(상한 25%)과는 곱이다: 배수 = (1 + 옵션 합) × (1 + 이 값).
 	expBonusByMemberCount = { [2] = 0.10, [3] = 0.15, [4] = 0.20 },
+	-- P2 G1(결정 10A): 위 보너스의 "인원"은 경험치를 받는 사람 기준으로 조건을 만족한 파티원(받는 사람 포함)만 센다 - 같은 구역(같은 사냥 구역 또는
+	-- 같은 보스 인스턴스) · 받는 사람과의 거리 radiusStuds 이하 · 최근 activeWithinSeconds초 안에 공격 또는 회복(스킬 시전)을 했다. 판정은 서버에서 경험치를
+	-- 지급하는 순간에만 한다(server/PartyExpBonus.lua - 매 프레임 계산 없음).
+	expBonusCondition = { radiusStuds = 150, activeWithinSeconds = 60 },
 
 	-- 초대 팝업 유지 시간(PRD 20.47 [5](라) "받는 쪽 팝업 15초"). 지나면 자동 거절.
 	inviteTimeoutSeconds = 15,

@@ -375,8 +375,9 @@ function PlayerProfile.combineExpMultiplier(optionBonus, partyBonus)
 end
 
 -- addCharacterExp · 재료 기대 개수(CombatResolution.grantMaterials) · /gg curve(DevTools)가 이 함수 하나만 본다.
+-- P2 G: 파티 보너스는 조건(같은 구역 · 반경 · 최근 활동)을 만족한 파티원만 센다(PartyState.getExpBonusFor - 지급 순간 판정).
 function PlayerProfile.getExpGainMultiplier(player)
-	return PlayerProfile.combineExpMultiplier(PlayerProfile.getOptionBonus(player, "expGain"), PartyState.getExpBonus(PartyState.getParty(player)))
+	return PlayerProfile.combineExpMultiplier(PlayerProfile.getOptionBonus(player, "expGain"), PartyState.getExpBonusFor(player))
 end
 
 -- 재생(healingPower, 26-2) 배수 - 자동회복(PlayerRegen.server.lua)·힐러 치유(SkillServer

@@ -351,19 +351,204 @@ local function writeProfiles(w, profileIds)
 	w.line("")
 end
 
+-- ═══ P2 전후 비교(/gg econ <프로필> compare) ═══
+-- "전" = p2before 덮어쓰기(P2 결정 전의 게임 값)로 같은 도구를 한 번 더 돌린 값, "후" = 지금 게임 값. 지표를 뽑는 계산(강화 비용 등)도 그쪽 덮어쓰기 안에서 한다.
+local COMPARE_STAGES = { 10, 50, 100, 250, 500, 1000, 2000, 3000 }
+local POWER_STAGES = { 100, 250, 500, 1000, 1500, 2000, 3000 }
+local GEM_STAGES = { 125, 250, 500, 1000, 2000, 3000 }
+
+local function firstChunkAt(run, stage)
+	for _, chunk in ipairs(run.chunks) do
+		if chunk.reach >= stage then
+			return chunk
+		end
+	end
+	return nil
+end
+
+local function metricsFor(run)
+	local m = { reached = {}, power = {}, gem = {}, rebirth5 = run.rebirthAt[5] and hours(run.rebirthAt[5]) or nil, finalReach = run.final.reach }
+	for _, stage in ipairs(COMPARE_STAGES) do
+		m.reached[stage] = run.reached[stage] and hours(run.reached[stage].seconds) or nil
+	end
+	local reference = EconSimConfig.compare.powerReferenceLevel
+	for _, stage in ipairs(POWER_STAGES) do
+		local chunk = firstChunkAt(run, stage)
+		if chunk and chunk.seconds + chunk.bossSeconds > 0 then
+			m.power[stage] = (chunk.gold + chunk.bossGold) / ((chunk.seconds + chunk.bossSeconds) / 60) / Enhance.getCost(reference, chunk.reach)
+		end
+	end
+	for _, stage in ipairs(GEM_STAGES) do
+		local chunk = firstChunkAt(run, stage)
+		if chunk then
+			m.gem[stage] = { power = chunk.gemAttackBonus, share = chunk.gemShare, level = chunk.gemAvgLevel }
+		end
+	end
+	local primordial, huntSeconds, primordial100, hunt100 = 0, 0, 0, 0
+	for _, chunk in ipairs(run.chunks) do
+		primordial += chunk.primordial
+		huntSeconds += chunk.seconds
+		if chunk.reach <= 100 then
+			primordial100 += chunk.primordial
+			hunt100 += chunk.seconds
+		end
+	end
+	m.supply = huntSeconds > 0 and primordial / hours(huntSeconds) or 0
+	m.supply100 = hunt100 > 0 and primordial100 / hours(hunt100) or 0
+	return m
+end
+
+local function writeCompare(w, afterRuns, beforeRuns, profileIds, after, before)
+	local beforeWhatIf = EconSimConfig.whatIfs.p2before
+	local ma, mb = {}, {}
+	for _, id in ipairs(profileIds) do
+		ma[id] = metricsFor(afterRuns[id])
+		mb[id] = EconSim.withOverrides(beforeWhatIf, metricsFor, beforeRuns[id])
+	end
+	local function h(value)
+		return value and num(value, 2) or "[없음]"
+	end
+	w.line("## P2 전후 비교(전 = what-if `p2before` - P2 결정 전 게임 값 · 후 = 지금 게임 값, 같은 도구)")
+	w.line("")
+	w.line("### ① 도달 시간(누적 플레이 시간, 시간)")
+	w.line("")
+	local head = { "| 스테이지 |" }
+	for _, id in ipairs(profileIds) do
+		table.insert(head, (" %s 전 → 후 |"):format(EconSimConfig.profiles[id].displayName))
+	end
+	w.line(table.concat(head))
+	w.line("|---|" .. string.rep("---|", #profileIds))
+	w.row("cmp_reach", { "stage", "profile", "before_h", "after_h" })
+	for _, stage in ipairs(COMPARE_STAGES) do
+		local cells = { ("| %d |"):format(stage) }
+		for _, id in ipairs(profileIds) do
+			table.insert(cells, (" %s → %s |"):format(h(mb[id].reached[stage]), h(ma[id].reached[stage])))
+			w.row("cmp_reach", { stage, id, mb[id].reached[stage] or "", ma[id].reached[stage] or "" })
+		end
+		w.line(table.concat(cells))
+	end
+	local cells = { "| 환생 5회차(레벨 1) |" }
+	for _, id in ipairs(profileIds) do
+		table.insert(cells, (" %s → %s |"):format(h(mb[id].rebirth5), h(ma[id].rebirth5)))
+		w.row("cmp_reach", { "rebirth5", id, mb[id].rebirth5 or "", ma[id].rebirth5 or "" })
+	end
+	w.line(table.concat(cells))
+	cells = { ("| 최종 최고(%d시간 상한) |"):format(EconSimConfig.maxPlayHours) }
+	for _, id in ipairs(profileIds) do
+		table.insert(cells, (" %d → %d |"):format(mb[id].finalReach, ma[id].finalReach))
+	end
+	w.line(table.concat(cells))
+	w.line("")
+	w.line(("### ② 골드 구매력(그 스테이지에 처음 선 레벨의 골드/분 ÷ +%d→+%d 1회 비용 - `Enhance.getCost(단계, 최고 스테이지)`)"):format(EconSimConfig.compare.powerReferenceLevel, EconSimConfig.compare.powerReferenceLevel + 1))
+	w.line("")
+	w.line(table.concat(head))
+	w.line("|---|" .. string.rep("---|", #profileIds))
+	w.row("cmp_power", { "stage", "profile", "before", "after", "after_vs_stage100" })
+	for _, stage in ipairs(POWER_STAGES) do
+		local row = { ("| %d |"):format(stage) }
+		for _, id in ipairs(profileIds) do
+			local pa, pb = ma[id].power[stage], mb[id].power[stage]
+			local base = ma[id].power[100]
+			local rel = (pa and base) and ("(%+.0f%%)"):format((pa / base - 1) * 100) or ""
+			table.insert(row, (" %s → %s %s |"):format(pb and ("%.3g"):format(pb) or "[없음]", pa and ("%.3g"):format(pa) or "[없음]", rel))
+			w.row("cmp_power", { stage, id, pb or "", pa or "", (pa and base) and pa / base or "" })
+		end
+		w.line(table.concat(row))
+	end
+	w.line("")
+	w.line("괄호 = 후의 스테이지 100 대비(C1 목표 ±20%).")
+	w.line("")
+	w.line("### ③ 보석 비중(보석 위력 합 = 보석 공격력% 합 · 괄호 = 공격력 중 보석이 만든 몫 = 1 − 보석 없는 공격력 ÷ 공격력)")
+	w.line("")
+	w.line(table.concat(head))
+	w.line("|---|" .. string.rep("---|", #profileIds))
+	w.row("cmp_gem", { "stage", "profile", "before_power", "before_share", "after_power", "after_share", "after_avg_level" })
+	for _, stage in ipairs(GEM_STAGES) do
+		local row = { ("| %d |"):format(stage) }
+		for _, id in ipairs(profileIds) do
+			local ga, gb = ma[id].gem[stage], mb[id].gem[stage]
+			table.insert(row, (" %s → %s |"):format(gb and ("%s(%s)"):format(pct(gb.power), pct(gb.share)) or "[없음]", ga and ("%s(%s) · Lv%d"):format(pct(ga.power), pct(ga.share), math.floor(ga.level)) or "[없음]"))
+			w.row("cmp_gem", { stage, id, gb and gb.power or "", gb and gb.share or "", ga and ga.power or "", ga and ga.share or "", ga and ga.level or "" })
+		end
+		w.line(table.concat(row))
+	end
+	w.line("")
+	w.line("### ④ 태초 - 시간당 공급(잡몹 태초 장비 기대 개수 ÷ 사냥 시간) · tier별 손익분기")
+	w.line("")
+	w.line("| 프로필 | 전체: 전 → 후(배수) | 스테이지 100까지: 전 → 후 |")
+	w.line("|---|---|---|")
+	w.row("cmp_supply", { "profile", "before", "after", "before_100", "after_100" })
+	for _, id in ipairs(profileIds) do
+		local a, b = ma[id].supply, mb[id].supply
+		w.line(("| %s | %s → %s(%s) | %s → %s |"):format(EconSimConfig.profiles[id].displayName, ("%.4g"):format(b), ("%.4g"):format(a), b > 0 and ("×" .. ("%.3g"):format(a / b)) or "전 0",
+			("%.4g"):format(mb[id].supply100), ("%.4g"):format(ma[id].supply100)))
+		w.row("cmp_supply", { id, b, a, mb[id].supply100, ma[id].supply100 })
+	end
+	w.line("")
+	w.line(("| tier | 전: 확률 · M* 최소(Δ ≤ %d, 감쇠 없음) | 후: 확률 · M* 최소(감쇠 포함) · Δ ≤ %d 지배 전략 |"):format(EconSimConfig.primordial.dominanceMaxDelta, EconSimConfig.primordial.dominanceMaxDelta))
+	w.line("|---|---|---|")
+	for _, tier in ipairs(EconSimConfig.primordial.lowTiers) do
+		local function summarize(rows)
+			local minM, dominated, rateB = math.huge, 0, 0
+			for _, row in ipairs(rows) do
+				if row.label == "grid" and row.lowTier == tier and row.delta <= EconSimConfig.primordial.dominanceMaxDelta then
+					minM = math.min(minM, row.breakEven)
+					dominated += row.ratio > 1 and 1 or 0
+					rateB = row.rateB
+				end
+			end
+			return minM, dominated, rateB
+		end
+		local mBefore, dBefore, rBefore = summarize(before.primordial)
+		local mAfter, dAfter, rAfter = summarize(after.primordial)
+		w.line(("| %d | %s · %s(%s) | %s · %s · %s |"):format(tier, ("%.4f%%"):format(rBefore * 100), num(mBefore, 2), dBefore > 0 and ("우세 %d칸"):format(dBefore) or "우세 없음",
+			("%.4f%%"):format(rAfter * 100), num(mAfter, 2), dAfter > 0 and ("**있음 %d칸**"):format(dAfter) or "없음"))
+	end
+	w.line("")
+	w.line("### ⑤ 치유사(4인 보스전 치유사 비중 · 딜링모드 ÷ 검사)")
+	w.line("")
+	w.line("| 장비 | 도적 3 + 1: 전 → 후 | 검사 3 + 1 | 궁수 3 + 1 | 혼합 | 딜링모드 ÷ 검사 |")
+	w.line("|---|---|---|---|---|---|")
+	for _, tier in ipairs(EconSimConfig.healer.gearTiers) do
+		local a, b = after.healer.tiers[tier.id], before.healer.tiers[tier.id]
+		w.line(("| %s | %s → %s | %s → %s | %s → %s | %s → %s | %s → %s |"):format(tier.displayName, pct(b.share.dualblade), pct(a.share.dualblade), pct(b.share.greatsword), pct(a.share.greatsword),
+			pct(b.share.bow), pct(a.share.bow), pct(b.share.mixed), pct(a.share.mixed), num(b.rDealing, 3), num(a.rDealing, 3)))
+	end
+	w.line("")
+	w.line("'전'도 지금 모형(치유모드 = 딜링모드 끈 평타 · 옵션 100% - 게임과 같다)으로 잰 값이다. P0 모형(옵션 미적용 · 딜링모드 × 전투 비율 0.266)의 옛 값은 docs/econ/P2-before.md E6(12.0 · 9.6 · 7.6%).")
+	w.line("")
+	w.line("### ⑥ 파티 구성 속도(보스 처치 속도 ÷ 딜러 4명, 치유사 = 치유모드)")
+	w.line("")
+	w.line("| 장비 · 딜러 | 전: 3+1 · 2+2 · 1+3 · 4 | 후: 3+1 · 2+2 · 1+3 · 4 |")
+	w.line("|---|---|---|")
+	for index, entry in ipairs(after.healer.compositions) do
+		local prior = before.healer.compositions[index]
+		local function line(e)
+			local v = {}
+			for i = 2, #e.speeds do
+				v[i - 1] = num(e.speeds[i].healMode, 3)
+			end
+			return table.concat(v, " · ")
+		end
+		w.line(("| %s · %s | %s | %s |"):format(entry.tier, className(entry.dealerClass), line(prior), line(entry)))
+	end
+	w.line("")
+end
+
 -- opts = { profileArg = "all" | 프로필 id, whatIfName = 이름(기본 baseline) }. 반환: 요약 문자열, 결과 표(검증 블록이 읽는다).
 function EconSimReport.run(opts)
 	assert(EconSim.isAllowed(), "EconSim은 Studio + DevToolsConfig.econSim 전용이다")
 	opts = opts or {}
 	local whatIfName = opts.whatIfName or "baseline"
-	local whatIf = EconSimConfig.whatIfs[whatIfName]
+	local compare = whatIfName == "compare" -- P2 H1: 지금 값(baseline) + p2before를 같이 돌려 전후 비교 절을 더한다
+	local whatIf = compare and EconSimConfig.whatIfs.baseline or EconSimConfig.whatIfs[whatIfName]
 	if not whatIf then
 		local names = {}
 		for name in pairs(EconSimConfig.whatIfs) do
 			table.insert(names, name)
 		end
 		table.sort(names)
-		error(("알 수 없는 what-if '%s' - 가능: %s"):format(whatIfName, table.concat(names, ", ")), 0)
+		error(("알 수 없는 what-if '%s' - 가능: %s · compare"):format(whatIfName, table.concat(names, ", ")), 0)
 	end
 	local profileArg = opts.profileArg or "all"
 	local profileIds = {}
@@ -392,6 +577,19 @@ function EconSimReport.run(opts)
 	local samples = EconSim.withOverrides(EconSimConfig.whatIfs.p2before, function()
 		return EconSimTables.samples(EconSimTables.healer())
 	end)
+	local beforeRuns, beforeTables = nil, nil
+	if compare then
+		local p2before = EconSimConfig.whatIfs.p2before
+		beforeRuns = {}
+		for _, id in ipairs(profileIds) do
+			beforeRuns[id] = EconSim.runProgress(id, p2before)
+			task.wait()
+		end
+		beforeTables = {
+			primordial = EconSim.withOverrides(p2before, EconSimTables.primordial),
+			healer = EconSim.withOverrides(p2before, EconSimTables.healer),
+		}
+	end
 	local elapsed = os.clock() - started
 
 	local runId = ("%s-%s"):format(whatIfName, profileArg)
@@ -413,6 +611,9 @@ function EconSimReport.run(opts)
 	writeE5(w, primordial)
 	writeE6(w, healer)
 	writeSamples(w, samples)
+	if compare then
+		writeCompare(w, runs, beforeRuns, profileIds, { primordial = primordial, healer = healer }, beforeTables)
+	end
 	w.flush(("run=%s whatif=%s profiles=%s"):format(runId, whatIfName, profileArg))
 
 	-- 채팅 요약

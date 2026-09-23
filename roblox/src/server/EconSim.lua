@@ -92,6 +92,9 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	if whatIf.dealingAttackMultiplier then
 		set(SkillData.healer.E, "attackMultiplier", whatIf.dealingAttackMultiplier)
 	end
+	if whatIf.partyExpRequiresPresence ~= nil then
+		set(EconSimConfig, "partyExpRequiresPresence", whatIf.partyExpRequiresPresence)
+	end
 	if whatIf.enhanceCostScale then
 		local scaled = {}
 		for index, cost in ipairs(EnhanceConfig.goldCost) do
@@ -395,8 +398,11 @@ local function loadoutFor(state)
 end
 EconSim.loadoutFor = loadoutFor
 
+-- P2 G: 게임의 파티 경험치 보너스는 "같은 구역 · 반경 · 최근 활동" 파티원만 센다(PartyExpBonus) - 시뮬 사냥은 솔로라([가정] partyHuntsTogether = false)
+-- EconSimConfig.partyExpRequiresPresence가 켜져 있으면 사냥 보너스가 없다. p2before(옛 규칙 - 파티 소속만 되면 거리 무관)는 이 스위치를 끈다.
 local function expMultiplier(profile)
-	local partyBonus = profile.partyExpBonus and PartyState.getExpBonusForCount(profile.partySize) or 0
+	local eligible = profile.partyExpBonus and (profile.partyHuntsTogether or not EconSimConfig.partyExpRequiresPresence)
+	local partyBonus = eligible and PartyState.getExpBonusForCount(profile.partySize) or 0
 	return PlayerProfile.combineExpMultiplier(0, partyBonus)
 end
 
@@ -758,7 +764,7 @@ function EconSim.runProgress(profileId, whatIf)
 	local milestones = table.clone(EconSimConfig.milestones)
 	table.insert(milestones, cap)
 	local run = { profileId = profileId, milestones = milestones, reached = {}, rebirthAt = {}, chunks = {}, cap = cap, stall = nil }
-	run.expMult = expMultiplier(profile)
+	run.expMult = EconSim.withOverrides(whatIf, expMultiplier, profile) -- what-if(p2before의 옛 파티 규칙)를 따른다
 	local state = newState(profile)
 	local rng = Random.new(EconSimConfig.seed)
 	nextMilestoneRecord(run, state, cap)

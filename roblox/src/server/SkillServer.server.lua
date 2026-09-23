@@ -32,6 +32,7 @@ local BuffState = require(script.Parent.BuffState)
 local SummonState = require(script.Parent.SummonState)
 local DashEndpoint = require(script.Parent.DashEndpoint)
 local HealCast = require(script.Parent.HealCast)
+local PartyState = require(script.Parent.PartyState)
 
 local skillRequest = Instance.new("RemoteEvent")
 skillRequest.Name = "SkillRequest"
@@ -493,6 +494,7 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 		reject(player, slot, "cooldown")
 		return
 	end
+	PartyState.noteActivity(player) -- P2 G: 파티 경험치 보너스의 "최근 활동"(스킬 · 치유 시전 요청을 받아들인 순간)
 
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")

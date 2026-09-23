@@ -129,6 +129,41 @@ function PartyState.getExpBonus(party)
 	return PartyState.getExpBonusForCount(#PartyState.getMemberPlayers(party))
 end
 
+-- ═══ P2 G: 조건부 파티 경험치 보너스 ═══
+-- 활동 기록 = 마지막으로 공격 · 스킬(치유 포함)을 시전한 시각(AttackServer · SkillServer가 요청을 받아들인 순간 부른다). 표 키라 검증 스탠드인(테이블)도 된다.
+local lastActivityAt = {}
+
+function PartyState.noteActivity(player, at)
+	lastActivityAt[player] = at or now()
+end
+
+function PartyState.getLastActivity(player)
+	return lastActivityAt[player]
+end
+
+-- 판정 함수 fn(recipient, member) → boolean은 server/PartyExpBonus.lua가 등록한다(그쪽이 BossEncounter · 위치를 안다 - 이 모듈은 둘을 모른다, 순환 require 방지).
+local expEligibility = nil
+
+function PartyState.setExpEligibility(fn)
+	expEligibility = fn
+end
+
+-- 받는 사람 기준 보너스 = 조건을 만족한 실제 멤버 수(받는 사람 포함)의 보너스. PlayerProfile.getExpGainMultiplier(경험치 · 재료 지급)가 부른다.
+-- 판정 함수가 아직 없으면(서버 시작 전) 아무도 세지 않는다(보너스 0 - 조건 없는 옛 보너스로 새지 않게).
+function PartyState.getExpBonusFor(player)
+	local party = partyOf[player]
+	if not party then
+		return 0
+	end
+	local count = 1
+	for _, member in ipairs(PartyState.getMemberPlayers(party)) do
+		if member ~= player and expEligibility and expEligibility(player, member) then
+			count += 1
+		end
+	end
+	return PartyState.getExpBonusForCount(count)
+end
+
 -- ═══ 24-2 크로스서버 보조 ═══
 
 -- 정원 계산용 좌석 수 = 멤버(더미 포함) + 텔레포트 중인 원격 좌석. 초대·수락·코드 합류의 "만원" 판정은
@@ -664,6 +699,7 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
 	PartyState.disconnect(player)
+	lastActivityAt[player] = nil
 end)
 
 return PartyState
