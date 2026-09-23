@@ -21,6 +21,7 @@ local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
 local BossEncounter = require(script.Parent.BossEncounter)
 local TutorialState = require(script.Parent.TutorialState)
+local PlayerState = require(script.Parent.PlayerState)
 
 local PerfProbe = {}
 
@@ -140,6 +141,7 @@ local function huntLoad(player)
 			return
 		end
 		acc -= cooldown
+		PlayerState.setHp(player, PlayerState.getMaxHp(player)) -- 측정 중 죽지 않게(피격 경로 · 몬스터 AI 부하는 그대로 돈다)
 		local target = nearestMonster(player)
 		if not target then
 			return
@@ -169,8 +171,6 @@ function PerfProbe.run(player)
 	if BossEncounter.getActive(player) then
 		BossEncounter.despawnFor(player)
 	end
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
 	-- 1) 마을(중앙 안전지대)
 	PlayerProfile.setInfiniteStage(player, 1)
@@ -212,10 +212,9 @@ function PerfProbe.run(player)
 	local afterSpawn = countInstances()
 	print(("[PERF] scene=transition kind=bossSpawn ms=%.2f instanceDelta=%d"):format(spawnMs, afterSpawn - before))
 	task.wait(3)
-	if humanoid then
-		humanoid.Health = humanoid.MaxHealth
-	end
-	sample("boss", SAMPLE_SECONDS.boss)
+	sample("boss", SAMPLE_SECONDS.boss, function()
+		PlayerState.setHp(player, PlayerState.getMaxHp(player))
+	end)
 	workspace:SetAttribute("PerfScene", "bossDespawn")
 	local beforeDespawn = countInstances()
 	t0 = os.clock()

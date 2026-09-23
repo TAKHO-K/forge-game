@@ -2314,11 +2314,9 @@ local function onChatMessage(player, message)
 	end
 end
 
-Players.PlayerAdded:Connect(function(player)
-	player.Chatted:Connect(function(message)
-		onChatMessage(player, message)
-	end)
-	-- P2.5a B: edit 모드에서 ReplicatedStorage Attribute PerfAutoRunUntil(os.time() 만료 시각)을 켜 두면 접속 25초 뒤 성능 측정을 한 번 돈다(채팅 명령 없이).
+-- P2.5a B: edit 모드에서 ReplicatedStorage Attribute PerfAutoRunUntil(os.time() 만료 시각)을 켜 두면 접속 25초 뒤 성능 측정을 한 번 돈다(채팅 명령 없이).
+-- Studio 솔로 Play는 이 스크립트가 연결되기 전에 플레이어가 들어와 있을 수 있어 이미 있는 플레이어도 본다.
+local function schedulePerfAutoRun(player)
 	local perfUntil = ReplicatedStorage:GetAttribute("PerfAutoRunUntil")
 	if type(perfUntil) == "number" and os.time() < perfUntil then
 		task.delay(25, function()
@@ -2328,7 +2326,16 @@ Players.PlayerAdded:Connect(function(player)
 			end
 		end)
 	end
+end
+Players.PlayerAdded:Connect(function(player)
+	player.Chatted:Connect(function(message)
+		onChatMessage(player, message)
+	end)
+	schedulePerfAutoRun(player)
 end)
+for _, existing in ipairs(Players:GetPlayers()) do
+	schedulePerfAutoRun(existing)
+end
 
 -- 24-2 실측: TextChatService가 "/"로 시작하는 메시지를 명령으로 해석해 Player.Chatted에 넘기지 않는다(같은 세션에서
 -- "hello"는 Chatted에 닿고 "/gg ..."는 닿지 않았다). 명령을 정식으로 등록해 Triggered로 받는다 - 실제 채팅창 입력과
