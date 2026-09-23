@@ -3,12 +3,16 @@
 -- 처치당 기대 개수 = dropChancePerKill × 마릿수분(tier · 접두사 보상 배율 / 보스 20 / 반짝이 · 상자 보너스) × 받는 사람의 경험치 배수
 -- (PlayerProfile.getExpGainMultiplier - 성장 옵션 × 파티 보너스. 골드 · 장비에는 곱하지 않는다). 계산은 Loot.expectedMaterialCount 하나다.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+
 return {
 	order = { "enhanceStone", "highEnhanceStone" },
 	materials = {
-		-- minStage: 받는 사람의 스테이지가 이 값 이상일 때만 나온다(보스도 "받는 사람의 스테이지"). 75+에서는 두 재료가 각각 독립으로 굴려진다.
-		enhanceStone = { displayName = "강화석", minStage = 50, dropChancePerKill = 0.25 },
-		highEnhanceStone = { displayName = "상급 강화석", minStage = 75, dropChancePerKill = 0.25 },
+		-- minStage: 받는 사람의 스테이지가 이 값 이상일 때만 나온다(보스도 "받는 사람의 스테이지"). 상급 해금 뒤에는 두 재료가 각각 독립으로 굴려진다.
+		-- P2.5c 결정 10: 옛 스테이지 50 · 75(k 1.155)와 같은 힘의 지금 스테이지(힘 비율 - InfiniteStage.fromLegacyStage) = 358 · 539(k 1.02).
+		enhanceStone = { displayName = "강화석", minStage = InfiniteStage.fromLegacyStage(50), dropChancePerKill = 0.25 },
+		highEnhanceStone = { displayName = "상급 강화석", minStage = InfiniteStage.fromLegacyStage(75), dropChancePerKill = 0.25 },
 	},
 	-- 시도 1회의 소모(시도하는 순간의 단계 → { 재료 id, 개수 }). 0 ~ 18강은 없음(골드만)
 	costByLevel = {

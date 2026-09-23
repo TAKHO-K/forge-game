@@ -67,7 +67,7 @@ function BossRules.maxSkillRangeScale()
 end
 
 -- 스테이지 밀도(S14, PRD 20.81 [C-3] - 상수는 BossData.mechanics.stageDensity): 범위 배율이 25에서 멈춘 뒤의 난이도는 낙하 원의 개수가 맡는다.
--- 스테이지 50부터 +1 · 75부터 +2 · 100부터 +3(상한). 견습은 stage 1이라 0이다. isPairStage는 **자리만**이다 - 지금은 항상 false(쌍 스테이지 = 보스 2마리는
+-- 스테이지 355부터 +1 · 535부터 +2 · 715부터 +3(상한 - P2.5c: 옛 50 · 75 · 100의 힘 비율 환산). 견습은 stage 1이라 0이다. isPairStage는 **자리만**이다 - 지금은 항상 false(쌍 스테이지 = 보스 2마리는
 -- 아직 없다). 20.80 E-1: 쌍 스테이지에서는 밀도 증가를 끈다(두 마리가 각자 원을 뿌리면 이미 두 배다).
 function BossRules.isPairStage(stage)
 	return false

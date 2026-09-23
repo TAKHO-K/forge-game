@@ -31,6 +31,7 @@
 
 local CombatConfig = require(script.Parent.CombatConfig)
 local ItemVisualData = require(script.Parent.ItemVisualData)
+local InfiniteStage = require(game:GetService("ReplicatedStorage").Shared.InfiniteStage)
 
 -- P2.5a R3: 갑옷 등급 배율도 1단계 = ×1.45(ItemVisualData.gradeStep) - 일반 1.184(옛 값 그대로)에서 시작해 1.184 × 1.45^(순서 − 1).
 -- 옛 표 1.184 · 2.397 · 3.903 · 5.866 · 8.347 · 11.25 · 15.0. 이 표는 tier 공정성 r(t)(MonsterData)의 입력이라 tier별 몬스터 HP · 골드 배율도 따라 바뀐다(공정성 항등식은 그대로).
@@ -109,11 +110,12 @@ return {
 		{ delta = 1, weight = 2 },
 		{ delta = 2, weight = 1 },
 	},
-	-- 28-1 [2-2]: 보스 드랍(첫 클리어 · 재도전)은 −가 없다. 3:2:1(평균 +0.67).
+	-- 28-1 [2-2]: 보스 드랍(첫 클리어 · 재도전)은 −가 없다. 3:2:1.
+	-- P2.5c 결정 6: 옛 +0 · +1 · +2(k 1.155 - 몬스터 힘 ×1 · ×1.155 · ×1.334)를 같은 힘의 지금 칸으로(힘 비율 - InfiniteStage.fromLegacySpan) = +0 · +7 · +15(평균 +4.8).
 	bossItemLevelDelta = {
 		{ delta = 0, weight = 3 },
-		{ delta = 1, weight = 2 },
-		{ delta = 2, weight = 1 },
+		{ delta = InfiniteStage.fromLegacySpan(1), weight = 2 },
+		{ delta = InfiniteStage.fromLegacySpan(2), weight = 1 },
 	},
 
 	-- 판매가 회수율(13-1). Loot.getSellPrice가 쓰는 유일한 상수 -

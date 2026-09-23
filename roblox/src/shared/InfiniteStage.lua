@@ -11,6 +11,27 @@ function InfiniteStage.getMultiplier(stage)
 	return InfiniteStageConfig.growthRate ^ (stage - 1)
 end
 
+-- P2.5c(COMMON §1 "k 의존 값 = 힘 비율"): 몬스터 힘이 ratio배가 되는 스테이지 폭(실수) = ln(ratio) ÷ ln(k). 데이터가 임계값 · 폭을 배율로 적고
+-- 이 함수로 지금 k의 스테이지를 계산한다(예: 옛 k의 스테이지 50 = 1.155^49배 지점 → 1 + 356.6). 반올림은 호출부(데이터)가 정한다.
+function InfiniteStage.stagesForPowerRatio(ratio)
+	return math.log(ratio) / math.log(InfiniteStageConfig.growthRate)
+end
+
+-- P2.5c 결정 10: 옛 k(legacyGrowthRate 1.155) 시절 스테이지 번호로 정한 임계값 → 같은 힘(1.155^(옛 − 1)배)의 지금 스테이지. snap(기본 1)의 가장 가까운 배수로
+-- 반올림한다(보스 스테이지에 걸리는 값은 BossData.stageInterval). 폭(칸 수)은 fromLegacySpan - 1.155^폭배.
+local function snapTo(value, snap)
+	snap = snap or 1
+	return math.max(snap, math.floor(value / snap + 0.5) * snap)
+end
+
+function InfiniteStage.fromLegacyStage(oldStage, snap)
+	return snapTo(1 + InfiniteStage.stagesForPowerRatio(InfiniteStageConfig.legacyGrowthRate ^ (oldStage - 1)), snap)
+end
+
+function InfiniteStage.fromLegacySpan(oldSpan, snap)
+	return snapTo(InfiniteStage.stagesForPowerRatio(InfiniteStageConfig.legacyGrowthRate ^ oldSpan), snap)
+end
+
 function InfiniteStage.getMonsterHp(baseHp, stage)
 	return baseHp * InfiniteStage.getMultiplier(stage)
 end

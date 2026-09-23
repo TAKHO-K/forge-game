@@ -40,6 +40,9 @@
 -- dashCount·recoverSeconds…)에서 BossSkillMath.boundSeconds가 계산한다(값이 두 군데 있으면 어긋난다).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+
+local STAGE_INTERVAL = 5 -- 아래 stageInterval(보스 간격) - 밀도 임계값의 반올림 단위로도 쓴다
 
 -- ═══ 6종 공통 뼈대 상수 ═══
 -- 게이트의 받는 피해 배율 g는 여기 없다 - BossRules.gateDamageTakenMultiplier가 PartyConfig.maxMembers·
@@ -128,13 +131,15 @@ local MECHANICS = {
 
 	-- S14(PRD 20.81 [C-3]) 스테이지 25 이후의 난이도는 범위가 아니라 **낙하 원의 개수**가 맡는다(범위 배율은 25에서 1.152로 멈춘다 -
 	-- 보장되지 않는 속도를 전제로 넓히면 "피할 수 없는 패턴"이 된다). extra(S) = min(maxExtra, floor((S - startStage) ÷ stepStages)) -
-	-- 스테이지 50부터 +1 · 75부터 +2 · 100부터 +3. densityScalable = true인 스킬의 count가 extra만큼 늘고 scatterStuds가
+	-- (P2.5c 전 번호) 스테이지 50부터 +1 · 75부터 +2 · 100부터 +3 - 지금은 355 · 535 · 715(아래 줄). densityScalable = true인 스킬의 count가 extra만큼 늘고 scatterStuds가
 	-- sqrt((count + extra) ÷ count)배로 넓어진다(면적당 밀도 보존). 대상 조건: circleTarget · 동시 산개(sequential 아님) · scatterStuds > 0 ·
 	-- 기믹 아님 · gate 없음(BossSkillMath.densityEligible). 검사기 BossSim.checkDensity가 합격 기준이다 - 실패하면 maxExtra = 0으로 끈다.
 	-- check(검사기 파라미터): 대상의 자리에서 어느 원에도 안 덮인 가장 가까운 점까지를 directions개 방위 × stepStuds 간격으로 찾고, 그 거리 d로
 	-- 필요 시간 t = perceptionSeconds + d ÷ 이동 속도 × marginFactor(회피 부등식 dodge와 같은 식)를 잰다. 합격 = t의 percentile 분위가 telegraphSeconds 이하 ·
 	-- 최댓값이 telegraphSeconds + maxOverSeconds 이하.
-	stageDensity = { startStage = 25, stepStages = 25, maxExtra = 3, check = { directions = 72, stepStuds = 0.5, percentile = 0.99, maxOverSeconds = 0.25 } },
+	-- P2.5c 결정 10: 옛 25 · 25칸(k 1.155)을 같은 힘의 지금 스테이지로(힘 비율 - InfiniteStage.fromLegacyStage/Span, 보스 간격의 배수로 반올림) = 175 · 180칸
+	-- → +1 = 355 · +2 = 535 · +3 = 715(옛 50 · 75 · 100과 같은 힘).
+	stageDensity = { startStage = InfiniteStage.fromLegacyStage(25, STAGE_INTERVAL), stepStages = InfiniteStage.fromLegacySpan(25, STAGE_INTERVAL), maxExtra = 3, check = { directions = 72, stepStuds = 0.5, percentile = 0.99, maxOverSeconds = 0.25 } },
 
 	-- 29-2 A: 우선순위 눈금(값 자체보다 순서가 뜻이다)과 굶주림 가산. 가산이 어떤 기본 우선순위보다도
 	-- 커서 굶은 스킬은 다음 선택에서 반드시 나간다(자리 비우기만 예외).
@@ -755,7 +760,7 @@ for _, species in ipairs(SPECIES) do
 end
 
 return {
-	stageInterval = 5,
+	stageInterval = STAGE_INTERVAL,
 	-- P2.5a: 보스 한 간격(stageInterval)의 "힘 비율" - 파티 HP 지수 p · 파훼 게이트 배율 g(BossRules)가 이 값에서 나온다. 옛 식은 k^stageInterval(k = 몬스터 성장)이라
 	-- k를 1.155 → 1.02로 바꾸면 2.056 → 1.104가 되어 4인 파티 이득(처치 시간 0.49 → 0.90배)과 파훼 게이트(받는 피해 ×0.487 → ×0.906 - "파훼 안 하면 1.8 ~ 2.7배
 	-- 느림"이 1.1 ~ 1.6배로)가 무너졌다(P25a 1회차 Play - S14(가) · 29-1(가) X). 보스 · 파티 균형(29-x · S14 튜닝)은 스테이지 단위가 아니라 힘 비율로 정해진 것이라

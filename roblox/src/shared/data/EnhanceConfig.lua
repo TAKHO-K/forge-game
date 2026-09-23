@@ -12,6 +12,10 @@
 --     확인해보니 골드만 쓰고 재료 비용은 구현된 적이 없다(PRD 표는 미구현 원안) - 그래서
 --     여기도 골드만 쓴다. 새로 만든 게 아니라 실제 구현을 그대로 따라간 것이다.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+
 local config = {
 	-- P2.5a R4(사용자 확정): 최대 +30(상수 하나 - 서버 판정 · 강화 패널 제목 "최대 +30" · 시뮬이 이 값을 읽는다). 옛 +25.
 	maxLevel = 30,
@@ -75,8 +79,14 @@ local config = {
 		drop = { displayName = "하락 방지권", usableFromLevel = 19, priceKillEquivalent = 300 },
 		reset = { displayName = "초기화 방지권", usableFromLevel = 22, priceKillEquivalent = 900 },
 		-- 보스 계정 첫 클리어 지급(계정 단위 1회): 보스 스테이지 S가 S >= firstStage이고 (S - firstStage) % stepStages == 0이면 하락 1장, 그중
-		-- S >= resetFromStage이면 초기화도 1장 -> 50 · 75 = 하락 / 100 · 125 · 150 ... = 하락 + 초기화(Enhance.getBossGrant).
-		bossGrant = { firstStage = 50, stepStages = 25, resetFromStage = 100 },
+		-- S >= resetFromStage이면 초기화도 1장(Enhance.getBossGrant).
+		-- P2.5c 결정 10: 옛 50 · 25칸 · 100(k 1.155)을 같은 힘의 지금 스테이지로(힘 비율 - InfiniteStage.fromLegacyStage/Span, 보스 간격 5의 배수로 반올림)
+		-- = 360 · 180칸 · 720 → 360 · 540 = 하락 / 720 · 900 · 1080 ... = 하락 + 초기화. 설계 최대까지 약 115장(옛 번호 그대로면 약 850장).
+		bossGrant = {
+			firstStage = InfiniteStage.fromLegacyStage(50, BossData.stageInterval),
+			stepStages = InfiniteStage.fromLegacySpan(25, BossData.stageInterval),
+			resetFromStage = InfiniteStage.fromLegacyStage(100, BossData.stageInterval),
+		},
 	},
 
 	-- 28-1 [1-6]: Robux로 살 수 있는 투입물의 id(gold · 재료 id · dropTicket · resetTicket). 지금은 비어 있다 - EnhancePolicy.canAttempt가 이 표에 든

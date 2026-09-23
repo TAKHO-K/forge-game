@@ -19,6 +19,9 @@ return {
 	-- InfiniteStage.getGoldMultiplier). 수입과 비용이 같은 율로 크므로 구매력(골드/분 ÷ 강화 1회 비용)은 이 값과 무관하게 스테이지 내내 일정하고, 숫자 크기만
 	-- 정한다: 스테이지 20,000에서 골드 배수 1.001^19999 ≈ 4.8e8(k로 키우면 ≈ 1e172).
 	goldGrowthRate = 1.001,
+	-- P2.5c 결정 10(COMMON §1 "k 의존 값 = 힘 비율"): 옛 k. 옛 스테이지 번호로 정한 임계값(재료 해금 · 방지권 · 보스 밀도 · 보스 드랍 편차)을 같은 힘의 지금
+	-- 스테이지로 옮길 때만 쓴다(InfiniteStage.fromLegacyStage · fromLegacySpan - 1.155 → 1.02에서 옛 1칸 ≈ 7.28칸). 게임 성장률이 아니다.
+	legacyGrowthRate = 1.155,
 
 	-- S21-0 A4 - 임시 안전 상한(docs/stage-scaling-audit.md §0-3 · §1-1). "게임에서 쓰는
 	-- 모든 수치가 1e300 미만인 마지막 스테이지" - 감사 보고서의 실측 공식(1.155^(stage-1)
