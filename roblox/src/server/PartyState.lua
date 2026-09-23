@@ -117,7 +117,7 @@ function PartyState.getSize(party)
 end
 
 -- 30-0 S09(PRD 20.73 [5-1]): 파티 경험치 보너스. 인원 = 실제 Player 멤버 수(더미 · 텔레포트 중인 원격 좌석은 안 센다).
--- P2 G부터 실제 지급(PlayerProfile.getExpGainMultiplier)은 조건부 getExpBonusFor를 쓰고, pushState의 Attribute(클라 칩)는 이 인원 보너스(조건을 채우면 받을 최대값)를 보인다.
+-- P2 G부터 실제 지급(PlayerProfile.getExpGainMultiplier)은 조건부 getExpBonusFor를 쓴다. P2.5a(결정 7)부터 클라 칩(Attribute)도 조건부 값(지급 순간 · pushState)이다 - 이 함수는 인원표 조회용.
 function PartyState.getExpBonusForCount(memberCount)
 	return PartyConfig.expBonusByMemberCount[memberCount] or 0
 end
@@ -130,7 +130,7 @@ function PartyState.getExpBonus(party)
 end
 
 -- ═══ P2 G: 조건부 파티 경험치 보너스 ═══
--- 활동 기록 = 마지막으로 공격 · 스킬(치유 포함)을 시전한 시각(AttackServer · SkillServer가 요청을 받아들인 순간 부른다). 표 키라 검증 스탠드인(테이블)도 된다.
+-- 활동 기록 = 마지막으로 적에게 명중한 시각(P2.5a 결정 10 - CombatResolution.resolveHit가 부른다. 옛: 공격 · 스킬 요청 순간). 표 키라 검증 스탠드인(테이블)도 된다.
 local lastActivityAt = {}
 
 -- P2.5a D(결정 10): 활동 = 적에게 실제로 명중한 순간만(CombatResolution.resolveHit - 평타 · 스킬 피해 공통). 헛스윙 · 치유 시전은 활동이 아니다.

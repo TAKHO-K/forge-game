@@ -76,7 +76,7 @@ end
 -- 몬스터 한 마리로 레벨이 여러 개 뛰는 일은 실제로 없어 반복 횟수가 크게 자라지 않는다.
 -- P2.5a: 레벨이 수만까지 가므로(스테이지당 2%) 1부터 세는 반복 대신 두 배씩 넓힌 뒤 이분 탐색한다(누적 임계값은 단조 증가). 결과는 옛 반복과 같다.
 function CharacterLevel.getLevelFromExp(exp)
-	if exp < CharacterLevel.getExpForLevel(2) then
+	if exp ~= exp or exp < CharacterLevel.getExpForLevel(2) then -- NaN이면 1(옛 반복과 같다 - 리뷰 11)
 		return 1
 	end
 	local lo, hi = 2, 4
@@ -118,6 +118,7 @@ function CharacterLevel.getExpectedKills(level, expGainMultiplier)
 end
 
 -- 무기 공격력 배율(PlayerCombat.getAttack이 곱한다). 1~25는 웹과 완전히 같은 선형식,
+-- (P2.5a: g = k = 1.02 · 레벨 20,000부터 1.01 - CharacterLevelConfig.weaponGrowthLate. 아래는 옛 설명)
 -- 26+는 20.10이 정한 지수식(g=1.15, 몬스터 k=1.155보다 살짝 낮게 - 스테이지가 오를수록
 -- 아주 조금씩 어려워지도록 의도된 격차).
 function CharacterLevel.getWeaponExpMultiplier(level)
@@ -133,7 +134,7 @@ end
 
 -- 아이템 레벨계수(Loot.getArmorDefense가 곱한다). 1~25는 무기 배율과 같은 선형식(레벨25
 -- 시점 무기 공격력·아이템 스탯이 나란히 2.44배로 정점을 찍는 대칭, data/items.js 75-78행
--- 설계 의도 재사용). 26+는 몬스터와 같은 k=1.155(InfiniteStageConfig.growthRate 재사용,
+-- 설계 의도 재사용). 26+는 몬스터와 같은 k(InfiniteStageConfig.growthRate 재사용 - P2.5a부터 1.02,
 -- PRD-forge-game-roblox.md 20.11-4 "defenseFlat도 k로 키워야 방어력/몬스터공격력 비율이
 -- 스테이지 무관 상수로 수렴한다") - g(1.15)가 아니라 k(1.155)를 쓰는 게 무기 배율과 다른
 -- 유일한 차이다.

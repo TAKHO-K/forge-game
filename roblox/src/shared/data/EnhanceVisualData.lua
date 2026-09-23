@@ -26,7 +26,11 @@ return {
 		{ level = 23, particle = { colorTo = "danger", rate = 18 } },
 		{ level = 24, light = { color = "danger", range = 12 }, trailColor = "danger" },
 		{ level = 25, rainbow = true, title = { text = "+25", textSize = 22, studsOffsetY = 3.2 }, pillarSeconds = 3 },
-		-- P2.5a R4: 새 최대 단계 +30 - +25와 같은 연출(새 색 · 에셋 없음), 칭호 글자만 +30.
+		-- P2.5a R4: +26 ~ +29는 칭호 글자만 그 단계로(칭호는 겹쳐 합치는 칸이라 안 적으면 "+25"가 남는다 - 리뷰 5) · 새 최대 +30은 +25와 같은 연출(새 색 · 에셋 없음).
+		{ level = 26, title = { text = "+26" } },
+		{ level = 27, title = { text = "+27" } },
+		{ level = 28, title = { text = "+28" } },
+		{ level = 29, title = { text = "+29" } },
 		{ level = 30, rainbow = true, title = { text = "+30", textSize = 22, studsOffsetY = 3.2 }, pillarSeconds = 3 },
 	},
 

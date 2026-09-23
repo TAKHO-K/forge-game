@@ -30,7 +30,7 @@ function Enhance.getTotalMultiplier(level)
 end
 
 -- 상한이면 nil(시도 불가 - 웹 getEnhanceCost의 Infinity와 같은 뜻).
--- P2 C1: 1회 골드 = GoldCost.cost(표의 기본 비용, 계정 최고 스테이지, "enhance") - 스테이지 100까지는 표 그대로, 그 뒤로는 골드 수입과 같은 비율로 커진다.
+-- P2 C1: 1회 골드 = GoldCost.cost(표의 기본 비용, 계정 최고 스테이지, "enhance") - 골드 수입과 같은 비율로 커진다(P2.5a: 기준 스테이지 1 · 골드 성장률 - GoldCostConfig).
 -- accountBestStage가 nil이면 표의 기본 비용(몬테카를로 기대 비용표 · 옛 검증처럼 스테이지와 무관한 계산용).
 function Enhance.getCost(level, accountBestStage)
 	if level >= EnhanceConfig.maxLevel then

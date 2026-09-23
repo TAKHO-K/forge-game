@@ -89,7 +89,8 @@ return {
 	-- damageReductionAlpha 자체가 이 값에 맞춰 역산됐다)이라는 사실로부터 감소율
 	-- ρ=1-maxHp/(7×몬스터공격력)을 구할 수 있다(직접 실행 없이 CombatConfig.playerMaxHp=10,
 	-- maxHpBonusBase=300, CharacterLevelConfig의 레벨100 itemLevel계수, MonsterData.tier1.attack=8,
-	-- InfiniteStageConfig.growthRate=1.155로 계산, 보고서 "기대 가치 환산표" 참고) - ρ≈0.5885.
+	-- InfiniteStageConfig.growthRate=1.155로 계산, 보고서 "기대 가치 환산표" 참고) - ρ≈0.5885. P2.5a: k = 1.02에서 α · 최대체력 기준을 같은 앵커 비율로
+	-- 다시 풀어(CombatConfig 주석) ρ도 그대로 유효하다.
 	-- 방어력 보너스는 생존 타수에 ×(1+r×ρ)로만 반영되므로, 다른 축과 같은 만큼(+r) 생존을
 	-- 올리려면 실제로는 r/ρ만큼 방어력을 올려야 한다. 새 상수가 아니라 기존 CombatConfig/
 	-- MonsterData/InfiniteStageConfig 값으로 앵커 식을 풀어 나온 값이다. 26-2부터는

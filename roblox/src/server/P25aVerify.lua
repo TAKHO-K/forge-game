@@ -201,9 +201,9 @@ function P25aVerify.runPure()
 		local average = PlayerCombat.getInvestmentScale(scaling.average.enhance, scaling.average.attackPercent, scaling)
 		local top = PlayerCombat.getInvestmentScale(scaling.top.enhance, scaling.top.attackPercent, scaling)
 		local none = PlayerCombat.getInvestmentScale(0, 0, scaling)
-		r.check(("D8 딜링모드 투자 기울기: 평균 %.6f(기대 1) · 최상위 %.6f(기대 HealerTopScale ÷ 기울기 없는 최상위 비 = %.6f) · 투자 없음 %.4f(< 1) · 기울기 없는 버프 = %s(기대 1)"):format(
-			average, top, scaling.topScale / scaling.unscaledTopRatio, none, tostring(PlayerCombat.getInvestmentScale(30, 1, nil))),
-			near(average, 1, 1e-12) and near(top, scaling.topScale / scaling.unscaledTopRatio, 1e-9) and none < 1 and PlayerCombat.getInvestmentScale(30, 1, nil) == 1)
+		r.check(("D8 딜링모드 투자 기울기: 평균 %.6f(기대 1) · 최상위 %.6f(기대 HealerTopScale ÷ 기울기 없는 최상위 비 = %.6f) · 투자 없음 %.4f(기대 하한 %s) · 기울기 없는 버프 = %s(기대 1)"):format(
+			average, top, scaling.topScale / scaling.unscaledTopRatio, none, tostring(scaling.floor), tostring(PlayerCombat.getInvestmentScale(30, 1, nil))),
+			near(average, 1, 1e-12) and near(top, scaling.topScale / scaling.unscaledTopRatio, 1e-9) and none == scaling.floor and PlayerCombat.getInvestmentScale(30, 1, nil) == 1)
 		local stand = { Name = "P25aStand", UserId = -9801 }
 		local fakeTarget = {}
 		local beforeActivity = PartyState.getLastActivity(stand)

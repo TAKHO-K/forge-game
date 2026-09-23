@@ -82,7 +82,9 @@ function PlayerCombat.getInvestmentScale(weaponLevel, attackPercentBonus, scalin
 	local average = investment(scaling.average.enhance, scaling.average.attackPercent)
 	local top = investment(scaling.top.enhance, scaling.top.attackPercent)
 	local exponent = math.log(scaling.topScale / scaling.unscaledTopRatio) / math.log(top / average)
-	return Sanitize.number((investment(weaponLevel or 0, attackPercentBonus or 0) / average) ^ exponent, 1)
+	-- 하한(scaling.floor - P2.5a 리뷰 4): 평균 아래 투자에서 배율이 1 밑으로 내려가면 +0 치유사의 딜링모드가 평타와 거의 같아진다(×0.65) - 기울기는 평균 위에서만.
+	local scale = (investment(weaponLevel or 0, attackPercentBonus or 0) / average) ^ exponent
+	return Sanitize.number(math.max(scaling.floor or 0, scale), 1)
 end
 
 -- 신발의 이동+공격속도 비율 보너스를 1+x 배율로 바꾼다(16-6, 웹 core/equipment.js

@@ -2,7 +2,7 @@
 -- 매 프레임 계산 없음. 받는 사람(recipient) 기준으로 파티원 한 명(member)이 인원에 드는가:
 --   ① 같은 구역: 둘 다 같은 보스 인스턴스(BossEncounter) 안이거나, 둘 다 보스전 밖에서 같은 사냥 구역(tier 구역 - ZoneBounds) 안.
 --   ② 반경: 두 캐릭터 사이 거리 ≤ PartyConfig.expBonusCondition.radiusStuds.
---   ③ 활동: 파티원이 최근 activeWithinSeconds초 안에 공격 또는 스킬(치유 포함)을 시전했다(PartyState.noteActivity - AttackServer · SkillServer).
+--   ③ 활동: 파티원이 최근 activeWithinSeconds초 안에 적에게 실제로 명중했다(PartyState.noteActivity - CombatResolution.resolveHit, P2.5a 결정 10 - 헛스윙 · 치유는 안 센다).
 -- isEligible은 순수 함수(검증 (가)가 합성 입력으로 부른다). 이 모듈을 불러오면 PartyState에 판정 함수가 등록된다(CombatResolution이 require한다).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

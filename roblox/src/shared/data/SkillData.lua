@@ -250,6 +250,7 @@ return {
 			investmentScaling = {
 				topScale = 1.1, -- HealerTopScale
 				unscaledTopRatio = 0.918,
+				floor = 1, -- 평균 아래 투자는 기울기 없이 배율 그대로(리뷰 4 - 신규 · 환생 직후 치유사의 딜링모드가 평타 수준으로 떨어지지 않게)
 				average = { enhance = 20, attackPercent = 0.666 },
 				top = { enhance = 30, attackPercent = 0.912 },
 			},
