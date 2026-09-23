@@ -723,7 +723,7 @@ local function printOptionTable(player)
 		table.insert(levelCells, ("L%d=%.3f"):format(level, Option.levelFactor(level)))
 	end
 	print("[DevTools] " .. table.concat(levelCells, " | "))
-	print(("[DevTools]   동결 확인: f(125)=%.4f, f(130)=%.4f (같아야 함)"):format(Option.levelFactor(125), Option.levelFactor(130)))
+	print(("[DevTools]   125 이후 로그 곡선(P2 D1, p=%.3f): f(125)=%.4f, f(250)=%.4f, f(4738)=%.4f"):format(OptionData.levelLogSlope, Option.levelFactor(125), Option.levelFactor(250), Option.levelFactor(4738)))
 	print(("[DevTools]   절대 최대 계수(20.67 [3]) = rollMax × f(125) = %.3f × %.4f = %.4f (기대 1.368)"):format(
 		OptionData.rollMax, Option.levelFactor(125), OptionData.rollMax * Option.levelFactor(125)))
 

@@ -735,6 +735,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		seconds = seconds, kills = kills, killSeconds = hunt.killSeconds,
 		gold = gold, exp = exp, gearReplaced = replaced, weaponLevel = state.weaponLevel,
 		goldBalance = state.gold, goldPerKill = goldPerKill, -- P2 C2: 보유 골드 대비 처치 1회 골드(상대 정밀도)
+		gemShare = 1 - BalanceSim.buildLoadout({ classId = state.classId, level = state.level, weaponLevel = state.weaponLevel, weaponGrade = state.weaponGrade, gear = state.gear, gems = {} }).atk / loadoutFor(state).atk, -- P2 D1: 보석이 공격력에서 차지하는 비중
 		armorGrade = state.gear.armor and state.gear.armor.grade or "-", armorLevel = state.gear.armor and state.gear.armor.itemLevel or 0,
 		gemCount = gemCount, gemAvgLevel = gemCount > 0 and gemLevels / gemCount or 0, gemAttackBonus = gemBonus,
 	}

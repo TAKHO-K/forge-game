@@ -25,12 +25,17 @@ local REFERENCE_LEVEL = BalanceAnchorConfig.referenceLevel -- 100
 -- 앵커를 재사용한다(20.67 [3] "레벨125(killTargetAnchors 마지막 앵커)에서 동결").
 local FREEZE_LEVEL = CharacterLevelConfig.killTargetAnchors[#CharacterLevelConfig.killTargetAnchors].level
 
--- f(L) = (1 + s·(min(L,125) − 1)) / (1 + s·(100 − 1)) - 20.67 [3] 그대로. 기준 레벨(100)에서
--- 1.0, 동결 레벨(125) 이후로는 값이 더 늘지 않는다.
+-- f(L) = (1 + s·(min(L,125) − 1)) / (1 + s·(100 − 1)) - 20.67 [3] 그대로. 기준 레벨(100)에서 1.0.
+-- P2 D1(결정 5A): 125(옛 동결 레벨) 뒤로는 f(125) × (1 + p·log2(L/125)) - p = OptionData.levelLogSlope. 125에서 이어진다.
+-- itemLevel은 스테이지(최대 SafeStageCap 4738)라 log2 항이 5.3을 넘지 않는다 - 유한(inf · NaN 없음).
 function Option.levelFactor(level)
 	local numerator = 1 + STAT_BONUS_PER_LEVEL * (math.min(level, FREEZE_LEVEL) - 1)
 	local denominator = 1 + STAT_BONUS_PER_LEVEL * (REFERENCE_LEVEL - 1)
-	return numerator / denominator
+	local factor = numerator / denominator
+	if level > FREEZE_LEVEL then
+		factor *= 1 + OptionData.levelLogSlope * math.log(level / FREEZE_LEVEL, 2)
+	end
+	return factor
 end
 
 -- m_grade/m_primordial - ItemVisualData.gradeVisuals.statMultiplier를 태초 기준으로

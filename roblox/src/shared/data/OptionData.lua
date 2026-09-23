@@ -24,6 +24,11 @@ local GemData = require(ReplicatedStorage.Shared.data.GemData)
 
 return {
 	minGradeIndex = 3,
+
+	-- P2 D1(결정 5A): 옵션 levelFactor의 레벨 125 동결 해제 - 125 뒤로는 완만한 로그 곡선 f(L) = f(125) × (1 + levelLogSlope × log2(L / 125)).
+	-- 값 = 일반 프로필에서 "보석이 전체 전투력(공격력)에서 차지하는 비중"이 125 ~ 4738 구간에서 약 40 ~ 55%에 머물도록 EconSim으로 고른 p(docs/phase/P2-log.md).
+	-- 125에서 값이 이어진다(log2(1) = 0). 상한이 있는 축(건강 · 방어 · 성장 · 재생)은 그대로 상한에서 멈춘다(Option.sumWithCap).
+	levelLogSlope = 0.035,
 	rollMin = 0.875,
 	rollMax = 1.125,
 
