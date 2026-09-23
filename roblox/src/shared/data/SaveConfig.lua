@@ -66,7 +66,9 @@ return {
 	-- 32(P2.5b D) - 환생 후 레벨 마일스톤: classes[*].milestones = { [tostring(환생 회차)] = 그 회차에서 받은 마지막 능력치 마일스톤 레벨 }(직업별 · 문자열 키) ·
 	-- profile.milestoneUnlocks = 받은 해금 개수(계정 공유 0 이상 정수) 신설. 기존 세이브는 빈 표 · 0 - 지금 회차의 지금 레벨까지는 접속할 때 채운다(지난 회차는 기록이 없어 소급하지 않는다).
 	-- SaveSystem.migrate()의 v31->v32 참고.
-	saveVersion = 32,
+	-- 33(P2.5c B2) - 마일스톤 재설계: classes[*].milestones(회차별 표)를 지우고 classes[*].milestoneLevel(받은 마지막 능력치 마일스톤 레벨, 0 이상 정수)을 신설.
+	-- 기존 세이브는 0 - 환생 5회를 마친 직업은 접속 때 지금 레벨까지 채운다. milestoneUnlocks는 그대로. SaveSystem.migrate()의 v32->v33 참고.
+	saveVersion = 33,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

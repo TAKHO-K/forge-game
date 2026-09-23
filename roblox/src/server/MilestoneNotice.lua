@@ -1,6 +1,6 @@
 -- 환생 후 레벨 마일스톤(P2.5b D)의 클라 통로 하나 - GemSync · InventorySync와 같은 이유(PlayerProfile이 달성 순간 직접 부른다 - 호출부마다 알림을 챙기면 잊는다).
---   MilestoneReached(RemoteEvent, 서버 → 클라): { level, statGained, statCount, multiplier, unlocks = { { index, id, name, level, reserved } } } - 달성 토스트가 읽는다.
---   MilestoneFetch(RemoteFunction): 성장 보상 창이 열 때 묻는다 - { rebirthCount, level, cycles = classState.milestones, statCount, multiplier, unlockCount }.
+--   MilestoneReached(RemoteEvent, 서버 → 클라): { level, statGained, claimedLevel, bonus, multiplier, unlocks = { { index, id, name, level, reserved } } } - 달성 토스트가 읽는다.
+--   MilestoneFetch(RemoteFunction): 성장 보상 창이 열 때 묻는다 - { rebirthCount, level, claimedLevel, bonus, unlockCount }(P2.5c B2).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

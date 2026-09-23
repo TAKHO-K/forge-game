@@ -108,7 +108,7 @@ end
 -- 전투 경로에서 장갑·신발·갑옷 보너스에 더하는 자리에 똑같이 더한다(단일 계산 경로 -
 -- 여기서 새 공식을 만들지 않고 PlayerProfile과 같은 지점에 합류시킨다).
 -- permanentMultiplier · permanentHpMultiplier(P2.5b D - 선택, 기본 1) = 환생 후 레벨 마일스톤 영구 배율 - 게임과 같이 공격력(PlayerCombat.getAttack) · 최대체력에 곱한다
--- (최대체력 몫은 MilestoneData.survival일 때만 1이 아니다 - 호출부가 Milestone.maxHpMultiplier로 넘긴다).
+-- (최대체력 몫은 MilestoneData.stat = "survival"일 때만 1이 아니다 - 호출부가 Milestone.maxHpMultiplier로 넘긴다).
 local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems, permanentMultiplier, permanentHpMultiplier)
 	local class = ClassData.classes[classId]
 	assert(class, "알 수 없는 classId: " .. tostring(classId))

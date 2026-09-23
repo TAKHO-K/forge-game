@@ -582,7 +582,7 @@ end
 
 -- ⑤ 스테이지 환산 표(E): 구간 시작 → 끝(그 구간에 처음 · 마지막으로 선 청크)에서 출처별 배율 변화를 스테이지로 옮긴다(ln(끝 ÷ 시작) ÷ ln k).
 --   필요 = 최고 스테이지 변화(몬스터가 그만큼 k배씩 세졌다). 공격 쪽 출처 = 레벨(무기 계수) · 무기 등급(환생 보상) · 강화 · 보석 · 장갑. 생존 쪽 = 방어구(방어력).
---   마일스톤 = P2.5b D(환생 후 레벨 마일스톤 - 1회 = MilestoneData.statStagesPerMilestone스테이지, 공격 · 최대체력 둘 다). 공격 격차 = 공격 합 − 필요: 음수면 막힘(처치 시간이 늘어난 몫), 양수면 건너뛰기 여력(더 높은 스테이지를 잡을 수 있는 몫).
+--   마일스톤 = P2.5c B2(환생 5회 뒤 레벨 마일스톤 버킷 - MilestoneData.stat 쪽 하나). 공격 격차 = 공격 합 − 필요: 음수면 막힘(처치 시간이 늘어난 몫), 양수면 건너뛰기 여력(더 높은 스테이지를 잡을 수 있는 몫).
 local function writeStageTable(w, runs, profileIds)
 	local k = InfiniteStageConfig.growthRate
 	local function st(ratio)
@@ -612,11 +612,11 @@ local function writeStageTable(w, runs, profileIds)
 				local enhance = st(Enhance.getTotalMultiplier(last.weaponLevel) / Enhance.getTotalMultiplier(first.weaponLevel))
 				local gems = st((1 + last.gemAttackBonus) / (1 + first.gemAttackBonus))
 				local gloves = st((1 + last.glovesAttack) / (1 + first.glovesAttack))
-				local milestone = st(Milestone.multiplier(last.milestoneCount or 0) / Milestone.multiplier(first.milestoneCount or 0))
+				local milestone = st(Milestone.attackMultiplier(last.milestoneLevel or 0) / Milestone.attackMultiplier(first.milestoneLevel or 0))
 				local attack = level + grade + enhance + gems + gloves + milestone
-				-- 생존 쪽은 마일스톤이 최대 체력에도 붙을 때(MilestoneData.survival)만 그 몫을 더한다.
+				-- 생존 쪽은 마일스톤 버킷이 최대 체력 쪽일 때(MilestoneData.stat = "survival")만 그 몫을 더한다.
 				local armor = st((CombatConfig.playerDefense + last.armorDefense) / (CombatConfig.playerDefense + first.armorDefense))
-					+ st(Milestone.maxHpMultiplier(last.milestoneCount or 0) / Milestone.maxHpMultiplier(first.milestoneCount or 0))
+					+ st(Milestone.maxHpMultiplier(last.milestoneLevel or 0) / Milestone.maxHpMultiplier(first.milestoneLevel or 0))
 				local gap = attack - required
 				local block = required > 0 and math.max(0, -gap) / required or 0
 				local skip = required > 0 and math.max(0, gap) / required or 0
@@ -640,15 +640,16 @@ local function writeP25(w, runs, profileIds)
 end
 
 -- ═══ P2.5b 지표(docs/phase/P25b-report.md) ═══
--- ① 환생 후 레벨 마일스톤 누적(D3): 그 스테이지에 처음 선 청크의 능력치 마일스톤 횟수 · 스테이지 환산 · 배율 + 해금 k번째(환생 뒤 Lv.100k)에 처음 닿은 누적 시간.
+-- ① 환생 후 레벨 마일스톤(P2.5c B2 - 환생 5회 뒤 사다리 · 합연산 버킷): 그 스테이지에 처음 선 청크의 받은 마지막 마일스톤 레벨 · 버킷 · 스테이지 환산 + 해금 k번째에 처음 닿은 누적 시간.
 local function writeMilestones(w, runs, profileIds)
 	local cfg = EconSimConfig.p25b
 	local stages = table.clone(cfg.milestoneStages)
 	table.insert(stages, InfiniteStageConfig.designMaxStage)
-	w.line("## P2.5b ① 환생 후 레벨 마일스톤 누적(D3)")
+	w.line("## P2.5b ① 환생 후 레벨 마일스톤(P2.5c B2 사다리 · 합연산 버킷)")
 	w.line("")
-	w.line(("1회 = 스테이지 %s칸(공격력%s ×%s) · 회차마다 레벨 %d의 배수 · 칸 = 그 스테이지에 처음 섰을 때 누적 횟수 · 스테이지 환산(배율)."):format(
-		num(MilestoneData.statStagesPerMilestone, 1), MilestoneData.survival and " · 최대 체력" or "", num(Milestone.multiplier(1), 4), MilestoneData.statInterval))
+	w.line(("환생 %d회 뒤: Lv.%d 큰 보상 +%s%% · 그 뒤 %d레벨마다 +%s%% · %d레벨마다 해금 · 버킷 상한 +%s%%(스테이지 환산 %s칸 - Lv.%d에서 닿음) · 붙는 곳 = %s. 칸 = 그 스테이지에 처음 섰을 때 받은 마지막 마일스톤 레벨 · 버킷 · 스테이지 환산."):format(
+		MilestoneData.requiredRebirths, MilestoneData.firstLevel, num(MilestoneData.bigBonus * 100, 1), MilestoneData.statInterval, num(MilestoneData.smallBonus * 100, 2), MilestoneData.unlockInterval,
+		num(Milestone.bonusCap() * 100, 1), num(math.log(MilestoneData.capRatio) / math.log(InfiniteStageConfig.growthRate), 1), Milestone.capLevel(), MilestoneData.stat == "none" and "없음(what-if)" or Milestone.statText()))
 	w.line("")
 	local header = { "| 프로필 |" }
 	for _, stage in ipairs(stages) do
@@ -656,15 +657,15 @@ local function writeMilestones(w, runs, profileIds)
 	end
 	w.line(table.concat(header))
 	w.line("|" .. string.rep("---|", #stages + 1))
-	w.row("p25b_milestone", { "profile", "stage", "count", "stage_equivalent", "multiplier" })
+	w.row("p25b_milestone", { "profile", "stage", "claimed_level", "stage_equivalent", "multiplier" })
 	for _, id in ipairs(profileIds) do
 		local cells = { ("| %s |"):format(EconSimConfig.profiles[id].displayName) }
 		for _, stage in ipairs(stages) do
 			local chunk = firstChunkAt(runs[id], stage)
 			if chunk then
-				local count = chunk.milestoneCount or 0
-				table.insert(cells, (" %d회 · +%s칸 · ×%s |"):format(count, num(Milestone.stageEquivalent(count), 0), num(Milestone.multiplier(count), 3)))
-				w.row("p25b_milestone", { id, stage, count, Milestone.stageEquivalent(count), Milestone.multiplier(count) })
+				local claimed = chunk.milestoneLevel or 0
+				table.insert(cells, (" Lv.%d · +%s%% · +%s칸 |"):format(claimed, num(Milestone.bonusFor(claimed) * 100, 1), num(Milestone.stageEquivalent(claimed), 1)))
+				w.row("p25b_milestone", { id, stage, claimed, Milestone.stageEquivalent(claimed), Milestone.multiplier(claimed) })
 			else
 				table.insert(cells, " [없음] |")
 			end
@@ -672,7 +673,7 @@ local function writeMilestones(w, runs, profileIds)
 		w.line(table.concat(cells))
 	end
 	w.line("")
-	w.line("해금(계정 공유 · 환생 뒤 레벨 100 · 200 · …)에 처음 닿은 누적 플레이 시간:")
+	w.line(("큰 보상 · 해금(계정 공유 · 환생 %d회 뒤 레벨 %d · %d · …)에 처음 닿은 누적 플레이 시간:"):format(MilestoneData.requiredRebirths, Milestone.unlockLevel(1), Milestone.unlockLevel(2)))
 	w.line("")
 	local unlockHeader = { "| 프로필 |" }
 	for index, entry in ipairs(MilestoneData.unlocks) do
@@ -684,7 +685,7 @@ local function writeMilestones(w, runs, profileIds)
 		local cells = { ("| %s |"):format(EconSimConfig.profiles[id].displayName) }
 		local at = {}
 		eachChunk(runs[id], function(chunk, _, t)
-			if chunk.rebirth >= 1 then
+			if Milestone.isEligible(chunk.rebirth) then
 				local count = Milestone.unlockCountFor(chunk.levelAfter)
 				for index = 1, count do
 					at[index] = at[index] or t
@@ -810,7 +811,7 @@ function EconSimReport.run(opts)
 	writeE5(w, primordial)
 	writeE6(w, healer)
 	writeSamples(w, samples)
-	EconSim.withOverrides(whatIf, writeP25, w, runs, profileIds) -- P2.5b: 마일스톤 칸도 what-if(milestoneStages · milestoneSurvival)를 따른다
+	EconSim.withOverrides(whatIf, writeP25, w, runs, profileIds) -- P2.5b · P2.5c: 마일스톤 칸도 what-if(milestoneStat)를 따른다
 	EconSim.withOverrides(whatIf, writeP25b, w, runs, profileIds)
 	w.flush(("run=%s whatif=%s profiles=%s"):format(runId, whatIfName, profileArg))
 

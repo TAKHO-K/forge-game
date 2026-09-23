@@ -97,14 +97,14 @@ function P2Verify.runPure()
 	local r = newRecorder("가")
 
 	r.section("[B] 환생 필요 레벨표", function()
-		local expected = { 78, 155, 202, 248, 279 } -- P2.5a C3(옛 25 · 50 · 65 · 80 · 90)
+		local expected = { 25, 50, 75, 100, 125 } -- P2.5c 결정 3(옛 P2.5a 78 · 155 · 202 · 248 · 279 · P2 25 · 50 · 65 · 80 · 90)
 		local ok = true
 		local got = {}
 		for count = 0, 4 do
 			got[count + 1] = CharacterLevel.getRebirthRequiredLevel(count)
 			ok = ok and got[count + 1] == expected[count + 1]
 		end
-		r.check(("B1 환생 0 ~ 4회 → 필요 레벨 %s(기대 78 · 155 · 202 · 248 · 279 - P2.5a) · 5회(최대) → %s(기대 nil) · 최대 회차 %d(기대 5)"):format(
+		r.check(("B1 환생 0 ~ 4회 → 필요 레벨 %s(기대 25 · 50 · 75 · 100 · 125 - P2.5c) · 5회(최대) → %s(기대 nil) · 최대 회차 %d(기대 5)"):format(
 			table.concat(got, " · "), tostring(CharacterLevel.getRebirthRequiredLevel(5)), GemData.maxRebirthCount),
 			ok and CharacterLevel.getRebirthRequiredLevel(5) == nil and GemData.maxRebirthCount == 5)
 	end)
@@ -120,8 +120,10 @@ function P2Verify.runPure()
 		end
 		r.check(("C1.1 강화 0 ~ %d강 × 계정 최고 1 · 없음 = 표 그대로 · 50 · 100 = 표 × 골드 배수(P2.5a 기준 1) %s"):format(EnhanceConfig.maxLevel - 1, tostring(ok)), ok)
 		local at101, at500 = Enhance.getCost(19, 101), Enhance.getCost(19, 500)
-		local expected101, expected500 = math.floor(235000 * InfiniteStage.getGoldMultiplier(101)), math.floor(235000 * InfiniteStage.getGoldMultiplier(500))
-		r.check(("C1.2 19강 최고 101 = %.0f(기대 floor(235000 × 골드 배수) = %.0f) · 500 = %.4g(기대 %.4g)"):format(at101, expected101, at500, expected500),
+		-- P2.5c 결정 4: 19강 1회 표 값은 EnhanceConfig에서 읽는다(옛 235,000 → 18,500).
+		local cost19 = EnhanceConfig.goldCost[20]
+		local expected101, expected500 = math.floor(cost19 * InfiniteStage.getGoldMultiplier(101)), math.floor(cost19 * InfiniteStage.getGoldMultiplier(500))
+		r.check(("C1.2 19강 최고 101 = %.0f(기대 floor(%d × 골드 배수) = %.0f) · 500 = %.4g(기대 %.4g)"):format(at101, cost19, expected101, at500, expected500),
 			at101 == expected101 and near(at500, expected500, 1e-12))
 		local same = true
 		for _, stage in ipairs({ 1, 50, 83, 250, 1000, 4738 }) do
@@ -133,7 +135,8 @@ function P2Verify.runPure()
 		r.check(("C1.3 방지권 2종 · 변환권 가격(최고 1 · 50 · 83 · 250 · 1000 · 4738) = P2 전 식(잡몹 1마리 골드 × 배수)과 같다 %s"):format(tostring(same)), same)
 		local ratioOk = true
 		for _, stage in ipairs({ 150, 800, 2500, 4000 }) do
-			ratioOk = ratioOk and near(Enhance.getCost(20, stage + 1) / Enhance.getCost(20, stage), InfiniteStage.getGoldReward(1e6, stage + 1) / InfiniteStage.getGoldReward(1e6, stage), 1e-6)
+			-- P2.5c: 20강 1회가 766,000 → 20,000이라 floor(정수 골드)의 상대 오차가 1e-6을 넘는다 - 허용치 = 1원 ÷ 비용.
+			ratioOk = ratioOk and near(Enhance.getCost(20, stage + 1) / Enhance.getCost(20, stage), InfiniteStage.getGoldReward(1e6, stage + 1) / InfiniteStage.getGoldReward(1e6, stage), 2 / Enhance.getCost(20, stage))
 		end
 		local top = Enhance.getCost(24, 4738)
 		r.check(("C1.4 한 스테이지당 비용 증가율 = 잡몹 골드 증가율(P2.5a 골드 성장률) %s · 24강 최고 4738 = %.3g(유한 %s)"):format(tostring(ratioOk), top, tostring(isFinite(top))), ratioOk and isFinite(top))
@@ -208,7 +211,7 @@ function P2Verify.runPure()
 	end)
 
 	r.section("[E] 드랍표 단일 소스 · 태초", function()
-		local divisors = { 1.30, 1.20, 1.08, 0.85, 0.64, 1 } -- P2.5a C9(옛 1.9 · 1.7 · 1.35 · 1.1 · 1.05)
+		local divisors = { 1.30, 1.20, 1.08, 1 / 0.94, 1 / 0.97, 1 } -- P2.5c 결정 7(드래곤 최고 - tier4 · 5 = ×0.94 · ×0.97) · P2.5a C9 0.85 · 0.64 · 옛 1.9 · 1.7 · 1.35 · 1.1 · 1.05
 		local ok = true
 		local cells = {}
 		for tier = 1, 6 do
@@ -216,7 +219,7 @@ function P2Verify.runPure()
 			cells[tier] = ("%.5f%%"):format(rate * 100)
 			ok = ok and near(rate, 0.001 / divisors[tier], 1e-12)
 		end
-		r.check(("E2 tier1 ~ 6 태초 기본 확률 %s(기대 0.1%% ÷ 1.30 · 1.20 · 1.08 · 0.85 · 0.64 · 1 - P2.5a)"):format(table.concat(cells, " · ")), ok)
+		r.check(("E2 tier1 ~ 6 태초 기본 확률 %s(기대 0.1%% ÷ 1.30 · 1.20 · 1.08 · 1/0.94 · 1/0.97 · 1 - P2.5c)"):format(table.concat(cells, " · ")), ok)
 		local decays = {}
 		-- P2.5a C9: 시작 70 · 1칸당 1.4%(옛 5 · 10%)
 		local expectedDecay = { [0] = 1, [69] = 1, [70] = 0.986, [100] = 0.566, [140] = 0.006, [141] = 0, [200] = 0 }

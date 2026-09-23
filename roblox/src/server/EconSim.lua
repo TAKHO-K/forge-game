@@ -101,11 +101,8 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	if whatIf.partyExpRequiresPresence ~= nil then
 		set(EconSimConfig, "partyExpRequiresPresence", whatIf.partyExpRequiresPresence)
 	end
-	if whatIf.milestoneStages ~= nil then -- P2.5b D3: 마일스톤 1회의 스테이지 환산(0 = 마일스톤 없음 - 곡선 영향 비교)
-		set(MilestoneData, "statStagesPerMilestone", whatIf.milestoneStages)
-	end
-	if whatIf.milestoneSurvival ~= nil then -- P2.5b D3: 마일스톤을 최대체력에도 줄 때의 곡선(결정 필요 - 기본 false)
-		set(MilestoneData, "survival", whatIf.milestoneSurvival)
+	if whatIf.milestoneStat ~= nil then -- P2.5c B2: 마일스톤 버킷이 붙는 곳("attack" · "survival" · "none" = 마일스톤 없음 - 곡선 영향 비교)
+		set(MilestoneData, "stat", whatIf.milestoneStat)
 	end
 	if whatIf.enhanceCostScale then
 		local scaled = {}
@@ -395,8 +392,7 @@ local function newState(profile)
 		bossExp = 0,
 		gearMode = false,
 		poolKey = 0,
-		milestones = {}, -- P2.5b D: { [tostring(회차)] = 받은 마지막 능력치 마일스톤 레벨 } - 게임의 classState.milestones와 같은 모양
-		milestoneCount = 0,
+		milestoneLevel = 0, -- P2.5c B2: 받은 마지막 능력치 마일스톤 레벨 - 게임의 classState.milestoneLevel과 같은 값
 	}
 end
 
@@ -408,8 +404,8 @@ local function loadoutFor(state)
 		weaponGrade = state.weaponGrade,
 		gear = state.gear,
 		gems = state.gems,
-		permanentMultiplier = Milestone.multiplier(state.milestoneCount), -- P2.5b D
-		permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneCount),
+		permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel), -- P2.5c B2: 마일스톤 버킷(붙는 곳 = MilestoneData.stat)
+		permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel),
 	})
 end
 EconSim.loadoutFor = loadoutFor
@@ -746,11 +742,10 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	tryEnhanceWithGold(state, profile, rng)
 	local levelBefore = state.level
 	state.level += 1
-	-- P2.5b D: 게임과 같은 규칙(Milestone.plan)으로 이 회차의 능력치 마일스톤을 받는다(환생 판정 전 - 환생 레벨에 닿은 순간의 마일스톤도 받는다).
-	local plan = Milestone.plan(state.rebirth, state.level, state.milestones, 0)
+	-- P2.5b D · P2.5c B2: 게임과 같은 규칙(Milestone.plan)으로 능력치 마일스톤을 받는다(환생 5회 뒤 사다리 - 해금은 전투에 무관해 안 센다).
+	local plan = Milestone.plan(state.rebirth, state.level, state.milestoneLevel, 0)
 	if plan and plan.statGained > 0 then
-		state.milestones[plan.cycleKey] = plan.claimedLevel
-		state.milestoneCount = Milestone.statCount(state.milestones)
+		state.milestoneLevel = plan.claimedLevel
 	end
 	local requiredLevel = CharacterLevel.getRebirthRequiredLevel(state.rebirth)
 	if profile.rebirth and state.rebirth < GemData.maxRebirthCount and requiredLevel and state.level >= requiredLevel then
@@ -773,8 +768,8 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		gold = gold, exp = exp, gearReplaced = replaced, weaponLevel = state.weaponLevel,
 		primordial = primordial, -- P2 E5: 이 청크 사냥의 태초 장비 기대 개수
 		goldBalance = state.gold, goldPerKill = goldPerKill, -- P2 C2: 보유 골드 대비 처치 1회 골드(상대 정밀도)
-		gemShare = 1 - BalanceSim.buildLoadout({ classId = state.classId, level = state.level, weaponLevel = state.weaponLevel, weaponGrade = state.weaponGrade, gear = state.gear, gems = {}, permanentMultiplier = Milestone.multiplier(state.milestoneCount), permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneCount) }).atk / loadoutFor(state).atk, -- P2 D1: 보석이 공격력에서 차지하는 비중
-		milestoneCount = state.milestoneCount, -- P2.5b D3: 청크 끝의 능력치 마일스톤 누적 횟수
+		gemShare = 1 - BalanceSim.buildLoadout({ classId = state.classId, level = state.level, weaponLevel = state.weaponLevel, weaponGrade = state.weaponGrade, gear = state.gear, gems = {}, permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel), permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel) }).atk / loadoutFor(state).atk, -- P2 D1: 보석이 공격력에서 차지하는 비중
+		milestoneLevel = state.milestoneLevel, -- P2.5c B2: 청크 끝의 받은 마지막 능력치 마일스톤 레벨(버킷 = Milestone.bonusFor)
 		armorGrade = state.gear.armor and state.gear.armor.grade or "-", armorLevel = state.gear.armor and state.gear.armor.itemLevel or 0,
 		-- P2.5a E(스테이지 환산 표): 청크 끝의 출처별 값 - 무기 등급(환생) · 장갑 공격력% · 방어구(방어 · 최대체력은 itemLevel · 등급)
 		weaponGrade = state.weaponGrade, levelAfter = state.level,

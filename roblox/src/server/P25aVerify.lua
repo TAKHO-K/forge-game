@@ -140,8 +140,9 @@ function P25aVerify.runPure()
 		for count = 0, 4 do
 			levels[count + 1] = CharacterLevel.getRebirthRequiredLevel(count)
 		end
-		r.check(("C3.3 환생 필요 레벨 %s(기대 78 · 155 · 202 · 248 · 279) · 레벨 279의 스테이지 척도 %d(기대 446)"):format(table.concat(levels, " · "), CharacterLevel.getStageForLevel(279)),
-			table.concat(levels, ",") == "78,155,202,248,279" and CharacterLevel.getStageForLevel(279) == 446)
+		-- P2.5c 결정 3: 필요 레벨 25 · 50 · 75 · 100 · 125(사용자 확정 - 옛 P2.5a 78 · 155 · 202 · 248 · 279). 스테이지 척도(레벨 + 167)는 그대로.
+		r.check(("C3.3 환생 필요 레벨 %s(기대 25 · 50 · 75 · 100 · 125 - P2.5c) · 레벨 125의 스테이지 척도 %d(기대 292)"):format(table.concat(levels, " · "), CharacterLevel.getStageForLevel(125)),
+			table.concat(levels, ",") == "25,50,75,100,125" and CharacterLevel.getStageForLevel(125) == 292)
 	end)
 
 	r.section("[C5] 강화 +30", function()

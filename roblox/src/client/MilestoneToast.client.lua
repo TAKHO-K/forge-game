@@ -15,7 +15,8 @@ reached.OnClientEvent:Connect(function(payload)
 	end
 	local parts = { { text = ("성장 보상 Lv.%d · "):format(payload.level or 0), colorName = "xp", bold = true } }
 	if (payload.statGained or 0) > 0 then
-		table.insert(parts, { text = ("%s ×%.3f "):format(Milestone.statText(), payload.multiplier or 1), colorName = "success" })
+		-- P2.5c B2: 합연산 버킷의 지금 합(%)을 보인다.
+		table.insert(parts, { text = ("%s +%.1f%%(합) "):format(Milestone.statText(), (payload.bonus or 0) * 100), colorName = "success" })
 	end
 	for _, unlock in ipairs(payload.unlocks or {}) do
 		table.insert(parts, { text = ("%s "):format(unlock.name), colorName = "gold", bold = true })

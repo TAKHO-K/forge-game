@@ -86,9 +86,9 @@ local function defaultClassState()
 		-- 쌓이지 않는다 - "임의 결정" 목록 참고).
 		gemInventory = {},
 
-		-- 환생 후 레벨 마일스톤(P2.5b D, v32) - { [tostring(환생 회차)] = 그 회차에서 받은 마지막 능력치 마일스톤 레벨(50의 배수) }. 직업별(레벨 · 환생이 직업별이다).
-		-- 키는 문자열이다(DataStore 왕복이 숫자 키를 문자열로 바꾼다 - v28과 같은 이유). 규칙 = shared/Milestone.lua.
-		milestones = {},
+		-- 환생 후 레벨 마일스톤(P2.5c B2, v33 - v32의 회차별 표 milestones를 대신한다) - 이 직업이 받은 마지막 능력치 마일스톤 레벨(0 = 없음 · 200 · 250 …).
+		-- 직업별(레벨 · 환생이 직업별이다). 버킷 값은 이 레벨에서 계산한다. 규칙 = shared/Milestone.lua.
+		milestoneLevel = 0,
 
 		-- ⚠ 29-5부터 **아무도 읽지 않는다**: 보스의 정체는 스테이지 번호만의 함수가 됐다(BossRules.bossIdForStage, PRD 20.80 [A]).
 		-- 필드는 지우지 않는다 - 옛 세이브가 검증(아래 type 검사)·이관을 그대로 통과하고, 되돌릴 일이 생겨도 데이터가 남아 있다.
@@ -310,7 +310,7 @@ end
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
 -- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
 -- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
--- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11) -> 30(안내 플래그 hints, S20e) -> 31(보석 가루 gemDust 신설 - 0, P2.5b C) -> 32(환생 후 마일스톤 milestones · milestoneUnlocks 신설 - 빈 표 · 0, P2.5b D).
+-- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11) -> 30(안내 플래그 hints, S20e) -> 31(보석 가루 gemDust 신설 - 0, P2.5b C) -> 32(환생 후 마일스톤 milestones · milestoneUnlocks 신설 - 빈 표 · 0, P2.5b D) -> 33(마일스톤 재설계 - milestones 표를 milestoneLevel 숫자로, P2.5c B2).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -826,6 +826,17 @@ local function migrate(data)
 		data.version = 32
 	end
 
+	if data.version < 33 then
+		-- P2.5c B2: 마일스톤 재설계 - 회차마다 반복되던 50레벨 곱연산 공격력(회차별 표 milestones)을 없애고, 환생 5회 뒤 레벨 200 · 250 … 사다리(받은 마지막 레벨 하나)로 바꿨다.
+		-- 옛 표는 새 규칙과 뜻이 달라 옮기지 않고 0에서 시작한다 - 환생 5회를 마친 직업은 PlayerProfile.init이 접속 때 지금 레벨까지 채운다.
+		-- 받은 해금 개수(milestoneUnlocks)와 이미 늘어난 가방 칸은 그대로 둔다(되돌리지 않는다 - 새 규칙의 해금 순서가 옛 순서와 같다).
+		for _, classState in pairs(data.classes) do
+			classState.milestones = nil
+			classState.milestoneLevel = classState.milestoneLevel or 0
+		end
+		data.version = 33
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -918,15 +929,9 @@ local function isValidProfile(data)
 			or type(classState.rebirthCount) ~= "number"
 			or type(classState.gemInventory) ~= "table"
 			or type(classState.bossRotation) ~= "table"
-			or type(classState.milestones) ~= "table"
+			or type(classState.milestoneLevel) ~= "number" or classState.milestoneLevel % 1 ~= 0 or classState.milestoneLevel < 0 -- 마일스톤 기록(v33): 0 이상 정수
 		then
 			return false
-		end
-		-- 마일스톤 기록(v32): 키 = 문자열 회차 · 값 = 0 이상 정수.
-		for key, claimed in pairs(classState.milestones) do
-			if type(key) ~= "string" or type(claimed) ~= "number" or claimed % 1 ~= 0 or claimed < 0 then
-				return false
-			end
 		end
 
 		for _, part in ipairs({ "armor", "gloves", "shoes" }) do

@@ -182,23 +182,24 @@ local function run()
 		task.wait(0.3)
 
 		-- ③ 성장 보상 창.
-		MilestonesPanel.debugOpen({ rebirthCount = 2, level = 180, cycles = { ["1"] = 150, ["2"] = 150 }, statCount = 6, multiplier = 1.1941, unlockCount = 1 })
+		-- P2.5c B2: 환생 5회 · Lv.180(사다리 첫 칸 Lv.200 전) · 받은 것 없음.
+		MilestonesPanel.debugOpen({ rebirthCount = 5, level = 180, claimedLevel = 0, bonus = 0, unlockCount = 0 })
 		task.wait(0.5)
 		local ms = MilestonesPanel.debugState()
 		local mr = ms.refs
-		local unlockRows, cycleRows = 0, 0
+		local unlockRows, cycleRows = 0, 0 -- cycleRows = 능력치 사다리 행(P2.5c B2 - 옛 회차 행)
 		for _, child in ipairs(mr.scroll:GetChildren()) do
 			if child.Name:find("^Unlock_") then
 				unlockRows += 1
-			elseif child.Name:find("^Cycle_") then
+			elseif child.Name:find("^Ladder_") then
 				cycleRows += 1
 			end
 		end
 		local nextStat = mr.scroll:FindFirstChild("NextStat")
 		local nextUnlock = mr.scroll:FindFirstChild("NextUnlock")
 		local ms1, ms1Name, _, minside, mgeo = measure(mr, {})
-		check(("③ 성장 보상 창(%s): 해금 행 %d(기대 5) · 회차 행 %d(기대 2) · '%s' · '%s' · 최소 글씨 %.1f(%s) · 화면 안 %s"):format(mgeo, unlockRows, cycleRows, nextStat and nextStat.Text or "-", nextUnlock and nextUnlock.Text or "-", ms1, ms1Name, tostring(minside)),
-			unlockRows == 5 and cycleRows == 2 and nextStat ~= nil and nextStat.Text:find("Lv.200") ~= nil and nextStat.Text:find("남은 레벨 20") ~= nil
+		check(("③ 성장 보상 창(%s): 해금 행 %d(기대 5) · 사다리 행 %d(기대 3) · '%s' · '%s' · 최소 글씨 %.1f(%s) · 화면 안 %s"):format(mgeo, unlockRows, cycleRows, nextStat and nextStat.Text or "-", nextUnlock and nextUnlock.Text or "-", ms1, ms1Name, tostring(minside)),
+			unlockRows == 5 and cycleRows == 3 and nextStat ~= nil and nextStat.Text:find("Lv.200") ~= nil and nextStat.Text:find("남은 레벨 20") ~= nil
 				and nextUnlock ~= nil and nextUnlock.Text:find("남은 레벨 20") ~= nil and ms1 >= 12 and minside)
 		UIManager.close(MilestonesPanel.id, true)
 		task.wait(0.3)
@@ -246,7 +247,7 @@ local function run()
 			GemForge.setMode("refine")
 			task.wait(0.05)
 			UIManager.close(GemForge.id, true)
-			MilestonesPanel.debugOpen({ rebirthCount = 2, level = 180, cycles = { ["1"] = 150, ["2"] = 150 }, statCount = 6, multiplier = 1.19, unlockCount = 1 })
+			MilestonesPanel.debugOpen({ rebirthCount = 5, level = 180, claimedLevel = 0, bonus = 0, unlockCount = 0 })
 			task.wait(0.05)
 			UIManager.close(MilestonesPanel.id, true)
 		end

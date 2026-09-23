@@ -128,13 +128,14 @@ local function syncAccountBestStage(player, profile)
 	player:SetAttribute("AccountBestStage", accountBestStageOf(profile))
 end
 
--- P2.5b D: 마일스톤 Attribute - MilestoneUnlockCount(계정) · MilestoneStatCount · MilestoneMultiplier(활성 직업 공격력 배율 - 가방 창 공격력 표시 · 성장 보상 창이 읽는다).
+-- P2.5b D · P2.5c B2: 마일스톤 Attribute - MilestoneUnlockCount(계정) · MilestoneLevel(활성 직업이 받은 마지막 능력치 마일스톤 레벨) ·
+-- MilestoneMultiplier(활성 직업 공격력 배율 - 버킷이 최대 체력 쪽이면 1. 가방 창 공격력 표시 · 성장 보상 창이 읽는다).
 local function syncMilestoneAttributes(player, profile)
 	player:SetAttribute("MilestoneUnlockCount", profile.milestoneUnlocks)
 	local classState = activeClassState(profile)
-	local count = classState and Milestone.statCount(classState.milestones) or 0
-	player:SetAttribute("MilestoneStatCount", count)
-	player:SetAttribute("MilestoneMultiplier", Milestone.multiplier(count))
+	local claimed = classState and classState.milestoneLevel or 0
+	player:SetAttribute("MilestoneLevel", claimed)
+	player:SetAttribute("MilestoneMultiplier", Milestone.attackMultiplier(claimed))
 end
 
 -- 로드 직후(PlayerProfile.init)와 직업 전환 직후(setClassId) 둘 다 "지금 활성 직업의
@@ -423,30 +424,30 @@ function PlayerProfile.addCharacterExp(player, amount)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then
 		player:SetAttribute("CharacterLevel", newLevel)
-		PlayerProfile.claimMilestones(player, true) -- P2.5b D: 50 · 100 레벨 배수를 넘었으면 보상 + 토스트
+		PlayerProfile.claimMilestones(player, true) -- P2.5b D · P2.5c B2: 마일스톤 레벨을 넘었으면 보상 + 토스트
 	end
 	return oldLevel, newLevel
 end
 
--- ═══ 환생 후 레벨 마일스톤(P2.5b D) ═══
--- 영구 능력치 배율(공격력) - 활성 직업이 모든 회차에서 받은 능력치 마일스톤 횟수에서 나온다(Milestone.multiplier).
+-- ═══ 환생 후 레벨 마일스톤(P2.5b D · P2.5c B2) ═══
+-- 공격력 배율 = 1 + 마일스톤 버킷(버킷이 공격력 쪽일 때 - Milestone.attackMultiplier). 활성 직업이 받은 마지막 마일스톤 레벨에서 나온다.
 function PlayerProfile.getMilestoneMultiplier(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
 		return 1
 	end
-	return Milestone.multiplier(Milestone.statCount(classState.milestones))
+	return Milestone.attackMultiplier(classState.milestoneLevel or 0)
 end
 
--- 최대 체력 배율(MilestoneData.survival이 꺼져 있으면 1 - Milestone.maxHpMultiplier).
+-- 최대 체력 배율(버킷이 최대 체력 쪽일 때만 1이 아니다 - Milestone.maxHpMultiplier).
 function PlayerProfile.getMilestoneMaxHpMultiplier(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
 		return 1
 	end
-	return Milestone.maxHpMultiplier(Milestone.statCount(classState.milestones))
+	return Milestone.maxHpMultiplier(classState.milestoneLevel or 0)
 end
 
 -- 해금 효과를 그 순간 적용한다(계정 효과 - 한 번만). 예약(reserved) 해금은 기록만 남는다.
@@ -465,14 +466,13 @@ function PlayerProfile.claimMilestones(player, notify)
 	if not classState then
 		return nil
 	end
-	classState.milestones = classState.milestones or {}
 	local level = CharacterLevel.getLevelFromExp(classState.characterExp)
-	local plan = Milestone.plan(classState.rebirthCount, level, classState.milestones, profile.milestoneUnlocks)
+	local plan = Milestone.plan(classState.rebirthCount, level, classState.milestoneLevel or 0, profile.milestoneUnlocks)
 	if not plan or (plan.statGained <= 0 and plan.unlockTo < plan.unlockFrom) then
 		return nil
 	end
 	if plan.statGained > 0 then
-		classState.milestones[plan.cycleKey] = plan.claimedLevel
+		classState.milestoneLevel = plan.claimedLevel
 	end
 	local unlocked = {}
 	for index = plan.unlockFrom, plan.unlockTo do
@@ -485,8 +485,8 @@ function PlayerProfile.claimMilestones(player, notify)
 	if plan.statGained > 0 then
 		PlayerProfile.refreshMaxHp(player)
 	end
-	local count = Milestone.statCount(classState.milestones)
-	local payload = { level = level, statGained = plan.statGained, statCount = count, multiplier = Milestone.multiplier(count), unlocks = unlocked }
+	local claimed = classState.milestoneLevel or 0
+	local payload = { level = level, statGained = plan.statGained, claimedLevel = claimed, bonus = Milestone.bonusFor(claimed), multiplier = Milestone.multiplier(claimed), unlocks = unlocked }
 	if notify then
 		MilestoneNotice.push(player, payload)
 	end
@@ -498,15 +498,14 @@ function PlayerProfile.getMilestoneSummary(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
-		return { rebirthCount = 0, level = 1, cycles = {}, statCount = 0, multiplier = 1, unlockCount = profile and profile.milestoneUnlocks or 0 }
+		return { rebirthCount = 0, level = 1, claimedLevel = 0, bonus = 0, unlockCount = profile and profile.milestoneUnlocks or 0 }
 	end
-	local count = Milestone.statCount(classState.milestones)
+	local claimed = classState.milestoneLevel or 0
 	return {
 		rebirthCount = classState.rebirthCount,
 		level = CharacterLevel.getLevelFromExp(classState.characterExp),
-		cycles = classState.milestones,
-		statCount = count,
-		multiplier = Milestone.multiplier(count),
+		claimedLevel = claimed,
+		bonus = Milestone.bonusFor(claimed),
 		unlockCount = profile.milestoneUnlocks,
 	}
 end
@@ -1233,7 +1232,7 @@ end
 local function computeMaxHp(player)
 	local bonus = Loot.getMaxHpBonus(PlayerProfile.getEquipped(player, "armor"))
 	local optionMaxHpPercent = PlayerProfile.getOptionBonus(player, "maxHpPercent")
-	return (CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent) * PlayerProfile.getMilestoneMaxHpMultiplier(player) -- P2.5b D: 마일스톤(MilestoneData.survival일 때만 - 기본 1)
+	return (CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent) * PlayerProfile.getMilestoneMaxHpMultiplier(player) -- P2.5b D · P2.5c B2: 마일스톤 버킷(MilestoneData.stat = "survival"일 때만 - 기본 1)
 end
 
 function PlayerProfile.refreshMaxHp(player)
