@@ -11,6 +11,7 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel) -- P2.5a: 안전 상한 정의에 레벨 경험치 누적
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
@@ -67,13 +68,15 @@ function S21_0Verify.runPure()
 	t.check("Sanitize.number(-17.5, 0) == -17.5(정상 음수도 그대로)", Sanitize.number(-17.5, 0) == -17.5)
 
 	-- A4: safeStageCap = 마지막 스테이지가 boss4(4인 파티) HP 기준 1e300 미만, cap+1은 1e300 이상.
+	-- P2.5a(k 1.02): 같은 정의(모든 수치 1e300 미만인 마지막 스테이지)를 다시 쟀다 - 새 k에서는 레벨 경험치 누적(레벨 = 스테이지로 보수적으로)이 boss4 HP보다 먼저 넘는다.
 	local cap = InfiniteStageConfig.safeStageCap
-	local function boss4Hp(stage)
-		return InfiniteStage.getMonsterHp(80, stage) * 20 * BossRules.partySizeHpMultiplier(4)
+	local function largest(stage)
+		local boss4Hp = InfiniteStage.getMonsterHp(80, stage) * 20 * BossRules.partySizeHpMultiplier(4)
+		return math.max(boss4Hp, CharacterLevel.getExpForLevel(stage + 1))
 	end
-	t.check(("safeStageCap = %d"):format(cap), cap == 4738)
-	t.check(("stage %d(cap) boss4 HP < 1e300"):format(cap), boss4Hp(cap) < 1e300)
-	t.check(("stage %d(cap+1) boss4 HP >= 1e300"):format(cap + 1), boss4Hp(cap + 1) >= 1e300)
+	t.check(("safeStageCap = %d(기대 34320 - P2.5a)"):format(cap), cap == 34320)
+	t.check(("stage %d(cap) 최대 수치(boss4 HP · 레벨 경험치 누적) %.3g < 1e300"):format(cap, largest(cap)), largest(cap) < 1e300)
+	t.check(("stage %d(cap+1) 최대 수치 %.3g >= 1e300"):format(cap + 1, largest(cap + 1)), largest(cap + 1) >= 1e300)
 
 	-- A6: getSurviveHits가 A² 없이 계산되므로 스테이지 2448 · 2500 · 3000에서도 유한값 · PlayerDamage와 같은 식.
 	local D = 1000 -- 임의의 방어력(순수 함수 확인용 - PlayerDamage.computeHitDamage와 같은 reduction 식인지가 핵심)

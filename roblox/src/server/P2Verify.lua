@@ -85,6 +85,7 @@ local function oldRewardRatio(tierIndex)
 end
 
 -- NumberFormat 표본(값, 기대 문자열) - 1e15 미만은 P2 전 출력 그대로, 알파벳 구간은 부동소수 결함을 고친 값.
+-- P2.5a: 이 블록의 값 검사 중 P2.5a가 바꾼 것(환생표 · 강화 비용 기준 · 보석 p · 태초 tier 배수 · 감쇠 · 딜링모드 배율)은 새 값을 기대한다(근거 = docs/phase/P25a-log.md).
 local NUMBER_SAMPLES = {
 	{ 7, "7" }, { 9999, "9,999" }, { 10000, "10K" }, { 12345, "12.3K" }, { 999999, "999.9K" }, { 1234567, "1.2M" }, { 9.99e8, "999M" }, { 1e9, "1B" },
 	{ 2.5e11, "250B" }, { 1e12, "1T" }, { 999.99e12, "999.9T" }, { 1e15, "1aa" }, { 1.5e18, "1.5ab" }, { 3.3e33, "3.3ag" }, { 1e45, "1ak" }, { 1e60, "1ap" },
@@ -96,31 +97,32 @@ function P2Verify.runPure()
 	local r = newRecorder("가")
 
 	r.section("[B] 환생 필요 레벨표", function()
-		local expected = { 25, 50, 65, 80, 90 }
+		local expected = { 78, 155, 202, 248, 279 } -- P2.5a C3(옛 25 · 50 · 65 · 80 · 90)
 		local ok = true
 		local got = {}
 		for count = 0, 4 do
 			got[count + 1] = CharacterLevel.getRebirthRequiredLevel(count)
 			ok = ok and got[count + 1] == expected[count + 1]
 		end
-		r.check(("B1 환생 0 ~ 4회 → 필요 레벨 %s(기대 25 · 50 · 65 · 80 · 90) · 5회(최대) → %s(기대 nil) · 최대 회차 %d(기대 5)"):format(
+		r.check(("B1 환생 0 ~ 4회 → 필요 레벨 %s(기대 78 · 155 · 202 · 248 · 279 - P2.5a) · 5회(최대) → %s(기대 nil) · 최대 회차 %d(기대 5)"):format(
 			table.concat(got, " · "), tostring(CharacterLevel.getRebirthRequiredLevel(5)), GemData.maxRebirthCount),
 			ok and CharacterLevel.getRebirthRequiredLevel(5) == nil and GemData.maxRebirthCount == 5)
 	end)
 
 	r.section("[C1] GoldCost", function()
+		-- P2.5a C8: 강화 비용 기준 스테이지 100 → 1 · 배수는 골드 성장률(InfiniteStage.getGoldMultiplier) - 최고 1 · 없음은 표 그대로, 그 위는 표 × 골드 배수.
 		local ok = true
 		for level = 0, EnhanceConfig.maxLevel - 1 do
-			for _, stage in ipairs({ 1, 50, 100 }) do
-				ok = ok and Enhance.getCost(level, stage) == EnhanceConfig.goldCost[level + 1]
+			ok = ok and Enhance.getCost(level, 1) == EnhanceConfig.goldCost[level + 1] and Enhance.getCost(level) == EnhanceConfig.goldCost[level + 1]
+			for _, stage in ipairs({ 50, 100 }) do
+				ok = ok and Enhance.getCost(level, stage) == math.floor(EnhanceConfig.goldCost[level + 1] * InfiniteStage.getGoldMultiplier(stage))
 			end
-			ok = ok and Enhance.getCost(level) == EnhanceConfig.goldCost[level + 1]
 		end
-		r.check(("C1.1 강화 0 ~ 24강 × 계정 최고 1 · 50 · 100 · 없음 = P2 전 고정표 그대로 %s"):format(tostring(ok)), ok)
-		local k = InfiniteStage.getMultiplier(2)
+		r.check(("C1.1 강화 0 ~ %d강 × 계정 최고 1 · 없음 = 표 그대로 · 50 · 100 = 표 × 골드 배수(P2.5a 기준 1) %s"):format(EnhanceConfig.maxLevel - 1, tostring(ok)), ok)
 		local at101, at500 = Enhance.getCost(19, 101), Enhance.getCost(19, 500)
-		r.check(("C1.2 19강 최고 101 = %.0f(기대 floor(235000 × k) = %.0f) · 500 = %.4g(기대 235000 × k^400 = %.4g)"):format(at101, math.floor(235000 * k), at500, 235000 * InfiniteStage.getMultiplier(401)),
-			at101 == math.floor(235000 * k) and near(at500, 235000 * InfiniteStage.getMultiplier(401), 1e-12))
+		local expected101, expected500 = math.floor(235000 * InfiniteStage.getGoldMultiplier(101)), math.floor(235000 * InfiniteStage.getGoldMultiplier(500))
+		r.check(("C1.2 19강 최고 101 = %.0f(기대 floor(235000 × 골드 배수) = %.0f) · 500 = %.4g(기대 %.4g)"):format(at101, expected101, at500, expected500),
+			at101 == expected101 and near(at500, expected500, 1e-12))
 		local same = true
 		for _, stage in ipairs({ 1, 50, 83, 250, 1000, 4738 }) do
 			local perKill = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage)
@@ -134,7 +136,7 @@ function P2Verify.runPure()
 			ratioOk = ratioOk and near(Enhance.getCost(20, stage + 1) / Enhance.getCost(20, stage), InfiniteStage.getGoldReward(1e6, stage + 1) / InfiniteStage.getGoldReward(1e6, stage), 1e-6)
 		end
 		local top = Enhance.getCost(24, 4738)
-		r.check(("C1.4 기준 100 뒤 한 스테이지당 비용 증가율 = 잡몹 골드 증가율(k) %s · 24강 최고 4738 = %.3g(유한 %s)"):format(tostring(ratioOk), top, tostring(isFinite(top))), ratioOk and isFinite(top))
+		r.check(("C1.4 한 스테이지당 비용 증가율 = 잡몹 골드 증가율(P2.5a 골드 성장률) %s · 24강 최고 4738 = %.3g(유한 %s)"):format(tostring(ratioOk), top, tostring(isFinite(top))), ratioOk and isFinite(top))
 		local bad = GoldCost.cost(100, 0 / 0, "enhance")
 		r.check(("C1.5 스테이지 NaN → 비용 %s(기대 math.huge - Sanitize가 끊어 공짜로 새지 않는다)"):format(tostring(bad)), bad == math.huge)
 	end)
@@ -177,10 +179,10 @@ function P2Verify.runPure()
 		for level = 1, 125 do
 			oldOk = oldOk and near(Option.levelFactor(level), (1 + 0.06 * (level - 1)) / (1 + 0.06 * 99), 1e-12)
 		end
-		r.check(("D1.1 레벨 1 ~ 125 = P2 전 식 그대로 %s · p = %.3f(기대 0.035)"):format(tostring(oldOk), p), oldOk and p == 0.035)
-		r.check(("D1.2 f(250) = %.6f(기대 f(125) × 1.035 = %.6f) · f(4738) = %.6f(기대 f(125) × (1 + 0.035 × log2(4738/125)) = %.6f)"):format(
-			Option.levelFactor(250), f125 * 1.035, Option.levelFactor(4738), f125 * (1 + 0.035 * math.log(4738 / 125, 2))),
-			near(Option.levelFactor(250), f125 * 1.035, 1e-12) and near(Option.levelFactor(4738), f125 * (1 + 0.035 * math.log(4738 / 125, 2)), 1e-12))
+		r.check(("D1.1 레벨 1 ~ 125 = P2 전 식 그대로 %s · p = %.3f(기대 0.025 - P2.5a C10)"):format(tostring(oldOk), p), oldOk and p == 0.025)
+		r.check(("D1.2 f(250) = %.6f(기대 f(125) × (1 + p) = %.6f) · f(4738) = %.6f(기대 f(125) × (1 + p × log2(4738/125)) = %.6f)"):format(
+			Option.levelFactor(250), f125 * (1 + p), Option.levelFactor(4738), f125 * (1 + p * math.log(4738 / 125, 2))),
+			near(Option.levelFactor(250), f125 * (1 + p), 1e-12) and near(Option.levelFactor(4738), f125 * (1 + p * math.log(4738 / 125, 2)), 1e-12))
 		local bad, prev = 0, 0
 		for level = 1, 4738 do
 			local f = Option.levelFactor(level)
@@ -206,7 +208,7 @@ function P2Verify.runPure()
 	end)
 
 	r.section("[E] 드랍표 단일 소스 · 태초", function()
-		local divisors = { 1.9, 1.7, 1.35, 1.1, 1.05, 1 }
+		local divisors = { 1.30, 1.20, 1.08, 0.85, 0.64, 1 } -- P2.5a C9(옛 1.9 · 1.7 · 1.35 · 1.1 · 1.05)
 		local ok = true
 		local cells = {}
 		for tier = 1, 6 do
@@ -214,9 +216,10 @@ function P2Verify.runPure()
 			cells[tier] = ("%.5f%%"):format(rate * 100)
 			ok = ok and near(rate, 0.001 / divisors[tier], 1e-12)
 		end
-		r.check(("E2 tier1 ~ 6 태초 기본 확률 %s(기대 0.1%% ÷ 1.9 · 1.7 · 1.35 · 1.1 · 1.05 · 1)"):format(table.concat(cells, " · ")), ok)
+		r.check(("E2 tier1 ~ 6 태초 기본 확률 %s(기대 0.1%% ÷ 1.30 · 1.20 · 1.08 · 0.85 · 0.64 · 1 - P2.5a)"):format(table.concat(cells, " · ")), ok)
 		local decays = {}
-		local expectedDecay = { [0] = 1, [4] = 1, [5] = 0.9, [9] = 0.5, [13] = 0.1, [14] = 0, [30] = 0 }
+		-- P2.5a C9: 시작 70 · 1칸당 1.4%(옛 5 · 10%)
+		local expectedDecay = { [0] = 1, [69] = 1, [70] = 0.986, [100] = 0.566, [140] = 0.006, [141] = 0, [200] = 0 }
 		local decayOk = true
 		for gap, expected in pairs(expectedDecay) do
 			local value = DropTable.levelDecay(100 + gap, 100)
@@ -224,10 +227,10 @@ function P2Verify.runPure()
 			decayOk = decayOk and near(value, expected, 1e-12)
 		end
 		table.sort(decays)
-		r.check(("E3 레벨 감쇠 %s(기대 5 미만 1 · 5부터 한 칸마다 −10%% · 0 아래 없음) · 최고 없음 = %.2f(기대 1)"):format(table.concat(decays, ", "), DropTable.levelDecay(nil, 50)),
+		r.check(("E3 레벨 감쇠 %s(기대 70 미만 1 · 70부터 한 칸마다 −1.4%% · 0 아래 없음 - P2.5a) · 최고 없음 = %.2f(기대 1)"):format(table.concat(decays, ", "), DropTable.levelDecay(nil, 50)),
 			decayOk and DropTable.levelDecay(nil, 50) == 1)
-		local eff = DropTable.effectiveRate({ bestStage = 120 }, { tierIndex = 1 }, 111)
-		r.check(("E3.2 effectiveRate(최고 120 · tier1 · 사냥 111) = %.6f%%(기대 기본 × 0.5 = %.6f%%)"):format(eff * 100, DropTable.primordialBaseRate(1) * 0.5 * 100), near(eff, DropTable.primordialBaseRate(1) * 0.5, 1e-12))
+		local eff = DropTable.effectiveRate({ bestStage = 200 }, { tierIndex = 1 }, 111)
+		r.check(("E3.2 effectiveRate(최고 200 · tier1 · 사냥 111 - 격차 89) = %.6f%%(기대 기본 × 0.72 = %.6f%%)"):format(eff * 100, DropTable.primordialBaseRate(1) * 0.72 * 100), near(eff, DropTable.primordialBaseRate(1) * 0.72, 1e-9))
 		local sumOk = true
 		for tier = 1, 6 do
 			for _, rate in ipairs({ DropTable.primordialBaseRate(tier), 0, 0.3 }) do
@@ -303,8 +306,8 @@ function P2Verify.runPure()
 		end
 		r.check(("F1 치유사 평타 식의 옵션 자리(모드 무관 - AttackServer가 그대로 넘긴다): 위력 +50%% → atk ×%.4f(기대 1.5) · 신속 +30%% → 쿨다운 %.3f → %.3f(줄어듦) · 치명 +100%% → 200번 중 치명 %d(기대 200)"):format(
 			boosted / base, cooldown, fast, crits), near(boosted / base, 1.5, 1e-12) and fast < cooldown and crits == 200)
-		r.check(("F2 · F3 데이터: ClassData.healer.atk %.3f(기대 0.66) · SkillData.healer.E.attackMultiplier %.3f(기대 1.615)"):format(ClassData.classes.healer.atk, SkillData.healer.E.attackMultiplier),
-			ClassData.classes.healer.atk == 0.66 and SkillData.healer.E.attackMultiplier == 1.615)
+		r.check(("F2 · F3 데이터: ClassData.healer.atk %.3f(기대 0.66) · SkillData.healer.E.attackMultiplier %.3f(기대 1.574 - P2.5a 평균 투자 기준)"):format(ClassData.classes.healer.atk, SkillData.healer.E.attackMultiplier),
+			ClassData.classes.healer.atk == 0.66 and SkillData.healer.E.attackMultiplier == 1.574)
 		local EconSim = require(script.Parent.EconSim)
 		if EconSim.isAllowed() then
 			local healer = require(script.Parent.EconSimTables).healer()
@@ -314,8 +317,8 @@ function P2Verify.runPure()
 				table.insert(shares, ("%.2f%%"):format(share * 100))
 				okShare = okShare and share >= EconSimConfig.healer.shareTarget
 			end
-			local rDealing = healer.tiers.none.rDealing
-			r.check(("F2 도적 3 + 치유사 1 비중(없음 · 평균 · 상위) %s(기대 전부 ≥ 12%%) · F3 딜링모드 ÷ 검사(장비 없음) %.4f(기대 0.85 ~ 0.9)"):format(table.concat(shares, " · "), rDealing),
+			local rDealing = healer.tiers.average.rDealing
+			r.check(("F2 도적 3 + 치유사 1 비중(없음 · 평균 · 상위) %s(기대 전부 ≥ 12%%) · F3 딜링모드 ÷ 검사(평균 투자 - P2.5a) %.4f(기대 0.85 ~ 0.9)"):format(table.concat(shares, " · "), rDealing),
 				okShare and rDealing >= 0.85 and rDealing <= 0.9)
 		else
 			r.check("F2 · F3 EconSim이 꺼져 있어(DevToolsConfig.econSim) 비중 · 딜링모드 비를 못 잰다", false)

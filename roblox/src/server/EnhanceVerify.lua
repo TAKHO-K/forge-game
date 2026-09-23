@@ -596,10 +596,10 @@ local function checkCostTable(r)
 				below += 1
 			end
 		end
-		if EnhanceMaterialData.costByLevel[25] then
+		if EnhanceMaterialData.costByLevel[EnhanceConfig.maxLevel] then -- P2.5a: 최대 단계(25 → 30)에는 재료 칸이 없다(시도 불가)
 			above += 1
 		end
-		r.check(("%s · 0 ~ 18강에 재료 있는 단계 %d개(기대 0) · 25강 %d개(기대 0) - 기대 8 · 10 · 12 · 10 · 13 · 16"):format(table.concat(cells, " · "), below, above),
+		r.check(("%s · 0 ~ 18강에 재료 있는 단계 %d개(기대 0) · 최대 %d강 %d개(기대 0) - 기대 8 · 10 · 12 · 10 · 13 · 16"):format(table.concat(cells, " · "), below, EnhanceConfig.maxLevel, above),
 			ok and below == 0 and above == 0)
 	end)
 end

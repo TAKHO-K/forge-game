@@ -130,6 +130,26 @@ function EconSimVerify.runPure()
 			local target = EconSimConfig.healer.shareTarget
 			r.check(("7 E6 도적 3 + 치유사 1 비중 없음 %.2f%% · 평균 %.2f%% · 상위 %.2f%%(기대 전부 ≥ %.0f%%)"):format(tiers.none.share.dualblade * 100, tiers.average.share.dualblade * 100, tiers.top.share.dualblade * 100, target * 100),
 				tiers.none.share.dualblade >= target and tiers.average.share.dualblade >= target and tiers.top.share.dualblade >= target)
+			-- P2.5a 목표(결과 모양): 일반 환생 5회차 약 12시간 · 첫 12시간 레벨업 평균 ≤ 5분 · 스테이지 10 ≤ 30분 · 상위 1% 설계 최대 도달 ≈ 2,190시간(±10%).
+			local normal, top = data.runs.normal, data.runs.top
+			local rebirth5 = normal.rebirthAt[5] and normal.rebirthAt[5] / 3600 or math.huge
+			local t, n, sum = 0, 0, 0
+			for _, chunk in ipairs(normal.chunks) do
+				local dur = chunk.seconds + chunk.bossSeconds
+				t += dur
+				if t > 12 * 3600 then
+					break
+				end
+				n += 1
+				sum += dur
+			end
+			local avgMinutes = n > 0 and sum / n / 60 or math.huge
+			local stage10 = normal.reached[10] and normal.reached[10].seconds / 3600 or math.huge
+			local design = InfiniteStageConfig.designMaxStage
+			local topDesign = top.reached[design] and top.reached[design].seconds / 3600 or math.huge
+			r.check(("9 P2.5a 일반: 환생 5회차 %.2f시간(기대 11 ~ 13) · 첫 12시간 레벨업 평균 %.2f분(기대 ≤ 5) · 스테이지 10 %.2f시간(기대 ≤ 0.5) / 상위 1%% 설계 최대 %d 도달 %.0f시간(기대 2,190 ± 10%%)"):format(
+				rebirth5, avgMinutes, stage10, design, topDesign),
+				rebirth5 >= 11 and rebirth5 <= 13 and avgMinutes <= 5 and stage10 <= 0.5 and math.abs(topDesign - 2190) <= 219)
 		end)
 	end
 
