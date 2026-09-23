@@ -455,6 +455,9 @@ craftResult.OnClientEvent:Connect(function(action, success, reason, data)
 		Toast.push("TC", { text = text, colorName = "success", seconds = 4 })
 		if action == "refine" and UIManager.isOpen(GemForge.id) then
 			GemForge.back() -- 가방 index가 바뀌었다(먹인 보석이 빠졌다) - 대상을 다시 고르게 가방으로 돌아간다
+		elseif action == "dismantleBulk" and target and target.kind == "bag" then
+			-- 리뷰 1: 가방 보석이 빠져 index가 밀렸다 - 옛 index로 다른 보석이 대상이 되지 않게 비운다(재련 탭은 "대상 없음"을 보이고 가방에서 다시 고른다).
+			target, fodderIndex = nil, nil
 		end
 	else
 		Toast.push("TC", { text = GemForge.reasonText(reason), colorName = "danger", seconds = 4 })

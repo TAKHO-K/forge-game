@@ -172,7 +172,7 @@ player:GetAttributeChangedSignal("Gold"):Connect(function()
 	end
 end)
 
-for _, attr in ipairs({ "ClassId", "WeaponLevel", "WeaponGrade", "CharacterLevel", "MaxHp" }) do
+for _, attr in ipairs({ "ClassId", "WeaponLevel", "WeaponGrade", "CharacterLevel", "MaxHp", "MilestoneMultiplier" }) do -- P2.5b: 마일스톤 배율이 바뀌면 공격력 표시도(리뷰 9)
 	player:GetAttributeChangedSignal(attr):Connect(function()
 		if S.isOpen then
 			S.refreshStats()
