@@ -173,6 +173,15 @@ end
 -- 기본 0이라 기존 2-인자 호출부(BalanceSim 등)는 그대로 동작한다). GemData.
 -- survivalReductionAtAnchor 주석 참고 - 방어력은 수확체감 축이라 이 값이 다른 보석 축
 -- (공격력%·공속%·최대체력%)보다 커야 같은 만큼 생존에 기여한다.
+-- P2.5c 결정 2: 신규 보호 받는 피해 배율(CombatConfig.newbieProtection 주석). stage = 받는 사람의 무한 스테이지(nil = 모름 → 1, 보호 없음).
+function PlayerCombat.getNewbieDamageMultiplier(stage)
+	local protection = CombatConfig.newbieProtection
+	if not stage or stage > protection.untilStage then
+		return 1
+	end
+	return protection.atStage1 ^ (1 - (math.max(1, stage) - 1) / protection.untilStage)
+end
+
 function PlayerCombat.getDefense(classId, equipmentDefenseBonus, defensePercentBonus)
 	local class = ClassData.classes[classId]
 	local defense = (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def * (1 + (defensePercentBonus or 0))

@@ -86,6 +86,8 @@ end
 -- 지점. 받는 피해 배율(대검 E 채널링·대시, PlayerState)은 여기서 곱한다.
 local function applyFinalDamage(targetPlayer, damage, label)
 	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
+	-- P2.5c 결정 2: 신규 보호(받는 사람의 무한 스테이지 ≤ 20 - PlayerCombat.getNewbieDamageMultiplier). 스탠드인(표 Player)은 스테이지가 nil이라 1.
+	damage *= PlayerCombat.getNewbieDamageMultiplier(PlayerProfile.getInfiniteStage(targetPlayer))
 	-- 29-1(PRD 20.73 [2-8] A-1 "잡힌 동안 받는 피해"): 잡히면 못 피하므로 모든 패턴이 확정 피격이다 -
 	-- 배율(지금은 0 = 면역)을 곱하고, 0이면 피격 자체가 없던 것으로 친다(자동회복 타이머도 안 건드린다).
 	local trapMultiplier = PlayerState.getTrapDamageMultiplier(targetPlayer)

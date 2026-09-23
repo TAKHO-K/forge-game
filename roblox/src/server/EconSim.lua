@@ -38,6 +38,7 @@ local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local Option = require(ReplicatedStorage.Shared.Option)
 local Gem = require(ReplicatedStorage.Shared.Gem)
 local Loot = require(ReplicatedStorage.Shared.Loot)
+local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local DropTable = require(ReplicatedStorage.Shared.DropTable)
@@ -210,7 +211,7 @@ end
 function EconSim.highestStageBySurvive(loadout, tierIndex, minHits, maxStage)
 	local attackBase = tierData(tierIndex).attack
 	local function ok(stage)
-		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(attackBase, stage)) >= minHits
+		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(attackBase, stage), PlayerCombat.getNewbieDamageMultiplier(stage)) >= minHits -- P2.5c 신규 보호
 	end
 	if not ok(1) then
 		return 1
@@ -568,7 +569,7 @@ local function fightBosses(state, profile, loadout, run)
 		-- 파티 딜 = 인원 × 내 딜(같은 수준의 파티원 가정 - [가정]). 보스 HP는 BossRules가 이미 인원 배율(N^p)을 곱했다.
 		local effectiveHp = data.hp / (profile.bossDpsEfficiency * profile.partySize)
 		-- 생존: 보스 평타(BossRules가 계산한 attack)에 최소 생존 타수를 버텨야 도전한다(잡몹과 같은 minSurviveHits).
-		if BalanceSim.getSurviveHits(loadout, data.attack) < profile.minSurviveHits then
+		if BalanceSim.getSurviveHits(loadout, data.attack, PlayerCombat.getNewbieDamageMultiplier(bossStage)) < profile.minSurviveHits then -- P2.5c 신규 보호
 			break
 		end
 		local seconds = EconSim.killSeconds(loadout, effectiveHp, profile.bossKillLimitSeconds)

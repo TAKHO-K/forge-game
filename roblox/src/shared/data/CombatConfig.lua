@@ -128,4 +128,10 @@ return {
 	-- 없어 이 분기가 실제로 발동할 일은 없지만(쌍검 기본 30%뿐), 나중에 장비 치확 옵션이
 	-- 생겼을 때를 위해 PRD 규칙을 그대로 넣어 둔다.
 	guaranteedCritOverflowBonus = 0.4,
+
+	-- P2.5c 결정 2(사용자 확정): 신규 보호 - 옛 k(1.155)의 초반 "무적"(스테이지 1 갑옷 1,370타) 역할을 되살린다. 받는 사람의 무한 스테이지 s가
+	-- untilStage 이하면 받는 피해 × atStage1^(1 − (s − 1) ÷ untilStage) - 스테이지 1 ×0.1 · 10 ×0.28 · 15 ×0.50 · 20 ×0.89 · 21부터 1(기하 감소 - 계단 없음,
+	-- 선형보다 중간 스테이지 보호가 두텁다). 계산 = PlayerCombat.getNewbieDamageMultiplier(서버 피해 공통 지점 PlayerDamage.applyFinalDamage · 시뮬 생존 타수가 같은 함수).
+	-- 스테이지 번호 자체가 뜻이다(첫 구간 - 힘 비율 아님). 값 = 캐주얼 프로필 스테이지 10 ≤ 30분을 맞춘 값(하네스 격자 - docs/phase/P25c-log.md).
+	newbieProtection = { untilStage = 20, atStage1 = 0.1 },
 }
