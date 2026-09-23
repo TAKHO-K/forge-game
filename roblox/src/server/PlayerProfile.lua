@@ -557,7 +557,7 @@ end
 -- 반환값: (성공 여부, 실패 이유 또는 새 rebirthCount, 실패 시 필요 레벨).
 --   "no_class"       - 아직 직업을 안 골랐다.
 --   "max_rebirth"     - 이미 5회 전부 마쳤다(GemData.maxRebirthCount).
---   "level_too_low"   - 그 회차의 목표 레벨(25×(rebirthCount+1))에 아직 못 미쳤다.
+--   "level_too_low"   - 그 회차의 목표 레벨(CharacterLevel.getRebirthRequiredLevel - P2 전 25×(rebirthCount+1))에 아직 못 미쳤다.
 --
 -- 25-1: 레벨 곡선은 환생 회차와 무관하게 하나다(CharacterLevel 주석) - 환생은 characterExp를
 -- 0으로 되돌릴 뿐 곡선 분기를 바꾸지 않는다.
@@ -571,7 +571,7 @@ function PlayerProfile.rebirth(player)
 		return false, "max_rebirth"
 	end
 
-	local requiredLevel = 25 * (classState.rebirthCount + 1)
+	local requiredLevel = CharacterLevel.getRebirthRequiredLevel(classState.rebirthCount)
 	local currentLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
 	if currentLevel < requiredLevel then
 		return false, "level_too_low", requiredLevel
@@ -592,8 +592,8 @@ function PlayerProfile.rebirth(player)
 	-- 슬롯 k(=이번 회차)가 지금 열리고, 그 자리에 확정 보석 1개가 자동 지급된다(20.38 [2]
 	-- "슬롯이 열릴 때 그 등급의 보석 1개가 확정 지급된다", 23-4부터 등급은 그 슬롯의 상한).
 	local slot = classState.rebirthCount
-	-- 26-1: 환생 지급 보석의 itemLevel = 환생 순간 캐릭터 레벨(=25×회차, PRD 20.67 [3]).
-	classState.weapon.gems[slot] = Gem.buildGrantedGem(slot, profile.classId, 25 * classState.rebirthCount)
+	-- 26-1: 환생 지급 보석의 itemLevel = 환생 순간 캐릭터 레벨(PRD 20.67 [3]) - P2부터 그 회차의 필요 레벨(CharacterLevelConfig.rebirth, 전엔 25×회차).
+	classState.weapon.gems[slot] = Gem.buildGrantedGem(slot, profile.classId, requiredLevel)
 
 	-- 23-4: 해금 상태를 저장 필드에 기록한다(GemData.slotUnlockRequiredRebirth 주석 참고) -
 	-- 매번 rebirthCount에서 다시 계산하지 않는다. 지금 조건은 여전히 1:1(slot i = 환생

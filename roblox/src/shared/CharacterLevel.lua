@@ -128,4 +128,9 @@ function CharacterLevel.getItemLevelMultiplierFrozen(level)
 	return CharacterLevel.getItemLevelMultiplier(math.min(level, STAT_LINEAR_MAX_LEVEL))
 end
 
+-- P2 B: 환생 rebirthCount회 상태에서 다음 환생에 필요한 레벨(PlayerProfile.rebirth · 환생 UI · EconSim이 이 함수 하나를 본다). 표 밖(최대 회차)이면 nil.
+function CharacterLevel.getRebirthRequiredLevel(rebirthCount)
+	return CharacterLevelConfig.rebirth.requiredLevels[(rebirthCount or 0) + 1]
+end
+
 return CharacterLevel

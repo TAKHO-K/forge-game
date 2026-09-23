@@ -438,8 +438,8 @@ local function doRebirth(state, profile, whatIf)
 	state.exp = 0
 	state.weaponGrade = state.rebirth
 	local slot = state.rebirth
-	-- 환생 지급 보석(PlayerProfile.rebirth): 그 슬롯 상한 등급 · itemLevel = 환생 순간 레벨(25 × 회차) · 옵션 무작위.
-	tryPlaceGem(state, profile, slot, Gem.gradeCapForSlot(slot), 25 * state.rebirth, whatIf, true)
+	-- 환생 지급 보석(PlayerProfile.rebirth): 그 슬롯 상한 등급 · itemLevel = 환생 순간 레벨(그 회차 필요 레벨 - CharacterLevel.getRebirthRequiredLevel) · 옵션 무작위.
+	tryPlaceGem(state, profile, slot, Gem.gradeCapForSlot(slot), CharacterLevel.getRebirthRequiredLevel(state.rebirth - 1), whatIf, true)
 	if state.rebirth == GemData.maxRebirthCount and Gem.allSlotsFilled(state.gems) then
 		state.weaponGrade = #ArmorData.gradeOrder - 1
 	end
@@ -714,8 +714,10 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	tryEnhanceWithGold(state, profile, rng)
 	local levelBefore = state.level
 	state.level += 1
-	if profile.rebirth and state.rebirth < GemData.maxRebirthCount and state.level >= 25 * (state.rebirth + 1) then
+	local requiredLevel = CharacterLevel.getRebirthRequiredLevel(state.rebirth)
+	if profile.rebirth and state.rebirth < GemData.maxRebirthCount and requiredLevel and state.level >= requiredLevel then
 		doRebirth(state, profile, whatIf)
+		run.rebirthAt[state.rebirth] = state.seconds -- P2 B1: 환생 k회차를 마친 누적 플레이 초(레벨 1 상태)
 	end
 	local gemLevels, gemCount, gemBonus = 0, 0, 0
 	for slot = 1, Gem.slotCount do
@@ -744,7 +746,7 @@ function EconSim.runProgress(profileId, whatIf)
 	local cap = InfiniteStageConfig.safeStageCap
 	local milestones = table.clone(EconSimConfig.milestones)
 	table.insert(milestones, cap)
-	local run = { profileId = profileId, milestones = milestones, reached = {}, chunks = {}, cap = cap, stall = nil }
+	local run = { profileId = profileId, milestones = milestones, reached = {}, rebirthAt = {}, chunks = {}, cap = cap, stall = nil }
 	run.expMult = expMultiplier(profile)
 	local state = newState(profile)
 	local rng = Random.new(EconSimConfig.seed)

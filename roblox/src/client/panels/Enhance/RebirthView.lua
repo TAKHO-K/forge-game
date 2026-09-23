@@ -6,14 +6,16 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 
 local RebirthView = {}
 
 -- S12b F: 강화대 환생 탭의 확인창과 커뮤니티 환생 제단(RebirthAltar.client.lua)이 같은 문구 · 같은 조건식을 쓴다 - 한 곳에서 내보낸다.
 RebirthView.confirmText = "정말 환생하시겠습니까?\n레벨과 무한 스테이지가 1로 초기화됩니다 - 되돌릴 수 없습니다."
 
+-- P2 B: 필요 레벨은 서버(PlayerProfile.rebirth)와 같은 표 한 곳(CharacterLevelConfig.rebirth.requiredLevels)에서 읽는다.
 function RebirthView.requiredLevel(rebirthCount)
-	return 25 * (rebirthCount + 1)
+	return CharacterLevel.getRebirthRequiredLevel(rebirthCount)
 end
 
 -- 서버 결과(RebirthResult) → 한 줄 문구(기존 문구 그대로 + 보스전 · 강화 중 두 줄).
