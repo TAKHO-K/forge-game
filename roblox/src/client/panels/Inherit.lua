@@ -305,10 +305,14 @@ function InheritPanel.render()
 	refs.heading.Text = ("착용 중 %s → 새 장비"):format(ItemVisualData.partDisplayNames[b.part or "armor"] or "장비")
 	local describedA = ItemDescribe.item(a, player:GetAttribute("ClassId"))
 	local describedB = ItemDescribe.item(b, player:GetAttribute("ClassId"))
-	-- meta의 첫 조각은 부위 이름이다(제목에 이미 있다) - 레벨 · 기본 효과만 붙인다.
-	refs.lineA.Text = ("A(착용) %s · %s"):format(describedA.title, (describedA.meta:gsub("^[^·]+· ", "")))
+	-- meta의 첫 조각은 부위 이름이다(제목에 이미 있다) - 레벨 · 기본 효과만 붙인다. 문자 집합([^·])은 바이트 단위라 한글(옷 = … B7)과 섞여 못 쓴다 - 평문 find.
+	local function withoutPart(meta)
+		local at = meta:find(" · ", 1, true)
+		return at and meta:sub(at + #" · ") or meta
+	end
+	refs.lineA.Text = ("A(착용) %s · %s"):format(describedA.title, withoutPart(describedA.meta))
 	refs.lineA.TextColor3 = gradeColor(a.grade)
-	refs.lineB.Text = ("B(새 장비) %s · %s"):format(describedB.title, (describedB.meta:gsub("^[^·]+· ", "")))
+	refs.lineB.Text = ("B(새 장비) %s · %s"):format(describedB.title, withoutPart(describedB.meta))
 	refs.lineB.TextColor3 = gradeColor(b.grade)
 
 	local blockA = preview and preview.keepABlock or Inherit.keepABlockReason(a, b)

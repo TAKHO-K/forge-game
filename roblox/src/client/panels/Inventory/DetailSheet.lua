@@ -88,6 +88,7 @@ local dinfo = Instance.new("Frame")
 dinfo.Position = UDim2.new(0, 70, 0, 0)
 dinfo.Size = UDim2.new(1, -260, 1, 0)
 dinfo.BackgroundTransparency = 1
+dinfo.ClipsDescendants = true -- P2.5b: 버튼 묶음 밑으로 글 · 옵션 게이지가 그려지지 않게(폭은 배치 함수가 버튼 묶음 폭에서 정한다)
 dinfo.Parent = detail
 
 local dname = Instance.new("TextLabel")
@@ -99,6 +100,7 @@ dname.TextSize = Theme.textSize("body")
 dname.TextXAlignment = Enum.TextXAlignment.Left
 dname.TextColor3 = UIColors.textPrimary
 dname.Text = "선택된 아이템 없음"
+dname.TextTruncate = Enum.TextTruncate.AtEnd
 dname.Parent = dinfo
 
 local dmeta = Instance.new("TextLabel")
@@ -110,6 +112,7 @@ dmeta.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 dmeta.TextXAlignment = Enum.TextXAlignment.Left
 dmeta.TextColor3 = UIColors.textTertiary
 dmeta.Text = ""
+dmeta.TextTruncate = Enum.TextTruncate.AtEnd
 dmeta.Parent = dinfo
 
 -- 버튼 3개 묶음 - 화면 오른쪽에 붙는다.
@@ -930,7 +933,8 @@ table.insert(R.layouts, function(L)
 	sheetClose.Size = UDim2.new(0, 44, 0, 44)
 	if not phone then
 		dpic.AnchorPoint, dpic.Position, dpic.Size = Vector2.new(0, 0.5), UDim2.new(0, 0, 0.5, 0), UDim2.new(0, 56, 0, 56)
-		dinfo.Position, dinfo.Size = UDim2.new(0, 70, 0, 0), UDim2.new(1, -260, 1, 0)
+		-- P2.5b: 정보 칸 폭 = 바 폭 - (그림 70 + 버튼 묶음 + 8). 옛 고정값(-260)은 버튼 5개(354)보다 좁아 옵션 게이지가 버튼 밑으로 그려졌다([계승] · [재련]이 늘며 더 커졌다 - 스크린샷 Play).
+		dinfo.Position, dinfo.Size = UDim2.new(0, 70, 0, 0), UDim2.new(1, -(70 + groupWidth + 8), 1, 0)
 		dact.AnchorPoint, dact.Position = Vector2.new(1, 0.5), UDim2.new(1, 0, 0.5, 0)
 	elseif L.sheetWide then
 		dpic.AnchorPoint, dpic.Position, dpic.Size = Vector2.new(0, 0.5), UDim2.new(0, 0, 0.5, 0), UDim2.new(0, 48, 0, 48)
