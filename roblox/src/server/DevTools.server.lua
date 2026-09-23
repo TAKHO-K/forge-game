@@ -2438,10 +2438,11 @@ if RunService:IsStudio() and verifyEnabled("26-2") then
 		local GRADE_ORDER = { "epic", "legendary", "relic", "ancient", "primordial" }
 		-- P2.5a: 등급 배율이 ×1.45/단계(R3)로 바뀌어 영웅 ~ 고대 행은 표의 태초 행 × (그 등급 배율 ÷ 태초 배율)로 다시 계산한다(옛 표 = 웹 배율 2 · 3 · 4.5 · 8 ÷ 15).
 		-- 태초 행은 PRD 20.67 [3] 값 그대로 대조한다(정규화 기준이라 등급 배율과 무관).
+		-- P2.5c 결정 5: 옵션 등급 몫이 Option.gradeFactor(OptionData.gradeStep - 태초도 1이 아니다)로 바뀌어 모든 행 = 표의 태초 행(몫 1 기준) × 그 등급 몫.
 		for _, axisId in ipairs(AXIS_ORDER) do
 			local primordialRow = AXIS_GRADE_EXPECTED[axisId].primordial
 			for _, gradeId in ipairs(GRADE_ORDER) do
-				local share = ItemVisualData.gradeVisuals[gradeId].statMultiplier / ItemVisualData.gradeVisuals.primordial.statMultiplier
+				local share = Option.gradeFactor(gradeId)
 				local expected = { primordialRow[1] * share, primordialRow[2] * share, primordialRow[3] * share }
 				local range = Option.rangeOf(axisId, gradeId, 100, nil)
 				local minPct, midPct, maxPct = range.min * 100, range.mid * 100, range.max * 100

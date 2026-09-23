@@ -7,7 +7,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local InheritConfig = require(ReplicatedStorage.Shared.data.InheritConfig)
-local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
@@ -94,7 +93,7 @@ function P25bVerify.runPure()
 		local valueOnB = Option.valueOf(keptA.option, b.grade, b.itemLevel, "greatsword")
 		-- 값 식(Option.valueOf 주석) = 기본값 × (등급 배율 ÷ 태초 배율) × levelFactor(itemLevel) × 굴림 - B의 등급 · 레벨 · A의 굴림으로 직접 계산해 대조한다.
 		local expectedOnB = OptionData.options.attackPercent.baseValue
-			* (ItemVisualData.gradeVisuals.relic.statMultiplier / ItemVisualData.gradeVisuals.primordial.statMultiplier) * Option.levelFactor(300) * 1.1
+			* Option.gradeFactor("relic") * Option.levelFactor(300) * 1.1 -- P2.5c: 등급 몫 = Option.gradeFactor(OptionData.gradeStep)
 		r.check(("A2 A 세트: 옵션 %s · 굴림 %.3f(= A 1.100) · A에서 %.4f → B에서 %.4f(기대 %.4f = B 등급 · Lv.300으로 재계산) · B의 등급 · 레벨 그대로(%s · %d)"):format(
 			keptA.option.id, keptA.option.roll, valueOnA, valueOnB, expectedOnB, keptA.grade, keptA.itemLevel),
 			keptA.option.id == "attackPercent" and keptA.option.roll == 1.1 and near(valueOnB, expectedOnB, 1e-9) and valueOnB > valueOnA and keptA.grade == "relic" and keptA.itemLevel == 300)
