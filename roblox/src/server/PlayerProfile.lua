@@ -1705,6 +1705,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)
 	InventorySync.push(player, profile)
+	GemSync.push(player) -- P2.5b: 보석(홈 · 가방)도 되돌렸다 - 안 밀면 클라 보석 탭이 검증 도중의 마지막 스냅샷에 남는다(P25b Play 1 S20(UI) X)
 end
 
 -- 캐릭터 레벨을 경험치로 직접 지정한다(addCharacterExp와 달리 "더하기"가 아니라 "그

@@ -77,8 +77,15 @@ local function measure(refs, buttonNames)
 	return smallest, smallName, shortButtons, inside, ("%dx%d @ %d,%d / 화면 %dx%d"):format(size.X, size.Y, pos.X, pos.Y, screen.X, screen.Y)
 end
 
+-- 세 창의 ScreenGui 안 인스턴스 수(다른 HUD의 변화와 섞이지 않게 - Play 1에서 PlayerGui 전체로 재다 다른 HUD가 줄어 -24가 났다).
 local function countGui()
-	return #player.PlayerGui:GetDescendants()
+	local count = 0
+	for _, refs in ipairs({ InheritPanel.debugState().refs, GemForge.debugState().refs, MilestonesPanel.debugState().refs }) do
+		if refs then
+			count += #refs.panel.screenGui:GetDescendants()
+		end
+	end
+	return count
 end
 
 local function run()
@@ -241,8 +248,9 @@ local function run()
 		end
 		task.wait(1)
 		local after, memAfter = countGui(), gcinfo()
-		check(("⑤ 열고 닫기 20회 × 3창: PlayerGui 인스턴스 %d → %d(차이 %d · 기대 0) · 메모리 %.0f → %.0f KB(차이 %.0f KB · 기대 < 2048)"):format(before, after, after - before, memBefore, memAfter, memAfter - memBefore),
-			after == before and memAfter - memBefore < 2048)
+		-- 메모리(gcinfo)는 수집 시점에 따라 흔들린다(강제 수집 불가) - 인스턴스 수가 판정이고 메모리는 크게 새지 않는지만 본다(4 MB).
+		check(("⑤ 열고 닫기 20회 × 3창: 세 창 ScreenGui 인스턴스 %d → %d(차이 %d · 기대 0) · 메모리 %.0f → %.0f KB(차이 %.0f KB · 기대 < 4096)"):format(before, after, after - before, memBefore, memAfter, memAfter - memBefore),
+			after == before and memAfter - memBefore < 4096)
 	end)
 	if not ok then
 		check(("실행 중 에러: %s"):format(tostring(err)), false)

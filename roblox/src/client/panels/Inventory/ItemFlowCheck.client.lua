@@ -153,7 +153,8 @@ local function run()
 
 		select("bag", 1)
 		button, hint = equipButton(), hintLabel()
-		check("PC 가방 가득이어도 가방 장비 [장착]은 활성(교체라 칸 수 불변) · 이유 줄 없음", button.Text == "장착" and button.Active and not hint.Visible)
+		-- P2.5b: 같은 줄에 "착용 대비" 비교(보조색)가 나올 수 있다 - 이유(빨강)만 없으면 된다.
+		check("PC 가방 가득이어도 가방 장비 [장착]은 활성(교체라 칸 수 불변) · 이유 줄 없음", button.Text == "장착" and button.Active and not (hint.Visible and colorEq(hint.TextColor3, UIColors.danger)))
 	end
 
 	-- ③ 거절 연출: 가방 가득에서 S.unequipToBag → 요청 안 나감(false) · 이유 토스트 · 유령이 오갔다가 사라진다
