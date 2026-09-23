@@ -50,7 +50,7 @@ end
 -- 옵션(보석) 등급 몫 = OptionData.gradeStep^(등급 순서 − 1) ÷ 장비 태초 배율(ItemVisualData.gradeVisuals.primordial.statMultiplier).
 -- 옛(20.67 [3] ~ P2.5b): 장비 등급 배율 statMultiplier(1.45^(순서 − 1)) ÷ 태초 배율 - 태초 = 1.
 -- P2.5c 결정 5(사용자 확정 "보석에는 장비 등급 배율 ×1.45를 일부만 적용"): 일반 등급의 기준점(1 ÷ 태초 배율)은 그대로 두고 등급당 배율만 gradeStep(< 1.45)로 -
--- 모든 등급이 옛 값 이하이고 높은 등급일수록 더 줄어든다(태초 = (gradeStep ÷ 1.45)^6). 서버 판정 · 클라 표시 · 시뮬 · 가루 표가 모두 이 함수 하나를 본다.
+-- 모든 등급이 옛 값 이하이고 높은 등급일수록 더 줄어든다(태초 = (gradeStep ÷ 1.45)^6). 서버 판정 · 클라 표시 · 시뮬이 모두 이 함수 하나를 본다(Option.valueOf).
 function Option.gradeFactor(gradeId)
 	local index = gradeIndex(gradeId)
 	if not index then
