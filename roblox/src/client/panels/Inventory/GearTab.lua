@@ -253,7 +253,7 @@ local function refreshStats()
 	local weapon = { id = WeaponData.starterId, level = weaponLevel, grade = weaponGrade }
 	-- 16-6: 장갑 공격력% 보너스가 공격력 계산에 들어간다 - 서버(AttackServer)와 같은
 	-- PlayerCombat.getAttack 4번째 인자를 그대로 쓴다.
-	local attack = PlayerCombat.getAttack(weapon, classId, characterLevel, Loot.getGlovesAttackPercent(S.equippedGloves))
+	local attack = PlayerCombat.getAttack(weapon, classId, characterLevel, Loot.getGlovesAttackPercent(S.equippedGloves), nil, player:GetAttribute("MilestoneMultiplier") or 1) -- P2.5b D: 마일스톤 영구 배율(서버가 Attribute로 내린다)
 	local defense = PlayerCombat.getDefense(classId, Loot.getArmorDefense(S.equippedArmor))
 
 	atkValueLabel.Text = NumberFormat.format(attack)

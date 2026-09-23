@@ -107,7 +107,9 @@ end
 -- getAttackPercentBonus/getSpeedPercentBonus/getDefensePercentBonus/refreshMaxHp가 실제
 -- 전투 경로에서 장갑·신발·갑옷 보너스에 더하는 자리에 똑같이 더한다(단일 계산 경로 -
 -- 여기서 새 공식을 만들지 않고 PlayerProfile과 같은 지점에 합류시킨다).
-local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems)
+-- permanentMultiplier · permanentHpMultiplier(P2.5b D - 선택, 기본 1) = 환생 후 레벨 마일스톤 영구 배율 - 게임과 같이 공격력(PlayerCombat.getAttack) · 최대체력에 곱한다
+-- (최대체력 몫은 MilestoneData.survival일 때만 1이 아니다 - 호출부가 Milestone.maxHpMultiplier로 넘긴다).
+local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems, permanentMultiplier, permanentHpMultiplier)
 	local class = ClassData.classes[classId]
 	assert(class, "알 수 없는 classId: " .. tostring(classId))
 
@@ -122,9 +124,9 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 		classId = classId,
 		level = level,
 		class = class,
-		atk = PlayerCombat.getAttack(weapon, classId, level, attackPercentBonus),
+		atk = PlayerCombat.getAttack(weapon, classId, level, attackPercentBonus, nil, permanentMultiplier),
 		defense = PlayerCombat.getDefense(classId, armorBonus, gemBonus.defensePercent),
-		maxHp = (CombatConfig.playerMaxHp + maxHpBonus) * (1 + gemBonus.maxHpPercent),
+		maxHp = (CombatConfig.playerMaxHp + maxHpBonus) * (1 + gemBonus.maxHpPercent) * (permanentHpMultiplier or 1),
 		speedPercentBonus = speedPercentBonus,
 		weaponLevel = weapon.level, -- P2.5a: 딜링모드 투자 기울기(PlayerCombat.getInvestmentScale)가 읽는다
 		attackPercentBonus = attackPercentBonus,
@@ -150,7 +152,7 @@ function BalanceSim.buildLoadout(spec)
 	return buildLoadoutCore(
 		spec.classId, spec.level, spec.weaponLevel, spec.weaponGrade,
 		buildItem("armor", gear.armor), buildItem("gloves", gear.gloves), buildItem("shoes", gear.shoes),
-		spec.gems
+		spec.gems, spec.permanentMultiplier, spec.permanentHpMultiplier
 	)
 end
 

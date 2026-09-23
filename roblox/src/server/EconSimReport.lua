@@ -19,6 +19,13 @@ local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLeve
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+-- P2.5b: 마일스톤 · 계승 · 재련 · 가루(보고 ⑤ 마일스톤 칸 · P2.5b 절).
+local Milestone = require(ReplicatedStorage.Shared.Milestone)
+local MilestoneData = require(ReplicatedStorage.Shared.data.MilestoneData)
+local Inherit = require(ReplicatedStorage.Shared.Inherit)
+local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local EconSim = require(script.Parent.EconSim)
 local EconSimTables = require(script.Parent.EconSimTables)
 
@@ -575,7 +582,7 @@ end
 
 -- ⑤ 스테이지 환산 표(E): 구간 시작 → 끝(그 구간에 처음 · 마지막으로 선 청크)에서 출처별 배율 변화를 스테이지로 옮긴다(ln(끝 ÷ 시작) ÷ ln k).
 --   필요 = 최고 스테이지 변화(몬스터가 그만큼 k배씩 세졌다). 공격 쪽 출처 = 레벨(무기 계수) · 무기 등급(환생 보상) · 강화 · 보석 · 장갑. 생존 쪽 = 방어구(방어력).
---   마일스톤 = P2.5b(아직 0). 공격 격차 = 공격 합 − 필요: 음수면 막힘(처치 시간이 늘어난 몫), 양수면 건너뛰기 여력(더 높은 스테이지를 잡을 수 있는 몫).
+--   마일스톤 = P2.5b D(환생 후 레벨 마일스톤 - 1회 = MilestoneData.statStagesPerMilestone스테이지, 공격 · 최대체력 둘 다). 공격 격차 = 공격 합 − 필요: 음수면 막힘(처치 시간이 늘어난 몫), 양수면 건너뛰기 여력(더 높은 스테이지를 잡을 수 있는 몫).
 local function writeStageTable(w, runs, profileIds)
 	local k = InfiniteStageConfig.growthRate
 	local function st(ratio)
@@ -605,14 +612,17 @@ local function writeStageTable(w, runs, profileIds)
 				local enhance = st(Enhance.getTotalMultiplier(last.weaponLevel) / Enhance.getTotalMultiplier(first.weaponLevel))
 				local gems = st((1 + last.gemAttackBonus) / (1 + first.gemAttackBonus))
 				local gloves = st((1 + last.glovesAttack) / (1 + first.glovesAttack))
-				local attack = level + grade + enhance + gems + gloves
+				local milestone = st(Milestone.multiplier(last.milestoneCount or 0) / Milestone.multiplier(first.milestoneCount or 0))
+				local attack = level + grade + enhance + gems + gloves + milestone
+				-- 생존 쪽은 마일스톤이 최대 체력에도 붙을 때(MilestoneData.survival)만 그 몫을 더한다.
 				local armor = st((CombatConfig.playerDefense + last.armorDefense) / (CombatConfig.playerDefense + first.armorDefense))
+					+ st(Milestone.maxHpMultiplier(last.milestoneCount or 0) / Milestone.maxHpMultiplier(first.milestoneCount or 0))
 				local gap = attack - required
 				local block = required > 0 and math.max(0, -gap) / required or 0
 				local skip = required > 0 and math.max(0, gap) / required or 0
-				w.line(("| %s · %s | %s | %s | %s | %s | %s | %s | 0 | %s | %s | %s · %s |"):format(EconSimConfig.profiles[id].displayName, segment.label, num(required, 0), num(level, 0), num(grade, 0), num(enhance, 0),
-					num(gems, 0), num(gloves, 0), num(attack, 0), num(armor, 0), num(block, 2), num(skip, 2)))
-				w.row("p25_stage", { id, segment.label, required, level, grade, enhance, gems, gloves, 0, attack, armor, block, skip })
+				w.line(("| %s · %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s · %s |"):format(EconSimConfig.profiles[id].displayName, segment.label, num(required, 0), num(level, 0), num(grade, 0), num(enhance, 0),
+					num(gems, 0), num(gloves, 0), num(milestone, 0), num(attack, 0), num(armor, 0), num(block, 2), num(skip, 2)))
+				w.row("p25_stage", { id, segment.label, required, level, grade, enhance, gems, gloves, milestone, attack, armor, block, skip })
 			end
 		end
 	end
@@ -627,6 +637,117 @@ local function writeP25(w, runs, profileIds)
 	writePower(w, runs, profileIds)
 	writeSupplyAndGems(w, runs, profileIds)
 	writeStageTable(w, runs, profileIds)
+end
+
+-- ═══ P2.5b 지표(docs/phase/P25b-report.md) ═══
+-- ① 환생 후 레벨 마일스톤 누적(D3): 그 스테이지에 처음 선 청크의 능력치 마일스톤 횟수 · 스테이지 환산 · 배율 + 해금 k번째(환생 뒤 Lv.100k)에 처음 닿은 누적 시간.
+local function writeMilestones(w, runs, profileIds)
+	local cfg = EconSimConfig.p25b
+	local stages = table.clone(cfg.milestoneStages)
+	table.insert(stages, InfiniteStageConfig.designMaxStage)
+	w.line("## P2.5b ① 환생 후 레벨 마일스톤 누적(D3)")
+	w.line("")
+	w.line(("1회 = 스테이지 %s칸(공격력%s ×%s) · 회차마다 레벨 %d의 배수 · 칸 = 그 스테이지에 처음 섰을 때 누적 횟수 · 스테이지 환산(배율)."):format(
+		num(MilestoneData.statStagesPerMilestone, 1), MilestoneData.survival and " · 최대 체력" or "", num(Milestone.multiplier(1), 4), MilestoneData.statInterval))
+	w.line("")
+	local header = { "| 프로필 |" }
+	for _, stage in ipairs(stages) do
+		table.insert(header, (" %d%s |"):format(stage, stage == InfiniteStageConfig.designMaxStage and "(설계 최대)" or ""))
+	end
+	w.line(table.concat(header))
+	w.line("|" .. string.rep("---|", #stages + 1))
+	w.row("p25b_milestone", { "profile", "stage", "count", "stage_equivalent", "multiplier" })
+	for _, id in ipairs(profileIds) do
+		local cells = { ("| %s |"):format(EconSimConfig.profiles[id].displayName) }
+		for _, stage in ipairs(stages) do
+			local chunk = firstChunkAt(runs[id], stage)
+			if chunk then
+				local count = chunk.milestoneCount or 0
+				table.insert(cells, (" %d회 · +%s칸 · ×%s |"):format(count, num(Milestone.stageEquivalent(count), 0), num(Milestone.multiplier(count), 3)))
+				w.row("p25b_milestone", { id, stage, count, Milestone.stageEquivalent(count), Milestone.multiplier(count) })
+			else
+				table.insert(cells, " [없음] |")
+			end
+		end
+		w.line(table.concat(cells))
+	end
+	w.line("")
+	w.line("해금(계정 공유 · 환생 뒤 레벨 100 · 200 · …)에 처음 닿은 누적 플레이 시간:")
+	w.line("")
+	local unlockHeader = { "| 프로필 |" }
+	for index, entry in ipairs(MilestoneData.unlocks) do
+		table.insert(unlockHeader, (" Lv.%d %s |"):format(Milestone.unlockLevel(index), entry.name))
+	end
+	w.line(table.concat(unlockHeader))
+	w.line("|" .. string.rep("---|", #MilestoneData.unlocks + 1))
+	for _, id in ipairs(profileIds) do
+		local cells = { ("| %s |"):format(EconSimConfig.profiles[id].displayName) }
+		local at = {}
+		eachChunk(runs[id], function(chunk, _, t)
+			if chunk.rebirth >= 1 then
+				local count = Milestone.unlockCountFor(chunk.levelAfter)
+				for index = 1, count do
+					at[index] = at[index] or t
+				end
+			end
+		end)
+		for index = 1, #MilestoneData.unlocks do
+			table.insert(cells, at[index] and (" %s시간 |"):format(num(at[index] / 3600, 1)) or " [없음] |")
+		end
+		w.line(table.concat(cells))
+	end
+	w.line("")
+end
+
+-- ② 계승 · 재련 · 변환권 비용 흐름: 스테이지마다 비용(골드 · 가루)과 "기준 프로필이 그 스테이지에 처음 섰을 때 몇 분 수입인가".
+local function writeCraftCosts(w, runs, profileIds)
+	local cfg = EconSimConfig.p25b
+	local incomeRun = runs[cfg.incomeProfile] or runs[profileIds[1]]
+	local incomeName = EconSimConfig.profiles[cfg.incomeProfile] and EconSimConfig.profiles[cfg.incomeProfile].displayName or cfg.incomeProfile
+	w.line("## P2.5b ② 계승 · 재련 · 변환권 비용 흐름")
+	w.line("")
+	w.line(("골드 비용 = GoldCost(계정 최고 스테이지) · 괄호 = %s 프로필이 그 스테이지에 처음 섰을 때의 골드/분(사냥 + 보스)으로 나눈 분. 가루 = 보석 분해 1개당(레벨 = 그 스테이지)."):format(incomeName))
+	w.line("")
+	w.line("| 스테이지 | 골드/분 | 계승(영웅 · 유물 · 태초) | 재련 골드 + 가루(영웅 · 유물 · 태초) | 변환권 골드 + 가루(고대 · 태초) | 분해 가루/개(영웅 · 유물 · 태초) |")
+	w.line("|---|---|---|---|---|---|")
+	w.row("p25b_cost", { "stage", "gold_per_min", "inherit_epic", "inherit_relic", "inherit_primordial", "refine_epic", "refine_relic", "refine_primordial", "ticket_gold" })
+	for _, stage in ipairs(cfg.costStages) do
+		local chunk = incomeRun and firstChunkAt(incomeRun, stage)
+		local perMinute = chunk and (chunk.gold + chunk.bossGold) / math.max(1e-9, (chunk.seconds + chunk.bossSeconds) / 60) or nil
+		local function minutes(gold)
+			return perMinute and ("%s분"):format(num(gold / perMinute, 1)) or "-"
+		end
+		local inherit, refine, dust = {}, {}, {}
+		local rowValues = { stage, perMinute or 0 }
+		for _, gradeId in ipairs({ "epic", "relic", "primordial" }) do
+			local cost = Inherit.cost(gradeId, stage, 0)
+			table.insert(inherit, ("%s(%s)"):format(num(cost, 0), minutes(cost)))
+			table.insert(rowValues, cost)
+		end
+		for _, gradeId in ipairs({ "epic", "relic", "primordial" }) do
+			local gold, dustCost = GemCraft.refineCost(gradeId, stage)
+			table.insert(refine, ("%s + %d(%s)"):format(num(gold, 0), dustCost, minutes(gold)))
+			table.insert(dust, tostring(GemCraft.dustYield({ grade = gradeId, itemLevel = stage })))
+			table.insert(rowValues, gold)
+		end
+		local ticketGold = GoldCost.cost(MonsterData.tier1.goldDrop, stage, "rerollTicket") * GemData.rerollTicketGoldMultiplier
+		table.insert(rowValues, ticketGold)
+		w.line(("| %d | %s | %s | %s | %s + %d · %s + %d | %s |"):format(stage, perMinute and num(perMinute, 0) or "-", table.concat(inherit, " · "), table.concat(refine, " · "),
+			num(ticketGold, 0), GemCraft.ticketDust("ancient"), num(ticketGold, 0), GemCraft.ticketDust("primordial"), table.concat(dust, " · ")))
+		w.row("p25b_cost", rowValues)
+	end
+	w.line("")
+	w.line(("가루 환산: 재련 가루(영웅 %d · 유물 %d · 태초 %d) ÷ 같은 등급 분해 가루(레벨 100 기준 %d · %d · %d) = 보석 %s · %s · %s개 몫. 변환권 가루(고대 %d · 태초 %d)."):format(
+		GemData.dust.refineDust.epic, GemData.dust.refineDust.relic, GemData.dust.refineDust.primordial,
+		GemData.dust.dustYield.epic, GemData.dust.dustYield.relic, GemData.dust.dustYield.primordial,
+		num(GemData.dust.refineDust.epic / GemData.dust.dustYield.epic, 1), num(GemData.dust.refineDust.relic / GemData.dust.dustYield.relic, 1), num(GemData.dust.refineDust.primordial / GemData.dust.dustYield.primordial, 1),
+		GemData.dust.ticketDust.ancient, GemData.dust.ticketDust.primordial))
+	w.line("")
+end
+
+local function writeP25b(w, runs, profileIds)
+	writeMilestones(w, runs, profileIds)
+	writeCraftCosts(w, runs, profileIds)
 end
 
 -- opts = { profileArg = "all" | 프로필 id, whatIfName = 이름(기본 baseline) }. 반환: 요약 문자열, 결과 표(검증 블록이 읽는다).
@@ -689,7 +810,8 @@ function EconSimReport.run(opts)
 	writeE5(w, primordial)
 	writeE6(w, healer)
 	writeSamples(w, samples)
-	writeP25(w, runs, profileIds)
+	EconSim.withOverrides(whatIf, writeP25, w, runs, profileIds) -- P2.5b: 마일스톤 칸도 what-if(milestoneStages · milestoneSurvival)를 따른다
+	EconSim.withOverrides(whatIf, writeP25b, w, runs, profileIds)
 	w.flush(("run=%s whatif=%s profiles=%s"):format(runId, whatIfName, profileArg))
 
 	-- 채팅 요약

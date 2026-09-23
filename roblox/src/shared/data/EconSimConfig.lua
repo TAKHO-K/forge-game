@@ -121,6 +121,13 @@ return {
 		gemStages = { 125, 500, 1000, 2000, 5000, 10000, 20000 },
 	},
 
+	-- P2.5b 지표 절(EconSimReport.writeP25b): 마일스톤 누적을 볼 스테이지(마지막에 설계 최대를 붙인다) · 계승 · 재련 · 변환권 비용을 볼 스테이지 · 골드 수입 기준 프로필.
+	p25b = {
+		milestoneStages = { 500, 1000, 5000, 10000, 20000 },
+		costStages = { 100, 1000, 5000, 20000 },
+		incomeProfile = "normal",
+	},
+
 	-- E7 what-if 덮어쓰기. 이름 = /gg econ의 둘째 인자. 빈 표 = 기준선. 모든 칸은 선택:
 	--   growthRate          InfiniteStageConfig.growthRate(몬스터 · 보상 · 아이템 계수 성장 k)
 	--   weaponGrowthRate    CharacterLevelConfig.weaponMultGrowthRate(g)
@@ -128,11 +135,14 @@ return {
 	--   enhanceCostScale    EnhanceConfig.goldCost 전체에 곱하는 배율
 	--   (P2) rebirthRequiredLevels  CharacterLevelConfig.rebirth.requiredLevels · optionLevelLogSlope  OptionData.levelLogSlope · enhanceGoldAnchor  GoldCostConfig.anchorStage.enhance
 	--   (P2) primordialDragonOverTier  DropTableData.primordial.dragonOverTier · primordialDecayPerLevel  levelDecay.perLevel · healerAtk  ClassData.healer.atk · dealingAttackMultiplier  SkillData.healer.E.attackMultiplier(절대값)
+	--   (P2.5b) milestoneStages  MilestoneData.statStagesPerMilestone(마일스톤 1회의 스테이지 환산 - 0이면 끔) · milestoneSurvival  MilestoneData.survival(최대 체력에도 줄까)
 	--   (P2.5a: p2before · compare는 없앴다 - k · 강화식 · 경험치 척도가 바뀌어 "P2 전 값만 되돌리기"가 옛 게임을 재현하지 못한다. 전후 비교 = docs/econ/P25a-before.md(옛 코드) 대조)
 	whatIfs = {
 		baseline = {},
 		g10195 = { weaponGrowthRate = 1.0195 }, -- P2.5a: 주 구간 g를 k 아래로(천장이 앞당겨지는 민감도)
 		dealing087 = { dealingMultiplier = 0.87 },
 		enhanceHalf = { enhanceCostScale = 0.5 },
+		noMilestone = { milestoneStages = 0 }, -- P2.5b D3: 환생 후 레벨 마일스톤을 끈 곡선(영향 비교 - MilestoneData.statStagesPerMilestone = 0)
+		milestoneSurvival = { milestoneSurvival = true }, -- P2.5b D3: 마일스톤을 최대 체력에도 줄 때(결정 필요 - 생존 사다리를 건너뛰는 곡선)
 	},
 }

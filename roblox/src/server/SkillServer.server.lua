@@ -502,7 +502,7 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 	end
 
 	local characterLevel = PlayerProfile.getCharacterLevel(player)
-	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage")) -- P2.5a R5: 최종 데미지 버킷
+	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player)) -- P2.5a R5: 최종 데미지 버킷 · P2.5b D: 마일스톤 영구 배율
 	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage를 쓴다.
 	local attackerStage = TutorialState.getMonsterStage(player)
 

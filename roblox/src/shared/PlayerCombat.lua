@@ -58,13 +58,14 @@ function PlayerCombat.getFinalDamageBonus(weaponLevel, optionBonus)
 end
 
 -- optionFinalDamageBonus(P2.5a) = 옵션 · 보석이 최종 데미지 버킷에 더하는 값(없으면 0). 강화 몫은 weapon.level에서 여기서 더한다.
-function PlayerCombat.getAttack(weapon, classId, characterLevel, attackPercentBonus, optionFinalDamageBonus)
+-- permanentMultiplier(P2.5b D) = 환생 후 레벨 마일스톤 영구 능력치 배율(없으면 1 - PlayerProfile.getMilestoneMultiplier). 공격력 전체에 곱한다.
+function PlayerCombat.getAttack(weapon, classId, characterLevel, attackPercentBonus, optionFinalDamageBonus, permanentMultiplier)
 	local class = ClassData.classes[classId]
 	local weaponData = WeaponData.weapons[weapon.id]
 	local gradeMultiplier = gradeMultiplierForIndex(weapon.grade)
 	local base = Enhance.getPlayerAttack(weaponData, weapon.level, class.atk, gradeMultiplier)
 	local attack = base * CharacterLevel.getWeaponExpMultiplier(characterLevel) * (1 + (attackPercentBonus or 0))
-		* (1 + PlayerCombat.getFinalDamageBonus(weapon.level, optionFinalDamageBonus))
+		* (1 + PlayerCombat.getFinalDamageBonus(weapon.level, optionFinalDamageBonus)) * (permanentMultiplier or 1)
 	return Sanitize.number(attack, 0) -- S21-0 A2: 스탯 합산 출구(고스테이지 double 붕괴 - PRD 감사 §1-2)
 end
 

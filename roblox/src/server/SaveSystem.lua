@@ -86,6 +86,10 @@ local function defaultClassState()
 		-- 쌓이지 않는다 - "임의 결정" 목록 참고).
 		gemInventory = {},
 
+		-- 환생 후 레벨 마일스톤(P2.5b D, v32) - { [tostring(환생 회차)] = 그 회차에서 받은 마지막 능력치 마일스톤 레벨(50의 배수) }. 직업별(레벨 · 환생이 직업별이다).
+		-- 키는 문자열이다(DataStore 왕복이 숫자 키를 문자열로 바꾼다 - v28과 같은 이유). 규칙 = shared/Milestone.lua.
+		milestones = {},
+
 		-- ⚠ 29-5부터 **아무도 읽지 않는다**: 보스의 정체는 스테이지 번호만의 함수가 됐다(BossRules.bossIdForStage, PRD 20.80 [A]).
 		-- 필드는 지우지 않는다 - 옛 세이브가 검증(아래 type 검사)·이관을 그대로 통과하고, 되돌릴 일이 생겨도 데이터가 남아 있다.
 		-- 아래는 23-5 당시의 뜻이다.
@@ -229,6 +233,9 @@ local function defaultProfile()
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
 		gemDust = 0,
+
+		-- 환생 후 해금 마일스톤 받은 개수(P2.5b D, v32) - 계정 공유(가방 칸 · 계승 할인 같은 계정 효과). MilestoneData.unlocks의 앞에서부터 이 개수만큼 열렸다.
+		milestoneUnlocks = 0,
 	}
 end
 
@@ -303,7 +310,7 @@ end
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
 -- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
 -- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
--- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11) -> 30(안내 플래그 hints, S20e) -> 31(보석 가루 gemDust 신설 - 0, P2.5b C).
+-- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11) -> 30(안내 플래그 hints, S20e) -> 31(보석 가루 gemDust 신설 - 0, P2.5b C) -> 32(환생 후 마일스톤 milestones · milestoneUnlocks 신설 - 빈 표 · 0, P2.5b D).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -810,6 +817,15 @@ local function migrate(data)
 		data.version = 31
 	end
 
+	if data.version < 32 then
+		-- P2.5b D: 환생 후 마일스톤 기록 신설. 빈 표 · 0에서 시작한다 - 지금 회차의 지금 레벨까지는 PlayerProfile.init이 접속 때 채운다(지난 회차의 최고 레벨은 저장된 적이 없어 소급하지 않는다).
+		for _, classState in pairs(data.classes) do
+			classState.milestones = classState.milestones or {}
+		end
+		data.milestoneUnlocks = data.milestoneUnlocks or 0
+		data.version = 32
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -850,6 +866,7 @@ local function isValidProfile(data)
 		or type(data.hints) ~= "table"
 		or (data.hints.gemMerchantUsed ~= nil and type(data.hints.gemMerchantUsed) ~= "boolean")
 		or type(data.gemDust) ~= "number" or data.gemDust % 1 ~= 0 or data.gemDust < 0
+		or type(data.milestoneUnlocks) ~= "number" or data.milestoneUnlocks % 1 ~= 0 or data.milestoneUnlocks < 0
 	then
 		return false
 	end
@@ -901,8 +918,15 @@ local function isValidProfile(data)
 			or type(classState.rebirthCount) ~= "number"
 			or type(classState.gemInventory) ~= "table"
 			or type(classState.bossRotation) ~= "table"
+			or type(classState.milestones) ~= "table"
 		then
 			return false
+		end
+		-- 마일스톤 기록(v32): 키 = 문자열 회차 · 값 = 0 이상 정수.
+		for key, claimed in pairs(classState.milestones) do
+			if type(key) ~= "string" or type(claimed) ~= "number" or claimed % 1 ~= 0 or claimed < 0 then
+				return false
+			end
 		end
 
 		for _, part in ipairs({ "armor", "gloves", "shoes" }) do

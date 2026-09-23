@@ -455,6 +455,22 @@ resultRemote.OnClientEvent:Connect(function(success, reason)
 	end
 end)
 
+-- 점검용(P25b(UI) 자체 점검 · 스크린샷): 서버에 묻지 않고 합성 미리보기로 연다. 판정 · 요청 경로는 그대로(계승 버튼은 실제 요청을 보낸다 - 점검은 누르지 않는다).
+function InheritPanel.debugOpen(part, bagIndex, a, b, fakePreview, keepChoice)
+	if not built then
+		build()
+	end
+	target = { part = part, bagIndex = bagIndex, a = a, b = b }
+	preview = fakePreview
+	keep = keepChoice or "b"
+	pendingSince = nil
+	if not UIManager.isOpen(InheritPanel.id) and not UIManager.open(InheritPanel.id) then
+		return false
+	end
+	InheritPanel.render()
+	return true
+end
+
 -- 점검용: 지금 상태(열림 · 선택 세트 · 미리보기 유무 · 계승 버튼 활성).
 function InheritPanel.debugState()
 	return {

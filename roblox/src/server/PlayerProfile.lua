@@ -32,6 +32,10 @@ local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
 -- P2.5b C · B: 보석 분해(가루) · 재련 규칙.
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
+-- P2.5b D: 환생 후 레벨 마일스톤(영구 능력치 · 해금).
+local Milestone = require(ReplicatedStorage.Shared.Milestone)
+local MilestoneData = require(ReplicatedStorage.Shared.data.MilestoneData)
+local MilestoneNotice = require(script.Parent.MilestoneNotice)
 
 local PlayerProfile = {}
 
@@ -124,12 +128,22 @@ local function syncAccountBestStage(player, profile)
 	player:SetAttribute("AccountBestStage", accountBestStageOf(profile))
 end
 
+-- P2.5b D: 마일스톤 Attribute - MilestoneUnlockCount(계정) · MilestoneStatCount · MilestoneMultiplier(활성 직업 공격력 배율 - 가방 창 공격력 표시 · 성장 보상 창이 읽는다).
+local function syncMilestoneAttributes(player, profile)
+	player:SetAttribute("MilestoneUnlockCount", profile.milestoneUnlocks)
+	local classState = activeClassState(profile)
+	local count = classState and Milestone.statCount(classState.milestones) or 0
+	player:SetAttribute("MilestoneStatCount", count)
+	player:SetAttribute("MilestoneMultiplier", Milestone.multiplier(count))
+end
+
 -- 로드 직후(PlayerProfile.init)와 직업 전환 직후(setClassId) 둘 다 "지금 활성 직업의
 -- 상태를 Attribute에 그대로 반영"해야 하므로 공유한다. classId가 nil이면(아직 선택 전)
 -- 직업별 Attribute는 건드리지 않는다 - ClassSelectUI가 빈 문자열로 이미 선택 UI를 띄운다.
 local function syncActiveClassAttributes(player, profile)
 	player:SetAttribute("ClassId", profile.classId or "")
 	syncAccountBestStage(player, profile)
+	syncMilestoneAttributes(player, profile)
 
 	local classState = activeClassState(profile)
 	if not classState then
@@ -200,6 +214,7 @@ function PlayerProfile.init(player, profile)
 	end
 	player:SetAttribute("TutorialStep", profile.tutorial.step)
 	player:SetAttribute("TutorialCompleted", profile.tutorial.completed)
+	PlayerProfile.claimMilestones(player, false) -- P2.5b D: 지금 회차의 지금 레벨까지 기록을 채운다(v32 이관 전 계정 · 알림 없음)
 	syncActiveClassAttributes(player, profile)
 end
 
@@ -407,8 +422,92 @@ function PlayerProfile.addCharacterExp(player, amount)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then
 		player:SetAttribute("CharacterLevel", newLevel)
+		PlayerProfile.claimMilestones(player, true) -- P2.5b D: 50 · 100 레벨 배수를 넘었으면 보상 + 토스트
 	end
 	return oldLevel, newLevel
+end
+
+-- ═══ 환생 후 레벨 마일스톤(P2.5b D) ═══
+-- 영구 능력치 배율(공격력) - 활성 직업이 모든 회차에서 받은 능력치 마일스톤 횟수에서 나온다(Milestone.multiplier).
+function PlayerProfile.getMilestoneMultiplier(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return 1
+	end
+	return Milestone.multiplier(Milestone.statCount(classState.milestones))
+end
+
+-- 최대 체력 배율(MilestoneData.survival이 꺼져 있으면 1 - Milestone.maxHpMultiplier).
+function PlayerProfile.getMilestoneMaxHpMultiplier(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return 1
+	end
+	return Milestone.maxHpMultiplier(Milestone.statCount(classState.milestones))
+end
+
+-- 해금 효과를 그 순간 적용한다(계정 효과 - 한 번만). 예약(reserved) 해금은 기록만 남는다.
+local function applyMilestoneUnlock(player, profile, entry)
+	if entry.bagSlots then
+		profile.inventorySlots += entry.bagSlots
+		InventorySync.push(player, profile)
+	end
+end
+
+-- 활성 직업의 지금 레벨로 마일스톤 기록을 갱신하고 새로 받은 보상을 적용한다(Milestone.plan). notify = 토스트용 알림을 보낸다.
+-- 부르는 곳: 레벨이 바뀔 때(addCharacterExp · setCharacterExpDirect) · 로드(init) · 직업 전환(setClassId). 반환: 알림 표 | nil(새로 받은 것 없음).
+function PlayerProfile.claimMilestones(player, notify)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return nil
+	end
+	classState.milestones = classState.milestones or {}
+	local level = CharacterLevel.getLevelFromExp(classState.characterExp)
+	local plan = Milestone.plan(classState.rebirthCount, level, classState.milestones, profile.milestoneUnlocks)
+	if not plan or (plan.statGained <= 0 and plan.unlockTo < plan.unlockFrom) then
+		return nil
+	end
+	if plan.statGained > 0 then
+		classState.milestones[plan.cycleKey] = plan.claimedLevel
+	end
+	local unlocked = {}
+	for index = plan.unlockFrom, plan.unlockTo do
+		local entry = MilestoneData.unlocks[index]
+		applyMilestoneUnlock(player, profile, entry)
+		table.insert(unlocked, { index = index, id = entry.id, name = entry.name, level = Milestone.unlockLevel(index), reserved = entry.reserved == true })
+	end
+	profile.milestoneUnlocks = math.max(profile.milestoneUnlocks, plan.unlockTo)
+	syncMilestoneAttributes(player, profile)
+	if plan.statGained > 0 then
+		PlayerProfile.refreshMaxHp(player)
+	end
+	local count = Milestone.statCount(classState.milestones)
+	local payload = { level = level, statGained = plan.statGained, statCount = count, multiplier = Milestone.multiplier(count), unlocks = unlocked }
+	if notify then
+		MilestoneNotice.push(player, payload)
+	end
+	return payload
+end
+
+-- 성장 보상 창(MilestoneFetch)이 그리는 값. 직업을 안 골랐으면 빈 요약.
+function PlayerProfile.getMilestoneSummary(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return { rebirthCount = 0, level = 1, cycles = {}, statCount = 0, multiplier = 1, unlockCount = profile and profile.milestoneUnlocks or 0 }
+	end
+	local count = Milestone.statCount(classState.milestones)
+	return {
+		rebirthCount = classState.rebirthCount,
+		level = CharacterLevel.getLevelFromExp(classState.characterExp),
+		cycles = classState.milestones,
+		statCount = count,
+		multiplier = Milestone.multiplier(count),
+		unlockCount = profile.milestoneUnlocks,
+	}
 end
 
 function PlayerProfile.getWeapon(player)
@@ -470,6 +569,7 @@ function PlayerProfile.setClassId(player, classId)
 		return
 	end
 	profile.classId = classId
+	PlayerProfile.claimMilestones(player, false) -- P2.5b D: 그 직업의 지금 회차 기록을 채운다(알림 없음)
 	syncActiveClassAttributes(player, profile)
 	InventorySync.push(player, profile)
 end
@@ -1132,7 +1232,7 @@ end
 local function computeMaxHp(player)
 	local bonus = Loot.getMaxHpBonus(PlayerProfile.getEquipped(player, "armor"))
 	local optionMaxHpPercent = PlayerProfile.getOptionBonus(player, "maxHpPercent")
-	return (CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent)
+	return (CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent) * PlayerProfile.getMilestoneMaxHpMultiplier(player) -- P2.5b D: 마일스톤(MilestoneData.survival일 때만 - 기본 1)
 end
 
 function PlayerProfile.refreshMaxHp(player)
@@ -1284,7 +1384,7 @@ function PlayerProfile.getStatSummary(player)
 	local level = CharacterLevel.getLevelFromExp(classState.characterExp)
 	local critRate, critDmg = PlayerProfile.getCritBonus(player)
 	return {
-		attack = PlayerCombat.getAttack(classState.weapon, profile.classId, level, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage")),
+		attack = PlayerCombat.getAttack(classState.weapon, profile.classId, level, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player)),
 		defense = PlayerCombat.getDefense(profile.classId, Loot.getArmorDefense(classState.equipment.armor), PlayerProfile.getDefensePercentBonus(player)),
 		maxHp = computeMaxHp(player),
 		speedPercent = PlayerProfile.getSpeedPercentBonus(player),
@@ -1293,9 +1393,11 @@ function PlayerProfile.getStatSummary(player)
 	}
 end
 
--- 계승 비용(골드) - 서버 차감과 미리보기가 같은 값. 기준 = 계정 최고 스테이지(변환권과 같은 규칙).
+-- 계승 비용(골드) - 서버 차감과 미리보기가 같은 값. 기준 = 계정 최고 스테이지(변환권과 같은 규칙) · 마일스톤 해금 "계승 비용 할인"(P2.5b D).
 function PlayerProfile.getInheritCost(player, bGradeId)
-	return Inherit.cost(bGradeId, PlayerProfile.getAccountBestStage(player), 0)
+	local profile = profiles[player]
+	local discount = profile and Milestone.inheritDiscount(profile.milestoneUnlocks) or 0
+	return Inherit.cost(bGradeId, PlayerProfile.getAccountBestStage(player), discount)
 end
 
 -- 계승 미리보기(A6): { cost, gold, keepABlock, refund = { a, b }, stats = { current, a, b } }. a · b = 그 세트를 남겼을 때 계승 뒤 능력치(A 세트를 못 고르면 a = nil).
@@ -1564,6 +1666,8 @@ function PlayerProfile.snapshotForDevTools(player)
 		protectionTickets = deepCopy(profile.purchases.protectionTickets),
 		protectionClaimedStages = deepCopy(profile.purchases.protectionClaimedStages),
 		bossCodex = deepCopy(profile.purchases.bossCodex), -- 30-0 S11: 보스 처치가 도감 도장을 실제 프로필에 찍는다 - 같은 이유로 되돌린다.
+		milestoneUnlocks = profile.milestoneUnlocks, -- P2.5b D: 마일스톤 검증이 해금 개수 · 가방 칸 수를 바꾼다 - 같은 이유로 되돌린다.
+		inventorySlots = profile.inventorySlots,
 		gemDust = profile.gemDust, -- P2.5b C: 보석 분해 · 재련 · 변환권 구매 검증이 가루를 바꾼다 - 같은 이유로 되돌린다.
 		hints = deepCopy(profile.hints), -- 30-0 S20e: 수동 Play에서 보석상인을 쓰면 안내 플래그가 켜지고 Play 종료 때 실제 프로필에 저장됐다(S20e 실측) - 같은 이유로 되돌린다.
 	}
@@ -1595,6 +1699,8 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	player:SetAttribute("GemMerchantUsed", profile.hints.gemMerchantUsed == true)
 	profile.gemDust = snapshot.gemDust or profile.gemDust
 	player:SetAttribute("GemDust", profile.gemDust)
+	profile.milestoneUnlocks = snapshot.milestoneUnlocks or profile.milestoneUnlocks
+	profile.inventorySlots = snapshot.inventorySlots or profile.inventorySlots
 	syncProtectionAttributes(player, profile)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)
@@ -1612,6 +1718,7 @@ function PlayerProfile.setCharacterExpDirect(player, exp)
 	classState.characterExp = exp
 	player:SetAttribute("CharacterExp", exp)
 	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(exp))
+	PlayerProfile.claimMilestones(player, true) -- P2.5b D: 개발 도구로 레벨을 옮겨도 정상 레벨업과 같이 마일스톤을 받는다
 end
 
 -- 인벤토리 경유 없이 장비를 직접 장착한다(equipItem과 달리 인벤토리 인덱스가 아니라

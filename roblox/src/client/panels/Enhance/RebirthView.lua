@@ -61,6 +61,21 @@ function RebirthView.build(parent, overlayParent)
 	button.BackgroundColor3 = Color3.fromRGB(200, 160, 40)
 	button.Parent = parent
 
+	-- P2.5b D2: 환생 후 레벨 마일스톤 보상 목록(성장 보상 창 - window라 이 강화대 창은 닫힌다).
+	local milestoneButton = Instance.new("TextButton")
+	milestoneButton.Name = "MilestoneButton"
+	milestoneButton.Size = UDim2.new(0, 140, 0, 44)
+	milestoneButton.Position = UDim2.new(0.5, -70, 0, 100)
+	milestoneButton.Text = "성장 보상"
+	milestoneButton.Font = Enum.Font.GothamBold
+	milestoneButton.TextSize = 16
+	milestoneButton.TextColor3 = Color3.new(1, 1, 1)
+	milestoneButton.BackgroundColor3 = Color3.fromRGB(60, 60, 66)
+	milestoneButton.Parent = parent
+	milestoneButton.Activated:Connect(function()
+		require(script.Parent.Parent.Milestones).open()
+	end)
+
 	local resultLabel = Instance.new("TextLabel")
 	resultLabel.BackgroundTransparency = 1
 	resultLabel.Size = UDim2.new(1, -16, 0, 20)

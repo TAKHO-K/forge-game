@@ -14,6 +14,11 @@ local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
+local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
+local MilestoneData = require(ReplicatedStorage.Shared.data.MilestoneData)
+local Milestone = require(ReplicatedStorage.Shared.Milestone)
+local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local Option = require(ReplicatedStorage.Shared.Option)
@@ -190,6 +195,37 @@ function P25bVerify.runPure()
 			gold1 == MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial and gold1000 == GoldCost.cost(MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial, 1000, "refine") and rising)
 	end)
 
+	r.section("[D] 환생 후 레벨 마일스톤", function()
+		local k = InfiniteStageConfig.growthRate
+		local per = MilestoneData.statStagesPerMilestone
+		r.check(("D1 1회 배율 %.6f(기대 k^%.1f = %.6f · 스테이지 환산 %.1f ∈ [1, 2]) · 10회 %.4f(= 1회^10)"):format(Milestone.multiplier(1), per, k ^ per, Milestone.stageEquivalent(1), Milestone.multiplier(10)),
+			near(Milestone.multiplier(1), k ^ per, 1e-12) and per >= 1 and per <= 2 and near(Milestone.multiplier(10), (k ^ per) ^ 10, 1e-9) and Milestone.multiplier(0) == 1)
+		local plan0 = Milestone.plan(0, 300, {}, 0)
+		local plan1 = Milestone.plan(1, 155, {}, 0)
+		local plan1b = Milestone.plan(1, 160, { ["1"] = 150 }, 1)
+		local plan5 = Milestone.plan(5, 20000, { ["1"] = 150, ["2"] = 200 }, 2)
+		r.check(("D1 기록: 환생 0회 = %s(기대 nil) · 1회차 Lv.155 → 받을 레벨 %d · +%d회 · 해금 %d ~ %d(기대 150 · 3 · 1 ~ 1) · 이미 받음(150) Lv.160 → +%d(기대 0) · 5회차 Lv.20000 → +%d회 · 해금 %d ~ %d(기대 400 · 3 ~ 5)"):format(
+			tostring(plan0), plan1.claimedLevel, plan1.statGained, plan1.unlockFrom, plan1.unlockTo, plan1b.statGained, plan5.statGained, plan5.unlockFrom, plan5.unlockTo),
+			plan0 == nil and plan1.claimedLevel == 150 and plan1.statGained == 3 and plan1.unlockFrom == 1 and plan1.unlockTo == 1 and plan1b.statGained == 0 and plan1b.unlockTo < plan1b.unlockFrom
+				and plan5.statGained == 400 and plan5.unlockFrom == 3 and plan5.unlockTo == #MilestoneData.unlocks)
+		r.check(("D1 누적(환생 반복): 회차 150 · 200 · 200 → %d회(기대 3 + 4 + 4 = 11) · 해금 수 Lv.99 %d · 100 %d · 550 %d · 1e4 %d(기대 0 · 1 · 5 · 5)"):format(
+			Milestone.statCount({ ["1"] = 150, ["2"] = 200, ["3"] = 200 }), Milestone.unlockCountFor(99), Milestone.unlockCountFor(100), Milestone.unlockCountFor(550), Milestone.unlockCountFor(10000)),
+			Milestone.statCount({ ["1"] = 150, ["2"] = 200, ["3"] = 200 }) == 11 and Milestone.unlockCountFor(99) == 0 and Milestone.unlockCountFor(100) == 1 and Milestone.unlockCountFor(550) == #MilestoneData.unlocks)
+		local reserved = 0
+		for _, entry in ipairs(MilestoneData.unlocks) do
+			reserved += entry.reserved and 1 or 0
+		end
+		r.check(("D1 해금 표: %d개 · 가방 칸 +%d(해금 1개) · 계승 할인 %.0f%%(해금 2개) · 예약 %d개 · 1번 = 가방 · 2번 = 계승 할인"):format(#MilestoneData.unlocks, Milestone.bagSlotsBonus(1), Milestone.inheritDiscount(2) * 100, reserved),
+			#MilestoneData.unlocks == 5 and Milestone.bagSlotsBonus(1) == 5 and near(Milestone.inheritDiscount(2), 0.10) and Milestone.inheritDiscount(1) == 0 and reserved == 3)
+		-- 전투 식: 공격력 · 최대체력에 배율이 곱해진다(BalanceSim = EconSim이 쓰는 같은 식).
+		local base = BalanceSim.buildLoadout({ classId = "greatsword", level = 200, weaponLevel = 10, weaponGrade = 2 })
+		local boosted = BalanceSim.buildLoadout({ classId = "greatsword", level = 200, weaponLevel = 10, weaponGrade = 2, permanentMultiplier = Milestone.multiplier(7), permanentHpMultiplier = Milestone.maxHpMultiplier(7) })
+		local hpExpected = MilestoneData.survival and Milestone.multiplier(7) or 1
+		r.check(("D1 공격력 ×%.4f(기대 %.4f) · 최대체력 ×%.4f(기대 %.4f - survival %s) · 방어력 그대로 %s"):format(boosted.atk / base.atk, Milestone.multiplier(7), boosted.maxHp / base.maxHp, hpExpected,
+			tostring(MilestoneData.survival), tostring(boosted.defense == base.defense)),
+			near(boosted.atk / base.atk, Milestone.multiplier(7), 1e-9) and near(boosted.maxHp / base.maxHp, hpExpected, 1e-9) and boosted.defense == base.defense)
+	end)
+
 	r.section("[C] 저장 v31 gemDust", function()
 		local SaveSystem = require(script.Parent.SaveSystem)
 		local old = SaveSystem.defaultProfile()
@@ -204,6 +240,35 @@ function P25bVerify.runPure()
 			SaveConfig.saveVersion, migrated.version, tostring(migrated.gemDust), tostring(SaveSystem.isValidProfile(migrated)), tostring(SaveSystem.isValidProfile(bad)), tostring(SaveSystem.isValidProfile(frac))),
 			SaveConfig.saveVersion >= 31 and migrated.version == SaveConfig.saveVersion and migrated.gemDust == 0 and SaveSystem.isValidProfile(migrated)
 				and not SaveSystem.isValidProfile(bad) and not SaveSystem.isValidProfile(frac) and SaveSystem.defaultProfile().gemDust == 0)
+	end)
+
+	r.section("[D] 저장 v32 milestones · milestoneUnlocks", function()
+		local SaveSystem = require(script.Parent.SaveSystem)
+		local old = SaveSystem.defaultProfile()
+		old.version = 31
+		old.milestoneUnlocks = nil
+		for _, classState in pairs(old.classes) do
+			classState.milestones = nil
+		end
+		local migrated = SaveSystem.migrate(old)
+		local allEmpty = true
+		for _, classState in pairs(migrated.classes) do
+			allEmpty = allEmpty and type(classState.milestones) == "table" and next(classState.milestones) == nil
+		end
+		local badKey = SaveSystem.defaultProfile()
+		local someClass = next(badKey.classes)
+		badKey.classes[someClass].milestones = { [1] = 50 } -- 숫자 키(DataStore가 문자열로 바꾸는 키 - 쓰는 쪽은 항상 문자열)
+		local badValue = SaveSystem.defaultProfile()
+		badValue.classes[someClass].milestones = { ["1"] = 12.5 }
+		local badUnlock = SaveSystem.defaultProfile()
+		badUnlock.milestoneUnlocks = -1
+		local good = SaveSystem.defaultProfile()
+		good.classes[someClass].milestones = { ["1"] = 150, ["2"] = 200 }
+		good.milestoneUnlocks = 2
+		r.check(("D 저장: SAVE_VERSION %d(기대 ≥ 32) · v31 → v%d 빈 표 %s · 해금 %s · 숫자 키 %s · 소수 %s · 음수 해금 %s(기대 거절) · 정상 %s"):format(SaveConfig.saveVersion, migrated.version, tostring(allEmpty),
+			tostring(migrated.milestoneUnlocks), tostring(SaveSystem.isValidProfile(badKey)), tostring(SaveSystem.isValidProfile(badValue)), tostring(SaveSystem.isValidProfile(badUnlock)), tostring(SaveSystem.isValidProfile(good))),
+			SaveConfig.saveVersion >= 32 and migrated.version == SaveConfig.saveVersion and allEmpty and migrated.milestoneUnlocks == 0 and SaveSystem.isValidProfile(migrated)
+				and not SaveSystem.isValidProfile(badKey) and not SaveSystem.isValidProfile(badValue) and not SaveSystem.isValidProfile(badUnlock) and SaveSystem.isValidProfile(good))
 	end)
 
 	local pass, total = r.summary()
@@ -358,6 +423,45 @@ function P25bVerify.runLive(player, env)
 			tostring(ok), tostring(data and data.itemLevel), socket.option.id, socket.option.roll, #gems, tostring(profile.gold), profile.gemDust, maxHpBefore, maxHpAfter),
 			ok and why == nil and data.itemLevel == 2500 and classState.weapon.gems[1] == socket and socket.itemLevel == 2500 and socket.grade == "primordial" and socket.option.id == "maxHpPercent"
 				and socket.option.roll == 1.05 and #gems == 1 and gems[1].itemLevel == 30 and profile.gold == 5 and profile.gemDust == 3 and maxHpAfter > maxHpBefore)
+	end)
+
+	r.section("[D] 마일스톤 실제 경로", function()
+		classState.rebirthCount = 1
+		classState.milestones = {}
+		profile.milestoneUnlocks = 0
+		local slotsBefore = profile.inventorySlots
+		PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(49))
+		local statsBefore = PlayerProfile.getStatSummary(player)
+		local nothing = PlayerProfile.claimMilestones(player, false)
+		classState.characterExp = CharacterLevel.getExpForLevel(155)
+		local payload = PlayerProfile.claimMilestones(player, false)
+		local stats = PlayerProfile.getStatSummary(player)
+		local expected = Milestone.multiplier(3)
+		r.check(("D1 1회차 Lv.49 → 없음(%s) · Lv.155 → +%d회 · 해금 %d개(%s) · 기록 1회차 = %s(기대 150) · 가방 칸 %d → %d(+5) · Attribute 배율 %.4f(기대 %.4f)"):format(
+			tostring(nothing), payload and payload.statGained or -1, payload and #payload.unlocks or -1, payload and payload.unlocks[1] and payload.unlocks[1].name or "-",
+			tostring(classState.milestones["1"]), slotsBefore, profile.inventorySlots, player:GetAttribute("MilestoneMultiplier") or -1, expected),
+			nothing == nil and payload ~= nil and payload.statGained == 3 and #payload.unlocks == 1 and payload.unlocks[1].id == "bagSlots" and classState.milestones["1"] == 150
+				and profile.inventorySlots == slotsBefore + 5 and profile.milestoneUnlocks == 1 and near(player:GetAttribute("MilestoneMultiplier"), expected, 1e-9))
+		-- 공격력 · 최대체력(실제 전투가 쓰는 함수): 레벨이 같은 상태에서 배율만 비교한다.
+		classState.characterExp = CharacterLevel.getExpForLevel(49)
+		local attackWith = PlayerProfile.getStatSummary(player)
+		local hpExpected = MilestoneData.survival and expected or 1
+		r.check(("D1 실제 능력치(같은 레벨 49): 공격력 ×%.4f(기대 %.4f) · 최대 체력 ×%.4f(기대 %.4f - survival %s) · 전투 배율 함수 %.4f"):format(attackWith.attack / statsBefore.attack, expected,
+			attackWith.maxHp / statsBefore.maxHp, hpExpected, tostring(MilestoneData.survival), PlayerProfile.getMilestoneMultiplier(player)),
+			near(attackWith.attack / statsBefore.attack, expected, 1e-9) and near(attackWith.maxHp / statsBefore.maxHp, hpExpected, 1e-9) and near(PlayerProfile.getMilestoneMultiplier(player), expected, 1e-12))
+		-- 환생 뒤 새 회차: 레벨 1부터 다시 받고, 지난 회차 몫은 남는다(누적) · Lv.200 = 2번째 해금(계승 할인).
+		classState.rebirthCount = 2
+		classState.characterExp = CharacterLevel.getExpForLevel(210)
+		local fullCost = Inherit.cost("relic", PlayerProfile.getAccountBestStage(player), 0)
+		local payload2 = PlayerProfile.claimMilestones(player, false)
+		r.check(("D1 2회차 Lv.210 → +%d회(기대 4) · 누적 %d회(기대 7) · 해금 %s · 계승 비용 %d → %d(기대 ×0.9 = %d) · 저장 모양 유효 %s"):format(
+			payload2 and payload2.statGained or -1, Milestone.statCount(classState.milestones), payload2 and payload2.unlocks[1] and payload2.unlocks[1].id or "-",
+			fullCost, PlayerProfile.getInheritCost(player, "relic"), math.floor(fullCost * 0.9), tostring(require(script.Parent.SaveSystem).isValidProfile(profile))),
+			payload2 ~= nil and payload2.statGained == 4 and Milestone.statCount(classState.milestones) == 7 and payload2.unlocks[1].id == "inheritDiscount"
+				and PlayerProfile.getInheritCost(player, "relic") == math.floor(fullCost * 0.9) and require(script.Parent.SaveSystem).isValidProfile(profile))
+		local summary = PlayerProfile.getMilestoneSummary(player)
+		r.check(("D2 보상 목록 값: 회차 %d · 레벨 %d · 누적 %d회 · 해금 %d개 · 회차별 %s · %s"):format(summary.rebirthCount, summary.level, summary.statCount, summary.unlockCount, tostring(summary.cycles["1"]), tostring(summary.cycles["2"])),
+			summary.rebirthCount == 2 and summary.level == 210 and summary.statCount == 7 and summary.unlockCount == 2 and summary.cycles["1"] == 150 and summary.cycles["2"] == 200)
 	end)
 
 	env.restore(player)

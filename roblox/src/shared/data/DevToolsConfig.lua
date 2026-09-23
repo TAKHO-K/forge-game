@@ -106,9 +106,19 @@ local config = {
 		--   뺀 것: 보스 블록 29-x(ClassData를 읽지만 치유사를 안 쓴다 - grep 0) · S04(나)(exclude 그대로).
 		-- P2.5a(2026-09-23): 이번 블록 P25a(가)(나) + 동반 실행. 1 · 2회차 Play는 k(1.02) · 강화 · 등급 · 골드 · 생존 앵커가 거의 모든 수치에 들어가 옛 블록 전부를 돌렸다
 		-- (docs/phase/P25a-report.md ⑨). 3회차(리뷰 반영 - PlayerCombat.getInvestmentScale 하한 · EnhanceVisualData +26 ~ +29 · CharacterLevel NaN)는 그 모듈을 쓰는 블록만.
+		-- P2.5b(2026-09-23): 이번 블록 P25b(가)(나)(UI) + 동반 실행(COMMON.md §3 - 이 단계가 고친 모듈을 쓰는 옛 블록, grep):
+		--   PlayerCombat.getAttack(인자 추가) · BalanceSim.buildLoadout · EconSim/Report → P0(가) · P2(가)(나) · P25a(가)(나) · S13(가)(나) · S13b(가)(나) · S21-0(가)(나)
+		--   PlayerProfile(계승 · 가루 · 재련 · 마일스톤 · refreshMaxHp · addCharacterExp) · SaveSystem v31 · v32 → 26-2 · 26-3 · S09(가)(나)(경험치 지급) · S03(가)(나) · 이관 체인 S02(가) · S03(가) · S04(가) · S05(가) · S05b(가) · S11(가)
+		--   GemServer · GemWorkshop(변환권 = 골드 + 가루) · GemMerchantVerify → S20e(가)(나)(UI) · 보석 장착 경로 → S20c(가)(나)(UI)
+		--   DetailSheet · GearTab · 장비창(클라) → S20d(가)(나)(UI) · S20(UI) · S12(UI) · S12b(UI). S04(나)는 계속 제외.
 		current = {
+			"P25b(가)", "P25b(나)", "P25b(UI)",
 			"P25a(가)", "P25a(나)", "P2(가)", "P2(나)", "P0(가)",
-			"S03(가)", "S03(나)", "S08(가)", "S08(나)", "S13(가)", "S13(나)", "S13b(가)", "S13b(나)", "26-2",
+			"S13(가)", "S13(나)", "S13b(가)", "S13b(나)", "S21-0(가)", "S21-0(나)",
+			"26-2", "26-3", "S09(가)", "S09(나)", "S03(가)", "S03(나)",
+			"S02(가)", "S04(가)", "S05(가)", "S05b(가)", "S11(가)",
+			"S20c(가)", "S20c(나)", "S20c(UI)", "S20d(가)", "S20d(나)", "S20d(UI)", "S20e(가)", "S20e(나)", "S20e(UI)",
+			"S20(UI)", "S12(UI)", "S12b(UI)",
 		},
 	},
 }

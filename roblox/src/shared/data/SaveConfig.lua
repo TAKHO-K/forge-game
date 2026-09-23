@@ -63,7 +63,10 @@ return {
 	-- 필드(classId) 추가.
 	-- 30(30-0 S20e) - 계정 안내 플래그 표 hints 신설(hints.gemMerchantUsed = 보석상인에서 변환 · 리롤을 한 번이라도 성공했는가). SaveSystem.migrate()의 v29->v30 참고.
 	-- 31(P2.5b C) - 보석 가루 profile.gemDust(0 이상 정수, 계정 공유 - 보석 분해로 늘고 재련 · 변환권 구매가 쓴다) 신설. 기존 세이브는 0. SaveSystem.migrate()의 v30->v31 참고.
-	saveVersion = 31,
+	-- 32(P2.5b D) - 환생 후 레벨 마일스톤: classes[*].milestones = { [tostring(환생 회차)] = 그 회차에서 받은 마지막 능력치 마일스톤 레벨 }(직업별 · 문자열 키) ·
+	-- profile.milestoneUnlocks = 받은 해금 개수(계정 공유 0 이상 정수) 신설. 기존 세이브는 빈 표 · 0 - 지금 회차의 지금 레벨까지는 접속할 때 채운다(지난 회차는 기록이 없어 소급하지 않는다).
+	-- SaveSystem.migrate()의 v31->v32 참고.
+	saveVersion = 32,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

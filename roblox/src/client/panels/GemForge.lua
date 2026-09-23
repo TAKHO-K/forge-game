@@ -464,6 +464,23 @@ end)
 
 player:GetAttributeChangedSignal("GemDust"):Connect(GemForge.render)
 
+-- 점검용(P25b(UI) · 스크린샷): 서버 스냅샷 대신 합성 보석 상태로 연다(GemSync가 오면 실제 상태로 덮인다).
+function GemForge.debugOpen(fakeState, targetKind, key, openMode, fodder)
+	if not built then
+		build()
+	end
+	state = fakeState
+	target = targetKind and { kind = targetKind, key = key } or nil
+	fodderIndex = fodder
+	mode = openMode or "refine"
+	pendingSince = nil
+	if not UIManager.isOpen(GemForge.id) and not UIManager.open(GemForge.id) then
+		return false
+	end
+	GemForge.render()
+	return true
+end
+
 -- 점검용.
 function GemForge.debugState()
 	return { open = UIManager.isOpen(GemForge.id), mode = mode, target = target, fodderIndex = fodderIndex, bulkGrade = bulkGrade, refs = built }
