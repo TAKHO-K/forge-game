@@ -1016,10 +1016,11 @@ end
 
 local function checkProtectionPrice(r)
 	r.section("[2] 방지권 가격", function()
-		local perKill = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 83)
-		local dropPrice, resetPrice = Enhance.getProtectionPrice("drop", 83), Enhance.getProtectionPrice("reset", 83)
+		-- P2.5a: 골드 성장률이 1.001이라 스테이지 83과 1의 마리당 골드가 같다(6) - 차이가 보이는 계정 최고 3000으로 잰다(식은 그대로).
+		local perKill = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 3000)
+		local dropPrice, resetPrice = Enhance.getProtectionPrice("drop", 3000), Enhance.getProtectionPrice("reset", 3000)
 		-- 가격 함수는 "계정 최고 스테이지" 하나만 받는다(지금 서 있는 스테이지 인자가 없다) - 서 있는 스테이지를 1로 바꿔도 같은 값인지는 실제 Player의 상점 경로로 (나) 17번이 잰다.
-		r.check(("계정 최고 83: 하락 %d(기대 스테이지 83 마리당 골드 %d × 300 = %d) · 초기화 %d(기대 × 900 = %d) · 스테이지 1 기준 하락 %d은 더 싸다(=스테이지 1로 내려가 사는 길이 있었다면 그 값) - 함수는 계정 최고만 받는다"):format(
+		r.check(("계정 최고 3000: 하락 %d(기대 스테이지 3000 마리당 골드 %d × 300 = %d) · 초기화 %d(기대 × 900 = %d) · 스테이지 1 기준 하락 %d은 더 싸다(=스테이지 1로 내려가 사는 길이 있었다면 그 값) - 함수는 계정 최고만 받는다"):format(
 			dropPrice, perKill, perKill * 300, resetPrice, perKill * 900, Enhance.getProtectionPrice("drop", 1)),
 			dropPrice == perKill * 300 and resetPrice == perKill * 900 and Enhance.getProtectionPrice("drop", 1) < dropPrice)
 	end)

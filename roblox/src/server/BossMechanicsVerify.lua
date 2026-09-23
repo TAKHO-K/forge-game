@@ -18,7 +18,6 @@ local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BossSim = require(ReplicatedStorage.Shared.BossSim)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
-local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local BossEncounter = require(script.Parent.BossEncounter)
@@ -74,7 +73,7 @@ local function runPure()
 
 	r.section("도출값", function()
 		local g = BossRules.gateDamageTakenMultiplier()
-		local expectedG = 1 / InfiniteStageConfig.growthRate ^ BossData.stageInterval
+		local expectedG = 1 / BossData.intervalPowerRatio -- P2.5a: 옛 1 / k^stageInterval(k = 1.155) - 보스 한 간격 힘 비율을 데이터로 고정
 		r.check(("게이트 g = N_max^(p-1) = %.4f (= 1/k^%d = %.4f, p=%.4f)"):format(
 			g, BossData.stageInterval, expectedG, BossRules.partyHpExponent()), near(g, expectedG, 1e-9))
 		r.check(("4인 x g = %.4f = 솔로 1.0 (기믹을 무시하는 정원 파티의 딜 = 기믹을 푸는 솔로의 딜)"):format(

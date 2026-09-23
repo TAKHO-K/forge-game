@@ -53,7 +53,8 @@ function EnhanceOddsVerify.runPure()
 			end
 		end
 	end
-	check(("표의 합: %d칸 중 합이 1에서 어긋난 칸 %d(기대 200 · 0)"):format(cells, badSum), cells == 200 and badSum == 0)
+	-- P2.5a: 최대 +25 → +30이라 칸 수 = 최대 단계 × 8(옛 200)
+	check(("표의 합: %d칸 중 합이 1에서 어긋난 칸 %d(기대 %d · 0)"):format(cells, badSum, EnhanceConfig.maxLevel * 8), cells == EnhanceConfig.maxLevel * 8 and badSum == 0)
 
 	-- 2. 토글이 쓸 수 없는 단계 · 불씨 가득에서 켜도 서버가 실제로 쓰는 표와 같다: 서버는 resolveProtectionFlags로 플래그를 거른 뒤(보유는 넉넉히 5장) 그 값으로 판정한다.
 	local mismatches, serverCells = 0, 0

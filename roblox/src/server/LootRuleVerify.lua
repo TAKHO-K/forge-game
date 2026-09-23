@@ -107,14 +107,18 @@ end
 
 local function checkExpectedCounts(r)
 	r.section("[4] tier별 기대 드랍 수", function()
-		local expected = { 0.25, 0.31, 0.40, 0.57, 0.79, 1.05 }
+		-- P2.5a: 등급 배율 ×1.45(R3)가 tier 공정성 r(t)의 입력이라 기대 개수(= dropChance × r(t))가 바뀌었다 - 옛 0.25 · 0.31 · 0.40 · 0.57 · 0.79 · 1.05.
+		local expected = {}
+		for tierIndex = 1, 6 do
+			expected[tierIndex] = ArmorData.dropChance * MonsterData.getRewardRatio(tierIndex)
+		end
 		local rows, allOk = {}, true
 		for tierIndex = 1, #expected do
 			local value = Loot.expectedArmorDropCount(tierIndex, 1)
 			allOk = allOk and math.abs(value - expected[tierIndex]) <= 0.01
 			table.insert(rows, ("tier%d=%.4f"):format(tierIndex, value))
 		end
-		r.check(("rewardMultiplier=1: %s (기대 0.25/0.31/0.40/0.57/0.79/1.05 ±0.01)"):format(table.concat(rows, " ")), allOk)
+		r.check(("rewardMultiplier=1: %s (기대 dropChance × r(t) ±0.01 - P2.5a 등급 배율)"):format(table.concat(rows, " ")), allOk)
 	end)
 end
 
@@ -137,15 +141,17 @@ local function checkTier6Drops(r)
 			end
 		end
 		local mean = total / rolls
+		-- P2.5a: 기대 = 3 × tier6 기대 개수(r(t)가 바뀌어 옛 3.15가 아니다) · 나오는 개수는 그 값의 내림 또는 올림만.
+		local expectedMean = 3 * Loot.expectedArmorDropCount(6, 1)
 		local onlyThreeOrFour = true
 		local kinds = {}
 		for count, times in pairs(countKinds) do
-			onlyThreeOrFour = onlyThreeOrFour and (count == 3 or count == 4)
+			onlyThreeOrFour = onlyThreeOrFour and (count == math.floor(expectedMean) or count == math.floor(expectedMean) + 1)
 			table.insert(kinds, ("%d개=%d회"):format(count, times))
 		end
 		table.sort(kinds)
-		r.check(("⑤ tier6 · 배율 3 · %d회: 평균 %.4f개(기대 3.15 ±0.05) · %s(3개 또는 4개만)"):format(
-			rolls, mean, table.concat(kinds, " ")), math.abs(mean - 3.15) <= 0.05 and onlyThreeOrFour)
+		r.check(("⑤ tier6 · 배율 3 · %d회: 평균 %.4f개(기대 %.4f ±0.05) · %s(내림 또는 올림만)"):format(
+			rolls, mean, expectedMean, table.concat(kinds, " ")), math.abs(mean - expectedMean) <= 0.05 and onlyThreeOrFour)
 		r.check(("⑥ tier6 · 스테이지 100 · 아이템 %d개 전부의 itemLevel: 최소 %d 최대 %d · 102 초과 %d건(기대 98 ~ 102 · 420 같은 값 0건) ★진짜 합격 기준"):format(
 			itemCount, lowest, highest, over102), itemCount > 0 and lowest >= 98 and highest <= 102 and over102 == 0)
 	end)
@@ -186,17 +192,17 @@ local function checkBossRetryAndFixed(r)
 end
 
 -- 이름만 바뀌었다(itemLevelBonus → dropCountMultiplier) - 공정성 항등식 rewardPerTime은 S01 전과 같아야 한다.
--- 1.3053은 S01 착수 전 로컬 하네스로 잰 tier1 ~ 6 공통값이다.
-local FAIRNESS_BASELINE = 1.3053
+-- 1.3053은 S01 착수 전 로컬 하네스로 잰 tier1 ~ 6 공통값이다. P2.5a: 등급 배율 ×1.45(R3)로 공통값이 1.2373이 됐다 - 항등식(tier 전부 같은 값)은 그대로.
+local FAIRNESS_BASELINE = 1.23728
 
 local function checkFairness(r)
 	r.section("[9] 공정성 항등식", function()
 		local rows, allOk = {}, #MonsterData.fairnessCheck == 6
 		for _, row in ipairs(MonsterData.fairnessCheck) do
-			allOk = allOk and math.abs(row.rewardPerTime - FAIRNESS_BASELINE) <= 1e-6
+			allOk = allOk and math.abs(row.rewardPerTime - FAIRNESS_BASELINE) <= 1e-5
 			table.insert(rows, ("tier%d=%.6f"):format(row.tier, row.rewardPerTime))
 		end
-		r.check(("fairnessCheck rewardPerTime: %s (기대 전부 %.4f - S01 전과 같은 값)"):format(table.concat(rows, " "), FAIRNESS_BASELINE), allOk)
+		r.check(("fairnessCheck rewardPerTime: %s (기대 전부 %.4f - P2.5a 등급 배율 뒤의 공통값)"):format(table.concat(rows, " "), FAIRNESS_BASELINE), allOk)
 	end)
 end
 
@@ -396,7 +402,7 @@ end
 local function runAccountBestStage(player, env, r, profile)
 	r.section("[13] 계정 최고 스테이지", function()
 		local classA, classB = ClassData.order[1], ClassData.order[2]
-		profile.classes[classA].stageProgress.infiniteBest = 80
+		profile.classes[classA].stageProgress.infiniteBest = 3000 -- P2.5a: 골드 성장률 1.001이라 80과 1의 가격이 같아 3000으로(가격 차이가 보이는 값)
 		profile.classes[classB].stageProgress.infiniteBest = 10
 		env.applyStage(player, 1) -- 지금 서 있는 스테이지 1 - Attribute 갱신도 이 호출이 탄다
 		local activeBest = PlayerProfile.getInfiniteStageBest(player)
@@ -406,9 +412,9 @@ local function runAccountBestStage(player, env, r, profile)
 		-- 지금 스테이지(1)를 넣은 값이 서로 다름(= 스테이지 1로 내려가 싸게 사는 길이 닫혔다)을 확인한다.
 		local priceAtBest = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, accountBest) * GemData.rerollTicketGoldMultiplier
 		local priceAtStage1 = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 1) * GemData.rerollTicketGoldMultiplier
-		r.check(("직업 %s best 80 · 직업 %s best 10 · 지금 스테이지 1(활성 직업 best %s): getAccountBestStage=%d(기대 80) · Attribute AccountBestStage=%s(기대 80) · 변환권 가격 = 스테이지 80 기준 %.0f(스테이지 1 기준 %.0f보다 큼=%s)"):format(
+		r.check(("직업 %s best 3000 · 직업 %s best 10 · 지금 스테이지 1(활성 직업 best %s): getAccountBestStage=%d(기대 3000) · Attribute AccountBestStage=%s(기대 3000) · 변환권 가격 = 스테이지 3000 기준 %.0f(스테이지 1 기준 %.0f보다 큼=%s)"):format(
 			classA, classB, tostring(activeBest), accountBest, tostring(attribute), priceAtBest, priceAtStage1, tostring(priceAtBest > priceAtStage1)),
-			accountBest == 80 and attribute == 80 and priceAtBest > priceAtStage1)
+			accountBest == 3000 and attribute == 3000 and priceAtBest > priceAtStage1)
 	end)
 end
 

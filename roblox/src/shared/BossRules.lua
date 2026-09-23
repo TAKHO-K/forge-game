@@ -30,8 +30,9 @@ local BossRules = {}
 -- k=1.155, stageInterval=5, N_max=4 → p ≈ 0.480. 2/3/4인 처치 시간 = 솔로의 0.70/0.56/0.49배
 -- ("유리하되 4배 빠르지는 않다"). 파티 하나가 진행을 앞당길 수 있는 폭이 보스 한 칸을
 -- 넘지 않는다는 뜻이라 리더보드 축(최고 도달 스테이지)의 의미도 지킨다.
+-- P2.5a: k^stageInterval 대신 BossData.intervalPowerRatio(옛 1.155^5 고정 - 그 주석 참고). p ≈ 0.480 · g ≈ 0.487 그대로.
 function BossRules.partyHpExponent()
-	return 1 - BossData.stageInterval * math.log(InfiniteStageConfig.growthRate) / math.log(PartyConfig.maxMembers)
+	return 1 - math.log(BossData.intervalPowerRatio) / math.log(PartyConfig.maxMembers)
 end
 
 function BossRules.partySizeHpMultiplier(memberCount)
@@ -39,7 +40,7 @@ function BossRules.partySizeHpMultiplier(memberCount)
 	return n ^ BossRules.partyHpExponent()
 end
 
--- 파훼 게이트의 받는 피해 배율 g(29-1, PRD 20.73 [2-8] A-3) = N_max^(p−1) = 1/k^stageInterval ≈ 0.487.
+-- 파훼 게이트의 받는 피해 배율 g(29-1, PRD 20.73 [2-8] A-3) = N_max^(p−1) = 1/intervalPowerRatio ≈ 0.487(P2.5a - 옛 1/k^stageInterval).
 -- 새 상수가 아니라 p와 같은 세 값에서 나온다 - 뜻: "기믹을 무시하는 정원 파티의 딜 = 기믹을 푸는
 -- 솔로의 딜". 4명이 모여 기믹을 건너뛰어도 혼자 제대로 하는 것보다 나을 게 없다.
 function BossRules.gateDamageTakenMultiplier()

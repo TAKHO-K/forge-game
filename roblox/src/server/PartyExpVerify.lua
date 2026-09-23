@@ -29,8 +29,8 @@ local EPSILON = 1e-9
 
 -- 이 세션 전(2026-09-20, 커밋 ff88ba0)의 p · b. 입력(BossData.stageInterval · InfiniteStageConfig.growthRate · PartyConfig.maxMembers · healerDpsRatio)은 이 세션이 안 건드린다 -
 -- p = 1 - 5 × ln(1.155) / ln(4) · b = 4 / (3 + 0.9491) - 1을 밖에서(python) 계산해 적었다.
--- P2.5a: 입력 growthRate가 1.155 → 1.02로 바뀌어(사용자 결정 R1) p = 1 - 5 × ln(1.02) / ln(4)로 다시 계산했다(python). b는 그대로.
-local BASELINE_P = 0.9285771195080728
+-- P2.5a: k가 1.02로 바뀌었지만 p는 BossData.intervalPowerRatio(= 옛 1.155^5)에서 나와 그대로다.
+local BASELINE_P = 0.4802678708966678
 local BASELINE_B = 0.012889012686434942
 
 local function newRecorder(tag)

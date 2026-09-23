@@ -10,6 +10,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
+local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig) -- P2.5a: 처치 앵커 오프셋(levelStageOffset)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
@@ -80,18 +81,20 @@ function BalanceDecisionVerify.runPure()
 
 	r.section("[4] 궁수 기준 앵커 · p · b 불변", function()
 		-- 처치 시간은 타수(정수)로 정해지는 계단 함수라 rec 스테이지(이분법이 찾은 경계)에서 정확히 2.5초가 나오지 않는다 - 경계 양쪽이 목표를 사이에 끼는지로 잰다.
+		-- P2.5a(k 1.02): 처치 앵커 오프셋 = CharacterLevelConfig.levelStageOffset(+167) · 생존 앵커 = itemLevel = 스테이지(고스테이지 1,000에서 7타 - 옛 k에서는 레벨 100 = 스테이지 100이었다).
 		local offset = BalanceSim.solveKillOffset()
 		local stage = BalanceAnchorConfig.referenceLevel + offset
 		local bowLoadout = BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, BalanceAnchorConfig.referenceLevel, 0)
 		local point = BalanceSim.measurePoint(bowLoadout, stage)
+		point.surviveHits = BalanceSim.measurePoint(BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, 1000, 0), 1000).surviveHits
 		local below = BalanceSim.measurePoint(bowLoadout, stage - 0.05).killRotationSeconds
 		local above = BalanceSim.measurePoint(bowLoadout, stage + 0.05).killRotationSeconds
 		local target = BalanceAnchorConfig.killTargetSeconds
 		local p = BossRules.partyHpExponent()
 		local b = PartyConfig.healerBuffFraction
-		r.check(("4 궁수 앵커(rec 스테이지 %.2f = 레벨 100 + 오프셋 %+.3f): 생존 %.3f타(기대 7 ± 0.02) · 처치(로테이션) 경계 %.3f초 < %.1f ≤ %.3f초(기대 경계가 목표를 낀다) · 오프셋 |%.3f| ≤ 0.1 · 보스 p %.4f(기대 0.4803 ± 0.001) · 치유사 b %.5f(기대 0.01289 ± 0.0001) - 전부 이 세션 전 문서값 그대로"):format(
-			stage, offset, point.surviveHits, below, target, above, offset, p, b),
-			near(point.surviveHits, BalanceAnchorConfig.surviveTargetHits, 0.02) and below < target and above >= target and math.abs(offset) <= 0.1
+		r.check(("4 궁수 앵커(rec 스테이지 %.2f = 레벨 100 + 오프셋 %+.3f): 생존(itemLevel = 스테이지 1,000) %.3f타(기대 7 ± 0.02) · 처치(로테이션) 경계 %.3f초 < %.1f ≤ %.3f초(기대 경계가 목표를 낀다) · 오프셋 %.3f - %d ≤ 0.1(P2.5a levelStageOffset) · 보스 p %.4f(기대 0.4803 ± 0.001) · 치유사 b %.5f(기대 0.01289 ± 0.0001)"):format(
+			stage, offset, point.surviveHits, below, target, above, offset, CharacterLevelConfig.levelStageOffset, p, b),
+			near(point.surviveHits, BalanceAnchorConfig.surviveTargetHits, 0.02) and below < target and above >= target and math.abs(offset - CharacterLevelConfig.levelStageOffset) <= 0.1
 				and near(p, 0.4803, 0.001) and near(b, 0.01289, 0.0001))
 		-- 참고(합격 조건 아님): b는 r = 힐러 실효 DPS ÷ 대검 DPS(PartyConfig 주석 · 24-4)에서 나왔다. 대검이 598.6 → 615.5로 올랐으므로 같은 식의 r · b를 다시 적어 둔다.
 		if dps.greatsword and dps.healer then

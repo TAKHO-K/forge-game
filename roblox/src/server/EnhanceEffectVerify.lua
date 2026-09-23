@@ -94,12 +94,12 @@ function EnhanceEffectVerify.runPure()
 		for _, step in ipairs(EnhanceVisualData.steps) do
 			table.insert(levels, step.level)
 		end
-		local expected = { 5, 10, 15, 19, 20, 21, 22, 23, 24, 25 }
+		local expected = { 5, 10, 15, 19, 20, 21, 22, 23, 24, 25, 30 } -- P2.5a: +30(새 최대) 칭호 줄
 		local same = #levels == #expected
 		for index, level in ipairs(expected) do
 			same = same and levels[index] == level
 		end
-		r.check(("임계 %d개: %s(기대 5 · 10 · 15 · 19 · 20 · 21 · 22 · 23 · 24 · 25 - 오름차순 · 10개)"):format(#levels, table.concat(levels, " · ")), same)
+		r.check(("임계 %d개: %s(기대 5 · 10 · 15 · 19 · 20 · 21 · 22 · 23 · 24 · 25 · 30 - 오름차순 · 11개)"):format(#levels, table.concat(levels, " · ")), same)
 	end)
 
 	r.section("[2] 색 키", function()

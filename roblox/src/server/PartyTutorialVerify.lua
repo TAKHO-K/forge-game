@@ -377,9 +377,10 @@ function PartyTutorialVerify.runLive(player, env)
 		r.check(("견습 중 처치: 기준 스테이지 %s(기대 %d) · 경험치 +%.4f(기대 %.4f = 견습 스테이지 기준 × 파티 보너스 ×%.2f)"):format(
 			tostring(tutorialStage), TutorialData.monsterStage, tutorialExp, expectedTutorial, 1 + partyBonus),
 			tutorialStage == TutorialData.monsterStage and math.abs(tutorialExp - expectedTutorial) <= 1)
-		r.check(("친구(견습 아님) 처치: 기준 스테이지 %s(기대 %d) · 경험치 +%.4f(기대 %.4f = 자기 스테이지 기준 × 파티 보너스 ×%.2f) · 견습 쪽보다 골드 %d > %d(기대 참)"):format(
+		-- P2.5a: 골드 성장률 1.001이라 스테이지 12와 1의 골드가 같을 수 있다(6) - "자기 스테이지 기준"은 경험치 쪽이 잰다, 골드는 줄지 않는지(≥)만.
+		r.check(("친구(견습 아님) 처치: 기준 스테이지 %s(기대 %d) · 경험치 +%.4f(기대 %.4f = 자기 스테이지 기준 × 파티 보너스 ×%.2f) · 견습 쪽보다 골드 %d ≥ %d(기대 참)"):format(
 			tostring(friendStage), FRIEND_STAGE, friendExp, expectedFriend, 1 + partyBonus, friendGold, tutorialGold),
-			friendStage == FRIEND_STAGE and math.abs(friendExp - expectedFriend) <= 1 and friendGold > tutorialGold)
+			friendStage == FRIEND_STAGE and math.abs(friendExp - expectedFriend) <= 1 and friendGold >= tutorialGold)
 	end)
 	-- P2 G: 가짜 위치는 섹션 밖에서 해제한다(섹션 도중 에러가 나도 남지 않게 - 리뷰 지적 7).
 	PartyExpBonus.debugSetPresence(player, nil)

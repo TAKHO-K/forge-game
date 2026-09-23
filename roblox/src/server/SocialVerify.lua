@@ -332,7 +332,9 @@ function SocialVerify.runLive(player, env)
 	r.section("나", "[2] 환생 요청", function()
 		local classState = PlayerProfile.getProfile(player).classes[PlayerProfile.getClassId(player)]
 		PlayerProfile.setRebirthCountDirect(player, 0)
-		PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(25)) -- 1회차 필요 레벨 25
+		-- P2.5a: 필요 레벨은 표(CharacterLevel.getRebirthRequiredLevel)에서 읽는다 - 옛 25 · 50 → 78 · 155.
+		local firstLevel, secondLevel = CharacterLevel.getRebirthRequiredLevel(0), CharacterLevel.getRebirthRequiredLevel(1)
+		PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(firstLevel)) -- 1회차 필요 레벨
 		local before = classState.rebirthCount
 
 		local farPosition = altar + Vector3.new(40, 0, 0) + standHeight
@@ -343,21 +345,21 @@ function SocialVerify.runLive(player, env)
 
 		moveTo(player, altar + Vector3.new(4, 0, 0) + standHeight)
 		local nearPayload = RebirthAccess.attempt(player, rootOf(player).Position)
-		r.check("나", ("반경 안(제단 앞 4 stud) + 레벨 25: 결과 success=%s 회차 %s(기대 true · 1) · 저장 환생 횟수 %d(기대 1) · Attribute RebirthCount %s(기대 1) · 레벨 %s(기대 1)"):format(
-			tostring(nearPayload and nearPayload.success), tostring(nearPayload and nearPayload.rebirthCount), classState.rebirthCount, tostring(player:GetAttribute("RebirthCount")), tostring(player:GetAttribute("CharacterLevel"))),
+		r.check("나", ("반경 안(제단 앞 4 stud) + 레벨 %d: 결과 success=%s 회차 %s(기대 true · 1) · 저장 환생 횟수 %d(기대 1) · Attribute RebirthCount %s(기대 1) · 레벨 %s(기대 1)"):format(
+			firstLevel, tostring(nearPayload and nearPayload.success), tostring(nearPayload and nearPayload.rebirthCount), classState.rebirthCount, tostring(player:GetAttribute("RebirthCount")), tostring(player:GetAttribute("CharacterLevel"))),
 			nearPayload ~= nil and nearPayload.success == true and nearPayload.rebirthCount == 1 and classState.rebirthCount == 1 and player:GetAttribute("RebirthCount") == 1 and player:GetAttribute("CharacterLevel") == 1)
 
 		local lowPayload = RebirthAccess.attempt(player, rootOf(player).Position)
-		r.check("나", ("반경 안 + 조건 미달(레벨 1 · 2회차 필요 50): 결과 reason=%s 필요 %s(기대 level_too_low · 50) · 회차 %d(기대 1 그대로)"):format(
-			tostring(lowPayload and lowPayload.reason), tostring(lowPayload and lowPayload.requiredLevel), classState.rebirthCount),
-			lowPayload ~= nil and lowPayload.success == false and lowPayload.reason == "level_too_low" and lowPayload.requiredLevel == 50 and classState.rebirthCount == 1)
+		r.check("나", ("반경 안 + 조건 미달(레벨 1 · 2회차 필요 %d): 결과 reason=%s 필요 %s(기대 level_too_low · %d) · 회차 %d(기대 1 그대로)"):format(
+			secondLevel, tostring(lowPayload and lowPayload.reason), tostring(lowPayload and lowPayload.requiredLevel), secondLevel, classState.rebirthCount),
+			lowPayload ~= nil and lowPayload.success == false and lowPayload.reason == "level_too_low" and lowPayload.requiredLevel == secondLevel and classState.rebirthCount == 1)
 
 		-- 기존 경로: 강화대 앞에서도 같은 조건으로 허용된다.
-		PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(50))
+		PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(secondLevel))
 		moveTo(player, station + Vector3.new(3, 0, 0) + standHeight)
 		local stationPayload = RebirthAccess.attempt(player, rootOf(player).Position)
-		r.check("나", ("기존 경로(강화대 앞) + 레벨 50: success=%s 회차 %s(기대 true · 2) · 같은 위치에서 환생 조건은 제단과 같은 함수(PlayerProfile.rebirth)"):format(
-			tostring(stationPayload and stationPayload.success), tostring(stationPayload and stationPayload.rebirthCount)),
+		r.check("나", ("기존 경로(강화대 앞) + 레벨 %d: success=%s 회차 %s(기대 true · 2) · 같은 위치에서 환생 조건은 제단과 같은 함수(PlayerProfile.rebirth)"):format(
+			secondLevel, tostring(stationPayload and stationPayload.success), tostring(stationPayload and stationPayload.rebirthCount)),
 			stationPayload ~= nil and stationPayload.success == true and stationPayload.rebirthCount == 2)
 	end)
 

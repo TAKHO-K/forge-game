@@ -756,6 +756,11 @@ end
 
 return {
 	stageInterval = 5,
+	-- P2.5a: 보스 한 간격(stageInterval)의 "힘 비율" - 파티 HP 지수 p · 파훼 게이트 배율 g(BossRules)가 이 값에서 나온다. 옛 식은 k^stageInterval(k = 몬스터 성장)이라
+	-- k를 1.155 → 1.02로 바꾸면 2.056 → 1.104가 되어 4인 파티 이득(처치 시간 0.49 → 0.90배)과 파훼 게이트(받는 피해 ×0.487 → ×0.906 - "파훼 안 하면 1.8 ~ 2.7배
+	-- 느림"이 1.1 ~ 1.6배로)가 무너졌다(P25a 1회차 Play - S14(가) · 29-1(가) X). 보스 · 파티 균형(29-x · S14 튜닝)은 스테이지 단위가 아니라 힘 비율로 정해진 것이라
+	-- 옛 값을 그대로 둔다: 1.155^5 = 2.0560. 스테이지 환산이 필요한 곳(파티 입장 밴드)은 지금 k로 그대로 바꾼다(BossRules.partyEntryBand).
+	intervalPowerRatio = 1.155 ^ 5,
 
 	pools = {
 		{ minStage = 1, bossIds = rotationBossIds },

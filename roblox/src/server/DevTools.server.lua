@@ -2436,9 +2436,13 @@ if RunService:IsStudio() and verifyEnabled("26-2") then
 		}
 		local AXIS_ORDER = { "attackPercent", "speedPercent", "defensePercent", "maxHpPercent" }
 		local GRADE_ORDER = { "epic", "legendary", "relic", "ancient", "primordial" }
+		-- P2.5a: 등급 배율이 ×1.45/단계(R3)로 바뀌어 영웅 ~ 고대 행은 표의 태초 행 × (그 등급 배율 ÷ 태초 배율)로 다시 계산한다(옛 표 = 웹 배율 2 · 3 · 4.5 · 8 ÷ 15).
+		-- 태초 행은 PRD 20.67 [3] 값 그대로 대조한다(정규화 기준이라 등급 배율과 무관).
 		for _, axisId in ipairs(AXIS_ORDER) do
+			local primordialRow = AXIS_GRADE_EXPECTED[axisId].primordial
 			for _, gradeId in ipairs(GRADE_ORDER) do
-				local expected = AXIS_GRADE_EXPECTED[axisId][gradeId]
+				local share = ItemVisualData.gradeVisuals[gradeId].statMultiplier / ItemVisualData.gradeVisuals.primordial.statMultiplier
+				local expected = { primordialRow[1] * share, primordialRow[2] * share, primordialRow[3] * share }
 				local range = Option.rangeOf(axisId, gradeId, 100, nil)
 				local minPct, midPct, maxPct = range.min * 100, range.mid * 100, range.max * 100
 				local ok = checkmark(minPct, expected[1], 0.02) and checkmark(midPct, expected[2], 0.02) and checkmark(maxPct, expected[3], 0.02)
@@ -2553,9 +2557,16 @@ if RunService:IsStudio() and verifyEnabled("26-2") then
 				gems = gems,
 			})
 			local point = BalanceSim.measurePoint(loadout, BalanceAnchorConfig.referenceLevel)
-			local ok = checkmark(point.surviveHits, 9.98, 0.05)
-			print(("[26-2][4]   건강2+방어3(태초·기댓값) 장착 후 생존 타수=%.3f대 (기대 9.98대) %s"):format(
-				point.surviveHits, record(ok)))
+			-- P2.5a: 앵커 레벨 100에서 보석 없는 생존이 7.0 → 7.77타(생존 앵커를 고스테이지 기준으로 다시 풀었다 - CombatConfig 주석)라 기대 = 보석 없는 생존 × 1.20 × 1.188(명세 배율 그대로).
+			local bare = BalanceSim.measurePoint(BalanceSim.buildLoadout({
+				classId = BalanceAnchorConfig.referenceClassId, level = BalanceAnchorConfig.referenceLevel,
+				weaponLevel = 0, weaponGrade = 0,
+				gear = { armor = gearSpec, gloves = gearSpec, shoes = gearSpec },
+			}), BalanceAnchorConfig.referenceLevel).surviveHits
+			local expectedHits = bare * 1.20 * 1.188
+			local ok = checkmark(point.surviveHits, expectedHits, expectedHits * 0.01)
+			print(("[26-2][4]   건강2+방어3(태초·기댓값) 장착 후 생존 타수=%.3f대 (기대 보석 없음 %.3f × 1.20 × 1.188 = %.3f대) %s"):format(
+				point.surviveHits, bare, expectedHits, record(ok)))
 		end
 
 		-- [5] 경험치 8개 몰빵 합산 상한(Σ≤25%).

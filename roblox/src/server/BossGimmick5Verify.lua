@@ -317,6 +317,10 @@ local function newStandIn(model, members, name, position)
 		return attributes[key]
 	end
 	PlayerState.init(fake)
+	-- P2.5a: 생존 앵커를 새 k로 다시 풀어(α 0.471) 맨몸 스탠드인(최대체력 10)은 보스 스킬 한 번에 쓰러진다 - 구출 흐름(누름 · 피격 리셋 · 다시 누름)을 재는
+	-- 검증이라 체력을 넉넉히 준다(맞았는지는 체력 비율 < 1로 그대로 본다).
+	PlayerState.setMaxHp(fake, 1e9)
+	PlayerState.setHp(fake, 1e9)
 	table.insert(members, fake)
 	BossEncounter.debugAddMember(model, fake)
 	return fake, fakeRoot
