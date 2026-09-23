@@ -581,8 +581,9 @@ local function fightBosses(state, profile, loadout, run)
 		state.bossSeconds += spent
 		state.gold += data.goldDrop
 		state.bossGold += data.goldDrop
-		state.exp += data.expReward * run.expMult
-		state.bossExp += data.expReward * run.expMult
+		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(state.rebirth) -- P2.5c: 환생 경험치 배율(캐릭터 경험치에만 - 게임 PlayerProfile.addCharacterExp와 같다)
+		state.exp += data.expReward * run.expMult * rebirthMult
+		state.bossExp += data.expReward * run.expMult * rebirthMult
 		local drop, reset = Enhance.getBossGrant(bossStage)
 		state.tickets.drop += drop
 		state.tickets.reset += reset
@@ -672,7 +673,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		end
 		hunt = chooseHunt(loadout, profile, math.max(1, state.reach - 1), state.gearMode and { armor = state.gear.armor }) -- 보스 스테이지(state.reach)는 아레나라 잡몹이 없다
 		tier = tierData(hunt.tier)
-		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * run.expMult
+		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth) -- P2.5c: 환생 경험치 배율(재료에는 안 곱한다)
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
 		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage)
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)

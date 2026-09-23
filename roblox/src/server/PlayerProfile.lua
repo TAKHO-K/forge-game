@@ -417,7 +417,8 @@ function PlayerProfile.addCharacterExp(player, amount)
 	end
 	local oldLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
 	-- S21-0 A2: 보상 계산 출구.
-	classState.characterExp += Sanitize.number(amount * PlayerProfile.getExpGainMultiplier(player), 0)
+	-- P2.5c 결정 3: 환생 회차 배율(CharacterLevel.getRebirthExpMultiplier)은 캐릭터 경험치에만 - 재료 기대 개수가 쓰는 getExpGainMultiplier에는 안 넣는다.
+	classState.characterExp += Sanitize.number(amount * PlayerProfile.getExpGainMultiplier(player) * CharacterLevel.getRebirthExpMultiplier(classState.rebirthCount), 0)
 	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then

@@ -149,8 +149,10 @@ function RebirthView.build(parent, overlayParent)
 		local requiredLevel = RebirthView.requiredLevel(rebirthCount)
 		button.Text = "환생"
 		button.AutoButtonColor = true
-		infoLabel.Text = ("환생 %d/%d회 · 현재 레벨 %d\n필요 레벨 %d - 레벨을 1로 초기화하고 무기 등급·보석 슬롯을 1단계 올립니다.\n경험치 배수 ×%d → ×%d"):format(
-			rebirthCount, GemData.maxRebirthCount, level, requiredLevel, rebirthCount + 1, rebirthCount + 2)
+		-- P2.5c 결정 3: 경험치 배수는 데이터(CharacterLevelConfig.rebirth.expMultipliers - 서버 PlayerProfile.addCharacterExp와 같은 함수)에서 읽는다.
+		infoLabel.Text = ("환생 %d/%d회 · 현재 레벨 %d\n필요 레벨 %d - 레벨을 1로 초기화하고 무기 등급·보석 슬롯을 1단계 올립니다.\n경험치 배수 ×%g → ×%g"):format(
+			rebirthCount, GemData.maxRebirthCount, level, requiredLevel,
+			CharacterLevel.getRebirthExpMultiplier(rebirthCount), CharacterLevel.getRebirthExpMultiplier(rebirthCount + 1))
 	end
 
 	function refs.handleResult(data)

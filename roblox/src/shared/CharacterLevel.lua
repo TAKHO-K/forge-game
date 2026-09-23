@@ -36,6 +36,9 @@ function CharacterLevel.getTargetKills(level)
 			return a.kills + (b.kills - a.kills) * (level - a.level) / (b.level - a.level)
 		end
 	end
+	if level > ANCHORS[#ANCHORS].level then
+		return CharacterLevelConfig.killTargetAfterAnchors or ANCHORS[#ANCHORS].kills -- P2.5c: 5회 환생 뒤 곡선
+	end
 	return ANCHORS[#ANCHORS].kills
 end
 
@@ -159,6 +162,12 @@ end
 -- P2 B: 환생 rebirthCount회 상태에서 다음 환생에 필요한 레벨(PlayerProfile.rebirth · 환생 UI · EconSim이 이 함수 하나를 본다). 표 밖(최대 회차)이면 nil.
 function CharacterLevel.getRebirthRequiredLevel(rebirthCount)
 	return CharacterLevelConfig.rebirth.requiredLevels[(rebirthCount or 0) + 1]
+end
+
+-- P2.5c 결정 3: 환생 rebirthCount회 상태의 캐릭터 경험치 획득 배율(CharacterLevelConfig.rebirth.expMultipliers - 표 밖이면 마지막 값). 캐릭터 경험치에만 곱한다.
+function CharacterLevel.getRebirthExpMultiplier(rebirthCount)
+	local list = CharacterLevelConfig.rebirth.expMultipliers
+	return list[math.clamp((rebirthCount or 0) + 1, 1, #list)]
 end
 
 return CharacterLevel
