@@ -75,7 +75,7 @@ function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 	end
 
 	-- [3] 상한 확인 - Enhance.getCost는 상한이면 nil을 돌려준다(Enhance.lua 참고).
-	local cost = Enhance.getCost(weapon.level)
+	local cost = Enhance.getCost(weapon.level, PlayerProfile.getAccountBestStage(player)) -- P2 C1: 계정 최고 스테이지 기준(GoldCost)
 	if not cost then
 		return send(player, { result = "max", level = weapon.level })
 	end

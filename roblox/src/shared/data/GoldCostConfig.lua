@@ -1,0 +1,18 @@
+-- 골드 비용 곡선(P2 C1, 결정 4B "골드 비용을 수입 증가율에 연동"). 공식은 shared/GoldCost.lua 한 곳이고 여기엔 비용 종류별 기준 스테이지만 둔다.
+--
+-- 비용(종류, 기본 비용, 스테이지 s) = floor(기본 비용 × k^max(0, s − 기준 스테이지)) - k = InfiniteStageConfig.growthRate(1.155).
+-- 골드 수입(잡몹 골드 = tier 골드 × k^(s−1))과 같은 k로 커지므로, 기준 스테이지 뒤로는 "골드/분 ÷ 1회 비용"(구매력)이 스테이지와 무관하게 일정하다.
+-- 스테이지 s = 계정 최고 스테이지(PlayerProfile.getAccountBestStage) - 지금 서 있는 곳이 아니다(스테이지 1로 내려가 싸게 사는 구멍, 28-2 [8] 3번과 같은 규칙).
+--
+--   enhance       무기 강화 1회 골드(기본 비용 = EnhanceConfig.goldCost 표). 기준 100 = P0 E4에서 구매력을 잰 구간 끝(스테이지 100) -
+--                 그때까지는 P2 전 고정표 그대로이고, 그 뒤로는 스테이지 100 시점의 구매력을 유지한다(P2 전: 스테이지 100 이후 골드 비용이 사실상 0).
+--   rerollTicket  옵션 변환권(기본 비용 = tier1 잡몹 골드 × GemData.rerollTicketGoldMultiplier). 기준 1 = P2 전과 같은 값(잡몹 1마리당 골드 × 배수).
+--   protection    강화 방지권(기본 비용 = tier1 잡몹 골드 × EnhanceConfig.protection[종류].priceKillEquivalent). 기준 1 = P2 전과 같은 값.
+-- 새 골드 소비처(예: 펫)는 여기에 종류 한 줄을 더하고 GoldCost.cost(기본 비용, 스테이지, 종류)를 부르면 된다.
+return {
+	anchorStage = {
+		enhance = 100,
+		rerollTicket = 1,
+		protection = 1,
+	},
+}

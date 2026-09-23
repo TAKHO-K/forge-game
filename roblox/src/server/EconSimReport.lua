@@ -10,6 +10,7 @@ local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageC
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local EconSim = require(script.Parent.EconSim)
 local EconSimTables = require(script.Parent.EconSimTables)
 
@@ -142,7 +143,7 @@ end
 local function writeE4(w, runs, profileIds, enhanceTable)
 	w.line("## E4 구간별 경제표")
 	w.line("")
-	w.line("구간 = 그 청크(레벨업 1회) 동안의 최고 스테이지. 골드 · EXP/분 = 구간 전체(사냥 + 보스) 합 ÷ 시간. 강화 비용 = 구간 끝 강화 단계 기준(다음 1회 = `Enhance.getCost`, 다음 단계 기대 = 몬테카를로 표). 구매력 = 골드/분 ÷ 다음 1회 비용. 보석 = 구간 끝(칸 수 · 평균 itemLevel · 위력 합).")
+	w.line("구간 = 그 청크(레벨업 1회) 동안의 최고 스테이지. 골드 · EXP/분 = 구간 전체(사냥 + 보스) 합 ÷ 시간. 강화 비용 = 구간 끝 강화 단계 · 구간 끝 최고 스테이지 기준(다음 1회 = `Enhance.getCost` - P2부터 GoldCost, 다음 단계 기대 = 몬테카를로 표 × 같은 GoldCost 배수). 구매력 = 골드/분 ÷ 다음 1회 비용. 보석 = 구간 끝(칸 수 · 평균 itemLevel · 위력 합).")
 	w.line("")
 	w.line("| 구간 | 프로필 | 골드/분 | EXP/분 | 다음 강화 1회 | 다음 단계 기대 골드 | 구매력 | 장비 교체 간격(분) | 보석 칸 · 평균 레벨 · 위력 합 | 레벨 범위 | 사냥 스테이지 범위 |")
 	w.line("|---|---|---|---|---|---|---|---|---|---|---|")
@@ -169,16 +170,17 @@ local function writeE4(w, runs, profileIds, enhanceTable)
 			else
 				local minutes = seconds / 60
 				local goldPerMin, expPerMin = gold / minutes, exp / minutes
-				local cost = Enhance.getCost(last.weaponLevel)
+				local cost = Enhance.getCost(last.weaponLevel, last.reach) -- P2 C1: 구간 끝 최고 스테이지 기준(GoldCost)
 				local expected = enhanceTable[last.weaponLevel]
+				local scale = GoldCost.scale(last.reach, "enhance") -- 몬테카를로 표는 기본 비용 기준 - 같은 배수를 곱한다
 				local power = cost and goldPerMin / cost or nil
 				local interval = replaced > 0 and minutes / replaced or nil
 				w.line(("| %s | %s | %s | %s | %s | %s | %s | %s | %d칸 · %s · %s | %d ~ %d | %d ~ %d |"):format(
 					segment.label, profile.displayName, num(goldPerMin, 0), num(expPerMin, 0),
 					cost and ("+%d→+%d %s"):format(last.weaponLevel, last.weaponLevel + 1, num(cost, 0)) or ("+%d 최대 [없음]"):format(last.weaponLevel),
-					expected and num(expected.gold, 0) or "[없음]", power and num(power, 1) or "[없음]", interval and num(interval, 1) or "교체 없음",
+					expected and num(expected.gold * scale, 0) or "[없음]", power and num(power, 1) or "[없음]", interval and num(interval, 1) or "교체 없음",
 					last.gemCount, num(last.gemAvgLevel, 0), pct(last.gemAttackBonus), first.level, last.level, first.stage, last.stage))
-				w.row("e4", { segment.label, id, goldPerMin, expPerMin, cost or "", expected and expected.gold or "", power or "", interval or "", last.gemCount, last.gemAvgLevel, last.gemAttackBonus, last.weaponLevel, minutes })
+				w.row("e4", { segment.label, id, goldPerMin, expPerMin, cost or "", expected and expected.gold * scale or "", power or "", interval or "", last.gemCount, last.gemAvgLevel, last.gemAttackBonus, last.weaponLevel, minutes })
 			end
 		end
 	end

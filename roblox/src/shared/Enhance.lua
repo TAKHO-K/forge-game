@@ -5,9 +5,10 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
--- 28-1 S05: 방지권 상점가(getProtectionPrice)가 변환권과 같은 모양(잡몹 1마리당 골드 × 배수)이라 같은 두 모듈을 읽는다.
-local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+-- 28-1 S05: 방지권 상점가(getProtectionPrice)가 변환권과 같은 모양(잡몹 1마리당 골드 × 배수)이라 같은 모듈을 읽는다.
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+-- P2 C1: 골드 비용은 전부 GoldCost 한 곳을 거친다(강화 · 방지권 · 변환권).
+local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 
 local Enhance = {}
 
@@ -17,11 +18,13 @@ function Enhance.getDamageMultiplier(level)
 end
 
 -- 상한이면 nil(시도 불가 - 웹 getEnhanceCost의 Infinity와 같은 뜻).
-function Enhance.getCost(level)
+-- P2 C1: 1회 골드 = GoldCost.cost(표의 기본 비용, 계정 최고 스테이지, "enhance") - 스테이지 100까지는 표 그대로, 그 뒤로는 골드 수입과 같은 비율로 커진다.
+-- accountBestStage가 nil이면 표의 기본 비용(몬테카를로 기대 비용표 · 옛 검증처럼 스테이지와 무관한 계산용).
+function Enhance.getCost(level, accountBestStage)
 	if level >= EnhanceConfig.maxLevel then
 		return nil
 	end
-	return EnhanceConfig.goldCost[level + 1]
+	return GoldCost.cost(EnhanceConfig.goldCost[level + 1], accountBestStage, "enhance")
 end
 
 function Enhance.getProbability(level)
@@ -169,8 +172,9 @@ end
 
 -- 방지권 상점가(골드) = 계정 최고 스테이지의 잡몹(tier1) 1마리당 골드 × priceKillEquivalent. 지금 서 있는 스테이지가 아니라 **계정 최고 스테이지**가
 -- 기준이다(옵션 변환권과 같은 모양 - 스테이지 1로 내려가 싸게 사는 구멍을 막는다). kind = "drop" / "reset".
+-- P2 C1: GoldCost(기준 스테이지 1) = InfiniteStage.getGoldReward와 같은 값 - P2 전과 한 자리도 안 바뀐다.
 function Enhance.getProtectionPrice(kind, accountBestStage)
-	return InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, accountBestStage) * EnhanceConfig.protection[kind].priceKillEquivalent
+	return GoldCost.cost(MonsterData.tier1.goldDrop, accountBestStage, "protection") * EnhanceConfig.protection[kind].priceKillEquivalent
 end
 
 -- 보스 계정 첫 클리어 지급(28-1 S05) - 보스 스테이지 stage가 주는 방지권 장수. 반환: 하락 장수, 초기화 장수(0 또는 1). 식은 EnhanceConfig.protection.bossGrant.

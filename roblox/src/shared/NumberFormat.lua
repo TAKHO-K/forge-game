@@ -103,13 +103,35 @@ function NumberFormat.format(value)
 
 	local scaled = n
 	local stepIndex = -1
-	while scaled >= STEP do
-		scaled = scaled / STEP
-		stepIndex += 1
+	local truncateSlack = 1 -- 버림 직전 배율(K · M · B · T 구간은 1 = P2 전 그대로)
+	if n < STEP ^ (#UNITS + 1) then
+		-- K · M · B · T 구간(1e15 미만) - P2 전 코드 그대로(표시가 한 글자도 안 바뀐다).
+		while scaled >= STEP do
+			scaled = scaled / STEP
+			stepIndex += 1
+		end
+	else
+		-- P2 C3: 알파벳 단위 구간(1e15 이상)은 1000으로 수십 번 나누면 오차가 쌓여 1e45가 "999.9aj"(정답 "1ak"), 1e308이 "99.9dt"(정답 "100dt")로 찍혔다.
+		-- 단위 칸을 먼저 정하고 한 번만 나눈다(STEP^k는 반올림 한 번뿐 - 10의 거듭제곱이 정확히 1 · 10 · 100으로 떨어진다).
+		stepIndex = #UNITS - 1
+		while n >= STEP ^ (stepIndex + 2) do
+			stepIndex += 1
+		end
+		scaled = n / STEP ^ (stepIndex + 1)
+		if scaled >= STEP then -- STEP^k가 반올림으로 n보다 한 칸 크게 나온 경계(예: 1000.0000…) - 다음 단위로 올린다
+			scaled = scaled / STEP
+			stepIndex += 1
+		end
+		-- 나눗셈 · 거듭제곱의 반올림으로 7.7e245가 769.99999…가 되어 "769.9cy"로 버려지는 경계 - 상대 1e-9만큼 올려서 버린다(표시 0.1 자리보다 훨씬 작다).
+		truncateSlack = 1 + 1e-9
 	end
 
 	local factor = 10 ^ DECIMALS
-	local truncated = math.floor(scaled * factor) / factor
+	local truncated = math.floor(scaled * factor * truncateSlack) / factor
+	if truncated >= STEP then -- 여유가 999.99999…를 1000.0으로 올린 경우(알파벳 구간만 가능) - "1000aj"가 아니라 "1ak"
+		truncated = math.floor(truncated / STEP * factor) / factor
+		stepIndex += 1
+	end
 	local text
 	if truncated == math.floor(truncated) then
 		text = tostring(math.floor(truncated))

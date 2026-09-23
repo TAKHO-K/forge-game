@@ -9,7 +9,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -50,7 +50,7 @@ workshopResult.Parent = ReplicatedStorage
 -- 단일 출처). 28-2 [8] 3번: 기준 스테이지는 지금 서 있는 곳이 아니라 계정 최고 스테이지다(스테이지 1로 내려가 싸게 사는 구멍).
 local function rerollTicketPrice(player)
 	local stage = PlayerProfile.getAccountBestStage(player)
-	return InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage) * GemData.rerollTicketGoldMultiplier
+	return GoldCost.cost(MonsterData.tier1.goldDrop, stage, "rerollTicket") * GemData.rerollTicketGoldMultiplier -- P2 C1: GoldCost(기준 1 - P2 전과 같은 값)
 end
 
 -- 분해는 판매(SellRequest)와 같은 층의 되돌릴 수 없는 사건이다 - 즉시저장. 사용자 지시로

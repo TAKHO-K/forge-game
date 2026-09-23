@@ -37,6 +37,7 @@ local Option = require(ReplicatedStorage.Shared.Option)
 local Gem = require(ReplicatedStorage.Shared.Gem)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
+local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PartyState = require(script.Parent.PartyState)
 
@@ -416,7 +417,7 @@ local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, for
 	if profile.gemReroll and Gem.isRerollableGrade(gradeId) then
 		local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, profile.gemRoll, whatIf)
 		local tickets = #Option.poolFor(state.classId)
-		local price = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, state.reach) * GemData.rerollTicketGoldMultiplier * tickets
+		local price = GoldCost.cost(MonsterData.tier1.goldDrop, state.reach, "rerollTicket") * GemData.rerollTicketGoldMultiplier * tickets -- GemServer.rerollTicketPrice와 같은 식
 		if (forced or EconSim.gemValue(gem, state.classId) > oldValue) and state.gold >= price then
 			state.gold -= price
 			state.rerollTickets += tickets
@@ -493,7 +494,7 @@ local function tryEnhanceWithGold(state, profile, rng)
 	while state.weaponLevel < math.min(profile.enhanceTarget, EnhanceConfig.maxLevel) and guard < 5000 do
 		guard += 1
 		local level = state.weaponLevel
-		local cost = Enhance.getCost(level)
+		local cost = Enhance.getCost(level, state.reach) -- P2 C1: 계정 최고 스테이지(= 설 수 있는 가장 높은 스테이지) 기준 GoldCost
 		local mat = EnhanceMaterialData.costByLevel[level]
 		if state.gold < cost or (mat and (state.materials[mat.id] or 0) < mat.count) then
 			return
@@ -733,6 +734,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		reach = state.reach, stage = hunt.stage, firstStage = firstStage, tier = hunt.tier, limiter = hunt.limiter, level = levelBefore, rebirth = state.rebirth,
 		seconds = seconds, kills = kills, killSeconds = hunt.killSeconds,
 		gold = gold, exp = exp, gearReplaced = replaced, weaponLevel = state.weaponLevel,
+		goldBalance = state.gold, goldPerKill = goldPerKill, -- P2 C2: 보유 골드 대비 처치 1회 골드(상대 정밀도)
 		armorGrade = state.gear.armor and state.gear.armor.grade or "-", armorLevel = state.gear.armor and state.gear.armor.itemLevel or 0,
 		gemCount = gemCount, gemAvgLevel = gemCount > 0 and gemLevels / gemCount or 0, gemAttackBonus = gemBonus,
 	}

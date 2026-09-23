@@ -16,7 +16,7 @@ local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local Gem = require(ReplicatedStorage.Shared.Gem)
-local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Button = require(script.Parent.Parent.ui.kit.Button)
@@ -73,7 +73,7 @@ local REASON_TEXT = {
 local function ticketPrice()
 	-- 28-2 [8] 3번: 가격 기준은 계정 최고 스테이지(서버 GemServer.rerollTicketPrice와 같은 값 - Attribute는 PlayerProfile이 내린다).
 	local stage = player:GetAttribute("AccountBestStage") or 1
-	return InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage) * GemData.rerollTicketGoldMultiplier
+	return GoldCost.cost(MonsterData.tier1.goldDrop, stage, "rerollTicket") * GemData.rerollTicketGoldMultiplier -- P2 C1: 서버와 같은 GoldCost
 end
 
 local function gradeName(gradeId)

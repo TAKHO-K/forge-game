@@ -15,6 +15,7 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local EnhanceEffect = require(ReplicatedStorage.Shared.EnhanceEffect)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local EnhanceService = require(script.Parent.EnhanceService)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
@@ -259,7 +260,7 @@ function EnhanceEffectVerify.runLive(player, env)
 
 		root.Anchored = true -- 옮긴 자리의 지형이 아직 스트리밍되지 않았을 때 추락하는 일을 막는다(S03 (나)와 같다)
 		root.CFrame = CFrame.new(WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset + Vector3.new(0, 3, 0))
-		PlayerProfile.addGold(player, 4000000000) -- 아래 시도가 쓰는 골드 · 재료를 넉넉히 준다(env.restore가 되돌린다)
+		PlayerProfile.addGold(player, 4000000000 * GoldCost.scale(PlayerProfile.getAccountBestStage(player), "enhance")) -- P2 C1: 계정 최고 > 100이면 비용이 커진다 · 아래 시도가 쓰는 골드 · 재료를 넉넉히 준다(env.restore가 되돌린다)
 		for _, materialId in ipairs(EnhanceMaterialData.order) do
 			PlayerProfile.addMaterial(player, materialId, 1000)
 		end

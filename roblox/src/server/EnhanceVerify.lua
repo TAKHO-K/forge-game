@@ -14,6 +14,7 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local BossEncounter = require(script.Parent.BossEncounter)
 local CombatResolution = require(script.Parent.CombatResolution)
@@ -448,7 +449,7 @@ function EnhanceVerify.runLive(player, env)
 		root.CFrame = CFrame.new(WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset + Vector3.new(0, 3, 0))
 		PlayerProfile.setWeaponLevel(player, 0)
 		PlayerProfile.setEnhanceGauge(player, 0)
-		PlayerProfile.addGold(player, 20000000) -- 19강 시도 1회 23.5만 × 10회까지 넉넉히
+		PlayerProfile.addGold(player, 20000000 * GoldCost.scale(PlayerProfile.getAccountBestStage(player), "enhance")) -- 19강 시도 1회 23.5만 × 10회까지 넉넉히
 		goldStart = PlayerProfile.getGold(player)
 	end)
 
@@ -927,7 +928,7 @@ function EnhanceVerify.runLiveS04(player, env)
 		standAtStation()
 		PlayerProfile.setWeaponLevel(player, 19)
 		PlayerProfile.setEnhanceGauge(player, 0)
-		PlayerProfile.addGold(player, 20000000)
+		PlayerProfile.addGold(player, 20000000 * GoldCost.scale(PlayerProfile.getAccountBestStage(player), "enhance")) -- P2 C1: 계정 최고 > 100이면 비용이 커진다
 		setMaterial(player, ENHANCE_STONE, 7)
 		task.wait(EnhanceService.requestCooldownSeconds + 0.1)
 		local goldBefore = PlayerProfile.getGold(player)
@@ -948,9 +949,12 @@ function EnhanceVerify.runLiveS04(player, env)
 		local goldAfter, stonesAfter = PlayerProfile.getGold(player), PlayerProfile.getMaterial(player, ENHANCE_STONE)
 		local resultOk = payload ~= nil and RESULT_SET[payload.result] == true
 			and payload.level == Enhance.getResultLevel(19, payload.result) and PlayerProfile.getWeapon(player).level == payload.level
-		r.check(("강화석 8개 → 시도: 결과 %s · 무기 +%d · 강화석 8 → %d(기대 0) · 골드 %d → %d(차감 %d, 기대 235,000) · 결과가 정상(5종 중 하나 · 단계가 판정과 같음)=%s"):format(
-			payload and payload.result or "응답 없음", PlayerProfile.getWeapon(player).level, stonesAfter, goldBefore, goldAfter, goldBefore - goldAfter, tostring(resultOk)),
-			resultOk and stonesAfter == 0 and goldBefore - goldAfter == 235000 and goldBefore - goldAfter == Enhance.getCost(19))
+		-- P2 C1: 1회 골드 = GoldCost(표 235,000, 계정 최고 스테이지) - 최고 100 이하면 235,000 그대로, 그 위면 골드 수입과 같은 비율로 크다.
+		local expectedCost = Enhance.getCost(19, PlayerProfile.getAccountBestStage(player))
+		r.check(("강화석 8개 → 시도: 결과 %s · 무기 +%d · 강화석 8 → %d(기대 0) · 골드 %.0f → %.0f(차감 %.0f, 기대 %.0f = 표 235,000 × GoldCost(최고 %d)) · 결과가 정상(5종 중 하나 · 단계가 판정과 같음)=%s"):format(
+			payload and payload.result or "응답 없음", PlayerProfile.getWeapon(player).level, stonesAfter, goldBefore, goldAfter, goldBefore - goldAfter, expectedCost,
+			PlayerProfile.getAccountBestStage(player), tostring(resultOk)),
+			resultOk and stonesAfter == 0 and Enhance.getCost(19) == 235000 and goldBefore - goldAfter == expectedCost)
 	end)
 
 	-- [14] 되돌리기: classes · gold · 가방 · 재료는 env.restore가, 위치 · 고정은 직접. 검증이 만든 것은 전부 없어야 한다.

@@ -87,7 +87,7 @@ function Controller.getState()
 	local gauge = player:GetAttribute("EnhanceGauge") or 0
 	local gaugeMax = EnhanceConfig.gauge.max
 	local gaugeFull = gauge >= gaugeMax
-	local cost = Enhance.getCost(level)
+	local cost = Enhance.getCost(level, player:GetAttribute("AccountBestStage") or 1) -- P2 C1: 서버(EnhanceService)와 같은 기준 스테이지
 
 	local haveDrop = player:GetAttribute(ticketAttributeName("drop")) or 0
 	local haveReset = player:GetAttribute(ticketAttributeName("reset")) or 0
