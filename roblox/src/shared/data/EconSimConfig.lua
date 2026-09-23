@@ -40,7 +40,7 @@ return {
 	--   gemRoll            원하는 축을 맞췄을 때의 옵션 롤 값(0.875 ~ 1.125)
 	profiles = {
 		casual = {
-			displayName = "캐주얼", hoursPerDay = 0.5, classId = "bow", huntTierMax = 3,
+			displayName = "캐주얼", hoursPerDay = 1, classId = "bow", huntTierMax = 3,
 			targetKillSeconds = 4.0, minSurviveHits = 5, dpsEfficiency = 0.7, moveOverheadSeconds = 1.5,
 			bossDpsEfficiency = 0.6, bossKillLimitSeconds = 120, bossAttemptsPerClear = 2.0, bossOverheadSeconds = 30,
 			partySize = 1, partyExpBonus = false,
@@ -48,7 +48,7 @@ return {
 			gearCheckMinutes = 60, gemReroll = false, gemRoll = 1.0,
 		},
 		normal = {
-			displayName = "일반", hoursPerDay = 1.5, classId = "bow", huntTierMax = 5,
+			displayName = "일반", hoursPerDay = 3, classId = "bow", huntTierMax = 5,
 			targetKillSeconds = 3.0, minSurviveHits = 4, dpsEfficiency = 0.85, moveOverheadSeconds = 1.0,
 			bossDpsEfficiency = 0.75, bossKillLimitSeconds = 90, bossAttemptsPerClear = 1.5, bossOverheadSeconds = 20,
 			partySize = 1, partyExpBonus = false,
@@ -56,7 +56,7 @@ return {
 			gearCheckMinutes = 20, gemReroll = true, gemRoll = 1.0,
 		},
 		top = {
-			displayName = "상위 1%", hoursPerDay = 6, classId = "bow", huntTierMax = 6,
+			displayName = "상위 1%", hoursPerDay = 12, classId = "bow", huntTierMax = 6,
 			targetKillSeconds = 2.5, minSurviveHits = 3, dpsEfficiency = 0.95, moveOverheadSeconds = 0.6,
 			bossDpsEfficiency = 0.9, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.1, bossOverheadSeconds = 10,
 			partySize = 4, partyExpBonus = true,
