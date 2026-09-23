@@ -241,7 +241,18 @@ return {
 			-- 재사용하라고 준 값이다(새로 만들지 않는다).
 			-- P2 F3(결정 8A "딜링모드를 검사 기준으로 하향"): 3.13 → 1.615 - 치유사 atk 0.66(F2)에서 딜링모드 60초 로테이션 = 검사 × 0.875(목표 0.85 ~ 0.9, 장비 없음 앵커,
 			-- EconSim E6 풀이 1.6154). 딜링모드 딜 = 평타 × 이 배율(치유모드는 1).
-			attackMultiplier = 1.615,
+			-- P2.5a D(결정 8): 1.615 → 1.574 - 기준을 "장비 없음"에서 "평균 투자"(+20 · E6 평균 보석)로 옮겨 그 자리에서 검사 × 0.875(EconSim E6 F3 풀이 1.5743).
+			attackMultiplier = 1.574,
+			-- P2.5a D(결정 8 - "무조건 딜러보다 약하게"가 아니다): 투자 기울기. 딜링모드 배율 × (I ÷ I_평균)^β(PlayerCombat.getInvestmentScale), I = 강화 누적 배율 ×
+			-- (1 + 공격력% 합). 평균 투자(+20 · 공격력% average.attackPercent)에서 1, 최상위 투자(+30 · top.attackPercent)에서 검사 대비 비가 topScale(= HealerTopScale 1.1 -
+			-- 사용자 지정 기본값)이 되도록 β를 푼다. unscaledTopRatio = 기울기 없이 최상위 투자의 검사 대비 비(E6 측정 0.918 - 치유사는 모든 피해가 평타라 치명 · 신속
+			-- 보석을 딜러보다 더 받는다). 기준점 공격력% = E6 평균 · 최상위 장비의 치유사 값(장갑 + 보석).
+			investmentScaling = {
+				topScale = 1.1, -- HealerTopScale
+				unscaledTopRatio = 0.918,
+				average = { enhance = 20, attackPercent = 0.666 },
+				top = { enhance = 30, attackPercent = 0.912 },
+			},
 			-- 초당 최대체력 소모율 - 새로 만드는 상수라 기존 관계식(PlayerRegen.server.lua의
 			-- regenPercentPerSecond=0.04)에서 역산한다. 목표 가동률 60%(지시 [6])라면
 			-- 가동/비가동 시간비 = 0.6/0.4 = 1.5이고, "켜져 있던 동안 소모한 양 = 꺼져있는

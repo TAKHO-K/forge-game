@@ -377,7 +377,9 @@ end
 -- addCharacterExp · 재료 기대 개수(CombatResolution.grantMaterials) · /gg curve(DevTools)가 이 함수 하나만 본다.
 -- P2 G: 파티 보너스는 조건(같은 구역 · 반경 · 최근 활동)을 만족한 파티원만 센다(PartyState.getExpBonusFor - 지급 순간 판정).
 function PlayerProfile.getExpGainMultiplier(player)
-	return PlayerProfile.combineExpMultiplier(PlayerProfile.getOptionBonus(player, "expGain"), PartyState.getExpBonusFor(player))
+	local partyBonus = PartyState.getExpBonusFor(player)
+	PartyState.showAppliedExpBonus(player, partyBonus) -- P2.5a D(결정 7): 칩 = 이번에 실제로 적용한 보너스
+	return PlayerProfile.combineExpMultiplier(PlayerProfile.getOptionBonus(player, "expGain"), partyBonus)
 end
 
 -- 재생(healingPower, 26-2) 배수 - 자동회복(PlayerRegen.server.lua)·힐러 치유(SkillServer
@@ -593,9 +595,9 @@ function PlayerProfile.rebirth(player)
 	-- 슬롯 k(=이번 회차)가 지금 열리고, 그 자리에 확정 보석 1개가 자동 지급된다(20.38 [2]
 	-- "슬롯이 열릴 때 그 등급의 보석 1개가 확정 지급된다", 23-4부터 등급은 그 슬롯의 상한).
 	local slot = classState.rebirthCount
-	-- 26-1: 환생 지급 보석의 itemLevel = 25×회차(PRD 20.67 [3] "환생 순간 레벨"이던 값). P2 B로 필요 레벨이 65 · 80 · 90으로 내려갔지만 보석 위력은
-	-- 승인 범위 밖이라 옛 값을 그대로 둔다(리뷰 지적 2 - 필요 레벨을 따라가면 3 ~ 5회차 보석이 11 ~ 25% 약해진다. docs/phase/P2-log.md 결정 필요).
-	classState.weapon.gems[slot] = Gem.buildGrantedGem(slot, profile.classId, 25 * classState.rebirthCount)
+	-- P2.5a D(결정 9): 환생 지급 보석의 itemLevel = 환생 순간의 캐릭터 레벨을 스테이지 척도로 옮긴 값(CharacterLevel.getStageForLevel - 태초 보석(= 사냥 스테이지)과
+	-- 같은 척도, C10). 옛 값 25 × 회차.
+	classState.weapon.gems[slot] = Gem.buildGrantedGem(slot, profile.classId, CharacterLevel.getStageForLevel(currentLevel))
 
 	-- 23-4: 해금 상태를 저장 필드에 기록한다(GemData.slotUnlockRequiredRebirth 주석 참고) -
 	-- 매번 rebirthCount에서 다시 계산하지 않는다. 지금 조건은 여전히 1:1(slot i = 환생

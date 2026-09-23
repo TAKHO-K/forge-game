@@ -9,9 +9,11 @@
 --   rerollTicket  옵션 변환권(기본 비용 = tier1 잡몹 골드 × GemData.rerollTicketGoldMultiplier). 기준 1 = P2 전과 같은 값(잡몹 1마리당 골드 × 배수).
 --   protection    강화 방지권(기본 비용 = tier1 잡몹 골드 × EnhanceConfig.protection[종류].priceKillEquivalent). 기준 1 = P2 전과 같은 값.
 -- 새 골드 소비처(예: 펫)는 여기에 종류 한 줄을 더하고 GoldCost.cost(기본 비용, 스테이지, 종류)를 부르면 된다.
+-- P2.5a C8: enhance 기준 100 → 1. 비용이 스테이지 1부터 골드 수입과 같은 율(InfiniteStageConfig.goldGrowthRate)로 커져 구매력이 1 ~ 100 구간에서도 일정하다
+-- (기준 100이면 1 ~ 100에서는 비용이 고정이라 수입만 커져 구매력이 스테이지 따라 올랐다). 강화 1회 비용 = EnhanceConfig.goldCost × 1.001^(s − 1).
 return {
 	anchorStage = {
-		enhance = 100,
+		enhance = 1,
 		rerollTicket = 1,
 		protection = 1,
 	},

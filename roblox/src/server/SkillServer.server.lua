@@ -32,7 +32,6 @@ local BuffState = require(script.Parent.BuffState)
 local SummonState = require(script.Parent.SummonState)
 local DashEndpoint = require(script.Parent.DashEndpoint)
 local HealCast = require(script.Parent.HealCast)
-local PartyState = require(script.Parent.PartyState)
 
 local skillRequest = Instance.new("RemoteEvent")
 skillRequest.Name = "SkillRequest"
@@ -440,6 +439,7 @@ local function castToggle(player, slot, def)
 	else
 		BuffState.apply(player, "dealingMode", {
 			attackMultiplier = def.attackMultiplier,
+			investmentScaling = def.investmentScaling, -- P2.5a D(결정 8) - AttackServer가 PlayerCombat.getInvestmentScale로 읽는다
 			displayName = def.name,
 			colorName = "danger",
 		})
@@ -494,7 +494,6 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 		reject(player, slot, "cooldown")
 		return
 	end
-	PartyState.noteActivity(player) -- P2 G: 파티 경험치 보너스의 "최근 활동"(스킬 · 치유 시전 요청을 받아들인 순간)
 
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -503,7 +502,7 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 	end
 
 	local characterLevel = PlayerProfile.getCharacterLevel(player)
-	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player))
+	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage")) -- P2.5a R5: 최종 데미지 버킷
 	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage를 쓴다.
 	local attackerStage = TutorialState.getMonsterStage(player)
 

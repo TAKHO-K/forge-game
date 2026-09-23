@@ -302,6 +302,10 @@ end
 -- attacker는 "이 타격을 낸 사람"(보스면 이 사람이 보상을 가져간다, 잡몹이면 기여자 목록만
 -- 쓰이고 attacker 자체는 안 쓰인다 - 그래도 호출부 계약을 하나로 통일하기 위해 항상 받는다).
 function CombatResolution.resolveHit(attacker, target, isDead)
+	-- P2.5a D(결정 10): 파티 경험치의 "최근 활동" = 적에게 실제로 명중한 순간(평타 · 스킬 모두 여기로 온다). 구출 대상(피해 0 · 적 아님)은 세지 않는다.
+	if attacker and not MonsterState.isRescueTarget(target) then
+		PartyState.noteActivity(attacker)
+	end
 	if not isDead then
 		return
 	end

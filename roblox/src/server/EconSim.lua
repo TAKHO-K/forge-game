@@ -92,6 +92,9 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	if whatIf.dealingAttackMultiplier then
 		set(SkillData.healer.E, "attackMultiplier", whatIf.dealingAttackMultiplier)
 	end
+	if whatIf.dealingInvestmentScaling ~= nil then -- P2.5a: false = 딜링모드 투자 기울기 끄기(치유모드 딜 계산 · p25before)
+		set(SkillData.healer.E, "investmentScaling", whatIf.dealingInvestmentScaling or nil)
+	end
 	if whatIf.partyExpRequiresPresence ~= nil then
 		set(EconSimConfig, "partyExpRequiresPresence", whatIf.partyExpRequiresPresence)
 	end
@@ -444,13 +447,14 @@ local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, for
 end
 
 local function doRebirth(state, profile, whatIf)
+	local levelAtRebirth = state.level
 	state.rebirth += 1
 	state.level = 1
 	state.exp = 0
 	state.weaponGrade = state.rebirth
 	local slot = state.rebirth
-	-- 환생 지급 보석(PlayerProfile.rebirth): 그 슬롯 상한 등급 · itemLevel = 25 × 회차(P2 필요 레벨 변경과 무관하게 옛 값) · 옵션 무작위.
-	tryPlaceGem(state, profile, slot, Gem.gradeCapForSlot(slot), 25 * state.rebirth, whatIf, true)
+	-- 환생 지급 보석(PlayerProfile.rebirth): 그 슬롯 상한 등급 · itemLevel = 환생 순간 레벨의 스테이지 척도(P2.5a 결정 9 - CharacterLevel.getStageForLevel) · 옵션 무작위.
+	tryPlaceGem(state, profile, slot, Gem.gradeCapForSlot(slot), CharacterLevel.getStageForLevel(levelAtRebirth), whatIf, true)
 	if state.rebirth == GemData.maxRebirthCount and Gem.allSlotsFilled(state.gems) then
 		state.weaponGrade = #ArmorData.gradeOrder - 1
 	end
@@ -751,6 +755,9 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		goldBalance = state.gold, goldPerKill = goldPerKill, -- P2 C2: 보유 골드 대비 처치 1회 골드(상대 정밀도)
 		gemShare = 1 - BalanceSim.buildLoadout({ classId = state.classId, level = state.level, weaponLevel = state.weaponLevel, weaponGrade = state.weaponGrade, gear = state.gear, gems = {} }).atk / loadoutFor(state).atk, -- P2 D1: 보석이 공격력에서 차지하는 비중
 		armorGrade = state.gear.armor and state.gear.armor.grade or "-", armorLevel = state.gear.armor and state.gear.armor.itemLevel or 0,
+		-- P2.5a E(스테이지 환산 표): 청크 끝의 출처별 값 - 무기 등급(환생) · 장갑 공격력% · 방어구(방어 · 최대체력은 itemLevel · 등급)
+		weaponGrade = state.weaponGrade, levelAfter = state.level,
+		glovesAttack = Loot.getGlovesAttackPercent(state.gear.gloves), armorDefense = Loot.getArmorDefense(state.gear.armor),
 		gemCount = gemCount, gemAvgLevel = gemCount > 0 and gemLevels / gemCount or 0, gemAttackBonus = gemBonus,
 	}
 end
@@ -762,7 +769,7 @@ function EconSim.runProgress(profileId, whatIf)
 	assert(profile, "알 수 없는 프로필: " .. tostring(profileId))
 	local cap = InfiniteStageConfig.safeStageCap
 	local milestones = table.clone(EconSimConfig.milestones)
-	table.insert(milestones, cap)
+	table.insert(milestones, InfiniteStageConfig.designMaxStage) -- P2.5a R2: 설계 최대 스테이지(안전 상한은 진행 끝 조건으로만 쓴다)
 	local run = { profileId = profileId, milestones = milestones, reached = {}, rebirthAt = {}, chunks = {}, cap = cap, stall = nil }
 	run.expMult = EconSim.withOverrides(whatIf, expMultiplier, profile) -- what-if(p2before의 옛 파티 규칙)를 따른다
 	local state = newState(profile)

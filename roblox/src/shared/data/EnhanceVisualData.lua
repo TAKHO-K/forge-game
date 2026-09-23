@@ -26,6 +26,8 @@ return {
 		{ level = 23, particle = { colorTo = "danger", rate = 18 } },
 		{ level = 24, light = { color = "danger", range = 12 }, trailColor = "danger" },
 		{ level = 25, rainbow = true, title = { text = "+25", textSize = 22, studsOffsetY = 3.2 }, pillarSeconds = 3 },
+		-- P2.5a R4: 새 최대 단계 +30 - +25와 같은 연출(새 색 · 에셋 없음), 칭호 글자만 +30.
+		{ level = 30, rainbow = true, title = { text = "+30", textSize = 22, studsOffsetY = 3.2 }, pillarSeconds = 3 },
 	},
 
 	-- 무지개 한 바퀴(초). 반짝이 몬스터의 hue 순환(client/SparkleMonsterVisual)과 같은 속도다 - "태초 rainbow와 같은 hue 회전"의 hue 순환 쪽(PRD 20.72 [1-9]).

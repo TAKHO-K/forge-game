@@ -96,8 +96,9 @@ local function refresh()
 	end
 	local state = Controller.getState()
 	if built.tab == "enhance" then
+		-- P2.5a R4: 최대 단계를 제목에 항상 적는다("최대 +30" - EnhanceConfig.maxLevel).
 		built.panel.titleLabel.Text = state.maxed and ("%s 등급 · +%d (최대)"):format(state.gradeName, state.level)
-			or ("%s 등급 · +%d → +%d"):format(state.gradeName, state.level, state.level + 1)
+			or ("%s 등급 · +%d → +%d · 최대 +%d"):format(state.gradeName, state.level, state.level + 1, EnhanceConfig.maxLevel)
 	else
 		built.panel.titleLabel.Text = "환생"
 	end

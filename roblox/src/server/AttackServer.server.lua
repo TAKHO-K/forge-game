@@ -21,7 +21,6 @@ local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
 local StuckArrowState = require(script.Parent.StuckArrowState)
 local TutorialState = require(script.Parent.TutorialState)
-local PartyState = require(script.Parent.PartyState)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -129,7 +128,6 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	end
 
 	lastAttackTick[player] = now -- 헛스윙이어도 쿨다운은 소모한다
-	PartyState.noteActivity(player) -- P2 G: 파티 경험치 보너스의 "최근 활동"(공격 요청을 받아들인 순간)
 	-- 19-1: 공격 시도(헛스윙 포함)도 "전투 중"이다 - 자동회복이 싸우는 동안엔 켜지지
 	-- 않아야 한다(PlayerRegen.server.lua 주석 참고).
 	PlayerState.setLastCombatActionAt(player, now)
@@ -178,7 +176,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 즉시 정해져야 클라가 "맞을지 미리 안다"는 위화감 없이 보인다(Projectiles.lua 원본
 	-- 주석과 같은 이유). 실제로 맞는지(도달 시점 재검증)는 아래에서 따로 판단한다.
 	local characterLevel = PlayerProfile.getCharacterLevel(player)
-	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player))
+	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage")) -- P2.5a R5: 최종 데미지 버킷
 	local base = atk
 	if isComboHit then
 		base *= CombatConfig.comboHitMultiplier
@@ -187,6 +185,8 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	-- 딜링모드(힐러 E, 20-6 [6], PRD 4.3 "평타 배율을 딜로 환산") - 버프가 없으면
 	-- BuffState.getField가 기본값 1을 돌려줘 다른 3직업은 기존과 완전히 동일하게 계산된다.
 	base *= BuffState.getField(player, "dealingMode", "attackMultiplier", 1)
+		-- P2.5a D(결정 8): 딜링모드의 투자 기울기(강화 · 위력% 투자가 클수록 배율이 딜러보다 가파르게 큰다 - PlayerCombat.getInvestmentScale).
+		* PlayerCombat.getInvestmentScale(weapon.level, PlayerProfile.getAttackPercentBonus(player), BuffState.getField(player, "dealingMode", "investmentScaling", nil))
 
 	-- 활 백스텝샷(20-2b [1][4], PRD-forge-game.md 4.3) - "다음 평타 5발에 마법피해 추가 +
 	-- 그 5발 치명타 확률 +30%p". 버프가 없으면 두 값 다 0이라 기존과 똑같이 계산된다.

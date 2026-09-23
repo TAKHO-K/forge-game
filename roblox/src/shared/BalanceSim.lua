@@ -126,6 +126,8 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 		defense = PlayerCombat.getDefense(classId, armorBonus, gemBonus.defensePercent),
 		maxHp = (CombatConfig.playerMaxHp + maxHpBonus) * (1 + gemBonus.maxHpPercent),
 		speedPercentBonus = speedPercentBonus,
+		weaponLevel = weapon.level, -- P2.5a: 딜링모드 투자 기울기(PlayerCombat.getInvestmentScale)가 읽는다
+		attackPercentBonus = attackPercentBonus,
 		attackCooldown = PlayerCombat.getAttackCooldown(classId, speedPercentBonus),
 		attackRange = PlayerCombat.getAttackRange(classId),
 		critRate = class.critRate,
@@ -404,7 +406,7 @@ function BalanceSim.simulateCombat(loadout, opts)
 			base *= CombatConfig.comboHitMultiplier
 		end
 		if dealingModeActive then
-			base *= skills.E.attackMultiplier
+			base *= skills.E.attackMultiplier * PlayerCombat.getInvestmentScale(loadout.weaponLevel, loadout.attackPercentBonus, skills.E.investmentScaling)
 		end
 		local critRateBonus = 0
 		if backstepCharges > 0 then
@@ -768,7 +770,8 @@ function BalanceSim.solveKillOffset()
 	end
 	local level = BalanceAnchorConfig.referenceLevel
 	local loadout = BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, level, 0)
-	local lo, hi = 1, level + 60
+	-- P2.5a: 탐색 상한 = 레벨 + "HP 1만 배"에 해당하는 스테이지 수(k = 1.155에서 64 - 옛 +60과 같은 폭, k = 1.02에서 466 - 처치 오프셋이 +167이라 옛 +60으로는 못 찾는다).
+	local lo, hi = 1, level + math.ceil(math.log(1e4) / math.log(InfiniteStageConfig.growthRate))
 	for _ = 1, 40 do
 		local mid = (lo + hi) / 2
 		local point = BalanceSim.measurePoint(loadout, mid)

@@ -7,18 +7,19 @@
 
 return {
 	-- 시뮬 전체 공통
-	partyExpRequiresPresence = true, -- P2 G: 게임 규칙(파티 경험치 보너스 = 조건 충족 파티원만) - p2before what-if가 false로 끈다
+	partyExpRequiresPresence = true, -- P2 G: 게임 규칙(파티 경험치 보너스 = 조건 충족 파티원만)
 	seed = 20260923, -- 강화 시도 · 몬테카를로 난수 시드(같은 입력 → 같은 결과)
 	yieldSeconds = 0.25, -- 계산이 이만큼(초) 이어지면 레벨업 사이에서 task.wait() 한 번(한 번에 계산하되 스크립트 시간 초과를 피한다 - 매 프레임 계산이 아니다)
 	stallLevelHours = 200, -- 레벨업 한 번에 이 플레이 시간(시간)을 넘기면 "진행 정지"로 보고 끝낸다([없음] 사유)
 	maxPlayHours = 20000, -- 누적 플레이 시간 상한(시간)
 	enhanceMonteCarloTrials = 2000, -- 강화 단계별 기대 비용 표(E4)의 시행 수
 
-	-- E3 도달 시간 곡선의 이정표(마지막 = InfiniteStageConfig.safeStageCap을 EconSim이 붙인다)
-	milestones = { 10, 50, 100, 250, 500, 1000, 2000, 3000, 4000 },
+	-- E3 도달 시간 곡선의 이정표(마지막 = InfiniteStageConfig.designMaxStage를 EconSim이 붙인다 - P2.5a)
+	milestones = { 10, 50, 100, 500, 1000, 2000, 5000, 10000, 15000, 20000 },
 
-	-- E4 구간(최고 스테이지 기준, 마지막 구간의 끝 = safeStageCap)
-	segments = { { 1, 100 }, { 101, 500 }, { 501, 1000 }, { 1001, 3000 }, { 3001, "cap" } },
+	-- E4 구간(최고 스테이지 기준, "cap" = designMaxStage) - P2.5a 지시의 구간 1 ~ 100 / 100 ~ 500 / 500 ~ 1000 / 1000 ~ 설계 최대. 마지막을 천장(무기 성장 천장
+	-- CharacterLevelConfig.weaponGrowthLate.fromLevel 20,000) 앞 · 뒤로 나눴다 - 천장 뒤는 처치가 느려지는 구간이라 한데 섞으면 평균이 천장 몫으로 덮인다.
+	segments = { { 1, 100 }, { 101, 500 }, { 501, 1000 }, { 1001, 20000 }, { 20001, "cap" } },
 
 	-- E2 플레이어 프로필 3종([가정] 전부). 보스는 bossKillLimitSeconds 안에 잡을 수 있을 때만 도전한다.
 	--   hoursPerDay        하루 플레이 시간
@@ -46,7 +47,7 @@ return {
 			targetKillSeconds = 4.0, minSurviveHits = 5, dpsEfficiency = 0.7, moveOverheadSeconds = 1.5,
 			bossDpsEfficiency = 0.6, bossKillLimitSeconds = 120, bossAttemptsPerClear = 2.0, bossOverheadSeconds = 30,
 			partySize = 1, partyExpBonus = false,
-			enhanceTarget = 15, useProtection = false, rebirth = true,
+			enhanceTarget = 18, useProtection = false, rebirth = true, -- P2.5a: 최대 +25 → +30에 맞춰 목표 ×30/25(15 → 18 · 20 → 24 · 25 → 30)
 			gearCheckMinutes = 60, gemReroll = false, gemRoll = 1.0,
 		},
 		normal = {
@@ -54,7 +55,7 @@ return {
 			targetKillSeconds = 3.0, minSurviveHits = 4, dpsEfficiency = 0.85, moveOverheadSeconds = 1.0,
 			bossDpsEfficiency = 0.75, bossKillLimitSeconds = 90, bossAttemptsPerClear = 1.5, bossOverheadSeconds = 20,
 			partySize = 1, partyExpBonus = false,
-			enhanceTarget = 20, useProtection = false, rebirth = true,
+			enhanceTarget = 24, useProtection = false, rebirth = true,
 			gearCheckMinutes = 20, gemReroll = true, gemRoll = 1.0,
 		},
 		top = {
@@ -62,7 +63,7 @@ return {
 			targetKillSeconds = 2.5, minSurviveHits = 3, dpsEfficiency = 0.95, moveOverheadSeconds = 0.6,
 			bossDpsEfficiency = 0.9, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.1, bossOverheadSeconds = 10,
 			partySize = 4, partyExpBonus = true, partyHuntsTogether = false,
-			enhanceTarget = 25, useProtection = true, rebirth = true,
+			enhanceTarget = 30, useProtection = true, rebirth = true,
 			gearCheckMinutes = 5, gemReroll = true, gemRoll = 1.1,
 		},
 	},
@@ -70,10 +71,12 @@ return {
 
 	-- E5 태초 선택지(P2: 게임 드랍표 그대로 - DropTable.effectiveRate · 레벨 감쇠 포함). 비교: 같은 플레이어가
 	--   (A) 드래곤(highTier)을 자기 스테이지보다 Δ 낮은 스테이지에서 잡기 vs (B) tier t(lowTiers)를 자기 스테이지에서 잡기. 보석 레벨 = 잡은 스테이지(몬스터 레벨, 결정 6B E4).
+	-- P2.5a: 스테이지 단위를 새 k(1.02)로 옮겼다 - 옛 Δ 1 · 2 · 3 · 4 · 5 · 10 · 30(k = 1.155)과 같은 HP 배율인 Δ 7 · 15 · 22 · 29 · 36 · 73 · 218, 지배 판정 범위 Δ ≤ 36(옛 5 = ×2.06).
+	-- 플레이어 레벨 10 · 1000 · 10000(옛 10 · 150 · 1000 - 새 설계 최대 약 21,000에 맞춰 넓혔다).
 	primordial = {
-		playerLevels = { 10, 150, 1000 },
-		deltas = { 1, 2, 3, 4, 5, 10, 30 },
-		dominanceMaxDelta = 5, -- 지배 전략 판정 범위(E2 "Δ ≤ 5에서 지배 전략 없음")
+		playerLevels = { 10, 1000, 10000 },
+		deltas = { 7, 15, 22, 29, 36, 73, 218 },
+		dominanceMaxDelta = 36, -- 지배 전략 판정 범위(E2 "Δ ≤ 5에서 지배 전략 없음"의 새 단위)
 		highTier = 6,
 		lowTiers = { 1, 2, 3, 4, 5 },
 	},
@@ -84,14 +87,15 @@ return {
 		fightRatioScenario = { hitsPerSecond = 0.25, hitRatio = 0.1026, bossHpUnitsSeconds = 600 }, -- S13b PartyShieldSim 기준 시나리오 그대로
 		shareFloor = 0.10, -- 보상 문턱(CombatConfig.contributionRewardThreshold를 EconSim이 읽어 대조한다 - 이 값은 표의 기준선일 뿐)
 		shareTarget = 0.12,
+		-- P2.5a: 장비 단계에 강화 단계(weaponLevel)를 넣었다 - 결정 8 "투자(유효 옵션 · 보석 · 강화)"의 평균 = +20 · 최상위 = +30(최대). 옛 E6는 전 단계 +0.
 		gearTiers = {
-			{ id = "none", displayName = "없음", gems = {} },
-			{ id = "average", displayName = "평균", gems = {
+			{ id = "none", displayName = "없음", weaponLevel = 0, gems = {} },
+			{ id = "average", displayName = "평균", weaponLevel = 20, gems = {
 				{ "attackPercent", "primordial", 100, 1.0 },
 				{ "crit", "epic", 100, 1.0 },
 				{ "speedPercent", "legendary", 100, 1.0 },
 			} },
-			{ id = "top", displayName = "상위", gems = {
+			{ id = "top", displayName = "상위", weaponLevel = 30, gems = {
 				{ "attackPercent", "primordial", 125, 1.125 },
 				{ "crit", "epic", 125, 1.125 },
 				{ "attackPercent", "legendary", 125, 1.125 },
@@ -99,7 +103,7 @@ return {
 				{ "speedPercent", "ancient", 125, 1.125 },
 			} },
 		},
-		dealingTarget = 0.875, -- F3 딜링모드 원딜 = 검사 × 이 값(장비 없음 기준)
+		dealingTarget = 0.875, -- F3 딜링모드 원딜 = 검사 × 이 값(P2.5a: 평균 투자 기준 - 결정 8. P2는 장비 없음 기준)
 		dealingTargetRange = { 0.85, 0.9 }, -- 딜링모드 목표 범위(결정 8A)
 		shareDealerClass = "dualblade", -- F2 판정 구성 = 이 딜러 3 + 치유사 1
 		healModeFightRatio = 1.0, -- [가정] 보스전 치유모드 치유사의 전투 시간 비율(치유모드는 소모가 없다 - 딜러 가동률과 같게 1로 본다)
@@ -109,8 +113,13 @@ return {
 		compositionDealerClasses = { "dualblade", "greatsword" },
 	},
 
-	-- P2 H1 전후 비교(/gg econ <프로필> compare): 구매력의 기준 강화 단계(+20→+21 - 일반 프로필 목표 단계와 같다)
-	compare = { powerReferenceLevel = 20 },
+	-- P2.5a 지표 절(EconSimReport.writeP25): 구매력 기준 강화 단계(+20→+21) · 레벨업 간격 목표(첫 12시간 평균 ≤ 5분 · 이후 ≤ 15분) · 정체 기준(10분) · 표 스테이지
+	p25 = {
+		powerReferenceLevel = 20,
+		earlyHours = 12, earlyIntervalMinutes = 5, lateIntervalMinutes = 15, stallMinutes = 10,
+		powerStages = { 10, 50, 100, 500, 1000, 2000, 5000, 10000, 20000 },
+		gemStages = { 125, 500, 1000, 2000, 5000, 10000, 20000 },
+	},
 
 	-- E7 what-if 덮어쓰기. 이름 = /gg econ의 둘째 인자. 빈 표 = 기준선. 모든 칸은 선택:
 	--   growthRate          InfiniteStageConfig.growthRate(몬스터 · 보상 · 아이템 계수 성장 k)
@@ -119,22 +128,11 @@ return {
 	--   enhanceCostScale    EnhanceConfig.goldCost 전체에 곱하는 배율
 	--   (P2) rebirthRequiredLevels  CharacterLevelConfig.rebirth.requiredLevels · optionLevelLogSlope  OptionData.levelLogSlope · enhanceGoldAnchor  GoldCostConfig.anchorStage.enhance
 	--   (P2) primordialDragonOverTier  DropTableData.primordial.dragonOverTier · primordialDecayPerLevel  levelDecay.perLevel · healerAtk  ClassData.healer.atk · dealingAttackMultiplier  SkillData.healer.E.attackMultiplier(절대값)
-	--   p2before = P2 결정 전의 게임 값 전부(docs/econ/P2-before.md와 같은 조건을 새 도구로 다시 재는 기준선 - 비교표의 "전" 칸)
+	--   (P2.5a: p2before · compare는 없앴다 - k · 강화식 · 경험치 척도가 바뀌어 "P2 전 값만 되돌리기"가 옛 게임을 재현하지 못한다. 전후 비교 = docs/econ/P25a-before.md(옛 코드) 대조)
 	whatIfs = {
 		baseline = {},
-		k1150 = { growthRate = 1.150 },
-		g1155 = { weaponGrowthRate = 1.155 },
+		g10195 = { weaponGrowthRate = 1.0195 }, -- P2.5a: 주 구간 g를 k 아래로(천장이 앞당겨지는 민감도)
 		dealing087 = { dealingMultiplier = 0.87 },
 		enhanceHalf = { enhanceCostScale = 0.5 },
-		p2before = {
-			rebirthRequiredLevels = { 25, 50, 75, 100, 125 },
-			optionLevelLogSlope = 0,
-			enhanceGoldAnchor = math.huge,
-			primordialDragonOverTier = { [6] = 1 },
-			primordialDecayPerLevel = 0,
-			healerAtk = 0.6,
-			dealingAttackMultiplier = 3.13,
-			partyExpRequiresPresence = false,
-		},
 	},
 }

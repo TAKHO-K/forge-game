@@ -13,46 +13,53 @@
 -- "무한 모드 데미지 재설계용" 전용표)를 쓰고 나머지 두 부위는 웹의 일반 배율을 그대로
 -- 쓴다는 16-5 조사 결과를 그대로 반영했다 - 두 표를 섞으면 안 된다(단일 출처 원칙).
 -- 17-1부터 7등급 전부 실제로 드랍된다(ArmorData.gradeOrder, MonsterData.dropGradeTableByTier).
+--
+-- P2.5a R3(사용자 확정): 등급 1단계 = ×GRADE_STEP(1.45) - statMultiplier = 1.45^(등급 순서 − 1)(일반 1.0 · 희귀 1.45 · 영웅 2.10 · 전설 3.05 · 유물 4.42 · 고대 6.41 ·
+-- 태초 9.29). 옛 값 1.0 · 1.4 · 2.0 · 3.0 · 4.5 · 8.0 · 15.0(웹 ITEM_GRADES). 스테이지 환산 = ln 1.45 ÷ ln k ≈ 18.8스테이지/단계(k = 1.02). 갑옷 전용표
+-- (ArmorData.defenseGradeMultiplier)도 같은 단계 배율을 쓴다(일반 1.184 기준).
+local GRADE_STEP = 1.45
+
 return {
+	gradeStep = GRADE_STEP,
 	gradeVisuals = {
 		normal = {
 			color = Color3.fromRGB(230, 230, 230), -- 웹 #e6e6e6
-			statMultiplier = 1.0,
+			statMultiplier = GRADE_STEP ^ 0,
 			glowBrightness = 0.5, glowRange = 8,
 			burstOnDrop = false,
 			toastTextSize = 18,
 		},
 		rare = {
 			color = Color3.fromRGB(77, 166, 255), -- 웹 #4da6ff
-			statMultiplier = 1.4,
+			statMultiplier = GRADE_STEP ^ 1,
 			glowBrightness = 1.2, glowRange = 12,
 			burstOnDrop = true,
 			toastTextSize = 22,
 		},
 		epic = {
 			color = Color3.fromRGB(166, 77, 255), -- 웹 #a64dff
-			statMultiplier = 2.0,
+			statMultiplier = GRADE_STEP ^ 2,
 			glowBrightness = 1.8, glowRange = 14,
 			burstOnDrop = true,
 			toastTextSize = 24,
 		},
 		legendary = {
 			color = Color3.fromRGB(255, 153, 51), -- 웹 #ff9933
-			statMultiplier = 3.0,
+			statMultiplier = GRADE_STEP ^ 3,
 			glowBrightness = 2.4, glowRange = 16,
 			burstOnDrop = true,
 			toastTextSize = 26,
 		},
 		relic = {
 			color = Color3.fromRGB(255, 215, 0), -- 웹 #ffd700
-			statMultiplier = 4.5,
+			statMultiplier = GRADE_STEP ^ 4,
 			glowBrightness = 3.0, glowRange = 18,
 			burstOnDrop = true,
 			toastTextSize = 28,
 		},
 		ancient = {
 			color = Color3.fromRGB(224, 57, 62), -- 웹 #e0393e
-			statMultiplier = 8.0,
+			statMultiplier = GRADE_STEP ^ 5,
 			glowBrightness = 3.6, glowRange = 20,
 			burstOnDrop = true,
 			toastTextSize = 30,
@@ -68,7 +75,7 @@ return {
 		-- 애니메이션 테두리가 덧씌워진다(색만 바뀌고 rainbow 자체는 그대로).
 		primordial = {
 			color = Color3.fromRGB(160, 255, 250),
-			statMultiplier = 15.0,
+			statMultiplier = GRADE_STEP ^ 6,
 			glowBrightness = 4.5, glowRange = 24,
 			burstOnDrop = true,
 			toastTextSize = 34,

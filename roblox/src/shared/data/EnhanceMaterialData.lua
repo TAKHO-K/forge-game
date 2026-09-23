@@ -18,5 +18,11 @@ return {
 		[22] = { id = "highEnhanceStone", count = 10 },
 		[23] = { id = "highEnhanceStone", count = 13 },
 		[24] = { id = "highEnhanceStone", count = 16 },
+		-- P2.5a C5: 25 ~ 29강(→ +26 ~ +30) - 22 ~ 24강 증가폭(+3개)을 그대로 이었다.
+		[25] = { id = "highEnhanceStone", count = 19 },
+		[26] = { id = "highEnhanceStone", count = 22 },
+		[27] = { id = "highEnhanceStone", count = 25 },
+		[28] = { id = "highEnhanceStone", count = 28 },
+		[29] = { id = "highEnhanceStone", count = 31 },
 	},
 }

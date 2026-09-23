@@ -36,8 +36,9 @@ end
 -- 치유의 치명 굴림 - 자기 힐 · 파티 회복 · 쉴드가 전부 이 함수 하나로 굴린다(테이블 필드라 자동 검증이 굴림을 고정해 "같은 함수를 쓰는가"를 잰다).
 -- calcDamage를 그대로 쓰지 않는다 - 크리 롤(RNG 소스 하나로 통일)만 재사용하고, 배율은 SkillData의 critHealMultiplier(고정 2배, PRD 4.3)로 따로 곱한다.
 -- class.critDmg를 그대로 썼다면 힐러 기준 1.8배가 나와 PRD 수치와 어긋난다.
-function HealCast.rollCrit(baseHeal, classId)
-	local _, isCrit = PlayerCombat.calcDamage(baseHeal, classId)
+-- P2.5a D(결정 5): 옵션 치명 확률(critRateBonus - PlayerProfile.getCritBonus 첫 값)이 치유 치명 굴림에도 더해진다(평타와 같은 옵션 합).
+function HealCast.rollCrit(baseHeal, classId, critRateBonus)
+	local _, isCrit = PlayerCombat.calcDamage(baseHeal, classId, critRateBonus)
 	return isCrit
 end
 
@@ -52,10 +53,15 @@ function HealCast.cast(player, def, classId, cooldownSeconds)
 	local maxHp = PlayerState.getMaxHp(player)
 	local hp = PlayerState.getHp(player)
 	-- 26-2(PRD 20.67 [2] "재생 - 힐러 치유 회복량 ×(1+x)") - PlayerProfile.getHealingPowerMultiplier가 자동회복(PlayerRegen.server.lua)과 같은 배수를 쓴다.
-	local healingPower = PlayerProfile.getHealingPowerMultiplier(player)
+	-- P2.5a R5: 치유량도 최종 데미지 버킷(강화 단계 + 옵션 finalDamage)을 곱한다 - 평타와 같은 PlayerCombat.getFinalDamageBonus.
+	-- P2.5a D(결정 5): 치유 치명 = 옵션 치명 확률 · 치명 피해가 평타처럼 더해진다(배율 = SkillData critHealMultiplier + 옵션 치명 피해).
+	local weapon = PlayerProfile.getWeapon(player)
+	local finalBonus = PlayerCombat.getFinalDamageBonus(weapon and weapon.level or 0, PlayerProfile.getOptionBonus(player, "finalDamage"))
+	local healingPower = PlayerProfile.getHealingPowerMultiplier(player) * (1 + finalBonus)
+	local optionCritRate, optionCritDmg = PlayerProfile.getCritBonus(player)
 	local baseHeal = maxHp * def.healPercentOfMaxHp * healingPower
-	local isCrit = HealCast.rollCrit(baseHeal, classId)
-	local critMultiplier = isCrit and def.critHealMultiplier or 1
+	local isCrit = HealCast.rollCrit(baseHeal, classId, optionCritRate)
+	local critMultiplier = isCrit and (def.critHealMultiplier + optionCritDmg) or 1
 	local shieldMode = HealCast.usesShield(player, def)
 	local healAmount = 0
 	if not shieldMode then

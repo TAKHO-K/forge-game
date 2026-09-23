@@ -42,8 +42,14 @@ end
 -- 스테이지 L에서 tier1 몬스터 1마리가 주는 경험치 E(L) - 실제 지급 경로(MonsterState.
 -- getExpRewardFor → InfiniteStage.getExpReward)와 같은 식·같은 floor. 목표 마릿수의 전제
 -- "자기 레벨에 맞는 스테이지에서 사냥"이 곧 stage = level이다.
+-- P2.5a C10: 레벨 → 스테이지 척도(앵커 장비의 처치 스테이지 - CharacterLevelConfig.levelStageOffset 주석). 환생 지급 보석 itemLevel이 이 값이다.
+function CharacterLevel.getStageForLevel(level)
+	return level + CharacterLevelConfig.levelStageOffset
+end
+
+-- P2.5a C3: "레벨 L의 척도 스테이지(getStageForLevel)에서 tier1 1마리가 주는 경험치"(옛: 스테이지 L - 옛 k에서는 척도 오프셋이 0이었다). 지급 경로와 같은 식 · 같은 floor.
 function CharacterLevel.getMonsterExpAtLevel(level)
-	return InfiniteStage.getExpReward(MonsterData.tier1.expReward, level)
+	return InfiniteStage.getExpReward(MonsterData.tier1.expReward, CharacterLevel.getStageForLevel(level))
 end
 
 -- 레벨 L→L+1 필요 경험치(정수). 위 모듈 주석 참고.
@@ -68,12 +74,29 @@ end
 
 -- 누적 경험치로 현재 레벨을 구한다. 다음 임계값을 넘는지 반복 검사한다 - 증가분이 지수식이라
 -- 몬스터 한 마리로 레벨이 여러 개 뛰는 일은 실제로 없어 반복 횟수가 크게 자라지 않는다.
+-- P2.5a: 레벨이 수만까지 가므로(스테이지당 2%) 1부터 세는 반복 대신 두 배씩 넓힌 뒤 이분 탐색한다(누적 임계값은 단조 증가). 결과는 옛 반복과 같다.
 function CharacterLevel.getLevelFromExp(exp)
-	local level = 1
-	while exp >= CharacterLevel.getExpForLevel(level + 1) do
-		level += 1
+	if exp < CharacterLevel.getExpForLevel(2) then
+		return 1
 	end
-	return level
+	local lo, hi = 2, 4
+	-- 상한 2^20(약 105만) - exp가 inf여도(임계값도 결국 inf) 끝난다.
+	while exp >= CharacterLevel.getExpForLevel(hi) and hi < 2 ^ 20 do
+		lo, hi = hi, hi * 2
+	end
+	if exp >= CharacterLevel.getExpForLevel(hi) then
+		return hi
+	end
+	-- 불변식: getExpForLevel(lo) <= exp < getExpForLevel(hi)
+	while hi - lo > 1 do
+		local mid = (lo + hi) // 2
+		if exp >= CharacterLevel.getExpForLevel(mid) then
+			lo = mid
+		else
+			hi = mid
+		end
+	end
+	return lo
 end
 
 -- 다음 레벨까지 진행률(UI 표시용).
@@ -101,7 +124,11 @@ function CharacterLevel.getWeaponExpMultiplier(level)
 	if level <= STAT_LINEAR_MAX_LEVEL then
 		return 1 + CharacterLevelConfig.statBonusPerLevel * (level - 1)
 	end
-	return PEAK_MULTIPLIER * (CharacterLevelConfig.weaponMultGrowthRate ^ (level - STAT_LINEAR_MAX_LEVEL))
+	-- P2.5a C2 구간별 g: weaponGrowthLate.fromLevel까지 g, 그 뒤로 late.rate(< k - 천장).
+	local late = CharacterLevelConfig.weaponGrowthLate
+	local mainLevels = math.min(level, late.fromLevel) - STAT_LINEAR_MAX_LEVEL
+	local lateLevels = math.max(0, level - late.fromLevel)
+	return PEAK_MULTIPLIER * (CharacterLevelConfig.weaponMultGrowthRate ^ mainLevels) * (late.rate ^ lateLevels)
 end
 
 -- 아이템 레벨계수(Loot.getArmorDefense가 곱한다). 1~25는 무기 배율과 같은 선형식(레벨25

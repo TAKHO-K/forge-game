@@ -12,9 +12,21 @@ local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 
 local Enhance = {}
 
+-- P2.5a R5: 강화의 공격력 곱연산 몫 = (1 + attackGrowthPerLevel)^단계(+30 = ×9.76). 최종 데미지 몫(+3.5%/강, 합연산)은 getFinalDamageBonus -
+-- 두 몫의 곱이 강화 누적 배율(+30 = ×20)이다. 단계는 0 ~ maxLevel로 자른다.
 function Enhance.getDamageMultiplier(level)
-	local coefficient = EnhanceConfig.damageCoefficient[level + 1] or 0
-	return 1 + coefficient
+	local clamped = math.clamp(level or 0, 0, EnhanceConfig.maxLevel)
+	return (1 + EnhanceConfig.attackGrowthPerLevel) ^ clamped
+end
+
+-- P2.5a R5: 강화가 최종 데미지 버킷에 더하는 값 = 단계 × finalDamagePerLevel(+30 = +105%). 버킷 합산은 PlayerCombat.getFinalDamageBonus.
+function Enhance.getFinalDamageBonus(level)
+	return math.clamp(level or 0, 0, EnhanceConfig.maxLevel) * EnhanceConfig.finalDamagePerLevel
+end
+
+-- 강화 누적 배율(공격력 몫 × 최종 데미지 몫) - 표시 · 시뮬 · 스테이지 환산용.
+function Enhance.getTotalMultiplier(level)
+	return Enhance.getDamageMultiplier(level) * (1 + Enhance.getFinalDamageBonus(level))
 end
 
 -- 상한이면 nil(시도 불가 - 웹 getEnhanceCost의 Infinity와 같은 뜻).

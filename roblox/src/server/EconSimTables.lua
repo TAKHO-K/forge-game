@@ -9,6 +9,8 @@ local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageC
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local Loot = require(ReplicatedStorage.Shared.Loot)
@@ -94,13 +96,13 @@ end
 --   치유모드 원딜 = 같은 로테이션을 attackMultiplier 1(딜링모드 꺼짐 = 평타 그대로)로 · 딜 옵션 100% 적용(F1 · 결정 7A).
 --   보스전 치유모드 딜 = 치유모드 원딜 × healModeFightRatio([가정] 1.0 - 치유모드는 소모가 없어 딜러처럼 계속 싸운다, 딜러 가동률도 1로 본다).
 --   비중 = 치유사 딜 ÷ (딜러 3명 딜 + 치유사 딜). 딜링모드 비 = 딜링모드 원딜 ÷ 검사 원딜(목표 0.875 - 결정 8A).
-local function anchorSpec(classId)
+local function anchorSpec(classId, weaponLevel)
 	local level = BalanceAnchorConfig.referenceLevel
 	local grade = BalanceAnchorConfig.gearGrade
 	return {
 		classId = classId,
 		level = level,
-		weaponLevel = BalanceAnchorConfig.weaponLevel,
+		weaponLevel = weaponLevel or BalanceAnchorConfig.weaponLevel, -- P2.5a: 장비 단계의 강화 단계(없으면 앵커 +0)
 		weaponGrade = 0,
 		gear = {
 			armor = { grade = grade, itemLevel = level },
@@ -124,12 +126,13 @@ end
 EconSimTables.healerShare = share
 
 -- 치유사 로테이션 60초 총딜(atk 단위가 아니라 게임 피해). dealing = true면 딜링모드 배율 그대로, false면 배율 1(치유모드).
-local function healerDamage(gems, dealing)
+-- P2.5a: 치유모드는 딜링모드 배율 1 · 투자 기울기도 없다(딜링모드 버프가 없으니) - investmentScaling을 잠깐 뺀다.
+local function healerDamage(gems, dealing, weaponLevel)
 	if dealing then
-		return EconSim.rotationDamage(anchorSpec("healer"), gems)
+		return EconSim.rotationDamage(anchorSpec("healer", weaponLevel), gems)
 	end
-	return EconSim.withOverrides({ dealingAttackMultiplier = 1 }, function()
-		return EconSim.rotationDamage(anchorSpec("healer"), gems)
+	return EconSim.withOverrides({ dealingAttackMultiplier = 1, dealingInvestmentScaling = false }, function()
+		return EconSim.rotationDamage(anchorSpec("healer", weaponLevel), gems)
 	end)
 end
 
@@ -159,11 +162,16 @@ function EconSimTables.healer()
 	for _, tier in ipairs(cfg.gearTiers) do
 		local gems = tierGems(tier)
 		local row = { id = tier.id, displayName = tier.displayName, dps = {} }
+		row.weaponLevel = tier.weaponLevel or 0
 		for _, classId in ipairs(cfg.dealerClasses) do
-			row.dps[classId] = EconSim.rotationDamage(anchorSpec(classId), gems)
+			row.dps[classId] = EconSim.rotationDamage(anchorSpec(classId, tier.weaponLevel), gems)
 		end
-		row.healMode = healerDamage(gems, false) * cfg.healModeFightRatio
-		row.dealingMode = healerDamage(gems, true)
+		row.healMode = healerDamage(gems, false, tier.weaponLevel) * cfg.healModeFightRatio
+		row.dealingMode = healerDamage(gems, true, tier.weaponLevel)
+		-- P2.5a: 치유사의 투자량 기준(강화 단계 · 공격력% 합) - SkillData.healer.E.investmentScaling의 평균 · 최상위 기준점을 이 값으로 맞춘다.
+		local healerSpec = anchorSpec("healer", tier.weaponLevel)
+		healerSpec.gems = gems
+		row.healerAttackPercent = BalanceSim.buildLoadout(healerSpec).attackPercentBonus
 		row.rDealing = row.dealingMode / row.dps.greatsword
 		row.r = {}
 		row.share = {}
@@ -188,9 +196,10 @@ function EconSimTables.healer()
 		need = math.max(need, rTarget / result.tiers[tier.id].r[cfg.shareDealerClass])
 	end
 	result.solvedAtk = atkNow * need -- 이 값 이상이면 "도적 3 + 치유사 1"이 모든 장비 단계에서 비중 ≥ shareTarget
-	local noneRow = result.tiers[cfg.gearTiers[1].id]
-	local healModeAtSolved = noneRow.healMode / cfg.healModeFightRatio * need
-	result.solvedDealingMultiplier = cfg.dealingTarget * noneRow.dps.greatsword / healModeAtSolved -- 장비 없음에서 딜링모드 = 검사 × 목표
+	-- P2.5a(결정 8): 딜링모드 배율은 "평균 투자"에서 검사 × 목표가 되게 푼다(P2는 장비 없음). 평균 투자 기준점에서 투자 기울기 = 1이라 배율 하나로 풀린다.
+	local refRow = result.tiers.average or result.tiers[cfg.gearTiers[1].id]
+	local healModeAtSolved = refRow.healMode / cfg.healModeFightRatio * need
+	result.solvedDealingMultiplier = cfg.dealingTarget * refRow.dps.greatsword / healModeAtSolved
 
 	-- F4 파티 구성 속도: 파티 딜 = (딜러 딜 합 + 치유사 딜 합) × (치유사가 있으면 1 + 힐러 버프 b). 보스 HP는 인원(4)이 같아 같다 → 속도 = 파티 딜 ÷ 딜러 4명 딜.
 	--   치유사 모드 두 가지: 치유모드(위 healMode) · 딜링모드(딜링모드 원딜 × 보스전 전투 비율(쉴드) - 소모 · 이탈 포함, S13b 모형).
@@ -217,34 +226,33 @@ function EconSimTables.healer()
 	return result
 end
 
--- ═══ 표본 대조(S21a · S21-0) ═══
--- ① S21-0 A6: BalanceSim 생존 타수 - 앵커(궁수, 레벨 = 스테이지) 2448 · 2500 · 3000에서 유한 · 7타(S21a §2-1 "스테이지 내내 정확히 7").
--- ② S21a §2-1: 앵커 궁수 로테이션 처치 시간 - 스테이지 100 = 2.66초 · 500 = 16.7초(EconSim.killSeconds가 BalanceSim.measurePoint와 같은 조건).
--- ③ S21-0 D2: 치유사 r - 딜링모드 1.5412 · 필드 0.9236 · 보스전 0.410 · 4인 보스전 비중 12.0%.
+-- ═══ 표본 대조(P2.5a 앵커 - 새 k에서 다시 푼 값) ═══
+-- ① 생존 앵커(CombatConfig.damageReductionAlpha · maxHpBonusBase): 앵커 장비(레벨 = itemLevel = 스테이지)에서 스테이지 1,000 · 5,000 · 20,000 모두 7.0타
+--    (옛 k의 레벨 100 비율을 새 k의 고스테이지에서 다시 풀었다 - 상수 +10 HP · +5 방어 몫이 사라지는 곳).
+-- ② 처치 앵커(CharacterLevelConfig.levelStageOffset): 앵커 장비 레벨 L로 스테이지 L + 167의 tier1을 2.5초(BalanceAnchorConfig.killTargetSeconds)에 잡는다 - L = 100 · 1000.
+-- ③ 치유사(결정 8): 딜링모드 ÷ 검사 = 평균 투자 0.875 · 최상위 투자 HealerTopScale(1.1) · 도적 3 + 1 비중(평균) ≥ 12%.
 function EconSimTables.samples(healer)
 	local samples = {}
 	local classId = BalanceAnchorConfig.referenceClassId
-	for _, stage in ipairs({ 2448, 2500, 3000 }) do
+	for _, entry in ipairs({ { 1000, 0.02 }, { 5000, 0.02 }, { 20000, 0.02 } }) do
+		local stage = entry[1]
 		local loadout = BalanceSim.buildAnchorLoadout(classId, stage, 0)
 		local survive = BalanceSim.getSurviveHits(loadout, BalanceSim.getMonsterAttack(stage))
 		table.insert(samples, {
-			id = ("A6 생존 %d"):format(stage), expected = 7, value = survive, ok = survive == survive and survive < math.huge and math.abs(survive - 7) <= 0.01,
+			id = ("생존 앵커 %d"):format(stage), expected = 7, value = survive, ok = survive == survive and survive < math.huge and math.abs(survive - 7) <= entry[2],
 		})
 	end
-	for _, entry in ipairs({ { 100, 2.66 }, { 500, 16.7 } }) do
-		local loadout = BalanceSim.buildAnchorLoadout(classId, entry[1], 0)
-		local kill = EconSim.killSeconds(loadout, BalanceSim.getMonsterHp(entry[1]), 600)
-		table.insert(samples, { id = ("S21a 처치 %d"):format(entry[1]), expected = entry[2], value = kill, ok = math.abs(kill - entry[2]) <= entry[2] * 0.01 + 0.005 })
+	for _, level in ipairs({ 100, 1000 }) do
+		local loadout = BalanceSim.buildAnchorLoadout(classId, level, 0)
+		local stage = CharacterLevel.getStageForLevel(level)
+		local kill = EconSim.killSeconds(loadout, BalanceSim.getMonsterHp(stage), 600)
+		table.insert(samples, { id = ("처치 앵커 레벨 %d · 스테이지 %d"):format(level, stage), expected = BalanceAnchorConfig.killTargetSeconds, value = kill, ok = math.abs(kill - BalanceAnchorConfig.killTargetSeconds) <= 0.1 })
 	end
-	local rDealing = healer.healerDealing / healer.greatswordBase
-	local rField = rDealing * healer.fieldUptime
-	local rBoss = rDealing * healer.fightRatio.heal
-	local shareBoss = share(rBoss, 3)
+	local scaling = SkillData.healer.E.investmentScaling
 	for _, entry in ipairs({
-		{ "D2 r 딜링모드", 1.5412, rDealing, 0.0005 },
-		{ "D2 r 필드", 0.9236, rField, 0.0005 },
-		{ "D2 r 보스전", 0.410, rBoss, 0.0005 },
-		{ "D2 비중 4인 보스전", 0.120, shareBoss, 0.0005 },
+		{ "치유사 딜링모드 ÷ 검사(평균 투자)", 0.875, healer.tiers.average.rDealing, 0.01 },
+		{ "치유사 딜링모드 ÷ 검사(최상위 투자)", scaling and scaling.topScale or 1, healer.tiers.top.rDealing, 0.02 },
+		{ "치유사 비중 도적 3 + 1(평균)", 0.122, healer.tiers.average.share.dualblade, 0.01 },
 	}) do
 		table.insert(samples, { id = entry[1], expected = entry[2], value = entry[3], ok = math.abs(entry[3] - entry[2]) <= entry[4] })
 	end

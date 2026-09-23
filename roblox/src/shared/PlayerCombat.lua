@@ -37,6 +37,9 @@ local critRng = Random.new()
 
 local PlayerCombat = {}
 
+-- P2.5a: 무기 등급 배율 조회(보고서 · 스테이지 환산 표가 읽는다 - 계산은 위 지역 함수 하나).
+PlayerCombat.gradeMultiplier = gradeMultiplierForIndex
+
 function PlayerCombat.getClass(classId)
 	return ClassData.classes[classId]
 end
@@ -47,13 +50,39 @@ end
 -- 채운다) × (1+장갑 공격력%, 16-6). 치명타를 적용하기 전 기본 데미지다 - calcDamage에
 -- base로 넘긴다. attackPercentBonus는 장갑 미착용이면 항상 0이 들어와 곱셈이 1이 되므로
 -- 기존 호출부(장갑 이식 전)와 결과가 똑같다.
-function PlayerCombat.getAttack(weapon, classId, characterLevel, attackPercentBonus)
+-- P2.5a R5 최종 데미지 버킷 - 모든 출처(강화 단계 + 옵션 · 보석의 "finalDamage" 축)를 한 버킷에 **더한다**. 최종 피해 = 공격력 × (1 + 이 합).
+-- 평타 · 스킬(getAttack)과 치유량(HealCast)이 같은 함수를 쓴다. 지금 "finalDamage" 옵션 종류는 없다(C6 - 새 옵션 종류를 만들지 않았다) - 출처가 생기면
+-- 호출부가 넘기는 optionBonus(PlayerProfile.getOptionBonus(player, "finalDamage"))에 자동으로 들어온다.
+function PlayerCombat.getFinalDamageBonus(weaponLevel, optionBonus)
+	return Sanitize.number(Enhance.getFinalDamageBonus(weaponLevel) + (optionBonus or 0), 0)
+end
+
+-- optionFinalDamageBonus(P2.5a) = 옵션 · 보석이 최종 데미지 버킷에 더하는 값(없으면 0). 강화 몫은 weapon.level에서 여기서 더한다.
+function PlayerCombat.getAttack(weapon, classId, characterLevel, attackPercentBonus, optionFinalDamageBonus)
 	local class = ClassData.classes[classId]
 	local weaponData = WeaponData.weapons[weapon.id]
 	local gradeMultiplier = gradeMultiplierForIndex(weapon.grade)
 	local base = Enhance.getPlayerAttack(weaponData, weapon.level, class.atk, gradeMultiplier)
 	local attack = base * CharacterLevel.getWeaponExpMultiplier(characterLevel) * (1 + (attackPercentBonus or 0))
+		* (1 + PlayerCombat.getFinalDamageBonus(weapon.level, optionFinalDamageBonus))
 	return Sanitize.number(attack, 0) -- S21-0 A2: 스탯 합산 출구(고스테이지 double 붕괴 - PRD 감사 §1-2)
+end
+
+-- P2.5a D(결정 8) 투자 기울기 - 버프 데이터(scaling = { topScale, unscaledTopRatio, average = { enhance, attackPercent }, top = { … } })가 있으면 그 버프의 배율에
+-- (I ÷ I_평균)^β를 곱한다. I = 강화 누적 배율(Enhance.getTotalMultiplier) × (1 + 공격력% 합) = 이 캐릭터의 투자량. β = ln(topScale ÷ unscaledTopRatio) ÷ ln(I_최상위 ÷ I_평균)
+-- - 평균 투자에서는 1(배율 그대로), 최상위 투자에서는 딜러 대비 비가 기울기 없을 때의 unscaledTopRatio에서 topScale로 올라간다.
+-- 지금 쓰는 곳은 치유사 딜링모드(SkillData.healer.E.investmentScaling) - AttackServer · BalanceSim이 같은 함수를 부른다.
+function PlayerCombat.getInvestmentScale(weaponLevel, attackPercentBonus, scaling)
+	if not scaling then
+		return 1
+	end
+	local function investment(enhanceLevel, attackPercent)
+		return Enhance.getTotalMultiplier(enhanceLevel) * (1 + attackPercent)
+	end
+	local average = investment(scaling.average.enhance, scaling.average.attackPercent)
+	local top = investment(scaling.top.enhance, scaling.top.attackPercent)
+	local exponent = math.log(scaling.topScale / scaling.unscaledTopRatio) / math.log(top / average)
+	return Sanitize.number((investment(weaponLevel or 0, attackPercentBonus or 0) / average) ^ exponent, 1)
 end
 
 -- 신발의 이동+공격속도 비율 보너스를 1+x 배율로 바꾼다(16-6, 웹 core/equipment.js

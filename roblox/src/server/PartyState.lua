@@ -133,8 +133,14 @@ end
 -- 활동 기록 = 마지막으로 공격 · 스킬(치유 포함)을 시전한 시각(AttackServer · SkillServer가 요청을 받아들인 순간 부른다). 표 키라 검증 스탠드인(테이블)도 된다.
 local lastActivityAt = {}
 
+-- P2.5a D(결정 10): 활동 = 적에게 실제로 명중한 순간만(CombatResolution.resolveHit - 평타 · 스킬 피해 공통). 헛스윙 · 치유 시전은 활동이 아니다.
 function PartyState.noteActivity(player, at)
 	lastActivityAt[player] = at or now()
+end
+
+-- P2.5a D(결정 7): 경험치 지급 순간 실제로 적용한 파티 보너스를 칩(Attribute PartyExpBonus)에 내린다(PlayerProfile.getExpGainMultiplier가 부른다).
+function PartyState.showAppliedExpBonus(player, bonus)
+	syncExpBonusAttribute(player, bonus)
 end
 
 function PartyState.getLastActivity(player)
@@ -305,10 +311,10 @@ PartyState.debugSnapshot = snapshot -- S19b 검증 전용(스냅샷을 클라 �
 
 function PartyState.pushState(party)
 	local data = snapshot(party)
-	local expBonus = PartyState.getExpBonus(party)
 	for _, player in ipairs(PartyState.getMemberPlayers(party)) do
 		fireClient(partyStateChanged, player, data)
-		syncExpBonusAttribute(player, expBonus)
+		-- P2.5a D(결정 7): 칩 = 실제로 적용되는 보너스(조건 판정 getExpBonusFor - 인원 보너스가 아니다).
+		syncExpBonusAttribute(player, PartyState.getExpBonusFor(player))
 	end
 end
 

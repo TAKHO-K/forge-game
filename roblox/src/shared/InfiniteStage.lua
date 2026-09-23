@@ -19,10 +19,15 @@ function InfiniteStage.getMonsterAttack(baseAttack, stage)
 	return baseAttack * InfiniteStage.getMultiplier(stage)
 end
 
+-- P2.5a C8: 골드 전용 배수 = goldGrowthRate^(stage − 1)(k가 아니다 - InfiniteStageConfig.goldGrowthRate 주석). 몬스터 골드와 GoldCost(비용)가 이 한 함수를 쓴다.
+function InfiniteStage.getGoldMultiplier(stage)
+	return InfiniteStageConfig.goldGrowthRate ^ (stage - 1)
+end
+
 -- 골드는 정수 화폐다(PlayerProfile.addGold가 그대로 더하는 값) - HP·공격력과 달리
 -- 소수점을 남기지 않는다.
 function InfiniteStage.getGoldReward(baseGold, stage)
-	return math.floor(baseGold * InfiniteStage.getMultiplier(stage))
+	return math.floor(baseGold * InfiniteStage.getGoldMultiplier(stage))
 end
 
 -- 경험치도 골드와 같은 이유로 정수·같은 k를 쓴다(13-2 - "몬스터가 세지는 속도"라는 하나의

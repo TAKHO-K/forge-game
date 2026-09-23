@@ -15,8 +15,8 @@ function GoldCost.scale(stage, kind)
 	if not stage or stage <= anchor then
 		return 1
 	end
-	-- InfiniteStage.getMultiplier(n) = k^(n − 1) - 몬스터 골드와 같은 함수(수입과 비용이 한 식을 공유한다).
-	return InfiniteStage.getMultiplier(stage - anchor + 1)
+	-- InfiniteStage.getGoldMultiplier(n) = goldGrowthRate^(n − 1) - 몬스터 골드와 같은 함수(수입과 비용이 한 식을 공유한다). P2.5a: k 대신 골드 성장률.
+	return InfiniteStage.getGoldMultiplier(stage - anchor + 1)
 end
 
 -- 비용 = floor(기본 비용 × 배수). 기준 스테이지 1인 종류는 floor(기본 × k^(s−1)) = InfiniteStage.getGoldReward(기본, s)와 같은 값이다.

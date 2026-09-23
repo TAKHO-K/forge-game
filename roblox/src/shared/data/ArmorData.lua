@@ -30,6 +30,12 @@
 -- Loot.lua와 PRD 20.23 참고.
 
 local CombatConfig = require(script.Parent.CombatConfig)
+local ItemVisualData = require(script.Parent.ItemVisualData)
+
+-- P2.5a R3: 갑옷 등급 배율도 1단계 = ×1.45(ItemVisualData.gradeStep) - 일반 1.184(옛 값 그대로)에서 시작해 1.184 × 1.45^(순서 − 1).
+-- 옛 표 1.184 · 2.397 · 3.903 · 5.866 · 8.347 · 11.25 · 15.0. 이 표는 tier 공정성 r(t)(MonsterData)의 입력이라 tier별 몬스터 HP · 골드 배율도 따라 바뀐다(공정성 항등식은 그대로).
+local ARMOR_NORMAL = 1.184
+local STEP = ItemVisualData.gradeStep
 
 return {
 	baseDefense = CombatConfig.playerDefense,
@@ -53,12 +59,12 @@ return {
 		normal = {
 			id = "normal",
 			displayName = "일반",
-			defenseGradeMultiplier = 1.184,
+			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 0,
 		},
 		rare = {
 			id = "rare",
 			displayName = "희귀",
-			defenseGradeMultiplier = 2.397,
+			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 1,
 		},
 		-- 아래 5등급은 PRD-forge-game.md 7.0 각주의 ARMOR_DEFENSE_GRADE_MULTIPLIER 표를
 		-- 그대로 옮긴 값이다(1.184/2.397/3.903/5.866/8.347/11.25/15.0, 일반~태초) - 16-5
@@ -66,27 +72,27 @@ return {
 		epic = {
 			id = "epic",
 			displayName = "영웅",
-			defenseGradeMultiplier = 3.903,
+			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 2,
 		},
 		legendary = {
 			id = "legendary",
 			displayName = "전설",
-			defenseGradeMultiplier = 5.866,
+			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 3,
 		},
 		relic = {
 			id = "relic",
 			displayName = "유물",
-			defenseGradeMultiplier = 8.347,
+			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 4,
 		},
 		ancient = {
 			id = "ancient",
 			displayName = "고대",
-			defenseGradeMultiplier = 11.25,
+			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 5,
 		},
 		primordial = {
 			id = "primordial",
 			displayName = "태초",
-			defenseGradeMultiplier = 15.0,
+			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 6,
 		},
 	},
 
