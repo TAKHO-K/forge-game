@@ -3,7 +3,8 @@
 --   GemCraftRequest.handle(player, action, a, b, c) -> success, reason(실패 이유 코드 | nil), data(성공 결과 표 | nil)
 --     action = "dismantle"(a = 가방 index)       → data = { dust }
 --              "dismantleBulk"(a = 기준 등급 id) → data = { count, dust }   (대상 0개면 실패 "none")
---   이유 코드: invalid(인자 모양 · 프로필 없음) · no_class · not_found · none.
+--              "refine"(a = "slot" | "bag", b = 홈 번호 | 가방 index, c = 먹일 가방 index) → data = { itemLevel }
+--   이유 코드: invalid(인자 모양 · 프로필 없음) · no_class · not_found · none · same_gem · no_gain · no_dust · no_gold.
 
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
@@ -35,6 +36,15 @@ function GemCraftRequest.handle(player, action, a, b, c)
 			return false, "none"
 		end
 		return true, nil, { count = count, dust = dust }
+	elseif action == "refine" then
+		if (a ~= "slot" and a ~= "bag") or not isIndex(b) or not isIndex(c) then
+			return false, "invalid"
+		end
+		local ok, result = PlayerProfile.refineGem(player, a, math.floor(b), math.floor(c))
+		if not ok then
+			return false, result
+		end
+		return true, nil, { itemLevel = result }
 	end
 	return false, "invalid"
 end

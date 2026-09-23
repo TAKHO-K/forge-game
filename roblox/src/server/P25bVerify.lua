@@ -160,6 +160,36 @@ function P25bVerify.runPure()
 			GemCraft.ticketDust("ancient") > 0 and GemCraft.ticketDust("primordial") > GemCraft.ticketDust("ancient") and GemCraft.ticketDust("epic") == 0)
 	end)
 
+	r.section("[B] 보석 재련", function()
+		local target = { grade = "primordial", itemLevel = 40, option = { id = "maxHpPercent", roll = 1.05 } }
+		local fodder = { grade = "epic", itemLevel = 2500, option = { id = "crit", roll = 0.9, roll2 = 0.9 } }
+		local same = { grade = "relic", itemLevel = 40, option = { id = "attackPercent", roll = 1 } }
+		r.check(("B1 판정: 정상 %s · 먹이 없음 %s · 같은 보석 %s · 같은 레벨 %s · 낮은 레벨 %s(기대 nil · not_found · same_gem · no_gain · no_gain)"):format(
+			tostring(GemCraft.refineBlockReason(target, fodder)), tostring(GemCraft.refineBlockReason(target, nil)), tostring(GemCraft.refineBlockReason(target, target)),
+			tostring(GemCraft.refineBlockReason(target, same)), tostring(GemCraft.refineBlockReason(fodder, target))),
+			GemCraft.refineBlockReason(target, fodder) == nil and GemCraft.refineBlockReason(target, nil) == "not_found" and GemCraft.refineBlockReason(target, target) == "same_gem"
+				and GemCraft.refineBlockReason(target, same) == "no_gain" and GemCraft.refineBlockReason(fodder, target) == "no_gain")
+		local after = GemCraft.refinedGem(target, fodder)
+		local before = Option.valueOf(target.option, target.grade, target.itemLevel, "greatsword")
+		local now = Option.valueOf(after.option, after.grade, after.itemLevel, "greatsword")
+		local expected = OptionData.options.maxHpPercent.baseValue * Option.levelFactor(2500) * 1.05 -- 태초 등급 몫 = 1
+		r.check(("B1 재련 뒤: 등급 %s(그대로) · 레벨 %d → %d · 옵션 %s 굴림 %.2f(그대로) · 수치 %.4f → %.4f(기대 %.4f = 새 레벨로 재계산) · 원본 불변(%d)"):format(
+			after.grade, target.itemLevel, after.itemLevel, after.option.id, after.option.roll, before, now, expected, target.itemLevel),
+			after.grade == "primordial" and after.itemLevel == 2500 and after.option == target.option and near(now, expected, 1e-9) and now > before and target.itemLevel == 40)
+		local rising = true
+		local gold1 = GemCraft.refineCost("primordial", 1)
+		local gold1000 = GemCraft.refineCost("primordial", 1000)
+		local grades = GemCraft.bulkGradeChoices()
+		for i = 2, #grades do
+			local goldA, dustA = GemCraft.refineCost(grades[i - 1], 500)
+			local goldB, dustB = GemCraft.refineCost(grades[i], 500)
+			rising = rising and goldB > goldA and dustB > dustA
+		end
+		r.check(("B2 비용: 태초 스테이지 1 = %d골드(기대 %d) · 1000 = %d(GoldCost %d) · 등급이 오를수록 골드 · 가루가 커진다 %s"):format(gold1, MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial,
+			gold1000, GoldCost.cost(MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial, 1000, "refine"), tostring(rising)),
+			gold1 == MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial and gold1000 == GoldCost.cost(MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial, 1000, "refine") and rising)
+	end)
+
 	r.section("[C] 저장 v31 gemDust", function()
 		local SaveSystem = require(script.Parent.SaveSystem)
 		local old = SaveSystem.defaultProfile()
@@ -288,6 +318,46 @@ function P25bVerify.runLive(player, env)
 			not okNoDust and whyNoDust == "no_dust" and goldAfterFail == 1e9 and okBuy and profile.gemDust == 0 and profile.gold == 1e9 - 1000 and tickets.ancient == ticketsBefore + 1)
 		tickets.ancient = ticketsBefore -- purchases는 DevTools 백업 대상이 아니다(옵션 변환권은 만지는 블록이 되돌린다)
 		profile.hints.gemMerchantUsed = false -- buyTicket이 켠 안내 플래그(hints는 백업 대상 - env.restore가 원래 값으로 되돌린다)
+	end)
+
+	r.section("[B] 보석 재련 실제 경로(장착 중 홈)", function()
+		local GemCraftRequest = require(script.Parent.GemCraftRequest)
+		local gems = classState.gemInventory
+		table.clear(gems)
+		local socket = { grade = "primordial", itemLevel = 40, option = { id = "maxHpPercent", roll = 1.05 } }
+		-- 다른 건강 옵션 출처를 비운다(합산 상한 20%에 걸리면 최대 체력 변화가 안 보인다) - env.restore가 되돌린다.
+		for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+			classState.equipment[part] = nil
+		end
+		for slot = 2, #classState.weapon.gems do
+			classState.weapon.gems[slot] = false
+		end
+		classState.weapon.gems[1] = socket
+		PlayerProfile.refreshMaxHp(player)
+		local maxHpBefore = PlayerProfile.getStatSummary(player).maxHp
+		table.insert(gems, { grade = "epic", itemLevel = 30, option = { id = "attackPercent", roll = 1 } }) -- 1: 낮은 레벨
+		table.insert(gems, { grade = "epic", itemLevel = 2500, option = { id = "crit", roll = 0.9, roll2 = 0.9 } }) -- 2: 먹이
+		local goldCost, dustCost = GemCraft.refineCost("primordial", PlayerProfile.getAccountBestStage(player))
+		profile.gold = goldCost + 5
+		profile.gemDust = dustCost - 1
+		local okNoDust, whyNoDust = GemCraftRequest.handle(player, "refine", "slot", 1, 2)
+		profile.gemDust = dustCost + 3
+		profile.gold = goldCost - 1
+		local okNoGold, whyNoGold = GemCraftRequest.handle(player, "refine", "slot", 1, 2)
+		profile.gold = goldCost + 5
+		local okLow, whyLow = GemCraftRequest.handle(player, "refine", "slot", 1, 1)
+		local okSame, whySame = GemCraftRequest.handle(player, "refine", "bag", 2, 2)
+		local okKind, whyKind = GemCraftRequest.handle(player, "refine", "weapon", 1, 2)
+		r.check(("B 거절: 가루 부족 %s · 골드 부족 %s · 낮은 먹이 %s · 같은 보석 %s · 모양 %s(기대 no_dust · no_gold · no_gain · same_gem · invalid) · 그대로(레벨 %d · 가방 %d · 골드 %s)"):format(
+			tostring(whyNoDust), tostring(whyNoGold), tostring(whyLow), tostring(whySame), tostring(whyKind), socket.itemLevel, #gems, tostring(profile.gold == goldCost + 5)),
+			not okNoDust and whyNoDust == "no_dust" and not okNoGold and whyNoGold == "no_gold" and not okLow and whyLow == "no_gain" and not okSame and whySame == "same_gem"
+				and not okKind and whyKind == "invalid" and socket.itemLevel == 40 and #gems == 2 and profile.gold == goldCost + 5 and profile.gemDust == dustCost + 3)
+		local ok, why, data = GemCraftRequest.handle(player, "refine", "slot", 1, 2)
+		local maxHpAfter = PlayerProfile.getStatSummary(player).maxHp
+		r.check(("B1 · B2 성공(장착 중 1번 홈 - 해제 없이): %s · 레벨 40 → %s · 옵션 %s 굴림 %.2f 그대로 · 먹이 사라짐(가방 %d) · 골드 %s(기대 5) · 가루 %d(기대 3) · 최대 체력 %.1f → %.1f(건강 옵션 수치가 새 레벨로)"):format(
+			tostring(ok), tostring(data and data.itemLevel), socket.option.id, socket.option.roll, #gems, tostring(profile.gold), profile.gemDust, maxHpBefore, maxHpAfter),
+			ok and why == nil and data.itemLevel == 2500 and classState.weapon.gems[1] == socket and socket.itemLevel == 2500 and socket.grade == "primordial" and socket.option.id == "maxHpPercent"
+				and socket.option.roll == 1.05 and #gems == 1 and gems[1].itemLevel == 30 and profile.gold == 5 and profile.gemDust == 3 and maxHpAfter > maxHpBefore)
 	end)
 
 	env.restore(player)

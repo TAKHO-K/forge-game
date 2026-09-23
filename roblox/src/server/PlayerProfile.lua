@@ -731,6 +731,47 @@ function PlayerProfile.dismantleGemsUpTo(player, cutoffGradeId)
 	return count, dust
 end
 
+-- 보석 재련(P2.5b B): 대상(홈 targetKind = "slot" · key = 홈 번호 / 가방 "bag" · key = index)에 가방 보석(fodderIndex)을 먹여 대상 itemLevel = 먹이 itemLevel.
+-- 등급 · 옵션(종류 · 굴림)은 그대로 - 수치는 Option.valueOf가 새 레벨로 다시 계산한다. 먹이는 사라진다. 장착 중인 보석도 그대로 된다(해제 불필요 - B2).
+-- 비용 = 골드(GemCraft.refineCost - 계정 최고 스테이지) + 가루. 가루를 먼저 확인한다(골드만 빠지고 실패하는 일이 없다). 되돌릴 수 없다(호출부가 즉시저장).
+-- 반환: true, 새 레벨 | false, 이유("no_class" · "invalid" · GemCraft.refineBlockReason의 코드 · "no_dust" · "no_gold").
+function PlayerProfile.refineGem(player, targetKind, targetKey, fodderIndex)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	local target
+	if targetKind == "slot" then
+		target = Gem.isFilled(classState.weapon.gems, targetKey) and classState.weapon.gems[targetKey] or nil
+	elseif targetKind == "bag" then
+		target = classState.gemInventory[targetKey]
+	else
+		return false, "invalid"
+	end
+	local fodder = classState.gemInventory[fodderIndex]
+	local reason = GemCraft.refineBlockReason(target, fodder)
+	if reason then
+		return false, reason
+	end
+	local goldCost, dustCost = GemCraft.refineCost(target.grade, accountBestStageOf(profile))
+	if profile.gemDust < dustCost then
+		return false, "no_dust"
+	end
+	if not PlayerProfile.trySpendGold(player, goldCost) then
+		return false, "no_gold"
+	end
+	PlayerProfile.addGemDust(player, -dustCost)
+	target.itemLevel = fodder.itemLevel
+	table.remove(classState.gemInventory, fodderIndex)
+	GemSync.push(player)
+	if targetKind == "slot" then
+		PlayerProfile.refreshMaxHp(player) -- 장착 중 보석의 수치가 바뀌었다(건강 · 신속 축이면 그 자리에서 반영 - equipGem과 같은 이유)
+		PlayerProfile.refreshMovementSpeed(player)
+	end
+	return true, target.itemLevel
+end
+
 function PlayerProfile.getGemInventory(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
