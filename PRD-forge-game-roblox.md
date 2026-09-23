@@ -9304,6 +9304,8 @@ grep으로 확인했다(다른 곳에 있는 "숨은 치트 경로" 없음). 진
 
 #### [3] 퍼블리시 전 점검(코드 감사 - 전부 기존 코드가 이미 옳게 처리하고 있었다, 변경 없음)
 
+- **(P2.5c 결정 9 추가 - 퍼블리시 체크리스트) 출시 전 새 DataStore 이름으로 시작한다**: 세이브 이관은 하지 않는다(사용자 확정). P2.5a(k 1.155 → 1.02) · P2.5c(환생 레벨 · 경험치 곡선 · 마일스톤 v33)로 옛 세이브의 스테이지 · itemLevel · 누적 경험치 · 골드 · 마일스톤 기록의 **뜻**이 바뀌었다(구조는 migrate가 옮기지만 값은 옛 단위). 퍼블리시 직전에 `shared/data/SaveConfig.lua`의 `dataStoreName`(지금 `ForgeGamePlayerData_v1`)을 새 이름(예: `ForgeGamePlayerData_v2`)으로 바꾸고, 파티 MemoryStore 이름도 같이 바꿀지 확인한다. 개발 · 테스트 계정 기록은 새 이름에서 다시 시작한다(DevTools 검증 저장소 `_verify` 접미사는 그대로).
+
 - **DataStore Studio vs 실서버**: `SaveSystem.lua`가 `DataStoreService:GetDataStore`를
   표준 API로만 쓴다(Studio 전용 분기 없음) - Studio에서 저장이 되고 안 되고는 순전히
   Studio 설정("Enable Studio Access to API Services")에 달렸고, **이 설정은 Studio

@@ -253,23 +253,23 @@ function P25cVerify.runLive(player, env)
 	local classState = profile.classes[profile.classId]
 
 	r.section("[B] 신규 보호 - 실제 피해 경로", function()
-		-- 같은 공격을 스테이지 1 · 10 · 30에서 PlayerDamage.applyHit로 넣고, 감소식만 거친 피해(computeHitDamage)와 비교한다. 체력은 매번 가득 채운다(쓰러지지 않게).
+		-- 같은 공격을 (지금 스테이지, 최고 스테이지) 조합마다 PlayerDamage.applyHit로 넣고, 감소식만 거친 피해(computeHitDamage)와 비교한다. 체력은 매번 가득 채운다.
+		-- 보호 기준 = 최고 스테이지(리뷰 1 - 지금 스테이지를 1로 내려 두고 고스테이지 보스에 들어가는 악용 차단).
 		local attack = 1
-		local function hitAt(stage)
-			env.applyStage(player, stage)
+		local function hitAt(current, best)
+			env.applyStage(player, current)
+			classState.stageProgress.infiniteBest = best
 			PlayerState.setHp(player, PlayerState.getMaxHp(player))
 			local raw = PlayerDamage.computeHitDamage(attack, player)
 			local dealt = PlayerDamage.applyHit(player, attack, "P25c 신규 보호 검증")
 			PlayerState.setHp(player, PlayerState.getMaxHp(player))
 			PlayerDamage.syncHud(player)
-			return dealt, raw
+			return dealt / raw
 		end
-		local d1, raw1 = hitAt(1)
-		local d10, raw10 = hitAt(10)
-		local d30, raw30 = hitAt(30)
-		local ok = raw1 > 0 and near(d1 / raw1, PlayerCombat.getNewbieDamageMultiplier(1), 1e-6) and near(d10 / raw10, PlayerCombat.getNewbieDamageMultiplier(10), 1e-6) and near(d30 / raw30, 1, 1e-6)
-		r.check(("B 실제 applyHit ÷ 감소식 피해: 스테이지 1 %.4f · 10 %.4f · 30 %.4f(기대 %.3f · %.3f · 1 - 받는 사람의 무한 스테이지로 · 대시 · 잡힘 배율 1 상태)"):format(
-			d1 / raw1, d10 / raw10, d30 / raw30, PlayerCombat.getNewbieDamageMultiplier(1), PlayerCombat.getNewbieDamageMultiplier(10)), ok)
+		local r1, r10, r30, rAbuse = hitAt(1, 1), hitAt(10, 10), hitAt(30, 30), hitAt(1, 500)
+		local ok = near(r1, PlayerCombat.getNewbieDamageMultiplier(1), 1e-6) and near(r10, PlayerCombat.getNewbieDamageMultiplier(10), 1e-6) and near(r30, 1, 1e-6) and near(rAbuse, 1, 1e-6)
+		r.check(("B 실제 applyHit ÷ 감소식 피해: 최고 1 %.4f · 10 %.4f · 30 %.4f(기대 %.3f · %.3f · 1) · 지금 1 + 최고 500 %.4f(기대 1 - 스테이지를 내려도 보호 없음)"):format(
+			r1, r10, r30, PlayerCombat.getNewbieDamageMultiplier(1), PlayerCombat.getNewbieDamageMultiplier(10), rAbuse), ok)
 	end)
 
 	r.section("[C] 환생 경험치 배율 - 실제 지급 경로", function()

@@ -74,7 +74,7 @@ function S21_0Verify.runPure()
 		local boss4Hp = InfiniteStage.getMonsterHp(80, stage) * 20 * BossRules.partySizeHpMultiplier(4)
 		return math.max(boss4Hp, CharacterLevel.getExpForLevel(stage + 1))
 	end
-	t.check(("safeStageCap = %d(기대 34320 - P2.5a)"):format(cap), cap == 34320)
+	t.check(("safeStageCap = %d(기대 34230 - P2.5c: 5회 뒤 목표 마릿수 ×6으로 경험치 누적이 먼저 넘는다)"):format(cap), cap == 34230)
 	t.check(("stage %d(cap) 최대 수치(boss4 HP · 레벨 경험치 누적) %.3g < 1e300"):format(cap, largest(cap)), largest(cap) < 1e300)
 	t.check(("stage %d(cap+1) 최대 수치 %.3g >= 1e300"):format(cap + 1, largest(cap + 1)), largest(cap + 1) >= 1e300)
 

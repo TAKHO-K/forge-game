@@ -286,10 +286,10 @@ local function runLive(player, env)
 
 	local ok, err = pcall(function()
 		local dense = BossData.mechanics.stageDensity
-		local stage = dense.startStage + dense.stepStages * dense.maxExtra -- 100
+		local stage = dense.startStage + dense.stepStages * dense.maxExtra -- P2.5c: 715(옛 100)
 		local model, data = spawnBoss(player, env, GUARDIAN, stage)
 		if not model then
-			r.check("스테이지 100 구간 수호자 스폰 실패", false)
+			r.check(("스테이지 %d 구간 수호자 스폰 실패"):format(stage), false)
 			return
 		end
 		-- 캐릭터는 어그로 밖(60stud)에 둔다 - 가까우면 MonsterAI도 같은 보스를 step해 강제 시작이 흔들린다(29-3의 교훈).

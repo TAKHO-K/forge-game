@@ -82,12 +82,18 @@ function PlayerDamage.takeDamage(targetPlayer, damage, opts)
 	return damage, absorbed, died
 end
 
+-- P2.5c 결정 2: 신규 보호 배율 - 받는 사람의 **최고** 무한 스테이지(지금 직업 infiniteBest) ≤ 20일 때만(PlayerCombat.getNewbieDamageMultiplier).
+-- 지금 스테이지가 아니라 최고를 보는 이유(리뷰 1): 지금 스테이지는 언제든 내릴 수 있어, 파티원이 스테이지 1로 내려 두고 리더의 고스테이지 보스에 들어가면
+-- 피해가 ×0.1이 됐다. 최고 스테이지는 내려가지 않는다 - 진짜 신규만 보호받는다. 스탠드인(표 Player)은 nil이라 1. 체력바 눈금(MonsterAI TickDamage)도 이 함수를 곱한다.
+function PlayerDamage.getNewbieMultiplier(targetPlayer)
+	return PlayerCombat.getNewbieDamageMultiplier(PlayerProfile.getInfiniteStageBest(targetPlayer))
+end
+
 -- 감소율까지 적용된 최종 피해를 넣고 사망 처리까지 한다 - 모든 피격 경로의 마지막 공통
 -- 지점. 받는 피해 배율(대검 E 채널링·대시, PlayerState)은 여기서 곱한다.
 local function applyFinalDamage(targetPlayer, damage, label)
 	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
-	-- P2.5c 결정 2: 신규 보호(받는 사람의 무한 스테이지 ≤ 20 - PlayerCombat.getNewbieDamageMultiplier). 스탠드인(표 Player)은 스테이지가 nil이라 1.
-	damage *= PlayerCombat.getNewbieDamageMultiplier(PlayerProfile.getInfiniteStage(targetPlayer))
+	damage *= PlayerDamage.getNewbieMultiplier(targetPlayer)
 	-- 29-1(PRD 20.73 [2-8] A-1 "잡힌 동안 받는 피해"): 잡히면 못 피하므로 모든 패턴이 확정 피격이다 -
 	-- 배율(지금은 0 = 면역)을 곱하고, 0이면 피격 자체가 없던 것으로 친다(자동회복 타이머도 안 건드린다).
 	local trapMultiplier = PlayerState.getTrapDamageMultiplier(targetPlayer)

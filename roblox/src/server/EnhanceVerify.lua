@@ -279,9 +279,10 @@ local function checkExpectedGold(r)
 			end
 		end
 		monteGold, monteAttempts = goldSum / runs, attemptSum / runs
-		r.check(("⑦ 0 → 19강 기대 골드: 해석식 %.0f · 몬테카를로 %d회 평균 %.0f (기대 498,8xx ±1%% = PRD 498,822 · 몬테카를로는 해석식 ±3%%) ★진짜 합격 기준"):format(
+		-- P2.5c 결정 4: +17 ~ +19 1회 비용을 낮춰(33,700 · 89,300 · 235,000 → 16,000 · 17,000 · 18,500) 기대 골드가 498,822 → 194,107(같은 해석식)이 됐다.
+		r.check(("⑦ 0 → 19강 기대 골드: 해석식 %.0f · 몬테카를로 %d회 평균 %.0f (기대 194,1xx ±1%% = P2.5c 비용표 · 옛 498,822 · 몬테카를로는 해석식 ±3%%) ★진짜 합격 기준"):format(
 			analyticGold, runs, monteGold),
-			math.abs(analyticGold - 498822) <= 498822 * 0.01 and math.abs(monteGold - analyticGold) <= analyticGold * 0.03)
+			math.abs(analyticGold - 194107) <= 194107 * 0.01 and math.abs(monteGold - analyticGold) <= analyticGold * 0.03)
 		r.check(("⑧ 0 → 19강 기대 시도 수: 해석식 %.2f · 몬테카를로 평균 %.2f (기대 34.6 ±1 - 옛 구조 679회)"):format(analyticAttempts, monteAttempts),
 			math.abs(analyticAttempts - 34.6) <= 1 and math.abs(monteAttempts - 34.6) <= 1)
 	end)
@@ -954,12 +955,12 @@ function EnhanceVerify.runLiveS04(player, env)
 		local goldAfter, stonesAfter = PlayerProfile.getGold(player), PlayerProfile.getMaterial(player, ENHANCE_STONE)
 		local resultOk = payload ~= nil and RESULT_SET[payload.result] == true
 			and payload.level == Enhance.getResultLevel(19, payload.result) and PlayerProfile.getWeapon(player).level == payload.level
-		-- P2 C1: 1회 골드 = GoldCost(표 235,000, 계정 최고 스테이지) - 최고 100 이하면 235,000 그대로, 그 위면 골드 수입과 같은 비율로 크다.
+		-- P2 C1: 1회 골드 = GoldCost(표 19강 값 - P2.5c 18,500, 계정 최고 스테이지) - 골드 수입과 같은 비율로 크다.
 		local expectedCost = Enhance.getCost(19, PlayerProfile.getAccountBestStage(player))
-		r.check(("강화석 8개 → 시도: 결과 %s · 무기 +%d · 강화석 8 → %d(기대 0) · 골드 %.0f → %.0f(차감 %.0f, 기대 %.0f = 표 235,000 × GoldCost(최고 %d)) · 결과가 정상(5종 중 하나 · 단계가 판정과 같음)=%s"):format(
+		r.check(("강화석 8개 → 시도: 결과 %s · 무기 +%d · 강화석 8 → %d(기대 0) · 골드 %.0f → %.0f(차감 %.0f, 기대 %.0f = 표 19강 값 × GoldCost(최고 %d)) · 결과가 정상(5종 중 하나 · 단계가 판정과 같음)=%s"):format(
 			payload and payload.result or "응답 없음", PlayerProfile.getWeapon(player).level, stonesAfter, goldBefore, goldAfter, goldBefore - goldAfter, expectedCost,
 			PlayerProfile.getAccountBestStage(player), tostring(resultOk)),
-			resultOk and stonesAfter == 0 and Enhance.getCost(19) == 235000 and goldBefore - goldAfter == expectedCost)
+			resultOk and stonesAfter == 0 and Enhance.getCost(19) == EnhanceConfig.goldCost[20] and goldBefore - goldAfter == expectedCost) -- P2.5c: 표 값은 데이터에서(옛 235,000)
 	end)
 
 	-- [14] 되돌리기: classes · gold · 가방 · 재료는 env.restore가, 위치 · 고정은 직접. 검증이 만든 것은 전부 없어야 한다.

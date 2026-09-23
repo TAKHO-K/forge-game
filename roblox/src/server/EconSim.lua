@@ -207,8 +207,9 @@ end
 -- 생존 타수가 minHits 이상인 가장 높은 스테이지(1 ~ maxStage). 생존은 스테이지에 단조 감소라 이분법.
 function EconSim.highestStageBySurvive(loadout, tierIndex, minHits, maxStage)
 	local attackBase = tierData(tierIndex).attack
+	local newbie = PlayerCombat.getNewbieDamageMultiplier(maxStage + 1) -- P2.5c 신규 보호: 게임과 같이 최고 스테이지(= reach = maxStage + 1) 기준
 	local function ok(stage)
-		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(attackBase, stage), PlayerCombat.getNewbieDamageMultiplier(stage)) >= minHits -- P2.5c 신규 보호
+		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(attackBase, stage), newbie) >= minHits
 	end
 	if not ok(1) then
 		return 1

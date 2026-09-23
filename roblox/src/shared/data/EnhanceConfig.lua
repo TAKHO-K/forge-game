@@ -81,7 +81,7 @@ local config = {
 		-- 보스 계정 첫 클리어 지급(계정 단위 1회): 보스 스테이지 S가 S >= firstStage이고 (S - firstStage) % stepStages == 0이면 하락 1장, 그중
 		-- S >= resetFromStage이면 초기화도 1장(Enhance.getBossGrant).
 		-- P2.5c 결정 10: 옛 50 · 25칸 · 100(k 1.155)을 같은 힘의 지금 스테이지로(힘 비율 - InfiniteStage.fromLegacyStage/Span, 보스 간격 5의 배수로 반올림)
-		-- = 360 · 180칸 · 720 → 360 · 540 = 하락 / 720 · 900 · 1080 ... = 하락 + 초기화. 설계 최대까지 약 115장(옛 번호 그대로면 약 850장).
+		-- = 360 · 180칸 · 720 → 360 · 540 = 하락 / 720 · 900 · 1080 ... = 하락 + 초기화. 설계 최대 25,300까지 하락 139장(옛 번호 그대로면 약 1,000장).
 		bossGrant = {
 			firstStage = InfiniteStage.fromLegacyStage(50, BossData.stageInterval),
 			stepStages = InfiniteStage.fromLegacySpan(25, BossData.stageInterval),

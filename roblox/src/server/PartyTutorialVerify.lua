@@ -28,6 +28,8 @@ local PartyVote = require(script.Parent.PartyVote)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local TutorialState = require(script.Parent.TutorialState)
 
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+
 local PartyTutorialVerify = {}
 
 local BOSS_STAGE = BossData.stageInterval * 20 -- 100 - party selftest S9와 같은 스테이지
@@ -370,8 +372,10 @@ function PartyTutorialVerify.runLive(player, env)
 		local tutorialStage, tutorialGold, tutorialExp = killOne(player) -- 지금 견습 중
 		TutorialState.stop(player, false)
 		local friendStage, friendGold, friendExp = killOne(player) -- 견습 아님 = 같은 파티의 친구 처지
-		local expectedTutorial = InfiniteStage.getExpReward(MonsterData.tier1.expReward, TutorialData.monsterStage) * (1 + partyBonus)
-		local expectedFriend = InfiniteStage.getExpReward(MonsterData.tier1.expReward, FRIEND_STAGE) * (1 + partyBonus)
+		-- P2.5c 결정 3: 캐릭터 경험치에는 환생 배율도 곱해진다(PlayerProfile.addCharacterExp).
+		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(PlayerProfile.getRebirthCount(player))
+		local expectedTutorial = InfiniteStage.getExpReward(MonsterData.tier1.expReward, TutorialData.monsterStage) * (1 + partyBonus) * rebirthMult
+		local expectedFriend = InfiniteStage.getExpReward(MonsterData.tier1.expReward, FRIEND_STAGE) * (1 + partyBonus) * rebirthMult
 		print(("[S12][나] 처치 로그 1(견습 중): 스테이지 %s · 골드 +%d · 경험치 +%.4f"):format(tostring(tutorialStage), tutorialGold, tutorialExp))
 		print(("[S12][나] 처치 로그 2(친구): 스테이지 %s · 골드 +%d · 경험치 +%.4f"):format(tostring(friendStage), friendGold, friendExp))
 		r.check(("견습 중 처치: 기준 스테이지 %s(기대 %d) · 경험치 +%.4f(기대 %.4f = 견습 스테이지 기준 × 파티 보너스 ×%.2f)"):format(

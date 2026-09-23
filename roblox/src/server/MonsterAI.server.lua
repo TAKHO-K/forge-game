@@ -287,7 +287,7 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
 					local aggroStage = TutorialState.getMonsterStage(player)
-					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player) * (data.basicAttackDamageMultiplier or 1))
+					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player)) -- P2.5c: 신규 보호도 눈금에
 					if data.isBoss then
 						BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)
 					end
@@ -307,7 +307,7 @@ RunService.Heartbeat:Connect(function(dt)
 						end
 						target = nearest
 						MonsterState.setAiTarget(model, nearest)
-						nearest:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, TutorialState.getMonsterStage(nearest)), nearest) * (data.basicAttackDamageMultiplier or 1))
+						nearest:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, TutorialState.getMonsterStage(nearest)), nearest) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(nearest))
 					end
 				end
 				local targetCharacter = target and target.Character
