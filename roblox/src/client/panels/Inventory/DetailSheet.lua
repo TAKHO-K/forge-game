@@ -13,6 +13,23 @@ local Layout = require(script.Parent.Layout)
 local ItemActions = require(script.Parent.ItemActions)
 local Hint = require(script.Parent.Parent.GemWorkshop.Hint)
 
+-- P2.5b A: 장비 비교 한 줄 + [계승](착용 중인 같은 부위보다 기본 효과가 좋은 가방 장비일 때만). 규칙 = shared/Inherit · 창 = panels/Inherit.
+local Inherit = require(ReplicatedStorage.Shared.Inherit)
+local InheritPanel = require(script.Parent.Parent.Inherit)
+
+-- "착용 대비" 한 줄(부위 기본 효과 차이). equipped가 없으면 nil.
+local function compareText(equipped, item)
+	if not equipped then
+		return nil
+	end
+	local diff = Inherit.baseStat(item) - Inherit.baseStat(equipped)
+	local part = item.part or "armor"
+	if part == "armor" then
+		return ("착용 대비 방어력 %s%s"):format(diff >= 0 and "+" or "-", NumberFormat.format(math.floor(math.abs(diff))))
+	end
+	return ("착용 대비 %s %+.1f%%p"):format(part == "gloves" and "공격력" or "속도", diff * 100)
+end
+
 -- 상세(S20b: InventoryUI 분할) - PC는 하단 상세 바(104), 폰은 아래에서 올라오는 시트(선택이 있을 때만 · 닫기 44). 이름 · 메타 · 옵션 줄 · 잠금 / 판매 / 분해 / 착용 / 리롤 버튼과 그 서버 요청, refreshDetail이 전부 여기 있다.
 local DetailSheet = {}
 
@@ -192,6 +209,10 @@ equipButton.Text = "장착"
 -- rerollButton과 같은 자리(gold 테두리, "sell" 스타일 재사용 - 새 색을 안 만든다).
 -- 고대·태초 등급의 가방/착용 아이템에서만 보인다(Gem.isRerollableGrade).
 local rerollDetailButton = makeActionButton(5, 70, "sell")
+local inheritButton = makeActionButton(6, 60, "primary") -- P2.5b A: 착용 중인 같은 부위보다 좋은 가방 장비일 때만 보인다
+inheritButton.Name = "InheritButton"
+inheritButton.Text = "계승"
+inheritButton.Visible = false
 -- ═══ 옵션 줄(26-3, PRD 20.67 [12]) ═══
 -- 26-3 실기 검증 중 발견: 이 파일이 이미 Luau 최상위 레지스터 200개 한계에 가까웠다
 -- ("Out of local registers ... exceeded limit 200"로 실제 실패) - setupGemTab/
@@ -437,6 +458,8 @@ end
 
 local function refreshDetailBody()
 	setHint(nil) -- 아래 분기가 필요한 것만 다시 채운다
+	local inheritWasVisible = inheritButton.Visible
+	inheritButton.Visible = false -- P2.5b A: 가방 분기만 다시 켠다
 	if S.selectedKind == "bag" then
 		local item = S.inventory[S.selectedValue]
 		if not item then
@@ -471,10 +494,14 @@ local function refreshDetailBody()
 		equipButton.Active = canEquip
 		equipButton.TextTransparency = canEquip and 0 or 0.6
 		equipButton.Text = "장착"
+		local equippedSame = S.equippedByPart()[item.part or "armor"]
 		if blockReason and blockReason ~= "busy" then
 			setHint(ItemActions.reasonText(blockReason), true)
+		else
+			setHint(compareText(equippedSame, item)) -- P2.5b A: 착용 대비 한 줄(착용품이 없으면 nil = 안 보인다)
 		end
 		setRerollDetailButton(Gem.isRerollableGrade(item.grade), item.grade)
+		inheritButton.Visible = Inherit.isUpgrade(equippedSame, item)
 	elseif S.selectedKind == "equip" and S.selectedValue ~= "weapon" and S.equippedByPart()[S.selectedValue] then
 		local part = S.selectedValue
 		local item = S.equippedByPart()[part]
@@ -597,6 +624,9 @@ local function refreshDetailBody()
 		setRerollDetailButton(nil)
 	else
 		clearDetail()
+	end
+	if inheritButton.Visible ~= inheritWasVisible then
+		R.applyLayout() -- 버튼 묶음 폭이 바뀌었다(정보 칸 폭을 다시 정한다)
 	end
 end
 
@@ -774,6 +804,19 @@ rerollDetailButton.Activated:Connect(function()
 	end
 end)
 
+-- P2.5b A: [계승] - 계승 창(window)을 연다(가방 창은 닫히고 계승 창이 끝나면 돌아온다). 판정 · 비용 · 능력치는 계승 창이 서버에 묻는다.
+inheritButton.Activated:Connect(function()
+	if S.selectedKind ~= "bag" then
+		return
+	end
+	local item = S.inventory[S.selectedValue]
+	local part = item and (item.part or "armor")
+	local equipped = part and S.equippedByPart()[part]
+	if item and Inherit.isUpgrade(equipped, item) then
+		InheritPanel.open(part, S.selectedValue, equipped, item)
+	end
+end)
+
 
 -- 폰 시트: 선택이 없으면 숨는다(PC 바는 항상 보인다). refreshDetail이 끝날 때마다 다시 정한다.
 local function applySheetVisibility()
@@ -835,8 +878,8 @@ end)
 R.sheetClose = sheetClose
 
 -- 배치(S20b): PC = 원래 하단 바 · 폰 = 시트(넓으면 한 줄: 정보 + 버튼 + 닫기 · 좁으면 두 줄: 정보 위 · 버튼 아래). 버튼은 폰에서 높이 44 이상 · 폭 44 이상.
-local actionButtons = { lockButton, sellButton, dismantleButton, equipButton, rerollDetailButton }
-local ACTION_WIDTHS = { 36, 76, 60, 84, 70 }
+local actionButtons = { lockButton, sellButton, dismantleButton, equipButton, rerollDetailButton, inheritButton }
+local ACTION_WIDTHS = { 36, 76, 60, 84, 70, 60 }
 local ACTION_GAP = 7
 table.insert(R.layouts, function(L)
 	local phone = L.mode == "phone"
@@ -845,7 +888,9 @@ table.insert(R.layouts, function(L)
 	for i, button in ipairs(actionButtons) do
 		local width = phone and math.max(ACTION_WIDTHS[i], 44) or ACTION_WIDTHS[i]
 		button.Size = UDim2.new(0, width, 0, L.actionH)
-		groupWidth += width + ACTION_GAP
+		if button ~= inheritButton or button.Visible then -- P2.5b A: [계승]은 보일 때만 폭에 넣는다(다른 버튼은 옛 계산 그대로)
+			groupWidth += width + ACTION_GAP
+		end
 	end
 	dact.Size = UDim2.new(0, 0, 0, L.actionH)
 	sheetClose.Visible = phone

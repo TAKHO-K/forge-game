@@ -3350,6 +3350,7 @@ if RunService:IsStudio() then
 				{ "S21-0(나)", function() require(script.Parent.S21_0Verify).runLive(player, env) end }, -- S21-0: A3 - DataStore NaN·inf 처리 + 저장 직전 sanitize 왕복(모듈은 여기서 require)
 				{ "P2(나)", function() require(script.Parent.P2Verify).runLive(player, env) end }, -- P2: 파티 경험치 조건 배선 · 실제 처치 경로 태초 드랍 · 드랍표 조회 API(모듈은 여기서 require)
 				{ "P25a(나)", function() require(script.Parent.P25aVerify).runLive(player, env) end }, -- P2.5a: 파티 칩 · 명중 활동 · 환생 보석 척도 · +30 공격력
+				{ "P25b(나)", function() require(script.Parent.P25bVerify).runLive(player, env) end }, -- P2.5b: 계승 · 재련 · 분해 · 마일스톤 실제 서버 경로
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3625,6 +3626,16 @@ if RunService:IsStudio() and verifyEnabled("P25a(가)") then
 		local ok, err = pcall(require(script.Parent.P25aVerify).runPure)
 		if not ok then
 			warn(("[P25a(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ P2.5b 자동 검증 블록(가) - 계승 · 재련 · 분해 · 마일스톤 규칙(순수 계산) ═══
+if RunService:IsStudio() and verifyEnabled("P25b(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.P25bVerify).runPure)
+		if not ok then
+			warn(("[P25b(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

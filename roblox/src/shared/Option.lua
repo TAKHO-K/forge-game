@@ -64,6 +64,11 @@ function Option.hasOptionPool(gradeId)
 	return index ~= nil and index >= OptionData.minGradeIndex
 end
 
+-- P2.5b A: 그 등급이 가질 수 있는 옵션 개수(지금 규칙 = 옵션 풀이 있으면 1개 · 없으면 0개). 계승이 "B 등급 한도까지"를 이 값으로 자른다.
+function Option.optionSlotsFor(gradeId)
+	return Option.hasOptionPool(gradeId) and 1 or 0
+end
+
 -- 드랍·환생·리롤 풀 10종(공통 8 + 그 직업 특화 2, 20.67 [1] "직업 특화 후보는 그 순간
 -- 플레이어의 직업 2종만"). classId가 nil이거나 알 수 없으면 공통 8종만.
 local function poolFor(classId)

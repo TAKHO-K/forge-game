@@ -28,6 +28,8 @@ local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMateria
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 -- S21-0 A2: 보상 계산 출구(NaN·inf 오염 차단).
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
+-- P2.5b A: 장비 계승 규칙(클라 미리 판정과 같은 순수 함수).
+local Inherit = require(ReplicatedStorage.Shared.Inherit)
 
 local PlayerProfile = {}
 
@@ -1017,14 +1019,19 @@ end
 -- 리스폰 경로만 알고 장비 교체는 모른다). 캐릭터가 아직 없어 PlayerState.init 전이면(로드
 -- 중) get 함수들이 nil을 돌려주는데, Attribute에 nil을 주면 그 값이 지워지므로 안전하게
 -- 건너뛴다.
+-- P2.5b: 최대체력 식 한 곳(refreshMaxHp · 능력치 요약 getStatSummary가 같이 쓴다).
+local function computeMaxHp(player)
+	local bonus = Loot.getMaxHpBonus(PlayerProfile.getEquipped(player, "armor"))
+	local optionMaxHpPercent = PlayerProfile.getOptionBonus(player, "maxHpPercent")
+	return (CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent)
+end
+
 function PlayerProfile.refreshMaxHp(player)
 	local profile = profiles[player]
 	if not profile then
 		return
 	end
-	local bonus = Loot.getMaxHpBonus(PlayerProfile.getEquipped(player, "armor"))
-	local optionMaxHpPercent = PlayerProfile.getOptionBonus(player, "maxHpPercent")
-	PlayerState.setMaxHp(player, (CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent))
+	PlayerState.setMaxHp(player, computeMaxHp(player))
 	local hp, maxHp = PlayerState.getHp(player), PlayerState.getMaxHp(player)
 	if hp and maxHp then
 		player:SetAttribute("Hp", hp)
@@ -1154,6 +1161,102 @@ function PlayerProfile.unequipItem(player, part)
 		PlayerProfile.refreshMaxHp(player)
 	end
 	return true
+end
+
+-- ═══ 장비 계승(P2.5b A) ═══
+-- 지금 활성 직업의 최종 능력치(계승 미리보기가 전후를 비교한다). 실제 전투가 쓰는 함수 그대로 - 공격력 = PlayerCombat.getAttack(AttackServer와 같은 인자) ·
+-- 방어력 = PlayerCombat.getDefense(PlayerDamage와 같은 인자) · 최대체력 = refreshMaxHp와 같은 식 · 속도 = 신발 + 옵션 · 치명 = 옵션 합.
+function PlayerProfile.getStatSummary(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return nil
+	end
+	local level = CharacterLevel.getLevelFromExp(classState.characterExp)
+	local critRate, critDmg = PlayerProfile.getCritBonus(player)
+	return {
+		attack = PlayerCombat.getAttack(classState.weapon, profile.classId, level, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage")),
+		defense = PlayerCombat.getDefense(profile.classId, Loot.getArmorDefense(classState.equipment.armor), PlayerProfile.getDefensePercentBonus(player)),
+		maxHp = computeMaxHp(player),
+		speedPercent = PlayerProfile.getSpeedPercentBonus(player),
+		critRate = critRate,
+		critDmg = critDmg,
+	}
+end
+
+-- 계승 비용(골드) - 서버 차감과 미리보기가 같은 값. 기준 = 계정 최고 스테이지(변환권과 같은 규칙).
+function PlayerProfile.getInheritCost(player, bGradeId)
+	return Inherit.cost(bGradeId, PlayerProfile.getAccountBestStage(player), 0)
+end
+
+-- 계승 미리보기(A6): { cost, gold, keepABlock, refund = { a, b }, stats = { current, a, b } }. a · b = 그 세트를 남겼을 때 계승 뒤 능력치(A 세트를 못 고르면 a = nil).
+-- 착용 칸을 잠깐 결과 장비로 바꿔 getStatSummary로 잰 뒤 되돌린다 - 중간에 yield가 없고, 에러가 나도 pcall 뒤에 반드시 되돌린다.
+-- 반환: 표 | nil, 이유 코드(Inherit.blockReason과 같은 코드 - keep 판정 전까지).
+function PlayerProfile.previewInherit(player, part, bagIndex)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	local a = classState and classState.equipment[part]
+	local b = profile and profile.inventory[bagIndex]
+	local reason = Inherit.blockReason(a, b, "b", classState ~= nil)
+	if reason then
+		return nil, reason
+	end
+	local keepABlock = Inherit.keepABlockReason(a, b)
+	local result = {
+		cost = PlayerProfile.getInheritCost(player, b.grade),
+		gold = profile.gold,
+		keepABlock = keepABlock,
+		refund = { a = Inherit.refund(a, b, "a"), b = Inherit.refund(a, b, "b") },
+		stats = { current = PlayerProfile.getStatSummary(player) },
+	}
+	local ok, err = pcall(function()
+		for _, keep in ipairs({ "a", "b" }) do
+			if keep == "b" or not keepABlock then
+				classState.equipment[part] = Inherit.resultItem(a, b, keep)
+				result.stats[keep] = PlayerProfile.getStatSummary(player)
+			end
+		end
+	end)
+	classState.equipment[part] = a
+	if not ok then
+		warn(("[PlayerProfile] 계승 미리보기 에러: %s"):format(tostring(err)))
+		return nil, "invalid"
+	end
+	return result
+end
+
+-- 계승 실행(A1 ~ A5) - 되돌릴 수 없다(호출부가 즉시저장). keep = "a"(착용 장비 A의 옵션 세트) | "b"(새 장비 B의 옵션 세트).
+-- 순서: 판정(Inherit.blockReason) → 비용(서버가 다시 계산) → 골드 차감 → B를 결과 장비로 바꿔 착용 · 가방에서 제거 → A 환급(보석 가방 또는 골드).
+-- 반환: true, 환급 종류("gem" | "gold") | false, 이유 코드(Inherit.blockReason의 코드 + no_gold).
+function PlayerProfile.inheritItem(player, part, bagIndex, keep)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	local a = classState and classState.equipment[part]
+	local b = profile and profile.inventory[bagIndex]
+	local reason = Inherit.blockReason(a, b, keep, classState ~= nil)
+	if reason then
+		return false, reason
+	end
+	local cost = PlayerProfile.getInheritCost(player, b.grade)
+	if not PlayerProfile.trySpendGold(player, cost) then
+		return false, "no_gold"
+	end
+
+	local refund = Inherit.refund(a, b, keep)
+	local newItem = Inherit.resultItem(a, b, keep)
+	table.remove(profile.inventory, bagIndex)
+	classState.equipment[part] = newItem
+	if refund.kind == "gem" then
+		table.insert(classState.gemInventory, refund.gem)
+	else
+		PlayerProfile.addGold(player, refund.gold)
+	end
+
+	InventorySync.push(player, profile)
+	GemSync.push(player)
+	PlayerProfile.refreshMaxHp(player)
+	PlayerProfile.refreshMovementSpeed(player)
+	return true, refund.kind
 end
 
 -- 서버만 호출한다(InventoryServer의 SellRequest 처리 직후, 13-1). 잠긴 아이템은 개별 판매도 막는다([2] 판단 -

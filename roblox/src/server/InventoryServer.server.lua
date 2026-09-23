@@ -110,6 +110,35 @@ bulkSellCutoffRequest.OnServerEvent:Connect(function(player, gradeId)
 	PlayerProfile.setBulkSellCutoffGrade(player, gradeId)
 end)
 
+-- P2.5b A: 장비 계승 - 미리보기(RemoteFunction: 서버가 계산한 전후 능력치 · 비용 · 환급) · 실행(RemoteEvent) · 결과(성공 여부 · 이유 코드 또는 환급 종류).
+-- 계승은 골드를 쓰고 두 장비를 되돌릴 수 없게 바꾼다 - 판매와 같은 즉시저장.
+local ItemInherit = require(script.Parent.ItemInherit)
+
+local inheritPreview = Instance.new("RemoteFunction")
+inheritPreview.Name = "InheritPreview"
+inheritPreview.Parent = ReplicatedStorage
+
+local inheritRequest = Instance.new("RemoteEvent")
+inheritRequest.Name = "InheritRequest"
+inheritRequest.Parent = ReplicatedStorage
+
+local inheritResult = Instance.new("RemoteEvent")
+inheritResult.Name = "InheritResult"
+inheritResult.Parent = ReplicatedStorage
+
+inheritPreview.OnServerInvoke = function(player, part, bagIndex)
+	local result, reason = ItemInherit.preview(player, part, bagIndex)
+	return result or { error = reason }
+end
+
+inheritRequest.OnServerEvent:Connect(function(player, part, bagIndex, keep)
+	local success, reason = ItemInherit.handle(player, part, bagIndex, keep)
+	if success then
+		ImmediateSave.request(player)
+	end
+	inheritResult:FireClient(player, success, reason)
+end)
+
 -- 장비창 위치도 잠금·일괄판매 기준과 같은 되돌릴 수 있는 UI 사건이다 - 즉시저장하지 않는다.
 setInventoryWindowPositionRequest.OnServerEvent:Connect(function(player, x, y)
 	if not PlayerProfile.getProfile(player) then
