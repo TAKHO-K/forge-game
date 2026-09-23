@@ -61,7 +61,10 @@ def main():
             current["csv"].setdefault(match.group(1), []).append(match.group(2).rstrip())
     if not runs:
         sys.exit("로그에 완료된 [ECON] 실행이 없다: " + path)
-    for run in runs.values():
+    targets = list(runs.values())
+    if stem_override:
+        targets = targets[-1:]  # --stem은 한 이름에 쓰므로 로그의 가장 마지막 실행만
+    for run in targets:
         stem = stem_override or ("E1-" + run["whatif"] + ("" if run["profiles"] == "all" else "-" + run["profiles"]))
         with io.open(os.path.join(HERE, stem + ".md"), "w", encoding="utf-8", newline="\n") as f:
             f.write("\n".join(run["md"]).rstrip() + "\n")
