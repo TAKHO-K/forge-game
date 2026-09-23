@@ -34,20 +34,15 @@
 local ArmorData = require(script.Parent.ArmorData)
 local CombatConfig = require(script.Parent.CombatConfig)
 local CharacterLevelConfig = require(script.Parent.CharacterLevelConfig)
+local DropTableData = require(script.Parent.DropTableData)
 
 local MonsterData = {}
 
 -- 드랍 등급 확률표(웹 data/items.js DROP_GRADE_TABLE, 16-5 조사로 확인한 값 그대로,
 -- index=tier). tier별 "기대 장비 가치" E[g|t] 계산의 입력이자, 17-1부터 Loot.rollArmorDrop이
 -- 실제 드랍 판정에도 이 표를 그대로 읽는다(단일 출처 유지).
-MonsterData.dropGradeTableByTier = {
-	{ normal = 0.90, rare = 0.10 },
-	{ normal = 0.70, rare = 0.27, epic = 0.03 },
-	{ normal = 0.45, rare = 0.40, epic = 0.14, legendary = 0.01 },
-	{ normal = 0.20, rare = 0.40, epic = 0.30, legendary = 0.09, relic = 0.01 },
-	{ normal = 0.05, rare = 0.25, epic = 0.40, legendary = 0.25, relic = 0.045, ancient = 0.005 },
-	{ rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = 0.001 },
-}
+-- P2 E1: 표 자체는 드랍표 단일 소스(DropTableData.armorGradeByTier)로 옮겼다 - 이 이름은 그 표를 가리키는 별칭(값 · 공정성 계산 불변).
+MonsterData.dropGradeTableByTier = DropTableData.armorGradeByTier
 
 -- gradeOrder 안에서 gradeId의 위치(1부터). PlayerProfile.lua의 같은 이름 로컬 함수와
 -- 동일한 패턴이다 - 공유 유틸이 아니라 각자의 파일 안에서만 쓰는 작은 헬퍼라 중복을

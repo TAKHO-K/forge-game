@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
+local DropTable = require(ReplicatedStorage.Shared.DropTable)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
@@ -163,7 +164,9 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		armorDrops = { Loot.rollSparkleArmorDrop(dropStage, monsterData.tierIndex, classId) }
 	else
 		-- 접두사 변종(22-2 [1]) - 기대 드랍 개수에도 보상 배율(= HP 배율)을 곱한다(공평성).
-		armorDrops = Loot.rollArmorDrop(dropStage, monsterData.tierIndex, MonsterState.getRewardMultiplier(target), classId)
+		-- P2 E1 · E3: 태초 확률 = DropTable.effectiveRate(받는 사람의 활성 직업 최고 스테이지, 몬스터 tier, 받는 사람의 사냥 스테이지) - 조회 API와 같은 함수.
+		local primordialRate = DropTable.effectiveRate({ bestStage = PlayerProfile.getInfiniteStageBest(recipient) }, { tierIndex = monsterData.tierIndex }, dropStage)
+		armorDrops = Loot.rollArmorDrop(dropStage, monsterData.tierIndex, MonsterState.getRewardMultiplier(target), classId, primordialRate)
 	end
 	for _, armorDrop in ipairs(armorDrops) do
 		-- 30-0 S10: 굴려진 순간의 파티원 드랍 알림(PRD 20.73 [5-3]) - 땅 스폰 · 가방 직행 둘 다의 앞이다. 이 함수만 부른다(견습 지급 · 대여 · 분해 · 상점은 여기를 안 탄다).

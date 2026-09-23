@@ -15,6 +15,8 @@ local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMateria
 -- 26-1: 장비 생성 지점에서 옵션을 굴린다(PRD 20.67 [1] "옵션 굴림 시점은 장비가 생성되는
 -- 모든 지점"). Option.rollFor가 알아서 옵션 풀이 없는 등급(일반·희귀)엔 nil을 돌려준다.
 local Option = require(ReplicatedStorage.Shared.Option)
+-- P2 E1: 등급 확률 · 태초 확률은 드랍표 단일 소스(DropTable)에서 읽는다.
+local DropTable = require(ReplicatedStorage.Shared.DropTable)
 
 local lootRng = Random.new()
 
@@ -24,9 +26,18 @@ local Loot = {}
 -- tier마다 달라졌다. getSellPrice가 "그 등급으로 뽑힐 확률"을 역산할 때 쓴다, 13-1과 같은
 -- 목적). MonsterData.dropGradeTableByTier[tierIndex]에 그 등급이 없으면(예: tier1엔
 -- "전설"이 없다) 0 - 그 tier에서는 절대 안 나온다는 뜻이다.
+-- P2 E1: DropTable.gradeChance(감쇠 전 기본 확률) - tier1 ~ 5의 태초(별도 굴림)도 여기서 확률을 얻는다(옛 표엔 없어 판매가 0이었을 자리).
+-- 기본 표에 이미 있는 등급(tier6 태초 포함)은 표 값 그대로다(나눗셈 반올림 없이 - 판매가가 한 자리도 안 바뀐다).
 local function getGradeChance(tierIndex, gradeId)
 	local row = MonsterData.dropGradeTableByTier[tierIndex]
-	return row and row[gradeId] or nil
+	if not row then
+		return nil
+	end
+	if row[gradeId] and (row.primordial or 0) == DropTable.primordialBaseRate(tierIndex) then
+		return row[gradeId]
+	end
+	local chance = DropTable.gradeChance(tierIndex, gradeId)
+	return (chance and chance > 0) and chance or nil
 end
 
 -- 부위 균등 랜덤(16-6, 웹 core/loot.js rollItemPart와 동등) - EquipSlots.order(갑옷/장갑/
@@ -65,11 +76,16 @@ local function rollDelta(deltaTable)
 end
 
 -- 등급표(map)를 ArmorData.gradeOrder 순서로 굴린다(순회 순서가 결정적이어야 한다). 표 끝까지 안 걸리면 nil.
-local function rollGrade(gradeTable)
-	local roll = lootRng:NextNumber()
+-- excludeGrade(P2 E1): 그 등급을 빼고 나머지 합으로 정규화해 굴린다(태초를 따로 굴린 뒤 "태초가 아니면"의 분포).
+local function rollGrade(gradeTable, excludeGrade)
+	local total = 1
+	if excludeGrade and gradeTable[excludeGrade] then
+		total -= gradeTable[excludeGrade]
+	end
+	local roll = lootRng:NextNumber() * total
 	local acc = 0
 	for _, gradeId in ipairs(ArmorData.gradeOrder) do
-		local chance = gradeTable[gradeId]
+		local chance = gradeId ~= excludeGrade and gradeTable[gradeId]
 		if chance then
 			acc += chance
 			if roll < acc then
@@ -117,13 +133,22 @@ end
 -- 잡몹 드랍 판정 1회. 0개 이상의 장비 배열을 돌려준다(개수 = rollCount(expectedArmorDropCount)). 아이템마다 등급 ·
 -- 부위 · 옵션 · itemLevel을 독립으로 굴린다. 등급표는 tierIndex로 MonsterData.dropGradeTableByTier의 그 구역
 -- 줄을 그대로 가져온다(17-1).
-function Loot.rollArmorDrop(monsterStage, tierIndex, rewardMultiplier, classId)
+-- P2 E1 · E4: primordialRate(= DropTable.effectiveRate - 호출부 CombatResolution이 받는 사람 기준으로 구한다)가 오면 아이템마다 태초를 먼저 굴리고,
+-- 아니면 기본 표에서 태초를 뺀 나머지 분포로 굴린다. 태초의 itemLevel = 그 몬스터를 잡은 사냥 스테이지(몬스터 레벨 - 편차 δ 없음).
+-- primordialRate가 nil이면 옛 굴림 그대로(기본 표 - tier6 태초 0.1% 포함).
+function Loot.rollArmorDrop(monsterStage, tierIndex, rewardMultiplier, classId, primordialRate)
 	local gradeTable = MonsterData.dropGradeTableByTier[tierIndex] or MonsterData.dropGradeTableByTier[1]
 	local items = {}
 	for _ = 1, Loot.rollCount(Loot.expectedArmorDropCount(tierIndex, rewardMultiplier)) do
-		local gradeId = rollGrade(gradeTable)
+		local gradeId
+		if primordialRate then
+			gradeId = lootRng:NextNumber() < primordialRate and "primordial" or rollGrade(gradeTable, "primordial")
+		else
+			gradeId = rollGrade(gradeTable)
+		end
 		if gradeId then -- 확률 합이 1 미만인 경우의 방어적 처리(지금 표는 전부 정확히 1.0)
-			table.insert(items, buildDropItem(gradeId, monsterStage, Loot.rollItemLevel(monsterStage, ArmorData.itemLevelDelta), tierIndex, classId))
+			local itemLevel = (primordialRate and gradeId == "primordial") and math.max(1, monsterStage) or Loot.rollItemLevel(monsterStage, ArmorData.itemLevelDelta)
+			table.insert(items, buildDropItem(gradeId, monsterStage, itemLevel, tierIndex, classId))
 		end
 	end
 	return items

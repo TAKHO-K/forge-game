@@ -11,6 +11,8 @@ local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
+local DropTable = require(ReplicatedStorage.Shared.DropTable)
+local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 local EconSim = require(script.Parent.EconSim)
 local EconSimTables = require(script.Parent.EconSimTables)
 
@@ -204,68 +206,66 @@ local function writeE4(w, runs, profileIds, enhanceTable)
 end
 
 -- ═══ E5 ═══
-local function writeE5(w, rows, whatIf)
+local function writeE5(w, rows)
 	local cfg = EconSimConfig.primordial
-	w.line("## E5 태초 선택지 손익분기(what-if 전용 - 게임 코드 무변경)")
+	w.line("## E5 태초 선택지 손익분기(게임 드랍표 그대로 - DropTable.effectiveRate · 레벨 감쇠 포함)")
 	w.line("")
-	w.line(("비교: (A) tier%d를 사냥 스테이지 − Δ에서 vs (B) tier%d를 사냥 스테이지 sB에서(sB = '일반' 프로필 기준 목표 처치 초 안에 잡히는 가장 높은 스테이지, 앵커 장비). 값 = A의 태초 기대 가치/분 ÷ B의 것(태초 위력 옵션 값 × 태초 개수/분). 1 초과 = A 우세(낮은 레벨 고tier가 태초 기준 지배 전략 후보). 스위치 ① 보석 레벨 = 잡은 몬스터 레벨: %s. 태초 확률: A = %s, B = A ÷ 배수%s."):format(
-		cfg.highTier, cfg.lowTier, cfg.gemLevelIsMonsterLevel and "켬" or "끔", pct(EconSimTables.primordialChance(cfg.highTier, whatIf)),
-		(whatIf and whatIf.primordialByTier) and "(what-if 표 사용 - 배수 대신 표의 tier 확률)" or ""))
+	w.line(("비교: (A) 드래곤(tier%d)을 자기 스테이지 − Δ에서 vs (B) tier t를 자기 스테이지 sB에서(sB = '일반' 프로필 기준 tier1이 목표 처치 초 안에 잡히는 가장 높은 스테이지 = 최고 스테이지로 본다, 앵커 장비). 값 = A의 태초 기대 가치/분 ÷ B의 것(태초 위력 옵션 값 × 태초 개수/분, 보석 레벨 = 잡은 스테이지). 1 초과 = A 우세(지배 전략). M* = 드래곤 ÷ tier t 확률 배수가 이 값 이하면 A가 우세하지 않다(A÷B는 배수에 비례). 감쇠 = 사냥 스테이지가 최고보다 %d 이상 낮으면 (격차 − %d + 1) × %s씩 깎는다."):format(
+		cfg.highTier, DropTableData.primordial.levelDecay.startGap, DropTableData.primordial.levelDecay.startGap - 1, pct(DropTableData.primordial.levelDecay.perLevel)))
 	w.line("")
-	w.line("현재 게임(tier1 ~ 5 태초 0%)에서는 B의 태초가 0이라 모든 칸이 A 우세(∞)다 - 아래 배수 표는 \"B에도 태초를 준다면\"의 what-if다.")
-	w.line("")
-	w.row("e5", { "label", "player_level", "delta", "stage_a", "stage_b", "freeze", "multiplier", "p_a", "p_b", "value_a", "value_b", "kill_a", "kill_b", "ratio", "break_even", "gold_ratio", "exp_ratio" })
-	local custom = whatIf and whatIf.primordialByTier
-	local multipliers = custom and { "표" } or cfg.probabilityMultipliers
-	local groups = {}
+	w.row("e5", { "label", "player_level", "low_tier", "delta", "stage_a", "stage_b", "rate_a", "rate_b", "decay_a", "value_a", "value_b", "kill_a", "kill_b", "ratio", "break_even", "multiplier", "gold_ratio", "exp_ratio" })
 	for _, row in ipairs(rows) do
-		w.row("e5", { row.label, row.playerLevel, row.delta, row.stageA, row.stageB, row.freeze and "on" or "off", row.multiplier, row.pA, row.pB, row.valueA, row.valueB, row.killA, row.killB, row.ratio, row.breakEven, row.goldRatio, row.expRatio })
-		local key = ("%s|%d|%d|%d"):format(row.label, row.playerLevel, row.stageA, row.stageB)
-		if not groups[key] then
-			groups[key] = { first = row, ratios = { [true] = {}, [false] = {} }, breakEven = {} }
-			table.insert(groups, groups[key])
-		end
-		table.insert(groups[key].ratios[row.freeze], row.ratio)
-		groups[key].breakEven[row.freeze] = row.breakEven
-		groups[key].value = groups[key].value or {}
-		groups[key].value[row.freeze] = { row.valueA, row.valueB }
+		w.row("e5", { row.label, row.playerLevel, row.lowTier, row.delta, row.stageA, row.stageB, row.rateA, row.rateB, row.decayA, row.valueA, row.valueB, row.killA, row.killB, row.ratio, row.breakEven, row.multiplier, row.goldRatio, row.expRatio })
 	end
-	w.line("| 플레이어 레벨 | Δ | sA → sB | 처치 A · B(초) | 보석 값 A · B(동결 있음 / 없음) | 손익분기 배수 M*(동결 있음 · 없음) | " .. (function()
-		local heads = {}
-		for _, multiplier in ipairs(multipliers) do
-			table.insert(heads, ("배수 %s: A÷B(동결 있음 · 없음)"):format(tostring(multiplier)))
-		end
-		return table.concat(heads, " | ")
-	end)() .. " | 골드/분 A÷B |")
-	w.line("|" .. string.rep("---|", 7 + #multipliers))
-	for _, group in ipairs(groups) do
-		local row = group.first
-		local cells = {}
-		for index = 1, #multipliers do
-			local on, off = group.ratios[true][index], group.ratios[false][index]
-			local function mark(ratio)
-				return ratio > 1 and ("**%s**"):format(num(ratio, 2)) or num(ratio, 2)
-			end
-			table.insert(cells, ("%s · %s"):format(mark(on), mark(off)))
-		end
-		w.line(("| %s%d | %d | %d → %d | %s · %s | %s · %s / %s · %s | %s · %s | %s | %s |"):format(row.label == "example" and "예시 " or "", row.playerLevel, row.delta, row.stageA, row.stageB,
-			num(row.killA, 2), num(row.killB, 2), pct(group.value[true][1]), pct(group.value[true][2]), pct(group.value[false][1]), pct(group.value[false][2]),
-			custom and "-" or num(group.breakEven[true], 2), custom and "-" or num(group.breakEven[false], 2), table.concat(cells, " | "), ("%.3g"):format(row.goldRatio)))
-	end
-	w.line("")
-	w.line("굵은 글씨 = A÷B > 1(A 우세). **배수 ≤ M*이면 낮은 레벨 고tier가 태초 기준 지배 전략이 아니다** - M*가 그 Δ에서 \"B(저tier · 자기 레벨)의 태초 확률을 A의 몇 분의 1까지 낮춰도 되는가\"다.")
-	w.line("")
-	w.line("### 지배 전략이 안 되는 (Δ, 배수) - 격자 칸 중 A÷B ≤ 1")
-	w.line("")
-	for _, freeze in ipairs({ true, false }) do
-		for _, playerLevel in ipairs(cfg.playerLevels) do
-			local safe = {}
-			for _, row in ipairs(rows) do
-				if row.label == "grid" and row.freeze == freeze and row.playerLevel == playerLevel and row.ratio <= 1 then
-					table.insert(safe, ("Δ%d×%s"):format(row.delta, tostring(row.multiplier)))
+	-- tier별 요약: 지금 배수 · Δ ≤ dominanceMaxDelta의 최소 M* · 지배 전략 여부
+	w.line("| tier | 몬스터 | 드래곤 대비 배수(지금) | 기본 확률(장비 1개당) | M* 최소(Δ ≤ " .. cfg.dominanceMaxDelta .. ", 레벨 " .. table.concat(cfg.playerLevels, " · ") .. ") | Δ ≤ " .. cfg.dominanceMaxDelta .. " 지배 전략 |")
+	w.line("|---|---|---|---|---|---|")
+	for _, tier in ipairs(cfg.lowTiers) do
+		local minM, dominated = math.huge, {}
+		local multiplier = nil
+		for _, row in ipairs(rows) do
+			if row.label == "grid" and row.lowTier == tier and row.delta <= cfg.dominanceMaxDelta then
+				minM = math.min(minM, row.breakEven)
+				multiplier = row.multiplier
+				if row.ratio > 1 then
+					table.insert(dominated, ("L%d Δ%d"):format(row.playerLevel, row.delta))
 				end
 			end
-			w.line(("- 동결 %s · 레벨 %d: %s"):format(freeze and "있음" or "없음", playerLevel, #safe > 0 and table.concat(safe, ", ") or "없음(전 칸 A 우세)"))
+		end
+		w.line(("| %d | %s | %s | %s | %s | %s |"):format(tier, EconSim.tierData(tier).displayName, multiplier == math.huge and "태초 없음" or ("×" .. num(multiplier, 2)),
+			("%.4f%%"):format(DropTable.primordialBaseRate(tier) * 100), num(minM, 2), #dominated > 0 and ("**있음** (" .. table.concat(dominated, ", ") .. ")") or "없음"))
+	end
+	w.line("")
+	w.line("| 플레이어 레벨 | tier | sB | A÷B: Δ1 · Δ2 · Δ3 · Δ4 · Δ5 | Δ10 · Δ30 | M*: Δ1 ~ Δ5 | 감쇠 A(Δ5 · Δ10) | 골드/분 A÷B(Δ5) |")
+	w.line("|---|---|---|---|---|---|---|---|")
+	for _, playerLevel in ipairs(cfg.playerLevels) do
+		for _, tier in ipairs(cfg.lowTiers) do
+			local byDelta, stageB = {}, nil
+			for _, row in ipairs(rows) do
+				if row.label == "grid" and row.playerLevel == playerLevel and row.lowTier == tier then
+					byDelta[row.delta] = row
+					stageB = row.stageB
+				end
+			end
+			local function ratioAt(delta)
+				local row = byDelta[delta]
+				if not row then
+					return "-"
+				end
+				return row.ratio > 1 and ("**%s**"):format(num(row.ratio, 2)) or num(row.ratio, 2)
+			end
+			local function mAt(delta)
+				return byDelta[delta] and num(byDelta[delta].breakEven, 2) or "-"
+			end
+			w.line(("| %d | %d | %d | %s · %s · %s · %s · %s | %s · %s | %s · %s · %s · %s · %s | %s · %s | %s |"):format(playerLevel, tier, stageB or 0,
+				ratioAt(1), ratioAt(2), ratioAt(3), ratioAt(4), ratioAt(5), ratioAt(10), ratioAt(30), mAt(1), mAt(2), mAt(3), mAt(4), mAt(5),
+				byDelta[5] and num(byDelta[5].decayA, 2) or "-", byDelta[10] and num(byDelta[10].decayA, 2) or "-", byDelta[5] and ("%.3g"):format(byDelta[5].goldRatio) or "-"))
+		end
+	end
+	for _, row in ipairs(rows) do
+		if row.label == "example" then
+			w.line("")
+			w.line(("예시(사용자 설계): 레벨 10 플레이어 - 스테이지 %d 드래곤 vs 스테이지 %d 슬라임: A÷B %s · M* %s · 감쇠 A %s · 골드/분 A÷B %.3g."):format(row.stageA, row.stageB, num(row.ratio, 2), num(row.breakEven, 2), num(row.decayA, 2), row.goldRatio))
 		end
 	end
 	w.line("")
@@ -432,7 +432,7 @@ function EconSimReport.run(opts)
 	end
 	local enhanceTable = EconSim.withOverrides(whatIf, EconSim.enhanceExpectedTable, EconSimConfig.enhanceMonteCarloTrials, EconSimConfig.seed)
 	task.wait()
-	local primordial = EconSim.withOverrides(whatIf, EconSimTables.primordial, whatIf)
+	local primordial = EconSim.withOverrides(whatIf, EconSimTables.primordial)
 	task.wait()
 	local healer = EconSim.withOverrides(whatIf, EconSimTables.healer, whatIf)
 	task.wait()
@@ -455,7 +455,7 @@ function EconSimReport.run(opts)
 	writeProfiles(w, profileIds)
 	writeE3(w, runs, profileIds)
 	EconSim.withOverrides(whatIf, writeE4, w, runs, profileIds, enhanceTable) -- 강화 1회 비용(Enhance.getCost)도 what-if(enhanceCostScale)를 따른다(리뷰 지적 3)
-	writeE5(w, primordial, whatIf)
+	writeE5(w, primordial)
 	writeE6(w, healer)
 	writeSamples(w, samples)
 	w.flush(("run=%s whatif=%s profiles=%s"):format(runId, whatIfName, profileArg))

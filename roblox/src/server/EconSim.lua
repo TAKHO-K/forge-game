@@ -21,6 +21,8 @@ local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageC
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
+local GoldCostConfig = require(ReplicatedStorage.Shared.data.GoldCostConfig)
+local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
@@ -38,6 +40,7 @@ local Gem = require(ReplicatedStorage.Shared.Gem)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
+local DropTable = require(ReplicatedStorage.Shared.DropTable)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PartyState = require(script.Parent.PartyState)
 
@@ -67,6 +70,28 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	if whatIf.dealingMultiplier then
 		set(SkillData.healer.E, "attackMultiplier", SkillData.healer.E.attackMultiplier * whatIf.dealingMultiplier)
 	end
+	-- P2 칸(p2before what-if가 P2 전 값을 되살릴 때 쓴다).
+	if whatIf.rebirthRequiredLevels then
+		set(CharacterLevelConfig.rebirth, "requiredLevels", whatIf.rebirthRequiredLevels)
+	end
+	if whatIf.optionLevelLogSlope then
+		set(OptionData, "levelLogSlope", whatIf.optionLevelLogSlope)
+	end
+	if whatIf.enhanceGoldAnchor then
+		set(GoldCostConfig.anchorStage, "enhance", whatIf.enhanceGoldAnchor)
+	end
+	if whatIf.primordialDragonOverTier then
+		set(DropTableData.primordial, "dragonOverTier", whatIf.primordialDragonOverTier)
+	end
+	if whatIf.primordialDecayPerLevel then
+		set(DropTableData.primordial.levelDecay, "perLevel", whatIf.primordialDecayPerLevel)
+	end
+	if whatIf.healerAtk then
+		set(ClassData.classes.healer, "atk", whatIf.healerAtk)
+	end
+	if whatIf.dealingAttackMultiplier then
+		set(SkillData.healer.E, "attackMultiplier", whatIf.dealingAttackMultiplier)
+	end
 	if whatIf.enhanceCostScale then
 		local scaled = {}
 		for index, cost in ipairs(EnhanceConfig.goldCost) do
@@ -85,46 +110,12 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	return table.unpack(results, 2, results.n)
 end
 
--- ═══ 옵션 값(levelFactor 동결 what-if) ═══
+-- ═══ 옵션 값 ═══
 
--- Option.levelFactor가 더 이상 커지지 않는 첫 레벨(지금 125) - 게임 함수를 훑어서 찾는다(상수를 옮겨 적지 않는다).
-local freezeLevelCache = nil
-function EconSim.optionFreezeLevel()
-	if not freezeLevelCache then
-		freezeLevelCache = math.huge
-		for level = 1, 100000 do
-			if Option.levelFactor(level + 1) <= Option.levelFactor(level) then
-				freezeLevelCache = level
-				break
-			end
-		end
-	end
-	return freezeLevelCache
-end
-
--- 동결 what-if에서 itemLevel L의 levelFactor ÷ 동결 레벨의 levelFactor. 게임 함수의 선형 구간 기울기(동결 직전 두 점의 차)를 그대로 연장한다.
--- cap이 nil이면 1(게임 그대로).
-function EconSim.levelFactorScale(itemLevel, cap)
-	local freeze = EconSim.optionFreezeLevel()
-	if not cap or itemLevel <= freeze then
-		return 1
-	end
-	local effective = math.min(itemLevel, cap)
-	local top = Option.levelFactor(freeze)
-	local slope = top - Option.levelFactor(freeze - 1)
-	return (top + slope * (effective - freeze)) / top
-end
-
--- 보석 한 개(게임 모양 { grade, itemLevel, option = { id, roll, roll2 } }). 동결 what-if면 itemLevel을 동결 레벨로 두고 roll에 배율을 곱한다
--- (Option.valueOf가 roll에 선형이라 값이 정확히 연장값이 된다 - BalanceSim.buildLoadout이 이 보석을 그대로 읽는다).
-function EconSim.makeGem(optionId, grade, itemLevel, roll, whatIf)
-	local cap = whatIf and whatIf.levelFactorCap
-	local scale = EconSim.levelFactorScale(itemLevel, cap)
-	local level = itemLevel
-	if scale ~= 1 then
-		level = EconSim.optionFreezeLevel()
-	end
-	return { grade = grade, itemLevel = level, option = { id = optionId, roll = roll * scale, roll2 = roll * scale } }
+-- 보석 한 개(게임 모양 { grade, itemLevel, option = { id, roll, roll2 } }) - BalanceSim.buildLoadout이 이 보석을 그대로 읽는다.
+-- P2 D1로 levelFactor의 125 동결이 없어져 P0의 "동결 해제 what-if"(선형 연장 배율) 기계는 지웠다 - 곡선은 이제 게임 함수(Option.levelFactor) 그대로다.
+function EconSim.makeGem(optionId, grade, itemLevel, roll)
+	return { grade = grade, itemLevel = itemLevel, option = { id = optionId, roll = roll, roll2 = roll } }
 end
 
 function EconSim.gemValue(gem, classId)
@@ -314,8 +305,9 @@ end
 -- 가방 점검 한 번 사이에 주운 장비(기대 개수 drops개) 중 "기대 개수 1개 이상"인 (등급, itemLevel 편차) 조합들. 등급 ≥ g이고 편차 ≥ d인 장비의
 -- 기대 개수 = drops × P(등급 ≥ g) × P(편차 ≥ d) ≥ 1인 가장 큰 d를 등급마다 하나씩. 두 표 = MonsterData.dropGradeTableByTier · ArmorData.itemLevelDelta
 -- (Loot.rollArmorDrop이 굴리는 표 그대로). 등급과 편차는 독립으로 굴린다(Loot) - 그래서 곱이다.
-local function expectedCandidates(tierIndex, drops, minGradeIndex)
-	local row = MonsterData.dropGradeTableByTier[tierIndex]
+-- P2 E: 등급 분포 = DropTable.gradeRow(tier, 태초 확률 = DropTable.effectiveRate - 서버 굴림과 같은 함수). 태초는 편차가 없다(itemLevel = 사냥 스테이지, E4).
+local function expectedCandidates(tierIndex, drops, minGradeIndex, primordialRate)
+	local row = DropTable.gradeRow(tierIndex, primordialRate)
 	local deltas = table.clone(ArmorData.itemLevelDelta)
 	table.sort(deltas, function(a, b)
 		return a.delta > b.delta
@@ -330,16 +322,28 @@ local function expectedCandidates(tierIndex, drops, minGradeIndex)
 		local gradeId = ArmorData.gradeOrder[index]
 		gradeCumulative += (row[gradeId] or 0)
 		local deltaCumulative = 0
-		for _, entry in ipairs(deltas) do
-			deltaCumulative += entry.weight / totalWeight
-			if gradeCumulative > 0 and drops * gradeCumulative * deltaCumulative >= 1 then
-				table.insert(list, { grade = gradeId, delta = entry.delta })
-				break
+		if gradeId == "primordial" then
+			if gradeCumulative > 0 and drops * gradeCumulative >= 1 then
+				table.insert(list, { grade = gradeId, delta = 0 })
+			end
+		else
+			for _, entry in ipairs(deltas) do
+				deltaCumulative += entry.weight / totalWeight
+				if gradeCumulative > 0 and drops * gradeCumulative * deltaCumulative >= 1 then
+					table.insert(list, { grade = gradeId, delta = entry.delta })
+					break
+				end
 			end
 		end
 	end
 	return list
 end
+
+-- 이 사냥 자리(tier · 스테이지)의 태초 확률 - 최고 스테이지 = state.reach(설 수 있는 가장 높은 스테이지 = 게임의 infiniteBest).
+local function primordialRateAt(state, tierIndex, stage)
+	return DropTable.effectiveRate({ bestStage = state.reach }, { tierIndex = tierIndex }, stage)
+end
+EconSim.primordialRateAt = primordialRateAt
 
 local PART_SCORE = {
 	armor = Loot.getArmorDefense,
@@ -415,7 +419,7 @@ local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, for
 	local old = state.gems[slot]
 	local oldValue = type(old) == "table" and EconSim.gemValue(old, state.classId) or -1
 	if profile.gemReroll and Gem.isRerollableGrade(gradeId) then
-		local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, profile.gemRoll, whatIf)
+		local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, profile.gemRoll)
 		local tickets = #Option.poolFor(state.classId)
 		local price = GoldCost.cost(MonsterData.tier1.goldDrop, state.reach, "rerollTicket") * GemData.rerollTicketGoldMultiplier * tickets -- GemServer.rerollTicketPrice와 같은 식
 		if (forced or EconSim.gemValue(gem, state.classId) > oldValue) and state.gold >= price then
@@ -426,7 +430,7 @@ local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, for
 			return
 		end
 	end
-	local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, randomAxisRoll(state.classId), whatIf)
+	local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, randomAxisRoll(state.classId))
 	if forced or EconSim.gemValue(gem, state.classId) > oldValue then
 		state.gems[slot] = gem
 		state.gemReplacements += forced and 0 or 1
@@ -455,7 +459,7 @@ local function checkBag(state, profile, tierIndex, stage, kills, whatIf)
 	for _, part in ipairs(EquipSlots.order) do
 		local score = PART_SCORE[part]
 		local best, bestScore = nil, state.gear[part] and score(state.gear[part]) or -1
-		for _, candidate in ipairs(expectedCandidates(tierIndex, perPart)) do
+		for _, candidate in ipairs(expectedCandidates(tierIndex, perPart, nil, primordialRateAt(state, tierIndex, stage))) do
 			local item = { grade = candidate.grade, itemLevel = math.max(1, stage + candidate.delta) }
 			local value = score(item)
 			if value > bestScore then
@@ -473,10 +477,10 @@ local function checkBag(state, profile, tierIndex, stage, kills, whatIf)
 	for slot = 1, state.rebirth do
 		local capIndex = gradeIndex(Gem.gradeCapForSlot(slot))
 		local bestGem, bestValue = nil, -1
-		for _, candidate in ipairs(expectedCandidates(tierIndex, total, minGem)) do
+		for _, candidate in ipairs(expectedCandidates(tierIndex, total, minGem, primordialRateAt(state, tierIndex, stage))) do
 			if gradeIndex(candidate.grade) <= capIndex then
 				local level = math.max(1, stage + candidate.delta)
-				local value = EconSim.gemValue(EconSim.makeGem("attackPercent", candidate.grade, level, 1, whatIf), state.classId)
+				local value = EconSim.gemValue(EconSim.makeGem("attackPercent", candidate.grade, level, 1), state.classId)
 				if value > bestValue then
 					bestGem, bestValue = { grade = candidate.grade, itemLevel = level }, value
 				end
@@ -632,7 +636,7 @@ end
 local function stepLevel(state, profile, run, rng, whatIf)
 	local bossSecondsBefore, bossGoldBefore = state.bossSeconds, state.bossGold
 	local bossExpBefore = state.bossExp
-	local loadout, hunt, tier, expPerKill, perKillSeconds, goldPerKill, killUnits
+	local loadout, hunt, tier, expPerKill, perKillSeconds, goldPerKill, killUnits, primordialPerKill
 	local need = nil
 	local function refresh()
 		loadout = loadoutFor(state)
@@ -650,6 +654,8 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage)
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)
 		killUnits = tier.rewardRatio ^ MonsterData.fairnessExponent
+		-- P2 E5: 처치 1마리당 태초 장비 기대 개수(서버 굴림과 같은 effectiveRate - 레벨 감쇠 포함)
+		primordialPerKill = Loot.expectedArmorDropCount(hunt.tier, 1) * primordialRateAt(state, hunt.tier, hunt.stage)
 	end
 	refresh()
 	if hunt.killSeconds == math.huge then
@@ -657,7 +663,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	end
 	need = CharacterLevel.getExpToNextLevel(state.level) - state.exp
 	local checkSeconds = profile.gearCheckMinutes * 60
-	local seconds, kills, gold, exp, replaced = 0, 0, 0, 0, 0
+	local seconds, kills, gold, exp, replaced, primordial = 0, 0, 0, 0, 0, 0
 	local firstStage = hunt.stage
 	while need > 0 do
 		local killsToLevel = math.max(1, math.ceil(need / expPerKill - 1e-9))
@@ -676,6 +682,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		kills += batch
 		gold += batch * goldPerKill
 		exp += batch * expPerKill
+		primordial += batch * primordialPerKill
 		need -= batch * expPerKill
 		state.gold += batch * goldPerKill
 		state.seconds += batchSeconds
@@ -734,6 +741,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		reach = state.reach, stage = hunt.stage, firstStage = firstStage, tier = hunt.tier, limiter = hunt.limiter, level = levelBefore, rebirth = state.rebirth,
 		seconds = seconds, kills = kills, killSeconds = hunt.killSeconds,
 		gold = gold, exp = exp, gearReplaced = replaced, weaponLevel = state.weaponLevel,
+		primordial = primordial, -- P2 E5: 이 청크 사냥의 태초 장비 기대 개수
 		goldBalance = state.gold, goldPerKill = goldPerKill, -- P2 C2: 보유 골드 대비 처치 1회 골드(상대 정밀도)
 		gemShare = 1 - BalanceSim.buildLoadout({ classId = state.classId, level = state.level, weaponLevel = state.weaponLevel, weaponGrade = state.weaponGrade, gear = state.gear, gems = {} }).atk / loadoutFor(state).atk, -- P2 D1: 보석이 공격력에서 차지하는 비중
 		armorGrade = state.gear.armor and state.gear.armor.grade or "-", armorLevel = state.gear.armor and state.gear.armor.itemLevel or 0,

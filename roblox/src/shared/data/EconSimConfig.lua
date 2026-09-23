@@ -66,18 +66,14 @@ return {
 	},
 	profileOrder = { "casual", "normal", "top" },
 
-	-- E5 태초 선택지(what-if 전용 - 게임 코드는 안 바뀐다). 비교: 같은 플레이어가
-	--   (A) 고tier(highTier) 몬스터를 자기 사냥 스테이지보다 Δ 낮은 스테이지에서 잡기 vs (B) 저tier(lowTier)를 자기 사냥 스테이지에서 잡기.
-	-- 태초 확률: A = primordialByTier[highTier], B = A ÷ 확률 배수. 스위치 ① gemLevelIsMonsterLevel(보석 레벨 = 잡은 몬스터 레벨, 끄면 = 플레이어 사냥 스테이지).
+	-- E5 태초 선택지(P2: 게임 드랍표 그대로 - DropTable.effectiveRate · 레벨 감쇠 포함). 비교: 같은 플레이어가
+	--   (A) 드래곤(highTier)을 자기 스테이지보다 Δ 낮은 스테이지에서 잡기 vs (B) tier t(lowTiers)를 자기 스테이지에서 잡기. 보석 레벨 = 잡은 스테이지(몬스터 레벨, 결정 6B E4).
 	primordial = {
 		playerLevels = { 10, 150, 1000 },
-		deltas = { 1, 5, 10, 30, 100 },
-		probabilityMultipliers = { 2, 5, 10 },
+		deltas = { 1, 2, 3, 4, 5, 10, 30 },
+		dominanceMaxDelta = 5, -- 지배 전략 판정 범위(E2 "Δ ≤ 5에서 지배 전략 없음")
 		highTier = 6,
-		lowTier = 1,
-		gemLevelIsMonsterLevel = true,
-		-- 현재 기본값(S21-0 D5 = MonsterData.dropGradeTableByTier). nil이면 EconSim이 게임 표에서 그대로 읽는다 - what-if만 이 칸을 채운다.
-		primordialByTier = nil,
+		lowTiers = { 1, 2, 3, 4, 5 },
 	},
 
 	-- E6 치유사 r과 장비 성장. 장비 단계 = 딜러(와 what-if의 치유사)가 낀 딜 옵션 보석. 앵커 = 레벨 100 · 무기 등급 0 · +0강(S21-0 D2와 같은 조건).
@@ -110,22 +106,29 @@ return {
 	-- E7 what-if 덮어쓰기. 이름 = /gg econ의 둘째 인자. 빈 표 = 기준선. 모든 칸은 선택:
 	--   growthRate          InfiniteStageConfig.growthRate(몬스터 · 보상 · 아이템 계수 성장 k)
 	--   weaponGrowthRate    CharacterLevelConfig.weaponMultGrowthRate(g)
-	--   levelFactorCap      Option.levelFactor 동결 레벨(math.huge = 동결 없음) - 게임 함수의 선형 구간을 그대로 연장한다
-	--   primordialByTier    { [tier] = 확률 } - E5 태초 확률표
 	--   healerApplyRate     E6 (가)의 a를 한 값으로 고정해 표를 다시 낸다
 	--   healerGemCoefficient E6 (나)의 m
 	--   dealingMultiplier   SkillData.healer.E.attackMultiplier에 곱하는 배율
 	--   enhanceCostScale    EnhanceConfig.goldCost 전체에 곱하는 배율
+	--   (P2) rebirthRequiredLevels  CharacterLevelConfig.rebirth.requiredLevels · optionLevelLogSlope  OptionData.levelLogSlope · enhanceGoldAnchor  GoldCostConfig.anchorStage.enhance
+	--   (P2) primordialDragonOverTier  DropTableData.primordial.dragonOverTier · primordialDecayPerLevel  levelDecay.perLevel · healerAtk  ClassData.healer.atk · dealingAttackMultiplier  SkillData.healer.E.attackMultiplier(절대값)
+	--   p2before = P2 결정 전의 게임 값 전부(docs/econ/P2-before.md와 같은 조건을 새 도구로 다시 재는 기준선 - 비교표의 "전" 칸)
 	whatIfs = {
 		baseline = {},
 		k1150 = { growthRate = 1.150 },
 		g1155 = { weaponGrowthRate = 1.155 },
-		unfreeze = { levelFactorCap = math.huge },
-		cap500 = { levelFactorCap = 500 },
-		primFlat = { primordialByTier = { [1] = 0.0001, [2] = 0.0002, [3] = 0.0003, [4] = 0.0005, [5] = 0.0007, [6] = 0.001 } },
 		healA75 = { healerApplyRate = 0.75 },
 		healM09 = { healerGemCoefficient = 0.9 },
 		dealing087 = { dealingMultiplier = 0.87 },
 		enhanceHalf = { enhanceCostScale = 0.5 },
+		p2before = {
+			rebirthRequiredLevels = { 25, 50, 75, 100, 125 },
+			optionLevelLogSlope = 0,
+			enhanceGoldAnchor = math.huge,
+			primordialDragonOverTier = { [6] = 1 },
+			primordialDecayPerLevel = 0,
+			healerAtk = 0.6,
+			dealingAttackMultiplier = 3.13,
+		},
 	},
 }

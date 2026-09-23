@@ -6,13 +6,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EconSimConfig = require(ReplicatedStorage.Shared.data.EconSimConfig)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
-local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local Loot = require(ReplicatedStorage.Shared.Loot)
+local DropTable = require(ReplicatedStorage.Shared.DropTable)
 local PartyShieldSim = require(ReplicatedStorage.Shared.PartyShieldSim)
 local EconSim = require(script.Parent.EconSim)
 
@@ -20,19 +20,11 @@ local EconSimTables = {}
 
 -- ═══ E5 태초 선택지 손익분기 ═══
 -- 모형([가정]): 레벨 Lp 앵커 장비(BalanceSim.buildAnchorLoadout)의 플레이어가 "일반" 프로필의 사냥 기준(목표 처치 초 · 조작 효율 · 이동 시간)으로
---   (B) 저tier를 자기 사냥 스테이지 sB(목표 초 안에 잡히는 가장 높은 스테이지)에서, (A) 고tier를 sA = sB − Δ에서 잡는다.
---   태초 기대 가치/분 = 분당 처치 × 처치당 장비 기대 개수(Loot.expectedArmorDropCount) × 태초 확률 × 태초 위력 옵션 값(Option.valueOf, roll 1.0).
---   보석 레벨: 스위치 ①이 켜지면 잡은 스테이지(= 몬스터 레벨), 끄면 A도 sB(플레이어 사냥 스테이지). 동결 없음 = EconSim.levelFactorScale(선형 연장).
--- 결과 = A ÷ B. 1 초과면 "낮은 레벨 고tier만 도는 것"이 태초 기준 우세(지배 전략 후보), 1 이하면 아니다.
-local function primordialChance(tierIndex, whatIf)
-	local table_ = (whatIf and whatIf.primordialByTier) or EconSimConfig.primordial.primordialByTier
-	if table_ then
-		return table_[tierIndex] or 0
-	end
-	return MonsterData.dropGradeTableByTier[tierIndex].primordial or 0
-end
-EconSimTables.primordialChance = primordialChance
-
+--   (B) tier t(1 ~ 5)를 자기 스테이지 sB(tier1이 목표 초 안에 잡히는 가장 높은 스테이지 = 최고 스테이지로 본다)에서, (A) 드래곤(tier6)을 sA = sB − Δ에서 잡는다.
+--   태초 기대 가치/분 = 분당 처치 × 처치당 장비 기대 개수(Loot.expectedArmorDropCount) × 태초 확률(DropTable.effectiveRate - 서버 굴림과 같은 함수, 레벨 감쇠 포함)
+--   × 태초 위력 옵션 값(Option.valueOf, roll 1.0, 보석 레벨 = 잡은 스테이지 = 몬스터 레벨).
+-- 결과 = A ÷ B. 1 초과면 "낮은 스테이지 드래곤"이 태초 기준 우세(지배 전략). 손익분기 배수 M* = 드래곤 ÷ tier t 확률 배수가 이 값일 때 A ÷ B = 1
+-- (배수 ≤ M*면 지배 전략 아님). A ÷ B는 배수에 비례한다.
 local function perMinute(loadout, tierIndex, stage, profile)
 	local hp = InfiniteStage.getMonsterHp(EconSim.tierData(tierIndex).hp, stage)
 	local kill = EconSim.killSeconds(loadout, hp / profile.dpsEfficiency, 600)
@@ -47,57 +39,51 @@ local function perMinute(loadout, tierIndex, stage, profile)
 	}
 end
 
-local function primValue(itemLevel, classId, cap)
-	return EconSim.gemValue(EconSim.makeGem("attackPercent", "primordial", itemLevel, 1.0, { levelFactorCap = cap }), classId)
+local function primValue(itemLevel, classId)
+	return EconSim.gemValue(EconSim.makeGem("attackPercent", "primordial", itemLevel, 1.0), classId)
 end
 
-function EconSimTables.primordial(whatIf)
+function EconSimTables.primordial()
 	local cfg = EconSimConfig.primordial
 	local profile = EconSimConfig.profiles.normal
 	local classId = profile.classId
-	local switchOn = cfg.gemLevelIsMonsterLevel
-	local custom = (whatIf and whatIf.primordialByTier) or cfg.primordialByTier
 	local rows = {}
-	local function evaluate(playerLevel, stageA, stageB, loadout, label)
+	local function evaluate(playerLevel, lowTier, stageA, stageB, loadout, label)
 		local a = perMinute(loadout, cfg.highTier, stageA, profile)
-		local b = perMinute(loadout, cfg.lowTier, stageB, profile)
-		local levelA = switchOn and stageA or stageB
-		for _, freeze in ipairs({ true, false }) do
-			local cap = (not freeze) and math.huge or nil
-			local valueA, valueB = primValue(levelA, classId, cap), primValue(stageB, classId, cap)
-			local pA = primordialChance(cfg.highTier, whatIf)
-			local multipliers = custom and { "표" } or cfg.probabilityMultipliers
-			for _, multiplier in ipairs(multipliers) do
-				local pB = custom and primordialChance(cfg.lowTier, whatIf) or pA / multiplier
-				local perMinA = a.dropsPerMinute * pA * valueA
-				local perMinB = b.dropsPerMinute * pB * valueB
-				-- 손익분기 배수 M* = B의 확률이 A의 1/M*일 때 A÷B = 1(A÷B는 배수에 비례한다). 배수 ≤ M*면 지배 전략이 아니다.
-				local perMinBAtEqual = b.dropsPerMinute * pA * valueB
-				table.insert(rows, {
-					label = label, playerLevel = playerLevel, delta = stageB - stageA, stageA = stageA, stageB = stageB, freeze = freeze,
-					multiplier = multiplier, pA = pA, pB = pB, valueA = valueA, valueB = valueB,
-					killA = a.killSeconds, killB = b.killSeconds, perMinA = perMinA, perMinB = perMinB,
-					ratio = perMinB > 0 and perMinA / perMinB or math.huge,
-					breakEven = perMinA > 0 and perMinBAtEqual / perMinA or math.huge,
-					goldRatio = a.goldPerMinute / b.goldPerMinute, expRatio = a.expPerMinute / b.expPerMinute,
-				})
-			end
-		end
+		local b = perMinute(loadout, lowTier, stageB, profile)
+		local player = { bestStage = stageB }
+		local rateA = DropTable.effectiveRate(player, { tierIndex = cfg.highTier }, stageA)
+		local rateB = DropTable.effectiveRate(player, { tierIndex = lowTier }, stageB)
+		local valueA, valueB = primValue(stageA, classId), primValue(stageB, classId)
+		-- 같은 기본 확률일 때의 A ÷ B(= X). M* = 1 ÷ X - 감쇠는 A에만(B는 자기 최고 스테이지).
+		local x = (a.dropsPerMinute * DropTable.levelDecay(stageB, stageA) * valueA) / (b.dropsPerMinute * valueB)
+		local perMinA, perMinB = a.dropsPerMinute * rateA * valueA, b.dropsPerMinute * rateB * valueB
+		table.insert(rows, {
+			label = label, playerLevel = playerLevel, lowTier = lowTier, delta = stageB - stageA, stageA = stageA, stageB = stageB,
+			rateA = rateA, rateB = rateB, decayA = DropTable.levelDecay(stageB, stageA), valueA = valueA, valueB = valueB,
+			killA = a.killSeconds, killB = b.killSeconds, perMinA = perMinA, perMinB = perMinB,
+			ratio = perMinB > 0 and perMinA / perMinB or math.huge,
+			breakEven = x > 0 and 1 / x or math.huge,
+			multiplier = rateB > 0 and DropTable.primordialBaseRate(cfg.highTier) / DropTable.primordialBaseRate(lowTier) or math.huge,
+			goldRatio = a.goldPerMinute / b.goldPerMinute, expRatio = a.expPerMinute / b.expPerMinute,
+		})
 	end
 	for _, playerLevel in ipairs(cfg.playerLevels) do
 		local loadout = BalanceSim.buildAnchorLoadout(classId, playerLevel, 0)
-		local stageB = EconSim.highestStageByKill(loadout, cfg.lowTier, profile.targetKillSeconds, profile.dpsEfficiency, InfiniteStageConfig.safeStageCap)
-		local seen = {}
-		for _, delta in ipairs(cfg.deltas) do
-			local stageA = math.max(1, stageB - delta) -- Δ가 sB보다 크면 스테이지 1에서 잘린다 - 같은 sA는 한 번만
-			if not seen[stageA] then
-				seen[stageA] = true
-				evaluate(playerLevel, stageA, stageB, loadout, "grid")
+		local stageB = EconSim.highestStageByKill(loadout, 1, profile.targetKillSeconds, profile.dpsEfficiency, InfiniteStageConfig.safeStageCap)
+		for _, lowTier in ipairs(cfg.lowTiers) do
+			local seen = {}
+			for _, delta in ipairs(cfg.deltas) do
+				local stageA = math.max(1, stageB - delta) -- Δ가 sB보다 크면 스테이지 1에서 잘린다 - 같은 sA는 한 번만
+				if not seen[stageA] then
+					seen[stageA] = true
+					evaluate(playerLevel, lowTier, stageA, stageB, loadout, "grid")
+				end
 			end
 		end
 	end
 	-- 사용자 설계 예시: 레벨 10 플레이어 - 레벨 1 드래곤 vs 레벨 14 슬라임.
-	evaluate(10, 1, 14, BalanceSim.buildAnchorLoadout(classId, 10, 0), "example")
+	evaluate(10, 1, 1, 14, BalanceSim.buildAnchorLoadout(classId, 10, 0), "example")
 	return rows
 end
 
@@ -127,7 +113,7 @@ end
 local function tierGems(tier, optionOverride, rollScale)
 	local gems = {}
 	for slot, entry in ipairs(tier.gems) do
-		gems[slot] = EconSim.makeGem(optionOverride or entry[1], entry[2], entry[3], entry[4] * (rollScale or 1), nil)
+		gems[slot] = EconSim.makeGem(optionOverride or entry[1], entry[2], entry[3], entry[4] * (rollScale or 1))
 	end
 	return gems
 end
