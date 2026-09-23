@@ -232,8 +232,12 @@ local function run()
 
 		-- ⑤ 누수(E): 세 창을 20번씩 열고 닫는다(열 때마다 본문을 새로 그린다) - 인스턴스 수 · 메모리가 돌아오는가.
 		task.wait(0.5)
-		local before, memBefore = countGui(), gcinfo()
-		for _ = 1, 20 do
+		-- 한 바퀴 먼저 돌려 세 창의 마지막 그림을 반복 뒤와 같은 상태로 맞춘다(Play 2: 앞 점검이 보석 가공 창을 [일괄 분해] 탭으로 닫아 행 수가 달라 -24가 났다).
+		local before, memBefore
+		for round = 0, 20 do
+			if round == 1 then
+				before, memBefore = countGui(), gcinfo()
+			end
 			InheritPanel.debugOpen("armor", 1, a, b, preview, "a")
 			task.wait(0.05)
 			UIManager.close(InheritPanel.id, true)
