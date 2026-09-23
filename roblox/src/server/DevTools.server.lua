@@ -76,6 +76,7 @@ local BalanceDecisionVerify = require(script.Parent.BalanceDecisionVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local CombatResolution = require(script.Parent.CombatResolution)
+local PerfProbe = require(script.Parent.PerfProbe) -- P2.5a B: 성능 기준선(/gg perf · PerfAutoRunUntil)
 -- 22-2 변종 검증 명령(/gg variant, /gg chesttest)용.
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 -- 22-4 Y축 지형 검증 명령(/gg terrain)용.
@@ -1258,6 +1259,9 @@ local function handleCommand(player, args)
 		if stage > InfiniteStageConfig.safeStageCap then
 			reply(player, ("경고: 임시 안전 상한(%d)을 넘었다 - 생존타수/보상 배율이 double 붕괴 구간에 가까워진다"):format(InfiniteStageConfig.safeStageCap))
 		end
+	elseif sub == "perf" then
+		ensureBackup(player)
+		task.spawn(PerfProbe.run, player)
 	elseif sub == "measure" then
 		measure(player, tonumber(args[2]))
 	elseif sub == "curve" and args[2] == "anchor" then
@@ -2314,6 +2318,16 @@ Players.PlayerAdded:Connect(function(player)
 	player.Chatted:Connect(function(message)
 		onChatMessage(player, message)
 	end)
+	-- P2.5a B: edit 모드에서 ReplicatedStorage Attribute PerfAutoRunUntil(os.time() 만료 시각)을 켜 두면 접속 25초 뒤 성능 측정을 한 번 돈다(채팅 명령 없이).
+	local perfUntil = ReplicatedStorage:GetAttribute("PerfAutoRunUntil")
+	if type(perfUntil) == "number" and os.time() < perfUntil then
+		task.delay(25, function()
+			if player.Parent then
+				ensureBackup(player)
+				PerfProbe.run(player)
+			end
+		end)
+	end
 end)
 
 -- 24-2 실측: TextChatService가 "/"로 시작하는 메시지를 명령으로 해석해 Player.Chatted에 넘기지 않는다(같은 세션에서
