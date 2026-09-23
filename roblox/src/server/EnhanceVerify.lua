@@ -831,43 +831,46 @@ function EnhanceVerify.runLiveS04(player, env)
 	end
 
 	local tier1 = MonsterData.tier1
+	-- P2.5c 결정 10: 해금 스테이지는 데이터에서 읽는다(옛 50 · 75 → 힘 비율 환산 358 · 539).
+	local stoneStage = EnhanceMaterialData.materials[ENHANCE_STONE].minStage
+	local highStage = EnhanceMaterialData.materials[HIGH_STONE].minStage
 
-	r.section("[6] 스테이지 49 · 200마리", function()
-		if not prepareStage(49) then
-			r.check(("준비 실패: 처치 기준 스테이지 %s(기대 49) - 견습 진행 중이면 그 단계의 스테이지가 쓰인다"):format(tostring(TutorialState.getMonsterStage(player))), false)
+	r.section("[6] 강화석 해금 바로 아래 · 200마리", function()
+		if not prepareStage(stoneStage - 1) then
+			r.check(("준비 실패: 처치 기준 스테이지 %s(기대 %d) - 견습 진행 중이면 그 단계의 스테이지가 쓰인다"):format(tostring(TutorialState.getMonsterStage(player)), stoneStage - 1), false)
 			return
 		end
 		local gains = killAndMeasure(player, 200, tier1, {})
-		r.check(("스테이지 49 · tier1 200마리 처치: %s (기대 0 · 0 - 경계 바로 아래) ★진짜 합격 기준"):format(gainsText(gains)), gains[ENHANCE_STONE] == 0 and gains[HIGH_STONE] == 0)
+		r.check(("스테이지 %d · tier1 200마리 처치: %s (기대 0 · 0 - 경계 바로 아래) ★진짜 합격 기준"):format(stoneStage - 1, gainsText(gains)), gains[ENHANCE_STONE] == 0 and gains[HIGH_STONE] == 0)
 	end)
 
-	r.section("[7] 스테이지 50 · 400마리", function()
-		if not prepareStage(50) then
-			r.check("준비 실패: 처치 기준 스테이지가 50이 아니다", false)
+	r.section("[7] 강화석 해금 스테이지 · 400마리", function()
+		if not prepareStage(stoneStage) then
+			r.check(("준비 실패: 처치 기준 스테이지가 %d가 아니다"):format(stoneStage), false)
 			return
 		end
 		local gains = killAndMeasure(player, 400, tier1, {})
 		local expected = 400 * chance * baseMultiplier
-		r.check(("스테이지 50 · tier1 · 접두사 없음 400마리 처치: %s (기대 강화석 %.0f ± 25 · 상급 0) ★진짜 합격 기준"):format(gainsText(gains), expected),
+		r.check(("스테이지 %d · tier1 · 접두사 없음 400마리 처치: %s (기대 강화석 %.0f ± 25 · 상급 0) ★진짜 합격 기준"):format(stoneStage, gainsText(gains), expected),
 			math.abs(gains[ENHANCE_STONE] - expected) <= 25 and gains[HIGH_STONE] == 0)
 	end)
 
-	r.section("[8] 스테이지 74 / 75", function()
-		if not prepareStage(74) then
-			r.check("준비 실패: 처치 기준 스테이지가 74가 아니다", false)
+	r.section("[8] 상급 해금 바로 아래 / 해금", function()
+		if not prepareStage(highStage - 1) then
+			r.check(("준비 실패: 처치 기준 스테이지가 %d가 아니다"):format(highStage - 1), false)
 			return
 		end
 		local at74 = killAndMeasure(player, 100, tier1, {})
-		if not prepareStage(75) then
-			r.check("준비 실패: 처치 기준 스테이지가 75가 아니다", false)
+		if not prepareStage(highStage) then
+			r.check(("준비 실패: 처치 기준 스테이지가 %d가 아니다"):format(highStage), false)
 			return
 		end
 		local at75 = killAndMeasure(player, 100, tier1, {})
-		r.check(("스테이지 74 · 100마리: %s (기대 강화석 > 0 · 상급 0) / 스테이지 75 · 100마리: %s (기대 둘 다 > 0) ★진짜 합격 기준"):format(gainsText(at74), gainsText(at75)),
+		r.check(("스테이지 %d · 100마리: %s (기대 강화석 > 0 · 상급 0) / 스테이지 %d · 100마리: %s (기대 둘 다 > 0) ★진짜 합격 기준"):format(highStage - 1, gainsText(at74), highStage, gainsText(at75)),
 			at74[ENHANCE_STONE] > 0 and at74[HIGH_STONE] == 0 and at75[ENHANCE_STONE] > 0 and at75[HIGH_STONE] > 0)
 	end)
 
-	r.section("[9] 경험치 배수 m > 1 · 스테이지 50 · 400마리", function()
+	r.section("[9] 경험치 배수 m > 1 · 강화석 해금 스테이지 · 400마리", function()
 		-- 성장(expGain) 옵션 장비를 낀다 - 26-2 검증이 옵션 장비를 만드는 방식(setEquippedDirect + option 테이블)을 따른다. 새 디버그 훅은 없다.
 		PlayerProfile.setEquippedDirect(player, "armor", {
 			grade = "primordial", part = "armor", dropStage = 100, itemLevel = 100, tierIndex = 1, locked = true, option = { id = "expGain", roll = 1.0 },
@@ -877,8 +880,8 @@ function EnhanceVerify.runLiveS04(player, env)
 			r.check(("성장 옵션이 안 걸림: 경험치 배수 x%.3f(기대 > 1)"):format(multiplier), false)
 			return
 		end
-		if not prepareStage(50) then
-			r.check("준비 실패: 처치 기준 스테이지가 50이 아니다", false)
+		if not prepareStage(stoneStage) then
+			r.check(("준비 실패: 처치 기준 스테이지가 %d가 아니다"):format(stoneStage), false)
 			return
 		end
 		local gains = killAndMeasure(player, 400, tier1, {})
@@ -886,26 +889,28 @@ function EnhanceVerify.runLiveS04(player, env)
 		local mean = 400 * perKill
 		local fraction = perKill - math.floor(perKill)
 		local sigma = math.sqrt(400 * fraction * (1 - fraction))
-		r.check(("경험치 배수 m = x%.3f(getExpGainMultiplier): 스테이지 50 · 400마리 처치: %s (기대 강화석 %.1f ± %.1f(3σ) = 100 × m ± 3σ · 상급 0) ★진짜 합격 기준"):format(
+		r.check(("경험치 배수 m = x%.3f(getExpGainMultiplier): 강화석 해금 스테이지 · 400마리 처치: %s (기대 강화석 %.1f ± %.1f(3σ) = 100 × m ± 3σ · 상급 0) ★진짜 합격 기준"):format(
 			multiplier, gainsText(gains), mean, 3 * sigma), math.abs(gains[ENHANCE_STONE] - mean) <= 3 * sigma and gains[HIGH_STONE] == 0)
 		PlayerProfile.setEquippedDirect(player, "armor", nil)
 	end)
 
-	r.section("[10] 보스(스테이지 50) 처치", function()
-		local result = killBossOnce(player, env, 50, nil)
+	-- P2.5c 결정 10: 강화석만 나오는 첫 보스 스테이지(옛 50 → 강화석 해금 이상 · 상급 해금 미만의 첫 보스 스테이지 360).
+	local stoneBossStage = math.ceil(stoneStage / BossData.stageInterval) * BossData.stageInterval
+	r.section("[10] 보스(강화석 해금 뒤 첫 보스 스테이지) 처치", function()
+		local result = killBossOnce(player, env, stoneBossStage, nil)
 		if not result then
 			r.check("보스 스폰 실패", false)
 			return
 		end
 		-- 기대 = 0.25 × 20 × 배수 = 5(배수 1) - 소수부가 없어 정확히 5다. 지시서의 범위는 4 ~ 6.
 		local expected = chance * result.units * baseMultiplier
-		r.check(("스테이지 50 보스 처치(마릿수분 %d, 받는 사람 스테이지 %d): %s (기대 강화석 4 ~ 6 · 상급 0) · resolveHit 에러=%s"):format(
-			result.units, result.playerStage, gainsText(result.gains), result.ok and "없음" or tostring(result.err)),
+		r.check(("스테이지 %d 보스 처치(마릿수분 %d, 받는 사람 스테이지 %d): %s (기대 강화석 4 ~ 6 · 상급 0) · resolveHit 에러=%s"):format(
+			stoneBossStage, result.units, result.playerStage, gainsText(result.gains), result.ok and "없음" or tostring(result.err)),
 			result.ok and result.gains[ENHANCE_STONE] >= 4 and result.gains[ENHANCE_STONE] <= 6 and math.abs(result.gains[ENHANCE_STONE] - expected) <= 1 and result.gains[HIGH_STONE] == 0)
 	end)
 
 	r.section("[11] 기여 9% 스탠드인 + 실제 Player 91%", function()
-		local result = killBossOnce(player, env, 50, 0.09)
+		local result = killBossOnce(player, env, stoneBossStage, 0.09)
 		if not result then
 			r.check("보스 스폰 실패", false)
 			return
@@ -1001,8 +1006,11 @@ end
 
 local function checkBossGrantFormula(r)
 	r.section("[1] bossGrant 식", function()
+		-- P2.5c 결정 10: 지급 스테이지는 데이터(힘 비율 환산 360 · 180칸 · 720)에서 만든다 - 옛 45 · 50 · 55 · 75 · 100 · 125 · 130 · 150과 같은 모양의 행.
+		local grant, interval = EnhanceConfig.protection.bossGrant, BossData.stageInterval
 		local expected = {
-			{ 45, 0, 0 }, { 50, 1, 0 }, { 55, 0, 0 }, { 75, 1, 0 }, { 100, 1, 1 }, { 125, 1, 1 }, { 130, 0, 0 }, { 150, 1, 1 },
+			{ grant.firstStage - interval, 0, 0 }, { grant.firstStage, 1, 0 }, { grant.firstStage + interval, 0, 0 }, { grant.firstStage + grant.stepStages, 1, 0 },
+			{ grant.resetFromStage, 1, 1 }, { grant.resetFromStage + grant.stepStages, 1, 1 }, { grant.resetFromStage + interval, 0, 0 }, { grant.resetFromStage + 2 * grant.stepStages, 1, 1 },
 		}
 		local cells, ok = {}, true
 		for _, row in ipairs(expected) do
@@ -1300,62 +1308,65 @@ function EnhanceVerify.runLiveS05(player, env)
 		return result
 	end
 
-	r.section("[12] 직업 A · 스테이지 50 보스", function()
-		local result = killAndMeasure(50, nil)
+	-- P2.5c 결정 10: 옛 50(첫 지급) · 75(다음 지급) · 100(초기화 시작) → 데이터의 360 · 540 · 720.
+	local grant = EnhanceConfig.protection.bossGrant
+	local firstGrant, secondGrant, resetGrant = grant.firstStage, grant.firstStage + grant.stepStages, grant.resetFromStage
+	r.section("[12] 직업 A · 첫 지급 스테이지 보스", function()
+		local result = killAndMeasure(firstGrant, nil)
 		if not result then
 			r.check("보스 스폰 실패", false)
 			return
 		end
 		-- 저장 형식: 키가 문자열이어야 DataStore 왕복 뒤에도 같은 조회가 통한다(숫자 키는 문자열로 돌아온다 - PlayerProfile.hasClaimedProtectionStage 주석).
 		local claimKey = next(profile.purchases.protectionClaimedStages)
-		r.check(("직업 %s · 스테이지 50 보스 처치: 하락 방지권 +%d(기대 1) · 초기화 +%d(기대 0) · protectionClaimedStages[50]=%s(기대 true) · 저장 키 %s(%s, 기대 50 string) · 즉시 저장 요청 %d회(기대 1) · resolveHit 에러=%s"):format(
-			classA, result.dropGain, result.resetGain, tostring(PlayerProfile.hasClaimedProtectionStage(player, 50)), tostring(claimKey), typeof(claimKey), result.saves, result.ok and "없음" or tostring(result.err)),
-			result.ok and result.dropGain == 1 and result.resetGain == 0 and PlayerProfile.hasClaimedProtectionStage(player, 50) and claimKey == "50" and result.saves == 1)
+		r.check(("직업 %s · 스테이지 %d 보스 처치: 하락 방지권 +%d(기대 1) · 초기화 +%d(기대 0) · protectionClaimedStages[%d]=%s(기대 true) · 저장 키 %s(%s, 기대 %d string) · 즉시 저장 요청 %d회(기대 1) · resolveHit 에러=%s"):format(
+			classA, firstGrant, result.dropGain, result.resetGain, firstGrant, tostring(PlayerProfile.hasClaimedProtectionStage(player, firstGrant)), tostring(claimKey), typeof(claimKey), firstGrant, result.saves, result.ok and "없음" or tostring(result.err)),
+			result.ok and result.dropGain == 1 and result.resetGain == 0 and PlayerProfile.hasClaimedProtectionStage(player, firstGrant) and claimKey == tostring(firstGrant) and result.saves == 1)
 	end)
 
 	r.section("[13] 같은 보스를 한 번 더", function()
-		local result = killAndMeasure(50, nil)
+		local result = killAndMeasure(firstGrant, nil)
 		if not result then
 			r.check("보스 스폰 실패", false)
 			return
 		end
-		r.check(("같은 스테이지 50 보스를 한 번 더: 방지권 하락 +%d · 초기화 +%d(기대 0 · 0 - 계정 단위 1회)"):format(result.dropGain, result.resetGain), result.ok and result.dropGain == 0 and result.resetGain == 0)
+		r.check(("같은 첫 지급 스테이지 보스를 한 번 더: 방지권 하락 +%d · 초기화 +%d(기대 0 · 0 - 계정 단위 1회)"):format(result.dropGain, result.resetGain), result.ok and result.dropGain == 0 and result.resetGain == 0)
 	end)
 
-	r.section("[14] 직업 B로 같은 스테이지 50 보스", function()
+	r.section("[14] 직업 B로 같은 첫 지급 스테이지 보스", function()
 		PlayerProfile.setClassId(player, classB)
-		local firstClearBefore = PlayerProfile.hasBossFirstClearReward(player, 50)
-		local result = killAndMeasure(50, nil)
+		local firstClearBefore = PlayerProfile.hasBossFirstClearReward(player, firstGrant)
+		local result = killAndMeasure(firstGrant, nil)
 		if not result then
 			r.check("보스 스폰 실패", false)
 			return
 		end
-		local firstClearAfter = PlayerProfile.hasBossFirstClearReward(player, 50)
+		local firstClearAfter = PlayerProfile.hasBossFirstClearReward(player, firstGrant)
 		-- 장비 확정 드랍은 직업별 첫 클리어라 나온다: 가방에 아이템이 들어오고(빈 가방) 직업 B의 첫 클리어 기록이 새로 찍힌다.
-		r.check(("직업 %s(직업 %s로 이미 받은 스테이지)로 스테이지 50 보스: 방지권 하락 +%d · 초기화 +%d(기대 0 · 0) ★진짜 합격 기준 · 장비 확정 드랍 - 직업 %s 첫 클리어 기록 %s → %s(기대 false → true) · 가방 +%d(기대 1)"):format(
+		r.check(("직업 %s(직업 %s로 이미 받은 스테이지)로 첫 지급 스테이지 보스: 방지권 하락 +%d · 초기화 +%d(기대 0 · 0) ★진짜 합격 기준 · 장비 확정 드랍 - 직업 %s 첫 클리어 기록 %s → %s(기대 false → true) · 가방 +%d(기대 1)"):format(
 			classB, classA, result.dropGain, result.resetGain, classB, tostring(firstClearBefore), tostring(firstClearAfter), result.bagGain),
 			result.ok and result.dropGain == 0 and result.resetGain == 0 and firstClearBefore == false and firstClearAfter == true and result.bagGain == 1)
 		PlayerProfile.setClassId(player, classA)
 	end)
 
-	r.section("[15] 스테이지 100 보스", function()
-		local result = killAndMeasure(100, nil)
+	r.section("[15] 초기화 지급 시작 스테이지 보스", function()
+		local result = killAndMeasure(resetGrant, nil)
 		if not result then
 			r.check("보스 스폰 실패", false)
 			return
 		end
-		r.check(("스테이지 100 보스: 하락 +%d · 초기화 +%d(기대 1 · 1)"):format(result.dropGain, result.resetGain), result.ok and result.dropGain == 1 and result.resetGain == 1)
+		r.check(("스테이지 %d 보스: 하락 +%d · 초기화 +%d(기대 1 · 1)"):format(resetGrant, result.dropGain, result.resetGain), result.ok and result.dropGain == 1 and result.resetGain == 1)
 	end)
 
 	r.section("[16] 기여 9% 스탠드인", function()
-		local result = killAndMeasure(75, 0.09)
+		local result = killAndMeasure(secondGrant, 0.09)
 		if not result then
 			r.check("보스 스폰 실패", false)
 			return
 		end
 		-- 스탠드인이 지급 대상이면 grantForBoss의 FireClient에서 하드 에러가 났을 것이다 - 에러 없이 실제 Player만 받는다.
-		r.check(("스테이지 75 보스 · 스탠드인 기여 9%% + 실제 Player: 하락 +%d(기대 1 - 실제 Player만) · 스탠드인이 지급 대상이었다면 났을 하드 에러=%s(기대 없음)"):format(
-			result.dropGain, result.ok and "없음" or tostring(result.err)), result.ok and result.dropGain == 1 and PlayerProfile.hasClaimedProtectionStage(player, 75))
+		r.check(("스테이지 %d 보스 · 스탠드인 기여 9%% + 실제 Player: 하락 +%d(기대 1 - 실제 Player만) · 스탠드인이 지급 대상이었다면 났을 하드 에러=%s(기대 없음)"):format(
+			secondGrant, result.dropGain, result.ok and "없음" or tostring(result.err)), result.ok and result.dropGain == 1 and PlayerProfile.hasClaimedProtectionStage(player, secondGrant))
 	end)
 
 	r.section("[17] 상점", function()

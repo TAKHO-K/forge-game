@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local BossSim = require(ReplicatedStorage.Shared.BossSim)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
@@ -61,9 +62,12 @@ local function runPure()
 	print("===S14 검증 시작(가: 밀도 식 · 사본 규칙 · 대상 조건 · 검사기 · 몬테카를로 · 2연타)===")
 	local r = newRecorder("가")
 	local density = BossData.mechanics.stageDensity
+	-- P2.5c 결정 10: 밀도 임계값은 힘 비율 환산(시작 175 · 180칸 - 옛 25 · 25칸). 옛 스테이지 25 · 49 · 50 · 74 · 75 · 100 · 500 자리를 데이터에서 만든다.
+	local start, stepStages, interval = density.startStage, density.stepStages, BossData.stageInterval
+	local DENSE = start + stepStages * density.maxExtra -- 밀도 +3(옛 100 → 715)
 
 	r.section("[1] densityExtra", function()
-		local stages = { 5, 25, 49, 50, 74, 75, 100, 500 }
+		local stages = { 5, start, start + stepStages - interval, start + stepStages, start + 2 * stepStages - interval, start + 2 * stepStages, DENSE, DENSE * 5 }
 		local expected = { 0, 0, 0, 1, 1, 2, 3, 3 }
 		local cells, ok = {}, true
 		for index, stage in ipairs(stages) do
@@ -73,40 +77,41 @@ local function runPure()
 		end
 		r.check(("1 densityExtra(시작 %d · 간격 %d · 상한 %d): %s · 견습 스테이지 1 → %d(기대 0) · isPairStage(100) = %s(기대 false - 자리만)"):format(
 			density.startStage, density.stepStages, density.maxExtra, table.concat(cells, " "), BossRules.densityExtra(1), tostring(BossRules.isPairStage(100))),
-			ok and BossRules.densityExtra(1) == 0 and BossRules.isPairStage(100) == false and density.startStage == 25 and density.stepStages == 25 and density.maxExtra == 3)
+			ok and BossRules.densityExtra(1) == 0 and BossRules.isPairStage(100) == false and density.startStage == InfiniteStage.fromLegacyStage(25, interval)
+				and density.stepStages == InfiniteStage.fromLegacySpan(25, interval) and density.maxExtra == 3)
 	end)
 
 	r.section("[2] 사본 규칙", function()
 		local source = BossData.bosses[GUARDIAN].skills.meteor
 		local rawCount, rawScatter = source.count, source.scatterStuds
-		local data = BossRules.buildInstanceData(100, GUARDIAN, 1)
+		local data = BossRules.buildInstanceData(DENSE, GUARDIAN, 1)
 		local dense = data.skills.meteor
-		local scale = BossRules.skillRangeScale(100)
+		local scale = BossRules.skillRangeScale(DENSE)
 		local ok = dense ~= source and dense.count == rawCount + 3 and near(dense.scatterStuds, rawScatter * scale * math.sqrt((rawCount + 3) / rawCount), 1e-9)
 			and data.densityExtra == 3 and source.count == 3 and source.scatterStuds == 10
 			and dense.radiusStuds == source.radiusStuds * scale and dense.telegraphSeconds == source.telegraphSeconds and dense.cooldownSeconds == source.cooldownSeconds
-		r.check(("2 스테이지 100 구간 수호자 낙석: count %d → %d(기대 3 → 6) · 산개 %.3f = 10 × 범위 배율 %.3f × √2 = %.3f · **BossData 원본은 count %d · 산개 %g 그대로** · 반경 = 원본 × 배율(밀도는 반경을 안 건드림) · 예고 · 쿨 그대로"):format(
+		r.check(("2 스테이지 " .. DENSE .. " 구간 수호자 낙석: count %d → %d(기대 3 → 6) · 산개 %.3f = 10 × 범위 배율 %.3f × √2 = %.3f · **BossData 원본은 count %d · 산개 %g 그대로** · 반경 = 원본 × 배율(밀도는 반경을 안 건드림) · 예고 · 쿨 그대로"):format(
 			rawCount, dense.count, dense.scatterStuds, scale, 10 * scale * math.sqrt(2), source.count, source.scatterStuds), ok)
 
 		local cells, cellsOk = {}, true
-		for _, stage in ipairs({ 49, 50, 75, 100 }) do
+		for _, stage in ipairs({ start + stepStages - interval, start + stepStages, start + 2 * stepStages, DENSE }) do
 			local skill = BossRules.buildInstanceData(stage, GUARDIAN, 1).skills.meteor
 			local expectedCount = 3 + BossRules.densityExtra(stage)
 			cellsOk = cellsOk and skill.count == expectedCount
 			table.insert(cells, ("%d→%d개"):format(stage, skill.count))
 		end
-		local four = BossRules.buildInstanceData(100, "frost_giant", PartyConfig.maxMembers).skills.icefall
+		local four = BossRules.buildInstanceData(DENSE, "frost_giant", PartyConfig.maxMembers).skills.icefall
 		local fourTotal = four.count + four.countPerMember * PartyConfig.maxMembers
-		r.check(("2 스테이지별 낙석 개수 %s(기대 3 · 4 · 5 · 6) · 낙빙 %d인 스테이지 100: count %d + 인원 몫 %d × %d = %d개(기대 5 + 4 = 9 - 인원 몫은 그대로)"):format(
+		r.check(("2 스테이지별 낙석 개수 %s(기대 3 · 4 · 5 · 6) · 낙빙 %d인 스테이지 " .. DENSE .. ": count %d + 인원 몫 %d × %d = %d개(기대 5 + 4 = 9 - 인원 몫은 그대로)"):format(
 			table.concat(cells, " "), PartyConfig.maxMembers, four.count, four.countPerMember, PartyConfig.maxMembers, fourTotal), cellsOk and fourTotal == 9)
 	end)
 
 	r.section("[3] 대상 조건 · 아닌 스킬 불변", function()
 		local flagged, eligible, mismatched, unchanged, checked = {}, {}, {}, true, 0
-		local scale = BossRules.skillRangeScale(100)
+		local scale = BossRules.skillRangeScale(DENSE)
 		for _, bossId in ipairs(BossData.pools[1].bossIds) do
 			local boss = BossData.bosses[bossId]
-			local data = BossRules.buildInstanceData(100, bossId, 1)
+			local data = BossRules.buildInstanceData(DENSE, bossId, 1)
 			for id, skill in pairs(boss.skills) do
 				local isFlagged, isEligible = skill.densityScalable == true, BossSkillMath.densityEligible(skill)
 				if isFlagged then
@@ -131,7 +136,7 @@ local function runPure()
 		table.sort(eligible)
 		r.check(("3 플래그 목록(%d) = 조건 목록(%d) · 어긋남 %d건: 플래그 [%s] / 조건 [%s]"):format(
 			#flagged, #eligible, #mismatched, table.concat(flagged, " "), table.concat(eligible, " ")), #mismatched == 0 and #flagged == 3)
-		r.check(("3 대상 아닌 스킬(순차 · 기믹 · gate · 산개 0 - count를 가진 %d개)은 스테이지 100에서도 count 불변 · 산개는 범위 배율만: %s"):format(checked, tostring(unchanged)), unchanged and checked > 0)
+		r.check(("3 대상 아닌 스킬(순차 · 기믹 · gate · 산개 0 - count를 가진 %d개)은 스테이지 " .. DENSE .. "에서도 count 불변 · 산개는 범위 배율만: %s"):format(checked, tostring(unchanged)), unchanged and checked > 0)
 	end)
 
 	-- [4] 진짜 합격 기준 ① - 3스킬 × extra 0 ~ 3 × 범위 배율 2 × 인원 2 = 48칸, 칸당 10,000회. 칸마다 양보한다(서버 스레드 실행 시간 제한).

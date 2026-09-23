@@ -19,6 +19,13 @@ local EnhanceVerify = require(script.Parent.EnhanceVerify)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local SaveSystem = require(script.Parent.SaveSystem)
+local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
+
+-- P2.5c 결정 10: 방지권 · 강화석 임계값이 힘 비율 환산(360 · 180칸 · 720 · 재료 358 · 539)으로 바뀌어, 옛 자리 45 · 50 · 55 · 75 · 100 · 125(표시 문구의 번호)를
+-- 데이터의 같은 자리로 옮긴다: 첫 지급 − 5 · 첫 지급 · + 5 · 둘째 지급 · 초기화 시작 · 그다음 지급(= 355 · 360 · 365 · 540 · 720 · 900).
+local GRANT = EnhanceConfig.protection.bossGrant
+local S45, S50, S55 = GRANT.firstStage - BossData.stageInterval, GRANT.firstStage, GRANT.firstStage + BossData.stageInterval
+local S75, S100, S125 = GRANT.firstStage + GRANT.stepStages, GRANT.resetFromStage, GRANT.resetFromStage + GRANT.stepStages
 
 local BossRewardPreviewVerify = {}
 
@@ -83,27 +90,27 @@ function BossRewardPreviewVerify.runPure()
 
 	r.section("[1] 방지권 표시(Enhance.getBossGrant)", function()
 		local rows, ok = {}, true
-		local expected = { [45] = { 0, 0 }, [50] = { 1, 0 }, [75] = { 1, 0 }, [100] = { 1, 1 }, [55] = { 0, 0 }, [125] = { 1, 1 } }
-		for _, stage in ipairs({ 45, 50, 75, 100, 55, 125 }) do
+		local expected = { [S45] = { 0, 0 }, [S50] = { 1, 0 }, [S75] = { 1, 0 }, [S100] = { 1, 1 }, [S55] = { 0, 0 }, [S125] = { 1, 1 } }
+		for _, stage in ipairs({ S45, S50, S75, S100, S55, S125 }) do
 			local drop, reset = Enhance.getBossGrant(stage)
 			table.insert(rows, ("%d → 하락 %d · 초기화 %d"):format(stage, drop, reset))
 			ok = ok and drop == expected[stage][1] and reset == expected[stage][2]
 		end
-		r.check(("방지권 스테이지 45 / 50 / 75 / 100 = 없음 / 하락 / 하락 / 둘 다(그 밖 55 없음 · 125 둘 다): %s"):format(table.concat(rows, " · ")), ok)
+		r.check(("방지권 옛 스테이지 45 / 50 / 75 / 100 자리(355 · 360 · 540 · 720) = 없음 / 하락 / 하락 / 둘 다(그 밖 55 없음 · 125 둘 다): %s"):format(table.concat(rows, " · ")), ok)
 	end)
 
 	r.section("[2] 강화석 항목(데이터 식)", function()
-		local bossId = BossRules.bossIdForStage(50)
+		local bossId = BossRules.bossIdForStage(S50)
 		local rows, ok = {}, true
-		local expectedCount = { [45] = 0, [50] = 1, [75] = 2, [100] = 2 }
-		for _, stage in ipairs({ 45, 50, 75, 100 }) do
+		local expectedCount = { [S45] = 0, [S50] = 1, [S75] = 2, [S100] = 2 }
+		for _, stage in ipairs({ S45, S50, S75, S100 }) do
 			local entries = stoneEntries(stage, bossId)
 			table.insert(rows, ("%d → [%s]"):format(stage, table.concat(entries, " · ")))
 			ok = ok and #entries == expectedCount[stage]
 		end
-		local at50, at75 = stoneEntries(50, bossId), stoneEntries(75, bossId)
+		local at50, at75 = stoneEntries(S50, bossId), stoneEntries(S75, bossId)
 		ok = ok and at50[1] == "강화석 ≈5" and at75[1] == "강화석 ≈5" and at75[2] == "상급 강화석 ≈5"
-		r.check(("스테이지 45 / 50 / 75 / 100 = 없음 / ≈5 / ≈5 + 상급 ≈5 / 같음(dropChancePerKill × 보스 hpMultiplier %d): %s"):format(BossData.bosses[bossId].hpMultiplier, table.concat(rows, " · ")), ok)
+		r.check(("옛 스테이지 45 / 50 / 75 / 100 자리 = 없음 / ≈5 / ≈5 + 상급 ≈5 / 같음(dropChancePerKill × 보스 hpMultiplier %d): %s"):format(BossData.bosses[bossId].hpMultiplier, table.concat(rows, " · ")), ok)
 	end)
 
 	r.section("[3] 입력 검사", function()
@@ -257,49 +264,49 @@ function BossRewardPreviewVerify.runLive(player, env)
 		return nil
 	end
 
-	r.section("[1] 새 프로필로 [50, 55, 100] 조회", function()
-		local payload = query({ 50, 55, 100 })
-		local e50, e55, e100 = entryOf(payload, 50), entryOf(payload, 55), entryOf(payload, 100)
+	r.section("[1] 새 프로필로 옛 [50, 55, 100] 자리(360 · 365 · 720) 조회", function()
+		local payload = query({ S50, S55, S100 })
+		local e50, e55, e100 = entryOf(payload, S50), entryOf(payload, S55), entryOf(payload, S100)
 		local ok = payload.ok and e50 ~= nil and e55 ~= nil and e100 ~= nil
 		if ok then
 			ok = e50.gearClaimed == false and e50.dropTicket == "available" and e50.resetTicket == "none"
 				and e55.gearClaimed == false and e55.dropTicket == "none" and e55.resetTicket == "none"
 				and e100.gearClaimed == false and e100.dropTicket == "available" and e100.resetTicket == "available"
-				and e50.bossId == BossRules.bossIdForStage(50) and e55.bossId == BossRules.bossIdForStage(55) and e100.bossId == BossRules.bossIdForStage(100)
+				and e50.bossId == BossRules.bossIdForStage(S50) and e55.bossId == BossRules.bossIdForStage(S55) and e100.bossId == BossRules.bossIdForStage(S100)
 				and countKeys(payload.codex) == 0
 		end
-		r.check(("새 프로필 [50, 55, 100]: 50 = 장비 %s · 하락 %s · 초기화 %s / 55 = %s · %s · %s / 100 = %s · %s · %s · bossId %s · %s · %s(기대 bossIdForStage와 같음) · 도감 %d칸(기대 0)"):format(
+		r.check(("새 프로필 옛 [50, 55, 100] 자리: 50 = 장비 %s · 하락 %s · 초기화 %s / 55 = %s · %s · %s / 100 = %s · %s · %s · bossId %s · %s · %s(기대 bossIdForStage와 같음) · 도감 %d칸(기대 0)"):format(
 			tostring(e50 and e50.gearClaimed), tostring(e50 and e50.dropTicket), tostring(e50 and e50.resetTicket),
 			tostring(e55 and e55.gearClaimed), tostring(e55 and e55.dropTicket), tostring(e55 and e55.resetTicket),
 			tostring(e100 and e100.gearClaimed), tostring(e100 and e100.dropTicket), tostring(e100 and e100.resetTicket),
 			tostring(e50 and e50.bossId), tostring(e55 and e55.bossId), tostring(e100 and e100.bossId), payload.codex and countKeys(payload.codex) or -1), ok)
 	end)
 
-	local bossId50 = BossRules.bossIdForStage(50)
-	r.section("[2] 스테이지 50 보스를 실제 처치 경로로 잡은 뒤 다시 조회", function()
-		local result = EnhanceVerify.killBossOnce(player, env, 50, nil)
+	local bossId50 = BossRules.bossIdForStage(S50)
+	r.section("[2] 옛 50 자리(첫 지급) 보스를 실제 처치 경로로 잡은 뒤 다시 조회", function()
+		local result = EnhanceVerify.killBossOnce(player, env, S50, nil)
 		if not result then
 			r.check("보스 스폰 실패", false)
 			return
 		end
-		local payload = query({ 50 })
-		local e50 = entryOf(payload, 50)
+		local payload = query({ S50 })
+		local e50 = entryOf(payload, S50)
 		local ok = result.ok and payload.ok and e50 ~= nil and e50.gearClaimed == true and e50.dropTicket == "claimed" and e50.resetTicket == "none" and payload.codex[bossId50] == true and countKeys(payload.codex) == 1
 			and result.bossId == bossId50
-		r.check(("스테이지 50 보스(%s) 처치 뒤: 장비 %s(기대 true) · 하락 %s(기대 claimed) · 도감[%s] %s(기대 true) · 도감 %d칸(기대 1) · 처치한 보스 = bossIdForStage(50)이다 %s · resolveHit 에러=%s"):format(
+		r.check(("옛 50 자리 보스(%s) 처치 뒤: 장비 %s(기대 true) · 하락 %s(기대 claimed) · 도감[%s] %s(기대 true) · 도감 %d칸(기대 1) · 처치한 보스 = bossIdForStage(50)이다 %s · resolveHit 에러=%s"):format(
 			tostring(result.bossId), tostring(e50 and e50.gearClaimed), tostring(e50 and e50.dropTicket), bossId50, tostring(payload.codex and payload.codex[bossId50]),
 			payload.codex and countKeys(payload.codex) or -1, tostring(result.bossId == bossId50), result.ok and "없음" or tostring(result.err)), ok)
 	end)
 
 	r.section("[3] 직업을 바꿔 같은 스테이지 조회 - 직업 · 계정은 다른 축", function()
 		PlayerProfile.setClassId(player, classB)
-		local payload = query({ 50 })
-		local e50 = entryOf(payload, 50)
+		local payload = query({ S50 })
+		local e50 = entryOf(payload, S50)
 		local ok = payload.ok and e50 ~= nil and e50.gearClaimed == false and e50.dropTicket == "claimed" and payload.codex[bossId50] == true
-		r.check(("직업 %s(직업 %s가 이미 받은 스테이지 50): 장비 %s(기대 false - 직업별) · 하락 방지권 %s(기대 claimed - 계정 공유) · 도감 %s(기대 true - 계정 공유) ★진짜 합격 기준"):format(
+		r.check(("직업 %s(직업 %s가 이미 받은 옛 50 자리): 장비 %s(기대 false - 직업별) · 하락 방지권 %s(기대 claimed - 계정 공유) · 도감 %s(기대 true - 계정 공유) ★진짜 합격 기준"):format(
 			classB, classA, tostring(e50 and e50.gearClaimed), tostring(e50 and e50.dropTicket), tostring(payload.codex and payload.codex[bossId50])), ok)
 		PlayerProfile.setClassId(player, classA)
-		local back = entryOf(query({ 50 }), 50)
+		local back = entryOf(query({ S50 }), S50)
 		r.check(("다시 직업 %s: 장비 %s(기대 true)"):format(classA, tostring(back and back.gearClaimed)), back ~= nil and back.gearClaimed == true)
 	end)
 
@@ -321,26 +328,26 @@ function BossRewardPreviewVerify.runLive(player, env)
 				table.insert(notRejected, case[1])
 			end
 		end
-		local first = query({ 50 })
-		local tooSoon = BossRewardPreview.handle(player, { 50 }, clock + BossRewardPreviewData.minIntervalSeconds * 0.5)
+		local first = query({ S50 })
+		local tooSoon = BossRewardPreview.handle(player, { S50 }, clock + BossRewardPreviewData.minIntervalSeconds * 0.5)
 		r.check(("잘못된 입력 %d건: 에러 %d개 · 거절 안 된 것 %d개(기대 0 · 0) [%s] · 정상 요청 %s → 간격 절반 뒤 %s(기대 true → rate)"):format(
 			#cases, #errors, #notRejected, table.concat(errors, " | "), tostring(first.ok), tostring(tooSoon.reason)),
 			#errors == 0 and #notRejected == 0 and first.ok == true and tooSoon.reason == "rate")
 	end)
 
-	r.section("[5] 스테이지 100 보스 - 방지권 둘 다 · 도감", function()
-		local result = EnhanceVerify.killBossOnce(player, env, 100, nil)
+	r.section("[5] 옛 100 자리(초기화 시작) 보스 - 방지권 둘 다 · 도감", function()
+		local result = EnhanceVerify.killBossOnce(player, env, S100, nil)
 		if not result then
 			r.check("보스 스폰 실패", false)
 			return
 		end
-		local bossId100 = BossRules.bossIdForStage(100)
-		local payload = query({ 50, 100 })
-		local e100 = entryOf(payload, 100)
+		local bossId100 = BossRules.bossIdForStage(S100)
+		local payload = query({ S50, S100 })
+		local e100 = entryOf(payload, S100)
 		local expectedCodex = bossId100 == bossId50 and 1 or 2
 		local ok = result.ok and e100 ~= nil and e100.gearClaimed == true and e100.dropTicket == "claimed" and e100.resetTicket == "claimed" and payload.codex[bossId100] == true
 			and countKeys(payload.codex) == expectedCodex
-		r.check(("스테이지 100 보스(%s) 처치 뒤: 장비 %s · 하락 %s · 초기화 %s(기대 true · claimed · claimed) · 도감 %d칸(기대 %d = 50번과 %s)"):format(
+		r.check(("옛 100 자리 보스(%s) 처치 뒤: 장비 %s · 하락 %s · 초기화 %s(기대 true · claimed · claimed) · 도감 %d칸(기대 %d = 50번과 %s)"):format(
 			bossId100, tostring(e100 and e100.gearClaimed), tostring(e100 and e100.dropTicket), tostring(e100 and e100.resetTicket),
 			payload.codex and countKeys(payload.codex) or -1, expectedCodex, bossId100 == bossId50 and "같은 보스" or "다른 보스"), ok)
 	end)

@@ -28,6 +28,10 @@ local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local EconSim = require(script.Parent.EconSim)
 local EconSimTables = require(script.Parent.EconSimTables)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local BossRules = require(ReplicatedStorage.Shared.BossRules)
+local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 
 local EconSimReport = {}
 
@@ -751,6 +755,214 @@ local function writeP25b(w, runs, profileIds)
 	writeCraftCosts(w, runs, profileIds)
 end
 
+-- ═══ P2.5c 지표(docs/phase/P25c-report.md) ═══
+-- ① 천장 경사: 시간별 최고 스테이지 + 1,000칸 구간마다 걸린 시간 · 앞 구간 대비 비(목표 ≤ 1.5) + 설계 최대의 최대 수치.
+local function reachAt(run, seconds)
+	local reach = 0
+	eachChunk(run, function(chunk, _, t)
+		if t <= seconds then
+			reach = chunk.reach
+		end
+	end)
+	return reach
+end
+
+local function writeCeiling(w, runs, profileIds)
+	local cfg = EconSimConfig.p25c
+	w.line("## P2.5c ① 천장 경사(결정 1 - 점진 감속)")
+	w.line("")
+	local segs = {}
+	for _, segment in ipairs(CharacterLevelConfig.weaponGrowthSegments) do
+		table.insert(segs, ("Lv.%d ~ k^%s"):format(segment.fromLevel, num(segment.kShare, 4)))
+	end
+	w.line(("무기 성장 구간(g = k^몫 · `CharacterLevelConfig.weaponGrowthSegments`): %s. 목표 = 상위 1%% 360시간 ≈ 10,000 · 1,080시간 ≈ 17,000 · 2,190시간 = 설계 최대(%d) · 인접 1,000칸 구간의 스테이지당 시간 비 ≤ 1.5."):format(
+		table.concat(segs, " · "), InfiniteStageConfig.designMaxStage))
+	w.line("")
+	local header = { "| 누적 시간 |" }
+	for _, id in ipairs(profileIds) do
+		table.insert(header, (" %s 최고 스테이지 |"):format(EconSimConfig.profiles[id].displayName))
+	end
+	w.line(table.concat(header))
+	w.line("|---|" .. string.rep("---|", #profileIds))
+	w.row("p25c_ceiling_hours", { "hours", table.unpack(profileIds) })
+	for _, h in ipairs(cfg.ceilingHours) do
+		local cells, row = { ("| %s |"):format(num(h, 0)) }, { h }
+		for _, id in ipairs(profileIds) do
+			local reach = reachAt(runs[id], h * 3600)
+			table.insert(cells, (" %s |"):format(reach > 0 and tostring(reach) or "-"))
+			table.insert(row, reach)
+		end
+		w.line(table.concat(cells))
+		w.row("p25c_ceiling_hours", row)
+	end
+	w.line("")
+	-- 1,000칸 구간별 시간(그 구간 첫 스테이지 → 다음 1,000칸 첫 스테이지) · 앞 구간 대비 비.
+	w.line("1,000칸 구간마다 걸린 누적 시간(괄호 = 앞 구간 대비 비 - 목표 ≤ 1.5):")
+	w.line("")
+	w.line("| 구간(스테이지) |" .. table.concat((function()
+		local t = {}
+		for _, id in ipairs(profileIds) do
+			table.insert(t, (" %s 시간 |"):format(EconSimConfig.profiles[id].displayName))
+		end
+		return t
+	end)()))
+	w.line("|---|" .. string.rep("---|", #profileIds))
+	w.row("p25c_ceiling_bucket", { "bucket_end", table.unpack(profileIds) })
+	-- 프로필마다 1,000칸 경계에 처음 선 누적 초(청크를 한 번 훑는다).
+	local lastBucket = math.ceil(InfiniteStageConfig.designMaxStage / 1000) * 1000
+	local at = {}
+	for _, id in ipairs(profileIds) do
+		local times, nextBucket = {}, 1000
+		eachChunk(runs[id], function(chunk, _, t)
+			while nextBucket <= lastBucket and chunk.reach >= nextBucket do
+				times[nextBucket] = t
+				nextBucket += 1000
+			end
+		end)
+		at[id] = times
+	end
+	local worst = {}
+	for bucket = 1000, lastBucket, 1000 do
+		local cells, row, any = { ("| %d ~ %d |"):format(bucket - 999, bucket) }, { bucket }, false
+		for _, id in ipairs(profileIds) do
+			local times = at[id]
+			local finish, start = times[bucket], bucket == 1000 and 0 or times[bucket - 1000]
+			if finish and start then
+				local span = (finish - start) / 3600
+				local previous = bucket > 1000 and times[bucket - 1000] and (times[bucket - 1000] - (bucket == 2000 and 0 or (times[bucket - 2000] or 0))) / 3600 or nil
+				local ratio = previous and previous > 0 and span / previous or nil
+				if ratio and (not worst[id] or ratio > worst[id].ratio) then
+					worst[id] = { ratio = ratio, at = bucket }
+				end
+				table.insert(cells, (" %s%s |"):format(num(span, 1), ratio and (" (×%s)"):format(num(ratio, 2)) or ""))
+				table.insert(row, span)
+				any = true
+			else
+				table.insert(cells, " - |")
+				table.insert(row, "")
+			end
+		end
+		if any then
+			w.line(table.concat(cells))
+			w.row("p25c_ceiling_bucket", row)
+		end
+	end
+	w.line("")
+	local worstText = {}
+	for _, id in ipairs(profileIds) do
+		if worst[id] then
+			table.insert(worstText, ("%s ×%s(%d)"):format(EconSimConfig.profiles[id].displayName, num(worst[id].ratio, 2), worst[id].at))
+		end
+	end
+	w.line(("인접 구간 비 최대: %s."):format(table.concat(worstText, " · ")))
+	w.line("")
+	-- 설계 최대의 최대 수치(보스 6종 4인 HP · 공격 · 골드 · 경험치 · 잡몹 tier6 · 레벨 경험치 누적(레벨 = 스테이지로 보수적으로) - P25a(가) C1.3과 같은 후보).
+	local design = InfiniteStageConfig.designMaxStage
+	local largest, what = 0, "-"
+	local function consider(value, label)
+		if value > largest then
+			largest, what = value, label
+		end
+	end
+	for id in pairs(BossData.bosses) do
+		local data = BossRules.buildInstanceData(design, id, PartyConfig.maxMembers)
+		if data then
+			consider(data.hp, "보스 4인 HP")
+		end
+	end
+	consider(CharacterLevel.getExpForLevel(design + 1), "레벨 경험치 누적")
+	w.line(("설계 최대 %d의 최대 수치 = %s(%s) - 목표 < 1e250. 안전 상한(모든 수치 < 1e300) = %d."):format(design, ("%.3g"):format(largest), what, InfiniteStageConfig.safeStageCap))
+	w.line("")
+end
+
+-- ② 신규 보호 · ③ 환생 · 레벨업 · ④ 구매력(+20 · +25 · +29 1회 = 사냥 몇 분) · 보스 드랍.
+local function writeP25cMisc(w, runs, profileIds)
+	local p = CombatConfig.newbieProtection
+	w.line("## P2.5c ② 신규 보호 · ③ 환생 · 레벨업 간격")
+	w.line("")
+	w.line(("받는 피해 배율(받는 사람의 무한 스테이지 ≤ %d): 스테이지 1 ×%s · 5 ×%s · 10 ×%s · 15 ×%s · 20 ×%s · %d부터 ×1. 환생 필요 레벨 %s · 환생 경험치 배율(환생 0 ~ 5회) ×%s(캐릭터 경험치에만)."):format(
+		p.untilStage, num(PlayerCombat.getNewbieDamageMultiplier(1), 3), num(PlayerCombat.getNewbieDamageMultiplier(5), 3), num(PlayerCombat.getNewbieDamageMultiplier(10), 3),
+		num(PlayerCombat.getNewbieDamageMultiplier(15), 3), num(PlayerCombat.getNewbieDamageMultiplier(20), 3), p.untilStage + 1,
+		table.concat(CharacterLevelConfig.rebirth.requiredLevels, " · "), table.concat(CharacterLevelConfig.rebirth.expMultipliers, " · ")))
+	w.line("")
+	w.line("| 프로필 | 스테이지 10 · 20(시간) | 환생 1 · 2 · 3 · 4 · 5회차(누적 시간) | 환생 5회까지 레벨업 수 · 평균 간격(분) | 첫 12시간 레벨업 수 · 평균 간격(분) |")
+	w.line("|---|---|---|---|---|")
+	w.row("p25c_rebirth", { "profile", "stage10_h", "stage20_h", "r1", "r2", "r3", "r4", "r5", "levels_to_r5", "avg_min_to_r5", "levels_12h", "avg_min_12h" })
+	for _, id in ipairs(profileIds) do
+		local run = runs[id]
+		local s10, s20 = run.reached[10], run.reached[20]
+		local r5 = run.rebirthAt[5]
+		local toR5N, toR5Sum, n12, sum12 = 0, 0, 0, 0
+		eachChunk(run, function(_, dur, t)
+			if r5 and t <= r5 + 1e-6 then
+				toR5N += 1
+				toR5Sum += dur
+			end
+			if t <= 12 * 3600 then
+				n12 += 1
+				sum12 += dur
+			end
+		end)
+		local rebirths = {}
+		for i = 1, 5 do
+			table.insert(rebirths, run.rebirthAt[i] and num(hours(run.rebirthAt[i]), 2) or "-")
+		end
+		w.line(("| %s | %s · %s | %s | %d · %s | %d · %s |"):format(EconSimConfig.profiles[id].displayName, s10 and num(hours(s10.seconds), 2) or "-", s20 and num(hours(s20.seconds), 2) or "-",
+			table.concat(rebirths, " · "), toR5N, toR5N > 0 and num(toR5Sum / toR5N / 60, 2) or "-", n12, n12 > 0 and num(sum12 / n12 / 60, 2) or "-"))
+		w.row("p25c_rebirth", { id, s10 and hours(s10.seconds) or "", s20 and hours(s20.seconds) or "", run.rebirthAt[1] and hours(run.rebirthAt[1]) or "", run.rebirthAt[2] and hours(run.rebirthAt[2]) or "",
+			run.rebirthAt[3] and hours(run.rebirthAt[3]) or "", run.rebirthAt[4] and hours(run.rebirthAt[4]) or "", r5 and hours(r5) or "", toR5N, toR5N > 0 and toR5Sum / toR5N / 60 or "", n12, n12 > 0 and sum12 / n12 / 60 or "" })
+	end
+	w.line("")
+
+	w.line("## P2.5c ④ 구매력(결정 4 - 강화 1회 = 사냥 몇 분) · 보스 드랍")
+	w.line("")
+	w.line("구간 골드/분(사냥 + 보스 골드 ÷ 그 구간 시간) 대비 그 구간 끝 계정 최고 스테이지의 1회 비용(`Enhance.getCost`). 목표: 일반 프로필 +20 이상 1회 = 약 20 ~ 30분.")
+	w.line("")
+	local levels = EconSimConfig.p25c.powerLevels
+	local header = { "| 구간 | 프로필 |" }
+	for _, level in ipairs(levels) do
+		table.insert(header, (" +%d→+%d(분) |"):format(level, level + 1))
+	end
+	w.line(table.concat(header))
+	w.line("|---|---|" .. string.rep("---|", #levels))
+	w.row("p25c_power", { "segment", "profile", table.unpack(levels) })
+	for _, segment in ipairs(segmentBounds()) do
+		for _, id in ipairs(profileIds) do
+			local gold, seconds, lastReach = 0, 0, nil
+			for _, chunk in ipairs(runs[id].chunks) do
+				if chunk.reach >= segment.lo and chunk.reach <= segment.hi then
+					gold += chunk.gold + chunk.bossGold
+					seconds += chunk.seconds + chunk.bossSeconds
+					lastReach = chunk.reach
+				end
+			end
+			if lastReach and seconds > 0 then
+				local perMinute = gold / (seconds / 60)
+				local cells, row = { ("| %s | %s |"):format(segment.label, EconSimConfig.profiles[id].displayName) }, { segment.label, id }
+				for _, level in ipairs(levels) do
+					local minutes = Enhance.getCost(level, lastReach) / perMinute
+					table.insert(cells, (" %s |"):format(num(minutes, 1)))
+					table.insert(row, minutes)
+				end
+				w.line(table.concat(cells))
+				w.row("p25c_power", row)
+			end
+		end
+	end
+	w.line("")
+	local deltas = {}
+	for _, entry in ipairs(ArmorData.bossItemLevelDelta) do
+		table.insert(deltas, ("+%d(%d)"):format(entry.delta, entry.weight))
+	end
+	w.line(("보스 드랍 itemLevel = 보스 스테이지 %s(가중치) - 옛 +0 · +1 · +2의 힘 비율 환산(결정 6)."):format(table.concat(deltas, " · ")))
+	w.line("")
+end
+
+local function writeP25c(w, runs, profileIds)
+	writeCeiling(w, runs, profileIds)
+	writeP25cMisc(w, runs, profileIds)
+end
+
 -- opts = { profileArg = "all" | 프로필 id, whatIfName = 이름(기본 baseline) }. 반환: 요약 문자열, 결과 표(검증 블록이 읽는다).
 function EconSimReport.run(opts)
 	assert(EconSim.isAllowed(), "EconSim은 Studio + DevToolsConfig.econSim 전용이다")
@@ -813,6 +1025,7 @@ function EconSimReport.run(opts)
 	writeSamples(w, samples)
 	EconSim.withOverrides(whatIf, writeP25, w, runs, profileIds) -- P2.5b · P2.5c: 마일스톤 칸도 what-if(milestoneStat)를 따른다
 	EconSim.withOverrides(whatIf, writeP25b, w, runs, profileIds)
+	EconSim.withOverrides(whatIf, writeP25c, w, runs, profileIds) -- P2.5c: 천장 경사 · 신규 보호 · 환생 · 구매력(분) · 보스 드랍
 	w.flush(("run=%s whatif=%s profiles=%s"):format(runId, whatIfName, profileArg))
 
 	-- 채팅 요약

@@ -129,6 +129,12 @@ return {
 		incomeProfile = "normal",
 	},
 
+	-- P2.5c 지표 절(EconSimReport.writeP25c): 천장 경사 표의 누적 시간(시간) · 구매력 표의 강화 단계(+n→+n+1 1회 = 사냥 몇 분).
+	p25c = {
+		ceilingHours = { 12, 50, 100, 180, 360, 720, 1080, 1500, 2190, 3000 },
+		powerLevels = { 20, 25, 29 },
+	},
+
 	-- E7 what-if 덮어쓰기. 이름 = /gg econ의 둘째 인자. 빈 표 = 기준선. 모든 칸은 선택:
 	--   growthRate          InfiniteStageConfig.growthRate(몬스터 · 보상 · 아이템 계수 성장 k)
 	--   weaponGrowthRate    CharacterLevelConfig.weaponMultGrowthRate(g)

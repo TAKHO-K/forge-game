@@ -3352,6 +3352,7 @@ if RunService:IsStudio() then
 				{ "P2(나)", function() require(script.Parent.P2Verify).runLive(player, env) end }, -- P2: 파티 경험치 조건 배선 · 실제 처치 경로 태초 드랍 · 드랍표 조회 API(모듈은 여기서 require)
 				{ "P25a(나)", function() require(script.Parent.P25aVerify).runLive(player, env) end }, -- P2.5a: 파티 칩 · 명중 활동 · 환생 보석 척도 · +30 공격력
 				{ "P25b(나)", function() require(script.Parent.P25bVerify).runLive(player, env) end }, -- P2.5b: 계승 · 재련 · 분해 · 마일스톤 실제 서버 경로
+				{ "P25c(나)", function() require(script.Parent.P25cVerify).runLive(player, env) end }, -- P2.5c: 신규 보호 실제 피해 · 환생 경험치 배율 · 새 방지권 지급 스테이지
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3637,6 +3638,16 @@ if RunService:IsStudio() and verifyEnabled("P25b(가)") then
 		local ok, err = pcall(require(script.Parent.P25bVerify).runPure)
 		if not ok then
 			warn(("[P25b(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ P2.5c 자동 검증 블록(가) - 수치 조정 규칙(임계값 힘 비율 · 보스 드랍 · 태초 · 신규 보호 · 환생 · 강화 비용 · 보석 몫 · 마일스톤 상한 · 천장 구간) ═══
+if RunService:IsStudio() and verifyEnabled("P25c(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.P25cVerify).runPure)
+		if not ok then
+			warn(("[P25c(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

@@ -93,14 +93,23 @@ local function checkBossDelta(r)
 				negative += 1
 			end
 		end
-		local expected = { [0] = 3 / 6, [1] = 2 / 6, [2] = 1 / 6 }
+		-- P2.5c 결정 6: 편차는 표에서 읽는다(+0 · +7 · +15 - 옛 +0 · +1 · +2의 힘 비율 환산). 가중치 3 : 2 : 1은 그대로.
+		local expected, totalWeight = {}, 0
+		for _, entry in ipairs(ArmorData.bossItemLevelDelta) do
+			totalWeight += entry.weight
+		end
+		for _, entry in ipairs(ArmorData.bossItemLevelDelta) do
+			expected[entry.delta] = entry.weight / totalWeight
+		end
 		local rows, allOk = {}, true
-		for delta = 0, 2 do
+		for _, entry in ipairs(ArmorData.bossItemLevelDelta) do
+			local delta = entry.delta
 			local share = (counts[delta] or 0) / samples
 			allOk = allOk and math.abs(share - expected[delta]) <= 0.01
 			table.insert(rows, ("+%d=%.1f%%"):format(delta, share * 100))
 		end
-		r.check(("보스 δ %d회: %s (기대 50/33.3/16.7 ±1%%p) · 음수 %d건(기대 0)"):format(samples, table.concat(rows, " "), negative),
+		allOk = allOk and #ArmorData.bossItemLevelDelta == 3 and ArmorData.bossItemLevelDelta[2].delta == 7 and ArmorData.bossItemLevelDelta[3].delta == 15
+		r.check(("보스 δ %d회: %s (기대 +0 · +7 · +15 = 50/33.3/16.7 ±1%%p) · 음수 %d건(기대 0)"):format(samples, table.concat(rows, " "), negative),
 			allOk and negative == 0)
 	end)
 end
