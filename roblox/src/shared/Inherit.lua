@@ -2,7 +2,7 @@
 -- A = 지금 착용 중인 장비, B = 가방의 같은 부위 장비. 계승 = B가 그 부위에 착용되고 A는 사라진다(분해 재료로 환급).
 --   옮기는 것: 옵션 세트(종류 + 굴림 위치 roll · roll2) 중 고른 쪽 - 수치는 B의 등급 · itemLevel로 Option.valueOf가 다시 계산한다(옵션 표에 수치가 저장돼 있지 않다).
 --   장비에는 강화 단계 · 보석 칸이 없다(무기만 갖는다 - docs/phase/P25b-log.md 결정 1) - 그래서 옮길 강화 · 보석이 없다.
---   이유 코드: no_class · not_equipped(A 없음) · not_found(B 없음) · part_mismatch · locked(A 또는 B 잠금) · invalid(keep이 "a" | "b"가 아님) · b_grade_lower(B 등급이 A보다 낮아 A 세트 불가).
+--   이유 코드: no_class · not_equipped(A 없음) · not_found(B 없음) · part_mismatch · a_locked(착용 중 A 잠금) · locked(B 잠금) · invalid(keep이 "a" | "b"가 아님) · b_grade_lower(B 등급이 A보다 낮아 A 세트 불가).
 --   골드 부족(no_gold)은 서버가 비용을 다시 계산해 따로 거른다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -84,7 +84,11 @@ function Inherit.blockReason(a, b, keep, hasClass)
 	if partOf(a) ~= partOf(b) then
 		return "part_mismatch"
 	end
-	if a.locked or b.locked then
+	-- 잠금은 둘을 따로 알린다 - 착용 중 장비는 상세 바에서 잠금을 못 푼다(해제 → 잠금 해제 → 다시 착용해야 한다 - 스크린샷 Play 실측).
+	if a.locked then
+		return "a_locked"
+	end
+	if b.locked then
 		return "locked"
 	end
 	if keep ~= "a" and keep ~= "b" then

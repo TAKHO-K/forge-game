@@ -13,12 +13,12 @@ reached.OnClientEvent:Connect(function(payload)
 	if type(payload) ~= "table" then
 		return
 	end
-	local parts = { { text = ("성장 보상 Lv.%d "):format(payload.level or 0), colorName = "xp", bold = true } }
+	local parts = { { text = ("성장 보상 Lv.%d · "):format(payload.level or 0), colorName = "xp", bold = true } }
 	if (payload.statGained or 0) > 0 then
-		table.insert(parts, { text = ("영구 능력치 +%d회(%s ×%.3f · 스테이지 +%.1f) "):format(payload.statGained, Milestone.statText(), payload.multiplier or 1, Milestone.stageEquivalent(payload.statCount or 0)), colorName = "success" })
+		table.insert(parts, { text = ("%s ×%.3f "):format(Milestone.statText(), payload.multiplier or 1), colorName = "success" })
 	end
 	for _, unlock in ipairs(payload.unlocks or {}) do
-		table.insert(parts, { text = ("해금: %s "):format(unlock.name), colorName = "gold", bold = true })
+		table.insert(parts, { text = ("%s "):format(unlock.name), colorName = "gold", bold = true })
 	end
 	table.insert(parts, { text = "[보상 목록]", colorName = "success", bold = true, onActivate = function()
 		MilestonesPanel.open()

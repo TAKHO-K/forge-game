@@ -246,7 +246,7 @@ local function renderRefine()
 		return nil
 	end
 	local where = target.kind == "slot" and ("%d번 홈(장착 중)"):format(target.key) or "보석 가방"
-	local head = addLabel(("대상: %s · %s"):format(ItemDescribe.gem(gem).title, where), "body", "textPrimary")
+	local head = addLabel(("대상: %s · Lv.%d · %s"):format(ItemDescribe.gem(gem).title, gem.itemLevel or 0, where), "body", "textPrimary")
 	head.Name = "TargetLine"
 	head.TextColor3 = gradeColor(gem.grade)
 	addLabel(("지금 옵션: %s"):format(optionText(gem)), "caption", "textSecondary")

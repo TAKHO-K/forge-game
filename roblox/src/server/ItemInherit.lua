@@ -2,7 +2,7 @@
 -- 자리 제한 없음(착용 · 해제 · 분해와 같이 어디서나). 자동 검증(P25bVerify)이 같은 함수를 직접 부른다.
 --   ItemInherit.handle(player, part, bagIndex, keep) -> success, reason(성공이면 환급 종류 "gem" | "gold")
 --   ItemInherit.preview(player, part, bagIndex) -> 표 | nil, reason
---   이유 코드: invalid(인자 모양 · 프로필 없음) + PlayerProfile이 주는 no_class · not_equipped · not_found · part_mismatch · locked · b_grade_lower · no_gold.
+--   이유 코드: invalid(인자 모양 · 프로필 없음) + PlayerProfile이 주는 no_class · not_equipped · not_found · part_mismatch · a_locked · locked · b_grade_lower · no_gold.
 
 local PlayerProfile = require(script.Parent.PlayerProfile)
 

@@ -80,7 +80,7 @@ function P25bVerify.runPure()
 			Inherit.blockReason(a, item("gloves", "relic", 300), "b", true), Inherit.blockReason(item("armor", "legendary", 120, nil, nil, { locked = true }), b, "b", true),
 			Inherit.blockReason(a, item("armor", "relic", 300, nil, nil, { locked = true }), "b", true), Inherit.blockReason(a, b, "c", true), Inherit.blockReason(a, low, "a", true),
 		}
-		local expected = { "no_class", "not_equipped", "not_found", "part_mismatch", "locked", "locked", "invalid", "b_grade_lower" }
+		local expected = { "no_class", "not_equipped", "not_found", "part_mismatch", "a_locked", "locked", "invalid", "b_grade_lower" }
 		local same = true
 		for i = 1, #expected do
 			same = same and reasons[i] == expected[i]

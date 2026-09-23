@@ -151,7 +151,11 @@ function MilestonesPanel.render()
 
 	line(("회차별 능력치 마일스톤(레벨 %d마다)"):format(MilestoneData.statInterval), "caption", "textSecondary", "CycleHeader")
 	local shown = 0
-	for cycle = 1, math.max(rebirthCount, 0) do
+	local lastCycle = math.max(rebirthCount, 0)
+	for key in pairs(data.cycles or {}) do
+		lastCycle = math.max(lastCycle, tonumber(key) or 0) -- 기록이 있는 회차는 전부 보인다(개발 도구로 회차를 되돌린 계정 등)
+	end
+	for cycle = 1, lastCycle do
 		local claimed = (data.cycles and data.cycles[tostring(cycle)]) or 0
 		local times = math.floor(claimed / MilestoneData.statInterval)
 		local current = cycle == rebirthCount

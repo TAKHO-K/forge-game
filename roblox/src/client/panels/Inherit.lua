@@ -37,7 +37,8 @@ local REASON_TEXT = {
 	not_equipped = "같은 부위에 착용 중인 장비가 없습니다",
 	not_found = "가방에서 장비를 찾을 수 없습니다",
 	part_mismatch = "같은 부위끼리만 계승할 수 있습니다",
-	locked = "잠긴 장비는 계승할 수 없습니다 - 잠금을 먼저 푸세요",
+	locked = "새 장비가 잠겨 있습니다 - 가방에서 잠금을 먼저 푸세요",
+	a_locked = "착용 중 장비가 잠겨 있습니다 - 해제한 뒤 잠금을 풀고 다시 착용하세요",
 	b_grade_lower = "새 장비 등급이 낮아 착용 장비의 옵션을 옮길 수 없습니다",
 	no_gold = "골드가 부족합니다",
 }
@@ -304,9 +305,10 @@ function InheritPanel.render()
 	refs.heading.Text = ("착용 중 %s → 새 장비"):format(ItemVisualData.partDisplayNames[b.part or "armor"] or "장비")
 	local describedA = ItemDescribe.item(a, player:GetAttribute("ClassId"))
 	local describedB = ItemDescribe.item(b, player:GetAttribute("ClassId"))
-	refs.lineA.Text = ("A(착용) %s · %s"):format(describedA.title, describedA.meta)
+	-- meta의 첫 조각은 부위 이름이다(제목에 이미 있다) - 레벨 · 기본 효과만 붙인다.
+	refs.lineA.Text = ("A(착용) %s · %s"):format(describedA.title, (describedA.meta:gsub("^[^·]+· ", "")))
 	refs.lineA.TextColor3 = gradeColor(a.grade)
-	refs.lineB.Text = ("B(새 장비) %s · %s"):format(describedB.title, describedB.meta)
+	refs.lineB.Text = ("B(새 장비) %s · %s"):format(describedB.title, (describedB.meta:gsub("^[^·]+· ", "")))
 	refs.lineB.TextColor3 = gradeColor(b.grade)
 
 	local blockA = preview and preview.keepABlock or Inherit.keepABlockReason(a, b)
@@ -351,8 +353,12 @@ function InheritPanel.render()
 	if cost then
 		refs.cost.Text = ("비용 %s 골드(보유 %s)"):format(NumberFormat.format(cost), NumberFormat.format(gold))
 		refs.cost.TextColor3 = gold >= cost and Theme.color("gold") or Theme.color("danger")
+	elseif preview and preview.error then
+		refs.cost.Text = "계승할 수 없습니다"
+		refs.cost.TextColor3 = Theme.color("danger")
 	else
 		refs.cost.Text = "비용 계산 중…"
+		refs.cost.TextColor3 = Theme.color("textSecondary")
 	end
 	local reason
 	if not preview then
