@@ -34,6 +34,7 @@ local RunService = game:GetService("RunService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local SkillIconData = require(ReplicatedStorage.Shared.data.SkillIconData)
 local HudIcons = require(script.Parent.HudIcons)
+local SkillTooltip = require(script.Parent.hud.SkillTooltip)
 
 local skillCastResult = ReplicatedStorage:WaitForChild("SkillCastResult")
 local dashResult = ReplicatedStorage:WaitForChild("DashResult")
@@ -160,9 +161,16 @@ local function buildSlot(parent, layoutOrder, def)
 		slot = Instance.new("TextButton")
 		slot.Text = ""
 		slot.AutoButtonColor = false
-		slot.Activated:Connect(function()
-			slotTapped:Fire(def.id)
-		end)
+		if def.skillIcon then
+			-- P3b D: Q · E 칸 = 툴팁(PC 마우스 올림 · 폰 길게 누름). 짧게 누름 · 클릭은 기존처럼 시전 - 길게 누른 뒤 뗀 것은 시전하지 않는다(SkillTooltip.attach).
+			SkillTooltip.attach(slot, def.id, function()
+				slotTapped:Fire(def.id)
+			end, isTouchLayout)
+		else
+			slot.Activated:Connect(function()
+				slotTapped:Fire(def.id)
+			end)
+		end
 	end
 	slot.Name = "Slot_" .. def.id
 	slot.LayoutOrder = layoutOrder

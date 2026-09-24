@@ -17,7 +17,6 @@ local Workspace = game:GetService("Workspace")
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local SkillCombat = require(ReplicatedStorage.Shared.SkillCombat)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
-local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
 local Reach = require(ReplicatedStorage.Shared.Reach)
@@ -32,6 +31,7 @@ local BuffState = require(script.Parent.BuffState)
 local SummonState = require(script.Parent.SummonState)
 local DashEndpoint = require(script.Parent.DashEndpoint)
 local HealCast = require(script.Parent.HealCast)
+local SkillStats = require(script.Parent.SkillStats)
 
 local skillRequest = Instance.new("RemoteEvent")
 skillRequest.Name = "SkillRequest"
@@ -43,6 +43,16 @@ skillRequest.Parent = ReplicatedStorage
 local skillCastResult = Instance.new("RemoteEvent")
 skillCastResult.Name = "SkillCastResult"
 skillCastResult.Parent = ReplicatedStorage
+
+-- 결과 전송(P3b D) - 클라에 보내고, Studio 검증이 이 플레이어의 결과를 모으는 중이면(debugCapture) 같은 표를 쌓는다.
+local debugCapture = {}
+local function sendResult(player, slot, payload)
+	skillCastResult:FireClient(player, slot, payload)
+	local sink = debugCapture[player]
+	if sink then
+		table.insert(sink, { slot = slot, payload = payload })
+	end
+end
 
 -- [Player][slot] = os.clock() 마지막 캐스트 시각.
 local lastCastTick = {}
@@ -59,7 +69,7 @@ local function markCast(player, slot)
 end
 
 local function reject(player, slot, reason)
-	skillCastResult:FireClient(player, slot, { ok = false, reason = reason })
+	sendResult(player, slot, { ok = false, reason = reason })
 end
 
 -- 몬스터 하나를 때린다 - 데미지 계산(계수×atk, 치명타는 calcDamage가 판정) + 적용 + 죽음
@@ -135,13 +145,13 @@ local function castLineAttack(player, slot, def, classId, atk, rootPart, attacke
 	local targets = SkillCombat.hitsOnSegment(startPos, finalEnd, def.hitRadiusStuds, candidates)
 
 	-- 26-2(PRD 20.67 [2] "관통돌진 - Q coefficient ×(1+x)").
-	local coefficient = def.coefficient * (1 + PlayerProfile.getOptionBonus(player, "skill_greatsword_Q"))
+	local coefficient = SkillStats.hitCoefficient(player, classId, slot, def) -- P3b D: 툴팁과 같은 함수(옵션 ×(1+x))
 	local hits = {}
 	for _, target in ipairs(targets) do
 		table.insert(hits, strikeTarget(player, classId, atk, target, coefficient, attackerStage))
 	end
 
-	skillCastResult:FireClient(player, slot, {
+	sendResult(player, slot, {
 		ok = true,
 		kind = "dash",
 		cooldownSeconds = def.cooldownSeconds,
@@ -172,7 +182,7 @@ local function castDashBuff(player, slot, def, rootPart, cooldownSeconds)
 		colorName = "success",
 	})
 
-	skillCastResult:FireClient(player, slot, {
+	sendResult(player, slot, {
 		ok = true,
 		kind = "dash",
 		cooldownSeconds = cooldownSeconds,
@@ -188,11 +198,9 @@ end
 -- 치명타확률이 오르면 이 배율도 같이 오른다(ClassData.classes[classId].critRate를 그
 -- 순간 다시 읽으므로 - 확정된 값을 캐싱하지 않는다).
 local function castSelfBuff(player, slot, def, classId)
-	local critRate = ClassData.classes[classId].critRate
 	-- 26-2(PRD 20.67 [2] "속사 - 속사 공속 배율 ×(1+x), 기존 attackSpeedCap 유지") - 옵션
-	-- 배율은 cap으로 자르기 전에 곱한다(상한은 그대로 2.5).
-	local optionMultiplier = 1 + PlayerProfile.getOptionBonus(player, "skill_bow_Q")
-	local multiplier = math.min(def.attackSpeedCap, (def.attackSpeedBase + critRate * def.attackSpeedCritCoefficient) * optionMultiplier)
+	-- 배율은 cap으로 자르기 전에 곱한다(상한은 그대로 2.5). P3b D: 식은 SkillStats 하나(툴팁과 같은 함수).
+	local multiplier = SkillStats.quickShotMultiplier(player, classId, def)
 
 	BuffState.apply(player, "quickShot", {
 		durationSeconds = def.durationSeconds,
@@ -201,7 +209,7 @@ local function castSelfBuff(player, slot, def, classId)
 		colorName = "ember",
 	})
 
-	skillCastResult:FireClient(player, slot, {
+	sendResult(player, slot, {
 		ok = true,
 		kind = "selfBuff",
 		cooldownSeconds = def.cooldownSeconds,
@@ -215,7 +223,7 @@ end
 -- 안 된다는 이유 그대로 채택, PlayerState의 HP 차감과 이 task.spawn 루프는 서로 무관하다).
 local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 	markCast(player, slot)
-	skillCastResult:FireClient(player, slot, {
+	sendResult(player, slot, {
 		ok = true,
 		kind = "channelStart",
 		cooldownSeconds = def.cooldownSeconds,
@@ -237,7 +245,7 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 	local tickInterval = def.channelSeconds / def.tickCount
 	local castAt = os.clock() -- 29-3: 채널링을 시작한 시각(strikeTarget의 committedAt)
 	-- 26-2(PRD 20.67 [2] "회전베기 - E 틱 피해 ×(1+x)").
-	local perTickCoefficient = def.coefficient * (1 + PlayerProfile.getOptionBonus(player, "skill_greatsword_E")) / def.tickCount
+	local perTickCoefficient = SkillStats.hitCoefficient(player, classId, slot, def) -- P3b D: 툴팁과 같은 함수(옵션 ×(1+x) ÷ 틱 수)
 
 	for tickIndex = 1, def.tickCount do
 		task.wait(tickInterval)
@@ -261,7 +269,7 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 			table.insert(hits, strikeTarget(player, classId, atk, target, perTickCoefficient, attackerStage, nil, nil, castAt))
 		end
 
-		skillCastResult:FireClient(player, slot, {
+		sendResult(player, slot, {
 			ok = true,
 			kind = "tick",
 			tickIndex = tickIndex,
@@ -320,7 +328,7 @@ local function castSummonDecoy(player, slot, def, character)
 	-- skill_dualblade_Q.cap - 5×(1+1.8)=14=def.cooldownSeconds와 정확히 일치, 20.67 [7]
 	-- "지속 ≤ 쿨다운 14초"). 분신 생존시간과 확정 치명타 창이 이 값을 그대로 공유한다
 	-- (SkillData.lua 주석 그대로 유지).
-	local durationSeconds = def.durationSeconds * (1 + PlayerProfile.getOptionBonus(player, "skill_dualblade_Q"))
+	local durationSeconds = SkillStats.decoyDuration(player, "dualblade", def) -- P3b D: 툴팁과 같은 함수
 	SummonState.spawn(player, def.summonId, decoy, durationSeconds)
 
 	BuffState.apply(player, "guaranteedCrit", {
@@ -329,7 +337,7 @@ local function castSummonDecoy(player, slot, def, character)
 		colorName = "success",
 	})
 
-	skillCastResult:FireClient(player, slot, {
+	sendResult(player, slot, {
 		ok = true,
 		kind = "summon",
 		cooldownSeconds = def.cooldownSeconds,
@@ -351,7 +359,7 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 	end
 
 	markCast(player, slot)
-	skillCastResult:FireClient(player, slot, {
+	sendResult(player, slot, {
 		ok = true,
 		kind = "channelStart",
 		cooldownSeconds = def.cooldownSeconds,
@@ -365,7 +373,7 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 	local tickInterval = def.channelSeconds / def.tickCount
 	local castAt = os.clock() -- 29-3: 채널링을 시작한 시각(strikeTarget의 committedAt)
 	-- 26-2(PRD 20.67 [2] "난무 - E 틱 피해 ×(1+x)").
-	local perTickCoefficient = def.coefficient * (1 + PlayerProfile.getOptionBonus(player, "skill_dualblade_E")) / def.tickCount
+	local perTickCoefficient = SkillStats.hitCoefficient(player, classId, slot, def) -- P3b D: 툴팁과 같은 함수(옵션 ×(1+x) ÷ 틱 수)
 
 	for tickIndex = 1, def.tickCount do
 		task.wait(tickInterval)
@@ -394,7 +402,7 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 
 		local hit = strikeTarget(player, classId, atk, lockedTarget, perTickCoefficient, attackerStage, forceCrit, critDmgBonus, castAt)
 
-		skillCastResult:FireClient(player, slot, {
+		sendResult(player, slot, {
 			ok = true,
 			kind = "flurryTick",
 			tickIndex = tickIndex,
@@ -419,7 +427,7 @@ local function castHeal(player, slot, def, classId, cooldownSeconds)
 	local shieldMode = HealCast.usesShield(player, def)
 	local healAmount, isCrit = HealCast.cast(player, def, classId, cooldownSeconds)
 
-	skillCastResult:FireClient(player, slot, {
+	sendResult(player, slot, {
 		ok = true,
 		kind = "heal",
 		cooldownSeconds = cooldownSeconds,
@@ -445,7 +453,7 @@ local function castToggle(player, slot, def)
 		})
 	end
 
-	skillCastResult:FireClient(player, slot, {
+	sendResult(player, slot, {
 		ok = true,
 		kind = "toggle",
 		cooldownSeconds = def.cooldownSeconds,
@@ -454,7 +462,7 @@ local function castToggle(player, slot, def)
 	})
 end
 
-skillRequest.OnServerEvent:Connect(function(player, slot)
+local function handleSkill(player, slot)
 	if slot ~= "Q" and slot ~= "E" then
 		return
 	end
@@ -481,15 +489,7 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 	-- 26-2(PRD 20.67 [2] "백스텝샷/치유 - 쿨다운 ×(1-x)") - 옵션 baseValue가 음수라 1+합산이
 	-- 곧 (1-x)다(Option.sumWithCap이 상한을 ±50%로 대칭 clamp해 0 이하로 못 내려간다). 이
 	-- 두 슬롯 외에는 1(옵션 없음)로 원래 쿨다운 그대로다.
-	local cooldownSeconds = def.cooldownSeconds
-	if classId == "bow" and slot == "E" then
-		cooldownSeconds *= 1 + PlayerProfile.getOptionBonus(player, "skill_bow_E")
-	elseif classId == "healer" and slot == "Q" then
-		if HealCast.usesShield(player, def) then
-			cooldownSeconds = def.shield.cooldownSeconds -- S13b: 딜링모드 쉴드 시전은 쉴드의 쿨다운(치유 옵션은 그대로 곱한다)
-		end
-		cooldownSeconds *= 1 + PlayerProfile.getOptionBonus(player, "skill_healer_Q")
-	end
+	local cooldownSeconds = SkillStats.cooldown(player, classId, slot, def) -- P3b D: 식은 SkillStats 하나(툴팁과 같은 함수)
 	if isOnCooldown(player, slot, cooldownSeconds) then
 		reject(player, slot, "cooldown")
 		return
@@ -501,8 +501,7 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 		return
 	end
 
-	local characterLevel = PlayerProfile.getCharacterLevel(player)
-	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player)) -- P2.5a R5: 최종 데미지 버킷 · P2.5b D: 마일스톤 영구 배율
+	local atk = SkillStats.attack(player, classId, weapon) -- P2.5a R5: 최종 데미지 버킷 · P2.5b D: 마일스톤 영구 배율 · P3b D: 툴팁과 같은 함수
 	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage를 쓴다.
 	local attackerStage = TutorialState.getMonsterStage(player)
 
@@ -535,10 +534,28 @@ skillRequest.OnServerEvent:Connect(function(player, slot)
 		markCast(player, slot)
 		castToggle(player, slot, def)
 	end
-end)
+end
+skillRequest.OnServerEvent:Connect(handleSkill)
+
+-- Studio 검증 전용(P3b D3 - 툴팁 값 = 실제 피해 대조): 클라 요청과 같은 handleSkill을 서버에서 부르고 그 시전의 결과 이벤트를 모아 돌려준다.
+-- 쿨다운 기록은 지우고 시작한다(검증이 연달아 여러 스킬을 쓴다). 채널형은 채널이 끝날 때까지 기다린다(handleSkill이 그 동안 양보한다).
+if game:GetService("RunService"):IsStudio() then
+	local debugCast = Instance.new("BindableFunction")
+	debugCast.Name = "SkillCastDebug"
+	debugCast.Parent = game:GetService("ServerStorage")
+	debugCast.OnInvoke = function(player, slot)
+		lastCastTick[player] = nil
+		debugCapture[player] = {}
+		local ok, err = pcall(handleSkill, player, slot)
+		local captured = debugCapture[player]
+		debugCapture[player] = nil
+		return ok and captured or { error = tostring(err) }
+	end
+end
 
 Players.PlayerRemoving:Connect(function(player)
 	lastCastTick[player] = nil
+	debugCapture[player] = nil
 end)
 
 print("[forge-game] SkillServer 로드됨 - 검사 Q/E, 궁수 Q/E, 도적 Q(그림자분신)/E(난무), 치유사 Q(치유)/E(딜링모드) 판정 활성")

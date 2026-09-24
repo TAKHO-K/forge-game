@@ -42,6 +42,18 @@ function HealCast.rollCrit(baseHeal, classId, critRateBonus)
 	return isCrit
 end
 
+-- 치유 배수 = 재생 옵션 배수 × (1 + 최종 데미지 버킷) - 자기 회복 · 파티 회복 · 쉴드가 같은 값을 쓴다(P3b D: 스킬 툴팁도 이 함수를 부른다).
+function HealCast.healingPower(player)
+	local weapon = PlayerProfile.getWeapon(player)
+	local finalBonus = PlayerCombat.getFinalDamageBonus(weapon and weapon.level or 0, PlayerProfile.getOptionBonus(player, "finalDamage"))
+	return PlayerProfile.getHealingPowerMultiplier(player) * (1 + finalBonus)
+end
+
+-- 자기 회복량(치명 아님 · 최대체력 상한 적용 전) - cast와 같은 식(P3b D 툴팁).
+function HealCast.baseHeal(player, def)
+	return (PlayerState.getMaxHp(player) or 0) * def.healPercentOfMaxHp * HealCast.healingPower(player)
+end
+
 -- 이 시전이 쉴드를 주는가: 쉴드가 정의된 치유 + 딜링모드 켜짐 + 파티 있음(솔로는 지금까지처럼 자기 회복 - 딜링모드 가동률 60% 설계가 Q 자기 치유를 전제한다).
 function HealCast.usesShield(player, def)
 	return def.shield ~= nil and BuffState.get(player, "dealingMode") ~= nil and PartyState.getParty(player) ~= nil
@@ -55,9 +67,7 @@ function HealCast.cast(player, def, classId, cooldownSeconds)
 	-- 26-2(PRD 20.67 [2] "재생 - 힐러 치유 회복량 ×(1+x)") - PlayerProfile.getHealingPowerMultiplier가 자동회복(PlayerRegen.server.lua)과 같은 배수를 쓴다.
 	-- P2.5a R5: 치유량도 최종 데미지 버킷(강화 단계 + 옵션 finalDamage)을 곱한다 - 평타와 같은 PlayerCombat.getFinalDamageBonus.
 	-- P2.5a D(결정 5): 치유 치명 = 옵션 치명 확률 · 치명 피해가 평타처럼 더해진다(배율 = SkillData critHealMultiplier + 옵션 치명 피해).
-	local weapon = PlayerProfile.getWeapon(player)
-	local finalBonus = PlayerCombat.getFinalDamageBonus(weapon and weapon.level or 0, PlayerProfile.getOptionBonus(player, "finalDamage"))
-	local healingPower = PlayerProfile.getHealingPowerMultiplier(player) * (1 + finalBonus)
+	local healingPower = HealCast.healingPower(player)
 	local optionCritRate, optionCritDmg = PlayerProfile.getCritBonus(player)
 	local baseHeal = maxHp * def.healPercentOfMaxHp * healingPower
 	local isCrit = HealCast.rollCrit(baseHeal, classId, optionCritRate)
