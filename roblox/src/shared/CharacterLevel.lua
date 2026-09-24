@@ -55,9 +55,18 @@ function CharacterLevel.getMonsterExpAtLevel(level)
 	return InfiniteStage.getExpReward(MonsterData.tier1.expReward, CharacterLevel.getStageForLevel(level))
 end
 
+-- P3c C4: 레벨 L의 경험치 배수 - 마지막 앵커(125) 뒤(126 ~)는 CharacterLevelConfig.expScaleAfterAnchors, 그 앞은 1. 필요 경험치와 획득 경험치(PlayerProfile.addCharacterExp ·
+-- EconSim)에 **같이** 곱한다 - 처치 수는 그대로, 경험치 숫자만 125 → 126에서 이어진다.
+function CharacterLevel.getExpScale(level)
+	if level > ANCHORS[#ANCHORS].level then
+		return CharacterLevelConfig.expScaleAfterAnchors or 1
+	end
+	return 1
+end
+
 -- 레벨 L→L+1 필요 경험치(정수). 위 모듈 주석 참고.
 function CharacterLevel.getExpToNextLevel(level)
-	return math.floor(CharacterLevel.getTargetKills(level) * CharacterLevel.getMonsterExpAtLevel(level) + 0.5)
+	return math.floor(CharacterLevel.getTargetKills(level) * CharacterLevel.getMonsterExpAtLevel(level) * CharacterLevel.getExpScale(level) + 0.5)
 end
 
 -- 누적 임계값 메모(thresholds[level] = 그 레벨 도달 누적 경험치). 지수 성장이라 실제 도달
@@ -116,7 +125,7 @@ end
 -- 세션의 "경험치 획득량 +최대 25%" 옵션이 곱해질 자리). 목표 K(L)이 정수가 아니면 올림이라
 -- K(L)보다 1 큰 값이 나올 수 있다(그 남는 경험치는 다음 레벨로 이월되므로 장기 평균은 K(L)).
 function CharacterLevel.getExpectedKills(level, expGainMultiplier)
-	local perKill = CharacterLevel.getMonsterExpAtLevel(level) * (expGainMultiplier or 1)
+	local perKill = CharacterLevel.getMonsterExpAtLevel(level) * (expGainMultiplier or 1) * CharacterLevel.getExpScale(level) -- P3c C4: 필요 · 획득에 같은 배수
 	return math.ceil(CharacterLevel.getExpToNextLevel(level) / perKill - 1e-9)
 end
 

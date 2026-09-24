@@ -373,7 +373,7 @@ function PartyTutorialVerify.runLive(player, env)
 		TutorialState.stop(player, false)
 		local friendStage, friendGold, friendExp = killOne(player) -- 견습 아님 = 같은 파티의 친구 처지
 		-- P2.5c 결정 3: 캐릭터 경험치에는 환생 배율도 곱해진다(PlayerProfile.addCharacterExp).
-		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(PlayerProfile.getRebirthCount(player))
+		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(PlayerProfile.getRebirthCount(player)) * CharacterLevel.getExpScale(player:GetAttribute("CharacterLevel") or 1) -- P3c C4: 126 뒤 배수
 		local expectedTutorial = InfiniteStage.getExpReward(MonsterData.tier1.expReward, TutorialData.monsterStage) * (1 + partyBonus) * rebirthMult
 		local expectedFriend = InfiniteStage.getExpReward(MonsterData.tier1.expReward, FRIEND_STAGE) * (1 + partyBonus) * rebirthMult
 		print(("[S12][나] 처치 로그 1(견습 중): 스테이지 %s · 골드 +%d · 경험치 +%.4f"):format(tostring(tutorialStage), tutorialGold, tutorialExp))

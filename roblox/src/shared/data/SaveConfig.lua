@@ -70,7 +70,9 @@ return {
 	-- 기존 세이브는 0 - 환생 5회를 마친 직업은 접속 때 지금 레벨까지 채운다. milestoneUnlocks는 그대로. SaveSystem.migrate()의 v32->v33 참고.
 	-- 34(P3a B3) - 계정 단위 leaderboardTainted(boolean) 신설 - /gg가 돈 계정은 리더보드에 쓰지 않는다. 기존 세이브는 보스 클리어가 하나라도 있으면 true(진도 출처를 가릴 수 없다), 없으면 false.
 	-- SaveSystem.migrate()의 v33->v34 참고.
-	saveVersion = 34,
+	-- 35(P3c C4) - 필드 변경 없음, 값 이관: 레벨 126부터 필요 경험치 × expScaleAfterAnchors(CharacterLevel.getExpScale). classes[*].characterExp가 레벨 126 도달 누적값을 넘는
+	-- 몫만 같은 배수로 늘린다 - 레벨 · 진행률이 그대로다(누적 임계값이 126부터 정확히 그 배수로 늘기 때문 - 닫힌 식). SaveSystem.migrate()의 v34->v35 참고.
+	saveVersion = 35,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

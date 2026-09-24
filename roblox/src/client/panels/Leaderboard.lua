@@ -46,6 +46,7 @@ local state = {
 	me = {}, -- [boardId] = { result, at }
 	expandedParty = nil, -- 펼친 파티 줄의 key
 	token = 0,
+	hall = nil, -- P3c E2: 지난 시즌 개인 순위(명예의 전당 응답 - 시즌 탭)
 }
 
 local function rowHeight()
@@ -327,7 +328,22 @@ local function seasonText(season)
 	table.insert(lines, "· 직업별 · 파티 순위: 스테이지가 높을수록, 같으면 클리어 시간이 짧을수록 위.")
 	table.insert(lines, "· 파티 기록: 그 처치로 파티원 전원의 개인 최고가 오를 때만 남습니다.")
 	table.insert(lines, "· 순위표는 약 90초마다 갱신됩니다.")
+	table.insert(lines, "· 시즌이 끝나면 그 시즌 순위는 명예의 전당에 남습니다.")
+	-- P3c C7: 영구 개인 최고(시즌과 무관 - 프로필의 보스 클리어 최고).
+	table.insert(lines, ("· 내 영구 최고(시즌과 무관): 스테이지 %d"):format(player:GetAttribute("BestBossCleared") or 0))
 	return table.concat(lines, "\n")
+end
+
+-- P3c E2: 시즌 탭 아래의 지난 시즌 순위표 제목(명예의 전당 - C7과 같은 데이터).
+local function hallTitle(hall)
+	if not hall then
+		return "명예의 전당(지난 시즌)을 불러오는 중…"
+	elseif (hall.season or 0) < 1 then
+		return "명예의 전당: 첫 시즌이라 지난 시즌이 없습니다"
+	elseif not hall.exists or #(hall.entries or {}) == 0 then
+		return ("명예의 전당 - 시즌 %d: 기록이 없습니다"):format(hall.season)
+	end
+	return ("명예의 전당 - 시즌 %d 개인 순위(상위 %d)"):format(hall.season, #hall.entries)
 end
 
 -- 지금 탭의 목록 · 내 순위 줄을 다시 그린다.
@@ -339,9 +355,27 @@ local function render()
 	local used, usedMembers = 0, 0
 	if state.tab == "season" then
 		refs.emptyLabel.Visible = true
-		refs.emptyLabel.Text = seasonText(state.season)
-		refs.emptyLabel.Size = UDim2.new(1, -8, 0, (Theme.textSize("body") + 6) * 8)
-		y = (Theme.textSize("body") + 6) * 8 + 8
+		refs.emptyLabel.Text = seasonText(state.season) .. "\n\n" .. hallTitle(state.hall)
+		refs.emptyLabel.Size = UDim2.new(1, -8, 0, (Theme.textSize("body") + 6) * 12)
+		y = (Theme.textSize("body") + 6) * 12 + 8
+		-- P3c E2: 지난 시즌 개인 순위 줄(누르면 열리는 카드는 없다 - 카드는 지금 시즌 저장소라 지난 시즌 사람의 카드가 아닐 수 있다).
+		local hall = state.hall
+		for index, entry in ipairs(hall and hall.entries or {}) do
+			local row = rowAt(index)
+			used = index
+			row.entry = nil
+			row.button.Visible = true
+			row.button.Position = UDim2.new(0, 0, 0, y)
+			row.rank.Text = tostring(entry.rank)
+			local isMine = entry.userId == player.UserId
+			row.name.Text = nameOf(hall.names, entry.userId)
+			row.name.TextColor3 = isMine and UIColors.ember or UIColors.textPrimary
+			row.stroke.Color = isMine and UIColors.ember or UIColors.rim
+			row.stroke.Transparency = isMine and 0 or UIColors.rimTransparency
+			row.stage.Text = ("스테이지 %d"):format(entry.stage or 0)
+			row.time.Text = ""
+			y += rowH + 4
+		end
 	else
 		local board = state.boards[boardId]
 		local entries = board and board.entries or {}
@@ -449,6 +483,16 @@ function Leaderboard.refresh()
 	state.classId = state.classId or (ClassData.classes[player:GetAttribute("ClassId") or ""] and player:GetAttribute("ClassId")) or ClassData.order[1]
 	render()
 	local boardId = currentBoardId() or "personal" -- 시즌 탭은 시즌 정보만(개인 순위표 응답에 실려 온다)
+	if state.tab == "season" then
+		-- P3c E2: 지난 시즌 개인 순위(명예의 전당). 서버는 캐시만 돌려준다(저장소 요청은 서버가 30분에 한 번).
+		task.spawn(function()
+			local result = invoke("hall", "personal")
+			if token == state.token and result then
+				state.hall = result
+				render()
+			end
+		end)
+	end
 	task.spawn(function()
 		for _ = 1, 2 do
 			local result, reason = invoke("board", boardId)

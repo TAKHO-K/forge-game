@@ -96,6 +96,22 @@ function GemCraft.refinedGem(target, fodder)
 	return gem
 end
 
+-- P3c E4 보석 판매가(골드). stage = 계정 최고 스테이지. = GoldCost("refine", tier1 골드 × 가루 × 재련의 골드/가루 비 × sellFractionOfDust) - 분해 가루 가치보다 낮다.
+function GemCraft.sellPrice(gem, stage)
+	local dust = GemData.dust
+	local grade = dust.refineGoldKills[gem.grade] and gem.grade or "epic"
+	local killsPerDust = dust.refineGoldKills[grade] / dust.refineDust[grade]
+	local kills = GemCraft.dustYield(gem) * killsPerDust * dust.sellFractionOfDust
+	return math.max(GoldCost.cost(MonsterData.tier1.goldDrop * kills, stage, "refine"), 1)
+end
+
+-- 같은 보석의 분해 가루를 골드로 친 값(판매가와 비교 - 검증 · 보고용).
+function GemCraft.dustGoldValue(gem, stage)
+	local dust = GemData.dust
+	local grade = dust.refineGoldKills[gem.grade] and gem.grade or "epic"
+	return GoldCost.cost(MonsterData.tier1.goldDrop * GemCraft.dustYield(gem) * dust.refineGoldKills[grade] / dust.refineDust[grade], stage, "refine")
+end
+
 -- 변환권 1장 구매에 드는 가루(골드와 별도).
 function GemCraft.ticketDust(gradeId)
 	return GemData.dust.ticketDust[gradeId] or 0

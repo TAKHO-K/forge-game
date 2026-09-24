@@ -40,23 +40,43 @@ function Leaderboard.writeMode()
 	return DevToolsConfig.verifyArmed and "verify" or "off"
 end
 
-local function storeName(kind)
-	local prefix = LeaderboardConfig.namePrefix .. (DevToolsConfig.verifyArmed and "_verify" or "")
-	return ("%s_s%d_%s"):format(prefix, LeaderboardConfig.seasonId, kind)
+-- P3c C7: 지금 시즌(시작일 + 28일마다 자동 - LeaderboardRules.seasonAt). 검증은 debugSeason으로 시즌을 고정한다.
+Leaderboard.debugSeason = nil
+function Leaderboard.currentSeason()
+	return Leaderboard.debugSeason or LeaderboardRules.seasonAt(os.time(), LeaderboardConfig)
+end
+
+local function prefix()
+	return LeaderboardConfig.namePrefix .. (DevToolsConfig.verifyArmed and "_verify" or "")
+end
+
+-- season을 안 주면 지금 시즌 - 새 시즌이 되면 저장소 이름이 바뀌어 순위표가 0부터 시작한다.
+local function storeName(kind, season)
+	return ("%s_s%d_%s"):format(prefix(), season or Leaderboard.currentSeason(), kind)
 end
 Leaderboard.storeName = storeName
 
 local stores = {}
-local function ordered(kind)
-	local name = storeName(kind)
+local function ordered(kind, season)
+	local name = storeName(kind, season)
 	stores[name] = stores[name] or DataStoreService:GetOrderedDataStore(name)
 	return stores[name]
 end
 
-local function plain(kind)
-	local name = storeName(kind)
+local function plain(kind, season)
+	local name = storeName(kind, season)
 	stores[name] = stores[name] or DataStoreService:GetDataStore(name)
 	return stores[name]
+end
+
+-- 명예의 전당 저장소(시즌과 무관한 하나 - 키 s<시즌>).
+local function hallStore()
+	local name = prefix() .. "_hall"
+	stores[name] = stores[name] or DataStoreService:GetDataStore(name)
+	return stores[name]
+end
+Leaderboard.hallStoreName = function()
+	return prefix() .. "_hall"
 end
 
 -- 요청 수 계측(검증 · 보고가 공식 한도와 비교한다). kind = orderedWrite · plainWrite · orderedRead · list · plainRead.
@@ -377,17 +397,15 @@ local function decodeEntry(boardId, rank, item)
 	return entry
 end
 
-function Leaderboard.refreshBoard(boardId)
+-- 한 시즌 한 순위표의 상위 count명(이름 조회 포함). 반환: entries 또는 nil(읽기 실패).
+local function readTop(boardId, season, count)
 	local kind = kindOf(boardId)
-	if not kind then
-		return false
-	end
 	stats.list += 1
 	local ok, pages = withRetry("읽기 " .. kind, function()
-		return ordered(kind):GetSortedAsync(false, LeaderboardConfig.topN)
+		return ordered(kind, season):GetSortedAsync(false, count)
 	end)
 	if not ok then
-		return false
+		return nil
 	end
 	local entries = {}
 	for rank, item in ipairs(pages:GetCurrentPage()) do
@@ -400,11 +418,94 @@ function Leaderboard.refreshBoard(boardId)
 		end
 	end
 	resolveNames(ids)
+	return entries
+end
+
+function Leaderboard.refreshBoard(boardId)
+	if not kindOf(boardId) then
+		return false
+	end
+	local entries = readTop(boardId, nil, LeaderboardConfig.topN)
+	if not entries then
+		return false
+	end
 	cache[boardId] = { entries = entries, updatedAt = os.time() }
 	return true
 end
 
+-- ═══ 명예의 전당(P3c C7 · E2) ═══
+-- 끝난 시즌의 순위표마다 상위 hallTopN을 저장소 하나(키 s<시즌>)에 **한 번만** 쓴다(UpdateAsync - 이미 있으면 그대로: 서버 여러 대가 동시에 해도 처음 것이 남는다).
+-- 시즌 저장소는 지우지 않으므로 복사가 늦어도 잃는 것은 없다. 조회는 지난 시즌(지금 − 1)의 값을 hallCacheSeconds마다 한 번 읽는다.
+local hallCache = {} -- [season] = { value = 전당 값 또는 false(없음), at = os.clock() }
+local hallChecked = {} -- [season] = true(이 서버가 이미 쓰기를 시도했다)
+
+function Leaderboard.snapshotHall(season)
+	if season < 1 or hallChecked[season] or Leaderboard.writeMode() == "off" then
+		return false
+	end
+	hallChecked[season] = true
+	local boards, names = {}, {}
+	for _, boardId in ipairs(boardIds()) do
+		local entries = readTop(boardId, season, LeaderboardConfig.hallTopN)
+		if not entries then
+			hallChecked[season] = nil -- 읽기 실패 - 다음 갱신에서 다시
+			return false
+		end
+		boards[boardId] = entries
+		for key, value in pairs(namesFor(entries)) do
+			names[key] = value
+		end
+	end
+	local value = { season = season, boards = boards, names = names, savedAt = os.time() }
+	stats.plainWrite += 1
+	local wrote = false
+	withRetry(("전당 쓰기 s%d"):format(season), function()
+		wrote = false
+		hallStore():UpdateAsync("s" .. season, function(old)
+			if old ~= nil then
+				return nil -- 이미 있다(다른 서버가 먼저 썼다) - 그대로
+			end
+			wrote = true
+			return value
+		end)
+	end)
+	hallCache[season] = nil
+	print(("[forge-game] 명예의 전당: 시즌 %d 상위 %d 복사 %s"):format(season, LeaderboardConfig.hallTopN, wrote and "완료" or "(이미 있음)"))
+	return wrote
+end
+
+-- 전당 한 시즌 읽기(캐시). 반환: 값 또는 nil.
+function Leaderboard.getHall(season)
+	if season < 1 or Leaderboard.writeMode() == "off" then
+		return nil
+	end
+	local cached = hallCache[season]
+	if cached and os.clock() - cached.at < LeaderboardConfig.hallCacheSeconds then
+		return cached.value or nil
+	end
+	stats.plainRead += 1
+	local ok, value = withRetry(("전당 읽기 s%d"):format(season), function()
+		return hallStore():GetAsync("s" .. season)
+	end)
+	if not ok then
+		return nil
+	end
+	hallCache[season] = { value = type(value) == "table" and value or false, at = os.clock() }
+	return type(value) == "table" and value or nil
+end
+
+local lastSeason = nil
 function Leaderboard.refreshAll()
+	-- P3c C7: 시즌이 바뀌었으면 캐시를 비우고(새 시즌 = 빈 순위표) 끝난 시즌을 전당에 복사한다. 서버가 처음 돌 때도 지난 시즌을 한 번 확인한다.
+	local season = Leaderboard.currentSeason()
+	if lastSeason ~= season then
+		if lastSeason then
+			table.clear(cache)
+			print(("[forge-game] 리더보드 시즌 전환: %d → %d(새 순위표)"):format(lastSeason, season))
+		end
+		lastSeason = season
+		Leaderboard.snapshotHall(season - 1)
+	end
 	for _, boardId in ipairs(boardIds()) do
 		Leaderboard.refreshBoard(boardId)
 	end
@@ -461,8 +562,8 @@ local function rateLimited(player, action, now)
 end
 
 local function seasonInfo()
-	local endsAt = LeaderboardConfig.seasonStartUnix > 0 and (LeaderboardConfig.seasonStartUnix + LeaderboardConfig.seasonLengthDays * 86400) or nil
-	return { id = LeaderboardConfig.seasonId, lengthDays = LeaderboardConfig.seasonLengthDays, endsAt = endsAt }
+	local season = Leaderboard.currentSeason()
+	return { id = season, lengthDays = LeaderboardConfig.seasonLengthDays, endsAt = LeaderboardRules.seasonEndsAt(season, LeaderboardConfig) }
 end
 
 -- 요청 하나. action = "board"(boardId) · "me"(boardId) · "card"(boardId, key). now는 검증이 시간을 주입할 때만.
@@ -473,6 +574,13 @@ function Leaderboard.handle(player, action, boardId, key, now)
 	end
 	if rateLimited(player, action, now) then
 		return { ok = false, reason = "rate_limited" }
+	end
+	if action == "hall" then
+		-- P3c E2: 지난 시즌 순위표(명예의 전당 - C7과 같은 데이터). 저장소 요청은 서버 캐시(hallCacheSeconds)에만 - 요청마다 읽지 않는다.
+		local previous = Leaderboard.currentSeason() - 1
+		local hall = Leaderboard.getHall(previous)
+		local entries = hall and hall.boards and hall.boards[boardId] or {}
+		return { ok = true, season = previous, entries = entries, names = hall and hall.names or {}, exists = hall ~= nil }
 	end
 	if action == "board" then
 		local board = cache[boardId]

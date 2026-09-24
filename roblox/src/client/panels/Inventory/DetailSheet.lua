@@ -623,7 +623,9 @@ local function refreshDetailBody()
 		local color = visual and visual.color or UIColors.textPrimary
 		dname.Text = ItemDescribe.gem(gem).title
 		dname.TextColor3 = color
-		dmeta.Text = ("보유 보석(미장착)%s · 분해하면 가루 %d"):format(rollText(gem), GemCraft.dustYield(gem))
+		-- P3c E4: 판매가도 같이(판매 = 골드 · 분해 = 가루 - 판매가는 분해 가루 가치의 절반).
+		dmeta.Text = ("보유 보석(미장착) · 판매가 %s · 분해하면 가루 %d%s"):format(
+			NumberFormat.format(GemCraft.sellPrice(gem, player:GetAttribute("AccountBestStage") or 1)), GemCraft.dustYield(gem), rollText(gem))
 		setDpicIcon("weapon", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -632,9 +634,10 @@ local function refreshDetailBody()
 		lockButton.AutoButtonColor = false
 		lockButton.Active = false
 		lockIconHolder.Visible = false
-		sellButton.AutoButtonColor = false
-		sellButton.Active = false
-		sellButton.TextTransparency = 0.6
+		-- P3c E4: 보석 판매(→ 골드) - 보석은 전부 영웅 이상이라 매번 확인창을 거친다(장비 판매와 같은 규칙 - 보내는 즉시 선택을 비워 연타가 안 먹는다).
+		sellButton.AutoButtonColor = true
+		sellButton.Active = true
+		sellButton.TextTransparency = 0
 		-- P2.5b C: 보석 분해(→ 가루) - 보석은 전부 영웅 이상이라 매번 확인창을 거친다(장비 분해와 같은 문턱).
 		dismantleButton.AutoButtonColor = true
 		dismantleButton.Active = true
@@ -754,8 +757,13 @@ end)
 local function confirmItemAction(verb, item, action, isGem)
 	local visual = ItemVisualData.gradeVisuals[item.grade]
 	local described = isGem and ItemDescribe.gem(item) or ItemDescribe.item(item, player:GetAttribute("ClassId"))
-	itemConfirmText.Text = ("%s(%s)를 %s하시겠습니까?%s 되돌릴 수 없습니다."):format(
-		described.title, ArmorData.grades[item.grade].displayName, verb, isGem and (" 가루 %d를 얻습니다."):format(GemCraft.dustYield(item)) or "")
+	local gain = ""
+	if isGem and verb == "판매" then -- P3c E4
+		gain = (" 골드 %s를 얻습니다."):format(NumberFormat.format(GemCraft.sellPrice(item, player:GetAttribute("AccountBestStage") or 1)))
+	elseif isGem then
+		gain = (" 가루 %d를 얻습니다."):format(GemCraft.dustYield(item))
+	end
+	itemConfirmText.Text = ("%s(%s)를 %s하시겠습니까?%s 되돌릴 수 없습니다."):format(described.title, ArmorData.grades[item.grade].displayName, verb, gain)
 	itemConfirmText.TextColor3 = (visual and not visual.rainbow) and visual.color or UIColors.textPrimary
 	pendingConfirmAction = action
 	itemConfirmOverlay.Visible = true
@@ -776,11 +784,29 @@ end)
 -- 배열을 당겨서 같은 index가 다음 장비를 가리키게 되기 전에 끊는다. 실제 마우스로 이 버튼을
 -- 빠르게 연타해도(B3) 첫 클릭 뒤 버튼이 곧바로 비활성화(선택 없음)라 두 번째 클릭부터는 안 먹는다.
 sellButton.Activated:Connect(function()
+	if S.selectedKind == "gemBag" then -- P3c E4: 보석 → 골드(확인창 뒤 GemCraftRequest - 결과 토스트는 GemForge가 낸다)
+		local gem = S.gemState().gemInventory[S.selectedValue]
+		if not gem then
+			return
+		end
+		local index = S.selectedValue
+		confirmItemAction("판매", gem, function()
+			S.selectedKind, S.selectedValue = nil, nil
+			S.rebuildGrid()
+			ReplicatedStorage:WaitForChild("GemCraftRequest"):FireServer("sell", index)
+		end, true)
+		return
+	end
 	if S.selectedKind ~= "bag" then
 		return
 	end
 	local item = S.inventory[S.selectedValue]
-	if not item or item.locked then
+	if item and item.locked then
+		-- P3c E3: 잠금 = 보호 - 판매는 막아 두고 이유만 한 줄로 알린다(서버도 "locked"로 거절한다).
+		setHint("잠금을 해제해야 판매할 수 있습니다", true)
+		return
+	end
+	if not item then
 		return
 	end
 	local index = S.selectedValue

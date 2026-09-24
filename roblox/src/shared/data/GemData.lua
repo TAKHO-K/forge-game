@@ -114,6 +114,10 @@ return {
 		ticketDust = { ancient = 6, primordial = 10 },
 		refineGoldKills = { epic = 40, legendary = 80, relic = 160, ancient = 320, primordial = 640 },
 		refineDust = { epic = 4, legendary = 6, relic = 10, ancient = 15, primordial = 25 },
+		-- P3c E4 보석 판매(가방의 보석 → 골드): 판매가 = 그 보석을 분해했을 때의 가루 × 가루 1의 골드 몫 × sellFractionOfDust.
+		--   가루 1의 골드 몫 = 같은 등급 재련의 골드 ÷ 가루(refineGoldKills ÷ refineDust - 재련 한 번에서 골드와 가루가 맞바뀌는 비) × tier1 골드(GoldCost "refine").
+		--   sellFractionOfDust 0.5 = 분해 가루 가치의 절반(사용자 지시 "분해 가루 가치보다 낮게" - 팔면 손해, 분해가 기본 선택으로 남는다). 규칙 = shared/GemCraft.sellPrice.
+		sellFractionOfDust = 0.5,
 	},
 
 	-- S20c: 보석 장착 입력의 시간 값(밸런스가 아니라 입력 느낌 - 그래도 코드에 박지 않고 여기 둔다). 서버 규칙과 무관하다.

@@ -8,11 +8,16 @@
 return {
 	namePrefix = "ForgeLB_v1",
 
-	-- 시즌: seasonId를 올리면 새 저장소(빈 순위표)로 넘어간다. 기간은 운영 설정값(결정 필요 - 기본 4주). 자동 전환은 L1 범위 밖이다 -
-	-- 지금은 seasonStartUnix + seasonLengthDays로 "남은 기간"만 계산해 내려준다(0이면 시작일 미정).
+	-- 시즌(P3c C7 - 사용자 확정 "시즌 = 4주"): seasonStartUnix가 있으면 시즌 번호가 그날부터 seasonLengthDays(28)마다 자동으로 오른다(LeaderboardRules.seasonAt) -
+	-- 새 시즌 = 새 저장소 이름(_s<번호>_ - 빈 순위표, 0부터 시작). 끝난 시즌의 상위 기록은 "명예의 전당"(hallTopN)으로 한 번 복사해 둔다(Leaderboard.snapshotHall).
+	-- 영구 개인 최고(profile의 bestBossCleared)는 시즌과 무관하게 그대로다. 시작일 0 = 아직 안 정함 - seasonId 고정(결정 필요: 첫 시즌 시작일).
 	seasonId = 1,
 	seasonLengthDays = 28,
 	seasonStartUnix = 0,
+	-- 명예의 전당: 시즌이 끝나면 순위표마다 상위 hallTopN을 저장소 하나(<prefix>_hall, 키 s<시즌>)에 한 번 쓴다(값 = 모든 순위표 - 4MB 한도의 수십 분의 1).
+	-- 읽기는 서버가 hallCacheSeconds마다 한 번(시즌 탭 · 지난 시즌 순위표 - P3c E2).
+	hallTopN = 100,
+	hallCacheSeconds = 1800,
 
 	-- 직업별 · 파티 값 인코딩(정렬 저장소는 키마다 숫자 1개): value = stage × stageScale + (timeCapUnits − 1 − 클리어 시간 단위).
 	-- 시간 단위 0.1초 · 상한 timeCapUnits − 1 = 9,999,999단위(약 277.8시간) - 넘으면 상한으로 자른다(더 오래 걸린 기록은 모두 같은 꼴찌 시간).
@@ -26,7 +31,7 @@ return {
 	refreshSeconds = 90,
 
 	-- 클라 요청 최소 간격(초, 요청자별). board = 캐시 읽기(저장소 요청 0) · me = 내 기록 1회 읽기 · card = 무기 카드 1회 읽기(캐시 cardCacheSeconds).
-	requestIntervalSeconds = { board = 1, me = 10, card = 2 },
+	requestIntervalSeconds = { board = 1, me = 10, card = 2, hall = 2 }, -- hall(P3c E2) = 지난 시즌 순위표(서버 캐시 읽기)
 	cardCacheSeconds = 300,
 
 	-- 쓰기 실패 재시도(초) - 3번 다 실패하면 로그만 남기고 버린다(다음 기록 때 다시 쓴다 - 개인 · 직업 값은 UpdateAsync로 "더 좋을 때만" 올린다).

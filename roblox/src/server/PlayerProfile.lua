@@ -419,7 +419,9 @@ function PlayerProfile.addCharacterExp(player, amount)
 	local oldLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
 	-- S21-0 A2: 보상 계산 출구.
 	-- P2.5c 결정 3: 환생 회차 배율(CharacterLevel.getRebirthExpMultiplier)은 캐릭터 경험치에만 - 재료 기대 개수가 쓰는 getExpGainMultiplier에는 안 넣는다.
-	classState.characterExp += Sanitize.number(amount * PlayerProfile.getExpGainMultiplier(player) * CharacterLevel.getRebirthExpMultiplier(classState.rebirthCount), 0)
+	-- P3c C4: 레벨 126부터 필요 경험치와 같은 배수(CharacterLevel.getExpScale - 지금 레벨 기준)를 곱한다 - 처치 수는 그대로.
+	classState.characterExp += Sanitize.number(amount * PlayerProfile.getExpGainMultiplier(player) * CharacterLevel.getRebirthExpMultiplier(classState.rebirthCount)
+		* CharacterLevel.getExpScale(oldLevel), 0)
 	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then
@@ -839,6 +841,25 @@ function PlayerProfile.dismantleGem(player, index)
 	PlayerProfile.addGemDust(player, dust)
 	GemSync.push(player)
 	return true, dust
+end
+
+-- P3c E4: 보석 판매 - 가방의 보석 1개 → 골드(GemCraft.sellPrice · 계정 최고 스테이지). 홈에 낀 보석은 대상이 아니다(분해와 같다). 반환: 성공, 판매가 | 이유.
+function PlayerProfile.sellGem(player, index)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	local gem = classState.gemInventory[index]
+	if not gem then
+		return false, "not_found"
+	end
+	local price = Sanitize.number(GemCraft.sellPrice(gem, PlayerProfile.getAccountBestStage(player)), 0) -- S21-0 A2: 보상 계산 출구
+	table.remove(classState.gemInventory, index)
+	profile.gold += price
+	player:SetAttribute("Gold", profile.gold)
+	GemSync.push(player)
+	return true, price
 end
 
 -- 일괄 분해(C2): 가방 보석 중 cutoffGradeId 이하 등급 전부 → 가루. 목록을 먼저 다 계산한 뒤 한 번에 바꾼다(sellItemsBulkUpTo와 같은 원칙 - 중간 yield 없음). 반환: 개수, 가루.

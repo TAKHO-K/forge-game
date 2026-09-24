@@ -80,6 +80,24 @@ function LeaderboardRules.minClearSeconds(bossMaxHp, dpsCaps)
 end
 
 -- 파티 기록 키 = 멤버 UserId 오름차순을 이은 것(같은 구성 = 같은 키 - 그 구성의 최고 기록 하나). 4명 × 11자리 + 구분자 < 50자(키 상한).
+-- P3c C7: 지금 시즌 번호. 시작일(seasonStartUnix)이 있으면 그날부터 seasonLengthDays마다 1씩 오른다(1부터) - 서버 여러 대가 같은 시계로 같은 번호를 낸다.
+-- 시작일이 0(아직 안 정함)이면 seasonId 고정(운영이 손으로 올린다). 시작 전이면 1.
+function LeaderboardRules.seasonAt(now, config)
+	if (config.seasonStartUnix or 0) <= 0 then
+		return config.seasonId
+	end
+	local length = config.seasonLengthDays * 86400
+	return math.max(1, math.floor((now - config.seasonStartUnix) / length) + 1)
+end
+
+-- 그 시즌이 끝나는 시각(유닉스 초) - 시작일이 없으면 nil.
+function LeaderboardRules.seasonEndsAt(season, config)
+	if (config.seasonStartUnix or 0) <= 0 then
+		return nil
+	end
+	return config.seasonStartUnix + season * config.seasonLengthDays * 86400
+end
+
 function LeaderboardRules.partyKey(userIds)
 	local sorted = table.clone(userIds)
 	table.sort(sorted)

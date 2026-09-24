@@ -9,6 +9,8 @@ local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 -- P2 C1: 골드 비용은 전부 GoldCost 한 곳을 거친다(강화 · 방지권 · 변환권).
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
+-- P3c C1: 천장 구간 보정의 레벨 → 스테이지 척도(levelStageOffset).
+local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig)
 
 local Enhance = {}
 
@@ -36,7 +38,25 @@ function Enhance.getCost(level, accountBestStage)
 	if level >= EnhanceConfig.maxLevel then
 		return nil
 	end
-	return GoldCost.cost(EnhanceConfig.goldCost[level + 1], accountBestStage, "enhance")
+	local cost = GoldCost.cost(EnhanceConfig.goldCost[level + 1], accountBestStage, "enhance")
+	local discount = EnhanceConfig.ceilingDiscount
+	if discount and level >= discount.fromEnhanceLevel and accountBestStage then
+		cost = math.max(math.floor(cost * Enhance.getCeilingCostFactor(accountBestStage)), 1)
+	end
+	return cost
+end
+
+-- P3c C1 천장 구간 강화 비용 보정의 배수(1 = 보정 없음). EnhanceConfig.ceilingDiscount 주석 - 레벨 축(weaponGrowthSegments와 같은 축)의 두 점을 스테이지로 옮겨
+-- (+ CharacterLevelConfig.levelStageOffset) 그 사이에서 1 → factor로 곧게 내린다.
+function Enhance.getCeilingCostFactor(accountBestStage)
+	local discount = EnhanceConfig.ceilingDiscount
+	if not discount or not accountBestStage then
+		return 1
+	end
+	local offset = CharacterLevelConfig.levelStageOffset
+	local lo, hi = discount.rampFromLevel + offset, discount.fullAtLevel + offset
+	local t = math.clamp((accountBestStage - lo) / (hi - lo), 0, 1)
+	return 1 - (1 - discount.factor) * t
 end
 
 function Enhance.getProbability(level)

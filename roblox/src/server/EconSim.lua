@@ -388,7 +388,9 @@ local function newState(profile)
 		gemReplacements = 0,
 		bossClears = 0,
 		pendingKills = 0,
-		sinceCheck = 0,
+		-- P3c C5: 첫 가방 점검은 EconSimConfig.firstGearCheckMinutes에 한다(견습 1단계 안내 "B키로 가방을 열어 착용하세요" - 25마리 뒤) - 그 뒤는 프로필 간격.
+		-- 옛 모형은 첫 점검도 gearCheckMinutes(캐주얼 60분)라 첫 한 시간을 맨몸으로 사냥했다(P2.5c 결정 필요 5).
+		sinceCheck = math.max((profile.gearCheckMinutes - (EconSimConfig.firstGearCheckMinutes or profile.gearCheckMinutes)) * 60, 0),
 		bossGold = 0,
 		bossExp = 0,
 		gearMode = false,
@@ -578,7 +580,7 @@ local function fightBosses(state, profile, loadout, run)
 		state.bossSeconds += spent
 		state.gold += data.goldDrop
 		state.bossGold += data.goldDrop
-		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(state.rebirth) -- P2.5c: 환생 경험치 배율(캐릭터 경험치에만 - 게임 PlayerProfile.addCharacterExp와 같다)
+		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(state.rebirth) * CharacterLevel.getExpScale(state.level) -- P2.5c: 환생 경험치 배율(캐릭터 경험치에만 - 게임 PlayerProfile.addCharacterExp와 같다) · P3c C4 126 뒤 배수
 		state.exp += data.expReward * run.expMult * rebirthMult
 		state.bossExp += data.expReward * run.expMult * rebirthMult
 		local drop, reset = Enhance.getBossGrant(bossStage)
@@ -670,7 +672,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		end
 		hunt = chooseHunt(loadout, profile, math.max(1, state.reach - 1), state.gearMode and { armor = state.gear.armor }) -- 보스 스테이지(state.reach)는 아레나라 잡몹이 없다
 		tier = tierData(hunt.tier)
-		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth) -- P2.5c: 환생 경험치 배율(재료에는 안 곱한다)
+		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth) * CharacterLevel.getExpScale(state.level) -- P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
 		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage)
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)

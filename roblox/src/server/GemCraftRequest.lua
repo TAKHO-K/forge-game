@@ -4,6 +4,7 @@
 --     action = "dismantle"(a = 가방 index)       → data = { dust }
 --              "dismantleBulk"(a = 기준 등급 id) → data = { count, dust }   (대상 0개면 실패 "none")
 --              "refine"(a = "slot" | "bag", b = 홈 번호 | 가방 index, c = 먹일 가방 index) → data = { itemLevel }
+--              "sell"(a = 가방 index) → data = { gold }   (P3c E4 보석 판매)
 --   이유 코드: invalid(인자 모양 · 프로필 없음) · no_class · not_found · none · same_gem · no_gain · no_dust · no_gold.
 
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -27,6 +28,15 @@ function GemCraftRequest.handle(player, action, a, b, c)
 			return false, result
 		end
 		return true, nil, { dust = result }
+	elseif action == "sell" then
+		if not isIndex(a) then
+			return false, "invalid"
+		end
+		local ok, result = PlayerProfile.sellGem(player, math.floor(a))
+		if not ok then
+			return false, result
+		end
+		return true, nil, { gold = result }
 	elseif action == "dismantleBulk" then
 		if type(a) ~= "string" then
 			return false, "invalid"

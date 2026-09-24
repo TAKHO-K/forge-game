@@ -436,7 +436,7 @@ gemSync.OnClientEvent:Connect(function(data)
 end)
 
 craftResult.OnClientEvent:Connect(function(action, success, reason, data)
-	if action ~= "refine" and action ~= "dismantleBulk" and action ~= "dismantle" then
+	if action ~= "refine" and action ~= "dismantleBulk" and action ~= "dismantle" and action ~= "sell" then
 		return
 	end
 	pendingSince = nil
@@ -449,6 +449,8 @@ craftResult.OnClientEvent:Connect(function(action, success, reason, data)
 			text = "재련 완료 - 보석 레벨이 올랐습니다"
 		elseif action == "dismantleBulk" then
 			text = ("보석 %d개를 분해해 가루 %s를 얻었습니다"):format(data and data.count or 0, NumberFormat.format(data and data.dust or 0))
+		elseif action == "sell" then
+			text = ("보석을 판매해 골드 %s를 얻었습니다"):format(NumberFormat.format(data and data.gold or 0)) -- P3c E4
 		else
 			text = ("보석을 분해해 가루 %s를 얻었습니다"):format(NumberFormat.format(data and data.dust or 0))
 		end
