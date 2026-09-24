@@ -1259,6 +1259,10 @@ local function handleCommand(player, args)
 		if stage > InfiniteStageConfig.safeStageCap then
 			reply(player, ("경고: 임시 안전 상한(%d)을 넘었다 - 생존타수/보상 배율이 double 붕괴 구간에 가까워진다"):format(InfiniteStageConfig.safeStageCap))
 		end
+	elseif sub == "lb" and args[2] == "fake" then
+		-- P3b: 순위 창 화면 확인용 가짜 순위(수동 Play에서만 - 저장소 요청 0, Play가 끝나면 사라진다).
+		local filled = require(script.Parent.Leaderboard).debugFill(player)
+		reply(player, filled > 0 and ("가짜 순위표 %d개를 채웠다(개인 37위 · 내 직업 12위 · 파티 5위)"):format(filled) or "수동 Play에서만 된다(검증 모드 · 라이브 금지)")
 	elseif sub == "perf" then
 		ensureBackup(player)
 		task.spawn(PerfProbe.run, player)
@@ -3363,6 +3367,7 @@ if RunService:IsStudio() then
 				{ "P3a(나)", function() require(script.Parent.P3aVerify).runLive(player, env) end }, -- P3a: 실제 처치 경로의 진도 · 리더보드 쓰기/읽기/부정 방지(_verify 저장소)
 				{ "P3a(나C)", function() require(script.Parent.P3aArenaVerify).runLiveC(player, env) end }, -- P3a: 원형 맵 6종 · 구조물 · 돌진 충돌 · 뺑뺑이 방지 · 파트 수
 				{ "P3a(D)", function() local v = require(script.Parent.P3aArenaVerify) v.runLiveD(player, env, v.D_LABEL) end }, -- P3a: 장판 표시 ↔ 판정 실측(입장 20 + 20 · 점프 높이)
+				{ "P3b(나)", function() require(script.Parent.P3bVerify).runLive(player, env) end }, -- P3b: 순위 창 board 응답 · 자기 장비 비교 · 스킬 툴팁 = 실제 피해(D3)
 				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
 			}) do
 				if verifyEnabled(stage[1]) then
@@ -3670,6 +3675,16 @@ if RunService:IsStudio() and verifyEnabled("P3a(가)") then
 		local ok, err = pcall(require(script.Parent.P3aVerify).runPure)
 		if not ok then
 			warn(("[P3a(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ P3b 자동 검증 블록(가) - 장비 비교 줄 · 스킬 툴팁 글(docs/phase/P3b-log.md) ═══
+if RunService:IsStudio() and verifyEnabled("P3b(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.P3bVerify).runPure)
+		if not ok then
+			warn(("[P3b(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

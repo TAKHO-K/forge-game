@@ -114,20 +114,15 @@ local config = {
 		-- P3a(2026-09-24): 이번 블록 P3a(가) · (나) · (나C) · (D) + 동반(COMMON §3 - 바꾼 모듈이 사실상 전 블록에 걸린다: PlayerProfile(진도 · 기록 제외 표시) ·
 		-- SaveSystem v34 · CombatResolution(진도 판정) · BossEncounter · BossPatterns · BossData(킷 원형 재배치) · BossSkillMath · BossSim · WorldConfig(원형 아레나) ·
 		-- ZoneBounds · BossGimmicks · 전역 기믹 클라 → grep 결과 PlayerProfile을 쓰는 블록만 28개 → "넓은 쪽"으로 P2.5c와 같은 전 블록). regression 스위치는 그대로 false.
+		-- P3b(2026-09-24): 순위 창(L2) · 장비 보기 토글 · 비교 · 인벤토리 토글 상세 · 스킬 툴팁. 이번 블록 P3b(가) · P3b(나) · P3b(UI) + 동반(COMMON §3 - 바꾼 모듈을 쓰는 옛 블록, grep):
+		--   Leaderboard(이름 · 내 줄 · 가짜 채우기) → P3a(나) · SkillServer · HealCast(SkillStats로 식 이동) → S13(가)(나) · S13b(가)(나) · P25a(가)(나) ·
+		--   Inspect(칸 펼침 · 비교) → S12b(UI) · 인벤토리(BagTab · GearTab · GemTab · DetailSheet 토글 · 굴림) → S20(UI) · S20c(UI) · S20d(UI) · S20e(UI) · P25b(UI) ·
+		--   ScreenMap(새 슬롯) · 새 창 2개 → S12(UI)(창 전수 화면 안 · 글씨) · S16(UI) · S18(UI) · S19b(UI) · S10(가)(슬롯 겹침). regression 스위치는 그대로 false.
 		current = {
-			"P3a(가)", "P3a(나)", "P3a(나C)", "P3a(가C2)", -- P3a(D)(장판 실측 약 9분)는 Play 1(전) · Play 2(후)에서 돌렸다 - 이후 변경이 장판 판정과 무관해 Play 3에서 뺀다
-			-- P2.5c: 이번 블록 + 동반(바꾼 모듈이 사실상 전 블록에 걸린다 - PlayerDamage(신규 보호: 모든 보스 · 피격 블록) · CharacterLevel(경험치 곡선 · 천장) ·
-			-- SaveSystem v33 · PlayerProfile(마일스톤 · 경험치) · EnhanceConfig(비용 · 방지권) · EnhanceMaterialData · BossData(밀도) · ArmorData(보스 드랍) ·
-			-- Option(보석 몫) · DropTableData · EconSim(Report) · 성장 보상 창 · 토스트 → "넓은 쪽"으로 전 블록. regression 스위치는 그대로 false.
-			"P25c(가)", "P25c(나)",
-			"P25b(가)", "P25b(나)", "P25b(UI)", "P25a(가)", "P25a(나)", "P2(가)", "P2(나)", "P0(가)",
-			"26-2", "26-3", "27-1(가)", "27-1(나)", "27-3(가)", "27-3(나)", "27-4(가)", "27-4(나)",
-			"29-1", "29-2(나)", "29-3(나)", "29-4(나)", "29-5(나)",
-			"S01(가)", "S01(나)", "S02(가)", "S02(나)", "S03(가)", "S03(나)", "S04(가)", "S05(가)", "S05(나)", "S05b(가)", "S05b(나)",
-			"S07(가)", "S08(가)", "S08(나)", "S09(가)", "S09(나)", "S10(가)", "S10(나)", "S11(가)", "S11(나)", "S12(나)", "S12b(가)", "S12b(나)",
-			"S13(가)", "S13(나)", "S13b(가)", "S13b(나)", "S14(가)", "S14(나)", "S19b(가)", "S19b(나)",
-			"S20c(가)", "S20c(나)", "S20d(가)", "S20d(나)", "S20e(가)", "S20e(나)", "S21-0(가)", "S21-0(나)",
-			"S12(UI)", "S12b(UI)", "S15(UI)", "S16(UI)", "S17(UI)", "S18(UI)", "S19b(UI)", "S20(UI)", "S20c(UI)", "S20d(UI)", "S20e(UI)",
+			"P3b(가)", "P3b(나)", "P3b(UI)",
+			"P3a(나)", "S13(가)", "S13(나)", "S13b(가)", "S13b(나)", "P25a(가)", "P25a(나)",
+			"S12(UI)", "S12b(UI)", "S16(UI)", "S18(UI)", "S19b(UI)", "S10(가)",
+			"S20(UI)", "S20c(UI)", "S20d(UI)", "S20e(UI)", "P25b(UI)",
 		},
 	},
 }
