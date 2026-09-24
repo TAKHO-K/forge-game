@@ -20,12 +20,14 @@ local ArenaLayout = require(ReplicatedStorage.Shared.ArenaLayout)
 local GroundProbe = require(script.Parent.GroundProbe)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
+local PlayerState = require(script.Parent.PlayerState) -- P3d D3: 끼인 사람의 받는 피해 0배를 풀 때
 local Looks = require(script.Parent.BossArenaLooks)
 
 local BossArenaMap = {}
 
 local GEOMETRY = BossArenaMapData.geometry
 local OBSTACLE = BossArenaMapData.obstacle
+local REGROW = BossArenaMapData.regrow
 local FLOOR_TOP_Y = GEOMETRY.floorThicknessStuds / 2 -- 1(옛 아레나와 같은 관례)
 
 -- P3d B2: 맵 이탈 복귀 직후 보호 중인가(BossArenaContainment가 건다 - 이 모듈은 그 모듈을 require하지 않는다). nil이면 보호 없음.
@@ -255,6 +257,7 @@ end
 
 -- [zoneKey] = { zoneKey, theme, bossData, dressing(Model), layout, obstacles = { [id] = obstacle }, mounds = { Part }, lastBreak }
 local active = {}
+local spawnObstacle -- P3d D: 재생성(아래 BossArenaMap.spawnRegrown)이 먼저 부른다 - 정의는 아래
 
 local function zoneOfKey(zoneKey)
 	return WorldConfig.zones[zoneKey]
@@ -276,7 +279,7 @@ end
 -- 부서진 순간: 아레나 안 사람에게 파편 연출을 보내고, 윗면에 서 있던 사람은 파편과 함께 튕겨 나며 피해를 받는다(사용자 지시).
 -- 튕김은 보스 패턴의 넉백 연출(launch - BossStormView)을 그대로 쓴다 - P3c A5: 구역을 실어 보내 착지점이 벽 안쪽을 넘지 않는다. 반환: 튕겨 난 사람 목록, 떨어진 사람 목록(검증이 읽는다).
 -- P3d C2 · E2: 지진파(cause "wave") · 모래 구덩이(cause "pit")로 무너지면 위에 있던 사람은 **바닥으로 떨어지기만** 한다(피해 · 튕김 없음 - 떨어진 사람 목록).
-local SOFT_BREAK = { wave = true, pit = true }
+local SOFT_BREAK = { wave = true, pit = true, escape = true, expire = true } -- escape · expire = 끼임 구조물(P3d D3 - 3타 · 6초)
 local function fireBreak(state, obstacle, cause)
 	local zone = zoneOfKey(state.zoneKey)
 	local topBreak = OBSTACLE.topBreak
@@ -316,7 +319,8 @@ local function destroyObstacle(obstacle)
 	end
 end
 
--- 구조물 하나를 부순다(이미 부서졌으면 false). cause = "hits"(플레이어) · "charge"(보스 돌진) · "wave"(지진파 - 단상 · P3d C2) · "pit"(모래 구덩이 - P3d E2).
+-- 구조물 하나를 부순다(이미 부서졌으면 false). cause = "hits"(플레이어) · "charge"(보스 돌진) · "wave"(지진파 - 단상 · P3d C2) · "pit"(모래 구덩이 - P3d E2) ·
+-- "escape"(끼임 구조물을 3타 - P3d D3) · "expire"(끼임 자동 파괴 6초). 끼여 있던 사람은 여기서 풀린다(releaseEncased).
 function BossArenaMap.breakObstacle(zoneKey, id, cause)
 	local state = active[zoneKey]
 	local obstacle = state and state.obstacles[id]
@@ -326,8 +330,9 @@ function BossArenaMap.breakObstacle(zoneKey, id, cause)
 	obstacle.broken = true
 	state.obstacles[id] = nil
 	destroyObstacle(obstacle)
+	local released = BossArenaMap.releaseEncased(state, obstacle)
 	local launched, dropped = fireBreak(state, obstacle, cause)
-	state.lastBreak = { id = id, cause = cause, launched = launched, dropped = dropped, at = os.clock(), kind = obstacle.kind, hits = obstacle.hits, waveHits = obstacle.waveHits }
+	state.lastBreak = { id = id, cause = cause, launched = launched, dropped = dropped, released = released, at = os.clock(), kind = obstacle.kind, hits = obstacle.hits, waveHits = obstacle.waveHits, regrown = obstacle.regrown }
 	print(("[forge-game] 구조물 부서짐: %s #%d %s(%s) - 위에 있던 %d명 튕김 · %d명 떨어짐(피해 없음)"):format(zoneKey, id, obstacle.kind, cause, #launched, #dropped))
 	return true
 end
@@ -336,6 +341,217 @@ end
 function BossArenaMap.lastBreak(zoneKey)
 	local state = active[zoneKey]
 	return state and state.lastBreak or nil
+end
+
+-- ═══ 재생성 · 끼임 · 모래 구덩이 달그락(P3d D · E - 규칙 = BossArenaMapData.regrow 주석) ═══
+
+-- 끼임 표시 채널(클라 BossPatternVisuals - 머리 위 "탈출! n타"). 아레나 안 사람 전원에게 보낸다(친구도 부수러 올 수 있게).
+local encaseEvent = Instance.new("RemoteEvent")
+encaseEvent.Name = "BossArenaEncase"
+encaseEvent.Parent = ReplicatedStorage
+
+local function arenaPlayers(state)
+	local zone = zoneOfKey(state.zoneKey)
+	local list = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root and ArenaShape.contains(zone, root.Position, -GEOMETRY.wallThicknessStuds) then
+			table.insert(list, player)
+		end
+	end
+	return list
+end
+
+-- 끼임 상태를 알린다(hitsLeft = 남은 타수 · 0이면 풀림).
+function BossArenaMap.fireEncase(state, obstacle, hitsLeft)
+	local userIds = {}
+	for member in pairs(obstacle.encased or {}) do
+		if typeof(member) == "Instance" then
+			table.insert(userIds, member.UserId)
+		end
+	end
+	for _, player in ipairs(arenaPlayers(state)) do
+		encaseEvent:FireClient(player, { id = obstacle.id, userIds = userIds, hitsLeft = hitsLeft, seconds = obstacle.encaseUntil and math.max(obstacle.encaseUntil - os.clock(), 0) or 0,
+			position = obstacle.center + Vector3.new(0, obstacle.height, 0) })
+	end
+end
+
+-- 끼인 사람을 푼다(구조물이 부서질 때 · 치울 때). 반환: 풀린 사람 목록.
+function BossArenaMap.releaseEncased(state, obstacle)
+	local released = {}
+	for member in pairs(obstacle.encased or {}) do
+		table.insert(released, member)
+		local root = typeof(member) == "Instance" and member.Character and member.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			root.Anchored = false
+			PlayerState.clearIncomingDamageMultiplier(member)
+		end
+	end
+	if obstacle.encased and next(obstacle.encased) then
+		obstacle.encased = {}
+		BossArenaMap.fireEncase(state, obstacle, 0)
+		print(("[forge-game] 끼임 풀림: #%d - %d명"):format(obstacle.id, #released))
+	end
+	return released
+end
+
+-- 지금 서 있는 구조물 → 배치 칸 모양(아레나 중심 기준 - ArenaLayout.regrowSpot · connectivity가 읽는다).
+local function itemsOf(state)
+	local zone = zoneOfKey(state.zoneKey)
+	local items = {}
+	for _, obstacle in pairs(state.obstacles) do
+		local colliders = {}
+		for _, c in ipairs(obstacle.colliders) do
+			table.insert(colliders, { x = c.center.X - zone.center.X, z = c.center.Z - zone.center.Z, r = c.r })
+		end
+		table.insert(items, { x = obstacle.center.X - zone.center.X, z = obstacle.center.Z - zone.center.Z, radius = obstacle.radius, colliders = colliders })
+	end
+	return items
+end
+
+function BossArenaMap.itemsOf(zoneKey)
+	local state = active[zoneKey]
+	return state and itemsOf(state) or {}
+end
+
+-- 재생성 자리를 고른다. context = { members = { Vector3 }, boss = Vector3, pits = { { position, radius } } }.
+-- 반환: plan { item, token, worldColliders = { { center, r, h } }, tries } 또는 nil, 이유.
+function BossArenaMap.planRegrow(zoneKey, context)
+	local state = active[zoneKey]
+	if not state then
+		return nil, "no_arena"
+	end
+	local count = 0
+	for _ in pairs(state.obstacles) do
+		count += 1
+	end
+	if count >= REGROW.maxObstacles then
+		return nil, "cap"
+	end
+	local zone = zoneOfKey(zoneKey)
+	local function rel(p)
+		return { x = p.X - zone.center.X, z = p.Z - zone.center.Z }
+	end
+	local members, pits = {}, {}
+	for _, p in ipairs(context.members or {}) do
+		table.insert(members, rel(p))
+	end
+	for _, pit in ipairs(context.pits or {}) do
+		local r = rel(pit.position)
+		r.r = pit.radius
+		table.insert(pits, r)
+	end
+	local options = { kit = state.layoutOptions.kit, coverageMin = 0, members = members, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds }
+	state.nextRegrowId += 1
+	local item, tries, why = ArenaLayout.regrowSpot(state.theme, itemsOf(state), function()
+		return state.regrowRng:NextNumber()
+	end, options, state.nextRegrowId)
+	if not item then
+		return nil, why
+	end
+	local worldColliders = {}
+	for _, c in ipairs(item.colliders) do
+		table.insert(worldColliders, { center = Vector3.new(zone.center.X + c.x, FLOOR_TOP_Y, zone.center.Z + c.z), r = c.r, h = c.h })
+	end
+	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries }, nil
+end
+
+-- 전조가 끝나 실제로 솟는다(리셋 · 보스전 끝으로 토큰이 바뀌었으면 nil).
+function BossArenaMap.spawnRegrown(zoneKey, plan)
+	local state = active[zoneKey]
+	if not state or state.regrowToken ~= plan.token then
+		return nil
+	end
+	local item = table.clone(plan.item)
+	local obstacle = spawnObstacle(state, zoneOfKey(zoneKey), item)
+	obstacle.regrown = true
+	print(("[forge-game] 지형 재생성: %s #%d %s(%.0f, %.0f)%s"):format(zoneKey, item.id, item.kind, item.x, item.z, item.underMember and " - 멤버 발밑" or ""))
+	return obstacle
+end
+
+-- 발(feet)이 이 구조물의 어느 충돌 원에 몸이 닿는가(수평 거리 < 원 반경 + 몸 반폭). 반환: 가장 깊이 들어간 원(center · r) · 그 중심까지 수평 거리, 또는 nil.
+function BossArenaMap.colliderContact(obstacle, feet, halfWidth)
+	local best, bestDepth, bestDistance = nil, -math.huge, nil
+	for _, c in ipairs(obstacle.colliders) do
+		local d = Vector3.new(feet.X - c.center.X, 0, feet.Z - c.center.Z).Magnitude
+		if d < c.r + halfWidth and c.r - d > bestDepth then
+			best, bestDepth, bestDistance = c, c.r - d, d
+		end
+	end
+	return best, bestDistance
+end
+
+-- member를 이 구조물에 끼운다(D3) - 고정 · 받는 피해 0배 · 부수는 데 escapeHits · encaseAutoBreakSeconds 뒤 저절로 부서진다.
+function BossArenaMap.encase(zoneKey, obstacle, member, root)
+	local state = active[zoneKey]
+	if not state or obstacle.broken then
+		return false
+	end
+	obstacle.encased = obstacle.encased or {}
+	obstacle.encased[member] = true
+	obstacle.escape = true
+	obstacle.encaseUntil = obstacle.encaseUntil or (os.clock() + REGROW.encaseAutoBreakSeconds)
+	if typeof(root) == "Instance" then
+		root.Anchored = true
+		root.AssemblyLinearVelocity = Vector3.zero
+	end
+	if typeof(member) == "Instance" then
+		PlayerState.setIncomingDamageMultiplierUntil(member, 0, REGROW.encaseAutoBreakSeconds + 0.1)
+	end
+	BossArenaMap.fireEncase(state, obstacle, REGROW.escapeHits - obstacle.hits)
+	local token, id = state.regrowToken, obstacle.id
+	if not obstacle.expireScheduled then
+		obstacle.expireScheduled = true
+		task.delay(REGROW.encaseAutoBreakSeconds, function()
+			local now = active[zoneKey]
+			if now and now.regrowToken == token and now.obstacles[id] == obstacle then
+				BossArenaMap.breakObstacle(zoneKey, id, "expire")
+			end
+		end)
+	end
+	print(("[forge-game] 끼임: %s - #%d %s, %d타 또는 %.0f초"):format(tostring(member.Name), id, obstacle.kind, REGROW.escapeHits, REGROW.encaseAutoBreakSeconds))
+	return true
+end
+
+-- 원(position, radius)에 충돌 원이 걸친 구조물 id 목록(E2 - 모래 구덩이).
+function BossArenaMap.obstaclesInCircle(zoneKey, position, radius)
+	local ids = {}
+	local state = active[zoneKey]
+	for id, obstacle in pairs(state and state.obstacles or {}) do
+		for _, c in ipairs(obstacle.colliders) do
+			local dx, dz = position.X - c.center.X, position.Z - c.center.Z
+			if dx * dx + dz * dz < (radius + c.r) ^ 2 then
+				table.insert(ids, id)
+				break
+			end
+		end
+	end
+	table.sort(ids)
+	return ids
+end
+
+-- 모래 구덩이의 틱 한 번(E2): 그 구조물이 달그락거린다(클라) - breakTicks번째에 무너진다(cause "pit" - 위 사람은 떨어지기만). 반환: 지금까지 틱 수, 무너졌는가.
+function BossArenaMap.pitRattle(zoneKey, id, breakTicks)
+	local state = active[zoneKey]
+	local obstacle = state and state.obstacles[id]
+	if not obstacle or obstacle.broken then
+		return 0, false
+	end
+	obstacle.pitTicks = (obstacle.pitTicks or 0) + 1
+	if obstacle.pitTicks >= breakTicks then
+		BossArenaMap.breakObstacle(zoneKey, id, "pit")
+		return obstacle.pitTicks, true
+	end
+	for _, player in ipairs(arenaPlayers(state)) do
+		breakEvent:FireClient(player, { stage = "rattle", id = id, position = obstacle.center + Vector3.new(0, obstacle.height / 2, 0), radius = obstacle.radius, height = obstacle.height, color = obstacle.color })
+	end
+	return obstacle.pitTicks, false
+end
+
+-- 검증용: id의 구조물(사본 아님 - 읽기만).
+function BossArenaMap.debugObstacle(zoneKey, id)
+	local state = active[zoneKey]
+	return state and state.obstacles[id] or nil
 end
 
 -- ═══ 단상(P3d C - 올라갈 수 있는 큰 블록) ═══
@@ -405,7 +621,7 @@ function BossArenaMap.waveHitDais(zoneKey, id)
 	return nil
 end
 
-local function spawnObstacle(state, zone, item)
+function spawnObstacle(state, zone, item)
 	local center = Vector3.new(zone.center.X + item.x, FLOOR_TOP_Y, zone.center.Z + item.z)
 	local id = item.id
 	-- 충돌 = 투명 원기둥(충돌 원마다). 낮은 기둥은 지면 폴더(플레이어 물리 · 보스 지면 추적이 같은 것을 본다), 키 큰 기둥은 지면 폴더 밖.
@@ -457,7 +673,7 @@ local function spawnObstacle(state, zone, item)
 	MonsterState.init(model, data, root.Position, state.zoneKey, {
 		isRescueTarget = true,
 		rescueRemaining = function()
-			return 1 - obstacle.hits / OBSTACLE.hitsToBreak
+			return 1 - obstacle.hits / (obstacle.escape and REGROW.escapeHits or OBSTACLE.hitsToBreak)
 		end,
 		onRescueHit = function(player)
 			if obstacle.broken then
@@ -476,15 +692,19 @@ local function spawnObstacle(state, zone, item)
 					part.Color = part.Color:Lerp(Color3.new(0, 0, 0), 0.1)
 				end
 			end
-			-- P3c B2: 부서지기 직전(남은 타격 crackAtHitsLeft)에는 금 간 표시가 붙는다.
-			if not obstacle.cracked and OBSTACLE.hitsToBreak - obstacle.hits <= OBSTACLE.crackAtHitsLeft then
+			-- P3c B2: 부서지기 직전(남은 타격 crackAtHitsLeft)에는 금 간 표시가 붙는다. P3d D3: 끼임 구조물은 escapeHits(3)타에 부서진다.
+			local needed = obstacle.escape and REGROW.escapeHits or OBSTACLE.hitsToBreak
+			if obstacle.escape then
+				BossArenaMap.fireEncase(state, obstacle, needed - obstacle.hits)
+			end
+			if not obstacle.cracked and needed - obstacle.hits <= OBSTACLE.crackAtHitsLeft then
 				obstacle.cracked = true
 				for _, part in ipairs(Looks.crack(model, center, item)) do
 					table.insert(visuals, part)
 				end
 			end
-			if obstacle.hits >= OBSTACLE.hitsToBreak then
-				BossArenaMap.breakObstacle(state.zoneKey, id, "hits")
+			if obstacle.hits >= needed then
+				BossArenaMap.breakObstacle(state.zoneKey, id, obstacle.escape and "escape" or "hits")
 			end
 		end,
 	})
@@ -504,6 +724,7 @@ local function clearObstacles(state)
 		local obstacle = state.obstacles[id]
 		state.obstacles[id] = nil
 		destroyObstacle(obstacle)
+		BossArenaMap.releaseEncased(state, obstacle) -- P3d D3: 끼인 채 리셋 · 보스전 끝이면 풀어 준다
 	end
 end
 
@@ -540,7 +761,8 @@ function BossArenaMap.dress(zoneKey, bossData, seed)
 	BossArenaMap.debugNextSeed = nil
 	local startedAt = os.clock()
 	local layout = ArenaLayout.generate(theme, seed, ArenaLayout.optionsFor(bossData))
-	local state = { zoneKey = zoneKey, theme = theme, bossData = bossData, dressing = dressing, layout = layout, obstacles = {}, mounds = {} }
+	local state = { zoneKey = zoneKey, theme = theme, bossData = bossData, dressing = dressing, layout = layout, obstacles = {}, mounds = {},
+		layoutOptions = ArenaLayout.optionsFor(bossData), regrowToken = 0, nextRegrowId = 1000, regrowRng = Random.new(seed + 7) }
 	for _, spec in ipairs(theme.decor or {}) do
 		local builder = DECOR[spec.kind]
 		if builder then
@@ -568,6 +790,7 @@ function BossArenaMap.undress(zoneKey)
 	if not state then
 		return
 	end
+	state.regrowToken += 1 -- P3d D: 전조 중이던 재생성은 취소
 	clearObstacles(state)
 	for _, part in ipairs(state.mounds) do
 		part:Destroy()
@@ -582,6 +805,7 @@ function BossArenaMap.resetObstacles(zoneKey)
 	if not state then
 		return
 	end
+	state.regrowToken += 1 -- P3d D: 전조 중이던 재생성은 취소(처음대로 다시 선다 - 재생성된 것도 치운다)
 	clearObstacles(state)
 	spawnObstacles(state)
 end

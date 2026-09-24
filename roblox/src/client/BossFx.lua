@@ -1,7 +1,8 @@
 -- 보스 연출 조각(P3d A5 - 풀링 · 동시 상한 · 흔들림 설정). 판정 없음 - 파트는 전부 충돌 · 조준 · 터치 없음(서버 레이캐스트에 안 걸린다 · 클라에만 있다).
 -- 조각 = 풀에서 꺼낸 파트 하나 + 시작값 · 끝값 · 수명. RenderStepped 하나가 살아 있는 조각을 전부 움직이고(트윈을 조각마다 만들지 않는다), 수명이 끝나면 풀로 돌려준다.
 -- 동시 상한 BossFxData.maxActive를 넘는 요청은 버린다(연출이 빠질 뿐 - 판정은 서버). 숫자 · 상한 = shared/data/BossFxData.
---   spawn(spec)  spec = { shape("block"|"ball"|"cylinder"), position, velocity?, gravity?, size0, size1?, color, transparency0?, transparency1?, life, rotation?(CFrame), spin?(rad/초), material?, flat?(원판 - 크기 = 지름) }
+--   spawn(spec)  spec = { shape("block"|"ball"|"cylinder"), position, velocity?, gravity?, size0, size1?, color, transparency0?, transparency1?, life, rotation?(CFrame), spin?(rad/초), material?, flat?(원판 - 크기 = 지름),
+--                essential?(전조 그림 - 상한에 안 걸린다) }
 --   puff · streak · ring · chunk  자주 쓰는 모양
 --   shake(position, weight)  내 캐릭터가 가까우면 카메라를 짧게 흔든다(설정으로 끈다 - SettingBossScreenShake)
 --   count(n, weight)  다른 멤버가 주인공인 효과의 조각 수(weight = BossFxData.otherPlayerWeight)
@@ -67,7 +68,8 @@ function BossFx.count(n, weight)
 end
 
 function BossFx.spawn(spec)
-	if #active >= BossFxData.maxActive then
+	-- essential = 전조(판정을 알리는 그림 - 재생성 그림자 · 금 빛)는 상한에 걸려도 버리지 않는다(연출만 버린다).
+	if not spec.essential and #active >= BossFxData.maxActive then
 		stats.dropped += 1
 		return nil
 	end

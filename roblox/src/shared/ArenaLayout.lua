@@ -330,6 +330,90 @@ function ArenaLayout.generate(theme, seed, options)
 	return best
 end
 
+-- ═══ P3d D · E 재생성 자리(규칙 = BossArenaMapData.regrow 주석) ═══
+-- items = 지금 서 있는 구조물({ x, z, radius, colliders = { { x, z, r } } } - 아레나 중심 기준), rng() → [0, 1), nextId = 새 칸 id.
+-- options = defaults(반경 · 킷 · 입장) + members = { { x, z } } · boss = { x, z } · pits = { { x, z, r } } · mounds = { { x, z, radius } }.
+-- 반환: 새 칸(item - underMember = 멤버 발밑을 노렸는가) 또는 nil, 시도 수, 마지막 실패 이유.
+local REGROW = BossArenaMapData.regrow
+
+local function regrowClear(x, z, radius, items, o, options)
+	if math.sqrt(x * x + z * z) + radius > o.radius - LAYOUT.wallGapStuds + 1e-6 then
+		return false, "wall"
+	end
+	if angleDiffDeg(math.deg(math.atan2(z, x)), o.entryAngleDeg) < LAYOUT.entryClearDeg then
+		return false, "entry"
+	end
+	for _, other in ipairs(items) do
+		if math.sqrt((x - other.x) ^ 2 + (z - other.z) ^ 2) - radius - other.radius < LAYOUT.minGapStuds - 1e-6 then
+			return false, "obstacle"
+		end
+	end
+	for _, kit in ipairs(o.kit) do
+		if math.sqrt((x - kit.x) ^ 2 + (z - kit.z) ^ 2) - radius - kit.r < LAYOUT.kitGapStuds - 1e-6 then
+			return false, "kit"
+		end
+	end
+	local boss = options.boss
+	if boss and math.sqrt((x - boss.x) ^ 2 + (z - boss.z) ^ 2) - radius < REGROW.bossClearStuds then
+		return false, "boss"
+	end
+	for _, pit in ipairs(options.pits or {}) do
+		if math.sqrt((x - pit.x) ^ 2 + (z - pit.z) ^ 2) - radius - pit.r < REGROW.pitGapStuds then
+			return false, "pit"
+		end
+	end
+	for _, mound in ipairs(options.mounds or {}) do
+		if math.sqrt((x - mound.x) ^ 2 + (z - mound.z) ^ 2) - radius - mound.radius < LAYOUT.mounds.gapStuds then
+			return false, "mound"
+		end
+	end
+	return true, nil
+end
+
+function ArenaLayout.regrowSpot(theme, items, rng, options, nextId)
+	local o = defaults(options)
+	local specs = {}
+	for _, spec in ipairs(theme.layout or {}) do
+		if spec.group ~= "big" then
+			table.insert(specs, spec)
+		end
+	end
+	if #specs == 0 then
+		return nil, 0, "no_kind"
+	end
+	local members = options.members or {}
+	local reason = nil
+	for attempt = 1, REGROW.tries do
+		local spec = specs[1 + math.floor(rng() * #specs)]
+		local radius = spec.group == "feature" and SHAPES[spec.kind].footprint or (spec.radius[1] + (spec.radius[2] - spec.radius[1]) * rng())
+		local x, z, underMember
+		if #members > 0 and rng() < REGROW.underMemberChance then
+			local m = members[1 + math.floor(rng() * #members)]
+			local angle, d = rng() * 2 * math.pi, rng() * REGROW.underMemberStuds
+			x, z, underMember = m.x + math.cos(angle) * d, m.z + math.sin(angle) * d, true
+		else
+			local angle, d = rng() * 2 * math.pi, math.sqrt(rng()) * (o.radius - LAYOUT.wallGapStuds - radius)
+			x, z, underMember = math.cos(angle) * d, math.sin(angle) * d, false
+		end
+		local ok, why = regrowClear(x, z, radius, items, o, options)
+		if ok then
+			local rotation = rng() * 360
+			local item = {
+				id = nextId, kind = spec.kind, group = spec.group, x = x, z = z, radius = radius, rotationDeg = rotation,
+				colliders = collidersFor(spec.group, spec.kind, x, z, radius, rotation), spec = spec, climbable = false, underMember = underMember,
+			}
+			local all = table.clone(items)
+			table.insert(all, item)
+			if ArenaLayout.connectivity(all, o) then
+				return item, attempt, nil
+			end
+			why = "connectivity"
+		end
+		reason = why
+	end
+	return nil, REGROW.tries, reason
+end
+
 -- 돌진 경로(origin에서 단위벡터 dir로 length)에 처음 걸리는 구조물과 "닿는 거리". obstacles = { { id, colliders = { { center(Vector3) 또는 x · z, r } } } 또는 { id, center, radius } }.
 function ArenaLayout.firstOnPath(obstacles, origin, dir, length, bodyHalf)
 	local best, bestDistance = nil, math.huge

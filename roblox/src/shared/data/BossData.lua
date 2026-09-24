@@ -36,6 +36,7 @@
 --   bubble               말풍선 픽토그램 키(클라 BossPatternVisuals의 BUBBLES)
 --   densityScalable      true면 스테이지 밀도(mechanics.stageDensity)가 count · scatterStuds를 늘린다(S14 - 조건은 BossSkillMath.densityEligible)
 --   sim                  BossSim 전용 가정(회피 비용 등) - 게임 판정에는 안 쓰인다
+--   onComplete           P3d D1: 스킬이 **정상으로 끝난** 순간 도는 결과 조각(중단 · 리셋이면 안 돈다) - { type = "regrowObstacles", count }(지형지물 재생성)
 -- 전조 뒤 마지막 판정까지의 시간(시전)과 후딜은 손으로 적지 않는다 - 모양 파라미터(waveCount·volleys·
 -- dashCount·recoverSeconds…)에서 BossSkillMath.boundSeconds가 계산한다(값이 두 군데 있으면 어긋난다).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -208,6 +209,7 @@ local function guardianSkills()
 			-- 공중 판정 여유 - 지면 거리가 서 있을 때(HipHeight + 루트 반높이)보다 이만큼 더 크면 공중(21-3 실측).
 			airborneClearanceStuds = 0.5,
 			damage = { kind = "attack", multiplier = 2 }, damageLabel = "진동파",
+			onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
 		},
 		-- 낙석. 표적 장판 count개(첫 장판은 대상 현재 위치, 나머지는 scatterStuds 안 랜덤). 좌표 고정형이라
 		-- "계속 움직이는 사람은 안 맞는다". 회피 = 반경 6 + 1 = 7stud.
@@ -400,6 +402,7 @@ local SPECIES = {
 				telegraphSeconds = 2.25, radiusStuds = 18,
 				damage = { kind = "attack", multiplier = 3 }, damageLabel = "빙결 강타",
 				onImpact = { { type = "destroyProps", prop = "pillar" } },
+				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
 			},
 			-- 낙빙. 원이 입장 인원 + 2개(솔로 3): 멤버 각자의 발밑에 하나씩 + 대상 주변에 2개. 낙하점마다 얼음 기둥이
 			-- 남는다(29-3) - "어디서 피했는가" = "엄폐물이 어디 생기는가". 각자의 발밑에 떨어지므로 4인 전원이 자기
@@ -485,6 +488,7 @@ local SPECIES = {
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				layers = 2, layerGapSeconds = 4 / 24,
 				damage = { kind = "attack", multiplier = 1 }, damageLabel = "해일",
+				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
 			},
 			-- 물기둥. 기본형 낙석(동시 3개 산개)과 달리 **연발** - 하나가 터지면 그 순간의 대상 위치에 다음 것이
 			-- 예고된다. 한 번 피하고 서 있으면 다음 것을 맞는다(계속 걸어라).
@@ -540,6 +544,7 @@ local SPECIES = {
 				telegraphSeconds = 1.5, radiusStuds = 22,
 				pulses = { { innerRadiusStuds = 0, radiusStuds = 10 }, { innerRadiusStuds = 10, radiusStuds = 22 } },
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "파편 폭발",
+				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
 			},
 			-- 수정 낙하(23-6 "낙석 1개" 흡수). 하나지만 크다 - 기본형 낙석의 옆걸음으로는 못 나온다(11stud). 23-6의 반경
 			-- 6√3 = 10.39는 스테이지 범위 배율 최대(×1.152)에서 회피 부등식을 0.01초 넘겨 10으로 내렸다(PRD 20.75 B).
@@ -611,6 +616,8 @@ local SPECIES = {
 				radiusStuds = 8, coreRadiusStuds = 2.5, heightStuds = 0, maxCount = 3, armSeconds = 1.5,
 				pullStudsPerSecond = 6, coreTickSeconds = 0.75,
 				coreFraction = MECHANICS.gimmickFailMaxHpFraction / 6, damageLabel = "모래 구덩이", color = scorpionHead,
+				-- P3d E2(사용자 요청): 구조물 위에도 생기고, 걸친 구조물은 틱(coreTickSeconds)마다 달그락거리다 ticks번째에 무너진다(위 사람은 떨어지기만 - 피해 없음).
+				breaksObstacles = { ticks = 3 },
 			},
 		},
 		skills = {
@@ -650,6 +657,7 @@ local SPECIES = {
 				onEnd = { { type = "destroyProps", prop = "pit", which = "all" } },
 				arenaMarginStuds = 5, -- 몸통 반폭 1.2 × 2.8 × 1.3 = 4.4보다 조금 크게
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction / 2 }, damageLabel = "잠행 찌르기",
+				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
 			},
 			-- 갑각 태세(기믹, 29-3). 예고 1초(몸을 낮춘다) → 태세 3초(빨강 고리 - 받는 피해 0, 때린 사람에게 반사) → 꼬리
 			-- 내려찍기(태세 마지막 1.5초가 예고) → 꼬리 박힘 3초(고리가 사라진다 - 때려도 되는 순간, 헤롱 자세).
@@ -703,6 +711,7 @@ local SPECIES = {
 				rhythm = { label = "천둥 · 메아리", { speedStuds = 36 }, { gapSeconds = 1.3, speedStuds = 20 } },
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				damage = { kind = "attack", multiplier = 1.5 }, damageLabel = "방전 고리",
+				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
 			},
 			-- 회오리(29-4 - 28-2의 "연쇄 번개" 직선 자리를 대신한다, PRD 20.77 [1] · 20.79). 대상 위치의 원 하나 - 맞으면 그 자리에서
 			-- 공중으로 떠올라 원을 그리며 돌다가 내려온다. 낙뢰의 넉백과 **같은 결과 조각**(onHit = launch)이고 파라미터만 늘었다:

@@ -5,8 +5,11 @@
 --   hits · charge(옛 그대로) = 바깥으로 튀어 오르는 파편
 --   wave(단상이 지진파 두 번에 무너짐 - C2) · pit(모래 구덩이에 달그락거리다 부서짐 - E2) = 제자리로 주저앉는 낮은 파편 + 바닥 먼지 고리(위에 있던 사람은 그냥 떨어진다)
 --   stage = "crack"(단상 첫 지진파 - C2) = 윗면 둘레 먼지 + 작은 조각이 튄다(금 자체는 서버 파트)
+--   stage = "rattle"(모래 구덩이 틱 - E2) = 그 구조물이 잠깐 달그락거린다(보이는 파트만 로컬로 흔든다) + 모래 먼지
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local BossFxData = require(ReplicatedStorage.Shared.data.BossFxData)
 local BossFx = require(script.Parent.BossFx)
@@ -68,8 +71,56 @@ local function crack(data)
 	end
 end
 
+-- E2 달그락: 모래 구덩이 틱마다 그 구조물의 보이는 파트를 이 화면에서만 잠깐 흔든다(서버 파트의 CFrame을 로컬로 옮겼다가 되돌린다 - 충돌 기둥은 안 건드린다) + 발밑 모래 먼지.
+local rattling = {}
+local function rattle(data)
+	local best, bestDistance = nil, math.huge
+	for _, model in ipairs(CollectionService:GetTagged("ArenaObstacle")) do
+		local root = model.PrimaryPart
+		if root then
+			local d = Vector3.new(root.Position.X - data.position.X, 0, root.Position.Z - data.position.Z).Magnitude
+			if d < bestDistance then
+				best, bestDistance = model, d
+			end
+		end
+	end
+	if not best or bestDistance > (data.radius or 4) + 1 or rattling[best] then
+		return
+	end
+	local parts = {}
+	for _, part in ipairs(best:GetDescendants()) do
+		if part:IsA("BasePart") and part ~= best.PrimaryPart then
+			parts[part] = part.CFrame
+		end
+	end
+	rattling[best] = true
+	local started = os.clock()
+	local cfg = BossFxData.rattle
+	local connection
+	connection = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - started
+		local done = t >= cfg.seconds or not best.Parent
+		for part, base in pairs(parts) do
+			if part.Parent then
+				part.CFrame = done and base or (base * CFrame.new(rng:NextNumber(-1, 1) * cfg.amplitudeStuds, 0, rng:NextNumber(-1, 1) * cfg.amplitudeStuds) * CFrame.Angles(0, 0, math.rad(rng:NextNumber(-4, 4))))
+			end
+		end
+		if done then
+			connection:Disconnect()
+			rattling[best] = nil
+		end
+	end)
+	local floorY = data.position.Y - (data.height or 4) / 2
+	for index = 1, 4 do
+		local angle = (index / 4) * 2 * math.pi + rng:NextNumber(-0.4, 0.4)
+		BossFx.puff(Vector3.new(data.position.X, floorY + 0.5, data.position.Z) + Vector3.new(math.cos(angle), 0, math.sin(angle)) * (data.radius or 4), rng:NextNumber(1, 1.6), dustColor(data.color), 0.4, Vector3.new(0, 2, 0))
+	end
+end
+
 breakEvent.OnClientEvent:Connect(function(data)
-	if data.stage == "crack" then
+	if data.stage == "rattle" then
+		rattle(data)
+	elseif data.stage == "crack" then
 		crack(data)
 	elseif data.cause == "wave" or data.cause == "pit" then
 		crumble(data)

@@ -33,6 +33,7 @@ local BossSplitView = require(script.Parent.BossSplitView) -- 29-5 수정 여왕
 local BossStormView = require(script.Parent.BossStormView) -- 29-3: 낙뢰(하늘에서 꽂히는 번개) · 맞으면 튕겨 나는 넉백
 local BossFloodView = require(script.Parent.BossFloodView) -- 29-4: 심해 군주의 단(내 시계로 가라앉는다) · "아직 이르다" 윗면 빨강
 local BossRhythmView = require(script.Parent.BossRhythmView) -- P3c A: 점프 틈 · 돌진 대상 표식 · 번개 추적 원
+local BossRegrowView = require(script.Parent.BossRegrowView) -- P3d D: 지형 재생성 전조(그림자 + 금 빛) · 솟음 · 끼임 표시
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
@@ -594,6 +595,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		cross(data)
 	elseif kind == "crossFire" then
 		crossFire()
+	elseif kind == "regrowTelegraph" then
+		BossRegrowView.telegraph(data)
+	elseif kind == "regrowSpawn" then
+		BossRegrowView.spawn(data)
 	elseif kind == "reset" then
 		resetAll()
 		BossRhythmView.clear()

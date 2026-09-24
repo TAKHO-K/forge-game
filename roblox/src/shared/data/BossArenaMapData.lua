@@ -93,6 +93,35 @@ local layout = {
 	mounds = { count = { 2, 3 }, radiusStuds = { 12, 20 }, stepStuds = 0.5, maxHeightStuds = 1.5, gapStuds = 4 },
 }
 
+-- P3d D · E 지형지물 재생성(보스전 도중 - 기존 구조물은 남기고 새것만 선다). 언제 = 보스 스킬 데이터의 onComplete 조각 { type = "regrowObstacles", count }(BossData - 보스별 표는 보고서),
+-- 스킬이 정상으로 끝난 순간(중단 · 리셋은 안 된다) → 전조 telegraphSeconds(그림자 + 금 가는 빛) → 솟는다. 끝난 뒤의 전역 쿨(5 ~ 7초, 격노 2.5초) 안에 솟으므로 다른 판정과 겹치지 않는다.
+--   무엇 = 그 맵 배치의 작은 구조물 · 작은 지형지물(group small · feature - 큰 블록은 안 솟는다).
+--   회피 부등식: telegraphSeconds 1.5 ≥ 인지 0.5 + (가장 큰 발자국 5 + 몸 반폭 1) ÷ 16 × 1.25 = 0.97 - 발밑에 솟아도 걸어서 비킨다(검증 P3d(가)가 kind마다 잰다).
+--   자리(E1 - ArenaLayout.regrowSpot, 서버와 100시드 검사가 같은 함수): 벽 틈 ≥ layout.wallGapStuds · 입장 방위 ± entryClearDeg 밖(스폰 자리 - P3d B 복귀 자리를 덮지 않는다) ·
+--     다른 구조물(단상 포함)과 ≥ layout.minGapStuds · 킷과 ≥ kitGapStuds · 보스와 ≥ bossClearStuds · 모래 구덩이와 ≥ pitGapStuds · 둔덕과 ≥ layout.mounds.gapStuds ·
+--     연결(갇힘 없음 - 격자 BFS) - 실패하면 다른 자리를 tries번까지 다시 뽑고, 다 실패하면 이번엔 안 솟는다(로그).
+--     underMemberChance의 확률로 멤버 한 명의 발밑(underMemberStuds 안)을 노린다(D2 "플레이어 발밑 생성 가능").
+--   못 피하면(솟는 순간 발이 충돌 원 안) 피해 = damage(평타 배율 - 방어 적용). 충돌 원 가장자리(원 반경 − encaseCoreInsetStuds 밖)면 원 밖으로 밀려나고, 안쪽이면 **끼인다**(D3):
+--     그 자리에 고정 · 받는 피해 0배(움직일 수 없는 동안은 못 피한다 - 29-1 잡힘과 같은 원칙) · 그 구조물을 escapeHits(3)타에 부순다(누가 때려도) ·
+--     encaseAutoBreakSeconds(6초) 뒤 저절로 부서진다(영구 갇힘 방지). 머리 위 "탈출! n타"(클라).
+--   동시 상한(D4): 서 있는 구조물이 maxObstacles 이상이면 안 솟는다. 부서진 조각은 서버 인스턴스를 전부 파괴 · 클라 파편은 풀(BossFx)로 돌아간다.
+local regrow = {
+	telegraphSeconds = 1.5,
+	damage = { kind = "attack", multiplier = 2 }, damageLabel = "솟는 바위",
+	escapeHits = 3,
+	encaseAutoBreakSeconds = 6,
+	encaseCoreInsetStuds = 0.8,
+	pushOutStuds = 1.3,
+	maxObstacles = 14,
+	tries = 80,
+	underMemberChance = 0.5,
+	underMemberStuds = 4,
+	bossClearStuds = 6, -- 보스 몸통 반폭 3.6 + 여유
+	pitGapStuds = 1,
+	-- E3 검사(100시드 × 6맵): 한 시드에 재생성 events번 - 멤버 1 ~ 4명 · 보스 · 모래 구덩이 0 ~ 3개를 무작위로 둔다.
+	check = { seeds = 100, events = 8, seedBase = 20260925 },
+}
+
 -- P3c B3 작은 지형지물의 모양(kind마다) - 충돌 원(colliders: 한가운데 기준 x · z · 반경 · 높이 · tall)과 자리 잡기용 발자국 반경(footprint).
 --   tall = 충돌 기둥이 보이는 모양만큼 높다(석상 · 얼음 기둥 - 위에 올라설 수 없게). 이런 기둥은 지면 폴더 밖에 둔다(지면 탐지 · 드랍 스냅 · 낙하점 높이가 기둥 꼭대기를
 --   바닥으로 보지 않게). 보스는 추격 중에 가는 기둥을 비켜 가지 않는다(보스 몸은 충돌이 없다 - 돌진은 부딪혀 부순다).
@@ -285,6 +314,7 @@ return {
 	obstacle = obstacle,
 	containment = containment,
 	layout = layout,
+	regrow = regrow,
 	featureShapes = featureShapes,
 	maps = maps,
 	default = default,

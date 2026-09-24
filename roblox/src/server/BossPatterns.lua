@@ -365,6 +365,10 @@ local function endSkill(model, st, data, now)
 	if st.skill and st.skill.onEnd then
 		runEffects({ model = model, st = st, data = data, position = st.position }, st.skill.onEnd, {})
 	end
+	-- P3d D1: onComplete 조각은 **정상으로 끝났을 때만** 돈다(중단 · 리셋 · 전멸이면 안 돈다) - 지형 재생성(regrowObstacles)의 자리.
+	if st.skill and st.skill.onComplete and not st.interrupting then
+		runEffects({ model = model, st = st, data = data, position = st.position, now = now, skill = st.skill }, st.skill.onComplete, {})
+	end
 	st.phase = "normal"
 	st.current = nil
 	st.skill = nil
@@ -434,10 +438,81 @@ local function chargeZones(c, effect, info)
 	end
 end
 
+-- ─────────────────────────── 지형 재생성(P3d D · E - 규칙 = BossArenaMapData.regrow 주석) ───────────────────────────
+-- onComplete = { { type = "regrowObstacles", count } }. 자리는 BossArenaMap.planRegrow(= ArenaLayout.regrowSpot - 기존 구조물 · 단상 · 모래 구덩이 · 얼음 기둥 · 보스 · 킷 ·
+-- 둔덕 · 입장 방위와 겹치지 않고 갇힘이 없는 자리) → 멤버에게 전조(그림자 + 금 가는 빛)를 보내고 telegraphSeconds 뒤 솟는다. 솟는 순간 몸이 충돌 원에 닿은 사람:
+-- 피해(regrow.damage - 방어 적용) + 가장자리면 원 밖으로 밀려나고, 안쪽(원 반경 − encaseCoreInsetStuds 안)이거나 밀려날 자리가 막혔으면 끼인다(BossArenaMap.encase).
+local REGROW = BossArenaMapData.regrow
+local REGROW_SKILL = { damage = REGROW.damage, damageLabel = REGROW.damageLabel } -- applySkillDamage가 읽는 모양
+
+local function regrowObstacles(c, effect)
+	local st, model, data = c.st, c.model, c.data
+	if data.isTutorial then
+		return -- 견습 보스전에는 솟지 않는다(배우는 자리 - 29-3 자동회복 예외와 같은 이유)
+	end
+	local zoneKey = MonsterState.getZoneKey(model)
+	local members, keepOut = {}, {}
+	for _, v in ipairs(victims(st)) do
+		table.insert(members, v.root.Position)
+	end
+	for _, prop in ipairs(BossArenaProps.list(model)) do -- 모래 구덩이 · 얼음 기둥(동적 지형) 위에는 솟지 않는다(E1)
+		table.insert(keepOut, { position = prop.position, radius = prop.radius })
+	end
+	local half = BossData.mechanics.dodge.characterHalfWidthStuds
+	for _ = 1, effect.count or 1 do
+		local plan, why = BossArenaMap.planRegrow(zoneKey, { members = members, boss = c.position, pits = keepOut })
+		if not plan then
+			print(("[forge-game] 지형 재생성 건너뜀: %s - %s"):format(zoneKey, tostring(why)))
+			debugEvent("regrowSkip", { reason = why, at = os.clock() })
+			break
+		end
+		send(st, "regrowTelegraph", { id = plan.item.id, colliders = plan.worldColliders, seconds = REGROW.telegraphSeconds, color = plan.item.spec.color, floorY = st.floorY })
+		debugEvent("regrowPlan", { plan = plan, at = os.clock() })
+		local planned = os.clock()
+		task.delay(REGROW.telegraphSeconds, function()
+			local obstacle = BossArenaMap.spawnRegrown(zoneKey, plan)
+			if not obstacle then
+				return
+			end
+			local outcomes = {}
+			for _, v in ipairs(victims(st)) do
+				local collider, d = BossArenaMap.colliderContact(obstacle, v.feet, half)
+				if collider and Reach.sameLayer(v.feet, Vector3.new(0, st.floorY, 0)) then
+					applySkillDamage(model, data, REGROW_SKILL, v.player)
+					local outcome = "encase"
+					if d > collider.r - REGROW.encaseCoreInsetStuds then
+						local away = Vector3.new(v.root.Position.X - collider.center.X, 0, v.root.Position.Z - collider.center.Z)
+						away = away.Magnitude > 1e-3 and away.Unit or Vector3.new(1, 0, 0)
+						local target = collider.center + away * (collider.r + REGROW.pushOutStuds)
+						if not BossArenaMap.overlapsObstacle(zoneKey, target, half, 0) then
+							outcome = "push"
+							local to = Vector3.new(target.X, v.root.Position.Y, target.Z)
+							if typeof(v.root) == "Instance" then
+								v.root.CFrame = CFrame.new(to) * v.root.CFrame.Rotation
+							else
+								v.root.Position = to
+							end
+						end
+					end
+					if outcome == "encase" then
+						BossArenaMap.encase(zoneKey, obstacle, v.player, v.root)
+					end
+					table.insert(outcomes, { player = v.player, outcome = outcome, depth = collider.r - d })
+				end
+			end
+			send(st, "regrowSpawn", { id = obstacle.id, colliders = plan.worldColliders, color = plan.item.spec.color, floorY = st.floorY })
+			debugEvent("regrowSpawn", { id = obstacle.id, plan = plan, outcomes = outcomes, at = os.clock(), telegraph = os.clock() - planned })
+		end)
+	end
+end
+
 runEffects = function(c, effects, info)
 	for _, effect in ipairs(effects or {}) do
 		if effect.type == "chargeZone" then
 			chargeZones(c, effect, info)
+			continue
+		elseif effect.type == "regrowObstacles" then
+			regrowObstacles(c, effect) -- P3d D
 			continue
 		end
 		local def = c.data.props and c.data.props[effect.prop]
@@ -474,7 +549,8 @@ runEffects = function(c, effects, info)
 				for _, other in ipairs(BossArenaProps.list(c.model)) do
 					clear = clear and Reach.horizontalDistance(other.position, spot) >= def.radiusStuds + other.radius
 				end
-				clear = clear and not BossArenaMap.overlapsObstacle(MonsterState.getZoneKey(c.model), spot, def.radiusStuds, 2) -- P3a: 구조물과 겹치지 않게
+				-- P3a: 구조물과 겹치지 않게. P3d E2(사용자 요청): 구조물을 부수는 지형(def.breaksObstacles - 모래 구덩이)은 구조물 위에도 생긴다 - 그 구조물이 달그락거리다 부서진다(tickHazards).
+				clear = clear and (def.breaksObstacles ~= nil or not BossArenaMap.overlapsObstacle(MonsterState.getZoneKey(c.model), spot, def.radiusStuds, 2))
 				if clear then
 					local position = Vector3.new(spot.X, GroundProbe.surfaceY(spot.X, spot.Z, c.st.floorY) or c.st.floorY, spot.Z)
 					local prop, evicted = BossArenaProps.spawn(c.model, effect.prop, def, position)
@@ -551,6 +627,15 @@ local function tickHazards(model, st, data, now)
 	end
 	for _, prop in ipairs(BossArenaProps.list(model)) do
 		local def = data.props[prop.kind]
+		-- P3d E2: 구조물 위에 생긴 모래 구덩이 - 틱(coreTickSeconds)마다 걸친 구조물이 달그락거리고 breaksObstacles.ticks번째에 무너진다(위 사람은 떨어지기만).
+		if def and def.breaksObstacles and now >= (prop.armedAt or 0) and now - (prop.lastRattleAt or 0) >= def.coreTickSeconds then
+			prop.lastRattleAt = now
+			local zoneKey = MonsterState.getZoneKey(model)
+			for _, id in ipairs(BossArenaMap.obstaclesInCircle(zoneKey, prop.position, def.radiusStuds)) do
+				local ticks, broke = BossArenaMap.pitRattle(zoneKey, id, def.breaksObstacles.ticks)
+				debugEvent("pitRattle", { id = id, ticks = ticks, broke = broke, at = now, pit = prop.id })
+			end
+		end
 		if def and def.coreRadiusStuds and now >= (prop.armedAt or 0) then
 			for _, v in ipairs(victims(st)) do
 				local last = prop.lastTickAt[v.player]
@@ -1695,7 +1780,9 @@ function BossPatterns.interrupt(model, data)
 	clearDaze(model, st)
 	st.waves = {}
 	send(st, "reset", {})
+	st.interrupting = true -- P3d D1: 중단이면 onComplete(재생성)를 건너뛴다
 	endSkill(model, st, data, os.clock())
+	st.interrupting = false
 end
 
 -- 29-5 탱커 훅 ②(PRD 20.80 [F]) - 도발 인터럽트의 진입점. 탱커의 도발 스킬이 생기면 SkillServer가 여기를 부른다.
