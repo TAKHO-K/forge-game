@@ -496,7 +496,8 @@ local function refreshDetailBody()
 		local described = ItemDescribe.item(item, player:GetAttribute("ClassId"))
 		dname.Text = described.title .. " (가방)" -- P3b C1: 장착 여부(착용 칸은 "(착용 중)")
 		dname.TextColor3 = color
-		dmeta.Text = ("%s%s · 판매가 %s"):format(described.meta, rollText(item), NumberFormat.format(Loot.getSellPrice(item)))
+		-- 굴림은 판매가 뒤(폰 시트 폭에서 줄임표로 잘릴 때 판매 판단에 쓰는 판매가가 먼저 남게 - 굴림은 옵션 게이지로도 보인다).
+		dmeta.Text = ("%s · 판매가 %s%s"):format(described.meta, NumberFormat.format(Loot.getSellPrice(item)), rollText(item))
 		setDpicIcon(item.part or "armor", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
