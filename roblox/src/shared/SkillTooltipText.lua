@@ -99,7 +99,12 @@ function SkillTooltipText.build(classId, slot, info)
 	elseif shape == "summon" then
 		add("효과", stats and ("분신 · 확정 치명 %s%s"):format(seconds(stats.duration), optionText) or "불러오는 중…", "ember")
 	elseif shape == "heal" then
-		add("회복량", stats and ("%s · 치명 ×%s"):format(num(stats.heal), num(stats.critHealMultiplier)) or "불러오는 중…", "success")
+		if stats and stats.shieldMode then
+			-- 딜링모드 + 파티: 이번 시전은 회복 대신 쉴드(리뷰 6 - 회복량을 보여 주면 실제와 다르다).
+			add("쉴드량", ("자신 %s · 치명 ×%s(파티원은 각자 최대 체력 기준)"):format(num(stats.shieldAmount), num(stats.critHealMultiplier)), "success")
+		else
+			add("회복량", stats and ("%s · 치명 ×%s"):format(num(stats.heal), num(stats.critHealMultiplier)) or "불러오는 중…", "success")
+		end
 	elseif shape == "toggle" then
 		add("효과", stats and ("평타 ×%s(기본 ×%s × 투자 배율 ×%s)"):format(num(stats.attackMultiplier), num(def.attackMultiplier), num(stats.investmentScale)) or "불러오는 중…", "ember")
 		add("소모", stats and ("초당 최대 체력의 %s%s"):format(pct(stats.drainPerSecond), optionText) or "-")
@@ -149,7 +154,7 @@ function SkillTooltipText.build(classId, slot, info)
 	elseif classId == "healer" and shape == "toggle" then
 		add("치유모드", stats and (stats.active and "지금: 딜링모드(켜짐)" or "지금: 치유모드(꺼짐 - 평타 ×1)") or "-")
 	elseif def.coefficient then
-		add("치유모드", info and ("치유사 파티 버프를 받으면 최종 피해 ×%s(모드와 무관)"):format(num(1 + info.healerBuff)) or "-")
+		add("치유모드", info and ("치유사 파티 버프를 받으면 최종 피해 +%s(모드와 무관)"):format(pct(info.healerBuff)) or "-")
 	end
 
 	-- 설명 없이는 알기 어려운 규칙

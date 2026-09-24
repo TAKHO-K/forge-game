@@ -63,12 +63,12 @@ local function signColor(sign)
 	return Theme.colors.textSecondary
 end
 
--- 상세 줄 목록(EquipCompare) - 비교가 켜져 있고 내 스냅샷이 있으면 "나" 칸이 채워진다.
+-- 상세 줄 목록(EquipCompare) - 비교가 켜져 있고 내 스냅샷이 있으면 "나" 칸이 채워진다. 비공개 칸(카드의 방어구)은 hidden 표시 - 비교 칸 없이 한 줄로 그린다.
 local function detailLines(slotName)
 	local data = view.data
 	local item, hidden = EquipCompare.slotItem(data, slotName)
 	if hidden then
-		return { { label = PART_TEXT[slotName] or "장비", theirs = "리더보드에서는 무기 · 보석만 공개됩니다" } }
+		return { hidden = true, { label = PART_TEXT[slotName] or "장비", theirs = "리더보드에서는 무기 · 보석만 공개됩니다" } }
 	end
 	local compare = view.compare and view.mine ~= nil
 	local mineItem = compare and EquipCompare.slotItem(view.mine, slotName) or nil
@@ -92,7 +92,9 @@ local function build()
 			view.returnTo = nil
 			if back then
 				task.delay(0.3, function()
-					if #UIManager.getStack() == 0 then
+					local humanoid = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Humanoid")
+					-- 사망 · 리스폰으로 창이 전부 닫힌 경우(UIManager.closeAll)는 되살리지 않는다(리뷰 4c).
+					if #UIManager.getStack() == 0 and humanoid and humanoid.Health > 0 then
 						UIManager.open(back)
 					end
 				end)
@@ -201,7 +203,7 @@ local function fillDetail(frame, lines)
 			child:Destroy()
 		end
 	end
-	local compare = view.compare and view.mine ~= nil
+	local compare = view.compare and view.mine ~= nil and not lines.hidden
 	local h = lineHeight()
 	local y = 4
 	local function cell(text, x, width, colorName, alignRight, color)
@@ -303,7 +305,10 @@ end
 
 local function resetView()
 	requestToken += 1
-	view.data, view.card, view.expanded = nil, false, {}
+	view.data, view.card, view.expanded, view.returnTo = nil, false, {}, nil -- 리뷰 4a: 일반 조회로 다시 열면 리더보드로 돌아가지 않는다
+	-- 리뷰 1: 비교는 창을 열 때마다 꺼진 채 시작한다(켜 둔 채로 열면 내 장비 조회가 대상 조회보다 먼저 가 서버 간격 0.5초에 대상 조회가 막혔다).
+	view.compare = false
+	built.compareToggle.setValue(false, true)
 	local refs = built
 	refs.scroll.Visible = false
 	refs.scroll.CanvasPosition = Vector2.zero
@@ -385,14 +390,22 @@ function Inspect.open(userId)
 		refs.nameLabel.Text = PlayerLabelFormat.richText(target.DisplayName, target:GetAttribute("CharacterLevel"), target:GetAttribute("RebirthCount"), Theme.textSize("header"))
 	end
 	UIManager.open(Inspect.id)
-	if view.compare then
-		fetchMine(token)
-	end
 
 	task.spawn(function()
-		local ok, result = pcall(function()
-			return inspectRemote:InvokeServer(userId)
-		end)
+		local ok, result
+		for attempt = 1, 2 do
+			ok, result = pcall(function()
+				return inspectRemote:InvokeServer(userId)
+			end)
+			if token ~= requestToken then
+				return
+			end
+			if attempt == 1 and ok and type(result) == "table" and result.reason == "rate_limited" then
+				task.wait(0.6) -- 서버 간격(0.5초) - 바로 앞 조회(다른 창 · 내 장비)와 겹치면 한 번 더
+			else
+				break
+			end
+		end
 		if token ~= requestToken then
 			return
 		end
@@ -410,16 +423,13 @@ end
 -- 리더보드 카드(무기 · 보석만 - 방어구 칸은 "?")로 연다. returnTo = 닫을 때 다시 열 창 id(선택). card = Leaderboard 카드({ userId, name, displayName, classId, level, rebirthCount, weapon }).
 function Inspect.openCard(card, returnTo)
 	ensureBuilt()
-	local token = resetView()
+	resetView()
 	view.returnTo = returnTo -- 닫으면 돌아갈 창 id(리더보드)
 	view.mine = nil
 	local shown = table.clone(card)
 	shown.equipment = nil -- 카드에 방어구가 실려 와도 그리지 않는다(리더보드 화면만 무기 제한 - B3)
 	showData(shown, true)
 	UIManager.open(Inspect.id)
-	if view.compare then
-		fetchMine(token)
-	end
 end
 
 -- 검사용: 칸을 누른 것과 같은 일을 한다(name = weapon · armor · gloves · shoes · gem1 ~ gem5). 지금 그 칸이 펼쳐졌는지와 칸 제목을 돌려준다.

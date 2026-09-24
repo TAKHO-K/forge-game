@@ -155,11 +155,21 @@ function SkillTooltip.show(slotId, anchor, touch)
 	if not refs then
 		build()
 	end
-	current = { slotId = slotId, anchor = anchor, touch = touch == true }
+	local shown = { slotId = slotId, anchor = anchor, touch = touch == true }
+	current = shown
 	render()
 	if os.clock() - cache.at > INFO_MAX_AGE then
 		fetch()
 	end
+	-- 보이는 동안 1초마다 서버 수치를 새로 받는다(딜링모드 전환 · 장비 교체가 바로 반영되게 - 리뷰 6).
+	task.spawn(function()
+		while current == shown do
+			task.wait(INFO_MAX_AGE)
+			if current == shown and os.clock() - cache.at >= INFO_MAX_AGE then
+				fetch()
+			end
+		end
+	end)
 	if RunService:IsStudio() then
 		player:SetAttribute("P3bTooltipShown", (player:GetAttribute("P3bTooltipShown") or 0) + 1)
 	end
@@ -184,6 +194,7 @@ end
 -- 칸(TextButton)에 입력을 붙인다. onTap = 시전(짧게 누름 · 클릭 · 기존 Activated 자리). isTouchLayout = SkillSlots의 터치 배치 판정.
 function SkillTooltip.attach(button, slotId, onTap, isTouchLayout)
 	local holding, pressToken, shownByPress, swallowActivate = false, 0, false, false
+	local pressInput = nil -- 이 칸을 누른 입력(다른 손가락 - 조이스틱 - 을 뗀 것은 무시한다, 리뷰 3)
 	local function isPress(input)
 		local inputType = input.UserInputType
 		return inputType == Enum.UserInputType.Touch or (inputType == Enum.UserInputType.MouseButton1 and isTouchLayout())
@@ -199,7 +210,7 @@ function SkillTooltip.attach(button, slotId, onTap, isTouchLayout)
 		if not isPress(input) then
 			return
 		end
-		holding, swallowActivate = true, false
+		holding, swallowActivate, pressInput = true, false, input
 		pressToken += 1
 		local token = pressToken
 		task.delay(SkillTooltip.longPressSeconds, function()
@@ -216,10 +227,21 @@ function SkillTooltip.attach(button, slotId, onTap, isTouchLayout)
 	end)
 	-- 손가락이 칸 밖으로 미끄러진 뒤 떼면 칸의 InputEnded가 안 올 수 있다 - 화면 어디서든 뗀 순간 닫는다.
 	UserInputService.InputEnded:Connect(function(input)
-		if holding and isPress(input) then
+		-- 터치는 손가락마다 다른 InputObject다 - 이 칸을 누른 그 손가락이 떨어졌을 때만. 마우스(Studio 터치 흉내)는 왼쪽 버튼이면 같은 누름이다.
+		local same = input == pressInput or (pressInput ~= nil and input.UserInputType == Enum.UserInputType.MouseButton1 and pressInput.UserInputType == Enum.UserInputType.MouseButton1)
+		if holding and same then
 			release()
 		end
 	end)
+	-- 칸이 숨거나 사라지면(직업 변경 · 배치 전환) 이 칸의 툴팁을 닫는다 - MouseLeave가 안 오는 경우(리뷰 7).
+	local function hideIfMine()
+		if current and current.anchor == button then
+			SkillTooltip.hide()
+		end
+	end
+	button:GetPropertyChangedSignal("Visible"):Connect(hideIfMine)
+	button.AncestryChanged:Connect(hideIfMine)
+	player:GetAttributeChangedSignal("ClassId"):Connect(hideIfMine)
 	button.Activated:Connect(function()
 		if swallowActivate then
 			swallowActivate = false

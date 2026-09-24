@@ -107,6 +107,9 @@ local function meText(result, isParty)
 	if result.outOfTop and result.stage then
 		return ("내 순위: %d위 밖 · 스테이지 %d"):format(result.topN or 100, result.stage)
 	end
+	if result.retry then
+		return "내 순위: 잠시 뒤 다시 불러옵니다"
+	end
 	if result.outOfTop and isParty then
 		return ("내 파티: %d위 안 기록 없음"):format(result.topN or 100)
 	end
@@ -421,13 +424,17 @@ local function fetchMe(boardId, token)
 				return
 			end
 			if reason ~= "rate_limited" then
-				state.me[boardId] = { result = { ok = true }, at = os.clock() - ME_CACHE_SECONDS + 5 } -- 5초 뒤 다시
-				return
+				break
 			end
 			task.wait(ME_RETRY_SECONDS)
 			if token ~= state.token or currentBoardId() ~= boardId then
 				return
 			end
+		end
+		-- 두 번 다 실패(간격 · 오류): "잠시 뒤" 표시 + 5초 뒤 캐시가 풀려 다음 갱신(탭 · 열기)이 다시 묻는다(리뷰 5).
+		state.me[boardId] = { result = { ok = true, retry = true }, at = os.clock() - ME_CACHE_SECONDS + 5 }
+		if currentBoardId() == boardId then
+			render()
 		end
 	end)
 end
@@ -499,6 +506,9 @@ function Leaderboard.openCard(boardId, key)
 			Toast.push("TC", { text = "이 기록에는 장비 정보가 없습니다", colorName = "textPrimary" })
 			return
 		end
+		if not UIManager.isOpen(Leaderboard.id) then
+			return -- 응답이 오기 전에 순위 창을 닫았다(리뷰 4b)
+		end
 		Inspect.openCard(result.card, Leaderboard.id)
 	end)
 end
@@ -533,7 +543,10 @@ end
 
 function Leaderboard.toggle()
 	ensureBuilt()
-	UIManager.toggle(Leaderboard.id)
+	local ok, text = UIManager.switchTo(Leaderboard.id)
+	if not ok and text then
+		Toast.push("TC", { text = text, colorName = "textPrimary" })
+	end
 end
 
 -- ═══ HUD 버튼 ═══
@@ -543,6 +556,8 @@ local function buildToggleButton()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "LeaderboardToggleGui"
 	gui.ResetOnSpawn = false
+	-- 창(DisplayOrder 100 ~ 149)의 딤 위 · 확인창(200 ~) 아래 - 순위 창이 열린 채 이 버튼을 다시 누르면 닫혀야 한다(S16 메뉴바와 같은 이유 · 실제 클릭으로 확인한 결함: 0이면 딤이 클릭을 먹었다).
+	gui.DisplayOrder = 150
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local button = Instance.new("TextButton")

@@ -117,6 +117,7 @@ function SkillStats.info(player)
 				entry.heal = HealCast.baseHeal(player, def)
 				entry.critHealMultiplier = def.critHealMultiplier + select(4, SkillStats.crit(player, classId))
 				entry.shieldMode = HealCast.usesShield(player, def)
+				entry.shieldAmount = entry.heal * def.shield.healRatio -- 자기 쉴드량(HealCast.cast의 쉴드 식 - 받는 사람 최대 체력 × 비율 × 치유 배수 × healRatio, 자기 자신 기준)
 				entry.maxHp = PlayerState.getMaxHp(player)
 			elseif def.shape == "toggle" then
 				local weapon = PlayerProfile.getWeapon(player)

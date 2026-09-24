@@ -433,8 +433,10 @@ local function bindSlotInput(obj, slot)
 			onSlotTap(slot)
 		elseif Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot) and Gem.isFilled(currentGemState.gems, slot) then
 			local selectedKind, selectedValue = deps.getSelection()
-			if selectedKind == "gemSlot" and selectedValue == slot then
-				deps.select(nil, nil) -- P3b C1: 같은 홈을 다시 누르면 상세가 닫힌다(토글)
+			if selectedKind == "gemSlot" and selectedValue == slot and armedFlag ~= slot then
+				-- P3b C1: 같은 홈을 다시 누르면 상세가 닫힌다(토글). 방금 더블클릭으로 이 홈을 "홈 먼저"로 골랐으면(두 번째 클릭의 InputBegan이 먼저 무장) 토글하지 않는다(리뷰 2).
+				armedFlag = nil
+				deps.select(nil, nil)
 			else
 				deps.select("gemSlot", slot)
 			end
