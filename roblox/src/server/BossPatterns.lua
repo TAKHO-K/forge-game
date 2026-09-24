@@ -459,58 +459,64 @@ local function regrowObstacles(c, effect)
 		table.insert(keepOut, { position = prop.position, radius = prop.radius })
 	end
 	local half = BossData.mechanics.dodge.characterHalfWidthStuds
-	for _ = 1, effect.count or 1 do
-		local plan, why = BossArenaMap.planRegrow(zoneKey, { members = members, boss = c.position, pits = keepOut })
-		if not plan then
-			print(("[forge-game] 지형 재생성 건너뜀: %s - %s"):format(zoneKey, tostring(why)))
-			debugEvent("regrowSkip", { reason = why, at = os.clock() })
-			break
-		end
-		send(st, "regrowTelegraph", { id = plan.item.id, colliders = plan.worldColliders, seconds = REGROW.telegraphSeconds, color = plan.item.spec.color, floorY = st.floorY })
-		debugEvent("regrowPlan", { plan = plan, at = os.clock() })
-		local planned = os.clock()
-		task.delay(REGROW.telegraphSeconds, function()
-			-- 리뷰 6: 솟기 직전 자리를 다시 본다 - 지금 보스 자리 · 지금 동적 지형(전조 사이 들어왔으면 이번엔 안 솟는다)
-			local now = {}
-			for _, prop in ipairs(BossArenaProps.list(model)) do
-				table.insert(now, { position = prop.position, radius = prop.radius })
+	local bossAt = c.position
+	-- P3d Play 2: 자리 찾기(연결 검사 - 격자 BFS, 한 번에 수 ms)를 step 밖에서 돈다(task.defer) - step 안에서 돌면 그 틱이 튀어 29-2 step 평균이 40 → 118마이크로초였다.
+	task.defer(function()
+		for _ = 1, effect.count or 1 do
+			local planStartedAt = os.clock()
+			local plan, why = BossArenaMap.planRegrow(zoneKey, { members = members, boss = bossAt, pits = keepOut })
+			if not plan then
+				print(("[forge-game] 지형 재생성 건너뜀: %s - %s"):format(zoneKey, tostring(why)))
+				debugEvent("regrowSkip", { reason = why, at = os.clock() })
+				break
 			end
-			local bossNow = model.Parent and model.PrimaryPart and (BossPatterns.getLogicalPosition(model) or model.PrimaryPart.Position) or nil
-			local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, { boss = bossNow, pits = now })
-			if not obstacle then
-				debugEvent("regrowSkip", { reason = why, at = os.clock(), atSpawn = true })
-				return
-			end
-			local outcomes = {}
-			for _, v in ipairs(victims(st)) do
-				local collider, d = BossArenaMap.colliderContact(obstacle, v.feet, half)
-				if collider and Reach.sameLayer(v.feet, Vector3.new(0, st.floorY, 0)) then
-					applySkillDamage(model, data, REGROW_SKILL, v.player)
-					local outcome = "encase"
-					if d > collider.r - REGROW.encaseCoreInsetStuds then
-						local away = Vector3.new(v.root.Position.X - collider.center.X, 0, v.root.Position.Z - collider.center.Z)
-						away = away.Magnitude > 1e-3 and away.Unit or Vector3.new(1, 0, 0)
-						local target = collider.center + away * (collider.r + REGROW.pushOutStuds)
-						if not BossArenaMap.overlapsObstacle(zoneKey, target, half, 0) then
-							outcome = "push"
-							local to = Vector3.new(target.X, v.root.Position.Y, target.Z)
-							if typeof(v.root) == "Instance" then
-								v.root.CFrame = CFrame.new(to) * v.root.CFrame.Rotation
-							else
-								v.root.Position = to
+			print(("[forge-game] 지형 재생성 자리: %s #%d %s - 시도 %d · %.1fms"):format(zoneKey, plan.item.id, plan.item.kind, plan.tries or 0, (os.clock() - planStartedAt) * 1000))
+			send(st, "regrowTelegraph", { id = plan.item.id, colliders = plan.worldColliders, seconds = REGROW.telegraphSeconds, color = plan.item.spec.color, floorY = st.floorY })
+			debugEvent("regrowPlan", { plan = plan, at = os.clock() })
+			local planned = os.clock()
+			task.delay(REGROW.telegraphSeconds, function()
+				-- 리뷰 6: 솟기 직전 자리를 다시 본다 - 지금 보스 자리 · 지금 동적 지형(전조 사이 들어왔으면 이번엔 안 솟는다)
+				local now = {}
+				for _, prop in ipairs(BossArenaProps.list(model)) do
+					table.insert(now, { position = prop.position, radius = prop.radius })
+				end
+				local bossNow = model.Parent and model.PrimaryPart and (BossPatterns.getLogicalPosition(model) or model.PrimaryPart.Position) or nil
+				local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, { boss = bossNow, pits = now })
+				if not obstacle then
+					debugEvent("regrowSkip", { reason = why, at = os.clock(), atSpawn = true })
+					return
+				end
+				local outcomes = {}
+				for _, v in ipairs(victims(st)) do
+					local collider, d = BossArenaMap.colliderContact(obstacle, v.feet, half)
+					if collider and Reach.sameLayer(v.feet, Vector3.new(0, st.floorY, 0)) then
+						applySkillDamage(model, data, REGROW_SKILL, v.player)
+						local outcome = "encase"
+						if d > collider.r - REGROW.encaseCoreInsetStuds then
+							local away = Vector3.new(v.root.Position.X - collider.center.X, 0, v.root.Position.Z - collider.center.Z)
+							away = away.Magnitude > 1e-3 and away.Unit or Vector3.new(1, 0, 0)
+							local target = collider.center + away * (collider.r + REGROW.pushOutStuds)
+							if not BossArenaMap.overlapsObstacle(zoneKey, target, half, 0) then
+								outcome = "push"
+								local to = Vector3.new(target.X, v.root.Position.Y, target.Z)
+								if typeof(v.root) == "Instance" then
+									v.root.CFrame = CFrame.new(to) * v.root.CFrame.Rotation
+								else
+									v.root.Position = to
+								end
 							end
 						end
+						if outcome == "encase" then
+							BossArenaMap.encase(zoneKey, obstacle, v.player, v.root)
+						end
+						table.insert(outcomes, { player = v.player, outcome = outcome, depth = collider.r - d })
 					end
-					if outcome == "encase" then
-						BossArenaMap.encase(zoneKey, obstacle, v.player, v.root)
-					end
-					table.insert(outcomes, { player = v.player, outcome = outcome, depth = collider.r - d })
 				end
-			end
-			send(st, "regrowSpawn", { id = obstacle.id, colliders = plan.worldColliders, color = plan.item.spec.color, floorY = st.floorY })
-			debugEvent("regrowSpawn", { id = obstacle.id, plan = plan, outcomes = outcomes, at = os.clock(), telegraph = os.clock() - planned })
-		end)
-	end
+				send(st, "regrowSpawn", { id = obstacle.id, colliders = plan.worldColliders, color = plan.item.spec.color, floorY = st.floorY })
+				debugEvent("regrowSpawn", { id = obstacle.id, plan = plan, outcomes = outcomes, at = os.clock(), telegraph = os.clock() - planned })
+			end)
+		end
+	end)
 end
 
 runEffects = function(c, effects, info)

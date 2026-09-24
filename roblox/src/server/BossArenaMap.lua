@@ -257,6 +257,13 @@ end
 
 -- [zoneKey] = { zoneKey, theme, bossData, dressing(Model), layout, obstacles = { [id] = obstacle }, mounds = { Part }, lastBreak }
 local active = {}
+-- P3d Play 2: 재생성 토큰 · id는 모듈 전역 일련번호다 - 보스전마다 0 · 1000부터 다시 세면 앞 보스전의 전조 대기 작업(task.delay)이 다음 보스전의 같은 토큰으로 솟고,
+-- 같은 id가 덮어써져 충돌 기둥이 남았다(Play 2 실측 - 기둥 21 → 24).
+local regrowSerial = 0
+local function nextRegrowSerial()
+	regrowSerial += 1
+	return regrowSerial
+end
 local spawnObstacle -- P3d D: 재생성(아래 BossArenaMap.spawnRegrown)이 먼저 부른다 - 정의는 아래
 
 local function zoneOfKey(zoneKey)
@@ -450,10 +457,10 @@ function BossArenaMap.planRegrow(zoneKey, context)
 		table.insert(pits, r)
 	end
 	local options = { kit = state.layoutOptions.kit, coverageMin = 0, members = members, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds }
-	state.nextRegrowId += 1
+	local regrowId = 1000 + nextRegrowSerial()
 	local item, tries, why = ArenaLayout.regrowSpot(state.theme, itemsOf(state), function()
 		return state.regrowRng:NextNumber()
-	end, options, state.nextRegrowId)
+	end, options, regrowId)
 	if not item then
 		return nil, why
 	end
@@ -809,7 +816,7 @@ function BossArenaMap.dress(zoneKey, bossData, seed)
 	local startedAt = os.clock()
 	local layout = ArenaLayout.generate(theme, seed, ArenaLayout.optionsFor(bossData))
 	local state = { zoneKey = zoneKey, theme = theme, bossData = bossData, dressing = dressing, layout = layout, obstacles = {}, mounds = {},
-		layoutOptions = ArenaLayout.optionsFor(bossData), regrowToken = 0, nextRegrowId = 1000, regrowRng = Random.new(seed + 7) }
+		layoutOptions = ArenaLayout.optionsFor(bossData), regrowToken = nextRegrowSerial(), regrowRng = Random.new(seed + 7) }
 	for _, spec in ipairs(theme.decor or {}) do
 		local builder = DECOR[spec.kind]
 		if builder then
@@ -837,7 +844,7 @@ function BossArenaMap.undress(zoneKey)
 	if not state then
 		return
 	end
-	state.regrowToken += 1 -- P3d D: 전조 중이던 재생성은 취소
+	state.regrowToken = nextRegrowSerial() -- P3d D: 전조 중이던 재생성은 취소
 	clearObstacles(state)
 	for _, part in ipairs(state.mounds) do
 		part:Destroy()
@@ -852,7 +859,7 @@ function BossArenaMap.resetObstacles(zoneKey)
 	if not state then
 		return
 	end
-	state.regrowToken += 1 -- P3d D: 전조 중이던 재생성은 취소(처음대로 다시 선다 - 재생성된 것도 치운다)
+	state.regrowToken = nextRegrowSerial() -- P3d D: 전조 중이던 재생성은 취소(처음대로 다시 선다 - 재생성된 것도 치운다)
 	clearObstacles(state)
 	spawnObstacles(state)
 end
