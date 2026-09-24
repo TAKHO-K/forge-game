@@ -91,7 +91,7 @@ function BalanceDecisionVerify.runPure()
 		local above = BalanceSim.measurePoint(bowLoadout, stage + 0.05).killRotationSeconds
 		local target = BalanceAnchorConfig.killTargetSeconds
 		local p = BossRules.partyHpExponent()
-		local b = PartyConfig.healerBuffFraction
+		local b = PartyConfig.healerBuffFormulaFraction -- P3d F: 게임 b는 사용자 결정으로 17.36% - 이 앵커 검사는 24-4 식(옛 값)의 입력이 그대로인지를 본다
 		r.check(("4 궁수 앵커(rec 스테이지 %.2f = 레벨 100 + 오프셋 %+.3f): 생존(itemLevel = 스테이지 1,000) %.3f타(기대 7 ± 0.02) · 처치(로테이션) 경계 %.3f초 < %.1f ≤ %.3f초(기대 경계가 목표를 낀다) · 오프셋 %.3f - %d ≤ 0.1(P2.5a levelStageOffset) · 보스 p %.4f(기대 0.4803 ± 0.001) · 치유사 b %.5f(기대 0.01289 ± 0.0001)"):format(
 			stage, offset, point.surviveHits, below, target, above, offset, CharacterLevelConfig.levelStageOffset, p, b),
 			near(point.surviveHits, BalanceAnchorConfig.surviveTargetHits, 0.02) and below < target and above >= target and math.abs(offset - CharacterLevelConfig.levelStageOffset) <= 0.1

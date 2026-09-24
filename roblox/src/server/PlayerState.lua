@@ -156,6 +156,20 @@ function PlayerState.clearIncomingDamageMultiplier(player)
 	end
 end
 
+-- P3d 리뷰 5: 지금 걸린 받는 피해 배율의 만료 시각(없으면 nil) - 건 쪽이 기억해 두고 자기 것일 때만 푼다(clearIncomingDamageMultiplierIf).
+function PlayerState.getIncomingDamageMultiplierUntil(player)
+	local entry = players[player]
+	return entry and entry.incomingDamageMultiplierUntil or nil
+end
+
+function PlayerState.clearIncomingDamageMultiplierIf(player, untilTime)
+	local entry = players[player]
+	if entry and untilTime and entry.incomingDamageMultiplierUntil == untilTime then
+		entry.incomingDamageMultiplier = nil
+		entry.incomingDamageMultiplierUntil = nil
+	end
+end
+
 -- MonsterAI.server.lua의 applyHitToPlayer가 매 피격마다 곱한다. 활성 구간이 아니면 1.
 function PlayerState.getIncomingDamageMultiplier(player)
 	local entry = players[player]

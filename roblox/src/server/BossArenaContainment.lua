@@ -47,7 +47,10 @@ function BossArenaContainment.spawnPointFor(encounter, member)
 	if BossArenaMap.overlapsObstacle(encounter.zoneKey, point, 1.5, 0.5) then
 		return nil
 	end
-	return point
+	-- 리뷰 10: 그 자리 지면 위(둔덕 가장자리에 걸린 순번이면 둔덕 윗면 위)로 올린다
+	local floorTopY = BossArenaMap.floorTopY()
+	local groundY = GroundProbe.surfaceY(point.X, point.Z, floorTopY) or floorTopY
+	return Vector3.new(point.X, groundY + 3, point.Z)
 end
 
 -- 한 멤버를 검사하고 필요하면 옮긴다. 반환: 옮겼는가.

@@ -1,7 +1,7 @@
 -- P3d 자동 검증(docs/phase/P3d-log.md). (가) = 서버 시작 때 순수 계산 · (가E) = 체인 끝(무거운 100시드 재생성) · (나) = 보스 검증 체인 끝(실제 보스전 · 스탠드인 · 실제 판정 경로).
---   (가) F1 파티 구성 속도(경제 시뮬 F4 - 딜러3+치유사1 = 딜러4의 100 ~ 105% · 2+2 ≤ 3+1 · 치유사4 가장 느림) · F3 툴팁 · 칩 같은 값 · G-d 견습 시뮬 · G-e 첫 시즌 KST ·
---        B2 보호 범위 · B3 이탈 · 복귀 시뮬 1,000회 · D2 재생성 회피 부등식(kind마다) · A 연출 데이터(지진파 보스 3종 모션 · 박자 · 상한)
---   (가E) E3 재생성 100시드 × 6맵(겹침 0 · 갇힘 0 · 스폰 자리 덮임 0)
+--   (가) F3 툴팁 · 칩 같은 값 · G-e 첫 시즌 KST · B2 보호 범위 · B3 이탈 · 복귀 시뮬 1,000회 · D2 재생성 회피 부등식(kind마다) · A 연출 데이터(지진파 보스 3종 모션 · 박자 · 상한)
+--   (가E) 무거운 계산 - 체인 끝: F1 파티 구성 속도(경제 시뮬 F4 - 딜러3+치유사1 = 딜러4의 100 ~ 105% · 2+2 ≤ 3+1 · 치유사4 가장 느림) · G-d 견습 시뮬 ·
+--        E3 재생성 100시드 × 6맵(겹침 0 · 갇힘 0 · 스폰 자리 덮임 0)
 --   (나) B 맵 밖 → 스폰 자리 · 체력 · 기믹 누적 그대로 · 보호 0.75초(피해 0 · 넉백 무시) · C 단상 위 지진파 안 맞음 · 1번째 금 · 2번째 무너짐(위 사람 떨어짐 · 피해 없음) ·
 --        D 재생성(onComplete · 전조 1.5초 · 발밑 · 피해 · 밀림 · 끼임 3타 탈출 · 6초 자동 파괴 · 상한 · 누수) · E2 모래 구덩이 위 구조물 3틱 붕괴 · F2 버프 중첩 없음 · F3 툴팁 소스 · G-g 라이브 제외
 
@@ -74,24 +74,6 @@ function P3dVerify.runPure()
 	print("===P3d 검증 시작(가)===")
 	local r = newRecorder("가")
 
-	r.section("F1 파티 구성 속도", function()
-		local EconSimTables = require(script.Parent.EconSimTables)
-		local healer = EconSimTables.healer()
-		local target = PartyConfig.healerBuffTargetSpeed
-		local allOk, rows = true, {}
-		for _, entry in ipairs(healer.compositions) do
-			local v = {}
-			for index, speed in ipairs(entry.speeds) do
-				v[index] = speed.healMode
-			end
-			local ok = v[2] >= target[1] - 1e-9 and v[2] <= target[2] + 1e-9 and v[3] <= v[2] and v[5] <= math.min(v[1], v[2], v[3], v[4])
-			allOk = allOk and ok
-			table.insert(rows, ("%s·%s %.3f/%.3f/%.3f/%.3f/%.3f"):format(entry.tier, entry.dealerClass, v[1], v[2], v[3], v[4], v[5]))
-		end
-		r.check(("F1 b = %.4f(옛 식 %.5f) · 치유모드 딜러4/3+1/2+2/1+3/치유사4: %s | 3+1 ∈ [%.2f, %.2f] · 2+2 ≤ 3+1 · 치유사4 가장 느림"):format(PartyConfig.healerBuffFraction,
-			PartyConfig.healerBuffFormulaFraction, table.concat(rows, " · "), target[1], target[2]), allOk and #rows == 6)
-	end)
-
 	r.section("F3 툴팁 · 칩 같은 값", function()
 		local info = { classId = "healer", attack = 1000, critRate = 0.1, critDmg = 1.5, healerBuff = PartyConfig.healerBuffFraction, slots = {} }
 		local built = SkillTooltipText.build("healer", "Q", info)
@@ -104,13 +86,6 @@ function P3dVerify.runPure()
 		local chip = "✚ 피해 +" .. SkillTooltipText.pct(PartyConfig.healerBuffFraction)
 		local value = SkillTooltipText.pct(PartyConfig.healerBuffFraction)
 		r.check(("F3 툴팁 \"%s\" · 칩 \"%s\" - 같은 값 %s"):format(tostring(line), chip, value), line ~= nil and line:find(value, 1, true) ~= nil and value == "17.4%")
-	end)
-
-	r.section("G-d 견습 시뮬", function()
-		local EconSim = require(script.Parent.EconSim)
-		local seconds, level = EconSim.tutorialOnly("casual")
-		r.check(("G-d 캐주얼 견습 7단계 = %.1f분 · 끝난 레벨 %d(캐주얼 tutorial = %s) - 스테이지 20 도달(견습 포함)은 /gg econ 보고서 · 하네스 13.3분"):format(seconds / 60, level,
-			tostring(require(ReplicatedStorage.Shared.data.EconSimConfig).profiles.casual.tutorial)), seconds > 60 and level >= 2)
 	end)
 
 	r.section("G-e 첫 시즌 KST", function()
@@ -195,6 +170,32 @@ end
 function P3dVerify.runRegrowSeeds()
 	print("===P3d 검증 시작(가E)===")
 	local r = newRecorder("가E")
+	-- P3d Play 1: 경제 시뮬(F1 · G-d)은 무겁다 - 서버 시작 때 (가)에서 돌면 실시간 검증(29-1 첫 기믹 시각 · 29-2 step 성능)과 겹쳐 X가 났다. 체인 끝에서 돈다.
+	r.section("F1 파티 구성 속도", function()
+		local EconSimTables = require(script.Parent.EconSimTables)
+		local healer = EconSimTables.healer()
+		local target = PartyConfig.healerBuffTargetSpeed
+		local allOk, rows = true, {}
+		for _, entry in ipairs(healer.compositions) do
+			local v = {}
+			for index, speed in ipairs(entry.speeds) do
+				v[index] = speed.healMode
+			end
+			local ok = v[2] >= target[1] - 1e-9 and v[2] <= target[2] + 1e-9 and v[3] <= v[2] and v[5] <= math.min(v[1], v[2], v[3], v[4])
+			allOk = allOk and ok
+			table.insert(rows, ("%s·%s %.3f/%.3f/%.3f/%.3f/%.3f"):format(entry.tier, entry.dealerClass, v[1], v[2], v[3], v[4], v[5]))
+		end
+		r.check(("F1 b = %.4f(옛 식 %.5f) · 치유모드 딜러4/3+1/2+2/1+3/치유사4: %s | 3+1 ∈ [%.2f, %.2f] · 2+2 ≤ 3+1 · 치유사4 가장 느림"):format(PartyConfig.healerBuffFraction,
+			PartyConfig.healerBuffFormulaFraction, table.concat(rows, " · "), target[1], target[2]), allOk and #rows == 6)
+	end)
+
+	r.section("G-d 견습 시뮬", function()
+		local EconSim = require(script.Parent.EconSim)
+		local seconds, level = EconSim.tutorialOnly("casual")
+		r.check(("G-d 캐주얼 견습 7단계 = %.1f분 · 끝난 레벨 %d(캐주얼 tutorial = %s) - 스테이지 20 도달(견습 포함)은 /gg econ 보고서 · 하네스 13.3분"):format(seconds / 60, level,
+			tostring(require(ReplicatedStorage.Shared.data.EconSimConfig).profiles.casual.tutorial)), seconds > 60 and level >= 2)
+	end)
+
 	local startedAt = os.clock()
 	local state = REGROW.check.seedBase
 	local function rng()
@@ -408,8 +409,19 @@ function P3dVerify.runLive(player, env)
 	local MonsterState = require(script.Parent.MonsterState)
 	local PlayerState = require(script.Parent.PlayerState)
 	local PlayerDamage = require(script.Parent.PlayerDamage)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local root = nil
+	local function refreshRoot()
+		for _ = 1, 100 do
+			local character = player.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			root = character and character:FindFirstChild("HumanoidRootPart")
+			if root and humanoid and humanoid.Health > 0 then
+				return
+			end
+			task.wait(0.1)
+		end
+	end
+	refreshRoot()
 	local FLOOR = BossArenaMap.floorTopY()
 	local events = {}
 	BossPatterns.debugEventHook = function(kind, record)
@@ -419,6 +431,8 @@ function P3dVerify.runLive(player, env)
 	PlayerState.clearIncomingDamageMultiplier(player)
 	local rawSection = r.section
 	r.section = function(name, fn)
+		refreshRoot()
+		fullHeal(player)
 		rawSection(name, fn)
 		if root then
 			root.Anchored = false
@@ -456,14 +470,16 @@ function P3dVerify.runLive(player, env)
 		end
 		local fix = BossArenaContainment.corrections()[before + 1]
 		local protectedNow = BossArenaContainment.isProtected(player)
-		local hitDuring = PlayerDamage.applyHit(player, 1000, "P3d 보호 확인", 1)
+		local hitDuring = PlayerDamage.applyHit(player, 1, "P3d 보호 확인", 1)
 		local dist = spawn and (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(spawn.X, 0, spawn.Z)).Magnitude or -1
 		r.check(("B1 원 밖 12 → %.2f초 뒤 %s(스폰 자리 %s) · 스폰까지 %.2fstud · 체력 %.1f → %.1f · 기믹 누적 %.3f → %.3f"):format(waited, tostring(fix and fix.reason),
 			tostring(fix and fix.spawn), dist, hpBefore, PlayerState.getHp(player), stackBefore, BossMechanics.gimmickDamageOf(model, player)),
 			fix ~= nil and fix.spawn == true and dist >= 0 and dist < 2 and near(PlayerState.getHp(player), hpBefore, 1e-6) and near(BossMechanics.gimmickDamageOf(model, player), stackBefore))
 		task.wait(BossArenaMapData.containment.returnProtectSeconds + 0.1)
 		local protectedAfter = BossArenaContainment.isProtected(player)
-		local hitAfter = PlayerDamage.applyHit(player, 1000, "P3d 보호 끝 확인", 1)
+		fullHeal(player)
+		local hitAfter = PlayerDamage.applyHit(player, 1, "P3d 보호 끝 확인", 1) -- 약하게(Play 1: 1000은 개발 캐릭터를 죽여 다음 섹션이 옛 루트를 붙잡았다)
+		fullHeal(player)
 		r.check(("B2 보호 %.2f초: 복귀 직후 보호 %s · 그때 피격 %.2f(기대 0) · %.2f초 뒤 보호 %s · 피격 %.2f(> 0)"):format(BossArenaMapData.containment.returnProtectSeconds, tostring(protectedNow),
 			hitDuring, BossArenaMapData.containment.returnProtectSeconds + 0.1, tostring(protectedAfter), hitAfter), protectedNow and hitDuring == 0 and not protectedAfter and hitAfter > 0)
 		BossEncounter.despawnFor(player)
@@ -541,6 +557,7 @@ function P3dVerify.runLive(player, env)
 		BossPatterns.force(model, data, "shockwave")
 		local plan = nil
 		drive(player, root, model, data, 12, function()
+			PlayerState.setHp(s1, PlayerState.getMaxHp(s1))
 			local plans = eventsOf("regrowPlan", since)
 			plan = plans[1] and plans[1].plan
 			return plan ~= nil

@@ -362,15 +362,22 @@ local function arenaPlayers(state)
 	return list
 end
 
--- 끼임 상태를 알린다(hitsLeft = 남은 타수 · 0이면 풀림).
-function BossArenaMap.fireEncase(state, obstacle, hitsLeft)
+-- 끼임 상태를 알린다(hitsLeft = 남은 타수 · 0이면 풀림). extra = 아레나 밖이어도 받아야 할 사람(풀려난 당사자 - 리뷰 2: 보스전이 끝나 사냥터로 옮겨진 뒤에 풀면
+-- 아레나 안에 아무도 없어 머리 위 "탈출!"이 안 지워졌다).
+function BossArenaMap.fireEncase(state, obstacle, hitsLeft, extra)
 	local userIds = {}
 	for member in pairs(obstacle.encased or {}) do
 		if typeof(member) == "Instance" then
 			table.insert(userIds, member.UserId)
 		end
 	end
-	for _, player in ipairs(arenaPlayers(state)) do
+	local targets = arenaPlayers(state)
+	for _, member in ipairs(extra or {}) do
+		if typeof(member) == "Instance" and member.Parent and not table.find(targets, member) then
+			table.insert(targets, member)
+		end
+	end
+	for _, player in ipairs(targets) do
 		encaseEvent:FireClient(player, { id = obstacle.id, userIds = userIds, hitsLeft = hitsLeft, seconds = obstacle.encaseUntil and math.max(obstacle.encaseUntil - os.clock(), 0) or 0,
 			position = obstacle.center + Vector3.new(0, obstacle.height, 0) })
 	end
@@ -384,12 +391,13 @@ function BossArenaMap.releaseEncased(state, obstacle)
 		local root = typeof(member) == "Instance" and member.Character and member.Character:FindFirstChild("HumanoidRootPart")
 		if root then
 			root.Anchored = false
-			PlayerState.clearIncomingDamageMultiplier(member)
+			-- 리뷰 5: 끼임이 건 0배일 때만 푼다(그 사이 다른 출처 - 잡힘 해제 유예 · 회오리 면역 - 가 건 것은 그대로 둔다)
+			PlayerState.clearIncomingDamageMultiplierIf(member, obstacle.immuneUntil and obstacle.immuneUntil[member])
 		end
 	end
 	if obstacle.encased and next(obstacle.encased) then
 		obstacle.encased = {}
-		BossArenaMap.fireEncase(state, obstacle, 0)
+		BossArenaMap.fireEncase(state, obstacle, 0, released)
 		print(("[forge-game] 끼임 풀림: #%d - %d명"):format(obstacle.id, #released))
 	end
 	return released
@@ -456,11 +464,29 @@ function BossArenaMap.planRegrow(zoneKey, context)
 	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries }, nil
 end
 
--- 전조가 끝나 실제로 솟는다(리셋 · 보스전 끝으로 토큰이 바뀌었으면 nil).
-function BossArenaMap.spawnRegrown(zoneKey, plan)
+-- 전조가 끝나 실제로 솟는다(리셋 · 보스전 끝으로 토큰이 바뀌었으면 nil). context(선택 - planRegrow와 같은 모양, 멤버는 안 본다) = 솟기 직전에 자리를 다시 본다(리뷰 6 -
+-- 전조 1.5초 사이 보스가 걸어 들어왔거나 다른 구조물 · 동적 지형이 생겼으면 이번엔 안 솟는다). 반환: 구조물 또는 nil, 이유.
+function BossArenaMap.spawnRegrown(zoneKey, plan, context)
 	local state = active[zoneKey]
 	if not state or state.regrowToken ~= plan.token then
-		return nil
+		return nil, "cancelled"
+	end
+	if context then
+		local zone = zoneOfKey(zoneKey)
+		local function rel(p)
+			return { x = p.X - zone.center.X, z = p.Z - zone.center.Z }
+		end
+		local pits = {}
+		for _, pit in ipairs(context.pits or {}) do
+			local r = rel(pit.position)
+			r.r = pit.radius
+			table.insert(pits, r)
+		end
+		local ok, why = ArenaLayout.regrowFits(plan.item, itemsOf(state), { kit = state.layoutOptions.kit, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds })
+		if not ok then
+			print(("[forge-game] 지형 재생성 취소(솟기 직전 자리 다시 봄): %s #%d - %s"):format(zoneKey, plan.item.id, tostring(why)))
+			return nil, why
+		end
 	end
 	local item = table.clone(plan.item)
 	local obstacle = spawnObstacle(state, zoneOfKey(zoneKey), item)
@@ -497,6 +523,8 @@ function BossArenaMap.encase(zoneKey, obstacle, member, root)
 	end
 	if typeof(member) == "Instance" then
 		PlayerState.setIncomingDamageMultiplierUntil(member, 0, REGROW.encaseAutoBreakSeconds + 0.1)
+		obstacle.immuneUntil = obstacle.immuneUntil or {}
+		obstacle.immuneUntil[member] = PlayerState.getIncomingDamageMultiplierUntil(member)
 	end
 	BossArenaMap.fireEncase(state, obstacle, REGROW.escapeHits - obstacle.hits)
 	local token, id = state.regrowToken, obstacle.id
@@ -511,6 +539,25 @@ function BossArenaMap.encase(zoneKey, obstacle, member, root)
 	end
 	print(("[forge-game] 끼임: %s - #%d %s, %d타 또는 %.0f초"):format(tostring(member.Name), id, obstacle.kind, REGROW.escapeHits, REGROW.encaseAutoBreakSeconds))
 	return true
+end
+
+-- 리뷰 3: 이 사람이 어느 구조물에 끼여 있으면 그 사람만 풀어 준다(보스전 이탈 · 종료 - 텔레포트 전에 부른다. 구조물은 남는다 - 다른 끼인 사람 · 6초 자동 파괴 그대로).
+function BossArenaMap.releaseMember(zoneKey, member)
+	local state = active[zoneKey]
+	for _, obstacle in pairs(state and state.obstacles or {}) do
+		if obstacle.encased and obstacle.encased[member] then
+			obstacle.encased[member] = nil
+			local root = typeof(member) == "Instance" and member.Character and member.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				root.Anchored = false
+				PlayerState.clearIncomingDamageMultiplierIf(member, obstacle.immuneUntil and obstacle.immuneUntil[member])
+			end
+			BossArenaMap.fireEncase(state, obstacle, next(obstacle.encased) and (REGROW.escapeHits - obstacle.hits) or 0, { member })
+			print(("[forge-game] 끼임 풀림(보스전 이탈): %s - #%d"):format(tostring(member.Name), obstacle.id))
+			return true
+		end
+	end
+	return false
 end
 
 -- 원(position, radius)에 충돌 원이 걸친 구조물 id 목록(E2 - 모래 구덩이).

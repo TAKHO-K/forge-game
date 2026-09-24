@@ -450,7 +450,11 @@ local function stepPuppet(now)
 			return
 		end
 	end
-	-- 돌진 방향으로 몸을 돌린다(인형의 앞 = 서버 모델의 앞 - 서버가 돌진 중 방향을 안 바꾸면 그대로)
+	-- 리뷰 8: 발 긁기 · 달리기는 돌진 방향으로 몸을 돌린다(서버는 돌진 중 모델을 돌리지 않는다 - 인형의 앞(−Z)을 돌진 방향에 맞춘다)
+	if charge and charge.model == p.model and (p.phase == "scrape" or p.phase == "run") then
+		local localDir = p.model:GetPivot():VectorToObjectSpace(charge.dir)
+		pose.yaw = math.atan2(-localDir.X, -localDir.Z)
+	end
 	applyPose(p, pose)
 	-- 잔상 희미해지기
 	for _, ghost in ipairs(p.ghosts or {}) do

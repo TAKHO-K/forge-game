@@ -777,16 +777,19 @@ function P3cVerify.runLive(player, env)
 		if mound then
 			table.insert(spots, { label = ("둔덕 윗면(+%.1f)"):format(mound.layers * mound.stepStuds), position = zone.center + Vector3.new(mound.x, FLOOR + mound.layers * mound.stepStuds + 3, mound.z) })
 		end
+		-- P3d C: 큰 블록(단상) 위는 파동이 밑으로 지나가고(안 맞음) 파동 2번에 무너진다 - 바닥 칸을 먼저 재고(허공에 고정된 캐릭터의 공중 상태가 다음 칸에 남지 않게),
+		-- 칸마다 구조물을 처음대로 되돌린다(앞 칸의 파동이 단상을 무너뜨렸다).
+		table.insert(spots, { label = "바닥(+0)", position = zone.center + Vector3.new(60, FLOOR + 3, 0) })
 		for _, o in ipairs(BossArenaMap.obstacles(encounter.zoneKey)) do
 			if o.climbable then
-				table.insert(spots, { label = ("큰 블록 윗면(+%.1f)"):format(o.height), position = o.center + Vector3.new(0, o.height + 3, 0) })
+				table.insert(spots, { label = ("큰 블록 윗면(+%.1f)"):format(o.height), position = o.center + Vector3.new(0, o.height + 3, 0), dais = true })
 				break
 			end
 		end
-		table.insert(spots, { label = "바닥(+0)", position = zone.center + Vector3.new(60, FLOOR + 3, 0) })
 		root.Anchored = true
 		local rows, allHit = {}, true
 		for _, spot in ipairs(spots) do
+			BossArenaMap.resetObstacles(encounter.zoneKey)
 			place(root, spot.position)
 			table.clear(judged)
 			BossPatterns.force(model, data, "meteor")
@@ -809,8 +812,9 @@ function P3cVerify.runLive(player, env)
 			for _, e in ipairs(events) do
 				waveHit = waveHit or (e.kind == "waveHit" and e.record.player == player)
 			end
-			allHit = allHit and waveHit
-			table.insert(rows, ("%s 진동파(서 있음) 맞음=%s"):format(spot.label, tostring(waveHit)))
+			-- P3d C1: 단상 위는 안 맞는 것이 맞다(새 규칙) - 나머지 자리는 서 있으면 맞는다
+			allHit = allHit and (waveHit ~= (spot.dais == true))
+			table.insert(rows, ("%s 진동파(서 있음) 맞음=%s(기대 %s)"):format(spot.label, tostring(waveHit), tostring(spot.dais ~= true)))
 			fullHeal(player)
 		end
 		root.Anchored = false

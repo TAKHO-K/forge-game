@@ -481,6 +481,7 @@ local function endEncounter(encounter, destroyModel)
 			setEncounterAttribute(member, nil)
 		end
 		BossPatterns.clearTelegraphsFor(member) -- P3a D3: 떠 있던 예고(원 · 선 · 말풍선)를 지운다 - 판정이 없어진 장판이 남지 않게
+		BossArenaMap.releaseMember(encounter.zoneKey, member) -- P3d 리뷰 3: 끼인 채 사냥터로 가지 않게(고정 · 0배 · 머리 위 표시)
 		if member.Parent then
 			teleportTo(member, huntingGroundReturnPosition())
 		end
@@ -529,6 +530,7 @@ function BossEncounter.leaveFor(player)
 	BossTrap.release(player, "reset") -- 29-1
 	BossPatterns.clearPropsFor(player) -- 29-3
 	BossPatterns.clearTelegraphsFor(player) -- P3a D3: 이 사람의 화면에 떠 있던 예고도 지운다(판정 대상에서 빠졌다)
+	BossArenaMap.releaseMember(encounter.zoneKey, player) -- P3d 리뷰 3
 	if player.Parent then
 		teleportTo(player, huntingGroundReturnPosition())
 	end

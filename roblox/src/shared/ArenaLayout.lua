@@ -370,6 +370,21 @@ local function regrowClear(x, z, radius, items, o, options)
 	return true, nil
 end
 
+-- 솟기 직전 다시 보기(리뷰 6): 이미 고른 칸이 지금도 맞는가(벽 · 입장 · 구조물 · 킷 · 보스 · 동적 지형 · 둔덕 · 연결). 반환: bool, 이유.
+function ArenaLayout.regrowFits(item, items, options)
+	local o = defaults(options)
+	local ok, why = regrowClear(item.x, item.z, item.radius, items, o, options)
+	if not ok then
+		return false, why
+	end
+	local all = table.clone(items)
+	table.insert(all, item)
+	if not ArenaLayout.connectivity(all, o) then
+		return false, "connectivity"
+	end
+	return true, nil
+end
+
 function ArenaLayout.regrowSpot(theme, items, rng, options, nextId)
 	local o = defaults(options)
 	local specs = {}

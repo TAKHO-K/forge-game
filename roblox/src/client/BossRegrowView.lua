@@ -29,9 +29,9 @@ function BossRegrowView.telegraph(data)
 		BossFx.spawn({ essential = true, shape = "cylinder", position = base, rotation = CFrame.Angles(0, 0, math.rad(90)),
 			size0 = Vector3.new(0.1, c.r, c.r), size1 = Vector3.new(0.1, c.r * 2, c.r * 2), color = SHADOW_COLOR,
 			transparency0 = 0.75, transparency1 = BossFxData.regrow.shadowTransparency, life = seconds })
-		-- 테두리(위험색) - 판정 원 그대로
+		-- 테두리(위험색) = 판정 경계 = 충돌 원 + 몸 반폭 1(리뷰 7 - 몸이 닿으면 맞는다: 테 안에 발이 있으면 맞는다)
 		BossFx.spawn({ essential = true, shape = "cylinder", position = base - Vector3.new(0, 0.02, 0), rotation = CFrame.Angles(0, 0, math.rad(90)),
-			size0 = Vector3.new(0.08, c.r * 2 + 0.6, c.r * 2 + 0.6), color = DANGER_COLOR, material = Enum.Material.Neon,
+			size0 = Vector3.new(0.08, c.r * 2 + 2, c.r * 2 + 2), color = DANGER_COLOR, material = Enum.Material.Neon,
 			transparency0 = 0.6, transparency1 = 0.25, life = seconds })
 		-- 금 가는 빛: 흰 금이 가운데서 바깥으로 길어진다
 		local lines = math.max(3, math.floor(c.r * 1.5))
@@ -127,7 +127,11 @@ function BossRegrowView.encase(data)
 	marks[data.id] = marks[data.id] or {}
 	local deadline = os.clock() + (data.seconds or 0)
 	for _, userId in ipairs(data.userIds) do
-		local entry = marks[data.id][userId] or markFor(userId)
+		local entry = marks[data.id][userId]
+		if entry and not entry.gui.Parent then -- 리스폰 · 새 보스전(같은 id)으로 머리가 바뀌었다 - 새로 단다(리뷰 2)
+			entry = nil
+		end
+		entry = entry or markFor(userId)
 		if entry then
 			marks[data.id][userId] = entry
 			entry.label.Text = ("탈출! %d타"):format(data.hitsLeft)

@@ -356,7 +356,7 @@ end
 
 local runEffects -- 아래 "결과 조각"에서 정의한다(endSkill이 onEnd 조각을 돌린다)
 
-local function endSkill(model, st, data, now)
+local function endSkill(model, st, data, now, interrupted)
 	local id = st.current
 	if id then
 		print(("[forge-game] 보스 패턴 종료: %s (%.2f초 소요)"):format(id, now - (st.currentStartedAt or now)))
@@ -366,7 +366,7 @@ local function endSkill(model, st, data, now)
 		runEffects({ model = model, st = st, data = data, position = st.position }, st.skill.onEnd, {})
 	end
 	-- P3d D1: onComplete 조각은 **정상으로 끝났을 때만** 돈다(중단 · 리셋 · 전멸이면 안 돈다) - 지형 재생성(regrowObstacles)의 자리.
-	if st.skill and st.skill.onComplete and not st.interrupting then
+	if st.skill and st.skill.onComplete and not interrupted then
 		runEffects({ model = model, st = st, data = data, position = st.position, now = now, skill = st.skill }, st.skill.onComplete, {})
 	end
 	st.phase = "normal"
@@ -470,8 +470,15 @@ local function regrowObstacles(c, effect)
 		debugEvent("regrowPlan", { plan = plan, at = os.clock() })
 		local planned = os.clock()
 		task.delay(REGROW.telegraphSeconds, function()
-			local obstacle = BossArenaMap.spawnRegrown(zoneKey, plan)
+			-- 리뷰 6: 솟기 직전 자리를 다시 본다 - 지금 보스 자리 · 지금 동적 지형(전조 사이 들어왔으면 이번엔 안 솟는다)
+			local now = {}
+			for _, prop in ipairs(BossArenaProps.list(model)) do
+				table.insert(now, { position = prop.position, radius = prop.radius })
+			end
+			local bossNow = model.Parent and model.PrimaryPart and (BossPatterns.getLogicalPosition(model) or model.PrimaryPart.Position) or nil
+			local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, { boss = bossNow, pits = now })
 			if not obstacle then
+				debugEvent("regrowSkip", { reason = why, at = os.clock(), atSpawn = true })
 				return
 			end
 			local outcomes = {}
@@ -552,7 +559,9 @@ runEffects = function(c, effects, info)
 				-- P3a: 구조물과 겹치지 않게. P3d E2(사용자 요청): 구조물을 부수는 지형(def.breaksObstacles - 모래 구덩이)은 구조물 위에도 생긴다 - 그 구조물이 달그락거리다 부서진다(tickHazards).
 				clear = clear and (def.breaksObstacles ~= nil or not BossArenaMap.overlapsObstacle(MonsterState.getZoneKey(c.model), spot, def.radiusStuds, 2))
 				if clear then
-					local position = Vector3.new(spot.X, GroundProbe.surfaceY(spot.X, spot.Z, c.st.floorY) or c.st.floorY, spot.Z)
+					-- P3d 리뷰 4: 구조물 위에 생기는 지형(breaksObstacles)은 바닥 높이 - 구조물 윗면을 지면으로 잡으면 무너진 뒤 원판이 허공에 남는다.
+					local surface = def.breaksObstacles and c.st.floorY or (GroundProbe.surfaceY(spot.X, spot.Z, c.st.floorY) or c.st.floorY)
+					local position = Vector3.new(spot.X, surface, spot.Z)
 					local prop, evicted = BossArenaProps.spawn(c.model, effect.prop, def, position)
 					prop.armedAt = os.clock() + (def.armSeconds or 0)
 					prop.lastTickAt = {}
@@ -733,10 +742,11 @@ end
 -- 매 틱 모든 살아있는 파동에 대해: 파동 띠[반경-두께, 반경]가 대상을 지나는 동안 한 순간이라도 공중이면 회피,
 -- 띠가 완전히 지나갔는데 한 번도 공중이 아니었으면 피격. 24-1: 멤버마다 touched/dodged/resolved를 따로 기록한다 -
 -- 한 파동이 네 사람을 서로 다른 시각에 지나간다. 파동은 최대 반경까지 살아 있다.
--- P3d C1: 단상(올라갈 수 있는 큰 블록) 윗면에 선 사람은 파동이 발밑으로 지나간다(보이는 파동 띠 높이 1.6 < 윗면 3.5). 무너지며 떨어지는 사람도 잠깐(daisWave.dropGraceSeconds) 같다.
-local function onDais(c, v)
-	local grace = c.st.daisDropGrace
-	if grace and (grace[v.player] or 0) > c.now then
+-- P3d C1: 단상(올라갈 수 있는 큰 블록) 윗면에 선 사람은 파동이 발밑으로 지나간다(보이는 파동 띠 높이 1.6 < 윗면 3.5). 그 단상이 이 파동에 무너졌으면 위에 있던 사람은
+-- **그 파동(모든 겹)**을 안 맞는다(리뷰 1 - 시간 유예 0.6초는 단상 먼 쪽 가장자리 · 느린 파동(18 · 20)에서 모자랐다). 파동 번호는 스킬마다 새로 세므로 스킬 시작 시각과 같이 적는다.
+local function onDais(c, v, wave)
+	local dropped = c.st.daisDropped and c.st.daisDropped[v.player]
+	if dropped and dropped.skillAt == c.st.currentStartedAt and dropped.waveIndex == wave.waveIndex then
 		return true
 	end
 	return BossArenaMap.daisUnderFeet(MonsterState.getZoneKey(c.model), v.feet) ~= nil
@@ -761,9 +771,9 @@ local function waveOverDaises(c, wave, radius, targets)
 			local result = BossArenaMap.waveHitDais(zoneKey, dais.id)
 			debugEvent("daisWave", { id = dais.id, result = result, waveIndex = wave.waveIndex, at = c.now, onTop = onTop })
 			if result == "break" then
-				c.st.daisDropGrace = c.st.daisDropGrace or {}
+				c.st.daisDropped = c.st.daisDropped or {}
 				for _, player in ipairs(onTop) do
-					c.st.daisDropGrace[player] = c.now + BossArenaMapData.obstacle.daisWave.dropGraceSeconds
+					c.st.daisDropped[player] = { skillAt = c.st.currentStartedAt, waveIndex = wave.waveIndex }
 				end
 			end
 		end
@@ -789,7 +799,7 @@ local function updateWaves(c)
 			-- 22-4: 파동은 지면을 타고 퍼진다 - 파동 중심 지면(floorY)에서 높이차 상한 너머(절벽 위)는 안 닿는다.
 			-- P3d C1: 단상 윗면(또는 무너지며 떨어지는 중)은 파동이 밑으로 지나간다.
 			local inBand = d <= radius and d >= radius - skill.waveThicknessStuds
-				and Reach.sameLayer(v.root.Position, Vector3.new(0, st.floorY, 0)) and not onDais(c, v)
+				and Reach.sameLayer(v.root.Position, Vector3.new(0, st.floorY, 0)) and not onDais(c, v, wave)
 			if inBand then
 				rec.touched = true
 				if isAirborne(v.player.Character, skill.airborneClearanceStuds) then
@@ -1785,9 +1795,7 @@ function BossPatterns.interrupt(model, data)
 	clearDaze(model, st)
 	st.waves = {}
 	send(st, "reset", {})
-	st.interrupting = true -- P3d D1: 중단이면 onComplete(재생성)를 건너뛴다
-	endSkill(model, st, data, os.clock())
-	st.interrupting = false
+	endSkill(model, st, data, os.clock(), true) -- P3d D1: 중단이면 onComplete(재생성)를 건너뛴다
 end
 
 -- 29-5 탱커 훅 ②(PRD 20.80 [F]) - 도발 인터럽트의 진입점. 탱커의 도발 스킬이 생기면 SkillServer가 여기를 부른다.
