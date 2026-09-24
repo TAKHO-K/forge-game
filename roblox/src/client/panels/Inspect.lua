@@ -79,6 +79,7 @@ local function detailLines(slotName)
 end
 
 local function build()
+	Theme.recompute()
 	local panel = Panel.create({
 		id = Inspect.id,
 		kind = "window",
@@ -190,7 +191,7 @@ local function build()
 		end)
 	end
 
-	built = { panel = panel, usernameLabel = usernameLabel, nameLabel = nameLabel, statusLabel = statusLabel, scroll = scroll, rows = rows, compareToggle = compareToggle }
+	built = { mobile = Theme.isMobile, panel = panel, usernameLabel = usernameLabel, nameLabel = nameLabel, statusLabel = statusLabel, scroll = scroll, rows = rows, compareToggle = compareToggle }
 end
 
 -- 상세 틀 한 개를 줄 목록으로 다시 채운다(자식을 지우고 새로 - 고정 줄 높이). 반환 = 높이.
@@ -359,11 +360,22 @@ function Inspect.toggleSlot(slotName)
 	render()
 end
 
--- userId의 장비를 조회해 창을 연다. 조회가 거절되면 창은 열리고 상태 줄에 이유가 나온다.
-function Inspect.open(userId)
+-- 처음 열 때 짓고, 모바일 판정(Studio ForceTouchLayout 포함)이 바뀌었으면 다시 짓는다(줄 높이가 판정에서 나온다).
+local function ensureBuilt()
+	Theme.recompute()
+	if built and built.mobile ~= Theme.isMobile then
+		UIManager.unregister(Inspect.id)
+		built.panel.screenGui:Destroy()
+		built = nil
+	end
 	if not built then
 		build()
 	end
+end
+
+-- userId의 장비를 조회해 창을 연다. 조회가 거절되면 창은 열리고 상태 줄에 이유가 나온다.
+function Inspect.open(userId)
+	ensureBuilt()
 	local token = resetView()
 	view.mine = nil -- 창을 열 때마다 내 장비도 새로(방금 바꿨을 수 있다)
 	local refs = built
@@ -397,9 +409,7 @@ end
 
 -- 리더보드 카드(무기 · 보석만 - 방어구 칸은 "?")로 연다. returnTo = 닫을 때 다시 열 창 id(선택). card = Leaderboard 카드({ userId, name, displayName, classId, level, rebirthCount, weapon }).
 function Inspect.openCard(card, returnTo)
-	if not built then
-		build()
-	end
+	ensureBuilt()
 	local token = resetView()
 	view.returnTo = returnTo -- 닫으면 돌아갈 창 id(리더보드)
 	view.mine = nil

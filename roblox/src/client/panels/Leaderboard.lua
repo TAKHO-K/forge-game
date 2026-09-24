@@ -132,6 +132,7 @@ local function makeButton(parent, name, text)
 end
 
 local function build()
+	Theme.recompute()
 	local panel = Panel.create({
 		id = Leaderboard.id,
 		kind = "window",
@@ -146,7 +147,7 @@ local function build()
 		end,
 	})
 	local content = panel.content
-	local r = { panel = panel, tabButtons = {}, chips = {}, rows = {}, memberButtons = {} }
+	local r = { panel = panel, tabButtons = {}, chips = {}, rows = {}, memberButtons = {}, mobile = Theme.isMobile }
 
 	-- 왼쪽 레일(탭)
 	for index, tab in ipairs(TABS) do
@@ -512,6 +513,29 @@ function Leaderboard.onRowPressed(entry)
 	Leaderboard.openCard(boardId, entry.key)
 end
 
+-- 모바일 판정(Studio ForceTouchLayout 포함)이 지은 뒤 바뀌었으면 다시 짓는다(보석 공방과 같은 방식 - 줄 높이 · 탭 높이가 판정에서 나온다).
+local function ensureBuilt()
+	Theme.recompute()
+	if refs and refs.mobile ~= Theme.isMobile then
+		UIManager.unregister(Leaderboard.id)
+		refs.panel.screenGui:Destroy()
+		refs = nil
+	end
+	if not refs then
+		build()
+	end
+end
+
+function Leaderboard.open()
+	ensureBuilt()
+	return UIManager.open(Leaderboard.id)
+end
+
+function Leaderboard.toggle()
+	ensureBuilt()
+	UIManager.toggle(Leaderboard.id)
+end
+
 -- ═══ HUD 버튼 ═══
 
 -- [순위] 버튼: 칩 스택(TopChipsRow) 왼쪽 [파티] 버튼(PartyToggleButton) 바로 아래. 파티 버튼이 칩 스택을 따라 움직이므로 그 버튼의 자리를 따라간다.
@@ -534,8 +558,11 @@ local function buildToggleButton()
 	button.Parent = gui
 	Theme.corner(button, 8)
 	Theme.stroke(button)
-	button.Activated:Connect(function()
-		UIManager.toggle(Leaderboard.id)
+	button.Activated:Connect(Leaderboard.toggle)
+	player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(function()
+		task.defer(function() -- MenuBar가 Theme.recompute를 한 뒤
+			button.Size = UDim2.new(0, 72, 0, Theme.isMobile and Theme.touchMin or 36)
+		end)
 	end)
 
 	task.spawn(function()
@@ -557,7 +584,7 @@ local function buildToggleButton()
 end
 
 function Leaderboard.init()
-	build()
+	ensureBuilt()
 	buildToggleButton()
 end
 

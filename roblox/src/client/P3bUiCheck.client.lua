@@ -102,7 +102,7 @@ task.spawn(function()
 	local ok, err = pcall(function()
 		UIManager.closeAll()
 		task.wait(0.5)
-		UIManager.open(Leaderboard.id)
+		Leaderboard.open()
 		local loaded = waitFor(function()
 			local state = Leaderboard.debugState()
 			return state.empty ~= "불러오는 중…" and state.me ~= "내 순위: 불러오는 중…"
@@ -240,7 +240,7 @@ task.spawn(function()
 		local qButton = slotsGui:FindFirstChild("Slot_q", true)
 		local before, memBefore
 		for i = 1, 20 do
-			UIManager.open(Leaderboard.id)
+			Leaderboard.open()
 			task.wait(0.35)
 			Leaderboard.selectTab(i % 2 == 0 and "party" or "all")
 			UIManager.close(Leaderboard.id, true)
