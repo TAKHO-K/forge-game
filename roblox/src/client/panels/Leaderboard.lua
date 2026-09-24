@@ -556,8 +556,12 @@ local function buildToggleButton()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "LeaderboardToggleGui"
 	gui.ResetOnSpawn = false
-	-- 창(DisplayOrder 100 ~ 149)의 딤 위 · 확인창(200 ~) 아래 - 순위 창이 열린 채 이 버튼을 다시 누르면 닫혀야 한다(S16 메뉴바와 같은 이유 · 실제 클릭으로 확인한 결함: 0이면 딤이 클릭을 먹었다).
-	gui.DisplayOrder = 150
+	-- 순위 창이 열려 있는 동안만 창 딤 위(150 - 메뉴바와 같은 대역)로 올린다: 열린 채 이 버튼을 다시 누르면 닫혀야 한다(실제 클릭으로 확인한 결함 - 0이면 딤이 클릭을 먹었다).
+	-- 다른 창이 열려 있을 때는 0(파티 버튼과 같은 HUD 층) - 늘 150이면 폰 가방 창(800 × 302) 위를 덮었다(스크린샷 Play).
+	gui.DisplayOrder = 0
+	UIManager.changed:Connect(function()
+		gui.DisplayOrder = UIManager.isOpen(Leaderboard.id) and 150 or 0
+	end)
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local button = Instance.new("TextButton")

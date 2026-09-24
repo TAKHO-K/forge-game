@@ -14,6 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local SkillTooltipText = require(ReplicatedStorage.Shared.SkillTooltipText)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
+local UIManager = require(script.Parent.Parent.UIManager)
 
 local SkillTooltip = {}
 
@@ -241,6 +242,8 @@ function SkillTooltip.attach(button, slotId, onTap, isTouchLayout)
 	end
 	button:GetPropertyChangedSignal("Visible"):Connect(hideIfMine)
 	button.AncestryChanged:Connect(hideIfMine)
+	-- 칸이 움직이면(PC ↔ 터치 배치 전환) 마우스가 떠나도 MouseLeave가 안 온다 - 스크린샷 Play에서 PC 툴팁이 터치 배치 뒤에도 남았다.
+	button:GetPropertyChangedSignal("AbsolutePosition"):Connect(hideIfMine)
 	player:GetAttributeChangedSignal("ClassId"):Connect(hideIfMine)
 	button.Activated:Connect(function()
 		if swallowActivate then
@@ -263,6 +266,13 @@ function SkillTooltip.attach(button, slotId, onTap, isTouchLayout)
 		end
 	end)
 end
+
+-- 창이 열리면 툴팁을 닫는다(툴팁은 창 대역 아래 - 열린 창 뒤로 비친다).
+UIManager.changed:Connect(function(_, isOpen)
+	if isOpen then
+		SkillTooltip.hide()
+	end
+end)
 
 -- 검사용: 지금 툴팁 글(제목 + 줄 "이름: 값").
 function SkillTooltip.debugText()
