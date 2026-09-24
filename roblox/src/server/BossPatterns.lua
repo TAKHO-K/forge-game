@@ -169,13 +169,29 @@ local function kitZones(model, st, data, tag)
 end
 
 -- 24-1 파티: 판정 대상 = 아레나 안 멤버 전원(각자 따로 맞는다). 캐릭터가 없거나 이미 죽은 멤버는 뺀다.
+-- P3a D3: 바닥 장판(원 · 강타 · 직선 · 돌진)의 높이 판정은 **발** 높이로 잰다. 높이차 상한 8의 뜻은 "점프(7.2)로 닿는 높이는 같은 층"(TerrainConfig)인데,
+-- 루트(발 + 약 3)로 재면 점프 도중 약 0.25초 동안 바닥 장판 판정에서 빠졌다(P3a D1 실측 - 원 안에 보이는데 판정 없음). 진동파(ring)는 점프로 피하는 게
+-- 규칙이라 그대로 루트 · 공중 판정을 쓴다. 발 = 루트 − (HipHeight + 루트 반높이). 스탠드인(테이블)은 Humanoid가 없어 기본 서 있는 높이 3을 뺀다.
+local STANDING_ROOT_HEIGHT = 3
+
+local function feetOf(character, root)
+	local humanoid = character.FindFirstChildOfClass and character:FindFirstChildOfClass("Humanoid")
+	local standing = (humanoid and root.Size) and (humanoid.HipHeight + root.Size.Y / 2) or STANDING_ROOT_HEIGHT
+	return root.Position - Vector3.new(0, standing, 0)
+end
+
+-- 보스 모델 루트(발 + monsterFootOffset) → 보스의 발(바닥 판정의 기준 높이).
+local function footOf(position)
+	return Vector3.new(position.X, position.Y - TerrainConfig.monsterFootOffsetStuds, position.Z)
+end
+
 local function victims(st)
 	local list = {}
 	for _, member in ipairs(st.members or {}) do
 		local character = member.Parent and member.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if root and (PlayerState.getHp(member) or 0) > 0 then
-			table.insert(list, { player = member, root = root })
+			table.insert(list, { player = member, root = root, feet = feetOf(character, root) })
 		end
 	end
 	return list
@@ -562,7 +578,7 @@ HANDLERS.circleBoss = {
 		local inner = pulse.innerRadiusStuds or 0
 		judgeBegin()
 		for _, v in ipairs(victims(st)) do
-			if Reach.within(v.root.Position, c.position, pulse.radiusStuds) -- 22-4: 수평 + 높이차 상한
+			if Reach.horizontalDistance(v.root.Position, c.position) <= pulse.radiusStuds and Reach.sameLayer(v.feet, footOf(c.position)) -- 22-4 수평 + 높이차 상한(P3a D3: 발 기준)
 				and Reach.horizontalDistance(v.root.Position, c.position) >= inner then
 				applySkillDamage(c.model, c.data, skill, v.player)
 			end
@@ -786,7 +802,7 @@ HANDLERS.circleTarget = {
 		for _, v in ipairs(victims(st)) do
 			local p = xz(v.root.Position)
 			for _, spot in ipairs(st.meteorPositions) do
-				if (p - xz(spot)).Magnitude <= skill.radiusStuds and Reach.sameLayer(v.root.Position, spot) then -- 22-4
+				if (p - xz(spot)).Magnitude <= skill.radiusStuds and Reach.sameLayer(v.feet, spot) then -- 22-4(P3a D3: 발 기준)
 					applySkillDamage(c.model, c.data, skill, v.player)
 					runHitEffects(c, skill.onHit, v, spot)
 					break
@@ -936,7 +952,7 @@ HANDLERS.charge = {
 			end
 			for _, v in ipairs(victims(st)) do
 				if not st.chargeHitBy[v.player] and distanceToSegment(xz(v.root.Position), prev, xz(newPos)) <= skill.pathHalfWidthStuds
-					and Reach.sameLayer(v.root.Position, newPos) then
+					and Reach.sameLayer(v.feet, footOf(newPos)) then -- P3a D3: 발 기준
 					st.chargeHitBy[v.player] = true
 					applySkillDamage(c.model, c.data, skill, v.player)
 				end
@@ -1063,7 +1079,7 @@ HANDLERS.line = {
 			for _, beam in ipairs(st.crossBeams) do
 				local along = rel:Dot(beam.dir)
 				if along >= 0 and along <= beam.length and (rel - beam.dir * along).Magnitude <= skill.halfWidthStuds
-					and Reach.sameLayer(v.root.Position, Vector3.new(0, st.floorY, 0)) then -- 22-4: 지면을 탄다
+					and Reach.sameLayer(v.feet, Vector3.new(0, st.floorY, 0)) then -- 22-4: 지면을 탄다(P3a D3: 발 기준)
 					applySkillDamage(c.model, c.data, skill, v.player)
 					break
 				end
@@ -1373,7 +1389,7 @@ HANDLERS.gimmick = {
 			end
 			if finisher and st.finisherCenter then
 				for _, v in ipairs(list) do
-					if Reach.within(v.root.Position, st.finisherCenter, finisher.radiusStuds) and not BossTrap.isTrapped(v.player) then
+					if Reach.horizontalDistance(v.root.Position, st.finisherCenter) <= finisher.radiusStuds and Reach.sameLayer(v.feet, st.finisherCenter) and not BossTrap.isTrapped(v.player) then -- P3a D3: 발 기준
 						applySkillDamage(c.model, c.data, finisher, v.player)
 						if finisher.trapOnHit and (PlayerState.getHp(v.player) or 0) > 0 then
 							BossMechanics.trapMember(c.model, c.data, v.player)

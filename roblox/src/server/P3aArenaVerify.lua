@@ -29,7 +29,7 @@ local GroundProbe = require(script.Parent.GroundProbe)
 local P3aArenaVerify = {}
 
 -- D 실측의 이름표(수정 전 = "전" · 수정 뒤 = "후") - 로그 · 보고서가 두 Play를 나란히 놓는다.
-P3aArenaVerify.D_LABEL = "전"
+P3aArenaVerify.D_LABEL = "후"
 
 local FLOOR_TOP = BossArenaMap.floorTopY()
 
@@ -493,6 +493,12 @@ function P3aArenaVerify.runLiveD(player, env, label, entries)
 		place(root, Vector3.new(zone.center.X, FLOOR_TOP + 3, zone.center.Z + 8))
 		fullHeal(player)
 		local st = MonsterState.getBossPatternState(model)
+		-- 어그로가 붙는 순간 스케줄러 시계가 새로 시작돼(onAggro) 강제한 스킬이 지워진다(P3a Play 1: h 0 칸이 판정 없음 nil) - 어그로가 붙은 뒤에 강제한다.
+		local aggroWait = 0
+		while MonsterState.getAiState(model) ~= "chasing" and aggroWait < 2 do
+			RunService.Heartbeat:Wait()
+			aggroWait += 1 / 60
+		end
 		local before = #judgements
 		BossPatterns.force(model, data, "heavy")
 		-- 대상이 보스 8stud 안(어그로 안)이라 MonsterAI가 이 보스를 돌린다 - 여기서는 step하지 않고 보기만 한다(이중 step 금지 - 29-4 교훈).
@@ -514,7 +520,7 @@ function P3aArenaVerify.runLiveD(player, env, label, entries)
 		table.insert(jumpRows, ("h %d → 원안 %s · 판정 %s"):format(h, tostring(j and j.inside), tostring(j and j.hit)))
 		BossEncounter.despawnFor(player)
 	end
-	r.check(("점프 높이별(루트 = 바닥 + 3 + h · 점프 정점 약 7.2): %s · 원 안인데 판정 없음 %d(기대 0 - PRD 20.50 \"점프는 진동파 말고 어떤 위험도 막지 않는다\")"):format(table.concat(jumpRows, " · "), jumpMiss), jumpMiss == 0)
+	r.check(("점프 높이별(루트 = 바닥 + 3 + h · 점프 정점 약 7.2): %s · 원 안인데 판정 없음 %d(기대 0 - 높이 상한 8의 뜻 \"점프(7.2)로 닿는 높이는 같은 층\" · TerrainConfig)"):format(table.concat(jumpRows, " · "), jumpMiss), jumpMiss == 0)
 
 	BossPatterns.debugSendHook = nil
 	BossPatterns.debugJudgeHook = nil

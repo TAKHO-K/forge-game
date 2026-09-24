@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
 local DamageNumbers = {}
 
@@ -65,6 +66,41 @@ function DamageNumbers.show(monsterModel, damage, isCrit, isHeal)
 	task.delay(CombatConfig.damageNumberLifetimeSeconds, function()
 		gui:Destroy()
 		activeStacks[monsterModel] = math.max((activeStacks[monsterModel] or 1) - 1, 0)
+	end)
+end
+
+-- P3a D4: 내가 맞은 피해(빨강 "−숫자") · 쉴드가 막은 몫(테두리색 "흡수 숫자"). 몬스터 숫자와 같은 쌓기 · 수명을 쓴다. 색은 기존 UIColors(danger · rim).
+function DamageNumbers.showTaken(character, damage, absorbed)
+	local head = character and character:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	local stackIndex = activeStacks[character] or 0
+	activeStacks[character] = stackIndex + 1
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "DamageTakenGui"
+	gui.Size = UDim2.new(3, 0, 1, 0)
+	gui.StudsOffset = Vector3.new(0, 2.6 + stackIndex * 0.9, 0)
+	gui.AlwaysOnTop = true
+	gui.Adornee = head
+	gui.Parent = head
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.new(1, 0, 1, 0)
+	if damage > 0 then
+		label.Text = "-" .. NumberFormat.format(damage) .. ((absorbed or 0) > 0 and (" (흡수 %s)"):format(NumberFormat.format(absorbed)) or "")
+		label.TextColor3 = UIColors.danger
+	else
+		label.Text = ("흡수 %s"):format(NumberFormat.format(absorbed or 0))
+		label.TextColor3 = UIColors.rim
+	end
+	label.TextScaled = true
+	label.Font = Enum.Font.GothamBlack
+	label.TextStrokeTransparency = 0.4
+	label.Parent = gui
+	task.delay(CombatConfig.damageNumberLifetimeSeconds, function()
+		gui:Destroy()
+		activeStacks[character] = math.max((activeStacks[character] or 1) - 1, 0)
 	end)
 end
 

@@ -245,6 +245,7 @@ function P3aVerify.edgeEvasion(trials)
 					for _, party in ipairs(parties) do
 						local result = fn(target, extra, { rangeScale = scale, partySize = party }, seedBase + cells)
 						cells += 1
+						task.wait() -- Studio 스크립트 시간 한도(P3a Play 1: 양보 없이 돌다 "Script timeout"으로 (가)가 끊겼다)
 						worst = math.min(worst, result.telegraphSeconds - result.p99)
 						if not result.ok then
 							fails += 1
@@ -426,13 +427,20 @@ function P3aVerify.runLive(player, env)
 		classState.stageProgress.infiniteBest = base
 		PlayerProfile.setLeaderboardTaintedForDevTools(player, false)
 		local before = Leaderboard.stats()
-		killBoss(ctx, base + interval, 0.001) -- 0.001초 만의 처치 = 이론 최소보다 빠르다
+		-- 이론 최소 시간이 의미 있게 큰 스테이지에서 잰다(개발 계정은 낮은 스테이지 보스를 이론상 1ms 안에 잡는다 - P3a Play 1: 스테이지 85에서 최소 0.0005초).
+		-- 기록 판정(거절)은 진도와 무관하게 먼저 돈다 - 스테이지가 "다음 보스"가 아니어도 된다.
+		local probeStage = 5000
+		killBoss(ctx, probeStage, 0)
+		local probe = Leaderboard.lastJudgement()
+		local minSeconds = probe and probe.minSeconds or 0
+		before = Leaderboard.stats()
+		killBoss(ctx, probeStage, minSeconds * 0.5) -- 이론 최소의 절반 = 물리적으로 불가능
 		local judgement = Leaderboard.lastJudgement()
 		waitWrites(Leaderboard)
 		local after = Leaderboard.stats()
-		r.check(("B3 0.001초 처치 → %s(이론 최소 %.3f초) · 쓰기 %d건(기대 0) · 거절 +%d · 진도는 오름 %d(기록만 거절)"):format(tostring(judgement and judgement.rejected), judgement and judgement.minSeconds or -1,
-			after.orderedWrite - before.orderedWrite, after.rejected - before.rejected, PlayerProfile.getBestBossCleared(player)),
-			judgement and judgement.rejected == "too_fast" and after.orderedWrite == before.orderedWrite and after.rejected == before.rejected + 1)
+		r.check(("B3 스테이지 %d 이론 최소 %.3f초의 절반(%.3f초)에 처치 → %s · 쓰기 %d건(기대 0) · 거절 +%d"):format(probeStage, minSeconds, minSeconds * 0.5,
+			tostring(judgement and judgement.rejected), after.orderedWrite - before.orderedWrite, after.rejected - before.rejected),
+			minSeconds > 0.05 and judgement and judgement.rejected == "too_fast" and after.orderedWrite == before.orderedWrite and after.rejected == before.rejected + 1)
 		PlayerProfile.markLeaderboardTainted(player)
 		local tainted = select(2, Leaderboard.eligibility(player))
 		local before2 = Leaderboard.stats()

@@ -16,6 +16,12 @@ local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local PlayerDamage = {}
 
+-- P3a D4: 맞은 표시 - 피격마다 맞은 사람의 클라에 "얼마 맞았나 · 쉴드가 얼마 막았나"를 알린다(PlayerHitFeedback). 체력바만 줄던 옛 표시로는 신규 보호(×0.1 ~)로
+-- 작아진 피해나 쉴드가 다 막은 피격이 "안 맞은 것처럼" 보였다 - 판정은 있었고 피해만 줄었다는 것을 숫자로 보여 준다(그리기는 클라 PlayerHitFeedback).
+local hitFeedback = Instance.new("RemoteEvent")
+hitFeedback.Name = "PlayerHitFeedback"
+hitFeedback.Parent = ReplicatedStorage
+
 -- 클라이언트 체력바(PlayerHealthBar.client.lua)는 Humanoid.Health가 아니라 이 Attribute를
 -- 읽는다 - PlayerState가 유일한 HP 소스이므로 HP가 바뀌는 모든 지점에서 이걸 같이 불러야 한다.
 function PlayerDamage.syncHud(player)
@@ -58,6 +64,9 @@ function PlayerDamage.takeDamage(targetPlayer, damage, opts)
 	PlayerState.setHp(targetPlayer, newHp)
 	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)
 	PlayerDamage.syncHud(targetPlayer)
+	if not opts.silent and typeof(targetPlayer) == "Instance" and targetPlayer:IsA("Player") then
+		hitFeedback:FireClient(targetPlayer, hpDamage, absorbed) -- P3a D4
+	end
 
 	if not opts.silent then
 		print(("[forge-game] 플레이어 피격%s: %s - %.2f 데미지%s (남은 HP %.2f/%d)"):format(
