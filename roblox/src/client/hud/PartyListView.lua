@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
+local SkillTooltipText = require(ReplicatedStorage.Shared.SkillTooltipText)
 local Gauge = require(script.Parent.Parent.ui.kit.Gauge)
 local ListRow = require(script.Parent.Parent.ui.kit.ListRow)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
@@ -28,12 +29,13 @@ local function firstChar(text)
 	return stop and text:sub(1, stop - 1) or text
 end
 
--- 목록 높이(px): 멤버 count명 + 경험치 칩(보이면). 순수 함수 - 자체 점검이 폰 높이별로 그대로 부른다.
-function PartyListView.heightFor(count, chipVisible, compact)
+-- 목록 높이(px): 멤버 count명 + 경험치 칩(보이면) + 치유 버프 칩(P3d F3 - 보이면). 순수 함수 - 자체 점검이 폰 높이별로 그대로 부른다.
+function PartyListView.heightFor(count, chipVisible, compact, buffChipVisible)
 	local m = compact and PartyListView.compact or PartyListView.pc
 	local memberHeight = compact and m.rowHeight or (m.rowHeight + m.gaugeGap + m.gaugeHeight)
-	local blocks = count + (chipVisible and 1 or 0)
-	local height = count * memberHeight + (chipVisible and m.chipBlock or 0)
+	local chips = (chipVisible and 1 or 0) + (buffChipVisible and 1 or 0)
+	local blocks = count + chips
+	local height = count * memberHeight + chips * m.chipBlock
 	return height + math.max(0, blocks - 1) * m.padding
 end
 
@@ -194,33 +196,47 @@ function PartyListView.build(opts)
 	layout.Parent = list
 
 	-- 30-0 S09(PRD 20.73 [6]): 목록 맨 위의 "경험치 +20%" 칩 - 도움말을 안 열어도 파티의 이득이 보인다. 0이면(솔로 · 더미만 있는 파티) 숨긴다.
-	local chipHolder = Instance.new("Frame")
-	chipHolder.Name = "PartyExpChipHolder"
-	chipHolder.LayoutOrder = 0
-	chipHolder.Size = UDim2.new(0, m.chipWidth, 0, m.chipBlock)
-	chipHolder.BackgroundTransparency = 1
-	chipHolder.Visible = false
-	chipHolder.Parent = list
-	local chip = Instance.new("Frame")
-	chip.Name = "PartyExpChip"
-	chip.Size = UDim2.new(1, 0, 0, CHIP_HEIGHT)
-	chip.BackgroundColor3 = UIColors.panel
-	chip.BackgroundTransparency = UIColors.panelTransparency
-	chip.Parent = chipHolder
-	Theme.corner(chip, CHIP_HEIGHT / 2)
-	local chipStroke = Theme.stroke(chip)
-	chipStroke.Color = UIColors.success
-	chipStroke.Transparency = 0.4
-	local chipText = Theme.label(chip, "", "caption", "success")
-	chipText.Name = "Text"
-	chipText.Font = Theme.font
-	chipText.Size = UDim2.new(1, 0, 1, 0)
-	chipText.TextXAlignment = Enum.TextXAlignment.Center
+	-- P3d F3: 그 아래 "✚ 피해 +17.4%" 칩 - 내가 치유사 파티 버프를 받는 동안(값 = PartyConfig.healerBuffFraction · 툴팁과 같은 모양 SkillTooltipText.pct).
+	local function buildChip(holderName, chipName, order)
+		local holder = Instance.new("Frame")
+		holder.Name = holderName
+		holder.LayoutOrder = order
+		holder.Size = UDim2.new(0, m.chipWidth, 0, m.chipBlock)
+		holder.BackgroundTransparency = 1
+		holder.Visible = false
+		holder.Parent = list
+		local frame = Instance.new("Frame")
+		frame.Name = chipName
+		frame.Size = UDim2.new(1, 0, 0, CHIP_HEIGHT)
+		frame.BackgroundColor3 = UIColors.panel
+		frame.BackgroundTransparency = UIColors.panelTransparency
+		frame.Parent = holder
+		Theme.corner(frame, CHIP_HEIGHT / 2)
+		local stroke = Theme.stroke(frame)
+		stroke.Color = UIColors.success
+		stroke.Transparency = 0.4
+		local text = Theme.label(frame, "", "caption", "success")
+		text.Name = "Text"
+		text.Font = Theme.font
+		text.Size = UDim2.new(1, 0, 1, 0)
+		text.TextXAlignment = Enum.TextXAlignment.Center
+		return holder, frame, text
+	end
+	local chipHolder, chip, chipText = buildChip("PartyExpChipHolder", "PartyExpChip", -2)
+	local buffChipHolder, buffChip, buffChipText = buildChip("PartyBuffChipHolder", "PartyBuffChip", -1)
 
-	local view = { list = list, chip = chip, chipHolder = chipHolder, rows = {}, compact = compact, memberCount = 0 }
+	local view = { list = list, chip = chip, chipHolder = chipHolder, buffChip = buffChip, buffChipHolder = buffChipHolder, rows = {}, compact = compact, memberCount = 0 }
 
 	function view.height()
-		return PartyListView.heightFor(view.memberCount, chipHolder.Visible, compact)
+		return PartyListView.heightFor(view.memberCount, chipHolder.Visible, compact, buffChipHolder.Visible)
+	end
+
+	-- fraction = 받는 치유사 버프(없으면 nil - 숨긴다).
+	function view.setHealerBuff(fraction)
+		buffChipHolder.Visible = fraction ~= nil and fraction > 0
+		if buffChipHolder.Visible then
+			buffChipText.Text = (compact and "✚ +" or "✚ 피해 +") .. SkillTooltipText.pct(fraction) -- 축약형은 폭 96이라 "피해"를 뺀다
+		end
 	end
 
 	function view.setExpBonus(bonus)

@@ -93,7 +93,8 @@ function PartyExpVerify.runPure()
 	r.check(("4인 + 옵션 상한 = ×%.4f(기대 1.5000 - 곱. 합이면 %.4f) ★진짜 합격 기준"):format(product, 1 + capped + PartyState.getExpBonusForCount(4)), near(product, 1.5) and not near(product, 1.45))
 
 	-- p · b 불변: 파티 경험치는 보스 HP 배수 지수 p · 힐러 버프 b를 안 읽는다(PRD 20.73 [5-1]). 이 세션 전 값과 같은 값인가.
-	local p, b = BossRules.partyHpExponent(), PartyConfig.healerBuffFraction
+	-- P3d F: b를 사용자 결정으로 올렸다(PartyConfig.healerBuffFraction 17.36%) - 이 검사의 뜻("파티 경험치 코드가 b의 입력을 안 건드렸다")은 24-4 식의 값으로 잰다.
+	local p, b = BossRules.partyHpExponent(), PartyConfig.healerBuffFormulaFraction
 	r.check(("p · b 불변: BossRules.partyHpExponent = %.10f(기대 %.10f) · PartyConfig.healerBuffFraction = %.10f(기대 %.10f)"):format(p, BASELINE_P, b, BASELINE_B),
 		near(p, BASELINE_P) and near(b, BASELINE_B))
 

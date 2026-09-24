@@ -15,6 +15,7 @@ local function pct(value)
 	local text = ("%.1f"):format(value * 100)
 	return (text:gsub("%.0$", "")) .. "%"
 end
+SkillTooltipText.pct = pct -- P3d F3: 파티 칩이 툴팁과 같은 모양으로 쓴다
 
 local function num(value)
 	if value == nil then

@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local PartyListView = require(script.Parent.PartyListView)
 local PartyAway = require(script.Parent.PartyAway)
@@ -97,6 +98,14 @@ local function refreshExpChip()
 end
 player:GetAttributeChangedSignal("PartyExpBonus"):Connect(refreshExpChip)
 refreshExpChip()
+
+-- P3d F3: 치유사 파티 버프 칩 - 내가 버프를 받는 동안(서버 BuffState가 올리는 HealerBuffActive) 값을 보인다. 값은 툴팁과 같은 소스(PartyConfig).
+local function refreshBuffChip()
+	view.setHealerBuff(player:GetAttribute("HealerBuffActive") == true and PartyConfig.healerBuffFraction or nil)
+	view.applyPosition(screenGui.AbsoluteSize.Y)
+end
+player:GetAttributeChangedSignal("HealerBuffActive"):Connect(refreshBuffChip)
+refreshBuffChip()
 
 screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 	view.applyPosition(screenGui.AbsoluteSize.Y)

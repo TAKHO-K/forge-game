@@ -36,7 +36,15 @@ local healerDpsRatio = 0.9491
 -- 동률이라 뒤집히지 않는다. 부수 효과: 이 지점에서 딜러3+힐러1의 총 DPS가 4(대검 1인
 -- 대비)와 정확히 같아, p(BossRules.partyHpExponent, "정원 파티 DPS=maxMembers배" 전제)의
 -- 전제도 근사가 아니라 등식으로 유지된다.
-local healerBuffFraction = maxMembers / (maxMembers - 1 + healerDpsRatio) - 1
+-- ↑ 24-4의 식(b = N ÷ (N − 1 + r) − 1 = 1.29%)은 기록으로 남긴다(healerBuffFormulaFraction).
+--
+-- P3d F(사용자 결정 - "솔로는 힘들지만 보스 파티에서 빛나는 역할"): 상향. 목표 = 경제 시뮬 F4(EconSimTables.healer의 파티 구성 속도 - 치유모드,
+-- 보스 HP는 4인 배율로 같아 속도 = 파티 딜 ÷ 딜러 4명 딜)에서 "딜러 3 + 치유사 1" = 딜러 4의 100 ~ 105%. 버프를 뺀 3+1 속도는 장비 없음 · 평균 · 상위 ×
+-- 도적 · 검사 6조합에서 0.8526 ~ 0.8941(하네스) → 6조합 모두 [1.00, 1.05]에 드는 b = [0.17292, 0.17439] → 가운데 0.1736.
+--   결과(치유모드): 3+1 = 1.0006 ~ 1.0493 · 2+2 = 0.828 ~ 0.925(≤ 3+1) · 치유사 4 = 0.482 ~ 0.676(가장 느림). 치유사 여럿이어도 버프는 하나(같은 buffId를
+--   덮어쓴다 - HealCast) · 값도 하나(이 값)라 "최댓값 하나"다. 툴팁(SkillStats) · 파티 칩(PartyListView) · 딜 계산(AttackServer · SkillServer)이 전부 이 값을 읽는다.
+local healerBuffFormulaFraction = maxMembers / (maxMembers - 1 + healerDpsRatio) - 1
+local healerBuffFraction = 0.1736
 -- 서버 정원 12 = 4인 × 3파티(PRD 20.38 [6]·20.47 [5](가)). 24-2부터 "12"를 코드에 직접 적지 않고
 -- 이 두 값의 곱으로 유도한다 - 매치메이킹이 채우는 기준 인원(Players.PreferredPlayers에 해당).
 local partiesPerServer = 3
@@ -53,6 +61,9 @@ return {
 
 	-- 24-3: 힐러의 힐을 받은 파티원의 최종 피해 배율 계수. 위 healerBuffFraction 주석 참고.
 	healerBuffFraction = healerBuffFraction,
+	healerBuffFormulaFraction = healerBuffFormulaFraction, -- 24-4 식의 옛 값(1.29%) - 기록 · 검증 대조용(게임은 안 읽는다)
+	-- P3d F: 목표 창(딜러 3 + 치유사 1 ÷ 딜러 4) - 검증 P3d(가)가 경제 시뮬 F4로 다시 잰다.
+	healerBuffTargetSpeed = { 1.00, 1.05 },
 	-- 24-4: b 계산에 쓴 실측 r(힐러 1인 DPS ÷ 대검 1인 DPS, 딜링모드 가동률 포함). 위 주석 참고.
 	healerDpsRatio = healerDpsRatio,
 

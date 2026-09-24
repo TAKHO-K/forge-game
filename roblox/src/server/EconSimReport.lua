@@ -323,8 +323,8 @@ local function writeE6(w, healer)
 	w.line("")
 	w.line("### F4 파티 구성 속도(보스 처치 속도 ÷ 딜러 4명 - 보스 HP는 4인 배율로 같다)")
 	w.line("")
-	w.line("| 장비 | 딜러 | 치유사 모드 | 딜러4 · 딜러3+치유사1 · 딜러2+치유사2 · 딜러1+치유사3 · 치유사4 | 목표 순서(딜러4 ≈ 3+1 > 2+2 > 1+3 · 4) |")
-	w.line("|---|---|---|---|---|")
+	w.line("| 장비 | 딜러 | 치유사 모드 | 딜러4 · 딜러3+치유사1 · 딜러2+치유사2 · 딜러1+치유사3 · 치유사4 | 목표 순서(딜러4 ≈ 3+1 > 2+2 > 1+3 · 4) | P3d 목표(3+1 = 딜러4의 100 ~ 105% · 2+2 ≤ 3+1 · 치유사4 가장 느림) |")
+	w.line("|---|---|---|---|---|---|")
 	w.row("e6_comp", { "tier", "dealer", "mode", "d4", "d3h1", "d2h2", "d1h3", "h4" })
 	for _, entry in ipairs(healer.compositions) do
 		for _, mode in ipairs({ "healMode", "dealingMode", "rebuiltBuff" }) do
@@ -334,9 +334,11 @@ local function writeE6(w, healer)
 			end
 			-- ≈ = 딜러4의 90% 이상(판정 기준 - 로그에 적었다)
 			local ok = v[2] >= 0.9 * v[1] and v[2] > v[3] and v[3] > math.max(v[4], v[5])
+			local target = PartyConfig.healerBuffTargetSpeed
+			local p3d = v[2] >= target[1] * v[1] - 1e-9 and v[2] <= target[2] * v[1] + 1e-9 and v[3] <= v[2] and v[5] <= math.min(v[1], v[2], v[3], v[4])
 			local modeName = mode == "healMode" and "치유모드" or (mode == "dealingMode" and "딜링모드" or ("치유모드 · 참고: b 재산정 %s"):format(pct(entry.rebuiltBuff)))
-			w.line(("| %s | %s | %s | %s · %s · %s · %s · %s | %s |"):format(entry.tier, className(entry.dealerClass), modeName,
-				num(v[1], 3), num(v[2], 3), num(v[3], 3), num(v[4], 3), num(v[5], 3), ok and "O" or "**X**"))
+			w.line(("| %s | %s | %s | %s · %s · %s · %s · %s | %s | %s |"):format(entry.tier, className(entry.dealerClass), modeName,
+				num(v[1], 3), num(v[2], 3), num(v[3], 3), num(v[4], 3), num(v[5], 3), ok and "O" or "**X**", mode == "healMode" and (p3d and "O" or "**X**") or "-"))
 			w.row("e6_comp", { entry.tier, entry.dealerClass, mode, v[1], v[2], v[3], v[4], v[5] })
 		end
 	end
