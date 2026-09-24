@@ -19288,3 +19288,49 @@ COMMON.md §1에 영구 규칙 "성장률(k)에 기대는 값은 힘 비율로 �
 6. 첫 시즌 시작일
 7. 함께 맞은 수 기준
 8. 라이브 제외 UserId
+   - (P3d에서 닫음: 1 · 2 · 4 = 지금 값 확정 · 5 = 견습 포함 13.3분 · 6 = 오픈일 0시 KST 설정값(P6 확정) · 7 = 같은 원 · 8 = 개발 계정 11595243049 - 사용자 확인 대기)
+
+### 20.121 P3d 보스 연출 1차(카툰) · 이탈 복귀 변경 · 단상 균열 · 지형지물 재생성 · 겹침 방지 · 치유사 파티 버프 상향 · P3c 결정 반영 (P3d - 자율 단계)  `[✅ 구현 + 로컬 검사(luau-compile 바뀐 · 새 파일 전부 · luau-analyze 새 경고 0 · 하네스 P3d(가) 5/5 · (가E) 9/9 · P3c(가) 29/29) + Studio Play 3회(2026-09-24 - 동반 95블록 · 3회차 X 4 = P3d(나) D 2(제품 - 고쳤으나 미확인) + 이전부터 3) + 스크린샷 · 성능 Play 1회(PC 14 · 폰 5 - Claude outputs/P3d) · 리뷰 10건(9건 반영). 저장 구조 변경 없음. 결정 필요 6건 · 미결 1 - docs/phase/P3d-report.md]`
+
+#### [1] 무엇을 했나
+
+- **A 연출(클라 로컬 · 판정 무변경)**: 지진파 보스 3종 찍기 모션 = 서버 보스 모델을 내 화면에서만 숨기고 복제 인형을 서버 피벗에 붙여 과장(구간 수호자 두 손 · 심해 군주 꼬리 · 폭풍 군주 지팡이 - `BossFxData.bosses` · `client/BossMotionView`). 풍압(먼지 · 바람 줄기 · 고리 · 흔들림 - Attribute `SettingBossScreenShake`로 끔) · 땅 파도(파동 띠 안 흙 마루 = 판정 자리) · 돌진(발 긁기 · 속도선 · 잔상 · 먼지 꼬리 · 임팩트). 조각 = 풀링 파트(`client/BossFx` · 동시 상한 90 · ParticleEmitter 0).
+- **B 이탈 복귀**: 원 밖 · 바닥 아래 → 본인 스폰 자리(입장 순번 · 지면 + 3) · 체력 · 기믹 누적 그대로 · 0.75초 보호(받는 피해 0배 + 넉백 무시). 시뮬 1,000회 연쇄 0(`ArenaContainment.simulateReturn`).
+- **C 단상(= 큰 블록)**: 윗면에 선 사람은 지진파가 발밑으로 지나간다(현행은 맞았다 - 규칙 변경, 결정 필요 3). 파동 1번째 금 · 2번째 무너짐(위 사람은 떨어지기만, 그 파동 모든 겹 면제 - 큰 블록 5타 · 돌진 규칙과 다름).
+- **D 재생성**: 보스마다 스킬 하나(수호자 진동파 · 서리 빙결 강타 · 심해 해일 · 수정 파편 폭발 · 전갈 잠행 찌르기 · 폭풍 방전 고리)가 정상으로 끝나면 1개 - 전조 1.5초(그림자 + 위험색 테 + 금 빛) · 발밑 50% · 피해(평타 ×2) + 밀림/끼임(고정 · 0배 · 3타 · 6초 자동 파괴 · "탈출! n타") · 상한 14 · 견습 제외(`BossData onComplete` · `BossArenaMapData.regrow`).
+- **E 겹침 방지**: `ArenaLayout.regrowSpot` · `regrowFits`(서버 = 검사) - 100시드 × 6맵 4,800회 겹침 0 · 갇힘 0 · 스폰 덮임 0. 모래 구덩이는 구조물 위에도 생기고 걸친 구조물은 3틱에 무너진다(`props.pit.breaksObstacles`).
+- **F 치유사 버프** 1.29% → 17.36%(`PartyConfig.healerBuffFraction` - 6조합 3+1 = 딜러4의 100.1 ~ 104.9% · 2+2 ≤ 3+1 · 치유사4 최저) · 파티 칩 "✚ 피해 +17.4%"(툴팁과 같은 소스).
+- **G**: a · b · c 확정 · d 캐주얼 시뮬에 견습 7단계(`EconSim.tutorialPhase` - 스테이지 20 = 13.3분) · e `LeaderboardConfig.firstSeasonDateKst`(KST 0시) · f 같은 원 · g 라이브 제외 11595243049(라이브에서만).
+
+#### [2] 구조 · 변경 파일
+
+- 새: `client/BossFx.lua` · `client/BossMotionView.lua` · `client/BossRegrowView.lua` · `shared/data/BossFxData.lua` · `server/P3dVerify.lua`
+- 서버: BossPatterns(파동 단상 판정 · onComplete · 재생성 · 구덩이 달그락 · 넉백 보호 · 연출 필드) · BossArenaMap(단상 · 재생성 · 끼임 · 부드러운 붕괴 · 전역 일련번호) · BossArenaContainment(스폰 복귀 · 보호) · BossEncounter(끼임 해제) · BossMechanics · PlayerState(조건부 해제) · EconSim(Report) · Leaderboard · 검증(P3cVerify · PartyExpVerify · BalanceDecisionVerify 기대값 · DevTools 연결)
+- 공유 · 데이터: ArenaLayout · ArenaContainment · LeaderboardRules · SkillTooltipText · BossData · BossArenaMapData · PartyConfig · EconSimConfig · LeaderboardConfig · DevToolsConfig
+- 클라: BossPatternVisuals · BossRhythmView · BossArenaMapView · PartyListView · PartyList
+
+#### [3] 합격 기준
+
+| 항목 | 결과 | 근거 |
+|---|---|---|
+| A1 보스별 모션 표 + 스크린샷 | O | 보고서 ① · `A_*_windup/impact/wave` |
+| A2 · A3 · A4 전조를 가리지 않음 | O(겉) | 스크린샷 PC · 폰 - 체감은 사람이 확인 |
+| A5 풀링 · 상한 · 성능 비교 | O | 조각 최대 57 · 파트 +209 · 에미터 0 · 서버 2,020 · 1,164 |
+| B 복귀 · 상태 유지 · 연쇄 0 | O | P3d(나) B1 · B2 · (가) B3 |
+| C 단상 판정 · 금 · 붕괴 | O | P3d(나) C1 · C2(2 · 3회차) |
+| D 재생성 · 부등식 · 끼임 · 자동 파괴 · 상한 | △ | D2 부등식 O · 자동 파괴 O · 상한 O · **밀림/끼임 · 3타 탈출 3회차 X - 원인(미룬 계획 토큰) 고쳤으나 미확인(미결 1)** |
+| E3 100시드 겹침 · 갇힘 0 · E2 구덩이 | O | (가E) 9/9 · (나) E2 |
+| F 속도 표 · 중첩 없음 · 표시 | O | (가E) F1 · (나) F2 · (가) F3 |
+| G a ~ g | O(g 확인 대기) | 보고서 ⑧ |
+| 회귀(동반 95블록) | 3회차 X 4 | P3d(나) 2 + 이전부터 3(29-1 · S19b(UI) · P25b(UI)) - 29-1 첫 기믹 +0.56초는 무거운 (가) 부하로 본다 |
+
+#### [4] 사람이 확인할 것
+
+- 모션 · 풍압 · 땅 파도 · 돌진 체감(재미 · 멀미) · 흔들림 세기 · 꼬리 · 지팡이 크기
+- 단상 안전 + 2번 붕괴가 읽히는가 · 재생성 전조가 발밑에서 보이는가 · "탈출! 3타"
+- 폰 실기 프레임 · 라이브 제외 UserId
+
+#### [5] 미결 · 결정 필요
+
+- 미결: Play 3 뒤 재생성 계획 토큰 수정(`ece7b96`) 자동 검증 미실행 - 다음 세션 첫 Play에서 P3d(나) D.
+- 결정 필요 6건: 라이브 제외 UserId · 복귀 보호 0.75초 · 단상 해석 + 면제 · 재생성 시점 · 개수 · 상한 · 끼임 면역 · 받는 피해 배율 칸 공유.
