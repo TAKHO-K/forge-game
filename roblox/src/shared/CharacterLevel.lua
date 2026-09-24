@@ -58,8 +58,10 @@ end
 -- P3c C4: 레벨 L의 경험치 배수 - 마지막 앵커(125) 뒤(126 ~)는 CharacterLevelConfig.expScaleAfterAnchors, 그 앞은 1. 필요 경험치와 획득 경험치(PlayerProfile.addCharacterExp ·
 -- EconSim)에 **같이** 곱한다 - 처치 수는 그대로, 경험치 숫자만 125 → 126에서 이어진다.
 function CharacterLevel.getExpScale(level)
-	if level > ANCHORS[#ANCHORS].level then
-		return CharacterLevelConfig.expScaleAfterAnchors or 1
+	local last = ANCHORS[#ANCHORS].level
+	if level > last then
+		local scale = (CharacterLevelConfig.expScaleAfterAnchors or 1) * (CharacterLevelConfig.expScaleDecayPerLevel or 1) ^ (level - last - 1)
+		return math.max(scale, 1)
 	end
 	return 1
 end

@@ -147,6 +147,15 @@ function PlayerState.setIncomingDamageMultiplierUntil(player, multiplier, durati
 	entry.incomingDamageMultiplierUntil = newUntil
 end
 
+-- P3c: 걸려 있는 받는 피해 배율을 바로 푼다(검증 블록이 앞 블록의 면역을 이어받지 않게 - P3b(나) D3의 0배 40초가 P3c(나)까지 남았다).
+function PlayerState.clearIncomingDamageMultiplier(player)
+	local entry = players[player]
+	if entry then
+		entry.incomingDamageMultiplier = nil
+		entry.incomingDamageMultiplierUntil = nil
+	end
+end
+
 -- MonsterAI.server.lua의 applyHitToPlayer가 매 피격마다 곱한다. 활성 구간이 아니면 1.
 function PlayerState.getIncomingDamageMultiplier(player)
 	local entry = players[player]

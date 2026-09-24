@@ -129,6 +129,8 @@ function ArenaLayout.chargeCoverage(items, bodyHalf)
 	return covered / 360
 end
 
+local STEPS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } -- 리뷰 4: 칸마다 표를 새로 만들지 않는다
+
 -- 갇힘 검사: 칸 격자에서 입장 자리부터 퍼져 나가 원 안(몸 반폭 1 여유)의 빈 칸이 전부 닿는가. 빈 칸 = 어느 충돌 원 + 1 안도 아니다(큰 블록도 막힌 것으로 본다 - 보수적).
 -- 반환: 전부 닿는가, 빈 칸 수, 닿은 칸 수.
 function ArenaLayout.connectivity(items, options)
@@ -170,16 +172,21 @@ function ArenaLayout.connectivity(items, options)
 	if not free[key(si, sj)] then
 		return false, count, 0
 	end
-	local seen, queue, head, reached = { [key(si, sj)] = true }, { { si, sj } }, 1, 0
-	while head <= #queue do
-		local at = queue[head]
+	-- 큐 = 칸 키(숫자) 배열(리뷰 4 - 칸마다 표를 만들던 것을 숫자로). key = i × 4096 + j → i · j를 되돌린다(j는 음수일 수 있다).
+	local start = key(si, sj)
+	local seen, queue, head, tail, reached = { [start] = true }, { start }, 1, 1, 0
+	while head <= tail do
+		local k0 = queue[head]
 		head += 1
 		reached += 1
-		for _, step in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
-			local k = key(at[1] + step[1], at[2] + step[2])
+		local i0 = math.floor((k0 + 2048) / 4096)
+		local j0 = k0 - i0 * 4096
+		for _, step in ipairs(STEPS) do
+			local k = key(i0 + step[1], j0 + step[2])
 			if free[k] and not seen[k] then
 				seen[k] = true
-				table.insert(queue, { at[1] + step[1], at[2] + step[2] })
+				tail += 1
+				queue[tail] = k
 			end
 		end
 	end
@@ -210,8 +217,16 @@ function ArenaLayout.validate(layout, options)
 		end
 		report.minCenter = math.min(report.minCenter, d - item.radius)
 	end
-	report.connected, report.freeCells, report.reached = ArenaLayout.connectivity(items, o)
 	report.coverage = ArenaLayout.chargeCoverage(items)
+	-- 리뷰 4: 연결 검사(격자 BFS)가 가장 비싸다 - 싼 검사가 이미 실패했으면 건너뛴다(options.forceConnectivity = 검증이 늘 잰다).
+	local cheapOk = report.minWallGap >= LAYOUT.wallGapStuds - 1e-6 and report.minPairGap >= LAYOUT.minGapStuds - 1e-6
+		and report.minCenter >= LAYOUT.centerClearStuds - 1e-6 and report.minKitGap >= LAYOUT.kitGapStuds - 1e-6
+		and report.entryViolations == 0 and report.coverage >= o.coverageMin - 1e-9
+	if cheapOk or (options and options.forceConnectivity) then
+		report.connected, report.freeCells, report.reached = ArenaLayout.connectivity(items, o)
+	else
+		report.connected, report.freeCells, report.reached = false, 0, 0
+	end
 	report.ok = report.minWallGap >= LAYOUT.wallGapStuds - 1e-6 and report.minPairGap >= LAYOUT.minGapStuds - 1e-6
 		and report.minCenter >= LAYOUT.centerClearStuds - 1e-6 and report.minKitGap >= LAYOUT.kitGapStuds - 1e-6
 		and report.entryViolations == 0 and report.connected and report.coverage >= o.coverageMin - 1e-9

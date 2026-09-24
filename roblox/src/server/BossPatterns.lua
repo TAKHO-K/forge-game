@@ -673,6 +673,7 @@ local function updateWaves(c)
 				rec.resolved = true
 				if not rec.dodged then
 					applySkillDamage(c.model, c.data, skill, v.player)
+					debugEvent("waveHit", { player = v.player, at = c.now }) -- P3c 계측: 파동 판정(피해가 0이어도 판정은 났다)
 				end
 			end
 		end
@@ -910,7 +911,7 @@ HANDLERS.circleTarget = {
 						end
 					end
 					if not index then
-						table.insert(positions, xz(hit.v.root.Position))
+						table.insert(positions, clampToZone(xz(hit.v.root.Position), zoneOf(c.model), circleTargetMargin(zoneOf(c.model)))) -- 리뷰 6: 다른 원과 같이 벽 안쪽으로
 						index = #positions
 					end
 					trackers[index] = hit.v

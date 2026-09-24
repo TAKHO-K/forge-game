@@ -64,6 +64,20 @@ local function newFlatDisc(position, radius, color, material, lift)
 	return disc
 end
 
+-- P3c B4: 이 아레나의 둔덕 층(서버 "BossArenaMound" 태그 - 층 원판) 중 (x, z) 반경 radius 원에 걸친 것의 가장 높은 윗면 - 바닥(baseY) 기준 높이. 없으면 0.
+local CollectionService = game:GetService("CollectionService")
+local function moundLift(center, radius, baseY)
+	local lift = 0
+	for _, part in ipairs(CollectionService:GetTagged("BossArenaMound")) do
+		local dx, dz = part.Position.X - center.X, part.Position.Z - center.Z
+		local reach = part.Size.Y / 2 + radius
+		if dx * dx + dz * dz <= reach * reach then
+			lift = math.max(lift, part.Position.Y + part.Size.X / 2 - baseY)
+		end
+	end
+	return math.clamp(lift, 0, 4)
+end
+
 local function spawnPit(data)
 	local slope = newFlatDisc(data.position, data.radius, data.color, Enum.Material.Sand, 0.08)
 	local core = newFlatDisc(data.position, data.coreRadius, DANGER_COLOR, Enum.Material.Neon, 0.14)
@@ -156,10 +170,24 @@ function BossArenaPropsView.showGlobalTelegraph(data)
 		}):Play()
 	end
 	table.insert(telegraphParts, sheet)
+	-- P3c B4(리뷰 1): 빨강 판은 바닥 높이라 둔덕(최대 1.5) 속에 묻힌다 - 둔덕 층마다 그 윗면에 같은 빨강 원판을 얹는다(둔덕 위도 위험 = 판정 그대로).
+	if data.zoneRadius then
+		for _, part in ipairs(CollectionService:GetTagged("BossArenaMound")) do
+			local dx, dz = part.Position.X - data.zoneCenter.X, part.Position.Z - data.zoneCenter.Z
+			if dx * dx + dz * dz <= data.zoneRadius * data.zoneRadius then
+				local top = part.Position.Y + part.Size.X / 2
+				local cover = newFlatDisc(Vector3.new(part.Position.X, top, part.Position.Z), part.Size.Y / 2, DANGER_COLOR, Enum.Material.Neon, 0.12)
+				cover.Transparency = 0.85
+				TweenService:Create(cover, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 0.4 }):Play()
+				table.insert(telegraphParts, cover)
+			end
+		end
+	end
 
 	-- 29-4 과충전: 원형 안전지대(피뢰침 곁) - 같은 문법이다. 빨강 위에 바닥색 원판을 얹어 "여기만 비어 있다"를 그린다.
 	for _, circle in ipairs(data.safeCircles or {}) do
-		local hole = newFlatDisc(Vector3.new(circle.center.X, data.zoneCenter.Y, circle.center.Z), circle.radius, floorColor, Enum.Material.SmoothPlastic, 0.28)
+		local at = Vector3.new(circle.center.X, data.zoneCenter.Y, circle.center.Z)
+		local hole = newFlatDisc(at, circle.radius, floorColor, Enum.Material.SmoothPlastic, 0.28 + moundLift(at, circle.radius, data.zoneCenter.Y)) -- P3c B4: 둔덕 위로
 		hole.Transparency = 0
 		table.insert(telegraphParts, hole)
 	end
@@ -168,7 +196,8 @@ function BossArenaPropsView.showGlobalTelegraph(data)
 		local away = Vector3.new(entry.position.X - data.center.X, 0, entry.position.Z - data.center.Z)
 		if not entry.isPit and away.Magnitude > 1e-3 then
 			local dir = away.Unit
-			local from = Vector3.new(entry.position.X, data.zoneCenter.Y + 0.28, entry.position.Z)
+			local mid = Vector3.new(entry.position.X, data.zoneCenter.Y, entry.position.Z) + dir * (SHADOW_LENGTH_STUDS / 2)
+			local from = Vector3.new(entry.position.X, data.zoneCenter.Y + 0.28 + moundLift(mid, SHADOW_LENGTH_STUDS / 2 + entry.radius, data.zoneCenter.Y), entry.position.Z) -- P3c B4
 			local shadow = newPart(Vector3.new(entry.radius * 2, 0.16, SHADOW_LENGTH_STUDS), floorColor, 0, Enum.Material.SmoothPlastic)
 			shadow.CFrame = CFrame.lookAt(from + dir * (SHADOW_LENGTH_STUDS / 2), from + dir * SHADOW_LENGTH_STUDS)
 			table.insert(telegraphParts, shadow)

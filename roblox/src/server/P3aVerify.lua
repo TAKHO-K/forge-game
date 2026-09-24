@@ -277,8 +277,8 @@ function P3aVerify.edgeEvasion(trials)
 				local theta = 2 * math.pi * (point - 1) / 48
 				local px, pz = math.cos(theta) * (R - depth), math.sin(theta) * (R - depth)
 				local near = {}
-				-- P3c B1: 구조물은 무작위 배치 - 시드 P3aVerify.edgeLayoutSeeds개(기본 3)의 배치를 모두 대 본다(충돌 원 단위). 100시드 전수는 하네스(보고서 ⑤).
-				for seedIndex = 1, P3aVerify.edgeLayoutSeeds or 3 do
+				-- P3c B1: 구조물은 무작위 배치 - 시드 P3aVerify.edgeLayoutSeeds개(Studio 기본 1 - 3개면 Play 1에서 15분을 넘겼다)의 배치를 대 본다(충돌 원 단위). 100시드 전수는 하네스(보고서 ⑤).
+				for seedIndex = 1, P3aVerify.edgeLayoutSeeds or 1 do
 					local layout = ArenaLayout.generate(BossArenaMapData.maps[t[1]], seedIndex, ArenaLayout.optionsFor(BossData.bosses[t[1]]))
 					for _, item in ipairs(layout.items) do
 						for _, c in ipairs(item.colliders) do

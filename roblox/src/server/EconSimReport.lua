@@ -192,6 +192,9 @@ local function writeE4(w, runs, profileIds, enhanceTable)
 				local cost = Enhance.getCost(last.weaponLevel, last.reach) -- P2 C1: 구간 끝 최고 스테이지 기준(GoldCost)
 				local expected = enhanceTable[last.weaponLevel]
 				local scale = GoldCost.scale(last.reach, "enhance") -- 몬테카를로 표는 기본 비용 기준 - 같은 배수를 곱한다
+				if last.weaponLevel >= ((require(ReplicatedStorage.Shared.data.EnhanceConfig).ceilingDiscount or {}).fromEnhanceLevel or math.huge) then
+					scale *= Enhance.getCeilingCostFactor(last.reach) -- P3c C1(리뷰 9): +20 이상은 천장 보정 배수도(Enhance.getCost와 같은 기준)
+				end
 				local power = cost and goldPerMin / cost or nil
 				local interval = replaced > 0 and minutes / replaced or nil
 				w.line(("| %s | %s | %s | %s | %s | %s | %s | %s | %d칸 · %s · %s | %d ~ %d | %d ~ %d |"):format(

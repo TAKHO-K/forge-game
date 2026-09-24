@@ -36,7 +36,9 @@ function ArenaShape.clamp(zone, position, margin)
 	)
 end
 
--- origin에서 XZ 단위벡터 dir 방향으로 구역(margin만큼 안쪽) 안에 머무는 최대 거리(0 이상). origin이 이미 밖이면 0.
+-- origin에서 XZ 단위벡터 dir 방향으로 구역(margin만큼 안쪽) 안에 머무는 최대 거리(0 이상). origin이 밖이고 바깥쪽을 향하면 0.
+-- P3c A3: origin이 경계 **위나 아주 조금 밖**(돌진이 벽 여백에서 멈춘 자리 - 부동소수로 limit보다 1e-13쯤 크다)이어도 안쪽을 향하면 반대편 경계까지를 돌려준다.
+-- 옛 식은 c > 0이면 0이라 전갈 여왕의 둘째 돌진(벽에서 멈춘 자리에서 다시 출발)이 길이 0이 됐다(P3c Play 1 - "경로 0.0stud").
 function ArenaShape.clip(zone, origin, dir, margin)
 	margin = margin or 0
 	if zone.radius then
@@ -46,7 +48,7 @@ function ArenaShape.clip(zone, origin, dir, margin)
 		local b = ox * dir.X + oz * dir.Z
 		local c = ox * ox + oz * oz - limit * limit
 		local discriminant = b * b - c
-		if discriminant < 0 or c > 0 then
+		if discriminant < 0 or (c > 0 and b >= 0) then
 			return 0
 		end
 		return math.max(-b + math.sqrt(discriminant), 0)

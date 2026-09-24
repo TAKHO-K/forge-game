@@ -853,14 +853,26 @@ local function migrate(data)
 	end
 
 	if data.version < 35 then
-		-- P3c C4: 레벨 126부터 필요 경험치가 expScaleAfterAnchors배(획득도 같은 배수 - 처치 수는 그대로). 누적 임계값은 126까지 옛 값과 같고 그 뒤로는
-		-- 정확히 그 배수로 늘므로, 레벨 126 도달 누적값을 넘는 경험치만 같은 배수로 옮기면 레벨과 진행률이 그대로다. 126 아래 · 0은 그대로.
+		-- P3c C4: 레벨 126부터 필요 경험치가 레벨별 배수(CharacterLevel.getExpScale - 획득도 같은 배수, 처치 수는 그대로). 누적 임계값은 126까지 옛 값과 같다.
+		-- 옛 곡선(v34 - 필요 경험치 = round(K × E), 배수 없음)으로 레벨과 진행률을 읽고, 새 곡선에서 같은 레벨 · 같은 진행률의 값으로 옮긴다(126 아래 · 0은 그대로).
 		local base = CharacterLevel.getExpForLevel(126)
-		local scale = CharacterLevel.getExpScale(126)
+		local function oldNeed(level)
+			return math.floor(CharacterLevel.getTargetKills(level) * CharacterLevel.getMonsterExpAtLevel(level) + 0.5)
+		end
 		for _, classState in pairs(data.classes) do
 			local exp = classState.characterExp
 			if type(exp) == "number" and exp == exp and exp > base and exp < math.huge then
-				classState.characterExp = base + (exp - base) * scale
+				local level, threshold = 126, base
+				while level < 1000000 do
+					local need = oldNeed(level)
+					if exp < threshold + need then
+						break
+					end
+					threshold += need
+					level += 1
+				end
+				local fraction = (exp - threshold) / oldNeed(level)
+				classState.characterExp = CharacterLevel.getExpForLevel(level) + fraction * CharacterLevel.getExpToNextLevel(level)
 			end
 		end
 		data.version = 35

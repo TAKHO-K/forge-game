@@ -175,7 +175,10 @@ function BossStormView.launch(data)
 		return
 	end
 	if data.holdSeconds then
-		lift(data, root, humanoid)
+		-- P3c A5(리뷰 5): 회오리도 넉백 높이 상한을 거친다(수평은 제자리 + 중심을 서버가 벽 안쪽으로 잘라 보낸다).
+		local capped = table.clone(data)
+		capped.heightStuds = select(1, ArenaContainment.limitLaunch(nil, root.Position, Vector3.zero, data.heightStuds, 0))
+		lift(capped, root, humanoid)
 		return
 	end
 	local away = Vector3.new(root.Position.X - data.from.X, 0, root.Position.Z - data.from.Z)

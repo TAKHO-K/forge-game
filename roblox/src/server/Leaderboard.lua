@@ -444,6 +444,19 @@ function Leaderboard.snapshotHall(season)
 		return false
 	end
 	hallChecked[season] = true
+	-- 리뷰 3: 먼저 전당이 이미 있는지 한 번만 본다(있으면 순위표 6개 읽기를 하지 않는다 - 서버가 켜질 때마다 정렬 읽기 6회를 쓰지 않게).
+	stats.plainRead += 1
+	local existsOk, existing = withRetry(("전당 확인 s%d"):format(season), function()
+		return hallStore():GetAsync("s" .. season)
+	end)
+	if not existsOk then
+		hallChecked[season] = nil
+		return false
+	end
+	if existing ~= nil then
+		hallCache[season] = { value = type(existing) == "table" and existing or false, at = os.clock() }
+		return false
+	end
 	local boards, names = {}, {}
 	for _, boardId in ipairs(boardIds()) do
 		local entries = readTop(boardId, season, LeaderboardConfig.hallTopN)

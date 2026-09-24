@@ -141,6 +141,19 @@ function P3cVerify.runPure()
 			target == 1 and id == 7 and near(contact, 22.5) and near(BossData.bosses.section_guardian.skills.charge.recoverSeconds + BossArenaMapData.obstacle.chargeStunBonusSeconds, 6))
 	end)
 
+	r.section("A3 경계에서 다시 출발하는 돌진", function()
+		local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
+		local zone = WorldConfig.zones.bossArena1
+		local margin = BossData.bosses.scorpion_queen.skills.stab.arenaMarginStuds
+		local dir = Vector3.new(math.cos(0.7), 0, math.sin(0.7))
+		local first = ArenaShape.clip(zone, zone.center, dir, margin)
+		local stop = zone.center + dir * first -- 첫 돌진이 멈춘 자리(부동소수로 경계보다 아주 조금 밖일 수 있다)
+		local back = ArenaShape.clip(zone, stop, -dir, margin)
+		local out = ArenaShape.clip(zone, stop, dir, margin)
+		r.check(("A3 벽 여백에서 멈춘 자리 → 안쪽으로 다시 돌진 %.1fstud(기대 지름 − 여백×2 = %.1f) · 바깥쪽 %.2f(기대 0) - Play 1의 \"경로 0.0stud\" 재발 방지"):format(
+			back, 2 * (zone.radius - margin), out), near(back, 2 * (zone.radius - margin), 1e-6) and out <= 1e-6)
+	end)
+
 	r.section("A4 번개", function()
 		local strike = BossData.bosses.storm_lord.skills.strike
 		local launch = strike.onHit[1]
@@ -192,6 +205,7 @@ function P3cVerify.runPure()
 		for _, bossId in ipairs(ALL_BOSSES) do
 			local theme = BossArenaMapData.maps[bossId]
 			local options = ArenaLayout.optionsFor(BossData.bosses[bossId])
+			options.forceConnectivity = true -- 검증은 싼 검사가 실패해도 연결(갇힘)을 늘 잰다
 			local fails, trapped, nearWall, minWall, minPair, minCov, maxAttempts, minItems, maxItems = 0, 0, 0, math.huge, math.huge, 1, 0, math.huge, 0
 			for seed = 1, 100 do
 				local layout = ArenaLayout.generate(theme, seed * 7919, options)
@@ -251,15 +265,28 @@ function P3cVerify.runPure()
 			end
 		end
 		local at125 = CharacterLevel.getExpToNextLevel(126) / CharacterLevel.getExpToNextLevel(125)
-		r.check(("C4 레벨당 필요 경험치 비: 125 → 126 = ×%.4f(옛 ×0.0077) · 1 ~ 30,000 최소 ×%.4f(@%d) · 최대 ×%.4f(@%d, 상한 ×1.35) · 처치 수 126 = %d(×6 · 그대로 %d)"):format(
-			at125, minR, minAt, maxR, maxAt, CharacterLevel.getExpectedKills(126, 6), math.ceil(CharacterLevel.getTargetKills(126) / 6 - 1e-9)),
-			at125 >= 1 and at125 <= 1.1 and minR >= 1 and maxR <= 1.35 and CharacterLevel.getExpectedKills(126, 6) == math.ceil(CharacterLevel.getTargetKills(126) / 6 - 1e-9))
+		local capExp = CharacterLevel.getExpForLevel(34230)
+		r.check(("C4 레벨당 필요 경험치 비: 125 → 126 = ×%.4f(옛 ×0.0077) · 1 ~ 30,000 최소 ×%.4f(@%d) · 최대 ×%.4f(@%d, 상한 ×1.35) · 처치 수 126 = %d(×6 · 그대로 %d) · 배수 1로 돌아오는 레벨 %d · 누적(34,230) %.3g < 1e300"):format(
+			at125, minR, minAt, maxR, maxAt, CharacterLevel.getExpectedKills(126, 6), math.ceil(CharacterLevel.getTargetKills(126) / 6 - 1e-9),
+			(function()
+				local l = 126
+				while CharacterLevel.getExpScale(l) > 1 do
+					l += 1
+				end
+				return l
+			end)(), capExp),
+			at125 >= 1 and at125 <= 1.1 and minR >= 1 and maxR <= 1.35 and CharacterLevel.getExpectedKills(126, 6) == math.ceil(CharacterLevel.getTargetKills(126) / 6 - 1e-9) and capExp < 1e300)
 		-- v35 이관: 레벨 300 중간(진행 40%)의 옛 경험치 → 새 곡선에서 같은 레벨 · 같은 진행률.
 		local SaveSystem = require(script.Parent.SaveSystem)
-		local base126 = CharacterLevel.getExpForLevel(126)
-		local scale = CharacterLevel.getExpScale(126)
-		local oldAt300 = base126 + (CharacterLevel.getExpForLevel(300) - base126) / scale
-		local oldNeed300 = CharacterLevel.getExpToNextLevel(300) / scale
+		-- 옛 곡선(v34 - 배수 없음)의 레벨 300 임계값 · 필요량.
+		local function oldNeed(level)
+			return math.floor(CharacterLevel.getTargetKills(level) * CharacterLevel.getMonsterExpAtLevel(level) + 0.5)
+		end
+		local oldAt300 = CharacterLevel.getExpForLevel(126)
+		for level = 126, 299 do
+			oldAt300 += oldNeed(level)
+		end
+		local oldNeed300 = oldNeed(300)
 		local data = SaveSystem.defaultProfile()
 		data.version = 34
 		local classId = next(data.classes)
@@ -435,6 +462,21 @@ function P3cVerify.runLive(player, env)
 		table.insert(events, { kind = kind, at = os.clock(), record = record })
 	end
 	local standIns = {}
+	-- 앞 블록(P3b(나) D3)이 건 "받는 피해 0"(40초)이 남아 있으면 피해로 재는 항목이 거짓 X가 난다(P3c Play 1 - 파편 −0%) - 먼저 푼다.
+	PlayerState.clearIncomingDamageMultiplier(player)
+	-- 섹션이 에러로 끝나도 다음 섹션이 깨끗하게 시작하게(리뷰 10): 고정 해제 · 고정 시드 비우기 · 스탠드인 정리.
+	local rawSection = r.section
+	r.section = function(name, fn)
+		rawSection(name, fn)
+		if root then
+			root.Anchored = false
+		end
+		BossArenaMap.debugNextSeed = nil
+		BossPatterns.debugJudgeHook = nil
+		BossPatterns.debugSendHook = nil
+		clearStandIns(player, standIns)
+		PlayerState.clearIncomingDamageMultiplier(player)
+	end
 
 	r.section("A2 4인 발탄식 유도", function()
 		local model, data, encounter = spawnBoss(player, env, "section_guardian", 101)
@@ -453,7 +495,8 @@ function P3cVerify.runLive(player, env)
 		local side = Vector3.new(-dir.Z, 0, dir.X)
 		local distance = (Vector3.new(target.center.X, 0, target.center.Z) - Vector3.new(zone.center.X, 0, zone.center.Z)).Magnitude
 		root.Anchored = true
-		place(root, zone.center - dir * 80 + Vector3.new(0, FLOOR + 3, 0)) -- 개발 캐릭터 = 4번째 사람(멀리 - 어그로 밖)
+		-- 개발 캐릭터 = 4번째 사람(가장 멀리 - 반대편 130). Play 1은 80에 두어 구조물 뒤 사람(최대 약 117)보다 가까웠다(검증 쪽 X).
+		place(root, zone.center - dir * 130 + Vector3.new(0, FLOOR + 3, 0))
 		local members = { player }
 		local behind, behindRoot = newStandIn(model, members, "Behind", zone.center + dir * (distance + target.radius + 6) + Vector3.new(0, FLOOR + 3, 0))
 		table.insert(standIns, behind)
@@ -748,14 +791,17 @@ function P3cVerify.runLive(player, env)
 			allHit = allHit and hit
 			table.insert(rows, ("%s 낙석 판정=%s"):format(spot.label, tostring(hit)))
 			BossPatterns.interrupt(model, data)
-			-- 진동파: 서 있으면(점프 안 함) 맞는다 - 둔덕 · 블록 위에서도 공중 판정이 "공중 아님"이어야 한다.
+			-- 진동파: 서 있으면(점프 안 함) 맞는다 - 둔덕 · 블록 위에서도 공중 판정이 "공중 아님"이어야 한다. 체력이 아니라 판정 계측(waveHit)으로 센다(면역 · 쉴드와 무관).
 			fullHeal(player)
-			local hpFull = PlayerState.getHp(player)
+			table.clear(events)
 			BossPatterns.force(model, data, "shockwave")
 			drive(player, root, model, data, 9, function()
 				return st.phase == "normal"
-			end, true)
-			local waveHit = PlayerState.getHp(player) < hpFull
+			end)
+			local waveHit = false
+			for _, e in ipairs(events) do
+				waveHit = waveHit or (e.kind == "waveHit" and e.record.player == player)
+			end
 			allHit = allHit and waveHit
 			table.insert(rows, ("%s 진동파(서 있음) 맞음=%s"):format(spot.label, tostring(waveHit)))
 			fullHeal(player)

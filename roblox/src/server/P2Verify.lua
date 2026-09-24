@@ -136,7 +136,8 @@ function P2Verify.runPure()
 		local ratioOk = true
 		for _, stage in ipairs({ 150, 800, 2500, 4000 }) do
 			-- P2.5c: 20강 1회가 766,000 → 20,000이라 floor(정수 골드)의 상대 오차가 1e-6을 넘는다 - 허용치 = 1원 ÷ 비용.
-			ratioOk = ratioOk and near(Enhance.getCost(20, stage + 1) / Enhance.getCost(20, stage), InfiniteStage.getGoldReward(1e6, stage + 1) / InfiniteStage.getGoldReward(1e6, stage), 2 / Enhance.getCost(20, stage))
+			-- P3c C1: +20 이상은 천장 구간(레벨 2,500 ~ 4,500 척도)에서 보정 배수가 곱해져 이 비가 골드 증가율과 달라진다(의도) - 보정이 없는 +19 → +20 1회로 잰다.
+			ratioOk = ratioOk and near(Enhance.getCost(19, stage + 1) / Enhance.getCost(19, stage), InfiniteStage.getGoldReward(1e6, stage + 1) / InfiniteStage.getGoldReward(1e6, stage), 2 / Enhance.getCost(19, stage))
 		end
 		local top = Enhance.getCost(24, 4738)
 		r.check(("C1.4 한 스테이지당 비용 증가율 = 잡몹 골드 증가율(P2.5a 골드 성장률) %s · 24강 최고 4738 = %.3g(유한 %s)"):format(tostring(ratioOk), top, tostring(isFinite(top))), ratioOk and isFinite(top))

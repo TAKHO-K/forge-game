@@ -90,6 +90,22 @@ local function moundLift(center, radius)
 	return math.clamp(lift, 0, 4)
 end
 
+-- 선분(a → b, 반폭 halfWidth)이 실제로 걸친 둔덕만 본다(리뷰 2 - 선분을 감싸는 원으로 재면 둔덕을 안 지나는 선도 떴다).
+local function moundLiftSegment(a, b, halfWidth)
+	local lift = 0
+	local ab = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
+	local len2 = ab:Dot(ab)
+	for _, part in ipairs(CollectionService:GetTagged("BossArenaMound")) do
+		local p = Vector3.new(part.Position.X - a.X, 0, part.Position.Z - a.Z)
+		local t = len2 > 1e-6 and math.clamp(p:Dot(ab) / len2, 0, 1) or 0
+		local closest = p - ab * t
+		if closest.Magnitude <= part.Size.Y / 2 + halfWidth then
+			lift = math.max(lift, part.Position.Y + part.Size.X / 2 - a.Y)
+		end
+	end
+	return math.clamp(lift, 0, 4)
+end
+
 -- 바닥에 눕힌 원판(Cylinder는 로컬 X축이 높이 방향 - Z축으로 90도 돌려 눕힌다).
 local function newDisc(center, radius, color, transparency)
 	local disc = newPart(Vector3.new(0.2, radius * 2, radius * 2), color, transparency)
@@ -294,10 +310,12 @@ end
 local function shockwave(data)
 	local segments = {}
 	for i = 1, WAVE_SEGMENTS do
-		local part = newPart(Vector3.new(1, WAVE_HEIGHT_STUDS, data.thickness), DANGER_COLOR, 0.25)
+		local part = newPart(Vector3.new(1, waveHeight, data.thickness), DANGER_COLOR, 0.25)
 		segments[i] = part
 	end
-	local center = data.center + Vector3.new(0, WAVE_HEIGHT_STUDS / 2 + moundLift(data.center, data.maxRadius), 0) -- P3c B4: 둔덕 위로 지나가는 띠도 보이게
+	-- P3c B4(리뷰 2): 띠를 띄우지 않고 **키운다** - 바닥에서 둔덕 윗면 위까지 덮는 띠(평지에서도 바닥에 붙어 있고, 둔덕 위를 지날 때도 보인다).
+	local waveHeight = WAVE_HEIGHT_STUDS + moundLift(data.center, data.maxRadius)
+	local center = data.center + Vector3.new(0, waveHeight / 2, 0)
 	local connection
 	connection = RunService.RenderStepped:Connect(function()
 		local radius = (Workspace:GetServerTimeNow() - data.serverStart) * data.speed
@@ -314,7 +332,7 @@ local function shockwave(data)
 		for i, part in ipairs(segments) do
 			local angle = (i / WAVE_SEGMENTS) * 2 * math.pi
 			local offset = Vector3.new(math.cos(angle), 0, math.sin(angle))
-			part.Size = Vector3.new(segmentLength, WAVE_HEIGHT_STUDS, data.thickness)
+			part.Size = Vector3.new(segmentLength, waveHeight, data.thickness)
 			part.CFrame = CFrame.new(center + offset * mid) * CFrame.Angles(0, -angle, 0)
 		end
 	end)
@@ -332,7 +350,7 @@ local function focus(data)
 	end
 	local mid = (data.bossPosition + data.endPosition) / 2
 	local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), DANGER_COLOR, 0.8)
-	local y = data.floorY + 0.15 + moundLift(Vector3.new(mid.X, data.floorY, mid.Z), length / 2 + data.halfWidth) -- P3c B4
+	local y = data.floorY + 0.15 + moundLiftSegment(Vector3.new(data.bossPosition.X, data.floorY, data.bossPosition.Z), Vector3.new(data.endPosition.X, data.floorY, data.endPosition.Z), data.halfWidth) -- P3c B4
 	line.CFrame = CFrame.lookAt(Vector3.new(mid.X, y, mid.Z), Vector3.new(data.endPosition.X, y, data.endPosition.Z))
 	-- 예고 시간 동안 점점 진해진다.
 	TweenService:Create(line, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
@@ -445,7 +463,7 @@ local function placeCrossBeams(angleDeg, data)
 			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 			local length = data.lengths[k + 1]
 			local mid = data.center + dir * (length / 2)
-			local up = Vector3.new(0, 0.15 + moundLift(mid, length / 2 + data.halfWidth), 0) -- P3c B4
+			local up = Vector3.new(0, 0.15 + moundLiftSegment(data.center, data.center + dir * length, data.halfWidth), 0) -- P3c B4
 			line.CFrame = CFrame.lookAt(mid + up, data.center + dir * length + up)
 		end
 	end

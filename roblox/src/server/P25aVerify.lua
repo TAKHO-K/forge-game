@@ -125,7 +125,9 @@ function P25aVerify.runPure()
 			near(main, CharacterLevelConfig.weaponMultGrowthRate, 1e-12) and near(before, CharacterLevelConfig.weaponMultGrowthRate, 1e-12) and segOk)
 		local expOk = true
 		for _, level in ipairs({ 1, 25, 100, 5000, 20000 }) do
-			local expected = math.floor(CharacterLevel.getTargetKills(level) * math.floor(MonsterData.tier1.expReward * InfiniteStage.getMultiplier(level + CharacterLevelConfig.levelStageOffset)) + 0.5)
+			-- P3c C4: 126부터 레벨별 경험치 배수(CharacterLevel.getExpScale)가 곱해진다(처치 수는 그대로).
+			local expected = math.floor(CharacterLevel.getTargetKills(level) * math.floor(MonsterData.tier1.expReward * InfiniteStage.getMultiplier(level + CharacterLevelConfig.levelStageOffset))
+				* CharacterLevel.getExpScale(level) + 0.5)
 			expOk = expOk and CharacterLevel.getExpToNextLevel(level) == expected
 		end
 		r.check(("C3.1 필요 경험치 = round(K(L) × 스테이지 L + %d의 tier1 경험치) %s"):format(CharacterLevelConfig.levelStageOffset, tostring(expOk)), expOk)
