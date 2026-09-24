@@ -169,6 +169,11 @@ function SkillTooltip.hide()
 	current = nil
 	if refs then
 		refs.root.Visible = false
+		for _, pair in ipairs(refs.lines) do -- 숨길 때 줄을 지운다(보일 때마다 새로 그린다 - 숨은 채 남는 인스턴스 0)
+			pair.left:Destroy()
+			pair.right:Destroy()
+		end
+		refs.lines = {}
 	end
 end
 

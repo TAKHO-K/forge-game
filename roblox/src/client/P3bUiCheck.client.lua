@@ -107,6 +107,7 @@ task.spawn(function()
 			local state = Leaderboard.debugState()
 			return state.empty ~= "불러오는 중…" and state.me ~= "내 순위: 불러오는 중…"
 		end, 15)
+		task.wait(0.6) -- 여는 트윈(UIScale 0.94 → 1)이 끝난 뒤 잰다(Play 1: 트윈 중에 재서 11.3)
 		local state = Leaderboard.debugState()
 		local frame, gui = UIManager.getParts(Leaderboard.id)
 		local smallest, below = smallestText(frame, gui)

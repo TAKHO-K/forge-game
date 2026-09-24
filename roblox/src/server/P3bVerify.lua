@@ -235,13 +235,21 @@ function P3bVerify.runLive(player, env)
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		assert(root, "캐릭터 없음")
-		local samples = { { "greatsword", "Q" }, { "greatsword", "E" }, { "dualblade", "E" }, { "healer", "Q" } }
+		-- 5번째 = 난무 + 분신 확정 치명(첫 타가 치명 경로 - 툴팁 "치명" 값과 대조).
+		local samples = { { "greatsword", "Q" }, { "greatsword", "E" }, { "dualblade", "E" }, { "healer", "Q" }, { "dualblade", "E", crit = true } }
 		local spawned = {}
+		local monstersBefore = {} -- 잡은 잡몹은 5초 뒤 같은 자리(플레이어 옆)에 리스폰한다(MonsterSpawner.despawn) - 끝에서 새로 생긴 것을 전부 지운다(Play 1: 안 지워 개발 캐릭터가 5초마다 죽었다)
+		for _, model in ipairs(MonsterState.getAllModels()) do
+			monstersBefore[model] = true
+		end
 		for _, sample in ipairs(samples) do
 			local classId, slot = sample[1], sample[2]
 			PlayerProfile.setClassId(player, classId)
 			for _, buffId in ipairs({ "healerBuff", "guaranteedCrit", "dealingMode", "backstepShotBuff", "quickShot" }) do
 				BuffState.clear(player, buffId)
+			end
+			if sample.crit then
+				BuffState.apply(player, "guaranteedCrit", { durationSeconds = 5, displayName = "검증", colorName = "success" })
 			end
 			task.wait(0.1)
 			local info = SkillStats.info(player) -- 툴팁 Remote(SkillInfoRequest)가 돌려주는 것과 같은 함수
@@ -289,13 +297,25 @@ function P3bVerify.runLive(player, env)
 			local shownDamage = findLine(text.lines, stats.hitDamage and "예상 피해" or "회복량")
 			local textOk = shownDamage ~= nil and shownDamage.text:find(shown(stats.hitDamage or stats.heal), 1, true) ~= nil
 			local needHits = stats.hitDamage and 1 or 0
-			r.check(("D3 %s %s(%s): 툴팁 1타 %s · 치명 %s · 글 [%s] · 실제 타격 %d개 [%s] · 쿨 %s초"):format(ClassData.classes[classId].displayName, slot, SkillData[classId][slot].name,
+			BuffState.clear(player, "guaranteedCrit")
+			r.check(("D3 %s %s(%s)%s: 툴팁 1타 %s · 치명 %s · 글 [%s] · 실제 타격 %d개 [%s] · 쿨 %s초"):format(ClassData.classes[classId].displayName, slot, SkillData[classId][slot].name, sample.crit and " + 확정 치명" or "",
 				stats.hitDamage and shown(stats.hitDamage) or shown(stats.heal), stats.critHitDamage and shown(stats.critHitDamage) or shown(stats.heal * stats.critHealMultiplier),
 				shownDamage and shownDamage.text or "-", hits, table.concat(rows, " · "), shown(stats.cooldown)),
-				allMatch and textOk and hits >= needHits and (stats.hitDamage ~= nil or healAmount ~= nil))
+				allMatch and textOk and hits >= needHits and (stats.hitDamage ~= nil or healAmount ~= nil) and (not sample.crit or table.concat(rows, " "):find("치명", 1, true) ~= nil))
 			for _, model in ipairs(models) do
 				if model.Parent then
 					MonsterState.clear(model)
+					model:Destroy()
+				end
+			end
+		end
+		task.wait(require(ReplicatedStorage.Shared.data.WorldConfig).zoneMonsterGrid.respawnDelaySeconds + 1)
+		local respawned = 0
+		for _, model in ipairs(MonsterState.getAllModels()) do
+			if not monstersBefore[model] then
+				respawned += 1
+				MonsterState.clear(model)
+				if model.Parent then
 					model:Destroy()
 				end
 			end
@@ -306,7 +326,13 @@ function P3bVerify.runLive(player, env)
 				left += 1
 			end
 		end
-		r.check(("D4 검증 잡몹 %d마리 정리 뒤 남은 것 %d(기대 0)"):format(#spawned, left), left == 0)
+		local leftNew = 0
+		for _, model in ipairs(MonsterState.getAllModels()) do
+			if not monstersBefore[model] then
+				leftNew += 1
+			end
+		end
+		r.check(("D4 검증 잡몹 %d마리 · 리스폰분 %d마리 정리 뒤 남은 것 %d · 새 몬스터 %d(기대 0 · 0)"):format(#spawned, respawned, left, leftNew), left == 0 and leftNew == 0)
 	end)
 
 	PlayerProfile.setClassId(player, originalClass)
