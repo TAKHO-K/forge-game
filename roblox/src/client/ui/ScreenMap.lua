@@ -64,6 +64,10 @@ ScreenMap.slots = {
 		chipStack = slot("existing", 1, 0, UDim2.new(1, -14, 0, 52), nil, "TopChipsRow", "StageUI.client.lua - 골드(LayoutOrder 1) · 레벨(2) · 스테이지(3) · 설정(4) · 견습(5) 세로 스택, 간격 8. PRD 지도의 '골드 · 스테이지 칩'이 코드에서는 이 스택이다"),
 		partyToggle = slot("existing", 1, 0, UDim2.new(1, -99, 0, 52), UDim2.new(0, 72, 0, 36), "PartyToggleButton",
 			"panels/Party.lua(S12b) - '파티' 열기 버튼(P 키와 같은 창). 칩 스택 **왼쪽**, 위 끝을 칩 스택과 맞춘다(y 52). 오른쪽 끝 = 칩 스택 왼쪽 끝 - 8 - 칩 스택 폭이 늘면(골드 자릿수) 따라 움직인다(Party.lua followChipStack). 여기 기본값(-99)은 스택 폭 77일 때다. 세로 중앙 열(가방 버튼 · 투표 패널)은 이미 겹침이 있어 새 버튼을 놓지 않았다. 모바일은 높이 44"),
+		-- P3b A: [순위] 버튼(리더보드 창) - [파티] 버튼 바로 아래(아래 끝 + 8, 오른쪽 끝을 맞춘다 - panels/Leaderboard.lua가 파티 버튼을 따라 움직인다). 기본값은 파티 버튼 기본 자리(y 52 · 높이 36) 기준.
+		-- 메뉴바 4번째 칸은 폰 가로(ScreenGui 높이 302)에서 BL 터치 예약 구역과 겹쳐 못 쓴다(P2.5b 확인 - 3칸 + 1칸 = 210 > 밀어 올릴 수 있는 한도). 칩 스택 왼쪽 열은 파티 버튼 하나뿐이라 그 아래가 비어 있다.
+		leaderboardToggle = slot("new", 1, 0, UDim2.new(1, -99, 0, 96), UDim2.new(0, 72, 0, 36), "LeaderboardToggleButton",
+			"panels/Leaderboard.lua(P3b) - '순위' 열기 버튼. 파티 버튼 아래 끝 + 8 · 오른쪽 끝 = 파티 버튼 오른쪽 끝. 모바일은 높이 44(파티 버튼도 44라 위 끝 = 52 + 44 + 8 = 104)"),
 		dropFeed = slot("new", 1, 0, UDim2.new(1, -14, 0, 52), UDim2.new(0, 300, 0, 78), "ToastLane_TR",
 			"Toast 줄 TR(드랍 피드 · 최대 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 넘치면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93 · 보완): 칩 스택 바로 아래(아래 끝 + 8)에 남은 자리만큼(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 구역 위 끝까지, 최대 3줄), 0줄이면 상단 가운데 띠 1줄(태초 배너가 있으면 그 아래 3)",
 			{ zone = "TR", slot = "chipStack", gap = 8 }),

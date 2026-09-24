@@ -301,9 +301,74 @@ end
 
 local cache = {} -- [boardId] = { entries = { { rank, key, userId, stage, seconds } }, updatedAt = os.time() }
 
+-- ═══ 이름(P3b A) ═══
+-- 정렬 저장소에는 키(u<UserId> · p<id>_<id>)와 숫자만 있다 - 화면 이름은 서버가 UserService로 한 번에 풀어 캐시한다(순위표 갱신 때 모르는 id만 · 요청 수 = 새 id 200명당 1회).
+-- 같은 서버에 있는 사람은 Players에서 바로 읽는다. 못 풀면 화면이 "#<id>"로 그린다.
+local UserService = game:GetService("UserService")
+local nameById = {} -- [userId] = 표시 이름
+local nameCount = 0
+local NAME_CACHE_LIMIT = 5000
+local NAME_BATCH = 200
+
+local function keyUserIds(key)
+	local ids = {}
+	for id in key:sub(2):gmatch("[^_]+") do
+		table.insert(ids, tonumber(id))
+	end
+	return ids
+end
+
+local function resolveNames(ids)
+	local unknown = {}
+	for _, id in ipairs(ids) do
+		if id and not nameById[id] then
+			local online = Players:GetPlayerByUserId(id)
+			if online then
+				nameById[id] = online.DisplayName
+			elseif id > 0 and not table.find(unknown, id) then
+				table.insert(unknown, id)
+			end
+		end
+	end
+	if nameCount > NAME_CACHE_LIMIT then
+		table.clear(nameById)
+		nameCount = 0
+	end
+	for start = 1, #unknown, NAME_BATCH do
+		local batch = table.move(unknown, start, math.min(start + NAME_BATCH - 1, #unknown), 1, {})
+		local ok, infos = pcall(function()
+			return UserService:GetUserInfosByUserIdsAsync(batch)
+		end)
+		if ok and type(infos) == "table" then
+			for _, info in ipairs(infos) do
+				nameById[info.Id] = info.DisplayName
+				nameCount += 1
+			end
+		else
+			warn(("[Leaderboard] 이름 조회 실패(%d명): %s"):format(#batch, tostring(infos)))
+		end
+	end
+end
+
+-- 목록에 나오는 사람들의 이름 표(클라가 행을 그릴 때 쓴다).
+local function namesFor(entries)
+	local names = {}
+	for _, entry in ipairs(entries) do
+		for _, id in ipairs(entry.members or { entry.userId }) do
+			if nameById[id] then
+				names[tostring(id)] = nameById[id]
+			end
+		end
+	end
+	return names
+end
+
 local function decodeEntry(boardId, rank, item)
 	local entry = { rank = rank, key = item.key }
 	entry.userId = tonumber(item.key:match("^u(%-?%d+)$"))
+	if boardId == "party" then
+		entry.members = keyUserIds(item.key) -- 파티 키 = 멤버 UserId(오름차순)
+	end
 	if boardId == "personal" then
 		entry.stage = item.value
 	else
@@ -328,6 +393,13 @@ function Leaderboard.refreshBoard(boardId)
 	for rank, item in ipairs(pages:GetCurrentPage()) do
 		entries[rank] = decodeEntry(boardId, rank, item)
 	end
+	local ids = {}
+	for _, entry in ipairs(entries) do
+		for _, id in ipairs(entry.members or { entry.userId }) do
+			table.insert(ids, id)
+		end
+	end
+	resolveNames(ids)
 	cache[boardId] = { entries = entries, updatedAt = os.time() }
 	return true
 end
@@ -352,6 +424,19 @@ function Leaderboard.rankInCache(boardId, userId)
 	end
 	return nil
 end
+
+-- 캐시(상위 topN) 안의 내 줄 - 파티는 내가 든 가장 높은 기록. 없으면 nil.
+local function mineInCache(boardId, userId)
+	for _, entry in ipairs((cache[boardId] or {}).entries or {}) do
+		if table.find(entry.members or { entry.userId }, userId) then
+			return { rank = entry.rank, stage = entry.stage, seconds = entry.seconds, key = entry.key }
+		end
+	end
+	return nil
+end
+
+-- Studio 화면 확인용 가짜 순위(P3b - /gg lb fake). 수동 Play(쓰기 off)에서만 채운다 - 저장소 요청 0. [boardId] = "me" 응답(캐시 밖 표시용).
+local fakeMine = nil
 
 -- ═══ 조회 Remote ═══
 
@@ -391,7 +476,9 @@ function Leaderboard.handle(player, action, boardId, key, now)
 	end
 	if action == "board" then
 		local board = cache[boardId]
-		return { ok = true, entries = board and board.entries or {}, updatedAt = board and board.updatedAt or nil, season = seasonInfo() }
+		local entries = board and board.entries or {}
+		-- P3b A: 이름 표 + 캐시 안의 내 줄(있으면 - 저장소 요청 0). 캐시 밖이면 클라가 "me"를 따로 묻는다.
+		return { ok = true, entries = entries, updatedAt = board and board.updatedAt or nil, season = seasonInfo(), names = namesFor(entries), mine = mineInCache(boardId, player.UserId) }
 	elseif action == "me" then
 		-- 캐시 안이면 그 순위, 밖이면 내 저장 값 하나만 읽는다(정렬 저장소에는 "몇 위인가" 조회가 없다 - 상위 topN 밖은 "topN위 밖"으로 보인다).
 		if boardId == "party" then
@@ -409,6 +496,11 @@ function Leaderboard.handle(player, action, boardId, key, now)
 		local rank, entry = Leaderboard.rankInCache(boardId, player.UserId)
 		if rank then
 			return { ok = true, rank = rank, stage = entry.stage, seconds = entry.seconds }
+		end
+		if Leaderboard.writeMode() == "off" then
+			-- Studio 수동 Play는 저장소를 읽지 않는다(리뷰 10) - 가짜 순위(/gg lb fake)의 "캐시 밖" 값만 돌려준다.
+			local fake = fakeMine and fakeMine[boardId]
+			return fake and table.clone(fake) or { ok = true, rank = nil, outOfTop = false }
 		end
 		stats.orderedRead += 1
 		local ok, value = withRetry("내 기록 읽기", function()
@@ -477,6 +569,90 @@ function Leaderboard.debugRoundTrip(value)
 		return store:GetAsync("roundtrip")
 	end)
 	return ok and back == value, back
+end
+
+-- Studio 화면 확인 전용(P3b - /gg lb fake · 검증 (나)): 수동 Play(쓰기 off)에서만 캐시 · 이름 · 카드를 가짜로 채운다(저장소 요청 0).
+-- 요청한 사람은 개인 37위 · 자기 직업 12위 · 파티 5위에 넣고, 다른 직업 순위표에는 넣지 않고 "100위 밖"(스테이지 40)을 준다.
+-- 반환 = 채운 순위표 수(off가 아니면 0 - 검증 모드 · 라이브에서는 아무것도 안 한다).
+local FAKE_NAMES = { "강철손", "불꽃망치", "새벽검", "달빛궁수", "은빛방패", "폭풍칼날", "바람걸음", "별똥별", "모루지기", "화염심장" }
+function Leaderboard.debugFill(player)
+	if Leaderboard.writeMode() ~= "off" then
+		return 0
+	end
+	local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+	local gemOptions = { "attackPercent", "speedPercent", "crit", "maxHpPercent", "lifesteal" }
+	local myClass = PlayerProfile.getClassId(player)
+	local rng = Random.new(3)
+	local fakeBase = 900000000
+	local function fakeCard(id, classId)
+		local gems = {}
+		for slot = 1, 5 do
+			gems[slot] = slot <= rng:NextInteger(1, 5) and {
+				grade = ArmorData.gradeOrder[rng:NextInteger(3, 7)], itemLevel = rng:NextInteger(20, 120),
+				option = { id = gemOptions[rng:NextInteger(1, #gemOptions)], roll = rng:NextNumber(0.875, 1.125), roll2 = rng:NextNumber(0.875, 1.125) },
+			} or false
+		end
+		return {
+			userId = id, name = "fake" .. id, displayName = nameById[id], classId = classId,
+			level = rng:NextInteger(30, 99), rebirthCount = rng:NextInteger(0, 6),
+			weapon = { gradeId = ArmorData.gradeOrder[rng:NextInteger(3, 7)], level = rng:NextInteger(8, 30), gems = gems }, at = os.time(),
+		}
+	end
+	local function putCard(storeKey, card)
+		cardCache[storeKey] = { value = card, at = math.huge } -- 만료 없음(Play가 끝나면 사라진다)
+	end
+	local filled = 0
+	for _, boardId in ipairs(boardIds()) do
+		local classId = boardId:match("^class:(.+)$")
+		local entries = {}
+		for rank = 1, LeaderboardConfig.topN do
+			local stage = 5 * math.max(1, 60 - math.floor(rank / 2))
+			local seconds = 40 + rank * 3.7
+			local entry = { rank = rank, stage = stage, seconds = boardId ~= "personal" and seconds or nil }
+			if boardId == "party" then
+				local ids = {}
+				for m = 1, 2 + rank % 3 do
+					table.insert(ids, fakeBase + rank * 10 + m)
+				end
+				if rank == 5 then
+					ids[1] = player.UserId
+				end
+				entry.members = ids
+				entry.key = LeaderboardRules.partyKey(ids)
+			else
+				local id = (rank == 37 and boardId == "personal" or rank == 12 and classId == myClass) and player.UserId or (fakeBase + rank)
+				entry.userId, entry.key = id, playerKey(id)
+			end
+			for i, id in ipairs(entry.members or { entry.userId }) do
+				if id ~= player.UserId then
+					nameById[id] = FAKE_NAMES[(id + i) % #FAKE_NAMES + 1] .. tostring(id % 1000)
+					local cardClass = classId or ClassData.order[id % #ClassData.order + 1]
+					local card = fakeCard(id, cardClass)
+					putCard(playerKey(id), card)
+					putCard(("%s_%s"):format(playerKey(id), cardClass), card)
+				end
+			end
+			entries[rank] = entry
+		end
+		cache[boardId] = { entries = entries, updatedAt = os.time() }
+		filled += 1
+	end
+	-- 내 카드 = 실제 프로필의 무기(카드 쓰기 경로와 같은 모양 - 방어구 없음).
+	nameById[player.UserId] = player.DisplayName
+	local profile = PlayerProfile.getProfile(player)
+	if myClass and profile then
+		local snapshot = PlayerInspect.buildSnapshot({ userId = player.UserId, name = player.Name, displayName = player.DisplayName, classId = myClass, classState = profile.classes[myClass] })
+		local card = { userId = snapshot.userId, name = snapshot.name, displayName = snapshot.displayName, classId = myClass, level = snapshot.level, rebirthCount = snapshot.rebirthCount, weapon = snapshot.weapon, at = os.time() }
+		putCard(playerKey(player.UserId), card)
+		putCard(("%s_%s"):format(playerKey(player.UserId), myClass), card)
+	end
+	fakeMine = {}
+	for _, classId in ipairs(ClassData.order) do
+		if classId ~= myClass then
+			fakeMine["class:" .. classId] = { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN, stage = 40, seconds = 612.3 }
+		end
+	end
+	return filled
 end
 
 -- 자동 검증 전용: 검증이 주입한 시각으로 남긴 요청 간격 기록을 지운다(안 지우면 그 세션의 실제 요청이 간격에 막힌다).
