@@ -111,7 +111,11 @@ local config = {
 		--   PlayerProfile(계승 · 가루 · 재련 · 마일스톤 · refreshMaxHp · addCharacterExp) · SaveSystem v31 · v32 → 26-2 · 26-3 · S09(가)(나)(경험치 지급) · S03(가)(나) · 이관 체인 S02(가) · S03(가) · S04(가) · S05(가) · S05b(가) · S11(가)
 		--   GemServer · GemWorkshop(변환권 = 골드 + 가루) · GemMerchantVerify → S20e(가)(나)(UI) · 보석 장착 경로 → S20c(가)(나)(UI)
 		--   DetailSheet · GearTab · 장비창(클라) → S20d(가)(나)(UI) · S20(UI) · S12(UI) · S12b(UI). S04(나)는 계속 제외.
+		-- P3a(2026-09-24): 이번 블록 P3a(가) · (나) · (나C) · (D) + 동반(COMMON §3 - 바꾼 모듈이 사실상 전 블록에 걸린다: PlayerProfile(진도 · 기록 제외 표시) ·
+		-- SaveSystem v34 · CombatResolution(진도 판정) · BossEncounter · BossPatterns · BossData(킷 원형 재배치) · BossSkillMath · BossSim · WorldConfig(원형 아레나) ·
+		-- ZoneBounds · BossGimmicks · 전역 기믹 클라 → grep 결과 PlayerProfile을 쓰는 블록만 28개 → "넓은 쪽"으로 P2.5c와 같은 전 블록). regression 스위치는 그대로 false.
 		current = {
+			"P3a(가)", "P3a(나)", "P3a(나C)", "P3a(D)",
 			-- P2.5c: 이번 블록 + 동반(바꾼 모듈이 사실상 전 블록에 걸린다 - PlayerDamage(신규 보호: 모든 보스 · 피격 블록) · CharacterLevel(경험치 곡선 · 천장) ·
 			-- SaveSystem v33 · PlayerProfile(마일스톤 · 경험치) · EnhanceConfig(비용 · 방지권) · EnhanceMaterialData · BossData(밀도) · ArmorData(보스 드랍) ·
 			-- Option(보석 몫) · DropTableData · EconSim(Report) · 성장 보상 창 · 토스트 → "넓은 쪽"으로 전 블록. regression 스위치는 그대로 false.

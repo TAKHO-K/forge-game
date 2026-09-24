@@ -427,6 +427,26 @@ function Leaderboard.handle(player, action, boardId, key, now)
 	return { ok = false, reason = "bad_request" }
 end
 
+-- 자동 검증 전용(검증 모드만): 정렬 저장소에 value를 쓰고 다시 읽는다 - 공식 문서에 값 범위가 없어(로그 인용) 최대 인코딩을 실측한다. 반환: (같은가, 읽은 값).
+function Leaderboard.debugRoundTrip(value)
+	if Leaderboard.writeMode() ~= "verify" then
+		return false, nil
+	end
+	stats.orderedWrite += 1
+	stats.orderedRead += 1
+	local ok, back = pcall(function()
+		local store = ordered("probe")
+		store:SetAsync("roundtrip", value)
+		return store:GetAsync("roundtrip")
+	end)
+	return ok and back == value, back
+end
+
+-- 자동 검증 전용: 검증이 주입한 시각으로 남긴 요청 간격 기록을 지운다(안 지우면 그 세션의 실제 요청이 간격에 막힌다).
+function Leaderboard.debugResetRateLimit(player)
+	lastRequestAt[player] = nil
+end
+
 remote.OnServerInvoke = function(player, action, boardId, key)
 	return Leaderboard.handle(player, action, boardId, key)
 end

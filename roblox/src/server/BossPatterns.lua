@@ -132,7 +132,17 @@ local function setBodyColor(model, color)
 	end
 end
 
+-- P3a D1 계측(자동 검증 전용 - 평소엔 nil이라 아무 일도 안 한다). debugSendHook(kind, payload, 서버 시각) = 멤버에게 보낸 모든 예고 · 연출.
+-- debugJudgeHook(record) = 장판 판정 한 번(원 · 강타 · 직선): { at, serverTime, skill, primitive, shape, members, hits = { [멤버] = 들어간 피해 }, floorY, model }.
+-- 둘 다 검증(P3aVerify D)이 "보인 장판 = 판정"을 멤버마다 대조할 때만 건다.
+BossPatterns.debugSendHook = nil
+BossPatterns.debugJudgeHook = nil
+local judgeHits = nil
+
 local function send(st, kind, payload)
+	if BossPatterns.debugSendHook then
+		BossPatterns.debugSendHook(kind, payload, serverNow(), st)
+	end
 	for _, member in ipairs(st.members or {}) do
 		if typeof(member) == "Instance" and member.Parent then -- 자동 검증의 스탠드인 멤버(테이블)에게는 보내지 않는다
 			patternEvent:FireClient(member, kind, payload)
@@ -175,10 +185,33 @@ end
 -- 무시하고, 한 번의 발동에서 한 사람이 받는 합이 mechanics.gimmickFailMaxHpFraction을 넘지 않는다(BossMechanics).
 local function applySkillDamage(model, data, skill, player)
 	local damage = skill.damage
+	local dealt
 	if damage.kind == "maxHp" then
-		BossMechanics.applyGimmickDamage(model, player, damage.fraction, skill.damageLabel)
-	elseif PlayerDamage.applyHit(player, data.attack, skill.damageLabel, damage.multiplier) > 0 then
-		BossTrap.noteSkillHit(player) -- 29-5: 예고가 있는 피격은 누르고 있던 구출을 처음으로 돌린다(%피해 쪽은 BossMechanics가 부른다)
+		dealt = BossMechanics.applyGimmickDamage(model, player, damage.fraction, skill.damageLabel)
+	else
+		dealt = PlayerDamage.applyHit(player, data.attack, skill.damageLabel, damage.multiplier)
+		if dealt > 0 then
+			BossTrap.noteSkillHit(player) -- 29-5: 예고가 있는 피격은 누르고 있던 구출을 처음으로 돌린다(%피해 쪽은 BossMechanics가 부른다)
+		end
+	end
+	if judgeHits then
+		judgeHits[player] = (judgeHits[player] or 0) + (dealt or 0) -- P3a D1 계측: 판정이 이 사람에게 닿았다(피해 0이어도 판정은 있었다)
+	end
+end
+
+-- P3a D1 계측: 판정 한 번의 시작 · 끝(훅이 없으면 아무것도 안 한다).
+local function judgeBegin()
+	if BossPatterns.debugJudgeHook then
+		judgeHits = {}
+	end
+end
+
+local function judgeEnd(c, shape)
+	local hook, hits = BossPatterns.debugJudgeHook, judgeHits
+	judgeHits = nil
+	if hook and hits then
+		hook({ at = os.clock(), serverTime = serverNow(), skill = c.st.current, primitive = c.skill and c.skill.primitive, shape = shape,
+			members = c.st.members, hits = hits, floorY = c.st.floorY, model = c.model })
 	end
 end
 
@@ -527,12 +560,14 @@ HANDLERS.circleBoss = {
 		local pulses = BossSkillMath.pulsesOf(skill)
 		local pulse = pulses[st.pulseIndex]
 		local inner = pulse.innerRadiusStuds or 0
+		judgeBegin()
 		for _, v in ipairs(victims(st)) do
 			if Reach.within(v.root.Position, c.position, pulse.radiusStuds) -- 22-4: 수평 + 높이차 상한
 				and Reach.horizontalDistance(v.root.Position, c.position) >= inner then
 				applySkillDamage(c.model, c.data, skill, v.player)
 			end
 		end
+		judgeEnd(c, { kind = "circle", centers = { Vector3.new(c.position.X, st.floorY, c.position.Z) }, radius = pulse.radiusStuds, inner = inner })
 		-- 25-4: 판정 순간 흰 섬광 - "임팩트 = 흰색".
 		send(st, "heavyImpact", {
 			center = Vector3.new(c.position.X, st.floorY, c.position.Z),
@@ -747,6 +782,7 @@ HANDLERS.circleTarget = {
 		if c.now < st.phaseEndsAt then
 			return
 		end
+		judgeBegin()
 		for _, v in ipairs(victims(st)) do
 			local p = xz(v.root.Position)
 			for _, spot in ipairs(st.meteorPositions) do
@@ -757,6 +793,7 @@ HANDLERS.circleTarget = {
 				end
 			end
 		end
+		judgeEnd(c, { kind = "circle", centers = st.meteorPositions, radius = skill.radiusStuds, inner = 0 })
 		send(st, "meteorImpact", { positions = st.meteorPositions, radius = skill.radiusStuds, style = skill.impactStyle })
 		runEffects(c, skill.onImpact, { positions = st.meteorPositions, radius = skill.radiusStuds })
 		if skill.sequential and st.shotIndex < circleCount(c.data, skill) and c.targetRoot then
@@ -1020,6 +1057,7 @@ HANDLERS.line = {
 		if c.now < st.phaseEndsAt then
 			return
 		end
+		judgeBegin()
 		for _, v in ipairs(victims(st)) do
 			local rel = xz(v.root.Position) - st.crossOrigin
 			for _, beam in ipairs(st.crossBeams) do
@@ -1031,6 +1069,7 @@ HANDLERS.line = {
 				end
 			end
 		end
+		judgeEnd(c, { kind = "beams", origin = Vector3.new(st.crossOrigin.X, st.floorY, st.crossOrigin.Z), beams = st.crossBeams, halfWidth = skill.halfWidthStuds })
 		send(st, "crossFire", { angleDeg = st.crossAngle })
 		if skill.blockedByProp then
 			sendPropsRemoved(st, BossArenaProps.removeWhere(c.model, function(prop)

@@ -3360,6 +3360,9 @@ if RunService:IsStudio() then
 				{ "P25a(나)", function() require(script.Parent.P25aVerify).runLive(player, env) end }, -- P2.5a: 파티 칩 · 명중 활동 · 환생 보석 척도 · +30 공격력
 				{ "P25b(나)", function() require(script.Parent.P25bVerify).runLive(player, env) end }, -- P2.5b: 계승 · 재련 · 분해 · 마일스톤 실제 서버 경로
 				{ "P25c(나)", function() require(script.Parent.P25cVerify).runLive(player, env) end }, -- P2.5c: 신규 보호 실제 피해 · 환생 경험치 배율 · 새 방지권 지급 스테이지
+				{ "P3a(나)", function() require(script.Parent.P3aVerify).runLive(player, env) end }, -- P3a: 실제 처치 경로의 진도 · 리더보드 쓰기/읽기/부정 방지(_verify 저장소)
+				{ "P3a(나C)", function() require(script.Parent.P3aArenaVerify).runLiveC(player, env) end }, -- P3a: 원형 맵 6종 · 구조물 · 돌진 충돌 · 뺑뺑이 방지 · 파트 수
+				{ "P3a(D)", function() local v = require(script.Parent.P3aArenaVerify) v.runLiveD(player, env, v.D_LABEL) end }, -- P3a: 장판 표시 ↔ 판정 실측(입장 20 + 20 · 점프 높이)
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3656,6 +3659,16 @@ if RunService:IsStudio() and verifyEnabled("P25c(가)") then
 		local ok, err = pcall(require(script.Parent.P25cVerify).runPure)
 		if not ok then
 			warn(("[P25c(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ P3a 자동 검증 블록(가) - 진도 판정 시나리오 · 리더보드 인코딩 · 원형 도형 · 맵 6종 배치 · 가장자리 회피(docs/phase/P3a-log.md) ═══
+if RunService:IsStudio() and verifyEnabled("P3a(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.P3aVerify).runPure)
+		if not ok then
+			warn(("[P3a(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

@@ -134,6 +134,21 @@ function BossArenaMap.buildBase(zoneKey)
 	return base
 end
 
+-- 자동 검증 전용(P3a D1 "첫 진입" 재현): 보스전이 없는 슬롯의 기반을 부순다 - 다음 보스전이 처음 짓는 것처럼 새 파트를 만들고 클라는 그것을 새로 받는다.
+function BossArenaMap.debugDestroyBases(activeZones)
+	local destroyed = 0
+	for zoneKey, base in pairs(bases) do
+		if not (activeZones and activeZones[zoneKey]) then
+			base.floor:Destroy()
+			base.model:Destroy()
+			bases[zoneKey] = nil
+			destroyed += 1
+		end
+	end
+	return destroyed
+end
+
+
 local function applyTheme(base, theme)
 	base.floor.Color, base.floor.Material = theme.floor.color, theme.floor.material
 	base.rim.Color, base.rim.Material = theme.rim.color, theme.rim.material
@@ -600,6 +615,13 @@ end
 function BossArenaMap.smashSeconds(obstacleRadius, moveSpeedStuds)
 	local loop = 2 * math.pi * (obstacleRadius + OBSTACLE.chargeBodyHalfStuds + OBSTACLE.nearSlackStuds)
 	return loop / math.max(moveSpeedStuds, 1e-3) * OBSTACLE.smashAfterLaps
+end
+
+-- 검증 · 성능 기록용: 이 슬롯의 기반 모델 · 장식 모델 · 바닥(없으면 nil).
+function BossArenaMap.debugModels(zoneKey)
+	local base = bases[zoneKey]
+	local state = active[zoneKey]
+	return base and base.model, state and state.dressing, base and base.floor
 end
 
 -- 입장 자리(중심에서 entryDistance, entryAngle 방위) - index번째 멤버는 원둘레 방향으로 벌린다.
