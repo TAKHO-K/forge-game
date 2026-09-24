@@ -579,6 +579,7 @@ function BossEncounter.resetFor(player)
 	end
 	BossPatterns.reset(model, data)
 	MonsterState.resetBossHp(model)
+	encounter.startedAt = os.clock() -- P3a(리뷰 4): 재도전 = 처음부터 - 기록 시간도 새로 잰다
 	BossArenaMap.resetObstacles(encounter.zoneKey) -- P3a C: 재도전 = 처음부터 - 부서진 구조물도 다시 선다
 	-- 29-1: 전멸 = 힌트 한 단계(견습 제외). 잡힘도 전부 푼다(리스폰하는 사람은 BossTrap이 이미 풀었다).
 	BossTrap.releaseAll(encounter.members, "reset")

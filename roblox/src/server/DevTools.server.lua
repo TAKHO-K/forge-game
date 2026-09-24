@@ -3363,6 +3363,7 @@ if RunService:IsStudio() then
 				{ "P3a(나)", function() require(script.Parent.P3aVerify).runLive(player, env) end }, -- P3a: 실제 처치 경로의 진도 · 리더보드 쓰기/읽기/부정 방지(_verify 저장소)
 				{ "P3a(나C)", function() require(script.Parent.P3aArenaVerify).runLiveC(player, env) end }, -- P3a: 원형 맵 6종 · 구조물 · 돌진 충돌 · 뺑뺑이 방지 · 파트 수
 				{ "P3a(D)", function() local v = require(script.Parent.P3aArenaVerify) v.runLiveD(player, env, v.D_LABEL) end }, -- P3a: 장판 표시 ↔ 판정 실측(입장 20 + 20 · 점프 높이)
+				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])

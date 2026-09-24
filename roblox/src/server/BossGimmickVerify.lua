@@ -377,7 +377,8 @@ local function runFrost(player, env, r, root)
 		task.wait(0.1)
 		local iceBlock = nil
 		for _, candidate in ipairs(MonsterState.getAllModels()) do
-			if MonsterState.isRescueTarget(candidate) then
+			-- P3a: 아레나 구조물도 "맞으면 알림만" 엔티티(isRescueTarget)라 얼음 덩어리만 고른다(순회 순서에 따라 구조물을 집던 것 - P3a Play 2 X).
+			if MonsterState.isRescueTarget(candidate) and (MonsterState.getData(candidate) or {}).id ~= "arena_obstacle" then
 				iceBlock = candidate
 			end
 		end

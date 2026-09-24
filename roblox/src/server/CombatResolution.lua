@@ -258,7 +258,14 @@ local function handleBossDeath(attacker, target)
 		return table.concat(parts, ", ")
 	end)(), verdict.partyRecord and "대상" or "아님"))
 	-- P3a B: 리더보드 기록(쓰기는 비동기 - 처치 처리를 막지 않는다). 시간 = 서버가 잰 보스전 시간(스폰 ~ 지금).
-	Leaderboard.onBossCleared({
+	-- pcall: 기록 쪽 에러가 처치 처리(아래 복귀 · 드랍)를 끊지 않게(리뷰).
+	local contributorList = {}
+	for contributor in pairs(contributions) do
+		if typeof(contributor) == "Instance" then
+			table.insert(contributorList, contributor)
+		end
+	end
+	local recordOk, recordErr = pcall(Leaderboard.onBossCleared, {
 		stage = monsterData.stageNumber,
 		bossId = monsterData.id,
 		bossMaxHp = select(2, MonsterState.getBossHp(target)),
@@ -266,7 +273,11 @@ local function handleBossDeath(attacker, target)
 		isParty = encounter ~= nil and encounter.party ~= nil,
 		partyRecord = verdict.partyRecord,
 		members = clearMembers,
+		contributors = contributorList, -- 도중에 빠진 멤버도 피해를 넣었다 - 이론 최소 시간에 넣는다
 	})
+	if not recordOk then
+		warn(("[forge-game] 리더보드 기록 처리 에러(처치는 계속): %s"):format(tostring(recordErr)))
+	end
 
 	-- 29-5: 보스의 정체가 스테이지만의 함수가 되면서(BossRules.bossIdForStage) 23-5의 "처치하면 pending을 지운다"는 없어졌다.
 	BossEncounter.clearForModel(target)

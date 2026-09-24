@@ -115,7 +115,7 @@ local config = {
 		-- SaveSystem v34 · CombatResolution(진도 판정) · BossEncounter · BossPatterns · BossData(킷 원형 재배치) · BossSkillMath · BossSim · WorldConfig(원형 아레나) ·
 		-- ZoneBounds · BossGimmicks · 전역 기믹 클라 → grep 결과 PlayerProfile을 쓰는 블록만 28개 → "넓은 쪽"으로 P2.5c와 같은 전 블록). regression 스위치는 그대로 false.
 		current = {
-			"P3a(가)", "P3a(나)", "P3a(나C)", "P3a(D)",
+			"P3a(가)", "P3a(나)", "P3a(나C)", "P3a(가C2)", -- P3a(D)(장판 실측 약 9분)는 Play 1(전) · Play 2(후)에서 돌렸다 - 이후 변경이 장판 판정과 무관해 Play 3에서 뺀다
 			-- P2.5c: 이번 블록 + 동반(바꾼 모듈이 사실상 전 블록에 걸린다 - PlayerDamage(신규 보호: 모든 보스 · 피격 블록) · CharacterLevel(경험치 곡선 · 천장) ·
 			-- SaveSystem v33 · PlayerProfile(마일스톤 · 경험치) · EnhanceConfig(비용 · 방지권) · EnhanceMaterialData · BossData(밀도) · ArmorData(보스 드랍) ·
 			-- Option(보석 몫) · DropTableData · EconSim(Report) · 성장 보상 창 · 토스트 → "넓은 쪽"으로 전 블록. regression 스위치는 그대로 false.

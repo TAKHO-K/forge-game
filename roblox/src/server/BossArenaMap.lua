@@ -333,10 +333,12 @@ local function zoneOfKey(zoneKey)
 	return WorldConfig.zones[zoneKey]
 end
 
--- 구조물 윗면에 서 있는가(수평으로 윗면 안 + 발이 윗면 근처 이상).
-local function standsOnTop(obstacle, root)
+-- 구조물 윗면에 서 있는가(수평으로 윗면 안 + **발**이 윗면 근처 이상 - 리뷰 1: 루트로 재면 곁의 바닥에 선 사람(루트 = 바닥 + 3)도 윗면 3.5 - 0.5에 걸렸다).
+local function standsOnTop(obstacle, character, root)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local feetY = root.Position.Y - (humanoid and (humanoid.HipHeight + root.Size.Y / 2) or 3)
 	local dx, dz = root.Position.X - obstacle.center.X, root.Position.Z - obstacle.center.Z
-	return dx * dx + dz * dz <= (obstacle.radius + 0.5) ^ 2 and root.Position.Y >= obstacle.center.Y + obstacle.height - 0.5
+	return dx * dx + dz * dz <= (obstacle.radius + 0.5) ^ 2 and feetY >= obstacle.center.Y + obstacle.height - 0.5
 end
 
 -- 부서진 순간: 아레나 안 사람에게 파편 연출을 보내고, 윗면에 서 있던 사람은 파편과 함께 튕겨 나며 피해를 받는다(사용자 지시).
@@ -354,7 +356,7 @@ local function fireBreak(state, obstacle, cause)
 				position = obstacle.center + Vector3.new(0, obstacle.height / 2, 0),
 				radius = obstacle.radius, height = obstacle.height, color = obstacle.color, cause = cause,
 			})
-			if standsOnTop(obstacle, root) then
+			if standsOnTop(obstacle, character, root) then
 				table.insert(launched, player)
 				if patternEvent then
 					patternEvent:FireClient(player, "launch", { from = obstacle.center, heightStuds = topBreak.heightStuds, distanceStuds = topBreak.distanceStuds })
@@ -576,8 +578,9 @@ function BossArenaMap.firstOnPath(zoneKey, origin, dir, length, bodyHalf)
 		local reach = obstacle.radius + bodyHalf
 		local lateral2 = rel:Dot(rel) - along * along
 		if along > 0 and lateral2 <= reach * reach then
-			local contact = along - math.sqrt(reach * reach - lateral2)
-			if contact >= 0 and contact < length and contact < bestDistance then
+			-- 이미 닿아 있으면(보스가 구조물 가장자리에서 몸통 반폭 안) 0 - 그 자리에서 부딪힌다(리뷰 3: 음수를 버리면 돌진이 구조물을 지나쳤다).
+			local contact = math.max(along - math.sqrt(reach * reach - lateral2), 0)
+			if contact < length and contact < bestDistance then
 				best, bestDistance = obstacle, contact
 			end
 		end

@@ -176,9 +176,10 @@ function P3aVerify.runPure()
 			end
 			local heightsOk = true
 			for _, a in ipairs(spots) do
-				heightsOk = heightsOk and a.h > 2 and a.h <= 6 -- 계단 한 단(2)보다 높고 아레나 고도차 상한(6) 이하
+				-- 계단 한 단(2)보다 높고(보스 걸음 우회) 보스 지면 탐지 창(발 + probeUp 4)보다 낮다(리뷰 2 - 넘으면 광선이 기둥 속에서 시작해 못 본다) · 고도차 상한 6 이하.
+				heightsOk = heightsOk and a.h > 2 and a.h < 4 and a.h <= 6
 			end
-			r.check(("C %s(%s): 구조물 %d개 · 벽과 틈 최소 %.1f(≥ %d) · 서로 %.1f(≥ %d) · 중심과 %.1f(≥ %d) · 입장 자리와 %.1f(≥ 10) · 킷과 %s(≥ %d) · 높이 2 < h ≤ 6"):format(
+			r.check(("C %s(%s): 구조물 %d개 · 벽과 틈 최소 %.1f(≥ %d) · 서로 %.1f(≥ %d) · 중심과 %.1f(≥ %d) · 입장 자리와 %.1f(≥ 10) · 킷과 %s(≥ %d) · 높이 2 < h < 4(지면 탐지 창)"):format(
 				bossId, theme.name, #spots, minWall, obstacleCfg.minWallGapStuds, minPair, obstacleCfg.minGapStuds, minCenter, geometry.centerClearStuds, minEntry,
 				minKit == math.huge and "없음" or ("%.1f"):format(minKit), obstacleCfg.minGapStuds),
 				#spots >= 4 and minWall >= obstacleCfg.minWallGapStuds and minPair >= obstacleCfg.minGapStuds and minCenter >= geometry.centerClearStuds
@@ -212,15 +213,23 @@ function P3aVerify.runPure()
 		r.check(("C 뺑뺑이 방지(%d바퀴): %s"):format(obstacleCfg.smashAfterLaps, table.concat(rows, " · ")), #rows > 0)
 	end)
 
+	local passCount, totalCount = r.summary()
+	print(("===P3a 검증 끝(가)=== %d/%d 통과"):format(passCount, totalCount))
+end
+
+-- (가C2) 가장자리 회피 전 · 후 - 계산이 무거워(몬테카를로 칸 × 변형) 서버 시작 때 (가)와 같이 돌면 보스 체인의 실시간 검증을 밀어냈다(P3a Play 2: 29-3 구출 · 끌어내기 ·
+-- UI 타이밍 X). 그래서 보스 검증 체인의 **맨 끝 단계**로 따로 돈다(실시간 검증과 겹치지 않는다). 플레이어는 안 쓴다.
+function P3aVerify.runEdge()
+	print("===P3a 검증 시작(가C2)===")
+	local r = newRecorder("가C2")
 	r.section("C2 가장자리 회피(전 · 후)", function()
 		local rows = P3aVerify.edgeEvasion(tonumber(P3aVerify.edgeTrials) or 2000)
 		for _, row in ipairs(rows) do
 			r.check(("C2 %s: 실패 %d/%d · p99 여유 최소 %.3f초%s"):format(row.label, row.fails, row.cells, row.worst, row.failList ~= "" and (" - " .. row.failList) or ""), row.expectFail or row.fails == 0)
 		end
 	end)
-
 	local passCount, totalCount = r.summary()
-	print(("===P3a 검증 끝(가)=== %d/%d 통과"):format(passCount, totalCount))
+	print(("===P3a 검증 끝(가C2)=== %d/%d 통과"):format(passCount, totalCount))
 end
 
 -- C2: 가장자리 표본 - 원 둘레 48지점 × 벽에서 1 · 3stud(대상 원 벽 여백 = 데이터 값). 원은 모든 둘레점이 대칭이라, 구조물이 영향권(EDGE_INFLUENCE_STUDS) 안에

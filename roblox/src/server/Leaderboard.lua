@@ -82,17 +82,22 @@ local function withRetry(label, fn)
 	return ok, result
 end
 
--- 정렬 값은 "더 클 때만" 올린다 - 같은 키를 서버 두 대가 동시에 써도(드문 경합) 큰 값이 남는다.
+-- 정렬 값은 "더 클 때만" 올린다 - 같은 키를 서버 두 대가 동시에 써도(드문 경합) 큰 값이 남는다. 반환: (성공, 실제로 올렸는가).
 local function raiseOrdered(kind, key, value)
 	stats.orderedWrite += 1
-	return withRetry(("쓰기 %s/%s"):format(kind, key), function()
+	local raised = false
+	local ok = withRetry(("쓰기 %s/%s"):format(kind, key), function()
+		raised = false
 		ordered(kind):UpdateAsync(key, function(old)
 			if type(old) == "number" and old >= value then
+				raised = false
 				return nil -- 바꾸지 않는다
 			end
+			raised = true
 			return value
 		end)
 	end)
+	return ok, ok and raised
 end
 
 local function setPlain(kind, key, value)
@@ -209,10 +214,17 @@ function Leaderboard.onBossCleared(info)
 		judgement.rejected = "no_server_time"
 		return judgement
 	end
-	-- 부정 방지: 이론 최소 시간(멤버 전원의 이론 최대 DPS 합 - 10% 미만 멤버도 피해를 넣었다)보다 빠르면 이 처치의 기록을 전부 거절한다.
-	local caps = {}
+	-- 부정 방지: 이론 최소 시간(피해를 넣은 사람 전원의 이론 최대 DPS 합 - 10% 미만 멤버 · 도중에 빠진 멤버도 피해를 넣었다)보다 빠르면 이 처치의 기록을 전부 거절한다.
+	local caps, counted = {}, {}
 	for _, entry in ipairs(info.members) do
+		counted[entry.player] = true
 		table.insert(caps, Leaderboard.memberDpsCap(entry.player))
+	end
+	for _, contributor in ipairs(info.contributors or {}) do
+		if not counted[contributor] then
+			counted[contributor] = true
+			table.insert(caps, Leaderboard.memberDpsCap(contributor))
+		end
 	end
 	judgement.minSeconds = LeaderboardRules.minClearSeconds(info.bossMaxHp or 0, caps)
 	if info.seconds < judgement.minSeconds then
@@ -253,8 +265,11 @@ function Leaderboard.onBossCleared(info)
 		judgement.party = key
 		local value = LeaderboardRules.encode(info.stage, info.seconds)
 		spawnWrite(function()
-			raiseOrdered("party", key, value)
-			setPlain("partyDetail", key, detail)
+			-- 상세는 순위 값이 실제로 올랐을 때만 쓴다(리뷰 5 - 같은 구성이 다른 직업으로 더 낮은 스테이지를 깨도 상세가 덮이지 않게).
+			local _, raised = raiseOrdered("party", key, value)
+			if raised then
+				setPlain("partyDetail", key, detail)
+			end
 		end)
 	end
 	print(("[forge-game] 리더보드: 스테이지 %d · %.1f초(최소 %.2f) · 개인 쓰기 %d · 파티 %s · 모드 %s"):format(
@@ -346,6 +361,8 @@ remote.Parent = ReplicatedStorage
 
 local lastRequestAt = {} -- [Player] = { [action] = os.clock() }
 local cardCache = {} -- [저장 키] = { value, at }
+local cardCacheCount = 0
+local CARD_CACHE_LIMIT = 500
 
 local function rateLimited(player, action, now)
 	local byAction = lastRequestAt[player] or {}
@@ -377,6 +394,18 @@ function Leaderboard.handle(player, action, boardId, key, now)
 		return { ok = true, entries = board and board.entries or {}, updatedAt = board and board.updatedAt or nil, season = seasonInfo() }
 	elseif action == "me" then
 		-- 캐시 안이면 그 순위, 밖이면 내 저장 값 하나만 읽는다(정렬 저장소에는 "몇 위인가" 조회가 없다 - 상위 topN 밖은 "topN위 밖"으로 보인다).
+		if boardId == "party" then
+			-- 파티 키는 멤버 구성이라 내 키가 하나가 아니다 - 캐시(상위 topN)에서 내가 든 가장 높은 기록만 찾는다(저장소 요청 0).
+			local token = tostring(player.UserId)
+			for _, entry in ipairs((cache.party or {}).entries or {}) do
+				for id in entry.key:sub(2):gmatch("[^_]+") do
+					if id == token then
+						return { ok = true, rank = entry.rank, stage = entry.stage, seconds = entry.seconds, key = entry.key }
+					end
+				end
+			end
+			return { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN }
+		end
 		local rank, entry = Leaderboard.rankInCache(boardId, player.UserId)
 		if rank then
 			return { ok = true, rank = rank, stage = entry.stage, seconds = entry.seconds }
@@ -401,6 +430,9 @@ function Leaderboard.handle(player, action, boardId, key, now)
 		local storeKind, storeKey = "cards", key
 		if kind == "party" then
 			storeKind = "partyDetail"
+			if not key:match("^p%-?%d[%d_%-]*$") then
+				return { ok = false, reason = "bad_request" }
+			end
 		else
 			if not key:match("^u%-?%d+$") then
 				return { ok = false, reason = "bad_request" }
@@ -420,6 +452,11 @@ function Leaderboard.handle(player, action, boardId, key, now)
 		end)
 		if not ok then
 			return { ok = false, reason = "store_error" }
+		end
+		cardCacheCount += 1
+		if cardCacheCount > CARD_CACHE_LIMIT then -- 캐시 상한(리뷰 8) - 넘으면 통째로 비운다(다음 조회가 다시 읽는다)
+			table.clear(cardCache)
+			cardCacheCount = 1
 		end
 		cardCache[storeKey] = { value = value, at = os.clock() }
 		return { ok = true, card = value }
@@ -455,10 +492,10 @@ Players.PlayerRemoving:Connect(function(player)
 	lastRequestAt[player] = nil
 end)
 
--- 주기 갱신: 서버에 사람이 있을 때만(빈 서버가 한도를 쓰지 않는다). 첫 갱신은 첫 접속 직후.
+-- 주기 갱신: 서버에 사람이 있을 때만(빈 서버가 한도를 쓰지 않는다). 첫 갱신은 첫 접속 직후. Studio 수동 Play(쓰기 off)는 읽지도 않는다(리뷰 10 - 라이브 저장소 목록 요청 · 경고 폭주).
 task.spawn(function()
 	while true do
-		if #Players:GetPlayers() > 0 then
+		if #Players:GetPlayers() > 0 and Leaderboard.writeMode() ~= "off" then
 			Leaderboard.refreshAll()
 			task.wait(LeaderboardConfig.refreshSeconds)
 		else

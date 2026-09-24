@@ -150,6 +150,16 @@ function P3aArenaVerify.runLiveC(player, env)
 		local broke = BossArenaMap.lastBreak(zoneKey)
 		r.check(("작은 구조물 3타: 남은 구조물 %s(기대 %d · %d · %d) · 마지막 부서짐 원인 %s"):format(table.concat(hitsSeen, " · "), #list, #list, #list - 1, tostring(broke and broke.cause)),
 			hitsSeen[1] == #list and hitsSeen[2] == #list and hitsSeen[3] == #list - 1 and broke and broke.cause == "hits")
+		-- 보스 걸음의 지면 탐지(MonsterAI와 같은 GroundProbe.groundY, 발 = 바닥 윗면)가 구조물을 "계단보다 높은 턱"으로 보는가(리뷰 2 - 광선 시작점이 기둥 속이면 못 본다).
+		local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
+		local blockedAll, heights = true, {}
+		for _, o in ipairs(BossArenaMap.obstacles(zoneKey)) do
+			local groundY = GroundProbe.groundY(o.center.X, o.center.Z, FLOOR_TOP)
+			local step = groundY and (groundY - FLOOR_TOP) or 0
+			table.insert(heights, ("%.1f"):format(step))
+			blockedAll = blockedAll and step > TerrainConfig.maxStepHeightStuds
+		end
+		r.check(("보스 지면 탐지가 본 구조물 턱 [%s](기대 모두 > 계단 한 단 %.1f - 보스 걸음이 비켜 간다)"):format(table.concat(heights, ", "), TerrainConfig.maxStepHeightStuds), blockedAll and #heights > 0)
 		-- 연타(간격 안)는 세지 않는다.
 		local second = BossArenaMap.obstacles(zoneKey)[1]
 		for _ = 1, 3 do
