@@ -68,7 +68,9 @@ return {
 	-- SaveSystem.migrate()의 v31->v32 참고.
 	-- 33(P2.5c B2) - 마일스톤 재설계: classes[*].milestones(회차별 표)를 지우고 classes[*].milestoneLevel(받은 마지막 능력치 마일스톤 레벨, 0 이상 정수)을 신설.
 	-- 기존 세이브는 0 - 환생 5회를 마친 직업은 접속 때 지금 레벨까지 채운다. milestoneUnlocks는 그대로. SaveSystem.migrate()의 v32->v33 참고.
-	saveVersion = 33,
+	-- 34(P3a B3) - 계정 단위 leaderboardTainted(boolean) 신설 - /gg가 돈 계정은 리더보드에 쓰지 않는다. 기존 세이브는 보스 클리어가 하나라도 있으면 true(진도 출처를 가릴 수 없다), 없으면 false.
+	-- SaveSystem.migrate()의 v33->v34 참고.
+	saveVersion = 34,
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

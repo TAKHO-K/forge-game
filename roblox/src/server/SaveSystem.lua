@@ -236,6 +236,9 @@ local function defaultProfile()
 
 		-- 환생 후 해금 마일스톤 받은 개수(P2.5b D, v32) - 계정 공유(가방 칸 · 계승 할인 같은 계정 효과). MilestoneData.unlocks의 앞에서부터 이 개수만큼 열렸다.
 		milestoneUnlocks = 0,
+
+		-- 리더보드 기록 제외(P3a B3, v34) - 계정 단위. 이 계정에서 /gg(개발 명령)가 한 번이라도 돌면 true(PlayerProfile.markLeaderboardTainted) - "/gg로 만든 진도는 기록하지 않는다".
+		leaderboardTainted = false,
 	}
 end
 
@@ -310,7 +313,7 @@ end
 -- 마릿수 역산 하나로 통일 - characterExp를 같은 레벨·진행률 위치로 재배치, 25-1) -> 23(보석·
 -- 장비 옵션 통합 - gem.optionId를 gem.option({id, roll})으로 치환 + itemLevel 백필, 26-1) -> 24(옛 규칙으로
 -- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
--- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11) -> 30(안내 플래그 hints, S20e) -> 31(보석 가루 gemDust 신설 - 0, P2.5b C) -> 32(환생 후 마일스톤 milestones · milestoneUnlocks 신설 - 빈 표 · 0, P2.5b D) -> 33(마일스톤 재설계 - milestones 표를 milestoneLevel 숫자로, P2.5c B2).
+-- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11) -> 30(안내 플래그 hints, S20e) -> 31(보석 가루 gemDust 신설 - 0, P2.5b C) -> 32(환생 후 마일스톤 milestones · milestoneUnlocks 신설 - 빈 표 · 0, P2.5b D) -> 33(마일스톤 재설계 - milestones 표를 milestoneLevel 숫자로, P2.5c B2) -> 34(리더보드 기록 제외 leaderboardTainted 신설 - 보스 클리어가 있던 세이브는 true, P3a B3).
 local function migrate(data)
 	data.version = data.version or 0
 
@@ -837,6 +840,18 @@ local function migrate(data)
 		data.version = 33
 	end
 
+	if data.version < 34 then
+		-- P3a(v34): 리더보드 기록 제외 표시 신설. 이관 규칙(개발 계정뿐이라 단순하게 - 로그 결정): 보스를 하나라도 깬 기존 세이브는 그 진도가
+		-- /gg로 만든 것인지 가릴 수 없어 true(기록 제외), 아직 보스 클리어가 없는 세이브는 false. 진도 값(infiniteBest = 도달 · bestBossCleared = 보스 클리어)은 그대로 둔다 -
+		-- 두 값은 원래 따로 있었고, 이번 단계부터 순위 · 기록은 bestBossCleared(보스 클리어)만 본다.
+		local cleared = false
+		for _, classState in pairs(data.classes) do
+			cleared = cleared or ((classState.stageProgress and classState.stageProgress.bestBossCleared) or 0) > 0
+		end
+		data.leaderboardTainted = cleared
+		data.version = 34
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -878,6 +893,7 @@ local function isValidProfile(data)
 		or (data.hints.gemMerchantUsed ~= nil and type(data.hints.gemMerchantUsed) ~= "boolean")
 		or type(data.gemDust) ~= "number" or data.gemDust % 1 ~= 0 or data.gemDust < 0
 		or type(data.milestoneUnlocks) ~= "number" or data.milestoneUnlocks % 1 ~= 0 or data.milestoneUnlocks < 0
+		or type(data.leaderboardTainted) ~= "boolean" -- 리더보드 기록 제외(v34)
 	then
 		return false
 	end

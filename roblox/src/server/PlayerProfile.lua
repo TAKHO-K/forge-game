@@ -632,6 +632,41 @@ function PlayerProfile.setBossCleared(player, stage)
 	player:SetAttribute("BestBossCleared", stage)
 end
 
+-- P3a A: 보스 클리어로 개인 최고가 오른 멤버의 도달(infiniteBest)도 그 보스 스테이지까지 끌어올린다 - 파티원은 보스 스테이지로 직접 갈 수 없어(리더만)
+-- 옛 코드에서는 파티 보스를 깨도 도달이 안 올라 다음 스테이지로 못 갔다("리더만 갱신"). 지금 스테이지(infinite)는 건드리지 않는다. 오르면 true.
+function PlayerProfile.raiseInfiniteBest(player, stage)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState or stage <= classState.stageProgress.infiniteBest then
+		return false
+	end
+	classState.stageProgress.infiniteBest = stage
+	player:SetAttribute("InfiniteStageBest", stage)
+	syncAccountBestStage(player, profile)
+	return true
+end
+
+-- P3a B3: "/gg 명령으로 만든 진도는 기록하지 않는다" - 이 계정에서 /gg가 한 번이라도 돌면 켜진다(계정 단위 · 저장 v34). 켜진 계정은 리더보드에 쓰지 않는다.
+function PlayerProfile.markLeaderboardTainted(player)
+	local profile = profiles[player]
+	if profile and not profile.leaderboardTainted then
+		profile.leaderboardTainted = true
+	end
+end
+
+function PlayerProfile.isLeaderboardTainted(player)
+	local profile = profiles[player]
+	return profile == nil or profile.leaderboardTainted == true
+end
+
+-- 자동 검증 전용 - 검증이 쓰기 경로를 재려고 잠깐 끈다(스냅샷 복원이 원래 값으로 되돌린다).
+function PlayerProfile.setLeaderboardTaintedForDevTools(player, value)
+	local profile = profiles[player]
+	if profile then
+		profile.leaderboardTainted = value == true
+	end
+end
+
 -- 29-5: 보스의 정체는 스테이지 번호만의 함수다(BossRules.bossIdForStage) - 23-5의 플레이어별 순환(getBossForStage ·
 -- pending · "/gg boss force"의 debugForceNextId)은 여기서 없앴다. 세이브의 classState.bossRotation 필드는 그대로 두고
 -- 읽지 않는다(SaveSystem - 옛 세이브가 검증·이관을 그대로 통과한다).
@@ -1670,6 +1705,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		inventorySlots = profile.inventorySlots,
 		gemDust = profile.gemDust, -- P2.5b C: 보석 분해 · 재련 · 변환권 구매 검증이 가루를 바꾼다 - 같은 이유로 되돌린다.
 		hints = deepCopy(profile.hints), -- 30-0 S20e: 수동 Play에서 보석상인을 쓰면 안내 플래그가 켜지고 Play 종료 때 실제 프로필에 저장됐다(S20e 실측) - 같은 이유로 되돌린다.
+		leaderboardTainted = profile.leaderboardTainted, -- P3a(v34): 검증이 기록 경로를 재려고 끈 값을 되돌린다(COMMON §1 "새 저장 필드는 백업 대상에").
 	}
 end
 
@@ -1701,6 +1737,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	player:SetAttribute("GemDust", profile.gemDust)
 	profile.milestoneUnlocks = snapshot.milestoneUnlocks or profile.milestoneUnlocks
 	profile.inventorySlots = snapshot.inventorySlots or profile.inventorySlots
+	profile.leaderboardTainted = snapshot.leaderboardTainted
 	syncProtectionAttributes(player, profile)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)

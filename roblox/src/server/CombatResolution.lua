@@ -27,6 +27,8 @@ local ProtectionTickets = require(script.Parent.ProtectionTickets)
 local TutorialState = require(script.Parent.TutorialState)
 local PartyState = require(script.Parent.PartyState)
 local DropNotice = require(script.Parent.DropNotice)
+local Leaderboard = require(script.Parent.Leaderboard) -- P3a B: 보스 클리어 기록
+local LeaderboardRules = require(ReplicatedStorage.Shared.LeaderboardRules) -- P3a A: 멤버별 진도 판정
 -- P2 G: 불러오는 순간 PartyState에 파티 경험치 조건 판정을 등록한다(경험치 지급 경로가 이 모듈을 지난다).
 require(script.Parent.PartyExpBonus)
 
@@ -202,7 +204,6 @@ local function handleBossDeath(attacker, target)
 	end
 	local contributions = MonsterState.getContributors(target)
 	local rewarded = {}
-	local underThreshold = {}
 	local deferredBossDrops = {}
 	for _, member in ipairs(candidates) do
 		local ratio = contributions[member] or 0
@@ -215,33 +216,57 @@ local function handleBossDeath(attacker, target)
 			ImmediateSave.request(member)
 			table.insert(rewarded, ("%s(%.0f%%)"):format(member.Name, ratio * 100))
 		elseif member.Parent then
-			table.insert(underThreshold, { player = member, ratio = ratio })
 			print(("[forge-game] 보스 보상 제외: %s - 기여 %.1f%% < %.0f%%"):format(member.Name, ratio * 100, CombatConfig.contributionRewardThreshold * 100))
 		end
 	end
 
-	-- 25-3(PRD 20.47 [6](라) "클리어 인정") - 스테이지 클리어 기록(bestBossCleared)은 위 보상
-	-- 지급과 별개다. 파티 전원이 기여 10% 이상일 때만 전원에게 남는다 - 한 명이라도 미달이면
-	-- 아무도 이 처치로는 기록을 얻지 못한다(보상은 각자 독립 지급 그대로, 절대 같은 분기에
-	-- 묶지 않는다). 못 깬 사람을 이미 깬 파티원들이 데려가 캐리하는 경로를 막는 장치다.
-	if #underThreshold == 0 then
-		for _, member in ipairs(candidates) do
-			if member.Parent then
-				PlayerProfile.setBossCleared(member, monsterData.stageNumber)
-			end
-		end
-	else
-		for _, entry in ipairs(underThreshold) do
-			PartyState.notify(entry.player, ("스테이지 클리어가 인정되지 않았습니다 - 기여 %.1f%%(최소 %.0f%% 필요)"):format(
-				entry.ratio * 100, CombatConfig.contributionRewardThreshold * 100))
-		end
-		for _, member in ipairs(candidates) do
-			local ratio = contributions[member] or 0
-			if member.Parent and ratio >= CombatConfig.contributionRewardThreshold then
-				PartyState.notify(member, "파티원 기여 미달로 이 처치는 스테이지 클리어로 기록되지 않았습니다")
-			end
+	-- P3a A(사용자 확정 규칙 - docs/phase/P3a-log.md): 스테이지 클리어 기록(bestBossCleared = 개인 최고)은 보상 지급과 별개이고 **멤버마다 따로** 오른다 -
+	-- 이 보스 스테이지가 "자기 최고 다음 보스 스테이지"이고 본인 피해가 10% 이상일 때만(치유사도 피해만 센다 - contributions는 보스에게 들어간 피해다).
+	-- 옛 25-3 게이트("파티 전원 10% 이상일 때만 전원")를 대신한다. 캐리는 여전히 막힌다: 다음 스테이지가 아니면 안 오르고, 10% 미만이면 본인은 안 오른다.
+	-- 오른 멤버는 도달(infiniteBest)도 그 스테이지까지 오른다 - 옛 코드는 리더의 이동만 도달을 올려 파티원은 파티 보스를 깨도 다음 스테이지로 못 갔다.
+	local encounter = BossEncounter.getEncounterByModel(target)
+	local judged, judgedInput = {}, {}
+	for _, member in ipairs(candidates) do
+		if member.Parent then
+			table.insert(judged, member)
+			table.insert(judgedInput, { best = PlayerProfile.getBestBossCleared(member), ratio = contributions[member] or 0 })
 		end
 	end
+	local verdict = LeaderboardRules.evaluateClear({
+		stage = monsterData.stageNumber,
+		interval = BossData.stageInterval,
+		threshold = CombatConfig.contributionRewardThreshold,
+		isParty = encounter ~= nil and encounter.party ~= nil,
+		members = judgedInput,
+	})
+	local clearMembers = {}
+	for i, member in ipairs(judged) do
+		if verdict.advanced[i] then
+			PlayerProfile.setBossCleared(member, monsterData.stageNumber)
+			PlayerProfile.raiseInfiniteBest(member, monsterData.stageNumber)
+		elseif verdict.reasons[i] == "low_damage" then
+			PartyState.notify(member, ("개인 최고 기록이 오르지 않았습니다 - 기여 %.1f%%(최소 %.0f%% 필요)"):format(
+				judgedInput[i].ratio * 100, CombatConfig.contributionRewardThreshold * 100))
+		end
+		table.insert(clearMembers, { player = member, advanced = verdict.advanced[i], reason = verdict.reasons[i], ratio = judgedInput[i].ratio })
+	end
+	print(("[forge-game] 진도 판정: 스테이지 %d - %s · 파티 기록 %s"):format(monsterData.stageNumber, (function()
+		local parts = {}
+		for _, entry in ipairs(clearMembers) do
+			table.insert(parts, ("%s(%s %.0f%%)"):format(tostring(entry.player.Name), entry.reason, entry.ratio * 100))
+		end
+		return table.concat(parts, ", ")
+	end)(), verdict.partyRecord and "대상" or "아님"))
+	-- P3a B: 리더보드 기록(쓰기는 비동기 - 처치 처리를 막지 않는다). 시간 = 서버가 잰 보스전 시간(스폰 ~ 지금).
+	Leaderboard.onBossCleared({
+		stage = monsterData.stageNumber,
+		bossId = monsterData.id,
+		bossMaxHp = select(2, MonsterState.getBossHp(target)),
+		seconds = encounter and (os.clock() - encounter.startedAt) or nil,
+		isParty = encounter ~= nil and encounter.party ~= nil,
+		partyRecord = verdict.partyRecord,
+		members = clearMembers,
+	})
 
 	-- 29-5: 보스의 정체가 스테이지만의 함수가 되면서(BossRules.bossIdForStage) 23-5의 "처치하면 pending을 지운다"는 없어졌다.
 	BossEncounter.clearForModel(target)

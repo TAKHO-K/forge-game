@@ -2308,6 +2308,7 @@ local function onChatMessage(player, message)
 	end
 	table.remove(args, 1) -- "/gg" 자체를 뗀다
 
+	PlayerProfile.markLeaderboardTainted(player) -- P3a B3: /gg가 돈 계정의 진도는 리더보드에 쓰지 않는다(저장 v34)
 	local ok, err = pcall(handleCommand, player, args)
 	if not ok then
 		warn(("[DevTools] 명령 처리 실패: %s"):format(tostring(err)))
@@ -3071,8 +3072,10 @@ if RunService:IsStudio() and verifyEnabled("27-3(나)") then
 			local afterB = PlayerProfile.getBestBossCleared(player)
 			print(("[27-3][나2] 스탠드인 9%% 미달 - 보상은 지급(골드 %d -> %d) %s"):format(
 				goldBefore, goldAfter, record(spawnedB and goldAfter > goldBefore)))
-			print(("[27-3][나2] 같은 처치에서 bestBossCleared는 안 오름(%s -> %s, 기대 %s 유지) %s"):format(
-				tostring(afterA), tostring(afterB), tostring(afterA), record(afterB == afterA)))
+			-- P3a A(사용자 확정 규칙): 클리어 기록은 멤버마다 따로 오른다 - 본인(91%)은 자기 최고 다음 보스 스테이지를 깼으므로 오른다(옛 25-3 "전원 게이트" 기대 → 개정).
+			-- 미달 스탠드인(9%)은 프로필이 없어 판정 밖이다(실제 멤버의 10% 미만은 P3a(가) 시나리오 표가 잰다).
+			print(("[27-3][나2] 파티원 9%% 미달이어도 본인(91%%)의 bestBossCleared는 오름(%s -> %s, 기대 %s - P3a 개인별 규칙) %s"):format(
+				tostring(afterA), tostring(afterB), tostring(stageB), record(afterB == stageB)))
 
 			restore(player)
 			print(("===27-3 검증 끝(나)=== %d/%d 통과"):format(passCount, totalCount))
