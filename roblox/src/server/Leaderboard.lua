@@ -160,7 +160,8 @@ local function eligibility(member)
 	if mode == "off" then
 		return false, "studio_manual"
 	end
-	if table.find(LeaderboardConfig.excludedUserIds, member.UserId) then
+	-- P3d G-g: 라이브에서만 뺀다 - 개발 계정이 목록에 있어도 Studio 검증 모드(_verify 저장소)는 그 계정으로 기록 경로를 잰다.
+	if mode == "live" and table.find(LeaderboardConfig.excludedUserIds, member.UserId) then
 		return false, "excluded"
 	end
 	if mode == "live" and member.UserId <= 0 then

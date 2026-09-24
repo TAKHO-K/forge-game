@@ -46,6 +46,7 @@ local Milestone = require(ReplicatedStorage.Shared.Milestone) -- P2.5b D: 환생
 local MilestoneData = require(ReplicatedStorage.Shared.data.MilestoneData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PartyState = require(script.Parent.PartyState)
+local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData) -- P3d G-d: 견습 7단계를 캐주얼 시뮬 앞에
 
 local EconSim = {}
 
@@ -781,6 +782,65 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	}
 end
 
+-- P3d G-d(사용자 결정 "캐주얼 측정에 견습 시뮬 포함"): 견습 7단계(TutorialData)를 무한 모드 앞에 돈다 - 프로필의 tutorial = true일 때만.
+-- 게임과 같은 값: 단계마다 tier 몬스터(스테이지 TutorialData.monsterStage) killTarget마리 → 견습 보스(BossRules.buildTutorialInstanceData - 부분 스킬 · HP 배율).
+-- 대여(4 ~ 7단계) = 무기 등급 + 3부위 세트(itemLevel = 지금 레벨 - TutorialState.applyLend), 끝나면 대여 전으로 되돌린다. 지급(1 ~ 3단계 보스 확정 드랍) = 비어 있거나
+-- 더 좋으면 낀다. 처치 · 보스 시간은 무한 모드와 같은 프로필 파라미터(조작 효율 · 이동 · 보스 시도 수)로 잰다. 반환: 견습에 쓴 초.
+local function tutorialPhase(state, profile, run)
+	local startedAt = state.seconds
+	local baseline = { weaponGrade = state.weaponGrade, gear = table.clone(state.gear) }
+	local function gainExp(amount)
+		state.exp += amount
+		while state.exp >= CharacterLevel.getExpToNextLevel(state.level) do
+			state.exp -= CharacterLevel.getExpToNextLevel(state.level)
+			state.level += 1
+		end
+	end
+	for step = 1, TutorialData.stepCount do
+		local data = TutorialData.steps[step]
+		if data.lend then
+			state.weaponGrade = data.lend.weaponGrade
+			if data.lend.armorGrade then
+				for _, part in ipairs(EquipSlots.order) do
+					state.gear[part] = { grade = data.lend.armorGrade, part = part, dropStage = TutorialData.monsterStage, itemLevel = state.level, tierIndex = data.tierIndex }
+				end
+			end
+		end
+		local tier = tierData(data.tierIndex)
+		for _ = 1, data.killTarget do
+			local loadout = loadoutFor(state)
+			local kill = EconSim.killSeconds(loadout, InfiniteStage.getMonsterHp(tier.hp, TutorialData.monsterStage) / profile.dpsEfficiency, 600)
+			state.seconds += kill + profile.moveOverheadSeconds
+			state.huntSeconds += kill + profile.moveOverheadSeconds
+			state.gold += InfiniteStage.getGoldReward(tier.goldDrop, TutorialData.monsterStage)
+			gainExp(InfiniteStage.getExpReward(tier.expReward, TutorialData.monsterStage) * run.expMult * CharacterLevel.getExpScale(state.level))
+		end
+		local boss = BossRules.buildTutorialInstanceData(data.tierIndex, TutorialData.monsterStage, data.bossPatternKeys, data.bossHpScale, TutorialData.bossWeaponMultiplier(step))
+		local loadout = loadoutFor(state)
+		local spent = EconSim.killSeconds(loadout, boss.hp / profile.bossDpsEfficiency, 600) * profile.bossAttemptsPerClear + profile.bossOverheadSeconds
+		state.seconds += spent
+		state.bossSeconds += spent
+		state.gold += boss.goldDrop
+		gainExp(boss.expReward * run.expMult * CharacterLevel.getExpScale(state.level))
+		if data.grant then
+			local item = Loot.buildFixedArmorDrop(data.grant.grade, data.grant.part, TutorialData.monsterStage, data.tierIndex, state.classId)
+			local current = baseline.gear[data.grant.part]
+			if not current or PART_SCORE[data.grant.part](item) > PART_SCORE[data.grant.part](current) then
+				baseline.gear[data.grant.part] = item
+				if not data.lend then
+					state.gear[data.grant.part] = item
+				end
+			end
+		end
+		if data.isFinal then
+			state.gold += TutorialData.tutorialCompletionGold or 0
+		end
+	end
+	state.weaponGrade = baseline.weaponGrade
+	state.gear = baseline.gear
+	return state.seconds - startedAt
+end
+
 -- 프로필 하나의 진행 시뮬. 반환: { profileId, reached = { [이정표] = 기록 }, chunks = { 청크 }, stall = 사유 or nil, final = state }.
 function EconSim.runProgress(profileId, whatIf)
 	assert(EconSim.isAllowed(), "EconSim: Studio · DevToolsConfig.econSim 전용")
@@ -793,6 +853,10 @@ function EconSim.runProgress(profileId, whatIf)
 	run.expMult = EconSim.withOverrides(whatIf, expMultiplier, profile) -- what-if(p2before의 옛 파티 규칙)를 따른다
 	local state = newState(profile)
 	local rng = Random.new(EconSimConfig.seed)
+	if profile.tutorial then
+		run.tutorialSeconds = tutorialPhase(state, profile, run) -- P3d G-d
+		run.tutorialLevel = state.level
+	end
 	nextMilestoneRecord(run, state, cap)
 	local lastYield = os.clock()
 	while state.reach < cap do

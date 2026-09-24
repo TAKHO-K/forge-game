@@ -621,8 +621,15 @@ function P3cVerify.runLive(player, env)
 				lock = e.record
 			end
 		end
-		local firstCo = launches[1] and launches[1].coHits or 0
-		local firstH = launches[1] and launches[1].limitedHeight or 0
+		-- P3d G-f: "함께 맞은 수" = 같은 원 안(옛 = 회차 전체 4명). 배치상 S1 · S2(1.4stud 곁)만 같은 원 - 2명 → 높이 6, 개발 캐릭터 · S3은 혼자 → 5.
+		local firstCo, firstH, soloCo = 0, 0, 0
+		for _, launch in ipairs(launches) do
+			if launch.player == s1 and firstCo == 0 then
+				firstCo, firstH = launch.coHits, launch.limitedHeight
+			elseif launch.player == player and soloCo == 0 then
+				soloCo = launch.coHits
+			end
+		end
 		local s1Lock = nil
 		for _, entry in ipairs(lock and lock.locked or {}) do
 			if entry.player == s1 then
@@ -630,10 +637,10 @@ function P3cVerify.runLive(player, env)
 			end
 		end
 		local track = data.skills.strike.trackAfterHit
-		r.check(("A4 첫 낙뢰에 함께 맞은 수 %d(개발 + 스탠드인 3 = 4) → 넉백 높이 %.2f(기대 상한 7.5) · 추적 고정 %.2f초 뒤(기대 %.2f) · 고정 → 둘째 판정 %.2f초(기대 %.2f) · S1 고정 자리 = 날아간 자리 %s"):format(
-			firstCo, firstH, (lockAt and impactAt[1]) and (lockAt - impactAt[1]) or -1, track.trackSeconds, (secondAt and lockAt) and (secondAt - lockAt) or -1, track.lockTelegraphSeconds,
+		r.check(("A4 첫 낙뢰에 같은 원에서 함께 맞은 수 S1 %d(기대 2 - S1 · S2) · 개발 %d(기대 1) → S1 넉백 높이 %.2f(기대 6) · 추적 고정 %.2f초 뒤(기대 %.2f) · 고정 → 둘째 판정 %.2f초(기대 %.2f) · S1 고정 자리 = 날아간 자리 %s"):format(
+			firstCo, soloCo, firstH, (lockAt and impactAt[1]) and (lockAt - impactAt[1]) or -1, track.trackSeconds, (secondAt and lockAt) and (secondAt - lockAt) or -1, track.lockTelegraphSeconds,
 			tostring(s1Lock and (Vector3.new(s1Lock.X, 0, s1Lock.Z) - Vector3.new(zone.center.X + 48, 0, zone.center.Z + 4)).Magnitude < 0.5)),
-			firstCo == 4 and near(firstH, 7.5) and lockAt and near(lockAt - impactAt[1], track.trackSeconds, 0.1) and secondAt and near(secondAt - lockAt, track.lockTelegraphSeconds, 0.1)
+			firstCo == 2 and soloCo == 1 and near(firstH, 6) and lockAt and near(lockAt - impactAt[1], track.trackSeconds, 0.1) and secondAt and near(secondAt - lockAt, track.lockTelegraphSeconds, 0.1)
 				and s1Lock ~= nil and (Vector3.new(s1Lock.X, 0, s1Lock.Z) - Vector3.new(zone.center.X + 48, 0, zone.center.Z + 4)).Magnitude < 0.5)
 		clearStandIns(player, standIns)
 		root.Anchored = false

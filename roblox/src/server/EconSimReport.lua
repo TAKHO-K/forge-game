@@ -918,6 +918,16 @@ local function writeP25cMisc(w, runs, profileIds)
 			run.rebirthAt[3] and hours(run.rebirthAt[3]) or "", run.rebirthAt[4] and hours(run.rebirthAt[4]) or "", r5 and hours(r5) or "", toR5N, toR5N > 0 and toR5Sum / toR5N / 60 or "", n12, n12 > 0 and sum12 / n12 / 60 or "" })
 	end
 	w.line("")
+	-- P3d G-d: 견습을 포함한 프로필(EconSimConfig tutorial = true)의 견습 시간 · 끝난 레벨 - 위 표의 스테이지 10 · 20은 이 시간을 포함한다.
+	for _, id in ipairs(profileIds) do
+		local run = runs[id]
+		if run.tutorialSeconds then
+			local s20 = run.reached[20]
+			w.line(("견습 포함(P3d G-d) %s: 견습 7단계 %s분(끝난 레벨 %d) → 스테이지 20 도달 %s분(견습 포함)."):format(EconSimConfig.profiles[id].displayName,
+				num(run.tutorialSeconds / 60, 1), run.tutorialLevel or 0, s20 and num(s20.seconds / 60, 1) or "-"))
+			w.line("")
+		end
+	end
 
 	w.line("## P2.5c ④ 구매력(결정 4 - 강화 1회 = 사냥 몇 분) · 보스 드랍")
 	w.line("")

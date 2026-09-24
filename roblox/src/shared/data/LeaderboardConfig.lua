@@ -14,6 +14,9 @@ return {
 	seasonId = 1,
 	seasonLengthDays = 28,
 	seasonStartUnix = 0,
+	-- P3d G-e(사용자 결정): 첫 시즌 시작 = 소규모 오픈일 0시(KST). 날짜는 P6에서 확정 - { 년, 월, 일 }을 넣으면 seasonStartUnix 대신 그날 0시(KST)가 시작이다
+	-- (LeaderboardRules.seasonStartOf · kstMidnightUnix). nil = 아직 안 정함(seasonId 고정).
+	firstSeasonDateKst = nil,
 	-- 명예의 전당: 시즌이 끝나면 순위표마다 상위 hallTopN을 저장소 하나(<prefix>_hall, 키 s<시즌>)에 한 번 쓴다(값 = 모든 순위표 - 4MB 한도의 수십 분의 1).
 	-- 읽기는 서버가 hallCacheSeconds마다 한 번(시즌 탭 · 지난 시즌 순위표 - P3c E2).
 	hallTopN = 100,
@@ -46,5 +49,7 @@ return {
 	},
 
 	-- 기록 제외 계정(라이브의 개발 · 운영 계정 UserId). Studio는 수동 Play면 전부 제외 · 검증 모드면 _verify 저장소로만 쓴다(Leaderboard.writeMode).
-	excludedUserIds = {},
+	-- P3d G-g(사용자 결정 "라이브 제외 = 개발 계정"): 11595243049 = Studio 로그의 개발 계정 프로필 키(Player_11595243049) - 사용자 확인 요청(결정 필요).
+	-- 제외는 라이브(writeMode "live")에서만 건다(Leaderboard.eligibility).
+	excludedUserIds = { 11595243049 },
 }

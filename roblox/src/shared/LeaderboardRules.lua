@@ -82,20 +82,43 @@ end
 -- 파티 기록 키 = 멤버 UserId 오름차순을 이은 것(같은 구성 = 같은 키 - 그 구성의 최고 기록 하나). 4명 × 11자리 + 구분자 < 50자(키 상한).
 -- P3c C7: 지금 시즌 번호. 시작일(seasonStartUnix)이 있으면 그날부터 seasonLengthDays마다 1씩 오른다(1부터) - 서버 여러 대가 같은 시계로 같은 번호를 낸다.
 -- 시작일이 0(아직 안 정함)이면 seasonId 고정(운영이 손으로 올린다). 시작 전이면 1.
+-- P3d G-e: 한국 시간(KST = UTC+9) 그날 0시의 유닉스 초. 날짜 계산은 달력 공식(civil days)으로 직접 한다 - os.time(표)의 시간대 해석에 기대지 않는다.
+function LeaderboardRules.kstMidnightUnix(year, month, day)
+	local y = month <= 2 and year - 1 or year
+	local era = math.floor(y / 400)
+	local yoe = y - era * 400
+	local mp = (month + 9) % 12
+	local doy = math.floor((153 * mp + 2) / 5) + day - 1
+	local doe = yoe * 365 + math.floor(yoe / 4) - math.floor(yoe / 100) + doy
+	local days = era * 146097 + doe - 719468
+	return days * 86400 - 9 * 3600
+end
+
+-- 시즌 시작 시각: firstSeasonDateKst({ 년, 월, 일 } - 소규모 오픈일, P6에서 확정)가 있으면 그날 0시(KST), 없으면 seasonStartUnix(0 = 아직 안 정함).
+function LeaderboardRules.seasonStartOf(config)
+	local date = config.firstSeasonDateKst
+	if date then
+		return LeaderboardRules.kstMidnightUnix(date[1], date[2], date[3])
+	end
+	return config.seasonStartUnix or 0
+end
+
 function LeaderboardRules.seasonAt(now, config)
-	if (config.seasonStartUnix or 0) <= 0 then
+	local start = LeaderboardRules.seasonStartOf(config)
+	if start <= 0 then
 		return config.seasonId
 	end
 	local length = config.seasonLengthDays * 86400
-	return math.max(1, math.floor((now - config.seasonStartUnix) / length) + 1)
+	return math.max(1, math.floor((now - start) / length) + 1)
 end
 
 -- 그 시즌이 끝나는 시각(유닉스 초) - 시작일이 없으면 nil.
 function LeaderboardRules.seasonEndsAt(season, config)
-	if (config.seasonStartUnix or 0) <= 0 then
+	local start = LeaderboardRules.seasonStartOf(config)
+	if start <= 0 then
 		return nil
 	end
-	return config.seasonStartUnix + season * config.seasonLengthDays * 86400
+	return start + season * config.seasonLengthDays * 86400
 end
 
 function LeaderboardRules.partyKey(userIds)

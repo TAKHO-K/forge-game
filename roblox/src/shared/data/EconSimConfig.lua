@@ -51,6 +51,7 @@ return {
 			partySize = 1, partyExpBonus = false,
 			enhanceTarget = 18, useProtection = false, rebirth = true, -- P2.5a: 최대 +25 → +30에 맞춰 목표 ×30/25(15 → 18 · 20 → 24 · 25 → 30)
 			gearCheckMinutes = 60, gemReroll = false, gemRoll = 1.0,
+			tutorial = true, -- P3d G-d(사용자 결정): 견습 7단계를 무한 모드 앞에 돈다(EconSim.tutorialPhase) - 캐주얼 스테이지 20 도달 시간에 견습이 들어간다
 		},
 		normal = {
 			displayName = "일반", hoursPerDay = 3, classId = "bow", huntTierMax = 5,

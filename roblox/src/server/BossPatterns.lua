@@ -881,17 +881,22 @@ HANDLERS.circleTarget = {
 		local hits = {}
 		for _, v in ipairs(victims(st)) do
 			local p = xz(v.root.Position)
-			for _, spot in ipairs(st.meteorPositions) do
+			for spotIndex, spot in ipairs(st.meteorPositions) do
 				if (p - xz(spot)).Magnitude <= skill.radiusStuds and Reach.sameLayer(v.feet, spot) then -- 22-4(P3a D3: 발 기준)
 					applySkillDamage(c.model, c.data, skill, v.player)
-					table.insert(hits, { v = v, spot = spot })
+					table.insert(hits, { v = v, spot = spot, spotIndex = spotIndex })
 					break
 				end
 			end
 		end
-		-- P3c A4: 넉백은 판정이 다 끝난 뒤에 - 함께 맞은 사람 수(#hits)가 높이를 정한다.
+		-- P3c A4: 넉백은 판정이 다 끝난 뒤에 - 함께 맞은 사람 수가 높이를 정한다. P3d G-f(사용자 결정): "함께" = **같은 원** 안에서 실제로 함께 맞은 사람(옛 = 회차 전체).
+		-- 원이 겹친 자리의 사람은 먼저 찾은 원 하나에만 센다(판정도 원 하나 - 위 break).
+		local perSpot = {}
 		for _, hit in ipairs(hits) do
-			runHitEffects(c, skill.onHit, hit.v, hit.spot, #hits)
+			perSpot[hit.spotIndex] = (perSpot[hit.spotIndex] or 0) + 1
+		end
+		for _, hit in ipairs(hits) do
+			runHitEffects(c, skill.onHit, hit.v, hit.spot, perSpot[hit.spotIndex])
 		end
 		judgeEnd(c, { kind = "circle", centers = st.meteorPositions, radius = skill.radiusStuds, inner = 0 })
 		send(st, "meteorImpact", { positions = st.meteorPositions, radius = skill.radiusStuds, style = skill.impactStyle })
