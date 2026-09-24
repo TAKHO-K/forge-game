@@ -7,8 +7,8 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 
 local BossSkillMath = {}
 
--- BossPatterns.lua의 파동 최대 반경 계수와 같은 값 - 아레나 대각선 반(√2)보다 조금 크게. 여기까지 퍼지면 파동이 사라진다.
-BossSkillMath.WAVE_MAX_RADIUS_FACTOR = math.sqrt(2) + 0.05
+-- 파동 최대 반경(P3a C: 아레나 크기와 떼어 고정 - BossArenaMapData.geometry.waveMaxRadiusStuds 주석). BossPatterns.lua도 같은 값을 쓴다.
+BossSkillMath.WAVE_MAX_RADIUS_STUDS = require(ReplicatedStorage.Shared.data.BossArenaMapData).geometry.waveMaxRadiusStuds
 
 -- 스킬의 펄스 목록(circleBoss). pulses가 없으면 { innerRadiusStuds, radiusStuds } 하나짜리.
 function BossSkillMath.pulsesOf(skill)
@@ -25,7 +25,7 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 	if primitive == "circleBoss" then
 		return skill.telegraphSeconds * #BossSkillMath.pulsesOf(skill)
 	elseif primitive == "ring" then
-		local maxRadius = arenaHalfSizeStuds * BossSkillMath.WAVE_MAX_RADIUS_FACTOR
+		local maxRadius = BossSkillMath.WAVE_MAX_RADIUS_STUDS
 		return skill.telegraphSeconds + skill.repeatIntervalSeconds * (skill.waveCount - 1)
 			+ (skill.layerGapSeconds or 0) * ((skill.layers or 1) - 1) + maxRadius / skill.waveSpeedStuds
 	elseif primitive == "circleTarget" then

@@ -468,6 +468,114 @@ function BossSim.checkDensityWall(bossId, skillId, extra, trials, seed, options)
 	}
 end
 
+-- 원형 아레나 가장자리 변형(P3a C2 - 측정 · 게임 판정에 안 쓰인다): checkDensityWall과 같은 배치 · 판정을 원형 벽(반경 arenaRadiusStuds)에 대고 잰다.
+-- 좌표는 대상(원점)에서 잰 상대 좌표이고, 대상은 벽에서 depthStuds 안쪽이다(아레나 중심 = (반경 − depth, 0)). ① 원의 중심은 서버 ArenaShape.clamp(…, clampMarginStuds)처럼
+-- 벽 여백만큼 원 안쪽(중심 방향)으로 눌린다 ② 도망갈 점은 원 안이어야 하고 구조물(obstacles = { { x, z, radius } } - 대상 기준 상대 좌표, 반경 + 몸통 반폭) 속으로는
+-- 못 간다(그 방위의 행진은 거기서 끝난다). 나머지(난수 순서 · 방위 · 간격 · 판정식)는 checkDensityWall과 같다 - 반경을 아주 크게 두면 벽(wallStuds = depth)과 같은 값이 나온다(자체 점검이 대조).
+-- options = checkDensity의 것 + { arenaRadiusStuds(필수), depthStuds(필수), clampMarginStuds(기본 2), obstacles(선택) }. 반환: checkDensity와 같은 표(nil 조건도 같다).
+function BossSim.checkDensityCircle(bossId, skillId, extra, trials, seed, options)
+	options = options or {}
+	local boss = BossData.bosses[bossId]
+	if not boss or not boss.skills[skillId] or not boss.skills[skillId].densityScalable then
+		return nil
+	end
+	local density = BossData.mechanics.stageDensity
+	local dodge = BossData.mechanics.dodge
+	local skills = BossSkillMath.densifySkills(BossSkillMath.scaleSkills(boss.skills, options.rangeScale or 1), extra)
+	local skill = skills[skillId]
+	local total = skill.count + (skill.countPerMember or 0) * (options.partySize or 1)
+	local radius, scatter = skill.radiusStuds, skill.scatterStuds
+	local directions, step = density.check.directions, density.check.stepStuds
+	local secondsPerStud = dodge.marginFactor / (options.walkSpeedStuds or WorldConfig.playerWalkSpeedStuds)
+	local margin = options.clampMarginStuds or 2
+	local arena = options.arenaRadiusStuds
+	local centerX = arena - options.depthStuds -- 아레나 중심(대상은 원점, 벽은 -X 쪽)
+	local clampLimit = math.max(arena - margin, 0)
+	local body = dodge.characterHalfWidthStuds
+	local obstacles = options.obstacles or {}
+	local rng = newRng(seed)
+
+	local function clampToArena(x, z)
+		local dx, dz = x - centerX, z
+		local distance = math.sqrt(dx * dx + dz * dz)
+		if distance <= clampLimit then
+			return x, z
+		end
+		local scale = clampLimit / distance
+		return centerX + dx * scale, dz * scale
+	end
+
+	local dirX, dirZ = {}, {}
+	for index = 1, directions do
+		local angle = 2 * math.pi * (index - 1) / directions
+		dirX[index], dirZ[index] = math.cos(angle), math.sin(angle)
+	end
+	local radiusSquared = radius * radius
+	local arenaSquared = arena * arena
+	local circleX, circleZ = table.create(total), table.create(total)
+	local samples, sum = table.create(trials), 0
+	for trial = 1, trials do
+		circleX[1], circleZ[1] = clampToArena(0, 0) -- 첫 원 = 대상의 자리(벽 여백 안이면 안쪽으로 눌린다)
+		for index = 2, total do
+			local offsetX, offsetZ = rng() * 2 - 1, rng() * 2 - 1
+			local magnitude = math.sqrt(offsetX * offsetX + offsetZ * offsetZ)
+			if magnitude > 1 then
+				offsetX, offsetZ = offsetX / magnitude, offsetZ / magnitude
+			end
+			circleX[index], circleZ[index] = clampToArena(offsetX * scatter, offsetZ * scatter)
+		end
+		local nearest = math.huge
+		for direction = 1, directions do
+			local ux, uz = dirX[direction], dirZ[direction]
+			local distance = step
+			while distance < nearest do
+				local px, pz = ux * distance, uz * distance
+				local ax, az = px - centerX, pz
+				if ax * ax + az * az > arenaSquared then
+					break -- 벽 밖 - 이 방위로는 더 못 간다
+				end
+				local blocked = false
+				for _, obstacle in ipairs(obstacles) do
+					local ox, oz = px - obstacle.x, pz - obstacle.z
+					local reach = obstacle.radius + body
+					if ox * ox + oz * oz < reach * reach then
+						blocked = true
+						break
+					end
+				end
+				if blocked then
+					break -- 구조물 - 뚫고 못 간다
+				end
+				local covered = false
+				for index = 1, total do
+					local dx, dz = px - circleX[index], pz - circleZ[index]
+					if dx * dx + dz * dz <= radiusSquared + (index == 1 and 1e-6 or 0) then
+						covered = true
+						break
+					end
+				end
+				if not covered then
+					nearest = distance
+					break
+				end
+				distance += step
+			end
+		end
+		local seconds = dodge.perceptionSeconds + nearest * secondsPerStud
+		samples[trial] = seconds
+		sum += seconds
+	end
+	table.sort(samples)
+	local bodySeconds = body * secondsPerStud
+	local p99 = samples[math.clamp(math.ceil(density.check.percentile * trials), 1, trials)]
+	local max = samples[trials]
+	return {
+		p99 = p99, max = max, mean = sum / trials, pBody = p99 + bodySeconds, maxBody = max + bodySeconds,
+		telegraphSeconds = skill.telegraphSeconds, count = total, scatterStuds = scatter, radiusStuds = radius,
+		ok = p99 <= skill.telegraphSeconds + 1e-9 and max <= skill.telegraphSeconds + density.check.maxOverSeconds + 1e-9,
+	}
+end
+
 -- 인접 가능한 스킬 쌍 전수(설계 스킬 포함). b가 a 바로 다음에 올 수 있는가: b의 notAfter에 a가 없고, a == b면
 -- 그 스킬의 쿨이 전역 쿨 이하일 때만(연속 금지는 다른 후보가 없을 때만 풀린다 - 쿨이 더 길면 준비 자체가 안 된다).
 -- 반환: { { first, second, share, possible }, ... }(share 내림차순), 100%를 넘는 가능한 쌍의 수

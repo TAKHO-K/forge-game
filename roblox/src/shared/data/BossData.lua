@@ -41,6 +41,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+-- P3a C: 킷 자리는 원형 아레나의 반경에서 계산한다(아레나를 키우면 킷도 같은 뜻의 자리로 따라간다).
+local ARENA_RADIUS = require(ReplicatedStorage.Shared.data.BossArenaMapData).geometry.radiusStuds
 
 local STAGE_INTERVAL = 5 -- 아래 stageInterval(보스 간격) - 밀도 임계값의 반올림 단위로도 쓴다
 
@@ -273,33 +275,44 @@ local scorpionBody, scorpionHead = tierColor("tier4")
 local crystalBody, crystalHead = tierColor("tier6")
 
 -- 전갈 여왕의 아레나 kit(29-3) - 파트 10개(상한 40). offset은 아레나 중심·바닥 윗면 기준.
+-- P3a C(원형 아레나): 돌진은 벽에서 arenaMarginStuds(5) 안쪽 = 중심에서 반경 − 5에서 멈춘다 - 웅덩이(반경 5) 중심을 반경 − 9에 둬 그 자리를 덮는다(옛 87 = 91 − 4와 같은 뜻).
+-- 폐허 기둥(장식 · 충돌 없음)은 벽 안쪽 고리(반경 − 10)에 웅덩이 · 입장 방위(+Z)를 피해 선다(옛 정사각형 가장자리 자리의 원형판).
 local function scorpionKitParts(ruinColor, sandColor)
 	local parts = {}
-	for _, x in ipairs({ -87, 87 }) do -- 돌진은 벽에서 5stud 안쪽(중심에서 91)에서 멈춘다 - 웅덩이(반경 5)가 그 자리를 덮는다
+	for _, x in ipairs({ -(ARENA_RADIUS - 9), ARENA_RADIUS - 9 }) do
 		table.insert(parts, {
 			name = "Quicksand", shape = "cylinder", size = Vector3.new(0.2, 10, 10), rotationDeg = Vector3.new(0, 0, 90),
 			offset = Vector3.new(x, 0.1, 0), color = sandColor, material = Enum.Material.Sand, collide = false,
 			tag = "quicksand", radiusStuds = 5,
 		})
 	end
-	for index, spot in ipairs({ { -60, -90 }, { 0, -90 }, { 60, -90 }, { -60, 90 }, { 0, 90 }, { 60, 90 }, { -90, -50 }, { 90, 50 } }) do
+	for index, angleDeg in ipairs({ 30, 60, 120, 150, 210, 240, 300, 330 }) do
 		local height = 6 + (index % 3) * 3
+		local angle = math.rad(angleDeg)
 		table.insert(parts, {
-			name = "RuinPillar", size = Vector3.new(4, height, 4), offset = Vector3.new(spot[1], height / 2, spot[2]),
+			name = "RuinPillar", size = Vector3.new(4, height, 4),
+			offset = Vector3.new(math.cos(angle) * (ARENA_RADIUS - 10), height / 2, math.sin(angle) * (ARENA_RADIUS - 10)),
 			color = ruinColor, material = Enum.Material.Sandstone, collide = false,
 		})
 	end
 	return parts
 end
 
--- 심해 군주의 아레나 kit(29-4) - 돌단 4곳 × 2파트 = 8파트(상한 40). 단은 사분면의 한가운데(±48, ±48)에 있다 - 아레나의
--- 어느 자리에서도 가장 가까운 단 윗면까지 56.6stud를 넘지 않는 배치다(중심·네 귀퉁이·벽 한가운데가 전부 같은 거리).
+-- 심해 군주의 아레나 kit(29-4) - 옛 정사각형(반폭 96)은 돌단 4곳(±48, ±48) - 어느 자리에서도 가장 가까운 단 윗면까지 56.6stud.
+-- P3a C(원형 반경 120): 4곳으로는 그 거리를 못 지킨다(단 4곳이면 최대 약 73) → 반경 65의 방위 0 · 45 · … · 315 여덟 곳 = 8곳 × 2파트 = 16파트(상한 40).
+-- 원 안 어디서든 가장 가까운 단 윗면까지 최대 약 54.7stud(옛 56.6보다 가깝다 - 29-4(가)가 원 안 격자로 다시 잰다, 회피 거리 57 이하). 중심(보스 스폰)은 비운다 -
+-- 중심에 단이 있으면 보스가 단 속에서 스폰되고 예고 원이 단 높이에 떠서 그려진다. 입장 자리(+Z 90)는 90° 단(반경 65)의 바깥 25stud다.
 -- 두 단 계단: 아랫단(20 × 20, 윗면 1) → 윗단(16 × 16, 윗면 2). 한 단이 1stud라 경사로 없이 걸어 오른다(지면 폴더 -
 -- 드랍은 윗면에 놓이고 보스도 밟고 지나간다). 범람의 안전지대는 tag가 붙은 **윗단**뿐이다 - 아랫단은 물에 잠긴다.
 -- 넷이 한 단에 넉넉히 선다(윗면 16 × 16, 몸통 폭 2).
 local function abyssalKitParts(baseColor, topColor)
 	local parts = {}
-	for _, spot in ipairs({ { -48, -48 }, { 48, -48 }, { -48, 48 }, { 48, 48 } }) do
+	local spots = {}
+	for k = 0, 7 do
+		local angle = math.rad(45 * k)
+		table.insert(spots, { math.cos(angle) * 65, math.sin(angle) * 65 })
+	end
+	for _, spot in ipairs(spots) do
 		table.insert(parts, {
 			name = "FloodPlatform", size = Vector3.new(20, 1, 20), offset = Vector3.new(spot[1], 0.5, spot[2]),
 			color = baseColor, ground = true,

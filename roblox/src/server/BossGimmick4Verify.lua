@@ -78,15 +78,18 @@ local function runPure()
 		local boss = BossData.bosses[ABYSSAL]
 		local flood = boss.skills.flood
 		local half = WorldConfig.bossArena.halfSizeStuds
+		local radius = WorldConfig.bossArena.radiusStuds -- P3a C: 원형 아레나 - 원 안 격자만 잰다(원 밖 모서리는 걸어 갈 수 없다)
 		local zones = BossPropMath.kitZones(boss.arenaKit, Vector3.zero, 0, flood.safeZone.tag)
 		local worst = 0
 		for x = -half, half, 2 do
 			for z = -half, half, 2 do
-				local best = math.huge
-				for _, zone in ipairs(zones) do
-					best = math.min(best, BossPropMath.distanceToBox(Vector3.new(x, 0, z), zone.center, zone.size))
+				if not radius or x * x + z * z <= radius * radius then
+					local best = math.huge
+					for _, zone in ipairs(zones) do
+						best = math.min(best, BossPropMath.distanceToBox(Vector3.new(x, 0, z), zone.center, zone.size))
+					end
+					worst = math.max(worst, best)
 				end
-				worst = math.max(worst, best)
 			end
 		end
 		local allowance = (flood.telegraphSeconds - dodge.perceptionSeconds) / dodge.marginFactor * walkSpeed
@@ -99,7 +102,7 @@ local function runPure()
 		end
 		r.check(("단 %d곳(kit %d파트 ≤ 40): 아레나 격자 전체에서 가장 가까운 단 윗면까지 최대 %.1fstud ≤ 회피 거리 %d ≤ 걸을 수 있는 거리 %.1f(전조 %.1f초) · 윗면 한 변 %dstud ≥ 네 명(몸통 폭 2 × 4) · 한 단 높이 %.1f ≤ 계단 한 단 %.1f"):format(
 			#zones, #boss.arenaKit.parts, worst, flood.dodge.distanceStuds, allowance, flood.telegraphSeconds, smallestTop, tallestStep, TerrainConfig.maxStepHeightStuds),
-			#zones == 4 and #boss.arenaKit.parts <= 40 and worst <= flood.dodge.distanceStuds and flood.dodge.distanceStuds <= allowance
+			#zones >= 4 and #boss.arenaKit.parts <= 40 and worst <= flood.dodge.distanceStuds and flood.dodge.distanceStuds <= allowance -- P3a C: 원형(반경 120)은 8곳
 				and smallestTop >= 8 and tallestStep <= TerrainConfig.maxStepHeightStuds)
 	end)
 
@@ -355,6 +358,10 @@ local function runAbyssal(player, env, r, root)
 				platforms += 1
 			end
 		end
+		local expectedTops = 0 -- P3a C: 단 개수는 kit 데이터에서(원형 아레나 = 8곳)
+		for _, spec in ipairs(data.arenaKit.parts) do
+			expectedTops += (spec.tag == "platform") and 1 or 0
+		end
 		local st = MonsterState.getBossPatternState(model)
 		arenaFloorY = st.floorY
 		for _, z in ipairs(BossPropMath.kitZones(data.arenaKit, zone.center, st.floorY, "platform")) do
@@ -368,7 +375,7 @@ local function runAbyssal(player, env, r, root)
 					table.insert(starts, ("%s@+%.1f"):format(current, os.clock() - startedAt))
 					if current == "flood" then
 						freshAtFlood = true
-						for index = 1, 4 do
+						for index = 1, expectedTops do
 							freshAtFlood = freshAtFlood and BossMechanics.zoneExpiresAt(model, player, index) == nil
 						end
 						return true
@@ -379,8 +386,8 @@ local function runAbyssal(player, env, r, root)
 			return false
 		end)
 		perStepFlood = perStep
-		r.check(("아레나 kit: FloodPlatform 파트 %d개(기대 8 = 단 4곳 × 2단), 단 윗면 높이(바닥 기준) [%s](기대 2.0 - 서버의 지면이라 단 위에 서 있어도 공중이 아니다 = 해일은 뛰어야 한다)"):format(
-			platforms, table.concat(tops, ", ")), platforms == 8 and #tops == 4 and tops[1] == "2.0" and tops[4] == "2.0")
+		r.check(("아레나 kit: FloodPlatform 파트 %d개(기대 %d = 단 %d곳 × 2단), 단 윗면 높이(바닥 기준) [%s](기대 2.0 - 서버의 지면이라 단 위에 서 있어도 공중이 아니다 = 해일은 뛰어야 한다)"):format(
+			platforms, expectedTops * 2, expectedTops, table.concat(tops, ", ")), platforms == expectedTops * 2 and #tops == expectedTops and tops[1] == "2.0" and tops[#tops] == "2.0")
 		r.check(("실시간 시퀀스: %s | 첫 범람이 시작된 순간 네 단이 전부 이 사람에게 새것=%s(선행 스킬 없이 첫 스킬이 범람이다)"):format(table.concat(starts, " "), tostring(freshAtFlood)),
 			starts[1] ~= nil and starts[1]:match("^flood@%+10") ~= nil and freshAtFlood == true)
 	end)

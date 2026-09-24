@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local Reach = require(ReplicatedStorage.Shared.Reach)
+local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape) -- P3a C: 원형 아레나 경계
 local BossMechanics = require(script.Parent.BossMechanics)
 local BossTrap = require(script.Parent.BossTrap)
 local BossArenaProps = require(script.Parent.BossArenaProps)
@@ -187,10 +188,7 @@ BossTrap.registerRescueHandler("push", {
 		local target = root.Position + pull.direction * pull.distance * amount
 		local zone = record.context and WorldConfig.zones[record.context.zoneKey or ""]
 		if zone then
-			target = Vector3.new(
-				math.clamp(target.X, zone.center.X - zone.halfSize + 2, zone.center.X + zone.halfSize - 2),
-				target.Y,
-				math.clamp(target.Z, zone.center.Z - zone.halfSize + 2, zone.center.Z + zone.halfSize - 2))
+			target = ArenaShape.clamp(zone, target, 2) -- P3a C: 원형 아레나의 벽 안쪽 2stud
 		end
 		root.CFrame = root.CFrame.Rotation + target
 	end,

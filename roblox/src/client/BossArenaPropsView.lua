@@ -21,7 +21,7 @@ local BossArenaPropsView = {}
 
 local DANGER_COLOR = UIColors.danger
 local IMPACT_COLOR = Color3.new(1, 1, 1)
-local ARENA_FLOOR_COLOR = Color3.fromRGB(30, 15, 15) -- BossEncounter.buildArena의 바닥색과 같은 값 - "빨강을 비운 자리"
+local ARENA_FLOOR_COLOR = Color3.fromRGB(30, 15, 15) -- 옛 아레나 바닥색 - 서버가 맵 바닥색(floorColor)을 안 실어 보낼 때만 쓴다(P3a C: 테마마다 바닥색이 다르다)
 local SHADOW_LENGTH_STUDS = 48 -- 그림자 띠의 길이(기둥 뒤 3초 걸음 = 48stud까지 그린다 - 판정은 벽까지다)
 local COLLIDE_CLEARANCE_STUDS = 1.5
 
@@ -135,11 +135,19 @@ function BossArenaPropsView.clearTelegraph()
 	telegraphParts = {}
 end
 
--- data = gimmickTelegraph 이벤트(center = 보스 발밑, zoneCenter·zoneHalfSize = 아레나, seconds)
+-- data = gimmickTelegraph 이벤트(center = 보스 발밑, zoneCenter·zoneHalfSize(· zoneRadius - 원형 아레나) = 아레나, floorColor = 맵 바닥색, seconds)
 function BossArenaPropsView.showGlobalTelegraph(data)
 	BossArenaPropsView.clearTelegraph()
-	local sheet = newPart(Vector3.new(data.zoneHalfSize * 2, 0.2, data.zoneHalfSize * 2), DANGER_COLOR, 0.85, Enum.Material.Neon)
-	sheet.CFrame = CFrame.new(data.zoneCenter + Vector3.new(0, 0.12, 0))
+	local floorColor = data.floorColor or ARENA_FLOOR_COLOR
+	local sheet
+	if data.zoneRadius then
+		-- P3a C: 원형 아레나는 빨강 바닥도 원(벽 밖으로 삐져나온 빨강이 없다 - 보이는 것 = 판정 범위).
+		sheet = newFlatDisc(data.zoneCenter, data.zoneRadius, DANGER_COLOR, Enum.Material.Neon, 0.12)
+		sheet.Transparency = 0.85
+	else
+		sheet = newPart(Vector3.new(data.zoneHalfSize * 2, 0.2, data.zoneHalfSize * 2), DANGER_COLOR, 0.85, Enum.Material.Neon)
+		sheet.CFrame = CFrame.new(data.zoneCenter + Vector3.new(0, 0.12, 0))
+	end
 	TweenService:Create(sheet, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 0.4 }):Play()
 	-- 29-4 범람: 위험색 판이 곧 수면이다 - 예고 동안 riseStuds까지 차오른다(수면이 시계). 판보다 높은 단 윗면만 빨강 밖에 남는다.
 	if data.safeZone and data.safeZone.riseStuds then
@@ -151,7 +159,7 @@ function BossArenaPropsView.showGlobalTelegraph(data)
 
 	-- 29-4 과충전: 원형 안전지대(피뢰침 곁) - 같은 문법이다. 빨강 위에 바닥색 원판을 얹어 "여기만 비어 있다"를 그린다.
 	for _, circle in ipairs(data.safeCircles or {}) do
-		local hole = newFlatDisc(Vector3.new(circle.center.X, data.zoneCenter.Y, circle.center.Z), circle.radius, ARENA_FLOOR_COLOR, Enum.Material.Slate, 0.28)
+		local hole = newFlatDisc(Vector3.new(circle.center.X, data.zoneCenter.Y, circle.center.Z), circle.radius, floorColor, Enum.Material.SmoothPlastic, 0.28)
 		hole.Transparency = 0
 		table.insert(telegraphParts, hole)
 	end
@@ -161,7 +169,7 @@ function BossArenaPropsView.showGlobalTelegraph(data)
 		if not entry.isPit and away.Magnitude > 1e-3 then
 			local dir = away.Unit
 			local from = Vector3.new(entry.position.X, data.zoneCenter.Y + 0.28, entry.position.Z)
-			local shadow = newPart(Vector3.new(entry.radius * 2, 0.16, SHADOW_LENGTH_STUDS), ARENA_FLOOR_COLOR, 0, Enum.Material.Slate)
+			local shadow = newPart(Vector3.new(entry.radius * 2, 0.16, SHADOW_LENGTH_STUDS), floorColor, 0, Enum.Material.SmoothPlastic)
 			shadow.CFrame = CFrame.lookAt(from + dir * (SHADOW_LENGTH_STUDS / 2), from + dir * SHADOW_LENGTH_STUDS)
 			table.insert(telegraphParts, shadow)
 		end

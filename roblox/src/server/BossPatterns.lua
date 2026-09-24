@@ -40,6 +40,10 @@ local BossTrap = require(script.Parent.BossTrap)
 -- 29-5: 분열의 분신은 구출 대상(얼음 덩어리)과 같은 타격 대상 엔티티다(MonsterSpawner.spawnRescueTarget).
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 require(script.Parent.BossGimmicks)
+-- P3a C: 원형 아레나의 자르기(ArenaShape) · 구조물(돌진 충돌 · 뺑뺑이 방지 · 기믹 지형이 구조물 위에 서지 않게).
+local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
+local BossArenaMap = require(script.Parent.BossArenaMap)
+local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 
 local BossPatterns = {}
 
@@ -68,28 +72,20 @@ local function zoneOf(model)
 	return { center = xz(MonsterState.getSpawnPosition(model)), halfSize = WorldConfig.bossArena.halfSizeStuds }
 end
 
--- origin에서 XZ 단위벡터 dir 방향으로 아레나 AABB(margin만큼 안쪽) 안에 머무는 최대 거리.
--- 돌진 도착점·직선 길이가 이걸로 잘려 담장 밖으로 절대 안 나간다.
+-- origin에서 XZ 단위벡터 dir 방향으로 아레나(margin만큼 안쪽) 안에 머무는 최대 거리.
+-- 돌진 도착점·직선 길이가 이걸로 잘려 담장 밖으로 절대 안 나간다. P3a C: 원형 아레나는 원까지(ArenaShape - 정사각형 구역은 옛 AABB 그대로).
 local function clipToZone(origin, dir, zone, margin)
-	local tMax = math.huge
-	for _, axis in ipairs({ "X", "Z" }) do
-		local d = dir[axis]
-		if math.abs(d) > 1e-6 then
-			local lo = zone.center[axis] - zone.halfSize + margin
-			local hi = zone.center[axis] + zone.halfSize - margin
-			local t = ((d > 0 and hi or lo) - origin[axis]) / d
-			tMax = math.min(tMax, t)
-		end
-	end
-	return math.max(tMax, 0)
+	return ArenaShape.clip(zone, origin, dir, margin)
 end
 
 local function clampToZone(position, zone, margin)
-	return Vector3.new(
-		math.clamp(position.X, zone.center.X - zone.halfSize + margin, zone.center.X + zone.halfSize - margin),
-		position.Y,
-		math.clamp(position.Z, zone.center.Z - zone.halfSize + margin, zone.center.Z + zone.halfSize - margin)
-	)
+	return ArenaShape.clamp(zone, position, margin)
+end
+
+-- 대상 원(circleTarget)의 자리를 벽 안쪽으로 누르는 여백. 원형 아레나 = BossArenaMapData.geometry.circleTargetMarginStuds(0 - P3a C2 측정: 여백 2면 벽 1stud의
+-- 대상 곁 독침이 48칸 중 3칸 실패, 0이면 0칸), 옛 정사각형 구역(DevTools로 사냥터에 띄운 보스) = 옛 값 2.
+local function circleTargetMargin(zone)
+	return zone.radius and BossArenaMapData.geometry.circleTargetMarginStuds or 2
 end
 
 -- 점 p에서 선분 a-b(XZ)까지의 거리.
@@ -390,6 +386,11 @@ runEffects = function(c, effects, info)
 		end
 		if effect.type == "spawnProp" then
 			for _, position in ipairs(info.positions) do
+				-- P3a(사용자 지시): 기믹 지형(얼음 기둥)은 맵 구조물 위 · 곁(겹침)에 세우지 않는다 - 옆으로 밀어 세우면 구조물 사이로 피한 사람이 갇힐 수 있어 그 기둥만 건너뛴다.
+				if BossArenaMap.overlapsObstacle(MonsterState.getZoneKey(c.model), position, def.radiusStuds, 1) then
+					print(("[forge-game] 기믹 지형 생략: %s - 구조물과 겹친다(%.0f, %.0f)"):format(effect.prop, position.X, position.Z))
+					continue
+				end
 				local prop, evicted = BossArenaProps.spawn(c.model, effect.prop, def, position)
 				sendPropsRemoved(c.st, evicted)
 				send(c.st, "propSpawn", { id = prop.id, kind = prop.kind, position = position, radius = prop.radius, height = prop.height, color = def.color })
@@ -413,6 +414,7 @@ runEffects = function(c, effects, info)
 				for _, other in ipairs(BossArenaProps.list(c.model)) do
 					clear = clear and Reach.horizontalDistance(other.position, spot) >= def.radiusStuds + other.radius
 				end
+				clear = clear and not BossArenaMap.overlapsObstacle(MonsterState.getZoneKey(c.model), spot, def.radiusStuds, 2) -- P3a: 구조물과 겹치지 않게
 				if clear then
 					local position = Vector3.new(spot.X, GroundProbe.surfaceY(spot.X, spot.Z, c.st.floorY) or c.st.floorY, spot.Z)
 					local prop, evicted = BossArenaProps.spawn(c.model, effect.prop, def, position)
@@ -570,7 +572,7 @@ end
 -- 한 파동이 네 사람을 서로 다른 시각에 지나간다. 파동은 최대 반경까지 살아 있다.
 local function updateWaves(c)
 	local st, skill = c.st, c.skill
-	local maxRadius = zoneOf(c.model).halfSize * BossSkillMath.WAVE_MAX_RADIUS_FACTOR
+	local maxRadius = BossSkillMath.WAVE_MAX_RADIUS_STUDS
 	local alive = {}
 	local targets = victims(st)
 	for _, wave in ipairs(st.waves) do
@@ -609,7 +611,7 @@ end
 local function slam(c)
 	local st, skill = c.st, c.skill
 	c.model:PivotTo(CFrame.new(st.hopBase))
-	local maxRadius = zoneOf(c.model).halfSize * BossSkillMath.WAVE_MAX_RADIUS_FACTOR
+	local maxRadius = BossSkillMath.WAVE_MAX_RADIUS_STUDS
 	for layer = 1, (skill.layers or 1) do
 		local delay = (layer - 1) * (skill.layerGapSeconds or 0)
 		table.insert(st.waves, { center = xz(st.hopBase), startedAt = c.now + delay })
@@ -681,11 +683,11 @@ end
 
 -- 조준 자리: 대상의 자리 + (perMember면) 안 잡힌 다른 멤버 각자의 자리(29-3 낙빙 · 29-4 낙뢰의 두 발 모두).
 local function aimPositions(c, zone)
-	local positions = { clampToZone(xz(c.targetRoot.Position), zone, 2) }
+	local positions = { clampToZone(xz(c.targetRoot.Position), zone, circleTargetMargin(zone)) }
 	if c.skill.perMember then
 		for _, v in ipairs(victims(c.st)) do
 			if v.root ~= c.targetRoot and not BossTrap.isTrapped(v.player) then
-				table.insert(positions, clampToZone(xz(v.root.Position), zone, 2))
+				table.insert(positions, clampToZone(xz(v.root.Position), zone, circleTargetMargin(zone)))
 			end
 		end
 	end
@@ -735,7 +737,7 @@ HANDLERS.circleTarget = {
 				if offset.Magnitude > 1 then
 					offset = offset.Unit
 				end
-				table.insert(positions, clampToZone(first + offset * skill.scatterStuds, zone, 2))
+				table.insert(positions, clampToZone(first + offset * skill.scatterStuds, zone, circleTargetMargin(zone)))
 			end
 		end
 		beginCircles(c, positions, hintedSeconds(c.st, skill, skill.telegraphSeconds))
@@ -787,6 +789,12 @@ local function startDash(c, fromPosition, dashIndex)
 	end
 	dir = dir.Unit
 	local length = clipToZone(origin, dir, zone, skill.arenaMarginStuds)
+	-- P3a C(사용자 지시): 경로에 구조물이 있으면 몸통이 닿는 자리에서 멈춘다 - 예고 선도 거기까지(보이는 것 = 판정). 도착하면 구조물이 부서지고 헤롱이 길어진다.
+	local obstacleId, contact = BossArenaMap.firstOnPath(MonsterState.getZoneKey(c.model), origin, dir, length, BossArenaMapData.obstacle.chargeBodyHalfStuds)
+	if obstacleId then
+		length = contact
+	end
+	st.chargeObstacle = obstacleId
 	st.chargeDashIndex = dashIndex
 	st.chargeFrom = Vector3.new(origin.X, fromPosition.Y, origin.Z)
 	st.chargeTo = st.chargeFrom + dir * length
@@ -897,19 +905,22 @@ HANDLERS.charge = {
 				end
 			end
 			if progress >= 1 then
-				if st.chargeDashIndex < (skill.dashCount or 1) and c.targetRoot then
+				-- P3a C: 구조물에 부딪혀 멈췄다 - 구조물이 부서지고, 남은 돌진은 없이 바로 헤롱(길어진다).
+				local crashed = st.chargeObstacle and BossArenaMap.breakObstacle(MonsterState.getZoneKey(c.model), st.chargeObstacle, "charge")
+				st.chargeObstacle = nil
+				if not crashed and st.chargeDashIndex < (skill.dashCount or 1) and c.targetRoot then
 					-- 헤롱 없이 바로 다음 돌진(현재 위치·현재 대상 좌표로 재조준). 마지막 돌진에서만 헤롱.
 					startDash(c, newPos, st.chargeDashIndex + 1)
 				else
 					-- 헤롱(주저앉기) - 몸을 내려 기울인다. 끝날 때(endSkill/interrupt) 똑바로 되돌린다.
 					-- 29-3: 마지막 돌진이 아레나 kit의 논리 구역(tag) 안에서 끝났으면 헤롱이 길어진다(전갈 여왕의 유사 웅덩이).
-					local recoverSeconds = skill.recoverSeconds
+					local recoverSeconds = skill.recoverSeconds + (crashed and BossArenaMapData.obstacle.chargeStunBonusSeconds or 0)
 					local bonus = skill.recoverInZone
 					if bonus and c.data.arenaKit then
 						local zoneCenter = zoneOf(c.model).center
 						for _, part in ipairs(c.data.arenaKit.parts) do
 							if part.tag == bonus.tag and Reach.horizontalDistance(newPos, zoneCenter + part.offset) <= part.radiusStuds then
-								recoverSeconds = bonus.seconds
+								recoverSeconds = math.max(recoverSeconds, bonus.seconds)
 							end
 						end
 					end
@@ -1261,6 +1272,8 @@ HANDLERS.gimmick = {
 			safeProp = skill.safeProp,
 			zoneCenter = Vector3.new(zone.center.X, st.floorY, zone.center.Z),
 			zoneHalfSize = zone.halfSize,
+			zoneRadius = zone.radius, -- P3a C: 원형 아레나면 클라가 빨강 바닥을 원으로 깐다
+			floorColor = (BossArenaMap.getTheme(MonsterState.getZoneKey(c.model)) or BossArenaMapData.default).floor.color, -- 그림자 띠(안전지대)를 맵 바닥색으로
 			-- 29-4: 시한 안전 구역(단)의 자리와 시계 - 클라가 물(위험색 판이 차오른다)과 "아직 이르다"(윗면 빨강)를 그린다.
 			safeZone = safeZone and {
 				zones = zones, sinkSeconds = st.zoneSinkSeconds, earlySeconds = seconds - st.zoneSinkSeconds,
@@ -1420,6 +1433,8 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 		-- 격노(HP ≤ enragedHpFraction)에서만 전역 쿨이 짧아진다(사용자 지시 - 연속 사용은 체력 20% 이하에서만).
 		pickCtx.enraged = MonsterState.getHpRatio(model) <= data.scheduler.enragedHpFraction
 		local pick = BossScheduler.pick(st.sched, data.skills, data.skillOrder, data.scheduler, pickCtx)
+		-- P3a C(사용자 지시): 추격 중 한 구조물 곁을 오래 맴돌면(바퀴 수 기준) 보스가 그 구조물을 부순다 - 구조물 뒤에 숨어 무적이 되는 길이 없다.
+		BossArenaMap.noteBossChase(MonsterState.getZoneKey(model), position, dt, data.moveSpeedStuds)
 		if pick then
 			startSkill(model, st, data, pick, now, position, targetRoot)
 			return true
@@ -1494,6 +1509,14 @@ function BossPatterns.clearProps(model, members)
 	removeDecoys(model) -- 29-5: 분열 도중에 보스전이 끝나도(처치·이탈) 분신이 남지 않는다
 	for _, member in ipairs(members or (st and st.members) or {}) do
 		BossPatterns.clearPropsFor(member)
+	end
+end
+
+-- P3a D3: 한 사람의 화면에 떠 있는 예고(원 · 선 · 말풍선 · 파동)를 전부 지운다 - 보스전이 끝나거나 그 사람이 빠질 때(BossEncounter). 판정이 더는 없는
+-- 장판이 화면에 남지 않게 한다("보이는 장판 = 실제 판정"). 클라의 "reset" 처리 그대로다.
+function BossPatterns.clearTelegraphsFor(player)
+	if typeof(player) == "Instance" and player.Parent then
+		patternEvent:FireClient(player, "reset", {})
 	end
 end
 

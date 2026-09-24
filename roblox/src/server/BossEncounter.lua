@@ -27,7 +27,7 @@
 -- 사냥터로 돌아간다.
 
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
@@ -35,7 +35,7 @@ local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossPatterns = require(script.Parent.BossPatterns)
-local GroundProbe = require(script.Parent.GroundProbe)
+
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
 local PartyState = require(script.Parent.PartyState)
@@ -44,6 +44,8 @@ local BossTrap = require(script.Parent.BossTrap)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 -- 29-2: 보스별 정적 지형지물 kit - 보스전이 시작될 때 짓고 끝날 때 치운다(슬롯은 보스 종과 무관하게 재사용된다).
 local BossArenaKit = require(script.Parent.BossArenaKit)
+-- P3a C: 원형 아레나 · 보스별 테마 맵 · 구조물(기반은 슬롯마다 한 번, 테마 · 장식 · 구조물은 보스전마다).
+local BossArenaMap = require(script.Parent.BossArenaMap)
 
 local BossEncounter = {}
 
@@ -120,64 +122,12 @@ for i = WorldConfig.bossArena.slotCount, 1, -1 do
 	table.insert(freeSlots, i)
 end
 
--- 슬롯당 한 번만 짓는다(zoneKey -> true). 서버가 켜져 있는 동안 아레나는 파괴하지 않는다 -
--- 몬스터 격자(HuntingGround)처럼 상시 존재하는 고정 지형으로 취급한다.
-local builtArenas = {}
-
-local ARENA_WALL_COLOR = Color3.fromRGB(40, 20, 20) -- 사냥터 담장(70,65,60)보다 어둡게 - "다른 곳"이라는 신호.
-local ARENA_FLOOR_COLOR = Color3.fromRGB(30, 15, 15)
--- HuntingGround.server.lua의 FLOOR_THICKNESS(=2)·FLOOR_Y(=0, 바닥 "중심" 기준)와 같은
--- 관례를 그대로 쓴다 - 바닥 윗면은 항상 FLOOR_Y+FLOOR_THICKNESS/2 = 1이다. 두 시스템이
--- 같은 기준을 안 쓰면 나중에 유지보수할 때 "이 파일의 Y는 왜 다른가"를 매번 되짚어야 한다.
-local ARENA_FLOOR_THICKNESS_STUDS = 2
-local ARENA_FLOOR_TOP_Y = ARENA_FLOOR_THICKNESS_STUDS / 2 -- 1
-
--- 파티 입장 시 멤버끼리 겹치지 않게 입장점 좌우로 벌리는 간격(캐릭터 반폭 1의 4배 - 연출값).
-local ENTRY_SPREAD_STUDS = 4
+-- P3a C: 아레나(원형 바닥 · 벽 고리 · 테라스)는 BossArenaMap이 슬롯마다 한 번 짓고, 보스전마다 그 보스의 테마로 입힌다(dress/undress).
+-- 바닥 윗면은 옛 관례 그대로 1(HuntingGround의 FLOOR_Y + 두께/2).
+local ARENA_FLOOR_TOP_Y = BossArenaMap.floorTopY()
 
 local function zoneKeyForSlot(slot)
 	return "bossArena" .. slot
-end
-
-local function buildArena(zoneKey)
-	if builtArenas[zoneKey] then
-		return
-	end
-	builtArenas[zoneKey] = true
-
-	local zone = WorldConfig.zones[zoneKey]
-	local half = zone.halfSize
-	local wallsCfg = WorldConfig.walls
-	local thickness = wallsCfg.thicknessStuds
-
-	local floor = Instance.new("Part")
-	floor.Name = "BossArenaFloor"
-	floor.Anchored = true
-	floor.CanCollide = true
-	floor.Material = Enum.Material.Slate
-	floor.Color = ARENA_FLOOR_COLOR
-	floor.Size = Vector3.new(half * 2, ARENA_FLOOR_THICKNESS_STUDS, half * 2)
-	floor.Position = Vector3.new(zone.center.X, 0, zone.center.Z)
-	floor.Parent = GroundProbe.folder() -- 22-4: 지면 폴더(보스 지면 추적·돌진 Y·드랍 스냅의 대상)
-
-	local wallY = ARENA_FLOOR_TOP_Y + wallsCfg.heightStuds / 2
-	local function wall(sizeX, sizeZ, offsetX, offsetZ)
-		local part = Instance.new("Part")
-		part.Name = "BossArenaWall"
-		part.Anchored = true
-		part.CanCollide = true
-		part.Material = Enum.Material.Slate
-		part.Color = ARENA_WALL_COLOR
-		part.Size = Vector3.new(sizeX, wallsCfg.heightStuds, sizeZ)
-		part.Position = zone.center + Vector3.new(offsetX, wallY, offsetZ)
-		part.Parent = Workspace
-	end
-
-	-- 4면 전부 막는다 - 문이 없다(텔레포트 전용 입장이라 걸어 들어올 필요가 없다).
-	wall(thickness, half * 2 + thickness * 2, half + thickness / 2, 0)
-	wall(thickness, half * 2 + thickness * 2, -half - thickness / 2, 0)
-	wall(half * 2 + thickness * 2, thickness, 0, half + thickness / 2)
-	wall(half * 2 + thickness * 2, thickness, 0, -half - thickness / 2)
 end
 
 local function allocateSlot()
@@ -192,11 +142,10 @@ local function releaseSlot(slot)
 	end
 end
 
--- 아레나 안쪽, 벽에서 10stud 떨어진 가장자리 - 보스(중앙 스폰)를 바로 마주보게 한다.
--- Y는 바닥 윗면(ARENA_FLOOR_TOP_Y) + 3 - HuntingGround.server.lua가 플레이어 관련
--- 텔레포트 지점에 쓰는 것과 같은 여유(예: 포탈 도착점 FLOOR_Y+FLOOR_THICKNESS/2+3).
+-- 입장 자리(P3a C: BossArenaMapData.geometry - 중심에서 +Z로 entryDistance, 보스(중앙 스폰)를 마주본다). Y는 바닥 윗면 + 3 -
+-- HuntingGround.server.lua가 플레이어 텔레포트 지점에 쓰는 것과 같은 여유.
 local function arenaEntryPosition(zone)
-	return zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 3, zone.halfSize - 10)
+	return BossArenaMap.entryPosition(zone.key, 1, 1)
 end
 BossEncounter.entryPositionFor = arenaEntryPosition -- 22-4: 심연 복귀(TerrainServer)가 같은 입장점을 쓴다
 
@@ -213,10 +162,9 @@ local function huntingGroundReturnPosition()
 end
 BossEncounter.huntingGroundReturnPosition = huntingGroundReturnPosition -- 28-1: 보스 드랍이 복귀 자리를 못 찾을 때의 대체 위치(CombatResolution)
 
--- 멤버 index번째의 입장 위치 - 입장점을 중심으로 좌우로 벌린다(파티가 한 점에 겹쳐 서지 않게).
+-- 멤버 index번째의 입장 위치 - 입장점을 중심으로 원둘레 방향으로 벌린다(파티가 한 점에 겹쳐 서지 않게).
 local function entryPositionForIndex(zone, index, count)
-	local offset = (index - 1 - (count - 1) / 2) * ENTRY_SPREAD_STUDS
-	return arenaEntryPosition(zone) + Vector3.new(offset, 0, 0)
+	return BossArenaMap.entryPosition(zone.key, index, count)
 end
 
 local function memberIndex(encounter, player)
@@ -328,7 +276,7 @@ end
 local function spawnEncounter(data, stage, members, party, size, owner, isTutorial)
 	local slot = allocateSlot()
 	local zoneKey = zoneKeyForSlot(slot)
-	buildArena(zoneKey)
+	BossArenaMap.dress(zoneKey, data) -- P3a C: 기반(처음이면 짓는다) + 이 보스의 테마 · 장식 · 구조물 - 텔레포트 전에(바닥이 먼저 있어야 한다)
 	local zone = WorldConfig.zones[zoneKey]
 
 	for i, member in ipairs(members) do
@@ -530,6 +478,7 @@ local function endEncounter(encounter, destroyModel)
 			encounterOf[member] = nil
 			setEncounterAttribute(member, nil)
 		end
+		BossPatterns.clearTelegraphsFor(member) -- P3a D3: 떠 있던 예고(원 · 선 · 말풍선)를 지운다 - 판정이 없어진 장판이 남지 않게
 		if member.Parent then
 			teleportTo(member, huntingGroundReturnPosition())
 		end
@@ -542,6 +491,7 @@ local function endEncounter(encounter, destroyModel)
 	end
 	BossArenaKit.destroy(encounter.kitParts) -- 29-2: 다음 보스가 같은 슬롯을 깨끗한 아레나로 받는다
 	encounter.kitParts = nil
+	BossArenaMap.undress(encounter.zoneKey) -- P3a C: 장식 · 구조물도 같이 치운다(기반은 남는다)
 	releaseSlot(encounter.slot)
 	encounter.slot = nil
 	fireListeners(endedListeners, encounter)
@@ -575,6 +525,7 @@ function BossEncounter.leaveFor(player)
 	setEncounterAttribute(player, nil)
 	BossTrap.release(player, "reset") -- 29-1
 	BossPatterns.clearPropsFor(player) -- 29-3
+	BossPatterns.clearTelegraphsFor(player) -- P3a D3: 이 사람의 화면에 떠 있던 예고도 지운다(판정 대상에서 빠졌다)
 	if player.Parent then
 		teleportTo(player, huntingGroundReturnPosition())
 	end
@@ -628,6 +579,7 @@ function BossEncounter.resetFor(player)
 	end
 	BossPatterns.reset(model, data)
 	MonsterState.resetBossHp(model)
+	BossArenaMap.resetObstacles(encounter.zoneKey) -- P3a C: 재도전 = 처음부터 - 부서진 구조물도 다시 선다
 	-- 29-1: 전멸 = 힌트 한 단계(견습 제외). 잡힘도 전부 푼다(리스폰하는 사람은 BossTrap이 이미 풀었다).
 	BossTrap.releaseAll(encounter.members, "reset")
 	if not encounter.isTutorial and encounter.hintOwner then

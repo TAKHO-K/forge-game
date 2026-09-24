@@ -133,12 +133,15 @@ end
 -- 세우는 사냥터 바닥·지형이 아레나 위치까지 따라와 겹치는 걸 막는다. 벽(문 없는 완전
 -- 밀폐)은 BossEncounter.lua가 직접 세운다.
 local BOSS_ARENA_SLOT_COUNT = 12
--- 22-5: tier 구역이 256으로 넓어졌지만 아레나는 21-3이 패턴(돌진 거리·파동 반경·경계 92)을
--- 검증한 크기(격자 + 격자/2 = 96)에 묶어 둔다 - 보스맵 6종(20.50 [6])을 지을 때 그 세션이
--- 아레나 크기를 다시 정한다. ZONE_HALF_SIZE를 따라가게 두면 검증 없이 패턴 기하가 바뀐다.
-local BOSS_ARENA_HALF_SIZE_STUDS = ZONE_MONSTER_HALF_SPAN + GRID_SPACING_STUDS / 2
+-- P3a C: 아레나가 원이 됐다(BossArenaMapData.geometry - 반경 120 · 옛 정사각형 반폭 96). zones[key].radius가 있으면 원이다(shared/ArenaShape).
+-- halfSize는 원을 감싸는 정사각형 반폭(= 반경)으로 남긴다 - 반폭을 "크기"로만 읽는 옛 코드가 원의 크기를 읽는다.
+local BossArenaMapData = require(script.Parent.BossArenaMapData)
+local BOSS_ARENA_RADIUS_STUDS = BossArenaMapData.geometry.radiusStuds
+local BOSS_ARENA_HALF_SIZE_STUDS = BOSS_ARENA_RADIUS_STUDS
 local BOSS_ARENA_BASE_Z_STUDS = -3000 -- 슈퍼그리드 가장자리(-MAP_SIZE/2)에서 충분히 먼 값.
-local BOSS_ARENA_SPACING_STUDS = BOSS_ARENA_HALF_SIZE_STUDS * 2 + 100 -- 슬롯끼리 안 겹치는 여유.
+-- 슬롯끼리 안 겹치는 간격 = 벽 · 테라스까지의 지름 + 여유.
+local BOSS_ARENA_SPACING_STUDS = (BOSS_ARENA_RADIUS_STUDS + BossArenaMapData.geometry.wallThicknessStuds + BossArenaMapData.geometry.rimWidthStuds) * 2
+	+ BossArenaMapData.geometry.slotSpacingExtraStuds
 
 -- zoneOrder에는 일부러 안 넣는다 - HuntingGround.server.lua가 zoneOrder를 순회하며 바닥·
 -- 경계 장식을 자동으로 세우는데(각 구역에 맞는 스폰/문 배치 전제), 그 로직을 그대로 타면
@@ -151,6 +154,7 @@ for i = 1, BOSS_ARENA_SLOT_COUNT do
 		role = "bossArena",
 		center = Vector3.new(0, 0, BOSS_ARENA_BASE_Z_STUDS - (i - 1) * BOSS_ARENA_SPACING_STUDS),
 		halfSize = BOSS_ARENA_HALF_SIZE_STUDS, -- 걸어 들어오는 문이 없다 - BossEncounter.lua가 텔레포트로만 입장시킨다.
+		radius = BOSS_ARENA_RADIUS_STUDS, -- P3a C: 원형 아레나(ArenaShape)
 	}
 end
 
@@ -187,6 +191,7 @@ return {
 	bossArena = {
 		slotCount = BOSS_ARENA_SLOT_COUNT,
 		halfSizeStuds = BOSS_ARENA_HALF_SIZE_STUDS,
+		radiusStuds = BOSS_ARENA_RADIUS_STUDS,
 	},
 
 	-- 구역 하나의 물리적 크기 + 안의 몬스터 격자.

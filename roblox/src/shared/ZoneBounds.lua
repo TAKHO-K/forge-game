@@ -5,6 +5,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape) -- P3a C: 보스 아레나는 원이다
 
 local ZoneBounds = {}
 
@@ -15,8 +16,7 @@ function ZoneBounds.isInside(position, zoneKey)
 	if not zone then
 		return true
 	end
-	return math.abs(position.X - zone.center.X) <= zone.halfSize
-		and math.abs(position.Z - zone.center.Z) <= zone.halfSize
+	return ArenaShape.contains(zone, position)
 end
 
 return ZoneBounds
