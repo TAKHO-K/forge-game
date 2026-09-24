@@ -42,6 +42,7 @@ local MonsterSpawner = require(script.Parent.MonsterSpawner)
 require(script.Parent.BossGimmicks)
 -- P3a C: 원형 아레나의 자르기(ArenaShape) · 구조물(돌진 충돌 · 뺑뺑이 방지 · 기믹 지형이 구조물 위에 서지 않게).
 local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
+local ArenaContainment = require(ReplicatedStorage.Shared.ArenaContainment) -- P3c A5: 넉백 상한 · 착지 경계(클라와 같은 함수)
 local BossArenaMap = require(script.Parent.BossArenaMap)
 local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 
@@ -137,6 +138,15 @@ end
 -- 둘 다 검증(P3aVerify D)이 "보인 장판 = 판정"을 멤버마다 대조할 때만 건다.
 BossPatterns.debugSendHook = nil
 BossPatterns.debugJudgeHook = nil
+-- P3c D 계측(자동 검증 전용 - 평소엔 nil): debugEventHook(kind, record) - "chargeTarget"(돌진 대상 확정 · 전조 시작) · "launch"(넉백 높이 · 거리 · 함께 맞은 수) ·
+-- "trackLock"(번개 추적 고정 자리) · "chargeHit"(돌진 판정 - 몇 번째 돌진인가).
+BossPatterns.debugEventHook = nil
+
+local function debugEvent(kind, record)
+	if BossPatterns.debugEventHook then
+		BossPatterns.debugEventHook(kind, record)
+	end
+end
 local judgeHits = nil
 
 local function send(st, kind, payload)
@@ -492,8 +502,8 @@ runEffects = function(c, effects, info)
 	end
 end
 
--- 판정에 맞은 한 사람에게 도는 조각(onHit). from = 그 판정의 중심.
-local function runHitEffects(c, effects, v, from)
+-- 판정에 맞은 한 사람에게 도는 조각(onHit). from = 그 판정의 중심. coHits(P3c A4) = 이 판정에 함께 맞은 사람 수(자기 포함).
+local function runHitEffects(c, effects, v, from, coHits)
 	for _, effect in ipairs(effects or {}) do
 		if effect.type == "launch" and not BossTrap.isTrapped(v.player) then
 			c.st.lastLaunch = { player = v.player, at = c.now, effect = effect } -- 자동 검증이 읽는다
@@ -505,12 +515,27 @@ local function runHitEffects(c, effects, v, from)
 				PlayerState.setIncomingDamageMultiplierUntil(v.player, 0, effect.immuneSeconds / weight)
 			end
 			-- 도는 원(spinRadiusStuds)이 벽을 넘지 않게 중심을 그만큼 안쪽으로 자른다(맵 밖으로는 안 나간다 - 20.77 [1]).
+			local zone = zoneOf(c.model)
 			if effect.spinRadiusStuds then
-				from = clampToZone(from, zoneOf(c.model), effect.spinRadiusStuds + 2)
+				from = clampToZone(from, zone, effect.spinRadiusStuds + 2)
 			end
+			-- P3c A4: 함께 맞은 사람이 많을수록 높이 뜬다(상한 maxHeightStuds). A5: 높이 · 거리 상한과 착지 경계는 클라가 같은 함수(ArenaContainment.limitLaunch)로
+			-- 자른다 - 서버는 구역을 실어 보내고, 검증 계측에는 서버에서 같은 계산을 한 값을 남긴다.
+			local height = effect.heightStuds + (effect.extraHeightPerCoHit or 0) * math.max((coHits or 1) - 1, 0)
+			height = math.min(height, effect.maxHeightStuds or height) / weight
+			local distance = effect.distanceStuds / weight
+			-- 한가운데서 맞으면(판정 원이 발밑) 클라가 아무 방향으로나 튕긴다 - 계측은 가장 나쁜 방향(아레나 바깥쪽)으로 잘린 거리를 남긴다.
+			local away = v.root.Position - from
+			if Vector3.new(away.X, 0, away.Z).Magnitude < 0.5 then
+				away = v.root.Position - zone.center
+			end
+			local limitedHeight, limitedDistance = ArenaContainment.limitLaunch(zone, v.root.Position, away, height, distance)
+			debugEvent("launch", { player = v.player, coHits = coHits or 1, heightStuds = height, limitedHeight = limitedHeight,
+				distanceStuds = distance, limitedDistance = limitedDistance, from = from, rootPosition = v.root.Position })
 			sendTo(v.player, "launch", {
-				from = from, heightStuds = effect.heightStuds / weight, distanceStuds = effect.distanceStuds / weight,
+				from = from, heightStuds = height, distanceStuds = distance,
 				holdSeconds = effect.holdSeconds and effect.holdSeconds / weight, spinRadiusStuds = effect.spinRadiusStuds,
+				zoneCenter = zone.center, zoneRadius = zone.radius,
 			})
 		end
 	end
@@ -627,7 +652,7 @@ local function updateWaves(c)
 	local alive = {}
 	local targets = victims(st)
 	for _, wave in ipairs(st.waves) do
-		local radius = (c.now - wave.startedAt) * skill.waveSpeedStuds
+		local radius = (c.now - wave.startedAt) * wave.speed -- P3c A1: 파동마다 속도가 다를 수 있다(리듬)
 		wave.byPlayer = wave.byPlayer or {}
 		for _, v in ipairs(targets) do
 			local rec = wave.byPlayer[v.player]
@@ -659,19 +684,23 @@ local function updateWaves(c)
 end
 
 -- 한 번 찍을 때 파동을 layers개 낸다 - 겹마다 startedAt을 layerGapSeconds만큼 늦춰 서로 다른 링으로 퍼지게 한다.
+-- P3c A1: 겹 수 · 겹 간격 · 속도는 이번 파동의 리듬 칸(BossSkillMath.ringWaves)에서 읽는다. 클라는 파동마다 받은 속도로 그리고,
+-- 내 자리에 닿는 순간을 거꾸로 세는 "뛰어라" 표시(점프 틈)를 띄운다(BossRhythmView) - 판정은 서버의 이 목록 그대로다.
 local function slam(c)
 	local st, skill = c.st, c.skill
 	c.model:PivotTo(CFrame.new(st.hopBase))
 	local maxRadius = BossSkillMath.WAVE_MAX_RADIUS_STUDS
-	for layer = 1, (skill.layers or 1) do
-		local delay = (layer - 1) * (skill.layerGapSeconds or 0)
-		table.insert(st.waves, { center = xz(st.hopBase), startedAt = c.now + delay })
+	local wave = st.ringWaves[st.wavesSpawned + 1]
+	for layer = 1, wave.layers do
+		local delay = (layer - 1) * wave.layerGapSeconds
+		table.insert(st.waves, { center = xz(st.hopBase), startedAt = c.now + delay, speed = wave.speedStuds })
 		send(st, "shockwave", {
 			center = Vector3.new(st.hopBase.X, st.floorY, st.hopBase.Z),
 			serverStart = serverNow() + delay,
-			speed = skill.waveSpeedStuds,
+			speed = wave.speedStuds,
 			thickness = skill.waveThicknessStuds,
 			maxRadius = maxRadius,
+			waveIndex = st.wavesSpawned + 1, layer = layer, waveCount = #st.ringWaves,
 		})
 	end
 	st.wavesSpawned += 1
@@ -679,14 +708,16 @@ end
 
 HANDLERS.ring = {
 	bubbleSeconds = function(c)
-		return c.skill.telegraphSeconds + c.skill.repeatIntervalSeconds * (c.skill.waveCount - 1)
+		local waves = BossSkillMath.ringWaves(c.skill)
+		return waves[#waves].startSeconds
 	end,
 	start = function(c)
 		local st = c.st
 		st.hopBase = xz(c.position) + Vector3.new(0, MonsterState.getSpawnPosition(c.model).Y, 0)
 		st.wavesSpawned = 0
 		st.waves = {}
-		startHop(c, c.skill.telegraphSeconds)
+		st.ringWaves = BossSkillMath.ringWaves(c.skill)
+		startHop(c, st.ringWaves[1].startSeconds)
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
@@ -698,8 +729,9 @@ HANDLERS.ring = {
 				return
 			end
 			slam(c)
-			if st.wavesSpawned < skill.waveCount then
-				startHop(c, skill.repeatIntervalSeconds)
+			if st.wavesSpawned < #st.ringWaves then
+				local waves = st.ringWaves
+				startHop(c, waves[st.wavesSpawned + 1].startSeconds - waves[st.wavesSpawned].startSeconds)
 			else
 				st.phase = "shockWait"
 			end
@@ -720,29 +752,72 @@ local function circleCount(data, skill)
 	return skill.count + (skill.countPerMember or 0) * (data.partySize or 1)
 end
 
-local function beginCircles(c, positions, seconds)
+local function groundAt(st, p)
+	-- 22-4: 낙하점 Y는 그 자리 지면(언덕 위면 언덕 위). 못 찾으면 보스 발밑.
+	return Vector3.new(p.X, GroundProbe.surfaceY(p.X, p.Z, st.floorY) or st.floorY, p.Z)
+end
+
+-- trackers(P3c A4, 선택) = { [원 번호] = 따라갈 멤버의 victims 항목 } - 그 원은 st.trackLockAt까지 그 사람을 따라가다 멈춘다(updateTrackers).
+local function beginCircles(c, positions, seconds, trackers, trackSeconds)
 	local st, skill = c.st, c.skill
 	for i, p in ipairs(positions) do
-		-- 22-4: 낙하점 Y는 그 자리 지면(언덕 위면 언덕 위). 못 찾으면 보스 발밑.
-		positions[i] = Vector3.new(p.X, GroundProbe.surfaceY(p.X, p.Z, st.floorY) or st.floorY, p.Z)
+		positions[i] = groundAt(st, p)
 	end
 	st.meteorPositions = positions
 	st.phase = "meteorTelegraph"
 	st.phaseEndsAt = c.now + seconds
-	send(st, "meteor", { positions = positions, radius = skill.radiusStuds, seconds = seconds, style = skill.impactStyle })
+	st.trackers = trackers
+	st.trackLockAt = trackers and (c.now + trackSeconds) or nil
+	local track = nil
+	if trackers then
+		track = {}
+		for index, v in pairs(trackers) do
+			table.insert(track, { index = index, userId = typeof(v.player) == "Instance" and v.player.UserId or nil })
+		end
+	end
+	send(st, "meteor", { positions = positions, radius = skill.radiusStuds, seconds = seconds, style = skill.impactStyle, track = track, lockIn = trackers and trackSeconds or nil })
+end
+
+-- P3c A4 번개 추적: 추적 중인 원을 그 사람의 지금 자리(벽 안쪽으로 자른 발밑 지면)로 옮기고, trackLockAt이 되면 멈춘다 - 멈춘 자리를 멤버에게 보내
+-- 클라가 그 자리로 원을 옮긴다(멈춘 뒤의 원 = 판정 자리). 판정은 phaseEndsAt(멈춘 뒤 lockTelegraphSeconds)에 난다.
+local function updateTrackers(c)
+	local st = c.st
+	local zone = zoneOf(c.model)
+	for index, v in pairs(st.trackers) do
+		if typeof(v.root) ~= "Instance" or v.root.Parent then
+			st.meteorPositions[index] = groundAt(st, clampToZone(xz(v.root.Position), zone, circleTargetMargin(zone)))
+		end
+	end
+	if c.now >= st.trackLockAt then
+		local locked = {}
+		for index, v in pairs(st.trackers) do
+			table.insert(locked, { player = v.player, position = st.meteorPositions[index], index = index })
+		end
+		st.trackers = nil
+		send(st, "meteorLock", { positions = st.meteorPositions, radius = c.skill.radiusStuds, seconds = st.phaseEndsAt - c.now, style = c.skill.impactStyle })
+		debugEvent("trackLock", { locked = locked, at = c.now, judgeAt = st.phaseEndsAt, positions = st.meteorPositions })
+	end
 end
 
 -- 조준 자리: 대상의 자리 + (perMember면) 안 잡힌 다른 멤버 각자의 자리(29-3 낙빙 · 29-4 낙뢰의 두 발 모두).
+-- 반환: 자리 목록, 자리마다 주인(victims 항목 - 대상이 멤버 목록에 없으면 nil).
 local function aimPositions(c, zone)
-	local positions = { clampToZone(xz(c.targetRoot.Position), zone, circleTargetMargin(zone)) }
+	local positions, owners = { clampToZone(xz(c.targetRoot.Position), zone, circleTargetMargin(zone)) }, {}
+	local list = victims(c.st)
+	for _, v in ipairs(list) do
+		if v.root == c.targetRoot then
+			owners[1] = v
+		end
+	end
 	if c.skill.perMember then
-		for _, v in ipairs(victims(c.st)) do
+		for _, v in ipairs(list) do
 			if v.root ~= c.targetRoot and not BossTrap.isTrapped(v.player) then
 				table.insert(positions, clampToZone(xz(v.root.Position), zone, circleTargetMargin(zone)))
+				owners[#positions] = v
 			end
 		end
 	end
-	return positions
+	return positions, owners
 end
 
 -- 게이트의 판정 스킬(skill.gate - 폭풍 군주의 낙뢰)은 기믹 스킬과 같은 힌트를 받는다(20.73 [1-5]): 2단계 = 예고 × 1.5.
@@ -756,7 +831,7 @@ end
 local function circleBubbleSeconds(c)
 	local skill = c.skill
 	if skill.sequential then
-		return hintedSeconds(c.st, skill, skill.telegraphSeconds + (skill.repeatTelegraphSeconds or skill.telegraphSeconds) * (circleCount(c.data, skill) - 1))
+		return hintedSeconds(c.st, skill, skill.telegraphSeconds + BossSkillMath.repeatSeconds(skill) * (circleCount(c.data, skill) - 1))
 	end
 	return hintedSeconds(c.st, skill, skill.telegraphSeconds)
 end
@@ -795,26 +870,55 @@ HANDLERS.circleTarget = {
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
+		if st.trackers then
+			updateTrackers(c)
+		end
 		if c.now < st.phaseEndsAt then
 			return
 		end
 		judgeBegin()
+		local hits = {}
 		for _, v in ipairs(victims(st)) do
 			local p = xz(v.root.Position)
 			for _, spot in ipairs(st.meteorPositions) do
 				if (p - xz(spot)).Magnitude <= skill.radiusStuds and Reach.sameLayer(v.feet, spot) then -- 22-4(P3a D3: 발 기준)
 					applySkillDamage(c.model, c.data, skill, v.player)
-					runHitEffects(c, skill.onHit, v, spot)
+					table.insert(hits, { v = v, spot = spot })
 					break
 				end
 			end
+		end
+		-- P3c A4: 넉백은 판정이 다 끝난 뒤에 - 함께 맞은 사람 수(#hits)가 높이를 정한다.
+		for _, hit in ipairs(hits) do
+			runHitEffects(c, skill.onHit, hit.v, hit.spot, #hits)
 		end
 		judgeEnd(c, { kind = "circle", centers = st.meteorPositions, radius = skill.radiusStuds, inner = 0 })
 		send(st, "meteorImpact", { positions = st.meteorPositions, radius = skill.radiusStuds, style = skill.impactStyle })
 		runEffects(c, skill.onImpact, { positions = st.meteorPositions, radius = skill.radiusStuds })
 		if skill.sequential and st.shotIndex < circleCount(c.data, skill) and c.targetRoot then
 			st.shotIndex += 1
-			beginCircles(c, aimPositions(c, zoneOf(c.model)), hintedSeconds(st, skill, skill.repeatTelegraphSeconds or skill.telegraphSeconds))
+			local positions, owners = aimPositions(c, zoneOf(c.model))
+			local track = skill.trackAfterHit
+			if track and #hits > 0 then
+				-- P3c A4 번개 추적: 맞은 사람의 원은 그 사람을 따라간다(그 사람 몫의 원이 없으면 하나 더한다).
+				local trackers = {}
+				for _, hit in ipairs(hits) do
+					local index = nil
+					for i, owner in pairs(owners) do
+						if owner.player == hit.v.player then
+							index = i
+						end
+					end
+					if not index then
+						table.insert(positions, xz(hit.v.root.Position))
+						index = #positions
+					end
+					trackers[index] = hit.v
+				end
+				beginCircles(c, positions, hintedSeconds(st, skill, track.trackSeconds + track.lockTelegraphSeconds), trackers, track.trackSeconds)
+				return
+			end
+			beginCircles(c, positions, hintedSeconds(st, skill, skill.repeatTelegraphSeconds or skill.telegraphSeconds))
 			return
 		end
 		if skill.gate and not st.gateJudged then
@@ -826,12 +930,32 @@ HANDLERS.circleTarget = {
 	end,
 }
 
+-- P3c A2 돌진 대상 = 전조가 시작되는 순간 보스에서 가장 가까운 멤버(잡힌 사람 제외 · 동률이면 무작위 - BossSkillMath.nearestIndex). 전조 동안 바뀌지 않는다
+-- (대상 · 좌표 모두 이 순간에 고정). 멤버가 없으면(스탠드인 없이 DevTools로 띄운 경우) 어그로 대상 그대로. 반환: 대상의 victims 항목(없으면 nil), 루트.
+local function pickChargeTarget(c, origin)
+	local candidates, positions = {}, {}
+	for _, v in ipairs(victims(c.st)) do
+		if not BossTrap.isTrapped(v.player) then
+			table.insert(candidates, v)
+			table.insert(positions, v.root.Position)
+		end
+	end
+	local index = BossSkillMath.nearestIndex(origin, positions, function()
+		return scatterRng:NextNumber()
+	end)
+	if index then
+		return candidates[index], candidates[index].root
+	end
+	return nil, c.targetRoot
+end
+
 -- ── charge: 정신집중 → 돌진. 느낌표가 뜨는 순간의 대상 좌표를 고정한다(이후 추적 안 함). dashCount만큼 잇는다 ──
 local function startDash(c, fromPosition, dashIndex)
 	local st, skill = c.st, c.skill
 	local zone = zoneOf(c.model)
 	local origin = xz(fromPosition)
-	local snapshot = xz(c.targetRoot.Position)
+	local target, targetRoot = pickChargeTarget(c, origin)
+	local snapshot = xz(targetRoot.Position)
 	local dir = snapshot - origin
 	if dir.Magnitude < 1e-3 then
 		local look = c.model.PrimaryPart.CFrame.LookVector
@@ -851,17 +975,24 @@ local function startDash(c, fromPosition, dashIndex)
 	st.chargeDashIndex = dashIndex
 	st.chargeFrom = Vector3.new(origin.X, fromPosition.Y, origin.Z)
 	st.chargeTo = st.chargeFrom + dir * length
-	st.chargeHitBy = {} -- 24-1: 돌진 한 번에 멤버마다 한 번씩만(경로 위 전원 대상)
+	st.chargeHitBy = {} -- 24-1: 돌진 한 번에 멤버마다 한 번씩만(경로 위 전원 대상). P3c A3: 돌진마다 새로 비운다 - 1회차에 맞은 사람도 2회차 판정을 받는다
+	st.chargeTarget = target and target.player or nil
 	st.focusStartedAt = c.now
 	st.phase = "focus"
 	st.phaseEndsAt = c.now + skill.telegraphSeconds
+	local targetPlayer = target and target.player
+	local targetUserId = typeof(targetPlayer) == "Instance" and targetPlayer.UserId or nil
 	send(st, "focus", {
 		bossPosition = st.chargeFrom,
 		endPosition = st.chargeTo,
 		halfWidth = skill.pathHalfWidthStuds,
 		seconds = skill.telegraphSeconds,
 		floorY = st.floorY,
+		targetUserId = targetUserId, -- P3c A2: 클라가 이 사람 머리 위에 표식을 띄운다(방향선 = 위 경로선)
 	})
+	print(("[forge-game] 돌진 대상 확정: %s(%d번째 돌진) - 보스에서 %.1fstud, 경로 %.1fstud%s"):format(
+		tostring(targetPlayer and targetPlayer.Name or "어그로 대상"), dashIndex, (snapshot - origin).Magnitude, length, obstacleId and (" · 구조물 #" .. obstacleId .. "에서 멈춤") or ""))
+	debugEvent("chargeTarget", { player = targetPlayer, dashIndex = dashIndex, at = c.now, origin = origin, snapshot = snapshot, obstacleId = obstacleId, length = length })
 end
 
 -- 잠행(29-3, skill.burrow = { depthStuds, enterSeconds, exitSeconds, visibleParts }): 돌진의 **겉모습**만 바꾼다 - 첫 예고
@@ -955,6 +1086,7 @@ HANDLERS.charge = {
 					and Reach.sameLayer(v.feet, footOf(newPos)) then -- P3a D3: 발 기준
 					st.chargeHitBy[v.player] = true
 					applySkillDamage(c.model, c.data, skill, v.player)
+					debugEvent("chargeHit", { player = v.player, dashIndex = st.chargeDashIndex, at = c.now })
 				end
 			end
 			if progress >= 1 then
@@ -989,6 +1121,7 @@ HANDLERS.charge = {
 					end
 					runEffects(c, skill.onEnd, {}) -- 헤롱(딜타임)에는 구덩이가 없다 - 다가가 때릴 수 있어야 한다
 					send(st, "daze", { seconds = recoverSeconds })
+					debugEvent("chargeEnd", { crashed = crashed == true, recoverSeconds = recoverSeconds, dashIndex = st.chargeDashIndex, at = c.now, position = newPos })
 				end
 			end
 		elseif c.now >= st.phaseEndsAt then -- chargeRecover
@@ -1488,8 +1621,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 		-- 격노(HP ≤ enragedHpFraction)에서만 전역 쿨이 짧아진다(사용자 지시 - 연속 사용은 체력 20% 이하에서만).
 		pickCtx.enraged = MonsterState.getHpRatio(model) <= data.scheduler.enragedHpFraction
 		local pick = BossScheduler.pick(st.sched, data.skills, data.skillOrder, data.scheduler, pickCtx)
-		-- P3a C(사용자 지시): 추격 중 한 구조물 곁을 오래 맴돌면(바퀴 수 기준) 보스가 그 구조물을 부순다 - 구조물 뒤에 숨어 무적이 되는 길이 없다.
-		BossArenaMap.noteBossChase(MonsterState.getZoneKey(model), position, dt, data.moveSpeedStuds)
+		-- P3a의 "구조물 곁을 5바퀴 맴돌면 보스가 부순다"는 P3c C8에서 없앴다 - 돌진 대상이 가장 가까운 사람이라 구조물 뒤에 숨으면 돌진이 온다(구조물 파괴 + 기절).
 		if pick then
 			startSkill(model, st, data, pick, now, position, targetRoot)
 			return true

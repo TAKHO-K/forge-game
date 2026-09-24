@@ -18,6 +18,45 @@ function BossSkillMath.pulsesOf(skill)
 	return { { innerRadiusStuds = skill.innerRadiusStuds or 0, radiusStuds = skill.radiusStuds } }
 end
 
+-- P3c A1 줄넘기 리듬: ring 스킬의 파동 목록 - { startSeconds(스킬 시작부터 찍는 순간), speedStuds, layers, layerGapSeconds } × 파동 수.
+-- skill.rhythm(보스별 리듬 - 파동마다 앞 파동과의 간격 gapSeconds · 속도 · 겹 수)이 있으면 그것을, 없으면 옛 필드(waveCount ·
+-- repeatIntervalSeconds · waveSpeedStuds · layers)에서 같은 모양을 만든다. 판정(BossPatterns) · 구속 시간 · 회피 검사 · 모형(BossSim) · 클라가 이 목록 하나를 읽는다.
+function BossSkillMath.ringWaves(skill)
+	local waves = {}
+	local baseLayers, baseGap = skill.layers or 1, skill.layerGapSeconds or 0
+	if skill.rhythm then
+		local start = skill.telegraphSeconds
+		for index, wave in ipairs(skill.rhythm) do
+			if index > 1 then
+				start += wave.gapSeconds
+			end
+			table.insert(waves, {
+				startSeconds = start, speedStuds = wave.speedStuds or skill.waveSpeedStuds,
+				layers = wave.layers or baseLayers, layerGapSeconds = wave.layerGapSeconds or baseGap,
+			})
+		end
+		return waves
+	end
+	for index = 1, skill.waveCount do
+		table.insert(waves, {
+			startSeconds = skill.telegraphSeconds + skill.repeatIntervalSeconds * (index - 1), speedStuds = skill.waveSpeedStuds,
+			layers = baseLayers, layerGapSeconds = baseGap,
+		})
+	end
+	return waves
+end
+
+-- 연발(sequential) 원의 둘째부터의 예고 길이 상한. P3c A4 추적(skill.trackAfterHit - 폭풍 군주의 낙뢰): 앞 판정에 누가 맞았으면 다음 원이 그 사람을 trackSeconds 동안
+-- 따라가다 멈추고 lockTelegraphSeconds 뒤에 떨어진다 - 그 회차는 추적 + 고정이 된다(아무도 안 맞았으면 옛 repeatTelegraphSeconds).
+function BossSkillMath.repeatSeconds(skill)
+	local seconds = skill.repeatTelegraphSeconds or skill.telegraphSeconds
+	local track = skill.trackAfterHit
+	if track then
+		seconds = math.max(seconds, track.trackSeconds + track.lockTelegraphSeconds)
+	end
+	return seconds
+end
+
 -- 이 스킬이 보스를 묶는 시간(시작 ~ 다음 스킬을 고를 수 있게 되는 순간). chargeTravelSeconds를 안 주면 상한
 -- (아레나를 끝에서 끝까지 달리는 경우 - 자리 비우기는 넉넉한 쪽이 안전하다).
 function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSeconds)
@@ -25,12 +64,16 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 	if primitive == "circleBoss" then
 		return skill.telegraphSeconds * #BossSkillMath.pulsesOf(skill)
 	elseif primitive == "ring" then
+		-- 가장 늦게 사라지는 파동(마지막 겹이 최대 반경에 닿는 순간)까지. 리듬이 없으면 옛 식 그대로다.
 		local maxRadius = BossSkillMath.WAVE_MAX_RADIUS_STUDS
-		return skill.telegraphSeconds + skill.repeatIntervalSeconds * (skill.waveCount - 1)
-			+ (skill.layerGapSeconds or 0) * ((skill.layers or 1) - 1) + maxRadius / skill.waveSpeedStuds
+		local bound = 0
+		for _, wave in ipairs(BossSkillMath.ringWaves(skill)) do
+			bound = math.max(bound, wave.startSeconds + wave.layerGapSeconds * (wave.layers - 1) + maxRadius / wave.speedStuds)
+		end
+		return bound
 	elseif primitive == "circleTarget" then
 		if skill.sequential then
-			return skill.telegraphSeconds + (skill.repeatTelegraphSeconds or skill.telegraphSeconds) * (skill.count - 1)
+			return skill.telegraphSeconds + BossSkillMath.repeatSeconds(skill) * (skill.count - 1)
 		end
 		return skill.telegraphSeconds
 	elseif primitive == "charge" then
@@ -42,6 +85,28 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 		return skill.telegraphSeconds + (skill.recoverSeconds or 0)
 	end
 	return skill.telegraphSeconds
+end
+
+-- P3c A2 돌진 대상: 전조가 시작되는 순간 origin(보스)에서 수평으로 가장 가까운 자리의 번호. 차가 tieStuds(기본 0.05) 안인 자리들은 동률 -
+-- random01()(0 ~ 1)로 그중 하나를 고른다. positions가 비었으면 nil. 서버(BossPatterns)와 검증이 같은 함수를 쓴다.
+function BossSkillMath.nearestIndex(origin, positions, random01, tieStuds)
+	local best = math.huge
+	local distances = {}
+	for index, position in ipairs(positions) do
+		local dx, dz = position.X - origin.X, position.Z - origin.Z
+		distances[index] = math.sqrt(dx * dx + dz * dz)
+		best = math.min(best, distances[index])
+	end
+	local ties = {}
+	for index, distance in ipairs(distances) do
+		if distance <= best + (tieStuds or 0.05) then
+			table.insert(ties, index)
+		end
+	end
+	if #ties == 0 then
+		return nil
+	end
+	return ties[math.clamp(1 + math.floor((random01 and random01() or 0) * #ties), 1, #ties)], #ties
 end
 
 -- 29-5 탱커 훅 ①: 이 스킬을 탱커의 반사가 되돌릴 수 있는가(스킬 데이터의 reflectable - 없으면 false). 아직 읽는 곳이 없다.
@@ -86,6 +151,10 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		walk("첫 원", skill.telegraphSeconds, skill.radiusStuds + half)
 		if skill.sequential and skill.count > 1 then
 			walk("연발", skill.repeatTelegraphSeconds or skill.telegraphSeconds, skill.radiusStuds + half)
+			-- P3c A4: 추적하던 원이 멈춘 뒤 떨어질 때까지(짧은 전조) - 멈춘 순간 원 한가운데에 있어도 벗어난다.
+			if skill.trackAfterHit then
+				walk("추적 뒤 고정", skill.trackAfterHit.lockTelegraphSeconds, skill.radiusStuds + half)
+			end
 		end
 		-- 29-4 유인 경로(skill.route - 폭풍 군주의 낙뢰): 첫 발을 한 구역 곁에서 받고 다음 발의 예고 안에 다른 구역의 충전 거리
 		-- 안으로 걸어 들어가는 거리. 원이 넓어지면(범위 배율) 실제 거리는 줄지만 넓히지 않은 값으로 검사한다(보수적).
@@ -110,17 +179,34 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		end
 		walk("직선 옆걸음", skill.telegraphSeconds, distance)
 	elseif primitive == "ring" then
+		local waves = BossSkillMath.ringWaves(skill)
 		-- 첫 파동: 서 있다가 뛰면 된다 - 찍기 예고 + 파동이 standoff까지 오는 시간 안에 인지만 하면 된다.
-		local firstArrival = skill.telegraphSeconds + standoffStuds / skill.waveSpeedStuds
+		local firstArrival = waves[1].startSeconds + standoffStuds / waves[1].speedStuds
 		table.insert(checks, { label = "첫 점프", availableSeconds = firstArrival, requiredSeconds = dodge.perceptionSeconds, distanceStuds = 0, ok = firstArrival >= dodge.perceptionSeconds })
-		if skill.waveCount > 1 then
-			local required = dodge.perceptionSeconds + dodge.jumpAirSeconds * dodge.marginFactor
-			table.insert(checks, { label = "다시 뛰기", availableSeconds = skill.repeatIntervalSeconds, requiredSeconds = required, distanceStuds = 0, ok = skill.repeatIntervalSeconds >= required })
+		-- P3c A1: 다시 뛰기 = 앞 파동의 마지막 겹과 다음 파동이 **같은 자리에 닿는 시각 차**. 속도가 다르면 거리에 따라 차가 변한다(빠른 파동이 느린 파동을
+		-- 뒤따르면 멀수록 좁아진다) - 차는 거리에 대해 1차식이라 보스 곁(standoff)과 파동이 사라지는 반경(WAVE_MAX) 두 끝에서 최솟값이 난다.
+		local required = dodge.perceptionSeconds + dodge.jumpAirSeconds * dodge.marginFactor
+		for index = 2, #waves do
+			local before, after = waves[index - 1], waves[index]
+			local lastLayer = before.startSeconds + before.layerGapSeconds * (before.layers - 1)
+			local worst, worstAt = math.huge, standoffStuds
+			for _, d in ipairs({ standoffStuds, BossSkillMath.WAVE_MAX_RADIUS_STUDS }) do
+				local gap = (after.startSeconds + d / after.speedStuds) - (lastLayer + d / before.speedStuds)
+				if gap < worst then
+					worst, worstAt = gap, d
+				end
+			end
+			table.insert(checks, {
+				label = ("다시 뛰기 %d→%d(최악 거리 %.0f)"):format(index - 1, index, worstAt), availableSeconds = worst, requiredSeconds = required,
+				distanceStuds = 0, ok = worst >= required,
+			})
 		end
-		if (skill.layers or 1) > 1 then
-			-- 겹: 마지막 겹이 다 지나갈 때까지가 체공 시간 안이어야 점프 한 번에 넘는다.
-			local passSeconds = (skill.layerGapSeconds or 0) * (skill.layers - 1) + skill.waveThicknessStuds / skill.waveSpeedStuds
-			table.insert(checks, { label = "겹 통과", availableSeconds = dodge.jumpAirSeconds, requiredSeconds = passSeconds, distanceStuds = 0, ok = dodge.jumpAirSeconds >= passSeconds })
+		for index, wave in ipairs(waves) do
+			if wave.layers > 1 then
+				-- 겹: 마지막 겹이 다 지나갈 때까지가 체공 시간 안이어야 점프 한 번에 넘는다.
+				local passSeconds = wave.layerGapSeconds * (wave.layers - 1) + skill.waveThicknessStuds / wave.speedStuds
+				table.insert(checks, { label = ("겹 통과 %d"):format(index), availableSeconds = dodge.jumpAirSeconds, requiredSeconds = passSeconds, distanceStuds = 0, ok = dodge.jumpAirSeconds >= passSeconds })
+			end
 		end
 	elseif primitive == "gimmick" then
 		local d = skill.dodge or { distanceStuds = 0 }
@@ -144,7 +230,7 @@ function BossSkillMath.damageShares(skill, surviveTargetHits)
 	if primitive == "circleBoss" then
 		hits = #BossSkillMath.pulsesOf(skill)
 	elseif primitive == "ring" then
-		hits = skill.waveCount
+		hits = #BossSkillMath.ringWaves(skill)
 	elseif primitive == "circleTarget" then
 		hits = skill.sequential and skill.count or 1
 	elseif primitive == "charge" then
@@ -156,8 +242,14 @@ function BossSkillMath.damageShares(skill, surviveTargetHits)
 		local cap = BossData.mechanics.gimmickFailMaxHpFraction
 		return math.min(damage.fraction, cap), math.min(damage.fraction * hits, cap)
 	end
-	-- attack 배율: 한 판정 = 배율 ÷ 생존 타수. 겹(layers)은 한 번의 실수에 겹 수만큼 맞는다.
-	local single = damage.multiplier * (skill.layers or 1) / surviveTargetHits
+	-- attack 배율: 한 판정 = 배율 ÷ 생존 타수. 겹(layers)은 한 번의 실수에 겹 수만큼 맞는다(리듬이면 겹이 가장 많은 파동).
+	local layers = skill.layers or 1
+	if primitive == "ring" then
+		for _, wave in ipairs(BossSkillMath.ringWaves(skill)) do
+			layers = math.max(layers, wave.layers)
+		end
+	end
+	local single = damage.multiplier * layers / surviveTargetHits
 	return single, single * hits
 end
 

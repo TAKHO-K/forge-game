@@ -16,6 +16,7 @@
 -- 살아있는 연출을 전부 지운다 - 재도전 직후 남은 파동이 플레이어를 때리는 일이 판정
 -- (서버)에서도 연출(여기)에서도 없게.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -31,6 +32,7 @@ local BossStanceView = require(script.Parent.BossStanceView)
 local BossSplitView = require(script.Parent.BossSplitView) -- 29-5 수정 여왕의 프리즘 분열(빨강 원 넷 + 진짜의 흰 카운트다운)
 local BossStormView = require(script.Parent.BossStormView) -- 29-3: 낙뢰(하늘에서 꽂히는 번개) · 맞으면 튕겨 나는 넉백
 local BossFloodView = require(script.Parent.BossFloodView) -- 29-4: 심해 군주의 단(내 시계로 가라앉는다) · "아직 이르다" 윗면 빨강
+local BossRhythmView = require(script.Parent.BossRhythmView) -- P3c A: 점프 틈 · 돌진 대상 표식 · 번개 추적 원
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
@@ -74,11 +76,25 @@ local function newPart(size, color, transparency)
 	return track(part)
 end
 
+-- P3c B4 바닥 둔덕: 예고 도형이 걸친 둔덕(서버가 "BossArenaMound" 태그를 단 층 원판)의 가장 높은 윗면만큼 도형을 띄운다 - 둔덕 속에 묻혀
+-- 안 보이는 장판이 없게("보이는 것 = 판정" - 판정은 높이차 상한 8 안이라 둔덕 위아래가 모두 맞는다). 둔덕이 없는 곳은 0(옛 그림 그대로).
+local function moundLift(center, radius)
+	local lift = 0
+	for _, part in ipairs(CollectionService:GetTagged("BossArenaMound")) do
+		local dx, dz = part.Position.X - center.X, part.Position.Z - center.Z
+		local reach = part.Size.Y / 2 + radius
+		if dx * dx + dz * dz <= reach * reach then
+			lift = math.max(lift, part.Position.Y + part.Size.X / 2 - center.Y)
+		end
+	end
+	return math.clamp(lift, 0, 4)
+end
+
 -- 바닥에 눕힌 원판(Cylinder는 로컬 X축이 높이 방향 - Z축으로 90도 돌려 눕힌다).
 local function newDisc(center, radius, color, transparency)
 	local disc = newPart(Vector3.new(0.2, radius * 2, radius * 2), color, transparency)
 	disc.Shape = Enum.PartType.Cylinder
-	disc.CFrame = CFrame.new(center + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	disc.CFrame = CFrame.new(center + Vector3.new(0, 0.15 + moundLift(center, radius), 0)) * CFrame.Angles(0, 0, math.rad(90))
 	return disc
 end
 
@@ -219,6 +235,7 @@ local RING_SEGMENTS = 40
 
 local function newRingBand(center, innerRadius, outerRadius, color, transparency)
 	local parts = {}
+	center += Vector3.new(0, moundLift(center, outerRadius), 0) -- P3c B4
 	local mid = (innerRadius + outerRadius) / 2
 	local segmentLength = 2 * math.pi * outerRadius / RING_SEGMENTS * 1.08
 	for i = 1, RING_SEGMENTS do
@@ -280,7 +297,7 @@ local function shockwave(data)
 		local part = newPart(Vector3.new(1, WAVE_HEIGHT_STUDS, data.thickness), DANGER_COLOR, 0.25)
 		segments[i] = part
 	end
-	local center = data.center + Vector3.new(0, WAVE_HEIGHT_STUDS / 2, 0)
+	local center = data.center + Vector3.new(0, WAVE_HEIGHT_STUDS / 2 + moundLift(data.center, data.maxRadius), 0) -- P3c B4: 둔덕 위로 지나가는 띠도 보이게
 	local connection
 	connection = RunService.RenderStepped:Connect(function()
 		local radius = (Workspace:GetServerTimeNow() - data.serverStart) * data.speed
@@ -315,7 +332,8 @@ local function focus(data)
 	end
 	local mid = (data.bossPosition + data.endPosition) / 2
 	local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), DANGER_COLOR, 0.8)
-	line.CFrame = CFrame.lookAt(Vector3.new(mid.X, data.floorY + 0.15, mid.Z), Vector3.new(data.endPosition.X, data.floorY + 0.15, data.endPosition.Z))
+	local y = data.floorY + 0.15 + moundLift(Vector3.new(mid.X, data.floorY, mid.Z), length / 2 + data.halfWidth) -- P3c B4
+	line.CFrame = CFrame.lookAt(Vector3.new(mid.X, y, mid.Z), Vector3.new(data.endPosition.X, y, data.endPosition.Z))
 	-- 예고 시간 동안 점점 진해진다.
 	TweenService:Create(line, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		Transparency = 0.35,
@@ -347,7 +365,13 @@ end
 local meteorDiscs = {}
 
 local function meteor(data)
-	for _, position in ipairs(data.positions) do
+	local followed = {}
+	for _, entry in ipairs(data.track or {}) do
+		if entry.userId then
+			followed[entry.index] = entry.userId
+		end
+	end
+	for index, position in ipairs(data.positions) do
 		local disc = newDisc(position, data.radius, DANGER_COLOR, 0.8)
 		TweenService:Create(disc, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 			Transparency = 0.3,
@@ -359,7 +383,19 @@ local function meteor(data)
 		}):Play()
 		table.insert(meteorDiscs, disc)
 		table.insert(meteorDiscs, inner)
+		if followed[index] then -- P3c A4: 맞아서 튕겨 난 사람을 따라가는 원(멈추면 서버가 meteorLock으로 멈춘 자리를 보낸다)
+			BossRhythmView.follow({ disc, inner }, followed[index], data.lockIn or 0.5)
+		end
 	end
+end
+
+-- P3c A4: 추적이 멈췄다 - 지금 원을 지우고 서버가 멈춘 자리에 남은 시간만큼 다시 그린다(멈춘 뒤의 원 = 판정 자리).
+local function meteorLock(data)
+	for _, disc in ipairs(meteorDiscs) do
+		destroy(disc)
+	end
+	meteorDiscs = {}
+	meteor({ positions = data.positions, radius = data.radius, seconds = data.seconds, style = data.style })
 end
 
 local function meteorImpact(data)
@@ -409,7 +445,8 @@ local function placeCrossBeams(angleDeg, data)
 			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 			local length = data.lengths[k + 1]
 			local mid = data.center + dir * (length / 2)
-			line.CFrame = CFrame.lookAt(mid + Vector3.new(0, 0.15, 0), data.center + dir * length + Vector3.new(0, 0.15, 0))
+			local up = Vector3.new(0, 0.15 + moundLift(mid, length / 2 + data.halfWidth), 0) -- P3c B4
+			line.CFrame = CFrame.lookAt(mid + up, data.center + dir * length + up)
 		end
 	end
 end
@@ -523,12 +560,16 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		shockTelegraph(data)
 	elseif kind == "shockwave" then
 		shockwave(data)
+		BossRhythmView.waveCue(data)
 	elseif kind == "focus" then
 		focus(data)
+		BossRhythmView.chargeTarget(data)
 	elseif kind == "charge" then
 		charge(data)
 	elseif kind == "meteor" then
 		meteor(data)
+	elseif kind == "meteorLock" then
+		meteorLock(data)
 	elseif kind == "meteorImpact" then
 		meteorImpact(data)
 	elseif kind == "cross" then
@@ -537,6 +578,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		crossFire()
 	elseif kind == "reset" then
 		resetAll()
+		BossRhythmView.clear()
 		BossArenaPropsView.clearTelegraph() -- 기둥 자체는 남는다(서버가 propsClear로 따로 치운다)
 		BossStanceView.clear()
 		BossSplitView.clear()

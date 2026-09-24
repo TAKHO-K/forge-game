@@ -197,10 +197,13 @@ local function guardianSkills()
 		-- 퍼진다. 24 > 걷기 16이라 뛰어서는 못 피한다(점프가 유일한 답). 판정은 "파동 두께가 플레이어를
 		-- 지나는 동안 한 순간이라도 공중이었는가" - 점프 입력 창 = 체공 0.54 + 통과 4/24 = 0.71초.
 		-- waveCount 3 = 줄넘기: repeatIntervalSeconds 1.5 ≥ 체공 0.54 + 반응·입력 0.35 + 통과 0.17 + 여유 0.44.
+		-- P3c A1 리듬 "느림 · 느림 · 빠름": 박자 간격 1.6 → 1.25(마지막 박자가 당겨진다). 속도는 같다 - 같은 자리에 닿는 시각 차 = 간격
+		-- (1.6 · 1.25 ≥ 다시 뛰기 1.175 = 인지 0.5 + 체공 0.54 × 여유 1.25). 파동 수 · 속도가 같아 회피 비용은 그대로, 구속 시간은 0.15초 짧다.
 		shockwave = {
 			primitive = "ring", bubble = "shockwave",
 			cooldownSeconds = 11, priority = P.normal,
 			telegraphSeconds = 1.2, waveCount = 3, repeatIntervalSeconds = 1.5,
+			rhythm = { label = "느림 · 느림 · 빠름", { speedStuds = 24 }, { gapSeconds = 1.6, speedStuds = 24 }, { gapSeconds = 1.25, speedStuds = 24 } },
 			waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4,
 			-- 공중 판정 여유 - 지면 거리가 서 있을 때(HipHeight + 루트 반높이)보다 이만큼 더 크면 공중(21-3 실측).
 			airborneClearanceStuds = 0.5,
@@ -300,17 +303,21 @@ end
 
 -- 심해 군주의 아레나 kit(29-4) - 옛 정사각형(반폭 96)은 돌단 4곳(±48, ±48) - 어느 자리에서도 가장 가까운 단 윗면까지 56.6stud.
 -- P3a C(원형 반경 120): 4곳으로는 그 거리를 못 지킨다(단 4곳이면 최대 약 73) → 반경 65의 방위 0 · 45 · … · 315 여덟 곳 = 8곳 × 2파트 = 16파트(상한 40).
--- 원 안 어디서든 가장 가까운 단 윗면까지 최대 약 54.7stud(옛 56.6보다 가깝다 - 29-4(가)가 원 안 격자로 다시 잰다, 회피 거리 57 이하). 중심(보스 스폰)은 비운다 -
--- 중심에 단이 있으면 보스가 단 속에서 스폰되고 예고 원이 단 높이에 떠서 그려진다. 입장 자리(+Z 90)는 90° 단(반경 65)의 바깥 25stud다.
+-- P3c B4(반경 140): 한 고리로는 어떤 개수 · 반경이어도 원 안 최악이 63.6stud(12곳 · 반경 70)로 회피 57을 넘는다 - 가운데를 비워야 해서 중심 둘레가 멀어진다.
+-- → 안쪽 고리(반경 40 · 방위 45 · 165 · 285) 3곳 + 바깥 고리(반경 105 · 방위 22.5 + 45k) 8곳 = 11곳 × 2파트 = 22파트(상한 40). 원 안 최악 49.8stud(하네스 격자 1stud ·
+-- 29-4(가)가 다시 잰다). 안쪽 단의 가장자리는 중심에서 40 − 10√2 = 25.9 - 보스 스폰(중심)은 비어 있다. 입장 자리(+Z 90)는 바깥 단 67.5° · 112.5° 사이(각 단에서 약 40stud).
+-- 결정 필요 4(P3a에서 승인된 "발판 8"과 개수가 다르다 - 반경 120을 유지하면 8곳 그대로).
 -- 두 단 계단: 아랫단(20 × 20, 윗면 1) → 윗단(16 × 16, 윗면 2). 한 단이 1stud라 경사로 없이 걸어 오른다(지면 폴더 -
 -- 드랍은 윗면에 놓이고 보스도 밟고 지나간다). 범람의 안전지대는 tag가 붙은 **윗단**뿐이다 - 아랫단은 물에 잠긴다.
 -- 넷이 한 단에 넉넉히 선다(윗면 16 × 16, 몸통 폭 2).
 local function abyssalKitParts(baseColor, topColor)
 	local parts = {}
 	local spots = {}
-	for k = 0, 7 do
-		local angle = math.rad(45 * k)
-		table.insert(spots, { math.cos(angle) * 65, math.sin(angle) * 65 })
+	for _, ring in ipairs({ { count = 3, radius = 40, offsetDeg = 45 }, { count = 8, radius = 105, offsetDeg = 22.5 } }) do
+		for k = 0, ring.count - 1 do
+			local angle = math.rad(ring.offsetDeg + 360 * k / ring.count)
+			table.insert(spots, { math.cos(angle) * ring.radius, math.sin(angle) * ring.radius })
+		end
 	end
 	for _, spot in ipairs(spots) do
 		table.insert(parts, {
@@ -450,7 +457,7 @@ local SPECIES = {
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 1, rangeStuds = 14 },
 		scheduler = scheduler(6),
 		skillOrder = { "sweep", "tide", "spout", "flood" },
-		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단 4곳
+		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단(P3c: 11곳)
 		skills = {
 			-- 꼬리 휩쓸기. 도넛(안쪽 9 ~ 바깥 24) - 기본형 강공격과 반대로 **몸 쪽이 안전하다**. 누군가 바깥 반경
 			-- 안에 있을 때만 쓴다(거리 조건).
@@ -463,10 +470,18 @@ local SPECIES = {
 			},
 			-- 해일 줄넘기(23-6 "진동파 두 겹" 흡수). 한 번 찍을 때 파동이 두 겹 - 겹당 피해 절반, 겹 간격 = 두께 ÷ 속도라
 			-- 점프 한 번에 둘 다 넘는다. 29-4에서 단 위에서도 뛰어야 한다.
+			-- P3c A1 리듬 "두 겹 시간차 · 빠름 → 보통 → 느림": 파동 속도 30 · 24 · 18(전부 걷기 16보다 빨라 점프가 유일한 답), 겹 간격 = 두께 ÷ 그 파동 속도
+			-- (두 겹이 붙어 온다 - 겹 통과 0.27 · 0.33 · 0.44초 ≤ 체공 0.54). 빠른 파동이 앞서므로 뒤 파동과의 차는 멀수록 벌어진다 - 보스 곁(8)이 최악 1.43 · 1.44초 ≥ 1.175.
 			tide = {
 				primitive = "ring", bubble = "shockwave", role = "signature",
 				cooldownSeconds = 13, priority = P.signature,
 				telegraphSeconds = 1.2, waveCount = 3, repeatIntervalSeconds = 1.5,
+				rhythm = {
+					label = "두 겹 시간차 · 빠름 → 보통 → 느림",
+					{ speedStuds = 30, layers = 2, layerGapSeconds = 4 / 30 },
+					{ gapSeconds = 1.5, speedStuds = 24, layers = 2, layerGapSeconds = 4 / 24 },
+					{ gapSeconds = 1.5, speedStuds = 18, layers = 2, layerGapSeconds = 4 / 18 },
+				},
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				layers = 2, layerGapSeconds = 4 / 24,
 				damage = { kind = "attack", multiplier = 1 }, damageLabel = "해일",
@@ -679,12 +694,15 @@ local SPECIES = {
 		arenaKit = { parts = stormKitParts(stormBody, stormHead) }, -- 29-4 폭풍 첨탑의 피뢰침 2개
 		skills = {
 			-- 방전 고리. 파동 하나 - 기본형 강공격 자리의 스킬이지만 걸어서가 아니라 **뛰어서** 피한다.
+			-- P3c A1 리듬 "천둥 · 메아리": 빠른 파동(36) 뒤 1.3초에 느린 메아리(20). 빠른 쪽이 앞서 차는 멀수록 벌어진다 - 보스 곁(8) 최악 1.48초 ≥ 1.175.
+			-- 파동이 둘이 되며 한 파동의 피해를 ×3 → ×1.5로 나눴다(둘 다 맞으면 옛 한 방과 같다 - 결정 필요 2: 회피 비용이 파동 하나만큼 늘어 처치 시간 모형이 바뀐다).
 			discharge = {
 				primitive = "ring", bubble = "shockwave",
 				cooldownSeconds = 9, priority = P.normal, starvationSeconds = 40,
 				telegraphSeconds = 1.2, waveCount = 1, repeatIntervalSeconds = 1.5,
+				rhythm = { label = "천둥 · 메아리", { speedStuds = 36 }, { gapSeconds = 1.3, speedStuds = 20 } },
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
-				damage = { kind = "attack", multiplier = 3 }, damageLabel = "방전 고리",
+				damage = { kind = "attack", multiplier = 1.5 }, damageLabel = "방전 고리",
 			},
 			-- 회오리(29-4 - 28-2의 "연쇄 번개" 직선 자리를 대신한다, PRD 20.77 [1] · 20.79). 대상 위치의 원 하나 - 맞으면 그 자리에서
 			-- 공중으로 떠올라 원을 그리며 돌다가 내려온다. 낙뢰의 넉백과 **같은 결과 조각**(onHit = launch)이고 파라미터만 늘었다:
@@ -721,7 +739,14 @@ local SPECIES = {
 				-- (판정의 높이차 상한 8·아레나 벽 12보다 낮다 - 보스가 대상을 놓치지 않고 맵 밖으로도 못 나간다), 거리 8, 체공 ≈ 0.45초.
 				-- 둘째 낙뢰는 첫 낙뢰가 떨어진 순간의 자리에 예고되므로, 튕겨 난 사람은 이미 그 원(r6) 밖이다.
 				impactStyle = "lightning",
-				onHit = { { type = "launch", heightStuds = 5, distanceStuds = 8 } },
+				-- P3c A4: 여러 명이 한 판정에 함께 맞으면 넉백이 높아진다 - 함께 맞은 사람 1명마다 + extraHeightPerCoHit, 상한 maxHeightStuds(1명 5 · 2명 6 · 3명 7 · 4명 7.5).
+				-- 상한 7.5 = 맵 이탈 방지 상한(BossArenaMapData.containment.maxLaunchHeightStuds)과 같다 - 판정 높이차 상한 8보다 낮다.
+				onHit = { { type = "launch", heightStuds = 5, distanceStuds = 8, extraHeightPerCoHit = 1, maxHeightStuds = 7.5 } },
+				-- P3c A4 번개 추적: 첫 낙뢰에 맞아 튕겨 난 사람에게는 둘째 낙뢰의 원이 그 사람을 trackSeconds(0.55 = 넉백 체공 0.45 + 착지 0.1) 동안 따라가다가
+				-- 멈추고, lockTelegraphSeconds(1.2) 뒤에 떨어진다 - 멈춘 뒤 1.2초 ≥ 인지 0.5 + (반경 6 × 최대 범위 배율 1.152 + 몸통 1) ÷ 16 × 1.25 = 1.12초
+				-- (회피 부등식 "추적 뒤 고정" - 1.1은 배율 1에서만 성립했다, 하네스 29-4(가)). 안 맞은 사람의 원은 옛 규칙(첫 낙뢰가 떨어진 순간의 자리 · 피뢰침 유인 경로)
+				-- 그대로다 - 그 회차 전체는 추적 + 고정 1.75초에 같이 떨어진다.
+				trackAfterHit = { trackSeconds = 0.55, lockTelegraphSeconds = 1.2 },
 				gate = { zoneTag = "rod", breakWindow = { seconds = 10, damageTakenMultiplier = 1.15 } }, -- 28-2의 ×1.3은 새 쿨 분포에서 −11.6%로 범위 밖(×1.15 = −6.5%)
 				sim = { evadeSeconds = 2.5 },
 			},

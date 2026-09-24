@@ -14,6 +14,7 @@ local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local LeaderboardRules = require(ReplicatedStorage.Shared.LeaderboardRules)
 local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
+local ArenaLayout = require(ReplicatedStorage.Shared.ArenaLayout) -- P3c B1: 구조물 자리는 보스 등장마다 무작위(검증은 고정 시드)
 local BossSim = require(ReplicatedStorage.Shared.BossSim)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 
@@ -138,21 +139,22 @@ function P3aVerify.runPure()
 		local arena2 = WorldConfig.zones.bossArena2
 		local spacing = math.abs(arena.center.Z - arena2.center.Z)
 		local outer = BossArenaMapData.geometry.radiusStuds + BossArenaMapData.geometry.wallThicknessStuds + BossArenaMapData.geometry.rimWidthStuds
-		r.check(("C 슬롯: 아레나 반경 %d · 슬롯 간격 %.0f > 테라스까지 지름 %.0f"):format(arena.radius, spacing, outer * 2), arena.radius == 120 and spacing > outer * 2)
+		r.check(("C 슬롯: 아레나 반경 %d(데이터 %d - P3c B4 140) · 슬롯 간격 %.0f > 테라스까지 지름 %.0f"):format(arena.radius, BossArenaMapData.geometry.radiusStuds, spacing, outer * 2),
+			arena.radius == BossArenaMapData.geometry.radiusStuds and spacing > outer * 2)
 	end)
 
 	r.section("C 맵 6종 배치", function()
 		local geometry, obstacleCfg = BossArenaMapData.geometry, BossArenaMapData.obstacle
 		local R = geometry.radiusStuds
 		local ids = { "section_guardian", "frost_giant", "abyssal_lord", "crystal_queen", "scorpion_queen", "storm_lord" }
+		local layoutCfg = BossArenaMapData.layout
 		for _, bossId in ipairs(ids) do
 			local theme = BossArenaMapData.maps[bossId]
+			-- P3c B1: 구조물 자리는 무작위 - 고정 시드 1의 배치를 옛 잣대(벽 · 서로 · 중심 · 입장 · 킷 · 높이)로 잰다. 100시드 전수는 P3c(가) B5.
+			local layout = ArenaLayout.generate(theme, 1, ArenaLayout.optionsFor(BossData.bosses[bossId]))
 			local spots = {}
-			for _, spec in ipairs(theme.obstacles) do
-				for _, angle in ipairs(spec.angles) do
-					local a = math.rad(angle)
-					table.insert(spots, { x = math.cos(a) * R * spec.ring, z = math.sin(a) * R * spec.ring, r = spec.radius, angle = angle, h = spec.heightStuds or obstacleCfg.heightStuds })
-				end
+			for _, item in ipairs(layout.items) do
+				table.insert(spots, { x = item.x, z = item.z, r = item.radius, angle = math.deg(math.atan2(item.z, item.x)), h = item.colliders[1].h, low = item.group ~= "feature" })
 			end
 			local minWall, minPair, minCenter, minEntry, minKit = math.huge, math.huge, math.huge, math.huge, math.huge
 			local entry = { x = math.cos(math.rad(geometry.entryAngleDeg)) * geometry.entryDistanceStuds, z = math.sin(math.rad(geometry.entryAngleDeg)) * geometry.entryDistanceStuds }
@@ -177,13 +179,14 @@ function P3aVerify.runPure()
 			local heightsOk = true
 			for _, a in ipairs(spots) do
 				-- 계단 한 단(2)보다 높고(보스 걸음 우회) 보스 지면 탐지 창(발 + probeUp 4)보다 낮다(리뷰 2 - 넘으면 광선이 기둥 속에서 시작해 못 본다) · 고도차 상한 6 이하.
-				heightsOk = heightsOk and a.h > 2 and a.h < 4 and a.h <= 6
+				-- P3c B3의 작은 지형지물(feature)은 모양별 높이라 여기서 빼고 P3c(가)가 잰다(키 큰 기둥은 지면 폴더 밖).
+				heightsOk = heightsOk and (not a.low or (a.h > 2 and a.h < 4 and a.h <= 6))
 			end
-			r.check(("C %s(%s): 구조물 %d개 · 벽과 틈 최소 %.1f(≥ %d) · 서로 %.1f(≥ %d) · 중심과 %.1f(≥ %d) · 입장 자리와 %.1f(≥ 10) · 킷과 %s(≥ %d) · 높이 2 < h < 4(지면 탐지 창)"):format(
-				bossId, theme.name, #spots, minWall, obstacleCfg.minWallGapStuds, minPair, obstacleCfg.minGapStuds, minCenter, geometry.centerClearStuds, minEntry,
-				minKit == math.huge and "없음" or ("%.1f"):format(minKit), obstacleCfg.minGapStuds),
-				#spots >= 4 and minWall >= obstacleCfg.minWallGapStuds and minPair >= obstacleCfg.minGapStuds and minCenter >= geometry.centerClearStuds
-					and minEntry >= 10 and (minKit == math.huge or minKit >= obstacleCfg.minGapStuds) and heightsOk)
+			r.check(("C %s(%s): 시드 1 구조물 %d개 · 벽과 틈 최소 %.1f(≥ %d) · 서로 %.1f(≥ %d) · 중심과 %.1f(≥ %d) · 입장 자리와 %.1f(≥ 10) · 킷과 %s(≥ %d) · 큰 · 작은 구조물 높이 2 < h < 4"):format(
+				bossId, theme.name, #spots, minWall, layoutCfg.wallGapStuds, minPair, layoutCfg.minGapStuds, minCenter, layoutCfg.centerClearStuds, minEntry,
+				minKit == math.huge and "없음" or ("%.1f"):format(minKit), layoutCfg.kitGapStuds),
+				#spots >= 4 and minWall >= layoutCfg.wallGapStuds - 1e-6 and minPair >= layoutCfg.minGapStuds - 1e-6 and minCenter >= layoutCfg.centerClearStuds - 1e-6
+					and minEntry >= 10 and (minKit == math.huge or minKit >= layoutCfg.kitGapStuds - 1e-6) and heightsOk)
 		end
 		-- 전갈 여왕: 돌진이 멈추는 자리(중심에서 반경 − 벽 여백)가 유사 웅덩이 안인가(29-3 "웅덩이에서 끝난 돌진은 헤롱이 길다"의 뜻 유지).
 		local scorpion = BossData.bosses.scorpion_queen
@@ -201,16 +204,9 @@ function P3aVerify.runPure()
 			end
 		end
 		r.check(("C 전갈 여왕: ±X 돌진 정지점(중심에서 %.0f)을 덮는 유사 웅덩이 %d곳(기대 2)"):format(stop, pools), pools == 2)
-		-- 뺑뺑이 방지 시간(보스 걸음 · 구조물 크기에서 계산).
-		local rows = {}
-		for _, bossId in ipairs(ids) do
-			local speed = BossData.bosses[bossId].moveSpeedStuds
-			for _, spec in ipairs(BossArenaMapData.maps[bossId].obstacles) do
-				local loop = 2 * math.pi * (spec.radius + obstacleCfg.chargeBodyHalfStuds + obstacleCfg.nearSlackStuds)
-				table.insert(rows, ("%s %s %.0f초"):format(bossId, spec.kind, loop / speed * obstacleCfg.smashAfterLaps))
-			end
-		end
-		r.check(("C 뺑뺑이 방지(%d바퀴): %s"):format(obstacleCfg.smashAfterLaps, table.concat(rows, " · ")), #rows > 0)
+		-- P3c C8: 뺑뺑이 5바퀴 규칙은 없앴다(돌진 대상 = 가장 가까운 사람 · 구조물 파괴 규칙 하나로 통일 - hitsToBreak 5 · 돌진 1방).
+		r.check(("C 뺑뺑이 규칙 제거(P3c C8): 데이터 smashAfterLaps=%s · 파괴 %d타 · 돌진 1방"):format(tostring(obstacleCfg.smashAfterLaps), obstacleCfg.hitsToBreak),
+			obstacleCfg.smashAfterLaps == nil and obstacleCfg.hitsToBreak == 5)
 	end)
 
 	local passCount, totalCount = r.summary()
@@ -281,14 +277,17 @@ function P3aVerify.edgeEvasion(trials)
 				local theta = 2 * math.pi * (point - 1) / 48
 				local px, pz = math.cos(theta) * (R - depth), math.sin(theta) * (R - depth)
 				local near = {}
-				for _, spec in ipairs(BossArenaMapData.maps[t[1]].obstacles) do
-					for _, angle in ipairs(spec.angles) do
-						local a = math.rad(angle)
-						local ox, oz = math.cos(a) * R * spec.ring - px, math.sin(a) * R * spec.ring - pz
-						if math.sqrt(ox * ox + oz * oz) - spec.radius <= EDGE_INFLUENCE_STUDS then
-							-- 대상 기준 좌표를 "벽이 -X" 틀로 돌린다(바깥 법선 (cosθ, sinθ) → (−1, 0)).
-							local rot = math.pi - theta
-							table.insert(near, { x = ox * math.cos(rot) - oz * math.sin(rot), z = ox * math.sin(rot) + oz * math.cos(rot), radius = spec.radius })
+				-- P3c B1: 구조물은 무작위 배치 - 시드 P3aVerify.edgeLayoutSeeds개(기본 3)의 배치를 모두 대 본다(충돌 원 단위). 100시드 전수는 하네스(보고서 ⑤).
+				for seedIndex = 1, P3aVerify.edgeLayoutSeeds or 3 do
+					local layout = ArenaLayout.generate(BossArenaMapData.maps[t[1]], seedIndex, ArenaLayout.optionsFor(BossData.bosses[t[1]]))
+					for _, item in ipairs(layout.items) do
+						for _, c in ipairs(item.colliders) do
+							local ox, oz = c.x - px, c.z - pz
+							if math.sqrt(ox * ox + oz * oz) - c.r <= EDGE_INFLUENCE_STUDS then
+								-- 대상 기준 좌표를 "벽이 -X" 틀로 돌린다(바깥 법선 (cosθ, sinθ) → (−1, 0)).
+								local rot = math.pi - theta
+								table.insert(near, { x = ox * math.cos(rot) - oz * math.sin(rot), z = ox * math.sin(rot) + oz * math.cos(rot), radius = c.r })
+							end
 						end
 					end
 				end

@@ -46,6 +46,7 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossArenaKit = require(script.Parent.BossArenaKit)
 -- P3a C: 원형 아레나 · 보스별 테마 맵 · 구조물(기반은 슬롯마다 한 번, 테마 · 장식 · 구조물은 보스전마다).
 local BossArenaMap = require(script.Parent.BossArenaMap)
+local BossArenaContainment = require(script.Parent.BossArenaContainment) -- P3c A5: 맵 이탈 방지(원 밖 · 바닥 아래 → 피해 없이 안쪽으로)
 
 local BossEncounter = {}
 
@@ -316,6 +317,7 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	if not encounter.isTutorial then
 		BossPatterns.setHintLevel(model, data, hintLevelFor(encounter.hintOwner, data.id))
 	end
+	BossArenaContainment.track(encounter)
 	fireListeners(startedListeners, encounter)
 	return encounter
 end
@@ -492,6 +494,7 @@ local function endEncounter(encounter, destroyModel)
 	BossArenaKit.destroy(encounter.kitParts) -- 29-2: 다음 보스가 같은 슬롯을 깨끗한 아레나로 받는다
 	encounter.kitParts = nil
 	BossArenaMap.undress(encounter.zoneKey) -- P3a C: 장식 · 구조물도 같이 치운다(기반은 남는다)
+	BossArenaContainment.untrack(encounter)
 	releaseSlot(encounter.slot)
 	encounter.slot = nil
 	fireListeners(endedListeners, encounter)

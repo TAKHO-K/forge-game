@@ -43,7 +43,7 @@ local function evadeSecondsOf(skill)
 	if primitive == "circleBoss" then
 		return evade.circleBoss + evade.circleTargetRepeat * (#BossSkillMath.pulsesOf(skill) - 1)
 	elseif primitive == "ring" then
-		return evade.ringPerWave * skill.waveCount
+		return evade.ringPerWave * #BossSkillMath.ringWaves(skill) -- P3c A1: 리듬의 파동 수
 	elseif primitive == "circleTarget" then
 		local first = skill.radiusStuds > BossData.mechanics.sim.largeCircleRadiusStuds and evade.circleTargetLarge or evade.circleTarget
 		return first + (skill.sequential and evade.circleTargetRepeat * (skill.count - 1) or 0)

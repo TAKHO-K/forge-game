@@ -15,6 +15,10 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- P3c A5: 넉백 높이 · 거리 상한과 착지 경계(벽에서 containment.innerMarginStuds 안쪽) - 서버 계측과 같은 함수다.
+local ArenaContainment = require(ReplicatedStorage.Shared.ArenaContainment)
 
 local BossStormView = {}
 
@@ -162,7 +166,7 @@ local function lift(data, root, humanoid)
 	end)
 end
 
--- data = { from(판정 중심), heightStuds, distanceStuds, holdSeconds?, spinRadiusStuds? }
+-- data = { from(판정 중심), heightStuds, distanceStuds, holdSeconds?, spinRadiusStuds?, zoneCenter?, zoneRadius? }
 function BossStormView.launch(data)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -179,11 +183,14 @@ function BossStormView.launch(data)
 		local angle = rng:NextNumber(0, 2 * math.pi)
 		away = Vector3.new(math.cos(angle), 0, math.sin(angle))
 	end
+	-- P3c A5: 높이 · 거리 상한 + 착지점이 벽 안쪽 경계를 넘지 않게 거리를 줄인다(구역이 실려 오지 않으면 상한만).
+	local zone = data.zoneRadius and { center = data.zoneCenter, radius = data.zoneRadius } or nil
+	local heightStuds, distanceStuds = ArenaContainment.limitLaunch(zone, root.Position, away, data.heightStuds, data.distanceStuds)
 	-- 포물선: 최고 높이 h = v² ÷ 2g, 체공 = 2v ÷ g, 그동안 수평으로 distance.
 	local gravity = Workspace.Gravity
-	local up = math.sqrt(2 * gravity * data.heightStuds)
+	local up = math.sqrt(2 * gravity * math.max(heightStuds, 0.5))
 	local airSeconds = 2 * up / gravity
-	local velocity = away.Unit * (data.distanceStuds / airSeconds) + Vector3.new(0, up, 0)
+	local velocity = away.Unit * (distanceStuds / airSeconds) + Vector3.new(0, up, 0)
 
 	-- 떠 있는 동안 Humanoid의 조작을 끈다 - 켜 두면 걷기 제어가 수평 속도를 곧바로 지워 "튕겨 난다"가 안 보인다.
 	humanoid.PlatformStand = true

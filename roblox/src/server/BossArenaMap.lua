@@ -3,8 +3,10 @@
 --
 -- 구조물(사용자 지시): 충돌하는 자연 지형지물. ① 걸어서 못 지나간다 - 투명 충돌 기둥이 지면 폴더(GroundProbe)에 있어 보스 걸음도 계단보다 높은 턱으로 보고 비켜 간다
 -- ② 보스 돌진이 부딪히면 돌진이 거기서 끝나고(예고 선도 거기까지 - 보이는 것 = 판정) 구조물이 부서지며 헤롱이 길어진다(BossPatterns가 firstOnPath · breakObstacle을 부른다)
--- ③ 플레이어가 hitsToBreak번 때리면 부서진다(조준 대상 - Monster 태그 + 구출 대상과 같은 "맞으면 알림만" 엔티티) ④ 보스가 한 구조물 곁을 smashAfterLaps바퀴만큼
--- 맴돌면 보스가 부순다(뺑뺑이 방지) ⑤ 부서질 때 멤버의 클라가 파편을 그린다(BossArenaObstacleBreak). 전멸 리셋이면 처음대로 다시 선다.
+-- ③ 플레이어가 hitsToBreak번 때리면 부서진다(조준 대상 - Monster 태그 + 구출 대상과 같은 "맞으면 알림만" 엔티티) - 직전에는 금 간 표시(P3c B2)
+-- ④ 부서질 때 멤버의 클라가 파편을 그린다(BossArenaObstacleBreak). 전멸 리셋이면 처음대로(같은 시드) 다시 선다.
+-- P3c B: 자리 · 크기는 보스 등장마다 무작위(shared/ArenaLayout - 시드는 로그 "보스맵 배치 시드"), 겉모습은 server/BossArenaLooks, 바닥 둔덕(B4)도 여기서 짓는다.
+-- 옛 ⑤ "뺑뺑이 5바퀴면 보스가 부순다"는 없앴다(C8 - 돌진 대상이 가장 가까운 사람이라 숨으면 돌진이 온다).
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -14,15 +16,21 @@ local CollectionService = game:GetService("CollectionService")
 local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
+local ArenaLayout = require(ReplicatedStorage.Shared.ArenaLayout)
 local GroundProbe = require(script.Parent.GroundProbe)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
+local Looks = require(script.Parent.BossArenaLooks)
 
 local BossArenaMap = {}
 
 local GEOMETRY = BossArenaMapData.geometry
 local OBSTACLE = BossArenaMapData.obstacle
 local FLOOR_TOP_Y = GEOMETRY.floorThicknessStuds / 2 -- 1(옛 아레나와 같은 관례)
+
+-- 배치 시드를 뽑는 난수(보스 등장마다). 검증은 debugNextSeed로 고정 시드를 넣는다.
+local layoutRng = Random.new()
+BossArenaMap.debugNextSeed = nil
 
 -- 파편 연출 채널(클라 BossArenaMapView).
 local breakEvent = Instance.new("RemoteEvent")
@@ -37,36 +45,10 @@ function BossArenaMap.themeFor(bossId)
 	return BossArenaMapData.maps[bossId or ""] or BossArenaMapData.default
 end
 
--- ═══ 파트 도우미 ═══
+-- ═══ 파트 도우미(겉모습 파일과 같은 것) ═══
 
-local function newPart(parent, props)
-	local part = Instance.new("Part")
-	part.Anchored = true
-	part.CanCollide = props.collide == true
-	part.CanQuery = props.collide == true -- 충돌 없는 장식은 서버 레이캐스트(지면 · 공중 판정)에도 안 걸린다
-	part.CanTouch = false
-	part.CastShadow = props.shadow ~= false
-	part.Material = props.material or Enum.Material.SmoothPlastic
-	part.Color = props.color or Color3.new(1, 1, 1)
-	part.Transparency = props.transparency or 0
-	part.Size = props.size
-	if props.shape == "cylinder" then
-		part.Shape = Enum.PartType.Cylinder
-	elseif props.shape == "ball" then
-		part.Shape = Enum.PartType.Ball
-	end
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	part.CFrame = props.cframe
-	part.Name = props.name or "ArenaPart"
-	part.Parent = parent
-	return part
-end
-
--- 누운 원판(Cylinder는 로컬 X가 높이) - 윗면 Y = topY.
-local function discCFrame(x, topY, z, thickness)
-	return CFrame.new(x, topY - thickness / 2, z) * CFrame.Angles(0, 0, math.rad(90))
-end
+local newPart = Looks.newPart
+local discCFrame = Looks.discCFrame
 
 local function polar(zone, angleDeg, distance)
 	local angle = math.rad(angleDeg)
@@ -255,94 +237,41 @@ function DECOR.floorDisc(parent, zone, spec)
 	end
 end
 
--- ═══ 구조물 ═══
+-- ═══ 구조물(P3c B - 보스 등장마다 무작위 배치, shared/ArenaLayout) ═══
 
--- kind별 겉모습(충돌 없음 - 충돌은 아래 투명 기둥이 한다). 반환: 그린 파트 목록.
-local OBSTACLE_LOOK = {}
-
-local function heightOf(spec)
-	return spec.heightStuds or OBSTACLE.heightStuds
-end
-
-function OBSTACLE_LOOK.boulder(model, center, spec, index)
-	local r = spec.radius
-	return {
-		newPart(model, { name = "ObstacleRock", shape = "ball", size = Vector3.new(r * 2, r * 2, r * 2) * 1.05, color = spec.color, transparency = spec.transparency, cframe = CFrame.new(center + Vector3.new(0, r * 0.75, 0)) }),
-		newPart(model, { name = "ObstacleRock", shape = "ball", size = Vector3.new(r, r, r) * 1.1, color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(r * 0.8 * ((index % 2 == 0) and 1 or -1), r * 0.35, r * 0.5)) }),
-	}
-end
-
-function OBSTACLE_LOOK.block(model, center, spec, index)
-	local r = spec.radius
-	return {
-		newPart(model, { name = "ObstacleBlock", size = Vector3.new(r * 1.7, heightOf(spec) + 0.5, r * 1.5), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(0, heightOf(spec) / 2, 0)) * CFrame.Angles(0, math.rad(index * 37), math.rad(6)) }),
-		newPart(model, { name = "ObstacleBlock", size = Vector3.new(r, r * 0.8, r * 1.1), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(r * 0.7, r * 0.4, -r * 0.6)) * CFrame.Angles(math.rad(10), math.rad(index * 53), 0) }),
-	}
-end
-
-function OBSTACLE_LOOK.stump(model, center, spec, index)
-	local r = spec.radius
-	return {
-		newPart(model, { name = "ObstacleStump", shape = "cylinder", size = Vector3.new(heightOf(spec) + 0.5, r * 1.9, r * 1.9), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(0, (heightOf(spec) + 0.5) / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)) }),
-		newPart(model, { name = "ObstacleStump", size = Vector3.new(r * 1.6, 1.2, r * 1.6), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(0, heightOf(spec) + 0.8, 0)) * CFrame.Angles(math.rad(8), math.rad(index * 29), math.rad(-6)) }),
-	}
-end
-
-function OBSTACLE_LOOK.cluster(model, center, spec, index)
-	local r = spec.radius
-	local parts = {}
-	for k = 0, 2 do
-		local angle = math.rad(k * 120 + index * 17)
-		local height = heightOf(spec) + 1 - k * 1.2
-		local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * (k == 0 and 0 or r * 0.55)
-		table.insert(parts, newPart(model, {
-			name = "ObstacleCrystal", size = Vector3.new(r * 0.8, height, r * 0.8), color = spec.color, transparency = spec.transparency, material = Enum.Material.SmoothPlastic,
-			cframe = CFrame.new(center + offset + Vector3.new(0, height / 2, 0)) * CFrame.Angles(math.rad(k * 9), math.rad(k * 40 + 20), math.rad(-k * 12)),
-		}))
+-- 키가 큰 충돌 기둥(석상 · 얼음 기둥 - featureShapes의 tall)은 지면 폴더 밖에 둔다: 지면 탐지 · 드랍 스냅 · 낙하점 높이가 기둥 꼭대기를 바닥으로 보지 않게.
+local tallFolder = nil
+local function tallColliderFolder()
+	if not tallFolder or not tallFolder.Parent then
+		tallFolder = Instance.new("Folder")
+		tallFolder.Name = "BossArenaTallColliders"
+		tallFolder.Parent = Workspace
 	end
-	return parts
+	return tallFolder
 end
 
--- 큰 바위판(사용자 지시 - 올라서서 건너가는 지형): 충돌 기둥과 같은 크기의 넓은 원판(보이는 윗면 = 실제로 서는 면) + 가장자리의 작은 바위 둘.
-function OBSTACLE_LOOK.mesa(model, center, spec, index)
-	local r, h = spec.radius, heightOf(spec)
-	local parts = {
-		newPart(model, { name = "ObstacleMesa", shape = "cylinder", size = Vector3.new(h, r * 2, r * 2), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)) }),
-	}
-	for k = 0, 1 do
-		local angle = math.rad(index * 50 + k * 150)
-		local size = Vector3.new(3, h * 0.7, 3.5)
-		table.insert(parts, newPart(model, {
-			name = "ObstacleMesaRock", size = size, color = spec.color:Lerp(Color3.new(0, 0, 0), 0.15), transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(math.cos(angle) * (r - 1), size.Y / 2, math.sin(angle) * (r - 1))) * CFrame.Angles(0, angle, math.rad(8)),
-		}))
-	end
-	return parts
-end
-
--- [zoneKey] = { zoneKey, theme, bossData, dressing(Model), obstacles = { [id] = obstacle }, nextId, near = { [id] = 초 }, lastBreak }
+-- [zoneKey] = { zoneKey, theme, bossData, dressing(Model), layout, obstacles = { [id] = obstacle }, mounds = { Part }, lastBreak }
 local active = {}
 
 local function zoneOfKey(zoneKey)
 	return WorldConfig.zones[zoneKey]
 end
 
--- 구조물 윗면에 서 있는가(수평으로 윗면 안 + **발**이 윗면 근처 이상 - 리뷰 1: 루트로 재면 곁의 바닥에 선 사람(루트 = 바닥 + 3)도 윗면 3.5 - 0.5에 걸렸다).
+-- 구조물 윗면에 서 있는가: 충돌 원마다 수평으로 윗면 안 + **발**이 윗면 근처 이상(P3a 리뷰 1 - 루트로 재면 곁의 바닥에 선 사람도 걸렸다). 키 큰 기둥 위에는 못 선다.
 local function standsOnTop(obstacle, character, root)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local feetY = root.Position.Y - (humanoid and (humanoid.HipHeight + root.Size.Y / 2) or 3)
-	local dx, dz = root.Position.X - obstacle.center.X, root.Position.Z - obstacle.center.Z
-	return dx * dx + dz * dz <= (obstacle.radius + 0.5) ^ 2 and feetY >= obstacle.center.Y + obstacle.height - 0.5
+	for _, c in ipairs(obstacle.colliders) do
+		local dx, dz = root.Position.X - c.center.X, root.Position.Z - c.center.Z
+		if not c.tall and dx * dx + dz * dz <= (c.r + 0.5) ^ 2 and feetY >= FLOOR_TOP_Y + c.h - 0.5 then
+			return true
+		end
+	end
+	return false
 end
 
 -- 부서진 순간: 아레나 안 사람에게 파편 연출을 보내고, 윗면에 서 있던 사람은 파편과 함께 튕겨 나며 피해를 받는다(사용자 지시).
--- 튕김은 보스 패턴의 넉백 연출(launch - BossStormView)을 그대로 쓴다. 반환: 튕겨 난 사람 목록(검증이 읽는다).
+-- 튕김은 보스 패턴의 넉백 연출(launch - BossStormView)을 그대로 쓴다 - P3c A5: 구역을 실어 보내 착지점이 벽 안쪽을 넘지 않는다. 반환: 튕겨 난 사람 목록(검증이 읽는다).
 local function fireBreak(state, obstacle, cause)
 	local zone = zoneOfKey(state.zoneKey)
 	local topBreak = OBSTACLE.topBreak
@@ -359,7 +288,9 @@ local function fireBreak(state, obstacle, cause)
 			if standsOnTop(obstacle, character, root) then
 				table.insert(launched, player)
 				if patternEvent then
-					patternEvent:FireClient(player, "launch", { from = obstacle.center, heightStuds = topBreak.heightStuds, distanceStuds = topBreak.distanceStuds })
+					patternEvent:FireClient(player, "launch", {
+						from = obstacle.center, heightStuds = topBreak.heightStuds, distanceStuds = topBreak.distanceStuds, zoneCenter = zone.center, zoneRadius = zone.radius,
+					})
 				end
 				PlayerDamage.applyMaxHpFraction(player, topBreak.maxHpFraction, topBreak.label)
 			end
@@ -368,7 +299,15 @@ local function fireBreak(state, obstacle, cause)
 	return launched
 end
 
--- 구조물 하나를 부순다(이미 부서졌으면 false). cause = "hits"(플레이어) · "charge"(보스 돌진) · "boss"(뺑뺑이 방지).
+local function destroyObstacle(obstacle)
+	MonsterState.clear(obstacle.model)
+	obstacle.model:Destroy()
+	for _, collider in ipairs(obstacle.colliderParts) do
+		collider:Destroy()
+	end
+end
+
+-- 구조물 하나를 부순다(이미 부서졌으면 false). cause = "hits"(플레이어) · "charge"(보스 돌진).
 function BossArenaMap.breakObstacle(zoneKey, id, cause)
 	local state = active[zoneKey]
 	local obstacle = state and state.obstacles[id]
@@ -377,12 +316,10 @@ function BossArenaMap.breakObstacle(zoneKey, id, cause)
 	end
 	obstacle.broken = true
 	state.obstacles[id] = nil
-	MonsterState.clear(obstacle.model)
-	obstacle.model:Destroy()
-	obstacle.collider:Destroy()
+	destroyObstacle(obstacle)
 	local launched = fireBreak(state, obstacle, cause)
-	state.lastBreak = { id = id, cause = cause, launched = launched, at = os.clock() }
-	print(("[forge-game] 구조물 부서짐: %s #%d(%s) - 위에 있던 %d명 튕김"):format(zoneKey, id, cause, #launched))
+	state.lastBreak = { id = id, cause = cause, launched = launched, at = os.clock(), kind = obstacle.kind, hits = obstacle.hits }
+	print(("[forge-game] 구조물 부서짐: %s #%d %s(%s) - 위에 있던 %d명 튕김"):format(zoneKey, id, obstacle.kind, cause, #launched))
 	return true
 end
 
@@ -392,28 +329,30 @@ function BossArenaMap.lastBreak(zoneKey)
 	return state and state.lastBreak or nil
 end
 
-local function spawnObstacle(state, zone, spec, angleDeg, index)
-	local x, z = polar(zone, angleDeg, GEOMETRY.radiusStuds * spec.ring)
-	local center = Vector3.new(x, FLOOR_TOP_Y, z)
-	state.nextId += 1
-	local id = state.nextId
-	-- 충돌 = 지면 폴더의 투명 원기둥(플레이어 물리 · 보스 지면 추적이 같은 것을 본다).
-	local height = heightOf(spec)
-	local collider = newPart(GroundProbe.folder(), {
-		name = "ArenaObstacleCollider", shape = "cylinder", collide = true, transparency = 1, shadow = false,
-		size = Vector3.new(height, spec.radius * 2, spec.radius * 2),
-		cframe = CFrame.new(center + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-	})
+local function spawnObstacle(state, zone, item)
+	local center = Vector3.new(zone.center.X + item.x, FLOOR_TOP_Y, zone.center.Z + item.z)
+	local id = item.id
+	-- 충돌 = 투명 원기둥(충돌 원마다). 낮은 기둥은 지면 폴더(플레이어 물리 · 보스 지면 추적이 같은 것을 본다), 키 큰 기둥은 지면 폴더 밖.
+	local colliders, colliderParts, height = {}, {}, 0
+	for _, c in ipairs(item.colliders) do
+		local at = Vector3.new(zone.center.X + c.x, FLOOR_TOP_Y, zone.center.Z + c.z)
+		table.insert(colliderParts, Looks.newPart(c.tall and tallColliderFolder() or GroundProbe.folder(), {
+			name = "ArenaObstacleCollider", shape = "cylinder", collide = true, transparency = 1, shadow = false,
+			size = Vector3.new(c.h, c.r * 2, c.r * 2),
+			cframe = CFrame.new(at + Vector3.new(0, c.h / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		}))
+		table.insert(colliders, { center = at, r = c.r, h = c.h, tall = c.tall })
+		height = math.max(height, c.h)
+	end
 	-- 조준 대상 = 모델(Monster 태그 + 구출 대상과 같은 "맞으면 알림만"). 루트는 투명 · 충돌 없음.
 	local model = Instance.new("Model")
 	model.Name = "구조물"
-	local root = newPart(model, {
+	local root = Looks.newPart(model, {
 		name = "HumanoidRootPart", size = Vector3.new(2, 2, 2), transparency = 1, shadow = false,
 		cframe = CFrame.new(center + Vector3.new(0, math.min(height, 2.5), 0)),
 	})
 	model.PrimaryPart = root
-	local look = OBSTACLE_LOOK[spec.kind] or OBSTACLE_LOOK.block
-	local visuals = look(model, center, spec, index)
+	local visuals = Looks.build(model, center, item, state.bossData)
 	-- 조준 대상 외곽선(몬스터와 같은 AimHighlight - AimTarget이 조준할 때만 켠다. 꺼진 Highlight는 동시 한도에 안 든다).
 	local aim = Instance.new("Highlight")
 	aim.Name = "AimHighlight"
@@ -428,11 +367,12 @@ local function spawnObstacle(state, zone, spec, angleDeg, index)
 	CollectionService:AddTag(model, "ArenaObstacle")
 
 	local obstacle = {
-		id = id, center = center, radius = spec.radius, height = height, color = spec.color, model = model, collider = collider, visuals = visuals,
-		hits = 0, lastHitAt = {}, broken = false,
+		id = id, kind = item.kind, group = item.group, center = center, radius = item.radius, height = height, color = item.spec.color, model = model,
+		colliders = colliders, colliderParts = colliderParts, visuals = visuals, climbable = item.climbable, item = item,
+		hits = 0, lastHitAt = {}, broken = false, cracked = false,
 	}
 	local data = {
-		id = "arena_obstacle", displayName = "구조물", isRescueTarget = true, bodyColor = spec.color, headColor = spec.color,
+		id = "arena_obstacle", displayName = "구조물", isRescueTarget = true, bodyColor = item.spec.color, headColor = item.spec.color,
 		hp = 0, attack = 0, goldDrop = 0, expReward = 0, moveSpeedStuds = 0, attackRangeStuds = 0, attackCooldownSeconds = 1,
 	}
 	MonsterState.init(model, data, root.Position, state.zoneKey, {
@@ -454,7 +394,14 @@ local function spawnObstacle(state, zone, spec, angleDeg, index)
 			-- 금이 가는 겉모습: 맞을 때마다 조금 어두워진다(서버 파트라 모두에게 보인다). 크기는 그대로 - 충돌 기둥과 보이는 모양이 어긋나지 않게.
 			for _, part in ipairs(visuals) do
 				if part.Parent then
-					part.Color = part.Color:Lerp(Color3.new(0, 0, 0), 0.18)
+					part.Color = part.Color:Lerp(Color3.new(0, 0, 0), 0.1)
+				end
+			end
+			-- P3c B2: 부서지기 직전(남은 타격 crackAtHitsLeft)에는 금 간 표시가 붙는다.
+			if not obstacle.cracked and OBSTACLE.hitsToBreak - obstacle.hits <= OBSTACLE.crackAtHitsLeft then
+				obstacle.cracked = true
+				for _, part in ipairs(Looks.crack(model, center, item)) do
+					table.insert(visuals, part)
 				end
 			end
 			if obstacle.hits >= OBSTACLE.hitsToBreak then
@@ -468,10 +415,8 @@ end
 
 local function spawnObstacles(state)
 	local zone = zoneOfKey(state.zoneKey)
-	for _, spec in ipairs(state.theme.obstacles or {}) do -- 그룹마다(작은 구조물 · 큰 바위판)
-		for index, angleDeg in ipairs(spec.angles) do
-			spawnObstacle(state, zone, spec, angleDeg, index)
-		end
+	for _, item in ipairs(state.layout.items) do
+		spawnObstacle(state, zone, item)
 	end
 end
 
@@ -479,15 +424,31 @@ local function clearObstacles(state)
 	for id in pairs(state.obstacles) do
 		local obstacle = state.obstacles[id]
 		state.obstacles[id] = nil
-		MonsterState.clear(obstacle.model)
-		obstacle.model:Destroy()
-		obstacle.collider:Destroy()
+		destroyObstacle(obstacle)
 	end
-	state.near = {}
 end
 
--- 보스전 시작(BossEncounter.spawnEncounter가 텔레포트 전에 부른다). bossData = 인스턴스 데이터(색 · id). 반환 = 상태(치울 때 넘긴다).
-function BossArenaMap.dress(zoneKey, bossData)
+-- B4 둔덕: 층 높이 stepStuds의 원판을 겹쳐 쌓는다(아래 층이 가장 넓다 - 층마다 반경이 줄어 완만하다). 지면 폴더(보스 걸음 · 낙하점 · 드랍이 그 높이를 따른다).
+local function buildMounds(state, zone)
+	local floorColor = state.theme.floor.color
+	for _, mound in ipairs(state.layout.mounds or {}) do
+		for layer = 1, mound.layers do
+			local radius = mound.radius * (1 - (layer - 1) / mound.layers)
+			local topY = FLOOR_TOP_Y + mound.stepStuds * layer
+			local part = Looks.newPart(GroundProbe.folder(), {
+				name = "BossArenaMound", shape = "cylinder", collide = true, shadow = false,
+				color = floorColor:Lerp(Color3.new(0, 0, 0), 0.05 * layer), material = state.theme.floor.material,
+				size = Vector3.new(mound.stepStuds + 0.02, radius * 2, radius * 2),
+				cframe = Looks.discCFrame(zone.center.X + mound.x, topY, zone.center.Z + mound.z, mound.stepStuds + 0.02),
+			})
+			CollectionService:AddTag(part, "BossArenaMound") -- 클라가 예고 도형을 둔덕 위로 띄운다(BossPatternVisuals.moundLift)
+			table.insert(state.mounds, part)
+		end
+	end
+end
+
+-- 보스전 시작(BossEncounter.spawnEncounter가 텔레포트 전에 부른다). bossData = 인스턴스 데이터(색 · id · 킷). seed = 배치 시드(생략 = 새로 뽑는다 - 검증은 고정 시드).
+function BossArenaMap.dress(zoneKey, bossData, seed)
 	BossArenaMap.undress(zoneKey)
 	local base = BossArenaMap.buildBase(zoneKey)
 	local theme = BossArenaMap.themeFor(bossData and bossData.id)
@@ -496,7 +457,11 @@ function BossArenaMap.dress(zoneKey, bossData)
 	local dressing = Instance.new("Model")
 	dressing.Name = "BossArenaDressing_" .. zoneKey
 	dressing.Parent = Workspace
-	local state = { zoneKey = zoneKey, theme = theme, bossData = bossData, dressing = dressing, obstacles = {}, nextId = 0, near = {} }
+	seed = seed or BossArenaMap.debugNextSeed or layoutRng:NextInteger(1, 2147483646)
+	BossArenaMap.debugNextSeed = nil
+	local startedAt = os.clock()
+	local layout = ArenaLayout.generate(theme, seed, ArenaLayout.optionsFor(bossData))
+	local state = { zoneKey = zoneKey, theme = theme, bossData = bossData, dressing = dressing, layout = layout, obstacles = {}, mounds = {} }
 	for _, spec in ipairs(theme.decor or {}) do
 		local builder = DECOR[spec.kind]
 		if builder then
@@ -509,8 +474,13 @@ function BossArenaMap.dress(zoneKey, bossData)
 		end
 	end
 	spawnObstacles(state)
+	buildMounds(state, zone)
 	outline(dressing)
 	active[zoneKey] = state
+	local report = layout.report
+	print(("[forge-game] 보스맵 배치 시드: %s %d - 구조물 %d · 둔덕 %d · 시도 %d · 벽 틈 %.1f · 서로 %.1f · 돌진 보장 %.0f%% · 연결 %s · %.1fms"):format(
+		zoneKey, seed, #layout.items, #(layout.mounds or {}), layout.attempts, report.minWallGap, report.minPairGap, report.coverage * 100,
+		tostring(report.connected), (os.clock() - startedAt) * 1000))
 	return state
 end
 
@@ -520,11 +490,14 @@ function BossArenaMap.undress(zoneKey)
 		return
 	end
 	clearObstacles(state)
+	for _, part in ipairs(state.mounds) do
+		part:Destroy()
+	end
 	state.dressing:Destroy()
 	active[zoneKey] = nil
 end
 
--- 전멸 리셋 - 구조물을 처음대로(부서진 것도 다시) 세운다.
+-- 전멸 리셋 - 구조물을 처음대로(같은 시드 - 부서진 것도 다시) 세운다. 둔덕은 부서지지 않아 그대로다.
 function BossArenaMap.resetObstacles(zoneKey)
 	local state = active[zoneKey]
 	if not state then
@@ -539,12 +512,21 @@ function BossArenaMap.getTheme(zoneKey)
 	return state and state.theme or nil
 end
 
--- 서 있는 구조물 목록(검증 · 검사기용 사본): { { id, center, radius } }.
+-- 이번 보스전의 배치(시드 · 구조물 · 둔덕 · 검사 결과) - 검증 · 로그용.
+function BossArenaMap.getLayout(zoneKey)
+	local state = active[zoneKey]
+	return state and state.layout or nil
+end
+
+-- 서 있는 구조물 목록(검증 · 검사기용 사본): { { id, kind, group, center, radius, height, hits, model, colliders, climbable } }.
 function BossArenaMap.obstacles(zoneKey)
 	local list = {}
 	local state = active[zoneKey]
 	for id, obstacle in pairs(state and state.obstacles or {}) do
-		table.insert(list, { id = id, center = obstacle.center, radius = obstacle.radius, height = obstacle.height, hits = obstacle.hits, model = obstacle.model })
+		table.insert(list, {
+			id = id, kind = obstacle.kind, group = obstacle.group, center = obstacle.center, radius = obstacle.radius, height = obstacle.height, hits = obstacle.hits,
+			model = obstacle.model, colliders = obstacle.colliders, climbable = obstacle.climbable, cracked = obstacle.cracked,
+		})
 	end
 	table.sort(list, function(a, b)
 		return a.id < b.id
@@ -552,72 +534,28 @@ function BossArenaMap.obstacles(zoneKey)
 	return list
 end
 
--- 원(position, radius)이 서 있는 구조물과 clearance 안으로 겹치는가(사용자 지시: 기믹 지형 - 얼음 기둥 · 모래 구덩이 - 이 구조물 위에 서지 않는다).
+-- 원(position, radius)이 서 있는 구조물의 충돌 원과 clearance 안으로 겹치는가(사용자 지시: 기믹 지형 - 얼음 기둥 · 모래 구덩이 - 이 구조물 위에 서지 않는다).
 function BossArenaMap.overlapsObstacle(zoneKey, position, radius, clearance)
 	local state = active[zoneKey]
 	for _, obstacle in pairs(state and state.obstacles or {}) do
-		local limit = obstacle.radius + radius + (clearance or 0)
-		local dx, dz = position.X - obstacle.center.X, position.Z - obstacle.center.Z
-		if dx * dx + dz * dz < limit * limit then
-			return true
+		for _, c in ipairs(obstacle.colliders) do
+			local limit = c.r + radius + (clearance or 0)
+			local dx, dz = position.X - c.center.X, position.Z - c.center.Z
+			if dx * dx + dz * dz < limit * limit then
+				return true
+			end
 		end
 	end
 	return false
 end
 
--- 돌진 경로(origin에서 단위벡터 dir로 length)에 처음 걸리는 구조물과 "닿는 거리"(보스 몸통이 구조물 가장자리에 닿는 순간의 이동 거리). 없으면 nil.
+-- 돌진 경로(origin에서 단위벡터 dir로 length)에 처음 걸리는 구조물과 "닿는 거리"(보스 몸통이 충돌 원 가장자리에 닿는 순간의 이동 거리). 없으면 nil.
 function BossArenaMap.firstOnPath(zoneKey, origin, dir, length, bodyHalf)
 	local state = active[zoneKey]
 	if not state then
 		return nil
 	end
-	local best, bestDistance = nil, math.huge
-	for _, obstacle in pairs(state.obstacles) do
-		local rel = Vector3.new(obstacle.center.X - origin.X, 0, obstacle.center.Z - origin.Z)
-		local along = rel:Dot(dir)
-		local reach = obstacle.radius + bodyHalf
-		local lateral2 = rel:Dot(rel) - along * along
-		if along > 0 and lateral2 <= reach * reach then
-			-- 이미 닿아 있으면(보스가 구조물 가장자리에서 몸통 반폭 안) 0 - 그 자리에서 부딪힌다(리뷰 3: 음수를 버리면 돌진이 구조물을 지나쳤다).
-			local contact = math.max(along - math.sqrt(reach * reach - lateral2), 0)
-			if contact < length and contact < bestDistance then
-				best, bestDistance = obstacle, contact
-			end
-		end
-	end
-	if best then
-		return best.id, bestDistance
-	end
-	return nil
-end
-
--- 뺑뺑이 방지(사용자 지시): 보스가 추격 중(스킬 없음) 한 구조물 곁에 머문 시간을 쌓아, "그 구조물을 보스 걸음으로 smashAfterLaps바퀴 도는 시간"을 넘으면 부순다.
--- BossPatterns.step이 정상 상태(추격)일 때마다 부른다. 반환: 부쉈으면 그 id.
-function BossArenaMap.noteBossChase(zoneKey, position, dt, moveSpeedStuds)
-	local state = active[zoneKey]
-	if not state or (moveSpeedStuds or 0) <= 0 then
-		return nil
-	end
-	for id, obstacle in pairs(state.obstacles) do
-		local nearRadius = obstacle.radius + OBSTACLE.chargeBodyHalfStuds + OBSTACLE.nearSlackStuds
-		local dx, dz = position.X - obstacle.center.X, position.Z - obstacle.center.Z
-		local near = dx * dx + dz * dz <= nearRadius * nearRadius
-		local accumulated = math.max((state.near[id] or 0) + (near and dt or -dt), 0)
-		state.near[id] = accumulated
-		local limit = BossArenaMap.smashSeconds(obstacle.radius, moveSpeedStuds)
-		if accumulated >= limit then
-			print(("[forge-game] 보스가 구조물 곁을 %.1f초(%d바퀴분) 맴돌아 부순다"):format(accumulated, OBSTACLE.smashAfterLaps))
-			BossArenaMap.breakObstacle(zoneKey, id, "boss")
-			return id
-		end
-	end
-	return nil
-end
-
--- 한 구조물을 보스 걸음으로 smashAfterLaps바퀴 도는 시간(초).
-function BossArenaMap.smashSeconds(obstacleRadius, moveSpeedStuds)
-	local loop = 2 * math.pi * (obstacleRadius + OBSTACLE.chargeBodyHalfStuds + OBSTACLE.nearSlackStuds)
-	return loop / math.max(moveSpeedStuds, 1e-3) * OBSTACLE.smashAfterLaps
+	return ArenaLayout.firstOnPath(state.obstacles, origin, dir, length, bodyHalf)
 end
 
 -- 검증 · 성능 기록용: 이 슬롯의 기반 모델 · 장식 모델 · 바닥(없으면 nil).

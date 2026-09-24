@@ -12,6 +12,7 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
+local ArenaLayout = require(ReplicatedStorage.Shared.ArenaLayout)
 local P3aVerify = require(script.Parent.P3aVerify)
 
 local BossEncounter = require(script.Parent.BossEncounter)
@@ -105,10 +106,8 @@ function P3aArenaVerify.runLiveC(player, env)
 			for _, child in ipairs(baseModel:GetChildren()) do
 				walls += child.Name == "BossArenaWall" and 1 or 0
 			end
-			local expectedObstacles = 0
-			for _, spec in ipairs(theme.obstacles) do
-				expectedObstacles += #spec.angles
-			end
+			-- P3c B1: 구조물 수 = 이번 등장의 무작위 배치(시드는 로그) 그대로.
+			local expectedObstacles = #BossArenaMap.getLayout(encounter.zoneKey).items
 			local obstacles = BossArenaMap.obstacles(encounter.zoneKey)
 			local highlights = 0
 			for _, d in ipairs(baseModel:GetDescendants()) do
@@ -124,9 +123,12 @@ function P3aArenaVerify.runLiveC(player, env)
 			local dressingParts, dressingInstances = countParts(dressing)
 			local kitParts = #(encounter.kitParts or {})
 			local colliders = 0
-			for _, child in ipairs(GroundProbe.folder():GetChildren()) do
-				if child.Name == "ArenaObstacleCollider" and ArenaShape.contains(zone, child.Position) then
-					colliders += 1
+			local tall = Workspace:FindFirstChild("BossArenaTallColliders")
+			for _, folder in ipairs({ GroundProbe.folder(), tall }) do
+				for _, child in ipairs(folder and folder:GetChildren() or {}) do
+					if child.Name == "ArenaObstacleCollider" and ArenaShape.contains(zone, child.Position) then
+						colliders += 1
+					end
 				end
 			end
 			table.insert(perfRows, ("%s 기반 %d · 장식+구조물 %d(인스턴스 %d) · 킷 %d · 충돌 기둥 %d"):format(bossId, baseParts, dressingParts, dressingInstances, kitParts, colliders))
@@ -136,24 +138,29 @@ function P3aArenaVerify.runLiveC(player, env)
 		end
 	end)
 
-	r.section("구조물 3타 파괴 · 큰 바위판 튕김", function()
+	r.section("구조물 파괴(P3c: 5타) · 큰 블록 튕김", function()
 		local _, _, encounter = spawnBoss(player, env, "section_guardian")
 		local zoneKey = encounter.zoneKey
 		local list = BossArenaMap.obstacles(zoneKey)
 		local target = list[1]
-		local hitsSeen = {}
-		for _ = 1, 3 do
+		local hitsSeen, expected = {}, {}
+		local need = BossArenaMapData.obstacle.hitsToBreak
+		for hit = 1, need do
 			MonsterState.applyDamage(target.model, 1, BossData.stageInterval, player, { committedAt = os.clock() })
 			table.insert(hitsSeen, #BossArenaMap.obstacles(zoneKey))
+			table.insert(expected, hit < need and #list or #list - 1)
 			task.wait(BossArenaMapData.obstacle.hitIntervalSeconds + 0.05)
 		end
 		local broke = BossArenaMap.lastBreak(zoneKey)
-		r.check(("작은 구조물 3타: 남은 구조물 %s(기대 %d · %d · %d) · 마지막 부서짐 원인 %s"):format(table.concat(hitsSeen, " · "), #list, #list, #list - 1, tostring(broke and broke.cause)),
-			hitsSeen[1] == #list and hitsSeen[2] == #list and hitsSeen[3] == #list - 1 and broke and broke.cause == "hits")
+		r.check(("구조물 %d타: 남은 구조물 %s(기대 %s) · 마지막 부서짐 원인 %s"):format(need, table.concat(hitsSeen, " · "), table.concat(expected, " · "), tostring(broke and broke.cause)),
+			table.concat(hitsSeen, ",") == table.concat(expected, ",") and broke and broke.cause == "hits")
 		-- 보스 걸음의 지면 탐지(MonsterAI와 같은 GroundProbe.groundY, 발 = 바닥 윗면)가 구조물을 "계단보다 높은 턱"으로 보는가(리뷰 2 - 광선 시작점이 기둥 속이면 못 본다).
 		local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
 		local blockedAll, heights = true, {}
 		for _, o in ipairs(BossArenaMap.obstacles(zoneKey)) do
+			if o.group == "feature" then
+				continue -- P3c B3 지형지물은 모양별(키 큰 기둥은 지면 폴더 밖 · 낮은 돌무더기는 계단 이하) - P3c(나B)가 잰다
+			end
 			local groundY = GroundProbe.groundY(o.center.X, o.center.Z, FLOOR_TOP)
 			local step = groundY and (groundY - FLOOR_TOP) or 0
 			table.insert(heights, ("%.1f"):format(step))
@@ -174,7 +181,7 @@ function P3aArenaVerify.runLiveC(player, env)
 		-- 큰 바위판: 위에 서 있다가 부서지면 튕겨 나고 최대 체력 10% 피해.
 		local mesa = nil
 		for _, o in ipairs(BossArenaMap.obstacles(zoneKey)) do
-			if o.radius >= 8 then
+			if o.climbable then -- P3c B2 올라갈 수 있는 큰 블록(돌무더기 · 고인돌)
 				mesa = o
 			end
 		end
@@ -186,7 +193,7 @@ function P3aArenaVerify.runLiveC(player, env)
 		local info = BossArenaMap.lastBreak(zoneKey)
 		local hpAfter = PlayerState.getHp(player) / PlayerState.getMaxHp(player)
 		root.Anchored = false
-		r.check(("큰 바위판(반경 %.0f · 높이 %.1f) 위에서 부서짐 → 튕김 %d명(기대 1) · 체력 %.0f%% → %.0f%%(기대 −%.0f%%)"):format(mesa.radius, mesa.height, info and #info.launched or 0,
+		r.check(("큰 블록(반경 %.0f · 높이 %.1f) 위에서 부서짐 → 튕김 %d명(기대 1) · 체력 %.0f%% → %.0f%%(기대 −%.0f%%)"):format(mesa.radius, mesa.height, info and #info.launched or 0,
 			hpBefore * 100, hpAfter * 100, BossArenaMapData.obstacle.topBreak.maxHpFraction * 100),
 			info and #info.launched == 1 and math.abs((hpBefore - hpAfter) - BossArenaMapData.obstacle.topBreak.maxHpFraction) < 1e-6)
 		BossEncounter.despawnFor(player)
@@ -194,13 +201,15 @@ function P3aArenaVerify.runLiveC(player, env)
 		r.check(("보스전 끝 → 장식 · 구조물 치움=%s · 이 슬롯의 구조물 %d"):format(tostring(dressingAfter == nil), #BossArenaMap.obstacles(zoneKey)), dressingAfter == nil and #BossArenaMap.obstacles(zoneKey) == 0)
 	end)
 
-	r.section("돌진 충돌 · 뺑뺑이 방지", function()
+	r.section("돌진 충돌 · 뺑뺑이 규칙 제거", function()
 		local model, data, encounter = spawnBoss(player, env, "section_guardian")
 		local zoneKey = encounter.zoneKey
 		local zone = WorldConfig.zones[zoneKey]
 		local target = nil
+		-- P3c B1: 무작위 배치 - 중심에서 곧게 갔을 때 **처음 걸리는 것이 자기 자신인** 작은 구조물을 고른다(앞에 다른 구조물이 있으면 거기서 멈춘다).
 		for _, o in ipairs(BossArenaMap.obstacles(zoneKey)) do
-			if o.radius < 8 then
+			local dir = Vector3.new(o.center.X - zone.center.X, 0, o.center.Z - zone.center.Z).Unit
+			if o.group == "small" and BossArenaMap.firstOnPath(zoneKey, zone.center, dir, zone.radius, BossArenaMapData.obstacle.chargeBodyHalfStuds) == o.id then
 				target = o
 				break
 			end
@@ -230,17 +239,9 @@ function P3aArenaVerify.runLiveC(player, env)
 			stopDistance, target.radius + BossArenaMapData.obstacle.chargeBodyHalfStuds, tostring(info and info.cause), recoverLeft or -1, expectedRecover,
 			data.skills.charge.recoverSeconds, BossArenaMapData.obstacle.chargeStunBonusSeconds),
 			math.abs(stopDistance - (target.radius + BossArenaMapData.obstacle.chargeBodyHalfStuds)) < 0.6 and info and info.cause == "charge" and recoverLeft and math.abs(recoverLeft - expectedRecover) < 0.1)
-		-- 뺑뺑이 방지: 구조물 곁에서 추격이 이어지면(dt를 흘려) 계산한 시간에 부순다.
-		local other = BossArenaMap.obstacles(zoneKey)[1]
-		local nearPoint = other.center + Vector3.new(other.radius + 2, 1.5, 0)
-		local limit = BossArenaMap.smashSeconds(other.radius, data.moveSpeedStuds)
-		local elapsed, smashed = 0, nil
-		while elapsed < limit * 2 and not smashed do
-			elapsed += 0.5
-			smashed = BossArenaMap.noteBossChase(zoneKey, nearPoint, 0.5, data.moveSpeedStuds)
-		end
-		r.check(("뺑뺑이 방지: 구조물(반경 %.1f) 곁 추격 %.1f초에 부숨(기대 %.1f초 = %d바퀴 · 보스 속도 %d)"):format(other.radius, elapsed, limit, BossArenaMapData.obstacle.smashAfterLaps, data.moveSpeedStuds),
-			smashed == other.id and elapsed >= limit - 1e-6 and elapsed < limit + 0.5 + 1e-6)
+		-- P3c C8: 뺑뺑이 5바퀴 규칙은 없앴다 - 추격 중 구조물 곁을 맴돌아도 보스가 부수지 않는다(함수 자체가 없다).
+		r.check(("뺑뺑이 규칙 제거(P3c C8): noteBossChase=%s · smashSeconds=%s"):format(tostring(BossArenaMap.noteBossChase), tostring(BossArenaMap.smashSeconds)),
+			BossArenaMap.noteBossChase == nil and BossArenaMap.smashSeconds == nil)
 		BossEncounter.despawnFor(player)
 	end)
 
