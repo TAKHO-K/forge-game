@@ -759,6 +759,11 @@ local function runLive(player, env)
 	else
 		local perStepFlood = runAbyssal(player, env, r, root)
 		local perStepStrike = runStorm(player, env, r, root)
+		-- P3c A4: 둘째 낙뢰가 맞아 튕겨 난 사람을 따라가 다시 맞힌다(설계) - 낙뢰 검사 뒤 체력이 바닥이면 다음 보스 등장 때 죽어 캐릭터가 바뀐다.
+		-- 같은 층 검사는 지금 캐릭터로(옛 루트를 옮기면 어그로가 안 붙는다 - P3c Play 1 · 2 X).
+		PlayerState.setHp(player, PlayerState.getMaxHp(player))
+		local character2 = player.Character or player.CharacterAdded:Wait()
+		root = character2:WaitForChild("HumanoidRootPart", 5) or root
 		runLayer(player, env, r, root)
 		if perStepStrike then
 			print(("[29-4][나] 성능 폭풍 군주: BossPatterns.step 평균 %.1f마이크로초/틱 → 보스전 12개 x 60Hz = 프레임당 %.3fms"):format(perStepStrike * 1e6, perStepStrike * 12 * 1000))

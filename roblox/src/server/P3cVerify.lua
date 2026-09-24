@@ -151,7 +151,7 @@ function P3cVerify.runPure()
 		local back = ArenaShape.clip(zone, stop, -dir, margin)
 		local out = ArenaShape.clip(zone, stop, dir, margin)
 		r.check(("A3 벽 여백에서 멈춘 자리 → 안쪽으로 다시 돌진 %.1fstud(기대 지름 − 여백×2 = %.1f) · 바깥쪽 %.2f(기대 0) - Play 1의 \"경로 0.0stud\" 재발 방지"):format(
-			back, 2 * (zone.radius - margin), out), near(back, 2 * (zone.radius - margin), 1e-6) and out <= 1e-6)
+			back, 2 * (zone.radius - margin), out), near(back, 2 * (zone.radius - margin), 1e-3) and out <= 1e-3) -- Studio Vector3는 단정밀도(Play 2: 270.0 ± 1e-6 X)
 	end)
 
 	r.section("A4 번개", function()
