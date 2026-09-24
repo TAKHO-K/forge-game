@@ -232,9 +232,6 @@ function P3bVerify.runLive(player, env)
 	r.section("D3 툴팁 = 실제 피해", function()
 		local debugCast = ServerStorage:WaitForChild("SkillCastDebug", 5)
 		assert(debugCast, "SkillCastDebug 없음")
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		assert(root, "캐릭터 없음")
 		-- 5번째 = 난무 + 분신 확정 치명(첫 타가 치명 경로 - 툴팁 "치명" 값과 대조).
 		local samples = { { "greatsword", "Q" }, { "greatsword", "E" }, { "dualblade", "E" }, { "healer", "Q" }, { "dualblade", "E", crit = true } }
 		local spawned = {}
@@ -256,6 +253,14 @@ function P3bVerify.runLive(player, env)
 			local stats = info.slots[slot]
 			local text = SkillTooltipText.build(classId, slot, info)
 			local models = {}
+			-- 표본마다 지금 캐릭터를 다시 읽는다(Play 2: 표본 사이에 캐릭터가 죽어 리스폰했는데 옛 위치에 잡몹을 놓아 난무가 "대상 없음"이었다).
+			local character = player.Character or player.CharacterAdded:Wait()
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health <= 0 then
+				character = player.CharacterAdded:Wait()
+			end
+			local root = character:WaitForChild("HumanoidRootPart", 5)
+			assert(root, "캐릭터 없음")
 			if SkillData[classId][slot].coefficient then
 				local look = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
 				look = look.Magnitude > 1e-3 and look.Unit or Vector3.new(0, 0, -1)
