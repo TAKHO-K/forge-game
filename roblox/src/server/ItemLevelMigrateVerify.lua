@@ -11,6 +11,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+-- P2.5c 결정 6: 보스 드랍이 보스 스테이지 +15까지(옛 +2) - 실제 프로필 불변식의 허용 폭 = 잡몹 · 보스 편차 중 큰 쪽.
+local MAX_DELTA = math.max(ArmorData.itemLevelDelta[#ArmorData.itemLevelDelta].delta, ArmorData.bossItemLevelDelta[#ArmorData.bossItemLevelDelta].delta)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local SaveSystem = require(script.Parent.SaveSystem)
 
@@ -169,7 +172,7 @@ function ItemLevelMigrateVerify.runLive(player)
 			total += 1
 			if type(item.dropStage) ~= "number" then
 				noStage += 1
-			elseif item.itemLevel > item.dropStage + 2 then
+			elseif item.itemLevel > item.dropStage + MAX_DELTA then
 				over += 1
 				if not worst or item.itemLevel - item.dropStage > worst.gap then
 					worst = { gap = item.itemLevel - item.dropStage, where = where, itemLevel = item.itemLevel, dropStage = item.dropStage }
@@ -184,7 +187,7 @@ function ItemLevelMigrateVerify.runLive(player)
 				scan(classState.equipment[part], classId .. "." .. part)
 			end
 		end
-		r.check(("로드된 실제 프로필: version=%s(기대 %d) · 장비 %d개(가방 + 모든 직업 착용) 중 itemLevel > dropStage + 2 인 것 %d개%s · dropStage 없는 것 %d개 (기대 0 · 0 - 두 번째 Play라면 이관 로그도 없어야 한다)"):format(
+		r.check(("로드된 실제 프로필: version=%s(기대 %d) · 장비 %d개(가방 + 모든 직업 착용) 중 itemLevel > dropStage + " .. MAX_DELTA .. " 인 것 %d개%s · dropStage 없는 것 %d개 (기대 0 · 0 - 두 번째 Play라면 이관 로그도 없어야 한다)"):format(
 			tostring(profile.version), SaveConfig.saveVersion, total, over,
 			worst and (" - 최악 " .. worst.where .. " itemLevel " .. worst.itemLevel .. " / dropStage " .. worst.dropStage) or "", noStage),
 			profile.version == SaveConfig.saveVersion and over == 0 and noStage == 0)

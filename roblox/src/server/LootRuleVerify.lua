@@ -363,11 +363,12 @@ local function runBossDrops(player, env, r, profile, root)
 		local toBagAfter = CombatResolution.dropStats()
 		local grounded = newGroundDrops(player, before)
 		local item = profile.inventory[#profile.inventory]
-		local levelOk = item ~= nil and item.itemLevel >= stage and item.itemLevel <= stage + 2 and item.dropStage == stage and item.tierIndex == 1
+		local maxDelta = ArmorData.bossItemLevelDelta[#ArmorData.bossItemLevelDelta].delta -- P2.5c 결정 6: +15(옛 +2)
+		local levelOk = item ~= nil and item.itemLevel >= stage and item.itemLevel <= stage + maxDelta and item.dropStage == stage and item.tierIndex == 1
 		clearGroundDrops(grounded)
 		r.check(("첫 클리어 처치(스테이지 %d, 아레나 z=%.0f): 가방 %d → %d(기대 +1) · 땅의 드랍 모델 %d개(기대 0) · ItemPickedUp 발신 %d회(기대 1) · 아이템 itemLevel=%s dropStage=%s(기대 %d ~ %d · %d) · 첫 클리어 표시=%s ★진짜 합격 기준"):format(
 			stage, arenaPosition.Z, bagBefore, #profile.inventory, #grounded, toBagAfter - toBagBefore, tostring(item and item.itemLevel),
-			tostring(item and item.dropStage), stage, stage + 2, stage, tostring(PlayerProfile.hasBossFirstClearReward(player, stage))),
+			tostring(item and item.dropStage), stage, stage + maxDelta, stage, tostring(PlayerProfile.hasBossFirstClearReward(player, stage))),
 			#profile.inventory == bagBefore + 1 and #grounded == 0 and toBagAfter - toBagBefore == 1 and levelOk
 				and PlayerProfile.hasBossFirstClearReward(player, stage))
 	end)
@@ -396,7 +397,7 @@ local function runBossDrops(player, env, r, profile, root)
 		local distanceToArena = (drop and drop.PrimaryPart) and (drop.PrimaryPart.Position - arenaPosition).Magnitude or 0
 		local returned = afterRoot ~= nil and (afterRoot.Position - BossEncounter.huntingGroundReturnPosition()).Magnitude <= 10
 		local gradeOk = dropItem ~= nil and MonsterData.dropGradeTableByTier[1][dropItem.grade] ~= nil
-			and dropItem.itemLevel >= stage and dropItem.itemLevel <= stage + 2
+			and dropItem.itemLevel >= stage and dropItem.itemLevel <= stage + ArmorData.bossItemLevelDelta[#ArmorData.bossItemLevelDelta].delta -- P2.5c: +15
 		local alreadyNotified = drop ~= nil and ItemDropState.isFullNotified(drop)
 		local bagUnchanged = #profile.inventory == profile.inventorySlots
 		clearGroundDrops(grounded)
