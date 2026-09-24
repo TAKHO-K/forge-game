@@ -85,7 +85,14 @@ end
 -- P2.5c 결정 2: 신규 보호 배율 - 받는 사람의 **최고** 무한 스테이지(지금 직업 infiniteBest) ≤ 20일 때만(PlayerCombat.getNewbieDamageMultiplier).
 -- 지금 스테이지가 아니라 최고를 보는 이유(리뷰 1): 지금 스테이지는 언제든 내릴 수 있어, 파티원이 스테이지 1로 내려 두고 리더의 고스테이지 보스에 들어가면
 -- 피해가 ×0.1이 됐다. 최고 스테이지는 내려가지 않는다 - 진짜 신규만 보호받는다. 스탠드인(표 Player)은 nil이라 1. 체력바 눈금(MonsterAI TickDamage)도 이 함수를 곱한다.
+-- 검증 전용(DevTools 자동 검증 체인만 켠다): 옛 보스 · 피격 검증은 "보호 없는 피해"를 기대값으로 박아 두었고, 검증용 개발 프로필은 최고 스테이지가 20 이하일 수 있다
+-- (P2.5c Play 1 - 최고 5에서 ×0.158이 걸려 29-1 · 29-3 · 29-4 · S13b가 X). 체인이 도는 동안만 true - 신규 보호 자체는 P25c(나)가 다시 켜고 잰다.
+PlayerDamage.debugNewbieProtectionOff = false
+
 function PlayerDamage.getNewbieMultiplier(targetPlayer)
+	if PlayerDamage.debugNewbieProtectionOff then
+		return 1
+	end
 	return PlayerCombat.getNewbieDamageMultiplier(PlayerProfile.getInfiniteStageBest(targetPlayer))
 end
 

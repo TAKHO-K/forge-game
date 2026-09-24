@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
+local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
@@ -327,7 +328,11 @@ function StageRewardBand.selfTest(report)
 		return string.find(text, needle, 1, true) ~= nil
 	end
 
-	local d45, d50, d75, d100 = rowsOf(45, entryOf(false, "none", "none")), rowsOf(50, entryOf(false, "available", "none")), rowsOf(75, entryOf(false, "available", "none")), rowsOf(100, entryOf(false, "available", "available"))
+	-- P2.5c 결정 10: 방지권 · 강화석 임계값이 힘 비율 환산(360 · 180칸 · 720 · 재료 358 · 539)으로 바뀌어, 옛 자리 45 · 50 · 75 · 100을 데이터의 같은 자리
+	-- (첫 지급 − 5 · 첫 지급 · 둘째 지급 · 초기화 시작 = 355 · 360 · 540 · 720)로 옮긴다. 변수 이름은 옛 자리 번호 그대로 둔다.
+	local grant = EnhanceConfig.protection.bossGrant
+	local S45, S50, S75, S100 = grant.firstStage - BossData.stageInterval, grant.firstStage, grant.firstStage + grant.stepStages, grant.resetFromStage
+	local d45, d50, d75, d100 = rowsOf(S45, entryOf(false, "none", "none")), rowsOf(S50, entryOf(false, "available", "none")), rowsOf(S75, entryOf(false, "available", "none")), rowsOf(S100, entryOf(false, "available", "available"))
 	local t45, t50, t75, t100 = joined(d45), joined(d50), joined(d75), joined(d100)
 	report(("방지권 표시 45 / 50 / 75 / 100 = 없음 / 하락 / 하락 / 둘 다: [%s] [%s] [%s] [%s]"):format(t45, t50, t75, t100),
 		not has(t45, "방지권") and has(t50, "하락 방지권 ×1") and not has(t50, "초기화") and has(t75, "하락 방지권 ×1") and not has(t75, "초기화")
@@ -335,20 +340,23 @@ function StageRewardBand.selfTest(report)
 	report(("강화석 항목 45 / 50 / 75 / 100 = 없음 / ≈5 / ≈5 + 상급 ≈5 / 같음: 45 %s · 50 %s · 75 %s · 100 %s"):format(
 		tostring(has(t45, "강화석")), tostring(has(t50, "강화석 ≈5")), tostring(has(t75, "강화석 ≈5 · 상급 강화석 ≈5")), tostring(has(t100, "강화석 ≈5 · 상급 강화석 ≈5"))),
 		not has(t45, "강화석") and has(t50, "강화석 ≈5") and not has(t50, "상급") and has(t75, "강화석 ≈5 · 상급 강화석 ≈5") and has(t100, "강화석 ≈5 · 상급 강화석 ≈5"))
-	report(("제목 · 매번 · Lv 범위: [%s] · 50: [%s] (기대 '스테이지 50 보스 · 서리 거인' · '20마리분' · 'Lv 50~52' · '???' 없음)"):format(d50.title, t50),
-		d50.title == "스테이지 50 보스 · 서리 거인" and has(t50, "골드·경험치 20마리분") and has(t50, "Lv 50~52") and not has(d50.title .. t50, "???"))
-	local r0, r1 = rowsOf(50, entryOf(false, "available", "none"), 0), rowsOf(50, entryOf(false, "available", "none"), 1)
+	local deltas = ArmorData.bossItemLevelDelta
+	local lvRange = ("Lv %d~%d"):format(S50 + deltas[1].delta, S50 + deltas[#deltas].delta) -- P2.5c 결정 6: +0 ~ +15
+	local titleHead = ("스테이지 %d 보스 · "):format(S50)
+	report(("제목 · 매번 · Lv 범위: [%s] · %d: [%s] (기대 '%s…' · '20마리분' · '%s' · '???' 없음)"):format(d50.title, S50, t50, titleHead, lvRange),
+		string.sub(d50.title, 1, #titleHead) == titleHead and has(t50, "골드·경험치 20마리분") and has(t50, lvRange) and not has(d50.title .. t50, "???"))
+	local r0, r1 = rowsOf(S50, entryOf(false, "available", "none"), 0), rowsOf(S50, entryOf(false, "available", "none"), 1)
 	report(("등급 이상 표기 · 확률 줄 수: 환생 0회 [%s] %d줄(기대 영웅 이상 · 5줄) / 환생 1회 [%s] %d줄(기대 희귀 이상 · 6줄)"):format(
 		string.match(r0.rows[1].plain, "%((%S+) 이상") or "?", r0.helpLines, string.match(r1.rows[1].plain, "%((%S+) 이상") or "?", r1.helpLines),
 		has(r0.rows[1].plain, "영웅 이상") and r0.helpLines == 5 and has(r1.rows[1].plain, "희귀 이상") and r1.helpLines == 6)
 	-- 직업 / 계정은 다른 축: 장비는 이 직업 기준, 방지권은 계정 기준 - 한 줄이 받은 것이어도 다른 줄은 밝다.
-	local axes = rowsOf(50, entryOf(false, "claimed", "none"))
+	local axes = rowsOf(S50, entryOf(false, "claimed", "none"))
 	local gearRow, ticketRow = axes.rows[1], axes.rows[2]
 	report(("직업 · 계정 축 분리(장비 미수령 · 방지권 수령): 장비 줄 흐림 %s(기대 false) · 방지권 줄 흐림 %s · '✓ 받음' %s(기대 true · true) · 꼬리표 [직업] %s · [계정] %s"):format(
 		tostring(has(gearRow.text, dim)), tostring(has(ticketRow.text, dim)), tostring(has(ticketRow.plain, "✓ 받음")), tostring(has(gearRow.plain, "[직업]")), tostring(has(ticketRow.plain, "[계정]"))),
 		not gearRow.claimed and not has(gearRow.text, dim) and ticketRow.claimed and has(ticketRow.text, dim) and has(ticketRow.plain, "✓ 받음") and has(gearRow.plain, "[직업]") and has(ticketRow.plain, "[계정]"))
-	local done = rowsOf(50, entryOf(true, "claimed", "none"))
-	local mixed = rowsOf(100, entryOf(true, "claimed", "available"))
+	local done = rowsOf(S50, entryOf(true, "claimed", "none"))
+	local mixed = rowsOf(S100, entryOf(true, "claimed", "available"))
 	report(("받은 줄은 지워지지 않고 흐려진다: 장비 줄 '✓ 받음' %s · 흐림 %s(기대 true · true) · 줄 수 %d(기대 4 - 그대로) / 방지권이 하나만 받음 → '✓' %s · 줄 흐림 %s(기대 true · false)"):format(
 		tostring(has(done.rows[1].plain, "✓ 받음")), tostring(has(done.rows[1].text, dim)), #done.rows, tostring(has(mixed.rows[2].plain, "하락 방지권 ×1 ✓")), tostring(has(mixed.rows[2].text, colored("하락 방지권 ×1 ✓ · 초기화 방지권 ×1 [계정]", "textTertiary")))),
 		has(done.rows[1].plain, "✓ 받음") and has(done.rows[1].text, dim) and #done.rows == 4 and has(mixed.rows[2].plain, "하락 방지권 ×1 ✓") and not mixed.rows[2].claimed)

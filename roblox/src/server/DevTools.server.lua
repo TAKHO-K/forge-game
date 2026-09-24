@@ -2457,7 +2457,7 @@ if RunService:IsStudio() and verifyEnabled("26-2") then
 		print("[26-2][2] 새 옵션 12종 적용 전/후(태초·itemLevel100·최대롤 1.125)")
 		local ROLL_MAX = OptionData.rollMax
 		local function expectedRaw(optionId)
-			return OptionData.options[optionId].baseValue * ROLL_MAX
+			return OptionData.options[optionId].baseValue * ROLL_MAX * Option.gradeFactor("primordial") -- P2.5c: 태초 등급 몫(옛 1)
 		end
 
 		-- 공통 4종(축 자체가 곧 "전/후"다 - 배수 1.00 또는 흡혈률 0%가 "전").
@@ -2476,8 +2476,8 @@ if RunService:IsStudio() and verifyEnabled("26-2") then
 		-- 치명(치확·치피 둘 다 독립 롤이지만 여기선 둘 다 최대롤로 검산).
 		do
 			local value = Option.valueOf({ id = "crit", roll = ROLL_MAX, roll2 = ROLL_MAX }, "primordial", 100, nil)
-			local expectedCrit = OptionData.options.crit.critRateBase * ROLL_MAX
-			local expectedDmg = OptionData.options.crit.critDmgBase * ROLL_MAX
+			local expectedCrit = OptionData.options.crit.critRateBase * ROLL_MAX * Option.gradeFactor("primordial") -- P2.5c: 태초 등급 몫
+			local expectedDmg = OptionData.options.crit.critDmgBase * ROLL_MAX * Option.gradeFactor("primordial")
 			local ok = checkmark(value.critRate, expectedCrit, 0.0005) and checkmark(value.critDmg, expectedDmg, 0.0005)
 			print(("[26-2][2]   치명: 치확+0%%p 치피+0 -> 치확+%.4f%%p 치피+%.4f (기대 치확+%.4f%%p 치피+%.4f) %s"):format(
 				value.critRate * 100, value.critDmg, expectedCrit * 100, expectedDmg, record(ok)))
@@ -2564,10 +2564,12 @@ if RunService:IsStudio() and verifyEnabled("26-2") then
 				weaponLevel = 0, weaponGrade = 0,
 				gear = { armor = gearSpec, gloves = gearSpec, shoes = gearSpec },
 			}), BalanceAnchorConfig.referenceLevel).surviveHits
-			local expectedHits = bare * 1.20 * 1.188
+			-- P2.5c 결정 5: 태초 보석 몫이 0.65라 건강 2개 = +20% → +13%(Option이 계산) · 방어 3개는 여전히 상한 32%(= ×1.188).
+			local maxHpSum = Option.sumAxisBonus(gems, "maxHpPercent", nil)
+			local expectedHits = bare * (1 + maxHpSum) * 1.188
 			local ok = checkmark(point.surviveHits, expectedHits, expectedHits * 0.01)
-			print(("[26-2][4]   건강2+방어3(태초·기댓값) 장착 후 생존 타수=%.3f대 (기대 보석 없음 %.3f × 1.20 × 1.188 = %.3f대) %s"):format(
-				point.surviveHits, bare, expectedHits, record(ok)))
+			print(("[26-2][4]   건강2+방어3(태초·기댓값) 장착 후 생존 타수=%.3f대 (기대 보석 없음 %.3f × %.3f × 1.188 = %.3f대) %s"):format(
+				point.surviveHits, bare, 1 + maxHpSum, expectedHits, record(ok)))
 		end
 
 		-- [5] 경험치 8개 몰빵 합산 상한(Σ≤25%).
@@ -2771,7 +2773,7 @@ if RunService:IsStudio() and verifyEnabled("27-1(가)") then
 		-- "1 + getOptionBonus")을 그대로 재현 - Option.valueOf로 태초·itemLevel100·중앙롤(1.0)
 		-- 값을 구해 곱한다(하드코딩 없음, [2] 표의 "태초 기준값" -60%와 일치해야 한다).
 		local dealingModeBonus = Option.valueOf({ id = "skill_healer_E", roll = 1.0 }, "primordial", 100, "healer")
-		local dealingModeExpected = OptionData.options.skill_healer_E.baseValue
+		local dealingModeExpected = OptionData.options.skill_healer_E.baseValue * Option.gradeFactor("primordial") -- P2.5c: 태초 등급 몫(옛 1)
 		local dealingModeOk = math.abs(dealingModeBonus - dealingModeExpected) < 0.0005
 		local reducedDrain = baseDrain * (1 + dealingModeBonus)
 		local reducedParams = table.clone(baselineParams)
@@ -3317,6 +3319,8 @@ if RunService:IsStudio() then
 				applyOptionStack = applyOptionStack,
 				partySelfTest = runPartySelfTest,
 			}
+			-- P2.5c: 체인 동안 신규 보호를 끈다(PlayerDamage.debugNewbieProtectionOff 주석 - 옛 피격 기대값 보존, P25c(나)가 다시 켜고 잰다). 루프 뒤에 되돌린다.
+			require(script.Parent.PlayerDamage).debugNewbieProtectionOff = true
 			-- 29-1(뼈대 회귀) → 29-2(가: 순수 계산) → 29-2(나: 실제 서버 경로) 순서로 이어서 돈다 - 같은 플레이어·같은
 			-- 아레나를 쓰므로 겹치면 안 된다. 하나가 에러로 끊겨도 다음은 돈다.
 			for _, stage in ipairs({
@@ -3364,6 +3368,7 @@ if RunService:IsStudio() then
 					end
 				end
 			end
+			require(script.Parent.PlayerDamage).debugNewbieProtectionOff = false
 			-- S04 사전 작업(PRD 20.83 [8]): 옛 블록을 포함한 검증 체인 전체가 실제 가방을 그대로 남겼는가. 기준은 이 서버의 첫 백업
 			-- 순간(=어떤 블록도 가방을 건드리기 전)의 지문이다. 예전에는 Play마다 보스 드랍 2 ~ 3개가 가방에 남았다.
 			if firstBagCount[player] ~= nil then -- 체인이 전부 건너뛰어졌으면(DevToolsConfig.verify) 백업이 없어 기준도 없다

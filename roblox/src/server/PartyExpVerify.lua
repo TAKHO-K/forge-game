@@ -271,15 +271,16 @@ function PartyExpVerify.runLive(player, env)
 	end)
 
 	r.section("[5] 옵션 상한 + 4인 = ×1.500", function()
-		-- 성장 옵션 태초 3부위(합 37.5% → 상한 25%): 26-2 검증이 옵션 장비를 만드는 방식(setEquippedDirect + option 테이블)을 따른다.
+		-- 성장 옵션 태초 3부위(최대 롤 - 합이 상한 25%를 넘는다): 26-2 검증이 옵션 장비를 만드는 방식(setEquippedDirect + option 테이블)을 따른다.
+		-- P2.5c: 태초 등급 몫 0.65로 중앙 롤 3개 합이 24.4%(< 상한)라 최대 롤(1.125)로 올렸다(합 약 27.5%).
 		for _, part in ipairs({ "armor", "gloves", "shoes" }) do
 			PlayerProfile.setEquippedDirect(player, part, {
-				grade = "primordial", part = part, dropStage = 100, itemLevel = 100, tierIndex = 1, locked = true, option = { id = "expGain", roll = 1.0 },
+				grade = "primordial", part = part, dropStage = 100, itemLevel = 100, tierIndex = 1, locked = true, option = { id = "expGain", roll = 1.125 },
 			})
 		end
 		local capBonus = PlayerProfile.getOptionBonus(player, "expGain")
 		local multiplier = PlayerProfile.getExpGainMultiplier(player)
-		r.check(("성장 옵션 3부위(합 37.5%%) · 4인: 옵션 합 %.3f(기대 0.250 - 상한) · 배수 ×%.4f(기대 ×1.5000 - 곱. 합이면 ×1.4500) ★진짜 합격 기준"):format(capBonus, multiplier),
+		r.check(("성장 옵션 3부위(최대 롤 - 합 > 25%%) · 4인: 옵션 합 %.3f(기대 0.250 - 상한) · 배수 ×%.4f(기대 ×1.5000 - 곱. 합이면 ×1.4500) ★진짜 합격 기준"):format(capBonus, multiplier),
 			near(capBonus, 0.25) and near(multiplier, 1.5))
 		for _, part in ipairs({ "armor", "gloves", "shoes" }) do
 			PlayerProfile.setEquippedDirect(player, part, nil)

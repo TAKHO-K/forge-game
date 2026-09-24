@@ -256,6 +256,8 @@ function P25cVerify.runLive(player, env)
 		-- 같은 공격을 (지금 스테이지, 최고 스테이지) 조합마다 PlayerDamage.applyHit로 넣고, 감소식만 거친 피해(computeHitDamage)와 비교한다. 체력은 매번 가득 채운다.
 		-- 보호 기준 = 최고 스테이지(리뷰 1 - 지금 스테이지를 1로 내려 두고 고스테이지 보스에 들어가는 악용 차단).
 		local attack = 1
+		local savedOff = PlayerDamage.debugNewbieProtectionOff
+		PlayerDamage.debugNewbieProtectionOff = false -- 검증 체인이 꺼 둔 신규 보호를 이 항목에서만 켠다(끝에서 되돌린다)
 		local function hitAt(current, best)
 			env.applyStage(player, current)
 			classState.stageProgress.infiniteBest = best
@@ -267,6 +269,7 @@ function P25cVerify.runLive(player, env)
 			return dealt / raw
 		end
 		local r1, r10, r30, rAbuse = hitAt(1, 1), hitAt(10, 10), hitAt(30, 30), hitAt(1, 500)
+		PlayerDamage.debugNewbieProtectionOff = savedOff
 		local ok = near(r1, PlayerCombat.getNewbieDamageMultiplier(1), 1e-6) and near(r10, PlayerCombat.getNewbieDamageMultiplier(10), 1e-6) and near(r30, 1, 1e-6) and near(rAbuse, 1, 1e-6)
 		r.check(("B 실제 applyHit ÷ 감소식 피해: 최고 1 %.4f · 10 %.4f · 30 %.4f(기대 %.3f · %.3f · 1) · 지금 1 + 최고 500 %.4f(기대 1 - 스테이지를 내려도 보호 없음)"):format(
 			r1, r10, r30, PlayerCombat.getNewbieDamageMultiplier(1), PlayerCombat.getNewbieDamageMultiplier(10), rAbuse), ok)
