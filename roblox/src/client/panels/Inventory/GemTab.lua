@@ -339,7 +339,13 @@ local function endGemDrag(x, y)
 		proxy:Destroy()
 		if index then
 			-- 26-3(PRD 20.67 [12] "보유 보석 셀도 클릭 = 선택(드래그는 그대로 장착)") - 홈에 안 놓인 채 끝난 누름(=짧은 클릭)을 선택으로 처리한다.
-			deps.select("gemBag", index)
+			-- P3b C1: 같은 보석을 다시 누르면 상세가 닫힌다(선택 해제 - 토글).
+			local selectedKind, selectedValue = deps.getSelection()
+			if selectedKind == "gemBag" and selectedValue == index then
+				deps.select(nil, nil)
+			else
+				deps.select("gemBag", index)
+			end
 			refreshDetail()
 		end
 	end
@@ -426,7 +432,12 @@ local function bindSlotInput(obj, slot)
 		if tapMode() then
 			onSlotTap(slot)
 		elseif Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot) and Gem.isFilled(currentGemState.gems, slot) then
-			deps.select("gemSlot", slot)
+			local selectedKind, selectedValue = deps.getSelection()
+			if selectedKind == "gemSlot" and selectedValue == slot then
+				deps.select(nil, nil) -- P3b C1: 같은 홈을 다시 누르면 상세가 닫힌다(토글)
+			else
+				deps.select("gemSlot", slot)
+			end
 			refreshDetail()
 			paintAll()
 		end

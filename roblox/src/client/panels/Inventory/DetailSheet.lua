@@ -20,6 +20,19 @@ local InheritPanel = require(script.Parent.Parent.Inherit)
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
 local GemForge = require(script.Parent.Parent.GemForge)
 
+-- P3b C1: 옵션 굴림 위치(그 등급 · 레벨 범위의 어디쯤인가 - 장비 보기 창과 같은 EquipCompare.rollPercent). 치명은 치확 / 치피 두 굴림.
+local EquipCompare = require(ReplicatedStorage.Shared.EquipCompare)
+local function rollText(item)
+	local option = item and item.option
+	if not option or not option.roll then
+		return ""
+	end
+	if option.id == "crit" then
+		return (" · 굴림 %.0f%% / %.0f%%"):format(EquipCompare.rollPercent(option.roll), EquipCompare.rollPercent(option.roll2 or option.roll))
+	end
+	return (" · 굴림 %.0f%%"):format(EquipCompare.rollPercent(option.roll))
+end
+
 -- "착용 대비" 한 줄(부위 기본 효과 차이). equipped가 없으면 nil.
 local function compareText(equipped, item)
 	if not equipped then
@@ -481,9 +494,9 @@ local function refreshDetailBody()
 		local visual = ItemVisualData.gradeVisuals[item.grade]
 		local color = visual and visual.color or UIColors.textPrimary
 		local described = ItemDescribe.item(item, player:GetAttribute("ClassId"))
-		dname.Text = described.title
+		dname.Text = described.title .. " (가방)" -- P3b C1: 장착 여부(착용 칸은 "(착용 중)")
 		dname.TextColor3 = color
-		dmeta.Text = ("%s · 판매가 %s"):format(described.meta, NumberFormat.format(Loot.getSellPrice(item)))
+		dmeta.Text = ("%s%s · 판매가 %s"):format(described.meta, rollText(item), NumberFormat.format(Loot.getSellPrice(item)))
 		setDpicIcon(item.part or "armor", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -521,7 +534,7 @@ local function refreshDetailBody()
 		local described = ItemDescribe.item(item, player:GetAttribute("ClassId"))
 		dname.Text = described.title .. " (착용 중)"
 		dname.TextColor3 = color
-		dmeta.Text = described.meta
+		dmeta.Text = described.meta .. rollText(item)
 		setDpicIcon(item.part or part, color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -582,7 +595,7 @@ local function refreshDetailBody()
 		local color = visual and visual.color or UIColors.textPrimary
 		dname.Text = ("%d번 홈 - %s"):format(S.selectedValue, ItemDescribe.gem(gem).title)
 		dname.TextColor3 = color
-		dmeta.Text = ("상한 %s"):format(ArmorData.grades[Gem.gradeCapForSlot(S.selectedValue)].displayName)
+		dmeta.Text = ("장착 중 · 상한 %s%s"):format(ArmorData.grades[Gem.gradeCapForSlot(S.selectedValue)].displayName, rollText(gem))
 		setDpicIcon("weapon", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -609,7 +622,7 @@ local function refreshDetailBody()
 		local color = visual and visual.color or UIColors.textPrimary
 		dname.Text = ItemDescribe.gem(gem).title
 		dname.TextColor3 = color
-		dmeta.Text = ("보유 보석 - 장착하면 홈의 보석과 교체 · 분해하면 가루 %d"):format(GemCraft.dustYield(gem))
+		dmeta.Text = ("보유 보석(미장착)%s · 분해하면 가루 %d"):format(rollText(gem), GemCraft.dustYield(gem))
 		setDpicIcon("weapon", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0

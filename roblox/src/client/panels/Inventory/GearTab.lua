@@ -387,7 +387,13 @@ local function rebuildGearSlots()
 
 		if interactive then
 			slot.Activated:Connect(function()
-				if part == "weapon" then
+				if S.selectedKind == "equip" and S.selectedValue == part and (part == "weapon" or filled) then
+					S.selectedKind, S.selectedValue = nil, nil -- P3b C1: 같은 칸을 다시 누르면 상세가 닫힌다(토글). 그 두 번째 클릭이 0.35초 안(PC 더블클릭)이면 기존대로 해제한다.
+					if part ~= "weapon" and not S.tapMode() and isDoubleClick(part) then
+						S.unequipToBag(part)
+						return
+					end
+				elseif part == "weapon" then
 					S.selectedKind, S.selectedValue = "equip", "weapon"
 				elseif filled then
 					-- S20d: PC 더블클릭 = 해제 / 한 번 클릭 · 탭 방식(폰) = 선택(해제는 상세의 [해제] 버튼). 착용 · 해제는 S.unequipToBag(ItemActions) 한 곳으로 간다.

@@ -106,7 +106,12 @@ function S.bagAreaCenter()
 end
 
 local function selectBagIndex(index)
-	S.selectedKind, S.selectedValue = "bag", index
+	if S.selectedKind == "bag" and S.selectedValue == index then
+		index = nil -- P3b C1: 같은 칸을 다시 누르면 상세가 닫힌다(선택 해제 - 토글). PC 더블클릭(0.35초 안)은 이 앞에서 착용으로 빠진다.
+		S.selectedKind, S.selectedValue = nil, nil
+	else
+		S.selectedKind, S.selectedValue = "bag", index
+	end
 	S.refreshDetail()
 	for i, cell in ipairs(cellFrames) do
 		local selStroke = cell:FindFirstChild("SelectionStroke")
