@@ -28,6 +28,9 @@ local GEOMETRY = BossArenaMapData.geometry
 local OBSTACLE = BossArenaMapData.obstacle
 local FLOOR_TOP_Y = GEOMETRY.floorThicknessStuds / 2 -- 1(옛 아레나와 같은 관례)
 
+-- P3d B2: 맵 이탈 복귀 직후 보호 중인가(BossArenaContainment가 건다 - 이 모듈은 그 모듈을 require하지 않는다). nil이면 보호 없음.
+BossArenaMap.isLaunchProtected = nil
+
 -- 배치 시드를 뽑는 난수(보스 등장마다). 검증은 debugNextSeed로 고정 시드를 넣는다.
 local layoutRng = Random.new()
 BossArenaMap.debugNextSeed = nil
@@ -285,7 +288,7 @@ local function fireBreak(state, obstacle, cause)
 				position = obstacle.center + Vector3.new(0, obstacle.height / 2, 0),
 				radius = obstacle.radius, height = obstacle.height, color = obstacle.color, cause = cause,
 			})
-			if standsOnTop(obstacle, character, root) then
+			if standsOnTop(obstacle, character, root) and not (BossArenaMap.isLaunchProtected and BossArenaMap.isLaunchProtected(player)) then -- P3d B2: 복귀 보호 중이면 안 튕긴다
 				table.insert(launched, player)
 				if patternEvent then
 					patternEvent:FireClient(player, "launch", {

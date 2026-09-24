@@ -135,4 +135,80 @@ function ArenaContainment.simulate(zone, params, trials, seed, maxEvents)
 	return counts
 end
 
+-- ─────────────────────────── 이탈 · 복귀 시뮬레이션(P3d B3) ───────────────────────────
+-- ①②가 뚫렸다고 치고(넉백을 상한 없이 원래 값 × 1 ~ 3으로 준다 - 이탈을 억지로 만든다) ③ 복귀 규칙만 잰다. 한 조합 = 멤버 1명(파티 1 ~ 4명 중 순번) · 무작위 시작 ·
+-- 사건 1 ~ maxEvents개(사건 사이 0.05 ~ 1.5초). 복귀 = 스폰 자리(params.spawns[순번]) · 체력 비율과 기믹 누적은 그대로 · 보호 protectSeconds(넉백 무시 · 받는 피해 0).
+-- 셈: exits(이탈) · returns(복귀) · chainExits(복귀 뒤 보호 + 검사 간격 안에 다시 이탈) · hpChanged · stacksChanged(복귀가 바꾼 것) · spawnOutside(스폰 자리가 원 밖) ·
+-- suppressed(보호로 무시한 넉백).
+-- params = { spawns = { [파티 인원] = { [순번] = Vector3 } }, launchDistance, damagePerHit(최대체력 비율), protectSeconds, checkSeconds, walkStuds, dashStuds,
+--   chainWindowSeconds(연쇄로 볼 복귀 뒤 창 - 생략 = 보호 + 검사 간격. 보호 0과 비교할 때는 같은 창을 준다) }
+function ArenaContainment.simulateReturn(zone, params, trials, seed, maxEvents)
+	local state = seed or 1
+	local function rand()
+		state = (state * 1103515245 + 12345) % 2147483648
+		return state / 2147483648
+	end
+	local function randomDir()
+		local angle = rand() * 2 * math.pi
+		return Vector3.new(math.cos(angle), 0, math.sin(angle))
+	end
+	local counts = { trials = 0, exits = 0, returns = 0, chainExits = 0, hpChanged = 0, stacksChanged = 0, spawnOutside = 0, suppressed = 0, events = 0 }
+	for _ = 1, trials do
+		counts.trials += 1
+		local size = 1 + math.floor(rand() * 4)
+		local index = 1 + math.floor(rand() * size)
+		local spawn = params.spawns[size][index]
+		if ArenaContainment.isOutside(zone, spawn, nil) then
+			counts.spawnOutside += 1
+		end
+		local r = rand() < 0.5 and (zone.radius - 1 - rand() * 4) or (math.sqrt(rand()) * (zone.radius - 1))
+		local position = zone.center + randomDir() * r
+		local hp = 0.2 + rand() * 0.8
+		local stacks = { gimmickDamage = math.floor(rand() * 4) * 0.1375, reflects = math.floor(rand() * 3), zoneSteps = math.floor(rand() * 2) }
+		local t, protectUntil, lastReturn = 0, -math.huge, -math.huge
+		for _ = 1, 1 + math.floor(rand() * (maxEvents or 6)) do
+			counts.events += 1
+			t += 0.05 + rand() * 1.45
+			local protected = t < protectUntil
+			local kind = rand()
+			if kind < 0.5 then -- 넉백(낙뢰 · 구조물 파편 · 회오리 무리)
+				if protected then
+					counts.suppressed += 1
+				else
+					hp = math.max(hp - params.damagePerHit, 0.01) -- 그 기술의 피해는 받는다
+					local scale = 1 + rand() * 2
+					position += randomDir() * params.launchDistance * scale
+				end
+			elseif kind < 0.75 then -- 대시(벽에 막힌다)
+				local dir = randomDir()
+				position += dir * math.min(params.dashStuds, math.max(ArenaShape.clip(zone, position, dir, 1), 0))
+			else -- 걷기(벽이 막는다)
+				local dir = randomDir()
+				position += dir * math.min(rand() * params.walkStuds, math.max(ArenaShape.clip(zone, position, dir, 1), 0))
+			end
+			if ArenaContainment.isOutside(zone, position, nil) then
+				counts.exits += 1
+				if t <= lastReturn + (params.chainWindowSeconds or (params.protectSeconds + params.checkSeconds)) then
+					counts.chainExits += 1
+				end
+				-- ③ 복귀: 스폰 자리로 순간이동만 - 체력 · 누적은 그대로
+				local hpBefore, stacksBefore = hp, table.clone(stacks)
+				position = spawn
+				counts.returns += 1
+				if hp ~= hpBefore then
+					counts.hpChanged += 1
+				end
+				for key, value in pairs(stacksBefore) do
+					if stacks[key] ~= value then
+						counts.stacksChanged += 1
+					end
+				end
+				protectUntil = t + params.protectSeconds
+				lastReturn = t
+			end
+		end
+	end
+	return counts
+end
+
 return ArenaContainment

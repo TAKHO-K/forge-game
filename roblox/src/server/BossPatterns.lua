@@ -45,6 +45,7 @@ local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
 local ArenaContainment = require(ReplicatedStorage.Shared.ArenaContainment) -- P3c A5: 넉백 상한 · 착지 경계(클라와 같은 함수)
 local BossArenaMap = require(script.Parent.BossArenaMap)
 local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
+local BossArenaContainment = require(script.Parent.BossArenaContainment) -- P3d B2: 맵 이탈 복귀 보호(넉백 건너뛰기)
 
 local BossPatterns = {}
 
@@ -505,7 +506,7 @@ end
 -- 판정에 맞은 한 사람에게 도는 조각(onHit). from = 그 판정의 중심. coHits(P3c A4) = 이 판정에 함께 맞은 사람 수(자기 포함).
 local function runHitEffects(c, effects, v, from, coHits)
 	for _, effect in ipairs(effects or {}) do
-		if effect.type == "launch" and not BossTrap.isTrapped(v.player) then
+		if effect.type == "launch" and not BossTrap.isTrapped(v.player) and not BossArenaContainment.isProtected(v.player) then -- P3d B2: 맵 이탈 복귀 직후 보호 중이면 안 뜬다
 			c.st.lastLaunch = { player = v.player, at = c.now, effect = effect } -- 자동 검증이 읽는다
 			-- 29-5 탱커 훅 ③: 무게 계수(지금은 전원 1.0 - BossMechanics.weightFactorOf). 무거울수록 낮게·가까이·짧게 뜬다 -
 			-- 높이·거리·체공·면역 시간을 계수로 나눈다(조작을 잃는 시간이 짧아지면 면역도 같이 짧아져야 공짜 면역이 안 된다).

@@ -110,8 +110,12 @@ local featureShapes = {
 --   ① 넉백 상한: 높이 ≤ maxLaunchHeightStuds · 수평 거리 ≤ maxLaunchDistanceStuds. 높이 7.5 = 판정 높이차 상한(8)보다 낮고(보스가 뜬 대상을 놓치지 않는다),
 --      가장 높은 발판(큰 블록 윗면 obstacle.climbHeightStuds)에서 떠도 벽 윗면(wallHeightStuds 14)에 못 닿는다(3.5 + 7.5 = 11 < 14).
 --   ② 경계 안쪽 고정: 넉백 착지점이 벽에서 innerMarginStuds 안쪽을 넘지 않게 수평 거리를 줄인다(클라 BossStormView가 이 함수로 자른다 - 서버는 구역을 실어 보낸다).
---   ③ 복귀: 서버가 checkIntervalSeconds마다 멤버 위치를 보고, 원 밖(outsideToleranceStuds 넘게) · 바닥 아래(fallDepthStuds)면 피해 없이 벽에서
---      rescueInsetStuds 안쪽의 안전 지점(구조물 밖)으로 옮긴다(server/BossArenaContainment). ①②가 지키면 ③은 한 번도 안 돈다 - 로그가 0이어야 정상이다.
+--   ③ 복귀: 서버가 checkIntervalSeconds마다 멤버 위치를 보고, 원 밖(outsideToleranceStuds 넘게) · 바닥 아래(fallDepthStuds)면 옮긴다(server/BossArenaContainment).
+--      P3d B(사용자 결정 - 옛 "피해 없이 벽에서 rescueInsetStuds 안쪽"을 대체): **본인의 보스방 스폰 자리**(입장 자리 - BossArenaMap.entryPosition, 멤버 순번)로 옮긴다.
+--      날려 보낸 기술의 피해는 그 판정에서 이미 받았다(복귀가 되돌리지 않는다) · 체력 비율 · 기믹 누적(%피해 발동 누적 · 반사 횟수 · 단 기록 · 잡힘)은 그대로다(순간이동만 한다).
+--      복귀 직후 returnProtectSeconds 동안 보호: 받는 피해 0배 + 넉백(launch)을 안 받는다 - 스폰 자리에 떨어지는 다음 판정이 곧바로 다시 날려 보내는 연쇄 이탈을 막는다.
+--      0.75 = 지시 범위 0.5 ~ 1초의 가운데(결정 필요 - 로그). 스폰 자리가 구조물에 덮였으면(재생성은 입장 자리를 비운다 - 안전망) 옛 안전 지점(rescueInsetStuds)으로 간다.
+--      ①②가 지키면 ③은 한 번도 안 돈다 - 로그가 0이어야 정상이다.
 local containment = {
 	maxLaunchHeightStuds = 7.5,
 	maxLaunchDistanceStuds = 12,
@@ -119,6 +123,7 @@ local containment = {
 	outsideToleranceStuds = 2,
 	fallDepthStuds = 6,
 	rescueInsetStuds = 8,
+	returnProtectSeconds = 0.75,
 	checkIntervalSeconds = 0.25,
 	-- 이탈 시뮬레이션(검증 P3c(가)): 무작위 패턴 조합 trials회 - 한 조합 = 사건 1 ~ maxEvents개(넉백 · 회오리 · 구조물 파편 · 모래 무덤 밀기 · 대시 · 걷기).
 	sim = { trials = 1000, maxEvents = 6, seed = 20260924 },
