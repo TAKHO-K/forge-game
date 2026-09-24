@@ -118,11 +118,24 @@ local config = {
 		--   Leaderboard(이름 · 내 줄 · 가짜 채우기) → P3a(나) · SkillServer · HealCast(SkillStats로 식 이동) → S13(가)(나) · S13b(가)(나) · P25a(가)(나) ·
 		--   Inspect(칸 펼침 · 비교) → S12b(UI) · 인벤토리(BagTab · GearTab · GemTab · DetailSheet 토글 · 굴림) → S20(UI) · S20c(UI) · S20d(UI) · S20e(UI) · P25b(UI) ·
 		--   ScreenMap(새 슬롯) · 새 창 2개 → S12(UI)(창 전수 화면 안 · 글씨) · S16(UI) · S18(UI) · S19b(UI) · S10(가)(슬롯 겹침). regression 스위치는 그대로 false.
+		-- P3c: 이번 블록 P3c(가)(나) + 동반(COMMON §3 - 바꾼 모듈이 사실상 전 블록에 걸린다: BossPatterns · BossData · BossSkillMath · BossSim(보스 블록 전부) ·
+		-- BossArenaMap(Data) · BossEncounter(P3a 맵 · 29-x) · SaveSystem v35(이관을 부르는 S01 · S02 · S03 · S05b · S11 · S20e 블록) · PlayerProfile(경험치 배수 · 보석 판매 - 전 블록) ·
+		-- CharacterLevel(P25a · P25c · S12) · Enhance · EnhanceConfig(S03 · S04 · S05 · P25a · P25c) · EconSim(P0 · P2 · P25*) · Leaderboard(P3a(나) · P3b) · 가방 상세 · 순위 창(UI 블록)
+		-- → "넓은 쪽"으로 P3a와 같은 전 블록 + 29-x(가)(BossSkillMath · BossSim을 직접 잰다) + P3b 3블록(E1 치명 표본 재실행). P3a(D)(장판 실측 약 9분)는 뺀다 - 이번 변경의 판정 자리는
+		-- P3c(나) B4(높이별) · A4(추적)가 따로 잰다. regression 스위치는 그대로 false.
 		current = {
+			"P3c(가)", "P3c(나)",
 			"P3b(가)", "P3b(나)", "P3b(UI)",
-			"P3a(나)", "S13(가)", "S13(나)", "S13b(가)", "S13b(나)", "P25a(가)", "P25a(나)",
-			"S12(UI)", "S12b(UI)", "S16(UI)", "S18(UI)", "S19b(UI)", "S10(가)",
-			"S20(UI)", "S20c(UI)", "S20d(UI)", "S20e(UI)", "P25b(UI)",
+			"P3a(가)", "P3a(나)", "P3a(나C)", "P3a(가C2)",
+			"P25c(가)", "P25c(나)",
+			"P25b(가)", "P25b(나)", "P25b(UI)", "P25a(가)", "P25a(나)", "P2(가)", "P2(나)", "P0(가)",
+			"26-2", "26-3", "27-1(가)", "27-1(나)", "27-3(가)", "27-3(나)", "27-4(가)", "27-4(나)",
+			"29-1", "29-2(가)", "29-2(나)", "29-3(가)", "29-3(나)", "29-4(가)", "29-4(나)", "29-5(가)", "29-5(나)",
+			"S01(가)", "S01(나)", "S02(가)", "S02(나)", "S03(가)", "S03(나)", "S04(가)", "S05(가)", "S05(나)", "S05b(가)", "S05b(나)",
+			"S07(가)", "S08(가)", "S08(나)", "S09(가)", "S09(나)", "S10(가)", "S10(나)", "S11(가)", "S11(나)", "S12(나)", "S12b(가)", "S12b(나)",
+			"S13(가)", "S13(나)", "S13b(가)", "S13b(나)", "S14(가)", "S14(나)", "S19b(가)", "S19b(나)",
+			"S20c(가)", "S20c(나)", "S20d(가)", "S20d(나)", "S20e(가)", "S20e(나)", "S21-0(가)", "S21-0(나)",
+			"S12(UI)", "S12b(UI)", "S15(UI)", "S16(UI)", "S17(UI)", "S18(UI)", "S19b(UI)", "S20(UI)", "S20c(UI)", "S20d(UI)", "S20e(UI)",
 		},
 	},
 }

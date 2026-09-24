@@ -3368,6 +3368,7 @@ if RunService:IsStudio() then
 				{ "P3a(나C)", function() require(script.Parent.P3aArenaVerify).runLiveC(player, env) end }, -- P3a: 원형 맵 6종 · 구조물 · 돌진 충돌 · 뺑뺑이 방지 · 파트 수
 				{ "P3a(D)", function() local v = require(script.Parent.P3aArenaVerify) v.runLiveD(player, env, v.D_LABEL) end }, -- P3a: 장판 표시 ↔ 판정 실측(입장 20 + 20 · 점프 높이)
 				{ "P3b(나)", function() require(script.Parent.P3bVerify).runLive(player, env) end }, -- P3b: 순위 창 board 응답 · 자기 장비 비교 · 스킬 툴팁 = 실제 피해(D3)
+				{ "P3c(나)", function() require(script.Parent.P3cVerify).runLive(player, env) end }, -- P3c: 발탄식 유도 · 전갈 2회 · 번개 추적 · 맵 이탈 복귀 · 6맵 배치 · 큰 블록 · 높이별 판정 · 보석 판매 · 전당
 				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
 			}) do
 				if verifyEnabled(stage[1]) then
@@ -3675,6 +3676,16 @@ if RunService:IsStudio() and verifyEnabled("P3a(가)") then
 		local ok, err = pcall(require(script.Parent.P3aVerify).runPure)
 		if not ok then
 			warn(("[P3a(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ P3c 자동 검증 블록(가) - 줄넘기 리듬 · 가장 가까운 대상 · 번개 · 이탈 시뮬 · 무작위 배치 100시드 · 경제 결정 · 보석 판매가(docs/phase/P3c-log.md) ═══
+if RunService:IsStudio() and verifyEnabled("P3c(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.P3cVerify).runPure)
+		if not ok then
+			warn(("[P3c(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end
