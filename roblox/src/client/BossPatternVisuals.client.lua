@@ -34,6 +34,9 @@ local BossStormView = require(script.Parent.BossStormView) -- 29-3: 낙뢰(하�
 local BossFloodView = require(script.Parent.BossFloodView) -- 29-4: 심해 군주의 단(내 시계로 가라앉는다) · "아직 이르다" 윗면 빨강
 local BossRhythmView = require(script.Parent.BossRhythmView) -- P3c A: 점프 틈 · 돌진 대상 표식 · 번개 추적 원
 local BossRegrowView = require(script.Parent.BossRegrowView) -- P3d D: 지형 재생성 전조(그림자 + 금 빛) · 솟음 · 끼임 표시
+local BossMotionView = require(script.Parent.BossMotionView) -- P3d A1 · A2 · A4: 보스 찍기 · 돌진 모션(인형) · 풍압 · 속도감
+local BossFx = require(script.Parent.BossFx) -- P3d A5: 연출 조각 풀
+local BossFxData = require(ReplicatedStorage.Shared.data.BossFxData)
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
@@ -309,14 +312,27 @@ end
 -- 밀어낸다(로블록스엔 속이 빈 원통 프리미티브가 없다). 반경은 서버 시계 기준 - 서버 판정
 -- 과 같은 반경이 그려진다.
 local function shockwave(data)
+	-- P3c B4(리뷰 2): 띠를 띄우지 않고 **키운다** - 바닥에서 둔덕 윗면 위까지 덮는 띠(평지에서도 바닥에 붙어 있고, 둔덕 위를 지날 때도 보인다).
+	-- (P3d: 옛 코드는 이 값을 선언 전에 읽어 첫 크기가 nil이었다 - 첫 프레임에 다시 잡혀 겉으로는 안 보였다. 선언을 앞으로 옮겼다.)
+	local waveHeight = WAVE_HEIGHT_STUDS + moundLift(data.center, data.maxRadius)
 	local segments = {}
 	for i = 1, WAVE_SEGMENTS do
 		local part = newPart(Vector3.new(1, waveHeight, data.thickness), DANGER_COLOR, 0.25)
 		segments[i] = part
 	end
-	-- P3c B4(리뷰 2): 띠를 띄우지 않고 **키운다** - 바닥에서 둔덕 윗면 위까지 덮는 띠(평지에서도 바닥에 붙어 있고, 둔덕 위를 지날 때도 보인다).
-	local waveHeight = WAVE_HEIGHT_STUDS + moundLift(data.center, data.maxRadius)
 	local center = data.center + Vector3.new(0, waveHeight / 2, 0)
+	-- P3d A3 땅 파도: 첫 겹에만 흙 마루(맵 바닥색을 밝게 - 솟았다 꺼지며 굴러간다)를 띠 안에 세운다. 마루 = 띠와 같은 자리 · 띠보다 낮고 좁다(빨강 띠가 겉을 감싸 전조가 가려지지 않는다).
+	local ground = BossFxData.groundWave
+	local crest = {}
+	if (data.layer or 1) == 1 then
+		local earth = (data.floorColor or Color3.fromRGB(120, 110, 100)):Lerp(Color3.new(1, 1, 1), 0.18)
+		for i = 1, ground.segments do
+			local part = BossFx.acquirePart("block")
+			part.Color = earth
+			part.Size = Vector3.new(1, 0.1, data.thickness * 0.8)
+			crest[i] = part
+		end
+	end
 	local connection
 	connection = RunService.RenderStepped:Connect(function()
 		local radius = (Workspace:GetServerTimeNow() - data.serverStart) * data.speed
@@ -325,6 +341,10 @@ local function shockwave(data)
 			for _, part in ipairs(segments) do
 				destroy(part)
 			end
+			for _, part in ipairs(crest) do
+				BossFx.releasePart(part, "block")
+			end
+			crest = {}
 			return
 		end
 		-- 띠의 안쪽 가장자리~바깥 가장자리 = [반경-두께, 반경] (서버와 같은 정의).
@@ -335,6 +355,19 @@ local function shockwave(data)
 			local offset = Vector3.new(math.cos(angle), 0, math.sin(angle))
 			part.Size = Vector3.new(segmentLength, waveHeight, data.thickness)
 			part.CFrame = CFrame.new(center + offset * mid) * CFrame.Angles(0, -angle, 0)
+		end
+		if #crest > 0 then
+			local t = Workspace:GetServerTimeNow() - data.serverStart
+			local crestLength = 2 * math.pi * math.max(radius, 1) / ground.segments * 1.1
+			local rise = math.clamp(radius / 6, 0, 1) -- 보스 곁에서 솟아나기 시작한다
+			for i, part in ipairs(crest) do
+				local angle = (i / ground.segments) * 2 * math.pi
+				local offset = Vector3.new(math.cos(angle), 0, math.sin(angle))
+				-- 마루 높이가 둘레를 따라 굴러간다(솟았다 꺼진다) - 띠 높이보다 낮다
+				local h = ground.crestHeight * rise * (0.65 + 0.35 * math.sin(angle * ground.rollWaves + t * ground.rollSpeed))
+				part.Size = Vector3.new(crestLength, math.max(h, 0.05), data.thickness * 0.8)
+				part.CFrame = CFrame.new(data.center + offset * mid + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, -angle, math.rad(8 * math.sin(angle * ground.rollWaves + t * ground.rollSpeed)))
+			end
 		end
 	end)
 end
@@ -577,14 +610,20 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		heavyImpact(data)
 	elseif kind == "shockTelegraph" then
 		shockTelegraph(data)
+		BossMotionView.slamWindup(data) -- P3d A1: 크게 들어 올리는 예비 동작
 	elseif kind == "shockwave" then
 		shockwave(data)
 		BossRhythmView.waveCue(data)
+		if (data.layer or 1) == 1 then
+			BossMotionView.slamImpact(data) -- P3d A2: 내려찍는 순간 풍압 · 흔들림
+		end
 	elseif kind == "focus" then
 		focus(data)
 		BossRhythmView.chargeTarget(data)
+		BossMotionView.chargeWindup(data) -- P3d A4: 발 긁기
 	elseif kind == "charge" then
 		charge(data)
+		BossMotionView.chargeRun(data) -- P3d A4: 속도선 · 잔상 · 먼지 꼬리 · 도착 임팩트
 	elseif kind == "meteor" then
 		meteor(data)
 	elseif kind == "meteorLock" then
@@ -602,6 +641,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	elseif kind == "reset" then
 		resetAll()
 		BossRhythmView.clear()
+		BossMotionView.reset()
 		BossArenaPropsView.clearTelegraph() -- 기둥 자체는 남는다(서버가 propsClear로 따로 치운다)
 		BossStanceView.clear()
 		BossSplitView.clear()
@@ -613,4 +653,7 @@ end)
 BossArenaPropsView.start()
 
 -- 내 캐릭터가 죽어 리스폰될 때도 남은 연출을 지운다(서버 reset과 이중 방어).
-player.CharacterAdded:Connect(resetAll)
+player.CharacterAdded:Connect(function()
+	resetAll()
+	BossMotionView.reset()
+end)

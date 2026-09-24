@@ -63,6 +63,18 @@ local function release(entry)
 	end
 end
 
+-- 오래 사는 조각(땅 파도 마루 - 매 프레임 호출자가 움직인다)도 같은 풀에서 꺼내고 돌려준다. 상한에는 안 센다(전조와 붙어 있는 그림).
+function BossFx.acquirePart(shape)
+	local part = acquire(shape)
+	part.Material = Enum.Material.SmoothPlastic
+	part.Transparency = 0
+	return part
+end
+
+function BossFx.releasePart(part, shape)
+	release({ part = part, shape = shape })
+end
+
 function BossFx.count(n, weight)
 	return math.max(1, math.floor(n * (weight or 1) + 0.5))
 end

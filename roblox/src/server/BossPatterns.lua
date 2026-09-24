@@ -726,6 +726,7 @@ local function startHop(c, seconds)
 		center = Vector3.new(st.hopBase.X, st.floorY, st.hopBase.Z),
 		seconds = seconds,
 		hopHeight = skill.hopHeightStuds,
+		bossId = c.data.id, waveIndex = st.wavesSpawned + 1, waveCount = #st.ringWaves, -- P3d A1: 클라가 보스별 찍기 모션(BossFxData.bosses)을 고른다(연출만)
 	})
 end
 
@@ -827,6 +828,8 @@ local function slam(c)
 			thickness = skill.waveThicknessStuds,
 			maxRadius = maxRadius,
 			waveIndex = st.wavesSpawned + 1, layer = layer, waveCount = #st.ringWaves,
+			bossId = c.data.id, -- P3d A2 · A3: 임팩트 모션 · 풍압 · 땅 파도(연출만)
+			floorColor = (BossArenaMap.getTheme(MonsterState.getZoneKey(c.model)) or BossArenaMapData.default).floor.color,
 		})
 	end
 	st.wavesSpawned += 1
@@ -1120,6 +1123,7 @@ local function startDash(c, fromPosition, dashIndex)
 		seconds = skill.telegraphSeconds,
 		floorY = st.floorY,
 		targetUserId = targetUserId, -- P3c A2: 클라가 이 사람 머리 위에 표식을 띄운다(방향선 = 위 경로선)
+		bossId = c.data.id, dashIndex = dashIndex, burrow = skill.burrow ~= nil, -- P3d A4: 발 긁기 · 잠행 연출(연출만)
 	})
 	print(("[forge-game] 돌진 대상 확정: %s(%d번째 돌진) - 보스에서 %.1fstud, 경로 %.1fstud%s"):format(
 		tostring(targetPlayer and targetPlayer.Name or "어그로 대상"), dashIndex, (snapshot - origin).Magnitude, length, obstacleId and (" · 구조물 #" .. obstacleId .. "에서 멈춤") or ""))
@@ -1191,7 +1195,8 @@ HANDLERS.charge = {
 			st.phase = "charge"
 			st.chargeStartedAt = c.now
 			st.chargeSeconds = length / skill.speedStuds
-			send(st, "charge", { startPosition = st.chargeFrom, endPosition = st.chargeTo, durationSeconds = st.chargeSeconds })
+			send(st, "charge", { startPosition = st.chargeFrom, endPosition = st.chargeTo, durationSeconds = st.chargeSeconds,
+				bossId = c.data.id, burrow = skill.burrow ~= nil, targetUserId = typeof(st.chargeTarget) == "Instance" and st.chargeTarget.UserId or nil, crashed = st.chargeObstacle ~= nil }) -- P3d A4(연출만)
 		elseif st.phase == "charge" then
 			local position = st.burrowLogical or c.position -- 잠행 중에는 모델이 땅속에 있다 - 계산은 지표의 논리 위치로
 			local prev = xz(position)
