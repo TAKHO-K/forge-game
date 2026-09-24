@@ -3369,7 +3369,9 @@ if RunService:IsStudio() then
 				{ "P3a(D)", function() local v = require(script.Parent.P3aArenaVerify) v.runLiveD(player, env, v.D_LABEL) end }, -- P3a: 장판 표시 ↔ 판정 실측(입장 20 + 20 · 점프 높이)
 				{ "P3b(나)", function() require(script.Parent.P3bVerify).runLive(player, env) end }, -- P3b: 순위 창 board 응답 · 자기 장비 비교 · 스킬 툴팁 = 실제 피해(D3)
 				{ "P3c(나)", function() require(script.Parent.P3cVerify).runLive(player, env) end }, -- P3c: 발탄식 유도 · 전갈 2회 · 번개 추적 · 맵 이탈 복귀 · 6맵 배치 · 큰 블록 · 높이별 판정 · 보석 판매 · 전당
+				{ "P3d(나)", function() require(script.Parent.P3dVerify).runLive(player, env) end }, -- P3d: 맵 이탈 → 스폰 복귀 · 단상 · 재생성 · 끼임 · 모래 구덩이 붕괴 · 버프 중첩 · 라이브 제외
 				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
+				{ "P3d(가E)", function() require(script.Parent.P3dVerify).runRegrowSeeds() end }, -- P3d: 재생성 100시드 × 6맵(무거운 계산 - 맨 끝)
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])
@@ -3676,6 +3678,16 @@ if RunService:IsStudio() and verifyEnabled("P3a(가)") then
 		local ok, err = pcall(require(script.Parent.P3aVerify).runPure)
 		if not ok then
 			warn(("[P3a(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ P3d 자동 검증 블록(가) - 파티 구성 속도 · 툴팁 · 견습 시뮬 · 첫 시즌 KST · 복귀 시뮬 · 재생성 회피 부등식 · 연출 데이터(docs/phase/P3d-log.md) ═══
+if RunService:IsStudio() and verifyEnabled("P3d(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.P3dVerify).runPure)
+		if not ok then
+			warn(("[P3d(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

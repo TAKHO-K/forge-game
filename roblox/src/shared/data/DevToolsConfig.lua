@@ -123,7 +123,12 @@ local config = {
 		-- CharacterLevel(P25a · P25c · S12) · Enhance · EnhanceConfig(S03 · S04 · S05 · P25a · P25c) · EconSim(P0 · P2 · P25*) · Leaderboard(P3a(나) · P3b) · 가방 상세 · 순위 창(UI 블록)
 		-- → "넓은 쪽"으로 P3a와 같은 전 블록 + 29-x(가)(BossSkillMath · BossSim을 직접 잰다) + P3b 3블록(E1 치명 표본 재실행). P3a(D)(장판 실측 약 9분)는 뺀다 - 이번 변경의 판정 자리는
 		-- P3c(나) B4(높이별) · A4(추적)가 따로 잰다. regression 스위치는 그대로 false.
+		-- P3d: 이번 블록 P3d(가) · P3d(나) · P3d(가E) + 동반(COMMON §3 - 바꾼 모듈을 쓰는 옛 블록, grep): BossPatterns · BossData(onComplete · 구덩이) · BossArenaMap(Data) ·
+		-- BossArenaContainment · ArenaLayout · ArenaContainment(보스 블록 전부 - 29-x · S14 · P3a · P3c) · BossMechanics(29-1 ~ 29-5) · PartyConfig(치유사 b - S13 · S13b · S09 · P25a · 파티 경로 S12 · S12b · S19b) ·
+		-- EconSim(Report · Config - P0 · P2 · P25*) · Leaderboard(Rules · Config - P3a(나) · P3b(나) · P3c(나)) · SkillTooltipText(P3b(가)(UI)) · 파티 목록(S18(UI) · S19b(UI)) → P3c와 같은 전 블록(넓은 쪽).
+		-- P3a(D)(약 9분)는 뺀다 - 판정 자리를 옮기지 않았다(연출만 · 단상 위 판정은 P3d(나) C가 잰다). regression 스위치는 그대로 false.
 		current = {
+			"P3d(가)", "P3d(나)", "P3d(가E)",
 			"P3c(가)", "P3c(나)",
 			"P3b(가)", "P3b(나)", "P3b(UI)",
 			"P3a(가)", "P3a(나)", "P3a(나C)", "P3a(가C2)",

@@ -841,6 +841,15 @@ local function tutorialPhase(state, profile, run)
 	return state.seconds - startedAt
 end
 
+-- 검증 P3d(가)용: 견습만 돌린다(무한 모드 전체를 돌지 않는다). 반환: 견습 초, 끝난 레벨.
+function EconSim.tutorialOnly(profileId)
+	assert(EconSim.isAllowed(), "EconSim: Studio · DevToolsConfig.econSim 전용")
+	local profile = EconSimConfig.profiles[profileId]
+	local state = newState(profile)
+	local seconds = tutorialPhase(state, profile, { expMult = expMultiplier(profile) })
+	return seconds, state.level
+end
+
 -- 프로필 하나의 진행 시뮬. 반환: { profileId, reached = { [이정표] = 기록 }, chunks = { 청크 }, stall = 사유 or nil, final = state }.
 function EconSim.runProgress(profileId, whatIf)
 	assert(EconSim.isAllowed(), "EconSim: Studio · DevToolsConfig.econSim 전용")

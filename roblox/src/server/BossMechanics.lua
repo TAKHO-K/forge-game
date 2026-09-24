@@ -307,6 +307,11 @@ function BossMechanics.zoneHolds(model, player, zoneIndex)
 	return expiresAt == nil or deadline == nil or expiresAt >= deadline - ZONE_EDGE_SECONDS
 end
 
+-- P3d B 검증: 이번 발동에서 이 사람에게 들어간 %최대체력 누적(기믹 누적 - 맵 이탈 복귀가 바꾸지 않는지 잰다).
+function BossMechanics.gimmickDamageOf(model, player)
+	return (stateOf(model).gimmickDamage or {})[player] or 0
+end
+
 -- 이번(마지막) 태세에서 이 사람이 반사를 받은 횟수 - 파훼 판정 "noHit"이 읽는다.
 function BossMechanics.reflectCount(model, player)
 	local reflect = stateOf(model).reflect
