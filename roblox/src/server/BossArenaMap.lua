@@ -436,6 +436,10 @@ function BossArenaMap.planRegrow(zoneKey, context)
 	if not state then
 		return nil, "no_arena"
 	end
+	-- P3d Play 3: 자리 찾기는 step 밖(task.defer)에서 돈다 - 그 사이 이 슬롯의 보스전이 바뀌었으면(끝 · 전멸 리셋) 계획하지 않는다(context.token = 스킬이 끝난 순간의 토큰).
+	if context.token and context.token ~= state.regrowToken then
+		return nil, "cancelled"
+	end
 	local count = 0
 	for _ in pairs(state.obstacles) do
 		count += 1
@@ -600,6 +604,12 @@ function BossArenaMap.pitRattle(zoneKey, id, breakTicks)
 		breakEvent:FireClient(player, { stage = "rattle", id = id, position = obstacle.center + Vector3.new(0, obstacle.height / 2, 0), radius = obstacle.radius, height = obstacle.height, color = obstacle.color })
 	end
 	return obstacle.pitTicks, false
+end
+
+-- 지금 이 슬롯의 재생성 토큰(스킬이 끝난 순간에 잡아 두고 planRegrow에 넘긴다).
+function BossArenaMap.regrowToken(zoneKey)
+	local state = active[zoneKey]
+	return state and state.regrowToken or nil
 end
 
 -- 검증용: id의 구조물(사본 아님 - 읽기만).

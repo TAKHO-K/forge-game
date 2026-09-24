@@ -581,7 +581,11 @@ function P3dVerify.runLive(player, env)
 		local spawned = nil
 		while not spawned and waited < REGROW.telegraphSeconds + 1 do
 			waited += task.wait(0.05)
-			spawned = eventsOf("regrowSpawn", since)[1]
+			for _, rec in ipairs(eventsOf("regrowSpawn", since)) do
+				if rec.id == plan.item.id then -- 이 계획의 솟음만(Play 3: 다른 계획과 섞였다)
+					spawned = rec
+				end
+			end
 		end
 		assert(spawned, "재생성이 안 솟았다")
 		local outcome = {}

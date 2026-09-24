@@ -460,11 +460,12 @@ local function regrowObstacles(c, effect)
 	end
 	local half = BossData.mechanics.dodge.characterHalfWidthStuds
 	local bossAt = c.position
+	local token = BossArenaMap.regrowToken(zoneKey) -- 스킬이 끝난 순간의 보스전(리셋 · 종료 뒤의 계획은 버린다)
 	-- P3d Play 2: 자리 찾기(연결 검사 - 격자 BFS, 한 번에 수 ms)를 step 밖에서 돈다(task.defer) - step 안에서 돌면 그 틱이 튀어 29-2 step 평균이 40 → 118마이크로초였다.
 	task.defer(function()
 		for _ = 1, effect.count or 1 do
 			local planStartedAt = os.clock()
-			local plan, why = BossArenaMap.planRegrow(zoneKey, { members = members, boss = bossAt, pits = keepOut })
+			local plan, why = BossArenaMap.planRegrow(zoneKey, { members = members, boss = bossAt, pits = keepOut, token = token })
 			if not plan then
 				print(("[forge-game] 지형 재생성 건너뜀: %s - %s"):format(zoneKey, tostring(why)))
 				debugEvent("regrowSkip", { reason = why, at = os.clock() })
