@@ -647,6 +647,43 @@ end
 -- 매 틱 모든 살아있는 파동에 대해: 파동 띠[반경-두께, 반경]가 대상을 지나는 동안 한 순간이라도 공중이면 회피,
 -- 띠가 완전히 지나갔는데 한 번도 공중이 아니었으면 피격. 24-1: 멤버마다 touched/dodged/resolved를 따로 기록한다 -
 -- 한 파동이 네 사람을 서로 다른 시각에 지나간다. 파동은 최대 반경까지 살아 있다.
+-- P3d C1: 단상(올라갈 수 있는 큰 블록) 윗면에 선 사람은 파동이 발밑으로 지나간다(보이는 파동 띠 높이 1.6 < 윗면 3.5). 무너지며 떨어지는 사람도 잠깐(daisWave.dropGraceSeconds) 같다.
+local function onDais(c, v)
+	local grace = c.st.daisDropGrace
+	if grace and (grace[v.player] or 0) > c.now then
+		return true
+	end
+	return BossArenaMap.daisUnderFeet(MonsterState.getZoneKey(c.model), v.feet) ~= nil
+end
+
+-- P3d C2: 한 번 찍은 파동(첫 겹)이 단상 한가운데를 지나면 센다 - 금 → 무너짐. 무너지는 순간 그 위에 선 사람은 떨어지는 동안 파동을 안 맞는다.
+local function waveOverDaises(c, wave, radius, targets)
+	if wave.layer ~= 1 then
+		return
+	end
+	local zoneKey = MonsterState.getZoneKey(c.model)
+	wave.daisPassed = wave.daisPassed or {}
+	for _, dais in ipairs(BossArenaMap.daises(zoneKey)) do
+		if not wave.daisPassed[dais.id] and (xz(dais.center) - wave.center).Magnitude <= radius then
+			wave.daisPassed[dais.id] = true
+			local onTop = {}
+			for _, v in ipairs(targets) do
+				if BossArenaMap.daisUnderFeet(zoneKey, v.feet) == dais.id then
+					table.insert(onTop, v.player)
+				end
+			end
+			local result = BossArenaMap.waveHitDais(zoneKey, dais.id)
+			debugEvent("daisWave", { id = dais.id, result = result, waveIndex = wave.waveIndex, at = c.now, onTop = onTop })
+			if result == "break" then
+				c.st.daisDropGrace = c.st.daisDropGrace or {}
+				for _, player in ipairs(onTop) do
+					c.st.daisDropGrace[player] = c.now + BossArenaMapData.obstacle.daisWave.dropGraceSeconds
+				end
+			end
+		end
+	end
+end
+
 local function updateWaves(c)
 	local st, skill = c.st, c.skill
 	local maxRadius = BossSkillMath.WAVE_MAX_RADIUS_STUDS
@@ -655,6 +692,7 @@ local function updateWaves(c)
 	for _, wave in ipairs(st.waves) do
 		local radius = (c.now - wave.startedAt) * wave.speed -- P3c A1: 파동마다 속도가 다를 수 있다(리듬)
 		wave.byPlayer = wave.byPlayer or {}
+		waveOverDaises(c, wave, radius, targets) -- P3d C2: 판정보다 먼저 - 무너지는 단상 위 사람에게 떨어지는 유예를 준 뒤 판정한다
 		for _, v in ipairs(targets) do
 			local rec = wave.byPlayer[v.player]
 			if not rec then
@@ -663,8 +701,9 @@ local function updateWaves(c)
 			end
 			local d = (xz(v.root.Position) - wave.center).Magnitude
 			-- 22-4: 파동은 지면을 타고 퍼진다 - 파동 중심 지면(floorY)에서 높이차 상한 너머(절벽 위)는 안 닿는다.
+			-- P3d C1: 단상 윗면(또는 무너지며 떨어지는 중)은 파동이 밑으로 지나간다.
 			local inBand = d <= radius and d >= radius - skill.waveThicknessStuds
-				and Reach.sameLayer(v.root.Position, Vector3.new(0, st.floorY, 0))
+				and Reach.sameLayer(v.root.Position, Vector3.new(0, st.floorY, 0)) and not onDais(c, v)
 			if inBand then
 				rec.touched = true
 				if isAirborne(v.player.Character, skill.airborneClearanceStuds) then
@@ -695,7 +734,7 @@ local function slam(c)
 	local wave = st.ringWaves[st.wavesSpawned + 1]
 	for layer = 1, wave.layers do
 		local delay = (layer - 1) * wave.layerGapSeconds
-		table.insert(st.waves, { center = xz(st.hopBase), startedAt = c.now + delay, speed = wave.speedStuds })
+		table.insert(st.waves, { center = xz(st.hopBase), startedAt = c.now + delay, speed = wave.speedStuds, waveIndex = st.wavesSpawned + 1, layer = layer })
 		send(st, "shockwave", {
 			center = Vector3.new(st.hopBase.X, st.floorY, st.hopBase.Z),
 			serverStart = serverNow() + delay,

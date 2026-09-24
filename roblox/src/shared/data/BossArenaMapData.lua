@@ -64,6 +64,11 @@ local obstacle = {
 	-- 부서질 때 위에 서 있던 사람(사용자 지시): 파편과 함께 튕겨 난다(기존 넉백 연출 launch - 높이 · 거리) + 최대 체력 비율 피해(방어 무관 · 신규 보호 · 쉴드는 그대로 탄다).
 	-- 10%(P3a 결정 필요 2 → P3c B2 사용자 지시 "위에 있다가 부서지면 피해 10%").
 	topBreak = { maxHpFraction = 0.10, heightStuds = 5, distanceStuds = 10, label = "구조물 파편" },
+	-- P3d C 단상(= 올라갈 수 있는 큰 블록, climbable): 지진파(줄넘기 파동 - ring)는 단상 윗면 밑으로 지나간다 - 윗면에 선 사람은 파동을 안 맞는다(C1).
+	-- 대신 파동이 단상 한가운데를 지날 때마다 센다: crackAfterWaves번째 = 금(파편 먼지), breakAfterWaves번째 = 무너진다(C2). 한 번 찍은 파동의 겹(심해 군주 해일 2겹)은 한 번으로 센다.
+	-- 무너질 때 위에 있던 사람은 바닥으로 떨어진다 - **피해 · 튕김 없음**(topBreak = 때리기 5타 · 돌진 1방으로 부서질 때만의 규칙과 다르다). 떨어지는 동안 그 파동은 안 맞는다
+	-- (dropGraceSeconds - 무너진 순간 띠가 발밑을 지나고 있다: 낙하 3.5stud ≈ 0.19초 + 띠 통과 최대 4 ÷ 18 = 0.22초 + 여유).
+	daisWave = { crackAfterWaves = 1, breakAfterWaves = 2, dropGraceSeconds = 0.6 },
 }
 
 -- P3c B1 무작위 배치(보스 등장마다 새 시드 - 로그 "[forge-game] 보스맵 배치 시드"). 생성 · 검사 = shared/ArenaLayout(순수 함수 - 서버와 검증이 같은 함수).

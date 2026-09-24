@@ -4,6 +4,7 @@
 --   · chargeTarget: 돌진 대상 머리 위 표식(‼ - 말풍선과 같은 그림 문자) - 전조 동안만. 방향선은 BossPatternVisuals의 경로선이다.
 --   · follow: 번개 추적 원이 그 사람의 캐릭터를 따라간다(서버가 멈춘 자리를 meteorLock으로 보내면 BossPatternVisuals가 그 자리로 다시 그린다).
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -40,6 +41,14 @@ end
 local function myRoot()
 	local character = player.Character
 	return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+-- P3d C1: 내가 단상(서버가 "BossArenaDais" 태그를 단 큰 블록 충돌 기둥) 윗면에 서 있는가 - 발밑 광선이 그 기둥에 닿는다.
+local daisParams = RaycastParams.new()
+daisParams.FilterType = Enum.RaycastFilterType.Include
+local function onDais(root)
+	daisParams.FilterDescendantsInstances = CollectionService:GetTagged("BossArenaDais")
+	return Workspace:Raycast(root.Position, Vector3.new(0, -6, 0), daisParams) ~= nil
 end
 
 -- data = shockwave 이벤트 { center(바닥), serverStart, speed, thickness, maxRadius, layer }
@@ -82,7 +91,7 @@ function BossRhythmView.waveCue(data)
 			return
 		end
 		local alpha = math.clamp(left / CUE_SECONDS, 0, 1)
-		ring.Transparency = left > CUE_SECONDS and 1 or (0.15 + 0.5 * alpha)
+		ring.Transparency = (left > CUE_SECONDS or onDais(root)) and 1 or (0.15 + 0.5 * alpha) -- P3d C1: 단상 위면 파동이 발밑으로 지나간다 - 뛸 필요가 없다
 		local radius = 1.2 + (CUE_MAX_RADIUS - 1.2) * alpha
 		ring.Size = Vector3.new(0.12, radius * 2, radius * 2)
 		local humanoid = root.Parent and root.Parent:FindFirstChildOfClass("Humanoid")

@@ -274,12 +274,14 @@ local function standsOnTop(obstacle, character, root)
 end
 
 -- 부서진 순간: 아레나 안 사람에게 파편 연출을 보내고, 윗면에 서 있던 사람은 파편과 함께 튕겨 나며 피해를 받는다(사용자 지시).
--- 튕김은 보스 패턴의 넉백 연출(launch - BossStormView)을 그대로 쓴다 - P3c A5: 구역을 실어 보내 착지점이 벽 안쪽을 넘지 않는다. 반환: 튕겨 난 사람 목록(검증이 읽는다).
+-- 튕김은 보스 패턴의 넉백 연출(launch - BossStormView)을 그대로 쓴다 - P3c A5: 구역을 실어 보내 착지점이 벽 안쪽을 넘지 않는다. 반환: 튕겨 난 사람 목록, 떨어진 사람 목록(검증이 읽는다).
+-- P3d C2 · E2: 지진파(cause "wave") · 모래 구덩이(cause "pit")로 무너지면 위에 있던 사람은 **바닥으로 떨어지기만** 한다(피해 · 튕김 없음 - 떨어진 사람 목록).
+local SOFT_BREAK = { wave = true, pit = true }
 local function fireBreak(state, obstacle, cause)
 	local zone = zoneOfKey(state.zoneKey)
 	local topBreak = OBSTACLE.topBreak
 	local patternEvent = ReplicatedStorage:FindFirstChild("BossPatternEvent")
-	local launched = {}
+	local launched, dropped = {}, {}
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -288,7 +290,11 @@ local function fireBreak(state, obstacle, cause)
 				position = obstacle.center + Vector3.new(0, obstacle.height / 2, 0),
 				radius = obstacle.radius, height = obstacle.height, color = obstacle.color, cause = cause,
 			})
-			if standsOnTop(obstacle, character, root) and not (BossArenaMap.isLaunchProtected and BossArenaMap.isLaunchProtected(player)) then -- P3d B2: 복귀 보호 중이면 안 튕긴다
+			if SOFT_BREAK[cause] then
+				if standsOnTop(obstacle, character, root) then
+					table.insert(dropped, player)
+				end
+			elseif standsOnTop(obstacle, character, root) and not (BossArenaMap.isLaunchProtected and BossArenaMap.isLaunchProtected(player)) then -- P3d B2: 복귀 보호 중이면 안 튕긴다
 				table.insert(launched, player)
 				if patternEvent then
 					patternEvent:FireClient(player, "launch", {
@@ -299,7 +305,7 @@ local function fireBreak(state, obstacle, cause)
 			end
 		end
 	end
-	return launched
+	return launched, dropped
 end
 
 local function destroyObstacle(obstacle)
@@ -310,7 +316,7 @@ local function destroyObstacle(obstacle)
 	end
 end
 
--- 구조물 하나를 부순다(이미 부서졌으면 false). cause = "hits"(플레이어) · "charge"(보스 돌진).
+-- 구조물 하나를 부순다(이미 부서졌으면 false). cause = "hits"(플레이어) · "charge"(보스 돌진) · "wave"(지진파 - 단상 · P3d C2) · "pit"(모래 구덩이 - P3d E2).
 function BossArenaMap.breakObstacle(zoneKey, id, cause)
 	local state = active[zoneKey]
 	local obstacle = state and state.obstacles[id]
@@ -320,9 +326,9 @@ function BossArenaMap.breakObstacle(zoneKey, id, cause)
 	obstacle.broken = true
 	state.obstacles[id] = nil
 	destroyObstacle(obstacle)
-	local launched = fireBreak(state, obstacle, cause)
-	state.lastBreak = { id = id, cause = cause, launched = launched, at = os.clock(), kind = obstacle.kind, hits = obstacle.hits }
-	print(("[forge-game] 구조물 부서짐: %s #%d %s(%s) - 위에 있던 %d명 튕김"):format(zoneKey, id, obstacle.kind, cause, #launched))
+	local launched, dropped = fireBreak(state, obstacle, cause)
+	state.lastBreak = { id = id, cause = cause, launched = launched, dropped = dropped, at = os.clock(), kind = obstacle.kind, hits = obstacle.hits, waveHits = obstacle.waveHits }
+	print(("[forge-game] 구조물 부서짐: %s #%d %s(%s) - 위에 있던 %d명 튕김 · %d명 떨어짐(피해 없음)"):format(zoneKey, id, obstacle.kind, cause, #launched, #dropped))
 	return true
 end
 
@@ -330,6 +336,73 @@ end
 function BossArenaMap.lastBreak(zoneKey)
 	local state = active[zoneKey]
 	return state and state.lastBreak or nil
+end
+
+-- ═══ 단상(P3d C - 올라갈 수 있는 큰 블록) ═══
+
+-- 발(feet - Vector3)이 서 있는 단상의 id(없으면 nil). 수평으로 충돌 원 + 0.5 안 · 발이 윗면 − 0.5 이상(standsOnTop과 같은 잣대 - 스탠드인도 발 좌표로 잰다).
+function BossArenaMap.daisUnderFeet(zoneKey, feet)
+	local state = active[zoneKey]
+	for id, obstacle in pairs(state and state.obstacles or {}) do
+		if obstacle.climbable then
+			for _, c in ipairs(obstacle.colliders) do
+				local dx, dz = feet.X - c.center.X, feet.Z - c.center.Z
+				if dx * dx + dz * dz <= (c.r + 0.5) ^ 2 and feet.Y >= FLOOR_TOP_Y + c.h - 0.5 then
+					return id
+				end
+			end
+		end
+	end
+	return nil
+end
+
+-- 서 있는 단상 목록 { { id, center, radius } }(파동이 지나가는지 잰다).
+function BossArenaMap.daises(zoneKey)
+	local list = {}
+	local state = active[zoneKey]
+	for id, obstacle in pairs(state and state.obstacles or {}) do
+		if obstacle.climbable then
+			table.insert(list, { id = id, center = obstacle.center, radius = obstacle.radius })
+		end
+	end
+	table.sort(list, function(a, b)
+		return a.id < b.id
+	end)
+	return list
+end
+
+-- 지진파 하나가 단상 한가운데를 지났다(BossPatterns.updateWaves - 한 번 찍은 파동당 한 번). crackAfterWaves번째 = 금 + 먼지, breakAfterWaves번째 = 무너진다(피해 없음).
+-- 반환: "crack" · "break" · nil.
+function BossArenaMap.waveHitDais(zoneKey, id)
+	local state = active[zoneKey]
+	local obstacle = state and state.obstacles[id]
+	if not obstacle or obstacle.broken or not obstacle.climbable then
+		return nil
+	end
+	local rule = OBSTACLE.daisWave
+	obstacle.waveHits += 1
+	if obstacle.waveHits >= rule.breakAfterWaves then
+		BossArenaMap.breakObstacle(zoneKey, id, "wave")
+		return "break"
+	end
+	if obstacle.waveHits >= rule.crackAfterWaves then
+		if not obstacle.cracked then
+			obstacle.cracked = true
+			for _, part in ipairs(Looks.crack(obstacle.model, obstacle.center, obstacle.item)) do
+				table.insert(obstacle.visuals, part)
+			end
+		end
+		local zone = zoneOfKey(zoneKey)
+		for _, player in ipairs(Players:GetPlayers()) do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root and ArenaShape.contains(zone, root.Position, -GEOMETRY.wallThicknessStuds) then
+				breakEvent:FireClient(player, { stage = "crack", position = obstacle.center + Vector3.new(0, obstacle.height, 0), radius = obstacle.radius, height = obstacle.height, color = obstacle.color, cause = "wave" })
+			end
+		end
+		print(("[forge-game] 단상 금: %s #%d - 지진파 %d번째(%d번째에 무너진다)"):format(zoneKey, id, obstacle.waveHits, rule.breakAfterWaves))
+		return "crack"
+	end
+	return nil
 end
 
 local function spawnObstacle(state, zone, item)
@@ -345,6 +418,9 @@ local function spawnObstacle(state, zone, item)
 			cframe = CFrame.new(at + Vector3.new(0, c.h / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 		}))
 		table.insert(colliders, { center = at, r = c.r, h = c.h, tall = c.tall })
+		if item.climbable then
+			CollectionService:AddTag(colliderParts[#colliderParts], "BossArenaDais") -- P3d C: 클라가 "단상 위에 섰다"를 안다(점프 틈 표시를 끈다)
+		end
 		height = math.max(height, c.h)
 	end
 	-- 조준 대상 = 모델(Monster 태그 + 구출 대상과 같은 "맞으면 알림만"). 루트는 투명 · 충돌 없음.
@@ -372,7 +448,7 @@ local function spawnObstacle(state, zone, item)
 	local obstacle = {
 		id = id, kind = item.kind, group = item.group, center = center, radius = item.radius, height = height, color = item.spec.color, model = model,
 		colliders = colliders, colliderParts = colliderParts, visuals = visuals, climbable = item.climbable, item = item,
-		hits = 0, lastHitAt = {}, broken = false, cracked = false,
+		hits = 0, lastHitAt = {}, broken = false, cracked = false, waveHits = 0,
 	}
 	local data = {
 		id = "arena_obstacle", displayName = "구조물", isRescueTarget = true, bodyColor = item.spec.color, headColor = item.spec.color,
@@ -528,7 +604,7 @@ function BossArenaMap.obstacles(zoneKey)
 	for id, obstacle in pairs(state and state.obstacles or {}) do
 		table.insert(list, {
 			id = id, kind = obstacle.kind, group = obstacle.group, center = obstacle.center, radius = obstacle.radius, height = obstacle.height, hits = obstacle.hits,
-			model = obstacle.model, colliders = obstacle.colliders, climbable = obstacle.climbable, cracked = obstacle.cracked,
+			model = obstacle.model, colliders = obstacle.colliders, climbable = obstacle.climbable, cracked = obstacle.cracked, waveHits = obstacle.waveHits,
 		})
 	end
 	table.sort(list, function(a, b)
