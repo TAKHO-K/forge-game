@@ -613,6 +613,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossFloodView.reset()
 		BossStormView.dischargeRods(false)
 		BossSplitView.clear()
+		BossEnvironmentView.reset() -- BR1: 보스전이 끝났다(환경 그림 · 빙판 · 점프대 힘)
 	elseif kind == "splitStart" then
 		BossSplitView.start(data)
 	elseif kind == "splitBreak" then
@@ -733,7 +734,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossStormView.dischargeRods(false)
 		BossBR1View.reset() -- BR1
 		BossGrabView.reset()
-		BossEnvironmentView.reset()
+		-- 환경 그림은 여기서 안 지운다(리뷰 4 - 스킬 중단 · 대상 이탈의 "reset"에도 서버 환경은 계속 돈다): envEnd · propsClear에서
 	end
 end)
 

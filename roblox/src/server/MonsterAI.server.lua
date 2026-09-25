@@ -22,6 +22,7 @@ local SummonState = require(script.Parent.SummonState)
 -- 옮겼다 - 보스 패턴(BossPatterns.lua)이 같은 경로로 피해를 넣어야 해서다. 동작은 그대로다.
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local BossPatterns = require(script.Parent.BossPatterns)
+local BossEnvironment = require(script.Parent.BossEnvironment) -- BR1 리뷰 1: 수정 공중 정원 발판 위 대상 = 같은 층
 -- 24-1 파티: 보스의 평타·패턴 조준 대상을 "살아 있는 멤버 중 가장 가까운 사람"으로 매 틱
 -- 재선택하고(PRD 20.47 [6](나)), 패턴 피해·연출 대상 목록(멤버 전원)을 BossPatterns에 넘긴다.
 local BossEncounter = require(script.Parent.BossEncounter)
@@ -334,7 +335,8 @@ RunService.Heartbeat:Connect(function(dt)
 				if not targetRoot or targetIsDead
 					or (not data.isBoss and distanceFromHome > WorldConfig.aggro.leashRangeStuds)
 					or isOutsideZoneBounds(position, zoneKey)
-					or (targetRoot and not GroundProbe.sameGroundLayer(position, targetRoot.Position)) then -- 29-4: 뜬 대상은 발밑 지면으로 판단한다
+					or (targetRoot and not GroundProbe.sameGroundLayer(position, targetRoot.Position)
+						and not (data.isBoss and BossEnvironment.onGardenPlatform(model, targetRoot.Position))) then -- 29-4: 뜬 대상은 발밑 지면으로 판단한다 · BR1 리뷰 1: 수정 공중 정원 발판 위 대상은 놓치지 않는다
 					-- 대상을 놓쳤거나(퇴장) 죽었거나(리스폰된 새 캐릭터를 이어서 쫓아가면 안 된다 -
 					-- 스폰 지점이 리쉬 범위 안이면 즉시 재사망 루프가 생긴다) 집에서 너무
 					-- 멀어졌거나(리쉬), 구역 경계를 벗어났다(16-6 - 구역 경계가 리쉬의 진짜

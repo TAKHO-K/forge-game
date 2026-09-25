@@ -1757,7 +1757,8 @@ local function beginSplit(c, seconds)
 					decoys[i] = nil
 					MonsterSpawner.removeRescueTarget(decoy)
 					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-					send(st, "splitBreak", { index = i, to = root and root.Position or spots[i] })
+					local at = state.spotOf and state.spotOf[i] or i -- 리뷰 2: 섞기 뒤에는 분신이 다른 자리에 서 있다
+					send(st, "splitBreak", { index = at, to = root and root.Position or spots[at] })
 					task.defer(function() -- 같은 틱에 진짜도 맞았으면(광역기) 벌이 없다
 						local now = os.clock()
 						local last = state.lastPunishAt[player]
@@ -1865,17 +1866,19 @@ HANDLERS.gimmick = {
 				split.shuffled = true
 				local decoys = decoysOf[c.model]
 				local choices = {}
-				for index, decoy in pairs(decoys or {}) do
+				for key, decoy in pairs(decoys or {}) do
 					if decoy then
-						table.insert(choices, index)
+						table.insert(choices, key)
 					end
 				end
 				if #choices > 0 then
-					local to = choices[scatterRng:NextInteger(1, #choices)]
+					-- 리뷰 2: 분신 표의 키(= onHit 클로저가 자기를 찾는 번호)는 그대로 두고, 그 분신이 서 있는 자리 번호만 바꾼다.
+					split.spotOf = split.spotOf or {}
+					local key = choices[scatterRng:NextInteger(1, #choices)]
+					local to = split.spotOf[key] or key
 					local from = split.realIndex
-					local decoy = decoys[to]
-					decoys[to] = nil
-					decoys[from] = decoy
+					local decoy = decoys[key]
+					split.spotOf[key] = from
 					split.realIndex = to
 					c.model:PivotTo(CFrame.new(Vector3.new(split.spots[to].X, c.position.Y, split.spots[to].Z)))
 					decoy:PivotTo(CFrame.new(Vector3.new(split.spots[from].X, c.position.Y, split.spots[from].Z)))
@@ -2060,9 +2063,10 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 		pickCtx.graceUntil = st.graceUntil
 		-- 격노(HP ≤ enragedHpFraction)에서만 전역 쿨이 짧아진다(사용자 지시 - 연속 사용은 체력 20% 이하에서만).
 		pickCtx.enraged = MonsterState.getHpRatio(model) <= data.scheduler.enragedHpFraction
+		local forced = st.sched.forced ~= nil -- 리뷰 6: DevTools · 검증이 강제한 스킬은 미루지 않는다(미루면 강제가 사라진다)
 		local pick = BossScheduler.pick(st.sched, data.skills, data.skillOrder, data.scheduler, pickCtx)
 		-- BR1 겹침(설계 §4-3): 환경이 도는 동안 "피할 수 없음" 쌍의 패턴은 나올 차례에 확률로 건너뛰고 같은 환경 발동 안에서 두 번 연속 나오지 않는다.
-		if pick and BossEnvironment.shouldDefer(model, st, data, pick, now) then
+		if pick and not forced and BossEnvironment.shouldDefer(model, st, data, pick, now) then
 			st.sched.readyAt[pick] = now + BossEnvironment.deferSeconds()
 			pick = nil
 		end
@@ -2128,6 +2132,10 @@ function BossPatterns.reset(model, data)
 	BossPatterns.interrupt(model, data)
 	local st = ensureState(model, data)
 	if st then
+		-- 리뷰 3: 스킬이 없을 때(normal)는 interrupt가 바로 돌아간다 - 환경 기절 · 헤롱 자세 · 날아가던 투사체를 여기서 무조건 치운다.
+		st.stunUntil = nil
+		clearDaze(model, st)
+		BossHandlersBR1.clearProjectiles(st)
 		restartClocks(st, data, os.clock())
 		st.target = nil
 		st.zoneCharges = nil -- 29-4: 충전된 피뢰침도 처음 상태로(클라는 "reset"에서 빛을 끈다)
@@ -2144,6 +2152,7 @@ function BossPatterns.clearProps(model, members)
 	BossArenaProps.clear(model)
 	removeDecoys(model) -- 29-5: 분열 도중에 보스전이 끝나도(처치·이탈) 분신이 남지 않는다
 	BossEnvironment.clear(model) -- BR1: 보스전이 끝나면 환경 변화의 파트(공중 발판 · 핵)도 치운다
+	BossAirGrab.clear(model) -- 리뷰 8: 잡은 채 처치 · 이탈해도 들고 있던 기록(모델 참조)을 남기지 않는다
 	for _, member in ipairs(members or (st and st.members) or {}) do
 		BossPatterns.clearPropsFor(member)
 	end

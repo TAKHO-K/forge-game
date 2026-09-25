@@ -128,7 +128,7 @@ local function pickProjectileTargets(c, count)
 	if rule ~= "target" then
 		local airborne = {}
 		for _, v in ipairs(kit.victims(c.st)) do
-			if not BossTrap.isTrapped(v.player) and kit.isAirborne(v.player.Character, 0.5) then
+			if not BossTrap.isTrapped(v.player) and kit.airSecondsOf(c.st, v.player, c.now) >= (c.skill.minAirSeconds or 0.2) then -- 리뷰 7: 발동 조건(memberAirborne)과 같은 잣대
 				table.insert(airborne, v)
 			end
 		end

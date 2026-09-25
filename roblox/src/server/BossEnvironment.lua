@@ -19,6 +19,8 @@ local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local BossTrap = require(script.Parent.BossTrap)
 local GroundProbe = require(script.Parent.GroundProbe)
+local HeightGuard = require(script.Parent.HeightGuard)
+local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 
 local BossEnvironment = {}
 
@@ -199,6 +201,44 @@ local function buildGarden(model, st, data, env, layout)
 	end
 end
 
+-- 리뷰 1: 이 점이 지금 서 있는 정원 발판 위(윗면 + 여유 8 안)인가 - MonsterAI가 "대상이 다른 층으로 갔다"로 보스를 되돌리지 않게 묻는다.
+function BossEnvironment.onGardenPlatform(model, position)
+	local g = gardens[model]
+	if not g then
+		return false
+	end
+	for _, part in ipairs(g.parts) do
+		if part.Name == "GardenPlatform" then
+			local rel = position - part.Position
+			if math.abs(rel.X) <= part.Size.X / 2 + 1 and math.abs(rel.Z) <= part.Size.Z / 2 + 1 and rel.Y >= 0 and rel.Y <= 12 then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- 리뷰 5: 점프대는 클라가 띄운다 - 서버 높이 검증이 점프대 + 공중 점프를 부정으로 보지 않게, 점프대 위에 선 멤버에게 체공만큼 예외를 건다.
+local function exemptPadUsers(model, st, env)
+	local g = gardens[model]
+	if not g then
+		return
+	end
+	local launch = env.garden.padLaunchHeightStuds
+	for _, v in ipairs(kit.victims(st)) do
+		if typeof(v.player) == "Instance" then
+			for _, part in ipairs(g.parts) do
+				if part.Name == "GardenJumpPad" then
+					local rel = v.root.Position - part.Position
+					if math.abs(rel.X) <= part.Size.X / 2 and math.abs(rel.Z) <= part.Size.Z / 2 and rel.Y >= -1 and rel.Y <= 6 then
+						HeightGuard.exempt(v.player, JumpMath.launchAirSeconds(launch) + 1.5)
+					end
+				end
+			end
+		end
+	end
+end
+
 -- ─────────────────────────── 틱 ───────────────────────────
 local function stateOf(st)
 	st.env = st.env or { phase = "idle", taken = {} }
@@ -316,6 +356,7 @@ function BossEnvironment.step(model, st, data, now, _dt)
 		end
 		kit.send(st, "envWind", { zones = e.zones })
 	end
+	exemptPadUsers(model, st, env)
 	-- 수정 공중 정원: 두 핵을 창 안에 쳤으면 성공(보스 기절 · 정원 무너짐) · 시간을 넘기면 수정 폭풍(기믹 실패 - 85% · 쉴드 무시)
 	local g = gardens[model]
 	if g and g.solved then
@@ -368,6 +409,9 @@ end
 -- 전멸 리셋 · 사망 리셋: 처음 상태(체력 50%를 다시 넘어야 온다). 클라 그림은 "reset"이 지운다. 수정 공중 정원의 파트도 치운다.
 function BossEnvironment.reset(model, st)
 	if st then
+		if st.env and (st.env.phase == "telegraph" or st.env.phase == "active") and kit then
+			kit.send(st, "envEnd", {}) -- 리뷰 4: 패턴 "reset"은 환경 그림을 안 지운다 - 환경 리셋은 이 신호로
+		end
 		st.env = nil
 	end
 	clearGarden(model)

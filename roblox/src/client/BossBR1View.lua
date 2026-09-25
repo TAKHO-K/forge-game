@@ -72,16 +72,20 @@ local function sectorParts(data, color, transparency)
 	local inner = data.innerRadius or 0
 	local width = math.min(data.widthDeg, 360)
 	local steps = math.max(2, math.ceil(width / SECTOR_STEP_DEG))
-	local mid = (inner + data.radius) / 2
-	local depth = data.radius - inner
-	for i = 0, steps - 1 do
-		local a = math.rad(data.angleDeg - width / 2 + width * (i + 0.5) / steps)
-		local arc = 2 * math.pi * data.radius * (width / 360) / steps * 1.1
-		-- 부채 조각은 바깥이 넓다 - 바깥 호 길이로 잡아 틈이 없게(안쪽은 겹친다)
-		local part = newPart(Vector3.new(arc, 0.2, depth), color, transparency)
-		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		part.CFrame = CFrame.lookAt(data.center + dir * mid + Vector3.new(0, 0.15, 0), data.center + dir * (mid + 1) + Vector3.new(0, 0.15, 0))
-		table.insert(parts, part)
+	-- 리뷰 9: 반경을 BANDS개 띠로 나눠 띠마다 **그 띠의 바깥 호 길이**로 잡는다 - 한 조각으로 그리면 보스 곁에서 조각이 경계선 너머(안전한 쪽)로 넘쳤다.
+	local BANDS = 3
+	local band = (data.radius - inner) / BANDS
+	for b = 1, BANDS do
+		local r0, r1 = inner + band * (b - 1), inner + band * b
+		local mid = (r0 + r1) / 2
+		for i = 0, steps - 1 do
+			local a = math.rad(data.angleDeg - width / 2 + width * (i + 0.5) / steps)
+			local arc = 2 * math.pi * r1 * (width / 360) / steps * 1.05
+			local part = newPart(Vector3.new(arc, 0.2, band), color, transparency)
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			part.CFrame = CFrame.lookAt(data.center + dir * mid + Vector3.new(0, 0.15, 0), data.center + dir * (mid + 1) + Vector3.new(0, 0.15, 0))
+			table.insert(parts, part)
+		end
 	end
 	return parts
 end

@@ -174,8 +174,12 @@ BossAirGrab.handler = {
 			if held and next(held) ~= nil and c.now < st.phaseEndsAt then
 				return
 			end
-			if held then -- 안전장치: 시간이 넘었는데 남아 있으면 자동 해제로 던진다
+			if held then -- 안전장치: 시간이 넘었는데 남아 있으면 자동 해제로 던진다(리뷰 8: 피해 조각도 같이 - 풀리기 직전)
 				for player in pairs(held) do
+					local record = BossTrap.getRecord(player)
+					if record and record.onAutoRelease then
+						record.onAutoRelease(player, record)
+					end
 					BossTrap.release(player, "auto")
 				end
 			end
@@ -314,6 +318,15 @@ function BossAirGrab.releaseByTaunt(model)
 		end
 	end
 	return count
+end
+
+-- 보스전 종료(처치 · 이탈)에 부른다 - 들고 있던 사람을 풀고 모델 참조를 지운다(리뷰 8).
+function BossAirGrab.clear(model)
+	local held = grabsByModel[model]
+	grabsByModel[model] = nil
+	for player in pairs(held or {}) do
+		BossTrap.release(player, "reset")
+	end
 end
 
 function BossAirGrab.register(handlers, patternKit)
