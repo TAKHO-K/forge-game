@@ -100,6 +100,9 @@ return {
 		["vote.retry.leaderBody"] = "스테이지 {stage} 보스 재도전 투표 중(1명 동의 시 성립)",
 		["vote.retry.body"] = "스테이지 {stage} 보스에 다시 도전할까요?",
 		["boss.blockedInvite"] = "보스전 중에는 파티 초대를 받을 수 없습니다",
+		-- BR1 대공 잡기
+		["boss.grab.struggle"] = "대공 잡기 - 점프를 연타해 발버둥!",
+		["boss.grab.warn"] = "착지!",
 
 		-- 설정 · 시점(M1-0)
 		["settings.title"] = "설정",

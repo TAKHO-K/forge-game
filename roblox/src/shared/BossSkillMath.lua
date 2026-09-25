@@ -33,6 +33,7 @@ function BossSkillMath.ringWaves(skill)
 			table.insert(waves, {
 				startSeconds = start, speedStuds = wave.speedStuds or skill.waveSpeedStuds,
 				layers = wave.layers or baseLayers, layerGapSeconds = wave.layerGapSeconds or baseGap,
+				air = wave.air, -- BR1 공중 파동 { minStuds, maxStuds } - 발 높이(지면 기준)가 이 띠인 사람만 맞는다(서 있으면 안전)
 			})
 		end
 		return waves
@@ -57,6 +58,56 @@ function BossSkillMath.repeatSeconds(skill)
 	return seconds
 end
 
+-- BR1: 연발 원(circleTarget)의 칸 목록 - skill.shots(칸마다 반경 · 배율 · 전조 - 작게 → 크게)가 있으면 그것, 없으면 count개가 같은 값.
+-- 반환: { { radiusStuds, multiplier, telegraphSeconds } } - 첫 칸 전조 = telegraphSeconds, 둘째부터 = repeatSeconds(추적은 그 값이 이긴다).
+function BossSkillMath.shotsOf(skill, count)
+	local shots = {}
+	local n = skill.shots and #skill.shots or (count or skill.count or 1)
+	for index = 1, n do
+		local shot = skill.shots and skill.shots[index] or {}
+		shots[index] = {
+			radiusStuds = shot.radiusStuds or skill.radiusStuds,
+			multiplier = shot.multiplier or (skill.damage and skill.damage.multiplier),
+			telegraphSeconds = shot.telegraphSeconds or (index == 1 and skill.telegraphSeconds or BossSkillMath.repeatSeconds(skill)),
+		}
+	end
+	return shots
+end
+
+-- BR1: 직선(line) · 부채꼴(sector)의 볼리 목록 - skill.volleyShots(볼리마다 배율 · 전조 · 반폭 · 폭 · 회전 - 마지막이 강함)가 있으면 그것, 없으면 volleys개가 같은 값.
+function BossSkillMath.volleysOf(skill)
+	local volleys = {}
+	local n = skill.volleyShots and #skill.volleyShots or (skill.volleys or 1)
+	for index = 1, n do
+		local shot = skill.volleyShots and skill.volleyShots[index] or {}
+		volleys[index] = {
+			multiplier = shot.multiplier or skill.damage.multiplier,
+			telegraphSeconds = shot.telegraphSeconds or skill.telegraphSeconds,
+			halfWidthStuds = shot.halfWidthStuds or skill.halfWidthStuds,
+			angleDeg = shot.angleDeg or skill.angleDeg, -- 부채꼴 폭
+			radiusStuds = shot.radiusStuds or skill.radiusStuds,
+			rotateDeg = shot.rotateDeg, -- 부채꼴: 앞 볼리에서 이만큼 돌린다(없으면 다시 대상 쪽)
+		}
+	end
+	return volleys
+end
+
+-- BR1 돌진: 둘째 돌진부터의 전조(repeatTelegraphSeconds - 없으면 첫 돌진과 같다).
+function BossSkillMath.dashTelegraph(skill, dashIndex)
+	if dashIndex > 1 and skill.repeatTelegraphSeconds then
+		return skill.repeatTelegraphSeconds
+	end
+	return skill.telegraphSeconds
+end
+
+local function sumTelegraphs(list)
+	local total = 0
+	for _, entry in ipairs(list) do
+		total += entry.telegraphSeconds
+	end
+	return total
+end
+
 -- 이 스킬이 보스를 묶는 시간(시작 ~ 다음 스킬을 고를 수 있게 되는 순간). chargeTravelSeconds를 안 주면 상한
 -- (아레나를 끝에서 끝까지 달리는 경우 - 자리 비우기는 넉넉한 쪽이 안전하다).
 function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSeconds)
@@ -72,15 +123,31 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 		end
 		return bound
 	elseif primitive == "circleTarget" then
-		if skill.sequential then
+		if skill.ambush then -- BR1 잠행: 전조(파고들기) + 추적 + 멈춘 뒤 전조
+			return skill.telegraphSeconds + skill.ambush.trackSeconds + skill.ambush.lockTelegraphSeconds
+		elseif skill.chain then -- BR1 연쇄: 전조 뒤 원이 차례로 솟는다
+			return skill.telegraphSeconds + skill.chain.intervalSeconds * (skill.chain.count - 1)
+		elseif skill.shots then
+			return sumTelegraphs(BossSkillMath.shotsOf(skill))
+		elseif skill.sequential then
 			return skill.telegraphSeconds + BossSkillMath.repeatSeconds(skill) * (skill.count - 1)
 		end
 		return skill.telegraphSeconds
 	elseif primitive == "charge" then
 		local travel = chargeTravelSeconds or (arenaHalfSizeStuds * 2 / skill.speedStuds)
-		return (skill.telegraphSeconds + travel) * (skill.dashCount or 1) + skill.recoverSeconds
-	elseif primitive == "line" then
-		return skill.telegraphSeconds * (skill.volleys or 1)
+		local dashes = skill.dashCount or 1
+		return skill.telegraphSeconds + BossSkillMath.dashTelegraph(skill, 2) * (dashes - 1) + travel * dashes + skill.recoverSeconds
+	elseif primitive == "line" or primitive == "sector" then
+		return sumTelegraphs(BossSkillMath.volleysOf(skill))
+	elseif primitive == "projectile" then
+		-- 투사체는 쏜 뒤 스킬과 떨어져 난다(BossPatterns - 보스는 다음 스킬을 고를 수 있다). 묶는 시간 = 전조 + 연사 간격.
+		return skill.telegraphSeconds + (skill.launchIntervalSeconds or 0) * ((skill.count or 1) - 1)
+	elseif primitive == "grab" then
+		-- 잡으면 들고 있다가(holdSeconds) 던지거나, 풀리면 기절(stunSeconds) - 상한은 둘을 더한 값.
+		local grab = BossData.mechanics.airGrab
+		return skill.telegraphSeconds + grab.holdSeconds + grab.stunSeconds
+	elseif primitive == "vortex" then
+		return skill.telegraphSeconds + (skill.burstTelegraphSeconds or 0)
 	elseif primitive == "gimmick" then
 		return skill.telegraphSeconds + (skill.recoverSeconds or 0)
 	end
@@ -147,6 +214,14 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 			end
 			walk(("펄스 %d"):format(index), skill.telegraphSeconds, worst + half)
 		end
+	elseif primitive == "circleTarget" and skill.shots then
+		for index, shot in ipairs(BossSkillMath.shotsOf(skill)) do -- BR1 칸별 크기(작게 → 크게)
+			walk(("연발 %d"):format(index), shot.telegraphSeconds, shot.radiusStuds + half)
+		end
+	elseif primitive == "circleTarget" and skill.chain then
+		walk("연쇄 옆으로", skill.telegraphSeconds, skill.radiusStuds + half)
+	elseif primitive == "circleTarget" and skill.ambush then
+		walk("멈춘 뒤 밖으로", skill.ambush.lockTelegraphSeconds, skill.radiusStuds + half)
 	elseif primitive == "circleTarget" then
 		walk("첫 원", skill.telegraphSeconds, skill.radiusStuds + half)
 		if skill.sequential and skill.count > 1 then
@@ -163,6 +238,50 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		end
 	elseif primitive == "charge" then
 		walk("경로 옆걸음", skill.telegraphSeconds, skill.pathHalfWidthStuds + half)
+		if (skill.dashCount or 1) > 1 and skill.repeatTelegraphSeconds then
+			walk("다음 돌진 옆걸음", skill.repeatTelegraphSeconds, skill.pathHalfWidthStuds + half)
+		end
+	elseif primitive == "sector" then
+		-- BR1 부채꼴(보스 중심 · 대상 쪽): 근접 자리 ~ 원거리 자리 어디에 서 있든 가장 가까운 밖(옆 경계선 또는 반경 밖)까지의 최악.
+		-- 180° 이상이면 옆 경계선 = 보스를 지나는 지름(대상의 수직 거리 = d). jumpable이면 걷기 대신 "보고 뛰기"(인지만)가 답이다.
+		for index, volley in ipairs(BossSkillMath.volleysOf(skill)) do
+			local worst = 0
+			if skill.dodge and skill.dodge.distanceStuds then
+				worst = skill.dodge.distanceStuds - half
+			else
+				local d = standoffStuds
+				local to = math.min(math.max(dodge.rangedStandoffStuds, standoffStuds), volley.radiusStuds)
+				local halfAngle = math.rad(math.min(volley.angleDeg, 180) / 2)
+				while d <= to + 1e-6 do
+					local side = volley.angleDeg >= 180 and d or d * math.sin(halfAngle)
+					worst = math.max(worst, math.min(side, volley.radiusStuds - d))
+					d += 0.5
+				end
+			end
+			if skill.jumpable then
+				table.insert(checks, { label = ("부채꼴 %d 점프"):format(index), availableSeconds = volley.telegraphSeconds, requiredSeconds = dodge.perceptionSeconds, distanceStuds = 0, ok = volley.telegraphSeconds >= dodge.perceptionSeconds })
+			else
+				walk(("부채꼴 %d 밖으로"):format(index), volley.telegraphSeconds, worst + half)
+			end
+		end
+	elseif primitive == "projectile" then
+		-- BR1 투사체. 지면(ground): 대상 쪽으로 굴러오는 것을 옆으로 비킨다 - 쓸 수 있는 시간 = 전조 + 보스 곁에서 닿기까지.
+		-- 공중(air): 대상을 쫓는다 - 느리면(속도 < 걷기) 땅에서 걸어 따돌리고, 빠르면 궤도를 바꾸거나 착지한다(인지만 되면 된다).
+		local arrival = skill.telegraphSeconds + standoffStuds / skill.speedStuds
+		if skill.heightMode == "ground" then
+			walk("굴러오는 것 옆으로", arrival, skill.radiusStuds + half)
+		elseif skill.speedStuds < walkSpeedStuds then
+			table.insert(checks, { label = "걸어서 따돌리기(속도)", availableSeconds = walkSpeedStuds, requiredSeconds = skill.speedStuds, distanceStuds = 0, ok = true })
+		else
+			table.insert(checks, { label = "궤도 바꾸기(인지)", availableSeconds = arrival, requiredSeconds = dodge.perceptionSeconds, distanceStuds = 0, ok = arrival >= dodge.perceptionSeconds })
+		end
+	elseif primitive == "grab" then
+		-- BR1 대공 잡기: 보고 내려올 시간 - 인지 + 한 체공 최대(공중 점프 2 + 대시 = 1.961초 - movement-metrics v2). 착지하면 연속 체공이 0이 된다.
+		local need = dodge.perceptionSeconds + BossData.mechanics.airGrab.maxAirSeconds
+		table.insert(checks, { label = "보고 착지", availableSeconds = skill.telegraphSeconds, requiredSeconds = need, distanceStuds = 0, ok = skill.telegraphSeconds >= need })
+	elseif primitive == "vortex" then
+		-- BR1 소용돌이: 당기는 힘을 거슬러(걷기 − 당김) 반경 밖으로 · 끌림이 끝난 뒤 폭발 원 밖.
+		walk("끌림 거슬러 밖으로", skill.telegraphSeconds, skill.radiusStuds + half, (walkSpeedStuds - skill.pullStudsPerSecond) / walkSpeedStuds)
 	elseif primitive == "line" then
 		local distance = skill.halfWidthStuds + half
 		if (skill.directions or 1) > 1 and skill.centered then
@@ -177,7 +296,13 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 			local halfFanDeg = skill.stepDeg * ((skill.directions - 1) / 2)
 			distance = reach * math.sin(math.rad(halfFanDeg)) + skill.halfWidthStuds + half
 		end
-		walk("직선 옆걸음", skill.telegraphSeconds, distance)
+		if skill.volleyShots then
+			for index, volley in ipairs(BossSkillMath.volleysOf(skill)) do -- BR1 볼리별 전조 · 반폭
+				walk(("직선 %d 옆걸음"):format(index), volley.telegraphSeconds, distance - skill.halfWidthStuds + volley.halfWidthStuds)
+			end
+		else
+			walk("직선 옆걸음", skill.telegraphSeconds, distance)
+		end
 	elseif primitive == "ring" then
 		local waves = BossSkillMath.ringWaves(skill)
 		-- 첫 파동: 서 있다가 뛰면 된다 - 찍기 예고 + 파동이 standoff까지 오는 시간 안에 인지만 하면 된다.
@@ -226,6 +351,24 @@ end
 -- mechanics.gimmickFailMaxHpFraction에서 잘린다(BossMechanics가 강제).
 function BossSkillMath.damageShares(skill, surviveTargetHits)
 	local damage = skill.damage
+	if damage.kind == "currentHp" then
+		return damage.fraction, damage.fraction -- BR1 대공 잡기: 현재 체력 비율(가장 나쁜 경우 = 가득 찬 체력의 그 비율)
+	end
+	-- BR1 칸 · 볼리마다 배율이 다른 스킬: 한 판정 = 가장 큰 칸, 발동 전부 = 합.
+	local list = nil
+	if skill.primitive == "circleTarget" and skill.shots then
+		list = BossSkillMath.shotsOf(skill)
+	elseif (skill.primitive == "line" or skill.primitive == "sector") and skill.volleyShots then
+		list = BossSkillMath.volleysOf(skill)
+	end
+	if list and damage.kind == "attack" then
+		local maxMultiplier, sum = 0, 0
+		for _, entry in ipairs(list) do
+			maxMultiplier = math.max(maxMultiplier, entry.multiplier)
+			sum += entry.multiplier
+		end
+		return maxMultiplier / surviveTargetHits, sum / surviveTargetHits
+	end
 	local hits = 1
 	local primitive = skill.primitive
 	if primitive == "circleBoss" then
@@ -236,8 +379,10 @@ function BossSkillMath.damageShares(skill, surviveTargetHits)
 		hits = skill.sequential and skill.count or 1
 	elseif primitive == "charge" then
 		hits = skill.dashCount or 1
-	elseif primitive == "line" then
+	elseif primitive == "line" or primitive == "sector" then
 		hits = skill.volleys or 1
+	elseif primitive == "projectile" then
+		hits = skill.count or 1
 	end
 	if damage.kind == "maxHp" then
 		local cap = BossData.mechanics.gimmickFailMaxHpFraction

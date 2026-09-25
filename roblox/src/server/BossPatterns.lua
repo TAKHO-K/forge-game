@@ -48,6 +48,10 @@ local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 local BossArenaContainment = require(script.Parent.BossArenaContainment) -- P3d B2: 맵 이탈 복귀 보호(넉백 건너뛰기)
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 넉백 · 회오리 동안 서버 높이 검증 예외
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+-- BR1: 새 조각(부채꼴 · 투사체 · 소용돌이) · 대공 잡기 · 환경 트랙 - 이 파일의 공용 함수 표(kit)를 받아 HANDLERS에 꽂는다.
+local BossHandlersBR1 = require(script.Parent.BossHandlersBR1)
+local BossAirGrab = require(script.Parent.BossAirGrab)
+local BossEnvironment = require(script.Parent.BossEnvironment)
 
 local BossPatterns = {}
 
@@ -318,6 +322,24 @@ local function conditionMet(model, st, data, condition)
 		-- 29-5 분열: 성공이 파티 단위(한 명이 진짜를 때리면 전원이 산다)라 닿을 수 있는 사람이 한 명이면 된다.
 		for _, v in ipairs(victims(st)) do
 			if not BossTrap.isTrapped(v.player) and Reach.horizontalDistance(v.root.Position, st.position) <= condition.studs then
+				return true
+			end
+		end
+		return false
+	elseif kind == "memberAirborneFor" then
+		-- BR1 대공 잡기: 누군가 연속으로 seconds 이상 떠 있다(착지하면 0 - BossHandlersBR1.trackAir).
+		local now = os.clock()
+		for _, v in ipairs(victims(st)) do
+			if not BossTrap.isTrapped(v.player) and BossHandlersBR1.airSecondsOf(st, v.player, now) >= condition.seconds then
+				return true
+			end
+		end
+		return false
+	elseif kind == "memberAirborne" then
+		-- BR1 대공 투사체(얼음 창 · 뇌격 창): 지금 떠 있는 사람이 있다(없으면 쏘지 않는다).
+		local now = os.clock()
+		for _, v in ipairs(victims(st)) do
+			if not BossTrap.isTrapped(v.player) and BossHandlersBR1.airSecondsOf(st, v.player, now) >= (condition.seconds or 0.2) then
 				return true
 			end
 		end
@@ -862,15 +884,21 @@ local function updateWaves(c)
 			-- 22-4: 파동은 지면을 타고 퍼진다 - 파동 중심 지면(floorY)에서 높이차 상한 너머(절벽 위)는 안 닿는다.
 			-- P3d C1: 단상 윗면(또는 무너지며 떨어지는 중)은 파동이 밑으로 지나간다.
 			local inBand = d <= radius and d >= radius - skill.waveThicknessStuds
-				and Reach.sameLayer(v.root.Position, Vector3.new(0, st.floorY, 0)) and not onDais(c, v, wave)
+				and (wave.air or Reach.sameLayer(v.root.Position, Vector3.new(0, st.floorY, 0))) and not onDais(c, v, wave)
 			if inBand then
 				rec.touched = true
-				if isAirborne(v.player.Character, skill.airborneClearanceStuds) then
+				if wave.air then
+					-- BR1 공중 파동: 발 높이(지면 기준)가 띠 [airMin, airMax] 안인 순간이 있으면 맞는다 - 서 있으면 안전, 떠 있으면 맞는다.
+					local height = v.groundFeet.Y - st.floorY
+					if height >= wave.air.minStuds and height <= wave.air.maxStuds then
+						rec.airHit = true
+					end
+				elseif isAirborne(v.player.Character, skill.airborneClearanceStuds) then
 					rec.dodged = true
 				end
 			elseif rec.touched and not rec.resolved and d < radius - skill.waveThicknessStuds then
 				rec.resolved = true
-				if not rec.dodged then
+				if (wave.air and rec.airHit) or (not wave.air and not rec.dodged) then
 					applySkillDamage(c.model, c.data, skill, v.player)
 					debugEvent("waveHit", { player = v.player, at = c.now }) -- P3c 계측: 파동 판정(피해가 0이어도 판정은 났다)
 				end
@@ -893,7 +921,7 @@ local function slam(c)
 	local wave = st.ringWaves[st.wavesSpawned + 1]
 	for layer = 1, wave.layers do
 		local delay = (layer - 1) * wave.layerGapSeconds
-		table.insert(st.waves, { center = xz(st.hopBase), startedAt = c.now + delay, speed = wave.speedStuds, waveIndex = st.wavesSpawned + 1, layer = layer })
+		table.insert(st.waves, { center = xz(st.hopBase), startedAt = c.now + delay, speed = wave.speedStuds, waveIndex = st.wavesSpawned + 1, layer = layer, air = wave.air })
 		send(st, "shockwave", {
 			center = Vector3.new(st.hopBase.X, st.floorY, st.hopBase.Z),
 			serverStart = serverNow() + delay,
@@ -901,6 +929,7 @@ local function slam(c)
 			thickness = skill.waveThicknessStuds,
 			maxRadius = maxRadius,
 			waveIndex = st.wavesSpawned + 1, layer = layer, waveCount = #st.ringWaves,
+			air = wave.air, -- BR1 공중 파동(클라가 띠를 발 높이 [min, max]에 띄워 그린다)
 			bossId = c.data.id, -- P3d A2 · A3: 임팩트 모션 · 풍압 · 땅 파도(연출만)
 			floorColor = (BossArenaMap.getTheme(MonsterState.getZoneKey(c.model)) or BossArenaMapData.default).floor.color,
 		})
@@ -951,6 +980,9 @@ HANDLERS.ring = {
 -- ── circleTarget: 대상 위치의 원. 기본은 count개 동시 산개(낙석), sequential이면 하나가 터진 뒤 그 순간의 대상 위치에 다음 것 ──
 -- count는 입장 인원에 비례할 수 있다(countPerMember - 서리 거인 낙빙 N+2).
 local function circleCount(data, skill)
+	if skill.shots then
+		return #skill.shots -- BR1 칸별 연발
+	end
 	return skill.count + (skill.countPerMember or 0) * (data.partySize or 1)
 end
 
@@ -960,12 +992,22 @@ local function groundAt(st, p)
 end
 
 -- trackers(P3c A4, 선택) = { [원 번호] = 따라갈 멤버의 victims 항목 } - 그 원은 st.trackLockAt까지 그 사람을 따라가다 멈춘다(updateTrackers).
+-- BR1 칸(skill.shots - 작게 → 크게): 지금 칸의 반경 · 배율 · 전조. shots가 없으면 스킬 값 그대로.
+local function currentShot(c)
+	local skill = c.skill
+	if not skill.shots then
+		return { radiusStuds = skill.radiusStuds, multiplier = skill.damage.multiplier, telegraphSeconds = nil }
+	end
+	return BossSkillMath.shotsOf(skill)[c.st.shotIndex or 1]
+end
+
 local function beginCircles(c, positions, seconds, trackers, trackSeconds)
 	local st, skill = c.st, c.skill
 	for i, p in ipairs(positions) do
 		positions[i] = groundAt(st, p)
 	end
 	st.meteorPositions = positions
+	st.shotRadius = currentShot(c).radiusStuds
 	st.phase = "meteorTelegraph"
 	st.phaseEndsAt = c.now + seconds
 	st.trackers = trackers
@@ -977,7 +1019,7 @@ local function beginCircles(c, positions, seconds, trackers, trackSeconds)
 			table.insert(track, { index = index, userId = typeof(v.player) == "Instance" and v.player.UserId or nil })
 		end
 	end
-	send(st, "meteor", { positions = positions, radius = skill.radiusStuds, seconds = seconds, style = skill.impactStyle, track = track, lockIn = trackers and trackSeconds or nil })
+	send(st, "meteor", { positions = positions, radius = st.shotRadius, seconds = seconds, style = skill.impactStyle, track = track, lockIn = trackers and trackSeconds or nil })
 end
 
 -- P3c A4 번개 추적: 추적 중인 원을 그 사람의 지금 자리(벽 안쪽으로 자른 발밑 지면)로 옮기고, trackLockAt이 되면 멈춘다 - 멈춘 자리를 멤버에게 보내
@@ -996,7 +1038,7 @@ local function updateTrackers(c)
 			table.insert(locked, { player = v.player, position = st.meteorPositions[index], index = index })
 		end
 		st.trackers = nil
-		send(st, "meteorLock", { positions = st.meteorPositions, radius = c.skill.radiusStuds, seconds = st.phaseEndsAt - c.now, style = c.skill.impactStyle })
+		send(st, "meteorLock", { positions = st.meteorPositions, radius = st.shotRadius or c.skill.radiusStuds, seconds = st.phaseEndsAt - c.now, style = c.skill.impactStyle })
 		debugEvent("trackLock", { locked = locked, at = c.now, judgeAt = st.phaseEndsAt, positions = st.meteorPositions })
 	end
 end
@@ -1032,16 +1074,79 @@ end
 
 local function circleBubbleSeconds(c)
 	local skill = c.skill
+	if skill.shots or skill.chain or skill.ambush then
+		return BossSkillMath.boundSeconds(skill, 0)
+	end
 	if skill.sequential then
 		return hintedSeconds(c.st, skill, skill.telegraphSeconds + BossSkillMath.repeatSeconds(skill) * (circleCount(c.data, skill) - 1))
 	end
 	return hintedSeconds(c.st, skill, skill.telegraphSeconds)
 end
 
+-- BR1 연쇄(skill.chain = { count, stepStuds, startStuds, intervalSeconds }): 보스 → 대상 직선을 따라 원 count개를 한꺼번에 예고하고, 전조가 끝나면
+-- 보스 쪽부터 intervalSeconds마다 하나씩 솟는다(원마다 제 시각에 판정). 벽 밖 자리는 뺀다.
+local function startChain(c)
+	local st, skill = c.st, c.skill
+	local zone = zoneOf(c.model)
+	local origin = xz(c.position)
+	local toward = xz(c.targetRoot.Position) - origin
+	local dir = toward.Magnitude > 1e-3 and toward.Unit or Vector3.new(1, 0, 0)
+	local positions = {}
+	for k = 0, skill.chain.count - 1 do
+		local at = origin + dir * ((skill.chain.startStuds or skill.chain.stepStuds) + skill.chain.stepStuds * k)
+		local inside = zone.radius and (at - xz(zone.center)).Magnitude <= zone.radius - skill.radiusStuds or (not zone.radius and ArenaShape.clamp(zone, at, 0) == at)
+		if inside then
+			table.insert(positions, groundAt(st, at))
+		end
+	end
+	st.chainPositions = positions
+	st.chainFired = 0
+	st.phase = "chainTelegraph"
+	st.phaseEndsAt = c.now + skill.telegraphSeconds
+	send(st, "chain", { positions = positions, radius = skill.radiusStuds, seconds = skill.telegraphSeconds, interval = skill.chain.intervalSeconds, bossId = c.data.id })
+end
+
+local function stepChain(c)
+	local st, skill = c.st, c.skill
+	while st.chainFired < #st.chainPositions and c.now >= st.phaseEndsAt + skill.chain.intervalSeconds * st.chainFired do
+		st.chainFired += 1
+		local spot = st.chainPositions[st.chainFired]
+		judgeBegin()
+		for _, v in ipairs(victims(st)) do
+			if (xz(v.root.Position) - xz(spot)).Magnitude <= skill.radiusStuds and Reach.sameLayer(v.groundFeet, spot) then
+				applySkillDamage(c.model, c.data, skill, v.player)
+			end
+		end
+		judgeEnd(c, { kind = "circle", centers = { spot }, radius = skill.radiusStuds, inner = 0 })
+		send(st, "chainImpact", { index = st.chainFired, position = spot, radius = skill.radiusStuds })
+	end
+	if st.chainFired >= #st.chainPositions then
+		endSkill(c.model, st, c.data, c.now)
+	end
+end
+
+-- BR1 잠행 급습(skill.ambush = { trackSeconds, lockTelegraphSeconds, depthStuds }): 보스가 전조(telegraphSeconds) 동안 땅속으로 사라지고, 대상 발밑의
+-- 원이 trackSeconds 동안 따라가다 멈춘 뒤 lockTelegraphSeconds에 솟는다(P3c 추적 원 그대로) - 보스는 그 자리로 올라온다. 겉모습만 숨긴다(판정 위치는 서버 논리).
+local function startAmbush(c)
+	local st, skill = c.st, c.skill
+	st.phase = "ambushDig"
+	st.phaseEndsAt = c.now + skill.telegraphSeconds
+	st.ambushBase = c.position
+	st.burrowLogical = c.position
+	send(st, "ambushDig", { center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.telegraphSeconds, bossId = c.data.id })
+end
+
 HANDLERS.circleTarget = {
 	bubbleSeconds = circleBubbleSeconds,
 	start = function(c)
 		local skill = c.skill
+		if skill.chain then
+			startChain(c)
+			return
+		elseif skill.ambush then
+			startAmbush(c)
+			return
+		end
 		local zone = zoneOf(c.model)
 		local first = xz(c.targetRoot.Position)
 		local positions = aimPositions(c, zone)
@@ -1068,10 +1173,35 @@ HANDLERS.circleTarget = {
 				table.insert(positions, clampToZone(first + offset * skill.scatterStuds, zone, circleTargetMargin(zone)))
 			end
 		end
-		beginCircles(c, positions, hintedSeconds(c.st, skill, skill.telegraphSeconds))
+		beginCircles(c, positions, hintedSeconds(c.st, skill, currentShot(c).telegraphSeconds or skill.telegraphSeconds))
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
+		if skill.chain then
+			if c.now >= st.phaseEndsAt then
+				stepChain(c)
+			end
+			return
+		end
+		if skill.ambush and st.phase == "ambushDig" then
+			local progress = math.min((c.now - (st.phaseEndsAt - skill.telegraphSeconds)) / skill.telegraphSeconds, 1)
+			c.model:PivotTo(CFrame.new(st.ambushBase - Vector3.new(0, (skill.ambush.depthStuds or 6) * progress, 0)))
+			if c.now < st.phaseEndsAt then
+				return
+			end
+			-- 다 파고들었다 - 대상 발밑 원이 따라가다(trackSeconds) 멈춘 뒤(lockTelegraphSeconds) 솟는다.
+			local zone = zoneOf(c.model)
+			local target = nil
+			for _, v in ipairs(victims(st)) do
+				if v.root == c.targetRoot then
+					target = v
+				end
+			end
+			local positions = { clampToZone(xz(c.targetRoot.Position), zone, circleTargetMargin(zone)) }
+			st.shotIndex = 1
+			beginCircles(c, positions, skill.ambush.trackSeconds + skill.ambush.lockTelegraphSeconds, target and { [1] = target } or nil, skill.ambush.trackSeconds)
+			return
+		end
 		if st.trackers then
 			updateTrackers(c)
 		end
@@ -1080,11 +1210,16 @@ HANDLERS.circleTarget = {
 		end
 		judgeBegin()
 		local hits = {}
+		local shot = currentShot(c) -- BR1: 이 칸의 반경 · 배율
+		local shotSkill = skill
+		if skill.shots and shot.multiplier ~= skill.damage.multiplier then
+			shotSkill = { damage = { kind = skill.damage.kind, multiplier = shot.multiplier }, damageLabel = skill.damageLabel }
+		end
 		for _, v in ipairs(victims(st)) do
 			local p = xz(v.root.Position)
 			for spotIndex, spot in ipairs(st.meteorPositions) do
-				if (p - xz(spot)).Magnitude <= skill.radiusStuds and Reach.sameLayer(v.groundFeet, spot) then -- 22-4(P3a D3: 발 기준)
-					applySkillDamage(c.model, c.data, skill, v.player)
+				if (p - xz(spot)).Magnitude <= shot.radiusStuds and Reach.sameLayer(v.groundFeet, spot) then -- 22-4(P3a D3: 발 기준)
+					applySkillDamage(c.model, c.data, shotSkill, v.player)
 					table.insert(hits, { v = v, spot = spot, spotIndex = spotIndex })
 					break
 				end
@@ -1099,9 +1234,18 @@ HANDLERS.circleTarget = {
 		for _, hit in ipairs(hits) do
 			runHitEffects(c, skill.onHit, hit.v, hit.spot, perSpot[hit.spotIndex])
 		end
-		judgeEnd(c, { kind = "circle", centers = st.meteorPositions, radius = skill.radiusStuds, inner = 0 })
-		send(st, "meteorImpact", { positions = st.meteorPositions, radius = skill.radiusStuds, style = skill.impactStyle })
-		runEffects(c, skill.onImpact, { positions = st.meteorPositions, radius = skill.radiusStuds })
+		judgeEnd(c, { kind = "circle", centers = st.meteorPositions, radius = shot.radiusStuds, inner = 0 })
+		send(st, "meteorImpact", { positions = st.meteorPositions, radius = shot.radiusStuds, style = skill.impactStyle, shotIndex = st.shotIndex, bossId = c.data.id, motion = skill.motion })
+		runEffects(c, skill.onImpact, { positions = st.meteorPositions, radius = shot.radiusStuds })
+		if skill.ambush then
+			-- 솟은 자리로 보스가 올라온다(겉모습 - 판정은 이미 났다).
+			local spot = st.meteorPositions[1]
+			st.burrowLogical = nil
+			c.model:PivotTo(CFrame.new(Vector3.new(spot.X, MonsterState.getSpawnPosition(c.model).Y, spot.Z)))
+			send(st, "ambushEmerge", { position = spot, radius = shot.radiusStuds, bossId = c.data.id })
+			endSkill(c.model, st, c.data, c.now)
+			return
+		end
 		if skill.sequential and st.shotIndex < circleCount(c.data, skill) and c.targetRoot then
 			st.shotIndex += 1
 			local positions, owners = aimPositions(c, zoneOf(c.model))
@@ -1125,7 +1269,7 @@ HANDLERS.circleTarget = {
 				beginCircles(c, positions, hintedSeconds(st, skill, track.trackSeconds + track.lockTelegraphSeconds), trackers, track.trackSeconds)
 				return
 			end
-			beginCircles(c, positions, hintedSeconds(st, skill, skill.repeatTelegraphSeconds or skill.telegraphSeconds))
+			beginCircles(c, positions, hintedSeconds(st, skill, currentShot(c).telegraphSeconds or skill.repeatTelegraphSeconds or skill.telegraphSeconds))
 			return
 		end
 		if skill.gate and not st.gateJudged then
@@ -1136,6 +1280,13 @@ HANDLERS.circleTarget = {
 		endSkill(c.model, st, c.data, c.now)
 	end,
 }
+
+HANDLERS.circleTarget.interrupt = function(c)
+	if c.st.burrowLogical and c.skill and c.skill.ambush then -- BR1 잠행 급습 중에 끊겼다 - 지표로 올린다
+		c.model:PivotTo(CFrame.new(c.st.burrowLogical))
+		c.st.burrowLogical = nil
+	end
+end
 
 -- P3c A2 돌진 대상 = 전조가 시작되는 순간 보스에서 가장 가까운 멤버(잡힌 사람 제외 · 동률이면 무작위 - BossSkillMath.nearestIndex). 전조 동안 바뀌지 않는다
 -- (대상 · 좌표 모두 이 순간에 고정). 멤버가 없으면(스탠드인 없이 DevTools로 띄운 경우) 어그로 대상 그대로. 반환: 대상의 victims 항목(없으면 nil), 루트.
@@ -1186,14 +1337,15 @@ local function startDash(c, fromPosition, dashIndex)
 	st.chargeTarget = target and target.player or nil
 	st.focusStartedAt = c.now
 	st.phase = "focus"
-	st.phaseEndsAt = c.now + skill.telegraphSeconds
+	local telegraph = BossSkillMath.dashTelegraph(skill, dashIndex) -- BR1: 첫 돌진 2.2초 · 둘째부터 repeatTelegraphSeconds
+	st.phaseEndsAt = c.now + telegraph
 	local targetPlayer = target and target.player
 	local targetUserId = typeof(targetPlayer) == "Instance" and targetPlayer.UserId or nil
 	send(st, "focus", {
 		bossPosition = st.chargeFrom,
 		endPosition = st.chargeTo,
 		halfWidth = skill.pathHalfWidthStuds,
-		seconds = skill.telegraphSeconds,
+		seconds = telegraph,
 		floorY = st.floorY,
 		targetUserId = targetUserId, -- P3c A2: 클라가 이 사람 머리 위에 표식을 띄운다(방향선 = 위 경로선)
 		bossId = c.data.id, dashIndex = dashIndex, burrow = skill.burrow ~= nil, -- P3d A4: 발 긁기 · 잠행 연출(연출만)
@@ -1371,7 +1523,10 @@ local function startVolley(c, angleDeg)
 	local st, skill = c.st, c.skill
 	local zone = zoneOf(c.model)
 	local origin = xz(c.model.PrimaryPart.Position)
+	local volley = BossSkillMath.volleysOf(skill)[st.crossVolley] -- BR1: 볼리마다 전조 · 반폭 · 배율(마지막이 강함)
+	st.crossVolleyShot = volley
 	local beams, lengths = {}, {}
+	local segments = {} -- BR1 반사(skill.reflect): 벽에서 꺾인 선분 - { origin, angleDeg, length }
 	for k = 0, (skill.directions or 1) - 1 do
 		local a = math.rad(angleDeg + skill.stepDeg * k)
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
@@ -1386,25 +1541,39 @@ local function startVolley(c, angleDeg)
 		end
 		table.insert(beams, { dir = dir, length = length, blocker = blocker })
 		lengths[k + 1] = length
+		-- BR1 반사 레이저: 막히지 않고 벽(원)에 닿은 빔은 벽의 법선으로 한 번 반사된다(r = d − 2(d·n)n).
+		if skill.reflect and not blocker and zone.radius then
+			local hitPoint = origin + dir * length
+			local normal = xz(hitPoint) - xz(zone.center)
+			if normal.Magnitude > 1e-3 then
+				normal = normal.Unit
+				local reflected = (dir - normal * (2 * dir:Dot(normal))).Unit
+				local start = hitPoint + reflected * 0.5
+				local reflectedLength = clipToZone(start, reflected, zone, 1)
+				table.insert(beams, { dir = reflected, length = reflectedLength, origin = start })
+				table.insert(segments, { origin = Vector3.new(start.X, st.floorY, start.Z), angleDeg = math.deg(math.atan2(reflected.Z, reflected.X)), length = reflectedLength })
+			end
+		end
 	end
 	st.crossOrigin = origin
 	st.crossBeams = beams
 	st.crossAngle = angleDeg
 	st.phase = "crossTelegraph"
-	st.phaseEndsAt = c.now + skill.telegraphSeconds
+	st.phaseEndsAt = c.now + volley.telegraphSeconds
 	send(st, "cross", {
 		center = Vector3.new(origin.X, st.floorY, origin.Z),
 		angleDeg = angleDeg,
 		stepDeg = skill.stepDeg,
 		lengths = lengths,
-		halfWidth = skill.halfWidthStuds,
-		seconds = skill.telegraphSeconds,
+		halfWidth = volley.halfWidthStuds,
+		seconds = volley.telegraphSeconds,
+		segments = #segments > 0 and segments or nil,
 	})
 end
 
 HANDLERS.line = {
 	bubbleSeconds = function(c)
-		return c.skill.telegraphSeconds * (c.skill.volleys or 1)
+		return BossSkillMath.boundSeconds(c.skill, 0)
 	end,
 	start = function(c)
 		c.st.crossVolley = 1
@@ -1416,18 +1585,23 @@ HANDLERS.line = {
 			return
 		end
 		judgeBegin()
+		local volley = st.crossVolleyShot or BossSkillMath.volleysOf(skill)[st.crossVolley]
+		local volleySkill = skill
+		if volley.multiplier ~= skill.damage.multiplier then -- BR1 볼리별 배율
+			volleySkill = { damage = { kind = skill.damage.kind, multiplier = volley.multiplier, fraction = skill.damage.fraction }, damageLabel = skill.damageLabel }
+		end
 		for _, v in ipairs(victims(st)) do
-			local rel = xz(v.root.Position) - st.crossOrigin
 			for _, beam in ipairs(st.crossBeams) do
+				local rel = xz(v.root.Position) - (beam.origin or st.crossOrigin) -- BR1 반사 선분은 자기 시작점
 				local along = rel:Dot(beam.dir)
-				if along >= 0 and along <= beam.length and (rel - beam.dir * along).Magnitude <= skill.halfWidthStuds
+				if along >= 0 and along <= beam.length and (rel - beam.dir * along).Magnitude <= volley.halfWidthStuds
 					and Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0)) then -- 22-4: 지면을 탄다(P3a D3: 발 기준)
-					applySkillDamage(c.model, c.data, skill, v.player)
+					applySkillDamage(c.model, c.data, volleySkill, v.player)
 					break
 				end
 			end
 		end
-		judgeEnd(c, { kind = "beams", origin = Vector3.new(st.crossOrigin.X, st.floorY, st.crossOrigin.Z), beams = st.crossBeams, halfWidth = skill.halfWidthStuds })
+		judgeEnd(c, { kind = "beams", origin = Vector3.new(st.crossOrigin.X, st.floorY, st.crossOrigin.Z), beams = st.crossBeams, halfWidth = volley.halfWidthStuds })
 		send(st, "crossFire", { angleDeg = st.crossAngle })
 		if skill.blockedByProp then
 			sendPropsRemoved(st, BossArenaProps.removeWhere(c.model, function(prop)
@@ -1439,7 +1613,7 @@ HANDLERS.line = {
 				return false
 			end))
 		end
-		if st.crossVolley < (skill.volleys or 1) then
+		if st.crossVolley < #BossSkillMath.volleysOf(skill) then
 			st.crossVolley += 1
 			startVolley(c, (skill.reaim and c.targetRoot) and firstBeamAngle(c) or (st.crossAngle + skill.rotateDeg))
 			return
@@ -1773,6 +1947,18 @@ HANDLERS.gimmick = {
 	end,
 }
 
+-- ─────────────────────────── BR1 조각 등록 ───────────────────────────
+local kit = {
+	victims = victims, send = send, sendTo = sendTo, applySkillDamage = applySkillDamage, zoneOf = zoneOf,
+	clampToZone = clampToZone, clipToZone = clipToZone, isAirborne = isAirborne, xz = xz, footOf = footOf,
+	endSkill = endSkill, runHitEffects = runHitEffects, judgeBegin = judgeBegin, judgeEnd = judgeEnd,
+	debugEvent = debugEvent, serverNow = serverNow, rng = scatterRng, setBodyColor = setBodyColor, clearDaze = clearDaze,
+	kitZones = kitZones, groundAt = groundAt,
+}
+BossHandlersBR1.register(HANDLERS, kit)
+BossAirGrab.register(HANDLERS, kit)
+BossEnvironment.register(kit)
+
 -- ─────────────────────────── 틱 ───────────────────────────
 
 local function context(model, st, data, now, position, targetRoot)
@@ -1822,6 +2008,9 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	local now = os.clock()
 	BossMechanics.tick(st.members, dt) -- 29-1: 잡힌 멤버의 구출 핸들러
 	tickHazards(model, st, data, now) -- 29-3: 위험 지형(모래 구덩이)의 중심부 피해
+	BossHandlersBR1.trackAir(st, now) -- BR1: 멤버별 연속 체공(대공 잡기 · 대공 투사체의 조건)
+	BossHandlersBR1.stepProjectiles(model, st, data, now, dt) -- BR1: 쏜 투사체는 스킬과 떨어져 난다
+	BossEnvironment.step(model, st, data, now, dt) -- BR1: 환경 변화(두 번째 시계 - 기본 패턴과 겹친다)
 
 	if st.phase == "normal" then
 		local pickCtx = st.pickCtx
@@ -1830,6 +2019,11 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 		-- 격노(HP ≤ enragedHpFraction)에서만 전역 쿨이 짧아진다(사용자 지시 - 연속 사용은 체력 20% 이하에서만).
 		pickCtx.enraged = MonsterState.getHpRatio(model) <= data.scheduler.enragedHpFraction
 		local pick = BossScheduler.pick(st.sched, data.skills, data.skillOrder, data.scheduler, pickCtx)
+		-- BR1 겹침(설계 §4-3): 환경이 도는 동안 "피할 수 없음" 쌍의 패턴은 나올 차례에 확률로 건너뛰고 같은 환경 발동 안에서 두 번 연속 나오지 않는다.
+		if pick and BossEnvironment.shouldDefer(model, st, data, pick, now) then
+			st.sched.readyAt[pick] = now + BossEnvironment.deferSeconds()
+			pick = nil
+		end
 		-- P3a의 "구조물 곁을 5바퀴 맴돌면 보스가 부순다"는 P3c C8에서 없앴다 - 돌진 대상이 가장 가까운 사람이라 구조물 뒤에 숨으면 돌진이 온다(구조물 파괴 + 기절).
 		if pick then
 			startSkill(model, st, data, pick, now, position, targetRoot)
@@ -1857,6 +2051,7 @@ function BossPatterns.interrupt(model, data)
 	end
 	clearDaze(model, st)
 	st.waves = {}
+	BossHandlersBR1.clearProjectiles(st) -- BR1
 	send(st, "reset", {})
 	endSkill(model, st, data, os.clock(), true) -- P3d D1: 중단이면 onComplete(재생성)를 건너뛴다
 end
@@ -1873,6 +2068,8 @@ function BossPatterns.onTaunt(model, data, player)
 	end
 	st.lastTaunt = { player = player, at = os.clock() }
 	BossScheduler.noteTaunt(st.sched, os.clock())
+	-- BR1(설계 §2): 도발이 들어오면 이 보스가 들고 있는 사람(대공 잡기)을 즉시 푼다 → 보스 기절. 연결 고리만 - 도발 스킬은 K 단계.
+	BossAirGrab.releaseByTaunt(model)
 	return false
 end
 
@@ -1895,6 +2092,7 @@ function BossPatterns.reset(model, data)
 	end
 	BossMechanics.reset(model)
 	BossPatterns.clearProps(model)
+	BossEnvironment.reset(model, st) -- BR1: 환경 변화도 처음 상태로(구역 · 발판 · 핵을 치운다)
 end
 
 -- 29-3: 동적 지형을 전부 치운다 - 전멸 리셋(재도전 = 처음부터)과 보스전 종료(BossEncounter.endEncounter).
@@ -1903,6 +2101,7 @@ function BossPatterns.clearProps(model, members)
 	local st = MonsterState.getBossPatternState(model)
 	BossArenaProps.clear(model)
 	removeDecoys(model) -- 29-5: 분열 도중에 보스전이 끝나도(처치·이탈) 분신이 남지 않는다
+	BossEnvironment.clear(model) -- BR1: 보스전이 끝나면 환경 변화의 파트(공중 발판 · 핵)도 치운다
 	for _, member in ipairs(members or (st and st.members) or {}) do
 		BossPatterns.clearPropsFor(member)
 	end

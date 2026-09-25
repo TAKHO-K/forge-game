@@ -41,6 +41,7 @@ holdBrokenEvent.Name = "BossRescueHoldBroken"
 holdBrokenEvent.Parent = ReplicatedStorage
 
 local PROMPT_NAME = "BossRescuePrompt"
+local scheduleAutoRelease -- 아래(trap 앞)에서 정의
 local releasedListeners = {}
 local trappedListeners = {}
 
@@ -149,7 +150,21 @@ function BossTrap.release(player, reason)
 	return true
 end
 
--- def = { kind, rescueType, autoReleaseSeconds(생략하면 BossData.mechanics.trap), context(핸들러용 자유 필드) }
+-- 자동 해제 타이머 - 발버둥(shortenRelease)이 releaseAt을 당기면 그 시각에 한 번 더 건다. 어느 타이머든 releaseAt이 됐을 때만 푼다.
+scheduleAutoRelease = function(player, record, seconds)
+	task.delay(math.max(seconds, 0), function()
+		if records[player] == record and os.clock() >= record.releaseAt - 1e-3 then
+			if record.onAutoRelease then
+				record.onAutoRelease(player, record)
+			end
+			if records[player] == record then
+				BossTrap.release(player, "auto")
+			end
+		end
+	end)
+end
+
+-- def = { kind, rescueType, autoReleaseSeconds(생략하면 BossData.mechanics.trap), context(핸들러용 자유 필드), onAutoRelease(선택) }
 -- 반환: 잡혔으면 true. 이미 잡혀 있으면 false(타이머를 늘리지 않는다).
 function BossTrap.trap(player, def)
 	if records[player] then
@@ -169,6 +184,7 @@ function BossTrap.trap(player, def)
 		progressBy = {},
 		holders = {},
 		context = def.context,
+		onAutoRelease = def.onAutoRelease, -- BR1: 자동 해제 직전(아직 잡힌 채) 도는 조각 - 대공 잡기의 던짐 피해(풀린 뒤에는 해제 유예 무적이 막는다)
 	}
 	records[player] = record
 	record.prompt = BossTrap.createPrompt(player, record)
@@ -189,12 +205,29 @@ function BossTrap.trap(player, def)
 		task.spawn(fn, player, record)
 	end
 
-	task.delay(seconds, function()
-		if records[player] == record then
-			BossTrap.release(player, "auto")
-		end
-	end)
+	scheduleAutoRelease(player, record, seconds)
 	return true
+end
+
+-- BR1 발버둥: 남은 시간을 seconds만큼 줄인다 - 잡힌 뒤 minHoldSeconds 전에는 안 풀린다. 반환: 새 남은 시간(잡혀 있지 않으면 nil).
+function BossTrap.shortenRelease(player, seconds, minHoldSeconds)
+	local record = records[player]
+	if not record then
+		return nil
+	end
+	local now = os.clock()
+	local releaseAt = math.max(record.releaseAt - seconds, record.startedAt + (minHoldSeconds or 0), now)
+	local cut = record.releaseAt - releaseAt
+	if cut <= 0 then
+		return record.releaseAt - now
+	end
+	record.releaseAt = releaseAt
+	record.serverReleaseAt -= cut
+	if isRealPlayer(player) and player.Parent then
+		player:SetAttribute("BossTrapReleaseAt", record.serverReleaseAt)
+	end
+	scheduleAutoRelease(player, record, releaseAt - now)
+	return releaseAt - now
 end
 
 -- 구출 진행을 amount(0~1)만큼 채운다. 합이 1에 닿으면 해제한다. 잡힌 사람은 구출자가 될 수 없다.

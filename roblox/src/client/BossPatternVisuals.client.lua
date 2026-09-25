@@ -37,6 +37,10 @@ local BossRegrowView = require(script.Parent.BossRegrowView) -- P3d D: 지형 �
 local BossMotionView = require(script.Parent.BossMotionView) -- P3d A1 · A2 · A4: 보스 찍기 · 돌진 모션(인형) · 풍압 · 속도감
 local BossFx = require(script.Parent.BossFx) -- P3d A5: 연출 조각 풀
 local BossFxData = require(ReplicatedStorage.Shared.data.BossFxData)
+-- BR1: 새 조각(부채꼴 · 투사체 · 소용돌이 · 연쇄 · 잠행) · 대공 잡기 · 환경 변화 - 그리기는 각 모듈에 있다.
+local BossBR1View = require(script.Parent.BossBR1View)
+local BossGrabView = require(script.Parent.BossGrabView)
+local BossEnvironmentView = require(script.Parent.BossEnvironmentView)
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
@@ -172,6 +176,9 @@ local BUBBLES = {
 	overcharge = { icon = "ϟ", color = Color3.fromRGB(230, 40, 40) },
 	-- 29-1 파훼 성공 = 기회(헤롱과 같은 파랑).
 	gateBroken = { icon = "◇", color = Color3.fromRGB(120, 200, 255) },
+	-- BR1: 강화 평타 = 짧은 휘두르기(작은 무게 - 주황), 대공 잡기 = 손바닥(큰 무게 - 위험색).
+	swipe = { icon = "›", color = Color3.fromRGB(255, 120, 30) },
+	grab = { icon = "✋", color = Color3.fromRGB(230, 40, 40) },
 }
 
 local currentBubble = nil
@@ -315,16 +322,22 @@ local function shockwave(data)
 	-- P3c B4(리뷰 2): 띠를 띄우지 않고 **키운다** - 바닥에서 둔덕 윗면 위까지 덮는 띠(평지에서도 바닥에 붙어 있고, 둔덕 위를 지날 때도 보인다).
 	-- (P3d: 옛 코드는 이 값을 선언 전에 읽어 첫 크기가 nil이었다 - 첫 프레임에 다시 잡혀 겉으로는 안 보였다. 선언을 앞으로 옮겼다.)
 	local waveHeight = WAVE_HEIGHT_STUDS + moundLift(data.center, data.maxRadius)
+	local airLift = 0
+	if data.air then
+		-- BR1 공중 파동: 발 높이 [min, max] 띠를 그 높이에 그린다(루트 = 발 + 3 - 띠가 몸통을 지나는 높이). 땅에 서 있으면 띠가 머리 위로 지나간다.
+		waveHeight = data.air.maxStuds - data.air.minStuds
+		airLift = data.air.minStuds + 1.5
+	end
 	local segments = {}
 	for i = 1, WAVE_SEGMENTS do
 		local part = newPart(Vector3.new(1, waveHeight, data.thickness), DANGER_COLOR, 0.25)
 		segments[i] = part
 	end
-	local center = data.center + Vector3.new(0, waveHeight / 2, 0)
+	local center = data.center + Vector3.new(0, waveHeight / 2 + airLift, 0)
 	-- P3d A3 땅 파도: 첫 겹에만 흙 마루(맵 바닥색을 밝게 - 솟았다 꺼지며 굴러간다)를 띠 안에 세운다. 마루 = 띠와 같은 자리 · 띠보다 낮고 좁다(빨강 띠가 겉을 감싸 전조가 가려지지 않는다).
 	local ground = BossFxData.groundWave
 	local crest = {}
-	if (data.layer or 1) == 1 then
+	if (data.layer or 1) == 1 and not data.air then
 		local earth = (data.floorColor or Color3.fromRGB(120, 110, 100)):Lerp(Color3.new(1, 1, 1), 0.18)
 		for i = 1, ground.segments do
 			local part = BossFx.acquirePart("block")
@@ -523,6 +536,15 @@ local function cross(data)
 		end
 	end
 	placeCrossBeams(data.angleDeg, data)
+	-- BR1 반사 레이저: 벽에서 꺾인 선분(시작점 · 각 · 길이 - 서버 판정의 두 번째 선분 그대로).
+	for _, segment in ipairs(data.segments or {}) do
+		local a = math.rad(segment.angleDeg)
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, segment.length), DANGER_COLOR, 0.8)
+		line.CFrame = CFrame.lookAt(segment.origin + dir * (segment.length / 2) + Vector3.new(0, 0.15, 0), segment.origin + dir * segment.length + Vector3.new(0, 0.15, 0))
+		TweenService:Create(line, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 0.35 }):Play()
+		table.insert(crossLines, line)
+	end
 end
 
 local function crossFire()
@@ -634,6 +656,48 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		cross(data)
 	elseif kind == "crossFire" then
 		crossFire()
+	elseif kind == "sector" then
+		BossBR1View.sector(data)
+	elseif kind == "sectorImpact" then
+		BossBR1View.sectorImpact(data)
+	elseif kind == "projTelegraph" then
+		BossBR1View.projTelegraph(data)
+	elseif kind == "projSpawn" then
+		BossBR1View.projSpawn(data)
+	elseif kind == "projSync" then
+		BossBR1View.projSync(data)
+	elseif kind == "projEnd" then
+		BossBR1View.projEnd(data)
+	elseif kind == "vortex" then
+		BossBR1View.vortex(data)
+	elseif kind == "vortexBurst" then
+		BossBR1View.vortexBurst(data)
+	elseif kind == "chain" then
+		BossBR1View.chain(data)
+	elseif kind == "chainImpact" then
+		BossBR1View.chainImpact(data)
+	elseif kind == "ambushDig" then
+		BossBR1View.ambushDig(data)
+	elseif kind == "ambushEmerge" then
+		BossBR1View.ambushEmerge(data)
+	elseif kind == "grabTelegraph" then
+		BossGrabView.telegraph(data)
+	elseif kind == "grabMark" then
+		BossGrabView.mark(data)
+	elseif kind == "grabbed" then
+		BossGrabView.grabbed(data)
+	elseif kind == "grabRelease" or kind == "grabEnd" or kind == "grabMiss" then
+		if kind ~= "grabRelease" then
+			BossGrabView.clear()
+		end
+	elseif kind == "envTelegraph" then
+		BossEnvironmentView.telegraph(data)
+	elseif kind == "envStart" then
+		BossEnvironmentView.start(data)
+	elseif kind == "envWind" then
+		BossEnvironmentView.wind(data)
+	elseif kind == "envEnd" then
+		BossEnvironmentView.clear()
 	elseif kind == "regrowTelegraph" then
 		BossRegrowView.telegraph(data)
 	elseif kind == "regrowSpawn" then
@@ -648,6 +712,9 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossSplitView.clear()
 		BossFloodView.reset()
 		BossStormView.dischargeRods(false)
+		BossBR1View.reset() -- BR1
+		BossGrabView.reset()
+		BossEnvironmentView.reset()
 	end
 end)
 

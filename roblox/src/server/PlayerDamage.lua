@@ -116,7 +116,7 @@ end
 
 -- 감소율까지 적용된 최종 피해를 넣고 사망 처리까지 한다 - 모든 피격 경로의 마지막 공통
 -- 지점. 받는 피해 배율(대검 E 채널링·대시, PlayerState)은 여기서 곱한다.
-local function applyFinalDamage(targetPlayer, damage, label)
+local function applyFinalDamage(targetPlayer, damage, label, opts)
 	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
 	damage *= PlayerDamage.getNewbieMultiplier(targetPlayer)
 	damage *= PlayerDamage.getLevelGapTakeMultiplier(targetPlayer) -- G1-3: 레벨차 계수(받는 피해)
@@ -133,7 +133,7 @@ local function applyFinalDamage(targetPlayer, damage, label)
 	-- 오염된 값과 곱해져도 여기서 한 번 더 끊는다.
 	damage = Sanitize.number(damage, 0)
 	-- 반환은 지금까지처럼 피해 하나(호출자들이 "피격이 있었나"로 읽는다) - 쉴드가 다 막아도 피격은 피격이다. 흡수량이 필요한 곳은 takeDamage를 직접 부른다.
-	return (PlayerDamage.takeDamage(targetPlayer, damage, { label = label }))
+	return (PlayerDamage.takeDamage(targetPlayer, damage, { label = label, ignoresShield = opts and opts.ignoresShield }))
 end
 
 -- 몬스터 공격력(rawAttack)을 방어력 감소식에 넣어 적용한다 - 잡몹 평타·보스 평타·강공격·
@@ -157,11 +157,30 @@ end
 -- 최대체력 비율 피해(21-3, 보스 돌진 - 방어 무관). 받는 피해 배율(대시 50% 등)은 그대로
 -- 곱한다 - "방어 무관"이지 "감소 무관"이 아니다(PRD 5.4 대시 설계가 만든 "일단 대시 vs
 -- 제대로 피하기"의 대비를 여기서도 유지한다, 20.46 [0] 계산 참고).
-function PlayerDamage.applyMaxHpFraction(targetPlayer, fraction, label)
+-- opts.ignoresShield(BR1): 쉴드를 건드리지 않고 HP를 깎는다 - 핵심 기믹 실패(BossData.mechanics.gimmickFail).
+function PlayerDamage.applyMaxHpFraction(targetPlayer, fraction, label, opts)
 	if (PlayerState.getHp(targetPlayer) or 0) <= 0 then
 		return 0
 	end
-	return applyFinalDamage(targetPlayer, PlayerState.getMaxHp(targetPlayer) * fraction, label)
+	return applyFinalDamage(targetPlayer, PlayerState.getMaxHp(targetPlayer) * fraction, label, opts)
+end
+
+-- BR1 대공 잡기의 던짐: **현재** 체력의 비율(방어 무시 · 받는 피해 감소 = 신규 보호 · 레벨차 · 버프 · 무적 적용 · 쉴드 적용 - 설계 §2 결정).
+-- 잡힌 채로 부른다(풀린 뒤에는 해제 유예 무적이 막는다) - 그래서 잡힘 배율(0)만 건너뛴다. 현재 체력의 비율이라 이것만으로는 죽지 않는다.
+function PlayerDamage.applyCurrentHpFraction(targetPlayer, fraction, label)
+	local hp = PlayerState.getHp(targetPlayer) or 0
+	if hp <= 0 then
+		return 0
+	end
+	local damage = hp * fraction
+	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
+	damage *= PlayerDamage.getNewbieMultiplier(targetPlayer)
+	damage *= PlayerDamage.getLevelGapTakeMultiplier(targetPlayer)
+	damage = math.min(Sanitize.number(damage, 0), hp * fraction) -- 레벨차 배율이 1을 넘어도 현재 체력의 비율을 넘기지 않는다(이것만으로 죽지 않는다)
+	if damage <= 0 then
+		return 0
+	end
+	return (PlayerDamage.takeDamage(targetPlayer, damage, { label = label }))
 end
 
 return PlayerDamage

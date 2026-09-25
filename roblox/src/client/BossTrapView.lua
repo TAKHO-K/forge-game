@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local BossTrapView = {}
 
@@ -31,6 +32,7 @@ local KIND_NAMES = {
 	crystallized = "결정화",
 	buried = "속박",
 	shocked = "감전",
+	grabbed = "대공 잡기", -- BR1
 }
 -- 29-5: 구출 입력이 F 홀드 하나로 통일됐다 - 픽토그램은 "손"(꾹 누른다) 하나이고, 다른 길이 있는 종류만 그 길을 덧붙인다
 -- (빙결 = 얼음을 때려도 된다 · 결정화 = 진짜를 찾아 때린다).
@@ -40,6 +42,7 @@ local RESCUE_ICONS = {
 	gimmick = "?",
 	push = "✋",
 	touch = "✋",
+	grab = "✋ ⚔", -- BR1 대공 잡기: 곁에서 F 홀드 또는 손을 때린다
 }
 local PROMPT_NAME = "BossRescuePrompt" -- 서버 BossTrap.createPrompt와 같은 이름
 local HOLD_BREAK_SECONDS = 0.2 -- 피격으로 끊긴 뒤 프롬프트를 꺼 두는 시간(꺼지는 순간 홀드가 끝난다)
@@ -236,7 +239,8 @@ function BossTrapView.start()
 				panel.Visible = kind ~= nil
 				if kind then
 					local remaining, rescue = readBars(target)
-					title.Text = (rescue > 0 and "%s - 친구가 구하는 중" or "%s - 움직일 수 없습니다"):format(KIND_NAMES[kind] or "잡힘")
+					title.Text = (kind == "grabbed" and rescue <= 0) and Text.get("boss.grab.struggle") -- BR1: 점프 연타로 발버둥(남은 시간이 준다)
+						or (rescue > 0 and "%s - 친구가 구하는 중" or "%s - 움직일 수 없습니다"):format(KIND_NAMES[kind] or "잡힘")
 					ownCountdown.Size = UDim2.new(remaining, 0, 1, 0)
 					ownRescue.Size = UDim2.new(rescue, 0, 1, 0)
 				end

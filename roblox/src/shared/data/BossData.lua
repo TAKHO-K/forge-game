@@ -42,6 +42,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 -- P3a C: 킷 자리는 원형 아레나의 반경에서 계산한다(아레나를 키우면 킷도 같은 뜻의 자리로 따라간다).
 local ARENA_RADIUS = require(ReplicatedStorage.Shared.data.BossArenaMapData).geometry.radiusStuds
 
@@ -107,6 +108,45 @@ local MECHANICS = {
 		-- 18.3%를 내면 구출자는 다음 실수 한 번에 죽는다 - 친구를 구한 사람이 벌받는 구조다. 값이 0보다 크면 구출자는 그만큼
 		-- 받고, 체력이 그 이하면 풀리지 않는다(구출로 죽는 일은 없다) - 경로는 남겨 두고 값만 0이다.
 		touch = { reachStuds = 3, rescuerMaxHpFraction = 0 },
+		-- BR1 대공 잡기: 잡힌 사람은 보스 곁 공중(발 +7)에 들려 있다 - 땅에서 보스 곁(수평 16 안)이면 F 홀드. 프롬프트 거리는 3D라 높이만큼 넉넉하게.
+		grab = { reachStuds = 16 },
+	},
+
+	-- BR1 대공 잡기(docs/design/boss-br1.md §2 - 6종 공통 규칙, 모션만 보스별). 스킬 primitive = "grab".
+	--   airSeconds(N) 1.2: 판정 순간 연속 체공이 이 이상인 사람 전원. 1단 + 공중 점프 1(1.04초)은 안전, 공중 2회(1.54) · 공중 + 대시(1.46)는 걸린다.
+	--   warnAirSeconds 0.6: 이만큼 떠 있으면 머리 위 작은 손바닥이 차기 시작한다(발동 조건 memberAirborneFor와 같은 값 - 땅에서만 싸우면 안 온다).
+	--   holdSeconds 3.0 뒤 던짐(throw - 기존 넉백 상한 규칙 · 맵 밖이면 기존 복귀) + 현재 체력 × currentHpFraction(방어 무시 · 받는 피해 감소 · 쉴드 적용 - 설계 §2 결정).
+	--   holdLiftStuds = 잡힌 사람의 발 높이(아레나 바닥 기준) - 땅의 동료가 손을 때릴 수 있는 높이(판정 높이차 ≤ 8). holdOffsetStuds = 보스에서 그 사람 쪽 수평 거리.
+	--   해제: 동료가 손(구출 대상)을 rescueHits회(구출자 1인당 hitIntervalSeconds에 한 번) 또는 곁(rescue.grab.reachStuds)에서 F 홀드 → 풀림 + 보스 기절 stunSeconds.
+	--   발버둥(본인): 점프 누를 때마다 남은 시간 − secondsPerPress(초당 maxPressesPerSecond회까지 인정), 잡힌 뒤 minHoldSeconds 전에는 안 풀린다.
+	airGrab = {
+		warnAirSeconds = 0.6,
+		airSeconds = 1.2,
+		holdSeconds = 3.0,
+		holdLiftStuds = 7,
+		holdOffsetStuds = 6,
+		throw = { heightStuds = 7.5, distanceStuds = 30 },
+		currentHpFraction = 0.5,
+		stunSeconds = 3.5,
+		struggle = { secondsPerPress = 0.25, maxPressesPerSecond = 6, minHoldSeconds = 0.8 },
+		rescueHits = { requiredHits = 3, hitIntervalSeconds = 0.5 },
+		maxAirSeconds = 1.961, -- 한 체공 최대(공중 점프 2 + 대시 - movement-metrics v2 · JumpMath.maxAirSeconds) - 회피 검사 "보고 착지"의 기준
+	},
+
+	-- BR1 핵심 기믹 실패(설계 §3): 55% → 85% · 쉴드 무시. 기믹 판정 실패(resolveGimmick)에만 쓴다 - 다른 %최대체력 피해(돌진 · 구덩이 · 반사 · 분신)는
+	-- 옛 발동당 상한(gimmickFailMaxHpFraction 55%)에 그대로 묶인다. 85%는 "실패 + 강한 공격 한 번 = 죽음"이면서 단독으로는 죽지 않는 값(즉사는 K 단계).
+	gimmickFail = { maxHpFraction = 0.85, ignoresShield = true },
+
+	-- BR1 환경 변화 공통(설계 §4): 환경 발동 하나에서 한 사람이 받는 도트 합 상한(기존 발동당 상한과 같은 55%) · 겹침(§4-3 - 환경이 도는 동안
+	-- "피할 수 없음" 쌍의 패턴은 나올 차례에 deferChance로 미루고(deferSeconds 뒤 다시 후보) 같은 발동 안에서 두 번 나오지 않는다).
+	-- overlap.check = 자동 분류기(shared/BossOverlap) - trials번 무작위 배치 · 탈출 지점을 directions 방위 × stepStuds 간격(최대 maxStuds)으로 찾는다 ·
+	-- 분위 percentile의 필요 시간으로 가른다(여유 ×1.25 통과 = 피할 수 있음 · ×1.0만 통과 = 어려움 · 둘 다 실패 = 피할 수 없음 - 공중으로만 피하면 어려움).
+	environment = {
+		maxHpFractionPerActivation = 0.55,
+		overlap = {
+			deferChance = 0.7, deferSeconds = 1.0,
+			check = { trials = 24, directions = 36, stepStuds = 1, maxStuds = 60, percentile = 0.95, seed = 7, standoffStuds = 8, airRiseSeconds = 0.45 },
+		},
 	},
 
 	-- 29-3 반사(전갈 여왕 갑각 태세): 타격 수가 아니라 시간 창으로 센다 - windowSeconds에 한 번. 평타 빈도가 직업마다
@@ -175,10 +215,61 @@ local MECHANICS = {
 		chargeTravelSeconds = 1.5, -- 아레나 중앙 → 벽 92stud ÷ 60stud/s(결정 모형). 몬테카를로는 아래 범위에서 뽑는다
 		-- 몬테카를로(29-2 F-8): 회피 비용 ±jitter 균등, 돌진 이동 시간 범위, 위치 조건(거리·밀집)의 참 확률.
 		monteCarlo = { runs = 200, evadeJitter = 0.25, chargeTravelMinSeconds = 0.5, chargeTravelMaxSeconds = 3.0, positionalConditionChance = 0.5 },
+		-- BR1 첫 도전 난이도 모형(shared/BossDifficultySim - 설계 §5). 전부 **가정**이다(사람 플레이 기록이 생기면 그 값으로 바꾼다 - 보고서에 같이 싣는다).
+		--   hitChance: 판정 한 번에 맞을 확률(첫 도전 - 패턴을 처음 본다). 무게(피해 몫: < 20% 작음 · < 35% 중간 · 그 위 큼) · 종류별.
+		--   slack: 회피 여유(전조 − 필요 시간)가 tightSeconds 밑이면 ×tightMultiplier, looseSeconds 위면 ×looseMultiplier.
+		--   airDodgeShare: 바닥 판정을 공중으로 피하는 몫(M1-0 이동 - 피한 뒤 airSecondsMin ~ Max 떠 있다 → 대공 잡기의 발동 조건 · 대상).
+		--   grabCatchChance: 떠 있는 채 잡기 전조를 본 사람이 N초 전에 못 내려올 확률(첫 도전).
+		--   envTicks: 환경 발동 하나에서 맞는 도트 횟수(균등 min ~ max, 확률 hitChance.env로 한 번 이상).
+		--   basicExposure: 보스 평타 사거리(14) 안에 있는 몫(스킬 사이 시간 중) - 원거리(기준 직업 활) · 근접.
+		--   gimmickTrapDpsZero: 기믹 실패로 잡히면 그동안 딜 0(trap.autoReleaseSeconds).
+		difficulty = {
+			runs = 300,
+			-- 처음 보는 판정의 확률 - 같은 스킬을 두 번째 볼 때부터 × learnedMultiplier(한 판 안에서 배운다).
+			hitChance = { small = 0.25, medium = 0.3, large = 0.35, jump = 0.25, airWave = 0.4, antiAir = 0.35, gimmickFirst = 0.45, gimmickLater = 0.25, env = 0.5 },
+			learnedMultiplier = 0.4,
+			-- 게이트가 기믹이 아닌 스킬의 판정인 경우(폭풍 군주 낙뢰 - 피뢰침 둘을 동시에 채운다): 회차마다 풀 확률(처음 · 두 번째부터).
+			gateSolveChance = { first = 0.3, later = 0.6 },
+			slack = { tightSeconds = 0.15, tightMultiplier = 1.4, looseSeconds = 1.0, looseMultiplier = 0.7 },
+			airDodgeShare = 0.4, airSecondsMin = 0.6, airSecondsMax = 1.9,
+			grabCatchChance = 0.35,
+			envTicks = { min = 1, max = 4 },
+			basicExposure = { ranged = 0.12, melee = 0.45 },
+			evadeSeconds = { sector = 1.0, projectile = 0.8, grab = 0.5, vortex = 2.5, chain = 0.8, ambush = 1.2 },
+			envDpsMultiplier = 0.8, -- 환경이 도는 동안 딜이 줄어드는 몫(피하고 버티느라)
+		},
 	},
 }
 
 local P = MECHANICS.priority
+
+-- ═══ BR1 공통 스킬(docs/design/boss-br1.md §1-1 · §2) - 6종이 같은 뼈대를 쓰고 이름 · 모션(motion = 클라 인형 스타일 키)만 다르다 ═══
+-- 강화 평타: 피할 수 있는 작은 일격(무게 작음 - 전조 1.1초 · ×1.4 = 20%). 앞 100° · 반경 14 부채꼴(sector). 보스 앞 8에 선 사람이 옆으로
+-- 8 × sin 50° + 1 = 7.1 → 0.5 + 7.1 ÷ 16 × 1.25 = 1.05초 ≤ 1.1. 뒤로 물러나도 되고 공중 점프 1회(발 13.3 > 8)로도 피한다.
+local function enhancedBasic(label, motion)
+	return {
+		primitive = "sector", bubble = "swipe", motion = motion,
+		cooldownSeconds = 7, priority = P.normal,
+		conditions = { { type = "targetWithin", studs = 14 } },
+		telegraphSeconds = 1.1, angleDeg = 100, radiusStuds = 14, facing = "target",
+		dodge = { distanceStuds = 7.1 },
+		damage = { kind = "attack", multiplier = 1.4 }, damageLabel = label,
+	}
+end
+
+-- 대공 잡기(§2): 누군가 연속 체공 ≥ warnAirSeconds일 때만 쓴다(땅에서만 싸우면 안 온다 - 공중 남용에 대한 대답). 전조 2.5초(큰 모션 - 손 · 꼬리 ·
+-- 집게를 하늘로) = 보고 내려올 시간(한 체공 최대 1.96초 + 인지 0.5). 판정 = 그 순간 연속 체공 ≥ airGrab.airSeconds인 사람 전원(BossAirGrab).
+local function airGrab(label, motion)
+	return {
+		primitive = "grab", bubble = "grab", motion = motion,
+		cooldownSeconds = 16, firstAvailableSeconds = 20, priority = P.normal,
+		conditions = { { type = "memberAirborneFor", seconds = MECHANICS.airGrab.warnAirSeconds } },
+		telegraphSeconds = 2.5,
+		trap = { kind = "grabbed", rescueType = "grab" },
+		damage = { kind = "currentHp", fraction = MECHANICS.airGrab.currentHpFraction }, damageLabel = label,
+		sim = { evadeSeconds = 0.5 },
+	}
+end
 
 -- ═══ 기본형 스킬(21-3, PRD 20.44 [3](나) → 20.46) - 구간 수호자가 그대로 쓴다 ═══
 -- 회피 전제는 "걷기 16stud/s + 점프(높이 7.2, 체공 0.54초)"뿐이다 - 대시(21-2)는 보너스지 필수가 아니다.
@@ -226,7 +317,8 @@ local function guardianSkills()
 		charge = {
 			primitive = "charge", bubble = "charge",
 			cooldownSeconds = 15, priority = P.normal,
-			telegraphSeconds = 1.5, speedStuds = 60, pathHalfWidthStuds = 4, dashCount = 1,
+			-- BR1(사용자 - 돌진은 전조를 크게): 1.5 → 2.2초(발 긁기가 길어진다). 피해 55%는 그대로.
+			telegraphSeconds = 2.2, speedStuds = 60, pathHalfWidthStuds = 4, dashCount = 1,
 			recoverSeconds = 4.0, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
 			arenaMarginStuds = 4, -- 보스 몸통 반폭(1.2×3=3.6)보다 조금 크게
 			damage = { kind = "maxHp", fraction = 0.55 }, damageLabel = "돌진",
@@ -239,6 +331,8 @@ local function guardianSkills()
 			telegraphSeconds = 1.5, directions = 4, stepDeg = 90, volleys = 2, rotateDeg = 45, halfWidthStuds = 3,
 			damage = { kind = "attack", multiplier = 2 }, damageLabel = "십자 화염",
 		},
+		swipe = enhancedBasic("방패 후려치기", "fist"), -- BR1 강화 평타
+		grab = airGrab("움켜쥐기", "hand"), -- BR1 대공 잡기
 	}
 end
 
@@ -246,7 +340,9 @@ end
 local BASE_STATS = {
 	-- 잡몹(MonsterData.tier1) 대비 배율. 실제 수치는 그 스테이지의 잡몹 값에 곱해서 매번 계산한다
 	-- (BossRules.buildInstanceData) - 여기 절대값을 박지 않는다.
-	hpMultiplier = 20,
+	-- BR1(사용자): 보스 HP = 그 스테이지 첫 도전 대표 전력의 60초분. 대표 전력 = 권장 스테이지에서 잡몹을 killTargetSeconds(2.5초)에 잡는 앵커(BalanceAnchorConfig) -
+	-- 잡몹 HP × (60 ÷ 2.5) = × 24(옛 20 = 50초분). 숫자를 박지 않고 두 원본 값에서 유도한다(MECHANICS.sim.referenceKillSeconds).
+	hpMultiplier = MECHANICS.sim.referenceKillSeconds / BalanceAnchorConfig.killTargetSeconds,
 	attackMultiplier = 1,
 	goldMultiplier = 20,
 	expMultiplier = 20,
@@ -370,9 +466,9 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(-1.2, 0.9, 0), size = Vector3.new(0.5, 0.5, 0.9), kind = "block", color = "head", name = "RightPauldron" },
 		},
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 1, rangeStuds = 14 },
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.5, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(6),
-		skillOrder = { "heavy", "shockwave", "meteor", "charge", "cross" },
+		skillOrder = { "heavy", "shockwave", "meteor", "charge", "cross", "swipe", "grab" },
 		skills = guardianSkills(),
 	},
 	{
@@ -384,9 +480,9 @@ local SPECIES = {
 			{ anchor = "head", offset = Vector3.new(-0.5, 0.6, 0), size = Vector3.new(0.3, 1.4, 0.3), rotationDeg = Vector3.new(0, 180, 25), kind = "wedge", color = "head", name = "RightHorn" },
 		},
 		moveSpeedStuds = 6, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 1.5, rangeStuds = 14 },
+		basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 0.75, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(7),
-		skillOrder = { "slam", "icefall", "spike", "roar" },
+		skillOrder = { "slam", "icefall", "spike", "roar", "swipe", "grab" },
 		-- 29-3 동적 지형(논리 상태는 서버 BossArenaProps, 그리기·충돌은 클라 BossArenaPropsView). 얼음 기둥: 반경 3 ·
 		-- 높이 10 · 최대 6개(넘으면 가장 오래된 것부터 사라진다). 그림자 폭 6stud에 네 명이 한 줄로 선다 - 기둥 하나가
 		-- 파티 전원을 가린다(그림자는 벽까지 이어진다).
@@ -446,6 +542,8 @@ local SPECIES = {
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "눈보라 포효",
 				sim = { evadeSeconds = 2.0 },
 			},
+			swipe = enhancedBasic("서리 주먹", "fist"), -- BR1 강화 평타
+			grab = airGrab("서리 손아귀", "hand"), -- BR1 대공 잡기
 		},
 	},
 	{
@@ -457,9 +555,9 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 0.7, -1.0), size = Vector3.new(0.6, 0.6, 1.0), rotationDeg = Vector3.new(0, 180, 0), kind = "wedge", color = "body", name = "TailFin" },
 		},
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 1, rangeStuds = 14 },
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.5, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(6),
-		skillOrder = { "sweep", "tide", "spout", "flood" },
+		skillOrder = { "sweep", "tide", "spout", "flood", "swipe", "grab" },
 		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단(P3c: 11곳)
 		skills = {
 			-- 꼬리 휩쓸기. 도넛(안쪽 9 ~ 바깥 24) - 기본형 강공격과 반대로 **몸 쪽이 안전하다**. 누군가 바깥 반경
@@ -521,6 +619,8 @@ local SPECIES = {
 				breakWindow = { seconds = 3, damageTakenMultiplier = 1.3 },
 				sim = { evadeSeconds = 3.5 },
 			},
+			swipe = enhancedBasic("지느러미 베기", "fin"), -- BR1 강화 평타
+			grab = airGrab("꼬리 감기", "tail"), -- BR1 대공 잡기
 		},
 	},
 	{
@@ -532,9 +632,9 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 1.1, -0.7), size = Vector3.new(0.4, 1.6, 0.4), kind = "wedge", color = "head", name = "BackShard" },
 		},
 		moveSpeedStuds = 7, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 1, rangeStuds = 14 },
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.5, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(6),
-		skillOrder = { "burst", "drop", "beam", "split" },
+		skillOrder = { "burst", "drop", "beam", "split", "swipe", "grab" },
 		skills = {
 			-- 파편 폭발. 두 번 터진다: 안쪽 원(반경 10) → 바깥 도넛(10 ~ 22). 밖으로 나갔다가 다시 안으로 - 기본형
 			-- 강공격의 "한 번 나가면 끝"과 다르다. 펄스당 ×2(둘 다 맞아도 57%).
@@ -584,6 +684,8 @@ local SPECIES = {
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "파편 폭풍",
 				sim = { evadeSeconds = 2.5, resolveSeconds = 3.5 },
 			},
+			swipe = enhancedBasic("수정 채찍", "fist"), -- BR1 강화 평타
+			grab = airGrab("수정 손", "hand"), -- BR1 대공 잡기
 		},
 	},
 	{
@@ -596,9 +698,9 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 0.8, 1.0), size = Vector3.new(0.35, 1.2, 0.35), rotationDeg = Vector3.new(-30, 0, 0), kind = "wedge", color = "body", name = "TailSpike" },
 		},
 		moveSpeedStuds = 10, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.75, rangeStuds = 14 },
+		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.375, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(5),
-		skillOrder = { "claw", "sting", "stab", "shell" },
+		skillOrder = { "claw", "sting", "stab", "shell", "swipe", "grab" },
 		-- 29-3 모래 유적(정적 지형 - 보스전이 시작될 때 짓고 끝나면 치운다, BossArenaKit). 유사 웅덩이 2곳(지름 10)은
 		-- 동·서 벽 앞이다 - 돌진은 늘 벽까지 달리므로 "웅덩이 앞에 서서 돌진을 받으면" 마지막 돌진이 웅덩이에서 끝난다
 		-- (연속 찌르기의 recoverInZone). 무너진 기둥 8개는 네 벽 앞의 장식이다(충돌 없음 - 회피 동선을 막지 않는다).
@@ -646,7 +748,8 @@ local SPECIES = {
 				primitive = "charge", bubble = "charge", role = "signature",
 				cooldownSeconds = 14, priority = P.signature,
 				conditions = { { type = "notAfter", skills = { "shell" } } },
-				telegraphSeconds = 1.5, speedStuds = 60, pathHalfWidthStuds = 4, dashCount = 2,
+				-- BR1: 첫 돌진 전조 1.5 → 2.2초(repeatTelegraphSeconds = 둘째 돌진은 옛 1.5 - 첫 돌진을 피한 자리에서 다시 겨눈다)
+				telegraphSeconds = 2.2, repeatTelegraphSeconds = 1.5, speedStuds = 60, pathHalfWidthStuds = 4, dashCount = 2,
 				recoverSeconds = 4.0, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
 				-- 29-3: 마지막 돌진이 유사 웅덩이 안에서 끝나면 헤롱 6초(알면 이득인 유인 - 몰라도 손해는 없다, 20.73 [2-5]).
 				recoverInZone = { tag = "quicksand", seconds = 6.0 },
@@ -685,6 +788,8 @@ local SPECIES = {
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "갑각 반사",
 				sim = { evadeSeconds = 4.0 },
 			},
+			swipe = enhancedBasic("집게 찰싹", "claw"), -- BR1 강화 평타
+			grab = airGrab("집게 낚아채기", "claw"), -- BR1 대공 잡기
 		},
 	},
 	{
@@ -696,9 +801,9 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(-1.2, 1.3, 0), size = Vector3.new(0.3, 1.8, 0.3), rotationDeg = Vector3.new(0, 180, 15), kind = "wedge", color = "head", name = "RightBlade" },
 		},
 		moveSpeedStuds = 9, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.75, rangeStuds = 14 },
+		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.375, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(5),
-		skillOrder = { "discharge", "whirl", "strike", "overcharge" },
+		skillOrder = { "discharge", "whirl", "strike", "overcharge", "swipe", "grab" },
 		arenaKit = { parts = stormKitParts(stormBody, stormHead) }, -- 29-4 폭풍 첨탑의 피뢰침 2개
 		skills = {
 			-- 방전 고리. 파동 하나 - 기본형 강공격 자리의 스킬이지만 걸어서가 아니라 **뛰어서** 피한다.
@@ -777,6 +882,8 @@ local SPECIES = {
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "과충전 방전",
 				sim = { evadeSeconds = 2.0 },
 			},
+			swipe = enhancedBasic("지팡이 휘두르기", "staff"), -- BR1 강화 평타
+			grab = airGrab("바람 손", "wind"), -- BR1 대공 잡기
 		},
 	},
 }

@@ -194,10 +194,32 @@ function BossMechanics.applyGimmickDamage(model, player, fraction, label)
 	return dealt, applied
 end
 
--- 기믹 실패 1인분 = %피해 + 잡힘. fraction을 생략하면 전체 실패(gimmickFailMaxHpFraction).
+-- BR1 핵심 기믹 실패(BossData.mechanics.gimmickFail - 85% · 쉴드 무시). 발동당 누적 상한도 그 값이다(같은 발동에서 먼저 받은 %피해만큼 줄어든다).
+function BossMechanics.applyGimmickFailDamage(model, player, label)
+	local fail = BossData.mechanics.gimmickFail
+	local st = stateOf(model)
+	local taken = st.gimmickDamage[player] or 0
+	local applied = math.min(fail.maxHpFraction, fail.maxHpFraction - taken)
+	if applied <= 0 then
+		return 0, 0
+	end
+	st.gimmickDamage[player] = taken + applied
+	local dealt = PlayerDamage.applyMaxHpFraction(player, applied, label, { ignoresShield = fail.ignoresShield })
+	if dealt > 0 then
+		BossTrap.noteSkillHit(player)
+	end
+	return dealt, applied
+end
+
+-- 기믹 실패 1인분 = %피해 + 잡힘. fraction을 생략하면 전체 실패(BR1: gimmickFail 85% · 쉴드 무시).
 -- 잡힘 종류는 그 보스의 data.mechanics(BossData SPECIES_MECHANICS) - 없으면 피해만.
 function BossMechanics.failGimmick(model, data, player, label, fraction)
-	local damage = BossMechanics.applyGimmickDamage(model, player, fraction or BossData.mechanics.gimmickFailMaxHpFraction, label)
+	local damage
+	if fraction then
+		damage = BossMechanics.applyGimmickDamage(model, player, fraction, label)
+	else
+		damage = BossMechanics.applyGimmickFailDamage(model, player, label)
+	end
 	BossMechanics.trapMember(model, data, player)
 	return damage
 end
@@ -345,7 +367,7 @@ function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 				-- cfg.failPenalty == false: 실패의 대가를 판정 밖에서 이미 치렀다(갑각 반사 - 때릴 때마다 받았다). 게이트만 남는다.
 				-- cfg.failTraps == false(29-5 파편 폭풍): %피해만 - 이 보스의 잡힘은 판정이 아니라 분신을 때린 순간에 온다.
 				if cfg.failPenalty ~= false and cfg.failTraps == false then
-					BossMechanics.applyGimmickDamage(model, v.player, BossData.mechanics.gimmickFailMaxHpFraction, label)
+					BossMechanics.applyGimmickFailDamage(model, v.player, label) -- BR1: 85% · 쉴드 무시
 				elseif cfg.failPenalty ~= false then
 					BossMechanics.failGimmick(model, data, v.player, label)
 				end
