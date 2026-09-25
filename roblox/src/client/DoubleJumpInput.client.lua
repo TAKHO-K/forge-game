@@ -50,6 +50,9 @@ local function bind(newCharacter)
 		if GROUNDED[new] then
 			onLanded()
 		elseif AIR[new] and not airborne then
+			if new == Enum.HumanoidStateType.Jumping and not humanoid.PlatformStand then
+				locked = false -- 지면에서 새로 뛰었다(무너짐 신호가 이미 서 있던 사람에게 온 경우의 잠금이 다음 점프까지 남지 않게)
+			end
 			airborne = true
 			airStartedAt = os.clock()
 			takeoffFeetY = feetY() -- 점프면 지면, 턱에서 걸어 떨어졌으면 턱 윗면
