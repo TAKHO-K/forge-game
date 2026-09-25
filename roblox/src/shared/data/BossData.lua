@@ -796,19 +796,15 @@ local SPECIES = {
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "burst", "drop", "beam", "split", "swipe", "grab", "spikes", "shards", "mirrorDash", "mirror" },
-		-- BR1 환경 변화 "수정 공중 정원"(중력 반전 시범의 대체안 - 설계 §4-2 · §9-1): 두 팔을 들어 수정을 띄운다(3초) → 20초 동안 공중 발판 4(높이 16) · 점프대 4 ·
-		-- 수정 핵 2(바닥 A · 발판 위 B). **두 핵을 서로 6초 안에 모두 치면** 성공 - 보스 기절 5초 · 정원이 무너진다. 20초를 넘기면 수정 폭풍(기믹 실패 = 85% · 쉴드 무시).
-		-- 파티 = 나눠서 동시에(위 · 아래) · 솔로 = A를 치고 점프대(발 +19)로 올라가 B(6초 안 - 점프대까지 11 + 오르기 1초 ≈ 2초). 발판은 보스전 동안만 서는 단순 파트(정확한 맵은 나중).
+		-- BR1-2 환경 변화 "수정 부수기"(사용자 보강 C - 옛 공중 정원 대체 · server/BossJumpCourse): 두 팔을 들어 수정을 띄운다(3초) → 보스 몸에 **보호막**(피해로는 절대 안 깨진다 -
+		-- 맞으면 숫자 대신 "무효") · 서로 반대 방위의 수정 자리 2곳에 점프맵(저장 공간에 지어 둔 4종 중 무작위 - BossJumpMapData, 어려움 = 공중 점프 · 대시 조합) · 꼭대기마다 수정 1개.
+		-- 수정에서 보스까지 보스 색 빛줄기(길 안내) - 수정 하나를 깨면 그 줄이 사라지고 둘 다 깨면 보호막 해제 + 보스 기절 stunSeconds. **시간 제한 없음**(그동안 보스는 패턴을 쓴다 - 압박).
+		-- 체크포인트 발판(초록)을 밟으면 떨어져도 거기로 돌아간다 · 아레나 가장자리에 투명 벽(wallHeightStuds - 끝나면 치운다). 솔로도 두 코스를 차례로 오른다.
 		environment = {
-			id = "crystalGarden", style = "crystal", kind = "cores", motion = "hand", damageLabel = "수정 폭풍",
-			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 40, telegraphSeconds = 3.0, durationSeconds = 20,
+			id = "crystalGarden", style = "crystal", kind = "jumpCourse", motion = "hand", damageLabel = "수정 부수기",
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 40, telegraphSeconds = 3.0, durationSeconds = 0,
 			zones = { shape = "none" },
-			garden = {
-				platformCount = 4, platformRadiusStuds = 55, platformHeightStuds = 16, platformSize = Vector3.new(14, 1, 14),
-				padOffsetStuds = 11, padSizeStuds = 6, padLaunchHeightStuds = 19,
-				coreFloorRadiusStuds = 30, coreWindowSeconds = 6, stunSeconds = 5,
-				color = crystalHead, padColor = crystalBody,
-			},
+			garden = { stunSeconds = 5, wallHeightStuds = 60, color = crystalHead },
 		},
 		skills = {
 			-- 파편 폭발. 두 번 터진다: 안쪽 원(반경 10) → 바깥 도넛(10 ~ 22). 밖으로 나갔다가 다시 안으로 - 기본형

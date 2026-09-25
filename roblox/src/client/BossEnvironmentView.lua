@@ -143,24 +143,97 @@ local function crackAlong(z, seconds)
 	end
 end
 
--- 수정 공중 정원(garden): 전조 동안 발판 자리에서 수정이 솟는 그림 · 핵 자리에 흰 고리(서버가 활성 순간 진짜 파트를 세운다).
+-- BR1-2 수정 부수기(garden = { courses }): 전조 동안 두 코스의 발판 자리에 흰 테 · 수정 자리에 빛기둥이 솟는다(서버가 활성 순간 진짜 발판 · 수정을 세운다).
 local function gardenTelegraph(garden, seconds)
 	local parts = {}
-	for _, p in ipairs(garden.platforms) do
-		local crystal = newPart(Vector3.new(3, 0.5, 3), WHITE, 0.3, Enum.Material.Glass)
-		crystal.CFrame = CFrame.new(Vector3.new(p.X, p.Y - 16, p.Z))
-		TweenService:Create(crystal, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(3, 32, 3), CFrame = CFrame.new(Vector3.new(p.X, p.Y - 16, p.Z)) }):Play()
-		table.insert(parts, crystal)
-	end
-	for _, p in ipairs(garden.cores) do
-		BossFx.ring(p + Vector3.new(0, 0.3, 0), 1, 6, WHITE, seconds)
+	for _, course in ipairs(garden.courses or {}) do
+		for _, p in ipairs(course.platforms or {}) do
+			BossFx.ring(p.position + Vector3.new(0, 0.3, 0), 1, p.width, WHITE, seconds)
+			if p.crystal then
+				local pillar = newPart(Vector3.new(2, 0.5, 2), WHITE, 0.3, Enum.Material.Neon)
+				pillar.CFrame = CFrame.new(p.position)
+				TweenService:Create(pillar, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(2, 60, 2) }):Play()
+				table.insert(parts, pillar)
+			end
+		end
 	end
 	return parts
 end
 
+-- 빛줄기(보스 색): 수정 → 보스(길 안내 - 매 프레임 보스를 따라간다). 수정이 깨지면 그 줄이 사라진다.
+local beams = {} -- [site] = { part, from }
+local function clearBeams()
+	for site, entry in pairs(beams) do
+		beams[site] = nil
+		destroy(entry.part)
+	end
+end
+
+local function startBeams(garden, color)
+	clearBeams()
+	for site, course in ipairs(garden.courses or {}) do
+		for _, p in ipairs(course.platforms or {}) do
+			if p.crystal then
+				local part = newPart(Vector3.new(0.8, 0.8, 1), color or DANGER, 0.25, Enum.Material.Neon)
+				beams[site] = { part = part, from = p.position + Vector3.new(0, 3, 0) }
+			end
+		end
+	end
+end
+
+local function bossModelNear(position)
+	local best, bestDistance = nil, math.huge
+	for _, model in ipairs(Workspace:GetChildren()) do
+		if model:IsA("Model") and model:GetAttribute("BossShielded") then
+			local d = (model:GetPivot().Position - position).Magnitude
+			if d < bestDistance then
+				best, bestDistance = model, d
+			end
+		end
+	end
+	return best
+end
+
+-- 보호막(보스 둘레 유리 공 - BossShielded Attribute가 켜진 보스) · 빛줄기 매 프레임
+local shieldBall = nil
+RunService.RenderStepped:Connect(function()
+	local anyBeam = next(beams) ~= nil
+	local model = nil
+	if anyBeam then
+		for _, entry in pairs(beams) do
+			model = bossModelNear(entry.from)
+			break
+		end
+	end
+	if model then
+		local center = model:GetPivot().Position + Vector3.new(0, 2, 0)
+		for _, entry in pairs(beams) do
+			local length = (center - entry.from).Magnitude
+			entry.part.Size = Vector3.new(0.8, 0.8, length)
+			entry.part.CFrame = CFrame.lookAt(entry.from:Lerp(center, 0.5), center)
+		end
+		if not shieldBall or not shieldBall.Parent then
+			shieldBall = newPart(Vector3.one * 16, Color3.fromRGB(170, 220, 255), 0.7, Enum.Material.ForceField)
+			shieldBall.Shape = Enum.PartType.Ball
+		end
+		shieldBall.CFrame = CFrame.new(center)
+	elseif shieldBall then
+		destroy(shieldBall)
+		shieldBall = nil
+	end
+end)
+
 function BossEnvironmentView.coreHit(data)
-	if current and current.coreFlash then
-		current.coreFlash[data.index] = os.clock() + data.windowSeconds
+	local entry = beams[data.index]
+	if entry then
+		BossFx.ring(entry.from, 1, 5, WHITE, 0.3)
+		if data.broken then
+			for _ = 1, 8 do
+				BossFx.chunk(entry.from, Vector3.new(math.random(-12, 12), 16, math.random(-12, 12)), 0.8, entry.part.Color, 0.7)
+			end
+			beams[data.index] = nil
+			destroy(entry.part)
+		end
 	end
 end
 
@@ -241,6 +314,9 @@ function BossEnvironmentView.start(data)
 			flipSlab(z)
 		end
 	end
+	if data.garden then -- BR1-2 수정 부수기: 수정 → 보스 빛줄기(보스 색)
+		startBeams(data.garden, data.color)
+	end
 end
 
 function BossEnvironmentView.wind(data)
@@ -257,10 +333,12 @@ end
 
 function BossEnvironmentView.clear()
 	clearParts()
+	clearBeams()
 	current = nil
 end
 
 function BossEnvironmentView.reset()
+	clearBeams()
 	current = nil
 	fields = {}
 	for part in pairs(live) do

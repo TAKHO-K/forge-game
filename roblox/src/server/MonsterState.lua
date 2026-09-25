@@ -214,6 +214,17 @@ end
 -- 곱해진 값. 호출부가 데미지 숫자·흡혈에 이 값을 쓴다. 잡몹·상자는 넘긴 damage 그대로).
 -- hitInfo(29-3, 선택) = { committedAt = 이 공격을 시작한 시각(os.clock - 투사체는 쏜 순간, 채널링은 시전 순간. 없으면
 -- 지금), indirect = 지연 폭발·지속 피해 } - 보스의 반사 태세가 "막을 수 있었던 공격인가"를 가리는 데만 쓴다.
+-- BR1-2 보스 보호막(수정 여왕 환경 변화 동안): 켜진 동안 받는 피해 0 · 모델 Attribute BossShielded(클라 "무효" 표시 · 보호막 그림).
+function MonsterState.setShielded(model, shielded)
+	local entry = monsters[model]
+	if entry then
+		entry.shielded = shielded or nil
+	end
+	if model and model.Parent then
+		model:SetAttribute("BossShielded", shielded or nil)
+	end
+end
+
 function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, hitInfo)
 	local entry = monsters[model]
 	if not entry then
@@ -233,6 +244,9 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 		-- 29-1 파훼 게이트·기회 창(BossMechanics가 setDamageTakenMultiplier로 건다). 기여도도 받는 피해 배율까지는 곱한다.
 		-- G2a: 레벨차 계수만 빼고 센다(계수가 1이면 합이 1(= maxHp)로 닫히고, 벌점을 받는 멤버가 있으면 합이 1보다 조금 크다 - 문턱 · 표시 모두 이 값).
 		local taken = entry.damageTakenMultiplier or 1
+		if entry.shielded then -- BR1-2 수정 여왕 보호막: 피해로는 절대 안 깨진다(수정 둘을 깨야 풀린다 - BossEnvironment) · 클라는 "무효"로 그린다
+			taken = 0
+		end
 		damage *= taken
 		entry.hp -= damage
 		if attackerPlayer and entry.maxHp > 0 then

@@ -189,6 +189,28 @@ function BR1_2Verify.quakeCheck(r)
 		#fails > 0 and (" " .. table.concat(fails, " / ")) or "", byCount[3] or 0, byCount[4] or 0, byCount[5] or 0), #fails == 0 and sequences > 0 and (byCount[3] or 0) > 0 and (byCount[5] or 0) > 0)
 end
 
+-- 수정 부수기 점프맵(BossJumpMapData): 코스마다 완주 가능(단계마다 가장 약한 기술 조합의 최대 간격 × safety 안 · 대시 간격 · 어려운 단계 수 · 발판 폭 · 마지막 = 수정) + 8방위 자리 배치.
+function BR1_2Verify.jumpCourseCheck(r)
+	local BossJumpMapData = require(ReplicatedStorage.Shared.data.BossJumpMapData)
+	local BossJumpCourseMath = require(ReplicatedStorage.Shared.BossJumpCourseMath)
+	for _, course in ipairs(BossJumpMapData.courses) do
+		local ok, problems, combos, hard = BossJumpCourseMath.validate(course)
+		local labels = {}
+		for i = 2, #course.steps do
+			table.insert(labels, combos[i] and combos[i].label or "X")
+		end
+		local placed = 0
+		for k = 0, 7 do
+			if BossJumpCourseMath.place(course, k * math.pi / 4, Vector3.new(0, 0, 0), 0, 140) then
+				placed += 1
+			end
+		end
+		local layout = BossJumpCourseMath.layout(course)
+		r.check(("점프맵 %s: 완주 %s · 어려운 단계 %d(≥ %d) · 꼭대기 %.0f · 8방위 배치 %d/8 · %s%s"):format(course.name, tostring(ok), hard, BossJumpMapData.minHardSteps, layout[#layout].position.Y, placed,
+			table.concat(labels, " / "), #problems > 0 and (" | " .. table.concat(problems, " | ")) or ""), ok and placed == 8)
+	end
+end
+
 function BR1_2Verify.runPure()
 	print("===BR1-2 검증 시작(가)===")
 	local r = newRecorder("가")
@@ -197,6 +219,9 @@ function BR1_2Verify.runPure()
 	end)
 	r.section("지진파", function()
 		BR1_2Verify.quakeCheck(r)
+	end)
+	r.section("점프맵", function()
+		BR1_2Verify.jumpCourseCheck(r)
 	end)
 	r.section("곡선 표", function()
 		BR1_2Verify.curveCheck(r)

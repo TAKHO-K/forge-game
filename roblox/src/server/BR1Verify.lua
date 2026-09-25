@@ -447,19 +447,31 @@ function BR1Verify.runLive(player, env)
 			local hp0 = PlayerState.getHp(victim)
 			local costs = drive(player, root, model, data, 1.6)
 			local hp1 = PlayerState.getHp(victim)
-			if envData.kind == "cores" then
-				local parts, cores = BossEnvironment.debugGarden(model)
-				r.check(("%s 환경 %s: 전조 %.1f초 → 정원 파트 %d(기대 %d) · 핵 %d(기대 2)"):format(bossId, envData.id, envData.telegraphSeconds, parts, envData.garden.platformCount * 2, cores),
-					parts == envData.garden.platformCount * 2 and cores == 2)
-				st.env.phaseEndsAt = os.clock() -- 시간 넘김 → 수정 폭풍(첫 실패 55%)
-				drive(player, root, model, data, 0.5, function()
+			if envData.kind == "jumpCourse" then
+				-- BR1-2 수정 부수기: 코스 발판 · 벽 · 수정 2 · 보호막(피해 무효) → 두 수정을 깨면 보호막 해제 + 코스 치움
+				local parts, crystals = BossEnvironment.debugGarden(model)
+				local hpBoss0 = MonsterState.getHpRatio(model)
+				MonsterState.applyDamage(model, 1000, 1, player)
+				local hpBoss1 = MonsterState.getHpRatio(model)
+				local shielded = model:GetAttribute("BossShielded") == true
+				r.check(("%s 환경 %s: 전조 %.1f초 → 코스 발판 + 벽 %d(기대 > 36) · 수정 %d(기대 2) · 보호막 %s · 피해 1000 → 체력 변화 %s(기대 0)"):format(bossId, envData.id, envData.telegraphSeconds, parts, crystals, tostring(shielded),
+					tostring(hpBoss0 and hpBoss1 and (hpBoss0 - hpBoss1))), parts > 36 and crystals == 2 and shielded and (hpBoss0 == nil or hpBoss0 == hpBoss1))
+				-- 수정 둘을 때려 깬다(구출 대상 타격 경로 - 1인 간격을 두고 3번씩)
+				for _, target in ipairs(MonsterState.getAllModels()) do
+					local d = MonsterState.getData(target)
+					if d and d.isRescueTarget and d.displayName == "수정" then
+						for _ = 1, 3 do
+							MonsterState.applyDamage(target, 1, 1, player)
+							drive(player, root, model, data, 0.35)
+						end
+					end
+				end
+				drive(player, root, model, data, 1, function()
 					return countKind("envEnd") > 0
 				end)
-				local hp2 = PlayerState.getHp(victim)
 				local partsAfter = BossEnvironment.debugGarden(model)
-				local maxHp = PlayerState.getMaxHp(victim)
-				r.check(("%s 정원 실패: 수정 폭풍 %.0f%%(기대 첫 실패 %.0f%%) · 끝나면 파트 %d(기대 0)"):format(bossId, (hp1 - hp2) / maxHp * 100, BossData.mechanics.gimmickFail.firstMaxHpFraction * 100, partsAfter),
-					near((hp1 - hp2) / maxHp, BossData.mechanics.gimmickFail.firstMaxHpFraction, 0.02) and partsAfter == 0)
+				r.check(("%s 수정 부수기 성공: 끝 신호 %d · 보호막 %s(기대 해제) · 파트 %d(기대 0)"):format(bossId, countKind("envEnd"), tostring(model:GetAttribute("BossShielded")), partsAfter),
+					countKind("envEnd") == 1 and model:GetAttribute("BossShielded") == nil and partsAfter == 0)
 			else
 				local expected = math.floor(1.6 / envData.tick.seconds) * envData.tick.fraction * PlayerState.getMaxHp(victim)
 				r.check(("%s 환경 %s: 전조 %.1f초 → 구역 %d개 · 구역 안 1.6초 도트 %.1f(기대 약 %.1f - %.0f%%/%.1f초)%s"):format(bossId, envData.id, envData.telegraphSeconds, #telegraphPayload.zones,

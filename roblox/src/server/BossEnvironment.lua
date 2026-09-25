@@ -22,6 +22,7 @@ local BossTrap = require(script.Parent.BossTrap)
 local GroundProbe = require(script.Parent.GroundProbe)
 local HeightGuard = require(script.Parent.HeightGuard)
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+local BossJumpCourse = require(script.Parent.BossJumpCourse)
 
 local BossEnvironment = {}
 
@@ -117,106 +118,18 @@ local function inAnyHazard(zones, position)
 	return false
 end
 
--- ─────────────────────────── 수정 공중 정원(kind = "cores") ───────────────────────────
--- 서버에 실제 파트를 세운다: 공중 발판(Workspace.Ground - 서버 지면 탐지 · 높이 검증이 지면으로 본다) · 점프대(태그 BossJumpPad + Attribute LaunchHeight -
--- 밟은 사람의 클라가 자기 캐릭터를 띄운다) · 수정 핵 2(구출 대상과 같은 타격 대상 - 평타 · 스킬 · 투사체). 두 핵의 마지막 타격이 coreWindowSeconds 안이면 성공.
-local gardens = {} -- [보스 Model] = { parts = { Part }, cores = { Model }, lastHit = { [1] = t, [2] = t }, solved }
+-- ─────────────────────────── 수정 부수기(kind = "jumpCourse" - BR1-2 · server/BossJumpCourse) ───────────────────────────
+-- 전조 때 두 수정 자리의 코스(저장 공간에 지어 둔 것 중 무작위)를 정하고, 활성 순간 복제해 세운다 · 보스 보호막(피해 무효) · 아레나 가장자리 투명 벽.
+-- 두 수정을 다 깨면 성공(보호막 해제 · 보스 기절 stunSeconds · 코스를 치운다). 시간 제한 없음(그동안 보스는 패턴을 계속 쓴다).
+local courses = {} -- [보스 Model] = true(코스가 서 있다)
 
-local function gardenLayout(model, st, env)
-	local zone = kit.zoneOf(model)
-	local center = xz(zone.center)
-	local g = env.garden
-	local layout = { platforms = {}, pads = {}, cores = {} }
-	local base = rng:NextNumber(0, 360)
-	for i = 1, g.platformCount do
-		local a = math.rad(base + 360 * (i - 1) / g.platformCount)
-		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		local p = center + dir * g.platformRadiusStuds
-		table.insert(layout.platforms, Vector3.new(p.X, st.floorY + g.platformHeightStuds, p.Z))
-		local pad = center + dir * (g.platformRadiusStuds - g.padOffsetStuds)
-		table.insert(layout.pads, Vector3.new(pad.X, st.floorY, pad.Z))
-	end
-	local a = rng:NextNumber(0, 2 * math.pi)
-	local floorCore = center + Vector3.new(math.cos(a), 0, math.sin(a)) * g.coreFloorRadiusStuds
-	layout.cores[1] = Vector3.new(floorCore.X, st.floorY, floorCore.Z)
-	layout.cores[2] = layout.platforms[rng:NextInteger(1, #layout.platforms)] + Vector3.new(0, g.platformSize.Y / 2, 0)
-	return layout
-end
-
-local function newGardenPart(name, size, cframe, color, material, parent)
-	local part = Instance.new("Part")
-	part.Name = name
-	part.Anchored = true
-	part.Size = size
-	part.CFrame = cframe
-	part.Color = color
-	part.Material = material
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.Parent = parent
-	return part
-end
-
-local function clearGarden(model)
-	local g = gardens[model]
-	gardens[model] = nil
-	if not g then
-		return
-	end
-	for _, part in ipairs(g.parts) do
-		part:Destroy()
-	end
-	for _, core in ipairs(g.cores) do
-		MonsterSpawner.removeRescueTarget(core)
-	end
-end
-
-local function buildGarden(model, st, data, env, layout)
-	clearGarden(model)
-	local spec = env.garden
-	local g = { parts = {}, cores = {}, lastHit = {}, solved = false }
-	gardens[model] = g
-	for _, p in ipairs(layout.platforms) do
-		local platform = newGardenPart("GardenPlatform", spec.platformSize, CFrame.new(p), spec.color, Enum.Material.Glass, GroundProbe.folder())
-		table.insert(g.parts, platform)
-	end
-	for _, p in ipairs(layout.pads) do
-		local pad = newGardenPart("GardenJumpPad", Vector3.new(spec.padSizeStuds, 0.4, spec.padSizeStuds), CFrame.new(p + Vector3.new(0, 0.2, 0)), spec.padColor, Enum.Material.Neon, GroundProbe.folder())
-		pad:SetAttribute("LaunchHeight", spec.padLaunchHeightStuds)
-		CollectionService:AddTag(pad, "BossJumpPad")
-		table.insert(g.parts, pad)
-	end
-	for index, p in ipairs(layout.cores) do
-		g.cores[index] = MonsterSpawner.spawnRescueTarget({
-			displayName = "수정 핵",
-			color = spec.color,
-			bodyAspect = Vector3.new(1.2, 1.4, 1.2),
-			footPosition = p,
-			onHit = function()
-				if g.solved or gardens[model] ~= g then
-					return
-				end
-				g.lastHit[index] = os.clock()
-				local other = g.lastHit[3 - index]
-				kit.send(st, "gardenCoreHit", { index = index, windowSeconds = spec.coreWindowSeconds })
-				if other and os.clock() - other <= spec.coreWindowSeconds then
-					g.solved = true
-				end
-			end,
-			remaining = function()
-				return g.lastHit[index] and 0 or 1
-			end,
-		}, MonsterState.getZoneKey(model))
-	end
-end
-
--- 리뷰 1: 이 점이 지금 서 있는 정원 발판 위(윗면 + 여유 8 안)인가 - MonsterAI가 "대상이 다른 층으로 갔다"로 보스를 되돌리지 않게 묻는다.
+-- 리뷰 1(BR1)의 뜻 그대로: 이 점이 지금 서 있는 코스 발판 위인가 - MonsterAI가 "대상이 다른 층으로 갔다"로 보스를 되돌리지 않게 묻는다.
 function BossEnvironment.onGardenPlatform(model, position)
-	local g = gardens[model]
-	if not g then
+	if not courses[model] then
 		return false
 	end
-	for _, part in ipairs(g.parts) do
-		if part.Name == "GardenPlatform" then
+	for _, part in ipairs(GroundProbe.folder():GetChildren()) do
+		if part:GetAttribute("CourseSite") then
 			local rel = position - part.Position
 			if math.abs(rel.X) <= part.Size.X / 2 + 1 and math.abs(rel.Z) <= part.Size.Z / 2 + 1 and rel.Y >= 0 and rel.Y <= 12 then
 				return true
@@ -226,25 +139,12 @@ function BossEnvironment.onGardenPlatform(model, position)
 	return false
 end
 
--- 리뷰 5: 점프대는 클라가 띄운다 - 서버 높이 검증이 점프대 + 공중 점프를 부정으로 보지 않게, 점프대 위에 선 멤버에게 체공만큼 예외를 건다.
-local function exemptPadUsers(model, st, env)
-	local g = gardens[model]
-	if not g then
-		return
+local function clearCourse(model)
+	if courses[model] then
+		courses[model] = nil
+		MonsterState.setShielded(model, false)
 	end
-	local launch = env.garden.padLaunchHeightStuds
-	for _, v in ipairs(kit.victims(st)) do
-		if typeof(v.player) == "Instance" then
-			for _, part in ipairs(g.parts) do
-				if part.Name == "GardenJumpPad" then
-					local rel = v.root.Position - part.Position
-					if math.abs(rel.X) <= part.Size.X / 2 and math.abs(rel.Z) <= part.Size.Z / 2 and rel.Y >= -1 and rel.Y <= 6 then
-						HeightGuard.exempt(v.player, JumpMath.launchAirSeconds(launch) + 1.5)
-					end
-				end
-			end
-		end
-	end
+	BossJumpCourse.clear(model)
 end
 
 -- ─────────────────────────── 틱 ───────────────────────────
@@ -274,7 +174,12 @@ local function begin(model, st, data, env, e, now)
 	e.taken = {}
 	e.usedImpossible = false
 	e.activation = (e.activation or 0) + 1
-	e.garden = env.kind == "cores" and gardenLayout(model, st, env) or nil
+	if env.kind == "jumpCourse" then
+		local zone = kit.zoneOf(model)
+		e.garden = { courses = BossJumpCourse.plan(zone.center, st.floorY, zone.radius or 140), wallRadius = zone.radius or 140 }
+	else
+		e.garden = nil
+	end
 	print(("[forge-game] 환경 변화 전조: %s - 구역 %d개, %.1f초"):format(env.id, #e.zones, env.telegraphSeconds))
 	kit.send(st, "envTelegraph", { id = env.id, style = env.style, zones = e.zones, seconds = env.telegraphSeconds, bossId = data.id, motion = env.motion, garden = e.garden })
 end
@@ -327,10 +232,16 @@ local function activate(model, st, data, env, e, now)
 		end
 	end
 	if e.garden then
-		buildGarden(model, st, data, env, e.garden)
+		local zone = kit.zoneOf(model)
+		courses[model] = true
+		MonsterState.setShielded(model, true)
+		e.phaseEndsAt = math.huge -- 시간 제한 없음(두 수정을 깨야 끝난다)
+		BossJumpCourse.build(model, e.garden.courses, zone.center, st.floorY, zone.radius or 140, MonsterState.getZoneKey(model), env.garden, function(site, broken, hits)
+			kit.send(st, "gardenCoreHit", { index = site, broken = broken, hits = hits })
+		end)
 	end
 	print(("[forge-game] 환경 변화 시작: %s - %.1f초"):format(env.id, env.durationSeconds))
-	kit.send(st, "envStart", { id = env.id, style = env.style, zones = e.zones, seconds = env.durationSeconds, bossId = data.id, garden = e.garden })
+	kit.send(st, "envStart", { id = env.id, style = env.style, zones = e.zones, seconds = env.durationSeconds, bossId = data.id, garden = e.garden, color = data.headColor })
 end
 
 local function finish(model, st, env, e, now)
@@ -338,7 +249,7 @@ local function finish(model, st, env, e, now)
 	e.phaseEndsAt = now + env.cooldownSeconds
 	e.zones = nil
 	e.garden = nil
-	clearGarden(model)
+	clearCourse(model)
 	kit.send(st, "envEnd", { id = env.id })
 	print(("[forge-game] 환경 변화 끝: %s"):format(env.id))
 end
@@ -387,29 +298,19 @@ function BossEnvironment.step(model, st, data, now, _dt)
 		end
 		kit.send(st, "envWind", { zones = e.zones })
 	end
-	exemptPadUsers(model, st, env)
-	-- 수정 공중 정원: 두 핵을 창 안에 쳤으면 성공(보스 기절 · 정원 무너짐) · 시간을 넘기면 수정 폭풍(기믹 실패 - 85% · 쉴드 무시)
-	local g = gardens[model]
-	if g and g.solved then
-		print(("[forge-game] 수정 공중 정원 파훼 → 보스 기절 %.1f초"):format(env.garden.stunSeconds))
-		kit.send(st, "gimmickResolve", { broken = true, windowSeconds = env.garden.stunSeconds })
-		kit.stun(model, st, data, env.garden.stunSeconds)
-		finish(model, st, env, e, now)
+	-- 수정 부수기: 체크포인트 · 두 수정을 다 깨면 성공(보호막 해제 · 기절 · 코스 치움). 시간 제한 없음.
+	if courses[model] then
+		BossJumpCourse.step(model, kit.victims(st), st.floorY, now)
+		local broken, total = BossJumpCourse.brokenCount(model)
+		if total > 0 and broken >= total then
+			print(("[forge-game] 수정 부수기 성공 → 보호막 해제 · 보스 기절 %.1f초"):format(env.garden.stunSeconds))
+			kit.send(st, "gimmickResolve", { broken = true, windowSeconds = env.garden.stunSeconds })
+			finish(model, st, env, e, now)
+			kit.stun(model, st, data, env.garden.stunSeconds)
+		end
 		return
 	end
 	if now >= e.phaseEndsAt then
-		if g then
-			local fail = BossData.mechanics.gimmickFail
-			e.gardenFails = (e.gardenFails or 0) + 1
-			local fraction = e.gardenFails == 1 and fail.firstMaxHpFraction or fail.maxHpFraction -- 그 보스전 첫 실패 55% · 그 뒤 85%(기믹과 같은 규칙)
-			for _, v in ipairs(kit.victims(st)) do
-				if not BossTrap.isTrapped(v.player) then
-					PlayerDamage.applyMaxHpFraction(v.player, fraction, env.damageLabel, { ignoresShield = fail.ignoresShield })
-				end
-			end
-			kit.send(st, "gimmickResolve", { broken = false })
-			print("[forge-game] 수정 공중 정원 실패 → 수정 폭풍")
-		end
 		finish(model, st, env, e, now)
 	end
 end
@@ -445,18 +346,18 @@ function BossEnvironment.reset(model, st)
 		end
 		st.env = nil
 	end
-	clearGarden(model)
+	clearCourse(model)
 end
 
 -- 보스전 종료(처치 · 이탈): 수정 공중 정원의 파트(발판 · 점프대 · 핵)를 치운다 - 구역은 논리뿐이라 남는 것이 없다.
 function BossEnvironment.clear(model)
-	clearGarden(model)
+	clearCourse(model)
 end
 
--- 자동 검증 전용: 지금 이 보스의 정원 파트 수(발판 + 점프대) · 핵 수
+-- 자동 검증 전용: 지금 이 보스의 코스 파트 수(발판 + 벽) · 수정 수
 function BossEnvironment.debugGarden(model)
-	local g = gardens[model]
-	return g and #g.parts or 0, g and #g.cores or 0
+	local parts, walls, crystals = BossJumpCourse.debugCounts(model)
+	return parts + walls, crystals
 end
 
 function BossEnvironment.register(patternKit)

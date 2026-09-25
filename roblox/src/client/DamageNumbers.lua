@@ -49,6 +49,12 @@ function DamageNumbers.show(monsterModel, damage, isCrit, isHeal)
 	label.Size = UDim2.new(1, 0, 1, 0)
 	label.Text = (isHeal and "+" or "") .. NumberFormat.format(damage)
 	label.TextColor3 = isHeal and Color3.fromRGB(120, 230, 130) or Color3.fromRGB(255, 220, 60)
+	if not isHeal and monsterModel:GetAttribute("BossShielded") then -- BR1-2 보호막: 피해 숫자 대신 "무효"(피해로는 안 깨진다)
+		label.Text = "무효"
+		label.TextColor3 = Color3.fromRGB(170, 220, 255)
+		gui.StudsOffset += Vector3.new(math.random(-10, 10) / 10, 0, 0)
+		TweenService:Create(gui, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { StudsOffset = gui.StudsOffset + Vector3.new(0, 1.2, 0) }):Play()
+	end
 	label.TextScaled = true
 	label.Font = isCrit and Enum.Font.GothamBlack or Enum.Font.GothamMedium
 	label.Parent = gui
