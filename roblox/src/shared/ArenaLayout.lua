@@ -132,45 +132,64 @@ function ArenaLayout.chargeCoverage(items, bodyHalf)
 	return covered / 360
 end
 
-local STEPS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } -- 리뷰 4: 칸마다 표를 새로 만들지 않는다
-
 -- 갇힘 검사: 칸 격자에서 입장 자리부터 퍼져 나가 원 안(몸 반폭 1 여유)의 빈 칸이 전부 닿는가. 빈 칸 = 어느 충돌 원 + 1 안도 아니다(큰 블록도 막힌 것으로 본다 - 보수적).
 -- 반환: 전부 닿는가, 빈 칸 수, 닿은 칸 수.
+-- G1-0(P3d-F 결정 3): 부를 때마다 칸 수만큼(반경 140 · 칸 2 → 약 15,000칸) 해시 표를 새로 만들던 것을 **재사용 배열**로 바꿨다 - 할당이 GC를 불러
+-- 체크포인트 사이가 17ms까지 튀었다(Play 1). 원 안 칸 표는 반경마다 한 번만 만들고(gridCache), 막힘 · 방문은 세대 번호로 지운다(표를 비우지 않는다).
+-- 작업 표(scratch)는 풀에서 빌려 쓴다 - 서버가 여러 아레나의 자리 찾기를 나눠 돌리는 동안(체크포인트에서 양보) 서로의 표를 덮지 않게.
+local gridCache = {}
+local scratchPool = {}
+
+local function gridFor(n, cell, limit)
+	local cacheKey = n * 100000 + math.floor(limit * 100 + 0.5) + cell * 1e9
+	local grid = gridCache[cacheKey]
+	if grid then
+		return grid
+	end
+	local width = 2 * n + 1
+	local inside, total = table.create(width * width, false), 0
+	for i = -n, n do
+		for j = -n, n do
+			local x, z = i * cell, j * cell
+			if x * x + z * z <= limit * limit then
+				inside[(i + n) * width + (j + n) + 1] = true
+				total += 1
+			end
+		end
+	end
+	grid = { width = width, inside = inside, total = total }
+	gridCache[cacheKey] = grid
+	return grid
+end
+
+-- 기본 반경의 원 안 칸 표는 모듈을 읽을 때 한 번 만든다(첫 자리 찾기가 그 비용을 한 프레임에 안 내게).
+gridFor(math.ceil(GEOMETRY.radiusStuds / LAYOUT.connectCellStuds), LAYOUT.connectCellStuds, GEOMETRY.radiusStuds - 1)
+
 function ArenaLayout.connectivity(items, options)
 	local o = defaults(options)
 	local cell = LAYOUT.connectCellStuds
 	local n = math.ceil(o.radius / cell)
 	local limit = o.radius - 1
-	local free = {}
-	local function key(i, j)
-		return i * 4096 + j
-	end
-	local count = 0
+	local grid = gridFor(n, cell, limit)
+	local width, inside, total = grid.width, grid.inside, grid.total
+	local scratch = table.remove(scratchPool) or { blocked = {}, seen = {}, queue = {}, gen = 0 }
+	scratch.gen += 1
+	local gen, blocked, seen, queue = scratch.gen, scratch.blocked, scratch.seen, scratch.queue
+	local count = total -- P3d-F B4: total = 구조물 없는 아레나의 칸 수(이동 가능 면적 비율 = 남은 칸 ÷ total)
 	local checkpoint = o.checkpoint
-	for i = -n, n do
-		if checkpoint then
-			checkpoint()
-		end
-		for j = -n, n do
-			local x, z = i * cell, j * cell
-			if x * x + z * z <= limit * limit then
-				free[key(i, j)] = true
-				count += 1
-			end
-		end
-	end
-	local total = count -- P3d-F B4: 구조물 없는 아레나의 칸 수(이동 가능 면적 비율 = 남은 칸 ÷ total)
 	for _, item in ipairs(items) do
 		if checkpoint then
 			checkpoint()
 		end
 		for _, c in ipairs(item.colliders) do
 			local reach = c.r + 1
-			for i = math.floor((c.x - reach) / cell), math.ceil((c.x + reach) / cell) do
-				for j = math.floor((c.z - reach) / cell), math.ceil((c.z + reach) / cell) do
+			for i = math.max(math.floor((c.x - reach) / cell), -n), math.min(math.ceil((c.x + reach) / cell), n) do
+				local rowBase = (i + n) * width + n + 1
+				for j = math.max(math.floor((c.z - reach) / cell), -n), math.min(math.ceil((c.z + reach) / cell), n) do
 					local dx, dz = i * cell - c.x, j * cell - c.z
-					if dx * dx + dz * dz < reach * reach and free[key(i, j)] then
-						free[key(i, j)] = nil
+					local index = rowBase + j
+					if dx * dx + dz * dz < reach * reach and inside[index] and blocked[index] ~= gen then
+						blocked[index] = gen
 						count -= 1
 					end
 				end
@@ -180,30 +199,54 @@ function ArenaLayout.connectivity(items, options)
 	local ex = math.cos(math.rad(o.entryAngleDeg)) * o.entryDistanceStuds
 	local ez = math.sin(math.rad(o.entryAngleDeg)) * o.entryDistanceStuds
 	local si, sj = math.floor(ex / cell + 0.5), math.floor(ez / cell + 0.5)
-	if not free[key(si, sj)] then
+	local start = (si + n) * width + (sj + n) + 1
+	if si < -n or si > n or sj < -n or sj > n or not inside[start] or blocked[start] == gen then
+		table.insert(scratchPool, scratch)
 		return false, count, 0, total
 	end
-	-- 큐 = 칸 키(숫자) 배열(리뷰 4 - 칸마다 표를 만들던 것을 숫자로). key = i × 4096 + j → i · j를 되돌린다(j는 음수일 수 있다).
-	local start = key(si, sj)
-	local seen, queue, head, tail, reached = { [start] = true }, { start }, 1, 1, 0
+	-- 큐 = 칸 번호 배열(번호 = (i + n) × width + (j + n) + 1). 격자 가장자리를 넘는 이웃은 행 · 열 범위로 거른다.
+	seen[start] = gen
+	queue[1] = start
+	local head, tail, reached = 1, 1, 0
 	while head <= tail do
 		local k0 = queue[head]
 		head += 1
 		reached += 1
-		if checkpoint and head % 128 == 0 then
+		if checkpoint and head % 256 == 0 then
 			checkpoint()
 		end
-		local i0 = math.floor((k0 + 2048) / 4096)
-		local j0 = k0 - i0 * 4096
-		for _, step in ipairs(STEPS) do
-			local k = key(i0 + step[1], j0 + step[2])
-			if free[k] and not seen[k] then
-				seen[k] = true
+		local column = (k0 - 1) % width -- j + n
+		local k
+		k = k0 + width -- i + 1
+		if k <= width * width and inside[k] and blocked[k] ~= gen and seen[k] ~= gen then
+			seen[k] = gen
+			tail += 1
+			queue[tail] = k
+		end
+		k = k0 - width -- i - 1
+		if k >= 1 and inside[k] and blocked[k] ~= gen and seen[k] ~= gen then
+			seen[k] = gen
+			tail += 1
+			queue[tail] = k
+		end
+		if column < width - 1 then -- j + 1
+			k = k0 + 1
+			if inside[k] and blocked[k] ~= gen and seen[k] ~= gen then
+				seen[k] = gen
+				tail += 1
+				queue[tail] = k
+			end
+		end
+		if column > 0 then -- j - 1
+			k = k0 - 1
+			if inside[k] and blocked[k] ~= gen and seen[k] ~= gen then
+				seen[k] = gen
 				tail += 1
 				queue[tail] = k
 			end
 		end
 	end
+	table.insert(scratchPool, scratch)
 	return reached == count, count, reached, total
 end
 

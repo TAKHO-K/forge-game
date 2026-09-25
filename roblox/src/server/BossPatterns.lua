@@ -504,7 +504,8 @@ local function regrowObstacles(c, effect)
 					table.insert(now, { position = prop.position, radius = prop.radius })
 				end
 				local bossNow = model.Parent and model.PrimaryPart and (BossPatterns.getLogicalPosition(model) or model.PrimaryPart.Position) or nil
-				local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, { boss = bossNow, pits = now, sliced = true })
+				-- G1-0 Play 1: 솟기 직전 다시 보기(연결 검사 1번)는 나누지 않는다 - 나누면 솟는 시각이 전조 1.5초보다 늦어졌다(1.80초). 연결 검사 한 번은 재사용 배열로 ≤ 2ms(G1-0(가) ②).
+				local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, { boss = bossNow, pits = now })
 				if not obstacle then
 					debugEvent("regrowSkip", { reason = why, at = os.clock(), atSpawn = true, zoneKey = zoneKey, token = token, id = plan.item.id })
 					return

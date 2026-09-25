@@ -264,7 +264,7 @@ function BalanceDecisionVerify.runLive(player, env)
 		local power = HealCast.healingPower(player) -- G1-0: 기대식 = 게임 치유 배수(재생 × 최종 데미지 버킷)
 		PartyState.create(player)
 		PartyState.attachMember(PartyState.getParty(player), member)
-		local allOk, lines = okStack and near(multiplier, 2, 1e-6), {}
+		local allOk, lines = okStack and multiplier > 1.5, {} -- G1-0: 옵션 값이 장비 itemLevel에 비례(P2.5a levelFactor)라 "정확히 ×2"는 계정 상태에 기댄다 - 스택이 붙었는가만 보고 기대식은 실제 배수로
 		for _ = 1, 4 do
 			setHpFraction(member, 0.2)
 			setHpFraction(player, 0.5)

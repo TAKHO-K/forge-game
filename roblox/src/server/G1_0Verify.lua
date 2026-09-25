@@ -279,6 +279,19 @@ function G1_0Verify.runPure()
 				task.wait()
 			end
 		end
+		-- 솟기 직전 다시 보기 = 연결 검사 한 번(나누지 않는다) - 상한 14개 배치에서 한 번 걸리는 시간
+		local openMax = 0
+		for _, bossId in ipairs(BOSSES) do
+			local theme = BossArenaMapData.maps[bossId]
+			local opts = ArenaLayout.optionsFor(BossData.bosses[bossId])
+			for s = 1, 10 do
+				local layout = ArenaLayout.generate(theme, 8900 + s, opts)
+				local t0 = os.clock()
+				ArenaLayout.regrowOpen(layout.items, opts)
+				openMax = math.max(openMax, (os.clock() - t0) * 1000)
+			end
+		end
+		r.check(("② 연결 검사 한 번(솟기 직전 다시 보기 - 나누지 않음) 최대 %.3fms(기대 ≤ %.1f)"):format(openMax, REGROW.frameBudgetMs), openMax <= REGROW.frameBudgetMs)
 		local bound = REGROW.frameBudgetMs * REGROW.yieldAtFraction + maxGap * 1000
 		r.check(("② %d회 자리 찾기(한 번에 돌면 평균 %.2f · 최대 %.2fms) · 체크포인트 %d번 · 가장 긴 간격 %.3fms → 한 프레임 상한 %.2f × %.1f + %.3f = %.2fms(기대 ≤ %.1f)"):format(
 			spots, totalMs / math.max(spots, 1), maxMs, calls, maxGap * 1000, REGROW.frameBudgetMs, REGROW.yieldAtFraction, maxGap * 1000, bound, REGROW.frameBudgetMs),
@@ -397,7 +410,7 @@ function G1_0Verify.runLive(player, env)
 			local fix = BossArenaContainment.corrections()[before + 1]
 			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			local alive = humanoid ~= nil and humanoid.Health > 0 and (PlayerState.getHp(player) or 0) > 0
-			local protected = BossArenaContainment.isProtected(player)
+			local protected = BossArenaContainment.isProtected(player) and BossArenaMap.isLaunchProtected ~= nil and BossArenaMap.isLaunchProtected(player) -- 받는 피해 0 + 넉백 무시(복귀 직후 재이탈 방지)
 			local dist = spawn and fix and (Vector3.new(fix.to.X, 0, fix.to.Z) - Vector3.new(spawn.X, 0, spawn.Z)).Magnitude or -1
 			local stuck = fix ~= nil and BossArenaMap.overlapsObstacle(encounter.zoneKey, fix.to, 1.5, 0.5)
 			if expectReason == nil then
@@ -415,13 +428,12 @@ function G1_0Verify.runLive(player, env)
 			return zone.center + Vector3.new(math.cos(a) * radial, 0, math.sin(a) * radial) + Vector3.new(0, y - zone.center.Y, 0)
 		end
 		-- 벽 윗면 안쪽 띠(반경 R + 1.5 - 원 밖 허용 2 안) · 발 = 벽 윗면
-		sample("벽 위 착지(반경 R + 1.5)", at(zone.radius + 1.5, FLOOR + GEOMETRY.wallHeightStuds + 3, 0), "offFloor", 3)
+		-- 24각형 변의 가운데(7.5°)는 안쪽 면이 반경 R - 캐릭터 중심을 R + 1.8(원 밖 허용 2 안)에 두면 벽 윗면에 선다(꼭짓점 0°는 면이 R × 1.0086이라 미끄러져 안으로 떨어졌다 - Play 1)
+		sample("벽 위 착지(반경 R + 1.8)", at(zone.radius + 1.8, FLOOR + GEOMETRY.wallHeightStuds + 3, 180 / GEOMETRY.wallSegments), "offFloor", 3)
 		sample("맵 바깥 지면(테라스)", at(zone.radius + GEOMETRY.wallThicknessStuds + 10, FLOOR - GEOMETRY.rimDropStuds + 3, 30), "outside", 2)
 		sample("허공(테라스 밖)", at(zone.radius + GEOMETRY.wallThicknessStuds + GEOMETRY.rimWidthStuds + 20, FLOOR + 10, 60), "outside", 2)
 		-- 연쇄: 복귀 직후(보호 안) 곧바로 다시 바깥 → 다음 검사에서 다시 복귀
 		sample("연쇄 1(바깥)", at(zone.radius + 20, FLOOR - GEOMETRY.rimDropStuds + 3, 90), "outside", 2)
-		local protectedLaunch = BossArenaMap.isLaunchProtected and BossArenaMap.isLaunchProtected(player)
-		r.check(("B 복귀 직후 넉백 보호(isLaunchProtected) %s(기대 true - 스폰 자리에서 곧바로 다시 날아가지 않는다)"):format(tostring(protectedLaunch)), protectedLaunch == true)
 		sample("연쇄 2(보호 중 다시 바깥)", at(zone.radius + 20, FLOOR - GEOMETRY.rimDropStuds + 3, 120), "outside", 2)
 		-- 오탐 없음: 아레나 안 높이 뜸(벽 윗면보다 조금 높이 - 떨어지며 1초 안에 내려온다) · 평지 점프 높이
 		sample("아레나 안 공중(발 15 → 떨어짐)", at(40, FLOOR + 15 + 3, 200), nil, 1.6)
