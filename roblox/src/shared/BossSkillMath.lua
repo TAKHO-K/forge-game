@@ -272,9 +272,38 @@ function BossSkillMath.orgelShowInterval(skill, stage)
 	return skill.showIntervalByTier[math.clamp(tier, 1, #skill.showIntervalByTier)]
 end
 
-function BossSkillMath.orgelSequence(skill, rand01)
+-- 인원 n의 순서 길이(sequenceLengthByParty - 없으면 sequenceLength).
+function BossSkillMath.orgelLength(skill, memberCount)
+	local list = skill.sequenceLengthByParty
+	if not list then
+		return skill.sequenceLength
+	end
+	return list[math.clamp(memberCount or 1, 1, #list)]
+end
+
+-- 파티 단위 전멸기의 제한 시간(2인 이상 = limitSecondsParty - 없으면 limitSeconds).
+function BossSkillMath.gimmickLimitSeconds(skill, memberCount)
+	return ((memberCount or 1) > 1 and skill.limitSecondsParty) or skill.limitSeconds
+end
+
+-- 모형 전용(M1 A안 가정): 파티 보정으로 늘어난 어려움 k - 1인 성공 확률 s가 s^k가 된다.
+--   둔덕 = 둔덕 수 비 × 시간 비(솔로 대비) · 오르골 = 순서 길이 비(한 음씩 따로 기억한다고 본다). 보정이 없으면 1.
+function BossSkillMath.partyGimmickHardness(skill, memberCount)
+	local k = 1
+	if skill.mound and skill.mound.countByParty then
+		local list = skill.mound.countByParty
+		k *= list[math.clamp(memberCount or 1, 1, #list)] / list[1]
+	end
+	k *= skill.limitSeconds / BossSkillMath.gimmickLimitSeconds(skill, memberCount)
+	if skill.sequenceLengthByParty then
+		k *= BossSkillMath.orgelLength(skill, memberCount) / BossSkillMath.orgelLength(skill, 1)
+	end
+	return k
+end
+
+function BossSkillMath.orgelSequence(skill, rand01, memberCount)
 	local list = {}
-	for i = 1, skill.sequenceLength do
+	for i = 1, BossSkillMath.orgelLength(skill, memberCount) do
 		list[i] = math.clamp(1 + math.floor(rand01() * skill.bells), 1, skill.bells)
 	end
 	return list
@@ -363,7 +392,7 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 	elseif primitive == "sandSearch" then
 		return skill.telegraphSeconds + skill.limitSeconds + skill.stunSeconds -- BR1-3 진짜 전갈 찾기(상한 - 기절 포함)
 	elseif primitive == "orgel" then
-		return skill.telegraphSeconds + skill.protectedShowInterval * skill.sequenceLength + skill.limitSeconds + math.max(skill.stunSeconds, skill.statue.seconds) -- BR1-3 수정 오르골(상한)
+		return skill.telegraphSeconds + skill.protectedShowInterval * BossSkillMath.orgelLength(skill, 4) + skill.limitSeconds + math.max(skill.stunSeconds, skill.statue.seconds) -- BR1-3 수정 오르골(상한)
 	elseif primitive == "reflect" then
 		return skill.telegraphSeconds + skill.stanceSeconds -- BR1-2 반사: 결계 전조 + 반사 동안(되돌린 투사체는 스킬과 떨어져 난다)
 	elseif primitive == "colorMatch" then

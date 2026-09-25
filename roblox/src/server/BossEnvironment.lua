@@ -66,7 +66,13 @@ local function placeZones(model, st, data, env)
 	elseif spec.shape == "rect" and spec.halfMap then
 		-- BR1-2 맵 절반 판: 무작위 방위 θ - 길이 방향 = θ(지름 전체) · 폭 = 반경(한쪽 반). 판 가운데 = 중심 + 옆 방향 × 반경 ÷ 2.
 		local angle = rng:NextNumber(0, 360)
-		if spec.walkOutStuds then
+		-- M1(사용자 확정): walkOutChance(80%)만 걸어 나갈 수 있는 방향 · 나머지는 완전 무작위(피할 수 없는 조합 허용) - 무작위가 두 번 연달아 나오지는 않는다
+		local free = spec.walkOutChance ~= nil and not st.plateFreeLast and rng:NextNumber() >= spec.walkOutChance
+		st.plateFreeLast = free
+		if free then
+			print(("[forge-game] 판 털기 방향: 완전 무작위 %.0f°"):format(angle))
+		end
+		if spec.walkOutStuds and not free then
 			-- BR1-3 판 털기: 판 위 멤버가 모두 walkOutStuds 안에서 경계(지름)를 넘어 나갈 수 있는 방향만(dirTries번 뽑아 가장 나은 것 - 회피 부등식)
 			local bestAngle, bestDepth = angle, math.huge
 			for _ = 1, spec.dirTries or 12 do

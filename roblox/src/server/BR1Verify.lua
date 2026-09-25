@@ -367,6 +367,12 @@ function BR1Verify.runLive(player, env)
 						ok = total >= 3 and total <= 5 and airWaves >= 1 and airWaves < total
 					end
 					detail = ("파동 %d · 공중 파동 %d(기대 %d)"):format(total, airWaves, expectAir)
+				elseif p == "sweep" then -- M1: BR1-3 에네르기파 휩쓸기
+					ok = countKind("sweepTelegraph") == 1 and countKind("sweepFire") == 1 and countKind("sweepEnd") == 1
+					detail = ("기 모으기 %d · 휩쓸기 %d · 끝 %d"):format(countKind("sweepTelegraph"), countKind("sweepFire"), countKind("sweepEnd"))
+				elseif p == "boomerang" then -- M1: BR1-3 분신 부메랑
+					ok = countKind("boomTelegraph") == 1 and countKind("boomRun") == 1 and countKind("boomEnd") == 1
+					detail = ("전조 %d · 달림 %d · 흡수 %d"):format(countKind("boomTelegraph"), countKind("boomRun"), countKind("boomEnd"))
 				end
 				r.check(("%s %s(%s): %s"):format(bossId, sid, p, detail), ok)
 			end
@@ -459,7 +465,35 @@ function BR1Verify.runLive(player, env)
 			local hp0 = PlayerState.getHp(victim)
 			local costs = drive(player, root, model, data, 1.6)
 			local hp1 = PlayerState.getHp(victim)
-			if envData.kind == "jumpCourse" then
+			if envData.fall then
+				-- M1: BR1-3 낙사형(지반 붕괴 조각 · 판 털기 빈 판) - 빈 바닥에 발을 딛으면 최대 체력 fall.maxHpFraction + 바닥 아래로
+				local z1 = (envData.kind == "collapse" and st.env.collapsed or st.env.zones)[1]
+				local spot = z1.center
+				if z1.shape == "slice" then
+					local a = math.rad(z1.startDeg + z1.widthDeg / 2)
+					spot = z1.center + Vector3.new(math.cos(a), 0, math.sin(a)) * (z1.hub + (z1.radius - z1.hub) * 0.5)
+				end
+				st.env.launched = {} -- 판 털기: 날아간 사람 면제를 지우고 "걸어 들어온 사람"으로
+				st.env.fell = {}
+				fullHeal(victim)
+				victimRoot.Position = Vector3.new(spot.X, FLOOR + 3, spot.Z)
+				local before = PlayerState.getHp(victim)
+				drive(player, root, model, data, 0.6, function()
+					return countKind("voidFall") > 0
+				end)
+				local lost = (before - PlayerState.getHp(victim)) / PlayerState.getMaxHp(victim)
+				r.check(("%s 환경 %s: 전조 %.1f초 → 구역 %d개 · 빈 바닥 발 딛음 → 낙사 %d · 체력 −%.0f%%(기대 %.0f%%)"):format(bossId, envData.id, envData.telegraphSeconds, #telegraphPayload.zones,
+					countKind("voidFall"), lost * 100, envData.fall.maxHpFraction * 100), countKind("voidFall") >= 1 and near(lost, envData.fall.maxHpFraction, 0.02))
+				if envData.kind == "collapse" then
+					r.check(("%s 무너진 조각 유지 %d(기대 %d - 다음 붕괴까지)"):format(bossId, #(st.env.collapsed or {}), envData.zones.collapse), #(st.env.collapsed or {}) == envData.zones.collapse)
+				else
+					st.env.phaseEndsAt = os.clock()
+					drive(player, root, model, data, 0.5, function()
+						return countKind("envEnd") > 0
+					end)
+					r.check(("%s 환경 끝 신호 %d"):format(bossId, countKind("envEnd")), countKind("envEnd") == 1)
+				end
+			elseif envData.kind == "jumpCourse" then
 				-- BR1-2 수정 부수기: 코스 발판 · 벽 · 수정 2 · 보호막(피해 무효) → 두 수정을 깨면 보호막 해제 + 코스 치움
 				local parts, crystals = BossEnvironment.debugGarden(model)
 				local hpBoss0 = MonsterState.getHpRatio(model)

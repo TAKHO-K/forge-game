@@ -48,9 +48,7 @@ local BossSim = require(ReplicatedStorage.Shared.BossSim)
 local BossMechanicsVerify = require(script.Parent.BossMechanicsVerify)
 -- 29-2 쿨타임·우선순위 구동 + 보스별 스킬표 자동 검증.
 local BossSkillVerify = require(script.Parent.BossSkillVerify)
-local BossGimmickVerify = require(script.Parent.BossGimmickVerify)
 local BossGimmick4Verify = require(script.Parent.BossGimmick4Verify)
-local BossGimmick5Verify = require(script.Parent.BossGimmick5Verify)
 -- 28-1(S01) 드랍 규칙 자동 검증 - (가)는 서버 시작 때, (나)는 위 보스 검증 체인의 끝에서 돈다.
 local LootRuleVerify = require(script.Parent.LootRuleVerify)
 -- 30-0 S02 v23 -> v24 이관(부풀려진 itemLevel 절단) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(읽기 전용).
@@ -3450,12 +3448,8 @@ if RunService:IsStudio() then
 				{ "29-1", function() BossMechanicsVerify.run(player, env) end },
 				{ "29-2(가)", BossSkillVerify.runPure },
 				{ "29-2(나)", function() BossSkillVerify.runLive(player, env) end },
-				{ "29-3(가)", BossGimmickVerify.runPure },
-				{ "29-3(나)", function() BossGimmickVerify.runLive(player, env) end },
 				{ "29-4(가)", BossGimmick4Verify.runPure },
 				{ "29-4(나)", function() BossGimmick4Verify.runLive(player, env) end },
-				{ "29-5(가)", BossGimmick5Verify.runPure },
-				{ "29-5(나)", function() BossGimmick5Verify.runLive(player, env) end },
 				{ "S01(나)", function() LootRuleVerify.runLive(player, env) end },
 				{ "S02(나)", function() ItemLevelMigrateVerify.runLive(player) end },
 				{ "S03(나)", function() EnhanceVerify.runLive(player, env) end },

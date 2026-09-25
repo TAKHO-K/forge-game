@@ -8,6 +8,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossMechanics = require(script.Parent.BossMechanics)
+local BossSkillMath = require(game:GetService("ReplicatedStorage").Shared.BossSkillMath)
 
 local BossSandSearch = {}
 
@@ -103,10 +104,11 @@ local function spawnMounds(c)
 	end
 	sand.phase = "search"
 	sand.openedAt = os.clock()
-	sand.endsAt = c.now + skill.limitSeconds
+	local limit = BossSkillMath.gimmickLimitSeconds(skill, #st.members)
+	sand.endsAt = c.now + limit
 	sand.blastAt = {}
-	kit.send(st, "sandStart", { realIndex = sand.realIndex, count = count, seconds = skill.limitSeconds, footprintEvery = skill.clue.footprintEverySeconds, footprintSeconds = skill.clue.footprintSeconds, floorY = st.floorY })
-	print(("[forge-game] 진짜 전갈 찾기: 둔덕 %d개(진짜 %d번) · 제한 %.1f초"):format(count, sand.realIndex, skill.limitSeconds))
+	kit.send(st, "sandStart", { realIndex = sand.realIndex, count = count, seconds = limit, footprintEvery = skill.clue.footprintEverySeconds, footprintSeconds = skill.clue.footprintSeconds, floorY = st.floorY })
+	print(("[forge-game] 진짜 전갈 찾기: 둔덕 %d개(진짜 %d번) · 제한 %.1f초"):format(count, sand.realIndex, limit))
 end
 
 -- 둔덕이 맞았다(구출 대상의 onHit). 설치형 규칙: 둔덕이 나오기 전에 시작한 공격 · 지연 폭발은 판정하지 않는다.

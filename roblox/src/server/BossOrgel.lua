@@ -181,7 +181,7 @@ BossOrgel.handler = {
 		st.phase = "orgel"
 		st.orgel = {
 			phase = "crown", endsAt = c.now + skill.telegraphSeconds, center = kit.clampToZone(kit.xz(c.position), zone, skill.bellRingStuds + 6),
-			sequence = BossSkillMath.orgelSequence(skill, function() return rng:NextNumber() end), interval = interval,
+			sequence = BossSkillMath.orgelSequence(skill, function() return rng:NextNumber() end, #st.members), interval = interval,
 			progress = 0, lastHitAt = {}, shown = 0,
 		}
 		spawnBells(c)

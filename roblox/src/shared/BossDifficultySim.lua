@@ -323,7 +323,9 @@ function BossDifficultySim.run(bossId, options)
 				elseif j.gimmick and j.party then
 					-- BR1-3 파티 단위: 실패 확률 = 1인 확률 ^ (1 + partySolveExponent × (인원 − 1))(여럿이 찾으면 쉽다 - 가정) · 실패면 살아 있는 전원 fraction
 					gimmickSeen += 1
-					local failed = rng() < hitChance(j) ^ (1 + cfg.partySolveExponent * (n - 1))
+					-- M1 A안: 인원별 둔덕 수 · 제한 시간 · 순서 길이로 1인 실패 확률을 먼저 올린다(BossSkillMath.partyGimmickHardness - 가정)
+					local single = 1 - (1 - hitChance(j)) ^ BossSkillMath.partyGimmickHardness(j.skill, n)
+					local failed = rng() < single ^ (1 + cfg.partySolveExponent * (n - 1))
 					for _, m in ipairs(members) do
 						if m.alive and t >= m.trappedUntil and failed then
 							damage(m, j.fraction, nil, j.id)

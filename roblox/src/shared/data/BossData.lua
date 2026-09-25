@@ -779,7 +779,7 @@ local SPECIES = {
 		environment = {
 			id = "plateShake", style = "shake", motion = "fin", damageLabel = "판 털기",
 			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 4.2, durationSeconds = 3.6,
-			zones = { shape = "rect", halfMap = true, walkOutStuds = 45, dirTries = 16 },
+			zones = { shape = "rect", halfMap = true, walkOutStuds = 45, dirTries = 16, walkOutChance = 0.8 }, -- M1: 80%만 나갈 수 있는 방향 · 20% 완전 무작위(연달아 두 번은 안 나온다)
 			shakes = 3,
 			onStart = { pan = { heightStuds = 22, distanceStuds = 70, distanceJitter = 20, scatterDeg = 25, airborneDistanceScale = 1.4, airborneHeightBonus = 6, multiplier = 2.0, starDistanceStuds = 85 } },
 			voidFall = true, fall = { maxHpFraction = 0.25, dropStuds = 14 },
@@ -946,6 +946,7 @@ local SPECIES = {
 				cooldownSeconds = 32, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				conditions = { { type = "memberWithin", studs = 60 } },
 				telegraphSeconds = 1.5, bells = 5, bellRingStuds = 30, sequenceLength = 5,
+				sequenceLengthByParty = { 5, 6, 7, 7 }, -- M1 BR1-3 후속(사용자 확정 A안): 솔로 5개 유지 · 파티는 6 ~ 7개(파티 단위 전멸기라 인원이 늘면 쉬워지는 것을 막는다)
 				showIntervalByTier = { 1.2, 1.0, 0.8, 0.65 }, protectedShowInterval = 1.4, protectedUntilStage = 30,
 				limitSeconds = 24, hitDebounceSeconds = 0.35,
 				bellLook = { sizeScale = 1.6, bodyAspect = Vector3.new(0.9, 1.3, 0.9) },
@@ -1086,7 +1087,7 @@ local SPECIES = {
 				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
 			},
 			-- BR1-3 전멸기 "진짜 전갈 찾기"(사용자 - 갑각 태세 삭제 · primitive "sandSearch" = server/BossSandSearch): 여왕이 모래 속으로 숨는다(telegraphSeconds - 먼지 · 파고들기) →
-			-- 똑같은 모래 둔덕 mound.countByParty[인원]개(솔로 · 2인 3 · 3 · 4인 4)가 보스 자리 둘레 wanderRadiusStuds 안을 천천히(speedStuds < 걷기) 돌아다닌다.
+			-- 똑같은 모래 둔덕 mound.countByParty[인원]개(솔로 3 · 2인 4 · 3 · 4인 5 - M1 A안)가 보스 자리 둘레 wanderRadiusStuds 안을 천천히(speedStuds < 걷기) 돌아다닌다.
 			-- 진짜 둔덕만 **꼬리 끝이 빛나고 발자국**을 남긴다(작지만 알면 보인다 - 빛나는 꼬리는 폰에서도 보이게 크게).
 			--   · limitSeconds 안에 진짜를 때리면: 여왕이 튀어나와 기절 stunSeconds(벽 충돌 헤롱 그림) + 게이트 열림(breakWindow).
 			--   · 가짜를 때리면: 작은 모래 폭발 - 때린 사람에게 decoyBlast(×1.0 · 약 14%, 0.75초에 한 번). 둔덕은 남는다.
@@ -1097,8 +1098,8 @@ local SPECIES = {
 				primitive = "sandSearch", bubble = "sandSearch", role = "gimmick",
 				cooldownSeconds = 30, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				conditions = { { type = "notAfter", skills = { "stab" } }, { type = "memberWithin", studs = 60 } },
-				telegraphSeconds = 1.5, limitSeconds = 14, depthStuds = 8,
-				mound = { countByParty = { 3, 3, 4, 4 }, speedStuds = 7, wanderRadiusStuds = 40, sizeScale = 3.4, bodyAspect = Vector3.new(1.7, 0.5, 1.7), color = scorpionHead },
+				telegraphSeconds = 1.5, limitSeconds = 14, limitSecondsParty = 12, depthStuds = 8, -- M1 BR1-3 후속(A안): 파티(2인 이상) 제한 12초
+				mound = { countByParty = { 3, 4, 5, 5 }, speedStuds = 7, wanderRadiusStuds = 40, sizeScale = 3.4, bodyAspect = Vector3.new(1.7, 0.5, 1.7), color = scorpionHead },
 				clue = { footprintEverySeconds = 0.3, footprintSeconds = 2.4 },
 				decoyBlast = { multiplier = 1.0, radiusStuds = 7, damageLabel = "모래 폭발" },
 				stunSeconds = 4, breakWindow = { seconds = 4, damageTakenMultiplier = 1.3 },
