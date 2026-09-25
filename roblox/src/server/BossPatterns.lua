@@ -497,15 +497,30 @@ local function regrowObstacles(c, effect)
 			send(st, "regrowTelegraph", { id = plan.item.id, colliders = plan.worldColliders, seconds = REGROW.telegraphSeconds, color = plan.item.spec.color, floorY = st.floorY })
 			debugEvent("regrowPlan", { plan = plan, at = os.clock(), zoneKey = zoneKey, token = token })
 			local planned = os.clock()
-			task.delay(REGROW.telegraphSeconds, function()
-				-- 리뷰 6: 솟기 직전 자리를 다시 본다 - 지금 보스 자리 · 지금 동적 지형(전조 사이 들어왔으면 이번엔 안 솟는다)
+			local function spotContext()
 				local now = {}
 				for _, prop in ipairs(BossArenaProps.list(model)) do
 					table.insert(now, { position = prop.position, radius = prop.radius })
 				end
 				local bossNow = model.Parent and model.PrimaryPart and (BossPatterns.getLogicalPosition(model) or model.PrimaryPart.Position) or nil
-				-- G1-0 Play 1: 솟기 직전 다시 보기(연결 검사 1번)는 나누지 않는다 - 나누면 솟는 시각이 전조 1.5초보다 늦어졌다(1.80초). 연결 검사 한 번은 재사용 배열로 ≤ 2ms(G1-0(가) ②).
-				local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, { boss = bossNow, pits = now })
+				return { boss = bossNow, pits = now }
+			end
+			task.delay(REGROW.telegraphSeconds - REGROW.recheckLeadSeconds, function()
+				-- 리뷰 6: 솟기 직전 자리를 다시 본다 - 지금 보스 자리 · 지금 동적 지형(전조 사이 들어왔으면 이번엔 안 솟는다).
+				-- G1-0: 연결 검사까지 하는 무거운 다시 보기는 recheckLeadSeconds 앞서 여러 프레임에 나눠 하고, 솟는 순간에는 싼 자리 검사만(솟는 시각 = 전조 끝 그대로).
+				local fits, fitWhy = BossArenaMap.precheckRegrow(zoneKey, plan, spotContext())
+				if not fits then
+					print(("[forge-game] 지형 재생성 취소(솟기 전 자리 다시 봄): %s #%d - %s"):format(zoneKey, plan.item.id, tostring(fitWhy)))
+					debugEvent("regrowSkip", { reason = fitWhy, at = os.clock(), atSpawn = true, zoneKey = zoneKey, token = token, id = plan.item.id })
+					return
+				end
+				local remain = planned + REGROW.telegraphSeconds - os.clock()
+				if remain > 0 then
+					task.wait(remain)
+				end
+				local context = spotContext()
+				context.skipOpen = true
+				local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, context)
 				if not obstacle then
 					debugEvent("regrowSkip", { reason = why, at = os.clock(), atSpawn = true, zoneKey = zoneKey, token = token, id = plan.item.id })
 					return

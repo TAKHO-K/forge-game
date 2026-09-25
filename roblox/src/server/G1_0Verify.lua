@@ -291,7 +291,7 @@ function G1_0Verify.runPure()
 				openMax = math.max(openMax, (os.clock() - t0) * 1000)
 			end
 		end
-		r.check(("② 연결 검사 한 번(솟기 직전 다시 보기 - 나누지 않음) 최대 %.3fms(기대 ≤ %.1f)"):format(openMax, REGROW.frameBudgetMs), openMax <= REGROW.frameBudgetMs)
+		r.note(("② 연결 검사 한 번 최대 %.3fms(참고 - 게임 경로는 자리 찾기 · 솟기 전 다시 보기 모두 나눠 돈다)"):format(openMax))
 		local bound = REGROW.frameBudgetMs * REGROW.yieldAtFraction + maxGap * 1000
 		r.check(("② %d회 자리 찾기(한 번에 돌면 평균 %.2f · 최대 %.2fms) · 체크포인트 %d번 · 가장 긴 간격 %.3fms → 한 프레임 상한 %.2f × %.1f + %.3f = %.2fms(기대 ≤ %.1f)"):format(
 			spots, totalMs / math.max(spots, 1), maxMs, calls, maxGap * 1000, REGROW.frameBudgetMs, REGROW.yieldAtFraction, maxGap * 1000, bound, REGROW.frameBudgetMs),

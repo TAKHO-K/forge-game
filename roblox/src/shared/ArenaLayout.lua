@@ -178,10 +178,10 @@ function ArenaLayout.connectivity(items, options)
 	local count = total -- P3d-F B4: total = 구조물 없는 아레나의 칸 수(이동 가능 면적 비율 = 남은 칸 ÷ total)
 	local checkpoint = o.checkpoint
 	for _, item in ipairs(items) do
-		if checkpoint then
-			checkpoint()
-		end
 		for _, c in ipairs(item.colliders) do
+			if checkpoint then
+				checkpoint()
+			end
 			local reach = c.r + 1
 			for i = math.max(math.floor((c.x - reach) / cell), -n), math.min(math.ceil((c.x + reach) / cell), n) do
 				local rowBase = (i + n) * width + n + 1
@@ -212,7 +212,7 @@ function ArenaLayout.connectivity(items, options)
 		local k0 = queue[head]
 		head += 1
 		reached += 1
-		if checkpoint and head % 256 == 0 then
+		if checkpoint and head % 128 == 0 then
 			checkpoint()
 		end
 		local column = (k0 - 1) % width -- j + n
@@ -431,8 +431,8 @@ end
 function ArenaLayout.regrowFits(item, items, options)
 	local o = defaults(options)
 	local ok, why = regrowClear(item.x, item.z, item.radius, items, o, options)
-	if not ok then
-		return false, why
+	if not ok or options.skipOpen then
+		return ok, why -- G1-0: skipOpen = 연결 검사는 미리(전조 끝 조금 전에 나눠서) 했다 - 솟는 순간에는 싼 자리 검사만
 	end
 	local all = table.clone(items)
 	table.insert(all, item)

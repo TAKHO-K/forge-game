@@ -545,7 +545,7 @@ function BossArenaMap.spawnRegrown(zoneKey, plan, context)
 			table.insert(pits, r)
 		end
 		local checkpoint = context.sliced and newSlicer() or nil
-		local ok, why = ArenaLayout.regrowFits(plan.item, itemsOf(state), { kit = state.layoutOptions.kit, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds, checkpoint = checkpoint })
+		local ok, why = ArenaLayout.regrowFits(plan.item, itemsOf(state), { kit = state.layoutOptions.kit, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds, checkpoint = checkpoint, skipOpen = context.skipOpen })
 		if checkpoint and (active[zoneKey] ~= state or state.regrowToken ~= plan.token) then
 			return nil, "cancelled" -- G1-0: 나눠 도는 사이 보스전이 바뀌었다
 		end
@@ -559,6 +559,26 @@ function BossArenaMap.spawnRegrown(zoneKey, plan, context)
 	obstacle.regrown = true
 	print(("[forge-game] 지형 재생성: %s #%d %s(%.0f, %.0f)%s"):format(zoneKey, item.id, item.kind, item.x, item.z, item.underMember and " - 멤버 발밑" or ""))
 	return obstacle
+end
+
+-- G1-0: 솟기 전에 자리를 미리 다시 본다(연결 검사 포함 · 여러 프레임에 나눔). 반환: 맞는가, 이유. 이 뒤의 spawnRegrown은 skipOpen으로 싼 검사만 한다.
+function BossArenaMap.precheckRegrow(zoneKey, plan, context)
+	local state = active[zoneKey]
+	if not state or state.regrowToken ~= plan.token then
+		return false, "cancelled"
+	end
+	local zone = zoneOfKey(zoneKey)
+	local pits = {}
+	for _, pit in ipairs(context.pits or {}) do
+		table.insert(pits, { x = pit.position.X - zone.center.X, z = pit.position.Z - zone.center.Z, r = pit.radius })
+	end
+	local boss = context.boss and { x = context.boss.X - zone.center.X, z = context.boss.Z - zone.center.Z } or nil
+	local checkpoint = newSlicer()
+	local ok, why = ArenaLayout.regrowFits(plan.item, itemsOf(state), { kit = state.layoutOptions.kit, boss = boss, pits = pits, mounds = state.layout.mounds, checkpoint = checkpoint })
+	if active[zoneKey] ~= state or state.regrowToken ~= plan.token then
+		return false, "cancelled"
+	end
+	return ok, why
 end
 
 -- 발(feet)이 이 구조물의 어느 충돌 원에 몸이 닿는가(수평 거리 < 원 반경 + 몸 반폭). 반환: 가장 깊이 들어간 원(center · r) · 그 중심까지 수평 거리, 또는 nil.

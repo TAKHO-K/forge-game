@@ -123,7 +123,10 @@ local regrow = {
 	-- G1-0(P3d-F 결정 3): 자리 찾기 · 솟기 직전 다시 보기를 여러 프레임에 나눈다 - 한 프레임에 쓰는 시간 ≤ frameBudgetMs(옛 한 번에 평균 8.1 · 최대 16.4ms).
 	-- 조각이 예산 × yieldAtFraction을 넘기면 다음 Heartbeat로 양보한다(체크포인트 사이 계산이 남은 몫을 넘지 않게 여유).
 	frameBudgetMs = 2,
-	yieldAtFraction = 0.6,
+	yieldAtFraction = 0.4, -- Play 2: 0.6이면 체크포인트 간격 최대 1.12ms가 더해져 2.32ms - 0.4 + 간격 ≤ 2
+	-- 솟기 직전 다시 보기(연결 검사)는 전조가 끝나기 recheckLeadSeconds 전에 나눠서 먼저 돌고, 솟는 순간에는 싼 자리 검사(보스 · 동적 지형 · 겹침)만 한다
+	-- (G1-0 Play 1: 솟는 순간 나눠 돌면 솟는 시각이 1.5 → 1.8초로 밀렸다 · 한 번에 돌면 한 프레임 5ms).
+	recheckLeadSeconds = 0.3,
 	underMemberChance = 0.5,
 	underMemberStuds = 4,
 	bossClearStuds = 6, -- 보스 몸통 반폭 3.6 + 여유
