@@ -135,5 +135,7 @@ RunService:BindToRenderStep("ShiftLock", Enum.RenderPriority.Camera.Value + 3, f
 end)
 
 player.CharacterAdded:Connect(function()
-	applied = false -- 새 Humanoid는 기본값(AutoRotate 켜짐)이다 - 다음 프레임에 다시 건다
+	-- 새 Humanoid는 기본값(AutoRotate 켜짐)이다 - 마우스만 풀고 다음 프레임에 다시 건다(리뷰 3: 창이 열린 채 캐릭터가 바뀌어도 마우스가 가운데에 남지 않게)
+	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+	applied = false
 end)

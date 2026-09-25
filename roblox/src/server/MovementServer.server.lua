@@ -14,17 +14,23 @@ local airMoveFx = Instance.new("RemoteEvent")
 airMoveFx.Name = "AirMoveFx"
 airMoveFx.Parent = ReplicatedStorage
 
-local lastRelayAt = {} -- [Player] = os.clock()
+local lastRelayAt = {} -- [Player] = { [kind] = os.clock() } - 종류별(점프 직후 대시 기울임이 먹히지 않게)
 
 airMoveFx.OnServerEvent:Connect(function(player, kind)
 	if not KINDS[kind] then
 		return
 	end
-	local now = os.clock()
-	if now - (lastRelayAt[player] or -math.huge) < MovementConfig.airMotion.relayMinGapSeconds then
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
 		return
 	end
-	lastRelayAt[player] = now
+	local now = os.clock()
+	local last = lastRelayAt[player] or {}
+	lastRelayAt[player] = last
+	if now - (last[kind] or -math.huge) < MovementConfig.airMotion.relayMinGapSeconds then
+		return
+	end
+	last[kind] = now
 	for _, other in ipairs(Players:GetPlayers()) do
 		if other ~= player then
 			airMoveFx:FireClient(other, player, kind)

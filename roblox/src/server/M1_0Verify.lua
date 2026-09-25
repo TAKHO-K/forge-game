@@ -261,6 +261,21 @@ function M1_0Verify.runLive(player, env)
 		task.wait(1)
 		local after = #BossArenaContainment.corrections()
 		r.check(("아레나 안 공중 발 %.1f(바닥 + 벽 %d + 2)에 1.8초 → 복귀 %d(기대 0 - 벽 위에 서 있을 때만 잰다)"):format(feet - floorTop, BossArenaMapData.geometry.wallHeightStuds, after - before), after == before)
+		-- 리뷰 2: 벽 윗면에 선 뒤 점프를 누르고 있어도(폴링이 공중만 봐도) 복귀한다 - 벽 윗면 띠(반경 R + 1.8 · 변 가운데)에 세우고 0.1초마다 Jump
+		local zone = require(ReplicatedStorage.Shared.data.WorldConfig).zones[encounter.zoneKey]
+		local angle = math.rad(180 / BossArenaMapData.geometry.wallSegments)
+		local top = zone.center + Vector3.new(math.cos(angle) * (zone.radius + 1.8), 0, math.sin(angle) * (zone.radius + 1.8))
+		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+		local before2 = #BossArenaContainment.corrections()
+		player.Character:PivotTo(CFrame.new(top.X, floorTop + BossArenaMapData.geometry.wallHeightStuds + 3, top.Z))
+		local t0 = os.clock()
+		while #BossArenaContainment.corrections() == before2 and os.clock() - t0 < 4 do
+			humanoid.Jump = true
+			task.wait(0.1)
+		end
+		local fix = BossArenaContainment.corrections()[before2 + 1]
+		r.check(("벽 윗면에서 점프를 누르고 있음 → %.2f초 뒤 복귀 %s(기대 offFloor · ≤ 2.5초)"):format(os.clock() - t0, tostring(fix and fix.reason)), fix ~= nil and fix.reason == "offFloor" and os.clock() - t0 <= 2.5)
+		task.wait(BossArenaMapData.containment.returnProtectSeconds + 0.1)
 		BossEncounter.despawnFor(player)
 	end)
 

@@ -11,7 +11,8 @@ return {
 	-- 충전은 바닥을 밟으면 charges로 돌아온다. 공중대시는 한 체공에 1회이고 공중 점프와 어느 순서로든 섞는다(G2a의 상한형 · 대시 택일 · 아레나 전용 제한은 폐기).
 	-- 최대 발 높이 = 1단 × (1 + charges × heightFraction) = 7.2 × 2.7 = 19.44(정점마다 누를 때). 0.85 = 80 ~ 90% 중 가운데(표 = docs/design/movement-metrics.md v2).
 	-- newPressGapSeconds: 누른 채로 있으면 JumpRequest가 반복된다 - 직전 요청과 이만큼 떨어진 요청만 새 누름. minAirSeconds: 이륙 직후의 같은 누름을 공중 점프로 읽지 않게.
-	airJump = { charges = 2, heightFraction = 0.85, newPressGapSeconds = 0.1, minAirSeconds = 0.05 },
+	-- dashPendingSeconds: 공중대시를 요청한 뒤 결과(서버 왕복)가 올 때까지 공중 점프를 막는 여유(결과가 오면 트윈 끝 시각으로 덮는다 - 트윈이 끝나며 속도 0이라 그 사이 점프는 충전만 날아간다).
+	airJump = { charges = 2, heightFraction = 0.85, newPressGapSeconds = 0.1, minAirSeconds = 0.05, dashPendingSeconds = 0.5 },
 
 	-- 공중 점프 · 공중대시 모션(클라가 그린다 - 판정 없음). 루트 관절(Motor6D) C0에 회전을 더한다: 공중 점프 = 앞으로 한 바퀴(flipSeconds), 공중대시 = 앞으로 기울임(leanDeg · 대시 시간 동안).
 	-- 입력 즉시 시작(준비 동작 없음). 남에게는 서버가 중계한다(relayMinGapSeconds보다 잦은 요청은 버린다).

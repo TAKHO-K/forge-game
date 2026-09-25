@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
+local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local UIManager = require(script.Parent.UIManager)
 local SkillEffects = require(script.Parent.SkillEffects)
@@ -48,6 +49,7 @@ local function requestDash()
 			return
 		end
 		character:SetAttribute("AirDashUsed", true)
+		character:SetAttribute("AirDashUntil", os.clock() + DashConfig.durationSeconds + MovementConfig.airJump.dashPendingSeconds) -- 리뷰 5: 결과가 오기 전(왕복)부터 공중 점프를 막는다 - 결과가 오면 정확한 끝 시각으로 덮는다
 	end
 	localCooldownUntil = os.clock() + DashConfig.cooldownSeconds
 	localCastSignal:Fire("dash", DashConfig.cooldownSeconds)
@@ -72,6 +74,11 @@ end)
 dashResult.OnClientEvent:Connect(function(data)
 	if not data.ok then
 		localCooldownUntil = 0
+		local character = player.Character
+		if character then -- 리뷰 4: 서버가 거절하면 이 체공의 공중대시도 돌려준다
+			character:SetAttribute("AirDashUsed", nil)
+			character:SetAttribute("AirDashUntil", nil)
+		end
 		return
 	end
 	local character = player.Character

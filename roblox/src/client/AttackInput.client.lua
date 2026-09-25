@@ -249,6 +249,14 @@ local function fireAttack(aimPoint)
 		return
 	end
 
+	-- M1-0 리뷰 1: 시점 고정 중에는 ShiftLock이 매 프레임 루트를 카메라 방위로 되돌려 회전이 끝나지 않는다 - 카메라 방향이 곧 조준이라 돌지 않고 바로 친다
+	if player:GetAttribute("ShiftLocked") then
+		if onComplete then
+			onComplete()
+		end
+		return
+	end
+
 	if activeRotation then
 		activeRotation.targetDir = targetDir
 		activeRotation.onComplete = onComplete
