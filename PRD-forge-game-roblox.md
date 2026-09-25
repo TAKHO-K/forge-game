@@ -19332,5 +19332,46 @@ COMMON.md §1에 영구 규칙 "성장률(k)에 기대는 값은 힘 비율로 �
 
 #### [5] 미결 · 결정 필요
 
-- 미결: Play 3 뒤 재생성 계획 토큰 수정(`ece7b96`) 자동 검증 미실행 - 다음 세션 첫 Play에서 P3d(나) D.
-- 결정 필요 6건: 라이브 제외 UserId · 복귀 보호 0.75초 · 단상 해석 + 면제 · 재생성 시점 · 개수 · 상한 · 끼임 면역 · 받는 피해 배율 칸 공유.
+- 미결: Play 3 뒤 재생성 계획 토큰 수정(`ece7b96`) 자동 검증 미실행 - 다음 세션 첫 Play에서 P3d(나) D. → **닫힘(20.122 - P3d-F Play 1 · 2 · 3 P3d(나) 11/11 · 누수 5회 깨끗함)**
+- 결정 필요 6건: 라이브 제외 UserId · 복귀 보호 0.75초 · 단상 해석 + 면제 · 재생성 시점 · 개수 · 상한 · 끼임 면역 · 받는 피해 배율 칸 공유. → **사용자 결정 반영(20.122)**
+
+### 20.122 P3d-F P3d 후속 - 재검증 + 확인 6건 반영 (자율 단계)  `[✅ 구현 + 로컬 검사(luau-compile 바뀐 · 새 파일 전부 · luau-analyze 새 미정의 전역 0) + Studio Play 3회(2026-09-25 - Play 1 단독 3블록 · Play 2 · 3 동반 전 블록 · 3회차 P3dF(나) 12/12 · P3d(나) 11/11) + 스크린샷 · 측정 Play 1회(Claude outputs/P3d-F) · 리뷰 15건(4건 반영). 저장 구조 변경 없음. 결정 필요 4건 · 미결 1 - docs/phase/P3d-F-report.md]`
+
+#### [1] 무엇을 했나
+
+- **A 재검증**: 재생성 누수 = 같은 슬롯에서 보스전 A 종료 직후 B 입장 5회(등록 직후 · 전조 중) → A의 계획 · 전조 · 솟음이 B에 0(계측 훅 `regrowQueue` · `regrowPlan` · `regrowSkip` · `regrowSpawn`에 슬롯 · 토큰). 끝난 순간 보스전이 없으면(nil 토큰) 등록 안 함. 29-1 첫 기믹 단독 +10.02초 O(옛 +0.56초 = 부하). S19b 화면 스크린샷 O.
+- **B1** 라이브 제외 11595243049 = 사용자 확인(개발 계정) - 그대로. **B2** 복귀 보호 0.75초 유지(무적 플래그로).
+- **B3** 금 간 단상: 굵은 금 6줄 + 가지 · 윗면 위험색 35%(`BossArenaMapData.obstacle.daisCrackLook`) · 무너질 파동이 닿기 0.5초 전 예고(`daisWave.collapseWarnSeconds` - 흔들림 · 먼지, 판정 시각 그대로).
+- **B4** 상한(14)이면 재생성분 중 가장 오래된 것(끼인 것 제외)을 cause `cap`으로 무너뜨리고 새로(새 자리가 정해진 뒤) · 이동 가능 면적 하한 `regrow.minWalkableFraction` 0.7 + 닫힌 공간 0(`ArenaLayout.regrowOpen`). 100시드 × 6맵 × 16회 겹침 0 · 닫힌 공간 0 · 면적 최소 97.4%. 12인(아레나 12개 전부 상한) Heartbeat 0.39 → 0.41ms · +489 인스턴스.
+- **B5** 끼임: 현행은 무적(0배 6.1초)이었다 → 제거. 끼이는 순간 피해 0(현행 평타 ×2 - 결정 필요 2) · 밀림은 ×2 · 3타 · 6초 유지.
+- **B6** 받는 피해 배율 = 출처별 키 · 최종 = 곱 · 무적 = 별도 플래그 · 자기 키만 해제(`PlayerState.setIncomingDamageMultiplierUntil(…, sourceKey)` · `setInvulnerableUntil`). 전수 점검으로 같은 구조 5칸 더: 루트 고정(`setAnchorHold` - 잡힘 × 끼임) · 이동속도(`setMoveSpeedMultiplier` - 회전베기 저장/복원 제거 · 만료) · 채널링(잡히면 종료) · 체력바 눈금(`setTickDamageSource` - 몹별 최대) · 치유 버프(더 늦은 만료 유지).
+
+#### [2] 구조 · 변경 파일
+
+- 새: `server/P3dFVerify.lua`(P3dF(나) · (가E))
+- 서버: PlayerState · BossArenaMap · BossArenaLooks · BossPatterns · BossArenaContainment · BossTrap · BossEncounter · DashServer · SkillServer · PlayerProfile(refreshMovementSpeed 한 줄) · MonsterAI · HealCast · 검증(P3dVerify 기대값 · P3bVerify 키 · DevTools 연결)
+- 공유 · 데이터: ArenaLayout · BossArenaMapData · BossFxData · DevToolsConfig
+- 클라: BossArenaMapView(예고 · cap 붕괴)
+
+#### [3] 합격 기준
+
+| 항목 | 결과 | 근거 |
+|---|---|---|
+| A1 누수 5회 · 계측 | O | P3dF(나) A1 5/5(Play 1 · 2 · 3) |
+| A1 P3d(나) D | O | 11/11 × 3 |
+| A2 29-1 첫 기믹(가벼운 부하) | O | +10.02초(단독) |
+| B3 금 구분 · 예고 0.5초 · 보이는 것 = 판정 | O | 금 파트 12 · 색 8 · 예고 → 무너짐 0.50초 · 스크린샷 |
+| B4 교체 · 면적 · 닫힌 공간 · 12인 성능 | O | (가E) 7/7 · (나) 교체 #1327 · 12인 표 |
+| B5 끼인 동안 무적 아님 | O | 끼인 동안 피격 > 0 · D1 받는 피해 ×1 |
+| B6 출처별 · 보호 + 회전베기 | O | ×0.5 → ×0 → ×0.5 → ×0.25 → ×0.5 → ×1 |
+| 전수 점검 수정 | O | 고정 두 순서 · 이동속도 · 눈금 O(치유 버프 지속은 코드 리뷰) |
+| 회귀(동반 전 블록) | 3회차 새 X 0 | 남은 X = 계정 상태(27-4 · S13 · S13b) · 옛 X(29-1) · UI 타이밍 |
+
+#### [4] 사람이 확인할 것
+
+- 금 간 단상 · 붕괴 예고가 실제 폰에서 읽히는가 · 끼인 동안 맞는 체감 · 대시 + 회전베기 0.25배 체감
+
+#### [5] 미결 · 결정 필요
+
+- 미결: 리뷰 반영(`1c8697f` - 상한 교체 순서 · 리스폰 경합 · 스탠드인 해제)은 Play 3 뒤라 자동 검증 미실행(끼인 것 건너뜀은 모듈 사본으로 확인) - 다음 세션 첫 Play에 P3dF(나) 동반.
+- 결정 필요 4건: 대시 × 회전베기 0.25배 · 끼이는 순간 피해 0(현행 ×2였음) · 재생성 자리 찾기 8ms 프레임 · 계정 상태에 기대는 옛 검증.
