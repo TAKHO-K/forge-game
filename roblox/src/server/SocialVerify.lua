@@ -354,13 +354,13 @@ function SocialVerify.runLive(player, env)
 			secondLevel, tostring(lowPayload and lowPayload.reason), tostring(lowPayload and lowPayload.requiredLevel), secondLevel, classState.rebirthCount),
 			lowPayload ~= nil and lowPayload.success == false and lowPayload.reason == "level_too_low" and lowPayload.requiredLevel == secondLevel and classState.rebirthCount == 1)
 
-		-- 기존 경로: 강화대 앞에서도 같은 조건으로 허용된다.
+		-- G1-3(사용자 결정): 환생은 제단 한 곳 - 강화대 앞 요청은 자리 밖으로 조용히 무시된다(응답 없음 · 회차 그대로).
 		PlayerProfile.setCharacterExpDirect(player, CharacterLevel.getExpForLevel(secondLevel))
 		moveTo(player, station + Vector3.new(3, 0, 0) + standHeight)
 		local stationPayload = RebirthAccess.attempt(player, rootOf(player).Position)
-		r.check("나", ("기존 경로(강화대 앞) + 레벨 %d: success=%s 회차 %s(기대 true · 2) · 같은 위치에서 환생 조건은 제단과 같은 함수(PlayerProfile.rebirth)"):format(
-			secondLevel, tostring(stationPayload and stationPayload.success), tostring(stationPayload and stationPayload.rebirthCount)),
-			stationPayload ~= nil and stationPayload.success == true and stationPayload.rebirthCount == 2)
+		r.check("나", ("강화대 앞 + 레벨 %d(G1-3: 제단 한 곳): 응답 %s · 회차 %d(기대 없음 · 1 그대로)"):format(
+			secondLevel, tostring(stationPayload and stationPayload.success), classState.rebirthCount),
+			stationPayload == nil and classState.rebirthCount == 1)
 	end)
 
 	-- [3] 강화 중 · 보스전 중 거절.
