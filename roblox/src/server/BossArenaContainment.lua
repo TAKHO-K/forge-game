@@ -91,7 +91,9 @@ function BossArenaContainment.checkMember(encounter, member)
 	local standing = (humanoid and humanoid.HipHeight or 2) + root.Size.Y / 2
 	-- 리뷰 1: 회오리 체공(무적 출처 launchHold) 중에는 붙잡힌 높이라 벽 위가 아니다 - 끝난 뒤부터 잰다
 	local lifted = PlayerState.debugIncomingSources(member).launchHold ~= nil
-	if not lifted and ArenaContainment.isOffFloorHeight(root.Position.Y - standing, floorTopY, GEOMETRY.wallHeightStuds) then
+	-- M1-0: 공중 점프로 벽 윗면 높이를 1초 넘게 날 수 있다(단상 위 연속 공중 점프) - 벽 위에 "서 있을" 때만 잰다. 벽 밖으로 날아가면 위의 isOutside가 받는다.
+	local standingOn = humanoid ~= nil and humanoid.FloorMaterial ~= Enum.Material.Air
+	if not lifted and standingOn and ArenaContainment.isOffFloorHeight(root.Position.Y - standing, floorTopY, GEOMETRY.wallHeightStuds) then
 		offFloorSince[member] = offFloorSince[member] or os.clock()
 		if not outside and os.clock() - offFloorSince[member] >= CONTAINMENT.offFloorReturnSeconds then
 			outside, reason = true, "offFloor"

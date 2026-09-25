@@ -101,6 +101,13 @@ return {
 		["vote.retry.body"] = "스테이지 {stage} 보스에 다시 도전할까요?",
 		["boss.blockedInvite"] = "보스전 중에는 파티 초대를 받을 수 없습니다",
 
+		-- 설정 · 시점(M1-0)
+		["settings.title"] = "설정",
+		["settings.cameraTopDown"] = "탑다운 시점(위에서 내려다보기)",
+		["settings.cameraTopDownHint"] = "끄면 로블록스 기본 카메라입니다. 이번 접속 동안 유지됩니다.",
+		["settings.shiftLockHint"] = "시점 고정: PC는 왼쪽 Ctrl, 모바일은 대시 버튼 위 버튼입니다.",
+		["shiftLock.button"] = "고정",
+
 		-- 채팅 · 알림
 		["chat.primalDrop"] = "★ {name}님이 <font color=\"{color}\">{item}</font>을 얻었습니다",
 	},

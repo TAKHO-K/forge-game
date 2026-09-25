@@ -25,6 +25,7 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local HudChip = require(script.Parent.HudChip)
 local HudIcons = require(script.Parent.HudIcons)
 local StageSelectPanel = require(script.Parent.StageSelectPanel)
+local SettingsPanel = require(script.Parent.panels.Settings)
 local Confirm = require(script.Parent.ui.kit.Confirm)
 local Text = require(ReplicatedStorage.Shared.Text)
 
@@ -135,7 +136,7 @@ updateLabels()
 -- 두 가지로 늘었다 - 콘솔 메시지만이라도 구분해 둔다(reason 없는 옛 서버 응답도
 -- 방어적으로 처리).
 -- 설정 버튼(18-2 [5]) - ESC를 못 쓰는 이유(CoreGUI 예약)는 UIManager.lua 18-1 [2] 참고.
--- 우측 칩 스택 맨 아래에 자리만 만든다 - 설정창 내용은 다음 단계, 지금은 눌러도 아무 일 없다.
+-- 우측 칩 스택 맨 아래. M1-0: 누르면 설정 창(panels/Settings.lua - 카메라 방식)을 연다 · 닫는다.
 local settingsButton = Instance.new("TextButton")
 settingsButton.Name = "SettingsButton"
 settingsButton.LayoutOrder = 4
@@ -163,6 +164,7 @@ settingsIconHolder.Position = UDim2.new(0.5, 0, 0.5, 0)
 settingsIconHolder.Size = UDim2.new(0, 18, 0, 18)
 settingsIconHolder.Parent = settingsButton
 HudIcons.gear(settingsIconHolder, 18)
+settingsButton.Activated:Connect(SettingsPanel.toggle)
 
 stageMoveResult.OnClientEvent:Connect(function(payload)
 	if payload.result ~= "rejected" then

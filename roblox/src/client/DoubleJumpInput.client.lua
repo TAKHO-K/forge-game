@@ -1,9 +1,10 @@
--- 이단점프(G2a - D0 결정 3 B 상한형 · 사용자 확정): 공중에서 점프 버튼을 한 번 더 누르면 세로 속도만 바꿔 다시 뜬다. 입력은 UserInputService.JumpRequest 하나 -
--- PC Space · 게임패드 · 폰 기본 점프 버튼이 모두 이 신호를 낸다(폰에 버튼을 더하지 않는다). 수치 = MovementConfig · 식 = JumpMath.
---   - 2단 오름 = 1단 × 비율, 단 발이 이륙 지면 + 1단 높이를 넘지 않게 줄인다(높이 불변식 그대로 · 체공만 는다). 못 오를 만큼(정점 근처)이면 누름을 쓰지 않는다.
---   - 한 체공에 이단점프와 공중대시 중 하나만: 캐릭터 Attribute "AirMoveUsed"("jump" · "dash" - 이 클라에서만 쓰는 값, 복제 안 됨)를 DashInput과 같이 본다. 착지하면 지운다.
+-- 공중 점프(M1-0 - 사용자 결정: 겐지 · 한조식 스택형, 필드 · 보스 아레나 같은 규칙). 공중에서 점프 버튼을 누를 때마다 충전 1을 쓰고 지금 높이에서 더 오른다.
+-- 입력은 UserInputService.JumpRequest 하나 - PC Space · 게임패드 · 폰 기본 점프 버튼이 모두 이 신호를 낸다(폰에 버튼을 더하지 않는다). 수치 = MovementConfig.airJump · 식 = JumpMath.
+--   - 충전 = airJump.charges(바닥을 밟으면 다시 찬다). 공중대시는 한 체공에 1회(DashInput)이고 공중 점프와 어느 순서로든 섞는다(G2a 상한형 · 대시 택일은 폐기).
+--   - 캐릭터 Attribute(이 클라에서만 쓰는 값 - 복제 안 됨): "AirJumpsLeft"(남은 충전 - AirChargeDots가 그린다) · "AirDashUsed"(DashInput) · "AirDashUntil"(대시 트윈이 도는 동안은 점프를 받지 않는다 - 트윈이 끝나며 속도를 0으로 되돌려 충전만 날아간다).
 --   - 금지: 넉백(PlatformStand) 받은 뒤 착지까지 · 구조물이 무너져 떨어지는 동안 · 잡힘 · 끼임(루트 Anchored) · 죽음. 플레이어 기절 상태는 코드에 없다(생기면 여기 추가).
---   - ChangeState(Jumping)은 쓰지 않는다(엔진이 1단 속도를 다시 넣어 상한이 깨진다). 상태는 Freefall 그대로라 서버 isAirborne도 공중으로 읽는다.
+--   - ChangeState(Jumping)은 쓰지 않는다(엔진이 1단 속도를 다시 넣는다). 상태는 Freefall 그대로라 서버 isAirborne도 공중으로 읽는다.
+--   - 모션: 앞으로 한 바퀴(AirMotion) - 남에게는 서버 중계(AirMoveFx). 남의 공중 점프 · 대시 모션도 여기서 받아 그린다.
 -- 구조물 붕괴 낙하(G2a B5)도 여기서 한다 - 캐릭터 물리는 이 클라가 소유한다(서버는 떨어질 사람에게만 dropSpeedStuds를 실어 보낸다).
 
 local Players = game:GetService("Players")
@@ -11,14 +12,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
+local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+local AirMotion = require(script.Parent.AirMotion)
 
 local player = Players.LocalPlayer
-local cfg = MovementConfig.doubleJump
+local cfg = MovementConfig.airJump
+local airMoveFx = ReplicatedStorage:WaitForChild("AirMoveFx")
 
 local character, humanoid, root
 local airborne = false
-local takeoffFeetY = 0
 local airStartedAt = 0
 local locked = false -- 넉백 · 무너짐 낙하 뒤 착지까지
 local lastRequestAt = -math.huge
@@ -29,16 +32,13 @@ local GROUNDED = {
 }
 local AIR = { [Enum.HumanoidStateType.Jumping] = true, [Enum.HumanoidStateType.Freefall] = true }
 
-local function feetY()
-	return root.Position.Y - MovementConfig.rootAboveFeetStuds
-end
-
 local function onLanded()
 	airborne = false
 	if not humanoid.PlatformStand then
 		locked = false
 	end
-	character:SetAttribute("AirMoveUsed", nil)
+	character:SetAttribute("AirJumpsLeft", cfg.charges)
+	character:SetAttribute("AirDashUsed", nil)
 end
 
 local function bind(newCharacter)
@@ -46,6 +46,7 @@ local function bind(newCharacter)
 	humanoid = newCharacter:WaitForChild("Humanoid")
 	root = newCharacter:WaitForChild("HumanoidRootPart")
 	airborne, locked = false, false
+	character:SetAttribute("AirJumpsLeft", cfg.charges)
 	humanoid.StateChanged:Connect(function(_, new)
 		if GROUNDED[new] then
 			onLanded()
@@ -55,7 +56,6 @@ local function bind(newCharacter)
 			end
 			airborne = true
 			airStartedAt = os.clock()
-			takeoffFeetY = feetY() -- 점프면 지면, 턱에서 걸어 떨어졌으면 턱 윗면
 		end
 	end)
 	humanoid:GetPropertyChangedSignal("PlatformStand"):Connect(function()
@@ -75,19 +75,27 @@ UserInputService.JumpRequest:Connect(function()
 	if not airborne or now - airStartedAt < cfg.minAirSeconds then
 		return
 	end
-	if locked or humanoid.PlatformStand or root.Anchored or humanoid.Health <= 0 or character:GetAttribute("AirMoveUsed") then
-		return
-	end
-	local rise = JumpMath.secondJumpRise(feetY() - takeoffFeetY, JumpMath.jumpHeight(0, player:GetAttribute("BossStage") ~= nil)) -- 점프력 옵션 출처는 아직 없다(0) · 보스전(BossStage)이면 옵션 무시
-	if rise < cfg.minRiseStuds then
+	local left = character:GetAttribute("AirJumpsLeft") or 0
+	if left <= 0 or locked or humanoid.PlatformStand or root.Anchored or humanoid.Health <= 0 or now < (character:GetAttribute("AirDashUntil") or 0) then
 		return
 	end
 	local v = root.AssemblyLinearVelocity
-	root.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, JumpMath.upSpeed(rise)), v.Z) -- 리뷰: 오르는 중 1단 속도가 더 크면 그대로(정점을 낮추지 않는다)
-	character:SetAttribute("AirMoveUsed", "jump")
+	local rise = JumpMath.airJumpRise(JumpMath.jumpHeight(0)) -- 점프력 옵션 출처는 아직 없다(0)
+	root.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, JumpMath.upSpeed(rise)), v.Z) -- 오르는 중 속도가 더 크면 그대로(정점을 낮추지 않는다)
+	character:SetAttribute("AirJumpsLeft", left - 1)
+	AirMotion.play(character, "flip", MovementConfig.airMotion.flipSeconds)
+	airMoveFx:FireServer("flip")
 end)
 
--- 구조물 붕괴(서버 BossArenaMap.fireBreak): 윗면에 서 있던 사람만 dropSpeedStuds가 온다 → 아래로 속도 + 이번 낙하 2단 금지.
+-- 남의 공중 점프 · 대시 모션(서버 중계).
+airMoveFx.OnClientEvent:Connect(function(who, kind)
+	local other = typeof(who) == "Instance" and who.Character
+	if other then
+		AirMotion.play(other, kind, kind == "flip" and MovementConfig.airMotion.flipSeconds or DashConfig.durationSeconds)
+	end
+end)
+
+-- 구조물 붕괴(서버 BossArenaMap.fireBreak): 윗면에 서 있던 사람만 dropSpeedStuds가 온다 → 아래로 속도 + 이번 낙하 공중 점프 금지.
 ReplicatedStorage:WaitForChild("BossArenaObstacleBreak").OnClientEvent:Connect(function(data)
 	if type(data) ~= "table" or not data.dropSpeedStuds or not root or not humanoid or humanoid.Health <= 0 or root.Anchored then
 		return

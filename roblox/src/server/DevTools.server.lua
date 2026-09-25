@@ -3382,6 +3382,7 @@ if RunService:IsStudio() then
 				{ "P3d(나)", function() require(script.Parent.P3dVerify).runLive(player, env) end }, -- P3d: 맵 이탈 → 스폰 복귀 · 단상 · 재생성 · 끼임 · 모래 구덩이 붕괴 · 버프 중첩 · 라이브 제외
 				{ "P3dF(나)", function() require(script.Parent.P3dFVerify).runLive(player, env) end }, -- P3d-F: 재생성 누수 5회 · 받는 피해 배율 출처별 · 끼임 중 피격 · 단상 균열 예고 · 상한 교체
 				{ "G2a(나)", function() require(script.Parent.G2aVerify).runLive(player, env) end }, -- G2a: 높이 검증 실제 Player · 보스 기여도(계수 전) · 이속 상한 · 구조물 낙하
+				{ "M1-0(나)", function() require(script.Parent.M1_0Verify).runLive(player, env) end }, -- M1-0: 합법 최대 높이 되돌림 0 · 기본 Shift Lock 꺼짐 · 아레나 공중 복귀 0
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "G1-4(나)", function() require(script.Parent.G1_4Verify).runLive(player, env) end }, -- G1-4: 보스맵 잔류 · 다음 / 다시 도전 / 마을 · 90초
 				{ "G1-3(나)", function() require(script.Parent.G1_3Verify).runLive(player, env) end }, -- G1-3: 레벨차 계수(실제 Player)
@@ -3744,7 +3745,17 @@ if RunService:IsStudio() and verifyEnabled("G1-3(가)") then
 	end)
 end
 
--- ═══ G2a 자동 검증 블록(가) - 이단점프 식 · 한 체공 두 박자 검사(전 보스) · 높이 검증 판정 · 이속 · 점프력 상한(docs/phase/G2a-report.md) ═══
+-- ═══ M1-0 자동 검증 블록(가) - 공중 점프 식 · 체공 표 · 높이 검증(새 허용치) · [측정] 점프 패턴이 쉬워진 정도(docs/phase/M1-0-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("M1-0(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.M1_0Verify).runPure)
+		if not ok then
+			warn(("[M1-0(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ G2a 자동 검증 블록(가) - 회피 부등식(전 보스) · 높이 검증 판정 · 이속 · 점프력 상한(docs/phase/G2a-report.md - M1-0에서 폐기 항목 교체) ═══
 if RunService:IsStudio() and verifyEnabled("G2a(가)") then
 	task.spawn(function()
 		local ok, err = pcall(require(script.Parent.G2aVerify).runPure)

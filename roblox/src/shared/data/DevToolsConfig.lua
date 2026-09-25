@@ -145,7 +145,9 @@ local config = {
 		-- G2a: 이번 블록 G2a(가)(나) + 동반(COMMON §3 - 바꾼 모듈: MonsterState(보스 기여도 - 모든 보스 처치) · BossSkillMath(회피 검사 - 29-x · S14 · P3a · P3c) · BossPatterns · BossArenaMap(넉백 예외 · 무너짐 낙하) ·
 		-- BossArenaContainment(복귀) · Leaderboard(거절 - P3a(나) · P3b · P3c) · PlayerProfile(걷기 상한) · DropTableData(세기 0.5 - G1-2(가) · P0(가) · S01 · P2) · TerrainServer) → G1-5와 같은 전 블록(넓은 쪽).
 		-- 체인 동안 높이 검증은 꺼진다(HeightGuard.debugOff - G2a(나)만 켠다). Play 1은 VerifyOnly 필터로 G1 미실행 2건(G1-2(나) · P3c(가))만.
+		-- M1-0(검증 정책 v2 - COMMON §7): 이번 블록 M1-0(가)(나) + 이번 변경이 닿는 블록만 VerifyOnly로 돈다 - G2a(가)(나)(높이 검증 · 회피 부등식 - 리뷰 반영 9건 첫 Play) · G1-0(나)(맵 이탈 복귀 - BossArenaContainment).
 		current = {
+			"M1-0(가)", "M1-0(나)",
 			"G2a(가)", "G2a(나)",
 			"G1-5(나)",
 			"G1-4(나)",

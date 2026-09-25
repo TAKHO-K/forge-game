@@ -13,9 +13,11 @@ local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local UIManager = require(script.Parent.UIManager)
 local SkillEffects = require(script.Parent.SkillEffects)
+local AirMotion = require(script.Parent.AirMotion)
 
 local dashRequest = ReplicatedStorage:WaitForChild("DashRequest")
 local dashResult = ReplicatedStorage:WaitForChild("DashResult")
+local airMoveFx = ReplicatedStorage:WaitForChild("AirMoveFx")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -37,15 +39,15 @@ local function requestDash()
 	if not classId or classId == "" then
 		return
 	end
-	-- G2a: 한 체공에 공중대시와 이단점프 중 하나만(DoubleJumpInput이 착지하면 "AirMoveUsed"를 지운다). 막히면 쿨다운도 안 쓴다.
+	-- M1-0: 공중대시는 한 체공에 1회 - 공중 점프와는 어느 순서로든 섞는다(DoubleJumpInput이 착지하면 "AirDashUsed"를 지운다). 막히면 쿨다운도 안 쓴다.
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local state = humanoid and humanoid:GetState()
-	if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then -- 리뷰: 상태로 본다(요철에서 잠깐 Air인 걸 공중으로 세면 다음 점프의 2단이 막힌다)
-		if character:GetAttribute("AirMoveUsed") then
+	if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then -- 리뷰(G2a): 상태로 본다(요철에서 잠깐 Air인 걸 공중으로 세지 않게)
+		if character:GetAttribute("AirDashUsed") then
 			return
 		end
-		character:SetAttribute("AirMoveUsed", "dash")
+		character:SetAttribute("AirDashUsed", true)
 	end
 	localCooldownUntil = os.clock() + DashConfig.cooldownSeconds
 	localCastSignal:Fire("dash", DashConfig.cooldownSeconds)
@@ -96,6 +98,10 @@ dashResult.OnClientEvent:Connect(function(data)
 			end
 		end)
 		tween:Play()
+		-- M1-0: 트윈 동안은 공중 점프를 받지 않는다(끝나며 속도 0으로 되돌려 충전만 날아간다) · 앞으로 기울이는 모션(남에게는 서버 중계)
+		character:SetAttribute("AirDashUntil", os.clock() + data.durationSeconds)
+		AirMotion.play(character, "lean", data.durationSeconds)
+		airMoveFx:FireServer("lean")
 	end
 	local classId = player:GetAttribute("ClassId")
 	local color = (classId and classId ~= "" and UIColors.classAccent[classId]) or UIColors.ember

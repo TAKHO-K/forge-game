@@ -1,5 +1,6 @@
 -- G2a 자동 검증(docs/phase/G2a-report.md) - 이동 수치 확정 · G1 결정 반영.
---   (가) 이단점프 식(상한형 - 발 최고 = 1단) · 한 체공 최대(이단 · 공중대시) · 한 체공 두 박자 검사(전 보스 · 범위 배율 1 · 최대) · 높이 검증 판정(합성 표본) · 이속 · 점프력 상한.
+--   (가) 회피 부등식 전 보스(한 체공 두 박자 줄 없음 - M1-0에서 폐기) · 높이 검증 판정(합성 표본) · 이속 · 점프력 상한.
+--   M1-0: 이단점프 상한형 · 한 체공 두 박자 · 점프력 옵션 아레나 무시가 폐기돼 그 항목을 새 규칙으로 바꿨다(공중 점프 식 · 체공 표는 M1_0Verify(가)).
 --   (나) 실제 Player: 높이 검증(띄워 두기 = 되돌림 · 점프 = 오탐 0) · 리더보드 거절(height_guard) · 보스 기여도 = 계수 전 피해 · 걷기 상한 ×1.5와 공속 그대로.
 --   클라 이단점프 · 공중대시 배타 · 구조물 낙하 · 카메라는 서버에서 못 누른다 - 스크린샷 Play에서 MCP로 잰다(보고서 ③).
 
@@ -9,7 +10,6 @@ local RunService = game:GetService("RunService")
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
 local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
-local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local BossSim = require(ReplicatedStorage.Shared.BossSim)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
@@ -43,65 +43,25 @@ local function near(a, b, tol)
 	return math.abs(a - b) <= (tol or 1e-6)
 end
 
--- 1단 + 2단 궤적을 가짜 시계로 적분해 발 최고 높이를 잰다(내려오는 중 발 y에서 2단).
-local function simulatePeak(h1, pressY)
-	local g = MovementConfig.gravity
-	local y, v, dt, peak, pressed = 0, JumpMath.upSpeed(h1), 1 / 600, 0, false
-	for _ = 1, 6000 do
-		v -= g * dt
-		y += v * dt
-		if not pressed and v < 0 and y <= pressY then
-			pressed = true
-			local rise = JumpMath.secondJumpRise(y, h1)
-			if rise >= MovementConfig.doubleJump.minRiseStuds then
-				v = JumpMath.upSpeed(rise)
-			end
-		end
-		peak = math.max(peak, y)
-		if y < 0 then
-			break
-		end
-	end
-	return peak
-end
-
 function G2aVerify.runPure()
 	print("===G2a 검증 시작(가)===")
 	local r = newRecorder("가")
 	local h1 = MovementConfig.jumpHeightStuds
 
-	r.section("이단점프 식", function()
-		local worstPeak = 0
-		for i = 0, 72 do
-			worstPeak = math.max(worstPeak, simulatePeak(h1, h1 * i / 72))
-		end
-		local dj, dash = JumpMath.maxDoubleJumpAirSeconds(h1), JumpMath.maxAirDashAirSeconds(h1, DashConfig.durationSeconds)
-		r.check(("2단 비율 %.2f · 지면에서 2단 오름 %.2f(기대 3.60) · 발 5에서 %.2f(기대 2.20) · 정점 %.2f(기대 0) · 모든 누름 높이 발 최고 %.3f(기대 ≤ 1단 %.1f + 0.02)"):format(
-			MovementConfig.doubleJump.heightFraction, JumpMath.secondJumpRise(0), JumpMath.secondJumpRise(5), JumpMath.secondJumpRise(h1), worstPeak, h1),
-			near(JumpMath.secondJumpRise(0), 3.6) and near(JumpMath.secondJumpRise(5), 2.2) and JumpMath.secondJumpRise(h1) == 0 and worstPeak <= h1 + 0.02)
-		r.check(("체공 최대: 1단 %.3f · 이단 %.3f(D0 0.932) · 1단 + 공중대시 %.3f(D0 0.954) · 한 체공 최대 %.3f · 판정 층 %.1f > 발 최고 %.1f"):format(
-			2 * JumpMath.upSpeed(h1) / MovementConfig.gravity, dj, dash, JumpMath.maxAirSeconds(h1, DashConfig.durationSeconds), TerrainConfig.heightToleranceStuds, h1),
-			near(dj, 0.932, 0.003) and near(dash, 0.954, 0.003) and h1 < TerrainConfig.heightToleranceStuds)
-	end)
-
-	r.section("한 체공 두 박자(전 보스)", function()
-		local lines, allOk, count = {}, true, 0
+	r.section("회피 부등식(전 보스)", function()
+		local allOk, air = true, 0
 		for _, scale in ipairs({ 1, BossRules.maxSkillRangeScale() }) do
 			for bossId in pairs(BossData.bosses) do
 				local rows, ok = BossSim.checkDodge(bossId, scale)
 				allOk = allOk and ok
 				for _, row in ipairs(rows) do
 					if row.label:find("체공", 1, true) then
-						count += 1
-						if scale == 1 then
-							table.insert(lines, ("%s %s %.3f/%.3f"):format(row.skillId, row.label:match("%d→%d") or "", row.availableSeconds, row.requiredSeconds))
-						end
+						air += 1
 					end
 				end
 			end
 		end
-		r.check(("회피 부등식 전 보스 × 범위 배율 1 · 최대 전부 통과 %s · 한 체공 두 박자 검사 %d줄(기대 10 - 진동파 2 · 해일 2 · 방전 1 × 2) [%s] - 박자 값 그대로"):format(tostring(allOk), count, table.concat(lines, ", ")),
-			allOk and count == 10)
+		r.check(("회피 부등식 전 보스 × 범위 배율 1 · 최대 전부 통과 %s · 한 체공 두 박자 줄 %d(기대 0 - M1-0 폐기) - 박자 값 그대로"):format(tostring(allOk), air), allOk and air == 0)
 	end)
 
 	r.section("높이 검증 판정(합성)", function()
@@ -121,34 +81,35 @@ function G2aVerify.runPure()
 			return { feetY = y, pos = Vector3.new(x or 0, y + 3, 0), grounded = grounded }
 		end
 		local jump = run({ at(0, true), at(0, true), at(5, false), at(7.2, false), at(4, false), at(0, true) })
-		local fly = run({ at(0, true), at(0, true), at(4, false), at(12, false), at(15, false), at(15, false) })
-		local platform = run({ at(0, true), at(0, true), at(6, false), at(3.5, true), at(10.5, false), at(3.5, true) })
-		local launchSamples = { at(0, true), at(0, true), at(12, false), at(15, false), at(8, false), at(0, true) }
+		local over = allow + 3 -- M1-0: 허용치가 공중 점프 최대 도달까지 올라갔다(8.92 → 22.38) - 날기 표본은 허용치 기준으로
+		local fly = run({ at(0, true), at(0, true), at(4, false), at(over, false), at(over, false), at(over, false) })
+		local platform = run({ at(0, true), at(0, true), at(6, false), at(3.5, true), at(3.5 + allow - 1, false), at(3.5, true) })
+		local launchSamples = { at(0, true), at(0, true), at(12, false), at(over, false), at(8, false), at(0, true) }
 		launchSamples[3].exempt = 3
 		local launch = run(launchSamples)
 		local teleport = run({ at(0, true), at(0, true), at(40, false, 200), at(40, false, 200), at(44, false, 200) })
-		local probeSamples = { at(0, true), at(0, true), at(11, false), at(11, false) }
-		probeSamples[3].probe = function() return 11 end -- FloorMaterial이 늦어 공중으로 보이지만 발 바로 아래가 지면
-		probeSamples[4].probe = function() return 11 end
+		local probeSamples = { at(0, true), at(0, true), at(over, false), at(over, false) }
+		probeSamples[3].probe = function() return over end -- FloorMaterial이 늦어 공중으로 보이지만 발 바로 아래가 지면
+		probeSamples[4].probe = function() return over end
 		local probe = run(probeSamples)
-		-- 리뷰 1: 테라스(6)에 올라선 착지를 폴링이 놓치고 곧바로 다시 뜀(발 6 + 7.2 = 13.2 > 기준 0 + 8.92) → 발 아래 지면 6 기준으로 통과
-		local missedSamples = { at(0, true), at(0, true), at(4, false), at(12, false), at(13.2, false), at(8, false) }
+		-- 리뷰 1: 테라스(6)에 올라선 착지를 폴링이 놓치고 곧바로 다시 뜀(발 6 + 최대 도달 > 기준 0 + 허용) → 발 아래 지면 6 기준으로 통과
+		local missedSamples = { at(0, true), at(0, true), at(4, false), at(12, false), at(6 + allow - 1, false), at(8, false) }
 		for i = 4, 6 do
 			missedSamples[i].probe = function() return 6 end
 		end
 		local missed = run(missedSamples)
 		-- 날기: 발 아래 지면이 멀리(0)면 그대로 걸린다
-		local flyProbe = { at(0, true), at(0, true), at(4, false), at(12, false), at(15, false) }
+		local flyProbe = { at(0, true), at(0, true), at(4, false), at(over, false), at(over, false) }
 		for i = 3, 5 do
 			flyProbe[i].probe = function() return 0 end
 		end
 		local flyWithGround = run(flyProbe)
-		local anchored = run({ at(0, true), at(0, true), { feetY = 20, pos = Vector3.new(0, 23, 0), grounded = false, skip = true }, { feetY = 20, pos = Vector3.new(0, 23, 0), grounded = false, skip = true } })
+		local anchored = run({ at(0, true), at(0, true), { feetY = over, pos = Vector3.new(0, over + 3, 0), grounded = false, skip = true }, { feetY = over, pos = Vector3.new(0, over + 3, 0), grounded = false, skip = true } })
 		local ok = jump == "reset,ok,ok,ok,ok,ok" and fly == "reset,ok,ok,strike,revert,strike" and platform == "reset,ok,ok,ok,ok,ok" and launch == "reset,ok,ok,ok,ok,ok"
 			and teleport == "reset,ok,reset,ok,ok" and probe == "reset,ok,ok,ok" and anchored == "reset,ok,ok,ok"
 			and missed == "reset,ok,ok,ok,ok,ok" and flyWithGround == "reset,ok,ok,strike,revert"
-		r.check(("허용 %.2f(= 7.2 × 1.1 + 1) · 점프 [%s] · 띄워 두기 [%s](기대 둘째 넘음에서 revert) · 단상 위 점프 [%s] · 넉백 예외 [%s] · 순간이동 [%s] · 서 있음(광선) [%s] · 루트 고정 [%s] · 착지 놓친 테라스 재점프 [%s] · 날기(아래 지면 멀리) [%s]"):format(
-			allow, jump, fly, platform, launch, teleport, probe, anchored, missed, flyWithGround), ok and near(allow, 8.92))
+		r.check(("허용 %.2f(M1-0 = 7.92 × 2.7 + 1) · 점프 [%s] · 띄워 두기 [%s](기대 둘째 넘음에서 revert) · 단상 위 점프 [%s] · 넉백 예외 [%s] · 순간이동 [%s] · 서 있음(광선) [%s] · 루트 고정 [%s] · 착지 놓친 테라스 재점프 [%s] · 날기(아래 지면 멀리) [%s]"):format(
+			allow, jump, fly, platform, launch, teleport, probe, anchored, missed, flyWithGround), ok and near(allow, 22.384, 1e-3))
 	end)
 
 	r.section("이속 · 점프력 상한", function()
@@ -160,9 +121,9 @@ function G2aVerify.runPure()
 			JumpMath.moveSpeedMultiplier(0) == 1 and near(JumpMath.moveSpeedMultiplier(0.3), 1.3) and JumpMath.moveSpeedMultiplier(shoes) == MovementConfig.moveSpeedMaxMultiplier
 				and near(PlayerCombat.getSpeedMultiplier(shoes), 6.49))
 		local capped = JumpMath.jumpHeight(0.5)
-		r.check(("점프력 +50%% 요청 → %.2f(상한 +%.0f%%) < 판정 층 %.1f · 보스 아레나 %.2f(옵션 무시) · 옵션 없음 %.2f"):format(
-			capped, MovementConfig.jumpHeightBonusCap * 100, TerrainConfig.heightToleranceStuds, JumpMath.jumpHeight(0.5, true), JumpMath.jumpHeight(0)),
-			near(capped, 7.92) and capped < TerrainConfig.heightToleranceStuds and JumpMath.jumpHeight(0.5, true) == h1 and JumpMath.jumpHeight(0) == h1)
+		r.check(("점프력 +50%% 요청 → %.2f(상한 +%.0f%%) < 판정 층 %.1f · 옵션 없음 %.2f(M1-0: 보스 아레나도 같은 값)"):format(
+			capped, MovementConfig.jumpHeightBonusCap * 100, TerrainConfig.heightToleranceStuds, JumpMath.jumpHeight(0)),
+			near(capped, 7.92) and capped < TerrainConfig.heightToleranceStuds and JumpMath.jumpHeight(0) == h1)
 		local g = MovementConfig.gravity
 		local natural = math.sqrt(2 * 3.5 / g)
 		local v = MovementConfig.structureDropSpeedStuds
@@ -214,7 +175,7 @@ function G2aVerify.runLive(player, env)
 		end
 		local afterLaunch = st.reverts - reverts0 - afterJump
 		local launchRise = launchPeak - base0
-		-- ② 띄워 두기(날기 부정 흉내): AlignPosition으로 루트를 기준 + 14에 붙잡는다 → 0.5초 안팎에 되돌림
+		-- ② 띄워 두기(날기 부정 흉내): AlignPosition으로 루트를 기준 + (허용 + 3)에 붙잡는다 → 0.5초 안팎에 되돌림(M1-0: 옛 +14는 이제 합법 높이)
 		local base = root.Position
 		local revertsBeforeAlign = st.reverts
 		local attachment = Instance.new("Attachment")
@@ -223,7 +184,7 @@ function G2aVerify.runLive(player, env)
 		align.Mode = Enum.PositionAlignmentMode.OneAttachment
 		align.Attachment0 = attachment
 		align.RigidityEnabled = true
-		align.Position = base + Vector3.new(0, 14, 0)
+		align.Position = base + Vector3.new(0, JumpMath.heightGuardAllowance() + 3, 0)
 		align.Parent = root
 		local t0 = os.clock()
 		local caught
@@ -239,7 +200,7 @@ function G2aVerify.runLive(player, env)
 		task.wait(1)
 		r.check(("넉백 높이 %d(허용 %.2f 초과): 서버가 본 루트 최고 +%.1f · 되돌림 %d(기대 0 - 넉백 예외)"):format(launchHeight, JumpMath.heightGuardAllowance(), launchRise, afterLaunch),
 			afterLaunch == 0 and patternEvent ~= nil)
-		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(+14) 되돌림 %s초 뒤(기대 ≤ 1.5 - 폴링 0.25 × 연속 2) · 기록 시각 있음 %s"):format(
+		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(허용 + 3) 되돌림 %s초 뒤(기대 ≤ 1.5 - 폴링 0.25 × 연속 2) · 기록 시각 있음 %s"):format(
 			afterJump, caught and ("%.2f"):format(caught) or "없음", tostring(st.flaggedAt ~= nil)),
 			afterJump == 0 and caught ~= nil and caught <= 1.5 and st.flaggedAt ~= nil)
 		-- ③ 리더보드: 이 판(10초 전 시작)에 되돌림이 있었다 → 거절

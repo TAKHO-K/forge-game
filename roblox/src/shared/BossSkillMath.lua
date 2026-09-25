@@ -4,8 +4,6 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
-local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
-local JumpMath = require(ReplicatedStorage.Shared.JumpMath) -- G2a: 한 체공 최대(이단점프 · 공중대시)
 
 local BossSkillMath = {}
 
@@ -203,25 +201,7 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 				distanceStuds = 0, ok = worst >= required,
 			})
 		end
-		-- G2a 이단점프(D0 부록 I §2): 한 번 떠 있는 동안 두 박자를 다 넘으면 리듬이 무너진다. 필요 체공 = 다음 박자 마지막 겹이 닿기 시작하는 시각 − 앞 박자 첫 겹이
-		-- 다 지나간 시각(거리 0 · standoff · WAVE_MAX 중 최소 - 보스 몸통엔 충돌이 없어 붙어 설 수 있다). 두 띠에 "한 틱이라도" 공중이면 되므로 보수적(엄격한) 쪽의 필요량이다. 막으려면 ≥ 한 체공 최대(2단 또는 공중대시 - 보스 아레나는 점프력 옵션 무시) + 여유.
-		local maxAir = JumpMath.maxAirSeconds(JumpMath.jumpHeight(0, true), DashConfig.durationSeconds)
-		for index = 2, #waves do
-			local before, after = waves[index - 1], waves[index]
-			local worst, worstAt = math.huge, 0
-			for _, d in ipairs({ 0, standoffStuds, BossSkillMath.WAVE_MAX_RADIUS_STUDS }) do
-				local firstPassed = before.startSeconds + (d + skill.waveThicknessStuds) / before.speedStuds
-				local lastArrives = after.startSeconds + after.layerGapSeconds * (after.layers - 1) + d / after.speedStuds
-				if lastArrives - firstPassed < worst then
-					worst, worstAt = lastArrives - firstPassed, d
-				end
-			end
-			local need = maxAir + dodge.doubleJumpMarginSeconds
-			table.insert(checks, {
-				label = ("한 체공에 두 박자 불가 %d→%d(최악 거리 %.0f)"):format(index - 1, index, worstAt), availableSeconds = worst, requiredSeconds = need,
-				distanceStuds = 0, ok = worst >= need,
-			})
-		end
+		-- M1-0: G2a의 "한 체공에 두 박자 불가" 검사는 폐기했다(공중 점프 자유화 - 한 체공으로 여러 박자를 넘는 것은 G2b 난이도에서 다룬다 · 측정 = M1-0 보고서).
 		for index, wave in ipairs(waves) do
 			if wave.layers > 1 then
 				-- 겹: 마지막 겹이 다 지나갈 때까지가 체공 시간 안이어야 점프 한 번에 넘는다.
