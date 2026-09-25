@@ -1992,7 +1992,7 @@ local kit = {
 	clampToZone = clampToZone, clipToZone = clipToZone, isAirborne = isAirborne, xz = xz, footOf = footOf,
 	endSkill = endSkill, runHitEffects = runHitEffects, judgeBegin = judgeBegin, judgeEnd = judgeEnd,
 	debugEvent = debugEvent, serverNow = serverNow, rng = scatterRng, setBodyColor = setBodyColor, clearDaze = clearDaze,
-	kitZones = kitZones, groundAt = groundAt,
+	kitZones = kitZones, groundAt = groundAt, sendPropsRemoved = sendPropsRemoved,
 }
 -- BR1: 보스를 seconds 동안 기절시킨다(환경 기믹 파훼 - 수정 공중 정원). 돌던 스킬을 끊고 헤롱 자세 · 그동안 스킬 · 추격 · 평타 없음(step이 true).
 function kit.stun(model, st, data, seconds)
@@ -2006,6 +2006,7 @@ function kit.stun(model, st, data, seconds)
 end
 BossHandlersBR1.register(HANDLERS, kit)
 BossAirGrab.register(HANDLERS, kit)
+require(script.Parent.BossSonic).register(HANDLERS, kit) -- BR1-2 음파 포효(primitive sonic)
 BossEnvironment.register(kit)
 
 -- ─────────────────────────── 틱 ───────────────────────────

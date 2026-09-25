@@ -40,6 +40,7 @@ local BossFxData = require(ReplicatedStorage.Shared.data.BossFxData)
 -- BR1: 새 조각(부채꼴 · 투사체 · 소용돌이 · 연쇄 · 잠행) · 대공 잡기 · 환경 변화 - 그리기는 각 모듈에 있다.
 local BossBR1View = require(script.Parent.BossBR1View)
 local BossGrabView = require(script.Parent.BossGrabView)
+local BossSonicView = require(script.Parent.BossSonicView) -- BR1-2 음파 포효
 local BossEnvironmentView = require(script.Parent.BossEnvironmentView)
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
@@ -740,6 +741,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossBR1View.reflectShot(data)
 	elseif kind == "reflectEnd" then
 		BossBR1View.reflectEnd()
+	elseif kind == "sonicTelegraph" then
+		BossSonicView.telegraph(data)
+	elseif kind == "sonicTick" then
+		BossSonicView.tick(data)
 	elseif kind == "grabEnd" or kind == "grabMiss" then
 		BossGrabView.clear()
 	elseif kind == "envTelegraph" then
@@ -768,6 +773,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossStormView.dischargeRods(false)
 		BossBR1View.reset() -- BR1
 		BossGrabView.reset()
+		BossSonicView.reset()
 		-- 환경 그림은 여기서 안 지운다(리뷰 4 - 스킬 중단 · 대상 이탈의 "reset"에도 서버 환경은 계속 돈다): envEnd · propsClear에서
 	end
 end)

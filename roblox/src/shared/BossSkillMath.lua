@@ -194,6 +194,8 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 		return skill.telegraphSeconds + (skill.recoverSeconds or 0)
 	elseif primitive == "reflect" then
 		return skill.telegraphSeconds + skill.stanceSeconds -- BR1-2 반사: 결계 전조 + 반사 동안(되돌린 투사체는 스킬과 떨어져 난다)
+	elseif primitive == "sonic" then
+		return skill.telegraphSeconds + skill.tickSeconds * (skill.ticks - 1) + (skill.recoverSeconds or 0.5) -- BR1-2 음파 포효
 	end
 	return skill.telegraphSeconds
 end
@@ -319,6 +321,9 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		else
 			table.insert(checks, { label = "궤도 바꾸기(인지)", availableSeconds = arrival, requiredSeconds = dodge.perceptionSeconds, distanceStuds = 0, ok = arrival >= dodge.perceptionSeconds })
 		end
+	elseif primitive == "sonic" then
+		-- BR1-2 음파 포효: 곁에 선 큰 기둥 뒤까지(데이터 dodge.distanceStuds)
+		walk("엄폐물 뒤로", skill.telegraphSeconds, skill.dodge.distanceStuds)
 	elseif primitive == "reflect" then
 		-- BR1-2 되돌아오는 투사체: 모으기 + 원거리 자리(rangedStandoff)에서 닿기까지 안에 옆으로 (반경 + 몸통)
 		walk("되돌아오는 것 옆으로", skill.projectile.windupSeconds + dodge.rangedStandoffStuds / skill.projectile.speedStuds, skill.projectile.radiusStuds + half)
@@ -430,6 +435,9 @@ function BossSkillMath.damageShares(skill, surviveTargetHits)
 		hits = skill.volleys or 1
 	elseif primitive == "projectile" then
 		hits = skill.count or 1
+	end
+	if primitive == "sonic" then
+		return skill.tickFraction, skill.tickFraction * skill.ticks -- BR1-2 음파: 한 틱 · 전부(보호막 무시 - 발동당 상한 대신 틱 합 90%)
 	end
 	if damage.kind == "maxHp" then
 		local cap = BossData.mechanics.gimmickFailMaxHpFraction
@@ -546,7 +554,7 @@ function BossSkillMath.perPersonCount(baseCount, row)
 	return math.clamp(scaled, 1, BossCurveData.perPersonMax)
 end
 
-local TELEGRAPH_FIT_SKIP = { gimmick = true, ring = true, grab = true, reflect = true }
+local TELEGRAPH_FIT_SKIP = { gimmick = true, ring = true, grab = true, reflect = true, sonic = true }
 
 -- 넓어진 범위에서 회피 부등식이 깨지면 모자란 만큼 **모든 전조 칸에** 더한다(큰 범위 = 긴 전조 - 무게 원칙). 사본을 고친다.
 function BossSkillMath.fitTelegraphs(skill, standoffStuds, walkSpeedStuds)

@@ -579,7 +579,9 @@ local SPECIES = {
 		-- 높이 10 · 최대 6개(넘으면 가장 오래된 것부터 사라진다). 그림자 폭 6stud에 네 명이 한 줄로 선다 - 기둥 하나가
 		-- 파티 전원을 가린다(그림자는 벽까지 이어진다).
 		props = {
-			pillar = { radiusStuds = 3, heightStuds = 10, maxCount = 6, color = frostHead },
+			pillar = { radiusStuds = 3, heightStuds = 10, maxCount = 6, color = frostHead, durabilityTicks = 3 }, -- BR1-2: 음파 틱 3번에 부서진다(낙빙 기둥)
+			-- BR1-2 음파 포효 직전에 멤버마다 곁에 서는 큰 얼음 기둥 - 음파 6틱을 다 버틴다(여기 숨으면 끝까지 0)
+			roarPillar = { radiusStuds = 4.5, heightStuds = 14, maxCount = 5, color = frostHead, durabilityTicks = 6 },
 		},
 		skills = {
 			-- 빙결 강타(23-6의 "긴 예비동작" 흡수). 기본형 강공격과 같은 동사(밖으로 걷기)지만 더 크고 더 느리다 -
@@ -612,28 +614,19 @@ local SPECIES = {
 				blockedByProp = "pillar",
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "얼음 가시",
 			},
-			-- 눈보라 포효(기믹, 29-3). 전역 - 얼음 기둥 뒤에서만 피한다(판정은 shared/BossPropMath.isShielded). 가려 준
-			-- 기둥은 부서진다.
-			--   · 순서 보장: 첫 포효 16초. 낙빙이 7.0초(전역 쿨 7)에 나와 8.5초에 기둥을 남기고, 전역 쿨 7초 뒤인
-			--     15.5초부터 포효가 나올 수 있다 - 자리 비우기(끝 + 전역 쿨 ≤ 첫 발동 시각)가 낙빙을 막지 않는 가장 이른
-			--     정수 시각이 16이다. 10초로 두면 낙빙(8.5 + 7 = 15.5 > 10)이 자리 비우기에 막혀 **기둥 0개로 첫 포효**가 온다.
-			--   · 그래도 안전지대가 없으면(강타가 기둥을 다 부쉈거나 누군가 멀리 있으면) 포효 대신 낙빙이 먼저 온다
-			--     (precondition, BossScheduler 규칙 ⑦). 걸을 수 있는 거리 = (전조 3.0 − 인지 0.5) ÷ 여유 1.25 × 속도 16 =
-			--     32stud. 기둥 뒤 자리까지의 직선 27 + 기둥을 돌아 들어가는 몫 4(반경 3의 반 바퀴 − 지름) = 회피 거리 31
-			--     (dodge.distanceStuds, 2.92초 ≤ 3.0) - 남는 1stud가 여유다.
+			-- BR1-2 음파 포효(사용자 보강 B - 옛 "기둥 그림자" 한 번 판정을 대신한다 · primitive sonic = server/BossSonic):
+			--   시작 = 멤버마다 곁 10 ~ 18에 큰 얼음 기둥(roarPillar - 음파 6틱을 버틴다) + 1개 → 전조 3.4초(숨을 들이쉰다) → 음파 6틱(0.8초 간격).
+			--   틱마다 보스 → 사람 시야가 엄폐물에 가리면 0("가려짐" 표시), 아니면 최대 체력 15%(보호막 무시) - 6틱을 다 맞으면 90%(진짜 즉사는 K).
+			--   엄폐물은 틱마다 1씩 깎인다: 작은 구조물 2 · 큰 블록 4 · 낙빙 기둥 3 · 큰 얼음 기둥 6 → 부서지면 그 뒤 사람은 다음 틱부터 맞는다(옮겨 숨는다).
+			--   회피: 곁의 큰 기둥 뒤까지(최대 18 + 반경 4.5 + 1 = 23.5) 0.5 + 23.5 ÷ 16 × 1.25 = 2.34초 ≤ 3.4.
 			roar = {
-				primitive = "gimmick", bubble = "roar", role = "gimmick", kind = "behindProp",
-				-- 쿨 21(29-5 튜닝 - 전 20): 몬테카를로 200회에서 초회 ÷ 파훼 후가 x2.71로 허용 구간(1.8 ~ 2.7)을 넘었다 → x2.60. 세 박자
-				-- (낙빙 → 포효 → 강타)와 첫 포효 16초·기둥 3개는 그대로다(실제 BossPatterns 300초 로그).
+				primitive = "sonic", bubble = "roar", role = "gimmick",
 				cooldownSeconds = 21, firstAvailableSeconds = 16, reserveFirstUse = true, priority = P.gimmick,
-				precondition = { type = "membersNearSafeSpot", prop = "pillar", studs = 27, marginStuds = 2, otherwise = "icefall" },
-				-- BR1: 전조 3.0 → 3.4(회피 여유 0.08 → 0.48초). 난이도 모형에서 여유 0.08초의 포효가 서리 거인 전멸의 대부분이었다(첫 실패 확률 63%) -
-				-- 실패 피해를 85%로 올린 대신 "읽을 시간"을 준다(무게 원칙 - 큰 피해 = 긴 전조).
-				telegraphSeconds = 3.4, recoverSeconds = 1.0,
-				dodge = { distanceStuds = 31 },
-				safeProp = "pillar", -- 클라가 이 지형의 그림자만 비우고 바닥 전체를 빨강으로 깐다 · 힌트 화살표의 자리
-				onResolve = { { type = "destroyProps", prop = "pillar", which = "shielding" } },
-				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "눈보라 포효",
+				telegraphSeconds = 3.4, ticks = 6, tickSeconds = 0.8, tickFraction = 0.15, recoverSeconds = 1.0,
+				pillars = { prop = "roarPillar", minStuds = 10, maxStuds = 18, extra = 1 },
+				cover = { obstacleTicks = 2, climbableTicks = 4 },
+				dodge = { distanceStuds = 23.5 },
+				damage = { kind = "maxHp", fraction = 0.9 }, damageLabel = "눈보라 포효",
 				sim = { evadeSeconds = 2.0 },
 			},
 			swipe = enhancedBasic("서리 주먹", "fist"), -- BR1 강화 평타
