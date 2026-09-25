@@ -102,6 +102,8 @@ function BossDifficultySim.run(bossId, options)
 	local fail = BossData.mechanics.gimmickFail
 	local env = boss.environment
 	local exposure = cfg.basicExposure[options.role or "ranged"]
+	local familiar = options.familiar == true
+	local hitScale = familiar and cfg.familiar.hitScale or 1
 
 	local maxHp = sim.referenceKillSeconds * BossRules.partySizeHpMultiplier(n)
 	local hp = maxHp
@@ -115,6 +117,7 @@ function BossDifficultySim.run(bossId, options)
 	local armed, gateStarted, windowMultiplier, windowUntil = false, false, 1, 0
 	local gimmickSeen = 0
 	local gateRounds = 0
+	local failSeenBySkill = {} -- [기믹 id] = 이 판에서 본 횟수(처음 = firstMaxHpFraction)
 	local gardenRounds = 0
 	local envPhase, envAt, envUntil, envUsedImpossible = "idle", 0, 0, false
 	local counts = {}
@@ -166,9 +169,9 @@ function BossDifficultySim.run(bossId, options)
 	local function hitChance(j)
 		local base
 		if j.gimmick then
-			base = gimmickSeen <= 1 and cfg.hitChance.gimmickFirst or cfg.hitChance.gimmickLater
+			base = (gimmickSeen <= 1 and not familiar) and cfg.hitChance.gimmickFirst or cfg.hitChance.gimmickLater
 		else
-			base = cfg.hitChance[j.class] or cfg.hitChance.medium
+			base = (cfg.hitChance[j.class] or cfg.hitChance.medium) * hitScale
 			if (seenCount[j.skill] or 0) > 1 then
 				base *= cfg.learnedMultiplier
 			end
@@ -215,12 +218,12 @@ function BossDifficultySim.run(bossId, options)
 				if env.kind == "cores" then
 					-- 수정 공중 정원: 두 핵을 창 안에 치면 기절(딜 창) · 못 치면 전원 기믹 실패(85%)
 					gardenRounds = (gardenRounds or 0) + 1
-					if rng() < (gardenRounds <= 1 and cfg.gardenSolveChance.first or cfg.gardenSolveChance.later) then
+					if rng() < ((gardenRounds <= 1 and not familiar) and cfg.gardenSolveChance.first or cfg.gardenSolveChance.later) then
 						windowMultiplier, windowUntil = 1.3, t + env.garden.stunSeconds
 					else
 						for _, m in ipairs(members) do
 							if m.alive then
-								damage(m, fail.maxHpFraction, nil, "환경")
+								damage(m, gardenRounds <= 1 and fail.firstMaxHpFraction or fail.maxHpFraction, nil, "환경")
 							end
 						end
 					end
@@ -265,7 +268,7 @@ function BossDifficultySim.run(bossId, options)
 				if skill.gate then
 					-- 게이트 판정 스킬(낙뢰): 회차가 끝날 때 풀었는가(가정 - gateSolveChance)
 					gateRounds = (gateRounds or 0) + 1
-					local chance = gateRounds <= 1 and cfg.gateSolveChance.first or cfg.gateSolveChance.later
+					local chance = (gateRounds <= 1 and not familiar) and cfg.gateSolveChance.first or cfg.gateSolveChance.later
 					table.insert(pending, { at = t + bound, gateJudge = true, solved = rng() < chance, skill = skill, id = pick })
 				end
 			end
@@ -283,11 +286,13 @@ function BossDifficultySim.run(bossId, options)
 					end
 				elseif j.gimmick then
 					gimmickSeen += 1
+					failSeenBySkill[j.id] = (failSeenBySkill[j.id] or 0) + 1
 					local anySafe = false
 					for _, m in ipairs(members) do
 						if m.alive and t >= m.trappedUntil then
 							if rng() < hitChance(j) then
-								damage(m, j.skill.failPenalty == false and 0 or fail.maxHpFraction, nil, j.id)
+								local firstTime = (failSeenBySkill[j.id] or 0) <= 1
+								damage(m, j.skill.failPenalty == false and 0 or (firstTime and fail.firstMaxHpFraction or fail.maxHpFraction), nil, j.id)
 								if j.skill.failPenalty ~= false and j.skill.failTraps ~= false then
 									m.trappedUntil = t + trapSeconds
 									m.evadeUntil = math.max(m.evadeUntil, t + trapSeconds)
@@ -337,6 +342,13 @@ function BossDifficultySim.run(bossId, options)
 		if current and t >= currentEnd then
 			BossScheduler.onSkillEnd(state, skills, current, t)
 			current = nil
+		end
+		-- 자유 체공: 회피가 아니어도 이동 중에 뛴다(freeAirPerSecond - 평균 그 간격에 한 번, airSecondsMin ~ Max) → 대공 잡기 · 대공 투사체의 조건
+		for _, m in ipairs(members) do
+			if m.alive and not (m.airSince and t < m.airUntil) and rng() < cfg.freeAirPerSecond * tick then
+				local air = cfg.airSecondsMin + rng() * (cfg.airSecondsMax - cfg.airSecondsMin)
+				m.airSince, m.airUntil = t, t + air
+			end
 		end
 		-- 평타(스킬 사이 · 사거리 안 몫만)
 		if not current then

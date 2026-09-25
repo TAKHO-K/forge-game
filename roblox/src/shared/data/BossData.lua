@@ -135,7 +135,9 @@ local MECHANICS = {
 
 	-- BR1 핵심 기믹 실패(설계 §3): 55% → 85% · 쉴드 무시. 기믹 판정 실패(resolveGimmick)에만 쓴다 - 다른 %최대체력 피해(돌진 · 구덩이 · 반사 · 분신)는
 	-- 옛 발동당 상한(gimmickFailMaxHpFraction 55%)에 그대로 묶인다. 85%는 "실패 + 강한 공격 한 번 = 죽음"이면서 단독으로는 죽지 않는 값(즉사는 K 단계).
-	gimmickFail = { maxHpFraction = 0.85, ignoresShield = true },
+	-- 그 보스전에서 **처음 보는** 기믹의 실패는 firstMaxHpFraction(옛 55% - 배우는 한 번), 두 번째부터 maxHpFraction(85%). 난이도 모형(첫 도전 전멸률 목표 30 ~ 50%)에서
+	-- 85% 한 가지로는 서리 포효 · 심해 범람이 판마다 전멸의 대부분을 만들었다(BR1 보고서 - 모형 표).
+	gimmickFail = { firstMaxHpFraction = 0.55, maxHpFraction = 0.85, ignoresShield = true },
 
 	-- BR1 환경 변화 공통(설계 §4): 환경 발동 하나에서 한 사람이 받는 도트 합 상한(기존 발동당 상한과 같은 55%) · 겹침(§4-3 - 환경이 도는 동안
 	-- "피할 수 없음" 쌍의 패턴은 나올 차례에 deferChance로 미루고(deferSeconds 뒤 다시 후보) 같은 발동 안에서 두 번 나오지 않는다).
@@ -230,9 +232,13 @@ local MECHANICS = {
 			learnedMultiplier = 0.4,
 			-- 게이트가 기믹이 아닌 스킬의 판정인 경우(폭풍 군주 낙뢰 - 피뢰침 둘을 동시에 채운다): 회차마다 풀 확률(처음 · 두 번째부터).
 			gateSolveChance = { first = 0.3, later = 0.6 },
+			-- 익숙함(familiar): "첫 도전" 대부분은 **이미 만난 보스 종의 새 스테이지**다(6종이 5스테이지마다 돈다 - 처음 한 바퀴 중 스테이지 ≤ 20은 신규 보호).
+			-- 그 경우 판정 확률 × hitScale, 게이트 · 정원 · 기믹은 처음부터 "두 번째"(later) 값. 목표(전멸 30 ~ 50%)는 이 기준으로 맞췄다(보고서).
+			familiar = { hitScale = 0.6 },
 			gardenSolveChance = { first = 0.5, later = 0.75 }, -- 수정 공중 정원(두 핵 6초 안)을 푸는 확률(처음 · 두 번째부터)
 			slack = { tightSeconds = 0.15, tightMultiplier = 1.4, looseSeconds = 1.0, looseMultiplier = 0.7 },
 			airDodgeShare = 0.4, airSecondsMin = 0.6, airSecondsMax = 1.9,
+			freeAirPerSecond = 0.125, -- 회피가 아닌 이동 중 점프(평균 8초에 한 번) - 대공 잡기가 실제로 나오는 빈도의 가정
 			grabCatchChance = 0.35,
 			envTicks = { min = 1, max = 4 },
 			basicExposure = { ranged = 0.12, melee = 0.45 },
@@ -503,7 +509,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(-1.2, 0.9, 0), size = Vector3.new(0.5, 0.5, 0.9), kind = "block", color = "head", name = "RightPauldron" },
 		},
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.5, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "heavy", "shockwave", "meteor", "charge", "cross", "swipe", "grab", "fists", "orbs", "earthSplit" },
 		skills = guardianSkills(),
@@ -525,7 +531,7 @@ local SPECIES = {
 			{ anchor = "head", offset = Vector3.new(-0.5, 0.6, 0), size = Vector3.new(0.3, 1.4, 0.3), rotationDeg = Vector3.new(0, 180, 25), kind = "wedge", color = "head", name = "RightHorn" },
 		},
 		moveSpeedStuds = 6, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 0.75, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
+		basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 0.525, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1.5 → ×0.525(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(7),
 		skillOrder = { "slam", "icefall", "spike", "roar", "swipe", "grab", "spear", "stomp", "snowball" },
 		-- BR1 환경 변화 "빙하 균열"(체력 50%부터): 포효하며 땅을 내려친다 → 반경 95의 고리에 금(4.2초) → 그 밖이 15초 동안 얼음물(0.5초마다 6%).
@@ -588,7 +594,9 @@ local SPECIES = {
 				-- (낙빙 → 포효 → 강타)와 첫 포효 16초·기둥 3개는 그대로다(실제 BossPatterns 300초 로그).
 				cooldownSeconds = 21, firstAvailableSeconds = 16, reserveFirstUse = true, priority = P.gimmick,
 				precondition = { type = "membersNearSafeSpot", prop = "pillar", studs = 27, marginStuds = 2, otherwise = "icefall" },
-				telegraphSeconds = 3.0, recoverSeconds = 1.0,
+				-- BR1: 전조 3.0 → 3.4(회피 여유 0.08 → 0.48초). 난이도 모형에서 여유 0.08초의 포효가 서리 거인 전멸의 대부분이었다(첫 실패 확률 63%) -
+				-- 실패 피해를 85%로 올린 대신 "읽을 시간"을 준다(무게 원칙 - 큰 피해 = 긴 전조).
+				telegraphSeconds = 3.4, recoverSeconds = 1.0,
 				dodge = { distanceStuds = 31 },
 				safeProp = "pillar", -- 클라가 이 지형의 그림자만 비우고 바닥 전체를 빨강으로 깐다 · 힌트 화살표의 자리
 				onResolve = { { type = "destroyProps", prop = "pillar", which = "shielding" } },
@@ -638,7 +646,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 0.7, -1.0), size = Vector3.new(0.6, 0.6, 1.0), rotationDeg = Vector3.new(0, 180, 0), kind = "wedge", color = "body", name = "TailFin" },
 		},
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.5, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "sweep", "tide", "spout", "flood", "swipe", "grab", "tailSweep", "vortex", "bubbles" },
 		-- BR1 환경 변화 "밥상뒤집기"(체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 사각 판 40 × 60이 (1 + 인원 ÷ 2)개, 가장자리가 들리고
@@ -704,9 +712,10 @@ local SPECIES = {
 			flood = {
 				primitive = "gimmick", bubble = "flood", role = "gimmick", kind = "onZone",
 				cooldownSeconds = 20, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
-				-- BR1 기믹 개편(어렵게): 예고 6 → 5초 · 가라앉기 5 → 4초("너무 이른" 창 1초는 그대로). 가장 먼 자리 57stud = 0.5 + 57 ÷ 16 × 1.25 = 4.95초 ≤ 5.0.
-				telegraphSeconds = 5.0, recoverSeconds = 1.5,
-				safeZone = { tag = "platform", sinkSeconds = 4.0, shakeSeconds = 1.0, waterRiseStuds = 1.5 },
+				-- BR1 기믹 개편(어렵게): 예고 6 → 5.5초 · 가라앉기 5 → 4.5초("너무 이른" 창 1초는 그대로). 가장 먼 자리 57stud = 0.5 + 57 ÷ 16 × 1.25 = 4.95초 ≤ 5.5.
+				-- (5.0초는 여유 0.05초라 난이도 모형에서 심해 군주 전멸의 대부분이 됐다 - 실패 85%와 같이 쓰기에 너무 빡빡하다.)
+				telegraphSeconds = 5.5, recoverSeconds = 1.5,
+				safeZone = { tag = "platform", sinkSeconds = 4.5, shakeSeconds = 1.0, waterRiseStuds = 1.5 },
 				dodge = { distanceStuds = 57 },
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "방전",
 				-- 방전을 쏟아낸 직후 3초는 기회 창이다(파랑 말풍선). 노브: 단이 사분면 한가운데로 옮겨 가며(어디서든 닿게) 오가는
@@ -754,7 +763,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 1.1, -0.7), size = Vector3.new(0.4, 1.6, 0.4), kind = "wedge", color = "head", name = "BackShard" },
 		},
 		moveSpeedStuds = 7, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.5, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "burst", "drop", "beam", "split", "swipe", "grab", "spikes", "shards", "mirrorDash" },
 		-- BR1 환경 변화 "수정 공중 정원"(중력 반전 시범의 대체안 - 설계 §4-2 · §9-1): 두 팔을 들어 수정을 띄운다(3초) → 20초 동안 공중 발판 4(높이 16) · 점프대 4 ·
@@ -864,7 +873,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 0.8, 1.0), size = Vector3.new(0.35, 1.2, 0.35), rotationDeg = Vector3.new(-30, 0, 0), kind = "wedge", color = "body", name = "TailSpike" },
 		},
 		moveSpeedStuds = 10, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.375, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
+		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(5),
 		skillOrder = { "claw", "sting", "stab", "shell", "swipe", "grab", "stingJab", "ambush", "clawSweep" },
 		-- BR1 환경 변화 "개미지옥"(체력 50%부터): 몸을 흔들며 모래를 판다(3초 - 모래 소용돌이) → 12초 동안 아레나 한가운데 구덩이(반경 45)가 초당 7로 당긴다
@@ -1014,7 +1023,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(-1.2, 1.3, 0), size = Vector3.new(0.3, 1.8, 0.3), rotationDeg = Vector3.new(0, 180, 15), kind = "wedge", color = "head", name = "RightBlade" },
 		},
 		moveSpeedStuds = 9, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.375, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
+		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(5),
 		skillOrder = { "discharge", "whirl", "strike", "overcharge", "swipe", "grab", "tornado", "thunderRing", "boltSpear" },
 		-- BR1 환경 변화 "돌풍"(체력 50%부터): 지팡이를 수평으로 - 바람 줄기가 한 방향으로(3초) → 12초 동안 바람이 초당 7로 민다(클라 - 걷기 16보다 약하다:
@@ -1152,6 +1161,18 @@ local SPECIES_MECHANICS = {
 	scorpion_queen = { trapKind = "buried", rescueType = "push" },
 	storm_lord = { trapKind = "shocked", rescueType = "touch" },
 }
+
+-- BR1 굶주림 통일: 스킬이 보스마다 5개씩 늘어 한 바퀴(전역 쿨 + 구속 × 9 ~ 10개)가 약 90초가 됐다. 옛 굶주림 40 ~ 45초는 그보다 짧아 "굶주린" 스킬(+1000)이
+-- 늘 이겨서 굶주림 값이 없는 스킬(대공 잡기 · 강화 평타 · 시그니처)이 거의 안 나왔다(모형 · 스케줄러 순서 실측 - 빙결 강타 90초에 1번 · 잡기 0번).
+-- → 기믹이 아닌 모든 스킬의 굶주림 = BR1_STARVATION_SECONDS(한 바퀴보다 약간 짧게 - 가장 오래 기다린 스킬만 끌어올린다).
+local BR1_STARVATION_SECONDS = 75
+for _, species in ipairs(SPECIES) do
+	for _, skill in pairs(species.skills) do
+		if skill.primitive ~= "gimmick" then
+			skill.starvationSeconds = BR1_STARVATION_SECONDS
+		end
+	end
+end
 
 local bosses = {}
 local rotationBossIds = {}

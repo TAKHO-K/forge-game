@@ -328,9 +328,11 @@ function BossEnvironment.step(model, st, data, now, _dt)
 	if now >= e.phaseEndsAt then
 		if g then
 			local fail = BossData.mechanics.gimmickFail
+			e.gardenFails = (e.gardenFails or 0) + 1
+			local fraction = e.gardenFails == 1 and fail.firstMaxHpFraction or fail.maxHpFraction -- 그 보스전 첫 실패 55% · 그 뒤 85%(기믹과 같은 규칙)
 			for _, v in ipairs(kit.victims(st)) do
 				if not BossTrap.isTrapped(v.player) then
-					PlayerDamage.applyMaxHpFraction(v.player, fail.maxHpFraction, env.damageLabel, { ignoresShield = fail.ignoresShield })
+					PlayerDamage.applyMaxHpFraction(v.player, fraction, env.damageLabel, { ignoresShield = fail.ignoresShield })
 				end
 			end
 			kit.send(st, "gimmickResolve", { broken = false })

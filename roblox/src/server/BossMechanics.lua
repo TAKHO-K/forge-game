@@ -35,7 +35,7 @@ local judges = {}
 local function stateOf(model)
 	local st = states[model]
 	if not st then
-		st = { gateStarted = false, gateArmed = false, windowToken = 0, gimmickDamage = {} }
+		st = { gateStarted = false, gateArmed = false, windowToken = 0, gimmickDamage = {}, gimmickRounds = {} }
 		states[model] = st
 	end
 	return st
@@ -159,6 +159,7 @@ function BossMechanics.reset(model)
 	st.reflectBuffer = nil
 	st.gateStarted = false
 	st.gimmickDamage = {}
+	st.gimmickRounds = {} -- BR1: 전멸 리셋 = 처음부터(첫 기믹 실패는 다시 55%)
 	st.zoneSteps = nil
 	st.reflect = nil
 	MonsterState.setHitListener(model, nil)
@@ -195,11 +196,13 @@ function BossMechanics.applyGimmickDamage(model, player, fraction, label)
 end
 
 -- BR1 핵심 기믹 실패(BossData.mechanics.gimmickFail - 85% · 쉴드 무시). 발동당 누적 상한도 그 값이다(같은 발동에서 먼저 받은 %피해만큼 줄어든다).
-function BossMechanics.applyGimmickFailDamage(model, player, label)
+-- firstTime(BR1 조정): 그 보스전에서 이 기믹을 처음 판정하는 회차면 firstMaxHpFraction(55% - 배우는 한 번).
+function BossMechanics.applyGimmickFailDamage(model, player, label, firstTime)
 	local fail = BossData.mechanics.gimmickFail
 	local st = stateOf(model)
 	local taken = st.gimmickDamage[player] or 0
-	local applied = math.min(fail.maxHpFraction, fail.maxHpFraction - taken)
+	local fraction = firstTime and fail.firstMaxHpFraction or fail.maxHpFraction
+	local applied = math.min(fraction, fraction - taken)
 	if applied <= 0 then
 		return 0, 0
 	end
@@ -213,12 +216,12 @@ end
 
 -- 기믹 실패 1인분 = %피해 + 잡힘. fraction을 생략하면 전체 실패(BR1: gimmickFail 85% · 쉴드 무시).
 -- 잡힘 종류는 그 보스의 data.mechanics(BossData SPECIES_MECHANICS) - 없으면 피해만.
-function BossMechanics.failGimmick(model, data, player, label, fraction)
+function BossMechanics.failGimmick(model, data, player, label, fraction, firstTime)
 	local damage
 	if fraction then
 		damage = BossMechanics.applyGimmickDamage(model, player, fraction, label)
 	else
-		damage = BossMechanics.applyGimmickFailDamage(model, player, label)
+		damage = BossMechanics.applyGimmickFailDamage(model, player, label, firstTime)
 	end
 	BossMechanics.trapMember(model, data, player)
 	return damage
@@ -353,6 +356,10 @@ end
 function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 	local judge = judges[cfg.kind]
 	local safeCount, failCount = 0, 0
+	-- BR1: 이 기믹을 이 보스전에서 몇 번째 판정하는가(첫 회차 = 실패 55%, 그 뒤 85%). 전멸 리셋(reset)이면 다시 처음이다.
+	local rounds = stateOf(model).gimmickRounds
+	rounds[cfg] = (rounds[cfg] or 0) + 1
+	local firstTime = rounds[cfg] == 1
 	for _, v in ipairs(victims) do
 		-- 이미 잡혀 있는 사람은 판정 밖이다(면역이고, 성공으로도 세지 않는다).
 		if not BossTrap.isTrapped(v.player) then
@@ -367,9 +374,9 @@ function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 				-- cfg.failPenalty == false: 실패의 대가를 판정 밖에서 이미 치렀다(갑각 반사 - 때릴 때마다 받았다). 게이트만 남는다.
 				-- cfg.failTraps == false(29-5 파편 폭풍): %피해만 - 이 보스의 잡힘은 판정이 아니라 분신을 때린 순간에 온다.
 				if cfg.failPenalty ~= false and cfg.failTraps == false then
-					BossMechanics.applyGimmickFailDamage(model, v.player, label) -- BR1: 85% · 쉴드 무시
+					BossMechanics.applyGimmickFailDamage(model, v.player, label, firstTime) -- BR1: 첫 회차 55% · 그 뒤 85% · 쉴드 무시
 				elseif cfg.failPenalty ~= false then
-					BossMechanics.failGimmick(model, data, v.player, label)
+					BossMechanics.failGimmick(model, data, v.player, label, nil, firstTime)
 				end
 			end
 		end
