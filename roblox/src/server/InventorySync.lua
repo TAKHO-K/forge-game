@@ -14,12 +14,6 @@ local autoProcessed = Instance.new("RemoteEvent")
 autoProcessed.Name = "AutoProcessed"
 autoProcessed.Parent = ReplicatedStorage
 
-function InventorySync.notifyAutoProcessed(player, info)
-	if typeof(player) == "Instance" and player:IsA("Player") then
-		autoProcessed:FireClient(player, info)
-	end
-end
-
 local inventoryFull = Instance.new("RemoteEvent")
 inventoryFull.Name = "InventoryFull"
 inventoryFull.Parent = ReplicatedStorage
@@ -75,6 +69,13 @@ end
 -- 남는다, ItemDropServer.server.lua 참고).
 function InventorySync.notifyFull(player)
 	inventoryFull:FireClient(player)
+end
+
+-- G1-2: 줍는 순간 자동 처리 알림.
+function InventorySync.notifyAutoProcessed(player, info)
+	if typeof(player) == "Instance" and player:IsA("Player") then
+		autoProcessed:FireClient(player, info)
+	end
 end
 
 return InventorySync
