@@ -287,7 +287,7 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
 					local aggroStage = TutorialState.getMonsterStage(player)
-					player:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player)) -- P2.5c: 신규 보호도 눈금에
+					PlayerState.setTickDamageSource(player, model, computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player)) -- P2.5c: 신규 보호도 눈금에
 					if data.isBoss then
 						BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)
 					end
@@ -303,11 +303,11 @@ RunService.Heartbeat:Connect(function(dt)
 					local nearest = BossEncounter.nearestLivingMember(model, position)
 					if nearest and nearest ~= target then
 						if target then
-							target:SetAttribute("TickDamage", 0)
+							PlayerState.setTickDamageSource(target, model, nil)
 						end
 						target = nearest
 						MonsterState.setAiTarget(model, nearest)
-						nearest:SetAttribute("TickDamage", computeHitDamage(MonsterState.getAttackFor(model, TutorialState.getMonsterStage(nearest)), nearest) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(nearest))
+						PlayerState.setTickDamageSource(nearest, model, computeHitDamage(MonsterState.getAttackFor(model, TutorialState.getMonsterStage(nearest)), nearest) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(nearest))
 					end
 				end
 				local targetCharacter = target and target.Character
@@ -346,7 +346,7 @@ RunService.Heartbeat:Connect(function(dt)
 						BossPatterns.interrupt(model, data)
 					end
 					if target then
-						target:SetAttribute("TickDamage", 0) -- 전투 종료 - 눈금 기준을 지운다
+						PlayerState.setTickDamageSource(target, model, nil) -- 전투 종료 - 눈금 기준을 지운다
 					end
 				elseif data.isBoss then
 					tryBossAttack(model, data, position, target, targetRoot, dt)
@@ -382,7 +382,7 @@ RunService.Heartbeat:Connect(function(dt)
 						if os.clock() - blockedSince[model] >= TerrainConfig.returningStuckTeleportSeconds then
 							MonsterState.setAiState(model, "returning")
 							MonsterState.setAiTarget(model, nil)
-							target:SetAttribute("TickDamage", 0)
+							PlayerState.setTickDamageSource(target, model, nil)
 							blockedSince[model] = nil
 						end
 					end

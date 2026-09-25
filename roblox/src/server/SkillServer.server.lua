@@ -235,9 +235,17 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 	if not humanoid then
 		return
 	end
-	local originalWalkSpeed = humanoid.WalkSpeed
-	humanoid.WalkSpeed = originalWalkSpeed * def.channelMoveSpeedMultiplier
-	PlayerState.setIncomingDamageMultiplierUntil(player, def.incomingDamageMultiplier, def.channelSeconds)
+	-- P3d-F: 감속은 출처별 배율로 건다(옛 "시작 값 저장 → 끝에 되돌림"은 채널링 중 신발 · 보석 교체를 덮었다)
+	local sourceKey = ("skill:%s:%s"):format(tostring(classId), tostring(slot))
+	local function endChannel()
+		PlayerState.setMoveSpeedMultiplier(player, sourceKey, nil)
+		PlayerProfile.refreshMovementSpeed(player)
+		PlayerState.clearIncomingDamageMultiplierSource(player, sourceKey)
+		PlayerState.clearChanneling(player)
+	end
+	PlayerState.setMoveSpeedMultiplier(player, sourceKey, def.channelMoveSpeedMultiplier)
+	PlayerProfile.refreshMovementSpeed(player)
+	PlayerState.setIncomingDamageMultiplierUntil(player, def.incomingDamageMultiplier, def.channelSeconds, sourceKey) -- P3d-F B6: 출처 = 이 스킬(대시 · 복귀 보호와 곱해진다)
 	-- 21-1 [1]-C: 채널링 중 평타 차단(PRD 4.3 "채널링 3초는 평타 시간에서 뺀다") - 이게
 	-- 계수 프리미엄의 대가다. AttackServer가 PlayerState.isChanneling으로 거부한다.
 	PlayerState.setChannelingUntil(player, def.channelSeconds)
@@ -256,7 +264,11 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 		humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 		if not humanoid or not rootPart then
-			PlayerState.clearChanneling(player)
+			endChannel()
+			return
+		end
+		if PlayerState.isTrapped(player) then
+			endChannel() -- P3d-F 전수 점검 C: 잡히면 채널링이 끝난다(옛: 잡힘이 채널링 칸만 지우고 틱 피해는 계속 들어갔다)
 			return
 		end
 
@@ -280,7 +292,7 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 		})
 	end
 
-	humanoid.WalkSpeed = originalWalkSpeed
+	endChannel()
 end
 
 -- 그림자분신용 반투명 복제(20-6 [2], 지시 "새 모델을 만들지 마라. 기존 캐릭터를
@@ -383,6 +395,10 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 		if not rootNow then
 			PlayerState.clearChanneling(player)
 			return -- 캐스터가 사라졌다(사망·퇴장) - 조용히 멈춘다(castCircleChannel과 같은 가드)
+		end
+		if PlayerState.isTrapped(player) then
+			PlayerState.clearChanneling(player)
+			return -- P3d-F 전수 점검 C: 잡히면 난무도 끝난다
 		end
 
 		if not (lockedTarget.Parent and MonsterState.getData(lockedTarget)) then

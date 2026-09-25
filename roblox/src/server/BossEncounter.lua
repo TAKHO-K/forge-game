@@ -604,7 +604,7 @@ function BossEncounter.resetFor(player)
 	model:PivotTo(CFrame.new(MonsterState.getSpawnPosition(model)))
 	for _, member in ipairs(encounter.members) do
 		if typeof(member) == "Instance" then
-			member:SetAttribute("TickDamage", 0)
+			PlayerState.setTickDamageSource(member, model, nil) -- P3d-F: 이 보스의 눈금만 지운다
 		end
 	end
 	print(("[forge-game] 보스 리셋: %s 사망(생존자 0) - %s HP 최대치 복구"):format(player.Name, data.displayName))

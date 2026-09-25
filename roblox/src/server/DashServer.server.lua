@@ -68,7 +68,7 @@ dashRequest.OnServerEvent:Connect(function(player)
 	local endPos = DashEndpoint.compute(player, startPos, direction, DashConfig.rangeStuds)
 
 	-- PRD 5.4 "대시 중 피격 데미지 50% 감소" - 대검 회전베기와 같은 통로(PlayerState).
-	PlayerState.setIncomingDamageMultiplierUntil(player, DashConfig.incomingDamageMultiplier, DashConfig.durationSeconds)
+	PlayerState.setIncomingDamageMultiplierUntil(player, DashConfig.incomingDamageMultiplier, DashConfig.durationSeconds, "dash")
 
 	dashResult:FireClient(player, {
 		ok = true,

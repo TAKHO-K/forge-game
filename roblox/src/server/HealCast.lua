@@ -93,8 +93,11 @@ function HealCast.cast(player, def, classId, cooldownSeconds)
 		for _, member in ipairs(PartyState.getMemberPlayers(party)) do
 			-- Player가 아닌 것(검증의 스탠드인 테이블)에는 버프 알림(SetAttribute · FireClient)을 못 보낸다 - PartyState.fireClient와 같은 거름.
 			if typeof(member) == "Instance" then
+				-- P3d-F 전수 점검 E: 치유사가 둘이면 짧은 지속(쿨감이 높은 쪽)의 재시전이 긴 쪽의 남은 시간을 줄였다 - 더 늦은 만료를 남긴다(배율은 같은 값 하나 - 중첩 없음 그대로).
+				local existing = BuffState.get(member, "healerBuff")
+				local remaining = existing and existing.expiresAt and (existing.expiresAt - os.clock()) or 0
 				BuffState.apply(member, "healerBuff", {
-					durationSeconds = durationSeconds,
+					durationSeconds = math.max(durationSeconds, remaining),
 					multiplier = multiplier,
 					displayName = "치유 버프",
 					colorName = "success",

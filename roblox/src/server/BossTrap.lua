@@ -52,11 +52,7 @@ local function setAnchored(player, anchored)
 	if not isRealPlayer(player) then
 		return
 	end
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if root then
-		root.Anchored = anchored
-	end
+	PlayerState.setAnchorHold(player, "trap", anchored) -- P3d-F: 출처별 고정(끼임과 서로 풀지 않는다)
 end
 
 local function syncAttributes(player, record)
@@ -136,7 +132,12 @@ function BossTrap.release(player, reason)
 	-- 보스전이 끝나거나 리셋돼 풀린 것("reset")은 유예가 필요 없다.
 	if reason == "auto" or reason == "rescued" then
 		local trapConfig = BossData.mechanics.trap
-		PlayerState.setIncomingDamageMultiplierUntil(player, trapConfig.damageTakenMultiplier, trapConfig.releaseGraceSeconds)
+		-- P3d-F B6: 출처별 칸 - 0배(지금 값)면 무적 플래그, 아니면 배율
+		if trapConfig.damageTakenMultiplier <= 0 then
+			PlayerState.setInvulnerableUntil(player, trapConfig.releaseGraceSeconds, "trapReleaseGrace")
+		else
+			PlayerState.setIncomingDamageMultiplierUntil(player, trapConfig.damageTakenMultiplier, trapConfig.releaseGraceSeconds, "trapReleaseGrace")
+		end
 	end
 	setAnchored(player, false)
 	syncAttributes(player, nil)

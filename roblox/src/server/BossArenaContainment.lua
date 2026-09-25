@@ -79,7 +79,7 @@ function BossArenaContainment.checkMember(encounter, member)
 	character:PivotTo(CFrame.new(to))
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.AssemblyAngularVelocity = Vector3.zero
-	PlayerState.setIncomingDamageMultiplierUntil(member, 0, CONTAINMENT.returnProtectSeconds)
+	PlayerState.setInvulnerableUntil(member, CONTAINMENT.returnProtectSeconds, "returnProtect") -- P3d-F B6: 무적은 별도 플래그(회전베기 등 다른 출처의 배율을 덮지 않는다)
 	protectedUntil[member] = os.clock() + CONTAINMENT.returnProtectSeconds
 	local hpAfter = PlayerState.getHp(member)
 	table.insert(corrections, { player = member, zoneKey = encounter.zoneKey, reason = reason, from = from, to = to, at = os.clock(), hpBefore = hpBefore, hpAfter = hpAfter, spawn = spawn })

@@ -10,7 +10,7 @@ local PlayerShield = require(script.Parent.PlayerShield)
 local PlayerState = {}
 
 -- [Player] = { hp, maxHp, lastCombatActionAt(17-1 도입, 19-1에서 의미 확장 - 자동회복
--- 5초 대기 타이머 기준 시각, os.clock()), incomingDamageMultiplier·incomingDamageMultiplierUntil
+-- 5초 대기 타이머 기준 시각, os.clock()), incomingMultipliers·invulnerableUntil(P3d-F B6 - 출처별)
 -- (20-2a, 대검 E "받는 피해 50% 감소" - os.clock() 기준 만료 시각), channelingUntil(21-1,
 -- 채널링 스킬 진행 중 - 이 시각 전엔 평타 요청을 거부한다), lifestealTokens·
 -- lifestealTokensUpdatedAt(26-2, 흡혈 초당 상한 토큰 버킷 - PlayerState.tryLifesteal) }
@@ -21,8 +21,8 @@ function PlayerState.init(player)
 		hp = CombatConfig.playerMaxHp,
 		maxHp = CombatConfig.playerMaxHp,
 		lastCombatActionAt = nil,
-		incomingDamageMultiplier = 1,
-		incomingDamageMultiplierUntil = nil,
+		incomingMultipliers = nil, -- P3d-F B6: { [출처] = { multiplier, untilAt } } (아래 setIncomingDamageMultiplierUntil)
+		invulnerableUntil = nil, -- P3d-F B6: { [출처] = untilAt } (setInvulnerableUntil)
 		channelingUntil = nil,
 		lifestealTokens = nil, -- 첫 사용 시 가득 찬 것으로 취급(아래 tryLifesteal)
 		lifestealTokensUpdatedAt = nil,
@@ -35,6 +35,8 @@ function PlayerState.reset(player)
 	if entry then
 		entry.hp = entry.maxHp
 		entry.trapDamageMultiplier = nil -- 29-1: 리스폰하면 잡힘도 풀린다(BossTrap이 기록도 같이 지운다)
+		entry.anchorHolds = nil -- P3d-F: 새 캐릭터는 고정 없이 시작한다
+		entry.moveSpeedMultipliers = nil -- P3d-F: 끊긴 채널링의 감속이 남지 않게
 	end
 	PlayerShield.clear(player) -- S13b: 리스폰하면 쉴드도 풀린다
 	PlayerState.clearChanneling(player)
@@ -128,58 +130,172 @@ function PlayerState.setLastCombatActionAt(player, value)
 	end
 end
 
--- 받는 피해 배율을 durationSeconds 동안 걸어 둔다(20-2a, PRD-forge-game.md 4.3 대검
--- 회전베기 "받는 피해 50% 감소"). 만료 시각을 넘기면 getIncomingDamageMultiplier가
--- 자동으로 1(정상)을 돌려준다 - 별도 해제 호출이 필요 없다(타이머 정리를 깜빡할 일이 없다).
-function PlayerState.setIncomingDamageMultiplierUntil(player, multiplier, durationSeconds)
+-- 받는 피해 배율(20-2a, PRD-forge-game.md 4.3 대검 회전베기 "받는 피해 50% 감소").
+-- P3d-F B6: 출처(sourceKey)마다 따로 둔다 - 옛 구조는 칸 하나를 대시 · 회전베기 · 복귀 보호 · 끼임 · 회오리 · 잡힘 유예가
+-- 같이 써서, 한 출처의 설정이 다른 출처를 덮고(복귀 보호 0배가 회전베기 0.5배를 덮은 뒤 끝나면 남은 감소가 사라졌다) 해제가 남의 것을 지웠다.
+-- 최종 배율 = 살아 있는 출처 배율의 곱. 완전 무적(0배)은 배율이 아니라 별도 플래그(setInvulnerableUntil)다. 만료 시각을 넘긴 출처는
+-- 읽을 때 저절로 빠진다(해제 호출이 필요 없다) · 푸는 쪽은 자기 키만 지운다.
+-- [Player] 칸: incomingMultipliers = { [sourceKey] = { multiplier, untilAt } } · invulnerableUntil = { [sourceKey] = untilAt }
+function PlayerState.setIncomingDamageMultiplierUntil(player, multiplier, durationSeconds, sourceKey)
+	assert(sourceKey, "setIncomingDamageMultiplierUntil: sourceKey가 필요하다(출처별 칸)")
 	local entry = players[player]
 	if not entry then
 		return
 	end
-	-- 21-2: 대시(0.5, 0.3초)와 대검 회전베기(0.5, 3초)가 겹칠 수 있다 - 짧은 쪽이 나중에
-	-- 걸렸다고 긴 쪽의 만료 시각을 당겨 버리면 채널링 중인데 감소가 풀린다. 이미 같거나
-	-- 더 강한 감소가 더 오래 살아 있으면 그대로 둔다.
+	entry.incomingMultipliers = entry.incomingMultipliers or {}
 	local newUntil = os.clock() + durationSeconds
-	if PlayerState.getIncomingDamageMultiplier(player) <= multiplier and (entry.incomingDamageMultiplierUntil or 0) >= newUntil then
+	-- 21-2: 같은 출처를 다시 걸 때 이미 같거나 더 강한 감소가 더 오래 살아 있으면 그대로 둔다(짧은 쪽이 긴 쪽의 만료를 당기지 않게).
+	local existing = entry.incomingMultipliers[sourceKey]
+	if existing and existing.untilAt > os.clock() and existing.multiplier <= multiplier and existing.untilAt >= newUntil then
 		return
 	end
-	entry.incomingDamageMultiplier = multiplier
-	entry.incomingDamageMultiplierUntil = newUntil
+	entry.incomingMultipliers[sourceKey] = { multiplier = multiplier, untilAt = newUntil }
 end
 
--- P3c: 걸려 있는 받는 피해 배율을 바로 푼다(검증 블록이 앞 블록의 면역을 이어받지 않게 - P3b(나) D3의 0배 40초가 P3c(나)까지 남았다).
+-- 이 출처의 배율만 푼다(다른 출처는 그대로).
+function PlayerState.clearIncomingDamageMultiplierSource(player, sourceKey)
+	local entry = players[player]
+	if entry and entry.incomingMultipliers then
+		entry.incomingMultipliers[sourceKey] = nil
+	end
+end
+
+-- 완전 무적(받는 피해 0) - 출처마다 따로. 같은 출처를 다시 걸면 더 늦은 만료를 남긴다.
+function PlayerState.setInvulnerableUntil(player, durationSeconds, sourceKey)
+	assert(sourceKey, "setInvulnerableUntil: sourceKey가 필요하다(출처별 칸)")
+	local entry = players[player]
+	if not entry then
+		return
+	end
+	entry.invulnerableUntil = entry.invulnerableUntil or {}
+	entry.invulnerableUntil[sourceKey] = math.max(entry.invulnerableUntil[sourceKey] or 0, os.clock() + durationSeconds)
+end
+
+function PlayerState.clearInvulnerable(player, sourceKey)
+	local entry = players[player]
+	if entry and entry.invulnerableUntil then
+		entry.invulnerableUntil[sourceKey] = nil
+	end
+end
+
+function PlayerState.isInvulnerable(player)
+	local entry = players[player]
+	local now = os.clock()
+	for _, untilAt in pairs(entry and entry.invulnerableUntil or {}) do
+		if untilAt > now then
+			return true
+		end
+	end
+	return false
+end
+
+-- P3c: 걸려 있는 받는 피해 배율 · 무적을 **전부** 바로 푼다(검증 블록이 앞 블록의 면역을 이어받지 않게 - P3b(나) D3의 0배 40초가 P3c(나)까지 남았다). 게임 코드는 출처별 해제를 쓴다.
 function PlayerState.clearIncomingDamageMultiplier(player)
 	local entry = players[player]
 	if entry then
-		entry.incomingDamageMultiplier = nil
-		entry.incomingDamageMultiplierUntil = nil
+		entry.incomingMultipliers = nil
+		entry.invulnerableUntil = nil
 	end
 end
 
--- P3d 리뷰 5: 지금 걸린 받는 피해 배율의 만료 시각(없으면 nil) - 건 쪽이 기억해 두고 자기 것일 때만 푼다(clearIncomingDamageMultiplierIf).
-function PlayerState.getIncomingDamageMultiplierUntil(player)
+-- 지금 살아 있는 출처 목록(검증 · 로그용): { [sourceKey] = 배율 } · 무적 출처는 배율 0으로 넣는다.
+function PlayerState.debugIncomingSources(player)
 	local entry = players[player]
-	return entry and entry.incomingDamageMultiplierUntil or nil
-end
-
-function PlayerState.clearIncomingDamageMultiplierIf(player, untilTime)
-	local entry = players[player]
-	if entry and untilTime and entry.incomingDamageMultiplierUntil == untilTime then
-		entry.incomingDamageMultiplier = nil
-		entry.incomingDamageMultiplierUntil = nil
+	local now, list = os.clock(), {}
+	for key, rec in pairs(entry and entry.incomingMultipliers or {}) do
+		if rec.untilAt > now then
+			list[key] = rec.multiplier
+		end
 	end
+	for key, untilAt in pairs(entry and entry.invulnerableUntil or {}) do
+		if untilAt > now then
+			list[key] = 0
+		end
+	end
+	return list
 end
 
--- MonsterAI.server.lua의 applyHitToPlayer가 매 피격마다 곱한다. 활성 구간이 아니면 1.
+-- 모든 피격 경로의 마지막 공통 지점(PlayerDamage.applyFinalDamage)이 매 피격마다 곱한다. 무적이면 0, 아니면 살아 있는 출처 배율의 곱(없으면 1).
 function PlayerState.getIncomingDamageMultiplier(player)
 	local entry = players[player]
-	if not entry or not entry.incomingDamageMultiplierUntil then
+	if not entry then
 		return 1
 	end
-	if os.clock() >= entry.incomingDamageMultiplierUntil then
-		return 1
+	if PlayerState.isInvulnerable(player) then
+		return 0
 	end
-	return entry.incomingDamageMultiplier
+	local now, product = os.clock(), 1
+	for key, rec in pairs(entry.incomingMultipliers or {}) do
+		if rec.untilAt > now then
+			product *= rec.multiplier
+		else
+			entry.incomingMultipliers[key] = nil
+		end
+	end
+	return product
+end
+
+-- 이동속도 배율도 출처별(P3d-F B6 전수 점검 B): 옛 회전베기는 시작할 때 WalkSpeed를 저장했다가 끝날 때 되돌려, 채널링 중 신발 · 보석을 바꾸면
+-- 감속이 사라지고 끝날 때 옛 신발 속도로 돌아갔다. 이제 WalkSpeed = 기본 × 신발 배율 × 이 곱(PlayerProfile.refreshMovementSpeed) - 건 쪽이 자기 키만 지우고 다시 계산한다.
+function PlayerState.setMoveSpeedMultiplier(player, sourceKey, multiplier)
+	local entry = players[player]
+	if not entry then
+		return
+	end
+	entry.moveSpeedMultipliers = entry.moveSpeedMultipliers or {}
+	entry.moveSpeedMultipliers[sourceKey] = multiplier
+end
+
+function PlayerState.getMoveSpeedMultiplier(player)
+	local entry = players[player]
+	local product = 1
+	for _, multiplier in pairs(entry and entry.moveSpeedMultipliers or {}) do
+		product *= multiplier
+	end
+	return product
+end
+
+-- 체력바 눈금 기준(Attribute TickDamage)도 출처(몬스터 모델)별(P3d-F 전수 점검 D): 옛 칸 하나는 나중에 붙은 몹이 앞 몹의 값을 덮고, 그 몹이 돌아가며 0으로
+-- 지워 앞 몹이 아직 때리는데 눈금이 사라졌다. 보이는 값 = 살아 있는 출처 중 가장 큰 평타(가장 위협적인 몹). value nil/0 = 이 출처를 지운다.
+function PlayerState.setTickDamageSource(player, source, value)
+	local entry = players[player]
+	if not entry or typeof(player) ~= "Instance" then
+		return
+	end
+	entry.tickSources = entry.tickSources or setmetatable({}, { __mode = "k" })
+	entry.tickSources[source] = (value and value > 0) and value or nil
+	local best = 0
+	for model, v in pairs(entry.tickSources) do
+		if typeof(model) == "Instance" and model.Parent then
+			best = math.max(best, v)
+		else
+			entry.tickSources[model] = nil
+		end
+	end
+	player:SetAttribute("TickDamage", best)
+end
+
+-- 루트 고정(Anchored)도 출처별로 잡는다(P3d-F B6 전수 점검 A): 잡힘(BossTrap)과 끼임(BossArenaMap)이 같은 Anchored 한 칸을 켜고 꺼서,
+-- 끼인 채 잡히면 끼임이 부서질 때 잡힌 사람이 풀려 걸어 다녔고 · 잡힌 채 끼이면 잡힘이 풀릴 때 끼임에서 빠져나갔다. 고정 = 잡은 출처가 하나라도 있으면.
+function PlayerState.setAnchorHold(player, sourceKey, on)
+	local entry = players[player]
+	if not entry then
+		return
+	end
+	entry.anchorHolds = entry.anchorHolds or {}
+	entry.anchorHolds[sourceKey] = on and true or nil
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if root then
+		root.Anchored = next(entry.anchorHolds) ~= nil
+		if on then
+			root.AssemblyLinearVelocity = Vector3.zero
+		end
+	end
+end
+
+function PlayerState.hasAnchorHold(player, sourceKey)
+	local entry = players[player]
+	return entry ~= nil and entry.anchorHolds ~= nil and entry.anchorHolds[sourceKey] == true
 end
 
 -- 흡혈 토큰 버킷(26-2, PRD 20.67 [6-1]) - 용량·충전 모두 maxHp×

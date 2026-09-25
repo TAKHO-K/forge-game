@@ -1338,7 +1338,7 @@ function PlayerProfile.refreshMovementSpeed(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.WalkSpeed = BASE_WALK_SPEED_STUDS * PlayerCombat.getSpeedMultiplier(bonus)
+		humanoid.WalkSpeed = BASE_WALK_SPEED_STUDS * PlayerCombat.getSpeedMultiplier(bonus) * PlayerState.getMoveSpeedMultiplier(player) -- P3d-F: 출처별 이동속도 배율(회전베기 감속 등)
 	end
 end
 
