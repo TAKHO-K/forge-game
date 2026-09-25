@@ -20,6 +20,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
 local AimTarget = {}
 
@@ -65,6 +66,18 @@ function AimTarget.getWorldPointFromScreen(screenPos)
 	return ray.Origin + ray.Direction * t
 end
 
+-- G1-1(3타 표시 C): 다음 타가 강타면 조준 외곽선 색을 바꾼다(로컬만 - 서버가 만든 기본 색은 모델마다 기억해 두고 되돌린다).
+local heavyReady = false
+local HEAVY_OUTLINE = UIColors.ember
+local baseOutline = setmetatable({}, { __mode = "k" }) -- [Highlight] = 서버가 준 색
+
+local function paintOutline(highlight)
+	if baseOutline[highlight] == nil then
+		baseOutline[highlight] = highlight.OutlineColor
+	end
+	highlight.OutlineColor = heavyReady and HEAVY_OUTLINE or baseOutline[highlight]
+end
+
 local function setVisual(model, on)
 	if not model then
 		return
@@ -72,6 +85,7 @@ local function setVisual(model, on)
 	local highlight = model:FindFirstChild("AimHighlight")
 	if highlight then
 		highlight.Enabled = on
+		paintOutline(highlight)
 	end
 	local head = model:FindFirstChild("Head")
 	local nameplateGui = head and head:FindFirstChild("NameplateGui")
@@ -92,6 +106,17 @@ end
 
 -- 지금 조준점을 즉시 반영한다(클릭·탭 순간 호버 틱을 기다리지 않고 바로 갱신하기 위해
 -- AttackInput.client.lua가 부른다). aimPoint가 nil이면 마지막 조준점을 그대로 쓴다.
+function AimTarget.setHeavyReady(on)
+	if heavyReady == on then
+		return
+	end
+	heavyReady = on
+	local highlight = currentTarget and currentTarget:FindFirstChild("AimHighlight")
+	if highlight then
+		paintOutline(highlight)
+	end
+end
+
 function AimTarget.refresh(aimPoint)
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")

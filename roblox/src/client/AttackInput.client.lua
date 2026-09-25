@@ -29,64 +29,11 @@ local attackLaunched = ReplicatedStorage:WaitForChild("AttackLaunched")
 local comboUpdate = ReplicatedStorage:WaitForChild("ComboUpdate")
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 
--- 3타 강타 콤보 표시(16-7) - 18-2까지는 공격 버튼 위에 붙어 있었다. 버튼이 없어진 뒤로는
--- 체력바 바로 위로 옮긴다 - PlayerHealthBar.client.lua가 만들어 두는 전용 앵커(ComboPipsAnchor)
--- 를 WaitForChild로 찾는다(SkillSlots·AttackInput이 옛 CentralRow를 공유하던 것과 같은
--- 계약 패턴). 서버 ComboUpdate가 보내는 comboCount(계속 증가하는 누적값)를 comboHitEvery로
--- 감싸 "이번 3타 사이클의 몇 번째"로 바꿔서 켠다.
-local comboPipsAnchor = playerGui:WaitForChild("PlayerHealthBarGui"):WaitForChild("ComboPipsAnchor")
-
-local COMBO_PIP_COUNT = CombatConfig.comboHitEvery
-local COMBO_PIP_SIZE = 10
-local COMBO_PIP_GAP = 6
-local COMBO_PIP_OFF_COLOR = Color3.fromRGB(255, 255, 255)
-local COMBO_PIP_OFF_TRANSPARENCY = 0.75
-local COMBO_PIP_ON_COLOR = UIColors.ember
-local COMBO_PIP_HEAVY_COLOR = Color3.fromRGB(255, 230, 90)
-
-local comboPipsHolder = Instance.new("Frame")
-comboPipsHolder.Name = "ComboPips"
-comboPipsHolder.Size = UDim2.new(0, COMBO_PIP_COUNT * (COMBO_PIP_SIZE + COMBO_PIP_GAP), 0, COMBO_PIP_SIZE)
-comboPipsHolder.BackgroundTransparency = 1
-comboPipsHolder.Parent = comboPipsAnchor
-
-local comboPipLayout = Instance.new("UIListLayout")
-comboPipLayout.FillDirection = Enum.FillDirection.Horizontal
-comboPipLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-comboPipLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-comboPipLayout.Padding = UDim.new(0, COMBO_PIP_GAP)
-comboPipLayout.Parent = comboPipsHolder
-
-local comboPips = {}
-for i = 1, COMBO_PIP_COUNT do
-	local pip = Instance.new("Frame")
-	pip.Name = "Pip" .. i
-	pip.Size = UDim2.new(0, COMBO_PIP_SIZE, 0, COMBO_PIP_SIZE)
-	pip.BackgroundColor3 = COMBO_PIP_OFF_COLOR
-	pip.BackgroundTransparency = COMBO_PIP_OFF_TRANSPARENCY
-	pip.BorderSizePixel = 0
-	pip.Parent = comboPipsHolder
-
-	local pipCorner = Instance.new("UICorner")
-	pipCorner.CornerRadius = UDim.new(1, 0)
-	pipCorner.Parent = pip
-
-	comboPips[i] = pip
-end
-
+-- 3타 강타 표시(G1-1): 체력바 위 점 3개 → 내 발밑 3칸 고리 + 다음 강타 때 조준 외곽선 색(client/ComboRing). 서버 ComboUpdate를 그대로 넘긴다.
+local ComboRing = require(script.Parent.ComboRing)
 comboUpdate.OnClientEvent:Connect(function(comboCount, isHeavyHit)
-	local posInCycle = ((comboCount - 1) % COMBO_PIP_COUNT) + 1
-	for i, pip in ipairs(comboPips) do
-		if i <= posInCycle then
-			pip.BackgroundColor3 = isHeavyHit and COMBO_PIP_HEAVY_COLOR or COMBO_PIP_ON_COLOR
-			pip.BackgroundTransparency = 0
-		else
-			pip.BackgroundColor3 = COMBO_PIP_OFF_COLOR
-			pip.BackgroundTransparency = COMBO_PIP_OFF_TRANSPARENCY
-		end
-	end
+	ComboRing.onCombo(comboCount, isHeavyHit)
 end)
 
 -- 스윙 모션은 서버 확인 없이 여기서 바로 재생한다(지시 사항 - "모션은 클라이언트에서
