@@ -72,6 +72,10 @@ return {
 
 	-- 3타 강타(16-7). 웹 값(data/balance.js BALANCE.combo*) 그대로 옮긴다 - 새로 정하지
 	-- 않는다는 지시. 모든 직업 공통, 넉백 없음(웹 구현에 없다).
+	-- 받는 피해 배율의 최종 하한(G1-0 · P3d-F 결정 1): 출처별 감소(대시 · 회전베기 · 궁극기 · 성벽 · 포효 …)는 곱으로 합치되 이 값 밑으로는 안 내려간다.
+	-- 완전 무적(0배)은 배율이 아니라 PlayerState.setInvulnerableUntil 플래그라 이 하한과 무관하다.
+	incomingDamageMultiplierFloor = 0.25,
+
 	comboHitEvery = 3, -- N번째 공격마다 강타
 	comboHitMultiplier = 1.8,
 	comboResetWindowSeconds = 2, -- 이 시간 동안 공격 없으면 콤보 카운터 초기화

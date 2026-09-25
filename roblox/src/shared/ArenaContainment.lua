@@ -39,6 +39,11 @@ function ArenaContainment.isOutside(zone, position, floorTopY)
 	return false, nil
 end
 
+-- G1-0: 발(feetY)이 "바닥 위가 아닌" 높이인가 - 벽 윗면 − offFloorBelowWallTopStuds 이상(벽 위에 선 사람). 시간 조건(offFloorReturnSeconds)은 호출자가 잰다.
+function ArenaContainment.isOffFloorHeight(feetY, floorTopY, wallHeightStuds)
+	return feetY >= floorTopY + wallHeightStuds - CONTAINMENT.offFloorBelowWallTopStuds
+end
+
 -- blocked(point) → bool(선택): 그 자리가 구조물 안인가. 반환: 복귀 자리(XZ, Y = 들어온 값 그대로 - 호출자가 바닥 위로 올린다).
 function ArenaContainment.rescuePoint(zone, position, blocked)
 	local inset = CONTAINMENT.rescueInsetStuds

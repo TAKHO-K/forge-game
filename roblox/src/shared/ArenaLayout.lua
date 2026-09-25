@@ -71,6 +71,9 @@ local function defaults(options)
 		entryAngleDeg = options.entryAngleDeg or GEOMETRY.entryAngleDeg,
 		entryDistanceStuds = options.entryDistanceStuds or GEOMETRY.entryDistanceStuds,
 		coverageMin = options.coverageMin or 0,
+		-- G1-0(P3d-F 결정 3): 선택 - 긴 계산(연결 검사 · 재생성 자리 시도) 도중 자주 부르는 함수. 서버는 프레임 예산을 넘기면 여기서 다음 프레임으로 양보한다
+		-- (BossArenaMap.planRegrow). 하네스 · 검사처럼 없으면 한 번에 끝까지 돈다.
+		checkpoint = options.checkpoint,
 	}
 end
 
@@ -143,7 +146,11 @@ function ArenaLayout.connectivity(items, options)
 		return i * 4096 + j
 	end
 	local count = 0
+	local checkpoint = o.checkpoint
 	for i = -n, n do
+		if checkpoint then
+			checkpoint()
+		end
 		for j = -n, n do
 			local x, z = i * cell, j * cell
 			if x * x + z * z <= limit * limit then
@@ -154,6 +161,9 @@ function ArenaLayout.connectivity(items, options)
 	end
 	local total = count -- P3d-F B4: 구조물 없는 아레나의 칸 수(이동 가능 면적 비율 = 남은 칸 ÷ total)
 	for _, item in ipairs(items) do
+		if checkpoint then
+			checkpoint()
+		end
 		for _, c in ipairs(item.colliders) do
 			local reach = c.r + 1
 			for i = math.floor((c.x - reach) / cell), math.ceil((c.x + reach) / cell) do
@@ -180,6 +190,9 @@ function ArenaLayout.connectivity(items, options)
 		local k0 = queue[head]
 		head += 1
 		reached += 1
+		if checkpoint and head % 128 == 0 then
+			checkpoint()
+		end
 		local i0 = math.floor((k0 + 2048) / 4096)
 		local j0 = k0 - i0 * 4096
 		for _, step in ipairs(STEPS) do
@@ -411,6 +424,9 @@ function ArenaLayout.regrowSpot(theme, items, rng, options, nextId)
 	local members = options.members or {}
 	local reason = nil
 	for attempt = 1, REGROW.tries do
+		if o.checkpoint then
+			o.checkpoint()
+		end
 		local spec = specs[1 + math.floor(rng() * #specs)]
 		local radius = spec.group == "feature" and SHAPES[spec.kind].footprint or (spec.radius[1] + (spec.radius[2] - spec.radius[1]) * rng())
 		local x, z, underMember

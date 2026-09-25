@@ -1,4 +1,4 @@
--- P3c A5 맵 이탈 방지 ③(마지막 겹): 보스전 멤버가 원 밖 · 바닥 아래로 나가면 옮긴다. 규칙 = BossArenaMapData.containment 주석.
+-- P3c A5 맵 이탈 방지 ③(마지막 겹): 보스전 멤버가 원 밖 · 바닥 아래로 나가거나 벽 윗면에 1초 넘게 머물면(G1-0) 옮긴다. 규칙 = BossArenaMapData.containment 주석.
 -- P3d B: 옮기는 자리 = 본인의 보스방 스폰 자리(입장 자리 - 멤버 순번) · 체력 비율 · 기믹 누적은 그대로 · 직후 returnProtectSeconds 보호(받는 피해 0배 + 넉백 안 받음).
 -- ①(넉백 상한) · ②(착지 경계)가 지키면 이 복귀는 한 번도 일어나지 않아야 한다 - 일어나면 "[forge-game] 위치 보정" 줄이 남고 corrections()에 쌓인다(검증이 0을 확인한다).
 -- BossEncounter가 보스전 시작 · 끝에 track · untrack을 부른다(이 모듈은 BossEncounter를 모른다 - 순환 require 없음).
@@ -10,6 +10,7 @@ local ArenaContainment = require(ReplicatedStorage.Shared.ArenaContainment)
 local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local BossArenaMap = require(script.Parent.BossArenaMap)
+local BossArenaProps = require(script.Parent.BossArenaProps)
 local GroundProbe = require(script.Parent.GroundProbe)
 local PlayerState = require(script.Parent.PlayerState)
 
@@ -19,6 +20,8 @@ local CONTAINMENT = BossArenaMapData.containment
 local tracked = {} -- [encounter] = true
 local corrections = {} -- { { player, zoneKey, reason, from, to, at, hpBefore, hpAfter, spawn } } - 검증 · 로그용
 local protectedUntil = setmetatable({}, { __mode = "k" }) -- [Player] = os.clock 기준 보호 끝
+local offFloorSince = setmetatable({}, { __mode = "k" }) -- G1-0: [Player] = 벽 윗면 높이에 처음 선 시각(os.clock)
+local GEOMETRY = BossArenaMapData.geometry
 local elapsed = 0
 
 function BossArenaContainment.track(encounter)
@@ -47,6 +50,13 @@ function BossArenaContainment.spawnPointFor(encounter, member)
 	if BossArenaMap.overlapsObstacle(encounter.zoneKey, point, 1.5, 0.5) then
 		return nil
 	end
+	-- G1-0: 동적 지형(얼음 기둥 · 모래 구덩이)이 스폰 자리를 덮었어도 안전 지점으로(끼임 0)
+	for _, prop in ipairs(encounter.model and BossArenaProps.list(encounter.model) or {}) do
+		local dx, dz = point.X - prop.position.X, point.Z - prop.position.Z
+		if math.sqrt(dx * dx + dz * dz) < (prop.radius or 0) + CONTAINMENT.spawnPropClearStuds then
+			return nil
+		end
+	end
 	-- 리뷰 10: 그 자리 지면 위(둔덕 가장자리에 걸린 순번이면 둔덕 윗면 위)로 올린다
 	local floorTopY = BossArenaMap.floorTopY()
 	local groundY = GroundProbe.surfaceY(point.X, point.Z, floorTopY) or floorTopY
@@ -63,9 +73,21 @@ function BossArenaContainment.checkMember(encounter, member)
 	end
 	local floorTopY = BossArenaMap.floorTopY()
 	local outside, reason = ArenaContainment.isOutside(zone, root.Position, floorTopY)
+	-- G1-0: 벽 윗면 높이에 offFloorReturnSeconds 넘게 머물면(벽 위에 착지) 바닥 위가 아닌 것으로 보고 복귀
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local standing = (humanoid and humanoid.HipHeight or 2) + root.Size.Y / 2
+	if ArenaContainment.isOffFloorHeight(root.Position.Y - standing, floorTopY, GEOMETRY.wallHeightStuds) then
+		offFloorSince[member] = offFloorSince[member] or os.clock()
+		if not outside and os.clock() - offFloorSince[member] >= CONTAINMENT.offFloorReturnSeconds then
+			outside, reason = true, "offFloor"
+		end
+	else
+		offFloorSince[member] = nil
+	end
 	if not outside then
 		return false
 	end
+	offFloorSince[member] = nil
 	local to = BossArenaContainment.spawnPointFor(encounter, member)
 	local spawn = to ~= nil
 	if not to then

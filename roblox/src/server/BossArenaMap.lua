@@ -12,6 +12,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
 
 local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
@@ -431,7 +432,27 @@ function BossArenaMap.itemsOf(zoneKey)
 	return state and itemsOf(state) or {}
 end
 
--- 재생성 자리를 고른다. context = { members = { Vector3 }, boss = Vector3, pits = { { position, radius } } }.
+-- G1-0(P3d-F 결정 3): 긴 계산을 여러 프레임에 나누는 체크포인트. 한 조각이 regrow.frameBudgetMs의 yieldAtFraction을 넘기면 다음 Heartbeat로 양보한다.
+-- 반환: checkpoint 함수, 통계 읽기 함수(조각 수 · 가장 긴 조각 ms).
+local function newSlicer()
+	local threshold = REGROW.frameBudgetMs / 1000 * REGROW.yieldAtFraction
+	local sliceStart, maxSlice, frames = os.clock(), 0, 1
+	local function checkpoint()
+		local elapsed = os.clock() - sliceStart
+		if elapsed >= threshold then
+			maxSlice = math.max(maxSlice, elapsed)
+			RunService.Heartbeat:Wait()
+			frames += 1
+			sliceStart = os.clock()
+		end
+	end
+	local function stats()
+		return frames, math.max(maxSlice, os.clock() - sliceStart) * 1000
+	end
+	return checkpoint, stats
+end
+
+-- 재생성 자리를 고른다. context = { members = { Vector3 }, boss = Vector3, pits = { { position, radius } }, sliced = 여러 프레임에 나눌까(G1-0 - 게임 경로는 true) }.
 -- 반환: plan { item, token, worldColliders = { { center, r, h } }, tries } 또는 nil, 이유.
 function BossArenaMap.planRegrow(zoneKey, context)
 	local state = active[zoneKey]
@@ -471,11 +492,27 @@ function BossArenaMap.planRegrow(zoneKey, context)
 		r.r = pit.radius
 		table.insert(pits, r)
 	end
-	local options = { kit = state.layoutOptions.kit, coverageMin = 0, members = members, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds }
+	local checkpoint, sliceStats = nil, nil
+	if context.sliced then
+		checkpoint, sliceStats = newSlicer()
+	end
+	local options = { kit = state.layoutOptions.kit, coverageMin = 0, members = members, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds, checkpoint = checkpoint }
 	local regrowId = 1000 + nextRegrowSerial()
 	local item, tries, why = ArenaLayout.regrowSpot(state.theme, itemsOf(state, oldest), function()
 		return state.regrowRng:NextNumber()
 	end, options, regrowId)
+	local frames, maxSliceMs = 1, nil
+	if sliceStats then
+		frames, maxSliceMs = sliceStats()
+		-- 나눠 도는 동안 이 슬롯의 보스전이 바뀌었거나(끝 · 리셋) 교체하려던 것이 사라졌 · 끼였으면 이번 계획은 버린다
+		if active[zoneKey] ~= state or context.token and context.token ~= state.regrowToken then
+			return nil, "cancelled"
+		end
+		local old = oldest and state.obstacles[oldest]
+		if oldest and (not old or old.broken or (old.encased and next(old.encased))) then
+			return nil, "stale"
+		end
+	end
 	if not item then
 		return nil, why -- 새 자리가 없으면 옛것도 그대로 둔다(리뷰 1 - 먼저 부수면 하나가 그냥 사라졌다)
 	end
@@ -486,7 +523,7 @@ function BossArenaMap.planRegrow(zoneKey, context)
 	for _, c in ipairs(item.colliders) do
 		table.insert(worldColliders, { center = Vector3.new(zone.center.X + c.x, FLOOR_TOP_Y, zone.center.Z + c.z), r = c.r, h = c.h })
 	end
-	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries, replaced = oldest }, nil
+	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries, replaced = oldest, frames = frames, maxSliceMs = maxSliceMs }, nil
 end
 
 -- 전조가 끝나 실제로 솟는다(리셋 · 보스전 끝으로 토큰이 바뀌었으면 nil). context(선택 - planRegrow와 같은 모양, 멤버는 안 본다) = 솟기 직전에 자리를 다시 본다(리뷰 6 -
@@ -507,7 +544,11 @@ function BossArenaMap.spawnRegrown(zoneKey, plan, context)
 			r.r = pit.radius
 			table.insert(pits, r)
 		end
-		local ok, why = ArenaLayout.regrowFits(plan.item, itemsOf(state), { kit = state.layoutOptions.kit, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds })
+		local checkpoint = context.sliced and newSlicer() or nil
+		local ok, why = ArenaLayout.regrowFits(plan.item, itemsOf(state), { kit = state.layoutOptions.kit, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds, checkpoint = checkpoint })
+		if checkpoint and (active[zoneKey] ~= state or state.regrowToken ~= plan.token) then
+			return nil, "cancelled" -- G1-0: 나눠 도는 사이 보스전이 바뀌었다
+		end
 		if not ok then
 			print(("[forge-game] 지형 재생성 취소(솟기 직전 자리 다시 봄): %s #%d - %s"):format(zoneKey, plan.item.id, tostring(why)))
 			return nil, why
@@ -647,6 +688,13 @@ function BossArenaMap.daisUnderFeet(zoneKey, feet)
 		end
 	end
 	return nil
+end
+
+-- G1-0: 구조물 윗면의 월드 높이(단상 위 바닥 판정 기준 - BossPatterns.victims의 groundFeet).
+function BossArenaMap.obstacleTop(zoneKey, id)
+	local state = active[zoneKey]
+	local obstacle = state and state.obstacles[id]
+	return FLOOR_TOP_Y + (obstacle and obstacle.height or 0)
 end
 
 -- 서 있는 단상 목록 { { id, center, radius } }(파동이 지나가는지 잰다).

@@ -104,8 +104,8 @@ local layout = {
 --     다른 구조물(단상 포함)과 ≥ layout.minGapStuds · 킷과 ≥ kitGapStuds · 보스와 ≥ bossClearStuds · 모래 구덩이와 ≥ pitGapStuds · 둔덕과 ≥ layout.mounds.gapStuds ·
 --     연결(갇힘 없음 - 격자 BFS) - 실패하면 다른 자리를 tries번까지 다시 뽑고, 다 실패하면 이번엔 안 솟는다(로그).
 --     underMemberChance의 확률로 멤버 한 명의 발밑(underMemberStuds 안)을 노린다(D2 "플레이어 발밑 생성 가능").
---   못 피하면(솟는 순간 발이 충돌 원 안): 충돌 원 가장자리(원 반경 − encaseCoreInsetStuds 밖)면 피해 = damage(평타 배율 - 방어 적용) + 원 밖으로 밀려나고, 안쪽이면 **끼인다**(D3):
---     끼이는 순간 피해 0 · 그 자리에 고정 · **무적 아님**(P3d-F B5 - 옛 0배는 전조 위에 일부러 서서 보스 패턴을 피하는 악용이 됐다) · 그 구조물을 escapeHits(3)타에 부순다(누가 때려도) ·
+--   못 피하면(솟는 순간 발이 충돌 원 안): 피해 = damage(평타 배율 - 방어 적용, G1-0: 밀림 · 끼임 같음). 충돌 원 가장자리(원 반경 − encaseCoreInsetStuds 밖)면 원 밖으로 밀려나고, 안쪽이면 **끼인다**(D3):
+--     끼이는 순간 피해 = 밀림과 같음(P3d-F 결정 2) · 그 자리에 고정 · **무적 아님**(P3d-F B5 - 옛 0배는 전조 위에 일부러 서서 보스 패턴을 피하는 악용이 됐다) · 그 구조물을 escapeHits(3)타에 부순다(누가 때려도) ·
 --     encaseAutoBreakSeconds(6초) 뒤 저절로 부서진다(영구 갇힘 방지). 머리 위 "탈출! n타"(클라).
 --   동시 상한(D4 · P3d-F B4): 서 있는 구조물이 maxObstacles 이상이면 **재생성된 것 중 가장 오래된 것**을 무너뜨리고(cause "cap" - 부드러운 붕괴 모션 · 위 사람은 떨어지기만) 새로 세운다.
 --     재생성된 것이 없으면(배치만으로 상한) 안 솟는다. 부서진 조각은 서버 인스턴스를 전부 파괴 · 클라 파편은 풀(BossFx)로 돌아간다.
@@ -120,6 +120,10 @@ local regrow = {
 	maxObstacles = 14,
 	minWalkableFraction = 0.7, -- P3d-F B4: 재생성 뒤 걸을 수 있는 칸 비율 하한(사용자 예시 70%)
 	tries = 80,
+	-- G1-0(P3d-F 결정 3): 자리 찾기 · 솟기 직전 다시 보기를 여러 프레임에 나눈다 - 한 프레임에 쓰는 시간 ≤ frameBudgetMs(옛 한 번에 평균 8.1 · 최대 16.4ms).
+	-- 조각이 예산 × yieldAtFraction을 넘기면 다음 Heartbeat로 양보한다(체크포인트 사이 계산이 남은 몫을 넘지 않게 여유).
+	frameBudgetMs = 2,
+	yieldAtFraction = 0.6,
 	underMemberChance = 0.5,
 	underMemberStuds = 4,
 	bossClearStuds = 6, -- 보스 몸통 반폭 3.6 + 여유
@@ -165,6 +169,14 @@ local containment = {
 	rescueInsetStuds = 8,
 	returnProtectSeconds = 0.75,
 	checkIntervalSeconds = 0.25,
+	-- G1-0(사용자 결정 - 공중 넉백이 벽 높이를 넘는 것은 웃음 요소로 허용, 높이 제한은 넣지 않는다 → 대신 복귀가 모든 경로에서 되게):
+	-- 벽 윗면 안쪽 띠(반경 R ~ R + outsideToleranceStuds)에 올라서면 "원 밖"도 "바닥 아래"도 아니라 ③이 못 잡았다. 발이 벽 윗면 − offFloorBelowWallTopStuds
+	-- 이상에 offFloorReturnSeconds 넘게 머물면 "바닥 위가 아님"으로 보고 복귀한다. 아레나 안에서 이 높이에 1초 머무는 길은 없다
+	-- (가장 높은 발판 단상 3.5 + 공중 넉백 정점 = 판정 상한 8 + 7.5 = 15.5 → 13 위 체공 약 0.3초).
+	offFloorBelowWallTopStuds = 1,
+	offFloorReturnSeconds = 1.0,
+	-- 스폰 자리 둘레에 동적 지형(얼음 기둥 · 모래 구덩이)이 있으면 그 자리 대신 안전 지점(끼임 0). 몸 반폭 + 여유.
+	spawnPropClearStuds = 2,
 	-- 이탈 시뮬레이션(검증 P3c(가)): 무작위 패턴 조합 trials회 - 한 조합 = 사건 1 ~ maxEvents개(넉백 · 회오리 · 구조물 파편 · 모래 무덤 밀기 · 대시 · 걷기).
 	sim = { trials = 1000, maxEvents = 6, seed = 20260924 },
 }

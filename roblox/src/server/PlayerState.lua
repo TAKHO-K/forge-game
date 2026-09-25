@@ -216,6 +216,8 @@ function PlayerState.debugIncomingSources(player)
 end
 
 -- 모든 피격 경로의 마지막 공통 지점(PlayerDamage.applyFinalDamage)이 매 피격마다 곱한다. 무적이면 0, 아니면 살아 있는 출처 배율의 곱(없으면 1).
+-- G1-0(P3d-F 결정 1): 곱의 최종 하한 = CombatConfig.incomingDamageMultiplierFloor(0.25) - 감소가 여럿 겹쳐도 그 밑으로는 안 내려간다(무적은 위 플래그로만).
+-- 1보다 큰 배율(받는 피해 증가)은 하한과 무관하다.
 function PlayerState.getIncomingDamageMultiplier(player)
 	local entry = players[player]
 	if not entry then
@@ -232,7 +234,7 @@ function PlayerState.getIncomingDamageMultiplier(player)
 			entry.incomingMultipliers[key] = nil
 		end
 	end
-	return product
+	return math.max(product, CombatConfig.incomingDamageMultiplierFloor)
 end
 
 -- 이동속도 배율도 출처별(P3d-F B6 전수 점검 B): 옛 회전베기는 시작할 때 WalkSpeed를 저장했다가 끝날 때 되돌려, 채널링 중 신발 · 보석을 바꾸면

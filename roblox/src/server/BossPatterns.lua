@@ -196,13 +196,29 @@ local function footOf(position)
 	return Vector3.new(position.X, position.Y - TerrainConfig.monsterFootOffsetStuds, position.Z)
 end
 
+-- G1-0(D0 추가 2 · 기존 문제 1): 바닥 판정(보스 중심 원 · 원 장판 · 돌진 · 직선 · 마무리)의 높이 기준 = **발밑 지면**. 단상(윗면 3.5) 위에서 1단 점프만 해도
+-- 발이 아레나 바닥 기준 8을 넘는 0.33초 동안 판정이 빠졌다(보이는 장판 = 판정 위반). 단상 발자국 위에서 윗면 이상에 있으면 발 높이에서 단상 높이를 빼고 잰다 -
+-- 평지 점프와 같은 "지면 + 7.2"가 된다. 지진파(단상 밑으로 지나감)와 재생성 접촉은 실제 발(feet)을 그대로 쓴다.
+function BossPatterns.groundFeet(zoneKey, floorY, feet)
+	local id = zoneKey and BossArenaMap.daisUnderFeet(zoneKey, feet)
+	if not id then
+		return feet
+	end
+	return feet - Vector3.new(0, BossArenaMap.obstacleTop(zoneKey, id) - (floorY or 0), 0)
+end
+
+local function groundFeetOf(st, feet)
+	return BossPatterns.groundFeet(st.zoneKey, st.floorY, feet)
+end
+
 local function victims(st)
 	local list = {}
 	for _, member in ipairs(st.members or {}) do
 		local character = member.Parent and member.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if root and (PlayerState.getHp(member) or 0) > 0 then
-			table.insert(list, { player = member, root = root, feet = feetOf(character, root) })
+			local feet = feetOf(character, root)
+			table.insert(list, { player = member, root = root, feet = feet, groundFeet = groundFeetOf(st, feet) })
 		end
 	end
 	return list
@@ -339,6 +355,7 @@ local function ensureState(model, data)
 		st.graceUntil = now + (data.scheduler.entryGraceSeconds or 0)
 		st.waves = {}
 		st.floorY = floorYUnder(MonsterState.getSpawnPosition(model))
+		st.zoneKey = MonsterState.getZoneKey(model) -- G1-0: 바닥 판정의 발밑 지면(단상)을 찾을 때(victims)
 		st.position = MonsterState.getSpawnPosition(model)
 		-- 스케줄러에 넘기는 문맥은 한 번만 만든다(매 틱 클로저를 새로 만들지 않는다).
 		st.pickCtx = {
@@ -441,7 +458,7 @@ end
 -- ─────────────────────────── 지형 재생성(P3d D · E - 규칙 = BossArenaMapData.regrow 주석) ───────────────────────────
 -- onComplete = { { type = "regrowObstacles", count } }. 자리는 BossArenaMap.planRegrow(= ArenaLayout.regrowSpot - 기존 구조물 · 단상 · 모래 구덩이 · 얼음 기둥 · 보스 · 킷 ·
 -- 둔덕 · 입장 방위와 겹치지 않고 갇힘이 없는 자리) → 멤버에게 전조(그림자 + 금 가는 빛)를 보내고 telegraphSeconds 뒤 솟는다. 솟는 순간 몸이 충돌 원에 닿은 사람:
--- 가장자리면 피해(regrow.damage - 방어 적용) + 원 밖으로 밀려나고(P3d-F B5: 끼임은 피해 0 · 무적 아님), 안쪽(원 반경 − encaseCoreInsetStuds 안)이거나 밀려날 자리가 막혔으면 끼인다(BossArenaMap.encase).
+-- 피해(regrow.damage - 방어 적용 · G1-0: 밀림 · 끼임 같음)를 받고, 가장자리면 원 밖으로 밀려나고(끼임은 무적 아님), 안쪽(원 반경 − encaseCoreInsetStuds 안)이거나 밀려날 자리가 막혔으면 끼인다(BossArenaMap.encase).
 local REGROW = BossArenaMapData.regrow
 local REGROW_SKILL = { damage = REGROW.damage, damageLabel = REGROW.damageLabel } -- applySkillDamage가 읽는 모양
 
@@ -469,13 +486,14 @@ local function regrowObstacles(c, effect)
 	task.defer(function()
 		for _ = 1, effect.count or 1 do
 			local planStartedAt = os.clock()
-			local plan, why = BossArenaMap.planRegrow(zoneKey, { members = members, boss = bossAt, pits = keepOut, token = token })
+			local plan, why = BossArenaMap.planRegrow(zoneKey, { members = members, boss = bossAt, pits = keepOut, token = token, sliced = true })
 			if not plan then
 				print(("[forge-game] 지형 재생성 건너뜀: %s - %s"):format(zoneKey, tostring(why)))
 				debugEvent("regrowSkip", { reason = why, at = os.clock(), zoneKey = zoneKey, token = token })
 				break
 			end
-			print(("[forge-game] 지형 재생성 자리: %s #%d %s - 시도 %d · %.1fms"):format(zoneKey, plan.item.id, plan.item.kind, plan.tries or 0, (os.clock() - planStartedAt) * 1000))
+			print(("[forge-game] 지형 재생성 자리: %s #%d %s - 시도 %d · %.1fms(%d프레임 · 한 프레임 최대 %.2fms)"):format(zoneKey, plan.item.id, plan.item.kind, plan.tries or 0,
+				(os.clock() - planStartedAt) * 1000, plan.frames or 1, plan.maxSliceMs or 0))
 			send(st, "regrowTelegraph", { id = plan.item.id, colliders = plan.worldColliders, seconds = REGROW.telegraphSeconds, color = plan.item.spec.color, floorY = st.floorY })
 			debugEvent("regrowPlan", { plan = plan, at = os.clock(), zoneKey = zoneKey, token = token })
 			local planned = os.clock()
@@ -486,7 +504,7 @@ local function regrowObstacles(c, effect)
 					table.insert(now, { position = prop.position, radius = prop.radius })
 				end
 				local bossNow = model.Parent and model.PrimaryPart and (BossPatterns.getLogicalPosition(model) or model.PrimaryPart.Position) or nil
-				local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, { boss = bossNow, pits = now })
+				local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, { boss = bossNow, pits = now, sliced = true })
 				if not obstacle then
 					debugEvent("regrowSkip", { reason = why, at = os.clock(), atSpawn = true, zoneKey = zoneKey, token = token, id = plan.item.id })
 					return
@@ -502,7 +520,6 @@ local function regrowObstacles(c, effect)
 							local target = collider.center + away * (collider.r + REGROW.pushOutStuds)
 							if not BossArenaMap.overlapsObstacle(zoneKey, target, half, 0) then
 								outcome = "push"
-								applySkillDamage(model, data, REGROW_SKILL, v.player) -- P3d-F B5: 피해는 밀려난 사람만 - 끼이는 순간은 0(대신 끼인 동안 무적이 아니다)
 								local to = Vector3.new(target.X, v.root.Position.Y, target.Z)
 								if typeof(v.root) == "Instance" then
 									v.root.CFrame = CFrame.new(to) * v.root.CFrame.Rotation
@@ -511,6 +528,8 @@ local function regrowObstacles(c, effect)
 								end
 							end
 						end
+						-- G1-0(P3d-F 결정 2): 솟는 순간 닿은 사람은 밀리든 끼이든 같은 피해(regrow.damage = 평타 ×2). 끼인 동안 무적은 없다.
+						applySkillDamage(model, data, REGROW_SKILL, v.player)
 						if outcome == "encase" then
 							BossArenaMap.encase(zoneKey, obstacle, v.player, v.root)
 						end
@@ -709,7 +728,7 @@ HANDLERS.circleBoss = {
 		local inner = pulse.innerRadiusStuds or 0
 		judgeBegin()
 		for _, v in ipairs(victims(st)) do
-			if Reach.horizontalDistance(v.root.Position, c.position) <= pulse.radiusStuds and Reach.sameLayer(v.feet, footOf(c.position)) -- 22-4 수평 + 높이차 상한(P3a D3: 발 기준)
+			if Reach.horizontalDistance(v.root.Position, c.position) <= pulse.radiusStuds and Reach.sameLayer(v.groundFeet, footOf(c.position)) -- 22-4 수평 + 높이차 상한(P3a D3: 발 기준)
 				and Reach.horizontalDistance(v.root.Position, c.position) >= inner then
 				applySkillDamage(c.model, c.data, skill, v.player)
 			end
@@ -1042,7 +1061,7 @@ HANDLERS.circleTarget = {
 		for _, v in ipairs(victims(st)) do
 			local p = xz(v.root.Position)
 			for spotIndex, spot in ipairs(st.meteorPositions) do
-				if (p - xz(spot)).Magnitude <= skill.radiusStuds and Reach.sameLayer(v.feet, spot) then -- 22-4(P3a D3: 발 기준)
+				if (p - xz(spot)).Magnitude <= skill.radiusStuds and Reach.sameLayer(v.groundFeet, spot) then -- 22-4(P3a D3: 발 기준)
 					applySkillDamage(c.model, c.data, skill, v.player)
 					table.insert(hits, { v = v, spot = spot, spotIndex = spotIndex })
 					break
@@ -1251,7 +1270,7 @@ HANDLERS.charge = {
 			end
 			for _, v in ipairs(victims(st)) do
 				if not st.chargeHitBy[v.player] and distanceToSegment(xz(v.root.Position), prev, xz(newPos)) <= skill.pathHalfWidthStuds
-					and Reach.sameLayer(v.feet, footOf(newPos)) then -- P3a D3: 발 기준
+					and Reach.sameLayer(v.groundFeet, footOf(newPos)) then -- P3a D3: 발 기준
 					st.chargeHitBy[v.player] = true
 					applySkillDamage(c.model, c.data, skill, v.player)
 					debugEvent("chargeHit", { player = v.player, dashIndex = st.chargeDashIndex, at = c.now })
@@ -1380,7 +1399,7 @@ HANDLERS.line = {
 			for _, beam in ipairs(st.crossBeams) do
 				local along = rel:Dot(beam.dir)
 				if along >= 0 and along <= beam.length and (rel - beam.dir * along).Magnitude <= skill.halfWidthStuds
-					and Reach.sameLayer(v.feet, Vector3.new(0, st.floorY, 0)) then -- 22-4: 지면을 탄다(P3a D3: 발 기준)
+					and Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0)) then -- 22-4: 지면을 탄다(P3a D3: 발 기준)
 					applySkillDamage(c.model, c.data, skill, v.player)
 					break
 				end
@@ -1690,7 +1709,7 @@ HANDLERS.gimmick = {
 			end
 			if finisher and st.finisherCenter then
 				for _, v in ipairs(list) do
-					if Reach.horizontalDistance(v.root.Position, st.finisherCenter) <= finisher.radiusStuds and Reach.sameLayer(v.feet, st.finisherCenter) and not BossTrap.isTrapped(v.player) then -- P3a D3: 발 기준
+					if Reach.horizontalDistance(v.root.Position, st.finisherCenter) <= finisher.radiusStuds and Reach.sameLayer(v.groundFeet, st.finisherCenter) and not BossTrap.isTrapped(v.player) then -- P3a D3: 발 기준
 						applySkillDamage(c.model, c.data, finisher, v.player)
 						if finisher.trapOnHit and (PlayerState.getHp(v.player) or 0) > 0 then
 							BossMechanics.trapMember(c.model, c.data, v.player)
