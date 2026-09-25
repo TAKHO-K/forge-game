@@ -26,6 +26,7 @@ local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
+local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData) -- G1-2: 처치 시간 상한(fairness.maxSecondsPerHit)
 
 local MonsterState = {}
 
@@ -58,6 +59,7 @@ function MonsterState.init(model, data, spawnPosition, zoneKey, variant)
 		-- 24-1: 보스도 기여 비율을 기록한다(damage/maxHp) - 파티 보스 보상이 잡몹과 같은 "기여
 		-- 10% 이상 각자 독립 지급" 규칙(CombatConfig.contributionRewardThreshold)을 쓴다(지시 4).
 		contributions = {},
+		hitCounts = {}, -- G1-2 리뷰 2
 		firstHitAt = {}, -- G1-2: [Player] = 처음 때린 시각(os.clock) - 처치 시간 공정성 보정(DropTable.timeFairnessFactor)
 		data = data,
 		spawnPosition = spawnPosition,
@@ -265,8 +267,9 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	local effectiveMaxHp = InfiniteStage.getMonsterHp(entry.data.hp, attackerStage) * prefixHpMultiplier
 	local ratioDealt = effectiveMaxHp > 0 and (damage / effectiveMaxHp) or 0
 	entry.hpRatio -= ratioDealt
-	if attackerPlayer and entry.firstHitAt and not entry.firstHitAt[attackerPlayer] then
-		entry.firstHitAt[attackerPlayer] = os.clock()
+	if attackerPlayer and entry.firstHitAt then
+		entry.firstHitAt[attackerPlayer] = entry.firstHitAt[attackerPlayer] or os.clock()
+		entry.hitCounts[attackerPlayer] = (entry.hitCounts[attackerPlayer] or 0) + 1 -- G1-2 리뷰 2: k 상한(때린 횟수 × maxSecondsPerHit)
 	end
 	if attackerPlayer then
 		entry.contributions[attackerPlayer] = (entry.contributions[attackerPlayer] or 0) + ratioDealt
@@ -281,7 +284,11 @@ end
 function MonsterState.getKillSecondsFor(model, player)
 	local entry = monsters[model]
 	local at = entry and entry.firstHitAt and entry.firstHitAt[player]
-	return at and (os.clock() - at) or nil
+	if not at then
+		return nil
+	end
+	-- 리뷰 2: 한 대 찔러 두고 나중에 잡아도 걸린 시간이 부풀지 않게 - 때린 횟수 × maxSecondsPerHit 이하
+	return math.min(os.clock() - at, (entry.hitCounts[player] or 1) * DropTableData.fairness.maxSecondsPerHit)
 end
 
 function MonsterState.getContributors(model)
@@ -300,6 +307,7 @@ function MonsterState.clearPlayerContributions(player)
 		end
 		if entry.firstHitAt then
 			entry.firstHitAt[player] = nil
+			entry.hitCounts[player] = nil
 		end
 		-- 보물상자 피격 기록도 같이 지운다(22-2 [3] 지시 "플레이어 퇴장 시 그 기록도 정리") -
 		-- 남겨 두면 파괴 시점에 이미 나간 Player를 보상 대상으로 순회하게 된다.

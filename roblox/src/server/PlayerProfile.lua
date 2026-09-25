@@ -1390,16 +1390,17 @@ function PlayerProfile.autoProcessDrop(player, item)
 	return { kind = "sell", grade = item.grade, part = item.part, gold = price }
 end
 
-function PlayerProfile.addArmorDrop(player, item)
+-- 반환: 넣었는가(또는 처리됐는가), 자동 처리 결과(G1-2 - 처리됐으면 표, 가방에 넣었으면 nil). options.noAutoProcess = 개발 명령 · 검증이 가방에 그대로 넣을 때.
+function PlayerProfile.addArmorDrop(player, item, options)
 	local profile = profiles[player]
 	if not profile then
 		return false
 	end
 	-- G1-2: 자동 처리 대상이면 가방에 넣지 않고 바로 분해 · 판매(가방이 가득이어도 처리된다 - 줍기 성공)
-	local processed = PlayerProfile.autoProcessDrop(player, item)
+	local processed = not (options and options.noAutoProcess) and PlayerProfile.autoProcessDrop(player, item) or nil
 	if processed then
 		InventorySync.notifyAutoProcessed(player, processed)
-		return true
+		return true, processed
 	end
 	if #profile.inventory >= profile.inventorySlots then
 		return false

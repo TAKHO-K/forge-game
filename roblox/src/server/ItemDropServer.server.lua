@@ -30,10 +30,12 @@ local function tryPickup(model, owner)
 		return
 	end
 
-	local added = PlayerProfile.addArmorDrop(owner, item)
+	local added, processed = PlayerProfile.addArmorDrop(owner, item)
 	if added then
 		ItemDropSpawner.despawn(model)
-		itemPickedUp:FireClient(owner, item)
+		if not processed then -- G1-2 리뷰 3: 자동 처리됐으면 "획득" 대신 자동 처리 알림만(InventorySync)
+			itemPickedUp:FireClient(owner, item)
+		end
 	elseif not ItemDropState.isFullNotified(model) then
 		-- 인벤토리가 가득 차도 드랍 자체는 취소하지 않는다(14-1 판단 - "땅에는 있는데 못
 		-- 줍는" 상태로 둔다. 눈앞에 두고 못 주우면 정리하고 싶어지고, 판매 기능(13-1)이

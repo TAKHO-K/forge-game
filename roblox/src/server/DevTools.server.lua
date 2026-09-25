@@ -216,7 +216,7 @@ local function applyAddItem(player, part, grade, itemLevel)
 	end
 	local item = buildGearItem(part, grade, itemLevel, nil, PlayerProfile.getClassId(player))
 	item.locked = false
-	return PlayerProfile.addArmorDrop(player, item)
+	return PlayerProfile.addArmorDrop(player, item, { noAutoProcess = true }) -- G1-2 리뷰 4: 개발 명령은 자동 처리를 건너뛴다
 end
 
 -- "/gg fillbag [n]" - 등급 · 부위가 섞인 잠기지 않은 장비를 n개 가방에 넣는다(기본 = 가방이 가득 찰 만큼). 가방 가득 참 상황(해제 거절 · 줍기 실패 · 정리 흐름)을 채팅 명령 하나로 만든다.
@@ -230,7 +230,7 @@ local function applyFillBag(player, want)
 		local grade = grades[(i - 1) % #grades + 1]
 		local item = buildGearItem(parts[(i - 1) % #parts + 1], grade, 10 + i, nil, classId)
 		item.locked = false
-		if not PlayerProfile.addArmorDrop(player, item) then
+		if not PlayerProfile.addArmorDrop(player, item, { noAutoProcess = true }) then -- G1-2 리뷰 4
 			break
 		end
 		added += 1

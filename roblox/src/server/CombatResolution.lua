@@ -63,8 +63,13 @@ end
 -- 아레나 땅에 남은 드랍은 주울 수 없었다. 성공하면 줍기와 같은 ItemPickedUp(획득 팝업)을 쏜다. 가방이 가득이면 false를
 -- 돌려주고 호출부가 deferred에 담는다 - 땅에 떨어뜨리는 일은 복귀 텔레포트 뒤(flushDeferredBossDrops)다.
 local function deliverBossDropToBag(recipient, item)
-	if not PlayerProfile.addArmorDrop(recipient, item) then
+	local added, processed = PlayerProfile.addArmorDrop(recipient, item)
+	if not added then
 		return false
+	end
+	if processed then
+		dropStats.autoProcessed = (dropStats.autoProcessed or 0) + 1 -- G1-2 리뷰 3: 가방 집계 · 획득 알림에서 뺀다
+		return true
 	end
 	-- ItemPickedUp은 ItemDropServer가 만든 인스턴스를 그대로 쓴다(새 이벤트를 만들지 않는다).
 	local pickedUp = ReplicatedStorage:FindFirstChild("ItemPickedUp")

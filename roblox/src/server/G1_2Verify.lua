@@ -50,14 +50,14 @@ function G1_2Verify.runPure()
 	r.section("보정 식", function()
 		local H6 = hpUnits(6)
 		local oneShot = DropTable.timeFairnessFactor(0.05, H6)
-		local slow = DropTable.timeFairnessFactor(60, H6)
+		local slow = DropTable.timeFairnessFactor(600, H6)
 		local tier1 = DropTable.timeFairnessFactor(0.05, 1)
 		local noTime = DropTable.timeFairnessFactor(nil, H6)
 		local saved = config.strength
 		config.strength = 0
 		local off = DropTable.timeFairnessFactor(0.05, H6)
 		config.strength = saved
-		r.check(("드래곤 H %.2f: 한 방 c %.4f(기대 1/H %.4f) · 60초 c %.4f(기대 ≥ 0.98) · tier1 %.2f · 처치 시간 없음 %.2f · 세기 0 %.2f(기대 1 · 1 · 1)"):format(
+		r.check(("드래곤 H %.2f: 한 방 c %.4f(기대 1/H %.4f) · 600초 c %.4f(기대 ≥ 0.98 - 이동 시간이 작아질수록 1) · tier1 %.2f · 처치 시간 없음 %.2f · 세기 0 %.2f(기대 1 · 1 · 1)"):format(
 			H6, oneShot, 1 / H6, slow, tier1, noTime, off),
 			near(oneShot, 1 / H6, 1e-9) and slow >= 0.98 and tier1 == 1 and noTime == 1 and off == 1)
 		-- 옛 호출(처치 시간 없음)은 옛 값 그대로

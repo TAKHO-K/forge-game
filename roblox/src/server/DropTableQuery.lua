@@ -43,7 +43,7 @@ function DropTableQuery.describe(playerInfo, tierIndex, huntStage, expGainMultip
 		monsterName = MonsterData[key].displayName,
 		huntStage = huntStage,
 		bestStage = playerInfo.bestStage,
-		armorPerKill = Loot.expectedArmorDropCount(tierIndex, 1),
+		armorPerKill = Loot.expectedArmorDropCount(tierIndex, 1), -- G1-2: 처치 시간 보정 전(느린 처치 기준 상한) - 실제는 받는 사람의 처치 시간에 따라 × DropTable.timeFairnessFactor
 		primordial = {
 			baseRate = DropTable.primordialBaseRate(tierIndex),
 			levelDecay = DropTable.levelDecay(playerInfo.bestStage, huntStage),
