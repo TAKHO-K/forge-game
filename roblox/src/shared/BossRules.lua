@@ -36,9 +36,11 @@ function BossRules.partyHpExponent()
 	return 1 - math.log(BossData.intervalPowerRatio) / math.log(PartyConfig.maxMembers)
 end
 
+-- BR1-2: 보스 HP 배수는 BossData.mechanics.party.hpExponent(파티 난이도 상향 - 설계 §8). 파훼 게이트 배율 g는 옛 p(partyHpExponent) 그대로다.
 function BossRules.partySizeHpMultiplier(memberCount)
 	local n = math.max(memberCount or 1, 1)
-	return n ^ BossRules.partyHpExponent()
+	local party = BossData.mechanics.party
+	return n ^ (party and party.hpExponent or BossRules.partyHpExponent())
 end
 
 -- 파훼 게이트의 받는 피해 배율 g(29-1, PRD 20.73 [2-8] A-3) = N_max^(p−1) = 1/intervalPowerRatio ≈ 0.487(P2.5a - 옛 1/k^stageInterval).
@@ -205,6 +207,19 @@ function BossRules.buildTutorialInstanceData(tierIndex, stage, patternKeys, hpSc
 	return data
 end
 
+-- BR1-2 파티 전역 쿨(BossData.mechanics.party.globalCooldownScale[N]) - 솔로는 원본 표 그대로.
+function BossRules.partyScheduler(scheduler, partySize)
+	local party = BossData.mechanics.party
+	local n = math.clamp(math.floor(partySize or 1), 1, #(party and party.globalCooldownScale or { 1 }))
+	local scale = party and party.globalCooldownScale[n] or 1
+	if scale == 1 then
+		return scheduler
+	end
+	local copy = table.clone(scheduler)
+	copy.globalCooldownSeconds = scheduler.globalCooldownSeconds * scale
+	return copy
+end
+
 -- buildInstanceData/buildTutorialInstanceData 공용 - trashBase(MonsterData의 tier 항목)와
 -- hpMultiplierExtra(견습 전용 배율, 일반 무한 모드는 1)만 다르다. partySize(24-1)는
 -- partySizeHpMultiplier 전용 - 견습 호출부는 nil(=1)을 넘긴다(견습은 항상 싱글). densityExtra(S14)는 스킬표 사본에 더하는 낙하 원 개수 -
@@ -268,7 +283,7 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		skills = (BossSkillMath.applyCurve(BossSkillMath.scaleSkills(boss.skills, BossRules.skillRangeScale(stage)), BossSkillMath.curveRow(stage), densityExtra or 0, WorldConfig.playerWalkSpeedStuds)),
 		curveTier = BossSkillMath.curveRow(stage).tier,
 		skillOrder = boss.skillOrder,
-		scheduler = boss.scheduler,
+		scheduler = BossRules.partyScheduler(boss.scheduler, partySize),
 		skillRangeScale = BossRules.skillRangeScale(stage),
 		densityExtra = densityExtra or 0,
 		arenaKit = boss.arenaKit,

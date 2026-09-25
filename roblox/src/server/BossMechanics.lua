@@ -349,6 +349,21 @@ function BossMechanics.registerJudge(kind, fn)
 	judges[kind] = fn
 end
 
+-- BR1-2 파티 공동 책임(BossData.mechanics.party.failShareFraction): 전멸기를 failCount명이 실패하면 나머지(안 잡힌 · 성공한) 멤버도 failCount × 비율(보호막 무시).
+-- failedSet = { [player] = true }(없으면 이번 판정에서 잡힌 사람 = 실패자로 본다 - 일반 기믹은 실패하면 잡힌다).
+function BossMechanics.shareGimmickFailure(model, victims, failCount, failedSet, label)
+	local share = BossData.mechanics.party and BossData.mechanics.party.failShareFraction or 0
+	if failCount <= 0 or share <= 0 or #victims <= 1 then
+		return
+	end
+	for _, v in ipairs(victims) do
+		local failed = failedSet and failedSet[v.player] or (not failedSet and BossTrap.isTrapped(v.player))
+		if not failed then
+			PlayerDamage.applyMaxHpFraction(v.player, share * failCount, (label or "전멸기") .. " - 공동 책임", { ignoresShield = true })
+		end
+	end
+end
+
 -- 기믹 패턴의 예고가 끝나는 순간(BossPatterns) - victims = { { player, root }, ... }.
 -- 사람마다 판정해 실패자에게 failGimmick을 넣고, 한 명이라도 성공했으면 게이트를 연다. 판정 함수는
 -- fn(model, data, victim, cfg)를 받는다(29-3: cfg = 그 기믹 스킬 - 어느 지형이 안전지대인가 같은 것을 데이터에서 읽는다).
@@ -356,6 +371,7 @@ end
 function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 	local judge = judges[cfg.kind]
 	local safeCount, failCount = 0, 0
+	local failedSet = {} -- BR1-2 공동 책임
 	-- BR1: 이 기믹을 이 보스전에서 몇 번째 판정하는가(첫 회차 = 실패 55%, 그 뒤 85%). 전멸 리셋(reset)이면 다시 처음이다.
 	local rounds = stateOf(model).gimmickRounds
 	rounds[cfg] = (rounds[cfg] or 0) + 1
@@ -371,6 +387,7 @@ function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 				safeCount += 1
 			else
 				failCount += 1
+				failedSet[v.player] = true
 				-- cfg.failPenalty == false: 실패의 대가를 판정 밖에서 이미 치렀다(갑각 반사 - 때릴 때마다 받았다). 게이트만 남는다.
 				-- cfg.failTraps == false(29-5 파편 폭풍): %피해만 - 이 보스의 잡힘은 판정이 아니라 분신을 때린 순간에 온다.
 				if cfg.failPenalty ~= false and cfg.failTraps == false then
@@ -380,6 +397,9 @@ function BossMechanics.resolveGimmick(model, data, cfg, victims, label)
 				end
 			end
 		end
+	end
+	if cfg.failPenalty ~= false then -- 갑각 반사(실패의 대가를 이미 치렀다)는 나누지 않는다
+		BossMechanics.shareGimmickFailure(model, victims, failCount, failedSet, label)
 	end
 	-- cfg.judgesGate == false(29-4 과충전): 이 기믹은 게이트를 바꾸지 않는다 - 피했다고 장막이 걷히지 않는다(걷는 것은 낙뢰뿐).
 	local broken = safeCount > 0 and cfg.judgesGate ~= false

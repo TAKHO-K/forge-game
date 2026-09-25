@@ -140,6 +140,13 @@ local MECHANICS = {
 		maxAirSeconds = 1.961, -- 한 체공 최대(공중 점프 2 + 대시 - movement-metrics v2 · JumpMath.maxAirSeconds) - 회피 검사 "보고 착지"의 기준
 	},
 
+	-- BR1-2 파티 난이도(설계 §8 - 사용자: 파티 첫 도전 전멸도 30 ~ 50% · 처치 시간은 솔로보다 짧되 인원수에 반비례까지는 아니게 · 솔로가 파티보다 쉬워도 된다):
+	--   hpExponent: 보스 HP = 솔로 × N^hpExponent(옛 p 0.48 - 파훼 게이트 배율 g는 옛 p 그대로 BossRules.gateDamageTakenMultiplier).
+	--   globalCooldownScale[N]: 전역 쿨 × (인원이 많을수록 보스가 바쁘다 - 패턴 수 = 기믹 요구 증가). 투사체는 곡선의 인당 개수(§1)라 따로 늘리지 않는다.
+	--   failShareFraction: 공동 책임 - 전멸기(기믹 판정 · 색 맞추기)를 누가 실패하면 나머지 멤버도 실패한 인원 × 이 값(최대 체력 · 보호막 무시). 파티는 서로의 실수를 같이 진다.
+	--   값 = 난이도 모형 격자(BR1-2 보고서 ④): 2인 · 4인 첫 도전 전멸 30%대 · 처치 시간 솔로 > 2인 · 4인.
+	party = { hpExponent = 0.9, globalCooldownScale = { 1, 0.8, 0.7, 0.6 }, failShareFraction = 0.35 },
+
 	-- BR1 핵심 기믹 실패(설계 §3): 55% → 85% · 쉴드 무시. 기믹 판정 실패(resolveGimmick)에만 쓴다 - 다른 %최대체력 피해(돌진 · 구덩이 · 반사 · 분신)는
 	-- 옛 발동당 상한(gimmickFailMaxHpFraction 55%)에 그대로 묶인다. 85%는 "실패 + 강한 공격 한 번 = 죽음"이면서 단독으로는 죽지 않는 값(즉사는 K 단계).
 	-- 그 보스전에서 **처음 보는** 기믹의 실패는 firstMaxHpFraction(옛 55% - 배우는 한 번), 두 번째부터 maxHpFraction(85%). 난이도 모형(첫 도전 전멸률 목표 30 ~ 50%)에서
@@ -251,6 +258,21 @@ local MECHANICS = {
 			basicExposure = { ranged = 0.12, melee = 0.45 },
 			evadeSeconds = { sector = 1.0, projectile = 0.8, grab = 0.5, vortex = 2.5, chain = 0.8, ambush = 1.2 },
 			envDpsMultiplier = 0.8, -- 환경이 도는 동안 딜이 줄어드는 몫(피하고 버티느라)
+			-- BR1-2 추가 가정(설계 §9 - 역시 가정, 보고서에 싣는다):
+			--   basicExposureBR12: 평타 사거리 26 · 먼 거리 반감 뒤 평타 노출(스킬 사이 시간 중) - 원거리 · 근접. innerCircle = 근접 원형 구역 보스에서 근접이 원 밖에 나가 있는 몫.
+			--   extraProjectileHit: 한 사람에게 쏜 투사체 중 두 번째부터의 맞을 확률 = 첫 발 확률 × 이 값(같은 방향에서 줄지어 온다 - 첫 발을 피하면 대개 다 피한다).
+			--   reflectHit: 원거리가 반사를 보고도 쏘다 되돌아온 것에 맞을 확률(처음 · 두 번째부터). sonicSafeTicks: 음파 실패 때 그래도 가려진 틱 수(균등 min ~ max).
+			--   grabEscape: 잡힌 뒤 발악으로 풀려날 확률(솔로 18회 · 인원마다 더 필요하지만 같이 누른다). courseSeconds: 수정 부수기(보스 보호막) 동안 딜 0인 시간(솔로 두 코스 · 파티 나눠서).
+			--   colorPartyPenalty: 색 맞추기 실패 확률 × (1 + 이 값 × (인원 − 1)) - 남이 밟아 내 발판이 뒤집힌다.
+			basicExposureBR12 = { ranged = 0.6, melee = 0.7, innerCircleMelee = 0.12 },
+			extraProjectileHit = 0.35,
+			reflectHit = { first = 0.35, later = 0.15 },
+			sonicSafeTicks = { min = 0, max = 3 },
+			grabEscape = 0.5,
+			courseSeconds = { solo = 45, party = 28, jitter = 0.3 },
+			colorPartyPenalty = 0.1,
+			courseGroundHitScale = 0.4,
+			partyFailShare = 0.35, -- = mechanics.party.failShareFraction(모형이 같은 값을 쓴다 - 아래 루프가 맞춘다) -- 수정 부수기 동안 점프맵 위 사람이 바닥 판정 · 평타를 맞는 몫(높이 올라가 있다)
 		},
 	},
 }
@@ -287,7 +309,8 @@ end
 
 -- BR1-2 평타 사거리(사용자 - 원거리가 안 맞고 플레이하지 않게): 피할 수 없는 기본 공격이 fullStuds(26 = 원거리 직업 최대 사거리 약 24 + 여유)까지 그대로 닿는다 ·
 -- 그 밖(아주 먼 거리 - 플레이어도 못 때리는 자리) ~ farStuds(60)는 farMultiplier(반감) · 그보다 멀면 안 닿는다. 원 밖이라고 반감하지 않는다(궁수 · 치유사 정체성 보호).
-local BASIC_RANGE = { fullStuds = 26, farStuds = 60, farMultiplier = 0.5 }
+-- damageScale: 사거리가 넓어져 원거리도 스킬 사이 내내 평타를 맞는다(노출 12% → 약 70% - 난이도 모형 가정) → 한 방을 줄여 초당 5% → 1.5%(피할 수 없는 공격은 낮게 - BR1 원칙 그대로).
+local BASIC_RANGE = { fullStuds = 26, farStuds = 60, farMultiplier = 0.5, damageScale = 0.3 }
 
 -- BR1-2 근접 원형 구역(사용자 - 근접 실패율 상위 3보스만: 서리 거인 98 · 폭풍 군주 94 · 구간 수호자 88%, BR1 모형): 보스 둘레 innerSafeRadiusStuds 원(바닥에 보인다) = 평타 최소 사거리.
 -- 평타는 원 밖을 낫 휘두르듯 쓸어 원 밖의 멤버 **전원**을 친다(원 안은 평타를 안 맞는다) · 가끔 원 안 강공격(innerSmash - 전조 있고 걸어 나가면 피한다).
@@ -559,7 +582,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(-1.2, 0.9, 0), size = Vector3.new(0.5, 0.5, 0.9), kind = "block", color = "head", name = "RightPauldron" },
 		},
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
-		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
+		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "heavy", "shockwave", "meteor", "charge", "cross", "swipe", "grab", "fists", "orbs", "earthSplit", "mirror", "innerSmash" },
 		skills = guardianSkills(),
@@ -583,7 +606,7 @@ local SPECIES = {
 			{ anchor = "head", offset = Vector3.new(-0.5, 0.6, 0), size = Vector3.new(0.3, 1.4, 0.3), rotationDeg = Vector3.new(0, 180, 25), kind = "wedge", color = "head", name = "RightHorn" },
 		},
 		moveSpeedStuds = 6, chaseStopDistanceStuds = 8,
-		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 0.525, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1.5 → ×0.525(초당 5% - 6종 같음 · 난이도 모형 조정)
+		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 0.525 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1.5 → ×0.525(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(7),
 		skillOrder = { "slam", "icefall", "spike", "roar", "swipe", "grab", "spear", "stomp", "snowball", "mirror", "innerSmash" },
 		-- BR1 환경 변화 "빙하 균열"(체력 50%부터): 포효하며 땅을 내려친다 → 반경 95의 고리에 금(4.2초) → 그 밖이 15초 동안 얼음물(0.5초마다 6%).
@@ -698,7 +721,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 0.7, -1.0), size = Vector3.new(0.6, 0.6, 1.0), rotationDeg = Vector3.new(0, 180, 0), kind = "wedge", color = "body", name = "TailFin" },
 		},
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "sweep", "tide", "spout", "colors", "swipe", "grab", "tailSweep", "vortex", "bubbles", "mirror" },
 		-- BR1 환경 변화 "밥상뒤집기 = 널뛰기"(사용자 보완 B · 체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 사각 판 40 × 60이 (1 + 인원 ÷ 2)개.
@@ -764,6 +787,7 @@ local SPECIES = {
 				cooldownSeconds = 22, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				telegraphSeconds = 7.5, recoverSeconds = 1.5,
 				platformTag = "platform", standToleranceStuds = 2.5, failMaxHpFraction = 0.9,
+				telegraphPerExtraMemberSeconds = 0.5, -- 파티: 한 사람 늘 때마다 전조 +0.5초(남이 밟아 뒤집히는 혼란만큼)
 				dodge = { distanceStuds = 57 },
 				damage = { kind = "maxHp", fraction = 0.9 }, damageLabel = "색 맞추기 실패",
 				sim = { evadeSeconds = 3.5 },
@@ -813,7 +837,9 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 1.1, -0.7), size = Vector3.new(0.4, 1.6, 0.4), kind = "wedge", color = "head", name = "BackShard" },
 		},
 		moveSpeedStuds = 7, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
+		-- BR1-2: 수정 부수기 동안 보호막(딜 0 - 솔로 약 45초)이 있어 HP를 60초분 × 0.7로(난이도 모형 - 처치 시간 목표 45 ~ 90초)
+		hpMultiplier = MECHANICS.sim.referenceKillSeconds / BalanceAnchorConfig.killTargetSeconds * 0.7,
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "burst", "drop", "beam", "split", "swipe", "grab", "spikes", "shards", "mirrorDash", "mirror" },
 		-- BR1-2 환경 변화 "수정 부수기"(사용자 보강 C - 옛 공중 정원 대체 · server/BossJumpCourse): 두 팔을 들어 수정을 띄운다(3초) → 보스 몸에 **보호막**(피해로는 절대 안 깨진다 -
@@ -822,7 +848,7 @@ local SPECIES = {
 		-- 체크포인트 발판(초록)을 밟으면 떨어져도 거기로 돌아간다 · 아레나 가장자리에 투명 벽(wallHeightStuds - 끝나면 치운다). 솔로도 두 코스를 차례로 오른다.
 		environment = {
 			id = "crystalGarden", style = "crystal", kind = "jumpCourse", motion = "hand", damageLabel = "수정 부수기",
-			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 40, telegraphSeconds = 3.0, durationSeconds = 0,
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 9999, telegraphSeconds = 3.0, durationSeconds = 0, -- 한 판에 한 번(보호막 동안 딜 0 - 두 번이면 처치 시간이 너무 길다)
 			zones = { shape = "none" },
 			garden = { stunSeconds = 5, wallHeightStuds = 60, color = crystalHead },
 		},
@@ -922,8 +948,8 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 0.8, 1.0), size = Vector3.new(0.35, 1.2, 0.35), rotationDeg = Vector3.new(-30, 0, 0), kind = "wedge", color = "body", name = "TailSpike" },
 		},
 		moveSpeedStuds = 10, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
-		scheduler = scheduler(5),
+		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
+		scheduler = scheduler(6), -- BR1-2: 5 → 6(난이도 모형 - 가장 바쁜 두 보스의 솔로 전멸 64 · 61%)
 		skillOrder = { "claw", "sting", "stab", "shell", "swipe", "grab", "stingJab", "ambush", "clawSweep", "mirror" },
 		-- BR1 환경 변화 "개미지옥"(체력 50%부터): 몸을 흔들며 모래를 판다(3초 - 모래 소용돌이) → 12초 동안 아레나 한가운데 구덩이(반경 45)가 초당 7로 당긴다
 		-- (클라 - 걷기 16보다 느리다: 반대로 달리면 9/초로 버틴다) · 중심(반경 8)에 있으면 0.5초마다 10%. 떠 있어도 당긴다(수평).
@@ -964,7 +990,7 @@ local SPECIES = {
 				cooldownSeconds = 8, priority = P.normal, starvationSeconds = 40,
 				conditions = { { type = "targetWithin", studs = 12 } },
 				telegraphSeconds = 1.5, directions = 3, stepDeg = 35, centered = true, volleys = 1, rotateDeg = 0, halfWidthStuds = 3,
-				damage = { kind = "attack", multiplier = 3 }, damageLabel = "집게 강타",
+				damage = { kind = "attack", multiplier = 2.6 }, damageLabel = "집게 강타", -- BR1-2: ×3 → ×2.6(난이도 모형 - 전갈 근접 전멸 62%)
 			},
 			-- 독침 낙하. 기본형 낙석보다 작고(반경 5) 빠르다(1.2초) - 빠른 보스의 템포.
 			sting = {
@@ -1077,8 +1103,8 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(-1.2, 1.3, 0), size = Vector3.new(0.3, 1.8, 0.3), rotationDeg = Vector3.new(0, 180, 15), kind = "wedge", color = "head", name = "RightBlade" },
 		},
 		moveSpeedStuds = 9, chaseStopDistanceStuds = 8,
-		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
-		scheduler = scheduler(5),
+		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
+		scheduler = scheduler(6), -- BR1-2: 5 → 6(난이도 모형 - 가장 바쁜 두 보스의 솔로 전멸 64 · 61%)
 		skillOrder = { "discharge", "whirl", "strike", "overcharge", "swipe", "grab", "tornado", "thunderRing", "boltSpear", "mirror", "innerSmash" },
 		-- BR1 환경 변화 "돌풍"(체력 50%부터): 지팡이를 수평으로 - 바람 줄기가 한 방향으로(3초) → 12초 동안 바람이 초당 7로 민다(클라 - 걷기 16보다 약하다:
 		-- 거슬러 9/초 · 떠 있으면 ×1.5) · 4초마다 90° 돈다 · 바람이 불어 가는 반원의 가장자리(반경 110 밖)가 전기 벽(0.5초마다 6%).
@@ -1131,9 +1157,9 @@ local SPECIES = {
 				primitive = "circleTarget", bubble = "meteor", role = "signature",
 				cooldownSeconds = 12, firstAvailableSeconds = 8, reserveFirstUse = true, priority = P.signature,
 				-- BR1 수정 "추적 번개 강화": 연발 2 → 3.
-				telegraphSeconds = 1.5, count = 3, sequential = true, repeatTelegraphSeconds = 1.5, radiusStuds = 6, scatterStuds = 0,
+				telegraphSeconds = 1.5, count = 2, sequential = true, repeatTelegraphSeconds = 1.5, radiusStuds = 6, scatterStuds = 0, -- BR1-2: 3 → 2(난이도 모형 - 폭풍 원거리 전멸 66% · 대신 곡선 ③ ④에서 장판이 넓어진다)
 				perMember = true,
-				damage = { kind = "attack", multiplier = 2 }, damageLabel = "낙뢰",
+				damage = { kind = "attack", multiplier = 1.6 }, damageLabel = "낙뢰", -- BR1-2: ×2 → ×1.6(난이도 모형 - 폭풍 군주 원거리 전멸 66%의 가장 큰 스킬)
 				onImpact = { { type = "chargeZone", tag = "rod", seconds = 12, reachStuds = 1 } },
 				route = { distanceStuds = 9 }, -- 회피 부등식의 "피뢰침 사이": 간격 16 − 충전 거리 7(BossGimmick4Verify가 kit에서 다시 잰다)
 				-- 29-3: 하늘에서 꽂히는 번개로 그리고(impactStyle), 맞은 사람은 팝콘처럼 판정 중심 반대쪽으로 튕겨 난다 - 높이 5

@@ -1,9 +1,10 @@
--- BR1 첫 도전 난이도 모형(docs/design/boss-br1.md §5) - 순수 계산. 실제 스케줄러(BossScheduler)로 패턴 순서를 내고, 판정마다 "첫 도전 실수 확률"로 맞을지를 굴린다.
---   목표(사용자): 첫 도전 솔로 45 ~ 90초 · 받은 피해 합 80 ~ 150%(최대체력 대비) · 전멸률 30 ~ 50%.
---   단위: 보스 HP = 기준 플레이어 순딜 referenceKillSeconds(60)초분 × N^p(BossSim과 같다) · 멤버 딜 1/초 · 피해 = 최대체력 비율.
---   가정 값 = BossData.mechanics.sim.difficulty(보고서에 같이 싣는다). 신규 보호(스테이지 1 ~ 20)는 넣지 않는다 - 그 밖의 스테이지 기준이다.
--- 모형이 넣는 것: 평타 노출 · 강화 평타 · 패턴 판정(무게 · 여유 · 종류) · 공중 회피 → 체공 → 대공 잡기(조건 · 대상) · 기믹 실패(85% + 잡힘 딜 0) ·
---   게이트(×g) · 기회 창 · 환경 변화(체력 50%부터 · 도트 · 겹침 미루기) · 격노. 넣지 않는 것: 흡혈 · 쉴드 · 물약 · 파티원 구출(잡힘은 자동 해제까지).
+-- BR1 첫 도전 난이도 모형 → BR1-2 갱신(docs/design/boss-br1-2.md §9) - 순수 계산. 실제 스케줄러(BossScheduler)로 패턴 순서를 내고, 판정마다 "첫 도전 실수 확률"로 맞을지를 굴린다.
+--   목표(사용자): 솔로(원거리 · 근접) · 2인 · 4인 처치 45 ~ 90초 · 받은 피해 80 ~ 150% · 첫 도전 전멸 30 ~ 50%(근접 60% 이하). 스테이지 1 ~ 30은 보호 적용 뒤 따로.
+--   단위: 보스 HP = 기준 플레이어 순딜 referenceKillSeconds(60)초분 × N^hpExponent · 멤버 딜 1/초 · 피해 = 최대체력 비율.
+--   가정 값 = BossData.mechanics.sim.difficulty(보고서에 같이 싣는다).
+-- BR1-2가 넣은 것: 스테이지 곡선(인당 투사체 · 범위 · 전조 - BossRules.buildInstanceData) · 신규 보호(스테이지 ≤ 30) · 평타 사거리 26(역할별 노출) · 근접 원형 구역(원 밖 전원 쓸기) ·
+--   반사(원거리만) · 음파 포효(틱 · 엄폐) · 색 맞추기(인원이 많을수록 혼란) · 대공 잡기 발악(풀리면 기절) · 수정 부수기(보호막 동안 딜 0) · 파티 전역 쿨.
+-- 넣지 않는 것: 흡혈 · 쉴드 · 물약 · 파티원 구출(잡힘은 자동 해제까지) · 반사를 몸으로 막기.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
@@ -11,6 +12,7 @@ local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BossScheduler = require(ReplicatedStorage.Shared.BossScheduler)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 local BossOverlap = require(ReplicatedStorage.Shared.BossOverlap)
+local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 
@@ -23,8 +25,6 @@ local function newRng(seed)
 		return state / 2147483648
 	end
 end
-
-local ANTI_AIR = { projectile = true, grab = true }
 
 -- 판정 목록: { at(스킬 시작부터 초), share(맞으면 최대체력 비율 · 현재 체력 비율이면 current = true), class(확률 키), slack, perMember }
 local function judgmentsOf(skill, surviveHits)
@@ -47,8 +47,12 @@ local function judgmentsOf(skill, surviveHits)
 		return "large"
 	end
 	local p = skill.primitive
-	if p == "gimmick" then
-		table.insert(list, { at = skill.telegraphSeconds, gimmick = true, slack = minSlack })
+	if p == "gimmick" or p == "colorMatch" then
+		table.insert(list, { at = skill.telegraphSeconds, gimmick = true, slack = minSlack, fraction = p == "colorMatch" and skill.failMaxHpFraction or nil, color = p == "colorMatch" })
+	elseif p == "sonic" then
+		table.insert(list, { at = skill.telegraphSeconds + skill.tickSeconds * skill.ticks, gimmick = true, sonic = true, slack = minSlack })
+	elseif p == "reflect" then
+		table.insert(list, { at = skill.telegraphSeconds + 1.5, reflect = true, share = skill.projectile.maxHpFraction, slack = minSlack })
 	elseif p == "grab" then
 		table.insert(list, { at = skill.telegraphSeconds, grab = true, slack = minSlack })
 	elseif p == "ring" then
@@ -56,8 +60,10 @@ local function judgmentsOf(skill, surviveHits)
 			table.insert(list, { at = wave.startSeconds + 0.5, share = single, class = wave.air and "airWave" or "jump", slack = minSlack })
 		end
 	elseif p == "projectile" then
+		-- 인당 count발(곡선) - 한 사람에게 줄지어 온다: 첫 발 = 기본 확률 · 둘째부터 × extraProjectileHit
 		for i = 1, skill.count or 1 do
-			table.insert(list, { at = skill.telegraphSeconds + (skill.launchIntervalSeconds or 0) * (i - 1) + 1, share = single, class = (skill.targetRule and skill.targetRule ~= "target") and "antiAir" or weightClass(single), slack = minSlack, antiAir = skill.targetRule ~= nil and skill.targetRule ~= "target" })
+			table.insert(list, { at = skill.telegraphSeconds + (skill.launchIntervalSeconds or 0) * (i - 1) + 1, share = single, class = (skill.targetRule and skill.targetRule ~= "target") and "antiAir" or weightClass(single),
+				slack = minSlack, antiAir = skill.targetRule ~= nil and skill.targetRule ~= "target", follow = i > 1 })
 		end
 	elseif p == "circleTarget" and skill.shots then
 		local at = 0
@@ -85,27 +91,34 @@ local function judgmentsOf(skill, surviveHits)
 	return list
 end
 
--- options = { partySize(1), seed, role("ranged"/"melee"), stage(nil) }
+-- options = { partySize(1), seed, role("ranged"/"melee"), familiar(false), stage(100) }
 function BossDifficultySim.run(bossId, options)
 	options = options or {}
-	local boss = BossData.bosses[bossId]
 	local sim = BossData.mechanics.sim
 	local cfg = sim.difficulty
 	local rng = newRng(options.seed or 1)
 	local tick = sim.tickSeconds
 	local n = options.partySize or 1
+	local stage = options.stage or 100
+	local role = options.role or "ranged"
 	local surviveHits = BalanceAnchorConfig.surviveTargetHits
-	local skills, order, config = boss.skills, boss.skillOrder, boss.scheduler
+	local data = BossRules.buildInstanceData(stage, bossId, n) -- 곡선 · 파티 전역 쿨이 얹힌 인스턴스 표
+	local boss = BossData.bosses[bossId]
+	local skills, order, config = data.skills, data.skillOrder, data.scheduler
 	local gateMultiplier = BossRules.gateDamageTakenMultiplier()
 	local trapSeconds = BossData.mechanics.trap.autoReleaseSeconds
 	local grabConfig = BossData.mechanics.airGrab
 	local fail = BossData.mechanics.gimmickFail
 	local env = boss.environment
-	local exposure = cfg.basicExposure[options.role or "ranged"]
 	local familiar = options.familiar == true
 	local hitScale = familiar and cfg.familiar.hitScale or 1
+	local protect = PlayerCombat.getNewbieDamageMultiplier(stage) -- 스테이지 1 ~ 30 신규 보호(최고 스테이지 = 이 스테이지로 본다)
+	local exposureCfg = cfg.basicExposureBR12
+	local innerCircle = data.innerSafeRadiusStuds ~= nil
+	local exposure = role == "melee" and (innerCircle and exposureCfg.innerCircleMelee or exposureCfg.melee) or exposureCfg.ranged
 
-	local maxHp = sim.referenceKillSeconds * BossRules.partySizeHpMultiplier(n)
+	local hpScale = boss.hpMultiplier / (sim.referenceKillSeconds / BalanceAnchorConfig.killTargetSeconds) -- 보스별 HP 배율(수정 여왕 0.7 - 보호막 보정)
+	local maxHp = sim.referenceKillSeconds * hpScale * BossRules.partySizeHpMultiplier(n)
 	local hp = maxHp
 	local members = {}
 	for i = 1, n do
@@ -117,12 +130,12 @@ function BossDifficultySim.run(bossId, options)
 	local armed, gateStarted, windowMultiplier, windowUntil = false, false, 1, 0
 	local gimmickSeen = 0
 	local gateRounds = 0
-	local failSeenBySkill = {} -- [기믹 id] = 이 판에서 본 횟수(처음 = firstMaxHpFraction)
-	local gardenRounds = 0
+	local failSeenBySkill = {}
 	local envPhase, envAt, envUntil, envUsedImpossible = "idle", 0, 0, false
 	local counts = {}
 	local deferred = 0
 	local basicTimer = 0
+	local shieldUntil = -1 -- 수정 부수기(보호막) - 이때까지 딜 0
 
 	local ctx = { graceUntil = config.entryGraceSeconds }
 	function ctx.conditionMet(condition)
@@ -144,6 +157,8 @@ function BossDifficultySim.run(bossId, options)
 			return armed
 		elseif kind == "membersNearSafeSpot" then
 			return true
+		elseif kind == "targetWithin" and innerCircle and condition.studs <= data.innerSafeRadiusStuds then
+			return role == "melee" and rng() < 0.8 -- 원 안 강공격: 근접이 원 안에 있을 때
 		end
 		return rng() < 0.6 -- 위치 조건(거리 · 밀집)
 	end
@@ -156,7 +171,7 @@ function BossDifficultySim.run(bossId, options)
 		if not m.alive then
 			return
 		end
-		local dealt = current_ and m.hp * share or share
+		local dealt = (current_ and m.hp * share or share) * protect
 		bySource[source or "?"] = (bySource[source or "?"] or 0) + dealt
 		m.hp -= dealt
 		m.taken += dealt
@@ -165,11 +180,14 @@ function BossDifficultySim.run(bossId, options)
 		end
 	end
 
-	local seenCount = {} -- [스킬] = 판정을 본 횟수(학습 - 두 번째부터 learnedMultiplier)
+	local seenCount = {}
 	local function hitChance(j)
 		local base
 		if j.gimmick then
 			base = (gimmickSeen <= 1 and not familiar) and cfg.hitChance.gimmickFirst or cfg.hitChance.gimmickLater
+			if j.color then
+				base *= 1 + cfg.colorPartyPenalty * (n - 1)
+			end
 		else
 			base = (cfg.hitChance[j.class] or cfg.hitChance.medium) * hitScale
 			if (seenCount[j.skill] or 0) > 1 then
@@ -202,33 +220,31 @@ function BossDifficultySim.run(bossId, options)
 			elseif (envPhase == "armed" or envPhase == "cooldown") and t >= envAt then
 				envPhase, envAt, envUsedImpossible = "telegraph", t + env.telegraphSeconds, false
 			elseif envPhase == "telegraph" and t >= envAt then
-				envPhase, envUntil = "active", t + env.durationSeconds
-				for _, m in ipairs(members) do
-					if m.alive and rng() < cfg.hitChance.env then
-						local ticks = cfg.envTicks.min + math.floor(rng() * (cfg.envTicks.max - cfg.envTicks.min + 1))
-						local share = math.min(ticks * (env.tick and env.tick.fraction or 0), BossData.mechanics.environment.maxHpFractionPerActivation)
-						if env.onStart and env.onStart.damage then
-							share += env.onStart.damage.multiplier / surviveHits
-						elseif env.onStart and env.onStart.seesaw then -- 널뛰기: 판 위 자리 평균(지렛대 0.5)
-							share += (env.onStart.seesaw.minMultiplier + env.onStart.seesaw.maxMultiplier) / 2 / surviveHits
+				if env.kind == "jumpCourse" then
+					-- 수정 부수기: 보호막 동안 딜 0 - 솔로는 두 코스 · 파티는 나눠서(가정 courseSeconds ± jitter)
+					local base = n == 1 and cfg.courseSeconds.solo or cfg.courseSeconds.party
+					local seconds = base * (1 + (rng() * 2 - 1) * cfg.courseSeconds.jitter)
+					envPhase, envUntil = "active", t + seconds
+					shieldUntil = envUntil
+				else
+					envPhase, envUntil = "active", t + env.durationSeconds
+					for _, m in ipairs(members) do
+						if m.alive and rng() < cfg.hitChance.env then
+							local ticks = cfg.envTicks.min + math.floor(rng() * (cfg.envTicks.max - cfg.envTicks.min + 1))
+							local share = math.min(ticks * (env.tick and env.tick.fraction or 0), BossData.mechanics.environment.maxHpFractionPerActivation)
+							if env.onStart and env.onStart.damage then
+								share += env.onStart.damage.multiplier / surviveHits
+							elseif env.onStart and env.onStart.seesaw then
+								share += (env.onStart.seesaw.minMultiplier + env.onStart.seesaw.maxMultiplier) / 2 / surviveHits
+							end
+							damage(m, share, nil, "환경")
 						end
-						damage(m, share, nil, "환경")
 					end
 				end
 			elseif envPhase == "active" and t >= envUntil then
 				envPhase, envAt = "cooldown", t + env.cooldownSeconds
-				if env.kind == "cores" then
-					-- 수정 공중 정원: 두 핵을 창 안에 치면 기절(딜 창) · 못 치면 전원 기믹 실패(85%)
-					gardenRounds = (gardenRounds or 0) + 1
-					if rng() < ((gardenRounds <= 1 and not familiar) and cfg.gardenSolveChance.first or cfg.gardenSolveChance.later) then
-						windowMultiplier, windowUntil = 1.3, t + env.garden.stunSeconds
-					else
-						for _, m in ipairs(members) do
-							if m.alive then
-								damage(m, gardenRounds <= 1 and fail.firstMaxHpFraction or fail.maxHpFraction, nil, "환경")
-							end
-						end
-					end
+				if env.kind == "jumpCourse" then
+					windowMultiplier, windowUntil = 1, t + env.garden.stunSeconds -- 성공 뒤 기절(딜 창 - 배율 1)
 				end
 			end
 		end
@@ -268,7 +284,6 @@ function BossDifficultySim.run(bossId, options)
 					end
 				end
 				if skill.gate then
-					-- 게이트 판정 스킬(낙뢰): 회차가 끝날 때 풀었는가(가정 - gateSolveChance)
 					gateRounds = (gateRounds or 0) + 1
 					local chance = (gateRounds <= 1 and not familiar) and cfg.gateSolveChance.first or cfg.gateSolveChance.later
 					table.insert(pending, { at = t + bound, gateJudge = true, solved = rng() < chance, skill = skill, id = pick })
@@ -292,10 +307,19 @@ function BossDifficultySim.run(bossId, options)
 					local anySafe = false
 					for _, m in ipairs(members) do
 						if m.alive and t >= m.trappedUntil then
-							if rng() < hitChance(j) then
+							local failed = rng() < hitChance(j)
+							if j.sonic then
+								-- 음파: 실패 = 가려진 틱이 min ~ max뿐(나머지 틱 × 15%) · 성공 = 한 틱 늦게 숨음(30%)
+								local skill = j.skill
+								local safeTicks = failed and (cfg.sonicSafeTicks.min + math.floor(rng() * (cfg.sonicSafeTicks.max - cfg.sonicSafeTicks.min + 1))) or (rng() < 0.3 and skill.ticks - 1 or skill.ticks)
+								damage(m, skill.tickFraction * (skill.ticks - safeTicks), nil, j.id)
+								anySafe = anySafe or not failed
+							elseif failed then
+								m.failedGimmickAt = t
 								local firstTime = (failSeenBySkill[j.id] or 0) <= 1
-								damage(m, j.skill.failPenalty == false and 0 or (firstTime and fail.firstMaxHpFraction or fail.maxHpFraction), nil, j.id)
-								if j.skill.failPenalty ~= false and j.skill.failTraps ~= false then
+								local fraction = j.fraction or (j.skill.failPenalty == false and 0 or (firstTime and fail.firstMaxHpFraction or fail.maxHpFraction))
+								damage(m, fraction, nil, j.id)
+								if j.skill.primitive == "gimmick" and j.skill.failPenalty ~= false and j.skill.failTraps ~= false then
 									m.trappedUntil = t + trapSeconds
 									m.evadeUntil = math.max(m.evadeUntil, t + trapSeconds)
 								end
@@ -304,35 +328,83 @@ function BossDifficultySim.run(bossId, options)
 							end
 						end
 					end
-					if j.skill.judgesGate ~= false then
+					-- BR1-2 파티 공동 책임(설계 §8 - 기믹 요구 증가): 전멸기를 누가 실패하면 나머지도 실패한 인원 × partyFailShare(보호막 무시)
+					if n > 1 and cfg.partyFailShare and cfg.partyFailShare > 0 and not j.sonic and j.skill.failPenalty ~= false then
+						local failedCount = 0
+						for _, m in ipairs(members) do
+							failedCount += (m.failedGimmickAt == t) and 1 or 0
+						end
+						if failedCount > 0 then
+							for _, m in ipairs(members) do
+								if m.alive and m.failedGimmickAt ~= t then
+									damage(m, cfg.partyFailShare * failedCount, nil, "공동 책임")
+								end
+							end
+						end
+					end
+					if j.skill.primitive == "gimmick" and j.skill.judgesGate ~= false then
 						armed = not anySafe
 						if anySafe and j.skill.breakWindow then
 							windowMultiplier, windowUntil = j.skill.breakWindow.damageTakenMultiplier, t + j.skill.breakWindow.seconds
 						end
 					end
+				elseif j.reflect then
+					-- 반사: 원거리만(근접 평타는 반사 대상이 아니다) - 되돌아온 것에 맞을 확률(처음 · 두 번째부터)
+					if role == "ranged" then
+						for _, m in ipairs(members) do
+							local chance = ((seenCount[j.skill] or 0) <= 1 and not familiar) and cfg.reflectHit.first or cfg.reflectHit.later
+							if m.alive and t >= m.trappedUntil and rng() < chance * hitScale then
+								damage(m, j.share, nil, j.id)
+							end
+						end
+					end
 				elseif j.grab then
+					local caught = 0
 					for _, m in ipairs(members) do
 						if m.alive and m.airSince and t < m.airUntil and t - m.airSince >= grabConfig.warnAirSeconds and rng() < cfg.grabCatchChance then
-							-- 잡혔다: 들려 있다가(구출 없음 - 솔로 모형) 던짐 = 현재 체력 비율
-							damage(m, grabConfig.currentHpFraction, true, j.id)
-							m.evadeUntil = math.max(m.evadeUntil, t + grabConfig.holdSeconds)
+							caught += 1
 							m.airSince, m.airUntil = nil, -1
+							m.caught = true
+						end
+					end
+					if caught > 0 then
+						if rng() < cfg.grabEscape then
+							windowMultiplier, windowUntil = 1, t + grabConfig.stunSeconds -- 발악 성공 = 기절(딜 창)
+							for _, m in ipairs(members) do
+								if m.caught then
+									m.evadeUntil = math.max(m.evadeUntil, t + 3)
+									m.caught = nil
+								end
+							end
+						else
+							for _, m in ipairs(members) do
+								if m.caught then
+									damage(m, grabConfig.currentHpFraction, true, j.id)
+									m.evadeUntil = math.max(m.evadeUntil, t + grabConfig.holdSeconds + 2)
+									m.caught = nil
+								end
+							end
 						end
 					end
 				else
 					for _, m in ipairs(members) do
 						if m.alive and t >= m.trappedUntil then
 							local chance = hitChance(j)
+							if j.follow then
+								chance *= cfg.extraProjectileHit
+							end
 							local airborne = m.airSince and t < m.airUntil
 							if j.antiAir and not airborne then
 								chance *= 0.4 -- 땅에서는 걸어서 따돌린다
 							elseif j.class == "airWave" and not airborne then
 								chance *= 0.5
 							end
+							if t < shieldUntil and j.ground then
+								chance *= cfg.courseGroundHitScale -- 수정 부수기: 점프맵 위 사람은 바닥 판정을 덜 맞는다
+							end
 							if rng() < chance then
 								damage(m, j.share, nil, j.id)
 							elseif j.ground and rng() < cfg.airDodgeShare then
-								-- 공중으로 피했다 → 한동안 떠 있다(대공 잡기 · 대공 투사체의 조건)
 								local air = cfg.airSecondsMin + rng() * (cfg.airSecondsMax - cfg.airSecondsMin)
 								m.airSince, m.airUntil = t - 0.3, t - 0.3 + air
 							end
@@ -345,21 +417,29 @@ function BossDifficultySim.run(bossId, options)
 			BossScheduler.onSkillEnd(state, skills, current, t)
 			current = nil
 		end
-		-- 자유 체공: 회피가 아니어도 이동 중에 뛴다(freeAirPerSecond - 평균 그 간격에 한 번, airSecondsMin ~ Max) → 대공 잡기 · 대공 투사체의 조건
 		for _, m in ipairs(members) do
 			if m.alive and not (m.airSince and t < m.airUntil) and rng() < cfg.freeAirPerSecond * tick then
 				local air = cfg.airSecondsMin + rng() * (cfg.airSecondsMax - cfg.airSecondsMin)
 				m.airSince, m.airUntil = t, t + air
 			end
 		end
-		-- 평타(스킬 사이 · 사거리 안 몫만)
+		-- 평타(스킬 사이): 근접 원형 구역 보스는 원 밖 전원을 쓴다 · 아니면 한 명
 		if not current then
 			basicTimer += tick
 			if basicTimer >= boss.basicAttack.cooldownSeconds then
 				basicTimer = 0
-				local target = members[1 + math.floor(rng() * n)]
-				if target.alive and t >= target.trappedUntil and rng() < exposure then
-					damage(target, boss.basicAttack.damageMultiplier / surviveHits, nil, "평타")
+				local share = boss.basicAttack.damageMultiplier / surviveHits
+				if innerCircle then
+					for _, m in ipairs(members) do
+						if m.alive and t >= m.trappedUntil and rng() < exposure * (t < shieldUntil and cfg.courseGroundHitScale or 1) then
+							damage(m, share, nil, "평타")
+						end
+					end
+				else
+					local target = members[1 + math.floor(rng() * n)]
+					if target.alive and t >= target.trappedUntil and rng() < exposure * (t < shieldUntil and cfg.courseGroundHitScale or 1) then
+						damage(target, share, nil, "평타")
+					end
 				end
 			end
 		end
@@ -367,6 +447,9 @@ function BossDifficultySim.run(bossId, options)
 		local multiplier = armed and gateMultiplier or (t < windowUntil and windowMultiplier or 1)
 		if env and envPhase == "active" then
 			multiplier *= cfg.envDpsMultiplier
+		end
+		if t < shieldUntil then
+			multiplier = 0 -- 보호막(수정 부수기)
 		end
 		for _, m in ipairs(members) do
 			if m.alive and t >= m.evadeUntil then
@@ -387,10 +470,10 @@ function BossDifficultySim.run(bossId, options)
 	}
 end
 
--- 여러 판(seed 1..runs): 처치 시간(처치한 판만) 분위 · 받은 피해 평균(1인) · 전멸률 · 스킬 등장 수.
+-- 여러 판(seed 1..runs): 처치 시간(처치한 판만) 분위 · 받은 피해 평균(1인) · 전멸률 · 한 명 이상 사망률 · 스킬 등장 수.
 function BossDifficultySim.monteCarlo(bossId, options, runs)
 	runs = runs or BossData.mechanics.sim.difficulty.runs
-	local times, taken, wipes, killed = {}, 0, 0, 0
+	local times, taken, wipes, killed, anyDead = {}, 0, 0, 0, 0
 	local counts, deferred, bySource = {}, 0, {}
 	for seed = 1, runs do
 		local opts = table.clone(options or {})
@@ -398,6 +481,7 @@ function BossDifficultySim.monteCarlo(bossId, options, runs)
 		local r = BossDifficultySim.run(bossId, opts)
 		taken += r.takenAverage
 		deferred += r.deferred
+		anyDead += r.deadCount > 0 and 1 or 0
 		if r.wiped then
 			wipes += 1
 		elseif r.killed then
@@ -416,7 +500,7 @@ function BossDifficultySim.monteCarlo(bossId, options, runs)
 		return #times > 0 and times[math.clamp(math.ceil(p * #times), 1, #times)] or 0
 	end
 	return {
-		runs = runs, wipeRate = wipes / runs, killRate = killed / runs, takenMean = taken / runs,
+		runs = runs, wipeRate = wipes / runs, killRate = killed / runs, takenMean = taken / runs, deathRate = anyDead / runs,
 		p10 = pct(0.1), p50 = pct(0.5), p90 = pct(0.9), counts = counts, deferredPerRun = deferred / runs, bySource = bySource,
 	}
 end

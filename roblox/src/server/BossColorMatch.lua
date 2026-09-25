@@ -44,7 +44,8 @@ BossColorMatch.handler = {
 	start = function(c)
 		local st, skill = c.st, c.skill
 		st.phase = "colorTelegraph"
-		st.phaseEndsAt = c.now + skill.telegraphSeconds
+		local seconds = skill.telegraphSeconds + (skill.telegraphPerExtraMemberSeconds or 0) * math.max(#kit.victims(st) - 1, 0)
+		st.phaseEndsAt = c.now + seconds
 		st.colorPlatforms = platformsOf(c)
 		st.colorOf = {}
 		for _, p in ipairs(st.colorPlatforms) do
@@ -64,8 +65,8 @@ BossColorMatch.handler = {
 		for _, p in ipairs(st.colorPlatforms) do
 			table.insert(list, { index = p.index, center = p.center, size = p.size, color = st.colorOf[p.index] })
 		end
-		kit.send(st, "colorStart", { seconds = skill.telegraphSeconds, marks = marks, platforms = list, bossId = c.data.id })
-		print(("[forge-game] 색 맞추기: 발판 %d · 멤버 %d · %.1f초"):format(#list, #marks, skill.telegraphSeconds))
+		kit.send(st, "colorStart", { seconds = seconds, marks = marks, platforms = list, bossId = c.data.id })
+		print(("[forge-game] 색 맞추기: 발판 %d · 멤버 %d · %.1f초"):format(#list, #marks, seconds))
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
@@ -100,6 +101,16 @@ BossColorMatch.handler = {
 				end
 			end
 			kit.judgeEnd(c, { kind = "colorMatch" })
+			-- BR1-2 파티 공동 책임: 실패한 인원 × failShareFraction을 나머지도 받는다
+			local share = BossData.mechanics.party and BossData.mechanics.party.failShareFraction or 0
+			if #failed > 0 and share > 0 then
+				for _, v in ipairs(kit.victims(st)) do
+					local id = typeof(v.player) == "Instance" and v.player.UserId or 0
+					if table.find(safe, id) then
+						PlayerDamage.applyMaxHpFraction(v.player, share * #failed, skill.damageLabel .. " - 공동 책임", { ignoresShield = true })
+					end
+				end
+			end
 			kit.send(st, "colorResolve", { safe = safe, failed = failed })
 			print(("[forge-game] 색 맞추기 판정: 생존 %d · 실패 %d"):format(#safe, #failed))
 			st.phase = "colorRecover"
