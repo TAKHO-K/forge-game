@@ -138,11 +138,65 @@ function BR1_2Verify.protectionCheck(r)
 		monotone and math.abs(m1 - p.atStage1) < 1e-9 and math.abs(mP - p.atPlateau) < 1e-9 and m30 < 1 and m31 == 1 and PlayerCombat.getNewbieDamageMultiplier(nil) == 1)
 end
 
+-- 지진파 무작위 리듬(구간 수호자 진동파 randomRhythm): 가능한 모든 순서(3 · 4 · 5박 · 두 종류 · 같은 종류 3연속 없음)가 회피 부등식을 통과하는가 + 굴린 1,000번의 분포.
+function BR1_2Verify.quakeCheck(r)
+	local skill = BossData.bosses.section_guardian.skills.shockwave
+	local spec = skill.randomRhythm
+	local sequences, fails = 0, {}
+	local function walk(types, count)
+		if #types == count then
+			local hasAir, hasGround, run, ok = false, false, 0, true
+			for i, t in ipairs(types) do
+				hasAir = hasAir or t == "air"
+				hasGround = hasGround or t == "ground"
+				run = (i > 1 and t == types[i - 1]) and run + 1 or 1
+				ok = ok and run <= spec.maxSameInRow
+			end
+			if ok and hasAir and hasGround then
+				sequences += 1
+				for _, scale in ipairs({ 1, BossRules.maxSkillRangeScale() }) do
+					local copy = table.clone(BossSkillMath.scaleSkills({ s = skill }, scale).s)
+					copy.rhythm = BossSkillMath.rollRhythm(copy, nil, types)
+					for _, ch in ipairs(BossSkillMath.dodgeChecks(copy, 8, WorldConfig.playerWalkSpeedStuds)) do
+						if not ch.ok then
+							table.insert(fails, table.concat(types, "-") .. " " .. ch.label)
+						end
+					end
+				end
+			end
+			return
+		end
+		for _, t in ipairs({ "ground", "air" }) do
+			local nextTypes = table.clone(types)
+			table.insert(nextTypes, t)
+			walk(nextTypes, count)
+		end
+	end
+	for _, count in ipairs(spec.counts) do
+		walk({}, count)
+	end
+	local seed = 12345
+	local function rng()
+		seed = (seed * 1103515245 + 12345) % 2147483648
+		return seed / 2147483648
+	end
+	local byCount = {}
+	for _ = 1, 1000 do
+		local rhythm = BossSkillMath.rollRhythm(skill, rng)
+		byCount[#rhythm] = (byCount[#rhythm] or 0) + 1
+	end
+	r.check(("지진파 무작위: 가능한 순서 %d가지 × 범위 배율 1 · 최대 - 회피 실패 %d%s · 굴림 1,000번 3박 %d · 4박 %d · 5박 %d"):format(sequences, #fails,
+		#fails > 0 and (" " .. table.concat(fails, " / ")) or "", byCount[3] or 0, byCount[4] or 0, byCount[5] or 0), #fails == 0 and sequences > 0 and (byCount[3] or 0) > 0 and (byCount[5] or 0) > 0)
+end
+
 function BR1_2Verify.runPure()
 	print("===BR1-2 검증 시작(가)===")
 	local r = newRecorder("가")
 	r.section("초반 보호", function()
 		BR1_2Verify.protectionCheck(r)
+	end)
+	r.section("지진파", function()
+		BR1_2Verify.quakeCheck(r)
 	end)
 	r.section("곡선 표", function()
 		BR1_2Verify.curveCheck(r)

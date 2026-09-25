@@ -47,6 +47,38 @@ function BossSkillMath.ringWaves(skill)
 	return waves
 end
 
+-- BR1-2 지진파 무작위 리듬(skill.randomRhythm): 파동 수 counts 중 하나 · 파동마다 하단(땅) / 상단(공중 파동) - 두 종류 모두 · 같은 종류 maxSameInRow 초과 연속 없음.
+-- rng01 = 0 ~ 1 난수 함수. types를 주면 그 순서 그대로(하네스가 모든 순서를 검사할 때). 반환 = skill.rhythm과 같은 모양의 표.
+function BossSkillMath.rollRhythm(skill, rng01, types)
+	local spec = skill.randomRhythm
+	if not types then
+		local count = spec.counts[math.clamp(math.floor(rng01() * #spec.counts) + 1, 1, #spec.counts)]
+		repeat
+			types = {}
+			local ok, run = true, 0
+			for i = 1, count do
+				types[i] = rng01() < 0.5 and "air" or "ground"
+				run = (i > 1 and types[i] == types[i - 1]) and run + 1 or 1
+				ok = ok and run <= spec.maxSameInRow
+			end
+			local hasAir, hasGround = false, false
+			for _, t in ipairs(types) do
+				hasAir = hasAir or t == "air"
+				hasGround = hasGround or t == "ground"
+			end
+		until ok and hasAir and hasGround
+	end
+	local rhythm = { label = "무작위 " .. #types .. "박" }
+	for i, t in ipairs(types) do
+		local wave = { speedStuds = spec.speedStuds, air = t == "air" and spec.air or nil }
+		if i > 1 then
+			wave.gapSeconds = types[i - 1] == "air" and spec.gapAfterAirSeconds or spec.gapAfterGroundSeconds
+		end
+		rhythm[i] = wave
+	end
+	return rhythm
+end
+
 -- 연발(sequential) 원의 둘째부터의 예고 길이 상한. P3c A4 추적(skill.trackAfterHit - 폭풍 군주의 낙뢰): 앞 판정에 누가 맞았으면 다음 원이 그 사람을 trackSeconds 동안
 -- 따라가다 멈추고 lockTelegraphSeconds 뒤에 떨어진다 - 그 회차는 추적 + 고정이 된다(아무도 안 맞았으면 옛 repeatTelegraphSeconds).
 function BossSkillMath.repeatSeconds(skill)

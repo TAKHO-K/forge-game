@@ -351,6 +351,9 @@ function BR1Verify.runLive(player, env)
 						expectAir += w.air and 1 or 0
 					end
 					ok = total == #BossSkillMath.ringWaves(skill) and airWaves == expectAir and expectAir >= 1
+					if skill.randomRhythm then -- BR1-2 지진파: 3 · 4 · 5박 무작위 · 공중 파동 1개 이상 · 땅 파동 1개 이상
+						ok = total >= 3 and total <= 5 and airWaves >= 1 and airWaves < total
+					end
 					detail = ("파동 %d · 공중 파동 %d(기대 %d)"):format(total, airWaves, expectAir)
 				end
 				r.check(("%s %s(%s): %s"):format(bossId, sid, p, detail), ok)

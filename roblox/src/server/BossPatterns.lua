@@ -950,7 +950,15 @@ HANDLERS.ring = {
 		st.hopBase = xz(c.position) + Vector3.new(0, MonsterState.getSpawnPosition(c.model).Y, 0)
 		st.wavesSpawned = 0
 		st.waves = {}
-		st.ringWaves = BossSkillMath.ringWaves(c.skill)
+		local skill = c.skill
+		if skill.randomRhythm then -- BR1-2 지진파: 시전마다 3 · 4 · 5박 · 상/하 무작위 순서
+			skill = table.clone(skill)
+			skill.rhythm = BossSkillMath.rollRhythm(skill, function()
+				return scatterRng:NextNumber()
+			end)
+			debugEvent("rhythmRoll", { label = skill.rhythm.label, at = c.now })
+		end
+		st.ringWaves = BossSkillMath.ringWaves(skill)
 		startHop(c, st.ringWaves[1].startSeconds)
 	end,
 	step = function(c)

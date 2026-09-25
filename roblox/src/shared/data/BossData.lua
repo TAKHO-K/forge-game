@@ -329,6 +329,10 @@ local function guardianSkills()
 			telegraphSeconds = 1.2, waveCount = 3, repeatIntervalSeconds = 1.5,
 			-- BR1(공중 전제 §2 "땅 · 공중 겹침"): 2박째 = 공중 파동(발 높이 지면 + 4 ~ 14만 친다) - 1 · 3박은 뛰고 2박은 **서 있어야** 한다. 계속 떠 있기로는 못 버틴다.
 			rhythm = { label = "느림 · 느림(공중) · 빠름", { speedStuds = 24 }, { gapSeconds = 1.6, speedStuds = 24, air = { minStuds = 4, maxStuds = 14 } }, { gapSeconds = 1.25, speedStuds = 24 } },
+			-- BR1-2 지진파(사용자): 시전마다 파동 수 3 · 4 · 5 중 무작위 · 하단(땅 - 점프로 넘는다) · 상단(머리 높이 공중 파동 - 땅에 붙어 피한다)이 무작위 순서로 섞인다
+			-- (두 종류 모두 들어가고 같은 종류 3연속 없음 - BossSkillMath.rollRhythm). 간격 = 하단 뒤 1.5(다시 뛰기 1.175 이상) · 상단 뒤 1.3(서 있다가 뛰기).
+			-- 위 rhythm은 회피 검사 · 모형의 대표값(3박) - 실제 시전은 이 표로 굴린다. 하네스가 가능한 순서 전부를 회피 부등식에 넣는다.
+			randomRhythm = { counts = { 3, 4, 5 }, speedStuds = 24, gapAfterGroundSeconds = 1.5, gapAfterAirSeconds = 1.3, air = { minStuds = 4, maxStuds = 14 }, maxSameInRow = 2 },
 			waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4,
 			-- 공중 판정 여유 - 지면 거리가 서 있을 때(HipHeight + 루트 반높이)보다 이만큼 더 크면 공중(21-3 실측).
 			airborneClearanceStuds = 0.5,
