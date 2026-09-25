@@ -237,22 +237,53 @@ end
 
 -- 이동속도 배율도 출처별(P3d-F B6 전수 점검 B): 옛 회전베기는 시작할 때 WalkSpeed를 저장했다가 끝날 때 되돌려, 채널링 중 신발 · 보석을 바꾸면
 -- 감속이 사라지고 끝날 때 옛 신발 속도로 돌아갔다. 이제 WalkSpeed = 기본 × 신발 배율 × 이 곱(PlayerProfile.refreshMovementSpeed) - 건 쪽이 자기 키만 지우고 다시 계산한다.
-function PlayerState.setMoveSpeedMultiplier(player, sourceKey, multiplier)
+-- durationSeconds(선택) = 만료 시각(Play 2: 채널링 스레드가 끝 처리 전에 끊기면 감속 키가 리스폰까지 남았다 - 만료가 있으면 읽을 때 저절로 빠진다).
+-- 만료되면 onExpire(선택 - 보통 PlayerProfile.refreshMovementSpeed)를 불러 WalkSpeed를 다시 맞춘다.
+function PlayerState.setMoveSpeedMultiplier(player, sourceKey, multiplier, durationSeconds, onExpire)
 	local entry = players[player]
 	if not entry then
 		return
 	end
 	entry.moveSpeedMultipliers = entry.moveSpeedMultipliers or {}
-	entry.moveSpeedMultipliers[sourceKey] = multiplier
+	if multiplier == nil then
+		entry.moveSpeedMultipliers[sourceKey] = nil
+		return
+	end
+	local rec = { multiplier = multiplier, untilAt = durationSeconds and (os.clock() + durationSeconds) or math.huge }
+	entry.moveSpeedMultipliers[sourceKey] = rec
+	if durationSeconds and onExpire then
+		task.delay(durationSeconds + 0.05, function()
+			if entry.moveSpeedMultipliers and entry.moveSpeedMultipliers[sourceKey] == rec then
+				entry.moveSpeedMultipliers[sourceKey] = nil
+				onExpire(player)
+			end
+		end)
+	end
 end
 
 function PlayerState.getMoveSpeedMultiplier(player)
 	local entry = players[player]
-	local product = 1
-	for _, multiplier in pairs(entry and entry.moveSpeedMultipliers or {}) do
-		product *= multiplier
+	local now, product = os.clock(), 1
+	for key, rec in pairs(entry and entry.moveSpeedMultipliers or {}) do
+		if rec.untilAt > now then
+			product *= rec.multiplier
+		else
+			entry.moveSpeedMultipliers[key] = nil
+		end
 	end
 	return product
+end
+
+-- 검증 · 로그용: 살아 있는 이동속도 출처 { [키] = 배율 }.
+function PlayerState.debugMoveSpeedSources(player)
+	local entry = players[player]
+	local now, list = os.clock(), {}
+	for key, rec in pairs(entry and entry.moveSpeedMultipliers or {}) do
+		if rec.untilAt > now then
+			list[key] = rec.multiplier
+		end
+	end
+	return list
 end
 
 -- 체력바 눈금 기준(Attribute TickDamage)도 출처(몬스터 모델)별(P3d-F 전수 점검 D): 옛 칸 하나는 나중에 붙은 몹이 앞 몹의 값을 덮고, 그 몹이 돌아가며 0으로

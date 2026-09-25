@@ -275,6 +275,11 @@ function P3dFVerify.runLive(player, env)
 	r.section("공유 칸 B 이동속도 · D 체력바 눈금", function()
 		refreshRoot()
 		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+		local before = {}
+		for k, v in pairs(PlayerState.debugMoveSpeedSources(player)) do
+			table.insert(before, ("%s=%s"):format(k, tostring(v)))
+		end
+		r.note(("B 시작 때 남아 있던 이동속도 출처 [%s](기대 비어 있음 - Play 2: 앞 블록 P3b(나)의 실제 회전베기 감속이 남았다)"):format(table.concat(before, ",")))
 		PlayerProfile.refreshMovementSpeed(player)
 		local w0 = humanoid.WalkSpeed
 		local key = "skill:greatsword:E"
@@ -377,6 +382,56 @@ function P3dFVerify.runLive(player, env)
 			tostring(last and last.cause), tostring(o ~= nil), atCap, #BossArenaMap.obstacles(zoneKey)),
 			atCap == REGROW.maxObstacles and plan ~= nil and plan.replaced == firstRegrown and last and last.cause == "cap" and o ~= nil and #BossArenaMap.obstacles(zoneKey) == REGROW.maxObstacles)
 		BossEncounter.despawnFor(player)
+	end)
+
+	r.section("B4 12인 성능(아레나 12개 전부 상한)", function()
+		BossEncounter.despawnFor(player)
+		local Stats = game:GetService("Stats")
+		local function sample(seconds)
+			local sum, n, peak = 0, 0, 0
+			local t0 = os.clock()
+			while os.clock() - t0 < seconds do
+				RunService.Heartbeat:Wait()
+				local ms = Stats.HeartbeatTimeMs
+				sum, n, peak = sum + ms, n + 1, math.max(peak, ms)
+			end
+			local inst, parts = 0, 0
+			for _, d in ipairs(workspace:GetDescendants()) do
+				inst += 1
+				parts += d:IsA("BasePart") and 1 or 0
+			end
+			return sum / math.max(n, 1), peak, inst, parts
+		end
+		local hb0, peak0, inst0, parts0 = sample(3)
+		local bosses = { "section_guardian", "frost_giant", "abyssal_lord", "crystal_queen", "scorpion_queen", "storm_lord" }
+		local keys, regrown, planMs, planMax, plans = {}, 0, 0, 0, 0
+		for slot = 1, WorldConfig.bossArena.slotCount do
+			local zoneKey = "bossArena" .. slot
+			BossArenaMap.dress(zoneKey, BossData.bosses[bosses[1 + (slot - 1) % #bosses]], 7000 + slot)
+			table.insert(keys, zoneKey)
+			local zone = WorldConfig.zones[zoneKey]
+			for _ = 1, REGROW.maxObstacles + 2 do -- 상한을 넘겨 교체까지
+				local t0 = os.clock()
+				local plan = BossArenaMap.planRegrow(zoneKey, { members = {}, boss = zone.center, pits = {} })
+				local ms = (os.clock() - t0) * 1000
+				planMs, planMax, plans = planMs + ms, math.max(planMax, ms), plans + 1
+				if plan and BossArenaMap.spawnRegrown(zoneKey, plan) then
+					regrown += 1
+				end
+			end
+			task.wait()
+		end
+		local maxCount = 0
+		for _, zoneKey in ipairs(keys) do
+			maxCount = math.max(maxCount, #BossArenaMap.obstacles(zoneKey))
+		end
+		local hb1, peak1, inst1, parts1 = sample(3)
+		for _, zoneKey in ipairs(keys) do
+			BossArenaMap.undress(zoneKey)
+		end
+		r.check(("B4 12인(아레나 %d개 · 재생성 %d · 아레나당 최대 %d개): 워크스페이스 인스턴스 %d → %d(+%d) · 파트 %d → %d(+%d) · Heartbeat 평균 %.2f → %.2fms · 최대 %.2f → %.2fms · 자리 찾기 %d회 평균 %.2fms 최대 %.2fms(task.defer - step 밖)"):format(
+			#keys, regrown, maxCount, inst0, inst1, inst1 - inst0, parts0, parts1, parts1 - parts0, hb0, hb1, peak0, peak1, plans, planMs / math.max(plans, 1), planMax),
+			maxCount <= REGROW.maxObstacles and hb1 < 16.7)
 	end)
 
 	BossPatterns.debugEventHook = nil

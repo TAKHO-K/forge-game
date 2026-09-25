@@ -131,7 +131,7 @@ local config = {
 		-- PlayerState(받는 피해 배율 출처별 · 고정 · 이동속도 · 눈금 - 모든 피격 경로) · BossPatterns · BossArenaMap · ArenaLayout · BossTrap · SkillServer · PlayerProfile · MonsterAI · HealCast · BossEncounter)
 		-- → P3d와 같은 전 블록(넓은 쪽). P3a(D)는 계속 뺀다(판정 자리 무변경). regression 스위치는 그대로 false.
 		current = {
-			"P3dF(나)", "P3dF(가E)",
+			"P3dF(나)", -- Play 3: P3dF(가E)는 Play 2에서 7/7(235초) · 그 뒤 ArenaLayout 무변경이라 뺀다
 			"P3d(가)", "P3d(나)", "P3d(가E)",
 			"P3c(가)", "P3c(나)",
 			"P3b(가)", "P3b(나)", "P3b(UI)",

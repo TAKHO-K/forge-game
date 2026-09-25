@@ -242,8 +242,13 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 		PlayerProfile.refreshMovementSpeed(player)
 		PlayerState.clearIncomingDamageMultiplierSource(player, sourceKey)
 		PlayerState.clearChanneling(player)
+		local left = {} -- P3d-F 진단(임시): 채널 끝에 남은 이동속도 출처
+		for key, value in pairs(PlayerState.debugMoveSpeedSources(player)) do
+			table.insert(left, ("%s=%s"):format(key, tostring(value)))
+		end
+		print(("[P3dF][진단] 채널 끝 %s - 남은 이동속도 출처 [%s] · WalkSpeed %s"):format(sourceKey, table.concat(left, ","), tostring(humanoid and humanoid.WalkSpeed)))
 	end
-	PlayerState.setMoveSpeedMultiplier(player, sourceKey, def.channelMoveSpeedMultiplier)
+	PlayerState.setMoveSpeedMultiplier(player, sourceKey, def.channelMoveSpeedMultiplier, def.channelSeconds + 0.5, PlayerProfile.refreshMovementSpeed) -- 끝 처리가 끊겨도 채널 뒤 저절로 풀린다
 	PlayerProfile.refreshMovementSpeed(player)
 	PlayerState.setIncomingDamageMultiplierUntil(player, def.incomingDamageMultiplier, def.channelSeconds, sourceKey) -- P3d-F B6: 출처 = 이 스킬(대시 · 복귀 보호와 곱해진다)
 	-- 21-1 [1]-C: 채널링 중 평타 차단(PRD 4.3 "채널링 3초는 평타 시간에서 뺀다") - 이게
