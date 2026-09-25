@@ -725,18 +725,17 @@ local SPECIES = {
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "sweep", "tide", "spout", "colors", "swipe", "grab", "tailSweep", "vortex", "bubbles", "mirror" },
-		-- BR1 환경 변화 "밥상뒤집기 = 널뛰기"(사용자 보완 B · 체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 사각 판 40 × 60이 (1 + 인원 ÷ 2)개.
-		-- 전조 3초 = 지형이 크게 흔들리고 판 전체가 위험색 · 가장자리 균열(보이는 판 = 판정). 판이 **가운데 받침점을 축으로** 뒤집힌다(그림은 클라 - 물리 없음):
-		-- 판 위(뒤집히는 순간 땅에 있는 사람 - 떠 있으면 안 날아간다) 사람은 **받침점에서 멀수록** 높이 · 멀리 · 크게: 높이 3 → 16 · 거리 6 → 48(판 바깥쪽 방향) ·
-		-- ×1.0(14%) → ×3.2(46%). 넉백 상한 · 착지 경계 없음(escape - 맵 밖이면 기존 복귀). 뒤집힌 자리는 10초 급류(0.5초마다 5%).
-		-- 피하는 법: 받침점 곁으로(끝 → 가운데 6 안: 24 + 1 = 2.45초) · 판 옆으로(20 + 1 = 2.14초) · 뒤집히는 순간 뛰기(너무 오래 떠 있으면 대공 잡기 - 두 기믹이 맞물린다).
+		-- BR1-2 환경 변화 "밥상뒤집기 = 프라이팬"(사용자 - 요리사가 프라이팬 뒤집듯 · 옛 널뛰기 대체 · 체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 판(60 × 120)이 1 + ⌊인원 ÷ 2⌋개.
+		-- 전조 3.6초 = 판 전체 위험색 · 크게 흔들림 · 균열(보이는 판 = 판정). 뒤집히는 순간 판 위의 **전원**이 팝콘처럼 튄다: 방향 = 판 가운데 → 그 사람(판 바깥쪽) ± scatterDeg 흩어짐 ·
+		-- 높은 포물선(heightStuds) · 멀리(distanceStuds + 0 ~ distanceJitter) · 피해 ×multiplier(날아가기 전에). **공중에 떠 있던 사람은 더 멀리**(거리 × airborneDistanceScale · 높이 + airborneHeightBonus - 옛 "떠 있으면 안 날아감" 폐기).
+		-- 맵 밖이면 기존 복귀(본인 스폰 + 보호) · 넉백 상한 · 착지 경계 없음(escape) · 날아가는 동안 높이 검증 예외. 거리 ≥ starDistanceStuds면 궤적 끝 하늘에서 별이 반짝(아레나 멤버 전원 화면).
+		-- 피하는 법 = 판 밖으로: 가장 먼 자리(판 가운데 줄)에서 옆 가장자리 30 + 1 = 0.5 + 31 ÷ 16 × 1.25 = 2.92초 ≤ 3.6. 뒤집힌 자리는 10초 급류(0.5초마다 5%).
 		environment = {
 			id = "tableFlip", style = "water", motion = "fin", damageLabel = "밥상뒤집기",
-			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.0, durationSeconds = 10,
-			-- BR1-2(사용자 - 맵 절반 이상을 한 번에): 판 한 장 = 아레나 반쪽(halfMap - 길이 = 지름 · 폭 = 반경, 무작위 방위). 받침점 = 판 가운데(길이 방향 0).
-			-- 받침점에서 멀수록 높이 · 멀리 · 크게(판 끝이면 맵 밖까지 - 날아갈 때 피해를 받고 기존 복귀가 받는다). 피하는 법 = 뒤집히는 순간 뛰기(떠 있으면 발사 없음) · 받침점 곁 · 판 밖(반대쪽 반).
-			zones = { shape = "rect", halfMap = true, halfLengthStuds = 30, halfWidthStuds = 20 },
-			onStart = { seesaw = { minHeightStuds = 3, maxHeightStuds = 20, minDistanceStuds = 6, maxDistanceStuds = 90, minMultiplier = 1.0, maxMultiplier = 3.2 } },
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.6, durationSeconds = 10,
+			zones = { shape = "rect", halfLengthStuds = 60, halfWidthStuds = 30 },
+			onStart = { pan = { heightStuds = 22, distanceStuds = 70, distanceJitter = 20, scatterDeg = 25, airborneDistanceScale = 1.4, airborneHeightBonus = 6, multiplier = 2.0, starDistanceStuds = 85 } },
+			dodge = { distanceStuds = 31 },
 			tick = { seconds = 0.5, fraction = 0.05 },
 		},
 		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단(P3c: 11곳)

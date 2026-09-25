@@ -241,6 +241,107 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
+-- BR1-2 프라이팬: 아주 멀리 날아간 사람이 궤적 끝 하늘에서 "반짝" 별이 된다(자체 카툰 연출 - 노랑 네온 네 갈래 + 흰 가운데 · 커졌다 돌며 사라짐).
+-- 풀링: 부품 한 벌을 한 번 만들어 계속 다시 쓴다(겹치면 마지막 것만) · 파티클 방출기 0. 아레나 멤버 전원이 받는다(날아간 본인 · 다른 사람 모두).
+local starParts = nil
+local starToken = 0
+local function starSet()
+	if starParts and starParts[1].Parent then
+		return starParts
+	end
+	starParts = {}
+	for i = 1, 2 do
+		local ray = Instance.new("Part")
+		ray.Name = "BossStarRay"
+		ray.Anchored, ray.CanCollide, ray.CanQuery, ray.CanTouch, ray.CastShadow = true, false, false, false, false
+		ray.Material = Enum.Material.Neon
+		ray.Color = Color3.fromRGB(255, 225, 90)
+		ray.Size = Vector3.new(0.6, 0.6, 6)
+		ray.Transparency = 1
+		ray.Parent = Workspace
+		starParts[i] = ray
+	end
+	local core = Instance.new("Part")
+	core.Name = "BossStarCore"
+	core.Anchored, core.CanCollide, core.CanQuery, core.CanTouch, core.CastShadow = true, false, false, false, false
+	core.Material = Enum.Material.Neon
+	core.Shape = Enum.PartType.Ball
+	core.Color = WHITE
+	core.Size = Vector3.one * 1.6
+	core.Transparency = 1
+	core.Parent = Workspace
+	starParts[3] = core
+	return starParts
+end
+
+function BossEnvironmentView.starTwinkle(data)
+	starToken += 1
+	local token = starToken
+	task.delay(data.delay or 0, function()
+		if token ~= starToken then
+			return
+		end
+		local parts = starSet()
+		local started = os.clock()
+		local connection
+		connection = RunService.RenderStepped:Connect(function()
+			local t = (os.clock() - started) / 0.7
+			if t >= 1 or token ~= starToken then
+				for _, part in ipairs(parts) do
+					part.Transparency = 1
+				end
+				connection:Disconnect()
+				return
+			end
+			local scale = math.sin(t * math.pi) * 2.2 + 0.2 -- 커졌다 작아진다
+			local spin = t * math.pi * 1.5
+			local facing = CFrame.new(data.position) * Workspace.CurrentCamera.CFrame.Rotation -- 보는 사람 쪽을 향한 네 갈래 별
+			for i = 1, 2 do
+				parts[i].Size = Vector3.new(0.6 * scale, 6 * scale, 0.6 * scale)
+				parts[i].CFrame = facing * CFrame.Angles(0, 0, spin + (i - 1) * math.pi / 2)
+				parts[i].Transparency = t * 0.6
+			end
+			parts[3].Size = Vector3.one * 1.6 * scale
+			parts[3].CFrame = CFrame.new(data.position)
+			parts[3].Transparency = t * 0.5
+		end)
+	end)
+end
+
+-- BR1-2 수정 부수기 도움 단계: 화면 알림(3초) + 새 발판 자리 강조(흰 고리 · 빛기둥)
+function BossEnvironmentView.courseHelp(data)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "CourseHelpNotice"
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 35
+	local label = Instance.new("TextLabel")
+	label.AnchorPoint = Vector2.new(0.5, 0)
+	label.Position = UDim2.new(0.5, 0, 0, 140)
+	label.Size = UDim2.new(0, 360, 0, 44)
+	label.BackgroundColor3 = Color3.fromRGB(30, 34, 44)
+	label.BackgroundTransparency = 0.1
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 22
+	label.TextColor3 = data.stage >= 2 and Color3.fromRGB(255, 200, 80) or Color3.fromRGB(120, 230, 255)
+	label.Text = data.stage >= 2 and "수정까지 날아가는 발판이 생겼어요!" or "도움 발판이 생겼어요!"
+	label.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = label
+	gui.Parent = player:WaitForChild("PlayerGui")
+	task.delay(3, function()
+		gui:Destroy()
+	end)
+	for _, position in ipairs(data.positions or {}) do
+		BossFx.ring(position, 1, 6, WHITE, 2.5)
+		local beam = newPart(Vector3.new(0.6, 30, 0.6), label.TextColor3, 0.4)
+		beam.CFrame = CFrame.new(position + Vector3.new(0, 15, 0))
+		task.delay(3, function()
+			destroy(beam)
+		end)
+	end
+end
+
 function BossEnvironmentView.coreHit(data)
 	local entry = beams[data.index]
 	if entry then
@@ -439,6 +540,25 @@ RunService.Heartbeat:Connect(function()
 	for _, pad in ipairs(CollectionService:GetTagged("BossJumpPad")) do
 		local rel = root.Position - pad.Position
 		if math.abs(rel.X) <= pad.Size.X / 2 and math.abs(rel.Z) <= pad.Size.Z / 2 and rel.Y >= 0 and rel.Y <= 5 then
+			local target = pad:GetAttribute("LaunchTarget")
+			if typeof(target) == "Vector3" then
+				-- BR1-2 발사 발판(수정 부수기 도움 2단계): 정점 LaunchApexY를 지나 target에 내려앉는 포물선. 날아가는 동안은 조작을 끈다(걷기 제어가 수평 속도를 지우지 않게).
+				local g = Workspace.Gravity
+				local apexY = math.max(pad:GetAttribute("LaunchApexY") or target.Y + 8, root.Position.Y + 2, target.Y + 1)
+				local up = math.sqrt(2 * g * (apexY - root.Position.Y))
+				local total = up / g + math.sqrt(2 * (apexY - target.Y) / g)
+				local flat = Vector3.new(target.X - root.Position.X, 0, target.Z - root.Position.Z)
+				root.AssemblyLinearVelocity = flat / total + Vector3.new(0, up, 0)
+				humanoid.PlatformStand = true
+				task.delay(total + 0.05, function()
+					if humanoid.Parent then
+						humanoid.PlatformStand = false
+					end
+				end)
+				padCooldownUntil = os.clock() + total + 0.3
+				BossFx.ring(pad.Position + Vector3.new(0, 0.3, 0), 1, 6, WHITE, 0.3)
+				break
+			end
 			local height = pad:GetAttribute("LaunchHeight") or 18
 			local v = root.AssemblyLinearVelocity
 			root.AssemblyLinearVelocity = Vector3.new(v.X, math.sqrt(2 * Workspace.Gravity * height), v.Z)

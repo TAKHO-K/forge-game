@@ -758,6 +758,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossColorView.finish()
 	elseif kind == "basicSweep" then
 		BossInnerCircleView.sweep(data)
+	elseif kind == "courseHelp" then
+		BossEnvironmentView.courseHelp(data)
+	elseif kind == "starTwinkle" then
+		BossEnvironmentView.starTwinkle(data)
 	elseif kind == "rodsStart" then
 		BossRodsView.start(data)
 	elseif kind == "rodsStatus" then

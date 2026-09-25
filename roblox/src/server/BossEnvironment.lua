@@ -222,8 +222,11 @@ local function activate(model, st, data, env, e, now)
 	e.windTurnAt = now + (env.zones.rotateEverySeconds or math.huge)
 	-- 활성 순간 효과(onStart - 밥상뒤집기의 튕김 + 피해): 구역 안(발 기준 같은 층 - 떠 있으면 안 맞는다)의 사람.
 	local onStart = env.onStart
-	if onStart and onStart.seesaw then
-		-- 널뛰기(사용자 보완 B): 판마다 받침점(판 가운데)에서의 판 길이 방향 거리로 높이 · 거리 · 피해를 정한다. 뒤집히는 순간 떠 있는 사람은 안 날아간다.
+	if onStart and onStart.pan then
+		-- BR1-2 프라이팬: 판 위 전원(떠 있어도 - 더 멀리) · 판 바깥쪽 ± 흩어짐 · 높은 포물선 · 피해 뒤 발사 · 멀리 가면 별 반짝(아레나 멤버 전원)
+		local random01 = function()
+			return rng:NextNumber()
+		end
 		for _, z in ipairs(e.zones) do
 			if z.shape == "rect" then
 				local a = math.rad(z.angleDeg)
@@ -231,16 +234,19 @@ local function activate(model, st, data, env, e, now)
 				local sideDir = Vector3.new(-alongDir.Z, 0, alongDir.X)
 				for _, v in ipairs(kit.victims(st)) do
 					local rel = xz(v.root.Position) - xz(z.center)
-					local along = rel:Dot(alongDir)
-					local inside = math.abs(along) <= z.halfLength and math.abs(rel:Dot(sideDir)) <= z.halfWidth
-					local airborne = typeof(v.player) == "Instance" and kit.isAirborne(v.player.Character, 0.5)
-					if inside and not airborne and not BossTrap.isTrapped(v.player) and Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0)) then
-						local lever, height, distance, multiplier = BossSkillMath.seesawLaunch(onStart.seesaw, z.halfLength, along)
+					local inside = math.abs(rel:Dot(alongDir)) <= z.halfLength and math.abs(rel:Dot(sideDir)) <= z.halfWidth
+					local airborne = typeof(v.player) == "Instance" and kit.isAirborne(v.player.Character, 0.5) or v.player.debugAirborne == true
+					if inside and not BossTrap.isTrapped(v.player) and (airborne or Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0))) then
+						local dir, height, distance, multiplier, star = BossSkillMath.panLaunch(onStart.pan, rel, airborne, random01)
 						kit.applySkillDamage(model, data, { damage = { kind = "attack", multiplier = multiplier }, damageLabel = env.damageLabel }, v.player)
-						local outward = alongDir * (along >= 0 and 1 or -1)
 						local c = { model = model, st = st, data = data, now = now }
-						kit.runHitEffects(c, { { type = "launch", heightStuds = height, distanceStuds = distance, escape = true } }, v, v.root.Position - outward * 5, 1)
-						kit.debugEvent("seesaw", { player = v.player, lever = lever, height = height, distance = distance, multiplier = multiplier, at = now })
+						kit.runHitEffects(c, { { type = "launch", heightStuds = height, distanceStuds = distance, escape = true } }, v, v.root.Position - dir * 5, 1)
+						kit.debugEvent("pan", { player = v.player, height = height, distance = distance, airborne = airborne, star = star, at = now })
+						if star then
+							local airSeconds = JumpMath.launchAirSeconds(height)
+							local land = xz(v.root.Position) + dir * distance
+							kit.send(st, "starTwinkle", { position = Vector3.new(land.X, st.floorY + height * 0.8 + 12, land.Z), delay = airSeconds * 0.85, userId = typeof(v.player) == "Instance" and v.player.UserId or nil })
+						end
 					end
 				end
 			end
@@ -269,6 +275,8 @@ local function activate(model, st, data, env, e, now)
 		e.phaseEndsAt = math.huge -- 시간 제한 없음(두 수정을 깨야 끝난다)
 		BossJumpCourse.build(model, e.garden.courses, zone.center, st.floorY, zone.radius or 140, MonsterState.getZoneKey(model), env.garden, function(site, broken, hits)
 			kit.send(st, "gardenCoreHit", { index = site, broken = broken, hits = hits })
+		end, function(stage, positions)
+			kit.send(st, "courseHelp", { stage = stage, positions = positions }) -- BR1-2 도움 단계 알림 + 발판 강조
 		end)
 	end
 	print(("[forge-game] 환경 변화 시작: %s - %.1f초"):format(env.id, env.durationSeconds))

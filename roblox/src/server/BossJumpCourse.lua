@@ -83,9 +83,9 @@ local function buildWalls(center, floorY, radius, height)
 end
 
 -- 활성 순간: 저장 공간의 코스를 복제해 놓고 · 수정 · 벽을 세운다. onCrystal(index, broken) = 수정이 맞을 때마다.
-function BossJumpCourse.build(model, plan, center, floorY, arenaRadius, zoneKey, spec, onCrystal)
+function BossJumpCourse.build(model, plan, center, floorY, arenaRadius, zoneKey, spec, onCrystal, onHelp)
 	BossJumpCourse.clear(model)
-	local state = { parts = {}, walls = {}, crystals = {}, checkpoints = {}, courseParts = {}, plan = plan }
+	local state = { parts = {}, walls = {}, crystals = {}, checkpoints = {}, courseParts = {}, plan = plan, builtAt = os.clock(), helpStage = 0, onHelp = onHelp, floorY = floorY, pads = {} }
 	active[model] = state
 	for site, course in ipairs(plan) do
 		local source = storage:FindFirstChild(("Course%d_%s"):format(course.courseIndex, course.name))
@@ -144,14 +144,108 @@ function BossJumpCourse.brokenCount(model)
 	return n, state and #state.plan or 0
 end
 
+-- ─────────────────────────── BR1-2 도움 단계(BossJumpMapData.help) ───────────────────────────
+local CollectionService = game:GetService("CollectionService")
+local HELP = BossJumpMapData.help
+
+local function newPad(name, size, position, color)
+	local pad = Instance.new("Part")
+	pad.Name = name
+	pad.Anchored = true
+	pad.Size = size
+	pad.CFrame = CFrame.new(position)
+	pad.Material = Enum.Material.Neon
+	pad.Color = color
+	pad.TopSurface = Enum.SurfaceType.Smooth
+	CollectionService:AddTag(pad, "BossJumpPad") -- 클라 BossEnvironmentView가 밟은 사람을 띄운다(LaunchHeight · LaunchTarget)
+	pad.Parent = GroundProbe.folder()
+	return pad
+end
+
+-- 1단계: 코스 발판 boostEvery칸마다 윗면에 높이 점프 발판(마지막 수정 발판 제외).
+local function helpStage1(state)
+	local placed = {}
+	for site, course in ipairs(state.plan) do
+		for _, p in ipairs(course.platforms) do
+			if not p.crystal and (p.index % HELP.boostEvery) == 1 then
+				local pad = newPad("CourseBoostPad", Vector3.new(HELP.boostPadStuds, 0.3, HELP.boostPadStuds), p.position + Vector3.new(0, 0.15, 0), Color3.fromRGB(120, 230, 255))
+				pad:SetAttribute("LaunchHeight", HELP.boostHeightStuds)
+				pad:SetAttribute("CourseSite", site)
+				table.insert(state.parts, pad)
+				table.insert(state.pads, pad)
+				table.insert(placed, pad.Position)
+			end
+		end
+	end
+	return placed
+end
+
+-- 2단계: 코스 시작 곁 바닥에 발사 발판 - 수정 발판 윗면 + 3을 겨눈다(클라가 포물선 속도를 계산 - LaunchTarget · LaunchApex).
+function BossJumpCourse.launchPadFor(course, floorY)
+	local first, crystal = course.platforms[1], nil
+	for _, p in ipairs(course.platforms) do
+		if p.crystal then
+			crystal = p
+		end
+	end
+	if not (first and crystal) then
+		return nil
+	end
+	local away = Vector3.new(first.position.X - crystal.position.X, 0, first.position.Z - crystal.position.Z)
+	away = away.Magnitude > 1e-3 and away.Unit or Vector3.new(1, 0, 0)
+	local at = Vector3.new(first.position.X, floorY, first.position.Z) + away * HELP.launchOffsetStuds
+	return at, crystal.position + Vector3.new(0, 3, 0), crystal.position.Y + HELP.launchApexAboveStuds
+end
+
+local function helpStage2(state)
+	local placed = {}
+	for site, course in ipairs(state.plan) do
+		local at, target, apexY = BossJumpCourse.launchPadFor(course, state.floorY)
+		if at then
+			local pad = newPad("CourseLaunchPad", Vector3.new(HELP.launchPadStuds, 0.4, HELP.launchPadStuds), at + Vector3.new(0, 0.2, 0), Color3.fromRGB(255, 200, 80))
+			pad:SetAttribute("LaunchTarget", target)
+			pad:SetAttribute("LaunchApexY", apexY)
+			pad:SetAttribute("CourseSite", site)
+			table.insert(state.parts, pad)
+			table.insert(state.pads, pad)
+			table.insert(placed, pad.Position)
+		end
+	end
+	return placed
+end
+
 -- 매 틱: 체크포인트를 밟으면 적고 · 코스에서 떨어지면(방금 코스 높이에 있었는데 바닥 가까이) 마지막 체크포인트로 돌려놓는다(그 코스의 수정이 깨지기 전까지).
 function BossJumpCourse.step(model, victims, floorY, now)
 	local state = active[model]
 	if not state then
 		return
 	end
+	-- 도움 단계(전투 시계 - 파티 공통)
+	local elapsed = now - state.builtAt
+	if state.helpStage < 1 and elapsed >= HELP.stage1Seconds then
+		state.helpStage = 1
+		local placed = helpStage1(state)
+		print(("[forge-game] 수정 부수기 도움 1단계(%.0f초): 높이 점프 발판 %d"):format(elapsed, #placed))
+		if state.onHelp then
+			state.onHelp(1, placed)
+		end
+	elseif state.helpStage < 2 and elapsed >= HELP.stage2Seconds then
+		state.helpStage = 2
+		local placed = helpStage2(state)
+		print(("[forge-game] 수정 부수기 도움 2단계(%.0f초): 발사 발판 %d"):format(elapsed, #placed))
+		if state.onHelp then
+			state.onHelp(2, placed)
+		end
+	end
 	for _, v in ipairs(victims) do
 		local feet = v.feet or v.root.Position - Vector3.new(0, 3, 0)
+		-- 도움 발판 위: 클라가 띄운다 - 서버 높이 검증이 부정으로 보지 않게 체공만큼 예외
+		for _, pad in ipairs(state.pads) do
+			local rel = feet - pad.Position
+			if math.abs(rel.X) <= pad.Size.X / 2 + 0.5 and math.abs(rel.Z) <= pad.Size.Z / 2 + 0.5 and rel.Y >= -1 and rel.Y <= 3 and typeof(v.player) == "Instance" then
+				HeightGuard.exempt(v.player, 4)
+			end
+		end
 		local on = nil
 		for _, part in ipairs(state.parts) do
 			local rel = feet - part.Position
@@ -206,6 +300,18 @@ function BossJumpCourse.clear(model)
 			MonsterSpawner.removeRescueTarget(crystal.model)
 		end
 	end
+end
+
+-- 검증 전용: 도움 단계 · 도움 발판 수 · 시계를 당긴다(builtAt을 seconds만큼 앞으로)
+function BossJumpCourse.debugHelp(model, advanceSeconds)
+	local state = active[model]
+	if not state then
+		return 0, 0
+	end
+	if advanceSeconds then
+		state.builtAt -= advanceSeconds
+	end
+	return state.helpStage, #state.pads
 end
 
 -- 검증 전용: 지금 코스 파트 수 · 벽 수 · 수정 수

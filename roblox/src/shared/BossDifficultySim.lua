@@ -240,8 +240,8 @@ function BossDifficultySim.run(bossId, options)
 							local share = math.min(ticks * (env.tick and env.tick.fraction or 0), BossData.mechanics.environment.maxHpFractionPerActivation)
 							if env.onStart and env.onStart.damage then
 								share += env.onStart.damage.multiplier / surviveHits
-							elseif env.onStart and env.onStart.seesaw then
-								share += (env.onStart.seesaw.minMultiplier + env.onStart.seesaw.maxMultiplier) / 2 / surviveHits
+							elseif env.onStart and env.onStart.pan then
+								share += env.onStart.pan.multiplier / surviveHits
 							end
 							damage(m, share, nil, "환경")
 						end

@@ -134,6 +134,21 @@ function BossSkillMath.seesawLaunch(seesaw, halfLengthStuds, along)
 	return lever, lerp(seesaw.minHeightStuds, seesaw.maxHeightStuds), lerp(seesaw.minDistanceStuds, seesaw.maxDistanceStuds), lerp(seesaw.minMultiplier, seesaw.maxMultiplier)
 end
 
+-- BR1-2 프라이팬(밥상뒤집기): 판 위 사람의 발사. rel = 판 가운데 → 그 사람(수평) · airborne = 뒤집히는 순간 떠 있었나 · rand01 = 0 ~ 1 난수 함수.
+-- 반환: 방향(단위), 높이, 거리, 피해 배율, 별 반짝(거리 ≥ starDistanceStuds).
+function BossSkillMath.panLaunch(pan, rel, airborne, rand01)
+	local base = rel.Magnitude > 0.5 and math.atan2(rel.Z, rel.X) or rand01() * 2 * math.pi
+	local angle = base + math.rad((rand01() * 2 - 1) * pan.scatterDeg)
+	local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
+	local distance = pan.distanceStuds + rand01() * pan.distanceJitter
+	local height = pan.heightStuds
+	if airborne then
+		distance *= pan.airborneDistanceScale
+		height += pan.airborneHeightBonus
+	end
+	return dir, height, distance, pan.multiplier, distance >= pan.starDistanceStuds
+end
+
 -- BR1 돌진: 둘째 돌진부터의 전조(repeatTelegraphSeconds - 없으면 첫 돌진과 같다).
 function BossSkillMath.dashTelegraph(skill, dashIndex)
 	if dashIndex > 1 and skill.repeatTelegraphSeconds then

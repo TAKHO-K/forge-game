@@ -15,6 +15,12 @@ return {
 	wallMarginStuds = 14,
 	centerClearStuds = 18,
 	crystal = { hits = 3, hitIntervalSeconds = 0.3 }, -- 수정 하나 = 유효 타격 3번(구조물 · 상자와 같은 1인 간격)
+	-- BR1-2 도움 단계(사용자 - 시간 제한은 없고, 오래 걸리면 쉬워진다 · 시계 = 전투 기준(파티 공통) · 두 코스 모두 · 솔로도 같다):
+	--   1단계 stage1Seconds: 코스 발판 boostEvery칸마다 윗면에 높이 점프 발판(밟으면 발 + boostHeightStuds - 다음 발판까지 1단 점프 없이 오른다)
+	--   2단계 stage2Seconds: 코스 시작 곁 바닥에 발사 발판(밟으면 수정 발판 윗면 + 3으로 포물선 - 정점은 수정 발판 + launchApexAboveStuds)
+	--   값 근거 = 코스별 깨끗한 완주 추정(BR1-2 보고서 · 하네스 - 발판마다 도움닫기 1.2초 + 그 조합의 최대 체공): 가장 긴 코스 약 20초 · 두 코스 + 사이 이동 약 50초 →
+	--   1단계 45초(솔로가 첫 코스를 한 번쯤 떨어져도 두 번째 코스 전에 도움) · 2단계 90초(1단계로도 두 배 넘게 걸리면 바로 간다).
+	help = { stage1Seconds = 45, stage2Seconds = 90, boostEvery = 2, boostHeightStuds = 20, boostPadStuds = 2.4, launchPadStuds = 5, launchApexAboveStuds = 8, launchOffsetStuds = 8 },
 	-- 코스 4종(자리마다 무작위 1개 - 두 자리는 서로 다른 것)
 	courses = {
 		{
