@@ -88,6 +88,24 @@ local function zoneParts(z, transparency, material)
 		core.CFrame = CFrame.new(z.center + Vector3.new(0, 0.25, 0)) * CFrame.Angles(0, 0, math.rad(90))
 		local slope = arcParts(z.center, 0, 360, z.radius - 1.2, z.radius, WHITE, 0.5, Enum.Material.SmoothPlastic) -- 끌림 반경 테두리(흰 선 - 위험이 아니라 경계)
 		table.insert(slope, core)
+		-- BR1-2 개미지옥: 모래 깔때기(안쪽으로 갈수록 낮아 보이는 고리 3겹 - 도는 것은 매 프레임) · 테두리 밖을 가리키는 흰 화살표 8개(빠져나오는 법)
+		for k = 1, 3 do
+			local r = z.core + (z.radius - z.core) * k / 4
+			for _, part in ipairs(arcParts(z.center - Vector3.new(0, 0.05 * k, 0), 0, 360, r - 0.6, r, Color3.fromRGB(190, 160, 110), 0.3, Enum.Material.Sand)) do
+				part:SetAttribute("PitSwirl", k)
+				table.insert(slope, part)
+			end
+		end
+		for i = 1, 8 do
+			local a = i / 8 * 2 * math.pi
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local arrow = newPart(Vector3.new(1.2, 0.3, 4), WHITE, 0.2, Enum.Material.Neon)
+			arrow.CFrame = CFrame.lookAt(z.center + dir * (z.radius + 2.5) + Vector3.new(0, 0.3, 0), z.center + dir * (z.radius + 6) + Vector3.new(0, 0.3, 0))
+			local tip = newPart(Vector3.new(2.6, 0.3, 1.2), WHITE, 0.2, Enum.Material.Neon)
+			tip.CFrame = arrow.CFrame * CFrame.new(0, 0, -2.2) * CFrame.Angles(0, math.rad(45), 0)
+			table.insert(slope, arrow)
+			table.insert(slope, tip)
+		end
 		return slope
 	elseif z.shape == "rect" then
 		local part = newPart(Vector3.new(z.halfWidth * 2, 0.25, z.halfLength * 2), DANGER, transparency, material)
@@ -433,6 +451,24 @@ end)
 
 -- 힘(내 캐릭터) · 바람 줄기(그림).
 local windStreakAt = 0
+local sinkSand, sinkSeenAt = nil, 0 -- BR1-2 개미지옥: 내 다리를 덮는 모래(구덩이 밖이면 곧 치운다)
+RunService.Heartbeat:Connect(function()
+	if sinkSand and os.clock() - sinkSeenAt > 0.15 then
+		destroy(sinkSand)
+		sinkSand = nil
+	end
+	-- 깔때기 고리가 돈다(안쪽이 빠르다)
+	if current and current.active then
+		for _, list in pairs(current.parts) do
+			for _, part in ipairs(list) do
+				local k = part:GetAttribute("PitSwirl")
+				if k then
+					part.CFrame *= CFrame.Angles(0, 0.02 * (4 - k), 0)
+				end
+			end
+		end
+	end
+end)
 RunService.Heartbeat:Connect(function(dt)
 	if not current or not current.active or os.clock() > (current.untilAt or 0) then
 		return
@@ -449,6 +485,15 @@ RunService.Heartbeat:Connect(function(dt)
 			local toCenter = Vector3.new(z.center.X - root.Position.X, 0, z.center.Z - root.Position.Z)
 			if toCenter.Magnitude <= z.radius and toCenter.Magnitude > 0.5 then
 				root.CFrame += toCenter.Unit * math.min(z.pull * dt, toCenter.Magnitude)
+			end
+			-- BR1-2: 안쪽일수록 다리가 모래에 묻힌다(그림만 - 판정은 서버 중심 원)
+			if toCenter.Magnitude <= z.radius and not airborne then
+				local depth = math.clamp(1 - toCenter.Magnitude / z.radius, 0, 1)
+				sinkSand = sinkSand or newPart(Vector3.new(3.2, 1, 3.2), Color3.fromRGB(190, 160, 110), 0.05, Enum.Material.Sand, Enum.PartType.Cylinder)
+				local h = 0.6 + depth * 2.6
+				sinkSand.Size = Vector3.new(h, 3.2, 3.2)
+				sinkSand.CFrame = CFrame.new(root.Position.X, z.center.Y + h / 2, root.Position.Z) * CFrame.Angles(0, os.clock() * 4, math.rad(90))
+				sinkSeenAt = os.clock()
 			end
 		elseif z.shape == "wind" and z.push then
 			local a = math.rad(z.angleDeg)

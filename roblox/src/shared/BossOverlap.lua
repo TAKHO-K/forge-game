@@ -45,9 +45,22 @@ local function envZones(env, rng, player)
 		end
 	elseif spec.shape == "ring" then
 		table.insert(list, { shape = "ring", x = 0, z = 0, beyond = spec.beyondStuds })
+	elseif spec.shape == "rect" and spec.halfMap then
+		-- BR1-2 맵 절반 판(급류 도트가 아레나 반쪽): 무작위 방위의 반쪽 - 서버 BossEnvironment.placeZones와 같은 모양
+		local a = rng() * 2 * math.pi
+		local sx, sz = -math.sin(a), math.cos(a)
+		table.insert(list, { shape = "rect", x = sx * ARENA_RADIUS / 2, z = sz * ARENA_RADIUS / 2, angle = a, halfLength = ARENA_RADIUS, halfWidth = ARENA_RADIUS / 2 })
 	elseif spec.shape == "rect" then
 		local a = rng() * 2 * math.pi
 		table.insert(list, { shape = "rect", x = player.x + math.cos(a) * 25, z = player.z + math.sin(a) * 25, angle = rng() * 2 * math.pi, halfLength = spec.halfLengthStuds, halfWidth = spec.halfWidthStuds })
+	elseif spec.shape == "pit" and (spec.perMember or spec.extra) then
+		-- BR1-2 여러 구덩이: 내 발밑에 생겼던 것(전조 동안 막 빠져나왔다 - 테두리 곁) + 무작위 extra개
+		local a = rng() * 2 * math.pi
+		table.insert(list, { shape = "pit", x = player.x + math.cos(a) * (spec.radiusStuds + 2), z = player.z + math.sin(a) * (spec.radiusStuds + 2), radius = spec.radiusStuds, core = spec.coreRadiusStuds, pull = spec.pullStudsPerSecond })
+		for _ = 1, spec.extra or 0 do
+			local b, d = rng() * 2 * math.pi, rng() * (ARENA_RADIUS - spec.radiusStuds)
+			table.insert(list, { shape = "pit", x = math.cos(b) * d, z = math.sin(b) * d, radius = spec.radiusStuds, core = spec.coreRadiusStuds, pull = spec.pullStudsPerSecond })
+		end
 	elseif spec.shape == "pit" then
 		table.insert(list, { shape = "pit", x = 0, z = 0, radius = spec.radiusStuds, core = spec.coreRadiusStuds, pull = spec.pullStudsPerSecond })
 	elseif spec.shape == "wind" then

@@ -910,7 +910,9 @@ local SPECIES = {
 		environment = {
 			id = "antlion", style = "sand", motion = "claw", damageLabel = "개미지옥",
 			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.0, durationSeconds = 12,
-			zones = { shape = "pit", radiusStuds = 45, coreRadiusStuds = 8, pullStudsPerSecond = 7 },
+			-- BR1-2(사용자 - 맵 곳곳에 한 번에 여러 개): 멤버 발밑마다 1개 + 무작위 extra개 · 서로 minGapStuds 떨어진다 · 반경 18(끌림 7 - 걷기 16보다 약하다: 반대로 9/초) ·
+			-- 중심 5 = 0.5초마다 10%(빨려 들어가는 모래 - 클라가 다리를 모래에 묻고 흔든다) · 테두리 밖을 가리키는 흰 화살표(빠져나오는 법). 발밑에서 밖으로 19 = 0.5 + 19 ÷ 9 × 1.25 = 3.1초 ≈ 전조 3 + 끌림 전 여유.
+			zones = { shape = "pit", radiusStuds = 18, coreRadiusStuds = 5, pullStudsPerSecond = 7, perMember = true, extra = 3, minGapStuds = 40 },
 			tick = { seconds = 0.5, fraction = 0.1 },
 		},
 		-- 29-3 모래 유적(정적 지형 - 보스전이 시작될 때 짓고 끝나면 치운다, BossArenaKit). 유사 웅덩이 2곳(지름 10)은

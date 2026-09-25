@@ -77,6 +77,32 @@ local function placeZones(model, st, data, env)
 			local p = kit.clampToZone(spot, zone, math.min(spec.halfLengthStuds, spec.halfWidthStuds))
 			table.insert(list, { shape = "rect", center = Vector3.new(p.X, st.floorY, p.Z), angleDeg = angle, halfLength = spec.halfLengthStuds, halfWidth = spec.halfWidthStuds })
 		end
+	elseif spec.shape == "pit" and (spec.perMember or spec.extra) then
+		-- BR1-2 여러 구덩이: 멤버 발밑마다 1개 + 무작위 extra개(서로 minGapStuds - 못 놓으면 건너뛴다)
+		local spots = {}
+		if spec.perMember then
+			for _, v in ipairs(members) do
+				table.insert(spots, xz(v.root.Position))
+			end
+		end
+		for _ = 1, (spec.extra or 0) * 10 do
+			if #spots >= #members + (spec.extra or 0) then
+				break
+			end
+			local angle = rng:NextNumber(0, 2 * math.pi)
+			local spot = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * rng:NextNumber(0, arenaRadius - spec.radiusStuds - 4)
+			local clear = true
+			for _, other in ipairs(spots) do
+				clear = clear and (other - spot).Magnitude >= (spec.minGapStuds or 0)
+			end
+			if clear then
+				table.insert(spots, spot)
+			end
+		end
+		for _, spot in ipairs(spots) do
+			local p = kit.clampToZone(spot, zone, spec.radiusStuds * 0.5)
+			table.insert(list, { shape = "pit", center = Vector3.new(p.X, st.floorY, p.Z), radius = spec.radiusStuds, core = spec.coreRadiusStuds, pull = spec.pullStudsPerSecond })
+		end
 	elseif spec.shape == "pit" then
 		table.insert(list, { shape = "pit", center = Vector3.new(center.X, st.floorY, center.Z), radius = spec.radiusStuds, core = spec.coreRadiusStuds, pull = spec.pullStudsPerSecond })
 	elseif spec.shape == "wind" then
