@@ -461,6 +461,10 @@ local function regrowObstacles(c, effect)
 	local half = BossData.mechanics.dodge.characterHalfWidthStuds
 	local bossAt = c.position
 	local token = BossArenaMap.regrowToken(zoneKey) -- 스킬이 끝난 순간의 보스전(리셋 · 종료 뒤의 계획은 버린다)
+	if not token then
+		return -- P3d-F: 끝난 순간 이 슬롯에 보스전이 없으면 계획하지 않는다(nil 토큰은 planRegrow의 대조를 건너뛰어 다음 보스전에 솟을 수 있었다)
+	end
+	debugEvent("regrowQueue", { zoneKey = zoneKey, token = token, at = os.clock() }) -- P3d-F A1 계측: 등록(자리 찾기 대기)
 	-- P3d Play 2: 자리 찾기(연결 검사 - 격자 BFS, 한 번에 수 ms)를 step 밖에서 돈다(task.defer) - step 안에서 돌면 그 틱이 튀어 29-2 step 평균이 40 → 118마이크로초였다.
 	task.defer(function()
 		for _ = 1, effect.count or 1 do
@@ -468,12 +472,12 @@ local function regrowObstacles(c, effect)
 			local plan, why = BossArenaMap.planRegrow(zoneKey, { members = members, boss = bossAt, pits = keepOut, token = token })
 			if not plan then
 				print(("[forge-game] 지형 재생성 건너뜀: %s - %s"):format(zoneKey, tostring(why)))
-				debugEvent("regrowSkip", { reason = why, at = os.clock() })
+				debugEvent("regrowSkip", { reason = why, at = os.clock(), zoneKey = zoneKey, token = token })
 				break
 			end
 			print(("[forge-game] 지형 재생성 자리: %s #%d %s - 시도 %d · %.1fms"):format(zoneKey, plan.item.id, plan.item.kind, plan.tries or 0, (os.clock() - planStartedAt) * 1000))
 			send(st, "regrowTelegraph", { id = plan.item.id, colliders = plan.worldColliders, seconds = REGROW.telegraphSeconds, color = plan.item.spec.color, floorY = st.floorY })
-			debugEvent("regrowPlan", { plan = plan, at = os.clock() })
+			debugEvent("regrowPlan", { plan = plan, at = os.clock(), zoneKey = zoneKey, token = token })
 			local planned = os.clock()
 			task.delay(REGROW.telegraphSeconds, function()
 				-- 리뷰 6: 솟기 직전 자리를 다시 본다 - 지금 보스 자리 · 지금 동적 지형(전조 사이 들어왔으면 이번엔 안 솟는다)
@@ -484,7 +488,7 @@ local function regrowObstacles(c, effect)
 				local bossNow = model.Parent and model.PrimaryPart and (BossPatterns.getLogicalPosition(model) or model.PrimaryPart.Position) or nil
 				local obstacle, why = BossArenaMap.spawnRegrown(zoneKey, plan, { boss = bossNow, pits = now })
 				if not obstacle then
-					debugEvent("regrowSkip", { reason = why, at = os.clock(), atSpawn = true })
+					debugEvent("regrowSkip", { reason = why, at = os.clock(), atSpawn = true, zoneKey = zoneKey, token = token, id = plan.item.id })
 					return
 				end
 				local outcomes = {}
@@ -514,7 +518,7 @@ local function regrowObstacles(c, effect)
 					end
 				end
 				send(st, "regrowSpawn", { id = obstacle.id, colliders = plan.worldColliders, color = plan.item.spec.color, floorY = st.floorY })
-				debugEvent("regrowSpawn", { id = obstacle.id, plan = plan, outcomes = outcomes, at = os.clock(), telegraph = os.clock() - planned })
+				debugEvent("regrowSpawn", { id = obstacle.id, plan = plan, outcomes = outcomes, at = os.clock(), telegraph = os.clock() - planned, zoneKey = zoneKey, token = token })
 			end)
 		end
 	end)
