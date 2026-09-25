@@ -476,6 +476,32 @@ function BR1_2Verify.runLive(player, env)
 			trapped and kind == "bubbled" and math.abs(lifted - spec.liftStuds) < 0.01 and presses == spec.presses and not BossTrap.isTrapped(victim))
 	end)
 
+	-- 6-2) 번개 조준경: 피뢰침 5 · 필요(스탠드인 1 + 개발 = 2인 → 3) · 한 명을 피뢰침 곁에 세워 두면 그 사람이 표적일 때 충전 · 7번 뒤 판정
+	r.section("번개 조준경", function()
+		local model, data, zone, st = setup("storm_lord", BossData.stageInterval, 1207)
+		local rods = BossPropMath.kitZones(data.arenaKit, zone.center, FLOOR, "rod")
+		local onRod = standIn(model, "OnRod", Vector3.new(rods[1].center.X + 2, FLOOR + 3, rods[1].center.Z))
+		H.fullHeal(onRod)
+		hook()
+		BossPatterns.force(model, data, "rods")
+		local skill = data.skills.rods
+		local total = skill.telegraphSeconds + skill.discharges * (skill.markSeconds + skill.trackSeconds + skill.lockSeconds + skill.gapSeconds) + 2
+		H.drive(player, root, model, data, total, function()
+			return countKind("rodsEnd") > 0
+		end)
+		local startPayload, strikes, charged = nil, 0, 0
+		for _, e in ipairs(sent) do
+			if e.kind == "rodsStart" then
+				startPayload = e.payload
+			elseif e.kind == "rodsStrike" then
+				strikes += 1
+				charged += e.payload.rodIndex and 1 or 0
+			end
+		end
+		r.check(("번개 조준경: 피뢰침 %d(기대 5) · 필요 %s(기대 3 - 2인) · 방전 %d(기대 7) · 충전 %d(피뢰침 곁 표적 차례만 - 기대 1) · 끝 %d"):format(#rods, tostring(startPayload and startPayload.required), strikes, charged, countKind("rodsEnd")),
+			#rods == 5 and startPayload and startPayload.required == 3 and strikes == skill.discharges and charged == 1 and countKind("rodsEnd") == 1)
+	end)
+
 	-- 7) 저장 v37: 이관(빈 표) · 첫 만남 표시 한 번만 · 되돌리기
 	r.section("저장 v37", function()
 		local old = SaveSystem.defaultProfile()
