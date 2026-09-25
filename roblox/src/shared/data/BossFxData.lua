@@ -54,7 +54,7 @@ return {
 	},
 
 	-- 단상 금 · 무너짐(C2) · 지형 재생성(D2) · 모래 구덩이 달그락(E2)
-	dais = { crackDust = 8, crumbleChunks = 14 },
+	dais = { crackDust = 8, crumbleChunks = 14, warnAmplitudeStuds = 0.45, warnMinSeconds = 0.35, warnDust = 10 }, -- warn* = P3d-F B3 붕괴 예고(흔들림 · 먼지)
 	regrow = { shadowTransparency = 0.45, glowPulse = 6 },
 	rattle = { amplitudeStuds = 0.25, seconds = 0.35 },
 }

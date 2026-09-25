@@ -441,7 +441,7 @@ end
 -- ─────────────────────────── 지형 재생성(P3d D · E - 규칙 = BossArenaMapData.regrow 주석) ───────────────────────────
 -- onComplete = { { type = "regrowObstacles", count } }. 자리는 BossArenaMap.planRegrow(= ArenaLayout.regrowSpot - 기존 구조물 · 단상 · 모래 구덩이 · 얼음 기둥 · 보스 · 킷 ·
 -- 둔덕 · 입장 방위와 겹치지 않고 갇힘이 없는 자리) → 멤버에게 전조(그림자 + 금 가는 빛)를 보내고 telegraphSeconds 뒤 솟는다. 솟는 순간 몸이 충돌 원에 닿은 사람:
--- 피해(regrow.damage - 방어 적용) + 가장자리면 원 밖으로 밀려나고, 안쪽(원 반경 − encaseCoreInsetStuds 안)이거나 밀려날 자리가 막혔으면 끼인다(BossArenaMap.encase).
+-- 가장자리면 피해(regrow.damage - 방어 적용) + 원 밖으로 밀려나고(P3d-F B5: 끼임은 피해 0 · 무적 아님), 안쪽(원 반경 − encaseCoreInsetStuds 안)이거나 밀려날 자리가 막혔으면 끼인다(BossArenaMap.encase).
 local REGROW = BossArenaMapData.regrow
 local REGROW_SKILL = { damage = REGROW.damage, damageLabel = REGROW.damageLabel } -- applySkillDamage가 읽는 모양
 
@@ -495,7 +495,6 @@ local function regrowObstacles(c, effect)
 				for _, v in ipairs(victims(st)) do
 					local collider, d = BossArenaMap.colliderContact(obstacle, v.feet, half)
 					if collider and Reach.sameLayer(v.feet, Vector3.new(0, st.floorY, 0)) then
-						applySkillDamage(model, data, REGROW_SKILL, v.player)
 						local outcome = "encase"
 						if d > collider.r - REGROW.encaseCoreInsetStuds then
 							local away = Vector3.new(v.root.Position.X - collider.center.X, 0, v.root.Position.Z - collider.center.Z)
@@ -503,6 +502,7 @@ local function regrowObstacles(c, effect)
 							local target = collider.center + away * (collider.r + REGROW.pushOutStuds)
 							if not BossArenaMap.overlapsObstacle(zoneKey, target, half, 0) then
 								outcome = "push"
+								applySkillDamage(model, data, REGROW_SKILL, v.player) -- P3d-F B5: 피해는 밀려난 사람만 - 끼이는 순간은 0(대신 끼인 동안 무적이 아니다)
 								local to = Vector3.new(target.X, v.root.Position.Y, target.Z)
 								if typeof(v.root) == "Instance" then
 									v.root.CFrame = CFrame.new(to) * v.root.CFrame.Rotation
@@ -609,7 +609,7 @@ local function runHitEffects(c, effects, v, from, coHits)
 			local weight = BossMechanics.weightFactorOf(v.player)
 			-- 29-4 회오리(holdSeconds): 떠서 도는 동안은 조작을 잃는다 - 그동안은 맞지 않는다(immuneSeconds). 이 스킬의 피해는 이미 들어갔다.
 			if effect.immuneSeconds then
-				PlayerState.setIncomingDamageMultiplierUntil(v.player, 0, effect.immuneSeconds / weight)
+				PlayerState.setInvulnerableUntil(v.player, effect.immuneSeconds / weight, "launchHold") -- P3d-F B6: 출처별 무적
 			end
 			-- 도는 원(spinRadiusStuds)이 벽을 넘지 않게 중심을 그만큼 안쪽으로 자른다(맵 밖으로는 안 나간다 - 20.77 [1]).
 			local zone = zoneOf(c.model)
@@ -770,8 +770,19 @@ local function waveOverDaises(c, wave, radius, targets)
 	end
 	local zoneKey = MonsterState.getZoneKey(c.model)
 	wave.daisPassed = wave.daisPassed or {}
+	wave.daisWarned = wave.daisWarned or {}
 	for _, dais in ipairs(BossArenaMap.daises(zoneKey)) do
-		if not wave.daisPassed[dais.id] and (xz(dais.center) - wave.center).Magnitude <= radius then
+		local distance = (xz(dais.center) - wave.center).Magnitude
+		-- P3d-F B3: 이 파동에 무너질 단상(금 간 상태)이면 닿기 collapseWarnSeconds 전에 예고(흔들림 · 먼지 - 클라). 파동이 그보다 가까이서 태어나면 태어난 순간 남은 시간만큼.
+		if not wave.daisWarned[dais.id] and not wave.daisPassed[dais.id] and BossArenaMap.daisBreaksNext(zoneKey, dais.id) then
+			local lead = (distance - radius) / wave.speed
+			if lead <= BossArenaMapData.obstacle.daisWave.collapseWarnSeconds then
+				wave.daisWarned[dais.id] = true
+				BossArenaMap.warnDais(zoneKey, dais.id, math.max(lead, 0))
+				debugEvent("daisWarn", { id = dais.id, lead = lead, waveIndex = wave.waveIndex, at = c.now })
+			end
+		end
+		if not wave.daisPassed[dais.id] and distance <= radius then
 			wave.daisPassed[dais.id] = true
 			local onTop = {}
 			for _, v in ipairs(targets) do

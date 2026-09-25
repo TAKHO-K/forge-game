@@ -21,6 +21,7 @@ local FLY_SECONDS = 0.7
 local DUST_COLOR = Color3.fromRGB(235, 228, 214) -- 흙먼지(먼지 공통 - BossPatternVisuals와 같은 값)
 
 local rng = Random.new()
+local warn_ -- P3d-F B3 붕괴 예고(아래 - rattle 뒤에 정의)
 
 local function dustColor(color)
 	return (color or DUST_COLOR):Lerp(DUST_COLOR, 0.6)
@@ -73,7 +74,7 @@ end
 
 -- E2 달그락: 모래 구덩이 틱마다 그 구조물의 보이는 파트를 이 화면에서만 잠깐 흔든다(서버 파트의 CFrame을 로컬로 옮겼다가 되돌린다 - 충돌 기둥은 안 건드린다) + 발밑 모래 먼지.
 local rattling = {}
-local function rattle(data)
+local function rattle(data, seconds, amplitude)
 	local best, bestDistance = nil, math.huge
 	for _, model in ipairs(CollectionService:GetTagged("ArenaObstacle")) do
 		local root = model.PrimaryPart
@@ -96,13 +97,14 @@ local function rattle(data)
 	rattling[best] = true
 	local started = os.clock()
 	local cfg = BossFxData.rattle
+	seconds, amplitude = seconds or cfg.seconds, amplitude or cfg.amplitudeStuds
 	local connection
 	connection = RunService.RenderStepped:Connect(function()
 		local t = os.clock() - started
-		local done = t >= cfg.seconds or not best.Parent
+		local done = t >= seconds or not best.Parent
 		for part, base in pairs(parts) do
 			if part.Parent then
-				part.CFrame = done and base or (base * CFrame.new(rng:NextNumber(-1, 1) * cfg.amplitudeStuds, 0, rng:NextNumber(-1, 1) * cfg.amplitudeStuds) * CFrame.Angles(0, 0, math.rad(rng:NextNumber(-4, 4))))
+				part.CFrame = done and base or (base * CFrame.new(rng:NextNumber(-1, 1) * amplitude, 0, rng:NextNumber(-1, 1) * amplitude) * CFrame.Angles(0, 0, math.rad(rng:NextNumber(-4, 4))))
 			end
 		end
 		if done then
@@ -117,12 +119,27 @@ local function rattle(data)
 	end
 end
 
+-- P3d-F B3 붕괴 예고(금 간 단상 - 무너질 파동이 닿기 0.5초 전): 그 단상이 무너질 때까지 크게 흔들리고 둘레에서 먼지가 오른다(판정 무관 - 겉모습만).
+warn_ = function(data)
+	local cfg = BossFxData.dais
+	local seconds = math.max(data.seconds or 0, cfg.warnMinSeconds)
+	rattle(data, seconds, cfg.warnAmplitudeStuds)
+	local floorY = data.position.Y - (data.height or 4) / 2
+	for index = 1, cfg.warnDust do
+		local angle = (index / cfg.warnDust) * 2 * math.pi + rng:NextNumber(-0.3, 0.3)
+		local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
+		BossFx.puff(Vector3.new(data.position.X, floorY + 0.4, data.position.Z) + dir * (data.radius or 4), rng:NextNumber(1.4, 2.2), dustColor(data.color), seconds + 0.2, dir * 1.5 + Vector3.new(0, 3, 0))
+	end
+end
+
 breakEvent.OnClientEvent:Connect(function(data)
 	if data.stage == "rattle" then
 		rattle(data)
+	elseif data.stage == "warn" then
+		warn_(data)
 	elseif data.stage == "crack" then
 		crack(data)
-	elseif data.cause == "wave" or data.cause == "pit" then
+	elseif data.cause == "wave" or data.cause == "pit" or data.cause == "cap" then
 		crumble(data)
 	else
 		burst(data)

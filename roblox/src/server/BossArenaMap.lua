@@ -286,7 +286,7 @@ end
 -- 부서진 순간: 아레나 안 사람에게 파편 연출을 보내고, 윗면에 서 있던 사람은 파편과 함께 튕겨 나며 피해를 받는다(사용자 지시).
 -- 튕김은 보스 패턴의 넉백 연출(launch - BossStormView)을 그대로 쓴다 - P3c A5: 구역을 실어 보내 착지점이 벽 안쪽을 넘지 않는다. 반환: 튕겨 난 사람 목록, 떨어진 사람 목록(검증이 읽는다).
 -- P3d C2 · E2: 지진파(cause "wave") · 모래 구덩이(cause "pit")로 무너지면 위에 있던 사람은 **바닥으로 떨어지기만** 한다(피해 · 튕김 없음 - 떨어진 사람 목록).
-local SOFT_BREAK = { wave = true, pit = true, escape = true, expire = true } -- escape · expire = 끼임 구조물(P3d D3 - 3타 · 6초)
+local SOFT_BREAK = { wave = true, pit = true, escape = true, expire = true, cap = true } -- escape · expire = 끼임 구조물(P3d D3 - 3타 · 6초) · cap = 상한 교체(P3d-F B4)
 local function fireBreak(state, obstacle, cause)
 	local zone = zoneOfKey(state.zoneKey)
 	local topBreak = OBSTACLE.topBreak
@@ -395,11 +395,10 @@ function BossArenaMap.releaseEncased(state, obstacle)
 	local released = {}
 	for member in pairs(obstacle.encased or {}) do
 		table.insert(released, member)
-		local root = typeof(member) == "Instance" and member.Character and member.Character:FindFirstChild("HumanoidRootPart")
-		if root then
-			root.Anchored = false
-			-- 리뷰 5: 끼임이 건 0배일 때만 푼다(그 사이 다른 출처 - 잡힘 해제 유예 · 회오리 면역 - 가 건 것은 그대로 둔다)
-			PlayerState.clearIncomingDamageMultiplierIf(member, obstacle.immuneUntil and obstacle.immuneUntil[member])
+		if typeof(member) == "Instance" then
+			PlayerState.setAnchorHold(member, "encase", false) -- P3d-F: 끼임 고정만 푼다(잡힘 고정은 그대로)
+		elseif type(member) == "table" and obstacle.encasedRoots and obstacle.encasedRoots[member] then
+			obstacle.encasedRoots[member].Anchored = false -- 검증 스탠드인(표 루트)
 		end
 	end
 	if obstacle.encased and next(obstacle.encased) then
@@ -440,12 +439,20 @@ function BossArenaMap.planRegrow(zoneKey, context)
 	if context.token and context.token ~= state.regrowToken then
 		return nil, "cancelled"
 	end
-	local count = 0
-	for _ in pairs(state.obstacles) do
+	local count, oldest = 0, nil
+	for id, obstacle in pairs(state.obstacles) do
 		count += 1
+		if obstacle.regrown and (not oldest or id < oldest) then -- 재생성 id는 전역 일련번호라 작을수록 오래됐다
+			oldest = id
+		end
 	end
 	if count >= REGROW.maxObstacles then
-		return nil, "cap"
+		-- P3d-F B4: 상한이면 재생성된 것 중 가장 오래된 것을 무너뜨리고(부드러운 붕괴 모션 · 위 사람은 떨어지기만) 새로 세운다. 재생성분이 없으면(배치만으로 상한) 안 솟는다.
+		if not oldest then
+			return nil, "cap"
+		end
+		BossArenaMap.breakObstacle(zoneKey, oldest, "cap")
+		context.replaced = oldest
 	end
 	local zone = zoneOfKey(zoneKey)
 	local function rel(p)
@@ -472,7 +479,7 @@ function BossArenaMap.planRegrow(zoneKey, context)
 	for _, c in ipairs(item.colliders) do
 		table.insert(worldColliders, { center = Vector3.new(zone.center.X + c.x, FLOOR_TOP_Y, zone.center.Z + c.z), r = c.r, h = c.h })
 	end
-	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries }, nil
+	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries, replaced = context.replaced }, nil
 end
 
 -- 전조가 끝나 실제로 솟는다(리셋 · 보스전 끝으로 토큰이 바뀌었으면 nil). context(선택 - planRegrow와 같은 모양, 멤버는 안 본다) = 솟기 직전에 자리를 다시 본다(리뷰 6 -
@@ -518,7 +525,8 @@ function BossArenaMap.colliderContact(obstacle, feet, halfWidth)
 	return best, bestDistance
 end
 
--- member를 이 구조물에 끼운다(D3) - 고정 · 받는 피해 0배 · 부수는 데 escapeHits · encaseAutoBreakSeconds 뒤 저절로 부서진다.
+-- member를 이 구조물에 끼운다(D3) - 고정 · 부수는 데 escapeHits · encaseAutoBreakSeconds 뒤 저절로 부서진다.
+-- P3d-F B5: 끼인 동안 무적이 아니다(옛 0배는 전조 위에 일부러 서서 보스 패턴을 피하는 악용이 됐다) - 받는 피해는 평소대로.
 function BossArenaMap.encase(zoneKey, obstacle, member, root)
 	local state = active[zoneKey]
 	if not state or obstacle.broken then
@@ -528,14 +536,12 @@ function BossArenaMap.encase(zoneKey, obstacle, member, root)
 	obstacle.encased[member] = true
 	obstacle.escape = true
 	obstacle.encaseUntil = obstacle.encaseUntil or (os.clock() + REGROW.encaseAutoBreakSeconds)
-	if typeof(root) == "Instance" then
-		root.Anchored = true
-		root.AssemblyLinearVelocity = Vector3.zero
-	end
 	if typeof(member) == "Instance" then
-		PlayerState.setIncomingDamageMultiplierUntil(member, 0, REGROW.encaseAutoBreakSeconds + 0.1)
-		obstacle.immuneUntil = obstacle.immuneUntil or {}
-		obstacle.immuneUntil[member] = PlayerState.getIncomingDamageMultiplierUntil(member)
+		PlayerState.setAnchorHold(member, "encase", true) -- P3d-F: 출처별 고정(잡힘과 서로 풀지 않는다)
+	elseif root then
+		root.Anchored = true -- 검증 스탠드인(표 루트)
+		obstacle.encasedRoots = obstacle.encasedRoots or {}
+		obstacle.encasedRoots[member] = root
 	end
 	BossArenaMap.fireEncase(state, obstacle, REGROW.escapeHits - obstacle.hits)
 	local token, id = state.regrowToken, obstacle.id
@@ -558,10 +564,8 @@ function BossArenaMap.releaseMember(zoneKey, member)
 	for _, obstacle in pairs(state and state.obstacles or {}) do
 		if obstacle.encased and obstacle.encased[member] then
 			obstacle.encased[member] = nil
-			local root = typeof(member) == "Instance" and member.Character and member.Character:FindFirstChild("HumanoidRootPart")
-			if root then
-				root.Anchored = false
-				PlayerState.clearIncomingDamageMultiplierIf(member, obstacle.immuneUntil and obstacle.immuneUntil[member])
+			if typeof(member) == "Instance" then
+				PlayerState.setAnchorHold(member, "encase", false)
 			end
 			BossArenaMap.fireEncase(state, obstacle, next(obstacle.encased) and (REGROW.escapeHits - obstacle.hits) or 0, { member })
 			print(("[forge-game] 끼임 풀림(보스전 이탈): %s - #%d"):format(tostring(member.Name), obstacle.id))
@@ -683,6 +687,27 @@ function BossArenaMap.waveHitDais(zoneKey, id)
 		return "crack"
 	end
 	return nil
+end
+
+-- P3d-F B3: 다음 파동에 무너지는 단상인가(금 간 상태 - waveHits가 breakAfterWaves − 1).
+function BossArenaMap.daisBreaksNext(zoneKey, id)
+	local state = active[zoneKey]
+	local obstacle = state and state.obstacles[id]
+	return obstacle ~= nil and obstacle.climbable and not obstacle.broken and obstacle.waveHits == OBSTACLE.daisWave.breakAfterWaves - 1
+end
+
+-- P3d-F B3: 무너지기 seconds 전 예고 - 아레나 안 사람에게 흔들림 · 먼지(클라 stage "warn"). 판정은 그대로(무너지는 순간 = 파동이 한가운데를 지나는 순간).
+function BossArenaMap.warnDais(zoneKey, id, seconds)
+	local state = active[zoneKey]
+	local obstacle = state and state.obstacles[id]
+	if not obstacle then
+		return
+	end
+	obstacle.warnedAt = os.clock()
+	for _, player in ipairs(arenaPlayers(state)) do
+		breakEvent:FireClient(player, { stage = "warn", id = id, seconds = seconds, position = obstacle.center + Vector3.new(0, obstacle.height / 2, 0), radius = obstacle.radius, height = obstacle.height, color = obstacle.color })
+	end
+	print(("[forge-game] 단상 붕괴 예고: %s #%d - %.2f초 뒤"):format(zoneKey, id, seconds))
 end
 
 function spawnObstacle(state, zone, item)

@@ -68,7 +68,10 @@ local obstacle = {
 	-- 대신 파동이 단상 한가운데를 지날 때마다 센다: crackAfterWaves번째 = 금(파편 먼지), breakAfterWaves번째 = 무너진다(C2). 한 번 찍은 파동의 겹(심해 군주 해일 2겹)은 한 번으로 센다.
 	-- 무너질 때 위에 있던 사람은 바닥으로 떨어진다 - **피해 · 튕김 없음**(topBreak = 때리기 5타 · 돌진 1방으로 부서질 때만의 규칙과 다르다). 무너뜨린 그 파동(모든 겹)은
 	-- 안 맞는다(리뷰 1 - 옛 시간 유예 0.6초는 먼 쪽 가장자리 · 느린 파동에서 모자랐다. BossPatterns onDais).
-	daisWave = { crackAfterWaves = 1, breakAfterWaves = 2 },
+	daisWave = { crackAfterWaves = 1, breakAfterWaves = 2, collapseWarnSeconds = 0.5 }, -- P3d-F B3: 무너질 파동이 닿기 0.5초 전 예고(흔들림 · 먼지)
+	-- P3d-F B3 금 간 단상 겉모습(탑다운 거리 · 폰 800 × 360에서 구분): 윗면에 굵은 금 lines줄(폭 widthStuds - 옛 0.25 × 3줄은 폰에서 1px 남짓) + 보이는 파트 색을
+	-- 위험색(UIColors.danger) 쪽으로 tintFraction만큼. 판정 자리는 그대로(겉모습만).
+	daisCrackLook = { lines = 6, widthStuds = 0.7, tintFraction = 0.35 },
 }
 
 -- P3c B1 무작위 배치(보스 등장마다 새 시드 - 로그 "[forge-game] 보스맵 배치 시드"). 생성 · 검사 = shared/ArenaLayout(순수 함수 - 서버와 검증이 같은 함수).
@@ -101,10 +104,12 @@ local layout = {
 --     다른 구조물(단상 포함)과 ≥ layout.minGapStuds · 킷과 ≥ kitGapStuds · 보스와 ≥ bossClearStuds · 모래 구덩이와 ≥ pitGapStuds · 둔덕과 ≥ layout.mounds.gapStuds ·
 --     연결(갇힘 없음 - 격자 BFS) - 실패하면 다른 자리를 tries번까지 다시 뽑고, 다 실패하면 이번엔 안 솟는다(로그).
 --     underMemberChance의 확률로 멤버 한 명의 발밑(underMemberStuds 안)을 노린다(D2 "플레이어 발밑 생성 가능").
---   못 피하면(솟는 순간 발이 충돌 원 안) 피해 = damage(평타 배율 - 방어 적용). 충돌 원 가장자리(원 반경 − encaseCoreInsetStuds 밖)면 원 밖으로 밀려나고, 안쪽이면 **끼인다**(D3):
---     그 자리에 고정 · 받는 피해 0배(움직일 수 없는 동안은 못 피한다 - 29-1 잡힘과 같은 원칙) · 그 구조물을 escapeHits(3)타에 부순다(누가 때려도) ·
+--   못 피하면(솟는 순간 발이 충돌 원 안): 충돌 원 가장자리(원 반경 − encaseCoreInsetStuds 밖)면 피해 = damage(평타 배율 - 방어 적용) + 원 밖으로 밀려나고, 안쪽이면 **끼인다**(D3):
+--     끼이는 순간 피해 0 · 그 자리에 고정 · **무적 아님**(P3d-F B5 - 옛 0배는 전조 위에 일부러 서서 보스 패턴을 피하는 악용이 됐다) · 그 구조물을 escapeHits(3)타에 부순다(누가 때려도) ·
 --     encaseAutoBreakSeconds(6초) 뒤 저절로 부서진다(영구 갇힘 방지). 머리 위 "탈출! n타"(클라).
---   동시 상한(D4): 서 있는 구조물이 maxObstacles 이상이면 안 솟는다. 부서진 조각은 서버 인스턴스를 전부 파괴 · 클라 파편은 풀(BossFx)로 돌아간다.
+--   동시 상한(D4 · P3d-F B4): 서 있는 구조물이 maxObstacles 이상이면 **재생성된 것 중 가장 오래된 것**을 무너뜨리고(cause "cap" - 부드러운 붕괴 모션 · 위 사람은 떨어지기만) 새로 세운다.
+--     재생성된 것이 없으면(배치만으로 상한) 안 솟는다. 부서진 조각은 서버 인스턴스를 전부 파괴 · 클라 파편은 풀(BossFx)로 돌아간다.
+--   이동 가능 면적 하한(P3d-F B4): 재생성 뒤 아레나 안 걸을 수 있는 칸 비율 ≥ minWalkableFraction · 닫힌 공간 0 - 못 지키면 그 자리는 버린다(ArenaLayout.regrowSpot).
 local regrow = {
 	telegraphSeconds = 1.5,
 	damage = { kind = "attack", multiplier = 2 }, damageLabel = "솟는 바위",
@@ -113,6 +118,7 @@ local regrow = {
 	encaseCoreInsetStuds = 0.8,
 	pushOutStuds = 1.3,
 	maxObstacles = 14,
+	minWalkableFraction = 0.7, -- P3d-F B4: 재생성 뒤 걸을 수 있는 칸 비율 하한(사용자 예시 70%)
 	tries = 80,
 	underMemberChance = 0.5,
 	underMemberStuds = 4,

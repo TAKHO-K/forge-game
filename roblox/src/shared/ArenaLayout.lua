@@ -152,6 +152,7 @@ function ArenaLayout.connectivity(items, options)
 			end
 		end
 	end
+	local total = count -- P3d-F B4: 구조물 없는 아레나의 칸 수(이동 가능 면적 비율 = 남은 칸 ÷ total)
 	for _, item in ipairs(items) do
 		for _, c in ipairs(item.colliders) do
 			local reach = c.r + 1
@@ -170,7 +171,7 @@ function ArenaLayout.connectivity(items, options)
 	local ez = math.sin(math.rad(o.entryAngleDeg)) * o.entryDistanceStuds
 	local si, sj = math.floor(ex / cell + 0.5), math.floor(ez / cell + 0.5)
 	if not free[key(si, sj)] then
-		return false, count, 0
+		return false, count, 0, total
 	end
 	-- 큐 = 칸 키(숫자) 배열(리뷰 4 - 칸마다 표를 만들던 것을 숫자로). key = i × 4096 + j → i · j를 되돌린다(j는 음수일 수 있다).
 	local start = key(si, sj)
@@ -190,7 +191,7 @@ function ArenaLayout.connectivity(items, options)
 			end
 		end
 	end
-	return reached == count, count, reached
+	return reached == count, count, reached, total
 end
 
 -- 배치 검사(검증과 재시도 판정이 같이 쓴다). 반환 = report { ok, minWallGap, minPairGap, minCenter, minKitGap, entryViolations, connected, freeCells, reached, coverage, count }.
@@ -379,10 +380,21 @@ function ArenaLayout.regrowFits(item, items, options)
 	end
 	local all = table.clone(items)
 	table.insert(all, item)
-	if not ArenaLayout.connectivity(all, o) then
-		return false, "connectivity"
+	local open, why = ArenaLayout.regrowOpen(all, o)
+	return open, why
+end
+
+-- P3d-F B4: 재생성 뒤 아레나가 열려 있는가 = 닫힌 공간 0(모든 빈 칸이 입장 자리와 이어짐) + 이동 가능 면적 비율 ≥ regrow.minWalkableFraction. 반환: bool, 이유, 비율.
+function ArenaLayout.regrowOpen(items, o)
+	local connected, freeCells, _, total = ArenaLayout.connectivity(items, o)
+	local fraction = total > 0 and freeCells / total or 0
+	if not connected then
+		return false, "connectivity", fraction
 	end
-	return true, nil
+	if fraction < REGROW.minWalkableFraction then
+		return false, "walkable", fraction
+	end
+	return true, nil, fraction
 end
 
 function ArenaLayout.regrowSpot(theme, items, rng, options, nextId)
@@ -419,10 +431,11 @@ function ArenaLayout.regrowSpot(theme, items, rng, options, nextId)
 			}
 			local all = table.clone(items)
 			table.insert(all, item)
-			if ArenaLayout.connectivity(all, o) then
+			local open, openWhy = ArenaLayout.regrowOpen(all, o)
+			if open then
 				return item, attempt, nil
 			end
-			why = "connectivity"
+			why = openWhy
 		end
 		reason = why
 	end

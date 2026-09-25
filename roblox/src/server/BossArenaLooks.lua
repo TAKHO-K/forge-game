@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors) -- P3d-F B3: 금 간 단상 위험색
 
 local BossArenaLooks = {}
 
@@ -277,17 +278,32 @@ function BossArenaLooks.build(model, center, item, bossData)
 	return look(model, center, item, item.spec, bossData)
 end
 
--- B2 금 간 표시(부서지기 직전): 충돌 원마다 윗면에 어두운 금 세 줄(기존 외곽선 색). 반환: 그린 파트 목록.
+-- B2 금 간 표시(부서지기 직전): 충돌 원마다 윗면에 어두운 금(기존 외곽선 색). 반환: 그린 파트 목록.
+-- P3d-F B3: 탑다운 · 폰에서 보이게 - 한가운데서 뻗는 굵은 금 lines줄(가지 하나씩) + 보이는 파트 색을 위험색 쪽으로(BossArenaMapData.obstacle.daisCrackLook).
 function BossArenaLooks.crack(model, center, item)
+	local look = BossArenaMapData.obstacle.daisCrackLook
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") and part.Transparency < 1 and part.Name ~= "ObstacleCrack" then
+			part.Color = part.Color:Lerp(UIColors.danger, look.tintFraction)
+		end
+	end
 	local parts = {}
 	for _, c in ipairs(item.colliders) do
 		local at = Vector3.new(center.X + (c.x - item.x), center.Y + c.h + 0.06, center.Z + (c.z - item.z))
-		for k = 0, 2 do
-			local angle = math.rad(item.rotationDeg + k * 62 + 15)
-			local length = math.max(c.r * 1.4, 1)
+		for k = 0, look.lines - 1 do
+			local angle = math.rad(item.rotationDeg + k * (360 / look.lines) + 15)
+			local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
+			local length = math.max(c.r * 0.85, 1)
 			table.insert(parts, newPart(model, {
-				name = "ObstacleCrack", size = Vector3.new(length, 0.1, 0.25), color = BossArenaMapData.outlineColor, shadow = false,
-				cframe = CFrame.new(at + Vector3.new(math.cos(angle), 0, math.sin(angle)) * (c.r * 0.2)) * CFrame.Angles(0, -angle, 0),
+				name = "ObstacleCrack", size = Vector3.new(length, 0.1, look.widthStuds), color = BossArenaMapData.outlineColor, shadow = false,
+				cframe = CFrame.new(at + dir * (length / 2)) * CFrame.Angles(0, -angle, 0),
+			}))
+			-- 가지: 금 끝에서 30° 꺾여 반 길이
+			local branch = angle + math.rad(k % 2 == 0 and 30 or -30)
+			local tip = at + dir * length
+			table.insert(parts, newPart(model, {
+				name = "ObstacleCrack", size = Vector3.new(length * 0.45, 0.1, look.widthStuds * 0.7), color = BossArenaMapData.outlineColor, shadow = false,
+				cframe = CFrame.new(tip - dir * (length * 0.3) + Vector3.new(math.cos(branch), 0, math.sin(branch)) * (length * 0.2)) * CFrame.Angles(0, -branch, 0),
 			}))
 		end
 	end
