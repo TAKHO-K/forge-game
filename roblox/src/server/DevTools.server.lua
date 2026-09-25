@@ -2377,6 +2377,12 @@ if DevToolsConfig.verifyArmed then
 		tostring(TextChatService:FindFirstChild("ForgeGG") ~= nil), tostring(RunService:IsStudio())))
 end
 
+-- G1-4: 검증 모드면 서버 전체에서 보스맵 잔류를 끈다 - 체인 밖에서 도는 옛 블록(27-1 · 27-3 · 27-4)도 처치 직후 복귀를 전제로 한다(Play 1 - 27-3(나)가 잔류에 들어갔다).
+-- G1-4(나)만 자기 항목에서 켠다. 수동 Play(검증 꺼짐)는 잔류가 켜진 실제 동작.
+if DevToolsConfig.verifyArmed then
+	require(script.Parent.BossEncounter).debugLingerOff = true
+end
+
 -- 자동 검증 블록 실행 스위치(DevToolsConfig.verify) - 아래 블록마다 id로 물어본다. 기본은 "지금 세션의 블록만"이고, 과거 블록 전체 회귀는
 -- regression = true일 때만 돈다(마일스톤 Play만 - COMMON.md §3). 건너뛴 블록은 파일 맨 끝에서 한 줄로 남긴다.
 local skippedVerifyBlocks = {}
@@ -3396,7 +3402,7 @@ if RunService:IsStudio() then
 			end
 			require(script.Parent.PlayerDamage).debugNewbieProtectionOff = false
 			CharacterLevel.debugLevelGapOff = false
-			require(script.Parent.BossEncounter).debugLingerOff = false
+			require(script.Parent.BossEncounter).debugLingerOff = DevToolsConfig.verifyArmed -- 체인 밖 옛 블록(27-x)도 잔류 없이(아래 서버 시작 설정과 같다)
 			-- S04 사전 작업(PRD 20.83 [8]): 옛 블록을 포함한 검증 체인 전체가 실제 가방을 그대로 남겼는가. 기준은 이 서버의 첫 백업
 			-- 순간(=어떤 블록도 가방을 건드리기 전)의 지문이다. 예전에는 Play마다 보스 드랍 2 ~ 3개가 가방에 남았다.
 			if firstBagCount[player] ~= nil then -- 체인이 전부 건너뛰어졌으면(DevToolsConfig.verify) 백업이 없어 기준도 없다
