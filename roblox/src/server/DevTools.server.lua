@@ -1335,6 +1335,42 @@ local function handleCommand(player, args)
 		reply(player, "보스 배치: " .. table.concat(cells, " "))
 		local problems = BossRules.validatePlacement()
 		reply(player, #problems == 0 and "배치표 검사 통과" or ("배치표 위반: " .. table.concat(problems, " / ")))
+	elseif sub == "boss" and args[2] == "pattern" and args[3] then
+		-- BR1-2 패턴 단독 발동(Studio · 개발 계정만): "/gg boss pattern <보스 id> <패턴 id> [스테이지]" - 그 보스를 부르고 그 패턴 하나만 되풀이(2초 쉬고 다시).
+		-- 패턴 id 목록 = docs/design/boss-patterns-explained.md. 패턴 없이 부르면 그 보스의 패턴 id를 알려 준다. 끄기 = "/gg boss pattern off"
+		local bossId, patternId = args[3], args[4]
+		if bossId == "off" then
+			local model = BossEncounter.getActive(player)
+			if model then
+				BossPatterns.setOnlyPattern(model, MonsterState.getData(model), nil)
+			end
+			reply(player, "패턴 단독 발동 끔")
+			return
+		end
+		local boss = BossData.bosses[bossId]
+		if not boss then
+			reply(player, "알 수 없는 보스 id: " .. tostring(bossId) .. " (section_guardian · frost_giant · abyssal_lord · crystal_queen · scorpion_queen · storm_lord)")
+			return
+		end
+		if not patternId or not boss.skills[patternId] then
+			reply(player, ("%s 패턴 id: %s"):format(bossId, table.concat(boss.skillOrder, " · ")))
+			return
+		end
+		local stage = tonumber(args[5]) and math.floor(tonumber(args[5])) or 15
+		if not BossRules.isBossStage(stage) then
+			stage = math.max(BossData.stageInterval, stage - stage % BossData.stageInterval)
+		end
+		ensureBackup(player)
+		BossEncounter.despawnFor(player)
+		applyStage(player, stage)
+		BossEncounter.setDebugForcedBoss(player, bossId)
+		BossEncounter.spawnFor(player, stage)
+		local model = BossEncounter.getActive(player)
+		if model and BossPatterns.setOnlyPattern(model, MonsterState.getData(model), patternId) then
+			reply(player, ("%s(스테이지 %d)가 %s만 되풀이합니다 - 끄기: /gg boss pattern off"):format(bossId, stage, patternId))
+		else
+			reply(player, "실패: 보스를 부르지 못했습니다")
+		end
 	elseif sub == "boss" and args[2] == "force" and args[3] then
 		-- 29-5: 보스 id는 스테이지만의 함수다 - 강제 지정은 Studio 전용 예외이고 세션 메모리다(다음 스폰 한 번, 저장 안 함).
 		if BossEncounter.setDebugForcedBoss(player, args[3]) then

@@ -2119,6 +2119,16 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 		clearDaze(model, st)
 	end
 
+	-- BR1-2 개발 명령(/gg boss pattern <보스> <패턴>): 그 패턴 하나만 되풀이(조건 무시 · 끝나고 onlyGapSeconds 쉬고 다시) · 다른 패턴 · 평타 없음
+	if st.phase == "normal" and st.onlyPattern then
+		if not st.onlyNextAt then
+			st.onlyNextAt = now + (st.onlyGapSeconds or 2)
+		elseif now >= st.onlyNextAt then
+			st.onlyNextAt = nil
+			startSkill(model, st, data, st.onlyPattern, now, position, targetRoot)
+		end
+		return true
+	end
 	if st.phase == "normal" and BossEnvironment.isCourseActive(model) then
 		return true -- BR1-2 수정 부수기: 패턴 없음(사용자) - 보호막 속에서 멈춰 선다
 	end
@@ -2247,6 +2257,20 @@ function BossPatterns.setGrace(model, data, seconds)
 end
 
 -- DevTools 전용 - 진행 중인 스킬을 끊고 다음 틱에 특정 스킬을 강제로 시작한다(전역 쿨·유예·쿨·조건 전부 무시).
+-- BR1-2 개발 전용: 이 보스가 id 패턴 하나만 되풀이한다(nil이면 끈다). Studio DevTools만 부른다(라이브 서버에는 명령 자체가 없다).
+function BossPatterns.setOnlyPattern(model, data, id, gapSeconds)
+	local st = ensureState(model, data)
+	if not st or (id and not data.skills[id]) then
+		return false
+	end
+	BossPatterns.interrupt(model, data)
+	st.onlyPattern = id
+	st.onlyGapSeconds = gapSeconds
+	st.onlyNextAt = nil
+	st.graceUntil = 0
+	return true
+end
+
 function BossPatterns.force(model, data, id)
 	local st = ensureState(model, data)
 	if not st or not data.skills[id] then -- 견습 모드는 data.skills가 부분집합이다 - 없는 스킬은 강제도 막는다
