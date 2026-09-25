@@ -232,4 +232,263 @@ function BR1_2Verify.runPure()
 	return pass, total
 end
 
+-- ─────────────────────────── (나) 실제 서버(보스 · 스탠드인 · 실제 판정 경로) ───────────────────────────
+function BR1_2Verify.runLive(player, env)
+	print("===BR1-2 검증 시작(나)===")
+	local r = newRecorder("나")
+	env.ensureBackup(player)
+	local H = require(script.Parent.BR1Verify).helpers
+	local BossPatterns = require(script.Parent.BossPatterns)
+	local BossEncounter = require(script.Parent.BossEncounter)
+	local BossArenaMap = require(script.Parent.BossArenaMap)
+	local BossArenaProps = require(script.Parent.BossArenaProps)
+	local BossTrap = require(script.Parent.BossTrap)
+	local BossHandlersBR1 = require(script.Parent.BossHandlersBR1)
+	local BossAirGrab = require(script.Parent.BossAirGrab)
+	local MonsterState = require(script.Parent.MonsterState)
+	local MonsterSpawner = require(script.Parent.MonsterSpawner)
+	local PlayerState = require(script.Parent.PlayerState)
+	local PlayerProfile = require(script.Parent.PlayerProfile)
+	local SaveSystem = require(script.Parent.SaveSystem)
+	local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
+	local BossPropMath = require(ReplicatedStorage.Shared.BossPropMath)
+	local RunService = game:GetService("RunService")
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local FLOOR = BossArenaMap.floorTopY()
+	local sent = {}
+	local standIns = {}
+	local rawSection = r.section
+	r.section = function(name, fn)
+		rawSection(name, fn)
+		if root then
+			root.Anchored = false
+		end
+		BossPatterns.debugSendHook = nil
+		H.clearStandIns(player, standIns)
+		PlayerState.clearIncomingDamageMultiplier(player)
+		BossEncounter.despawnFor(player)
+	end
+	local function hook()
+		table.clear(sent)
+		BossPatterns.debugSendHook = function(kind, payload)
+			table.insert(sent, { kind = kind, payload = payload })
+		end
+	end
+	local function countKind(kind)
+		local n = 0
+		for _, e in ipairs(sent) do
+			if e.kind == kind then
+				n += 1
+			end
+		end
+		return n
+	end
+	local function setup(bossId, stage, seed)
+		local model, data, encounter = H.spawnBoss(player, env, bossId, seed, stage)
+		assert(model, "보스 스폰 실패")
+		local zone = WorldConfig.zones[encounter.zoneKey]
+		root.Anchored = true
+		root.CFrame = CFrame.new(zone.center + Vector3.new(0, FLOOR + 3, 70))
+		PlayerState.setIncomingDamageMultiplierUntil(player, 0, 600, "br12Verify") -- 개발 캐릭터는 대상일 뿐(죽지 않게)
+		local st = MonsterState.getBossPatternState(model)
+		st.graceUntil = os.clock() + 999 -- 기본 패턴은 멈춘다(강제한 것만)
+		return model, data, zone, st
+	end
+	local function standIn(model, name, position)
+		local fake, fakeRoot = H.newStandIn(model, name, position)
+		table.insert(standIns, fake)
+		return fake, fakeRoot
+	end
+
+	-- 1) 곡선 ④(스테이지 10000): 인당 8발 × 대상 4명(개발 + 스탠드인 3) = 32발 · 아레나 상한 안
+	r.section("곡선 4단계 투사체", function()
+		local model, data, zone = setup("section_guardian", 10000, 1201)
+		for i = 1, 3 do
+			local a = i / 3 * 2 * math.pi
+			standIn(model, "C" .. i, zone.center + Vector3.new(math.cos(a) * 20, FLOOR + 3, math.sin(a) * 20))
+		end
+		hook()
+		BossPatterns.force(model, data, "orbs")
+		H.drive(player, root, model, data, data.skills.orbs.telegraphSeconds + data.skills.orbs.launchIntervalSeconds * 8 + 0.5)
+		local spawns = countKind("projSpawn")
+		r.check(("곡선 %d단계(스테이지 10000): orbs 인당 %d발 × 대상 4 = 투사체 %d(기대 32 · 아레나 상한 %d)"):format(data.curveTier, data.skills.orbs.count, spawns, BossCurveData.arenaProjectileCap),
+			data.curveTier == 4 and data.skills.orbs.count == BossCurveData.perPersonMax and spawns == 32)
+	end)
+
+	-- 2) 성능 최악: 최대 단계 · 4인 · 동시 보스전 4개(서버 16명 = 4인 파티 4개) - 보스마다 투사체 스킬을 겹쳐 한 프레임 합을 잰다
+	r.section("성능 최악", function()
+		local model, data, zone = setup("storm_lord", 10000, 1202)
+		local members = { player }
+		for i = 1, 3 do
+			local a = i / 3 * 2 * math.pi
+			local fake = standIn(model, "P" .. i, zone.center + Vector3.new(math.cos(a) * 25, FLOOR + 3, math.sin(a) * 25))
+			table.insert(members, fake)
+		end
+		-- 같은 아레나에 보스 3마리를 더(판정 · 투사체 계산은 보스마다 따로 - 서버 부하는 아레나가 달라도 같다)
+		local models = { model }
+		for i = 1, 3 do
+			local extra = MonsterSpawner.spawn(data, zone.center + Vector3.new(i * 12 - 24, FLOOR + 1.5, -30), MonsterState.getZoneKey(model))
+			table.insert(models, extra)
+		end
+		for _, m in ipairs(models) do
+			BossPatterns.force(m, data, "tornado")
+		end
+		local costs, peakProjectiles = {}, 0
+		local startedAt = os.clock()
+		while os.clock() - startedAt < 5 do
+			RunService.Heartbeat:Wait()
+			local t0 = os.clock()
+			local alive = 0
+			for _, m in ipairs(models) do
+				if m.Parent then
+					BossPatterns.step(m, data, m.PrimaryPart.Position, player, root, 1 / 60, members)
+					local s2 = MonsterState.getBossPatternState(m)
+					alive += s2 and s2.projectiles and #s2.projectiles or 0
+					if s2 and s2.phase == "normal" then
+						BossPatterns.force(m, data, "boltSpear")
+					end
+				end
+			end
+			peakProjectiles = math.max(peakProjectiles, alive)
+			table.insert(costs, os.clock() - t0)
+		end
+		local avg, peak = H.stats(costs)
+		for i = 2, #models do
+			MonsterSpawner.despawn(models[i])
+		end
+		BR1_2Verify.perf = { avg = avg, peak = peak, projectiles = peakProjectiles, bosses = #models, members = #members }
+		r.check(("성능 최악(스테이지 10000 · 4인 · 보스 %d마리 동시): 투사체 최대 %d개 · 한 프레임 합 평균 %.0fμs · 최대 %.0fμs(허용 평균 ≤ 4000 · 최대 ≤ 16000 = 보스당 1000 · 4000 × 4)"):format(#models, peakProjectiles, avg, peak),
+			avg <= 4000 and peak <= 16000 and peakProjectiles >= 64)
+	end)
+
+	-- 3) 반사: 반사 중 원거리 평타 → 되돌림 → 경로의 첫 사람(막은 동료)만 70% · 쏜 사람 무사
+	r.section("반사", function()
+		local model, data, zone, st = setup("frost_giant", BossData.stageInterval, 1203)
+		local c = zone.center
+		model:PivotTo(CFrame.new(c + Vector3.new(0, FLOOR + 3.5, 0)))
+		local shooter = standIn(model, "Shooter", c + Vector3.new(30, FLOOR + 3, 0))
+		local blocker = standIn(model, "Blocker", c + Vector3.new(15, FLOOR + 3, 0))
+		H.fullHeal(shooter)
+		H.fullHeal(blocker)
+		hook()
+		BossPatterns.force(model, data, "mirror")
+		H.drive(player, root, model, data, data.skills.mirror.telegraphSeconds + 0.5, function()
+			return st.phase == "reflectStance"
+		end)
+		local stance = st.phase == "reflectStance"
+		local reflected = BossHandlersBR1.tryReflect(model, shooter)
+		local hpS, hpB = PlayerState.getHp(shooter), PlayerState.getHp(blocker)
+		H.drive(player, root, model, data, 2.5)
+		local lostB = (hpB - PlayerState.getHp(blocker)) / PlayerState.getMaxHp(blocker)
+		r.check(("반사: 태세 %s · 흡수 %s · 되돌림 %d · 막은 동료 %.0f%%(기대 70) · 쏜 사람 %.0f%%(기대 0)"):format(tostring(stance), tostring(reflected), countKind("reflectShot"), lostB * 100, (hpS - PlayerState.getHp(shooter)) / PlayerState.getMaxHp(shooter) * 100),
+			stance and reflected and countKind("reflectShot") == 1 and math.abs(lostB - 0.7) < 0.02 and PlayerState.getHp(shooter) == hpS)
+	end)
+
+	-- 4) 음파 포효: 트인 곳 = 6틱 90% · 큰 얼음 기둥 뒤 = 0
+	r.section("음파 포효", function()
+		local model, data, zone = setup("frost_giant", BossData.stageInterval, 1204)
+		local c = zone.center
+		model:PivotTo(CFrame.new(c + Vector3.new(0, FLOOR + 3.5, 0)))
+		local open = standIn(model, "Open", c + Vector3.new(0, FLOOR + 3, 6))
+		local hider, hiderRoot = standIn(model, "Hider", c + Vector3.new(40, FLOOR + 3, 0))
+		H.fullHeal(open)
+		H.fullHeal(hider)
+		hook()
+		BossPatterns.force(model, data, "roar")
+		H.drive(player, root, model, data, 0.2)
+		local best = nil
+		for _, prop in ipairs(BossArenaProps.list(model)) do
+			if prop.kind == "roarPillar" and (not best or (prop.position - hiderRoot.Position).Magnitude < (best.position - hiderRoot.Position).Magnitude) then
+				best = prop
+			end
+		end
+		if best then -- 곁의 큰 얼음 기둥 뒤로(보스 반대쪽 반경 + 2)
+			local away = Vector3.new(best.position.X - c.X, 0, best.position.Z - c.Z).Unit
+			hiderRoot.Position = Vector3.new(best.position.X, FLOOR + 3, best.position.Z) + away * (best.radius + 2)
+		end
+		H.drive(player, root, model, data, data.skills.roar.telegraphSeconds + data.skills.roar.tickSeconds * data.skills.roar.ticks + 1.5, function()
+			return countKind("sonicEnd") > 0
+		end)
+		local lostOpen = 1 - PlayerState.getHp(open) / PlayerState.getMaxHp(open)
+		local lostHider = 1 - PlayerState.getHp(hider) / PlayerState.getMaxHp(hider)
+		r.check(("음파 포효: 틱 %d(기대 %d) · 트인 곳 %.0f%%(기대 90) · 큰 기둥 뒤 %.0f%%(기대 0) · 큰 기둥 %s"):format(countKind("sonicTick"), data.skills.roar.ticks, lostOpen * 100, lostHider * 100, tostring(best ~= nil)),
+			countKind("sonicTick") == data.skills.roar.ticks and math.abs(lostOpen - 0.9) < 0.02 and lostHider < 0.01 and best ~= nil)
+	end)
+
+	-- 5) 색 맞추기: 같은 색 발판 위 = 생존(+ 공동 책임 35%) · 바닥 = 90%
+	r.section("색 맞추기", function()
+		local model, data, zone, st = setup("abyssal_lord", BossData.stageInterval, 1205)
+		local platforms = BossPropMath.kitZones(data.arenaKit, zone.center, FLOOR, "platform")
+		local p1 = platforms[1]
+		local onTop = standIn(model, "OnTop", Vector3.new(p1.center.X, p1.center.Y + p1.size.Y / 2 + 3, p1.center.Z))
+		local floorOne = standIn(model, "Floor", zone.center + Vector3.new(0, FLOOR + 3, 20))
+		H.fullHeal(onTop)
+		H.fullHeal(floorOne)
+		hook()
+		BossPatterns.force(model, data, "colors")
+		H.drive(player, root, model, data, 0.5, function()
+			return st.colorMark ~= nil and st.colorMark[onTop] ~= nil
+		end)
+		if st.colorMark and st.colorMark[onTop] then
+			st.colorOf[p1.index] = st.colorMark[onTop] -- 서 있던 발판을 자기 색으로(올라선 것이 아니라 뒤집히지 않는다)
+		end
+		H.drive(player, root, model, data, data.skills.colors.telegraphSeconds + 3, function()
+			return countKind("colorResolve") > 0
+		end)
+		local lostTop = 1 - PlayerState.getHp(onTop) / PlayerState.getMaxHp(onTop)
+		local lostFloor = 1 - PlayerState.getHp(floorOne) / PlayerState.getMaxHp(floorOne)
+		local share = BossData.mechanics.party.failShareFraction
+		r.check(("색 맞추기: 같은 색 발판 %.0f%%(기대 공동 책임 %.0f - 한 명 실패) · 바닥 %.0f%%(기대 90)"):format(lostTop * 100, share * 100, lostFloor * 100),
+			math.abs(lostTop - share) < 0.02 and math.abs(lostFloor - 0.9) < 0.02)
+	end)
+
+	-- 6) 공중 가둠: 거품탄 두 번 → 발 + 8 갇힘 · 점프 연타 10회 → 탈출
+	r.section("공중 가둠", function()
+		local model, data, zone, st = setup("abyssal_lord", BossData.stageInterval, 1206)
+		local victim, victimRoot = standIn(model, "Bubbled", zone.center + Vector3.new(10, FLOOR + 3, 10))
+		local spec = data.skills.bubbles.trapOnHits
+		local c = { model = model, st = st, data = data, now = os.clock() }
+		local v = { player = victim, root = victimRoot }
+		BossHandlersBR1.noteTrapHit(c, v, spec)
+		c.now = os.clock()
+		local y0 = victimRoot.Position.Y
+		local trapped = BossHandlersBR1.noteTrapHit(c, v, spec)
+		local lifted = victimRoot.Position.Y - y0
+		local kind = BossTrap.getRecord(victim) and BossTrap.getRecord(victim).kind
+		local presses = 0
+		for _ = 1, 20 do
+			if BossAirGrab.press(victim) then
+				presses += 1
+			end
+			if not BossTrap.isTrapped(victim) then
+				break
+			end
+		end
+		r.check(("공중 가둠: 두 번째 명중 → %s(%s) · 발 + %.0f · 연타 %d회에 탈출 %s"):format(tostring(trapped), tostring(kind), lifted, presses, tostring(not BossTrap.isTrapped(victim))),
+			trapped and kind == "bubbled" and math.abs(lifted - spec.liftStuds) < 0.01 and presses == spec.presses and not BossTrap.isTrapped(victim))
+	end)
+
+	-- 7) 저장 v37: 이관(빈 표) · 첫 만남 표시 한 번만 · 되돌리기
+	r.section("저장 v37", function()
+		local old = SaveSystem.defaultProfile()
+		old.version = 36
+		old.hints = { gemMerchantUsed = true }
+		local migrated = SaveSystem.migrate(old)
+		local first = PlayerProfile.markBossIntroSeen(player, "frost_giant")
+		local second = PlayerProfile.markBossIntroSeen(player, "frost_giant")
+		PlayerProfile.debugResetBossIntro(player)
+		local again = PlayerProfile.markBossIntroSeen(player, "frost_giant")
+		PlayerProfile.debugResetBossIntro(player)
+		r.check(("저장 v%d(기대 37): v36 → v%d · bossIntroSeen 빈 표 %s · 옛 힌트 유지 %s · 첫 만남 %s → 두 번째 %s · 비우면 다시 %s"):format(SaveConfig.saveVersion, migrated.version,
+			tostring(type(migrated.hints.bossIntroSeen) == "table" and next(migrated.hints.bossIntroSeen) == nil), tostring(migrated.hints.gemMerchantUsed), tostring(first), tostring(second), tostring(again)),
+			SaveConfig.saveVersion == 37 and migrated.version == 37 and type(migrated.hints.bossIntroSeen) == "table" and migrated.hints.gemMerchantUsed == true and first and not second and again)
+	end)
+
+	root.Anchored = false
+	BossEncounter.despawnFor(player)
+	local passed, total = r.summary()
+	print(("===BR1-2 검증 끝(나)=== %d/%d 통과"):format(passed, total))
+end
+
 return BR1_2Verify

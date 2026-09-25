@@ -125,15 +125,16 @@ local function fullHeal(player)
 	PlayerDamage.syncHud(player)
 end
 
-local function spawnBoss(player, env, bossId, seed)
+local function spawnBoss(player, env, bossId, seed, stage)
 	local BossEncounter = require(script.Parent.BossEncounter)
 	local BossArenaMap = require(script.Parent.BossArenaMap)
 	local MonsterState = require(script.Parent.MonsterState)
+	stage = stage or BossData.stageInterval -- BR1-2: 곡선 단계를 볼 때 스테이지를 준다
 	BossEncounter.despawnFor(player)
-	env.applyStage(player, BossData.stageInterval)
+	env.applyStage(player, stage)
 	BossEncounter.setDebugForcedBoss(player, bossId)
 	BossArenaMap.debugNextSeed = seed
-	BossEncounter.spawnFor(player, BossData.stageInterval)
+	BossEncounter.spawnFor(player, stage)
 	local model = BossEncounter.getActive(player)
 	local encounter = BossEncounter.getEncounter(player)
 	return model, model and MonsterState.getData(model), encounter
@@ -209,6 +210,9 @@ local function stats(costs)
 	end
 	return #costs > 0 and sum / #costs * 1e6 or 0, peak * 1e6
 end
+
+-- BR1-2(나)가 같은 도우미를 쓴다(스탠드인 · 보스 직접 step).
+BR1Verify.helpers = { fullHeal = fullHeal, spawnBoss = spawnBoss, newStandIn = newStandIn, clearStandIns = clearStandIns, drive = drive, stats = stats, newRecorder = newRecorder }
 
 -- ─────────────────────────── (나) ───────────────────────────
 function BR1Verify.runLive(player, env)

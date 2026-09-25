@@ -3404,6 +3404,7 @@ if RunService:IsStudio() then
 				{ "G2a(나)", function() require(script.Parent.G2aVerify).runLive(player, env) end }, -- G2a: 높이 검증 실제 Player · 보스 기여도(계수 전) · 이속 상한 · 구조물 낙하
 				{ "M1-0(나)", function() require(script.Parent.M1_0Verify).runLive(player, env) end }, -- M1-0: 합법 최대 높이 되돌림 0 · 기본 Shift Lock 꺼짐 · 아레나 공중 복귀 0
 				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
+				{ "BR1-2(나)", function() require(script.Parent.BR1_2Verify).runLive(player, env) end }, -- BR1-2: 곡선 32발 · 동시 4보스 성능 · 반사 · 음파 · 색 맞추기 · 가둠 · 저장 v37
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "G1-4(나)", function() require(script.Parent.G1_4Verify).runLive(player, env) end }, -- G1-4: 보스맵 잔류 · 다음 / 다시 도전 / 마을 · 90초
 				{ "G1-3(나)", function() require(script.Parent.G1_3Verify).runLive(player, env) end }, -- G1-3: 레벨차 계수(실제 Player)
