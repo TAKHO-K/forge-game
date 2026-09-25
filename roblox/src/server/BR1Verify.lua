@@ -273,8 +273,12 @@ function BR1Verify.runLive(player, env)
 			local near1 = newStandIn(model, "Near", zone.center + Vector3.new(10, FLOOR + 3, 0))
 			table.insert(standIns, near1)
 			local st = MonsterState.getBossPatternState(model)
+			local spawnAt = MonsterState.getSpawnPosition(model)
 			for _, sid in ipairs(NEW_SKILLS[bossId]) do
 				local skill = data.skills[sid]
+				-- Play 2(검증 쪽): 스탠드인 체력을 채우고(죽으면 체공 추적 · 대상에서 빠진다) 보스를 스폰 자리로(잠복 뒤 개발 캐릭터 곁에 솟으면 MonsterAI도 이 보스를 돌린다)
+				fullHeal(near1)
+				model:PivotTo(CFrame.new(spawnAt))
 				hook()
 				near1.debugAirborne = skill.targetRule == "airborne" or nil -- 대공 투사체는 떠 있는 사람만 노린다
 				if near1.debugAirborne then
@@ -433,6 +437,7 @@ function BR1Verify.runLive(player, env)
 			drive(player, root, model, data, envData.telegraphSeconds + 0.5, function()
 				return countKind("envStart") > 0
 			end)
+			fullHeal(victim) -- Play 2(검증 쪽): 활성 순간 피해(밥상뒤집기 ×2.5)로 거의 죽은 뒤 도트를 재면 모자라 보였다 - 도트만 잰다
 			local hp0 = PlayerState.getHp(victim)
 			local costs = drive(player, root, model, data, 1.6)
 			local hp1 = PlayerState.getHp(victim)
