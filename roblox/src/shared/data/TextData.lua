@@ -63,9 +63,7 @@ return {
 
 		-- 환생(G1-3)
 		["rebirth.confirm.title"] = "환생 - 레벨이 1로 돌아갑니다",
-		["rebirth.confirm.body"] = "레벨 {level} → 1 · 스테이지 {stage} → 1(되돌릴 수 없음) - 높은 스테이지에서는 레벨만큼 약해집니다.
-얻는 것(영구): 무기 등급 +1 · 보석 칸 +1 · 경험치 ×{expFrom} → ×{expTo}
-필요 레벨 {required} · 환생 {count}/{max}회",
+		["rebirth.confirm.body"] = "레벨 {level} → 1 · 스테이지 {stage} → 1(되돌릴 수 없음) - 높은 스테이지에서는 레벨만큼 약해집니다.\n얻는 것(영구): 무기 등급 +1 · 보석 칸 +1 · 경험치 ×{expFrom} → ×{expTo}\n필요 레벨 {required} · 환생 {count}/{max}회",
 		["rebirth.confirm.done"] = "환생 {count}/{max}회 완료 - 더 이상 환생할 수 없습니다.",
 		["rebirth.confirm.ok"] = "환생한다",
 		["rebirth.confirm.cancel"] = "취소",
