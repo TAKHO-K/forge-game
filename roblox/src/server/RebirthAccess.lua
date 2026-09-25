@@ -18,11 +18,8 @@ function RebirthAccess.altarPosition()
 end
 
 -- 위치 → 어느 자리 안인가("station" · "altar" · nil). position은 Vector3.
+-- G1-3(사용자 결정): 강화대 자리는 뺐다 - 환생은 커뮤니티 센터의 제단 한 곳(강화대 환생 탭은 안내만).
 function RebirthAccess.placeOf(position)
-	local stationPosition = WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset
-	if (position - stationPosition).Magnitude <= WorldConfig.enhance.interactionRangeStuds then
-		return "station"
-	end
 	if (position - RebirthAccess.altarPosition()).Magnitude <= WorldConfig.rebirthAltar.interactionRangeStuds then
 		return "altar"
 	end

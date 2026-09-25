@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
+local Text = require(ReplicatedStorage.Shared.Text)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local TeleportPad = require(script.Parent.TeleportPad)
 local ZoneTerrain = require(script.Parent.ZoneTerrain)
@@ -142,7 +143,7 @@ local function createCommunityPlaceholder(zone)
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
 	text.Size = UDim2.new(1, 0, 1, 0)
-	text.Text = "커뮤니티 센터 (준비 중)"
+	text.Text = Text.get("world.communityCenter") -- G1-3: "(준비 중)" 제거 - 환생 제단 · 보석상인이 여기 있다
 	text.TextColor3 = Color3.new(1, 1, 1)
 	text.TextScaled = true
 	text.Parent = label

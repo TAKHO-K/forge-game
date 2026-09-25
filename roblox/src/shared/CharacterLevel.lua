@@ -178,6 +178,30 @@ function CharacterLevel.getItemLevelMultiplierFrozen(level)
 	return CharacterLevel.getItemLevelMultiplier(math.min(level, STAT_LINEAR_MAX_LEVEL))
 end
 
+-- G1-3 레벨차 계수(규칙 = CharacterLevelConfig.levelGap 주석). 검증 체인이 옛 피해 기대값을 볼 때 끈다(debugLevelGapOff - 신규 보호와 같은 방식, 서버 사본만).
+CharacterLevel.debugLevelGapOff = false
+
+-- 벌점이 붙는 칸 수(0 이상). level · stage가 없으면 0.
+function CharacterLevel.levelGapStages(level, stage)
+	if CharacterLevel.debugLevelGapOff or type(level) ~= "number" or type(stage) ~= "number" then
+		return 0
+	end
+	local config = CharacterLevelConfig.levelGap
+	return math.max(0, stage - CharacterLevel.getStageForLevel(level) - InfiniteStage.stagesForPowerRatio(config.freePowerRatio))
+end
+
+-- 주는 피해 배율(1 이하).
+function CharacterLevel.levelGapDealMultiplier(level, stage)
+	local config = CharacterLevelConfig.levelGap
+	return math.max(config.dealFloor, 1 - config.dealPerStage * CharacterLevel.levelGapStages(level, stage))
+end
+
+-- 받는 피해 배율(1 이상).
+function CharacterLevel.levelGapTakeMultiplier(level, stage)
+	local config = CharacterLevelConfig.levelGap
+	return math.min(config.takeCap, 1 + config.takePerStage * CharacterLevel.levelGapStages(level, stage))
+end
+
 -- P2 B: 환생 rebirthCount회 상태에서 다음 환생에 필요한 레벨(PlayerProfile.rebirth · 환생 UI · EconSim이 이 함수 하나를 본다). 표 밖(최대 회차)이면 nil.
 function CharacterLevel.getRebirthRequiredLevel(rebirthCount)
 	return CharacterLevelConfig.rebirth.requiredLevels[(rebirthCount or 0) + 1]

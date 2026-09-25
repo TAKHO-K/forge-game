@@ -26,7 +26,8 @@ local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
-local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData) -- G1-2: 처치 시간 상한(fairness.maxSecondsPerHit)
+local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel) -- G1-3: 레벨차 계수 -- G1-2: 처치 시간 상한(fairness.maxSecondsPerHit)
 
 local MonsterState = {}
 
@@ -217,6 +218,11 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	local entry = monsters[model]
 	if not entry then
 		return false, 0
+	end
+	-- G1-3: 레벨차 계수 - 주는 피해(CharacterLevelConfig.levelGap). 스테이지 = 잡몹은 때린 사람의 스테이지, 보스는 보스 스테이지. 실제 Player만(스탠드인 · 구출 · 상자는 영향 없음).
+	if typeof(attackerPlayer) == "Instance" and not entry.isRescueTarget and not entry.isChest then
+		local gapStage = entry.data.isBoss and entry.data.stageNumber or attackerStage
+		damage *= CharacterLevel.levelGapDealMultiplier(attackerPlayer:GetAttribute("CharacterLevel"), gapStage)
 	end
 
 	if entry.data.isBoss then

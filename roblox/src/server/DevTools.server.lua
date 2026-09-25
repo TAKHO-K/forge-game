@@ -3329,6 +3329,7 @@ if RunService:IsStudio() then
 			}
 			-- P2.5c: 체인 동안 신규 보호를 끈다(PlayerDamage.debugNewbieProtectionOff 주석 - 옛 피격 기대값 보존, P25c(나)가 다시 켜고 잰다). 루프 뒤에 되돌린다.
 			require(script.Parent.PlayerDamage).debugNewbieProtectionOff = true
+			CharacterLevel.debugLevelGapOff = true -- G1-3: 레벨차 계수도 체인 동안 끈다(옛 피해 기대값 - G1-3(나)가 자기 항목에서만 켠다)
 			-- 29-1(뼈대 회귀) → 29-2(가: 순수 계산) → 29-2(나: 실제 서버 경로) 순서로 이어서 돈다 - 같은 플레이어·같은
 			-- 아레나를 쓰므로 겹치면 안 된다. 하나가 에러로 끊겨도 다음은 돈다.
 			for _, stage in ipairs({
@@ -3372,6 +3373,7 @@ if RunService:IsStudio() then
 				{ "P3c(나)", function() require(script.Parent.P3cVerify).runLive(player, env) end }, -- P3c: 발탄식 유도 · 전갈 2회 · 번개 추적 · 맵 이탈 복귀 · 6맵 배치 · 큰 블록 · 높이별 판정 · 보석 판매 · 전당
 				{ "P3d(나)", function() require(script.Parent.P3dVerify).runLive(player, env) end }, -- P3d: 맵 이탈 → 스폰 복귀 · 단상 · 재생성 · 끼임 · 모래 구덩이 붕괴 · 버프 중첩 · 라이브 제외
 				{ "P3dF(나)", function() require(script.Parent.P3dFVerify).runLive(player, env) end }, -- P3d-F: 재생성 누수 5회 · 받는 피해 배율 출처별 · 끼임 중 피격 · 단상 균열 예고 · 상한 교체
+				{ "G1-3(나)", function() require(script.Parent.G1_3Verify).runLive(player, env) end }, -- G1-3: 레벨차 계수(실제 Player)
 				{ "G1-2(나)", function() require(script.Parent.G1_2Verify).runLive(player, env) end }, -- G1-2: 자동 처리 · 처치 시간 측정
 				{ "G1-1(나)", function() require(script.Parent.G1_1Verify).runLive(player, env) end }, -- G1-1: 보상 띠 강화석 = 지급 식(경험치 배수)
 				{ "G1-0(나)", function() require(script.Parent.G1_0Verify).runLive(player, env) end }, -- G1-0: 받는 피해 하한 · 복귀 표본(벽 위 · 바깥 · 허공 · 연쇄) · 단상 점프 판정 · 12인 재생성 전후
@@ -3390,6 +3392,7 @@ if RunService:IsStudio() then
 				end
 			end
 			require(script.Parent.PlayerDamage).debugNewbieProtectionOff = false
+			CharacterLevel.debugLevelGapOff = false
 			-- S04 사전 작업(PRD 20.83 [8]): 옛 블록을 포함한 검증 체인 전체가 실제 가방을 그대로 남겼는가. 기준은 이 서버의 첫 백업
 			-- 순간(=어떤 블록도 가방을 건드리기 전)의 지문이다. 예전에는 Play마다 보스 드랍 2 ~ 3개가 가방에 남았다.
 			if firstBagCount[player] ~= nil then -- 체인이 전부 건너뛰어졌으면(DevToolsConfig.verify) 백업이 없어 기준도 없다
@@ -3714,6 +3717,16 @@ if RunService:IsStudio() and verifyEnabled("P3b(가)") then
 		local ok, err = pcall(require(script.Parent.P3bVerify).runPure)
 		if not ok then
 			warn(("[P3b(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ G1-3 자동 검증 블록(가) - 레벨차 계수 · 환생 자리(docs/phase/G1-3-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("G1-3(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.G1_3Verify).runPure)
+		if not ok then
+			warn(("[G1-3(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

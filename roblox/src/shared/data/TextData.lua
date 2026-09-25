@@ -61,6 +61,20 @@ return {
 		["toast.autoDismantle"] = "자동 분해: {item} → 보석",
 		["toast.autoSell"] = "자동 판매: {item} +{gold}골드",
 
+		-- 환생(G1-3)
+		["rebirth.confirm.title"] = "환생 - 레벨이 1로 돌아갑니다",
+		["rebirth.confirm.body"] = "레벨 {level} → 1 · 스테이지 {stage} → 1(되돌릴 수 없음) - 높은 스테이지에서는 레벨만큼 약해집니다.
+얻는 것(영구): 무기 등급 +1 · 보석 칸 +1 · 경험치 ×{expFrom} → ×{expTo}
+필요 레벨 {required} · 환생 {count}/{max}회",
+		["rebirth.confirm.done"] = "환생 {count}/{max}회 완료 - 더 이상 환생할 수 없습니다.",
+		["rebirth.confirm.ok"] = "환생한다",
+		["rebirth.confirm.cancel"] = "취소",
+		["rebirth.confirm.close"] = "닫기",
+		["rebirth.levelShort"] = "레벨이 부족합니다(필요 레벨 {required})",
+		["rebirth.tab.where"] = "환생은 커뮤니티 센터의 환생 제단에서 합니다(마을 한가운데 건물 앞).",
+		["rebirth.tab.status"] = "환생 {count}/{max}회 · 현재 레벨 {level} · 필요 레벨 {required} · 경험치 ×{expFrom} → ×{expTo}",
+		["world.communityCenter"] = "커뮤니티 센터",
+
 		-- 채팅 · 알림
 		["chat.primalDrop"] = "★ {name}님이 <font color=\"{color}\">{item}</font>을 얻었습니다",
 	},

@@ -138,7 +138,10 @@ local config = {
 		-- 클라(GradeColor · HelpTooltip · 도움말 · 가방 · 보석 · 강화대 · 보상 띠) → S11(UI 띠 문자열) · S12(UI) · S12b(UI) · S15(UI) · S20(UI) · S20c(UI) · S20d(UI) · S20e(UI) · P25b(UI) · P3b(UI) · S10(가)(드랍 피드).
 		-- G1-2: 이번 블록 G1-2(가)(나) + 동반(COMMON §3): Loot · DropTable(드랍 개수) · MonsterState(처치 시간) · CombatResolution → S01(가)(나) · S05b · S10(나) · P2(가)(나) · P0(가)(EconSim) ·
 		-- LootRuleVerify · PlayerProfile(addArmorDrop · 분해 문턱) · SaveSystem v36 → 이관 체인(S02 · S03 · S04 · S05 · S05b · S11(가)) · P25b(가)(나) · S20d(나) · 26-2 · 가방 UI(S20(UI) · S20d(UI) · P25b(UI)) + G1-1 미결(G1-1(UI) · S12(UI)).
+		-- G1-3: 이번 블록 G1-3(가)(나) + 동반: CharacterLevel(레벨차) · PlayerDamage(모든 피격) · MonsterState(모든 타격) - 체인 동안 계수를 끄므로 옛 피해 기대값 블록은 영향 없음 →
+		-- 대표로 29-1(PlayerDamage 직접) · S13b(나) · P25c(나)(신규 보호와 곱) · EconSim(P0(가)) · 환생 자리 RebirthAccess(S12b(가)(나)) · 강화대 환생 탭(S12(UI) · S12b(UI)).
 		current = {
+			"G1-3(가)", "G1-3(나)",
 			"G1-2(가)", "G1-2(나)",
 			"G1-1(가)", "G1-1(나)", "G1-1(UI)",
 			"G1-0(가)", "G1-0(나)", "P3dF(가E)",

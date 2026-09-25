@@ -7,11 +7,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local RebirthView = {}
-
--- S12b F: 강화대 환생 탭의 확인창과 커뮤니티 환생 제단(RebirthAltar.client.lua)이 같은 문구 · 같은 조건식을 쓴다 - 한 곳에서 내보낸다.
-RebirthView.confirmText = "정말 환생하시겠습니까?\n레벨과 무한 스테이지가 1로 초기화됩니다 - 되돌릴 수 없습니다."
 
 -- P2 B: 필요 레벨은 서버(PlayerProfile.rebirth)와 같은 표 한 곳(CharacterLevelConfig.rebirth.requiredLevels)에서 읽는다.
 function RebirthView.requiredLevel(rebirthCount)
@@ -35,10 +33,10 @@ function RebirthView.resultText(data)
 end
 
 local player = Players.LocalPlayer
-local rebirthRequest = ReplicatedStorage:WaitForChild("RebirthRequest")
 
--- parent = 환생 탭 본문 Frame, overlayParent = 확인창 오버레이를 붙일 ScreenGui. 반환 refs = { update, handleResult, hideOverlay }.
-function RebirthView.build(parent, overlayParent)
+-- G1-3(사용자 결정): 환생은 커뮤니티 센터의 환생 제단 한 곳에서만 한다(서버 RebirthAccess도 제단만). 이 탭은 안내 · 상태 · 성장 보상 버튼 · 결과 줄만 남긴다.
+-- parent = 환생 탭 본문 Frame. 반환 refs = { update, handleResult, hideOverlay(옛 호출 호환 - 할 일 없음) }.
+function RebirthView.build(parent, _overlayParent)
 	local infoLabel = Instance.new("TextLabel")
 	infoLabel.BackgroundTransparency = 1
 	infoLabel.Size = UDim2.new(1, -16, 0, 90)
@@ -51,15 +49,6 @@ function RebirthView.build(parent, overlayParent)
 	infoLabel.TextColor3 = Color3.new(1, 1, 1)
 	infoLabel.Text = ""
 	infoLabel.Parent = parent
-
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(0, 140, 0, 40)
-	button.Position = UDim2.new(0.5, -70, 1, -48)
-	button.Text = "환생"
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 18
-	button.BackgroundColor3 = Color3.fromRGB(200, 160, 40)
-	button.Parent = parent
 
 	-- P2.5b D2: 환생 후 레벨 마일스톤 보상 목록(성장 보상 창 - window라 이 강화대 창은 닫힌다).
 	local milestoneButton = Instance.new("TextButton")
@@ -86,73 +75,19 @@ function RebirthView.build(parent, overlayParent)
 	resultLabel.Text = ""
 	resultLabel.Parent = parent
 
-	local overlay = Instance.new("Frame")
-	overlay.Size = UDim2.new(1, 0, 1, 0)
-	overlay.BackgroundColor3 = Color3.new(0, 0, 0)
-	overlay.BackgroundTransparency = 0.4
-	overlay.Visible = false
-	overlay.ZIndex = 10
-	overlay.Parent = overlayParent
-
-	local box = Instance.new("Frame")
-	box.AnchorPoint = Vector2.new(0.5, 0.5)
-	box.Position = UDim2.new(0.5, 0, 0.5, 0)
-	box.Size = UDim2.new(0, 280, 0, 140)
-	box.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-	box.ZIndex = 11
-	box.Parent = overlay
-
-	local confirmLabel = Instance.new("TextLabel")
-	confirmLabel.BackgroundTransparency = 1
-	confirmLabel.Size = UDim2.new(1, -16, 0, 70)
-	confirmLabel.Position = UDim2.new(0, 8, 0, 8)
-	confirmLabel.TextWrapped = true
-	confirmLabel.Font = Enum.Font.Gotham
-	confirmLabel.TextSize = 15
-	confirmLabel.TextColor3 = Color3.new(1, 1, 1)
-	confirmLabel.ZIndex = 11
-	confirmLabel.Text = RebirthView.confirmText
-	confirmLabel.Parent = box
-
-	local confirmYes = Instance.new("TextButton")
-	confirmYes.Size = UDim2.new(0, 120, 0, 36)
-	confirmYes.Position = UDim2.new(0, 12, 1, -48)
-	confirmYes.Text = "환생한다"
-	confirmYes.Font = Enum.Font.GothamBold
-	confirmYes.TextSize = 15
-	confirmYes.BackgroundColor3 = Color3.fromRGB(200, 160, 40)
-	confirmYes.ZIndex = 11
-	confirmYes.Parent = box
-
-	local confirmNo = Instance.new("TextButton")
-	confirmNo.Size = UDim2.new(0, 120, 0, 36)
-	confirmNo.Position = UDim2.new(1, -132, 1, -48)
-	confirmNo.Text = "취소"
-	confirmNo.Font = Enum.Font.GothamBold
-	confirmNo.TextSize = 15
-	confirmNo.BackgroundColor3 = Color3.fromRGB(60, 60, 66)
-	confirmNo.ZIndex = 11
-	confirmNo.Parent = box
-
 	local refs = {}
 
 	function refs.update()
 		local rebirthCount = player:GetAttribute("RebirthCount") or 0
 		local level = player:GetAttribute("CharacterLevel") or 1
 		if rebirthCount >= GemData.maxRebirthCount then
-			infoLabel.Text = ("환생 %d/%d회 완료 - 더 이상 환생할 수 없습니다."):format(rebirthCount, GemData.maxRebirthCount)
-			button.Text = "완료"
-			button.AutoButtonColor = false
+			infoLabel.Text = Text.get("rebirth.confirm.done", { count = rebirthCount, max = GemData.maxRebirthCount })
 			return
 		end
-
-		local requiredLevel = RebirthView.requiredLevel(rebirthCount)
-		button.Text = "환생"
-		button.AutoButtonColor = true
-		-- P2.5c 결정 3: 경험치 배수는 데이터(CharacterLevelConfig.rebirth.expMultipliers - 서버 PlayerProfile.addCharacterExp와 같은 함수)에서 읽는다.
-		infoLabel.Text = ("환생 %d/%d회 · 현재 레벨 %d\n필요 레벨 %d - 레벨을 1로 초기화하고 무기 등급·보석 슬롯을 1단계 올립니다.\n경험치 배수 ×%g → ×%g"):format(
-			rebirthCount, GemData.maxRebirthCount, level, requiredLevel,
-			CharacterLevel.getRebirthExpMultiplier(rebirthCount), CharacterLevel.getRebirthExpMultiplier(rebirthCount + 1))
+		infoLabel.Text = Text.get("rebirth.tab.where") .. "\n" .. Text.get("rebirth.tab.status", {
+			count = rebirthCount, max = GemData.maxRebirthCount, level = level, required = RebirthView.requiredLevel(rebirthCount),
+			expFrom = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount)), expTo = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount + 1)),
+		})
 	end
 
 	function refs.handleResult(data)
@@ -160,24 +95,7 @@ function RebirthView.build(parent, overlayParent)
 		refs.update()
 	end
 
-	-- 패널이 닫힐 때 열려 있던 확인창을 같이 닫는다(station이 걸어서 벗어나거나 window가 열려서 닫히면 오버레이만 남지 않게).
-	function refs.hideOverlay()
-		overlay.Visible = false
-	end
-
-	button.Activated:Connect(function()
-		if (player:GetAttribute("RebirthCount") or 0) >= GemData.maxRebirthCount then
-			return
-		end
-		overlay.Visible = true
-	end)
-	confirmNo.Activated:Connect(function()
-		overlay.Visible = false
-	end)
-	confirmYes.Activated:Connect(function()
-		overlay.Visible = false
-		rebirthRequest:FireServer()
-	end)
+	function refs.hideOverlay() end
 
 	return refs
 end

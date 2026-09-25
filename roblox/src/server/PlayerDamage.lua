@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 local PlayerShield = require(script.Parent.PlayerShield)
@@ -98,6 +99,11 @@ end
 -- (P2.5c Play 1 - 최고 5에서 ×0.158이 걸려 29-1 · 29-3 · 29-4 · S13b가 X). 체인이 도는 동안만 true - 신규 보호 자체는 P25c(나)가 다시 켜고 잰다.
 PlayerDamage.debugNewbieProtectionOff = false
 
+-- G1-3: 레벨차 계수 - 받는 피해(CharacterLevelConfig.levelGap). 스테이지 = 그 사람의 지금 스테이지(보스전이면 리더가 연 보스 스테이지와 같다 - 파티원은 자기 스테이지). 스탠드인은 1.
+function PlayerDamage.getLevelGapTakeMultiplier(targetPlayer)
+	return CharacterLevel.levelGapTakeMultiplier(PlayerProfile.getCharacterLevel(targetPlayer), PlayerProfile.getInfiniteStage(targetPlayer))
+end
+
 function PlayerDamage.getNewbieMultiplier(targetPlayer)
 	if PlayerDamage.debugNewbieProtectionOff then
 		return 1
@@ -110,6 +116,7 @@ end
 local function applyFinalDamage(targetPlayer, damage, label)
 	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
 	damage *= PlayerDamage.getNewbieMultiplier(targetPlayer)
+	damage *= PlayerDamage.getLevelGapTakeMultiplier(targetPlayer) -- G1-3: 레벨차 계수(받는 피해)
 	-- 29-1(PRD 20.73 [2-8] A-1 "잡힌 동안 받는 피해"): 잡히면 못 피하므로 모든 패턴이 확정 피격이다 -
 	-- 배율(지금은 0 = 면역)을 곱하고, 0이면 피격 자체가 없던 것으로 친다(자동회복 타이머도 안 건드린다).
 	local trapMultiplier = PlayerState.getTrapDamageMultiplier(targetPlayer)

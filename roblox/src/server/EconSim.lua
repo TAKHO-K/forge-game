@@ -188,6 +188,12 @@ end
 EconSim.tierData = tierData
 
 -- 이 loadout으로 tier 몬스터를 seconds 안에 잡을 수 있는 가장 높은 스테이지(1 ~ maxStage, 보스 스테이지 제외). efficiency = 조작 효율.
+-- G1-3: 레벨차 계수(주는 피해)가 있으면 그 스테이지의 실효 HP = HP ÷ 계수(게임 MonsterState.applyDamage와 같은 함수). HP ÷ 계수는 스테이지에 단조 증가.
+local function effectiveMonsterHp(loadout, baseHp, stage)
+	return InfiniteStage.getMonsterHp(baseHp, stage) / CharacterLevel.levelGapDealMultiplier(loadout.level, stage)
+end
+EconSim.effectiveMonsterHp = effectiveMonsterHp
+
 function EconSim.highestStageByKill(loadout, tierIndex, seconds, efficiency, maxStage)
 	local hpLimit = EconSim.maxHpPerAtk(loadout, seconds) * loadout.atk * efficiency
 	local baseHp = tierData(tierIndex).hp
@@ -196,10 +202,10 @@ function EconSim.highestStageByKill(loadout, tierIndex, seconds, efficiency, max
 		stage = math.floor(1 + math.log(hpLimit / baseHp) / math.log(InfiniteStageConfig.growthRate))
 	end
 	stage = math.clamp(stage, 1, maxStage)
-	while stage < maxStage and InfiniteStage.getMonsterHp(baseHp, stage + 1) <= hpLimit do
+	while stage < maxStage and effectiveMonsterHp(loadout, baseHp, stage + 1) <= hpLimit do
 		stage += 1
 	end
-	while stage > 1 and InfiniteStage.getMonsterHp(baseHp, stage) > hpLimit do
+	while stage > 1 and effectiveMonsterHp(loadout, baseHp, stage) > hpLimit do
 		stage -= 1
 	end
 	return stage
@@ -210,7 +216,7 @@ function EconSim.highestStageBySurvive(loadout, tierIndex, minHits, maxStage)
 	local attackBase = tierData(tierIndex).attack
 	local newbie = PlayerCombat.getNewbieDamageMultiplier(maxStage + 1) -- P2.5c 신규 보호: 게임과 같이 최고 스테이지(= reach = maxStage + 1) 기준
 	local function ok(stage)
-		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(attackBase, stage), newbie) >= minHits
+		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(attackBase, stage), newbie * CharacterLevel.levelGapTakeMultiplier(loadout.level, stage)) >= minHits -- G1-3: 받는 피해 계수
 	end
 	if not ok(1) then
 		return 1
@@ -567,9 +573,9 @@ local function fightBosses(state, profile, loadout, run)
 		local bossStage = state.reach
 		local data = BossRules.buildInstanceData(bossStage, BossRules.bossIdForStage(bossStage), profile.partySize)
 		-- 파티 딜 = 인원 × 내 딜(같은 수준의 파티원 가정 - [가정]). 보스 HP는 BossRules가 이미 인원 배율(N^p)을 곱했다.
-		local effectiveHp = data.hp / (profile.bossDpsEfficiency * profile.partySize)
+		local effectiveHp = data.hp / (profile.bossDpsEfficiency * profile.partySize) / CharacterLevel.levelGapDealMultiplier(loadout.level, bossStage) -- G1-3: 레벨차 계수
 		-- 생존: 보스 평타(BossRules가 계산한 attack)에 최소 생존 타수를 버텨야 도전한다(잡몹과 같은 minSurviveHits).
-		if BalanceSim.getSurviveHits(loadout, data.attack, PlayerCombat.getNewbieDamageMultiplier(bossStage)) < profile.minSurviveHits then -- P2.5c 신규 보호
+		if BalanceSim.getSurviveHits(loadout, data.attack, PlayerCombat.getNewbieDamageMultiplier(bossStage) * CharacterLevel.levelGapTakeMultiplier(loadout.level, bossStage)) < profile.minSurviveHits then -- P2.5c 신규 보호 · G1-3 레벨차
 			break
 		end
 		local seconds = EconSim.killSeconds(loadout, effectiveHp, profile.bossKillLimitSeconds)
@@ -614,7 +620,7 @@ local function chooseHunt(loadout, profile, maxStage, gearMode)
 			stage -= 1
 		end
 		local tier = tierData(tierIndex)
-		local kill = EconSim.killSeconds(loadout, InfiniteStage.getMonsterHp(tier.hp, stage) / profile.dpsEfficiency, 600)
+		local kill = EconSim.killSeconds(loadout, effectiveMonsterHp(loadout, tier.hp, stage) / profile.dpsEfficiency, 600) -- G1-3: 레벨차 계수
 		local rate = InfiniteStage.getExpReward(tier.expReward, stage) / (kill + profile.moveOverheadSeconds)
 		local limiter = (bySurvive < byKill) and "생존 타수" or ((byKill >= maxStage) and "보스 게이트" or "처치 시간")
 		table.insert(options, { tier = tierIndex, stage = stage, killSeconds = kill, expPerSecond = rate, limiter = limiter })

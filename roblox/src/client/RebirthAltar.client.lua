@@ -7,6 +7,8 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Confirm = require(script.Parent.ui.kit.Confirm)
 local Toast = require(script.Parent.ui.kit.Toast)
 local RebirthView = require(script.Parent.panels.Enhance.RebirthView)
@@ -23,25 +25,29 @@ local function askRebirth()
 	local level = player:GetAttribute("CharacterLevel") or 1
 	if rebirthCount >= GemData.maxRebirthCount then
 		Confirm.ask({
-			title = "환생",
-			body = ("환생 %d/%d회 완료 - 더 이상 환생할 수 없습니다."):format(rebirthCount, GemData.maxRebirthCount),
-			primaryText = "환생한다",
-			secondaryText = "닫기",
+			title = Text.get("rebirth.confirm.title"),
+			body = Text.get("rebirth.confirm.done", { count = rebirthCount, max = GemData.maxRebirthCount }),
+			primaryText = Text.get("rebirth.confirm.ok"),
+			secondaryText = Text.get("rebirth.confirm.close"),
 			primaryEnabled = false,
 		}, function() end)
 		return
 	end
 	local requiredLevel = RebirthView.requiredLevel(rebirthCount)
 	local enough = level >= requiredLevel
+	-- G1-3: 제목에 "레벨이 1로 돌아갑니다" · 첫 줄 = 무엇이 1이 되는가 · 한 줄 = 얻는 것(영구). 경험치 배수는 서버와 같은 데이터 함수(옛: rebirthCount + 1을 직접 계산).
 	Confirm.ask({
-		title = "환생",
-		body = ("%s\n\n환생 %d/%d회 · 현재 레벨 %d · 필요 레벨 %d\n경험치 배수 ×%d → ×%d"):format(
-			RebirthView.confirmText, rebirthCount, GemData.maxRebirthCount, level, requiredLevel, rebirthCount + 1, rebirthCount + 2),
-		primaryText = "환생한다",
-		secondaryText = "취소",
+		title = Text.get("rebirth.confirm.title"),
+		body = Text.get("rebirth.confirm.body", {
+			level = level, stage = player:GetAttribute("InfiniteStage") or 1,
+			expFrom = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount)), expTo = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount + 1)),
+			count = rebirthCount, max = GemData.maxRebirthCount, required = requiredLevel,
+		}),
+		primaryText = Text.get("rebirth.confirm.ok"),
+		secondaryText = Text.get("rebirth.confirm.cancel"),
 		danger = true,
 		primaryEnabled = enough,
-		reason = (not enough) and ("레벨이 부족합니다(필요 레벨 %d)"):format(requiredLevel) or nil,
+		reason = (not enough) and Text.get("rebirth.levelShort", { required = requiredLevel }) or nil,
 	}, function(accepted)
 		if accepted then
 			awaitingResult = true
