@@ -59,9 +59,10 @@ local encounterByModel = {}
 -- S19b: 화면 보스 체력바(client/hud/BossBar)가 "내 보스"를 찾는 표식 - 보스전마다 번호 하나를 보스 모델과 멤버(실제 Player)의 Attribute BossEncounterId에 건다.
 -- 스탠드인(검증용 테이블 멤버)에는 Attribute가 없어 건너뛴다.
 local nextEncounterId = 0
-local function setEncounterAttribute(member, id)
+local function setEncounterAttribute(member, id, stage)
 	if typeof(member) == "Instance" then
 		member:SetAttribute("BossEncounterId", id)
+		member:SetAttribute("BossStage", stage) -- G1-3 리뷰 2: 레벨차 계수(받는 피해)는 보스전 중 보스 스테이지로 잰다(파티원은 자기 스테이지가 낮을 수 있다)
 	end
 end
 
@@ -307,7 +308,7 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	model:SetAttribute("BossEncounterId", encounter.id)
 	for _, member in ipairs(members) do
 		encounterOf[member] = encounter
-		setEncounterAttribute(member, encounter.id)
+		setEncounterAttribute(member, encounter.id, encounter.stage)
 	end
 	encounterByModel[model] = encounter
 	encounter.kitParts = BossArenaKit.build(data.arenaKit, zone, ARENA_FLOOR_TOP_Y)

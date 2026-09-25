@@ -101,7 +101,10 @@ PlayerDamage.debugNewbieProtectionOff = false
 
 -- G1-3: 레벨차 계수 - 받는 피해(CharacterLevelConfig.levelGap). 스테이지 = 그 사람의 지금 스테이지(보스전이면 리더가 연 보스 스테이지와 같다 - 파티원은 자기 스테이지). 스탠드인은 1.
 function PlayerDamage.getLevelGapTakeMultiplier(targetPlayer)
-	return CharacterLevel.levelGapTakeMultiplier(PlayerProfile.getCharacterLevel(targetPlayer), PlayerProfile.getInfiniteStage(targetPlayer))
+	-- 리뷰 2: 보스전 중이면 보스 스테이지(BossEncounter가 거는 Attribute BossStage) - 파티원이 자기 스테이지를 1로 내려 두고 리더의 고스테이지 보스에 들어가
+	-- 받는 피해 벌점만 피하던 우회를 막는다(주는 피해는 원래 보스 스테이지). 신규 보호가 "지금 → 최고 스테이지"로 바꾼 것과 같은 이유.
+	local bossStage = typeof(targetPlayer) == "Instance" and targetPlayer:GetAttribute("BossStage") or nil
+	return CharacterLevel.levelGapTakeMultiplier(PlayerProfile.getCharacterLevel(targetPlayer), bossStage or PlayerProfile.getInfiniteStage(targetPlayer))
 end
 
 function PlayerDamage.getNewbieMultiplier(targetPlayer)
