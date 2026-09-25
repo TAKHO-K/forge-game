@@ -182,11 +182,28 @@ function G2aVerify.runLive(player, env)
 		local st = HeightGuard.getState(player)
 		local reverts0 = st.reverts
 		-- ① 점프 = 오탐 0(서버가 Jump를 켠다 - 1단)
+		local base0 = root.Position.Y
 		humanoid.Jump = true
 		task.wait(1.2)
 		local afterJump = st.reverts - reverts0
+		-- ①-2 넉백(높이 12 > 허용 8.92): 보스 패턴과 같은 길(exempt + BossPatternEvent "launch") → 되돌림 0
+		local patternEvent = ReplicatedStorage:FindFirstChild("BossPatternEvent")
+		local launchHeight = 12
+		HeightGuard.exempt(player, JumpMath.launchAirSeconds(launchHeight))
+		local launchPeak = root.Position.Y
+		if patternEvent then
+			patternEvent:FireClient(player, "launch", { from = root.Position + Vector3.new(1, 0, 0), heightStuds = launchHeight, distanceStuds = 4 })
+		end
+		local tl = os.clock()
+		while os.clock() - tl < 2 do
+			task.wait(0.05)
+			launchPeak = math.max(launchPeak, root.Position.Y)
+		end
+		local afterLaunch = st.reverts - reverts0 - afterJump
+		local launchRise = launchPeak - base0
 		-- ② 띄워 두기(날기 부정 흉내): AlignPosition으로 루트를 기준 + 14에 붙잡는다 → 0.5초 안팎에 되돌림
 		local base = root.Position
+		local revertsBeforeAlign = st.reverts
 		local attachment = Instance.new("Attachment")
 		attachment.Parent = root
 		local align = Instance.new("AlignPosition")
@@ -199,7 +216,7 @@ function G2aVerify.runLive(player, env)
 		local caught
 		while os.clock() - t0 < 3 do
 			task.wait(0.05)
-			if st.reverts > reverts0 then
+			if st.reverts > revertsBeforeAlign then
 				caught = os.clock() - t0
 				break
 			end
@@ -207,6 +224,8 @@ function G2aVerify.runLive(player, env)
 		align:Destroy()
 		attachment:Destroy()
 		task.wait(1)
+		r.check(("넉백 높이 %d(허용 %.2f 초과): 서버가 본 루트 최고 +%.1f · 되돌림 %d(기대 0 - 넉백 예외)"):format(launchHeight, JumpMath.heightGuardAllowance(), launchRise, afterLaunch),
+			afterLaunch == 0 and patternEvent ~= nil)
 		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(+14) 되돌림 %s초 뒤(기대 ≤ 1.5 - 폴링 0.25 × 연속 2) · 기록 시각 있음 %s"):format(
 			afterJump, caught and ("%.2f"):format(caught) or "없음", tostring(st.flaggedAt ~= nil)),
 			afterJump == 0 and caught ~= nil and caught <= 1.5 and st.flaggedAt ~= nil)
