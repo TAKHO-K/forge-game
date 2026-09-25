@@ -19397,3 +19397,9 @@ COMMON.md §1에 영구 규칙 "성장률(k)에 기대는 값은 힘 비율로 �
 - 장비 기대 개수 × 처치 시간 보정(`DropTableData.fairness` · `DropTable.timeFairnessFactor` · `MonsterState.getKillSecondsFor`) - 같은 사람에게 모든 tier의 시간당 장비 가치가 같다(한 방 드래곤 ×6.58 → ×1.00). EconSim 같은 함수.
 - 분해 문턱 `ArmorData.dismantleMinGradeIndex`(값 3 그대로). 줍는 순간 자동 처리 `autoProcess`(v36 · 기본 끔 · 영웅 / 희귀 / 일반 이하 · 영웅 = 분해 · 그 아래 = 판매 · 잠금 존중) · 가방 드롭다운 토글 · 알림.
 - 결정 필요: 보정 세기(1이면 상위 1% 1,000 도달 9.6 → 29.2h · P0(가) 9 설계 기준 벗어남).
+
+### 20.126 G1-3 환생의 의미 - 레벨차 계수 + 무료 폭 · 확인창 · 제단 한 곳 (G1 - 자율 단계)  `[✅ 구현 + 로컬 검사(luau-compile · luau-analyze · EconSim D0 하네스 3프로필) + Studio Play 2회(2026-09-25 - G1-3(가)(나) 전부 O · S12b(나) 13/13 · S19b 9/9) + 스크린샷(환생 확인창) · 리뷰 3건 반영. 저장 구조 변경 없음. 결정 필요 2 - docs/phase/G1-3-report.md]`
+
+- 레벨차 계수(`CharacterLevelConfig.levelGap` · `CharacterLevel.levelGapDealMultiplier / TakeMultiplier`): 스테이지 − (레벨 + 167) − 무료 폭(1.02^100 = 100칸) > 0이면 주는 −1%/칸(하한 0.25) · 받는 +2%/칸(상한 ×3). 주는 = MonsterState.applyDamage(보스는 보스 스테이지), 받는 = PlayerDamage 공통 출구(보스전 중 보스 스테이지). EconSim 같은 함수. 검증 체인 동안 끔(`debugLevelGapOff`).
+- 1,000 도달(캐주얼 · 일반 · 상위 1%): 53.1 · 36.3 · 9.6h(G1 전) → 58.1 · 41.9 · 28.7h(드랍 보정 + 레벨차) - 환생 경험치 ×6 그대로.
+- 환생 = 커뮤니티 센터 제단 한 곳(RebirthAccess) · 강화대 탭은 안내 · 확인창 "환생 - 레벨이 1로 돌아갑니다" + 얻는 것 한 줄 · 제단 배수 = 데이터 함수.
