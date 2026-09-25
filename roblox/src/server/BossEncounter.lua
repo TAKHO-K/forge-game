@@ -328,6 +328,7 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 		setEncounterAttribute(member, encounter.id, encounter.stage)
 	end
 	encounterByModel[model] = encounter
+	model:SetAttribute("BossInnerCircle", data.innerSafeRadiusStuds) -- BR1-2 근접 원형 구역(클라가 바닥에 원을 그린다 · 없는 보스는 nil)
 	encounter.kitParts = BossArenaKit.build(data.arenaKit, zone, ARENA_FLOOR_TOP_Y)
 	BossPatterns.setGrace(model, data, data.scheduler.entryGraceSeconds) -- 입장 2초 유예(20.44 [3](다))
 	-- 29-1: 힌트 단계 - 같은 보스에게 이번 세션에 전멸한 적이 있으면 그 단계로 시작한다.

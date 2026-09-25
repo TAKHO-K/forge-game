@@ -42,6 +42,7 @@ local BossBR1View = require(script.Parent.BossBR1View)
 local BossGrabView = require(script.Parent.BossGrabView)
 local BossSonicView = require(script.Parent.BossSonicView) -- BR1-2 음파 포효
 local BossColorView = require(script.Parent.BossColorView) -- BR1-2 색 맞추기
+local BossInnerCircleView = require(script.Parent.BossInnerCircleView) -- BR1-2 근접 원형 구역 · 낫 휘두르기 평타
 local BossEnvironmentView = require(script.Parent.BossEnvironmentView)
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
@@ -754,6 +755,8 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossColorView.resolve(data)
 	elseif kind == "colorEnd" then
 		BossColorView.finish()
+	elseif kind == "basicSweep" then
+		BossInnerCircleView.sweep(data)
 	elseif kind == "grabEnd" or kind == "grabMiss" then
 		BossGrabView.clear()
 	elseif kind == "envTelegraph" then

@@ -256,6 +256,10 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		attackRangeStuds = boss.basicAttack.rangeStuds,
 		attackCooldownSeconds = boss.basicAttack.cooldownSeconds,
 		basicAttackDamageMultiplier = boss.basicAttack.damageMultiplier,
+		-- BR1-2 평타 먼 거리(반감) · 근접 원형 구역(상위 3보스 - 원 안은 평타 없음 · 원 밖 전원을 쓴다)
+		attackFarRangeStuds = boss.basicAttack.farRangeStuds,
+		attackFarMultiplier = boss.basicAttack.farMultiplier,
+		innerSafeRadiusStuds = boss.innerSafeRadiusStuds,
 
 		-- 29-2 스킬표(BossPatterns.lua가 읽는다). 범위 배율이 1이면 원본 테이블을 그대로 가리키고(읽기 전용이라
 		-- 공유해도 안전하다 - BossData는 절대 런타임에 고치지 않는다), 아니면 넓힌 사본이다.

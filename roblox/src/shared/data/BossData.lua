@@ -285,6 +285,24 @@ local function airGrab(label, motion)
 	}
 end
 
+-- BR1-2 평타 사거리(사용자 - 원거리가 안 맞고 플레이하지 않게): 피할 수 없는 기본 공격이 fullStuds(26 = 원거리 직업 최대 사거리 약 24 + 여유)까지 그대로 닿는다 ·
+-- 그 밖(아주 먼 거리 - 플레이어도 못 때리는 자리) ~ farStuds(60)는 farMultiplier(반감) · 그보다 멀면 안 닿는다. 원 밖이라고 반감하지 않는다(궁수 · 치유사 정체성 보호).
+local BASIC_RANGE = { fullStuds = 26, farStuds = 60, farMultiplier = 0.5 }
+
+-- BR1-2 근접 원형 구역(사용자 - 근접 실패율 상위 3보스만: 서리 거인 98 · 폭풍 군주 94 · 구간 수호자 88%, BR1 모형): 보스 둘레 innerSafeRadiusStuds 원(바닥에 보인다) = 평타 최소 사거리.
+-- 평타는 원 밖을 낫 휘두르듯 쓸어 원 밖의 멤버 **전원**을 친다(원 안은 평타를 안 맞는다) · 가끔 원 안 강공격(innerSmash - 전조 있고 걸어 나가면 피한다).
+local INNER_CIRCLE = { radiusStuds = 12 }
+local function innerSmash(label)
+	-- 원 안 강공격: 보스 중심 원(= 구역 원) · 전조 1.3초(무기를 머리 위로 - 중간 무게) · ×2.4(34%) · 원 안에 누가 있을 때만. 피하기 = 원 밖으로 12 − 8(근접 자리) + 1 = 5 → 0.89초 ≤ 1.3.
+	return {
+		primitive = "circleBoss", bubble = "heavy", motion = "fist",
+		cooldownSeconds = 10, priority = P.normal,
+		conditions = { { type = "targetWithin", studs = INNER_CIRCLE.radiusStuds } },
+		telegraphSeconds = 1.3, radiusStuds = INNER_CIRCLE.radiusStuds,
+		damage = { kind = "attack", multiplier = 2.4 }, damageLabel = label,
+	}
+end
+
 -- BR1-2 투사체 반사(설계 §5 - 6종 공통 조각 "reflect", 이름 · 모션 · 색만 보스별): 전조 telegraphSeconds(결계가 솟는다 - 거울 · 결계 연출) → 반사 stanceSeconds.
 --   반사 동안 **플레이어의 원거리 평타(활 화살 · 힐러 구슬)**가 닿으면 피해 0 · 보스 곁에서 projectile.windupSeconds 모았다가 **쏜 사람 쪽 직선**으로 되돌린다(근접은 영향 없음).
 --   되돌아오는 투사체 = 보스가 쏜 판정: 경로의 **첫 사람**에게 최대 체력 × maxHpFraction(피해 감소 · 스테이지 1 ~ 30 보호 적용 · 즉사 플래그 아님) 후 소멸 - 동료가 몸으로 막아 쏜 사람을 지킬 수 있다.
@@ -371,6 +389,7 @@ local function guardianSkills()
 		swipe = enhancedBasic("방패 후려치기", "fist"), -- BR1 강화 평타
 		grab = airGrab("움켜쥐기", "hand"), -- BR1 대공 잡기
 			mirror = reflectSkill("방패 거울", "fist"), -- BR1-2 투사체 반사
+			innerSmash = innerSmash("원 안 내려찍기"), -- BR1-2 원 안 강공격(근접 원형 구역)
 		-- BR1 새 ① 쌍권 연타: 좌 · 우 주먹을 번갈아 내려찍는다 - 점점 크게(작게 → 크게, 무게 원칙). 매 칸은 그 순간 대상의 자리(계속 걸어라).
 		--   칸 = 반경 5 · 5 · 6 · 10, 전조 1.1 · 1.1 · 1.2 · 1.55, 배율 ×0.8 · ×0.8 · ×1.0(작음) · ×2.2(31% - 중간). 최대 범위 배율(×1.152)에서
 		--   마지막 칸 11.5 + 1 = 1.48초 ≤ 1.55(하네스 - 1.4는 0.08초 모자랐다). 공중으로 피해도 다음 칸이 착지 자리로 온다.
@@ -540,9 +559,9 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(-1.2, 0.9, 0), size = Vector3.new(0.5, 0.5, 0.9), kind = "block", color = "head", name = "RightPauldron" },
 		},
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
+		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
-		skillOrder = { "heavy", "shockwave", "meteor", "charge", "cross", "swipe", "grab", "fists", "orbs", "earthSplit", "mirror" },
+		skillOrder = { "heavy", "shockwave", "meteor", "charge", "cross", "swipe", "grab", "fists", "orbs", "earthSplit", "mirror", "innerSmash" },
 		skills = guardianSkills(),
 		-- BR1 환경 변화 "지반 붕괴"(체력 50%부터 · 설계 §1-2): 두 주먹으로 땅을 연타 → 멤버 발밑마다 + 1개 무작위의 원(반경 22)에 금이 가고(3초)
 		-- 무너져 12초 동안 용암(0.5초마다 5% - 발 기준 같은 층). 구멍 밖으로 23 = 2.3초 ≤ 3.0. 견습 보스전에는 없다(BossEnvironment).
@@ -564,9 +583,9 @@ local SPECIES = {
 			{ anchor = "head", offset = Vector3.new(-0.5, 0.6, 0), size = Vector3.new(0.3, 1.4, 0.3), rotationDeg = Vector3.new(0, 180, 25), kind = "wedge", color = "head", name = "RightHorn" },
 		},
 		moveSpeedStuds = 6, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 0.525, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1.5 → ×0.525(초당 5% - 6종 같음 · 난이도 모형 조정)
+		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 0.525, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1.5 → ×0.525(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(7),
-		skillOrder = { "slam", "icefall", "spike", "roar", "swipe", "grab", "spear", "stomp", "snowball", "mirror" },
+		skillOrder = { "slam", "icefall", "spike", "roar", "swipe", "grab", "spear", "stomp", "snowball", "mirror", "innerSmash" },
 		-- BR1 환경 변화 "빙하 균열"(체력 50%부터): 포효하며 땅을 내려친다 → 반경 95의 고리에 금(4.2초) → 그 밖이 15초 동안 얼음물(0.5초마다 6%).
 		-- 가장 먼 자리(벽 곁 140)에서 안으로 46 = 4.09초 ≤ 4.2. 아레나가 좁아진다 - 다른 패턴과 겹친다(겹침 분류 §4-3).
 		environment = {
@@ -632,6 +651,7 @@ local SPECIES = {
 			swipe = enhancedBasic("서리 주먹", "fist"), -- BR1 강화 평타
 			grab = airGrab("서리 손아귀", "hand"), -- BR1 대공 잡기
 				mirror = reflectSkill("얼음 거울", "hand"), -- BR1-2 투사체 반사
+				innerSmash = innerSmash("원 안 짓밟기"), -- BR1-2 원 안 강공격(근접 원형 구역)
 			-- BR1 새 ① 얼음 창 투척(대공): 창을 들어 **공중에 뜬 사람**을 겨눈다(조준 고리가 그 사람 머리 위 - 하늘 쪽 표시). 떠 있는 사람이 없으면 쓰지 않는다.
 			--   직선(회전 0) · 속도 45 · 반경 2.5(3D) · 0.35초 간격 3자루 - 쏜 순간의 자리를 향해 날아온다: 궤도를 바꾸면(공중 점프 · 대시) 빗나가고, 착지하면 머리 위로 지나간다.
 			spear = {
@@ -678,7 +698,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 0.7, -1.0), size = Vector3.new(0.6, 0.6, 1.0), rotationDeg = Vector3.new(0, 180, 0), kind = "wedge", color = "body", name = "TailFin" },
 		},
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "sweep", "tide", "spout", "colors", "swipe", "grab", "tailSweep", "vortex", "bubbles", "mirror" },
 		-- BR1 환경 변화 "밥상뒤집기 = 널뛰기"(사용자 보완 B · 체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 사각 판 40 × 60이 (1 + 인원 ÷ 2)개.
@@ -793,7 +813,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 1.1, -0.7), size = Vector3.new(0.4, 1.6, 0.4), kind = "wedge", color = "head", name = "BackShard" },
 		},
 		moveSpeedStuds = 7, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
+		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "burst", "drop", "beam", "split", "swipe", "grab", "spikes", "shards", "mirrorDash", "mirror" },
 		-- BR1-2 환경 변화 "수정 부수기"(사용자 보강 C - 옛 공중 정원 대체 · server/BossJumpCourse): 두 팔을 들어 수정을 띄운다(3초) → 보스 몸에 **보호막**(피해로는 절대 안 깨진다 -
@@ -902,7 +922,7 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(0, 0.8, 1.0), size = Vector3.new(0.35, 1.2, 0.35), rotationDeg = Vector3.new(-30, 0, 0), kind = "wedge", color = "body", name = "TailSpike" },
 		},
 		moveSpeedStuds = 10, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
+		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(5),
 		skillOrder = { "claw", "sting", "stab", "shell", "swipe", "grab", "stingJab", "ambush", "clawSweep", "mirror" },
 		-- BR1 환경 변화 "개미지옥"(체력 50%부터): 몸을 흔들며 모래를 판다(3초 - 모래 소용돌이) → 12초 동안 아레나 한가운데 구덩이(반경 45)가 초당 7로 당긴다
@@ -1057,9 +1077,9 @@ local SPECIES = {
 			{ anchor = "body", offset = Vector3.new(-1.2, 1.3, 0), size = Vector3.new(0.3, 1.8, 0.3), rotationDeg = Vector3.new(0, 180, 15), kind = "wedge", color = "head", name = "RightBlade" },
 		},
 		moveSpeedStuds = 9, chaseStopDistanceStuds = 8,
-		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
+		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(5),
-		skillOrder = { "discharge", "whirl", "strike", "overcharge", "swipe", "grab", "tornado", "thunderRing", "boltSpear", "mirror" },
+		skillOrder = { "discharge", "whirl", "strike", "overcharge", "swipe", "grab", "tornado", "thunderRing", "boltSpear", "mirror", "innerSmash" },
 		-- BR1 환경 변화 "돌풍"(체력 50%부터): 지팡이를 수평으로 - 바람 줄기가 한 방향으로(3초) → 12초 동안 바람이 초당 7로 민다(클라 - 걷기 16보다 약하다:
 		-- 거슬러 9/초 · 떠 있으면 ×1.5) · 4초마다 90° 돈다 · 바람이 불어 가는 반원의 가장자리(반경 110 밖)가 전기 벽(0.5초마다 6%).
 		environment = {
@@ -1153,6 +1173,7 @@ local SPECIES = {
 			swipe = enhancedBasic("지팡이 휘두르기", "staff"), -- BR1 강화 평타
 			grab = airGrab("바람 손", "wind"), -- BR1 대공 잡기
 				mirror = reflectSkill("번개 결계", "staff"), -- BR1-2 투사체 반사
+				innerSmash = innerSmash("원 안 낙뢰"), -- BR1-2 원 안 강공격(근접 원형 구역)
 			-- BR1 새 ① 회오리 이동: 지팡이를 돌려 회오리를 보낸다 - 지면을 기며(속도 10 · 회전 30°/초 · 반경 5 · 6초) 대상을 쫓고, 닿은 사람을 띄워 1.5초 돌린다
 			--   (회오리 원과 같은 조각 launch · 그동안 무적). 높이 14까지 닿는다(떠 있어도 맞는다). 옆으로 걸어 비킨다(10 < 16). ×1.4(20% - 작음).
 			tornado = {

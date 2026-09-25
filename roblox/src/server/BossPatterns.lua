@@ -167,6 +167,14 @@ local function send(st, kind, payload)
 	end
 end
 
+-- BR1-2: 패턴 밖(MonsterAI 평타의 낫 휘두르기 그림)에서 이 보스의 멤버에게 보낸다.
+function BossPatterns.sendEvent(model, kind, payload)
+	local st = MonsterState.getBossPatternState(model)
+	if st then
+		send(st, kind, payload)
+	end
+end
+
 -- 한 사람에게만(29-4: 내 단이 가라앉는 시계처럼 그 사람의 화면에만 뜻이 있는 사실).
 local function sendTo(player, kind, payload)
 	if typeof(player) == "Instance" and player.Parent then

@@ -234,6 +234,40 @@ end
 -- 십자 화염)이 진행 중이면 BossPatterns.step이 true를 돌려주고 보스는 그 자리에 구속된다 -
 -- 평상시(false)엔 잡몹과 완전히 같은 추격·평타다. 어떤 패턴이 언제 시작되는지(간격·겹침
 -- 방지)는 전부 BossPatterns의 스케줄러가 정한다.
+-- BR1-2 보스 평타(BossData BASIC_RANGE · INNER_CIRCLE): 사거리 attackRangeStuds까지 그대로 · 그 밖 ~ attackFarRangeStuds는 attackFarMultiplier(반감).
+-- innerSafeRadiusStuds가 있는 보스(근접 원형 구역)는 원 밖을 낫처럼 쓸어 원 밖의 멤버 전원을 친다 - 원 안은 평타를 안 맞는다(가끔 원 안 강공격 innerSmash).
+local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot)
+	local now = os.clock()
+	local last = MonsterState.getLastAttackTick(model)
+	if last and now - last < data.attackCooldownSeconds then
+		return
+	end
+	local farRange = data.attackFarRangeStuds or data.attackRangeStuds
+	local victims = {}
+	if data.innerSafeRadiusStuds then
+		for _, member in ipairs(BossEncounter.getMembersOfModel(model)) do
+			local root = typeof(member) == "Instance" and member.Character and member.Character:FindFirstChild("HumanoidRootPart")
+			if root and PlayerState.getHp(member) > 0 and Reach.within(root.Position, monsterPosition, farRange) and Reach.horizontalDistance(root.Position, monsterPosition) > data.innerSafeRadiusStuds then
+				table.insert(victims, { player = member, root = root })
+			end
+		end
+	elseif PlayerState.getHp(targetPlayer) > 0 and Reach.within(targetRoot.Position, monsterPosition, farRange) then
+		victims = { { player = targetPlayer, root = targetRoot } }
+	end
+	if #victims == 0 then
+		return
+	end
+	MonsterState.setLastAttackTick(model, now)
+	for _, v in ipairs(victims) do
+		local far = Reach.horizontalDistance(v.root.Position, monsterPosition) > data.attackRangeStuds
+		local multiplier = (data.basicAttackDamageMultiplier or 1) * (far and (data.attackFarMultiplier or 1) or 1)
+		applyHitToPlayer(v.player, MonsterState.getAttackFor(model, TutorialState.getMonsterStage(v.player)), nil, multiplier)
+	end
+	if data.innerSafeRadiusStuds then
+		BossPatterns.sendEvent(model, "basicSweep", { center = monsterPosition, inner = data.innerSafeRadiusStuds, outer = data.attackRangeStuds })
+	end
+end
+
 local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetRoot, dt)
 	if BossPatterns.step(model, data, monsterPosition, targetPlayer, targetRoot, dt, BossEncounter.getMembersOfModel(model)) then
 		return
@@ -243,7 +277,7 @@ local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetR
 	if Reach.horizontalDistance(targetRoot.Position, monsterPosition) > data.chaseStopDistanceStuds then
 		stepToward(model, monsterPosition, targetRoot.Position, data.moveSpeedStuds, dt)
 	end
-	tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
+	tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot) -- BR1-2
 end
 
 RunService.Heartbeat:Connect(function(dt)
