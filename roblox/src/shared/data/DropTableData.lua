@@ -34,7 +34,8 @@ return {
 	--   maxSecondsPerHit(리뷰 2): k는 "때린 횟수 × 이 값"을 넘지 않는다 - 높은 tier를 한 대씩 찔러 두고 나중에 한 방에 잡아 k를 부풀리는 우회를 막는다.
 	--   travelSeconds = EconSim 일반 프로필의 처치 사이 이동(moveOverheadSeconds 1.0) · killFloorSeconds = 가장 빠른 평타 한 번의 간격 근처.
 	--   보석 가루 · 골드 · 경험치 · 강화석은 보정하지 않는다(장비 드랍만 - 지시 "6티어 드랍표").
-	fairness = { killFloorSeconds = 0.5, travelSeconds = 1.0, strength = 1, maxSecondsPerHit = 1.5 },
+	--   G2a(사용자 결정 - G1-2 결정 필요 1): strength = 0.5 - 1,000 도달 캐주얼 55.1h · 일반 36.6h · 상위 1% 20.0h(1이면 58.1 · 41.9 · 28.7). docs/phase/G2a-report.md ①.
+	fairness = { killFloorSeconds = 0.5, travelSeconds = 1.0, strength = 0.5, maxSecondsPerHit = 1.5 },
 
 	-- G1-1(보상 목록 단일 소스): 보스 확정 장비의 등급표. 옛 코드는 첫 클리어 = armorGradeByTier[6](드래곤 표를 그대로 가리킴) · 재도전 = [1]이었다 - 드래곤 표를
 	-- 고치면(G1-2 공정성 보정) 보스 보상이 같이 바뀌므로 값을 그대로 옮겨 따로 선언한다(값 불변). 환생 0회의 상향표는 MonsterData가 이 firstClear를 한 단계 민다.

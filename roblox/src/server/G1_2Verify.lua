@@ -47,6 +47,16 @@ function G1_2Verify.runPure()
 	local r = newRecorder("가")
 	local config = DropTableData.fairness
 
+	-- G2a: 데이터 세기 = 0.5(사용자 결정). 식 자체는 세기 1(전부)에서 재고, 지금 값은 따로 본다.
+	local liveStrength = config.strength
+	r.section("세기 데이터", function()
+		local H6 = hpUnits(6)
+		local c = DropTable.timeFairnessFactor(0.05, H6)
+		r.check(("세기 %.2f(기대 0.5 - G2a 사용자 결정) · 드래곤 한 방 c %.4f(기대 1 − 0.5 × (1 − 1/H) = %.4f)"):format(liveStrength, c, 1 - 0.5 * (1 - 1 / H6)),
+			liveStrength == 0.5 and near(c, 1 - 0.5 * (1 - 1 / H6), 1e-9))
+	end)
+	config.strength = 1
+
 	r.section("보정 식", function()
 		local H6 = hpUnits(6)
 		local oneShot = DropTable.timeFairnessFactor(0.05, H6)
@@ -84,8 +94,9 @@ function G1_2Verify.runPure()
 			end
 			table.insert(lines, ("tier1 %.1f초: %s"):format(k1, table.concat(parts, " ")))
 		end
-		r.check(("시간당 장비 가치(tier1 = 1, 보정 전 → 후) %s(기대 보정 후 전부 1.00)"):format(table.concat(lines, " | ")), ok)
+		r.check(("시간당 장비 가치(tier1 = 1, 보정 전 → 후 · 세기 1) %s(기대 보정 후 전부 1.00)"):format(table.concat(lines, " | ")), ok)
 	end)
+	config.strength = liveStrength
 
 	r.section("분해 문턱 · 자동 처리 데이터", function()
 		local choices = ArmorData.autoProcessGradeChoices
