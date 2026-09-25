@@ -13,9 +13,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossOverlap = require(ReplicatedStorage.Shared.BossOverlap)
 local Reach = require(ReplicatedStorage.Shared.Reach)
+local CollectionService = game:GetService("CollectionService")
 local MonsterState = require(script.Parent.MonsterState)
+local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local BossTrap = require(script.Parent.BossTrap)
+local GroundProbe = require(script.Parent.GroundProbe)
 
 local BossEnvironment = {}
 
@@ -104,6 +107,98 @@ local function inAnyHazard(zones, position)
 	return false
 end
 
+-- ─────────────────────────── 수정 공중 정원(kind = "cores") ───────────────────────────
+-- 서버에 실제 파트를 세운다: 공중 발판(Workspace.Ground - 서버 지면 탐지 · 높이 검증이 지면으로 본다) · 점프대(태그 BossJumpPad + Attribute LaunchHeight -
+-- 밟은 사람의 클라가 자기 캐릭터를 띄운다) · 수정 핵 2(구출 대상과 같은 타격 대상 - 평타 · 스킬 · 투사체). 두 핵의 마지막 타격이 coreWindowSeconds 안이면 성공.
+local gardens = {} -- [보스 Model] = { parts = { Part }, cores = { Model }, lastHit = { [1] = t, [2] = t }, solved }
+
+local function gardenLayout(model, st, env)
+	local zone = kit.zoneOf(model)
+	local center = xz(zone.center)
+	local g = env.garden
+	local layout = { platforms = {}, pads = {}, cores = {} }
+	local base = rng:NextNumber(0, 360)
+	for i = 1, g.platformCount do
+		local a = math.rad(base + 360 * (i - 1) / g.platformCount)
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local p = center + dir * g.platformRadiusStuds
+		table.insert(layout.platforms, Vector3.new(p.X, st.floorY + g.platformHeightStuds, p.Z))
+		local pad = center + dir * (g.platformRadiusStuds - g.padOffsetStuds)
+		table.insert(layout.pads, Vector3.new(pad.X, st.floorY, pad.Z))
+	end
+	local a = rng:NextNumber(0, 2 * math.pi)
+	local floorCore = center + Vector3.new(math.cos(a), 0, math.sin(a)) * g.coreFloorRadiusStuds
+	layout.cores[1] = Vector3.new(floorCore.X, st.floorY, floorCore.Z)
+	layout.cores[2] = layout.platforms[rng:NextInteger(1, #layout.platforms)] + Vector3.new(0, g.platformSize.Y / 2, 0)
+	return layout
+end
+
+local function newGardenPart(name, size, cframe, color, material, parent)
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Anchored = true
+	part.Size = size
+	part.CFrame = cframe
+	part.Color = color
+	part.Material = material
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.Parent = parent
+	return part
+end
+
+local function clearGarden(model)
+	local g = gardens[model]
+	gardens[model] = nil
+	if not g then
+		return
+	end
+	for _, part in ipairs(g.parts) do
+		part:Destroy()
+	end
+	for _, core in ipairs(g.cores) do
+		MonsterSpawner.removeRescueTarget(core)
+	end
+end
+
+local function buildGarden(model, st, data, env, layout)
+	clearGarden(model)
+	local spec = env.garden
+	local g = { parts = {}, cores = {}, lastHit = {}, solved = false }
+	gardens[model] = g
+	for _, p in ipairs(layout.platforms) do
+		local platform = newGardenPart("GardenPlatform", spec.platformSize, CFrame.new(p), spec.color, Enum.Material.Glass, GroundProbe.folder())
+		table.insert(g.parts, platform)
+	end
+	for _, p in ipairs(layout.pads) do
+		local pad = newGardenPart("GardenJumpPad", Vector3.new(spec.padSizeStuds, 0.4, spec.padSizeStuds), CFrame.new(p + Vector3.new(0, 0.2, 0)), spec.padColor, Enum.Material.Neon, GroundProbe.folder())
+		pad:SetAttribute("LaunchHeight", spec.padLaunchHeightStuds)
+		CollectionService:AddTag(pad, "BossJumpPad")
+		table.insert(g.parts, pad)
+	end
+	for index, p in ipairs(layout.cores) do
+		g.cores[index] = MonsterSpawner.spawnRescueTarget({
+			displayName = "수정 핵",
+			color = spec.color,
+			bodyAspect = Vector3.new(1.2, 1.4, 1.2),
+			footPosition = p,
+			onHit = function()
+				if g.solved or gardens[model] ~= g then
+					return
+				end
+				g.lastHit[index] = os.clock()
+				local other = g.lastHit[3 - index]
+				kit.send(st, "gardenCoreHit", { index = index, windowSeconds = spec.coreWindowSeconds })
+				if other and os.clock() - other <= spec.coreWindowSeconds then
+					g.solved = true
+				end
+			end,
+			remaining = function()
+				return g.lastHit[index] and 0 or 1
+			end,
+		}, MonsterState.getZoneKey(model))
+	end
+end
+
 -- ─────────────────────────── 틱 ───────────────────────────
 local function stateOf(st)
 	st.env = st.env or { phase = "idle", taken = {} }
@@ -131,8 +226,9 @@ local function begin(model, st, data, env, e, now)
 	e.taken = {}
 	e.usedImpossible = false
 	e.activation = (e.activation or 0) + 1
+	e.garden = env.kind == "cores" and gardenLayout(model, st, env) or nil
 	print(("[forge-game] 환경 변화 전조: %s - 구역 %d개, %.1f초"):format(env.id, #e.zones, env.telegraphSeconds))
-	kit.send(st, "envTelegraph", { id = env.id, style = env.style, zones = e.zones, seconds = env.telegraphSeconds, bossId = data.id, motion = env.motion })
+	kit.send(st, "envTelegraph", { id = env.id, style = env.style, zones = e.zones, seconds = env.telegraphSeconds, bossId = data.id, motion = env.motion, garden = e.garden })
 end
 
 local function activate(model, st, data, env, e, now)
@@ -159,14 +255,19 @@ local function activate(model, st, data, env, e, now)
 			end
 		end
 	end
+	if e.garden then
+		buildGarden(model, st, data, env, e.garden)
+	end
 	print(("[forge-game] 환경 변화 시작: %s - %.1f초"):format(env.id, env.durationSeconds))
-	kit.send(st, "envStart", { id = env.id, style = env.style, zones = e.zones, seconds = env.durationSeconds, bossId = data.id })
+	kit.send(st, "envStart", { id = env.id, style = env.style, zones = e.zones, seconds = env.durationSeconds, bossId = data.id, garden = e.garden })
 end
 
-local function finish(st, env, e, now)
+local function finish(model, st, env, e, now)
 	e.phase = "cooldown"
 	e.phaseEndsAt = now + env.cooldownSeconds
 	e.zones = nil
+	e.garden = nil
+	clearGarden(model)
 	kit.send(st, "envEnd", { id = env.id })
 	print(("[forge-game] 환경 변화 끝: %s"):format(env.id))
 end
@@ -215,8 +316,27 @@ function BossEnvironment.step(model, st, data, now, _dt)
 		end
 		kit.send(st, "envWind", { zones = e.zones })
 	end
+	-- 수정 공중 정원: 두 핵을 창 안에 쳤으면 성공(보스 기절 · 정원 무너짐) · 시간을 넘기면 수정 폭풍(기믹 실패 - 85% · 쉴드 무시)
+	local g = gardens[model]
+	if g and g.solved then
+		print(("[forge-game] 수정 공중 정원 파훼 → 보스 기절 %.1f초"):format(env.garden.stunSeconds))
+		kit.send(st, "gimmickResolve", { broken = true, windowSeconds = env.garden.stunSeconds })
+		kit.stun(model, st, data, env.garden.stunSeconds)
+		finish(model, st, env, e, now)
+		return
+	end
 	if now >= e.phaseEndsAt then
-		finish(st, env, e, now)
+		if g then
+			local fail = BossData.mechanics.gimmickFail
+			for _, v in ipairs(kit.victims(st)) do
+				if not BossTrap.isTrapped(v.player) then
+					PlayerDamage.applyMaxHpFraction(v.player, fail.maxHpFraction, env.damageLabel, { ignoresShield = fail.ignoresShield })
+				end
+			end
+			kit.send(st, "gimmickResolve", { broken = false })
+			print("[forge-game] 수정 공중 정원 실패 → 수정 폭풍")
+		end
+		finish(model, st, env, e, now)
 	end
 end
 
@@ -243,15 +363,24 @@ function BossEnvironment.deferSeconds()
 	return ENV.overlap.deferSeconds
 end
 
--- 전멸 리셋 · 사망 리셋: 처음 상태(체력 50%를 다시 넘어야 온다). 클라 그림은 "reset"이 지운다.
-function BossEnvironment.reset(_model, st)
+-- 전멸 리셋 · 사망 리셋: 처음 상태(체력 50%를 다시 넘어야 온다). 클라 그림은 "reset"이 지운다. 수정 공중 정원의 파트도 치운다.
+function BossEnvironment.reset(model, st)
 	if st then
 		st.env = nil
 	end
+	clearGarden(model)
 end
 
--- 보스전 종료: 서버에 남는 파트는 없다(구역은 논리만) - 자리만 둔다(수정 공중 정원의 파트는 여기서 치운다).
-function BossEnvironment.clear(_model) end
+-- 보스전 종료(처치 · 이탈): 수정 공중 정원의 파트(발판 · 점프대 · 핵)를 치운다 - 구역은 논리뿐이라 남는 것이 없다.
+function BossEnvironment.clear(model)
+	clearGarden(model)
+end
+
+-- 자동 검증 전용: 지금 이 보스의 정원 파트 수(발판 + 점프대) · 핵 수
+function BossEnvironment.debugGarden(model)
+	local g = gardens[model]
+	return g and #g.parts or 0, g and #g.cores or 0
+end
 
 function BossEnvironment.register(patternKit)
 	kit = patternKit

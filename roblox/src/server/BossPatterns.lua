@@ -1602,7 +1602,7 @@ HANDLERS.line = {
 			end
 		end
 		judgeEnd(c, { kind = "beams", origin = Vector3.new(st.crossOrigin.X, st.floorY, st.crossOrigin.Z), beams = st.crossBeams, halfWidth = volley.halfWidthStuds })
-		send(st, "crossFire", { angleDeg = st.crossAngle })
+		send(st, "crossFire", { angleDeg = st.crossAngle, motion = skill.motion }) -- BR1: motion "mirrorDash" = 분신이 선을 따라 달리는 잔상(그림만)
 		if skill.blockedByProp then
 			sendPropsRemoved(st, BossArenaProps.removeWhere(c.model, function(prop)
 				for _, beam in ipairs(st.crossBeams) do
@@ -1858,6 +1858,31 @@ HANDLERS.gimmick = {
 	step = function(c)
 		local st, skill = c.st, c.skill
 		if st.phase == "gimmickTelegraph" then
+			-- BR1 분열 섞기(split.shuffleAtFraction): 제한의 그 몫에서 진짜가 살아 있는 분신 하나와 자리를 바꾼다 - 흰 카운트다운도 옮겨 간다(클라).
+			local split = st.split
+			if split and not split.shuffled and not split.solved and skill.split.shuffleAtFraction
+				and c.now >= split.startedAt + (st.phaseEndsAt - split.startedAt) * skill.split.shuffleAtFraction then
+				split.shuffled = true
+				local decoys = decoysOf[c.model]
+				local choices = {}
+				for index, decoy in pairs(decoys or {}) do
+					if decoy then
+						table.insert(choices, index)
+					end
+				end
+				if #choices > 0 then
+					local to = choices[scatterRng:NextInteger(1, #choices)]
+					local from = split.realIndex
+					local decoy = decoys[to]
+					decoys[to] = nil
+					decoys[from] = decoy
+					split.realIndex = to
+					c.model:PivotTo(CFrame.new(Vector3.new(split.spots[to].X, c.position.Y, split.spots[to].Z)))
+					decoy:PivotTo(CFrame.new(Vector3.new(split.spots[from].X, c.position.Y, split.spots[from].Z)))
+					send(st, "splitShuffle", { from = from, to = to, spot = Vector3.new(split.spots[to].X, st.floorY, split.spots[to].Z) })
+					print(("[forge-game] 분열 섞기: 진짜 %d → %d번 자리"):format(from, to))
+				end
+			end
 			if skill.stance and not st.stanceOn and c.now >= st.stanceAt and c.now < st.phaseEndsAt then
 				st.stanceOn = true
 				BossMechanics.beginReflect(c.model, skill.stance, skill.damageLabel, function(player)
@@ -1955,6 +1980,16 @@ local kit = {
 	debugEvent = debugEvent, serverNow = serverNow, rng = scatterRng, setBodyColor = setBodyColor, clearDaze = clearDaze,
 	kitZones = kitZones, groundAt = groundAt,
 }
+-- BR1: 보스를 seconds 동안 기절시킨다(환경 기믹 파훼 - 수정 공중 정원). 돌던 스킬을 끊고 헤롱 자세 · 그동안 스킬 · 추격 · 평타 없음(step이 true).
+function kit.stun(model, st, data, seconds)
+	BossPatterns.interrupt(model, data)
+	st.stunUntil = os.clock() + seconds
+	st.dazeBase = st.position
+	if st.position then
+		model:PivotTo(CFrame.new(st.position - Vector3.new(0, 1.2, 0)) * CFrame.Angles(0, 0, math.rad(25)))
+	end
+	send(st, "daze", { seconds = seconds })
+end
 BossHandlersBR1.register(HANDLERS, kit)
 BossAirGrab.register(HANDLERS, kit)
 BossEnvironment.register(kit)
@@ -2011,6 +2046,13 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	BossHandlersBR1.trackAir(st, now) -- BR1: 멤버별 연속 체공(대공 잡기 · 대공 투사체의 조건)
 	BossHandlersBR1.stepProjectiles(model, st, data, now, dt) -- BR1: 쏜 투사체는 스킬과 떨어져 난다
 	BossEnvironment.step(model, st, data, now, dt) -- BR1: 환경 변화(두 번째 시계 - 기본 패턴과 겹친다)
+	if st.stunUntil then -- BR1 환경 기믹 파훼로 기절 중
+		if now < st.stunUntil then
+			return true
+		end
+		st.stunUntil = nil
+		clearDaze(model, st)
+	end
 
 	if st.phase == "normal" then
 		local pickCtx = st.pickCtx

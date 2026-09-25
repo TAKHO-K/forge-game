@@ -230,6 +230,7 @@ local MECHANICS = {
 			learnedMultiplier = 0.4,
 			-- 게이트가 기믹이 아닌 스킬의 판정인 경우(폭풍 군주 낙뢰 - 피뢰침 둘을 동시에 채운다): 회차마다 풀 확률(처음 · 두 번째부터).
 			gateSolveChance = { first = 0.3, later = 0.6 },
+			gardenSolveChance = { first = 0.5, later = 0.75 }, -- 수정 공중 정원(두 핵 6초 안)을 푸는 확률(처음 · 두 번째부터)
 			slack = { tightSeconds = 0.15, tightMultiplier = 1.4, looseSeconds = 1.0, looseMultiplier = 0.7 },
 			airDodgeShare = 0.4, airSecondsMin = 0.6, airSecondsMax = 1.9,
 			grabCatchChance = 0.35,
@@ -755,7 +756,21 @@ local SPECIES = {
 		moveSpeedStuds = 7, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.5, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(6),
-		skillOrder = { "burst", "drop", "beam", "split", "swipe", "grab" },
+		skillOrder = { "burst", "drop", "beam", "split", "swipe", "grab", "spikes", "shards", "mirrorDash" },
+		-- BR1 환경 변화 "수정 공중 정원"(중력 반전 시범의 대체안 - 설계 §4-2 · §9-1): 두 팔을 들어 수정을 띄운다(3초) → 20초 동안 공중 발판 4(높이 16) · 점프대 4 ·
+		-- 수정 핵 2(바닥 A · 발판 위 B). **두 핵을 서로 6초 안에 모두 치면** 성공 - 보스 기절 5초 · 정원이 무너진다. 20초를 넘기면 수정 폭풍(기믹 실패 = 85% · 쉴드 무시).
+		-- 파티 = 나눠서 동시에(위 · 아래) · 솔로 = A를 치고 점프대(발 +19)로 올라가 B(6초 안 - 점프대까지 11 + 오르기 1초 ≈ 2초). 발판은 보스전 동안만 서는 단순 파트(정확한 맵은 나중).
+		environment = {
+			id = "crystalGarden", style = "crystal", kind = "cores", motion = "hand", damageLabel = "수정 폭풍",
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 40, telegraphSeconds = 3.0, durationSeconds = 20,
+			zones = { shape = "none" },
+			garden = {
+				platformCount = 4, platformRadiusStuds = 55, platformHeightStuds = 16, platformSize = Vector3.new(14, 1, 14),
+				padOffsetStuds = 11, padSizeStuds = 6, padLaunchHeightStuds = 19,
+				coreFloorRadiusStuds = 30, coreWindowSeconds = 6, stunSeconds = 5,
+				color = crystalHead, padColor = crystalBody,
+			},
+		},
 		skills = {
 			-- 파편 폭발. 두 번 터진다: 안쪽 원(반경 10) → 바깥 도넛(10 ~ 22). 밖으로 나갔다가 다시 안으로 - 기본형
 			-- 강공격의 "한 번 나가면 끝"과 다르다. 펄스당 ×2(둘 다 맞아도 57%).
@@ -779,8 +794,9 @@ local SPECIES = {
 			beam = {
 				primitive = "line", bubble = "cross", reflectable = true, -- 29-5 탱커 훅: 탱커의 반사가 되돌릴 수 있는 스킬(지금은 아무도 안 읽는다 - PRD 20.80 [F])
 				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
-				telegraphSeconds = 1.5, directions = 1, stepDeg = 0, volleys = 2, rotateDeg = 0, reaim = true, halfWidthStuds = 3,
-				damage = { kind = "attack", multiplier = 2 }, damageLabel = "반사 광선",
+				-- BR1 수정 "반사 레이저": 벽(원)에 닿으면 한 번 반사된다(r = d − 2(d·n)n - 꺾인 선도 판정 · 그림 그대로). 전조 1.5 → 1.6(꺾인 선까지 본다).
+				telegraphSeconds = 1.6, directions = 1, stepDeg = 0, volleys = 2, rotateDeg = 0, reaim = true, halfWidthStuds = 3, reflect = true,
+				damage = { kind = "attack", multiplier = 2 }, damageLabel = "반사 레이저",
 			},
 			-- 프리즘 분열(기믹, 29-5 - 대상 선택). 여왕이 넷으로 갈라진다: 분열 중심(지금 자리)의 네 방위 radiusStuds에 진짜 1 + 분신 3.
 			-- 넷 다 발밑에 빨강 원(circleRadiusStuds)이 깔리고 **진짜의 원에서만 흰 원이 자란다**(제한 시간의 카운트다운 - 낙석의
@@ -796,8 +812,10 @@ local SPECIES = {
 				primitive = "gimmick", bubble = "none", role = "gimmick", kind = "hitReal",
 				cooldownSeconds = 20, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				conditions = { { type = "memberWithin", studs = 40 } },
+				-- BR1 기믹 개편(어렵게): 제한의 shuffleAtFraction(절반 - 4초)에 진짜가 분신 하나와 **자리를 바꾼다** - 흰 원(카운트다운)이 새 자리로 옮겨 간다.
+				-- 처음 본 흰 원만 기억하면 틀린다 - 끝까지 봐야 한다. 옮겨 간 뒤 남은 4초 안에 가장 먼 자리(40)까지 0.5 + 40 ÷ 16 × 1.25 = 3.6초.
 				telegraphSeconds = 8.0, recoverSeconds = 4.0,
-				split = { count = 4, radiusStuds = 20, circleRadiusStuds = 6, decoyLabel = "분신 반격" },
+				split = { count = 4, radiusStuds = 20, circleRadiusStuds = 6, decoyLabel = "분신 반격", shuffleAtFraction = 0.5 },
 				failTraps = false,
 				recoverPose = true, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
 				breakWindow = { seconds = 4, damageTakenMultiplier = 1.3 },
@@ -807,6 +825,33 @@ local SPECIES = {
 			},
 			swipe = enhancedBasic("수정 채찍", "fist"), -- BR1 강화 평타
 			grab = airGrab("수정 손", "hand"), -- BR1 대공 잡기
+			-- BR1 새 ① 연쇄 수정 가시: 손을 땅에 짚는다 - 보스 → 대상 직선을 따라 원 8개(간격 8 · 반경 4)가 한꺼번에 예고되고(1.3초) 보스 쪽부터 0.12초씩 솟는다.
+			--   옆으로 5 = 0.89초(최대 범위 배율 5.6 = 0.94초). ×1.6(23% - 중간).
+			spikes = {
+				primitive = "circleTarget", bubble = "cross", motion = "fist",
+				cooldownSeconds = 12, priority = P.normal, starvationSeconds = 45,
+				telegraphSeconds = 1.3, count = 1, radiusStuds = 4, scatterStuds = 0,
+				chain = { count = 8, stepStuds = 8, startStuds = 6, intervalSeconds = 0.12 },
+				damage = { kind = "attack", multiplier = 1.6 }, damageLabel = "수정 가시",
+			},
+			-- BR1 새 ② 수정 파편탄(대공): 등의 수정이 떨어져 넷이 날아간다 - 공중에 뜬 사람 우선. 속도 26(빠르다 - 궤도를 바꾸거나 착지) · 회전 45°/초 · 반경 2.5. ×1.2(17% - 작음).
+			shards = {
+				primitive = "projectile", bubble = "meteor", motion = "hand", projectileStyle = "shard",
+				cooldownSeconds = 12, priority = P.normal, starvationSeconds = 45,
+				telegraphSeconds = 1.0, count = 4, launchIntervalSeconds = 0.15, spreadDeg = 18,
+				speedStuds = 26, turnRateDeg = 45, radiusStuds = 2.5, lifetimeSeconds = 5, heightMode = "air", launchHeightStuds = 10,
+				targetRule = "airbornePreferred",
+				damage = { kind = "attack", multiplier = 1.2 }, damageLabel = "수정 파편",
+			},
+			-- BR1 새 ③ 분신 돌격: 분신 둘이 양옆에서 본체와 함께 돌진한다 - 대상 쪽 부채 3선(±25°) · 반폭 3.5 · 전조 2.2초(큰 모션).
+			--   판정 = 세 선(직선 조각 - 벽까지). 줄 사이로 비킨다(대상 거리 14 안: 14 × sin 25° + 3.5 + 1 = 10.4 → 1.31초). ×2.8(40% - 큼).
+			mirrorDash = {
+				primitive = "line", bubble = "charge", motion = "mirrorDash",
+				cooldownSeconds = 15, priority = P.normal, starvationSeconds = 45,
+				conditions = { { type = "targetWithin", studs = 14 } },
+				telegraphSeconds = 2.2, directions = 3, stepDeg = 25, centered = true, volleys = 1, rotateDeg = 0, halfWidthStuds = 3.5,
+				damage = { kind = "attack", multiplier = 2.8 }, damageLabel = "분신 돌격",
+			},
 		},
 	},
 	{

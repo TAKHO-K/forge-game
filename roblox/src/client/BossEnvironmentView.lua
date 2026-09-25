@@ -143,9 +143,33 @@ local function crackAlong(z, seconds)
 	end
 end
 
+-- 수정 공중 정원(garden): 전조 동안 발판 자리에서 수정이 솟는 그림 · 핵 자리에 흰 고리(서버가 활성 순간 진짜 파트를 세운다).
+local function gardenTelegraph(garden, seconds)
+	local parts = {}
+	for _, p in ipairs(garden.platforms) do
+		local crystal = newPart(Vector3.new(3, 0.5, 3), WHITE, 0.3, Enum.Material.Glass)
+		crystal.CFrame = CFrame.new(Vector3.new(p.X, p.Y - 16, p.Z))
+		TweenService:Create(crystal, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(3, 32, 3), CFrame = CFrame.new(Vector3.new(p.X, p.Y - 16, p.Z)) }):Play()
+		table.insert(parts, crystal)
+	end
+	for _, p in ipairs(garden.cores) do
+		BossFx.ring(p + Vector3.new(0, 0.3, 0), 1, 6, WHITE, seconds)
+	end
+	return parts
+end
+
+function BossEnvironmentView.coreHit(data)
+	if current and current.coreFlash then
+		current.coreFlash[data.index] = os.clock() + data.windowSeconds
+	end
+end
+
 function BossEnvironmentView.telegraph(data)
 	BossEnvironmentView.clear()
-	current = { zones = data.zones, parts = {}, style = data.style, active = false }
+	current = { zones = data.zones, parts = {}, style = data.style, active = false, coreFlash = {} }
+	if data.garden then
+		current.parts.garden = gardenTelegraph(data.garden, data.seconds)
+	end
 	for index, z in ipairs(data.zones) do
 		local parts = zoneParts(z, 0.88, Enum.Material.Neon)
 		current.parts[index] = parts
@@ -185,7 +209,7 @@ end
 
 function BossEnvironmentView.start(data)
 	if not current then
-		current = { zones = data.zones, parts = {}, style = data.style }
+		current = { zones = data.zones, parts = {}, style = data.style, coreFlash = {} }
 	end
 	clearParts()
 	current.zones = data.zones
@@ -284,6 +308,30 @@ RunService.Heartbeat:Connect(function()
 		v = root.AssemblyLinearVelocity
 	end
 	lastVelocity = v
+end)
+
+-- 점프대(서버 파트 - 태그 BossJumpPad · Attribute LaunchHeight): 내 캐릭터가 서 있으면 그 높이까지 띄운다(v = √(2gh)). 서버 높이 검증의 기준 = 점프대 윗면이라
+-- 허용(+22.38) 안이다. 한 번 띄우면 0.6초 동안은 다시 안 띄운다(떠오르는 첫 프레임에 또 밟힌 것으로 읽히지 않게).
+local CollectionService = game:GetService("CollectionService")
+local padCooldownUntil = 0
+RunService.Heartbeat:Connect(function()
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or root.Anchored or os.clock() < padCooldownUntil or humanoid.FloorMaterial == Enum.Material.Air then
+		return
+	end
+	for _, pad in ipairs(CollectionService:GetTagged("BossJumpPad")) do
+		local rel = root.Position - pad.Position
+		if math.abs(rel.X) <= pad.Size.X / 2 and math.abs(rel.Z) <= pad.Size.Z / 2 and rel.Y >= 0 and rel.Y <= 5 then
+			local height = pad:GetAttribute("LaunchHeight") or 18
+			local v = root.AssemblyLinearVelocity
+			root.AssemblyLinearVelocity = Vector3.new(v.X, math.sqrt(2 * Workspace.Gravity * height), v.Z)
+			padCooldownUntil = os.clock() + 0.6
+			BossFx.ring(pad.Position + Vector3.new(0, 0.3, 0), 1, 5, WHITE, 0.3)
+			break
+		end
+	end
 end)
 
 -- 힘(내 캐릭터) · 바람 줄기(그림).

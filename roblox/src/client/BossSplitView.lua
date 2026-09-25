@@ -73,6 +73,15 @@ function BossSplitView.start(data)
 	end)
 end
 
+-- BR1 섞기: 진짜가 분신과 자리를 바꿨다 - 흰 카운트다운을 새 자리로 옮긴다(자라는 크기는 그대로 이어진다).
+function BossSplitView.shuffle(data)
+	if countdown then
+		countdown.CFrame = CFrame.new(data.spot + Vector3.new(0, countdown.Size.X / 2 + 0.25, 0)) * countdown.CFrame.Rotation
+	end
+	local a, b = discs[data.from], discs[data.to]
+	discs[data.from], discs[data.to] = b, a
+end
+
 -- data = { index(깨진 분신의 자리), to(때린 사람) }
 function BossSplitView.breakDecoy(data)
 	local disc = discs[data.index]

@@ -552,8 +552,16 @@ local function cross(data)
 	end
 end
 
-local function crossFire()
+local function crossFire(data)
 	for _, line in ipairs(crossLines) do
+		if live[line] and data and data.motion == "mirrorDash" then
+			-- BR1 분신 돌격: 선을 따라 달리는 흰 잔상(인형 대신 조각 - 그림만)
+			local look = line.CFrame.LookVector
+			local back = line.Position - look * (line.Size.Z / 2)
+			for k = 0, 4 do
+				BossFx.streak(back + look * (line.Size.Z * k / 5) + Vector3.new(0, 2.5, 0), look, 6, 1.2, IMPACT_COLOR, 0.35 + k * 0.05, 30)
+			end
+		end
 		if live[line] then
 			line.Color = IMPACT_COLOR
 			line.Size = Vector3.new(line.Size.X, 3, line.Size.Z)
@@ -609,6 +617,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossSplitView.start(data)
 	elseif kind == "splitBreak" then
 		BossSplitView.breakDecoy(data)
+	elseif kind == "splitShuffle" then
+		BossSplitView.shuffle(data)
+	elseif kind == "gardenCoreHit" then
+		BossEnvironmentView.coreHit(data)
 	elseif kind == "splitEnd" then
 		BossSplitView.clear()
 	elseif kind == "stanceStart" then
@@ -660,7 +672,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	elseif kind == "cross" then
 		cross(data)
 	elseif kind == "crossFire" then
-		crossFire()
+		crossFire(data)
 	elseif kind == "sector" then
 		BossBR1View.sector(data)
 	elseif kind == "sectorImpact" then

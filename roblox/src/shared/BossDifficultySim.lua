@@ -115,6 +115,7 @@ function BossDifficultySim.run(bossId, options)
 	local armed, gateStarted, windowMultiplier, windowUntil = false, false, 1, 0
 	local gimmickSeen = 0
 	local gateRounds = 0
+	local gardenRounds = 0
 	local envPhase, envAt, envUntil, envUsedImpossible = "idle", 0, 0, false
 	local counts = {}
 	local deferred = 0
@@ -211,6 +212,19 @@ function BossDifficultySim.run(bossId, options)
 				end
 			elseif envPhase == "active" and t >= envUntil then
 				envPhase, envAt = "cooldown", t + env.cooldownSeconds
+				if env.kind == "cores" then
+					-- 수정 공중 정원: 두 핵을 창 안에 치면 기절(딜 창) · 못 치면 전원 기믹 실패(85%)
+					gardenRounds = (gardenRounds or 0) + 1
+					if rng() < (gardenRounds <= 1 and cfg.gardenSolveChance.first or cfg.gardenSolveChance.later) then
+						windowMultiplier, windowUntil = 1.3, t + env.garden.stunSeconds
+					else
+						for _, m in ipairs(members) do
+							if m.alive then
+								damage(m, fail.maxHpFraction, nil, "환경")
+							end
+						end
+					end
+				end
 			end
 		end
 		if not current then
