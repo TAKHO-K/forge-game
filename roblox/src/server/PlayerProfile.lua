@@ -1817,4 +1817,19 @@ function PlayerProfile.setInfiniteStageDirect(player, stage)
 	syncAccountBestStage(player, profile)
 end
 
+-- G1-0(P3d-F 결정 4): 검증 전용 - 최고 도달 · 보스 게이트를 **낮추는 것까지** 강제로 맞춘다(위 함수들은 올리기만 한다 - 개발 계정이 진행하면
+-- 27-4처럼 "최고 7 · 게이트 5"를 기대하는 검증이 계정 상태를 따라 X가 됐다). 호출한 검증이 DevTools 백업 · 복원으로 되돌린다.
+function PlayerProfile.debugForceStageProgress(player, best, bossCleared)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false
+	end
+	classState.stageProgress.infiniteBest = best
+	classState.stageProgress.bestBossCleared = bossCleared
+	player:SetAttribute("InfiniteStageBest", best)
+	player:SetAttribute("BestBossCleared", bossCleared)
+	return true
+end
+
 return PlayerProfile

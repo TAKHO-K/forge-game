@@ -206,7 +206,8 @@ function BalanceDecisionVerify.runLive(player, env)
 
 	-- 옵션을 재생 0인 기준 빌드로 바꾼 뒤 시작한다(개발 계정의 장비 옵션이 기대값을 흔들지 않게).
 	env.applyOptionStack(player, "attackPercent")
-	local baseMultiplier = PlayerProfile.getHealingPowerMultiplier(player)
+	-- G1-0(P3d-F 결정 4): 기대식은 게임과 같은 치유 배수(재생 옵션 × (1 + 무기 최종 데미지 버킷)) - 개발 계정 무기 강화 단계가 기대값을 흔들지 않게.
+	local baseMultiplier = HealCast.healingPower(player)
 
 	r.section("[7] 멤버 HP 45% → 45% + 30% × 재생 배수(치명이면 ×2) · 상한 100%", function()
 		PartyState.create(player)
@@ -260,6 +261,7 @@ function BalanceDecisionVerify.runLive(player, env)
 	r.section("[11] 치유사의 재생 옵션 +100% → 멤버 +60%", function()
 		local okStack = env.applyOptionStack(player, "healingPower")
 		local multiplier = PlayerProfile.getHealingPowerMultiplier(player)
+		local power = HealCast.healingPower(player) -- G1-0: 기대식 = 게임 치유 배수(재생 × 최종 데미지 버킷)
 		PartyState.create(player)
 		PartyState.attachMember(PartyState.getParty(player), member)
 		local allOk, lines = okStack and near(multiplier, 2, 1e-6), {}
@@ -267,7 +269,7 @@ function BalanceDecisionVerify.runLive(player, env)
 			setHpFraction(member, 0.2)
 			setHpFraction(player, 0.5)
 			local castOk, _, isCrit, healed = pcall(HealCast.cast, player, def, "healer", cooldown)
-			local expected = math.min(0.2 + def.healPercentOfMaxHp * multiplier * (isCrit and def.critHealMultiplier or 1), 1)
+			local expected = math.min(0.2 + def.healPercentOfMaxHp * power * (isCrit and def.critHealMultiplier or 1), 1)
 			allOk = allOk and castOk and near(hpFraction(member), expected, 1e-6) and #healed == 1
 			table.insert(lines, ("%s→%.2f(기대 %.2f)"):format(isCrit and "치명" or "일반", castOk and hpFraction(member) or -1, expected))
 		end

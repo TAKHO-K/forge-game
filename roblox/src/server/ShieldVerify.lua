@@ -320,7 +320,8 @@ function ShieldVerify.runLive(player, env)
 
 	-- 옵션을 재생 0인 기준 빌드로(개발 계정의 장비 옵션이 기대값을 흔들지 않게).
 	env.applyOptionStack(player, "attackPercent")
-	local healingPower = PlayerProfile.getHealingPowerMultiplier(player)
+	-- G1-0(P3d-F 결정 4): 기대식은 게임과 같은 치유 배수(재생 옵션 × (1 + 무기 최종 데미지 버킷)) - 개발 계정 무기 강화 단계가 기대값을 흔들지 않게.
+	local healingPower = HealCast.healingPower(player)
 	local originalRoll = HealCast.rollCrit
 	local function forceCrit(value)
 		HealCast.rollCrit = function()
@@ -380,17 +381,20 @@ function ShieldVerify.runLive(player, env)
 		local critShield = shieldOf(member)
 		-- 같은 함수가 회복 쪽도 굴리는가: 딜링모드를 잠깐 끄고(쉴드 모드 해제) 파티 회복을 받는다.
 		BuffState.clear(player, "dealingMode")
-		PlayerState.setHp(member, memberMax * 0.3)
+		-- G1-0: 시작 HP를 낮게(5%) - 계정 치유 배수가 커도 치명 회복이 최대체력 상한에 덜 잘린다. 기대는 상한으로 자른 값.
+		local startHp = memberMax * 0.05
+		PlayerState.setHp(member, startHp)
 		cast()
-		local critHeal = PlayerState.getHp(member) - memberMax * 0.3
+		local critHeal = PlayerState.getHp(member) - startHp
 		forceCrit(false)
-		PlayerState.setHp(member, memberMax * 0.3)
+		PlayerState.setHp(member, startHp)
 		cast()
-		local plainHeal = PlayerState.getHp(member) - memberMax * 0.3
+		local plainHeal = PlayerState.getHp(member) - startHp
+		local critHealExpected = math.min(plainHeal * def.critHealMultiplier, memberMax - startHp)
 		BuffState.apply(player, "dealingMode", { attackMultiplier = SkillData.healer.E.attackMultiplier, displayName = SkillData.healer.E.name, colorName = "danger" })
 		r.check(("13 치명: 쉴드 %.1f(기대 %.1f = 힐량 × 0.6 × %.1f) · 힐량 %.1f(기대 %.1f = 힐 일반 %.1f × 2 - 같은 굴림 함수) ★진짜 합격 기준"):format(
-			critShield, perHit * shieldDef.healRatio * def.critHealMultiplier, def.critHealMultiplier, critHeal, plainHeal * def.critHealMultiplier, plainHeal),
-			isCrit == true and near(critShield, perHit * shieldDef.healRatio * def.critHealMultiplier, 1e-6) and near(critHeal, plainHeal * def.critHealMultiplier, 1e-6) and near(plainHeal, perHit, 1e-6))
+			critShield, perHit * shieldDef.healRatio * def.critHealMultiplier, def.critHealMultiplier, critHeal, critHealExpected, plainHeal),
+			isCrit == true and near(critShield, perHit * shieldDef.healRatio * def.critHealMultiplier, 1e-6) and near(critHeal, critHealExpected, 1e-6) and near(plainHeal, math.min(perHit, memberMax - startHp), 1e-6))
 		forceCrit(false)
 		PlayerShield.clear(member)
 		PlayerShield.clear(player)

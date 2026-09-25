@@ -2391,7 +2391,8 @@ local function verifyEnabled(blockId)
 end
 if DevToolsConfig.verifyArmed then
 	print(("[DevTools] 자동 검증 모드: %s (현재 세션 블록: %s)"):format(
-		DevToolsConfig.verify.regression and "회귀 전체(과거 블록 포함)" or "현재 세션 블록만", table.concat(DevToolsConfig.verify.current, " · ")))
+		DevToolsConfig.verifyOnly and "필터(VerifyOnly Attribute)" or (DevToolsConfig.verify.regression and "회귀 전체(과거 블록 포함)" or "현재 세션 블록만"),
+		table.concat(DevToolsConfig.verify.current, " · ")))
 end
 
 -- ═══ 26-2 자동 검증 블록 ═══════════════════════════════════════════════════
@@ -3254,8 +3255,8 @@ if RunService:IsStudio() and verifyEnabled("27-4(나)") then
 			end
 
 			ensureBackup(player)
+			PlayerProfile.debugForceStageProgress(player, 7, 5) -- G1-0(P3d-F 결정 4): 계정 진행(최고 44 · 게이트 40)과 무관하게 최고 7 · 게이트 5로 맞춘다(아래 restore가 되돌림)
 			applyStage(player, 7)
-			PlayerProfile.setBossCleared(player, 5)
 			local stage = player:GetAttribute("InfiniteStage")
 			local best = player:GetAttribute("InfiniteStageBest")
 			local bestBossCleared = player:GetAttribute("BestBossCleared")
@@ -3371,6 +3372,7 @@ if RunService:IsStudio() then
 				{ "P3c(나)", function() require(script.Parent.P3cVerify).runLive(player, env) end }, -- P3c: 발탄식 유도 · 전갈 2회 · 번개 추적 · 맵 이탈 복귀 · 6맵 배치 · 큰 블록 · 높이별 판정 · 보석 판매 · 전당
 				{ "P3d(나)", function() require(script.Parent.P3dVerify).runLive(player, env) end }, -- P3d: 맵 이탈 → 스폰 복귀 · 단상 · 재생성 · 끼임 · 모래 구덩이 붕괴 · 버프 중첩 · 라이브 제외
 				{ "P3dF(나)", function() require(script.Parent.P3dFVerify).runLive(player, env) end }, -- P3d-F: 재생성 누수 5회 · 받는 피해 배율 출처별 · 끼임 중 피격 · 단상 균열 예고 · 상한 교체
+				{ "G1-0(나)", function() require(script.Parent.G1_0Verify).runLive(player, env) end }, -- G1-0: 받는 피해 하한 · 복귀 표본(벽 위 · 바깥 · 허공 · 연쇄) · 단상 점프 판정 · 12인 재생성 전후
 				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
 				{ "P3d(가E)", function() require(script.Parent.P3dVerify).runRegrowSeeds() end }, -- P3d: 재생성 100시드 × 6맵(무거운 계산 - 맨 끝)
 				{ "P3dF(가E)", function() require(script.Parent.P3dFVerify).runRegrowSeeds() end }, -- P3d-F B4: 상한 교체 100시드 × 6맵 · 면적 하한 · 닫힌 공간(무거운 계산 - 맨 끝)
@@ -3710,6 +3712,16 @@ if RunService:IsStudio() and verifyEnabled("P3b(가)") then
 		local ok, err = pcall(require(script.Parent.P3bVerify).runPure)
 		if not ok then
 			warn(("[P3b(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ G1-0 자동 검증 블록(가) - 받는 피해 하한 · 재생성 체크포인트 · 단상 점프 · 복귀 경로 1,000회(docs/phase/G1-0-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("G1-0(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.G1_0Verify).runPure)
+		if not ok then
+			warn(("[G1-0(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

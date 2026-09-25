@@ -599,7 +599,7 @@ function P3dVerify.runLive(player, env)
 			hpMe - PlayerState.getHp(player), hpS1 - PlayerState.getHp(s1), tostring(root.Anchored), PlayerState.getIncomingDamageMultiplier(player)), -- 고정은 검증이 이미 걸었다 - 참이어야 할 뿐 증거는 ③ 풀림
 
 			near(spawned.telegraph, REGROW.telegraphSeconds, 0.15) and outcome[player] == "encase" and outcome[s1] == "push" and near(s1Dist, big.r + REGROW.pushOutStuds, 0.05)
-				and hpMe - PlayerState.getHp(player) == 0 and hpS1 - PlayerState.getHp(s1) > 0 and root.Anchored and PlayerState.getIncomingDamageMultiplier(player) == 1) -- P3d-F B5: 끼이는 순간 피해 0 · 끼인 동안 무적 아님(×1)
+				and hpMe - PlayerState.getHp(player) > 0 and hpS1 - PlayerState.getHp(s1) > 0 and root.Anchored and PlayerState.getIncomingDamageMultiplier(player) == 1) -- G1-0(P3d-F 결정 2): 끼이는 순간도 밀림과 같은 피해 · 끼인 동안 무적 아님(×1)
 		-- ③ 3타에 부수고 풀려난다
 		for hit = 1, REGROW.escapeHits do
 			MonsterState.applyDamage(obstacle.model, 1, BossData.stageInterval, player, { committedAt = os.clock() })

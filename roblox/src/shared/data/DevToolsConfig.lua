@@ -130,7 +130,11 @@ local config = {
 		-- P3d-F: Play 1(A - 필수 재검증) = 29-1 · P3d(나) · P3dF(나)만(29-1 첫 기믹을 가벼운 부하에서 단독 측정). Play 2 · 3 = 이번 블록 P3dF(나) · P3dF(가E) + 동반(COMMON §3 - 바꾼 모듈:
 		-- PlayerState(받는 피해 배율 출처별 · 고정 · 이동속도 · 눈금 - 모든 피격 경로) · BossPatterns · BossArenaMap · ArenaLayout · BossTrap · SkillServer · PlayerProfile · MonsterAI · HealCast · BossEncounter)
 		-- → P3d와 같은 전 블록(넓은 쪽). P3a(D)는 계속 뺀다(판정 자리 무변경). regression 스위치는 그대로 false.
+		-- G1-0: 이번 블록 G1-0(가)(나) + 동반(COMMON §3 - 바꾼 모듈: PlayerState(받는 피해 하한 - 모든 피격 경로) · BossPatterns(바닥 판정 발밑 지면 · 끼임 피해) ·
+		-- BossArenaMap · ArenaLayout(재생성 프레임 분할) · BossArenaContainment(벽 위 복귀) · 검증 기대식(27-4 · S13 · S13b)) → P3d-F와 같은 전 블록(넓은 쪽) + P3dF(가E)(ArenaLayout 체크포인트).
+		-- Play 1은 VerifyOnly 필터로 좁게 돈다(G1-0 · P3dF(나) · P3d(나) · 27-4 · S13 · S13b).
 		current = {
+			"G1-0(가)", "G1-0(나)", "P3dF(가E)",
 			"P3dF(나)", -- Play 3: P3dF(가E)는 Play 2에서 7/7(235초) · 그 뒤 ArenaLayout 무변경이라 뺀다
 			"P3d(가)", "P3d(나)", "P3d(가E)",
 			"P3c(가)", "P3c(나)",
@@ -154,6 +158,25 @@ config.verifyArmed = RunService:IsStudio() and type(armedUntil) == "number" and 
 if not config.verifyArmed then
 	config.verify.current = {}
 	config.verify.regression = false
+end
+
+-- 검증 필터(G1-0 - 상설): 특정 블록만 돌릴 때 이 파일을 임시로 고치지 않고, VerifyArmedUntil과 같이 edit 모드에서 Attribute로 준다.
+--   켜기: game:GetService("ReplicatedStorage"):SetAttribute("VerifyOnly", "P3dF(나), 29-1")   (쉼표로 구분 · 앞뒤 공백 무시)
+--   끄기: game:GetService("ReplicatedStorage"):SetAttribute("VerifyOnly", nil)
+-- 켜져 있으면 current를 이 목록으로 바꾸고 regression을 끈다(서버 블록 · 클라 자체 점검이 모두 current를 읽는다). verifyArmed가 꺼져 있으면 무시한다.
+local only = ReplicatedStorage:GetAttribute("VerifyOnly")
+config.verifyOnly = nil
+if config.verifyArmed and type(only) == "string" and only:match("%S") then
+	local ids = {}
+	for id in only:gmatch("[^,]+") do
+		id = id:match("^%s*(.-)%s*$")
+		if id ~= "" then
+			table.insert(ids, id)
+		end
+	end
+	config.verify.current = ids
+	config.verify.regression = false
+	config.verifyOnly = ids
 end
 
 return config
