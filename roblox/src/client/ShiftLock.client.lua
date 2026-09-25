@@ -82,7 +82,13 @@ local function isTouchLayout()
 end
 
 task.spawn(function()
-	local holder = player:WaitForChild("PlayerGui"):WaitForChild("SkillSlotsGui"):WaitForChild("DashHolder")
+	-- DashHolder는 PC 배치에서 CentralRow 안, 터치 배치에서 SkillSlotsGui 바로 아래로 옮겨진다 - 자손으로 찾는다(Play 1: 자식 WaitForChild가 무한 대기)
+	local gui = player:WaitForChild("PlayerGui"):WaitForChild("SkillSlotsGui")
+	local holder = gui:FindFirstChild("DashHolder", true)
+	while not holder do
+		gui.DescendantAdded:Wait()
+		holder = gui:FindFirstChild("DashHolder", true)
+	end
 	button.Parent = holder
 	local function refresh()
 		button.Visible = isTouchLayout()
