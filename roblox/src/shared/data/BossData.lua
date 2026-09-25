@@ -639,7 +639,17 @@ local SPECIES = {
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.5, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(6),
-		skillOrder = { "sweep", "tide", "spout", "flood", "swipe", "grab" },
+		skillOrder = { "sweep", "tide", "spout", "flood", "swipe", "grab", "tailSweep", "vortex", "bubbles" },
+		-- BR1 환경 변화 "밥상뒤집기"(체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 사각 판 40 × 60이 (1 + 인원 ÷ 2)개, 가장자리가 들리고
+		-- 물이 넘친다(3초) → 뒤집힌다: 판 위(발 기준 같은 층 - 떠 있으면 안 맞는다) 사람은 아레나 가운데 쪽으로 튕기고(높이 7.5 · 거리 20 - 튕김 상한은 기존 조각) ×2.5,
+		-- 뒤집힌 자리는 10초 동안 급류(0.5초마다 5%). 판 밖으로 20 + 1 = 2.14초 ≤ 3.0. 큰 파트를 물리로 뒤집지 않는다(판이 도는 그림은 클라).
+		environment = {
+			id = "tableFlip", style = "water", motion = "fin", damageLabel = "밥상뒤집기",
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.0, durationSeconds = 10,
+			zones = { shape = "rect", halfLengthStuds = 30, halfWidthStuds = 20 },
+			onStart = { launch = { heightStuds = 7.5, distanceStuds = 20 }, damage = { kind = "attack", multiplier = 2.5 } },
+			tick = { seconds = 0.5, fraction = 0.05 },
+		},
 		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단(P3c: 11곳)
 		skills = {
 			-- 꼬리 휩쓸기. 도넛(안쪽 9 ~ 바깥 24) - 기본형 강공격과 반대로 **몸 쪽이 안전하다**. 누군가 바깥 반경
@@ -663,7 +673,8 @@ local SPECIES = {
 					label = "두 겹 시간차 · 빠름 → 보통 → 느림",
 					{ speedStuds = 30, layers = 2, layerGapSeconds = 4 / 30 },
 					{ gapSeconds = 1.5, speedStuds = 24, layers = 2, layerGapSeconds = 4 / 24 },
-					{ gapSeconds = 1.5, speedStuds = 18, layers = 2, layerGapSeconds = 4 / 18 },
+					-- BR1(땅 · 공중 겹침): 3박째 = 공중 파동(발 높이 지면 + 4 ~ 14) - 1 · 2박은 뛰고 3박은 서 있는다.
+					{ gapSeconds = 1.5, speedStuds = 18, layers = 2, layerGapSeconds = 4 / 18, air = { minStuds = 4, maxStuds = 14 } },
 				},
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				layers = 2, layerGapSeconds = 4 / 24,
@@ -675,8 +686,9 @@ local SPECIES = {
 			spout = {
 				primitive = "circleTarget", bubble = "meteor",
 				cooldownSeconds = 15, priority = P.normal, starvationSeconds = 45,
-				telegraphSeconds = 1.5, count = 3, sequential = true, repeatTelegraphSeconds = 1.2, radiusStuds = 6, scatterStuds = 0,
-				damage = { kind = "attack", multiplier = 2 }, damageLabel = "물기둥",
+				-- BR1 수정 "발밑 따라오는 물기둥": 3 → 5발 · 반경 6 → 5 · 연발 전조 1.2 → 1.05 · 발당 ×2 → ×1.4(작음). 최대 범위 배율에서 5.76 + 1 = 1.03초 ≤ 1.05.
+				telegraphSeconds = 1.5, count = 5, sequential = true, repeatTelegraphSeconds = 1.05, radiusStuds = 5, scatterStuds = 0,
+				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "물기둥",
 			},
 			-- 범람(기믹, 29-4 - 타이밍). 예고 시작 6초 뒤 방전 - 그 순간 "아직 가라앉지 않은 단(윗단) 위"여야 한다.
 			--   · 단은 **그 사람이** 밟은 뒤 sinkSeconds(5초)면 **그 사람에게만** 가라앉는다 - 친구가 먼저 밟았다고 내 단이
@@ -691,8 +703,9 @@ local SPECIES = {
 			flood = {
 				primitive = "gimmick", bubble = "flood", role = "gimmick", kind = "onZone",
 				cooldownSeconds = 20, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
-				telegraphSeconds = 6.0, recoverSeconds = 1.5,
-				safeZone = { tag = "platform", sinkSeconds = 5.0, shakeSeconds = 1.0, waterRiseStuds = 1.5 },
+				-- BR1 기믹 개편(어렵게): 예고 6 → 5초 · 가라앉기 5 → 4초("너무 이른" 창 1초는 그대로). 가장 먼 자리 57stud = 0.5 + 57 ÷ 16 × 1.25 = 4.95초 ≤ 5.0.
+				telegraphSeconds = 5.0, recoverSeconds = 1.5,
+				safeZone = { tag = "platform", sinkSeconds = 4.0, shakeSeconds = 1.0, waterRiseStuds = 1.5 },
 				dodge = { distanceStuds = 57 },
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "방전",
 				-- 방전을 쏟아낸 직후 3초는 기회 창이다(파랑 말풍선). 노브: 단이 사분면 한가운데로 옮겨 가며(어디서든 닿게) 오가는
@@ -703,6 +716,32 @@ local SPECIES = {
 			},
 			swipe = enhancedBasic("지느러미 베기", "fin"), -- BR1 강화 평타
 			grab = airGrab("꼬리 감기", "tail"), -- BR1 대공 잡기
+			-- BR1 새 ① 꼬리 반원 휩쓸기: 몸을 틀어 꼬리로 대상 쪽 반원(반경 26)을 쓴다 - 걸어서는 못 나간다(27 = 2.6초 > 1.4) → **점프로 넘는다**
+			--   (판정 순간 공중이면 안 맞는다 · jumpable). ×2(28.6% - 중간).
+			tailSweep = {
+				primitive = "sector", bubble = "heavy", motion = "tail",
+				cooldownSeconds = 11, priority = P.normal, starvationSeconds = 45,
+				conditions = { { type = "targetWithin", studs = 26 } },
+				telegraphSeconds = 1.4, angleDeg = 180, radiusStuds = 26, facing = "target", jumpable = true,
+				damage = { kind = "attack", multiplier = 2 }, damageLabel = "꼬리 반원",
+			},
+			-- BR1 새 ② 소용돌이: 몸을 돌리며 물을 휘감는다 - 반경 28 안이면 중심으로 초당 7 끌린다(클라 - 걷기 16보다 느리다: 버티면 9/초로 나간다),
+			--   5.3초 뒤 중심 원(반경 8)이 터진다(×2.8 = 40% - 큼). 최대 범위 배율에서 32.3 + 1 = 0.5 + 33.3 ÷ 9 × 1.25 = 5.1초 ≤ 5.3.
+			vortex = {
+				primitive = "vortex", bubble = "whirl", motion = "tail",
+				cooldownSeconds = 18, priority = P.normal, starvationSeconds = 50,
+				telegraphSeconds = 5.3, radiusStuds = 28, pullStudsPerSecond = 7, burstRadiusStuds = 8,
+				damage = { kind = "attack", multiplier = 2.8 }, damageLabel = "소용돌이",
+			},
+			-- BR1 새 ③ 심해 거품탄(대공): 입을 벌려 거품 셋을 뿜는다 - 공중에 뜬 사람 우선. 속도 14 < 걷기 16(땅에서 걸어 따돌린다) · 회전 70°/초 · 반경 3.5.
+			bubbles = {
+				primitive = "projectile", bubble = "meteor", motion = "fin", projectileStyle = "bubble",
+				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
+				telegraphSeconds = 1.2, count = 3, launchIntervalSeconds = 0.25, spreadDeg = 20,
+				speedStuds = 14, turnRateDeg = 70, radiusStuds = 3.5, lifetimeSeconds = 7, heightMode = "air", launchHeightStuds = 8,
+				targetRule = "airbornePreferred",
+				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "거품탄",
+			},
 		},
 	},
 	{
