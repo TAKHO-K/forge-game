@@ -285,7 +285,9 @@ function BR1Verify.runLive(player, env)
 					drive(player, root, model, data, 0.5) -- 연속 체공이 쌓인 뒤에 쏜다(Play 1: 같은 틱에 띄우면 대상 0 - 검증 쪽)
 				end
 				BossPatterns.force(model, data, sid)
-				drive(player, root, model, data, 16, function()
+				-- BR1-2 첫 Play: 대기 = 16초 또는 투사체 수명 전체(벽 튕김마다 bounceLifetimeSeconds가 다시 붙는다 - 눈덩이 2번 = 1.5 + 9 + 9 × 2 ≈ 29초) 중 큰 쪽
+				local waitSeconds = math.max(16, (skill.telegraphSeconds or 0) + (skill.lifetimeSeconds or 0) + (skill.bounces or 0) * (skill.bounceLifetimeSeconds or 0) + 2)
+				drive(player, root, model, data, waitSeconds, function()
 					-- 이 스킬이 실제로 시작된 뒤(말풍선) 끝났는가 - Play 1: "#sent > 1"은 강제 직전 스킬의 reset 등으로 너무 일찍 참이 됐다(검증 쪽)
 					return countKind("bubble") > 0 and st.phase == "normal" and st.current == nil and (not st.projectiles or #st.projectiles == 0)
 				end)

@@ -2270,6 +2270,14 @@ local function handleCommand(player, args)
 			end
 			reply(player, "killsim 중단: 보스가 사라졌습니다")
 		end)
+	elseif sub == "god" and (args[2] == "on" or args[2] == "off") then
+		-- BR1-2 스크린샷용: 받는 피해 ×0(출처 칸 devGod - 1시간). 연출 · 판정은 그대로 돈다.
+		if args[2] == "on" then
+			PlayerState.setIncomingDamageMultiplierUntil(player, 0, 3600, "devGod")
+		else
+			PlayerState.clearIncomingDamageMultiplierSource(player, "devGod")
+		end
+		reply(player, "받는 피해 ×0: " .. args[2])
 	elseif sub == "heal" and args[2] == "buff" then
 		-- 24-3(PRD 20.64) 검증용, 24-4에서 b 재도출에 맞춰 출력도 r·부등식 근거로 교체.
 		local b = PartyConfig.healerBuffFraction
@@ -2368,6 +2376,15 @@ do -- 30-0 S06: 클라 UI 전시장 · 규칙 검사 신호(/gg ui) - 클라 ui/
 	local uiDevCommand = Instance.new("RemoteEvent")
 	uiDevCommand.Name = "UiDevCommand"
 	uiDevCommand.Parent = ReplicatedStorage
+end
+do -- BR1-2: 서버 execute_luau에서 채팅 없이 /gg를 부르는 훅(Studio 전용 - 이 스크립트 첫머리 가드). ServerStorage.DevCommandHook:Invoke(player, "/gg ...")
+	local hook = Instance.new("BindableFunction")
+	hook.Name = "DevCommandHook"
+	hook.OnInvoke = function(player, message)
+		onChatMessage(player, message)
+		return true
+	end
+	hook.Parent = game:GetService("ServerStorage")
 end
 -- 28-1(S01) [C-2] 6번: "/gg" 명령 인스턴스가 있는 조건 = IsStudio()와 같다는 것을 서버 시작 때 남긴다. 이 스크립트는 첫머리 가드가
 -- 라이브 서버에서 return하므로 명령 인스턴스 자체가 만들어지지 않는다(Studio에서는 둘 다 true만 확인된다 - 프로덕션 쪽은 호출 그래프가 증명이다).
@@ -3752,6 +3769,16 @@ if RunService:IsStudio() and verifyEnabled("BR1(가)") then
 		local ok, err = pcall(require(script.Parent.BR1Verify).runPure)
 		if not ok then
 			warn(("[BR1(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ BR1-2 자동 검증 블록(가) - 난이도 곡선 표 검사 · (보스별 단계마다 늘어난다)(docs/design/boss-br1-2.md) ═══
+if RunService:IsStudio() and verifyEnabled("BR1-2(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.BR1_2Verify).runPure)
+		if not ok then
+			warn(("[BR1-2(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

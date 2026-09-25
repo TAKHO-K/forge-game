@@ -14,6 +14,7 @@ local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
+local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 
 local BossRules = {}
 
@@ -73,12 +74,12 @@ function BossRules.isPairStage(stage)
 	return false
 end
 
+-- BR1-2: 낙하 원 개수 ± = 난이도 곡선 행의 zoneExtra(shared/data/BossCurveData - 옛 stageDensity 355 · 535 · 715를 대신한다). 쌍 스테이지는 0.
 function BossRules.densityExtra(stage)
-	local density = BossData.mechanics.stageDensity
-	if BossRules.isPairStage(stage) or stage <= density.startStage then
+	if BossRules.isPairStage(stage) then
 		return 0
 	end
-	return math.min(density.maxExtra, math.floor((stage - density.startStage) / density.stepStages))
+	return BossSkillMath.curveRow(stage).zoneExtra
 end
 
 -- 파티 보스 입장 밴드(PRD 20.47 [6](라) "불가" 밴드 재사용). 멤버 전원이
@@ -259,7 +260,9 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		-- 29-2 스킬표(BossPatterns.lua가 읽는다). 범위 배율이 1이면 원본 테이블을 그대로 가리키고(읽기 전용이라
 		-- 공유해도 안전하다 - BossData는 절대 런타임에 고치지 않는다), 아니면 넓힌 사본이다.
 		-- S14: 배율로 넓힌 뒤(배율 → 밀도 순서) 밀도만큼 원을 늘린다. 둘 다 사본이라 BossData 원본은 그대로다.
-		skills = BossSkillMath.densifySkills(BossSkillMath.scaleSkills(boss.skills, BossRules.skillRangeScale(stage)), densityExtra or 0),
+		-- BR1-2: 이속 보정 → 난이도 곡선(장판 범위 · 개수 · 연쇄 · 투사체 인당 개수 · 반경 → 전조 맞춤 - BossSkillMath.applyCurve).
+		skills = (BossSkillMath.applyCurve(BossSkillMath.scaleSkills(boss.skills, BossRules.skillRangeScale(stage)), BossSkillMath.curveRow(stage), densityExtra or 0, WorldConfig.playerWalkSpeedStuds)),
+		curveTier = BossSkillMath.curveRow(stage).tier,
 		skillOrder = boss.skillOrder,
 		scheduler = boss.scheduler,
 		skillRangeScale = BossRules.skillRangeScale(stage),

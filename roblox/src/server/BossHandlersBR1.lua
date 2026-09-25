@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
+local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData)
 local Reach = require(ReplicatedStorage.Shared.Reach)
 local BossTrap = require(script.Parent.BossTrap)
 local PlayerState = require(script.Parent.PlayerState)
@@ -121,39 +122,23 @@ BossHandlersBR1.sector = {
 }
 
 -- ─────────────────────────── projectile ───────────────────────────
--- 대상 규칙: "airborne"(공중에 뜬 사람만 - 없으면 쏘지 않는다: 스킬 조건 memberAirborne이 막는다) · "airbornePreferred"(뜬 사람 우선, 없으면 어그로 대상) · "target"(어그로 대상).
-local function pickProjectileTargets(c, count)
+-- 대상 규칙: "airborne"(공중에 뜬 사람만 - 없으면 쏘지 않는다: 스킬 조건 memberAirborne이 막는다) · "airbornePreferred"(뜬 사람이 있으면 그들, 없으면 전원) · "target"(전원).
+-- BR1-2 인당(docs/design/boss-br1-2.md §1): 반환 = 대상 멤버 목록 - 한 사람마다 skill.count(곡선의 인당 개수)발을 쏜다(4인 × 8 = 32).
+local function pickProjectileTargets(c)
 	local rule = c.skill.targetRule or "target"
-	local list = {}
-	if rule ~= "target" then
-		local airborne = {}
-		for _, v in ipairs(kit.victims(c.st)) do
-			if not BossTrap.isTrapped(v.player) and kit.airSecondsOf(c.st, v.player, c.now) >= (c.skill.minAirSeconds or 0.2) then -- 리뷰 7: 발동 조건(memberAirborne)과 같은 잣대
+	local all, airborne = {}, {}
+	for _, v in ipairs(kit.victims(c.st)) do
+		if not BossTrap.isTrapped(v.player) then
+			table.insert(all, v)
+			if kit.airSecondsOf(c.st, v.player, c.now) >= (c.skill.minAirSeconds or 0.2) then -- 리뷰 7: 발동 조건(memberAirborne)과 같은 잣대
 				table.insert(airborne, v)
 			end
 		end
-		table.sort(airborne, function(a, b)
-			return kit.airSecondsOf(c.st, a.player, c.now) > kit.airSecondsOf(c.st, b.player, c.now)
-		end)
-		for i = 1, count do
-			if #airborne > 0 then
-				list[i] = airborne[((i - 1) % #airborne) + 1]
-			end
-		end
-		if rule == "airborne" then
-			return list
-		end
 	end
-	for i = 1, count do
-		if not list[i] then
-			for _, v in ipairs(kit.victims(c.st)) do
-				if v.root == c.targetRoot then
-					list[i] = v
-				end
-			end
-		end
+	if rule == "airborne" or (rule == "airbornePreferred" and #airborne > 0) then
+		return airborne
 	end
-	return list
+	return all
 end
 
 -- 예측 조준(사용자 - 이속이 높으니 유도 공격도 따라와야 한다): 대상의 지금 속도(루트 AssemblyLinearVelocity - 캐릭터 물리는 그 클라 소유라 서버로 복제된다)로
@@ -174,11 +159,14 @@ end
 
 local nextProjectileId = 0
 
-local function launchProjectile(c, index)
+local function aliveProjectileCount(st)
+	return st.projectiles and #st.projectiles or 0
+end
+
+local function launchProjectile(c, index, target)
 	local st, skill = c.st, c.skill
-	local target = st.projTargets[index]
-	if not target then
-		return
+	if not target or aliveProjectileCount(st) >= BossCurveData.arenaProjectileCap then
+		return false -- BR1-2 아레나당 동시 투사체 상한(성능)
 	end
 	local origin = kit.xz(c.position)
 	local y = skill.heightMode == "ground" and (st.floorY + skill.radiusStuds * 0.6) or (st.floorY + (skill.launchHeightStuds or 9))
@@ -187,7 +175,9 @@ local function launchProjectile(c, index)
 	if skill.heightMode == "ground" then
 		aim = Vector3.new(aim.X, y, aim.Z)
 	end
-	local spread = (skill.spreadDeg or 0) * (index - (skill.count + 1) / 2)
+	-- 부채 폭은 곡선으로 개수가 늘어도 전체 ±30° 안(BR1-2 - 8발이면 칸 사이 60 ÷ 7)
+	local step = skill.count > 1 and math.min(skill.spreadDeg or 0, 60 / (skill.count - 1)) or 0
+	local spread = step * (index - (skill.count + 1) / 2)
 	local dir = aim - position
 	if dir.Magnitude < 1e-3 then
 		dir = Vector3.new(1, 0, 0)
@@ -199,6 +189,8 @@ local function launchProjectile(c, index)
 		radius = skill.radiusStuds, expiresAt = c.now + (skill.lifetimeSeconds or 6), target = target.player,
 		heightMode = skill.heightMode or "air", pierce = skill.pierce == true, hitBy = {}, skill = skill, data = c.data, model = c.model,
 		bouncesLeft = skill.bounces or 0,
+		-- BR1-2 반사 대비(K 성기사 패링 · 반사 대결): 소유자 · 반사 가능 · 반사 횟수
+		owner = { kind = "boss", model = c.model }, reflectable = skill.reflectable ~= false, reflections = 0,
 	}
 	st.projectiles = st.projectiles or {}
 	table.insert(st.projectiles, projectile)
@@ -206,6 +198,7 @@ local function launchProjectile(c, index)
 		id = projectile.id, position = position, dir = dir, speed = skill.speedStuds, radius = skill.radiusStuds, style = skill.projectileStyle,
 		heightMode = projectile.heightMode, bossId = c.data.id, targetUserId = typeof(target.player) == "Instance" and target.player.UserId or nil,
 	})
+	return true
 end
 
 BossHandlersBR1.projectile = {
@@ -216,11 +209,11 @@ BossHandlersBR1.projectile = {
 		local st, skill = c.st, c.skill
 		st.phase = "projTelegraph"
 		st.phaseEndsAt = c.now + skill.telegraphSeconds
-		st.projTargets = pickProjectileTargets(c, skill.count or 1)
+		st.projTargets = pickProjectileTargets(c)
 		st.projLaunched = 0
 		local userIds = {}
-		for i, v in pairs(st.projTargets) do
-			userIds[i] = typeof(v.player) == "Instance" and v.player.UserId or nil
+		for _, v in ipairs(st.projTargets) do
+			table.insert(userIds, typeof(v.player) == "Instance" and v.player.UserId or 0)
 		end
 		kit.send(st, "projTelegraph", {
 			center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.telegraphSeconds, count = skill.count or 1,
@@ -231,9 +224,12 @@ BossHandlersBR1.projectile = {
 	step = function(c)
 		local st, skill = c.st, c.skill
 		local interval = skill.launchIntervalSeconds or 0
+		-- 한 사람 몫은 interval 간격으로 차례로, 멤버끼리는 같은 순간(라운드마다 대상 전원에게 한 발씩)
 		while st.projLaunched < (skill.count or 1) and c.now >= st.phaseEndsAt + interval * st.projLaunched do
 			st.projLaunched += 1
-			launchProjectile(c, st.projLaunched)
+			for _, target in ipairs(st.projTargets) do
+				launchProjectile(c, st.projLaunched, target)
+			end
 		end
 		if st.projLaunched >= (skill.count or 1) then
 			kit.endSkill(c.model, st, c.data, c.now)

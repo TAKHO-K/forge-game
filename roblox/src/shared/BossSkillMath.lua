@@ -486,4 +486,115 @@ function BossSkillMath.densifySkills(skills, extra)
 	return dense
 end
 
+-- ─────────────────────────── BR1-2 스테이지 난이도 곡선(shared/data/BossCurveData - docs/design/boss-br1-2.md §1) ───────────────────────────
+local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData)
+
+-- 이 스테이지의 곡선 행(fromStage ≤ stage인 마지막 행).
+function BossSkillMath.curveRow(stage)
+	local row = BossCurveData.rows[1]
+	for _, r in ipairs(BossCurveData.rows) do
+		if (stage or 1) >= r.fromStage then
+			row = r
+		end
+	end
+	return row
+end
+
+-- 인당 투사체 개수 = BR1 기본 개수 × 행 배율(반올림 · 1 ~ perPersonMax).
+function BossSkillMath.perPersonCount(baseCount, row)
+	local scaled = (baseCount or 1) * row.projectileCountScale
+	if scaled ~= math.huge then
+		scaled = math.floor(scaled + 0.5)
+	end
+	return math.clamp(scaled, 1, BossCurveData.perPersonMax)
+end
+
+local TELEGRAPH_FIT_SKIP = { gimmick = true, ring = true, grab = true, reflect = true }
+
+-- 넓어진 범위에서 회피 부등식이 깨지면 모자란 만큼 **모든 전조 칸에** 더한다(큰 범위 = 긴 전조 - 무게 원칙). 사본을 고친다.
+function BossSkillMath.fitTelegraphs(skill, standoffStuds, walkSpeedStuds)
+	if TELEGRAPH_FIT_SKIP[skill.primitive] then
+		return skill, 0
+	end
+	local added = 0
+	for _ = 1, 4 do
+		local deficit = 0
+		for _, check in ipairs(BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)) do
+			if check.distanceStuds > 0 and not check.ok then
+				deficit = math.max(deficit, check.requiredSeconds - check.availableSeconds)
+			end
+		end
+		if deficit <= 0 then
+			break
+		end
+		deficit = math.ceil((deficit + 0.01) * 100) / 100
+		added += deficit
+		skill.telegraphSeconds += deficit
+		if skill.repeatTelegraphSeconds then
+			skill.repeatTelegraphSeconds += deficit
+		end
+		for _, key in ipairs({ "shots", "volleyShots" }) do
+			if skill[key] then
+				local list = {}
+				for index, entry in ipairs(skill[key]) do
+					list[index] = table.clone(entry)
+					if entry.telegraphSeconds then
+						list[index].telegraphSeconds = entry.telegraphSeconds + deficit
+					end
+				end
+				skill[key] = list
+			end
+		end
+		for _, key in ipairs({ "ambush", "trackAfterHit", "finisher" }) do
+			if skill[key] and skill[key].lockTelegraphSeconds then
+				skill[key] = table.clone(skill[key])
+				skill[key].lockTelegraphSeconds += deficit
+			elseif skill[key] and key == "finisher" then
+				skill[key] = table.clone(skill[key])
+				skill[key].telegraphSeconds += deficit
+			end
+		end
+	end
+	return skill, added
+end
+
+-- 곡선 행을 스킬표 사본에 얹는다(원본 BossData는 안 건드린다). 순서: (이미 곱한 이속 보정 위에) 장판 범위 × → 장판 개수 ± → 연쇄 칸 ± → 투사체 인당 개수 · 반경 → 전조 맞춤.
+-- zoneExtra를 따로 주면(견습 = 0) 행 값 대신 쓴다. 반환: 새 표, 전조를 늘린 스킬 { [id] = 초 }.
+function BossSkillMath.applyCurve(skills, row, zoneExtraOverride, walkSpeedStuds)
+	local zoneScaled = {}
+	for id, skill in pairs(skills) do
+		if skill.primitive ~= "projectile" then
+			zoneScaled[id] = skill
+		end
+	end
+	zoneScaled = BossSkillMath.scaleSkills(zoneScaled, row.zoneRangeScale)
+	local extra = zoneExtraOverride or row.zoneExtra
+	local out, fitted = {}, {}
+	for id, skill in pairs(skills) do
+		local copy = table.clone(zoneScaled[id] or skill)
+		if copy.primitive == "projectile" then
+			copy.baseCount = skill.count or 1
+			copy.count = BossSkillMath.perPersonCount(skill.count or 1, row)
+			copy.radiusStuds = skill.radiusStuds * row.projectileRadiusScale
+		end
+		if extra ~= 0 and copy.densityScalable and copy.count then
+			local count = math.max(1, copy.count + extra)
+			copy.scatterStuds = copy.scatterStuds * math.sqrt(count / copy.count)
+			copy.count = count
+		end
+		if copy.chain and (row.chainExtra or 0) ~= 0 then
+			copy.chain = table.clone(copy.chain)
+			copy.chain.count = math.max(3, copy.chain.count + row.chainExtra)
+		end
+		if walkSpeedStuds then
+			local _, added = BossSkillMath.fitTelegraphs(copy, 8, walkSpeedStuds)
+			if added > 0 then
+				fitted[id] = added
+			end
+		end
+		out[id] = copy
+	end
+	return out, fitted
+end
+
 return BossSkillMath
