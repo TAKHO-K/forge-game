@@ -427,6 +427,16 @@ function BossSkillMath.scaleSkills(skills, scale)
 			copy.finisher = table.clone(copy.finisher)
 			copy.finisher.radiusStuds *= scale
 		end
+		if copy.shots then -- BR1 칸별 반경도 "걸어서 벗어나는 거리"다
+			local shots = {}
+			for index, shot in ipairs(copy.shots) do
+				shots[index] = table.clone(shot)
+				if shot.radiusStuds then
+					shots[index].radiusStuds = shot.radiusStuds * scale
+				end
+			end
+			copy.shots = shots
+		end
 		if copy.pulses then
 			local pulses = {}
 			for index, pulse in ipairs(copy.pulses) do

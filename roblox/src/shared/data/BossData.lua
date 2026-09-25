@@ -282,7 +282,8 @@ local function guardianSkills()
 		heavy = {
 			primitive = "circleBoss", bubble = "heavy",
 			cooldownSeconds = 6, priority = P.normal,
-			telegraphSeconds = 1.5, radiusStuds = 14,
+			-- BR1(무게 원칙 §1): 피해 ×3(42.9% - 큼)에 전조 1.5(중간)는 어긋났다 → 2.0초(두 주먹을 머리 위로 크게).
+			telegraphSeconds = 2.0, radiusStuds = 14,
 			damage = { kind = "attack", multiplier = 3 }, damageLabel = "강공격",
 		},
 		-- 진동파. 보스가 hopHeightStuds만큼 떠올랐다 찍는 동작이 예고이고 찍는 순간 파동이 waveSpeedStuds로
@@ -295,7 +296,8 @@ local function guardianSkills()
 			primitive = "ring", bubble = "shockwave",
 			cooldownSeconds = 11, priority = P.normal,
 			telegraphSeconds = 1.2, waveCount = 3, repeatIntervalSeconds = 1.5,
-			rhythm = { label = "느림 · 느림 · 빠름", { speedStuds = 24 }, { gapSeconds = 1.6, speedStuds = 24 }, { gapSeconds = 1.25, speedStuds = 24 } },
+			-- BR1(공중 전제 §2 "땅 · 공중 겹침"): 2박째 = 공중 파동(발 높이 지면 + 4 ~ 14만 친다) - 1 · 3박은 뛰고 2박은 **서 있어야** 한다. 계속 떠 있기로는 못 버틴다.
+			rhythm = { label = "느림 · 느림(공중) · 빠름", { speedStuds = 24 }, { gapSeconds = 1.6, speedStuds = 24, air = { minStuds = 4, maxStuds = 14 } }, { gapSeconds = 1.25, speedStuds = 24 } },
 			waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4,
 			-- 공중 판정 여유 - 지면 거리가 서 있을 때(HipHeight + 루트 반높이)보다 이만큼 더 크면 공중(21-3 실측).
 			airborneClearanceStuds = 0.5,
@@ -333,6 +335,40 @@ local function guardianSkills()
 		},
 		swipe = enhancedBasic("방패 후려치기", "fist"), -- BR1 강화 평타
 		grab = airGrab("움켜쥐기", "hand"), -- BR1 대공 잡기
+		-- BR1 새 ① 쌍권 연타: 좌 · 우 주먹을 번갈아 내려찍는다 - 점점 크게(작게 → 크게, 무게 원칙). 매 칸은 그 순간 대상의 자리(계속 걸어라).
+		--   칸 = 반경 5 · 5 · 6 · 10, 전조 1.1 · 1.1 · 1.2 · 1.55, 배율 ×0.8 · ×0.8 · ×1.0(작음) · ×2.2(31% - 중간). 최대 범위 배율(×1.152)에서
+		--   마지막 칸 11.5 + 1 = 1.48초 ≤ 1.55(하네스 - 1.4는 0.08초 모자랐다). 공중으로 피해도 다음 칸이 착지 자리로 온다.
+		fists = {
+			primitive = "circleTarget", bubble = "meteor", motion = "fist",
+			cooldownSeconds = 12, priority = P.normal, starvationSeconds = 45,
+			telegraphSeconds = 1.1, count = 4, sequential = true, radiusStuds = 5, scatterStuds = 0,
+			shots = {
+				{ radiusStuds = 5, multiplier = 0.8, telegraphSeconds = 1.1 },
+				{ radiusStuds = 5, multiplier = 0.8, telegraphSeconds = 1.1 },
+				{ radiusStuds = 6, multiplier = 1.0, telegraphSeconds = 1.2 },
+				{ radiusStuds = 10, multiplier = 2.2, telegraphSeconds = 1.55 },
+			},
+			damage = { kind = "attack", multiplier = 0.8 }, damageLabel = "쌍권 연타",
+		},
+		-- BR1 새 ② 추적 광구(대공): 두 손을 모아 빛을 뭉쳐 느린 구체 2개를 띄운다 - 공중에 뜬 사람 우선(없으면 어그로 대상). 속도 12 < 걷기 16 -
+		-- 땅에서 걸으면 따돌리고, 공중에서는 느리다(내려와서 달린다). 회전 90°/초 · 반경 3(3D) · 수명 7초.
+		orbs = {
+			primitive = "projectile", bubble = "meteor", motion = "fist", projectileStyle = "orb",
+			cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
+			telegraphSeconds = 1.2, count = 2, launchIntervalSeconds = 0.2, spreadDeg = 25,
+			speedStuds = 12, turnRateDeg = 90, radiusStuds = 3, lifetimeSeconds = 7, heightMode = "air", launchHeightStuds = 9,
+			targetRule = "airbornePreferred",
+			damage = { kind = "attack", multiplier = 1.6 }, damageLabel = "추적 광구",
+		},
+		-- BR1 새 ③ 대지 가르기: 한 손을 땅에 꽂고 옆으로 긋는다 - 보스 → 대상 선의 왼쪽 또는 오른쪽 반원(반경 40)이 갈라진다(무작위).
+		--   큼 = 전조 2.4초(최대 범위 배율 1.152에서 반경 46: 최악 = 가르는 선까지와 원 밖까지가 같은 자리 23 + 1 → 2.38초) · ×2.8(40%).
+		--   공중 점프로도 피한다 - 충전을 쓰게 만들고(→ 대공 잡기) 착지 자리를 좁힌다.
+		earthSplit = {
+			primitive = "sector", bubble = "heavy", motion = "handDrag",
+			cooldownSeconds = 16, priority = P.normal, starvationSeconds = 45,
+			telegraphSeconds = 2.4, angleDeg = 180, radiusStuds = 40, facing = "randomSide",
+			damage = { kind = "attack", multiplier = 2.8 }, damageLabel = "대지 가르기",
+		},
 	}
 end
 
@@ -468,8 +504,16 @@ local SPECIES = {
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.5, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(6),
-		skillOrder = { "heavy", "shockwave", "meteor", "charge", "cross", "swipe", "grab" },
+		skillOrder = { "heavy", "shockwave", "meteor", "charge", "cross", "swipe", "grab", "fists", "orbs", "earthSplit" },
 		skills = guardianSkills(),
+		-- BR1 환경 변화 "지반 붕괴"(체력 50%부터 · 설계 §1-2): 두 주먹으로 땅을 연타 → 멤버 발밑마다 + 1개 무작위의 원(반경 22)에 금이 가고(3초)
+		-- 무너져 12초 동안 용암(0.5초마다 5% - 발 기준 같은 층). 구멍 밖으로 23 = 2.3초 ≤ 3.0. 견습 보스전에는 없다(BossEnvironment).
+		environment = {
+			id = "groundCollapse", style = "lava", motion = "fist", damageLabel = "지반 붕괴",
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.0, durationSeconds = 12,
+			zones = { shape = "circle", radiusStuds = 22, perMember = true, extra = 1 },
+			tick = { seconds = 0.5, fraction = 0.05 },
+		},
 	},
 	{
 		id = "frost_giant", displayName = "서리 거인", bodyColor = frostBody, headColor = frostHead,

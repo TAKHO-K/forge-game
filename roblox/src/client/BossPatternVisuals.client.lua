@@ -474,6 +474,11 @@ local function meteorImpact(data)
 			BossStormView.bolt(position)
 			fadeOut(newDisc(position, data.radius, IMPACT_COLOR, 0.1), 0.35)
 			continue
+		elseif data.motion == "fist" then
+			-- BR1 쌍권 연타: 낙석 기둥 대신 주먹이 내려찍는다(임팩트 = 흰색).
+			BossBR1View.fistSlam(position, data.radius)
+			fadeOut(newDisc(position, data.radius, IMPACT_COLOR, 0.1), 0.35)
+			continue
 		elseif data.style == "whirl" then
 			-- 29-4: 회오리 - 흰 띠가 나선으로 돌며 솟는다(임팩트 = 흰색).
 			BossStormView.whirl(position, data.radius)

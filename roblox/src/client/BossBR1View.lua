@@ -86,7 +86,39 @@ local function sectorParts(data, color, transparency)
 	return parts
 end
 
+-- 대지 가르기(motion "handDrag"): 반원을 가르는 지름을 따라 흰 금이 보스에서 양쪽으로 번진다(전조 동안).
+local function splitLine(data)
+	local a = math.rad(data.angleDeg + 90)
+	local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+	local line = newPart(Vector3.new(0.6, 0.3, 1), WHITE, 0.2)
+	line.CFrame = CFrame.lookAt(data.center + Vector3.new(0, 0.3, 0), data.center + dir + Vector3.new(0, 0.3, 0))
+	TweenService:Create(line, TweenInfo.new(data.seconds * 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.6, 0.3, data.radius * 2) }):Play()
+	task.delay(data.seconds, function()
+		fadeOut(line, 0.3)
+	end)
+end
+
+-- 주먹 내려찍기(motion "fist" - 연타 칸 · 강화 평타): 위에서 떨어지는 주먹 덩어리 + 먼지 고리. 낙석 기둥 대신.
+function BossBR1View.fistSlam(position, radius)
+	local fist = newPart(Vector3.new(radius * 0.9, radius * 0.7, radius * 0.9), WHITE, 0.15)
+	fist.Material = Enum.Material.SmoothPlastic
+	fist.CFrame = CFrame.new(position + Vector3.new(0, 14, 0))
+	TweenService:Create(fist, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = CFrame.new(position + Vector3.new(0, radius * 0.35, 0)) }):Play()
+	task.delay(0.12, function()
+		fadeOut(fist, 0.3)
+		BossFx.ring(position, 1, radius + 2, DUST, 0.35)
+		for i = 1, 6 do
+			local a = i / 6 * 2 * math.pi
+			BossFx.puff(position + Vector3.new(math.cos(a) * radius * 0.7, 0.5, math.sin(a) * radius * 0.7), 2, DUST, 0.5, Vector3.new(math.cos(a) * 4, 2, math.sin(a) * 4))
+		end
+		BossFx.shake(position, 0.4)
+	end)
+end
+
 function BossBR1View.sector(data)
+	if data.motion == "handDrag" then
+		splitLine(data)
+	end
 	for _, part in ipairs(sectorParts(data, DANGER, 0.85)) do
 		TweenService:Create(part, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = data.jumpable and 0.45 or 0.3 }):Play()
 		task.delay(data.seconds, function()
