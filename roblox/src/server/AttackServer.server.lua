@@ -21,6 +21,7 @@ local CombatResolution = require(script.Parent.CombatResolution)
 local BuffState = require(script.Parent.BuffState)
 local StuckArrowState = require(script.Parent.StuckArrowState)
 local TutorialState = require(script.Parent.TutorialState)
+local BossHandlersBR1 = require(script.Parent.BossHandlersBR1) -- BR1-2 투사체 반사
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -303,6 +304,11 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 			return
 		end
 
+		-- BR1-2 투사체 반사: 보스가 반사 중이면 피해 0 + 쏜 사람 쪽으로 되돌린다(BossHandlersBR1.tryReflect - 근접 분기는 위에서 이미 끝났다)
+		if MonsterState.getData(target).isBoss and BossHandlersBR1.tryReflect(target, player) then
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot)
+			return
+		end
 		-- 29-3: 이 투사체를 "쏜" 시각을 같이 넘긴다 - 보스의 반사 태세는 태세가 선 뒤에 쏜 것만 반사한다(이미 날아가던
 		-- 화살·구슬은 0 피해로 끝날 뿐이다, BossMechanics.beginReflect).
 		local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player, { committedAt = requestedAt }) -- 29-1: 위 근접 분기와 같다

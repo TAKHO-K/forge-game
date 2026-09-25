@@ -179,6 +179,8 @@ local BUBBLES = {
 	-- BR1: 강화 평타 = 짧은 휘두르기(작은 무게 - 주황), 대공 잡기 = 손바닥(큰 무게 - 위험색).
 	swipe = { icon = "›", color = Color3.fromRGB(255, 120, 30) },
 	grab = { icon = "✋", color = Color3.fromRGB(230, 40, 40) },
+	-- BR1-2 투사체 반사 = 거울(원거리는 쏘지 마라)
+	mirror = { icon = "◈", color = Color3.fromRGB(230, 40, 40) },
 }
 
 local currentBubble = nil
@@ -730,6 +732,14 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossGrabView.throw(data)
 	elseif kind == "bubbleTrap" then
 		BossGrabView.bubble(data)
+	elseif kind == "reflectTelegraph" then
+		BossBR1View.reflectTelegraph(data)
+	elseif kind == "reflectStance" then
+		BossBR1View.reflectStance(data)
+	elseif kind == "reflectShot" then
+		BossBR1View.reflectShot(data)
+	elseif kind == "reflectEnd" then
+		BossBR1View.reflectEnd()
 	elseif kind == "grabEnd" or kind == "grabMiss" then
 		BossGrabView.clear()
 	elseif kind == "envTelegraph" then

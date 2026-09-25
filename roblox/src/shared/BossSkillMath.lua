@@ -160,6 +160,8 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 		return skill.telegraphSeconds + (skill.burstTelegraphSeconds or 0)
 	elseif primitive == "gimmick" then
 		return skill.telegraphSeconds + (skill.recoverSeconds or 0)
+	elseif primitive == "reflect" then
+		return skill.telegraphSeconds + skill.stanceSeconds -- BR1-2 반사: 결계 전조 + 반사 동안(되돌린 투사체는 스킬과 떨어져 난다)
 	end
 	return skill.telegraphSeconds
 end
@@ -285,6 +287,9 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		else
 			table.insert(checks, { label = "궤도 바꾸기(인지)", availableSeconds = arrival, requiredSeconds = dodge.perceptionSeconds, distanceStuds = 0, ok = arrival >= dodge.perceptionSeconds })
 		end
+	elseif primitive == "reflect" then
+		-- BR1-2 되돌아오는 투사체: 모으기 + 원거리 자리(rangedStandoff)에서 닿기까지 안에 옆으로 (반경 + 몸통)
+		walk("되돌아오는 것 옆으로", skill.projectile.windupSeconds + dodge.rangedStandoffStuds / skill.projectile.speedStuds, skill.projectile.radiusStuds + half)
 	elseif primitive == "grab" then
 		-- BR1 대공 잡기: 보고 내려올 시간 - 인지 + 한 체공 최대(공중 점프 2 + 대시 = 1.961초 - movement-metrics v2). 착지하면 연속 체공이 0이 된다.
 		local need = dodge.perceptionSeconds + BossData.mechanics.airGrab.maxAirSeconds

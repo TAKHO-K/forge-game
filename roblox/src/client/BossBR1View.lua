@@ -156,6 +156,8 @@ local STYLE = {
 	bolt = { shape = "block", size = function(r) return Vector3.new(r * 0.3, r * 0.3, r * 3.6) end, color = WHITE },
 	snowball = { shape = "ball", size = function(r) return Vector3.one * r * 2 end, color = WHITE, material = Enum.Material.Snow, transparency = 0 },
 	tornado = { shape = "cylinder", size = function(r) return Vector3.new(r * 3, r * 1.8, r * 1.8) end, transparency = 0.5, spin = true },
+	-- BR1-2 반사된 투사체(보스 판정 - 흰 테두리의 붉은 빛 창): 멀리서도 보이게 길고 밝다
+	reflected = { shape = "block", size = function(r) return Vector3.new(r * 0.8, r * 0.8, r * 3) end, material = Enum.Material.Neon, transparency = 0 },
 }
 
 local function playerByUserId(userId)
@@ -342,8 +344,108 @@ function BossBR1View.ambushEmerge(data)
 	BossFx.shake(data.position, 1)
 end
 
+-- ─────────────────────────── BR1-2 투사체 반사 ───────────────────────────
+-- 전조: 보스 둘레에 거울 판 6장이 땅에서 솟는다(보스 색 · 유리) → 반사: 판이 빛나며 돈다 + 원거리 멤버마다 "되돌아올 경로" 바닥 선(보스 → 그 사람, 매 프레임 따라간다 -
+-- 되돌리는 순간 그 사람 자리로 곧게 가므로 이 선 = 실제 판정의 길) → 되돌림: 보스 곁에 빛이 모이고(windup) 그 선이 짙어진다.
+local mirror = nil -- { panels, lines = { [userId] = Part }, center, spin }
+
+local function clearMirror()
+	if not mirror then
+		return
+	end
+	for _, part in ipairs(mirror.panels) do
+		destroy(part)
+	end
+	for _, line in pairs(mirror.lines) do
+		destroy(line)
+	end
+	mirror = nil
+end
+
+function BossBR1View.reflectTelegraph(data)
+	clearMirror()
+	mirror = { panels = {}, lines = {}, center = data.center, radius = data.radius, spin = 0 }
+	local color = data.color or DANGER
+	for i = 1, 6 do
+		local a = i / 6 * 2 * math.pi
+		local at = data.center + Vector3.new(math.cos(a) * data.radius, -4, math.sin(a) * data.radius)
+		local panel = newPart(Vector3.new(5, 7, 0.4), color, 0.35)
+		panel.Material = Enum.Material.Glass
+		panel.CFrame = CFrame.lookAt(at, Vector3.new(data.center.X, at.Y, data.center.Z))
+		TweenService:Create(panel, TweenInfo.new(data.seconds, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { CFrame = panel.CFrame + Vector3.new(0, 7.5, 0) }):Play()
+		table.insert(mirror.panels, panel)
+	end
+	BossFx.ring(data.center, 1, data.radius + 2, WHITE, data.seconds)
+end
+
+function BossBR1View.reflectStance(data)
+	if not mirror then
+		BossBR1View.reflectTelegraph({ center = data.center, radius = data.radius, seconds = 0.01, color = data.color })
+	end
+	for _, panel in ipairs(mirror.panels) do
+		panel.Material = Enum.Material.Neon
+		panel.Transparency = 0.45
+	end
+	for _, userId in ipairs(data.rangedUserIds or {}) do
+		local line = newPart(Vector3.new(3, 0.15, 1), DANGER, 0.55)
+		mirror.lines[userId] = line
+	end
+end
+
+function BossBR1View.reflectShot(data)
+	local orb = newPart(Vector3.one * 1, data.color or DANGER, 0, Enum.PartType.Ball)
+	orb.Material = Enum.Material.Neon
+	orb.CFrame = CFrame.new(data.from)
+	TweenService:Create(orb, TweenInfo.new(data.windup, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 4 }):Play()
+	task.delay(data.windup, function()
+		destroy(orb)
+	end)
+	-- 되돌아가는 길(고정 - 이미 정해졌다): 짙은 빨강 띠
+	local flat = Vector3.new(data.to.X - data.from.X, 0, data.to.Z - data.from.Z)
+	local band = newPart(Vector3.new(5, 0.2, flat.Magnitude), DANGER, 0.25)
+	band.CFrame = CFrame.lookAt(Vector3.new(data.from.X, (mirror and mirror.center.Y or data.from.Y - 3) + 0.2, data.from.Z) + flat / 2, Vector3.new(data.to.X, (mirror and mirror.center.Y or data.from.Y - 3) + 0.2, data.to.Z))
+	task.delay(data.windup + flat.Magnitude / 30, function()
+		fadeOut(band, 0.3)
+	end)
+	BossFx.ring(data.from, 1, 6, WHITE, 0.25)
+end
+
+function BossBR1View.reflectEnd()
+	clearMirror()
+end
+
+RunService.RenderStepped:Connect(function(dt)
+	if not mirror then
+		return
+	end
+	mirror.spin += dt * 0.6
+	local c = mirror.center
+	for i, panel in ipairs(mirror.panels) do
+		local a = i / 6 * 2 * math.pi + mirror.spin
+		local at = c + Vector3.new(math.cos(a) * mirror.radius, 3.5, math.sin(a) * mirror.radius)
+		panel.CFrame = CFrame.lookAt(at, Vector3.new(c.X, at.Y, c.Z))
+	end
+	for userId, line in pairs(mirror.lines) do
+		local target = nil
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p.UserId == userId then
+				target = p
+			end
+		end
+		local root = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			local flat = Vector3.new(root.Position.X - c.X, 0, root.Position.Z - c.Z)
+			local length = math.max(flat.Magnitude + 40, 1)
+			local dir = flat.Magnitude > 1e-3 and flat.Unit or Vector3.new(1, 0, 0)
+			line.Size = Vector3.new(5, 0.15, length)
+			line.CFrame = CFrame.lookAt(c + Vector3.new(0, 0.15, 0) + dir * (length / 2), c + Vector3.new(0, 0.15, 0) + dir * length)
+		end
+	end
+end)
+
 -- ─────────────────────────── 매 프레임 · 리셋 ───────────────────────────
 function BossBR1View.reset()
+	clearMirror()
 	for part in pairs(live) do
 		part:Destroy()
 	end

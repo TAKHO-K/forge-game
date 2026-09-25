@@ -13,6 +13,7 @@ local Reach = require(ReplicatedStorage.Shared.Reach)
 local BossTrap = require(script.Parent.BossTrap)
 local PlayerState = require(script.Parent.PlayerState)
 local MonsterState = require(script.Parent.MonsterState)
+local PlayerDamage = require(script.Parent.PlayerDamage)
 local HeightGuard = require(script.Parent.HeightGuard)
 
 local BossHandlersBR1 = {}
@@ -252,7 +253,12 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 	local ended = {}
 	for _, p in ipairs(list) do
 		local done = now >= p.expiresAt
-		if not done then
+		local holding = p.holdUntil and now < p.holdUntil -- BR1-2 반사: 보스 곁에서 모으는 중
+		if not done and not holding and p.holdUntil and not p.announced then
+			p.announced = true
+			kit.send(st, "projSpawn", { id = p.id, position = p.position, dir = p.dir, speed = p.speed, radius = p.radius, style = p.skill.projectileStyle, heightMode = p.heightMode, bossId = data.id })
+		end
+		if not done and not holding then
 			-- 방향 돌리기(turnRad/초 상한) - 대상의 지금 자리 쪽으로.
 			local target = nil
 			for _, v in ipairs(targets) do
@@ -343,7 +349,12 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 						p.hitBy[v.player] = true
 						local c = { model = model, st = st, data = data, skill = p.skill, now = now, position = p.position }
 						kit.judgeBegin()
-						damageWith(c, nil, v.player)
+						if p.skill.damage.kind == "maxHpRaw" then -- BR1-2 반사된 투사체: 한 방에 죽을 수 있는 큰 피해(감소 · 1 ~ 30 보호 적용)
+							PlayerDamage.applyMaxHpFraction(v.player, p.skill.damage.fraction, p.skill.damageLabel)
+							BossTrap.noteSkillHit(v.player)
+						else
+							damageWith(c, nil, v.player)
+						end
 						kit.judgeEnd(c, { kind = "projectile", center = p.position, radius = p.radius })
 						if p.skill.onHit then
 							kit.runHitEffects(c, p.skill.onHit, v, p.position - Vector3.new(0, 0, 0), 1)
@@ -454,6 +465,91 @@ BossHandlersBR1.vortex = {
 	end,
 }
 
+-- ─────────────────────────── reflect(BR1-2 투사체 반사 - 설계 §5) ───────────────────────────
+-- 전조(결계가 솟는다) → 반사 stanceSeconds. 반사 동안 원거리 평타가 닿으면 AttackServer가 BossHandlersBR1.tryReflect를 부른다 → 피해 0 · 되돌리는 투사체(보스 판정).
+local RANGED_CLASSES = { bow = true, healer = true } -- ProjectileConfig.kindByClass와 같은 직업(원거리 평타 = 투사체)
+
+local function rangedUserIds(st)
+	local ids = {}
+	for _, v in ipairs(kit.victims(st)) do
+		if typeof(v.player) == "Instance" and RANGED_CLASSES[v.player:GetAttribute("ClassId") or ""] then
+			table.insert(ids, v.player.UserId)
+		end
+	end
+	return ids
+end
+
+BossHandlersBR1.reflect = {
+	bubbleSeconds = function(c)
+		return c.skill.telegraphSeconds
+	end,
+	start = function(c)
+		local st, skill = c.st, c.skill
+		st.phase = "reflectTelegraph"
+		st.phaseEndsAt = c.now + skill.telegraphSeconds
+		st.reflectBy = {}
+		kit.send(st, "reflectTelegraph", { center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.telegraphSeconds, radius = skill.barrierRadiusStuds,
+			bossId = c.data.id, motion = skill.motion, color = c.data.headColor })
+	end,
+	step = function(c)
+		local st, skill = c.st, c.skill
+		if c.now < st.phaseEndsAt then
+			return
+		end
+		if st.phase == "reflectTelegraph" then
+			st.phase = "reflectStance"
+			st.phaseEndsAt = c.now + skill.stanceSeconds
+			kit.send(st, "reflectStance", { center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.stanceSeconds, radius = skill.barrierRadiusStuds,
+				bossId = c.data.id, color = c.data.headColor, rangedUserIds = rangedUserIds(st) })
+			return
+		end
+		kit.send(st, "reflectEnd", {})
+		kit.endSkill(c.model, st, c.data, c.now)
+	end,
+	interrupt = function(c)
+		kit.send(c.st, "reflectEnd", {})
+	end,
+}
+
+-- AttackServer(원거리 평타가 닿는 순간)가 부른다. 반사 중이면 true(피해 0) - 쏜 사람 1인당 windowSeconds에 한 발만 되돌린다(나머지는 흡수).
+function BossHandlersBR1.tryReflect(model, shooter)
+	local st = MonsterState.getBossPatternState(model)
+	if not (st and st.phase == "reflectStance" and st.skill and st.skill.primitive == "reflect" and st.context) then
+		return false
+	end
+	local skill = st.skill
+	local now = os.clock()
+	local last = st.reflectBy[shooter]
+	if last and now - last < skill.windowSeconds then
+		return true
+	end
+	st.reflectBy[shooter] = now
+	local shooterRoot = shooter.Character and shooter.Character:FindFirstChild("HumanoidRootPart")
+	if not shooterRoot then
+		return true
+	end
+	local c = st.context
+	local bossAt = model:GetPivot().Position
+	local from = Vector3.new(bossAt.X, st.floorY + 3, bossAt.Z)
+	local flat = Vector3.new(shooterRoot.Position.X - from.X, 0, shooterRoot.Position.Z - from.Z)
+	local dir = flat.Magnitude > 1e-3 and flat.Unit or Vector3.new(1, 0, 0)
+	local spec = skill.projectile
+	nextProjectileId += 1
+	local projectile = {
+		id = nextProjectileId, position = from, dir = dir, speed = spec.speedStuds, turnRad = 0, radius = spec.radiusStuds,
+		expiresAt = now + spec.windupSeconds + (flat.Magnitude + 40) / spec.speedStuds, holdUntil = now + spec.windupSeconds,
+		heightMode = "air", pierce = false, hitBy = {}, bouncesLeft = 0, model = model, data = c.data,
+		skill = { damage = { kind = "maxHpRaw", fraction = spec.maxHpFraction }, damageLabel = skill.damageLabel, projectileStyle = "reflected" },
+		owner = { kind = "reflected", player = shooter }, reflectable = true, reflections = 1, -- K 성기사 패링 대비
+	}
+	st.projectiles = st.projectiles or {}
+	table.insert(st.projectiles, projectile)
+	kit.send(st, "reflectShot", { from = from, to = from + dir * math.min(flat.Magnitude + 40, 200), windup = spec.windupSeconds, shooterUserId = shooter.UserId, color = c.data.headColor })
+	kit.debugEvent("reflectShot", { shooter = shooter, at = now })
+	print(("[forge-game] 투사체 반사: %s의 원거리 공격을 되돌린다"):format(tostring(shooter.Name)))
+	return true
+end
+
 -- ─────────────────────────── 체공 추적(대공 잡기 · 투사체 · 발동 조건) ───────────────────────────
 -- 멤버마다 "연속으로 떠 있기 시작한 시각". 매 틱 Humanoid 상태(Jumping · Freefall - 서버로 즉시 복제된다)로 싸게 갱신한다 - 잡기 판정 순간에는
 -- 지면 거리까지 재는 kit.isAirborne으로 한 번 더 확인한다(BossAirGrab). 착지하면 0.
@@ -496,6 +592,7 @@ function BossHandlersBR1.register(handlers, patternKit)
 	handlers.sector = BossHandlersBR1.sector
 	handlers.projectile = BossHandlersBR1.projectile
 	handlers.vortex = BossHandlersBR1.vortex
+	handlers.reflect = BossHandlersBR1.reflect
 end
 
 return BossHandlersBR1
