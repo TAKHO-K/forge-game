@@ -138,55 +138,54 @@ function BR1_2Verify.protectionCheck(r)
 		monotone and math.abs(m1 - p.atStage1) < 1e-9 and math.abs(mP - p.atPlateau) < 1e-9 and m30 < 1 and m31 == 1 and PlayerCombat.getNewbieDamageMultiplier(nil) == 1)
 end
 
--- 지진파 무작위 리듬(구간 수호자 진동파 randomRhythm): 가능한 모든 순서(3 · 4 · 5박 · 두 종류 · 같은 종류 3연속 없음)가 회피 부등식을 통과하는가 + 굴린 1,000번의 분포.
+-- 지진파 무작위(링 패턴 - randomRhythm이 있는 스킬 전부): 읽을 수 있는 조합 전부 × 범위 배율 1 · 최대가 회피 부등식 통과 · 단계별 1,000회 박 수 분포가 확률표 ± 0.05 · 같은 조합 연속 0.
 function BR1_2Verify.quakeCheck(r)
-	local skill = BossData.bosses.section_guardian.skills.shockwave
-	local spec = skill.randomRhythm
-	local sequences, fails = 0, {}
-	local function walk(types, count)
-		if #types == count then
-			local hasAir, hasGround, run, ok = false, false, 0, true
-			for i, t in ipairs(types) do
-				hasAir = hasAir or t == "air"
-				hasGround = hasGround or t == "ground"
-				run = (i > 1 and t == types[i - 1]) and run + 1 or 1
-				ok = ok and run <= spec.maxSameInRow
-			end
-			if ok and hasAir and hasGround then
-				sequences += 1
-				for _, scale in ipairs({ 1, BossRules.maxSkillRangeScale() }) do
-					local copy = table.clone(BossSkillMath.scaleSkills({ s = skill }, scale).s)
-					copy.rhythm = BossSkillMath.rollRhythm(copy, nil, types)
-					for _, ch in ipairs(BossSkillMath.dodgeChecks(copy, 8, WorldConfig.playerWalkSpeedStuds)) do
-						if not ch.ok then
-							table.insert(fails, table.concat(types, "-") .. " " .. ch.label)
+	for _, bossId in ipairs(ALL_BOSSES) do
+		local boss = BossData.bosses[bossId]
+		for _, skillId in ipairs(boss.skillOrder) do
+			local skill = boss.skills[skillId]
+			local spec = skill and skill.randomRhythm
+			if spec then
+				local combos, fails = 0, {}
+				for count, list in pairs(spec.sequences) do
+					for _, key in ipairs(list) do
+						combos += 1
+						for _, scale in ipairs({ 1, BossRules.maxSkillRangeScale() }) do
+							local copy = table.clone(BossSkillMath.scaleSkills({ s = skill }, scale).s)
+							copy.rhythm = BossSkillMath.rhythmFromKey(spec, key)
+							for _, ch in ipairs(BossSkillMath.dodgeChecks(copy, 8, WorldConfig.playerWalkSpeedStuds)) do
+								if not ch.ok then
+									table.insert(fails, key .. " " .. ch.label)
+								end
+							end
 						end
 					end
 				end
+				local seed = 777
+				local function rng()
+					seed = (seed * 1103515245 + 12345) % 2147483648
+					return seed / 2147483648
+				end
+				local cells, distOk, repeats = {}, true, 0
+				for tier = 1, #spec.countWeightsByTier do
+					local counts, last = { [3] = 0, [4] = 0, [5] = 0 }, nil
+					for _ = 1, 1000 do
+						local rhythm, key = BossSkillMath.rollRhythm(skill, rng, nil, tier, last)
+						counts[#rhythm] += 1
+						repeats += (key == last) and 1 or 0
+						last = key
+					end
+					local w = spec.countWeightsByTier[tier]
+					for _, n in ipairs({ 3, 4, 5 }) do
+						distOk = distOk and math.abs(counts[n] / 1000 - (w[n] or 0)) <= 0.05
+					end
+					table.insert(cells, ("%d단계 %d/%d/%d(표 %.0f/%.0f/%.0f)"):format(tier, counts[3], counts[4], counts[5], (w[3] or 0) * 1000, (w[4] or 0) * 1000, (w[5] or 0) * 1000))
+				end
+				r.check(("지진파 %s.%s: 조합 %d × 범위 배율 1 · 최대 회피 실패 %d%s · 1,000회 3/4/5박 %s · 같은 조합 연속 %d"):format(bossId, skillId, combos, #fails,
+					#fails > 0 and (" " .. table.concat(fails, " / ")) or "", table.concat(cells, " · "), repeats), #fails == 0 and distOk and repeats == 0)
 			end
-			return
-		end
-		for _, t in ipairs({ "ground", "air" }) do
-			local nextTypes = table.clone(types)
-			table.insert(nextTypes, t)
-			walk(nextTypes, count)
 		end
 	end
-	for _, count in ipairs(spec.counts) do
-		walk({}, count)
-	end
-	local seed = 12345
-	local function rng()
-		seed = (seed * 1103515245 + 12345) % 2147483648
-		return seed / 2147483648
-	end
-	local byCount = {}
-	for _ = 1, 1000 do
-		local rhythm = BossSkillMath.rollRhythm(skill, rng)
-		byCount[#rhythm] = (byCount[#rhythm] or 0) + 1
-	end
-	r.check(("지진파 무작위: 가능한 순서 %d가지 × 범위 배율 1 · 최대 - 회피 실패 %d%s · 굴림 1,000번 3박 %d · 4박 %d · 5박 %d"):format(sequences, #fails,
-		#fails > 0 and (" " .. table.concat(fails, " / ")) or "", byCount[3] or 0, byCount[4] or 0, byCount[5] or 0), #fails == 0 and sequences > 0 and (byCount[3] or 0) > 0 and (byCount[5] or 0) > 0)
 end
 
 -- 수정 부수기 점프맵(BossJumpMapData): 코스마다 완주 가능(단계마다 가장 약한 기술 조합의 최대 간격 × safety 안 · 대시 간격 · 어려운 단계 수 · 발판 폭 · 마지막 = 수정) + 8방위 자리 배치.

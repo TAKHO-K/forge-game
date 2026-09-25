@@ -961,10 +961,13 @@ HANDLERS.ring = {
 		local skill = c.skill
 		if skill.randomRhythm then -- BR1-2 지진파: 시전마다 3 · 4 · 5박 · 상/하 무작위 순서
 			skill = table.clone(skill)
-			skill.rhythm = BossSkillMath.rollRhythm(skill, function()
+			local key
+			skill.rhythm, key = BossSkillMath.rollRhythm(skill, function()
 				return scatterRng:NextNumber()
-			end)
-			debugEvent("rhythmRoll", { label = skill.rhythm.label, at = c.now })
+			end, nil, c.data.curveTier, st.lastRhythmKey and st.lastRhythmKey[c.st.current])
+			st.lastRhythmKey = st.lastRhythmKey or {}
+			st.lastRhythmKey[c.st.current] = key -- 같은 조합 연속 금지(스킬마다)
+			debugEvent("rhythmRoll", { label = skill.rhythm.label, key = key, at = c.now })
 		end
 		st.ringWaves = BossSkillMath.ringWaves(skill)
 		startHop(c, st.ringWaves[1].startSeconds)

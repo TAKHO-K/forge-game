@@ -47,36 +47,45 @@ function BossSkillMath.ringWaves(skill)
 	return waves
 end
 
--- BR1-2 지진파 무작위 리듬(skill.randomRhythm): 파동 수 counts 중 하나 · 파동마다 하단(땅) / 상단(공중 파동) - 두 종류 모두 · 같은 종류 maxSameInRow 초과 연속 없음.
--- rng01 = 0 ~ 1 난수 함수. types를 주면 그 순서 그대로(하네스가 모든 순서를 검사할 때). 반환 = skill.rhythm과 같은 모양의 표.
-function BossSkillMath.rollRhythm(skill, rng01, types)
-	local spec = skill.randomRhythm
-	if not types then
-		local count = spec.counts[math.clamp(math.floor(rng01() * #spec.counts) + 1, 1, #spec.counts)]
-		repeat
-			types = {}
-			local ok, run = true, 0
-			for i = 1, count do
-				types[i] = rng01() < 0.5 and "air" or "ground"
-				run = (i > 1 and types[i] == types[i - 1]) and run + 1 or 1
-				ok = ok and run <= spec.maxSameInRow
-			end
-			local hasAir, hasGround = false, false
-			for _, t in ipairs(types) do
-				hasAir = hasAir or t == "air"
-				hasGround = hasGround or t == "ground"
-			end
-		until ok and hasAir and hasGround
-	end
-	local rhythm = { label = "무작위 " .. #types .. "박" }
-	for i, t in ipairs(types) do
-		local wave = { speedStuds = spec.speedStuds, air = t == "air" and spec.air or nil }
-		if i > 1 then
-			wave.gapSeconds = types[i - 1] == "air" and spec.gapAfterAirSeconds or spec.gapAfterGroundSeconds
+-- BR1-2 지진파 무작위 리듬(skill.randomRhythm - BossData quakeRhythm): 박 수 = 곡선 단계(tier) 확률표 · 순서 = 읽을 수 있는 조합(sequences[박 수]) · 직전과 같은 조합 금지(lastKey).
+-- key(예 "GAG")를 주면 그 조합 그대로(하네스). rng01 = 0 ~ 1 난수. 반환 = skill.rhythm과 같은 모양의 표, 조합 key.
+function BossSkillMath.rhythmFromKey(spec, key)
+	local rhythm = { label = "무작위 " .. #key .. "박 " .. key }
+	local prev = nil
+	for i = 1, #key do
+		local t = key:sub(i, i)
+		local wave = { speedStuds = spec.speedStuds, air = t == "A" and spec.air or nil, layers = spec.layers, layerGapSeconds = spec.layerGapSeconds }
+		if prev then
+			wave.gapSeconds = prev == "A" and spec.gapAfterAirSeconds or spec.gapAfterGroundSeconds
 		end
 		rhythm[i] = wave
+		prev = t
 	end
 	return rhythm
+end
+
+function BossSkillMath.rollRhythm(skill, rng01, key, tier, lastKey)
+	local spec = skill.randomRhythm
+	if not key then
+		local weights = spec.countWeightsByTier[math.clamp(tier or 1, 1, #spec.countWeightsByTier)]
+		local roll, count = rng01(), nil
+		for _, n in ipairs({ 3, 4, 5 }) do
+			roll -= weights[n] or 0
+			if roll < 0 and not count then
+				count = n
+			end
+		end
+		count = count or 5
+		local list = spec.sequences[count]
+		local choices = {}
+		for _, candidate in ipairs(list) do
+			if candidate ~= lastKey or #list == 1 then
+				table.insert(choices, candidate)
+			end
+		end
+		key = choices[math.clamp(math.floor(rng01() * #choices) + 1, 1, #choices)]
+	end
+	return BossSkillMath.rhythmFromKey(spec, key), key
 end
 
 -- 연발(sequential) 원의 둘째부터의 예고 길이 상한. P3c A4 추적(skill.trackAfterHit - 폭풍 군주의 낙뢰): 앞 판정에 누가 맞았으면 다음 원이 그 사람을 trackSeconds 동안

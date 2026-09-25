@@ -307,6 +307,29 @@ local function airGrab(label, motion)
 	}
 end
 
+-- BR1-2 지진파(링 패턴) 무작위(사용자 - 지진파 있는 보스 전부): 시전마다 박 수 3 · 4 · 5를 **난이도 곡선 단계**(BossCurveData tier)별 확률로 뽑고,
+-- 상(A = 머리 높이 공중 파동 - 땅에 붙어 피한다) · 하(G = 땅 파동 - 점프로 넘는다) 순서는 **읽을 수 있는 조합** 목록에서만 뽑는다(같은 조합 연속 금지).
+-- 읽을 수 있는 조합 = 두 종류 모두 · 같은 종류 3연속 없음 · 번갈아가 기본이고 두 번 겹치는 곳은 한 군데까지(3박 4 · 4박 5 · 5박 5 = 14가지).
+-- 보스마다 표를 따로 줄 수 있다(스킬의 randomRhythm.sequences · countWeightsByTier) - 지금 4개 스킬이 이 기본 표를 같이 쓴다.
+local QUAKE_SEQUENCES = {
+	[3] = { "GAG", "AGA", "GGA", "AGG" },
+	[4] = { "GAGA", "AGAG", "GGAG", "GAGG", "AGGA" },
+	[5] = { "GAGAG", "AGAGA", "GGAGA", "GAGGA", "AGAGG" },
+}
+local QUAKE_COUNT_WEIGHTS = { -- [곡선 단계] = { [3박] = 확률, [4박], [5박] } - 초반 3박이 많고 후반 5박이 많다
+	{ [3] = 0.7, [4] = 0.25, [5] = 0.05 },
+	{ [3] = 0.45, [4] = 0.4, [5] = 0.15 },
+	{ [3] = 0.25, [4] = 0.45, [5] = 0.3 },
+	{ [3] = 0.1, [4] = 0.4, [5] = 0.5 },
+}
+local function quakeRhythm(speedStuds, gapAfterGround, gapAfterAir, layers, layerGapSeconds)
+	return {
+		sequences = QUAKE_SEQUENCES, countWeightsByTier = QUAKE_COUNT_WEIGHTS,
+		speedStuds = speedStuds, gapAfterGroundSeconds = gapAfterGround, gapAfterAirSeconds = gapAfterAir,
+		layers = layers, layerGapSeconds = layerGapSeconds, air = { minStuds = 4, maxStuds = 14 },
+	}
+end
+
 -- BR1-2 평타 사거리(사용자 - 원거리가 안 맞고 플레이하지 않게): 피할 수 없는 기본 공격이 fullStuds(26 = 원거리 직업 최대 사거리 약 24 + 여유)까지 그대로 닿는다 ·
 -- 그 밖(아주 먼 거리 - 플레이어도 못 때리는 자리) ~ farStuds(60)는 farMultiplier(반감) · 그보다 멀면 안 닿는다. 원 밖이라고 반감하지 않는다(궁수 · 치유사 정체성 보호).
 -- damageScale: 사거리가 넓어져 원거리도 스킬 사이 내내 평타를 맞는다(노출 12% → 약 70% - 난이도 모형 가정) → 한 방을 줄여 초당 5% → 1.5%(피할 수 없는 공격은 낮게 - BR1 원칙 그대로).
@@ -373,7 +396,7 @@ local function guardianSkills()
 			-- BR1-2 지진파(사용자): 시전마다 파동 수 3 · 4 · 5 중 무작위 · 하단(땅 - 점프로 넘는다) · 상단(머리 높이 공중 파동 - 땅에 붙어 피한다)이 무작위 순서로 섞인다
 			-- (두 종류 모두 들어가고 같은 종류 3연속 없음 - BossSkillMath.rollRhythm). 간격 = 하단 뒤 1.5(다시 뛰기 1.175 이상) · 상단 뒤 1.3(서 있다가 뛰기).
 			-- 위 rhythm은 회피 검사 · 모형의 대표값(3박) - 실제 시전은 이 표로 굴린다. 하네스가 가능한 순서 전부를 회피 부등식에 넣는다.
-			randomRhythm = { counts = { 3, 4, 5 }, speedStuds = 24, gapAfterGroundSeconds = 1.5, gapAfterAirSeconds = 1.3, air = { minStuds = 4, maxStuds = 14 }, maxSameInRow = 2 },
+			randomRhythm = quakeRhythm(24, 1.5, 1.3),
 			waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4,
 			-- 공중 판정 여유 - 지면 거리가 서 있을 때(HipHeight + 루트 반높이)보다 이만큼 더 크면 공중(21-3 실측).
 			airborneClearanceStuds = 0.5,
@@ -764,6 +787,7 @@ local SPECIES = {
 					-- BR1(땅 · 공중 겹침): 3박째 = 공중 파동(발 높이 지면 + 4 ~ 14) - 1 · 2박은 뛰고 3박은 서 있는다.
 					{ gapSeconds = 1.5, speedStuds = 18, layers = 2, layerGapSeconds = 4 / 18, air = { minStuds = 4, maxStuds = 14 } },
 				},
+				randomRhythm = quakeRhythm(24, 1.6, 1.5, 2, 4 / 24), -- BR1-2 지진파 무작위(해일 - 두 겹 · 겹 통과 0.33초 ≤ 체공 0.54 · 뒷겹만큼 간격을 늘렸다)
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				layers = 2, layerGapSeconds = 4 / 24,
 				damage = { kind = "attack", multiplier = 1 }, damageLabel = "해일",
@@ -1126,6 +1150,7 @@ local SPECIES = {
 				-- BR1(공중 전제 §2 - 한 체공 1.50초로 전부 넘던 문제): 3파동 "천둥 · 공중 메아리 · 천둥" - 첫 박 → 끝 박 2.4초(≥ 한 체공 최대 1.96 + 여유).
 				-- 2박 = 공중 파동(발 +4 ~ 14 - 서 있는다). 3박 속도는 메아리와 같은 20(빠른 파동이 느린 파동을 뒤따르면 멀리서 따라잡아 "다시 뛰기"가 깨진다).
 				rhythm = { label = "천둥 · 공중 메아리 · 천둥", { speedStuds = 36 }, { gapSeconds = 1.2, speedStuds = 20, air = { minStuds = 4, maxStuds = 14 } }, { gapSeconds = 1.2, speedStuds = 20 } },
+				randomRhythm = quakeRhythm(20, 1.3, 1.2), -- BR1-2 지진파 무작위(방전 고리 - 한 속도라 거리마다 차가 같다)
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				damage = { kind = "attack", multiplier = 1.5 }, damageLabel = "방전 고리",
 				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
@@ -1215,6 +1240,7 @@ local SPECIES = {
 				cooldownSeconds = 15, priority = P.normal, starvationSeconds = 45,
 				telegraphSeconds = 1.6, waveCount = 3, repeatIntervalSeconds = 1.6,
 				rhythm = { label = "느린 고리 · 공중 · 느린 고리", { speedStuds = 12 }, { gapSeconds = 1.6, speedStuds = 12, air = { minStuds = 4, maxStuds = 14 } }, { gapSeconds = 1.6, speedStuds = 12 } },
+				randomRhythm = quakeRhythm(12, 1.6, 1.6), -- BR1-2 지진파 무작위(느린 천둥 고리)
 				waveSpeedStuds = 12, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "천둥 고리",
 			},
