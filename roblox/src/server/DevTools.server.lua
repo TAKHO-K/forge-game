@@ -3383,6 +3383,7 @@ if RunService:IsStudio() then
 				{ "P3dF(나)", function() require(script.Parent.P3dFVerify).runLive(player, env) end }, -- P3d-F: 재생성 누수 5회 · 받는 피해 배율 출처별 · 끼임 중 피격 · 단상 균열 예고 · 상한 교체
 				{ "G2a(나)", function() require(script.Parent.G2aVerify).runLive(player, env) end }, -- G2a: 높이 검증 실제 Player · 보스 기여도(계수 전) · 이속 상한 · 구조물 낙하
 				{ "M1-0(나)", function() require(script.Parent.M1_0Verify).runLive(player, env) end }, -- M1-0: 합법 최대 높이 되돌림 0 · 기본 Shift Lock 꺼짐 · 아레나 공중 복귀 0
+				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "G1-4(나)", function() require(script.Parent.G1_4Verify).runLive(player, env) end }, -- G1-4: 보스맵 잔류 · 다음 / 다시 도전 / 마을 · 90초
 				{ "G1-3(나)", function() require(script.Parent.G1_3Verify).runLive(player, env) end }, -- G1-3: 레벨차 계수(실제 Player)
@@ -3741,6 +3742,16 @@ if RunService:IsStudio() and verifyEnabled("G1-3(가)") then
 		local ok, err = pcall(require(script.Parent.G1_3Verify).runPure)
 		if not ok then
 			warn(("[G1-3(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ BR1 자동 검증 블록(가) - 회피 부등식(6종 × 범위 배율) · 겹침 분류 · 대공 잡기 수치 · 첫 도전 모형(docs/design/boss-br1.md) ═══
+if RunService:IsStudio() and verifyEnabled("BR1(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.BR1Verify).runPure)
+		if not ok then
+			warn(("[BR1(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end
