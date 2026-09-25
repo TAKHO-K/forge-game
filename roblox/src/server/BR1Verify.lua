@@ -468,6 +468,17 @@ function BR1Verify.runLive(player, env)
 				local shielded = model:GetAttribute("BossShielded") == true
 				r.check(("%s 환경 %s: 전조 %.1f초 → 코스 발판 + 벽 %d(기대 > 36) · 수정 %d(기대 2) · 보호막 %s · 피해 1000 → 체력 변화 %s(기대 0)"):format(bossId, envData.id, envData.telegraphSeconds, parts, crystals, tostring(shielded),
 					tostring(hpBoss0 and hpBoss1 and (hpBoss0 - hpBoss1))), parts > 36 and crystals == 2 and shielded and (hpBoss0 == nil or hpBoss0 == hpBoss1))
+				-- BR1-2 도움 단계: 전투 시계를 당겨 1단계(높이 점프 발판) · 2단계(발사 발판)가 서는가 · 그동안 보스는 패턴 없음
+				local BossJumpCourse = require(script.Parent.BossJumpCourse)
+				local help = require(ReplicatedStorage.Shared.data.BossJumpMapData).help
+				BossJumpCourse.debugHelp(model, help.stage1Seconds + 0.5)
+				drive(player, root, model, data, 0.3)
+				local stage1, pads1 = BossJumpCourse.debugHelp(model)
+				BossJumpCourse.debugHelp(model, help.stage2Seconds - help.stage1Seconds)
+				drive(player, root, model, data, 0.3)
+				local stage2, pads2 = BossJumpCourse.debugHelp(model)
+				r.check(("%s 도움 단계: %d초 → 단계 %d · 발판 %d / %d초 → 단계 %d · 발판 %d(발사 +2) · 알림 %d · 보스 패턴 %s"):format(bossId, help.stage1Seconds, stage1, pads1, help.stage2Seconds, stage2, pads2, countKind("courseHelp"), tostring(st.phase)),
+					stage1 == 1 and pads1 > 0 and stage2 == 2 and pads2 == pads1 + 2 and countKind("courseHelp") == 2 and st.phase == "normal")
 				-- 수정 둘을 때려 깬다(구출 대상 타격 경로 - 1인 간격을 두고 3번씩)
 				for _, target in ipairs(MonsterState.getAllModels()) do
 					local d = MonsterState.getData(target)
