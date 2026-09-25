@@ -337,6 +337,7 @@ function BossArenaMap.breakObstacle(zoneKey, id, cause)
 	end
 	obstacle.broken = true
 	state.obstacles[id] = nil
+	state.obstacleSerial = (state.obstacleSerial or 0) + 1 -- G1-0 리뷰 3 · 4: 나눠 도는 계획 · 미리 본 자리가 낡았는지 가른다
 	destroyObstacle(obstacle)
 	local released = BossArenaMap.releaseEncased(state, obstacle)
 	local launched, dropped = fireBreak(state, obstacle, cause)
@@ -434,20 +435,59 @@ end
 
 -- G1-0(P3d-F 결정 3): 긴 계산을 여러 프레임에 나누는 체크포인트. 한 조각이 regrow.frameBudgetMs의 yieldAtFraction을 넘기면 다음 Heartbeat로 양보한다.
 -- 반환: checkpoint 함수, 통계 읽기 함수(조각 수 · 가장 긴 조각 ms).
+-- 리뷰 2: 예산은 **서버 전체 한 프레임** 기준이다(아레나 12개가 같은 프레임에 재개돼도 합이 예산 안) - 조각마다 쓴 시간을 프레임 누적(frameUsed)에 더하고,
+-- 누적이 기준을 넘으면 다음 프레임으로 넘긴다. 재개 직후에도 이 프레임의 누적이 이미 차 있으면 한 번 더 넘긴다.
+local frameId, frameUsed, frameUsedId, frameUsedPeak = 0, 0, 0, 0
+RunService.Heartbeat:Connect(function()
+	if frameUsedId == frameId then
+		frameUsedPeak = math.max(frameUsedPeak, frameUsed)
+	end
+	frameId += 1
+end)
+local function addFrameUsed(seconds)
+	if frameUsedId ~= frameId then
+		frameUsedId, frameUsed = frameId, 0
+	end
+	frameUsed += seconds
+end
+local function frameFull(threshold)
+	return frameUsedId == frameId and frameUsed >= threshold
+end
+
+-- 검증용: 나눠 도는 계산이 한 프레임에 쓴 합의 최댓값(ms) - reset이면 0으로.
+function BossArenaMap.debugFrameUsedPeakMs(reset)
+	local peak = math.max(frameUsedPeak, frameUsedId == frameId and frameUsed or 0) * 1000
+	if reset then
+		frameUsedPeak = 0
+	end
+	return peak
+end
+
 local function newSlicer()
 	local threshold = REGROW.frameBudgetMs / 1000 * REGROW.yieldAtFraction
-	local sliceStart, maxSlice, frames = os.clock(), 0, 1
+	local frames = 1
+	while frameFull(threshold) do
+		RunService.Heartbeat:Wait()
+		frames += 1
+	end
+	local sliceStart, maxSlice = os.clock(), 0
 	local function checkpoint()
 		local elapsed = os.clock() - sliceStart
-		if elapsed >= threshold then
-			maxSlice = math.max(maxSlice, elapsed)
-			RunService.Heartbeat:Wait()
-			frames += 1
+		local used = frameUsedId == frameId and frameUsed or 0
+		if used + elapsed >= threshold then
+			addFrameUsed(elapsed)
+			maxSlice = math.max(maxSlice, frameUsed)
+			repeat
+				RunService.Heartbeat:Wait()
+				frames += 1
+			until not frameFull(threshold)
 			sliceStart = os.clock()
 		end
 	end
 	local function stats()
-		return frames, math.max(maxSlice, os.clock() - sliceStart) * 1000
+		addFrameUsed(os.clock() - sliceStart) -- 마지막 조각(끝까지)
+		sliceStart = os.clock()
+		return frames, math.max(maxSlice, frameUsed) * 1000
 	end
 	return checkpoint, stats
 end
@@ -493,6 +533,7 @@ function BossArenaMap.planRegrow(zoneKey, context)
 		table.insert(pits, r)
 	end
 	local checkpoint, sliceStats = nil, nil
+	local serialBefore = state.obstacleSerial
 	if context.sliced then
 		checkpoint, sliceStats = newSlicer()
 	end
@@ -508,8 +549,8 @@ function BossArenaMap.planRegrow(zoneKey, context)
 		if active[zoneKey] ~= state or context.token and context.token ~= state.regrowToken then
 			return nil, "cancelled"
 		end
-		local old = oldest and state.obstacles[oldest]
-		if oldest and (not old or old.broken or (old.encased and next(old.encased))) then
+		-- 리뷰 4: 나눠 도는 사이 구조물이 솟거나 부서졌으면(개수 · 교체 대상 · 자리가 낡음) 이번 계획은 버린다(전조 전이라 플레이어에게는 안 보인다)
+		if state.obstacleSerial ~= serialBefore then
 			return nil, "stale"
 		end
 	end
@@ -545,7 +586,8 @@ function BossArenaMap.spawnRegrown(zoneKey, plan, context)
 			table.insert(pits, r)
 		end
 		local checkpoint = context.sliced and newSlicer() or nil
-		local ok, why = ArenaLayout.regrowFits(plan.item, itemsOf(state), { kit = state.layoutOptions.kit, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds, checkpoint = checkpoint, skipOpen = context.skipOpen })
+		local ok, why = ArenaLayout.regrowFits(plan.item, itemsOf(state), { kit = state.layoutOptions.kit, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds, checkpoint = checkpoint,
+			skipOpen = context.skipOpen and plan.checkedSerial ~= nil and plan.checkedSerial == state.obstacleSerial })
 		if checkpoint and (active[zoneKey] ~= state or state.regrowToken ~= plan.token) then
 			return nil, "cancelled" -- G1-0: 나눠 도는 사이 보스전이 바뀌었다
 		end
@@ -574,10 +616,12 @@ function BossArenaMap.precheckRegrow(zoneKey, plan, context)
 	end
 	local boss = context.boss and { x = context.boss.X - zone.center.X, z = context.boss.Z - zone.center.Z } or nil
 	local checkpoint = newSlicer()
+	local serialBefore = state.obstacleSerial
 	local ok, why = ArenaLayout.regrowFits(plan.item, itemsOf(state), { kit = state.layoutOptions.kit, boss = boss, pits = pits, mounds = state.layout.mounds, checkpoint = checkpoint })
 	if active[zoneKey] ~= state or state.regrowToken ~= plan.token then
 		return false, "cancelled"
 	end
+	plan.checkedSerial = (state.obstacleSerial == serialBefore) and serialBefore or nil -- 리뷰 3: 이 뒤 구조물이 바뀌면 솟는 순간 전체 검사
 	return ok, why
 end
 
@@ -875,6 +919,7 @@ function spawnObstacle(state, zone, item)
 		end,
 	})
 	state.obstacles[id] = obstacle
+	state.obstacleSerial = (state.obstacleSerial or 0) + 1
 	return obstacle
 end
 

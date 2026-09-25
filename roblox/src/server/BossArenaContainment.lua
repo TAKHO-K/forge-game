@@ -30,6 +30,9 @@ end
 
 function BossArenaContainment.untrack(encounter)
 	tracked[encounter] = nil
+	for _, member in ipairs(encounter.members or {}) do
+		offFloorSince[member] = nil -- 리뷰 7
+	end
 end
 
 function BossArenaContainment.corrections()
@@ -42,6 +45,17 @@ function BossArenaContainment.isProtected(player)
 end
 BossArenaMap.isLaunchProtected = BossArenaContainment.isProtected -- 구조물 파편 넉백(BossArenaMap은 이 모듈을 모른다 - 훅으로 건다)
 
+-- G1-0: 그 자리 둘레에 동적 지형(얼음 기둥 · 모래 구덩이)이 있는가.
+local function propNear(encounter, point)
+	for _, prop in ipairs(encounter.model and BossArenaProps.list(encounter.model) or {}) do
+		local dx, dz = point.X - prop.position.X, point.Z - prop.position.Z
+		if math.sqrt(dx * dx + dz * dz) < (prop.radius or 0) + CONTAINMENT.spawnPropClearStuds then
+			return true
+		end
+	end
+	return false
+end
+
 -- P3d B1: 이 멤버의 스폰 자리(입장 자리 - BossEncounter가 입장 · 재도전 때 쓰는 것과 같은 순번). 구조물에 덮였으면 nil.
 function BossArenaContainment.spawnPointFor(encounter, member)
 	local members = encounter.members or {}
@@ -51,11 +65,8 @@ function BossArenaContainment.spawnPointFor(encounter, member)
 		return nil
 	end
 	-- G1-0: 동적 지형(얼음 기둥 · 모래 구덩이)이 스폰 자리를 덮었어도 안전 지점으로(끼임 0)
-	for _, prop in ipairs(encounter.model and BossArenaProps.list(encounter.model) or {}) do
-		local dx, dz = point.X - prop.position.X, point.Z - prop.position.Z
-		if math.sqrt(dx * dx + dz * dz) < (prop.radius or 0) + CONTAINMENT.spawnPropClearStuds then
-			return nil
-		end
+	if propNear(encounter, point) then
+		return nil
 	end
 	-- 리뷰 10: 그 자리 지면 위(둔덕 가장자리에 걸린 순번이면 둔덕 윗면 위)로 올린다
 	local floorTopY = BossArenaMap.floorTopY()
@@ -69,6 +80,7 @@ function BossArenaContainment.checkMember(encounter, member)
 	local character = typeof(member) == "Instance" and member.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not zone or not zone.radius or not root or root.Anchored then
+		offFloorSince[member] = nil -- 리뷰 7: 고정(잡힘 · 끼임) · 캐릭터 없음 동안은 시간을 새로 잰다
 		return false
 	end
 	local floorTopY = BossArenaMap.floorTopY()
@@ -76,7 +88,9 @@ function BossArenaContainment.checkMember(encounter, member)
 	-- G1-0: 벽 윗면 높이에 offFloorReturnSeconds 넘게 머물면(벽 위에 착지) 바닥 위가 아닌 것으로 보고 복귀
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local standing = (humanoid and humanoid.HipHeight or 2) + root.Size.Y / 2
-	if ArenaContainment.isOffFloorHeight(root.Position.Y - standing, floorTopY, GEOMETRY.wallHeightStuds) then
+	-- 리뷰 1: 회오리 체공(무적 출처 launchHold) 중에는 붙잡힌 높이라 벽 위가 아니다 - 끝난 뒤부터 잰다
+	local lifted = PlayerState.debugIncomingSources(member).launchHold ~= nil
+	if not lifted and ArenaContainment.isOffFloorHeight(root.Position.Y - standing, floorTopY, GEOMETRY.wallHeightStuds) then
 		offFloorSince[member] = offFloorSince[member] or os.clock()
 		if not outside and os.clock() - offFloorSince[member] >= CONTAINMENT.offFloorReturnSeconds then
 			outside, reason = true, "offFloor"
@@ -92,7 +106,7 @@ function BossArenaContainment.checkMember(encounter, member)
 	local spawn = to ~= nil
 	if not to then
 		local point = ArenaContainment.rescuePoint(zone, root.Position, function(p)
-			return BossArenaMap.overlapsObstacle(encounter.zoneKey, p, 1.5, 0.5)
+			return BossArenaMap.overlapsObstacle(encounter.zoneKey, p, 1.5, 0.5) or propNear(encounter, p) -- 리뷰 6: 대체 자리도 동적 지형 피함
 		end)
 		to = Vector3.new(point.X, (GroundProbe.surfaceY(point.X, point.Z, floorTopY) or floorTopY) + 3, point.Z)
 	end

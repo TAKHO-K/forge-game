@@ -476,6 +476,7 @@ function G1_0Verify.runLive(player, env)
 				table.insert(keys, zoneKey)
 			end
 			local frameMax, frames, planMax, planSlices, maxSlice, done = 0, 0, 0, 0, 0, 0
+			BossArenaMap.debugFrameUsedPeakMs(true)
 			local conn = RunService.Heartbeat:Connect(function()
 				frames += 1
 				frameMax = math.max(frameMax, Stats.HeartbeatTimeMs)
@@ -503,15 +504,16 @@ function G1_0Verify.runLive(player, env)
 				waited += RunService.Heartbeat:Wait()
 			end
 			conn:Disconnect()
+			local framePeak = BossArenaMap.debugFrameUsedPeakMs(true) -- 리뷰 2: 서버 전체 한 프레임 합(아레나 12개 스레드 합)
 			for _, zoneKey in ipairs(keys) do
 				BossArenaMap.undress(zoneKey)
 			end
-			return frameMax, maxSlice, planMax, planSlices, waited
+			return frameMax, sliced and framePeak or maxSlice, planMax, planSlices, waited
 		end
 		local f0, s0, p0, _, w0 = run(false)
 		task.wait(0.5)
 		local f1, s1, p1, n1, w1 = run(true)
-		r.check(("D 12아레나 × %d회 동시: 한 번에 - Heartbeat 최대 %.2fms · 자리 찾기 한 번 최대 %.2fms(%.1f초) → 나눠서 - Heartbeat 최대 %.2fms · 한 프레임 최대 %.2fms(기대 ≤ %.1f) · 조각 %d · 끝까지 최대 %.1fms(%.1f초)"):format(
+		r.check(("D 12아레나 × %d회 동시: 한 번에 - Heartbeat 최대 %.2fms · 자리 찾기 한 번 최대 %.2fms(%.1f초) → 나눠서 - Heartbeat 최대 %.2fms · 한 프레임 합(12아레나) 최대 %.2fms(기대 ≤ %.1f) · 조각 %d · 끝까지 최대 %.1fms(%.1f초)"):format(
 			REGROW.maxObstacles + 2, f0, s0, w0, f1, s1, REGROW.frameBudgetMs, n1, p1, w1), s1 <= REGROW.frameBudgetMs and f1 <= f0)
 	end)
 

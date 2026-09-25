@@ -546,6 +546,9 @@ local function regrowObstacles(c, effect)
 						end
 						-- G1-0(P3d-F 결정 2): 솟는 순간 닿은 사람은 밀리든 끼이든 같은 피해(regrow.damage = 평타 ×2). 끼인 동안 무적은 없다.
 						applySkillDamage(model, data, REGROW_SKILL, v.player)
+						if outcome == "encase" and (PlayerState.getHp(v.player) or 0) <= 0 then
+							outcome = "dead" -- 리뷰 5: 그 피해로 죽었으면 끼우지 않는다(죽은 캐릭터 고정 · 탈출 표시 · 교체 제외 방지)
+						end
 						if outcome == "encase" then
 							BossArenaMap.encase(zoneKey, obstacle, v.player, v.root)
 						end
