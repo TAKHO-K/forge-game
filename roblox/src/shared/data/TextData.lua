@@ -73,6 +73,18 @@ return {
 		["rebirth.tab.status"] = "환생 {count}/{max}회 · 현재 레벨 {level} · 필요 레벨 {required} · 경험치 ×{expFrom} → ×{expTo}",
 		["world.communityCenter"] = "커뮤니티 센터",
 
+		-- 보스맵 잔류(G1-4)
+		["linger.title"] = "보스 처치!",
+		["linger.line"] = "스테이지 {stage} 보스를 잡았습니다. {seconds}초 뒤 스테이지 {next}(으)로 자동 이동합니다.",
+		["linger.lineNoNext"] = "스테이지 {stage} 보스를 잡았습니다. {seconds}초 뒤 마을로 돌아갑니다.",
+		["linger.next"] = "다음 스테이지",
+		["linger.retry"] = "다시 도전",
+		["linger.retryVote"] = "재도전 투표",
+		["linger.town"] = "마을",
+		["linger.noNextReason"] = "이 보스 기록이 오르지 않아 다음 스테이지로 갈 수 없습니다",
+		["linger.leaderOnly"] = "파티 리더만 신청합니다",
+		["linger.cannotNext"] = "다음 스테이지로 갈 수 없어 마을로 돌아갑니다(이 보스 기록이 오르지 않았습니다)",
+
 		-- 채팅 · 알림
 		["chat.primalDrop"] = "★ {name}님이 <font color=\"{color}\">{item}</font>을 얻었습니다",
 	},

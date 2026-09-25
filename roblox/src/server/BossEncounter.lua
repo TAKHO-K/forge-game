@@ -71,6 +71,16 @@ end
 -- 고정되므로 도중 합류는 없다, PRD 20.47 [6](다)). 리스너는 encounter 하나를 받는다(party 필드로 파티 여부 판단).
 local startedListeners = {}
 local endedListeners = {}
+local lingerListeners = {} -- G1-4: 처치 뒤 잔류가 시작됐다(encounter) - BossLinger가 멤버에게 선택 창을 연다
+local returnedListeners = {} -- G1-4: 멤버 한 명이 사냥터로 돌아갔다(player)
+
+function BossEncounter.onLingerStarted(fn)
+	table.insert(lingerListeners, fn)
+end
+
+function BossEncounter.onMemberReturned(fn)
+	table.insert(returnedListeners, fn)
+end
 
 function BossEncounter.onEncounterStarted(fn)
 	table.insert(startedListeners, fn)
@@ -472,7 +482,9 @@ end
 -- 정리한다 / 물러남은 true - 즉시 지운다). 남은 멤버 전원을 사냥터로 돌려보내고 슬롯을 반납한다.
 local function endEncounter(encounter, destroyModel)
 	BossTrap.releaseAll(encounter.members, "reset") -- 29-1: 잡힌 채로 사냥터에 돌아가지 않는다
-	BossPatterns.clearProps(encounter.model, encounter.members) -- 29-3: 동적 지형(얼음 기둥)은 보스전과 함께 사라진다
+	if encounter.model then -- G1-4: 잔류 중에는 보스 모델이 없다
+		BossPatterns.clearProps(encounter.model, encounter.members) -- 29-3: 동적 지형(얼음 기둥)은 보스전과 함께 사라진다
+	end
 	if not destroyModel and encounter.hintOwner then
 		hintWipes[encounter.hintOwner] = nil -- 처치 - 이 보스의 힌트 단계를 지운다(PRD 20.73 [1-5])
 	end
@@ -485,13 +497,17 @@ local function endEncounter(encounter, destroyModel)
 		BossArenaMap.releaseMember(encounter.zoneKey, member) -- P3d 리뷰 3: 끼인 채 사냥터로 가지 않게(고정 · 0배 · 머리 위 표시)
 		if member.Parent then
 			teleportTo(member, huntingGroundReturnPosition())
+			fireListeners(returnedListeners, member) -- G1-4: 잔류 중 맡아 둔 가방 가득 드랍을 사냥터 발밑에(BossLinger)
 		end
 	end
 	encounter.members = {}
-	encounterByModel[encounter.model] = nil
-	if destroyModel then
-		MonsterState.clear(encounter.model)
-		encounter.model:Destroy()
+	encounter.lingering = false
+	if encounter.model then
+		encounterByModel[encounter.model] = nil
+		if destroyModel then
+			MonsterState.clear(encounter.model)
+			encounter.model:Destroy()
+		end
 	end
 	BossArenaKit.destroy(encounter.kitParts) -- 29-2: 다음 보스가 같은 슬롯을 깨끗한 아레나로 받는다
 	encounter.kitParts = nil
@@ -534,6 +550,7 @@ function BossEncounter.leaveFor(player)
 	BossArenaMap.releaseMember(encounter.zoneKey, player) -- P3d 리뷰 3
 	if player.Parent then
 		teleportTo(player, huntingGroundReturnPosition())
+		fireListeners(returnedListeners, player) -- G1-4
 	end
 	if #encounter.members == 0 then
 		endEncounter(encounter, true)
@@ -554,6 +571,83 @@ function BossEncounter.clearForModel(model)
 	end
 end
 
+-- ═══ G1-4 보스맵 잔류(D0 결정 5) ═══
+-- 처치 직후 부른다(CombatResolution). 멤버는 아레나에 남고 슬롯도 그대로다 - 보스 모델만 없다(encounter.model = nil · lingering = true).
+-- 선택([다음 스테이지] · [다시 도전] · [마을])과 90초 자동 이동은 server/BossLinger. 반환: 잔류에 들어갔는가(false면 옛 동작 - 전원 복귀).
+-- 견습 보스 · 검증 체인(debugLingerOff - 처치 직후 복귀를 전제로 한 옛 검증을 지킨다)은 옛 동작.
+BossEncounter.debugLingerOff = false
+function BossEncounter.enterLinger(model)
+	local encounter = encounterByModel[model]
+	if not encounter then
+		return false
+	end
+	if encounter.isTutorial or BossEncounter.debugLingerOff then
+		endEncounter(encounter, false)
+		return false
+	end
+	BossTrap.releaseAll(encounter.members, "reset")
+	BossPatterns.clearProps(model, encounter.members)
+	if encounter.hintOwner then
+		hintWipes[encounter.hintOwner] = nil -- 처치 - 이 보스의 힌트 단계를 지운다(endEncounter와 같다)
+	end
+	for _, member in ipairs(encounter.members) do
+		BossPatterns.clearTelegraphsFor(member)
+		BossArenaMap.releaseMember(encounter.zoneKey, member)
+		if typeof(member) == "Instance" then
+			PlayerState.setTickDamageSource(member, model, nil)
+		end
+	end
+	encounterByModel[model] = nil
+	encounter.model = nil
+	encounter.lingering = true
+	encounter.lingerUntil = os.clock() + BossData.lingerSeconds
+	fireListeners(lingerListeners, encounter)
+	print(("[forge-game] 보스맵 잔류: 스테이지 %d · 멤버 %d · %d초"):format(encounter.stage, #encounter.members, BossData.lingerSeconds))
+	return true
+end
+
+function BossEncounter.isLingering(player)
+	local encounter = encounterOf[player]
+	return encounter ~= nil and encounter.lingering == true
+end
+
+-- 잔류 중인 보스전 목록(90초 자동 이동 검사 - BossLinger).
+function BossEncounter.lingeringEncounters()
+	local list, seen = {}, {}
+	for _, encounter in pairs(encounterOf) do
+		if encounter.lingering and not seen[encounter] then
+			seen[encounter] = true
+			table.insert(list, encounter)
+		end
+	end
+	return list
+end
+
+-- [다시 도전]: 같은 슬롯 · 같은 인스턴스 데이터로 보스를 다시 세운다. 남아 있는 멤버를 입장 자리로 · 구조물 복구 · 기록 시간 새로(리더보드는 첫 돌파만이라 재도전은 기록되지 않는다).
+function BossEncounter.retryLinger(encounter)
+	if not encounter.lingering or not encounter.slot or #encounter.members == 0 then
+		return false
+	end
+	local zone = WorldConfig.zones[encounter.zoneKey]
+	BossArenaMap.resetObstacles(encounter.zoneKey)
+	for i, member in ipairs(encounter.members) do
+		teleportTo(member, entryPositionForIndex(zone, i, #encounter.members))
+	end
+	local model = MonsterSpawner.spawn(encounter.data, zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 1.5, 0), encounter.zoneKey)
+	encounter.model = model
+	encounter.lingering = false
+	encounter.lingerUntil = nil
+	encounter.startedAt = os.clock()
+	model:SetAttribute("BossEncounterId", encounter.id)
+	encounterByModel[model] = encounter
+	BossPatterns.setGrace(model, encounter.data, encounter.data.scheduler.entryGraceSeconds)
+	if not encounter.isTutorial then
+		BossPatterns.setHintLevel(model, encounter.data, hintLevelFor(encounter.hintOwner, encounter.data.id))
+	end
+	print(("[forge-game] 보스 다시 도전: 스테이지 %d · 멤버 %d"):format(encounter.stage, #encounter.members))
+	return true
+end
+
 -- 옛 계약(TutorialState.onBossCleared) - 이 플레이어의 보스전을 처치 후 정리한다.
 function BossEncounter.clearFor(player)
 	local encounter = encounterOf[player]
@@ -570,7 +664,7 @@ end
 -- 돌아온다(아래 CharacterAdded 훅).
 function BossEncounter.resetFor(player)
 	local encounter = encounterOf[player]
-	local model = encounter and encounter.model
+	local model = encounter and encounter.model -- G1-4: 잔류 중이면 nil(리셋할 보스가 없다)
 	if not model or not model.Parent then
 		return
 	end

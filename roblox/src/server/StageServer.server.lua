@@ -102,6 +102,10 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 	-- 실제 이동(스테이지 갱신 + 보스 스폰/despawn + 즉시저장) - 파티 보스면 아래 투표를
 	-- 통과한 뒤에만, 그 외에는 지금 바로 실행한다.
 	local function performMove()
+		-- G1-4: 보스맵 잔류 중에 스테이지 선택 창으로 옮기면 그 사람만 잔류에서 빠진다(같이 남은 파티원의 잔류는 그대로).
+		if BossEncounter.isLingering(player) then
+			BossEncounter.leaveFor(player)
+		end
 		local previousStage = PlayerProfile.getInfiniteStage(player)
 		local isNewBest = PlayerProfile.setInfiniteStage(player, targetStage)
 		stageMoveResult:FireClient(player, {

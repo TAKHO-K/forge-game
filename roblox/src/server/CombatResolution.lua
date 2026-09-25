@@ -286,9 +286,13 @@ local function handleBossDeath(attacker, target)
 	end
 
 	-- 29-5: 보스의 정체가 스테이지만의 함수가 되면서(BossRules.bossIdForStage) 23-5의 "처치하면 pending을 지운다"는 없어졌다.
-	BossEncounter.clearForModel(target)
-	-- 28-1 [C-1]: 가방이 가득이라 못 넣은 장비는 멤버 전원이 사냥터로 돌아간 "뒤"에 그 발밑에 떨어뜨린다(위 clearForModel이 텔레포트).
-	flushDeferredBossDrops(deferredBossDrops, BossEncounter.huntingGroundReturnPosition())
+	-- G1-4: 잡아도 보스맵에 남는다(BossEncounter.enterLinger - 견습 · 검증 체인은 옛 동작: 전원 복귀). 가방이 가득이라 못 넣은 장비는 그 사람이 사냥터로 돌아간 뒤
+	-- 발밑에 떨어뜨린다(28-1 [C-1]) - 잔류면 BossLinger가 맡아 뒀다가 돌아가는 순간(다음 · 마을 · 90초 · 이동) 떨어뜨린다.
+	if BossEncounter.enterLinger(target) then
+		require(script.Parent.BossLinger).holdDrops(deferredBossDrops, flushDeferredBossDrops)
+	else
+		flushDeferredBossDrops(deferredBossDrops, BossEncounter.huntingGroundReturnPosition())
+	end
 	print(("[forge-game] 보스 처치: %s(스테이지 %d) - 보상 %d명 [%s]"):format(
 		monsterData.displayName, monsterData.stageNumber, #rewarded, table.concat(rewarded, ", ")))
 end
