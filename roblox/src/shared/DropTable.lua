@@ -7,10 +7,37 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 
 local DropTable = {}
 
 local PRIMORDIAL = "primordial"
+
+-- G1-1 보스 확정 장비 등급표(보상 목록 단일 소스 - 서버 굴림 Loot와 스테이지 선택 보상 띠가 같은 함수를 부른다).
+-- 첫 클리어: 환생 1회 이상 = 기본표, 0회 = 한 단계 올린 표(재무장 특례). 재도전: 등급 상승 없는 표.
+function DropTable.bossFirstClearGradeTable(rebirthCount)
+	if rebirthCount and rebirthCount > 0 then
+		return MonsterData.bossFirstClearGradeTable
+	end
+	return MonsterData.bossFirstClearUpgradedGradeTable
+end
+
+function DropTable.bossRetryGradeTable()
+	return DropTableData.bossGrades.retry
+end
+
+-- 등급표 → 확률 > 0인 등급을 낮은 등급부터 { { id, chance }... }(화면 목록용).
+function DropTable.gradeRows(gradeTable)
+	local rows = {}
+	for _, gradeId in ipairs(ArmorData.gradeOrder) do
+		local chance = gradeTable[gradeId]
+		if chance and chance > 0 then
+			table.insert(rows, { id = gradeId, chance = chance })
+		end
+	end
+	return rows
+end
 
 -- 잡몹 장비 1개의 기본 등급 분포(태초 별도 굴림 전 - 공정성 식의 입력). 표 밖 tier는 tier1.
 function DropTable.armorGradeTable(tierIndex)

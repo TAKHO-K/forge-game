@@ -47,6 +47,14 @@ return {
 		-- 파티
 		["party.help.short"] = "몬스터 피해의 {percent}% 이상을 넣어야 파티 보상을 받습니다.",
 
+		-- 스테이지 선택 보상 띠(StageRewardBand)
+		["band.every.head"] = "매번",
+		["band.every.body"] = "골드·경험치 {units}마리분",
+		["band.stone"] = "{name} ≈{count}",
+		["band.retry.head"] = "재도전",
+		["band.retry.body"] = "장비 1개({grades})",
+		["band.gradeChance"] = "{grade} {percent}",
+
 		-- 채팅 · 알림
 		["chat.primalDrop"] = "★ {name}님이 <font color=\"{color}\">{item}</font>을 얻었습니다",
 	},

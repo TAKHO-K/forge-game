@@ -13,16 +13,17 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
-local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local DropTable = require(ReplicatedStorage.Shared.DropTable)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Button = require(script.Parent.ui.kit.Button)
 local HelpToggle = require(script.Parent.ui.kit.HelpToggle)
 local Theme = require(script.Parent.ui.kit.Theme)
 
 local StageRewardBand = {}
 
-local MAX_ROWS = 4 -- 첫 클리어(장비) · 방지권 · 매번(골드 · 경험치 · 장비) · 매번(강화석)
+local MAX_ROWS = 4 -- 첫 클리어(장비) · 방지권 · 매번(골드 · 경험치 · 강화석) · 재도전(장비) - G1-1
 local CODEX_DOT = 22 -- 도감 점 한 칸의 폭(보이는 자리 · PC 터치 폭)
 local TOUCH_DOT_WIDTH = 44 -- 모바일 터치 상자 폭(S12 사전 작업 3) - 보이는 점과 22 간격은 그대로, 상자만 넓혀 이웃과 겹친다
 
@@ -37,29 +38,28 @@ function StageRewardBand.isBossStage(stage)
 	return stage >= BossData.stageInterval and stage % BossData.stageInterval == 0
 end
 
--- 확정 장비 등급표: 환생 0회 = 상향표, 1회 이상 = 기본표(Loot.rollBossFirstClearDrop과 같은 분기).
-local function firstClearGradeTable(rebirthCount)
-	if rebirthCount and rebirthCount > 0 then
-		return MonsterData.bossFirstClearGradeTable
-	end
-	return MonsterData.bossFirstClearUpgradedGradeTable
-end
 
 local function percentText(chance)
 	return ("%g%%"):format(math.floor(chance * 1000 + 0.5) / 10)
 end
 
 -- 확률 > 0인 등급을 낮은 등급부터: { { id, name, chance }... }.
+-- G1-1: 서버 굴림(Loot)과 같은 함수 - DropTable.bossFirstClearGradeTable(환생 0회 = 상향표).
 function StageRewardBand.gradeRows(rebirthCount)
-	local gradeTable = firstClearGradeTable(rebirthCount)
-	local rows = {}
-	for _, gradeId in ipairs(ArmorData.gradeOrder) do
-		local chance = gradeTable[gradeId]
-		if chance and chance > 0 then
-			table.insert(rows, { id = gradeId, name = ArmorData.grades[gradeId].displayName, chance = chance })
-		end
+	local rows = DropTable.gradeRows(DropTable.bossFirstClearGradeTable(rebirthCount))
+	for _, row in ipairs(rows) do
+		row.name = ArmorData.grades[row.id].displayName
 	end
 	return rows
+end
+
+-- G1-1: 재도전 장비 등급 한 줄("일반 90% · 희귀 10%") - 옛 띠에는 어디에도 없었다.
+function StageRewardBand.retryGradesText()
+	local parts = {}
+	for _, row in ipairs(DropTable.gradeRows(DropTable.bossRetryGradeTable())) do
+		table.insert(parts, Text.get("band.gradeChance", { grade = ArmorData.grades[row.id].displayName, percent = percentText(row.chance) }))
+	end
+	return table.concat(parts, " · ")
 end
 
 function StageRewardBand.gradeHelpText(rebirthCount)
@@ -135,17 +135,15 @@ function StageRewardBand.describe(stage, entry, rebirthCount)
 		table.insert(rows, { head = "", text = body, claimed = allClaimed })
 	end
 
-	table.insert(rows, { head = "매번", text = colored(("골드·경험치 %d마리분 · 장비 1"):format(units), "textPrimary"), claimed = false })
-	local stones = {}
-	for _, materialId in ipairs(EnhanceMaterialData.order) do
-		local material = EnhanceMaterialData.materials[materialId]
-		if stage >= material.minStage then
-			table.insert(stones, ("%s ≈%g"):format(material.displayName, material.dropChancePerKill * units))
-		end
+	-- G1-1: "매번 장비 1"이 첫 클리어 때 2개로 읽혔다(실제 1개 - 첫 클리어는 확정 장비가 대신한다) → 장비는 "재도전" 줄로 나눴다.
+	-- 강화석 기대 개수는 서버가 보낸 값(entry.stones - 지급과 같은 식 · 경험치 배수 포함). 옛 띠는 경험치 배수를 빠뜨렸다.
+	local everyParts = { Text.get("band.every.body", { units = units }) }
+	for _, stone in ipairs(entry.stones or {}) do
+		local material = EnhanceMaterialData.materials[stone.id]
+		table.insert(everyParts, Text.get("band.stone", { name = material.displayName, count = ("%g"):format(math.floor(stone.expected * 10 + 0.5) / 10) }))
 	end
-	if #stones > 0 then
-		table.insert(rows, { head = "", text = colored(table.concat(stones, " · "), "textPrimary"), claimed = false })
-	end
+	table.insert(rows, { head = Text.get("band.every.head"), text = colored(table.concat(everyParts, " · "), "textPrimary"), claimed = false })
+	table.insert(rows, { head = Text.get("band.retry.head"), text = colored(Text.get("band.retry.body", { grades = StageRewardBand.retryGradesText() }), "textPrimary"), claimed = false })
 
 	for _, row in ipairs(rows) do
 		row.plain = plainOf(row.text)
@@ -314,8 +312,19 @@ function StageRewardBand.selfTest(report)
 	local function entryOf(gear, drop, reset)
 		return { bossId = "frost_giant", gearClaimed = gear, dropTicket = drop, resetTicket = reset }
 	end
+	-- G1-1: 강화석은 서버 응답(entry.stones)이다 - 합성 응답에는 서버와 같은 모양으로 경험치 배수 1의 값을 넣는다.
+	local function withStones(stage, entry)
+		entry.stones = {}
+		for _, materialId in ipairs(EnhanceMaterialData.order) do
+			local material = EnhanceMaterialData.materials[materialId]
+			if stage >= material.minStage then
+				table.insert(entry.stones, { id = materialId, expected = material.dropChancePerKill * BossData.bosses[entry.bossId].hpMultiplier })
+			end
+		end
+		return entry
+	end
 	local function rowsOf(stage, entry, rebirth)
-		return StageRewardBand.describe(stage, entry, rebirth or 0)
+		return StageRewardBand.describe(stage, withStones(stage, entry), rebirth or 0)
 	end
 	local function joined(described)
 		local texts = {}
@@ -345,6 +354,10 @@ function StageRewardBand.selfTest(report)
 	local titleHead = ("스테이지 %d 보스 · "):format(S50)
 	report(("제목 · 매번 · Lv 범위: [%s] · %d: [%s] (기대 '%s…' · '20마리분' · '%s' · '???' 없음)"):format(d50.title, S50, t50, titleHead, lvRange),
 		string.sub(d50.title, 1, #titleHead) == titleHead and has(t50, "골드·경험치 20마리분") and has(t50, lvRange) and not has(d50.title .. t50, "???"))
+	-- G1-1: 매번 줄에 장비가 없다(첫 클리어 때 2개로 읽히던 것) · 재도전 줄 = 장비 1개 + 등급 확률(일반 90% · 희귀 10%)
+	local everyRow, retryRow = d50.rows[#d50.rows - 1], d50.rows[#d50.rows]
+	report(("매번 · 재도전 줄: 매번 [%s](기대 장비 없음) · 재도전 [%s](기대 '장비 1개' · '일반 90%%' · '희귀 10%%')"):format(everyRow.plain, retryRow.plain),
+		not has(everyRow.plain, "장비") and has(retryRow.plain, "장비 1개") and has(retryRow.plain, "일반 90%") and has(retryRow.plain, "희귀 10%"))
 	local r0, r1 = rowsOf(S50, entryOf(false, "available", "none"), 0), rowsOf(S50, entryOf(false, "available", "none"), 1)
 	report(("등급 이상 표기 · 확률 줄 수: 환생 0회 [%s] %d줄(기대 영웅 이상 · 5줄) / 환생 1회 [%s] %d줄(기대 희귀 이상 · 6줄)"):format(
 		string.match(r0.rows[1].plain, "%((%S+) 이상") or "?", r0.helpLines, string.match(r1.rows[1].plain, "%((%S+) 이상") or "?", r1.helpLines),

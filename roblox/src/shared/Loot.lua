@@ -189,9 +189,7 @@ end
 -- 부동소수 오차 극단값에도 확정 지급이 깨지면 안 되므로 방어적 기본값(rollSparkleArmorDrop과 같은 패턴)을
 -- 둔다 - 두 표 모두 실제로는 정확히 1.0으로 맞아떨어진다.
 function Loot.rollBossFirstClearDrop(bossStage, rebirthCount, classId)
-	local gradeTable = (rebirthCount and rebirthCount > 0)
-		and MonsterData.bossFirstClearGradeTable
-		or MonsterData.bossFirstClearUpgradedGradeTable
+	local gradeTable = DropTable.bossFirstClearGradeTable(rebirthCount) -- G1-1: 보상 띠와 같은 함수
 
 	local grade = rollGrade(gradeTable) or ArmorData.gradeOrder[#ArmorData.gradeOrder]
 	return buildDropItem(grade, bossStage, Loot.rollItemLevel(bossStage, ArmorData.bossItemLevelDelta), 1, classId)
@@ -200,7 +198,7 @@ end
 -- 보스 재도전 확정 드랍(28-1 [2-2]) - 확정 1개(확률 굴림 없음, 기존 25%에서 상향). 등급 상승은 첫 클리어 전용이라
 -- 등급표는 tier1(일반·희귀만)이고, itemLevel 편향만 첫 클리어와 같다.
 function Loot.rollBossRetryDrop(bossStage, classId)
-	local grade = rollGrade(MonsterData.dropGradeTableByTier[1]) or ArmorData.gradeOrder[1]
+	local grade = rollGrade(DropTable.bossRetryGradeTable()) or ArmorData.gradeOrder[1] -- G1-1: 보상 띠와 같은 함수(값 = 옛 tier1 표)
 	return buildDropItem(grade, bossStage, Loot.rollItemLevel(bossStage, ArmorData.bossItemLevelDelta), 1, classId)
 end
 

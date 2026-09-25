@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
+local BossLook = require(ReplicatedStorage.Shared.BossLook)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
@@ -85,29 +86,7 @@ end
 -- anchor는 "body"|"head" - 그 파트의 실제 위치(bodyAspect 반영 후)를 기준으로 offset(사이즈
 -- 배율 전 스터드 단위)만큼 떨어뜨린다. 새 판정 함수는 없다 - CanCollide=false라 히트박스·
 -- 어그로·리쉬(전부 루트 위치 기준, 파트 크기 무관 - MonsterAI/Reach 확인됨)에 영향이 없다.
-local function buildAttachments(model, data, sizeScale, bodyColor, headColor, bodyPosition, headPosition)
-	for _, spec in ipairs(data.attachments or {}) do
-		local part
-		if spec.kind == "wedge" then
-			part = Instance.new("WedgePart")
-		else
-			part = Instance.new("Part")
-			if spec.kind == "ball" then
-				part.Shape = Enum.PartType.Ball
-			end
-		end
-		part.Name = spec.name or "BossAttachment"
-		part.Size = spec.size * sizeScale
-		part.Anchored = true
-		part.CanCollide = false
-		part.CastShadow = false
-		part.Color = (spec.color == "head") and headColor or bodyColor
-		local anchorPosition = (spec.anchor == "head") and headPosition or bodyPosition
-		local rot = spec.rotationDeg or Vector3.new(0, 0, 0)
-		part.CFrame = CFrame.new(anchorPosition + spec.offset * sizeScale) * CFrame.Angles(math.rad(rot.X), math.rad(rot.Y), math.rad(rot.Z))
-		part.Parent = model
-	end
-end
+-- (G1-1: 조립 코드는 shared/BossLook.buildAttachments로 옮겼다 - 서버 · 클라 뷰포트 공용)
 
 -- sizeScale/bodyColor/headColor(15-1, 기본값은 잡몹 그대로) - 보스를 "확실히 크게"
 -- 만들라는 지시를 아트 리소스 없이 기본 파트 크기·색만으로 만족시킨다(하지 말 것:
@@ -139,53 +118,9 @@ local function buildModel(data, position, variant)
 		CollectionService:AddTag(model, "SparkleMonster")
 	end
 
-	local root = Instance.new("Part")
-	root.Name = "HumanoidRootPart"
-	root.Size = Vector3.new(2, 2, 1) * sizeScale
-	root.Transparency = 1
-	root.CanCollide = false
-	root.Anchored = true
-	root.Position = position
-	root.Parent = model
-
-	-- 23-6: 높이(Y)가 바뀌어도 발이 원래 자리(position.Y - 1.5*sizeScale)에 그대로 붙도록
-	-- 몸통 중심을 다시 계산한다. bodyAspect=(1,1,1)이면 아래 식 전부 기존 값과 정확히 같다.
-	local bodyHalfHeight = 1.5 * sizeScale * bodyAspect.Y
-	local bodyBottomY = position.Y - 1.5 * sizeScale
-	local bodyCenterY = bodyBottomY + bodyHalfHeight
-
-	local body = Instance.new("Part")
-	body.Name = "Body"
-	body.Size = Vector3.new(2.4 * bodyAspect.X, 3 * bodyAspect.Y, 1.2 * bodyAspect.Z) * sizeScale
-	body.Anchored = true
-	-- 21-3: 보스 몸통은 캐릭터와 충돌하지 않는다. 진동파(뛰었다 찍기)·돌진(60stud/s)으로
-	-- 움직이는 anchored 파트가 캐릭터를 밀어내면 물리가 캐릭터를 바닥 아래로 튕겨
-	-- FallenPartsDestroyHeight까지 떨어뜨려 "HP는 남았는데 죽는" 엔진 사망이 났다(21-3 검증
-	-- 중 재현). 피격 판정은 전부 거리 기반이라 충돌이 필요 없다.
-	-- 22-5: 잡몹도 끈다. 22-4 검증 중 추격하는 잡몹 몸통(PivotTo로 순간 이동하는 anchored 파트)이
-	-- 플레이어를 밀어 고원 가장자리에서 떨어뜨리는 일이 두 번 있었다 - 평지에선 무해했던 밀림이
-	-- 높낮이가 생기자 위험 요소가 됐다. "밀려서 떨어짐"은 의도된 위험이 아니라 사고다(낙하 피해
-	-- 없음·절벽은 도달원 밖이라는 20.50 규칙 어디에도 "밀려 떨어짐"이 설계에 없다). 밀림 힘은
-	-- anchored 파트라 줄일 수 없고(물리가 겹침을 무조건 해소한다), 난간은 절벽마다 파트를 더한다.
-	-- 충돌을 끄면 겹침 자체가 없다 - 잡몹은 사거리(10) 밖에서 멈추지 않고 플레이어 자리까지
-	-- 오므로 겹치는 순간이 생기지만(PRD 20.51 [5] 실기 관찰) 탑다운 3인칭에서 어색하지 않았다.
-	body.CanCollide = false
-	body.Color = bodyColor
-	body.Position = Vector3.new(position.X, bodyCenterY, position.Z)
-	body.Parent = model
-
-	local head = Instance.new("Part")
-	head.Name = "Head"
-	head.Shape = Enum.PartType.Ball
-	head.Size = Vector3.new(1.6, 1.6, 1.6) * sizeScale
-	head.Anchored = true
-	head.CanCollide = false -- 위 Body와 같은 이유(21-3 보스 → 22-5 전체)
-	head.Color = headColor
-	-- 몸통 꼭대기(bodyBottomY + 2*bodyHalfHeight)에 머리 반지름(0.8*sizeScale)만큼 얹는다 -
-	-- bodyAspect=(1,1,1)이면 bodyBottomY + 3*sizeScale + 0.8*sizeScale = position.Y + 2.3*sizeScale로
-	-- 기존 값과 정확히 같다.
-	head.Position = Vector3.new(position.X, bodyBottomY + 2 * bodyHalfHeight + 0.8 * sizeScale, position.Z)
-	head.Parent = model
+	-- G1-1: 루트 · 몸통 · 머리 조립은 shared/BossLook(서버 · 클라 뷰포트 공용 - 값 · 순서 · 이름 그대로 옮김).
+	local look = { sizeScale = sizeScale, bodyColor = bodyColor, headColor = headColor, bodyAspect = bodyAspect, attachments = data.attachments }
+	local root, body, head = BossLook.buildCore(model, look, position)
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.MaxHealth = 100
@@ -256,7 +191,7 @@ local function buildModel(data, position, variant)
 	highlight.OutlineTransparency = 0
 	highlight.Parent = model
 
-	buildAttachments(model, data, sizeScale, bodyColor, headColor, body.Position, head.Position)
+	BossLook.buildAttachments(model, look, body.Position, head.Position)
 
 	model.PrimaryPart = root
 	return model

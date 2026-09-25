@@ -10,6 +10,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BossRewardPreviewData = require(ReplicatedStorage.Shared.data.BossRewardPreviewData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local Loot = require(ReplicatedStorage.Shared.Loot)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
+local PartyState = require(script.Parent.PartyState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local BossRewardPreview = {}
@@ -52,16 +56,32 @@ local function ticketState(count, claimed)
 	return claimed and "claimed" or "available"
 end
 
+-- G1-1: 보스 1회 처치의 강화석 기대 개수(지급과 같은 식 - Loot.expectedMaterialCount × 받는 사람의 경험치 배수 · minStage 게이트). 옛 띠는 경험치 배수를 빠뜨렸다.
+-- 경험치 배수 = PlayerProfile.combineExpMultiplier(옵션 · 파티) - getExpGainMultiplier와 같은 값이지만 파티 칩 표시(부수 효과)는 부르지 않는다.
+function BossRewardPreview.stonesFor(player, stage, bossId)
+	local expMultiplier = PlayerProfile.combineExpMultiplier(PlayerProfile.getOptionBonus(player, "expGain"), PartyState.getExpBonusFor(player))
+	local killUnits = BossData.bosses[bossId].hpMultiplier
+	local stones = {}
+	for _, materialId in ipairs(EnhanceMaterialData.order) do
+		if stage >= EnhanceMaterialData.materials[materialId].minStage then
+			table.insert(stones, { id = materialId, expected = Loot.expectedMaterialCount(materialId, killUnits, expMultiplier) })
+		end
+	end
+	return stones
+end
+
 -- 검증을 통과한 stages에 대한 응답을 만든다.
 function BossRewardPreview.build(player, stages)
 	local entries = {}
 	for _, stage in ipairs(stages) do
+		local bossId = BossRules.bossIdForStage(stage)
 		local dropCount, resetCount = Enhance.getBossGrant(stage)
 		local claimed = PlayerProfile.hasClaimedProtectionStage(player, stage)
 		table.insert(entries, {
 			stage = stage,
-			bossId = BossRules.bossIdForStage(stage),
+			bossId = bossId,
 			gearClaimed = PlayerProfile.hasBossFirstClearReward(player, stage),
+			stones = BossRewardPreview.stonesFor(player, stage, bossId),
 			dropTicket = ticketState(dropCount, claimed),
 			resetTicket = ticketState(resetCount, claimed),
 		})

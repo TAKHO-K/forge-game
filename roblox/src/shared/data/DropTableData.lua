@@ -25,6 +25,14 @@ return {
 		{ rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = dragonRate },
 	},
 
+	-- G1-1(보상 목록 단일 소스): 보스 확정 장비의 등급표. 옛 코드는 첫 클리어 = armorGradeByTier[6](드래곤 표를 그대로 가리킴) · 재도전 = [1]이었다 - 드래곤 표를
+	-- 고치면(G1-2 공정성 보정) 보스 보상이 같이 바뀌므로 값을 그대로 옮겨 따로 선언한다(값 불변). 환생 0회의 상향표는 MonsterData가 이 firstClear를 한 단계 민다.
+	-- 읽는 곳: DropTable.bossFirstClearGradeTable · bossRetryGradeTable(서버 굴림 Loot · 스테이지 선택 보상 띠 · 검증).
+	bossGrades = {
+		firstClear = { rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = dragonRate },
+		retry = { normal = 0.90, rare = 0.10 },
+	},
+
 	primordial = {
 		dragonRate = dragonRate,
 		-- P2.5a C9: 1.9 · 1.7 · 1.35 · 1.1 · 1.05 → 1.30 · 1.20 · 1.08 · 0.85 · 0.64. "지배 전략 없음"을 우선(사용자 지시) - 새 단위 손익분기 M*(Δ ≤ 36 = 옛 Δ ≤ 5 · 레벨 10 · 1000 · 10000

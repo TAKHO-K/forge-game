@@ -72,8 +72,9 @@ local function shiftGradeTableUp(sourceRow)
 	return shifted
 end
 
-MonsterData.bossFirstClearGradeTable = MonsterData.dropGradeTableByTier[6]
-MonsterData.bossFirstClearUpgradedGradeTable = shiftGradeTableUp(MonsterData.dropGradeTableByTier[6])
+-- G1-1: 보스 표는 드래곤 표와 따로 선언한다(DropTableData.bossGrades - 값은 옛 tier6 그대로).
+MonsterData.bossFirstClearGradeTable = DropTableData.bossGrades.firstClear
+MonsterData.bossFirstClearUpgradedGradeTable = shiftGradeTableUp(DropTableData.bossGrades.firstClear)
 
 MonsterData.fairnessExponent = 2 -- p. 이 값 하나만 튜닝 노브다.
 
