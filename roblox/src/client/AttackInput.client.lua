@@ -30,10 +30,10 @@ local comboUpdate = ReplicatedStorage:WaitForChild("ComboUpdate")
 
 local player = Players.LocalPlayer
 
--- 3타 강타 표시(G1-1): 체력바 위 점 3개 → 내 발밑 3칸 고리 + 다음 강타 때 조준 외곽선 색(client/ComboRing). 서버 ComboUpdate를 그대로 넘긴다.
-local ComboRing = require(script.Parent.ComboRing)
+-- 3타 강타 표시(G1-1 → M1-0 후속): 발밑 고리 → 무기 발광 단계 + 폰 3칸 막대 + 다음 강타 때 조준 외곽선 색(client/ComboGlow). 서버 ComboUpdate를 그대로 넘긴다.
+local ComboGlow = require(script.Parent.ComboGlow)
 comboUpdate.OnClientEvent:Connect(function(comboCount, isHeavyHit)
-	ComboRing.onCombo(comboCount, isHeavyHit)
+	ComboGlow.onCombo(comboCount, isHeavyHit)
 end)
 
 -- 스윙 모션은 서버 확인 없이 여기서 바로 재생한다(지시 사항 - "모션은 클라이언트에서

@@ -1,5 +1,5 @@
 -- G1-1 클라 자체 점검 [G1-1][UI] - Studio에서 DevToolsConfig.verify에 "G1-1(UI)"가 있을 때만(또는 회귀 전체).
--- ① 3타 고리: 서버 ComboUpdate와 같은 호출로 칸 채움 · 다음 타 강타면 조준 외곽선 색 신호 · 2초 뒤 저절로 꺼짐 ② ? 도움말 2단: 처음엔 짧은 줄 + 안내 · 터치 44 이상
+-- ① 3타 표시(M1-0 후속 - 무기 발광): 서버 ComboUpdate와 같은 호출로 발광 단계 · 준비 번쩍 · 폰 3칸 막대 · 다음 타 강타면 조준 외곽선 색 신호 ② ? 도움말 2단: 처음엔 짧은 줄 + 안내 · 터치 44 이상
 -- ③ 강화 확률표 행 이름 "성공 시 · 실패 시". 펼치기(누르기)는 자체 점검이 못 누른다 - 스크린샷 Play에서 실제 클릭으로 본다(COMMON §2).
 
 local Players = game:GetService("Players")
@@ -17,9 +17,8 @@ if not (DevToolsConfig.verify.regression or table.find(DevToolsConfig.verify.cur
 end
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
-local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Text = require(ReplicatedStorage.Shared.Text)
-local ComboRing = require(script.Parent.ComboRing)
+local ComboGlow = require(script.Parent.ComboGlow)
 local AimTarget = require(script.Parent.AimTarget)
 local HelpTooltip = require(script.Parent.HelpTooltip)
 local OddsView = require(script.Parent.panels.Enhance.OddsView)
@@ -35,41 +34,30 @@ local function run()
 	end
 	print("===G1-1 검증 시작(UI)===")
 
-	-- ① 3타 고리
+	-- ① 3타 표시(M1-0 후속: 발밑 고리 → 무기 발광 + 폰 3칸 막대)
 	local ok, err = pcall(function()
-		local discs = {}
-		for i = 1, CombatConfig.comboHitEvery do
-			discs[i] = Workspace.CurrentCamera:FindFirstChild("ComboRingDisc" .. i)
-		end
-		local function onCount()
-			local n = 0
-			for _, disc in ipairs(discs) do
-				n += (disc and disc.Color == UIColors.ember) and 1 or 0
-			end
-			return n
-		end
-		ComboRing.onCombo(101, false) -- 누적 101 = 사이클 2번째(3의 배수 + 2)
+		local ringGone = Workspace.CurrentCamera:FindFirstChild("ComboRingDisc1") == nil
+		ComboGlow.onCombo(100, false) -- 누적 100 = 사이클 1번째
+		task.wait(0.1)
+		local one = ComboGlow.debugState()
+		ComboGlow.onCombo(101, false) -- 누적 101 = 사이클 2번째 → 다음 타 강타
 		task.wait(0.05)
-		local two, heavyReady = onCount(), AimTarget.debugHeavyReady()
-		ComboRing.onCombo(102, true)
+		local flash = ComboGlow.debugState()
+		local heavyReady = AimTarget.debugHeavyReady()
+		task.wait(CombatConfig.comboGlow.flashSeconds + 0.1)
+		local ready = ComboGlow.debugState()
+		ComboGlow.onCombo(102, true)
 		task.wait(0.05)
-		local heavyColor = discs[1] and discs[1].Color ~= UIColors.ember and discs[1].Transparency == 0
+		local after = ComboGlow.debugState()
 		local readyAfterHeavy = AimTarget.debugHeavyReady()
-		-- Play 2: 전 블록에서는 서버 검증의 공격이 ComboUpdate를 계속 보내 2초 시계가 다시 잡혔다 - 마지막 갱신에서 창 + 0.3초 지날 때까지(최대 20초) 기다린다
-		local waited = 0
-		repeat
-			waited += task.wait(0.1)
-		until os.clock() - ComboRing.debugLastComboAt() > CombatConfig.comboResetWindowSeconds + 0.3 or waited > 20
-		local off = true
-		for _, disc in ipairs(discs) do
-			off = off and disc.Color == UIColors.panel -- 꺼진 칸 = 어두운 패널색(스크린샷 뒤 투명도 0.7 → 0.35로 바꿔 옛 기준 > 0.5가 틀렸다 - Play 3)
-		end
-		check(("3타 고리: 칸 %d개 · 누적 101 → 켜진 칸 %d(기대 2) · 다음 타 강타 신호 %s(기대 true) · 강타 → 강타 색 %s · 신호 %s(기대 false) · %.1f초 뒤 전부 꺼짐 %s"):format(
-			#discs, two, tostring(heavyReady), tostring(heavyColor), tostring(readyAfterHeavy), CombatConfig.comboResetWindowSeconds + 0.3, tostring(off)),
-			#discs == CombatConfig.comboHitEvery and two == 2 and heavyReady == true and heavyColor and readyAfterHeavy == false and off and AimTarget.debugHeavyReady() == false)
+		local g = CombatConfig.comboGlow
+		check(("3타 발광: 발밑 고리 없음 %s · 1타 밝기 %.1f(기대 %.1f) · 준비 번쩍 %.1f → %.1f(기대 %.1f → %.1f) · 폰 막대 %d(기대 3) · 강타 신호 %s · 강타 뒤 밝기 %.1f · 신호 %s"):format(
+			tostring(ringGone), one.brightness, g.mine.hit.brightness, flash.brightness, ready.brightness, g.flashBrightness, g.mine.ready.brightness, ready.bars, tostring(heavyReady), after.brightness, tostring(readyAfterHeavy)),
+			ringGone and math.abs(one.brightness - g.mine.hit.brightness) < 1e-3 and math.abs(flash.brightness - g.flashBrightness) < 1e-3 and math.abs(ready.brightness - g.mine.ready.brightness) < 1e-3
+				and ready.bars == CombatConfig.comboHitEvery and heavyReady == true and after.brightness == 0 and readyAfterHeavy == false)
 	end)
 	if not ok then
-		check("3타 고리 에러: " .. tostring(err), false)
+		check("3타 발광 에러: " .. tostring(err), false)
 	end
 
 	-- ② ? 도움말 2단

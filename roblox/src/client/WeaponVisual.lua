@@ -509,6 +509,23 @@ function WeaponVisual.getReleaseDelay()
 	return math.max(releaseAt - elapsed, 0)
 end
 
+-- 무기 이펙트 자리(강화 빛과 같은 자리 - WeaponModelData.effectAnchor): (파트, 그 파트 기준 위치). 무기가 없으면 nil. ComboGlow(3타 발광 - M1-0 후속)가 쓴다.
+function WeaponVisual.getEffectAttach()
+	if not current then
+		return nil
+	end
+	local instances = current.instances
+	local part
+	if current.kind == "mesh_pair" then
+		part = instances.parts[current.model.effectPart]
+	elseif current.kind == "bow" then
+		part = instances.root
+	else
+		part = instances.part
+	end
+	return part, current.model.effectAnchor
+end
+
 -- 투사체(화살·구슬)가 시작할 위치 - 활은 시위 nock 근처, 힐러는 지팡이 끝.
 function WeaponVisual.getMuzzleWorldPosition()
 	if not current then

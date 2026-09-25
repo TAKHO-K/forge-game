@@ -141,6 +141,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 	lastComboAttackTick[player] = now
 	local isComboHit = comboCounts[player] % CombatConfig.comboHitEvery == 0
 	comboUpdate:FireClient(player, comboCounts[player], isComboHit)
+	player:SetAttribute("ComboStage", comboCounts[player] % CombatConfig.comboHitEvery) -- 남의 화면 무기 발광(M1-0 후속 - client/ComboGlow · 표시만)
 
 	-- aimPoint는 클릭·탭한 지점(AttackInput.client.lua) - 서버 검증: Vector3가 아니면
 	-- 무시한다(지시 - "클라가 보낸 방향을 그대로 믿으면 안 된다"). 방향이 없거나 이상한

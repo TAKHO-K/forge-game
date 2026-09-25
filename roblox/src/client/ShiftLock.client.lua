@@ -2,7 +2,8 @@
 -- 기본 PlayerModule을 복제해 키만 바꾸지 않은 이유: 복제본은 로블록스 카메라 · 조작 업데이트를 더 못 받는다. 여기는 기본 카메라 위에 세 가지만 얹는다:
 --   ① 마우스를 화면 가운데에 묶는다(MouseBehavior.LockCenter - 기본 카메라가 이때 마우스 이동으로 시점을 돌린다) ② 캐릭터가 카메라 방위를 본다(AutoRotate 끄고 루트 회전)
 --   ③ 카메라를 오른쪽 어깨 너머로(Humanoid.CameraOffset). 창이 열려 있으면(모달) 잠시 풀어 마우스를 쓸 수 있게 한다 - 창을 닫으면 다시 묶는다.
--- 켜고 끄기: PC = LeftControl · 폰 = 대시 버튼 바로 위 "고정" 버튼(SkillSlotsGui.DashHolder 안 - 터치 배치일 때만 보인다). 이번 접속 동안만(저장은 P4 설정창).
+-- 켜고 끄기: PC = LeftControl 또는 스킬 줄 왼쪽 끝 "[Ctrl] 시점 고정" 칸 클릭 · 폰 = 대시 버튼 바로 위 "고정" 버튼(SkillSlotsGui.DashHolder 안 - 터치 배치일 때만 보인다). 켜짐 = ember 바탕. 이번 접속 동안만(저장은 P4 설정창).
+-- 시점 고정 중에는 마우스가 가운데에 묶여 HUD를 못 누른다(M1-0 결정 ③ - 사용자 확정: 유지 · 창이 열리면 자동 해제). 칸을 눌러 끄려면 Ctrl.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -62,9 +63,53 @@ stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 stroke.Thickness = 2
 stroke.Parent = button
 
+-- PC 표시 칸(M1-0 후속 - 사용자 필수): 스킬 줄(CentralRow) 왼쪽 끝 "[Ctrl] 시점 고정 ON/OFF" - 클릭으로도 켜고 끈다. 터치 배치에서는 숨는다(폰은 위 "고정" 버튼).
+-- 폭 64 = 줄 전체 492(1024에서 x 266 ~ 758) - 가장 좁은 PC 폭 720에서도 왼쪽 끝 114 = 직업 변경 버튼(BL · x 24 ~ 114) 오른쪽 끝과 겹치지 않는다. 중앙 금지 구역(화면 높이 0.75 위)보다 아래.
+local CHIP_WIDTH = 64
+local chip = Instance.new("TextButton")
+chip.Name = "ShiftLockChip"
+chip.LayoutOrder = 0
+chip.Size = UDim2.new(0, CHIP_WIDTH, 0, 54)
+chip.AutoButtonColor = false
+chip.Text = ""
+chip.BackgroundColor3 = UIColors.panel
+chip.BackgroundTransparency = UIColors.panelTransparency
+chip.Visible = false
+local chipCorner = Instance.new("UICorner")
+chipCorner.CornerRadius = UDim.new(0, 8)
+chipCorner.Parent = chip
+local chipStroke = Instance.new("UIStroke")
+chipStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+chipStroke.Thickness = 2
+chipStroke.Parent = chip
+local chipLines = {}
+for i, key in ipairs({ "shiftLock.chipKey", "shiftLock.chipName", "shiftLock.off" }) do
+	local line = Instance.new("TextLabel")
+	line.Name = "Line" .. i
+	line.BackgroundTransparency = 1
+	line.Position = UDim2.new(0, 0, 0, 3 + (i - 1) * 16)
+	line.Size = UDim2.new(1, 0, 0, 16)
+	line.Font = Enum.Font.GothamBold
+	line.TextSize = 12
+	line.Text = Text.get(key)
+	line.TextColor3 = i == 1 and UIColors.textSecondary or UIColors.textPrimary
+	line.Parent = chip
+	chipLines[i] = line
+end
+
+-- 켜짐 = ember 바탕(폰 버튼 · PC 칸 같은 색) · 꺼짐 = 어두운 패널
+local function paintButton(target, targetStroke)
+	target.BackgroundColor3 = locked and UIColors.ember or UIColors.panel
+	target.BackgroundTransparency = locked and 0.1 or UIColors.panelTransparency
+	targetStroke.Color = locked and UIColors.ember or UIColors.rim
+	targetStroke.Transparency = locked and 0 or UIColors.rimTransparency
+end
+
 local function paint()
-	stroke.Color = locked and UIColors.ember or UIColors.rim
-	stroke.Transparency = locked and 0 or UIColors.rimTransparency
+	paintButton(button, stroke)
+	paintButton(chip, chipStroke)
+	chipLines[3].Text = Text.get(locked and "shiftLock.on" or "shiftLock.off")
+	chipLines[3].TextColor3 = locked and UIColors.textPrimary or UIColors.textSecondary
 end
 paint()
 
@@ -90,14 +135,19 @@ task.spawn(function()
 		holder = gui:FindFirstChild("DashHolder", true)
 	end
 	button.Parent = holder
+	chip.Parent = gui:FindFirstChild("CentralRow")
 	local function refresh()
 		button.Visible = isTouchLayout()
+		chip.Visible = not isTouchLayout()
 	end
 	refresh()
 	player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(refresh)
 end)
 
 button.Activated:Connect(function()
+	setLocked(not locked)
+end)
+chip.Activated:Connect(function()
 	setLocked(not locked)
 end)
 

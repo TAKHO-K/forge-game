@@ -52,6 +52,9 @@ local function requestDash()
 		character:SetAttribute("AirDashUntil", os.clock() + DashConfig.durationSeconds + MovementConfig.airJump.dashPendingSeconds) -- 리뷰 5: 결과가 오기 전(왕복)부터 공중 점프를 막는다 - 결과가 오면 정확한 끝 시각으로 덮는다
 	end
 	localCooldownUntil = os.clock() + DashConfig.cooldownSeconds
+	if character then
+		character:SetAttribute("DashReadyAt", localCooldownUntil) -- 충전 표시(AirChargeDots)가 쿨다운 중이면 공중대시 칸을 회색으로(M1-0 후속)
+	end
 	localCastSignal:Fire("dash", DashConfig.cooldownSeconds)
 	dashRequest:FireServer()
 end
@@ -78,6 +81,7 @@ dashResult.OnClientEvent:Connect(function(data)
 		if character then -- 리뷰 4: 서버가 거절하면 이 체공의 공중대시도 돌려준다
 			character:SetAttribute("AirDashUsed", nil)
 			character:SetAttribute("AirDashUntil", nil)
+			character:SetAttribute("DashReadyAt", nil)
 		end
 		return
 	end

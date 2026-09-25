@@ -29,6 +29,7 @@ local camera = workspace.CurrentCamera
 
 local TICK_SECONDS = 0.1 -- 지시: "매 프레임 하지 말고 0.1초 간격 정도로 충분하다"
 local RAYCAST_DISTANCE_STUDS = 500
+local HORIZON_AIM_STUDS = 30 -- 지평선 위 커서의 조준점 거리(방향 힌트일 뿐 - AimPicker는 방향만 본다)
 
 local activeTouchPosition = nil -- Vector2, 터치 중일 때만
 local lastAimPoint = nil -- Vector3, 마지막으로 구한 조준점(터치 뗀 뒤에도 얼려서 재사용)
@@ -56,12 +57,14 @@ function AimTarget.getWorldPointFromScreen(screenPos)
 
 	local groundY = rootPart.Position.Y
 	local dirY = ray.Direction.Y
-	if math.abs(dirY) < 1e-4 then
-		return nil
-	end
-	local t = (groundY - ray.Origin.Y) / dirY
+	local t = math.abs(dirY) >= 1e-4 and (groundY - ray.Origin.Y) / dirY or -1
 	if t < 0 then
-		return nil
+		-- M1-0 결정 ①(사용자 확정): 커서가 지평선 위(누운 자유 카메라) - 지면점이 없다. 그 커서 광선의 수평 방향으로 조준한다(최근접 대체 대신).
+		local flat = Vector3.new(ray.Direction.X, 0, ray.Direction.Z)
+		if flat.Magnitude < 1e-3 then
+			return nil
+		end
+		return rootPart.Position + flat.Unit * HORIZON_AIM_STUDS
 	end
 	return ray.Origin + ray.Direction * t
 end

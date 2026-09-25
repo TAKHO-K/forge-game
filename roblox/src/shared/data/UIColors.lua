@@ -46,6 +46,7 @@ return {
 	textTertiary = Color3.fromRGB(87, 90, 96), -- 목업 --ink-3(alpha .34 실효색, panel-solid 기준)
 	danger = Color3.fromRGB(226, 59, 59), -- 목업에 별도 위험색이 없어 hp를 그대로 재사용
 	success = Color3.fromRGB(53, 208, 165), -- 목업 --ok
+	comboGlow = Color3.fromRGB(166, 77, 255), -- 3타 무기 발광(M1-0 후속) - 새 색이 아니라 classAccent.dualblade와 같은 값(강화 이펙트 색과 구분)
 
 	-- 16-3: 빈 칸·슬롯 바닥색(목업 --slot, rgba(30,35,45,.9)) - panel보다 밝고 더 불투명해서
 	-- 20칸이 나란히 있을 때 등급 테두리 색과 배경이 섞이지 않는다.

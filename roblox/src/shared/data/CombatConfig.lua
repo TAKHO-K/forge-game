@@ -79,6 +79,16 @@ return {
 	comboHitEvery = 3, -- N번째 공격마다 강타
 	comboHitMultiplier = 1.8,
 	comboResetWindowSeconds = 2, -- 이 시간 동안 공격 없으면 콤보 카운터 초기화
+	-- 3타 표시 = 무기 발광(M1-0 후속 - 사용자: 발밑 고리는 버튼 · 화면과 겹쳐 난잡). 단계 = 이번 사이클에 친 수(2 = 다음 타가 강타).
+	-- colorKey는 UIColors 키 - 강화 이펙트(ember · gold · danger · 흰색)와 겹치지 않는 보라. 내 무기 = mine, 남(Player Attribute ComboStage) = others(준비 단계만 · 약하게).
+	-- flashBrightness = 준비 순간 한 번 번쩍(flashSeconds 동안 ready로 내려온다).
+	comboGlow = {
+		colorKey = "comboGlow",
+		mine = { hit = { brightness = 0.6, range = 4 }, ready = { brightness = 4, range = 10 } }, -- hit = 1타 뒤(은은) · ready = 2타 뒤(다음 타 강타)
+		others = { ready = { brightness = 1.2, range = 5 } },
+		flashBrightness = 10,
+		flashSeconds = 0.25,
+	},
 
 	-- 자동 체력회복(17-1, 19-1에서 조건 확장). 마지막 전투 행위(피격 또는 공격 시도) 후
 	-- 이 시간이 지나면 회복이 시작되고, 피격되거나 공격을 시도하면 즉시 중단·리셋된다
