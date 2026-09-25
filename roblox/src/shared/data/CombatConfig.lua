@@ -147,5 +147,7 @@ return {
 	-- untilStage 이하면 받는 피해 × atStage1^(1 − (s − 1) ÷ untilStage) - 스테이지 1 ×0.1 · 10 ×0.28 · 15 ×0.50 · 20 ×0.89 · 21부터 1(기하 감소 - 계단 없음,
 	-- 선형보다 중간 스테이지 보호가 두텁다). 계산 = PlayerCombat.getNewbieDamageMultiplier(서버 피해 공통 지점 PlayerDamage.applyFinalDamage · 시뮬 생존 타수가 같은 함수).
 	-- 스테이지 번호 자체가 뜻이다(첫 구간 - 힘 비율 아님). 값 = 캐주얼 프로필 스테이지 10 ≤ 30분을 맞춘 값(하네스 격자 - docs/phase/P25c-log.md).
-	newbieProtection = { untilStage = 20, atStage1 = 0.1 },
+	-- BR1-2(사용자 - 보스 6종을 한 번씩 만나는 1 ~ 30은 받는 피해를 크게 줄이고 25 ~ 30에서 부드럽게 푼다): 1 ~ plateauStage = atStage1 × (atPlateau ÷ atStage1)^((s − 1) ÷ (plateauStage − 1))
+	-- (1 ×0.10 · 10 ×0.15 · 20 ×0.24 · 24 ×0.30) → plateauStage ~ untilStage + 1 = smoothstep으로 atPlateau → 1(25 ×0.34 · 27 ×0.60 · 30 ×0.96) → 31부터 ×1. 기준 = 최고 스테이지(그대로).
+	newbieProtection = { untilStage = 30, atStage1 = 0.1, plateauStage = 24, atPlateau = 0.3 },
 }

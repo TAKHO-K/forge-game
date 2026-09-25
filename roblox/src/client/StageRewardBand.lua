@@ -20,6 +20,7 @@ local Text = require(ReplicatedStorage.Shared.Text)
 local Button = require(script.Parent.ui.kit.Button)
 local HelpToggle = require(script.Parent.ui.kit.HelpToggle)
 local Theme = require(script.Parent.ui.kit.Theme)
+local BossIntroDiagram = require(script.Parent.BossIntroDiagram) -- BR1-2 기믹 도움말
 
 local StageRewardBand = {}
 
@@ -177,7 +178,61 @@ function StageRewardBand.build(props)
 	local title = Theme.label(root, "", "body", "textPrimary")
 	title.Name = "Title"
 	title.Font = Theme.font
-	title.Size = UDim2.new(1, 0, 0, titleHeight)
+	title.Size = UDim2.new(1, -96, 0, titleHeight) -- BR1-2: 오른쪽 끝 = [기믹 도움말]
+
+	-- BR1-2 기믹 도움말 토글: 고른 보스(스테이지 칸 · 도감 점)의 전멸기 도식 + 한 줄을 띠 위에 겹친다(첫 만남 카드와 같은 그림 - BossIntroDiagram).
+	local gimmickBossId = nil
+	local gimmickPanel = Instance.new("Frame")
+	gimmickPanel.Name = "GimmickHelpPanel"
+	gimmickPanel.Visible = false
+	gimmickPanel.ZIndex = 20
+	gimmickPanel.Position = UDim2.new(0, 0, 0, titleHeight + 2)
+	gimmickPanel.BackgroundColor3 = UIColors.panel
+	gimmickPanel.BackgroundTransparency = 0.02
+	gimmickPanel.Parent = root
+	Theme.corner(gimmickPanel, Theme.corner.chip)
+	local gimmickDiagram = Instance.new("Frame")
+	gimmickDiagram.Name = "Diagram"
+	gimmickDiagram.BackgroundTransparency = 1
+	gimmickDiagram.Position = UDim2.new(0, 6, 0, 6)
+	gimmickDiagram.Parent = gimmickPanel
+	local gimmickText = Theme.label(gimmickPanel, "", "caption", "textPrimary")
+	gimmickText.Name = "GimmickLine"
+	gimmickText.TextWrapped = true
+	gimmickText.TextTruncate = Enum.TextTruncate.None
+	gimmickText.TextYAlignment = Enum.TextYAlignment.Top
+	gimmickText.RichText = true
+	local function refreshGimmick()
+		local boss = gimmickBossId and BossData.bosses[gimmickBossId]
+		for _, child in ipairs(gimmickDiagram:GetChildren()) do
+			child:Destroy()
+		end
+		if not (boss and boss.intro) then
+			gimmickText.Text = "보스 칸이나 도감 점을 누르면 그 보스의 전멸기가 보입니다"
+			return
+		end
+		BossIntroDiagram.draw(gimmickDiagram, boss.intro.diagram)
+		for _, d in ipairs(gimmickDiagram:GetDescendants()) do
+			if d:IsA("GuiObject") then
+				d.ZIndex = 21
+			end
+		end
+		gimmickText.Text = ("<b>%s · %s</b>\n%s"):format(boss.displayName, boss.intro.title, boss.intro.line)
+	end
+	local gimmickButton = Button.build({
+		parent = root,
+		name = "GimmickHelpButton",
+		kind = "secondary",
+		text = "기믹 도움말",
+		width = 92,
+		height = math.max(titleHeight, 24),
+		anchorPoint = Vector2.new(1, 0),
+		position = UDim2.new(1, 0, 0, 0),
+		onActivated = function()
+			gimmickPanel.Visible = not gimmickPanel.Visible
+			refreshGimmick()
+		end,
+	})
 
 	local rowViews = {}
 	for index = 1, MAX_ROWS do
@@ -235,6 +290,8 @@ function StageRewardBand.build(props)
 				picked = StageRewardBand.dotIndexAt(input.Position.X, dots[1].AbsolutePosition.X + overhang, CODEX_DOT, #codexBossIds)
 			end
 			nameLabel.Text = BossData.bosses[codexBossIds[picked]].displayName
+			gimmickBossId = codexBossIds[picked]
+			refreshGimmick()
 		end)
 		dots[index] = dot
 	end
@@ -258,6 +315,14 @@ function StageRewardBand.build(props)
 	challenge.setEnabled(false)
 
 	local refs = { root = root, height = height }
+	-- 도움말 판 크기 = 제목 아래 ~ 도감 줄 위(보상 줄을 덮는다)
+	local panelHeight = codexTop - titleHeight - 4
+	gimmickPanel.Size = UDim2.new(1, 0, 0, panelHeight)
+	gimmickDiagram.Size = UDim2.new(0, panelHeight - 12, 0, panelHeight - 12)
+	gimmickText.Position = UDim2.new(0, panelHeight + 2, 0, 6)
+	gimmickText.Size = UDim2.new(1, -(panelHeight + 8), 1, -12)
+	gimmickText.ZIndex = 21
+	refs.gimmickButton = gimmickButton
 
 	local function setCodex(codex)
 		for index, bossId in ipairs(codexBossIds) do
@@ -291,6 +356,8 @@ function StageRewardBand.build(props)
 			rowViews[1].body.Text = "보상을 불러오는 중…"
 			return
 		end
+		gimmickBossId = entry.bossId
+		refreshGimmick()
 		local described = StageRewardBand.describe(stage, entry, rebirthCount)
 		title.Text = described.title
 		for index, row in ipairs(described.rows) do

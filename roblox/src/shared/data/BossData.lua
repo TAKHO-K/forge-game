@@ -503,6 +503,8 @@ end
 -- skillOrder는 같은 우선순위·같은 대기 시간일 때의 결정 순서(순회 순서 보장 - ArmorData.gradeOrder와 같은 이유).
 local SPECIES = {
 	{
+		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
+		intro = { title = "지반 붕괴", line = "체력이 절반 아래면 땅이 무너진다 - 금 간 원 밖으로 피하라", icon = "!", diagram = "zones" },
 		id = "section_guardian", displayName = "구간 수호자",
 		bodyColor = Color3.fromRGB(60, 20, 70), headColor = Color3.fromRGB(90, 30, 100),
 		-- 기본형(기준선) - 21-3부터 검증돼 온 그 보스다. 다른 5종이 쓰는 전조 어휘의 사전이고 견습 보스다.
@@ -526,6 +528,8 @@ local SPECIES = {
 		},
 	},
 	{
+		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
+		intro = { title = "눈보라 포효", line = "포효가 울리면 얼음 기둥 뒤에 숨어라 - 기둥이 부서지면 옮겨 숨어라", icon = "❄", diagram = "pillar" },
 		id = "frost_giant", displayName = "서리 거인", bodyColor = frostBody, headColor = frostHead,
 		-- 느린 거인: 크고(3.3) 느리고(6) 한 방이 무겁다(평타 1.5초에 ×1.5). 전역 쿨도 7초로 길다.
 		sizeScale = 3.3, bodyAspect = Vector3.new(0.85, 1.35, 0.85),
@@ -644,6 +648,8 @@ local SPECIES = {
 		},
 	},
 	{
+		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
+		intro = { title = "색 맞추기", line = "머리 위 표시(●빨강 / ▲파랑)와 같은 색 발판에 서라 - 밟을 때마다 색이 바뀐다", icon = "≈", diagram = "platform" },
 		id = "abyssal_lord", displayName = "심해 군주", bodyColor = abyssalBody, headColor = abyssalHead,
 		sizeScale = 3, bodyAspect = Vector3.new(1.05, 0.95, 1.15),
 		attachments = {
@@ -763,6 +769,8 @@ local SPECIES = {
 		},
 	},
 	{
+		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
+		intro = { title = "프리즘 분열", line = "흰 원이 자라는 진짜 여왕을 때려라 - 중간에 자리가 바뀐다", icon = "◇", diagram = "real" },
 		id = "crystal_queen", displayName = "수정 여왕", bodyColor = crystalBody, headColor = crystalHead,
 		sizeScale = 3, bodyAspect = Vector3.new(1.0, 1.15, 1.0),
 		attachments = {
@@ -872,6 +880,8 @@ local SPECIES = {
 		},
 	},
 	{
+		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
+		intro = { title = "갑각 태세", line = "붉은 고리가 서면 공격을 멈춰라 - 이어지는 꼬리 내려찍기를 피하라", icon = "✖", diagram = "shell" },
 		id = "scorpion_queen", displayName = "전갈 여왕", bodyColor = scorpionBody, headColor = scorpionHead,
 		-- 빠른 보스: 낮고 넓고(2.8) 빠르다(10 - 잡몹과 같다). 평타가 잦고(0.75초) 가볍다(×0.75). 전역 쿨 5초.
 		sizeScale = 2.8, bodyAspect = Vector3.new(1.3, 0.65, 1.2),
@@ -1023,6 +1033,8 @@ local SPECIES = {
 		},
 	},
 	{
+		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
+		intro = { title = "과충전", line = "낙뢰로 피뢰침 둘을 함께 채워라 - 못 채우면 피뢰침 곁으로", icon = "ϟ", diagram = "rod" },
 		id = "storm_lord", displayName = "폭풍 군주", bodyColor = stormBody, headColor = stormHead,
 		-- 가장 바쁜 보스: 전역 쿨 5초에 쿨이 짧은 스킬들. 평타도 잦고 가볍다.
 		sizeScale = 3, bodyAspect = Vector3.new(0.9, 1.2, 0.9),

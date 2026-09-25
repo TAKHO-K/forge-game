@@ -230,7 +230,8 @@ local function defaultProfile()
 
 		-- 안내 플래그(30-0 S20e, v30) - 계정 전체 공유. 한 번 하고 나면 안내 표시가 줄어드는 종류의 "본 적 있다/해 본 적 있다" 기록이다(값이 없으면 false로 본다).
 		--   gemMerchantUsed: 보석상인에서 변환 · 리롤(변환권 구매 포함)을 한 번이라도 성공했는가 - true면 보석 탭의 위치 안내 줄이 작은 회색 한 줄로 줄어든다.
-		hints = { gemMerchantUsed = false },
+		--   bossIntroSeen(BR1-2, v37): 전멸기 설명 카드를 본 보스 id 집합({ [bossId 문자열] = true }) - 처음 만난 보스만 카드가 뜬다.
+		hints = { gemMerchantUsed = false, bossIntroSeen = {} },
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
 		gemDust = 0,
@@ -888,6 +889,13 @@ local function migrate(data)
 		data.version = 36
 	end
 
+	if data.version < 37 then
+		-- BR1-2: 첫 만남 전멸기 카드 - 본 보스 집합(빈 표 = 아무것도 안 봤다. 기존 유저도 다음 보스전에서 한 번씩 본다).
+		data.hints = data.hints or {}
+		data.hints.bossIntroSeen = data.hints.bossIntroSeen or {}
+		data.version = 37
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -927,6 +935,7 @@ local function isValidProfile(data)
 		or type(data.purchases.bossCodex) ~= "table"
 		or type(data.hints) ~= "table"
 		or (data.hints.gemMerchantUsed ~= nil and type(data.hints.gemMerchantUsed) ~= "boolean")
+		or (data.hints.bossIntroSeen ~= nil and type(data.hints.bossIntroSeen) ~= "table") -- v37
 		or type(data.gemDust) ~= "number" or data.gemDust % 1 ~= 0 or data.gemDust < 0
 		or type(data.milestoneUnlocks) ~= "number" or data.milestoneUnlocks % 1 ~= 0 or data.milestoneUnlocks < 0
 		or type(data.leaderboardTainted) ~= "boolean" -- 리더보드 기록 제외(v34)

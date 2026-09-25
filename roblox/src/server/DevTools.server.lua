@@ -2270,6 +2270,9 @@ local function handleCommand(player, args)
 			end
 			reply(player, "killsim 중단: 보스가 사라졌습니다")
 		end)
+	elseif sub == "bossintro" and args[2] == "reset" then
+		PlayerProfile.debugResetBossIntro(player) -- BR1-2: 첫 만남 카드를 다시 보게(세션 메모리 - 백업 복원 대상)
+		reply(player, "첫 만남 카드 기록을 비웠습니다")
 	elseif sub == "god" and (args[2] == "on" or args[2] == "off") then
 		-- BR1-2 스크린샷용: 받는 피해 ×0(출처 칸 devGod - 1시간). 연출 · 판정은 그대로 돈다.
 		if args[2] == "on" then

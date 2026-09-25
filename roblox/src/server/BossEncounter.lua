@@ -287,6 +287,11 @@ end
 -- 공통 스폰 - members(실제 Player 목록)를 slot 하나의 아레나로 전원 텔레포트하고 보스를 세운다.
 -- size는 보스 HP 배수의 N(더미 포함 머릿수, PRD 20.47 [6](가) "N은 입장 인원이지 유효 DPS
 -- 환산이 아니다"). 이미 encounter가 있는 멤버가 섞여 있으면 호출부가 먼저 정리해야 한다.
+-- BR1-2 첫 만남 카드 신호(클라 BossIntroCard가 보스 id로 BossData.intro를 그린다)
+local bossIntroEvent = Instance.new("RemoteEvent")
+bossIntroEvent.Name = "BossIntroEvent"
+bossIntroEvent.Parent = game:GetService("ReplicatedStorage")
+
 local function spawnEncounter(data, stage, members, party, size, owner, isTutorial)
 	local slot = allocateSlot()
 	local zoneKey = zoneKeyForSlot(slot)
@@ -332,6 +337,14 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	end
 	BossArenaContainment.track(encounter)
 	fireListeners(startedListeners, encounter)
+	-- BR1-2 첫 만남 전멸기 카드: 이 보스(종)를 처음 만난 멤버에게만(저장 hints.bossIntroSeen - v37). 견습 보스전은 제외(견습 안내가 따로 있다).
+	if not encounter.isTutorial then
+		for _, member in ipairs(members) do
+			if typeof(member) == "Instance" and PlayerProfile.markBossIntroSeen(member, data.id) then
+				bossIntroEvent:FireClient(member, data.id)
+			end
+		end
+	end
 	return encounter
 end
 

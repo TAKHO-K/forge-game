@@ -179,7 +179,13 @@ function PlayerCombat.getNewbieDamageMultiplier(stage)
 	if not stage or stage ~= stage or stage > protection.untilStage then
 		return 1
 	end
-	return protection.atStage1 ^ (1 - (math.max(1, stage) - 1) / protection.untilStage)
+	-- BR1-2: 기하 증가(1 → plateauStage) + smoothstep 풀림(plateauStage → untilStage + 1) - CombatConfig.newbieProtection 주석
+	local s = math.max(1, stage)
+	if s <= protection.plateauStage then
+		return protection.atStage1 * (protection.atPlateau / protection.atStage1) ^ ((s - 1) / (protection.plateauStage - 1))
+	end
+	local x = math.clamp((s - protection.plateauStage) / (protection.untilStage + 1 - protection.plateauStage), 0, 1)
+	return protection.atPlateau + (1 - protection.atPlateau) * x * x * (3 - 2 * x)
 end
 
 function PlayerCombat.getDefense(classId, equipmentDefenseBonus, defensePercentBonus)

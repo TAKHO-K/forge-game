@@ -72,7 +72,8 @@ return {
 	-- SaveSystem.migrate()의 v33->v34 참고.
 	-- 35(P3c C4) - 필드 변경 없음, 값 이관: 레벨 126부터 필요 경험치 × 레벨별 배수(CharacterLevel.getExpScale - 133.3에서 레벨마다 ×0.99, 1에서 멈춤). classes[*].characterExp를
 	-- 옛 곡선(배수 없음)으로 읽은 레벨 · 진행률 그대로 새 곡선의 값으로 옮긴다. SaveSystem.migrate()의 v34->v35 참고.
-	saveVersion = 36, -- G1-2: 줍는 순간 자동 처리 필터 autoProcess
+	-- 37(BR1-2) - hints.bossIntroSeen(보스 id 문자열 키 집합) 신설 - 처음 만난 보스의 전멸기 카드를 한 번만 띄운다. 기존 세이브는 빈 표. SaveSystem.migrate()의 v36->v37 참고.
+	saveVersion = 37, -- BR1-2: 첫 만남 전멸기 카드 hints.bossIntroSeen
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

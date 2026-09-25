@@ -1667,6 +1667,28 @@ function PlayerProfile.markGemMerchantUsed(player)
 	return true
 end
 
+-- BR1-2(v37): 첫 만남 전멸기 카드 - 이 보스를 처음 만나면 true를 돌려주고 본 것으로 적는다(저장은 다음 정기 저장 - 카드를 한 번 더 보는 것은 무해하다).
+function PlayerProfile.markBossIntroSeen(player, bossId)
+	local profile = profiles[player]
+	if not profile or type(bossId) ~= "string" then
+		return false
+	end
+	profile.hints.bossIntroSeen = profile.hints.bossIntroSeen or {}
+	if profile.hints.bossIntroSeen[bossId] then
+		return false
+	end
+	profile.hints.bossIntroSeen[bossId] = true
+	return true
+end
+
+-- 검증 · 스크린샷 전용(/gg bossintro reset): 본 보스 집합을 비운다.
+function PlayerProfile.debugResetBossIntro(player)
+	local profile = profiles[player]
+	if profile then
+		profile.hints.bossIntroSeen = {}
+	end
+end
+
 function PlayerProfile.hasUsedGemMerchant(player)
 	local profile = profiles[player]
 	return profile ~= nil and profile.hints.gemMerchantUsed == true

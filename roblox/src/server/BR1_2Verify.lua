@@ -8,6 +8,8 @@ local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
+local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 
 local BR1_2Verify = {}
 
@@ -117,9 +119,31 @@ function BR1_2Verify.curveTable(r)
 	end
 end
 
+-- 초반 보호(스테이지 1 ~ 30 - CombatConfig.newbieProtection): 1 = atStage1 · plateau = atPlateau · 오르막만 · 30 < 1 · 31 = 1 · 첫 보스 6종(5 ~ 30) 모두 보호 안.
+function BR1_2Verify.protectionCheck(r)
+	local p = CombatConfig.newbieProtection
+	local cells, monotone, prev = {}, true, 0
+	for stage = 1, 32 do
+		local m = PlayerCombat.getNewbieDamageMultiplier(stage)
+		if m < prev - 1e-12 then
+			monotone = false
+		end
+		prev = m
+		if stage == 1 or stage % 5 == 0 or stage == 24 or stage == 27 or stage == 31 then
+			table.insert(cells, ("%d ×%.3f"):format(stage, m))
+		end
+	end
+	local m1, mP, m30, m31 = PlayerCombat.getNewbieDamageMultiplier(1), PlayerCombat.getNewbieDamageMultiplier(p.plateauStage), PlayerCombat.getNewbieDamageMultiplier(30), PlayerCombat.getNewbieDamageMultiplier(31)
+	r.check(("초반 보호 1 ~ %d: %s · 오르막 %s · nil → %s"):format(p.untilStage, table.concat(cells, " · "), tostring(monotone), tostring(PlayerCombat.getNewbieDamageMultiplier(nil))),
+		monotone and math.abs(m1 - p.atStage1) < 1e-9 and math.abs(mP - p.atPlateau) < 1e-9 and m30 < 1 and m31 == 1 and PlayerCombat.getNewbieDamageMultiplier(nil) == 1)
+end
+
 function BR1_2Verify.runPure()
 	print("===BR1-2 검증 시작(가)===")
 	local r = newRecorder("가")
+	r.section("초반 보호", function()
+		BR1_2Verify.protectionCheck(r)
+	end)
 	r.section("곡선 표", function()
 		BR1_2Verify.curveCheck(r)
 		BR1_2Verify.curveTable(r)
