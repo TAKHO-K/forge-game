@@ -176,12 +176,15 @@ function G1_2Verify.runLive(player, env)
 		assert(model, "잡몹이 없다")
 		local before = MonsterState.getKillSecondsFor(model, player)
 		MonsterState.applyDamage(model, 0, 1, player)
+		local hitAt = os.clock()
 		task.wait(0.3)
 		local measured = MonsterState.getKillSecondsFor(model, player)
+		local elapsed = os.clock() - hitAt -- Play 3: 경제 시뮬과 겹치면 task.wait가 늘어난다 - 기대는 실제 경과
 		MonsterState.clearPlayerContributions(player)
 		local cleared = MonsterState.getKillSecondsFor(model, player)
-		r.check(("잡몹 처음 때린 뒤 0.3초: 측정 %s → %.2f초(기대 0.3 ± 0.1) · 퇴장 정리 뒤 %s(기대 nil)"):format(tostring(before), measured or -1, tostring(cleared)),
-			measured ~= nil and near(measured, 0.3, 0.1) and cleared == nil)
+		r.check(("잡몹 한 대 뒤: 측정 %s → %.2f초(기대 실제 경과 %.2f · 한 대 상한 %.1f 이하) · 퇴장 정리 뒤 %s(기대 nil)"):format(tostring(before), measured or -1, elapsed,
+			DropTableData.fairness.maxSecondsPerHit, tostring(cleared)),
+			measured ~= nil and near(measured, math.min(elapsed, DropTableData.fairness.maxSecondsPerHit), 0.05) and cleared == nil)
 	end)
 
 	env.restore(player)
