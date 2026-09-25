@@ -866,7 +866,15 @@ local SPECIES = {
 		moveSpeedStuds = 10, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.375, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(5),
-		skillOrder = { "claw", "sting", "stab", "shell", "swipe", "grab" },
+		skillOrder = { "claw", "sting", "stab", "shell", "swipe", "grab", "stingJab", "ambush", "clawSweep" },
+		-- BR1 환경 변화 "개미지옥"(체력 50%부터): 몸을 흔들며 모래를 판다(3초 - 모래 소용돌이) → 12초 동안 아레나 한가운데 구덩이(반경 45)가 초당 7로 당긴다
+		-- (클라 - 걷기 16보다 느리다: 반대로 달리면 9/초로 버틴다) · 중심(반경 8)에 있으면 0.5초마다 10%. 떠 있어도 당긴다(수평).
+		environment = {
+			id = "antlion", style = "sand", motion = "claw", damageLabel = "개미지옥",
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.0, durationSeconds = 12,
+			zones = { shape = "pit", radiusStuds = 45, coreRadiusStuds = 8, pullStudsPerSecond = 7 },
+			tick = { seconds = 0.5, fraction = 0.1 },
+		},
 		-- 29-3 모래 유적(정적 지형 - 보스전이 시작될 때 짓고 끝나면 치운다, BossArenaKit). 유사 웅덩이 2곳(지름 10)은
 		-- 동·서 벽 앞이다 - 돌진은 늘 벽까지 달리므로 "웅덩이 앞에 서서 돌진을 받으면" 마지막 돌진이 웅덩이에서 끝난다
 		-- (연속 찌르기의 recoverInZone). 무너진 기둥 8개는 네 벽 앞의 장식이다(충돌 없음 - 회피 동선을 막지 않는다).
@@ -941,12 +949,14 @@ local SPECIES = {
 				reflectable = true, -- 29-5 탱커 훅: 갑각의 반사는 탱커의 반사로 되돌릴 수 있다("반사 대 반사" - PRD 20.80 [F]). 지금은 아무도 안 읽는다
 				cooldownSeconds = 18, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				conditions = { { type = "notAfter", skills = { "stab" } } },
-				telegraphSeconds = 4.0, recoverSeconds = 3.0,
+				-- BR1 기믹 개편(어렵게): 태세 3 → 4초(예고 1 + 태세 4) · 꼬리 반경 8 → 10 · ×2 → ×2.8(아래 finisher).
+				telegraphSeconds = 5.0, recoverSeconds = 3.0,
 				stance = { afterSeconds = 1.0, damageTakenMultiplier = 0, ringRadiusStuds = 5, sinkStuds = 1.0 },
 				failPenalty = false,
 				finisher = {
-					telegraphSeconds = 1.5, radiusStuds = 8, offsetStuds = 8, trapOnHit = true,
-					damage = { kind = "attack", multiplier = 2 }, damageLabel = "꼬리 내려찍기",
+					-- BR1: 반경 10(최대 범위 배율 11.5 + 1 = 1.48초 ≤ 1.5) · ×2.8(40% - 큼)
+					telegraphSeconds = 1.5, radiusStuds = 10, offsetStuds = 8, trapOnHit = true,
+					damage = { kind = "attack", multiplier = 2.8 }, damageLabel = "꼬리 내려찍기",
 				},
 				recoverPose = true, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
 				breakWindow = { seconds = 3, damageTakenMultiplier = 1.5 },
@@ -956,6 +966,43 @@ local SPECIES = {
 			},
 			swipe = enhancedBasic("집게 찰싹", "claw"), -- BR1 강화 평타
 			grab = airGrab("집게 낚아채기", "claw"), -- BR1 대공 잡기
+			-- BR1 새 ① 독침 3연 찌르기: 꼬리로 세 번 - 매번 그 순간의 대상에게 다시 겨눈 직선(반폭 3). 전조 0.9 · 0.9 · 1.3, 배율 ×1.0 · ×1.0(작음) · ×2.6(37% - 큼 - 마지막이 강하다).
+			--   옆으로 4 = 0.81초(최대 범위 배율 4.46 = 0.85초 ≤ 0.9).
+			stingJab = {
+				primitive = "line", bubble = "cross", motion = "tail",
+				cooldownSeconds = 11, priority = P.normal, starvationSeconds = 40,
+				conditions = { { type = "targetWithin", studs = 30 } },
+				telegraphSeconds = 0.9, directions = 1, stepDeg = 0, volleys = 3, rotateDeg = 0, reaim = true, halfWidthStuds = 3,
+				volleyShots = {
+					{ telegraphSeconds = 0.9, multiplier = 1.0 },
+					{ telegraphSeconds = 0.9, multiplier = 1.0 },
+					{ telegraphSeconds = 1.3, multiplier = 2.6 },
+				},
+				damage = { kind = "attack", multiplier = 1.0 }, damageLabel = "독침 찌르기",
+			},
+			-- BR1 새 ② 모래 잠복: 땅속으로 사라진다(0.8초) → 대상 발밑 원(반경 8)이 2초 따라가다 멈추고 1.35초 뒤 솟는다(보스가 그 자리에서 나타난다).
+			--   멈춘 순간 원 한가운데여도 9 = 1.2초(최대 범위 배율 10.2 = 1.30초 ≤ 1.35). ×3(42.9% - 큼).
+			ambush = {
+				primitive = "circleTarget", bubble = "charge", motion = "burrow",
+				cooldownSeconds = 16, priority = P.normal, starvationSeconds = 45,
+				conditions = { { type = "notAfter", skills = { "stab" } } },
+				telegraphSeconds = 0.8, count = 1, radiusStuds = 8, scatterStuds = 0,
+				ambush = { trackSeconds = 2.0, lockTelegraphSeconds = 1.35, depthStuds = 5 },
+				damage = { kind = "attack", multiplier = 3 }, damageLabel = "모래 잠복",
+			},
+			-- BR1 새 ③ 집게 휘두르기: 두 집게를 차례로 크게 - 대상 쪽 부채꼴 150°(반경 18) → 60° 돌려 한 번 더. 볼리 전조 1.5 · 1.5, 볼리당 ×2.2(31% - 중간).
+			--   부채 옆 · 뒤로(근접 자리 최악 9.9 → 1.27초 · 최대 범위 배율 1.39초). 공중 점프로도 피한다.
+			clawSweep = {
+				primitive = "sector", bubble = "heavy", motion = "claw",
+				cooldownSeconds = 12, priority = P.normal, starvationSeconds = 40,
+				conditions = { { type = "targetWithin", studs = 18 } },
+				telegraphSeconds = 1.5, angleDeg = 150, radiusStuds = 18, facing = "target", volleys = 2,
+				volleyShots = {
+					{ telegraphSeconds = 1.5, multiplier = 2.2 },
+					{ telegraphSeconds = 1.5, multiplier = 2.2, rotateDeg = 60 },
+				},
+				damage = { kind = "attack", multiplier = 2.2 }, damageLabel = "집게 휘두르기",
+			},
 		},
 	},
 	{
