@@ -27,6 +27,7 @@ local LeaderboardRules = require(ReplicatedStorage.Shared.LeaderboardRules)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerInspect = require(script.Parent.PlayerInspect)
+local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 보스전 중 높이 보정을 받은 판은 기록 거절
 
 local Leaderboard = {}
 
@@ -254,6 +255,16 @@ function Leaderboard.onBossCleared(info)
 		warn(("[Leaderboard] 기록 거절: 스테이지 %d · %.2f초 < 이론 최소 %.2f초(보스 HP %.3g ÷ DPS 상한 합)"):format(
 			info.stage, info.seconds, judgement.minSeconds, info.bossMaxHp or 0))
 		return judgement
+	end
+	-- G2a(D0 결정 3): 이 보스전이 시작된 뒤 서버 높이 검증이 되돌린 사람이 있으면(피해를 넣은 사람 전원 - 위와 같은 범위) 이 처치의 기록을 전부 거절한다.
+	local startedAt = os.clock() - info.seconds
+	for contributor in pairs(counted) do
+		if HeightGuard.flaggedSince(contributor, startedAt) then
+			stats.rejected += 1
+			judgement.rejected = "height_guard"
+			warn(("[Leaderboard] 기록 거절: 스테이지 %d - %s 높이 보정(보스전 중)"):format(info.stage, tostring(contributor.Name)))
+			return judgement
+		end
 	end
 
 	local allEligible = true

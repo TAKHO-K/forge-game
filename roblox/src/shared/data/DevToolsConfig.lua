@@ -142,7 +142,11 @@ local config = {
 		-- 대표로 29-1(PlayerDamage 직접) · S13b(나) · P25c(나)(신규 보호와 곱) · EconSim(P0(가)) · 환생 자리 RebirthAccess(S12b(가)(나)) · 강화대 환생 탭(S12(UI) · S12b(UI)).
 		-- G1-4: 이번 블록 G1-4(나) + 동반: BossEncounter(endEncounter · leaveFor 잔류 대응) · CombatResolution(처치) · StageServer → 보스 처치 · 이동 블록(S01(나) · S11(나) · 29-1 · P3a(나) · 27-4(나) · S12(나) · S19b(나)) - 체인 동안 잔류는 꺼져 옛 동작.
 		-- G1-5: 이번 블록 G1-5(나) + 동반: StageServer(이동 제한 · 재접속) · PartyServer(초대) · TutorialState(견습) · PartyVote(종류) · BossEncounter(탈퇴) → 27-3(나)(투표) · S12(나)(파티 · 견습) · S12b(나) · S19b(나) · 27-4(나).
+		-- G2a: 이번 블록 G2a(가)(나) + 동반(COMMON §3 - 바꾼 모듈: MonsterState(보스 기여도 - 모든 보스 처치) · BossSkillMath(회피 검사 - 29-x · S14 · P3a · P3c) · BossPatterns · BossArenaMap(넉백 예외 · 무너짐 낙하) ·
+		-- BossArenaContainment(복귀) · Leaderboard(거절 - P3a(나) · P3b · P3c) · PlayerProfile(걷기 상한) · DropTableData(세기 0.5 - G1-2(가) · P0(가) · S01 · P2) · TerrainServer) → G1-5와 같은 전 블록(넓은 쪽).
+		-- 체인 동안 높이 검증은 꺼진다(HeightGuard.debugOff - G2a(나)만 켠다). Play 1은 VerifyOnly 필터로 G1 미실행 2건(G1-2(나) · P3c(가))만.
 		current = {
+			"G2a(가)", "G2a(나)",
 			"G1-5(나)",
 			"G1-4(나)",
 			"G1-3(가)", "G1-3(나)",

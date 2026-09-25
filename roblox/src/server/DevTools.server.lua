@@ -3337,6 +3337,7 @@ if RunService:IsStudio() then
 			require(script.Parent.PlayerDamage).debugNewbieProtectionOff = true
 			require(script.Parent.BossEncounter).debugLingerOff = true -- G1-4: 처치 직후 복귀를 전제로 한 옛 검증 - G1-4(나)가 자기 항목에서만 켠다
 			CharacterLevel.debugLevelGapOff = true -- G1-3: 레벨차 계수도 체인 동안 끈다(옛 피해 기대값 - G1-3(나)가 자기 항목에서만 켠다)
+			require(script.Parent.HeightGuard).debugOff = true -- G2a: 서버 높이 검증도 체인 동안 끈다(캐릭터를 공중 · 구조물 위에 두는 옛 항목 - G2a(나)가 자기 항목에서만 켠다)
 			-- 29-1(뼈대 회귀) → 29-2(가: 순수 계산) → 29-2(나: 실제 서버 경로) 순서로 이어서 돈다 - 같은 플레이어·같은
 			-- 아레나를 쓰므로 겹치면 안 된다. 하나가 에러로 끊겨도 다음은 돈다.
 			for _, stage in ipairs({
@@ -3380,6 +3381,7 @@ if RunService:IsStudio() then
 				{ "P3c(나)", function() require(script.Parent.P3cVerify).runLive(player, env) end }, -- P3c: 발탄식 유도 · 전갈 2회 · 번개 추적 · 맵 이탈 복귀 · 6맵 배치 · 큰 블록 · 높이별 판정 · 보석 판매 · 전당
 				{ "P3d(나)", function() require(script.Parent.P3dVerify).runLive(player, env) end }, -- P3d: 맵 이탈 → 스폰 복귀 · 단상 · 재생성 · 끼임 · 모래 구덩이 붕괴 · 버프 중첩 · 라이브 제외
 				{ "P3dF(나)", function() require(script.Parent.P3dFVerify).runLive(player, env) end }, -- P3d-F: 재생성 누수 5회 · 받는 피해 배율 출처별 · 끼임 중 피격 · 단상 균열 예고 · 상한 교체
+				{ "G2a(나)", function() require(script.Parent.G2aVerify).runLive(player, env) end }, -- G2a: 높이 검증 실제 Player · 보스 기여도(계수 전) · 이속 상한 · 구조물 낙하
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "G1-4(나)", function() require(script.Parent.G1_4Verify).runLive(player, env) end }, -- G1-4: 보스맵 잔류 · 다음 / 다시 도전 / 마을 · 90초
 				{ "G1-3(나)", function() require(script.Parent.G1_3Verify).runLive(player, env) end }, -- G1-3: 레벨차 계수(실제 Player)
@@ -3402,6 +3404,7 @@ if RunService:IsStudio() then
 			end
 			require(script.Parent.PlayerDamage).debugNewbieProtectionOff = false
 			CharacterLevel.debugLevelGapOff = false
+			require(script.Parent.HeightGuard).debugOff = false
 			require(script.Parent.BossEncounter).debugLingerOff = DevToolsConfig.verifyArmed -- 체인 밖 옛 블록(27-x)도 잔류 없이(아래 서버 시작 설정과 같다)
 			-- S04 사전 작업(PRD 20.83 [8]): 옛 블록을 포함한 검증 체인 전체가 실제 가방을 그대로 남겼는가. 기준은 이 서버의 첫 백업
 			-- 순간(=어떤 블록도 가방을 건드리기 전)의 지문이다. 예전에는 Play마다 보스 드랍 2 ~ 3개가 가방에 남았다.
@@ -3737,6 +3740,16 @@ if RunService:IsStudio() and verifyEnabled("G1-3(가)") then
 		local ok, err = pcall(require(script.Parent.G1_3Verify).runPure)
 		if not ok then
 			warn(("[G1-3(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ G2a 자동 검증 블록(가) - 이단점프 식 · 한 체공 두 박자 검사(전 보스) · 높이 검증 판정 · 이속 · 점프력 상한(docs/phase/G2a-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("G2a(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.G2aVerify).runPure)
+		if not ok then
+			warn(("[G2a(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

@@ -22,6 +22,9 @@ local GroundProbe = require(script.Parent.GroundProbe)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local PlayerState = require(script.Parent.PlayerState) -- P3d D3: 끼인 사람의 받는 피해 0배를 풀 때
+local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 파편 튕김 동안 서버 높이 검증 예외
+local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig) -- G2a B5: 무너짐 낙하 속도
 local Looks = require(script.Parent.BossArenaLooks)
 
 local BossArenaMap = {}
@@ -297,16 +300,20 @@ local function fireBreak(state, obstacle, cause)
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if root and ArenaShape.contains(zone, root.Position, -GEOMETRY.wallThicknessStuds) then
+			local onTop = standsOnTop(obstacle, character, root)
+			-- G2a B5: 무너짐(피해 · 튕김 없음)으로 떨어질 사람에게만 아래 속도를 싣는다 - 캐릭터 물리를 가진 클라(DoubleJumpInput)가 적용하고 이번 낙하 2단을 막는다.
 			breakEvent:FireClient(player, {
 				position = obstacle.center + Vector3.new(0, obstacle.height / 2, 0),
 				radius = obstacle.radius, height = obstacle.height, color = obstacle.color, cause = cause,
+				dropSpeedStuds = (SOFT_BREAK[cause] and onTop) and MovementConfig.structureDropSpeedStuds or nil,
 			})
 			if SOFT_BREAK[cause] then
-				if standsOnTop(obstacle, character, root) then
+				if onTop then
 					table.insert(dropped, player)
 				end
-			elseif standsOnTop(obstacle, character, root) and not (BossArenaMap.isLaunchProtected and BossArenaMap.isLaunchProtected(player)) then -- P3d B2: 복귀 보호 중이면 안 튕긴다
+			elseif onTop and not (BossArenaMap.isLaunchProtected and BossArenaMap.isLaunchProtected(player)) then -- P3d B2: 복귀 보호 중이면 안 튕긴다
 				table.insert(launched, player)
+				HeightGuard.exempt(player, JumpMath.launchAirSeconds(topBreak.heightStuds))
 				if patternEvent then
 					patternEvent:FireClient(player, "launch", {
 						from = obstacle.center, heightStuds = topBreak.heightStuds, distanceStuds = topBreak.distanceStuds, zoneCenter = zone.center, zoneRadius = zone.radius,

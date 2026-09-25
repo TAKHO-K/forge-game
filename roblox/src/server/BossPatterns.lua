@@ -46,6 +46,8 @@ local ArenaContainment = require(ReplicatedStorage.Shared.ArenaContainment) -- P
 local BossArenaMap = require(script.Parent.BossArenaMap)
 local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 local BossArenaContainment = require(script.Parent.BossArenaContainment) -- P3d B2: 맵 이탈 복귀 보호(넉백 건너뛰기)
+local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 넉백 · 회오리 동안 서버 높이 검증 예외
+local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 
 local BossPatterns = {}
 
@@ -667,6 +669,7 @@ local function runHitEffects(c, effects, v, from, coHits)
 			local limitedHeight, limitedDistance = ArenaContainment.limitLaunch(zone, v.root.Position, away, height, distance)
 			debugEvent("launch", { player = v.player, coHits = coHits or 1, heightStuds = height, limitedHeight = limitedHeight,
 				distanceStuds = distance, limitedDistance = limitedDistance, from = from, rootPosition = v.root.Position })
+			HeightGuard.exempt(v.player, JumpMath.launchAirSeconds(height) + (effect.holdSeconds and effect.holdSeconds / weight or 0))
 			sendTo(v.player, "launch", {
 				from = from, heightStuds = height, distanceStuds = distance,
 				holdSeconds = effect.holdSeconds and effect.holdSeconds / weight, spinRadiusStuds = effect.spinRadiusStuds,

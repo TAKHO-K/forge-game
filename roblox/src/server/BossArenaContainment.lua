@@ -13,6 +13,7 @@ local BossArenaMap = require(script.Parent.BossArenaMap)
 local BossArenaProps = require(script.Parent.BossArenaProps)
 local GroundProbe = require(script.Parent.GroundProbe)
 local PlayerState = require(script.Parent.PlayerState)
+local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 복귀 순간이동 뒤 높이 기준 새로
 
 local BossArenaContainment = {}
 
@@ -113,6 +114,7 @@ function BossArenaContainment.checkMember(encounter, member)
 	local from = root.Position
 	local hpBefore = PlayerState.getHp(member)
 	character:PivotTo(CFrame.new(to))
+	HeightGuard.reset(member)
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.AssemblyAngularVelocity = Vector3.zero
 	PlayerState.setInvulnerableUntil(member, CONTAINMENT.returnProtectSeconds, "returnProtect") -- P3d-F B6: 무적은 별도 플래그(회전베기 등 다른 출처의 배율을 덮지 않는다)

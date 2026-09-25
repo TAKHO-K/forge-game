@@ -162,6 +162,8 @@ local MECHANICS = {
 		marginFactor = 1.25,
 		characterHalfWidthStuds = 1,
 		jumpAirSeconds = 0.54,
+		-- G2a: "한 체공에 두 박자 불가" 검사의 여유(초) - 필요 체공 ≥ 이단점프 · 공중대시 최대 체공(JumpMath.maxAirSeconds) + 이 값. 회피 검사 "다시 뛰기"는 1단(jumpAirSeconds) 기준 그대로.
+		doubleJumpMarginSeconds = 0.1,
 		rangedStandoffStuds = 20,
 	},
 

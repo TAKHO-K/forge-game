@@ -11,6 +11,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local JumpMath = require(ReplicatedStorage.Shared.JumpMath) -- G2a: 걷기 배율 상한
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
 local Equip = require(ReplicatedStorage.Shared.Equip) -- S20d: 착용 · 해제 판정(클라 미리 판정과 같은 함수)
@@ -1339,7 +1340,8 @@ function PlayerProfile.refreshMovementSpeed(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.WalkSpeed = BASE_WALK_SPEED_STUDS * PlayerCombat.getSpeedMultiplier(bonus) * PlayerState.getMoveSpeedMultiplier(player) -- P3d-F: 출처별 이동속도 배율(회전베기 감속 등)
+		humanoid.WalkSpeed = BASE_WALK_SPEED_STUDS * JumpMath.moveSpeedMultiplier(bonus) * PlayerState.getMoveSpeedMultiplier(player) -- P3d-F: 출처별 이동속도 배율(회전베기 감속 등)
+		-- G2a: 걷기 배율은 MovementConfig.moveSpeedMaxMultiplier(×1.5)에서 멈춘다 - 공격 속도(SpeedPercentBonus Attribute · PlayerCombat.getAttackCooldown)는 상한 없이 그대로.
 	end
 end
 
