@@ -2007,6 +2007,7 @@ end
 BossHandlersBR1.register(HANDLERS, kit)
 BossAirGrab.register(HANDLERS, kit)
 require(script.Parent.BossSonic).register(HANDLERS, kit) -- BR1-2 음파 포효(primitive sonic)
+require(script.Parent.BossColorMatch).register(HANDLERS, kit) -- BR1-2 색 맞추기(primitive colorMatch)
 BossEnvironment.register(kit)
 
 -- ─────────────────────────── 틱 ───────────────────────────

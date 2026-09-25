@@ -680,7 +680,7 @@ local SPECIES = {
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
-		skillOrder = { "sweep", "tide", "spout", "flood", "swipe", "grab", "tailSweep", "vortex", "bubbles", "mirror" },
+		skillOrder = { "sweep", "tide", "spout", "colors", "swipe", "grab", "tailSweep", "vortex", "bubbles", "mirror" },
 		-- BR1 환경 변화 "밥상뒤집기 = 널뛰기"(사용자 보완 B · 체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 사각 판 40 × 60이 (1 + 인원 ÷ 2)개.
 		-- 전조 3초 = 지형이 크게 흔들리고 판 전체가 위험색 · 가장자리 균열(보이는 판 = 판정). 판이 **가운데 받침점을 축으로** 뒤집힌다(그림은 클라 - 물리 없음):
 		-- 판 위(뒤집히는 순간 땅에 있는 사람 - 떠 있으면 안 날아간다) 사람은 **받침점에서 멀수록** 높이 · 멀리 · 크게: 높이 3 → 16 · 거리 6 → 48(판 바깥쪽 방향) ·
@@ -689,8 +689,10 @@ local SPECIES = {
 		environment = {
 			id = "tableFlip", style = "water", motion = "fin", damageLabel = "밥상뒤집기",
 			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.0, durationSeconds = 10,
-			zones = { shape = "rect", halfLengthStuds = 30, halfWidthStuds = 20 },
-			onStart = { seesaw = { minHeightStuds = 3, maxHeightStuds = 16, minDistanceStuds = 6, maxDistanceStuds = 48, minMultiplier = 1.0, maxMultiplier = 3.2 } },
+			-- BR1-2(사용자 - 맵 절반 이상을 한 번에): 판 한 장 = 아레나 반쪽(halfMap - 길이 = 지름 · 폭 = 반경, 무작위 방위). 받침점 = 판 가운데(길이 방향 0).
+			-- 받침점에서 멀수록 높이 · 멀리 · 크게(판 끝이면 맵 밖까지 - 날아갈 때 피해를 받고 기존 복귀가 받는다). 피하는 법 = 뒤집히는 순간 뛰기(떠 있으면 발사 없음) · 받침점 곁 · 판 밖(반대쪽 반).
+			zones = { shape = "rect", halfMap = true, halfLengthStuds = 30, halfWidthStuds = 20 },
+			onStart = { seesaw = { minHeightStuds = 3, maxHeightStuds = 20, minDistanceStuds = 6, maxDistanceStuds = 90, minMultiplier = 1.0, maxMultiplier = 3.2 } },
 			tick = { seconds = 0.5, fraction = 0.05 },
 		},
 		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단(P3c: 11곳)
@@ -733,29 +735,17 @@ local SPECIES = {
 				telegraphSeconds = 1.5, count = 5, sequential = true, repeatTelegraphSeconds = 1.05, radiusStuds = 5, scatterStuds = 0,
 				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "물기둥",
 			},
-			-- 범람(기믹, 29-4 - 타이밍). 예고 시작 6초 뒤 방전 - 그 순간 "아직 가라앉지 않은 단(윗단) 위"여야 한다.
-			--   · 단은 **그 사람이** 밟은 뒤 sinkSeconds(5초)면 **그 사람에게만** 가라앉는다 - 친구가 먼저 밟았다고 내 단이
-			--     가라앉지 않는다(서버는 멤버별로 밟은 시각만 갖고, 가라앉는 그림과 발밑 충돌은 각자의 클라가 자기 시계로 한다).
-			--     → 예고 뒤 1초(= 전조 − sinkSeconds) 안에 밟으면 방전 전에 발판을 잃는다. 미리 올라가 있던 사람은 예고와 함께
-			--     밟은 것으로 친다. 그 1초 동안은 단 윗면도 빨강이다("아직 올라가지 마라") - 빨강이 걷히면 올라간다.
-			--   · 시계는 범람이 도는 동안에만 돈다 - 범람이 시작될 때마다 네 단이 전원에게 새것이고, 끝나면 전부 돌아온다.
-			--     그래서 "첫 방전 전에 밟을 단이 없다"는 상태가 구조적으로 없다(단은 정적 kit이라 스킬 순서와도 무관하다).
-			--   · 물속 이동 −20%는 넣지 않았다(PRD 20.79) - 가장 먼 자리(56.6stud)에서 0.8배면 6.03초 > 전조 6.0으로 못 닿는다.
-			--     회피 거리 57 = 가장 먼 자리에서 윗단 가장자리까지 56.6(BossGimmickVerify가 격자로 잰다).
-			--   · 힌트 2단계(예고 × 1.5 = 9초)에서는 sinkSeconds도 같은 3초만큼 늘어난다 - "너무 이른" 창은 늘 1초다.
-			flood = {
-				primitive = "gimmick", bubble = "flood", role = "gimmick", kind = "onZone",
-				cooldownSeconds = 20, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
-				-- BR1 기믹 개편(어렵게): 예고 6 → 5.5초 · 가라앉기 5 → 4.5초("너무 이른" 창 1초는 그대로). 가장 먼 자리 57stud = 0.5 + 57 ÷ 16 × 1.25 = 4.95초 ≤ 5.5.
-				-- (5.0초는 여유 0.05초라 난이도 모형에서 심해 군주 전멸의 대부분이 됐다 - 실패 85%와 같이 쓰기에 너무 빡빡하다.)
-				telegraphSeconds = 5.5, recoverSeconds = 1.5,
-				safeZone = { tag = "platform", sinkSeconds = 4.5, shakeSeconds = 1.0, waterRiseStuds = 1.5 },
+			-- BR1-2 색 맞추기(전멸기 - 옛 범람을 대신한다 · primitive colorMatch = server/BossColorMatch): 멤버마다 머리 위 빨강 ● / 파랑 ▲(색약 대비 - 모양도) ·
+			--   돌단 윗단 11곳이 무작위 색(둘 다 하나 이상). 전조 7.5초 동안 **누구든 발판에 올라서는 순간 그 발판 색이 뒤집힌다**(남이 밟아도 바뀐다 - 협동 혼란).
+			--   판정 = 자기 표시와 같은 색 발판 윗면 위면 생존 · 아니면 최대 체력 90%(보호막 무시 - 진짜 즉사는 K).
+			--   회피: 가장 먼 자리에서 가장 가까운 단 57(옛 범람 격자) → 0.5 + 57 ÷ 16 × 1.25 = 4.95초 + 색이 틀리면 내려갔다 다시 올라서기 ≈ 1초 ≤ 7.5.
+			colors = {
+				primitive = "colorMatch", bubble = "flood", role = "gimmick",
+				cooldownSeconds = 22, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
+				telegraphSeconds = 7.5, recoverSeconds = 1.5,
+				platformTag = "platform", standToleranceStuds = 2.5, failMaxHpFraction = 0.9,
 				dodge = { distanceStuds = 57 },
-				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "방전",
-				-- 방전을 쏟아낸 직후 3초는 기회 창이다(파랑 말풍선). 노브: 단이 사분면 한가운데로 옮겨 가며(어디서든 닿게) 오가는
-				-- 길이 길어졌다 - 회피 비용 3.0 → 3.5초(단 20stud 곁에서 싸우는 사람: 가기 1.25 + 오기 1.25 + 여유 1). 창이 없으면
-				-- 몬테카를로 +8.7%로 ±10%의 가장자리다.
-				breakWindow = { seconds = 3, damageTakenMultiplier = 1.3 },
+				damage = { kind = "maxHp", fraction = 0.9 }, damageLabel = "색 맞추기 실패",
 				sim = { evadeSeconds = 3.5 },
 			},
 			swipe = enhancedBasic("지느러미 베기", "fin"), -- BR1 강화 평타

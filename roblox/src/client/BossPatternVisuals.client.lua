@@ -41,6 +41,7 @@ local BossFxData = require(ReplicatedStorage.Shared.data.BossFxData)
 local BossBR1View = require(script.Parent.BossBR1View)
 local BossGrabView = require(script.Parent.BossGrabView)
 local BossSonicView = require(script.Parent.BossSonicView) -- BR1-2 음파 포효
+local BossColorView = require(script.Parent.BossColorView) -- BR1-2 색 맞추기
 local BossEnvironmentView = require(script.Parent.BossEnvironmentView)
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
@@ -745,6 +746,14 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossSonicView.telegraph(data)
 	elseif kind == "sonicTick" then
 		BossSonicView.tick(data)
+	elseif kind == "colorStart" then
+		BossColorView.start(data)
+	elseif kind == "colorFlip" then
+		BossColorView.flip(data)
+	elseif kind == "colorResolve" then
+		BossColorView.resolve(data)
+	elseif kind == "colorEnd" then
+		BossColorView.finish()
 	elseif kind == "grabEnd" or kind == "grabMiss" then
 		BossGrabView.clear()
 	elseif kind == "envTelegraph" then
@@ -774,6 +783,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossBR1View.reset() -- BR1
 		BossGrabView.reset()
 		BossSonicView.reset()
+		BossColorView.finish()
 		-- 환경 그림은 여기서 안 지운다(리뷰 4 - 스킬 중단 · 대상 이탈의 "reset"에도 서버 환경은 계속 돈다): envEnd · propsClear에서
 	end
 end)

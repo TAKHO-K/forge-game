@@ -60,6 +60,13 @@ local function placeZones(model, st, data, env)
 		end
 	elseif spec.shape == "ring" then
 		table.insert(list, { shape = "ring", center = Vector3.new(center.X, st.floorY, center.Z), beyond = spec.beyondStuds, radius = arenaRadius })
+	elseif spec.shape == "rect" and spec.halfMap then
+		-- BR1-2 맵 절반 판: 무작위 방위 θ - 길이 방향 = θ(지름 전체) · 폭 = 반경(한쪽 반). 판 가운데 = 중심 + 옆 방향 × 반경 ÷ 2.
+		local angle = rng:NextNumber(0, 360)
+		local a = math.rad(angle)
+		local side = Vector3.new(-math.sin(a), 0, math.cos(a))
+		local c = center + side * (arenaRadius / 2)
+		table.insert(list, { shape = "rect", center = Vector3.new(c.X, st.floorY, c.Z), angleDeg = angle, halfLength = arenaRadius, halfWidth = arenaRadius / 2 })
 	elseif spec.shape == "rect" then
 		local count = 1 + math.floor(#members / 2)
 		for i = 1, count do
