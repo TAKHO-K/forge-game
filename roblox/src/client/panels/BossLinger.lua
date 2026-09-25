@@ -15,7 +15,7 @@ local UIManager = require(script.Parent.Parent.UIManager)
 local BossLingerPanel = {}
 BossLingerPanel.id = "bossLinger"
 
-local PANEL_SIZE = Vector2.new(420, 190)
+local PANEL_SIZE = Vector2.new(420, 214) -- 스크린샷: 비활성 버튼의 이유 줄이 창 아래로 잘려 버튼 아래에 한 줄 자리를 둔다
 local PAD = 12
 
 local _ = Players.LocalPlayer
@@ -40,7 +40,7 @@ local function build()
 	local function make(name, key, x, kind, choice)
 		return Button.build({
 			parent = panel.content, name = name, text = Text.get(key), kind = kind, width = width,
-			position = UDim2.new(0, x, 1, -(Theme.buttonHeight + PAD)),
+			position = UDim2.new(0, x, 1, -(Theme.buttonHeight + PAD + Theme.textSize("caption") + 6)),
 			onActivated = function()
 				choiceEvent:FireServer(choice)
 			end,
