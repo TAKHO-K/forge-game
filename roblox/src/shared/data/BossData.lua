@@ -479,7 +479,7 @@ local function stormKitParts(baseColor, rodColor)
 		})
 		table.insert(parts, {
 			name = "LightningRod", size = Vector3.new(1, 12, 1), offset = Vector3.new(x, 6, 0), color = rodColor, material = Enum.Material.Metal,
-			tag = "rod", radiusStuds = 6, -- radiusStuds = 과충전 방전 때 이 피뢰침 곁의 안전 반경
+			tag = "rod", radiusStuds = 5, -- radiusStuds = 과충전 방전 때 이 피뢰침 곁의 안전 반경(BR1: 6 → 5)
 		})
 	end
 	return parts
@@ -1016,7 +1016,15 @@ local SPECIES = {
 		moveSpeedStuds = 9, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.375, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(5),
-		skillOrder = { "discharge", "whirl", "strike", "overcharge", "swipe", "grab" },
+		skillOrder = { "discharge", "whirl", "strike", "overcharge", "swipe", "grab", "tornado", "thunderRing", "boltSpear" },
+		-- BR1 환경 변화 "돌풍"(체력 50%부터): 지팡이를 수평으로 - 바람 줄기가 한 방향으로(3초) → 12초 동안 바람이 초당 7로 민다(클라 - 걷기 16보다 약하다:
+		-- 거슬러 9/초 · 떠 있으면 ×1.5) · 4초마다 90° 돈다 · 바람이 불어 가는 반원의 가장자리(반경 110 밖)가 전기 벽(0.5초마다 6%).
+		environment = {
+			id = "gale", style = "storm", motion = "staff", damageLabel = "돌풍",
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.0, durationSeconds = 12,
+			zones = { shape = "wind", beyondStuds = 110, pushStudsPerSecond = 7, airMultiplier = 1.5, rotateEverySeconds = 4, rotateDeg = 90 },
+			tick = { seconds = 0.5, fraction = 0.06 },
+		},
 		arenaKit = { parts = stormKitParts(stormBody, stormHead) }, -- 29-4 폭풍 첨탑의 피뢰침 2개
 		skills = {
 			-- 방전 고리. 파동 하나 - 기본형 강공격 자리의 스킬이지만 걸어서가 아니라 **뛰어서** 피한다.
@@ -1026,7 +1034,9 @@ local SPECIES = {
 				primitive = "ring", bubble = "shockwave",
 				cooldownSeconds = 9, priority = P.normal, starvationSeconds = 40,
 				telegraphSeconds = 1.2, waveCount = 1, repeatIntervalSeconds = 1.5,
-				rhythm = { label = "천둥 · 메아리", { speedStuds = 36 }, { gapSeconds = 1.3, speedStuds = 20 } },
+				-- BR1(공중 전제 §2 - 한 체공 1.50초로 전부 넘던 문제): 3파동 "천둥 · 공중 메아리 · 천둥" - 첫 박 → 끝 박 2.4초(≥ 한 체공 최대 1.96 + 여유).
+				-- 2박 = 공중 파동(발 +4 ~ 14 - 서 있는다). 3박 속도는 메아리와 같은 20(빠른 파동이 느린 파동을 뒤따르면 멀리서 따라잡아 "다시 뛰기"가 깨진다).
+				rhythm = { label = "천둥 · 공중 메아리 · 천둥", { speedStuds = 36 }, { gapSeconds = 1.2, speedStuds = 20, air = { minStuds = 4, maxStuds = 14 } }, { gapSeconds = 1.2, speedStuds = 20 } },
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				damage = { kind = "attack", multiplier = 1.5 }, damageLabel = "방전 고리",
 				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
@@ -1057,7 +1067,8 @@ local SPECIES = {
 			strike = {
 				primitive = "circleTarget", bubble = "meteor", role = "signature",
 				cooldownSeconds = 12, firstAvailableSeconds = 8, reserveFirstUse = true, priority = P.signature,
-				telegraphSeconds = 1.5, count = 2, sequential = true, repeatTelegraphSeconds = 1.5, radiusStuds = 6, scatterStuds = 0,
+				-- BR1 수정 "추적 번개 강화": 연발 2 → 3.
+				telegraphSeconds = 1.5, count = 3, sequential = true, repeatTelegraphSeconds = 1.5, radiusStuds = 6, scatterStuds = 0,
 				perMember = true,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "낙뢰",
 				onImpact = { { type = "chargeZone", tag = "rod", seconds = 12, reachStuds = 1 } },
@@ -1088,15 +1099,47 @@ local SPECIES = {
 			overcharge = {
 				primitive = "gimmick", bubble = "overcharge", role = "gimmick", kind = "nearZone",
 				cooldownSeconds = 30, priority = P.gimmick,
-				conditions = { { type = "gateArmedFor", seconds = 30 }, { type = "membersNearZone", tag = "rod", studs = 30 } },
+				-- BR1 기믹 개편(어렵게): 장막 30 → 25초 · 안전 반경 6 → 5(피뢰침 kit의 radiusStuds) · 회피 거리 30 − 5 + 1 = 26 → 2.53초 ≤ 3.0.
+				conditions = { { type = "gateArmedFor", seconds = 25 }, { type = "membersNearZone", tag = "rod", studs = 30 } },
 				telegraphSeconds = 3.0, recoverSeconds = 0,
 				safeCircles = { tag = "rod" }, judgesGate = false,
-				dodge = { distanceStuds = 25 }, -- 30 − 안전 반경 6 + 몸통 1
+				dodge = { distanceStuds = 26 }, -- 30 − 안전 반경 5 + 몸통 1
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "과충전 방전",
 				sim = { evadeSeconds = 2.0 },
 			},
 			swipe = enhancedBasic("지팡이 휘두르기", "staff"), -- BR1 강화 평타
 			grab = airGrab("바람 손", "wind"), -- BR1 대공 잡기
+			-- BR1 새 ① 회오리 이동: 지팡이를 돌려 회오리를 보낸다 - 지면을 기며(속도 10 · 회전 30°/초 · 반경 5 · 6초) 대상을 쫓고, 닿은 사람을 띄워 1.5초 돌린다
+			--   (회오리 원과 같은 조각 launch · 그동안 무적). 높이 14까지 닿는다(떠 있어도 맞는다). 옆으로 걸어 비킨다(10 < 16). ×1.4(20% - 작음).
+			tornado = {
+				primitive = "projectile", bubble = "whirl", motion = "staff", projectileStyle = "tornado",
+				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 40,
+				telegraphSeconds = 1.3, count = 1,
+				speedStuds = 10, turnRateDeg = 30, radiusStuds = 5, lifetimeSeconds = 6, heightMode = "ground", groundHitHeightStuds = 14, pierce = true,
+				targetRule = "target",
+				onHit = { { type = "launch", heightStuds = 6, distanceStuds = 0, holdSeconds = 1.5, spinRadiusStuds = 3, immuneSeconds = 2.5 } },
+				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "회오리 이동",
+			},
+			-- BR1 새 ② 확장 천둥 고리: 지팡이를 높이 든다 - 느린 파동 셋(속도 12 - 걸어서도 앞선다) · 1 · 3박 = 지상(뛴다) · 2박 = 공중(서 있는다). 간격 1.6초. 파동당 ×1.4(작음).
+			thunderRing = {
+				primitive = "ring", bubble = "shockwave", motion = "staff",
+				cooldownSeconds = 15, priority = P.normal, starvationSeconds = 45,
+				telegraphSeconds = 1.6, waveCount = 3, repeatIntervalSeconds = 1.6,
+				rhythm = { label = "느린 고리 · 공중 · 느린 고리", { speedStuds = 12 }, { gapSeconds = 1.6, speedStuds = 12, air = { minStuds = 4, maxStuds = 14 } }, { gapSeconds = 1.6, speedStuds = 12 } },
+				waveSpeedStuds = 12, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
+				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "천둥 고리",
+			},
+			-- BR1 새 ③ 뇌격 창(대공): 지팡이 끝에 번개가 모인다 - **공중에 뜬 사람**을 겨눈 빠른 직선 둘(속도 55 · 반경 2 · 0.3초 간격). 떠 있는 사람이 없으면 쓰지 않는다.
+			--   궤도를 바꾸거나 착지하면 빗나간다. ×1.6(23% - 중간).
+			boltSpear = {
+				primitive = "projectile", bubble = "overcharge", motion = "staff", projectileStyle = "bolt",
+				cooldownSeconds = 12, priority = P.normal, starvationSeconds = 40,
+				conditions = { { type = "memberAirborne", seconds = 0.3 } },
+				telegraphSeconds = 1.0, count = 2, launchIntervalSeconds = 0.3,
+				speedStuds = 55, turnRateDeg = 0, radiusStuds = 2, lifetimeSeconds = 4, heightMode = "air", launchHeightStuds = 11,
+				targetRule = "airborne",
+				damage = { kind = "attack", multiplier = 1.6 }, damageLabel = "뇌격 창",
+			},
 		},
 	},
 }
