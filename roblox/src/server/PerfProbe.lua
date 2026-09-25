@@ -270,4 +270,103 @@ function PerfProbe.run(player)
 	print("[PERF] 끝")
 end
 
+-- ═══ M1 인원별 서버 부하(가짜 플레이어) ═══
+-- 실제 클라를 여럿 못 띄우므로(MCP) 서버에서 인원 n을 흉내 낸다: 허브 25% · 나무 15% · 사냥 60%(사냥 지대마다 2명씩 - 몬스터 지대 활성 초점 SpawnSites.debugFoci) ·
+-- 사냥꾼마다 직업 평타 쿨다운으로 가장 가까운 잡몹을 실제 평타 경로(applyDamage → AttackResult → resolveHit)로 때린다 · 허브 밀집 렌더용 캐릭터 복제본(crowd = true).
+-- 한계: 가짜 사냥꾼은 캐릭터가 없어 몬스터 추격 AI가 돌지 않는다(대기 AI만) · 네트워크는 실제 클라가 없어 원격 호출 수 × 인원으로 추정한다.
+function PerfProbe.runWorld(player, counts, seconds, crowd)
+	local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
+	local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+	local SpawnSites = require(script.Parent.SpawnSites)
+	local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
+	local cooldown = PlayerCombat.getAttackCooldown(PlayerProfile.getClassId(player), 0)
+	local grounds = {}
+	for _, z in ipairs(WorldMapData.zones) do
+		for _, g in ipairs(WorldMapLayout.grounds(z)) do
+			table.insert(grounds, g.center)
+		end
+	end
+	local character = player.Character
+	local results = {}
+	for _, n in ipairs(counts) do
+		local hub, tree = math.floor(n * 0.25 + 0.5), math.floor(n * 0.15 + 0.5)
+		local hunters = n - hub - tree
+		local foci, hunterAt = {}, {}
+		for i = 1, hunters do
+			local g = grounds[(math.ceil(i / 2) - 1) % #grounds + 1]
+			local p = g + Vector3.new((i % 2) * 20 - 10, 0, 0)
+			table.insert(foci, p)
+			table.insert(hunterAt, p)
+		end
+		table.clear(SpawnSites.debugFoci)
+		for _, p in ipairs(foci) do
+			table.insert(SpawnSites.debugFoci, p)
+		end
+		-- 허브 밀집(렌더 확인용 복제본 - 서버 비용은 거의 0)
+		local dummies = {}
+		if crowd and character then
+			character.Archivable = true
+			for i = 1, hub do
+				local c = character:Clone()
+				for _, d in ipairs(c:GetDescendants()) do
+					if d:IsA("BaseScript") then
+						d:Destroy()
+					elseif d:IsA("BasePart") then
+						d.Anchored = true
+					end
+				end
+				local a = i / math.max(hub, 1) * 2 * math.pi
+				c:PivotTo(CFrame.new(WorldMapLayout.spawnPoint() + Vector3.new(math.cos(a) * 18, 4, math.sin(a) * 18)))
+				c.Name = "PerfCrowd"
+				c.Parent = workspace
+				table.insert(dummies, c)
+			end
+		end
+		task.wait(2.5) -- 지대가 켜질 시간(checkSeconds 1초)
+		local acc = {}
+		local hits, kills = 0, 0
+		local function tick(dt)
+			PlayerState.setHp(player, PlayerState.getMaxHp(player))
+			for i, at in ipairs(hunterAt) do
+				acc[i] = (acc[i] or (i * 0.03)) + dt
+				if acc[i] >= cooldown then
+					acc[i] -= cooldown
+					local best, bestD = nil, 60
+					for _, model in ipairs(MonsterState.getAllModels()) do
+						local data = MonsterState.getData(model)
+						if data and not data.isBoss and not data.isChest and model.PrimaryPart then
+							local d = (model.PrimaryPart.Position - at).Magnitude
+							if d < bestD then
+								best, bestD = model, d
+							end
+						end
+					end
+					if best then
+						local stage = TutorialState.getMonsterStage(player)
+						local prefix = MonsterState.getPrefix(best)
+						local maxHp = InfiniteStage.getMonsterHp(MonsterState.getData(best).hp, stage) * (prefix and prefix.hpMultiplier or 1)
+						local isDead, dealt = MonsterState.applyDamage(best, maxHp / HITS_PER_KILL, stage, player)
+						MonsterSpawner.updateHpLabel(best)
+						hits += 1
+						kills += isDead and 1 or 0
+						attackResult:FireClient(player, best, dealt or maxHp / HITS_PER_KILL, false, isDead, false, false, false)
+						CombatResolution.resolveHit(player, best, isDead)
+					end
+				end
+			end
+		end
+		local line = sample(("world%d"):format(n), seconds or 15, tick)
+		local activeSites, alive = SpawnSites.stats()
+		local summary = ("[PERF] world n=%d hub=%d tree=%d hunters=%d activeSites=%d aliveSiteMonsters=%d hits=%d kills=%d crowd=%d"):format(n, hub, tree, hunters, activeSites, alive, hits, kills, #dummies)
+		print(summary)
+		table.insert(results, line .. " | " .. summary)
+		for _, c in ipairs(dummies) do
+			c:Destroy()
+		end
+	end
+	table.clear(SpawnSites.debugFoci)
+	print("[PERF] world 끝")
+	return results
+end
+
 return PerfProbe

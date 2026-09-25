@@ -147,6 +147,7 @@ local config = {
 		-- 체인 동안 높이 검증은 꺼진다(HeightGuard.debugOff - G2a(나)만 켠다). Play 1은 VerifyOnly 필터로 G1 미실행 2건(G1-2(나) · P3c(가))만.
 		-- M1-0(검증 정책 v2 - COMMON §7): 이번 블록 M1-0(가)(나) + 이번 변경이 닿는 블록만 VerifyOnly로 돈다 - G2a(가)(나)(높이 검증 · 회피 부등식 - 리뷰 반영 9건 첫 Play) · G1-0(나)(맵 이탈 복귀 - BossArenaContainment).
 		current = {
+			"M1(가)", "M1(나)",
 			"BR1(가)", "BR1(나)",
 			"M1-0(가)", "M1-0(나)",
 			"G2a(가)", "G2a(나)",

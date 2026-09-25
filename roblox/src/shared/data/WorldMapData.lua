@@ -352,6 +352,8 @@ return {
 		startUnlocked = 1,
 		-- 잠긴 구역 밀어내기(서버 보조 - 주 수단은 클라 결계 벽): 들어온 자리 → 구역 원 밖 pushOutStuds.
 		pushOutStuds = 6,
+		-- 높은 곳 착지 복귀(서버): 나무 둘레(treeRadius) 밖에서 발이 standMaxY 위에 서 있으면 허브로 - 걸어서 오를 수 있는 가장 높은 곳 = 탑 지형 120(폭풍 첨탑 구역).
+		treeRadius = 320, standMaxY = 160,
 		pushCheckSeconds = 0.5,
 	},
 	-- 결계(잠긴 구역 경계 - 클라만 만든다: 캐릭터 물리는 클라 소유라 로컬 벽이 그 사람만 막는다). 투명 충돌 벽 + 발밑 빛 선 + 결계 문 표시.

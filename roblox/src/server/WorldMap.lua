@@ -66,6 +66,10 @@ local function makePart(p)
 		part.CastShadow = false
 	else
 		part.CanTouch = false -- 트리거는 서버 거리 폴링(TravelServer) - 터치 이벤트를 안 쓴다
+		if p.query == false then
+			part.CanQuery = false -- 봉인 상자 투명 벽: 막기만 한다(조준 · 지면 광선에 안 걸림)
+			part.CastShadow = false
+		end
 	end
 	if p.transparency then
 		part.Transparency = p.transparency
@@ -82,7 +86,7 @@ local function makePart(p)
 	if p.attrs and p.attrs.Label then
 		local gui = Instance.new("BillboardGui")
 		gui.Name = "LabelGui"
-		gui.Size = UDim2.new(0, 160, 0, 32)
+		gui.Size = p.attrs.LabelSmall and UDim2.new(0, 110, 0, 20) or UDim2.new(0, 160, 0, 32) -- 봉인 입구 명판은 작게
 		gui.StudsOffsetWorldSpace = Vector3.new(0, p.size.Y / 2 + 3, 0)
 		gui.MaxDistance = 220
 		gui.Parent = part

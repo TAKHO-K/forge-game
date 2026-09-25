@@ -241,6 +241,44 @@ local function onStation(feet)
 	return nil
 end
 
+-- ─────────────────────────── 봉인 입구(M1 티저) ───────────────────────────
+-- 봉인 상자 안(투명 벽 빈틈 · 순간이동 · 끼임 대비) = 입구 앞으로 부드럽게 되돌림(피해 없음). 틈 선반에 서면 짧은 문구 + 칭호(계정 1회).
+local sealedBoxes
+function Travel.sealedBoxes()
+	sealedBoxes = sealedBoxes or WorldMapLayout.sealedBoxes()
+	return sealedBoxes
+end
+
+function Travel.checkSealed(player, st, feet, grounded, now)
+	local S = WorldMapData.sealed
+	for _, box in ipairs(Travel.sealedBoxes()) do
+		if WorldMapLayout.insideSealed(box, feet + Vector3.new(0, 1, 0)) then
+			st.sealedPushes = (st.sealedPushes or 0) + 1
+			Travel.teleport(player, (box.cf * CFrame.new(0, 3, -12)).Position, "봉인 되돌림(" .. box.id .. ")")
+			if now - (st.sealedNoticeAt or -math.huge) > 3 then
+				st.sealedNoticeAt = now
+				PartyState.notify(player, S.title.line)
+			end
+			return true
+		end
+		if grounded then
+			local l = box.cf:PointToObjectSpace(feet)
+			local led = box.ledge
+			if math.abs(l.X - led.localPos.X) <= led.halfX and math.abs(l.Z - led.localPos.Z) <= led.halfZ and math.abs(l.Y - led.localPos.Y) <= 2.5 then
+				if PlayerProfile.grantTitle(player, S.title.id) then
+					print(("[forge-game] 칭호: %s - %s(%s 틈)"):format(player.Name, S.title.name, box.id))
+					PartyState.notify(player, ("%s  · 칭호 [%s]"):format(S.title.line, S.title.name))
+					ImmediateSave.request(player)
+				elseif now - (st.sealedNoticeAt or -math.huge) > 6 then
+					st.sealedNoticeAt = now
+					PartyState.notify(player, S.title.line)
+				end
+			end
+		end
+	end
+	return false
+end
+
 -- ─────────────────────────── 폴링 ───────────────────────────
 local hubPortals, campPortals, gates, liftPoint
 local function buildPoints()
@@ -292,8 +330,14 @@ function Travel.pollPlayer(player, root, humanoid, now)
 	if BossEncounter.getEncounter(player) then
 		return -- 보스 아레나(세계 밖 슬롯) - 이 아래 규칙은 필드 전용
 	end
+	if Travel.checkSealed(player, st, feet, grounded, now) then
+		return
+	end
 	-- 세계 밖 · 너무 높은 곳에 서 있다 → 허브
-	if flat(feet).Magnitude > WorldMapData.edge.radius + 10 or (grounded and feet.Y > WorldMapData.hub.tree.course.deck.y + 60) then
+	-- 높은 곳: 나무 둘레(treeRadius) 안 = 전망대 + 60 위 · 밖 = 오를 수 있는 가장 높은 구조물 + 여유(standMaxY) 위에 서 있으면(투명 벽 위 · 끼임 등)
+	local P = WorldMapData.progress
+	local tooHigh = grounded and (feet.Y > WorldMapData.hub.tree.course.deck.y + 60 or (flat(feet).Magnitude > P.treeRadius and feet.Y > P.standMaxY))
+	if flat(feet).Magnitude > WorldMapData.edge.radius + 10 or tooHigh then
 		Travel.teleport(player, WorldConfig.zones.spawn.arrival + Vector3.new(0, WorldMapData.floorTopY + 3, 0), "세계 밖 복귀")
 		return
 	end

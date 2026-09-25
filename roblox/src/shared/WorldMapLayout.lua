@@ -124,7 +124,7 @@ local function prim(list, model, name, size, cf, color, opts)
 	table.insert(list, {
 		model = model, name = name, size = size, cf = cf, color = color or D.colors.block,
 		material = opts.material or "Concrete", shape = opts.shape or "Block", collide = opts.collide ~= false,
-		transparency = opts.transparency, attrs = opts.attrs, neon = opts.neon, mesh = opts.mesh,
+		transparency = opts.transparency, attrs = opts.attrs, neon = opts.neon, mesh = opts.mesh, query = opts.query,
 	})
 end
 -- 바닥에 선 상자(중심 xz · 윗면 높이 top)
@@ -160,6 +160,35 @@ function Layout.triangle(a, b, c, thickness)
 		{ size = Vector3.new(thickness, height, math.abs(ab:Dot(back))), cf = CFrame.fromMatrix((a + b) / 2, right, up, back) },
 		{ size = Vector3.new(thickness, height, math.abs(ac:Dot(back))), cf = CFrame.fromMatrix((a + c) / 2, -right, up, -back) },
 	}
+end
+
+-- 이동 한 번(오름 rise · 간격 gap - 끝에서 끝)에 필요한 가장 쉬운 기술(movement-metrics v2 - 간격은 80% 여유 · 높이는 최대 도달 − 0.3).
+-- 반환: 난이도("easy" | "normal" | "hard") · 조합 이름 | nil, "불가". 격자 계산이라 결과를 캐시한다(검증 · 시간 표 전용 - 매 프레임 쓰지 않는다).
+local skillCache = {}
+local COMBOS = {
+	{ name = "1단", air = 0, dash = false, skill = "easy" },
+	{ name = "공중1", air = 1, dash = false, skill = "normal" },
+	{ name = "공중2", air = 2, dash = false, skill = "normal" },
+	{ name = "1단+대시", air = 0, dash = true, skill = "hard" },
+	{ name = "공중1+대시", air = 1, dash = true, skill = "hard" },
+	{ name = "공중2+대시", air = 2, dash = true, skill = "hard" },
+}
+function Layout.moveSkill(rise, gap)
+	local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+	local MC = require(ReplicatedStorage.Shared.data.MovementConfig)
+	for _, c in ipairs(COMBOS) do
+		local key = c.name .. ":" .. math.floor(math.max(rise, 0) * 2 + 0.5)
+		local g = skillCache[key]
+		if not g then
+			local air = JumpMath.maxAirSeconds(MC.jumpHeightStuds, c.air, c.dash and 0.3 or nil, math.max(rise, 0), nil, 24)
+			g = MC.walkSpeedStuds * (air - (c.dash and 0.3 or 0)) + (c.dash and 16 or 0)
+			skillCache[key] = g
+		end
+		if rise <= JumpMath.maxReachStuds(MC.jumpHeightStuds, c.air) - 0.3 and gap <= 0.8 * g then
+			return c.skill, c.name
+		end
+	end
+	return nil, "불가"
 end
 
 -- ─────────────────────────── 나무 점프맵(M1 재설계 - 두 갈래 길) ───────────────────────────
@@ -863,6 +892,145 @@ function Layout.buildHub(list)
 	end
 end
 
+-- ─────────────────────────── 봉인 입구(M1 티저) ───────────────────────────
+-- 문 좌표계: 원점 = 문 바닥 가운데 · 로컬 −Z = 문 앞(사람이 서는 쪽) · +Z = 봉인 상자 안쪽.
+function Layout.sealedFrame(entry)
+	local d = dirOf(entry.at.angleDeg)
+	local p = d * entry.at.r + Vector3.new(0, FLOOR + (entry.at.y or 0), 0)
+	local front = entry.facing == "out" and d or -d
+	return CFrame.lookAt(p, p + front)
+end
+
+-- 봉인 상자(서버 구역 검사 · 투명 벽): { id, name, cf(문 좌표계), w, d, h, ledge = { localPos(문 좌표계 선반 윗면 가운데), halfX, halfZ } }
+function Layout.sealedBoxes()
+	local S = D.sealed
+	local list = {}
+	for _, e in ipairs(S.entrances) do
+		local cf = Layout.sealedFrame(e)
+		local door = S.door
+		local ledgeX = door.width / 2 + door.frame + door.wallW / 2
+		table.insert(list, { id = e.id, name = e.name, cf = cf, w = e.box.w, d = e.box.d, h = e.box.h,
+			ledge = { localPos = Vector3.new(ledgeX, door.ledgeH, -1), halfX = door.wallW / 2, halfZ = 3 } })
+	end
+	return list
+end
+
+-- 점이 봉인 상자 안인가(문 좌표계로 옮겨 잰다)
+function Layout.insideSealed(box, position)
+	local l = box.cf:PointToObjectSpace(position)
+	return math.abs(l.X) < box.w / 2 and l.Z > 1 and l.Z < box.d + 1 and l.Y > -2 and l.Y < box.h
+end
+
+local SEALED_PROPS = {}
+function SEALED_PROPS.clockTower(list, model, cf, door)
+	-- 바늘 없는 시계판(문 위 탑 벽) · 멈춘 큰 톱니(문 옆에 기대어) · 째깍 소리 자리
+	prim(list, model, "TowerFace", Vector3.new(22, 22, 3), cf * CFrame.new(0, door.height + 4 + 11, 0.5), { 120, 116, 110 }, { material = "SmoothPlastic" })
+	prim(list, model, "ClockFace", Vector3.new(1, 14, 14), cf * CFrame.new(0, door.height + 17, -1.5) * CFrame.Angles(0, math.rad(90), 0), { 235, 225, 200 }, { shape = "Cylinder", material = "SmoothPlastic" })
+	prim(list, model, "ClockRim", Vector3.new(0.8, 16, 16), cf * CFrame.new(0, door.height + 17, -1) * CFrame.Angles(0, math.rad(90), 0), { 150, 120, 60 }, { shape = "Cylinder", material = "SmoothPlastic" })
+	local gear = cf * CFrame.new(-(door.width / 2 + 9), 9, -6) * CFrame.Angles(0, 0, math.rad(78))
+	prim(list, model, "Gear", Vector3.new(2, 16, 16), gear * CFrame.Angles(0, math.rad(90), 0), { 160, 140, 90 }, { shape = "Cylinder", material = "SmoothPlastic" })
+	for k = 1, 10 do
+		local a = k / 10 * 2 * math.pi
+		prim(list, model, "GearTooth", Vector3.new(2, 3, 2), gear * CFrame.new(math.cos(a) * 8.6, math.sin(a) * 8.6, 0) * CFrame.Angles(0, 0, a), { 160, 140, 90 }, { material = "SmoothPlastic" })
+	end
+	prim(list, model, "TickSpot", Vector3.new(1, 1, 1), cf * CFrame.new(0, door.height + 12, -3), { 0, 0, 0 }, { collide = false, transparency = 1, attrs = { SealedSound = "tick" } })
+end
+function SEALED_PROPS.giantKitchen(list, model, cf, door)
+	-- 문틈에 걸린 거대 포크(손잡이 + 살 4) · 굴러 나온 빵 조각
+	local fork = cf * CFrame.new(3, 10, -3) * CFrame.Angles(math.rad(-25), math.rad(10), math.rad(-35))
+	prim(list, model, "ForkHandle", Vector3.new(30, 3, 3), fork * CFrame.new(-12, 0, 0), { 200, 200, 210 }, { shape = "Cylinder", material = "SmoothPlastic" })
+	prim(list, model, "ForkNeck", Vector3.new(4, 2, 12), fork * CFrame.new(4, 0, 0), { 200, 200, 210 }, { material = "SmoothPlastic" })
+	for k = 1, 4 do
+		prim(list, model, "ForkTine", Vector3.new(12, 1.4, 1.4), fork * CFrame.new(11, 0, -4.5 + (k - 1) * 3), { 200, 200, 210 }, { material = "SmoothPlastic" })
+	end
+	prim(list, model, "Bread", Vector3.new(10, 6, 7), cf * CFrame.new(-8, 3, -14) * CFrame.Angles(0, math.rad(30), math.rad(8)), { 214, 160, 90 }, { material = "SmoothPlastic", mesh = "Sphere" })
+	prim(list, model, "BreadCrumb", Vector3.new(3, 2, 3), cf * CFrame.new(-2, 1, -20), { 214, 160, 90 }, { material = "SmoothPlastic", mesh = "Sphere" })
+end
+function SEALED_PROPS.puppetTheater(list, model, cf, door)
+	-- 반쯤 걷힌 커튼(양옆) · 끊어진 줄에 매달린 작은 인형
+	prim(list, model, "Curtain", Vector3.new(6, door.height + 4, 1.5), cf * CFrame.new(-(door.width / 2 - 2), (door.height + 4) / 2, -2.5), { 170, 30, 45 }, { material = "Fabric" })
+	prim(list, model, "Curtain", Vector3.new(4, door.height, 1.5), cf * CFrame.new(door.width / 2 - 1, door.height / 2 + 2, -2.5) * CFrame.Angles(0, 0, math.rad(6)), { 170, 30, 45 }, { material = "Fabric" })
+	prim(list, model, "PuppetString", Vector3.new(0.2, 7, 0.2), cf * CFrame.new(2, door.height - 3.5, -4), { 230, 230, 230 }, { collide = false })
+	prim(list, model, "PuppetHead", Vector3.new(1.6, 1.6, 1.6), cf * CFrame.new(2, door.height - 8, -4), { 240, 210, 180 }, { shape = "Ball", material = "SmoothPlastic", collide = false })
+	prim(list, model, "PuppetBody", Vector3.new(1.6, 2.4, 1), cf * CFrame.new(2, door.height - 10, -4) * CFrame.Angles(0, 0, math.rad(12)), { 60, 90, 170 }, { material = "SmoothPlastic", collide = false })
+	prim(list, model, "BrokenString", Vector3.new(0.2, 3, 0.2), cf * CFrame.new(-1, door.height - 2, -4) * CFrame.Angles(0, 0, math.rad(30)), { 230, 230, 230 }, { collide = false })
+end
+function SEALED_PROPS.cloudWhale(list, model, cf, door, entry)
+	-- 구름 발판(전망대 바깥) + 구름 문(흰 구름 뭉치가 문틀을 감싼다) + 큰 그림자 자리(로컬 연출)
+	local pl = entry.platform
+	local d = dirOf(entry.at.angleDeg)
+	local pp = d * pl.r + Vector3.new(0, FLOOR + entry.at.y - 1.5, 0)
+	prim(list, model, "CloudPlatform", Vector3.new(3, pl.size, pl.size), CFrame.new(pp) * CFrame.Angles(0, 0, math.rad(90)), { 245, 248, 252 }, { shape = "Cylinder", material = "SmoothPlastic" })
+	for k = 1, 6 do
+		local a = k / 6 * math.pi
+		prim(list, model, "CloudPuff", Vector3.new(10, 7, 7), cf * CFrame.new(math.cos(a) * (door.width / 2 + 3), math.sin(a) * (door.height * 0.7) + door.height * 0.4, -1.5), { 250, 252, 255 },
+			{ material = "SmoothPlastic", mesh = "Sphere", collide = false })
+	end
+	prim(list, model, "WhaleShadowSpot", Vector3.new(1, 1, 1), cf * CFrame.new(0, 120, 60), { 0, 0, 0 }, { collide = false, transparency = 1, attrs = { SealedFx = "whaleShadow" } })
+end
+function SEALED_PROPS.moleMine(list, model, cf)
+	-- 어둠으로 이어진 레일 · 멈춘 광차 · 튀어나왔다 사라지는 흙더미 자리
+	for side = -1, 1, 2 do
+		prim(list, model, "Rail", Vector3.new(0.6, 0.6, 44), cf * CFrame.new(side * 2.2, 0.3, -18), { 90, 90, 95 }, { material = "SmoothPlastic" })
+	end
+	for k = 0, 6 do
+		prim(list, model, "Sleeper", Vector3.new(7, 0.5, 1.4), cf * CFrame.new(0, 0.25, -2 - k * 6), { 110, 80, 55 }, { material = "SmoothPlastic" })
+	end
+	local cart = cf * CFrame.new(0, 3, -26)
+	prim(list, model, "Cart", Vector3.new(6, 4, 7), cart, { 120, 100, 80 }, { material = "SmoothPlastic" })
+	for sx = -1, 1, 2 do
+		for sz = -1, 1, 2 do
+			prim(list, model, "Wheel", Vector3.new(0.8, 2.2, 2.2), cart * CFrame.new(sx * 3.2, -2, sz * 2.4), { 60, 60, 65 }, { shape = "Cylinder", material = "SmoothPlastic" })
+		end
+	end
+	prim(list, model, "MoundSpot", Vector3.new(1, 1, 1), cf * CFrame.new(9, 0, -32), { 0, 0, 0 }, { collide = false, transparency = 1, attrs = { SealedFx = "moleMound" } })
+end
+
+function Layout.buildSealed(list)
+	local S = D.sealed
+	local door = S.door
+	for _, e in ipairs(S.entrances) do
+		local model = "Sealed_" .. e.id
+		local cf = Layout.sealedFrame(e)
+		local stone, stoneDark = { 120, 116, 110 }, { 84, 80, 76 }
+		-- 문틀 · 문짝(어둡다) · 사슬 X · 덩굴 · 잠든 문장 · 낡은 명판("이름 ???" - 작게)
+		for side = -1, 1, 2 do
+			prim(list, model, "DoorPost", Vector3.new(door.frame, door.height + 4, door.frame + 1), cf * CFrame.new(side * (door.width / 2 + door.frame / 2), (door.height + 4) / 2, 0), stone, { material = "SmoothPlastic" })
+		end
+		prim(list, model, "DoorLintel", Vector3.new(door.width + door.frame * 2, 4, door.frame + 1), cf * CFrame.new(0, door.height + 2, 0), stone, { material = "SmoothPlastic" })
+		prim(list, model, "DoorSlab", Vector3.new(door.width, door.height, 1.5), cf * CFrame.new(0, door.height / 2, 0.5), { 40, 34, 32 }, { material = "SmoothPlastic" })
+		for side = -1, 1, 2 do
+			local len = math.sqrt(door.width ^ 2 + door.height ^ 2)
+			local ang = math.atan2(door.height, door.width) * side
+			prim(list, model, "Chain", Vector3.new(len, 0.9, 0.9), cf * CFrame.new(0, door.height / 2, -0.6) * CFrame.Angles(0, 0, ang), { 150, 150, 160 }, { shape = "Cylinder", material = "SmoothPlastic", collide = false })
+		end
+		for k = 1, 3 do
+			prim(list, model, "Vine", Vector3.new(0.7, door.height * (0.6 + k * 0.1), 0.7), cf * CFrame.new(-door.width / 2 + k * 4, door.height * 0.55, -1) * CFrame.Angles(0, 0, math.rad(-12 + k * 9)), { 70, 110, 60 },
+				{ material = "SmoothPlastic", collide = false })
+		end
+		prim(list, model, "SealEmblem", Vector3.new(0.4, door.emblemSize, door.emblemSize), cf * CFrame.new(0, door.height / 2, -0.4) * CFrame.Angles(0, math.rad(90), 0), { 170, 150, 230 },
+			{ shape = "Cylinder", neon = true, collide = false, transparency = 0.5, attrs = { SealEmblem = e.id } })
+		prim(list, model, "Plaque", Vector3.new(8, 1.6, 0.4), cf * CFrame.new(0, door.height + 5, -1.6), { 110, 90, 70 },
+			{ material = "SmoothPlastic", attrs = { Label = e.name .. " ???", LabelSmall = true } })
+		-- 무너진 담 + 틈 선반(선반 높이 ledgeH · 위 구멍 holeH · 그 위 담)
+		local lx = door.width / 2 + door.frame + door.wallW / 2
+		prim(list, model, "CrumbledWall", Vector3.new(door.wallW, door.ledgeH, 6), cf * CFrame.new(lx, door.ledgeH / 2, -1), stoneDark, { material = "SmoothPlastic", attrs = { SealedLedge = e.id } })
+		local upperY = door.ledgeH + door.holeH
+		prim(list, model, "CrumbledWall", Vector3.new(door.wallW, door.height + 4 - upperY, 4), cf * CFrame.new(lx, upperY + (door.height + 4 - upperY) / 2, 0), stoneDark, { material = "SmoothPlastic" })
+		prim(list, model, "Wall", Vector3.new(door.wallW, door.height + 4, 4), cf * CFrame.new(-lx, (door.height + 4) / 2, 0), stoneDark, { material = "SmoothPlastic" })
+		-- 봉인 상자(투명 충돌 벽 5면 - 조준 광선 · 지면 광선에 안 걸리게 쿼리 없음). 안쪽은 비운다.
+		local walls = "SealedWalls_" .. e.id
+		local w, dd, h = e.box.w, e.box.d, e.box.h
+		local inv = { transparency = 1, query = false }
+		prim(list, walls, "SealWall", Vector3.new(w, h, 2), cf * CFrame.new(0, h / 2, 2), stone, inv)
+		prim(list, walls, "SealWall", Vector3.new(w, h, 2), cf * CFrame.new(0, h / 2, dd + 2), stone, inv)
+		prim(list, walls, "SealWall", Vector3.new(2, h, dd), cf * CFrame.new(-w / 2, h / 2, dd / 2 + 2), stone, inv)
+		prim(list, walls, "SealWall", Vector3.new(2, h, dd), cf * CFrame.new(w / 2, h / 2, dd / 2 + 2), stone, inv)
+		prim(list, walls, "SealWall", Vector3.new(w, 2, dd), cf * CFrame.new(0, h, dd / 2 + 2), stone, inv)
+		SEALED_PROPS[e.props](list, model, cf, door, e)
+	end
+end
+
 -- ─────────────────────────── 세계 전체 ───────────────────────────
 -- 반환: prims, meta{ zones[key] = 구역 메타 }
 function Layout.buildAll()
@@ -891,6 +1059,7 @@ function Layout.buildAll()
 		prim(list, "Edge", "EdgeRidge", Vector3.new(len, E.ridgeHeight, E.ridgeWidth), cf * CFrame.new(0, E.ridgeHeight / 2, -E.ridgeWidth / 2 - 4), D.colors.blockDark)
 	end
 	Layout.buildHub(list)
+	Layout.buildSealed(list)
 	local meta = { zones = {} }
 	for _, z in ipairs(D.zones) do
 		meta.zones[z.key] = Layout.buildZone(z, list)

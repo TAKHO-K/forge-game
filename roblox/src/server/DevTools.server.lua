@@ -1261,6 +1261,10 @@ local function handleCommand(player, args)
 		-- P3b: 순위 창 화면 확인용 가짜 순위(수동 Play에서만 - 저장소 요청 0, Play가 끝나면 사라진다).
 		local filled = require(script.Parent.Leaderboard).debugFill(player)
 		reply(player, filled > 0 and ("가짜 순위표 %d개를 채웠다(개인 37위 · 내 직업 12위 · 파티 5위)"):format(filled) or "수동 Play에서만 된다(검증 모드 · 라이브 금지)")
+	elseif sub == "perf" and args[2] == "world" then
+		-- M1: 인원별 서버 부하(가짜 플레이어) - "/gg perf world [crowd]"(crowd = 허브 밀집 복제본도)
+		ensureBackup(player)
+		task.spawn(PerfProbe.runWorld, player, { 1, 12, 16, 20, 24 }, 15, args[3] == "crowd")
 	elseif sub == "perf" then
 		ensureBackup(player)
 		task.spawn(PerfProbe.run, player)
@@ -3483,6 +3487,7 @@ if RunService:IsStudio() then
 				{ "P3dF(나)", function() require(script.Parent.P3dFVerify).runLive(player, env) end }, -- P3d-F: 재생성 누수 5회 · 받는 피해 배율 출처별 · 끼임 중 피격 · 단상 균열 예고 · 상한 교체
 				{ "G2a(나)", function() require(script.Parent.G2aVerify).runLive(player, env) end }, -- G2a: 높이 검증 실제 Player · 보스 기여도(계수 전) · 이속 상한 · 구조물 낙하
 				{ "M1-0(나)", function() require(script.Parent.M1_0Verify).runLive(player, env) end }, -- M1-0: 합법 최대 높이 되돌림 0 · 기본 Shift Lock 꺼짐 · 아레나 공중 복귀 0
+				{ "M1(나)", function() require(script.Parent.M1Verify).runLive(player, env) end }, -- M1: 잠금 · 포탈 · 귀환 · 몬스터 지대 · 보스 관문 · 나무 리프트 · 떨어짐 · 복귀 · 봉인 입구
 				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
 				{ "BR1-2(나)", function() require(script.Parent.BR1_2Verify).runLive(player, env) end }, -- BR1-2: 곡선 32발 · 동시 4보스 성능 · 반사 · 음파 · 색 맞추기 · 가둠 · 저장 v37
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
@@ -3843,6 +3848,16 @@ if RunService:IsStudio() and verifyEnabled("G1-3(가)") then
 		local ok, err = pcall(require(script.Parent.G1_3Verify).runPure)
 		if not ok then
 			warn(("[G1-3(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ M1 자동 검증 블록(가) - 맵 배치 · 이동 거리 · 구역-보스 · 나무 점프맵 · 둥지 · 봉인 입구 · BR1-3 후속(docs/phase/M1-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("M1(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.M1Verify).runPure)
+		if not ok then
+			warn(("[M1(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end
