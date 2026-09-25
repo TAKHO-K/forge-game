@@ -106,6 +106,10 @@ end
 
 -- 지금 조준점을 즉시 반영한다(클릭·탭 순간 호버 틱을 기다리지 않고 바로 갱신하기 위해
 -- AttackInput.client.lua가 부른다). aimPoint가 nil이면 마지막 조준점을 그대로 쓴다.
+function AimTarget.debugHeavyReady() -- G1-1(UI) 자체 점검용
+	return heavyReady
+end
+
 function AimTarget.setHeavyReady(on)
 	if heavyReady == on then
 		return

@@ -3372,6 +3372,7 @@ if RunService:IsStudio() then
 				{ "P3c(나)", function() require(script.Parent.P3cVerify).runLive(player, env) end }, -- P3c: 발탄식 유도 · 전갈 2회 · 번개 추적 · 맵 이탈 복귀 · 6맵 배치 · 큰 블록 · 높이별 판정 · 보석 판매 · 전당
 				{ "P3d(나)", function() require(script.Parent.P3dVerify).runLive(player, env) end }, -- P3d: 맵 이탈 → 스폰 복귀 · 단상 · 재생성 · 끼임 · 모래 구덩이 붕괴 · 버프 중첩 · 라이브 제외
 				{ "P3dF(나)", function() require(script.Parent.P3dFVerify).runLive(player, env) end }, -- P3d-F: 재생성 누수 5회 · 받는 피해 배율 출처별 · 끼임 중 피격 · 단상 균열 예고 · 상한 교체
+				{ "G1-1(나)", function() require(script.Parent.G1_1Verify).runLive(player, env) end }, -- G1-1: 보상 띠 강화석 = 지급 식(경험치 배수)
 				{ "G1-0(나)", function() require(script.Parent.G1_0Verify).runLive(player, env) end }, -- G1-0: 받는 피해 하한 · 복귀 표본(벽 위 · 바깥 · 허공 · 연쇄) · 단상 점프 판정 · 12인 재생성 전후
 				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
 				{ "P3d(가E)", function() require(script.Parent.P3dVerify).runRegrowSeeds() end }, -- P3d: 재생성 100시드 × 6맵(무거운 계산 - 맨 끝)
@@ -3712,6 +3713,16 @@ if RunService:IsStudio() and verifyEnabled("P3b(가)") then
 		local ok, err = pcall(require(script.Parent.P3bVerify).runPure)
 		if not ok then
 			warn(("[P3b(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ G1-1 자동 검증 블록(가) - 등급 색 · Text · 보스 등급표 분리 · 재도전 분포(docs/phase/G1-1-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("G1-1(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.G1_1Verify).runPure)
+		if not ok then
+			warn(("[G1-1(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

@@ -118,8 +118,10 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 			else
 				BossEncounter.spawnFor(player, targetStage)
 			end
-		elseif BossRules.isBossStage(previousStage) then
+		elseif BossRules.isBossStage(previousStage) or BossEncounter.getEncounter(player) then
 			-- 24-1: 리더(또는 솔로)면 보스전 전체 종료, 파티원이면 자기만 빠진다.
+			-- G1-1(D0 (d) 버그): 파티원은 자기 스테이지가 보스 스테이지가 아닌 채 아레나에 끌려 들어가므로(리더가 연다) "이전 스테이지"만 보면
+			-- 일반 → 일반 이동이 어느 분기도 안 타 아레나에 남았다 - 지금 보스전에 속해 있으면 빠진다.
 			if party and not PartyState.isLeader(player) then
 				BossEncounter.leaveFor(player)
 			else
