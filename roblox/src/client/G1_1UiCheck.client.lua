@@ -62,7 +62,7 @@ local function run()
 		until os.clock() - ComboRing.debugLastComboAt() > CombatConfig.comboResetWindowSeconds + 0.3 or waited > 20
 		local off = true
 		for _, disc in ipairs(discs) do
-			off = off and disc.Transparency > 0.5
+			off = off and disc.Color == UIColors.panel -- 꺼진 칸 = 어두운 패널색(스크린샷 뒤 투명도 0.7 → 0.35로 바꿔 옛 기준 > 0.5가 틀렸다 - Play 3)
 		end
 		check(("3타 고리: 칸 %d개 · 누적 101 → 켜진 칸 %d(기대 2) · 다음 타 강타 신호 %s(기대 true) · 강타 → 강타 색 %s · 신호 %s(기대 false) · %.1f초 뒤 전부 꺼짐 %s"):format(
 			#discs, two, tostring(heavyReady), tostring(heavyColor), tostring(readyAfterHeavy), CombatConfig.comboResetWindowSeconds + 0.3, tostring(off)),
