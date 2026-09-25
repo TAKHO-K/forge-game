@@ -268,6 +268,8 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		props = boss.props, -- 29-3 동적 지형의 종류·크기·상한(서버는 논리 상태만 - BossArenaProps)
 		-- 29-1: 보스별 잡힘·구출 종류(BossData SPECIES_MECHANICS, 구간 수호자는 nil).
 		mechanics = boss.mechanics,
+		-- BR1 환경 변화(체력 50%부터 - 두 번째 시계, BossEnvironment가 읽는다). 인스턴스로 안 넘기면 실제 보스전에서 환경이 영영 안 돈다(BR1 Play 1).
+		environment = boss.environment,
 	}
 end
 

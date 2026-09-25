@@ -277,9 +277,13 @@ function BR1Verify.runLive(player, env)
 				local skill = data.skills[sid]
 				hook()
 				near1.debugAirborne = skill.targetRule == "airborne" or nil -- 대공 투사체는 떠 있는 사람만 노린다
+				if near1.debugAirborne then
+					drive(player, root, model, data, 0.5) -- 연속 체공이 쌓인 뒤에 쏜다(Play 1: 같은 틱에 띄우면 대상 0 - 검증 쪽)
+				end
 				BossPatterns.force(model, data, sid)
 				drive(player, root, model, data, 16, function()
-					return st.phase == "normal" and st.current == nil and #sent > 1 and (not st.projectiles or #st.projectiles == 0)
+					-- 이 스킬이 실제로 시작된 뒤(말풍선) 끝났는가 - Play 1: "#sent > 1"은 강제 직전 스킬의 reset 등으로 너무 일찍 참이 됐다(검증 쪽)
+					return countKind("bubble") > 0 and st.phase == "normal" and st.current == nil and (not st.projectiles or #st.projectiles == 0)
 				end)
 				near1.debugAirborne = nil
 				local ok, detail = true, ""
