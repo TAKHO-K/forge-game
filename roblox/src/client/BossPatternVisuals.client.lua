@@ -45,6 +45,8 @@ local BossColorView = require(script.Parent.BossColorView) -- BR1-2 색 맞추�
 local BossInnerCircleView = require(script.Parent.BossInnerCircleView) -- BR1-2 근접 원형 구역 · 낫 휘두르기 평타
 local BossRodsView = require(script.Parent.BossRodsView) -- BR1-2 번개 조준경
 local BossEnvironmentView = require(script.Parent.BossEnvironmentView)
+local BossBR13View = require(script.Parent.BossBR13View) -- BR1-3 강화 평타 테두리 · 에네르기파 · 분신 부메랑 · 아르마딜로 · 기절 별
+local BossGimmick13View = require(script.Parent.BossGimmick13View) -- BR1-3 진짜 전갈 찾기 · 수정 오르골
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
 local player = Players.LocalPlayer
@@ -185,6 +187,11 @@ local BUBBLES = {
 	grab = { icon = "✋", color = Color3.fromRGB(230, 40, 40) },
 	-- BR1-2 투사체 반사 = 거울(원거리는 쏘지 마라)
 	mirror = { icon = "◈", color = Color3.fromRGB(230, 40, 40) },
+	-- BR1-3: 에네르기파 = 반원(휩쓰는 쪽) · 아르마딜로 = 손바닥(때리지 마 - 노랑) · 진짜 전갈 찾기 = 모래 물결 · 수정 오르골 = 음표
+	sweep = { icon = "◐", color = Color3.fromRGB(230, 40, 40) },
+	armadillo = { icon = "✋", color = Color3.fromRGB(255, 200, 40) },
+	sandSearch = { icon = "≋", color = Color3.fromRGB(230, 40, 40) },
+	orgel = { icon = "♪", color = Color3.fromRGB(230, 40, 40) },
 }
 
 local currentBubble = nil
@@ -698,6 +705,9 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		crossFire(data)
 	elseif kind == "sector" then
 		BossBR1View.sector(data)
+		if data.outline then
+			BossBR13View.swipeOutline(data)
+		end
 	elseif kind == "sectorImpact" then
 		BossBR1View.sectorImpact(data)
 	elseif kind == "projTelegraph" then
@@ -736,6 +746,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossGrabView.throw(data)
 	elseif kind == "bubbleTrap" then
 		BossGrabView.bubble(data)
+	elseif kind == "reflectTelegraph" and data.style == "armadillo" then
+		BossBR13View.armadilloTelegraph(data)
+	elseif kind == "reflectStance" and data.style == "armadillo" then
+		BossBR13View.armadilloStance(data)
 	elseif kind == "reflectTelegraph" then
 		BossBR1View.reflectTelegraph(data)
 	elseif kind == "reflectStance" then
@@ -744,6 +758,47 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossBR1View.reflectShot(data)
 	elseif kind == "reflectEnd" then
 		BossBR1View.reflectEnd()
+		BossBR13View.armadilloEnd()
+	elseif kind == "spikeMark" then
+		BossBR13View.spikeMark(data)
+	elseif kind == "spikeImpact" then
+		BossBR13View.spikeImpact(data)
+	elseif kind == "playerStun" then
+		BossBR13View.playerStun(data)
+	elseif kind == "sweepTelegraph" then
+		BossBR13View.sweepTelegraph(data)
+	elseif kind == "sweepFire" then
+		BossBR13View.sweepFire(data)
+	elseif kind == "sweepEnd" then
+		BossBR13View.sweepEnd()
+	elseif kind == "boomTelegraph" then
+		BossBR13View.boomTelegraph(data)
+	elseif kind == "boomRun" then
+		BossBR13View.boomRun()
+	elseif kind == "boomEnd" then
+		BossBR13View.boomEnd()
+	elseif kind == "sandDig" then
+		BossGimmick13View.sandDig(data)
+	elseif kind == "sandStart" then
+		BossGimmick13View.sandStart(data)
+	elseif kind == "sandBlast" then
+		BossGimmick13View.sandBlast(data)
+	elseif kind == "sandEnd" then
+		BossGimmick13View.sandEnd(data)
+	elseif kind == "orgelStart" then
+		BossGimmick13View.orgelStart(data)
+	elseif kind == "orgelRing" then
+		BossGimmick13View.orgelRing(data)
+	elseif kind == "orgelInput" then
+		BossGimmick13View.orgelInput(data)
+	elseif kind == "orgelHit" then
+		BossGimmick13View.orgelHit(data)
+	elseif kind == "orgelStatue" then
+		BossGimmick13View.orgelStatue(data)
+	elseif kind == "orgelEnd" then
+		BossGimmick13View.orgelEnd(data)
+	elseif kind == "voidFall" then
+		BossEnvironmentView.voidFall(data)
 	elseif kind == "sonicTelegraph" then
 		BossSonicView.telegraph(data)
 	elseif kind == "sonicTick" then
@@ -815,6 +870,8 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossSonicView.reset()
 		BossColorView.finish()
 		BossRodsView.clear()
+		BossBR13View.reset() -- BR1-3
+		BossGimmick13View.reset()
 		-- 환경 그림은 여기서 안 지운다(리뷰 4 - 스킬 중단 · 대상 이탈의 "reset"에도 서버 환경은 계속 돈다): envEnd · propsClear에서
 	end
 end)

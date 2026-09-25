@@ -519,11 +519,11 @@ function BR1_2Verify.runLive(player, env)
 			SaveConfig.saveVersion == 37 and migrated.version == 37 and type(migrated.hints.bossIntroSeen) == "table" and migrated.hints.gemMerchantUsed == true and first and not second and again)
 	end)
 
-	-- 8) 보스 에어본: 되튕겨진 투사체 → 뜬 동안 논리 위치 = 지면(MonsterAI 높이차 출구가 추격을 안 끊는다 - 끊으면 step이 멈춰 공중에 걸렸다) · 체력바 3% · 제때 착지
+	-- 8) 보스 에어본: 되튕겨진 투사체 → 뜬 동안 논리 위치 = 지면(MonsterAI 높이차 출구가 추격을 안 끊는다 - 끊으면 step이 멈춰 공중에 걸렸다) · 체력바 5% 고정(BR1-3) · 제때 착지
 	r.section("보스 에어본", function()
 		local GroundProbe = require(script.Parent.GroundProbe)
 		local tolerance = require(ReplicatedStorage.Shared.data.TerrainConfig).heightToleranceStuds
-		local gap = require(ReplicatedStorage.Shared.CharacterLevel).levelGapDealMultiplier(player:GetAttribute("CharacterLevel"), BossData.stageInterval)
+		local gap = BossData.mechanics.bossAirborne.fixedDamage and 1 or require(ReplicatedStorage.Shared.CharacterLevel).levelGapDealMultiplier(player:GetAttribute("CharacterLevel"), BossData.stageInterval) -- BR1-3 결정 6: 고정이면 계수 1
 		local model, data, zone, st = setup("abyssal_lord", BossData.stageInterval, 1208)
 		local cfg = BossData.mechanics.bossAirborne
 		local c = zone.center
@@ -545,7 +545,7 @@ function BR1_2Verify.runLive(player, env)
 		end)
 		local landedDy = model:GetPivot().Y - y0
 		local ratio = model:GetAttribute("BossHpRatio")
-		r.check(("보스 에어본: 발사 %s · 최고 %.1f(기대 %d) · 뜬 동안 논리 위치 지면 %s(%d프레임) · 착지 %s(%.1f) · 체력바 %s(기대 %.3f = 3%% × 레벨차 계수)"):format(tostring(shot), peak, cfg.liftStuds, tostring(logicalOk), logicalChecked,
+		r.check(("보스 에어본: 발사 %s · 최고 %.1f(기대 %d) · 뜬 동안 논리 위치 지면 %s(%d프레임) · 착지 %s(%.1f) · 체력바 %s(기대 %.3f = 5%% 고정)"):format(tostring(shot), peak, cfg.liftStuds, tostring(logicalOk), logicalChecked,
 			tostring(countKind("bossLand") == 1), landedDy, tostring(ratio), 1 - cfg.damageMaxHpFraction * gap),
 			shot and peak > cfg.liftStuds * 0.8 and logicalOk and logicalChecked > 0 and countKind("bossLand") == 1 and landedDy < 1 and type(ratio) == "number" and math.abs(ratio - (1 - cfg.damageMaxHpFraction * gap)) < 0.002)
 	end)

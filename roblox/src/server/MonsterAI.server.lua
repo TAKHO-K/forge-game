@@ -275,7 +275,12 @@ local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetR
 	-- 정지 거리(BossData.chaseStopDistanceStuds) 밖에서만 다가간다 - 몸통 충돌이 없는 보스가
 	-- 플레이어와 겹치지 않게(21-3).
 	if Reach.horizontalDistance(targetRoot.Position, monsterPosition) > data.chaseStopDistanceStuds then
-		stepToward(model, monsterPosition, targetRoot.Position, data.moveSpeedStuds, dt)
+		-- BR1-3: 무너진 바닥(피자 조각 · 들린 판)으로는 걷지 않는다 - 다음 걸음이 그 안이면 멈춰 선다
+		local toward = Vector3.new(targetRoot.Position.X - monsterPosition.X, 0, targetRoot.Position.Z - monsterPosition.Z)
+		local ahead = monsterPosition + (toward.Magnitude > 1e-3 and toward.Unit or Vector3.zero) * math.max(data.moveSpeedStuds * dt, 1)
+		if not BossEnvironment.blocksBoss(model, ahead) then
+			stepToward(model, monsterPosition, targetRoot.Position, data.moveSpeedStuds, dt)
+		end
 	end
 	tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot) -- BR1-2
 end

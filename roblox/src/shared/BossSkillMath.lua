@@ -158,6 +158,136 @@ function BossSkillMath.panLaunch(pan, rel, airborne, rand01)
 	return dir, height, distance, pan.multiplier, distance >= pan.starDistanceStuds
 end
 
+-- ─────────────────────────── BR1-3 새 조각의 순수 계산(서버 판정 · 클라 그림 · 하네스가 같은 함수) ───────────────────────────
+-- 에네르기파 휩쓸기(sweep): 시작 각 = 대상 방향 − 방향 × sweepDeg ÷ 2(dirSign +1 = 반시계 · −1 = 시계). t초(발사부터) 뒤 빔의 각(도). 끝났으면 끝 각 + done.
+function BossSkillMath.sweepAngleAt(skill, centerDeg, dirSign, t)
+	local startDeg = centerDeg - dirSign * skill.sweepDeg / 2
+	local f = math.clamp(t / skill.sweepSeconds, 0, 1)
+	return startDeg + dirSign * skill.sweepDeg * f, t >= skill.sweepSeconds
+end
+
+-- 휩쓸기 회피 최악(근접 standoff ~ 반경): 반원 안 자리(가운데 각에서 φ · 거리 d)에서 가장 가까운 안전(뒤 반원 경계까지 d·cosφ · 반경 밖 R − d)까지 걷는 시간과
+-- 쓸 수 있는 시간(전조 + 빔이 그 각에 닿기까지 = sweepSeconds × (90 − φ) ÷ 180 - 시작 쪽이 φ = +90)의 여유가 가장 작은 자리. 반환: available, required, distance.
+function BossSkillMath.sweepWorst(skill, standoffStuds, walkSpeedStuds)
+	local dodge = BossData.mechanics.dodge
+	local R = skill.radiusStuds
+	local best = nil
+	for phi = -90, 90, 5 do
+		local c = math.cos(math.rad(phi))
+		local d = standoffStuds
+		while d <= R do
+			local dist = math.min(d * c, R - d) + dodge.characterHalfWidthStuds
+			local required = dodge.perceptionSeconds + dist / walkSpeedStuds * dodge.marginFactor
+			local available = skill.telegraphSeconds + skill.sweepSeconds * (90 - phi) / 180
+			if not best or available - required < best.available - best.required then
+				best = { available = available, required = required, distance = dist }
+			end
+			d += 1
+		end
+	end
+	return best.available, best.required, best.distance
+end
+
+-- 분신 부메랑(boomerang): 발사부터 t초 뒤 분신이 보스에서 떨어진 거리(0 ~ length)와 구간("out" · "turn" · "back"). 다 돌아왔으면 nil.
+function BossSkillMath.boomerangAt(skill, length, t)
+	local outT = length / skill.outSpeedStuds
+	if t < outT then
+		return t * skill.outSpeedStuds, "out"
+	end
+	t -= outT
+	if t < skill.turnSeconds then
+		return length, "turn"
+	end
+	t -= skill.turnSeconds
+	local back = length - t * skill.backSpeedStuds
+	if back > 0 then
+		return back, "back"
+	end
+	return nil, nil
+end
+
+-- 피자 조각(slices): 점 p가 들어 있는 조각 번호(1 ~ count). 가운데 허브 안이면 nil. 조각 k = 각 [offsetDeg + (k − 1) × 360/count, + 360/count).
+function BossSkillMath.sliceIndexOf(center, p, count, hubRadius, offsetDeg)
+	local dx, dz = p.X - center.X, p.Z - center.Z
+	if dx * dx + dz * dz <= hubRadius * hubRadius then
+		return nil
+	end
+	local deg = (math.deg(math.atan2(dz, dx)) - (offsetDeg or 0)) % 360
+	return math.floor(deg / (360 / count)) + 1
+end
+
+-- 무너질 조각 고르기: excluded[k] = 못 고르는 조각(보스 · 스폰) · previous[k] = 지난번 무너진 조각(되도록 피한다) · nonAdjacent = 서로 붙지 않게.
+-- 후보가 모자라면 previous → nonAdjacent 순으로 규칙을 푼다. 반환: 조각 번호 목록.
+function BossSkillMath.pickSlices(count, want, excluded, previous, nonAdjacent, rand01)
+	local function adjacent(a, b)
+		local d = math.abs(a - b)
+		return d == 1 or d == count - 1
+	end
+	for _, relax in ipairs({ { prev = true, adj = nonAdjacent }, { prev = false, adj = nonAdjacent }, { prev = false, adj = false } }) do
+		local pool = {}
+		for k = 1, count do
+			if not excluded[k] and not (relax.prev and previous[k]) then
+				table.insert(pool, k)
+			end
+		end
+		-- 섞기(피셔-예이츠)
+		for i = #pool, 2, -1 do
+			local j = 1 + math.floor(rand01() * i)
+			j = math.clamp(j, 1, i)
+			pool[i], pool[j] = pool[j], pool[i]
+		end
+		local chosen = {}
+		for _, k in ipairs(pool) do
+			local ok = true
+			for _, other in ipairs(chosen) do
+				ok = ok and not (relax.adj and adjacent(k, other))
+			end
+			if ok then
+				table.insert(chosen, k)
+			end
+			if #chosen >= want then
+				return chosen
+			end
+		end
+		if #chosen >= want then
+			return chosen
+		end
+	end
+	return {}
+end
+
+-- 판 털기(halfMap): 방위 a(라디안)의 절반 판 = 중심에서 side(−sin a, cos a) 쪽. 점 p가 판 위면 경계(지름)까지의 거리, 아니면 nil.
+function BossSkillMath.halfMapDepth(center, angleRad, p)
+	local sx, sz = -math.sin(angleRad), math.cos(angleRad)
+	local depth = (p.X - center.X) * sx + (p.Z - center.Z) * sz
+	return depth > 0 and depth or nil
+end
+
+-- 수정 오르골: 보여 주는 간격(스테이지 1 ~ protectedUntilStage = 가장 느리게 · 그 뒤 곡선 단계별) · 무작위 순서(중복 허용) · 입력 한 번 진행.
+function BossSkillMath.orgelShowInterval(skill, stage)
+	if (stage or 1) <= skill.protectedUntilStage then
+		return skill.protectedShowInterval
+	end
+	local tier = BossSkillMath.curveRow(stage).tier
+	return skill.showIntervalByTier[math.clamp(tier, 1, #skill.showIntervalByTier)]
+end
+
+function BossSkillMath.orgelSequence(skill, rand01)
+	local list = {}
+	for i = 1, skill.sequenceLength do
+		list[i] = math.clamp(1 + math.floor(rand01() * skill.bells), 1, skill.bells)
+	end
+	return list
+end
+
+-- 반환: 새 진행(맞힌 수), 맞았는가. 틀리면 0(처음부터 - 순서는 그대로).
+function BossSkillMath.orgelAdvance(progress, sequence, bell)
+	if sequence[progress + 1] == bell then
+		return progress + 1, true
+	end
+	return 0, false
+end
+
 -- BR1-2 보스 에어본 높이(시작부터 t초): 떠오름 riseSeconds → 떨어짐 fallSeconds(사인 곡선 - 꼭대기 liftStuds). 다 떨어졌으면 nil(그 뒤는 기절).
 function BossSkillMath.bossAirborneHeight(cfg, t)
 	if t >= cfg.riseSeconds + cfg.fallSeconds then
@@ -225,6 +355,15 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 		return skill.telegraphSeconds + (skill.burstTelegraphSeconds or 0)
 	elseif primitive == "gimmick" then
 		return skill.telegraphSeconds + (skill.recoverSeconds or 0)
+	elseif primitive == "sweep" then
+		return skill.telegraphSeconds + skill.sweepSeconds -- BR1-3 에네르기파
+	elseif primitive == "boomerang" then
+		local length = (arenaHalfSizeStuds or 96) * 2
+		return skill.telegraphSeconds + length / skill.outSpeedStuds + skill.turnSeconds + length / skill.backSpeedStuds -- BR1-3 분신 부메랑(상한)
+	elseif primitive == "sandSearch" then
+		return skill.telegraphSeconds + skill.limitSeconds + skill.stunSeconds -- BR1-3 진짜 전갈 찾기(상한 - 기절 포함)
+	elseif primitive == "orgel" then
+		return skill.telegraphSeconds + skill.protectedShowInterval * skill.sequenceLength + skill.limitSeconds + math.max(skill.stunSeconds, skill.statue.seconds) -- BR1-3 수정 오르골(상한)
 	elseif primitive == "reflect" then
 		return skill.telegraphSeconds + skill.stanceSeconds -- BR1-2 반사: 결계 전조 + 반사 동안(되돌린 투사체는 스킬과 떨어져 난다)
 	elseif primitive == "colorMatch" then
@@ -368,9 +507,22 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 	elseif primitive == "sonic" then
 		-- BR1-2 음파 포효: 곁에 선 큰 기둥 뒤까지(데이터 dodge.distanceStuds)
 		walk("엄폐물 뒤로", skill.telegraphSeconds, skill.dodge.distanceStuds)
+	elseif primitive == "reflect" and skill.counter then
+		-- BR1-3 아르마딜로 반격 가시: 떨어질 자리(때린 순간의 내 자리)의 원 밖으로 - 원 한가운데(보스 바로 옆 근접)에서도
+		walk("가시 자리 밖으로", skill.counter.delaySeconds, skill.counter.radiusStuds + half)
 	elseif primitive == "reflect" then
 		-- BR1-2 되돌아오는 투사체: 모으기 + 원거리 자리(rangedStandoff)에서 닿기까지 안에 옆으로 (반경 + 몸통)
 		walk("되돌아오는 것 옆으로", skill.projectile.windupSeconds + dodge.rangedStandoffStuds / skill.projectile.speedStuds, skill.projectile.radiusStuds + half)
+	elseif primitive == "sweep" then
+		-- BR1-3 에네르기파: 반원 안 가장 나쁜 자리에서 뒤 반원 · 반경 밖까지(BossSkillMath.sweepWorst)
+		local available, required, distance = BossSkillMath.sweepWorst(skill, standoffStuds, walkSpeedStuds)
+		table.insert(checks, { label = "휩쓸기 뒤 반원 · 밖으로", availableSeconds = available, requiredSeconds = required, distanceStuds = distance, ok = available >= required })
+	elseif primitive == "boomerang" then
+		-- BR1-3 분신 부메랑: 선 옆으로(가는 길) - 오는 길은 같은 선(그대로 보인다)
+		walk("분신 길 옆으로", skill.telegraphSeconds, skill.halfWidthStuds + half)
+	elseif primitive == "sandSearch" or primitive == "orgel" then
+		-- BR1-3 진짜 전갈 찾기(가장 먼 둔덕까지) · 수정 오르골(종 사이 최악 네 번) - 제한 시간 안에 걸어서
+		walk(primitive == "orgel" and "종 다섯 번 치기" or "진짜 둔덕까지", skill.limitSeconds, skill.dodge.distanceStuds)
 	elseif primitive == "grab" then
 		-- BR1 대공 잡기: 보고 내려올 시간 - 인지 + 한 체공 최대(공중 점프 2 + 대시 = 1.961초 - movement-metrics v2). 착지하면 연속 체공이 0이 된다.
 		local need = dodge.perceptionSeconds + BossData.mechanics.airGrab.maxAirSeconds
@@ -479,8 +631,10 @@ function BossSkillMath.damageShares(skill, surviveTargetHits)
 		hits = skill.volleys or 1
 	elseif primitive == "projectile" then
 		hits = skill.count or 1
+	elseif primitive == "boomerang" then
+		hits = 2 -- BR1-3 가는 길 · 오는 길
 	end
-	if primitive == "colorMatch" or primitive == "lightningRods" then
+	if primitive == "colorMatch" or primitive == "lightningRods" or primitive == "sandSearch" or primitive == "orgel" then
 		return skill.failMaxHpFraction, skill.failMaxHpFraction -- BR1-2 색 맞추기 · 번개 조준경 실패(보호막 무시 90%)
 	end
 	if primitive == "sonic" then
@@ -601,7 +755,7 @@ function BossSkillMath.perPersonCount(baseCount, row)
 	return math.clamp(scaled, 1, BossCurveData.perPersonMax)
 end
 
-local TELEGRAPH_FIT_SKIP = { gimmick = true, ring = true, grab = true, reflect = true, sonic = true, colorMatch = true, lightningRods = true }
+local TELEGRAPH_FIT_SKIP = { gimmick = true, ring = true, grab = true, reflect = true, sonic = true, colorMatch = true, lightningRods = true, sandSearch = true, orgel = true }
 
 -- 넓어진 범위에서 회피 부등식이 깨지면 모자란 만큼 **모든 전조 칸에** 더한다(큰 범위 = 긴 전조 - 무게 원칙). 사본을 고친다.
 function BossSkillMath.fitTelegraphs(skill, standoffStuds, walkSpeedStuds)

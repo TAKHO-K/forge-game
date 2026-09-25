@@ -232,7 +232,8 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	end
 	-- G1-3: 레벨차 계수 - 주는 피해(CharacterLevelConfig.levelGap). 스테이지 = 잡몹은 때린 사람의 스테이지, 보스는 보스 스테이지. 실제 Player만(스탠드인 · 구출 · 상자는 영향 없음).
 	local damageBeforeGap = damage -- G2a(사용자 결정 - G1-3 결정 필요 2): 보스 기여도는 계수를 곱하기 전 피해로 센다(저레벨 파티원이 10% 문턱에서 빠지지 않게)
-	if typeof(attackerPlayer) == "Instance" and not entry.isRescueTarget and not entry.isChest then
+	local fixed = hitInfo ~= nil and hitInfo.fixed == true -- BR1-3 고정 피해(보스 에어본 5% - 레벨차 계수 · 받는 피해 배율 없이, 보호막만 막는다)
+	if typeof(attackerPlayer) == "Instance" and not entry.isRescueTarget and not entry.isChest and not fixed then
 		local gapStage = entry.data.isBoss and entry.data.stageNumber or attackerStage
 		damage *= CharacterLevel.levelGapDealMultiplier(attackerPlayer:GetAttribute("CharacterLevel"), gapStage)
 	end
@@ -243,7 +244,7 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 		end
 		-- 29-1 파훼 게이트·기회 창(BossMechanics가 setDamageTakenMultiplier로 건다). 기여도도 받는 피해 배율까지는 곱한다.
 		-- G2a: 레벨차 계수만 빼고 센다(계수가 1이면 합이 1(= maxHp)로 닫히고, 벌점을 받는 멤버가 있으면 합이 1보다 조금 크다 - 문턱 · 표시 모두 이 값).
-		local taken = entry.damageTakenMultiplier or 1
+		local taken = fixed and 1 or (entry.damageTakenMultiplier or 1)
 		if entry.shielded then -- BR1-2 수정 여왕 보호막: 피해로는 절대 안 깨진다(수정 둘을 깨야 풀린다 - BossEnvironment) · 클라는 "무효"로 그린다
 			taken = 0
 		end

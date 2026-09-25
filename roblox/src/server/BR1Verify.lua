@@ -23,7 +23,7 @@ local NEW_SKILLS = {
 	section_guardian = { "swipe", "fists", "orbs", "earthSplit", "shockwave" },
 	frost_giant = { "swipe", "spear", "stomp", "snowball" },
 	abyssal_lord = { "swipe", "tailSweep", "vortex", "bubbles", "spout", "tide" },
-	crystal_queen = { "swipe", "spikes", "shards", "mirrorDash", "beam" },
+	crystal_queen = { "swipe", "spikes", "shards", "mirrorDash", "energyBeam" }, -- BR1-3: 반사 레이저 → 에네르기파
 	scorpion_queen = { "swipe", "stingJab", "ambush", "clawSweep" },
 	storm_lord = { "swipe", "tornado", "thunderRing", "boltSpear", "discharge" },
 }

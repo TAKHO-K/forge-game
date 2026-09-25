@@ -57,8 +57,14 @@ local function judgmentsOf(skill, surviveHits)
 		end
 	elseif p == "sonic" then
 		table.insert(list, { at = skill.telegraphSeconds + skill.tickSeconds * skill.ticks, gimmick = true, sonic = true, slack = minSlack })
+	elseif p == "reflect" and skill.counter then
+		-- BR1-3 아르마딜로: 태세 중 때린 사람(근접 · 원거리 모두)에게 반격 가시(바닥 원 - 피할 수 있다)
+		table.insert(list, { at = skill.telegraphSeconds + 1.5, reflect = true, counter = true, share = skill.counter.multiplier / surviveHits, slack = minSlack })
 	elseif p == "reflect" then
 		table.insert(list, { at = skill.telegraphSeconds + 1.5, reflect = true, share = skill.projectile.maxHpFraction, slack = minSlack })
+	elseif p == "sandSearch" or p == "orgel" then
+		-- BR1-3 파티 단위 전멸기(누가 풀어도 전원 성공 · 실패하면 전원 failMaxHpFraction) - 판정 한 번(party = 파티 한 번 굴림)
+		table.insert(list, { at = skill.telegraphSeconds + skill.limitSeconds, gimmick = true, party = true, slack = minSlack, fraction = skill.failMaxHpFraction })
 	elseif p == "grab" then
 		table.insert(list, { at = skill.telegraphSeconds, grab = true, slack = minSlack })
 	elseif p == "ring" then
@@ -191,6 +197,10 @@ function BossDifficultySim.run(bossId, options)
 		local base
 		if j.gimmick then
 			base = (gimmickSeen <= 1 and not familiar) and cfg.hitChance.gimmickFirst or cfg.hitChance.gimmickLater
+			local own = j.skill and j.skill.sim and j.skill.sim.failChance -- BR1-3 스킬별 가정(수정 오르골 - 무작위 5개 기억)
+			if own then
+				base = (gimmickSeen <= 1 and not familiar) and own.first or own.later
+			end
 			if j.color then
 				base *= 1 + cfg.colorPartyPenalty * (n - 1)
 			end
@@ -238,6 +248,9 @@ function BossDifficultySim.run(bossId, options)
 						if m.alive and rng() < cfg.hitChance.env then
 							local ticks = cfg.envTicks.min + math.floor(rng() * (cfg.envTicks.max - cfg.envTicks.min + 1))
 							local share = math.min(ticks * (env.tick and env.tick.fraction or 0), BossData.mechanics.environment.maxHpFractionPerActivation)
+							if env.fall and not env.onStart then -- 판 털기는 날아간 사람이 낙사 면제(날아감 = onStart 몫)
+								share += env.fall.maxHpFraction -- BR1-3 무너진 바닥 낙사 한 번(가정)
+							end
 							if env.onStart and env.onStart.damage then
 								share += env.onStart.damage.multiplier / surviveHits
 							elseif env.onStart and env.onStart.pan then
@@ -284,7 +297,7 @@ function BossDifficultySim.run(bossId, options)
 					j.id = pick
 					table.insert(pending, j)
 				end
-				if skill.primitive == "gimmick" or skill.gate then
+				if skill.primitive == "gimmick" or skill.gate or skill.primitive == "sandSearch" or skill.primitive == "orgel" then -- BR1-3 새 전멸기도 게이트를 세운다(서버 onGimmickStart)
 					if not gateStarted then
 						gateStarted, armed = true, true
 					end
@@ -306,6 +319,19 @@ function BossDifficultySim.run(bossId, options)
 					armed = not j.solved
 					if j.solved and j.skill.gate.breakWindow then
 						windowMultiplier, windowUntil = j.skill.gate.breakWindow.damageTakenMultiplier, t + j.skill.gate.breakWindow.seconds
+					end
+				elseif j.gimmick and j.party then
+					-- BR1-3 파티 단위: 실패 확률 = 1인 확률 ^ (1 + partySolveExponent × (인원 − 1))(여럿이 찾으면 쉽다 - 가정) · 실패면 살아 있는 전원 fraction
+					gimmickSeen += 1
+					local failed = rng() < hitChance(j) ^ (1 + cfg.partySolveExponent * (n - 1))
+					for _, m in ipairs(members) do
+						if m.alive and t >= m.trappedUntil and failed then
+							damage(m, j.fraction, nil, j.id)
+						end
+					end
+					armed = failed
+					if not failed and j.skill.breakWindow then
+						windowMultiplier, windowUntil = j.skill.breakWindow.damageTakenMultiplier, t + j.skill.breakWindow.seconds
 					end
 				elseif j.gimmick then
 					gimmickSeen += 1
@@ -356,7 +382,7 @@ function BossDifficultySim.run(bossId, options)
 					end
 				elseif j.reflect then
 					-- 반사: 원거리만(근접 평타는 반사 대상이 아니다) - 되돌아온 것에 맞을 확률(처음 · 두 번째부터)
-					if role == "ranged" then
+					if role == "ranged" or j.counter then
 						for _, m in ipairs(members) do
 							local chance = ((seenCount[j.skill] or 0) <= 1 and not familiar) and cfg.reflectHit.first or cfg.reflectHit.later
 							if m.alive and t >= m.trappedUntil and rng() < chance * hitScale then

@@ -15,6 +15,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local HeightGuard = require(script.Parent.HeightGuard)
+local BossMechanics = require(script.Parent.BossMechanics) -- BR1-3 아르마딜로 태세(반사의 귀)
 
 local BossHandlersBR1 = {}
 
@@ -60,6 +61,7 @@ local function beginSectorVolley(c, centerDeg)
 		angleDeg = centerDeg, widthDeg = volley.angleDeg, radius = radius, innerRadius = skill.innerRadiusStuds,
 		seconds = volley.telegraphSeconds, jumpable = skill.jumpable == true,
 		bossId = c.data.id, motion = skill.motion, volley = st.sectorVolley,
+		outline = skill.outline, weaponFlash = skill.weaponFlash, -- BR1-3 강화 평타: 흰 테두리 두 줄 · 무기 번쩍
 		zoneCenter = kit.zoneOf(c.model).center, zoneRadius = kit.zoneOf(c.model).radius,
 	})
 end
@@ -103,6 +105,9 @@ BossHandlersBR1.sector = {
 			if inWedge and Reach.sameLayer(v.groundFeet, floor) then -- 발 기준(P3a D3)
 				if not (skill.jumpable and kit.isAirborne(v.player.Character, 0.5)) then
 					damageWith(c, volley.multiplier, v.player)
+					if skill.onHit then -- BR1-3 강화 평타 기절
+						kit.runHitEffects(c, skill.onHit, v, Vector3.new(st.sectorOrigin.X, st.floorY, st.sectorOrigin.Z), 1)
+					end
 				end
 			end
 		end
@@ -460,6 +465,9 @@ function BossHandlersBR1.clearProjectiles(st)
 	if st and st.projectiles then
 		st.projectiles = {}
 	end
+	if st then
+		st.spikes = nil -- BR1-3 떨어지던 가시도(리셋 · 중단)
+	end
 end
 
 -- ─────────────────────────── vortex ───────────────────────────
@@ -520,7 +528,7 @@ BossHandlersBR1.reflect = {
 		st.phaseEndsAt = c.now + skill.telegraphSeconds
 		st.reflectBy = {}
 		kit.send(st, "reflectTelegraph", { center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.telegraphSeconds, radius = skill.barrierRadiusStuds,
-			bossId = c.data.id, motion = skill.motion, color = c.data.headColor })
+			bossId = c.data.id, motion = skill.motion, color = c.data.headColor, style = skill.counter and "armadillo" or nil })
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
@@ -530,22 +538,75 @@ BossHandlersBR1.reflect = {
 		if st.phase == "reflectTelegraph" then
 			st.phase = "reflectStance"
 			st.phaseEndsAt = c.now + skill.stanceSeconds
+			if skill.counter then
+				-- BR1-3 아르마딜로: 받는 피해 0 · 때린 사람(근접 · 원거리 모두 - 설치형 규칙은 beginReflect가 본다)의 그 순간 자리로 가시
+				local model, data = c.model, c.data
+				BossMechanics.beginReflect(model, { damageTakenMultiplier = 0 }, skill.damageLabel, function(player)
+					BossHandlersBR1.throwSpike(model, st, data, skill, player)
+				end, true)
+			end
 			kit.send(st, "reflectStance", { center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.stanceSeconds, radius = skill.barrierRadiusStuds,
-				bossId = c.data.id, color = c.data.headColor, rangedUserIds = rangedUserIds(st) })
+				bossId = c.data.id, color = c.data.headColor, rangedUserIds = (not skill.counter) and rangedUserIds(st) or {}, style = skill.counter and "armadillo" or nil })
 			return
+		end
+		if skill.counter then
+			BossMechanics.endReflect(c.model)
 		end
 		kit.send(st, "reflectEnd", {})
 		kit.endSkill(c.model, st, c.data, c.now)
 	end,
 	interrupt = function(c)
+		if c.skill and c.skill.counter and c.st.phase == "reflectStance" then
+			BossMechanics.endReflect(c.model)
+		end
 		kit.send(c.st, "reflectEnd", {})
 	end,
 }
 
+-- BR1-3 아르마딜로 반격 가시: 때린 사람의 **그 순간 자리**에 counter.delaySeconds 뒤 떨어진다(바닥 원 = 판정). 스킬이 끝나도 떨어진다(stepSpikes - 투사체처럼 따로 돈다).
+function BossHandlersBR1.throwSpike(model, st, data, skill, player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local counter = skill.counter
+	local at = Vector3.new(root.Position.X, st.floorY, root.Position.Z)
+	local now = os.clock()
+	st.spikes = st.spikes or {}
+	table.insert(st.spikes, { position = at, landAt = now + counter.delaySeconds, radius = counter.radiusStuds, multiplier = counter.multiplier, label = skill.damageLabel, data = data })
+	local bossAt = model:GetPivot().Position
+	kit.send(st, "spikeMark", { from = bossAt, position = at, radius = counter.radiusStuds, seconds = counter.delaySeconds, color = data.headColor })
+	kit.debugEvent("spikeMark", { player = player, at = now, position = at })
+	print(("[forge-game] 아르마딜로 반격 가시: %s 자리로 %.1f초 뒤"):format(tostring(player.Name), counter.delaySeconds))
+end
+
+function BossHandlersBR1.stepSpikes(model, st, now)
+	local list = st.spikes
+	if not list or #list == 0 then
+		return
+	end
+	for i = #list, 1, -1 do
+		local spike = list[i]
+		if now >= spike.landAt then
+			table.remove(list, i)
+			local c = { model = model, st = st, data = spike.data, now = now }
+			kit.judgeBegin()
+			for _, v in ipairs(kit.victims(st)) do
+				if Reach.horizontalDistance(v.root.Position, spike.position) <= spike.radius and Reach.sameLayer(v.groundFeet, spike.position) then
+					kit.applySkillDamage(model, spike.data, { damage = { kind = "attack", multiplier = spike.multiplier }, damageLabel = spike.label }, v.player)
+					kit.debugEvent("spikeHit", { player = v.player, at = now })
+				end
+			end
+			kit.judgeEnd(c, { kind = "circle", centers = { spike.position }, radius = spike.radius, inner = 0 })
+			kit.send(st, "spikeImpact", { position = spike.position, radius = spike.radius })
+		end
+	end
+end
+
 -- AttackServer(원거리 평타가 닿는 순간)가 부른다. 반사 중이면 true(피해 0) - 쏜 사람 1인당 windowSeconds에 한 발만 되돌린다(나머지는 흡수).
 function BossHandlersBR1.tryReflect(model, shooter)
 	local st = MonsterState.getBossPatternState(model)
-	if not (st and st.phase == "reflectStance" and st.skill and st.skill.primitive == "reflect" and st.context) then
+	if not (st and st.phase == "reflectStance" and st.skill and st.skill.primitive == "reflect" and not st.skill.counter and st.context) then -- BR1-3 아르마딜로는 반사 대신 가시(피해 0 · 귀)
 		return false
 	end
 	local skill = st.skill
@@ -617,6 +678,141 @@ function BossHandlersBR1.airSecondsOf(st, player, now)
 	return since and (now - since) or 0
 end
 
+-- ─────────────────────────── sweep(BR1-3 에네르기파 휩쓸기) ───────────────────────────
+-- 기 모으기(전조 - 보스 앞 빛이 커진다 · 머리 위 회전 화살표) → 빔이 보스 둘레 sweepDeg를 sweepSeconds 동안 돈다. 판정 = 빔이 지나간 각(지난 틱 ~ 이번 틱)에 든 사람 ·
+-- 반경 radiusStuds 안 · 발 기준 같은 층 - 한 사람 한 번. 휩쓰는 범위 = 대상 방향이 한가운데인 반원(바닥에 보이는 반원 = 판정 - 빔 굵기는 그림).
+BossHandlersBR1.sweep = {
+	bubbleSeconds = function(c)
+		return c.skill.telegraphSeconds + c.skill.sweepSeconds
+	end,
+	start = function(c)
+		local st, skill = c.st, c.skill
+		st.phase = "sweepCharge"
+		st.phaseEndsAt = c.now + skill.telegraphSeconds
+		st.sweepCenterDeg = angleToTarget(c)
+		st.sweepDir = kit.rng:NextNumber() < 0.5 and 1 or -1
+		st.sweepOrigin = kit.xz(c.position)
+		st.sweepHit = {}
+		local startDeg = BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, 0)
+		kit.send(st, "sweepTelegraph", {
+			center = Vector3.new(st.sweepOrigin.X, st.floorY, st.sweepOrigin.Z), angleDeg = st.sweepCenterDeg, startDeg = startDeg, widthDeg = skill.sweepDeg,
+			radius = skill.radiusStuds, halfWidth = skill.halfWidthStuds, dirSign = st.sweepDir, seconds = skill.telegraphSeconds, sweepSeconds = skill.sweepSeconds,
+			bossId = c.data.id, color = c.data.headColor,
+		})
+	end,
+	step = function(c)
+		local st, skill = c.st, c.skill
+		if st.phase == "sweepCharge" then
+			if c.now < st.phaseEndsAt then
+				return
+			end
+			st.phase = "sweepFire"
+			st.sweepStartedAt = c.now
+			st.sweepPrevOffset = 0
+			kit.send(st, "sweepFire", { seconds = skill.sweepSeconds })
+		end
+		local t = c.now - st.sweepStartedAt
+		local f = math.clamp(t / skill.sweepSeconds, 0, 1)
+		local offset = skill.sweepDeg * f
+		local startDeg = BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, 0)
+		local floor = Vector3.new(0, st.floorY, 0)
+		kit.judgeBegin()
+		for _, v in ipairs(kit.victims(st)) do
+			if not st.sweepHit[v.player] then
+				local rel = kit.xz(v.root.Position) - st.sweepOrigin
+				local d = rel.Magnitude
+				local o = ((math.deg(math.atan2(rel.Z, rel.X)) - startDeg) * st.sweepDir) % 360
+				if d <= skill.radiusStuds and (d < 1e-3 or (o >= st.sweepPrevOffset - 1e-6 and o <= offset + 1e-6)) and Reach.sameLayer(v.groundFeet, floor) then
+					st.sweepHit[v.player] = true
+					kit.applySkillDamage(c.model, c.data, skill, v.player)
+				end
+			end
+		end
+		kit.judgeEnd(c, { kind = "sector", origin = Vector3.new(st.sweepOrigin.X, st.floorY, st.sweepOrigin.Z), angleDeg = st.sweepCenterDeg, widthDeg = skill.sweepDeg, radius = skill.radiusStuds, inner = 0 })
+		st.sweepPrevOffset = offset
+		if f >= 1 then
+			kit.send(st, "sweepEnd", {})
+			kit.endSkill(c.model, st, c.data, c.now)
+		end
+	end,
+	interrupt = function(c)
+		kit.send(c.st, "sweepEnd", {})
+	end,
+}
+
+-- ─────────────────────────── boomerang(BR1-3 분신 돌격) ───────────────────────────
+-- 분신 directions개가 대상 쪽 부채(가운데 = 대상 · ±stepDeg)로 벽(arenaMarginStuds 안쪽)까지 → turnSeconds → 같은 길로 돌아와 보스에 흡수(패턴 끝).
+-- 판정 = 분신 몸(반폭 halfWidthStuds + 몸통)에 닿은 사람 · 길마다 · 가는 길 / 오는 길 따로 1번. 사람을 통과한다(분신은 멈추지 않는다).
+BossHandlersBR1.boomerang = {
+	bubbleSeconds = function(c)
+		return c.skill.telegraphSeconds
+	end,
+	start = function(c)
+		local st, skill = c.st, c.skill
+		local zone = kit.zoneOf(c.model)
+		local origin = kit.xz(c.position)
+		local spread = skill.centered and skill.stepDeg * ((skill.directions or 1) - 1) / 2 or 0
+		local base = angleToTarget(c) - spread
+		local lines, payload = {}, {}
+		for k = 0, (skill.directions or 1) - 1 do
+			local deg = base + skill.stepDeg * k
+			local a = math.rad(deg)
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local length = kit.clipToZone(origin, dir, zone, skill.arenaMarginStuds or 4)
+			table.insert(lines, { dir = dir, length = length, hit = { out = {}, back = {} } })
+			table.insert(payload, { angleDeg = deg, length = length })
+		end
+		st.boomOrigin = origin
+		st.boomLines = lines
+		st.phase = "boomTelegraph"
+		st.phaseEndsAt = c.now + skill.telegraphSeconds
+		kit.send(st, "boomTelegraph", {
+			center = Vector3.new(origin.X, st.floorY, origin.Z), lines = payload, halfWidth = skill.halfWidthStuds, seconds = skill.telegraphSeconds,
+			outSpeed = skill.outSpeedStuds, backSpeed = skill.backSpeedStuds, turnSeconds = skill.turnSeconds, bossId = c.data.id, color = c.data.headColor,
+		})
+	end,
+	step = function(c)
+		local st, skill = c.st, c.skill
+		if st.phase == "boomTelegraph" then
+			if c.now < st.phaseEndsAt then
+				return
+			end
+			st.phase = "boomRun"
+			st.boomStartedAt = c.now
+			kit.send(st, "boomRun", {})
+		end
+		local t = c.now - st.boomStartedAt
+		local half = BossData.mechanics.dodge.characterHalfWidthStuds
+		local floor = Vector3.new(0, st.floorY, 0)
+		local running = false
+		local targets = kit.victims(st)
+		for _, line in ipairs(st.boomLines) do
+			local distance, leg = BossSkillMath.boomerangAt(skill, line.length, t)
+			if distance then
+				running = true
+				local at = st.boomOrigin + line.dir * distance
+				local hitSet = leg == "back" and line.hit.back or line.hit.out
+				for _, v in ipairs(targets) do
+					if not hitSet[v.player] and (kit.xz(v.root.Position) - at).Magnitude <= skill.halfWidthStuds + half and Reach.sameLayer(v.groundFeet, floor) then
+						hitSet[v.player] = true
+						kit.judgeBegin()
+						kit.applySkillDamage(c.model, c.data, skill, v.player)
+						kit.judgeEnd(c, { kind = "circle", centers = { Vector3.new(at.X, st.floorY, at.Z) }, radius = skill.halfWidthStuds, inner = 0 })
+						kit.debugEvent("boomerangHit", { player = v.player, leg = leg, at = c.now })
+					end
+				end
+			end
+		end
+		if not running then
+			kit.send(st, "boomEnd", { center = Vector3.new(st.boomOrigin.X, st.floorY, st.boomOrigin.Z) })
+			kit.endSkill(c.model, st, c.data, c.now)
+		end
+	end,
+	interrupt = function(c)
+		kit.send(c.st, "boomEnd", {})
+	end,
+}
+
 function BossHandlersBR1.register(handlers, patternKit)
 	kit = patternKit
 	kit.airSecondsOf = BossHandlersBR1.airSecondsOf
@@ -624,6 +820,8 @@ function BossHandlersBR1.register(handlers, patternKit)
 	handlers.projectile = BossHandlersBR1.projectile
 	handlers.vortex = BossHandlersBR1.vortex
 	handlers.reflect = BossHandlersBR1.reflect
+	handlers.sweep = BossHandlersBR1.sweep -- BR1-3
+	handlers.boomerang = BossHandlersBR1.boomerang -- BR1-3
 end
 
 return BossHandlersBR1

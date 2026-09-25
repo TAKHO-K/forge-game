@@ -48,6 +48,7 @@ local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 local BossArenaContainment = require(script.Parent.BossArenaContainment) -- P3d B2: 맵 이탈 복귀 보호(넉백 건너뛰기)
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 넉백 · 회오리 동안 서버 높이 검증 예외
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+local PlayerStun = require(script.Parent.PlayerStun) -- BR1-3 강화 평타 기절
 -- BR1: 새 조각(부채꼴 · 투사체 · 소용돌이) · 대공 잡기 · 환경 트랙 - 이 파일의 공용 함수 표(kit)를 받아 HANDLERS에 꽂는다.
 local BossHandlersBR1 = require(script.Parent.BossHandlersBR1)
 local BossAirGrab = require(script.Parent.BossAirGrab)
@@ -672,7 +673,12 @@ end
 -- 판정에 맞은 한 사람에게 도는 조각(onHit). from = 그 판정의 중심. coHits(P3c A4) = 이 판정에 함께 맞은 사람 수(자기 포함).
 local function runHitEffects(c, effects, v, from, coHits)
 	for _, effect in ipairs(effects or {}) do
-		if effect.type == "launch" and not BossTrap.isTrapped(v.player) and not BossArenaContainment.isProtected(v.player) then -- P3d B2: 맵 이탈 복귀 직후 보호 중이면 안 뜬다
+		if effect.type == "stun" then -- BR1-3 강화 평타: 잠시 기절(면역 · 무적 · 잡힘이면 안 걸린다 - PlayerStun)
+			if PlayerStun.stun(v.player, effect.seconds) then
+				send(c.st, "playerStun", { userId = typeof(v.player) == "Instance" and v.player.UserId or nil, seconds = effect.seconds })
+				debugEvent("playerStun", { player = v.player, at = c.now, seconds = effect.seconds })
+			end
+		elseif effect.type == "launch" and not BossTrap.isTrapped(v.player) and not BossArenaContainment.isProtected(v.player) then -- P3d B2: 맵 이탈 복귀 직후 보호 중이면 안 뜬다
 			c.st.lastLaunch = { player = v.player, at = c.now, effect = effect } -- 자동 검증이 읽는다
 			-- 29-5 탱커 훅 ③: 무게 계수(지금은 전원 1.0 - BossMechanics.weightFactorOf). 무거울수록 낮게·가까이·짧게 뜬다 -
 			-- 높이·거리·체공·면역 시간을 계수로 나눈다(조작을 잃는 시간이 짧아지면 면역도 같이 짧아져야 공짜 면역이 안 된다).
@@ -1351,6 +1357,10 @@ local function startDash(c, fromPosition, dashIndex)
 	if obstacleId then
 		length = contact
 	end
+	local voidAt = BossEnvironment.firstBlockedAlong(c.model, origin, dir, length) -- BR1-3: 무너진 바닥 앞에서 멈춘다(예고 선도 거기까지)
+	if voidAt then
+		length, obstacleId = voidAt, nil
+	end
 	st.chargeObstacle = obstacleId
 	st.chargeDashIndex = dashIndex
 	st.chargeFrom = Vector3.new(origin.X, fromPosition.Y, origin.Z)
@@ -2021,7 +2031,7 @@ function kit.bossAirborne(model, st, data, now, projectile)
 	local hp, maxHp = MonsterState.getBossHp(model)
 	if maxHp then
 		local owner = projectile.owner and projectile.owner.player or nil
-		local isDead = MonsterState.applyDamage(model, maxHp * cfg.damageMaxHpFraction, data.stageNumber, owner)
+		local isDead = MonsterState.applyDamage(model, maxHp * cfg.damageMaxHpFraction, data.stageNumber, owner, { fixed = cfg.fixedDamage, indirect = true }) -- BR1-3: 5% 고정(indirect - 반사 태세의 귀를 부르지 않는다)
 		MonsterSpawner.updateHpLabel(model) -- 화면 체력바(BossHpRatio) - 평타 경로(AttackServer)와 같다
 		if isDead and typeof(owner) == "Instance" then
 			require(script.Parent.CombatResolution).resolveHit(owner, model, true) -- 막타면 보통 처치 경로(지연 require - BossEncounter 순환 회피)
@@ -2048,6 +2058,10 @@ BossAirGrab.register(HANDLERS, kit)
 require(script.Parent.BossSonic).register(HANDLERS, kit) -- BR1-2 음파 포효(primitive sonic)
 require(script.Parent.BossColorMatch).register(HANDLERS, kit) -- BR1-2 색 맞추기(primitive colorMatch)
 require(script.Parent.BossLightningRods).register(HANDLERS, kit) -- BR1-2 번개 조준경(primitive lightningRods)
+local BossSandSearch = require(script.Parent.BossSandSearch)
+BossSandSearch.register(HANDLERS, kit) -- BR1-3 진짜 전갈 찾기(primitive sandSearch)
+local BossOrgel = require(script.Parent.BossOrgel)
+BossOrgel.register(HANDLERS, kit) -- BR1-3 수정 오르골(primitive orgel)
 BossEnvironment.register(kit)
 
 -- ─────────────────────────── 틱 ───────────────────────────
@@ -2102,6 +2116,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	tickHazards(model, st, data, now) -- 29-3: 위험 지형(모래 구덩이)의 중심부 피해
 	BossHandlersBR1.trackAir(st, now) -- BR1: 멤버별 연속 체공(대공 잡기 · 대공 투사체의 조건)
 	BossHandlersBR1.stepProjectiles(model, st, data, now, dt) -- BR1: 쏜 투사체는 스킬과 떨어져 난다
+	BossHandlersBR1.stepSpikes(model, st, now) -- BR1-3 아르마딜로 반격 가시(스킬이 끝나도 떨어진다)
 	BossEnvironment.step(model, st, data, now, dt) -- BR1: 환경 변화(두 번째 시계 - 기본 패턴과 겹친다)
 	if st.airborne then -- BR1-2 보스 에어본: 떠올랐다(rise) 떨어진다(fall) - 그 뒤는 아래 기절(stunUntil)
 		local cfg = BossData.mechanics.bossAirborne
@@ -2232,6 +2247,8 @@ function BossPatterns.clearProps(model, members)
 	local st = MonsterState.getBossPatternState(model)
 	BossArenaProps.clear(model)
 	removeDecoys(model) -- 29-5: 분열 도중에 보스전이 끝나도(처치·이탈) 분신이 남지 않는다
+	BossSandSearch.clear(model) -- BR1-3 모래 둔덕
+	BossOrgel.clear(model) -- BR1-3 수정 종
 	BossEnvironment.clear(model) -- BR1: 보스전이 끝나면 환경 변화의 파트(공중 발판 · 핵)도 치운다
 	BossAirGrab.clear(model) -- 리뷰 8: 잡은 채 처치 · 이탈해도 들고 있던 기록(모델 참조)을 남기지 않는다
 	for _, member in ipairs(members or (st and st.members) or {}) do

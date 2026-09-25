@@ -150,7 +150,12 @@ local MECHANICS = {
 	-- BR1-2 보스 에어본(사용자 - 되튕겨진 보스 투사체가 보스에 맞으면): 보스가 riseSeconds 동안 liftStuds 떠올랐다 fallSeconds 동안 떨어지고 stunSeconds 기절(돌진 헤롱과 같은 그림 - 인형 방식).
 	--   맞는 순간 진행 중 패턴은 끊긴다 · 기절 동안 새 패턴 · 평타 없음 · 보스 최대 체력 × damageMaxHpFraction. cooldownSeconds 안에 또 맞으면 에어본 없이 피해만(연속 에어본 방지).
 	--   판정 = 되튕겨진 투사체(owner.kind == "player")가 보스 곁 hitRadiusStuds + 투사체 반경 안. 지금 되튕기는 수단은 개발 명령(/gg reflectshot)뿐 - 성기사 방패 패링 연결은 K.
-	bossAirborne = { liftStuds = 10, riseSeconds = 0.35, fallSeconds = 0.35, stunSeconds = 3.0, damageMaxHpFraction = 0.03, cooldownSeconds = 12, hitRadiusStuds = 4 },
+	--   BR1-3 결정 6(사용자): 피해 = 1회당 보스 최대 체력 5% **고정**(fixedDamage - 레벨차 계수 · 받는 피해 배율(게이트) 미적용 - 기믹 보상). 보호막(수정 부수기)만 막는다.
+	bossAirborne = { liftStuds = 10, riseSeconds = 0.35, fallSeconds = 0.35, stunSeconds = 3.0, damageMaxHpFraction = 0.05, fixedDamage = true, cooldownSeconds = 12, hitRadiusStuds = 4 },
+
+	-- BR1-3 플레이어 기절(강화 평타 onHit "stun" · server/PlayerStun): 맞으면 seconds 동안 제자리(루트 고정 - 출처 "stun"). 기절이 풀린 뒤 immuneSeconds 동안은
+	-- 다시 기절하지 않는다(연속 기절 방지). 같은 면역을 대공 잡기의 얼림도 본다 · 잡힘(모든 BossTrap)이 풀린 뒤에도 면역이 붙는다 - "기절 → 기절"이 이어지지 않는다.
+	stun = { immuneSeconds = 2.0 },
 
 	-- BR1 핵심 기믹 실패(설계 §3): 55% → 85% · 쉴드 무시. 기믹 판정 실패(resolveGimmick)에만 쓴다 - 다른 %최대체력 피해(돌진 · 구덩이 · 반사 · 분신)는
 	-- 옛 발동당 상한(gimmickFailMaxHpFraction 55%)에 그대로 묶인다. 85%는 "실패 + 강한 공격 한 번 = 죽음"이면서 단독으로는 죽지 않는 값(즉사는 K 단계).
@@ -172,6 +177,8 @@ local MECHANICS = {
 
 	-- 29-3 반사(전갈 여왕 갑각 태세): 타격 수가 아니라 시간 창으로 센다 - windowSeconds에 한 번. 평타 빈도가 직업마다
 	-- 2.5~5.7타/초라 타격당으로 세면 쌍검만 두 배로 벌받는다(20.73 [2-5]). 1회 = gimmickFailMaxHpFraction ÷ partialFailDivisor.
+	-- BR1-3 설치형 공격 규칙(결정 5 - 사용자): 공격이 **설치 · 시전된 시점**(hitInfo.committedAt - 투사체는 쏜 순간 · 채널링 · 장판 · 다단 히트는 시전 순간)에 보스가 반사
+	-- 태세가 아니었으면, 그 뒤 태세 중에 맞아도(다단 히트 포함) 반사 피해 · 반격이 없다(BossMechanics.beginReflect). 나중 궁수 화살비 같은 장판 스킬도 시전 시각을 태그한다.
 	reflect = { windowSeconds = 0.75 },
 
 	-- 29-5 탱커 대비 훅(PRD 20.80 [F]) - 탱커 직업은 아직 없다. 보스 코드를 나중에 다시 뜯지 않게 **자리만** 만들어 둔다:
@@ -276,6 +283,8 @@ local MECHANICS = {
 			grabEscape = 0.5,
 			courseSeconds = { solo = 45, party = 28, jitter = 0.3 },
 			colorPartyPenalty = 0.1,
+			-- BR1-3 파티 단위 전멸기(진짜 전갈 찾기 · 수정 오르골 - 누가 풀어도 전원 성공): 파티 실패 확률 = 1인 실패 확률 ^ (1 + 이 값 × (인원 − 1)) - 가정
+			partySolveExponent = 0.5,
 			courseGroundHitScale = 0.4,
 			partyFailShare = 0.45, -- = mechanics.party.failShareFraction(모형이 같은 값을 쓴다 - 아래 루프가 맞춘다) -- 수정 부수기 동안 점프맵 위 사람이 바닥 판정 · 평타를 맞는 몫(높이 올라가 있다)
 		},
@@ -287,13 +296,17 @@ local P = MECHANICS.priority
 -- ═══ BR1 공통 스킬(docs/design/boss-br1.md §1-1 · §2) - 6종이 같은 뼈대를 쓰고 이름 · 모션(motion = 클라 인형 스타일 키)만 다르다 ═══
 -- 강화 평타: 피할 수 있는 작은 일격(무게 작음 - 전조 1.1초 · ×1.4 = 20%). 앞 100° · 반경 14 부채꼴(sector). 보스 앞 8에 선 사람이 옆으로
 -- 8 × sin 50° + 1 = 7.1 → 0.5 + 7.1 ÷ 16 × 1.25 = 1.05초 ≤ 1.1. 뒤로 물러나도 되고 공중 점프 1회(발 13.3 > 8)로도 피한다.
+-- BR1-3(사용자 - 설명서 개선안 적용): 전조 1.1 → 1.3초 · 부채꼴 테두리 흰 선 두 줄(outline - 보스 몸 밖에서부터 그려 가려지지 않게) · 무기 번쩍(weaponFlash 0.3초).
+--   맞으면 잠시 기절(onHit stun 0.7초 - 풀린 뒤 mechanics.stun.immuneSeconds 동안 기절 면역). 기록(모션 단계): 팔을 휘두를 듯 떨림.
 local function enhancedBasic(label, motion)
 	return {
 		primitive = "sector", bubble = "swipe", motion = motion,
 		cooldownSeconds = 7, priority = P.normal,
 		conditions = { { type = "targetWithin", studs = 14 } },
-		telegraphSeconds = 1.1, angleDeg = 100, radiusStuds = 14, facing = "target",
+		telegraphSeconds = 1.3, angleDeg = 100, radiusStuds = 14, facing = "target",
+		outline = true, weaponFlash = true,
 		dodge = { distanceStuds = 7.1 },
+		onHit = { { type = "stun", seconds = 0.7 } },
 		damage = { kind = "attack", multiplier = 1.4 }, damageLabel = label,
 	}
 end
@@ -601,7 +614,7 @@ end
 local SPECIES = {
 	{
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
-		intro = { title = "지반 붕괴", line = "체력이 절반 아래면 땅이 무너진다 - 금 간 원 밖으로 피하라", icon = "!", diagram = "zones" },
+		intro = { title = "지반 붕괴", line = "체력이 절반 아래면 땅이 조각조각 무너진다 - 금 간 조각 밖으로!", icon = "!", diagram = "slices" },
 		id = "section_guardian", displayName = "구간 수호자",
 		bodyColor = Color3.fromRGB(60, 20, 70), headColor = Color3.fromRGB(90, 30, 100),
 		-- 기본형(기준선) - 21-3부터 검증돼 온 그 보스다. 다른 5종이 쓰는 전조 어휘의 사전이고 견습 보스다.
@@ -615,13 +628,17 @@ local SPECIES = {
 		scheduler = scheduler(6),
 		skillOrder = { "heavy", "shockwave", "meteor", "charge", "cross", "swipe", "grab", "fists", "orbs", "earthSplit", "mirror", "innerSmash" },
 		skills = guardianSkills(),
-		-- BR1 환경 변화 "지반 붕괴"(체력 50%부터 · 설계 §1-2): 두 주먹으로 땅을 연타 → 멤버 발밑마다 + 1개 무작위의 원(반경 22)에 금이 가고(3초)
-		-- 무너져 12초 동안 용암(0.5초마다 5% - 발 기준 같은 층). 구멍 밖으로 23 = 2.3초 ≤ 3.0. 견습 보스전에는 없다(BossEnvironment).
+		-- BR1-3 환경 변화 "지반 붕괴"(사용자 - 옛 "구멍 → 용암" 대체 · kind "collapse" = BossEnvironment): 아레나를 피자처럼 count(8)조각으로 나누고(가운데 허브 hubRadiusStuds는
+		-- 늘 남는다 - 보스 · 사람이 가운데로 건너간다) 무작위 collapse(2)조각이 무너진다. 고르는 규칙: 보스가 선 조각 · 멤버 스폰(복귀 자리) 조각은 빼고, 둘은 서로 붙지 않게(nonAdjacent),
+		-- 지난번 무너진 조각은 되도록 피한다. 전조 telegraphSeconds = 조각 경계선을 따라 금 + 조각 위험색 + 흔들림(보이는 장판 = 실제 판정).
+		--   회피: 조각 안 가장 먼 자리(반경 140 · 가운데 각)에서 옆 조각까지 140 × sin 22.5° = 53.6 + 1 → 0.5 + 54.6 ÷ 16 × 1.25 = 4.77초 ≤ 5.0.
+		--   무너진 조각(바닥이 사라진 검은 구멍)에 **발을 딛으면**(떠 있으면 아직) 떨어진다 = 최대 체력 fall.maxHpFraction(25%) + 바닥 아래로 → 맵 이탈 복귀(본인 스폰 · 보호 0.75초 - 기존 규칙).
+		--   보스도 무너진 조각으로는 걷지 않는다(MonsterAI · 돌진이 조각 경계에서 멈춘다). 복구 = **다음 붕괴 때** 이전 조각이 돌아오고 새 조각이 무너진다(무너진 채 cooldownSeconds 유지).
 		environment = {
-			id = "groundCollapse", style = "lava", motion = "fist", damageLabel = "지반 붕괴",
-			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.0, durationSeconds = 12,
-			zones = { shape = "circle", radiusStuds = 22, perMember = true, extra = 1 },
-			tick = { seconds = 0.5, fraction = 0.05 },
+			id = "groundCollapse", style = "collapse", kind = "collapse", motion = "fist", damageLabel = "지반 붕괴",
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 5.0, durationSeconds = 0,
+			zones = { shape = "slices", count = 8, collapse = 2, hubRadiusStuds = 8, nonAdjacent = true },
+			fall = { maxHpFraction = 0.25, dropStuds = 14 },
 		},
 	},
 	{
@@ -753,18 +770,20 @@ local SPECIES = {
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "sweep", "tide", "spout", "colors", "swipe", "grab", "tailSweep", "vortex", "bubbles", "mirror" },
-		-- BR1-2 환경 변화 "밥상뒤집기 = 프라이팬"(사용자 - 요리사가 프라이팬 뒤집듯 · 옛 널뛰기 대체 · 체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 판(60 × 120)이 1 + ⌊인원 ÷ 2⌋개.
-		-- 전조 3.6초 = 판 전체 위험색 · 크게 흔들림 · 균열(보이는 판 = 판정). 뒤집히는 순간 판 위의 **전원**이 팝콘처럼 튄다: 방향 = 판 가운데 → 그 사람(판 바깥쪽) ± scatterDeg 흩어짐 ·
-		-- 높은 포물선(heightStuds) · 멀리(distanceStuds + 0 ~ distanceJitter) · 피해 ×multiplier(날아가기 전에). **공중에 떠 있던 사람은 더 멀리**(거리 × airborneDistanceScale · 높이 + airborneHeightBonus - 옛 "떠 있으면 안 날아감" 폐기).
-		-- 맵 밖이면 기존 복귀(본인 스폰 + 보호) · 넉백 상한 · 착지 경계 없음(escape) · 날아가는 동안 높이 검증 예외. 거리 ≥ starDistanceStuds면 궤적 끝 하늘에서 별이 반짝(아레나 멤버 전원 화면).
-		-- 피하는 법 = 판 밖으로: 가장 먼 자리(판 가운데 줄)에서 옆 가장자리 30 + 1 = 0.5 + 31 ÷ 16 × 1.25 = 2.92초 ≤ 3.6. 뒤집힌 자리는 10초 급류(0.5초마다 5%).
+		-- BR1-3 환경 변화 "판 털기"(사용자 - 밥상뒤집기 대체 · 체력 50%부터): 보스가 맵 **절반**(zones.halfMap - 방향 무작위)의 판 가장자리를 손으로 잡는다.
+		-- 전조 telegraphSeconds = 잡힐 절반 위험색 + 가장자리 금 + 흔들림(보이는 판 = 판정). 방향은 무작위로 고르되 **판 위 멤버가 모두 walkOutStuds 안에서 나갈 수 있는 방향**만
+		-- (dirTries번 뽑아 가장 나은 것 - 회피 부등식: 0.5 + (45 + 1) ÷ 16 × 1.25 = 4.1초 ≤ 4.2). 활성 = 판을 통째로 들어 올려 shakes번 턴다(인형 방식 - 클라 연출):
+		-- 첫 털기 순간 판 위의 **전원**이 팝콘처럼 날아간다(onStart.pan - 기존 발사 규칙: 판 가운데 → 바깥 · 공중이면 더 멀리 · 멀리 가면 별 반짝 · 맵 밖이면 복귀 · 피해 받고 날아감).
+		-- 판이 들린 동안(durationSeconds) 그 절반은 **빈 공간** - 걸어 들어가면 낙사(voidFall - 구간 수호자 피자 조각과 같은 규칙: 최대 체력 25% + 복귀) · 날아간 사람은 그 발동 동안 낙사 면제.
+		-- 끝 = 판을 "쿵" 내려놓는다(착지 흔들림 - envEnd).
 		environment = {
-			id = "tableFlip", style = "water", motion = "fin", damageLabel = "밥상뒤집기",
-			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.6, durationSeconds = 10,
-			zones = { shape = "rect", halfLengthStuds = 60, halfWidthStuds = 30 },
+			id = "plateShake", style = "shake", motion = "fin", damageLabel = "판 털기",
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 4.2, durationSeconds = 3.6,
+			zones = { shape = "rect", halfMap = true, walkOutStuds = 45, dirTries = 16 },
+			shakes = 3,
 			onStart = { pan = { heightStuds = 22, distanceStuds = 70, distanceJitter = 20, scatterDeg = 25, airborneDistanceScale = 1.4, airborneHeightBonus = 6, multiplier = 2.0, starDistanceStuds = 85 } },
-			dodge = { distanceStuds = 31 },
-			tick = { seconds = 0.5, fraction = 0.05 },
+			voidFall = true, fall = { maxHpFraction = 0.25, dropStuds = 14 },
+			dodge = { distanceStuds = 46 },
 		},
 		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단(P3c: 11곳)
 		skills = {
@@ -857,7 +876,7 @@ local SPECIES = {
 	},
 	{
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
-		intro = { title = "프리즘 분열", line = "흰 원이 자라는 진짜 여왕을 때려라 - 중간에 자리가 바뀐다", icon = "◇", diagram = "real" },
+		intro = { title = "수정 오르골", line = "수정 종이 울리는 순서를 기억해, 똑같이 두드려라!", sub = "틀리면 처음부터! 실패하면… 여왕의 수정 장식품이 됩니다.", icon = "♪", diagram = "bells" },
 		id = "crystal_queen", displayName = "수정 여왕", bodyColor = crystalBody, headColor = crystalHead,
 		sizeScale = 3, bodyAspect = Vector3.new(1.0, 1.15, 1.0),
 		attachments = {
@@ -867,10 +886,11 @@ local SPECIES = {
 		},
 		moveSpeedStuds = 7, chaseStopDistanceStuds = 8,
 		-- BR1-2: 수정 부수기 동안 보호막(딜 0 - 솔로 약 45초)이 있어 HP를 60초분 × 0.7로(난이도 모형 - 처치 시간 목표 45 ~ 90초)
-		hpMultiplier = MECHANICS.sim.referenceKillSeconds / BalanceAnchorConfig.killTargetSeconds * 0.7,
+		-- BR1-3: 수정 오르골(보여 주기 + 종 치기 동안 보스를 못 때린다 - 옛 분열보다 길다) → 0.7 → 0.6(모형 솔로 처치 107초 → 목표 안)
+		hpMultiplier = MECHANICS.sim.referenceKillSeconds / BalanceAnchorConfig.killTargetSeconds * 0.6,
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
-		skillOrder = { "burst", "drop", "beam", "split", "swipe", "grab", "spikes", "shards", "mirrorDash", "mirror" },
+		skillOrder = { "burst", "drop", "energyBeam", "orgel", "swipe", "grab", "spikes", "shards", "mirrorDash", "mirror" },
 		-- BR1-2 환경 변화 "수정 부수기"(사용자 보강 C - 옛 공중 정원 대체 · server/BossJumpCourse): 두 팔을 들어 수정을 띄운다(3초) → 보스 몸에 **보호막**(피해로는 절대 안 깨진다 -
 		-- 맞으면 숫자 대신 "무효") · 서로 반대 방위의 수정 자리 2곳에 점프맵(저장 공간에 지어 둔 4종 중 무작위 - BossJumpMapData, 어려움 = 공중 점프 · 대시 조합) · 꼭대기마다 수정 1개.
 		-- 수정에서 보스까지 보스 색 빛줄기(길 안내) - 수정 하나를 깨면 그 줄이 사라지고 둘 다 깨면 보호막 해제 + 보스 기절 stunSeconds. **시간 제한 없음**(그동안 보스는 패턴을 쓴다 - 압박).
@@ -900,38 +920,49 @@ local SPECIES = {
 				telegraphSeconds = 1.5, count = 1, radiusStuds = 10, scatterStuds = 0,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "수정 낙하",
 			},
-			-- 반사 광선. 직선 하나를 두 번 - 둘째는 그 순간의 대상 위치로 다시 겨눈다(29-5에서 벽 수정에 꺾인다).
-			beam = {
-				primitive = "line", bubble = "cross", reflectable = true, -- 29-5 탱커 훅: 탱커의 반사가 되돌릴 수 있는 스킬(지금은 아무도 안 읽는다 - PRD 20.80 [F])
-				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
-				-- BR1 수정 "반사 레이저": 벽(원)에 닿으면 한 번 반사된다(r = d − 2(d·n)n - 꺾인 선도 판정 · 그림 그대로). 전조 1.5 → 1.6(꺾인 선까지 본다).
-				telegraphSeconds = 1.6, directions = 1, stepDeg = 0, volleys = 2, rotateDeg = 0, reaim = true, halfWidthStuds = 3, reflect = true,
-				damage = { kind = "attack", multiplier = 2 }, damageLabel = "반사 레이저",
+			-- BR1-3 에네르기파 휩쓸기(사용자 - 옛 벽 반사 레이저 `beam` 대체 · primitive "sweep" = BossHandlersBR1): 보스 앞에 빛이 커진다(기 모으기 telegraphSeconds) + 머리 위
+			-- 회전 방향 화살표(시계 / 반시계 - 무작위) → 굵은 레이저(반폭 halfWidthStuds - 그림)가 보스 둘레 sweepDeg(180°)를 sweepSeconds 동안 휩쓴다.
+			--   휩쓰는 반원 = 대상 쪽 반(대상 방향이 한가운데) · 반경 radiusStuds - 바닥에 보이는 반원 = 판정. 안전 = **보스 뒤 반원**(또는 반경 밖). 회전 방향을 보면 늦게 오는 쪽이 보인다.
+			--   회피(BossSkillMath.dodgeChecks "sweep"): 반원 안 모든 자리(근접 8 ~ 반경)에서 가장 가까운 안전(뒤 반원 경계 · 반경 밖)까지 걷는 시간 ≤ 전조 + 빔이 그 각에 닿기까지.
+			--   큰 모션 = 큰 피해 ×3.2(46% - 큼). 파티클 방출기 0(부품 · 트윈 - 클라 BossBR1View).
+			energyBeam = {
+				primitive = "sweep", bubble = "sweep", motion = "beamCharge",
+				cooldownSeconds = 16, priority = P.normal,
+				telegraphSeconds = 2.5, sweepSeconds = 2.0, sweepDeg = 180, radiusStuds = 60, halfWidthStuds = 4,
+				damage = { kind = "attack", multiplier = 3.2 }, damageLabel = "에네르기파",
 			},
-			-- 프리즘 분열(기믹, 29-5 - 대상 선택). 여왕이 넷으로 갈라진다: 분열 중심(지금 자리)의 네 방위 radiusStuds에 진짜 1 + 분신 3.
-			-- 넷 다 발밑에 빨강 원(circleRadiusStuds)이 깔리고 **진짜의 원에서만 흰 원이 자란다**(제한 시간의 카운트다운 - 낙석의
-			-- "안쪽에서 자라는 흰 원"과 같은 문법). 분신은 겉모습이 진짜와 완전히 같다 - 구분은 색이 아니라 움직임이다(색약에서도 같다).
-			--   · 제한 8초 안에 진짜를 때리면: 분신 소멸 · 결정화된 친구 전원 해제 · 기절 4초(받는 피해 ×1.3, 파랑 말풍선).
-			--   · 분신을 때리면: 그 분신이 깨지고 **때린 사람에게** 55% ÷ 3 = 18.3% + 결정화. 8초를 넘기면 파편 폭풍 55%(잡힘 없음 -
-			--     failTraps). 둘 다 발동당 1인 상한을 같이 쓴다 - 한 번의 분열에서 받는 합은 55%를 넘지 않는다(BossPatterns.beginSplit).
-			--   · 말풍선이 없다(bubble = "none"): 말풍선은 "보스"의 머리 위에만 뜬다 - 띄우면 그것이 진짜를 가리킨다.
-			--   · 도달 가능성(29-3·29-4의 교훈 - 검사기는 "걸을 시간"만 묻는다): 발동 조건 memberWithin 40 → 그 사람이 가장 먼
-			--     자리의 진짜까지 40 + 20 = 60stud → 0.5 + 60 ÷ 16 × 1.25 = 5.19초 ≤ 8초. 닿을 수 있는 사람이 없으면 쏘지 않는다.
-			--   · 힌트 1단계 = 진짜의 자리 위에 흰 ▼, 2단계 = 제한 시간 8 → 12초.
-			split = {
-				primitive = "gimmick", bubble = "none", role = "gimmick", kind = "hitReal",
-				cooldownSeconds = 20, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
-				conditions = { { type = "memberWithin", studs = 40 } },
-				-- BR1 기믹 개편(어렵게): 제한의 shuffleAtFraction(절반 - 4초)에 진짜가 분신 하나와 **자리를 바꾼다** - 흰 원(카운트다운)이 새 자리로 옮겨 간다.
-				-- 처음 본 흰 원만 기억하면 틀린다 - 끝까지 봐야 한다. 옮겨 간 뒤 남은 4초 안에 가장 먼 자리(40)까지 0.5 + 40 ÷ 16 × 1.25 = 3.6초.
-				telegraphSeconds = 8.0, recoverSeconds = 4.0,
-				split = { count = 4, radiusStuds = 20, circleRadiusStuds = 6, decoyLabel = "분신 반격", shuffleAtFraction = 0.5 },
-				failTraps = false,
-				recoverPose = true, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
-				breakWindow = { seconds = 4, damageTakenMultiplier = 1.3 },
-				dodge = { distanceStuds = 60 }, -- memberWithin 40 + 분열 반경 20
-				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "파편 폭풍",
-				sim = { evadeSeconds = 2.5, resolveSeconds = 3.5 },
+			-- BR1-3 전멸기 "수정 오르골"(사용자 - 프리즘 분열 대체 · 빛 · 프리즘 · 공명 · primitive "orgel" = server/BossOrgel): 여왕 둘레(bellRingStuds)에 수정 종 bells개.
+			-- 색 = 색약 안전(Okabe-Ito 주황 · 하늘 · 청록 · 노랑 · 자주) + 종 몸통 모양(● ▲ ■ ◆ ★) - 색 · 모양 이중 구분.
+			--   진행: 여왕이 왕관을 들어 올린다(telegraphSeconds) → 종이 **하나씩** 울린다(sequenceLength 5개 · 무작위 · 같은 종이 두 번 나와도 된다 - 한 번만 보여 준다).
+			--   울리는 종은 크게 흔들리며 밝게 반짝 + 종마다 다른 음(소리를 꺼도 순서가 보인다). 보여 주는 간격 = 곡선 단계별 showIntervalByTier(초반 느리게 → 후반 빠르게) ·
+			--   스테이지 1 ~ 30 보호 구간 = protectedShowInterval(가장 느리게).
+			--   입력: limitSeconds 안에 같은 순서로 종을 때린다(파티는 누가 쳐도 인정 · 한 사람의 타격은 hitDebounceSeconds에 한 번 - 광역기가 여러 종을 한 번에 쳐도 하나만).
+			--   맞으면 짧게 반짝 + 화면 "2/5" · 틀리면 "삐빅" + 때린 사람에게 작은 전기 충격(wrongShock) + **처음부터**(순서는 그대로 · 다시 보여 주지 않는다).
+			--   성공 = 왕관이 깨지며 기절 stunSeconds(헤롱) + 게이트 열림(breakWindow). 실패 = 수정 조각상(statue - 전원 각자 다른 웃긴 포즈 · 그동안 무적 · 높이 검증 예외):
+			--   여왕이 조각상 사이를 거닐며 감상 → "찰칵"(화면 번쩍 flashAt) → 손가락 "톡"(tapAt) → 와장창(shatterAt) + 최대 체력 failMaxHpFraction(90%) · 보호막 무시(진짜 즉사는 K).
+			--   도달(솔로): 가장 먼 종까지 60 → 0.5 + 60 ÷ 16 × 1.25 = 5.2초 · 5타 = 종 사이 최악 4번(지름 60) → 19.3초 ≤ 24. 원거리는 가운데서 다 닿는다.
+			orgel = {
+				primitive = "orgel", bubble = "orgel", role = "gimmick",
+				cooldownSeconds = 32, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
+				conditions = { { type = "memberWithin", studs = 60 } },
+				telegraphSeconds = 1.5, bells = 5, bellRingStuds = 30, sequenceLength = 5,
+				showIntervalByTier = { 1.2, 1.0, 0.8, 0.65 }, protectedShowInterval = 1.4, protectedUntilStage = 30,
+				limitSeconds = 24, hitDebounceSeconds = 0.35,
+				bellLook = { sizeScale = 1.6, bodyAspect = Vector3.new(0.9, 1.3, 0.9) },
+				palette = {
+					{ color = Color3.fromRGB(230, 159, 0), symbol = "●", note = 1.0 }, -- 주황
+					{ color = Color3.fromRGB(86, 180, 233), symbol = "▲", note = 1.12 }, -- 하늘
+					{ color = Color3.fromRGB(0, 158, 115), symbol = "■", note = 1.26 }, -- 청록
+					{ color = Color3.fromRGB(240, 228, 66), symbol = "◆", note = 1.33 }, -- 노랑
+					{ color = Color3.fromRGB(204, 121, 167), symbol = "★", note = 1.5 }, -- 자주
+				},
+				wrongShock = { multiplier = 0.8, damageLabel = "오르골 전기" },
+				stunSeconds = 5, breakWindow = { seconds = 4, damageTakenMultiplier = 1.3 },
+				statue = { seconds = 4.5, strollSeconds = 2.4, flashAt = 2.8, tapAt = 3.5, shatterAt = 4.0 },
+				failMaxHpFraction = 0.9,
+				dodge = { distanceStuds = 240 }, -- 종 사이 최악 4번(지름 60 × 4) - limitSeconds와 비교
+				damage = { kind = "maxHp", fraction = 0.9 }, damageLabel = "수정 장식품",
+				sim = { evadeSeconds = 6.0, failChance = { first = 0.55, later = 0.4 } }, -- 가정: 무작위 5개를 한 번 보고 기억하기는 옛 흰 원 찾기보다 어렵다
 			},
 			swipe = enhancedBasic("수정 채찍", "fist"), -- BR1 강화 평타
 			grab = airGrab("수정 손", "hand"), -- BR1 대공 잡기
@@ -954,20 +985,23 @@ local SPECIES = {
 				targetRule = "airbornePreferred", leadSeconds = 0.6,
 				damage = { kind = "attack", multiplier = 1.2 }, damageLabel = "수정 파편",
 			},
-			-- BR1 새 ③ 분신 돌격: 분신 둘이 양옆에서 본체와 함께 돌진한다 - 대상 쪽 부채 3선(±25°) · 반폭 3.5 · 전조 2.2초(큰 모션).
-			--   판정 = 세 선(직선 조각 - 벽까지). 줄 사이로 비킨다(대상 거리 14 안: 14 × sin 25° + 3.5 + 1 = 10.4 → 1.31초). ×2.8(40% - 큼).
+			-- BR1-3 분신 돌격(부메랑 - 사용자 · primitive "boomerang" = BossHandlersBR1): 분신 directions(3)개가 대상 쪽 부채(±stepDeg)로 벽까지 달려갔다가(outSpeedStuds)
+			-- turnSeconds 멈칫 → 같은 길로 돌아와(backSpeedStuds) 보스 몸에 흡수되며 끝난다. 분신은 사람을 통과한다(막히지 않는다) · 닿으면 피해 - **가는 길 · 오는 길 따로**(길마다 1인 1회).
+			--   전조 = 선 끝에 분신 실루엣 + 화살표(설명서 개선안) · 선은 분신이 돌아올 때까지 남는다(오는 길도 미리 보인다 - 보이는 선 = 판정).
+			--   회피: 선 옆으로 반폭 3.5 + 1 → 0.85초 ≤ 2.2. 돌아올 때는 선 밖에 있으면 된다(선이 그대로 보인다). ×2.8(40% - 큼).
 			mirrorDash = {
-				primitive = "line", bubble = "charge", motion = "mirrorDash",
+				primitive = "boomerang", bubble = "charge", motion = "mirrorDash",
 				cooldownSeconds = 15, priority = P.normal, starvationSeconds = 45,
-				conditions = { { type = "targetWithin", studs = 14 } },
-				telegraphSeconds = 2.2, directions = 3, stepDeg = 25, centered = true, volleys = 1, rotateDeg = 0, halfWidthStuds = 3.5,
+				conditions = { { type = "targetWithin", studs = 30 } },
+				telegraphSeconds = 2.2, directions = 3, stepDeg = 25, centered = true, halfWidthStuds = 3.5,
+				outSpeedStuds = 45, backSpeedStuds = 45, turnSeconds = 0.4, arenaMarginStuds = 4,
 				damage = { kind = "attack", multiplier = 2.8 }, damageLabel = "분신 돌격",
 			},
 		},
 	},
 	{
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
-		intro = { title = "갑각 태세", line = "붉은 고리가 서면 공격을 멈춰라 - 이어지는 꼬리 내려찍기를 피하라", icon = "✖", diagram = "shell" },
+		intro = { title = "진짜 전갈 찾기", line = "빛나는 꼬리를 찾아 때려라!", icon = "≋", diagram = "mound" },
 		id = "scorpion_queen", displayName = "전갈 여왕", bodyColor = scorpionBody, headColor = scorpionHead,
 		-- 빠른 보스: 낮고 넓고(2.8) 빠르다(10 - 잡몹과 같다). 평타가 잦고(0.75초) 가볍다(×0.75). 전역 쿨 5초.
 		sizeScale = 2.8, bodyAspect = Vector3.new(1.3, 0.65, 1.2),
@@ -979,7 +1013,7 @@ local SPECIES = {
 		moveSpeedStuds = 10, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6), -- BR1-2: 5 → 6(난이도 모형 - 가장 바쁜 두 보스의 솔로 전멸 64 · 61%)
-		skillOrder = { "claw", "sting", "stab", "shell", "swipe", "grab", "stingJab", "ambush", "clawSweep", "mirror" },
+		skillOrder = { "claw", "sting", "stab", "sandSearch", "swipe", "grab", "stingJab", "ambush", "clawSweep", "armadillo" },
 		-- BR1 환경 변화 "개미지옥"(체력 50%부터): 몸을 흔들며 모래를 판다(3초 - 모래 소용돌이) → 12초 동안 아레나 한가운데 구덩이(반경 45)가 초당 7로 당긴다
 		-- (클라 - 걷기 16보다 느리다: 반대로 달리면 9/초로 버틴다) · 중심(반경 8)에 있으면 0.5초마다 10%. 떠 있어도 당긴다(수평).
 		environment = {
@@ -1036,7 +1070,7 @@ local SPECIES = {
 			stab = {
 				primitive = "charge", bubble = "charge", role = "signature",
 				cooldownSeconds = 14, priority = P.signature,
-				conditions = { { type = "notAfter", skills = { "shell" } } },
+				conditions = { { type = "notAfter", skills = { "sandSearch" } } },
 				-- BR1: 첫 돌진 전조 1.5 → 2.2초(repeatTelegraphSeconds = 둘째 돌진은 옛 1.5 - 첫 돌진을 피한 자리에서 다시 겨눈다)
 				telegraphSeconds = 2.2, repeatTelegraphSeconds = 1.5, speedStuds = 60, pathHalfWidthStuds = 4, dashCount = 2,
 				recoverSeconds = 4.0, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
@@ -1051,37 +1085,42 @@ local SPECIES = {
 				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction / 2 }, damageLabel = "잠행 찌르기",
 				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
 			},
-			-- 갑각 태세(기믹, 29-3). 예고 1초(몸을 낮춘다) → 태세 3초(빨강 고리 - 받는 피해 0, 때린 사람에게 반사) → 꼬리
-			-- 내려찍기(태세 마지막 1.5초가 예고) → 꼬리 박힘 3초(고리가 사라진다 - 때려도 되는 순간, 헤롱 자세).
-			--   · 회피는 이동이 아니라 "손을 뗀다"(dodge.noticeSeconds 1.0 ≥ 인지 0.5). 판정(noHit) = 태세 동안 반사를
-			--     한 번도 안 받았는가. 실패의 대가는 반사로 이미 치렀으므로 판정 실패에는 추가 피해·잡힘이 없다(failPenalty).
-			--   · 반사 1회 = 55% ÷ 3 = 18.3%, 0.75초 창당 1회, 합계는 발동당 상한 55%에서 잘린다(28-2의 20% × 3 = 60%는
-			--     "기믹 1회로 죽지 않는다"의 상한을 넘겨 29-1에서 내렸다). 상세는 BossMechanics.beginReflect.
-			--   · 꼬리 내려찍기(finisher): 보스 앞 8stud의 원 r8, ×2(방어 적용) + 속박(모래 무덤). 예고 1.5초 - 28-2의 1.0초는
-			--     원 한가운데의 근접 자리(9stud)에서 1.20초가 필요해 회피 부등식을 못 넘는다.
-			shell = {
-				primitive = "gimmick", bubble = "shell", role = "gimmick", kind = "noHit",
-				reflectable = true, -- 29-5 탱커 훅: 갑각의 반사는 탱커의 반사로 되돌릴 수 있다("반사 대 반사" - PRD 20.80 [F]). 지금은 아무도 안 읽는다
-				cooldownSeconds = 18, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
-				conditions = { { type = "notAfter", skills = { "stab" } } },
-				-- BR1 기믹 개편(어렵게): 태세 3 → 4초(예고 1 + 태세 4) · 꼬리 반경 8 → 10 · ×2 → ×2.8(아래 finisher).
-				telegraphSeconds = 5.0, recoverSeconds = 3.0,
-				stance = { afterSeconds = 1.0, damageTakenMultiplier = 0, ringRadiusStuds = 5, sinkStuds = 1.0 },
-				failPenalty = false,
-				finisher = {
-					-- BR1: 반경 10(최대 범위 배율 11.5 + 1 = 1.48초 ≤ 1.5) · ×2.8(40% - 큼)
-					telegraphSeconds = 1.5, radiusStuds = 10, offsetStuds = 8, trapOnHit = true,
-					damage = { kind = "attack", multiplier = 2.8 }, damageLabel = "꼬리 내려찍기",
-				},
-				recoverPose = true, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
-				breakWindow = { seconds = 3, damageTakenMultiplier = 1.5 },
-				dodge = { distanceStuds = 0, noticeSeconds = 1.0 }, -- 예고 1초 안에 공격을 멈추면 된다
-				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "갑각 반사",
-				sim = { evadeSeconds = 4.0 },
+			-- BR1-3 전멸기 "진짜 전갈 찾기"(사용자 - 갑각 태세 삭제 · primitive "sandSearch" = server/BossSandSearch): 여왕이 모래 속으로 숨는다(telegraphSeconds - 먼지 · 파고들기) →
+			-- 똑같은 모래 둔덕 mound.countByParty[인원]개(솔로 · 2인 3 · 3 · 4인 4)가 보스 자리 둘레 wanderRadiusStuds 안을 천천히(speedStuds < 걷기) 돌아다닌다.
+			-- 진짜 둔덕만 **꼬리 끝이 빛나고 발자국**을 남긴다(작지만 알면 보인다 - 빛나는 꼬리는 폰에서도 보이게 크게).
+			--   · limitSeconds 안에 진짜를 때리면: 여왕이 튀어나와 기절 stunSeconds(벽 충돌 헤롱 그림) + 게이트 열림(breakWindow).
+			--   · 가짜를 때리면: 작은 모래 폭발 - 때린 사람에게 decoyBlast(×1.0 · 약 14%, 0.75초에 한 번). 둔덕은 남는다.
+			--   · 못 찾으면: 둔덕 전부 폭발 = 전원 최대 체력 failMaxHpFraction(90%) · 보호막 무시(진짜 즉사는 K).
+			--   · 설치형 규칙(결정 5): 둔덕이 나오기 **전에** 시작한 공격은 둔덕을 판정하지 않는다(날아가던 화살이 진짜를 맞혀도 무효 · 가짜를 맞혀도 벌 없음).
+			--   · 도달: memberWithin 60 → 가장 먼 둔덕까지 60 + 40 = 100 → 0.5 + 100 ÷ 16 × 1.25 = 8.3초 ≤ 14.
+			sandSearch = {
+				primitive = "sandSearch", bubble = "sandSearch", role = "gimmick",
+				cooldownSeconds = 30, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
+				conditions = { { type = "notAfter", skills = { "stab" } }, { type = "memberWithin", studs = 60 } },
+				telegraphSeconds = 1.5, limitSeconds = 14, depthStuds = 8,
+				mound = { countByParty = { 3, 3, 4, 4 }, speedStuds = 7, wanderRadiusStuds = 40, sizeScale = 3.4, bodyAspect = Vector3.new(1.7, 0.5, 1.7), color = scorpionHead },
+				clue = { footprintEverySeconds = 0.3, footprintSeconds = 2.4 },
+				decoyBlast = { multiplier = 1.0, radiusStuds = 7, damageLabel = "모래 폭발" },
+				stunSeconds = 4, breakWindow = { seconds = 4, damageTakenMultiplier = 1.3 },
+				failMaxHpFraction = 0.9,
+				dodge = { distanceStuds = 100 },
+				damage = { kind = "maxHp", fraction = 0.9 }, damageLabel = "모래 폭풍",
+				sim = { evadeSeconds = 3.0 },
 			},
 			swipe = enhancedBasic("집게 찰싹", "claw"), -- BR1 강화 평타
 			grab = airGrab("집게 낚아채기", "claw"), -- BR1 대공 잡기
-				mirror = reflectSkill("모래 방벽", "claw"), -- BR1-2 투사체 반사
+			-- BR1-3 "아르마딜로 태세"(사용자 - 반사를 기본 패턴으로 · primitive "reflect" + counter): 몸을 웅크리고 가시가 돋는다(가시 껍질 + 머리 위 "✋ 공격 멈춤").
+			--   태세 stanceSeconds 동안 보스를 때리면(근접 · 원거리 모두) 보스 피해 0 · 대신 **큰 가시가 때린 사람의 그 순간 자리로** 날아간다: counter.delaySeconds 뒤 떨어진다 +
+			--   떨어질 자리 바닥 원(보이는 원 = 판정). 1인 windowSeconds에 한 발. 설치형 규칙(결정 5) 그대로 - 태세 전에 시전한 공격은 가시를 부르지 않는다.
+			--   회피: 원 반경 4 + 1 → 0.5 + 5 ÷ 16 × 1.25 = 0.89초 ≤ 1.0(보스 바로 옆 근접도 한 걸음). ×2.2(31% - 중간).
+			armadillo = {
+				primitive = "reflect", bubble = "armadillo", motion = "curl",
+				cooldownSeconds = 20, firstAvailableSeconds = 15, priority = P.normal,
+				telegraphSeconds = 1.2, stanceSeconds = 5, windowSeconds = 0.75, barrierRadiusStuds = 6,
+				counter = { delaySeconds = 1.0, radiusStuds = 4, multiplier = 2.2 },
+				damage = { kind = "attack", multiplier = 2.2 }, damageLabel = "가시 반격",
+				sim = { evadeSeconds = 0.5 },
+			},
 			-- BR1 새 ① 독침 3연 찌르기: 꼬리로 세 번 - 매번 그 순간의 대상에게 다시 겨눈 직선(반폭 3). 전조 0.9 · 0.9 · 1.3, 배율 ×1.0 · ×1.0(작음) · ×2.6(37% - 큼 - 마지막이 강하다).
 			--   옆으로 4 = 0.81초(최대 범위 배율 4.46 = 0.85초 ≤ 0.9).
 			stingJab = {

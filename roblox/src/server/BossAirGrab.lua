@@ -18,6 +18,7 @@ local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossArenaContainment = require(script.Parent.BossArenaContainment)
 local HeightGuard = require(script.Parent.HeightGuard)
+local PlayerStun = require(script.Parent.PlayerStun) -- BR1-3 기절 면역(연속 기절 방지 - 얼림도 같은 규칙)
 
 local BossAirGrab = {}
 
@@ -93,7 +94,7 @@ end
 
 -- 얼릴 수 있는가: 센 연속 체공 ≥ N · (진짜 사람은) 지면 거리까지 재도 떠 있다(가둠은 예외) · 무적 · 복귀 보호 아님 · 가둠 말고 다른 잡힘 아님 · 살아 있다.
 local function freezable(c, v)
-	if c.st.grabFrozen[v.player] or (PlayerState.getHp(v.player) or 0) <= 0 then
+	if c.st.grabFrozen[v.player] or (PlayerState.getHp(v.player) or 0) <= 0 or PlayerStun.isImmune(v.player) then
 		return false
 	end
 	local bubbled = isBubbled(v.player)

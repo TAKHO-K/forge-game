@@ -23,6 +23,8 @@ local GroundProbe = require(script.Parent.GroundProbe)
 local HeightGuard = require(script.Parent.HeightGuard)
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local BossJumpCourse = require(script.Parent.BossJumpCourse)
+local BossArenaMap = require(script.Parent.BossArenaMap) -- BR1-3 멤버 스폰(복귀) 자리 - 그 조각은 무너지지 않는다
+local BossArenaContainment = require(script.Parent.BossArenaContainment) -- BR1-3 복귀 직후 보호 중이면 떨어지지 않는다
 
 local BossEnvironment = {}
 
@@ -64,10 +66,28 @@ local function placeZones(model, st, data, env)
 	elseif spec.shape == "rect" and spec.halfMap then
 		-- BR1-2 맵 절반 판: 무작위 방위 θ - 길이 방향 = θ(지름 전체) · 폭 = 반경(한쪽 반). 판 가운데 = 중심 + 옆 방향 × 반경 ÷ 2.
 		local angle = rng:NextNumber(0, 360)
+		if spec.walkOutStuds then
+			-- BR1-3 판 털기: 판 위 멤버가 모두 walkOutStuds 안에서 경계(지름)를 넘어 나갈 수 있는 방향만(dirTries번 뽑아 가장 나은 것 - 회피 부등식)
+			local bestAngle, bestDepth = angle, math.huge
+			for _ = 1, spec.dirTries or 12 do
+				local candidate = rng:NextNumber(0, 360)
+				local worst = 0
+				for _, v in ipairs(members) do
+					worst = math.max(worst, BossSkillMath.halfMapDepth(center, math.rad(candidate), v.root.Position) or 0)
+				end
+				if worst < bestDepth then
+					bestAngle, bestDepth = candidate, worst
+				end
+				if worst <= spec.walkOutStuds then
+					break
+				end
+			end
+			angle = bestAngle
+		end
 		local a = math.rad(angle)
 		local side = Vector3.new(-math.sin(a), 0, math.cos(a))
 		local c = center + side * (arenaRadius / 2)
-		table.insert(list, { shape = "rect", center = Vector3.new(c.X, st.floorY, c.Z), angleDeg = angle, halfLength = arenaRadius, halfWidth = arenaRadius / 2 })
+		table.insert(list, { shape = "rect", halfMap = true, center = Vector3.new(c.X, st.floorY, c.Z), angleDeg = angle, halfLength = arenaRadius, halfWidth = arenaRadius / 2 })
 	elseif spec.shape == "rect" then
 		local count = 1 + math.floor(#members / 2)
 		for i = 1, count do
@@ -131,6 +151,14 @@ function BossEnvironment.insideHazard(z, position)
 		local a = math.rad(z.angleDeg)
 		local downwind = Vector3.new(math.cos(a), 0, math.sin(a))
 		return d >= z.beyond + half and rel:Dot(downwind) > 0
+	elseif z.shape == "slice" then
+		-- BR1-3 피자 조각: 허브 밖 · 조각의 두 경계선 안쪽(몸통 반폭만큼 - 경계에 걸친 사람은 안 떨어진다)
+		if d < z.hub + half then
+			return false
+		end
+		local offset = (math.deg(math.atan2(rel.Z, rel.X)) - z.startDeg) % 360
+		local margin = math.deg(math.asin(math.min(1, half / math.max(d, 1e-3))))
+		return offset >= margin and offset <= z.widthDeg - margin
 	end
 	return false
 end
@@ -178,6 +206,127 @@ local function clearCourse(model)
 	BossJumpCourse.clear(model)
 end
 
+-- ─────────────────────────── 무너진 바닥(BR1-3 - 피자 조각 · 들린 판) ───────────────────────────
+-- 조각 번호 목록 → 구역 목록(서버 판정 · 클라 그림이 같은 표).
+local function sliceZones(center, floorY, radius, spec, indices)
+	local list = {}
+	local width = 360 / spec.count
+	for _, k in ipairs(indices) do
+		table.insert(list, { shape = "slice", index = k, center = Vector3.new(center.X, floorY, center.Z), startDeg = (k - 1) * width, widthDeg = width, hub = spec.hubRadiusStuds, radius = radius })
+	end
+	return list
+end
+
+-- 이번 붕괴의 조각: 보스가 선 조각 · 멤버 스폰(복귀 자리) 조각은 빼고 · 서로 붙지 않게 · 지난번 조각은 되도록 피한다(BossSkillMath.pickSlices).
+local function planSlices(model, st, env, e)
+	local zone = kit.zoneOf(model)
+	local center = xz(zone.center)
+	local spec = env.zones
+	local excluded = {}
+	local bossSlice = BossSkillMath.sliceIndexOf(center, st.position or center, spec.count, spec.hubRadiusStuds, 0)
+	if bossSlice then
+		excluded[bossSlice] = true
+	end
+	local count = math.max(#(st.members or {}), 1)
+	for i = 1, count do
+		local ok, point = pcall(BossArenaMap.entryPosition, st.zoneKey, i, count)
+		local k = ok and point and BossSkillMath.sliceIndexOf(center, point, spec.count, spec.hubRadiusStuds, 0)
+		if k then
+			excluded[k] = true
+		end
+	end
+	local previous = {}
+	for _, z in ipairs(e.collapsed or {}) do
+		previous[z.index] = true
+	end
+	local indices = BossSkillMath.pickSlices(spec.count, spec.collapse, excluded, previous, spec.nonAdjacent, function()
+		return rng:NextNumber()
+	end)
+	return sliceZones(center, st.floorY, zone.radius or 140, spec, indices)
+end
+
+-- 지금 무너진(빈) 바닥의 구역 목록(없으면 nil) - 피자 조각은 다음 붕괴까지 · 판 털기는 들린 동안.
+local function voidZonesOf(st, env)
+	local e = st and st.env
+	if not (e and env) then
+		return nil
+	end
+	if env.kind == "collapse" then
+		return e.collapsed
+	elseif env.voidFall and e.phase == "active" then
+		return e.zones
+	end
+	return nil
+end
+
+-- 이 자리가 무너진 바닥인가 - 보스 이동 · 돌진이 묻는다(MonsterAI · BossPatterns). 몸통 여유 없이(경계선 그대로).
+function BossEnvironment.blocksBoss(model, position)
+	local data = MonsterState.getData(model)
+	local st = MonsterState.getBossPatternState(model)
+	local zones = voidZonesOf(st, data and data.environment)
+	if not zones then
+		return false
+	end
+	for _, z in ipairs(zones) do
+		local rel = xz(position) - xz(z.center)
+		if z.shape == "slice" then
+			local offset = (math.deg(math.atan2(rel.Z, rel.X)) - z.startDeg) % 360
+			if rel.Magnitude >= z.hub and offset <= z.widthDeg then
+				return true
+			end
+		elseif BossEnvironment.insideHazard(z, position) then
+			return true
+		end
+	end
+	return false
+end
+
+-- 선분(origin → dir × length)에서 처음 무너진 바닥에 닿기 직전 거리(없으면 nil) - 돌진이 거기서 멈춘다.
+function BossEnvironment.firstBlockedAlong(model, origin, dir, length)
+	local d = 1
+	while d <= length do
+		if BossEnvironment.blocksBoss(model, origin + dir * d) then
+			return math.max(d - 2, 0)
+		end
+		d += 1
+	end
+	return nil
+end
+
+-- 발을 딛으면 떨어진다: 최대 체력 fall.maxHpFraction + 바닥 아래로(맵 이탈 복귀가 본인 스폰 · 보호 0.75초로 받는다 - BossArenaContainment).
+-- 떠 있으면 아직 · 잡힌 사람 · 복귀 보호 중 · 이번 발동에 날아간 사람(판 털기)은 안 떨어진다.
+local function checkFalls(st, env, e, zones, now)
+	e.fell = e.fell or {}
+	for _, v in ipairs(kit.victims(st)) do
+		local player = v.player
+		local recently = e.fell[player] and now - e.fell[player] < 1.5
+		if not recently and not BossTrap.isTrapped(player) and not BossArenaContainment.isProtected(player) and not (e.launched and e.launched[player])
+			and Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0)) and inAnyHazard(zones, v.root.Position) then
+			local airborne
+			if typeof(player) == "Instance" then
+				airborne = kit.isAirborne(player.Character, 0.5)
+			else
+				airborne = player.debugAirborne == true
+			end
+			if not airborne then
+				e.fell[player] = now
+				PlayerDamage.applyMaxHpFraction(player, env.fall.maxHpFraction, env.damageLabel .. " - 낙사")
+				BossTrap.noteSkillHit(player)
+				local down = Vector3.new(v.root.Position.X, st.floorY - env.fall.dropStuds, v.root.Position.Z)
+				if typeof(v.root) == "Instance" then
+					v.root.CFrame = CFrame.new(down) * v.root.CFrame.Rotation
+					v.root.AssemblyLinearVelocity = Vector3.new(0, -30, 0)
+				else
+					v.root.Position = down
+				end
+				kit.send(st, "voidFall", { userId = typeof(player) == "Instance" and player.UserId or nil, position = Vector3.new(down.X, st.floorY, down.Z) })
+				kit.debugEvent("voidFall", { player = player, at = now })
+				print(("[forge-game] 낙사(%s): %s - 최대 체력 %.0f%% · 복귀"):format(env.id, tostring(player.Name), env.fall.maxHpFraction * 100))
+			end
+		end
+	end
+end
+
 -- ─────────────────────────── 틱 ───────────────────────────
 local function stateOf(st)
 	st.env = st.env or { phase = "idle", taken = {} }
@@ -201,7 +350,8 @@ end
 local function begin(model, st, data, env, e, now)
 	e.phase = "telegraph"
 	e.phaseEndsAt = now + env.telegraphSeconds
-	e.zones = placeZones(model, st, data, env)
+	e.zones = env.kind == "collapse" and planSlices(model, st, env, e) or placeZones(model, st, data, env)
+	e.launched = nil
 	e.taken = {}
 	e.usedImpossible = false
 	e.activation = (e.activation or 0) + 1
@@ -212,13 +362,27 @@ local function begin(model, st, data, env, e, now)
 		e.garden = nil
 	end
 	print(("[forge-game] 환경 변화 전조: %s - 구역 %d개, %.1f초"):format(env.id, #e.zones, env.telegraphSeconds))
-	kit.send(st, "envTelegraph", { id = env.id, style = env.style, zones = e.zones, seconds = env.telegraphSeconds, bossId = data.id, motion = env.motion, garden = e.garden })
+	kit.send(st, "envTelegraph", { id = env.id, style = env.style, zones = e.zones, seconds = env.telegraphSeconds, bossId = data.id, motion = env.motion, garden = e.garden, shakes = env.shakes })
 end
 
 local function activate(model, st, data, env, e, now)
 	e.phase = "active"
 	e.phaseEndsAt = now + env.durationSeconds
 	e.lastTickAt = {}
+	if env.kind == "collapse" then
+		-- BR1-3: 이전 조각이 돌아오고 새 조각이 무너진다 - 무너진 채 다음 붕괴(cooldownSeconds)까지
+		local restored = e.collapsed
+		e.collapsed = e.zones
+		e.phaseEndsAt = now + env.cooldownSeconds
+		local names = {}
+		for _, z in ipairs(e.zones) do
+			table.insert(names, tostring(z.index))
+		end
+		print(("[forge-game] 지반 붕괴: 조각 %s 무너짐 · 복구 %d"):format(table.concat(names, ","), #(restored or {})))
+		kit.send(st, "envStart", { id = env.id, style = env.style, zones = e.zones, restored = restored, seconds = env.cooldownSeconds, bossId = data.id, color = data.headColor })
+		return
+	end
+	e.launched = {}
 	e.windTurnAt = now + (env.zones.rotateEverySeconds or math.huge)
 	-- 활성 순간 효과(onStart - 밥상뒤집기의 튕김 + 피해): 구역 안(발 기준 같은 층 - 떠 있으면 안 맞는다)의 사람.
 	local onStart = env.onStart
@@ -243,6 +407,7 @@ local function activate(model, st, data, env, e, now)
 					end
 					if inside and not BossTrap.isTrapped(v.player) and (airborne or Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0))) then
 						local dir, height, distance, multiplier, star = BossSkillMath.panLaunch(onStart.pan, rel, airborne, random01)
+						e.launched[v.player] = true -- BR1-3 판 털기: 날아간 사람은 이번 발동의 빈 공간 낙사 면제
 						kit.applySkillDamage(model, data, { damage = { kind = "attack", multiplier = multiplier }, damageLabel = env.damageLabel }, v.player)
 						local c = { model = model, st = st, data = data, now = now }
 						kit.runHitEffects(c, { { type = "launch", heightStuds = height, distanceStuds = distance, escape = true } }, v, v.root.Position - dir * 5, 1)
@@ -285,7 +450,7 @@ local function activate(model, st, data, env, e, now)
 		end)
 	end
 	print(("[forge-game] 환경 변화 시작: %s - %.1f초"):format(env.id, env.durationSeconds))
-	kit.send(st, "envStart", { id = env.id, style = env.style, zones = e.zones, seconds = env.durationSeconds, bossId = data.id, garden = e.garden, color = data.headColor })
+	kit.send(st, "envStart", { id = env.id, style = env.style, zones = e.zones, seconds = env.durationSeconds, bossId = data.id, garden = e.garden, color = data.headColor, shakes = env.shakes })
 end
 
 local function finish(model, st, env, e, now)
@@ -311,7 +476,11 @@ function BossEnvironment.step(model, st, data, now, _dt)
 		end
 		return
 	end
-	if e.phase == "armed" or e.phase == "cooldown" then
+	local voids = voidZonesOf(st, env)
+	if voids and #voids > 0 then
+		checkFalls(st, env, e, voids, now) -- BR1-3 무너진 조각 · 들린 판
+	end
+	if e.phase == "armed" or e.phase == "cooldown" or (env.kind == "collapse" and e.phase == "active") then
 		if now >= e.phaseEndsAt then
 			begin(model, st, data, env, e, now)
 		end

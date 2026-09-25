@@ -253,7 +253,8 @@ end
 --     회전베기는 0 피해로 끝날 뿐이다. 지연 폭발(꽂힌 화살)은 언제 꽂았든 반사하지 않는다(hitInfo.indirect).
 --     플레이어가 막을 수 없는 반사는 반사가 아니라 벌이다.
 -- 타격은 전부 MonsterState.applyDamage 한 곳을 지나므로 거기에 듣는 귀 하나만 단다(setHitListener).
-function BossMechanics.beginReflect(model, stance, label, onReflected)
+-- BR1-3 counterOnly(아르마딜로 태세): 부분 실패 피해를 넣지 않고 onReflected만 부른다(반격은 부른 쪽 - 가시가 그 사람 자리로 날아간다).
+function BossMechanics.beginReflect(model, stance, label, onReflected, counterOnly)
 	local st = stateOf(model)
 	local reflect = { startedAt = os.clock(), lastAt = {}, count = {} }
 	st.reflect = reflect
@@ -275,7 +276,9 @@ function BossMechanics.beginReflect(model, stance, label, onReflected)
 		end
 		reflect.lastAt[player] = now
 		reflect.count[player] = (reflect.count[player] or 0) + 1
-		BossMechanics.applyGimmickDamage(model, player, fraction, label)
+		if not counterOnly then
+			BossMechanics.applyGimmickDamage(model, player, fraction, label)
+		end
 		if onReflected then
 			onReflected(player)
 		end

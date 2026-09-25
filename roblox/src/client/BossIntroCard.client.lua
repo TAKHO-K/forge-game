@@ -19,7 +19,7 @@ local function introLine(boss, memberCount)
 	local intro = boss.intro
 	local skill = intro.countKey and boss.skills[intro.countKey]
 	if not skill then
-		return intro.line
+		return intro.sub and (intro.line .. "\n" .. intro.sub) or intro.line -- BR1-3 보조 한 줄(수정 오르골)
 	end
 	local rodCount = 0
 	for _, part in ipairs(boss.arenaKit and boss.arenaKit.parts or {}) do
@@ -49,6 +49,9 @@ local function show(bossId, memberCount)
 
 	local width = mobile and 380 or 460
 	local height = mobile and 178 or 160 -- BR1-2: 긴 한 줄(번개 조준경)이 폰에서 3줄까지
+	if intro.sub then
+		height += mobile and 44 or 30 -- BR1-3 보조 한 줄
+	end
 	local card = Instance.new("Frame")
 	card.Name = "Card"
 	card.AnchorPoint = Vector2.new(0.5, 0)

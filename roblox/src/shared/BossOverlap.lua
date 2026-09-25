@@ -65,6 +65,14 @@ local function envZones(env, rng, player)
 		table.insert(list, { shape = "pit", x = 0, z = 0, radius = spec.radiusStuds, core = spec.coreRadiusStuds, pull = spec.pullStudsPerSecond })
 	elseif spec.shape == "wind" then
 		table.insert(list, { shape = "wind", x = 0, z = 0, angle = rng() * 2 * math.pi, beyond = spec.beyondStuds, push = spec.pushStudsPerSecond })
+	elseif spec.shape == "slices" then
+		-- BR1-3 피자 조각: 무작위 조각 하나 + 붙지 않은 조각 하나(서버 BossSkillMath.pickSlices의 nonAdjacent)
+		local width = 2 * math.pi / spec.count
+		local first = math.floor(rng() * spec.count)
+		local second = (first + 2 + math.floor(rng() * (spec.count - 3))) % spec.count
+		for _, k in ipairs({ first, second }) do
+			table.insert(list, { shape = "slice", x = 0, z = 0, start = k * width, width = width, hub = spec.hubRadiusStuds })
+		end
 	end
 	return list
 end
@@ -85,6 +93,8 @@ local function inEnvHazard(zones, x, z)
 				return true
 			end
 		elseif e.shape == "wind" and d >= e.beyond and (rx * math.cos(e.angle) + rz * math.sin(e.angle)) > 0 then
+			return true
+		elseif e.shape == "slice" and d >= e.hub and ((math.atan2(rz, rx) - e.start) % (2 * math.pi)) <= e.width then
 			return true
 		end
 	end
@@ -153,6 +163,37 @@ local function patternShape(skill, boss, player, zoneRadius)
 		return function(x, z)
 			return len(x - player.x, z - player.z) <= radius
 		end, available, true, "walk"
+	elseif primitive == "sweep" then
+		-- BR1-3 에네르기파: 대상 쪽 반원(반경 radiusStuds) · 쓸 수 있는 시간 = 전조 + 휩쓸기 절반(대상 각에 닿기까지)
+		return function(x, z)
+			local rx, rz = x - boss.x, z - boss.z
+			return len(rx, rz) <= skill.radiusStuds and (rx * dirx + rz * dirz) >= 0
+		end, skill.telegraphSeconds + skill.sweepSeconds / 2, true, "walk"
+	elseif primitive == "boomerang" then
+		-- BR1-3 분신 부메랑: 대상 쪽 부채 선(반폭) - 직선과 같은 모양
+		local dirs = {}
+		local base = math.atan2(dirz, dirx) - math.rad(skill.stepDeg * ((skill.directions or 1) - 1) / 2)
+		for k = 0, (skill.directions or 1) - 1 do
+			local a = base + math.rad(skill.stepDeg * k)
+			table.insert(dirs, { math.cos(a), math.sin(a) })
+		end
+		return function(x, z)
+			local rx, rz = x - boss.x, z - boss.z
+			for _, d in ipairs(dirs) do
+				local along = rx * d[1] + rz * d[2]
+				if along >= 0 and math.abs(-rx * d[2] + rz * d[1]) <= skill.halfWidthStuds then
+					return true
+				end
+			end
+			return false
+		end, skill.telegraphSeconds, true, "walk"
+	elseif primitive == "reflect" and skill.counter then
+		-- BR1-3 반격 가시: 내 자리 원
+		return function(x, z)
+			return len(x - player.x, z - player.z) <= skill.counter.radiusStuds
+		end, skill.counter.delaySeconds, true, "walk"
+	elseif primitive == "sandSearch" or primitive == "orgel" then
+		return nil, skill.limitSeconds, false, "gimmick"
 	elseif primitive == "line" then
 		local half = BossSkillMath.volleysOf(skill)[1].halfWidthStuds
 		local dirs = {}

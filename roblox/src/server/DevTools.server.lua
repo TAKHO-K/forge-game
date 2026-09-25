@@ -1074,7 +1074,7 @@ local HELP_TEXT = table.concat({
 	"/gg boss sim <bossId> <인원> <break|failfirst|nobreak> [live] - 처치 시간 모형(29-2: 기본은 설계 기믹 포함, live면 지금 켜진 스킬만)",
 	"/gg boss check <bossId> - 그 보스 스킬표의 회피 부등식·인접 피해 합 검사(29-2)",
 	"/gg boss density [스테이지] - 그 스테이지의 낙하 원 밀도(S14: extra · 솔로/4인 실제 원 개수 · 산개 거리)와 검사기(BossSim.checkDensity) 결과 표(기본 100)",
-	"/gg pattern <스킬 id> - 지금 보스에게 그 스킬을 즉시 시작시킨다(/gg bossinfo에 id 목록 - 예: roar, icefall, shell, stab)",
+	"/gg pattern <스킬 id> - 지금 보스에게 그 스킬을 즉시 시작시킨다(/gg bossinfo에 id 목록 - 예: roar, icefall, sandSearch, stab)",
 	"/gg bossinfo - 지금 보스 인스턴스의 주력 패턴·패턴별 간격·변형 필드·실루엣을 콘솔에 출력(23-6 검증용)",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
 	"/gg bosskilltest - 지금 보스를 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡는다(견습/무한 모드 처치 파이프라인 검증용, 23-1)",

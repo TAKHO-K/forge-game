@@ -31,6 +31,8 @@ local STYLE_MATERIAL = {
 }
 
 local live = {}
+local voids = {} -- BR1-3 무너진 조각(검은 구멍) - 다음 붕괴 · 보스전 끝까지 남는다(전조가 current를 새로 만들어도 지우지 않는다)
+local VOID = Color3.fromRGB(12, 10, 14)
 local current = nil -- { zones, parts = { [zone index] = { parts } }, style, active, forces }
 
 local function newPart(size, color, transparency, material, shape)
@@ -107,6 +109,14 @@ local function zoneParts(z, transparency, material)
 			table.insert(slope, tip)
 		end
 		return slope
+	elseif z.shape == "slice" then
+		-- BR1-3 피자 조각(허브 밖 · 두 경계선 사이)
+		return arcParts(z.center, z.startDeg + z.widthDeg / 2, z.widthDeg, z.hub, z.radius, DANGER, transparency, material)
+	elseif z.shape == "rect" and z.halfMap then
+		-- BR1-3 판 털기: 맵 절반 = 반원(아레나 중심 · 판 쪽 방위 angleDeg + 90) - 판정 사각형과 원 안에서 같다
+		local a = math.rad(z.angleDeg)
+		local side = Vector3.new(-math.sin(a), 0, math.cos(a))
+		return arcParts(z.center - side * z.halfWidth, z.angleDeg + 90, 180, 0, z.halfLength, DANGER, transparency, material)
 	elseif z.shape == "rect" then
 		local part = newPart(Vector3.new(z.halfWidth * 2, 0.25, z.halfLength * 2), DANGER, transparency, material)
 		part.CFrame = CFrame.new(z.center + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, -math.rad(z.angleDeg) + math.rad(90), 0)
@@ -142,6 +152,22 @@ local function crackAlong(z, seconds)
 		for i = 1, 24 do
 			local a = i / 24 * 2 * math.pi
 			table.insert(points, { z.center + Vector3.new(math.cos(a) * r, 0.4, math.sin(a) * r), Vector3.new(-math.sin(a), 0, math.cos(a)) })
+		end
+	elseif z.shape == "slice" then
+		-- 두 경계선(가운데 → 벽) + 바깥 호를 따라 금
+		for _, deg in ipairs({ z.startDeg, z.startDeg + z.widthDeg }) do
+			local dir = Vector3.new(math.cos(math.rad(deg)), 0, math.sin(math.rad(deg)))
+			for i = 0, 8 do
+				table.insert(points, { z.center + dir * (z.hub + (z.radius - z.hub) * i / 8) + Vector3.new(0, 0.4, 0), dir })
+			end
+		end
+	elseif z.shape == "rect" and z.halfMap then
+		-- 판 털기: 판의 가장자리(지름 = 보스가 잡는 쪽)를 따라 금
+		local a = math.rad(z.angleDeg)
+		local along, side = Vector3.new(math.cos(a), 0, math.sin(a)), Vector3.new(-math.sin(a), 0, math.cos(a))
+		local edge = z.center - side * z.halfWidth
+		for i = -6, 6 do
+			table.insert(points, { edge + along * (z.halfLength * i / 6) + Vector3.new(0, 0.4, 0), along })
 		end
 	elseif z.shape == "rect" then
 		local a = math.rad(z.angleDeg)
@@ -356,8 +382,92 @@ function BossEnvironmentView.coreHit(data)
 	end
 end
 
+local function clearVoids(withDust)
+	for _, entry in ipairs(voids) do
+		for _, part in ipairs(entry.parts) do
+			if withDust and math.random() < 0.3 then
+				BossFx.puff(part.Position + Vector3.new(0, 1, 0), 3, DUST, 0.6, Vector3.new(0, 5, 0))
+			end
+			destroy(part)
+		end
+	end
+	voids = {}
+end
+
+-- BR1-3 무너진 조각: 바닥이 사라진 검은 구멍(조각 모양) + 무너지는 파편. 이전 조각은 먼지와 함께 돌아온다(구멍을 치운다).
+local function collapse(data)
+	clearVoids(true)
+	for _, z in ipairs(data.zones) do
+		local parts = arcParts(z.center, z.startDeg + z.widthDeg / 2, z.widthDeg, z.hub, z.radius, VOID, 0, Enum.Material.SmoothPlastic)
+		table.insert(voids, { zone = z, parts = parts })
+		local mid = math.rad(z.startDeg + z.widthDeg / 2)
+		local dir = Vector3.new(math.cos(mid), 0, math.sin(mid))
+		for i = 1, 14 do
+			local at = z.center + dir * (z.hub + (z.radius - z.hub) * math.random()) + Vector3.new(0, 0.5, 0)
+			BossFx.chunk(at, Vector3.new(math.random(-6, 6), 8, math.random(-6, 6)), 1.6, DUST, 1.0)
+		end
+		BossFx.shake(z.center + dir * 30, 1)
+	end
+end
+
+-- BR1-3 판 털기: 보스가 잡은 가장자리(지름)를 경첩으로 반원 판이 통째로 들린다 → shakes번 턴다 → "쿵" 내려놓는다(Anchored 판 - 매 프레임 CFrame, 물리 없음).
+-- 판이 들린 동안 그 자리 바닥 = 검은 빈 공간(zoneParts가 VOID 색으로 깐다 - 서버 낙사 구역과 같다).
+local function plateShake(z, shakes, seconds)
+	local a = math.rad(z.angleDeg)
+	local along, side = Vector3.new(math.cos(a), 0, math.sin(a)), Vector3.new(-math.sin(a), 0, math.cos(a))
+	local hinge = z.center - side * z.halfWidth
+	local pivot = CFrame.fromMatrix(hinge + Vector3.new(0, 0.6, 0), along, Vector3.yAxis)
+	local parts = arcParts(hinge, z.angleDeg + 90, 180, 0, z.halfLength, DUST, 0, Enum.Material.Slate)
+	local offsets = {}
+	for i, part in ipairs(parts) do
+		part.Size = Vector3.new(part.Size.X, 1.2, part.Size.Z)
+		offsets[i] = pivot:ToObjectSpace(part.CFrame)
+	end
+	local started = os.clock()
+	local liftDeg = 22
+	local connection
+	connection = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - started
+		if t >= seconds or not current then
+			connection:Disconnect()
+			for _, part in ipairs(parts) do
+				destroy(part)
+			end
+			for i = 1, 16 do
+				local at = hinge + side * math.random(5, math.floor(z.halfLength)) + along * math.random(-60, 60)
+				BossFx.puff(at + Vector3.new(0, 1, 0), 4, DUST, 0.7, Vector3.new(0, 6, 0))
+			end
+			BossFx.shake(hinge, 1.2) -- 쿵
+			return
+		end
+		local f = t / seconds
+		local lift = liftDeg * math.min(t / 0.35, 1) * (f > 0.85 and (1 - f) / 0.15 or 1)
+		local wobble = math.sin(t / seconds * shakes * 2 * math.pi) * 9 -- 털기(shakes번 오르내림)
+		local rotation = pivot * CFrame.fromAxisAngle(Vector3.new(1, 0, 0), -math.rad(lift + wobble)) -- 판(로컬 +Z)이 위로 들리는 쪽이 음의 각
+		for i, part in ipairs(parts) do
+			part.CFrame = rotation * offsets[i]
+		end
+	end)
+	for k = 1, shakes do
+		task.delay(seconds * (k - 0.5) / shakes, function()
+			if current then
+				BossFx.shake(hinge, 0.8)
+			end
+		end)
+	end
+end
+
+function BossEnvironmentView.voidFall(data)
+	BossFx.ring(data.position + Vector3.new(0, 0.5, 0), 1, 6, DUST, 0.4)
+	for i = 1, 6 do
+		BossFx.chunk(data.position + Vector3.new(0, 0.5, 0), Vector3.new(math.random(-5, 5), -10, math.random(-5, 5)), 1, DUST, 0.6)
+	end
+end
+
 function BossEnvironmentView.telegraph(data)
-	BossEnvironmentView.clear()
+	clearParts()
+	clearBeams()
+	current = nil
 	current = { zones = data.zones, parts = {}, style = data.style, active = false, coreFlash = {} }
 	if data.garden then
 		current.parts.garden = gardenTelegraph(data.garden, data.seconds)
@@ -371,7 +481,18 @@ function BossEnvironmentView.telegraph(data)
 			end
 		end
 		crackAlong(z, data.seconds)
-		if z.shape == "rect" then
+		if z.shape == "slice" then
+			-- BR1-3 지반 붕괴 전조: 조각이 점점 크게 흔들린다(0.5초마다)
+			local mid = math.rad(z.startDeg + z.widthDeg / 2)
+			local at = z.center + Vector3.new(math.cos(mid), 0, math.sin(mid)) * (z.hub + z.radius) / 2
+			for k = 0, math.floor(data.seconds / 0.5) - 1 do
+				task.delay(k * 0.5, function()
+					if current then
+						BossFx.shake(at, 0.3 + 0.6 * k / math.max(data.seconds / 0.5, 1))
+					end
+				end)
+			end
+		elseif z.shape == "rect" then
 			-- 널뛰기 전조: 지형이 크게 흔들린다(0.25초마다 흔들림 + 판 가장자리 먼지 기둥) - 판 전체 위험색은 위 zoneParts
 			for k = 0, math.floor(data.seconds / 0.25) - 1 do
 				task.delay(k * 0.25, function()
@@ -428,10 +549,23 @@ function BossEnvironmentView.start(data)
 	current.untilAt = os.clock() + data.seconds
 	local material = STYLE_MATERIAL[data.style] or Enum.Material.Neon
 	for index, z in ipairs(data.zones) do
-		current.parts[index] = zoneParts(z, 0.35, material)
-		if z.shape == "rect" then
-			flipSlab(z)
+		if data.style == "collapse" then
+			current.parts[index] = {}
+		elseif z.halfMap then
+			current.parts[index] = zoneParts(z, 0, Enum.Material.SmoothPlastic) -- 들린 판 자리 = 빈 공간(검정)
+			for _, part in ipairs(current.parts[index]) do
+				part.Color = VOID
+			end
+			plateShake(z, data.shakes or 3, data.seconds)
+		else
+			current.parts[index] = zoneParts(z, 0.35, material)
+			if z.shape == "rect" then
+				flipSlab(z)
+			end
 		end
+	end
+	if data.style == "collapse" then
+		collapse(data)
 	end
 	if data.garden then -- BR1-2 수정 부수기: 수정 → 보스 빛줄기(보스 색)
 		startBeams(data.garden, data.color)
@@ -453,12 +587,14 @@ end
 function BossEnvironmentView.clear()
 	clearParts()
 	clearBeams()
+	clearVoids(false)
 	current = nil
 end
 
 function BossEnvironmentView.reset()
 	clearBeams()
 	current = nil
+	voids = {}
 	fields = {}
 	for part in pairs(live) do
 		part:Destroy()

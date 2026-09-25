@@ -217,7 +217,7 @@ function StageRewardBand.build(props)
 				d.ZIndex = 21
 			end
 		end
-		gimmickText.Text = ("<b>%s · %s</b>\n%s"):format(boss.displayName, boss.intro.title, (boss.intro.line:gsub("{N}", "2(솔로) ~ 5(4인)")))
+		gimmickText.Text = ("<b>%s · %s</b>\n%s"):format(boss.displayName, boss.intro.title, (boss.intro.line:gsub("{N}", "2(솔로) ~ 5(4인)")) .. (boss.intro.sub and ("\n" .. boss.intro.sub) or "")) -- BR1-3 보조 한 줄
 	end
 	local gimmickButton = Button.build({
 		parent = root,
