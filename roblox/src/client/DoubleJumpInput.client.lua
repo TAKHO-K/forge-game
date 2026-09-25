@@ -83,7 +83,7 @@ UserInputService.JumpRequest:Connect(function()
 		return
 	end
 	local v = root.AssemblyLinearVelocity
-	root.AssemblyLinearVelocity = Vector3.new(v.X, JumpMath.upSpeed(rise), v.Z)
+	root.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, JumpMath.upSpeed(rise)), v.Z) -- 리뷰: 오르는 중 1단 속도가 더 크면 그대로(정점을 낮추지 않는다)
 	character:SetAttribute("AirMoveUsed", "jump")
 end)
 

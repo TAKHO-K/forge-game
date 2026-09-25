@@ -26,7 +26,8 @@ local function stateOf(player)
 	return st
 end
 
--- 판정 한 번(순수 - 검증이 합성 표본으로 부른다). sample = { feetY, pos(루트 Vector3), grounded(bool), skip(bool - 사망 · 루트 고정), probe(fn → 서 있으면 true, 없어도 됨) }.
+-- 판정 한 번(순수 - 검증이 합성 표본으로 부른다). sample = { feetY, pos(루트 Vector3), grounded(bool), skip(bool - 사망 · 루트 고정), probe(fn → 발 바로 아래 지면 Y 또는 nil, 없어도 됨) }.
+-- 리뷰 1: 폴링(0.25초)이 짧은 착지(높은 단에 올라서자마자 다시 뜀)를 놓치면 기준이 아래층에 남는다 - 넘었을 때 지금 발 아래 지면을 찾아 그 지면 기준으로 다시 잰다.
 -- 반환: "ok" | "strike" | "revert"(되돌릴 자리 = st.supportPos) | "reset"(순간이동으로 봄).
 function HeightGuard.evaluate(st, sample, now)
 	local moved = st.lastPos and (sample.pos - st.lastPos).Magnitude or 0
@@ -52,8 +53,9 @@ function HeightGuard.evaluate(st, sample, now)
 		st.strikes = 0
 		return "ok"
 	end
-	if sample.probe and sample.probe() then
-		st.supportY, st.supportPos, st.strikes = sample.feetY, sample.pos, 0
+	local groundY = sample.probe and sample.probe()
+	if groundY and sample.feetY - groundY <= JumpMath.heightGuardAllowance() then
+		st.supportY, st.strikes = groundY, 0 -- 되돌릴 자리(supportPos)는 실제로 서 있던 곳 그대로
 		return "ok"
 	end
 	st.strikes += 1
@@ -66,12 +68,18 @@ end
 
 -- 넉백 · 회오리 · 파편: 서버가 보낸 순간 부른다. seconds = 체공(+ 붙잡는 시간).
 function HeightGuard.exempt(player, seconds)
+	if typeof(player) ~= "Instance" then -- 리뷰 4: 검증 스탠드인(표)은 상태를 만들지 않는다
+		return
+	end
 	local st = stateOf(player)
 	st.exemptUntil = math.max(st.exemptUntil, os.clock() + seconds + cfg.exemptExtraSeconds)
 end
 
 -- 서버 순간이동 뒤(복귀 · 심연 · 리스폰): 기준을 다음 폴링의 자리로 새로 잡는다.
 function HeightGuard.reset(player)
+	if typeof(player) ~= "Instance" then
+		return
+	end
 	local st = stateOf(player)
 	st.supportY, st.lastPos, st.strikes = nil, nil, 0
 	st.graceUntil = os.clock() + cfg.graceSeconds
@@ -115,7 +123,8 @@ function HeightGuard.poll(player, now)
 		skip = root.Anchored or humanoid.Health <= 0,
 		probe = function()
 			probeParams.FilterDescendantsInstances = { character }
-			return Workspace:Raycast(root.Position, Vector3.new(0, -cfg.probeStuds, 0), probeParams) ~= nil
+			local hit = Workspace:Raycast(root.Position, Vector3.new(0, -(MovementConfig.rootAboveFeetStuds + JumpMath.heightGuardAllowance() + cfg.probeStuds), 0), probeParams)
+			return hit and hit.Position.Y
 		end,
 	}
 	local verdict = HeightGuard.evaluate(st, sample, now)

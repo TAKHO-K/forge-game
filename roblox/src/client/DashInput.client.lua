@@ -40,7 +40,8 @@ local function requestDash()
 	-- G2a: 한 체공에 공중대시와 이단점프 중 하나만(DoubleJumpInput이 착지하면 "AirMoveUsed"를 지운다). 막히면 쿨다운도 안 쓴다.
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if humanoid and humanoid.FloorMaterial == Enum.Material.Air then
+	local state = humanoid and humanoid:GetState()
+	if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then -- 리뷰: 상태로 본다(요철에서 잠깐 Air인 걸 공중으로 세면 다음 점프의 2단이 막힌다)
 		if character:GetAttribute("AirMoveUsed") then
 			return
 		end

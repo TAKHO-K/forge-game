@@ -54,8 +54,8 @@ local function onCharacter()
 	-- 기본 거리: 한 프레임 동안 줌을 기본값 하나로 묶는다(카메라 모듈이 범위 안으로 끌어온다) → 원래 범위로 푼다.
 	player.CameraMinZoomDistance = cfg.zoomStuds
 	player.CameraMaxZoomDistance = cfg.zoomStuds
-	defaultPitchUntil = os.clock() + 0.3
-	task.delay(0.2, function()
+	defaultPitchUntil = os.clock() + cfg.spawnSnapSeconds
+	task.delay(cfg.spawnSnapSeconds, function()
 		player.CameraMinZoomDistance = cfg.zoomMinStuds
 		player.CameraMaxZoomDistance = cfg.zoomMaxStuds
 	end)

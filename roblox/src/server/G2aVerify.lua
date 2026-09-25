@@ -128,14 +128,27 @@ function G2aVerify.runPure()
 		local launch = run(launchSamples)
 		local teleport = run({ at(0, true), at(0, true), at(40, false, 200), at(40, false, 200), at(44, false, 200) })
 		local probeSamples = { at(0, true), at(0, true), at(11, false), at(11, false) }
-		probeSamples[3].probe = function() return true end
-		probeSamples[4].probe = function() return true end
+		probeSamples[3].probe = function() return 11 end -- FloorMaterial이 늦어 공중으로 보이지만 발 바로 아래가 지면
+		probeSamples[4].probe = function() return 11 end
 		local probe = run(probeSamples)
+		-- 리뷰 1: 테라스(6)에 올라선 착지를 폴링이 놓치고 곧바로 다시 뜀(발 6 + 7.2 = 13.2 > 기준 0 + 8.92) → 발 아래 지면 6 기준으로 통과
+		local missedSamples = { at(0, true), at(0, true), at(4, false), at(12, false), at(13.2, false), at(8, false) }
+		for i = 4, 6 do
+			missedSamples[i].probe = function() return 6 end
+		end
+		local missed = run(missedSamples)
+		-- 날기: 발 아래 지면이 멀리(0)면 그대로 걸린다
+		local flyProbe = { at(0, true), at(0, true), at(4, false), at(12, false), at(15, false) }
+		for i = 3, 5 do
+			flyProbe[i].probe = function() return 0 end
+		end
+		local flyWithGround = run(flyProbe)
 		local anchored = run({ at(0, true), at(0, true), { feetY = 20, pos = Vector3.new(0, 23, 0), grounded = false, skip = true }, { feetY = 20, pos = Vector3.new(0, 23, 0), grounded = false, skip = true } })
 		local ok = jump == "reset,ok,ok,ok,ok,ok" and fly == "reset,ok,ok,strike,revert,strike" and platform == "reset,ok,ok,ok,ok,ok" and launch == "reset,ok,ok,ok,ok,ok"
 			and teleport == "reset,ok,reset,ok,ok" and probe == "reset,ok,ok,ok" and anchored == "reset,ok,ok,ok"
-		r.check(("허용 %.2f(= 7.2 × 1.1 + 1) · 점프 [%s] · 띄워 두기 [%s](기대 둘째 넘음에서 revert) · 단상 위 점프 [%s] · 넉백 예외 [%s] · 순간이동 [%s] · 서 있음(광선) [%s] · 루트 고정 [%s]"):format(
-			allow, jump, fly, platform, launch, teleport, probe, anchored), ok and near(allow, 8.92))
+			and missed == "reset,ok,ok,ok,ok,ok" and flyWithGround == "reset,ok,ok,strike,revert"
+		r.check(("허용 %.2f(= 7.2 × 1.1 + 1) · 점프 [%s] · 띄워 두기 [%s](기대 둘째 넘음에서 revert) · 단상 위 점프 [%s] · 넉백 예외 [%s] · 순간이동 [%s] · 서 있음(광선) [%s] · 루트 고정 [%s] · 착지 놓친 테라스 재점프 [%s] · 날기(아래 지면 멀리) [%s]"):format(
+			allow, jump, fly, platform, launch, teleport, probe, anchored, missed, flyWithGround), ok and near(allow, 8.92))
 	end)
 
 	r.section("이속 · 점프력 상한", function()
@@ -232,11 +245,11 @@ function G2aVerify.runLive(player, env)
 		-- ③ 리더보드: 이 판(10초 전 시작)에 되돌림이 있었다 → 거절
 		local judged = Leaderboard.onBossCleared({ stage = 10, bossId = "x", bossMaxHp = 1, seconds = 10, isParty = false, members = { { player = player, advanced = false, reason = "verify", ratio = 1 } }, contributors = {} })
 		local clean = Leaderboard.onBossCleared({ stage = 10, bossId = "x", bossMaxHp = 1, seconds = 0.01, isParty = false, members = { { player = player, advanced = false, reason = "verify", ratio = 1 } }, contributors = {} })
-		r.check(("리더보드: 보스전 중 되돌림 → 거절 %s(기대 height_guard) · 되돌림 전에 시작한 판이 아니면(0.01초) %s(기대 height_guard 아님)"):format(tostring(judged.rejected), tostring(clean.rejected)),
-			judged.rejected == "height_guard" and clean.rejected ~= "height_guard")
-		HeightGuard.debugOff = true
+		r.check(("리더보드: 보스전 중 되돌림 → 거절 %s(기대 height_guard) · 되돌림 전에 시작한 판이 아니면(0.01초) %s(기대 nil)"):format(tostring(judged.rejected), tostring(clean.rejected)),
+			judged.rejected == "height_guard" and clean.rejected == nil)
 		st.flaggedAt = nil
 	end)
+	HeightGuard.debugOff = true -- 리뷰: 절 안에서 에러가 나도 체인에는 꺼진 채로 돌아간다
 
 	r.section("보스 기여도 = 계수 전 피해", function()
 		local STAGE = 500

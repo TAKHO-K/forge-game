@@ -28,12 +28,12 @@ return {
 	structureDropSpeedStuds = 40,
 
 	-- 서버 높이 검증(D0 부록 I §5): 발 − 마지막으로 서 있던 발 높이 > 1단 × (1 + 점프력 상한) + toleranceStuds가 strikes번 이어지면 서 있던 자리로 되돌린다(+ 보스전이면 그 판 리더보드 무효).
-	-- tolerance 1.0 = 복제 지연 · 보간 여유. probeStuds = 루트에서 아래로 이 안에 무언가 있으면 서 있는 것(FloorMaterial이 서버에 늦게 보이는 것 대응 - 3 + 0.5).
+	-- tolerance 1.0 = 복제 지연 · 보간 여유. 허용치를 넘으면 루트에서 아래로 (3 + 허용치 + probeStuds) 광선을 쏴 발 바로 아래 지면을 기준으로 다시 잰다(폴링이 짧은 착지를 놓친 경우 · FloorMaterial 지연).
 	-- teleportResetStuds: 한 폴링(0.25초)에 이만큼 넘게 움직이면 순간이동으로 보고 기준을 새로 잡는다(정상 최대 = 24 × 0.25 + 대시 16 = 22). graceSeconds = 그 뒤 유예.
 	-- exemptExtraSeconds: 넉백 · 회오리 · 파편 튕김은 서버가 보낸 순간부터 체공 + 이만큼 검사를 건너뛴다.
 	heightGuard = { toleranceStuds = 1.0, strikes = 2, probeStuds = 3.5, teleportResetStuds = 50, graceSeconds = 1.0, exemptExtraSeconds = 0.5 },
 
 	-- 카메라(로블록스 기본 Classic 카메라 위에 각도 · 줌 범위만 건다 - 좌우 회전은 자유). 각도 = 수평에서 내려다보는 각(도).
 	-- 기본 55° · 45stud에서 PC(16:9)와 폰(800 × 360) 화면에 보이는 땅의 범위 = docs/design/movement-metrics.md §6. 줌 25 미만(1인칭 · 코앞)은 막는다.
-	camera = { pitchDeg = 55, pitchMinDeg = 40, pitchMaxDeg = 70, zoomStuds = 45, zoomMinStuds = 25, zoomMaxStuds = 70 },
+	camera = { pitchDeg = 55, pitchMinDeg = 40, pitchMaxDeg = 70, zoomStuds = 45, zoomMinStuds = 25, zoomMaxStuds = 70, spawnSnapSeconds = 0.3 }, -- spawnSnapSeconds = 스폰 직후 기본 거리 · 각도로 맞추는 시간
 }

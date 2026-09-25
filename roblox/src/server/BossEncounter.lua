@@ -33,6 +33,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local MonsterState = require(script.Parent.MonsterState)
+local HeightGuard = require(script.Parent.HeightGuard) -- G2a 리뷰: 순간이동 뒤 높이 기준 새로(50 넘게 움직이면 자동이지만 명시)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossPatterns = require(script.Parent.BossPatterns)
 
@@ -166,6 +167,7 @@ local function teleportTo(player, position)
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if rootPart then
 		rootPart.CFrame = CFrame.new(position, position + Vector3.new(0, 0, -1))
+		HeightGuard.reset(player)
 	end
 end
 

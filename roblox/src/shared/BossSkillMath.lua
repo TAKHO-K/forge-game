@@ -204,7 +204,7 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 			})
 		end
 		-- G2a 이단점프(D0 부록 I §2): 한 번 떠 있는 동안 두 박자를 다 넘으면 리듬이 무너진다. 필요 체공 = 다음 박자 마지막 겹이 닿기 시작하는 시각 − 앞 박자 첫 겹이
-		-- 다 지나간 시각(거리 0 · standoff · WAVE_MAX 중 최소 - 보스 몸통엔 충돌이 없어 붙어 설 수 있다). 막으려면 ≥ 한 체공 최대(2단 또는 공중대시 - 보스 아레나는 점프력 옵션 무시) + 여유.
+		-- 다 지나간 시각(거리 0 · standoff · WAVE_MAX 중 최소 - 보스 몸통엔 충돌이 없어 붙어 설 수 있다). 두 띠에 "한 틱이라도" 공중이면 되므로 보수적(엄격한) 쪽의 필요량이다. 막으려면 ≥ 한 체공 최대(2단 또는 공중대시 - 보스 아레나는 점프력 옵션 무시) + 여유.
 		local maxAir = JumpMath.maxAirSeconds(JumpMath.jumpHeight(0, true), DashConfig.durationSeconds)
 		for index = 2, #waves do
 			local before, after = waves[index - 1], waves[index]
