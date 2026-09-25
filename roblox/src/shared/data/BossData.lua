@@ -364,7 +364,7 @@ local function guardianSkills()
 			cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
 			telegraphSeconds = 1.2, count = 2, launchIntervalSeconds = 0.2, spreadDeg = 25,
 			speedStuds = 12, turnRateDeg = 90, radiusStuds = 3, lifetimeSeconds = 7, heightMode = "air", launchHeightStuds = 9,
-			targetRule = "airbornePreferred",
+			targetRule = "airbornePreferred", leadSeconds = 0.8, -- 예측 조준(대상 속도 × 도착까지 - 상한 0.8초)
 			damage = { kind = "attack", multiplier = 1.6 }, damageLabel = "추적 광구",
 		},
 		-- BR1 새 ③ 대지 가르기: 한 손을 땅에 꽂고 옆으로 긋는다 - 보스 → 대상 선의 왼쪽 또는 오른쪽 반원(반경 40)이 갈라진다(무작위).
@@ -613,7 +613,7 @@ local SPECIES = {
 				conditions = { { type = "memberAirborne", seconds = 0.3 } },
 				telegraphSeconds = 1.2, count = 3, launchIntervalSeconds = 0.35,
 				speedStuds = 45, turnRateDeg = 0, radiusStuds = 2.5, lifetimeSeconds = 5, heightMode = "air", launchHeightStuds = 11,
-				targetRule = "airborne",
+				targetRule = "airborne", leadSeconds = 0.6, -- 직선 창: 쏘는 순간 예측 자리로(궤도를 바꾸면 빗나간다)
 				damage = { kind = "attack", multiplier = 1.8 }, damageLabel = "얼음 창",
 			},
 			-- BR1 새 ② 발 구르기 빙판: 한 발을 들어 쾅 - 보스 둘레 원(반경 30)의 땅이 흔들린다. 걸어서는 못 나간다(31 = 2.9초 > 1.8) - **점프로 넘는다**
@@ -632,7 +632,10 @@ local SPECIES = {
 				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
 				telegraphSeconds = 1.5, count = 2, spreadDeg = 30,
 				speedStuds = 22, turnRateDeg = 0, radiusStuds = 5, lifetimeSeconds = 9, heightMode = "ground", groundHitHeightStuds = 4, pierce = true,
-				targetRule = "target",
+				targetRule = "target", leadSeconds = 1.0,
+				-- 사용자 요청: 벽에 닿으면 최대 2번 튕긴다 - 튕기는 순간 **가장 먼 사람의 (예측) 자리**를 기억해 그쪽으로 곧게 굴러간다(튕김마다 다시 맞을 수 있다).
+				-- 튕긴 뒤에도 옆 6 = 0.97초 · 점프로 넘기는 그대로다(굴러오는 것이 보인다 - 벽에서 가장 먼 사람까지는 멀다).
+				bounces = 2, bounceRetarget = "farthest", bounceLifetimeSeconds = 9,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "눈덩이",
 			},
 		},
@@ -749,7 +752,7 @@ local SPECIES = {
 				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
 				telegraphSeconds = 1.2, count = 3, launchIntervalSeconds = 0.25, spreadDeg = 20,
 				speedStuds = 14, turnRateDeg = 70, radiusStuds = 3.5, lifetimeSeconds = 7, heightMode = "air", launchHeightStuds = 8,
-				targetRule = "airbornePreferred",
+				targetRule = "airbornePreferred", leadSeconds = 0.8,
 				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "거품탄",
 			},
 		},
@@ -849,7 +852,7 @@ local SPECIES = {
 				cooldownSeconds = 12, priority = P.normal, starvationSeconds = 45,
 				telegraphSeconds = 1.0, count = 4, launchIntervalSeconds = 0.15, spreadDeg = 18,
 				speedStuds = 26, turnRateDeg = 45, radiusStuds = 2.5, lifetimeSeconds = 5, heightMode = "air", launchHeightStuds = 10,
-				targetRule = "airbornePreferred",
+				targetRule = "airbornePreferred", leadSeconds = 0.6,
 				damage = { kind = "attack", multiplier = 1.2 }, damageLabel = "수정 파편",
 			},
 			-- BR1 새 ③ 분신 돌격: 분신 둘이 양옆에서 본체와 함께 돌진한다 - 대상 쪽 부채 3선(±25°) · 반폭 3.5 · 전조 2.2초(큰 모션).
@@ -1125,7 +1128,7 @@ local SPECIES = {
 				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 40,
 				telegraphSeconds = 1.3, count = 1,
 				speedStuds = 10, turnRateDeg = 30, radiusStuds = 5, lifetimeSeconds = 6, heightMode = "ground", groundHitHeightStuds = 14, pierce = true,
-				targetRule = "target",
+				targetRule = "target", leadSeconds = 0.8,
 				onHit = { { type = "launch", heightStuds = 6, distanceStuds = 0, holdSeconds = 1.5, spinRadiusStuds = 3, immuneSeconds = 2.5 } },
 				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "회오리 이동",
 			},
@@ -1146,7 +1149,7 @@ local SPECIES = {
 				conditions = { { type = "memberAirborne", seconds = 0.3 } },
 				telegraphSeconds = 1.0, count = 2, launchIntervalSeconds = 0.3,
 				speedStuds = 55, turnRateDeg = 0, radiusStuds = 2, lifetimeSeconds = 4, heightMode = "air", launchHeightStuds = 11,
-				targetRule = "airborne",
+				targetRule = "airborne", leadSeconds = 0.6,
 				damage = { kind = "attack", multiplier = 1.6 }, damageLabel = "뇌격 창",
 			},
 		},

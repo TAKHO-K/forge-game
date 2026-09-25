@@ -329,9 +329,14 @@ local function shockwave(data)
 		airLift = data.air.minStuds + 1.5
 	end
 	local segments = {}
+	local edges = {} -- 공중 파동의 흰 테두리(위 · 아래 선)
 	for i = 1, WAVE_SEGMENTS do
-		local part = newPart(Vector3.new(1, waveHeight, data.thickness), DANGER_COLOR, 0.25)
+		local part = newPart(Vector3.new(1, waveHeight, data.thickness), DANGER_COLOR, data.air and 0.6 or 0.25)
 		segments[i] = part
+		if data.air then
+			-- 사용자 결정(가): 공중 파동 = 머리 높이에 뜬 반투명 띠 + 흰 테두리 두 줄("서 있어라"). 땅 파동(바닥의 진한 빨강 벽)과 모양으로 구분한다. 판정은 그대로.
+			edges[i] = { newPart(Vector3.new(1, 0.35, data.thickness), IMPACT_COLOR, 0.1), newPart(Vector3.new(1, 0.35, data.thickness), IMPACT_COLOR, 0.1) }
+		end
 	end
 	local center = data.center + Vector3.new(0, waveHeight / 2 + airLift, 0)
 	-- P3d A3 땅 파도: 첫 겹에만 흙 마루(맵 바닥색을 밝게 - 솟았다 꺼지며 굴러간다)를 띠 안에 세운다. 마루 = 띠와 같은 자리 · 띠보다 낮고 좁다(빨강 띠가 겉을 감싸 전조가 가려지지 않는다).
@@ -354,6 +359,10 @@ local function shockwave(data)
 			for _, part in ipairs(segments) do
 				destroy(part)
 			end
+			for _, pair in pairs(edges) do
+				destroy(pair[1])
+				destroy(pair[2])
+			end
 			for _, part in ipairs(crest) do
 				BossFx.releasePart(part, "block")
 			end
@@ -368,6 +377,13 @@ local function shockwave(data)
 			local offset = Vector3.new(math.cos(angle), 0, math.sin(angle))
 			part.Size = Vector3.new(segmentLength, waveHeight, data.thickness)
 			part.CFrame = CFrame.new(center + offset * mid) * CFrame.Angles(0, -angle, 0)
+			local pair = edges[i]
+			if pair then
+				for k, edge in ipairs(pair) do
+					edge.Size = Vector3.new(segmentLength, 0.35, data.thickness)
+					edge.CFrame = CFrame.new(center + offset * mid + Vector3.new(0, (k == 1 and 1 or -1) * waveHeight / 2, 0)) * CFrame.Angles(0, -angle, 0)
+				end
+			end
 		end
 		if #crest > 0 then
 			local t = Workspace:GetServerTimeNow() - data.serverStart
@@ -684,6 +700,8 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossBR1View.projSpawn(data)
 	elseif kind == "projSync" then
 		BossBR1View.projSync(data)
+	elseif kind == "projBounce" then
+		BossBR1View.projBounce(data)
 	elseif kind == "projEnd" then
 		BossBR1View.projEnd(data)
 	elseif kind == "vortex" then

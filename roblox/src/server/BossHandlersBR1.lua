@@ -156,6 +156,22 @@ local function pickProjectileTargets(c, count)
 	return list
 end
 
+-- 예측 조준(사용자 - 이속이 높으니 유도 공격도 따라와야 한다): 대상의 지금 속도(루트 AssemblyLinearVelocity - 캐릭터 물리는 그 클라 소유라 서버로 복제된다)로
+-- "투사체가 닿을 즈음의 자리"를 겨눈다. 예측 시간 = 거리 ÷ 투사체 속도(상한 skill.leadSeconds). 지면 투사체는 수평 속도만. 스탠드인(속도 없음)은 지금 자리.
+local function predictedAim(skill, from, root, heightMode)
+	local at = root.Position
+	local velocity = typeof(root) == "Instance" and root.AssemblyLinearVelocity or nil
+	local lead = skill.leadSeconds or 0
+	if velocity and lead > 0 then
+		if heightMode == "ground" then
+			velocity = Vector3.new(velocity.X, 0, velocity.Z)
+		end
+		local t = math.min((at - from).Magnitude / math.max(skill.speedStuds, 1), lead)
+		at += velocity * t
+	end
+	return at
+end
+
 local nextProjectileId = 0
 
 local function launchProjectile(c, index)
@@ -167,7 +183,7 @@ local function launchProjectile(c, index)
 	local origin = kit.xz(c.position)
 	local y = skill.heightMode == "ground" and (st.floorY + skill.radiusStuds * 0.6) or (st.floorY + (skill.launchHeightStuds or 9))
 	local position = Vector3.new(origin.X, y, origin.Z)
-	local aim = target.root.Position
+	local aim = predictedAim(skill, position, target.root, skill.heightMode)
 	if skill.heightMode == "ground" then
 		aim = Vector3.new(aim.X, y, aim.Z)
 	end
@@ -182,6 +198,7 @@ local function launchProjectile(c, index)
 		id = nextProjectileId, position = position, dir = dir, speed = skill.speedStuds, turnRad = math.rad(skill.turnRateDeg or 0),
 		radius = skill.radiusStuds, expiresAt = c.now + (skill.lifetimeSeconds or 6), target = target.player,
 		heightMode = skill.heightMode or "air", pierce = skill.pierce == true, hitBy = {}, skill = skill, data = c.data, model = c.model,
+		bouncesLeft = skill.bounces or 0,
 	}
 	st.projectiles = st.projectiles or {}
 	table.insert(st.projectiles, projectile)
@@ -246,7 +263,7 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 				end
 			end
 			if target and p.turnRad > 0 then
-				local desired = target.root.Position - p.position
+				local desired = predictedAim(p.skill, p.position, target.root, p.heightMode) - p.position -- 예측 조준으로 돈다
 				if p.heightMode == "ground" then
 					desired = Vector3.new(desired.X, 0, desired.Z)
 				end
@@ -272,7 +289,45 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 			-- 아레나 밖으로 나가면 끝(벽에 부서진다).
 			local fromCenter = Vector3.new(p.position.X - zone.center.X, 0, p.position.Z - zone.center.Z).Magnitude
 			if zone.radius and fromCenter > zone.radius then
-				done = true
+				if p.bouncesLeft > 0 then
+					-- 벽 튕김(skill.bounces): 벽 안으로 되돌리고, bounceRetarget = "farthest"면 **튕기는 순간 가장 먼 사람의 (예측) 자리**를 기억해
+					-- 그쪽으로 곧게 간다(아니면 거울 반사). 튕길 때마다 이미 맞은 사람도 다시 맞을 수 있다.
+					p.bouncesLeft -= 1
+					local outward = Vector3.new(p.position.X - zone.center.X, 0, p.position.Z - zone.center.Z).Unit
+					p.position = Vector3.new(zone.center.X, p.position.Y, zone.center.Z) + outward * (zone.radius - p.radius - 0.5)
+					local newDir = nil
+					if p.skill.bounceRetarget == "farthest" then
+						local far, farDistance = nil, -1
+						for _, v in ipairs(targets) do
+							if not BossTrap.isTrapped(v.player) then
+								local d = Vector3.new(v.root.Position.X - p.position.X, 0, v.root.Position.Z - p.position.Z).Magnitude
+								if d > farDistance then
+									far, farDistance = v, d
+								end
+							end
+						end
+						if far then
+							local aim = predictedAim(p.skill, p.position, far.root, p.heightMode)
+							local flat = Vector3.new(aim.X - p.position.X, 0, aim.Z - p.position.Z)
+							if flat.Magnitude > 1e-3 then
+								newDir = flat.Unit
+								p.target = far.player
+								p.bounceAim = aim
+							end
+						end
+					end
+					if not newDir then
+						local d = Vector3.new(p.dir.X, 0, p.dir.Z)
+						newDir = (d - outward * (2 * d:Dot(outward))).Unit
+					end
+					p.dir = newDir
+					p.hitBy = {}
+					p.expiresAt = math.max(p.expiresAt, now + (p.skill.bounceLifetimeSeconds or 6))
+					kit.send(st, "projBounce", { id = p.id, position = p.position, dir = p.dir, aim = p.bounceAim })
+					kit.debugEvent("projectileBounce", { id = p.id, at = now, target = p.target, left = p.bouncesLeft })
+				else
+					done = true
+				end
 			end
 		end
 		if not done then

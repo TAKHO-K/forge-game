@@ -238,6 +238,20 @@ function BossBR1View.projSync(data)
 	end
 end
 
+-- 벽 튕김: 자리 · 방향을 서버 값으로 바로 맞추고 벽에 흰 충격 · 기억한 자리(가장 먼 사람)에 옅은 표적 원.
+function BossBR1View.projBounce(data)
+	local p = projectiles[data.id]
+	if p then
+		p.position, p.dir = data.position, data.dir
+	end
+	BossFx.ring(data.position, 1, 6, WHITE, 0.3)
+	BossFx.shake(data.position, 0.3)
+	if data.aim then
+		local mark = disc(Vector3.new(data.aim.X, data.position.Y - (p and p.radius * 0.6 or 3), data.aim.Z), p and p.radius or 5, DANGER, 0.6)
+		fadeOut(mark, 1.2)
+	end
+end
+
 function BossBR1View.projEnd(data)
 	local p = projectiles[data.id]
 	projectiles[data.id] = nil
