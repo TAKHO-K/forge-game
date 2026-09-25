@@ -313,8 +313,16 @@ function BR1Verify.runLive(player, env)
 				elseif p == "projectile" then
 					local spawns = countKind("projSpawn")
 					local ends = countKind("projEnd")
-					ok = spawns == (skill.count or 1) and ends == spawns
-					detail = ("투사체 %d발(기대 %d) · 끝 %d"):format(spawns, skill.count or 1, ends)
+					-- BR1-2: 인당 발사 - 기대 = 인당 개수 × 대상 수(projTelegraph의 대상 목록)
+					local targets = 0
+					for _, e in ipairs(sent) do
+						if e.kind == "projTelegraph" then
+							targets = #(e.payload.targetUserIds or {})
+						end
+					end
+					local expected = (skill.count or 1) * math.max(targets, 1)
+					ok = spawns == expected and ends == spawns
+					detail = ("투사체 %d발(기대 인당 %d × 대상 %d = %d) · 끝 %d"):format(spawns, skill.count or 1, targets, expected, ends)
 				elseif p == "vortex" then
 					ok = countKind("vortex") == 1 and countKind("vortexBurst") == 1
 					detail = ("소용돌이 %d · 폭발 %d"):format(countKind("vortex"), countKind("vortexBurst"))

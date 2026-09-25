@@ -2273,6 +2273,33 @@ local function handleCommand(player, args)
 	elseif sub == "bossintro" and args[2] == "reset" then
 		PlayerProfile.debugResetBossIntro(player) -- BR1-2: 첫 만남 카드를 다시 보게(세션 메모리 - 백업 복원 대상)
 		reply(player, "첫 만남 카드 기록을 비웠습니다")
+	elseif sub == "env" and args[2] == "start" then
+		-- BR1-2 스크린샷 · 수동 확인: 지금 보스의 환경 변화를 체력과 상관없이 바로 시작한다(다음 틱에 전조)
+		local model = BossEncounter.getActive(player)
+		local st = model and MonsterState.getBossPatternState(model)
+		if st then
+			st.env = { phase = "armed", phaseEndsAt = 0, taken = {} }
+			reply(player, "환경 변화 시작")
+		else
+			reply(player, "활성 보스가 없습니다")
+		end
+	elseif sub == "bubbletrap" then
+		-- BR1-2 스크린샷: 나를 공중 가둠에 넣는다(거품탄 두 번 맞은 것과 같은 경로)
+		local model = BossEncounter.getActive(player)
+		local st = model and MonsterState.getBossPatternState(model)
+		local data = model and MonsterState.getData(model)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local spec = data and ((data.skills.bubbles and data.skills.bubbles.trapOnHits) or (data.skills.tornado and data.skills.tornado.trapOnHits))
+		if st and root and spec then
+			local BossHandlersBR1 = require(script.Parent.BossHandlersBR1)
+			local c = { model = model, st = st, data = data, now = os.clock() }
+			for _ = 1, spec.hits do
+				BossHandlersBR1.noteTrapHit(c, { player = player, root = root }, spec)
+			end
+			reply(player, "공중 가둠")
+		else
+			reply(player, "가둠 스킬이 있는 보스(심해 · 폭풍)가 아닙니다")
+		end
 	elseif sub == "god" and (args[2] == "on" or args[2] == "off") then
 		-- BR1-2 스크린샷용: 받는 피해 ×0(출처 칸 devGod - 1시간). 연출 · 판정은 그대로 돈다.
 		if args[2] == "on" then

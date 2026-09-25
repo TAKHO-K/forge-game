@@ -439,8 +439,15 @@ function BR1_2Verify.runLive(player, env)
 		local lostTop = 1 - PlayerState.getHp(onTop) / PlayerState.getMaxHp(onTop)
 		local lostFloor = 1 - PlayerState.getHp(floorOne) / PlayerState.getMaxHp(floorOne)
 		local share = BossData.mechanics.party.failShareFraction
-		r.check(("색 맞추기: 같은 색 발판 %.0f%%(기대 공동 책임 %.0f - 한 명 실패) · 바닥 %.0f%%(기대 90)"):format(lostTop * 100, share * 100, lostFloor * 100),
-			math.abs(lostTop - share) < 0.02 and math.abs(lostFloor - 0.9) < 0.02)
+		local failed = 0
+		for _, e in ipairs(sent) do
+			if e.kind == "colorResolve" then
+				failed = #e.payload.failed -- 개발 캐릭터(멀리 바닥)도 멤버라 실패에 든다
+			end
+		end
+		local expectFloor = math.min(0.9 + share * (failed - 1), 1)
+		r.check(("색 맞추기: 실패 %d명 · 같은 색 발판 %.0f%%(기대 공동 책임 %.0f × %d) · 바닥 %.0f%%(기대 90 + 공동 책임 → %.0f)"):format(failed, lostTop * 100, share * 100, failed, lostFloor * 100, expectFloor * 100),
+			failed >= 1 and math.abs(lostTop - share * failed) < 0.02 and math.abs(lostFloor - expectFloor) < 0.02)
 	end)
 
 	-- 6) 공중 가둠: 거품탄 두 번 → 발 + 8 갇힘 · 점프 연타 10회 → 탈출
@@ -475,6 +482,7 @@ function BR1_2Verify.runLive(player, env)
 		old.version = 36
 		old.hints = { gemMerchantUsed = true }
 		local migrated = SaveSystem.migrate(old)
+		PlayerProfile.debugResetBossIntro(player) -- 앞 섹션의 보스전이 이미 본 것으로 적었다
 		local first = PlayerProfile.markBossIntroSeen(player, "frost_giant")
 		local second = PlayerProfile.markBossIntroSeen(player, "frost_giant")
 		PlayerProfile.debugResetBossIntro(player)
