@@ -2020,7 +2020,13 @@ function kit.bossAirborne(model, st, data, now, projectile)
 	local cfg = BossData.mechanics.bossAirborne
 	local hp, maxHp = MonsterState.getBossHp(model)
 	if maxHp then
-		MonsterState.applyDamage(model, maxHp * cfg.damageMaxHpFraction, data.stageNumber, projectile.owner and projectile.owner.player or nil)
+		local owner = projectile.owner and projectile.owner.player or nil
+		local isDead = MonsterState.applyDamage(model, maxHp * cfg.damageMaxHpFraction, data.stageNumber, owner)
+		MonsterSpawner.updateHpLabel(model) -- 화면 체력바(BossHpRatio) - 평타 경로(AttackServer)와 같다
+		if isDead and typeof(owner) == "Instance" then
+			require(script.Parent.CombatResolution).resolveHit(owner, model, true) -- 막타면 보통 처치 경로(지연 require - BossEncounter 순환 회피)
+			return true
+		end
 	end
 	send(st, "projEnd", { id = projectile.id, position = projectile.position })
 	if st.lastAirborneAt and now - st.lastAirborneAt < cfg.cooldownSeconds then
@@ -2286,7 +2292,8 @@ end
 -- 가라앉은 루트 좌표로 대상과의 높이차를 재면 점프한 대상을 "다른 층"으로 보고 추격을 포기(= 스킬 중단)한다.
 function BossPatterns.getLogicalPosition(model)
 	local st = MonsterState.getBossPatternState(model)
-	return st and st.burrowLogical or nil
+	-- BR1-2 보스 에어본: 떠 있는 동안(최고 10 stud)도 지면 자리로 판단한다 - 안 그러면 높이차 출구(상한 8)가 추격을 끊어 step이 멈추고 공중에 걸린다
+	return st and (st.burrowLogical or (st.airborne and st.airborne.base)) or nil
 end
 
 function BossPatterns.getPhase(model)
