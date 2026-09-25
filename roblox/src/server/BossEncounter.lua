@@ -342,7 +342,7 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	if not encounter.isTutorial then
 		for _, member in ipairs(members) do
 			if typeof(member) == "Instance" and PlayerProfile.markBossIntroSeen(member, data.id) then
-				bossIntroEvent:FireClient(member, data.id)
+				bossIntroEvent:FireClient(member, data.id, #members) -- BR1-2: 인원(카드 문구의 {N} - 번개 조준경 필요 피뢰침 수)
 			end
 		end
 	end

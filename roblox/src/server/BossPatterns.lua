@@ -2016,6 +2016,7 @@ BossHandlersBR1.register(HANDLERS, kit)
 BossAirGrab.register(HANDLERS, kit)
 require(script.Parent.BossSonic).register(HANDLERS, kit) -- BR1-2 음파 포효(primitive sonic)
 require(script.Parent.BossColorMatch).register(HANDLERS, kit) -- BR1-2 색 맞추기(primitive colorMatch)
+require(script.Parent.BossLightningRods).register(HANDLERS, kit) -- BR1-2 번개 조준경(primitive lightningRods)
 BossEnvironment.register(kit)
 
 -- ─────────────────────────── 틱 ───────────────────────────
@@ -2079,6 +2080,9 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 		clearDaze(model, st)
 	end
 
+	if st.phase == "normal" and BossEnvironment.isCourseActive(model) then
+		return true -- BR1-2 수정 부수기: 패턴 없음(사용자) - 보호막 속에서 멈춰 선다
+	end
 	if st.phase == "normal" then
 		local pickCtx = st.pickCtx
 		pickCtx.now = now

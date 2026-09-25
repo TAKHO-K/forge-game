@@ -196,6 +196,8 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 		return skill.telegraphSeconds + skill.stanceSeconds -- BR1-2 반사: 결계 전조 + 반사 동안(되돌린 투사체는 스킬과 떨어져 난다)
 	elseif primitive == "colorMatch" then
 		return skill.telegraphSeconds + (skill.recoverSeconds or 1) -- BR1-2 색 맞추기
+	elseif primitive == "lightningRods" then
+		return skill.telegraphSeconds + skill.discharges * (skill.markSeconds + skill.trackSeconds + skill.lockSeconds + skill.gapSeconds) -- BR1-2 번개 조준경(상한)
 	elseif primitive == "sonic" then
 		return skill.telegraphSeconds + skill.tickSeconds * (skill.ticks - 1) + (skill.recoverSeconds or 0.5) -- BR1-2 음파 포효
 	end
@@ -323,6 +325,10 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		else
 			table.insert(checks, { label = "궤도 바꾸기(인지)", availableSeconds = arrival, requiredSeconds = dodge.perceptionSeconds, distanceStuds = 0, ok = arrival >= dodge.perceptionSeconds })
 		end
+	elseif primitive == "lightningRods" then
+		-- BR1-2 번개 조준경: 표적이 된 뒤 조준경이 멈추기까지(mark + track) 가장 가까운 피뢰침으로 유인 · 멈춘 뒤(lock) 낙뢰 원 밖으로
+		walk("피뢰침으로 유인", skill.markSeconds + skill.trackSeconds, skill.dodge.distanceStuds)
+		walk("멈춘 낙뢰 밖으로", skill.lockSeconds, skill.strike.radiusStuds + half)
 	elseif primitive == "colorMatch" then
 		-- BR1-2 색 맞추기: 가장 먼 자리에서 가장 가까운 단 + 색이 틀리면 한 번 내려갔다 다시 올라서기(점프 1회 = 체공 × 여유)
 		walk("같은 색 발판까지", skill.telegraphSeconds - dodge.jumpAirSeconds * dodge.marginFactor, skill.dodge.distanceStuds)
@@ -441,8 +447,8 @@ function BossSkillMath.damageShares(skill, surviveTargetHits)
 	elseif primitive == "projectile" then
 		hits = skill.count or 1
 	end
-	if primitive == "colorMatch" then
-		return skill.failMaxHpFraction, skill.failMaxHpFraction -- BR1-2 색 맞추기 실패(보호막 무시 90%)
+	if primitive == "colorMatch" or primitive == "lightningRods" then
+		return skill.failMaxHpFraction, skill.failMaxHpFraction -- BR1-2 색 맞추기 · 번개 조준경 실패(보호막 무시 90%)
 	end
 	if primitive == "sonic" then
 		return skill.tickFraction, skill.tickFraction * skill.ticks -- BR1-2 음파: 한 틱 · 전부(보호막 무시 - 발동당 상한 대신 틱 합 90%)
@@ -562,7 +568,7 @@ function BossSkillMath.perPersonCount(baseCount, row)
 	return math.clamp(scaled, 1, BossCurveData.perPersonMax)
 end
 
-local TELEGRAPH_FIT_SKIP = { gimmick = true, ring = true, grab = true, reflect = true, sonic = true, colorMatch = true }
+local TELEGRAPH_FIT_SKIP = { gimmick = true, ring = true, grab = true, reflect = true, sonic = true, colorMatch = true, lightningRods = true }
 
 -- 넓어진 범위에서 회피 부등식이 깨지면 모자란 만큼 **모든 전조 칸에** 더한다(큰 범위 = 긴 전조 - 무게 원칙). 사본을 고친다.
 function BossSkillMath.fitTelegraphs(skill, standoffStuds, walkSpeedStuds)

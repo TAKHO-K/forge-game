@@ -165,6 +165,11 @@ function BossEnvironment.onGardenPlatform(model, position)
 	return false
 end
 
+-- 사용자(BR1-2 후속): 수정 부수기 동안 보스는 패턴을 쓰지 않는다(BossPatterns.step이 묻는다 - 보호막 속에서 멈춰 선다 · 평타도 없다).
+function BossEnvironment.isCourseActive(model)
+	return courses[model] == true
+end
+
 local function clearCourse(model)
 	if courses[model] then
 		courses[model] = nil

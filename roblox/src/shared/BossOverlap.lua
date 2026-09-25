@@ -198,6 +198,10 @@ local function patternShape(skill, boss, player, zoneRadius)
 		return nil, skill.telegraphSeconds, false, "land"
 	elseif primitive == "gimmick" then
 		return nil, skill.telegraphSeconds, false, "gimmick"
+	elseif primitive == "lightningRods" or primitive == "colorMatch" or primitive == "sonic" then
+		-- BR1-2 전멸기: 안전 자리(피뢰침 · 같은 색 발판 · 엄폐물)까지 걷기 - 쓸 수 있는 시간 = 번개 조준경은 표적 뒤 조준경이 멈추기까지
+		local available = primitive == "lightningRods" and (skill.markSeconds + skill.trackSeconds) or skill.telegraphSeconds
+		return nil, available, false, "gimmick"
 	end
 	return nil, skill.telegraphSeconds, false, "jump"
 end

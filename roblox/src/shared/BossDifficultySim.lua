@@ -49,6 +49,12 @@ local function judgmentsOf(skill, surviveHits)
 	local p = skill.primitive
 	if p == "gimmick" or p == "colorMatch" then
 		table.insert(list, { at = skill.telegraphSeconds, gimmick = true, slack = minSlack, fraction = p == "colorMatch" and skill.failMaxHpFraction or nil, color = p == "colorMatch" })
+	elseif p == "lightningRods" then
+		local total = skill.telegraphSeconds + skill.discharges * (skill.markSeconds + skill.trackSeconds + skill.lockSeconds + skill.gapSeconds)
+		table.insert(list, { at = total, gimmick = true, slack = minSlack, fraction = skill.failMaxHpFraction })
+		for i = 1, skill.discharges do
+			table.insert(list, { at = skill.telegraphSeconds + i * (skill.markSeconds + skill.trackSeconds + skill.lockSeconds), share = skill.strike.multiplier / surviveHits, class = "small", slack = minSlack, ground = true, follow = true })
+		end
 	elseif p == "sonic" then
 		table.insert(list, { at = skill.telegraphSeconds + skill.tickSeconds * skill.ticks, gimmick = true, sonic = true, slack = minSlack })
 	elseif p == "reflect" then
@@ -248,7 +254,7 @@ function BossDifficultySim.run(bossId, options)
 				end
 			end
 		end
-		if not current then
+		if not current and t >= shieldUntil then -- 수정 부수기 동안 보스는 패턴을 쓰지 않는다(사용자)
 			ctx.now = t
 			ctx.enraged = hp / maxHp <= config.enragedHpFraction
 			local pick = BossScheduler.pick(state, skills, order, config, ctx)
@@ -423,8 +429,8 @@ function BossDifficultySim.run(bossId, options)
 				m.airSince, m.airUntil = t, t + air
 			end
 		end
-		-- 평타(스킬 사이): 근접 원형 구역 보스는 원 밖 전원을 쓴다 · 아니면 한 명
-		if not current then
+		-- 평타(스킬 사이): 근접 원형 구역 보스는 원 밖 전원을 쓴다 · 아니면 한 명(수정 부수기 동안은 없다)
+		if not current and t >= shieldUntil then
 			basicTimer += tick
 			if basicTimer >= boss.basicAttack.cooldownSeconds then
 				basicTimer = 0

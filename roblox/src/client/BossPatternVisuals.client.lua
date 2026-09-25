@@ -43,6 +43,7 @@ local BossGrabView = require(script.Parent.BossGrabView)
 local BossSonicView = require(script.Parent.BossSonicView) -- BR1-2 음파 포효
 local BossColorView = require(script.Parent.BossColorView) -- BR1-2 색 맞추기
 local BossInnerCircleView = require(script.Parent.BossInnerCircleView) -- BR1-2 근접 원형 구역 · 낫 휘두르기 평타
+local BossRodsView = require(script.Parent.BossRodsView) -- BR1-2 번개 조준경
 local BossEnvironmentView = require(script.Parent.BossEnvironmentView)
 
 local patternEvent = ReplicatedStorage:WaitForChild("BossPatternEvent")
@@ -757,6 +758,22 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossColorView.finish()
 	elseif kind == "basicSweep" then
 		BossInnerCircleView.sweep(data)
+	elseif kind == "rodsStart" then
+		BossRodsView.start(data)
+	elseif kind == "rodsStatus" then
+		BossRodsView.status(data)
+	elseif kind == "rodsTarget" then
+		BossRodsView.target(data)
+	elseif kind == "rodsLock" then
+		BossRodsView.lock(data)
+	elseif kind == "rodsStrike" then
+		BossRodsView.strike(data)
+	elseif kind == "rodsAmbient" then
+		BossRodsView.ambient(data)
+	elseif kind == "rodsAmbientHit" then
+		BossRodsView.ambientHit(data)
+	elseif kind == "rodsEnd" then
+		BossRodsView.clear()
 	elseif kind == "grabEnd" or kind == "grabMiss" then
 		BossGrabView.clear()
 	elseif kind == "envTelegraph" then
@@ -787,6 +804,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossGrabView.reset()
 		BossSonicView.reset()
 		BossColorView.finish()
+		BossRodsView.clear()
 		-- 환경 그림은 여기서 안 지운다(리뷰 4 - 스킬 중단 · 대상 이탈의 "reset"에도 서버 환경은 계속 돈다): envEnd · propsClear에서
 	end
 end)

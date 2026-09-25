@@ -145,7 +145,7 @@ local MECHANICS = {
 	--   globalCooldownScale[N]: 전역 쿨 × (인원이 많을수록 보스가 바쁘다 - 패턴 수 = 기믹 요구 증가). 투사체는 곡선의 인당 개수(§1)라 따로 늘리지 않는다.
 	--   failShareFraction: 공동 책임 - 전멸기(기믹 판정 · 색 맞추기)를 누가 실패하면 나머지 멤버도 실패한 인원 × 이 값(최대 체력 · 보호막 무시). 파티는 서로의 실수를 같이 진다.
 	--   값 = 난이도 모형 격자(BR1-2 보고서 ④): 2인 · 4인 첫 도전 전멸 30%대 · 처치 시간 솔로 > 2인 · 4인.
-	party = { hpExponent = 0.9, globalCooldownScale = { 1, 0.8, 0.7, 0.6 }, failShareFraction = 0.35 },
+	party = { hpExponent = 0.93, globalCooldownScale = { 1, 0.7, 0.6, 0.5 }, failShareFraction = 0.45 },
 
 	-- BR1 핵심 기믹 실패(설계 §3): 55% → 85% · 쉴드 무시. 기믹 판정 실패(resolveGimmick)에만 쓴다 - 다른 %최대체력 피해(돌진 · 구덩이 · 반사 · 분신)는
 	-- 옛 발동당 상한(gimmickFailMaxHpFraction 55%)에 그대로 묶인다. 85%는 "실패 + 강한 공격 한 번 = 죽음"이면서 단독으로는 죽지 않는 값(즉사는 K 단계).
@@ -272,7 +272,7 @@ local MECHANICS = {
 			courseSeconds = { solo = 45, party = 28, jitter = 0.3 },
 			colorPartyPenalty = 0.1,
 			courseGroundHitScale = 0.4,
-			partyFailShare = 0.35, -- = mechanics.party.failShareFraction(모형이 같은 값을 쓴다 - 아래 루프가 맞춘다) -- 수정 부수기 동안 점프맵 위 사람이 바닥 판정 · 평타를 맞는 몫(높이 올라가 있다)
+			partyFailShare = 0.45, -- = mechanics.party.failShareFraction(모형이 같은 값을 쓴다 - 아래 루프가 맞춘다) -- 수정 부수기 동안 점프맵 위 사람이 바닥 판정 · 평타를 맞는 몫(높이 올라가 있다)
 		},
 	},
 }
@@ -544,19 +544,20 @@ local function abyssalKitParts(baseColor, topColor)
 	return parts
 end
 
--- 폭풍 군주의 아레나 kit(29-4) - 피뢰침 2개 × 2파트 = 4파트. 중심에서 X ±8(간격 16): 낙뢰의 원(반경 6, 충전 판정은 + 1)
--- 하나가 두 피뢰침을 한꺼번에 덮지 못하고(16 > 2 × 7.9 - 최대 범위 배율에서도), 솔로가 첫 낙뢰를 A 곁에서 받고 둘째 낙뢰의
--- 예고(1.5초) 안에 B의 충전 거리(7) 안으로 걸어 들어갈 수 있는(16 − 7 = 9stud → 1.20초) 간격이다. 28-2의 24stud는 인지
--- 0.5초·여유 ×1.25를 넣으면 1.83초가 필요해 성립하지 않았다(PRD 20.79). 기둥만 충돌한다(1 × 1 - 회피 동선을 안 막는다).
+-- BR1-2 폭풍 군주 피뢰침(사용자 - 전멸기 "번개 조준경"): 부서지지 않는 피뢰침 5개 · 아레나 중심에서 반경 55 고리(방위 18 + 72k - 입장 방위 90과 겹치지 않는다).
+-- 기둥만 충돌(1 × 1 - 동선을 안 막는다) · 킷이라 구조물 무작위 배치 · 재생성이 자리를 피한다(ArenaLayout kitGap) · 대공 잡기는 보스 곁이라 겹치지 않는다.
+local STORM_RODS = { count = 5, ringRadiusStuds = 55, offsetDeg = 18 }
 local function stormKitParts(baseColor, rodColor)
 	local parts = {}
-	for _, x in ipairs({ -8, 8 }) do
+	for k = 0, STORM_RODS.count - 1 do
+		local a = math.rad(STORM_RODS.offsetDeg + 360 * k / STORM_RODS.count)
+		local x, z = math.cos(a) * STORM_RODS.ringRadiusStuds, math.sin(a) * STORM_RODS.ringRadiusStuds
 		table.insert(parts, {
-			name = "LightningRodBase", size = Vector3.new(3, 0.6, 3), offset = Vector3.new(x, 0.3, 0), color = baseColor, collide = false,
+			name = "LightningRodBase", size = Vector3.new(3, 0.6, 3), offset = Vector3.new(x, 0.3, z), color = baseColor, collide = false,
 		})
 		table.insert(parts, {
-			name = "LightningRod", size = Vector3.new(1, 12, 1), offset = Vector3.new(x, 6, 0), color = rodColor, material = Enum.Material.Metal,
-			tag = "rod", radiusStuds = 5, -- radiusStuds = 과충전 방전 때 이 피뢰침 곁의 안전 반경(BR1: 6 → 5)
+			name = "LightningRod", size = Vector3.new(1, 12, 1), offset = Vector3.new(x, 6, z), color = rodColor, material = Enum.Material.Metal,
+			tag = "rod", radiusStuds = 5,
 		})
 	end
 	return parts
@@ -1094,7 +1095,7 @@ local SPECIES = {
 	},
 	{
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
-		intro = { title = "과충전", line = "낙뢰로 피뢰침 둘을 함께 채워라 - 못 채우면 피뢰침 곁으로", icon = "ϟ", diagram = "rod" },
+		intro = { title = "번개 조준경", line = "번개 조준경을 피뢰침으로 유인하세요! 피뢰침 {N}개를 충전하면 폭풍을 막습니다.", icon = "ϟ", diagram = "rod", countKey = "rods" },
 		id = "storm_lord", displayName = "폭풍 군주", bodyColor = stormBody, headColor = stormHead,
 		-- 가장 바쁜 보스: 전역 쿨 5초에 쿨이 짧은 스킬들. 평타도 잦고 가볍다.
 		sizeScale = 3, bodyAspect = Vector3.new(0.9, 1.2, 0.9),
@@ -1105,7 +1106,7 @@ local SPECIES = {
 		moveSpeedStuds = 9, chaseStopDistanceStuds = 8,
 		innerSafeRadiusStuds = INNER_CIRCLE.radiusStuds, basicAttack = { cooldownSeconds = 0.75, damageMultiplier = 0.2625 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×0.75 → ×0.2625(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6), -- BR1-2: 5 → 6(난이도 모형 - 가장 바쁜 두 보스의 솔로 전멸 64 · 61%)
-		skillOrder = { "discharge", "whirl", "strike", "overcharge", "swipe", "grab", "tornado", "thunderRing", "boltSpear", "mirror", "innerSmash" },
+		skillOrder = { "discharge", "whirl", "strike", "rods", "swipe", "grab", "tornado", "thunderRing", "boltSpear", "mirror", "innerSmash" },
 		-- BR1 환경 변화 "돌풍"(체력 50%부터): 지팡이를 수평으로 - 바람 줄기가 한 방향으로(3초) → 12초 동안 바람이 초당 7로 민다(클라 - 걷기 16보다 약하다:
 		-- 거슬러 9/초 · 떠 있으면 ×1.5) · 4초마다 90° 돈다 · 바람이 불어 가는 반원의 가장자리(반경 110 밖)가 전기 벽(0.5초마다 6%).
 		environment = {
@@ -1160,8 +1161,7 @@ local SPECIES = {
 				telegraphSeconds = 1.5, count = 2, sequential = true, repeatTelegraphSeconds = 1.5, radiusStuds = 6, scatterStuds = 0, -- BR1-2: 3 → 2(난이도 모형 - 폭풍 원거리 전멸 66% · 대신 곡선 ③ ④에서 장판이 넓어진다)
 				perMember = true,
 				damage = { kind = "attack", multiplier = 1.6 }, damageLabel = "낙뢰", -- BR1-2: ×2 → ×1.6(난이도 모형 - 폭풍 군주 원거리 전멸 66%의 가장 큰 스킬)
-				onImpact = { { type = "chargeZone", tag = "rod", seconds = 12, reachStuds = 1 } },
-				route = { distanceStuds = 9 }, -- 회피 부등식의 "피뢰침 사이": 간격 16 − 충전 거리 7(BossGimmick4Verify가 kit에서 다시 잰다)
+				-- BR1-2: 장막 게이트 · 피뢰침 충전 · 유인 경로(route)를 뺐다 - 피뢰침은 새 전멸기 "번개 조준경"(rods)이 쓴다. 낙뢰는 일반 번개.
 				-- 29-3: 하늘에서 꽂히는 번개로 그리고(impactStyle), 맞은 사람은 팝콘처럼 판정 중심 반대쪽으로 튕겨 난다 - 높이 5
 				-- (판정의 높이차 상한 8·아레나 벽 12보다 낮다 - 보스가 대상을 놓치지 않고 맵 밖으로도 못 나간다), 거리 8, 체공 ≈ 0.45초.
 				-- 둘째 낙뢰는 첫 낙뢰가 떨어진 순간의 자리에 예고되므로, 튕겨 난 사람은 이미 그 원(r6) 밖이다.
@@ -1174,26 +1174,24 @@ local SPECIES = {
 				-- (회피 부등식 "추적 뒤 고정" - 1.1은 배율 1에서만 성립했다, 하네스 29-4(가)). 안 맞은 사람의 원은 옛 규칙(첫 낙뢰가 떨어진 순간의 자리 · 피뢰침 유인 경로)
 				-- 그대로다 - 그 회차 전체는 추적 + 고정 1.75초에 같이 떨어진다.
 				trackAfterHit = { trackSeconds = 0.55, lockTelegraphSeconds = 1.2 },
-				gate = { zoneTag = "rod", breakWindow = { seconds = 10, damageTakenMultiplier = 1.15 } }, -- 28-2의 ×1.3은 새 쿨 분포에서 −11.6%로 범위 밖(×1.15 = −6.5%)
 				sim = { evadeSeconds = 2.5 },
 			},
-			-- 과충전 방전(기믹, 29-4). 장막이 30초 이어지면 전역 55% + 감전 - **피뢰침 곁(반경 6)만 안전하다**(충전 여부와 무관).
-			--   · 28-2는 "충전된 피뢰침 곁"이었다. 그러면 피뢰침을 한 번도 못 채운 사람(= 과충전을 보게 되는 바로 그 사람)에게는
-			--     안전지대가 아예 없다 - 서리 거인의 "기둥 0개 포효"와 같은 파훼 불가 패턴이다. 피뢰침은 정적 kit이라 늘 있다.
-			--   · 장막(기믹)과의 연결: 과충전의 전조는 바닥 전체가 빨강이고 **두 피뢰침 둘레만 비어 있다** - 기믹을 못 푼 사람에게
-			--     "답은 피뢰침이다"를 그림으로 알려 주는 스킬이다. 살아남은 사람은 피뢰침 곁에 서 있고, 다음 낙뢰가 거기 떨어진다.
-			--   · 발동 조건: 장막 30초 + 살아 있는(안 잡힌) 전원이 피뢰침에서 nearStuds(30) 안 - 예고 3초에 닿을 수 없는 사람이
-			--     있으면 쏘지 않는다(피할 수 없는 과충전은 없다). 멀리 떨어져 싸우면 과충전은 안 오지만 장막도 영영 못 걷는다.
-			--   · 게이트를 바꾸지 않는다(judgesGate = false) - 장막을 걷는 것은 낙뢰뿐이다.
-			overcharge = {
-				primitive = "gimmick", bubble = "overcharge", role = "gimmick", kind = "nearZone",
-				cooldownSeconds = 30, priority = P.gimmick,
-				-- BR1 기믹 개편(어렵게): 장막 30 → 25초 · 안전 반경 6 → 5(피뢰침 kit의 radiusStuds) · 회피 거리 30 − 5 + 1 = 26 → 2.53초 ≤ 3.0.
-				conditions = { { type = "gateArmedFor", seconds = 25 }, { type = "membersNearZone", tag = "rod", studs = 30 } },
-				telegraphSeconds = 3.0, recoverSeconds = 0,
-				safeCircles = { tag = "rod" }, judgesGate = false,
-				dodge = { distanceStuds = 26 }, -- 30 − 안전 반경 5 + 몸통 1
-				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction }, damageLabel = "과충전 방전",
+			-- BR1-2 전멸기 "번개 조준경"(사용자 - 과충전 · 장막을 대신한다 · primitive lightningRods = server/BossLightningRods):
+			--   방전 번개 discharges(7)번: 표적 한 명(번갈아 - 파티면 돌아가며 · 머리 위 표시) → 조준경이 trackSeconds 동안 그 사람의 발밑을 스나이퍼처럼 따라가다 멈춘다 →
+			--   lockSeconds 뒤 멈춘 자리에 낙뢰(반경 strike.radiusStuds · ×strike.multiplier - 맞은 사람은 피해). 멈춘 자리가 피뢰침에서 rodReachStuds(넉넉하게) 안이면 그 피뢰침이 충전(빛남) -
+			--   이미 빛나는 피뢰침은 다시 세지 않는다 · 아예 벗어나면 인정 없음. 그동안 일반 번개(ambient)도 계속 떨어진다.
+			--   파훼 = 7번 안에 requiredBase + requiredPerExtra × (인원 − 1)개(솔로 2 · 2인 3 · 3인 4 · 4인 5 - 피뢰침 5개가 상한). 모자라면 실패 = 최대 체력 90% · 보호막 무시(진짜 즉사는 K).
+			--   회피(유인): 표시 뒤 조준경이 멈추기까지(mark + track 3.5초) 가장 가까운 피뢰침까지 30 → 0.5 + 30 ÷ 16 × 1.25 = 2.84초.
+			rods = {
+				primitive = "lightningRods", bubble = "overcharge", role = "gimmick",
+				cooldownSeconds = 40, firstAvailableSeconds = 20, reserveFirstUse = true, priority = P.gimmick,
+				telegraphSeconds = 1.0, discharges = 7, markSeconds = 1.0, trackSeconds = 2.5, lockSeconds = 1.2, gapSeconds = 0.4,
+				strike = { radiusStuds = 6, multiplier = 2.0 }, rodReachStuds = 5, rodTag = "rod",
+				requiredBase = 2, requiredPerExtra = 1,
+				ambient = { everySeconds = 2.2, radiusStuds = 5, telegraphSeconds = 1.3, multiplier = 1.4 },
+				failMaxHpFraction = 0.9, stunSeconds = 4,
+				dodge = { distanceStuds = 30 },
+				damage = { kind = "maxHp", fraction = 0.9 }, damageLabel = "폭풍",
 				sim = { evadeSeconds = 2.0 },
 			},
 			swipe = enhancedBasic("지팡이 휘두르기", "staff"), -- BR1 강화 평타
