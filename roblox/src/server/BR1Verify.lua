@@ -368,7 +368,7 @@ function BR1Verify.runLive(player, env)
 				if not late.debugAirborne and os.clock() - forcedAt >= telegraph - 0.4 then
 					late.debugAirborne = true
 				end
-				return countKind("grabbed") > 0 or countKind("grabMiss") > 0
+				return countKind("grabFreeze") > 0 or countKind("grabMiss") > 0 -- 사슬: 얼림 → 가까운 사람부터 잡기(grabPick)
 			end)
 			local airGrabbed = BossTrap.getRecord(air)
 			local hpBefore = PlayerState.getHp(air)

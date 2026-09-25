@@ -16,6 +16,7 @@ local PlayerDamage = require(script.Parent.PlayerDamage)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossArenaContainment = require(script.Parent.BossArenaContainment)
+local HeightGuard = require(script.Parent.HeightGuard)
 
 local BossAirGrab = {}
 
@@ -103,6 +104,78 @@ local function beginStun(c)
 	print(("[forge-game] 대공 잡기 해제 → 보스 기절 %.1f초"):format(CONFIG.stunSeconds))
 end
 
+-- 사슬(사용자 보완 A): 판정 순간 공중의 대상 전원을 **그 자리에 얼리고**(잡힘 종류 airFrozen - 이동 · 점프 · 대시 불가 · 얼음 표시), 보스가 **가장 가까운 사람부터**
+-- 한 명씩 잡는다(잡는 순간 거리로 다시 고른다) → 들어 올림(liftSeconds) → 들고 있기(perHold) → 던짐 + 현재 체력 50% → 다음. 사슬 전체 ≤ chainCapSeconds -
+-- 1인당 들고 있기 = clamp(chainCap ÷ 인원 − lift, minHold, holdSeconds). 사슬 동안 보스는 새 패턴을 고르지 않는다(스킬 진행 중) · 환경 변화는 따로 돈다.
+-- 구출(잡힌 손 3타 · F 홀드) · 도발 → 잡힌 사람 풀림 + 남은 얼음 전원 해제 + 보스 기절. 얼음 · 잡힘은 루트 고정(서버 높이 검증은 고정된 루트를 건너뛴다) + 예외도 건다.
+local function perHoldSeconds(count)
+	-- handoffSeconds = 다음 사람을 고르는 한 틱 몫(하네스 실측 - 4명에서 틱 지연이 쌓여 상한을 넘었다)
+	return math.clamp(CONFIG.chainCapSeconds / math.max(count, 1) - CONFIG.liftSeconds - CONFIG.handoffSeconds, CONFIG.minHoldSeconds, CONFIG.holdSeconds)
+end
+
+local function nearestFrozen(c)
+	local best, bestDistance = nil, math.huge
+	for player in pairs(c.st.grabFrozen or {}) do
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root and BossTrap.getRecord(player) and BossTrap.getRecord(player).kind == "airFrozen" then
+			local d = (kit.xz(root.Position) - kit.xz(c.position)).Magnitude
+			if d < bestDistance then
+				best, bestDistance = { player = player, root = root }, d
+			end
+		else
+			c.st.grabFrozen[player] = nil
+		end
+	end
+	return best
+end
+
+local function grabNext(c)
+	local st, skill = c.st, c.skill
+	local v = nearestFrozen(c)
+	if not v then
+		return false
+	end
+	st.grabFrozen[v.player] = nil
+	local from = v.root.Position
+	BossTrap.release(v.player, "chain") -- 얼음 → 손(유예 없음 - 바로 다음 잡힘)
+	local point = holdPointFor(c, v, 1, 1)
+	local hold = CONFIG.liftSeconds + st.grabPerHold
+	local trapped = BossTrap.trap(v.player, {
+		kind = skill.trap.kind, rescueType = skill.trap.rescueType, autoReleaseSeconds = hold,
+		context = { origin = point, zoneKey = MonsterState.getZoneKey(c.model), bossModel = c.model, grab = true, color = c.data.headColor },
+		onAutoRelease = function(player) -- 다 버텼다 = 던진다: 피해는 아직 잡힌 채로(풀린 뒤에는 해제 유예 무적이 막는다)
+			PlayerDamage.applyCurrentHpFraction(player, CONFIG.currentHpFraction, skill.damageLabel)
+			BossTrap.noteSkillHit(player)
+		end,
+	})
+	if not trapped then
+		return true
+	end
+	local held = grabsByModel[c.model] or {}
+	grabsByModel[c.model] = held
+	held[v.player] = true
+	HeightGuard.exempt(v.player, hold + 1)
+	if typeof(v.root) == "Instance" then
+		v.root.CFrame = CFrame.new(point) * v.root.CFrame.Rotation
+	else
+		v.root.Position = point
+	end
+	st.grabCurrent = v.player
+	kit.send(st, "grabPick", {
+		userId = realPlayer(v.player) and v.player.UserId or nil, from = from, point = point, liftSeconds = CONFIG.liftSeconds, holdSeconds = st.grabPerHold,
+		bossId = c.data.id, motion = skill.motion, color = c.data.headColor, bossPosition = Vector3.new(c.position.X, st.floorY, c.position.Z),
+	})
+	kit.debugEvent("grabPick", { player = v.player, at = c.now })
+	return true
+end
+
+local function releaseFrozen(c, reason)
+	for player in pairs(c.st.grabFrozen or {}) do
+		BossTrap.release(player, reason)
+	end
+	c.st.grabFrozen = {}
+end
+
 BossAirGrab.handler = {
 	bubbleSeconds = function(c)
 		return c.skill.telegraphSeconds
@@ -113,6 +186,8 @@ BossAirGrab.handler = {
 		st.phaseEndsAt = c.now + skill.telegraphSeconds
 		st.grabMarks = {}
 		st.grabRescued = false
+		st.grabFrozen = {}
+		st.grabCurrent = nil
 		kit.send(st, "grabTelegraph", {
 			center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.telegraphSeconds,
 			bossId = c.data.id, motion = skill.motion, color = c.data.headColor,
@@ -139,42 +214,47 @@ BossAirGrab.handler = {
 				kit.endSkill(c.model, st, c.data, c.now)
 				return
 			end
-			local held = {}
-			grabsByModel[c.model] = held
-			local userIds, points = {}, {}
-			for index, v in ipairs(caught) do
-				local point = holdPointFor(c, v, index, #caught)
-				local trapped = BossTrap.trap(v.player, {
-					kind = skill.trap.kind, rescueType = skill.trap.rescueType, autoReleaseSeconds = CONFIG.holdSeconds,
-					context = { origin = point, zoneKey = MonsterState.getZoneKey(c.model), bossModel = c.model, grab = true, color = c.data.headColor },
-					onAutoRelease = function(player) -- 다 버텼다 = 던진다: 피해는 아직 잡힌 채로(풀린 뒤에는 해제 유예 무적이 막는다)
-						PlayerDamage.applyCurrentHpFraction(player, CONFIG.currentHpFraction, skill.damageLabel)
-						BossTrap.noteSkillHit(player)
-					end,
-				})
-				if trapped then
-					held[v.player] = true
-					if typeof(v.root) == "Instance" then
-						v.root.CFrame = CFrame.new(point) * v.root.CFrame.Rotation
-					else
-						v.root.Position = point
-					end
+			-- 얼린다(그 자리에 고정 - 구출 프롬프트 없음: 풀리는 길은 잡힌 사람의 구출 · 도발 · 사슬 차례뿐)
+			st.grabPerHold = perHoldSeconds(#caught)
+			local chainSeconds = #caught * (CONFIG.liftSeconds + st.grabPerHold)
+			local userIds, positions = {}, {}
+			for _, v in ipairs(caught) do
+				if BossTrap.trap(v.player, {
+					kind = "airFrozen", rescueType = "chainFrozen", autoReleaseSeconds = chainSeconds + 2,
+					context = { origin = v.root.Position, zoneKey = MonsterState.getZoneKey(c.model), bossModel = c.model },
+				}) then
+					st.grabFrozen[v.player] = true
+					HeightGuard.exempt(v.player, chainSeconds + 3)
 					table.insert(userIds, realPlayer(v.player) and v.player.UserId or 0)
-					table.insert(points, point)
+					table.insert(positions, v.root.Position)
 				end
 			end
-			print(("[forge-game] 대공 잡기: %d명 잡힘(연속 체공 ≥ %.1f초)"):format(#points, CONFIG.airSeconds))
-			kit.debugEvent("grab", { caught = caught, at = c.now })
-			kit.send(st, "grabbed", { userIds = userIds, points = points, seconds = CONFIG.holdSeconds, bossId = c.data.id, motion = skill.motion, color = c.data.headColor })
+			print(("[forge-game] 대공 잡기: %d명 얼림(연속 체공 ≥ %.1f초) · 1인 %.2f초 · 사슬 %.2f초"):format(#userIds, CONFIG.airSeconds, st.grabPerHold, chainSeconds))
+			kit.debugEvent("grab", { caught = caught, at = c.now, perHold = st.grabPerHold, chainSeconds = chainSeconds })
+			kit.send(st, "grabFreeze", { userIds = userIds, positions = positions, bossId = c.data.id, color = c.data.headColor })
 			st.phase = "grabHold"
-			st.phaseEndsAt = c.now + CONFIG.holdSeconds + 1 -- 안전장치(잡힘 기록이 사라지지 않았을 때)
+			st.phaseEndsAt = c.now + chainSeconds + 1.5 -- 안전장치
+			st.grabCurrent = nil
+			grabNext(c)
 			return
 		elseif st.phase == "grabHold" then
 			local held = grabsByModel[c.model]
-			if held and next(held) ~= nil and c.now < st.phaseEndsAt then
+			local busy = held and next(held) ~= nil
+			if st.grabRescued then
+				-- 구출 · 도발: 남은 얼음 전원 해제 + 기절
+				releaseFrozen(c, "rescued")
+				grabsByModel[c.model] = nil
+				beginStun(c)
 				return
 			end
-			if held then -- 안전장치: 시간이 넘었는데 남아 있으면 자동 해제로 던진다(리뷰 8: 피해 조각도 같이 - 풀리기 직전)
+			if not busy then
+				if next(st.grabFrozen or {}) ~= nil and c.now < st.phaseEndsAt and grabNext(c) then
+					return
+				end
+			elseif c.now < st.phaseEndsAt then
+				return
+			end
+			if held then -- 안전장치: 시간이 넘었는데 남아 있으면 자동 해제로 던진다(피해 조각도 같이 - 풀리기 직전)
 				for player in pairs(held) do
 					local record = BossTrap.getRecord(player)
 					if record and record.onAutoRelease then
@@ -183,11 +263,8 @@ BossAirGrab.handler = {
 					BossTrap.release(player, "auto")
 				end
 			end
+			releaseFrozen(c, "reset")
 			grabsByModel[c.model] = nil
-			if st.grabRescued then
-				beginStun(c)
-				return
-			end
 			kit.send(st, "grabEnd", { stunned = false })
 			kit.endSkill(c.model, st, c.data, c.now)
 		elseif c.now >= st.phaseEndsAt then -- grabStun
@@ -197,6 +274,7 @@ BossAirGrab.handler = {
 	end,
 	interrupt = function(c)
 		clearMarks(c)
+		releaseFrozen(c, "reset")
 		local held = grabsByModel[c.model]
 		grabsByModel[c.model] = nil
 		for player in pairs(held or {}) do
@@ -222,7 +300,8 @@ local function throw(player, record)
 	end
 	local feet = root.Position - Vector3.new(0, ROOT_ABOVE_FEET, 0)
 	local v = { player = player, root = root, feet = feet, groundFeet = feet }
-	kit.runHitEffects(c, { { type = "launch", heightStuds = CONFIG.throw.heightStuds, distanceStuds = CONFIG.throw.distanceStuds } }, v, root.Position - away * 5, 1)
+	-- escape: 넉백 상한 · 착지 경계를 거치지 않는다 - 맵 밖으로 날아가면 기존 복귀(본인 스폰 + 보호)가 받는다(설계 §2 · 사용자 허용)
+	kit.runHitEffects(c, { { type = "launch", heightStuds = CONFIG.throw.heightStuds, distanceStuds = CONFIG.throw.distanceStuds, escape = true } }, v, root.Position - away * 5, 1)
 	print(("[forge-game] 대공 잡기 던짐: %s"):format(tostring(player.Name)))
 end
 
@@ -255,7 +334,7 @@ end)
 local HAND_ASPECT = Vector3.new(1.2, 1.1, 2.4)
 
 BossTrap.onTrapped(function(player, record)
-	if record.rescueType ~= "grab" or not realPlayer(player) then
+	if record.kind ~= "grabbed" or not realPlayer(player) then -- 얼음(airFrozen)에는 손이 없다 - 손은 잡힌 순간에만
 		return
 	end
 	local point = record.context and record.context.origin

@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossOverlap = require(ReplicatedStorage.Shared.BossOverlap)
 local Reach = require(ReplicatedStorage.Shared.Reach)
+local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 local CollectionService = game:GetService("CollectionService")
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
@@ -278,7 +279,30 @@ local function activate(model, st, data, env, e, now)
 	e.windTurnAt = now + (env.zones.rotateEverySeconds or math.huge)
 	-- 활성 순간 효과(onStart - 밥상뒤집기의 튕김 + 피해): 구역 안(발 기준 같은 층 - 떠 있으면 안 맞는다)의 사람.
 	local onStart = env.onStart
-	if onStart then
+	if onStart and onStart.seesaw then
+		-- 널뛰기(사용자 보완 B): 판마다 받침점(판 가운데)에서의 판 길이 방향 거리로 높이 · 거리 · 피해를 정한다. 뒤집히는 순간 떠 있는 사람은 안 날아간다.
+		for _, z in ipairs(e.zones) do
+			if z.shape == "rect" then
+				local a = math.rad(z.angleDeg)
+				local alongDir = Vector3.new(math.cos(a), 0, math.sin(a))
+				local sideDir = Vector3.new(-alongDir.Z, 0, alongDir.X)
+				for _, v in ipairs(kit.victims(st)) do
+					local rel = xz(v.root.Position) - xz(z.center)
+					local along = rel:Dot(alongDir)
+					local inside = math.abs(along) <= z.halfLength and math.abs(rel:Dot(sideDir)) <= z.halfWidth
+					local airborne = typeof(v.player) == "Instance" and kit.isAirborne(v.player.Character, 0.5)
+					if inside and not airborne and not BossTrap.isTrapped(v.player) and Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0)) then
+						local lever, height, distance, multiplier = BossSkillMath.seesawLaunch(onStart.seesaw, z.halfLength, along)
+						kit.applySkillDamage(model, data, { damage = { kind = "attack", multiplier = multiplier }, damageLabel = env.damageLabel }, v.player)
+						local outward = alongDir * (along >= 0 and 1 or -1)
+						local c = { model = model, st = st, data = data, now = now }
+						kit.runHitEffects(c, { { type = "launch", heightStuds = height, distanceStuds = distance, escape = true } }, v, v.root.Position - outward * 5, 1)
+						kit.debugEvent("seesaw", { player = v.player, lever = lever, height = height, distance = distance, multiplier = multiplier, at = now })
+					end
+				end
+			end
+		end
+	elseif onStart then
 		for _, v in ipairs(kit.victims(st)) do
 			if not BossTrap.isTrapped(v.player) and Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0)) and inAnyHazard(e.zones, v.root.Position) then
 				if onStart.damage then

@@ -189,8 +189,63 @@ function BossGrabView.grabbed(data)
 	BossFx.shake(data.points and data.points[1] or Vector3.zero, 0.6)
 end
 
+-- 사슬(사용자 보완 A): 얼린 사람마다 캐릭터를 감싸는 얼음 덩어리(반투명 Ice - 누가 걸렸는지 한눈에). 루트가 서버에 고정돼 있어 자리를 따라갈 필요가 없다.
+local ice = {} -- [userId] = Part
+
+function BossGrabView.freeze(data)
+	clearMarks()
+	for index, userId in ipairs(data.userIds or {}) do
+		local at = data.positions and data.positions[index]
+		if at then
+			local block = newPart(Vector3.new(4.2, 6, 4.2), Color3.fromRGB(190, 225, 255), 0.35)
+			block.Material = Enum.Material.Ice
+			block.CFrame = CFrame.new(at + Vector3.new(0, -0.5, 0))
+			ice[userId] = block
+			BossFx.ring(at, 1, 5, WHITE, 0.3)
+		end
+	end
+end
+
+-- 한 명씩 잡는다: 보스 곁에서 손이 그 사람(얼음)까지 뻗었다가(liftSeconds의 앞 절반) 들어 올려 보스 곁 들고 있는 자리로(뒤 절반). 그 사람의 얼음은 깨진다.
+function BossGrabView.pick(data)
+	local block = data.userId and ice[data.userId]
+	if block then
+		ice[data.userId] = nil
+		for i = 1, 6 do
+			BossFx.chunk(block.Position, Vector3.new(math.random(-10, 10), 12, math.random(-10, 10)), 0.8, Color3.fromRGB(190, 225, 255), 0.5)
+		end
+		destroy(block)
+	end
+	local hand = hands[1]
+	if not hand then
+		hand = newPart(Vector3.new(3.2, 1.2, 3.8), data.color or DANGER, 0)
+		hand.CFrame = CFrame.new(data.bossPosition + Vector3.new(0, 14, 0))
+		table.insert(hands, hand)
+	end
+	local half = math.max(data.liftSeconds / 2, 0.05)
+	TweenService:Create(hand, TweenInfo.new(half, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = CFrame.new(data.from + Vector3.new(0, 2.2, 0)) }):Play()
+	task.delay(half, function()
+		if hand.Parent then
+			TweenService:Create(hand, TweenInfo.new(half, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { CFrame = CFrame.new(data.point + Vector3.new(0, 2.2, 0)) }):Play()
+		end
+	end)
+	BossFx.shake(data.from, 0.4)
+end
+
+function BossGrabView.unfreeze(userId)
+	local block = userId and ice[userId]
+	if block then
+		ice[userId] = nil
+		destroy(block)
+	end
+end
+
 function BossGrabView.clear()
 	clearMarks()
+	for userId, block in pairs(ice) do
+		ice[userId] = nil
+		destroy(block)
+	end
 	for _, hand in ipairs(hands) do
 		destroy(hand)
 	end

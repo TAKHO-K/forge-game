@@ -92,6 +92,16 @@ function BossSkillMath.volleysOf(skill)
 	return volleys
 end
 
+-- BR1 널뛰기(사용자 보완 B - 심해 군주 밥상뒤집기): 판이 가운데 받침점을 축으로 뒤집힌다. 판 위의 자리 along(판 길이 방향, 받침점 기준 −L ~ L)에서
+-- 지렛대 비율 lever = |along| ÷ L - 받침점에서 멀수록 높이 · 멀리(방향 = 판 바깥쪽 = along의 부호) · 크게 맞는다. 반환: lever, 높이, 거리, 피해 배율.
+function BossSkillMath.seesawLaunch(seesaw, halfLengthStuds, along)
+	local lever = math.clamp(math.abs(along) / math.max(halfLengthStuds, 1e-3), 0, 1)
+	local function lerp(a, b)
+		return a + (b - a) * lever
+	end
+	return lever, lerp(seesaw.minHeightStuds, seesaw.maxHeightStuds), lerp(seesaw.minDistanceStuds, seesaw.maxDistanceStuds), lerp(seesaw.minMultiplier, seesaw.maxMultiplier)
+end
+
 -- BR1 돌진: 둘째 돌진부터의 전조(repeatTelegraphSeconds - 없으면 첫 돌진과 같다).
 function BossSkillMath.dashTelegraph(skill, dashIndex)
 	if dashIndex > 1 and skill.repeatTelegraphSeconds then
@@ -145,7 +155,7 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 	elseif primitive == "grab" then
 		-- 잡으면 들고 있다가(holdSeconds) 던지거나, 풀리면 기절(stunSeconds) - 상한은 둘을 더한 값.
 		local grab = BossData.mechanics.airGrab
-		return skill.telegraphSeconds + grab.holdSeconds + grab.stunSeconds
+		return skill.telegraphSeconds + math.max(grab.chainCapSeconds, grab.liftSeconds + grab.holdSeconds) + grab.stunSeconds -- 사슬(여럿 - 전체 ≤ chainCap) 또는 솔로 들고 있기
 	elseif primitive == "vortex" then
 		return skill.telegraphSeconds + (skill.burstTelegraphSeconds or 0)
 	elseif primitive == "gimmick" then

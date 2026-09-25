@@ -179,26 +179,45 @@ function BossEnvironmentView.telegraph(data)
 			end
 		end
 		crackAlong(z, data.seconds)
+		if z.shape == "rect" then
+			-- 널뛰기 전조: 지형이 크게 흔들린다(0.25초마다 흔들림 + 판 가장자리 먼지 기둥) - 판 전체 위험색은 위 zoneParts
+			for k = 0, math.floor(data.seconds / 0.25) - 1 do
+				task.delay(k * 0.25, function()
+					if current then
+						BossFx.shake(z.center, 0.35 + 0.5 * k / math.max(data.seconds / 0.25, 1))
+						local a = math.rad(z.angleDeg)
+						local along = Vector3.new(math.cos(a), 0, math.sin(a))
+						for _, sign in ipairs({ 1, -1 }) do
+							BossFx.puff(z.center + along * z.halfLength * sign + Vector3.new(0, 1, 0), 3, DUST, 0.5, Vector3.new(0, 6, 0))
+						end
+					end
+				end)
+			end
+		end
 	end
 	BossFx.shake(data.zones[1] and data.zones[1].center or Vector3.zero, 0.4)
 end
 
--- 밥상뒤집기(rect): 판이 가장자리를 축으로 들렸다가 뒤집혀 떨어지는 그림(Anchored 판을 트윈 - 물리 없음).
+-- 밥상뒤집기 = 널뛰기(사용자 보완 B): 판이 **가운데 받침점**(판 길이의 가운데를 지나는 가로축)을 축으로 한쪽이 솟았다 넘어가며 뒤집힌다(Anchored 판을 트윈 - 물리 없음).
+-- 판의 로컬 Z = 판 길이 방향(서버 along) - 받침점에서 먼 끝일수록 크게 움직인다(= 서버가 멀리 날리는 자리).
 local function flipSlab(z)
 	local a = -math.rad(z.angleDeg) + math.rad(90)
 	local slab = newPart(Vector3.new(z.halfWidth * 2, 1.5, z.halfLength * 2), DUST, 0, Enum.Material.Slate)
 	local base = CFrame.new(z.center + Vector3.new(0, 0.75, 0)) * CFrame.Angles(0, a, 0)
 	slab.CFrame = base
-	local hinge = base * CFrame.new(z.halfWidth, 0, 0)
-	TweenService:Create(slab, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		CFrame = hinge * CFrame.Angles(0, 0, math.rad(110)) * CFrame.new(-z.halfWidth, 0, 0),
-	}):Play()
-	task.delay(0.45, function()
-		TweenService:Create(slab, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			CFrame = hinge * CFrame.Angles(0, 0, math.rad(180)) * CFrame.new(-z.halfWidth, 0, 0), Transparency = 1,
-		}):Play()
-		task.delay(0.35, function()
-			destroy(slab)
+	-- 받침점(가운데 쐐기)
+	local fulcrum = newPart(Vector3.new(z.halfWidth * 2, 2, 2), WHITE, 0.2, Enum.Material.Slate)
+	fulcrum.CFrame = base * CFrame.new(0, -0.5, 0)
+	TweenService:Create(slab, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = base * CFrame.Angles(math.rad(35), 0, 0) }):Play() -- 지렛대가 튕긴다
+	task.delay(0.2, function()
+		TweenService:Create(slab, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = base * CFrame.Angles(math.rad(180), 0, 0) }):Play() -- 넘어가며 뒤집힌다
+		task.delay(0.45, function()
+			TweenService:Create(slab, TweenInfo.new(0.3), { Transparency = 1 }):Play()
+			TweenService:Create(fulcrum, TweenInfo.new(0.3), { Transparency = 1 }):Play()
+			task.delay(0.35, function()
+				destroy(slab)
+				destroy(fulcrum)
+			end)
 		end)
 	end)
 	for i = 1, 10 do

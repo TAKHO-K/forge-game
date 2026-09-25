@@ -189,6 +189,9 @@ function BossStormView.launch(data)
 	-- P3c A5: 높이 · 거리 상한 + 착지점이 벽 안쪽 경계를 넘지 않게 거리를 줄인다(구역이 실려 오지 않으면 상한만).
 	local zone = data.zoneRadius and { center = data.zoneCenter, radius = data.zoneRadius } or nil
 	local heightStuds, distanceStuds = ArenaContainment.limitLaunch(zone, root.Position, away, data.heightStuds, data.distanceStuds)
+	if data.escape then -- BR1(사용자 허용 - 널뛰기 · 대공 잡기 던짐): 상한 없이 - 맵 밖이면 서버의 기존 복귀가 받는다
+		heightStuds, distanceStuds = data.heightStuds, data.distanceStuds
+	end
 	-- 포물선: 최고 높이 h = v² ÷ 2g, 체공 = 2v ÷ g, 그동안 수평으로 distance.
 	local gravity = Workspace.Gravity
 	local up = math.sqrt(2 * gravity * math.max(heightStuds, 0.5))

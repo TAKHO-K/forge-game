@@ -123,9 +123,12 @@ local MECHANICS = {
 		warnAirSeconds = 0.6,
 		airSeconds = 1.2,
 		holdSeconds = 3.0,
+		-- 사용자 보완 A(사슬): 판정 순간 대상 전원을 그 자리에 얼리고 가장 가까운 사람부터 한 명씩 잡는다. 1인 = 들어 올림 liftSeconds + 들고 있기
+		-- clamp(chainCapSeconds ÷ 인원 − lift, minHoldSeconds, holdSeconds) - 4명이어도 사슬 전체 ≤ chainCapSeconds(4초). 솔로 = 0.3 + 3.0.
+		liftSeconds = 0.3, chainCapSeconds = 4, minHoldSeconds = 0.6, handoffSeconds = 0.06,
 		holdLiftStuds = 7,
 		holdOffsetStuds = 6,
-		throw = { heightStuds = 7.5, distanceStuds = 30 },
+		throw = { heightStuds = 9, distanceStuds = 34 }, -- 넉백 상한을 거치지 않는다(escape) - 맵 밖이면 기존 복귀
 		currentHpFraction = 0.5,
 		stunSeconds = 3.5,
 		struggle = { secondsPerPress = 0.25, maxPressesPerSecond = 6, minHoldSeconds = 0.8 },
@@ -652,14 +655,16 @@ local SPECIES = {
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "sweep", "tide", "spout", "flood", "swipe", "grab", "tailSweep", "vortex", "bubbles" },
-		-- BR1 환경 변화 "밥상뒤집기"(체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 사각 판 40 × 60이 (1 + 인원 ÷ 2)개, 가장자리가 들리고
-		-- 물이 넘친다(3초) → 뒤집힌다: 판 위(발 기준 같은 층 - 떠 있으면 안 맞는다) 사람은 아레나 가운데 쪽으로 튕기고(높이 7.5 · 거리 20 - 튕김 상한은 기존 조각) ×2.5,
-		-- 뒤집힌 자리는 10초 동안 급류(0.5초마다 5%). 판 밖으로 20 + 1 = 2.14초 ≤ 3.0. 큰 파트를 물리로 뒤집지 않는다(판이 도는 그림은 클라).
+		-- BR1 환경 변화 "밥상뒤집기 = 널뛰기"(사용자 보완 B · 체력 50%부터): 두 지느러미로 땅을 들어 올린다 - 멤버 발밑 우선 사각 판 40 × 60이 (1 + 인원 ÷ 2)개.
+		-- 전조 3초 = 지형이 크게 흔들리고 판 전체가 위험색 · 가장자리 균열(보이는 판 = 판정). 판이 **가운데 받침점을 축으로** 뒤집힌다(그림은 클라 - 물리 없음):
+		-- 판 위(뒤집히는 순간 땅에 있는 사람 - 떠 있으면 안 날아간다) 사람은 **받침점에서 멀수록** 높이 · 멀리 · 크게: 높이 3 → 16 · 거리 6 → 48(판 바깥쪽 방향) ·
+		-- ×1.0(14%) → ×3.2(46%). 넉백 상한 · 착지 경계 없음(escape - 맵 밖이면 기존 복귀). 뒤집힌 자리는 10초 급류(0.5초마다 5%).
+		-- 피하는 법: 받침점 곁으로(끝 → 가운데 6 안: 24 + 1 = 2.45초) · 판 옆으로(20 + 1 = 2.14초) · 뒤집히는 순간 뛰기(너무 오래 떠 있으면 대공 잡기 - 두 기믹이 맞물린다).
 		environment = {
 			id = "tableFlip", style = "water", motion = "fin", damageLabel = "밥상뒤집기",
 			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 3.0, durationSeconds = 10,
 			zones = { shape = "rect", halfLengthStuds = 30, halfWidthStuds = 20 },
-			onStart = { launch = { heightStuds = 7.5, distanceStuds = 20 }, damage = { kind = "attack", multiplier = 2.5 } },
+			onStart = { seesaw = { minHeightStuds = 3, maxHeightStuds = 16, minDistanceStuds = 6, maxDistanceStuds = 48, minMultiplier = 1.0, maxMultiplier = 3.2 } },
 			tick = { seconds = 0.5, fraction = 0.05 },
 		},
 		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단(P3c: 11곳)

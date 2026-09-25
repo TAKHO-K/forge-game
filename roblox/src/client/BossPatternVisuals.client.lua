@@ -720,12 +720,14 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossGrabView.telegraph(data)
 	elseif kind == "grabMark" then
 		BossGrabView.mark(data)
-	elseif kind == "grabbed" then
-		BossGrabView.grabbed(data)
-	elseif kind == "grabRelease" or kind == "grabEnd" or kind == "grabMiss" then
-		if kind ~= "grabRelease" then
-			BossGrabView.clear()
-		end
+	elseif kind == "grabFreeze" then
+		BossGrabView.freeze(data)
+	elseif kind == "grabPick" then
+		BossGrabView.pick(data)
+	elseif kind == "grabRelease" then
+		BossGrabView.unfreeze(data.userId)
+	elseif kind == "grabEnd" or kind == "grabMiss" then
+		BossGrabView.clear()
 	elseif kind == "envTelegraph" then
 		BossEnvironmentView.telegraph(data)
 	elseif kind == "envStart" then

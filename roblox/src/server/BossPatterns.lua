@@ -689,13 +689,16 @@ local function runHitEffects(c, effects, v, from, coHits)
 				away = v.root.Position - zone.center
 			end
 			local limitedHeight, limitedDistance = ArenaContainment.limitLaunch(zone, v.root.Position, away, height, distance)
+			if effect.escape then -- BR1(사용자 허용): 상한 · 착지 경계 없이 - 맵 밖이면 기존 복귀(BossArenaContainment)가 받는다
+				limitedHeight, limitedDistance = height, distance
+			end
 			debugEvent("launch", { player = v.player, coHits = coHits or 1, heightStuds = height, limitedHeight = limitedHeight,
 				distanceStuds = distance, limitedDistance = limitedDistance, from = from, rootPosition = v.root.Position })
-			HeightGuard.exempt(v.player, JumpMath.launchAirSeconds(height) + (effect.holdSeconds and effect.holdSeconds / weight or 0))
+			HeightGuard.exempt(v.player, JumpMath.launchAirSeconds(height) + (effect.holdSeconds and effect.holdSeconds / weight or 0) + (effect.escape and 1.5 or 0))
 			sendTo(v.player, "launch", {
 				from = from, heightStuds = height, distanceStuds = distance,
 				holdSeconds = effect.holdSeconds and effect.holdSeconds / weight, spinRadiusStuds = effect.spinRadiusStuds,
-				zoneCenter = zone.center, zoneRadius = zone.radius,
+				zoneCenter = zone.center, zoneRadius = zone.radius, escape = effect.escape,
 			})
 		end
 	end
