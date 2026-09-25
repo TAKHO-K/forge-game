@@ -2,7 +2,7 @@
 -- 기본 PlayerModule을 복제해 키만 바꾸지 않은 이유: 복제본은 로블록스 카메라 · 조작 업데이트를 더 못 받는다. 여기는 기본 카메라 위에 세 가지만 얹는다:
 --   ① 마우스를 화면 가운데에 묶는다(MouseBehavior.LockCenter - 기본 카메라가 이때 마우스 이동으로 시점을 돌린다) ② 캐릭터가 카메라 방위를 본다(AutoRotate 끄고 루트 회전)
 --   ③ 카메라를 오른쪽 어깨 너머로(Humanoid.CameraOffset). 창이 열려 있으면(모달) 잠시 풀어 마우스를 쓸 수 있게 한다 - 창을 닫으면 다시 묶는다.
--- 켜고 끄기: PC = LeftControl 또는 스킬 줄 왼쪽 끝 "[Ctrl] 시점 고정" 칸 클릭 · 폰 = 대시 버튼 바로 위 "고정" 버튼(SkillSlotsGui.DashHolder 안 - 터치 배치일 때만 보인다). 켜짐 = ember 바탕. 이번 접속 동안만(저장은 P4 설정창).
+-- 켜고 끄기: PC = LeftControl 또는 스킬 줄 왼쪽 끝 "[Ctrl] 시점 고정" 칸 클릭 · 폰 = 대시 버튼 오른쪽 옆 "고정" 버튼(SkillSlotsGui.DashHolder 안 - 터치 배치일 때만 보인다). 켜짐 = ember 바탕. 이번 접속 동안만(저장은 P4 설정창).
 -- 시점 고정 중에는 마우스가 가운데에 묶여 HUD를 못 누른다(M1-0 결정 ③ - 사용자 확정: 유지 · 창이 열리면 자동 해제). 칸을 눌러 끄려면 Ctrl.
 
 local Players = game:GetService("Players")
@@ -45,7 +45,8 @@ end
 local button = Instance.new("TextButton")
 button.Name = "ShiftLockButton"
 button.AnchorPoint = Vector2.new(0, 1)
-button.Position = UDim2.new(0, 5, 0, -8) -- 대시 칸(DashHolder) 위 끝에서 8 위
+-- M1-0 후속: 대시 칸 오른쪽 옆(아래 끝 맞춤 · 간격 8). 옛 자리(대시 칸 위)는 폰에서 왼쪽 메뉴바(모바일 위로 밀린 파티 버튼)와 겹쳤다 - 800 × 360에서 버튼 x 29 ~ 73 · y 90 ~ 134 vs 메뉴바 x 14 ~ 62 · y 10 ~ 166(스크린샷 Play에서 버튼 클릭이 파티 창을 열었다).
+button.Position = UDim2.new(1, 8, 1, 0)
 button.Size = UDim2.new(0, BUTTON, 0, BUTTON)
 button.AutoButtonColor = false
 button.Font = Enum.Font.GothamBold

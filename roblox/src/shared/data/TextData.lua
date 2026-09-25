@@ -105,7 +105,7 @@ return {
 		["settings.title"] = "설정",
 		["settings.cameraTopDown"] = "탑다운 시점(위에서 내려다보기)",
 		["settings.cameraTopDownHint"] = "끄면 로블록스 기본 카메라입니다. 이번 접속 동안 유지됩니다.",
-		["settings.shiftLockHint"] = "시점 고정: PC는 왼쪽 Ctrl, 모바일은 대시 버튼 위 버튼입니다.",
+		["settings.shiftLockHint"] = "시점 고정: PC는 왼쪽 Ctrl, 모바일은 대시 버튼 옆 고정 버튼입니다.",
 		["shiftLock.button"] = "고정",
 		["shiftLock.chipKey"] = "[Ctrl]",
 		["shiftLock.chipName"] = "시점 고정",
