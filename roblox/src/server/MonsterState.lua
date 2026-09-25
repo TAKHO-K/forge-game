@@ -58,6 +58,7 @@ function MonsterState.init(model, data, spawnPosition, zoneKey, variant)
 		-- 24-1: 보스도 기여 비율을 기록한다(damage/maxHp) - 파티 보스 보상이 잡몹과 같은 "기여
 		-- 10% 이상 각자 독립 지급" 규칙(CombatConfig.contributionRewardThreshold)을 쓴다(지시 4).
 		contributions = {},
+		firstHitAt = {}, -- G1-2: [Player] = 처음 때린 시각(os.clock) - 처치 시간 공정성 보정(DropTable.timeFairnessFactor)
 		data = data,
 		spawnPosition = spawnPosition,
 		zoneKey = zoneKey, -- 16-6, tier 구역 몬스터만 있음(보스는 nil).
@@ -264,6 +265,9 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	local effectiveMaxHp = InfiniteStage.getMonsterHp(entry.data.hp, attackerStage) * prefixHpMultiplier
 	local ratioDealt = effectiveMaxHp > 0 and (damage / effectiveMaxHp) or 0
 	entry.hpRatio -= ratioDealt
+	if attackerPlayer and entry.firstHitAt and not entry.firstHitAt[attackerPlayer] then
+		entry.firstHitAt[attackerPlayer] = os.clock()
+	end
 	if attackerPlayer then
 		entry.contributions[attackerPlayer] = (entry.contributions[attackerPlayer] or 0) + ratioDealt
 	end
@@ -273,6 +277,13 @@ end
 -- 이 몬스터에 기여한 [Player]=누적비율 테이블(잡몹 전용, 보스는 항상 빈 테이블 - 보스는
 -- 애초에 기록하지 않는다). AttackServer의 사망 처리가 이 테이블을 훑어 임계값
 -- (CombatConfig.contributionRewardThreshold) 이상인 플레이어 전원에게 각자 보상을 준다.
+-- G1-2: 이 사람이 처음 때린 뒤 지금까지(초) - 처치 순간 부르면 처치 시간. 기록이 없으면 nil(보정 없음).
+function MonsterState.getKillSecondsFor(model, player)
+	local entry = monsters[model]
+	local at = entry and entry.firstHitAt and entry.firstHitAt[player]
+	return at and (os.clock() - at) or nil
+end
+
 function MonsterState.getContributors(model)
 	local entry = monsters[model]
 	return (entry and entry.contributions) or {}
@@ -286,6 +297,9 @@ function MonsterState.clearPlayerContributions(player)
 	for _, entry in pairs(monsters) do
 		if entry.contributions then
 			entry.contributions[player] = nil
+		end
+		if entry.firstHitAt then
+			entry.firstHitAt[player] = nil
 		end
 		-- 보물상자 피격 기록도 같이 지운다(22-2 [3] 지시 "플레이어 퇴장 시 그 기록도 정리") -
 		-- 남겨 두면 파괴 시점에 이미 나간 Player를 보상 대상으로 순회하게 된다.

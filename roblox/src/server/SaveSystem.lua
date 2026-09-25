@@ -13,6 +13,7 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 -- 26-1 옵션 통합 이관(v22->v23)·isValidProfile 검사용.
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData) -- G1-2: 자동 처리 기준 등급 검사(v36)
 -- 28-1 S03: 강화 천장 게이지(weapon.enhanceGauge)의 상한 검사용(v24->v25 · isValidProfile).
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 -- 28-1 S04: 강화 재료 보유량(profile.materials)의 기본값 · 이관(v25->v26) · isValidProfile 검사용.
@@ -239,6 +240,9 @@ local function defaultProfile()
 
 		-- 리더보드 기록 제외(P3a B3, v34) - 계정 단위. 이 계정에서 /gg(개발 명령)가 한 번이라도 돌면 true(PlayerProfile.markLeaderboardTainted) - "/gg로 만든 진도는 기록하지 않는다".
 		leaderboardTainted = false,
+
+		-- 줍는 순간 자동 처리(G1-2, v36) - 계정 단위(bulkSellCutoffGrade와 같은 층). enabled = 켜짐 · maxGrade = 이 등급 이하(ArmorData.autoProcessGradeChoices 중 하나).
+		autoProcess = { enabled = false, maxGrade = "epic" },
 	}
 end
 
@@ -878,6 +882,12 @@ local function migrate(data)
 		data.version = 35
 	end
 
+	if data.version < 36 then
+		-- G1-2: 줍는 순간 자동 처리 필터 신설 - 기본 끔(옛 동작 = 전부 가방에 보관).
+		data.autoProcess = { enabled = false, maxGrade = "epic" }
+		data.version = 36
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -920,6 +930,8 @@ local function isValidProfile(data)
 		or type(data.gemDust) ~= "number" or data.gemDust % 1 ~= 0 or data.gemDust < 0
 		or type(data.milestoneUnlocks) ~= "number" or data.milestoneUnlocks % 1 ~= 0 or data.milestoneUnlocks < 0
 		or type(data.leaderboardTainted) ~= "boolean" -- 리더보드 기록 제외(v34)
+		or type(data.autoProcess) ~= "table" or type(data.autoProcess.enabled) ~= "boolean" -- 자동 처리(v36)
+		or not table.find(ArmorData.autoProcessGradeChoices, data.autoProcess.maxGrade)
 	then
 		return false
 	end

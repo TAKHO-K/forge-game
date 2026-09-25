@@ -14,6 +14,19 @@ local DropTable = {}
 
 local PRIMORDIAL = "primordial"
 
+-- G1-2: 처치 시간 공정성 보정(규칙 = DropTableData.fairness 주석). killSeconds가 nil이면 1(보정 없음 - 옛 호출). hpUnits ≤ 1이면 1.
+function DropTable.timeFairnessFactor(killSeconds, hpUnits)
+	if killSeconds == nil or hpUnits == nil or hpUnits <= 1 then
+		return 1
+	end
+	local config = DropTableData.fairness
+	local k = math.max(killSeconds, 0)
+	local spent = math.max(k, config.killFloorSeconds) + config.travelSeconds
+	local tierOne = math.max(k / hpUnits, config.killFloorSeconds) + config.travelSeconds
+	local c = math.min(1, spent / tierOne / hpUnits)
+	return Sanitize.number(1 - config.strength * (1 - c), 1)
+end
+
 -- G1-1 보스 확정 장비 등급표(보상 목록 단일 소스 - 서버 굴림 Loot와 스테이지 선택 보상 띠가 같은 함수를 부른다).
 -- 첫 클리어: 환생 1회 이상 = 기본표, 0회 = 한 단계 올린 표(재무장 특례). 재도전: 등급 상승 없는 표.
 function DropTable.bossFirstClearGradeTable(rebirthCount)

@@ -4,6 +4,7 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 
 -- 일괄판매(S20b: InventoryUI 분할) - 확인 팝업 · 기준 등급 드롭다운. 헤더 버튼(R.bulkSellButton · R.cutoffButton)이 여는 창 안 overlay다.
@@ -15,6 +16,7 @@ local content = R.content
 local bulkSellButton, cutoffButton = R.bulkSellButton, R.cutoffButton
 local sellRequest = ReplicatedStorage:WaitForChild("SellRequest")
 local bulkSellCutoffRequest = ReplicatedStorage:WaitForChild("BulkSellCutoffRequest")
+local autoProcessRequest = ReplicatedStorage:WaitForChild("AutoProcessRequest")
 local cutoffDropdown, cutoffDropdownDim
 
 -- ═══ 일괄판매 확인 창 ═══
@@ -161,7 +163,7 @@ cutoffDropdownDim.Parent = content
 cutoffDropdown = Instance.new("Frame")
 cutoffDropdown.Name = "CutoffDropdown"
 cutoffDropdown.Position = UDim2.new(0, 0, 1, 4)
-cutoffDropdown.Size = UDim2.new(0, 130, 0, 0)
+cutoffDropdown.Size = UDim2.new(0, 170, 0, 0) -- G1-2: 자동 처리 줄("자동 처리: 영웅 이하")이 들어가게 130 → 170
 cutoffDropdown.AutomaticSize = Enum.AutomaticSize.Y
 cutoffDropdown.BackgroundColor3 = UIColors.panel
 cutoffDropdown.BackgroundTransparency = 0.05
@@ -237,6 +239,40 @@ for order, gradeId in ipairs(S.BULK_SELL_GRADE_CHOICES) do
 		S.rebuildGrid()
 	end)
 end
+
+-- G1-2: 줍는 순간 자동 처리 토글 - 드롭다운 맨 아래 한 줄. 누를 때마다 끔 → 영웅 이하 → 희귀 이하 → 일반 이하 → 끔(서버가 값 검사 · Attribute AutoProcess로 되돌려 준다).
+-- 기준 이하 · 잠기지 않은 장비: 영웅은 분해(보석), 일반 · 희귀는 판매(골드). 문구는 TextData.
+local autoRow = Instance.new("TextButton")
+autoRow.Name = "AutoProcessRow"
+autoRow.LayoutOrder = #S.BULK_SELL_GRADE_CHOICES + 10
+autoRow.BackgroundTransparency = 1
+autoRow.Size = UDim2.new(1, 0, 0, 28)
+autoRow.ZIndex = 25
+autoRow.Font = Enum.Font.GothamBold
+autoRow.TextSize = Theme.textSize("body")
+autoRow.TextColor3 = UIColors.textSecondary
+autoRow.Parent = cutoffDropdown
+table.insert(dropdownRows, autoRow)
+local function refreshAutoRow()
+	local value = player:GetAttribute("AutoProcess") or "off"
+	local grade = ArmorData.grades[value]
+	autoRow.Text = grade and Text.get("bag.autoProcess.on", { grade = grade.displayName }) or Text.get("bag.autoProcess.off")
+	autoRow.TextColor3 = grade and UIColors.textPrimary or UIColors.textSecondary
+end
+refreshAutoRow()
+player:GetAttributeChangedSignal("AutoProcess"):Connect(refreshAutoRow)
+autoRow.Activated:Connect(function()
+	local choices = ArmorData.autoProcessGradeChoices
+	local current = player:GetAttribute("AutoProcess") or "off"
+	local index = table.find(choices, current)
+	if index == nil then
+		autoProcessRequest:FireServer(true, choices[1])
+	elseif index < #choices then
+		autoProcessRequest:FireServer(true, choices[index + 1])
+	else
+		autoProcessRequest:FireServer(false, choices[1])
+	end
+end)
 
 cutoffButton.Activated:Connect(function()
 	S.bulkSellDropdownOpen = not S.bulkSellDropdownOpen

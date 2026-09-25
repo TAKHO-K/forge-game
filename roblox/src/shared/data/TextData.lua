@@ -55,6 +55,12 @@ return {
 		["band.retry.body"] = "장비 1개({grades})",
 		["band.gradeChance"] = "{grade} {percent}",
 
+		-- 가방 자동 처리(G1-2)
+		["bag.autoProcess.off"] = "자동 처리: 끔",
+		["bag.autoProcess.on"] = "자동 처리: {grade} 이하",
+		["toast.autoDismantle"] = "자동 분해: {item} → 보석",
+		["toast.autoSell"] = "자동 판매: {item} +{gold}골드",
+
 		-- 채팅 · 알림
 		["chat.primalDrop"] = "★ {name}님이 <font color=\"{color}\">{item}</font>을 얻었습니다",
 	},

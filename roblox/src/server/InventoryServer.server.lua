@@ -99,6 +99,17 @@ lockRequest.OnServerEvent:Connect(function(player, index, locked)
 	PlayerProfile.setItemLocked(player, math.floor(index), locked)
 end)
 
+-- G1-2: 줍는 순간 자동 처리 설정(enabled · maxGrade) - 되돌릴 수 있는 설정이라 즉시저장하지 않는다. 값 검사는 PlayerProfile.setAutoProcess.
+local autoProcessRequest = Instance.new("RemoteEvent")
+autoProcessRequest.Name = "AutoProcessRequest"
+autoProcessRequest.Parent = ReplicatedStorage
+autoProcessRequest.OnServerEvent:Connect(function(player, enabled, maxGrade)
+	if not PlayerProfile.getProfile(player) then
+		return
+	end
+	PlayerProfile.setAutoProcess(player, enabled, maxGrade)
+end)
+
 -- 일괄판매 기준 등급 선택도 잠금과 같은 되돌릴 수 있는 사건이다 - 즉시저장하지 않는다.
 bulkSellCutoffRequest.OnServerEvent:Connect(function(player, gradeId)
 	if not PlayerProfile.getProfile(player) then

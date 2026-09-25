@@ -9,6 +9,17 @@ local inventorySync = Instance.new("RemoteEvent")
 inventorySync.Name = "InventorySync"
 inventorySync.Parent = ReplicatedStorage
 
+-- G1-2: 줍는 순간 자동 처리 알림(클라 토스트) - { kind = "dismantle" | "sell", grade, part, gold }.
+local autoProcessed = Instance.new("RemoteEvent")
+autoProcessed.Name = "AutoProcessed"
+autoProcessed.Parent = ReplicatedStorage
+
+function InventorySync.notifyAutoProcessed(player, info)
+	if typeof(player) == "Instance" and player:IsA("Player") then
+		autoProcessed:FireClient(player, info)
+	end
+end
+
 local inventoryFull = Instance.new("RemoteEvent")
 inventoryFull.Name = "InventoryFull"
 inventoryFull.Parent = ReplicatedStorage

@@ -90,7 +90,7 @@ end
 local function isDismantleEligibleGrade(gradeId)
 	for i, id in ipairs(ArmorData.gradeOrder) do
 		if id == gradeId then
-			return i >= 3
+			return i >= ArmorData.dismantleMinGradeIndex -- G1-2: 서버와 같은 데이터
 		end
 	end
 	return false

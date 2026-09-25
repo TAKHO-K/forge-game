@@ -125,9 +125,11 @@ end
 -- 잡몹 1마리가 주는 기대 장비 개수 = dropChance × tier의 dropCountMultiplier(= r^(p−1), 공정성 항등식이 옛 itemLevel
 -- 보너스로 맡던 몫) × 접두사 보상 배율(22-2 [1], = HP 배율 - 시간당 드랍 기대값이 접두사 무관하게 같아지도록).
 -- 옛 규칙("확률에 배율을 곱하고 1에서 자른다")을 대체한다 - 1을 넘으면 여러 개가 나온다.
-function Loot.expectedArmorDropCount(tierIndex, rewardMultiplier)
+-- G1-2: killSeconds(선택) = 받는 사람의 이 몬스터 처치 시간 - 주면 처치 시간 공정성 보정을 곱한다(DropTable.timeFairnessFactor · H = tier HP 배율 × 접두사 배율).
+function Loot.expectedArmorDropCount(tierIndex, rewardMultiplier, killSeconds)
 	local tierData = MonsterData[MonsterData.tierOrder[tierIndex]] or MonsterData.tier1
-	return ArmorData.dropChance * tierData.dropCountMultiplier * (rewardMultiplier or 1)
+	local hpUnits = (tierData.rewardRatio ^ MonsterData.fairnessExponent) * (rewardMultiplier or 1)
+	return ArmorData.dropChance * tierData.dropCountMultiplier * (rewardMultiplier or 1) * DropTable.timeFairnessFactor(killSeconds, hpUnits)
 end
 
 -- 잡몹 드랍 판정 1회. 0개 이상의 장비 배열을 돌려준다(개수 = rollCount(expectedArmorDropCount)). 아이템마다 등급 ·
@@ -136,10 +138,10 @@ end
 -- P2 E1 · E4: primordialRate(= DropTable.effectiveRate - 호출부 CombatResolution이 받는 사람 기준으로 구한다)가 오면 아이템마다 태초를 먼저 굴리고,
 -- 아니면 기본 표에서 태초를 뺀 나머지 분포로 굴린다. 태초의 itemLevel = 그 몬스터를 잡은 사냥 스테이지(몬스터 레벨 - 편차 δ 없음).
 -- primordialRate가 nil이면 옛 굴림 그대로(기본 표 - tier6 태초 0.1% 포함).
-function Loot.rollArmorDrop(monsterStage, tierIndex, rewardMultiplier, classId, primordialRate)
+function Loot.rollArmorDrop(monsterStage, tierIndex, rewardMultiplier, classId, primordialRate, killSeconds)
 	local gradeTable = MonsterData.dropGradeTableByTier[tierIndex] or MonsterData.dropGradeTableByTier[1]
 	local items = {}
-	for _ = 1, Loot.rollCount(Loot.expectedArmorDropCount(tierIndex, rewardMultiplier)) do
+	for _ = 1, Loot.rollCount(Loot.expectedArmorDropCount(tierIndex, rewardMultiplier, killSeconds)) do -- G1-2: 처치 시간 공정성 보정
 		local gradeId
 		if primordialRate then
 			gradeId = lootRng:NextNumber() < primordialRate and "primordial" or rollGrade(gradeTable, "primordial")

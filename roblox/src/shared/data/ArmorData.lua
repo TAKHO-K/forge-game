@@ -47,6 +47,12 @@ return {
 	-- Loot.rollBossFirstClearDrop의 등급 상향(MonsterData.shiftGradeTableUp), 인벤토리
 	-- 일괄판매 컷오프도 전부 이 배열을 본다.
 	gradeOrder = { "normal", "rare", "epic", "legendary", "relic", "ancient", "primordial" },
+	-- G1-2(D0 결정 4 - 규칙 위반 해소): 분해 가능 등급의 문턱(gradeOrder 번호) - 이 번호 이상이면 분해 → 보석(영웅 이상, 값 그대로). 옛 코드는 서버 PlayerProfile과
+	-- 클라 Store에 각각 3을 박아 두었다. 보석은 옵션이 있는 등급에서만 생기므로 OptionData.minGradeIndex와 같은 값이어야 한다(검증 G1-2(가)).
+	dismantleMinGradeIndex = 3,
+	-- G1-2(D0 결정 4 나): 줍는 순간 자동 처리 필터 - 고를 수 있는 기준 등급(이 등급 이하 = 자동 처리). 가장 높은 기준 = 영웅("영웅 이하"). 끄면 보관(옛 동작).
+	--   기준 이하 · 잠기지 않은 장비: 분해 가능 등급(dismantleMinGradeIndex 이상 = 영웅)은 분해 → 보석, 그 아래(일반 · 희귀)는 판매 → 골드. 기본 = 끔.
+	autoProcessGradeChoices = { "epic", "rare", "normal" },
 
 	-- 일괄판매 기준 등급의 상한(지시 - 유물·고대·태초는 어떤 사용자 설정으로도 일괄판매
 	-- 대상이 되지 않는다. 귀한 등급을 확인창 한 번의 오클릭으로 잃는 사고를 막는다).

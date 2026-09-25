@@ -475,8 +475,8 @@ end
 
 -- 가방 점검: 지난 점검 뒤 주운 장비(kills마리분의 기대 개수)로 부위마다 점수가 더 좋은 것이 있으면 바꾼다(점수 = Loot.getArmorDefense 등 게임 함수).
 -- 보석: 영웅 이상 장비를 분해하면 그 등급 · itemLevel의 보석(PlayerProfile.dismantleItem). 슬롯 상한 등급까지만 박힌다(Gem.canSocket).
-local function checkBag(state, profile, tierIndex, stage, kills, whatIf)
-	local total = kills * Loot.expectedArmorDropCount(tierIndex, 1)
+local function checkBag(state, profile, tierIndex, stage, kills, whatIf, killSeconds)
+	local total = kills * Loot.expectedArmorDropCount(tierIndex, 1, killSeconds) -- G1-2: 게임과 같은 처치 시간 공정성 보정
 	local perPart = total / #EquipSlots.order
 	local replaced = 0
 	for _, part in ipairs(EquipSlots.order) do
@@ -632,7 +632,7 @@ local function chooseHunt(loadout, profile, maxStage, gearMode)
 			local bestScore = current
 			for _, option in ipairs(options) do
 				local kills = horizon / (option.killSeconds + profile.moveOverheadSeconds)
-				local perPart = kills * Loot.expectedArmorDropCount(option.tier, 1) / #EquipSlots.order
+				local perPart = kills * Loot.expectedArmorDropCount(option.tier, 1, option.killSeconds) / #EquipSlots.order
 				for _, candidate in ipairs(expectedCandidates(option.tier, perPart)) do
 					local value = Loot.getArmorDefense({ grade = candidate.grade, itemLevel = math.max(1, option.stage + candidate.delta) })
 					if value > bestScore then
@@ -679,7 +679,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)
 		killUnits = tier.rewardRatio ^ MonsterData.fairnessExponent
 		-- P2 E5: 처치 1마리당 태초 장비 기대 개수(서버 굴림과 같은 effectiveRate - 레벨 감쇠 포함)
-		primordialPerKill = Loot.expectedArmorDropCount(hunt.tier, 1) * primordialRateAt(state, hunt.tier, hunt.stage)
+		primordialPerKill = Loot.expectedArmorDropCount(hunt.tier, 1, hunt.killSeconds) * primordialRateAt(state, hunt.tier, hunt.stage)
 	end
 	refresh()
 	if hunt.killSeconds == math.huge then
@@ -726,7 +726,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		state.sinceCheck += batchSeconds
 		if state.sinceCheck >= checkSeconds - 1e-9 then
 			local armorBefore, modeBefore, weaponBefore = state.gear.armor, state.gearMode, state.weaponLevel
-			local changed, anyChange = checkBag(state, profile, hunt.tier, hunt.stage, state.pendingKills, whatIf)
+			local changed, anyChange = checkBag(state, profile, hunt.tier, hunt.stage, state.pendingKills, whatIf, hunt.killSeconds)
 			state.sinceCheck = 0
 			-- 방어구가 그대로인데 생존이 사냥 스테이지를 막고 있으면 장비 올리기 모드, 방어구가 바뀌면 경험치 모드로 돌아간다.
 			if state.gear.armor ~= armorBefore then

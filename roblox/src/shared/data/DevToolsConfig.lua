@@ -136,7 +136,10 @@ local config = {
 		-- G1-1: 이번 블록 G1-1(가)(나)(UI) + 동반(COMMON §3 - 바꾼 모듈을 쓰는 옛 블록, grep): Loot · DropTable · MonsterData(보스 등급표) → S01(가)(나) · S05b(가)(나) · S10(가)(나) · S11(가)(나) · P2(가)(나) · P0(가) ·
 		-- LootRuleVerify(S01) · BossRewardPreview → S11(가)(나) · 보스 처치 경로(29-1 · S14(나)) · MonsterSpawner(BossLook - 모든 몬스터 · 분신 트리 대조 29-5(나)) · StageServer(27-4 · S12(나) 파티) ·
 		-- 클라(GradeColor · HelpTooltip · 도움말 · 가방 · 보석 · 강화대 · 보상 띠) → S11(UI 띠 문자열) · S12(UI) · S12b(UI) · S15(UI) · S20(UI) · S20c(UI) · S20d(UI) · S20e(UI) · P25b(UI) · P3b(UI) · S10(가)(드랍 피드).
+		-- G1-2: 이번 블록 G1-2(가)(나) + 동반(COMMON §3): Loot · DropTable(드랍 개수) · MonsterState(처치 시간) · CombatResolution → S01(가)(나) · S05b · S10(나) · P2(가)(나) · P0(가)(EconSim) ·
+		-- LootRuleVerify · PlayerProfile(addArmorDrop · 분해 문턱) · SaveSystem v36 → 이관 체인(S02 · S03 · S04 · S05 · S05b · S11(가)) · P25b(가)(나) · S20d(나) · 26-2 · 가방 UI(S20(UI) · S20d(UI) · P25b(UI)) + G1-1 미결(G1-1(UI) · S12(UI)).
 		current = {
+			"G1-2(가)", "G1-2(나)",
 			"G1-1(가)", "G1-1(나)", "G1-1(UI)",
 			"G1-0(가)", "G1-0(나)", "P3dF(가E)",
 			"P3dF(나)", -- Play 3: P3dF(가E)는 Play 2에서 7/7(235초) · 그 뒤 ArenaLayout 무변경이라 뺀다

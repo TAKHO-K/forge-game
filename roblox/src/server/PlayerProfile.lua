@@ -207,6 +207,7 @@ function PlayerProfile.init(player, profile)
 	player:SetAttribute("BulkSellCutoffGrade", profile.bulkSellCutoffGrade)
 	player:SetAttribute("GemMerchantUsed", profile.hints.gemMerchantUsed == true) -- 보석 탭 안내 줄(눈에 띄게 / 작게)이 읽는다
 	player:SetAttribute("GemDust", profile.gemDust) -- P2.5b C: 보석 가루 - 보석 가공 창 · 보석상인 창이 읽는다
+	player:SetAttribute("AutoProcess", profile.autoProcess.enabled and profile.autoProcess.maxGrade or "off") -- G1-2: 가방 자동 처리 토글이 읽는다
 	-- 23-5: 저장된 적 있을 때만 Attribute를 세운다 - false(한 번도 안 옮김)면 안 세워서
 	-- 클라가 GetAttribute nil을 "기본 위치 계산"의 신호로 그대로 쓸 수 있게 한다.
 	if profile.inventoryWindowPosition then
@@ -782,7 +783,7 @@ end
 -- 26-1(PRD 20.67 [1][13]): "분해 시 옵션 처리는 그대로 이전(재굴림 없음)"으로 바뀐다 - 위
 -- 23-3 결정(공짜 재굴림 방지)은 그대로 유지되면서(여기서 새로 옵션을 굴리지 않는다), 그
 -- 아이템이 생성 시점에 이미 가진 option·itemLevel을 그대로 보석으로 옮긴다.
-local DISMANTLE_MIN_GRADE_INDEX = 3 -- ArmorData.gradeOrder: 1=일반, 2=희귀, 3=영웅부터.
+local DISMANTLE_MIN_GRADE_INDEX = ArmorData.dismantleMinGradeIndex -- G1-2: 데이터로(ArmorData - 영웅부터, 값 그대로)
 
 function PlayerProfile.dismantleItem(player, index)
 	local profile = profiles[player]
@@ -1354,10 +1355,51 @@ end)
 -- 바꾸면서 호출 시점이 옮겨졌다). 칸이 가득 찼으면 false - 인벤토리에 반영하지 않는다.
 -- 14-1부터는 이게 "드랍 자체가 취소된다"는 뜻이 아니다 - 땅의 아이템은 그대로 남아
 -- 나중에 칸을 비우고 다시 주우러 오면 된다(호출부가 알림을 준다).
+-- G1-2 자동 처리 설정. enabled = 켜짐, maxGrade = ArmorData.autoProcessGradeChoices 중 하나(아니면 거절). 되돌릴 수 있는 설정이라 즉시저장하지 않는다(일괄판매 기준과 같음).
+function PlayerProfile.setAutoProcess(player, enabled, maxGrade)
+	local profile = profiles[player]
+	if not profile or type(enabled) ~= "boolean" or not table.find(ArmorData.autoProcessGradeChoices, maxGrade) then
+		return false
+	end
+	profile.autoProcess = { enabled = enabled, maxGrade = maxGrade }
+	player:SetAttribute("AutoProcess", enabled and maxGrade or "off")
+	return true
+end
+
+-- G1-2: 줍는 순간 자동 처리. 켜짐 · 기준 등급 이하 · 잠기지 않은 장비만 - 분해 가능 등급이면 보석(dismantleItem과 같은 보석), 아니면 판매 골드(sellItem과 같은 값).
+-- 반환: 처리했으면 { kind = "dismantle" | "sell", grade, part, gold }, 아니면 nil(가방에 넣는다).
+function PlayerProfile.autoProcessDrop(player, item)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	local setting = profile and profile.autoProcess
+	if not classState or not setting or not setting.enabled or item.locked then
+		return nil
+	end
+	local index, cutoff = gradeIndex(item.grade), gradeIndex(setting.maxGrade)
+	if not index or not cutoff or index > cutoff then
+		return nil
+	end
+	if index >= DISMANTLE_MIN_GRADE_INDEX then
+		table.insert(classState.gemInventory, { grade = item.grade, itemLevel = item.itemLevel, option = item.option })
+		GemSync.push(player)
+		return { kind = "dismantle", grade = item.grade, part = item.part, gold = 0 }
+	end
+	local price = Loot.getSellPrice(item)
+	profile.gold += price
+	player:SetAttribute("Gold", profile.gold)
+	return { kind = "sell", grade = item.grade, part = item.part, gold = price }
+end
+
 function PlayerProfile.addArmorDrop(player, item)
 	local profile = profiles[player]
 	if not profile then
 		return false
+	end
+	-- G1-2: 자동 처리 대상이면 가방에 넣지 않고 바로 분해 · 판매(가방이 가득이어도 처리된다 - 줍기 성공)
+	local processed = PlayerProfile.autoProcessDrop(player, item)
+	if processed then
+		InventorySync.notifyAutoProcessed(player, processed)
+		return true
 	end
 	if #profile.inventory >= profile.inventorySlots then
 		return false
@@ -1726,6 +1768,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		inventorySlots = profile.inventorySlots,
 		gemDust = profile.gemDust, -- P2.5b C: 보석 분해 · 재련 · 변환권 구매 검증이 가루를 바꾼다 - 같은 이유로 되돌린다.
 		hints = deepCopy(profile.hints), -- 30-0 S20e: 수동 Play에서 보석상인을 쓰면 안내 플래그가 켜지고 Play 종료 때 실제 프로필에 저장됐다(S20e 실측) - 같은 이유로 되돌린다.
+		autoProcess = deepCopy(profile.autoProcess), -- G1-2(v36): 새 저장 필드는 백업 대상(COMMON §1)
 		leaderboardTainted = profile.leaderboardTainted, -- P3a(v34): 검증이 기록 경로를 재려고 끈 값을 되돌린다(COMMON §1 "새 저장 필드는 백업 대상에").
 	}
 end
@@ -1759,6 +1802,10 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.milestoneUnlocks = snapshot.milestoneUnlocks or profile.milestoneUnlocks
 	profile.inventorySlots = snapshot.inventorySlots or profile.inventorySlots
 	profile.leaderboardTainted = snapshot.leaderboardTainted
+	if snapshot.autoProcess then
+		profile.autoProcess = deepCopy(snapshot.autoProcess)
+		player:SetAttribute("AutoProcess", profile.autoProcess.enabled and profile.autoProcess.maxGrade or "off")
+	end
 	syncProtectionAttributes(player, profile)
 	player:SetAttribute("Gold", profile.gold)
 	syncActiveClassAttributes(player, profile)

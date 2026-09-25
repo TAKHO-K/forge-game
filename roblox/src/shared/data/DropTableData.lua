@@ -25,6 +25,15 @@ return {
 		{ rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = dragonRate },
 	},
 
+	-- G1-2(D0 결정 4 나 - 공정성 식 보정): tier 공정성 식(MonsterData)은 "처치 시간 ∝ HP"를 전제로 tier마다 시간당 장비 가치를 같게 맞춘다. 한 방에 잡거나
+	-- 처치보다 이동이 길면 이 전제가 깨져 높은 tier(드래곤 HP ×7.8)가 시간당 훨씬 유리했다(D0 (c)). 보정 = 장비 기대 개수 × c(DropTable.timeFairnessFactor):
+	--   k = 그 사람이 이 몬스터를 처음 때린 뒤 죽기까지 걸린 시간(초) · H = 이 몬스터의 HP 배율(tier1 = 1, 접두사 포함 - MonsterState.getKillUnits)
+	--   이 처치에 든 시간 = max(k, killFloorSeconds) + travelSeconds · 같은 사람이 tier1을 잡는 시간 = max(k ÷ H, killFloorSeconds) + travelSeconds
+	--   c = min(1, (두 시간의 비) ÷ H) - 시간이 HP만큼 들었으면 1(보정 없음), 한 방이면 1 ÷ H(tier1과 시간당 같음). strength = 보정 세기(0 = 끔 · 1 = 전부).
+	--   travelSeconds = EconSim 일반 프로필의 처치 사이 이동(moveOverheadSeconds 1.0) · killFloorSeconds = 가장 빠른 평타 한 번의 간격 근처.
+	--   보석 가루 · 골드 · 경험치 · 강화석은 보정하지 않는다(장비 드랍만 - 지시 "6티어 드랍표").
+	fairness = { killFloorSeconds = 0.5, travelSeconds = 1.0, strength = 1 },
+
 	-- G1-1(보상 목록 단일 소스): 보스 확정 장비의 등급표. 옛 코드는 첫 클리어 = armorGradeByTier[6](드래곤 표를 그대로 가리킴) · 재도전 = [1]이었다 - 드래곤 표를
 	-- 고치면(G1-2 공정성 보정) 보스 보상이 같이 바뀌므로 값을 그대로 옮겨 따로 선언한다(값 불변). 환생 0회의 상향표는 MonsterData가 이 firstClear를 한 단계 민다.
 	-- 읽는 곳: DropTable.bossFirstClearGradeTable · bossRetryGradeTable(서버 굴림 Loot · 스테이지 선택 보상 띠 · 검증).
