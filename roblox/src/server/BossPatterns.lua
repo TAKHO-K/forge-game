@@ -2015,6 +2015,28 @@ function kit.stun(model, st, data, seconds)
 	end
 	send(st, "daze", { seconds = seconds })
 end
+-- BR1-2 보스 에어본(되튕겨진 투사체 - BossData.mechanics.bossAirborne): 진행 중 패턴을 끊고 떠올랐다 떨어져 기절. 쿨 안이면 피해만.
+function kit.bossAirborne(model, st, data, now, projectile)
+	local cfg = BossData.mechanics.bossAirborne
+	local hp, maxHp = MonsterState.getBossHp(model)
+	if maxHp then
+		MonsterState.applyDamage(model, maxHp * cfg.damageMaxHpFraction, data.stageNumber, projectile.owner and projectile.owner.player or nil)
+	end
+	send(st, "projEnd", { id = projectile.id, position = projectile.position })
+	if st.lastAirborneAt and now - st.lastAirborneAt < cfg.cooldownSeconds then
+		debugEvent("bossAirborne", { at = now, skipped = true })
+		return false
+	end
+	st.lastAirborneAt = now
+	BossPatterns.interrupt(model, data)
+	local base = st.position or model:GetPivot().Position
+	st.airborne = { at = now, base = base }
+	st.stunUntil = now + cfg.riseSeconds + cfg.fallSeconds + cfg.stunSeconds
+	send(st, "bossAirborne", { position = base, liftStuds = cfg.liftStuds, riseSeconds = cfg.riseSeconds, fallSeconds = cfg.fallSeconds, stunSeconds = cfg.stunSeconds, bossId = data.id })
+	debugEvent("bossAirborne", { at = now, skipped = false })
+	print(("[forge-game] 보스 에어본: 되튕겨진 투사체 → %.2f초 뜸 · 기절 %.1f초 · 최대 체력 %.0f%%"):format(cfg.riseSeconds + cfg.fallSeconds, cfg.stunSeconds, cfg.damageMaxHpFraction * 100))
+	return true
+end
 BossHandlersBR1.register(HANDLERS, kit)
 BossAirGrab.register(HANDLERS, kit)
 require(script.Parent.BossSonic).register(HANDLERS, kit) -- BR1-2 음파 포효(primitive sonic)
@@ -2075,6 +2097,20 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	BossHandlersBR1.trackAir(st, now) -- BR1: 멤버별 연속 체공(대공 잡기 · 대공 투사체의 조건)
 	BossHandlersBR1.stepProjectiles(model, st, data, now, dt) -- BR1: 쏜 투사체는 스킬과 떨어져 난다
 	BossEnvironment.step(model, st, data, now, dt) -- BR1: 환경 변화(두 번째 시계 - 기본 패턴과 겹친다)
+	if st.airborne then -- BR1-2 보스 에어본: 떠올랐다(rise) 떨어진다(fall) - 그 뒤는 아래 기절(stunUntil)
+		local cfg = BossData.mechanics.bossAirborne
+		local a = st.airborne
+		local h = BossSkillMath.bossAirborneHeight(cfg, now - a.at)
+		if h then
+			model:PivotTo(CFrame.new(a.base + Vector3.new(0, h, 0)) * CFrame.Angles(math.rad(-25 * h / cfg.liftStuds), 0, 0))
+			return true
+		end
+		st.airborne = nil
+		model:PivotTo(CFrame.new(a.base - Vector3.new(0, 1.2, 0)) * CFrame.Angles(0, 0, math.rad(25))) -- 떨어져 헤롱(돌진 벽 충돌과 같은 자세)
+		st.dazeBase = a.base
+		send(st, "daze", { seconds = cfg.stunSeconds })
+		send(st, "bossLand", { position = a.base })
+	end
 	if st.stunUntil then -- BR1 환경 기믹 파훼로 기절 중
 		if now < st.stunUntil then
 			return true

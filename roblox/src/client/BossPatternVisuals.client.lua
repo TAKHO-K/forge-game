@@ -758,6 +758,12 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossColorView.finish()
 	elseif kind == "basicSweep" then
 		BossInnerCircleView.sweep(data)
+	elseif kind == "bossAirborne" then -- BR1-2 보스 에어본: 발밑 먼지 고리 + 흔들림(보스 몸은 서버가 띄운다)
+		BossFx.ring(data.position - Vector3.new(0, 1.5, 0), 2, 12, Color3.new(1, 1, 1), 0.4)
+		BossFx.shake(data.position, 0.7)
+	elseif kind == "bossLand" then -- 떨어짐: 큰 먼지 고리 + 크게 흔들림
+		BossFx.ring(data.position - Vector3.new(0, 1.5, 0), 3, 20, Color3.fromRGB(235, 228, 214), 0.6)
+		BossFx.shake(data.position, 1.0)
 	elseif kind == "courseHelp" then
 		BossEnvironmentView.courseHelp(data)
 	elseif kind == "starTwinkle" then

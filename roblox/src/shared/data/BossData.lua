@@ -147,6 +147,11 @@ local MECHANICS = {
 	--   값 = 난이도 모형 격자(BR1-2 보고서 ④): 2인 · 4인 첫 도전 전멸 30%대 · 처치 시간 솔로 > 2인 · 4인.
 	party = { hpExponent = 0.93, globalCooldownScale = { 1, 0.7, 0.6, 0.5 }, failShareFraction = 0.45 },
 
+	-- BR1-2 보스 에어본(사용자 - 되튕겨진 보스 투사체가 보스에 맞으면): 보스가 riseSeconds 동안 liftStuds 떠올랐다 fallSeconds 동안 떨어지고 stunSeconds 기절(돌진 헤롱과 같은 그림 - 인형 방식).
+	--   맞는 순간 진행 중 패턴은 끊긴다 · 기절 동안 새 패턴 · 평타 없음 · 보스 최대 체력 × damageMaxHpFraction. cooldownSeconds 안에 또 맞으면 에어본 없이 피해만(연속 에어본 방지).
+	--   판정 = 되튕겨진 투사체(owner.kind == "player")가 보스 곁 hitRadiusStuds + 투사체 반경 안. 지금 되튕기는 수단은 개발 명령(/gg reflectshot)뿐 - 성기사 방패 패링 연결은 K.
+	bossAirborne = { liftStuds = 10, riseSeconds = 0.35, fallSeconds = 0.35, stunSeconds = 3.0, damageMaxHpFraction = 0.03, cooldownSeconds = 12, hitRadiusStuds = 4 },
+
 	-- BR1 핵심 기믹 실패(설계 §3): 55% → 85% · 쉴드 무시. 기믹 판정 실패(resolveGimmick)에만 쓴다 - 다른 %최대체력 피해(돌진 · 구덩이 · 반사 · 분신)는
 	-- 옛 발동당 상한(gimmickFailMaxHpFraction 55%)에 그대로 묶인다. 85%는 "실패 + 강한 공격 한 번 = 죽음"이면서 단독으로는 죽지 않는 값(즉사는 K 단계).
 	-- 그 보스전에서 **처음 보는** 기믹의 실패는 firstMaxHpFraction(옛 55% - 배우는 한 번), 두 번째부터 maxHpFraction(85%). 난이도 모형(첫 도전 전멸률 목표 30 ~ 50%)에서

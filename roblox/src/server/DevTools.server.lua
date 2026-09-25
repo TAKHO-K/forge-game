@@ -2288,6 +2288,24 @@ local function handleCommand(player, args)
 		local model = BossEncounter.getActive(player)
 		local stage, pads = require(script.Parent.BossJumpCourse).debugHelp(model, tonumber(args[2]))
 		reply(player, ("수정 부수기 시계 +%s초 - 도움 단계 %d · 발판 %d"):format(args[2], stage, pads))
+	elseif sub == "reflectshot" then
+		-- BR1-2 보스 에어본 시험: 보스의 투사체(거품탄 · 회오리 등 - 인자 = 스킬 id, 없으면 첫 투사체 스킬)를 되튕겨진 것처럼 내 자리에서 보스 쪽으로 쏜다
+		local model = BossEncounter.getActive(player)
+		local st = model and MonsterState.getBossPatternState(model)
+		local data = model and MonsterState.getData(model)
+		local skillId = args[2]
+		if data and not skillId then
+			for _, id in ipairs(data.skillOrder) do
+				if not skillId and data.skills[id] and data.skills[id].primitive == "projectile" then
+					skillId = id
+				end
+			end
+		end
+		if st and require(script.Parent.BossHandlersBR1).debugReflectedShot(model, st, data, player, skillId) then
+			reply(player, "되튕겨진 투사체 발사: " .. tostring(skillId))
+		else
+			reply(player, "실패: 활성 보스 · 투사체 스킬(" .. tostring(skillId) .. ")이 없습니다")
+		end
 	elseif sub == "bubbletrap" then
 		-- BR1-2 스크린샷: 나를 공중 가둠에 넣는다(거품탄 두 번 맞은 것과 같은 경로)
 		local model = BossEncounter.getActive(player)

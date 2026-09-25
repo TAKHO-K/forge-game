@@ -158,6 +158,15 @@ function BossSkillMath.panLaunch(pan, rel, airborne, rand01)
 	return dir, height, distance, pan.multiplier, distance >= pan.starDistanceStuds
 end
 
+-- BR1-2 보스 에어본 높이(시작부터 t초): 떠오름 riseSeconds → 떨어짐 fallSeconds(사인 곡선 - 꼭대기 liftStuds). 다 떨어졌으면 nil(그 뒤는 기절).
+function BossSkillMath.bossAirborneHeight(cfg, t)
+	if t >= cfg.riseSeconds + cfg.fallSeconds then
+		return nil
+	end
+	local f = t < cfg.riseSeconds and (t / cfg.riseSeconds) or (1 - (t - cfg.riseSeconds) / cfg.fallSeconds)
+	return math.sin(math.clamp(f, 0, 1) * math.pi / 2) * cfg.liftStuds
+end
+
 -- BR1 돌진: 둘째 돌진부터의 전조(repeatTelegraphSeconds - 없으면 첫 돌진과 같다).
 function BossSkillMath.dashTelegraph(skill, dashIndex)
 	if dashIndex > 1 and skill.repeatTelegraphSeconds then

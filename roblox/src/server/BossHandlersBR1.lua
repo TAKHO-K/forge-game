@@ -334,7 +334,15 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 				end
 			end
 		end
-		if not done then
+		if not done and not holding and p.owner and p.owner.kind == "player" then
+			-- BR1-2 되튕겨진 투사체(K 패링 · 지금은 /gg reflectshot): 사람은 안 치고 보스에 맞으면 에어본(BossPatterns.bossAirborne)
+			local cfg = BossData.mechanics.bossAirborne
+			local bossAt = model:GetPivot().Position
+			if (Vector3.new(bossAt.X, p.position.Y, bossAt.Z) - p.position).Magnitude <= cfg.hitRadiusStuds + p.radius then
+				done = true
+				kit.bossAirborne(model, st, data, now, p)
+			end
+		elseif not done and not holding then -- 모으는 중(반사 윈드업)에는 아무도 안 맞는다
 			for _, v in ipairs(targets) do
 				if not p.hitBy[v.player] and not BossTrap.isTrapped(v.player) then
 					local hit
@@ -422,6 +430,29 @@ function BossHandlersBR1.noteTrapHit(c, v, spec)
 	kit.send(st, "bubbleTrap", { userId = typeof(v.player) == "Instance" and v.player.UserId or nil, position = lifted, seconds = spec.seconds, style = spec.style, presses = spec.presses })
 	kit.debugEvent("bubbleTrap", { player = v.player, at = c.now })
 	print(("[forge-game] 공중 가둠(%s): %s - %d번 맞음"):format(spec.style, tostring(v.player.Name), spec.hits))
+	return true
+end
+
+-- BR1-2 개발 명령(/gg reflectshot): 보스의 투사체 스킬 skillId 모양으로 "되튕겨진 투사체"를 플레이어 자리에서 보스 쪽으로 쏜다(성기사 패링 흉내 - 소유자 = 그 플레이어 · 반사 1회).
+function BossHandlersBR1.debugReflectedShot(model, st, data, player, skillId)
+	local skill = data.skills[skillId]
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not (skill and skill.primitive == "projectile" and root) then
+		return false
+	end
+	local bossAt = model:GetPivot().Position
+	local from = root.Position + Vector3.new(0, 1, 0)
+	local flat = Vector3.new(bossAt.X - from.X, bossAt.Y - from.Y, bossAt.Z - from.Z)
+	local dir = flat.Magnitude > 1e-3 and flat.Unit or Vector3.new(1, 0, 0)
+	nextProjectileId += 1
+	local projectile = {
+		id = nextProjectileId, position = from, dir = dir, speed = 30, turnRad = 0, radius = skill.radiusStuds,
+		expiresAt = os.clock() + flat.Magnitude / 30 + 2, heightMode = "air", pierce = false, hitBy = {}, bouncesLeft = 0, model = model, data = data,
+		skill = skill, owner = { kind = "player", player = player }, reflectable = true, reflections = 1,
+	}
+	st.projectiles = st.projectiles or {}
+	table.insert(st.projectiles, projectile)
+	kit.send(st, "projSpawn", { id = projectile.id, position = from, dir = dir, speed = 30, radius = skill.radiusStuds, style = skill.projectileStyle, heightMode = "air", bossId = data.id })
 	return true
 end
 
