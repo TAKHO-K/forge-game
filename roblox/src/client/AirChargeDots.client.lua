@@ -1,4 +1,4 @@
--- 공중 점프 충전 표시(M1-0): 자기 캐릭터 발밑의 작은 점(충전 수만큼 - 남은 것 = 밝음, 쓴 것 = 어두움) + 공중대시 1칸(마름모 - 쓰면 어두움). PC · 폰 같은 모양이라 HUD 자리(ScreenMap)가 필요 없다.
+-- 공중 점프 충전 표시(M1-0): 자기 캐릭터 발밑의 작은 점(충전 수만큼 - 남은 것 = 노랑, 쓴 것 = 회색) + 공중대시 1칸(마름모 - 주황, 쓰면 회색). 밝은 바닥에서 투명도로는 구분이 안 됐다(스크린샷) - 색을 바꾼다. PC · 폰 같은 모양이라 HUD 자리(ScreenMap)가 필요 없다.
 -- 떠 있는 동안만 보인다(땅에서는 늘 가득이라 숨긴다). 값 = 캐릭터 Attribute "AirJumpsLeft" · "AirDashUsed"(DoubleJumpInput · DashInput이 이 클라에서 쓴다). 남에게는 안 보인다.
 
 local Players = game:GetService("Players")
@@ -10,9 +10,8 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local player = Players.LocalPlayer
 local charges = MovementConfig.airJump.charges
 
-local DOT = 10
+local DOT = 12
 local GAP = 6
-local DIM = 0.7 -- 쓴 칸의 배경 투명도
 
 local gui = Instance.new("BillboardGui")
 gui.Name = "AirChargeDots"
@@ -48,7 +47,7 @@ end
 
 local jumpCells = {}
 for i = 1, charges do
-	jumpCells[i] = cell(i, UIColors.textPrimary)
+	jumpCells[i] = cell(i, UIColors.xp)
 end
 local dashCell = cell(charges + 1, UIColors.ember, 45)
 
@@ -57,9 +56,9 @@ local AIR = { [Enum.HumanoidStateType.Jumping] = true, [Enum.HumanoidStateType.F
 local function render(character)
 	local left = character:GetAttribute("AirJumpsLeft") or charges
 	for i, frame in ipairs(jumpCells) do
-		frame.BackgroundTransparency = i <= left and 0 or DIM
+		frame.BackgroundColor3 = i <= left and UIColors.xp or UIColors.lockedIcon
 	end
-	dashCell.BackgroundTransparency = character:GetAttribute("AirDashUsed") and DIM or 0
+	dashCell.BackgroundColor3 = character:GetAttribute("AirDashUsed") and UIColors.lockedIcon or UIColors.ember
 end
 
 local function bind(character)
