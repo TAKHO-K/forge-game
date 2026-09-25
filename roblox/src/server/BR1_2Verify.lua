@@ -482,6 +482,7 @@ function BR1_2Verify.runLive(player, env)
 		local rods = BossPropMath.kitZones(data.arenaKit, zone.center, FLOOR, "rod")
 		local onRod = standIn(model, "OnRod", Vector3.new(rods[1].center.X + 2, FLOOR + 3, rods[1].center.Z))
 		H.fullHeal(onRod)
+		PlayerState.setIncomingDamageMultiplierUntil(onRod, 0, 120, "br12Verify") -- 일반 번개에 죽어 표적 차례를 잃지 않게(검증 쪽)
 		hook()
 		BossPatterns.force(model, data, "rods")
 		local skill = data.skills.rods

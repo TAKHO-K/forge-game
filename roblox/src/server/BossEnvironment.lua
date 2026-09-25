@@ -235,7 +235,12 @@ local function activate(model, st, data, env, e, now)
 				for _, v in ipairs(kit.victims(st)) do
 					local rel = xz(v.root.Position) - xz(z.center)
 					local inside = math.abs(rel:Dot(alongDir)) <= z.halfLength and math.abs(rel:Dot(sideDir)) <= z.halfWidth
-					local airborne = typeof(v.player) == "Instance" and kit.isAirborne(v.player.Character, 0.5) or v.player.debugAirborne == true
+					local airborne
+					if typeof(v.player) == "Instance" then
+						airborne = kit.isAirborne(v.player.Character, 0.5)
+					else
+						airborne = v.player.debugAirborne == true -- 검증 스탠드인(표)만 - 진짜 Player에는 이 필드가 없다(읽으면 에러)
+					end
 					if inside and not BossTrap.isTrapped(v.player) and (airborne or Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0))) then
 						local dir, height, distance, multiplier, star = BossSkillMath.panLaunch(onStart.pan, rel, airborne, random01)
 						kit.applySkillDamage(model, data, { damage = { kind = "attack", multiplier = multiplier }, damageLabel = env.damageLabel }, v.player)

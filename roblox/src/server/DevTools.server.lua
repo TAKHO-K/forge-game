@@ -2283,6 +2283,11 @@ local function handleCommand(player, args)
 		else
 			reply(player, "활성 보스가 없습니다")
 		end
+	elseif sub == "coursehelp" and tonumber(args[2]) then
+		-- BR1-2 스크린샷: 수정 부수기 전투 시계를 N초 당긴다(도움 단계 확인)
+		local model = BossEncounter.getActive(player)
+		local stage, pads = require(script.Parent.BossJumpCourse).debugHelp(model, tonumber(args[2]))
+		reply(player, ("수정 부수기 시계 +%s초 - 도움 단계 %d · 발판 %d"):format(args[2], stage, pads))
 	elseif sub == "bubbletrap" then
 		-- BR1-2 스크린샷: 나를 공중 가둠에 넣는다(거품탄 두 번 맞은 것과 같은 경로)
 		local model = BossEncounter.getActive(player)
