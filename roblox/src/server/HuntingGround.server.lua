@@ -207,6 +207,15 @@ do
 	end
 end
 
+-- M1: 대기 밀도(WorldMapData.atmosphere - place 기본 0.3은 멀리 있는 나무 · 빛기둥을 지운다)
+do
+	local atmosphere = game:GetService("Lighting"):FindFirstChildOfClass("Atmosphere")
+	if atmosphere then
+		atmosphere.Density = WorldMapData.atmosphere.density
+		atmosphere.Offset = WorldMapData.atmosphere.offset
+	end
+end
+
 removeDefaultSpawns("HuntingGroundSpawn")
 removeDefaultBaseplate()
 createPlayerSpawn(WorldConfig.zones.spawn.arrival)

@@ -73,43 +73,102 @@ return {
 		},
 		portalRingRadius = 38, -- 포탈 광장 안 구역별 포탈 6개(이름표가 안 겹치게 - 이웃 간격 38)
 		lanterns = { count = 24 }, -- 경계선 등불(safeRadius 둘레)
-		roots = { count = 8, length = 250, height = 10, width = 14 },
+		roots = { count = 8, length = 250, height = 4, width = 14 }, -- 낮은 경사(나무 점프맵 첫 가지 높이 5보다 낮게)
 		-- 나무(점프맵 · 랜드마크). 높이 약 470. 잎(leaves)은 별도 모델 - 재질 · 색은 seasons에서(봄 벚꽃 교체 = 데이터만).
 		tree = {
-			-- M1 추가(사용자 - 매일 오르는 콘텐츠): 높이는 시간으로 역산했다 - 바닥 → 정상 6 ~ 8분(보통 실력) · 최고 정거장 → 정상 1.5 ~ 2분(검증 M1(가)가 아래 secondsPerStep으로 잰다).
-			trunkRadius = 40, trunkHeight = 800,
+			-- M1 추가(사용자 - 매일 오르는 콘텐츠): 높이는 시간으로 역산했다 - 바닥 → 정상 6 ~ 8분(보통 실력) · 최고 정거장 → 정상 1.5 ~ 2분(검증 M1(가)가 course.secondsPer로 잰다).
+			-- 나무 모양(사용자 - 세계수 · 메타세쿼이아처럼): 곧은 적갈색 줄기(결 · 판자뿌리) + 층층이 뻗은 수평 가지(tiers) + 아래가 넓고 위로 좁아지는 원뿔 수관 + 뾰족한 꼭대기(spire).
+			--   가지 끝의 잎 뭉치(spray - 납작한 잎 판)는 점프맵 길 바깥(clearRadius 이상)에만 - 오르는 사람이 잎 속에 파묻히지 않게. 어깨(shoulderY) 위는 길이 끝난 뒤라 줄기까지 잎이 찬다.
+			--   장식은 전부 충돌 · 쿼리 없음. 색 = bark(껍질) · 잎은 계절 역할(SeasonRole) - WorldMap.setSeason.
+			trunkRadius = 48, trunkHeight = 800,
+			bark = { 142, 84, 58 }, barkDark = { 108, 62, 44 }, barkMaterial = "SmoothPlastic", -- 카툰풍(평면 음영) -- 메타세쿼이아 적갈색 껍질(점프맵 가지 · 혹 · 정거장도 이 톤 - 길이 나무에서 튀지 않게)
+			buttress = { count = 10, height = 90, reach = 95, width = 12 }, -- 판자뿌리(밑동이 넓게 퍼진다)
+			ridges = { count = 14, depth = 3, width = 5 }, -- 줄기 결(세로 골)
+			crownShape = {
+				baseY = 150, baseRadius = 300, -- 가장 아래 가지층(가장 넓다 - 잎 덮개 ≈ 허브 안전 지대)
+				shoulderY = 770, shoulderRadius = 150, -- 점프맵 끝 높이 - 여기까지 원뿔이 좁아진다
+				tipY = 960, -- 꼭대기(뾰족 - 줄기가 가늘어지며 끝난다)
+				-- 잎(사용자 확정 - 층층 로우폴리 원뿔): 층(tier)마다 각진 원뿔대 "치마" 한 장 - 위 가장자리 = 안쪽(점프맵 길 밖 clearRadius · 어깨 위는 줄기) · 아래 가장자리 = 수관 반경.
+				--   면 = 쐐기 파트 2개로 만든 삼각형(로우폴리 · 메시 에셋 없음 - git에 남는다). 층마다 면 수 · 꼭짓점 반경 · 높이 · 비틀림 · 색을 고정 시드로 흔든다(매번 같은 모양).
+				--   층이 위아래로 겹쳐(skirt > spacing) 틈이 없다 · 안쪽은 비어 있어 오르는 사람은 치마 밑에서 바깥을 본다. 꼭대기 = 끝이 뾰족한 원뿔(tip).
+				clearRadius = 145,
+				coneTiers = { spacing = 70, skirt = 104, facets = { 6, 8 }, thickness = 1.6 }, -- 면 수가 적을수록 로우폴리(파트 = 면 × 4)
+				jitter = { seed = 20260926, radius = 0.09, y = 6, twistDeg = 16, tint = 0.07 },
+			},
 			leaves = {
-				season = "summer",
+				season = "summer", -- 계절 = 이 값 하나(또는 Workspace Attribute Season - WorldMap.setSeason이 SeasonRole 붙은 도형을 다시 칠한다)
+				-- 계절 색표(역할별): 잎 판 = leaves(바깥 층) · leavesDeep(안쪽 · 아래 층) · 점프맵 잎 발판 = leafPad · 솔방울 = blossom. 메타세쿼이아: 봄 연둣빛 · 여름 초록 · 가을 적갈색 · 겨울 잎 진 회갈색 + 눈.
 				seasons = {
-					summer = { material = "Grass", color = { 110, 140, 105 } },
-					spring = { material = "Grass", color = { 235, 180, 195 } }, -- 벚꽃(시즌 단계에서 season만 바꾼다)
-				},
-				-- 잎 뭉치(공 - 충돌 없음) - 고리마다 반경 · 높이 · 지름 · 개수. 잎 덮개 반경 ≈ 300 = 안전 지대 경계. 줄기 둘레 반경 70 안은 비운다(점프맵 나선).
-				rings = {
-					{ radius = 140, y = 560, diameter = 130, count = 10 },
-					{ radius = 240, y = 520, diameter = 150, count = 14 },
-					{ radius = 190, y = 640, diameter = 130, count = 10 },
-					{ radius = 110, y = 720, diameter = 110, count = 7 },
+					spring = { material = "SmoothPlastic", leaves = { 170, 210, 120 }, leavesDeep = { 140, 190, 100 }, leafPad = { 180, 215, 130 }, blossom = { 150, 110, 70 } },
+					summer = { material = "SmoothPlastic", leaves = { 96, 150, 82 }, leavesDeep = { 72, 122, 66 }, leafPad = { 118, 165, 94 }, blossom = { 120, 90, 60 } },
+					autumn = { material = "SmoothPlastic", leaves = { 196, 104, 52 }, leavesDeep = { 160, 78, 44 }, leafPad = { 210, 130, 64 }, blossom = { 110, 70, 45 } },
+					winter = { material = "SmoothPlastic", leaves = { 214, 222, 228 }, leavesDeep = { 150, 128, 116 }, leafPad = { 228, 234, 238 }, blossom = { 240, 244, 248 } },
 				},
 			},
+			fruitColors = { bounce = { 255, 150, 60 }, soft = { 200, 120, 220 }, hang = { 250, 220, 80 }, pad = { 230, 90, 90 } },
 			-- 구름층(연출 자리 - 그레이박스는 옅은 원판 하나 · 충돌 없음): 오르다 이 높이를 지나간다.
 			cloudLayer = { y = 400, radius = 420, thickness = 6, transparency = 0.85 },
 			metersPerStud = 0.28, -- 화면 높이 표시(m) = (발 − 지면) × 이 값(로블록스 관례 1 stud ≈ 0.28 m)
-			-- 점프맵: 줄기 둘레 나선(발판 중심 반경 = 줄기 + ringOffset). 구간 = movement-metrics v2 §3 표 - 간격 · 오름은 발판 끝에서 끝. 발판마다 pattern을 차례로 되풀이한다.
-			-- 구간 1 ~ 5의 끝 = 가지 정거장(체크포인트 · 휴식처 - 넓은 발판). 역대 최고 레벨(환생해도 유지 - peakLevel)이 unlockLevel 이상이면 그 정거장이 열리고,
-			-- 허브의 덩굴 리프트가 가장 높은 열린 정거장으로 보낸다. 마지막 구간(정거장 5 → 정상)은 누구나 직접 오른다. 대시 칸 사이는 보통 세 칸(대시 쿨 8초).
-			-- 떨어지면 마지막으로 밟은 정거장으로 돌아간다(fallDropStuds 아래로 내려가면 - 정거장의 "내려가기" 판을 쓰면 기록이 지워진다).
+			-- 점프맵(M1 재설계 - 사용자: "진짜 거대한 나무를 기어오른다"). 줄기 둘레 발판이 아니라 가지 · 열매 · 덩굴 · 잎 · 줄기 속 통로를 지나간다.
+			--   두 갈래 길: inner = 줄기 가까이(반경 inner.radius) · 기존 방향(+) · 짧고 어렵다(좁은 발판 · 정밀 점프 · 줄기 속 통로) /
+			--   outer = 반대 방향(−) · 줄기에서 멀리 뻗은 가지(반경 outer.radius) · 길고 점프대가 많다(경치). 두 길은 정거장(줄기 둘레 고리 발판 - 반경 ringInner ~ ringOuter)에서 만난다 -
+			--   안쪽 길은 고리 안쪽 가장자리로 · 바깥 길은 바깥 가장자리로 올라선다(고리가 두 길 머리 위를 막지 않는다).
+			--   구간 = 정거장 사이 6개(바닥 → 1 … 5 → 정상). 구간마다 주인공 요소 1개(theme). 요소(k): branch(원통 가지 - dia = 굵기 · 가늘수록 조심) · bounce(통통 열매 - 트램펄린) ·
+			--   soft(말랑 열매 - 밟으면 가라앉다가 softDropSeconds 뒤 떨어지고 softRespawnSeconds 뒤 다시 - 로컬 · 풀링) · hang(매달린 열매 - 진자 · 움직이는 발판) ·
+			--   pad(점프대 - 버섯 · 꽃봉오리 · 다음 요소까지 정해진 포물선으로 날린다 · 착지 표시) · vine(덩굴 사다리 - TrussPart 기본 오르기 · h) · leaf(잎 발판 - sway면 흔들림) ·
+			--   tunnel(줄기 속 구멍 통로 - 줄기 안으로 들어가 반대편 구멍으로 나온다) · step(평범한 가지 혹).
+			--   rise = 앞 요소 윗면 → 이 요소 윗면 · gap = 앞 요소 끝 → 이 요소 끝(수평 · 길을 따라). 필요한 기술은 검증 M1(가)가 movement-metrics v2 표(80% 여유)로 계산한다.
+			--   pattern은 차례로 되풀이하고, 정거장 높이 finalRiseMax 안쪽에 들어오면 정거장으로 올라선다. secondsPer = 보통 실력 가정 시간(실패 · 재시도 포함 - 체감으로 다시 맞춘다).
+			-- 구간 1 ~ 5의 끝 = 가지 정거장. 역대 최고 레벨(peakLevel)이 unlockLevel 이상이면 열리고 허브 덩굴 리프트가 가장 높은 열린 정거장으로 보낸다. 마지막 구간은 누구나 직접.
+			-- 떨어지면 마지막으로 밟은 정거장으로(fallDropStuds 아래로 내려가 서면 - 정거장의 "내려가기" 판을 쓰면 기록이 지워진다).
 			course = {
-				startAngleDeg = -90, ringOffset = 9, checkpointSize = 16,
-				-- 보통 실력 가정(실패 · 재시도 포함) 한 칸 평균 시간 - 높이 역산의 근거(체감으로 다시 맞춘다)
-				secondsPerStep = { easy = 2.0, normal = 3.5, hard = 5.0 },
-				sections = {
-					{ name = "뿌리 계단", difficulty = "easy", untilY = 100, width = 5, pattern = { { rise = 4, gap = 5 } } },
-					{ name = "첫 가지", difficulty = "normal", untilY = 230, width = 3.5, pattern = { { rise = 6, gap = 10 }, { rise = 12, gap = 8 }, { rise = 4, gap = 15 } } },
-					{ name = "구름 아래", difficulty = "normal", untilY = 360, width = 3.5, pattern = { { rise = 6, gap = 10 }, { rise = 12, gap = 8 }, { rise = 4, gap = 15 } } },
-					{ name = "구름층", difficulty = "hard", untilY = 470, width = 2.5, pattern = { { rise = 5, gap = 24, dash = true }, { rise = 13, gap = 8 }, { rise = 8, gap = 14 }, { rise = 6, gap = 10 } } },
-					{ name = "높은 가지", difficulty = "hard", untilY = 580, width = 2.5, pattern = { { rise = 5, gap = 24, dash = true }, { rise = 13, gap = 8 }, { rise = 8, gap = 14 }, { rise = 6, gap = 10 } } },
-					{ name = "정상 오르기", difficulty = "hard", untilY = 750, width = 2.5, pattern = { { rise = 5, gap = 24, dash = true }, { rise = 13, gap = 8 }, { rise = 8, gap = 14 }, { rise = 6, gap = 10 } } },
+				trunkSegments = true, -- 줄기를 통로 높이에서 끊어 짓는다(속이 빈 고리)
+				station = { ringInner = 68, ringOuter = 110, thickness = 2, segments = 16, startAngleDeg = -90 },
+				inner = { radius = 60, dir = 1 },
+				outer = { radius = 120, dir = -1 },
+				finalRiseMax = 6,
+				elementScale = 0.75, -- 밟는 칸 크기 배율(사용자 - 길이 나무보다 튀지 않게): 가지 · 잎 길이 · 열매 · 혹 · 점프대 갓. 가지 굵기(dia)는 균형 판정이라 그대로 · 열매 지름 최소 4 · 혹 최소 2.5
+				bounce = { reachStuds = 22, horizontalMax = 14 }, -- 통통 열매: 밟으면 발 +reach(클라 속도) - 공중 점프는 그 뒤에도 쓴다(서버 높이 검증 예외 - TreeLaunch)
+				pad = { maxGap = 44, maxRise = 18, flightSeconds = 1.1 }, -- 점프대: 다음 요소 가운데로 날린다(비행 시간 고정 포물선)
+				soft = { sinkStuds = 0.8, dropSeconds = 1.5, respawnSeconds = 4 },
+				hang = { rope = 10, swingDeg = 22, periodSeconds = 4.0 },
+				leafSway = { deg = 6, periodSeconds = 3.2 },
+				movingMax = 14, -- 움직이는 발판(매달린 열매 + 흔들리는 잎) 상한 - 검증이 센다
+				climbStudsPerSecond = 9, -- 덩굴 오르기 속도(가정 - 시간 표)
+				secondsPer = { easy = 2.0, normal = 3.2, hard = 4.8, bounce = 2.6, launch = 3.0, climbExtra = 1.0, soft = 0.6, hang = 1.5, tunnel = 8 },
+				legs = {
+					{ -- 바닥 → 정거장 1(100): 굵은 가지 + 통통 열매 입문(보통)
+						name = "뿌리 가지", theme = "굵은 가지 · 통통 열매", untilY = 100,
+						inner = { { k = "branch", rise = 5, gap = 8, len = 14, dia = 6 }, { k = "bounce", rise = 3, gap = 7, dia = 6 }, { k = "branch", rise = 12, gap = 6, len = 10, dia = 5 }, { k = "step", rise = 6, gap = 10, w = 5 }, { k = "branch", rise = 3, gap = 11, len = 12, dia = 5 } },
+						outer = { { k = "branch", rise = 4, gap = 6, len = 22, dia = 8 }, { k = "bounce", rise = 3, gap = 6, dia = 7 }, { k = "branch", rise = 14, gap = 8, len = 20, dia = 7 }, { k = "branch", rise = 4, gap = 5, len = 18, dia = 7 } },
+					},
+					{ -- 정거장 1 → 2(230): 덩굴 + 잎(보통)
+						name = "덩굴 숲", theme = "덩굴 사다리 · 잎 발판", untilY = 230,
+						inner = { { k = "vine", rise = 16, gap = 4 }, { k = "leaf", rise = 2, gap = 5, len = 9 }, { k = "leaf", rise = 8, gap = 10, len = 9 }, { k = "leaf", rise = 12, gap = 8, len = 8, sway = true }, { k = "leaf", rise = 5, gap = 13, len = 8 } },
+						outer = { { k = "vine", rise = 14, gap = 4 }, { k = "leaf", rise = 2, gap = 5, len = 14 }, { k = "leaf", rise = 6, gap = 8, len = 14 }, { k = "branch", rise = 5, gap = 7, len = 20, dia = 7 }, { k = "leaf", rise = 8, gap = 9, len = 12 } },
+					},
+					{ -- 정거장 2 → 3(360): 말랑 열매 + 줄기 속 통로(보통 → 어려움)
+						name = "말랑 열매 골", theme = "말랑 열매 · 줄기 속 통로", untilY = 360,
+						inner = { { k = "soft", rise = 6, gap = 10, dia = 5 }, { k = "soft", rise = 10, gap = 8, dia = 5 }, { k = "tunnel", rise = 4, gap = 6 }, { k = "branch", rise = 8, gap = 12, len = 8, dia = 4 }, { k = "soft", rise = 12, gap = 8, dia = 5 } },
+						outer = { { k = "branch", rise = 5, gap = 7, len = 18, dia = 6 }, { k = "soft", rise = 6, gap = 8, dia = 6 }, { k = "soft", rise = 8, gap = 9, dia = 6 }, { k = "branch", rise = 4, gap = 6, len = 16, dia = 6 }, { k = "leaf", rise = 10, gap = 8, len = 12 } },
+					},
+					{ -- 정거장 3 → 4(470): 점프대 연속 + 가는 가지(어려움)
+						name = "점프대 가지", theme = "점프대 · 가는 가지", untilY = 470,
+						inner = { { k = "pad", rise = 3, gap = 8 }, { k = "branch", rise = 12, gap = 34, len = 12, dia = 2.5 }, { k = "branch", rise = 4, gap = 12, len = 12, dia = 2.5 }, { k = "branch", rise = 3, gap = 20, len = 10, dia = 2.5 }, { k = "step", rise = 11, gap = 8, w = 3 } },
+						outer = { { k = "pad", rise = 2, gap = 6 }, { k = "branch", rise = 12, gap = 38, len = 16, dia = 3.5 }, { k = "pad", rise = 2, gap = 6 }, { k = "branch", rise = 10, gap = 36, len = 16, dia = 3 }, { k = "branch", rise = 4, gap = 9, len = 14, dia = 3 } },
+						shortcut = { path = "inner", fromIndex = 2, skip = 3 }, -- 숨은 지름길: 잎 뒤에 숨은 덩굴(줄기 뒤쪽) - 요소 fromIndex에서 skip칸 건너뛴다
+					},
+					{ -- 정거장 4 → 5(580): 혼합 복습 - 통통 · 말랑 · 가는 가지 + 대시(어려움). 정거장이 5곳이라 구간이 6개(사용자 표 5개 + 이 구간).
+						name = "높은 가지", theme = "혼합(통통 · 말랑 · 가는 가지)", untilY = 580,
+						inner = { { k = "bounce", rise = 4, gap = 10, dia = 5 }, { k = "soft", rise = 18, gap = 8, dia = 5 }, { k = "branch", rise = 5, gap = 24, len = 10, dia = 2.5 }, { k = "step", rise = 13, gap = 8, w = 2.5 } },
+						outer = { { k = "pad", rise = 2, gap = 8 }, { k = "branch", rise = 10, gap = 36, len = 14, dia = 3 }, { k = "soft", rise = 6, gap = 10, dia = 5 }, { k = "branch", rise = 5, gap = 20, len = 12, dia = 3 }, { k = "vine", rise = 16, gap = 5 } },
+						egg = { path = "outer", index = 7, id = "tree_leafnest" }, -- 이스터에그 자리(바깥 길 잎 뒤)
+					},
+					{ -- 정거장 5 → 정상(750): 매달린 열매 + 공중 점프 · 대시 조합(마지막 - 누구나 직접)
+						name = "정상 오르기", theme = "매달린 열매 · 점프 대시 조합", untilY = 750,
+						inner = { { k = "hang", rise = 6, gap = 12, dia = 5 }, { k = "branch", rise = 5, gap = 24, len = 8, dia = 2.5 }, { k = "step", rise = 8, gap = 12, w = 2.5 }, { k = "leaf", rise = 6, gap = 26, len = 8 }, { k = "step", rise = 10, gap = 10, w = 2.5 }, { k = "branch", rise = 3, gap = 22, len = 8, dia = 2.5 } },
+						outer = { { k = "hang", rise = 5, gap = 10, dia = 6 }, { k = "leaf", rise = 6, gap = 14, len = 10 }, { k = "pad", rise = 2, gap = 8 }, { k = "branch", rise = 10, gap = 34, len = 12, dia = 2.5 }, { k = "branch", rise = 4, gap = 24, len = 10, dia = 2.5 }, { k = "step", rise = 9, gap = 10, w = 2.5 }, { k = "branch", rise = 3, gap = 20, len = 8, dia = 2.5 } },
+					},
 				},
 				-- 정거장 = 구간 1 ~ 5의 끝(순서대로). unlockLevel = 역대 최고 레벨 기준(제안 - 환생 요구 25 · 50 · 75 · 100 · 125와 겹치지 않게 간격을 벌렸다).
 				stations = {
@@ -266,6 +325,27 @@ return {
 		underground = { y = -80, entry = { angleDeg = 180, r = 60 }, radius = 260 },
 	},
 
+	-- 봉인 입구(M1 추가 - 사용자: 신규 업데이트 티저). 아직 개발하지 않은 확장 자리(reserved)의 입구 = "봉인된 문".
+	--   보스 잠금 결계(파란 빛 선 · 자물쇠 · "처음 잡으면 열린다")와 시각 언어가 다르다: 사슬 · 덩굴에 휘감긴 문 + 잠든 문장(빛이 숨쉬듯 희미하게) · 조건 문구 없음 · 날짜 · "곧 열림" 약속 문구 금지.
+	--   이름은 작게(낡은 명판) + "???". 소품(props)은 그 던전 느낌만 - 테마 = 데이터 · 모델 묶음(Sealed_<id>)으로 분리(나중에 교체 쉽게).
+	--   "뚫을 수 있을 것 같은" 틈(ledge): 문 옆 무너진 담 위 선반(높이 ledgeH - 공중 점프 1회로 닿는다) + 그 위 구멍. 실제로는 봉인 상자(box - 투명 충돌 벽 5면) + 서버 구역 검사(안이면 입구 앞으로 부드럽게 되돌림 · 피해 없음).
+	--   선반까지 올라간 사람 = 짧은 문구 + 칭호 "호기심 대장"(계정 1회 · v39 titles). 봉인 상자 안은 비워 둔다(인스턴스 0).
+	--   at: angleDeg · r = 문 위치(허브 원점 기준) · y = 문 바닥 높이 · 문 앞 = 허브 쪽(facing = "hub") 또는 바깥(facing = "out").
+	sealed = {
+		door = { width = 16, height = 22, frame = 3, ledgeH = 12, ledgeSize = 6, holeH = 8, wallW = 14, emblemSize = 5, breatheSeconds = 3.2 },
+		title = { id = "curiousCaptain", name = "호기심 대장", line = "…아직 잠들어 있다." },
+		entrances = {
+			{ id = "clockTower", name = "태엽 시계탑", region = "outerRing", at = { angleDeg = 0, r = 2590, y = 0 }, facing = "hub", box = { w = 320, d = 340, h = 700 }, props = "clockTower" },
+			{ id = "giantKitchen", name = "거인의 부엌", region = "outerRing", at = { angleDeg = 120, r = 2590, y = 0 }, facing = "hub", box = { w = 320, d = 340, h = 700 }, props = "giantKitchen" },
+			{ id = "puppetTheater", name = "인형 극장", region = "outerRing", at = { angleDeg = 240, r = 2590, y = 0 }, facing = "hub", box = { w = 320, d = 340, h = 700 }, props = "puppetTheater" },
+			-- 하늘섬: 나무 정상 전망대(760) 바깥 구름 발판 위 구름 문 - 정상에서만 보인다(구름 발판은 전망대에서 공중 점프 + 대시로 닿는다)
+			{ id = "cloudWhale", name = "구름 고래 하늘섬", region = "sky", at = { angleDeg = 90, r = 152, y = 770 }, facing = "hub", box = { w = 80, d = 120, h = 200 }, props = "cloudWhale",
+				platform = { r = 140, size = 24 } },
+			-- 지하: 허브 뿌리 아래 - 줄기 밑동 옆 광산 입구(문 앞 = 바깥 · 상자 = 줄기 쪽)
+			{ id = "moleMine", name = "두더지 광산", region = "underground", at = { angleDeg = 180, r = 76, y = 0 }, facing = "out", box = { w = 22, d = 20, h = 24 }, props = "moleMine" },
+		},
+	},
+
 	-- ═══ 진행 · 이동 ═══
 	progress = {
 		-- 구역 k+1 = 구역 k 보스를 처음 잡으면 열린다(개인 · 계정 - 직업 중 가장 높은 보스 기록). 처음 = T1만.
@@ -298,6 +378,9 @@ return {
 	spawnSites = { activateRadius = 250, keepRadius = 320, idleSeconds = 20, checkSeconds = 1.0 },
 	-- 스트리밍(Workspace 속성 = default.project.json · 여기 값은 기록 · 검증 대조용). 나무 실루엣은 Persistent 모델.
 	streaming = { targetRadius = 1024, minRadius = 128, streamOutBehavior = "Opportunistic" },
+
+	-- 대기(Atmosphere - place 기본 밀도 0.3은 1,000 stud 밖을 거의 지운다 → 나무 · 빛기둥이 어디서나 보이게 낮춘다. 서버 부팅 때 Lighting에 적용 - git 기록)
+	atmosphere = { density = 0.08, offset = 0 },
 
 	-- 검증 · 이동 시간 표용 지점 이름(보고서)
 	boss = { entry = "gate" }, -- 보스 입장 = 관문(보스 스테이지를 고르면 관문까지 길 안내 → 관문을 밟으면 입장). "direct" = 옛 즉시 입장

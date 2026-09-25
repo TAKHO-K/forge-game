@@ -237,6 +237,8 @@ local function defaultProfile()
 		world = { portals = {} },
 		-- M1(v38): 역대 최고 캐릭터 레벨(직업 · 환생 무관 최대 - 내려가지 않는다). 나무 가지 정거장 개방 기준.
 		peakLevel = 1,
+		-- M1(v39): 칭호(계정 - 전투력 없음) - { [칭호 id 문자열] = true }. 첫 칭호 = 호기심 대장(봉인 입구 틈까지 올라감).
+		titles = {},
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
 		gemDust = 0,
@@ -913,6 +915,12 @@ local function migrate(data)
 		data.version = 38
 	end
 
+	if data.version < 39 then
+		-- M1 봉인 입구: 칭호 집합(빈 표)
+		data.titles = data.titles or {}
+		data.version = 39
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -955,6 +963,7 @@ local function isValidProfile(data)
 		or (data.hints.bossIntroSeen ~= nil and type(data.hints.bossIntroSeen) ~= "table") -- v37
 		or type(data.world) ~= "table" or type(data.world.portals) ~= "table" -- v38
 		or type(data.peakLevel) ~= "number" or data.peakLevel < 1 -- v38
+		or type(data.titles) ~= "table" -- v39
 		or type(data.gemDust) ~= "number" or data.gemDust % 1 ~= 0 or data.gemDust < 0
 		or type(data.milestoneUnlocks) ~= "number" or data.milestoneUnlocks % 1 ~= 0 or data.milestoneUnlocks < 0
 		or type(data.leaderboardTainted) ~= "boolean" -- 리더보드 기록 제외(v34)

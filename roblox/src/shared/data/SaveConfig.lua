@@ -72,10 +72,11 @@ return {
 	-- SaveSystem.migrate()의 v33->v34 참고.
 	-- 35(P3c C4) - 필드 변경 없음, 값 이관: 레벨 126부터 필요 경험치 × 레벨별 배수(CharacterLevel.getExpScale - 133.3에서 레벨마다 ×0.99, 1에서 멈춤). classes[*].characterExp를
 	-- 옛 곡선(배수 없음)으로 읽은 레벨 · 진행률 그대로 새 곡선의 값으로 옮긴다. SaveSystem.migrate()의 v34->v35 참고.
+	-- 39(M1 봉인 입구) - titles = { [칭호 id 문자열] = true }(계정 공유 - 전투력 없음) 신설. 기존 세이브는 빈 표. SaveSystem.migrate()의 v38->v39 참고.
 	-- 38(M1) - world = { portals = { [구역 키] = true } }(입구 캠프 첫 방문으로 연 포탈 - 계정 공유) · peakLevel(역대 최고 캐릭터 레벨 - 환생해도 안 내려간다 · 나무 가지 정거장 기준)
 	-- 신설. 기존 세이브: portals 빈 표 · peakLevel = 지금 직업들 레벨 중 최대(환생 전 기록은 저장에 없어 복원 불가). SaveSystem.migrate()의 v37->v38 참고.
 	-- 37(BR1-2) - hints.bossIntroSeen(보스 id 문자열 키 집합) 신설 - 처음 만난 보스의 전멸기 카드를 한 번만 띄운다. 기존 세이브는 빈 표. SaveSystem.migrate()의 v36->v37 참고.
-	saveVersion = 38, -- M1: world.portals(포탈 개방) · peakLevel(역대 최고 레벨 - 나무 정거장)
+	saveVersion = 39, -- M1: titles(칭호 - 호기심 대장) · v38 world.portals · peakLevel
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

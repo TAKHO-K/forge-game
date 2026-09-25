@@ -455,6 +455,27 @@ function PlayerProfile.openPortal(player, zoneKey)
 	return true
 end
 
+-- 칭호(v39 - 계정 · 전투력 없음). 반환: 새로 받았는가. Titles Attribute(쉼표 목록 - 클라 표시용).
+function PlayerProfile.grantTitle(player, titleId)
+	local profile = profiles[player]
+	if not profile or profile.titles[titleId] then
+		return false
+	end
+	profile.titles[titleId] = true
+	local keys = {}
+	for k in pairs(profile.titles) do
+		table.insert(keys, k)
+	end
+	table.sort(keys)
+	player:SetAttribute("Titles", table.concat(keys, ","))
+	return true
+end
+
+function PlayerProfile.hasTitle(player, titleId)
+	local profile = profiles[player]
+	return profile ~= nil and profile.titles[titleId] == true
+end
+
 function PlayerProfile.getOpenPortals(player)
 	local profile = profiles[player]
 	return profile and profile.world.portals or {}
@@ -1849,6 +1870,9 @@ function PlayerProfile.snapshotForDevTools(player)
 		gemDust = profile.gemDust, -- P2.5b C: 보석 분해 · 재련 · 변환권 구매 검증이 가루를 바꾼다 - 같은 이유로 되돌린다.
 		hints = deepCopy(profile.hints), -- 30-0 S20e: 수동 Play에서 보석상인을 쓰면 안내 플래그가 켜지고 Play 종료 때 실제 프로필에 저장됐다(S20e 실측) - 같은 이유로 되돌린다.
 		autoProcess = deepCopy(profile.autoProcess), -- G1-2(v36): 새 저장 필드는 백업 대상(COMMON §1)
+		world = deepCopy(profile.world), -- M1(v38): 포탈 개방 - 새 저장 필드는 백업 대상(COMMON §1)
+		peakLevel = profile.peakLevel, -- M1(v38)
+		titles = deepCopy(profile.titles), -- M1(v39): 칭호(봉인 입구 검증이 지급한다)
 		leaderboardTainted = profile.leaderboardTainted, -- P3a(v34): 검증이 기록 경로를 재려고 끈 값을 되돌린다(COMMON §1 "새 저장 필드는 백업 대상에").
 	}
 end
@@ -1882,6 +1906,9 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.milestoneUnlocks = snapshot.milestoneUnlocks or profile.milestoneUnlocks
 	profile.inventorySlots = snapshot.inventorySlots or profile.inventorySlots
 	profile.leaderboardTainted = snapshot.leaderboardTainted
+	profile.world = snapshot.world and deepCopy(snapshot.world) or profile.world
+	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
+	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles
 	if snapshot.autoProcess then
 		profile.autoProcess = deepCopy(snapshot.autoProcess)
 		player:SetAttribute("AutoProcess", profile.autoProcess.enabled and profile.autoProcess.maxGrade or "off")

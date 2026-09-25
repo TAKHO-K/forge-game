@@ -230,9 +230,11 @@ function Travel.highestStation(peakLevel)
 	return best
 end
 
+-- 정거장 = 줄기 둘레 고리 발판(반경 ringInner ~ ringOuter · 높이 y)
 local function onStation(feet)
+	local r = flat(feet).Magnitude
 	for i, s in ipairs(stationList()) do
-		if (flat(feet) - flat(s.top)).Magnitude <= s.size * 0.75 and math.abs(feet.Y - s.top.Y) <= 3 then
+		if r >= s.ringInner - 1 and r <= s.ringOuter + 1 and math.abs(feet.Y - s.y) <= 3 then
 			return i
 		end
 	end
@@ -369,7 +371,7 @@ function Travel.pollPlayer(player, root, humanoid, now)
 	if st.checkpoint then
 		local s = stationList()[st.checkpoint]
 		local inTree = flat(feet).Magnitude <= 160
-		if inTree and grounded and feet.Y < s.top.Y - WorldMapData.hub.tree.course.fallDropStuds then
+		if inTree and grounded and feet.Y < s.y - WorldMapData.hub.tree.course.fallDropStuds then
 			Travel.teleport(player, s.top + Vector3.new(0, 3, 0), ("떨어짐 → 정거장 %d"):format(st.checkpoint))
 			return
 		end
@@ -416,6 +418,25 @@ function Travel.start(downPads)
 			local text = ({ in_boss = "보스전 중에는 못 간다", cooldown = "아직 쿨타임", combat = "전투 중(최근 피해)에는 못 간다", locked_zone = "그 사람은 나에게 잠긴 구역에 있다",
 				not_party = "파티원만", no_target = "대상을 찾지 못했다" })[why] or why
 			PartyState.notify(player, "이동 불가 - " .. text)
+		end
+	end)
+	-- 나무 통통 열매 · 점프대: 클라가 튕기기 직전에 알린다 → 그 요소가 발 가까이(10 안)에 있으면 높이 검증 예외(점프대 비행 + 여유)
+	local launchEvent = Instance.new("RemoteEvent")
+	launchEvent.Name = "TreeLaunch"
+	launchEvent.Parent = ReplicatedStorage
+	local launchParts = {}
+	local course = require(script.Parent.WorldMap).model("TreeCourse")
+	for _, part in ipairs(course and course:GetDescendants() or {}) do
+		local id = part:GetAttribute("FruitId") or part:GetAttribute("TreePad")
+		if id and (part:GetAttribute("TreeFruit") == "bounce" or part:GetAttribute("TreePad")) then
+			launchParts[id] = part
+		end
+	end
+	launchEvent.OnServerEvent:Connect(function(player, id)
+		local part = type(id) == "number" and launchParts[id]
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if part and root and (root.Position - part.Position).Magnitude <= 10 then
+			HeightGuard.exempt(player, WorldMapData.hub.tree.course.pad.flightSeconds + 1.5)
 		end
 	end)
 	local elapsed = 0

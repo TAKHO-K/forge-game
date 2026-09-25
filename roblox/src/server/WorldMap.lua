@@ -28,6 +28,10 @@ local function modelAt(root, models, path)
 	end
 	local m = Instance.new("Model")
 	m.Name = name
+	-- 먼 풍경 대체(Persistent)는 부모에 붙이기 **전에** 정한다(붙인 뒤 바꾸면 이미 스트리밍 대상으로 나가 멀리서 안 보였다 - Studio 실측)
+	if path == "BigTree" or path == "GatePillars" or path:match("^Landmark_") then
+		m.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+	end
 	m.Parent = parent
 	models[path] = m
 	return m
@@ -37,6 +41,8 @@ local function makePart(p)
 	local part
 	if p.shape == "Wedge" then
 		part = Instance.new("WedgePart")
+	elseif p.shape == "Truss" then
+		part = Instance.new("TrussPart") -- 덩굴 사다리(로블록스 기본 오르기)
 	else
 		part = Instance.new("Part")
 		if p.shape == "Ball" then
@@ -63,6 +69,12 @@ local function makePart(p)
 	end
 	if p.transparency then
 		part.Transparency = p.transparency
+	end
+	if p.mesh then
+		-- 카툰 잎 뭉치: 파트 크기 그대로 타원(구 메시 - SpecialMesh는 스크립트로 만든다 · 충돌은 파트 상자지만 장식이라 충돌 없음)
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType[p.mesh]
+		mesh.Parent = part
 	end
 	for k, v in pairs(p.attrs or {}) do
 		part:SetAttribute(k, v)
@@ -104,14 +116,8 @@ function WorldMap.build()
 			counts[top].decor += 1
 		end
 	end
-	-- 스트리밍 모드(Workspace.StreamingEnabled일 때만 뜻이 있다 - 꺼져 있어도 설정은 무해)
-	-- 먼 풍경 대체: 공식 LevelOfDetail(StreamingMesh)은 런타임 스크립트가 못 쓴다(Studio 실측 - "lacking capability Plugin") → 파트가 적은 랜드마크(구역마다 3 ~ 8)를
-	-- Persistent로 두어 멀리서도 늘 보이게 한다(나무 43 · 빛기둥 6 · 랜드마크 29 = 78파트).
-	for name, m in pairs(models) do
-		if name == "BigTree" or name == "GatePillars" or name:match("^Landmark_") then
-			m.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
-		end
-	end
+	-- 먼 풍경 대체: 공식 LevelOfDetail(StreamingMesh)은 런타임 스크립트가 못 쓴다(Studio 실측 - "lacking capability Plugin") → 나무 · 빛기둥 · 랜드마크(파트가 적다)를
+	-- Persistent(modelAt에서 부모에 붙이기 전에)로 두어 멀리서도 늘 보이게 한다. 파트 수 = 부팅 로그.
 	-- 빛기둥 = 그 관문 보스의 고유 색(머리색)
 	local BossData = require(ReplicatedStorage.Shared.data.BossData)
 	for _, part in ipairs(models.GatePillars and models.GatePillars:GetChildren() or {}) do
@@ -122,7 +128,34 @@ function WorldMap.build()
 	end
 	print(("[forge-game] M1 맵: 도형 %d · Persistent = 나무 · 빛기둥 · 랜드마크"):format(#prims))
 	built = { models = models, meta = meta, counts = counts }
+	workspace:GetAttributeChangedSignal("Season"):Connect(function()
+		WorldMap.setSeason(workspace:GetAttribute("Season"))
+	end)
 	return meta, counts
+end
+
+-- 계절 바꾸기(사용자 - 계절마다 색 교체 용이하게): SeasonRole 붙은 도형(잎 덩어리 · 꽃 · 잎 발판)을 WorldMapData.hub.tree.leaves.seasons[season]의 역할 색 · 재질로 다시 칠한다.
+-- 부르는 곳: 부팅(데이터 기본 season) · Workspace Attribute "Season"이 바뀔 때(시즌 이벤트 · 개발 확인). 반환: 칠한 파트 수(없는 계절이면 nil).
+function WorldMap.setSeason(season)
+	local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+	local palette = WorldMapData.hub.tree.leaves.seasons[season]
+	if not palette or not built then
+		return nil
+	end
+	local count = 0
+	for _, root in ipairs({ built.models.BigTree, built.models.TreeCourse }) do
+		for _, part in ipairs(root and root:GetDescendants() or {}) do
+			local role = part:IsA("BasePart") and part:GetAttribute("SeasonRole")
+			if role and palette[role] then
+				local c, k = palette[role], part:GetAttribute("SeasonTint") or 1 -- 뭉치마다 흔든 밝기는 계절이 바뀌어도 유지
+				part.Color = color3({ math.clamp(c[1] * k, 0, 255), math.clamp(c[2] * k, 0, 255), math.clamp(c[3] * k, 0, 255) })
+				part.Material = Enum.Material[palette.material] or part.Material
+				count += 1
+			end
+		end
+	end
+	print(("[forge-game] 계절: %s - 잎 · 꽃 %d개 다시 칠함"):format(season, count))
+	return count
 end
 
 function WorldMap.meta()
