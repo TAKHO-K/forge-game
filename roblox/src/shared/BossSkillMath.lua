@@ -155,7 +155,7 @@ function BossSkillMath.boundSeconds(skill, arenaHalfSizeStuds, chargeTravelSecon
 	elseif primitive == "grab" then
 		-- 잡으면 들고 있다가(holdSeconds) 던지거나, 풀리면 기절(stunSeconds) - 상한은 둘을 더한 값.
 		local grab = BossData.mechanics.airGrab
-		return skill.telegraphSeconds + math.max(grab.chainCapSeconds, grab.liftSeconds + grab.holdSeconds) + grab.stunSeconds -- 사슬(여럿 - 전체 ≤ chainCap) 또는 솔로 들고 있기
+		return skill.telegraphSeconds + grab.chaseMaxSeconds + grab.liftSeconds + grab.holdSeconds + grab.stunSeconds -- BR1-2: 다가가 잡기 + 들고 있기(마지막 뒤) + 기절(상한 - 자리 비우기용)
 	elseif primitive == "vortex" then
 		return skill.telegraphSeconds + (skill.burstTelegraphSeconds or 0)
 	elseif primitive == "gimmick" then

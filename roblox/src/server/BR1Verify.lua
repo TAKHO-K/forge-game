@@ -366,11 +366,12 @@ function BR1Verify.runLive(player, env)
 			BossPatterns.force(model, data, "grab")
 			local telegraph = data.skills.grab.telegraphSeconds
 			local forcedAt = os.clock()
-			drive(player, root, model, data, telegraph + 1, function()
+			-- BR1-2: 시전 5초 동안 N초 넘게 뜨면 얼림 → 시전 끝에 보스가 다가가 잡는다(grabPick) - 잡힐 때까지 기다린다
+			drive(player, root, model, data, telegraph + BossData.mechanics.airGrab.chaseMaxSeconds + 1, function()
 				if not late.debugAirborne and os.clock() - forcedAt >= telegraph - 0.4 then
 					late.debugAirborne = true
 				end
-				return countKind("grabFreeze") > 0 or countKind("grabMiss") > 0 -- 사슬: 얼림 → 가까운 사람부터 잡기(grabPick)
+				return countKind("grabPick") > 0 or countKind("grabMiss") > 0
 			end)
 			local airGrabbed = BossTrap.getRecord(air)
 			local hpBefore = PlayerState.getHp(air)
@@ -387,8 +388,8 @@ function BR1Verify.runLive(player, env)
 			fullHeal(air)
 			air.debugAirborne = true
 			BossPatterns.force(model, data, "grab")
-			drive(player, root, model, data, telegraph + 1, function()
-				return BossTrap.getRecord(air) ~= nil
+			drive(player, root, model, data, telegraph + BossData.mechanics.airGrab.chaseMaxSeconds + 1, function()
+				return BossTrap.getRecord(air) ~= nil and BossTrap.getRecord(air).kind == "grabbed"
 			end)
 			air.debugAirborne = nil
 			local record = BossTrap.getRecord(air)

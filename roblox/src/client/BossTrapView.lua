@@ -95,7 +95,12 @@ local function readBars(target)
 	if startedAt and releaseAt and releaseAt > startedAt then
 		remaining = math.clamp((releaseAt - Workspace:GetServerTimeNow()) / (releaseAt - startedAt), 0, 1)
 	end
-	return remaining, math.clamp(target:GetAttribute("BossTrapRescue") or 0, 0, 1)
+	local rescue = math.clamp(target:GetAttribute("BossTrapRescue") or 0, 0, 1)
+	local gauge = target:GetAttribute("BossGrabGauge") -- BR1-2 대공 잡기 발악 게이지(남은 몫 1 → 0) - 줄어든 만큼 구출 막대에 보인다
+	if type(gauge) == "number" then
+		rescue = math.max(rescue, 1 - gauge)
+	end
+	return remaining, rescue
 end
 
 function BossTrapView.start()

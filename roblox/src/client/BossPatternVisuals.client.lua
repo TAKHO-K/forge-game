@@ -726,6 +726,8 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossGrabView.pick(data)
 	elseif kind == "grabRelease" then
 		BossGrabView.unfreeze(data.userId)
+	elseif kind == "grabThrow" then
+		BossGrabView.throw(data)
 	elseif kind == "grabEnd" or kind == "grabMiss" then
 		BossGrabView.clear()
 	elseif kind == "envTelegraph" then

@@ -112,26 +112,28 @@ local MECHANICS = {
 		grab = { reachStuds = 16 },
 	},
 
-	-- BR1 대공 잡기(docs/design/boss-br1.md §2 - 6종 공통 규칙, 모션만 보스별). 스킬 primitive = "grab".
-	--   airSeconds(N) 1.2: 판정 순간 연속 체공이 이 이상인 사람 전원. 1단 + 공중 점프 1(1.04초)은 안전, 공중 2회(1.54) · 공중 + 대시(1.46)는 걸린다.
-	--   warnAirSeconds 0.6: 이만큼 떠 있으면 머리 위 작은 손바닥이 차기 시작한다(발동 조건 memberAirborneFor와 같은 값 - 땅에서만 싸우면 안 온다).
-	--   holdSeconds 3.0 뒤 던짐(throw - 기존 넉백 상한 규칙 · 맵 밖이면 기존 복귀) + 현재 체력 × currentHpFraction(방어 무시 · 받는 피해 감소 · 쉴드 적용 - 설계 §2 결정).
-	--   holdLiftStuds = 잡힌 사람의 발 높이(아레나 바닥 기준) - 땅의 동료가 손을 때릴 수 있는 높이(판정 높이차 ≤ 8). holdOffsetStuds = 보스에서 그 사람 쪽 수평 거리.
-	--   해제: 동료가 손(구출 대상)을 rescueHits회(구출자 1인당 hitIntervalSeconds에 한 번) 또는 곁(rescue.grab.reachStuds)에서 F 홀드 → 풀림 + 보스 기절 stunSeconds.
-	--   발버둥(본인): 점프 누를 때마다 남은 시간 − secondsPerPress(초당 maxPressesPerSecond회까지 인정), 잡힌 뒤 minHoldSeconds 전에는 안 풀린다.
+	-- BR1 대공 잡기 → BR1-2 개정(docs/design/boss-br1-2.md §3 - 6종 공통 규칙, 모션만 보스별). 스킬 primitive = "grab".
+	--   시전 = 스킬 telegraphSeconds(5초) 전체: 보스 위 "점프하지 마"(뛰는 사람 + 금지 표시). 이 동안 연속 체공이 airSeconds(N)를 넘는 순간 **그 자리에 얼린다**
+	--     (시전 시작 뒤 noticeSeconds 전의 체공은 세지 않는다 - 보고 내려올 시간). warnAirSeconds부터 머리 위 작은 손바닥이 찬다.
+	--   시전이 끝나면 얼린 사람 전원을 **가까운 순서대로** 잡는다 - 보스가 이동 속도 × chaseSpeedMultiplier로 다가가(chaseReachStuds 안 · 최대 chaseMaxSeconds) 들어 올린다(liftSeconds).
+	--     잡힌 사람은 보스 머리 위 둘레(holdLiftStuds · holdOffsetStuds)에 들려 보스를 따라간다.
+	--   마지막 사람을 잡은 뒤 holdSeconds(길게) → 던짐(보스별 던지는 모션 · 아레나 벽 앞 wallMarginStuds까지 - 맵 밖이면 기존 복귀) + 현재 체력 × currentHpFraction.
+	--   발악(사용자): 잡힌 사람들이 **게이지 하나**를 함께 연타로 줄인다 - 필요 횟수 = pressesBase + pressesPerExtra × (얼린 인원 − 1). 먼저 잡힌 사람은 혼자 누르는 시간이 길다.
+	--     게이지 0 → 전원(잡힘 + 아직 얼음) 풀림 + 보스 기절 stunSeconds. 동료가 손(꼬리)을 rescueHits만큼 때리거나 곁에서 F 홀드 → 같다.
+	--   잡기 동안 보스는 새 패턴을 시작하지 않는다(스킬 진행 중) · 얼음 · 잡힘 · 던짐은 서버 높이 검증 예외.
 	airGrab = {
 		warnAirSeconds = 0.6,
 		airSeconds = 1.2,
-		holdSeconds = 3.0,
-		-- 사용자 보완 A(사슬): 판정 순간 대상 전원을 그 자리에 얼리고 가장 가까운 사람부터 한 명씩 잡는다. 1인 = 들어 올림 liftSeconds + 들고 있기
-		-- clamp(chainCapSeconds ÷ 인원 − lift, minHoldSeconds, holdSeconds) - 4명이어도 사슬 전체 ≤ chainCapSeconds(4초). 솔로 = 0.3 + 3.0.
-		liftSeconds = 0.3, chainCapSeconds = 4, minHoldSeconds = 0.6, handoffSeconds = 0.06,
+		noticeSeconds = 0.5,
+		chaseSpeedMultiplier = 2.5, chaseReachStuds = 7, chaseMaxSeconds = 3.0,
+		liftSeconds = 0.35,
+		holdSeconds = 6.0,
 		holdLiftStuds = 7,
 		holdOffsetStuds = 6,
-		throw = { heightStuds = 9, distanceStuds = 34 }, -- 넉백 상한을 거치지 않는다(escape) - 맵 밖이면 기존 복귀
+		throw = { heightStuds = 14, wallMarginStuds = 12, minDistanceStuds = 40 }, -- 넉백 상한을 거치지 않는다(escape) - 맵 밖이면 기존 복귀
 		currentHpFraction = 0.5,
-		stunSeconds = 3.5,
-		struggle = { secondsPerPress = 0.25, maxPressesPerSecond = 6, minHoldSeconds = 0.8 },
+		stunSeconds = 4.0,
+		struggle = { maxPressesPerSecond = 6, pressesBase = 18, pressesPerExtra = 8 },
 		rescueHits = { requiredHits = 3, hitIntervalSeconds = 0.5 },
 		maxAirSeconds = 1.961, -- 한 체공 최대(공중 점프 2 + 대시 - movement-metrics v2 · JumpMath.maxAirSeconds) - 회피 검사 "보고 착지"의 기준
 	},
@@ -274,7 +276,7 @@ local function airGrab(label, motion)
 		primitive = "grab", bubble = "grab", motion = motion,
 		cooldownSeconds = 16, firstAvailableSeconds = 20, priority = P.normal,
 		conditions = { { type = "memberAirborneFor", seconds = MECHANICS.airGrab.warnAirSeconds } },
-		telegraphSeconds = 2.5,
+		telegraphSeconds = 5.0, -- BR1-2: 시전 전체 약 5초("점프하지 마" 표시 · 그동안 N초 넘게 뜨면 얼림)
 		trap = { kind = "grabbed", rescueType = "grab" },
 		damage = { kind = "currentHp", fraction = MECHANICS.airGrab.currentHpFraction }, damageLabel = label,
 		sim = { evadeSeconds = 0.5 },

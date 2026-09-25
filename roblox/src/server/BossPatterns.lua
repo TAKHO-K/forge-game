@@ -2046,6 +2046,7 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	st.targetRoot = targetRoot
 	st.position = position
 	st.members = (members and #members > 0) and members or { target }
+	st.dt = dt -- BR1-2: 스킬이 보스를 직접 옮길 때(대공 잡기 - 다가가 잡기)
 	local now = os.clock()
 	BossMechanics.tick(st.members, dt) -- 29-1: 잡힌 멤버의 구출 핸들러
 	tickHazards(model, st, data, now) -- 29-3: 위험 지형(모래 구덩이)의 중심부 피해

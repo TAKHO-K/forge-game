@@ -25,6 +25,7 @@ local struggleEvent = ReplicatedStorage:WaitForChild("BossGrabStruggle")
 local live = {}
 local marks = {} -- [userId] = { gui, fill }
 local hands = {} -- 솟은 손 파트 목록
+local followHands = {} -- [손 파트] = 잡힌 사람 userId(BR1-2 - 그 사람 루트를 따라간다)
 
 local function newPart(size, color, transparency, shape)
 	local part = Instance.new("Part")
@@ -124,14 +125,10 @@ function BossGrabView.telegraph(data)
 		CFrame = CFrame.new(base + Vector3.new(0, 13, 0)) * CFrame.Angles(math.rad(-20), 0, 0),
 	}):Play()
 	table.insert(hands, hand)
-	-- 아레나 전역 신호: 보스 위 큰 손바닥(모두에게 보인다).
+	-- 아레나 전역 신호(BR1-2): 보스 위 "점프하지 마" 표지 - 뛰는 사람 실루엣 + 빨간 금지 원 + 시전 막대(모두에게 보인다).
 	local anchor = newPart(Vector3.one * 0.2, WHITE, 1)
 	anchor.CFrame = CFrame.new(base + Vector3.new(0, 18, 0))
-	bigPalm = palmGui(anchor, 110, "✋")
-	local fill = bigPalm:FindFirstChild("Fill", true)
-	if fill then
-		TweenService:Create(fill, TweenInfo.new(data.seconds, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 1) }):Play()
-	end
+	bigPalm = BossGrabView.noJumpSign(anchor, 130, data.seconds)
 	task.delay(data.seconds + 0.1, function()
 		destroy(bigPalm)
 		destroy(anchor)
@@ -141,6 +138,76 @@ function BossGrabView.telegraph(data)
 		local a = i / 8 * 2 * math.pi
 		BossFx.streak(base + Vector3.new(math.cos(a) * 3, 0, math.sin(a) * 3), Vector3.new(0, 1, 0), 6, 0.3, WHITE, 0.5, 20)
 	end
+end
+
+-- "점프하지 마" 표지(BillboardGui): 흰 원판 위 뛰는 사람(머리 · 몸 · 올린 팔 · 굽힌 다리 - 프레임 조각) + 빨간 원 + 사선. 아래 막대 = 남은 시전 시간.
+function BossGrabView.noJumpSign(adornee, size, seconds)
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "BossNoJumpSign"
+	gui.Size = UDim2.new(0, size, 0, size + 16)
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.MaxDistance = 500
+	gui.Adornee = adornee
+	gui.Parent = adornee
+	live[gui] = true
+	local disc = Instance.new("Frame")
+	disc.Size = UDim2.new(0, size, 0, size)
+	disc.BackgroundColor3 = WHITE
+	disc.Parent = gui
+	Instance.new("UICorner", disc).CornerRadius = UDim.new(1, 0)
+	local function bar(x, y, w, h, rot, round)
+		local f = Instance.new("Frame")
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.Position = UDim2.fromScale(x, y)
+		f.Size = UDim2.fromScale(w, h)
+		f.Rotation = rot or 0
+		f.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+		f.BorderSizePixel = 0
+		f.Parent = disc
+		if round then
+			Instance.new("UICorner", f).CornerRadius = UDim.new(1, 0)
+		end
+		return f
+	end
+	bar(0.5, 0.26, 0.16, 0.16, 0, true) -- 머리
+	bar(0.5, 0.47, 0.08, 0.26, 10) -- 몸
+	bar(0.38, 0.34, 0.06, 0.22, -40) -- 올린 팔
+	bar(0.62, 0.34, 0.06, 0.22, 40)
+	bar(0.42, 0.66, 0.07, 0.2, 35) -- 굽힌 다리(뛰는 자세)
+	bar(0.58, 0.68, 0.07, 0.2, -20)
+	bar(0.5, 0.86, 0.46, 0.04, 0) -- 땅
+	local ring = Instance.new("Frame")
+	ring.Size = UDim2.fromScale(1, 1)
+	ring.BackgroundTransparency = 1
+	ring.Parent = disc
+	Instance.new("UICorner", ring).CornerRadius = UDim.new(1, 0)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = DANGER
+	stroke.Thickness = math.max(size * 0.07, 4)
+	stroke.Parent = ring
+	local slash = Instance.new("Frame")
+	slash.AnchorPoint = Vector2.new(0.5, 0.5)
+	slash.Position = UDim2.fromScale(0.5, 0.5)
+	slash.Size = UDim2.new(1, -4, 0, math.max(size * 0.07, 4))
+	slash.Rotation = 45
+	slash.BackgroundColor3 = DANGER
+	slash.BorderSizePixel = 0
+	slash.Parent = disc
+	local timeBack = Instance.new("Frame")
+	timeBack.Position = UDim2.new(0, 0, 0, size + 6)
+	timeBack.Size = UDim2.new(1, 0, 0, 8)
+	timeBack.BackgroundColor3 = UIColors.panel
+	timeBack.Parent = gui
+	local timeFill = Instance.new("Frame")
+	timeFill.Size = UDim2.fromScale(1, 1)
+	timeFill.BackgroundColor3 = DANGER
+	timeFill.BorderSizePixel = 0
+	timeFill.Parent = timeBack
+	TweenService:Create(timeFill, TweenInfo.new(seconds or 5, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(0, 1) }):Play()
+	-- 두근거림(눈에 띄게)
+	TweenService:Create(disc, TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Size = UDim2.new(0, size * 0.9, 0, size * 0.9) }):Play()
+	return gui
 end
 
 function BossGrabView.mark(data)
@@ -216,20 +283,50 @@ function BossGrabView.pick(data)
 		end
 		destroy(block)
 	end
-	local hand = hands[1]
-	if not hand then
-		hand = newPart(Vector3.new(3.2, 1.2, 3.8), data.color or DANGER, 0)
-		hand.CFrame = CFrame.new(data.bossPosition + Vector3.new(0, 14, 0))
-		table.insert(hands, hand)
-	end
-	local half = math.max(data.liftSeconds / 2, 0.05)
-	TweenService:Create(hand, TweenInfo.new(half, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = CFrame.new(data.from + Vector3.new(0, 2.2, 0)) }):Play()
-	task.delay(half, function()
-		if hand.Parent then
-			TweenService:Create(hand, TweenInfo.new(half, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { CFrame = CFrame.new(data.point + Vector3.new(0, 2.2, 0)) }):Play()
-		end
-	end)
+	-- BR1-2: 사람마다 손 하나 - 들린 사람의 루트를 매 프레임 따라간다(서버가 보스 둘레로 옮긴다 - 아래 RenderStepped).
+	local hand = newPart(Vector3.new(3.2, 1.2, 3.8), data.color or DANGER, 0)
+	hand.CFrame = CFrame.new(data.from + Vector3.new(0, 2.2, 0))
+	table.insert(hands, hand)
+	followHands[hand] = data.userId
+	BossFx.ring(data.from, 1, 6, WHITE, 0.3)
 	BossFx.shake(data.from, 0.4)
+end
+
+-- BR1-2 던짐: 보스별 던지는 모션(motion) - 보스 곁에서 큰 호를 그리며 휘두른다(인형 방식 - 풀 파트 트윈) + 충격 고리 · 흔들림.
+function BossGrabView.throw(data)
+	local center = data.bossPosition or Vector3.zero
+	local color = data.color or DANGER
+	local size, material, transparency = Vector3.new(4, 1.4, 7), Enum.Material.SmoothPlastic, 0
+	if data.motion == "tail" then
+		size = Vector3.new(1.8, 1.8, 14)
+	elseif data.motion == "claw" then
+		size = Vector3.new(5, 1.4, 4)
+	elseif data.motion == "wind" then
+		size, material, transparency, color = Vector3.new(3, 10, 10), Enum.Material.Neon, 0.5, WHITE
+	end
+	local arm = newPart(size, color, transparency)
+	arm.Material = material
+	local start = math.random() * 2 * math.pi
+	local radius = size.Z / 2 + 3
+	local steps = 10
+	for i = 0, steps do
+		task.delay(0.04 * i, function()
+			if arm.Parent then
+				local a = start + i / steps * math.pi * 1.3
+				local at = center + Vector3.new(math.cos(a) * radius, 8 - i * 0.4, math.sin(a) * radius)
+				arm.CFrame = CFrame.lookAt(at, center + Vector3.new(0, 8, 0)) * CFrame.Angles(0, math.pi, 0)
+			end
+		end)
+	end
+	task.delay(0.5, function()
+		destroy(arm)
+	end)
+	BossFx.ring(center, 2, 18, WHITE, 0.4)
+	for i = 1, 10 do
+		local a = i / 10 * 2 * math.pi
+		BossFx.streak(center + Vector3.new(0, 8, 0), Vector3.new(math.cos(a), 0.3, math.sin(a)), 14, 0.35, WHITE, 0.4, 30)
+	end
+	BossFx.shake(center, 0.8)
 end
 
 function BossGrabView.unfreeze(userId)
@@ -250,6 +347,7 @@ function BossGrabView.clear()
 		destroy(hand)
 	end
 	hands = {}
+	followHands = {}
 	if bigPalm then
 		destroy(bigPalm)
 		bigPalm = nil
@@ -283,7 +381,14 @@ RunService.RenderStepped:Connect(function()
 	local t = os.clock()
 	for index, hand in ipairs(hands) do
 		if hand.Parent then
-			hand.CFrame *= CFrame.Angles(0, math.sin(t * 9 + index) * 0.01, 0)
+			local userId = followHands[hand]
+			local target = userId and playerByUserId(userId)
+			local root = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				hand.CFrame = CFrame.new(root.Position + Vector3.new(0, -1.2, 0)) * CFrame.Angles(0, math.sin(t * 9 + index) * 0.2, 0)
+			else
+				hand.CFrame *= CFrame.Angles(0, math.sin(t * 9 + index) * 0.01, 0)
+			end
 		end
 	end
 end)
