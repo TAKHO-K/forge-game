@@ -38,7 +38,7 @@ local function returnPositionFor(position)
 			return BossEncounter.entryPositionFor(zone)
 		end
 	end
-	local spawn = WorldConfig.zones.spawn.center
+	local spawn = WorldConfig.zones.spawn.arrival -- M1: 허브 리스폰 자리(중심은 나무 줄기)
 	return Vector3.new(spawn.X, FLOOR_TOP_Y + RETURN_HEIGHT_ABOVE_FLOOR_TOP, spawn.Z)
 end
 

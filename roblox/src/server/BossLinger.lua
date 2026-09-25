@@ -99,6 +99,7 @@ function BossLinger.choose(player, choice)
 		return false, "not_lingering"
 	end
 	if choice == "town" then
+		BossEncounter.setReturnPoint(player, nil) -- M1: [마을] = 허브(관문 앞이 아니라)
 		BossEncounter.leaveFor(player)
 		return true, "town"
 	elseif choice == "next" then

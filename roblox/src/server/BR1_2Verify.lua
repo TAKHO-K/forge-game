@@ -514,9 +514,9 @@ function BR1_2Verify.runLive(player, env)
 		PlayerProfile.debugResetBossIntro(player)
 		local again = PlayerProfile.markBossIntroSeen(player, "frost_giant")
 		PlayerProfile.debugResetBossIntro(player)
-		r.check(("저장 v%d(기대 37): v36 → v%d · bossIntroSeen 빈 표 %s · 옛 힌트 유지 %s · 첫 만남 %s → 두 번째 %s · 비우면 다시 %s"):format(SaveConfig.saveVersion, migrated.version,
+		r.check(("저장 v%d(기대 ≥ 37): v36 → v%d · bossIntroSeen 빈 표 %s · 옛 힌트 유지 %s · 첫 만남 %s → 두 번째 %s · 비우면 다시 %s"):format(SaveConfig.saveVersion, migrated.version,
 			tostring(type(migrated.hints.bossIntroSeen) == "table" and next(migrated.hints.bossIntroSeen) == nil), tostring(migrated.hints.gemMerchantUsed), tostring(first), tostring(second), tostring(again)),
-			SaveConfig.saveVersion == 37 and migrated.version == 37 and type(migrated.hints.bossIntroSeen) == "table" and migrated.hints.gemMerchantUsed == true and first and not second and again)
+			SaveConfig.saveVersion >= 37 and migrated.version == SaveConfig.saveVersion and type(migrated.hints.bossIntroSeen) == "table" and migrated.hints.gemMerchantUsed == true and first and not second and again)
 	end)
 
 	-- 8) 보스 에어본: 되튕겨진 투사체 → 뜬 동안 논리 위치 = 지면(MonsterAI 높이차 출구가 추격을 안 끊는다 - 끊으면 step이 멈춰 공중에 걸렸다) · 체력바 5% 고정(BR1-3) · 제때 착지

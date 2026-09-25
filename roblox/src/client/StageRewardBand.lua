@@ -21,6 +21,8 @@ local Button = require(script.Parent.ui.kit.Button)
 local HelpToggle = require(script.Parent.ui.kit.HelpToggle)
 local Theme = require(script.Parent.ui.kit.Theme)
 local BossIntroDiagram = require(script.Parent.BossIntroDiagram) -- BR1-2 기믹 도움말
+local Wayfinder = require(script.Parent.Wayfinder) -- M1 [여기로 안내]
+local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 
 local StageRewardBand = {}
 
@@ -219,6 +221,33 @@ function StageRewardBand.build(props)
 		end
 		gimmickText.Text = ("<b>%s · %s</b>\n%s"):format(boss.displayName, boss.intro.title, (boss.intro.line:gsub("{N}", "2(솔로) ~ 5(4인)")) .. (boss.intro.sub and ("\n" .. boss.intro.sub) or "")) -- BR1-3 보조 한 줄
 	end
+	-- M1(사용자): [여기로 안내] - 고른 보스의 구역 관문까지 길 안내(Wayfinder - 바닥 빛줄기 · 화살표). 구역이 없는 보스(섬 예정)는 숨긴다.
+	local guideButton = Button.build({
+		parent = gimmickPanel,
+		name = "GuideHereButton",
+		kind = "secondary",
+		text = "여기로 안내",
+		width = 92,
+		height = 24,
+		anchorPoint = Vector2.new(1, 1),
+		position = UDim2.new(1, -6, 1, -6),
+		onActivated = function()
+			for _, z in ipairs(WorldMapData.zones) do
+				if z.bossId == gimmickBossId then
+					Wayfinder.setPoints("bossSelect", Wayfinder.routeToGate(z.key))
+					return
+				end
+			end
+		end,
+	})
+	guideButton.ZIndex = 22
+	local function refreshGuideButton()
+		local has = false
+		for _, z in ipairs(WorldMapData.zones) do
+			has = has or z.bossId == gimmickBossId
+		end
+		guideButton.Visible = has
+	end
 	local gimmickButton = Button.build({
 		parent = root,
 		name = "GimmickHelpButton",
@@ -231,6 +260,7 @@ function StageRewardBand.build(props)
 		onActivated = function()
 			gimmickPanel.Visible = not gimmickPanel.Visible
 			refreshGimmick()
+			refreshGuideButton()
 		end,
 	})
 

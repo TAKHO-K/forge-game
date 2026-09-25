@@ -23,6 +23,7 @@ local ImmediateSave = require(script.Parent.ImmediateSave)
 local BossEncounter = require(script.Parent.BossEncounter)
 local PartyState = require(script.Parent.PartyState)
 local PartyVote = require(script.Parent.PartyVote)
+local BossGate = require(script.Parent.BossGate)
 
 local stageMoveRequest = Instance.new("RemoteEvent")
 stageMoveRequest.Name = "StageMoveRequest"
@@ -88,7 +89,15 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 	-- 24-1 파티 검사 - 보스 스테이지로 갈 때만. 리더가 아니면 거절, 리더면 멤버 전원 검사.
 	local party = PartyState.getParty(player)
 	local isPartyBoss = false
-	if party and BossRules.isBossStage(targetStage) and not BossEncounter.getActive(player) then
+	-- M1 관문 모드: 보스 스테이지를 골라도 스테이지만 옮기고 관문까지 안내한다 - 리더 · 멤버 검사 · 투표는 관문에서(BossGate.enter).
+	--   관문 구역이 없는 보스(새 보스가 구역 없이 들어온 경우)는 옛 즉시 입장.
+	local viaGate = BossGate.enabled() and BossRules.isBossStage(targetStage) and BossGate.zoneKeyForStage(targetStage) ~= nil
+	if party and viaGate and not PartyState.isLeader(player) then
+		reject(player, "party_not_leader")
+		PartyState.notify(player, "보스 스테이지는 파티 리더만 열 수 있습니다")
+		return
+	end
+	if party and BossRules.isBossStage(targetStage) and not BossEncounter.getActive(player) and not viaGate then
 		if not PartyState.isLeader(player) then
 			reject(player, "party_not_leader")
 			PartyState.notify(player, "보스 스테이지는 파티 리더만 열 수 있습니다")
@@ -124,7 +133,12 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 
 		-- 보스 스테이지 진입/퇴장(15-1). 잡몹은 격자 스폰이 항상 그대로 있으니(HuntingGround)
 		-- 손댈 게 없다 - 보스만 이 전환에 맞춰 등장·퇴장한다.
-		if BossRules.isBossStage(targetStage) then
+		if viaGate then
+			-- 관문 모드: 보스는 관문에서 - 지금 보스전에 속해 있으면(잔류 등) 먼저 빠진다
+			if BossEncounter.getEncounter(player) then
+				BossEncounter.leaveFor(player)
+			end
+		elseif BossRules.isBossStage(targetStage) then
 			if isPartyBoss then
 				BossEncounter.spawnForParty(party, player, targetStage)
 			else
@@ -142,6 +156,7 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 			end
 		end
 
+		BossGate.refreshGuide(player) -- M1: 보스 스테이지면 그 관문까지 길 안내
 		if isNewBest then
 			ImmediateSave.request(player)
 		end

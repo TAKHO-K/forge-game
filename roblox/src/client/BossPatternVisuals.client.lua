@@ -331,6 +331,24 @@ end
 -- 파동 링 - 얇은 파트 WAVE_SEGMENTS개를 원둘레에 접선 방향으로 놓고 매 프레임 반경만큼
 -- 밀어낸다(로블록스엔 속이 빈 원통 프리미티브가 없다). 반경은 서버 시계 기준 - 서버 판정
 -- 과 같은 반경이 그려진다.
+-- M1: 보스 테마색을 바닥과 밝기 대비가 나게(상대 휘도 차 ≥ minLumaGap) 맞춘다
+local function luma(c)
+	return 0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B
+end
+local function contrastColor(theme, floor)
+	local gap = BossFxData.quakeLook.minLumaGap
+	local target = luma(floor) > 0.5 and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
+	local c = theme
+	for step = 0, 10 do
+		c = theme:Lerp(target, step / 10)
+		if math.abs(luma(c) - luma(floor)) >= gap then
+			break
+		end
+	end
+	return c
+end
+local BossDataForLook = require(ReplicatedStorage.Shared.data.BossData)
+
 local function shockwave(data)
 	-- P3c B4(리뷰 2): 띠를 띄우지 않고 **키운다** - 바닥에서 둔덕 윗면 위까지 덮는 띠(평지에서도 바닥에 붙어 있고, 둔덕 위를 지날 때도 보인다).
 	-- (P3d: 옛 코드는 이 값을 선언 전에 읽어 첫 크기가 nil이었다 - 첫 프레임에 다시 잡혀 겉으로는 안 보였다. 선언을 앞으로 옮겼다.)
@@ -343,12 +361,30 @@ local function shockwave(data)
 	end
 	local segments = {}
 	local edges = {} -- 공중 파동의 흰 테두리(위 · 아래 선)
+	local blades = {} -- M1: 공중 파동의 칼날(띠 가운데 얇은 네온)
+	local look = BossFxData.quakeLook
+	local bossLook = BossDataForLook.bosses[data.bossId or ""]
+	local floorColor = data.floorColor or Color3.fromRGB(120, 110, 100)
+	local themeColor = contrastColor(bossLook and bossLook.headColor or DANGER_COLOR, floorColor)
 	for i = 1, WAVE_SEGMENTS do
-		local part = newPart(Vector3.new(1, waveHeight, data.thickness), DANGER_COLOR, data.air and 0.6 or 0.25)
+		local part = newPart(Vector3.new(1, waveHeight, data.thickness), themeColor, data.air and look.bandTransparency or look.groundTransparency)
+		if not data.air then
+			part.Material = Enum.Material.Slate -- 두꺼운 흙물결(빛나는 벽이 아니라 땅)
+		end
 		segments[i] = part
 		if data.air then
-			-- 사용자 결정(가): 공중 파동 = 머리 높이에 뜬 반투명 띠 + 흰 테두리 두 줄("서 있어라"). 땅 파동(바닥의 진한 빨강 벽)과 모양으로 구분한다. 판정은 그대로.
+			-- 사용자 결정(가) → M1: 공중 파동 = 머리 높이 얇은 칼날 고리(네온) + 옅은 판정 띠 + 흰 테두리 두 줄. 땅 파동(두꺼운 흙물결)과 모양으로 구분한다. 판정은 그대로.
 			edges[i] = { newPart(Vector3.new(1, 0.35, data.thickness), IMPACT_COLOR, 0.1), newPart(Vector3.new(1, 0.35, data.thickness), IMPACT_COLOR, 0.1) }
+			blades[i] = newPart(Vector3.new(1, look.bladeHeight, data.thickness * 1.4), themeColor, 0)
+		end
+	end
+	-- M1: 땅 파동이 지나간 자리의 바닥 들썩임(파동 안쪽 behindStuds - 작은 블록이 솟았다 가라앉는다)
+	local heave = {}
+	if (data.layer or 1) == 1 and not data.air then
+		for i = 1, look.heave.segments do
+			local part = newPart(Vector3.new(1, 0.2, look.heave.width), floorColor:Lerp(themeColor, 0.35), 0)
+			part.Material = Enum.Material.Slate
+			heave[i] = part
 		end
 	end
 	local center = data.center + Vector3.new(0, waveHeight / 2 + airLift, 0)
@@ -356,7 +392,7 @@ local function shockwave(data)
 	local ground = BossFxData.groundWave
 	local crest = {}
 	if (data.layer or 1) == 1 and not data.air then
-		local earth = (data.floorColor or Color3.fromRGB(120, 110, 100)):Lerp(Color3.new(1, 1, 1), 0.18)
+		local earth = themeColor:Lerp(floorColor, 0.25) -- M1: 흙 마루도 테마색 쪽(바닥과 대비)
 		for i = 1, ground.segments do
 			local part = BossFx.acquirePart("block")
 			part.Color = earth
@@ -376,6 +412,12 @@ local function shockwave(data)
 				destroy(pair[1])
 				destroy(pair[2])
 			end
+			for _, part in pairs(blades) do
+				destroy(part)
+			end
+			for _, part in ipairs(heave) do
+				destroy(part)
+			end
 			for _, part in ipairs(crest) do
 				BossFx.releasePart(part, "block")
 			end
@@ -390,12 +432,29 @@ local function shockwave(data)
 			local offset = Vector3.new(math.cos(angle), 0, math.sin(angle))
 			part.Size = Vector3.new(segmentLength, waveHeight, data.thickness)
 			part.CFrame = CFrame.new(center + offset * mid) * CFrame.Angles(0, -angle, 0)
+			if blades[i] then
+				blades[i].Size = Vector3.new(segmentLength, look.bladeHeight, data.thickness * 1.4)
+				blades[i].CFrame = CFrame.new(center + offset * mid) * CFrame.Angles(0, -angle, 0)
+			end
 			local pair = edges[i]
 			if pair then
 				for k, edge in ipairs(pair) do
 					edge.Size = Vector3.new(segmentLength, 0.35, data.thickness)
 					edge.CFrame = CFrame.new(center + offset * mid + Vector3.new(0, (k == 1 and 1 or -1) * waveHeight / 2, 0)) * CFrame.Angles(0, -angle, 0)
 				end
+			end
+		end
+		if #heave > 0 then
+			local H = look.heave
+			local t = Workspace:GetServerTimeNow() - data.serverStart
+			local r = math.max(mid - data.thickness / 2 - H.behindStuds, 0.5)
+			local len = 2 * math.pi * r / H.segments * 1.05
+			for i, part in ipairs(heave) do
+				local angle = (i / H.segments) * 2 * math.pi
+				local offset = Vector3.new(math.cos(angle), 0, math.sin(angle))
+				local h = 0.2 + H.amplitude * math.max(0, math.sin(angle * H.waves + t * H.speed))
+				part.Size = Vector3.new(len, h, H.width)
+				part.CFrame = CFrame.new(data.center + offset * r + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, -angle, 0)
 			end
 		end
 		if #crest > 0 then

@@ -80,9 +80,7 @@ local function computeOccupiedZones()
 			local position = rootPart.Position
 			for _, zoneKey in ipairs(WorldConfig.tierZoneOrder) do
 				if not occupied[zoneKey] then
-					local zone = WorldConfig.zones[zoneKey]
-					if math.abs(position.X - zone.center.X) <= zone.halfSize
-						and math.abs(position.Z - zone.center.Z) <= zone.halfSize then
+					if ZoneBounds.isInside(position, zoneKey) then -- M1: 구역 = 원
 						occupied[zoneKey] = true
 					end
 				end

@@ -736,12 +736,27 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 	local airborne = humanoid:GetState() == Enum.HumanoidStateType.Freefall or humanoid:GetState() == Enum.HumanoidStateType.Jumping
+	-- M1 BR1-3 후속(사용자): 어디서든(중심 · 구덩이 겹침) "바깥으로 걷는 속도 > 끌려가는 속도" - 겹친 구덩이의 끌림을 더하되 한 구덩이 끌림(가장 센 것)을 넘지 않게 자른다.
+	--   옛 동작은 겹치면 더해져(7 + 7 = 14) 걷기 16과 거의 같아 못 빠져나왔다.
+	local pullSum, pullMax = Vector3.zero, 0
 	for _, z in ipairs(current.zones) do
 		if z.shape == "pit" and z.pull then
 			local toCenter = Vector3.new(z.center.X - root.Position.X, 0, z.center.Z - root.Position.Z)
 			if toCenter.Magnitude <= z.radius and toCenter.Magnitude > 0.5 then
-				root.CFrame += toCenter.Unit * math.min(z.pull * dt, toCenter.Magnitude)
+				pullSum += toCenter.Unit * z.pull
+				pullMax = math.max(pullMax, z.pull)
 			end
+		end
+	end
+	if pullSum.Magnitude > pullMax then
+		pullSum = pullSum.Unit * pullMax
+	end
+	if pullSum.Magnitude > 0 then
+		root.CFrame += pullSum * dt
+	end
+	for _, z in ipairs(current.zones) do
+		if z.shape == "pit" and z.pull then
+			local toCenter = Vector3.new(z.center.X - root.Position.X, 0, z.center.Z - root.Position.Z)
 			-- BR1-2: 안쪽일수록 다리가 모래에 묻힌다(그림만 - 판정은 서버 중심 원)
 			if toCenter.Magnitude <= z.radius and not airborne then
 				local depth = math.clamp(1 - toCenter.Magnitude / z.radius, 0, 1)

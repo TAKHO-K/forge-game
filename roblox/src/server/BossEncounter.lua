@@ -172,7 +172,18 @@ local function teleportTo(player, position)
 end
 
 local function huntingGroundReturnPosition()
-	return WorldConfig.huntingGround.center + Vector3.new(0, 5, 0)
+	return WorldConfig.zones.spawn.arrival + Vector3.new(0, 5, 0) -- M1: 허브 리스폰 자리(중심은 나무 줄기)
+end
+
+-- M1: 관문으로 들어온 사람의 복귀 자리(관문 앞 - BossGate). 없으면 허브. [마을](BossLinger)은 지우고 나간다(허브).
+local returnPointOf = setmetatable({}, { __mode = "k" })
+function BossEncounter.setReturnPoint(player, position)
+	returnPointOf[player] = position
+end
+local function returnPositionFor(member)
+	local p = returnPointOf[member]
+	returnPointOf[member] = nil
+	return p or huntingGroundReturnPosition()
 end
 BossEncounter.huntingGroundReturnPosition = huntingGroundReturnPosition -- 28-1: 보스 드랍이 복귀 자리를 못 찾을 때의 대체 위치(CombatResolution)
 
@@ -305,6 +316,14 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	-- Y는 바닥 윗면(ARENA_FLOOR_TOP_Y) + 1.5 - HuntingGround.server.lua의 tier 몬스터
 	-- 스폰 높이(FLOOR_Y+FLOOR_THICKNESS/2+1.5)와 같은 관례.
 	local spawnPosition = zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 1.5, 0)
+	-- M1 BR1-3 후속(사용자): 기믹 없는 보스(구간 수호자)는 2회차부터 체력 × repeatHpMultiplier - 주인(솔로 · 리더)이 이 종을 전에 만났으면(첫 만남 카드를 봤으면). 견습 제외.
+	local speciesData = BossData.bosses[data.id]
+	local repeatScale = speciesData and speciesData.repeatHpMultiplier
+	if repeatScale and not isTutorial and typeof(owner) == "Instance" and PlayerProfile.hasSeenBoss(owner, data.id) then
+		data = table.clone(data)
+		data.hp *= repeatScale
+		print(("[forge-game] %s 2회차 이상 - 체력 ×%.2f"):format(data.displayName or data.id, repeatScale))
+	end
 	local model = MonsterSpawner.spawn(data, spawnPosition, zoneKey)
 
 	local encounter = {
@@ -512,7 +531,7 @@ local function endEncounter(encounter, destroyModel)
 		BossPatterns.clearTelegraphsFor(member) -- P3a D3: 떠 있던 예고(원 · 선 · 말풍선)를 지운다 - 판정이 없어진 장판이 남지 않게
 		BossArenaMap.releaseMember(encounter.zoneKey, member) -- P3d 리뷰 3: 끼인 채 사냥터로 가지 않게(고정 · 0배 · 머리 위 표시)
 		if member.Parent then
-			teleportTo(member, huntingGroundReturnPosition())
+			teleportTo(member, returnPositionFor(member))
 			fireListeners(returnedListeners, member) -- G1-4: 잔류 중 맡아 둔 가방 가득 드랍을 사냥터 발밑에(BossLinger)
 		end
 	end
@@ -565,7 +584,7 @@ function BossEncounter.leaveFor(player)
 	BossPatterns.clearTelegraphsFor(player) -- P3a D3: 이 사람의 화면에 떠 있던 예고도 지운다(판정 대상에서 빠졌다)
 	BossArenaMap.releaseMember(encounter.zoneKey, player) -- P3d 리뷰 3
 	if player.Parent then
-		teleportTo(player, huntingGroundReturnPosition())
+		teleportTo(player, returnPositionFor(player))
 		fireListeners(returnedListeners, player) -- G1-4
 	end
 	if #encounter.members == 0 then

@@ -168,6 +168,7 @@ local function syncActiveClassAttributes(player, profile)
 	player:SetAttribute("InfiniteStageBest", classState.stageProgress.infiniteBest)
 	-- 최고로 깬 보스 스테이지(15-1). StageServer의 게이트 검사가 쓰는 값과 같은 소스다.
 	player:SetAttribute("BestBossCleared", classState.stageProgress.bestBossCleared)
+	PlayerProfile.notePeakLevel(player) -- M1: 역대 최고 레벨(PeakLevel Attribute - 나무 정거장)
 	-- 신발 배율(16-6)·최대체력(17-1) - 로드/전환된 직업에 이미 장비가 있을 수 있으니 매번 맞춘다.
 	PlayerProfile.refreshMovementSpeed(player)
 	PlayerProfile.refreshMaxHp(player)
@@ -412,6 +413,53 @@ function PlayerProfile.getHealingPowerMultiplier(player)
 	return 1 + PlayerProfile.getOptionBonus(player, "healingPower")
 end
 
+-- ═══ M1 세계 이동 · 역대 최고 레벨(v38 - 계정) ═══
+-- 지금 레벨이 기록보다 높으면 올린다(내려가지 않는다 - 환생 · 직업 전환 무관). PeakLevel Attribute(클라 - 나무 정거장 표시).
+function PlayerProfile.notePeakLevel(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return
+	end
+	profile.peakLevel = math.max(profile.peakLevel or 1, CharacterLevel.getLevelFromExp(classState.characterExp))
+	player:SetAttribute("PeakLevel", profile.peakLevel)
+end
+
+function PlayerProfile.getPeakLevel(player)
+	local profile = profiles[player]
+	return profile and profile.peakLevel or 1
+end
+
+-- 계정의 가장 높은 보스 기록(직업 중 최대 - 구역 개방 기준).
+function PlayerProfile.getAccountBestBossCleared(player)
+	local profile = profiles[player]
+	local best = 0
+	for _, classState in pairs(profile and profile.classes or {}) do
+		best = math.max(best, classState.stageProgress.bestBossCleared or 0)
+	end
+	return best
+end
+
+function PlayerProfile.isPortalOpen(player, zoneKey)
+	local profile = profiles[player]
+	return profile ~= nil and profile.world.portals[zoneKey] == true
+end
+
+-- 반환: 새로 열었는가
+function PlayerProfile.openPortal(player, zoneKey)
+	local profile = profiles[player]
+	if not profile or profile.world.portals[zoneKey] then
+		return false
+	end
+	profile.world.portals[zoneKey] = true
+	return true
+end
+
+function PlayerProfile.getOpenPortals(player)
+	local profile = profiles[player]
+	return profile and profile.world.portals or {}
+end
+
 function PlayerProfile.addCharacterExp(player, amount)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
@@ -428,6 +476,7 @@ function PlayerProfile.addCharacterExp(player, amount)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then
 		player:SetAttribute("CharacterLevel", newLevel)
+		PlayerProfile.notePeakLevel(player)
 		PlayerProfile.claimMilestones(player, true) -- P2.5b D · P2.5c B2: 마일스톤 레벨을 넘었으면 보상 + 토스트
 	end
 	return oldLevel, newLevel
@@ -1668,6 +1717,12 @@ function PlayerProfile.markGemMerchantUsed(player)
 end
 
 -- BR1-2(v37): 첫 만남 전멸기 카드 - 이 보스를 처음 만나면 true를 돌려주고 본 것으로 적는다(저장은 다음 정기 저장 - 카드를 한 번 더 보는 것은 무해하다).
+-- M1 BR1-3 후속: 이 보스(종)를 전에 만났는가(첫 만남 카드를 이미 봤는가) - 구간 수호자 2회차 체력 배율이 읽는다.
+function PlayerProfile.hasSeenBoss(player, bossId)
+	local profile = profiles[player]
+	return profile ~= nil and profile.hints.bossIntroSeen ~= nil and profile.hints.bossIntroSeen[bossId] == true
+end
+
 function PlayerProfile.markBossIntroSeen(player, bossId)
 	local profile = profiles[player]
 	if not profile or type(bossId) ~= "string" then
@@ -1849,6 +1904,7 @@ function PlayerProfile.setCharacterExpDirect(player, exp)
 	classState.characterExp = exp
 	player:SetAttribute("CharacterExp", exp)
 	player:SetAttribute("CharacterLevel", CharacterLevel.getLevelFromExp(exp))
+	PlayerProfile.notePeakLevel(player)
 	PlayerProfile.claimMilestones(player, true) -- P2.5b D: 개발 도구로 레벨을 옮겨도 정상 레벨업과 같이 마일스톤을 받는다
 end
 

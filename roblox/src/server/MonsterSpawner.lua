@@ -525,6 +525,10 @@ function MonsterSpawner.despawn(model)
 		-- 다시 굴리므로 드물게 상자가 연달아 나올 수도 있다(확률대로).
 		local respawnData = data.isChest and data.baseData or data
 		task.delay(WorldConfig.zoneMonsterGrid.respawnDelaySeconds, function()
+			-- M1: 지대 활성화(SpawnSites)가 슬롯을 맡고 있으면 그쪽이 되살린다(지대가 쉬는 중이면 되살리지 않는다)
+			if MonsterSpawner.respawnHook and MonsterSpawner.respawnHook(respawnData, spawnPosition, zoneKey) then
+				return
+			end
 			MonsterSpawner.spawn(respawnData, spawnPosition, zoneKey)
 		end)
 	end

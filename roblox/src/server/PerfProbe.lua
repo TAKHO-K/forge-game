@@ -214,7 +214,7 @@ function PerfProbe.run(player)
 
 	-- 1) 마을(중앙 안전지대)
 	PlayerProfile.setInfiniteStage(player, 1)
-	teleport(player, WorldConfig.zones.spawn.center + Vector3.new(0, 5, 0))
+	teleport(player, WorldConfig.zones.spawn.arrival + Vector3.new(0, 5, 0))
 	task.wait(4)
 	sample("town", SAMPLE_SECONDS.town)
 	worldCensus("world")
@@ -242,7 +242,7 @@ function PerfProbe.run(player)
 
 	-- 4) 보스 스테이지 진입(스폰) → 보스전 → 퇴장(파괴). 스폰 · 파괴 시간과 인스턴스 증감.
 	local bossStage = BossData.stageInterval * 3
-	teleport(player, WorldConfig.zones.spawn.center + Vector3.new(0, 5, 0))
+	teleport(player, WorldConfig.zones.spawn.arrival + Vector3.new(0, 5, 0))
 	task.wait(2)
 	workspace:SetAttribute("PerfScene", "bossSpawn")
 	before = countInstances()

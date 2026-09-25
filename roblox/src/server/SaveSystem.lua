@@ -233,6 +233,11 @@ local function defaultProfile()
 		--   bossIntroSeen(BR1-2, v37): 전멸기 설명 카드를 본 보스 id 집합({ [bossId 문자열] = true }) - 처음 만난 보스만 카드가 뜬다.
 		hints = { gemMerchantUsed = false, bossIntroSeen = {} },
 
+		-- M1(v38): 세계 이동 - portals = 입구 캠프 첫 방문으로 연 포탈({ [구역 키 문자열] = true }) · 계정 공유.
+		world = { portals = {} },
+		-- M1(v38): 역대 최고 캐릭터 레벨(직업 · 환생 무관 최대 - 내려가지 않는다). 나무 가지 정거장 개방 기준.
+		peakLevel = 1,
+
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
 		gemDust = 0,
 
@@ -896,6 +901,18 @@ local function migrate(data)
 		data.version = 37
 	end
 
+	if data.version < 38 then
+		-- M1: 포탈 개방 기록(빈 표 - 캠프를 한 번 더 밟으면 열린다) · 역대 최고 레벨(지금 직업들 레벨 중 최대 - 환생 전 기록은 없어 복원 불가).
+		data.world = data.world or { portals = {} }
+		data.world.portals = data.world.portals or {}
+		local peak = 1
+		for _, classState in pairs(data.classes or {}) do
+			peak = math.max(peak, CharacterLevel.getLevelFromExp(classState.characterExp or 0))
+		end
+		data.peakLevel = math.max(data.peakLevel or 1, peak)
+		data.version = 38
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -936,6 +953,8 @@ local function isValidProfile(data)
 		or type(data.hints) ~= "table"
 		or (data.hints.gemMerchantUsed ~= nil and type(data.hints.gemMerchantUsed) ~= "boolean")
 		or (data.hints.bossIntroSeen ~= nil and type(data.hints.bossIntroSeen) ~= "table") -- v37
+		or type(data.world) ~= "table" or type(data.world.portals) ~= "table" -- v38
+		or type(data.peakLevel) ~= "number" or data.peakLevel < 1 -- v38
 		or type(data.gemDust) ~= "number" or data.gemDust % 1 ~= 0 or data.gemDust < 0
 		or type(data.milestoneUnlocks) ~= "number" or data.milestoneUnlocks % 1 ~= 0 or data.milestoneUnlocks < 0
 		or type(data.leaderboardTainted) ~= "boolean" -- 리더보드 기록 제외(v34)

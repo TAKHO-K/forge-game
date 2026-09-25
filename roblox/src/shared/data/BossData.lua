@@ -616,6 +616,8 @@ local SPECIES = {
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "지반 붕괴", line = "체력이 절반 아래면 땅이 조각조각 무너진다 - 금 간 조각 밖으로!", icon = "!", diagram = "slices" },
 		id = "section_guardian", displayName = "구간 수호자",
+		-- M1 BR1-3 후속(사용자): 첫 만남은 그대로 · 2회차부터 체력 ×1.3(전멸기 없는 대신 튼튼한 보스) - 주인(솔로 · 리더)이 이 종의 첫 만남 카드를 이미 봤으면(BossEncounter).
+		repeatHpMultiplier = 1.3,
 		bodyColor = Color3.fromRGB(60, 20, 70), headColor = Color3.fromRGB(90, 30, 100),
 		-- 기본형(기준선) - 21-3부터 검증돼 온 그 보스다. 다른 5종이 쓰는 전조 어휘의 사전이고 견습 보스다.
 		sizeScale = 3, bodyAspect = Vector3.new(1.0, 1.0, 1.0),
@@ -1363,19 +1365,20 @@ return {
 	-- 29-5 보스 배치(PRD 20.80 [A]): 보스의 정체는 **스테이지 번호만의 함수**이고 모든 유저에게 같다. n번째 보스
 	-- 스테이지(= 스테이지 ÷ stageInterval)는 laps의 칸을 순서대로 읽는다 - 한 줄이 한 바퀴(6마리), 마지막 줄 다음은
 	-- 첫 줄로 돌아간다(36마리 = 180스테이지 주기). 유저 상태·저장 데이터·난수를 읽지 않는다.
-	--   · 1줄 = 선언 순서: 첫 보스는 기본형(전조 어휘를 배운다), 그다음 다섯에서 나머지 5종을 한 번씩 전부 만난다.
+	--   · 1줄 = M1 구역 순서(WorldMapData.zones[k].bossId - T1 견습 보스 → T2 ~ T6 모형 난이도 순): 스테이지 5k 보스 = 구역 k 보스라 그 첫 처치가 구역 k+1을 연다.
+	--     (M1: 옛 표를 보스 이름만 일괄 치환 - 서리→수정 · 수정→전갈 · 전갈→폭풍 · 폭풍→서리. 라틴 방진 · 이웃 쌍 · 간격 규칙은 이름 치환에 그대로 유지된다.)
 	--   · 2줄부터는 바퀴마다 순서가 다르다. 표는 6 × 6 행 완전 라틴 방진이다 - 각 보스가 바퀴의 각 자리에 한 번씩
 	--     서고, "A 다음에 B"라는 이웃 쌍 30가지가 36마리 안에서 정확히 한 번씩 나온다(같은 흐름이 되풀이되지 않는다).
 	--   · 같은 보스가 다시 나오기까지 최소 4마리(바퀴 경계·주기 경계 포함) - 연속 등장이 없다.
 	-- 표를 고치면 BossRules.validatePlacement(자동 검증 · "/gg boss table")가 규칙 위반을 잡는다.
 	placement = {
 		laps = {
-			{ "section_guardian", "frost_giant", "abyssal_lord", "crystal_queen", "scorpion_queen", "storm_lord" },
-			{ "frost_giant", "crystal_queen", "section_guardian", "storm_lord", "abyssal_lord", "scorpion_queen" },
-			{ "crystal_queen", "storm_lord", "frost_giant", "scorpion_queen", "section_guardian", "abyssal_lord" },
-			{ "storm_lord", "scorpion_queen", "crystal_queen", "abyssal_lord", "frost_giant", "section_guardian" },
-			{ "scorpion_queen", "abyssal_lord", "storm_lord", "section_guardian", "crystal_queen", "frost_giant" },
-			{ "abyssal_lord", "section_guardian", "scorpion_queen", "frost_giant", "storm_lord", "crystal_queen" },
+			{ "section_guardian", "crystal_queen", "abyssal_lord", "scorpion_queen", "storm_lord", "frost_giant" },
+			{ "crystal_queen", "scorpion_queen", "section_guardian", "frost_giant", "abyssal_lord", "storm_lord" },
+			{ "scorpion_queen", "frost_giant", "crystal_queen", "storm_lord", "section_guardian", "abyssal_lord" },
+			{ "frost_giant", "storm_lord", "scorpion_queen", "abyssal_lord", "crystal_queen", "section_guardian" },
+			{ "storm_lord", "abyssal_lord", "frost_giant", "section_guardian", "scorpion_queen", "crystal_queen" },
+			{ "abyssal_lord", "section_guardian", "storm_lord", "crystal_queen", "frost_giant", "scorpion_queen" },
 		},
 		minRepeatGap = 4, -- 같은 보스 사이의 최소 간격(보스 스테이지 수) - validatePlacement가 검사한다
 	},

@@ -58,6 +58,8 @@ ScreenMap.slots = {
 		tutorialToast = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 160), UDim2.new(0, 480, 0, 0), "TutorialToast", "TutorialHud.client.lua - 높이는 내용(AutomaticSize.Y)"),
 		toastLane = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 64), UDim2.new(0, 480, 0, 40), "ToastLane_TC", "Toast 줄 TC(시스템 · 1행 · 3초)"),
 		-- S19b: 보스 이름(22) + 체력바(16) 사이 2. 위 끝 12 · 아래 끝 52 - 토스트 줄(64) 바로 위, 중앙 금지 구역(높이 388에서 위 끝 97) 위, 칩 스택 · 파티 버튼(TR)과 가로로 안 겹친다(폭 360).
+		-- M1: 나무 높이 표시(오르는 동안만 - 발이 지면 위 12 넘게 · 줄기 둘레 160 안). 튜토리얼 토스트(160 · 내용 높이) 아래 - 견습은 나무를 안 오른다.
+		treeHeight = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 214), UDim2.new(0, 220, 0, 36), "TreeHeightLabel", "WorldClient.client.lua(M1) - '높이 123m · 정거장 2'"),
 		bossBar = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 12), UDim2.new(0, 360, 0, 40), "BossBar", "hud/BossBar.client.lua(S19b) - 보스전 중에만 뜨는 보스 이름 + 체력바. 서버 모델 Attribute BossHpRatio를 0.1초마다 읽는다 - 머리 위 보스 바는 없다"),
 	},
 	TR = {
@@ -68,6 +70,9 @@ ScreenMap.slots = {
 		-- 메뉴바 4번째 칸은 폰 가로(ScreenGui 높이 302)에서 BL 터치 예약 구역과 겹쳐 못 쓴다(P2.5b 확인 - 3칸 + 1칸 = 210 > 밀어 올릴 수 있는 한도). 칩 스택 왼쪽 열은 파티 버튼 하나뿐이라 그 아래가 비어 있다.
 		leaderboardToggle = slot("new", 1, 0, UDim2.new(1, -99, 0, 96), UDim2.new(0, 72, 0, 36), "LeaderboardToggleButton",
 			"panels/Leaderboard.lua(P3b) - '순위' 열기 버튼. 파티 버튼 아래 끝 + 8 · 오른쪽 끝 = 파티 버튼 오른쪽 끝. 모바일은 높이 44(파티 버튼도 44라 위 끝 = 52 + 44 + 8 = 104)"),
+		-- M1: [귀환](허브 - 쿨 60초) · [파티 곁](첫 다른 파티원 곁 - 파티일 때만) - [순위] 버튼 아래로 이어 붙는다(순위 버튼을 따라 움직인다 - WorldClient).
+		travelHub = slot("new", 1, 0, UDim2.new(1, -99, 0, 140), UDim2.new(0, 72, 0, 36), "TravelHubButton", "WorldClient.client.lua(M1) - 순위 버튼 아래 끝 + 8"),
+		travelParty = slot("new", 1, 0, UDim2.new(1, -99, 0, 184), UDim2.new(0, 72, 0, 36), "TravelPartyButton", "WorldClient.client.lua(M1) - 귀환 버튼 아래 끝 + 8 · 파티일 때만"),
 		dropFeed = slot("new", 1, 0, UDim2.new(1, -14, 0, 52), UDim2.new(0, 300, 0, 78), "ToastLane_TR",
 			"Toast 줄 TR(드랍 피드 · 최대 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 넘치면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93 · 보완): 칩 스택 바로 아래(아래 끝 + 8)에 남은 자리만큼(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 구역 위 끝까지, 최대 3줄), 0줄이면 상단 가운데 띠 1줄(태초 배너가 있으면 그 아래 3)",
 			{ zone = "TR", slot = "chipStack", gap = 8 }),

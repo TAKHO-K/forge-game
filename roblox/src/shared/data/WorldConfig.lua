@@ -37,20 +37,7 @@ local LEASH_RANGE_STUDS = AGGRO_RANGE_STUDS * 1.5 -- 38.4
 -- 입구 마진(entrance - half = SUPER/2 - HALF = CORRIDOR/2 = 16)은 이 식에서 그대로 나온다.
 local CORRIDOR_WIDTH_STUDS = GRID_SPACING_STUDS / 2
 local SUPER_GRID_SPACING_STUDS = ZONE_SIZE_STUDS + CORRIDOR_WIDTH_STUDS
--- 맵 전체 한 변(가장 바깥 구역의 바깥 담장까지) = 구역 3개 + 복도 2개. 맵 밑판(HuntingGround
--- MapBase)·심연 판정이 이 값을 읽는다 - 여기 말고는 어디에도 맵 크기를 다시 적지 않는다.
-local MAP_SIZE_STUDS = SUPER_GRID_SPACING_STUDS * 3 - CORRIDOR_WIDTH_STUDS
-
--- 24-5(PRD 20.51 [4]가 예정한 값): 맵 832가 기본 StreamingEnabled 반경 안이라 지금까지
--- 스트리밍이 아무것도 걸러내지 않았다(20.51 [4]). 16인 클라 스트리밍 파트가 상한
--- 1,500에 걸리면서(20.63 [3], 1,501) 처음으로 줄여야 하는 시점이 됐다 - "구역 1개 +
--- 이웃"(슈퍼그리드 간격의 2배, 288×2=576) 정도로 잡으면 지금 서 있는 구역과 옆 구역까지는
--- 보이고 그 너머(같은 대각선의 세 번째 구역)는 걸러진다. 성능/안전장치 값이라 새 밸런스
--- 상수가 아니다. 24-5 실측: `Workspace.StreamingTargetRadius`는 스크립트로 못 쓴다(공식
--- 문서 - Studio 속성창 전용, "not a valid member" 실행 에러로 확인) - 이 값은 적용될
--- 목표치를 기록만 하고, 실제 적용은 사용자가 Studio에서 수동으로 한다
--- (HuntingGround.server.lua 부팅 로그가 이 값을 안내한다).
-local STREAMING_TARGET_RADIUS_STUDS = 600
+-- M1: 옛 맵 한 변(3×3) · 스트리밍 권장값(24-5 - 600, Studio 수동)은 WorldMapData(세계 반지름 · streaming)로 옮겼다. 스트리밍 속성은 이제 default.project.json(Workspace)으로 git에 있다.
 
 -- ═══ 유도값 한눈에(22-5) - 숫자를 주석에 박아 두면 값이 바뀔 때 주석이 남는다(20.49 실측에서
 -- "슈퍼그리드 160" 주석이 실제 224였다). 그래서 이 파일의 주석은 식만 적고, 실제 숫자는
@@ -58,22 +45,14 @@ local STREAMING_TARGET_RADIUS_STUDS = 600
 --   구역 = 2 × (격자 + 여백)          / 슈퍼그리드 = 구역 + 복도     / 맵 = 3 × 슈퍼그리드 - 복도
 --   담장 안쪽 안전 띠 = 여백 - 리쉬    / 입구 마진 = 복도 / 2          / 변 칸 문까지 = 슈퍼그리드/2 - 여백 + 격자
 
--- 사용자가 확정한 배치표 그대로(16-6):
---   1 tier5 | 2 강화소 | 3 tier6
---   4 tier1 | 5 리스폰 | 6 tier2
---   7 tier3 | 8 커뮤니티 | 9 tier4
--- col/row는 리스폰(원점) 기준 격자 좌표 - world 좌표는 아래서 col/row × SUPER_GRID_SPACING로 뽑는다.
-local ZONE_LAYOUT = {
-	{ key = "tier5", role = "tier", tierIndex = 5, col = -1, row = -1 },
-	{ key = "enhance", role = "enhance", col = 0, row = -1, displayName = "강화소" },
-	{ key = "tier6", role = "tier", tierIndex = 6, col = 1, row = -1 },
-	{ key = "tier1", role = "tier", tierIndex = 1, col = -1, row = 0 },
-	{ key = "spawn", role = "spawn", col = 0, row = 0, displayName = "리스폰 마을" },
-	{ key = "tier2", role = "tier", tierIndex = 2, col = 1, row = 0 },
-	{ key = "tier3", role = "tier", tierIndex = 3, col = -1, row = 1 },
-	{ key = "community", role = "community", col = 0, row = 1, displayName = "커뮤니티 광장" },
-	{ key = "tier4", role = "tier", tierIndex = 4, col = 1, row = 1 },
-}
+-- M1(맵 확장 그레이박스): 옛 3×3 배치표(16-6)를 큰 세계(반지름 약 3,000 · 원점 = 허브 "큰 나무 마을")로 바꿨다. 구역 자리 · 크기의 단일 출처 =
+-- data/WorldMapData(+ shared/WorldMapLayout 식). 여기서는 옛 계약(zones[key] · zoneOrder · tierZoneOrder · enhance · rebirthAltar · gemMerchant)을 그 값으로 채운다.
+--   spawn = 허브(원 - 잎 덮개 반경) · tierN = 꽃잎 구역(원 - 구역 원 · entrance = 입구 캠프) · enhance / community = 허브 시설 자리(구역 아님 - zoneOrder에 없다).
+local WorldMapData = require(script.Parent.WorldMapData)
+local function hubPoint(angleDeg, r)
+	local a = math.rad(angleDeg)
+	return Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+end
 
 -- 구역별 몬스터 스폰 슬롯(사냥터 중심 기준이 아니라 그 "구역" 중심 기준) - 기존
 -- HuntingGround.server.lua의 monsterSpawnPositions와 같은 산식을, 구역 중심을 인자로 받게
@@ -97,29 +76,33 @@ local ZONE_MONSTER_OFFSETS = monsterSpawnOffsets()
 
 local zones = {}
 local zoneOrder = {}
-for _, entry in ipairs(ZONE_LAYOUT) do
-	local center = Vector3.new(entry.col * SUPER_GRID_SPACING_STUDS, 0, entry.row * SUPER_GRID_SPACING_STUDS)
-	-- 입구/포탈 도착점/중앙 복귀 패드 위치 - 리스폰(원점)과 구역 중심을 잇는 선분의
-	-- 정확히 중점이다. entrance - half = SUPER/2 - HALF = CORRIDOR/2로 항상 양수라
-	-- (SUPER_GRID_SPACING = ZONE_SIZE + CORRIDOR_WIDTH 관계 덕분에 ZONE_HALF_SIZE_STUDS 값이
-	-- 바뀌어도 이 마진은 유지된다 - 19-4의 64->96, 22-5의 96->128 둘 다 재검산으로 확인) 변 칸이든
-	-- 대각 칸이든 이 중점은 항상 두 구역 경계 바깥이다. 리스폰(구역 자체가 없음)엔 입구가 없다.
-	local entrance = center * 0.5
-
-	-- 22-5 지시로 구역 담장(19-4 [4]-가)과 문(gate)을 없앴다 - "담장을 둘러두면 답답하다". 구역은
-	-- 바닥색과 진입 토스트(ZoneBoundaryWarning.client.lua)로만 구분하고, 몬스터 봉쇄는 원래부터
-	-- 담장이 아니라 리쉬 + ZoneBounds(구역 경계 = 리쉬 상한, MonsterAI)가 하던 일이라 바뀌지 않는다.
-	-- 걸어가는 최단 경로는 이제 리스폰에서 구역 모서리까지의 직선이다(부팅 로그 참고).
-	zones[entry.key] = {
-		key = entry.key,
-		role = entry.role,
-		tierIndex = entry.tierIndex,
-		displayName = entry.displayName, -- tier 구역은 nil - 몬스터 이름(MonsterData)으로 부른다.
-		center = center,
-		halfSize = ZONE_HALF_SIZE_STUDS,
-		entrance = entrance,
-	}
-	table.insert(zoneOrder, entry.key)
+do
+	local hub = WorldMapData.hub
+	-- arrival = 허브로 돌아오는 자리(리스폰 · 보스전 뒤 · 심연 복귀 · 귀환) - 중심(0, 0, 0)은 나무 줄기 안이다.
+	zones[hub.key] = { key = hub.key, role = "spawn", displayName = hub.displayName, center = Vector3.new(0, 0, 0), radius = hub.safeRadius, halfSize = hub.safeRadius,
+		arrival = hubPoint(hub.spawn.angleDeg, hub.spawn.r) }
+	table.insert(zoneOrder, hub.key)
+	local forge, community = hub.facilities.forge, hub.facilities.community
+	zones.enhance = { key = "enhance", role = "enhance", displayName = forge.displayName, center = hubPoint(forge.angleDeg, forge.r) }
+	zones.community = { key = "community", role = "community", displayName = community.displayName, center = hubPoint(community.angleDeg, community.r) }
+	local L = WorldMapData.layout
+	for _, z in ipairs(WorldMapData.zones) do
+		local a = math.rad(z.angleDeg)
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local side = Vector3.new(-math.sin(a), 0, math.cos(a))
+		zones[z.key] = {
+			key = z.key,
+			role = "tier",
+			tierIndex = z.tierIndex,
+			displayName = z.theme,
+			center = dir * L.regionCenterR,
+			radius = L.regionRadius, -- 원(ArenaShape) - 몬스터 리쉬 상한 · 구역 소속 · 결계가 같은 원
+			halfSize = L.regionRadius,
+			entrance = dir * L.camp.r + side * L.camp.lat, -- 입구 캠프(심연 복귀 · 포탈 도착)
+			bossId = z.bossId,
+		}
+		table.insert(zoneOrder, z.key)
+	end
 end
 
 -- 보스 전용 격리 아레나(20-2b) - "맵 중앙에 보스가 스폰된다"는 버그 수정. 원인은
@@ -138,7 +121,7 @@ local BOSS_ARENA_SLOT_COUNT = 12
 local BossArenaMapData = require(script.Parent.BossArenaMapData)
 local BOSS_ARENA_RADIUS_STUDS = BossArenaMapData.geometry.radiusStuds
 local BOSS_ARENA_HALF_SIZE_STUDS = BOSS_ARENA_RADIUS_STUDS
-local BOSS_ARENA_BASE_Z_STUDS = -3000 -- 슈퍼그리드 가장자리(-MAP_SIZE/2)에서 충분히 먼 값.
+local BOSS_ARENA_BASE_Z_STUDS = -3500 -- M1: 세계 끝(반경 2960 벽 + 능선 44) 밖 - 옛 -3000은 새 세계 끝과 겹친다
 -- 슬롯끼리 안 겹치는 간격 = 벽 · 테라스까지의 지름 + 여유.
 local BOSS_ARENA_SPACING_STUDS = (BOSS_ARENA_RADIUS_STUDS + BossArenaMapData.geometry.wallThicknessStuds + BossArenaMapData.geometry.rimWidthStuds) * 2
 	+ BossArenaMapData.geometry.slotSpacingExtraStuds
@@ -220,8 +203,8 @@ return {
 	superGrid = {
 		spacingStuds = SUPER_GRID_SPACING_STUDS,
 		corridorWidthStuds = CORRIDOR_WIDTH_STUDS,
-		mapSizeStuds = MAP_SIZE_STUDS, -- 22-5: 맵 전체 한 변(맵 밑판·심연 경계의 단일 출처).
-		streamingTargetRadiusStuds = STREAMING_TARGET_RADIUS_STUDS, -- 24-5: 위 주석 참고.
+		mapSizeStuds = WorldMapData.worldRadiusStuds * 2, -- M1: 세계 지름(옛 = 3×3 맵 한 변 MAP_SIZE_STUDS)
+		streamingTargetRadiusStuds = WorldMapData.streaming.targetRadius, -- M1: default.project.json Workspace 속성으로 git에 들어갔다(24-5 권장값 600 대체)
 	},
 
 	-- 22-5: 지형 배치 규칙이 읽는 유도값. 담장 안쪽 안전 띠 = 여백 - 리쉬(> 0이어야 띠가 존재).
@@ -259,7 +242,7 @@ return {
 	-- 리스폰 쪽 면 앞). 서버는 요청 시점에 플레이어가 이 자리 interactionRangeStuds 안에 있는지 직접 잰다(클라의 ProximityPrompt 거리만 믿지 않는다).
 	-- promptDistanceStuds는 서버 반경보다 작다 - 프롬프트가 뜬 자리에서 누른 요청은 항상 서버 반경 안이다.
 	rebirthAltar = {
-		offsetFromCommunity = Vector3.new(0, 0, -26),
+		offsetFromCommunity = Vector3.new(0, 0, 0), -- M1: 커뮤니티 센터 앞 자리 그대로(건물은 그 바깥쪽 - WorldMapLayout.buildHub)
 		interactionRangeStuds = 12,
 		promptDistanceStuds = 10,
 		objectText = "환생의 제단",
@@ -271,7 +254,7 @@ return {
 	-- offsetFromCommunity = 제단(0, 0, -26)의 옆(같은 면 앞, 동쪽 16stud). promptDistanceStuds는 서버 반경보다 작다 - 프롬프트가 뜬 자리에서 누른 요청은 항상 서버 반경 안이다.
 	-- guideSeconds = [위치 안내] 마커가 떠 있는 시간(클라 표시 - 서버 호출 없음).
 	gemMerchant = {
-		offsetFromCommunity = Vector3.new(16, 0, -26),
+		offsetFromCommunity = hubPoint(WorldMapData.hub.facilities.market.angleDeg, WorldMapData.hub.facilities.market.r) - zones.community.center, -- M1: 시장 앞 자리(옛 이름 유지 - 커뮤니티 기준 오프셋)
 		interactionRangeStuds = 12,
 		promptDistanceStuds = 10,
 		objectText = "보석상인",

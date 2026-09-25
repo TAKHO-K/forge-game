@@ -12,6 +12,7 @@ local TweenService = game:GetService("TweenService")
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
 
 local CHECK_INTERVAL_SECONDS = 0.3
 local DISPLAY_SECONDS = 2.5
@@ -51,8 +52,7 @@ stroke.Parent = label
 local function findZone(position)
 	for _, zoneKey in ipairs(WorldConfig.zoneOrder) do
 		local zone = WorldConfig.zones[zoneKey]
-		if math.abs(position.X - zone.center.X) <= zone.halfSize
-			and math.abs(position.Z - zone.center.Z) <= zone.halfSize then
+		if ArenaShape.contains(zone, position) then -- M1: 구역 = 원(허브 · 꽃잎 구역)
 			return zoneKey, zone
 		end
 	end

@@ -43,6 +43,11 @@ return {
 
 	-- 땅 파도(A3): 파동 띠 자리의 바닥이 솟았다 꺼진다(시각 전용 - 띠 = 판정 자리 그대로). 솟은 흙 = 맵 바닥색을 조금 밝게, 외곽선 = 어두운 테.
 	groundWave = { segments = 32, crestHeight = 1.3, rollSpeed = 10, rollWaves = 6, rimDarken = 0.35 },
+	-- M1 BR1-3 후속(사용자 - 지진파 상 · 하 구분, 모양 1순위): 색 = 보스 머리색(테마)을 바닥색과 밝기 차 minLumaGap 이상이 되게 밝히거나 어둡게(바닥과 섞이지 않게).
+	--   하단(땅 파동) = 두꺼운 흙물결(불투명 띠 + 마루) + 지나간 자리 바닥이 꿈틀 들썩(heave - 파동 안쪽 띠의 작은 블록이 솟았다 가라앉는다).
+	--   상단(공중 파동) = 머리 높이 얇은 칼날 고리(blade - 네온 · 두께 bladeHeight) + 판정 띠는 아주 옅게(bandTransparency) + 흰 테두리 두 줄(판정 위 · 아래). 인형 방식 · 파티클 0.
+	quakeLook = { minLumaGap = 0.4, groundTransparency = 0.05, bladeHeight = 0.5, bandTransparency = 0.88,
+		heave = { segments = 28, amplitude = 0.9, behindStuds = 5, width = 4, waves = 5, speed = 14 } },
 
 	-- 돌진 속도감(A4)
 	charge = {
