@@ -25,6 +25,8 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local HudChip = require(script.Parent.HudChip)
 local HudIcons = require(script.Parent.HudIcons)
 local StageSelectPanel = require(script.Parent.StageSelectPanel)
+local Confirm = require(script.Parent.ui.kit.Confirm)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local stageMoveResult = ReplicatedStorage:WaitForChild("StageMoveResult")
 
@@ -164,6 +166,22 @@ HudIcons.gear(settingsIconHolder, 18)
 
 stageMoveResult.OnClientEvent:Connect(function(payload)
 	if payload.result ~= "rejected" then
+		return
+	end
+	if payload.reason == "boss_alive" then
+		-- G1-5: 보스 생존 중 이동 거절 → "포기하고 한 스테이지 아래 마을로" 확인창(파티면 포기 투표를 연다)
+		local stage = math.max(1, (payload.bossStage or 2) - 1)
+		Confirm.ask({
+			title = Text.get("giveup.title"),
+			body = Text.get(payload.isParty and "giveup.bodyParty" or "giveup.body", { stage = stage }),
+			primaryText = Text.get("giveup.ok"),
+			secondaryText = Text.get("giveup.cancel"),
+			danger = true,
+		}, function(accepted)
+			if accepted then
+				ReplicatedStorage:WaitForChild("BossGiveUp"):FireServer()
+			end
+		end)
 		return
 	end
 	if payload.reason == "boss_locked" then

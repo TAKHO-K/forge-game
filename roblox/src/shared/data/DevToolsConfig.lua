@@ -141,7 +141,9 @@ local config = {
 		-- G1-3: 이번 블록 G1-3(가)(나) + 동반: CharacterLevel(레벨차) · PlayerDamage(모든 피격) · MonsterState(모든 타격) - 체인 동안 계수를 끄므로 옛 피해 기대값 블록은 영향 없음 →
 		-- 대표로 29-1(PlayerDamage 직접) · S13b(나) · P25c(나)(신규 보호와 곱) · EconSim(P0(가)) · 환생 자리 RebirthAccess(S12b(가)(나)) · 강화대 환생 탭(S12(UI) · S12b(UI)).
 		-- G1-4: 이번 블록 G1-4(나) + 동반: BossEncounter(endEncounter · leaveFor 잔류 대응) · CombatResolution(처치) · StageServer → 보스 처치 · 이동 블록(S01(나) · S11(나) · 29-1 · P3a(나) · 27-4(나) · S12(나) · S19b(나)) - 체인 동안 잔류는 꺼져 옛 동작.
+		-- G1-5: 이번 블록 G1-5(나) + 동반: StageServer(이동 제한 · 재접속) · PartyServer(초대) · TutorialState(견습) · PartyVote(종류) · BossEncounter(탈퇴) → 27-3(나)(투표) · S12(나)(파티 · 견습) · S12b(나) · S19b(나) · 27-4(나).
 		current = {
+			"G1-5(나)",
 			"G1-4(나)",
 			"G1-3(가)", "G1-3(나)",
 			"G1-2(가)", "G1-2(나)",

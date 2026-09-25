@@ -757,7 +757,12 @@ PartyState.onMemberRemoved(function(player, party, reason)
 		encounter.party = nil
 		return
 	end
+	local stepDown = encounter.model ~= nil and not encounter.lingering -- G1-5: 보스 생존 중 탈퇴 = 도전 스테이지 − 1 + 마을(잔류 중 탈퇴는 스테이지 그대로)
+	local stage = encounter.stage
 	BossEncounter.leaveFor(player)
+	if stepDown and typeof(player) == "Instance" and player.Parent then
+		PlayerProfile.setInfiniteStage(player, math.max(1, stage - 1))
+	end
 end)
 
 return BossEncounter

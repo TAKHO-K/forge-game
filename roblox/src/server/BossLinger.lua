@@ -108,11 +108,54 @@ function BossLinger.choose(player, choice)
 					fire(member, { kind = "end" })
 				end
 			end
-		end)
+		end, "retry")
 		return started, started and "vote" or "vote_busy"
 	end
 	return false, "bad_choice"
 end
+
+-- ═══ G1-5 보스 생존 중 포기(D0 결정 5 · 사용자 확정) ═══
+-- 보스가 살아 있는 동안 스테이지 이동은 막힌다(StageServer). 대신 포기: 솔로 = 바로, 파티 = 포기 투표(PartyVote kind "giveup" - 요청한 사람 + 1명 동의).
+-- 통과하면 그 보스전의 멤버 전원이 "도전 스테이지 − 1"로 내려가 마을로 돌아간다(보스는 물러난다). 같은 규칙: 파티 탈퇴 · 재접속(BossEncounter · StageServer).
+function BossLinger.stepDown(player, bossStage)
+	PlayerProfile.setInfiniteStage(player, math.max(1, bossStage - 1))
+end
+
+function BossLinger.giveUp(player)
+	local encounter = BossEncounter.getEncounter(player)
+	if not encounter or encounter.lingering or not encounter.model then
+		return false, "no_boss"
+	end
+	local function apply()
+		local members = table.clone(encounter.members)
+		local stage = encounter.stage
+		BossEncounter.despawnFor(members[1] or player)
+		for _, member in ipairs(members) do
+			if typeof(member) == "Instance" and member.Parent then
+				BossLinger.stepDown(member, stage)
+			end
+		end
+		print(("[forge-game] 보스 포기: 스테이지 %d → %d · %d명"):format(stage, math.max(1, stage - 1), #members))
+	end
+	if encounter.party == nil then
+		apply()
+		return true, "gave_up"
+	end
+	local PartyVote = require(script.Parent.PartyVote)
+	local started = PartyVote.start(encounter.party, player, encounter.stage, function(passed)
+		if passed and BossEncounter.getEncounter(player) == encounter and not encounter.lingering then
+			apply()
+		end
+	end, "giveup")
+	return started, started and "vote" or "vote_busy"
+end
+
+local giveUpEvent = Instance.new("RemoteEvent")
+giveUpEvent.Name = "BossGiveUp"
+giveUpEvent.Parent = ReplicatedStorage
+giveUpEvent.OnServerEvent:Connect(function(player)
+	BossLinger.giveUp(player)
+end)
 
 choiceEvent.OnServerEvent:Connect(function(player, choice)
 	if type(choice) ~= "string" then

@@ -51,6 +51,14 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 		return -- 프로필 로드가 아직 안 끝났다
 	end
 
+	-- G1-5(D0 결정 5): 보스가 살아 있는 동안은 이동하지 않는다 - 거절(boss_alive)하면 클라가 "포기하고 한 스테이지 아래 마을로" 확인창을 띄운다(BossGiveUp).
+	-- 잔류 중(보스를 잡은 뒤)은 보스 모델이 없어 여기 안 걸린다.
+	if BossEncounter.getActive(player) ~= nil then
+		local encounter = BossEncounter.getEncounter(player)
+		reject(player, "boss_alive", { bossStage = encounter and encounter.stage, isParty = encounter ~= nil and encounter.party ~= nil })
+		return
+	end
+
 	-- 이동 규칙(11-1 [0]): 아래로는 자유(파밍 유도의 전제), 위로는 최고 도달 단계+1까지만
 	-- (건너뛰기 없음). 두 조건을 하나의 범위 검사로 표현한다.
 	local best = PlayerProfile.getInfiniteStageBest(player)
@@ -176,8 +184,11 @@ Players.PlayerAdded:Connect(function(player)
 	if not player.Parent then
 		return
 	end
+	-- G1-5(D0 결정 5 · 사용자 확정): 재접속은 보스를 다시 세우지 않는다 - 보스 스테이지에서 나갔으면 한 스테이지 아래 마을에서 시작한다
+	-- (이동 제한과 합쳐지면 못 이기는 보스에 갇힌다 - 포기 · 탈퇴와 같은 −1 규칙).
 	local stage = PlayerProfile.getInfiniteStage(player)
 	if BossRules.isBossStage(stage) then
-		BossEncounter.spawnFor(player, stage)
+		PlayerProfile.setInfiniteStage(player, math.max(1, stage - 1))
+		print(("[forge-game] 재접속: 보스 스테이지 %d → %d(마을)"):format(stage, math.max(1, stage - 1)))
 	end
 end)

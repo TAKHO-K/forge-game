@@ -16,6 +16,7 @@ local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local PartyState = require(script.Parent.PartyState)
 local TutorialState = require(script.Parent.TutorialState)
 local BossEncounter = require(script.Parent.BossEncounter)
+local Text = require(ReplicatedStorage.Shared.Text)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PartyCrossServer = require(script.Parent.PartyCrossServer)
 local PartyVote = require(script.Parent.PartyVote)
@@ -173,6 +174,12 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 				local leader = PartyState.getLeader(party)
 				if not leader then
 					fail(player, "party_gone")
+					PartyState.respondInvite(player, false)
+					return
+				end
+				-- G1-5 우회로 막기: 보스가 살아 있는 동안 초대를 받으면 보스전이 −1 없이 끝났다(합류가 솔로 보스를 물린다) - 포기로만 나간다.
+				if BossEncounter.getActive(player) ~= nil then
+					PartyState.notify(player, Text.get("boss.blockedInvite"))
 					PartyState.respondInvite(player, false)
 					return
 				end

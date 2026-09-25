@@ -85,6 +85,22 @@ return {
 		["linger.leaderOnly"] = "파티 리더만 신청합니다",
 		["linger.cannotNext"] = "다음 스테이지로 갈 수 없어 마을로 돌아갑니다(이 보스 기록이 오르지 않았습니다)",
 
+		-- 보스 생존 중 이동 제한 · 포기(G1-5)
+		["giveup.title"] = "보스전 중에는 이동할 수 없습니다",
+		["giveup.body"] = "포기하고 스테이지 {stage}(으)로 내려가 마을로 돌아갈까요?",
+		["giveup.bodyParty"] = "포기 투표를 열까요? 통과하면 파티 전원이 스테이지 {stage}(으)로 내려가 마을로 돌아갑니다.",
+		["giveup.ok"] = "포기",
+		["giveup.cancel"] = "계속 싸우기",
+		["giveup.reason"] = "보스전 중에는 이동할 수 없습니다(포기하면 한 스테이지 아래 마을로)",
+		["vote.enter.title"] = "스테이지 이동 투표",
+		["vote.giveup.title"] = "보스 포기 투표",
+		["vote.giveup.leaderBody"] = "스테이지 {stage} 보스 포기 투표 중(1명 동의 시 성립)",
+		["vote.giveup.body"] = "스테이지 {stage} 보스를 포기하고 한 스테이지 아래 마을로 갈까요?",
+		["vote.retry.title"] = "재도전 투표",
+		["vote.retry.leaderBody"] = "스테이지 {stage} 보스 재도전 투표 중(1명 동의 시 성립)",
+		["vote.retry.body"] = "스테이지 {stage} 보스에 다시 도전할까요?",
+		["boss.blockedInvite"] = "보스전 중에는 파티 초대를 받을 수 없습니다",
+
 		-- 채팅 · 알림
 		["chat.primalDrop"] = "★ {name}님이 <font color=\"{color}\">{item}</font>을 얻었습니다",
 	},

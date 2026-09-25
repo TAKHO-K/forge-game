@@ -136,6 +136,11 @@ end
 -- 단계 하나를 시작한다(새로 시작하거나 재접속으로 재개하거나 다음 단계로 넘어가거나 전부
 -- 이 함수 하나를 거친다 - 멱등: 몇 번을 다시 불러도 "지금은 이 단계"라는 결과가 같다).
 function TutorialState.start(player, step)
+	-- G1-5 우회로 막기: 일반 보스가 살아 있는 동안 견습에 들어가면 보스전이 −1 없이 끝났다 - 포기로만 나간다(견습 보스 자신은 예외).
+	local encounter = BossEncounter.getEncounter(player)
+	if encounter and encounter.model ~= nil and not encounter.isTutorial then
+		return
+	end
 	cancelTimer(player)
 	local stepData = TutorialData.steps[step]
 	if not stepData then

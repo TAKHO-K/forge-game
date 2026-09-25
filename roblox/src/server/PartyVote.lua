@@ -55,7 +55,8 @@ end
 -- 이미 진행 중인 투표가 있으면 false(호출부가 그 자리에서 이동 자체를 거절한다 - 보스전
 -- 중에는 투표가 안 뜨는 것과 같은 계통: "지금은 안 된다"). 다른 멤버가 없으면(사실상 혼자)
 -- 투표 없이 즉시 onResolve(true)를 부르고 true를 돌려준다.
-function PartyVote.start(party, leader, targetStage, onResolve)
+-- G1-4 · G1-5: kind(선택) = "enter"(기본 - 보스 진입) · "retry"(잔류 재도전) · "giveup"(보스 포기) - 클라 배너 문구만 달라진다(PartyRequests).
+function PartyVote.start(party, leader, targetStage, onResolve, kind)
 	if votes[party] then
 		return false
 	end
@@ -88,6 +89,7 @@ function PartyVote.start(party, leader, targetStage, onResolve)
 		leaderName = leader.Name,
 		stage = targetStage,
 		seconds = PartyConfig.stageVoteTimeoutSeconds,
+		kind = kind or "enter",
 	})
 	fireTo({ leader }, {
 		result = "start",
@@ -95,6 +97,7 @@ function PartyVote.start(party, leader, targetStage, onResolve)
 		stage = targetStage,
 		seconds = PartyConfig.stageVoteTimeoutSeconds,
 		isLeader = true,
+		kind = kind or "enter",
 	})
 
 	task.delay(PartyConfig.stageVoteTimeoutSeconds, function()

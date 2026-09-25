@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local Text = require(ReplicatedStorage.Shared.Text)
 local PartyAway = require(script.Parent.PartyAway)
 local RequestBanner = require(script.Parent.RequestBanner)
 local Toast = require(script.Parent.Parent.ui.kit.Toast)
@@ -60,7 +61,24 @@ end)
 -- ═══ 요청 배너: 스테이지 이동 투표(25-3) ═══
 -- 리더는 정보 배너(버튼 없음), 나머지는 [동의] · [거절]. 누르면 서버로 보내고 버튼만 사라진다(keepOpen) - 서버가 passed / failed를 보내면 결과 안내로 바뀌었다가 닫힌다.
 partyVoteNotice.OnClientEvent:Connect(function(data)
-	if data.result == "start" then
+	if data.result == "start" and (data.kind == "giveup" or data.kind == "retry") then
+		-- G1-4 · G1-5: 재도전 · 포기 투표(같은 동의 · 거절 흐름, 문구만 다르다)
+		local seconds = data.seconds or PartyConfig.stageVoteTimeoutSeconds
+		local titleKey = data.kind == "giveup" and "vote.giveup.title" or "vote.retry.title"
+		if data.isLeader then
+			RequestBanner.push({ key = "vote", title = Text.get(titleKey), seconds = seconds, body = Text.get("vote." .. data.kind .. ".leaderBody", { stage = data.stage }) })
+		else
+			RequestBanner.push({
+				key = "vote", title = Text.get(titleKey), seconds = seconds, body = Text.get("vote." .. data.kind .. ".body", { stage = data.stage }),
+				accept = { text = "동의", keepOpen = true, onActivated = function()
+					partyRequest:FireServer("vote_agree")
+				end },
+				decline = { text = "거절", keepOpen = true, onActivated = function()
+					partyRequest:FireServer("vote_reject")
+				end },
+			})
+		end
+	elseif data.result == "start" then
 		local seconds = data.seconds or PartyConfig.stageVoteTimeoutSeconds
 		if data.isLeader then
 			RequestBanner.push({
