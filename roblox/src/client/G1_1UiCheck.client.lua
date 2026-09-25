@@ -55,7 +55,11 @@ local function run()
 		task.wait(0.05)
 		local heavyColor = discs[1] and discs[1].Color ~= UIColors.ember and discs[1].Transparency == 0
 		local readyAfterHeavy = AimTarget.debugHeavyReady()
-		task.wait(CombatConfig.comboResetWindowSeconds + 0.3)
+		-- Play 2: 전 블록에서는 서버 검증의 공격이 ComboUpdate를 계속 보내 2초 시계가 다시 잡혔다 - 마지막 갱신에서 창 + 0.3초 지날 때까지(최대 20초) 기다린다
+		local waited = 0
+		repeat
+			waited += task.wait(0.1)
+		until os.clock() - ComboRing.debugLastComboAt() > CombatConfig.comboResetWindowSeconds + 0.3 or waited > 20
 		local off = true
 		for _, disc in ipairs(discs) do
 			off = off and disc.Transparency > 0.5

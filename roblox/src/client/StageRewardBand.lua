@@ -23,7 +23,7 @@ local Theme = require(script.Parent.ui.kit.Theme)
 
 local StageRewardBand = {}
 
-local MAX_ROWS = 4 -- 첫 클리어(장비) · 방지권 · 매번(골드 · 경험치 · 강화석) · 재도전(장비) - G1-1
+local MAX_ROWS = 5 -- 첫 클리어(장비) · 방지권 · 매번(골드 · 경험치) · (강화석) · 재도전(장비) - G1-1(리뷰 4: 강화석을 매번 줄에 붙이면 잘렸다)
 local CODEX_DOT = 22 -- 도감 점 한 칸의 폭(보이는 자리 · PC 터치 폭)
 local TOUCH_DOT_WIDTH = 44 -- 모바일 터치 상자 폭(S12 사전 작업 3) - 보이는 점과 22 간격은 그대로, 상자만 넓혀 이웃과 겹친다
 
@@ -137,12 +137,15 @@ function StageRewardBand.describe(stage, entry, rebirthCount)
 
 	-- G1-1: "매번 장비 1"이 첫 클리어 때 2개로 읽혔다(실제 1개 - 첫 클리어는 확정 장비가 대신한다) → 장비는 "재도전" 줄로 나눴다.
 	-- 강화석 기대 개수는 서버가 보낸 값(entry.stones - 지급과 같은 식 · 경험치 배수 포함). 옛 띠는 경험치 배수를 빠뜨렸다.
-	local everyParts = { Text.get("band.every.body", { units = units }) }
+	table.insert(rows, { head = Text.get("band.every.head"), text = colored(Text.get("band.every.body", { units = units }), "textPrimary"), claimed = false })
+	local stoneParts = {}
 	for _, stone in ipairs(entry.stones or {}) do
 		local material = EnhanceMaterialData.materials[stone.id]
-		table.insert(everyParts, Text.get("band.stone", { name = material.displayName, count = ("%g"):format(math.floor(stone.expected * 10 + 0.5) / 10) }))
+		table.insert(stoneParts, Text.get("band.stone", { name = material.displayName, count = ("%g"):format(math.floor(stone.expected * 10 + 0.5) / 10) }))
 	end
-	table.insert(rows, { head = Text.get("band.every.head"), text = colored(table.concat(everyParts, " · "), "textPrimary"), claimed = false })
+	if #stoneParts > 0 then
+		table.insert(rows, { head = "", text = colored(table.concat(stoneParts, " · "), "textPrimary"), claimed = false })
+	end
 	table.insert(rows, { head = Text.get("band.retry.head"), text = colored(Text.get("band.retry.body", { grades = StageRewardBand.retryGradesText() }), "textPrimary"), claimed = false })
 
 	for _, row in ipairs(rows) do
@@ -355,7 +358,12 @@ function StageRewardBand.selfTest(report)
 	report(("제목 · 매번 · Lv 범위: [%s] · %d: [%s] (기대 '%s…' · '20마리분' · '%s' · '???' 없음)"):format(d50.title, S50, t50, titleHead, lvRange),
 		string.sub(d50.title, 1, #titleHead) == titleHead and has(t50, "골드·경험치 20마리분") and has(t50, lvRange) and not has(d50.title .. t50, "???"))
 	-- G1-1: 매번 줄에 장비가 없다(첫 클리어 때 2개로 읽히던 것) · 재도전 줄 = 장비 1개 + 등급 확률(일반 90% · 희귀 10%)
-	local everyRow, retryRow = d50.rows[#d50.rows - 1], d50.rows[#d50.rows]
+	local everyRow, retryRow = nil, d50.rows[#d50.rows]
+	for _, row in ipairs(d50.rows) do
+		if row.head == Text.get("band.every.head") then
+			everyRow = row
+		end
+	end
 	report(("매번 · 재도전 줄: 매번 [%s](기대 장비 없음) · 재도전 [%s](기대 '장비 1개' · '일반 90%%' · '희귀 10%%')"):format(everyRow.plain, retryRow.plain),
 		not has(everyRow.plain, "장비") and has(retryRow.plain, "장비 1개") and has(retryRow.plain, "일반 90%") and has(retryRow.plain, "희귀 10%"))
 	local r0, r1 = rowsOf(S50, entryOf(false, "available", "none"), 0), rowsOf(S50, entryOf(false, "available", "none"), 1)
@@ -370,9 +378,9 @@ function StageRewardBand.selfTest(report)
 		not gearRow.claimed and not has(gearRow.text, dim) and ticketRow.claimed and has(ticketRow.text, dim) and has(ticketRow.plain, "✓ 받음") and has(gearRow.plain, "[직업]") and has(ticketRow.plain, "[계정]"))
 	local done = rowsOf(S50, entryOf(true, "claimed", "none"))
 	local mixed = rowsOf(S100, entryOf(true, "claimed", "available"))
-	report(("받은 줄은 지워지지 않고 흐려진다: 장비 줄 '✓ 받음' %s · 흐림 %s(기대 true · true) · 줄 수 %d(기대 4 - 그대로) / 방지권이 하나만 받음 → '✓' %s · 줄 흐림 %s(기대 true · false)"):format(
+	report(("받은 줄은 지워지지 않고 흐려진다: 장비 줄 '✓ 받음' %s · 흐림 %s(기대 true · true) · 줄 수 %d(기대 5 - 그대로) / 방지권이 하나만 받음 → '✓' %s · 줄 흐림 %s(기대 true · false)"):format(
 		tostring(has(done.rows[1].plain, "✓ 받음")), tostring(has(done.rows[1].text, dim)), #done.rows, tostring(has(mixed.rows[2].plain, "하락 방지권 ×1 ✓")), tostring(has(mixed.rows[2].text, colored("하락 방지권 ×1 ✓ · 초기화 방지권 ×1 [계정]", "textTertiary")))),
-		has(done.rows[1].plain, "✓ 받음") and has(done.rows[1].text, dim) and #done.rows == 4 and has(mixed.rows[2].plain, "하락 방지권 ×1 ✓") and not mixed.rows[2].claimed)
+		has(done.rows[1].plain, "✓ 받음") and has(done.rows[1].text, dim) and #done.rows == 5 and has(mixed.rows[2].plain, "하락 방지권 ×1 ✓") and not mixed.rows[2].claimed)
 	report(("남은 것 판정(★): 미수령 %s · 장비만 받음 %s · 방지권만 남음 %s · 전부 받음 %s · 방지권 없는 스테이지 장비 받음 %s(기대 true true true false false)"):format(
 		tostring(StageRewardBand.hasRemaining(entryOf(false, "available", "none"))), tostring(StageRewardBand.hasRemaining(entryOf(true, "available", "none"))),
 		tostring(StageRewardBand.hasRemaining(entryOf(true, "available", "available"))), tostring(StageRewardBand.hasRemaining(entryOf(true, "claimed", "claimed"))), tostring(StageRewardBand.hasRemaining(entryOf(true, "none", "none")))),

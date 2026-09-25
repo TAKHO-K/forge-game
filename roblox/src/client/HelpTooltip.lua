@@ -9,6 +9,7 @@
 --   경로로 자연스럽게 같이 동작해서, UserInputService.TouchEnabled 같은 플랫폼 분기를
 --   따로 두지 않는다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.ui.kit.Theme)
@@ -22,7 +23,8 @@ local HelpTooltip = {}
 -- options(30-0 S06, ui/kit/HelpToggle가 쓴다 - 안 주면 위 기존 동작 그대로): { toggleOnly = true(hover 경로를 쓰지 않고 누를 때마다 열고 닫는다),
 --   buttonSize(기본 16), buttonTextSize(기본 캡션 단 - PC 12 · 모바일 14), panelSize(Vector2, 기본 200×70), panelTextSize(기본 12) }.
 function HelpTooltip.attach(parent, anchorPosition, text, panelSide, options)
-	local toggleOnly = options ~= nil and options.toggleOnly == true
+	-- G1-1 리뷰 1: 2단(표)이면 항상 누름 전용 - hover 모드는 패널(자세히)을 누르러 커서를 옮기는 순간 MouseLeave로 닫혔다.
+	local toggleOnly = (options ~= nil and options.toggleOnly == true) or type(text) == "table"
 	local buttonSize = options and options.buttonSize or 16
 	local panelSize = options and options.panelSize or Vector2.new(200, 70)
 	local screenGui = parent
@@ -140,7 +142,9 @@ function HelpTooltip.attach(parent, anchorPosition, text, panelSide, options)
 			panelText.Text = on and (short .. "\n\n" .. detail) or short
 			panelText.Size = UDim2.new(1, -20, 1, -(16 + hintHeight))
 			hint.Text = Text.get(on and "help.less" or "help.more")
-			panel.Size = UDim2.new(0, panelSize.X, 0, on and math.max(panelSize.Y, collapsedHeight) or collapsedHeight)
+			-- G1-1 리뷰 3: 펼친 높이 = 실제 글 높이 + 안내 줄(옛 고정 높이면 긴 상세가 패널 밖으로 넘쳤다)
+			local textHeight = TextService:GetTextSize(panelText.Text, textSize, panelText.Font, Vector2.new(panelSize.X - 20, 10000)).Y
+			panel.Size = UDim2.new(0, panelSize.X, 0, on and math.max(collapsedHeight, textHeight + 16 + hintHeight + 4) or collapsedHeight)
 		end
 		toggle.Activated:Connect(function()
 			setExpanded(not expanded)

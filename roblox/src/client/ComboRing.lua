@@ -61,6 +61,11 @@ function ComboRing.onCombo(comboCount, isHeavyHit)
 	paint()
 end
 
+-- 자체 점검용(G1-1(UI)): 마지막 ComboUpdate 시각(검증 체인의 서버 공격이 사이에 끼면 리셋 시계가 다시 잡힌다).
+function ComboRing.debugLastComboAt()
+	return lastComboAt
+end
+
 function ComboRing.reset()
 	filled, heavyShown = 0, false
 	paint()
