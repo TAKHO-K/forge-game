@@ -19391,3 +19391,9 @@ COMMON.md §1에 영구 규칙 "성장률(k)에 기대는 값은 힘 비율로 �
 - 3타 표시: 체력바 위 점 → 발밑 오른쪽 옆 3칸 호(client/ComboRing) + 다음 타 강타면 조준 외곽선 색 · 2초 리셋 클라도.
 - 보스 보상: `DropTableData.bossGrades`(드래곤 표와 분리 - 값 불변) · `DropTable.bossFirstClearGradeTable / bossRetryGradeTable` 단일 소스 · 띠 = 첫 클리어 / (방지권) / 매번 / (강화석 - 서버 값 · 경험치 배수 포함) / 재도전(장비 1개 · 일반 90% · 희귀 10%) · `shared/BossLook` 추출(판정 무변경).
 - 버그: 파티원이 일반 → 일반으로 옮기면 아레나에 남던 것 → 지금 보스전에 속하면 빠짐(자기만).
+
+### 20.125 G1-2 드랍 공정성 보정 · 분해 기준 데이터 · 줍는 순간 자동 처리 (G1 - 자율 단계)  `[✅ 구현 + 로컬 검사(luau-compile · luau-analyze · EconSim 하네스 세기 0 / 0.5 / 1) + Studio Play 3회(2026-09-25 - 1회차 로드 오류 · 3회차 G1-2(가) 5/5 · 동반 전부 O) · 리뷰 6건 반영. SAVE_VERSION 36. 결정 필요 1 - docs/phase/G1-2-report.md]`
+
+- 장비 기대 개수 × 처치 시간 보정(`DropTableData.fairness` · `DropTable.timeFairnessFactor` · `MonsterState.getKillSecondsFor`) - 같은 사람에게 모든 tier의 시간당 장비 가치가 같다(한 방 드래곤 ×6.58 → ×1.00). EconSim 같은 함수.
+- 분해 문턱 `ArmorData.dismantleMinGradeIndex`(값 3 그대로). 줍는 순간 자동 처리 `autoProcess`(v36 · 기본 끔 · 영웅 / 희귀 / 일반 이하 · 영웅 = 분해 · 그 아래 = 판매 · 잠금 존중) · 가방 드롭다운 토글 · 알림.
+- 결정 필요: 보정 세기(1이면 상위 1% 1,000 도달 9.6 → 29.2h · P0(가) 9 설계 기준 벗어남).
