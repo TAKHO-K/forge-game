@@ -233,9 +233,9 @@ function G2aVerify.runLive(player, env)
 		MonsterState.applyDamage(encounter.model, maxHp * 0.01, STAGE, player)
 		local hp1 = MonsterState.getBossHp(encounter.model)
 		local contribution = MonsterState.getContributors(encounter.model)[player] or 0
+		local floor = CharacterLevel.levelGapDealMultiplier(1, STAGE) -- 계수를 켠 채로 읽는다(Play 2: 스위치를 되돌린 뒤 읽어 1.00이 나왔다 - 검증 쪽)
 		CharacterLevel.debugLevelGapOff = saved
 		local dealt = (hp0 - hp1) / maxHp
-		local floor = CharacterLevel.levelGapDealMultiplier(1, STAGE)
 		local taken = contribution / 0.01 -- 보스가 받는 피해 배율(파훼 창 등 - 스폰 직후 보통 1)
 		r.check(("Lv.1 · 보스 스테이지 %d: 최대 HP 1%% 피해 → 실제 깎인 HP %.4f%% · 기여 %.4f%%(받는 배율 ×%.2f) · 깎인 ÷ 기여 = %.3f(기대 계수 ×%.2f - 기여는 계수 전) · 문턱 10%%와 알림이 이 값"):format(
 			STAGE, dealt * 100, contribution * 100, taken, dealt / math.max(contribution, 1e-12), floor),
