@@ -368,14 +368,16 @@ local function shockwave(data)
 	local themeColor = contrastColor(bossLook and bossLook.headColor or DANGER_COLOR, floorColor)
 	for i = 1, WAVE_SEGMENTS do
 		local part = newPart(Vector3.new(1, waveHeight, data.thickness), themeColor, data.air and look.bandTransparency or look.groundTransparency)
-		if not data.air then
-			part.Material = Enum.Material.Slate -- 두꺼운 흙물결(빛나는 벽이 아니라 땅)
-		end
+		part.Material = data.air and Enum.Material.SmoothPlastic or Enum.Material.Slate -- 땅 = 두꺼운 흙물결 · 공중 = 옅은 판정 띠(무광 - 칼날이 주인공)
 		segments[i] = part
 		if data.air then
 			-- 사용자 결정(가) → M1: 공중 파동 = 머리 높이 얇은 칼날 고리(네온) + 옅은 판정 띠 + 흰 테두리 두 줄. 땅 파동(두꺼운 흙물결)과 모양으로 구분한다. 판정은 그대로.
 			edges[i] = { newPart(Vector3.new(1, 0.35, data.thickness), IMPACT_COLOR, 0.1), newPart(Vector3.new(1, 0.35, data.thickness), IMPACT_COLOR, 0.1) }
 			blades[i] = newPart(Vector3.new(1, look.bladeHeight, data.thickness * 1.4), themeColor, 0)
+			-- 무광(네온은 Bloom으로 번져 칼날이 두꺼운 빛 띠로 보였다 - Play 스크린샷)
+			blades[i].Material = Enum.Material.SmoothPlastic
+			edges[i][1].Material = Enum.Material.SmoothPlastic
+			edges[i][2].Material = Enum.Material.SmoothPlastic
 		end
 	end
 	-- M1: 땅 파동이 지나간 자리의 바닥 들썩임(파동 안쪽 behindStuds - 작은 블록이 솟았다 가라앉는다)

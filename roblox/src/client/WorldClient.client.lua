@@ -59,7 +59,7 @@ local function buildBarrier(zone)
 	local gatePos = WorldMapLayout.toWorld(zone, WorldMapData.layout.barrierGateR, 0, B.gateHeight + 6)
 	local anchor = localPart(folder, "BarrierSign", Vector3.new(1, 1, 1), CFrame.new(gatePos), { transparency = 1 })
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.new(0, 260, 0, 60)
+	gui.Size = UDim2.new(0, 300, 0, 84) -- 세 줄(자물쇠 이름 · 조건)이 잘리지 않게
 	gui.MaxDistance = 400
 	gui.Parent = anchor
 	local text = Instance.new("TextLabel")

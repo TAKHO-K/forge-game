@@ -53,7 +53,7 @@ return {
 		key = "spawn", -- WorldConfig.zones 키(옛 리스폰 마을 자리 - 복귀 · 리스폰이 읽는다)
 		displayName = "큰 나무 마을",
 		safeRadius = 300, -- = 잎 덮개 반경 = 경계(뿌리 끝 · 등불 줄)
-		spawn = { r = 90, angleDeg = -90 }, -- 리스폰 자리(나무 앞 광장 · T1 쪽)
+		spawn = { r = 120, angleDeg = -60 }, -- 리스폰 자리(나무 앞 · 판자뿌리 사이 - 뿌리 각 −78.5° · −42.5°)
 		-- 시설(뿌리 아래). 강화대 · 제단 · 상인은 WorldConfig가 이 자리를 읽는다(옛 강화소 · 커뮤니티 칸 대체).
 		facilities = {
 			forge = { angleDeg = -30, r = 170, displayName = "대장간", size = { 60, 18, 44 } }, -- 강화대 중심
@@ -342,7 +342,7 @@ return {
 			{ id = "cloudWhale", name = "구름 고래 하늘섬", region = "sky", at = { angleDeg = 90, r = 152, y = 770 }, facing = "hub", box = { w = 80, d = 120, h = 200 }, props = "cloudWhale",
 				platform = { r = 140, size = 24 } },
 			-- 지하: 허브 뿌리 아래 - 줄기 밑동 옆 광산 입구(문 앞 = 바깥 · 상자 = 줄기 쪽)
-			{ id = "moleMine", name = "두더지 광산", region = "underground", at = { angleDeg = 180, r = 76, y = 0 }, facing = "out", box = { w = 22, d = 20, h = 24 }, props = "moleMine" },
+			{ id = "moleMine", name = "두더지 광산", region = "underground", at = { angleDeg = 191, r = 76, y = 0 }, facing = "out", box = { w = 22, d = 20, h = 24 }, props = "moleMine" },
 		},
 	},
 
