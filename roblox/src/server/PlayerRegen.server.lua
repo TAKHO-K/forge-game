@@ -48,7 +48,7 @@ RunService.Heartbeat:Connect(function(dt)
 		-- 보스전인가는 BossEncounter의 encounter 하나만 본다(별도 플래그 없음 - 처치·전멸 리셋·이탈·퇴장 어느 경로로
 		-- 끝나도 encounter가 사라지는 순간 자동회복이 돌아온다). 견습 보스전은 예외.
 		local encounter = BossEncounter.getEncounter(player)
-		if encounter and not encounter.isTutorial and not BossData.mechanics.bossFight.baseRegenEnabled then
+		if encounter and not encounter.lingering and not encounter.isTutorial and not BossData.mechanics.bossFight.baseRegenEnabled then -- G1-4 리뷰 6: 잔류 중(보스 없음)은 기본 회복
 			healingMultiplier -= 1
 		end
 		if healingMultiplier <= 0 then

@@ -56,14 +56,15 @@ end
 -- 중에는 투표가 안 뜨는 것과 같은 계통: "지금은 안 된다"). 다른 멤버가 없으면(사실상 혼자)
 -- 투표 없이 즉시 onResolve(true)를 부르고 true를 돌려준다.
 -- G1-4 · G1-5: kind(선택) = "enter"(기본 - 보스 진입) · "retry"(잔류 재도전) · "giveup"(보스 포기) - 클라 배너 문구만 달라진다(PartyRequests).
-function PartyVote.start(party, leader, targetStage, onResolve, kind)
+-- voters(선택, G1-5 리뷰 3) = 투표할 사람 목록 - 재도전 · 포기는 그 보스전 멤버만(마을로 나간 파티원이 투표하지 않게). 없으면 옛 규칙(보스에 들어갈 멤버 전원).
+function PartyVote.start(party, leader, targetStage, onResolve, kind, voters)
 	if votes[party] then
 		return false
 	end
 
 	-- 투표 대상은 보스에 들어가는 멤버뿐이다(S12 - 견습 중인 멤버는 사냥터에 남는다). 대상이 리더뿐이면 아래에서 솔로처럼 즉시 성립한다.
 	local others = {}
-	for _, member in ipairs((BossEncounter.getEntryMembers(party))) do
+	for _, member in ipairs(voters or (BossEncounter.getEntryMembers(party))) do
 		if member ~= leader then
 			table.insert(others, member)
 		end

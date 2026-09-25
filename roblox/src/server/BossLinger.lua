@@ -81,6 +81,17 @@ function BossLinger.holdDrops(deferred, flush)
 	end
 end
 
+-- 보스전 멤버 중 실제 Player(투표 대상 - 리뷰 3).
+function BossLinger.realMembers(encounter)
+	local list = {}
+	for _, member in ipairs(encounter.members) do
+		if typeof(member) == "Instance" and member.Parent then
+			table.insert(list, member)
+		end
+	end
+	return list
+end
+
 -- 한 사람의 선택. 반환: 처리했는가, 결과 코드(검증 · 로그).
 function BossLinger.choose(player, choice)
 	local encounter = BossEncounter.getEncounter(player)
@@ -115,7 +126,7 @@ function BossLinger.choose(player, choice)
 					fire(member, { kind = "end" })
 				end
 			end
-		end, "retry")
+		end, "retry", BossLinger.realMembers(encounter))
 		return started, started and "vote" or "vote_busy"
 	end
 	return false, "bad_choice"
@@ -132,6 +143,9 @@ function BossLinger.giveUp(player)
 	local encounter = BossEncounter.getEncounter(player)
 	if not encounter or encounter.lingering or not encounter.model then
 		return false, "no_boss"
+	end
+	if encounter.isTutorial then
+		return false, "tutorial" -- 리뷰 4: 견습 보스는 포기 대상이 아니다(견습 흐름이 멈췄다)
 	end
 	local function apply()
 		local members = table.clone(encounter.members)
@@ -153,7 +167,7 @@ function BossLinger.giveUp(player)
 		if passed and BossEncounter.getEncounter(player) == encounter and not encounter.lingering then
 			apply()
 		end
-	end, "giveup")
+	end, "giveup", BossLinger.realMembers(encounter))
 	return started, started and "vote" or "vote_busy"
 end
 

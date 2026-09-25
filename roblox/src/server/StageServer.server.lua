@@ -187,7 +187,7 @@ Players.PlayerAdded:Connect(function(player)
 	-- G1-5(D0 결정 5 · 사용자 확정): 재접속은 보스를 다시 세우지 않는다 - 보스 스테이지에서 나갔으면 한 스테이지 아래 마을에서 시작한다
 	-- (이동 제한과 합쳐지면 못 이기는 보스에 갇힌다 - 포기 · 탈퇴와 같은 −1 규칙).
 	local stage = PlayerProfile.getInfiniteStage(player)
-	if BossRules.isBossStage(stage) then
+	if BossRules.isBossStage(stage) and PlayerProfile.getBestBossCleared(player) < stage then -- 리뷰 5: 이미 깬 보스 스테이지(잔류에서 [마을])면 그대로
 		PlayerProfile.setInfiniteStage(player, math.max(1, stage - 1))
 		print(("[forge-game] 재접속: 보스 스테이지 %d → %d(마을)"):format(stage, math.max(1, stage - 1)))
 	end

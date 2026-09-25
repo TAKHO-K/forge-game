@@ -454,7 +454,10 @@ local function attachLocal(player, party)
 		return false, "party_full"
 	end
 	if isInstance(player) and BossEncounter.getActive(player) then
-		BossEncounter.despawnFor(player) -- 파티원의 보스전은 리더가 여는 파티 보스뿐(PartyServer 수락 경로와 같다)
+		return false, "in_own_boss" -- G1-5 리뷰 1: 보스 생존 중 합류는 막는다(포기로만 나간다 - −1 규칙)
+	end
+	if isInstance(player) and BossEncounter.isLingering(player) then
+		BossEncounter.leaveFor(player)
 	end
 	PartyState.attachMember(party, player)
 	PartyState.notify(player, ("%s님의 파티에 합류했습니다"):format(party.leader.name))

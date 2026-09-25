@@ -158,8 +158,13 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 			fail(player, blocked)
 			return
 		end
+		-- G1-5 리뷰 1: 보스 생존 중 합류는 막는다(옛: 솔로 보스를 물려 −1 없이 빠졌다) · 잔류 중이면 잔류에서 먼저 빠진다(리뷰 2)
 		if BossEncounter.getActive(player) then
-			BossEncounter.despawnFor(player) -- 합류하는 순간 자기 솔로 보스는 물러난다(수락 경로와 같다)
+			PartyState.notify(player, Text.get("boss.blockedInvite"))
+			return
+		end
+		if BossEncounter.isLingering(player) then
+			BossEncounter.leaveFor(player)
 		end
 		task.spawn(PartyCrossServer.requestJoin, player, arg)
 	elseif action == "cancel_join" then
@@ -189,10 +194,9 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 					PartyState.respondInvite(player, false)
 					return
 				end
-				-- 합류하는 순간 진행 중이던 자기 솔로 보스는 물러난다 - 파티원의 보스전은 리더가
-				-- 시작하는 파티 보스뿐이다(StageServer.server.lua).
-				if BossEncounter.getActive(player) then
-					BossEncounter.despawnFor(player)
+				-- G1-5: 보스 생존 중 수락은 위에서 막았다 - 잔류 중이면 잔류에서 먼저 빠진다(리뷰 2 - 솔로 잔류가 파티원에게 남으면 재도전으로 솔로 보스를 다시 세웠다)
+				if BossEncounter.isLingering(player) then
+					BossEncounter.leaveFor(player)
 				end
 			end
 			local ok, reason = PartyState.respondInvite(player, accept)
@@ -202,6 +206,13 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 		elseif PartyCrossServer.hasRemoteInvite(player) then
 			-- 24-2: 다른 서버에서 온 초대 - 수락은 코드 합류와 같은 파이프라인이다.
 			if accept then
+				if BossEncounter.getActive(player) then -- G1-5 리뷰 1: 다른 서버 초대 수락도 보스 생존 중에는 막는다
+					PartyState.notify(player, Text.get("boss.blockedInvite"))
+					return
+				end
+				if BossEncounter.isLingering(player) then
+					BossEncounter.leaveFor(player)
+				end
 				local blocked = checkSelf(player)
 				if not blocked and PartyState.getParty(player) then
 					blocked = "already_in_party"

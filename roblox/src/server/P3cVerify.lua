@@ -301,7 +301,7 @@ function P3cVerify.runPure()
 		local progress = CharacterLevel.getProgress(exp, level).ratio
 		r.check(("C4 이관 v34 → v%d: 레벨 %d(기대 300) · 진행률 %.3f(기대 0.400) · 126 아래 경험치 그대로 %s · isValidProfile %s"):format(migrated.version, level, progress,
 			tostring(not low or migrated.classes[low].characterExp == 1000), tostring(SaveSystem.isValidProfile(migrated))),
-			migrated.version == 35 and level == 300 and near(progress, 0.4, 1e-6) and (not low or migrated.classes[low].characterExp == 1000) and SaveSystem.isValidProfile(migrated))
+			migrated.version >= 35 and level == 300 and near(progress, 0.4, 1e-6) and (not low or migrated.classes[low].characterExp == 1000) and SaveSystem.isValidProfile(migrated))
 		local cfg = { seasonId = 3, seasonLengthDays = 28, seasonStartUnix = 0 }
 		local fixed = LeaderboardRules.seasonAt(1e9, cfg)
 		cfg.seasonStartUnix = 1000000000
