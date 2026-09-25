@@ -410,10 +410,13 @@ function BossArenaMap.releaseEncased(state, obstacle)
 end
 
 -- 지금 서 있는 구조물 → 배치 칸 모양(아레나 중심 기준 - ArenaLayout.regrowSpot · connectivity가 읽는다).
-local function itemsOf(state)
+local function itemsOf(state, skipId)
 	local zone = zoneOfKey(state.zoneKey)
 	local items = {}
-	for _, obstacle in pairs(state.obstacles) do
+	for id, obstacle in pairs(state.obstacles) do
+		if id == skipId then
+			continue -- P3d-F B4: 상한 교체로 무너뜨릴 것은 빼고 자리를 찾는다
+		end
 		local colliders = {}
 		for _, c in ipairs(obstacle.colliders) do
 			table.insert(colliders, { x = c.center.X - zone.center.X, z = c.center.Z - zone.center.Z, r = c.r })
@@ -442,7 +445,8 @@ function BossArenaMap.planRegrow(zoneKey, context)
 	local count, oldest = 0, nil
 	for id, obstacle in pairs(state.obstacles) do
 		count += 1
-		if obstacle.regrown and (not oldest or id < oldest) then -- 재생성 id는 전역 일련번호라 작을수록 오래됐다
+		-- 재생성 id는 전역 일련번호라 작을수록 오래됐다. 누가 끼여 있는 것은 교체하지 않는다(리뷰 3 - 3타 · 6초를 안 채우고 풀려난다)
+		if obstacle.regrown and not (obstacle.encased and next(obstacle.encased)) and (not oldest or id < oldest) then
 			oldest = id
 		end
 	end
@@ -451,8 +455,8 @@ function BossArenaMap.planRegrow(zoneKey, context)
 		if not oldest then
 			return nil, "cap"
 		end
-		BossArenaMap.breakObstacle(zoneKey, oldest, "cap")
-		context.replaced = oldest
+	else
+		oldest = nil
 	end
 	local zone = zoneOfKey(zoneKey)
 	local function rel(p)
@@ -469,17 +473,20 @@ function BossArenaMap.planRegrow(zoneKey, context)
 	end
 	local options = { kit = state.layoutOptions.kit, coverageMin = 0, members = members, boss = context.boss and rel(context.boss) or nil, pits = pits, mounds = state.layout.mounds }
 	local regrowId = 1000 + nextRegrowSerial()
-	local item, tries, why = ArenaLayout.regrowSpot(state.theme, itemsOf(state), function()
+	local item, tries, why = ArenaLayout.regrowSpot(state.theme, itemsOf(state, oldest), function()
 		return state.regrowRng:NextNumber()
 	end, options, regrowId)
 	if not item then
-		return nil, why
+		return nil, why -- 새 자리가 없으면 옛것도 그대로 둔다(리뷰 1 - 먼저 부수면 하나가 그냥 사라졌다)
+	end
+	if oldest then
+		BossArenaMap.breakObstacle(zoneKey, oldest, "cap") -- 새 자리가 정해진 뒤 무너뜨린다(전조 1.5초 뒤 새것이 솟는다)
 	end
 	local worldColliders = {}
 	for _, c in ipairs(item.colliders) do
 		table.insert(worldColliders, { center = Vector3.new(zone.center.X + c.x, FLOOR_TOP_Y, zone.center.Z + c.z), r = c.r, h = c.h })
 	end
-	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries, replaced = context.replaced }, nil
+	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries, replaced = oldest }, nil
 end
 
 -- 전조가 끝나 실제로 솟는다(리셋 · 보스전 끝으로 토큰이 바뀌었으면 nil). context(선택 - planRegrow와 같은 모양, 멤버는 안 본다) = 솟기 직전에 자리를 다시 본다(리뷰 6 -
@@ -566,6 +573,8 @@ function BossArenaMap.releaseMember(zoneKey, member)
 			obstacle.encased[member] = nil
 			if typeof(member) == "Instance" then
 				PlayerState.setAnchorHold(member, "encase", false)
+			elseif obstacle.encasedRoots and obstacle.encasedRoots[member] then
+				obstacle.encasedRoots[member].Anchored = false -- 리뷰 7: 검증 스탠드인(표 루트)
 			end
 			BossArenaMap.fireEncase(state, obstacle, next(obstacle.encased) and (REGROW.escapeHits - obstacle.hits) or 0, { member })
 			print(("[forge-game] 끼임 풀림(보스전 이탈): %s - #%d"):format(tostring(member.Name), obstacle.id))

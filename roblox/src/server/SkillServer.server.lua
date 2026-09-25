@@ -242,11 +242,6 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 		PlayerProfile.refreshMovementSpeed(player)
 		PlayerState.clearIncomingDamageMultiplierSource(player, sourceKey)
 		PlayerState.clearChanneling(player)
-		local left = {} -- P3d-F 진단(임시): 채널 끝에 남은 이동속도 출처
-		for key, value in pairs(PlayerState.debugMoveSpeedSources(player)) do
-			table.insert(left, ("%s=%s"):format(key, tostring(value)))
-		end
-		print(("[P3dF][진단] 채널 끝 %s - 남은 이동속도 출처 [%s] · WalkSpeed %s"):format(sourceKey, table.concat(left, ","), tostring(humanoid and humanoid.WalkSpeed)))
 	end
 	PlayerState.setMoveSpeedMultiplier(player, sourceKey, def.channelMoveSpeedMultiplier, def.channelSeconds + 0.5, PlayerProfile.refreshMovementSpeed) -- 끝 처리가 끊겨도 채널 뒤 저절로 풀린다
 	PlayerProfile.refreshMovementSpeed(player)

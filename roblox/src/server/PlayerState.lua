@@ -253,8 +253,12 @@ function PlayerState.setMoveSpeedMultiplier(player, sourceKey, multiplier, durat
 	entry.moveSpeedMultipliers[sourceKey] = rec
 	if durationSeconds and onExpire then
 		task.delay(durationSeconds + 0.05, function()
-			if entry.moveSpeedMultipliers and entry.moveSpeedMultipliers[sourceKey] == rec then
-				entry.moveSpeedMultipliers[sourceKey] = nil
+			-- 리뷰 4: 리스폰(reset)이 표를 지운 뒤에도 다시 계산한다(새 캐릭터에 옛 감속이 먼저 걸렸을 수 있다). 같은 키를 새로 건 것이면 건드리지 않는다.
+			local current = entry.moveSpeedMultipliers and entry.moveSpeedMultipliers[sourceKey]
+			if current == rec or current == nil then
+				if current == rec then
+					entry.moveSpeedMultipliers[sourceKey] = nil
+				end
 				onExpire(player)
 			end
 		end)
