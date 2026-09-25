@@ -150,6 +150,8 @@ function BossArenaPropsView.clearTelegraph()
 end
 
 -- data = gimmickTelegraph 이벤트(center = 보스 발밑, zoneCenter·zoneHalfSize(· zoneRadius - 원형 아레나) = 아레나, floorColor = 맵 바닥색, seconds)
+local SAFE_SHADOW_COLOR = Color3.fromRGB(120, 200, 255) -- BossPatternVisuals의 헤롱 · 파훼 말풍선과 같은 값(새 색 아님)
+
 function BossArenaPropsView.showGlobalTelegraph(data)
 	BossArenaPropsView.clearTelegraph()
 	local floorColor = data.floorColor or ARENA_FLOOR_COLOR
@@ -198,7 +200,8 @@ function BossArenaPropsView.showGlobalTelegraph(data)
 			local dir = away.Unit
 			local mid = Vector3.new(entry.position.X, data.zoneCenter.Y, entry.position.Z) + dir * (SHADOW_LENGTH_STUDS / 2)
 			local from = Vector3.new(entry.position.X, data.zoneCenter.Y + 0.28 + moundLift(mid, SHADOW_LENGTH_STUDS / 2 + entry.radius, data.zoneCenter.Y), entry.position.Z) -- P3c B4
-			local shadow = newPart(Vector3.new(entry.radius * 2, 0.16, SHADOW_LENGTH_STUDS), floorColor, 0, Enum.Material.SmoothPlastic)
+			-- BR1(기믹 개편 - 직관): 안전 그림자를 바닥색이 아니라 밝은 파랑(기회 색 - 헤롱 말풍선과 같은 값)으로 칠한다 - "여기 숨어라"가 한눈에.
+			local shadow = newPart(Vector3.new(entry.radius * 2, 0.16, SHADOW_LENGTH_STUDS), SAFE_SHADOW_COLOR, 0.15, Enum.Material.Neon)
 			shadow.CFrame = CFrame.lookAt(from + dir * (SHADOW_LENGTH_STUDS / 2), from + dir * SHADOW_LENGTH_STUDS)
 			table.insert(telegraphParts, shadow)
 		end

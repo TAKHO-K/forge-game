@@ -703,6 +703,8 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossEnvironmentView.wind(data)
 	elseif kind == "envEnd" then
 		BossEnvironmentView.clear()
+	elseif kind == "field" then
+		BossEnvironmentView.field(data)
 	elseif kind == "regrowTelegraph" then
 		BossRegrowView.telegraph(data)
 	elseif kind == "regrowSpawn" then

@@ -526,7 +526,15 @@ local SPECIES = {
 		moveSpeedStuds = 6, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 1.5, damageMultiplier = 0.75, rangeStuds = 14 }, -- BR1: 피할 수 없는 평타는 절반(초당 7.1% - 6종 같음)
 		scheduler = scheduler(7),
-		skillOrder = { "slam", "icefall", "spike", "roar", "swipe", "grab" },
+		skillOrder = { "slam", "icefall", "spike", "roar", "swipe", "grab", "spear", "stomp", "snowball" },
+		-- BR1 환경 변화 "빙하 균열"(체력 50%부터): 포효하며 땅을 내려친다 → 반경 95의 고리에 금(4.2초) → 그 밖이 15초 동안 얼음물(0.5초마다 6%).
+		-- 가장 먼 자리(벽 곁 140)에서 안으로 46 = 4.09초 ≤ 4.2. 아레나가 좁아진다 - 다른 패턴과 겹친다(겹침 분류 §4-3).
+		environment = {
+			id = "glacierCrack", style = "ice", motion = "fist", damageLabel = "빙하 균열",
+			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 4.2, durationSeconds = 15,
+			zones = { shape = "ring", beyondStuds = 95 },
+			tick = { seconds = 0.5, fraction = 0.06 },
+		},
 		-- 29-3 동적 지형(논리 상태는 서버 BossArenaProps, 그리기·충돌은 클라 BossArenaPropsView). 얼음 기둥: 반경 3 ·
 		-- 높이 10 · 최대 6개(넘으면 가장 오래된 것부터 사라진다). 그림자 폭 6stud에 네 명이 한 줄로 선다 - 기둥 하나가
 		-- 파티 전원을 가린다(그림자는 벽까지 이어진다).
@@ -588,6 +596,36 @@ local SPECIES = {
 			},
 			swipe = enhancedBasic("서리 주먹", "fist"), -- BR1 강화 평타
 			grab = airGrab("서리 손아귀", "hand"), -- BR1 대공 잡기
+			-- BR1 새 ① 얼음 창 투척(대공): 창을 들어 **공중에 뜬 사람**을 겨눈다(조준 고리가 그 사람 머리 위 - 하늘 쪽 표시). 떠 있는 사람이 없으면 쓰지 않는다.
+			--   직선(회전 0) · 속도 45 · 반경 2.5(3D) · 0.35초 간격 3자루 - 쏜 순간의 자리를 향해 날아온다: 궤도를 바꾸면(공중 점프 · 대시) 빗나가고, 착지하면 머리 위로 지나간다.
+			spear = {
+				primitive = "projectile", bubble = "meteor", motion = "hand", projectileStyle = "spear",
+				cooldownSeconds = 13, priority = P.normal, starvationSeconds = 45,
+				conditions = { { type = "memberAirborne", seconds = 0.3 } },
+				telegraphSeconds = 1.2, count = 3, launchIntervalSeconds = 0.35,
+				speedStuds = 45, turnRateDeg = 0, radiusStuds = 2.5, lifetimeSeconds = 5, heightMode = "air", launchHeightStuds = 11,
+				targetRule = "airborne",
+				damage = { kind = "attack", multiplier = 1.8 }, damageLabel = "얼음 창",
+			},
+			-- BR1 새 ② 발 구르기 빙판: 한 발을 들어 쾅 - 보스 둘레 원(반경 30)의 땅이 흔들린다. 걸어서는 못 나간다(31 = 2.9초 > 1.8) - **점프로 넘는다**
+			--   (판정 순간 공중이면 안 맞는다 · jumpable). 그 뒤 원 안 땅이 8초 동안 빙판(미끄러짐 - 클라 관성 · 판정 없음)이 된다. ×1.4(20% - 작음).
+			stomp = {
+				primitive = "sector", bubble = "shockwave", motion = "fist",
+				cooldownSeconds = 15, priority = P.normal, starvationSeconds = 45,
+				telegraphSeconds = 1.8, angleDeg = 360, radiusStuds = 30, facing = "target", jumpable = true,
+				afterField = { kind = "slippery", radiusStuds = 30, seconds = 8 },
+				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "발 구르기",
+			},
+			-- BR1 새 ③ 굴러오는 눈덩이: 두 손으로 커다란 눈덩이 둘(±15°)을 굴린다 - 지면(발이 지면 + 4 아래인 사람만)을 벽까지 관통하며 굴러온다.
+			--   속도 22 > 걷기 16(도망은 못 친다) - 옆으로 비키거나(6 = 0.97초) **점프로 넘는다**. ×2(28.6% - 중간).
+			snowball = {
+				primitive = "projectile", bubble = "charge", motion = "hand", projectileStyle = "snowball",
+				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
+				telegraphSeconds = 1.5, count = 2, spreadDeg = 30,
+				speedStuds = 22, turnRateDeg = 0, radiusStuds = 5, lifetimeSeconds = 9, heightMode = "ground", groundHitHeightStuds = 4, pierce = true,
+				targetRule = "target",
+				damage = { kind = "attack", multiplier = 2 }, damageLabel = "눈덩이",
+			},
 		},
 	},
 	{

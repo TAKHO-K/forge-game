@@ -107,6 +107,9 @@ BossHandlersBR1.sector = {
 			center = Vector3.new(st.sectorOrigin.X, st.floorY, st.sectorOrigin.Z), angleDeg = st.sectorCenterDeg, widthDeg = volley.angleDeg,
 			radius = st.sectorRadius, innerRadius = skill.innerRadiusStuds, bossId = c.data.id, motion = skill.motion,
 		})
+		if skill.afterField then -- BR1 판정 뒤 남는 장(빙판 - 미끄러짐은 클라 관성 · 판정 없음)
+			kit.send(st, "field", { kind = skill.afterField.kind, center = Vector3.new(st.sectorOrigin.X, st.floorY, st.sectorOrigin.Z), radius = skill.afterField.radiusStuds, seconds = skill.afterField.seconds })
+		end
 		if st.sectorVolley < #volleys then
 			st.sectorVolley += 1
 			local nextVolley = volleys[st.sectorVolley]

@@ -219,6 +219,7 @@ end
 
 function BossEnvironmentView.reset()
 	current = nil
+	fields = {}
 	for part in pairs(live) do
 		part:Destroy()
 	end
@@ -232,6 +233,58 @@ function BossEnvironmentView.debugState()
 	end
 	return { parts = count, active = current ~= nil and current.active == true }
 end
+
+-- 빙판(field kind "slippery" - 서리 거인 발 구르기): 원 안 지면에 서 있으면 미끄러진다(수평 속도가 한 프레임에 목표 쪽으로 SLIP_BLEND만큼만 - 관성).
+-- 판정 없음(서버는 알리기만 한다). 원 = 옅은 흰 판(Glass).
+local SLIP_BLEND = 0.06
+local fields = {} -- { center, radius, untilAt, part }
+local lastVelocity = Vector3.zero
+
+function BossEnvironmentView.field(data)
+	if data.kind ~= "slippery" then
+		return
+	end
+	local part = newPart(Vector3.new(0.2, data.radius * 2, data.radius * 2), WHITE, 0.55, Enum.Material.Glass, Enum.PartType.Cylinder)
+	part.CFrame = CFrame.new(data.center + Vector3.new(0, 0.18, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	table.insert(fields, { center = data.center, radius = data.radius, untilAt = os.clock() + data.seconds, part = part })
+	task.delay(data.seconds, function()
+		TweenService:Create(part, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+		task.delay(0.4, function()
+			destroy(part)
+		end)
+	end)
+end
+
+RunService.Heartbeat:Connect(function()
+	if #fields == 0 then
+		return
+	end
+	local now = os.clock()
+	for i = #fields, 1, -1 do
+		if now > fields[i].untilAt then
+			table.remove(fields, i)
+		end
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or root.Anchored or humanoid.FloorMaterial == Enum.Material.Air then
+		lastVelocity = root and root.AssemblyLinearVelocity or Vector3.zero
+		return
+	end
+	local inside = false
+	for _, f in ipairs(fields) do
+		local d = Vector3.new(root.Position.X - f.center.X, 0, root.Position.Z - f.center.Z).Magnitude
+		inside = inside or d <= f.radius
+	end
+	local v = root.AssemblyLinearVelocity
+	if inside then
+		local flat = Vector3.new(lastVelocity.X, 0, lastVelocity.Z):Lerp(Vector3.new(v.X, 0, v.Z), SLIP_BLEND)
+		root.AssemblyLinearVelocity = Vector3.new(flat.X, v.Y, flat.Z)
+		v = root.AssemblyLinearVelocity
+	end
+	lastVelocity = v
+end)
 
 -- 힘(내 캐릭터) · 바람 줄기(그림).
 local windStreakAt = 0
