@@ -3373,6 +3373,7 @@ if RunService:IsStudio() then
 				{ "P3dF(나)", function() require(script.Parent.P3dFVerify).runLive(player, env) end }, -- P3d-F: 재생성 누수 5회 · 받는 피해 배율 출처별 · 끼임 중 피격 · 단상 균열 예고 · 상한 교체
 				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
 				{ "P3d(가E)", function() require(script.Parent.P3dVerify).runRegrowSeeds() end }, -- P3d: 재생성 100시드 × 6맵(무거운 계산 - 맨 끝)
+				{ "P3dF(가E)", function() require(script.Parent.P3dFVerify).runRegrowSeeds() end }, -- P3d-F B4: 상한 교체 100시드 × 6맵 · 면적 하한 · 닫힌 공간(무거운 계산 - 맨 끝)
 			}) do
 				if verifyEnabled(stage[1]) then
 					local ok, err = pcall(stage[2])

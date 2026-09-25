@@ -233,7 +233,7 @@ function P3bVerify.runLive(player, env)
 		local debugCast = ServerStorage:WaitForChild("SkillCastDebug", 5)
 		assert(debugCast, "SkillCastDebug 없음")
 		-- D3 동안 개발 캐릭터가 받는 피해 0(Play 3: 옆에 스폰한 잡몹이 대기 0.2초 사이에 캐릭터를 죽여 시전이 에러로 끝났다). 40초 뒤 저절로 풀린다(PlayerState 만료).
-		require(script.Parent.PlayerState).setIncomingDamageMultiplierUntil(player, 0, 40)
+		require(script.Parent.PlayerState).setInvulnerableUntil(player, 40, "verify")
 		-- 5번째 = 난무 + 분신 확정 치명(첫 타가 치명 경로 - 툴팁 "치명" 값과 대조).
 		local samples = { { "greatsword", "Q" }, { "greatsword", "E" }, { "dualblade", "E" }, { "healer", "Q" }, { "dualblade", "E", crit = true } }
 		local spawned = {}

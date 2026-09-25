@@ -599,7 +599,7 @@ function P3dVerify.runLive(player, env)
 			hpMe - PlayerState.getHp(player), hpS1 - PlayerState.getHp(s1), tostring(root.Anchored), PlayerState.getIncomingDamageMultiplier(player)), -- 고정은 검증이 이미 걸었다 - 참이어야 할 뿐 증거는 ③ 풀림
 
 			near(spawned.telegraph, REGROW.telegraphSeconds, 0.15) and outcome[player] == "encase" and outcome[s1] == "push" and near(s1Dist, big.r + REGROW.pushOutStuds, 0.05)
-				and hpMe - PlayerState.getHp(player) > 0 and hpS1 - PlayerState.getHp(s1) > 0 and root.Anchored and PlayerState.getIncomingDamageMultiplier(player) == 0)
+				and hpMe - PlayerState.getHp(player) == 0 and hpS1 - PlayerState.getHp(s1) > 0 and root.Anchored and PlayerState.getIncomingDamageMultiplier(player) == 1) -- P3d-F B5: 끼이는 순간 피해 0 · 끼인 동안 무적 아님(×1)
 		-- ③ 3타에 부수고 풀려난다
 		for hit = 1, REGROW.escapeHits do
 			MonsterState.applyDamage(obstacle.model, 1, BossData.stageInterval, player, { committedAt = os.clock() })
@@ -645,7 +645,7 @@ function P3dVerify.runLive(player, env)
 		local atCap = #BossArenaMap.obstacles(zoneKey)
 		BossArenaMap.resetObstacles(zoneKey)
 		r.check(("D4 상한: %d개 더 세움 → %d개(상한 %d) · 다음 = %s · 리셋 뒤 %d(배치 %d) · 충돌 기둥 %d → %d"):format(made, atCap, REGROW.maxObstacles, tostring(why), #BossArenaMap.obstacles(zoneKey), layoutCount,
-			collidersBefore, colliderCount()), atCap <= REGROW.maxObstacles and (why == "cap" or why == "connectivity" or why == "obstacle" or why ~= nil) and #BossArenaMap.obstacles(zoneKey) == layoutCount and colliderCount() == collidersBefore)
+			collidersBefore, colliderCount()), atCap <= REGROW.maxObstacles and #BossArenaMap.obstacles(zoneKey) == layoutCount and colliderCount() == collidersBefore) -- P3d-F B4: 상한이면 가장 오래된 재생성분을 교체(20회 내내 계속 세운다 - 개수는 상한을 안 넘는다)
 		root.Anchored = false
 		BossEncounter.despawnFor(player)
 	end)
