@@ -37,7 +37,11 @@ end
 -- 잔류 시작 → 멤버마다 창(남은 초 · 파티 여부 · 리더 여부 · 다음 스테이지로 갈 수 있는가).
 local function canGoNext(player, stage)
 	local target = stage + 1
-	if target > PlayerProfile.getInfiniteStageBest(player) + 1 or target > InfiniteStageConfig.safeStageCap then
+	local best = PlayerProfile.getInfiniteStageBest(player)
+	if type(best) ~= "number" then
+		return false -- 프로필 없는 멤버(검증 스탠드인 등) - Play 1 오류
+	end
+	if target > best + 1 or target > InfiniteStageConfig.safeStageCap then
 		return false
 	end
 	local required = BossRules.getBossStageBelow(target)
@@ -46,6 +50,9 @@ end
 
 BossEncounter.onLingerStarted(function(encounter)
 	for _, member in ipairs(encounter.members) do
+		if typeof(member) ~= "Instance" then
+			continue -- 스탠드인에게는 창이 없다
+		end
 		fire(member, {
 			kind = "start", stage = encounter.stage, seconds = BossData.lingerSeconds,
 			isParty = encounter.party ~= nil, isLeader = encounter.party == nil or PartyState.isLeader(member), canNext = canGoNext(member, encounter.stage),
