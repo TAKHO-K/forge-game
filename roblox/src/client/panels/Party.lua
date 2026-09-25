@@ -11,6 +11,7 @@ local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local UIManager = require(script.Parent.Parent.UIManager)
 local FriendInvite = require(script.Parent.Parent.FriendInvite)
 local HelpTooltip = require(script.Parent.Parent.HelpTooltip)
@@ -142,7 +143,7 @@ local function build()
 		for memberCount = 2, PartyConfig.maxMembers do
 			table.insert(bonusParts, ("%d인 +%d%%"):format(memberCount, math.floor(PartyConfig.expBonusByMemberCount[memberCount] * 100 + 0.5)))
 		end
-		HelpTooltip.attach(myColumn, UDim2.new(0, 62, 0, 19), table.concat({
+		HelpTooltip.attach(myColumn, UDim2.new(0, 62, 0, 19), { short = Text.get("party.help.short", { percent = gatePercent }), detail = table.concat({ -- G1-1: 2단
 			("■ 기여 %d%%"):format(gatePercent),
 			("몬스터에게 준 피해가 %d%%에 못 미치면 파티여도 골드·경험치·아이템·강화석을 받지 못합니다. 보스는 파티원 전원이 %d%%를 넘겨야 스테이지 클리어로 기록됩니다."):format(gatePercent, gatePercent),
 			"■ 파티 경험치",
@@ -151,7 +152,7 @@ local function build()
 			"유물 등급 이상이 나오면 파티 전원에게 표시됩니다. 태초는 서버 전체에 알려집니다.",
 			"■ 보스 스테이지 이동",
 			("파티장이 신청하고 파티원 1명이 동의하면 전원이 이동합니다. %d초 안에 동의가 없으면 취소됩니다."):format(PartyConfig.stageVoteTimeoutSeconds),
-		}, "\n"), nil, { panelSize = Vector2.new(280, 176) })
+		}, "\n") }, nil, { panelSize = Vector2.new(280, 176) })
 	end
 
 	-- 열 사이 세로 구분선.

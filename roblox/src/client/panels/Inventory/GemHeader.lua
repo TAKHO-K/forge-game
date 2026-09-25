@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local Text = require(ReplicatedStorage.Shared.Text)
 local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local HelpToggle = require(script.Parent.Parent.Parent.ui.kit.HelpToggle)
@@ -56,7 +57,10 @@ function GemHeader.createStatus(parent, hooks)
 
 	local helpButton = HelpToggle.build({
 		parent = parent,
-		text = "변환 · 리롤(옵션 다시 굴리기)은 커뮤니티 센터의 보석상인에게서 할 수 있습니다. 환생의 제단 옆입니다.\n보석 장착 · 교체는 어디서나 됩니다.",
+		text = { -- G1-1: 2단
+			short = Text.get("gemHeader.help.short"),
+			detail = Text.get("gemHeader.help.detail"),
+		},
 		position = UDim2.new(0, 0, 0, 0),
 		panelSide = "right",
 	}).root
@@ -178,7 +182,7 @@ function GemHeader.createWeaponArt(parent, size)
 			for _, child in ipairs(art:GetChildren()) do
 				child:Destroy()
 			end
-			local iconColor = (visual and visual.rainbow) and Color3.new(1, 1, 1) or (visual and visual.color or UIColors.textPrimary)
+			local iconColor = visual and visual.color or UIColors.textPrimary -- G1-1: 태초도 제 색(옛 흰색 분기 제거)
 			ItemIcons.weapon(art, size, iconColor)
 		end,
 	}

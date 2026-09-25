@@ -20,6 +20,7 @@ local GemCraft = require(ReplicatedStorage.Shared.GemCraft) -- P2.5b C: 변환�
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
@@ -301,7 +302,10 @@ local function build()
 		size = PANEL_SIZE,
 		anchorPoint = Vector2.new(0.5, 0),
 		position = UDim2.new(0.5, 0, 0, TOP_OFFSET),
-		help = "고대 · 태초 등급 장비 · 보석의 옵션을 변환권으로 다시 굴립니다. 변환권은 이곳에서 골드로 삽니다.\n보석 장착 · 교체는 어디서나 됩니다(가방 → 보석 탭).",
+		help = { -- G1-1: 사실 오류 수정(변환권 = 골드 + 보석 가루) + 2단
+			short = Text.get("gemWorkshop.help.short"),
+			detail = Text.get("gemWorkshop.help.detail"),
+		},
 		onOpen = onOpen,
 	})
 	local content = panel.content

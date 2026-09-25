@@ -73,8 +73,10 @@ return {
 		-- 지급) 더는 "도달 불가능한 자리표시자"가 아니다. 흰색 대신 다른 6등급 어디와도
 		-- 겹치지 않는 청록을 기본색으로 준다 - rainbow 처리를 받는 자리는 여전히 그 위에
 		-- 애니메이션 테두리가 덧씌워진다(색만 바뀌고 rainbow 자체는 그대로).
+		-- G1-1: 옛 (160, 255, 250) 옅은 청록은 작은 글자 · Neon에서 흰색(일반)처럼 보였다(D0 (h)) → 다른 6등급과 겹치지 않는 진한 자홍(style-bible §6-1 제안).
+		-- 표시는 전부 shared/GradeColor.of가 이 값을 읽는다(흰색으로 바꾸는 분기 없음).
 		primordial = {
-			color = Color3.fromRGB(160, 255, 250),
+			color = Color3.fromRGB(255, 60, 200),
 			statMultiplier = GRADE_STEP ^ 6,
 			glowBrightness = 4.5, glowRange = 24,
 			burstOnDrop = true,

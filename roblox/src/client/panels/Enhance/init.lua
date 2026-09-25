@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Tabs = require(script.Parent.Parent.ui.kit.Tabs)
@@ -47,8 +48,11 @@ local suppressDismiss = false -- 다시 짓는 동안의 닫힘은 사용자가 
 -- 도움말 문구(PRD 20.72 [1-8]) - 숫자는 확률표 · EnhanceConfig에서 끼운다.
 local function helpText()
 	local dropFrom, resetFrom = Enhance.getRiskStartLevels()
-	return ("0~%d강은 실패해도 단계가 내려가지 않습니다. %d강부터 하락, %d강부터 초기화(%d강)가 있습니다. 실패할 때마다 불씨가 차고, 가득 차면 다음 시도는 반드시 성공합니다."):format(
-		dropFrom - 1, dropFrom, resetFrom, EnhanceConfig.resetToLevel)
+	-- G1-1: 2단(짧은 한 줄 + 누르면 상세) · "초기화(12강)" 모호 → "실패 시 12강으로 초기화"
+	return {
+		short = Text.get("enhance.help.short"),
+		detail = Text.get("enhance.help.detail", { safeTo = dropFrom - 1, dropFrom = dropFrom, resetFrom = resetFrom, resetTo = EnhanceConfig.resetToLevel }),
+	}
 end
 
 -- 결과 줄의 문구와 색(UIColors 이름). payload = EnhanceResult가 실어 온 표(EnhanceService.handleRequest).

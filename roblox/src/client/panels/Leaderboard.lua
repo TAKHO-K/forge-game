@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local Text = require(ReplicatedStorage.Shared.Text)
 local UIManager = require(script.Parent.Parent.UIManager)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
@@ -142,7 +143,10 @@ local function build()
 		kind = "window",
 		title = "순위",
 		size = Vector2.new(660, 440),
-		help = "보스 스테이지를 깬 기록만 순위에 오릅니다. 자기 최고 다음 보스를 깨고 본인이 피해 10% 이상을 넣어야 합니다. 순위표는 약 90초마다 갱신됩니다.",
+		help = { -- G1-1: "자기 최고 다음 보스" 모호 정리 + 2단
+			short = Text.get("leaderboard.help.short"),
+			detail = Text.get("leaderboard.help.detail"),
+		},
 		onOpen = function()
 			Leaderboard.refresh()
 		end,

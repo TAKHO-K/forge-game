@@ -8,11 +8,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
-local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local Gem = require(ReplicatedStorage.Shared.Gem)
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local Confirm = require(script.Parent.Parent.ui.kit.Confirm)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
@@ -61,8 +62,7 @@ local function gradeName(gradeId)
 end
 
 local function gradeColor(gradeId)
-	local visual = ItemVisualData.gradeVisuals[gradeId]
-	return (visual and not visual.rainbow) and visual.color or Theme.color("textPrimary")
+	return GradeColor.of(gradeId, Theme.color("textPrimary")) -- G1-1: 태초도 제 색(옛 흰색 분기 제거)
 end
 
 local function targetGem()
@@ -109,7 +109,10 @@ local function build()
 		kind = "window",
 		title = "보석 가공",
 		size = PANEL_SIZE,
-		help = "재련: 레벨이 낮아진 보석에 더 높은 레벨의 보석을 먹여 그 레벨로 올립니다. 옵션 종류 · 굴림 위치는 그대로이고 수치만 새 레벨로 다시 계산됩니다(먹인 보석은 사라집니다).\n분해: 보석을 보석 가루로 바꿉니다. 가루는 재련 · 변환권 구매에 씁니다.",
+		help = { -- G1-1: "낮아진" · "굴림 위치" · "먹여" 은어 정리 + 2단
+			short = Text.get("gemForge.help.short"),
+			detail = Text.get("gemForge.help.detail"),
+		},
 		onClose = function()
 			pendingSince = nil
 		end,
@@ -260,14 +263,14 @@ local function renderRefine()
 		preview.Name = "PreviewLine"
 	end
 	local candidates = fodderCandidates(gem)
-	addLabel(("먹일 보석(대상보다 레벨이 높은 가방 보석 %d개 - 먹인 보석은 사라집니다)"):format(#candidates), "caption", "textSecondary")
+	addLabel(Text.get("gemForge.fodderHeader", { count = #candidates }), "caption", "textSecondary") -- G1-1: 옛 "먹일 보석"
 	if #candidates == 0 then
 		addLabel("대상보다 레벨이 높은 보석이 가방에 없습니다", "body", "textTertiary", 36)
 	end
 	for _, index in ipairs(candidates) do
 		local candidate = state.gemInventory[index]
 		addRow("Fodder_" .. index, ItemDescribe.gem(candidate).title, ("Lv.%d · %s"):format(candidate.itemLevel or 0, optionText(candidate)),
-			gradeColor(candidate.grade), fodderIndex == index, fodderIndex == index and "선택됨" or "먹이기", not isPending(), function()
+			gradeColor(candidate.grade), fodderIndex == index, fodderIndex == index and "선택됨" or Text.get("gemForge.fodderPick"), not isPending(), function()
 				fodderIndex = index
 				GemForge.render()
 			end)
@@ -316,7 +319,7 @@ function GemForge.render()
 			built.cost.TextColor3 = reason and Theme.color("danger") or Theme.color("gold")
 			built.action.setEnabled(reason == nil and not isPending(), reason)
 		else
-			built.cost.Text = gem and "먹일 보석을 고르세요" or ""
+			built.cost.Text = gem and Text.get("gemForge.pickFodder") or ""
 			built.cost.TextColor3 = Theme.color("textSecondary")
 			built.action.setEnabled(false)
 		end

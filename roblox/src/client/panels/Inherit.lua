@@ -8,10 +8,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local Confirm = require(script.Parent.Parent.ui.kit.Confirm)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
@@ -62,8 +64,7 @@ local keep = "b"
 local pendingSince
 
 local function gradeColor(gradeId)
-	local visual = ItemVisualData.gradeVisuals[gradeId]
-	return (visual and not visual.rainbow) and visual.color or Theme.color("textPrimary")
+	return GradeColor.of(gradeId, Theme.color("textPrimary")) -- G1-1: 태초도 제 색(옛 흰색 분기 제거)
 end
 
 -- 옵션 세트 한 줄(그 세트가 B에 붙었을 때의 값 - 수치는 B 등급 · itemLevel로 다시 계산).
@@ -99,7 +100,10 @@ local function build()
 		kind = "window",
 		title = "장비 계승",
 		size = PANEL_SIZE,
-		help = "착용 중인 장비의 옵션(종류 + 굴림 위치)을 새 장비로 옮깁니다. 수치는 새 장비의 등급 · 레벨로 다시 계산됩니다. 착용 중이던 장비는 분해 재료로 돌려받습니다.",
+		help = { -- G1-1: "굴림 위치" 은어 · 돌려받는 것 명시 + 2단
+			short = Text.get("inherit.help.short"),
+			detail = Text.get("inherit.help.detail"),
+		},
 		onClose = function()
 			target, preview, pendingSince = nil, nil, nil
 		end,

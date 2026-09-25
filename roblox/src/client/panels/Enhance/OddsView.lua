@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Gauge = require(script.Parent.Parent.Parent.ui.kit.Gauge)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 
@@ -12,18 +13,18 @@ local OddsView = {}
 
 -- 결과 5종의 순서 · 이름 · 색(색은 UIColors 이름). 유지는 색 지정이 없어 본문색이다.
 local ROWS = {
-	{ key = "success", text = "성공", colorName = "success" },
-	{ key = "maintain", text = "실패 · 유지", colorName = "textPrimary" },
-	{ key = "down1", text = "실패 · 1강 하락", colorName = "ember" },
-	{ key = "down2", text = "실패 · 2강 하락", colorName = "ember" },
-	{ key = "reset", text = "실패 · 초기화", colorName = "danger" },
+	{ key = "success", text = Text.get("enhance.odds.success"), colorName = "success" }, -- G1-1: "되는 단계" 머리 → 행 이름 "성공 시 · 실패 시"(머리만 바꾸면 실패 행에서 뜻이 틀린다 - D0 (g))
+	{ key = "maintain", text = Text.get("enhance.odds.maintain"), colorName = "textPrimary" },
+	{ key = "down1", text = Text.get("enhance.odds.down1"), colorName = "ember" },
+	{ key = "down2", text = Text.get("enhance.odds.down2"), colorName = "ember" },
+	{ key = "reset", text = Text.get("enhance.odds.reset"), colorName = "danger" },
 }
 
 local PAD = 8
-local RESULT_COL_WIDTH = 132
+local RESULT_COL_WIDTH = 144 -- G1-1: 행 이름 "실패 시 · 1강 하락"(옛 132 - 확률 열 시작 154 전까지)
 local PROB_COL_RIGHT = 218 -- 확률 열의 오른쪽 끝 x(박스 안)
 local PROB_COL_WIDTH = 64
-local LEVEL_COL_WIDTH = 74 -- 되는 단계 열은 박스 오른쪽 끝에 붙는다
+local LEVEL_COL_WIDTH = 74 -- 단계 열은 박스 오른쪽 끝에 붙는다
 local GAUGE_LABEL_WIDTH = 48
 
 -- 확률(0 ~ 1) → "4.5%" · "12%"(소수 첫째 자리까지, 끝의 ".0"은 뗀다). Controller의 확인창도 같은 표기를 쓴다.
@@ -76,7 +77,7 @@ function OddsView.buildTable(parent, x, y, width)
 	local levelX = width - PAD - LEVEL_COL_WIDTH
 	local refs = { box = box, rows = {} }
 
-	local header = { text = "결과", prob = "확률", level = "되는 단계" }
+	local header = { text = Text.get("enhance.odds.headResult"), prob = Text.get("enhance.odds.headProb"), level = Text.get("enhance.odds.headLevel") }
 	local headerY = 4
 	cell(box, "HeaderResult", Enum.TextXAlignment.Left, PAD, RESULT_COL_WIDTH, headerY, height, "textSecondary").Text = header.text
 	cell(box, "HeaderProb", Enum.TextXAlignment.Right, PROB_COL_RIGHT - PROB_COL_WIDTH, PROB_COL_WIDTH, headerY, height, "textSecondary").Text = header.prob

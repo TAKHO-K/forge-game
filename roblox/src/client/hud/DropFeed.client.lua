@@ -12,8 +12,10 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local DropNoticeData = require(ReplicatedStorage.Shared.data.DropNoticeData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local PlayerMenu = require(script.Parent.Parent.panels.PlayerMenu)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local FeedLayout = require(script.Parent.Parent.ui.FeedLayout)
@@ -31,7 +33,8 @@ end
 
 local function primalLine(payload)
 	local gradeName, partName = gradeAndPart(payload)
-	return ("★ %s님이 %s %s을 얻었습니다"):format(PlayerLabelFormat.plain(payload.name, payload.level, payload.rebirth), gradeName, partName)
+	-- G1-1: 채팅 줄도 등급 색(옛: 색 지정 없음 - 흰 글씨)
+	return Text.get("chat.primalDrop", { name = PlayerLabelFormat.plain(payload.name, payload.level, payload.rebirth), color = GradeColor.hex(payload.grade), item = ("%s %s"):format(gradeName, partName) })
 end
 
 -- S12b: 알림의 이름 조각들("★n Lv.35 표시이름") - 이름을 누르면 이름 클릭 메뉴(userId가 있을 때만 - 합성 검증 이벤트에는 없다).

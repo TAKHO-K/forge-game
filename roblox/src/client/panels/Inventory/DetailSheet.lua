@@ -391,7 +391,7 @@ local function setupOptionRow()
 			return
 		end
 		local gradeVisual = ItemVisualData.gradeVisuals[item.grade]
-		local fillColor = (gradeVisual and not gradeVisual.rainbow) and gradeVisual.color or UIColors.textPrimary
+		local fillColor = gradeVisual and gradeVisual.color or UIColors.textPrimary -- G1-1: 태초도 제 색
 		-- 글 · 회색(직업 불일치) · 직업색은 ItemDescribe가 준다(S20 - 툴팁 · 장비 보기와 같은 문구).
 		local lines = ItemDescribe.optionLines(item, classId)
 
@@ -764,7 +764,7 @@ local function confirmItemAction(verb, item, action, isGem)
 		gain = (" 가루 %d를 얻습니다."):format(GemCraft.dustYield(item))
 	end
 	itemConfirmText.Text = ("%s(%s)를 %s하시겠습니까?%s 되돌릴 수 없습니다."):format(described.title, ArmorData.grades[item.grade].displayName, verb, gain)
-	itemConfirmText.TextColor3 = (visual and not visual.rainbow) and visual.color or UIColors.textPrimary
+	itemConfirmText.TextColor3 = visual and visual.color or UIColors.textPrimary -- G1-1: 태초도 제 색
 	pendingConfirmAction = action
 	itemConfirmOverlay.Visible = true
 end

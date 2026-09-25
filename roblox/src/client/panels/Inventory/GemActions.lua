@@ -10,7 +10,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
-local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
@@ -46,13 +46,9 @@ function GemActions.reasonText(reason, gemGradeId, slot)
 	return "보석을 장착할 수 없습니다"
 end
 
--- 보석 등급의 표시 색(무지개 등급은 흰색 - 기존 무기 아이콘과 같은 처리).
+-- 보석 등급의 표시 색(G1-1: 태초도 제 색 - shared/GradeColor).
 function GemActions.gradeColor(gradeId)
-	local visual = ItemVisualData.gradeVisuals[gradeId]
-	if not visual then
-		return Color3.new(1, 1, 1)
-	end
-	return visual.rainbow and Color3.new(1, 1, 1) or visual.color
+	return GradeColor.of(gradeId, Color3.new(1, 1, 1))
 end
 
 -- 드래그 · 거절 유령(30px 원). pos = ScreenGui 좌표 중심.

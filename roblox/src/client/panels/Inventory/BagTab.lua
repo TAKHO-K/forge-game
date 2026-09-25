@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
@@ -177,7 +178,7 @@ local function rebuildGrid()
 		S.applyGradeVisual(cell, gradeStroke, glow, item.grade)
 
 		local visual = ItemVisualData.gradeVisuals[item.grade]
-		local iconColor = (visual and visual.rainbow) and Color3.new(1, 1, 1) or (visual and visual.color or UIColors.textPrimary)
+		local iconColor = GradeColor.of(item.grade, UIColors.textPrimary) -- G1-1: 태초도 제 색
 		local iconHolder = Instance.new("Frame")
 		iconHolder.AnchorPoint = Vector2.new(0.5, 0.5)
 		iconHolder.Position = UDim2.new(0.5, 0, 0.5, 0)

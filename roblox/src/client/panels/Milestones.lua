@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local MilestoneData = require(ReplicatedStorage.Shared.data.MilestoneData)
 local Milestone = require(ReplicatedStorage.Shared.Milestone)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local UIManager = require(script.Parent.Parent.UIManager)
@@ -30,9 +31,13 @@ local function build()
 		kind = "window",
 		title = "성장 보상 - 환생 후 레벨 마일스톤",
 		size = PANEL_SIZE,
-		help = ("환생 %d회를 마친 직업은 레벨 %d에 큰 보상(%s +%.1f%%)과 첫 해금을, 그 뒤 %d레벨마다 작은 보상(+%.1f%%)을 받습니다. 능력치는 한 버킷에 더해지고 합이 +%.1f%%(스테이지 10칸분)에서 멈춥니다.\n레벨 %d부터 %d레벨마다 시스템 해금이 하나씩 열립니다(계정 공유 · 한 번만)."):format(
-			MilestoneData.requiredRebirths, MilestoneData.firstLevel, Milestone.statText(), MilestoneData.bigBonus * 100, MilestoneData.statInterval, MilestoneData.smallBonus * 100,
-			Milestone.bonusCap() * 100, MilestoneData.firstLevel, MilestoneData.unlockInterval),
+		help = { -- G1-1: "버킷" · "스테이지 10칸분" 개발 용어 정리 + 2단
+			short = Text.get("milestones.help.short", { rebirths = MilestoneData.requiredRebirths }),
+			detail = Text.get("milestones.help.detail", {
+				firstLevel = MilestoneData.firstLevel, stat = Milestone.statText(), big = ("%.1f"):format(MilestoneData.bigBonus * 100), interval = MilestoneData.statInterval,
+				small = ("%.1f"):format(MilestoneData.smallBonus * 100), cap = ("%.1f"):format(Milestone.bonusCap() * 100), unlockFrom = MilestoneData.firstLevel, unlockEvery = MilestoneData.unlockInterval,
+			}),
+		},
 	})
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Name = "Body"
