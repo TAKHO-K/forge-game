@@ -103,6 +103,7 @@ return {
 		-- BR1 대공 잡기
 		["boss.grab.struggle"] = "대공 잡기 - 다 같이 점프를 연타해 발악!",
 		["boss.grab.warn"] = "착지!",
+		["boss.bubble.struggle"] = "공중에 갇혔다 - 점프를 연타해 탈출!",
 
 		-- 설정 · 시점(M1-0)
 		["settings.title"] = "설정",

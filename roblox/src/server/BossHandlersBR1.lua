@@ -12,6 +12,8 @@ local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData)
 local Reach = require(ReplicatedStorage.Shared.Reach)
 local BossTrap = require(script.Parent.BossTrap)
 local PlayerState = require(script.Parent.PlayerState)
+local MonsterState = require(script.Parent.MonsterState)
+local HeightGuard = require(script.Parent.HeightGuard)
 
 local BossHandlersBR1 = {}
 
@@ -346,6 +348,9 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 						if p.skill.onHit then
 							kit.runHitEffects(c, p.skill.onHit, v, p.position - Vector3.new(0, 0, 0), 1)
 						end
+						if p.skill.trapOnHits then
+							BossHandlersBR1.noteTrapHit(c, v, p.skill.trapOnHits)
+						end
 						kit.debugEvent("projectileHit", { player = v.player, id = p.id, at = now })
 						if not p.pierce then
 							done = true
@@ -373,6 +378,40 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 		end
 		kit.send(st, "projSync", { list = sync })
 	end
+end
+
+-- BR1-2 공중 가둠(설계 §4): 이 사람이 trapOnHits.windowSeconds 안에 hits번 맞았으면 그 자리 발 + liftStuds 공중에 가둔다(BossTrap kind "bubbled" - 면역 · 행동 막힘 ·
+-- seconds 뒤 떨어진다). 탈출 = 점프 연타 presses회(BossAirGrab.press) 또는 동료 F 홀드(rescue.bubble). 갇힌 동안은 "공중"(대공 잡기의 얼림 대상).
+function BossHandlersBR1.noteTrapHit(c, v, spec)
+	local st = c.st
+	st.trapHits = st.trapHits or {}
+	local list = st.trapHits[v.player] or {}
+	st.trapHits[v.player] = list
+	table.insert(list, c.now)
+	while #list > 0 and c.now - list[1] > spec.windowSeconds do
+		table.remove(list, 1)
+	end
+	if #list < spec.hits or BossTrap.isTrapped(v.player) or (PlayerState.getHp(v.player) or 0) <= 0 then
+		return false
+	end
+	st.trapHits[v.player] = {}
+	local lifted = v.root.Position + Vector3.new(0, spec.liftStuds, 0)
+	if not BossTrap.trap(v.player, {
+		kind = "bubbled", rescueType = "bubble", autoReleaseSeconds = spec.seconds,
+		context = { origin = lifted, zoneKey = MonsterState.getZoneKey(c.model), bossModel = c.model, style = spec.style, presses = spec.presses, pressed = 0 },
+	}) then
+		return false
+	end
+	HeightGuard.exempt(v.player, spec.seconds + 2)
+	if typeof(v.root) == "Instance" then
+		v.root.CFrame = CFrame.new(lifted) * v.root.CFrame.Rotation
+	else
+		v.root.Position = lifted
+	end
+	kit.send(st, "bubbleTrap", { userId = typeof(v.player) == "Instance" and v.player.UserId or nil, position = lifted, seconds = spec.seconds, style = spec.style, presses = spec.presses })
+	kit.debugEvent("bubbleTrap", { player = v.player, at = c.now })
+	print(("[forge-game] 공중 가둠(%s): %s - %d번 맞음"):format(spec.style, tostring(v.player.Name), spec.hits))
+	return true
 end
 
 function BossHandlersBR1.clearProjectiles(st)

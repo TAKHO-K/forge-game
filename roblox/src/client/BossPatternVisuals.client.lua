@@ -728,6 +728,8 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossGrabView.unfreeze(data.userId)
 	elseif kind == "grabThrow" then
 		BossGrabView.throw(data)
+	elseif kind == "bubbleTrap" then
+		BossGrabView.bubble(data)
 	elseif kind == "grabEnd" or kind == "grabMiss" then
 		BossGrabView.clear()
 	elseif kind == "envTelegraph" then

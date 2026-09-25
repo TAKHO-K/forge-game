@@ -479,12 +479,13 @@ end)
 
 -- F 홀드(보스 곁 - BossData.mechanics.rescue.grab.reachStuds). 조각 없음 - 공통 홀드 규칙 그대로.
 BossTrap.registerRescueHandler("grab", {})
+BossTrap.registerRescueHandler("bubble", {}) -- BR1-2 공중 가둠: 곁에서 F 홀드(공통 규칙)
 
 -- 발악: 잡힌 사람의 점프(클라 BossGrabView가 JumpRequest를 보낸다) = 게이지 하나를 1회 줄인다. 1인당 초당 maxPressesPerSecond회까지만 센다.
 local lastPressAt = {}
 function BossAirGrab.press(player)
 	local record = BossTrap.getRecord(player)
-	if not record or record.kind ~= "grabbed" then
+	if not record or (record.kind ~= "grabbed" and record.kind ~= "bubbled") then
 		return false
 	end
 	local now = os.clock()
@@ -492,6 +493,19 @@ function BossAirGrab.press(player)
 		return false
 	end
 	lastPressAt[player] = now
+	if record.kind == "bubbled" then -- BR1-2 공중 가둠: 혼자 presses회 → 탈출(떨어진다 - 해제 유예 없음)
+		record.context.pressed = (record.context.pressed or 0) + 1
+		if realPlayer(player) and player.Parent then
+			player:SetAttribute("BossGrabGauge", math.clamp(1 - record.context.pressed / record.context.presses, 0, 1))
+		end
+		if record.context.pressed >= record.context.presses then
+			BossTrap.release(player, "escaped")
+			if realPlayer(player) and player.Parent then
+				player:SetAttribute("BossGrabGauge", nil)
+			end
+		end
+		return true
+	end
 	local model = record.context and record.context.bossModel
 	local st = model and MonsterState.getBossPatternState(model)
 	if not (st and st.grabGauge) then

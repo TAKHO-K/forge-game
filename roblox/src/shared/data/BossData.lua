@@ -110,6 +110,8 @@ local MECHANICS = {
 		touch = { reachStuds = 3, rescuerMaxHpFraction = 0 },
 		-- BR1 대공 잡기: 잡힌 사람은 보스 곁 공중(발 +7)에 들려 있다 - 땅에서 보스 곁(수평 16 안)이면 F 홀드. 프롬프트 거리는 3D라 높이만큼 넉넉하게.
 		grab = { reachStuds = 16 },
+		-- BR1-2 공중 가둠(거품 · 회오리): 갇힌 사람은 발 + liftStuds 공중 - 땅의 동료가 곁(수평 8 + 높이)에서 F 홀드. 프롬프트 거리는 3D라 높이만큼 넉넉하게.
+		bubble = { reachStuds = 12 },
 	},
 
 	-- BR1 대공 잡기 → BR1-2 개정(docs/design/boss-br1-2.md §3 - 6종 공통 규칙, 모션만 보스별). 스킬 primitive = "grab".
@@ -766,6 +768,9 @@ local SPECIES = {
 				telegraphSeconds = 1.2, count = 3, launchIntervalSeconds = 0.25, spreadDeg = 20,
 				speedStuds = 14, turnRateDeg = 70, radiusStuds = 3.5, lifetimeSeconds = 7, heightMode = "air", launchHeightStuds = 8,
 				targetRule = "airbornePreferred", leadSeconds = 0.8,
+				-- BR1-2 공중 가둠(버블파이터식 - 설계 §4): windowSeconds 안에 hits번 맞으면 그 자리 발 + liftStuds 공중의 거품에 갇힌다(seconds 뒤 떨어진다).
+				-- 점프 연타 presses회(1인 초당 6회) 또는 동료 F 홀드로 탈출 · 갇힌 동안은 "공중" - 대공 잡기가 오면 얼림 · 잡기로 이어진다. 개수는 곡선(인당)을 따른다.
+				trapOnHits = { hits = 2, windowSeconds = 6, liftStuds = 8, seconds = 5, presses = 10, style = "bubble" },
 				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "거품탄",
 			},
 		},
@@ -1149,6 +1154,7 @@ local SPECIES = {
 				speedStuds = 10, turnRateDeg = 30, radiusStuds = 5, lifetimeSeconds = 6, heightMode = "ground", groundHitHeightStuds = 14, pierce = true,
 				targetRule = "target", leadSeconds = 0.8,
 				onHit = { { type = "launch", heightStuds = 6, distanceStuds = 0, holdSeconds = 1.5, spinRadiusStuds = 3, immuneSeconds = 2.5 } },
+				trapOnHits = { hits = 2, windowSeconds = 8, liftStuds = 8, seconds = 5, presses = 10, style = "tornado" }, -- BR1-2 공중 가둠(거품탄과 같은 규칙 - 회오리 속)
 				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "회오리 이동",
 			},
 			-- BR1 새 ② 확장 천둥 고리: 지팡이를 높이 든다 - 느린 파동 셋(속도 12 - 걸어서도 앞선다) · 1 · 3박 = 지상(뛴다) · 2박 = 공중(서 있는다). 간격 1.6초. 파동당 ×1.4(작음).

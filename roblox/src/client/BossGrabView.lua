@@ -329,6 +329,62 @@ function BossGrabView.throw(data)
 	BossFx.shake(center, 0.8)
 end
 
+-- BR1-2 공중 가둠: 갇힌 사람을 감싸는 거품(유리 공) · 회오리(흰 원통 둘) - 그 사람의 루트를 따라간다(서버가 공중에 고정). 풀리면(BossTrapKind가 바뀌면) 터진다.
+local bubbles = {} -- [userId] = { parts, style }
+function BossGrabView.bubble(data)
+	local userId = data.userId
+	if not userId or bubbles[userId] then
+		return
+	end
+	local parts = {}
+	if data.style == "tornado" then
+		for i = 1, 2 do
+			local ring = newPart(Vector3.new(1, 6 + i * 2, 6 + i * 2), WHITE, 0.55, Enum.PartType.Cylinder)
+			ring.Material = Enum.Material.Neon
+			table.insert(parts, ring)
+		end
+	else
+		local ball = newPart(Vector3.one * 7.5, Color3.fromRGB(150, 220, 255), 0.6, Enum.PartType.Ball)
+		ball.Material = Enum.Material.Glass
+		table.insert(parts, ball)
+	end
+	bubbles[userId] = { parts = parts, style = data.style }
+	BossFx.ring(data.position, 1, 6, WHITE, 0.3)
+end
+
+local function popBubble(userId)
+	local entry = bubbles[userId]
+	if not entry then
+		return
+	end
+	bubbles[userId] = nil
+	for _, part in ipairs(entry.parts) do
+		if part.Parent then
+			BossFx.puff(part.Position, 3, WHITE, 0.3, Vector3.new(0, 4, 0))
+		end
+		destroy(part)
+	end
+end
+
+RunService.RenderStepped:Connect(function()
+	local t = os.clock()
+	for userId, entry in pairs(bubbles) do
+		local target = playerByUserId(userId)
+		local root = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+		if not root or target:GetAttribute("BossTrapKind") ~= "bubbled" then
+			popBubble(userId)
+		else
+			for index, part in ipairs(entry.parts) do
+				if entry.style == "tornado" then
+					part.CFrame = CFrame.new(root.Position + Vector3.new(0, (index - 1.5) * 2, 0)) * CFrame.Angles(0, t * 8 * index, math.rad(90))
+				else
+					part.CFrame = CFrame.new(root.Position + Vector3.new(0, math.sin(t * 3) * 0.3, 0))
+				end
+			end
+		end
+	end
+end)
+
 function BossGrabView.unfreeze(userId)
 	local block = userId and ice[userId]
 	if block then
@@ -364,7 +420,8 @@ end
 
 -- ─────────────────────────── 발버둥(내가 잡혔을 때) ───────────────────────────
 UserInputService.JumpRequest:Connect(function()
-	if player:GetAttribute("BossTrapKind") == "grabbed" then
+	local kind = player:GetAttribute("BossTrapKind")
+	if kind == "grabbed" or kind == "bubbled" then -- BR1-2: 공중 가둠도 점프 연타로 탈출
 		struggleEvent:FireServer()
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		if root then
