@@ -29,10 +29,11 @@ local IN_SINE = { style = Enum.EasingStyle.Sine, direction = Enum.EasingDirectio
 local OUT_QUAD = { style = Enum.EasingStyle.Quad, direction = Enum.EasingDirection.Out }
 local OUT_BACK = { style = Enum.EasingStyle.Back, direction = Enum.EasingDirection.Out }
 
+-- MV1: 무기 5종째 방패망치(머리 위 내려치기)는 아직 직업 · 무기 데이터가 없다 - 생기면 그 직업 표에 air = { bodyPitchDeg = 24 }(대검과 같은 틀)을 넣는다.
 return {
 	greatsword = {
-		-- MV1 공중 전용 베기(표시만): 무기 스윙 축을 Z로(몸 앞을 가로로 크게 휘두름) · 조금 빠르게.
-		air = { swingAxis = "Z", speedScale = 1.15 },
+		-- MV1 공중 내려찍기(사용자 - 임시 모션 · 최종 키프레임 = A2): 지상과 같은 위 → 아래 내려치기 + 몸을 앞으로 싣는다.
+		air = { speedScale = 1.0, bodyPitchDeg = 24 },
 		totalDurationSeconds = 0.55, -- 공격 쿨다운(0.4초)보다 길다 - 의도적(위 주석)
 		trailWidth = 1.4,
 		trailColor = Color3.fromRGB(220, 235, 255),
@@ -69,8 +70,8 @@ return {
 	},
 
 	dualblade = {
-		-- MV1 공중 전용 베기: 두 자루를 Z축으로(교차 가로 베기) · 빠르게.
-		air = { swingAxis = "Z", speedScale = 1.25 },
+		-- MV1 공중 회전 베기: 두 자루를 가로(Z축)로 + 몸이 한 바퀴 돈다(bodySpinDeg).
+		air = { swingAxis = "Z", speedScale = 1.25, bodySpinDeg = 360 },
 		totalDurationSeconds = 0.32,
 		trailWidth = 0.6,
 		trailColor = Color3.fromRGB(200, 245, 245),
@@ -125,8 +126,8 @@ return {
 	-- WeaponModelData.lua의 stringTopTip/BottomTip이 실측한 실제 좌표계 기준이다)이다 -
 	-- WeaponVisual이 swingAxis 대신 이 값으로 활시위 중간점과 화살 위치를 계산한다.
 	bow = {
-		-- MV1 공중 사격: 시위 모션은 그대로 · 빠르게(활은 축을 바꾸면 시위 계산이 깨진다).
-		air = { speedScale = 1.2 },
+		-- MV1 공중 사격(사용자 - 프레야식): 짧게 공중에 멈춰(hoverSeconds) 몸을 앞으로 숙여(bodyPitchDeg) 아래로 쏜다 · 활을 비스듬히 눕힌다(bowCantDeg) - 시위 · 화살 계산은 지상과 같다.
+		air = { speedScale = 1.0, bodyPitchDeg = 22, bowCantDeg = 35, hoverSeconds = 0.25 },
 		totalDurationSeconds = 0.55,
 		parts = {
 			{
@@ -158,8 +159,8 @@ return {
 	},
 
 	healer = {
-		-- MV1 공중 휘두르기: 지팡이를 Y축으로(몸 둘레로 한 바퀴 쓸기).
-		air = { swingAxis = "Y", speedScale = 1.15 },
+		-- MV1 공중 영창 후 아래로 발사(사용자): 짧게 공중에 멈춰(hoverSeconds) 지상과 같은 위 → 아래 휘두르기로 아래를 향해 쏜다(bodyPitchDeg).
+		air = { speedScale = 1.0, bodyPitchDeg = 22, hoverSeconds = 0.25 },
 		totalDurationSeconds = 0.35,
 		trailWidth = 0.5,
 		trailColor = Color3.fromRGB(230, 200, 255),

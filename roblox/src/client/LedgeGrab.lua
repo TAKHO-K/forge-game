@@ -85,8 +85,13 @@ function LedgeGrab.climb()
 	if not root then
 		return false
 	end
+	-- 두 단계(모서리를 뚫지 않게 - 대각선 보간은 몸이 벽 모서리를 지나가 끝에서 물리가 밀어내 FallingDown으로 튕겼다 · MV1 실측):
+	-- ① 매달린 자리에서 곧장 위로(발 = 모서리 + 0.2) ② 모서리 위에서 안쪽 올라설 자리로.
+	local look = hang.cf.LookVector
+	local rise = Vector3.new(hang.cf.Position.X, hang.top.Y + ROOT_ABOVE_FEET + 0.2, hang.cf.Position.Z)
 	hang.climbFrom = hang.cf
-	hang.climbTo = CFrame.lookAt(hang.top + Vector3.new(0, ROOT_ABOVE_FEET, 0), hang.top + Vector3.new(0, ROOT_ABOVE_FEET, 0) + hang.cf.LookVector)
+	hang.climbMid = CFrame.lookAt(rise, rise + look)
+	hang.climbTo = CFrame.lookAt(hang.top + Vector3.new(0, ROOT_ABOVE_FEET + 0.2, 0), hang.top + Vector3.new(0, ROOT_ABOVE_FEET + 0.2, 0) + look)
 	hang.climbAt = os.clock()
 	return true
 end
@@ -104,9 +109,10 @@ RunService.Stepped:Connect(function()
 	if hang then
 		if hang.climbAt then
 			local t = math.clamp((os.clock() - hang.climbAt) / L.climbSeconds, 0, 1)
-			root.CFrame = hang.climbFrom:Lerp(hang.climbTo, t)
+			root.CFrame = t < 0.6 and hang.climbFrom:Lerp(hang.climbMid, t / 0.6) or hang.climbMid:Lerp(hang.climbTo, (t - 0.6) / 0.4)
 			root.AssemblyLinearVelocity = Vector3.zero
 			if t >= 1 then
+				humanoid:ChangeState(Enum.HumanoidStateType.Landed) -- 올라선 자리에서 바로 선다
 				character:SetAttribute("MV1LedgeClimbs", (character:GetAttribute("MV1LedgeClimbs") or 0) + 1) -- 계측(검증)
 				endHang(character)
 			end

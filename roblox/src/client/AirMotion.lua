@@ -2,7 +2,7 @@
 --   관절 종류: Motor6D(옛 리그) = C0 · AnimationConstraint(아바타 관절 업그레이드 - Studio Play 실측, Motor6D가 없다) = Attachment0.CFrame. 둘 다 "루트 파트 공간에서 본 관절 자리"라 같은 식이다.
 -- 회전축 = 루트의 오른쪽 축(R15 · R6 공통) · 앞으로 도는 방향. 입력 즉시 시작한다(준비 동작 없음). 자기 캐릭터는 입력한 클라가, 남의 캐릭터는 서버 중계(AirMoveFx)를 받은 클라가 부른다.
 --   flip = 앞으로 한 바퀴(seconds 동안 · 끝으로 갈수록 느려짐) / lean = 앞으로 leanDeg까지 기울었다가 돌아옴(대시 시간 동안).
---   MV1 hold(character, key, deg) = 풀 때까지 그 각으로 기울인 자세(활강 = 앞으로 눕기 · 낙하 쓰러짐 = 뒤로 눕기) · release(character, key)로 푼다. 유지 자세가 있으면 flip · lean보다 우선한다.
+--   MV1 spin = 제자리 한 바퀴(deg - 공중 회전 베기) · hold(character, key, deg) = 풀 때까지 그 각으로 기울인 자세(활강 = 앞으로 눕기 · 낙하 쓰러짐 = 뒤로 눕기) · release(character, key)로 푼다. 유지 자세가 있으면 flip · lean보다 우선한다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -51,7 +51,8 @@ function AirMotion.release(character, key)
 	end
 end
 
-function AirMotion.play(character, kind, seconds)
+-- deg(선택): lean의 기울기(양수 = 앞 · 음수 = 뒤 - 없으면 MovementConfig.airMotion.leanDeg). MV1 공중 공격 자세가 쓴다.
+function AirMotion.play(character, kind, seconds, deg)
 	local joint, prop = rootJoint(character)
 	if not joint or not seconds or seconds <= 0 then
 		return
@@ -60,7 +61,7 @@ function AirMotion.play(character, kind, seconds)
 		return -- 유지 자세가 우선(활강 중 공중 점프 · 대시 모션은 건너뛴다)
 	end
 	local running = active[joint]
-	active[joint] = { base = running and running.base or joint[prop], prop = prop, kind = kind, startedAt = os.clock(), seconds = seconds }
+	active[joint] = { base = running and running.base or joint[prop], prop = prop, kind = kind, startedAt = os.clock(), seconds = seconds, deg = deg }
 end
 
 RunService.RenderStepped:Connect(function(dt)
@@ -82,13 +83,15 @@ RunService.RenderStepped:Connect(function(dt)
 			joint[st.prop] = st.base
 			active[joint] = nil
 		else
-			local angle
+			local rot
 			if st.kind == "flip" then
-				angle = -2 * math.pi * (1 - (1 - p) ^ 2)
+				rot = CFrame.Angles(-2 * math.pi * (1 - (1 - p) ^ 2), 0, 0)
+			elseif st.kind == "spin" then
+				rot = CFrame.Angles(0, -math.rad(st.deg or 360) * (1 - (1 - p) ^ 2), 0) -- MV1 공중 회전 베기(몸이 제자리에서 한 바퀴)
 			else
-				angle = -math.rad(cfg.leanDeg) * math.sin(math.pi * p)
+				rot = CFrame.Angles(-math.rad(st.deg or cfg.leanDeg) * math.sin(math.pi * p), 0, 0)
 			end
-			joint[st.prop] = CFrame.Angles(angle, 0, 0) * st.base
+			joint[st.prop] = rot * st.base
 		end
 	end
 end)

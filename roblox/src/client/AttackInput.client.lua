@@ -19,6 +19,8 @@ local UIManager = require(script.Parent.UIManager)
 local CameraShake = require(script.Parent.CameraShake)
 local DamageNumbers = require(script.Parent.DamageNumbers)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
+local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
+local AirHover = require(script.Parent.AirHover)
 
 -- MV1 공중 공격(환생 1회부터 - MovementUnlockData): 한 체공 예산(MoveRules.airAttackBudget = 해금된 공중 점프 + 이번 체공의 공중 대시) 안에서는 공중에서 바로 친다.
 -- 예산을 넘거나 해금 전이면 옛 규칙(점프 중 클릭 = 착지 순간 발동하는 버퍼). 판정 · 예산 확정은 서버(AttackServer · AirState) - 여기는 모션 · 요청만.
@@ -176,6 +178,11 @@ local function performAttack(aimPoint, isAir)
 	attackRequest:FireServer(aimPoint, isAir == true)
 	if isAir then
 		airAttacksThisAir += 1
+		-- MV1 원거리 공중 정지(활 · 지팡이 - AttackMotionData[직업].air.hoverSeconds)
+		local motion = AttackMotionData[player:GetAttribute("ClassId") or ""]
+		if motion and motion.air and motion.air.hoverSeconds then
+			AirHover.hold(motion.air.hoverSeconds)
+		end
 	end
 
 	local classId = player:GetAttribute("ClassId")

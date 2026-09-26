@@ -216,7 +216,9 @@ local function handleAttack(player, aimPoint, clientAir)
 	local rangeMultiplier = BuffState.getField(player, "backstepShotBuff", "rangeMultiplier", 1)
 	-- 강화 단계(+15 · +20)의 사거리 보너스(30-0 S08)도 같은 함수가 곱한다 - 클라 조준(AimTarget)은 WeaponLevel Attribute로 같은 값을 넘긴다.
 	local attackRange = PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier, weapon.level)
-	local target = AimPicker.pick(rootPart.Position, safeAimPoint, attackRange, MonsterState.getAllModels())
+	-- MV1: 공중 공격은 아래 대상까지(CombatConfig.airAttack - 근접 · 원거리 높이차 상한)
+	local layer = isAir and (ProjectileConfig.kindByClass[classId] and CombatConfig.airAttack.rangedLayerStuds or CombatConfig.airAttack.meleeLayerStuds) or nil
+	local target = AimPicker.pick(rootPart.Position, safeAimPoint, attackRange, MonsterState.getAllModels(), layer)
 	if not target then
 		return -- 사거리 안에 몬스터가 없다 - 헛스윙
 	end

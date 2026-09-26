@@ -91,17 +91,40 @@ function MoveRules.stepGauge(gauge, maxSeconds, dt, gliding, grounded)
 end
 
 -- ── 낙하 ──
--- 착지 수직 속도(양수 = 아래로) → { kind = "none" | "damage" | "knockdown", fraction(최대 체력 비율) }.
+-- 착지 속도 → 환산 낙하 높이(h = v² ÷ 2g) · 기준 높이의 낙하 속도.
+function MoveRules.fallHeightOf(speed)
+	return speed * speed / (2 * MovementConfig.gravity)
+end
+-- 안전 높이 = 합법 점프 정점(점프력 상한 + 공중 점프 전부) + 여유.
+function MoveRules.fallSafeHeight()
+	local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+	return JumpMath.maxClimbStuds(MovementConfig.airJump.charges, false, MovementConfig.jumpHeightBonusCap) + MovementConfig.fall.safeMarginStuds
+end
+
+-- 기준 속도: 안전(이 아래 피해 0 · 보고 문턱) · 불꽃(예상 피해 flameWarnFraction) · 치명.
+function MoveRules.fallSpeeds()
+	local F = MovementConfig.fall
+	local g2 = 2 * MovementConfig.gravity
+	local safe = MoveRules.fallSafeHeight()
+	return math.sqrt(g2 * safe), math.sqrt(g2 * (safe + F.flameWarnFraction * (F.lethalHeight - safe))), math.sqrt(g2 * F.lethalHeight)
+end
+
+-- 착지 수직 속도(양수 = 아래로) → { kind = "none" | "damage" | "knockdown", fraction(최대 체력 비율 = clamp((h − 안전) ÷ (치명 − 안전), 0, 1)), height(환산 높이) }.
 function MoveRules.fallOutcome(speed)
 	local F = MovementConfig.fall
 	speed = math.clamp(tonumber(speed) or 0, 0, F.reportMaxSpeed)
-	if speed ~= speed or speed < F.dangerSpeed then
-		return { kind = "none", fraction = 0 }
-	elseif speed >= F.lethalSpeed then
-		return { kind = "knockdown", fraction = 1 }
+	if speed ~= speed then
+		return { kind = "none", fraction = 0, height = 0 }
 	end
-	local t = (speed - F.dangerSpeed) / (F.lethalSpeed - F.dangerSpeed)
-	return { kind = "damage", fraction = F.damageMinFraction + (F.damageMaxFraction - F.damageMinFraction) * t }
+	local h = MoveRules.fallHeightOf(speed)
+	local safe = MoveRules.fallSafeHeight()
+	local fraction = math.clamp((h - safe) / (F.lethalHeight - safe), 0, 1)
+	if fraction <= 0 then
+		return { kind = "none", fraction = 0, height = h }
+	elseif fraction >= 1 then
+		return { kind = "knockdown", fraction = 1, height = h }
+	end
+	return { kind = "damage", fraction = fraction, height = h }
 end
 
 -- 제외 사유(없으면 nil). ctx = { inBoss, inTree, permitRecent, exemptRecent, fromLadder, inWater }.
@@ -137,6 +160,38 @@ function MoveRules.ledgeClimbValid(ledgeY, serverTopY, baseY)
 		return false, "too_high"
 	end
 	return true
+end
+
+-- ── S1(이동 보안) · BR1-4에 넘길 값(데이터에서 계산 - 수치를 옮겨 적지 않는다) ──
+-- legalMoves = 서버가 합법으로 보는 이동(이름 → 한계). 속도 = stud/s · 거리 = stud.
+function MoveRules.s1Limits()
+	local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+	local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
+	local walkMax = MovementConfig.walkSpeedStuds * MovementConfig.moveSpeedMaxMultiplier
+	local dashMax = JumpMath.dashRangeStuds(MovementConfig.moveSpeedMaxMultiplier, MovementUnlockData.tiers[MovementUnlockData.maxTier].airDashRangeMultiplier)
+	local hover = 0
+	for _, motion in pairs(AttackMotionData) do
+		if type(motion) == "table" and motion.air and motion.air.hoverSeconds then
+			hover = math.max(hover, motion.air.hoverSeconds)
+		end
+	end
+	local budgetMax = MoveRules.airAttackBudget(MovementUnlockData.tiers[MovementUnlockData.maxTier], DashConfig.primordialShoes.charges)
+	return {
+		walkMax = walkMax,
+		dash = { maxStuds = dashMax, seconds = DashConfig.durationSeconds, maxSpeed = dashMax / DashConfig.durationSeconds, chainCharges = DashConfig.primordialShoes.charges, chainWindowSeconds = DashConfig.primordialShoes.chainWindowSeconds },
+		glide = { forwardSpeed = MovementConfig.glide.forwardSpeed, descentSpeed = MovementConfig.glide.descentSpeed, maxSeconds = MoveRules.glideGaugeSeconds(MovementUnlockData.tiers[MovementUnlockData.maxTier]) },
+		rangedHover = { seconds = hover, perAirborneMax = budgetMax, totalSeconds = hover * budgetMax },
+		ledgeClimb = { maxAboveFeet = MovementConfig.ledgeGrab.maxLedgeAboveFeet, permit = "HeightGuard 허가(source = ledge)" },
+		-- 한 폴링(0.25초) 최대 수평 이동 = 걷기 상한 + 대시 몫(대시 속도 × 0.25) - 순간이동 판정(heightGuard.teleportResetStuds)보다 작아야 한다
+		pollMaxStuds = walkMax * 0.25 + dashMax / DashConfig.durationSeconds * 0.25,
+		unjumpableGap = {
+			walk16 = JumpMath.unjumpableGapStuds({ walk = 16, airJumps = MovementConfig.airJump.charges, dashes = 1 }),
+			walkMax = JumpMath.unjumpableGapStuds({ walk = walkMax, airJumps = MovementConfig.airJump.charges, dashes = 1, dashStuds = JumpMath.dashRangeStuds(MovementConfig.moveSpeedMaxMultiplier) }),
+			primordialWorst = JumpMath.unjumpableGapStuds({ walk = walkMax, airJumps = MovementConfig.airJump.charges, dashes = DashConfig.primordialShoes.charges, dashStuds = dashMax }),
+		},
+		unclimbableWall = JumpMath.maxClimbStuds(MovementConfig.airJump.charges, false, MovementConfig.jumpHeightBonusCap) + 1.6,
+		unclimbableWallLedge = JumpMath.maxClimbStuds(MovementConfig.airJump.charges, true, MovementConfig.jumpHeightBonusCap) + 1.6,
+	}
 end
 
 return MoveRules

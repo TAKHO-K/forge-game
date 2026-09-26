@@ -78,6 +78,11 @@ return {
 
 	comboHitEvery = 3, -- N번째 공격마다 강타
 	comboHitMultiplier = 1.8,
+
+	-- MV1 공중 공격 판정 틀(사용자 - 동작 틀: 타이밍 · 이동 · 판정 / 최종 키프레임 = A2): 공중에서는 대상 높이차 상한을 넓힌다(아래로 내려찍기 · 사격).
+	--   meleeLayerStuds = 근접(대검 · 쌍검) 공중 공격이 닿는 높이차 · rangedLayerStuds = 원거리(활 · 지팡이) 공중 사격이 닿는 높이차(공중 점프 2 정점 19.4 + 여유).
+	--   원거리 공중 정지(짧게 멈춰 아래로 쏜다 - 프레야식)의 길이 = AttackMotionData[직업].air.hoverSeconds(공중 공격 횟수 안에서만 - 예산을 넘은 클릭은 옛 착지 버퍼).
+	airAttack = { meleeLayerStuds = 14, rangedLayerStuds = 30 },
 	comboResetWindowSeconds = 2, -- 이 시간 동안 공격 없으면 콤보 카운터 초기화
 	-- 3타 표시 = 무기 발광(M1-0 후속 - 사용자: 발밑 고리는 버튼 · 화면과 겹쳐 난잡). 단계 = 이번 사이클에 친 수(2 = 다음 타가 강타).
 	-- colorKey는 UIColors 키 - 강화 이펙트(ember · gold · danger · 흰색)와 겹치지 않는 보라. 내 무기 = mine, 남(Player Attribute ComboStage) = others(준비 단계만 · 약하게).

@@ -364,6 +364,9 @@ end
 
 local function updateBow(hand, model, motion, instances, alpha)
 	local rootCFrame = hand.CFrame * model.gripOffset
+	if current.air and motion.air and motion.air.bowCantDeg then
+		rootCFrame = rootCFrame * CFrame.Angles(0, math.rad(motion.air.bowCantDeg), 0) -- MV1 공중 사격: 활을 비스듬히 눕힌다(프레야식)
+	end
 	instances.root.CFrame = rootCFrame
 
 	for _, limb in ipairs(instances.limbs) do
@@ -510,7 +513,17 @@ function WeaponVisual.playSwing(isHeavy, isAir)
 		return
 	end
 	current.heavy = isHeavy
-	current.air = isAir == true -- MV1 공중 전용 베기(AttackMotionData[직업].air)
+	current.air = isAir == true -- MV1 공중 전용 모션(AttackMotionData[직업].air)
+	local air = current.air and current.motion.air
+	if air and player.Character then
+		-- 몸 자세(임시 모션 - 최종 키프레임 A2): 회전 베기 = 제자리 한 바퀴 · 그 밖 = 앞으로 실었다 돌아온다(AirMotion)
+		local seconds = current.motion.totalDurationSeconds / (air.speedScale or 1)
+		if air.bodySpinDeg then
+			require(script.Parent.AirMotion).play(player.Character, "spin", seconds, air.bodySpinDeg)
+		elseif air.bodyPitchDeg then
+			require(script.Parent.AirMotion).play(player.Character, "lean", seconds + (air.hoverSeconds or 0), air.bodyPitchDeg)
+		end
+	end
 	current.swingStartTime = os.clock()
 
 	if isHeavy and (current.kind == "mesh" or current.kind == "mesh_pair" or current.kind == "specialmesh") then

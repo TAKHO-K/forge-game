@@ -143,9 +143,12 @@ function V.runPure()
 
 	r.section("낙하", function()
 		local F = MovementConfig.fall
-		local o1, o2, o3, o4 = MoveRules.fallOutcome(JumpMath.fallSpeedFromHeight(JumpMath.maxClimbStuds(2, false, 0.1))), MoveRules.fallOutcome(F.dangerSpeed), MoveRules.fallOutcome((F.dangerSpeed + F.lethalSpeed) / 2), MoveRules.fallOutcome(F.lethalSpeed)
-		r.check(("공중 점프 2 정점(옵션 21.38) 낙하 %.1f → %s · 위험 %d → %s %.0f%% · 가운데 → %.0f%% · 치명 %d → %s"):format(JumpMath.fallSpeedFromHeight(21.38), o1.kind, F.dangerSpeed, o2.kind, o2.fraction * 100, o3.fraction * 100, F.lethalSpeed, o4.kind),
-			o1.kind == "none" and o2.kind == "damage" and near(o2.fraction, F.damageMinFraction) and near(o3.fraction, (F.damageMinFraction + F.damageMaxFraction) / 2) and o4.kind == "knockdown")
+		local sp = JumpMath.fallSpeedFromHeight
+		local safe = MoveRules.fallSafeHeight()
+		local o1, o2, o3, o4 = MoveRules.fallOutcome(sp(JumpMath.maxClimbStuds(2, false, 0.1))), MoveRules.fallOutcome(sp(safe + 0.25 * (F.lethalHeight - safe))), MoveRules.fallOutcome(sp((safe + F.lethalHeight) / 2)), MoveRules.fallOutcome(sp(F.lethalHeight) + 1e-6)
+		local st3 = WorldMapLayout.stations()[3]
+		r.check(("안전 높이 %.2f(합법 정점 + %d) · 정점 21.38 낙하 → %s · 1/4 높이 → %.1f%% · 가운데 → %.1f%% · 치명 %d(= 나무 세 번째 정거장 %.0f) → %s"):format(safe, F.safeMarginStuds, o1.kind, o2.fraction * 100, o3.fraction * 100, F.lethalHeight, st3.y - WorldMapData.floorTopY, o4.kind),
+			o1.kind == "none" and near(o2.fraction, 0.25, 1e-6) and near(o3.fraction, 0.5, 1e-6) and o4.kind == "knockdown" and near(st3.y - WorldMapData.floorTopY, F.lethalHeight, 0.5))
 		local nanOut = MoveRules.fallOutcome(0 / 0)
 		r.check(("이상한 보고(NaN) → %s · 음수 → %s"):format(nanOut.kind, MoveRules.fallOutcome(-500).kind), nanOut.kind == "none" and MoveRules.fallOutcome(-500).kind == "none")
 		local ex = {
@@ -156,7 +159,8 @@ function V.runPure()
 			bad += MoveRules.fallExcluded(e[1]) == e[2] and 0 or 1
 		end
 		r.check(("제외 사유 6경우(보스 · 나무 · 강제 체공 · 사다리 · 물 · 없음): 틀림 %d"):format(bad), bad == 0)
-		r.note(("낙하 속도 = √(2 × %.1f × 높이): 위험 %d ≈ 높이 %.0f · 치명 %d ≈ %.0f · 활강 8초 뒤 소진 높이 40 아래는 불꽃 없음"):format(MovementConfig.gravity, F.dangerSpeed, F.dangerSpeed ^ 2 / (2 * MovementConfig.gravity), F.lethalSpeed, F.lethalSpeed ^ 2 / (2 * MovementConfig.gravity)))
+		local vs, vf, vl = MoveRules.fallSpeeds()
+		r.note(("착지 속도 기준: 안전 %.0f · 불꽃(예상 피해 %d%%) %.0f · 치명 %.0f"):format(vs, F.flameWarnFraction * 100, vf, vl))
 	end)
 
 	r.section("서버 체공 세션(AirState.step)", function()
@@ -225,7 +229,8 @@ function V.runPure()
 			for _, cap in ipairs({ 1, CombatConfig.attackSpeedMaxMultiplier }) do
 				local cd = CombatConfig.attackCooldownSeconds / ClassData.classes[cls].atkSpeed / cap
 				local tier = MovementUnlockData.tiers[3]
-				local air = JumpMath.maxAirSeconds(nil, tier.airJumps, DashConfig.durationSeconds, 0, nil, 16)
+				local motionAir = require(ReplicatedStorage.Shared.data.AttackMotionData)[cls].air
+				local air = JumpMath.maxAirSeconds(nil, tier.airJumps, DashConfig.durationSeconds, 0, nil, 16) + (motionAir.hoverSeconds or 0) * MoveRules.airAttackBudget(tier, 1) -- 원거리 공중 정지가 체공을 늘린다
 				local groundHits = math.floor(air / cd) + 1
 				local airHits = math.min(MoveRules.airAttackBudget(tier, 1), groundHits)
 				local function dmg(n)
@@ -241,6 +246,14 @@ function V.runPure()
 			end
 		end
 		r.check(("한 체공(환생 3 · 최대 %.2f초) 공중 피해 ÷ 같은 시간 지상 피해 ≤ 1: 최대 %.2f(%s)"):format(JumpMath.maxAirSeconds(nil, 2, DashConfig.durationSeconds, 0, nil, 16), worst, table.concat(rows, " · ")), worst <= 1)
+	end)
+
+	r.section("S1 · BR1-4에 넘길 값(MoveRules.s1Limits)", function()
+		local S = MoveRules.s1Limits()
+		r.check(("걷기 상한 %.0f · 대시 최대 %.1f(%.0f/s) · 활강 %.0f/s · 원거리 공중 정지 %.2f초 × %d = %.2f초 · 한 폴링 최대 이동 %.1f < 순간이동 판정 %d · 못 넘는 틈 %d / %d / %d · 못 오르는 벽 %.1f(붙잡기 %.1f)"):format(
+			S.walkMax, S.dash.maxStuds, S.dash.maxSpeed, S.glide.forwardSpeed, S.rangedHover.seconds, S.rangedHover.perAirborneMax, S.rangedHover.totalSeconds, S.pollMaxStuds, MovementConfig.heightGuard.teleportResetStuds,
+			S.unjumpableGap.walk16, S.unjumpableGap.walkMax, S.unjumpableGap.primordialWorst, S.unclimbableWall, S.unclimbableWallLedge),
+			S.pollMaxStuds < MovementConfig.heightGuard.teleportResetStuds and S.rangedHover.seconds > 0)
 	end)
 
 	r.section("이동 기준(movement-metrics v3) · 도달성", function()
@@ -407,22 +420,22 @@ function V.runLive(player, env)
 			task.wait(MovementConfig.fall.reportMinGapSeconds + 0.05)
 			return FallServer.onLanded(player, speed, flags)
 		end
-		local n = land(100)
-		local d = land(130)
+		local n = land(90)
+		local d = land(200)
 		local hpAfter = PlayerState.getHp(player)
-		local expect = MoveRules.fallOutcome(130).fraction
-		r.check(("속도 100 → %s · 130 → %s(체력 %.1f%% 잃음 · 기대 %.1f%%)"):format(n, d, (1 - hpAfter / maxHp) * 100, expect * 100), n == "none" and d == "damage" and near(1 - hpAfter / maxHp, expect, 1e-6))
+		local expect = MoveRules.fallOutcome(200).fraction
+		r.check(("속도 90 → %s · 200 → %s(체력 %.1f%% 잃음 · 기대 %.1f%%)"):format(n, d, (1 - hpAfter / maxHp) * 100, expect * 100), n == "none" and d == "damage" and near(1 - hpAfter / maxHp, expect, 1e-6))
 		PlayerState.setHp(player, maxHp)
 		player:SetAttribute("BossEncounterId", "verify")
-		local eb = land(200)
+		local eb = land(300)
 		player:SetAttribute("BossEncounterId", nil)
 		local ew = land(200, { water = true })
 		local el = land(200, { ladder = true })
 		HeightGuard.grant(player, 999, 2, "verify")
-		local ep = land(200)
+		local ep = land(300)
 		HeightGuard.reset(player)
 		root.CFrame = CFrame.new(0, WorldMapData.floorTopY + 30, 60)
-		local et = land(200)
+		local et = land(300)
 		root.CFrame = CFrame.new(spot)
 		r.check(("제외: 보스 %s · 물 %s · 사다리 %s · 발사 허가 %s · 나무 둘레 %s · 체력 그대로 %s"):format(eb, ew, el, ep, et, tostring(PlayerState.getHp(player) == maxHp)),
 			eb == "excluded:boss" and ew == "excluded:water" and el == "excluded:ladder" and ep == "excluded:permit" and et == "excluded:tree" and PlayerState.getHp(player) == maxHp)
@@ -430,20 +443,20 @@ function V.runLive(player, env)
 		-- 쓰러짐: 치명 속도 → 고정 · 그을림 → knockdownSeconds 뒤 안전 지점 · 체력 가득
 		st.groundPos = spot
 		PlayerState.setHp(player, maxHp * 0.5)
-		local k = land(200)
+		local k = land(400) -- 치명 높이(360) 넘는 속도
 		local knocked, anchored, charred = character:GetAttribute("FallKnockdown"), root.Anchored, character:GetAttribute("CharredUntil")
 		task.wait(MovementConfig.fall.knockdownSeconds + 0.6)
 		local moved = require(script.Parent.Travel).lastTeleport
 		local standGap = moved and moved.player == player and (moved.position - (spot + Vector3.new(0, 3, 0))).Magnitude or math.huge
-		r.check(("치명 200 → %s(쓰러짐 %s · 고정 %s · 그을림 %s) → %.1f초 뒤 일어남 %s · 체력 %.0f/%.0f · 부활 자리 ↔ 안전 지점 + 3 = %.1f"):format(k, tostring(knocked), tostring(anchored), tostring(charred ~= nil), MovementConfig.fall.knockdownSeconds,
+		r.check(("치명 400 → %s(쓰러짐 %s · 고정 %s · 그을림 %s) → %.1f초 뒤 일어남 %s · 체력 %.0f/%.0f · 부활 자리 ↔ 안전 지점 + 3 = %.1f"):format(k, tostring(knocked), tostring(anchored), tostring(charred ~= nil), MovementConfig.fall.knockdownSeconds,
 			tostring(character:GetAttribute("FallKnockdown") == nil), PlayerState.getHp(player), maxHp, standGap),
 			k == "knockdown" and knocked == true and anchored and charred ~= nil and character:GetAttribute("FallKnockdown") == nil and PlayerState.getHp(player) == maxHp and standGap < 0.5)
 		root.Anchored = true
 		root.CFrame = CFrame.new(spot)
 		PlayerState.setHp(player, maxHp * 0.1)
-		local kd = land(140) -- 피해가 체력보다 크면 죽지 않고 쓰러짐
+		local kd = land(200) -- 피해가 체력보다 크면 죽지 않고 쓰러짐
 		task.wait(MovementConfig.fall.knockdownSeconds + 0.6)
-		r.check(("체력 10%%에서 속도 140(피해 %.0f%%) → %s(사망 대신 쓰러짐) · 체력 %.0f"):format(MoveRules.fallOutcome(140).fraction * 100, kd, PlayerState.getHp(player)), kd == "knockdown" and PlayerState.getHp(player) == maxHp)
+		r.check(("체력 10%%에서 속도 200(피해 %.0f%%) → %s(사망 대신 쓰러짐) · 체력 %.0f"):format(MoveRules.fallOutcome(200).fraction * 100, kd, PlayerState.getHp(player)), kd == "knockdown" and PlayerState.getHp(player) == maxHp)
 		root.Anchored = true
 		root.CFrame = CFrame.new(spot)
 	end)

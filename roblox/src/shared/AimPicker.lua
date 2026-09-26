@@ -13,7 +13,8 @@ local AimPicker = {}
 
 -- 22-4: 사거리는 XZ 수평 그대로, 높이차 상한(Reach.sameLayer)만 추가 - 절벽 위아래 몬스터는
 -- 후보에서 빠진다. 클라(AimTarget)와 서버(AttackServer)가 같은 함수라 조준 표시도 같이 빠진다.
-function AimPicker.pick(originPosition, aimPoint, rangeStuds, candidates)
+-- MV1: layerTolerance(선택) = 높이차 상한(공중 공격 - CombatConfig.airAttack · 없으면 공통 8).
+function AimPicker.pick(originPosition, aimPoint, rangeStuds, candidates, layerTolerance)
 	local direction = nil
 	if aimPoint then
 		local flat = Vector3.new(aimPoint.X - originPosition.X, 0, aimPoint.Z - originPosition.Z)
@@ -31,7 +32,7 @@ function AimPicker.pick(originPosition, aimPoint, rangeStuds, candidates)
 			local offset = root.Position - originPosition
 			local flat = Vector3.new(offset.X, 0, offset.Z)
 			local dist = flat.Magnitude
-			if dist <= rangeStuds and Reach.sameLayer(root.Position, originPosition) then
+			if dist <= rangeStuds and Reach.sameLayer(root.Position, originPosition, layerTolerance) then
 				if dist < nearestDist then
 					nearest, nearestDist = model, dist
 				end

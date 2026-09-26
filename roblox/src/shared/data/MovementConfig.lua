@@ -42,18 +42,20 @@ return {
 		serverTolerance = 3, pointSlackStuds = 12, permitMarginStuds = 3, permitSeconds = 6, requestGapSeconds = 0.3, -- 허가 = 매달리는 순간 요청(오르기 전에 서버에 닿게) · 매달림 최대 + 여유
 	},
 
-	-- MV1 낙하(사용자 결정 - 불꽃과 낙사): 판정 = 착지 순간 수직 속도(높이가 아님) → 공중 점프 · 활강으로 떨어지는 속도를 죽이면 산다("낙법").
-	--   dangerSpeed 이상으로 떨어지는 동안 몸에 불꽃 꼬리(경고) · 이 속도 이상 착지 = 최대 체력 × (damageMinFraction → damageMaxFraction 직선 - lethalSpeed에서 최대) 피해(보호막 무시 - 판정형 피해).
-	--   lethalSpeed 이상 착지(또는 피해로 체력이 0이 되면) = 쓰러짐("쿵!" · 그을린 모습 knockdownSeconds) → 마지막 안전 지점(이번 체공을 시작한 땅)에서 체력 가득으로 일어난다 · 아이템 손실 없음.
-	--   기준 근거(표 = movement-metrics v3 §낙하): 공중 점프 2 정점(19.44 · 옵션 21.38)에서 떨어져도 87 ~ 92 < 110(평소 점프는 불꽃 없음) · 110 = 약 31 높이 · 175 = 약 78 높이.
-	--   제외(서버가 판정): 강제 체공(발사 허가 - 보스 던지기 · 회오리 · 넉백 · 점프대 · 통통 열매 = HeightGuard 허가 · 예외가 permitGraceSeconds 안) · 사다리에서 떨어짐(클라가 오르기 뒤 체공을 표시) ·
-	--     나무 점프맵(허브 나무 둘레 WorldMapData.progress.treeRadius 안 - 체크포인트 복귀 규칙 · 높은 곳 규칙과 같은 둘레) · 보스전(BossEncounterId - 아레나 낙사 기믹 규칙) · 물 착지.
+	-- MV1 낙하(사용자 결정 · 보완): 판정 = 착지 순간 수직 속도(공중 점프 · 활강으로 떨어지는 속도를 죽이면 산다 = "낙법") → 환산 높이 h = v² ÷ 2g(MoveRules.fallHeightOf).
+	--   피해 = 최대 체력 × clamp((h − 안전 높이) ÷ (lethalHeight − 안전 높이), 0, 1) - 고정 %최대체력 · 방어 · 피해 감소 · 방어막 무시(판정형 피해).
+	--   안전 높이 = 합법 점프 정점(점프력 옵션 상한 + 공중 점프 전부 = 21.38 - JumpMath.maxClimbStuds) + safeMarginStuds → 평소 점프 · 사다리는 피해 0.
+	--   lethalHeight = 나무 세 번째 정거장 높이(360 - WorldMapLayout.stations()[3] · 검증 MV1(가)가 대조) - 그 높이에서 그냥 떨어지면 100% = 쓰러짐.
+	--   100%(또는 피해로 체력 0) = 쓰러짐("쿵!" · 그을린 모습 knockdownSeconds) → 마지막 안전 지점(이번 체공을 시작한 땅)에서 체력 가득 · 아이템 손실 없음.
+	--   불꽃 꼬리(경고) = 예상 피해가 flameWarnFraction 이상인 속도로 떨어지는 동안.
+	--   제외(서버가 판정): 강제 이동 후 착지(보스 던지기 · 회오리 · 넉백 · 점프대 · 통통 열매 = HeightGuard 발사 허가 · 예외가 permitGraceSeconds 안 - 새 강제 이동은 HeightGuard.exempt 또는 grantLaunch를 부른다) ·
+	--     사다리에서 떨어짐 · 나무 점프맵(허브 나무 둘레 WorldMapData.progress.treeRadius 안 - 체크포인트 복귀 규칙) · 보스전(BossEncounterId - 아레나 낙사 기믹 규칙) · 물 착지 · 넉백 잠금(클라 AirLocked).
 	--   reportMaxSpeed = 클라가 보낸 속도 상한(그 위는 자른다) · reportMinGapSeconds = 사람마다 보고 간격 · charredSeconds = 일어난 뒤에도 그을린 모습이 남는 시간.
 	fall = {
-		dangerSpeed = 110, lethalSpeed = 175, damageMinFraction = 0.1, damageMaxFraction = 0.9,
+		safeMarginStuds = 3, lethalHeight = 360, flameWarnFraction = 0.5,
 		knockdownSeconds = 1.6, charredSeconds = 5, permitGraceSeconds = 1.0,
 		reportMaxSpeed = 2000, reportMinGapSeconds = 0.3,
-		flame = { minSpeed = 110, size = 6, heat = 12, maxDistance = 220 }, -- 불꽃 꼬리(로블록스 기본 Fire 인스턴스 · 새 에셋 없음)
+		flame = { size = 6, heat = 12, maxDistance = 220 }, -- 불꽃 꼬리(로블록스 기본 Fire + Trail · 새 에셋 없음)
 		charredColor = Color3.fromRGB(22, 24, 29), charredBlend = 0.8, -- 그을림 = 몸 파트 색을 이 색 쪽으로 섞는다(끝나면 원래 색) · 색 = UIColors.metalBottom 값 재사용(새 색 금지)
 	},
 
