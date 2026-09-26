@@ -44,6 +44,9 @@ local function requestDash()
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local state = humanoid and humanoid:GetState()
+	if state == Enum.HumanoidStateType.Swimming and not MovementConfig.water.dashInWater then
+		return -- M1-3: 물속 대시 불가(서버도 거절) - 쿨다운을 쓰지 않는다
+	end
 	if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then -- 리뷰(G2a): 상태로 본다(요철에서 잠깐 Air인 걸 공중으로 세지 않게)
 		if character:GetAttribute("AirDashUsed") then
 			return

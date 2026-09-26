@@ -69,7 +69,8 @@ function M1_3Verify.runPure()
 		local old = { version = 39, world = { portals = { tier1 = true } }, titles = {} }
 		local migrated = SaveSystem.migrate and SaveSystem.migrate(old) or nil
 		local okMig = migrated ~= nil and type(migrated.world.bossGates) == "table" and next(migrated.world.bossGates) == nil and migrated.world.portals.tier1 == true
-		r.check(("SAVE_VERSION %d · v39 → v40 이관 bossGates 빈 표 %s(포탈 유지)"):format(SaveConfig.saveVersion, tostring(okMig)), SaveConfig.saveVersion == 40 and okMig)
+		-- M1-3 둥지(v41): 기대값 = 최신까지 이관(버전 숫자 고정 → ≥ 40 · 이관 결과 = 최신)
+		r.check(("SAVE_VERSION %d · v39 → 최신 이관 bossGates 빈 표 %s(포탈 유지)"):format(SaveConfig.saveVersion, tostring(okMig)), SaveConfig.saveVersion >= 40 and migrated.version == SaveConfig.saveVersion and okMig)
 	end)
 	local pass, total = r.summary()
 	print(("===M1-3 검증 끝(가)=== %d/%d 통과"):format(pass, total))

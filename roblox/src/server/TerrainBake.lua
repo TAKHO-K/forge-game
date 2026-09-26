@@ -122,20 +122,21 @@ local function bakeChunk(terrain, key, cx, cz)
 				for j = 1, ny do
 					local yb = y0 + (j - 1) * V
 					local yc = yb + V / 2
-					local occ = math.clamp((c.h - yb) / V, 0, 1)
+					-- 표면 = 가장 위 칸 바닥 + V/2 + V × 점유율(Studio 실측 - 점유율 0.01 → +2.05 · 0.5 → +4 · 1 → +6) → 점유율 = (h − V/2 − 칸 바닥) / V
+					local occ = math.clamp((c.h - V / 2 - yb) / V, 0, 1)
 					local m = occ > 0 and solid or air
 					if c.air and occ > 0 then
 						local inside, wy = TerrainShape.airAt(c.x, yc, c.z, c.air)
 						if inside then
 							if wy and yb < wy then
-								m, occ = water, math.clamp((wy - yb) / V, 0, 1)
+								m, occ = water, math.clamp((wy - V / 2 - yb) / V, 0, 1)
 							else
 								m, occ = air, 0
 							end
 						end
 					end
-					if occ < 0.5 and c.water and yb < c.water then
-						m, occ = water, math.clamp((c.water - yb) / V, 0, 1)
+					if occ < 0.5 and c.water and yb < c.water - V / 2 then
+						m, occ = water, math.clamp((c.water - V / 2 - yb) / V, 0, 1)
 					end
 					if occ <= 0 then
 						m, occ = air, 0

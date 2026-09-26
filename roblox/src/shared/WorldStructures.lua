@@ -43,11 +43,13 @@ local function mesaOf(zoneKey, index)
 	local p = WorldMapLayout.toWorld(zone, m.r, m.lat)
 	return { x = p.X, z = p.Z, radius = m.radius, blend = m.blend, level = FLAT + m.level }
 end
+-- 받침 높이: 숫자 = 평지 + 그만큼 · 없으면 자연 높이(굽기 전 식 - 언덕 위면 언덕 높이 · 둥지 받침이 언덕을 원형으로 깎아 분화구처럼 보이지 않게)
 local function baseYAt(spec, x, z)
-	if spec.base == "natural" then
-		return require(ReplicatedStorage.Shared.TerrainShape).baseHeight(x, z)
+	if spec.base ~= nil and spec.base ~= "natural" then
+		return FLAT + (tonumber(spec.base) or 0)
 	end
-	return FLAT + (tonumber(spec.base) or 0)
+	local h = require(ReplicatedStorage.Shared.TerrainShape).baseHeight(x, z)
+	return math.max(FLAT, h)
 end
 
 -- ─────────────────────────── 특수 둥지(구조물을 통째로 짓는다) ───────────────────────────
@@ -465,7 +467,7 @@ local function buildCactus(list, out)
 					prim(list, model, "CactusArm", Vector3.new(2.2, C.arm, C.arm), cf * CFrame.new(s * 1.6, ah, 0), color, { material = C.material, collide = false })
 					prim(list, model, "CactusArm", Vector3.new(3, C.arm, C.arm), cf * CFrame.new(s * 2.4, ah + 1.6, 0) * CFrame.Angles(0, 0, math.rad(90)), color, { shape = "Cylinder", material = C.material, collide = false })
 				end
-				table.insert(out.cactus, { x = x, z = z, y = y, h = h, radius = C.trunk / 2 + 2.4, field = fi })
+				table.insert(out.cactus, { x = x, z = z, y = y, h = h, radius = C.trunk / 2 + 2.4, touch = C.trunk / 2 + 1, field = fi }) -- touch = 몸통 + 팔 뿌리(팔 끝은 충돌 없음)
 			end
 		end
 	end

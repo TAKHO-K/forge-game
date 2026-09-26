@@ -480,6 +480,38 @@ for _, zone in ipairs(ZONES) do
 end
 TerrainShape.peaks = PEAKS
 
+-- 외곽 봉우리 줄(방위마다 고정 시드 - 버킷 = 정수 각도 → 가까운 봉우리)
+local EDGE_PEAKS = {}
+do
+	local E = G.edge
+	local seed = G.seed % 2147483647
+	local function rand()
+		seed = (seed * 48271) % 2147483647
+		return seed / 2147483647
+	end
+	for a = 0, 359, E.peakEveryDeg do
+		local ang = a + (rand() * 2 - 1) * E.peakJitterDeg
+		local r = E.peakR[1] + rand() * (E.peakR[2] - E.peakR[1])
+		local h = E.peakH[1] + rand() ^ 1.5 * (E.peakH[2] - E.peakH[1])
+		local w = E.peakWidth[1] + rand() * (E.peakWidth[2] - E.peakWidth[1])
+		table.insert(EDGE_PEAKS, { ang = ang, x = math.cos(math.rad(ang)) * r, z = math.sin(math.rad(ang)) * r, h = h, w = w })
+	end
+end
+local EDGE_BY_DEG = {}
+for d = -180, 180 do
+	local list = {}
+	for _, pk in ipairs(EDGE_PEAKS) do
+		if math.abs(((pk.ang - d + 180) % 360) - 180) <= 12 then
+			table.insert(list, pk)
+		end
+	end
+	EDGE_BY_DEG[d] = list
+end
+function TerrainShape.edgePeaksNear(angDeg)
+	return EDGE_BY_DEG[math.floor(angDeg + 0.5)] or EDGE_BY_DEG[180]
+end
+TerrainShape.edgePeaks = EDGE_PEAKS
+
 function TerrainShape.naturalAt(x, z)
 	local R = math.sqrt(x * x + z * z)
 	local zone = TerrainShape.zoneAt(x, z)
@@ -510,15 +542,28 @@ function TerrainShape.naturalAt(x, z)
 			end
 		end
 	end
-	-- 외곽 설산
+	-- 외곽 설산(산맥: 밑 둔덕 + 봉우리 줄 + 능선 결)
 	local E = G.edge
 	local ang = math.deg(math.atan2(z, x))
 	local start = E.start - E.startVary * math.max(0, noise1(ang / E.startLambdaDeg, s + 51))
-	if R > start then
+	if R > start - 200 then
 		local e = smoothstep(start, E.full, R) ^ 1.4
 		local eh = E.base + E.vary * noise1(ang / E.lambdaDeg, s + 5)
-		local ridge = (1 - math.abs(fbm(x / E.ridgeLambda, z / E.ridgeLambda, s + 9, 3))) * E.ridgeAmp
+		local ridge = (1 - math.abs(fbm(x / E.ridgeLambda, z / E.ridgeLambda, s + 9, 3))) ^ 2 * E.ridgeAmp
 		local v = FLAT + e * (eh + ridge)
+		for _, pk in ipairs(TerrainShape.edgePeaksNear(ang)) do
+			local dx, dz = x - pk.x, z - pk.z
+			local k = math.exp(-2 * (dx * dx + dz * dz) / (pk.w * pk.w))
+			if k > 0.01 then
+				local pv = FLAT + pk.h * k * (0.85 + 0.3 * (1 - math.abs(fbm(x / 70, z / 70, s + 13, 2))))
+				if pv > v then
+					v = pv
+				end
+			end
+		end
+		if R > E.backFill then -- 세계 끝 뒤(투명 벽 밖)는 채워 끝이 안 보이게 - 평평한 띠가 되지 않게 능선 결 · 잡음
+			v = math.max(v, FLAT + eh * 0.9 + ridge * 1.6 + fbm(x / 160, z / 160, s + 17, 3) * 70)
+		end
 		if v > h then
 			h = v
 		end

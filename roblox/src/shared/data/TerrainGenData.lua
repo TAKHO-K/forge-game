@@ -8,7 +8,7 @@
 
 local ZONE_PALETTE = {
 	-- 재질 = Enum.Material 이름. 색은 재질마다 하나(Terrain:SetMaterialColor는 place 전체) - 구역마다 다른 재질을 써서 색을 가른다(카툰 질감 = A1 MaterialVariant).
-	tier1 = { ground = "Grass", ground2 = "LeafyGrass", slope = "Limestone", cliff = "Rock", bed = "Mud" },
+	tier1 = { ground = "Grass", ground2 = "LeafyGrass", slope = "Rock", cliff = "Rock", bed = "Mud" }, -- 석회암(흰색)은 비탈에서 눈처럼 보여 폐허 기둥에만
 	tier2 = { ground = "Slate", ground2 = "Pavement", slope = "Basalt", cliff = "Basalt", bed = "Slate" },
 	tier3 = { ground = "LeafyGrass", ground2 = "Grass", slope = "Mud", cliff = "Rock", bed = "Mud" },
 	tier4 = { ground = "Sand", ground2 = "Sandstone", slope = "Sandstone", cliff = "Sandstone", bed = "Sand" },
@@ -34,7 +34,9 @@ return {
 	--   원이 너무 반듯하면 인공적이다: 반경을 wobble만큼 흔들고, 방향별 세기(허브 쪽 inner · 옆 side · 바깥 outer)를 준다 - 옆(이웃 구역과 맞닿는 쪽)이 가장 높다.
 	rim = { radius = 900, sigma = 80, base = 52, vary = 34, lambda = 380, wobble = 70, wobbleLambda = 300, inner = 0.3, side = 1.0, outer = 0.85 },
 	-- 외곽 설산(보이는 경계 - 실제 차단은 서버 밀어내기 WorldMapData.edgeGuard): r start → full에서 오르고 높이 base ± vary(방위 잡음) · 봉우리 결 ridges. 3,200까지 이어져 끝이 안 보인다.
-	edge = { start = 2560, full = 2900, outer = 3200, base = 300, vary = 110, lambdaDeg = 18, ridgeAmp = 34, ridgeLambda = 90, startVary = 170, startLambdaDeg = 9, spurAmp = 0.35 }, -- startVary = 산기슭 선을 방위마다 흔든다(능선 줄기가 안쪽으로 뻗는다)
+	--   산맥 = 밑 둔덕(base - 안부 높이) + 봉우리 줄(peakEveryDeg마다 하나 · 반경 peakR ± · 높이 peakH ± · 폭 peakWidth ±) + 날카로운 능선 결(ridge). 벽처럼 윗면이 평평하지 않게.
+	edge = { start = 2560, full = 2900, outer = 3200, base = 150, vary = 40, lambdaDeg = 18, ridgeAmp = 46, ridgeLambda = 110, startVary = 170, startLambdaDeg = 9,
+		peakEveryDeg = 5, peakJitterDeg = 2, peakR = { 2720, 3080 }, peakH = { 170, 400 }, peakWidth = { 130, 260 }, backFill = 3050 },
 	-- 눈 · 바위 선: 높이(바닥 기준) snowLine ± snowVary 위 = 눈 · 경사 steepDeg 넘으면 바위(구역 cliff 재질).
 	snowLine = 170, snowVary = 25, snowMaterial = "Snow", steepDeg = 40, rockMaterial = "Rock",
 	-- 바깥 고리 확장 자리(WorldMapData.reserved.outerRing - 꽃잎 사이) = 설산 속 분지 + 허브 쪽에서 들어가는 골짜기(봉인 입구 문 앞까지 걸어서).

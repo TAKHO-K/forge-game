@@ -245,11 +245,14 @@ local function defaultProfile()
 
 		-- M1(v38): 세계 이동 - portals = 입구 캠프 첫 방문으로 연 포탈({ [구역 키 문자열] = true }) · 계정 공유.
 		-- M1-3(v40): bossGates = 관문을 직접 찾아가 등록한 보스({ [bossId 문자열] = true }) - 등록된 보스는 어디서든 원격 입장(파티 = 한 명이라도 등록).
-		world = { portals = {}, bossGates = {} },
+		-- M1-3(v41): nests = 둥지별 개인 기록({ [둥지 id 문자열] = { next = 다시 주울 수 있는 unix 초, picks = 주운 횟수 } }) · nestDex = 처음 찾은 비밀 둥지({ [id] = true } - 칭호 · 꾸미기만).
+		world = { portals = {}, bossGates = {}, nests = {}, nestDex = {} },
 		-- M1(v38): 역대 최고 캐릭터 레벨(직업 · 환생 무관 최대 - 내려가지 않는다). 나무 가지 정거장 개방 기준.
 		peakLevel = 1,
 		-- M1(v39): 칭호(계정 - 전투력 없음) - { [칭호 id 문자열] = true }. 첫 칭호 = 호기심 대장(봉인 입구 틈까지 올라감).
 		titles = {},
+		-- M1-3(v41): 알 가방(부화 · 펫은 펫 단계) - { { zone = 구역 키, grade = "normal" | "good" | "rare", species = { 후보 id 2 }, nest = 둥지 id, at = unix 초 } } · 상한 NestData.eggCap.
+		eggs = {},
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
 		gemDust = 0,
@@ -939,6 +942,15 @@ local function migrate(data)
 		data.version = 40
 	end
 
+	if data.version < 41 then
+		-- M1-3 둥지 3트랙 · 구역 알: 빈 기록(모든 둥지를 바로 주울 수 있다) · 빈 도감 · 빈 알 가방
+		data.world = data.world or { portals = {}, bossGates = {} }
+		data.world.nests = data.world.nests or {}
+		data.world.nestDex = data.world.nestDex or {}
+		data.eggs = data.eggs or {}
+		data.version = 41
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -983,6 +995,7 @@ local function isValidProfile(data)
 		or type(data.peakLevel) ~= "number" or data.peakLevel < 1 -- v38
 		or type(data.titles) ~= "table" -- v39
 		or type(data.world.bossGates) ~= "table" -- v40
+		or type(data.world.nests) ~= "table" or type(data.world.nestDex) ~= "table" or type(data.eggs) ~= "table" -- v41
 		or type(data.gemDust) ~= "number" or data.gemDust % 1 ~= 0 or data.gemDust < 0
 		or type(data.milestoneUnlocks) ~= "number" or data.milestoneUnlocks % 1 ~= 0 or data.milestoneUnlocks < 0
 		or type(data.leaderboardTainted) ~= "boolean" -- 리더보드 기록 제외(v34)

@@ -106,11 +106,11 @@ local NESTS = {
 	{ id = "t6_c_h4", zone = "tier6", track = "C", sub = "hidden", r = 1200, lat = -600, face = 30, kit = "alcove", cover = "ice", hint = { "stone" } },
 	{ id = "t6_c_h5", zone = "tier6", track = "C", sub = "hidden", r = 1450, lat = 700, face = -60, kit = "alcove", cover = "vine", hint = { "fireflies" } },
 
-	-- ═══ 허브 C-마을(안전 · 가기 쉬움 - 한 단계 낮게) ═══
-	{ id = "hub_c_chimney", zone = "hub", track = "C", sub = "village", kit = "chimney", facility = "forge" },
-	{ id = "hub_c_attic", zone = "hub", track = "C", sub = "village", kit = "attic", facility = "market" },
-	{ id = "hub_c_trunk", zone = "hub", track = "C", sub = "village", kit = "trunk", angleDeg = 255 },
-	{ id = "hub_c_arch", zone = "hub", track = "C", sub = "village", kit = "arch", facility = "portal" },
+	-- ═══ 허브 C-마을(안전 · 가기 쉬움 - 한 단계 낮게) ═══ eggZone = 어느 구역 알이 나오는가(허브는 구역이 없다)
+	{ id = "hub_c_chimney", zone = "hub", track = "C", sub = "village", kit = "chimney", facility = "forge", eggZone = "tier1" },
+	{ id = "hub_c_attic", zone = "hub", track = "C", sub = "village", kit = "attic", facility = "market", eggZone = "tier2" },
+	{ id = "hub_c_trunk", zone = "hub", track = "C", sub = "village", kit = "trunk", angleDeg = 255, eggZone = "tier3" },
+	{ id = "hub_c_arch", zone = "hub", track = "C", sub = "village", kit = "arch", facility = "portal", eggZone = "tier4" },
 }
 
 return {

@@ -64,7 +64,7 @@ ScreenMap.slots = {
 		-- M1-2 후속(사용자): 지역명(작게 · 한 줄 · 오른쪽 맞춤) = [파티] 버튼 · 칩 스택(골드) 위. 위 끝 22 · 아래 끝 44(칩 스택 · 파티 버튼 위 끝 52 - 8). 보스전 중 숨김.
 		--   옛 나무 높이(TC 214) · 귀환 시전 막대(BC −170)는 폰 가로에서 중앙 금지 구역 안이었다 → 높이는 이 줄 · 귀환은 [귀환] · [돌아가기] 버튼 글씨로.
 		region = slot("new", 1, 0, UDim2.new(1, -14, 0, 22), nil, "RegionLabel", "WorldClient.client.lua(M1-2 후속) - 크기 = 글자(AutomaticSize X · 높이 22)"),
-		chipStack = slot("existing", 1, 0, UDim2.new(1, -14, 0, 52), nil, "TopChipsRow", "StageUI.client.lua - 골드(LayoutOrder 1) · 레벨(2) · 스테이지(3) · 설정(4) · 견습(5) 세로 스택, 간격 8. PRD 지도의 '골드 · 스테이지 칩'이 코드에서는 이 스택이다"),
+		chipStack = slot("existing", 1, 0, UDim2.new(1, -14, 0, 52), nil, "TopChipsRow", "StageUI.client.lua - 골드(LayoutOrder 1) · 레벨(2) · 스테이지(3) · 설정(4 - M1-3: 왼쪽 옆에 [알] 버튼 EggButton이 자식으로 붙는다 · 44 × 44) · 견습(5) 세로 스택, 간격 8. PRD 지도의 '골드 · 스테이지 칩'이 코드에서는 이 스택이다"),
 		partyToggle = slot("existing", 1, 0, UDim2.new(1, -99, 0, 52), UDim2.new(0, 72, 0, 36), "PartyToggleButton",
 			"panels/Party.lua(S12b) - '파티' 열기 버튼(P 키와 같은 창). 칩 스택 **왼쪽**, 위 끝을 칩 스택과 맞춘다(y 52). 오른쪽 끝 = 칩 스택 왼쪽 끝 - 8 - 칩 스택 폭이 늘면(골드 자릿수) 따라 움직인다(Party.lua followChipStack). 여기 기본값(-99)은 스택 폭 77일 때다. 세로 중앙 열(가방 버튼 · 투표 패널)은 이미 겹침이 있어 새 버튼을 놓지 않았다. 모바일은 높이 44"),
 		-- P3b A: [순위] 버튼(리더보드 창) - [파티] 버튼 바로 아래(아래 끝 + 8, 오른쪽 끝을 맞춘다 - panels/Leaderboard.lua가 파티 버튼을 따라 움직인다). 기본값은 파티 버튼 기본 자리(y 52 · 높이 36) 기준.

@@ -115,7 +115,7 @@ function Kits.rock(ctx, list)
 		table.insert(protect, box(s.cf * CFrame.new(0, s.y + 4, 0), Vector3.new(R.step / 2, 3.5, R.step / 2)))
 	end
 	local spot = (cf * CFrame.new(0, spec.h, 0)).Position
-	return { spot = spot, leaps = leapsFor(heights, sk.gap, spec.h), protect = protect, pads = { { radius = rc + R.step / 2 + 4, blend = 18 } }, open = true }
+	return { spot = spot, leaps = leapsFor(heights, sk.gap, spec.h), protect = protect, pads = { { radius = rc + R.step / 2 + 4, blend = 34 } }, open = true }
 end
 
 function Kits.tree(ctx, list)
@@ -140,7 +140,7 @@ function Kits.tree(ctx, list)
 		prim(list, ctx.model, "NestLeaves", Vector3.new(14, 9, 14), cf * CFrame.new(math.cos(a) * 9, spec.h + 6, math.sin(a) * 9), LEAF.color, { material = LEAF.material, mesh = "Sphere", collide = false })
 	end
 	table.insert(protect, box(cf * CFrame.new(0, spec.h + 3.5, 0), Vector3.new(T.top / 2, 3, T.top / 2)))
-	return { spot = (cf * CFrame.new(0, spec.h, 0)).Position, leaps = leapsFor(heights, T.gap, spec.h), protect = protect, pads = { { radius = rc + T.pad / 2 + 4, blend = 18 } }, open = true }
+	return { spot = (cf * CFrame.new(0, spec.h, 0)).Position, leaps = leapsFor(heights, T.gap, spec.h), protect = protect, pads = { { radius = rc + T.pad / 2 + 4, blend = 34 } }, open = true }
 end
 
 -- 대지(지형 mesa) 가장자리: 절벽 밖 돌 발판(공중 점프 2) → 윗면 가장자리 둥지. ctx.mesa = { x, z, radius, level(월드 Y), blend }
@@ -245,7 +245,7 @@ function Kits.shrine(ctx, list)
 	end
 	table.insert(leaps, { rise = S.top - prev, gap = S.dashGap })
 	house.leaps = leaps
-	house.pads = { { radius = (S.size + S.dashGap + 40) / 2 + 10, blend = 20, offset = Vector3.new(0, 0, -(S.dashGap + 30) / 2) } }
+	house.pads = { { radius = (S.size + S.dashGap + 40) / 2 + 10, blend = 34, offset = Vector3.new(0, 0, -(S.dashGap + 30) / 2) } }
 	return house
 end
 
@@ -316,7 +316,7 @@ function Kits.tower(ctx, list)
 		door = { pos = (cf * CFrame.new(0, 0, -w / 2)).Position, width = door.w, dir = cf.LookVector },
 		path = { (cf * CFrame.new(0, 0, -w / 2 - 4)).Position, (cf * CFrame.new(0, 0, -w / 2 + 2)).Position },
 		protect = { box(cf * CFrame.new(0, h / 2, 0), Vector3.new(half, h / 2, half)) },
-		pads = { { radius = w / 2 + (temple and 12 or 8), blend = 20 } },
+		pads = { { radius = w / 2 + (temple and 12 or 8), blend = 34 } },
 	}
 end
 

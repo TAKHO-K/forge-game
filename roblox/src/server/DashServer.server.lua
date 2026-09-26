@@ -53,6 +53,12 @@ dashRequest.OnServerEvent:Connect(function(player)
 		return
 	end
 
+	-- M1-3: 물속 대시 불가(MovementConfig.water.dashInWater) - 쿨다운을 쓰지 않는다
+	if not require(ReplicatedStorage.Shared.data.MovementConfig).water.dashInWater and require(script.Parent.WorldHazards).inWater(rootPart.Position) then
+		dashResult:FireClient(player, { ok = false, reason = "water" })
+		return
+	end
+
 	local move = humanoid.MoveDirection
 	local flat = Vector3.new(move.X, 0, move.Z)
 	if flat.Magnitude < 1e-3 then

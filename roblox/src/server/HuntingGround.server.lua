@@ -197,6 +197,7 @@ local meta, counts = WorldMap.build()
 task.spawn(function()
 	require(script.Parent.TerrainBake).checkVersion()
 end)
+require(script.Parent.NestServer).start() -- M1-3 둥지 3트랙(프롬프트 · 순환 · 번개 문 · 동기화)
 do
 	local names = {}
 	for name, c in pairs(counts) do

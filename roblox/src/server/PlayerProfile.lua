@@ -476,6 +476,57 @@ function PlayerProfile.hasTitle(player, titleId)
 	return profile ~= nil and profile.titles[titleId] == true
 end
 
+-- M1-3 둥지(v41 - 계정): 개인 쿨다운 · 줍기 횟수 · 비밀 둥지 발견 도감 · 알 가방. 서버 NestServer만 쓴다.
+local function copyTree(v) -- (deepCopy는 이 파일 아래에 있어 여기서 안 보인다)
+	if type(v) ~= "table" then
+		return v
+	end
+	local out = {}
+	for k, x in pairs(v) do
+		out[k] = copyTree(x)
+	end
+	return out
+end
+function PlayerProfile.getNestRecord(player, nestId)
+	local profile = profiles[player]
+	local rec = profile and profile.world.nests[nestId]
+	return rec and { next = rec.next or 0, picks = rec.picks or 0 } or { next = 0, picks = 0 }
+end
+-- 줍기 기록 + 알 넣기. 반환: 넣었는가(가방이 차면 false - 기록도 안 바꾼다)
+function PlayerProfile.recordNestPick(player, nestId, nextAt, egg, cap)
+	local profile = profiles[player]
+	if not profile or #profile.eggs >= cap then
+		return false
+	end
+	local rec = profile.world.nests[nestId] or { next = 0, picks = 0 }
+	rec.next, rec.picks = nextAt, (rec.picks or 0) + 1
+	profile.world.nests[nestId] = rec
+	table.insert(profile.eggs, egg)
+	return true
+end
+-- 비밀 둥지 처음 발견. 반환: 새로 찾았는가, 찾은 개수
+function PlayerProfile.discoverNest(player, nestId)
+	local profile = profiles[player]
+	if not profile then
+		return false, 0
+	end
+	local new = not profile.world.nestDex[nestId]
+	profile.world.nestDex[nestId] = true
+	local n = 0
+	for _ in pairs(profile.world.nestDex) do
+		n += 1
+	end
+	return new, n
+end
+function PlayerProfile.getEggs(player)
+	local profile = profiles[player]
+	return profile and copyTree(profile.eggs) or {}
+end
+function PlayerProfile.getNestDex(player)
+	local profile = profiles[player]
+	return profile and copyTree(profile.world.nestDex) or {}
+end
+
 -- M1-3 관문 등록(v40 - 계정). 반환: 새로 등록했는가
 function PlayerProfile.registerBossGate(player, bossId)
 	local profile = profiles[player]
@@ -1899,6 +1950,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		world = deepCopy(profile.world), -- M1(v38): 포탈 개방 - 새 저장 필드는 백업 대상(COMMON §1)
 		peakLevel = profile.peakLevel, -- M1(v38)
 		titles = deepCopy(profile.titles), -- M1(v39): 칭호(봉인 입구 검증이 지급한다)
+		eggs = deepCopy(profile.eggs), -- M1-3(v41): 알 가방(둥지 검증이 줍는다) - world(nests · nestDex)는 위 world 통째 복사에 들어 있다
 		leaderboardTainted = profile.leaderboardTainted, -- P3a(v34): 검증이 기록 경로를 재려고 끈 값을 되돌린다(COMMON §1 "새 저장 필드는 백업 대상에").
 	}
 end
@@ -1935,6 +1987,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.world = snapshot.world and deepCopy(snapshot.world) or profile.world
 	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
 	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles
+	profile.eggs = snapshot.eggs and deepCopy(snapshot.eggs) or profile.eggs
 	if snapshot.autoProcess then
 		profile.autoProcess = deepCopy(snapshot.autoProcess)
 		player:SetAttribute("AutoProcess", profile.autoProcess.enabled and profile.autoProcess.maxGrade or "off")

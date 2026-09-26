@@ -21,6 +21,8 @@ local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
 local BossEncounter = require(script.Parent.BossEncounter)
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 서버 높이 검증(같은 0.25초 폴링)
 local TeleportArrival = require(script.Parent.TeleportArrival)
+local WorldHazards = require(script.Parent.WorldHazards) -- M1-3: 물살 속도 상한 · 선인장(같은 0.25초 폴링)
+WorldHazards.start()
 
 -- 바닥 윗면 관례(HuntingGround FLOOR_Y+FLOOR_THICKNESS/2 = 1) 위 3stud - 포탈 도착점·아레나
 -- 입장점이 쓰는 것과 같은 여유.
@@ -76,6 +78,7 @@ RunService.Heartbeat:Connect(function(dt)
 			returnFromVoid(player, rootPart)
 		end
 		HeightGuard.poll(player, os.clock())
+		WorldHazards.poll(player, os.clock())
 	end
 end)
 

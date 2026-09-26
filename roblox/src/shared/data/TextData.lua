@@ -130,5 +130,21 @@ return {
 		["board.row"] = "{station}. {name} · Lv.{level} · 높이 {meters}m",
 		["board.rowOpen"] = "{station}. {name} · Lv.{level} · 높이 {meters}m · 열림",
 		["board.footer"] = "덩굴 리프트(줄기 옆 바구니 [F])는 가장 높은 열린 정거장으로 갑니다",
+
+		-- 둥지 · 알(M1-3)
+		["nest.action"] = "알 줍기",
+		["nest.object"] = "둥지",
+		["nest.gotEgg"] = "{grade} {egg} 획득! 후보: {a} / {b}",
+		["nest.discovered"] = "비밀 둥지 발견! 발견 도감 {count}곳",
+		["nest.title"] = "칭호 획득 - {name}",
+		["nest.full"] = "알 가방이 가득 찼다({cap}개) - 더 주울 수 없다",
+		["egg.title"] = "알 가방 ({count}/{cap})",
+		["egg.empty"] = "아직 알이 없다 - 바위 위 · 신전 · 숨은 곳의 둥지에서 알을 주울 수 있다",
+		["egg.row"] = "{egg} · {grade}",
+		["egg.candidates"] = "후보 {a} / {b} (반반)",
+		["egg.hatchHeader"] = "부화 결과 확률(사전 고지) - 알 등급별",
+		["egg.hatchCol"] = "{grade} 알",
+		["egg.dex"] = "비밀 둥지 발견 {count}곳",
+		["egg.chip"] = "알",
 	},
 }

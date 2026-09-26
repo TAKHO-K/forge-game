@@ -34,6 +34,11 @@ function LaunchPermit.register(part, spec)
 	sources[part] = spec
 end
 
+-- M1-3 둥지 줍기 검증이 같은 서버 위치 기록을 읽는다(순간이동 줍기 차단). 반환: { { t, pos } } - 오래된 것부터(복사 아님 - 읽기만)
+function LaunchPermit.recentSamples(player)
+	return history[player] or {}
+end
+
 function LaunchPermit.specOf(part)
 	return sources[part]
 end

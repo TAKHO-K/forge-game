@@ -116,6 +116,26 @@ function Travel.pushOutPoint(zone, feet)
 	return p + toHub * t
 end
 
+-- 순수(식): 발이 외곽 허용 반경(TerrainShape.edgeAllowR) 밖이면 안쪽으로 밀어낼 자리(허용 − pushStuds부터 안쪽으로 20씩 - 물 아닌 · 평지 + 30 이하 땅). 안이면 nil.
+function Travel.edgePushPoint(feet)
+	local TerrainShape = require(ReplicatedStorage.Shared.TerrainShape)
+	local EG = require(ReplicatedStorage.Shared.data.TerrainGenData).edgeGuard
+	local R = flat(feet).Magnitude
+	local allow = TerrainShape.edgeAllowR(feet.X, feet.Z)
+	if R <= allow then
+		return nil
+	end
+	local dir = flat(feet).Unit
+	for r = math.min(allow, EG.allowR) - EG.pushStuds, 0, -20 do
+		local p = dir * r
+		local c = TerrainShape.column(p.X, p.Z)
+		if not c.water and c.h - TerrainShape.flatY <= 30 then
+			return Vector3.new(p.X, c.h + 3, p.Z)
+		end
+	end
+	return WorldConfig.zones.spawn.arrival + Vector3.new(0, WorldMapData.floorTopY + 3, 0)
+end
+
 -- ─────────────────────────── 순간이동 ───────────────────────────
 -- 도착지 미리 불러오기(스트리밍) 뒤 옮긴다. 반환: 미리 불러오기 요청이 에러 없이 끝났는가(로그 · 검증).
 --   M1-2c: 로그의 "미리 불러오기 O"는 숫자 0이 아니라 글자 O(= 요청 성공). 요청이 끝나도 발판이 다 들어왔다는 보장은 아니라 도착 알림(TeleportArrival)으로 클라가 발 아래를 한 번 더 본다.
@@ -456,6 +476,16 @@ function Travel.pollPlayer(player, root, humanoid, now)
 	if flat(feet).Magnitude > WorldMapData.edge.radius + 10 or tooHigh then
 		Travel.teleport(player, WorldConfig.zones.spawn.arrival + Vector3.new(0, WorldMapData.floorTopY + 3, 0), "세계 밖 복귀")
 		return
+	end
+	-- M1-3 서버 경계 백업(사용자 보강 ②): 보이는 경계 = 외곽 설산 · 절벽 · 바다(지형) · 실제 차단 = 여기. 서 있거나 헤엄치는 자리가 허용 반경 밖이면 안쪽 걷는 땅으로.
+	local swimming = humanoid and humanoid:GetState() == Enum.HumanoidStateType.Swimming
+	if grounded or swimming then
+		local out = Travel.edgePushPoint(feet)
+		if out then
+			st.edgePushes = (st.edgePushes or 0) + 1
+			Travel.teleport(player, out, "외곽 경계 밀어내기")
+			return
+		end
 	end
 	-- 잠긴 구역 밀어내기
 	local zone = WorldMapLayout.zoneAt(feet)

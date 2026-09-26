@@ -26,9 +26,10 @@ local airStartedAt = 0
 local locked = false -- 넉백 · 무너짐 낙하 뒤 착지까지
 local lastRequestAt = -math.huge
 
+-- M1-3: 헤엄(Swimming)은 체공을 끝내지만 충전은 안 돌려준다(MovementConfig.water.rechargeInWater - 물 밖 착지에서만 찬다)
 local GROUNDED = {
 	[Enum.HumanoidStateType.Landed] = true, [Enum.HumanoidStateType.Running] = true, [Enum.HumanoidStateType.RunningNoPhysics] = true,
-	[Enum.HumanoidStateType.Climbing] = true, [Enum.HumanoidStateType.Swimming] = true, [Enum.HumanoidStateType.Seated] = true,
+	[Enum.HumanoidStateType.Climbing] = true, [Enum.HumanoidStateType.Seated] = true,
 }
 local AIR = { [Enum.HumanoidStateType.Jumping] = true, [Enum.HumanoidStateType.Freefall] = true }
 
@@ -48,8 +49,11 @@ local function bind(newCharacter)
 	airborne, locked = false, false
 	character:SetAttribute("AirJumpsLeft", cfg.charges)
 	humanoid.StateChanged:Connect(function(_, new)
-		if GROUNDED[new] then
+		if GROUNDED[new] or (new == Enum.HumanoidStateType.Swimming and MovementConfig.water.rechargeInWater) then
 			onLanded()
+		elseif new == Enum.HumanoidStateType.Swimming then
+			airborne = false -- 물에 들어오면 체공은 끝(물 밖으로 뛰어오르면 새 체공 - 남은 충전 그대로)
+			character:SetAttribute("AirDashUsed", nil)
 		elseif AIR[new] and not airborne then
 			if new == Enum.HumanoidStateType.Jumping and not humanoid.PlatformStand then
 				locked = false -- 지면에서 새로 뛰었다(무너짐 신호가 이미 서 있던 사람에게 온 경우의 잠금이 다음 점프까지 남지 않게)
