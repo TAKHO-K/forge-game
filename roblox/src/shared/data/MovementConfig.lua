@@ -44,7 +44,8 @@ return {
 		-- 요청 최소 간격 requestGapSeconds(리뷰 4) · 기록 보관 = historySeconds + historyKeepExtraSeconds.
 		historySeconds = 0.5, historyKeepExtraSeconds = 0.1, pendingSeconds = 0.5, reachSlackStuds = 4, belowSlackStuds = 3, aboveSlackStuds = 6,
 		cooldownSeconds = 0.25, requestGapSeconds = 0.1 },
-	heightGuard = { toleranceStuds = 1.0, strikes = 2, probeStuds = 3.5, teleportResetStuds = 50, graceSeconds = 1.0, exemptExtraSeconds = 0.5 },
+	heightGuard = { toleranceStuds = 1.0, strikes = 2, probeStuds = 3.5, teleportResetStuds = 50, graceSeconds = 1.0, exemptExtraSeconds = 0.5,
+		climbBox = Vector3.new(7, 10, 7) }, -- M1-4: 오르는 중 = 루트 둘레 이 상자 안에 사다리(TrussPart · Climbable)가 있을 때만 "서 있음"(지연 0.25 × 오르기 속도 여유)
 
 	-- M1-3 물(Terrain 물 - 익사 없음 · 로블록스 기본 헤엄): 공중 점프 충전은 물 밖 착지에서만 돌아온다(물에 떠 있기만으로는 안 찬다 - 물 → 공중 점프 무한 사다리 방지).
 	--   물속 대시 = 불가(dashInWater false - 결정: 물살 거슬러 대시로 강을 무의미하게 만들지 않게 · 대시 도착점 계산이 물 위 · 물속을 구분하지 못한다). 판정 = 루트 복셀이 물(점유율 ≥ inWaterOccupancy).

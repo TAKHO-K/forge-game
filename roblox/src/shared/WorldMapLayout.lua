@@ -1383,6 +1383,8 @@ function Layout.buildAll()
 		end
 	end
 	meta.structures = S
+	-- M1-4 빈 공간 채우기(소품 흩뿌리기 · 절벽 사다리 - shared/PropScatter)
+	meta.scatter = require(ReplicatedStorage.Shared.PropScatter).build(list)
 	return list, meta
 end
 

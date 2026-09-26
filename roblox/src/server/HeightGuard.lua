@@ -190,6 +190,20 @@ end
 
 local probeParams = RaycastParams.new()
 probeParams.FilterType = Enum.RaycastFilterType.Exclude
+local climbParams = OverlapParams.new()
+climbParams.FilterType = Enum.RaycastFilterType.Exclude
+
+-- M1-4 사다리: "오르는 중(Climbing)"은 클라가 정하는 상태라, 루트 곁(cfg.climbBox)에 실제 오를 것(TrussPart · Climbable 표시)이 있을 때만 "서 있음"으로 친다
+-- (사다리 · 나무 덩굴 사다리 - 상태 위조로 높이 검사를 우회하지 못하게 · 헤엄과 같은 원칙).
+function HeightGuard.nearClimbable(character, root)
+	climbParams.FilterDescendantsInstances = { character }
+	for _, part in ipairs(Workspace:GetPartBoundsInBox(root.CFrame, cfg.climbBox, climbParams)) do
+		if part:IsA("TrussPart") or part:GetAttribute("Climbable") then
+			return true
+		end
+	end
+	return false
+end
 
 -- TerrainServer 폴링(0.25초)에서 플레이어마다.
 function HeightGuard.poll(player, now)
@@ -209,7 +223,7 @@ function HeightGuard.poll(player, now)
 	local sample = {
 		feetY = root.Position.Y - MovementConfig.rootAboveFeetStuds,
 		pos = root.Position,
-		grounded = humanoid.FloorMaterial ~= Enum.Material.Air or state == Enum.HumanoidStateType.Climbing
+		grounded = humanoid.FloorMaterial ~= Enum.Material.Air or (state == Enum.HumanoidStateType.Climbing and HeightGuard.nearClimbable(character, root))
 			or swimming or state == Enum.HumanoidStateType.Seated,
 		skip = root.Anchored or humanoid.Health <= 0,
 		probe = function()
