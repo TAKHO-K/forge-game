@@ -15,6 +15,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local HeightGuard = require(script.Parent.HeightGuard)
+local AirState = require(script.Parent.AirState) -- 파트 0: 원거리 공중 정지 = 체공
 local BossMechanics = require(script.Parent.BossMechanics) -- BR1-3 아르마딜로 태세(반사의 귀)
 
 local BossHandlersBR1 = {}
@@ -659,6 +660,7 @@ function BossHandlersBR1.trackAir(st, now)
 		elseif type(member) == "table" and member.debugAirborne ~= nil then
 			airborne = member.debugAirborne -- 검증 스탠드인
 		end
+		airborne = airborne or AirState.isHovering(member, now) -- 파트 0: 원거리 공중 정지도 체공(서버 AirState 기록 - 클라 상태가 잠깐 바뀌어도 이어 센다)
 		if airborne and (PlayerState.getHp(member) or 0) > 0 then
 			st.airSince[member] = st.airSince[member] or now
 		else

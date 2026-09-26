@@ -127,7 +127,7 @@ function M1Verify.runPure()
 			local counts, bad = { A = 0, B = 0, C = 0 }, {}
 			for _, n in ipairs(WorldStructures.nestList()) do
 				if n.zone == z.key then
-					counts[n.track] += 1
+					counts[n.openTop and "A" or n.track] += 1 -- MV1 결정 1: 재분류 B는 A 자리 몫
 					for i, leap in ipairs(n.leaps or {}) do
 						if not WorldMapLayout.moveSkill(leap.rise, leap.gap) then
 							table.insert(bad, ("%s #%d"):format(n.id, i))

@@ -172,6 +172,11 @@ local function handleAttack(player, aimPoint, clientAir)
 		end
 		session.airAttacks += 1
 		AirState.markTakeoff(player)
+		-- 파트 0(MV1 결정 9): 원거리 공중 정지(프레야식 - 클라 AirHover)도 스스로 떠 있는 시간 - 서버가 정지 끝 시각을 적어 대공 잡기 체공이 그대로 센다
+		local air = AttackMotionData[classId] and AttackMotionData[classId].air
+		if air and air.hoverSeconds and clientAir == true then -- 리뷰: 클라가 지상으로 보낸 요청(서버만 공중 - 막 착지)은 클라가 안 멈춘다
+			session.hoverUntil = math.max(session.hoverUntil or 0, now) + air.hoverSeconds
+		end
 	end
 
 	lastAttackTick[player] = now -- 헛스윙이어도 쿨다운은 소모한다

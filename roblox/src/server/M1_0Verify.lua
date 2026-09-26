@@ -177,9 +177,9 @@ function M1_0Verify.runPure()
 				byPrimitive[skill.primitive] = (byPrimitive[skill.primitive] or 0) + 1
 			end
 		end
-		r.check(("[측정] 파동 스킬 %d개(기대 3) · 스킬 종류 수: 원(보스) %d · 원(대상) %d · 직선 %d · 돌진 %d · 파동 %d · 기믹 %d - 원 · 직선 · 돌진은 발이 판정 층 %.0f 위면 안 맞는다(공중 점프 1회 = 발 %.1f)"):format(
+		r.check(("[측정] 파동 스킬 %d개(기대 4) · 스킬 종류 수: 원(보스) %d · 원(대상) %d · 직선 %d · 돌진 %d · 파동 %d · 기믹 %d - 원 · 직선 · 돌진은 발이 판정 층 %.0f 위면 안 맞는다(공중 점프 1회 = 발 %.1f)"):format(
 			count, byPrimitive.circleBoss or 0, byPrimitive.circleTarget or 0, byPrimitive.line or 0, byPrimitive.charge or 0, byPrimitive.ring or 0, byPrimitive.gimmick or 0,
-			layer, h1 + JumpMath.airJumpRise(h1)), count == 3)
+			layer, h1 + JumpMath.airJumpRise(h1)), count == 4) -- 파트 0: 옛 기대값 3 → 지금 설계 4(M1-2c 이전부터 4 - 기능 변경 아님)
 		local wall = BossArenaMapData.geometry.wallHeightStuds
 		r.check(("[측정] 아레나 벽 %d: 바닥에서 최대 발 %.2f · 단상(3.5) 위 %.2f → 넘을 수 있다(넘으면 원 밖 → 본인 스폰 + 보호 %.2f초)"):format(
 			wall, JumpMath.maxReachStuds(h1), 3.5 + JumpMath.maxReachStuds(h1), BossArenaMapData.containment.returnProtectSeconds), JumpMath.maxReachStuds(h1) > wall)

@@ -86,7 +86,7 @@ return {
 			--   높이 h(t) = height × (1 − t)^curve (t = 줄기 표면에서 reach까지 0 → 1) · 폭 = width → tipWidth · 조각 segments개(기울인 상자 - 윗면이 곡선을 따른다) · 끝 sink만큼 땅속.
 			--   각도 = 점프맵 낮은 요소와 안 겹치는 자리만(angles - 뿌리 위에서 코스 중간으로 건너뛰는 지름길이 생기지 않게 · 리스폰 · 리프트 · 광산 입구를 피한다).
 			--   courseRoot = 점프맵과 겹치는 뿌리(사용자): 밟고 올라가면 코스 앞부분을 건너뛰는 이점 - 대신 끝이 끊긴 좁은 혹(knobs - 폭 knobWidth)을 공중 점프로 이어 가야 한다.
-			roots = { angles = { 45, 80, 115, 150, 172, 212 }, height = 24, reach = 112, curve = 1.8, width = 18, tipWidth = 6, segments = 5, sink = 3 },
+			roots = { angles = { 55, 80, 115, 150, 172, 212 }, height = 24, reach = 112, curve = 1.8, width = 18, tipWidth = 6, segments = 5, sink = 3 }, -- 파트 0(MV1 결정 4): 첫 뿌리 45° → 55°(대시 22로 1구간 안쪽 7번째 통통 열매 지름길이 생겨서 - 50°부터 0)
 			courseRoot = { angleDeg = 330, walkFrom = 0.46, knobWidth = 2.5, -- 같은 곡선(roots)의 t ≥ walkFrom 부분만(끝 → 높이 약 8 · r 99) - 줄기 쪽은 없다
 				knobs = { { r = 85, top = 14, angleDeg = 331 }, { r = 72, top = 21, angleDeg = 334 } } }, -- 걷는 끝(높이 약 8) → 혹 1(공중 1) → 혹 2(공중 1) → 안쪽 길 5번째 가지(높이 29 · 공중 1)
 			ridges = { count = 14, depth = 3, width = 5 }, -- 줄기 결(세로 골)

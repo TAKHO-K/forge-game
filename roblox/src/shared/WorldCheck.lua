@@ -85,6 +85,8 @@ function WorldCheck.run()
 			per[k].crest = (per[k].crest or 0) + 1 -- M1-4 능선 전망 둥지(외곽 테마 - T3 바다 제외)
 		elseif n.track == "A" then
 			per[k].A += 1
+		elseif n.track == "B" and n.openTop then
+			per[k].Bo = (per[k].Bo or 0) + 1 -- MV1 결정 1: A → B 재분류(A 자리 몫으로 센다)
 		elseif n.track == "B" then
 			per[k].B += 1
 		elseif n.sub == "hidden" then
@@ -99,11 +101,11 @@ function WorldCheck.run()
 	for _, z in ipairs(WorldMapData.zones) do
 		local c = per[z.key] or {}
 		local wantCrest = (TerrainGenData.edgeStyles[z.key] and TerrainGenData.edgeStyles[z.key].kind ~= "sea") and 1 or 0
-		if c.A ~= 5 or c.B ~= 3 or c.Cf ~= 1 or c.Ch ~= NestData.rotateCandidates or (c.crest or 0) ~= wantCrest then
-			table.insert(mixBad, ("%s A%d(+능선 %d) B%d C고정%d C순환%d"):format(z.key, c.A or 0, c.crest or 0, c.B or 0, c.Cf or 0, c.Ch or 0))
+		if (c.A or 0) + (c.Bo or 0) ~= 5 or c.B ~= 3 or c.Cf ~= 1 or c.Ch ~= NestData.rotateCandidates or (c.crest or 0) ~= wantCrest then
+			table.insert(mixBad, ("%s A%d(+능선 %d · 재분류 B %d) B%d C고정%d C순환%d"):format(z.key, c.A or 0, c.crest or 0, c.Bo or 0, c.B or 0, c.Cf or 0, c.Ch or 0))
 		end
 	end
-	add(("트랙 섞기: 구역마다 A 5 + 능선 1(바다 T3 제외 - M1-4) · B 3 · C 2(고정 1 + 순환 후보 %d) · 허브 C-마을 %d"):format(NestData.rotateCandidates, per.hub and per.hub.Cv or 0), #mixBad == 0 and per.hub and per.hub.Cv == 4, table.concat(mixBad, " / "))
+	add(("트랙 섞기: 구역마다 A 5(재분류 B 포함 - MV1) + 능선 1(바다 T3 제외 - M1-4) · B 3 · C 2(고정 1 + 순환 후보 %d) · 허브 C-마을 %d"):format(NestData.rotateCandidates, per.hub and per.hub.Cv or 0), #mixBad == 0 and per.hub and per.hub.Cv == 4, table.concat(mixBad, " / "))
 	-- 2 도달: 도약마다 이동표(공중 점프 2 + 대시 한도 안 · 80% 여유)
 	local bad, hardest = {}, {}
 	for _, n in ipairs(nests) do
@@ -120,7 +122,7 @@ function WorldCheck.run()
 	-- 3 B · C = 위에서 활강 착지 불가(지붕 또는 지형 지붕 · 입구 폭)
 	local roofBad = {}
 	for _, n in ipairs(nests) do
-		if n.track ~= "A" then
+		if n.track ~= "A" and not n.openTop then -- openTop = MV1 재분류(지붕 없음 - 결정 대기)
 			local ok = false
 			if n.roof then
 				local c, s = n.roof.center, n.spot

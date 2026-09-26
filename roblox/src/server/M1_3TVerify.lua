@@ -274,9 +274,9 @@ function V.runPure()
 		local SaveSystem = require(script.Parent.SaveSystem)
 		local old = { version = 40, world = { portals = { tier1 = true }, bossGates = { section_guardian = true } }, titles = {} }
 		local m = SaveSystem.migrate(old)
-		local ok = m.version == 41 and type(m.world.nests) == "table" and next(m.world.nests) == nil and type(m.world.nestDex) == "table" and type(m.eggs) == "table" and #m.eggs == 0
+		local ok = m.version == SaveConfig.saveVersion and type(m.world.nests) == "table" and next(m.world.nests) == nil and type(m.world.nestDex) == "table" and type(m.eggs) == "table" and #m.eggs == 0
 			and m.world.bossGates.section_guardian == true and m.world.portals.tier1 == true
-		r.check(("SAVE_VERSION %d · v40 → v41: 둥지 기록 · 도감 · 알 가방 빈 표 · 관문 · 포탈 유지 %s"):format(SaveConfig.saveVersion, tostring(ok)), SaveConfig.saveVersion == 41 and ok)
+		r.check(("SAVE_VERSION %d · v40 → 지금 버전: 둥지 기록 · 도감 · 알 가방 빈 표 · 관문 · 포탈 유지 %s"):format(SaveConfig.saveVersion, tostring(ok)), SaveConfig.saveVersion >= 41 and ok) -- 파트 0: 옛 기대값(41 고정) → 지금 버전까지 이관(기능 변경 아님)
 	end)
 	r.section("외곽 경계 밀어내기(식)", function()
 		local Travel = require(script.Parent.Travel)

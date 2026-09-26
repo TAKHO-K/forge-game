@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **MV1 이동 · 공중 전투 · 무기 규격 · 2026-09-27** · 직전 보고서 = `docs/phase/MV1-report.md`(그 전 `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **MV1b(밤샘 묶음 파트 0 - MV1 결정 반영) · 2026-09-27** · 직전 보고서 = `docs/phase/MV1b-report.md`(그 전 `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -42,7 +42,9 @@
 
 > **MV1 끝(2026-09-27) - place 저장 불필요**: 대시 · 활강 · 낙하 · 공중 전투 · 환생 해금 · 태초 유틸 · 무기 규격. 결정 대기 = A 둥지 11곳 환생 0 불가 · 나무 뿌리 지름길 · 부활 체력 등(`MV1-report.md` 결정 1 ~ 13).
 
-**다음** = MV1 결정 → **W1**(무기별 대기 · 달리기 · 3타 · 강공격 · 공중 공격 모션 · 전조 → 동작 → 회복 · 타격 프레임 ↔ 서버 판정 시각 표 · 양손 보조 손 · 활 시위 · 비전투 자리 - `WeaponRigSpec` 위에서) → S1(이동 보안 - `MoveRules.s1Limits`) · M1-4 결정(§4 - 특히 **place 저장**) 뒤 로드맵(`docs/phase/roadmap-v2.md`): BR2(보스 세트 · 토벌 - 관문 자리 있음) · M2(몬스터 외형 · 종) · 펫 단계(알 부화 · 탑승 · 활강 - 둥지 B · C는 활강 착지 불가로 설계됨). 지형 모양을 바꾸면 `TerrainGenData.version[구역]`을 올리고 그 구역만 다시 굽고 place 저장. 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`.
+> **MV1b 끝(2026-09-27) - place 저장 불필요**: A 둥지 환생 0 도달 33/33 · 뿌리 지름길 0 · 원거리 공중 정지 = 대공 잡기 체공(서버 기록) · 치장 슬롯 세트 4칸 · 옛 기대값 2건.
+
+**다음** = **W1**(무기별 대기 · 달리기 · 3타 · 강공격 · 공중 공격 모션 · 전조 → 동작 → 회복 · 타격 프레임 ↔ 서버 판정 시각 표 · 양손 보조 손 · 활 시위 · 비전투 자리 - `WeaponRigSpec` 위에서) → S1(이동 보안 - `MoveRules.s1Limits`) · M1-4 결정(§4 - 특히 **place 저장**) 뒤 로드맵(`docs/phase/roadmap-v2.md`): BR2(보스 세트 · 토벌 - 관문 자리 있음) · M2(몬스터 외형 · 종) · 펫 단계(알 부화 · 탑승 · 활강 - 둥지 B · C는 활강 착지 불가로 설계됨). 지형 모양을 바꾸면 `TerrainGenData.version[구역]`을 올리고 그 구역만 다시 굽고 place 저장. 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`.
 
 ## 4. 결정 필요 (열린 것)
 
@@ -61,7 +63,8 @@
 | C1 마무리 1 ~ 4 | 1 대칭 판정 = "낮은 쪽은 같이 때리되 주인 집합 밖"으로 해석 · 2 낮은 부계정 = 안전 딜러(드랍 이득 없음) · 3 j 끌기 2초 +9.5% 주의(`/gg stats` 알파 수치) · 4 자물쇠 최대 0.5초 먼저 풀림 - `C1-final-report.md` ⑧ · ~~5~~ → C1 결정 5 보정으로 닫힘(막힘 방향 = 성장) |
 | D1 1 ~ 14 | 1 EconSim 모형(보스 장비 포함 추천) · 2 목표 미달(상위 1% 1,084h · 캐주얼 43.1h - ①② 효과 4% · k ≈ 1.0204) · **3 태초 격차(추천: 딜 부위 태초 = 고대 위력 · 갑옷 ×2.5)** · 4 신발 공격속도 상한 없음 · 5 토벌 ÷ 사냥 상위 1% 5.0 · 6 반짝이 표 제안 · 7 드래곤 가치 0.876 · 8 상향표 폐지 · 9 무기 태초 = 환생 5 + 보석 5(문구 "7회"와 다름) · 10 각성 → 분해 · 11 순위 화면 태초 · 12 효과음 · 13 흰 기둥 전투 가림 · 14 유물 tier별 - `D1-report.md` ⑨ |
 | D1-2 1 ~ 9 | **1 · 2 · 3 · 6 · 7 닫힘(D1-3 - 사용자 확정)**: 격차 = 시간 비 ≤ 1.3만 · 캐주얼 40 ~ 45h · 반짝이 0.1% + 125 · 발자국 삭제 · L2 미적용(1,964h 오차 수용). 남음: 4 신발 공속 유물부터 상한 · 5 스킬 계수 옵션 · 8 파티 버스 ×2.7 · 9 토벌 ÷ 사냥 - `D1-2-report.md` ⑧ |
-| MV1 1 ~ 13 | 1 **A 둥지 11곳 환생 0 불가**(바위 air1 · 메사 · 피라미드) · 2 나무 2 ~ 6구간 직접 오르기 환생 1 · 3 대시 22 > 관통돌진 18 · 4 **대시 22 나무 뿌리 지름길(M1-2(가) X)** · 5 해금 = 계정 최대 환생 · 6 나무 안 낙하 제외 유지 · 7 치장 5칸 vs 세트 4칸 · 8 낙하 보고 S1 대조 · 9 공중 정지 = 대공 잡기 체공 · 10 태초 예외 큼 · 11 공중 판정 높이차 · 12 W1 범위 · 13 부활 체력 30% - `MV1-report.md` |
+| MV1 1 ~ 13 | **1 · 2 · 4 · 5 · 6 · 7 · 9 · 10 · 13 닫힘(MV1b - 사용자 지시 반영)**: 1 바위 = 1단 점프 계단 · 메사 · 피라미드 = B · 2 유지 · 4 뿌리 55° · 5 유지 · 6 유지 · 7 세트 4칸 + 글라이더 별도 · 9 서버 정지 기록 · 10 유지 · 13 유지. 남음: 3 관통돌진(K) · 8 낙하 대조(→ S1) · 11 공중 높이차(체감) · 12 W1 범위 - `MV1-report.md` |
+| MV1b 1 · 2 | 1 재분류 B 2곳 지붕 없음(활강 착지 가능 - 추천 유지) · 2 바위 계단 2번째 도약 = 1단 + 대시(추천 유지) - `MV1b-report.md` |
 | D1-3 1 | 캐주얼 1,000 = 39.2h(목표 하한 40의 0.8h 아래 - 추천: 하한 39 또는 오차 수용) - `D1-3-report.md` ⑤ |
 | ~~D1 1 ~ 4 · 6 · 9~~ | D1-2에서 처리(모형 = 보스 포함 · 상한 · 격차 · 반짝이 · 무기 태초 문구) |
 | ~~C1 결정 5 보정 1~~ | **D1-2에서 닫힘(파티원 막힘 제외)** · 2 유지 |
@@ -84,7 +87,7 @@
 - (M1-2c) M1-0(가) "파동 스킬 4개(기대 3)" X - 보스 데이터 스킬 수 검사(M1-2c는 안 바꿈). MCP로 대공 잡기 잡힘을 못 일으킨다(체공 1.2초 · grabMiss/reset). `/gg env start`를 연달아 부르면 판 털기가 전조에서 멈춘다(보스를 다시 부르면 됨 - 검증 도구 한계). 검증 지연 재현 = edit `settings().Network.IncomingReplicationLag = 0.25`(끝나면 0) · 지연 중 서버 CFrame 이동은 클라 옛 위치에 덮인다(클라 execute_luau로 옮긴다).
 - (M1-3a) 파티 "리더 미등록 + 다른 멤버 등록" 원격 입장은 순수 규칙만(다중 클라 불가). 검증 훅 `ServerStorage.StageMoveHook`(Studio 전용).
 - (M1-2 후속) S16(UI) 메뉴바 자체 점검은 칸 3개를 기대 - 파티 칸 삭제로 더 틀린다. M1-2(나) 귀환 3항목이 첫 Play에서 X · 다음 Play 7/7(원인 미확정 - 흔들림). 수동 Play에서 `/gg keycheck` 두 Play 왕복은 `_manual`이 서버마다 새로 시작해 안 이어진다.
-- (MV1에서 확인 · 옛 기대값) M1-3T(가) "SAVE_VERSION 41"(지금 43) · M1-0(가) 파동 4개(위와 같음).
+- ~~(MV1에서 확인 · 옛 기대값) M1-3T(가) "SAVE_VERSION 41" · M1-0(가) 파동 4개~~ → MV1b에서 기대값 갱신(30/30 · 10/10).
 - S04(나) 멈춤 - `verify.exclude`로 회귀 제외(원인 미확정).
 - (A1에서 확인) G1-2(나) "처치 시간 측정 - 잡몹이 없다" X - 앞선 블록이 남긴 필드 몹에 의존(A1 변경 되돌려도 같은 X · S09 · S12와 함께 돌면 O) - S01(나)와 같은 계열.
 - (C1 마무리에서 발견) S11(가) "옛 스테이지 45 / 50 / 75 / 100 자리 강화석 ≈5" X(실제 ≈6 - 보스 배율 · 드랍 변경 뒤 옛 기대값) · 같은 Play 클라 S11(UI) 6/8(같은 계열). 저장 이관 항목은 O.

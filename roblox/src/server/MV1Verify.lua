@@ -178,6 +178,24 @@ function V.runPure()
 		r.check(("사다리에서 뜸 → 세션 fromLadder %s · 이륙 자리 = 선 자리 %s · 0.15초 전 뜬 횟수 %d → 뒤 %d · 착지 뒤 lastSession 보존 %s · 요철 0.05초 = 안 셈(%d)"):format(
 			tostring(s1 and s1.fromLadder), tostring(s1 and s1.takeoffPos == p0), counted0, counted1, tostring(st.lastSession ~= nil), st.takeoffCount),
 			s1 ~= nil and s1.fromLadder == true and s1.takeoffPos == p0 and counted0 == 0 and counted1 == 1 and bump ~= nil and st.takeoffCount == 1)
+		-- 파트 0(MV1 결정 9): 원거리 공중 정지 = 대공 잡기 체공(클라 상태가 공중이 아니어도 서버 정지 기록이 있으면 이어 센다)
+		local PlayerState = require(script.Parent.PlayerState)
+		local BossHandlersBR1 = require(script.Parent.BossHandlersBR1)
+		local m = { Name = "MV1HoverStandIn", debugAirborne = false }
+		PlayerState.init(m)
+		local t0 = os.clock()
+		AirState.stateOf(m).session = { id = 1, since = t0 - 0.5, airDashes = 0, airAttacks = 1, ledgeUsed = false, hoverUntil = t0 + 0.25 }
+		local bst = { members = { m } }
+		BossHandlersBR1.trackAir(bst, t0)
+		local during = bst.airSince[m] ~= nil
+		BossHandlersBR1.trackAir(bst, t0 + 0.2)
+		local secs = BossHandlersBR1.airSecondsOf(bst, m, t0 + 0.2)
+		BossHandlersBR1.trackAir(bst, t0 + 0.3)
+		local after = bst.airSince[m] == nil
+		AirState.forget(m)
+		PlayerState.clear(m)
+		r.check(("원거리 공중 정지 = 대공 잡기 체공: 정지 중(클라 지상 상태) 체공 셈 %s · 0.2초 뒤 %.2f초 · 정지 끝 = 멈춤 %s"):format(tostring(during), secs, tostring(after)),
+			during and math.abs(secs - 0.2) < 1e-6 and after)
 	end)
 
 	r.section("높이 검증(활강 · 붙잡기 - 지연 0.25 표본)", function()
@@ -278,7 +296,8 @@ function V.runPure()
 				table.insert(aBad, n.id)
 			end
 		end
-		r.note(("환생 0 도달: A %d/%d · B %d/%d · C %d/%d - A 막힘 %s(결정 - MV1 보고서 §도달성)"):format(counts.A[1], counts.A[2], counts.B[1], counts.B[2], counts.C[1], counts.C[2], table.concat(aBad, " · ")))
+		-- 파트 0(MV1 결정 1): 열린 둥지 A는 전부 환생 0으로 닿는다(바위 = 1단 점프 계단 · 메사 · 피라미드 = B 재분류)
+		r.check(("환생 0 도달: A %d/%d · B %d/%d · C %d/%d - A 막힘 %s"):format(counts.A[1], counts.A[2], counts.B[1], counts.B[2], counts.C[1], counts.C[2], #aBad > 0 and table.concat(aBad, " · ") or "없음"), #aBad == 0)
 		local ledgeSkill = WorldMapLayout.moveSkill(WorldMapData.sealed.door.ledgeH, 2, caps0)
 		local ledgeGloves = WorldMapLayout.moveSkill(WorldMapData.sealed.door.ledgeH, 2, WorldMapLayout.capsForTier(MovementUnlockData.tiers[0], false, true, 16))
 		r.note(("봉인 입구 틈 선반(%d): 환생 0 %s · 태초 장갑 붙잡기 %s(봉인 상자 · 서버 구역 검사가 그대로 막는다)"):format(WorldMapData.sealed.door.ledgeH, tostring(ledgeSkill), tostring(ledgeGloves)))

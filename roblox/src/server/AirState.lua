@@ -64,6 +64,12 @@ function AirState.airborneSeconds(player, now)
 	return s and ((now or os.clock()) - s.since) or 0
 end
 
+-- 원거리 공중 정지 중인가(AttackServer가 정지 끝 시각을 적는다 - 대공 잡기 체공 · BossHandlersBR1.trackAir).
+function AirState.isHovering(player, now)
+	local s = AirState.session(player)
+	return s ~= nil and (s.hoverUntil or 0) > (now or os.clock())
+end
+
 -- 지금 체공이 있으면 그것, 없으면 방금 끝난 체공(낙하 보고용).
 function AirState.currentOrLastSession(player)
 	local st = states[player]
