@@ -9,6 +9,9 @@ local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
+local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
+local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 -- 26-1: 장비 생성 지점에서 옵션을 굴린다(PRD 20.67 [1] "옵션 굴림 시점은 장비가 생성되는
@@ -220,16 +223,8 @@ end
 -- 끌어올릴 뿐, itemLevel(28-1: 스테이지 + δ, 잡몹과 같은 분포)·판매가 계산(Loot.getSellPrice)은 일반 드랍과
 -- 같은 축을 그대로 쓴다(단일 출처 유지 - 반짝이 전용 별도 계산식을 만들지 않는다).
 function Loot.rollSparkleArmorDrop(monsterStage, tierIndex, classId)
-	local roll = lootRng:NextNumber()
-	local acc = 0
-	local grade = "relic" -- 확률 합이 부동소수 오차로 1 미만이 되는 극단적인 경우의 방어적 기본값
-	for gradeId, chance in pairs(RareMonsterConfig.sparkleGradeChances) do
-		acc += chance
-		if roll < acc then
-			grade = gradeId
-			break
-		end
-	end
+	-- D1-2: 표가 영웅 ~ 태초 5칸이 됐다 - 등급 순서(ArmorData.gradeOrder)로 굴린다(옛 pairs는 순서가 없었다 - 합이 1이라 분포는 같지만 경계 검증이 흔들린다).
+	local grade = rollGrade(RareMonsterConfig.sparkleGradeChances) or "epic" -- 확률 합이 부동소수 오차로 1 미만이 되는 극단적인 경우의 방어적 기본값(표의 가장 낮은 등급)
 
 	return buildDropItem(grade, monsterStage, Loot.rollItemLevel(monsterStage, ArmorData.itemLevelDelta), tierIndex or 1, classId)
 end
@@ -297,7 +292,22 @@ function Loot.getShoesSpeedPercent(item)
 	if not item then
 		return 0
 	end
-	return EquipSlots.baseValue.shoes * ArmorData.grades[item.grade].dropPower * CharacterLevel.getItemLevelMultiplierFrozen(item.itemLevel) -- D1: 장갑과 같은 위력표
+	local value = EquipSlots.baseValue.shoes * ArmorData.grades[item.grade].dropPower * CharacterLevel.getItemLevelMultiplierFrozen(item.itemLevel) -- D1: 장갑과 같은 위력표
+	if item.grade == "primordial" then
+		-- D1-2 태초 신발 고유 효과: 공격 속도 · 이동 속도를 상한까지(값이 상한보다 작아지게 데이터가 바뀌어도 보장 - 상한 자체는 PlayerCombat · JumpMath가 자른다)
+		value = math.max(value, CombatConfig.attackSpeedMaxMultiplier - 1, MovementConfig.moveSpeedMaxMultiplier - 1)
+	end
+	return value
+end
+
+-- D1-2 태초 신발 고유 효과: 대시 거리 배율(상한 DashConfig.rangeMaxMultiplier까지). 그 밖 = 1.
+function Loot.getShoesDashMultiplier(item)
+	return (item and item.grade == "primordial") and DashConfig.rangeMaxMultiplier or 1
+end
+
+-- D1-2 태초 장갑 고유 효과: 치명 피해 추가분(PrimordialData.unique.glovesCritDmgBonus - 합계는 CombatConfig.critDmgBonusCap 안). 그 밖 = 0.
+function Loot.getGlovesCritDmgBonus(item)
+	return (item and item.grade == "primordial") and PrimordialData.unique.glovesCritDmgBonus or 0
 end
 
 -- 판매가(13-1) - 이 관계식이 유일한 계산 지점이다(서버 InventoryServer의 SellRequest 처리·

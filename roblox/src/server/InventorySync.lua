@@ -60,10 +60,23 @@ function InventorySync.primordialEquipped(profile)
 	return false
 end
 
+-- D1-2: 착용한 태초 부위 목록("gloves,shoes" 모양 · 없으면 "") → Player Attribute PrimordialParts(클라 PrimordialFx: 장갑 = 강공격 흰 번개 · 신발 = 흰 발자국).
+function InventorySync.primordialParts(profile)
+	local equipment = activeEquipment(profile)
+	local parts = {}
+	for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+		if equipment[part] and equipment[part].grade == "primordial" then
+			table.insert(parts, part)
+		end
+	end
+	return table.concat(parts, ",")
+end
+
 function InventorySync.push(player, profile)
 	inventorySync:FireClient(player, InventorySync.snapshot(profile))
 	if typeof(player) == "Instance" and player:IsA("Player") then
 		player:SetAttribute("PrimordialEquipped", InventorySync.primordialEquipped(profile))
+		player:SetAttribute("PrimordialParts", InventorySync.primordialParts(profile))
 	end
 end
 

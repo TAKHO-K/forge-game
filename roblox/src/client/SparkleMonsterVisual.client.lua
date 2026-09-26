@@ -122,3 +122,55 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 end)
+
+-- D1-2: 금화 분수(서버 SparkleCoinFountain - 반짝이 처치 지점). 파티클 없이 금색 원판 파트 count개를 위로 흩뿌리고 중력으로 떨어뜨린다(RareMonsterConfig.coinFountain - 한 번 최대 count개 · lifeSeconds 뒤 전부 삭제).
+local Players = game:GetService("Players")
+local COIN = RareMonsterConfig.coinFountain
+local COIN_COLOR = Color3.fromRGB(255, 200, 40)
+
+local function coinFountain(position)
+	local camera = Workspace.CurrentCamera
+	local eye = camera and camera.CFrame.Position
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local from = root and root.Position or eye
+	if not from or (from - position).Magnitude > COIN.maxDistance then
+		return
+	end
+	local coins = {}
+	for i = 1, COIN.count do
+		local coin = Instance.new("Part")
+		coin.Name = "SparkleCoin"
+		coin.Shape = Enum.PartType.Cylinder
+		coin.Size = Vector3.new(COIN.size * 0.25, COIN.size, COIN.size)
+		coin.Material = Enum.Material.Neon
+		coin.Color = COIN_COLOR
+		coin.Anchored, coin.CanCollide, coin.CanQuery, coin.CanTouch, coin.CastShadow = true, false, false, false, false
+		local angle = (i / COIN.count) * math.pi * 2 + math.random() * 0.4
+		local out = COIN.spread * (0.4 + math.random() * 0.6)
+		coins[i] = { part = coin, velocity = Vector3.new(math.cos(angle) * out, COIN.upSpeed * (0.7 + math.random() * 0.3), math.sin(angle) * out), spin = math.random() * 10 }
+		coin.CFrame = CFrame.new(position + Vector3.new(0, 1.5, 0))
+		coin.Parent = Workspace
+	end
+	local startedAt = os.clock()
+	local connection
+	connection = RunService.RenderStepped:Connect(function(dt)
+		local age = os.clock() - startedAt
+		if age >= COIN.lifeSeconds then
+			connection:Disconnect()
+			for _, c in ipairs(coins) do
+				c.part:Destroy()
+			end
+			return
+		end
+		for _, c in ipairs(coins) do
+			c.velocity -= Vector3.new(0, COIN.gravity * dt, 0)
+			local pos = c.part.Position + c.velocity * dt
+			c.part.CFrame = CFrame.new(pos) * CFrame.Angles(0, age * c.spin, math.pi / 2)
+			c.part.Transparency = math.clamp((age / COIN.lifeSeconds - 0.6) / 0.4, 0, 1)
+		end
+	end)
+end
+
+ReplicatedStorage:WaitForChild("SparkleCoinFountain").OnClientEvent:Connect(coinFountain)
+

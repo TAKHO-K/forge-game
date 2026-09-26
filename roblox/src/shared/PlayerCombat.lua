@@ -91,8 +91,9 @@ end
 -- 신발의 이동+공격속도 비율 보너스를 1+x 배율로 바꾼다(16-6, 웹 core/equipment.js
 -- speedMultiplier와 같은 형태) - WalkSpeed·공격 쿨다운 둘 다 이 하나의 배율을 공유한다
 -- (웹도 신발 하나가 "이동+공속"을 같이 준다, ITEM_PART_BASE_STAT.shoes 참고).
+-- D1-2: 공격 속도 상한(CombatConfig.attackSpeedMaxMultiplier) - 이동 속도는 JumpMath.moveSpeedMultiplier가 따로 자른다.
 function PlayerCombat.getSpeedMultiplier(speedPercentBonus)
-	return 1 + (speedPercentBonus or 0)
+	return math.min(1 + (speedPercentBonus or 0), CombatConfig.attackSpeedMaxMultiplier)
 end
 
 -- 치명타 판정 + 적용 - 유일한 위치(10-4 [3]). base는 평타의 getAttack 결과일 수도,

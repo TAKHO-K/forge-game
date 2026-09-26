@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
 local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
+local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
 local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
@@ -69,6 +70,26 @@ local lastComboAttackTick = {} -- [Player] = os.clock() 시각
 local comboUpdate = Instance.new("RemoteEvent")
 comboUpdate.Name = "ComboUpdate"
 comboUpdate.Parent = ReplicatedStorage
+
+-- D1-2 태초 장갑 고유 연출: 강공격(3타)이 실제로 맞으면 대상 위치에 흰 번개(대상에서 boltSendStuds 안의 사람에게만 - 리뷰 5: 공속 상한 쌍검은 초당 약 5회라 전원 방송은 대역폭 낭비). 판정 · 피해와 무관한 표시 신호.
+local primordialGlovesBolt = Instance.new("RemoteEvent")
+primordialGlovesBolt.Name = "PrimordialGlovesBolt"
+primordialGlovesBolt.Parent = ReplicatedStorage
+local function glovesBolt(player, target, isComboHit, dealt)
+	if not isComboHit or not dealt or dealt <= 0 or not target.PrimaryPart then
+		return
+	end
+	local gloves = PlayerProfile.getEquipped(player, "gloves")
+	if gloves and gloves.grade == "primordial" then
+		local position = target.PrimaryPart.Position
+		for _, other in ipairs(Players:GetPlayers()) do
+			local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+			if root and (root.Position - position).Magnitude <= PrimordialData.unique.glovesBolt.sendStuds then
+				primordialGlovesBolt:FireClient(other, position, player)
+			end
+		end
+	end
+end
 
 -- 구역 밖 공격 차단 안내(19-4 [4]-나). 조용히 씹으면 버그로 오해한다는 지시 - 스팸
 -- 방지로 플레이어당 3초에 한 번만 띄운다(입구에 서서 연타해도 토스트가 겹쳐 뜨지 않게).
@@ -244,6 +265,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		-- (여기·아래 원거리 도달 판정 두 곳 - "damage 확정"을 "실제로 맞았다"로 해석했다,
 		-- 원거리가 빗나가는 경우까지 회복시키면 안 되므로).
 		PlayerProfile.applyLifesteal(player, damage)
+		glovesBolt(player, target, isComboHit, damage)
 		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false, isBuffedShot)
 		CombatResolution.resolveHit(player, target, isDead)
 		return
@@ -314,6 +336,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player, { committedAt = requestedAt }) -- 29-1: 위 근접 분기와 같다
 		MonsterSpawner.updateHpLabel(target)
 		PlayerProfile.applyLifesteal(player, dealt) -- 26-2, 위 근접 분기와 같은 지점(실제 명중 후)
+		glovesBolt(player, target, isComboHit, dealt)
 		attackResult:FireClient(player, target, dealt, isCrit, isDead, isComboHit, false, isBuffedShot)
 		CombatResolution.resolveHit(player, target, isDead)
 

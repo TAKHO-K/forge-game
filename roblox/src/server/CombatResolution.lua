@@ -45,6 +45,11 @@ materialGained.Parent = ReplicatedStorage
 local ownedMobBlocked = Instance.new("RemoteEvent")
 ownedMobBlocked.Name = "OwnedMobBlocked"
 ownedMobBlocked.Parent = ReplicatedStorage
+
+-- D1-2: 반짝이(금빛 몹) 처치 = 금화 분수 연출 신호(처치 지점 - 같은 서버 전원 · 클라 SparkleMonsterVisual이 거리 안에서만 그린다). 한 번의 죽음에 한 번.
+local sparkleCoinFountain = Instance.new("RemoteEvent")
+sparkleCoinFountain.Name = "SparkleCoinFountain"
+sparkleCoinFountain.Parent = ReplicatedStorage
 MonsterState.setBlockedListener(function(model, player)
 	if typeof(player) == "Instance" and player.Parent then
 		ownedMobBlocked:FireClient(player, model, PlayerProfile.markStealLockSeen(player))
@@ -157,7 +162,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	if isBoss then
 		killUnits = BossData.bosses[monsterData.id].hpMultiplier
 	elseif isSparkle then
-		killUnits = MonsterState.getKillUnits(target) + RareMonsterConfig.goldBonusKillEquivalent
+		killUnits = MonsterState.getKillUnits(target) + RareMonsterConfig.materialBonusKillEquivalent -- D1-2: 재료는 옛 10마리분(골드 보너스와 분리)
 	else
 		killUnits = MonsterState.getKillUnits(target)
 	end
@@ -356,6 +361,9 @@ end
 local function handleMobDeath(target)
 	local monsterData = MonsterState.getData(target)
 	local deathPosition = target.PrimaryPart.Position
+	if MonsterState.isSparkle(target) then
+		sparkleCoinFountain:FireAllClients(deathPosition)
+	end
 
 	-- 공유 잡몹(19-4 [2], PRD 20.13 C안) - 막타 1인이 아니라 기여 비율 이상인 전원이
 	-- 각자 온전한 보상을 받는다. contributor.Parent 검사는 방어적 가드(AttackServer.

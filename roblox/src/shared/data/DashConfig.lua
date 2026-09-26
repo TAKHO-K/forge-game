@@ -10,6 +10,8 @@ return {
 	-- 0.2초)보다 길고 대검 관통돌진(18stud/0.25초)보다 짧다 - 회피기가 공격 돌진보다 멀리
 	-- 가면 안 되고, 스킬 부속 뒷걸음보다는 확실히 멀어야 "대시"라는 이름값을 한다.
 	rangeStuds = 16,
+	-- D1-2: 대시 거리 상한(배율) - 태초 신발 고유 효과만 여기까지 늘린다(×1.125 = 18stud = 대검 관통돌진과 같다 - 위 "회피기가 공격 돌진보다 멀리 가면 안 된다"를 지킨다).
+	rangeMaxMultiplier = 1.125,
 	durationSeconds = 0.3, -- PRD 5.4 그대로. 16stud/0.3초 ≈ 53stud/s.
 	cooldownSeconds = 8, -- PRD 5.4 그대로.
 	incomingDamageMultiplier = 0.5, -- PRD 5.4 "대시 중 피격 데미지 50% 감소".

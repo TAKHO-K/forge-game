@@ -91,15 +91,21 @@ function PlayerProfile.getOptionBonus(player, axisId)
 	return Option.sumAxisBonus(buildOptionSources(classState), axisId, profile.classId)
 end
 
--- 치명(crit) 전용 - {critRate, critDmg} 두 값을 같이 돌려준다(20.67 [6-3], Option.critBonus
--- 참고 - 둘 다 상한 없음).
+-- 치명(crit) 전용 - {critRate, critDmg} 두 값을 같이 돌려준다(20.67 [6-3], Option.critBonus 참고).
+-- D1-2: 치명 피해 = 옵션 합 + 태초 장갑 고유 효과(Loot.getGlovesCritDmgBonus) - 합계 상한 CombatConfig.critDmgBonusCap. 치명 확률은 100%를 넘으면 의미가 없다(확정 치명 버프 중에만 피해로 전환 - PlayerCombat.resolveGuaranteedCrit).
 function PlayerProfile.getCritBonus(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
 		return 0, 0
 	end
-	return Option.critBonus(buildOptionSources(classState), profile.classId)
+	local critRate, critDmg = Option.critBonus(buildOptionSources(classState), profile.classId)
+	return critRate, math.min(critDmg + Loot.getGlovesCritDmgBonus(classState.equipment.gloves), CombatConfig.critDmgBonusCap)
+end
+
+-- D1-2 태초 신발 고유 효과: 대시 거리 배율(DashServer가 읽는다).
+function PlayerProfile.getDashRangeMultiplier(player)
+	return Loot.getShoesDashMultiplier(PlayerProfile.getEquipped(player, "shoes"))
 end
 
 -- 등급 하나의 ArmorData.gradeOrder 안 위치(1부터 시작). 목록에 없는 등급이면 nil -
@@ -206,6 +212,7 @@ function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
 	player:SetAttribute("PrimordialEquipped", InventorySync.primordialEquipped(profile)) -- D1 ⑤
+	player:SetAttribute("PrimordialParts", InventorySync.primordialParts(profile)) -- D1-2 딜 부위 고유 연출
 	do -- D1: 칭호 목록도 접속 때 내린다(옛 코드는 새로 받을 때만 - 이름표 칭호 줄이 재접속 뒤 사라졌다)
 		local keys = {}
 		for k in pairs(profile.titles or {}) do
@@ -1506,7 +1513,7 @@ function PlayerProfile.refreshMovementSpeed(player)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid.WalkSpeed = BASE_WALK_SPEED_STUDS * JumpMath.moveSpeedMultiplier(bonus) * PlayerState.getMoveSpeedMultiplier(player) -- P3d-F: 출처별 이동속도 배율(회전베기 감속 등)
-		-- G2a: 걷기 배율은 MovementConfig.moveSpeedMaxMultiplier(×1.5)에서 멈춘다 - 공격 속도(SpeedPercentBonus Attribute · PlayerCombat.getAttackCooldown)는 상한 없이 그대로.
+		-- G2a: 걷기 배율은 MovementConfig.moveSpeedMaxMultiplier(×1.5)에서 멈춘다 - 공격 속도(SpeedPercentBonus Attribute · PlayerCombat.getAttackCooldown)는 D1-2부터 CombatConfig.attackSpeedMaxMultiplier(×2.5)에서 멈춘다.
 	end
 end
 

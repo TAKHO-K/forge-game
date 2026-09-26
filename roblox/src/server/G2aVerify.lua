@@ -116,10 +116,10 @@ function G2aVerify.runPure()
 		local shoes = 5.49 -- 태초 신발(D0 (f) ≈ 104 stud/s)
 		local walk = JumpMath.moveSpeedMultiplier(shoes) * MovementConfig.walkSpeedStuds
 		local oldWalk = PlayerCombat.getSpeedMultiplier(shoes) * MovementConfig.walkSpeedStuds
-		r.check(("걷기 배율: 0 → %.2f · +30%% → %.2f · 태초 신발 +549%% → %.2f(= %.0f stud/s, 옛 %.0f) · 공속 배율 그대로 %.2f(상한 없음)"):format(
+		r.check(("걷기 배율: 0 → %.2f · +30%% → %.2f · 태초 신발 +549%% → %.2f(= %.0f stud/s, 옛 %.0f) · 공속 배율 %.2f(D1-2부터 상한 ×2.5)"):format(
 			JumpMath.moveSpeedMultiplier(0), JumpMath.moveSpeedMultiplier(0.3), JumpMath.moveSpeedMultiplier(shoes), walk, oldWalk, PlayerCombat.getSpeedMultiplier(shoes)),
 			JumpMath.moveSpeedMultiplier(0) == 1 and near(JumpMath.moveSpeedMultiplier(0.3), 1.3) and JumpMath.moveSpeedMultiplier(shoes) == MovementConfig.moveSpeedMaxMultiplier
-				and near(PlayerCombat.getSpeedMultiplier(shoes), 6.49))
+				and near(PlayerCombat.getSpeedMultiplier(shoes), require(game:GetService("ReplicatedStorage").Shared.data.CombatConfig).attackSpeedMaxMultiplier)) -- D1-2: 옛 기대 6.49(상한 없음) → 공속 상한
 		local capped = JumpMath.jumpHeight(0.5)
 		r.check(("점프력 +50%% 요청 → %.2f(상한 +%.0f%%) < 판정 층 %.1f · 옵션 없음 %.2f(M1-0: 보스 아레나도 같은 값)"):format(
 			capped, MovementConfig.jumpHeightBonusCap * 100, TerrainConfig.heightToleranceStuds, JumpMath.jumpHeight(0)),

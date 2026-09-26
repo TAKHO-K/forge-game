@@ -284,6 +284,7 @@ function V.runPure()
 		local worst = "O"
 		for _, row in ipairs(rows) do
 			local isFun = row.id:match("^e") ~= nil or (row.id:match("^j%-") ~= nil and row.id ~= "j-0") -- 끌기 변형 = 잔여(결정 대기 - 보고서 ⑧)
+				or row.id == "o" -- D1-2: 파티원 예외의 파티 버스(의도 - 사용자 결정 · 보상 규칙은 그대로) - 값은 보고서 D1-2 ⑤
 			r.note(("SIM|%s|%s|정상 %s|전 %s(%s) %s|후 %s(%s) %s|%s"):format(row.id, row.label, fmt(row.normal),
 				fmt(row.beforeRate), row.gainBefore and ("%+.1f%%"):format(row.gainBefore * 100) or "-", row.verdictBefore,
 				fmt(row.afterRate), ("%+.1f%%"):format(row.gainAfter * 100), row.verdictAfter, row.note or ""))

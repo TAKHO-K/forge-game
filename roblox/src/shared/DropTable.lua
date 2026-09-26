@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 
 local DropTable = {}
 
@@ -37,7 +38,7 @@ function DropTable.bossRetryGradeTable()
 end
 
 -- D1 ⑩ 확률 공개(정보창 데이터 - 창 UI는 U1): 드랍표 3종 = 보스 첫 클리어 · 토벌 · 잡몹(tier마다 태초 별도 굴림 포함 · 감쇠 전).
--- 반환 = { firstClear = rows, raid = rows, field = { [tier] = rows } } · rows = gradeRows 모양({ id, chance } 낮은 등급부터).
+-- 반환 = { firstClear = rows, raid = rows, field = { [tier] = rows }, sparkle = rows } · rows = gradeRows 모양({ id, chance } 낮은 등급부터).
 function DropTable.disclosure()
 	local field = {}
 	for tierIndex = 1, #DropTableData.armorGradeByTier do
@@ -47,6 +48,7 @@ function DropTable.disclosure()
 		firstClear = DropTable.gradeRows(DropTableData.bossGrades.firstClear),
 		raid = DropTable.gradeRows(DropTableData.bossGrades.raid),
 		field = field,
+		sparkle = DropTable.gradeRows(RareMonsterConfig.sparkleGradeChances), -- D1-2: 반짝이 확정 1개(출현 = RareMonsterConfig.sparkleChance)
 	}
 end
 

@@ -71,7 +71,7 @@ dashRequest.OnServerEvent:Connect(function(player)
 
 	lastDashTick[player] = now
 	local startPos = rootPart.Position
-	local endPos = DashEndpoint.compute(player, startPos, direction, DashConfig.rangeStuds)
+	local endPos = DashEndpoint.compute(player, startPos, direction, DashConfig.rangeStuds * PlayerProfile.getDashRangeMultiplier(player)) -- D1-2: 태초 신발 = 대시 거리 상한(DashConfig.rangeMaxMultiplier)
 
 	-- PRD 5.4 "대시 중 피격 데미지 50% 감소" - 대검 회전베기와 같은 통로(PlayerState).
 	PlayerState.setIncomingDamageMultiplierUntil(player, DashConfig.incomingDamageMultiplier, DashConfig.durationSeconds, "dash")

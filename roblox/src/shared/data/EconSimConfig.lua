@@ -18,6 +18,12 @@ return {
 	-- D1: 보스 첫 클리어 장비를 모형에 넣는가(누적 기대 도착 - server/EconSim fightBosses). D1 전 모형은 이 장비를 안 셌다(보스 드랍이 상위 등급의
 	-- 주 공급원이 된 D1부터 켠다 - what-if modelBossDrops = false로 옛 모형과 비교).
 	modelBossDrops = true,
+	-- D1-2(사용자 지시 "보스 장비 포함 = 현실"): 보스 장비 itemLevel = 보스 스테이지 + 게임 편차표(ArmorData.bossItemLevelDelta +0 · +7 · +15 = 3:2:1)를 비율대로 돈다("cycle").
+	-- D1 모형은 편차 +0("zero" - 보수적). 첫 클리어 장비 기대 개수 = bossFirstClearDrops(게임 = 1).
+	bossItemLevelDeltaModel = "cycle",
+	bossFirstClearDrops = 1,
+	-- D1-2: 반짝이(처치당 RareMonsterConfig.sparkleChance) 확정 장비 · 골드를 모형에 넣는다(누적 기대 도착 - 보스와 같은 방식). D1 전 모형은 반짝이를 안 셌다.
+	modelSparkleDrops = true,
 
 	-- E3 도달 시간 곡선의 이정표(마지막 = InfiniteStageConfig.designMaxStage를 EconSim이 붙인다 - P2.5a)
 	milestones = { 10, 20, 50, 100, 500, 1000, 2000, 5000, 10000, 15000, 17000, 20000 }, -- P2.5c: 20 · 17,000 추가(사용자 보고 표)

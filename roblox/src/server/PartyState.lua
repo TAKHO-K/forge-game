@@ -48,7 +48,18 @@ partyNotice.Parent = ReplicatedStorage
 --           code = string|nil(24-2), pending = { {userId, name, since}, ... }(24-2 원격 좌석), bossActive = bool(24-2) }
 -- record = { player = Player|nil, name, userId, isDummy, joinedAt, dummy = { classId, level, stage }|nil }
 local parties = {} -- [id] = party (살아 있는 파티만)
-local partyOf = {} -- [Player] = party
+-- [Player] = party. D1-2: 쓰는 곳이 여럿(결성 · 합류 · 복귀 · 탈퇴 · 끊김)이라 대리 표로 받아 Player Attribute PartyId(파티 번호 · 없으면 nil)를 같이 맞춘다 -
+-- 잡몹 막힘의 파티원 예외(shared/MobShare - 서버 isBlocked · 클라 자물쇠 MobLockView)가 읽는다. 스탠드인(테이블)은 Attribute가 없어 건너뛴다(시뮬 · 검증은 who.party).
+local partyOfStore = {}
+local partyOf = setmetatable({}, {
+	__index = partyOfStore,
+	__newindex = function(_, player, party)
+		partyOfStore[player] = party
+		if typeof(player) == "Instance" and player:IsA("Player") then
+			player:SetAttribute("PartyId", party and party.id or nil)
+		end
+	end,
+})
 local invites = {} -- [invitee Player] = { party, inviter = Player, expiresAt, thread }
 local nextPartyId = 1
 local removedListeners = {} -- fn(player, party, reason)

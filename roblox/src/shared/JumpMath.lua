@@ -134,7 +134,7 @@ function JumpMath.launchAirSeconds(heightStuds)
 	return 2 * JumpMath.upSpeed(math.max(heightStuds or 0, 0.5)) / g()
 end
 
--- 걷기 배율(신발 + 신속 합 → 1 + 합, 상한 MovementConfig.moveSpeedMaxMultiplier). 공격 속도 배율(PlayerCombat.getSpeedMultiplier)과 따로 - 공속은 상한 없음.
+-- 걷기 배율(신발 + 신속 합 → 1 + 합, 상한 MovementConfig.moveSpeedMaxMultiplier). 공격 속도 배율(PlayerCombat.getSpeedMultiplier - D1-2부터 상한 ×2.5)과 따로.
 function JumpMath.moveSpeedMultiplier(speedPercentBonus)
 	return math.min(1 + math.max(speedPercentBonus or 0, 0), MovementConfig.moveSpeedMaxMultiplier)
 end

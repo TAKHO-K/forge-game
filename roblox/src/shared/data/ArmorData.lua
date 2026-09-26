@@ -50,9 +50,14 @@ do
 		dropPower[i] = acc
 	end
 end
+-- D1-2(사용자 지시 - 태초 딜 부위 변별력): 장갑 · 신발(딜 부위) 태초 = 고대 × 이 배율. 갑옷 태초 방어(defenseGradeMultiplier)는 위 표 그대로(×2.5).
+-- 비교 = ×1.0 · 1.2 · 1.25 · 1.3 · 1.6 · 2.0(보고서 D1-2 ②): 상한 도달 시간 비 ≤ 1.3을 두 프로필(상위 1% 1.26 · 일반 1.26) 모두 여유 있게 지키는 가장 큰 값 = 1.25(×1.3은 상위 1% 1.302).
+-- "수렴 뒤 스테이지 차 ≤ 150"은 딜 우위가 조금이라도 있으면(×1.0 + 치명 피해 고유 효과도 +1,155) 못 맞춘다 - 결정 대기. 신발은 공격 속도 상한에 걸려 이 배율이 딜에 안 닿는다.
+local DPS_PRIMORDIAL_STEP = 1.25
 
 return {
 	baseDefense = CombatConfig.playerDefense,
+	dpsPrimordialStep = DPS_PRIMORDIAL_STEP, -- D1-2: 딜 부위 태초 = 고대 × 이 값(검증 · 보고서가 읽는다)
 
 	-- 17-1부터 7등급 전부 실제로 드랍된다(16-6이 미뤄 뒀던 "드랍표 연결"). 오름차순 순서 -
 	-- Loot.rollArmorDrop이 이 순서로 tier별 확률표를 굴리고(MonsterData.dropGradeTableByTier의
@@ -126,7 +131,7 @@ return {
 			displayName = "태초",
 			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[7],
 			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 6, -- 옛 배율(몬스터 tier 공정성 식 고정 입력 - D1)
-			dropPower = dropPower[7],
+			dropPower = dropPower[6] * DPS_PRIMORDIAL_STEP, -- D1-2: 딜 부위(장갑 · 신발)만 - 갑옷 방어는 위 defenseGradeMultiplier(×2.5)
 		},
 	},
 

@@ -443,8 +443,8 @@ end
 --   반환 = X가 O의 몹에서 가져간 가치/분(정상 0) · O 가치/분 · O 솔로. 사람 = { stage, level, rebirth }(MobShare.profileOf가 읽는다).
 local function scenarioSteal(mode, owner, thief)
 	local state = run(mode, function(m)
-		return start(m, { O = { power = owner.stage, stage = owner.stage, level = owner.level, rebirth = owner.rebirth },
-			X = { power = thief.power or thief.stage, stage = thief.stage, level = thief.level, rebirth = thief.rebirth } })
+		return start(m, { O = { power = owner.stage, stage = owner.stage, level = owner.level, rebirth = owner.rebirth, party = owner.party },
+			X = { power = thief.power or thief.stage, stage = thief.stage, level = thief.level, rebirth = thief.rebirth, party = thief.party } })
 	end, function(s, now)
 		if respawn(s, now) or s.mobDead then
 			return
@@ -633,6 +633,14 @@ function C1Sim.runAll()
 		add(case.id, case.label .. " - 받는 사람 = 도둑(정상 0)", xb, xa, 0, ("주인 %.3g → %.3g / 솔로 %.3g · 판정 canShare = %s"):format(ob, oa, oSolo,
 			tostring(MobShare.canShare(case.owner, case.thief))))
 	end
+	-- o(D1-2 파티원 예외): n과 같은 두 계정이 같은 파티 - 강한 파티원이 초보 파티원이 먼저 친 몹을 같이 친다(막힘 없음). 받는 사람 = 초보(파티 버스 · 보상 규칙은 그대로 - 기여 10%).
+	--   o-solo = 파티가 아니면 그대로 막힌다(= n). 정상 = 초보 솔로.
+	local partyOwner, partyStrong = { stage = 100, level = 30, rebirth = 0, party = 1 }, { stage = 100, level = 400, rebirth = 2, power = 3000, party = 1 }
+	local strongParty, ownerParty, ownerSolo = scenarioSteal("new", partyOwner, partyStrong)
+	add("o", "파티원 예외: 강한 파티원(n의 강한 계정)이 초보 파티원(n의 초보) 몹을 같이 침 - 받는 사람 = 초보(솔로 대비)", nil, ownerParty, ownerSolo,
+		("강한 파티원이 가져간 가치 %.3g/분 · 막힘 %s"):format(strongParty, tostring(MobShare.isBlocked(MobShare.fresh({}), partyStrong, 100, 0))))
+	local strongOut = scenarioSteal("new", { stage = 100, level = 30, rebirth = 0, party = 1 }, { stage = 100, level = 400, rebirth = 2, power = 3000, party = 2 })
+	add("o-other", "파티원 예외: 다른 파티끼리는 그대로 막힘(= n) - 받는 사람 = 강한 계정(정상 0)", nil, strongOut, 0)
 	local gBest, gNormal, gStage, gRows = scenarioG()
 	local gNote = {}
 	for _, r in ipairs(gRows) do

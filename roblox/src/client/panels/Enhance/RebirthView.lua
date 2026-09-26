@@ -80,14 +80,16 @@ function RebirthView.build(parent, _overlayParent)
 	function refs.update()
 		local rebirthCount = player:GetAttribute("RebirthCount") or 0
 		local level = player:GetAttribute("CharacterLevel") or 1
+		-- D1-2: 무기 태초 조건 한 줄(코드 조건 = 환생 maxRebirthCount회 + 보석 홈 전부 - PlayerProfile.rebirth)
+		local weaponRule = Text.get("rebirth.weaponPrimordialRule", { max = GemData.maxRebirthCount, slots = #GemData.slotGradeCap })
 		if rebirthCount >= GemData.maxRebirthCount then
-			infoLabel.Text = Text.get("rebirth.confirm.done", { count = rebirthCount, max = GemData.maxRebirthCount })
+			infoLabel.Text = Text.get("rebirth.confirm.done", { count = rebirthCount, max = GemData.maxRebirthCount }) .. "\n" .. weaponRule
 			return
 		end
 		infoLabel.Text = Text.get("rebirth.tab.where") .. "\n" .. Text.get("rebirth.tab.status", {
 			count = rebirthCount, max = GemData.maxRebirthCount, level = level, required = RebirthView.requiredLevel(rebirthCount),
 			expFrom = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount)), expTo = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount + 1)),
-		})
+		}) .. "\n" .. weaponRule
 	end
 
 	function refs.handleResult(data)

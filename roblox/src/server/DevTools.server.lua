@@ -3587,6 +3587,7 @@ if RunService:IsStudio() then
 				{ "M1-2(나)", function() require(script.Parent.M1_2Verify).runLive(player, env) end }, -- M1-2: 스폰 지점 실제 사이클 · 전투 중 보류 · 처치 중 남김 · 귀환 시전 · 취소 · 돌아가기 · 뿌리 밟기
 				{ "C1(나)", function() require(script.Parent.C1Verify).runLive(player, env) end }, -- C1: 기준 스테이지 상승 · 자격 · 스테이지 변경 지우기/초기화 · 만료 · 실제 처치 보상 · 치유 · 어그로 참여 · 토벌 검사
 				{ "D1(나)", function() require(script.Parent.D1Verify).runLive(player, env) end }, -- D1: 세계 번호 동시성 · 명예의 전당 복원 · 드랍 경로 각인 · 빛기둥 7단계 · 잠금 · 각성
+				{ "D1-2(나)", function() require(script.Parent.D1_2Verify).runLive(player, env) end }, -- D1-2: 태초 신발 · 장갑 착용(공격 간격 상한 · 걷기 · 대시 · 치명 피해 · Attribute) · 파티 PartyId · 막힘 예외
 				{ "A1(나)", function() require(script.Parent.A1Verify).runLive() end }, -- A1: CartoonStyle 멱등 · base 복귀 · 관리 밖 변화 0 · 몬스터별 AimHighlight 0
 				{ "M1-4(나)", function() require(script.Parent.M1_4Verify).runLive(player, env) end }, -- M1-4: 지형 표식 v2 · 캡슐(소품 포함) · 소품 라이브러리 · 지형 붙이기 · 사다리 곁 · 능선 위/너머 밀어내기 · 심해 관문 발판 · 무리 상한
 				{ "M1-3T(나)", function() require(script.Parent.M1_3TVerify).runLive(player, env) end }, -- M1-3 본편: 굽힌 지형 · 둥지 캡슐 통과 · 줍기(성공 · 쿨다운 · 멀리서 · 순간이동) · 저장 · 순환 · 선인장 · 외곽 밀어내기 · 스폰 높이
@@ -3983,6 +3984,16 @@ if RunService:IsStudio() and verifyEnabled("D1(가)") then
 		local ok, err = pcall(require(script.Parent.D1Verify).runPure)
 		if not ok then
 			warn(("[D1(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ D1-2 자동 검증 블록(가) - 공격 속도 상한 · 딜 부위 태초 · 반짝이 표 · 파티원 예외 · 칭호 조건 · 무기 태초 문구(docs/phase/D1-2-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("D1-2(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.D1_2Verify).runPure)
+		if not ok then
+			warn(("[D1-2(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

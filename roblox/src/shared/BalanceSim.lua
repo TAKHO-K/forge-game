@@ -119,6 +119,8 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 	local speedPercentBonus = Loot.getShoesSpeedPercent(shoesItem) + gemBonus.speedPercent
 	local armorBonus = Loot.getArmorDefense(armorItem)
 	local maxHpBonus = Loot.getMaxHpBonus(armorItem)
+	-- D1-2: 태초 장갑 치명 피해(PlayerProfile.getCritBonus와 같은 상한). 치명 옵션은 이 시뮬이 원래 안 센다(보석 = 위력 가정).
+	local critDmg = class.critDmg + math.min(Loot.getGlovesCritDmgBonus(glovesItem), CombatConfig.critDmgBonusCap)
 
 	return {
 		classId = classId,
@@ -133,9 +135,9 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 		attackCooldown = PlayerCombat.getAttackCooldown(classId, speedPercentBonus),
 		attackRange = PlayerCombat.getAttackRange(classId),
 		critRate = class.critRate,
-		critDmg = class.critDmg,
+		critDmg = critDmg,
 		-- 치명타 평균 배율 - calcDamage의 기대값(확률 롤을 매번 시뮬레이션하지 않고 기대치로 계산).
-		critMultAvg = 1 + class.critRate * (class.critDmg - 1),
+		critMultAvg = 1 + class.critRate * (critDmg - 1),
 		-- 3타 강타 평균 배율(CombatConfig.comboHitEvery/comboHitMultiplier) - 쉬지 않고 계속
 		-- 공격한다고 가정할 때(콤보 리셋 없음) N번에 한 번 1.8배가 나오는 것의 평균.
 		comboMultAvg = 1 + (CombatConfig.comboHitMultiplier - 1) / CombatConfig.comboHitEvery,
@@ -259,7 +261,7 @@ function BalanceSim.simulateCombat(loadout, opts)
 
 	local function critMultFor(critRateBonus)
 		local rate = math.min(class.critRate + (critRateBonus or 0), 1)
-		return 1 + rate * (class.critDmg - 1)
+		return 1 + rate * (loadout.critDmg - 1)
 	end
 
 	-- 버프 상태(BuffState와 같은 의미의 필드만).
@@ -420,9 +422,9 @@ function BalanceSim.simulateCombat(loadout, opts)
 		local critMult
 		local forceCrit, critDmgBonus = PlayerCombat.resolveGuaranteedCrit(classId, isGuaranteedCrit(t), critRateBonus)
 		if forceCrit then
-			critMult = class.critDmg
+			critMult = loadout.critDmg
 		elseif critDmgBonus > 0 then
-			critMult = class.critDmg + critDmgBonus
+			critMult = loadout.critDmg + critDmgBonus
 		else
 			critMult = critMultFor(critRateBonus)
 		end
@@ -499,9 +501,9 @@ function BalanceSim.simulateCombat(loadout, opts)
 					if k <= (def.guaranteedCritHits or 0) then
 						local forceCrit, critDmgBonus = PlayerCombat.resolveGuaranteedCrit(classId, isGuaranteedCrit(t), 0)
 						if forceCrit then
-							mult = class.critDmg
+							mult = loadout.critDmg
 						elseif critDmgBonus > 0 then
-							mult = class.critDmg + critDmgBonus
+							mult = loadout.critDmg + critDmgBonus
 						end
 					end
 					addDamage(locked, perTickBase * mult, def.name)

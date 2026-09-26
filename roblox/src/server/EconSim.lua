@@ -49,6 +49,8 @@ local PartyState = require(script.Parent.PartyState)
 local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData) -- P3d G-d: 견습 7단계를 캐주얼 시뮬 앞에
 local Awaken = require(ReplicatedStorage.Shared.Awaken) -- D1: 태초 각성 비용(보유 what-if)
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 
 local EconSim = {}
 
@@ -146,6 +148,37 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	if whatIf.optionGradeStep then -- ② 보석(옵션) 등급 단계 배율
 		set(OptionData, "gradeStep", whatIf.optionGradeStep)
 	end
+	-- D1-2 what-if: 상한 전 비교 · 보스 장비 레버 · 반짝이 모형
+	if whatIf.attackSpeedCap then -- 공격 속도 상한(math.huge = D1-2 전 - 상한 없음)
+		set(CombatConfig, "attackSpeedMaxMultiplier", whatIf.attackSpeedCap)
+	end
+	if whatIf.glovesCritDmgBonus then -- 태초 장갑 치명 피해(0 = 고유 효과 끔)
+		set(PrimordialData.unique, "glovesCritDmgBonus", whatIf.glovesCritDmgBonus)
+	end
+	if whatIf.bossItemLevelDelta then -- 레버 1: 첫 클리어 itemLevel 편차표(ArmorData.bossItemLevelDelta - 지금 +0 · +7 · +15 = 3:2:1)
+		set(ArmorData, "bossItemLevelDelta", whatIf.bossItemLevelDelta)
+	end
+	if whatIf.bossFirstClearTable then -- 레버 2: 첫 클리어 등급표(보장 등급)
+		set(DropTableData.bossGrades, "firstClear", whatIf.bossFirstClearTable)
+	end
+	if whatIf.bossFirstClearDrops then -- 레버 3: 첫 클리어 장비 기대 개수(지금 1 - 0.5 = 두 번에 한 번)
+		set(EconSimConfig, "bossFirstClearDrops", whatIf.bossFirstClearDrops)
+	end
+	if whatIf.bossItemLevelDeltaModel then -- 모형: "cycle"(게임 편차표를 비율대로 돌림 - 현실) · "zero"(D1 모형 - 편차 +0)
+		set(EconSimConfig, "bossItemLevelDeltaModel", whatIf.bossItemLevelDeltaModel)
+	end
+	if whatIf.modelSparkleDrops ~= nil then -- 반짝이 확정 장비 · 골드를 모형에 넣는가
+		set(EconSimConfig, "modelSparkleDrops", whatIf.modelSparkleDrops)
+	end
+	if whatIf.sparkleChance then -- 반짝이 출현 확률(처치당)
+		set(RareMonsterConfig, "sparkleChance", whatIf.sparkleChance)
+	end
+	if whatIf.sparkleGrades then -- 반짝이 등급표(D1-2 전 = 유물 90 · 고대 9 · 태초 1%)
+		set(RareMonsterConfig, "sparkleGradeChances", whatIf.sparkleGrades)
+	end
+	if whatIf.sparkleGoldKills then -- 반짝이 골드 보너스 마릿수분
+		set(RareMonsterConfig, "goldBonusKillEquivalent", whatIf.sparkleGoldKills)
+	end
 	if whatIf.enhanceCostScale then
 		local scaled = {}
 		for index, cost in ipairs(EnhanceConfig.goldCost) do
@@ -195,7 +228,7 @@ end
 -- "목표 초 안에 잡는 HP ÷ atk"는 한 번만 이분법으로 구하고 재사용한다(키 = 직업 · 공속 보너스 · 목표 초).
 local hpRatioCache = {}
 function EconSim.maxHpPerAtk(loadout, seconds)
-	local key = ("%s|%.9f|%.4f|%s"):format(loadout.classId, loadout.speedPercentBonus, seconds, tostring(SkillData.healer.E.attackMultiplier))
+	local key = ("%s|%.9f|%.4f|%s|%.4f"):format(loadout.classId, PlayerCombat.getSpeedMultiplier(loadout.speedPercentBonus), seconds, tostring(SkillData.healer.E.attackMultiplier), loadout.critDmg) -- D1-2: 공속은 상한 뒤 배율로(상한 위 값은 같은 결과) · 태초 장갑 치명 피해도 처치 시간을 바꾼다
 	local cached = hpRatioCache[key]
 	if cached then
 		return cached
@@ -302,7 +335,7 @@ function EconSim.rotationDamage(spec, gems, durationSeconds)
 	local original = classes[spec.classId]
 	local patched = table.clone(original)
 	patched.critRate += critRate
-	patched.critDmg += critDmg
+	patched.critDmg += math.min(critDmg, CombatConfig.critDmgBonusCap) -- D1-2 리뷰 2: 게임(PlayerProfile.getCritBonus)과 같은 상한
 	local bowQ = SkillData[spec.classId] and SkillData[spec.classId].Q
 	local restoreSpeedBase = nil
 	if bowQ and bowQ.shape == "selfBuff" then
@@ -450,6 +483,10 @@ local function newState(profile)
 		bossPartTurn = 0,
 		awakenCount = 0, -- D1: 각성 횟수(태초 보유 what-if)
 		awakenGold = 0,
+		sparkleTally = {}, -- D1-2: 반짝이 장비 누적 기대 도착(등급마다)
+		sparkleGot = {}, -- D1-2: 반짝이 장비 누적 기대 개수(공급 표 - 등급마다)
+		sparkles = 0,
+		bossDeltaTurn = 0,
 	}
 end
 
@@ -661,6 +698,63 @@ local function nextMilestoneRecord(run, state, cap)
 	end
 end
 
+-- D1-2: 보스 장비 itemLevel 편차. 모형 "cycle"(기본 - 현실) = 게임 편차표(ArmorData.bossItemLevelDelta)를 가중치대로 펼친 순서를 차례로 돈다(평균 = 표의 기대값) ·
+-- "zero" = D1 모형(편차 +0 - 보수적).
+local function nextBossDelta(state)
+	if EconSimConfig.bossItemLevelDeltaModel == "zero" then
+		return 0
+	end
+	local sequence = {}
+	for _, entry in ipairs(ArmorData.bossItemLevelDelta) do
+		for _ = 1, entry.weight do
+			table.insert(sequence, entry.delta)
+		end
+	end
+	if #sequence == 0 then -- 리뷰 4: 가중치가 0 · 소수뿐인 what-if 표
+		return 0
+	end
+	-- 한 가중치 묶음 안에서 섞인 순서(높은 편차가 한쪽에 몰리지 않게): 홀수 칸 → 짝수 칸 순서로 다시 늘어놓는다
+	local mixed = {}
+	for i = 1, #sequence, 2 do
+		table.insert(mixed, sequence[i])
+	end
+	for i = 2, #sequence, 2 do
+		table.insert(mixed, sequence[i])
+	end
+	state.bossDeltaTurn = (state.bossDeltaTurn or 0) + 1
+	return mixed[(state.bossDeltaTurn - 1) % #mixed + 1]
+end
+
+-- D1-2: 반짝이 확정 장비(누적 기대 도착 - 보스와 같은 방식) · 골드는 처치당 골드 배율로(stepLevel). 반짝이 1마리 = 등급표에서 장비 1개 · itemLevel = 사냥 스테이지.
+local function sparkleArrivals(state, kills, stage)
+	if not EconSimConfig.modelSparkleDrops then
+		return
+	end
+	local sparkles = kills * RareMonsterConfig.sparkleChance
+	state.sparkles = (state.sparkles or 0) + sparkles
+	for _, gradeId in ipairs(ArmorData.gradeOrder) do
+		local chance = RareMonsterConfig.sparkleGradeChances[gradeId]
+		if chance then
+			state.sparkleTally[gradeId] = (state.sparkleTally[gradeId] or 0) + sparkles * chance
+			state.sparkleGot[gradeId] = (state.sparkleGot[gradeId] or 0) + sparkles * chance
+			while state.sparkleTally[gradeId] >= 1 do
+				state.sparkleTally[gradeId] -= 1
+				state.bossPartTurn += 1
+				table.insert(state.bossPending, { grade = gradeId, itemLevel = math.max(1, stage), part = EquipSlots.order[(state.bossPartTurn - 1) % #EquipSlots.order + 1] })
+			end
+		end
+	end
+end
+
+-- 반짝이 골드 배율(처치당 평균 - 반짝이 자기 골드 × goldMultiplier + 같은 tier 잡몹 N마리분). modelSparkleDrops가 꺼져 있으면 1.
+local function sparkleGoldFactor()
+	if not EconSimConfig.modelSparkleDrops then
+		return 1
+	end
+	return 1 + RareMonsterConfig.sparkleChance * (RareMonsterConfig.goldMultiplier - 1 + RareMonsterConfig.goldBonusKillEquivalent)
+end
+EconSim.sparkleGoldFactor = sparkleGoldFactor
+
 -- 보스를 깰 수 있는 동안 계속 깬다(한 레벨에 여러 번 가능). 반환: 이번에 깬 수.
 local function fightBosses(state, profile, loadout, run)
 	local cleared = 0
@@ -693,14 +787,15 @@ local function fightBosses(state, profile, loadout, run)
 		-- D1: 보스 첫 클리어 장비(영웅 이상 보장 표 - DropTable.bossFirstClearGradeTable) - 희귀 등급도 오래 하면 오도록 "누적 기대 도착"으로 센다
 		-- (잡몹 모형의 "점검 한 번에 기대 1개 이상" 규칙은 0.39% 같은 확률을 영영 못 잡는다). itemLevel = 보스 스테이지(편차 +0 · 보수적).
 		if EconSimConfig.modelBossDrops then
+			local count = EconSimConfig.bossFirstClearDrops or 1 -- D1-2 레버 3(기대 개수)
 			for _, gradeId in ipairs(ArmorData.gradeOrder) do
 				local chance = DropTable.bossFirstClearGradeTable(state.rebirth)[gradeId]
 				if chance then
-					state.bossTally[gradeId] = (state.bossTally[gradeId] or 0) + chance
+					state.bossTally[gradeId] = (state.bossTally[gradeId] or 0) + chance * count
 					while state.bossTally[gradeId] >= 1 do
 						state.bossTally[gradeId] -= 1
 						state.bossPartTurn += 1
-						table.insert(state.bossPending, { grade = gradeId, itemLevel = bossStage, part = EquipSlots.order[(state.bossPartTurn - 1) % #EquipSlots.order + 1] })
+						table.insert(state.bossPending, { grade = gradeId, itemLevel = bossStage + nextBossDelta(state), part = EquipSlots.order[(state.bossPartTurn - 1) % #EquipSlots.order + 1] })
 					end
 				end
 			end
@@ -809,7 +904,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		tier = tierData(hunt.tier)
 		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * expGapMultiplier(state.level, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth) * CharacterLevel.getExpScale(state.level) -- P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
-		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage)
+		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * sparkleGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때)
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)
 		killUnits = tier.rewardRatio ^ MonsterData.fairnessExponent
 		-- P2 E5: 처치 1마리당 태초 장비 기대 개수(서버 굴림과 같은 effectiveRate - 레벨 감쇠 포함)
@@ -841,6 +936,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		gold += batch * goldPerKill
 		exp += batch * expPerKill
 		primordial += batch * primordialPerKill
+		sparkleArrivals(state, batch, hunt.stage) -- D1-2
 		need -= batch * expPerKill
 		state.gold += batch * goldPerKill
 		state.seconds += batchSeconds

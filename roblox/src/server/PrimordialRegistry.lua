@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
+local TitleData = require(ReplicatedStorage.Shared.data.TitleData)
 local Workspace = game:GetService("Workspace")
 
 local PrimordialRegistry = {}
@@ -231,6 +232,16 @@ local function spawnBeacon(position)
 end
 PrimordialRegistry.spawnBeacon = spawnBeacon
 
+-- D1-2: 칭호 "태초의 선택" 획득 조건(TitleData.acquire) - 드랍 출처 태그가 있는 태초 장비(갑옷 · 장갑 · 신발)만. 보석(part = nil · 옵션만) · 출처 없는 것은 거절.
+function PrimordialRegistry.titleEarnedBy(item)
+	local acquire = TitleData.titles[PrimordialData.titleId].acquire
+	if acquire.kind ~= "dropPrimordial" or type(item) ~= "table" or item.grade ~= "primordial" then
+		return false
+	end
+	local kind = type(item.source) == "table" and item.source.kind
+	return table.find(acquire.sources, kind) ~= nil and table.find(acquire.parts, item.part) ~= nil
+end
+
 -- 굴려진 순간의 연출 · 칭호(CombatResolution · /gg drop force). 태초: 번호 발급(claim) → 칭호 → 30초 흰 빛기둥(전원) → 본인 연출(보스전 중이면 슬로우 없음).
 -- 고대: 본인 큰 연출(고대 색 빛기둥 - 본인 화면만) · 같은 서버 알림은 DropNotice(서버 범위)가 한다 · 전 서버 알림 없음.
 -- deps = { PlayerProfile, ImmediateSave }(순환 require를 피하려고 호출부가 넘긴다).
@@ -247,7 +258,7 @@ function PrimordialRegistry.onRolled(player, item, position, inBossFight, deps, 
 			end
 		end
 		local wait = PrimordialRegistry.claim(player, item, options)
-		if deps and deps.PlayerProfile and typeof(player) == "Instance" then
+		if deps and deps.PlayerProfile and typeof(player) == "Instance" and PrimordialRegistry.titleEarnedBy(item) then
 			deps.PlayerProfile.grantTitle(player, PrimordialData.titleId)
 		end
 		spawnBeacon(position)

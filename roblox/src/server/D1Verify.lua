@@ -184,13 +184,15 @@ function V.runPure()
 		local okAll, cells = true, {}
 		for i, g in ipairs(order) do
 			local grade = ArmorData.grades[g]
-			okAll = okAll and near(grade.dropPower, expect[i], 1e-12) and near(grade.defenseGradeMultiplier, 1.184 * expect[i], 1e-12)
+			-- D1-2: 태초 딜 부위(dropPower) = 고대 × ArmorData.dpsPrimordialStep · 갑옷 태초 방어는 ×2.5 그대로(1.184 × expect[7])
+			local powerExpect = (g == "primordial") and expect[6] * ArmorData.dpsPrimordialStep or expect[i]
+			okAll = okAll and near(grade.dropPower, powerExpect, 1e-12) and near(grade.defenseGradeMultiplier, 1.184 * expect[i], 1e-12)
 				and near(grade.fairnessMultiplier, 1.184 * 1.45 ^ (i - 1), 1e-12) and near(ItemVisualData.gradeVisuals[g].statMultiplier, 1.45 ^ (i - 1), 1e-12)
 			table.insert(cells, ("%s %.3f"):format(g, grade.dropPower))
 		end
 		r.check("TABLE|드랍 위력 누적 " .. table.concat(cells, " · ") .. " · 갑옷 = 1.184 × 위력 · 무기 환생/보석 기준(statMultiplier 1.45^n) · 공정성 입력(옛 배율) 불변", okAll)
 		r.check(("무기 태초(환생 등급 6) 배율 %.3f = 옛 값 · 장갑 태초 %.3f(위력표)"):format(PlayerCombat.gradeMultiplier(6), Loot.getGlovesAttackPercent({ grade = "primordial", itemLevel = 25 })),
-			near(PlayerCombat.gradeMultiplier(6), 1.45 ^ 6, 1e-9) and near(Loot.getGlovesAttackPercent({ grade = "primordial", itemLevel = 25 }) / Loot.getGlovesAttackPercent({ grade = "normal", itemLevel = 25 }), expect[7], 1e-9))
+			near(PlayerCombat.gradeMultiplier(6), 1.45 ^ 6, 1e-9) and near(Loot.getGlovesAttackPercent({ grade = "primordial", itemLevel = 25 }) / Loot.getGlovesAttackPercent({ grade = "normal", itemLevel = 25 }), expect[6] * ArmorData.dpsPrimordialStep, 1e-9)) -- D1-2 딜 부위 태초
 		-- 몬스터 공정성 r(t) 불변(옛 식 직접 계산과 같음)
 		local okR = true
 		local base
@@ -316,7 +318,7 @@ function V.runLive(player, env)
 			tostring(stamp and stamp.ownerName), tostring(stamp and stamp.source and stamp.source.kind), tostring(item and item.locked), tostring(PlayerProfile.hasTitle(player, PrimordialData.titleId)),
 			tostring(titlesBefore), tostring(workspace:FindFirstChild("PrimordialBeacon") ~= nil)),
 			item and item.grade == "primordial" and stamp and type(stamp.no) == "number" and stamp.ownerId == player.UserId and item.source and item.source.kind == "dev"
-				and item.locked == true and PlayerProfile.hasTitle(player, PrimordialData.titleId) and workspace:FindFirstChild("PrimordialBeacon") ~= nil)
+				and item.locked == true and PlayerProfile.hasTitle(player, PrimordialData.titleId) == titlesBefore and workspace:FindFirstChild("PrimordialBeacon") ~= nil) -- D1-2: 시험 출처(dev)는 칭호 조건(드랍 출처) 밖 - 칭호 변화 없음이 기대값(조건 판정 = D1-2(가))
 		task.wait(4) -- 원본 기록(비동기 UpdateAsync) 기다림
 		HallOfFame.debugForget()
 		local empty = #HallOfFame.shownNumbers()

@@ -22,9 +22,10 @@ return {
 	-- 잡몹 리스폰마다 매번 다시 굴린다(MonsterSpawner.spawn이 매 스폰마다 호출).
 	sparkleChance = 0.005,
 
-	-- 확정 드랍 등급 분포(웹 BALANCE.sparkleGradeChances 그대로). ArmorData.gradeOrder의
-	-- 상위 3등급과 이름이 정확히 겹친다 - 로블록스에 이미 있는 등급 축을 그대로 쓴다.
-	sparkleGradeChances = { relic = 0.90, ancient = 0.09, primordial = 0.01 },
+	-- 확정 드랍 등급 분포. D1-2(사용자 결정): 태초 · 고대 = 보스 첫 클리어(DropTableData.bossGrades.firstClear)의 절반, 나머지를 영웅 · 전설 · 유물로(영웅 이상 확정).
+	-- 옛 값(웹 - 유물 90 · 고대 9 · 태초 1%)은 처치당 태초 0.005%로 D1 잡몹(0.0001%)의 50배라 태초 공급을 반짝이가 지배했다(D1 리뷰 1).
+	-- 공급 = docs/phase/D1-2-report.md ④(처치당 태초 = sparkleChance × 0.005%). 합 = 1(검증 D1-2(가)).
+	sparkleGradeChances = { epic = 0.55, legendary = 0.36, relic = 0.088, ancient = 0.00195, primordial = 0.00005 },
 
 	-- 골드는 오히려 줄어든다(웹 BALANCE.rareGoldMultiplier=0.5, PRD 8.0-5 "골드는 적게
 	-- (보상이 아이템이므로)") - 확정 최고 등급 드랍 하나가 보상의 전부라는 뜻을 골드에도
@@ -38,7 +39,12 @@ return {
 	-- 보스 첫 처치(태초 2%/0.1%)와의 균형이 그 위에 서 있다(PRD 20.48 [2] 비교표). 골드는
 	-- 등급 체계 밖의 축이라 그 균형을 건드리지 않는다. 경제 영향: 0.5% × 10마리분 = 잡몹 골드
 	-- 수입의 약 +5%.
-	goldBonusKillEquivalent = 10,
+	-- D1-2(사용자 결정 - 금빛 몹 = 골드 크게): 10 → 25마리분(반짝이 1마리 ≈ 잡몹 25.5마리 골드). 사냥 골드 몫 = 0.5% × 25.5 ≈ 11%(목표 10 ~ 15% - 보고서 D1-2 ④).
+	-- 처치 때 금화 분수 연출(client/SparkleMonsterVisual - coinFountain). 강화 재료 마릿수분은 옛 10 그대로(materialBonusKillEquivalent - 재료 공급은 안 바꾼다).
+	goldBonusKillEquivalent = 25,
+	materialBonusKillEquivalent = 10,
+	-- 금화 분수(처치 지점 · 같은 서버 곁의 사람 화면): 입자 예산 = 한 번 최대 count개 · lifeSeconds 뒤 전부 사라짐(파티클 없이 파트 - 드랍 번개와 같은 방식).
+	coinFountain = { count = 18, lifeSeconds = 1.4, upSpeed = 26, spread = 9, gravity = 60, size = 0.55, maxDistance = 160 },
 
 	-- 시각(19-4 [6] → 22-2 [2]에서 이펙트 레이어로 재구성). 몬스터 모델의 어떤 속성도
 	-- 건드리지 않는다 - 크기 배율(옛 sizeMultiplier 1.3)·Body 안의 PointLight 둘 다 모델에

@@ -77,6 +77,7 @@ local function myProfile()
 		stage = player:GetAttribute("InfiniteStage") or 1,
 		level = player:GetAttribute("CharacterLevel") or 1,
 		rebirth = player:GetAttribute("RebirthCount") or 0,
+		party = player:GetAttribute("PartyId"), -- D1-2: 같은 파티 = 잠금 없음(MobShare.sameParty)
 	}
 end
 

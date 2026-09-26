@@ -34,6 +34,16 @@ return {
 	-- ⑥ 칭호
 	titleId = "primordialChosen", -- 이름 · 등급 · 조건 = shared/data/TitleData
 
+	-- D1-2 딜 부위 태초 고유 효과(능력치 상한 안 - 수치 = Loot.getGlovesCritDmgBonus · getShoesSpeedPercent · getShoesDashMultiplier, 연출 = client/PrimordialFx).
+	--   장갑: 치명 피해 +glovesCritDmgBonus(합계 상한 CombatConfig.critDmgBonusCap) + 강공격(3타)마다 흰 번개(glovesBolt - 본인 · 곁의 사람 화면).
+	--   신발: 공격 속도 · 이동 속도 = 상한(CombatConfig.attackSpeedMaxMultiplier · MovementConfig.moveSpeedMaxMultiplier) · 대시 거리 = DashConfig.rangeMaxMultiplier + 흰 발자국(footprint).
+	unique = {
+		glovesCritDmgBonus = 0.4,
+		glovesBolt = { sendStuds = 120, heightStuds = 14, seconds = 0.35, width = 0.35, segmentStuds = 2, jitter = 1.2, branches = 2 },
+		-- 발자국 색 = 흰색에 자홍을 조금 섞은 색(허브 흰 바닥에서 순백 발자국이 안 보였다 - D1-2 스크린샷)
+		footprint = { color = Color3.fromRGB(255, 170, 235), everyStuds = 3.2, lifeSeconds = 1.6, size = Vector3.new(0.9, 0.05, 1.3), sideOffset = 0.55, maxAlive = 24 },
+	},
+
 	-- ⑧ 고대: 같은 서버 알림 + 본인 큰 연출(고대 색 빛기둥) - 전 서버 알림 없음
 	ancientPillarSeconds = 12,
 	ancientPillarWidth = 3.8,

@@ -75,12 +75,18 @@ local function expire(entry, now)
 	end
 end
 
--- C1 마무리: 사람 비교 단위 = { stage, level, rebirth }. 실제 Player = Attribute(CharacterLevel · RebirthCount - 지금 값), 스탠드인 표 = who.level · who.rebirth(없으면 1 · 0).
+-- C1 마무리: 사람 비교 단위 = { stage, level, rebirth, party }. 실제 Player = Attribute(CharacterLevel · RebirthCount · PartyId - 지금 값), 스탠드인 표 = who.level · who.rebirth · who.party(없으면 1 · 0 · nil).
 function MobShare.profileOf(who, stage)
 	if typeof(who) == "Instance" then
-		return { stage = stage, level = who:GetAttribute("CharacterLevel") or 1, rebirth = who:GetAttribute("RebirthCount") or 0 }
+		return { stage = stage, level = who:GetAttribute("CharacterLevel") or 1, rebirth = who:GetAttribute("RebirthCount") or 0, party = who:GetAttribute("PartyId") }
 	end
-	return { stage = stage, level = who.level or 1, rebirth = who.rebirth or 0 }
+	return { stage = stage, level = who.level or 1, rebirth = who.rebirth or 0, party = who.party }
+end
+
+-- D1-2(C1 결정 5 보정 ⑥ 1 - 사용자 결정): 같은 파티끼리는 막힘에서 뺀다(파티 = 합의된 같이 사냥 - 스틸 방지 대상이 아님). 보상 자격(기여 10% · 같은 스테이지 · ≤ 기준)과
+-- 어그로 필터(tooWeakFor - 약한 파티원이 기준 스테이지 몹에게 즉사하지 않게)는 그대로다.
+function MobShare.sameParty(a, b)
+	return a.party ~= nil and a.party ~= 0 and a.party == b.party
 end
 
 -- 둘 중 낮은 레벨이 든 구간의 허용 레벨 차(CombatConfig.stealLevelGapTiers).
@@ -126,7 +132,7 @@ end
 -- 스테이지 쪽을 남긴 이유: 성장이 낮아도(환생 직후 계정 등) 더 높은 스테이지 follower는 기준을 끌어올려 주인 몹의 체력 · 피해를 키우고 어그로를 떼어 낸다.
 -- 그래서 같이 때리는(follower) 쪽 = 스틸 불가인데 성장도 스테이지도 높지 않은 사람뿐.
 local function blocksAgainst(me, other)
-	if MobShare.canShare(me, other) then
+	if MobShare.canShare(me, other) or MobShare.sameParty(me, other) then
 		return false
 	end
 	return (growthApart(me, other) and MobShare.compareGrowth(me, other) > 0) or me.stage > other.stage
@@ -189,31 +195,31 @@ function MobShare.tooWeakFor(entry, who, stage)
 	return false
 end
 
--- 클라 자물쇠용: 잡는 사람 목록을 문자열로("userId,stage,level,rebirth,만료서버시각;…" - 스탠드인 userId = 0). toServerTime(at) = os.clock 시각 → 서버 시각.
+-- 클라 자물쇠용: 잡는 사람 목록을 문자열로("userId,stage,level,rebirth,파티번호,만료서버시각;…" - 스탠드인 userId = 0 · 파티 없음 = 0). toServerTime(at) = os.clock 시각 → 서버 시각.
 function MobShare.encodeHunters(entry, now, toServerTime)
 	local parts = {}
 	local window = CombatConfig.participationWindowSeconds
 	eachHunter(entry, nil, now, function(who, p)
 		local id = typeof(who) == "Instance" and who.UserId or 0
-		table.insert(parts, ("%d,%d,%d,%d,%.1f"):format(id, p.stage, p.level, p.rebirth, toServerTime(entry.activeAt[who] + window)))
+		table.insert(parts, ("%d,%d,%d,%d,%d,%.1f"):format(id, p.stage, p.level, p.rebirth, tonumber(p.party) or 0, toServerTime(entry.activeAt[who] + window)))
 		return false
 	end)
 	table.sort(parts)
 	return table.concat(parts, ";")
 end
 
--- 클라: 이 목록의 몹이 나(me = { userId, stage, level, rebirth })에게 잠겼는가(서버 isBlocked와 같은 판정 - 이미 잡는 사람이면 false).
+-- 클라: 이 목록의 몹이 나(me = { userId, stage, level, rebirth, party })에게 잠겼는가(서버 isBlocked와 같은 판정 - 이미 잡는 사람이면 false).
 function MobShare.lockedFor(encoded, me, serverNow)
 	if encoded == nil or encoded == "" then
 		return false
 	end
 	local locked = false
-	for id, stage, level, rebirth, untilAt in encoded:gmatch("(%-?%d+),(%d+),(%d+),(%d+),([%d%.]+)") do
+	for id, stage, level, rebirth, party, untilAt in encoded:gmatch("(%-?%d+),(%d+),(%d+),(%d+),(%d+),([%d%.]+)") do
 		if tonumber(untilAt) > serverNow then
 			if tonumber(id) == me.userId then
 				return false
 			end
-			locked = locked or blocksAgainst(me, { stage = tonumber(stage), level = tonumber(level), rebirth = tonumber(rebirth) })
+			locked = locked or blocksAgainst(me, { stage = tonumber(stage), level = tonumber(level), rebirth = tonumber(rebirth), party = tonumber(party) })
 		end
 	end
 	return locked
