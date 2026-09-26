@@ -50,7 +50,12 @@
 
 > **S1 끝(2026-09-27) - place 저장 불필요**: 이동 보안(수평 · 해금 높이 · 서버 낙하 · 비밀 둥지) · 획득 보안(상한 · 원장 · 격리 · 봉투 · 확률 · 운영). 경제 상한 조사표 = 보고서 [3].
 
-**다음** = BR1-4(보스 손질 - 시작 지점 = 아래)(이동 보안 - `MoveRules.s1Limits`) · M1-4 결정(§4 - 특히 **place 저장**) 뒤 로드맵(`docs/phase/roadmap-v2.md`): BR2(보스 세트 · 토벌 - 관문 자리 있음) · M2(몬스터 외형 · 종) · 펫 단계(알 부화 · 탑승 · 활강 - 둥지 B · C는 활강 착지 불가로 설계됨). 지형 모양을 바꾸면 `TerrainGenData.version[구역]`을 올리고 그 구역만 다시 굽고 place 저장. 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`.
+**다음** = BR1-4(보스 손질 - 시작 지점 = 바로 아래 인용)(이동 보안 - `MoveRules.s1Limits`) · M1-4 결정(§4 - 특히 **place 저장**) 뒤 로드맵(`docs/phase/roadmap-v2.md`): BR2(보스 세트 · 토벌 - 관문 자리 있음) · M2(몬스터 외형 · 종) · 펫 단계(알 부화 · 탑승 · 활강 - 둥지 B · C는 활강 착지 불가로 설계됨). 지형 모양을 바꾸면 `TerrainGenData.version[구역]`을 올리고 그 구역만 다시 굽고 place 저장. 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`.
+
+> **BR1-4 다음 시작 지점(2026-09-27 밤샘 묶음에서 착수 안 함 - 파트가 커서 반쯤 된 커밋을 피함)**. 추천 = 두 파트로 나눔: **BR1-4a 패턴 수치**(대공 잡기 · 에네르기파 · 회오리 · 붕괴 · 전멸기 %최대체력) → **BR1-4b 모션**(AnimationController · Animator + 서버 AlignPosition · 클라 보간 · 전갈 Bone 꼬리 3개 × 8 · 돌진 낚아채기 · 넘어짐 → `WeaponVisual.playGetup`).
+> - 코드 지도: 대공 잡기 `server/BossAirGrab.lua`(얼림 = 공지 0.5초 뒤 아무 때나 체공 1.2초 - art-spec은 "시전 끝 약 1.5초") · 체공 판정 `BossHandlersBR1.trackAir`(:651) · 수치 `BossData.mechanics.airGrab`(:126) · 발버둥 `press`(:487). 에네르기파 `BossHandlersBR1.sweep`(:686 - 반원 180° · 반경 60 · 높이 · 끌림 · 도트 없음) · `BossData` :938. 회오리 `BossData` :1222/:1285 · 발사 `BossPatterns` :682-719(distance 0 - 물리 발사 없음). 붕괴 `server/BossEnvironment.lua`(바닥은 그대로 · 클라 `BossEnvironmentView.collapse` :398이 검은 판만 · 서버가 14 아래로 옮김) · 환생별 폭 검사 코드 없음. 돌진 낚아채기 = 없음(A1 원형 `A1Prototypes.guardian` :105 · `A1PrototypeData.guardian.grabKeys`). 전갈 꼬리 = `TailSpike` 파트 하나(Bone은 A1 원형 `A1Prototypes.scorpionTail` :161뿐). 보스 이동 = 서버 Anchored `PivotTo` + 클라 `BossMotionView` 인형.
+> - 준비 수치(로컬 봇 시뮬): 대공 잡기 규칙 "시전 끝 1.5초 중 누적 체공 ≥ 약 0.6초" → 습관 점프 환생 0 62% · 1 81% · 3 87% · 멈춘 유저 0%. 틈 폭 표(maxGap): 환생 0 = 32.5 · 1/2 = 40.5 · 3 = 48.6 · 4 = 54.1 · 붕괴 45° 조각 현 길이 r 20 ~ 140 = 15.3 ~ 107.2.
+> - 검증: 12인 최악 보스 처리 시간 기준 = `BR1-report.md` 234μs 평균 · 2,096μs 최고(BR1(나) "12인 성능") · 회피 부등식 `BossSkillMath.dodgeChecks` · 2연타 `BossSim.checkPairs` · 지연 0.25 되돌림 0 · **첫 Play에 G2a(나) 포함**(S1 결정 10 - 띄워 두기 계측 줄 확인).
 
 ## 4. 결정 필요 (열린 것)
 
