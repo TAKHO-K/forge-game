@@ -15,6 +15,9 @@ return {
 	stallLevelHours = 200, -- 레벨업 한 번에 이 플레이 시간(시간)을 넘기면 "진행 정지"로 보고 끝낸다([없음] 사유)
 	maxPlayHours = 20000, -- 누적 플레이 시간 상한(시간)
 	enhanceMonteCarloTrials = 2000, -- 강화 단계별 기대 비용 표(E4)의 시행 수
+	-- D1: 보스 첫 클리어 장비를 모형에 넣는가(누적 기대 도착 - server/EconSim fightBosses). D1 전 모형은 이 장비를 안 셌다(보스 드랍이 상위 등급의
+	-- 주 공급원이 된 D1부터 켠다 - what-if modelBossDrops = false로 옛 모형과 비교).
+	modelBossDrops = true,
 
 	-- E3 도달 시간 곡선의 이정표(마지막 = InfiniteStageConfig.designMaxStage를 EconSim이 붙인다 - P2.5a)
 	milestones = { 10, 20, 50, 100, 500, 1000, 2000, 5000, 10000, 15000, 17000, 20000 }, -- P2.5c: 20 · 17,000 추가(사용자 보고 표)

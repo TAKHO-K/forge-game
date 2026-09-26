@@ -17,6 +17,7 @@ return {
 		rerollTicket = 1,
 		protection = 1,
 		inherit = 1, -- P2.5b A: 장비 계승(기본 비용 = tier1 잡몹 골드 × InheritConfig.goldKillEquivalent[B 등급]) - 변환권과 같은 기준 1
+		awaken = 1, -- D1: 태초 각성(기본 비용 = tier1 잡몹 골드 × PrimordialData.awakenGoldKills) - 같은 기준 1(shared/Awaken)
 		refine = 1, -- P2.5b B: 보석 재련(기본 비용 = tier1 잡몹 골드 × GemData.dust.refineGoldKills[대상 등급]) - 같은 기준 1
 	},
 }

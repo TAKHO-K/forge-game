@@ -68,7 +68,8 @@ return {
 			market = { angleDeg = 90, r = 255, displayName = "시장", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 16, h = 12, gap = 10 }, -- 가운데 = 보석상인(보석 공방)
 				spots = { { id = "shop", label = "상점(준비)", along = -38, side = 0 }, { id = "sell", label = "판매", along = 38, side = 0 } } },
 			community = { angleDeg = 210, r = 255, displayName = "커뮤니티 광장", plaza = 50, row = { count = 3, w = 24, d = 18, h = 18, gap = 12 }, -- 가운데 = 환생 제단
-				spots = { { id = "hatchery", label = "부화장(펫 단계)", along = -34, side = -8 }, { id = "partyBoard", label = "파티 게시판", along = 34, side = -8 }, { id = "rankBoard", label = "순위판", along = 0, side = -30 } } },
+				spots = { { id = "hatchery", label = "부화장(펫 단계)", along = -34, side = -8 }, { id = "partyBoard", label = "파티 게시판", along = 34, side = -8 }, { id = "rankBoard", label = "순위판", along = 0, side = -30 },
+					{ id = "hallOfFame", label = "명예의 전당", along = -30, side = -30 } } }, -- D1 ④: 태초 석판(server/HallOfFame이 이 자리 옆에 세운다)
 			portal = { angleDeg = -90, r = 250, displayName = "포탈 광장", radius = 46 },
 		},
 		portalRingRadius = 38, -- 포탈 광장 안 구역별 포탈 6개(이름표가 안 겹치게 - 이웃 간격 38)

@@ -43,12 +43,17 @@ function StageRewardBand.isBossStage(stage)
 end
 
 
+-- D1: 1% 미만은 유효숫자 3자리(태초 0.01% · 0.002%가 "0%"로 보이지 않게 - 확률 공개) · 1% 이상은 0.1% 단위.
 local function percentText(chance)
-	return ("%g%%"):format(math.floor(chance * 1000 + 0.5) / 10)
+	local percent = chance * 100
+	if percent < 1 then
+		return ("%.3g%%"):format(percent)
+	end
+	return ("%g%%"):format(math.floor(percent * 10 + 0.5) / 10)
 end
 
 -- 확률 > 0인 등급을 낮은 등급부터: { { id, name, chance }... }.
--- G1-1: 서버 굴림(Loot)과 같은 함수 - DropTable.bossFirstClearGradeTable(환생 0회 = 상향표).
+-- G1-1: 서버 굴림(Loot)과 같은 함수 - DropTable.bossFirstClearGradeTable(D1: 환생 무관 한 표).
 function StageRewardBand.gradeRows(rebirthCount)
 	local rows = DropTable.gradeRows(DropTable.bossFirstClearGradeTable(rebirthCount))
 	for _, row in ipairs(rows) do
@@ -481,19 +486,19 @@ function StageRewardBand.selfTest(report)
 	local titleHead = ("스테이지 %d 보스 · "):format(S50)
 	report(("제목 · 매번 · Lv 범위: [%s] · %d: [%s] (기대 '%s…' · '20마리분' · '%s' · '???' 없음)"):format(d50.title, S50, t50, titleHead, lvRange),
 		string.sub(d50.title, 1, #titleHead) == titleHead and has(t50, "골드·경험치 20마리분") and has(t50, lvRange) and not has(d50.title .. t50, "???"))
-	-- G1-1: 매번 줄에 장비가 없다(첫 클리어 때 2개로 읽히던 것) · 재도전 줄 = 장비 1개 + 등급 확률(일반 90% · 희귀 10%)
+	-- G1-1: 매번 줄에 장비가 없다(첫 클리어 때 2개로 읽히던 것) · 재도전 줄 = 장비 1개 + 등급 확률(D1: 토벌 표 - 영웅 78% · … · 태초 0.002%)
 	local everyRow, retryRow = nil, d50.rows[#d50.rows]
 	for _, row in ipairs(d50.rows) do
 		if row.head == Text.get("band.every.head") then
 			everyRow = row
 		end
 	end
-	report(("매번 · 재도전 줄: 매번 [%s](기대 장비 없음) · 재도전 [%s](기대 '장비 1개' · '일반 90%%' · '희귀 10%%')"):format(everyRow.plain, retryRow.plain),
-		not has(everyRow.plain, "장비") and has(retryRow.plain, "장비 1개") and has(retryRow.plain, "일반 90%") and has(retryRow.plain, "희귀 10%"))
+	report(("매번 · 재도전 줄: 매번 [%s](기대 장비 없음) · 재도전 [%s](기대 '장비 1개' · '영웅 78%%' · '태초 0.002%%')"):format(everyRow.plain, retryRow.plain),
+		not has(everyRow.plain, "장비") and has(retryRow.plain, "장비 1개") and has(retryRow.plain, "영웅 78%") and has(retryRow.plain, "태초 0.002%"))
 	local r0, r1 = rowsOf(S50, entryOf(false, "available", "none"), 0), rowsOf(S50, entryOf(false, "available", "none"), 1)
-	report(("등급 이상 표기 · 확률 줄 수: 환생 0회 [%s] %d줄(기대 영웅 이상 · 5줄) / 환생 1회 [%s] %d줄(기대 희귀 이상 · 6줄)"):format(
+	report(("등급 이상 표기 · 확률 줄 수: 환생 0회 [%s] %d줄(기대 영웅 이상 · 5줄) / 환생 1회 [%s] %d줄(기대 영웅 이상 · 5줄 - D1 상향표 폐지)"):format(
 		string.match(r0.rows[1].plain, "%((%S+) 이상") or "?", r0.helpLines, string.match(r1.rows[1].plain, "%((%S+) 이상") or "?", r1.helpLines),
-		has(r0.rows[1].plain, "영웅 이상") and r0.helpLines == 5 and has(r1.rows[1].plain, "희귀 이상") and r1.helpLines == 6)
+		has(r0.rows[1].plain, "영웅 이상") and r0.helpLines == 5 and has(r1.rows[1].plain, "영웅 이상") and r1.helpLines == 5)
 	-- 직업 / 계정은 다른 축: 장비는 이 직업 기준, 방지권은 계정 기준 - 한 줄이 받은 것이어도 다른 줄은 밝다.
 	local axes = rowsOf(S50, entryOf(false, "claimed", "none"))
 	local gearRow, ticketRow = axes.rows[1], axes.rows[2]

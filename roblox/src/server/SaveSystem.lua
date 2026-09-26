@@ -959,6 +959,26 @@ local function migrate(data)
 		data.version = 42
 	end
 
+	if data.version < 43 then
+		-- D1: 장비에 태초 각인(primordial - 세계 번호 · 최초 획득자 · 날짜 · 출처) · 출처 태그(source)가 생겼다. 옛 태초 = 번호 없는 "이전 태초"(세계 번호는 1번부터 새로)
+		--   + 기본 잠금(D1 ⑦). 옛 장비의 source는 없음(모름). 칭호는 v39 titles 그대로(새 칭호 "태초의 선택"은 다음 태초부터).
+		local function stampLegacy(item)
+			if type(item) == "table" and item.grade == "primordial" and item.primordial == nil then
+				item.primordial = { legacy = true }
+				item.locked = true
+			end
+		end
+		for _, item in ipairs(data.inventory or {}) do
+			stampLegacy(item)
+		end
+		for _, classState in pairs(data.classes or {}) do
+			for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+				stampLegacy(classState.equipment and classState.equipment[part])
+			end
+		end
+		data.version = 43
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -1038,7 +1058,10 @@ local function isValidProfile(data)
 	end
 
 	for _, item in ipairs(data.inventory) do
-		if not isValidOption(item.option) then
+		if not isValidOption(item.option)
+			or (item.primordial ~= nil and type(item.primordial) ~= "table") -- v43 태초 각인
+			or (item.source ~= nil and type(item.source) ~= "table") -- v43 출처 태그
+		then
 			return false
 		end
 	end

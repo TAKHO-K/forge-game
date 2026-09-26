@@ -47,6 +47,8 @@ local MilestoneData = require(ReplicatedStorage.Shared.data.MilestoneData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PartyState = require(script.Parent.PartyState)
 local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData) -- P3d G-d: 견습 7단계를 캐주얼 시뮬 앞에
+local Awaken = require(ReplicatedStorage.Shared.Awaken) -- D1: 태초 각성 비용(보유 what-if)
+local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 
 local EconSim = {}
 
@@ -104,6 +106,45 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	end
 	if whatIf.milestoneStat ~= nil then -- P2.5c B2: 마일스톤 버킷이 붙는 곳("attack" · "survival" · "none" = 마일스톤 없음 - 곡선 영향 비교)
 		set(MilestoneData, "stat", whatIf.milestoneStat)
+	end
+	-- D1 what-if: 모형 스위치 · 조정 손잡이(순서 = ① 잡몹 일반 ~ 전설 비율 ② 강화 · 보석 ③ k - growthRate는 위)
+	if whatIf.modelBossDrops ~= nil then -- 보스 첫 클리어 장비(누적 기대 도착) 켜기/끄기 - D1 전 모형 = 끔
+		set(EconSimConfig, "modelBossDrops", whatIf.modelBossDrops)
+	end
+	if whatIf.d1Before then -- D1 전 규칙으로 되돌린 비교(잡몹 표 · 태초 0.1% · 보스 첫 클리어 표 · 드랍 등급 위력 1.45^n) - 모형 스위치(modelBossDrops)는 따로
+		set(DropTableData, "armorGradeByTier", DropTableData.fairnessGradeByTier)
+		set(DropTableData.primordial, "dragonRate", DropTableData.sellReferencePrimordialRate)
+		set(DropTableData.bossGrades, "firstClear", { rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = 0.001 })
+		set(DropTableData.bossGrades, "raid", { normal = 0.90, rare = 0.10 })
+		for index, gradeId in ipairs(ArmorData.gradeOrder) do
+			local grade = ArmorData.grades[gradeId]
+			set(grade, "dropPower", 1.45 ^ (index - 1))
+			set(grade, "defenseGradeMultiplier", grade.fairnessMultiplier)
+		end
+	end
+	if whatIf.awakenCostScale then -- D1 격차 비교: 각성 비용 배율(기본 375마리분)
+		set(PrimordialData, "awakenGoldKills", PrimordialData.awakenGoldKills * whatIf.awakenCostScale)
+	end
+	if whatIf.expLevelGap ~= nil then -- D1 격차 참고안(게임에 없는 규칙): 캐릭터 레벨 스테이지(L + 167)보다 start칸 넘게 높은 사냥은 칸마다 경험치 −perStage(하한 floor)
+		set(EconSimConfig, "expLevelGap", whatIf.expLevelGap)
+	end
+	if whatIf.expStageCap ~= nil then -- D1 격차 참고안(게임에 없는 규칙): 사냥 경험치 = min(사냥 스테이지, 레벨 스테이지 + offset)의 경험치 - 전투력이 높아 더 높이 사냥해도 경험치는 레벨이 정한다
+		set(EconSimConfig, "expStageCap", whatIf.expStageCap)
+	end
+	if whatIf.dpsPrimordialStep then -- D1 격차 추천안 확인: 딜 부위(장갑 · 신발)만 태초 단계 배율을 바꾼다(갑옷 방어 = defenseGradeMultiplier는 그대로 ×2.5)
+		set(ArmorData.grades.primordial, "dropPower", ArmorData.grades.ancient.dropPower * whatIf.dpsPrimordialStep)
+	end
+	if whatIf.primordialStep then -- D1 대안: 태초 단계 배율(고대 대비 - 확정 2.5 · 대안 2.2)
+		local grade = ArmorData.grades.primordial
+		local power = ArmorData.grades.ancient.dropPower * whatIf.primordialStep
+		set(grade, "dropPower", power)
+		set(grade, "defenseGradeMultiplier", ArmorData.grades.normal.defenseGradeMultiplier * power)
+	end
+	if whatIf.armorGradeByTier then -- ① 잡몹 등급표 통째로(유물 이상 칸은 지시 값 그대로 두고 일반 ~ 전설만 바꾼 표를 넘긴다)
+		set(DropTableData, "armorGradeByTier", whatIf.armorGradeByTier)
+	end
+	if whatIf.optionGradeStep then -- ② 보석(옵션) 등급 단계 배율
+		set(OptionData, "gradeStep", whatIf.optionGradeStep)
 	end
 	if whatIf.enhanceCostScale then
 		local scaled = {}
@@ -403,6 +444,12 @@ local function newState(profile)
 		gearMode = false,
 		poolKey = 0,
 		milestoneLevel = 0, -- P2.5c B2: 받은 마지막 능력치 마일스톤 레벨 - 게임의 classState.milestoneLevel과 같은 값
+		-- D1: 보스 첫 클리어 장비(누적 기대 도착 - 등급마다 확률을 쌓다가 1이 되면 1개) · 다음 가방 점검까지 대기 · 부위 차례
+		bossTally = {},
+		bossPending = {},
+		bossPartTurn = 0,
+		awakenCount = 0, -- D1: 각성 횟수(태초 보유 what-if)
+		awakenGold = 0,
 	}
 end
 
@@ -485,14 +532,33 @@ local function checkBag(state, profile, tierIndex, stage, kills, whatIf, killSec
 	local total = kills * Loot.expectedArmorDropCount(tierIndex, 1, killSeconds) -- G1-2: 게임과 같은 처치 시간 공정성 보정
 	local perPart = total / #EquipSlots.order
 	local replaced = 0
+	-- D1: 갑옷 점수 = 이 사냥 스테이지 몬스터 평타에 버티는 타수(방어 + 최대 체력 - 둘 다 갑옷에서 온다). 옛 점수(방어력만)는 itemLevel이 높은 낮은 등급 갑옷(최대 체력 ↑)을
+	-- 영영 안 골라, 등급 간격이 벌어진 D1(한 단계 26.8칸)에서 보스 유물 갑옷에 묶여 진행이 멈췄다(캐주얼 3,995 정지 - 보고서).
+	local armorMonsterAttack = BalanceSim.getMonsterAttack(stage, MonsterData.tierOrder[tierIndex] or "tier1")
+	local function armorScore(item)
+		local saved = state.gear.armor
+		state.gear.armor = item
+		local hits = BalanceSim.getSurviveHits(loadoutFor(state), armorMonsterAttack)
+		state.gear.armor = saved
+		return hits
+	end
 	for _, part in ipairs(EquipSlots.order) do
-		local score = PART_SCORE[part]
+		local score = part == "armor" and armorScore or PART_SCORE[part]
 		local best, bestScore = nil, state.gear[part] and score(state.gear[part]) or -1
 		for _, candidate in ipairs(expectedCandidates(tierIndex, perPart, nil, primordialRateAt(state, tierIndex, stage))) do
 			local item = { grade = candidate.grade, itemLevel = math.max(1, stage + candidate.delta) }
 			local value = score(item)
 			if value > bestScore then
 				best, bestScore = item, value
+			end
+		end
+		for _, pending in ipairs(state.bossPending) do -- D1: 보스 첫 클리어 장비
+			if pending.part == part then
+				local item = { grade = pending.grade, itemLevel = pending.itemLevel }
+				local value = score(item)
+				if value > bestScore then
+					best, bestScore = item, value
+				end
 			end
 		end
 		if best then
@@ -515,8 +581,36 @@ local function checkBag(state, profile, tierIndex, stage, kills, whatIf, killSec
 				end
 			end
 		end
+		for _, pending in ipairs(state.bossPending) do -- D1: 보스 장비 분해 → 보석
+			if gradeIndex(pending.grade) >= minGem and gradeIndex(pending.grade) <= capIndex then
+				local value = EconSim.gemValue(EconSim.makeGem("attackPercent", pending.grade, pending.itemLevel, 1), state.classId)
+				if value > bestValue then
+					bestGem, bestValue = { grade = pending.grade, itemLevel = pending.itemLevel }, value
+				end
+			end
+		end
 		if bestGem then
 			tryPlaceGem(state, profile, slot, bestGem.grade, bestGem.itemLevel, whatIf, false)
+		end
+	end
+	state.bossPending = {}
+	-- D1 what-if 태초 보유(whatIf.primordialHold = { part, fromStage, awakenGap }): 그 부위 = 태초(계정 최고 fromStage부터) · itemLevel이 최고보다
+	-- awakenGap칸 넘게 뒤처지고 골드가 있으면 각성(shared/Awaken 비용 - 게임과 같은 함수).
+	local hold = whatIf and whatIf.primordialHold
+	if hold and state.reach >= hold.fromStage then
+		local item = state.gear[hold.part]
+		if not item or item.grade ~= "primordial" then
+			state.gear[hold.part] = { grade = "primordial", itemLevel = state.reach }
+			replaced += 1
+		elseif state.reach - item.itemLevel > hold.awakenGap then
+			local cost = Awaken.cost(state.reach)
+			if state.gold >= cost then
+				state.gold -= cost
+				state.awakenGold += cost
+				state.awakenCount += 1
+				item.itemLevel = state.reach
+				replaced += 1
+			end
 		end
 	end
 	return replaced, replaced > 0 or state.gemReplacements > gemsBefore
@@ -561,7 +655,8 @@ end
 local function nextMilestoneRecord(run, state, cap)
 	for _, milestone in ipairs(run.milestones) do
 		if not run.reached[milestone] and state.reach >= milestone and milestone <= cap then
-			run.reached[milestone] = { seconds = state.seconds, level = state.level, rebirth = state.rebirth, weaponLevel = state.weaponLevel, weaponGrade = state.weaponGrade }
+			run.reached[milestone] = { seconds = state.seconds, level = state.level, rebirth = state.rebirth, weaponLevel = state.weaponLevel, weaponGrade = state.weaponGrade,
+				gearGrades = { armor = state.gear.armor and state.gear.armor.grade, gloves = state.gear.gloves and state.gear.gloves.grade, shoes = state.gear.shoes and state.gear.shoes.grade } } -- D1: 장비 등급 구성
 		end
 	end
 end
@@ -595,6 +690,21 @@ local function fightBosses(state, profile, loadout, run)
 		state.tickets.reset += reset
 		state.bossClears += 1
 		cleared += 1
+		-- D1: 보스 첫 클리어 장비(영웅 이상 보장 표 - DropTable.bossFirstClearGradeTable) - 희귀 등급도 오래 하면 오도록 "누적 기대 도착"으로 센다
+		-- (잡몹 모형의 "점검 한 번에 기대 1개 이상" 규칙은 0.39% 같은 확률을 영영 못 잡는다). itemLevel = 보스 스테이지(편차 +0 · 보수적).
+		if EconSimConfig.modelBossDrops then
+			for _, gradeId in ipairs(ArmorData.gradeOrder) do
+				local chance = DropTable.bossFirstClearGradeTable(state.rebirth)[gradeId]
+				if chance then
+					state.bossTally[gradeId] = (state.bossTally[gradeId] or 0) + chance
+					while state.bossTally[gradeId] >= 1 do
+						state.bossTally[gradeId] -= 1
+						state.bossPartTurn += 1
+						table.insert(state.bossPending, { grade = gradeId, itemLevel = bossStage, part = EquipSlots.order[(state.bossPartTurn - 1) % #EquipSlots.order + 1] })
+					end
+				end
+			end
+		end
 		state.reach = bossStage + BossData.stageInterval
 		if state.reach > run.cap then
 			state.reach = run.cap
@@ -609,6 +719,21 @@ end
 -- 방어구 itemLevel은 "잡은 스테이지 + 편차(최대 +2)"로만 오르므로, 높은 tier에서 생존 때문에 방어구 레벨보다 낮은 스테이지에 묶이면 방어구가 영영
 -- 안 오른다(점검에서 방어구가 안 바뀌면 stepLevel이 gearMode를 켠다 - [가정] "장비가 막히면 더 높은 스테이지를 도는" 플레이어).
 -- 반환: { tier, stage, killSeconds, expPerSecond, limiter }.
+-- D1 참고안 what-if(expLevelGap - 기본 nil = 끔 = 게임과 같다): 레벨 차 경험치 배수.
+local function expGapMultiplier(level, stage)
+	local cap = EconSimConfig.expStageCap
+	if cap then
+		local capped = math.min(stage, CharacterLevel.getStageForLevel(level) + cap.offset)
+		return InfiniteStage.getExpReward(1, capped) / InfiniteStage.getExpReward(1, stage)
+	end
+	local rule = EconSimConfig.expLevelGap
+	if not rule then
+		return 1
+	end
+	local over = stage - CharacterLevel.getStageForLevel(level) - rule.start
+	return over > 0 and math.max(rule.floor, 1 - over * rule.perStage) or 1
+end
+
 local function chooseHunt(loadout, profile, maxStage, gearMode)
 	local options = {}
 	local bestRate = 0
@@ -616,12 +741,15 @@ local function chooseHunt(loadout, profile, maxStage, gearMode)
 		local byKill = EconSim.highestStageByKill(loadout, tierIndex, profile.targetKillSeconds, profile.dpsEfficiency, maxStage)
 		local bySurvive = EconSim.highestStageBySurvive(loadout, tierIndex, profile.minSurviveHits, maxStage)
 		local stage = math.min(byKill, bySurvive)
+		if EconSimConfig.expLevelGap then -- 참고안: 경험치가 줄기 시작하는 칸 위로는 사냥하지 않는다(경험치/초 최적 - 그 위는 칸당 감쇠가 k보다 크다)
+			stage = math.max(1, math.min(stage, CharacterLevel.getStageForLevel(loadout.level) + EconSimConfig.expLevelGap.start))
+		end
 		if BossRules.isBossStage(stage) and stage > 1 then
 			stage -= 1
 		end
 		local tier = tierData(tierIndex)
 		local kill = EconSim.killSeconds(loadout, effectiveMonsterHp(loadout, tier.hp, stage) / profile.dpsEfficiency, 600) -- G1-3: 레벨차 계수
-		local rate = InfiniteStage.getExpReward(tier.expReward, stage) / (kill + profile.moveOverheadSeconds)
+		local rate = InfiniteStage.getExpReward(tier.expReward, stage) * expGapMultiplier(loadout.level, stage) / (kill + profile.moveOverheadSeconds)
 		local limiter = (bySurvive < byKill) and "생존 타수" or ((byKill >= maxStage) and "보스 게이트" or "처치 시간")
 		table.insert(options, { tier = tierIndex, stage = stage, killSeconds = kill, expPerSecond = rate, limiter = limiter })
 		if rate > bestRate then
@@ -679,7 +807,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		end
 		hunt = chooseHunt(loadout, profile, math.max(1, state.reach - 1), state.gearMode and { armor = state.gear.armor }) -- 보스 스테이지(state.reach)는 아레나라 잡몹이 없다
 		tier = tierData(hunt.tier)
-		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth) * CharacterLevel.getExpScale(state.level) -- P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
+		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * expGapMultiplier(state.level, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth) * CharacterLevel.getExpScale(state.level) -- P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
 		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage)
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)

@@ -24,6 +24,9 @@ end
 
 -- 순수 함수: 이 등급의 드랍이 (파티 여부에 따라) 누구에게 가는가. "server" · "party" · nil(안 보냄).
 function DropNotice.scopeFor(grade, inParty)
+	if DropNoticeData.registryGrades[grade] then
+		return nil -- D1: 태초 = PrimordialRegistry(세계 번호 배너 · 전 서버)
+	end
 	if DropNoticeData.serverWideGrades[grade] then
 		return "server"
 	end

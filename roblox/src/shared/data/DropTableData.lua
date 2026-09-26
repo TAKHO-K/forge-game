@@ -8,21 +8,61 @@
 --   dragonOverTier = "드래곤 확률 ÷ 이 tier 확률"(2면 드래곤의 1/2). tier가 낮을수록 크다(확률이 낮다). 값 1.9 · 1.7 · 1.35 · 1.1 · 1.05 = E5 손익분기 M*
 --   (Δ ≤ 5, 레벨 10 · 150 · 1000 최소 - tier1 1.94 · tier2 1.71 · tier3 1.39 · tier4 0.94 · tier5 0.71) 아래로 고른 것. tier4 · 5는 M*가 1 미만이라 "드래곤보다 낮게"와
 --   동시에 못 맞춘다 - 1에 가깝게 두었다.
---   근거 · 대안 = docs/phase/P2-log.md.
+--   근거 · 대안 = docs/phase/P2-log.md. D1: dragonRate 0.001 → 0.000001(비율 구조 · 감쇠는 그대로).
 --   levelDecay: 사냥 스테이지가 본인 최고 스테이지보다 startGap 이상 낮으면, (격차 − startGap + 1)칸마다 perLevel씩 깎는다(0 미만 금지).
 --   태초 장비의 itemLevel = 그 몬스터를 잡은 사냥 스테이지("몬스터 레벨" - 편차 δ 없음, E4). 분해하면 그 레벨의 태초 보석이 된다.
 -- 보스(첫 처치 · 재도전) · 반짝이 · 견습 드랍은 이 굴림을 안 탄다(결정 9A - 보스 드랍 유지).
 
-local dragonRate = 0.001
+-- D1(사용자 확정 · 2026-09-27) 드랍 등급 개편: 상위 등급을 크게 낮추고(잡몹 유물 ≤ 0.5% · 고대 0.002% · 태초 0.0001%) 보스 첫 클리어 · 토벌에 몰았다.
+--   잡몹 일반 ~ 전설 비율은 옛 표 그대로 두고 남는 확률을 비율대로 흡수한다(absorb). 천장(확정 보상) 없음.
+--   옛 표(fairnessGradeByTier)는 몬스터 tier 공정성 식(MonsterData - HP · 골드 · 드랍 개수)과 판매가(Loot.getSellPrice)의 고정 기준으로 남긴다 -
+--   새 표로 바꾸면 몬스터 수치와 판매가가 같이 움직인다(몬스터는 지시 밖 · 판매가는 고대 ×950 · 태초 ×1,000으로 튄다). 근거 = docs/phase/D1-report.md.
+
+local dragonRate = 0.000001 -- D1: 0.001 → 0.000001(0.0001%) - tier6 장비 1개당 태초(나머지 tier는 dragonOverTier로 더 낮다)
+local ancientRate = 0.00002 -- D1: 잡몹 고대 0.002%(옛 tier5 0.5% · tier6 1.9%)
+
+-- 옛 비율 그대로 흡수: base의 등급들을 fixed(고정 등급 확률)를 뺀 나머지에 맞춰 늘린다.
+local function absorb(base, fixed)
+	local fixedSum, baseSum = 0, 0
+	for _, chance in pairs(fixed) do
+		fixedSum += chance
+	end
+	for _, chance in pairs(base) do
+		baseSum += chance
+	end
+	local row = {}
+	for gradeId, chance in pairs(base) do
+		row[gradeId] = chance * (1 - fixedSum) / baseSum
+	end
+	for gradeId, chance in pairs(fixed) do
+		row[gradeId] = chance
+	end
+	return row
+end
+
+-- D1 전 표(웹 DROP_GRADE_TABLE 16-5 조사값 · tier6 태초 0.1%) - 공정성 · 판매가 고정 기준.
+local fairnessGradeByTier = {
+	{ normal = 0.90, rare = 0.10 },
+	{ normal = 0.70, rare = 0.27, epic = 0.03 },
+	{ normal = 0.45, rare = 0.40, epic = 0.14, legendary = 0.01 },
+	{ normal = 0.20, rare = 0.40, epic = 0.30, legendary = 0.09, relic = 0.01 },
+	{ normal = 0.05, rare = 0.25, epic = 0.40, legendary = 0.25, relic = 0.045, ancient = 0.005 },
+	{ rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = 0.001 },
+}
 
 return {
+	fairnessGradeByTier = fairnessGradeByTier,
+	sellReferencePrimordialRate = 0.001, -- D1: 판매가 역산용 옛 dragonRate(Loot.getSellPrice - 값 고정)
+
+	-- D1 잡몹 장비 1개의 등급 분포. 유물 = tier4 0.3% · tier5 0.4% · tier6 0.5%(≤ 0.5% · 높은 tier가 높게) · 고대 = 옛 칸(tier5 · 6)만 0.002% ·
+	-- 태초 = 아래 primordial 별도 굴림(tier6 칸 = dragonRate). tier1 ~ 3은 옛 표 그대로(유물 이상 칸이 원래 없다).
 	armorGradeByTier = {
-		{ normal = 0.90, rare = 0.10 },
-		{ normal = 0.70, rare = 0.27, epic = 0.03 },
-		{ normal = 0.45, rare = 0.40, epic = 0.14, legendary = 0.01 },
-		{ normal = 0.20, rare = 0.40, epic = 0.30, legendary = 0.09, relic = 0.01 },
-		{ normal = 0.05, rare = 0.25, epic = 0.40, legendary = 0.25, relic = 0.045, ancient = 0.005 },
-		{ rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = dragonRate },
+		fairnessGradeByTier[1],
+		fairnessGradeByTier[2],
+		fairnessGradeByTier[3],
+		absorb({ normal = 0.20, rare = 0.40, epic = 0.30, legendary = 0.09 }, { relic = 0.003 }),
+		absorb({ normal = 0.05, rare = 0.25, epic = 0.40, legendary = 0.25 }, { relic = 0.004, ancient = ancientRate }),
+		absorb({ rare = 0.10, epic = 0.30, legendary = 0.40 }, { relic = 0.005, ancient = ancientRate, primordial = dragonRate }),
 	},
 
 	-- G1-2(D0 결정 4 나 - 공정성 식 보정): tier 공정성 식(MonsterData)은 "처치 시간 ∝ HP"를 전제로 tier마다 시간당 장비 가치를 같게 맞춘다. 한 방에 잡거나
@@ -40,9 +80,12 @@ return {
 	-- G1-1(보상 목록 단일 소스): 보스 확정 장비의 등급표. 옛 코드는 첫 클리어 = armorGradeByTier[6](드래곤 표를 그대로 가리킴) · 재도전 = [1]이었다 - 드래곤 표를
 	-- 고치면(G1-2 공정성 보정) 보스 보상이 같이 바뀌므로 값을 그대로 옮겨 따로 선언한다(값 불변). 환생 0회의 상향표는 MonsterData가 이 firstClear를 한 단계 민다.
 	-- 읽는 곳: DropTable.bossFirstClearGradeTable · bossRetryGradeTable(서버 굴림 Loot · 스테이지 선택 보상 띠 · 검증).
+	-- D1(사용자 확정): firstClear = 영웅 이상 보장(영웅 62 · 전설 32.6 · 유물 5 · 고대 0.39 · 태초 0.01%) - 환생 0회 상향표(한 단계 밀기)는 없앤다(태초 0.4%가 돼 공급을 지배).
+	--   raid = 토벌(반복 보스 = 첫 클리어가 아닌 처치 - 옛 retry 일반 90 · 희귀 10을 대체): 영웅 78 · 전설 20.948 · 유물 1 · 고대 0.05 · 태초 0.002%.
+	--   토벌 1회 확률은 잡몹보다 높고 첫 클리어보다 크게 낮다(지시 원칙).
 	bossGrades = {
-		firstClear = { rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = dragonRate },
-		retry = { normal = 0.90, rare = 0.10 },
+		firstClear = { epic = 0.62, legendary = 0.326, relic = 0.05, ancient = 0.0039, primordial = 0.0001 },
+		raid = { epic = 0.78, legendary = 0.20948, relic = 0.01, ancient = 0.0005, primordial = 0.00002 },
 	},
 
 	primordial = {

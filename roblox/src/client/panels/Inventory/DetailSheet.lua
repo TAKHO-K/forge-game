@@ -236,6 +236,7 @@ local craftButton = makeActionButton(7, 60, "primary") -- P2.5b B: 보석(홈 ·
 craftButton.Name = "CraftButton"
 craftButton.Text = "재련"
 craftButton.Visible = false
+S.primordialActions = require(script.Parent.PrimordialActions).create(makeActionButton, setHint) -- D1: [각성] · 태초 각인 줄(최상위 local을 늘리지 않게 S에 둔다)
 -- ═══ 옵션 줄(26-3, PRD 20.67 [12]) ═══
 -- 26-3 실기 검증 중 발견: 이 파일이 이미 Luau 최상위 레지스터 200개 한계에 가까웠다
 -- ("Out of local registers ... exceeded limit 200"로 실제 실패) - setupGemTab/
@@ -481,8 +482,9 @@ end
 
 local function refreshDetailBody()
 	setHint(nil) -- 아래 분기가 필요한 것만 다시 채운다
-	local inheritWasVisible, craftWasVisible = inheritButton.Visible, craftButton.Visible
+	local inheritWasVisible, craftWasVisible, awakenWasVisible = inheritButton.Visible, craftButton.Visible, S.primordialActions.button().Visible
 	inheritButton.Visible = false -- P2.5b A: 가방 분기만 다시 켠다
+	S.primordialActions.refresh(nil) -- D1: 태초 가방 · 착용 분기만 다시 켠다
 	craftButton.Visible = false -- P2.5b B: 보석 분기만 다시 켠다
 	if S.selectedKind == "bag" then
 		local item = S.inventory[S.selectedValue]
@@ -527,6 +529,7 @@ local function refreshDetailBody()
 		end
 		setRerollDetailButton(Gem.isRerollableGrade(item.grade), item.grade)
 		inheritButton.Visible = Inherit.isUpgrade(equippedSame, item)
+		S.primordialActions.refresh("bag", S.selectedValue, item, blockReason ~= nil and blockReason ~= "busy")
 	elseif S.selectedKind == "equip" and S.selectedValue ~= "weapon" and S.equippedByPart()[S.selectedValue] then
 		local part = S.selectedValue
 		local item = S.equippedByPart()[part]
@@ -560,6 +563,7 @@ local function refreshDetailBody()
 			setHint(ItemActions.reasonText(blockReason), true)
 		end
 		setRerollDetailButton(Gem.isRerollableGrade(item.grade), item.grade)
+		S.primordialActions.refresh("equip", part, item, blockReason ~= nil and blockReason ~= "busy")
 	elseif S.selectedKind == "equip" and S.selectedValue == "weapon" then
 		local weaponLevel = player:GetAttribute("WeaponLevel") or 0
 		local gradeId = S.weaponGradeId()
@@ -656,7 +660,7 @@ local function refreshDetailBody()
 	else
 		clearDetail()
 	end
-	if inheritButton.Visible ~= inheritWasVisible or craftButton.Visible ~= craftWasVisible then
+	if inheritButton.Visible ~= inheritWasVisible or craftButton.Visible ~= craftWasVisible or S.primordialActions.button().Visible ~= awakenWasVisible then
 		R.applyLayout() -- 버튼 묶음 폭이 바뀌었다(정보 칸 폭을 다시 정한다)
 	end
 end
@@ -775,6 +779,22 @@ lockButton.Activated:Connect(function()
 	end
 	local item = S.inventory[S.selectedValue]
 	if not item then
+		return
+	end
+	if item.grade == "primordial" and item.locked then
+		-- D1 ⑦: 태초 잠금 해제 = 확인 창 두 번(18번 시트 확인 창) → 서버도 이중 확인 표식이 없으면 거절한다.
+		local index = S.selectedValue
+		local first, second = require(script.Parent.PrimordialActions).unlockTexts(item)
+		itemConfirmText.Text = first
+		itemConfirmText.TextColor3 = UIColors.textPrimary
+		pendingConfirmAction = function()
+			itemConfirmText.Text = second
+			pendingConfirmAction = function()
+				lockRequest:FireServer(index, false, "primordial-confirmed-twice")
+			end
+			itemConfirmOverlay.Visible = true
+		end
+		itemConfirmOverlay.Visible = true
 		return
 	end
 	lockRequest:FireServer(S.selectedValue, not item.locked)
@@ -954,8 +974,8 @@ end)
 R.sheetClose = sheetClose
 
 -- 배치(S20b): PC = 원래 하단 바 · 폰 = 시트(넓으면 한 줄: 정보 + 버튼 + 닫기 · 좁으면 두 줄: 정보 위 · 버튼 아래). 버튼은 폰에서 높이 44 이상 · 폭 44 이상.
-local actionButtons = { lockButton, sellButton, dismantleButton, equipButton, rerollDetailButton, inheritButton, craftButton }
-local ACTION_WIDTHS = { 36, 76, 60, 84, 70, 60, 60 }
+local actionButtons = { lockButton, sellButton, dismantleButton, equipButton, rerollDetailButton, inheritButton, craftButton, S.primordialActions.button() }
+local ACTION_WIDTHS = { 36, 76, 60, 84, 70, 60, 60, 96 }
 local ACTION_GAP = 7
 table.insert(R.layouts, function(L)
 	local phone = L.mode == "phone"
@@ -964,7 +984,7 @@ table.insert(R.layouts, function(L)
 	for i, button in ipairs(actionButtons) do
 		local width = phone and math.max(ACTION_WIDTHS[i], 44) or ACTION_WIDTHS[i]
 		button.Size = UDim2.new(0, width, 0, L.actionH)
-		if (button ~= inheritButton and button ~= craftButton) or button.Visible then -- P2.5b: [계승] · [재련]은 보일 때만 폭에 넣는다(다른 버튼은 옛 계산 그대로)
+		if (button ~= inheritButton and button ~= craftButton and button ~= actionButtons[8]) or button.Visible then -- P2.5b: [계승] · [재련]은 보일 때만 폭에 넣는다(다른 버튼은 옛 계산 그대로)
 			groupWidth += width + ACTION_GAP
 		end
 	end

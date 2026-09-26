@@ -244,6 +244,8 @@ for _, part in ipairs(course and course:GetChildren() or {}) do
 	end
 end
 Travel.start(downPads)
+require(script.Parent.PrimordialRegistry).start() -- D1: 태초 전 서버 알림 구독
+require(script.Parent.HallOfFame).start() -- D1 ④: 커뮤니티 광장 명예의 전당(시작 · 5분마다 원본 읽기)
 
 print(("[forge-game] 사냥터 생성 완료 - 허브 + 구역 %d · 몬스터는 지대 활성화로(사람이 가까이 오면)"):format(#WorldMapData.zones))
 

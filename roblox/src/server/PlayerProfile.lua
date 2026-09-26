@@ -31,6 +31,7 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 -- P2.5b A: 장비 계승 규칙(클라 미리 판정과 같은 순수 함수).
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
+local Awaken = require(ReplicatedStorage.Shared.Awaken) -- D1 태초 각성
 -- P2.5b C · B: 보석 분해(가루) · 재련 규칙.
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
 -- P2.5b D: 환생 후 레벨 마일스톤(영구 능력치 · 해금).
@@ -204,6 +205,15 @@ end
 function PlayerProfile.init(player, profile)
 	profiles[player] = profile
 	player:SetAttribute("Gold", profile.gold)
+	player:SetAttribute("PrimordialEquipped", InventorySync.primordialEquipped(profile)) -- D1 ⑤
+	do -- D1: 칭호 목록도 접속 때 내린다(옛 코드는 새로 받을 때만 - 이름표 칭호 줄이 재접속 뒤 사라졌다)
+		local keys = {}
+		for k in pairs(profile.titles or {}) do
+			table.insert(keys, k)
+		end
+		table.sort(keys)
+		player:SetAttribute("Titles", table.concat(keys, ","))
+	end
 	syncMaterialAttributes(player, profile)
 	syncProtectionAttributes(player, profile)
 	player:SetAttribute("BulkSellCutoffGrade", profile.bulkSellCutoffGrade)
@@ -223,6 +233,14 @@ function PlayerProfile.init(player, profile)
 end
 
 -- 저장 시점에 SaveSystem이 통째로 넘겨받아 쓴다.
+-- D1: 가방 · 착용 스냅샷을 다시 보낸다(태초 세계 번호가 비동기로 채워진 뒤 - PrimordialRegistry).
+function PlayerProfile.pushInventory(player)
+	local profile = profiles[player]
+	if profile then
+		InventorySync.push(player, profile)
+	end
+end
+
 function PlayerProfile.getProfile(player)
 	return profiles[player]
 end
@@ -1551,7 +1569,8 @@ function PlayerProfile.addArmorDrop(player, item, options)
 		InventorySync.notifyAutoProcessed(player, processed)
 		return true, processed
 	end
-	if #profile.inventory >= profile.inventorySlots then
+	-- D1(리뷰 3): 태초는 칸이 가득이어도 가방에 넣는다(options.force) - 땅에 두면 주인이 나갈 때 세계 번호가 붙은 아이템이 사라진다. 칸 초과는 판매 · 분해로 풀린다.
+	if #profile.inventory >= profile.inventorySlots and not (options and options.force) then
 		return false
 	end
 	table.insert(profile.inventory, item)
@@ -1642,6 +1661,40 @@ function PlayerProfile.getStatSummary(player)
 end
 
 -- 계승 비용(골드) - 서버 차감과 미리보기가 같은 값. 기준 = 계정 최고 스테이지(변환권과 같은 규칙) · 마일스톤 해금 "계승 비용 할인"(P2.5b D).
+PlayerProfile.PRIMORDIAL_UNLOCK_TOKEN = "primordial-confirmed-twice" -- D1 ⑦(클라 DetailSheet 이중 확인 뒤에만 보낸다 - 우발 해제 방지용 표식 · 보안 장치 아님)
+
+-- D1 [3] 태초 각성(shared/Awaken 판정 · 비용). kind = "bag"(가방 칸 index) | "equip"(부위 이름). 반환: 성공, 새 itemLevel | 실패 이유. 되돌릴 수 없는 골드 사용 → 호출부가 즉시 저장.
+function PlayerProfile.awakenItem(player, kind, key, expectedNo)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "not_found"
+	end
+	local item
+	if kind == "bag" then
+		item = profile.inventory[key]
+	elseif kind == "equip" and (key == "armor" or key == "gloves" or key == "shoes") then
+		item = classState.equipment[key]
+	end
+	local best = PlayerProfile.getAccountBestStage(player)
+	-- 리뷰 7: 판매 · 분해로 칸이 당겨진 뒤 옛 칸 번호가 오면 다른 태초가 각성된다 → 클라가 본 세계 번호와 대조(번호 없는 태초는 nil끼리)
+	if item and expectedNo ~= nil and not (item.primordial and item.primordial.no == expectedNo) then
+		return false, "not_found"
+	end
+	local reason = Awaken.blockReason(item, best)
+	if reason then
+		return false, reason
+	end
+	if not PlayerProfile.trySpendGold(player, Awaken.cost(best)) then
+		return false, "no_gold"
+	end
+	item.itemLevel = best
+	InventorySync.push(player, profile)
+	PlayerProfile.refreshMaxHp(player)
+	PlayerProfile.refreshMovementSpeed(player)
+	return true, best
+end
+
 function PlayerProfile.getInheritCost(player, bGradeId)
 	local profile = profiles[player]
 	local discount = profile and Milestone.inheritDiscount(profile.milestoneUnlocks) or 0
@@ -1907,13 +1960,17 @@ end
 
 -- 서버만 호출한다(13-1). 잠금은 착용/해제와 같은 되돌릴 수 있는 사건이라(다시 누르면 그만)
 -- 즉시저장하지 않는다.
-function PlayerProfile.setItemLocked(player, index, locked)
+function PlayerProfile.setItemLocked(player, index, locked, confirmToken)
 	local profile = profiles[player]
 	if not profile then
 		return false
 	end
 	local item = profile.inventory[index]
 	if not item then
+		return false
+	end
+	-- D1 ⑦: 태초 잠금 해제는 이중 확인을 거친 요청만(클라 확인 창 두 번 → 토큰). 잠그기는 그대로.
+	if not locked and item.grade == "primordial" and confirmToken ~= PlayerProfile.PRIMORDIAL_UNLOCK_TOKEN then
 		return false
 	end
 	item.locked = locked

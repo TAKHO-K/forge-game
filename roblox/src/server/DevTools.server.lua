@@ -1095,6 +1095,7 @@ local HELP_TEXT = table.concat({
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
 	"/gg gold <n> - 골드를 n으로 맞춘다(0 이상, /gg reset으로 복원 - 구매 · 골드 부족 화면 검증용)",
 	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록(실제 키 타입 포함) · /gg ticket grantboss <스테이지> - 처치 없이 보스 첫 클리어 지급 함수 호출 · /gg ticket clear - 방지권 · 받은 기록을 비우고 저장",
+	"/gg drop force <등급> [부위] [ground] - D1: 그 등급 장비 1개를 실제 드랍 경로로(출처 태그 · 태초 = 시험 키 세계 번호 · 칭호 · 흰 빛기둥 · 본인 연출 · 배너 / 고대 = 같은 서버 알림 · 고대 빛기둥). 태초는 가방(ground = 땅에 - 빛기둥 확인)",
 	"/gg dropnotice <등급> [n] [same] - 가짜 드랍 알림 n건(기본 1)을 내 파티(솔로면 나 자신)에게 주입(30-0 S10, 스크린샷 · 검증용). 등급 = relic|ancient|primordial(태초는 서버 전체 배너 + 채팅 줄) · same = 같은 사람 이름으로(묶음 확인)",
 	"/gg ui <gallery|check|close> - 클라 UI 부품 전시장 열기 · 패널 규칙 자가 검사 · 닫기(30-0 S06, 결과는 클라 콘솔 [S06][UI])",
 	"/gg keycheck <스테이지> [save] - 실제 보스 처치 1회로 첫 클리어 확정 드랍 호출 횟수 · 저장 집합의 실제 키 타입을 찍는다(S05b) - save를 붙이면 두 기록(스테이지 · 견습 4단계)만 남기고 저장, Play 재시작 뒤 다시 불러 왕복을 확인 · /gg keyclean <스테이지> - 그 두 기록을 지우고 저장",
@@ -1918,6 +1919,33 @@ local function handleCommand(player, args)
 				totalSent = math.max(totalSent, #sent)
 			end
 			reply(player, ("드랍 알림 %d건(%s) 주입 - 받는 Player %d명"):format(count, grade, totalSent))
+		end
+	elseif sub == "drop" and args[2] == "force" and args[3] then
+		-- D1: 등급을 정해 실제 드랍 경로(출처 태그 · 태초 번호(시험 키) · 칭호 · 빛기둥 · 연출 · 알림)로 1개 지급. ground = 태초도 땅에(빛기둥 보기).
+		local grade = args[3]
+		if not isValidGrade(grade) then
+			reply(player, ("알 수 없는 등급: %s (사용 가능: %s)"):format(tostring(grade), table.concat(ArmorData.gradeOrder, "/")))
+		else
+			ensureBackup(player)
+			local LootModule = require(game:GetService("ReplicatedStorage").Shared.Loot)
+			local Registry = require(script.Parent.PrimordialRegistry)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			local stage = PlayerProfile.getInfiniteStage(player) or 1
+			local parts = { "armor", "gloves", "shoes" }
+			local item = LootModule.buildFixedArmorDrop(grade, args[4] and table.find(parts, args[4]) and args[4] or parts[math.random(1, 3)], stage, 6, PlayerProfile.getClassId(player))
+			item.source = { kind = "dev", stage = stage }
+			local position = root and root.Position - Vector3.new(0, 2.5, 0) or Vector3.zero
+			local inBoss = require(script.Parent.BossEncounter).getEncounter(player) ~= nil
+			local waitNo = Registry.onRolled(player, item, position, inBoss, { PlayerProfile = PlayerProfile, ImmediateSave = require(script.Parent.ImmediateSave) }, { test = true })
+			require(script.Parent.DropNotice).publish(player, item)
+			local ground = args[4] == "ground" or args[5] == "ground"
+			local no = waitNo and waitNo(10) -- 개발 명령만 번호를 기다린다(게임 경로는 안 기다림)
+			if grade == "primordial" and not ground and PlayerProfile.addArmorDrop(player, item, { noAutoProcess = true, force = true }) then
+				reply(player, ("태초 %s 지급(가방) - 시험 세계 번호 %s"):format(item.part, tostring(no)))
+			else
+				ItemDropSpawner.spawn(item, (root and root.Position or Vector3.zero) + Vector3.new(6, 0, 0), player)
+				reply(player, ("%s %s 땅에 드랍%s"):format(grade, item.part, no and (" - 시험 세계 번호 " .. no) or ""))
+			end
 		end
 	elseif sub == "gold" and tonumber(args[2]) then
 		-- 골드를 지정한 값으로 맞춘다(구매 화면 · 골드 부족 화면 검증용). 다른 명령처럼 백업 뒤 세션 메모리만 바꾼다(/gg reset으로 복원 · 그동안 저장 차단).
@@ -3558,6 +3586,7 @@ if RunService:IsStudio() then
 				{ "M1-0(나)", function() require(script.Parent.M1_0Verify).runLive(player, env) end }, -- M1-0: 합법 최대 높이 되돌림 0 · 기본 Shift Lock 꺼짐 · 아레나 공중 복귀 0
 				{ "M1-2(나)", function() require(script.Parent.M1_2Verify).runLive(player, env) end }, -- M1-2: 스폰 지점 실제 사이클 · 전투 중 보류 · 처치 중 남김 · 귀환 시전 · 취소 · 돌아가기 · 뿌리 밟기
 				{ "C1(나)", function() require(script.Parent.C1Verify).runLive(player, env) end }, -- C1: 기준 스테이지 상승 · 자격 · 스테이지 변경 지우기/초기화 · 만료 · 실제 처치 보상 · 치유 · 어그로 참여 · 토벌 검사
+				{ "D1(나)", function() require(script.Parent.D1Verify).runLive(player, env) end }, -- D1: 세계 번호 동시성 · 명예의 전당 복원 · 드랍 경로 각인 · 빛기둥 7단계 · 잠금 · 각성
 				{ "A1(나)", function() require(script.Parent.A1Verify).runLive() end }, -- A1: CartoonStyle 멱등 · base 복귀 · 관리 밖 변화 0 · 몬스터별 AimHighlight 0
 				{ "M1-4(나)", function() require(script.Parent.M1_4Verify).runLive(player, env) end }, -- M1-4: 지형 표식 v2 · 캡슐(소품 포함) · 소품 라이브러리 · 지형 붙이기 · 사다리 곁 · 능선 위/너머 밀어내기 · 심해 관문 발판 · 무리 상한
 				{ "M1-3T(나)", function() require(script.Parent.M1_3TVerify).runLive(player, env) end }, -- M1-3 본편: 굽힌 지형 · 둥지 캡슐 통과 · 줍기(성공 · 쿨다운 · 멀리서 · 순간이동) · 저장 · 순환 · 선인장 · 외곽 밀어내기 · 스폰 높이
@@ -3944,6 +3973,16 @@ if RunService:IsStudio() and verifyEnabled("C1(가)") then
 		local ok, err = pcall(require(script.Parent.C1Verify).runPure)
 		if not ok then
 			warn(("[C1(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ D1 자동 검증 블록(가) - 드랍표 3종 · 경계값 · 1,000만 회 표본 · 등급 위력표 · 스테이지 환산 · 판매가 불변 · 각성 · 알림 범위 · 저장 v43(docs/phase/D1-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("D1(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.D1Verify).runPure)
+		if not ok then
+			warn(("[D1(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

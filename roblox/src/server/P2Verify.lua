@@ -77,7 +77,7 @@ local function oldRewardRatio(tierIndex)
 	local function expected(row)
 		local sum = 0
 		for gradeId, chance in pairs(row) do
-			sum += chance * ArmorData.grades[gradeId].defenseGradeMultiplier
+			sum += chance * ArmorData.grades[gradeId].fairnessMultiplier -- D1: 공정성 입력 = 옛 배율 고정(갑옷 배율 defenseGradeMultiplier는 D1 위력표)
 		end
 		return sum
 	end
@@ -218,9 +218,9 @@ function P2Verify.runPure()
 		for tier = 1, 6 do
 			local rate = DropTable.primordialBaseRate(tier)
 			cells[tier] = ("%.5f%%"):format(rate * 100)
-			ok = ok and near(rate, 0.001 / divisors[tier], 1e-12)
+			ok = ok and near(rate, DropTableData.primordial.dragonRate / divisors[tier], 1e-18) -- D1: dragonRate 0.001 → 0.000001(비율 구조 그대로)
 		end
-		r.check(("E2 tier1 ~ 6 태초 기본 확률 %s(기대 0.1%% ÷ 1.30 · 1.20 · 1.08 · 1/0.94 · 1/0.97 · 1 - P2.5c)"):format(table.concat(cells, " · ")), ok)
+		r.check(("E2 tier1 ~ 6 태초 기본 확률 %s(기대 dragonRate(D1 0.0001%%) ÷ 1.30 · 1.20 · 1.08 · 1/0.94 · 1/0.97 · 1 - P2.5c)"):format(table.concat(cells, " · ")), ok)
 		local decays = {}
 		-- P2.5a C9: 시작 70 · 1칸당 1.4%(옛 5 · 10%)
 		local expectedDecay = { [0] = 1, [69] = 1, [70] = 0.986, [100] = 0.566, [140] = 0.006, [141] = 0, [200] = 0 }
@@ -246,10 +246,10 @@ function P2Verify.runPure()
 			end
 		end
 		local tier6Same = true
-		for gradeId, chance in pairs(OLD_GRADE_TABLE[6]) do
+		for gradeId, chance in pairs(DropTableData.armorGradeByTier[6]) do -- D1: tier6 기본 표 = D1 표(옛 = OLD_GRADE_TABLE)
 			tier6Same = tier6Same and near(DropTable.gradeChance(6, gradeId), chance, 1e-12)
 		end
-		r.check(("E1.1 등급 분포 합 = 1(tier 6종 × 태초 확률 3종) %s · tier6 감쇠 없음 = P2 전 표와 같다 %s"):format(tostring(sumOk), tostring(tier6Same)), sumOk and tier6Same)
+		r.check(("E1.1 등급 분포 합 = 1(tier 6종 × 태초 확률 3종) %s · tier6 감쇠 없음 = 기본 표(D1)와 같다 %s"):format(tostring(sumOk), tostring(tier6Same)), sumOk and tier6Same)
 		local fairOk = true
 		for tier = 1, 6 do
 			fairOk = fairOk and MonsterData.getRewardRatio(tier) == oldRewardRatio(tier)

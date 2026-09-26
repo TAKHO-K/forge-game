@@ -89,14 +89,43 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg)
 end)
 
 -- 잠금 토글은 착용/해제와 같은 되돌릴 수 있는 사건이다 - 즉시저장하지 않는다.
-lockRequest.OnServerEvent:Connect(function(player, index, locked)
+lockRequest.OnServerEvent:Connect(function(player, index, locked, confirmToken)
 	if not PlayerProfile.getProfile(player) then
 		return
 	end
 	if type(index) ~= "number" or type(locked) ~= "boolean" then
 		return
 	end
-	PlayerProfile.setItemLocked(player, math.floor(index), locked)
+	PlayerProfile.setItemLocked(player, math.floor(index), locked, type(confirmToken) == "string" and confirmToken or nil)
+end)
+
+-- D1 [3] 태초 각성: (kind "bag" + 칸 index | "equip" + 부위) → 결과(AwakenResult: ok, 새 itemLevel | 이유). 골드를 쓰는 되돌릴 수 없는 사건 → 즉시 저장.
+local awakenRequest = Instance.new("RemoteEvent")
+awakenRequest.Name = "AwakenRequest"
+awakenRequest.Parent = ReplicatedStorage
+local awakenResult = Instance.new("RemoteEvent")
+awakenResult.Name = "AwakenResult"
+awakenResult.Parent = ReplicatedStorage
+local lastAwakenAt = {}
+awakenRequest.OnServerEvent:Connect(function(player, kind, key, expectedNo)
+	if not PlayerProfile.getProfile(player) or (kind ~= "bag" and kind ~= "equip") then
+		return
+	end
+	if os.clock() - (lastAwakenAt[player] or 0) < 0.5 then
+		return
+	end
+	lastAwakenAt[player] = os.clock()
+	if kind == "bag" and type(key) ~= "number" or kind == "equip" and type(key) ~= "string" then
+		return
+	end
+	local ok, value = PlayerProfile.awakenItem(player, kind, kind == "bag" and math.floor(key) or key, type(expectedNo) == "number" and expectedNo or nil)
+	if ok then
+		ImmediateSave.request(player)
+	end
+	awakenResult:FireClient(player, ok, value)
+end)
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+	lastAwakenAt[player] = nil
 end)
 
 -- G1-2: 줍는 순간 자동 처리 설정(enabled · maxGrade) - 되돌릴 수 있는 설정이라 즉시저장하지 않는다. 값 검사는 PlayerProfile.setAutoProcess.

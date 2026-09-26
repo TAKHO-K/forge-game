@@ -27,6 +27,7 @@ local ProtectionTickets = require(script.Parent.ProtectionTickets)
 local TutorialState = require(script.Parent.TutorialState)
 local PartyState = require(script.Parent.PartyState)
 local DropNotice = require(script.Parent.DropNotice)
+local PrimordialRegistry = require(script.Parent.PrimordialRegistry) -- D1 태초 세계 번호 · 연출
 local Leaderboard = require(script.Parent.Leaderboard) -- P3a B: 보스 클리어 기록
 local LeaderboardRules = require(ReplicatedStorage.Shared.LeaderboardRules) -- P3a A: 멤버별 진도 판정
 -- P2 G: 불러오는 순간 PartyState에 파티 경험치 조건 판정을 등록한다(경험치 지급 경로가 이 모듈을 지난다).
@@ -73,7 +74,7 @@ end
 -- 아레나 땅에 남은 드랍은 주울 수 없었다. 성공하면 줍기와 같은 ItemPickedUp(획득 팝업)을 쏜다. 가방이 가득이면 false를
 -- 돌려주고 호출부가 deferred에 담는다 - 땅에 떨어뜨리는 일은 복귀 텔레포트 뒤(flushDeferredBossDrops)다.
 local function deliverBossDropToBag(recipient, item)
-	local added, processed = PlayerProfile.addArmorDrop(recipient, item)
+	local added, processed = PlayerProfile.addArmorDrop(recipient, item, item.grade == "primordial" and { noAutoProcess = true, force = true } or nil) -- D1: 태초는 칸 초과로도 가방
 	if not added then
 		return false
 	end
@@ -168,9 +169,10 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	-- 28-1(S01): 드랍 기준은 캐릭터 레벨이 아니라 스테이지다(dropStage - 보스는 보스 스테이지, 그 밖은 받는 사람 자신의
 	-- 스테이지). 잡몹은 0개 이상의 배열이 돌아온다(기대 개수가 1을 넘으면 여러 개).
 	local armorDrops
+	local bossFirstClear = false
 	if isBoss then
 		-- 20-4 [1]: "그 스테이지 보스를 처음 깼는가"로 분기한다. 첫 처치는 등급을 끌어올린 확정 드랍
-		-- (Loot.rollBossFirstClearDrop), 재도전은 등급 상승 없는 확정 1개(Loot.rollBossRetryDrop, 28-1 [2-2]).
+		-- (Loot.rollBossFirstClearDrop), 재도전은 확정 1개(Loot.rollBossRetryDrop, 28-1 [2-2] - D1부터 토벌 표).
 		-- 재입장 자체는 막지 않는다(지시 원문) - 막는 것은 등급 상승뿐이다.
 		local stage = monsterData.stageNumber
 		if PlayerProfile.hasBossFirstClearReward(recipient, stage) then
@@ -178,6 +180,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		else
 			armorDrops = { Loot.rollBossFirstClearDrop(dropStage, PlayerProfile.getRebirthCount(recipient), classId) }
 			PlayerProfile.markBossFirstClearReward(recipient, stage)
+			bossFirstClear = true
 		end
 	elseif isSparkle then
 		armorDrops = { Loot.rollSparkleArmorDrop(dropStage, monsterData.tierIndex, classId) }
@@ -187,6 +190,19 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		local primordialRate = DropTable.effectiveRate({ bestStage = PlayerProfile.getInfiniteStageBest(recipient) }, { tierIndex = monsterData.tierIndex }, dropStage)
 		-- G1-2: 처치 시간 공정성 보정 - 받는 사람이 처음 때린 뒤 죽기까지의 시간(한 방 · 이동 > 처치면 높은 tier 장비 개수가 줄어든다).
 		armorDrops = Loot.rollArmorDrop(dropStage, monsterData.tierIndex, MonsterState.getRewardMultiplier(target), classId, primordialRate, MonsterState.getKillSecondsFor(target, recipient))
+	end
+	-- D1: 출처 태그(M2 출처 태그와 같은 구조 - 태초 각인이 복사한다). 보스 = 첫 클리어 "boss" / 토벌(반복) "raid" · 반짝이 · 잡몹 = 구역.
+	local sourceKind = isBoss and (bossFirstClear and "boss" or "raid") or (isSparkle and "sparkle" or "field")
+	for _, armorDrop in ipairs(armorDrops) do
+		armorDrop.source = {
+			kind = sourceKind,
+			bossId = isBoss and monsterData.id or nil,
+			zone = (not isBoss and monsterData.tierIndex) and ("tier%d"):format(monsterData.tierIndex) or nil,
+			stage = dropStage,
+		}
+		if armorDrop.grade == "primordial" or armorDrop.grade == "ancient" then
+			PrimordialRegistry.onRolled(recipient, armorDrop, deathPosition, isBoss, { PlayerProfile = PlayerProfile, ImmediateSave = ImmediateSave })
+		end
 	end
 	for _, armorDrop in ipairs(armorDrops) do
 		-- 30-0 S10: 굴려진 순간의 파티원 드랍 알림(PRD 20.73 [5-3]) - 땅 스폰 · 가방 직행 둘 다의 앞이다. 이 함수만 부른다(견습 지급 · 대여 · 분해 · 상점은 여기를 안 탄다).
@@ -199,6 +215,10 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 				table.insert(deferredBossDrops, { player = recipient, item = armorDrop })
 			end
 			print(("[forge-game] 드랍: %s등급 %s (%s) → %s"):format(armorDrop.grade, armorDrop.part, kind, inBag and "가방" or "땅(가방 가득)"))
+		elseif armorDrop.grade == "primordial" and PlayerProfile.addArmorDrop(recipient, armorDrop, { noAutoProcess = true, force = true }) then
+			-- D1: 필드 태초는 가방 직행(칸이 가득이어도 - 리뷰 3) + 즉시 저장(세계 번호가 붙은 아이템이 땅에 남지 않게).
+			ImmediateSave.request(recipient)
+			print(("[forge-game] 드랍: 태초 %s (%s) → 가방 · 세계 번호 %s"):format(armorDrop.part, kind, tostring(armorDrop.primordial and armorDrop.primordial.no)))
 		else
 			ItemDropSpawner.spawn(armorDrop, deathPosition, recipient)
 			print(("[forge-game] 드랍: %s등급 %s (%s)"):format(armorDrop.grade, armorDrop.part, kind))

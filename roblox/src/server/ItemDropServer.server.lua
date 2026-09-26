@@ -33,6 +33,9 @@ local function tryPickup(model, owner)
 	local added, processed = PlayerProfile.addArmorDrop(owner, item)
 	if added then
 		ItemDropSpawner.despawn(model)
+		if item.grade == "primordial" then
+			require(script.Parent.ImmediateSave).request(owner) -- D1: 태초(가방이 가득이라 땅에 있던 것)를 주우면 즉시 저장
+		end
 		if not processed then -- G1-2 리뷰 3: 자동 처리됐으면 "획득" 대신 자동 처리 알림만(InventorySync)
 			itemPickedUp:FireClient(owner, item)
 		end

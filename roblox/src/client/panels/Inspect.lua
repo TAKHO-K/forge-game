@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local PrimordialData = require(game:GetService("ReplicatedStorage").Shared.data.PrimordialData) -- D1 ⑤ 태초 테두리
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local EquipCompare = require(ReplicatedStorage.Shared.EquipCompare)
 local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
@@ -274,6 +275,31 @@ local function render()
 		local expanded = view.expanded[slotName] == true
 		row.stroke.Color = expanded and Theme.colors.ember or Theme.colors.rim
 		row.stroke.Transparency = expanded and 0 or Theme.colors.rimTransparency
+		-- D1 ⑤: 태초 장비 = 흰 테두리 + 자홍 점(17번 시트 칸 규칙) · 세계 번호가 있으면 제목 뒤에
+		local primordialItem = not hidden and item and item.grade == "primordial" and (slotName == "armor" or slotName == "gloves" or slotName == "shoes")
+		if primordialItem then
+			row.stroke.Color = PrimordialData.auraColor
+			row.stroke.Transparency = 0
+			if item.primordialNo then
+				row.titleLabel.Text ..= (" ★#%d"):format(item.primordialNo)
+			end
+		end
+		local dot = row.button:FindFirstChild("PrimordialDot")
+		if primordialItem and not dot then
+			dot = Instance.new("Frame")
+			dot.Name = "PrimordialDot"
+			dot.AnchorPoint = Vector2.new(1, 0)
+			dot.Position = UDim2.new(1, -4, 0, 4)
+			dot.Size = UDim2.new(0, 8, 0, 8)
+			dot.BackgroundColor3 = PrimordialData.accentColor
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(1, 0)
+			corner.Parent = dot
+			dot.Parent = row.button
+		end
+		if dot then
+			dot.Visible = primordialItem == true
+		end
 		row.button.Position = UDim2.new(0, PAD, 0, y)
 		y += rowHeight() + ROW_GAP
 		row.detail.Visible = expanded

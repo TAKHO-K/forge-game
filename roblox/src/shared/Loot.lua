@@ -5,7 +5,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
-local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
@@ -17,6 +16,7 @@ local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMateria
 local Option = require(ReplicatedStorage.Shared.Option)
 -- P2 E1: 등급 확률 · 태초 확률은 드랍표 단일 소스(DropTable)에서 읽는다.
 local DropTable = require(ReplicatedStorage.Shared.DropTable)
+local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 
 local lootRng = Random.new()
 
@@ -28,16 +28,20 @@ local Loot = {}
 -- "전설"이 없다) 0 - 그 tier에서는 절대 안 나온다는 뜻이다.
 -- P2 E1: DropTable.gradeChance(감쇠 전 기본 확률) - tier1 ~ 5의 태초(별도 굴림)도 여기서 확률을 얻는다(옛 표엔 없어 판매가 0이었을 자리).
 -- 기본 표에 이미 있는 등급(tier6 태초 포함)은 표 값 그대로다(판매가가 한 자리도 안 바뀐다 - 리뷰 지적 1: 전에는 tier1 ~ 5 기존 등급까지 ×(1 − 태초)가 곱해졌다).
+-- D1: 판매가 기준 = D1 전 표(DropTableData.fairnessGradeByTier · 태초 = 옛 dragonRate ÷ dragonOverTier) 고정 - 새 드랍표로 역산하면 고대 ×950 · 태초 ×1,000으로 튄다.
 local function getGradeChance(tierIndex, gradeId)
-	local row = MonsterData.dropGradeTableByTier[tierIndex]
+	local row = DropTableData.fairnessGradeByTier[tierIndex]
 	if not row then
 		return nil
 	end
 	if row[gradeId] then
 		return row[gradeId]
 	end
-	local chance = DropTable.gradeChance(tierIndex, gradeId)
-	return (chance and chance > 0) and chance or nil
+	if gradeId == "primordial" then
+		local divisor = DropTableData.primordial.dragonOverTier[tierIndex]
+		return divisor and DropTableData.sellReferencePrimordialRate / divisor or nil
+	end
+	return nil
 end
 
 -- 부위 균등 랜덤(16-6, 웹 core/loot.js rollItemPart와 동등) - EquipSlots.order(갑옷/장갑/
@@ -77,12 +81,13 @@ end
 
 -- 등급표(map)를 ArmorData.gradeOrder 순서로 굴린다(순회 순서가 결정적이어야 한다). 표 끝까지 안 걸리면 nil.
 -- excludeGrade(P2 E1): 그 등급을 빼고 나머지 합으로 정규화해 굴린다(태초를 따로 굴린 뒤 "태초가 아니면"의 분포).
-local function rollGrade(gradeTable, excludeGrade)
+-- D1: 굴림값 u(0 ≤ u < 1) → 등급(순수 - 경계값 검증이 같은 함수를 부른다). 누적 구간 [acc, acc + chance)에 들면 그 등급.
+function Loot.gradeForRoll(gradeTable, u, excludeGrade)
 	local total = 1
 	if excludeGrade and gradeTable[excludeGrade] then
 		total -= gradeTable[excludeGrade]
 	end
-	local roll = lootRng:NextNumber() * total
+	local roll = u * total
 	local acc = 0
 	for _, gradeId in ipairs(ArmorData.gradeOrder) do
 		local chance = gradeId ~= excludeGrade and gradeTable[gradeId]
@@ -94,6 +99,10 @@ local function rollGrade(gradeTable, excludeGrade)
 		end
 	end
 	return nil
+end
+
+local function rollGrade(gradeTable, excludeGrade)
+	return Loot.gradeForRoll(gradeTable, lootRng:NextNumber(), excludeGrade)
 end
 
 local function buildDropItem(gradeId, monsterStage, itemLevel, tierIndex, classId)
@@ -245,7 +254,7 @@ end
 -- equipmentDefenseBonus 자리에 그대로 넘긴다. 13-2부터 dropStage가 아니라 itemLevel
 -- 기준이다(28-1부터 itemLevel = 드랍 기준 스테이지 ± 2 - 위 rollItemLevel) - PRD 20.11-4가 정의한 "아이템 레벨 시스템" 그대로. 갑옷만
 -- ArmorData의 전용 배율표(defenseGradeMultiplier)를 쓴다 - 16-5 조사로 확인한 대로 이
--- 표는 장갑·신발의 일반 배율(ItemVisualData.gradeVisuals.statMultiplier)과 축이 다르다.
+-- 표는 장갑·신발 배율(D1부터 ArmorData.grades[].dropPower)과 축이 다르다.
 function Loot.getArmorDefense(item)
 	if not item then
 		return 0
@@ -268,7 +277,7 @@ function Loot.getMaxHpBonus(item)
 end
 
 -- 장갑 공격력 비율 보너스(16-6, 웹 ITEM_PART_BASE_STAT.gloves 그대로 이식). item이 nil이면
--- 0. 갑옷과 달리 일반 등급 배율(ItemVisualData.gradeVisuals.statMultiplier, 1.0~15.0)을
+-- 0. 갑옷과 달리 드랍 등급 위력(D1 - ArmorData.grades[].dropPower, 1.0~26.8)을
 -- 쓴다 - 갑옷 전용표(위 getArmorDefense)와 절대 섞지 않는다(단일 출처 원칙, 16-5 확인).
 -- itemLevel 계수는 17-1부터 레벨25에서 동결한다(getItemLevelMultiplierFrozen) - 무기
 -- 공격력(getWeaponExpMultiplier)이 이미 레벨25 이후 지수 성장을 맡고 있어, 여기까지 같이
@@ -277,8 +286,8 @@ function Loot.getGlovesAttackPercent(item)
 	if not item then
 		return 0
 	end
-	local visual = ItemVisualData.gradeVisuals[item.grade]
-	return EquipSlots.baseValue.gloves * visual.statMultiplier * CharacterLevel.getItemLevelMultiplierFrozen(item.itemLevel)
+	-- D1: 드랍 장비 등급 위력표(ArmorData.grades[].dropPower - 상위 등급 가속). 무기 환생 등급의 statMultiplier와 갈라졌다.
+	return EquipSlots.baseValue.gloves * ArmorData.grades[item.grade].dropPower * CharacterLevel.getItemLevelMultiplierFrozen(item.itemLevel)
 end
 
 -- 신발 이동+공격속도 비율 보너스(16-6, 웹 ITEM_PART_BASE_STAT.shoes 그대로 이식) -
@@ -288,8 +297,7 @@ function Loot.getShoesSpeedPercent(item)
 	if not item then
 		return 0
 	end
-	local visual = ItemVisualData.gradeVisuals[item.grade]
-	return EquipSlots.baseValue.shoes * visual.statMultiplier * CharacterLevel.getItemLevelMultiplierFrozen(item.itemLevel)
+	return EquipSlots.baseValue.shoes * ArmorData.grades[item.grade].dropPower * CharacterLevel.getItemLevelMultiplierFrozen(item.itemLevel) -- D1: 장갑과 같은 위력표
 end
 
 -- 판매가(13-1) - 이 관계식이 유일한 계산 지점이다(서버 InventoryServer의 SellRequest 처리·

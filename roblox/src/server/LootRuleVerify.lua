@@ -168,7 +168,7 @@ end
 
 local function checkBossRetryAndFixed(r)
 	r.section("[7] 보스 재도전 드랍", function()
-		local tier1Table = MonsterData.dropGradeTableByTier[1]
+		local tier1Table = require(game:GetService("ReplicatedStorage").Shared.DropTable).bossRetryGradeTable() -- D1: 재도전 = 토벌 표(영웅 이상 - 옛 기대 = tier1 표)
 		local classId = ClassData.order[1]
 		local bossStage, samples = 50, 1000
 		local badGrade, belowStage, notSingle, badTier = 0, 0, 0, 0
@@ -188,7 +188,7 @@ local function checkBossRetryAndFixed(r)
 				end
 			end
 		end
-		r.check(("rollBossRetryDrop(%d) %d회: 확정 1개 아님 %d · tier1 표에 없는 등급 %d · itemLevel < 보스 스테이지 %d · tierIndex/dropStage 어긋남 %d (기대 전부 0)"):format(
+		r.check(("rollBossRetryDrop(%d) %d회: 확정 1개 아님 %d · tier1 표에 없는 등급 %d · itemLevel < 보스 스테이지 %d · tierIndex/dropStage 어긋남 %d (기대 전부 0 · 등급 = D1 토벌 표)"):format(
 			bossStage, samples, notSingle, badGrade, belowStage, badTier), notSingle == 0 and badGrade == 0 and belowStage == 0 and badTier == 0)
 	end)
 
@@ -396,7 +396,7 @@ local function runBossDrops(player, env, r, profile, root)
 		local distanceToPlayer = (drop and drop.PrimaryPart and afterRoot) and (drop.PrimaryPart.Position - afterRoot.Position).Magnitude or math.huge
 		local distanceToArena = (drop and drop.PrimaryPart) and (drop.PrimaryPart.Position - arenaPosition).Magnitude or 0
 		local returned = afterRoot ~= nil and (afterRoot.Position - BossEncounter.huntingGroundReturnPosition()).Magnitude <= 10
-		local gradeOk = dropItem ~= nil and MonsterData.dropGradeTableByTier[1][dropItem.grade] ~= nil
+		local gradeOk = dropItem ~= nil and require(game:GetService("ReplicatedStorage").Shared.DropTable).bossRetryGradeTable()[dropItem.grade] ~= nil -- D1: 재도전 = 토벌 표
 			and dropItem.itemLevel >= stage and dropItem.itemLevel <= stage + ArmorData.bossItemLevelDelta[#ArmorData.bossItemLevelDelta].delta -- P2.5c: +15
 		local alreadyNotified = drop ~= nil and ItemDropState.isFullNotified(drop)
 		local bagUnchanged = #profile.inventory == profile.inventorySlots

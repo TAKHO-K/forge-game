@@ -10,7 +10,9 @@ return {
 	-- 이 등급이 굴려지면 같은 파티 전원(본인 포함)에게 알린다. 솔로(파티 없음)는 serverWideGrades에 든 것만 알린다.
 	partyGrades = { relic = true, ancient = true, primordial = true },
 	-- 이 등급이 굴려지면 같은 서버 전원에게 알린다(파티 알림을 대신한다 - 배너 + 채팅 1줄).
-	serverWideGrades = { primordial = true },
+	-- D1 ⑧: 고대 = 같은 서버 알림(전 서버 없음). 태초는 여기서 빼고 registryGrades로 - PrimordialRegistry가 세계 번호와 함께 전 서버 배너 + 채팅을 보낸다(중복 배너 방지).
+	serverWideGrades = { ancient = true },
+	registryGrades = { primordial = true },
 
 	feedRows = 3, -- 드랍 피드 최대 줄 수
 	seconds = 4, -- 피드 · 배너 표시 시간(초) - 이 시간이 지나면 흐려지기 시작한다

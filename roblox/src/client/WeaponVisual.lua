@@ -110,8 +110,12 @@ local function buildMeshPart(name, meshId, size, color)
 	return part
 end
 
-local function buildWeapon(classId)
+local function buildWeapon(classId, colorOverride)
 	local model = WeaponModelData[classId]
+	if model and colorOverride then -- D1: 무기 태초 = 흰 본체(강화 틴트도 이 기본색 위에 얹힌다 - WeaponEnhanceVisual이 model.color를 읽는다)
+		model = table.clone(model)
+		model.color = colorOverride
+	end
 	local motion = AttackMotionData[classId]
 	if not model or not motion then
 		return nil
@@ -213,9 +217,28 @@ local function refresh()
 	clearCurrent()
 	local classId = player:GetAttribute("ClassId")
 	if classId and classId ~= "" then
-		current = buildWeapon(classId)
+		-- D1(사용자 결정): 무기 태초(환생 등급 6 - 누구나 얻는 성장 보상) = 흰 본체 + 은은한 반짝임(빛이 천천히 숨쉰다)만.
+		-- 드랍 태초의 자랑 기능(세계 번호 · 알림 · 명예의 전당 · 흰 오라 · 칭호)은 대상이 아니다.
+		local primordialWeapon = (player:GetAttribute("WeaponGrade") or 0) >= 6
+		current = buildWeapon(classId, primordialWeapon and Color3.fromRGB(245, 245, 250) or nil)
 		if current then
 			WeaponEnhanceVisual.apply(current, player:GetAttribute("WeaponLevel") or 0)
+			local glowPart = primordialWeapon and (current.instances.part or current.instances.root or (current.instances.parts and select(2, next(current.instances.parts))))
+			if glowPart then
+				local light = Instance.new("PointLight")
+				light.Name = "PrimordialWeaponGlow"
+				light.Color = Color3.fromRGB(255, 255, 255)
+				light.Range = 6
+				light.Brightness = 0.6
+				light.Parent = glowPart
+				task.spawn(function()
+					local t = 0
+					while light.Parent do
+						t += task.wait(0.1)
+						light.Brightness = 0.45 + 0.35 * (0.5 + 0.5 * math.sin(t * 1.6))
+					end
+				end)
+			end
 		end
 	end
 end
@@ -542,6 +565,7 @@ end
 
 player.CharacterAdded:Connect(refresh)
 player:GetAttributeChangedSignal("ClassId"):Connect(refresh)
+player:GetAttributeChangedSignal("WeaponGrade"):Connect(refresh) -- D1: 무기 태초 표시
 WeaponEnhanceVisual.init(function()
 	return current
 end)

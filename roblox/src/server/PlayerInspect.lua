@@ -18,7 +18,7 @@ local PlayerInspect = {}
 PlayerInspect.publicKeys = {
 	root = { "userId", "name", "displayName", "classId", "level", "rebirthCount", "weapon", "equipment" },
 	weapon = { "gradeId", "level", "gems" },
-	item = { "grade", "part", "itemLevel", "option" }, -- 장비 · 보석 공통(보석은 part 없음)
+	item = { "grade", "part", "itemLevel", "option", "primordialNo" }, -- 장비 · 보석 공통(보석은 part 없음) · D1: 태초 세계 번호(없으면 빠짐)
 	option = { "id", "roll", "roll2" },
 }
 
@@ -39,7 +39,8 @@ local function publicItem(item)
 	if type(item) ~= "table" then
 		return false
 	end
-	return { grade = item.grade, part = item.part, itemLevel = item.itemLevel, option = publicOption(item.option) }
+	return { grade = item.grade, part = item.part, itemLevel = item.itemLevel, option = publicOption(item.option),
+		primordialNo = type(item.primordial) == "table" and item.primordial.no or nil }
 end
 
 -- 순수 함수: info = { userId, name, displayName, classId, classState } → 공개 스냅샷. classState = profile.classes[classId](characterExp · rebirthCount · weapon · equipment).

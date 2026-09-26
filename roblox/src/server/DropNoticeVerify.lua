@@ -68,8 +68,8 @@ function DropNoticeVerify.runPure()
 		epic = { solo = "-", party = "-" },
 		legendary = { solo = "-", party = "-" },
 		relic = { solo = "-", party = "party" },
-		ancient = { solo = "-", party = "party" },
-		primordial = { solo = "server", party = "server" },
+		ancient = { solo = "server", party = "server" }, -- D1 ⑧: 고대 = 같은 서버 알림
+		primordial = { solo = "-", party = "-" }, -- D1: 태초 = PrimordialRegistry(세계 번호 · 전 서버) - DropNotice는 안 보낸다
 	}
 	local mismatches, rows = {}, {}
 	for _, grade in ipairs(ArmorData.gradeOrder) do
@@ -80,7 +80,7 @@ function DropNoticeVerify.runPure()
 			table.insert(mismatches, grade)
 		end
 	end
-	r.check(("등급 필터 7등급: %s(기대 영웅 · 전설까지 발신 0 · 유물 · 고대 = 파티만 · 태초 = 서버 전체) 어긋난 등급 %d개"):format(table.concat(rows, " · "), #mismatches), #mismatches == 0 and #ArmorData.gradeOrder == 7)
+	r.check(("등급 필터 7등급: %s(기대 영웅 · 전설까지 발신 0 · 유물 = 파티만 · 고대 = 서버 전체 · 태초 = 세계 기록 모듈 - D1) 어긋난 등급 %d개"):format(table.concat(rows, " · "), #mismatches), #mismatches == 0 and #ArmorData.gradeOrder == 7)
 
 	-- 데이터 표 정합: 등급 id가 실제 등급이고, 서버 전체 등급은 파티 등급의 부분집합이다. 사용자 결정 값(3줄 · 4초 · 묶기 1초).
 	local unknown = {}
@@ -90,7 +90,7 @@ function DropNoticeVerify.runPure()
 		end
 	end
 	for _, key in ipairs(sortedKeys(DropNoticeData.serverWideGrades)) do
-		if not ArmorData.grades[key] or not DropNoticeData.partyGrades[key] then
+		if not ArmorData.grades[key] or not DropNoticeData.partyGrades[key] or DropNoticeData.registryGrades[key] then
 			table.insert(unknown, key)
 		end
 	end
@@ -219,10 +219,10 @@ function DropNoticeVerify.runLive(player, env)
 		end
 	end)
 
-	r.section("[3] 솔로 · 유물 · 고대 · 영웅 · 전설 → 발신 0 / 파티 · 전설 → 발신 0", function()
+	r.section("[3] 솔로 · 유물 · 영웅 · 전설 → 발신 0 / 파티 · 전설 → 발신 0(D1: 고대는 [4]에서 서버 전체)", function()
 		local before = statSnapshot()
 		local scopes, totalSent = {}, 0
-		for _, grade in ipairs({ "relic", "ancient", "epic", "legendary" }) do
+		for _, grade in ipairs({ "relic", "epic", "legendary" }) do
 			local item = relicItem()
 			item.grade = grade
 			local scope, sent = DropNotice.publish(player, item)
@@ -235,19 +235,19 @@ function DropNoticeVerify.runLive(player, env)
 		legendary.grade = "legendary"
 		local partyScope, partySent = DropNotice.publish(player, legendary)
 		PartyState.clearDummies(player)
-		r.check(("솔로 4등급 [%s] · 보낸 Player %d명 · 부른 %d · 파티 %d · 서버 %d(기대 전부 nil · 0 · 4 · 0 · 0) / 파티 전설: 범위 %s · 보낸 %d명(기대 nil · 0)"):format(
+		r.check(("솔로 4등급 [%s] · 보낸 Player %d명 · 부른 %d · 파티 %d · 서버 %d(기대 전부 nil · 0 · 3 · 0 · 0) / 파티 전설: 범위 %s · 보낸 %d명(기대 nil · 0)"):format(
 			table.concat(scopes, " "), totalSent, calls, partyCount, serverCount, tostring(partyScope), #partySent),
-			totalSent == 0 and calls == 4 and partyCount == 0 and serverCount == 0 and partyScope == nil and #partySent == 0)
+			totalSent == 0 and calls == 3 and partyCount == 0 and serverCount == 0 and partyScope == nil and #partySent == 0)
 	end)
 
-	r.section("[4] 솔로 · 태초 → 서버 전원", function()
+	r.section("[4] 솔로 · 고대 → 서버 전원(D1 ⑧ - 태초는 PrimordialRegistry가 세계 번호와 함께 - D1(나))", function()
 		local before = statSnapshot()
 		local item = relicItem()
-		item.grade = "primordial"
+		item.grade = "ancient"
 		local scope, sent = DropNotice.publish(player, item)
 		local calls, partyCount, serverCount = statDelta(before)
 		local includesSelf = table.find(sent, player) ~= nil
-		r.check(("솔로 태초: 범위 %s(기대 server) · 보낸 Player %d명(기대 접속 전원 %d명 · 본인 포함=%s) · 부른 %d · 파티 %d · 서버 %d(기대 1 · 0 · 1) - 채팅 1줄은 이 신호를 받은 클라가 만든다(클라 selfTest · 스크린샷)"):format(
+		r.check(("솔로 고대: 범위 %s(기대 server) · 보낸 Player %d명(기대 접속 전원 %d명 · 본인 포함=%s) · 부른 %d · 파티 %d · 서버 %d(기대 1 · 0 · 1) - 채팅 1줄은 이 신호를 받은 클라가 만든다(클라 selfTest · 스크린샷)"):format(
 			tostring(scope), #sent, #Players:GetPlayers(), tostring(includesSelf), calls, partyCount, serverCount),
 			scope == "server" and #sent == #Players:GetPlayers() and includesSelf and calls == 1 and partyCount == 0 and serverCount == 1)
 	end)

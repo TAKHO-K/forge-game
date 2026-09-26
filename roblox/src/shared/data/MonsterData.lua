@@ -72,17 +72,18 @@ local function shiftGradeTableUp(sourceRow)
 	return shifted
 end
 
--- G1-1: 보스 표는 드래곤 표와 따로 선언한다(DropTableData.bossGrades - 값은 옛 tier6 그대로).
+-- G1-1: 보스 표는 드래곤 표와 따로 선언한다(DropTableData.bossGrades). D1: 환생 0회 상향표 폐지 - shiftGradeTableUp은 참고용으로만 남긴다(태초 0.4%가 돼 공급을 지배).
 MonsterData.bossFirstClearGradeTable = DropTableData.bossGrades.firstClear
-MonsterData.bossFirstClearUpgradedGradeTable = shiftGradeTableUp(DropTableData.bossGrades.firstClear)
+MonsterData.shiftGradeTableUp = shiftGradeTableUp
 
 MonsterData.fairnessExponent = 2 -- p. 이 값 하나만 튜닝 노브다.
 
+-- D1: 공정성 입력 = D1 전 표(DropTableData.fairnessGradeByTier) × 옛 배율(fairnessMultiplier) 고정 - 드랍표 · 등급 위력 개편이 몬스터 HP · 골드 · 드랍 개수를 안 바꾼다.
 local function expectedGradeValue(tierIndex)
-	local row = MonsterData.dropGradeTableByTier[tierIndex]
+	local row = DropTableData.fairnessGradeByTier[tierIndex]
 	local sum = 0
 	for gradeId, chance in pairs(row) do
-		sum += chance * ArmorData.grades[gradeId].defenseGradeMultiplier
+		sum += chance * ArmorData.grades[gradeId].fairnessMultiplier
 	end
 	return sum
 end

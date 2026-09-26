@@ -77,40 +77,32 @@ function G1_1Verify.runPure()
 			filled:find("3개", 1, true) ~= nil and filled:find("{", 1, true) == nil and missingArgs == 0)
 	end)
 
-	r.section("보스 등급표 분리 · 값 불변", function()
-		local firstClear, tier6 = DropTableData.bossGrades.firstClear, DropTableData.armorGradeByTier[6]
-		local retry, tier1 = DropTableData.bossGrades.retry, DropTableData.armorGradeByTier[1]
-		local same6, same1, sum6, sum1 = true, true, 0, 0
-		for gradeId, chance in pairs(tier6) do
-			same6 = same6 and math.abs((firstClear[gradeId] or 0) - chance) < 1e-12
+	r.section("보스 등급표 분리 · 값(D1 개편)", function()
+		-- D1(2026-09-27): 첫 클리어 = 영웅 이상 보장 표(잡몹 tier6과 분리 · 환생 0회 상향표 폐지) · 재도전 = 토벌 표. 옛 기대(tier6 · tier1 값 · 환생 0회 태초 2%)는 D1 결정으로 바뀌었다.
+		local firstClear, raid = DropTableData.bossGrades.firstClear, DropTableData.bossGrades.raid
+		local sumF, sumR = 0, 0
+		for _, chance in pairs(firstClear) do
+			sumF += chance
 		end
-		for gradeId, chance in pairs(firstClear) do
-			sum6 += chance
-			same6 = same6 and math.abs((tier6[gradeId] or 0) - chance) < 1e-12
+		for _, chance in pairs(raid) do
+			sumR += chance
 		end
-		for gradeId, chance in pairs(tier1) do
-			same1 = same1 and math.abs((retry[gradeId] or 0) - chance) < 1e-12
-		end
-		for _, chance in pairs(retry) do
-			sum1 += chance
-		end
-		local upgraded = DropTable.bossFirstClearGradeTable(0)
-		r.check(("첫 클리어 표 = 옛 tier6 값 %s(합 %.4f) · 다른 표 %s · 재도전 = 옛 tier1 값 %s(합 %.4f) · 환생 0회 태초 %.3f(기대 0.020) · 1회 표 = 기본 %s"):format(
-			tostring(same6), sum6, tostring(firstClear ~= tier6), tostring(same1), sum1, upgraded.primordial or 0, tostring(DropTable.bossFirstClearGradeTable(1) == firstClear)),
-			same6 and same1 and firstClear ~= tier6 and math.abs(sum6 - 1) < 1e-9 and math.abs(sum1 - 1) < 1e-9 and math.abs((upgraded.primordial or 0) - 0.02) < 1e-9
-				and DropTable.bossFirstClearGradeTable(1) == firstClear)
+		r.check(("첫 클리어 표(합 %.4f · 태초 %.4f%%) ≠ 잡몹 tier6 표 %s · 재도전 = 토벌 표(합 %.4f) · 환생 0회 = 1회 표 %s"):format(sumF, (firstClear.primordial or 0) * 100,
+			tostring(firstClear ~= DropTableData.armorGradeByTier[6]), sumR, tostring(DropTable.bossFirstClearGradeTable(0) == DropTable.bossFirstClearGradeTable(1))),
+			math.abs(sumF - 1) < 1e-9 and math.abs(sumR - 1) < 1e-9 and firstClear ~= DropTableData.armorGradeByTier[6] and DropTable.bossRetryGradeTable() == raid
+				and DropTable.bossFirstClearGradeTable(0) == firstClear and DropTable.bossFirstClearGradeTable(1) == firstClear)
 	end)
 
-	r.section("재도전 굴림 분포", function()
+	r.section("재도전(토벌) 굴림 분포", function()
 		local counts, n = {}, 20000
 		for _ = 1, n do
 			local item = Loot.rollBossRetryDrop(100, "greatsword")
 			counts[item.grade] = (counts[item.grade] or 0) + 1
 		end
-		local normal, rare = (counts.normal or 0) / n, (counts.rare or 0) / n
-		local others = n - (counts.normal or 0) - (counts.rare or 0)
-		r.check(("재도전 %d회: 일반 %.3f · 희귀 %.3f(기대 0.90 · 0.10 ± 0.01) · 그 밖 %d(기대 0)"):format(n, normal, rare, others),
-			math.abs(normal - 0.9) < 0.01 and math.abs(rare - 0.1) < 0.01 and others == 0)
+		local epic, legendary = (counts.epic or 0) / n, (counts.legendary or 0) / n
+		local below = (counts.normal or 0) + (counts.rare or 0)
+		r.check(("재도전 %d회: 영웅 %.3f · 전설 %.3f(기대 0.78 · 0.209 ± 0.01) · 일반 · 희귀 %d(기대 0)"):format(n, epic, legendary, below),
+			math.abs(epic - 0.78) < 0.01 and math.abs(legendary - 0.20948) < 0.01 and below == 0)
 	end)
 
 	local pass, count = r.summary()

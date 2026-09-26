@@ -12,6 +12,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local ItemDropState = require(script.Parent.ItemDropState)
 local GroundProbe = require(script.Parent.GroundProbe)
+local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 
 local ItemDropSpawner = {}
 
@@ -24,6 +25,18 @@ local BOUNCE_HEIGHT_STUDS = 3
 local BOUNCE_UP_SECONDS = 0.18
 local BOUNCE_DOWN_SECONDS = 0.27
 ItemDropSpawner.bounceSeconds = BOUNCE_UP_SECONDS + BOUNCE_DOWN_SECONDS -- WorldConfig.items.pickupDelaySeconds가 이 값 이상이어야 연출을 다 본다
+
+-- D1 ⑨(사용자 결정 · 디아블로4식): 땅 드랍 표시색 = 등급 색을 낮은 등급일수록 회색 쪽으로(일반 = 회색 · 빛 없음 - PrimordialData.dropLook). 태초 = 흰색.
+local function dropColor(gradeId)
+	if gradeId == "primordial" then
+		return PrimordialData.auraColor
+	end
+	local visual = ItemVisualData.gradeVisuals[gradeId]
+	local look = PrimordialData.dropLook[gradeId]
+	local base = visual and visual.color or PrimordialData.dropGray
+	return base:Lerp(PrimordialData.dropGray, look and look.desaturate or 0)
+end
+ItemDropSpawner.dropColor = dropColor
 
 local function buildModel(item)
 	local part = item.part or "armor" -- 지금은 항상 armor - 필드 자체가 아직 없어도 안전하게 기본값
@@ -39,15 +52,19 @@ local function buildModel(item)
 	root.Size = size
 	root.Anchored = true
 	root.CanCollide = false
-	root.Material = Enum.Material.Neon
-	root.Color = visual.color
+	-- D1(사용자 결정): 장비 본체 = 어두운 실루엣(번개 · 바닥 빛 속에서 모양이 잘 보이게) · 빛 = 등급별(일반 = 없음 - PrimordialData.dropLook)
+	root.Material = Enum.Material.SmoothPlastic
+	root.Color = PrimordialData.silhouetteColor
 	root.Parent = model
 
-	local light = Instance.new("PointLight")
-	light.Brightness = visual.glowBrightness
-	light.Range = visual.glowRange
-	light.Color = visual.color
-	light.Parent = root
+	local look = PrimordialData.dropLook[item.grade]
+	if look and look.light > 0 then
+		local light = Instance.new("PointLight")
+		light.Brightness = look.light
+		light.Range = visual.glowRange
+		light.Color = dropColor(item.grade)
+		light.Parent = root
+	end
 
 	-- 이름표(등급 + 레벨) - 가까이 가야만 보인다(지시 사항: "가까이 갔을 때 이름표에 함께
 	-- 뜨는 정도로 충분할 수도 있다" - 등급은 이미 색으로 표현되므로 여기선 등급명+레벨을
@@ -68,7 +85,7 @@ local function buildModel(item)
 	label.Size = UDim2.new(1, 0, 1, 0)
 	label.Font = Enum.Font.GothamBold
 	label.TextScaled = true
-	label.TextColor3 = visual.color
+	label.TextColor3 = dropColor(item.grade)
 	label.TextStrokeTransparency = 0.4
 	label.Text = ("%s %s (Lv.%d)"):format(grade and grade.displayName or item.grade, partName, item.itemLevel)
 	label.Parent = nameplateGui
@@ -102,6 +119,24 @@ local function spawnBurst(position, color)
 		ring:Destroy()
 	end)
 end
+
+
+-- 바닥 원(모든 등급) + 번개 자리 표시(Attribute DropGrade · DropPart · BoltHeight - 클라 DropLightning이 불규칙한 번개를 계속 다시 긋는다). 모델의 자식이라 줍기 · 만료 때 같이 사라진다.
+local function addPillar(model, groundPosition, gradeId, color)
+	local ring = Instance.new("Part")
+	ring.Name = "DropRing"
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Anchored, ring.CanCollide, ring.CanQuery, ring.CanTouch, ring.CastShadow = true, false, false, false, false
+	ring.Material = gradeId == "normal" and Enum.Material.SmoothPlastic or Enum.Material.Neon -- 일반 = 빛 없음
+	ring.Color = color
+	ring.Transparency = gradeId == "normal" and 0.55 or 0.35
+	ring.Size = Vector3.new(0.15, PrimordialData.ringDiameter, PrimordialData.ringDiameter)
+	ring.CFrame = CFrame.new(groundPosition + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	ring.Parent = model
+	model:SetAttribute("BoltHeight", PrimordialData.pillarHeights[gradeId] or 0)
+	model:SetAttribute("BoltGround", groundPosition)
+end
+ItemDropSpawner.addPillar = addPillar
 
 -- 몬스터 사망 위치 근처에 드랍을 스폰한다. 위로 솟았다 떨어지는 연출 뒤 정지한다(지시
 -- 사항 - "즉시 나타나면 눈에 안 띈다"). owner는 이 아이템을 주울 수 있는 유일한
@@ -153,16 +188,24 @@ function ItemDropSpawner.spawn(item, deathPosition, owner)
 
 	local visual = ItemVisualData.gradeVisuals[item.grade]
 	if visual and visual.burstOnDrop then
-		spawnBurst(restPosition, visual.color)
+		spawnBurst(restPosition, dropColor(item.grade))
+	end
+	if visual then
+		model:SetAttribute("DropGrade", item.grade)
+		model:SetAttribute("DropPart", item.part or "armor")
+		addPillar(model, groundPosition, item.grade, dropColor(item.grade))
 	end
 
 	-- 수명 만료(웹 BALANCE.itemGroundLifetime과 같은 60초, WorldConfig.items 참고) -
 	-- 못 주운 채 시간이 지나면 조용히 사라진다.
-	task.delay(WorldConfig.items.groundLifetimeSeconds, function()
-		if model.Parent then
-			ItemDropSpawner.despawn(model)
-		end
-	end)
+	-- D1: 태초는 만료 없음(세계 번호가 붙은 아이템 - 가방이 가득일 때만 땅에 온다 · 주인이 나가면 ItemDropServer 정리 규칙대로).
+	if item.grade ~= "primordial" then
+		task.delay(WorldConfig.items.groundLifetimeSeconds, function()
+			if model.Parent then
+				ItemDropSpawner.despawn(model)
+			end
+		end)
+	end
 
 	return model
 end

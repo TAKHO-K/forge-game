@@ -38,6 +38,19 @@ local InfiniteStage = require(game:GetService("ReplicatedStorage").Shared.Infini
 local ARMOR_NORMAL = 1.184
 local STEP = ItemVisualData.gradeStep
 
+-- D1(사용자 확정): 드랍 장비용 등급 위력표 - 상위 등급 가속. 일반 ~ 영웅 = 옛 값(1.45 단계) · 전설 ×1.5 · 유물 ×1.7 · 고대 ×2.0 · 태초 ×2.5(직전 등급 대비).
+-- 누적 = 1.00 · 1.45 · 2.10 · 3.15 · 5.36 · 10.7 · 26.8. 드랍 장비(갑옷 방어 · 장갑 공격% · 신발 속도%)만 쓴다 - 무기 환생 등급 · 보석(옵션) 등급은
+-- 옛 ItemVisualData.statMultiplier(1.45^n) 그대로(지시: 이번에 안 바꿈). 몬스터 tier 공정성 식(MonsterData)은 옛 배율(fairnessMultiplier)을 고정 입력으로 쓴다.
+local DROP_STEPS = { 1, 1.45, 1.45, 1.5, 1.7, 2.0, 2.5 }
+local dropPower = {}
+do
+	local acc = 1
+	for i, step in ipairs(DROP_STEPS) do
+		acc *= step
+		dropPower[i] = acc
+	end
+end
+
 return {
 	baseDefense = CombatConfig.playerDefense,
 
@@ -60,18 +73,22 @@ return {
 	-- 선택지 목록을 이 등급까지만 만드는 데 같이 쓴다(단일 출처).
 	bulkSellMaxGrade = "legendary",
 
-	-- defenseGradeMultiplier - 몬스터 tier 공정성 계산(MonsterData.lua, 16-6)의 입력이자
-	-- Loot.getArmorDefense의 갑옷 배율이다.
+	-- defenseGradeMultiplier = Loot.getArmorDefense의 갑옷 배율(D1 - 1.184 × dropPower) · fairnessMultiplier = 몬스터 tier 공정성 계산(MonsterData, 16-6)의
+	-- 고정 입력(D1 전 값 1.184 × 1.45^n - 몬스터 HP · 골드 · 드랍 개수가 안 바뀐다) · dropPower = 드랍 장비 등급 위력(장갑 · 신발 배율 - D1).
 	grades = {
 		normal = {
 			id = "normal",
 			displayName = "일반",
-			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 0,
+			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[1],
+			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 0, -- 옛 배율(몬스터 tier 공정성 식 고정 입력 - D1)
+			dropPower = dropPower[1],
 		},
 		rare = {
 			id = "rare",
 			displayName = "희귀",
-			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 1,
+			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[2],
+			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 1, -- 옛 배율(몬스터 tier 공정성 식 고정 입력 - D1)
+			dropPower = dropPower[2],
 		},
 		-- 아래 5등급은 PRD-forge-game.md 7.0 각주의 ARMOR_DEFENSE_GRADE_MULTIPLIER 표를
 		-- 그대로 옮긴 값이다(1.184/2.397/3.903/5.866/8.347/11.25/15.0, 일반~태초) - 16-5
@@ -79,27 +96,37 @@ return {
 		epic = {
 			id = "epic",
 			displayName = "영웅",
-			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 2,
+			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[3],
+			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 2, -- 옛 배율(몬스터 tier 공정성 식 고정 입력 - D1)
+			dropPower = dropPower[3],
 		},
 		legendary = {
 			id = "legendary",
 			displayName = "전설",
-			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 3,
+			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[4],
+			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 3, -- 옛 배율(몬스터 tier 공정성 식 고정 입력 - D1)
+			dropPower = dropPower[4],
 		},
 		relic = {
 			id = "relic",
 			displayName = "유물",
-			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 4,
+			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[5],
+			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 4, -- 옛 배율(몬스터 tier 공정성 식 고정 입력 - D1)
+			dropPower = dropPower[5],
 		},
 		ancient = {
 			id = "ancient",
 			displayName = "고대",
-			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 5,
+			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[6],
+			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 5, -- 옛 배율(몬스터 tier 공정성 식 고정 입력 - D1)
+			dropPower = dropPower[6],
 		},
 		primordial = {
 			id = "primordial",
 			displayName = "태초",
-			defenseGradeMultiplier = ARMOR_NORMAL * STEP ^ 6,
+			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[7],
+			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 6, -- 옛 배율(몬스터 tier 공정성 식 고정 입력 - D1)
+			dropPower = dropPower[7],
 		},
 	},
 

@@ -49,8 +49,22 @@ function InventorySync.snapshot(profile)
 	}
 end
 
+-- D1 ⑤: 태초 착용 여부 → Player Attribute PrimordialEquipped(클라 흰 오라 · 이름표 문양 · 살펴보기가 읽는다). 착용 · 해제 · 직업 변경이 전부 push를 거친다.
+function InventorySync.primordialEquipped(profile)
+	local equipment = activeEquipment(profile)
+	for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+		if equipment[part] and equipment[part].grade == "primordial" then
+			return true
+		end
+	end
+	return false
+end
+
 function InventorySync.push(player, profile)
 	inventorySync:FireClient(player, InventorySync.snapshot(profile))
+	if typeof(player) == "Instance" and player:IsA("Player") then
+		player:SetAttribute("PrimordialEquipped", InventorySync.primordialEquipped(profile))
+	end
 end
 
 inventoryFetch.OnServerInvoke = function(player)

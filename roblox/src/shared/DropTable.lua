@@ -8,7 +8,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
-local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 
 local DropTable = {}
 
@@ -28,16 +27,27 @@ function DropTable.timeFairnessFactor(killSeconds, hpUnits)
 end
 
 -- G1-1 보스 확정 장비 등급표(보상 목록 단일 소스 - 서버 굴림 Loot와 스테이지 선택 보상 띠가 같은 함수를 부른다).
--- 첫 클리어: 환생 1회 이상 = 기본표, 0회 = 한 단계 올린 표(재무장 특례). 재도전: 등급 상승 없는 표.
-function DropTable.bossFirstClearGradeTable(rebirthCount)
-	if rebirthCount and rebirthCount > 0 then
-		return MonsterData.bossFirstClearGradeTable
-	end
-	return MonsterData.bossFirstClearUpgradedGradeTable
+-- D1: 첫 클리어 = 영웅 이상 보장 표 하나(환생 0회 상향표 폐지 - rebirthCount는 호출 호환용으로만 받는다). 재도전 = 토벌 표(반복 보스).
+function DropTable.bossFirstClearGradeTable(_rebirthCount)
+	return DropTableData.bossGrades.firstClear
 end
 
 function DropTable.bossRetryGradeTable()
-	return DropTableData.bossGrades.retry
+	return DropTableData.bossGrades.raid
+end
+
+-- D1 ⑩ 확률 공개(정보창 데이터 - 창 UI는 U1): 드랍표 3종 = 보스 첫 클리어 · 토벌 · 잡몹(tier마다 태초 별도 굴림 포함 · 감쇠 전).
+-- 반환 = { firstClear = rows, raid = rows, field = { [tier] = rows } } · rows = gradeRows 모양({ id, chance } 낮은 등급부터).
+function DropTable.disclosure()
+	local field = {}
+	for tierIndex = 1, #DropTableData.armorGradeByTier do
+		field[tierIndex] = DropTable.gradeRows(DropTable.gradeRow(tierIndex))
+	end
+	return {
+		firstClear = DropTable.gradeRows(DropTableData.bossGrades.firstClear),
+		raid = DropTable.gradeRows(DropTableData.bossGrades.raid),
+		field = field,
+	}
 end
 
 -- 등급표 → 확률 > 0인 등급을 낮은 등급부터 { { id, chance }... }(화면 목록용).
