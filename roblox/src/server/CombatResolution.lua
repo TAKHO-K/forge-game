@@ -330,8 +330,9 @@ local function handleMobDeath(target)
 	-- 공유 잡몹(19-4 [2], PRD 20.13 C안) - 막타 1인이 아니라 기여 비율 이상인 전원이
 	-- 각자 온전한 보상을 받는다. contributor.Parent 검사는 방어적 가드(AttackServer.
 	-- server.lua 원본 주석 참고).
-	for contributor, ratio in pairs(MonsterState.getContributors(target)) do
-		if ratio >= CombatConfig.contributionRewardThreshold and contributor.Parent then
+	-- C1: 자격 = 기여 10% 이상 + 그 기여를 지금 스테이지에서 쌓았고 + 지금 스테이지 ≤ 기준 스테이지(MonsterState.isRewardEligible - 전부 서버 값).
+	for contributor in pairs(MonsterState.getContributors(target)) do
+		if contributor.Parent and MonsterState.isRewardEligible(target, contributor, TutorialState.getMonsterStage(contributor)) then
 			grantKillReward(contributor, target, monsterData, deathPosition)
 			-- 23-1: 골드·경험치·드랍은 위 grantKillReward가 이미 견습 stage 기준으로 계산했다
 			-- (recipientStage가 TutorialState.getMonsterStage를 거친다) - 여기선 그 처치가

@@ -17,6 +17,8 @@ local PartyState = require(script.Parent.PartyState)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerShield = require(script.Parent.PlayerShield)
 local PlayerState = require(script.Parent.PlayerState)
+local MonsterState = require(script.Parent.MonsterState) -- C1 치유 · 보호 참여
+local TutorialState = require(script.Parent.TutorialState)
 
 local HealCast = {}
 
@@ -90,7 +92,13 @@ function HealCast.cast(player, def, classId, cooldownSeconds)
 		-- 26-2: 실제(옵션 반영) 쿨다운에서 파생시킨다 - 치유 쿨다운이 짧아지면 버프도 그만큼 자주 갱신되므로 지속시간도 같이 짧아져야
 		-- SkillData.lua의 "제때 힐을 돌리면 안 끊긴다" 관계가 유지된다.
 		local durationSeconds = cooldownSeconds * def.partyBuffDurationMultiplier
+		local healerStage = TutorialState.getMonsterStage(player)
+		local healerCharacter = typeof(player) == "Instance" and player.Character
+		local healerRoot = healerCharacter and healerCharacter:FindFirstChild("HumanoidRootPart")
 		for _, member in ipairs(PartyState.getMemberPlayers(party)) do
+			if member ~= player then
+				MonsterState.noteSupport(player, healerStage, member, healerRoot and healerRoot.Position) -- C1: 버프 · 회복 · 보호를 받는 멤버가 참여 중인 잡몹에 치유사도 참여(기준 스테이지에 든다)
+			end
 			-- Player가 아닌 것(검증의 스탠드인 테이블)에는 버프 알림(SetAttribute · FireClient)을 못 보낸다 - PartyState.fireClient와 같은 거름.
 			if typeof(member) == "Instance" then
 				-- P3d-F 전수 점검 E: 치유사가 둘이면 짧은 지속(쿨감이 높은 쪽)의 재시전이 긴 쪽의 남은 시간을 줄였다 - 더 늦은 만료를 남긴다(배율은 같은 값 하나 - 중첩 없음 그대로).

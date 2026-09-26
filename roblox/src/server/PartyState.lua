@@ -143,6 +143,11 @@ function PartyState.showAppliedExpBonus(player, bonus)
 	syncExpBonusAttribute(player, bonus)
 end
 
+-- C1: 스테이지를 바꾸면 활동 기록을 지운다(파티 보너스 인원 = 지금 스테이지에서 쌓은 활동만).
+function PartyState.clearActivity(player)
+	lastActivityAt[player] = nil
+end
+
 function PartyState.getLastActivity(player)
 	return lastActivityAt[player]
 end

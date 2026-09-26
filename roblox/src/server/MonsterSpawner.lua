@@ -534,4 +534,6 @@ function MonsterSpawner.despawn(model)
 	end
 end
 
+MonsterState.setRatioListener(MonsterSpawner.updateHpLabel) -- C1: 피해 없이 비율이 바뀐 몹(기준 상승 · 초기화)도 HP바를 다시 그린다
+
 return MonsterSpawner

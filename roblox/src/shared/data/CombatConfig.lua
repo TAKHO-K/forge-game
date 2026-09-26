@@ -122,6 +122,13 @@ return {
 	-- 자격이 생기는" 낮은 문턱인 10%로 잡는다 - 상수로 빼둔다(실측 후 조정 대상).
 	contributionRewardThreshold = 0.10,
 
+	-- C1 기준 스테이지(shared/MobShare): 잡몹의 참여자 = 최근 participationWindowSeconds초 안에 타격 · 어그로(쫓기는 중) · 치유/보호(참여자를 도움)로 닿은 사람.
+	-- 기준 스테이지 = 참여자 중 가장 높은 스테이지 - 모든 피해를 그 HP로 환산한다. stageChangeCooldownSeconds = 서버가 받는 스테이지 변경 요청 간격(연타 제한).
+	participationWindowSeconds = 8,
+	-- 치유 · 보호 · 버프 참여는 치유사가 그 몹에서 이 거리 안일 때만(파티 버프는 거리 무관하게 걸린다 - C1 리뷰 1). 파티 경험치 공유 반경(PartyConfig 150)보다 좁은 "같은 싸움" 거리.
+	supportRadiusStuds = 60,
+	stageChangeCooldownSeconds = 1,
+
 	-- 점프 중 기본공격 입력 버퍼(19-2). 점프 중엔 공격이 나가지 않고 회전만 한다 - 착지
 	-- 순간 이 시간 안에 눌린 입력만 버퍼되어 발동한다(격투게임 입력 버퍼와 같은 개념).
 	-- 점프 시작할 때 누른 입력이 한참 뒤 착지에 나가면 유령 공격처럼 느껴지므로, 착지

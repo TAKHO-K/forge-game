@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local RaidRules = require(ReplicatedStorage.Shared.RaidRules) -- C1 토벌 스테이지
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -79,6 +80,17 @@ function BossGate.usableFor(player, bossId)
 		end
 	end
 	return BossGate.usableFromFlags(BossGate.isRegistered(player, bossId), flags)
+end
+
+-- C1 토벌 입장 검사(BR2 입장 경로가 부른다 - 지금은 검증만). 반환: ok, 이유, 토벌 스테이지(RaidRules.check).
+function BossGate.raidCheck(player, bossId, remote)
+	return RaidRules.check({
+		currentStage = PlayerProfile.getInfiniteStage(player),
+		bestBossCleared = PlayerProfile.getBestBossCleared(player),
+		bossId = bossId,
+		remote = remote,
+		gateUsable = BossGate.usableFor(player, bossId),
+	})
 end
 
 -- 첫 등록(관문 상호작용). 반환: 새로 등록했는가

@@ -315,4 +315,6 @@ BossEncounter.setEntryExclusion(function(player)
 	return TutorialState.isActive(player)
 end)
 
+MonsterState.setStageResolver(TutorialState.getMonsterStage) -- C1: 잡몹 참여 스테이지 = 맞는 순간의 스테이지(지연 피해 포함)
+
 return TutorialState

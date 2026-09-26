@@ -153,7 +153,10 @@ local config = {
 		-- M1-2c(가)(나)(LaunchPermit 위치 기록 · 높이 검사 · 발사) · M1-3(가)(나)(관문 · 저장 기대값 최신 이관).
 		-- M1-4(2026-09-26): 이번 블록 M1-4(가)(나) + 지시(옛 M1-2c · M1-3 · 관문 등록) + 바꾼 모듈(WorldMapLayout · TerrainShape · SpawnSites · HeightGuard · Travel · WorldCheck · NestData)을 쓰는 블록을 VerifyOnly로 -
 		-- M1-3T(가)(나) · M1-3(가)(나) · M1-2c(가)(나) · M1-2(가)(나) · M1(가)(나) · M1-0(나) · G2a(나).
+		-- C1(2026-09-26 · COMMON §7-1 개정 - 이번 수정만): C1(가)(나) + 이번 변경이 실제로 닿는 옛 블록만 VerifyOnly로 돈다 - G1-2(나)(첫 타격 · 타격 수 저장) · G1-3(나)(잡몹 레벨차 기준 스테이지) ·
+		--   P2(나) · S01(나) · S09(나) · P25a(나) · S12(나)(실제 잡몹 처치 보상 자격 · 활동) · S13(나) · S13b(나)(HealCast.cast 참여 추가) · M1-2(나)(잡몹 applyDamage) · M1-3(나)(StageServer).
 		current = {
+			"C1(가)", "C1(나)",
 			"M1-4(가)", "M1-4(나)",
 			"M1-3T(가)", "M1-3T(나)",
 			"M1-2c(가)", "M1-2c(나)",

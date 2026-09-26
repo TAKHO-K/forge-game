@@ -20,13 +20,16 @@
 --     공격력·골드·경험치도 같은 이유로 "그 순간 계산 대상 플레이어의 stage"를 인자로
 --     받는다(getAttackFor/getGoldDropFor/getExpRewardFor) - 몬스터 인스턴스 자체엔
 --     stage를 저장하지 않는다(예전 setStage/getStage는 19-4에서 완전히 제거했다).
+--   C1(2026-09-26): 위 "때린 사람 stage로 나눈다"는 기준 스테이지(참여자 중 최고)로 바뀌었다 - 규칙 = shared/MobShare.lua 머리 주석.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig) -- C1 도움 참여 반경
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
+local MobShare = require(ReplicatedStorage.Shared.MobShare) -- C1: 기준 스테이지(참여자 중 최고)로 잡몹 피해 환산
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel) -- G1-3: 레벨차 계수 -- G1-2: 처치 시간 상한(fairness.maxSecondsPerHit)
 
 local MonsterState = {}
@@ -42,6 +45,24 @@ local MonsterState = {}
 --             세 필드를 이 테이블 하나로 대체했다. 여기 두는 이유는 "몬스터 런타임 상태는
 --             이 모듈이 단일 통로"라는 원칙 - clear(model) 한 번에 같이 사라진다) }
 local monsters = {}
+
+-- C1: 실제 Player의 "지금" 스테이지(TutorialState.getMonsterStage - TutorialState가 이 모듈을 require하므로 여기서 부를 수 없어 거꾸로 등록한다).
+-- 지연 피해(꽂힌 화살 폭발 · 채널 틱)가 시전 때 잡은 옛 스테이지로 참여하는 것을 막는다(리뷰 3). 스탠드인(표)은 넘긴 스테이지 그대로.
+local stageResolver = nil
+function MonsterState.setStageResolver(fn)
+	stageResolver = fn
+end
+
+-- C1: 피해 없이 비율이 바뀐 몹(기준 상승 · 초기화 - 어그로 · 도움 · 퇴장) → HP바 다시 그리기(MonsterSpawner가 등록 - 리뷰 4).
+local ratioListener = nil
+function MonsterState.setRatioListener(fn)
+	ratioListener = fn
+end
+local function notifyRatio(model)
+	if ratioListener then
+		ratioListener(model)
+	end
+end
 
 -- variant(22-2) - 스폰 시점에 굴린 인스턴스별 변종 { isSparkle, prefix(MonsterPrefixData 항목
 -- 또는 nil), isChest }. data는 여러 인스턴스가 공유하는 원본 테이블이라 변종 배율을 data에
@@ -81,6 +102,9 @@ function MonsterState.init(model, data, spawnPosition, zoneKey, variant)
 		lastAttackTick = nil,
 		bossPattern = data.isBoss and {} or nil,
 	}
+	if not data.isBoss then
+		MobShare.fresh(monsters[model]) -- C1: hpRatio · refStage · participants · partStage · 기여 · 첫 타격(보스는 고정 스테이지라 없음)
+	end
 end
 
 function MonsterState.isChest(model)
@@ -233,8 +257,23 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	-- G1-3: 레벨차 계수 - 주는 피해(CharacterLevelConfig.levelGap). 스테이지 = 잡몹은 때린 사람의 스테이지, 보스는 보스 스테이지. 실제 Player만(스탠드인 · 구출 · 상자는 영향 없음).
 	local damageBeforeGap = damage -- G2a(사용자 결정 - G1-3 결정 필요 2): 보스 기여도는 계수를 곱하기 전 피해로 센다(저레벨 파티원이 10% 문턱에서 빠지지 않게)
 	local fixed = hitInfo ~= nil and hitInfo.fixed == true -- BR1-3 고정 피해(보스 에어본 5% - 레벨차 계수 · 받는 피해 배율 없이, 보호막만 막는다)
+	-- C1: 잡몹은 먼저 참여시켜 기준 스테이지(참여자 중 최고)를 정한다 - 레벨차 계수 · 환산 HP 둘 다 이 기준(때린 사람 스테이지가 아니다).
+	local mobRef
+	if not entry.data.isBoss and not entry.isRescueTarget and not entry.isChest then
+		local now = os.clock()
+		if attackerPlayer then
+			local stage = (stageResolver and typeof(attackerPlayer) == "Instance") and stageResolver(attackerPlayer) or attackerStage
+			mobRef = MobShare.touch(entry, attackerPlayer, stage, now)
+		else
+			mobRef = MobShare.refresh(entry, now)
+			if entry.refStage == nil then
+				entry.refStage = attackerStage -- 리뷰 2: 공격자 없는 피해도 기준을 남긴다(다음 상승이 이 비율을 다시 환산하게)
+			end
+		end
+		mobRef = mobRef or attackerStage
+	end
 	if typeof(attackerPlayer) == "Instance" and not entry.isRescueTarget and not entry.isChest and not fixed then
-		local gapStage = entry.data.isBoss and entry.data.stageNumber or attackerStage
+		local gapStage = entry.data.isBoss and entry.data.stageNumber or mobRef
 		damage *= CharacterLevel.levelGapDealMultiplier(attackerPlayer:GetAttribute("CharacterLevel"), gapStage)
 	end
 
@@ -288,17 +327,82 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	-- 곱한다. 비율 모델(19-4)은 그대로 - 유효 최대체력만 배율만큼 커진다.
 	entry.lastDamagedAt = os.clock() -- M1-2: 스폰 지점 정리 보류(맞는 중인 공유 몬스터는 치우지 않는다 - SpawnSites)
 	local prefixHpMultiplier = entry.prefix and entry.prefix.hpMultiplier or 1
-	local effectiveMaxHp = InfiniteStage.getMonsterHp(entry.data.hp, attackerStage) * prefixHpMultiplier
+	-- C1: 기준 스테이지 HP로 환산(옛 = 때린 사람 스테이지 HP - 낮은 스테이지 피해가 높은 몹으로 샜다). 첫 타격 · 타격 수(G1-2 리뷰 2 k 상한)도 MobShare가 쌓는다.
+	local effectiveMaxHp = InfiniteStage.getMonsterHp(entry.data.hp, mobRef) * prefixHpMultiplier
 	local ratioDealt = effectiveMaxHp > 0 and (damage / effectiveMaxHp) or 0
-	entry.hpRatio -= ratioDealt
-	if attackerPlayer and entry.firstHitAt then
-		entry.firstHitAt[attackerPlayer] = entry.firstHitAt[attackerPlayer] or os.clock()
-		entry.hitCounts[attackerPlayer] = (entry.hitCounts[attackerPlayer] or 0) + 1 -- G1-2 리뷰 2: k 상한(때린 횟수 × maxSecondsPerHit)
+	return MobShare.applyRatio(entry, attackerPlayer, ratioDealt, os.clock()), damage
+end
+
+-- C1: 어그로(쫓기는 중) 참여 - MonsterAI가 추격 틱마다 부른다.
+function MonsterState.noteParticipant(model, player, stage)
+	local entry = monsters[model]
+	if entry and entry.participants and not entry.isChest and not entry.isRescueTarget then
+		local _, wasReset, rose = MobShare.touch(entry, player, stage, os.clock())
+		if wasReset or rose then
+			notifyRatio(model)
+		end
+		return wasReset
 	end
-	if attackerPlayer then
-		entry.contributions[attackerPlayer] = (entry.contributions[attackerPlayer] or 0) + ratioDealt
+	return false
+end
+
+-- C1: 치유 · 보호 · 버프 참여 - target이 참여 중인 잡몹 중 helperPosition에서 CombatConfig.supportRadiusStuds 안인 몹에 helper를 참여시킨다(HealCast가 부른다).
+-- 반경(리뷰 1): 파티 버프 · 회복은 거리와 상관없이 파티원 전원에게 걸린다 - 반경이 없으면 맵 반대편 높은 치유사가 낮은 멤버의 몹 기준을 계속 올려 사냥을 막는다.
+function MonsterState.noteSupport(helper, helperStage, target, helperPosition)
+	if not helperPosition then
+		return
 	end
-	return entry.hpRatio <= 0, damage
+	local now = os.clock()
+	local radius = CombatConfig.supportRadiusStuds
+	for model, entry in pairs(monsters) do
+		local root = entry.participants and entry.participants[target] and model.PrimaryPart
+		if root and (root.Position - helperPosition).Magnitude <= radius then
+			local was = entry.hpRatio
+			if MobShare.support(entry, helper, helperStage, target, now) and entry.hpRatio ~= was then
+				notifyRatio(model)
+			end
+		end
+	end
+end
+
+-- C1: 스테이지를 바꾼 순간(HuntingGround가 InfiniteStage Attribute 변경에서 부른다). 그 사람의 참여 · 기여 · 첫 타격을 지우고 기준을 다시 잡는다.
+-- 반환 = 그 사람만 닿아 있어 체력 가득으로 초기화된 모델 목록(호출부가 HP바를 다시 그린다).
+function MonsterState.onStageChanged(player, stage)
+	local now = os.clock()
+	local resetModels = {}
+	for model, entry in pairs(monsters) do
+		local recorded = entry.partStage and entry.partStage[player]
+		if recorded ~= nil and recorded ~= stage then
+			if MobShare.purge(entry, player) then
+				table.insert(resetModels, model)
+			else
+				MobShare.refresh(entry, now)
+			end
+		end
+	end
+	return resetModels
+end
+
+-- C1: 보상 자격(기여 ≥ 10% · 같은 스테이지에서 쌓음 · 지금 스테이지 ≤ 기준). 반환 = bool, 이유.
+function MonsterState.isRewardEligible(model, player, stageNow)
+	local entry = monsters[model]
+	if not (entry and entry.participants) then
+		return false, "none"
+	end
+	return MobShare.eligible(entry, player, stageNow)
+end
+
+-- C1 검증 · DevTools: 기준 스테이지(nil = 아무도 참여 안 함)와 참여자 수.
+function MonsterState.getRefStage(model)
+	local entry = monsters[model]
+	if not (entry and entry.participants) then
+		return nil, 0
+	end
+	local count = 0
+	for _ in pairs(entry.participants) do
+		count += 1
+	end
+	return entry.refStage, count
 end
 
 -- 이 몬스터에 기여한 [Player]=누적비율 테이블(잡몹 전용, 보스는 항상 빈 테이블 - 보스는
@@ -325,7 +429,10 @@ end
 -- Player 인스턴스를 몬스터가 죽을 때까지 계속 들고 있게 된다(MonsterAI.server.lua의
 -- releaseChasersOf와 같은 "떠나는 쪽이 자기 흔적을 지운다" 원칙).
 function MonsterState.clearPlayerContributions(player)
-	for _, entry in pairs(monsters) do
+	for model, entry in pairs(monsters) do
+		if entry.participants and MobShare.purge(entry, player) then -- C1: 잡몹 = 참여 · 스테이지 기록까지(혼자였던 몹은 초기화)
+			notifyRatio(model)
+		end
 		if entry.contributions then
 			entry.contributions[player] = nil
 		end

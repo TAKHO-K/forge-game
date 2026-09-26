@@ -3504,6 +3504,7 @@ if RunService:IsStudio() then
 				{ "G2a(나)", function() require(script.Parent.G2aVerify).runLive(player, env) end }, -- G2a: 높이 검증 실제 Player · 보스 기여도(계수 전) · 이속 상한 · 구조물 낙하
 				{ "M1-0(나)", function() require(script.Parent.M1_0Verify).runLive(player, env) end }, -- M1-0: 합법 최대 높이 되돌림 0 · 기본 Shift Lock 꺼짐 · 아레나 공중 복귀 0
 				{ "M1-2(나)", function() require(script.Parent.M1_2Verify).runLive(player, env) end }, -- M1-2: 스폰 지점 실제 사이클 · 전투 중 보류 · 처치 중 남김 · 귀환 시전 · 취소 · 돌아가기 · 뿌리 밟기
+				{ "C1(나)", function() require(script.Parent.C1Verify).runLive(player, env) end }, -- C1: 기준 스테이지 상승 · 자격 · 스테이지 변경 지우기/초기화 · 만료 · 실제 처치 보상 · 치유 · 어그로 참여 · 토벌 검사
 				{ "M1-4(나)", function() require(script.Parent.M1_4Verify).runLive(player, env) end }, -- M1-4: 지형 표식 v2 · 캡슐(소품 포함) · 소품 라이브러리 · 지형 붙이기 · 사다리 곁 · 능선 위/너머 밀어내기 · 심해 관문 발판 · 무리 상한
 				{ "M1-3T(나)", function() require(script.Parent.M1_3TVerify).runLive(player, env) end }, -- M1-3 본편: 굽힌 지형 · 둥지 캡슐 통과 · 줍기(성공 · 쿨다운 · 멀리서 · 순간이동) · 저장 · 순환 · 선인장 · 외곽 밀어내기 · 스폰 높이
 				{ "M1-3(나)", function() require(script.Parent.M1_3Verify).runLive(player, env) end }, -- M1-3: 관문 등록 전 · 등록 · 원격 입장(솔로 · 파티) · 저장 유지 · 지형(물살 · 선인장 · 도달 · 낙하 복귀)
@@ -3879,6 +3880,16 @@ if RunService:IsStudio() and verifyEnabled("M1-2c(가)") then
 		local ok, err = pcall(require(script.Parent.M1_2cVerify).runPure)
 		if not ok then
 			warn(("[M1-2c(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ C1 자동 검증 블록(가) - 기준 스테이지 · 스테이지 전환 · 보상 자격 · 토벌 스테이지 · 악용 시뮬레이터 · 고스테이지 표본(docs/phase/C1-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("C1(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.C1Verify).runPure)
+		if not ok then
+			warn(("[C1(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

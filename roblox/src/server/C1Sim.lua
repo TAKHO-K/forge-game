@@ -1,0 +1,479 @@
+-- C1 악용 시뮬레이터(순수) - 잡몹 기준 스테이지 규칙(shared/MobShare)과 옛 C안(때린 사람 스테이지로 환산)을 같은 대본으로 돌려 "받는 사람의 드랍 가치/분"을 비교한다.
+-- 가정(보고서 C1 ⑤와 같다):
+--   · 힘 = "그 스테이지 몹을 BalanceAnchorConfig.killTargetSeconds초에 잡는 순딜" - power 스테이지 p의 초당 피해 = H(p) ÷ T. 몹 HP H(s) = k^(s − 1)(기본 HP · 접두사 1).
+--   · 처치 1마리 가치 = 받는 사람 자기 스테이지의 장비 가치 CharacterLevel.getItemLevelMultiplier(스테이지)(드랍 itemLevel = 자기 스테이지 ±2). 골드 · 경험치 · 처치 시간 보정은 뺀다
+--     (보정은 빠른 처치를 깎으므로 "전" 악용 이득은 상한값).
+--   · 처치 사이 이동 = DropTableData.fairness.travelSeconds · 틱 0.1초 · 10분.
+-- 판정: 정상 대비 +5% 이하 O · 5 ~ 15% 주의 · 15% 초과 X(지시 C1 [5]).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MobShare = require(ReplicatedStorage.Shared.MobShare)
+local RaidRules = require(ReplicatedStorage.Shared.RaidRules)
+local BossRules = require(ReplicatedStorage.Shared.BossRules)
+local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
+local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
+local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+
+local C1Sim = {}
+
+local T = BalanceAnchorConfig.killTargetSeconds
+local TRAVEL = DropTableData.fairness.travelSeconds
+local DT = 0.1
+local DURATION = 600
+local k = InfiniteStageConfig.growthRate
+
+function C1Sim.value(stage)
+	return CharacterLevel.getItemLevelMultiplier(math.max(1, stage))
+end
+
+-- ── 몹 하나(mode = "old" | "new") ──
+local function newMob(mode)
+	local mob = MobShare.fresh({ mode = mode })
+	return mob
+end
+
+-- who = { power, stage } · 한 틱 피해. 반환 = 죽었는가.
+local function hit(mob, who, now)
+	if mob.mode == "old" then
+		local ratio = k ^ (who.power - who.stage) / T * DT
+		mob.hpRatio -= ratio
+		mob.contributions[who] = (mob.contributions[who] or 0) + ratio
+		mob.partStage[who] = mob.partStage[who] or who.stage
+		return mob.hpRatio <= 0
+	end
+	local ref = MobShare.touch(mob, who, who.stage, now)
+	local ratio = k ^ (who.power - ref) / T * DT -- H(power) ÷ H(ref) - 절대 HP를 만들지 않는다
+	if ratio ~= ratio then
+		ratio = 0
+	end
+	return MobShare.applyRatio(mob, who, ratio, now)
+end
+
+-- 스테이지 변경(새 규칙 = 서버 onStageChanged와 같은 순서 · 옛 = 기록 그대로)
+local function changeStage(mobs, who, stage, now)
+	who.stage = stage
+	for _, mob in ipairs(mobs) do
+		if mob.mode == "new" and mob.partStage[who] ~= nil and mob.partStage[who] ~= stage then
+			if not MobShare.purge(mob, who) then
+				MobShare.refresh(mob, now)
+			end
+		end
+	end
+end
+
+-- 죽은 몹 보상 → 사람마다 가치 누적
+local function payout(mob, earned, now)
+	for who, c in pairs(mob.contributions) do
+		local ok
+		if mob.mode == "old" then
+			ok = c >= CombatConfig.contributionRewardThreshold
+		else
+			MobShare.refresh(mob, now)
+			ok = MobShare.eligible(mob, who, who.stage)
+		end
+		if ok then
+			earned[who] = (earned[who] or 0) + C1Sim.value(who.stage)
+		end
+	end
+end
+
+local function perMinute(total)
+	return total / (DURATION / 60)
+end
+
+-- 정상 기준: n명이 같은 스테이지(= 자기 힘)에서 같은 몹을 같이 친다.
+function C1Sim.normalRate(stage, n)
+	local killSeconds = math.ceil(T / (n or 1) / DT - 1e-9) * DT
+	return 60 / (killSeconds + TRAVEL) * C1Sim.value(stage)
+end
+
+-- 대본 러너: script(state, now) → 이번 틱의 행동(state가 몹 · 사람을 들고 있다). 몹이 죽으면 이동 시간 뒤 새 몹.
+local function run(mode, setup, step)
+	local state = setup(mode)
+	state.earned = {}
+	local now = 0
+	while now < DURATION do
+		step(state, now)
+		now += DT
+	end
+	return state
+end
+
+-- 한 몹 사이클 헬퍼: state.mob가 죽으면 보상 · 이동 대기 · 새 몹
+local function resolve(state, dead, now, key)
+	key = key or "mob"
+	if dead and not state[key .. "Dead"] then
+		payout(state[key], state.earned, now)
+		state[key .. "Dead"] = true
+		state[key .. "RespawnAt"] = now + TRAVEL
+	end
+end
+
+local function respawn(state, now, key)
+	key = key or "mob"
+	if state[key .. "Dead"] and now >= state[key .. "RespawnAt"] - 1e-9 then
+		state[key] = newMob(state.mode)
+		state[key .. "Dead"] = false
+		state.mobs = state.mobs or {}
+		table.insert(state.mobs, state[key])
+		if #state.mobs > 8 then
+			table.remove(state.mobs, 1)
+		end
+		return true
+	end
+	return false
+end
+
+local function start(mode, extra)
+	local state = extra or {}
+	state.mode = mode
+	state.mob = newMob(mode)
+	state.mobDead = false
+	state.mobs = { state.mob }
+	return state
+end
+
+local HIGH = 3000
+
+-- a: 강한 계정 A(힘 HIGH)가 스테이지 1에 두고 B(HIGH)의 몹을 깎는다. B가 10% 넘기면 A가 친다. 받는 사람 = B. 정상 = 둘이 HIGH에서 파티.
+local function scenarioA(mode)
+	local state = run(mode, function(m)
+		return start(m, { A = { power = HIGH, stage = 1, name = "A" }, B = { power = HIGH, stage = HIGH, name = "B" } })
+	end, function(s, now)
+		if respawn(s, now) or s.mobDead then
+			return
+		end
+		local dead = hit(s.mob, s.B, now)
+		if not dead and (s.mob.contributions[s.B] or 0) >= 0.1 then
+			dead = hit(s.mob, s.A, now)
+		end
+		resolve(s, dead, now)
+	end)
+	return perMinute(state.earned[state.B] or 0), C1Sim.normalRate(HIGH, 2), perMinute(state.earned[state.A] or 0)
+end
+
+-- b: 낮은 계정 L 4개(힘 1 · 스테이지 1)가 몹을 85 ~ 89% 깎아 두고(친구가 10%를 넘기게 남긴다) 높은 친구 F(HIGH)가 마무리. 받는 사람 = F. 정상 = F 혼자.
+local function scenarioB(mode)
+	local lows = {}
+	for i = 1, 4 do
+		lows[i] = { power = 1, stage = 1, name = "L" .. i }
+	end
+	local state = run(mode, function(m)
+		local s = start(m, { F = { power = HIGH, stage = HIGH }, lows = lows, prepped = {}, queue = {} })
+		s.mob = nil
+		s.mobs = {}
+		for i = 1, 4 do
+			local mob = newMob(m)
+			s.prepped[i] = mob
+			table.insert(s.mobs, mob)
+		end
+		return s
+	end, function(s, now)
+		-- 낮은 계정 i가 자기 몹을 90%까지(10% 남김) → 대기열
+		for i, low in ipairs(s.lows) do
+			local mob = s.prepped[i]
+			if mob and mob.hpRatio > 0.15 then
+				hit(mob, low, now)
+				if mob.hpRatio <= 0.15 then
+					table.insert(s.queue, mob)
+					s.prepped[i] = nil
+					s.lowReadyAt = s.lowReadyAt or {}
+					s.lowReadyAt[i] = now + TRAVEL
+				end
+			elseif not mob and s.lowReadyAt and now >= s.lowReadyAt[i] then
+				s.prepped[i] = newMob(s.mode)
+			end
+		end
+		-- F: 대기열 맨 앞을 마무리(없으면 자기 몹을 처음부터)
+		if s.fBusyUntil and now < s.fBusyUntil then
+			return
+		end
+		s.fMob = s.fMob or table.remove(s.queue, 1) or newMob(s.mode)
+		if hit(s.fMob, s.F, now) then
+			payout(s.fMob, s.earned, now)
+			s.fMob = nil
+			s.fBusyUntil = now + TRAVEL
+		end
+	end)
+	return perMinute(state.earned[state.F] or 0), C1Sim.normalRate(HIGH, 1)
+end
+
+-- c: 약한 P(힘 1)가 스테이지 1에서 F(HIGH)의 몹을 10% 깎고 → 스테이지 HIGH로 올림 → F가 마무리 → 다시 1로(1초 제한 지킴). 받는 사람 = P. 정상 = P 혼자 스테이지 1.
+local function scenarioC(mode)
+	local state = run(mode, function(m)
+		return start(m, { P = { power = 1, stage = 1 }, F = { power = HIGH, stage = HIGH }, phase = "low", switchAt = 0 })
+	end, function(s, now)
+		if respawn(s, now) then
+			s.phase = "low"
+			changeStage(s.mobs, s.P, 1, now)
+			s.switchAt = now
+			return
+		end
+		if s.mobDead then
+			return
+		end
+		local dead = false
+		if s.phase == "low" then
+			dead = hit(s.mob, s.P, now)
+			if (s.mob.contributions[s.P] or 0) >= 0.1 and now - s.switchAt >= 1 then
+				changeStage(s.mobs, s.P, HIGH, now)
+				s.phase = "high"
+				s.switchAt = now
+			end
+		else
+			dead = hit(s.mob, s.F, now)
+		end
+		resolve(s, dead, now)
+	end)
+	return perMinute(state.earned[state.P] or 0), C1Sim.normalRate(1, 1)
+end
+
+-- d: P(힘 300 · 스테이지 300)가 몹을 반쯤 깎을 때마다 스테이지를 299 ↔ 300으로 연타(1초 1회)해 몹을 초기화 · 어그로를 푼다. 받는 사람 = P. 정상 = P 혼자.
+local function scenarioD(mode)
+	local state = run(mode, function(m)
+		return start(m, { P = { power = 300, stage = 300 }, lastSwitch = -10, resets = 0 })
+	end, function(s, now)
+		if respawn(s, now) or s.mobDead then
+			return
+		end
+		local dead = hit(s.mob, s.P, now)
+		if not dead and s.mob.hpRatio < 0.5 and now - s.lastSwitch >= CombatConfig.stageChangeCooldownSeconds and s.resets < 3 then
+			changeStage(s.mobs, s.P, s.P.stage == 300 and 299 or 300, now)
+			s.lastSwitch = now
+			s.resets += 1
+		end
+		if dead then
+			s.resets = 0
+		end
+		resolve(s, dead, now)
+	end)
+	return perMinute(state.earned[state.P] or 0), C1Sim.normalRate(300, 1)
+end
+
+-- e: 섞인 파티 1 · 300 · 3,000이 같은 무리에서 각자 자기 몹을 잡는다. overlap = 내 몹 중 바로 위 파티원의 광역이 한 번 스치는 비율(0 = 각자 몹만).
+--   새 규칙: 스치면 기준이 그 사람 스테이지로 올라 HP바가 가득으로 튄다 → 주인은 그 몹을 두고 새 몹으로(이동 1초). 스친 사람은 마무리하지 않는다(가장 나쁜 경우).
+--   옛 규칙: 스쳐도 스친 사람 스테이지 비율만 빠져 주인이 계속 친다.
+local function scenarioE(mode, overlap)
+	local people = { { power = 1, stage = 1 }, { power = 300, stage = 300 }, { power = 3000, stage = 3000 } }
+	local state = run(mode, function(m)
+		local s = start(m, { people = people, own = {}, deadUntil = {}, spillAt = {}, count = {}, acc = {} })
+		for i = 1, 3 do
+			s.own[i] = newMob(m)
+			s.count[i] = 0
+			s.acc[i] = 0
+		end
+		return s
+	end, function(s, now)
+		for i, who in ipairs(s.people) do
+			if s.deadUntil[i] then
+				if now >= s.deadUntil[i] - 1e-9 then
+					s.own[i] = newMob(s.mode)
+					s.deadUntil[i] = nil
+					-- 결정적 표본: 누적 overlap이 1을 넘을 때마다 그 몹이 스친다(몹 수명의 절반쯤)
+					s.acc[i] += overlap
+					if i < 3 and s.acc[i] >= 1 - 1e-9 then
+						s.acc[i] -= 1
+						s.spillAt[i] = now + T / 2
+					end
+				end
+			elseif s.spillAt[i] and now >= s.spillAt[i] then
+				s.spillAt[i] = nil
+				if hit(s.own[i], s.people[i + 1], now) then
+					payout(s.own[i], s.earned, now)
+					s.deadUntil[i] = now + TRAVEL
+				elseif s.mode == "new" then
+					s.deadUntil[i] = now + TRAVEL -- HP바가 가득으로 튐 → 두고 새 몹
+				end
+			elseif hit(s.own[i], who, now) then
+				payout(s.own[i], s.earned, now)
+				s.deadUntil[i] = now + TRAVEL
+			end
+		end
+	end)
+	local rows = {}
+	for _, who in ipairs(people) do
+		table.insert(rows, { stage = who.stage, rate = perMinute(state.earned[who] or 0), normal = C1Sim.normalRate(who.stage, 1) })
+	end
+	return rows
+end
+
+-- f: 잠수 파티원 M(스테이지 1 · 무행동 · 가끔 쫓김 = 어그로 참여) + 사냥꾼 H(HIGH). 받는 사람 = M(버스). 정상 = 0(한 일 없음 → 0이어야 O).
+local function scenarioF(mode)
+	local state = run(mode, function(m)
+		return start(m, { M = { power = 1, stage = 1 }, H = { power = HIGH, stage = HIGH } })
+	end, function(s, now)
+		if respawn(s, now) or s.mobDead then
+			return
+		end
+		if s.mode == "new" then
+			MobShare.touch(s.mob, s.M, s.M.stage, now) -- 몹이 잠수 멤버를 쫓는다(어그로 참여)
+		end
+		resolve(s, hit(s.mob, s.H, now), now)
+	end)
+	return perMinute(state.earned[state.M] or 0), perMinute(state.earned[state.H] or 0), C1Sim.normalRate(HIGH, 1)
+end
+
+-- g: 토벌 - 보스 35를 깬 직후(힘 35) 스테이지를 낮췄다 올리며 토벌 스테이지를 고른다. 토벌 1회 = 보스 HP(몹 × hpMultiplier) 처치 + 입장 이동. 가치/분의 최대 vs 35.
+local RAID_BOSS = BossRules.bossIdForStage(BossData.stageInterval) -- 첫 보스(스테이지 5) - 35 클리어면 만난 보스
+
+function C1Sim.raidRate(raidStage, power)
+	local bossSeconds = BossData.bosses[RAID_BOSS].hpMultiplier * T * k ^ (raidStage - power)
+	return 60 / (bossSeconds + TRAVEL * 10) * C1Sim.value(raidStage)
+end
+
+local function scenarioG()
+	local best, bestStage = 0, nil
+	local rows = {}
+	for _, current in ipairs({ 1, 10, 25, 30, 34, 35, 36, 40 }) do
+		local ok, _, raid = RaidRules.check({ currentStage = current, bestBossCleared = 35, bossId = RAID_BOSS, remote = false, gateUsable = true })
+		local rate = ok and C1Sim.raidRate(raid, 35) or 0
+		table.insert(rows, { current = current, raid = raid, rate = rate })
+		if rate > best then
+			best, bestStage = rate, current
+		end
+	end
+	return best, C1Sim.raidRate(35, 35), bestStage, rows
+end
+
+-- h: 미클리어 보스 스테이지 40(최고 클리어 35 · 도달 40)에서 토벌 · 일반 사냥. 토벌 = 거절이어야 · 사냥 가치/분 vs 스테이지 39.
+local function scenarioH()
+	local ok, reason = RaidRules.check({ currentStage = 40, bestBossCleared = 35, bossId = RAID_BOSS, remote = true, gateUsable = true })
+	return ok, reason, C1Sim.normalRate(40, 1), C1Sim.normalRate(39, 1)
+end
+
+-- [6] 고스테이지 표본: 스테이지마다 규칙 1 ~ 4 수치. 반환 행 = { stage, log10MaxHp(가장 큰 몹 HP × 접두사 최대 · 보스 배율), tick(4% 한 틱 뒤 비율), tickErr,
+--   riseFrom(기준 오르기 전 스테이지), riseRatio(50% 깎인 몹이 기준 상승 뒤 남은 비율), riseContrib(낮은 사람 기여 50% → ?), nearFrom · nearRatio(5칸 아래에서 오를 때),
+--   itemMin · itemMax(잡몹 드랍 itemLevel), bossItemMax(토벌 보스 드랍 최대), raid(토벌 스테이지 - 최고 클리어 = 그 아래 보스 스테이지), ok(전부 유한 · 0 ≤ 비율 ≤ 1 · 정수 < 2^53) }
+function C1Sim.samples(stages, monsterData, prefixData, armorData)
+	local maxBase = 0
+	for _, entry in pairs(monsterData) do
+		if type(entry) == "table" and type(entry.hp) == "number" and entry.hp > maxBase then
+			maxBase = entry.hp
+		end
+	end
+	local maxPrefix = 1
+	for _, prefix in pairs(prefixData.prefixes or prefixData) do
+		if type(prefix) == "table" and type(prefix.hpMultiplier) == "number" and prefix.hpMultiplier > maxPrefix then
+			maxPrefix = prefix.hpMultiplier
+		end
+	end
+	local bossMult = 0
+	for _, boss in pairs(BossData.bosses) do
+		bossMult = math.max(bossMult, boss.hpMultiplier or 0)
+	end
+	local function deltaRange(tbl)
+		local lo, hi = math.huge, -math.huge
+		for _, row in ipairs(tbl) do
+			lo, hi = math.min(lo, row.delta), math.max(hi, row.delta)
+		end
+		return lo, hi
+	end
+	local dLo, dHi = deltaRange(armorData.itemLevelDelta)
+	local _, bHi = deltaRange(armorData.bossItemLevelDelta)
+	local function finite(v)
+		return type(v) == "number" and v == v and math.abs(v) ~= math.huge
+	end
+	local rows = {}
+	for _, stage in ipairs(stages) do
+		local maxHp = InfiniteStage.getMonsterHp(maxBase, stage) * maxPrefix * math.max(1, bossMult)
+		local who, low, near = {}, {}, {}
+		-- 4% 한 틱(기준 = 자기 스테이지)
+		local mob = MobShare.fresh({})
+		MobShare.touch(mob, who, stage, 0)
+		MobShare.applyRatio(mob, who, InfiniteStage.getMonsterHp(maxBase, stage) * 0.04 / InfiniteStage.getMonsterHp(maxBase, stage), 0)
+		local tick = mob.hpRatio
+		-- 절반 스테이지에서 50% 깎은 몹에 이 스테이지 사람이 참여
+		local riseFrom = math.max(1, math.floor(stage / 2))
+		local m2 = MobShare.fresh({})
+		MobShare.touch(m2, low, riseFrom, 0)
+		MobShare.applyRatio(m2, low, 0.5, 0)
+		MobShare.touch(m2, who, stage, 1)
+		-- 5칸 아래에서 50% → 오를 때(가까운 스테이지 - 값이 남는 경우)
+		local nearFrom = math.max(1, stage - 5)
+		local m3 = MobShare.fresh({})
+		MobShare.touch(m3, near, nearFrom, 0)
+		MobShare.applyRatio(m3, near, 0.5, 0)
+		MobShare.touch(m3, who, stage, 1)
+		local best = BossData.stageInterval * math.floor(stage / BossData.stageInterval)
+		local raid = RaidRules.raidStage(stage, best)
+		local itemMax, bossItemMax = stage + dHi, (raid or stage) + bHi
+		local row = {
+			stage = stage, log10MaxHp = math.log10(maxHp), tick = tick, tickErr = math.abs(tick - 0.96),
+			riseFrom = riseFrom, riseRatio = m2.hpRatio, riseContrib = m2.contributions[low], refAfter = m2.refStage,
+			nearFrom = nearFrom, nearRatio = m3.hpRatio, nearContrib = m3.contributions[near],
+			itemMin = math.max(1, stage + dLo), itemMax = itemMax, bossItemMax = bossItemMax, raid = raid,
+		}
+		row.ok = finite(maxHp) and finite(tick) and row.tickErr < 1e-9 and finite(row.riseRatio) and row.riseRatio >= 0 and row.riseRatio <= 1
+			and finite(row.riseContrib) and finite(row.nearRatio) and row.nearRatio >= 0.5 and row.nearRatio <= 1 and row.refAfter == stage
+			and itemMax < 2 ^ 53 and bossItemMax < 2 ^ 53
+		table.insert(rows, row)
+	end
+	return rows
+end
+
+C1Sim.SAMPLE_STAGES = { 5, 30, 100, 500, 1000, 2000, 5000, 10000, 20000, 25300, 34230 }
+
+function C1Sim.verdict(gain)
+	if gain <= 0.05 + 1e-9 then
+		return "O"
+	elseif gain <= 0.15 then
+		return "주의"
+	end
+	return "X"
+end
+
+local function gainOf(rate, normal)
+	if rate == nil then
+		return nil
+	end
+	if normal <= 0 then
+		return rate > 0 and math.huge or 0
+	end
+	return rate / normal - 1
+end
+
+-- 전체 실행 → 행 목록 { id, label, before = { rate, gain }, after = { rate, gain }, normal, verdictBefore, verdictAfter, note }
+function C1Sim.runAll()
+	local rows = {}
+	local function add(id, label, beforeRate, afterRate, normal, note)
+		local gb, ga = gainOf(beforeRate, normal), gainOf(afterRate, normal)
+		table.insert(rows, { id = id, label = label, normal = normal, beforeRate = beforeRate, afterRate = afterRate, gainBefore = gb, gainAfter = ga,
+			verdictBefore = beforeRate and C1Sim.verdict(gb) or "-", verdictAfter = C1Sim.verdict(ga), note = note })
+	end
+	local ab, normalA = scenarioA("old")
+	local aa = scenarioA("new")
+	add("a", "강한 계정 스테이지 1 → 높은 몹 대신 깎기(받는 사람 B)", ab, aa, normalA)
+	local bb, normalB = scenarioB("old")
+	local ba = scenarioB("new")
+	add("b", "낮은 계정 4개가 85 ~ 89% · 높은 친구 마무리(받는 사람 F)", bb, ba, normalB)
+	local cb, normalC = scenarioC("old")
+	local ca = scenarioC("new")
+	add("c", "스테이지 1에서 깎고 → 높은 스테이지로 전환(받는 사람 P)", cb, ca, normalC)
+	local db, normalD = scenarioD("old")
+	local da = scenarioD("new")
+	add("d", "스테이지 연타로 몹 초기화(받는 사람 P)", db, da, normalD)
+	for _, overlap in ipairs({ 0, 0.1, 0.3 }) do
+		local eb, ea = scenarioE("old", overlap), scenarioE("new", overlap)
+		local pct = math.floor(overlap * 100 + 0.5)
+		for i = 1, 3 do
+			add(("e%d-%d"):format(i, pct), ("섞인 파티 - 스테이지 %d · 스침 %d%%(솔로 대비)"):format(ea[i].stage, pct), eb[i].rate, ea[i].rate, ea[i].normal)
+		end
+	end
+	local fb, fbH = scenarioF("old")
+	local fa, faH, normalF = scenarioF("new")
+	add("f", "잠수 파티원 버스(받는 사람 = 잠수 M · 정상 0)", fb, fa, 0, ("사냥꾼 H %.1f → %.1f / 솔로 %.1f"):format(fbH, faH, normalF))
+	local gBest, gNormal, gStage, gRows = scenarioG()
+	local gNote = {}
+	for _, r in ipairs(gRows) do
+		table.insert(gNote, ("%d→%s"):format(r.current, r.raid and tostring(r.raid) or "거절"))
+	end
+	add("g", "토벌 스테이지 조작(보스 35 직후 낮췄다 올리기)", nil, gBest, gNormal, ("최고 = 선택 %s · 토벌 %s"):format(tostring(gStage), table.concat(gNote, " ")))
+	local hOk, hReason, h40, h39 = scenarioH()
+	add("h", "미클리어 보스 스테이지 40에서 사냥(대 39)", nil, h40, h39, ("토벌 시도 = %s(%s)"):format(hOk and "허용" or "거절", tostring(hReason)))
+	return rows
+end
+
+return C1Sim

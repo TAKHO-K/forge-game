@@ -390,6 +390,7 @@ RunService.Heartbeat:Connect(function(dt)
 				elseif data.isBoss then
 					tryBossAttack(model, data, position, target, targetRoot, dt)
 				else
+					MonsterState.noteParticipant(model, target, TutorialState.getMonsterStage(target)) -- C1: 쫓기는 사람 = 참여자(기준 스테이지에 든다)
 					-- 쌍검 Q 그림자분신(20-6 [2]) - "이미 쫓기는 중인" 몹의 방향만 분신 쪽으로
 					-- 돌린다(도발이지 신규 어그로 획득이 아니다 - idle→chasing 진입은 위에서
 					-- 항상 실제 플레이어 거리만 본다, 웹 core/aggro.js의 같은 원칙을 재사용).

@@ -24,6 +24,9 @@ local BossEncounter = require(script.Parent.BossEncounter)
 local PartyState = require(script.Parent.PartyState)
 local PartyVote = require(script.Parent.PartyVote)
 local BossGate = require(script.Parent.BossGate)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local MonsterState = require(script.Parent.MonsterState)
+local MonsterSpawner = require(script.Parent.MonsterSpawner)
 
 local stageMoveRequest = Instance.new("RemoteEvent")
 stageMoveRequest.Name = "StageMoveRequest"
@@ -42,8 +45,10 @@ local function reject(player, reason, extra)
 	stageMoveResult:FireClient(player, payload)
 end
 
+local lastMoveAt = {} -- C1: 스테이지 변경 연타 제한(서버 시각 - CombatConfig.stageChangeCooldownSeconds에 1회)
+
 local function onStageMove(player, targetStage)
-	if type(targetStage) ~= "number" then
+	if type(targetStage) ~= "number" or targetStage ~= targetStage then
 		return
 	end
 	targetStage = math.floor(targetStage)
@@ -188,7 +193,18 @@ local function onStageMove(player, targetStage)
 
 	performMove()
 end
-stageMoveRequest.OnServerEvent:Connect(onStageMove)
+stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
+	-- C1: 클라 요청만 연타 제한(서버 시각). 검증 훅 · 서버 내부 이동은 제한 없음.
+	local nowClock = os.clock()
+	if lastMoveAt[player] and nowClock - lastMoveAt[player] < CombatConfig.stageChangeCooldownSeconds then
+		if PlayerProfile.getProfile(player) then
+			reject(player, "too_fast")
+		end
+		return
+	end
+	lastMoveAt[player] = nowClock
+	onStageMove(player, targetStage)
+end)
 -- M1-3 검증(Studio 전용): 서버 검증 블록이 클라 요청과 같은 핸들러를 부른다(관문 등록 전 · 뒤 원격 입장 · 파티) - 라이브에는 없다.
 if game:GetService("RunService"):IsStudio() then
 	local hook = Instance.new("BindableEvent")
@@ -200,7 +216,27 @@ end
 -- 퇴장 - 자기 보스전에서만 빠진다(파티 보스전은 남은 멤버가 이어간다, BossEncounter.leaveFor).
 Players.PlayerRemoving:Connect(function(player)
 	BossEncounter.leaveFor(player)
+	lastMoveAt[player] = nil
 end)
+
+-- C1: 스테이지가 바뀐 순간(요청 · 보스 포기 · 재접속 −1 · DevTools 등 InfiniteStage를 쓰는 모든 경로) - 참여 중인 잡몹에서 내 참여 · 기여 · 첫 타격을 지우고
+-- 기준을 다시 잡는다. 나만 닿았던 몹은 체력 가득(HP바 다시 그림). 파티 보너스 활동 기록도 지운다. 견습 단계 전환은 MobShare.touch의 기록 대조가 잡는다.
+local function watchStage(player)
+	player:GetAttributeChangedSignal("InfiniteStage"):Connect(function()
+		local stage = player:GetAttribute("InfiniteStage")
+		if type(stage) ~= "number" then
+			return
+		end
+		PartyState.clearActivity(player)
+		for _, model in ipairs(MonsterState.onStageChanged(player, stage)) do
+			MonsterSpawner.updateHpLabel(model)
+		end
+	end)
+end
+for _, player in ipairs(Players:GetPlayers()) do
+	watchStage(player)
+end
+Players.PlayerAdded:Connect(watchStage)
 
 -- 재접속 시 보스 스테이지 복원(15-1). 접속을 끊었던 시점의 저장된 stageProgress.infinite가
 -- 이미 보스 스테이지일 수 있다(예: 보스 스테이지에 서 있다가 나감) - 그때는 스테이지
