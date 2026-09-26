@@ -8,9 +8,11 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local TerrainShape = require(ReplicatedStorage.Shared.TerrainShape)
+local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
+local NestData = require(ReplicatedStorage.Shared.data.NestData)
 
 local player = Players.LocalPlayer
-local SWAY = { studs = 0.5, periodSeconds = 3.4, maxDistance = 260 }
+local SWAY = NestData.kit.bridge.sway
 
 -- 물살
 local flowCheckAt = 0
@@ -28,7 +30,7 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 	local now = os.clock()
 	if now >= flowCheckAt then -- 식 계산은 0.2초마다(같은 강 구간이면 방향 · 속도가 같다)
-		flowCheckAt = now + 0.2
+		flowCheckAt = now + MovementConfig.water.flowCheckSeconds
 		local waterY, flow = TerrainShape.waterAt(root.Position.X, root.Position.Z)
 		flowNow = (flow and waterY and root.Position.Y < waterY + 2) and flow or nil
 	end

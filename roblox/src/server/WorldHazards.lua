@@ -27,11 +27,14 @@ local function stateOf(player)
 	return st
 end
 
--- 루트 자리가 물속인가(복셀 한 칸 - Terrain 물 · 점유율)
-function WorldHazards.inWater(position)
+-- 루트 자리가 물속인가(복셀 - Terrain 물 · 점유율). 루트 칸 또는 그 아래 칸(수면에 떠 있으면 루트가 수면 위 칸에 걸린다: 리뷰)
+local function waterCell(position)
 	local cell = Vector3.new(math.floor(position.X / 4) * 4, math.floor(position.Y / 4) * 4, math.floor(position.Z / 4) * 4)
 	local mats, occs = Workspace.Terrain:ReadVoxels(Region3.new(cell, cell + Vector3.new(4, 4, 4)), 4)
 	return mats[1][1][1] == Enum.Material.Water and occs[1][1][1] >= W.inWaterOccupancy
+end
+function WorldHazards.inWater(position)
+	return waterCell(position) or waterCell(position - Vector3.new(0, 2.5, 0))
 end
 
 -- 선인장 목록(구조물 빌드와 같은 식 - 도형이 아니라 자리만)
@@ -116,7 +119,7 @@ function WorldHazards.poll(player, now)
 			WorldHazards.stats.flowSamples += 1
 			WorldHazards.stats.maxFlowSpeed = math.max(WorldHazards.stats.maxFlowSpeed, v)
 			local cap = MovementConfig.walkSpeedStuds * MovementConfig.moveSpeedMaxMultiplier + flow.Magnitude + W.capMarginStuds
-			if v > cap and v < 200 then -- 200 넘음 = 순간이동(Travel이 따로 처리)
+			if v > cap and v < W.teleportIgnoreSpeed then -- 그보다 빠름 = 순간이동(Travel이 따로 처리)
 				st.over += 1
 				WorldHazards.stats.flowOverCap += 1
 				if st.over >= W.capStrikes then

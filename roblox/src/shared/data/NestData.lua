@@ -127,7 +127,7 @@ return {
 		-- 흙더미 = 방 뒤쪽(moundBack)으로 비껴 쌓고 문 앞 통로(corridor)를 흙더미 밖까지 비운다(M1-3 첫 굽기: 흙더미가 문 앞까지 덮어 20곳 막힘)
 		alcove = { w = 8, d = 8, h = 7, wall = 1.5, door = 5, doorH = 6, mound = 11, moundRadius = 11, moundBlend = 16, moundBack = 6, corridor = 14, apron = 7, apronBlend = 14 },
 		caveCourse = { pillars = { { h = 6, gap = 4 }, { h = 13, gap = 5 }, { h = 20, gap = 5 } }, ledge = 27 },
-		bridge = { width = 8, plank = 4, sag = 3.5, rail = 3.2, hut = 11, hutH = 8 },
+		bridge = { width = 8, plank = 4, sag = 3.5, rail = 3.2, hut = 11, hutH = 8, sway = { studs = 0.5, periodSeconds = 3.4, maxDistance = 260 } }, -- sway = 클라 로컬 흔들림(서버 판정 = 고정)
 		gorgeExit = { rise = 4.6, steps = 4, size = 4 },
 		marker = { ring = 3.4, ringH = 0.8 },
 	},
@@ -143,8 +143,14 @@ return {
 	-- 하루 경계 = 한국 자정(UTC + 9) · 순환형 = 날짜마다 후보 5곳 중 1곳(구역 키 해시 + 날짜 - 이웃 날은 다른 곳)
 	dayOffsetSeconds = 9 * 3600,
 	rotateCandidates = 5,
-	-- 줍기 서버 검증(M1-2c 위치 기록): 최근 historySeconds 동안 서버가 본 루트가 둥지 반경 pickupRadius 안에 minSamples장 이상 · 표본 사이 이동 ≤ maxStepStuds(순간이동 줍기 차단).
-	pickup = { radius = 9, promptDistance = 8, historySeconds = 0.5, minSamples = 3, maxStepStuds = 12, requestGapSeconds = 0.5 },
+	-- 줍기 서버 검증(M1-2c 위치 기록 + 둥지 전용 궤적): ① 최근 presentSeconds 동안의 서버 표본(발사 허가 위치 기록)이 전부 둥지 반경 radius · 높이 dyMin ~ dyMax 안이고 minSamples장 이상
+	--   ② 둥지 전용 궤적(trailHz로 trailSeconds 보관 - 발사 허가 기록은 0.6초뿐이라 "순간이동 → 0.6초 기다림"이 뚫렸다: M1-3 리뷰)에 초속 maxSpeedStuds를 넘는 이동이 없다(순간이동 · 속도 핵 차단 -
+	--   걷기 상한 24 · 대시 53 · 나무 점프대 약 120보다 넉넉히).
+	pickup = { radius = 9, promptDistance = 8, presentSeconds = 0.25, minSamples = 3, dyMin = -4, dyMax = 8, trailSeconds = 3, trailHz = 10, maxSpeedStuds = 160, requestGapSeconds = 0.5 },
+	-- 서버 주기: 번개 문 · 순환 확인(doorPollSeconds · refreshSeconds) · 열린 번개 문 투명도
+	server = { doorPollSeconds = 0.25, refreshSeconds = 30, doorOpenTransparency = 0.85 },
+	-- 줍기 연출(클라): 알이 떠오르는 높이 · 시간(보통 / 처음 찾은 비밀 둥지) · 빛 · 알림 지연
+	pickFx = { rise = 4, riseDiscovered = 9, seconds = 0.6, secondsDiscovered = 1.4, lightBrightness = 4, lightRange = 16, toastDelay = 0.8 },
 	-- 번개 문(시간형 C - 폭풍 첨탑 신전 뒤): 주기 periodSeconds 중 openSeconds 동안 열림(서버 시각 기준 - 모두 같다)
 	timedDoor = { periodSeconds = 150, openSeconds = 18, graceSeconds = 1.5 },
 	-- 발견 도감(C 처음 발견 - 칭호 · 꾸미기만): 개수 문턱마다 칭호(WorldMapData.sealed.title과 같은 칭호 집합 titles)

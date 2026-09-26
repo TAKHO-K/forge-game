@@ -12,6 +12,7 @@ local EggData = require(ReplicatedStorage.Shared.data.EggData)
 local WorldStructures = require(ReplicatedStorage.Shared.WorldStructures)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local LaunchPermit = require(script.Parent.LaunchPermit)
+local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 
 local NestServer = {}
@@ -27,6 +28,7 @@ NestServer.debugDayShift = 0 -- 검증 전용(Studio): 날짜를 밀어 순환�
 NestServer.debugUnixShift = 0 -- 검증 전용: 쿨다운 시각을 밀어 본다
 
 local anchors = {} -- [id] = { part, prompt }
+local trails = {} -- [Player] = { { t, pos } } - 둥지 전용 궤적(trailHz · trailSeconds - 순간이동 · 속도 핵 차단)
 local timedDoors = {} -- [id] = { door parts }
 local lastRequestAt = {}
 local syncRemote, pickedRemote
@@ -123,25 +125,31 @@ function NestServer.nextAt(userId, spec, picks, unix)
 	return unix + math.floor(R.minSeconds + rng:NextNumber() * (R.maxSeconds - R.minSeconds))
 end
 
--- 순수: 서버 위치 기록(samples = { { t, pos } })이 "그 자리에 있었다"인가. 반환: ok, 이유
-function NestServer.checkPresence(samples, spot, now)
-	local n, prev = 0, nil
+-- 순수: "그 자리에 있었다"인가. samples = 발사 허가 위치 기록(최근 0.6초 · Heartbeat) · trail = 둥지 전용 궤적(3초 · 10Hz). 반환: ok, 이유
+--   ① 최근 presentSeconds 표본 전부가 둥지 반경 · 높이 안 + minSamples장 이상(걸어와서 바로 눌러도 된다 - 창 전체가 아니라 마지막 구간만: 리뷰)
+--   ② 궤적(3초)에 초속 maxSpeedStuds를 넘는 이동이 없다(순간이동 → 기다림 → 줍기 차단: 리뷰)
+function NestServer.checkPresence(samples, spot, now, trail)
+	local n = 0
+	local root = MovementConfig.rootAboveFeetStuds
 	for _, s in ipairs(samples) do
-		if now - s.t <= P.historySeconds then
-			if prev and (s.pos - prev).Magnitude > P.maxStepStuds then
-				return false, "teleport"
-			end
+		if now - s.t <= P.presentSeconds then
 			local flat = Vector3.new(s.pos.X - spot.X, 0, s.pos.Z - spot.Z).Magnitude
-			local dy = (s.pos.Y - 3) - spot.Y
-			if flat > P.radius or dy < -4 or dy > 8 then
+			local dy = (s.pos.Y - root) - spot.Y
+			if flat > P.radius or dy < P.dyMin or dy > P.dyMax then
 				return false, "far"
 			end
 			n += 1
-			prev = s.pos
 		end
 	end
 	if n < P.minSamples then
 		return false, "few_samples"
+	end
+	for i = 2, #(trail or {}) do
+		local a, b = trail[i - 1], trail[i]
+		local dt = b.t - a.t
+		if now - a.t <= P.trailSeconds and dt > 0 and (b.pos - a.pos).Magnitude / dt > P.maxSpeedStuds then
+			return false, "teleport"
+		end
 	end
 	return true
 end
@@ -164,9 +172,7 @@ function NestServer.tryPickup(player, nestId, opts)
 	if not NestServer.isActive(spec, NestServer.dayIndex(unix)) then
 		return reject("inactive")
 	end
-	if spec.cover == "timed" and not opts.skipTimed and not NestServer.timedOpen(Workspace:GetServerTimeNow()) then
-		return reject("closed")
-	end
+	-- (번개 문: 문은 들어가는 길만 막는다 - 방 안에 있음은 위치로 증명되므로 닫힌 뒤에도 줍는다: 리뷰)
 	if now - (lastRequestAt[player] or -math.huge) < P.requestGapSeconds then
 		return reject("too_fast")
 	end
@@ -178,7 +184,7 @@ function NestServer.tryPickup(player, nestId, opts)
 	if unix < rec.next then
 		return reject("cooldown")
 	end
-	local ok, why = NestServer.checkPresence(opts.samples or LaunchPermit.recentSamples(player), meta.spot, now)
+	local ok, why = NestServer.checkPresence(opts.samples or LaunchPermit.recentSamples(player), meta.spot, now, opts.trail or trails[player])
 	if not ok then
 		print(("[forge-game] 알 줍기 거절: %s - %s(%s)"):format(player.Name, nestId, why))
 		return reject(why)
@@ -289,10 +295,29 @@ function NestServer.start()
 	end
 	refreshActive()
 	-- 번개 문(서버가 열고 닫는다 - 충돌 · 투명 복제) · 날짜 바뀜(순환)
-	local acc, doorOpen = 0, nil
+	local S = NestData.server
+	local acc, trailAcc, refreshAcc, doorOpen = 0, 0, 0, nil
 	RunService.Heartbeat:Connect(function(dt)
+		-- 둥지 전용 궤적(10Hz · 3초)
+		trailAcc += dt
+		if trailAcc >= 1 / P.trailHz then
+			trailAcc = 0
+			local now = os.clock()
+			for _, player in ipairs(Players:GetPlayers()) do
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				if root then
+					local list = trails[player] or {}
+					trails[player] = list
+					table.insert(list, { t = now, pos = root.Position })
+					while #list > 0 and now - list[1].t > P.trailSeconds + 0.2 do
+						table.remove(list, 1)
+					end
+				end
+			end
+		end
 		acc += dt
-		if acc < 0.25 then
+		refreshAcc += dt
+		if acc < S.doorPollSeconds then
 			return
 		end
 		acc = 0
@@ -302,12 +327,13 @@ function NestServer.start()
 			for _, parts in pairs(timedDoors) do
 				for _, door in ipairs(parts) do
 					door.CanCollide = not open
-					door.Transparency = open and 0.85 or 0
+					door.Transparency = open and S.doorOpenTransparency or 0
 				end
 			end
 			Workspace:SetAttribute("NestTimedOpen", open)
 		end
-		if math.floor(os.clock()) % 30 == 0 then
+		if refreshAcc >= S.refreshSeconds then
+			refreshAcc = 0
 			refreshActive()
 		end
 	end)
@@ -325,7 +351,7 @@ function NestServer.start()
 		task.spawn(onJoin, player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		lastRequestAt[player] = nil
+		lastRequestAt[player], trails[player] = nil, nil
 	end)
 	local count = 0
 	for _ in pairs(anchors) do

@@ -189,8 +189,18 @@ function V.runPure()
 			return i > 3 and (root + Vector3.new(300, 0, 0)) or root
 		end), spot, now)
 		local okFew, whyFew = NestServer.checkPresence({ { t = now, pos = root } }, spot, now)
-		r.check(("서 있음 → %s · 40 밖 → %s(%s) · 순간이동(300 → 둥지 · 3프레임) → %s(%s) · 표본 1장 → %s(%s)"):format(tostring(okStand), tostring(okFar), tostring(whyFar), tostring(okTp), tostring(whyTp), tostring(okFew), tostring(whyFew)),
-			okStand and not okFar and not okTp and not okFew)
+		-- 둥지 전용 궤적(리뷰 - 발사 허가 기록 0.6초만으로는 "순간이동 → 0.6초 기다림 → 줍기"가 통과했다): 1.5초 전 300 밖 → 둥지 · 그 뒤 계속 둥지
+		local trailTp, trailWalk = {}, {}
+		for i = 30, 0, -1 do
+			local t = now - i / 10
+			table.insert(trailTp, { t = t, pos = (i > 15) and (root + Vector3.new(300, 0, 0)) or root })
+			table.insert(trailWalk, { t = t, pos = root + Vector3.new(i * 1.6, 0, 0) }) -- 초속 16 걷기로 다가옴
+		end
+		local standing = samples(function() return root end)
+		local okTrail, whyTrail = NestServer.checkPresence(standing, spot, now, trailTp)
+		local okWalk = NestServer.checkPresence(standing, spot, now, trailWalk)
+		r.check(("서 있음 → %s · 40 밖 → %s(%s) · 순간이동(3프레임) → %s(%s) · 표본 1장 → %s(%s) · 순간이동 1.5초 뒤(궤적) → %s(%s) · 걸어와서 → %s"):format(tostring(okStand), tostring(okFar), tostring(whyFar), tostring(okTp), tostring(whyTp), tostring(okFew), tostring(whyFew), tostring(okTrail), tostring(whyTrail), tostring(okWalk)),
+			okStand and not okFar and not okTp and not okFew and not okTrail and whyTrail == "teleport" and okWalk)
 	end)
 	r.section("선인장 피해 상한", function()
 		local WorldHazards = require(script.Parent.WorldHazards)
@@ -424,6 +434,9 @@ function V.runLive(player, env)
 		local eggsBefore = #profile.eggs
 		put(meta.spot + Vector3.new(0, 3.2, 0))
 		task.wait(1.0)
+		local okEarly, whyEarly = NestServer.tryPickup(player, spec.id)
+		r.check(("순간이동 1초 뒤 줍기 → %s(%s · 기대 teleport - 둥지 궤적 3초)"):format(tostring(okEarly), tostring(whyEarly)), not okEarly and whyEarly == "teleport")
+		task.wait(2.6)
 		local ok, egg = NestServer.tryPickup(player, spec.id)
 		local rec = PlayerProfile.getNestRecord(player, spec.id)
 		r.check(("A 둥지 위에서 줍기 → %s · 알 %s %s · 가방 %d → %d · 다음 = %d초 뒤(30분)"):format(tostring(ok), ok and egg.zone or "-", ok and egg.grade or tostring(egg), eggsBefore, #profile.eggs, rec.next - os.time()),
@@ -444,9 +457,9 @@ function V.runLive(player, env)
 		task.wait(0.05)
 		local ok4, why4 = NestServer.tryPickup(player, far.id)
 		r.check(("순간이동 직후 줍기 → %s(%s · 기대 teleport 또는 far)"):format(tostring(ok4), tostring(why4)), not ok4 and (why4 == "teleport" or why4 == "far"))
-		task.wait(1.2)
+		task.wait(3.4)
 		local ok5 = NestServer.tryPickup(player, far.id)
-		r.check(("그 자리에 1.2초 머문 뒤 줍기 → %s(B 둥지 · 사당 안)"):format(tostring(ok5)), ok5)
+		r.check(("그 자리에 3.4초 머문 뒤 줍기 → %s(B 둥지 · 사당 안)"):format(tostring(ok5)), ok5)
 		-- 저장 왕복
 		local okSave, why = SaveSystem.saveProfile(player, profile)
 		local loaded = SaveSystem.loadProfile(player)

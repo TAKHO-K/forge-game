@@ -14,6 +14,6 @@ return {
 		height = { 6, 11 }, trunk = 2.2, arm = 1.4,
 		-- 피해(서버): 루트가 선인장 중심 반경(trunk/2 + touchStuds) 안이면 현재 체력의 hpFraction(이것만으로는 안 죽는다 - PlayerDamage.applyCurrentHpFraction) ·
 		--   사람마다 cooldownSeconds · windowSeconds 동안 최대 maxPerWindow번(상한) · 밀림 = 선인장 반대쪽 pushSpeed(클라가 속도로 준다).
-		hazard = { touchStuds = 1.6, hpFraction = 0.04, cooldownSeconds = 0.6, windowSeconds = 5, maxPerWindow = 3, pushSpeed = 26, pollSeconds = 0.2 },
+		hazard = { touchStuds = 1.6, hpFraction = 0.04, cooldownSeconds = 0.6, windowSeconds = 5, maxPerWindow = 3, pushSpeed = 26 }, -- 판정 주기 = TerrainServer 폴링(0.25초)
 	},
 }

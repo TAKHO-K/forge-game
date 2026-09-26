@@ -743,6 +743,16 @@ function TerrainShape.edgeAllowR(x, z)
 	if c.water then
 		return EG.basinAllowR
 	end
+	-- 바다 만 둘레(반경 + 둑) 안의 마른 기슭도(리뷰: 만 옆 모래사장에서 밀려났다)
+	for _, zone in ipairs(ZONES) do
+		local bay = G.zones[zone.key] and G.zones[zone.key].bay
+		if bay then
+			local bx, bz = w2(zone, bay.r, bay.lat)
+			if (x - bx) ^ 2 + (z - bz) ^ 2 <= (bay.radius + bay.shoreBlend) ^ 2 then
+				return EG.basinAllowR
+			end
+		end
+	end
 	return EG.allowR
 end
 

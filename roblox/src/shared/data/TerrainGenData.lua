@@ -41,7 +41,8 @@ return {
 	snowLine = 170, snowVary = 25, snowMaterial = "Snow", steepDeg = 40, rockMaterial = "Rock",
 	-- 바깥 고리 확장 자리(WorldMapData.reserved.outerRing - 꽃잎 사이) = 설산 속 분지 + 허브 쪽에서 들어가는 골짜기(봉인 입구 문 앞까지 걸어서).
 	-- 서버 경계 백업(사용자 보강 ②): 발이 반경 allowR(설산 발치) 밖에 서 있으면 안쪽으로 pushStuds 밀어낸다. 봉인 입구 분지 · 골짜기와 바다 만(헤엄) 안은 basinAllowR까지.
-	edgeGuard = { allowR = 2640, basinAllowR = 2945, pushStuds = 8 },
+	--   밀어낼 자리 = 안쪽으로 searchStep씩 걸어 들어가며 물 아닌 · 평지 + landMaxAbove 이하 땅. 바다 만 둘레(반경 + 둑) 안의 마른 기슭도 basinAllowR까지(리뷰).
+	edgeGuard = { allowR = 2640, basinAllowR = 2945, pushStuds = 8, searchStep = 20, landMaxAbove = 30 },
 	reservedBasin = { centerR = 2760, radius = 170, blend = 90, corridorFromR = 2200, corridorWidth = 50, corridorBlend = 90 },
 	-- 평탄 마스크 공통(도로 · 캠프 · 사냥 지대 · 관문 · 결계 문 · 옛 지형 · 봉인 입구): 반경 + margin 안 = 평지 · 그 밖 blend에 걸쳐 원래 지형으로.
 	flatten = { roadMargin = 10, roadBlend = 70, campRadius = 70, groundRadius = 150, gateRadius = 90, raidRadius = 40, featureMargin = 14, blend = 60, sealedRadius = 70 },

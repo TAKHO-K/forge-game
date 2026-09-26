@@ -126,10 +126,10 @@ function Travel.edgePushPoint(feet)
 		return nil
 	end
 	local dir = flat(feet).Unit
-	for r = math.min(allow, EG.allowR) - EG.pushStuds, 0, -20 do
+	for r = math.min(allow, EG.allowR) - EG.pushStuds, 0, -EG.searchStep do
 		local p = dir * r
 		local c = TerrainShape.column(p.X, p.Z)
-		if not c.water and c.h - TerrainShape.flatY <= 30 then
+		if not c.water and c.h - TerrainShape.flatY <= EG.landMaxAbove then
 			return Vector3.new(p.X, c.h + 3, p.Z)
 		end
 	end
@@ -478,7 +478,7 @@ function Travel.pollPlayer(player, root, humanoid, now)
 		return
 	end
 	-- M1-3 서버 경계 백업(사용자 보강 ②): 보이는 경계 = 외곽 설산 · 절벽 · 바다(지형) · 실제 차단 = 여기. 서 있거나 헤엄치는 자리가 허용 반경 밖이면 안쪽 걷는 땅으로.
-	local swimming = humanoid and humanoid:GetState() == Enum.HumanoidStateType.Swimming
+	local swimming = humanoid and humanoid:GetState() == Enum.HumanoidStateType.Swimming and require(script.Parent.WorldHazards).inWater(root.Position)
 	if grounded or swimming then
 		local out = Travel.edgePushPoint(feet)
 		if out then
@@ -493,7 +493,8 @@ function Travel.pollPlayer(player, root, humanoid, now)
 		-- 허브 쪽으로(구역 원 밖 + pushOutStuds) - 꽃잎 부채꼴 안의 반지름 선은 이웃 구역 원을 지나지 않는다(핑퐁 없음)
 		local out = Travel.pushOutPoint(zone, feet)
 		st.pushes += 1
-		Travel.teleport(player, up(out, 3), "잠긴 구역 밀어내기(" .. zone.key .. ")")
+		local TerrainShape = require(ReplicatedStorage.Shared.TerrainShape)
+		Travel.teleport(player, Vector3.new(out.X, math.max(TerrainShape.height(out.X, out.Z), WorldMapData.floorTopY) + 3, out.Z), "잠긴 구역 밀어내기(" .. zone.key .. ")") -- M1-3: 지형 높이(바닥 판이 없다 - 리뷰)
 		PartyState.notify(player, ("잠긴 구역 - %s 보스를 처음 잡으면 열린다"):format(ZONES[zone.tierIndex - 1] and ZONES[zone.tierIndex - 1].theme or "이전 구역"))
 		return
 	end

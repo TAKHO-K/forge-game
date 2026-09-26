@@ -204,11 +204,13 @@ function HeightGuard.poll(player, now)
 	end
 	local st = stateOf(player)
 	local state = humanoid:GetState()
+	-- M1-3: 헤엄(Swimming)은 클라가 정하는 상태라, 루트가 실제로 Terrain 물속일 때만 "서 있음"으로 친다(물이 생긴 뒤 상태 위조로 높이 검사를 우회하던 구멍: 리뷰)
+	local swimming = state == Enum.HumanoidStateType.Swimming and require(script.Parent.WorldHazards).inWater(root.Position)
 	local sample = {
 		feetY = root.Position.Y - MovementConfig.rootAboveFeetStuds,
 		pos = root.Position,
 		grounded = humanoid.FloorMaterial ~= Enum.Material.Air or state == Enum.HumanoidStateType.Climbing
-			or state == Enum.HumanoidStateType.Swimming or state == Enum.HumanoidStateType.Seated,
+			or swimming or state == Enum.HumanoidStateType.Seated,
 		skip = root.Anchored or humanoid.Health <= 0,
 		probe = function()
 			probeParams.FilterDescendantsInstances = { character }

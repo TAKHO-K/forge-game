@@ -196,8 +196,9 @@ ReplicatedStorage:WaitForChild("NestPicked").OnClientEvent:Connect(function(data
 		local model = shown.model
 		eggs[data.id] = nil
 		local body = model.PrimaryPart
-		local rise = data.discovered and 9 or 4
-		local t = TweenService:Create(body, TweenInfo.new(data.discovered and 1.4 or 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = body.CFrame * CFrame.new(0, rise, 0) * CFrame.Angles(0, math.pi * 2, 0), Transparency = 1 })
+		local FX = require(ReplicatedStorage.Shared.data.NestData).pickFx
+		local rise = data.discovered and FX.riseDiscovered or FX.rise
+		local t = TweenService:Create(body, TweenInfo.new(data.discovered and FX.secondsDiscovered or FX.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = body.CFrame * CFrame.new(0, rise, 0) * CFrame.Angles(0, math.pi * 2, 0), Transparency = 1 })
 		for _, band in ipairs(model:GetChildren()) do
 			if band:IsA("BasePart") and band ~= body then
 				band:Destroy()
@@ -206,8 +207,9 @@ ReplicatedStorage:WaitForChild("NestPicked").OnClientEvent:Connect(function(data
 		if data.discovered then
 			local light = Instance.new("PointLight")
 			light.Color = NestState.zoneColor(egg.zone)
-			light.Brightness = 4
-			light.Range = 16
+			local FX = require(ReplicatedStorage.Shared.data.NestData).pickFx
+			light.Brightness = FX.lightBrightness
+			light.Range = FX.lightRange
 			light.Parent = body
 		end
 		t:Play()
@@ -216,7 +218,7 @@ ReplicatedStorage:WaitForChild("NestPicked").OnClientEvent:Connect(function(data
 		end)
 	end
 	if data.discovered then
-		task.delay(0.8, function()
+		task.delay(require(ReplicatedStorage.Shared.data.NestData).pickFx.toastDelay, function()
 			Toast.push("TC", { text = Text.get("nest.discovered", { count = data.dexCount }), grade = "important", seconds = 3 })
 			if data.title then
 				for _, t in ipairs(require(ReplicatedStorage.Shared.data.NestData).dex.titles) do
