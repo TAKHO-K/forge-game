@@ -16,6 +16,7 @@ local TerrainBake = {}
 local G = TerrainGenData
 local V = G.voxel
 local CHUNK = 64 -- 칸(= 256 stud)
+local CEILING = 640 -- 지형이 닿을 수 있는 가장 높은 곳보다 위(봉우리 최대 약 470)
 local FLOOR = WorldMapData.floorTopY
 
 local function ownerOf(x, z)
@@ -67,6 +68,7 @@ local function bakeChunk(terrain, key, cx, cz)
 	local cols = {}
 	local owned = 0
 	local topY, lowY = -math.huge, math.huge
+	local topAll = -math.huge -- 이 덩어리 모든 열(이웃 구역 포함)의 새 최고 높이 - 그 위에 남은 옛 복셀을 비운다
 	for i = 0, CHUNK + 1 do
 		cols[i] = {}
 		for k = 0, CHUNK + 1 do
@@ -77,6 +79,9 @@ local function bakeChunk(terrain, key, cx, cz)
 				c.x, c.z = x, z
 				c.own = (i >= 1 and i <= CHUNK and k >= 1 and k <= CHUNK) and ownerOf(x, z) == key
 				cols[i][k] = c
+				if i >= 1 and i <= CHUNK and k >= 1 and k <= CHUNK then
+					topAll = math.max(topAll, c.h, c.water or -math.huge)
+				end
 				if c.own then
 					owned += 1
 					topY = math.max(topY, c.h, c.water or -math.huge)
@@ -166,6 +171,11 @@ local function bakeChunk(terrain, key, cx, cz)
 		end
 	end
 	terrain:WriteVoxels(region, V, mats, occs)
+	-- 옛 굽기가 더 높게 쌓은 복셀(모양을 낮춘 뒤 떠 있는 판으로 남았다 - M1-3 스크린샷): 이 덩어리 새 최고 높이 + 공기 부피 위를 천장까지 비운다
+	local clearFrom = math.ceil((math.max(topAll, airTop) + V * 2) / V) * V
+	if clearFrom < CEILING then
+		terrain:FillBlock(CFrame.new(x0 + CHUNK * V / 2, (clearFrom + CEILING) / 2, z0 + CHUNK * V / 2), Vector3.new(CHUNK * V, CEILING - clearFrom, CHUNK * V), Enum.Material.Air)
+	end
 	return owned, written
 end
 
