@@ -36,5 +36,34 @@
 ## 3. place에만 있는 설정(Rojo · git에 없다 - 바꾸면 여기와 STATE.md를 같이 고친다)
 
 - Workspace 스트리밍 4종(위 표) · `Workspace.Gravity` 196.2(기본) · `StarterPlayer.CharacterJumpHeight` 7.2(`movement-metrics.md` §0) · 아바타 관절 업그레이드(AnimationConstraint).
+- **지형(Terrain 복셀 · 재질 색 · 물 모양)** - M1-3부터. 굽기 절차 · 버전 = 아래 §4.
 - Lighting `Atmosphere`는 place에 있지만 밀도는 서버 부팅 때 코드가 덮어쓴다(`WorldMapData.atmosphere` - git 기록).
 - 먼 나무 저해상도 대체(imposter) 결과 = `docs/phase/M1-2b-report.md` ②.
+
+## 4. 지형(Terrain) - M1-3 굽기 절차 · 지형 버전 (place 전용)
+
+Rojo는 Terrain 복셀을 동기화하지 않는다(프로젝트 `Workspace`는 `$ignoreUnknownInstances` · 파일 형식에 복셀이 없다 - M1-3 실측: 굽기 전 Studio Terrain 셀 0). 그래서 **생성기(식 + 수치)만 git**에 두고 결과는 place에 굽는다.
+
+| 무엇 | 어디 |
+|---|---|
+| 모양 식(결정적 - 고정 시드 · 자체 잡음) | `shared/TerrainShape.lua` |
+| 수치(능선 · 설산 · 봉우리 · 강 · 바다 · 호수 · 사구 · 굴 · 재질 색 · 버전) | `shared/data/TerrainGenData.lua` |
+| 둥지 · 구조물 마스크(받침 · 흙더미 · 보호 부피 - 비밀 둥지 먼저) | `shared/WorldStructures.lua` · `data/NestData.lua` |
+| 굽기 | `server/TerrainBake.lua` · edit 실행기 `server/TerrainBakeRun.lua` |
+
+**굽기 절차**(Studio edit 모드 명령줄 - Play 중이 아니다):
+
+1. Rojo 연결 확인(소스가 최신인지).
+2. 구역마다 한 줄씩(한 구역 40 ~ 70초): `require(game.ServerScriptService.TerrainBakeRun)("hub")` → `"tier1"` … `"tier6"`. 전부 = `("all")`(5분 넘게 걸려 명령줄이 멈춘 것처럼 보인다 - 구역별 권장).
+   - edit 모드의 `require`는 Studio를 닫을 때까지 옛 모듈을 캐시한다 → `TerrainBakeRun`이 부를 때마다 소스를 새로 불러온다(loadstring). `TerrainBake`를 직접 require하면 옛 코드가 돌 수 있다.
+3. 확인: `require(game.ServerScriptService.TerrainBakeRun)("check")` - 둥지 입구 → 둥지 캐릭터 캡슐 통과(edit 모드엔 맵 파트가 없어 지형만 본다 - 파트까지는 Play의 `/gg terrain check` · 검증 M1-3T(나)) · 지형 표식.
+4. **place 저장**(파일 → 저장 / 게시). 저장하지 않으면 Studio를 닫을 때 지형이 사라진다.
+
+**지형 버전 표식**: 굽기가 `Workspace.Terrain` Attribute를 남긴다 - `TerrainVersion_<구역>`(= `TerrainGenData.version[구역]`) · `TerrainSig_<구역>`(표본 400점 높이 해시 - 버전 숫자를 안 올리고 데이터를 바꾼 경우도 잡는다) · `TerrainBakedAt_<구역>`. 서버 시작 때 `TerrainBake.checkVersion`이 비교해 다르면 **경고 로그만** 남긴다(런타임 생성 금지).
+- 모양(데이터 · 식 · 둥지 자리)을 바꾸면: 해당 구역 `version`을 올리고 → 그 구역만 다시 굽기 → 저장.
+
+| 구역 | 지형 버전 | 마지막 굽기 | 비고 |
+|---|---|---|---|
+| hub · tier1 ~ tier6 | 1 | 2026-09-26(M1-3) | 표면 = 평지 0.6(점유율 → 표면 식 실측: 표면 = 칸 바닥 + 2 + 4 × 점유율) |
+
+- 재질 색(Terrain:SetMaterialColor) · 물 색 · 투명도 · 물결도 굽기가 place에 쓴다(`TerrainGenData.materialColors` · `water`).
