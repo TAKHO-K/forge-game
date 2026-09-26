@@ -89,6 +89,9 @@ return {
 			courseRoot = { angleDeg = 330, walkFrom = 0.46, knobWidth = 2.5, -- 같은 곡선(roots)의 t ≥ walkFrom 부분만(끝 → 높이 약 8 · r 99) - 줄기 쪽은 없다
 				knobs = { { r = 85, top = 14, angleDeg = 331 }, { r = 72, top = 21, angleDeg = 334 } } }, -- 걷는 끝(높이 약 8) → 혹 1(공중 1) → 혹 2(공중 1) → 안쪽 길 5번째 가지(높이 29 · 공중 1)
 			ridges = { count = 14, depth = 3, width = 5 }, -- 줄기 결(세로 골)
+			-- M1-4(사용자 - 형태 · 색만): 밑동 퍼짐(원통 겹 - 바닥 반경 baseRadius → 줄기 · 높이 height · 충돌 없음 · 점프맵 반경 60 안쪽) · 껍질 혹(count · 크기 · 통로 높이 피함)
+			flare = { baseRadius = 57, height = 30, pieces = 4 },
+			bumps = { count = 26, size = { 7, 14 }, fromY = 24, seed = 20261006 },
 			crownShape = {
 				baseY = 150, baseRadius = 400, -- 가장 아래 가지층(가장 넓다 - 잎 덮개 ≈ 허브 안전 지대 400 · M1-2)
 				shoulderY = 770, shoulderRadius = 150, -- 점프맵 끝 높이 - 여기까지 원뿔이 좁아진다
@@ -97,7 +100,9 @@ return {
 				--   면 = 쐐기 파트 2개로 만든 삼각형(로우폴리 · 메시 에셋 없음 - git에 남는다). 층마다 면 수 · 꼭짓점 반경 · 높이 · 비틀림 · 색을 고정 시드로 흔든다(매번 같은 모양).
 				--   층이 위아래로 겹쳐(skirt > spacing) 틈이 없다 · 안쪽은 비어 있어 오르는 사람은 치마 밑에서 바깥을 본다. 꼭대기 = 끝이 뾰족한 원뿔(tip).
 				clearRadius = 145,
-				coneTiers = { spacing = 70, skirt = 104, facets = { 6, 8 }, thickness = 1.6 }, -- 면 수가 적을수록 로우폴리(파트 = 면 × 4)
+				coneTiers = { spacing = 70, skirt = 104, facets = { 6, 8 }, thickness = 1.6 }, -- 층 간격 · 층 높이(M1-4: 모양 = lumps · facets · thickness는 옛 원뿔 값)
+				-- M1-4 잎 덩어리: overhang = 안 · 밖 가장자리 너머로 덮는 여유 · minHalf = 덩어리 최소 반폭 · spacing = 고리 둘레 간격(반폭 배) · along = 고리 방향 길이 배 · heightScale · 흔들림
+				lumps = { overhang = 8, minHalf = 18, spacing = 1.25, along = 1.35, heightScale = 0.95, sizeJitter = 0.16, radialJitter = 10 },
 				-- 어깨 위 층(M1-2 사용자 - 윗잎이 어색함 → 아래와 같은 규칙의 층층 덩어리): 위로 갈수록 작아지는 치마 top → bottom · 안쪽 반경 inner · 바깥 outer. 마지막 = 뾰족한 끝(inner 0).
 				--   아래 가장자리는 전망대(760) 눈높이 위(≥ 785) - 전망대에서 바깥이 보이게.
 				topTiers = {

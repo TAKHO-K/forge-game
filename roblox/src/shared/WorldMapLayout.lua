@@ -750,7 +750,45 @@ function Layout.buildTree(list)
 		prim(list, "BigTree", "Ridge", Vector3.new(Rg.width, tree.trunkHeight * 0.95, Rg.depth), CFrame.lookAt(Vector3.new(p.X, FLOOR + tree.trunkHeight * 0.475, p.Z), Vector3.new(0, FLOOR + tree.trunkHeight * 0.475, 0)),
 			barkDark, { material = tree.barkMaterial, collide = false })
 	end
-	-- 메타세쿼이아 수관(층층 로우폴리 원뿔): 층마다 각진 원뿔대 치마 - 면 = 삼각형 2장(사각형) · 삼각형 = 쐐기 2개.
+	-- M1-4 밑동 퍼짐(겹친 원통 · 충돌 없음 - 점프맵 첫 요소 반경 60 안쪽) · 껍질 굴곡(혹 - 통로 높이 피함)
+	local FL = tree.flare
+	for k = 1, FL.pieces do
+		local t = (k - 0.5) / FL.pieces
+		local r = FL.baseRadius + (R - FL.baseRadius) * t ^ 0.7
+		local h = FL.height / FL.pieces
+		prim(list, "BigTree", "TrunkFlare", Vector3.new(h + 1, r * 2, r * 2), CFrame.new(0, FLOOR + h * (k - 0.5), 0) * CFrame.Angles(0, 0, math.rad(90)), k % 2 == 0 and bark or barkDark,
+			{ shape = "Cylinder", material = tree.barkMaterial, collide = false })
+	end
+	do
+		local BU = tree.bumps
+		local bs = BU.seed % 2147483647
+		local function br()
+			bs = (bs * 48271) % 2147483647
+			return bs / 2147483647
+		end
+		local placed = 0
+		for _ = 1, BU.count * 4 do
+			if placed >= BU.count then
+				break
+			end
+			local y = BU.fromY + br() * (tree.trunkHeight * 0.9 - BU.fromY)
+			local ok = true
+			for _, tn in ipairs(T.tunnels) do
+				if y > tn.y - 16 and y < tn.y + 40 then
+					ok = false
+				end
+			end
+			if ok then
+				placed += 1
+				local a = br() * 2 * math.pi
+				local s = BU.size[1] + br() * (BU.size[2] - BU.size[1])
+				local p = Vector3.new(math.cos(a) * (R - s * 0.25), FLOOR + y, math.sin(a) * (R - s * 0.25))
+				prim(list, "BigTree", "BarkBump", Vector3.new(s * 1.1, s * 1.8, s), CFrame.lookAt(p, Vector3.new(0, p.Y, 0)), barkDark,
+					{ material = tree.barkMaterial, collide = false, mesh = "Sphere" })
+			end
+		end
+	end
+	-- 메타세쿼이아 수관: 층마다 잎 덩어리 고리(M1-4 - 옛 로우폴리 원뿔 치마를 바꿨다 · 층 높이 · 수관 식은 그대로).
 	local CS = tree.crownShape
 	local season = tree.leaves.seasons[tree.leaves.season]
 	local function crownRadius(y)
@@ -770,33 +808,35 @@ function Layout.buildTree(list)
 	end
 	local CT = CS.coneTiers
 	local tierIndex = 0
+	-- M1-4(사용자 - 원뿔 층 대신 덩어리 여러 개로 주변과 덜 튀게): 층마다 잎 덩어리(타원 · 충돌 없음)를 고리에 두른다.
+	--   덩어리 = 안쪽 가장자리 innerR(점프맵 길 밖 · clearRadius) ~ 바깥 outerR(수관 식) 사이를 덮는 타원 · 층 높이(top → bottom) 안 · 크기 · 자리 · 색을 고정 시드로 흔든다.
+	--   안쪽이 좁은 꼭대기 층(innerR < 25)은 작은 고리 + 가운데 덩어리 하나.
+	local LU = CS.lumps
 	local function skirt(topY, bottomY, innerR, outerR, role)
 		tierIndex += 1
-		local n = CT.facets[1] + math.floor(rand() * (CT.facets[2] - CT.facets[1] + 1))
-		local twist = math.rad(spread(J.twistDeg)) + tierIndex * 0.37
-		local tops, bottoms = {}, {}
-		for k = 1, n do
-			local a = (k - 1) / n * 2 * math.pi + twist + spread(0.12)
-			local d = Vector3.new(math.cos(a), 0, math.sin(a))
-			local ro = outerR * (1 + spread(J.radius))
-			tops[k] = d * math.max(innerR, 0.01) + Vector3.new(0, FLOOR + topY + spread(J.y * 0.4), 0)
-			bottoms[k] = d * ro + Vector3.new(0, FLOOR + bottomY + spread(J.y), 0)
+		local twist = rand() * 2 * math.pi
+		local hh = (topY - bottomY) / 2 * LU.heightScale
+		local cy = (topY + bottomY) / 2
+		local hw = math.max((outerR - innerR) / 2 + LU.overhang, LU.minHalf)
+		local rc = math.max(innerR + hw, hw * 0.35) -- 안쪽 가장자리 = innerR(점프맵 길 밖 - 흔들림은 바깥으로만)
+		local n = math.max(3, math.ceil(2 * math.pi * rc / (hw * LU.spacing)))
+		local c = season[role]
+		local function lump(p, sx, sy, sz, yaw)
+			local tint = 1 + spread(J.tint)
+			local col = { math.clamp(c[1] * tint, 0, 255), math.clamp(c[2] * tint, 0, 255), math.clamp(c[3] * tint, 0, 255) }
+			prim(list, "BigTree.Leaves", "LeafLump", Vector3.new(sx, sy, sz), CFrame.new(p) * CFrame.Angles(0, yaw, 0), col,
+				{ material = season.material, collide = false, mesh = "Sphere", attrs = { SeasonRole = role, SeasonTint = tint } })
 		end
 		for k = 1, n do
-			local k2 = k % n + 1
-			local tint = 1 + spread(J.tint)
-			local c = season[role]
-			local col = { math.clamp(c[1] * tint, 0, 255), math.clamp(c[2] * tint, 0, 255), math.clamp(c[3] * tint, 0, 255) }
-			local opts = { material = season.material, collide = false, attrs = { SeasonRole = role, SeasonTint = tint } }
-			local faces = { { bottoms[k], bottoms[k2], tops[k] } }
-			if innerR > 0.5 then
-				table.insert(faces, { tops[k], bottoms[k2], tops[k2] })
-			end
-			for _, f in ipairs(faces) do
-				for _, w in ipairs(Layout.triangle(f[1], f[2], f[3], CT.thickness)) do
-					prim(list, "BigTree.Leaves", "Needle", w.size, w.cf, col, { shape = "Wedge", material = opts.material, collide = false, attrs = opts.attrs })
-				end
-			end
+			local a = (k - 1) / n * 2 * math.pi + twist + spread(0.15)
+			local k1 = 1 + spread(LU.sizeJitter)
+			local r = rc + (k1 - 1) * hw + rand() * LU.radialJitter -- 커진 몫만큼 바깥으로(안쪽 가장자리 ≥ innerR)
+			local p = Vector3.new(math.cos(a) * r, FLOOR + cy + spread(J.y * 0.5), math.sin(a) * r)
+			-- 덩어리 = 고리 방향으로 조금 길쭉한 타원(바깥 · 안쪽 끝이 outerR · innerR 근처)
+			lump(p, hw * 2 * k1, hh * 2 * (1 + spread(LU.sizeJitter * 0.5)), hw * 2 * LU.along * k1, -a)
+		end
+		if innerR < 25 then
+			lump(Vector3.new(0, FLOOR + cy + hh * 0.2, 0), hw * 1.6, hh * 2.1, hw * 1.6, twist)
 		end
 	end
 	-- 어깨(점프맵 끝) 아래: 안쪽 가장자리 = clearRadius(길 밖) · 위: 줄기까지 닫힌 원뿔
