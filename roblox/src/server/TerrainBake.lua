@@ -108,7 +108,7 @@ local function bakeChunk(terrain, key, cx, cz)
 			end
 		end
 	end
-	local y1 = math.ceil((math.max(topY, airTop) + V) / V) * V
+	local y1 = math.ceil((math.max(topY, topAll, airTop) + V) / V) * V -- 이웃 열 최고까지 내 열을 덮어쓴다(그 위는 아래 FillBlock이 비운다 - 옛 복셀이 사이에 남지 않게)
 	local ny = (y1 - y0) / V
 	local region = Region3.new(Vector3.new(x0, y0, z0), Vector3.new(x0 + CHUNK * V, y1, z0 + CHUNK * V)):ExpandToGrid(V)
 	local mats, occs = terrain:ReadVoxels(region, V)
