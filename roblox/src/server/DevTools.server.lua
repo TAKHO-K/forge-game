@@ -3504,6 +3504,7 @@ if RunService:IsStudio() then
 				{ "G2a(나)", function() require(script.Parent.G2aVerify).runLive(player, env) end }, -- G2a: 높이 검증 실제 Player · 보스 기여도(계수 전) · 이속 상한 · 구조물 낙하
 				{ "M1-0(나)", function() require(script.Parent.M1_0Verify).runLive(player, env) end }, -- M1-0: 합법 최대 높이 되돌림 0 · 기본 Shift Lock 꺼짐 · 아레나 공중 복귀 0
 				{ "M1-2(나)", function() require(script.Parent.M1_2Verify).runLive(player, env) end }, -- M1-2: 스폰 지점 실제 사이클 · 전투 중 보류 · 처치 중 남김 · 귀환 시전 · 취소 · 돌아가기 · 뿌리 밟기
+				{ "M1-3T(나)", function() require(script.Parent.M1_3TVerify).runLive(player, env) end }, -- M1-3 본편: 굽힌 지형 · 둥지 캡슐 통과 · 줍기(성공 · 쿨다운 · 멀리서 · 순간이동) · 저장 · 순환 · 선인장 · 외곽 밀어내기 · 스폰 높이
 				{ "M1-3(나)", function() require(script.Parent.M1_3Verify).runLive(player, env) end }, -- M1-3: 관문 등록 전 · 등록 · 원격 입장(솔로 · 파티) · 저장 유지 · 지형(물살 · 선인장 · 도달 · 낙하 복귀)
 				{ "M1(나)", function() require(script.Parent.M1Verify).runLive(player, env) end }, -- M1: 잠금 · 포탈 · 귀환 · 몬스터 지대 · 보스 관문 · 나무 리프트 · 떨어짐 · 복귀 · 봉인 입구
 				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
@@ -3877,6 +3878,16 @@ if RunService:IsStudio() and verifyEnabled("M1-2c(가)") then
 		local ok, err = pcall(require(script.Parent.M1_2cVerify).runPure)
 		if not ok then
 			warn(("[M1-2c(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ M1-3T 자동 검증 블록(가) - 지형 · 둥지 3트랙 · 알 · 순환 · 줍기 판정 · 선인장 · 저장 v41 · 외곽 · 물속 높이 · 스폰(docs/phase/M1-3-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("M1-3T(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.M1_3TVerify).runPure)
+		if not ok then
+			warn(("[M1-3T(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end
