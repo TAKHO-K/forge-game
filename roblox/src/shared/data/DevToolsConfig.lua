@@ -151,7 +151,10 @@ local config = {
 		-- G2a(가)(나) · M1-0(가)(나)(높이 검증) · M1(가)(나) · M1-2(가)(나) · M1-3(가)(나)(Travel · 리프트 · 순간이동) · BR1(나) · BR1-2(나)(발사 · 수정 부수기 발판).
 		-- M1-3 본편(2026-09-26): 이번 블록 M1-3T(가)(나) + 지시(옛 블록 M1 · M1-2 · M1-2c · 관문 등록)를 VerifyOnly로 - M1(가)(나)(WorldMapLayout · SpawnSites · Travel) · M1-2(가)(나)(스폰 지점 · 허브) ·
 		-- M1-2c(가)(나)(LaunchPermit 위치 기록 · 높이 검사 · 발사) · M1-3(가)(나)(관문 · 저장 기대값 최신 이관).
+		-- M1-4(2026-09-26): 이번 블록 M1-4(가)(나) + 지시(옛 M1-2c · M1-3 · 관문 등록) + 바꾼 모듈(WorldMapLayout · TerrainShape · SpawnSites · HeightGuard · Travel · WorldCheck · NestData)을 쓰는 블록을 VerifyOnly로 -
+		-- M1-3T(가)(나) · M1-3(가)(나) · M1-2c(가)(나) · M1-2(가)(나) · M1(가)(나) · M1-0(나) · G2a(나).
 		current = {
+			"M1-4(가)", "M1-4(나)",
 			"M1-3T(가)", "M1-3T(나)",
 			"M1-2c(가)", "M1-2c(나)",
 			"M1-3(가)", "M1-3(나)",

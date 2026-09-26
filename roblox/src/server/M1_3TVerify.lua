@@ -280,13 +280,15 @@ function V.runPure()
 	end)
 	r.section("외곽 경계 밀어내기(식)", function()
 		local Travel = require(script.Parent.Travel)
-		local EG = TerrainGenData.edgeGuard
 		local rows, okAll = {}, true
 		for _, z in ipairs(WorldMapData.zones) do
-			local d = WorldMapLayout.dirOf(z.angleDeg + 11)
-			local feet = d * 2760 + Vector3.new(0, 80, 0)
+			-- M1-4: 허용 반경 = 능선 너머(구역 테마) · 도착 = 능선 높이 + 12 이하 땅
+			local ang = z.angleDeg + 11
+			local d = WorldMapLayout.dirOf(ang)
+			local allow = TerrainShape.edgeAllowRAt(ang)
+			local feet = d * (allow + 40) + Vector3.new(0, 80, 0)
 			local out = Travel.edgePushPoint(feet)
-			local ok = out ~= nil and flat(out, Vector3.zero) <= EG.allowR and out.Y - TerrainShape.flatY <= 34 and not TerrainShape.waterAt(out.X, out.Z)
+			local ok = out ~= nil and flat(out, Vector3.zero) <= allow and out.Y - TerrainShape.flatY <= TerrainShape.edgeLandMaxAt(ang) + 4 and not TerrainShape.waterAt(out.X, out.Z)
 			okAll = okAll and ok
 			table.insert(rows, ("%s %s"):format(z.key, out and ("%.0f"):format(flat(out, Vector3.zero)) or "nil"))
 		end
@@ -295,7 +297,7 @@ function V.runPure()
 		local bay = TerrainGenData.zones.tier3.bay
 		local bayP = WorldMapLayout.toWorld(WorldMapLayout.zoneByKey("tier3"), bay.r + 60, bay.lat)
 		local inBay = Travel.edgePushPoint(bayP)
-		r.check(("설산 위(r 2,760) → 안쪽 걷는 땅(반경 %s ≤ %d) · 봉인 분지 안 = %s(기대 nil) · 바다 만 물 위 = %s(기대 nil)"):format(table.concat(rows, " · "), EG.allowR, tostring(inBasin), tostring(inBay)),
+		r.check(("능선 너머(허용 + 40) → 안쪽 걷는 땅(반경 %s ≤ 구역 허용 · 능선 높이 + 12 이하) · 봉인 분지 안 = %s(기대 nil) · 바다 만 물 위 = %s(기대 nil)"):format(table.concat(rows, " · "), tostring(inBasin), tostring(inBay)),
 			okAll and inBasin == nil and inBay == nil)
 	end)
 	r.section("물속 높이 검사(합성 표본)", function()
@@ -432,11 +434,11 @@ function V.runLive(player, env)
 					local p = e.a:Lerp(e.b, k / 4)
 					local hit = Workspace:Raycast(Vector3.new(p.X, 60, p.Z), Vector3.new(0, -120, 0), params)
 					n += 1
-					worst = math.max(worst, hit and math.abs(hit.Position.Y - TerrainShape.flatY) or 99)
+					worst = math.max(worst, hit and math.abs(hit.Position.Y - p.Y) or 99) -- M1-4: 길 높이(RoadNet - 지형을 따라간다)
 				end
 			end
 		end
-		r.check(("필수 길 실측(복셀 · 표본 %d): 지형 윗면 − 평지 최대 %.2f(기대 ≤ 1)"):format(n, worst), worst <= 1)
+		r.check(("필수 길 실측(복셀 · 표본 %d): 지형 윗면 − 길 높이 최대 %.2f(기대 ≤ 1)"):format(n, worst), worst <= 1)
 	end)
 	r.section("둥지 캡슐 통과(굽기 뒤 복셀)", function()
 		local bad, checked = TerrainBake.capsuleCheck(WorldStructures.nestList())
@@ -559,7 +561,7 @@ function V.runLive(player, env)
 		-- 허용 반경 밖 · 높은 곳 복귀(standMaxY) 아래 비탈을 찾는다(Play 1: 212 비탈은 높은 곳 복귀가 먼저 허브로 보냈다 - 규칙대로)
 		local q, top
 		for a = -89, 89, 3 do
-			for rr = TerrainGenData.edgeGuard.allowR + 15, 2900, 10 do
+			for rr = TerrainShape.edgeAllowRAt(a) + 15, 2950, 10 do
 				local p = WorldMapLayout.dirOf(a) * rr
 				local h = TerrainShape.height(p.X, p.Z)
 				if not q and h - TerrainShape.flatY > 25 and h - TerrainShape.flatY < WorldMapData.progress.standMaxY - 30 and not TerrainShape.waterAt(p.X, p.Z) and TerrainShape.edgeAllowR(p.X, p.Z) < rr then
@@ -573,7 +575,8 @@ function V.runLive(player, env)
 		task.wait(1.2)
 		local after = Travel.stateOf(player).edgePushes or 0
 		local R2 = flat(root.Position, Vector3.zero)
-		r.check(("설산 비탈(r %.0f · 높이 %.0f)에 서면 → 밀어내기 %d번 · 지금 반경 %.0f(≤ %d)"):format(flat(q, Vector3.zero), top - TerrainShape.flatY, after - before, R2, TerrainGenData.edgeGuard.allowR), after > before and R2 <= TerrainGenData.edgeGuard.allowR)
+		local allowQ = TerrainShape.edgeAllowRAt(math.deg(math.atan2(q.Z, q.X)))
+		r.check(("능선 너머 비탈(r %.0f · 높이 %.0f)에 서면 → 밀어내기 %d번 · 지금 반경 %.0f(≤ 허용 %.0f)"):format(flat(q, Vector3.zero), top - TerrainShape.flatY, after - before, R2, allowQ), after > before and R2 <= allowQ)
 		HeightGuard.debugOff = true
 		r.check(("MaxSlopeAngle(지금 캐릭터) = %.0f°(TerrainConfig 45 - 걷는 경사 한계)"):format(humanoid.MaxSlopeAngle), math.abs(humanoid.MaxSlopeAngle - 45) < 0.5)
 	end)
