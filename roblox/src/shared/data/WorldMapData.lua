@@ -301,7 +301,7 @@ return {
 	gateWeather = {
 		maxParticles = 140, -- 동시 입자 상한(rate × lifetime 합 - 넘으면 비율대로 줄인다)
 		tier3 = { kind = "sea", radius = 280, spray = { count = 4, rate = 3, lifetime = 3, size = 3 }, mist = { rate = 2, lifetime = 8, size = 26, transparency = 0.8 } },
-		tier5 = { kind = "storm", radius = 320, rain = { rate = 45, lifetime = 1.1, speed = 90 }, cloud = { height = 150, radius = 110, lumps = 7, color = { 58, 60, 72 }, transparency = 0.12 },
+		tier5 = { kind = "storm", radius = 320, rain = { rate = 45, lifetime = 1.1, speed = 90 }, cloud = { height = 300, radius = 110, lumps = 7, color = { 58, 60, 72 }, transparency = 0.12 },
 			flash = { everySeconds = { 16, 32 }, seconds = 0.45, brightness = 0.7, range = 160, color = { 190, 196, 255 } } },
 	},
 	-- M1-4 해안 거품(클라 전용 - client/CoastFx): T3 해안선 · 만 둘레 점마다 거품 입자(가까운 near개만 켠다 · 반경 radius 안)

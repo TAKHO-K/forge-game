@@ -18,7 +18,7 @@ local ZONE_PALETTE = {
 
 return {
 	-- 지형 버전(구역별 - 모양을 바꾸면 그 구역 숫자를 올리고 다시 굽는다). 서버 시작 때 Terrain Attribute TerrainVersion_<구역>과 다르면 경고만(런타임 생성 금지).
-	version = { hub = 2, tier1 = 2, tier2 = 2, tier3 = 2, tier4 = 2, tier5 = 2, tier6 = 2 }, -- M1-4: 커브길 · 외곽 테마 경계 · Basalt 색(전 구역 다시 굽기)
+	version = { hub = 2, tier1 = 2, tier2 = 2, tier3 = 3, tier4 = 2, tier5 = 2, tier6 = 2 }, -- M1-4: 커브길 · 외곽 테마 경계 · Basalt 색(전 구역 다시 굽기)
 	seed = 20260926,
 	voxel = 4, -- 로블록스 Terrain 해상도(고정)
 	-- 평지 높이 = 바닥 윗면 + flatLevel(도로 · 캠프 · 관문 판이 지형 위에 얹힌다 - 굽기 실측으로 맞춘 값). bottomY = 지형 바닥(심연 복귀선 −24 위에서 끝낸다).
@@ -117,8 +117,8 @@ return {
 			hills = 0.7,
 			peaks = {
 				{ r = 1330, lat = -700, h = 150, radius = 190 }, -- 샘 언덕(강의 발원)
-				{ r = 2860, lat = -460, h = 260, radius = 260, name = "파도 곶" },
-				{ r = 2850, lat = 360, h = 240, radius = 240 },
+				{ r = 2860, lat = -460, h = 260, radius = 150, name = "파도 곶" }, -- M1-4: 반경 260 → 150 · 240 → 140(해안 너머 바다를 두 곶이 덮어 안 보였다 - 좁은 곶으로)
+				{ r = 2850, lat = 360, h = 240, radius = 140 },
 			},
 			-- 물살 강: 샘(언덕 중턱) → 계단 폭포 → 평지 강 → 계곡(물 사이 - 절벽 벽 · 기슭 계단) → 바다 만. level = 수면(바닥 기준).
 			river = {
