@@ -562,7 +562,7 @@ function TerrainShape.naturalAt(x, z)
 			end
 		end
 		if R > E.backFill then -- 세계 끝 뒤(투명 벽 밖)는 채워 끝이 안 보이게 - 평평한 띠가 되지 않게 능선 결 · 잡음
-			v = math.max(v, FLAT + eh * 0.9 + ridge * 1.6 + fbm(x / 160, z / 160, s + 17, 3) * 70)
+			v = math.max(v, FLAT + eh * 0.5 + ridge * 2.2 + math.abs(fbm(x / 120, z / 120, s + 17, 3)) * 120) -- 봉우리보다 낮게 · 들쭉날쭉(평평한 띠가 윗선으로 보였다)
 		end
 		if v > h then
 			h = v

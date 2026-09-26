@@ -10,9 +10,9 @@ local ZONE_PALETTE = {
 	-- 재질 = Enum.Material 이름. 색은 재질마다 하나(Terrain:SetMaterialColor는 place 전체) - 구역마다 다른 재질을 써서 색을 가른다(카툰 질감 = A1 MaterialVariant).
 	tier1 = { ground = "Grass", ground2 = "LeafyGrass", slope = "Rock", cliff = "Rock", bed = "Mud" }, -- 석회암(흰색)은 비탈에서 눈처럼 보여 폐허 기둥에만
 	tier2 = { ground = "Slate", ground2 = "Pavement", slope = "Basalt", cliff = "Basalt", bed = "Slate" },
-	tier3 = { ground = "LeafyGrass", ground2 = "Grass", slope = "Mud", cliff = "Rock", bed = "Mud" },
+	tier3 = { ground = "LeafyGrass", ground2 = "Grass", slope = "Rock", cliff = "Rock", bed = "Mud" }, -- 진흙 비탈은 갈색 줄로 보여 바위로(M1-3 스크린샷)
 	tier4 = { ground = "Sand", ground2 = "Sandstone", slope = "Sandstone", cliff = "Sandstone", bed = "Sand" },
-	tier5 = { ground = "Ground", ground2 = "Asphalt", slope = "Cobblestone", cliff = "Rock", bed = "Ground" },
+	tier5 = { ground = "Ground", ground2 = "Basalt", slope = "Cobblestone", cliff = "Rock", bed = "Ground" }, -- 아스팔트 얼룩은 눈처럼 보여 현무암으로
 	tier6 = { ground = "Snow", ground2 = "Ice", slope = "Glacier", cliff = "Glacier", bed = "Ice" },
 }
 
@@ -51,7 +51,7 @@ return {
 	-- 재질 색(place 전체 - 굽기가 설정). 기존 WorldMapData 회색 · 구역 바닥 색 계열 + 자연색.
 	materialColors = {
 		Grass = { 106, 138, 78 }, LeafyGrass = { 88, 128, 70 }, Limestone = { 196, 190, 170 }, Rock = { 128, 124, 118 }, Mud = { 92, 76, 58 },
-		Slate = { 96, 100, 116 }, Pavement = { 120, 124, 140 }, Basalt = { 70, 72, 84 },
+		Slate = { 74, 70, 88 }, Pavement = { 90, 86, 104 }, -- 수정 동굴 바닥: 어두운 보랏빛 돌(밝으면 눈처럼 보였다) Basalt = { 70, 72, 84 },
 		Sand = { 214, 190, 138 }, Sandstone = { 186, 150, 104 },
 		Ground = { 112, 102, 90 }, Asphalt = { 84, 84, 92 }, Cobblestone = { 118, 114, 116 },
 		Snow = { 236, 240, 246 }, Ice = { 190, 222, 240 }, Glacier = { 160, 200, 226 },
