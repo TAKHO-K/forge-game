@@ -202,6 +202,7 @@ function Travel.pollRecall(player, now)
 	local from = root and root.Position or cast.origin
 	clearCast(player, st, nil)
 	st.hubAt = now
+	player:SetAttribute("RecallReadyAt", serverNow() + T.hubReturnCooldownSeconds) -- 클라 카드 "귀환 대기"
 	st.checkpoint = nil
 	if not WorldMapLayout.inHub(from) then
 		st.back = { position = from, untilAt = now + T.recall.backSeconds }
@@ -582,8 +583,8 @@ function Travel.start(downPads)
 					Travel.pollPlayer(player, root, humanoid, now)
 				end
 				local recall = Travel.pollRecall(player, now)
-				if recall == "hit" or recall == "boss" then
-					PartyState.notify(player, recall == "hit" and "귀환 취소 - 공격받았다" or "귀환 취소 - 보스전")
+				if recall == "boss" then
+					PartyState.notify(player, "귀환 취소 - 보스전") -- 맞아서 취소 = 세계 정보 카드 귀환 줄(M1-2 후속 - 한 틀) · 보스전 중엔 카드가 숨어 토스트로
 				end
 			end
 		end

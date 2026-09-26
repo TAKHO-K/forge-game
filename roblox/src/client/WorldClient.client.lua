@@ -130,18 +130,23 @@ hud.Name = "WorldHud"
 hud.ResetOnSpawn = false
 hud.Parent = player:WaitForChild("PlayerGui")
 
-local heightLabel = Instance.new("TextLabel")
-heightLabel.Name = "TreeHeightLabel"
-ScreenMap.place(heightLabel, "TC", "treeHeight")
-heightLabel.Size = UDim2.new(0, 220, 0, 36)
-heightLabel.BackgroundColor3 = UIColors.panel
-heightLabel.BackgroundTransparency = UIColors.panelTransparency
-heightLabel.TextColor3 = UIColors.textPrimary
-heightLabel.Font = Theme.font
-heightLabel.TextSize = Theme.textSize("body")
-heightLabel.Visible = false
-heightLabel.Parent = hud
-Theme.corner(heightLabel, 8)
+-- M1-2 후속(사용자): 지역명 = 오른쪽 위 [파티] 버튼 · 골드 칩 위에 작게(오른쪽 맞춤 한 줄 - 마을 · 구역 · 사냥터 / 나무를 오르면 높이 · 정거장).
+--   귀환 시전 · 쿨 · 돌아가기 시간은 [귀환] · [돌아가기] 버튼 글씨. 보스전 중엔 숨긴다.
+local regionLabel = Instance.new("TextLabel")
+regionLabel.Name = "RegionLabel"
+ScreenMap.place(regionLabel, "TR", "region")
+regionLabel.Size = UDim2.new(0, 0, 0, 22)
+regionLabel.AutomaticSize = Enum.AutomaticSize.X
+regionLabel.BackgroundColor3 = UIColors.panel
+regionLabel.BackgroundTransparency = UIColors.panelTransparency
+regionLabel.Font = Theme.font
+regionLabel.TextSize = Theme.textSize("caption")
+regionLabel.TextColor3 = UIColors.textPrimary
+regionLabel.Parent = hud
+Theme.corner(regionLabel, 6)
+local regionPad = Instance.new("UIPadding")
+regionPad.PaddingLeft, regionPad.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
+regionPad.Parent = regionLabel
 
 local function button(name, slotName, text)
 	local b = Instance.new("TextButton")
@@ -162,66 +167,65 @@ end
 local request = ReplicatedStorage:WaitForChild("TravelRequest", 30)
 local hubButton = button("TravelHubButton", "travelHub", "귀환")
 local partyButton = button("TravelPartyButton", "travelParty", "파티 곁")
-local backButton = button("TravelBackButton", "travelBack", "돌아가기") -- M1-2: 귀환한 자리로(5분 · 1회)
+local backButton = button("TravelBackButton", "travelBack", "돌아가기") -- M1-2: 귀환한 자리로(5분 · 1회 · 남은 시간 = 카드 귀환 줄)
 backButton.Visible = false
-backButton.Size = UDim2.new(0, 96, 0, Theme.isMobile and Theme.touchMin or 36) -- "돌아가기 4:59"가 들어가게
+backButton.Size = UDim2.new(0, 104, 0, Theme.isMobile and Theme.touchMin or 36) -- "돌아가기 4:59"가 들어가게
+-- [귀환] 버튼 안 시전 게이지(버튼 바탕을 왼쪽부터 채운다 - 글씨는 위)
+local castFill = Instance.new("Frame")
+castFill.Name = "CastFill"
+castFill.BackgroundColor3 = Color3.fromRGB(120, 190, 255)
+castFill.BackgroundTransparency = 0.25
+castFill.BorderSizePixel = 0
+castFill.Size = UDim2.fromScale(0, 1)
+castFill.Parent = hubButton
+Theme.corner(castFill, 8)
+local hubLabel = Instance.new("TextLabel") -- 자식은 부모 위에 그려지므로 글씨를 게이지 위 자식으로 둔다
+hubLabel.Name = "HubLabel"
+hubLabel.BackgroundTransparency = 1
+hubLabel.Size = UDim2.fromScale(1, 1)
+hubLabel.Font = Theme.font
+hubLabel.TextSize = Theme.textSize("body")
+hubLabel.TextColor3 = UIColors.textPrimary
+hubLabel.ZIndex = 2
+hubLabel.Parent = hubButton
+hubButton.Text = ""
+hubButton.Size = UDim2.new(0, 84, 0, Theme.isMobile and Theme.touchMin or 36) -- "귀환 0:42"가 들어가게
 backButton.Activated:Connect(function()
 	if request then
 		request:FireServer("back")
 	end
 end)
--- M1-2: 귀환 시전 막대(서버 Attribute RecallCastUntil = 끝나는 서버 시각) · 취소 문구(RecallCancel)
-local castBar = Instance.new("Frame")
-castBar.Name = "RecallCastBar"
-ScreenMap.place(castBar, "BC", "recallCast")
-castBar.Size = UDim2.new(0, 260, 0, 40) -- place는 자리만 정한다
-castBar.BackgroundColor3 = UIColors.panel
-castBar.BackgroundTransparency = UIColors.panelTransparency
-castBar.Visible = false
-castBar.Parent = hud
-Theme.corner(castBar, 8)
-local castFill = Instance.new("Frame")
-castFill.Name = "Fill"
-castFill.BackgroundColor3 = Color3.fromRGB(120, 190, 255)
-castFill.BorderSizePixel = 0
-castFill.Size = UDim2.fromScale(0, 1)
-castFill.Parent = castBar
-Theme.corner(castFill, 8)
-local castText = Instance.new("TextLabel")
-castText.Name = "CastText"
-castText.BackgroundTransparency = 1
-castText.Size = UDim2.fromScale(1, 1)
-castText.Font = Theme.font
-castText.TextSize = Theme.textSize("body")
-castText.TextColor3 = UIColors.textPrimary
-castText.Text = "마을로 귀환 중…"
-castText.ZIndex = 2
-castText.Parent = castBar
+-- 귀환 상태 = 버튼 글씨(서버 Attribute RecallCastUntil · RecallReadyAt · RecallBackUntil = 서버 시각 · 취소 = RecallCancel)
+--   [귀환] = 시전 중 "귀환 2.1"(+ 바탕 게이지) · 취소 "취소됨" 1.5초 · 쿨 "귀환 0:42"(흐리게) / [돌아가기] = "돌아가기 4:12"(남은 시간 - 그때만 보인다)
 local cancelShownUntil = 0
 player:GetAttributeChangedSignal("RecallCancelAt"):Connect(function()
-	local why = player:GetAttribute("RecallCancel")
-	castText.Text = why == "hit" and "귀환 취소 - 공격받았다" or "귀환 취소"
-	castFill.Size = UDim2.fromScale(0, 1)
-	castBar.Visible = true
 	cancelShownUntil = os.clock() + 1.5
 end)
+local function mmss(seconds)
+	local left = math.max(0, math.ceil(seconds))
+	return ("%d:%02d"):format(left // 60, left % 60)
+end
 RunService.RenderStepped:Connect(function()
-	local untilAt = player:GetAttribute("RecallCastUntil")
 	local now = Workspace:GetServerTimeNow()
-	if untilAt and untilAt > now then
-		local total = WorldMapData.travel.recall.castSeconds
-		castText.Text = ("마을로 귀환 중… %.1f"):format(untilAt - now)
-		castFill.Size = UDim2.fromScale(math.clamp(1 - (untilAt - now) / total, 0, 1), 1)
-		castBar.Visible = true
-	elseif os.clock() > cancelShownUntil then
-		castBar.Visible = false
-	end
+	local untilAt = player:GetAttribute("RecallCastUntil")
+	local readyAt = player:GetAttribute("RecallReadyAt")
 	local backUntil = player:GetAttribute("RecallBackUntil")
 	backButton.Visible = backUntil ~= nil and backUntil > now
 	if backButton.Visible then
-		local left = math.ceil(backUntil - now)
-		backButton.Text = ("돌아가기 %d:%02d"):format(left // 60, left % 60)
+		backButton.Text = "돌아가기 " .. mmss(backUntil - now)
 	end
+	local fill, text, dim = 0, "귀환", false
+	if untilAt and untilAt > now then
+		fill = math.clamp(1 - (untilAt - now) / WorldMapData.travel.recall.castSeconds, 0, 1)
+		text = ("귀환 %.1f"):format(untilAt - now)
+	elseif os.clock() < cancelShownUntil then
+		text = "취소됨"
+	elseif readyAt and readyAt > now then
+		text, dim = "귀환 " .. mmss(readyAt - now), true
+	end
+	castFill.Size = UDim2.fromScale(fill, 1)
+	hubLabel.Text = text
+	hubLabel.TextTransparency = dim and 0.45 or 0
 end)
 hubButton.Activated:Connect(function()
 	if request then
@@ -259,10 +263,21 @@ task.spawn(function()
 	anchor:GetPropertyChangedSignal("AbsoluteSize"):Connect(reposition)
 end)
 
--- 높이 표시 · 파티 버튼 보이기 · 관문 안내(0.2초마다)
+-- 지역 · 높이 줄 · 파티 버튼 보이기 · 관문 안내(0.2초마다)
 local function stationText()
 	local cp = player:GetAttribute("TreeCheckpoint")
 	return cp and (" · 정거장 %d"):format(cp) or ""
+end
+local function regionName(position)
+	if WorldMapLayout.inHub(position) then
+		return WorldMapData.hub.displayName
+	end
+	local range, rangeZone = WorldMapLayout.huntRangeAt(position)
+	if range then
+		return ("%s · %s"):format(rangeZone.theme, range.name)
+	end
+	local zone = WorldMapLayout.zoneAt(position)
+	return zone and zone.theme or "들판"
 end
 local lastGate = nil
 local elapsed = 0
@@ -275,14 +290,12 @@ RunService.Heartbeat:Connect(function(dt)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	partyButton.Visible = player:GetAttribute("InParty") == true
+	regionLabel.Visible = player:GetAttribute("BossEncounterId") == nil -- 보스전 중엔 숨김
 	if root then
 		local feet = root.Position - Vector3.new(0, 3, 0)
 		local above = feet.Y - WorldMapData.floorTopY
-		local nearTree = Vector3.new(feet.X, 0, feet.Z).Magnitude <= 160
-		heightLabel.Visible = nearTree and above > 12
-		if heightLabel.Visible then
-			heightLabel.Text = ("높이 %dm%s"):format(math.floor(above * TREE.metersPerStud + 0.5), stationText())
-		end
+		local climbing = Vector3.new(feet.X, 0, feet.Z).Magnitude <= 160 and above > 12
+		regionLabel.Text = climbing and ("큰 나무 · 높이 %dm%s"):format(math.floor(above * TREE.metersPerStud + 0.5), stationText()) or regionName(feet)
 	end
 	local gate = player:GetAttribute("BossGateZone")
 	if gate ~= lastGate then

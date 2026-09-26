@@ -171,6 +171,123 @@ function M1_2Verify.simulateCycles(cycles, seed)
 	return res
 end
 
+-- M1-2 후속(스폰 밀도 140 → 110 · 20 → 12초): 사냥꾼 한 명 시뮬(순수 - 실제 SpawnSites.tick + 리스폰 respawnDelay). mode = "stay"(한 지점에 서서 사냥 - 공급 상한) |
+--   "walk"(구역 지점을 가까운 순으로 돌며 지점마다 group.count마리를 잡고 다음 지점으로 - 걷기 16). killSeconds = 한 마리 처치 시간 · REACH 안에 들어가야 때린다.
+--   반환: 시간당 처치 · 몬스터가 없어 기다린 시간 비율(공급 부족) · 평균 · 최대 동시 몬스터 · 평균 켜진 지점
+function M1_2Verify.simulateHunter(mode, killSeconds, hours, zoneIndex)
+	local SpawnSites = require(script.Parent.SpawnSites)
+	local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+	local respawn = WorldConfig.zoneMonsterGrid.respawnDelaySeconds
+	local zoneKey = WorldMapData.zones[zoneIndex or 1].key
+	local list = {}
+	for _, p in ipairs(SpawnSites.buildPoints()) do
+		if p.zoneKey == zoneKey then
+			table.insert(list, p)
+		end
+	end
+	-- 걷는 순서 = 가까운 이웃 순회(첫 지점부터)
+	local route, used = { list[1] }, { [list[1]] = true }
+	while #route < #list do
+		local last, best, bestD = route[#route], nil, math.huge
+		for _, p in ipairs(list) do
+			if not used[p] then
+				local d = flat(p.position, last.position)
+				if d < bestD then
+					best, bestD = p, d
+				end
+			end
+		end
+		used[best] = true
+		table.insert(route, best)
+	end
+	local alive, pendingRespawn = {}, {}
+	local now = 0
+	local hooks = {
+		spawn = function(point, slot)
+			local m = { point = point, slot = slot, pos = slot.position }
+			alive[m] = true
+			return m
+		end,
+		alive = function(m) return alive[m] == true end,
+		engaged = function(m) return m.target == true end,
+		claim = function() return true end,
+		remove = function(m) alive[m] = nil end,
+	}
+	local SPEED, REACH, DT = 16, 10, 0.25
+	local pos = route[1].position
+	local stepIndex, target, hitLeft, pointKills, waited = 1, nil, 0, 0, 0
+	local kills, aliveSum, aliveMax, activeSum, ticks, nextTick = 0, 0, 0, 0, 0, 0
+	local total = hours * 3600
+	while now < total do
+		now += DT
+		if now >= nextTick then
+			nextTick = now + WorldMapData.spawnSites.checkSeconds
+			SpawnSites.tick(list, { pos }, now, hooks)
+			-- 리스폰(MonsterSpawner.respawnHook과 같은 규칙 - 지점이 켜져 있을 때만 그 슬롯에)
+			for i = #pendingRespawn, 1, -1 do
+				local e = pendingRespawn[i]
+				if now >= e.at then
+					table.remove(pendingRespawn, i)
+					if e.point.active and not (e.slot.model and alive[e.slot.model]) then
+						e.slot.model = hooks.spawn(e.point, e.slot)
+					end
+				end
+			end
+			local n, a = 0, 0
+			for _ in pairs(alive) do
+				n += 1
+			end
+			for _, p in ipairs(list) do
+				a += p.active and 1 or 0
+			end
+			aliveSum += n
+			aliveMax = math.max(aliveMax, n)
+			activeSum += a
+			ticks += 1
+		end
+		if target and not alive[target] then
+			target = nil
+		end
+		if not target then
+			-- 지금 지점의 살아 있는 몬스터(걷기 = 이 지점만 · 서 있기 = 어디든 가장 가까운)
+			local here = route[stepIndex]
+			local best, bestD = nil, 60
+			for m in pairs(alive) do
+				if mode == "stay" or (m.point == here and pointKills < WorldMapData.spawnSites.group.count) then
+					local d = flat(m.pos, pos)
+					if d < bestD then
+						best, bestD = m, d
+					end
+				end
+			end
+			if best then
+				target, hitLeft = best, killSeconds
+				best.target = true
+			elseif mode == "walk" and here.active and pointKills >= WorldMapData.spawnSites.group.count then
+				stepIndex, pointKills = stepIndex % #route + 1, 0 -- 이 지점 다 잡았다 → 다음 지점
+			elseif mode == "stay" then
+				waited += DT -- 서 있는데 잡을 몬스터가 없다(공급 부족)
+			end
+		end
+		local goal = target and target.pos or route[stepIndex].position
+		local d = flat(goal, pos)
+		if d > (target and REACH or 1) then
+			local dir = Vector3.new(goal.X - pos.X, 0, goal.Z - pos.Z).Unit
+			pos += dir * math.min(d, SPEED * DT)
+		elseif target then
+			hitLeft -= DT
+			if hitLeft <= 0 then
+				alive[target] = nil
+				kills += 1
+				pointKills += 1
+				table.insert(pendingRespawn, { point = target.point, slot = target.slot, at = now + respawn })
+				target = nil
+			end
+		end
+	end
+	return { killsPerHour = kills / hours, waitFraction = waited / total, aliveAvg = aliveSum / math.max(ticks, 1), aliveMax = aliveMax, activeAvg = activeSum / math.max(ticks, 1) }
+end
+
 -- ─────────────────────────── (가) ───────────────────────────
 function M1_2Verify.runPure()
 	print("===M1-2 검증 시작(가)===")
@@ -348,6 +465,27 @@ function M1_2Verify.runPure()
 			lowTop = math.min(lowTop, t.bottom)
 		end
 		r.check(("윗잎 층 %d장 · 가장 낮은 아래 가장자리 %d ≥ 785(전망대 760 눈높이 위)"):format(#tree.crownShape.topTiers, lowTop), lowTop >= 785)
+	end)
+	r.section("스폰 밀도(M1-2 후속)", function()
+		local S = D.spawnSites
+		local EconSimConfig = require(ReplicatedStorage.Shared.data.EconSimConfig)
+		r.check(("스폰 밀도 = 활성 반경 %d · 유지 %d초(사용자 확정 110 · 12)"):format(S.activateRadius, S.idleSeconds), S.activateRadius == 110 and S.idleSeconds == 12)
+		-- EconSim 수요(시간당 처치 = 3600 / (처치 + 이동 여유)) 대 서 있는 사냥꾼 공급 상한 · 걷는 사냥꾼(새 값 대 옛 값)
+		local rows, ok = {}, true
+		for _, id in ipairs({ "casual", "normal", "top" }) do
+			local prof = EconSimConfig.profiles[id]
+			local demand = 3600 / (prof.targetKillSeconds + prof.moveOverheadSeconds)
+			local stay = M1_2Verify.simulateHunter("stay", prof.targetKillSeconds, 2)
+			local walk = M1_2Verify.simulateHunter("walk", prof.targetKillSeconds, 2)
+			local a0, i0 = S.activateRadius, S.idleSeconds
+			S.activateRadius, S.idleSeconds = 140, 20
+			local walkOld = M1_2Verify.simulateHunter("walk", prof.targetKillSeconds, 2)
+			S.activateRadius, S.idleSeconds = a0, i0
+			table.insert(rows, ("%s 수요 %.0f/시 · 서서 %.0f(몬스터 없어 기다림 %.1f%%) · 걸어 %.0f(옛 %.0f) · 동시 몬스터 평균 %.1f 최대 %d(옛 %.1f · %d) · 켜진 지점 %.1f(옛 %.1f)"):format(
+				prof.displayName, demand, stay.killsPerHour, stay.waitFraction * 100, walk.killsPerHour, walkOld.killsPerHour, walk.aliveAvg, walk.aliveMax, walkOld.aliveAvg, walkOld.aliveMax, walk.activeAvg, walkOld.activeAvg))
+			ok = ok and stay.waitFraction == 0 and walk.killsPerHour == walkOld.killsPerHour and walk.aliveAvg < walkOld.aliveAvg
+		end
+		r.check("스폰 공급이 처치를 막지 않음(서 있는 사냥꾼 기다림 0 - 3마리 · 리스폰 5초 · EconSim은 스폰 값을 안 읽는다) · 걷는 사냥꾼 처치 같고 동시 몬스터 감소: " .. table.concat(rows, " / "), ok)
 	end)
 	local pass, total = r.summary()
 	print(("===M1-2 검증 끝(가)=== %d/%d 통과"):format(pass, total))

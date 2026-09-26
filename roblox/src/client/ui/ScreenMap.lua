@@ -58,11 +58,12 @@ ScreenMap.slots = {
 		tutorialToast = slot("existing", 0.5, 0, UDim2.new(0.5, 0, 0, 160), UDim2.new(0, 480, 0, 0), "TutorialToast", "TutorialHud.client.lua - 높이는 내용(AutomaticSize.Y)"),
 		toastLane = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 64), UDim2.new(0, 480, 0, 40), "ToastLane_TC", "Toast 줄 TC(시스템 · 1행 · 3초)"),
 		-- S19b: 보스 이름(22) + 체력바(16) 사이 2. 위 끝 12 · 아래 끝 52 - 토스트 줄(64) 바로 위, 중앙 금지 구역(높이 388에서 위 끝 97) 위, 칩 스택 · 파티 버튼(TR)과 가로로 안 겹친다(폭 360).
-		-- M1: 나무 높이 표시(오르는 동안만 - 발이 지면 위 12 넘게 · 줄기 둘레 160 안). 튜토리얼 토스트(160 · 내용 높이) 아래 - 견습은 나무를 안 오른다.
-		treeHeight = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 214), UDim2.new(0, 220, 0, 36), "TreeHeightLabel", "WorldClient.client.lua(M1) - '높이 123m · 정거장 2'"),
 		bossBar = slot("new", 0.5, 0, UDim2.new(0.5, 0, 0, 12), UDim2.new(0, 360, 0, 40), "BossBar", "hud/BossBar.client.lua(S19b) - 보스전 중에만 뜨는 보스 이름 + 체력바. 서버 모델 Attribute BossHpRatio를 0.1초마다 읽는다 - 머리 위 보스 바는 없다"),
 	},
 	TR = {
+		-- M1-2 후속(사용자): 지역명(작게 · 한 줄 · 오른쪽 맞춤) = [파티] 버튼 · 칩 스택(골드) 위. 위 끝 22 · 아래 끝 44(칩 스택 · 파티 버튼 위 끝 52 - 8). 보스전 중 숨김.
+		--   옛 나무 높이(TC 214) · 귀환 시전 막대(BC −170)는 폰 가로에서 중앙 금지 구역 안이었다 → 높이는 이 줄 · 귀환은 [귀환] · [돌아가기] 버튼 글씨로.
+		region = slot("new", 1, 0, UDim2.new(1, -14, 0, 22), nil, "RegionLabel", "WorldClient.client.lua(M1-2 후속) - 크기 = 글자(AutomaticSize X · 높이 22)"),
 		chipStack = slot("existing", 1, 0, UDim2.new(1, -14, 0, 52), nil, "TopChipsRow", "StageUI.client.lua - 골드(LayoutOrder 1) · 레벨(2) · 스테이지(3) · 설정(4) · 견습(5) 세로 스택, 간격 8. PRD 지도의 '골드 · 스테이지 칩'이 코드에서는 이 스택이다"),
 		partyToggle = slot("existing", 1, 0, UDim2.new(1, -99, 0, 52), UDim2.new(0, 72, 0, 36), "PartyToggleButton",
 			"panels/Party.lua(S12b) - '파티' 열기 버튼(P 키와 같은 창). 칩 스택 **왼쪽**, 위 끝을 칩 스택과 맞춘다(y 52). 오른쪽 끝 = 칩 스택 왼쪽 끝 - 8 - 칩 스택 폭이 늘면(골드 자릿수) 따라 움직인다(Party.lua followChipStack). 여기 기본값(-99)은 스택 폭 77일 때다. 세로 중앙 열(가방 버튼 · 투표 패널)은 이미 겹침이 있어 새 버튼을 놓지 않았다. 모바일은 높이 44"),
@@ -71,9 +72,9 @@ ScreenMap.slots = {
 		leaderboardToggle = slot("new", 1, 0, UDim2.new(1, -99, 0, 96), UDim2.new(0, 72, 0, 36), "LeaderboardToggleButton",
 			"panels/Leaderboard.lua(P3b) - '순위' 열기 버튼. 파티 버튼 아래 끝 + 8 · 오른쪽 끝 = 파티 버튼 오른쪽 끝. 모바일은 높이 44(파티 버튼도 44라 위 끝 = 52 + 44 + 8 = 104)"),
 		-- M1: [귀환](허브 - 쿨 60초) · [파티 곁](첫 다른 파티원 곁 - 파티일 때만) - [순위] 버튼 아래로 이어 붙는다(순위 버튼을 따라 움직인다 - WorldClient).
-		travelHub = slot("new", 1, 0, UDim2.new(1, -99, 0, 140), UDim2.new(0, 72, 0, 36), "TravelHubButton", "WorldClient.client.lua(M1) - 순위 버튼 아래 끝 + 8"),
+		travelHub = slot("new", 1, 0, UDim2.new(1, -99, 0, 140), UDim2.new(0, 84, 0, 36), "TravelHubButton", "WorldClient.client.lua(M1) - 순위 버튼 아래 끝 + 8 · 오른쪽 끝 맞춤 · 글씨 = 귀환 / 귀환 2.1(시전 게이지) / 취소됨 / 귀환 0:42(쿨)"),
 		-- M1-2: [돌아가기](귀환 뒤 5분 · 1회 - 그때만) = [귀환] 버튼 왼쪽 끝 - 8(같은 줄 - 파티 곁 버튼 자리를 밀지 않는다)
-		travelBack = slot("new", 1, 0, UDim2.new(1, -179, 0, 140), UDim2.new(0, 96, 0, 36), "TravelBackButton", "WorldClient.client.lua(M1-2) - 귀환 버튼 왼쪽 · 귀환 뒤 5분만"),
+		travelBack = slot("new", 1, 0, UDim2.new(1, -191, 0, 140), UDim2.new(0, 104, 0, 36), "TravelBackButton", "WorldClient.client.lua(M1-2) - 귀환 버튼 왼쪽 · 귀환 뒤 5분만 · 글씨 = 돌아가기 4:12"),
 		travelParty = slot("new", 1, 0, UDim2.new(1, -99, 0, 184), UDim2.new(0, 72, 0, 36), "TravelPartyButton", "WorldClient.client.lua(M1) - 귀환 버튼 아래 끝 + 8 · 파티일 때만"),
 		dropFeed = slot("new", 1, 0, UDim2.new(1, -14, 0, 52), UDim2.new(0, 300, 0, 78), "ToastLane_TR",
 			"Toast 줄 TR(드랍 피드 · 최대 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 넘치면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93 · 보완): 칩 스택 바로 아래(아래 끝 + 8)에 남은 자리만큼(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 구역 위 끝까지, 최대 3줄), 0줄이면 상단 가운데 띠 1줄(태초 배너가 있으면 그 아래 3)",
@@ -100,8 +101,6 @@ ScreenMap.slots = {
 		healthBar = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -94), UDim2.new(0, 394, 0, 19), "HealthBar", "PlayerHealthBar.client.lua"),
 		skillRow = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -31), nil, "CentralRow", "SkillSlots.client.lua - 슬롯 54 · 높이 54(모바일 터치 배치는 SkillSlots가 따로 정한다)"),
 		pickupPopup = slot("new", 0.5, 1, UDim2.new(0.5, 0, 1, -140), UDim2.new(0, 360, 0, 40), "ToastLane_BC", "Toast 줄 BC(획득 팝업 · 1행 · 묶기)"),
-		-- M1-2: 마을 귀환 시전 막대(3초) - 보스 잡힘 패널과 같은 자리(보스전 중에는 귀환이 안 되니 겹치지 않는다) · 중앙 금지 구역 아래
-		recallCast = slot("new", 0.5, 1, UDim2.new(0.5, 0, 1, -170), UDim2.new(0, 260, 0, 40), "RecallCastBar", "WorldClient.client.lua(M1-2) - 귀환 시전 중에만"),
 		bossTrap = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -170), UDim2.new(0, 260, 0, 58), "BossTrapPanel", "BossTrapView.lua - 보스 잡기 기믹에 잡혔을 때만 뜨는 카운트다운 · 구출 막대 패널(평소엔 숨김)"),
 	},
 	XP = {

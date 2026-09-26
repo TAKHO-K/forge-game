@@ -395,7 +395,8 @@ return {
 		pointSpacing = 120, pointsPerRange = 34, edgeMargin = 30, seed = 20260926,
 		avoid = { feature = 24, nest = 16, camp = 110, gate = 110 },
 		group = { count = 3, radius = 18 },
-		activateRadius = 140, keepRadius = 200, idleSeconds = 20, checkSeconds = 1.0, combatHoldSeconds = 10,
+		activateRadius = 110, keepRadius = 200, idleSeconds = 12, -- M1-3 전(M1-2 결정 2 사용자): 140 → 110 · 20 → 12초(걷는 1명당 동시 몬스터 줄이기)
+		checkSeconds = 1.0, combatHoldSeconds = 10,
 		-- 표시: 범위 바닥 = 구역 바닥보다 조금 진한 원판 + 경계 고리(얇은 판 조각) · 경계를 넘으면 화면 위쪽에 사냥터 이름(nameSeconds - 가운데 금지 구역 밖)
 		look = { tintScale = 0.9, ringSegments = 36, ringWidth = 3, nameSeconds = 2.5 },
 	},

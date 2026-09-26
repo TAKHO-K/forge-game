@@ -19,7 +19,8 @@ PanelRegistry.swallowedKeys = { [Enum.KeyCode.I] = true, [Enum.KeyCode.O] = true
 
 PanelRegistry.panels = {
 	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.B, menuOrder = 1, iconKey = "bag", menuLabel = "가방" },
-	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, menuOrder = 2, iconKey = "party", menuLabel = "파티" }, -- S12b: 파티창(panels/Party.lua). 채팅 입력 중 P는 UIManager가 gameProcessed로 무시한다.
+	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, iconKey = "party", menuLabel = "파티" }, -- S12b: 파티창(panels/Party.lua). 채팅 입력 중 P는 UIManager가 gameProcessed로 무시한다.
+	-- M1-2 후속(사용자): 메뉴바 파티 칸 삭제 - 여는 곳이 둘일 필요 없다(오른쪽 위 [파티] 버튼 · P 키만). menuOrder를 빼면 메뉴바 칸에서 빠진다.
 	-- S15: 스테이지 선택(StageSelectPanel.lua). 견습 중에는 UIManager의 canOpen이 막는다. S16: 메뉴바도 견습 중 · 직업 선택 전에는 이 버튼을 숨긴다(menuHiddenWhile).
 	{ id = "stageSelect", kind = "station", hotkey = Enum.KeyCode.M, menuOrder = 3, iconKey = "stage", menuLabel = "스테이지", menuHiddenWhile = { "tutorial", "noClass" } },
 	-- 예약(창이 없어 아직 등록하지 않는다 - 창을 만드는 세션이 한 줄 넣는다. PRD 20.81 [D-1] · [D-2]): O 상점(menuOrder 4) · K 펫(5) · J 보상(6번째부터는 "보상" 창의 탭으로 들어간다 - 출석 · 복귀 · 시즌패스 · 계절 토큰).

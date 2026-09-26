@@ -3,6 +3,7 @@
 -- 기본값·버전 이관만 안다 - 웹 core/save.js와 같은 역할, 같은 패턴(SAVE_VERSION+migrate()).
 
 local DataStoreService = game:GetService("DataStoreService")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
@@ -128,24 +129,33 @@ end
 -- Player_<id>_verify 키로 한다. 그래서 검증 블록이 프로필을 바꿔 놓은 채 Play가 멈춰도(S19 실측: S12(나) 도중 정지 → 견습 상태가 저장에 남음) 실제 프로필은
 -- 그대로다. 이 서버에서 그 플레이어를 처음 읽을 때 검증 키를 비워 실제 프로필로 새로 시작한다(지난 Play의 검증 상태가 이어지지 않는다). 검증 모드가 꺼져
 -- 있으면(사용자가 그냥 누른 Play · 라이브 서버) 이 함수는 항상 실제 키다.
-local function storeKey(player)
+-- M1-3 전(M1-2 결정 3 - 사용자 확정 A): 검증 모드가 아닌 Studio Play(수동 Play)도 같은 장치로 Player_<id>_manual 키에 쓴다 - 개발 계정 실제 프로필 오염 방지.
+--   수동 Play 진행은 다음 Play에 남지 않는다(서버마다 실제 프로필로 새로 시작). 라이브 서버는 항상 실제 키.
+local function studioSuffix()
 	if DevToolsConfig.verifyArmed then
-		return profileKey(player) .. "_verify"
+		return "_verify"
 	end
-	return profileKey(player)
+	if RunService:IsStudio() then
+		return "_manual"
+	end
+	return nil
 end
 
-local verifySeeded = {} -- userId → true(이 서버에서 검증 키를 비운 플레이어)
+local function storeKey(player)
+	return profileKey(player) .. (studioSuffix() or "")
+end
 
--- 저장된 원본(raw)을 읽는다. 검증 모드의 첫 읽기 = 검증 키를 비우고 실제 프로필을 시드로 읽는다. 그 뒤(재접속 · 왕복 검증)는 검증 키를 먼저 본다.
+local verifySeeded = {} -- userId → true(이 서버에서 검증 · 수동 키를 비운 플레이어)
+
+-- 저장된 원본(raw)을 읽는다. 검증 · 수동 Play의 첫 읽기 = 그 키를 비우고 실제 프로필을 시드로 읽는다. 그 뒤(재접속 · 왕복 검증)는 그 키를 먼저 본다.
 local function readStored(player)
-	if not DevToolsConfig.verifyArmed then
+	if not studioSuffix() then
 		return store:GetAsync(profileKey(player))
 	end
 	if not verifySeeded[player.UserId] then
 		store:RemoveAsync(storeKey(player))
 		verifySeeded[player.UserId] = true
-		print(("[SaveSystem] 검증 모드: %s 저장 키 = %s (실제 %s는 읽기만 - 쓰지 않는다)"):format(player.Name, storeKey(player), profileKey(player)))
+		print(("[SaveSystem] %s: %s 저장 키 = %s (실제 %s는 읽기만 - 쓰지 않는다)"):format(DevToolsConfig.verifyArmed and "검증 모드" or "수동 Play", player.Name, storeKey(player), profileKey(player)))
 	end
 	local raw = store:GetAsync(storeKey(player))
 	if raw ~= nil then
