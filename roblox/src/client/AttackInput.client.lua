@@ -175,6 +175,11 @@ local function performAttack(aimPoint, isAir)
 	if player:GetAttribute("IsChanneling") or player:GetAttribute("BossTrapKind") then
 		return -- 29-1: 잡힌 동안에도 같다(서버 BossTrap이 올린 Attribute - 판정은 서버)
 	end
+	if WeaponVisual.bufferInput(function()
+		performAttack(aimPoint, false)
+	end) then
+		return -- W1: 일어나는 중 = 끝나는 순간 낸다(입력 버퍼)
+	end
 	attackRequest:FireServer(aimPoint, isAir == true)
 	if isAir then
 		airAttacksThisAir += 1
@@ -407,9 +412,9 @@ attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit, isBuffedShot
 		return
 	end
 
-	-- 스윙이 아직 "발사 시점"(releaseT)에 안 닿았으면 그때까지 기다렸다가 쏜다(9-2/14-2 -
-	-- 시위가 안 당겨진 채로 화살이 나가는 어색함을 막는다). 서버도 같은 releaseT를
-	-- AttackMotionData(공유 정적 데이터)에서 읽어 피해 판정 시점을 맞춘다.
+	-- 스윙이 아직 "발사 시점"(타격 프레임)에 안 닿았으면 그때까지 기다렸다가 쏜다(9-2/14-2 -
+	-- 시위가 안 당겨진 채로 화살이 나가는 어색함을 막는다). 서버도 같은 시각을
+	-- MotionTiming(W1 - 공유 순수 함수)으로 계산해 피해 판정 시점을 맞춘다.
 	local releaseDelay = WeaponVisual.getReleaseDelay()
 	task.delay(releaseDelay, function()
 		local targetHead = monsterModel and monsterModel:FindFirstChild("Head")

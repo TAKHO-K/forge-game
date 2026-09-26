@@ -87,3 +87,26 @@ ReplicatedStorage
 Workspace.Ground.<구조물 모델>.<소품 Model(Attribute Prop = 이름)>
 MaterialService.<Terrain_<재질>>  (A1에서 넣는다)
 ```
+
+## 4. 플레이어 모션 · 무기 모델(W1 · 2026-09-27)
+
+### 4-1. 방식 = 코드로 재생하는 포즈 데이터(애니메이션 에셋 업로드 없음)
+
+| 비교 | (a) 포즈 데이터(채택) | (b) 애니메이션 에셋 |
+|---|---|---|
+| 라이브 실행 | 그대로 돈다(코드 · 데이터만 - Rojo · git) | 에셋을 **게임 소유자 계정으로 업로드**해야 재생된다(Studio 임시 등록은 Studio에서만 - 라이브 X) |
+| 누가 만드나 | 이 저장소(`shared/data/PlayerMotionData` 키 포즈 표) | 애니메이션 에디터 → 업로드(호영 수동) → id를 데이터에 |
+| 무기 교체 | 모션 그대로(쥐는 자리 = `WeaponRigSpec` · 보조 손 · 시위 = IK) | 무기 크기가 바뀌면 손 위치가 안 맞아 다시 만든다 |
+| 공격 속도 · 서버 시각 | 같은 순수 함수(`MotionTiming`)로 클라 재생 · 서버 원거리 발사 시각을 맞춘다 | 에셋 길이 · 이벤트 마커를 따로 맞춰야 한다 |
+| 한계 | 손가락 · 옷 등 세밀한 키는 없다(키 포즈 4개 + 이징) | 세밀한 곡선 가능 |
+
+- 재생 = `client/PoseRig`(관절 `Transform` · 직접 FK · 두 관절 IK) + `client/WeaponVisual`(모든 캐릭터). 관절 쓰기는 **`RunService.PreSimulation`**(애니메이터 다음 · 물리 전) - `RenderStepped`에 쓰면 애니메이터가 덮어써 물리에 안 들어간다(W1 실측). 무기 자리는 `RenderStepped`에서 실제 손 파트 기준.
+- 남의 화면: 서버 중계(`AttackMotion` 공격 · `AirMoveFx` 대시 · 일어나기) + 복제되는 Attribute(`ClassId` · `WeaponGrade` · `CombatUntil` · `Gliding` · `BossEncounterId`)로 각 클라가 같은 코드로 그린다.
+- 최종 다듬기(A2)에서 에셋 방식이 필요해지면: `PlayerMotionData` 키 포즈를 에디터로 옮겨 업로드 → 업로드 목록 = 무기 5 × (대기 · 이동 · 대시 · 1 ~ 3타 · 공중 · 일어나기 · 꺼내기) - 그때 "호영 업로드 필요"로 표시.
+
+### 4-2. 무기 교체 모델 절차
+
+1. 모델 축 규칙(`WeaponRigSpec` 머리 주석): 칼 · 망치 = +Z 끝 · +X 날 선 / 지팡이 = +Y 머리 / 활 = X 날개 · +Z 시위 쪽 / 방패 = −Z 앞면.
+2. 부착점: `Grip`(필수 - 쥐는 손 자리) · `Tip`(끝) · `Support`(양손 무기 보조 손) · `StringNock`(활 시위 가운데).
+3. `roblox/src/shared/WeaponModels/<직업>.rbxm`(쌍검 · 성기사 = 자식 이름 = 조각 이름 `BladeRight` · `BladeLeft` · `Shield` · `Hammer`) → Rojo가 `ReplicatedStorage.Shared.WeaponModels`로.
+4. 부팅 때 `WeaponRigCheck.check`가 O/X(길이 ±10% · 가장 긴 축 = 규격 축 · Tip이 끝 쪽 · 보조 손 거리 · 시위 점) - X면 경고하고 지금 메시를 쓴다.

@@ -23,7 +23,7 @@
 --     AttackServer가 거부, PRD 4.3 "채널링 3초는 평타 시간에서 뺀다"와 일치) - 20-7까지는
 --     막는 코드가 없어 opts.channelBlocksAutoAttack 기본값이 false였다. 이제 기본 true이고,
 --     false는 "차단 전 코드"와 비교할 때만 쓴다
---   · 원거리(활·힐러)는 발사 예비동작(AttackMotionData.releaseT)+비행시간(ProjectileConfig)
+--   · 원거리(활·힐러)는 발사 예비동작(W1 MotionTiming - 모션 타격 프레임)+비행시간(ProjectileConfig)
 --     뒤에 피해가 들어간다 - 측정 창(60초) 안에 도달하지 못한 발은 손실
 --   · 활 꽂히는 화살: 속사 중 "쏜" 평타가 명중하면 0.8초 뒤 개별 폭발, 몬스터당 4개 상한
 --     (초과분은 가장 오래된 것이 즉시 폭발 - StuckArrowState와 같은 규칙)
@@ -42,7 +42,6 @@ local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
-local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
@@ -236,8 +235,7 @@ function BalanceSim.simulateCombat(loadout, opts)
 	local atk = loadout.atk
 	local skills = SkillData[classId] or {}
 	local projectileKind = ProjectileConfig.kindByClass[classId]
-	local motion = AttackMotionData[classId]
-	local releaseDelay = (motion and motion.releaseT) and motion.releaseT * motion.totalDurationSeconds or 0
+	local releaseDelay = require(ReplicatedStorage.Shared.MotionTiming).serverSeconds(classId, 1, 1, false, false) -- W1: 발사 = 모션 타격 프레임(서버와 같은 함수 · ×1)
 	local travelTime = projectileKind and (targetDistance / ProjectileConfig.speedStudsPerSec[projectileKind]) or 0
 
 	-- 대상: [1]이 평타·난무 대상. targetHp가 있으면 [1]만 유한.

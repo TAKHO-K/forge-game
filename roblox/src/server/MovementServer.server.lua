@@ -17,11 +17,13 @@ local AirState = require(script.Parent.AirState)
 local FallServer = require(script.Parent.FallServer)
 local HeightGuard = require(script.Parent.HeightGuard)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local PlayerState = require(script.Parent.PlayerState)
+local PlayerMotionData = require(ReplicatedStorage.Shared.data.PlayerMotionData)
 
 AirState.start()
 FallServer.start()
 
-local KINDS = { flip = true, lean = true }
+local KINDS = { flip = true, lean = true, dash = true } -- W1: dash = 대시 무기 자세(표시만)
 
 local airMoveFx = Instance.new("RemoteEvent")
 airMoveFx.Name = "AirMoveFx"
@@ -50,6 +52,53 @@ airMoveFx.OnServerEvent:Connect(function(player, kind)
 		end
 	end
 end)
+
+-- ── W1 넘어짐 → 일어나기 ──
+-- 클라(넉백 · 회오리 · 붕괴 잠금 뒤 착지)가 알리면: 서버가 건 보스 발사(HeightGuard.grantLaunch)가 최근에 있었을 때만(발사 1건당 1회 소비 - W1 리뷰 1)
+-- 일어나는 동안 무적(PlayerMotionData.getup.invulnSeconds · 출처 "getup")을 주고 남에게 모션을 중계한다. 강제 이동 기록이 없으면 무적 · 중계 없음(클라 모션만).
+local playerGetup = Instance.new("RemoteEvent")
+playerGetup.Name = "PlayerGetup"
+playerGetup.Parent = ReplicatedStorage
+local lastGetupAt = {}
+local lastGetupStatus = {} -- 검증 훅
+local function handleGetup(player)
+	local G = PlayerMotionData.getup
+	local now = os.clock()
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
+		lastGetupStatus[player] = "dead"
+		return "dead"
+	end
+	if now - (lastGetupAt[player] or -math.huge) < G.minGapSeconds then
+		lastGetupStatus[player] = "gap"
+		return "gap"
+	end
+	if not HeightGuard.consumeForcedLaunch(player, G.serverWindowSeconds, now) then
+		lastGetupStatus[player] = "not_forced"
+		return "not_forced"
+	end
+	lastGetupAt[player] = now
+	PlayerState.setInvulnerableUntil(player, G.invulnSeconds, "getup")
+	for _, other in ipairs(Players:GetPlayers()) do
+		if other ~= player then
+			airMoveFx:FireClient(other, player, "getup")
+		end
+	end
+	lastGetupStatus[player] = "ok"
+	return "ok"
+end
+playerGetup.OnServerEvent:Connect(handleGetup)
+if RunService:IsStudio() then -- 검증 훅(W1(나)): 서버 execute_luau → ServerStorage.W1GetupHook:Invoke(player) = 상태 문자열
+	local hook = Instance.new("BindableFunction")
+	hook.Name = "W1GetupHook"
+	hook.OnInvoke = function(player, reset)
+		if reset then
+			lastGetupAt[player] = nil
+		end
+		return handleGetup(player)
+	end
+	hook.Parent = game:GetService("ServerStorage")
+end
 
 -- ── MV1 활강 상태 ──
 local glideState = Instance.new("RemoteEvent")
@@ -172,4 +221,6 @@ Players.PlayerRemoving:Connect(function(player)
 	glideOnAt[player] = nil
 	glideLastAt[player] = nil
 	lastLedgeAt[player] = nil
+	lastGetupAt[player] = nil
+	lastGetupStatus[player] = nil
 end)

@@ -161,6 +161,7 @@ function HeightGuard.grantLaunch(player, riseStuds, airSeconds, source)
 		return nil
 	end
 	local st = stateOf(player)
+	st.forcedLaunch = { at = os.clock(), used = false, source = source } -- W1 리뷰 1: 서버가 건 발사만 따로(일어나기 무적 = 1건당 1회 소비)
 	local base = HeightGuard.launchBaseFeet(st, root.Position.Y - MovementConfig.rootAboveFeetStuds, humanoid.FloorMaterial ~= Enum.Material.Air)
 	return HeightGuard.grantAt(st, base + riseStuds + JumpMath.airJumpsOnlyStuds() + PERMIT.marginStuds, airSeconds + PERMIT.bossExtraSeconds, source, os.clock())
 end
@@ -183,6 +184,19 @@ function HeightGuard.recentlyForced(player, graceSeconds, now)
 	end
 	now = now or os.clock()
 	return st.permit ~= nil or now - (st.permitSeenAt or -math.huge) <= graceSeconds or now <= st.exemptUntil + graceSeconds
+end
+
+-- W1 일어나기 무적: 서버가 건 보스 발사(grantLaunch - 넉백 · 회오리 · 던지기 · 판 털기)가 window초 안에 있었고 아직 안 썼으면 소비하고 true.
+-- 플레이어가 요청한 허가(점프대 · 통통 열매 · 붙잡기)와 붙잡힘 예외(exempt)는 넘어짐이 아니라 세지 않는다(리뷰 1 - 반복 무적 방지).
+function HeightGuard.consumeForcedLaunch(player, window, now)
+	local st = states[player]
+	local f = st and st.forcedLaunch
+	now = now or os.clock()
+	if not f or f.used or now - f.at > window then
+		return false
+	end
+	f.used = true
+	return true
 end
 
 -- 위반으로 되돌린 시각이 since(os.clock) 뒤에 있는가 - 리더보드가 그 보스전 시작 시각으로 묻는다.

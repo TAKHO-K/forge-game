@@ -5,6 +5,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local PlayerMotionData = require(ReplicatedStorage.Shared.data.PlayerMotionData) -- W1 전투 중 표시 길이
 local PlayerShield = require(script.Parent.PlayerShield)
 
 local PlayerState = {}
@@ -127,6 +128,13 @@ function PlayerState.setLastCombatActionAt(player, value)
 	local entry = players[player]
 	if entry then
 		entry.lastCombatActionAt = value
+		-- W1: 전투 중 표시(무기 꺼내기 · 수납 - 모든 클라가 읽는다: client/WeaponVisual). 서버 시각(GetServerTimeNow) · 1초 이상 늘 때만 쓴다(복제 줄이기)
+		if typeof(player) == "Instance" and player:IsA("Player") then
+			local untilAt = workspace:GetServerTimeNow() + PlayerMotionData.combatHoldSeconds
+			if untilAt - (player:GetAttribute("CombatUntil") or 0) >= 1 then
+				player:SetAttribute("CombatUntil", untilAt)
+			end
+		end
 	end
 end
 

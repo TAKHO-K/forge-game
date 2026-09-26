@@ -21,6 +21,7 @@ local SkillEffects = require(script.Parent.SkillEffects)
 local AirMotion = require(script.Parent.AirMotion)
 local GlideController = require(script.Parent.GlideController)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
+local WeaponVisual = require(script.Parent.WeaponVisual) -- W1 대시 무기 자세 · 일어나기 입력 버퍼
 
 local dashRequest = ReplicatedStorage:WaitForChild("DashRequest")
 local dashResult = ReplicatedStorage:WaitForChild("DashResult")
@@ -43,6 +44,9 @@ local function requestDash()
 	-- 18-1 [3] 모달 차단 - 창이 열려 있으면 대시가 안 나간다(지시).
 	if UIManager.isInputBlocked() then
 		return
+	end
+	if WeaponVisual.bufferInput(requestDash) then
+		return -- W1: 일어나는 중 = 끝나는 순간 낸다
 	end
 	local classId = player:GetAttribute("ClassId")
 	if not classId or classId == "" then
@@ -214,4 +218,6 @@ dashResult.OnClientEvent:Connect(function(data)
 	local classId = player:GetAttribute("ClassId")
 	local color = (classId and classId ~= "" and UIColors.classAccent[classId]) or UIColors.ember
 	SkillEffects.dashAfterimage(data.startPosition, data.endPosition, color, data.durationSeconds)
+	WeaponVisual.playDash(nil, data.durationSeconds) -- W1 대시 무기 자세(남에게는 중계 "dash")
+	airMoveFx:FireServer("dash")
 end)

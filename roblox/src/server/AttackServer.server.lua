@@ -25,6 +25,7 @@ local TutorialState = require(script.Parent.TutorialState)
 local BossHandlersBR1 = require(script.Parent.BossHandlersBR1) -- BR1-2 투사체 반사
 local AirState = require(script.Parent.AirState) -- MV1 공중 공격 예산 · 강공격 스택 초기화
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
+local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming) -- W1: 원거리 발사 시각 = 모션 타격 프레임(클라와 같은 함수)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -43,6 +44,12 @@ attackResult.Parent = ReplicatedStorage
 local attackLaunched = Instance.new("RemoteEvent")
 attackLaunched.Name = "AttackLaunched"
 attackLaunched.Parent = ReplicatedStorage
+
+-- W1 공격 모션 중계(남의 화면 - 무기 · 포즈는 각 클라가 그린다: client/WeaponVisual). 받아들인 공격만 (공격자, 콤보 수, 3타 강공격, 공중)으로 가까운 다른 사람에게.
+local attackMotion = Instance.new("RemoteEvent")
+attackMotion.Name = "AttackMotion"
+attackMotion.Parent = ReplicatedStorage
+local MOTION_SEND_STUDS = 220 -- client/WeaponVisual DRAW_RANGE_STUDS와 같게
 
 -- 처치 순간 골드 팝업(10-1)용. 골드 자체는 PlayerProfile.addGold가 Attribute로 이미
 -- 동기화한다 - 이 이벤트는 "방금 얼마 벌었다"는 일회성 연출 신호만 보낸다.
@@ -209,6 +216,12 @@ local function handleAttack(player, aimPoint, clientAir)
 	lastAttackDebug[player] = { status = "swing", isAir = isAir, isComboHit = isComboHit, combo = comboCounts[player] }
 	comboUpdate:FireClient(player, comboCounts[player], isComboHit)
 	player:SetAttribute("ComboStage", comboCounts[player] % CombatConfig.comboHitEvery) -- 남의 화면 무기 발광(M1-0 후속 - client/ComboGlow · 표시만)
+	for _, other in ipairs(Players:GetPlayers()) do -- W1 남의 화면 공격 모션
+		local root = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if root and (root.Position - rootPart.Position).Magnitude <= MOTION_SEND_STUDS then
+			attackMotion:FireClient(other, player, comboCounts[player], isComboHit, isAir)
+		end
+	end
 
 	-- aimPoint는 클릭·탭한 지점(AttackInput.client.lua) - 서버 검증: Vector3가 아니면
 	-- 무시한다(지시 - "클라가 보낸 방향을 그대로 믿으면 안 된다"). 방향이 없거나 이상한
@@ -353,8 +366,9 @@ local function handleAttack(player, aimPoint, clientAir)
 	-- 클라이언트 애니메이션 상태를 모르므로 "정상적으로 지금 막 스윙을 시작했다"고
 	-- 가정한 근사치다. 콤보로 스윙이 끊기고 새로 시작되는 드문 경우엔 클라 쪽 실제
 	-- 재생 시점과 몇십ms 어긋날 수 있지만, 피해 판정 자체(누가 맞았는가)에는 영향이 없다).
-	local motion = AttackMotionData[classId]
-	local releaseDelay = (motion and motion.releaseT) and motion.releaseT * motion.totalDurationSeconds or 0
+	-- W1: 발사 시각 = 모션 타격 프레임(MotionTiming - 공격 속도 배율 · 3타 · 공중 반영 · 클라 WeaponVisual과 같은 함수 - 시각표 W1 보고서 ④)
+	local motionSpeed = PlayerCombat.getSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player)) * buffSpeedMultiplier
+	local releaseDelay = MotionTiming.serverSeconds(classId, MotionTiming.comboIndex(comboCounts[player]), motionSpeed, isComboHit, isAir)
 	local travelTime = distance / ProjectileConfig.speedStudsPerSec[projectileKind]
 
 	task.delay(releaseDelay + travelTime, function()

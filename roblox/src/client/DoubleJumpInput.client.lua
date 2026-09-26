@@ -20,6 +20,7 @@ local AirMotion = require(script.Parent.AirMotion)
 local GlideController = require(script.Parent.GlideController)
 local LedgeGrab = require(script.Parent.LedgeGrab)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
+local WeaponVisual = require(script.Parent.WeaponVisual) -- W1 넘어짐 → 일어나기 · 남의 대시 자세
 
 local player = Players.LocalPlayer
 local cfg = MovementConfig.airJump
@@ -43,9 +44,17 @@ local GROUNDED = {
 }
 local AIR = { [Enum.HumanoidStateType.Jumping] = true, [Enum.HumanoidStateType.Freefall] = true }
 
+local playerGetup = ReplicatedStorage:WaitForChild("PlayerGetup")
+local GETUP_MIN_LOCK_SECONDS = 0.3 -- W1 리뷰 2: 잠긴(넉백 · 회오리 · 붕괴) 뒤 이만큼 날아갔다 떨어진 착지만 일어나기(잠기자마자 땅에 닿은 것은 아님)
+local lockedAt = -math.huge
 local function onLanded()
 	airborne = false
 	if not humanoid.PlatformStand then
+		if locked and os.clock() - lockedAt >= GETUP_MIN_LOCK_SECONDS and humanoid.Health > 0 then
+			-- W1: 넉백 · 회오리 · 붕괴로 날아갔다 착지 = 넘어짐 → 일어나기(0.8초 이내 · 서버가 강제 이동 기록을 보고 무적 · 남에게 중계)
+			WeaponVisual.playGetup(nil)
+			playerGetup:FireServer()
+		end
 		locked = false
 	end
 	character:SetAttribute("AirJumpsLeft", unlockedCharges())
@@ -76,6 +85,9 @@ local function bind(newCharacter)
 	end)
 	humanoid:GetPropertyChangedSignal("PlatformStand"):Connect(function()
 		if humanoid.PlatformStand then
+			if not locked then
+				lockedAt = os.clock()
+			end
 			locked = true -- 넉백 · 회오리: 풀린 뒤에도 착지할 때까지
 			character:SetAttribute("AirLocked", true)
 		end
@@ -127,8 +139,12 @@ end
 
 -- 남의 공중 점프 · 대시 모션(서버 중계).
 airMoveFx.OnClientEvent:Connect(function(who, kind)
-	local other = typeof(who) == "Instance" and who.Character
-	if other then
+	local other = typeof(who) == "Instance" and who:IsA("Player") and who.Character
+	if kind == "dash" then
+		WeaponVisual.playDash(who, DashConfig.durationSeconds) -- W1 대시 무기 자세
+	elseif kind == "getup" then
+		WeaponVisual.playGetup(who) -- W1 넘어짐 → 일어나기
+	elseif other then
 		AirMotion.play(other, kind, kind == "flip" and MovementConfig.airMotion.flipSeconds or DashConfig.durationSeconds)
 	end
 end)
@@ -140,6 +156,9 @@ ReplicatedStorage:WaitForChild("BossArenaObstacleBreak").OnClientEvent:Connect(f
 	end
 	local v = root.AssemblyLinearVelocity
 	root.AssemblyLinearVelocity = Vector3.new(v.X, math.min(v.Y, -data.dropSpeedStuds), v.Z)
+	if not locked then
+		lockedAt = os.clock()
+	end
 	locked = true
 	if character then
 		character:SetAttribute("AirLocked", true)
