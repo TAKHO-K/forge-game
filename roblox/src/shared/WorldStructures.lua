@@ -9,6 +9,7 @@ local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldStructureData = require(ReplicatedStorage.Shared.data.WorldStructureData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local Kits = require(ReplicatedStorage.Shared.WorldStructureKits)
+local PropKit = require(ReplicatedStorage.Shared.PropKit)
 
 local WorldStructures = {}
 local FLOOR = WorldMapData.floorTopY
@@ -397,49 +398,41 @@ local function buildColonnade(list, out)
 	local look = rotY(toHubDir(p.X, p.Z), C.face)
 	local cf = CFrame.lookAt(Vector3.new(p.X, FLAT, p.Z), Vector3.new(p.X, FLAT, p.Z) + look)
 	local m = "Struct_" .. C.zone .. "_ruins"
-	local stone = Kits.look(C.zone, "pillar")
-	prim(list, m, "RuinDais", Vector3.new(C.dais.w, C.dais.h + 2, C.dais.d), cf * CFrame.new(0, C.dais.h / 2 - 1, 0), stone.dark, { material = stone.material })
+	-- M1-4: 소품 라이브러리(PropData T1_Ruin*) - 모양 · 크기는 틀, 여기는 자리 · 배율만
+	PropKit.place(list, m, "T1_RuinDais", cf, Vector3.new(C.dais.w / 78, (C.dais.h + 2) / 3.2, C.dais.d / 26))
 	local idx = 0
 	for row = 1, C.rows do
 		for c = 1, C.cols do
 			idx += 1
 			local x, z = (c - (C.cols + 1) / 2) * C.spacing, (row - 1.5) * C.rowGap
-			local h = C.broken[idx] or C.h
-			prim(list, m, "RuinPillar", Vector3.new(h, C.dia, C.dia), cf * CFrame.new(x, C.dais.h + h / 2, z) * CFrame.Angles(0, 0, math.rad(90)), stone.color, { shape = "Cylinder", material = stone.material })
-			if not C.broken[idx] then
-				prim(list, m, "RuinCapital", Vector3.new(C.dia + 1.6, 1, C.dia + 1.6), cf * CFrame.new(x, C.dais.h + h + 0.5, z), stone.color, { material = stone.material })
+			local at = cf * CFrame.new(x, C.dais.h, z)
+			if C.broken[idx] then
+				PropKit.place(list, m, "T1_RuinPillarBroken", at, Vector3.new(C.dia / 3.6, C.broken[idx] / 8, C.dia / 3.6))
+			else
+				PropKit.place(list, m, "T1_RuinPillar", at, Vector3.new(C.dia / 3.6, C.h / 16, C.dia / 3.6))
 			end
 		end
 	end
 	for row = 1, C.rows do -- 들보 조각(몇 칸만 남음)
 		local z = (row - 1.5) * C.rowGap
-		prim(list, m, "RuinBeam", Vector3.new(C.spacing * 2 + 3, 1.6, C.dia), cf * CFrame.new(-C.spacing * 1.5 + (row - 1) * C.spacing * 2, C.dais.h + C.h + 1.8, z), stone.color, { material = stone.material })
+		PropKit.place(list, m, "T1_RuinBeam", cf * CFrame.new(-C.spacing * 1.5 + (row - 1) * C.spacing * 2, C.dais.h + C.h + 1, z), Vector3.new((C.spacing * 2 + 3) / 27, 1, C.dia / 3.6))
 	end
 	for i, k in ipairs(C.fallen) do
 		local x = (k - (C.cols + 1) / 2) * C.spacing
-		prim(list, m, "RuinFallen", Vector3.new(C.h - 2, C.dia, C.dia), cf * CFrame.new(x + 3, C.dais.h + C.dia / 2, C.rowGap * 0.9 + i * 3) * CFrame.Angles(0, math.rad(20 + i * 35), 0), stone.color, { shape = "Cylinder", material = stone.material })
+		PropKit.place(list, m, "T1_RuinFallen", cf * CFrame.new(x + 3, C.dais.h, C.rowGap * 0.9 + i * 3) * CFrame.Angles(0, math.rad(20 + i * 35), 0), Vector3.new((C.h - 2) / 14, C.dia / 3.6, C.dia / 3.6))
 	end
 	table.insert(out.pads, { x = p.X, z = p.Z, radius = C.dais.w / 2 + 6, blend = 30, level = FLAT, mode = "set", tag = "ruins" })
 	out.structures.colonnade = { center = p, cf = cf }
 end
 
-local function crystalCluster(list, model, cf, scale, look)
-	local spec = { { 0, 0, 9, 0, 0 }, { 2.2, 0.8, 6, 18, 20 }, { -2, 1.2, 5, -22, 50 }, { 0.8, -2.2, 4.5, 15, -40 }, { -1.4, -1.8, 3.5, -12, 130 } }
-	for _, s in ipairs(spec) do
-		local h = s[3] * scale
-		prim(list, model, "Crystal", Vector3.new(1.6 * scale, h, 1.6 * scale), cf * CFrame.new(s[1] * scale, 0, s[2] * scale) * CFrame.Angles(math.rad(s[4]), math.rad(s[5]), 0) * CFrame.new(0, h / 2 - 1, 0),
-			look.color, { material = look.material, transparency = 0.25, collide = false })
-	end
-end
 local function buildCrystals(list, out)
 	local C = WorldStructureData.crystals
 	local zone = zoneOf(C.zone)
-	local look = Kits.look(C.zone, "crystal")
 	local TerrainShape = require(ReplicatedStorage.Shared.TerrainShape)
 	for i, c in ipairs(C.clusters) do
 		local p = WorldMapLayout.toWorld(zone, c[1], c[2])
 		local y = TerrainShape.baseHeight(p.X, p.Z)
-		crystalCluster(list, "Struct_" .. C.zone .. "_crystals", CFrame.new(p.X, y, p.Z) * CFrame.Angles(0, i * 1.3, 0), c[3], look)
+		PropKit.place(list, "Struct_" .. C.zone .. "_crystals", "T2_CrystalCluster", CFrame.new(p.X, y, p.Z) * CFrame.Angles(0, i * 1.3, 0), c[3]) -- M1-4 소품 라이브러리
 	end
 end
 
@@ -447,7 +440,6 @@ local function buildCactus(list, out)
 	local C = WorldStructureData.cactus
 	local zone = zoneOf(C.zone)
 	local TerrainShape = require(ReplicatedStorage.Shared.TerrainShape)
-	local color = TerrainGenData.materialColors[C.material]
 	out.cactus = {}
 	for fi, f in ipairs(C.fields) do
 		local c = WorldMapLayout.toWorld(zone, f.r, f.lat)
@@ -476,12 +468,7 @@ local function buildCactus(list, out)
 				local y = TerrainShape.baseHeight(x, z)
 				local cf = CFrame.new(x, y, z) * CFrame.Angles(0, rand() * 6.28, 0)
 				local model = "Struct_" .. C.zone .. "_cactus" .. fi
-				prim(list, model, "Cactus", Vector3.new(h + 1, C.trunk, C.trunk), cf * CFrame.new(0, h / 2 - 0.5, 0) * CFrame.Angles(0, 0, math.rad(90)), color, { shape = "Cylinder", material = C.material, attrs = { Cactus = true } })
-				for _, s in ipairs({ -1, 1 }) do
-					local ah = h * (s > 0 and 0.45 or 0.6)
-					prim(list, model, "CactusArm", Vector3.new(2.2, C.arm, C.arm), cf * CFrame.new(s * 1.6, ah, 0), color, { material = C.material, collide = false })
-					prim(list, model, "CactusArm", Vector3.new(3, C.arm, C.arm), cf * CFrame.new(s * 2.4, ah + 1.6, 0) * CFrame.Angles(0, 0, math.rad(90)), color, { shape = "Cylinder", material = C.material, collide = false })
-				end
+				PropKit.place(list, model, "T4_Cactus", cf, Vector3.new(C.trunk / 2.2, h / 8, C.trunk / 2.2)) -- M1-4 소품 라이브러리(높이 8 틀 · y 배율)
 				table.insert(out.cactus, { x = x, z = z, y = y, h = h, radius = C.trunk / 2 + 2.4, touch = C.trunk / 2 + 1, field = fi }) -- touch = 몸통 + 팔 뿌리(팔 끝은 충돌 없음)
 			end
 		end

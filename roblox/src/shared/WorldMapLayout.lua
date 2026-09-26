@@ -1001,8 +1001,16 @@ local function buildLandmark(zone, list)
 	elseif m.kind == "monoliths" or m.kind == "spires" or m.kind == "iceWall" then
 		for i = 1, m.count do
 			local a = (i - 1) / m.count * 2 * math.pi
-			local w = m.kind == "iceWall" and 40 or 10
-			column(list, model, "Landmark", cf0 * CFrame.new(math.cos(a) * m.radius, 0, math.sin(a) * m.radius) * CFrame.Angles(0, a, 0), w, 10, m.height * (m.kind == "spires" and (0.6 + 0.4 * (i % 2)) or 1), cd, mat)
+			-- M1-4 소품 라이브러리(비석 · 수정 첨탑 · 얼음 벽 판 - 틀 높이 34 · 130 · 120에 y 배율)
+			local at = cf0 * CFrame.new(math.cos(a) * m.radius, 0, math.sin(a) * m.radius) * CFrame.Angles(0, a, 0)
+			local h = m.height * (m.kind == "spires" and (0.6 + 0.4 * (i % 2)) or 1)
+			local name, ref = "T1_Monolith", 34
+			if m.kind == "spires" then
+				name, ref = "T2_CrystalSpire", 130
+			elseif m.kind == "iceWall" then
+				name, ref = "T6_IceWallSlab", 120
+			end
+			require(ReplicatedStorage.Shared.PropKit).place(list, model, name, at, Vector3.new(1, h / ref, 1))
 		end
 	elseif m.kind == "temple" or m.kind == "pyramid" then
 		local layers = m.kind == "pyramid" and 6 or 4

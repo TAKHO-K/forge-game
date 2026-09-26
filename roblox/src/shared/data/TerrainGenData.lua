@@ -58,6 +58,10 @@ return {
 		Snow = { 236, 240, 246 }, Ice = { 190, 222, 240 }, Glacier = { 160, 200, 226 },
 	},
 	palette = ZONE_PALETTE,
+	-- M1-4 카툰 대비(A1): MaterialVariant 끼울 자리. 로블록스 재질 덮어쓰기(MaterialService:SetBaseMaterialOverride)는 **기본 재질마다 place 전체**라서
+	--   "구역별"은 구역마다 다른 기본 재질을 쓰는 지금 구조(palette)로 가른다. 이름 = prefix .. 기본 재질(예: "Terrain_Slate" = T2 바닥). 지금은 하나도 없다(기본 재질).
+	--   서버 부팅 때 MaterialService 아래(깊이 무관)에 그 이름의 MaterialVariant가 있으면 덮어쓰기를 켠다(TerrainBake.applyVariants) · 여러 구역이 같이 쓰는 재질 = docs/art/asset-pipeline.md 표.
+	materialVariants = { prefix = "Terrain_" },
 
 	-- ═══ 구역별 ═══ hills = 언덕 배율 · peaks = 봉우리(가우스 · 이름 있으면 랜드마크 - 구역당 200+ 1개 이상) · mesas = 솟은 대지(윗면 level · 가장자리 blend - 작을수록 절벽) ·
 	--   trails = 산길(점마다 level - 사이 선형 · 폭 width · 양옆 blend) · valleys = 골짜기(바닥 = 평지 − depth · 물 stream = 바닥 위 수심) · river = 물살 강(점마다 수면 level) ·

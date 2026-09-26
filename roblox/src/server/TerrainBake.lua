@@ -220,6 +220,31 @@ function TerrainBake.applyLook(terrain)
 	terrain.WaterReflectance = W.reflectance
 end
 
+-- M1-4 카툰 대비: MaterialVariant 자리(TerrainGenData.materialVariants). 지형 · 소품이 쓰는 기본 재질마다 "Terrain_<재질>" 변형이 MaterialService에 있으면 덮어쓰기를 켠다(없으면 기본).
+-- 런타임(서버 부팅)에 불러도 된다 - 복셀을 바꾸지 않는다. 반환: 켠 재질 이름 목록 · 자리(재질) 수
+function TerrainBake.applyVariants()
+	local MaterialService = game:GetService("MaterialService")
+	local prefix = G.materialVariants.prefix
+	local used = {}
+	for _, pal in pairs(G.palette) do
+		for _, name in pairs(pal) do
+			used[name] = true
+		end
+	end
+	used[G.snowMaterial], used[G.rockMaterial], used[G.hub.material] = true, true, true
+	local on, slots = {}, 0
+	for name in pairs(used) do
+		slots += 1
+		local v = MaterialService:FindFirstChild(prefix .. name, true)
+		if v and v:IsA("MaterialVariant") and v.BaseMaterial == Enum.Material[name] then
+			MaterialService:SetBaseMaterialOverride(Enum.Material[name], v.Name)
+			table.insert(on, name)
+		end
+	end
+	table.sort(on)
+	return on, slots
+end
+
 -- 표본 높이 해시(데이터를 바꾸고 다시 안 구웠는지 - 버전 숫자를 안 올린 경우도 잡는다)
 function TerrainBake.signature(key)
 	local x0, z0, x1, z1 = boundsOf(key)

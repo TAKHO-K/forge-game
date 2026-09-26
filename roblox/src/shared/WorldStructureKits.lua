@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local NestData = require(ReplicatedStorage.Shared.data.NestData)
+local PropKit = require(ReplicatedStorage.Shared.PropKit)
 local TerrainGenData = require(ReplicatedStorage.Shared.data.TerrainGenData)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 
@@ -137,7 +138,7 @@ function Kits.tree(ctx, list)
 	prim(list, ctx.model, "NestCrown", Vector3.new(1.2, T.top, T.top), cf * CFrame.new(0, spec.h - 0.6, 0) * CFrame.Angles(0, 0, math.rad(90)), WOOD.color, { shape = "Cylinder", material = "Wood" })
 	for k = 0, 2 do -- 잎(충돌 없음 - 둥지 위는 열려 있다: 옆으로 비껴 둔다)
 		local a = k / 3 * 2 * math.pi + ctx.jitter
-		prim(list, ctx.model, "NestLeaves", Vector3.new(14, 9, 14), cf * CFrame.new(math.cos(a) * 9, spec.h + 6, math.sin(a) * 9), LEAF.color, { material = LEAF.material, mesh = "Sphere", collide = false })
+		PropKit.place(list, ctx.model, "Common_LeafClump", cf * CFrame.new(math.cos(a) * 9, spec.h + 1.5, math.sin(a) * 9)) -- M1-4 소품 라이브러리(14 × 9 틀)
 	end
 	table.insert(protect, box(cf * CFrame.new(0, spec.h + 3.5, 0), Vector3.new(T.top / 2, 3, T.top / 2)))
 	return { spot = (cf * CFrame.new(0, spec.h, 0)).Position, leaps = leapsFor(heights, T.gap, spec.h), protect = protect, pads = { { radius = rc + T.pad / 2 + 4, blend = 34 } }, open = true }
@@ -419,7 +420,7 @@ function Kits.alcove(ctx, list)
 		prim(list, m, "HollowRoof", Vector3.new(2, 2 * R + 2, 2 * R + 2), cf * CFrame.new(0, h + 1, 0) * CFrame.Angles(0, 0, math.rad(90)), WOOD.color, { shape = "Cylinder", material = "Wood" })
 		for k = 0, 3 do
 			local a = k / 4 * 2 * math.pi + ctx.jitter
-			prim(list, m, "HollowLeaves", Vector3.new(18, 12, 18), cf * CFrame.new(math.cos(a) * 8, h + 22, math.sin(a) * 8), LEAF.color, { material = LEAF.material, mesh = "Sphere", collide = false })
+			PropKit.place(list, m, "Common_LeafClump", cf * CFrame.new(math.cos(a) * 8, h + 16, math.sin(a) * 8), Vector3.new(18 / 14, 12 / 9, 18 / 14)) -- M1-4 소품 라이브러리
 		end
 		for k = 1, 4 do -- 덩굴 커튼(통과)
 			prim(list, m, "VineCurtain", Vector3.new(0.4, doorH + 3, 0.4), cf * CFrame.new(-2 + (k - 1) * 1.3, (doorH + 3) / 2, -R + 0.4), LEAF.color, { material = LEAF.material, collide = false })
@@ -511,8 +512,7 @@ function Kits.alcove(ctx, list)
 			prim(list, m, "NestHint", Vector3.new(1, 1, 1), doorCf * CFrame.new(0, doorH + 2, -4), { 0, 0, 0 }, { collide = false, transparency = 1, attrs = { NestHint = hint } })
 			if hint == "birds" then -- 앉은 새(몸 · 머리 - 소리 에셋 없음)
 				local perch = cf * CFrame.new(1.5, h + t + (noMound and 0.6 or A.mound + 0.6), 0)
-				prim(list, m, "Bird", Vector3.new(1.2, 0.9, 1.6), perch, { 90, 70, 60 }, { material = "SmoothPlastic", mesh = "Sphere", collide = false })
-				prim(list, m, "Bird", Vector3.new(0.7, 0.7, 0.7), perch * CFrame.new(0, 0.5, -0.7), { 90, 70, 60 }, { material = "SmoothPlastic", mesh = "Sphere", collide = false })
+				PropKit.place(list, m, "Common_Bird", perch * CFrame.new(0, -0.45, 0)) -- M1-4 소품 라이브러리
 			end
 		end
 	end

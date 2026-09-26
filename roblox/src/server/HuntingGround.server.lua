@@ -196,6 +196,8 @@ local meta, counts = WorldMap.build()
 -- M1-3: 굽힌 지형 표식(버전 · 표본 서명)이 데이터와 같은가 - 다르면 경고만(런타임 생성 금지 · 다시 굽기 = Studio edit)
 task.spawn(function()
 	require(script.Parent.TerrainBake).checkVersion()
+	local on, slots = require(script.Parent.TerrainBake).applyVariants() -- M1-4 MaterialVariant 자리(있으면 끼움)
+	print(("[forge-game] 지형 재질 변형 자리 %d · 켠 것 %d%s"):format(slots, #on, #on > 0 and (" (" .. table.concat(on, ", ") .. ")") or ""))
 end)
 require(script.Parent.NestServer).start() -- M1-3 둥지 3트랙(프롬프트 · 순환 · 번개 문 · 동기화)
 do

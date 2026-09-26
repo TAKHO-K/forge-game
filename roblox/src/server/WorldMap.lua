@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local GroundProbe = require(script.Parent.GroundProbe)
+local PropLibrary = require(script.Parent.PropLibrary)
 
 local WorldMap = {}
 
@@ -110,9 +111,14 @@ function WorldMap.build()
 	local root = GroundProbe.folder()
 	local prims, meta = WorldMapLayout.buildAll()
 	local models, counts = {}, {}
+	local libN, libCustom = PropLibrary.ensureAll()
 	for _, p in ipairs(prims) do
 		local m = modelAt(root, models, p.model)
-		makePart(p).Parent = m
+		if p.prop then -- M1-4 소품 = 라이브러리 모델 복제(shared/PropKit · server/PropLibrary)
+			PropLibrary.instantiate(p).Parent = m
+		else
+			makePart(p).Parent = m
+		end
 		local top = p.model:match("^[^%.]+")
 		counts[top] = counts[top] or { parts = 0, decor = 0 }
 		counts[top].parts += 1
@@ -123,7 +129,11 @@ function WorldMap.build()
 	-- 먼 풍경 대체: 공식 LevelOfDetail(StreamingMesh)은 런타임 스크립트가 못 쓴다(Studio 실측 - "lacking capability Plugin") → 나무 · 빛기둥 · 랜드마크(파트가 적다)를
 	-- Persistent(modelAt에서 부모에 붙이기 전에)로 두어 멀리서도 늘 보이게 한다. 파트 수 = 부팅 로그.
 	-- 빛기둥 · 관문 = BossData gate.color(도형 색에 이미 들어 있다 - M1-3) · 등록 전/뒤 밝기는 클라(사람마다)
-	print(("[forge-game] M1 맵: 도형 %d · Persistent = 나무 · 빛기둥 · 랜드마크"):format(#prims))
+	local propPlaced = 0
+	for _, n in pairs(PropLibrary.counts()) do
+		propPlaced += n
+	end
+	print(("[forge-game] M1 맵: 도형 %d · 소품 라이브러리 %d종(교체 모델 %d) · 소품 배치 %d · Persistent = 나무 · 빛기둥 · 랜드마크"):format(#prims, libN, libCustom, propPlaced))
 	built = { models = models, meta = meta, counts = counts }
 	workspace:GetAttributeChangedSignal("Season"):Connect(function()
 		WorldMap.setSeason(workspace:GetAttribute("Season"))
