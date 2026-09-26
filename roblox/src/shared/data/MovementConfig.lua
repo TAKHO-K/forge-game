@@ -39,7 +39,7 @@ return {
 	ledgeGrab = {
 		reachStuds = 2.6, maxRiseSpeed = 8, minLedgeAboveFeet = 2.5, maxLedgeAboveFeet = 7.5, standClearStuds = 5.5, hangBelowStuds = 4.2,
 		hangMaxSeconds = 4, climbInStuds = 2.4, climbSeconds = 0.22,
-		serverTolerance = 3, pointSlackStuds = 12, permitMarginStuds = 3, permitSeconds = 6, requestGapSeconds = 0.3, -- 허가 = 매달리는 순간 요청(오르기 전에 서버에 닿게) · 매달림 최대 + 여유
+		serverTolerance = 3, pointSlackStuds = 12, permitMarginStuds = 0, permitSeconds = 4.8, requestGapSeconds = 0.3, -- 허가 = 매달리는 순간 요청(오르기 전에 서버에 닿게) · 매달림 4 + 오르기 0.22 + 여유 · 높이 여유는 HeightGuard 허가 여유(permit.marginStuds)만(리뷰 2: 두 겹이었다)
 	},
 
 	-- MV1 낙하(사용자 결정 · 보완): 판정 = 착지 순간 수직 속도(공중 점프 · 활강으로 떨어지는 속도를 죽이면 산다 = "낙법") → 환산 높이 h = v² ÷ 2g(MoveRules.fallHeightOf).
@@ -55,6 +55,9 @@ return {
 		safeMarginStuds = 3, lethalHeight = 360, flameWarnFraction = 0.5,
 		knockdownSeconds = 1.6, charredSeconds = 5, permitGraceSeconds = 1.0,
 		reportMaxSpeed = 2000, reportMinGapSeconds = 0.3,
+		-- 리뷰 1(보안): 보고 = 서버가 본 체공과 맞아야 인정 - 서버 체공 세션이 끝난 지 reportWindowSeconds 안(또는 진행 중)이고 체공 시간 ≥ 보고 속도의 자유 낙하 시간(v ÷ g) × airtimeSlack.
+		--   쓰러져 일어날 때 체력 = min(떨어지기 전 체력, 최대 × reviveHpCapFraction)(최소 1) - 낮은 체력에서 일부러 떨어져 가득 회복하는 길을 막는다(결정 요청).
+		reportWindowSeconds = 1.5, airtimeSlack = 0.7, reviveHpCapFraction = 0.3,
 		flame = { size = 6, heat = 12, maxDistance = 220 }, -- 불꽃 꼬리(로블록스 기본 Fire + Trail · 새 에셋 없음)
 		charredColor = Color3.fromRGB(22, 24, 29), charredBlend = 0.65, -- 그을림 = 어두운 채움 Highlight(채움 불투명도 = charredBlend · 끝나면 지운다) · 색 = UIColors.metalBottom 값 재사용(새 색 금지)
 	},

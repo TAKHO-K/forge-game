@@ -11,7 +11,7 @@ AirState.debugPaused = false
 local states = {} -- [Player] = { grounded, groundPos, session, sessionCount }
 
 -- 서버가 이 사람을 공중으로 보는 동안 "공중 공격" 판정을 강제하는 체공 길이(클라 신호 없이도 - 긴 활강 · 낙하 중 지상 신호 위조 방지).
-AirState.airSanitySeconds = 1.0
+AirState.airSanitySeconds = 0.6 -- 리뷰 3: 1단 점프 체공(0.54) 정도 - 그보다 오래 공중이면 지상 신고라도 공중으로 센다(단, 발밑 가까이 = 막 착지는 지상 - AttackServer)
 -- 이만큼 이어진 체공만 "떴다"로 센다(강공격 스택 초기화 - 요철 · 계단에서 잠깐 Air인 것은 세지 않는다).
 AirState.takeoffMinSeconds = 0.15
 
@@ -33,6 +33,7 @@ end
 function AirState.step(st, grounded, pos, climbing, now)
 	if grounded then
 		if st.session then
+			st.session.endedAt = now
 			st.lastSession = st.session -- 착지 보고(낙하 판정)가 서버 착지보다 늦게 와도 그 체공을 읽는다
 		end
 		st.grounded = true
@@ -117,6 +118,16 @@ local function groundedNow(character, humanoid, root)
 		return require(script.Parent.WorldHazards).inWater(root.Position), false
 	end
 	return false, false
+end
+
+-- 발밑 가까이(landingSlackStuds 안)에 땅이 있는가 - 서버가 아직 공중으로 보는 막 착지한 요청을 지상으로 받는다(리뷰 8: 긴 체공 뒤 착지 순간 공격이 거부됐다).
+AirState.landingSlackStuds = 4.5
+local groundParams = RaycastParams.new()
+groundParams.FilterType = Enum.RaycastFilterType.Exclude
+groundParams.RespectCanCollide = true
+function AirState.nearGround(player, root)
+	groundParams.FilterDescendantsInstances = { player.Character }
+	return workspace:Raycast(root.Position, Vector3.new(0, -(3 + AirState.landingSlackStuds), 0), groundParams) ~= nil
 end
 
 function AirState.forget(player)

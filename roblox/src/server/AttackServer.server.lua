@@ -163,7 +163,7 @@ local function handleAttack(player, aimPoint, clientAir)
 	-- MV1 공중 공격: 클라가 공중이라고 보냈거나(clientAir) 서버가 AirState.airSanitySeconds 넘게 공중으로 본 요청 = 공중 공격.
 	-- 예산(MoveRules.airAttackBudget - 해금된 공중 점프 + 이번 체공의 공중 대시)을 넘거나 해금 전이면 거부(쿨다운 · 콤보를 건드리지 않는다 - 요청이 없던 것과 같다).
 	local session = AirState.session(player)
-	local isAir = session ~= nil and (clientAir == true or now - session.since >= AirState.airSanitySeconds)
+	local isAir = session ~= nil and (clientAir == true or (now - session.since >= AirState.airSanitySeconds and not AirState.nearGround(player, rootPart)))
 	local tier = MoveRules.tierOf(player)
 	if isAir then
 		if session.airAttacks >= MoveRules.airAttackBudget(tier, session.airDashes) then

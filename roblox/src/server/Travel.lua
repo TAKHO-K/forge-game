@@ -159,6 +159,7 @@ function Travel.teleport(player, position, why)
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.CFrame = CFrame.new(position) * root.CFrame.Rotation
 	HeightGuard.reset(player)
+	require(script.Parent.AirState).reset(player, position) -- MV1 리뷰 7: 순간이동 = 체공 끝(공중 대시 · 공격 횟수 · 쓰러짐 안전 지점이 옛 자리에 남지 않게)
 	TeleportArrival.mark(player, position)
 	stateOf(player).teleportAt = os.clock()
 	print(("[forge-game] 이동(%s): %s → (%.0f, %.0f, %.0f) · 미리 불러오기 %s(%.2f초)"):format(why or "?", player.Name, position.X, position.Y, position.Z, streamed and "성공" or "실패", waited))

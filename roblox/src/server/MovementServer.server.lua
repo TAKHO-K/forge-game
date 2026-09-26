@@ -56,8 +56,14 @@ local glideState = Instance.new("RemoteEvent")
 glideState.Name = "GlideState"
 glideState.Parent = ReplicatedStorage
 local glideOnAt = {} -- [Player] = os.clock()
+local glideLastAt = {} -- 리뷰 4: 요청 간격(표시 스팸 방지)
 
 glideState.OnServerEvent:Connect(function(player, on)
+	local now = os.clock()
+	if now - (glideLastAt[player] or -math.huge) < 0.15 then
+		return
+	end
+	glideLastAt[player] = now
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then
@@ -93,6 +99,7 @@ local LEDGE = MovementConfig.ledgeGrab
 local lastLedgeAt = {}
 local ledgeParams = RaycastParams.new()
 ledgeParams.FilterType = Enum.RaycastFilterType.Exclude
+ledgeParams.RespectCanCollide = true -- 리뷰 2: 비충돌 파트(투명 구역 볼륨 등)를 모서리로 인정하지 않는다
 
 -- 서버가 모서리 윗면을 찾는다: 클라가 보낸 점(XZ)이 서버가 본 루트에서 수평 pointSlackStuds 안이면, 그 점의 윗면 높이 + 여유에서 아래로.
 -- 높이 기준 = 마지막 지면(HeightGuard supportY - 없으면 지금 발). 서버가 보는 루트는 복제 지연만큼 늦어(0.25초에 수 ~ 20 stud) 지금 발로 재면 모서리 아래(벽 안)에서 광선이 시작했다(MV1 실측 - 거절 mismatch).
@@ -123,8 +130,10 @@ local function handleLedge(player, ledgePoint, wallDir)
 	if flat.Magnitude < 0.5 then
 		return "bad_dir"
 	end
-	local session = AirState.currentOrLastSession(player)
-	if not session or session.ledgeUsed then
+	local session = AirState.session(player) -- 리뷰 2: 지금 공중일 때만(땅에서 직전 체공의 몫을 쓰지 못하게)
+	if not session then
+		return "not_air"
+	elseif session.ledgeUsed then
 		return "used"
 	end
 	local topY, feetY = ledgeTopFor(character, root, ledgePoint)
@@ -161,5 +170,6 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	lastRelayAt[player] = nil
 	glideOnAt[player] = nil
+	glideLastAt[player] = nil
 	lastLedgeAt[player] = nil
 end)

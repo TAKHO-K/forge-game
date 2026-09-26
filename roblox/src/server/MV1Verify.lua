@@ -418,6 +418,8 @@ function V.runLive(player, env)
 		PlayerState.setHp(player, maxHp)
 		local function land(speed, flags)
 			task.wait(MovementConfig.fall.reportMinGapSeconds + 0.05)
+			-- 리뷰 1: 보고는 서버 체공과 맞아야 한다 - 방금 끝난 긴 체공(5초)을 세워 둔다
+			st.lastSession = { id = -1, since = os.clock() - 5, endedAt = os.clock(), takeoffPos = spot, airDashes = 0, airAttacks = 0, ledgeUsed = false, fromLadder = false }
 			return FallServer.onLanded(player, speed, flags)
 		end
 		local n = land(90)
@@ -440,6 +442,18 @@ function V.runLive(player, env)
 		r.check(("제외: 보스 %s · 물 %s · 사다리 %s · 발사 허가 %s · 나무 둘레 %s · 체력 그대로 %s"):format(eb, ew, el, ep, et, tostring(PlayerState.getHp(player) == maxHp)),
 			eb == "excluded:boss" and ew == "excluded:water" and el == "excluded:ladder" and ep == "excluded:permit" and et == "excluded:tree" and PlayerState.getHp(player) == maxHp)
 		task.wait(MovementConfig.fall.permitGraceSeconds + 0.1)
+		-- 리뷰 1: 서버 체공과 안 맞는 보고(위조) - 체공 없음 · 짧은 체공 · 오래전 체공
+		task.wait(MovementConfig.fall.reportMinGapSeconds + 0.05)
+		st.session, st.lastSession = nil, nil
+		local f1 = FallServer.onLanded(player, 400)
+		task.wait(MovementConfig.fall.reportMinGapSeconds + 0.05)
+		st.lastSession = { id = -2, since = os.clock() - 0.3, endedAt = os.clock(), takeoffPos = spot }
+		local f2 = FallServer.onLanded(player, 400)
+		task.wait(MovementConfig.fall.reportMinGapSeconds + 0.05)
+		st.lastSession = { id = -3, since = os.clock() - 10, endedAt = os.clock() - 5, takeoffPos = spot }
+		local f3 = FallServer.onLanded(player, 400)
+		r.check(("위조 보고 거절: 체공 없음 %s · 체공 0.3초에 속도 400 %s · 5초 전 체공 %s · 체력 그대로 %s"):format(f1, f2, f3, tostring(PlayerState.getHp(player) == maxHp)),
+			f1 == "excluded:no_air" and f2 == "excluded:short_air" and f3 == "excluded:no_air" and PlayerState.getHp(player) == maxHp)
 		-- 쓰러짐: 치명 속도 → 고정 · 그을림 → knockdownSeconds 뒤 안전 지점 · 체력 가득
 		st.groundPos = spot
 		PlayerState.setHp(player, maxHp * 0.5)
@@ -448,15 +462,15 @@ function V.runLive(player, env)
 		task.wait(MovementConfig.fall.knockdownSeconds + 0.6)
 		local moved = require(script.Parent.Travel).lastTeleport
 		local standGap = moved and moved.player == player and (moved.position - (spot + Vector3.new(0, 3, 0))).Magnitude or math.huge
-		r.check(("치명 400 → %s(쓰러짐 %s · 고정 %s · 그을림 %s) → %.1f초 뒤 일어남 %s · 체력 %.0f/%.0f · 부활 자리 ↔ 안전 지점 + 3 = %.1f"):format(k, tostring(knocked), tostring(anchored), tostring(charred ~= nil), MovementConfig.fall.knockdownSeconds,
+		r.check(("치명 400 → %s(쓰러짐 %s · 고정 %s · 그을림 %s) → %.1f초 뒤 일어남 %s · 부활 체력 %.0f/%.0f · 부활 자리 ↔ 안전 지점 + 3 = %.1f"):format(k, tostring(knocked), tostring(anchored), tostring(charred ~= nil), MovementConfig.fall.knockdownSeconds,
 			tostring(character:GetAttribute("FallKnockdown") == nil), PlayerState.getHp(player), maxHp, standGap),
-			k == "knockdown" and knocked == true and anchored and charred ~= nil and character:GetAttribute("FallKnockdown") == nil and PlayerState.getHp(player) == maxHp and standGap < 0.5)
+			k == "knockdown" and knocked == true and anchored and charred ~= nil and character:GetAttribute("FallKnockdown") == nil and near(PlayerState.getHp(player), maxHp * MovementConfig.fall.reviveHpCapFraction, 1e-6) and standGap < 0.5) -- 부활 체력 = min(떨어지기 전 50%, 최대 × 0.3)
 		root.Anchored = true
 		root.CFrame = CFrame.new(spot)
 		PlayerState.setHp(player, maxHp * 0.1)
 		local kd = land(200) -- 피해가 체력보다 크면 죽지 않고 쓰러짐
 		task.wait(MovementConfig.fall.knockdownSeconds + 0.6)
-		r.check(("체력 10%%에서 속도 200(피해 %.0f%%) → %s(사망 대신 쓰러짐) · 체력 %.0f"):format(MoveRules.fallOutcome(200).fraction * 100, kd, PlayerState.getHp(player)), kd == "knockdown" and PlayerState.getHp(player) == maxHp)
+		r.check(("체력 10%%에서 속도 200(피해 %.0f%%) → %s(사망 대신 쓰러짐) · 체력 %.0f"):format(MoveRules.fallOutcome(200).fraction * 100, kd, PlayerState.getHp(player)), kd == "knockdown" and near(PlayerState.getHp(player), maxHp * 0.1, 1e-6)) -- 부활 체력 = 떨어지기 전(10%) - 일부러 떨어져 회복 못 함
 		root.Anchored = true
 		root.CFrame = CFrame.new(spot)
 	end)
@@ -491,7 +505,7 @@ function V.runLive(player, env)
 		r.check(("태초 아님 %s · 태초 장갑 %s(허가 %s ≤ %.1f · 기대 %.1f) · 같은 체공 두 번째 %s · 높이 불일치 %s · 땅(체공 없음) %s"):format(noGloves, okCall, permit and tostring(permit.source) or "없음", permit and permit.maxFeetY or -1,
 			top + MovementConfig.ledgeGrab.permitMarginStuds + MovementConfig.permit.marginStuds, used, mismatch, grounded),
 			noGloves == "no_gloves" and okCall == "ok" and permit ~= nil and permit.source == "ledge" and near(permit.maxFeetY, top + MovementConfig.ledgeGrab.permitMarginStuds + MovementConfig.permit.marginStuds, 0.05)
-				and used == "used" and (mismatch == "mismatch" or mismatch == "no_ledge") and grounded == "used")
+				and used == "used" and (mismatch == "mismatch" or mismatch == "no_ledge") and grounded == "not_air")
 		wall:Destroy()
 		PlayerProfile.setEquippedDirect(player, "gloves", originalGloves)
 		HeightGuard.reset(player)

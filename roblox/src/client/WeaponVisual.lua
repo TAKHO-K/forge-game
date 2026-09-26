@@ -213,19 +213,20 @@ local function buildWeapon(classId, colorOverride)
 
 	-- MV1 무기 모델 규격(WeaponRigSpec): 쥐는 손 · 손잡이 점 · 배율만 여기서 적용한다(모션은 W1). 손잡이 점(원본 단위 × 배율)이 손에 오도록 무기를 옮긴다.
 	local rig = WeaponRigSpec[classId]
-	local grips, hands = {}, {}
+	local grips, hands, poses = {}, {}, {}
 	for _, piece in ipairs(rig and rig.pieces or {}) do
 		local scale = piece.refLength / piece.nativeLength
 		local key = piece.name or "main"
 		grips[key] = piece.grip * scale
 		hands[key] = piece.hand
+		poses[key] = { tilt = CFrame.Angles(math.rad(-(piece.readyTiltDeg or 0)), 0, 0), roll = CFrame.Angles(0, 0, math.rad(piece.edgeRollDeg or 0)) }
 		local part = (piece.name and instances.parts and instances.parts[piece.name]) or instances.part
 		local mesh = part and part:FindFirstChildOfClass("SpecialMesh")
 		if mesh then
 			mesh.Scale = Vector3.new(scale, scale, scale)
 		end
 	end
-	return { classId = classId, model = model, motion = motion, kind = model.kind, instances = instances, swingStartTime = nil, grips = grips, rigHands = hands }
+	return { classId = classId, model = model, motion = motion, kind = model.kind, instances = instances, swingStartTime = nil, grips = grips, rigHands = hands, poses = poses }
 end
 
 local function refresh()
@@ -368,8 +369,12 @@ local function updateMeleeAlike(hands, model, motion, instances, alpha, singlePa
 		end
 
 		local angle = evalKeyframes(partMotion.keyframes, alpha, "angle")
-		local grip = current.grips[model.kind == "mesh_pair" and partMotion.name or "main"] or Vector3.zero -- MV1 규격: 손잡이 점을 손에(휘두르기 축도 손잡이)
-		part.CFrame = hand.CFrame * gripOffset * rotationCFrame((current.air and motion.air and motion.air.swingAxis) or partMotion.swingAxis, angle) * CFrame.new(-grip) -- MV1 공중 전용 베기
+		local key = model.kind == "mesh_pair" and partMotion.name or "main"
+		local grip = current.grips[key] or Vector3.zero -- MV1 규격: 손잡이 점을 손에(휘두르기 축도 손잡이)
+		local pose = current.poses[key]
+		-- 준비 자세 기울기(휘두르기 호 앞) · 날 선이 앞(휘두르기 뒤 - 날 축을 돈다)
+		part.CFrame = hand.CFrame * gripOffset * (pose and pose.tilt or CFrame.identity) * rotationCFrame((current.air and motion.air and motion.air.swingAxis) or partMotion.swingAxis, angle)
+			* (pose and pose.roll or CFrame.identity) * CFrame.new(-grip) -- MV1 공중 전용 베기
 
 		local trail = model.kind == "mesh_pair" and instances.trails[partMotion.name] or instances.trail
 		if trail then

@@ -38,30 +38,33 @@ function FallServer.context(player, flags, now)
 	}
 end
 
-local function stand(player, position)
+local function stand(player, position, reviveHp)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or humanoid.Health <= 0 or not character:GetAttribute("FallKnockdown") then
+		return -- 리뷰 6: 쓰러짐 중에 죽었으면(리스폰 대기) 시체를 옮기거나 체력을 채우지 않는다
 	end
 	root.Anchored = false
 	if position then
 		require(script.Parent.Travel).teleport(player, position + Vector3.new(0, 3, 0), "낙하 쓰러짐 → 마지막 안전 지점")
 		AirState.reset(player, position)
 	end
-	PlayerState.setHp(player, PlayerState.getMaxHp(player))
+	PlayerState.setHp(player, reviveHp)
 	PlayerDamage.syncHud(player)
 	character:SetAttribute("FallKnockdown", nil)
 end
 
 -- 쓰러짐: 그 자리에 고정 · 무적 → knockdownSeconds 뒤 안전 지점에서 일어남.
-function FallServer.knockdown(player)
+function FallServer.knockdown(player, hpBefore)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root or character:GetAttribute("FallKnockdown") then
 		return false
 	end
 	local safe = AirState.safePosition(player)
+	local maxHp = PlayerState.getMaxHp(player)
+	local reviveHp = math.max(1, math.min(hpBefore or maxHp, maxHp * F.reviveHpCapFraction)) -- 리뷰 1: 일부러 떨어져 회복하는 길을 막는다
 	PlayerState.setInvulnerableUntil(player, F.knockdownSeconds + 0.5, "fallKnockdown")
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.Anchored = true
@@ -70,7 +73,7 @@ function FallServer.knockdown(player)
 	print(("[forge-game] 낙하 쓰러짐: %s → %.1f초 뒤 안전 지점 %s"):format(player.Name, F.knockdownSeconds, tostring(safe)))
 	task.delay(F.knockdownSeconds, function()
 		if player.Parent and player.Character == character then
-			stand(player, safe)
+			stand(player, safe, reviveHp)
 		end
 	end)
 	return true
@@ -92,6 +95,17 @@ function FallServer.onLanded(player, speed, flags)
 	if out.kind == "none" then
 		return "none"
 	end
+	-- 리뷰 1(보안): 서버가 본 체공과 맞는 보고만 - 체공 세션이 진행 중이거나 막 끝났고, 체공 시간 ≥ 보고 속도의 자유 낙하 시간 × 여유
+	local session = AirState.currentOrLastSession(player)
+	if not session or (session.endedAt and now - session.endedAt > F.reportWindowSeconds) then
+		entry.excluded = "no_air"
+		return "excluded:no_air"
+	end
+	local airtime = (session.endedAt or now) - session.since
+	if airtime < speed / MovementConfig.gravity * F.airtimeSlack then
+		entry.excluded = "short_air"
+		return "excluded:short_air"
+	end
 	local why = MoveRules.fallExcluded(FallServer.context(player, flags, now))
 	if why then
 		entry.excluded = why
@@ -104,7 +118,7 @@ function FallServer.onLanded(player, speed, flags)
 	local damage = PlayerState.getMaxHp(player) * out.fraction
 	if out.kind == "knockdown" or hp - damage <= 0 then
 		entry.kind = "knockdown"
-		FallServer.knockdown(player)
+		FallServer.knockdown(player, hp)
 		return "knockdown"
 	end
 	PlayerDamage.takeDamage(player, damage, { label = ("낙하 %.0f"):format(speed), ignoresShield = true })

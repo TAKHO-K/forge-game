@@ -8,6 +8,8 @@
 --     tipAxis        날 · 화살 · 머리 방향(모델 로컬 축 - "+Z" 등). 휘두르기 · 궤적 · 이펙트 자리가 이 축을 따른다.
 --     refLength      기준 크기(끝에서 끝 · stud) - 지금 메시의 원본 길이(nativeLength)에서 배율 = refLength ÷ nativeLength(균일).
 --     nativeLength   지금 메시의 원본 길이(측정 - MV1 눈금 스크린샷). 새 모델로 바꾸면 그 모델의 길이로 적는다.
+--     edgeRollDeg    날 축을 도는 각 - 날 선(칼날)이 앞을 보게(지금 칼 메시는 넓은 면이 앞을 봐서 손이 날을 관통해 보였다 - 사용자 지적).
+--     readyTiltDeg   준비 자세 - 칼끝을 앞으로 기울이는 각(휘두르기 호 전체가 이만큼 앞으로 - 대기 · 공격 모션 자체는 W1).
 --     support        양손 무기의 보조 손(LeftHand) 자리 = 모델 로컬 좌표(배율 전) - 팔 자세(IK)는 W1(지금은 규격만).
 --     sheath         비전투 시 자리: mount = "back"(UpperTorso) | "hip"(LowerTorso) · offset = 그 몸 파트 기준 CFrame(W1에서 넣고 빼기 모션과 함께 쓴다 - 지금은 규격만).
 -- MV1 적용 범위(사용자): 지금 모델을 규격대로 "잡는 방식만" 고친다(손 · 손잡이 점 · 배율) - 대기 · 공격 · 공중 모션은 W1, 스킬 모션은 K, 최종 다듬기는 A2.
@@ -19,7 +21,7 @@ return {
 	greatsword = {
 		hands = "both",
 		pieces = {
-			{ hand = "RightHand", grip = SWORD_GRIP, tipAxis = "+Z", refLength = 5.5, nativeLength = SWORD_NATIVE,
+			{ hand = "RightHand", grip = SWORD_GRIP, tipAxis = "+Z", refLength = 5.5, nativeLength = SWORD_NATIVE, edgeRollDeg = 90, readyTiltDeg = 35,
 				support = Vector3.new(0, 0, -1.6), -- 오른손 바로 아래(자루 끝 쪽) - 양손 대검
 				sheath = { mount = "back", offset = CFrame.new(0, 0, 0.7) * CFrame.Angles(0, 0, math.rad(40)) } },
 		},
@@ -27,9 +29,9 @@ return {
 	dualblade = {
 		hands = "pair",
 		pieces = {
-			{ name = "BladeRight", hand = "RightHand", grip = SWORD_GRIP, tipAxis = "+Z", refLength = 2.6, nativeLength = SWORD_NATIVE,
+			{ name = "BladeRight", hand = "RightHand", grip = SWORD_GRIP, tipAxis = "+Z", refLength = 2.6, nativeLength = SWORD_NATIVE, edgeRollDeg = 90, readyTiltDeg = 35,
 				sheath = { mount = "hip", offset = CFrame.new(0.9, 0, 0.3) * CFrame.Angles(math.rad(-20), 0, 0) } },
-			{ name = "BladeLeft", hand = "LeftHand", grip = SWORD_GRIP, tipAxis = "+Z", refLength = 2.6, nativeLength = SWORD_NATIVE,
+			{ name = "BladeLeft", hand = "LeftHand", grip = SWORD_GRIP, tipAxis = "+Z", refLength = 2.6, nativeLength = SWORD_NATIVE, edgeRollDeg = 90, readyTiltDeg = 35,
 				sheath = { mount = "hip", offset = CFrame.new(-0.9, 0, 0.3) * CFrame.Angles(math.rad(-20), 0, 0) } },
 		},
 	},
