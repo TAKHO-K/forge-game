@@ -33,13 +33,13 @@ return {
 	-- MV1 태초 장갑 = 붙잡기(사용자 수정 - 딜 · 공격 횟수 · 공속 영향 0): 공중에서 벽 · 절벽 모서리에 닿으면 매달린다 → 점프 키로 올라선다. 한 체공 1회(착지하면 다시 찬다).
 	--   잡는 조건(클라 - 매 프레임): 떨어지는 중이거나 느리게 오르는 중(세로 속도 ≤ maxRiseSpeed) · 앞 reachStuds 안에 벽 · 그 벽 윗면(모서리)이 발 위 minLedgeAboveFeet ~ 손 높이(maxLedgeAboveFeet) ·
 	--     모서리 위 standClearStuds 높이가 비었다(올라설 자리). 매달림 = 루트 고정(모서리 − hangBelowStuds) · hangMaxSeconds 뒤 저절로 놓는다 · 점프 = 모서리 위 climbInStuds 안쪽으로 올라섬.
-	--   서버(합법 동작 등록): 클라가 LedgeClimb(모서리 윗면 · 벽 방향)를 보내면 서버가 광선으로 모서리를 다시 확인하고(serverTolerance) 태초 장갑 · 체공 1회를 확인한 뒤
+	--   서버(합법 동작 등록): 클라가 LedgeClimb(모서리 윗점 · 벽 방향)를 보내면 서버가 그 점 위에서 광선으로 모서리를 다시 확인하고(serverTolerance · 점이 서버가 본 루트에서 수평 pointSlackStuds 안) 태초 장갑 · 체공 1회를 확인한 뒤
 	--     HeightGuard 허가(발 최고 = 모서리 + permitMarginStuds · permitSeconds)를 준다 - 허가 없이 오르면 옛 규칙대로 되돌린다. 올라서기 = 새 지면(기준이 모서리 위로 옮는다).
 	--   대공 잡기의 공중 시간 규칙은 그대로다(매달림 = 공중 - 보스 BossAirGrab이 그대로 센다).
 	ledgeGrab = {
 		reachStuds = 2.6, maxRiseSpeed = 8, minLedgeAboveFeet = 2.5, maxLedgeAboveFeet = 7.5, standClearStuds = 5.5, hangBelowStuds = 4.2,
 		hangMaxSeconds = 4, climbInStuds = 2.4, climbSeconds = 0.22,
-		serverTolerance = 3, permitMarginStuds = 3, permitSeconds = 6, requestGapSeconds = 0.3, -- 허가 = 매달리는 순간 요청(오르기 전에 서버에 닿게) · 매달림 최대 + 여유
+		serverTolerance = 3, pointSlackStuds = 12, permitMarginStuds = 3, permitSeconds = 6, requestGapSeconds = 0.3, -- 허가 = 매달리는 순간 요청(오르기 전에 서버에 닿게) · 매달림 최대 + 여유
 	},
 
 	-- MV1 낙하(사용자 결정 - 불꽃과 낙사): 판정 = 착지 순간 수직 속도(높이가 아님) → 공중 점프 · 활강으로 떨어지는 속도를 죽이면 산다("낙법").

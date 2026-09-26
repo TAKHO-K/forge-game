@@ -123,8 +123,9 @@ function MoveRules.fallExcluded(ctx)
 end
 
 -- ── 붙잡기(태초 장갑) 서버 확인 ──
--- 클라가 보낸 모서리 윗면 높이(ledgeY)와 서버가 광선으로 찾은 윗면(serverTopY)이 serverTolerance 안이고, 모서리가 발 위 손 높이 안(서버가 본 발 feetY 기준 + 지연 여유)인가.
-function MoveRules.ledgeClimbValid(ledgeY, serverTopY, feetY)
+-- 클라가 보낸 모서리 윗면 높이(ledgeY)와 서버가 그 점 위에서 광선으로 찾은 윗면(serverTopY)이 serverTolerance 안이고,
+-- 모서리가 "마지막 지면(baseY - HeightGuard 기준) + 한 체공 최대 도달(높이 허용치) + 손 높이" 안인가 - 서버가 보는 지금 발은 복제 지연(0.25)만큼 늦어 쓰지 않는다(MV1 실측).
+function MoveRules.ledgeClimbValid(ledgeY, serverTopY, baseY)
 	local L = MovementConfig.ledgeGrab
 	if type(ledgeY) ~= "number" or ledgeY ~= ledgeY or not serverTopY then
 		return false, "no_ledge"
@@ -132,7 +133,7 @@ function MoveRules.ledgeClimbValid(ledgeY, serverTopY, feetY)
 	if math.abs(ledgeY - serverTopY) > L.serverTolerance then
 		return false, "mismatch"
 	end
-	if serverTopY - feetY > L.maxLedgeAboveFeet + L.serverTolerance then
+	if serverTopY - baseY > require(ReplicatedStorage.Shared.JumpMath).heightGuardAllowance() + L.maxLedgeAboveFeet + L.serverTolerance then
 		return false, "too_high"
 	end
 	return true

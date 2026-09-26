@@ -67,7 +67,7 @@ local function startHang(character, root, ledgeY, normal, wallPoint)
 	}
 	character:SetAttribute("LedgeUsed", true)
 	character:SetAttribute("LedgeHanging", true)
-	ledgeClimb:FireServer(ledgeY, facing)
+	ledgeClimb:FireServer(Vector3.new(wallPoint.X, ledgeY, wallPoint.Z) + facing * 0.6, facing) -- 모서리 윗점(벽 안쪽 0.6 - 서버가 그 점 위에서 다시 잰다)
 end
 
 local function endHang(character)

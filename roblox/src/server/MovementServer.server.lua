@@ -94,18 +94,21 @@ local lastLedgeAt = {}
 local ledgeParams = RaycastParams.new()
 ledgeParams.FilterType = Enum.RaycastFilterType.Exclude
 
--- 서버가 모서리 윗면을 찾는다: 루트에서 벽 방향 reach + 0.6 앞, 발 위 손 높이 + 여유에서 아래로.
-local function ledgeTopFor(character, root, wallDir)
+-- 서버가 모서리 윗면을 찾는다: 클라가 보낸 점(XZ)이 서버가 본 루트에서 수평 pointSlackStuds 안이면, 그 점의 윗면 높이 + 여유에서 아래로.
+-- 높이 기준 = 마지막 지면(HeightGuard supportY - 없으면 지금 발). 서버가 보는 루트는 복제 지연만큼 늦어(0.25초에 수 ~ 20 stud) 지금 발로 재면 모서리 아래(벽 안)에서 광선이 시작했다(MV1 실측 - 거절 mismatch).
+local function ledgeTopFor(character, root, point)
 	ledgeParams.FilterDescendantsInstances = { character }
 	local feetY = root.Position.Y - MovementConfig.rootAboveFeetStuds
-	local probe = Vector3.new(root.Position.X, feetY, root.Position.Z) + wallDir * (LEDGE.reachStuds + 0.6)
-	local from = probe + Vector3.new(0, LEDGE.maxLedgeAboveFeet + LEDGE.serverTolerance + 1, 0)
-	local hit = Workspace:Raycast(from, Vector3.new(0, -(LEDGE.maxLedgeAboveFeet + LEDGE.serverTolerance * 2 + 2), 0), ledgeParams)
+	if Vector3.new(point.X - root.Position.X, 0, point.Z - root.Position.Z).Magnitude > LEDGE.pointSlackStuds then
+		return nil, feetY
+	end
+	local from = Vector3.new(point.X, point.Y + LEDGE.serverTolerance + 1, point.Z)
+	local hit = Workspace:Raycast(from, Vector3.new(0, -(LEDGE.serverTolerance * 2 + 2), 0), ledgeParams)
 	return hit and hit.Position.Y, feetY
 end
 
 -- 반환 = "ok" | 거절 사유(검증 MV1(나)가 직접 부른다).
-local function handleLedge(player, ledgeY, wallDir)
+local function handleLedge(player, ledgePoint, wallDir)
 	local now = os.clock()
 	if now - (lastLedgeAt[player] or -math.huge) < LEDGE.requestGapSeconds then
 		return "throttled"
@@ -113,7 +116,7 @@ local function handleLedge(player, ledgeY, wallDir)
 	lastLedgeAt[player] = now
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root or typeof(wallDir) ~= "Vector3" or not PlayerProfile.hasLedgeGrab(player) then
+	if not root or typeof(wallDir) ~= "Vector3" or typeof(ledgePoint) ~= "Vector3" or not PlayerProfile.hasLedgeGrab(player) then
 		return "no_gloves"
 	end
 	local flat = Vector3.new(wallDir.X, 0, wallDir.Z)
@@ -124,8 +127,9 @@ local function handleLedge(player, ledgeY, wallDir)
 	if not session or session.ledgeUsed then
 		return "used"
 	end
-	local topY, feetY = ledgeTopFor(character, root, flat.Unit)
-	local ok, why = MoveRules.ledgeClimbValid(ledgeY, topY, feetY)
+	local topY, feetY = ledgeTopFor(character, root, ledgePoint)
+	local guard = HeightGuard.getState(player)
+	local ok, why = MoveRules.ledgeClimbValid(ledgePoint.Y, topY, (guard and guard.supportY) or feetY)
 	if not ok then
 		return why
 	end
@@ -133,8 +137,8 @@ local function handleLedge(player, ledgeY, wallDir)
 	HeightGuard.grant(player, topY + LEDGE.permitMarginStuds, LEDGE.permitSeconds, "ledge")
 	return "ok"
 end
-ledgeClimb.OnServerEvent:Connect(function(player, ledgeY, wallDir)
-	local result = handleLedge(player, ledgeY, wallDir)
+ledgeClimb.OnServerEvent:Connect(function(player, ledgePoint, wallDir)
+	local result = handleLedge(player, ledgePoint, wallDir)
 	if result ~= "ok" and result ~= "throttled" then
 		print(("[forge-game] 붙잡기 거절: %s - %s"):format(player.Name, result))
 	end

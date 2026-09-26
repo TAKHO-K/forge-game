@@ -1,6 +1,6 @@
 -- MV1 활강(자기 캐릭터 - 캐릭터 물리는 이 클라가 가진다). 수치 = MovementConfig.glide · 게이지 식 = MoveRules.stepGauge.
 --   켜기 = DashInput(공중에서 대시 길게 누름 - DashConfig.input.glideHoldSeconds). 끄기 = 대시 다시 누름(DashInput) · 점프(DoubleJumpInput) · 게이지 소진 · 착지 · 물 · 넉백.
---   활강 중: 매 물리 스텝 수평 = 바라보는 방향 × forwardSpeed · 세로 = −descentSpeed(일정). 이동 입력 쪽으로 turnDegPerSecond만큼 돈다(좌우 조향).
+--   활강 중: 수평 = 바라보는 방향 × forwardSpeed · 세로 = −descentSpeed(일정) - 루트에 LinearVelocity 제약(물리 스텝 안에서 속도를 지킨다 · 매 스텝 속도만 덮어쓰면 중력이 섞여 하강 7/s가 됐다 - MV1 실측). 이동 입력 쪽으로 turnDegPerSecond만큼 돈다(좌우 조향).
 --   게이지: 활강 중 줄고 · 서 있으면 refillSeconds에 가득 · 공중에서는 그대로. 캐릭터 옆 원형 게이지(점 고리 - 초록 → 노랑 → 빨강)는 활강 중이거나 덜 찼을 때만 보인다(자기 화면만).
 --   서버에 알림(GlideState) → 서버가 Character Attribute "Gliding"을 켜서 남의 화면에 글라이더가 보인다(이 모듈이 남의 캐릭터 Attribute를 감시해 GlideView를 부른다).
 local Players = game:GetService("Players")
@@ -64,6 +64,18 @@ function GlideController.start()
 	state.autoRotate = humanoid.AutoRotate
 	humanoid.AutoRotate = false
 	GlideView.show(character)
+	local attach = Instance.new("Attachment")
+	attach.Name = "MV1GlideAttach"
+	attach.Parent = root
+	local lv = Instance.new("LinearVelocity")
+	lv.Name = "MV1GlideVelocity"
+	lv.Attachment0 = attach
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+	lv.MaxForce = math.huge
+	lv.VectorVelocity = state.dir * G.forwardSpeed + Vector3.new(0, -G.descentSpeed, 0)
+	lv.Parent = root
+	state.constraint, state.attach = lv, attach
 	character:SetAttribute("MV1GlideStartedAt", os.clock())
 	glideState:FireServer(true)
 	return true
@@ -75,6 +87,11 @@ function GlideController.stop(reason)
 		return
 	end
 	state.gliding, state.lastStop = false, reason
+	if state.constraint then
+		state.constraint:Destroy()
+		state.attach:Destroy()
+		state.constraint, state.attach = nil, nil
+	end
 	local character, humanoid = parts()
 	if humanoid then
 		humanoid.AutoRotate = state.autoRotate ~= false
@@ -168,7 +185,11 @@ RunService.Stepped:Connect(function(_, dt)
 				state.dir = (CFrame.Angles(0, side * step, 0) * state.dir).Unit
 			end
 		end
-		root.AssemblyLinearVelocity = state.dir * G.forwardSpeed + Vector3.new(0, -G.descentSpeed, 0)
+		local velocity = state.dir * G.forwardSpeed + Vector3.new(0, -G.descentSpeed, 0)
+		if state.constraint then
+			state.constraint.VectorVelocity = velocity
+		end
+		root.AssemblyLinearVelocity = velocity
 		root.CFrame = CFrame.lookAt(root.Position, root.Position + state.dir)
 	end
 	renderGauge(root, maxS)
