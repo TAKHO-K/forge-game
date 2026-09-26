@@ -40,7 +40,10 @@ return {
 	--   점프대 확인 = 최근 historySeconds 동안 서버가 본 루트 위치 중 하나가 발판 기둥(반경 + reachSlackStuds · 윗면 − belowSlackStuds ~ 정점) 안(요청 시각의 "지금 거리"가 아니다) ·
 	--   요청이 위치보다 먼저 와도 pendingSeconds 동안 다시 본다 · 사람마다 cooldownSeconds.
 	permit = { marginStuds = 4, padSeconds = 4, bossExtraSeconds = 2, landGraceSeconds = 0.2, unusedSeconds = 1.0, descendMaxSeconds = 20,
-		historySeconds = 0.5, pendingSeconds = 0.5, reachSlackStuds = 4, belowSlackStuds = 8, cooldownSeconds = 0.25 },
+		-- 발판 확인 = 발이 윗면 − belowSlackStuds ~ 윗면 + aboveSlackStuds인 표본(리뷰 2: 정점 높이 기둥 전체를 받으면 공중에서 요청을 되풀이해 허가를 이어 받는다) ·
+		-- 요청 최소 간격 requestGapSeconds(리뷰 4) · 기록 보관 = historySeconds + historyKeepExtraSeconds.
+		historySeconds = 0.5, historyKeepExtraSeconds = 0.1, pendingSeconds = 0.5, reachSlackStuds = 4, belowSlackStuds = 3, aboveSlackStuds = 6,
+		cooldownSeconds = 0.25, requestGapSeconds = 0.1 },
 	heightGuard = { toleranceStuds = 1.0, strikes = 2, probeStuds = 3.5, teleportResetStuds = 50, graceSeconds = 1.0, exemptExtraSeconds = 0.5 },
 
 	-- 카메라(M1-0 - 사용자 결정): 기본 = 로블록스 기본 카메라(회전 · 줌 · 각도 자유)에 줌 범위만 건다(캐릭터가 작아 보이지 않게 기본 거리를 가깝게). 설정의 "탑다운 시점"을 켠 사람만

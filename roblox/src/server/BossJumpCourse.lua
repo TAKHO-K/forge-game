@@ -167,14 +167,15 @@ end
 
 -- M1-2c 발사 허가: 클라(BossEnvironmentView)가 발판 위 루트(발판 중심 위 0 ~ 5)에서 띄우는 것과 같은 식의 최고 발 높이 + 공중 점프 몫
 function BossJumpCourse.padLaunchSpec(pad)
+	local PL = BossJumpMapData.padLaunch
 	local top = pad.Position.Y + pad.Size.Y / 2
-	local rootMax = pad.Position.Y + 5 -- 클라가 "밟았다"로 읽는 루트 높이 상한(rel.Y ≤ 5)
+	local rootMax = pad.Position.Y + PL.probeRootStuds -- 클라가 "밟았다"로 읽는 루트 높이 상한
 	local target = pad:GetAttribute("LaunchTarget")
 	local apexFeet
 	if typeof(target) == "Vector3" then
-		apexFeet = math.max(pad:GetAttribute("LaunchApexY") or target.Y + 8, rootMax + 2, target.Y + 1) - ROOT_ABOVE
+		apexFeet = math.max(pad:GetAttribute("LaunchApexY") or target.Y + PL.defaultApexAboveTargetStuds, rootMax + PL.apexMinAboveRootStuds, target.Y + PL.targetClearStuds) - ROOT_ABOVE
 	else
-		apexFeet = rootMax - ROOT_ABOVE + (pad:GetAttribute("LaunchHeight") or 18)
+		apexFeet = rootMax - ROOT_ABOVE + (pad:GetAttribute("LaunchHeight") or PL.defaultBoostHeightStuds)
 	end
 	return { top = top, center = pad.Position, radius = math.max(pad.Size.X, pad.Size.Z) / 2, apexFeetY = apexFeet + JumpMath.airJumpsOnlyStuds(), source = "수정 부수기 " .. pad.Name }
 end

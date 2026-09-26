@@ -667,6 +667,7 @@ end)
 -- M1-2c: 띄울 때 LaunchPermitRequest(발판)를 보낸다 - 서버가 위치 기록으로 확인하고 설계 정점까지 높이 허가(공중 점프를 섞어도 되돌리지 않게).
 local CollectionService = game:GetService("CollectionService")
 local padCooldownUntil = 0
+local PAD_LAUNCH = require(ReplicatedStorage.Shared.data.BossJumpMapData).padLaunch -- M1-2c: 서버 허가 정점과 같은 수치
 local permitRemote = nil
 task.spawn(function()
 	permitRemote = ReplicatedStorage:WaitForChild("LaunchPermitRequest", 30)
@@ -685,12 +686,12 @@ RunService.Heartbeat:Connect(function()
 	end
 	for _, pad in ipairs(CollectionService:GetTagged("BossJumpPad")) do
 		local rel = root.Position - pad.Position
-		if math.abs(rel.X) <= pad.Size.X / 2 and math.abs(rel.Z) <= pad.Size.Z / 2 and rel.Y >= 0 and rel.Y <= 5 then
+		if math.abs(rel.X) <= pad.Size.X / 2 and math.abs(rel.Z) <= pad.Size.Z / 2 and rel.Y >= 0 and rel.Y <= PAD_LAUNCH.probeRootStuds then
 			local target = pad:GetAttribute("LaunchTarget")
 			if typeof(target) == "Vector3" then
 				-- BR1-2 발사 발판(수정 부수기 도움 2단계): 정점 LaunchApexY를 지나 target에 내려앉는 포물선. 날아가는 동안은 조작을 끈다(걷기 제어가 수평 속도를 지우지 않게).
 				local g = Workspace.Gravity
-				local apexY = math.max(pad:GetAttribute("LaunchApexY") or target.Y + 8, root.Position.Y + 2, target.Y + 1)
+				local apexY = math.max(pad:GetAttribute("LaunchApexY") or target.Y + PAD_LAUNCH.defaultApexAboveTargetStuds, root.Position.Y + PAD_LAUNCH.apexMinAboveRootStuds, target.Y + PAD_LAUNCH.targetClearStuds)
 				local up = math.sqrt(2 * g * (apexY - root.Position.Y))
 				local total = up / g + math.sqrt(2 * (apexY - target.Y) / g)
 				local flat = Vector3.new(target.X - root.Position.X, 0, target.Z - root.Position.Z)
@@ -706,7 +707,7 @@ RunService.Heartbeat:Connect(function()
 				BossFx.ring(pad.Position + Vector3.new(0, 0.3, 0), 1, 6, WHITE, 0.3)
 				break
 			end
-			local height = pad:GetAttribute("LaunchHeight") or 18
+			local height = pad:GetAttribute("LaunchHeight") or PAD_LAUNCH.defaultBoostHeightStuds
 			local v = root.AssemblyLinearVelocity
 			root.AssemblyLinearVelocity = Vector3.new(v.X, math.sqrt(2 * Workspace.Gravity * height), v.Z)
 			padCooldownUntil = os.clock() + 0.6

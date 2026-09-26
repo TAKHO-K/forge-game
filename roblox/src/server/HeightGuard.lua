@@ -141,9 +141,9 @@ function HeightGuard.launchBaseFeet(st, feetY, grounded)
 	local base = feetY
 	if not grounded then
 		base = math.max(feetY, (st.supportY or feetY) + JumpMath.heightGuardAllowance())
-	end
-	if st.permit then
-		base = math.max(base, st.permit.maxFeetY)
+		if st.permit then -- 리뷰 1: 앞 허가 높이는 떠 있을 때만 잇는다(서 있으면 안 쓴 허가 1초 동안 맞을 때마다 천장이 쌓였다)
+			base = math.max(base, st.permit.maxFeetY)
+		end
 	end
 	return base
 end
@@ -225,6 +225,7 @@ function HeightGuard.poll(player, now)
 		st.lastPos = st.supportPos
 		st.flaggedAt = now
 		st.reverts += 1
+		st.permit = nil -- 리뷰: 위반으로 되돌렸으면 남은 허가도 끝
 		warn(("[forge-game] 높이 보정: %s 발 %.1f(기준 %.1f + 허용 %.2f 초과 %d회 · 허가 %s) → (%.0f, %.1f, %.0f)로 되돌림"):format(
 			player.Name, from.Y - MovementConfig.rootAboveFeetStuds, st.supportY, JumpMath.heightGuardAllowance(), cfg.strikes,
 			permitBefore and ("%s ≤ %.1f"):format(tostring(permitBefore.source), permitBefore.maxFeetY) or "없음", st.supportPos.X, st.supportPos.Y, st.supportPos.Z))

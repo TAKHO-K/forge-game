@@ -30,7 +30,7 @@ local function onArrival()
 	local startedAt = os.clock()
 	-- 서버가 준 자리가 내 캐릭터에 반영될 때까지(복제) 잠깐 기다린다
 	local character, root
-	while os.clock() - startedAt < 1 do
+	while os.clock() - startedAt < A.replicateWaitSeconds do
 		character = player.Character
 		root = character and character:FindFirstChild("HumanoidRootPart")
 		if root and (root.Position - target).Magnitude <= A.nearStuds then

@@ -13,6 +13,7 @@ local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
+local Text = require(ReplicatedStorage.Shared.Text)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
 local BossEncounter = require(script.Parent.BossEncounter)
@@ -323,18 +324,23 @@ function Travel.rideLift(player)
 		return nil
 	end
 	local L = WorldMapData.hub.tree.course.lift
-	if (flat(root.Position) - flat(WorldMapLayout.hubPoint(L.angleDeg, L.r))).Magnitude > L.basketRadius + L.promptDistance + 2 then
+	if (flat(root.Position) - flat(WorldMapLayout.hubPoint(L.angleDeg, L.r))).Magnitude > L.basketRadius + L.promptDistance + L.promptSlackStuds then
 		return nil
 	end
+	local st = stateOf(player)
+	local now = os.clock()
+	if now - (st.liftAt or -math.huge) < L.rideCooldownSeconds then -- 리뷰 5: 미리 불러오기(최대 3초)를 기다리는 동안 [F] 연타로 겹쳐 옮기지 않게
+		return nil
+	end
+	st.liftAt = now
 	local best = Travel.highestStation(PlayerProfile.getPeakLevel(player))
 	if best > 0 then
 		local s = stationList()[best]
-		local st = stateOf(player)
 		st.checkpoint = best
 		player:SetAttribute("TreeCheckpoint", best)
 		Travel.teleport(player, s.top + Vector3.new(0, 3, 0), ("덩굴 리프트 → 정거장 %d"):format(best))
 	else
-		PartyState.notify(player, ("덩굴 리프트 - 역대 최고 레벨 %d부터 첫 정거장이 열린다"):format(stationList()[1].unlockLevel))
+		PartyState.notify(player, Text.get("lift.lockedNotice", { level = stationList()[1].unlockLevel }))
 	end
 	return best
 end
@@ -513,7 +519,7 @@ function Travel.pollPlayer(player, root, humanoid, now)
 		local s = stationList()[st.checkpoint]
 		local inTree = flat(feet).Magnitude <= 160
 		-- M1-2c: 순간이동 직후 1초는 건너뛴다 - 클라가 옮겨진 자리를 받기 전에 보낸 옛 위치(바닥)를 떨어짐으로 읽어 같은 정거장으로 한 번 더 옮겼다(리프트 [F] 실측)
-		local justMoved = now - (st.teleportAt or -math.huge) < 1
+		local justMoved = now - (st.teleportAt or -math.huge) < WorldMapData.travel.arrival.fallSkipAfterTeleportSeconds
 		if inTree and grounded and not justMoved and feet.Y < s.y - WorldMapData.hub.tree.course.fallDropStuds then
 			Travel.teleport(player, s.top + Vector3.new(0, 3, 0), ("떨어짐 → 정거장 %d"):format(st.checkpoint))
 			return
@@ -588,7 +594,7 @@ function Travel.start(downPads)
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "VineLiftPrompt"
 			prompt.ObjectText = WorldMapData.hub.tree.course.lift.label
-			prompt.ActionText = "타기"
+			prompt.ActionText = Text.get("lift.action")
 			prompt.KeyboardKeyCode = Enum.KeyCode.F
 			prompt.HoldDuration = 0
 			prompt.MaxActivationDistance = WorldMapData.hub.tree.course.lift.promptDistance

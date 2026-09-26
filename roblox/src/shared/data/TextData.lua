@@ -121,6 +121,8 @@ return {
 
 		-- 덩굴 리프트 · 나무 입구 안내판(M1-2c)
 		["lift.locked"] = "🔒 덩굴 리프트\nLv.{level} 필요",
+		["lift.action"] = "타기",
+		["lift.lockedNotice"] = "덩굴 리프트 - 역대 최고 레벨 {level}부터 첫 정거장이 열린다",
 		["lift.open"] = "덩굴 리프트\n정거장 {station} · 높이 {meters}m",
 		["lift.prompt"] = "타기 · 정거장 {station} (높이 {meters}m)",
 		["lift.unlockToast"] = "덩굴 리프트 - 정거장 {station}({name} · 높이 {meters}m)이 열렸습니다. 길 안내를 따라가세요",

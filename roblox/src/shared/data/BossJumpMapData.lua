@@ -21,6 +21,9 @@ return {
 	--   값 근거 = 코스별 깨끗한 완주 추정(BR1-2 보고서 · 하네스 - 발판마다 도움닫기 1.2초 + 그 조합의 최대 체공): 가장 긴 코스 약 20초 · 두 코스 + 사이 이동 약 50초 →
 	--   1단계 45초(솔로가 첫 코스를 한 번쯤 떨어져도 두 번째 코스 전에 도움) · 2단계 90초(1단계로도 두 배 넘게 걸리면 바로 간다).
 	help = { stage1Seconds = 45, stage2Seconds = 90, boostEvery = 2, boostHeightStuds = 20, boostPadStuds = 2.4, launchPadStuds = 5, launchApexAboveStuds = 8, launchOffsetStuds = 8 },
+	-- 도움 발판 발사 식(클라 BossEnvironmentView가 띄우고 서버 BossJumpCourse.padLaunchSpec가 같은 식으로 허가 정점을 잰다 - M1-2c): 발판 중심 위 루트 0 ~ probeRootStuds면 밟음 ·
+	-- 발사 발판 정점 = max(LaunchApexY(없으면 목표 + defaultApexAboveTargetStuds), 루트 + apexMinAboveRootStuds, 목표 + targetClearStuds) · 높이 점프 발판 기본 높이 defaultBoostHeightStuds.
+	padLaunch = { probeRootStuds = 5, apexMinAboveRootStuds = 2, defaultApexAboveTargetStuds = 8, targetClearStuds = 1, defaultBoostHeightStuds = 18 },
 	-- 코스 4종(자리마다 무작위 1개 - 두 자리는 서로 다른 것)
 	courses = {
 		{

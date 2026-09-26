@@ -23,6 +23,7 @@ local sources = {} -- [BasePart] = spec
 local history = {} -- [Player] = { { t, pos }, … }(오래된 것부터)
 local pending = {} -- [Player] = { part, untilAt }
 local lastGrantAt = {}
+local lastRequestAt = {}
 
 function LaunchPermit.register(part, spec)
 	if not sources[part] then
@@ -37,11 +38,11 @@ function LaunchPermit.specOf(part)
 	return sources[part]
 end
 
--- 순수: 루트 위치 하나가 발판 기둥 안인가(반경 + 여유 · 윗면 − belowSlack ~ 설계 정점)
+-- 순수: 루트 위치 하나가 발판 위(밟는 자리)인가 - 반경 + 여유 · 발 = 윗면 − belowSlack ~ 윗면 + aboveSlack(리뷰 2: 정점까지의 기둥 전체를 받으면 공중에서 되풀이 요청으로 허가를 이어 받았다)
 function LaunchPermit.inColumn(spec, rootPos)
 	local flat = Vector3.new(rootPos.X - spec.center.X, 0, rootPos.Z - spec.center.Z).Magnitude
 	local feet = rootPos.Y - ROOT_ABOVE
-	return flat <= spec.radius + PERMIT.reachSlackStuds and feet >= spec.top - PERMIT.belowSlackStuds and feet <= spec.apexFeetY
+	return flat <= spec.radius + PERMIT.reachSlackStuds and feet >= spec.top - PERMIT.belowSlackStuds and feet <= spec.top + PERMIT.aboveSlackStuds
 end
 
 -- 순수: 위치 기록(samples = { { t, pos } }) 중 now − historySeconds 뒤의 표본이 기둥 안인가. 반환: ok, 가장 가까운 표본의 평면 거리(로그)
@@ -71,7 +72,7 @@ local function record(player, now)
 		history[player] = list
 	end
 	table.insert(list, { t = now, pos = root.Position })
-	while #list > 0 and now - list[1].t > PERMIT.historySeconds + 0.1 do
+	while #list > 0 and now - list[1].t > PERMIT.historySeconds + PERMIT.historyKeepExtraSeconds do
 		table.remove(list, 1)
 	end
 end
@@ -84,7 +85,7 @@ local function grant(player, part, spec, now, deferred)
 	if deferred then
 		LaunchPermit.stats.deferred += 1
 	end
-	LaunchPermit.stats.last = { player = player, source = spec.source or part.Name, at = now, deferred = deferred }
+	LaunchPermit.stats.last = { userId = player.UserId, source = spec.source or part.Name, at = now, deferred = deferred }
 end
 
 -- 요청 한 번(서버 이벤트 · 검증). 반환: "granted" | "pending" | 거절 이유
@@ -95,10 +96,13 @@ function LaunchPermit.request(player, part, now)
 		LaunchPermit.stats.rejected += 1
 		return "unknown"
 	end
+	if now - (lastRequestAt[player] or -math.huge) < PERMIT.requestGapSeconds then
+		return "too_fast" -- 리뷰 4: 요청 폭주 제한(기록은 Heartbeat만 쌓는다)
+	end
+	lastRequestAt[player] = now
 	if now - (lastGrantAt[player] or -math.huge) < PERMIT.cooldownSeconds then
 		return "cooldown"
 	end
-	record(player, now)
 	if LaunchPermit.checkHistory(spec, history[player] or {}, now) then
 		grant(player, part, spec, now, false)
 		return "granted"
@@ -119,7 +123,7 @@ function LaunchPermit.start()
 		LaunchPermit.request(player, part)
 	end)
 	Players.PlayerRemoving:Connect(function(player)
-		history[player], pending[player], lastGrantAt[player] = nil, nil, nil
+		history[player], pending[player], lastGrantAt[player], lastRequestAt[player] = nil, nil, nil, nil
 	end)
 	RunService.Heartbeat:Connect(function()
 		local now = os.clock()

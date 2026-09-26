@@ -530,6 +530,7 @@ function M1_2cVerify.runLive(player, env)
 	if BossEncounter.getEncounter(player) then
 		BossEncounter.leaveFor(player)
 	end
+	BossEncounter.despawnFor(player) -- 리뷰 3: leaveFor만으로는 보스 모델이 남는다(검증 뒤 외톨이 보스)
 	local pass, total = r.summary()
 	print(("===M1-2c 검증 끝(나)=== %d/%d 통과"):format(pass, total))
 end

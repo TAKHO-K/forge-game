@@ -308,7 +308,6 @@ function M1Verify.runLive(player, env)
 	end)
 	r.section("나무", function()
 		local lift = D.hub.tree.course.lift
-		st.padAt = -math.huge
 		put(WorldMapLayout.hubPoint(lift.angleDeg, lift.r, 4))
 		task.wait(0.6)
 		Travel.rideLift(player) -- M1-2c: 밟기 → 바구니 앞 [F](프롬프트 Triggered와 같은 함수)
