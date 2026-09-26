@@ -141,13 +141,38 @@ local function applyScale(m, s)
 	end
 end
 
+-- 지형에 붙이기(snap 항목): 피벗 위 60에서 아래로 Terrain만 광선 → 식 높이와 0.75 넘게 다르면 지형 높이 − 0.3으로 옮긴다.
+-- 식(TerrainShape)과 굽힌 지형은 같아야 하지만, 모양을 바꾸고 아직 안 구운 구역 · 굽기 오차에서 떠 있거나 묻히지 않게(사용자: 재굽기 시 자동 재배치).
+local snapParams = RaycastParams.new()
+snapParams.FilterType = Enum.RaycastFilterType.Include
+local snapStats = { checked = 0, moved = 0, maxDelta = 0 }
+local function snapCf(cf)
+	snapParams.FilterDescendantsInstances = { workspace.Terrain }
+	local hit = workspace:Raycast(cf.Position + Vector3.new(0, 60, 0), Vector3.new(0, -140, 0), snapParams)
+	snapStats.checked += 1
+	if not hit or hit.Material == Enum.Material.Water then
+		return cf
+	end
+	local want = hit.Position.Y - 0.3
+	local d = want - cf.Position.Y
+	snapStats.maxDelta = math.max(snapStats.maxDelta, math.abs(d))
+	if math.abs(d) > 0.75 then
+		snapStats.moved += 1
+		return cf + Vector3.new(0, d, 0)
+	end
+	return cf
+end
+function PropLibrary.snapStats()
+	return snapStats
+end
+
 -- 배치 항목(PropKit.place) → 복제 Model(부모는 부르는 쪽이 붙인다)
 function PropLibrary.instantiate(entry)
 	local m = PropLibrary.model(entry.prop):Clone()
 	m:SetAttribute("PropSource", nil)
 	m:SetAttribute("Prop", entry.prop)
 	applyScale(m, entry.scale or Vector3.one)
-	m:PivotTo(entry.cf)
+	m:PivotTo(entry.snap and snapCf(entry.cf) or entry.cf)
 	for k, v in pairs(entry.attrs or {}) do
 		m:SetAttribute(k, v)
 	end

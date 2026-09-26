@@ -24,9 +24,14 @@ end
 local function essentials()
 	local list = {}
 	for _, z in ipairs(WorldMapData.zones) do
-		local route = WorldMapLayout.route(z)
-		for i = 2, #route do
-			table.insert(list, { kind = "road", a = route[i - 1].p, b = route[i].p, r = WorldMapData.layout.roadWidth / 2, zone = z.key, name = route[i - 1].id .. "→" .. route[i].id })
+		-- M1-4: 길 = 곡선(RoadNet 본길 · 갈림길) - 표본 선분(8 간격 · 높이 = 길 높이)
+		local RoadNet = require(game:GetService("ReplicatedStorage").Shared.RoadNet)
+		for _, path in ipairs({ RoadNet.zonePath(z), RoadNet.branchPath(z) }) do
+			local P = path.pts
+			for i = 1, #P - 1 do
+				local a, b = P[i], P[i + 1]
+				table.insert(list, { kind = "road", a = Vector3.new(a.x, a.y, a.z), b = Vector3.new(b.x, b.y, b.z), r = WorldMapData.layout.roadWidth / 2, zone = z.key, name = ("%s 길 %.0f"):format(path.kind == "main" and "본" or "갈림", a.s) })
+			end
 		end
 		for _, g in ipairs(WorldMapLayout.grounds(z)) do
 			table.insert(list, { kind = "ground", p = g.center, r = g.radius, zone = z.key, name = "사냥 지대 " .. g.index })
@@ -204,23 +209,32 @@ function WorldCheck.run()
 		end
 	end
 	add(("둥지 높이 ≤ %d(높은 곳 복귀 규칙) · 외곽 경계 안: 넘음 %d · 밖 %d"):format(WorldMapData.progress.standMaxY - 10, #high, #edge), #high == 0 and #edge == 0, table.concat(high, " / ") .. " " .. table.concat(edge, " / "))
-	-- 9 필수 길 평탄(걷기): 길 가운데 선 4 간격 표본 - 지형 = 평지 ± 0.3 · 물 없음
-	local roadBad, samples = {}, 0
+	-- 9 필수 길(M1-4 곡선 · 지형 높이): 가운데 선 4 간격 표본 - 지형 = 길 높이 ± 0.5 · 물 없음 · 길 방향 경사 ≤ 25°(RoadData.capGradeDeg) · 가로 기울기(반폭) ≤ 1
+	local RoadData = require(game:GetService("ReplicatedStorage").Shared.data.RoadData)
+	local roadBad, samples, maxGrade = {}, 0, 0
+	local capTan = math.tan(math.rad(RoadData.capGradeDeg))
 	for _, e in ipairs(essentials()) do
 		if e.kind == "road" then
 			local L = flatDist(e.a, e.b)
+			local prevH = nil
 			for s = 0, L, 4 do
 				local p = e.a:Lerp(e.b, s / math.max(L, 1))
 				local c = TerrainShape.column(p.X, p.Z)
 				samples += 1
-				if math.abs(c.h - FLAT) > 0.3 or c.water then
-					table.insert(roadBad, ("%s %s(%.0f, %.0f) h %.1f%s"):format(e.zone, e.name, p.X, p.Z, c.h - FLAT, c.water and " 물" or ""))
+				local dir = Vector3.new(e.b.X - e.a.X, 0, e.b.Z - e.a.Z).Unit
+				local side = Vector3.new(-dir.Z, 0, dir.X) * (RoadData.half - 1)
+				local cross = math.max(math.abs(TerrainShape.column(p.X + side.X, p.Z + side.Z).h - c.h), math.abs(TerrainShape.column(p.X - side.X, p.Z - side.Z).h - c.h))
+				local grade = prevH and math.abs(c.h - prevH) / 4 or 0
+				maxGrade = math.max(maxGrade, grade)
+				prevH = c.h
+				if math.abs(c.h - p.Y) > 0.5 or c.water or grade > capTan or cross > 1 then
+					table.insert(roadBad, ("%s %s(%.0f, %.0f) 길 %.1f · 지형 %.1f · 경사 %.0f° · 가로 %.1f%s"):format(e.zone, e.name, p.X, p.Z, p.Y - FLAT, c.h - FLAT, math.deg(math.atan(grade)), cross, c.water and " 물" or ""))
 					break
 				end
 			end
 		end
 	end
-	add(("필수 길 평탄(표본 %d · 평지 ± 0.3 · 물 0): 위반 %d"):format(samples, #roadBad), #roadBad == 0, table.concat(roadBad, " / "))
+	add(("필수 길(곡선 · 표본 %d · 지형 = 길 높이 ± 0.5 · 물 0 · 경사 ≤ %d° · 가로 ≤ 1 · 최대 경사 %.1f°): 위반 %d"):format(samples, RoadData.capGradeDeg, math.deg(math.atan(maxGrade)), #roadBad), #roadBad == 0, table.concat(roadBad, " / "))
 	-- 10 선인장: 필수 길 · 사냥 지대 · 캠프 밖(여유 12)
 	local S = WorldStructures.data()
 	local cactusBad = {}

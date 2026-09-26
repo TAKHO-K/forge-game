@@ -84,11 +84,7 @@ function Wayfinder.routeToGate(zoneKey)
 	if not zone then
 		return nil
 	end
-	local list = {}
-	for _, pt in ipairs(WorldMapLayout.route(zone)) do
-		table.insert(list, pt.p)
-	end
-	return list
+	return require(game:GetService("ReplicatedStorage").Shared.RoadNet).guidePoints(zone) -- M1-4 곡선 길을 따라
 end
 
 -- 순수: 지금 자리에서 다음 길목 번호(가장 가까운 선분의 끝 - 이미 지난 길목은 건너뛴다)

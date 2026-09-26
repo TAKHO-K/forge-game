@@ -133,7 +133,8 @@ function WorldMap.build()
 	for _, n in pairs(PropLibrary.counts()) do
 		propPlaced += n
 	end
-	print(("[forge-game] M1 맵: 도형 %d · 소품 라이브러리 %d종(교체 모델 %d) · 소품 배치 %d · Persistent = 나무 · 빛기둥 · 랜드마크"):format(#prims, libN, libCustom, propPlaced))
+	local sn = PropLibrary.snapStats()
+	print(("[forge-game] M1 맵: 도형 %d · 소품 라이브러리 %d종(교체 모델 %d) · 소품 배치 %d(지형 붙이기 %d · 옮김 %d · 최대 차 %.2f) · Persistent = 나무 · 빛기둥 · 랜드마크"):format(#prims, libN, libCustom, propPlaced, sn.checked, sn.moved, sn.maxDelta))
 	built = { models = models, meta = meta, counts = counts }
 	workspace:GetAttributeChangedSignal("Season"):Connect(function()
 		WorldMap.setSeason(workspace:GetAttribute("Season"))

@@ -37,10 +37,17 @@ local function buildBlockers(extra)
 		table.insert(circles, { x = p.X, z = p.Z, r = r, why = why })
 	end
 	for _, zone in ipairs(D.zones) do
-		local route = Layout.route(zone)
-		for i = 2, #route do
-			local a, b = route[i - 1].p, route[i].p
-			table.insert(segs, { ax = a.X, az = a.Z, bx = b.X, bz = b.Z, r = L.roadWidth / 2 + A.road, why = "road" })
+		local RoadNet = require(ReplicatedStorage.Shared.RoadNet) -- M1-4 곡선 길(본길 · 갈림길)
+		for _, path in ipairs({ RoadNet.zonePath(zone), RoadNet.branchPath(zone) }) do
+			for i = 3, #path.pts, 2 do
+				local a, b = path.pts[i - 2], path.pts[i]
+				table.insert(segs, { ax = a.x, az = a.z, bx = b.x, bz = b.z, r = L.roadWidth / 2 + A.road, why = "road" })
+			end
+		end
+		for _, sg in ipairs(RoadNet.signs()) do
+			if sg.zone == zone.key then
+				circle(sg.cf.Position, 6, "sign")
+			end
 		end
 		circle(Layout.camp(zone), A.camp, "camp")
 		circle(Layout.campPortal(zone), A.portal, "portal")
@@ -373,7 +380,7 @@ end
 function PropScatter.build(list)
 	local out = PropScatter.data()
 	for _, p in ipairs(out.placements) do
-		PropKit.place(list, "Fill_" .. p.zone, p.prop, p.cf, p.scale)
+		PropKit.place(list, "Fill_" .. p.zone, p.prop, p.cf, p.scale, { snap = true })
 	end
 	for i, ld in ipairs(out.ladders) do
 		local model = "Struct_" .. ld.zone .. "_ladder" .. i

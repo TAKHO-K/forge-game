@@ -96,9 +96,7 @@ function Layout.bossGateRoute(bossId)
 	local zone = g.zoneKey and Layout.zoneByKey(g.zoneKey)
 	local list = {}
 	if zone then
-		for _, pt in ipairs(Layout.route(zone)) do
-			table.insert(list, pt.p)
-		end
+		list = require(ReplicatedStorage.Shared.RoadNet).guidePoints(zone) -- M1-4 곡선 길을 따라
 	else
 		table.insert(list, g.dir * D.hub.safeRadius + Vector3.new(0, FLOOR, 0))
 		table.insert(list, g.position)
@@ -149,6 +147,10 @@ function Layout.route(zone)
 end
 
 function Layout.routeLength(zone, fromId, toId)
+	-- M1-4: 곡선 길 길이(RoadNet) - 옛 직선 길이는 Layout.routeLengthStraight
+	return require(ReplicatedStorage.Shared.RoadNet).length(zone, fromId, toId)
+end
+function Layout.routeLengthStraight(zone, fromId, toId)
 	local pts = Layout.route(zone)
 	local total, on = 0, false
 	for i = 1, #pts do
@@ -1035,13 +1037,15 @@ function Layout.buildZone(zone, list)
 	-- 캠프(안전 · 포탈)
 	local camp = Layout.camp(zone)
 	prim(list, model, "Camp", Vector3.new(0.2, L.camp.radius * 2, L.camp.radius * 2), CFrame.new(camp.X, FLOOR + 0.35, camp.Z) * CFrame.Angles(0, 0, math.rad(90)), D.colors.safe, { shape = "Cylinder", material = "SmoothPlastic" })
-	-- 도로(허브 끝 → … → 관문)
-	local route = Layout.route(zone)
-	for i = 2, #route do
-		local a, b = route[i - 1].p, route[i].p
-		local mid = (a + b) / 2
-		local len = (Vector3.new(b.X - a.X, 0, b.Z - a.Z)).Magnitude
-		prim(list, "Floor_" .. zone.key, "Road", Vector3.new(L.roadWidth, 0.2, len + L.roadWidth), CFrame.lookAt(Vector3.new(mid.X, FLOOR + 0.2, mid.Z), Vector3.new(b.X, FLOOR + 0.2, b.Z)), D.colors.road, { material = "SmoothPlastic" })
+	-- 도로 = M1-4부터 Terrain 재질 띠(곡선 · 지형 높이 - shared/RoadNet · 지형 굽기가 칠한다). 파트 없음. 갈림길 · 결계 문 표지판만(소품 + 이름표)
+	local RoadNet = require(ReplicatedStorage.Shared.RoadNet)
+	local PropKit = require(ReplicatedStorage.Shared.PropKit)
+	for _, sg in ipairs(RoadNet.signs()) do
+		if sg.zone == zone.key then
+			PropKit.place(list, "Floor_" .. zone.key, "Common_Signpost", sg.cf, nil, { snap = true })
+			prim(list, "Floor_" .. zone.key, "SignLabel", Vector3.new(1, 1, 1), sg.cf * CFrame.new(0, require(ReplicatedStorage.Shared.data.RoadData).sign.height, 0), D.colors.marker,
+				{ collide = false, transparency = 1, attrs = { Label = sg.label, LabelSmall = true } })
+		end
 	end
 	-- 결계 문(길이 구역 원을 지나는 자리 - 늘 보인다 · 잠김 표시는 클라)
 	local bg = Layout.toWorld(zone, L.barrierGateR, 0)
@@ -1419,8 +1423,15 @@ function Layout.validate()
 		local t = math.clamp(ap:Dot(ab) / math.max(ab:Dot(ab), 1e-6), 0, 1)
 		return (ap - ab * t).Magnitude
 	end
+	local RoadNet = require(ReplicatedStorage.Shared.RoadNet)
 	for _, z in ipairs(D.zones) do
-		local route = Layout.route(z)
+		local route = {} -- M1-4 곡선 길(본길 · 갈림길) 조각
+		for _, path in ipairs({ RoadNet.zonePath(z), RoadNet.branchPath(z) }) do
+			for i = 1, #path.pts, 3 do
+				local q = path.pts[i]
+				table.insert(route, { id = path.kind .. i, p = Vector3.new(q.x, 0, q.z) })
+			end
+		end
 		local center = Layout.regionCenter(z)
 		local keep = {}
 		for _, g in ipairs(Layout.grounds(z)) do
@@ -1435,7 +1446,7 @@ function Layout.validate()
 				end
 			end
 			for i = 2, #route do
-				if segDist(p, route[i - 1].p, route[i].p) < radius + L.roadWidth / 2 + 4 then
+				if route[i].id:match("^%a+") == route[i - 1].id:match("^%a+") and segDist(p, route[i - 1].p, route[i].p) < radius + L.roadWidth / 2 + 4 then
 					table.insert(problems, ("%s %s: 도로 %s→%s와 겹침"):format(z.key, name, route[i - 1].id, route[i].id))
 				end
 			end

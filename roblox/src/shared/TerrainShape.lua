@@ -11,6 +11,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local TerrainGenData = require(ReplicatedStorage.Shared.data.TerrainGenData)
+local RoadData = require(ReplicatedStorage.Shared.data.RoadData)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 
@@ -132,18 +133,28 @@ end
 
 local function buildMasks()
 	local shape, flat, struct, carves, air = {}, {}, {}, {}, {}
+	local roads = {} -- M1-4 길 마스크(평탄 그룹 맨 끝 - 캠프 · 사냥 지대 · 관문 판 위에서도 길 높이가 이긴다 · 길 높이는 그 판 근처에서 평지로 맞춰져 있다)
 	local F = G.flatten
 	-- 허브(평지 - 파트 바닥 · 나무)
 	addPad(flat, 0, 0, G.hub.radius, G.hub.ramp * 0.25, FLAT, "flat", "hub")
 	-- 구역: 길 · 캠프 · 사냥 지대 · 관문 · 토벌 관문 · 옛 지형 · 모양 · 깎기
 	for _, zone in ipairs(ZONES) do
 		local zd = G.zones[zone.key] or {}
-		local route = WorldMapLayout.route(zone)
-		local pts = {}
-		for _, pt in ipairs(route) do
-			table.insert(pts, { pt.p.X, pt.p.Z, FLAT })
+		-- M1-4 길 = 곡선 · 지형 높이를 따라간다(shared/RoadNet) - 조각(12점)으로 나눠 마스크 경계 상자를 작게(굽기 속도)
+		local RoadNet = require(ReplicatedStorage.Shared.RoadNet)
+		for _, path in ipairs({ RoadNet.zonePath(zone), RoadNet.branchPath(zone) }) do
+			local P = path.pts
+			local i = 1
+			while i < #P do
+				local chunk = {}
+				for j = i, math.min(#P, i + 12) do
+					table.insert(chunk, { P[j].x, P[j].z, P[j].y })
+				end
+				addPath(roads, chunk, RoadData.half + RoadData.shoulder, RoadData.blend, "set", "road")
+				roads[#roads].road = path.material
+				i += 12
+			end
 		end
-		addPath(flat, pts, WorldMapData.layout.roadWidth / 2 + F.roadMargin, F.roadBlend, "flat", "road_" .. zone.key)
 		local c = WorldMapLayout.camp(zone)
 		addPad(flat, c.X, c.Z, F.campRadius, F.blend, FLAT, "flat", "camp")
 		for _, g in ipairs(WorldMapLayout.grounds(zone)) do
@@ -250,6 +261,9 @@ local function buildMasks()
 			local d = WorldMapLayout.dirOf(e.at.angleDeg)
 			addPad(flat, d.X * e.at.r, d.Z * e.at.r, F.sealedRadius, F.blend, FLAT, "flat", "sealed")
 		end
+	end
+	for _, m in ipairs(roads) do
+		table.insert(flat, m)
 	end
 	for _, v in ipairs(air) do
 		TerrainShape.boundsOf(v)
@@ -383,13 +397,21 @@ local function pathWeight(m, x, z)
 	local a, b = m.pts[bestI - 1], m.pts[bestI]
 	local level = a[3] + (b[3] - a[3]) * bestT
 	if best <= m.half then
-		return 1, level
+		return 1, level, best
 	end
-	return 1 - smoothstep(m.half, m.half + m.blend, best), level
+	return 1 - smoothstep(m.half, m.half + m.blend, best), level, best
 end
 local function applyGroup(list, x, z, h)
+	local roadD, roadW, roadLevel = math.huge, 0, nil -- M1-4 길 조각은 가장 가까운 하나만(이웃 조각의 섞임이 높이를 끌지 않게)
 	for _, m in ipairs(list) do
-		if x >= m.minX and x <= m.maxX and z >= m.minZ and z <= m.maxZ then
+		if m.road then
+			if x >= m.minX and x <= m.maxX and z >= m.minZ and z <= m.maxZ then
+				local w, level, d = pathWeight(m, x, z)
+				if w > 0 and d < roadD then
+					roadD, roadW, roadLevel = d, w, level
+				end
+			end
+		elseif x >= m.minX and x <= m.maxX and z >= m.minZ and z <= m.maxZ then
 			local w, level
 			if m.kind == "pad" then
 				w, level = padWeight(m, x, z), m.level
@@ -406,6 +428,9 @@ local function applyGroup(list, x, z, h)
 				end
 			end
 		end
+	end
+	if roadLevel then
+		h = h + (roadLevel - h) * roadW
 	end
 	return h
 end
@@ -616,7 +641,25 @@ function TerrainShape.column(x, z, skipStruct)
 		end
 	end
 	h = math.max(h, FLOOR + G.minBedY)
-	return { h = h, water = water, flow = flow, zone = TerrainShape.zoneAt(x, z), carved = carved }
+	-- M1-4 길 재질 띠(반폭 안 · 물 · 깎인 곳 아님)
+	local road = nil
+	if not water and not carved then
+		for _, m in ipairs(b.flat) do
+			if m.road and x >= m.minX and x <= m.maxX and z >= m.minZ and z <= m.maxZ then
+				for i = 2, #m.pts do
+					local a, c = m.pts[i - 1], m.pts[i]
+					if segDist(x, z, a[1], a[2], c[1], c[2]) <= RoadData.half then
+						road = m.road
+						break
+					end
+				end
+				if road then
+					break
+				end
+			end
+		end
+	end
+	return { h = h, water = water, flow = flow, zone = TerrainShape.zoneAt(x, z), carved = carved, road = road }
 end
 
 function TerrainShape.height(x, z)
@@ -706,6 +749,9 @@ function TerrainShape.material(x, z, col, slopeDeg)
 	local above = col.h - FLOOR
 	if col.water and col.water > col.h then
 		return pal.bed
+	end
+	if col.road then
+		return col.road -- M1-4 길(구역 흙 · 자갈 띠 - RoadData)
 	end
 	if above > G.snowLine + G.snowVary * fbm(x / 90, z / 90, G.seed + 41, 2) then
 		return slopeDeg > G.steepDeg + 15 and G.rockMaterial or G.snowMaterial

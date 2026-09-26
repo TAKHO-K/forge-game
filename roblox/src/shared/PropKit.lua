@@ -73,7 +73,8 @@ end
 function PropKit.place(list, model, name, cf, scale, opts)
 	local s = toScale(scale)
 	local lo, hi = PropKit.bounds(name, s)
-	local entry = { model = model, name = name, prop = name, cf = cf, scale = s, collide = PropKit.collides(name), attrs = opts and opts.attrs, size = hi - lo, boundsLo = lo, boundsHi = hi }
+	local entry = { model = model, name = name, prop = name, cf = cf, scale = s, collide = PropKit.collides(name), attrs = opts and opts.attrs, size = hi - lo, boundsLo = lo, boundsHi = hi,
+		snap = opts and opts.snap } -- snap = 부팅 때 지형에 레이캐스트로 붙인다(재굽기 뒤 자동 재배치 - server/PropLibrary.snap)
 	table.insert(list, entry)
 	return entry
 end

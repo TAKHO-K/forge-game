@@ -75,6 +75,13 @@ return {
 				{ n = "LadderRail", s = { 0.5, 10.6, 0.5 }, p = { 1.4, 5.3, -0.4 }, c = WOOD, m = "Wood", col = false },
 			},
 		},
+		Common_Signpost = { -- 갈림길 표지판(기둥 + 판 2 · 원점 = 길가 바닥 · −Z = 길 쪽) - 글은 이름표(SignLabel)가 따로
+			parts = {
+				{ n = "SignPost", s = { 0.8, 7.5, 0.8 }, p = { 0, 3.25, 0 }, c = WOOD, m = "Wood" },
+				{ n = "SignBoard", s = { 5, 1.2, 0.4 }, p = { 1.4, 6, -0.5 }, r = { 0, 0, 6 }, c = { 196, 160, 110 }, m = "WoodPlanks", col = false },
+				{ n = "SignBoard", s = { 4.4, 1.1, 0.4 }, p = { -1.2, 4.6, -0.5 }, r = { 0, 0, -8 }, c = { 196, 160, 110 }, m = "WoodPlanks", col = false },
+			},
+		},
 		Common_LadderLanding = { -- 사다리 꼭대기 발판(사다리 → 절벽 윗면 · 길이 6 기준 - z 배율 · 원점 = 사다리 꼭대기 · +Z = 절벽 쪽)
 			parts = { { n = "LadderLanding", s = { 4, 1, 6 }, p = { 0, -0.5, 3 }, c = WOOD, m = "WoodPlanks" } },
 		},
