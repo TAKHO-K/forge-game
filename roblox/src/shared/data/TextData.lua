@@ -61,6 +61,21 @@ return {
 		["toast.autoDismantle"] = "자동 분해: {item} → 보석",
 		["toast.autoSell"] = "자동 판매: {item} +{gold}골드",
 
+		-- MV1 환생 해금(18번 시트 규칙 - 40자 이하 · 한 문장 = 한 행동 · 숫자는 인자로)
+		["moveUnlock.popup.title"] = "새 이동 기술",
+		["moveUnlock.popup.ok"] = "확인",
+		["moveUnlock.popup.1"] = "공중에서 점프를 한 번 더! 공중 공격도 열렸어요",
+		["moveUnlock.popup.2"] = "공중에서 대시를 길게 누르면 활강해요",
+		["moveUnlock.popup.3"] = "공중 점프 2회! 공중 3타 = 강공격",
+		["moveUnlock.popup.4"] = "활강이 길어지고 공중 대시가 더 멀리 가요",
+		["moveUnlock.popup.5"] = "무기가 태초 등급이 됐어요",
+		["moveUnlock.rewardHeader"] = "환생 보상",
+		["moveUnlock.reward.1"] = "환생 1: 공중 점프 1 · 공중 공격",
+		["moveUnlock.reward.2"] = "환생 2: 활강(공중에서 대시 길게)",
+		["moveUnlock.reward.3"] = "환생 3: 공중 점프 2 · 공중 3타 강공격",
+		["moveUnlock.reward.4"] = "환생 4: 활강 +{seconds}초 · 공중 대시 ×{mult}",
+		["moveUnlock.reward.5"] = "환생 5: 무기 태초(보석 홈 {slots}칸 장착)",
+
 		-- 환생(G1-3)
 		["rebirth.confirm.title"] = "환생 - 레벨이 1로 돌아갑니다",
 		["rebirth.confirm.body"] = "레벨 {level} → 1 · 스테이지 {stage} → 1(되돌릴 수 없음) - 높은 스테이지에서는 레벨만큼 약해집니다.\n얻는 것(영구): 무기 등급 +1 · 보석 칸 +1 · 경험치 ×{expFrom} → ×{expTo}\n필요 레벨 {required} · 환생 {count}/{max}회",

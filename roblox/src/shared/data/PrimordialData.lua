@@ -34,9 +34,9 @@ return {
 	-- ⑥ 칭호
 	titleId = "primordialChosen", -- 이름 · 등급 · 조건 = shared/data/TitleData
 
-	-- D1-2 딜 부위 태초 고유 효과(능력치 상한 안 - 수치 = Loot.getGlovesCritDmgBonus · getShoesSpeedPercent · getShoesDashMultiplier, 연출 = client/PrimordialFx).
-	--   장갑: 치명 피해 +glovesCritDmgBonus(합계 상한 CombatConfig.critDmgBonusCap) + 강공격(3타)마다 흰 번개(glovesBolt - 본인 · 곁의 사람 화면).
-	--   신발: 공격 속도 · 이동 속도 = 상한(CombatConfig.attackSpeedMaxMultiplier · MovementConfig.moveSpeedMaxMultiplier) · 대시 거리 = DashConfig.rangeMaxMultiplier(흰 발자국은 D1-3에서 삭제 - 사용자 결정).
+	-- D1-2 딜 부위 태초 고유 효과(능력치 상한 안 - 수치 = Loot.getGlovesCritDmgBonus · getShoesSpeedPercent · getShoesDashCharges · hasLedgeGrab, 연출 = client/PrimordialFx).
+	--   장갑: 치명 피해 +glovesCritDmgBonus(합계 상한 CombatConfig.critDmgBonusCap) + 강공격(3타)마다 흰 번개(glovesBolt - 본인 · 곁의 사람 화면) + MV1 붙잡기(MovementConfig.ledgeGrab - 유틸).
+	--   신발: 공격 속도 · 이동 속도 = 상한(CombatConfig.attackSpeedMaxMultiplier · MovementConfig.moveSpeedMaxMultiplier) · MV1 2단 대시(DashConfig.primordialShoes - D1-2 대시 18은 폐기 · 흰 발자국은 D1-3에서 삭제).
 	unique = {
 		glovesCritDmgBonus = 0.4,
 		glovesBolt = { sendStuds = 120, heightStuds = 14, seconds = 0.35, width = 0.35, segmentStuds = 2, jitter = 1.2, branches = 2 },

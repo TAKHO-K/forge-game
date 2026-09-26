@@ -80,7 +80,8 @@ end
 
 -- 한 체공 최대: 공중 점프 airJumps번 + 공중대시(dashSeconds - nil이면 안 씀)를 어떤 순서 · 어떤 높이에서 누르든 가장 긴 체공(초). 격자 탐색이라 검증 · 표 계산용(매 프레임 쓰지 않는다).
 -- landY = 착지 높이(높은 단에 내려앉는 간격 표). aboveY를 주면 체공 대신 "발이 aboveY 위에 있던 시간"의 최대(보스 판정 층 위에 머무는 시간).
-function JumpMath.maxAirSeconds(h1, airJumps, dashSeconds, landY, aboveY, steps)
+-- MV1: dashCount = 한 체공 공중 대시 횟수(없으면 dashSeconds가 있을 때 1 - 태초 신발 2단 대시 = 2). 대시를 여러 번 넣으면 순서 경우가 늘어 steps를 줄여 부른다.
+function JumpMath.maxAirSeconds(h1, airJumps, dashSeconds, landY, aboveY, steps, dashCount)
 	steps = steps or 24
 	local base = {}
 	for _ = 1, airJumps or 0 do
@@ -88,11 +89,20 @@ function JumpMath.maxAirSeconds(h1, airJumps, dashSeconds, landY, aboveY, steps)
 	end
 	local orders = { base }
 	if dashSeconds then
-		orders = {}
-		for at = 1, #base + 1 do
-			local order = table.clone(base)
-			table.insert(order, at, "dash")
-			table.insert(orders, order)
+		for _ = 1, dashCount or 1 do
+			local nextOrders, seen = {}, {}
+			for _, order in ipairs(orders) do
+				for at = 1, #order + 1 do
+					local o = table.clone(order)
+					table.insert(o, at, "dash")
+					local key = table.concat(o, ",")
+					if not seen[key] then
+						seen[key] = true
+						table.insert(nextOrders, o)
+					end
+				end
+			end
+			orders = nextOrders
 		end
 	end
 	local best = -1
@@ -142,6 +152,41 @@ end
 -- 서버 높이 검증 허용치: 마지막 지면 대비 발이 이보다 높으면 위반(M1-0 - 점프력 상한 + 공중 점프 전부의 최대 도달 + 여유).
 function JumpMath.heightGuardAllowance()
 	return JumpMath.maxReachStuds(JumpMath.jumpHeight(MovementConfig.jumpHeightBonusCap)) + MovementConfig.heightGuard.toleranceStuds
+end
+
+-- MV1 대시 거리: 기본 × clamp(장비 걷기 배율, 1, DashConfig.speedScaleMax) × 공중 대시 배율(환생 4 - MovementUnlockData.airDashRangeMultiplier · 지상은 1).
+function JumpMath.dashRangeStuds(moveMultiplier, airMultiplier)
+	local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
+	return DashConfig.rangeStuds * math.clamp(moveMultiplier or 1, 1, DashConfig.speedScaleMax) * (airMultiplier or 1)
+end
+
+-- MV1 한 체공 최대 수평 간격(끝에서 끝 · movement-metrics §2 식): 걷기 × (체공 − 대시 시간 합) + 대시 거리 합. opts = { walk, airJumps, dashes, dashStuds, rise, steps }.
+function JumpMath.maxGapStuds(opts)
+	local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
+	local dashes = opts.dashes or 0
+	local dashSeconds = dashes > 0 and DashConfig.durationSeconds or nil
+	local air = JumpMath.maxAirSeconds(MovementConfig.jumpHeightStuds, opts.airJumps or 0, dashSeconds, math.max(opts.rise or 0, 0), nil, opts.steps or (dashes > 1 and 12 or 24), dashes > 0 and dashes or nil)
+	if not air or air <= 0 then
+		return -1
+	end
+	return (opts.walk or MovementConfig.walkSpeedStuds) * (air - dashes * DashConfig.durationSeconds) + dashes * (opts.dashStuds or DashConfig.rangeStuds)
+end
+
+-- MV1 "못 넘는 틈"(평지 · 끝에서 끝): 한 체공 최대 간격 + 여유 gapMarginStuds를 올림(v2 = 42.6 → 46과 같은 식).
+JumpMath.gapMarginStuds = 3
+function JumpMath.unjumpableGapStuds(opts)
+	return math.ceil(JumpMath.maxGapStuds(opts) + JumpMath.gapMarginStuds)
+end
+
+-- MV1 오를 수 있는 가장 높은 단(발 기준): 1단 + 공중 점프 전부(점프력 옵션 상한 포함) + 태초 장갑 붙잡기(모서리가 손 높이 MovementConfig.ledgeGrab.maxLedgeAboveFeet 안이면 올라선다).
+function JumpMath.maxClimbStuds(airJumps, withLedgeGrab, jumpBonus)
+	local h1 = JumpMath.jumpHeight(jumpBonus or 0)
+	return h1 + (airJumps or 0) * JumpMath.airJumpRise(h1) + (withLedgeGrab and MovementConfig.ledgeGrab.maxLedgeAboveFeet or 0)
+end
+
+-- MV1 낙하: 높이 h를 자유 낙하한 착지 속도.
+function JumpMath.fallSpeedFromHeight(h)
+	return math.sqrt(2 * g() * math.max(h or 0, 0))
 end
 
 return JumpMath

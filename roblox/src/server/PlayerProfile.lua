@@ -56,6 +56,18 @@ local function activeClassState(profile)
 	return profile.classId and profile.classes[profile.classId]
 end
 
+-- MV1 이동 해금 기준 = 계정의 직업 중 가장 많이 환생한 횟수(MovementUnlockData - 직업을 바꿔도 이동 기술은 그대로). 저장 필드 없음(파생).
+local function maxRebirthOf(profile)
+	local best = 0
+	for _, classState in pairs(profile.classes or {}) do
+		best = math.max(best, classState.rebirthCount or 0)
+	end
+	return best
+end
+local function syncMoveTier(player, profile)
+	player:SetAttribute("MoveTier", maxRebirthOf(profile))
+end
+
 -- 26-2(PRD 20.67 [14] 3단계): 옵션을 가질 수 있는 모든 자리(장비 3부위 + 보석 5칸)를 한
 -- 목록으로 모은다. 각 원소는 { option, grade, itemLevel }를 갖는 아이템/보석 테이블 그대로
 -- 다시 쓴다(Option.sumAxisBonus·Option.critBonus가 이 모양을 그대로 읽는다, 20.67 [1]
@@ -103,9 +115,12 @@ function PlayerProfile.getCritBonus(player)
 	return critRate, math.min(critDmg + Loot.getGlovesCritDmgBonus(classState.equipment.gloves), CombatConfig.critDmgBonusCap)
 end
 
--- D1-2 태초 신발 고유 효과: 대시 거리 배율(DashServer가 읽는다).
-function PlayerProfile.getDashRangeMultiplier(player)
-	return Loot.getShoesDashMultiplier(PlayerProfile.getEquipped(player, "shoes"))
+-- MV1 태초 신발 = 2단 대시 충전 · 태초 장갑 = 붙잡기(DashServer · MovementServer가 읽는다).
+function PlayerProfile.getDashCharges(player)
+	return Loot.getShoesDashCharges(PlayerProfile.getEquipped(player, "shoes"))
+end
+function PlayerProfile.hasLedgeGrab(player)
+	return Loot.hasLedgeGrab(PlayerProfile.getEquipped(player, "gloves"))
 end
 
 -- 등급 하나의 ArmorData.gradeOrder 안 위치(1부터 시작). 목록에 없는 등급이면 nil -
@@ -152,6 +167,7 @@ end
 local function syncActiveClassAttributes(player, profile)
 	player:SetAttribute("ClassId", profile.classId or "")
 	syncAccountBestStage(player, profile)
+	syncMoveTier(player, profile) -- MV1
 	syncMilestoneAttributes(player, profile)
 
 	local classState = activeClassState(profile)
@@ -867,6 +883,7 @@ function PlayerProfile.setRebirthCountDirect(player, count)
 		return
 	end
 	classState.rebirthCount = count
+	syncMoveTier(player, profile) -- MV1: 이동 해금도 같이(개발 명령 - 환생 흐름 없이)
 end
 
 -- 환생 실행(23-2, PRD 20.38 [1][2]). 되돌릴 수 없는 조작이다 - 서버에서만 처리하고

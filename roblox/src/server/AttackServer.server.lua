@@ -23,6 +23,8 @@ local BuffState = require(script.Parent.BuffState)
 local StuckArrowState = require(script.Parent.StuckArrowState)
 local TutorialState = require(script.Parent.TutorialState)
 local BossHandlersBR1 = require(script.Parent.BossHandlersBR1) -- BR1-2 투사체 반사
+local AirState = require(script.Parent.AirState) -- MV1 공중 공격 예산 · 강공격 스택 초기화
+local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -67,6 +69,14 @@ local lastAttackTick = {} -- [Player] = os.clock() 시각
 local comboCounts = {} -- [Player] = number
 local lastComboAttackTick = {} -- [Player] = os.clock() 시각
 
+local comboSession = {} -- [Player] = 마지막으로 콤보를 센 체공 세션 번호(MV1: 뜨는 순간 스택 초기화 - 세션 번호가 바뀌면 0부터)
+
+-- MV1 공중 3타 강공격 반짝임(표시 신호 - 판정 없음): 때린 사람 곁 sendStuds 안의 사람에게.
+local airHeavyFx = Instance.new("RemoteEvent")
+airHeavyFx.Name = "AirHeavyFx"
+airHeavyFx.Parent = ReplicatedStorage
+local AIR_FX_SEND_STUDS = 120
+
 local comboUpdate = Instance.new("RemoteEvent")
 comboUpdate.Name = "ComboUpdate"
 comboUpdate.Parent = ReplicatedStorage
@@ -110,7 +120,8 @@ local function notifyZoneBlocked(player)
 	zoneBlockedNotice:FireClient(player, "구역 안으로 들어가야 공격할 수 있습니다")
 end
 
-attackRequest.OnServerEvent:Connect(function(player, aimPoint)
+local lastAttackDebug = {} -- [Player] = { status, isAir, isComboHit, combo } - 검증 훅(MV1(나))이 읽는다
+local function handleAttack(player, aimPoint, clientAir)
 	-- 프로필 로드가 아직 안 끝난 접속 직후, 혹은 클래스를 아직 안 고른 상태에서 공격이
 	-- 들어올 수 있다 - 공격력·쿨다운 둘 다 클래스가 있어야 계산할 수 있으니 헛스윙으로
 	-- 처리한다(10-3 [3] - 클래스 배율이 실제로 평타에 반영되는 첫 지점).
@@ -149,6 +160,20 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		return
 	end
 
+	-- MV1 공중 공격: 클라가 공중이라고 보냈거나(clientAir) 서버가 AirState.airSanitySeconds 넘게 공중으로 본 요청 = 공중 공격.
+	-- 예산(MoveRules.airAttackBudget - 해금된 공중 점프 + 이번 체공의 공중 대시)을 넘거나 해금 전이면 거부(쿨다운 · 콤보를 건드리지 않는다 - 요청이 없던 것과 같다).
+	local session = AirState.session(player)
+	local isAir = session ~= nil and (clientAir == true or now - session.since >= AirState.airSanitySeconds)
+	local tier = MoveRules.tierOf(player)
+	if isAir then
+		if session.airAttacks >= MoveRules.airAttackBudget(tier, session.airDashes) then
+			lastAttackDebug[player] = { status = "air_budget", isAir = true }
+			return
+		end
+		session.airAttacks += 1
+		AirState.markTakeoff(player)
+	end
+
 	lastAttackTick[player] = now -- 헛스윙이어도 쿨다운은 소모한다
 	-- 19-1: 공격 시도(헛스윙 포함)도 "전투 중"이다 - 자동회복이 싸우는 동안엔 켜지지
 	-- 않아야 한다(PlayerRegen.server.lua 주석 참고).
@@ -156,12 +181,27 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 
 	-- 3타 강타 콤보 카운터 - 헛스윙도 포함해 이 시점에서 갱신한다(웹과 동일 지점).
 	local lastCombo = lastComboAttackTick[player]
-	if not lastCombo or now - lastCombo > CombatConfig.comboResetWindowSeconds then
-		comboCounts[player] = 0
+	local sessionNo = AirState.sessionCount(player)
+	if not lastCombo or now - lastCombo > CombatConfig.comboResetWindowSeconds or comboSession[player] ~= sessionNo then
+		comboCounts[player] = 0 -- MV1: 공중에 뜨는 순간(세션 번호가 바뀌면) 스택 초기화 - 공중에서 다시 쌓고 착지 뒤 지상도 0부터
 	end
+	comboSession[player] = sessionNo
 	comboCounts[player] += 1
 	lastComboAttackTick[player] = now
 	local isComboHit = comboCounts[player] % CombatConfig.comboHitEvery == 0
+	if isAir and isComboHit then
+		if tier.airHeavy then
+			for _, other in ipairs(Players:GetPlayers()) do -- MV1 공중 3타 = 강공격 + 무기 반짝임(표시)
+				local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+				if root and (root.Position - rootPart.Position).Magnitude <= AIR_FX_SEND_STUDS then
+					airHeavyFx:FireClient(other, player)
+				end
+			end
+		else
+			isComboHit = false -- 공중 3타 강공격은 환생 3회부터(해금 전 공중 3타 = 일반 타격)
+		end
+	end
+	lastAttackDebug[player] = { status = "swing", isAir = isAir, isComboHit = isComboHit, combo = comboCounts[player] }
 	comboUpdate:FireClient(player, comboCounts[player], isComboHit)
 	player:SetAttribute("ComboStage", comboCounts[player] % CombatConfig.comboHitEvery) -- 남의 화면 무기 발광(M1-0 후속 - client/ComboGlow · 표시만)
 
@@ -353,12 +393,26 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 			StuckArrowState.attach(target, player, atk, classId, attackerStage, hitDirection, requestedAt)
 		end
 	end)
-end)
+end
+
+attackRequest.OnServerEvent:Connect(handleAttack)
+if game:GetService("RunService"):IsStudio() then -- 검증 훅(MV1(나)): 실제 요청과 같은 판정 → 마지막 판정 기록
+	local hook = Instance.new("BindableFunction")
+	hook.Name = "AttackHook"
+	hook.OnInvoke = function(player, aimPoint, clientAir)
+		lastAttackDebug[player] = { status = "ignored" }
+		handleAttack(player, aimPoint, clientAir)
+		return lastAttackDebug[player]
+	end
+	hook.Parent = game:GetService("ServerStorage")
+end
 
 Players.PlayerRemoving:Connect(function(player)
 	lastAttackTick[player] = nil
+	lastAttackDebug[player] = nil
 	comboCounts[player] = nil
 	lastComboAttackTick[player] = nil
+	comboSession[player] = nil
 	lastZoneBlockedNoticeAt[player] = nil
 	-- 아직 살아있는 몬스터의 기여 기록에 이 플레이어가 남아있으면(퇴장 시점에 전투 중이었던
 	-- 경우) 몬스터가 죽을 때까지 계속 남는다 - 떠나는 쪽이 자기 흔적을 지운다(MonsterAI.

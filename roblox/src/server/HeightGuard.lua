@@ -46,6 +46,7 @@ local function stepPermit(st, sample, now)
 	if not permit then
 		return nil
 	end
+	st.permitSeenAt = now -- MV1 낙하 제외(강제 체공): 허가가 살아 있던 마지막 판정 시각
 	if sample.grounded then
 		local age = now - permit.issuedAt
 		if (permit.airSeen and age >= PERMIT.landGraceSeconds) or (not permit.airSeen and age >= PERMIT.unusedSeconds) then
@@ -172,6 +173,16 @@ function HeightGuard.reset(player)
 	local st = stateOf(player)
 	st.supportY, st.lastPos, st.strikes, st.permit = nil, nil, 0, nil
 	st.graceUntil = os.clock() + cfg.graceSeconds
+end
+
+-- MV1 낙하 제외: 지금 발사 허가 · 예외(붙잡힘 · 넉백 등)가 있거나 graceSeconds 안에 끝났는가(착지 보고는 서버 착지 판정보다 늦게 온다).
+function HeightGuard.recentlyForced(player, graceSeconds, now)
+	local st = states[player]
+	if not st then
+		return false
+	end
+	now = now or os.clock()
+	return st.permit ~= nil or now - (st.permitSeenAt or -math.huge) <= graceSeconds or now <= st.exemptUntil + graceSeconds
 end
 
 -- 위반으로 되돌린 시각이 since(os.clock) 뒤에 있는가 - 리더보드가 그 보스전 시작 시각으로 묻는다.

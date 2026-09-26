@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
+local MovementUnlockData = require(ReplicatedStorage.Shared.data.MovementUnlockData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local Text = require(ReplicatedStorage.Shared.Text)
 
@@ -65,6 +66,22 @@ function RebirthView.build(parent, _overlayParent)
 		require(script.Parent.Parent.Milestones).open()
 	end)
 
+	-- MV1 환생 보상 줄(간단 표시 - 보상 줄 UI는 U1): 회차마다 한 줄 · 이미 받은 줄(계정 최대 환생 MoveTier 이상)은 초록.
+	local rewardLabel = Instance.new("TextLabel")
+	rewardLabel.Name = "RebirthRewards"
+	rewardLabel.BackgroundTransparency = 1
+	rewardLabel.Size = UDim2.new(1, -16, 0, 96)
+	rewardLabel.Position = UDim2.new(0, 8, 0, 150)
+	rewardLabel.TextXAlignment = Enum.TextXAlignment.Left
+	rewardLabel.TextYAlignment = Enum.TextYAlignment.Top
+	rewardLabel.TextWrapped = true
+	rewardLabel.RichText = true
+	rewardLabel.Font = Enum.Font.Gotham
+	rewardLabel.TextSize = 13
+	rewardLabel.TextColor3 = Color3.fromRGB(234, 238, 245) -- UIColors.textPrimary 값
+	rewardLabel.Text = ""
+	rewardLabel.Parent = parent
+
 	local resultLabel = Instance.new("TextLabel")
 	resultLabel.BackgroundTransparency = 1
 	resultLabel.Size = UDim2.new(1, -16, 0, 20)
@@ -77,7 +94,21 @@ function RebirthView.build(parent, _overlayParent)
 
 	local refs = {}
 
+	local function rewardText()
+		local got = player:GetAttribute("MoveTier") or 0
+		local tier4 = MovementUnlockData.tiers[4]
+		local lines = { "<b>" .. Text.get("moveUnlock.rewardHeader") .. "</b>" }
+		for n = 1, MovementUnlockData.maxTier do
+			for _, key in ipairs(MovementUnlockData.rewardRows[n]) do
+				local line = Text.get(key, { seconds = tier4.glideSecondsBonus, mult = ("%g"):format(tier4.airDashRangeMultiplier), slots = #GemData.slotGradeCap })
+				table.insert(lines, n <= got and ('<font color="#35D0A5">✓ %s</font>'):format(line) or ("· " .. line))
+			end
+		end
+		return table.concat(lines, "\n")
+	end
+
 	function refs.update()
+		rewardLabel.Text = rewardText()
 		local rebirthCount = player:GetAttribute("RebirthCount") or 0
 		local level = player:GetAttribute("CharacterLevel") or 1
 		-- D1-2: 무기 태초 조건 한 줄(코드 조건 = 환생 maxRebirthCount회 + 보석 홈 전부 - PlayerProfile.rebirth)

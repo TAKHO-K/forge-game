@@ -1,12 +1,25 @@
 -- 이동 보조(M1-0).
 --   ① 공중 점프 · 대시 모션 중계(AirMoveFx): 모션은 클라가 루트 관절 C0로 그려서 복제되지 않는다 - 입력한 클라가 kind를 보내면 다른 사람들에게 (그 사람, kind)로 다시 보낸다.
 --      그리기 신호일 뿐 판정 · 상태는 없다. kind는 두 가지만 받고, relayMinGapSeconds보다 잦으면 버린다.
+--   ③ MV1: 서버 체공 상태(AirState) · 낙하(FallServer - FallLanded) · 활강 상태(GlideState → Character Attribute Gliding - 모든 클라가 글라이더를 그린다) ·
+--      태초 장갑 붙잡기(LedgeClimb - 서버가 모서리를 광선으로 다시 확인하고 HeightGuard 허가를 준다 = 올라서기를 합법 동작으로 등록).
 --   ② 로블록스 기본 Shift Lock을 끈다(DevEnableMouseLock) - 기본 키가 LeftShift라 대시와 겹친다. 시점 고정은 자체 구현(client/ShiftLock.client.lua · LeftControl).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
+local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
+local AirState = require(script.Parent.AirState)
+local FallServer = require(script.Parent.FallServer)
+local HeightGuard = require(script.Parent.HeightGuard)
+local PlayerProfile = require(script.Parent.PlayerProfile)
+
+AirState.start()
+FallServer.start()
 
 local KINDS = { flip = true, lean = true }
 
@@ -38,6 +51,101 @@ airMoveFx.OnServerEvent:Connect(function(player, kind)
 	end
 end)
 
+-- ── MV1 활강 상태 ──
+local glideState = Instance.new("RemoteEvent")
+glideState.Name = "GlideState"
+glideState.Parent = ReplicatedStorage
+local glideOnAt = {} -- [Player] = os.clock()
+
+glideState.OnServerEvent:Connect(function(player, on)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
+		return
+	end
+	if on == true and MoveRules.tierOf(player).glide then
+		glideOnAt[player] = os.clock()
+		character:SetAttribute("Gliding", true)
+	else
+		glideOnAt[player] = nil
+		character:SetAttribute("Gliding", nil)
+	end
+end)
+
+-- 서버가 땅을 본 뒤에도 켜져 있으면 끈다(클라가 끄는 신호를 놓친 경우 - 켠 직후 0.5초는 서버 착지 판정 지연이라 기다린다)
+RunService.Heartbeat:Connect(function()
+	local now = os.clock()
+	for player, at in pairs(glideOnAt) do
+		if now - at > 0.5 and not AirState.session(player) then
+			glideOnAt[player] = nil
+			if player.Character then
+				player.Character:SetAttribute("Gliding", nil)
+			end
+		end
+	end
+end)
+
+-- ── MV1 태초 장갑 붙잡기(올라서기 = 합법 동작) ──
+local ledgeClimb = Instance.new("RemoteEvent")
+ledgeClimb.Name = "LedgeClimb"
+ledgeClimb.Parent = ReplicatedStorage
+local LEDGE = MovementConfig.ledgeGrab
+local lastLedgeAt = {}
+local ledgeParams = RaycastParams.new()
+ledgeParams.FilterType = Enum.RaycastFilterType.Exclude
+
+-- 서버가 모서리 윗면을 찾는다: 루트에서 벽 방향 reach + 0.6 앞, 발 위 손 높이 + 여유에서 아래로.
+local function ledgeTopFor(character, root, wallDir)
+	ledgeParams.FilterDescendantsInstances = { character }
+	local feetY = root.Position.Y - MovementConfig.rootAboveFeetStuds
+	local probe = Vector3.new(root.Position.X, feetY, root.Position.Z) + wallDir * (LEDGE.reachStuds + 0.6)
+	local from = probe + Vector3.new(0, LEDGE.maxLedgeAboveFeet + LEDGE.serverTolerance + 1, 0)
+	local hit = Workspace:Raycast(from, Vector3.new(0, -(LEDGE.maxLedgeAboveFeet + LEDGE.serverTolerance * 2 + 2), 0), ledgeParams)
+	return hit and hit.Position.Y, feetY
+end
+
+-- 반환 = "ok" | 거절 사유(검증 MV1(나)가 직접 부른다).
+local function handleLedge(player, ledgeY, wallDir)
+	local now = os.clock()
+	if now - (lastLedgeAt[player] or -math.huge) < LEDGE.requestGapSeconds then
+		return "throttled"
+	end
+	lastLedgeAt[player] = now
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or typeof(wallDir) ~= "Vector3" or not PlayerProfile.hasLedgeGrab(player) then
+		return "no_gloves"
+	end
+	local flat = Vector3.new(wallDir.X, 0, wallDir.Z)
+	if flat.Magnitude < 0.5 then
+		return "bad_dir"
+	end
+	local session = AirState.currentOrLastSession(player)
+	if not session or session.ledgeUsed then
+		return "used"
+	end
+	local topY, feetY = ledgeTopFor(character, root, flat.Unit)
+	local ok, why = MoveRules.ledgeClimbValid(ledgeY, topY, feetY)
+	if not ok then
+		return why
+	end
+	session.ledgeUsed = true
+	HeightGuard.grant(player, topY + LEDGE.permitMarginStuds, LEDGE.permitSeconds, "ledge")
+	return "ok"
+end
+ledgeClimb.OnServerEvent:Connect(function(player, ledgeY, wallDir)
+	local result = handleLedge(player, ledgeY, wallDir)
+	if result ~= "ok" and result ~= "throttled" then
+		print(("[forge-game] 붙잡기 거절: %s - %s"):format(player.Name, result))
+	end
+end)
+if RunService:IsStudio() then -- 검증 훅(MV1(나) - 서버 검증이 같은 판정을 부른다)
+	local hook = Instance.new("BindableFunction")
+	hook.Name = "LedgeClimbHook"
+	hook.OnInvoke = handleLedge
+	hook.Parent = game:GetService("ServerStorage")
+end
+
 local function onPlayer(player)
 	player.DevEnableMouseLock = false
 end
@@ -48,4 +156,6 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 Players.PlayerRemoving:Connect(function(player)
 	lastRelayAt[player] = nil
+	glideOnAt[player] = nil
+	lastLedgeAt[player] = nil
 end)

@@ -353,7 +353,7 @@ local function updateMeleeAlike(hands, model, motion, instances, alpha, singlePa
 		end
 
 		local angle = evalKeyframes(partMotion.keyframes, alpha, "angle")
-		part.CFrame = hand.CFrame * gripOffset * rotationCFrame(partMotion.swingAxis, angle)
+		part.CFrame = hand.CFrame * gripOffset * rotationCFrame((current.air and motion.air and motion.air.swingAxis) or partMotion.swingAxis, angle) -- MV1 공중 전용 베기
 
 		local trail = model.kind == "mesh_pair" and instances.trails[partMotion.name] or instances.trail
 		if trail then
@@ -405,7 +405,7 @@ end
 local function updateStaff(hand, model, motion, instances, alpha)
 	local partMotion = motion.parts[1]
 	local angle = evalKeyframes(partMotion.keyframes, alpha, "angle")
-	instances.part.CFrame = hand.CFrame * model.gripOffset * rotationCFrame(partMotion.swingAxis, angle)
+	instances.part.CFrame = hand.CFrame * model.gripOffset * rotationCFrame((current.air and motion.air and motion.air.swingAxis) or partMotion.swingAxis, angle) -- MV1 공중 휘두르기
 end
 
 -- 3타 강타 히트스톱(16-7) - "타격감의 핵심"(지시). durationSeconds 동안 스윙 포즈를
@@ -448,6 +448,9 @@ local function updateFrame()
 	local duration = current.motion.totalDurationSeconds
 	if current.heavy then
 		duration /= HEAVY_SPEED_SCALE
+	end
+	if current.air and current.motion.air then
+		duration /= current.motion.air.speedScale -- MV1 공중 베기는 조금 빠르다
 	end
 	local alpha = 0
 	if current.swingStartTime then
@@ -502,11 +505,12 @@ end
 -- 서버 확인 없이 즉시 재생한다(지시 사항 - "모션은 클라이언트에서 재생한다. 판정은
 -- 여전히 서버다"). 스윙 길이는 클래스 데이터(AttackMotionData)가 고정으로 갖고 있다 -
 -- 호출부는 "지금 재생해라"만 알려주면 된다. isHeavy(16-7)면 3타 강타 변형을 얹는다.
-function WeaponVisual.playSwing(isHeavy)
+function WeaponVisual.playSwing(isHeavy, isAir)
 	if not current then
 		return
 	end
 	current.heavy = isHeavy
+	current.air = isAir == true -- MV1 공중 전용 베기(AttackMotionData[직업].air)
 	current.swingStartTime = os.clock()
 
 	if isHeavy and (current.kind == "mesh" or current.kind == "mesh_pair" or current.kind == "specialmesh") then

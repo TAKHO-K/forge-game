@@ -18,6 +18,11 @@ local AimTarget = require(script.Parent.AimTarget)
 local UIManager = require(script.Parent.UIManager)
 local CameraShake = require(script.Parent.CameraShake)
 local DamageNumbers = require(script.Parent.DamageNumbers)
+local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
+
+-- MV1 공중 공격(환생 1회부터 - MovementUnlockData): 한 체공 예산(MoveRules.airAttackBudget = 해금된 공중 점프 + 이번 체공의 공중 대시) 안에서는 공중에서 바로 친다.
+-- 예산을 넘거나 해금 전이면 옛 규칙(점프 중 클릭 = 착지 순간 발동하는 버퍼). 판정 · 예산 확정은 서버(AttackServer · AirState) - 여기는 모션 · 요청만.
+local airAttacksThisAir = 0
 
 local attackRequest = ReplicatedStorage:WaitForChild("AttackRequest")
 local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
@@ -54,14 +59,24 @@ local lastSwingTick = 0
 local predictedComboCount = 0
 local lastPredictedComboTick = 0
 
-local function predictIsHeavyHit()
+local function predictIsHeavyHit(isAir)
 	local now = os.clock()
 	if now - lastPredictedComboTick > CombatConfig.comboResetWindowSeconds then
 		predictedComboCount = 0
 	end
 	predictedComboCount += 1
 	lastPredictedComboTick = now
-	return predictedComboCount % CombatConfig.comboHitEvery == 0
+	local heavy = predictedComboCount % CombatConfig.comboHitEvery == 0
+	if heavy and isAir and not (MoveRules.tierOf(player)).airHeavy then
+		heavy = false -- 공중 3타 강공격은 환생 3회부터(서버와 같은 규칙)
+	end
+	return heavy
+end
+
+local function canAirAttack()
+	local character = player.Character
+	local budget = MoveRules.airAttackBudget((MoveRules.tierOf(player)), character and character:GetAttribute("AirDashesUsed") or 0)
+	return airAttacksThisAir < budget
 end
 
 -- 공격 방향 회전(19-2 [1]) - 클릭하면 순간이동하듯 도는 대신, 720도/초로 최단 방향(시계/
@@ -151,14 +166,17 @@ end
 
 -- 실제 서버 공격 요청 + 스윙 모션 재생(회전 완료 후에만 호출된다). 점프 착지 버퍼(아래)도
 -- 같은 함수를 쓴다 - 회전을 거쳤든 착지로 바로 나갔든 공격이 실제로 나가는 지점은 하나뿐이다.
-local function performAttack(aimPoint)
+local function performAttack(aimPoint, isAir)
 	-- 21-1 [1]-C: 채널링 중(서버가 PlayerState.setChannelingUntil로 올려 둔 Attribute)엔
 	-- 요청도 스윙 모션도 내지 않는다 - 서버가 어차피 거부하지만, 모션만 재생되면 "쳤는데
 	-- 안 맞는다"는 거짓 피드백이 된다(위 lastSwingTick 주석과 같은 이유). 판정은 서버다.
 	if player:GetAttribute("IsChanneling") or player:GetAttribute("BossTrapKind") then
 		return -- 29-1: 잡힌 동안에도 같다(서버 BossTrap이 올린 Attribute - 판정은 서버)
 	end
-	attackRequest:FireServer(aimPoint)
+	attackRequest:FireServer(aimPoint, isAir == true)
+	if isAir then
+		airAttacksThisAir += 1
+	end
 
 	local classId = player:GetAttribute("ClassId")
 	if not classId or classId == "" then
@@ -175,13 +193,19 @@ local function performAttack(aimPoint)
 	local now = os.clock()
 	if now - lastSwingTick >= cooldown then
 		lastSwingTick = now
-		WeaponVisual.playSwing(predictIsHeavyHit())
+		WeaponVisual.playSwing(predictIsHeavyHit(isAir), isAir)
 	end
 end
 
 local function hookJumpLanding(character)
 	local humanoid = character:WaitForChild("Humanoid")
-	humanoid.StateChanged:Connect(function(_, newState)
+	humanoid.StateChanged:Connect(function(oldState, newState)
+		-- MV1: 뜨는 순간 = 강공격 스택 예측 초기화 + 공중 공격 예산 새로(서버 AirState와 같은 규칙 - 요철의 잠깐 Air는 Freefall이 짧아 예측만 흔들린다)
+		if (newState == Enum.HumanoidStateType.Jumping or newState == Enum.HumanoidStateType.Freefall)
+			and oldState ~= Enum.HumanoidStateType.Jumping and oldState ~= Enum.HumanoidStateType.Freefall then
+			predictedComboCount = 0
+			airAttacksThisAir = 0
+		end
 		if newState ~= Enum.HumanoidStateType.Landed then
 			return
 		end
@@ -232,7 +256,12 @@ local function fireAttack(aimPoint)
 
 	local airborne = isAirborne(humanoid)
 	local onComplete = nil
-	if airborne then
+	if airborne and canAirAttack() then
+		bufferedJumpAttack = nil -- MV1: 예산 안 = 공중에서 바로(회전을 거쳐)
+		onComplete = function()
+			performAttack(aimPoint, true)
+		end
+	elseif airborne then
 		bufferedJumpAttack = { aimPoint = aimPoint, inputTime = os.clock() }
 	else
 		bufferedJumpAttack = nil -- 지상에서 새로 클릭하면 이전 공중 버퍼는 무효

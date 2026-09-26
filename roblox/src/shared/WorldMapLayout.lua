@@ -379,33 +379,73 @@ function Layout.triangle(a, b, c, thickness)
 	}
 end
 
--- 이동 한 번(오름 rise · 간격 gap - 끝에서 끝)에 필요한 가장 쉬운 기술(movement-metrics v2 - 간격은 80% 여유 · 높이는 최대 도달 − 0.3).
--- 반환: 난이도("easy" | "normal" | "hard") · 조합 이름 | nil, "불가". 격자 계산이라 결과를 캐시한다(검증 · 시간 표 전용 - 매 프레임 쓰지 않는다).
+-- 이동 한 번(오름 rise · 간격 gap - 끝에서 끝)에 필요한 가장 쉬운 기술(movement-metrics v3 - 간격은 80% 여유 · 높이는 최대 도달 − 0.3).
+-- MV1: caps(없으면 해금 최대 = 공중 점프 2 · 공중 대시 1 · 대시 기본 · 걷기 16)로 해금 단계별 도달성을 잰다.
+--   caps = { airJumps, dashes(공중 대시 수 - 0이면 대시 없음 · 태초 신발 2), dashStuds(대시 거리), walk(걷기), ledge(태초 장갑 붙잡기 - 모서리가 손 높이 안이면 올라선다) }.
+-- 반환: 난이도("easy" | "normal" | "hard" | "ledge") · 조합 이름 | nil, "불가". 격자 계산이라 결과를 캐시한다(검증 · 시간 표 전용 - 매 프레임 쓰지 않는다).
 local skillCache = {}
 local COMBOS = {
-	{ name = "1단", air = 0, dash = false, skill = "easy" },
-	{ name = "공중1", air = 1, dash = false, skill = "normal" },
-	{ name = "공중2", air = 2, dash = false, skill = "normal" },
-	{ name = "1단+대시", air = 0, dash = true, skill = "hard" },
-	{ name = "공중1+대시", air = 1, dash = true, skill = "hard" },
-	{ name = "공중2+대시", air = 2, dash = true, skill = "hard" },
+	{ name = "1단", air = 0, dashes = 0, skill = "easy" },
+	{ name = "공중1", air = 1, dashes = 0, skill = "normal" },
+	{ name = "공중2", air = 2, dashes = 0, skill = "normal" },
+	{ name = "1단+대시", air = 0, dashes = 1, skill = "hard" },
+	{ name = "공중1+대시", air = 1, dashes = 1, skill = "hard" },
+	{ name = "공중2+대시", air = 2, dashes = 1, skill = "hard" },
+	{ name = "1단+2단대시", air = 0, dashes = 2, skill = "hard" },
+	{ name = "공중1+2단대시", air = 1, dashes = 2, skill = "hard" },
+	{ name = "공중2+2단대시", air = 2, dashes = 2, skill = "hard" },
 }
-function Layout.moveSkill(rise, gap)
+Layout.MOVE_COMBOS = COMBOS
+
+local function comboGap(c, rise, caps)
+	local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+	local key = ("%s:%d:%s:%s"):format(c.name, math.floor(math.max(rise, 0) * 2 + 0.5), tostring(caps.dashStuds), tostring(caps.walk))
+	local g = skillCache[key]
+	if not g then
+		g = JumpMath.maxGapStuds({ walk = caps.walk, airJumps = c.air, dashes = c.dashes, dashStuds = caps.dashStuds, rise = rise })
+		skillCache[key] = g
+	end
+	return g
+end
+
+function Layout.moveSkill(rise, gap, caps)
 	local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 	local MC = require(ReplicatedStorage.Shared.data.MovementConfig)
+	caps = caps or {}
+	local maxAir, maxDashes = caps.airJumps or MC.airJump.charges, caps.dashes or 1
 	for _, c in ipairs(COMBOS) do
-		local key = c.name .. ":" .. math.floor(math.max(rise, 0) * 2 + 0.5)
-		local g = skillCache[key]
-		if not g then
-			local air = JumpMath.maxAirSeconds(MC.jumpHeightStuds, c.air, c.dash and 0.3 or nil, math.max(rise, 0), nil, 24)
-			g = MC.walkSpeedStuds * (air - (c.dash and 0.3 or 0)) + (c.dash and 16 or 0)
-			skillCache[key] = g
+		if c.air <= maxAir and c.dashes <= maxDashes then
+			if rise <= JumpMath.maxReachStuds(MC.jumpHeightStuds, c.air) - 0.3 and gap <= 0.8 * comboGap(c, rise, caps) then
+				return c.skill, c.name
+			end
 		end
-		if rise <= JumpMath.maxReachStuds(MC.jumpHeightStuds, c.air) - 0.3 and gap <= 0.8 * g then
-			return c.skill, c.name
+	end
+	-- 태초 장갑 붙잡기: 발이 모서리 − 손 높이까지만 가면 올라선다(벽 = 착지 높이가 rise − maxLedgeAboveFeet인 도약)
+	if caps.ledge then
+		local low = rise - MC.ledgeGrab.maxLedgeAboveFeet
+		for _, c in ipairs(COMBOS) do
+			if c.air <= maxAir and c.dashes <= maxDashes then
+				if low <= JumpMath.maxReachStuds(MC.jumpHeightStuds, c.air) - 0.3 and gap <= 0.8 * comboGap(c, low, caps) then
+					return "ledge", c.name .. "+붙잡기"
+				end
+			end
 		end
 	end
 	return nil, "불가"
+end
+
+-- MV1 해금 단계(MovementUnlockData 행)의 능력(caps). primordialShoes · primordialGloves = 태초 보유자 예외 열.
+function Layout.capsForTier(tierRow, primordialShoes, primordialGloves, walk)
+	local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+	local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
+	walk = walk or 16
+	return {
+		airJumps = tierRow.airJumps,
+		dashes = primordialShoes and DashConfig.primordialShoes.charges or 1,
+		dashStuds = JumpMath.dashRangeStuds(walk / 16, tierRow.airDashRangeMultiplier),
+		walk = walk,
+		ledge = primordialGloves == true,
+	}
 end
 
 -- ─────────────────────────── 나무 점프맵(M1 재설계 - 두 갈래 길) ───────────────────────────

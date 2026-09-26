@@ -122,6 +122,10 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 local slotTapped = Instance.new("BindableEvent")
 slotTapped.Name = "SkillSlotTapped"
 slotTapped.Parent = screenGui
+-- MV1: 누름 · 뗌 신호(id, down) - 대시 칸만 쏜다(짧게 = 대시 · 공중 길게 = 활강 판정이 누른 시간을 봐야 한다 - DashInput).
+local slotPress = Instance.new("BindableEvent")
+slotPress.Name = "SkillSlotPress"
+slotPress.Parent = screenGui
 
 -- SkillInput.client.lua가 WaitForChild로 찾는 로컬 전용 신호(20-2a) - ComboPipsAnchor
 -- (AttackInput.client.lua)와 같은 "잘 알려진 자리" 계약 패턴. RemoteEvent가 아니라
@@ -166,6 +170,20 @@ local function buildSlot(parent, layoutOrder, def)
 			SkillTooltip.attach(slot, def.id, function()
 				slotTapped:Fire(def.id)
 			end, isTouchLayout)
+		elseif def.id == "dash" then
+			-- MV1: 누른 순간 · 뗀 순간(손가락이 버튼 밖에서 떼도 같은 입력의 끝을 받는다)
+			slot.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+					slotPress:Fire("dash", true)
+					local conn
+					conn = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
+						if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
+							conn:Disconnect()
+							slotPress:Fire("dash", false)
+						end
+					end)
+				end
+			end)
 		else
 			slot.Activated:Connect(function()
 				slotTapped:Fire(def.id)

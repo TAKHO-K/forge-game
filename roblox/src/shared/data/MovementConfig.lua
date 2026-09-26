@@ -10,9 +10,52 @@ return {
 	-- 공중 점프(M1-0 - 사용자 결정: 겐지 · 한조식 스택형, 필드 · 보스 아레나 같은 규칙): 공중에서 점프 버튼을 누를 때마다 충전 1을 쓰고 지금 높이에서 1단 × heightFraction만큼 더 오른다.
 	-- 충전은 바닥을 밟으면 charges로 돌아온다. 공중대시는 한 체공에 1회이고 공중 점프와 어느 순서로든 섞는다(G2a의 상한형 · 대시 택일 · 아레나 전용 제한은 폐기).
 	-- 최대 발 높이 = 1단 × (1 + charges × heightFraction) = 7.2 × 2.7 = 19.44(정점마다 누를 때). 0.85 = 80 ~ 90% 중 가운데(표 = docs/design/movement-metrics.md v2).
+	-- MV1: charges = 해금 최대(환생 3회). 사람마다 쓰는 수 = MovementUnlockData(환생 0 = 0 · 1 ~ 2 = 1 · 3+ = 2) - 서버 높이 검증 허용치는 이 최대로 잰다(느슨한 쪽 - S1에서 사람별로 좁힌다).
 	-- newPressGapSeconds: 누른 채로 있으면 JumpRequest가 반복된다 - 직전 요청과 이만큼 떨어진 요청만 새 누름. minAirSeconds: 이륙 직후의 같은 누름을 공중 점프로 읽지 않게.
 	-- dashPendingSeconds: 공중대시를 요청한 뒤 결과(서버 왕복)가 올 때까지 공중 점프를 막는 여유(결과가 오면 트윈 끝 시각으로 덮는다 - 트윈이 끝나며 속도 0이라 그 사이 점프는 충전만 날아간다).
 	airJump = { charges = 2, heightFraction = 0.85, newPressGapSeconds = 0.1, minAirSeconds = 0.05, dashPendingSeconds = 0.5 },
+
+	-- MV1 활강(사용자 - 젤다 고공비행 느낌 · 환생 2회 해금): 공중에서 대시를 길게 누르면(DashConfig.input.glideHoldSeconds) 켜진다.
+	--   forwardSpeed = 수평 전진(stud/s - 바라보는 방향 · 이동 속도 옵션과 무관: S1 속도 상한을 한 값으로 둔다) · descentSpeed = 하강(stud/s - 일정) · turnDegPerSecond = 이동 입력 쪽으로 도는 속도.
+	--   gaugeSeconds = 게이지(환생 4회 + MovementUnlockData.glideSecondsBonus) · 착지하면 refillSeconds에 가득(서 있는 동안만 찬다) · 공중에서는 안 찬다.
+	--   끝 = 대시 다시 누름 · 점프 · 게이지 소진(→ 자유 낙하) · 착지 · 물. 공중 점프 충전은 착지해야만 돌아온다(활강은 충전을 쓰지 않는다).
+	--   아무리 빨리 떨어지고 있어도 켤 수 있다(켜는 순간 하강 = descentSpeed - 활강도 낙법이다).
+	--   look: 글라이더 소품(나뭇잎 - 색 = 나무 점프맵 잎 발판 여름색 WorldMapData.hub.tree.seasons.summer.leafPad 재사용) · poseLeanDeg = 앞으로 눕는 각.
+	--   gaugeUi: 캐릭터 옆 원형 게이지(점 dots개 고리 · 초록 → 노랑 → 빨강 경계 = 남은 비율 warnFraction · dangerFraction).
+	glide = {
+		forwardSpeed = 30, descentSpeed = 5, turnDegPerSecond = 150,
+		gaugeSeconds = 8, refillSeconds = 2,
+		look = { leafColor = Color3.fromRGB(118, 165, 94), stemColor = Color3.fromRGB(108, 62, 44), -- 줄기 = 나무 껍질 어두운 색(WorldMapData barkDark) 재사용
+			leafSize = Vector3.new(7, 0.3, 3.6), aboveHeadStuds = 2.2, poseLeanDeg = 55 },
+		gaugeUi = { dots = 16, sizePx = 46, dotPx = 7, sideStuds = 2.6, warnFraction = 0.5, dangerFraction = 0.25 },
+	},
+
+	-- MV1 태초 장갑 = 붙잡기(사용자 수정 - 딜 · 공격 횟수 · 공속 영향 0): 공중에서 벽 · 절벽 모서리에 닿으면 매달린다 → 점프 키로 올라선다. 한 체공 1회(착지하면 다시 찬다).
+	--   잡는 조건(클라 - 매 프레임): 떨어지는 중이거나 느리게 오르는 중(세로 속도 ≤ maxRiseSpeed) · 앞 reachStuds 안에 벽 · 그 벽 윗면(모서리)이 발 위 minLedgeAboveFeet ~ 손 높이(maxLedgeAboveFeet) ·
+	--     모서리 위 standClearStuds 높이가 비었다(올라설 자리). 매달림 = 루트 고정(모서리 − hangBelowStuds) · hangMaxSeconds 뒤 저절로 놓는다 · 점프 = 모서리 위 climbInStuds 안쪽으로 올라섬.
+	--   서버(합법 동작 등록): 클라가 LedgeClimb(모서리 윗면 · 벽 방향)를 보내면 서버가 광선으로 모서리를 다시 확인하고(serverTolerance) 태초 장갑 · 체공 1회를 확인한 뒤
+	--     HeightGuard 허가(발 최고 = 모서리 + permitMarginStuds · permitSeconds)를 준다 - 허가 없이 오르면 옛 규칙대로 되돌린다. 올라서기 = 새 지면(기준이 모서리 위로 옮는다).
+	--   대공 잡기의 공중 시간 규칙은 그대로다(매달림 = 공중 - 보스 BossAirGrab이 그대로 센다).
+	ledgeGrab = {
+		reachStuds = 2.6, maxRiseSpeed = 8, minLedgeAboveFeet = 2.5, maxLedgeAboveFeet = 7.5, standClearStuds = 5.5, hangBelowStuds = 4.2,
+		hangMaxSeconds = 4, climbInStuds = 2.4, climbSeconds = 0.22,
+		serverTolerance = 3, permitMarginStuds = 3, permitSeconds = 6, requestGapSeconds = 0.3, -- 허가 = 매달리는 순간 요청(오르기 전에 서버에 닿게) · 매달림 최대 + 여유
+	},
+
+	-- MV1 낙하(사용자 결정 - 불꽃과 낙사): 판정 = 착지 순간 수직 속도(높이가 아님) → 공중 점프 · 활강으로 떨어지는 속도를 죽이면 산다("낙법").
+	--   dangerSpeed 이상으로 떨어지는 동안 몸에 불꽃 꼬리(경고) · 이 속도 이상 착지 = 최대 체력 × (damageMinFraction → damageMaxFraction 직선 - lethalSpeed에서 최대) 피해(보호막 무시 - 판정형 피해).
+	--   lethalSpeed 이상 착지(또는 피해로 체력이 0이 되면) = 쓰러짐("쿵!" · 그을린 모습 knockdownSeconds) → 마지막 안전 지점(이번 체공을 시작한 땅)에서 체력 가득으로 일어난다 · 아이템 손실 없음.
+	--   기준 근거(표 = movement-metrics v3 §낙하): 공중 점프 2 정점(19.44 · 옵션 21.38)에서 떨어져도 87 ~ 92 < 110(평소 점프는 불꽃 없음) · 110 = 약 31 높이 · 175 = 약 78 높이.
+	--   제외(서버가 판정): 강제 체공(발사 허가 - 보스 던지기 · 회오리 · 넉백 · 점프대 · 통통 열매 = HeightGuard 허가 · 예외가 permitGraceSeconds 안) · 사다리에서 떨어짐(클라가 오르기 뒤 체공을 표시) ·
+	--     나무 점프맵(허브 나무 둘레 WorldMapData.progress.treeRadius 안 - 체크포인트 복귀 규칙 · 높은 곳 규칙과 같은 둘레) · 보스전(BossEncounterId - 아레나 낙사 기믹 규칙) · 물 착지.
+	--   reportMaxSpeed = 클라가 보낸 속도 상한(그 위는 자른다) · reportMinGapSeconds = 사람마다 보고 간격 · charredSeconds = 일어난 뒤에도 그을린 모습이 남는 시간.
+	fall = {
+		dangerSpeed = 110, lethalSpeed = 175, damageMinFraction = 0.1, damageMaxFraction = 0.9,
+		knockdownSeconds = 1.6, charredSeconds = 5, permitGraceSeconds = 1.0,
+		reportMaxSpeed = 2000, reportMinGapSeconds = 0.3,
+		flame = { minSpeed = 110, size = 6, heat = 12, maxDistance = 220 }, -- 불꽃 꼬리(로블록스 기본 Fire 인스턴스 · 새 에셋 없음)
+		charredColor = Color3.fromRGB(22, 24, 29), charredBlend = 0.8, -- 그을림 = 몸 파트 색을 이 색 쪽으로 섞는다(끝나면 원래 색) · 색 = UIColors.metalBottom 값 재사용(새 색 금지)
+	},
 
 	-- 공중 점프 · 공중대시 모션(클라가 그린다 - 판정 없음). 루트 관절(Motor6D) C0에 회전을 더한다: 공중 점프 = 앞으로 한 바퀴(flipSeconds), 공중대시 = 앞으로 기울임(leanDeg · 대시 시간 동안).
 	-- 입력 즉시 시작(준비 동작 없음). 남에게는 서버가 중계한다(relayMinGapSeconds보다 잦은 요청은 버린다).
@@ -32,7 +75,7 @@ return {
 
 	-- 서버 높이 검증(D0 부록 I §5): 발 − 마지막으로 서 있던 발 높이 > 최대 도달(JumpMath.maxReachStuds - 점프력 상한 · 공중 점프 전부) + toleranceStuds가 strikes번 이어지면 서 있던 자리로 되돌린다(+ 보스전이면 그 판 리더보드 무효).
 	-- tolerance 1.0 = 복제 지연 · 보간 여유. 허용치를 넘으면 루트에서 아래로 (3 + 허용치 + probeStuds) 광선을 쏴 발 바로 아래 지면을 기준으로 다시 잰다(폴링이 짧은 착지를 놓친 경우 · FloorMaterial 지연).
-	-- teleportResetStuds: 한 폴링(0.25초)에 이만큼 넘게 움직이면 순간이동으로 보고 기준을 새로 잡는다(정상 최대 = 24 × 0.25 + 대시 16 = 22). graceSeconds = 그 뒤 유예.
+	-- teleportResetStuds: 한 폴링(0.25초)에 이만큼 넘게 움직이면 순간이동으로 보고 기준을 새로 잡는다(정상 최대 = 24 × 0.25 + 대시 30.8 = 36.8 · MV1 활강 30/s × 0.25 = 7.5). graceSeconds = 그 뒤 유예.
 	-- exemptExtraSeconds: 넉백 · 회오리 · 파편 튕김은 서버가 보낸 순간부터 체공 + 이만큼 검사를 건너뛴다.
 	-- permit(M1-2c 발사 허가 - 점프대 · 통통 열매 · 보스 발사 패턴 공용 · server/LaunchPermit · HeightGuard.grant): 서버가 발사를 확인하면 "발 최고 높이 = 설계 정점 + 공중 점프 전부 + marginStuds"를 준다.
 	--   허용 = max(평소 허용, 허가 높이). 겹쳐 쌓지 않는다(가장 최근 것만). 만료 = 착지(허가 뒤 공중을 한 번 봤고 landGraceSeconds 지난 뒤 서 있으면) · 공중을 못 보고 unusedSeconds 동안 서 있으면(안 쓴 허가).

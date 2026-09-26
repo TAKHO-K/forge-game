@@ -300,9 +300,14 @@ function Loot.getShoesSpeedPercent(item)
 	return value
 end
 
--- D1-2 태초 신발 고유 효과: 대시 거리 배율(상한 DashConfig.rangeMaxMultiplier까지). 그 밖 = 1.
-function Loot.getShoesDashMultiplier(item)
-	return (item and item.grade == "primordial") and DashConfig.rangeMaxMultiplier or 1
+-- MV1 태초 신발 고유 효과: 2단 대시(연속 충전 DashConfig.primordialShoes.charges - D1-2의 거리 상한 ×1.125는 이동 속도 비례 대시로 대체). 그 밖 = 1.
+function Loot.getShoesDashCharges(item)
+	return (item and item.grade == "primordial") and DashConfig.primordialShoes.charges or 1
+end
+
+-- MV1 태초 장갑 고유 효과(사용자 수정): 붙잡기(MovementConfig.ledgeGrab - 딜 · 공격 횟수 · 공속 영향 0).
+function Loot.hasLedgeGrab(item)
+	return item ~= nil and item.grade == "primordial"
 end
 
 -- D1-2 태초 장갑 고유 효과: 치명 피해 추가분(PrimordialData.unique.glovesCritDmgBonus - 합계는 CombatConfig.critDmgBonusCap 안). 그 밖 = 0.

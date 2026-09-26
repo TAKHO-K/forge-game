@@ -15,6 +15,9 @@ local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
 local DashEndpoint = require(script.Parent.DashEndpoint)
+local AirState = require(script.Parent.AirState)
+local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 
 local dashRequest = Instance.new("RemoteEvent")
 dashRequest.Name = "DashRequest"
@@ -27,9 +30,9 @@ local dashResult = Instance.new("RemoteEvent")
 dashResult.Name = "DashResult"
 dashResult.Parent = ReplicatedStorage
 
-local lastDashTick = {} -- [Player] = os.clock()
+local dashStates = {} -- [Player] = MoveRules.newDashState() - MV1 태초 신발 2단 대시(연속 충전 · 쿨다운은 두 번째 뒤)
 
-dashRequest.OnServerEvent:Connect(function(player)
+local function handleDash(player)
 	if not PlayerProfile.getClassId(player) then
 		return -- 직업 미선택·로드 전 - 헛동작(AttackServer와 같은 원칙)
 	end
@@ -40,11 +43,7 @@ dashRequest.OnServerEvent:Connect(function(player)
 	end
 
 	local now = os.clock()
-	local last = lastDashTick[player]
-	if last and now - last < DashConfig.cooldownSeconds then
-		dashResult:FireClient(player, { ok = false, reason = "cooldown" })
-		return
-	end
+	local charges = PlayerProfile.getDashCharges(player)
 
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -69,9 +68,28 @@ dashRequest.OnServerEvent:Connect(function(player)
 	end
 	local direction = flat.Unit
 
-	lastDashTick[player] = now
+	-- MV1: 공중 대시 = 한 체공 MoveRules.airDashesAllowed회(서버 세션으로 센다 - 옛 규칙은 클라만 셌다). 쿨다운을 쓰지 않는다.
+	local session = AirState.session(player)
+	if session and session.airDashes >= MoveRules.airDashesAllowed(charges >= 2) then
+		dashResult:FireClient(player, { ok = false, reason = "air_used" })
+		return "air_used"
+	end
+	local st = dashStates[player] or MoveRules.newDashState()
+	dashStates[player] = st
+	local ok, reason, second = MoveRules.tryDash(st, now, charges)
+	if not ok then
+		dashResult:FireClient(player, { ok = false, reason = reason })
+		return reason
+	end
+	if session then
+		session.airDashes += 1
+	end
+
+	-- MV1 거리 = 기본 × 장비 걷기 배율(1 ~ speedScaleMax) × 공중이면 환생 4 공중 대시 강화
+	local tier = MoveRules.tierOf(player)
+	local range = JumpMath.dashRangeStuds(JumpMath.moveSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player)), session and tier.airDashRangeMultiplier or 1)
 	local startPos = rootPart.Position
-	local endPos = DashEndpoint.compute(player, startPos, direction, DashConfig.rangeStuds * PlayerProfile.getDashRangeMultiplier(player)) -- D1-2: 태초 신발 = 대시 거리 상한(DashConfig.rangeMaxMultiplier)
+	local endPos = DashEndpoint.compute(player, startPos, direction, range)
 
 	-- PRD 5.4 "대시 중 피격 데미지 50% 감소" - 대검 회전베기와 같은 통로(PlayerState).
 	PlayerState.setIncomingDamageMultiplierUntil(player, DashConfig.incomingDamageMultiplier, DashConfig.durationSeconds, "dash")
@@ -79,14 +97,31 @@ dashRequest.OnServerEvent:Connect(function(player)
 	dashResult:FireClient(player, {
 		ok = true,
 		cooldownSeconds = DashConfig.cooldownSeconds,
+		-- MV1 2단 대시: 첫 대시 뒤 두 번째 창이 열려 있으면 그 끝까지 남은 초(클라 쿨 링 · 충전 표시) · second = 이번이 두 번째였나
+		chainSeconds = (charges >= 2 and not second) and DashConfig.primordialShoes.chainWindowSeconds or nil,
+		second = second,
+		rangeStuds = range,
 		startPosition = startPos,
 		endPosition = endPos,
 		durationSeconds = DashConfig.durationSeconds,
 	})
-end)
+	return "ok", range, endPos, startPos, second
+end
+dashRequest.OnServerEvent:Connect(handleDash)
+if game:GetService("RunService"):IsStudio() then -- 검증 훅(MV1(나)): 실제 요청과 같은 판정 · 결과(클라에도 DashResult가 간다)
+	local hook = Instance.new("BindableFunction")
+	hook.Name = "DashHook"
+	hook.OnInvoke = function(player, resetCooldown)
+		if resetCooldown then
+			dashStates[player] = nil -- 검증: 쿨다운 없이 다음 대시를 잰다
+		end
+		return handleDash(player)
+	end
+	hook.Parent = game:GetService("ServerStorage")
+end
 
 Players.PlayerRemoving:Connect(function(player)
-	lastDashTick[player] = nil
+	dashStates[player] = nil
 end)
 
 print("[forge-game] DashServer 로드됨 - 대시(LeftShift/모바일 버튼) 판정 활성")

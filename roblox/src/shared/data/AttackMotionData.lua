@@ -31,6 +31,8 @@ local OUT_BACK = { style = Enum.EasingStyle.Back, direction = Enum.EasingDirecti
 
 return {
 	greatsword = {
+		-- MV1 공중 전용 베기(표시만): 무기 스윙 축을 Z로(몸 앞을 가로로 크게 휘두름) · 조금 빠르게.
+		air = { swingAxis = "Z", speedScale = 1.15 },
 		totalDurationSeconds = 0.55, -- 공격 쿨다운(0.4초)보다 길다 - 의도적(위 주석)
 		trailWidth = 1.4,
 		trailColor = Color3.fromRGB(220, 235, 255),
@@ -67,6 +69,8 @@ return {
 	},
 
 	dualblade = {
+		-- MV1 공중 전용 베기: 두 자루를 Z축으로(교차 가로 베기) · 빠르게.
+		air = { swingAxis = "Z", speedScale = 1.25 },
 		totalDurationSeconds = 0.32,
 		trailWidth = 0.6,
 		trailColor = Color3.fromRGB(200, 245, 245),
@@ -121,6 +125,8 @@ return {
 	-- WeaponModelData.lua의 stringTopTip/BottomTip이 실측한 실제 좌표계 기준이다)이다 -
 	-- WeaponVisual이 swingAxis 대신 이 값으로 활시위 중간점과 화살 위치를 계산한다.
 	bow = {
+		-- MV1 공중 사격: 시위 모션은 그대로 · 빠르게(활은 축을 바꾸면 시위 계산이 깨진다).
+		air = { speedScale = 1.2 },
 		totalDurationSeconds = 0.55,
 		parts = {
 			{
@@ -152,6 +158,8 @@ return {
 	},
 
 	healer = {
+		-- MV1 공중 휘두르기: 지팡이를 Y축으로(몸 둘레로 한 바퀴 쓸기).
+		air = { swingAxis = "Y", speedScale = 1.15 },
 		totalDurationSeconds = 0.35,
 		trailWidth = 0.5,
 		trailColor = Color3.fromRGB(230, 200, 255),

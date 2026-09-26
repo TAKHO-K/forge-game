@@ -86,11 +86,11 @@ function V.runPure()
 			pri.defenseGradeMultiplier / anc.defenseGradeMultiplier), near(pri.dropPower, anc.dropPower * ArmorData.dpsPrimordialStep, 1e-12) and near(pri.defenseGradeMultiplier / anc.defenseGradeMultiplier, 2.5, 1e-12))
 		local shoes = { grade = "primordial", itemLevel = 25 }
 		local speed = Loot.getShoesSpeedPercent(shoes)
-		r.check(("태초 신발: 공격 속도 ×%.2f(상한) · 이동 ×%.2f(상한) · 대시 ×%.3f(상한 %.3f) · 고대 신발 대시 ×%.3f"):format(PlayerCombat.getSpeedMultiplier(speed), JumpMath.moveSpeedMultiplier(speed),
-			Loot.getShoesDashMultiplier(shoes), DashConfig.rangeMaxMultiplier, Loot.getShoesDashMultiplier({ grade = "ancient", itemLevel = 25 })),
+		-- MV1: 태초 신발 대시 = 2단 대시 충전(D1-2의 거리 ×1.125 · "대검 관통돌진 18 이하" 항목은 폐기 - 대시 22 + 이동 속도 비례)
+		r.check(("태초 신발: 공격 속도 ×%.2f(상한) · 이동 ×%.2f(상한) · 대시 충전 %d(MV1 2단) · 고대 신발 대시 충전 %d"):format(PlayerCombat.getSpeedMultiplier(speed), JumpMath.moveSpeedMultiplier(speed),
+			Loot.getShoesDashCharges(shoes), Loot.getShoesDashCharges({ grade = "ancient", itemLevel = 25 })),
 			PlayerCombat.getSpeedMultiplier(speed) == cap and JumpMath.moveSpeedMultiplier(speed) == MovementConfig.moveSpeedMaxMultiplier
-				and Loot.getShoesDashMultiplier(shoes) == DashConfig.rangeMaxMultiplier and Loot.getShoesDashMultiplier({ grade = "ancient", itemLevel = 25 }) == 1)
-		r.check(("대시 상한 %.1fstud ≤ 대검 관통돌진 18(회피기가 공격 돌진보다 멀리 가지 않음)"):format(DashConfig.rangeStuds * DashConfig.rangeMaxMultiplier), DashConfig.rangeStuds * DashConfig.rangeMaxMultiplier <= 18 + 1e-9)
+				and Loot.getShoesDashCharges(shoes) == DashConfig.primordialShoes.charges and Loot.getShoesDashCharges({ grade = "ancient", itemLevel = 25 }) == 1)
 		local gloves = { grade = "primordial", itemLevel = 25 }
 		local withP = BalanceSim.buildLoadout({ classId = "bow", level = 100, gear = { gloves = { grade = "primordial", itemLevel = 25 } } })
 		local withA = BalanceSim.buildLoadout({ classId = "bow", level = 100, gear = { gloves = { grade = "ancient", itemLevel = 25 } } })
@@ -211,15 +211,15 @@ function V.runLive(player, env)
 		local cooldown = PlayerCombat.getAttackCooldown(classId, bonus)
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		local parts = player:GetAttribute("PrimordialParts")
-		r.check(("공격 간격 %.3f초(= 기본 %.3f ÷ %.2f) · 걷기 %.2f(×%.2f) · 대시 배율 %.3f · Attribute PrimordialParts \"%s\""):format(cooldown, base, CombatConfig.attackSpeedMaxMultiplier,
-			humanoid and humanoid.WalkSpeed or -1, MovementConfig.moveSpeedMaxMultiplier, PlayerProfile.getDashRangeMultiplier(player), tostring(parts)),
-			near(cooldown, base / CombatConfig.attackSpeedMaxMultiplier, 1e-9) and PlayerProfile.getDashRangeMultiplier(player) == DashConfig.rangeMaxMultiplier
+		r.check(("공격 간격 %.3f초(= 기본 %.3f ÷ %.2f) · 걷기 %.2f(×%.2f) · 대시 충전 %d · Attribute PrimordialParts \"%s\""):format(cooldown, base, CombatConfig.attackSpeedMaxMultiplier,
+			humanoid and humanoid.WalkSpeed or -1, MovementConfig.moveSpeedMaxMultiplier, PlayerProfile.getDashCharges(player), tostring(parts)),
+			near(cooldown, base / CombatConfig.attackSpeedMaxMultiplier, 1e-9) and PlayerProfile.getDashCharges(player) == DashConfig.primordialShoes.charges
 				and type(parts) == "string" and parts:find("shoes", 1, true) ~= nil and (humanoid == nil or near(humanoid.WalkSpeed, MovementConfig.walkSpeedStuds * MovementConfig.moveSpeedMaxMultiplier, 0.01)))
 		PlayerProfile.setEquippedDirect(player, "shoes", { grade = "legendary", part = "shoes", itemLevel = 100, dropStage = 100, tierIndex = 1, locked = true })
 		task.wait(0.1)
 		local legendary = PlayerCombat.getAttackCooldown(classId, PlayerProfile.getSpeedPercentBonus(player))
-		r.check(("전설 신발 공격 간격 %.3f초(상한 아래 - 속도%% %.3f) · 대시 배율 %.3f"):format(legendary, PlayerProfile.getSpeedPercentBonus(player), PlayerProfile.getDashRangeMultiplier(player)),
-			legendary > base / CombatConfig.attackSpeedMaxMultiplier and PlayerProfile.getDashRangeMultiplier(player) == 1)
+		r.check(("전설 신발 공격 간격 %.3f초(상한 아래 - 속도%% %.3f) · 대시 충전 %d"):format(legendary, PlayerProfile.getSpeedPercentBonus(player), PlayerProfile.getDashCharges(player)),
+			legendary > base / CombatConfig.attackSpeedMaxMultiplier and PlayerProfile.getDashCharges(player) == 1)
 	end)
 
 	r.section("태초 장갑 착용", function()
