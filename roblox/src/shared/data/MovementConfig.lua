@@ -56,7 +56,7 @@ return {
 		knockdownSeconds = 1.6, charredSeconds = 5, permitGraceSeconds = 1.0,
 		reportMaxSpeed = 2000, reportMinGapSeconds = 0.3,
 		flame = { size = 6, heat = 12, maxDistance = 220 }, -- 불꽃 꼬리(로블록스 기본 Fire + Trail · 새 에셋 없음)
-		charredColor = Color3.fromRGB(22, 24, 29), charredBlend = 0.8, -- 그을림 = 몸 파트 색을 이 색 쪽으로 섞는다(끝나면 원래 색) · 색 = UIColors.metalBottom 값 재사용(새 색 금지)
+		charredColor = Color3.fromRGB(22, 24, 29), charredBlend = 0.65, -- 그을림 = 어두운 채움 Highlight(채움 불투명도 = charredBlend · 끝나면 지운다) · 색 = UIColors.metalBottom 값 재사용(새 색 금지)
 	},
 
 	-- 공중 점프 · 공중대시 모션(클라가 그린다 - 판정 없음). 루트 관절(Motor6D) C0에 회전을 더한다: 공중 점프 = 앞으로 한 바퀴(flipSeconds), 공중대시 = 앞으로 기울임(leanDeg · 대시 시간 동안).

@@ -7,7 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
-local STARS, LIFE, SPREAD = 6, 0.3, 3.2
+local STARS, LIFE, SPREAD, SIZE = 6, 0.35, 4.5, 1.1 -- 0.5 · 3.2는 화면에서 거의 안 보였다(MV1 스크린샷)
 
 ReplicatedStorage:WaitForChild("AirHeavyFx").OnClientEvent:Connect(function(who)
 	local character = typeof(who) == "Instance" and who.Character
@@ -20,7 +20,7 @@ ReplicatedStorage:WaitForChild("AirHeavyFx").OnClientEvent:Connect(function(who)
 		local star = Instance.new("Part")
 		star.Name = "MV1AirHeavyStar"
 		star.Shape = Enum.PartType.Ball
-		star.Size = Vector3.new(0.5, 0.5, 0.5)
+		star.Size = Vector3.new(SIZE, SIZE, SIZE)
 		star.Material = Enum.Material.Neon
 		star.Color = i % 2 == 0 and UIColors.xp or UIColors.textPrimary
 		star.Anchored, star.CanCollide, star.CanQuery, star.CanTouch, star.CastShadow = true, false, false, false, false

@@ -3,7 +3,7 @@
 --      표시 = 물 착지(water) · 사다리에서 떨어짐(ladder - 오르기 상태에서 곧장 공중). 넉백 · 무너짐 잠금(AirLocked)은 보내지 않는다(서버도 발사 허가로 뺀다).
 --   ② 불꽃: 예상 피해 flameWarnFraction(50%) 이상인 속도로 떨어지는 모든 캐릭터(내 화면 maxDistance 안)의 루트에 로블록스 기본 Fire + Trail 꼬리(새 에셋 없음 · 색 = UIColors xp → hp) · 활강 · 보스전 · 나무 둘레는 없음.
 --      Fire만으로는 초속 300에서 입자가 뒤로 흩어져 안 보였다(MV1 스크린샷) - 몸에 붙어 위로 늘어지는 꼬리(Trail)가 주 모양.
---   ③ 그을림: Character Attribute CharredUntil(서버 시각)까지 몸 파트 색을 charredColor 쪽으로 섞었다가 되돌린다.
+--   ③ 그을림: Character Attribute CharredUntil(서버 시각)까지 어두운 채움 Highlight(charredColor · 채움 = charredBlend).
 --   ④ 쓰러짐: Character Attribute FallKnockdown 동안 뒤로 눕는 자세 + 머리 위 "쿵!" + (자기면) 카메라 흔들림.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -54,7 +54,7 @@ end
 player.CharacterAdded:Connect(bindSelf)
 
 -- ── ②③④ 모든 캐릭터 그리기 ──
-local charred = {} -- [character] = { [BasePart] = 원래 색 }
+local charred = {} -- [character] = Highlight
 local knocked = {} -- [character] = BillboardGui
 
 local function flameExcluded(other, character, root)
@@ -65,22 +65,19 @@ local function flameExcluded(other, character, root)
 end
 
 local function setCharred(character, on)
+	-- 몸 파트 색을 바꾸면 캐릭터의 BodyColors가 덮고 옷(텍스처)은 그대로라 안 보였다(MV1 스크린샷) - 어두운 채움 Highlight 하나(외곽선 없음 · 가려지면 안 보임)로 옷까지 그을린다.
 	if on and not charred[character] then
-		local saved = {}
-		local glider = character:FindFirstChild("MV1Glider")
-		for _, d in ipairs(character:GetDescendants()) do
-			if d:IsA("BasePart") and d.Name ~= "HumanoidRootPart" and not (glider and d:IsDescendantOf(glider)) then
-				saved[d] = d.Color
-				d.Color = d.Color:Lerp(F.charredColor, F.charredBlend)
-			end
-		end
-		charred[character] = saved
+		local h = Instance.new("Highlight")
+		h.Name = "MV1Charred"
+		h.FillColor = F.charredColor
+		h.FillTransparency = 1 - F.charredBlend
+		h.OutlineTransparency = 1
+		h.DepthMode = Enum.HighlightDepthMode.Occluded
+		h.Adornee = character
+		h.Parent = character
+		charred[character] = h
 	elseif not on and charred[character] then
-		for part, color in pairs(charred[character]) do
-			if part.Parent then
-				part.Color = color
-			end
-		end
+		charred[character]:Destroy()
 		charred[character] = nil
 	end
 end
@@ -146,7 +143,7 @@ RunService.Heartbeat:Connect(function()
 				trail.Name = "MV1FlameTrail"
 				trail.Attachment0, trail.Attachment1 = a0, a1
 				trail.Lifetime = 0.18
-				trail.LightEmission = 1
+				trail.LightEmission = 0.15 -- 밝은 하늘에서 1은 하얗게 날아갔다(MV1 스크린샷)
 				trail.FaceCamera = true
 				trail.Color = ColorSequence.new(UIColors.xp, UIColors.hp)
 				trail.Transparency = NumberSequence.new(0.05, 1)
