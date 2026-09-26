@@ -286,6 +286,7 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 
 	-- 접두사 변종(22-2 [1]) - HP 배율은 "이 인스턴스"의 값이라 공유 data가 아니라 entry에서
 	-- 곱한다. 비율 모델(19-4)은 그대로 - 유효 최대체력만 배율만큼 커진다.
+	entry.lastDamagedAt = os.clock() -- M1-2: 스폰 지점 정리 보류(맞는 중인 공유 몬스터는 치우지 않는다 - SpawnSites)
 	local prefixHpMultiplier = entry.prefix and entry.prefix.hpMultiplier or 1
 	local effectiveMaxHp = InfiniteStage.getMonsterHp(entry.data.hp, attackerStage) * prefixHpMultiplier
 	local ratioDealt = effectiveMaxHp > 0 and (damage / effectiveMaxHp) or 0
@@ -391,6 +392,12 @@ end
 function MonsterState.getSpawnPosition(model)
 	local entry = monsters[model]
 	return entry and entry.spawnPosition
+end
+
+-- M1-2: 마지막으로 맞은 시각(os.clock · 잡몹 - 없으면 nil)
+function MonsterState.getLastDamagedAt(model)
+	local entry = monsters[model]
+	return entry and entry.lastDamagedAt
 end
 
 function MonsterState.getAiState(model)

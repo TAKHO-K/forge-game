@@ -139,20 +139,98 @@ local function up(p, h)
 	return Vector3.new(p.X, WorldMapData.floorTopY + (h or 3), p.Z)
 end
 
--- ─────────────────────────── 요청(허브 귀환 · 파티원 곁으로) ───────────────────────────
--- 반환: ok, 이유 코드
+-- ─────────────────────────── 요청(허브 귀환 · 돌아가기 · 파티원 곁으로) ───────────────────────────
+-- M1-2 마을 귀환(사용자): 요청 → recall.castSeconds 시전(Player Attribute RecallCastUntil = 서버 시각 - 클라 시전 막대) → 끝나면 허브.
+--   시전 중 맞으면(체력이 줄면) 취소(쿨 없음 - 다시 누를 수 있다) · 보스전이 시작돼도 취소. 쿨 = 도착 뒤 hubReturnCooldownSeconds.
+--   도착하면 허브 밖에서 출발했을 때만 "돌아가기" 자리(출발 자리)를 recall.backSeconds 동안 1회 기억(Attribute RecallBackUntil) → [돌아가기] = 그 자리로.
+-- 반환: ok, 이유 코드("casting" = 시전 시작)
+local function serverNow()
+	return workspace:GetServerTimeNow()
+end
+
+local function clearCast(player, st, why)
+	st.recall = nil
+	player:SetAttribute("RecallCastUntil", nil)
+	if why then
+		player:SetAttribute("RecallCancel", why) -- 클라 문구(시각이 아니라 이유 - 같은 이유가 연달아도 알리게 서버 시각을 붙인다)
+		player:SetAttribute("RecallCancelAt", serverNow())
+	end
+end
+
 function Travel.requestHub(player, now)
 	now = now or os.clock()
 	local st = stateOf(player)
 	if BossEncounter.getEncounter(player) then
 		return false, "in_boss"
 	end
+	if st.recall then
+		return false, "casting_already"
+	end
 	if now - st.hubAt < T.hubReturnCooldownSeconds then
 		return false, "cooldown"
 	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return false, "no_character"
+	end
+	st.recall = { startAt = now, hp = PlayerState.getHp(player), origin = root.Position }
+	player:SetAttribute("RecallCastUntil", serverNow() + T.recall.castSeconds)
+	return true, "casting"
+end
+
+-- 시전 진행(Heartbeat 0.25초마다 · 검증은 now를 넣어 부른다). 반환: nil | "done" | "hit" | "boss"
+function Travel.pollRecall(player, now)
+	local st = stateOf(player)
+	local cast = st.recall
+	if not cast then
+		return nil
+	end
+	if BossEncounter.getEncounter(player) then
+		clearCast(player, st, "boss")
+		return "boss"
+	end
+	local hp = PlayerState.getHp(player)
+	if hp and cast.hp and hp < cast.hp - 0.001 then
+		clearCast(player, st, "hit")
+		return "hit"
+	end
+	cast.hp = hp or cast.hp -- 회복은 괜찮다(줄어들 때만 취소)
+	if now - cast.startAt < T.recall.castSeconds then
+		return nil
+	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local from = root and root.Position or cast.origin
+	clearCast(player, st, nil)
 	st.hubAt = now
 	st.checkpoint = nil
+	if not WorldMapLayout.inHub(from) then
+		st.back = { position = from, untilAt = now + T.recall.backSeconds }
+		player:SetAttribute("RecallBackUntil", serverNow() + T.recall.backSeconds)
+	end
 	Travel.teleport(player, WorldConfig.zones.spawn.arrival + Vector3.new(0, WorldMapData.floorTopY + 3, 0), "허브 귀환")
+	return "done"
+end
+
+-- [돌아가기]: 귀환한 자리로(1회 · backSeconds 안 · 보스전 중 불가 · 그 자리가 지금 나에게 잠긴 구역이면 불가)
+function Travel.requestBack(player, now)
+	now = now or os.clock()
+	local st = stateOf(player)
+	local back = st.back
+	if not back or now > back.untilAt then
+		st.back = nil
+		player:SetAttribute("RecallBackUntil", nil)
+		return false, "no_back"
+	end
+	if BossEncounter.getEncounter(player) then
+		return false, "in_boss"
+	end
+	local zone = WorldMapLayout.zoneAt(back.position)
+	if zone and not Travel.isZoneOpen(player, zone.key) then
+		return false, "locked_zone"
+	end
+	st.back = nil
+	player:SetAttribute("RecallBackUntil", nil)
+	Travel.teleport(player, back.position + Vector3.new(0, 1, 0), "돌아가기")
 	return true, "ok"
 end
 
@@ -453,6 +531,8 @@ function Travel.start(downPads)
 		local ok, why
 		if kind == "hub" then
 			ok, why = Travel.requestHub(player)
+		elseif kind == "back" then
+			ok, why = Travel.requestBack(player)
 		elseif kind == "party" then
 			ok, why = Travel.requestParty(player, type(targetUserId) == "number" and Players:GetPlayerByUserId(targetUserId) or Travel.defaultPartyTarget(player))
 		else
@@ -460,7 +540,8 @@ function Travel.start(downPads)
 		end
 		if not ok then
 			local text = ({ in_boss = "보스전 중에는 못 간다", cooldown = "아직 쿨타임", combat = "전투 중(최근 피해)에는 못 간다", locked_zone = "그 사람은 나에게 잠긴 구역에 있다",
-				not_party = "파티원만", no_target = "대상을 찾지 못했다" })[why] or why
+				not_party = "파티원만", no_target = "대상을 찾지 못했다",
+				casting_already = "이미 귀환 중", no_back = "돌아갈 자리가 없다(5분 · 1회)", no_character = "캐릭터가 없다" })[why] or why
 			PartyState.notify(player, "이동 불가 - " .. text)
 		end
 	end)
@@ -499,6 +580,10 @@ function Travel.start(downPads)
 				local grounded = humanoid and humanoid.FloorMaterial ~= Enum.Material.Air
 				if not Travel.checkStationDown(player, root.Position - Vector3.new(0, 3, 0), grounded) then
 					Travel.pollPlayer(player, root, humanoid, now)
+				end
+				local recall = Travel.pollRecall(player, now)
+				if recall == "hit" or recall == "boss" then
+					PartyState.notify(player, recall == "hit" and "귀환 취소 - 공격받았다" or "귀환 취소 - 보스전")
 				end
 			end
 		end

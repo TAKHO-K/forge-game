@@ -59,6 +59,7 @@ function Layout.facility(name)
 	local f = D.hub.facilities[name]
 	return Layout.hubPoint(f.angleDeg, f.r)
 end
+Layout.facilityOrder = { "portal", "forge", "market", "community" } -- 짓는 순서(고정 - pairs 순서에 기대지 않는다)
 function Layout.spawnPoint()
 	return Layout.hubPoint(D.hub.spawn.angleDeg, D.hub.spawn.r)
 end
@@ -116,6 +117,91 @@ end
 
 function Layout.inHub(position)
 	return Vector3.new(position.X, 0, position.Z).Magnitude <= D.hub.safeRadius
+end
+
+-- ─────────────────────────── 몬스터 스폰 범위(M1-2) ───────────────────────────
+-- 지형이 차지하는 반경(스폰 지점이 피한다 · buildFeature의 footprint와 같은 식)
+local function featureFootprint(f)
+	return math.max(f.w or 0, f.d or 0, (f.size or 0) * 1.5 + 12) / 2 + ((f.kind == "plateau") and f.h / math.tan(math.rad(35)) or 0)
+end
+local NEST_EXTENT = 75 -- 둥지 구조가 기준점에서 뻗는 최대 길이(연속 점프 계단 8단 ≈ 71)
+
+-- 구역의 스폰 범위: { zoneKey, name, center(지면), radius, monsters }
+function Layout.huntRange(zone)
+	local H = D.spawnSites.huntRange
+	return { zoneKey = zone.key, name = zone.hunt.name, center = Layout.toWorld(zone, H.r, H.lat), radius = H.radius, monsters = zone.hunt.monsters }
+end
+
+-- 이 점이 어느 스폰 범위 안인가(없으면 nil) - 클라 지역명 · 검증
+function Layout.huntRangeAt(position)
+	for _, z in ipairs(D.zones) do
+		local range = Layout.huntRange(z)
+		if Vector3.new(position.X - range.center.X, 0, position.Z - range.center.Z).Magnitude <= range.radius then
+			return range, z
+		end
+	end
+	return nil
+end
+
+-- 스폰 지점(캐시 · 고정 시드): [i] = { index, position(지면), slots = { 지면 위치 × group.count } }. 범위 안에 흩어 둔다(최소 간격 · 지형 · 둥지 · 캠프 · 관문 회피).
+local huntPointCache = {}
+function Layout.huntPoints(zone)
+	if huntPointCache[zone.key] then
+		return huntPointCache[zone.key]
+	end
+	local S = D.spawnSites
+	local range = Layout.huntRange(zone)
+	local seed = (S.seed + (table.find(D.zones, zone) or 1) * 7919) % 2147483647
+	local function rand()
+		seed = (seed * 48271) % 2147483647
+		return seed / 2147483647
+	end
+	local blockers = {
+		{ p = Layout.camp(zone), r = S.avoid.camp },
+		{ p = Layout.gate(zone), r = S.avoid.gate },
+	}
+	for _, f in ipairs(zone.features) do
+		table.insert(blockers, { p = Layout.toWorld(zone, f.r, f.lat), r = featureFootprint(f) + S.avoid.feature })
+	end
+	for _, n in ipairs(zone.nests) do
+		table.insert(blockers, { p = Layout.toWorld(zone, n.r, n.lat), r = NEST_EXTENT + S.avoid.nest })
+	end
+	local function flat(a, b)
+		return Vector3.new(a.X - b.X, 0, a.Z - b.Z).Magnitude
+	end
+	local points = {}
+	local maxR = range.radius - S.edgeMargin - S.group.radius
+	for _ = 1, 6000 do
+		if #points >= S.pointsPerRange then
+			break
+		end
+		local a, rr = rand() * 2 * math.pi, math.sqrt(rand()) * maxR
+		local p = range.center + Vector3.new(math.cos(a) * rr, 0, math.sin(a) * rr)
+		local ok = true
+		for _, b in ipairs(blockers) do
+			if flat(p, b.p) < b.r + S.group.radius then
+				ok = false
+				break
+			end
+		end
+		for _, q in ipairs(points) do
+			if not ok then
+				break
+			end
+			ok = flat(p, q.position) >= S.pointSpacing
+		end
+		if ok then
+			local slots = {}
+			local turn = rand() * 2 * math.pi
+			for k = 1, S.group.count do
+				local sa = turn + (k - 1) / S.group.count * 2 * math.pi
+				slots[k] = p + Vector3.new(math.cos(sa) * S.group.radius, 0, math.sin(sa) * S.group.radius)
+			end
+			table.insert(points, { index = #points + 1, position = p, slots = slots })
+		end
+	end
+	huntPointCache[zone.key] = points
+	return points
 end
 
 -- ─────────────────────────── 도형 도우미 ───────────────────────────
@@ -362,7 +448,76 @@ function Layout.treeClimbSeconds(skillOf)
 	return legs, fastAll, slowAll, math.min(last.inner, last.outer), math.max(last.inner, last.outer)
 end
 
--- 나무 도형(BigTree = Persistent: 줄기 · 판자뿌리 · 결 · 윗가지 · 왕관 · 잎 / TreeCourse = 점프맵 요소 · 정거장 고리)
+-- 뿌리 곡선(M1-2): t(0 = 줄기 표면 · 1 = 끝) → 반경 · 윗면 높이 · 폭
+function Layout.rootAt(t)
+	local tree = D.hub.tree
+	local Rt = tree.roots
+	return tree.trunkRadius + t * Rt.reach, Rt.height * (1 - t) ^ Rt.curve, Rt.width + (Rt.tipWidth - Rt.width) * t
+end
+
+-- 뿌리 하나의 조각(기울인 상자 - 윗면이 곡선을 따른다 · 아래는 땅속 · 마지막 조각은 끝이 sink만큼 땅속으로). fromT = 이 t부터(코스 뿌리 = 끊긴 끝).
+-- 반환: { { size, cf, t0, t1 } }
+function Layout.rootSegments(angleDeg, fromT)
+	local Rt = D.hub.tree.roots
+	local d = dirOf(angleDeg)
+	local out = {}
+	local n = Rt.segments
+	for i = 1, n do
+		local t0, t1 = (i - 1) / n, i / n
+		if t1 > fromT then
+			t0 = math.max(t0, fromT)
+			local r0, h0 = Layout.rootAt(t0)
+			local r1, h1, w = Layout.rootAt(t1)
+			if t0 == 0 then
+				r0 -= 3 -- 줄기 속으로 조금 묻는다(틈 없게)
+			end
+			if i == n then
+				h1 = -Rt.sink -- 끝이 땅속으로 파고든다
+			end
+			local _, _, w0 = Layout.rootAt(t0)
+			local top0 = d * r0 + Vector3.new(0, FLOOR + h0, 0)
+			local top1 = d * r1 + Vector3.new(0, FLOOR + h1, 0)
+			local len = (top1 - top0).Magnitude + 1
+			local thick = math.max(h0, h1) + Rt.sink + 2
+			local cf = CFrame.lookAt((top0 + top1) / 2, top1) * CFrame.new(0, -thick / 2, 0)
+			table.insert(out, { size = Vector3.new((w + w0) / 2, thick, len), cf = cf, t0 = t0, t1 = t1 })
+		end
+	end
+	return out
+end
+
+-- 코스 뿌리 이동 표(검증 · 문서): 걷는 끝 → 혹 1 → 혹 2 → 안쪽 길 5번째 요소. { { from, to, rise, gap } }
+function Layout.courseRootMoves()
+	local tree = D.hub.tree
+	local CR = tree.courseRoot
+	local rEnd, hEnd = Layout.rootAt(CR.walkFrom)
+	local nodes = { { name = "뿌리 끝", p = Layout.hubPoint(CR.angleDeg, rEnd), top = hEnd, half = 0 } }
+	for i, k in ipairs(CR.knobs) do
+		table.insert(nodes, { name = "혹 " .. i, p = Layout.hubPoint(k.angleDeg, k.r), top = k.top, half = CR.knobWidth / 2 })
+	end
+	local target
+	for _, el in ipairs(Layout.tree().elements) do
+		if el.leg == 1 and el.path == "inner" and el.index == 5 then
+			target = el
+		end
+	end
+	local tan = tangentAt(target.angle, target.dir)
+	table.insert(nodes, { name = "안쪽 길 " .. target.index .. "번(" .. target.k .. ")", p = target.center, top = target.top, tangent = tan, len = target.spec.len or 4, dia = target.spec.dia or 4 })
+	local moves = {}
+	for i = 2, #nodes do
+		local a, b = nodes[i - 1], nodes[i]
+		local v = Vector3.new(b.p.X - a.p.X, 0, b.p.Z - a.p.Z)
+		local halfB = b.half
+		if b.tangent then
+			local u = v.Unit
+			halfB = math.abs(u:Dot(b.tangent)) * b.len / 2 + (1 - math.abs(u:Dot(b.tangent))) * b.dia / 2
+		end
+		table.insert(moves, { from = a.name, to = b.name, rise = b.top - a.top, gap = math.max(v.Magnitude - a.half - halfB, 0.5) })
+	end
+	return moves, target
+end
+
+-- 나무 도형(BigTree = Persistent: 줄기 · 뿌리 · 결 · 잎 / TreeCourse = 점프맵 요소 · 정거장 고리 · 코스 뿌리)
 function Layout.buildTree(list)
 	local tree = D.hub.tree
 	local C = tree.course
@@ -411,14 +566,19 @@ function Layout.buildTree(list)
 		prim(list, "TreeCourse", "TunnelStep", Vector3.new(8, 4, 8), CFrame.new(ex * (R - 24) + Vector3.new(0, FLOOR + tn.y + 2, 0)), barkDark, { material = tree.barkMaterial, attrs = { TreeTunnel = true } })
 		prim(list, "TreeCourse", "TunnelStep", Vector3.new(8, 8, 8), CFrame.new(ex * (R - 10) + Vector3.new(0, FLOOR + tn.y + 4, 0)), barkDark, { material = tree.barkMaterial, attrs = { TreeTunnel = true } })
 	end
-	-- 판자뿌리 · 줄기 결 · 윗가지 · 왕관(장식 - 충돌 없음)
-	local B = tree.buttress
-	for i = 1, B.count do
-		local a = (i - 0.5) / B.count * 2 * math.pi + 0.2
-		local d = Vector3.new(math.cos(a), 0, math.sin(a))
-		local base = d * (R + B.reach / 2)
-		local cf = CFrame.lookAt(Vector3.new(base.X, FLOOR, base.Z), Vector3.new(base.X, FLOOR, base.Z) + d) -- 쐐기 높은 면(+Z) = 줄기 쪽
-		prim(list, "BigTree", "Buttress", Vector3.new(B.width, B.height, B.reach), cf * CFrame.new(0, B.height / 2, 0), barkDark, { shape = "Wedge", material = tree.barkMaterial, collide = false })
+	-- 뿌리(M1-2 - 밟을 수 있다 · 끝이 땅속으로) · 코스 뿌리(끊긴 끝 + 좁은 혹) · 줄기 결(장식 - 충돌 없음)
+	for _, a in ipairs(tree.roots.angles) do
+		for _, seg in ipairs(Layout.rootSegments(a, 0)) do
+			prim(list, "BigTree", "Root", seg.size, seg.cf, barkDark, { material = tree.barkMaterial })
+		end
+	end
+	local CR = tree.courseRoot
+	for _, seg in ipairs(Layout.rootSegments(CR.angleDeg, CR.walkFrom)) do
+		prim(list, "TreeCourse", "CourseRoot", seg.size, seg.cf, barkDark, { material = tree.barkMaterial, attrs = { CourseRoot = true } })
+	end
+	for i, k in ipairs(CR.knobs) do
+		local p = Layout.hubPoint(k.angleDeg, k.r)
+		prim(list, "TreeCourse", "CourseRootKnob", Vector3.new(CR.knobWidth, k.top, CR.knobWidth), CFrame.new(p.X, FLOOR + k.top / 2, p.Z), barkDark, { material = tree.barkMaterial, attrs = { CourseRoot = true, CourseRootKnob = i } })
 	end
 	local Rg = tree.ridges
 	for i = 1, Rg.count do
@@ -488,11 +648,10 @@ function Layout.buildTree(list)
 		local bottom = top - CT.skirt
 		skirt(top, bottom, CS.clearRadius, crownRadius(bottom), (li % 2 == 0) and "leaves" or "leavesDeep")
 	end
-	-- 어깨 위: 층 두 장 + 뾰족한 끝(안쪽 반경 0 = 줄기를 덮는다)
-	-- 전망대(760) 눈높이 위로만 덮는다 - 전망대에서 바깥(6구역)이 보이게
-	local sy = CS.shoulderY + CT.spacing * 0.6
-	skirt(sy + 80, CS.shoulderY + 15, 20, 130, "leaves")
-	skirt(CS.tipY, sy + 20, 0, CS.shoulderRadius * 0.62, "leavesDeep")
+	-- 어깨 위(M1-2): 아래와 같은 규칙의 층이 위로 갈수록 작아진다 - 마지막은 뾰족한 끝(안쪽 0). 아래 가장자리는 전망대(760) 눈높이 위.
+	for i, t in ipairs(CS.topTiers) do
+		skirt(t.top, t.bottom, t.inner, t.outer, (i % 2 == 0) and "leavesDeep" or "leaves")
+	end
 	-- 꼭대기: 줄기가 가늘어지며 끝난다(원통 조각 - 충돌 없음)
 	local topY = tree.trunkHeight
 	local pieces = 4
@@ -730,7 +889,7 @@ local function buildFeature(zone, f, list)
 		prim(list, model, "ExplorePoint", Vector3.new(4, 4, 4), CFrame.new(at + Vector3.new(0, 2, 0)), D.colors.marker,
 			{ collide = false, transparency = 1, attrs = { ExploreName = f.explore, ExploreZone = zone.key } })
 	end
-	points.footprint = math.max(f.w or 0, f.d or 0, (f.size or 0) * 1.5 + 12) / 2 + ((f.kind == "plateau") and f.h / math.tan(math.rad(35)) or 0)
+	points.footprint = featureFootprint(f)
 	points.center = base
 	return points
 end
@@ -766,10 +925,20 @@ function Layout.buildZone(zone, list)
 	local model = "Zone_" .. zone.key
 	local tint = zone.floorTint
 	local center = Layout.regionCenter(zone)
-	-- 구역 바닥(옅은 색 원판 - 구역 구분) · 사냥 지대 원판(평평)
+	-- 구역 바닥(옅은 색 원판 - 구역 구분) · 몬스터 스폰 범위(M1-2 - 조금 진한 원판 + 경계 고리)
 	prim(list, "Floor_" .. zone.key, "ZoneFloor", Vector3.new(0.2, L.regionRadius * 2, L.regionRadius * 2), CFrame.new(center.X, FLOOR + 0.1, center.Z) * CFrame.Angles(0, 0, math.rad(90)), tint, { shape = "Cylinder", material = "SmoothPlastic" })
-	for _, g in ipairs(Layout.grounds(zone)) do
-		prim(list, model, "HuntingGround", Vector3.new(0.2, g.radius * 2, g.radius * 2), CFrame.new(g.center.X, FLOOR + 0.3, g.center.Z) * CFrame.Angles(0, 0, math.rad(90)), D.colors.blockLight, { shape = "Cylinder", material = "SmoothPlastic", attrs = { HuntingGround = g.index, Zone = zone.key } })
+	local range = Layout.huntRange(zone)
+	local look = D.spawnSites.look
+	local k = look.tintScale
+	prim(list, "Floor_" .. zone.key, "HuntRange", Vector3.new(0.2, range.radius * 2, range.radius * 2), CFrame.new(range.center.X, FLOOR + 0.15, range.center.Z) * CFrame.Angles(0, 0, math.rad(90)),
+		{ tint[1] * k, tint[2] * k, tint[3] * k }, { shape = "Cylinder", material = "SmoothPlastic", attrs = { HuntRange = zone.key } })
+	for i = 1, look.ringSegments do
+		local a1, a2 = (i - 1) / look.ringSegments * 2 * math.pi, i / look.ringSegments * 2 * math.pi
+		local p1 = range.center + Vector3.new(math.cos(a1), 0, math.sin(a1)) * range.radius
+		local p2 = range.center + Vector3.new(math.cos(a2), 0, math.sin(a2)) * range.radius
+		local mid = (p1 + p2) / 2
+		prim(list, "Floor_" .. zone.key, "HuntRangeEdge", Vector3.new(look.ringWidth, 0.2, (p2 - p1).Magnitude + look.ringWidth), CFrame.lookAt(Vector3.new(mid.X, FLOOR + 0.25, mid.Z), Vector3.new(p2.X, FLOOR + 0.25, p2.Z)),
+			{ tint[1] * k * 0.75, tint[2] * k * 0.75, tint[3] * k * 0.75 }, { collide = false, material = "SmoothPlastic" })
 	end
 	-- 캠프(안전 · 포탈)
 	local camp = Layout.camp(zone)
@@ -839,43 +1008,40 @@ function Layout.buildHub(list)
 	prim(list, "Hub", "HubFloor", Vector3.new(0.2, H.safeRadius * 2, H.safeRadius * 2), CFrame.new(0, FLOOR + 0.1, 0) * CFrame.Angles(0, 0, math.rad(90)), D.colors.safe, { shape = "Cylinder", material = "SmoothPlastic" })
 	-- 나무(세계수 - Persistent 모델 "BigTree" · 점프맵 "TreeCourse")
 	Layout.buildTree(list)
-	-- 뿌리(낮은 경사 - 걸어 넘는다) · 경계 등불
-	for i = 1, H.roots.count do
-		local a = (i - 0.5) / H.roots.count * 2 * math.pi
-		local d = Vector3.new(math.cos(a), 0, math.sin(a))
-		local startP = d * tree.trunkRadius
-		local cf = CFrame.lookAt(Vector3.new(startP.X, FLOOR, startP.Z), Vector3.new(startP.X, FLOOR, startP.Z) + d)
-		ramp(list, "Hub", "Root", cf * CFrame.new(0, 0, -H.roots.length) * CFrame.Angles(0, math.pi, 0), H.roots.length, H.roots.height, H.roots.width, { 110, 100, 92 })
-	end
+	-- 경계 등불(뿌리는 나무 도형 - M1-2에서 옛 긴 경사로 8개를 뺐다)
 	for i = 1, H.lanterns.count do
 		local a = (i - 1) / H.lanterns.count * 2 * math.pi
 		local p = Vector3.new(math.cos(a), 0, math.sin(a)) * H.safeRadius
 		prim(list, "Hub", "LanternPost", Vector3.new(1, 8, 1), CFrame.new(p.X, FLOOR + 4, p.Z), D.colors.blockDark, { collide = false })
 		prim(list, "Hub", "Lantern", Vector3.new(2, 2, 2), CFrame.new(p.X, FLOOR + 9, p.Z), D.colors.marker, { collide = false, neon = true })
 	end
-	-- 시설 건물(강화대 · 제단 · 상인은 자기 스크립트가 앞 자리에 세운다 - 건물은 그 뒤 바깥쪽)
-	for name, f in pairs(H.facilities) do
+	-- 시설 = 거리(M1-2): 가운데 = 기능 물체 자리(강화대 · 보석상인 · 환생 제단은 자기 스크립트가 세운다) · 양옆 자리 표시 · 바깥쪽 건물 줄 · 거리 바닥(광장 = 원판)
+	for _, name in ipairs(Layout.facilityOrder) do
+		local f = H.facilities[name]
 		local p = Layout.facility(name)
 		local out = dirOf(f.angleDeg)
-		if f.size then
-			local bp = p + out * (f.size[3] / 2 + 14)
-			local cf = flatYaw(bp, -out)
-			column(list, "Hub", "Facility_" .. name, cf, f.size[1], f.size[3], f.size[2], D.colors.blockLight, { attrs = { Facility = name, Label = f.displayName } })
-		else
+		if f.radius then
 			prim(list, "Hub", "PortalPlaza", Vector3.new(0.2, f.radius * 2, f.radius * 2), CFrame.new(p.X, FLOOR + 0.25, p.Z) * CFrame.Angles(0, 0, math.rad(90)), D.colors.blockLight, { shape = "Cylinder", material = "SmoothPlastic", attrs = { Facility = name, Label = f.displayName } })
+		else
+			local cf = flatYaw(p, -out) -- 로컬 −Z = 나무 쪽 · +X = 거리 방향
+			if f.plaza then
+				prim(list, "Hub", "DistrictFloor", Vector3.new(0.2, f.plaza * 2, f.plaza * 2), CFrame.new(p.X, FLOOR + 0.25, p.Z) * CFrame.Angles(0, 0, math.rad(90)), D.colors.road, { shape = "Cylinder", material = "SmoothPlastic", attrs = { District = name } })
+			else
+				prim(list, "Hub", "DistrictFloor", Vector3.new(f.street.w, 0.2, f.street.d), cf * CFrame.new(0, 0.25, 4), D.colors.road, { material = "SmoothPlastic", attrs = { District = name } })
+			end
+			local R = f.row
+			local back = (f.plaza or f.street.d / 2) + 6 + R.d / 2
+			for i = 1, R.count do
+				local x = (i - (R.count + 1) / 2) * (R.w + R.gap)
+				local mid = i == math.ceil(R.count / 2)
+				column(list, "Hub", "Facility_" .. name, cf * CFrame.new(x, 0, back), R.w, R.d, R.h + (mid and 4 or 0), D.colors.blockLight,
+					{ attrs = { Facility = name, Label = mid and f.displayName or nil } })
+			end
+			for _, sp in ipairs(f.spots) do
+				column(list, "Hub", "Spot_" .. sp.id, cf * CFrame.new(sp.along, 0, sp.side), 6, 2, 5, D.colors.block, { attrs = { Spot = sp.id, Label = sp.label, District = name } })
+			end
 		end
 	end
-	-- 커뮤니티 · 시장 자리 표시
-	local function spots(fname, entries)
-		local p = Layout.facility(fname)
-		local f = H.facilities[fname]
-		local cf = flatYaw(p, -dirOf(f.angleDeg))
-		for _, s in ipairs(entries) do
-			column(list, "Hub", "Spot_" .. s.id, cf * CFrame.new(s.offset[1], 0, s.offset[3]), 6, 2, 5, D.colors.block, { attrs = { Spot = s.id, Label = s.label } })
-		end
-	end
-	spots("community", H.communitySpots)
-	spots("market", H.marketSpots)
 	-- 덩굴 리프트(허브 바닥) · 구름층(연출 자리 - 옅은 원판 · 충돌 없음)
 	local lift = tree.course.lift
 	local lp = Layout.hubPoint(lift.angleDeg, lift.r)

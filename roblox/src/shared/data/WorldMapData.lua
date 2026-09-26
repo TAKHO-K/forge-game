@@ -52,28 +52,22 @@ return {
 	hub = {
 		key = "spawn", -- WorldConfig.zones 키(옛 리스폰 마을 자리 - 복귀 · 리스폰이 읽는다)
 		displayName = "큰 나무 마을",
-		safeRadius = 300, -- = 잎 덮개 반경 = 경계(뿌리 끝 · 등불 줄)
-		spawn = { r = 120, angleDeg = -60 }, -- 리스폰 자리(나무 앞 · 판자뿌리 사이 - 뿌리 각 −78.5° · −42.5°)
-		-- 시설(뿌리 아래). 강화대 · 제단 · 상인은 WorldConfig가 이 자리를 읽는다(옛 강화소 · 커뮤니티 칸 대체).
+		safeRadius = 400, -- = 잎 덮개 반경 = 경계(등불 줄) · M1-2 사용자: 300 → 400(더 넓게 - 수관 baseRadius도 같이)
+		spawn = { r = 120, angleDeg = -60 }, -- 리스폰 자리(나무 앞 · 뿌리 사이 - 가장 가까운 뿌리 = 코스 뿌리 −30°)
+		-- 시설 = 기능이 비슷한 것끼리 한 거리(M1-2 사용자). 가운데 자리(r · angleDeg) = 기능 물체(강화대 · 보석상인 · 환생 제단 - WorldConfig가 이 점을 읽는다) ·
+		--   양옆 spots = 자리 표시(along = 거리 방향 옆 거리 · side = 나무 쪽 −/바깥 +) · 뒤(바깥쪽) = 건물 줄(row) · 발밑 = 거리 바닥(street - 광장은 plaza 원판).
+		--   배치도 = docs/design/world-map-m1.md §1 허브.
 		facilities = {
-			forge = { angleDeg = -30, r = 170, displayName = "대장간", size = { 60, 18, 44 } }, -- 강화대 중심
-			market = { angleDeg = 90, r = 170, displayName = "시장", size = { 70, 14, 40 } }, -- 상점 · 보석상인 · 판매
-			community = { angleDeg = 210, r = 170, displayName = "커뮤니티 센터", size = { 60, 20, 50 } }, -- 환생 제단 · 부화장 자리 · 파티 게시판 · 순위판
-			portal = { angleDeg = -90, r = 200, displayName = "포탈 광장", radius = 46 },
-		},
-		-- 커뮤니티 센터 안 자리 표시(기능은 해당 단계에서): 부화장 · 파티 게시판 · 순위판
-		communitySpots = {
-			{ id = "hatchery", label = "부화장(펫 단계)", offset = { -20, 0, 18 } },
-			{ id = "partyBoard", label = "파티 게시판", offset = { 20, 0, 18 } },
-			{ id = "rankBoard", label = "순위판", offset = { 0, 0, 30 } },
-		},
-		marketSpots = {
-			{ id = "shop", label = "상점(준비)", offset = { -24, 0, -26 } },
-			{ id = "sell", label = "판매", offset = { 24, 0, -26 } },
+			forge = { angleDeg = -25, r = 255, displayName = "대장간 거리", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 18, h = 16, gap = 10 }, -- 가운데 = 강화대
+				spots = { { id = "refine", label = "재련대(준비 · 가방에서도 된다)", along = -38, side = 0 }, { id = "gemcraft", label = "보석 가공대(준비 · 가방에서도 된다)", along = 38, side = 0 } } },
+			market = { angleDeg = 90, r = 255, displayName = "시장", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 16, h = 12, gap = 10 }, -- 가운데 = 보석상인(보석 공방)
+				spots = { { id = "shop", label = "상점(준비)", along = -38, side = 0 }, { id = "sell", label = "판매", along = 38, side = 0 } } },
+			community = { angleDeg = 210, r = 255, displayName = "커뮤니티 광장", plaza = 50, row = { count = 3, w = 24, d = 18, h = 18, gap = 12 }, -- 가운데 = 환생 제단
+				spots = { { id = "hatchery", label = "부화장(펫 단계)", along = -34, side = -8 }, { id = "partyBoard", label = "파티 게시판", along = 34, side = -8 }, { id = "rankBoard", label = "순위판", along = 0, side = -30 } } },
+			portal = { angleDeg = -90, r = 250, displayName = "포탈 광장", radius = 46 },
 		},
 		portalRingRadius = 38, -- 포탈 광장 안 구역별 포탈 6개(이름표가 안 겹치게 - 이웃 간격 38)
-		lanterns = { count = 24 }, -- 경계선 등불(safeRadius 둘레)
-		roots = { count = 8, length = 250, height = 4, width = 14 }, -- 낮은 경사(나무 점프맵 첫 가지 높이 5보다 낮게)
+		lanterns = { count = 32 }, -- 경계선 등불(safeRadius 둘레)
 		-- 나무(점프맵 · 랜드마크). 높이 약 470. 잎(leaves)은 별도 모델 - 재질 · 색은 seasons에서(봄 벚꽃 교체 = 데이터만).
 		tree = {
 			-- M1 추가(사용자 - 매일 오르는 콘텐츠): 높이는 시간으로 역산했다 - 바닥 → 정상 6 ~ 8분(보통 실력) · 최고 정거장 → 정상 1.5 ~ 2분(검증 M1(가)가 course.secondsPer로 잰다).
@@ -82,10 +76,16 @@ return {
 			--   장식은 전부 충돌 · 쿼리 없음. 색 = bark(껍질) · 잎은 계절 역할(SeasonRole) - WorldMap.setSeason.
 			trunkRadius = 48, trunkHeight = 800,
 			bark = { 142, 84, 58 }, barkDark = { 108, 62, 44 }, barkMaterial = "SmoothPlastic", -- 카툰풍(평면 음영) -- 메타세쿼이아 적갈색 껍질(점프맵 가지 · 혹 · 정거장도 이 톤 - 길이 나무에서 튀지 않게)
-			buttress = { count = 10, height = 90, reach = 95, width = 12 }, -- 판자뿌리(밑동이 넓게 퍼진다)
+			-- 뿌리(M1-2 사용자 - 과해 보이지 않게 · 땅으로 파고드는 모양 · 밟을 수 있게): 줄기에서 뻗어 나가며 낮아지다 끝이 땅속으로 들어간다(충돌 있음 · 걸어 오른다).
+			--   높이 h(t) = height × (1 − t)^curve (t = 줄기 표면에서 reach까지 0 → 1) · 폭 = width → tipWidth · 조각 segments개(기울인 상자 - 윗면이 곡선을 따른다) · 끝 sink만큼 땅속.
+			--   각도 = 점프맵 낮은 요소와 안 겹치는 자리만(angles - 뿌리 위에서 코스 중간으로 건너뛰는 지름길이 생기지 않게 · 리스폰 · 리프트 · 광산 입구를 피한다).
+			--   courseRoot = 점프맵과 겹치는 뿌리(사용자): 밟고 올라가면 코스 앞부분을 건너뛰는 이점 - 대신 끝이 끊긴 좁은 혹(knobs - 폭 knobWidth)을 공중 점프로 이어 가야 한다.
+			roots = { angles = { 45, 80, 115, 150, 172, 212 }, height = 24, reach = 112, curve = 1.8, width = 18, tipWidth = 6, segments = 5, sink = 3 },
+			courseRoot = { angleDeg = 330, walkFrom = 0.46, knobWidth = 2.5, -- 같은 곡선(roots)의 t ≥ walkFrom 부분만(끝 → 높이 약 8 · r 99) - 줄기 쪽은 없다
+				knobs = { { r = 85, top = 14, angleDeg = 331 }, { r = 72, top = 21, angleDeg = 334 } } }, -- 걷는 끝(높이 약 8) → 혹 1(공중 1) → 혹 2(공중 1) → 안쪽 길 5번째 가지(높이 29 · 공중 1)
 			ridges = { count = 14, depth = 3, width = 5 }, -- 줄기 결(세로 골)
 			crownShape = {
-				baseY = 150, baseRadius = 300, -- 가장 아래 가지층(가장 넓다 - 잎 덮개 ≈ 허브 안전 지대)
+				baseY = 150, baseRadius = 400, -- 가장 아래 가지층(가장 넓다 - 잎 덮개 ≈ 허브 안전 지대 400 · M1-2)
 				shoulderY = 770, shoulderRadius = 150, -- 점프맵 끝 높이 - 여기까지 원뿔이 좁아진다
 				tipY = 960, -- 꼭대기(뾰족 - 줄기가 가늘어지며 끝난다)
 				-- 잎(사용자 확정 - 층층 로우폴리 원뿔): 층(tier)마다 각진 원뿔대 "치마" 한 장 - 위 가장자리 = 안쪽(점프맵 길 밖 clearRadius · 어깨 위는 줄기) · 아래 가장자리 = 수관 반경.
@@ -93,6 +93,14 @@ return {
 				--   층이 위아래로 겹쳐(skirt > spacing) 틈이 없다 · 안쪽은 비어 있어 오르는 사람은 치마 밑에서 바깥을 본다. 꼭대기 = 끝이 뾰족한 원뿔(tip).
 				clearRadius = 145,
 				coneTiers = { spacing = 70, skirt = 104, facets = { 6, 8 }, thickness = 1.6 }, -- 면 수가 적을수록 로우폴리(파트 = 면 × 4)
+				-- 어깨 위 층(M1-2 사용자 - 윗잎이 어색함 → 아래와 같은 규칙의 층층 덩어리): 위로 갈수록 작아지는 치마 top → bottom · 안쪽 반경 inner · 바깥 outer. 마지막 = 뾰족한 끝(inner 0).
+				--   아래 가장자리는 전망대(760) 눈높이 위(≥ 785) - 전망대에서 바깥이 보이게.
+				topTiers = {
+					{ top = 845, bottom = 786, inner = 20, outer = 150 },
+					{ top = 890, bottom = 820, inner = 14, outer = 118 },
+					{ top = 930, bottom = 858, inner = 9, outer = 84 },
+					{ top = 980, bottom = 898, inner = 0, outer = 50 },
+				},
 				jitter = { seed = 20260926, radius = 0.09, y = 6, twistDeg = 16, tint = 0.07 },
 			},
 			leaves = {
@@ -170,7 +178,7 @@ return {
 						outer = { { k = "hang", rise = 5, gap = 10, dia = 6 }, { k = "leaf", rise = 6, gap = 14, len = 10 }, { k = "pad", rise = 2, gap = 8 }, { k = "branch", rise = 10, gap = 34, len = 12, dia = 2.5 }, { k = "branch", rise = 4, gap = 24, len = 10, dia = 2.5 }, { k = "step", rise = 9, gap = 10, w = 2.5 }, { k = "branch", rise = 3, gap = 20, len = 8, dia = 2.5 } },
 					},
 				},
-				-- 정거장 = 구간 1 ~ 5의 끝(순서대로). unlockLevel = 역대 최고 레벨 기준(제안 - 환생 요구 25 · 50 · 75 · 100 · 125와 겹치지 않게 간격을 벌렸다).
+				-- 정거장 = 구간 1 ~ 5의 끝(순서대로). unlockLevel = 역대 최고 레벨 기준(M1-2 사용자 확정 10 · 30 · 60 · 120 · 250 - 환생 요구 25 · 50 · 75 · 100 · 125와 겹치지 않게 간격을 벌렸다).
 				stations = {
 					{ name = "뿌리 정거장", unlockLevel = 10 },
 					{ name = "첫 가지 정거장", unlockLevel = 30 },
@@ -186,7 +194,7 @@ return {
 		},
 	},
 
-	-- ═══ 구역 6개 ═══ tierIndex = 기존 tier(몬스터 · 드랍 그대로) · bossId = 이 구역의 진행 보스(BossData.placement.laps[1]과 같은 순서 - 검증이 대조).
+	-- ═══ 구역 6개 ═══ hunt = 몬스터 스폰 범위(이름 · 나오는 몬스터 { tier = MonsterData.tierOrder 번호, weight } - M2에서 종 추가 = 이 목록만) · tierIndex = 기존 tier(몬스터 · 드랍 그대로) · bossId = 이 구역의 진행 보스(BossData.placement.laps[1]과 같은 순서 - 검증이 대조).
 	-- 배정: T1 = 견습 보스(구간 수호자 - 스테이지 5) · T2 ~ T6 = BR 모형 난이도 순(처음 만남 · 스테이지 30 · 솔로 전멸률 - M1 보고서 표).
 	-- features(구역 좌표): 높이는 탐험 지역에(사냥 지대는 평평). kind = plateau(경사로로 걸어 오름) · tower(1단 점프 계단 나선) · cliff(못 오르는 벽 ≥ 23 - 경치 · 막음) ·
 	--   cave(굴 - 벽 둘 + 지붕) · falls(폭포 벽 + 뒤 공간) · spire(랜드마크 기둥 - 오르지 않음). explore = 둘러볼 지점 이름(발견 목록 · 탐험 표시).
@@ -194,7 +202,7 @@ return {
 	-- nests = 둥지 자리(기능은 펫 단계) · difficulty = walk(경사로) | chain(1단 점프 계단) | puzzle(공중 점프 2 + 대시 한 번의 도약) - 구역마다 walk 포함.
 	zones = {
 		{
-			key = "tier1", tierIndex = 1, bossId = "section_guardian", angleDeg = -90, theme = "수호자의 석조 평원", floorTint = { 150, 156, 146 },
+			key = "tier1", tierIndex = 1, hunt = { name = "석조 평원 사냥터", monsters = { { tier = 1, weight = 1 } } }, bossId = "section_guardian", angleDeg = -90, theme = "수호자의 석조 평원", floorTint = { 150, 156, 146 },
 			landmark = { kind = "monoliths", r = 2400, count = 8, radius = 60, height = 34 },
 			features = {
 				{ kind = "plateau", r = 1100, lat = 300, w = 120, d = 90, h = 40, explore = "절벽 위 전망" },
@@ -211,7 +219,7 @@ return {
 			},
 		},
 		{
-			key = "tier2", tierIndex = 2, bossId = "crystal_queen", angleDeg = -30, theme = "수정 동굴", floorTint = { 150, 150, 162 },
+			key = "tier2", tierIndex = 2, hunt = { name = "수정 굴 사냥터", monsters = { { tier = 2, weight = 1 } } }, bossId = "crystal_queen", angleDeg = -30, theme = "수정 동굴", floorTint = { 150, 150, 162 },
 			landmark = { kind = "spires", r = 2400, count = 5, radius = 70, height = 130 },
 			features = {
 				{ kind = "cave", r = 1100, lat = 320, w = 70, d = 90, h = 30, explore = "수정 굴" },
@@ -229,7 +237,7 @@ return {
 			},
 		},
 		{
-			key = "tier3", tierIndex = 3, bossId = "abyssal_lord", angleDeg = 30, theme = "수몰 사원", floorTint = { 144, 154, 160 },
+			key = "tier3", tierIndex = 3, hunt = { name = "수몰 사원 사냥터", monsters = { { tier = 3, weight = 1 } } }, bossId = "abyssal_lord", angleDeg = 30, theme = "수몰 사원", floorTint = { 144, 154, 160 },
 			landmark = { kind = "temple", r = 2400, count = 4, radius = 50, height = 70 },
 			features = {
 				{ kind = "falls", r = 1050, lat = -420, w = 80, h = 80, explore = "사원 폭포 뒤" },
@@ -246,7 +254,7 @@ return {
 			},
 		},
 		{
-			key = "tier4", tierIndex = 4, bossId = "scorpion_queen", angleDeg = 90, theme = "모래 유적", floorTint = { 162, 156, 140 },
+			key = "tier4", tierIndex = 4, hunt = { name = "모래 유적 사냥터", monsters = { { tier = 4, weight = 1 } } }, bossId = "scorpion_queen", angleDeg = 90, theme = "모래 유적", floorTint = { 162, 156, 140 },
 			landmark = { kind = "pyramid", r = 2400, count = 1, radius = 70, height = 90 },
 			features = {
 				{ kind = "plateau", r = 1100, lat = 300, w = 140, d = 90, h = 30, explore = "모래 언덕 위" },
@@ -264,7 +272,7 @@ return {
 		},
 		{
 			-- 폭풍 첨탑 = 특히 높게(사용자 지시): 첨탑 320 · 절벽 150.
-			key = "tier5", tierIndex = 5, bossId = "storm_lord", angleDeg = 150, theme = "폭풍 첨탑", floorTint = { 146, 150, 158 },
+			key = "tier5", tierIndex = 5, hunt = { name = "폭풍 첨탑 사냥터", monsters = { { tier = 5, weight = 1 } } }, bossId = "storm_lord", angleDeg = 150, theme = "폭풍 첨탑", floorTint = { 146, 150, 158 },
 			landmark = { kind = "stormSpire", r = 2400, count = 1, radius = 40, height = 320 },
 			features = {
 				{ kind = "tower", r = 1100, lat = 320, size = 28, h = 120, explore = "바람 탑 꼭대기" },
@@ -282,7 +290,7 @@ return {
 			},
 		},
 		{
-			key = "tier6", tierIndex = 6, bossId = "frost_giant", angleDeg = 210, theme = "빙하 동굴", floorTint = { 158, 162, 168 },
+			key = "tier6", tierIndex = 6, hunt = { name = "빙하 동굴 사냥터", monsters = { { tier = 6, weight = 1 } } }, bossId = "frost_giant", angleDeg = 210, theme = "빙하 동굴", floorTint = { 158, 162, 168 },
 			landmark = { kind = "iceWall", r = 2400, count = 3, radius = 80, height = 120 },
 			features = {
 				{ kind = "cliff", r = 1100, lat = -450, w = 160, d = 70, h = 120, explore = "빙벽" },
@@ -362,7 +370,9 @@ return {
 	travel = {
 		portalRadius = 6, -- 포탈 판 반경(밟으면)
 		campDiscoverRadius = 60, -- 캠프 중심에서 이 안에 들어오면 그 구역 포탈 개방(저장)
-		hubReturnCooldownSeconds = 60,
+		hubReturnCooldownSeconds = 60, -- M1-2 제안: 도착 뒤 60초(시전 3초 + 돌아가기 1회가 있어 사냥터 ↔ 마을 왕복이 공짜가 되지 않게 · 취소되면 쿨 없음)
+		-- M1-2 마을 귀환(사용자): castSeconds 시전(맞으면 취소) → 허브 · 도착 뒤 backSeconds 안에 [돌아가기] 1회 = 귀환한 자리로. PC 단축키 H · 폰/PC [귀환] 버튼.
+		recall = { castSeconds = 3, backSeconds = 300 },
 		partyTeleportCooldownSeconds = 90,
 		-- 파티원 곁으로 이동 제한(제안): 내가 · 대상이 보스전 중이면 불가 · 내가 최근 combatLockSeconds 안에 피해를 주거나 받았으면 불가 ·
 		-- 대상 자리가 나에게 잠긴 구역이면 불가. 도착 = 대상 옆 arriveOffsetStuds.
@@ -375,9 +385,20 @@ return {
 	guide = { beamWidth = 2.5, arrowEvery = 24, arrowsShown = 6, arriveStuds = 20, refreshSeconds = 0.5 },
 
 	-- ═══ 최적화 ═══
-	-- 몬스터 지대 활성화: 사냥 지대 중심 activateRadius 안에 사람이 있으면 그 지대 9마리를 세우고, keepRadius 밖으로 모두 나간 뒤 idleSeconds가 지나면 치운다.
-	-- 서버 몬스터 수 = 사람이 있는 지대 × 9(맵 크기와 무관).
-	spawnSites = { activateRadius = 250, keepRadius = 320, idleSeconds = 20, checkSeconds = 1.0 },
+	-- 몬스터 스폰 범위(M1-2 - 사용자: 넓은 범위 + 지나가면 생성). 구역마다 넓은 원(huntRange - 구역 좌표 중심 · 반경) 안에 스폰 지점을 흩어 둔다(최소 간격 pointSpacing ·
+	--   지형 · 둥지 · 캠프 · 관문을 avoid만큼 피한다 · 고정 시드 - 매번 같은 자리). 지점 activateRadius 안에 누가 들어오면 그 둘레(group.radius)에 group.count마리를 세운다.
+	--   정리 = 지점 keepRadius 안에 아무도 없고 + idleSeconds가 지났고 + 그 지점 몬스터가 전투 중이 아닐 때만(어그로 대상이 있거나 combatHoldSeconds 안에 맞았으면 보류 ·
+	--   처치 판정 중인 몬스터는 건드리지 않는다 - 보상 누락 0). 파티원이 흩어져 있어도 지점마다 "누구든 가까이" 기준이라 각자 주변이 유지된다.
+	--   어떤 몬스터가 나오는지 = 구역 hunt.monsters(가중치 - M2에서 종을 늘리면 데이터만). 서버 몬스터 수 = 사람 주변 지점 수 × group.count(맵 크기와 무관).
+	spawnSites = {
+		huntRange = { r = 1700, lat = 0, radius = 620 }, -- 구역 원(1700 · 850) 안 · 캠프(900)와 관문(2400)은 원 밖
+		pointSpacing = 120, pointsPerRange = 34, edgeMargin = 30, seed = 20260926,
+		avoid = { feature = 24, nest = 16, camp = 110, gate = 110 },
+		group = { count = 3, radius = 18 },
+		activateRadius = 140, keepRadius = 200, idleSeconds = 20, checkSeconds = 1.0, combatHoldSeconds = 10,
+		-- 표시: 범위 바닥 = 구역 바닥보다 조금 진한 원판 + 경계 고리(얇은 판 조각) · 경계를 넘으면 화면 위쪽에 사냥터 이름(nameSeconds - 가운데 금지 구역 밖)
+		look = { tintScale = 0.9, ringSegments = 36, ringWidth = 3, nameSeconds = 2.5 },
+	},
 	-- 스트리밍(Workspace 속성 = default.project.json · 여기 값은 기록 · 검증 대조용). 나무 실루엣은 Persistent 모델.
 	streaming = { targetRadius = 1024, minRadius = 128, streamOutBehavior = "Opportunistic" },
 

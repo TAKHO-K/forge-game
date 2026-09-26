@@ -103,6 +103,15 @@ function BossOrgel.onBellHit(model, st, data, skill, bell, player, hitInfo)
 	if not ok then
 		local shock = skill.wrongShock
 		kit.applySkillDamage(model, data, { damage = { kind = "attack", multiplier = shock.multiplier }, damageLabel = shock.damageLabel }, player)
+		-- M1-2 C안: 파티면 오답 공동 책임(전원 최대 체력 비율 - 인원별 표)
+		local share = shock.partyShareMaxHpByParty and shock.partyShareMaxHpByParty[math.min(#st.members, #shock.partyShareMaxHpByParty)] or 0
+		if share > 0 then
+			for _, v in ipairs(kit.victims(st)) do
+				if not BossTrap.isTrapped(v.player) then
+					PlayerDamage.applyMaxHpFraction(v.player, share, shock.partyShareLabel)
+				end
+			end
+		end
 	elseif progress >= #o.sequence then
 		o.done = true
 		o.success = true

@@ -319,9 +319,16 @@ function SocialVerify.runLive(player, env)
 		local prompt = orb and orb:FindFirstChildOfClass("ProximityPrompt")
 		local base = model and model:FindFirstChild("Base")
 		local drift = base and (Vector3.new(base.Position.X, 0, base.Position.Z) - Vector3.new(altar.X, 0, altar.Z)).Magnitude or math.huge
-		local center = Workspace:FindFirstChild("CommunityCenter")
-		local inside = center and (math.abs(base.Position.X - center.Position.X) <= center.Size.X / 2 and math.abs(base.Position.Z - center.Position.Z) <= center.Size.Z / 2) or false
-		r.check("나", ("제단 물체: 모델 %s · 프롬프트 %s(이름 %s · 거리 %s ≤ 반경 %s · 키 %s · 대기 %s) · 서버 판정 좌표와의 XZ 차이 %.3f(기대 ≈ 0) · 센터 블록 안에 겹침 %s(기대 false)"):format(
+		-- M1-2: 옛 CommunityCenter 파트 대신 커뮤니티 광장 건물 줄(Workspace.Ground.Hub.Facility_community) - 제단이 어느 건물 바닥 안에도 겹치지 않아야 한다
+		local inside = false
+		local hubModel = Workspace:FindFirstChild("Ground") and Workspace.Ground:FindFirstChild("Hub")
+		for _, building in ipairs(hubModel and hubModel:GetChildren() or {}) do
+			if building.Name == "Facility_community" and base then
+				local rel = building.CFrame:PointToObjectSpace(base.Position)
+				inside = inside or (math.abs(rel.X) <= building.Size.X / 2 and math.abs(rel.Z) <= building.Size.Z / 2)
+			end
+		end
+		r.check("나", ("제단 물체: 모델 %s · 프롬프트 %s(이름 %s · 거리 %s ≤ 반경 %s · 키 %s · 대기 %s) · 서버 판정 좌표와의 XZ 차이 %.3f(기대 ≈ 0) · 커뮤니티 광장 건물 안에 겹침 %s(기대 false)"):format(
 			tostring(model ~= nil), tostring(prompt ~= nil), prompt and prompt.Name or "-", prompt and tostring(prompt.MaxActivationDistance) or "-",
 			tostring(WorldConfig.rebirthAltar.interactionRangeStuds), prompt and tostring(prompt.KeyboardKeyCode) or "-", prompt and tostring(prompt.HoldDuration) or "-", drift, tostring(inside)),
 			model ~= nil and prompt ~= nil and prompt.Name == "RebirthAltarPrompt" and prompt.MaxActivationDistance <= WorldConfig.rebirthAltar.interactionRangeStuds

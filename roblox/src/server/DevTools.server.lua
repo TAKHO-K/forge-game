@@ -3487,6 +3487,7 @@ if RunService:IsStudio() then
 				{ "P3dF(나)", function() require(script.Parent.P3dFVerify).runLive(player, env) end }, -- P3d-F: 재생성 누수 5회 · 받는 피해 배율 출처별 · 끼임 중 피격 · 단상 균열 예고 · 상한 교체
 				{ "G2a(나)", function() require(script.Parent.G2aVerify).runLive(player, env) end }, -- G2a: 높이 검증 실제 Player · 보스 기여도(계수 전) · 이속 상한 · 구조물 낙하
 				{ "M1-0(나)", function() require(script.Parent.M1_0Verify).runLive(player, env) end }, -- M1-0: 합법 최대 높이 되돌림 0 · 기본 Shift Lock 꺼짐 · 아레나 공중 복귀 0
+				{ "M1-2(나)", function() require(script.Parent.M1_2Verify).runLive(player, env) end }, -- M1-2: 스폰 지점 실제 사이클 · 전투 중 보류 · 처치 중 남김 · 귀환 시전 · 취소 · 돌아가기 · 뿌리 밟기
 				{ "M1(나)", function() require(script.Parent.M1Verify).runLive(player, env) end }, -- M1: 잠금 · 포탈 · 귀환 · 몬스터 지대 · 보스 관문 · 나무 리프트 · 떨어짐 · 복귀 · 봉인 입구
 				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
 				{ "BR1-2(나)", function() require(script.Parent.BR1_2Verify).runLive(player, env) end }, -- BR1-2: 곡선 32발 · 동시 4보스 성능 · 반사 · 음파 · 색 맞추기 · 가둠 · 저장 v37
@@ -3848,6 +3849,16 @@ if RunService:IsStudio() and verifyEnabled("G1-3(가)") then
 		local ok, err = pcall(require(script.Parent.G1_3Verify).runPure)
 		if not ok then
 			warn(("[G1-3(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ M1-2 자동 검증 블록(가) - C안 모형 · 스폰 지점 배치 · 스폰 사이클 1,000회 · 마을 거리 · 귀환 수치 · 뿌리 · 윗잎(docs/phase/M1-2b-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("M1-2(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.M1_2Verify).runPure)
+		if not ok then
+			warn(("[M1-2(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

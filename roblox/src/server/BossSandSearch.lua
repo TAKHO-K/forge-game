@@ -132,6 +132,13 @@ function BossSandSearch.onMoundHit(model, st, data, skill, index, player, hitInf
 	local entry = moundsOf[model] and moundsOf[model][index]
 	local blast = skill.decoyBlast
 	kit.applySkillDamage(model, data, { damage = { kind = "attack", multiplier = blast.multiplier }, damageLabel = blast.damageLabel }, player)
+	-- M1-2 C안: 파티면 오답 공동 책임(전원 최대 체력 비율 - 인원별 표)
+	local share = blast.partyShareMaxHpByParty and blast.partyShareMaxHpByParty[math.min(#st.members, #blast.partyShareMaxHpByParty)] or 0
+	if share > 0 then
+		for _, v in ipairs(aliveVictims(st)) do
+			PlayerDamage.applyMaxHpFraction(v.player, share, blast.partyShareLabel)
+		end
+	end
 	kit.send(st, "sandBlast", { position = entry and Vector3.new(entry.position.X, st.floorY, entry.position.Z) or nil, radius = blast.radiusStuds })
 	kit.debugEvent("sandBlast", { player = player, index = index, at = now })
 end

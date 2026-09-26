@@ -13,6 +13,8 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
+local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
+local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 
 local CHECK_INTERVAL_SECONDS = 0.3
 local DISPLAY_SECONDS = 2.5
@@ -61,6 +63,24 @@ end
 
 local currentZoneKey = nil
 
+local currentRangeKey = nil
+
+local function show(text, color, seconds)
+	label.Text = text
+	label.TextColor3 = color
+	local tweenIn = TweenInfo.new(0.15)
+	TweenService:Create(label, tweenIn, { BackgroundTransparency = 0.15, TextTransparency = 0 }):Play()
+	TweenService:Create(stroke, tweenIn, { Transparency = UIColors.rimTransparency }):Play()
+
+	task.delay(seconds, function()
+		if label.Text == text then
+			local tweenOut = TweenInfo.new(0.5)
+			TweenService:Create(label, tweenOut, { BackgroundTransparency = 1, TextTransparency = 1 }):Play()
+			TweenService:Create(stroke, tweenOut, { Transparency = 1 }):Play()
+		end
+	end)
+end
+
 local function showWarning(zoneKey, zone)
 	local text, color
 	if zone.role == "tier" then
@@ -71,19 +91,7 @@ local function showWarning(zoneKey, zone)
 		text = ("%s 진입"):format(zone.displayName or zoneKey)
 		color = UIColors.textPrimary
 	end
-	label.Text = text
-	label.TextColor3 = color
-	local tweenIn = TweenInfo.new(0.15)
-	TweenService:Create(label, tweenIn, { BackgroundTransparency = 0.15, TextTransparency = 0 }):Play()
-	TweenService:Create(stroke, tweenIn, { Transparency = UIColors.rimTransparency }):Play()
-
-	task.delay(DISPLAY_SECONDS, function()
-		if label.Text == text then
-			local tweenOut = TweenInfo.new(0.5)
-			TweenService:Create(label, tweenOut, { BackgroundTransparency = 1, TextTransparency = 1 }):Play()
-			TweenService:Create(stroke, tweenOut, { Transparency = 1 }):Play()
-		end
-	end)
+	show(text, color, DISPLAY_SECONDS)
 end
 
 task.spawn(function()
@@ -97,6 +105,15 @@ task.spawn(function()
 				currentZoneKey = zoneKey
 				if zoneKey then
 					showWarning(zoneKey, WorldConfig.zones[zoneKey])
+				end
+			end
+			-- M1-2: 몬스터 스폰 범위 경계를 넘어 들어가면 사냥터 이름(화면 위쪽 - 가운데 금지 구역 밖)
+			local range = WorldMapLayout.huntRangeAt(rootPart.Position)
+			local rangeKey = range and range.zoneKey
+			if rangeKey ~= currentRangeKey then
+				currentRangeKey = rangeKey
+				if range then
+					show("⚔ " .. range.name, UIColors.textPrimary, WorldMapData.spawnSites.look.nameSeconds)
 				end
 			end
 		end

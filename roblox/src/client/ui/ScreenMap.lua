@@ -72,6 +72,8 @@ ScreenMap.slots = {
 			"panels/Leaderboard.lua(P3b) - '순위' 열기 버튼. 파티 버튼 아래 끝 + 8 · 오른쪽 끝 = 파티 버튼 오른쪽 끝. 모바일은 높이 44(파티 버튼도 44라 위 끝 = 52 + 44 + 8 = 104)"),
 		-- M1: [귀환](허브 - 쿨 60초) · [파티 곁](첫 다른 파티원 곁 - 파티일 때만) - [순위] 버튼 아래로 이어 붙는다(순위 버튼을 따라 움직인다 - WorldClient).
 		travelHub = slot("new", 1, 0, UDim2.new(1, -99, 0, 140), UDim2.new(0, 72, 0, 36), "TravelHubButton", "WorldClient.client.lua(M1) - 순위 버튼 아래 끝 + 8"),
+		-- M1-2: [돌아가기](귀환 뒤 5분 · 1회 - 그때만) = [귀환] 버튼 왼쪽 끝 - 8(같은 줄 - 파티 곁 버튼 자리를 밀지 않는다)
+		travelBack = slot("new", 1, 0, UDim2.new(1, -179, 0, 140), UDim2.new(0, 96, 0, 36), "TravelBackButton", "WorldClient.client.lua(M1-2) - 귀환 버튼 왼쪽 · 귀환 뒤 5분만"),
 		travelParty = slot("new", 1, 0, UDim2.new(1, -99, 0, 184), UDim2.new(0, 72, 0, 36), "TravelPartyButton", "WorldClient.client.lua(M1) - 귀환 버튼 아래 끝 + 8 · 파티일 때만"),
 		dropFeed = slot("new", 1, 0, UDim2.new(1, -14, 0, 52), UDim2.new(0, 300, 0, 78), "ToastLane_TR",
 			"Toast 줄 TR(드랍 피드 · 최대 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 넘치면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93 · 보완): 칩 스택 바로 아래(아래 끝 + 8)에 남은 자리만큼(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 구역 위 끝까지, 최대 3줄), 0줄이면 상단 가운데 띠 1줄(태초 배너가 있으면 그 아래 3)",
@@ -98,6 +100,8 @@ ScreenMap.slots = {
 		healthBar = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -94), UDim2.new(0, 394, 0, 19), "HealthBar", "PlayerHealthBar.client.lua"),
 		skillRow = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -31), nil, "CentralRow", "SkillSlots.client.lua - 슬롯 54 · 높이 54(모바일 터치 배치는 SkillSlots가 따로 정한다)"),
 		pickupPopup = slot("new", 0.5, 1, UDim2.new(0.5, 0, 1, -140), UDim2.new(0, 360, 0, 40), "ToastLane_BC", "Toast 줄 BC(획득 팝업 · 1행 · 묶기)"),
+		-- M1-2: 마을 귀환 시전 막대(3초) - 보스 잡힘 패널과 같은 자리(보스전 중에는 귀환이 안 되니 겹치지 않는다) · 중앙 금지 구역 아래
+		recallCast = slot("new", 0.5, 1, UDim2.new(0.5, 0, 1, -170), UDim2.new(0, 260, 0, 40), "RecallCastBar", "WorldClient.client.lua(M1-2) - 귀환 시전 중에만"),
 		bossTrap = slot("existing", 0.5, 1, UDim2.new(0.5, 0, 1, -170), UDim2.new(0, 260, 0, 58), "BossTrapPanel", "BossTrapView.lua - 보스 잡기 기믹에 잡혔을 때만 뜨는 카운트다운 · 구출 막대 패널(평소엔 숨김)"),
 	},
 	XP = {

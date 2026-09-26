@@ -325,6 +325,23 @@ function BossDifficultySim.run(bossId, options)
 					gimmickSeen += 1
 					-- M1 A안: 인원별 둔덕 수 · 제한 시간 · 순서 길이로 1인 실패 확률을 먼저 올린다(BossSkillMath.partyGimmickHardness - 가정)
 					local single = 1 - (1 - hitChance(j)) ^ BossSkillMath.partyGimmickHardness(j.skill, n)
+					-- M1-2 C안: 멤버마다 오답 한 번(확률 = 1인 실패 × partyWrongPressFactor) → 본인 벌(decoyBlast · wrongShock) + 파티면 전원 partyShareMaxHp × 오답 수
+					local wrong = j.skill.decoyBlast or j.skill.wrongShock
+					if wrong and cfg.partyWrongPressFactor then
+						local wrongs = 0
+						for _, m in ipairs(members) do
+							if m.alive and t >= m.trappedUntil and rng() < single * cfg.partyWrongPressFactor then
+								wrongs += 1
+								damage(m, wrong.multiplier / surviveHits, nil, j.id .. " 오답")
+							end
+						end
+						local share = wrong.partyShareMaxHpByParty and wrong.partyShareMaxHpByParty[math.min(n, #wrong.partyShareMaxHpByParty)] or 0
+						if wrongs > 0 and share > 0 then
+							for _, m in ipairs(members) do
+								damage(m, share * wrongs, nil, "공동 책임(오답)")
+							end
+						end
+					end
 					local failed = rng() < single ^ (1 + cfg.partySolveExponent * (n - 1))
 					for _, m in ipairs(members) do
 						if m.alive and t >= m.trappedUntil and failed then

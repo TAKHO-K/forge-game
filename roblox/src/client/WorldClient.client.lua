@@ -162,6 +162,67 @@ end
 local request = ReplicatedStorage:WaitForChild("TravelRequest", 30)
 local hubButton = button("TravelHubButton", "travelHub", "귀환")
 local partyButton = button("TravelPartyButton", "travelParty", "파티 곁")
+local backButton = button("TravelBackButton", "travelBack", "돌아가기") -- M1-2: 귀환한 자리로(5분 · 1회)
+backButton.Visible = false
+backButton.Size = UDim2.new(0, 96, 0, Theme.isMobile and Theme.touchMin or 36) -- "돌아가기 4:59"가 들어가게
+backButton.Activated:Connect(function()
+	if request then
+		request:FireServer("back")
+	end
+end)
+-- M1-2: 귀환 시전 막대(서버 Attribute RecallCastUntil = 끝나는 서버 시각) · 취소 문구(RecallCancel)
+local castBar = Instance.new("Frame")
+castBar.Name = "RecallCastBar"
+ScreenMap.place(castBar, "BC", "recallCast")
+castBar.Size = UDim2.new(0, 260, 0, 40) -- place는 자리만 정한다
+castBar.BackgroundColor3 = UIColors.panel
+castBar.BackgroundTransparency = UIColors.panelTransparency
+castBar.Visible = false
+castBar.Parent = hud
+Theme.corner(castBar, 8)
+local castFill = Instance.new("Frame")
+castFill.Name = "Fill"
+castFill.BackgroundColor3 = Color3.fromRGB(120, 190, 255)
+castFill.BorderSizePixel = 0
+castFill.Size = UDim2.fromScale(0, 1)
+castFill.Parent = castBar
+Theme.corner(castFill, 8)
+local castText = Instance.new("TextLabel")
+castText.Name = "CastText"
+castText.BackgroundTransparency = 1
+castText.Size = UDim2.fromScale(1, 1)
+castText.Font = Theme.font
+castText.TextSize = Theme.textSize("body")
+castText.TextColor3 = UIColors.textPrimary
+castText.Text = "마을로 귀환 중…"
+castText.ZIndex = 2
+castText.Parent = castBar
+local cancelShownUntil = 0
+player:GetAttributeChangedSignal("RecallCancelAt"):Connect(function()
+	local why = player:GetAttribute("RecallCancel")
+	castText.Text = why == "hit" and "귀환 취소 - 공격받았다" or "귀환 취소"
+	castFill.Size = UDim2.fromScale(0, 1)
+	castBar.Visible = true
+	cancelShownUntil = os.clock() + 1.5
+end)
+RunService.RenderStepped:Connect(function()
+	local untilAt = player:GetAttribute("RecallCastUntil")
+	local now = Workspace:GetServerTimeNow()
+	if untilAt and untilAt > now then
+		local total = WorldMapData.travel.recall.castSeconds
+		castText.Text = ("마을로 귀환 중… %.1f"):format(untilAt - now)
+		castFill.Size = UDim2.fromScale(math.clamp(1 - (untilAt - now) / total, 0, 1), 1)
+		castBar.Visible = true
+	elseif os.clock() > cancelShownUntil then
+		castBar.Visible = false
+	end
+	local backUntil = player:GetAttribute("RecallBackUntil")
+	backButton.Visible = backUntil ~= nil and backUntil > now
+	if backButton.Visible then
+		local left = math.ceil(backUntil - now)
+		backButton.Text = ("돌아가기 %d:%02d"):format(left // 60, left % 60)
+	end
+end)
 hubButton.Activated:Connect(function()
 	if request then
 		request:FireServer("hub")
@@ -190,6 +251,8 @@ task.spawn(function()
 		hubButton.Position = UDim2.new(0, pos.X + size.X, 0, pos.Y + size.Y + 8)
 		partyButton.AnchorPoint = Vector2.new(1, 0)
 		partyButton.Position = UDim2.new(0, pos.X + size.X, 0, pos.Y + size.Y * 2 + 16)
+		backButton.AnchorPoint = Vector2.new(1, 0)
+		backButton.Position = UDim2.new(0, pos.X + size.X - hubButton.AbsoluteSize.X - 8, 0, pos.Y + size.Y + 8)
 	end
 	reposition()
 	anchor:GetPropertyChangedSignal("AbsolutePosition"):Connect(reposition)

@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **M1 · 2026-09-26** · 직전 보고서 = `docs/phase/M1-report.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **M1-2(2차) · 2026-09-26** · 직전 보고서 = `docs/phase/M1-2b-report.md`(그 전 `M1-report.md`) · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -12,9 +12,9 @@
 | 영역 | 상태 | 문서 |
 |---|---|---|
 | 전투 · 직업 4종(대검 · 쌍검 · 활 · 치유사) · 스킬 Q/E · 대시 | 동작 | PRD 20.x · `docs/design/skills-RT.md`(R/T 예정) |
-| 무한 스테이지 · 보스 6종(5스테이지마다) · 파티 4인 · 기믹 | **BR1-3 기믹 3차**: 강화 평타 기절 0.7초 + 면역 2초 · 지반 붕괴 = 피자 8조각 낙사 · 판 털기(심해) · 분신 부메랑 · 에네르기파 휩쓸기 · 수정 오르골(수정 전멸기) · 아르마딜로 태세 · 진짜 전갈 찾기(전갈 전멸기 - 갑각 태세 삭제) · 에어본 5% 고정 · 설치형 공격 규칙. **BR1-2 난이도 2차**: 스테이지 곡선 표 4단계(`BossCurveData` - 인당 투사체 최대 8 · 아레나 상한 48) · 초반 보호 1 ~ 30 · 첫 만남 전멸기 카드 · 대공 잡기 재작업(점프하지 마 → 잡아 모음 → 던짐) · 공중 가둠 · 반사(6종) + 반사 에어본 · 음파 포효 · 색 맞추기 · 프라이팬 · 수정 부수기(점프맵 + 45/90초 도움) · 여러 개미지옥 · 번개 조준경(폭풍 전멸기) · 지진파 무작위 표 · 평타 사거리 26 · 근접 원형 구역 · 파티 N^0.93 · 공동 책임 45% | `docs/design/boss-rules.md` · `boss-br1.md` · `boss-br1-2.md` |
+| 무한 스테이지 · 보스 6종(5스테이지마다) · 파티 4인 · 기믹 | **M1-2 C안**: 전갈 가짜 둔덕 · 수정 틀린 종 = 파티 전원 최대 체력 비율(인원별 표 - 모형 파티 전멸 31 ~ 44%). **BR1-3 기믹 3차**: 강화 평타 기절 0.7초 + 면역 2초 · 지반 붕괴 = 피자 8조각 낙사 · 판 털기(심해) · 분신 부메랑 · 에네르기파 휩쓸기 · 수정 오르골(수정 전멸기) · 아르마딜로 태세 · 진짜 전갈 찾기(전갈 전멸기 - 갑각 태세 삭제) · 에어본 5% 고정 · 설치형 공격 규칙. **BR1-2 난이도 2차**: 스테이지 곡선 표 4단계(`BossCurveData` - 인당 투사체 최대 8 · 아레나 상한 48) · 초반 보호 1 ~ 30 · 첫 만남 전멸기 카드 · 대공 잡기 재작업(점프하지 마 → 잡아 모음 → 던짐) · 공중 가둠 · 반사(6종) + 반사 에어본 · 음파 포효 · 색 맞추기 · 프라이팬 · 수정 부수기(점프맵 + 45/90초 도움) · 여러 개미지옥 · 번개 조준경(폭풍 전멸기) · 지진파 무작위 표 · 평타 사거리 26 · 근접 원형 구역 · 파티 N^0.93 · 공동 책임 45% | `docs/design/boss-rules.md` · `boss-br1.md` · `boss-br1-2.md` |
 | 강화 · 방어구 3부위 · 보석 · 계승 · 환생 · 리더보드 | 동작 | PRD · `docs/econ/` |
-| 세계 지도 | **M1 그레이박스**: 반지름 3,000 · 허브 큰 나무 마을(잎 덮개 300 = 안전) · 꽃잎 구역 6(T1 수호자 · T2 수정 · T3 심해 · T4 전갈 · T5 폭풍 · T6 서리 - 스테이지 5k 보스 = 구역 k) · 구역 개방(계정 최고 보스) · 결계 · 포탈 · 귀환 · 파티원 곁 · 보스 관문 입장(길 안내) · 몬스터 지대 활성화 · 나무 점프맵 두 갈래(정거장 5 · 리프트 · 높이 표시 · 메타세쿼이아 로우폴리 원뿔 · 계절 색표) · 봉인 입구 5(티저 · 칭호) · 관문 빛기둥 | `docs/design/world-map-m1.md` · 수치 `shared/data/WorldMapData.lua` |
+| 세계 지도 | **M1-2**: 허브 안전 400 · 거리 배치(대장간 거리 · 시장 · 커뮤니티 광장 · 포탈 광장) · 마을 귀환(H · 3초 시전 · 맞으면 취소 · 5분 돌아가기 1회) · 몬스터 스폰 범위(구역 원 반경 620 · 지점 34곳 · 지나가면 3마리 · 전투 중 정리 안 함) · 뿌리(충돌 · 땅속) + 코스 뿌리 · 윗잎 층 4장. **M1 그레이박스**: 반지름 3,000 · 허브 큰 나무 마을 · 꽃잎 구역 6(T1 수호자 · T2 수정 · T3 심해 · T4 전갈 · T5 폭풍 · T6 서리 - 스테이지 5k 보스 = 구역 k) · 구역 개방(계정 최고 보스) · 결계 · 포탈 · 귀환 · 파티원 곁 · 보스 관문 입장(길 안내) · 몬스터 지대 활성화 · 나무 점프맵 두 갈래(정거장 5 · 리프트 · 높이 표시 · 메타세쿼이아 로우폴리 원뿔 · 계절 색표) · 봉인 입구 5(티저 · 칭호) · 관문 빛기둥 | `docs/design/world-map-m1.md` · 수치 `shared/data/WorldMapData.lua` |
 | 이동 | **M1-0 개편**: 공중 점프 충전 2(+6.12씩) · 공중대시 체공 1회 섞기 · 필드 = 아레나 같은 규칙 · 서버 높이 검증 허용 22.38 | `docs/design/movement-metrics.md` v2 |
 | 카메라 | **M1-0**: 기본 = 로블록스 기본 카메라(줌 22 · 10 ~ 60) · 설정 창 "탑다운 시점"(55° · 45 - 이번 접속 동안) · 보스전 최소 30° · 시점 고정 = 왼쪽 Ctrl · PC 스킬 줄 칸 / 폰 "고정" 버튼(대시 옆) | 같은 문서 §8 |
 | 설정 창 | M1-0에 첫 창(카메라 토글 하나). 저장 · 키 재설정은 **P4-4** | `client/panels/Settings.lua` |
@@ -22,7 +22,7 @@
 
 ## 3. 다음 단계
 
-로드맵 = `docs/phase/roadmap-v2.md`. M1 결정(§4) 뒤 BR2(보스 세트 · 토벌 - 관문 자리 있음) 또는 M2(몬스터 외형 · 종). 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`(spring · summer · autumn · winter).
+로드맵 = `docs/phase/roadmap-v2.md`. M1-2 결정(§4) 뒤 BR2(보스 세트 · 토벌 - 관문 자리 있음) 또는 M2(몬스터 외형 · 종). 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`(spring · summer · autumn · winter).
 
 ## 4. 결정 필요 (열린 것)
 
@@ -32,7 +32,8 @@
 | ~~BR1 ① ~ ⑤~~ | BR1-2에서 다시 맞춤(근접 솔로 전멸 32% · 서리 55% · 파티 p 0.93) |
 | ~~BR1-2 1 ~ 7~~ | **닫힘(BR1-3 - 사용자 확정)**: 1 모형 확인은 카툰 · 모션 뒤 · 2 ④ 8발 유지 · 3 평타 체감은 모션 단계 · 4 공동 책임 45% 유지 · 5 파티 보정은 재측정 뒤(→ BR1-3 1) + 설치형 공격 규칙 · 6 에어본 5% 고정 |
 | ~~BR1-3 1 ~ 6~~ | **닫힘(M1 - 사용자 확정)**: A안 적용 · 판 털기 80/20 · 가짜 폭발 = 때린 사람만 · 오르골 가정 = 알파 테스트 · 체감 = 카툰 · 모션 · 사운드 단계 |
-| M1 1 ~ 6 | 전갈 · 수정 파티 전멸 A안 뒤에도 2인 16 ~ 20% · 4인 5 ~ 6%(C 또는 B 추가?) · 나무 정거장 기준 레벨 · 서버 인원 20명 추천 · 스트리밍 속성 확인(rojo 재시작 · 속성창) · 먼 나무(저품질 그리기 거리 · imposter는 place 자산만) · 대기 밀도 0.08 - `docs/phase/M1-report.md` ⑧ |
+| ~~M1 1 ~ 6~~ | **닫힘(M1-2 - 사용자 확정)**: A + C · 정거장 10 · 30 · 60 · 120 · 250 · 서버 20명 · 스트리밍 = place 설정(원인 확정) · imposter 실험(→ M1-2 1) · 대기 밀도 = 아트 단계 |
+| M1-2 1 ~ 4 | 먼 나무 저품질(imposter도 그리기 거리에 잘림 - 빌보드 실루엣 추천) · 스폰 밀도(걷는 1명당 약 13마리) · 수동 Play 저장 분리(`_manual` 추천) · C안 체감(2인 수정 오답 50%) - `docs/phase/M1-2b-report.md` ⑨ |
 | G2a 1 | 이속 상한을 넘는 신발 몫 처리(지금 = 이동만 ×1.5에서 멈춤) |
 | G2a 2 | ~~점프력 옵션 아레나 규칙~~ → M1-0에서 "아레나도 적용"으로 닫음(확인만) |
 
@@ -40,7 +41,8 @@
 
 - G1-1(UI) 고리 타이밍 · 29-1 첫 기믹 +0.35초(서버 시작 부하) · S12b(UI) · S16(UI) · S19b(UI) · P25b(UI)(계정 가방 상태) - G1-5 / G2a 전 블록 Play와 같은 계열.
 - 29-1 일부 X = BR1 의도된 수치 변경(기대값 갱신 안 함). (BR1(나) 눈덩이 "끝 0"은 BR1-2 첫 Play에서 고침 - 67/67)
-- (M1) 29-3 · 29-5 블록 삭제(삭제된 스킬). S12b(나)는 없어진 `CommunityCenter` 파트를 찾는다 - 회귀 X. `ZoneTerrain` · `TeleportPad`는 이제 아무도 짓지 않는다(삭제 안 함).
+- (M1) 29-3 · 29-5 블록 삭제(삭제된 스킬). ~~S12b(나) CommunityCenter~~ → M1-2에서 커뮤니티 광장 건물 기준으로 고침(13/13). `ZoneTerrain` · `TeleportPad`는 이제 아무도 짓지 않는다(삭제 안 함).
+- (M1-2 · 기존) 월드 이름표 한글이 멀리서 깨진 글자로 그려진다(TextScaled 작은 크기 - 폰트 단계). 코스 뿌리 · 윗잎 주변 실제 키 입력 등반 · 폰 프레임 · 다중 클라 C안 피해는 안 쟀다.
 - (M1) 나무 구간 · 경로별 실제 조작 완주 · 둥지 실제 도달은 Play로 안 했다(계산 검사 + 요소 부분 실측).
 - G1-0(나) 12아레나 한 프레임 합 2.0ms 경계 흔들림(성능 표본).
 - S04(나) 멈춤 - `verify.exclude`로 회귀 제외(원인 미확정).
@@ -53,5 +55,7 @@
 - 로컬: 스크래치패드 `luau/`(luau-compile · luau-analyze) + `g2a_mk.py` · `br1_mk.py` 하네스(순수 (가) 블록 · 사슬 · 널뛰기 · 튕김 실행) - 세션마다 직전 세션 스크래치패드에서 복사.
 - 스크린샷: 서버 `ServerStorage.DevCommandHook:Invoke(player, "/gg …")` + 로그 `SHOT|이름` → `shots.ps1`(PowerShell 도구 백그라운드 · 이름 목록을 쓰면 끝나므로 장면마다 새로). BR1-3: `shots.ps1`이 SHOT 줄을 못 잡아(로그 늦은 기록 추정) → 클라 `execute_luau`로 BossPatternEvent를 기다렸다 돌아온 직후 `cap.ps1`(지연 약 1.5초 - 기다림에 더해 맞춤) · 카메라 = 클라 `BindToRenderStep(Last)` Scriptable. 보스 패턴은 캐릭터를 보스 18 stud 안에 둬야 어그로가 붙어 돈다. 받는 피해 ×0 = `/gg god on`(인자 필수 · **보스 호출 뒤에** 켠다 · 배율 하한 `incomingDamageMultiplierFloor`가 있어 스테이지 500 · 레벨 9는 여전히 한 방 - 스크린샷은 스테이지 15).
 - 클라 동작(점프 · 카메라 · 모션)은 수동 Play에서 MCP `user_keyboard_input` + 클라 `execute_luau` 기록기로 잰다. AlwaysOnTop 빌보드는 캡처에 안 나온다(끈 사본으로 확인).
+- (M1-2) MCP `screen_capture`는 Studio 창이 최대화가 아니면 3D가 검다 → 스크래치 `StudioWin.ps1 max` · 파일 저장 = `capcrop.ps1`(최대화 창에서 뷰포트 자르기). 스폰 지점 서버 상태 = Attribute `SpawnSitesActive` · `SpawnSitesAlive` · `SpawnSites.audit()`.
+- (M1-2) **place에만 있는 설정**(Rojo · git에 없다): Workspace 스트리밍 4종(최소 128 · 목표 1,024 · IntegrityMode · StreamOutBehavior - NotScriptable이라 `rojo serve`가 못 쓴다) · Gravity · CharacterJumpHeight · 아바타 관절 업그레이드 - `docs/perf/streaming-settings.md` §3.
 - (M1) Studio 자동 그래픽 품질은 먼 파트를 안 그린다 - 먼 풍경 스크린샷은 클라 `settings().Rendering.QualityLevel = Level21` + DepthOfField 끄기. `execute_luau` require = 모듈 사본 → 서버 상태는 Attribute(`DebugZonesUnlocked` · `SpawnSitesActive`)나 `DevCommandHook`으로. 보스전 중에는 아레나 이탈 방지가 순간이동을 되돌린다(`BossGiveUp`으로 먼저 나온다).
 - 이 place의 아바타는 **관절 업그레이드(AnimationConstraint)** - Motor6D가 없다. 관절을 만지는 코드는 둘 다 처리한다(`client/AirMotion.lua`).

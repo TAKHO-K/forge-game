@@ -146,7 +146,9 @@ local config = {
 		-- BossArenaContainment(복귀) · Leaderboard(거절 - P3a(나) · P3b · P3c) · PlayerProfile(걷기 상한) · DropTableData(세기 0.5 - G1-2(가) · P0(가) · S01 · P2) · TerrainServer) → G1-5와 같은 전 블록(넓은 쪽).
 		-- 체인 동안 높이 검증은 꺼진다(HeightGuard.debugOff - G2a(나)만 켠다). Play 1은 VerifyOnly 필터로 G1 미실행 2건(G1-2(나) · P3c(가))만.
 		-- M1-0(검증 정책 v2 - COMMON §7): 이번 블록 M1-0(가)(나) + 이번 변경이 닿는 블록만 VerifyOnly로 돈다 - G2a(가)(나)(높이 검증 · 회피 부등식 - 리뷰 반영 9건 첫 Play) · G1-0(나)(맵 이탈 복귀 - BossArenaContainment).
+		-- M1-2(2026-09-26): 이번 블록 M1-2(가)(나) + 이번 변경이 닿는 블록만 VerifyOnly로 돈다 - M1(가)(나)(SpawnSites · Travel 귀환 · 허브 배치 · 뿌리) · BR1(가)(나)(수정 오르골 · 전갈 둔덕 C안) · S12b(나)(커뮤니티 광장 기대값).
 		current = {
+			"M1-2(가)", "M1-2(나)",
 			"M1(가)", "M1(나)",
 			"BR1(가)", "BR1(나)",
 			"M1-0(가)", "M1-0(나)",

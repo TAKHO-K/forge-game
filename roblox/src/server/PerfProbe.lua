@@ -280,10 +280,13 @@ function PerfProbe.runWorld(player, counts, seconds, crowd)
 	local SpawnSites = require(script.Parent.SpawnSites)
 	local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
 	local cooldown = PlayerCombat.getAttackCooldown(PlayerProfile.getClassId(player), 0)
-	local grounds = {}
+	-- M1-2: 사냥꾼은 구역 스폰 범위의 지점 두 곳 사이를 걷기 16으로 오간다(지나가면 생성 · 떠나면 정리가 실제로 돈다) - 구역을 차례로 나눠 준다
+	local routes = {}
 	for _, z in ipairs(WorldMapData.zones) do
-		for _, g in ipairs(WorldMapLayout.grounds(z)) do
-			table.insert(grounds, g.center)
+		local pts = WorldMapLayout.huntPoints(z)
+		for k = 1, 4 do
+			local a, b = pts[(k * 2 - 2) % #pts + 1], pts[(k * 2 - 1) % #pts + 1]
+			table.insert(routes, { a = a.position, b = b.position })
 		end
 	end
 	local character = player.Character
@@ -292,11 +295,12 @@ function PerfProbe.runWorld(player, counts, seconds, crowd)
 		local hub, tree = math.floor(n * 0.25 + 0.5), math.floor(n * 0.15 + 0.5)
 		local hunters = n - hub - tree
 		local foci, hunterAt = {}, {}
+		local hunterRoute = {}
 		for i = 1, hunters do
-			local g = grounds[(math.ceil(i / 2) - 1) % #grounds + 1]
-			local p = g + Vector3.new((i % 2) * 20 - 10, 0, 0)
-			table.insert(foci, p)
-			table.insert(hunterAt, p)
+			local route = routes[((i - 1) % #WorldMapData.zones) * 4 + math.floor((i - 1) / #WorldMapData.zones) % 4 + 1]
+			hunterRoute[i] = route
+			table.insert(foci, route.a)
+			table.insert(hunterAt, route.a)
 		end
 		table.clear(SpawnSites.debugFoci)
 		for _, p in ipairs(foci) do
@@ -325,8 +329,22 @@ function PerfProbe.runWorld(player, counts, seconds, crowd)
 		task.wait(2.5) -- 지대가 켜질 시간(checkSeconds 1초)
 		local acc = {}
 		local hits, kills = 0, 0
+		local walked, frames, peakAlive, peakActive = 0, 0, 0, 0
 		local function tick(dt)
+			frames += 1
+			if frames % 30 == 0 then
+				local ap, al = SpawnSites.stats()
+				peakAlive, peakActive = math.max(peakAlive, al), math.max(peakActive, ap)
+			end
 			PlayerState.setHp(player, PlayerState.getMaxHp(player))
+			walked += dt * 16
+			for i, route in ipairs(hunterRoute) do
+				local len = (route.b - route.a).Magnitude
+				local u = (walked + i * 37) % (2 * len)
+				local p = route.a + (route.b - route.a).Unit * (u <= len and u or 2 * len - u)
+				hunterAt[i] = p
+				SpawnSites.debugFoci[i] = p
+			end
 			for i, at in ipairs(hunterAt) do
 				acc[i] = (acc[i] or (i * 0.03)) + dt
 				if acc[i] >= cooldown then
@@ -357,7 +375,7 @@ function PerfProbe.runWorld(player, counts, seconds, crowd)
 		end
 		local line = sample(("world%d"):format(n), seconds or 15, tick)
 		local activeSites, alive = SpawnSites.stats()
-		local summary = ("[PERF] world n=%d hub=%d tree=%d hunters=%d activeSites=%d aliveSiteMonsters=%d hits=%d kills=%d crowd=%d"):format(n, hub, tree, hunters, activeSites, alive, hits, kills, #dummies)
+		local summary = ("[PERF] world n=%d hub=%d tree=%d hunters=%d activeSites=%d aliveSiteMonsters=%d peakActive=%d peakAlive=%d hits=%d kills=%d crowd=%d"):format(n, hub, tree, hunters, activeSites, alive, peakActive, peakAlive, hits, kills, #dummies)
 		print(summary)
 		table.insert(results, line .. " | " .. summary)
 		for _, c in ipairs(dummies) do

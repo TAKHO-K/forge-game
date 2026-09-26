@@ -285,6 +285,8 @@ local MECHANICS = {
 			colorPartyPenalty = 0.1,
 			-- BR1-3 파티 단위 전멸기(진짜 전갈 찾기 · 수정 오르골 - 누가 풀어도 전원 성공): 파티 실패 확률 = 1인 실패 확률 ^ (1 + 이 값 × (인원 − 1)) - 가정
 			partySolveExponent = 0.5,
+			-- M1-2 C안(오답 공동 책임): 파티 전멸기 한 번에 멤버마다 오답(가짜 둔덕 · 틀린 종)을 한 번 낼 확률 = 그 사람 1인 실패 확률 × 이 값 - 가정
+			partyWrongPressFactor = 1.0,
 			courseGroundHitScale = 0.4,
 			partyFailShare = 0.45, -- = mechanics.party.failShareFraction(모형이 같은 값을 쓴다 - 아래 루프가 맞춘다) -- 수정 부수기 동안 점프맵 위 사람이 바닥 판정 · 평타를 맞는 몫(높이 올라가 있다)
 		},
@@ -959,7 +961,8 @@ local SPECIES = {
 					{ color = Color3.fromRGB(240, 228, 66), symbol = "◆", note = 1.33 }, -- 노랑
 					{ color = Color3.fromRGB(204, 121, 167), symbol = "★", note = 1.5 }, -- 자주
 				},
-				wrongShock = { multiplier = 0.8, damageLabel = "오르골 전기" },
+				-- M1-2 C안(사용자 확정 A + C): 파티에서 틀리면 파티 전원(때린 사람 포함)이 최대 체력 partyShareMaxHpByParty[인원]을 더 받는다(공동 책임 - 보호막은 적용 · 솔로 0 · 모형 스테이지 500 파티 전멸 30 ~ 50%로 맞춘 값)
+				wrongShock = { multiplier = 0.8, damageLabel = "오르골 전기", partyShareMaxHpByParty = { 0, 0.5, 0.45, 0.4 }, partyShareLabel = "공동 책임" },
 				stunSeconds = 5, breakWindow = { seconds = 4, damageTakenMultiplier = 1.3 },
 				statue = { seconds = 4.5, strollSeconds = 2.4, flashAt = 2.8, tapAt = 3.5, shatterAt = 4.0 },
 				failMaxHpFraction = 0.9,
@@ -1103,7 +1106,7 @@ local SPECIES = {
 				telegraphSeconds = 1.5, limitSeconds = 14, limitSecondsParty = 12, depthStuds = 8, -- M1 BR1-3 후속(A안): 파티(2인 이상) 제한 12초
 				mound = { countByParty = { 3, 4, 5, 5 }, speedStuds = 7, wanderRadiusStuds = 40, sizeScale = 3.4, bodyAspect = Vector3.new(1.7, 0.5, 1.7), color = scorpionHead },
 				clue = { footprintEverySeconds = 0.3, footprintSeconds = 2.4 },
-				decoyBlast = { multiplier = 1.0, radiusStuds = 7, damageLabel = "모래 폭발" },
+				decoyBlast = { multiplier = 1.0, radiusStuds = 7, damageLabel = "모래 폭발", partyShareMaxHpByParty = { 0, 0.35, 0.33, 0.3 }, partyShareLabel = "공동 책임" }, -- M1-2 C안 = 오르골 wrongShock 주석
 				stunSeconds = 4, breakWindow = { seconds = 4, damageTakenMultiplier = 1.3 },
 				failMaxHpFraction = 0.9,
 				dodge = { distanceStuds = 100 },
