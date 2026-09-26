@@ -122,14 +122,7 @@ function WorldMap.build()
 	end
 	-- 먼 풍경 대체: 공식 LevelOfDetail(StreamingMesh)은 런타임 스크립트가 못 쓴다(Studio 실측 - "lacking capability Plugin") → 나무 · 빛기둥 · 랜드마크(파트가 적다)를
 	-- Persistent(modelAt에서 부모에 붙이기 전에)로 두어 멀리서도 늘 보이게 한다. 파트 수 = 부팅 로그.
-	-- 빛기둥 = 그 관문 보스의 고유 색(머리색)
-	local BossData = require(ReplicatedStorage.Shared.data.BossData)
-	for _, part in ipairs(models.GatePillars and models.GatePillars:GetChildren() or {}) do
-		local boss = BossData.bosses[part:GetAttribute("BossId")]
-		if boss then
-			part.Color = boss.headColor
-		end
-	end
+	-- 빛기둥 · 관문 = BossData gate.color(도형 색에 이미 들어 있다 - M1-3) · 등록 전/뒤 밝기는 클라(사람마다)
 	print(("[forge-game] M1 맵: 도형 %d · Persistent = 나무 · 빛기둥 · 랜드마크"):format(#prims))
 	built = { models = models, meta = meta, counts = counts }
 	workspace:GetAttributeChangedSignal("Season"):Connect(function()

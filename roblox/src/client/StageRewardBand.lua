@@ -22,7 +22,8 @@ local HelpToggle = require(script.Parent.ui.kit.HelpToggle)
 local Theme = require(script.Parent.ui.kit.Theme)
 local BossIntroDiagram = require(script.Parent.BossIntroDiagram) -- BR1-2 기믹 도움말
 local Wayfinder = require(script.Parent.Wayfinder) -- M1 [여기로 안내]
-local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout) -- M1-3 관문 등록(원격 입장 · 관문 안내)
+local BossRules = require(ReplicatedStorage.Shared.BossRules)
 
 local StageRewardBand = {}
 
@@ -232,21 +233,15 @@ function StageRewardBand.build(props)
 		anchorPoint = Vector2.new(1, 1),
 		position = UDim2.new(1, -6, 1, -6),
 		onActivated = function()
-			for _, z in ipairs(WorldMapData.zones) do
-				if z.bossId == gimmickBossId then
-					Wayfinder.setPoints("bossSelect", Wayfinder.routeToGate(z.key))
-					return
-				end
+			local route = WorldMapLayout.bossGateRoute(gimmickBossId)
+			if route then
+				Wayfinder.setPoints("bossSelect", route)
 			end
 		end,
 	})
-	guideButton.ZIndex = 22
+	guideButton.root.ZIndex = 22
 	local function refreshGuideButton()
-		local has = false
-		for _, z in ipairs(WorldMapData.zones) do
-			has = has or z.bossId == gimmickBossId
-		end
-		guideButton.Visible = has
+		guideButton.root.Visible = WorldMapLayout.bossGate(gimmickBossId) ~= nil
 	end
 	local gimmickButton = Button.build({
 		parent = root,
@@ -302,7 +297,7 @@ function StageRewardBand.build(props)
 	local hitWidth = Theme.isMobile and TOUCH_DOT_WIDTH or CODEX_DOT
 	local overhang = (hitWidth - CODEX_DOT) / 2 -- 상자가 보이는 자리 양옆으로 나간 폭
 	nameLabel.Position = UDim2.new(0, dotsLeft + CODEX_DOT * #codexBossIds + 6, 0, codexTop)
-	nameLabel.Size = UDim2.new(0, width - (dotsLeft + CODEX_DOT * #codexBossIds + 6) - 96, 0, codexHeight)
+	nameLabel.Size = UDim2.new(0, width - (dotsLeft + CODEX_DOT * #codexBossIds + 6) - 186, 0, codexHeight) -- 오른쪽 = [관문 안내] + [원격 입장](M1-3)
 	for index in ipairs(codexBossIds) do
 		local dot = Instance.new("TextButton")
 		dot.Name = "CodexDot" .. index
@@ -343,6 +338,23 @@ function StageRewardBand.build(props)
 		end,
 	})
 	challenge.setEnabled(false)
+	-- M1-3 관문 등록: 등록 전이면 [원격 입장] 잠금 + [관문 안내](스테이지만 옮기고 관문까지 길 안내 - 서버가 등록 여부로 가른다 · 요청은 같은 스테이지 이동)
+	local gateGuide = Button.build({
+		parent = root,
+		name = "GateGuideButton",
+		kind = "secondary",
+		text = "관문 안내",
+		width = 84,
+		height = codexHeight,
+		anchorPoint = Vector2.new(1, 0),
+		position = UDim2.new(1, -94, 0, codexTop),
+		onActivated = function()
+			if selectedStage and props.onChallenge then
+				props.onChallenge(selectedStage)
+			end
+		end,
+	})
+	gateGuide.root.Visible = false
 
 	local refs = { root = root, height = height }
 	-- 도움말 판 크기 = 제목 아래 ~ 도감 줄 위(보상 줄을 덮는다)
@@ -370,9 +382,24 @@ function StageRewardBand.build(props)
 		help.root.Visible = false
 	end
 
+	-- 관문 상태: "remote"(등록 - 본인 또는 파티) · "locked"(등록 전) · "none"(관문 없는 보스 - 옛 [도전])
+	refs.gateState, refs.lockText = "none", nil
+	local function applyGate(stage)
+		local g = stage and WorldMapLayout.bossGate(BossRules.bossIdForStage(stage)) or nil
+		local usable = false
+		for id in string.gmatch(game:GetService("Players").LocalPlayer:GetAttribute("BossGatesUsable") or "", "[^,]+") do
+			usable = usable or (g ~= nil and id == g.bossId)
+		end
+		refs.gateState = g == nil and "none" or (usable and "remote" or "locked")
+		refs.lockText = refs.gateState == "locked" and "🔒 원격 입장 - 관문을 한 번 찾아가면 열립니다" or nil
+		challenge.setText(g and "원격 입장" or "도전")
+		challenge.setEnabled(stage ~= nil and refs.gateState ~= "locked") -- 잠금 이유는 창 아래 상태 줄 한 줄(버튼 밑 사유 글씨는 잘려서 뺐다)
+		gateGuide.root.Visible = refs.gateState == "locked"
+	end
+
 	function refs.update(stage, entry, rebirthCount, codex)
 		selectedStage = stage
-		challenge.setEnabled(stage ~= nil)
+		applyGate(stage)
 		setCodex(codex)
 		clearRows()
 		if stage == nil then

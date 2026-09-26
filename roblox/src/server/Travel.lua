@@ -365,7 +365,9 @@ local function buildPoints()
 	for _, z in ipairs(ZONES) do
 		hubPortals[z.key] = WorldMapLayout.hubPortal(z)
 		campPortals[z.key] = WorldMapLayout.campPortal(z)
-		gates[z.key] = WorldMapLayout.gate(z)
+	end
+	for _, g in ipairs(WorldMapLayout.bossGates()) do
+		gates[g.bossId] = g.position -- M1-3: 관문 = 보스 목록(BossData gate) - 발판 키 = 보스 id
 	end
 	local lift = WorldMapData.hub.tree.course.lift
 	liftPoint = WorldMapLayout.hubPoint(lift.angleDeg, lift.r)
@@ -402,6 +404,7 @@ function Travel.pollPlayer(player, root, humanoid, now)
 		player:SetAttribute("PortalsOpen", portals)
 	end
 	BossGate.refreshGuide(player)
+	BossGate.refreshAttributes(player) -- M1-3: 등록 · 원격 입장 가능 목록(클라 관문 색 · 버튼)
 	local inParty = PartyState.getParty(player) ~= nil
 	if player:GetAttribute("InParty") ~= inParty then
 		player:SetAttribute("InParty", inParty)
@@ -477,7 +480,7 @@ function Travel.pollPlayer(player, root, humanoid, now)
 				local result = BossGate.enter(player, key)
 				print(("[forge-game] 관문 %s: %s → %s"):format(key, player.Name, result))
 				if result == "not_boss_stage" or result == "wrong_gate" then
-					PartyState.notify(player, "관문 - 이 구역 보스의 스테이지를 고르면 열린다")
+					PartyState.notify(player, "관문 - 이 보스의 스테이지를 고르면 열린다(등록은 관문 앞 [F])")
 				end
 				return
 			end
@@ -524,6 +527,7 @@ end
 
 function Travel.start(downPads)
 	buildPoints()
+	BossGate.setupPrompts(require(script.Parent.GroundProbe).folder())
 	Travel.downPads = downPads
 	local request = Instance.new("RemoteEvent")
 	request.Name = "TravelRequest"

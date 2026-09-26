@@ -205,7 +205,7 @@ function M1Verify.runPure()
 			old.world, old.peakLevel, old.titles = nil, nil, nil
 			local migrated = SaveSystem.migrate(old)
 			r.check(("저장 v%d: v37 → v%d · world.portals 표 %s · peakLevel %s · titles 표 %s"):format(SaveConfig.saveVersion, migrated.version, tostring(type(migrated.world) == "table"), tostring(migrated.peakLevel), tostring(type(migrated.titles) == "table")),
-				SaveConfig.saveVersion == 39 and migrated.version == 39 and type(migrated.world.portals) == "table" and migrated.peakLevel >= 1 and type(migrated.titles) == "table")
+				SaveConfig.saveVersion >= 39 and migrated.version == SaveConfig.saveVersion and type(migrated.world.portals) == "table" and migrated.peakLevel >= 1 and type(migrated.titles) == "table")
 		else
 			r.check("저장: 기본 프로필 없음", false)
 		end

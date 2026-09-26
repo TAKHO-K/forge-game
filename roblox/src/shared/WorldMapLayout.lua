@@ -45,6 +45,66 @@ end
 function Layout.gate(zone)
 	return Layout.toWorld(zone, L.gate.r, L.gate.lat)
 end
+
+-- M1-3 관문 등록: 보스 관문 목록 = BossData 보스마다 gate 칸(zone = 구역 관문 자리 · at = { angleDeg, r } = 구역 없는 새 보스). 새 보스는 gate 한 줄로 등록 · 원격 입장 · 길 안내가 붙는다.
+-- 반환: { { bossId, name, zoneKey(없을 수 있음), position(지면), dir(관문이 보는 바깥 방향), color({r,g,b}) } } - 보스 id 순(고정)
+local gateCache = nil
+function Layout.bossGates()
+	if gateCache then
+		return gateCache
+	end
+	local BossData = require(ReplicatedStorage.Shared.data.BossData)
+	gateCache = {}
+	local ids = {}
+	for id, boss in pairs(BossData.bosses) do
+		if boss.gate then
+			table.insert(ids, id)
+		end
+	end
+	table.sort(ids) -- 고정 순서(pairs 순서에 기대지 않는다)
+	for _, id in ipairs(ids) do
+		local boss = BossData.bosses[id]
+		local g = boss.gate
+		do
+			local zone = g.zone and Layout.zoneByKey(g.zone)
+			local position, dir
+			if zone then
+				position, dir = Layout.gate(zone), dirOf(zone.angleDeg)
+			else
+				dir = dirOf(g.at.angleDeg)
+				position = dir * g.at.r + Vector3.new(0, FLOOR, 0)
+			end
+			table.insert(gateCache, { bossId = boss.id, name = boss.displayName, zoneKey = zone and zone.key or nil, position = position, dir = dir, color = g.color })
+		end
+	end
+	return gateCache
+end
+function Layout.bossGate(bossId)
+	for _, g in ipairs(Layout.bossGates()) do
+		if g.bossId == bossId then
+			return g
+		end
+	end
+	return nil
+end
+-- 관문까지 길(길 안내): 구역 관문 = 구역 길 · 구역 없는 관문 = 허브 끝 → 관문 직선
+function Layout.bossGateRoute(bossId)
+	local g = Layout.bossGate(bossId)
+	if not g then
+		return nil
+	end
+	local zone = g.zoneKey and Layout.zoneByKey(g.zoneKey)
+	local list = {}
+	if zone then
+		for _, pt in ipairs(Layout.route(zone)) do
+			table.insert(list, pt.p)
+		end
+	else
+		table.insert(list, g.dir * D.hub.safeRadius + Vector3.new(0, FLOOR, 0))
+		table.insert(list, g.position)
+	end
+	return list
+end
 function Layout.grounds(zone)
 	local list = {}
 	for i, g in ipairs(L.grounds) do
@@ -958,18 +1018,7 @@ function Layout.buildZone(zone, list)
 	column(list, model, "BarrierGatePost", gcf * CFrame.new(-B.gateWidth / 2, 0, 0), 4, 4, B.gateHeight, D.colors.blockDark)
 	column(list, model, "BarrierGatePost", gcf * CFrame.new(B.gateWidth / 2, 0, 0), 4, 4, B.gateHeight, D.colors.blockDark)
 	prim(list, model, "BarrierGateTop", Vector3.new(B.gateWidth + 4, 3, 4), gcf * CFrame.new(0, B.gateHeight + 1.5, 0), D.colors.blockDark, { attrs = { BarrierGate = zone.key } })
-	-- 보스 관문 + 토벌 관문 자리(BR2)
-	local gate = Layout.gate(zone)
-	local gatecf = flatYaw(gate, dirOf(zone.angleDeg))
-	column(list, model, "BossGatePost", gatecf * CFrame.new(-16, 0, 6), 5, 5, 30, D.colors.blockDark)
-	column(list, model, "BossGatePost", gatecf * CFrame.new(16, 0, 6), 5, 5, 30, D.colors.blockDark)
-	prim(list, model, "BossGateTop", Vector3.new(37, 4, 5), gatecf * CFrame.new(0, 32, 6), D.colors.blockDark)
-	prim(list, model, "BossGatePad", Vector3.new(0.4, L.gate.radius * 2, L.gate.radius * 2), CFrame.new(gate.X, FLOOR + 0.45, gate.Z) * CFrame.Angles(0, 0, math.rad(90)), D.colors.barrier,
-		{ shape = "Cylinder", material = "SmoothPlastic", attrs = { BossGate = zone.key } })
-	-- 빛기둥(보스 고유 색 - 빌더가 BossData에서 칠한다)
-	local P = D.gatePillar
-	prim(list, "GatePillars", "GatePillar", Vector3.new(P.width, P.height, P.width), CFrame.new(gate.X, FLOOR + P.height / 2, gate.Z), D.colors.marker,
-		{ collide = false, neon = true, transparency = P.transparency, attrs = { GatePillar = zone.key, BossId = zone.bossId } })
+	-- 보스 관문 = Layout.buildBossGates(보스 목록 BossData gate 칸 - M1-3 관문 등록) · 여기는 토벌 관문 자리(BR2)만
 	local raid = Layout.toWorld(zone, L.gate.r, L.raidLat)
 	local raidcf = flatYaw(raid, dirOf(zone.angleDeg))
 	column(list, model, "RaidGatePost", raidcf * CFrame.new(-10, 0, 0), 4, 4, 22, D.colors.block)
@@ -1197,6 +1246,43 @@ function Layout.buildSealed(list)
 	end
 end
 
+-- ─────────────────────────── 보스 관문(M1-3 관문 등록) ───────────────────────────
+-- 한눈에 관문(사용자): 보스 색 큰 아치(기둥 · 들보) + 들보 앞 문양(등록하면 켜진다 - 클라가 사람마다 칠한다) + 안쪽 빛 막 + 발판(밟으면 입장) + 빛기둥(Persistent - 멀리서 등록 여부).
+--   PromptAnchor = 등록 상호작용(F · 폰 버튼 - 서버 BossGate가 ProximityPrompt를 붙인다). 모델 = BossGate_<bossId>.
+function Layout.buildBossGates(list)
+	local G = D.bossGate
+	for _, g in ipairs(Layout.bossGates()) do
+		local model = "BossGate_" .. g.bossId
+		local cf = flatYaw(g.position, g.dir)
+		local half = G.width / 2
+		local dark = { math.floor(g.color[1] * 0.45), math.floor(g.color[2] * 0.45), math.floor(g.color[3] * 0.45) }
+		column(list, model, "BossGatePost", cf * CFrame.new(-half, 0, 0), G.postSize, G.postSize, G.height, dark, { material = "SmoothPlastic" })
+		column(list, model, "BossGatePost", cf * CFrame.new(half, 0, 0), G.postSize, G.postSize, G.height, dark, { material = "SmoothPlastic" })
+		prim(list, model, "BossGateTop", Vector3.new(G.width + G.postSize + 6, G.beam, G.postSize + 2), cf * CFrame.new(0, G.height + G.beam / 2, 0), dark, { material = "SmoothPlastic" })
+		-- 기둥 안쪽 모서리 띠(보스 색 - 늘 켜짐 · 아치 윤곽)
+		for _, sx in ipairs({ -1, 1 }) do
+			prim(list, model, "BossGateTrim", Vector3.new(1.2, G.height, 1.2), cf * CFrame.new(sx * (half - G.postSize / 2 - 0.6), G.height / 2, G.postSize / 2 + 0.2), g.color, { collide = false, neon = true })
+		end
+		prim(list, model, "BossGateTrim", Vector3.new(G.width - G.postSize, 1.2, 1.2), cf * CFrame.new(0, G.height - 0.6, G.postSize / 2 + 0.2), g.color, { collide = false, neon = true })
+		-- 문양(들보 앞 · 허브 쪽 면 = 로컬 +Z - flatYaw의 −Z가 바깥): 마름모 + 가로 띠 - 등록 전 꺼짐 · 등록 뒤 켜짐(클라)
+		prim(list, model, "BossGateEmblem", Vector3.new(G.emblem, G.emblem, 1), cf * CFrame.new(0, G.height + G.beam / 2, G.postSize / 2 + 1.6) * CFrame.Angles(0, 0, math.rad(45)), g.color,
+			{ collide = false, neon = true, attrs = { GateEmblem = g.bossId } })
+		prim(list, model, "BossGateEmblem", Vector3.new(G.width * 0.7, 1.4, 1), cf * CFrame.new(0, G.height + G.beam / 2, G.postSize / 2 + 1.4), g.color,
+			{ collide = false, neon = true, attrs = { GateEmblem = g.bossId } })
+		-- 안쪽 빛 막(문 안 - 통과 가능 · 흐릿하게)
+		prim(list, model, "BossGateVeil", Vector3.new(G.width - G.postSize, G.height, 0.4), cf * CFrame.new(0, G.height / 2, 0), g.color, { collide = false, neon = true, transparency = 0.78 })
+		-- 발판(밟으면 입장 - 서버 거리 폴링) · 등록 프롬프트 자리
+		prim(list, model, "BossGatePad", Vector3.new(0.4, L.gate.radius * 2, L.gate.radius * 2), CFrame.new(g.position.X, FLOOR + 0.45, g.position.Z) * CFrame.Angles(0, 0, math.rad(90)), g.color,
+			{ shape = "Cylinder", material = "SmoothPlastic", attrs = { BossGate = g.zoneKey or g.bossId, BossId = g.bossId } })
+		prim(list, model, "PromptAnchor", Vector3.new(2, 2, 2), cf * CFrame.new(0, 5, G.promptOffset), -- 허브 쪽 · 발판(반경 18) 밖
+			 g.color, { collide = false, transparency = 1, attrs = { GatePrompt = g.bossId } })
+		-- 빛기둥(Persistent · 보스 색 - 등록 전 흐리게 깜빡 · 뒤 밝게 꾸준히 = 클라)
+		local P = D.gatePillar
+		prim(list, "GatePillars", "GatePillar", Vector3.new(P.width, P.height, P.width), CFrame.new(g.position.X, FLOOR + P.height / 2, g.position.Z), g.color,
+			{ collide = false, neon = true, transparency = P.transparency, attrs = { GatePillar = g.zoneKey or g.bossId, BossId = g.bossId } })
+	end
+end
+
 -- ─────────────────────────── 세계 전체 ───────────────────────────
 -- 반환: prims, meta{ zones[key] = 구역 메타 }
 function Layout.buildAll()
@@ -1230,6 +1316,7 @@ function Layout.buildAll()
 	for _, z in ipairs(D.zones) do
 		meta.zones[z.key] = Layout.buildZone(z, list)
 	end
+	Layout.buildBossGates(list)
 	return list, meta
 end
 

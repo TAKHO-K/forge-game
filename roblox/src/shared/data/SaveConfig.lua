@@ -76,7 +76,7 @@ return {
 	-- 38(M1) - world = { portals = { [구역 키] = true } }(입구 캠프 첫 방문으로 연 포탈 - 계정 공유) · peakLevel(역대 최고 캐릭터 레벨 - 환생해도 안 내려간다 · 나무 가지 정거장 기준)
 	-- 신설. 기존 세이브: portals 빈 표 · peakLevel = 지금 직업들 레벨 중 최대(환생 전 기록은 저장에 없어 복원 불가). SaveSystem.migrate()의 v37->v38 참고.
 	-- 37(BR1-2) - hints.bossIntroSeen(보스 id 문자열 키 집합) 신설 - 처음 만난 보스의 전멸기 카드를 한 번만 띄운다. 기존 세이브는 빈 표. SaveSystem.migrate()의 v36->v37 참고.
-	saveVersion = 39, -- M1: titles(칭호 - 호기심 대장) · v38 world.portals · peakLevel
+	saveVersion = 40, -- M1-3: world.bossGates(관문 등록) · v39 titles(칭호 - 호기심 대장) · v38 world.portals · peakLevel
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

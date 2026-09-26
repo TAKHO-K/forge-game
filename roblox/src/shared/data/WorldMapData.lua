@@ -322,6 +322,13 @@ return {
 
 	-- 토벌 · 보스 관문 표지(M1 추가 - 사용자): 관문마다 보스 고유 색(BossData 머리색) 빛기둥 - 하늘까지 · 멀리서 보이게. 파트 1개 · 충돌 · 쿼리 없음 · Persistent 모델(스트리밍으로 안 사라진다).
 	gatePillar = { width = 8, height = 1800, transparency = 0.35 },
+	-- M1-3 관문 등록(사용자 - 한눈에 관문 · 색 확실 · 크게 · 상호작용으로 첫 등록). 관문 위치 · 색 = BossData 보스마다 gate 칸.
+	--   아치: 폭 width(기둥 사이) · 높이 height · 기둥 postSize · 들보 beam · 문양 emblem(마름모 한 변). 빛기둥 = gatePillar(등록 전 흐리게 깜빡 · 뒤 밝게 꾸준히 - 사람마다 = 클라).
+	--   등록 = 관문 앞 ProximityPrompt(F 짧게 · 폰 = 상호작용 버튼 · promptDistance 안) 또는 보스 스테이지에서 발판을 밟아 입장(관문 방문) - 가까이(hintDistance) 오면 "관문 등록 [F]" 큰 안내(등록 전만).
+	--   pillarDim = 등록 전 투명도 범위(깜빡 주기 blinkSeconds) · pillarLit = 등록 뒤 투명도. 토벌 관문(BR2)도 같은 표지를 쓴다.
+	bossGate = { width = 40, height = 44, postSize = 8, beam = 7, emblem = 9, promptDistance = 18, promptOffset = 30, hintDistance = 70, -- promptOffset = 관문 중심에서 허브 쪽(발판 반경 18 밖 - 등록하려다 발판을 밟아 바로 입장하지 않게)
+		pillarDim = { 0.72, 0.9 }, pillarLit = 0.2, blinkSeconds = 1.6, registerFlashSeconds = 1.2,
+		registerText = "%s 관문 등록! 이제 어디서든 입장할 수 있어요." },
 
 	-- 확장 자리(M1 추가 - 구현 없음 · 자리 · 좌표만, docs/design/world-map-m1.md §확장). 신규 보스 = "작은 보스 섬".
 	--   outerRing: 바깥 고리 - 꽃잎 사이 틈(두 구역 원 밖 · 세계 끝 안) 6칸. 섬 반경 ≤ islandRadius.

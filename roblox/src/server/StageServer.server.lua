@@ -42,7 +42,7 @@ local function reject(player, reason, extra)
 	stageMoveResult:FireClient(player, payload)
 end
 
-stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
+local function onStageMove(player, targetStage)
 	if type(targetStage) ~= "number" then
 		return
 	end
@@ -91,7 +91,10 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 	local isPartyBoss = false
 	-- M1 관문 모드: 보스 스테이지를 골라도 스테이지만 옮기고 관문까지 안내한다 - 리더 · 멤버 검사 · 투표는 관문에서(BossGate.enter).
 	--   관문 구역이 없는 보스(새 보스가 구역 없이 들어온 경우)는 옛 즉시 입장.
-	local viaGate = BossGate.enabled() and BossRules.isBossStage(targetStage) and BossGate.zoneKeyForStage(targetStage) ~= nil
+	--   M1-3 관문 등록: 그 관문이 등록돼 있으면(본인 또는 파티 멤버 한 명이라도) 원격 입장 = 옛 즉시 입장 경로(파티 검사 · 투표 그대로) · 복귀 = 각자 서 있던 자리.
+	local gateOf = BossGate.enabled() and BossRules.isBossStage(targetStage) and BossGate.gateForStage(targetStage) or nil
+	local remote = gateOf ~= nil and BossGate.usableFor(player, gateOf.bossId)
+	local viaGate = gateOf ~= nil and not remote
 	if party and viaGate and not PartyState.isLeader(player) then
 		reject(player, "party_not_leader")
 		PartyState.notify(player, "보스 스테이지는 파티 리더만 열 수 있습니다")
@@ -139,6 +142,10 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 				BossEncounter.leaveFor(player)
 			end
 		elseif BossRules.isBossStage(targetStage) then
+			if remote then
+				BossGate.setRemoteReturnPoints(isPartyBoss and BossEncounter.getEntryMembers(party) or { player })
+				print(("[forge-game] 원격 입장: %s → 스테이지 %d(%s)"):format(player.Name, targetStage, isPartyBoss and "파티" or "솔로"))
+			end
 			if isPartyBoss then
 				BossEncounter.spawnForParty(party, player, targetStage)
 			else
@@ -180,7 +187,15 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 	end
 
 	performMove()
-end)
+end
+stageMoveRequest.OnServerEvent:Connect(onStageMove)
+-- M1-3 검증(Studio 전용): 서버 검증 블록이 클라 요청과 같은 핸들러를 부른다(관문 등록 전 · 뒤 원격 입장 · 파티) - 라이브에는 없다.
+if game:GetService("RunService"):IsStudio() then
+	local hook = Instance.new("BindableEvent")
+	hook.Name = "StageMoveHook"
+	hook.Parent = game:GetService("ServerStorage")
+	hook.Event:Connect(onStageMove)
+end
 
 -- 퇴장 - 자기 보스전에서만 빠진다(파티 보스전은 남은 멤버가 이어간다, BossEncounter.leaveFor).
 Players.PlayerRemoving:Connect(function(player)

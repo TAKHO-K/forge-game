@@ -244,7 +244,8 @@ local function defaultProfile()
 		hints = { gemMerchantUsed = false, bossIntroSeen = {} },
 
 		-- M1(v38): 세계 이동 - portals = 입구 캠프 첫 방문으로 연 포탈({ [구역 키 문자열] = true }) · 계정 공유.
-		world = { portals = {} },
+		-- M1-3(v40): bossGates = 관문을 직접 찾아가 등록한 보스({ [bossId 문자열] = true }) - 등록된 보스는 어디서든 원격 입장(파티 = 한 명이라도 등록).
+		world = { portals = {}, bossGates = {} },
 		-- M1(v38): 역대 최고 캐릭터 레벨(직업 · 환생 무관 최대 - 내려가지 않는다). 나무 가지 정거장 개방 기준.
 		peakLevel = 1,
 		-- M1(v39): 칭호(계정 - 전투력 없음) - { [칭호 id 문자열] = true }. 첫 칭호 = 호기심 대장(봉인 입구 틈까지 올라감).
@@ -931,6 +932,13 @@ local function migrate(data)
 		data.version = 39
 	end
 
+	if data.version < 40 then
+		-- M1-3 관문 등록: 빈 표(기존 유저도 관문을 한 번 찾아가야 원격 입장 - 사용자 규칙: 구역을 한 번은 가로지르게)
+		data.world = data.world or { portals = {} }
+		data.world.bossGates = data.world.bossGates or {}
+		data.version = 40
+	end
+
 	data.savedAt = data.savedAt or 0
 	return data
 end
@@ -974,6 +982,7 @@ local function isValidProfile(data)
 		or type(data.world) ~= "table" or type(data.world.portals) ~= "table" -- v38
 		or type(data.peakLevel) ~= "number" or data.peakLevel < 1 -- v38
 		or type(data.titles) ~= "table" -- v39
+		or type(data.world.bossGates) ~= "table" -- v40
 		or type(data.gemDust) ~= "number" or data.gemDust % 1 ~= 0 or data.gemDust < 0
 		or type(data.milestoneUnlocks) ~= "number" or data.milestoneUnlocks % 1 ~= 0 or data.milestoneUnlocks < 0
 		or type(data.leaderboardTainted) ~= "boolean" -- 리더보드 기록 제외(v34)

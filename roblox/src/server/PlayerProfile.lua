@@ -476,6 +476,32 @@ function PlayerProfile.hasTitle(player, titleId)
 	return profile ~= nil and profile.titles[titleId] == true
 end
 
+-- M1-3 관문 등록(v40 - 계정). 반환: 새로 등록했는가
+function PlayerProfile.registerBossGate(player, bossId)
+	local profile = profiles[player]
+	if not profile or profile.world.bossGates[bossId] then
+		return false
+	end
+	profile.world.bossGates[bossId] = true
+	return true
+end
+
+function PlayerProfile.isBossGateRegistered(player, bossId)
+	local profile = profiles[player]
+	return profile ~= nil and profile.world.bossGates[bossId] == true
+end
+
+-- 등록된 보스 id 목록(정렬)
+function PlayerProfile.getRegisteredBossGates(player)
+	local profile = profiles[player]
+	local list = {}
+	for id in pairs(profile and profile.world.bossGates or {}) do
+		table.insert(list, id)
+	end
+	table.sort(list)
+	return list
+end
+
 function PlayerProfile.getOpenPortals(player)
 	local profile = profiles[player]
 	return profile and profile.world.portals or {}

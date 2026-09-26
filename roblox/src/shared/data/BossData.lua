@@ -618,6 +618,9 @@ local SPECIES = {
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "지반 붕괴", line = "체력이 절반 아래면 땅이 조각조각 무너진다 - 금 간 조각 밖으로!", icon = "!", diagram = "slices" },
 		id = "section_guardian", displayName = "구간 수호자",
+		-- M1-3 관문 등록(사용자): 관문 위치 = 이 칸 하나(zone = WorldMapData 구역 키 → 그 구역 관문 자리 · 구역 없는 새 보스(작은 보스 섬 등)는 at = { angleDeg, r }) ·
+		--   color = 관문 문 · 빛(한눈에 관문 - 보스마다 확실한 색). 이 칸이 있는 보스는 등록 · 원격 입장 · 길 안내 규칙이 자동으로 붙는다(BossGate · WorldMapLayout.bossGates).
+		gate = { zone = "tier1", color = { 170, 90, 255 } },
 		-- M1 BR1-3 후속(사용자): 첫 만남은 그대로 · 2회차부터 체력 ×1.3(전멸기 없는 대신 튼튼한 보스) - 주인(솔로 · 리더)이 이 종의 첫 만남 카드를 이미 봤으면(BossEncounter).
 		repeatHpMultiplier = 1.3,
 		bodyColor = Color3.fromRGB(60, 20, 70), headColor = Color3.fromRGB(90, 30, 100),
@@ -649,6 +652,7 @@ local SPECIES = {
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "눈보라 포효", line = "포효가 울리면 얼음 기둥 뒤에 숨어라 - 기둥이 부서지면 옮겨 숨어라", icon = "❄", diagram = "pillar" },
 		id = "frost_giant", displayName = "서리 거인", bodyColor = frostBody, headColor = frostHead,
+		gate = { zone = "tier6", color = { 190, 240, 255 } },
 		-- 느린 거인: 크고(3.3) 느리고(6) 한 방이 무겁다(평타 1.5초에 ×1.5). 전역 쿨도 7초로 길다.
 		sizeScale = 3.3, bodyAspect = Vector3.new(0.85, 1.35, 0.85),
 		attachments = {
@@ -764,6 +768,7 @@ local SPECIES = {
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "색 맞추기", line = "머리 위 표시(●빨강 / ▲파랑)와 같은 색 발판에 서라 - 밟을 때마다 색이 바뀐다", icon = "≈", diagram = "platform" },
 		id = "abyssal_lord", displayName = "심해 군주", bodyColor = abyssalBody, headColor = abyssalHead,
+		gate = { zone = "tier3", color = { 40, 140, 255 } },
 		sizeScale = 3, bodyAspect = Vector3.new(1.05, 0.95, 1.15),
 		attachments = {
 			{ anchor = "body", offset = Vector3.new(1.3, 0.9, 0), size = Vector3.new(0.9, 0.5, 0.9), rotationDeg = Vector3.new(0, 0, -30), kind = "wedge", color = "head", name = "LeftFin" },
@@ -882,6 +887,7 @@ local SPECIES = {
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "수정 오르골", line = "수정 종이 울리는 순서를 기억해, 똑같이 두드려라!", sub = "틀리면 처음부터! 실패하면… 여왕의 수정 장식품이 됩니다.", icon = "♪", diagram = "bells" },
 		id = "crystal_queen", displayName = "수정 여왕", bodyColor = crystalBody, headColor = crystalHead,
+		gate = { zone = "tier2", color = { 120, 230, 255 } },
 		sizeScale = 3, bodyAspect = Vector3.new(1.0, 1.15, 1.0),
 		attachments = {
 			{ anchor = "body", offset = Vector3.new(0.9, 1.0, 0.2), size = Vector3.new(0.4, 1.3, 0.4), rotationDeg = Vector3.new(0, 0, -20), kind = "wedge", color = "head", name = "LeftShard" },
@@ -1009,6 +1015,7 @@ local SPECIES = {
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "진짜 전갈 찾기", line = "빛나는 꼬리를 찾아 때려라!", icon = "≋", diagram = "mound" },
 		id = "scorpion_queen", displayName = "전갈 여왕", bodyColor = scorpionBody, headColor = scorpionHead,
+		gate = { zone = "tier4", color = { 255, 170, 40 } },
 		-- 빠른 보스: 낮고 넓고(2.8) 빠르다(10 - 잡몹과 같다). 평타가 잦고(0.75초) 가볍다(×0.75). 전역 쿨 5초.
 		sizeScale = 2.8, bodyAspect = Vector3.new(1.3, 0.65, 1.2),
 		attachments = {
@@ -1170,6 +1177,7 @@ local SPECIES = {
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "번개 조준경", line = "번개 조준경을 피뢰침으로 유인하세요! 피뢰침 {N}개를 충전하면 폭풍을 막습니다.", icon = "ϟ", diagram = "rod", countKey = "rods" },
 		id = "storm_lord", displayName = "폭풍 군주", bodyColor = stormBody, headColor = stormHead,
+		gate = { zone = "tier5", color = { 255, 240, 80 } },
 		-- 가장 바쁜 보스: 전역 쿨 5초에 쿨이 짧은 스킬들. 평타도 잦고 가볍다.
 		sizeScale = 3, bodyAspect = Vector3.new(0.9, 1.2, 0.9),
 		attachments = {

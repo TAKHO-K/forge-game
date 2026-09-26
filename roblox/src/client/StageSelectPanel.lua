@@ -584,6 +584,7 @@ local function selectBossStage(stage)
 	selectedStage = stage
 	setStatus("")
 	render()
+	setStatus(band.lockText or "") -- M1-3: 등록 전 = "🔒 원격 입장 - 관문을 한 번 찾아가면 열립니다"
 	if preview[stage] == nil then
 		requestPreview()
 	end
@@ -699,7 +700,7 @@ end
 
 -- 예외 3(목록을 연 채로 스테이지가 바뀔 때, 파티 투표 이동 포함): 세 Attribute를 구독해
 -- 열려 있는 동안은 그 자리에서 다시 그린다(windowStart는 유지 - 보던 자리를 안 바꾼다).
-for _, attr in ipairs({ "InfiniteStage", "InfiniteStageBest", "BestBossCleared", "RebirthCount" }) do
+for _, attr in ipairs({ "InfiniteStage", "InfiniteStageBest", "BestBossCleared", "RebirthCount", "BossGatesUsable" }) do -- BossGatesUsable = M1-3 원격 입장 버튼
 	player:GetAttributeChangedSignal(attr):Connect(render)
 end
 -- 보스를 잡았거나(BestBossCleared) 직업이 바뀌면(ClassId - 장비 수령 기록이 직업별) 열려 있는 동안 다시 묻는다.

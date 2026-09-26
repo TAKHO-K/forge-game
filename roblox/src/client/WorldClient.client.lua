@@ -147,6 +147,17 @@ Theme.corner(regionLabel, 6)
 local regionPad = Instance.new("UIPadding")
 regionPad.PaddingLeft, regionPad.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
 regionPad.Parent = regionLabel
+-- M1-3 관문 등록: 등록 전 보스 스테이지 = "다음 목표: ○○ 관문을 찾아라 · 거리" 추적(지역명 왼쪽 같은 줄 · 보스 색 글씨)
+local objectiveLabel = regionLabel:Clone()
+objectiveLabel.Name = "ObjectiveLabel"
+objectiveLabel.AnchorPoint = Vector2.new(1, 0)
+objectiveLabel.Visible = false
+objectiveLabel.Parent = hud
+local function placeObjective()
+	objectiveLabel.Position = UDim2.new(0, regionLabel.AbsolutePosition.X - 6, 0, regionLabel.AbsolutePosition.Y)
+end
+regionLabel:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeObjective)
+regionLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeObjective)
 
 local function button(name, slotName, text)
 	local b = Instance.new("TextButton")
@@ -297,13 +308,22 @@ RunService.Heartbeat:Connect(function(dt)
 		local climbing = Vector3.new(feet.X, 0, feet.Z).Magnitude <= 160 and above > 12
 		regionLabel.Text = climbing and ("큰 나무 · 높이 %dm%s"):format(math.floor(above * TREE.metersPerStud + 0.5), stationText()) or regionName(feet)
 	end
-	local gate = player:GetAttribute("BossGateZone")
+	-- M1-3: 관문 길 안내 + 다음 목표 = 등록 전 보스 스테이지만(서버 BossGateId - 등록하면 꺼진다)
+	local gate = player:GetAttribute("BossGateId")
 	if gate ~= lastGate then
 		lastGate = gate
 		if gate then
-			Wayfinder.setPoints("bossGate", Wayfinder.routeToGate(gate))
+			Wayfinder.setPoints("bossGate", WorldMapLayout.bossGateRoute(gate))
 		else
 			Wayfinder.clear("bossGate")
 		end
+	end
+	local g = gate and WorldMapLayout.bossGate(gate)
+	objectiveLabel.Visible = g ~= nil and regionLabel.Visible
+	if g and root then
+		local d = Vector3.new(g.position.X - root.Position.X, 0, g.position.Z - root.Position.Z).Magnitude
+		objectiveLabel.Text = ("다음 목표: %s 관문을 찾아라 · %dm"):format(g.name, math.floor(d * TREE.metersPerStud + 0.5))
+		objectiveLabel.TextColor3 = Color3.fromRGB(g.color[1], g.color[2], g.color[3])
+		placeObjective()
 	end
 end)
