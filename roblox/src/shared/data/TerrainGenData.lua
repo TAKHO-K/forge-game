@@ -35,7 +35,7 @@ return {
 	rim = { radius = 900, sigma = 80, base = 52, vary = 34, lambda = 380, wobble = 70, wobbleLambda = 300, inner = 0.3, side = 1.0, outer = 0.85 },
 	-- 외곽 설산(보이는 경계 - 실제 차단은 서버 밀어내기 WorldMapData.edgeGuard): r start → full에서 오르고 높이 base ± vary(방위 잡음) · 봉우리 결 ridges. 3,200까지 이어져 끝이 안 보인다.
 	--   산맥 = 밑 둔덕(base - 안부 높이) + 봉우리 줄(peakEveryDeg마다 하나 · 반경 peakR ± · 높이 peakH ± · 폭 peakWidth ±) + 날카로운 능선 결(ridge). 벽처럼 윗면이 평평하지 않게.
-	edge = { start = 2560, full = 2900, outer = 3200, base = 150, vary = 40, lambdaDeg = 18, ridgeAmp = 46, ridgeLambda = 110, startVary = 170, startLambdaDeg = 9,
+	edge = { start = 2560, full = 2900, outer = 3200, base = 90, vary = 30, lambdaDeg = 18, ridgeAmp = 70, ridgeLambda = 110, startVary = 170, startLambdaDeg = 9, -- base 150 → 90: 봉우리 사이가 평평한 흰 띠로 보였다(M1-3 스크린샷)
 		peakEveryDeg = 5, peakJitterDeg = 2, peakR = { 2720, 3080 }, peakH = { 170, 400 }, peakWidth = { 130, 260 }, backFill = 3050 },
 	-- 눈 · 바위 선: 높이(바닥 기준) snowLine ± snowVary 위 = 눈 · 경사 steepDeg 넘으면 바위(구역 cliff 재질).
 	snowLine = 170, snowVary = 25, snowMaterial = "Snow", steepDeg = 40, rockMaterial = "Rock",
