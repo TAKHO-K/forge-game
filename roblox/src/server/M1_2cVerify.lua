@@ -91,10 +91,10 @@ local function simulate(opts)
 	while t < (opts.maxSeconds or 12) do
 		t += dt
 		x += (opts.flatSpeed or 0) * dt
-		if opts.glideSpeed and vy < 0 and t > (opts.glideAfter or 0) then
+		if opts.climbAt and t >= opts.climbAt and t < opts.climbAt + 0.6 then
+			vy = 50 -- 활공 중 다시 오르기(부정 흉내 - 활공보다 먼저 본다)
+		elseif opts.glideSpeed and vy <= 0 and t > (opts.glideAfter or 0) then
 			vy = -opts.glideSpeed -- 활공: 천천히 내려온다
-		elseif opts.climbAt and t >= opts.climbAt and t < opts.climbAt + 0.6 then
-			vy = 50 -- 활공 중 다시 오르기(부정 흉내)
 		elseif holdLeft > 0 and vy <= 0 and jumpsLeft == 0 then
 			holdLeft -= dt
 			vy = 0
