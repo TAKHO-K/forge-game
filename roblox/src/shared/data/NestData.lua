@@ -11,6 +11,8 @@
 --         bridgeHut(흔들다리 가운데) · sunken(수중 신전 안) · mesaShrine(빙벽 위 사당) · hub 전용(chimney · attic · trunk · arch).
 --   hint = 환경 힌트(C) - fireflies(반딧불 몇 마리 · 클라) · moss(이끼 줄) · stone(어긋난 돌) · flow(물살 방향) · birds(새 - 소리 에셋 없음: 앉은 새 모형 자리만).
 
+-- S1(M1-3 결정 6): 비밀 둥지 C 40곳의 자리는 서버 전용(server/SecretNestData - ServerScriptService는 클라에 복제되지 않는다). 여기는 A · B만 공유하고,
+-- 서버(실행 중) · Studio edit(지형 굽기)에서만 아래 끝에서 C를 합친다 → 서버 코드(NestServer · WorldStructures · 지형 마스크)는 전과 같은 전체 목록을 본다.
 local NESTS = {
 	-- ═══ T1 석조 평원 ═══
 	{ id = "t1_a_pillar", zone = "tier1", track = "A", r = 1930, lat = 205, kit = "rock", h = 14, skill = "easy", style = "pillar" },
@@ -21,12 +23,6 @@ local NESTS = {
 	{ id = "t1_b_watch", zone = "tier1", track = "B", r = 1180, lat = -610, kit = "tower", w = 16, h = 48, cols = 2 },
 	{ id = "t1_b_peakcave", zone = "tier1", track = "B", top = true, r = 2545, lat = -330, kit = "cliffCave", mouth = 18 },
 	{ id = "t1_b_ruins", zone = "tier1", track = "B", r = 2090, lat = 280, face = 20, kit = "shrine" },
-	{ id = "t1_c_field", zone = "tier1", track = "C", sub = "field", r = 1590, lat = -560, face = 180, kit = "alcove", cover = "fakeWall", hint = { "stone", "moss" } },
-	{ id = "t1_c_h1", zone = "tier1", track = "C", sub = "hidden", r = 2505, lat = 0, inLandmark = true, kit = "alcove", cover = "slab", hint = { "moss" } },
-	{ id = "t1_c_h2", zone = "tier1", track = "C", sub = "hidden", r = 1060, lat = 640, face = -30, kit = "alcove", cover = "vine", hint = { "fireflies" } },
-	{ id = "t1_c_h3", zone = "tier1", track = "C", sub = "hidden", r = 1330, lat = 380, kit = "alcove", cover = "trunk", hint = { "birds" } },
-	{ id = "t1_c_h4", zone = "tier1", track = "C", sub = "hidden", r = 2540, lat = 360, kit = "alcove", cover = "fakeWall", hint = { "stone" } },
-	{ id = "t1_c_h5", zone = "tier1", track = "C", sub = "hidden", r = 1000, lat = -300, face = 60, kit = "alcove", cover = "vine", hint = { "fireflies", "moss" } },
 
 	-- ═══ T2 수정 동굴 ═══
 	{ id = "t2_a_rock", zone = "tier2", track = "A", r = 1050, lat = -420, kit = "rock", h = 10, skill = "easy", style = "crystal" },
@@ -37,12 +33,6 @@ local NESTS = {
 	{ id = "t2_b_cave", zone = "tier2", track = "B", top = true, kit = "cave", cave = 1 },
 	{ id = "t2_b_spire", zone = "tier2", track = "B", r = 1250, lat = 520, kit = "tower", w = 16, h = 44, cols = 2 },
 	{ id = "t2_b_shrine", zone = "tier2", track = "B", r = 1750, lat = -560, face = -40, kit = "shrine" },
-	{ id = "t2_c_field", zone = "tier2", track = "C", sub = "field", r = 1720, lat = 560, face = 90, kit = "alcove", cover = "fakeWall", hint = { "stone", "fireflies" } },
-	{ id = "t2_c_h1", zone = "tier2", track = "C", sub = "hidden", r = 2330, lat = 700, face = 150, kit = "alcove", cover = "vine", hint = { "fireflies" } },
-	{ id = "t2_c_h2", zone = "tier2", track = "C", sub = "hidden", r = 1320, lat = -620, kit = "alcove", cover = "vine", hint = { "moss" } },
-	{ id = "t2_c_h3", zone = "tier2", track = "C", sub = "hidden", r = 2505, lat = 0, inLandmark = true, kit = "alcove", cover = "slab", hint = { "stone" } },
-	{ id = "t2_c_h4", zone = "tier2", track = "C", sub = "hidden", r = 1950, lat = -720, face = -60, kit = "alcove", cover = "fakeWall", hint = { "stone" } },
-	{ id = "t2_c_h5", zone = "tier2", track = "C", sub = "hidden", r = 1990, lat = 780, face = 170, kit = "alcove", cover = "fakeWall", hint = { "moss" } },
 
 	-- ═══ T3 수몰 사원 ═══
 	{ id = "t3_a_rock", zone = "tier3", track = "A", r = 1100, lat = 200, kit = "rock", h = 10, skill = "easy" },
@@ -53,12 +43,6 @@ local NESTS = {
 	{ id = "t3_b_temple", zone = "tier3", track = "B", top = true, kit = "sunken" },
 	{ id = "t3_b_spire", zone = "tier3", track = "B", r = 1650, lat = -720, kit = "tower", w = 16, h = 44, cols = 2 },
 	{ id = "t3_b_shrine", zone = "tier3", track = "B", r = 2300, lat = 520, face = 30, kit = "shrine" },
-	{ id = "t3_c_field", zone = "tier3", track = "C", sub = "field", r = 1710, lat = -440, kit = "alcove", cover = "underwater", river = 4, hint = { "flow", "fireflies" } },
-	{ id = "t3_c_h1", zone = "tier3", track = "C", sub = "hidden", r = 1300, lat = -662, face = -70, kit = "alcove", cover = "waterfall", hint = { "flow" } },
-	{ id = "t3_c_h2", zone = "tier3", track = "C", sub = "hidden", r = 2450, lat = 290, face = 60, kit = "alcove", cover = "fakeWall", hint = { "stone" } },
-	{ id = "t3_c_h3", zone = "tier3", track = "C", sub = "hidden", r = 1200, lat = 560, kit = "alcove", cover = "vine", hint = { "fireflies" } },
-	{ id = "t3_c_h4", zone = "tier3", track = "C", sub = "hidden", r = 1000, lat = -150, kit = "alcove", cover = "trunk", hint = { "birds" } },
-	{ id = "t3_c_h5", zone = "tier3", track = "C", sub = "hidden", r = 2250, lat = 640, face = 120, kit = "alcove", cover = "vine", hint = { "moss" } },
 
 	-- ═══ T4 모래 유적 ═══
 	{ id = "t4_a_rock", zone = "tier4", track = "A", r = 1050, lat = -350, kit = "rock", h = 10, skill = "easy", style = "sand" },
@@ -69,12 +53,6 @@ local NESTS = {
 	{ id = "t4_b_vault", zone = "tier4", track = "B", top = true, r = 1650, lat = -700, kit = "tower", w = 18, h = 44, cols = 2 },
 	{ id = "t4_b_shrine", zone = "tier4", track = "B", r = 2150, lat = 300, face = 60, kit = "shrine" },
 	{ id = "t4_b_peakcave", zone = "tier4", track = "B", r = 2545, lat = -400, kit = "cliffCave", mouth = 18 },
-	{ id = "t4_c_field", zone = "tier4", track = "C", sub = "field", r = 1480, lat = 530, kit = "alcove", cover = "oasis", hint = { "fireflies" } },
-	{ id = "t4_c_h1", zone = "tier4", track = "C", sub = "hidden", r = 1200, lat = 480, kit = "alcove", cover = "buried", hint = { "stone" } },
-	{ id = "t4_c_h2", zone = "tier4", track = "C", sub = "hidden", r = 2290, lat = 590, face = 150, kit = "alcove", cover = "buried", hint = { "stone" } },
-	{ id = "t4_c_h3", zone = "tier4", track = "C", sub = "hidden", r = 2420, lat = -210, kit = "alcove", cover = "slab", hint = { "moss" } },
-	{ id = "t4_c_h4", zone = "tier4", track = "C", sub = "hidden", r = 1700, lat = -300, kit = "alcove", cover = "fakeWall", hint = { "stone" } },
-	{ id = "t4_c_h5", zone = "tier4", track = "C", sub = "hidden", r = 2050, lat = -560, kit = "alcove", cover = "buried", hint = { "birds" } },
 
 	-- ═══ T5 폭풍 첨탑 ═══
 	{ id = "t5_a_rock", zone = "tier5", track = "A", r = 1000, lat = -300, kit = "rock", h = 10, skill = "easy" },
@@ -85,12 +63,6 @@ local NESTS = {
 	{ id = "t5_b_thunder", zone = "tier5", track = "B", top = true, r = 2150, lat = -600, kit = "tower", w = 30, h = 110, cols = 3, temple = "thunder" },
 	{ id = "t5_b_bridge", zone = "tier5", track = "B", kit = "bridgeHut" },
 	{ id = "t5_b_shrine", zone = "tier5", track = "B", r = 1800, lat = 520, face = 60, kit = "shrine" },
-	{ id = "t5_c_field", zone = "tier5", track = "C", sub = "field", r = 2215, lat = 640, face = -140, kit = "alcove", cover = "fakeWall", base = "natural", hint = { "stone", "moss" } }, -- 흔들다리 아래 절벽 틈
-	{ id = "t5_c_h1", zone = "tier5", track = "C", sub = "hidden", r = 2150, lat = -600, kit = "alcove", cover = "timed", templeBack = true, hint = { "stone" } }, -- 번개 칠 때만 열리는 문(신전 뒤)
-	{ id = "t5_c_h2", zone = "tier5", track = "C", sub = "hidden", r = 2400, lat = -450, kit = "alcove", cover = "fakeWall", hint = { "moss" } },
-	{ id = "t5_c_h3", zone = "tier5", track = "C", sub = "hidden", r = 1600, lat = -450, kit = "alcove", cover = "vine", hint = { "fireflies" } },
-	{ id = "t5_c_h4", zone = "tier5", track = "C", sub = "hidden", r = 1250, lat = 560, face = -40, kit = "alcove", cover = "vine", hint = { "moss" } },
-	{ id = "t5_c_h5", zone = "tier5", track = "C", sub = "hidden", r = 2470, lat = -110, kit = "alcove", cover = "slab", hint = { "stone" } },
 
 	-- ═══ T6 빙하 동굴 ═══
 	{ id = "t6_a_rock", zone = "tier6", track = "A", r = 1050, lat = 300, kit = "rock", h = 10, skill = "easy", style = "ice" },
@@ -101,12 +73,6 @@ local NESTS = {
 	{ id = "t6_b_icewall", zone = "tier6", track = "B", top = true, kit = "mesaShrine", mesa = 2 },
 	{ id = "t6_b_spire", zone = "tier6", track = "B", r = 1300, lat = 550, kit = "tower", w = 16, h = 44, cols = 2 },
 	{ id = "t6_b_shrine", zone = "tier6", track = "B", r = 2250, lat = 200, face = 30, kit = "shrine" },
-	{ id = "t6_c_field", zone = "tier6", track = "C", sub = "field", r = 1438, lat = -612, face = 0, kit = "alcove", cover = "ice", noMound = true, hint = { "moss" } }, -- 빙벽 틈(빙하 혀 안)
-	{ id = "t6_c_h1", zone = "tier6", track = "C", sub = "hidden", r = 2140, lat = 455, face = 30, kit = "alcove", cover = "ice", base = 55, hint = { "fireflies" } }, -- 호수 선반 뒤 얼음 틈
-	{ id = "t6_c_h2", zone = "tier6", track = "C", sub = "hidden", r = 2400, lat = -300, kit = "alcove", cover = "fakeWall", hint = { "stone" } },
-	{ id = "t6_c_h3", zone = "tier6", track = "C", sub = "hidden", r = 2480, lat = -150, kit = "alcove", cover = "slab", hint = { "moss" } },
-	{ id = "t6_c_h4", zone = "tier6", track = "C", sub = "hidden", r = 1200, lat = -600, face = 30, kit = "alcove", cover = "ice", hint = { "stone" } },
-	{ id = "t6_c_h5", zone = "tier6", track = "C", sub = "hidden", r = 1450, lat = 700, face = -60, kit = "alcove", cover = "vine", hint = { "fireflies" } },
 
 	-- ═══ M1-4 능선 전망 둥지(외곽 테마 경계 - 산길 · 사다리로 능선까지 걸어 오른 곳 · 트랙 A 높은 곳) ═══ 자리 = TerrainGenData.edgeStyles[구역].lookout(방위 도 · 능선 반경 + 능선 폭/2)의 구역 좌표 · level = 능선 높이
 	--   T3은 바다(능선 없음)라 없다. 개인 쿨다운 · 줍기 위치 검증은 다른 둥지와 같다.
@@ -117,11 +83,19 @@ local NESTS = {
 	{ id = "t6_a_crest", zone = "tier6", track = "A", high = true, crest = true, r = 2684, lat = 770, kit = "ledge", level = 100 },
 
 	-- ═══ 허브 C-마을(안전 · 가기 쉬움 - 한 단계 낮게) ═══ eggZone = 어느 구역 알이 나오는가(허브는 구역이 없다)
-	{ id = "hub_c_chimney", zone = "hub", track = "C", sub = "village", kit = "chimney", facility = "forge", eggZone = "tier1" },
-	{ id = "hub_c_attic", zone = "hub", track = "C", sub = "village", kit = "attic", facility = "market", eggZone = "tier2" },
-	{ id = "hub_c_trunk", zone = "hub", track = "C", sub = "village", kit = "trunk", angleDeg = 255, eggZone = "tier3" },
-	{ id = "hub_c_arch", zone = "hub", track = "C", sub = "village", kit = "arch", facility = "portal", eggZone = "tier4" },
 }
+
+do -- 서버 전용 C 합치기(클라 = 실행 중 · 서버 아님 → 안 합침)
+	local RunService = game:GetService("RunService")
+	if not RunService:IsRunning() or RunService:IsServer() then
+		local m = game:GetService("ServerScriptService"):FindFirstChild("SecretNestData")
+		if m then
+			for _, spec in ipairs(require(m)) do
+				table.insert(NESTS, spec)
+			end
+		end
+	end
+end
 
 return {
 	nests = NESTS,
@@ -166,6 +140,8 @@ return {
 	timedDoor = { periodSeconds = 150, openSeconds = 18, graceSeconds = 1.5 },
 	-- 발견 도감(C 처음 발견 - 칭호 · 꾸미기만): 도감 = C 전부(마을 포함) 집계 · 칭호 문턱 = C-필드 · C-진짜 히든만 센다(M1-3 결정 5 - 허브 굴뚝 하나로 칭호가 나오지 않게)
 	dex = { titles = { { count = 1, id = "nestSeeker", name = "둥지 탐험가" }, { count = 10, id = "secretKeeper", name = "비밀 수집가" } }, discoverSeconds = 2.5 },
+	-- S1 비밀 둥지(C) 앵커(알 자리 · 프롬프트)는 서버 ServerStorage에 두었다가 누군가 revealStuds 안에 오면 월드에 꺼내고, 모두 hideStuds 밖이면 다시 넣는다(checkSeconds마다).
+	secret = { revealStuds = 45, hideStuds = 60, checkSeconds = 0.5 },
 	-- 알 가방 상한(다 차면 못 줍는다 - 부화 · 펫 단계에서 쓴다)
 	eggCap = 40,
 }

@@ -152,6 +152,14 @@ local function playerKey(userId)
 	return "u" .. tostring(userId)
 end
 
+-- S1 2-8 운영: 개인 · 직업 순위표 항목 제거(kind = "personal" | "class_<직업>"). 반환: 성공.
+function Leaderboard.removeEntry(kind, userId)
+	local ok = pcall(function()
+		ordered(kind):RemoveAsync(playerKey(userId))
+	end)
+	return ok
+end
+
 -- 이 멤버의 기록을 쓸 수 있는가. 반환 (bool, 이유).
 local function eligibility(member)
 	if typeof(member) ~= "Instance" or not member:IsA("Player") then
@@ -173,6 +181,10 @@ local function eligibility(member)
 	end
 	if not PlayerProfile.getClassId(member) then
 		return false, "no_class"
+	end
+	-- S1 2-5 속도 봉투: 합법 최대 곡선 × margin을 넘는 상승 = 등재 보류(검토 대기 - 자동 제재 없음)
+	if require(script.Parent.AcquisitionAudit).velocityHold(member) then
+		return false, "velocity_hold"
 	end
 	return true, "ok"
 end

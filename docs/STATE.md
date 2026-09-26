@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **W1(밤샘 묶음 - 무기 규격 + 플레이어 모션) · 2026-09-27** · 직전 보고서 = `docs/phase/W1-report.md`(그 전 `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **S1(밤샘 묶음 - 이동 · 획득 보안) · 2026-09-27** · 직전 보고서 = `docs/phase/S1-report.md`(그 전 `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -20,10 +20,11 @@
 | 이동 | **MV1**: 대시 22 × 이속(×1.4 상한) · 짧게 = 대시 / 공중 길게 0.25초 = 활강(30 · 5 · 게이지 8초 - `client/GlideController`) · 환생 해금(`MovementUnlockData` - 계정 최대 환생 `MoveTier` · 0 = 공중 점프 없음 · 1 = 공중 점프 1 + 공중 공격 · 2 = 활강 · 3 = 공중 점프 2 + 공중 3타 강공격 · 4 = 활강 +3 · 공중 대시 ×1.25) · 서버 체공 세션(`server/AirState`) · 낙하 = 착지 속도 → 환산 높이 → clamp((h − 24.38) ÷ (360 − 24.38)) %최대체력 · 쓰러짐 → 안전 지점(`server/FallServer` - 보고는 서버 체공과 대조) · 태초 신발 2단 대시 · 태초 장갑 붙잡기(허가 `source = ledge`) · S1 값 `MoveRules.s1Limits()` · 기준표 `movement-metrics.md` v3 · `/gg move 0~5`. **M1-4 사다리**: 오르기 상태 = 곁에 TrussPart · Climbable가 있을 때만 서 있음(`HeightGuard.nearClimbable` · 지연 0.25 되돌림 0). **M1-3 물**: 익사 없음 · 공중 점프 충전 = 물 밖 착지만 · 물속 대시 불가 · 물살(강 10/초 - 클라 끌림 · 서버 속도 기록) · 헤엄 = 실제 물 복셀일 때만 높이 검사 "서 있음"(`MovementConfig.water`). **M1-2c 발사 허가**: 점프대 · 통통 열매 · 수정 부수기 발판 · 보스 발사 전부 = 허가(설계 정점 + 공중 점프 전부 + 4 · 가장 최근 것만 · 착지까지 · 상한 뒤 내려가기만) - `server/LaunchPermit`(서버 위치 기록 0.5초로 발판 확인) · `HeightGuard.grantLaunch` · 수치 `MovementConfig.permit`. 새 수직 발사 요소 = 이 둘 중 하나로(감사 표 = M1-2c 보고서 ③). **M1-0 개편**: 공중 점프 충전 2(+6.12씩) · 공중대시 체공 1회 섞기 · 필드 = 아레나 같은 규칙 · 서버 높이 검증 허용 22.38 | `docs/design/movement-metrics.md` v2 |
 | 카메라 | **M1-0**: 기본 = 로블록스 기본 카메라(줌 22 · 10 ~ 60) · 설정 창 "탑다운 시점"(55° · 45 - 이번 접속 동안) · 보스전 최소 30° · 시점 고정 = 왼쪽 Ctrl · PC 스킬 줄 칸 / 폰 "고정" 버튼(대시 옆) | 같은 문서 §8 |
 | 카툰 스타일(A1) | `CartoonStyle.apply(base \| cartoon)` - 관리 속성만(조명 · 효과 4 · 물 · 17재질 색 · **텍스처 없는 MaterialVariant 17**(`shared/CartoonFlatVariants.model.json` - 평면 면 음영) · 허브 바닥 파트 색 · 작은 소품 그림자) · 멱등 · **기본 = base**(`CartoonStyleData.active` - 전환 = A2-1) · `/gg style base\|cartoon` · **외곽선 풀**(`client/OutlinePool` - 상한 80 · 조준 외곽선 통합 · 몬스터별 꺼진 AimHighlight 삭제) · 구역 색조(클라) · 시제품 `/gg a1 …`(슬라임 · 수호자 리그 · 전갈 꼬리 Bone · 대검 7등급 · 카툰 풀) · UI 목업 `client/A1UiMockups` · 검증 `A1(나)` | `docs/art/cartoon-pipeline.md` · `A1-report.md` |
-| 플레이어 모션 · 무기(W1) | **코드 포즈 데이터**(에셋 업로드 없음): `shared/data/PlayerMotionData`(무기별 대기 · 이동 · 대시 · 활강 · 꺼내기/수납 · 1 ~ 3타 · 강공격 · 공중 · 넘어짐 → 일어나기 0.78초) · `shared/MotionTiming`(전조 → 동작 → 회복 · 배율 ×2.5 전조부터 · **원거리 서버 발사 시각도 이 함수**) · `client/PoseRig`(관절 Transform = **PreSimulation**에 써야 물리에 들어간다 · FK · 보조 손 · 시위 IK) · `client/WeaponVisual`(**모든 캐릭터** - 서버 중계 `AttackMotion` · `AirMoveFx` dash/getup · Attribute `CombatUntil`) · 일어나기 서버 무적 `PlayerGetup`(강제 이동 기록 있을 때만) · 규격 `WeaponRigSpec`(hold · 부착점 Grip/Tip/Support/StringNock · 지팡이 머리 = +Y) + 검사 `WeaponRigCheck` · 교체 모델 자리 `Shared.WeaponModels` · 스크린샷 훅 `PlayerGui.W1PoseHook`(Studio) | `W1-report.md` · `docs/art/asset-pipeline.md` §4 |
+| 플레이어 모션 · 무기(W1) | **코드 포즈 데이터**(에셋 업로드 없음): `shared/data/PlayerMotionData`(무기별 대기 · 이동 · 대시 · 활강 · 꺼내기/수납 · 1 ~ 3타 · 강공격 · 공중 · 넘어짐 → 일어나기 0.78초) · `shared/MotionTiming`(전조 → 동작 → 회복 · 배율 ×2.5 전조부터 · 원거리 = 서버 발사 상수(W1 전 값 0.429 · 0.1925 - 밸런스) + 모션 발사 예약 큐) · `client/PoseRig`(관절 Transform = **PreSimulation**에 써야 물리에 들어간다 · FK · 보조 손 · 시위 IK) · `client/WeaponVisual`(**모든 캐릭터** - 서버 중계 `AttackMotion` · `AirMoveFx` dash/getup · Attribute `CombatUntil`) · 일어나기 서버 무적 `PlayerGetup`(강제 이동 기록 있을 때만) · 규격 `WeaponRigSpec`(hold · 부착점 Grip/Tip/Support/StringNock · 지팡이 머리 = +Y) + 검사 `WeaponRigCheck` · 교체 모델 자리 `Shared.WeaponModels` · 스크린샷 훅 `PlayerGui.W1PoseHook`(Studio) | `W1-report.md` · `docs/art/asset-pipeline.md` §4 |
 | 공중 전투 · 무기 규격(MV1) | 공중 공격 예산 = 해금 공중 점프 + 공중 대시(서버 거부) · 뜨면 강공격 스택 0 · 공중 판정 높이차 근접 14 · 원거리 30(`CombatConfig.airAttack`) · 무기별 공중 동작 틀(대검 내려찍기 · 쌍검 회전 · 활 · 지팡이 0.25초 공중 정지 - 임시 모션) · **`WeaponRigSpec`**(쥐는 손 · 손잡이 점 · 날 축 · 기준 크기 · 보조 손 · 비전투 자리 · 날 선 앞 · 준비 자세) - 지금 모델은 잡는 방식만 맞춤, 모션은 **W1** | `MV1-report.md` ④ ⑦ |
+| 보안(S1) | **이동**: 서버 수평 토큰 버킷(`HeightGuard.evaluateHorizontal` · 합법 목록 = `MovementConfig.moveGuard.legal` · 대시 · 밀림 허가 · 표시 없는 순간이동 = 되돌림) · 높이 허용 = 해금 단계별 · 낙하 = 서버 궤적(`AirState` peakY · 신고 없어도 처리) · 비밀 둥지 C = `server/SecretNestData`(클라 0 · 45 안에서 앵커 노출). **획득**: 스테이지 하드 상한 25,300(저장 · 로드 때 자름) · 태초 발급 원장(`AcquisitionAudit` · rollId) · 원장 없음 = 격리(원장 이전 = `preLedger` 집계 대상) · 집계 = 드랍 출처 · 속도 봉투(`AuditConfig.envelope` - 25,300 = 1,169h) · 포아송 1e-6 · 처치 속도 · 운영 `/ops`(`OpsConfig.userIds`) · 서버가 캐릭터를 옮기면 반드시 `HeightGuard.reset`/`exempt`(reset 뒤 유예 = 도착 자리 근처만) · 클라 낙하 신고 = 서버 착지 전이면 `pending` | `S1-report.md` |
 | 설정 창 | M1-0에 첫 창(카메라 토글 하나). 저장 · 키 재설정은 **P4-4** | `client/panels/Settings.lua` |
-| 저장 | **SAVE_VERSION 43**(v43 장비 태초 각인 primordial · 출처 source · 옛 태초 = 이전 태초 + 잠금 / v42 hints.stealLockSeen / v41 world.nests · world.nestDex · eggs / v40 world.bossGates / v38 world.portals · peakLevel / v39 titles) · Studio 수동 Play = `Player_<id>_manual`(M1-2 후속 - 실제 프로필은 읽기만) | `server/SaveSystem.lua` |
+| 저장 | **SAVE_VERSION 44**(v44 audit - λ · 태초 굴림 수 · 플레이 시간 / v43 장비 태초 각인 primordial · 출처 source · 옛 태초 = 이전 태초 + 잠금 / v42 hints.stealLockSeen / v41 world.nests · world.nestDex · eggs / v40 world.bossGates / v38 world.portals · peakLevel / v39 titles) · Studio 수동 Play = `Player_<id>_manual`(M1-2 후속 - 실제 프로필은 읽기만) | `server/SaveSystem.lua` |
 
 ## 3. 다음 단계
 
@@ -47,7 +48,9 @@
 
 > **W1 끝(2026-09-27) - place 저장 불필요 · 업로드 불필요**: 무기 5종 모션 세트 · 시각표 50칸 최대 0.045초 · 남의 캐릭터도 같은 모션 · 일어나기(BR1-4가 `WeaponVisual.playGetup` 호출) · 최종 키프레임 = A2 · 스킬 모션 = K.
 
-**다음** = S1(이동 보안 - `MoveRules.s1Limits`) · M1-4 결정(§4 - 특히 **place 저장**) 뒤 로드맵(`docs/phase/roadmap-v2.md`): BR2(보스 세트 · 토벌 - 관문 자리 있음) · M2(몬스터 외형 · 종) · 펫 단계(알 부화 · 탑승 · 활강 - 둥지 B · C는 활강 착지 불가로 설계됨). 지형 모양을 바꾸면 `TerrainGenData.version[구역]`을 올리고 그 구역만 다시 굽고 place 저장. 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`.
+> **S1 끝(2026-09-27) - place 저장 불필요**: 이동 보안(수평 · 해금 높이 · 서버 낙하 · 비밀 둥지) · 획득 보안(상한 · 원장 · 격리 · 봉투 · 확률 · 운영). 경제 상한 조사표 = 보고서 [3].
+
+**다음** = BR1-4(보스 손질 - 시작 지점 = 아래)(이동 보안 - `MoveRules.s1Limits`) · M1-4 결정(§4 - 특히 **place 저장**) 뒤 로드맵(`docs/phase/roadmap-v2.md`): BR2(보스 세트 · 토벌 - 관문 자리 있음) · M2(몬스터 외형 · 종) · 펫 단계(알 부화 · 탑승 · 활강 - 둥지 B · C는 활강 착지 불가로 설계됨). 지형 모양을 바꾸면 `TerrainGenData.version[구역]`을 올리고 그 구역만 다시 굽고 place 저장. 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`.
 
 ## 4. 결정 필요 (열린 것)
 
@@ -67,7 +70,8 @@
 | D1 1 ~ 14 | 1 EconSim 모형(보스 장비 포함 추천) · 2 목표 미달(상위 1% 1,084h · 캐주얼 43.1h - ①② 효과 4% · k ≈ 1.0204) · **3 태초 격차(추천: 딜 부위 태초 = 고대 위력 · 갑옷 ×2.5)** · 4 신발 공격속도 상한 없음 · 5 토벌 ÷ 사냥 상위 1% 5.0 · 6 반짝이 표 제안 · 7 드래곤 가치 0.876 · 8 상향표 폐지 · 9 무기 태초 = 환생 5 + 보석 5(문구 "7회"와 다름) · 10 각성 → 분해 · 11 순위 화면 태초 · 12 효과음 · 13 흰 기둥 전투 가림 · 14 유물 tier별 - `D1-report.md` ⑨ |
 | D1-2 1 ~ 9 | **1 · 2 · 3 · 6 · 7 닫힘(D1-3 - 사용자 확정)**: 격차 = 시간 비 ≤ 1.3만 · 캐주얼 40 ~ 45h · 반짝이 0.1% + 125 · 발자국 삭제 · L2 미적용(1,964h 오차 수용). 남음: 4 신발 공속 유물부터 상한 · 5 스킬 계수 옵션 · 8 파티 버스 ×2.7 · 9 토벌 ÷ 사냥 - `D1-2-report.md` ⑧ |
 | MV1 1 ~ 13 | **1 · 2 · 4 · 5 · 6 · 7 · 9 · 10 · 13 닫힘(MV1b - 사용자 지시 반영)**: 1 바위 = 1단 점프 계단 · 메사 · 피라미드 = B · 2 유지 · 4 뿌리 55° · 5 유지 · 6 유지 · 7 세트 4칸 + 글라이더 별도 · 9 서버 정지 기록 · 10 유지 · 13 유지. 남음: 3 관통돌진(K) · 8 낙하 대조(→ S1) · 11 공중 높이차(체감) · 12 W1 범위 - `MV1-report.md` |
-| W1 1 ~ 6 | 1 원거리 발사 = 모션 타격 프레임(활 0.43 → 0.20초 · DPS 불변) · 2 근접 전조 0.045초(서버 즉시 판정) · 3 남의 강화 이펙트 · 4 활 교체 모델 · 5 일어나기 무적 = 보스 발사 1건당 1회(리뷰 반영) · 6 모션 품질 초안 - `W1-report.md` |
+| W1 1 ~ 6 | 1 ~~원거리 발사 시각 변경~~ → W1 후속 되돌림(밸런스) · 2 근접 전조 0.045초(서버 즉시 판정) · 3 남의 강화 이펙트 · 4 활 교체 모델 · 5 일어나기 무적 = 보스 발사 1건당 1회(리뷰 반영) · 6 모션 품질 초안 - `W1-report.md` |
+| S1 1 ~ 10 | 1 수평 여유(10% 미만 속도 조작) · 2 원장 이전 태초 preLedger · 3 태초 리더보드 UI · 4 비밀 둥지 남은 단서 · 5 속사 버프 상한 밖 · 6 C1 계측 라이브 · 7 발사 허가 400/s · 8 상한 없는 스탯 4종 · 9 봉투 x축 · 10 G2a(나) 띄워 두기 체인 첫머리 미적발(미확인 - 다음 세션 첫 Play에서 계측 줄 확인) - `S1-report.md` |
 | MV1b 1 · 2 | 1 재분류 B 2곳 지붕 없음(활강 착지 가능 - 추천 유지) · 2 바위 계단 2번째 도약 = 1단 + 대시(추천 유지) - `MV1b-report.md` |
 | D1-3 1 | 캐주얼 1,000 = 39.2h(목표 하한 40의 0.8h 아래 - 추천: 하한 39 또는 오차 수용) - `D1-3-report.md` ⑤ |
 | ~~D1 1 ~ 4 · 6 · 9~~ | D1-2에서 처리(모형 = 보스 포함 · 상한 · 격차 · 반짝이 · 무기 태초 문구) |
@@ -75,7 +79,7 @@
 | C1 결정 5 보정 1 · 2(기록) | 1 **혼합 성장 파티**: 강한 파티원은 초보 파티원이 먼저 잡은 몹을 못 침(추천: 파티원끼리 막힘 제외) · 2 스테이지 더 높은 follower도 막힘 유지 - `C1-fix5-report.md` ⑥ |
 | C1 후속 6 ~ 8 | 6 스테이지 1 탱커 끌기 잔여(끌기 1초 +13% · 2초 +33%) · 7 결정 문구와 다른 3가지(잡는 사람만 막음 · 대칭 · 어그로 필터) · 8 수치 유지 - `C1-report.md` ⑩ |
 | M1-3 7 · 8 | 7 창 열림 중 칩 버튼(설정 · 알)이 딤에 막힘(기존 동작) · 8 사당(B 기둥 코스 끝) 앞이 열림(폭 9.6 - 활강 단계에서 재측정) - `M1-3-report.md` ⑨ |
-| S1 예정 | **알파 전 이동 보안 단계(S1)**: 비밀 둥지 위치 서버 전용화(오늘 자리만 · 가까이 오면 서버가 앵커 생성 - 지금은 `NestId` · `NestActive` Attribute로 클라에서 읽힌다) + M1-2c 결정 4(속도 · 수평 이동 검사 · 51씩 순간이동 기준 이동 구멍) |
+| ~~S1 예정~~ | **S1에서 처리**(비밀 둥지 서버 전용 · 수평 검사 · 50씩 순간이동)- 옛 기록: **알파 전 이동 보안 단계(S1)**: 비밀 둥지 위치 서버 전용화(오늘 자리만 · 가까이 오면 서버가 앵커 생성 - 지금은 `NestId` · `NestActive` Attribute로 클라에서 읽힌다) + M1-2c 결정 4(속도 · 수평 이동 검사 · 51씩 순간이동 기준 이동 구멍) |
 | M1-2c 1 ~ 6 | 1 리프트 [F]만(밟기 삭제) · 2 허가에 공중 점프 몫 포함(점프대 근처 부정 +54까지) · 3 상한 뒤 "내려가기만" 20초(활공 대비 - 지시 4초보다 넓다) · 4 속도 · 수평 검사 없음(보안 단계) · 5 자연 잡아 던지기 미확인 · 6 수정 부수기 발판 발사 미실측 - `M1-2c-report.md` ⑥ |
 | G2a 1 | 이속 상한을 넘는 신발 몫 처리(지금 = 이동만 ×1.5에서 멈춤) |
 | G2a 2 | ~~점프력 옵션 아레나 규칙~~ → M1-0에서 "아레나도 적용"으로 닫음(확인만) |

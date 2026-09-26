@@ -11,6 +11,8 @@ local PlayerProfile = require(script.Parent.PlayerProfile)
 local SaveCoordinator = require(script.Parent.SaveCoordinator)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local InventorySync = require(script.Parent.InventorySync)
+local AcquisitionAudit = require(script.Parent.AcquisitionAudit)
+AcquisitionAudit.start()
 
 local function loadForPlayer(player)
 	local profile, err = SaveSystem.loadProfile(player)
@@ -25,6 +27,7 @@ local function loadForPlayer(player)
 	-- 인벤토리 UI(InventoryUI.client.lua)는 Attribute가 아니라 이 이벤트로 초기 상태를
 	-- 받는다 - 접속 직후에도 한 번 밀어준다(이후 변경은 PlayerProfile의 각 뮤테이터가 push).
 	InventorySync.push(player, profile)
+	task.spawn(AcquisitionAudit.auditProfile, player) -- S1: 원장 없는 태초 격리 · 확률 검사(자동 제재 없음)
 end
 
 Players.PlayerAdded:Connect(loadForPlayer)

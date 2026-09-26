@@ -130,6 +130,8 @@ function PrimordialRegistry.claim(player, item, options)
 		ownerName = ownerName,
 		at = os.time(),
 		source = item.source,
+		rollId = options.rollId, -- S1 2-3 발급 원장 키(드랍 굴림마다 - CombatResolution). 없으면(운영 지급 · 옛 경로) 집계 · 칭호 대상이 아니다
+		p = options.p, -- 그 굴림의 태초 확률
 	}
 	item.primordial = stamp
 	item.locked = true -- ⑦ 태초 기본 잠금
@@ -142,6 +144,14 @@ function PrimordialRegistry.claim(player, item, options)
 		if not no then
 			stats.claimFails += 1
 			warn(("[D1] 태초 세계 번호 발급 실패(DataStore) - %s · 번호 없이 지급"):format(ownerName))
+		end
+		if stamp.rollId then -- S1 2-3: 원장(번호가 정해진 뒤 한 번 - 번호 실패여도 굴림은 기록)
+			local AcquisitionAudit = require(script.Parent.AcquisitionAudit)
+			stamp.ledger = AcquisitionAudit.writeLedger({ rollId = stamp.rollId, userId = stamp.ownerId, source = item.source, p = stamp.p, stage = item.source and item.source.stage,
+				at = stamp.at, jobId = game.JobId, no = no, part = item.part, test = options.test == true }) and "ok" or "failed"
+			if stamp.ledger ~= "ok" then
+				warn(("[forge-game] 태초 원장 쓰기 실패 - %s · 굴림 %s(다음 로드 때 격리될 수 있다 - 운영 해제)"):format(ownerName, stamp.rollId))
+			end
 		end
 		if options.onNumbered then
 			pcall(options.onNumbered, no)

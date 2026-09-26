@@ -253,7 +253,7 @@ function V.runPure()
 		local migrated = SaveSystem.migrate(old)
 		local bagP, bagA, eq = migrated.inventory[1], migrated.inventory[2], migrated.classes[anyClass].equipment.shoes
 		r.check(("v42 → v%d · 옛 태초(가방 · 착용) = 이전 태초 + 잠금 · 고대는 그대로 · isValidProfile %s"):format(migrated.version, tostring(SaveSystem.isValidProfile(migrated))),
-			migrated.version == 43 and bagP.primordial and bagP.primordial.legacy == true and bagP.locked == true and eq.primordial and eq.primordial.legacy == true and eq.locked == true
+			migrated.version >= 43 and bagP.primordial and bagP.primordial.legacy == true and bagP.locked == true and eq.primordial and eq.primordial.legacy == true and eq.locked == true
 				and bagA.primordial == nil and bagA.locked == false and SaveSystem.isValidProfile(migrated))
 		local bad = SaveSystem.migrate(SaveSystem.defaultProfile())
 		bad.inventory = { { grade = "primordial", part = "armor", itemLevel = 1, tierIndex = 1, locked = true, primordial = "숫자" } }

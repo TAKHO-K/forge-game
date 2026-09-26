@@ -1,7 +1,8 @@
 -- MV1 낙하(사용자 결정 - 불꽃과 낙사). 판정 = 착지 순간 수직 속도(MoveRules.fallOutcome) · 수치 = MovementConfig.fall.
 --   착지 속도는 캐릭터 물리를 가진 클라가 잰다(FallLanded RemoteEvent - 속도 · 물 · 사다리 표시). 서버는 제외(MoveRules.fallExcluded)를 스스로 판정한다:
 --     보스전(BossEncounterId) · 나무 둘레(WorldMapData.progress.treeRadius) · 강제 체공(HeightGuard 발사 허가 · 예외가 permitGraceSeconds 안) · 사다리에서 떨어짐(서버 체공 세션 fromLadder 또는 클라 표시) · 물.
---   보고를 안 보내는 부정은 제 피해만 피한다(보상 이득 없음) - S1에서 서버 궤적 추정과 대조할 자리(MV1 보고서).
+--   S1: 피해 속도 = 서버가 본 궤적(AirState 세션 최고점 − 착지 → 자유 낙하 속도)이다. 클라가 보낸 속도는 로그 대조만(달라도 서버 값) ·
+--   클라가 보고를 안 보내도 서버 착지 뒤 reportWindowSeconds가 지나면 서버가 스스로 처리한다(물 = 서버 판정 · 사다리 = 세션 fromLadder).
 --   피해 = 최대 체력 비율(보호막 무시 · 받는 피해 배율 없음 - 판정형 피해). 체력이 0이 되거나 치명 속도면 쓰러짐:
 --     "쿵!" + 그을림(Character Attribute FallKnockdown · CharredUntil - 클라 FallFx가 그린다) · 루트 고정 knockdownSeconds → 마지막 안전 지점(이번 체공을 시작한 땅)에서 체력 가득 · 아이템 손실 없음.
 local Players = game:GetService("Players")
@@ -33,8 +34,8 @@ function FallServer.context(player, flags, now)
 		inTree = root ~= nil and Vector3.new(root.Position.X, 0, root.Position.Z).Magnitude <= WorldMapData.progress.treeRadius,
 		permitRecent = HeightGuard.recentlyForced(player, F.permitGraceSeconds, now),
 		exemptRecent = false, -- recentlyForced가 예외까지 본다
-		fromLadder = flags.ladder == true or (session ~= nil and session.fromLadder == true),
-		inWater = flags.water == true,
+		fromLadder = session ~= nil and session.fromLadder == true, -- 리뷰 5: 사다리 = 서버 체공 세션 표시만
+		inWater = (flags.server and flags.water == true) or (root ~= nil and require(script.Parent.WorldHazards).inWater(root.Position)), -- 리뷰 5: 물 = 서버 판정(클라 표시 안 믿음)
 	}
 end
 
@@ -89,17 +90,33 @@ function FallServer.onLanded(player, speed, flags)
 	if type(speed) ~= "number" or speed ~= speed then
 		return "none"
 	end
+	-- 리뷰 1(보안): 서버가 본 체공과 맞는 보고만 - 체공 세션이 진행 중이거나 막 끝났고, 체공 시간 ≥ 보고 속도의 자유 낙하 시간 × 여유
+	local session = AirState.currentOrLastSession(player)
+	if session and not session.endedAt and session.peakY and not (flags and flags.server) then
+		-- 리뷰 5: 서버가 아직 착지를 못 봤다(지연) - 신고는 대조용으로만 적고, 서버 착지 때(onServerLanded) 서버 landY로 처리한다(정점에서 신고해 면제받는 길 차단)
+		session.clientReport = speed
+		return "pending"
+	end
+	if not session or (session.endedAt and now - session.endedAt > F.reportWindowSeconds) or session.fallHandled then
+		FallServer.log = { player = player, speed = speed, kind = "none", excluded = "no_air" }
+		return "excluded:no_air"
+	end
+	-- S1: 속도 = 서버 궤적 값(궤적이 있으면). 클라 값은 대조 로그만.
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local serverSpeed = AirState.fallSpeedOf(session, root and root.Position.Y)
+	local clientSpeed = speed
+	if serverSpeed then
+		if math.abs(serverSpeed - speed) > math.max(20, serverSpeed * 0.25) then
+			FallServer.mismatches = (FallServer.mismatches or 0) + 1
+		end
+		speed = serverSpeed
+	end
+	session.fallHandled = true
 	local out = MoveRules.fallOutcome(speed)
-	local entry = { player = player, speed = speed, kind = out.kind, fraction = out.fraction }
+	local entry = { player = player, speed = speed, clientSpeed = clientSpeed, server = serverSpeed ~= nil, kind = out.kind, fraction = out.fraction }
 	FallServer.log = entry
 	if out.kind == "none" then
 		return "none"
-	end
-	-- 리뷰 1(보안): 서버가 본 체공과 맞는 보고만 - 체공 세션이 진행 중이거나 막 끝났고, 체공 시간 ≥ 보고 속도의 자유 낙하 시간 × 여유
-	local session = AirState.currentOrLastSession(player)
-	if not session or (session.endedAt and now - session.endedAt > F.reportWindowSeconds) then
-		entry.excluded = "no_air"
-		return "excluded:no_air"
 	end
 	local airtime = (session.endedAt or now) - session.since
 	if airtime < speed / MovementConfig.gravity * F.airtimeSlack then
@@ -125,7 +142,31 @@ function FallServer.onLanded(player, speed, flags)
 	return "damage"
 end
 
+-- S1: 서버가 본 착지(AirState) - 클라 보고가 reportWindowSeconds 안에 없으면 서버 궤적만으로 처리(보고를 안 보내는 부정 차단).
+local function onServerLanded(st, session)
+	local player = st.player
+	if not player or not session.peakY then
+		return
+	end
+	task.delay(0.05, function() -- 리뷰 5: 서버 착지를 보면 바로(클라 신고는 대조용 - pending)
+		if session.fallHandled or not player.Parent then
+			return
+		end
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local speed = AirState.fallSpeedOf(session)
+		if not root or not speed or MoveRules.fallOutcome(speed).kind == "none" then
+			return
+		end
+		local inWater = require(script.Parent.WorldHazards).inWater(root.Position)
+		lastReportAt[player] = nil
+		local result = FallServer.onLanded(player, speed, { water = inWater, server = true })
+		FallServer.serverResolved = (FallServer.serverResolved or 0) + 1
+		print(("[forge-game] 낙하(서버 궤적): %s 높이 %.0f → %s"):format(player.Name, (session.peakY - (session.landY or 0)), tostring(result)))
+	end)
+end
+
 function FallServer.start()
+	AirState.onLanded = onServerLanded
 	local landed = Instance.new("RemoteEvent")
 	landed.Name = "FallLanded"
 	landed.Parent = ReplicatedStorage

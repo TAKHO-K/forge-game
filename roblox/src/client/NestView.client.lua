@@ -101,7 +101,7 @@ local function refresh(id)
 			local zoneKey = part:GetAttribute("NestZone")
 			if zoneKey == "hub" then
 				local spec = NestState.spec(id)
-				zoneKey = spec and spec.eggZone or "tier1"
+				zoneKey = part:GetAttribute("NestEggZone") or (spec and spec.eggZone) or "tier1" -- S1: C 스펙은 서버 전용 - 앵커 Attribute
 			end
 			local cf = CFrame.new(part.Position - Vector3.new(0, 0.2, 0)) * CFrame.Angles(0.15, 0, 0.1)
 			eggs[id] = { model = NestState.buildEgg(Workspace.CurrentCamera, cf, zoneKey, info.grade), grade = info.grade }

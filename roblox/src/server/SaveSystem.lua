@@ -254,6 +254,7 @@ local function defaultProfile()
 		titles = {},
 		-- M1-3(v41): 알 가방(부화 · 펫은 펫 단계) - { { zone = 구역 키, grade = "normal" | "good" | "rare", species = { 후보 id 2 }, nest = 둥지 id, at = unix 초 } } · 상한 NestData.eggCap.
 		eggs = {},
+		audit = { lambda = 0, primordialRolls = 0, playSeconds = 0 }, -- S1(v44): 획득 감사(AcquisitionAudit)
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
 		gemDust = 0,
@@ -979,7 +980,38 @@ local function migrate(data)
 		data.version = 43
 	end
 
+	if data.version < 44 then
+		-- S1: 획득 감사. λ = 0부터(옛 드랍 확률은 기록이 없다 - 옛 태초는 원장이 없어 격리 대상이라 확률 검사에 안 들어간다).
+		--   플레이 시간 = 옛 계정 최고 스테이지에 합법으로 닿는 최소 시간(속도 봉투 역함수 - 옛 진도를 보류하지 않게).
+		local best = 1
+		for _, cs in pairs(data.classes or {}) do
+			local sp = type(cs) == "table" and cs.stageProgress
+			if type(sp) == "table" and type(sp.infiniteBest) == "number" then
+				best = math.max(best, sp.infiniteBest)
+			end
+		end
+		local AuditMath = require(game:GetService("ReplicatedStorage").Shared.AuditMath)
+		data.audit = { lambda = 0, primordialRolls = 0, playSeconds = math.floor(AuditMath.hoursForStage(best) * 3600) }
+		-- 리뷰 1: D1 ~ S1 사이 정상 발급 태초(번호 있음 · 원장 id 없음) = preLedger(격리 안 함 · 집계 대상 - 원장 제도 전 발급)
+		local function markPre(item)
+			local stamp = type(item) == "table" and item.grade == "primordial" and item.primordial
+			if type(stamp) == "table" and not stamp.legacy and not stamp.rollId then
+				stamp.preLedger = true
+			end
+		end
+		for _, item in ipairs(data.inventory or {}) do
+			markPre(item)
+		end
+		for _, cs in pairs(data.classes or {}) do
+			for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+				markPre(cs.equipment and cs.equipment[part])
+			end
+		end
+		data.version = 44
+	end
+
 	data.savedAt = data.savedAt or 0
+	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data
 end
 
@@ -1198,7 +1230,79 @@ end
 -- 원리)의 기준값이다. UpdateAsync의 old가 이 값보다 최신이면 - 즉 내가 모르는 사이
 -- 다른 서버가 이미 더 최근 저장을 남겼으면 - 내 메모리 상태로 덮어쓰지 않고 포기한다.
 -- 성공하면 true, 실패하면 false + 이유("stale_session" 또는 에러 메시지)를 돌려준다.
+-- S1 2-8 운영: 저장 버전 목록 · 복구(DataStore 버전 = 30일 보관 - 탐지 · 복구는 30일 안). userId 키(Studio = 수동 · 검증 키 - 실제 프로필을 건드리지 않는다).
+--   복구는 그 사람이 이 서버에 없을 때만(있으면 메모리 상태가 곧 덮어쓴다 - 다른 서버 접속은 알 수 없다: 운영 절차로 확인).
+local function opsKey(userId)
+	return "Player_" .. userId .. (studioSuffix() or "")
+end
+function SaveSystem.opsListVersions(userId, count)
+	local ok, pages = pcall(function()
+		return store:ListVersionsAsync(opsKey(userId), Enum.SortDirection.Descending, nil, nil, count or 10)
+	end)
+	if not ok then
+		return nil, tostring(pages)
+	end
+	local list = {}
+	for _, info in ipairs(pages:GetCurrentPage()) do
+		table.insert(list, { version = info.Version, createdTime = info.CreatedTime, isDeleted = info.IsDeleted })
+	end
+	return list
+end
+function SaveSystem.opsRestoreVersion(userId, version)
+	local ok, data = pcall(function()
+		return store:GetVersionAsync(opsKey(userId), version)
+	end)
+	if not ok or type(data) ~= "table" then
+		return false, ok and "no_data" or tostring(data)
+	end
+	local okSet, err = pcall(function()
+		store:SetAsync(opsKey(userId), data)
+	end)
+	return okSet, okSet and "ok" or tostring(err)
+end
+
+-- S1 2-1: 하드 상한을 넘는 스테이지 필드(직업마다 infinite · infiniteBest · bestBossCleared) 목록 - 있으면 그 저장을 거부한다(옛 값 유지 · 로그).
+function SaveSystem.stageCapViolations(profile)
+	local cap = require(game:GetService("ReplicatedStorage").Shared.data.InfiniteStageConfig).hardMaxStage
+	local bad = {}
+	for classId, cs in pairs(type(profile) == "table" and profile.classes or {}) do
+		local sp = type(cs) == "table" and cs.stageProgress
+		if type(sp) == "table" then
+			for _, field in ipairs({ "infinite", "infiniteBest", "bestBossCleared" }) do
+				if type(sp[field]) == "number" and sp[field] > cap then
+					table.insert(bad, ("%s.%s=%s"):format(tostring(classId), field, tostring(sp[field])))
+				end
+			end
+		end
+	end
+	return bad
+end
+
+-- 리뷰 7: 넘는 값은 상한으로 자른다(저장 전체 거부 = 골드 · 아이템까지 못 쓰게 된다) + 로그. 반환: 자른 칸 목록.
+function SaveSystem.clampStageCap(profile)
+	local bad = SaveSystem.stageCapViolations(profile)
+	if #bad > 0 then
+		local cap = require(game:GetService("ReplicatedStorage").Shared.data.InfiniteStageConfig).hardMaxStage
+		for _, cs in pairs(profile.classes or {}) do
+			local sp = type(cs) == "table" and cs.stageProgress
+			if type(sp) == "table" then
+				for _, field in ipairs({ "infinite", "infiniteBest", "bestBossCleared" }) do
+					if type(sp[field]) == "number" and sp[field] > cap then
+						sp[field] = cap
+					end
+				end
+			end
+		end
+		SaveSystem.capClamped = (SaveSystem.capClamped or 0) + 1
+	end
+	return bad
+end
+
 function SaveSystem.saveProfile(player, profile)
+	local bad = SaveSystem.clampStageCap(profile)
+	if #bad > 0 then
+		warn(("[forge-game] 저장 전 스테이지 하드 상한으로 자름: %s - %s"):format(tostring(player and player.Name), table.concat(bad, " · ")))
+	end
 	local key = storeKey(player)
 	local baselineSavedAt = profile.savedAt or 0
 	local newSavedAt = os.time()

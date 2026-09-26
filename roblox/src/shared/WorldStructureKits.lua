@@ -66,7 +66,8 @@ function Kits.nestMarker(ctx, list, spot)
 	prim(list, ctx.model, "NestRing", Vector3.new(M.ringH, M.ring, M.ring), CFrame.new(spot + Vector3.new(0, M.ringH / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 		WOOD.color, { shape = "Cylinder", material = "Wood", collide = false })
 	prim(list, ctx.model, "NestSpot", Vector3.new(2, 2, 2), CFrame.new(spot + Vector3.new(0, 1.4, 0)), { 255, 255, 255 },
-		{ collide = false, transparency = 1, attrs = { NestId = ctx.spec.id, NestTrack = ctx.spec.track, NestSub = ctx.spec.sub, NestZone = ctx.spec.zone, NestTop = ctx.spec.top or nil, NestHigh = ctx.spec.high or nil } })
+		{ collide = false, transparency = 1, attrs = { NestId = ctx.spec.id, NestTrack = ctx.spec.track, NestSub = ctx.spec.sub, NestZone = ctx.spec.zone, NestTop = ctx.spec.top or nil, NestHigh = ctx.spec.high or nil,
+			NestEggZone = ctx.spec.eggZone } }) -- S1: 마을 C 알 구역(클라에 C 스펙이 없다)
 end
 
 -- 오르기 발판 줄(원 둘레 나선): 중심 cf(바닥) · 반경 rc · 칸 크기 size · 높이 목록 heights · 시작 각(앞 = 0) → 발판 cf 목록

@@ -87,7 +87,7 @@ function G2aVerify.runPure()
 		local launchSamples = { at(0, true), at(0, true), at(12, false), at(over, false), at(8, false), at(0, true) }
 		launchSamples[3].exempt = 3
 		local launch = run(launchSamples)
-		local teleport = run({ at(0, true), at(0, true), at(40, false, 200), at(40, false, 200), at(44, false, 200) })
+		local teleport = run({ at(0, true), at(0, true), at(40, false, 200), at(40, false, 200), at(44, false, 200) }) -- S1: 서버 표시(reset) 없는 순간이동 = 기준을 새로 잡지 않는다(높이 검사가 되돌림 · 수평은 evaluateHorizontal)
 		local probeSamples = { at(0, true), at(0, true), at(over, false), at(over, false) }
 		probeSamples[3].probe = function() return over end -- FloorMaterial이 늦어 공중으로 보이지만 발 바로 아래가 지면
 		probeSamples[4].probe = function() return over end
@@ -106,9 +106,9 @@ function G2aVerify.runPure()
 		local flyWithGround = run(flyProbe)
 		local anchored = run({ at(0, true), at(0, true), { feetY = over, pos = Vector3.new(0, over + 3, 0), grounded = false, skip = true }, { feetY = over, pos = Vector3.new(0, over + 3, 0), grounded = false, skip = true } })
 		local ok = jump == "reset,ok,ok,ok,ok,ok" and fly == "reset,ok,ok,strike,revert,strike" and platform == "reset,ok,ok,ok,ok,ok" and launch == "reset,ok,ok,ok,ok,ok"
-			and teleport == "reset,ok,reset,ok,ok" and probe == "reset,ok,ok,ok" and anchored == "reset,ok,ok,ok"
+			and teleport == "reset,ok,strike,revert,strike" and probe == "reset,ok,ok,ok" and anchored == "reset,ok,ok,ok"
 			and missed == "reset,ok,ok,ok,ok,ok" and flyWithGround == "reset,ok,ok,strike,revert"
-		r.check(("허용 %.2f(M1-0 = 7.92 × 2.7 + 1) · 점프 [%s] · 띄워 두기 [%s](기대 둘째 넘음에서 revert) · 단상 위 점프 [%s] · 넉백 예외 [%s] · 순간이동 [%s] · 서 있음(광선) [%s] · 루트 고정 [%s] · 착지 놓친 테라스 재점프 [%s] · 날기(아래 지면 멀리) [%s]"):format(
+		r.check(("허용 %.2f(M1-0 = 7.92 × 2.7 + 1) · 점프 [%s] · 띄워 두기 [%s](기대 둘째 넘음에서 revert) · 단상 위 점프 [%s] · 넉백 예외 [%s] · 표시 없는 순간이동(S1 = 되돌림) [%s] · 서 있음(광선) [%s] · 루트 고정 [%s] · 착지 놓친 테라스 재점프 [%s] · 날기(아래 지면 멀리) [%s]"):format(
 			allow, jump, fly, platform, launch, teleport, probe, anchored, missed, flyWithGround), ok and near(allow, 22.384, 1e-3))
 	end)
 
@@ -188,8 +188,10 @@ function G2aVerify.runLive(player, env)
 		align.Parent = root
 		local t0 = os.clock()
 		local caught
+		local hoverRise = 0 -- S1 계측: 서버가 본 띄워 두기 높이(클라 물리가 제약을 따랐는가)
 		while os.clock() - t0 < 3 do
 			task.wait(0.05)
+			hoverRise = math.max(hoverRise, root.Position.Y - base.Y)
 			if st.reverts > revertsBeforeAlign then
 				caught = os.clock() - t0
 				break
@@ -200,8 +202,8 @@ function G2aVerify.runLive(player, env)
 		task.wait(1)
 		r.check(("넉백 높이 %d(허용 %.2f 초과): 서버가 본 루트 최고 +%.1f · 되돌림 %d(기대 0 - 넉백 예외)"):format(launchHeight, JumpMath.heightGuardAllowance(), launchRise, afterLaunch),
 			afterLaunch == 0 and patternEvent ~= nil)
-		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(허용 + 3) 되돌림 %s초 뒤(기대 ≤ 1.5 - 폴링 0.25 × 연속 2) · 기록 시각 있음 %s"):format(
-			afterJump, caught and ("%.2f"):format(caught) or "없음", tostring(st.flaggedAt ~= nil)),
+		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(허용 + 3) 되돌림 %s초 뒤(기대 ≤ 1.5 - 폴링 0.25 × 연속 2 · 서버가 본 최고 +%.1f · 허용 %.2f · off %s) · 기록 시각 있음 %s"):format(
+			afterJump, caught and ("%.2f"):format(caught) or "없음", hoverRise, st.allowance or -1, tostring(HeightGuard.debugOff), tostring(st.flaggedAt ~= nil)),
 			afterJump == 0 and caught ~= nil and caught <= 1.5 and st.flaggedAt ~= nil)
 		-- ③ 리더보드: 이 판(10초 전 시작)에 되돌림이 있었다 → 거절
 		local judged = Leaderboard.onBossCleared({ stage = 10, bossId = "x", bossMaxHp = 1, seconds = 10, isParty = false, members = { { player = player, advanced = false, reason = "verify", ratio = 1 } }, contributors = {} })

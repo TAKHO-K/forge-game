@@ -15,6 +15,7 @@ local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 
 local HeightGuard = {}
 HeightGuard.debugOff = false
+local isStudio = game:GetService("RunService"):IsStudio()
 
 local cfg = MovementConfig.heightGuard
 local PERMIT = MovementConfig.permit
@@ -65,7 +66,7 @@ local function stepPermit(st, sample, now)
 		-- 내려가기만: 상한 뒤 가장 낮았던 발(이번 표본 전까지) + 평소 허용 - 이번 표본으로 먼저 올리면 다시 오르기를 못 잡는다(M1-2c 첫 Play X)
 		local low = permit.lowFeetY or sample.feetY
 		permit.descending = true
-		permit.maxFeetY = math.min(permit.maxFeetY, low + JumpMath.heightGuardAllowance())
+		permit.maxFeetY = math.min(permit.maxFeetY, low + (st.allowance or JumpMath.heightGuardAllowance()))
 		permit.lowFeetY = math.min(low, sample.feetY)
 	end
 	return permit
@@ -75,17 +76,15 @@ end
 -- 리뷰 1: 폴링(0.25초)이 짧은 착지(높은 단에 올라서자마자 다시 뜀)를 놓치면 기준이 아래층에 남는다 - 넘었을 때 지금 발 아래 지면을 찾아 그 지면 기준으로 다시 잰다.
 -- 반환: "ok" | "strike" | "revert"(되돌릴 자리 = st.supportPos) | "reset"(순간이동으로 봄).
 function HeightGuard.evaluate(st, sample, now)
-	local moved = st.lastPos and (sample.pos - st.lastPos).Magnitude or 0
 	st.lastPos = sample.pos
 	if sample.skip then
 		st.strikes = 0
 		return "ok"
 	end
 	local permit = stepPermit(st, sample, now)
-	-- 한 폴링에 멀리 움직임 = 순간이동으로 보고 기준을 새로(유일한 수평 이동 검사). 허가 비행 중(던지기 · 판 털기 - 초속 100 ~ 350)은 순간이동이 아니라 비행이다 - 기준을 공중으로 옮기지 않는다
-	-- (서버 순간이동은 reset이 허가를 지운다).
-	local flying = permit ~= nil and not permit.descending
-	if (moved > cfg.teleportResetStuds and not flying) or st.supportY == nil then
+	-- S1: 옛 "한 폴링에 teleportResetStuds 넘게 움직임 = 순간이동으로 인정"은 삭제 - 서버 순간이동은 reset(supportY = nil)으로만 기준을 새로 잡는다.
+	--   표시 없는 큰 수평 이동 = evaluateHorizontal이 되돌린다 · 표시 없는 큰 위 이동 = 아래 높이 검사가 되돌린다(아래로 빠른 낙하는 그대로 허용).
+	if st.supportY == nil then
 		st.supportY, st.supportPos, st.strikes = sample.feetY, sample.pos, 0
 		st.graceUntil = math.max(st.graceUntil, now + cfg.graceSeconds)
 		return "reset"
@@ -98,7 +97,8 @@ function HeightGuard.evaluate(st, sample, now)
 		st.strikes = 0
 		return "ok"
 	end
-	local limit = st.supportY + JumpMath.heightGuardAllowance()
+	local allowance = st.allowance or JumpMath.heightGuardAllowance() -- S1: 해금 단계별(환생 0 = 공중 점프 0 → 8.92) · 합성 상태는 최대
+	local limit = st.supportY + allowance
 	if permit then
 		limit = math.max(limit, permit.maxFeetY)
 	end
@@ -107,7 +107,7 @@ function HeightGuard.evaluate(st, sample, now)
 		return "ok"
 	end
 	local groundY = sample.probe and sample.probe()
-	if groundY and sample.feetY - groundY <= JumpMath.heightGuardAllowance() then
+	if groundY and sample.feetY - groundY <= allowance then
 		st.supportY, st.strikes = groundY, 0 -- 되돌릴 자리(supportPos)는 실제로 서 있던 곳 그대로
 		return "ok"
 	end
@@ -117,6 +117,107 @@ function HeightGuard.evaluate(st, sample, now)
 		return "revert"
 	end
 	return "strike"
+end
+
+-- ─────────────────────────── S1 수평 이동 검사 ───────────────────────────
+-- 순수 한 번(검증이 합성 표본으로 부른다). ctx = { rate(지금 합법 최대 수평 속도 stud/s), exempt(bool - 검사 안 함) }.
+-- 반환 "ok" | "hrevert"(되돌릴 자리 = st.hGood). 대시 · 밀림 허가는 st.hBank(grantDash · grantBurst)에서 쓴다.
+local MG = MovementConfig.moveGuard
+function HeightGuard.evaluateHorizontal(st, sample, now, ctx)
+	st.hBank = st.hBank or {}
+	st.hViolations = st.hViolations or 0
+	local pos = sample.pos
+	if sample.skip or ctx.exempt then
+		st.hGood, st.hAt, st.bucket = pos, now, nil
+		return "ok"
+	end
+	-- 리뷰 3: 서버 순간이동(reset) 뒤 유예는 "자유 이동 창"이 아니다 - 도착 자리(hAnchor = reset 순간 서버 루트) 근처만 새 기준으로 받는다.
+	--   지연으로 옛 자리 표본이 끼면 도착 자리로 되돌린다(위반으로 세지 않는다 - 정상 순간이동의 지연).
+	if ctx.grace and st.hAnchor then
+		local near = Vector3.new(pos.X - st.hAnchor.X, 0, pos.Z - st.hAnchor.Z).Magnitude <= ctx.rate * MG.bucketSeconds + MG.slackStuds
+		if near then
+			st.hGood, st.hAt, st.bucket = pos, now, nil
+			return "ok"
+		end
+		st.hGood = st.hAnchor
+		st.hAt = now
+		st.hGraceReverts = (st.hGraceReverts or 0) + 1
+		return "hrevert"
+	end
+	if not st.hGood then
+		st.hGood, st.hAt, st.bucket = pos, now, nil
+		return "ok"
+	end
+	local dt = math.clamp(now - (st.hAt or now), 0, 1)
+	st.hAt = now
+	local cap = ctx.rate * MG.bucketSeconds + MG.slackStuds
+	st.bucket = math.min(cap, (st.bucket or cap) + ctx.rate * dt)
+	local bank = 0
+	for i = #st.hBank, 1, -1 do
+		if now > st.hBank[i].untilAt then
+			table.remove(st.hBank, i)
+		else
+			bank += st.hBank[i].studs
+		end
+	end
+	local d = Vector3.new(pos.X - st.hGood.X, 0, pos.Z - st.hGood.Z).Magnitude
+	if d <= st.bucket then
+		st.bucket -= d
+		st.hGood = pos
+		return "ok"
+	end
+	local need = d - st.bucket
+	if need <= bank + 1e-6 then
+		for _, b in ipairs(st.hBank) do -- 먼저 받은 허가부터
+			local use = math.min(b.studs, need)
+			b.studs -= use
+			need -= use
+		end
+		st.bucket = 0
+		st.hGood = pos
+		return "ok"
+	end
+	st.hViolations += 1
+	st.hLastViolation = { at = now, studs = d, allowed = st.bucket + bank, rate = ctx.rate }
+	return "hrevert"
+end
+
+-- 순수: 허가 한 장 쌓기(대시 · 밀림) - 검증이 합성 상태에 준다.
+function HeightGuard.bankAt(st, studs, seconds, now)
+	st.hBank = st.hBank or {}
+	table.insert(st.hBank, { studs = studs, untilAt = now + seconds })
+end
+
+-- 서버가 준 대시(DashServer - 거리 = 서버 계산) · 2단 대시는 두 번 부른다.
+function HeightGuard.grantDash(player, rangeStuds)
+	if typeof(player) ~= "Instance" then
+		return
+	end
+	HeightGuard.bankAt(stateOf(player), rangeStuds * MG.dashMargin, MG.dashWindowSeconds, os.clock())
+end
+
+-- 서버가 보낸 밀림(선인장 - WorldHazards): 속도 × 시간 만큼.
+function HeightGuard.grantBurst(player, studs)
+	if typeof(player) ~= "Instance" then
+		return
+	end
+	HeightGuard.bankAt(stateOf(player), studs, MG.burstWindowSeconds, os.clock())
+end
+
+-- 지금 합법 최대 수평 속도(합법 이동 목록 중 켜진 것) · 검사 제외 여부.
+function HeightGuard.horizontalContext(st, character, root, humanoid, now)
+	local walk = MovementConfig.walkSpeedStuds * MovementConfig.moveSpeedMaxMultiplier * MG.walkMargin
+	local rate = walk
+	if character:GetAttribute("Gliding") then
+		rate = math.max(rate, MovementConfig.glide.forwardSpeed * MG.glideMargin)
+	end
+	if humanoid:GetState() == Enum.HumanoidStateType.Swimming or require(script.Parent.WorldHazards).inWater(root.Position) then
+		rate = math.max(rate, walk + MG.flowMaxStuds)
+	end
+	if st.permit and now <= st.permit.expiresAt then -- 리뷰 4: 설계 체공 안만(내려가기 단계 = 걷기 · 활강 속도)
+		rate = math.max(rate, MG.permitSpeed)
+	end
+	return { rate = rate, exempt = now < st.exemptUntil, grace = now < st.graceUntil }
 end
 
 -- 붙잡힘 · 가둠 · 석상(서버가 높이를 고정): 서버가 보낸 순간 부른다. seconds = 붙잡는 시간.
@@ -173,6 +274,9 @@ function HeightGuard.reset(player)
 	end
 	local st = stateOf(player)
 	st.supportY, st.lastPos, st.strikes, st.permit = nil, nil, 0, nil
+	st.hGood, st.bucket = nil, nil -- S1: 수평 기준도 새 자리에서
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	st.hAnchor = root and root.Position or nil -- 리뷰 3: 유예 동안 받을 도착 자리(서버가 방금 옮긴 루트)
 	st.graceUntil = os.clock() + cfg.graceSeconds
 end
 
@@ -258,6 +362,32 @@ function HeightGuard.poll(player, now)
 		end,
 	}
 	local permitBefore = st.permit
+	-- S1: 높이 허용치 = 해금된 공중 점프 수 기준(미해금 공중 점프 = 클라 물리라 요청이 없다 - 서버는 높이로 잡는다)
+	st.allowance = JumpMath.heightGuardAllowance(require(ReplicatedStorage.Shared.MoveRules).tierOf(player).airJumps)
+	-- S1 수평 이동(먼저 - 되돌리면 이번 높이 판정은 건너뛴다)
+	local hv = HeightGuard.evaluateHorizontal(st, sample, now, HeightGuard.horizontalContext(st, character, root, humanoid, now))
+	if hv == "hrevert" and now < st.graceUntil then -- 유예 중 = 도착 자리로 되돌림만(위반 아님 · 로그 없음)
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.CFrame = CFrame.new(st.hGood) * (root.CFrame - root.CFrame.Position)
+		return "hsnap"
+	end
+	if hv == "hrevert" then
+		local from = root.Position
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.CFrame = CFrame.new(st.hGood) * (root.CFrame - root.CFrame.Position)
+		st.lastPos = st.hGood
+		st.hReverts = (st.hReverts or 0) + 1
+		if isStudio then
+			player:SetAttribute("S1HReverts", st.hReverts) -- 검증 계측(Studio)
+		end
+		local v = st.hLastViolation
+		if (st.hWarnedAt or -math.huge) < now - 5 then -- 로그만(5초에 한 번 - 킥 · 자동 제재 없음)
+			st.hWarnedAt = now
+			warn(("[forge-game] 이동 보정: %s 수평 %.1f stud(허용 %.1f · 합법 속도 %.0f/s) → (%.0f, %.1f, %.0f)로 되돌림 · 누적 %d"):format(
+				player.Name, v and v.studs or (from - st.hGood).Magnitude, v and v.allowed or 0, v and v.rate or 0, st.hGood.X, st.hGood.Y, st.hGood.Z, st.hViolations or 0))
+		end
+		return "hrevert"
+	end
 	local verdict = HeightGuard.evaluate(st, sample, now)
 	if verdict == "revert" then
 		local from = root.Position
@@ -268,7 +398,7 @@ function HeightGuard.poll(player, now)
 		st.reverts += 1
 		st.permit = nil -- 리뷰: 위반으로 되돌렸으면 남은 허가도 끝
 		warn(("[forge-game] 높이 보정: %s 발 %.1f(기준 %.1f + 허용 %.2f 초과 %d회 · 허가 %s) → (%.0f, %.1f, %.0f)로 되돌림"):format(
-			player.Name, from.Y - MovementConfig.rootAboveFeetStuds, st.supportY, JumpMath.heightGuardAllowance(), cfg.strikes,
+			player.Name, from.Y - MovementConfig.rootAboveFeetStuds, st.supportY, st.allowance or JumpMath.heightGuardAllowance(), cfg.strikes,
 			permitBefore and ("%s ≤ %.1f"):format(tostring(permitBefore.source), permitBefore.maxFeetY) or "없음", st.supportPos.X, st.supportPos.Y, st.supportPos.Z))
 	end
 	return verdict

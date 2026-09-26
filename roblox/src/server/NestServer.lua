@@ -327,6 +327,55 @@ function NestServer.start()
 		end
 	end
 	refreshActive()
+	-- S1: 비밀 둥지(C) 앵커(알 자리 NestSpot · 둥지 고리 NestRing)는 서버 창고에 두었다가 누군가 가까이 오면 월드에 꺼낸다(클라가 멀리서 위치를 읽지 못하게).
+	local vault = Instance.new("Folder")
+	vault.Name = "SecretNestAnchors"
+	vault.Parent = game:GetService("ServerStorage")
+	for id, a in pairs(anchors) do
+		if specById[id].track == "C" then
+			local home = a.part.Parent
+			a.secret = { home = home, ring = home and home:FindFirstChild("NestRing"), shown = true }
+		end
+	end
+	local function setShown(a, shown)
+		local sc = a.secret
+		if sc.shown == shown then
+			return
+		end
+		sc.shown = shown
+		a.part.Parent = shown and sc.home or vault
+		if sc.ring then
+			sc.ring.Parent = shown and sc.home or vault
+		end
+	end
+	NestServer.setSecretShown = setShown
+	local SEC = NestData.secret
+	local function updateSecret()
+		local roots = {}
+		for _, player in ipairs(Players:GetPlayers()) do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				table.insert(roots, root.Position)
+			end
+		end
+		for _, a in pairs(anchors) do
+			if a.secret then
+				local near = math.huge
+				local spot = a.secret.pos or a.part.Position
+				a.secret.pos = spot
+				for _, pos in ipairs(roots) do
+					near = math.min(near, (pos - spot).Magnitude)
+				end
+				if near <= SEC.revealStuds then
+					setShown(a, true)
+				elseif near > SEC.hideStuds then
+					setShown(a, false)
+				end
+			end
+		end
+	end
+	updateSecret()
+	local secretAcc = 0
 	-- 번개 문(서버가 열고 닫는다 - 충돌 · 투명 복제) · 날짜 바뀜(순환)
 	local S = NestData.server
 	local acc, trailAcc, refreshAcc, doorOpen = 0, 0, 0, nil
@@ -350,6 +399,11 @@ function NestServer.start()
 		end
 		acc += dt
 		refreshAcc += dt
+		secretAcc += dt
+		if secretAcc >= SEC.checkSeconds then
+			secretAcc = 0
+			updateSecret()
+		end
 		if acc < S.doorPollSeconds then
 			return
 		end

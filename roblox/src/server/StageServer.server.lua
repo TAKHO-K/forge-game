@@ -79,6 +79,10 @@ local function onStageMove(player, targetStage)
 		reject(player, "safe_cap")
 		return
 	end
+	if targetStage > InfiniteStageConfig.hardMaxStage then -- S1 2-1 하드 상한
+		reject(player, "hard_cap")
+		return
+	end
 
 	-- 보스 게이트(15-1, 지시 [1] "보스를 못 잡으면 다음 스테이지로 못 가는가"): targetStage
 	-- 바로 아래의 보스 스테이지를 아직 못 깼으면 그 이상으로 못 간다. 보스 스테이지

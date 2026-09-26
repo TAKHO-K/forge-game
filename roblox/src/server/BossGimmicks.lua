@@ -191,6 +191,9 @@ BossTrap.registerRescueHandler("push", {
 			target = ArenaShape.clamp(zone, target, 2) -- P3a C: 원형 아레나의 벽 안쪽 2stud
 		end
 		root.CFrame = root.CFrame.Rotation + target
+		if typeof(trapped) == "Instance" then
+			require(script.Parent.HeightGuard).exempt(trapped, 0.5) -- S1: 서버가 끄는 이동(수평 검사 예외)
+		end
 	end,
 })
 

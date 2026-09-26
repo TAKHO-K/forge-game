@@ -137,7 +137,13 @@ function HallOfFame.refresh()
 	local list = PrimordialRegistry.readRecent()
 	lastReadOk = list ~= nil
 	if list then
-		entries = list
+		local AcquisitionAudit = require(script.Parent.AcquisitionAudit) -- S1 2-4: 회수 · 격리 번호 = 결번(명예의 전당에서 뺀다)
+		entries = {}
+		for _, row in ipairs(list) do
+			if not AcquisitionAudit.isNumberExcluded(row.no) then
+				table.insert(entries, row)
+			end
+		end
 		redraw()
 	end
 	return lastReadOk
@@ -145,6 +151,9 @@ end
 
 -- 이 서버에 알림이 온 순간: 같은 번호가 없으면 앞에 넣는다.
 local function onAnnounce(entry)
+	if require(script.Parent.AcquisitionAudit).isNumberExcluded(entry.no) then
+		return
+	end
 	for _, row in ipairs(entries) do
 		if row.no == entry.no then
 			return

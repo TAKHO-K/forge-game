@@ -150,8 +150,9 @@ function JumpMath.moveSpeedMultiplier(speedPercentBonus)
 end
 
 -- 서버 높이 검증 허용치: 마지막 지면 대비 발이 이보다 높으면 위반(M1-0 - 점프력 상한 + 공중 점프 전부의 최대 도달 + 여유).
-function JumpMath.heightGuardAllowance()
-	return JumpMath.maxReachStuds(JumpMath.jumpHeight(MovementConfig.jumpHeightBonusCap)) + MovementConfig.heightGuard.toleranceStuds
+-- airJumps(선택 - S1): 해금된 공중 점프 수(MovementUnlockData 단계 - 없으면 최대 charges).
+function JumpMath.heightGuardAllowance(airJumps)
+	return JumpMath.maxReachStuds(JumpMath.jumpHeight(MovementConfig.jumpHeightBonusCap), airJumps) + MovementConfig.heightGuard.toleranceStuds
 end
 
 -- MV1 대시 거리: 기본 × clamp(장비 걷기 배율, 1, DashConfig.speedScaleMax) × 공중 대시 배율(환생 4 - MovementUnlockData.airDashRangeMultiplier · 지상은 1).

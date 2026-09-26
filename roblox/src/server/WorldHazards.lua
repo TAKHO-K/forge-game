@@ -145,6 +145,7 @@ function WorldHazards.poll(player, now)
 				away = away.Magnitude > 1e-3 and away.Unit or Vector3.new(1, 0, 0)
 				if pushRemote then
 					pushRemote:FireClient(player, away * HZ.pushSpeed)
+					require(script.Parent.HeightGuard).grantBurst(player, HZ.pushSpeed * 1.0) -- S1: 밀림 = 합법 수평 이동(1초분)
 				end
 			elseif gate == "capped" then
 				WorldHazards.stats.cactusCapped += 1

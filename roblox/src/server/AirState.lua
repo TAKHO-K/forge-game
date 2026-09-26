@@ -29,12 +29,17 @@ function AirState.stateOf(player)
 	return st
 end
 
--- 순수 한 스텝(검증이 합성 표본으로 부른다): grounded(bool) · pos(Vector3) · climbing(bool - 떨어지기 직전 상태가 오르기였나).
-function AirState.step(st, grounded, pos, climbing, now)
+-- 순수 한 스텝(검증이 합성 표본으로 부른다): grounded(bool) · pos(Vector3) · climbing(bool - 떨어지기 직전 상태가 오르기였나) · gliding(bool - 활강 중).
+-- S1 낙하 궤적: 세션마다 서버가 본 루트 최고점 peakY(새로 오르기 시작하면(공중 점프 · 발사) · 활강 중이면 다시 잰다) · 착지 높이 landY.
+function AirState.step(st, grounded, pos, climbing, now, gliding)
 	if grounded then
 		if st.session then
 			st.session.endedAt = now
+			st.session.landY = pos.Y
 			st.lastSession = st.session -- 착지 보고(낙하 판정)가 서버 착지보다 늦게 와도 그 체공을 읽는다
+			if AirState.onLanded then
+				AirState.onLanded(st, st.session)
+			end
 		end
 		st.grounded = true
 		st.groundPos = pos
@@ -45,6 +50,23 @@ function AirState.step(st, grounded, pos, climbing, now)
 	end
 	st.lastClimbing = climbing
 	local s = st.session
+	if s then
+		local y = pos.Y
+		local dt = s.prevAt and math.max(now - s.prevAt, 1e-3) or nil
+		local falling = dt and s.prevY and (s.prevY - y) / dt or 0
+		-- 리뷰 5: 활강 = 서버 Gliding + 실제 하강이 활강 속도(5) 근처일 때만 · 다시 오름 = 떨어지던 가장 낮은 곳에서 2 넘게 올랐을 때만(0.06 올리기 · 착지 직전 Gliding 켜기로 최고점을 못 지운다)
+		if not s.peakY or y > s.peakY or (gliding and falling <= 8) then
+			s.peakY = y
+			s.lowY = y
+		else
+			s.lowY = math.min(s.lowY or y, y)
+			if y - s.lowY >= 2 and y < s.peakY then
+				s.peakY = y -- 떨어지다 다시 오름(공중 점프 · 발사) = 새 최고점부터
+				s.lowY = y
+			end
+		end
+		s.prevY, s.prevAt = y, now
+	end
 	if s and not s.counted and now - s.since >= AirState.takeoffMinSeconds then
 		s.counted = true
 		st.takeoffCount += 1
@@ -56,6 +78,15 @@ end
 function AirState.session(player)
 	local st = states[player]
 	return st and st.session
+end
+
+-- S1: 서버가 본 낙하 높이(최고점 − 착지 · 착지 전이면 지금 높이) → 같은 높이의 자유 낙하 착지 속도. 궤적이 없는 세션(검증 합성)은 nil.
+function AirState.fallSpeedOf(session, currentY)
+	if not session or not session.peakY then
+		return nil
+	end
+	local h = session.peakY - (session.landY or currentY or session.peakY)
+	return math.sqrt(2 * workspace.Gravity * math.max(h, 0)), h
 end
 
 -- 서버가 지금 공중으로 본 지 몇 초(땅이면 0).
@@ -152,7 +183,8 @@ function AirState.start()
 			local root = character and character:FindFirstChild("HumanoidRootPart")
 			if humanoid and root and humanoid.Health > 0 then
 				local grounded, climbing = groundedNow(character, humanoid, root)
-				AirState.step(AirState.stateOf(player), grounded or root.Anchored, root.Position, climbing, now)
+				AirState.step(AirState.stateOf(player), grounded or root.Anchored, root.Position, climbing, now, character:GetAttribute("Gliding") == true)
+				AirState.stateOf(player).player = player
 			end
 		end
 	end)

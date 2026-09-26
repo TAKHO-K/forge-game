@@ -435,10 +435,10 @@ function V.runLive(player, env)
 		ground()
 		local maxHp = PlayerState.getMaxHp(player)
 		PlayerState.setHp(player, maxHp)
-		local function land(speed, flags)
+		local function land(speed, flags, ladder)
 			task.wait(MovementConfig.fall.reportMinGapSeconds + 0.05)
-			-- 리뷰 1: 보고는 서버 체공과 맞아야 한다 - 방금 끝난 긴 체공(5초)을 세워 둔다
-			st.lastSession = { id = -1, since = os.clock() - 5, endedAt = os.clock(), takeoffPos = spot, airDashes = 0, airAttacks = 0, ledgeUsed = false, fromLadder = false }
+			-- 리뷰 1: 보고는 서버 체공과 맞아야 한다 - 방금 끝난 긴 체공(5초)을 세워 둔다 · S1: 사다리 = 서버 세션 표시만
+			st.lastSession = { id = -1, since = os.clock() - 5, endedAt = os.clock(), takeoffPos = spot, airDashes = 0, airAttacks = 0, ledgeUsed = false, fromLadder = ladder == true }
 			return FallServer.onLanded(player, speed, flags)
 		end
 		local n = land(90)
@@ -450,8 +450,8 @@ function V.runLive(player, env)
 		player:SetAttribute("BossEncounterId", "verify")
 		local eb = land(300)
 		player:SetAttribute("BossEncounterId", nil)
-		local ew = land(200, { water = true })
-		local el = land(200, { ladder = true })
+		local ew = land(200, { water = true, server = true }) -- S1 리뷰 5: 물 = 서버 판정(서버 착지 경로의 표시)
+		local el = land(200, nil, true)
 		HeightGuard.grant(player, 999, 2, "verify")
 		local ep = land(300)
 		HeightGuard.reset(player)

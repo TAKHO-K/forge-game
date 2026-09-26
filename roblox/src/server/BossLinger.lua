@@ -41,7 +41,7 @@ local function canGoNext(player, stage)
 	if type(best) ~= "number" then
 		return false -- 프로필 없는 멤버(검증 스탠드인 등) - Play 1 오류
 	end
-	if target > best + 1 or target > InfiniteStageConfig.safeStageCap then
+	if target > best + 1 or target > InfiniteStageConfig.safeStageCap or target > InfiniteStageConfig.hardMaxStage then
 		return false
 	end
 	local required = BossRules.getBossStageBelow(target)

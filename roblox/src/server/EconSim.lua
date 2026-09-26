@@ -635,18 +635,20 @@ local function checkBag(state, profile, tierIndex, stage, kills, whatIf, killSec
 	-- awakenGap칸 넘게 뒤처지고 골드가 있으면 각성(shared/Awaken 비용 - 게임과 같은 함수).
 	local hold = whatIf and whatIf.primordialHold
 	if hold and state.reach >= hold.fromStage then
-		local item = state.gear[hold.part]
-		if not item or item.grade ~= "primordial" then
-			state.gear[hold.part] = { grade = "primordial", itemLevel = state.reach }
-			replaced += 1
-		elseif state.reach - item.itemLevel > hold.awakenGap then
-			local cost = Awaken.cost(state.reach)
-			if state.gold >= cost then
-				state.gold -= cost
-				state.awakenGold += cost
-				state.awakenCount += 1
-				item.itemLevel = state.reach
+		for _, part in ipairs(hold.parts or { hold.part }) do -- S1 봉투: parts = 여러 부위(전 부위 태초)
+			local item = state.gear[part]
+			if not item or item.grade ~= "primordial" then
+				state.gear[part] = { grade = "primordial", itemLevel = state.reach }
 				replaced += 1
+			elseif state.reach - item.itemLevel > hold.awakenGap then
+				local cost = Awaken.cost(state.reach)
+				if state.gold >= cost then
+					state.gold -= cost
+					state.awakenGold += cost
+					state.awakenCount += 1
+					item.itemLevel = state.reach
+					replaced += 1
+				end
 			end
 		end
 	end

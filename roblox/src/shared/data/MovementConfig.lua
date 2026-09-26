@@ -92,6 +92,16 @@ return {
 		-- 요청 최소 간격 requestGapSeconds(리뷰 4) · 기록 보관 = historySeconds + historyKeepExtraSeconds.
 		historySeconds = 0.5, historyKeepExtraSeconds = 0.1, pendingSeconds = 0.5, reachSlackStuds = 4, belowSlackStuds = 3, aboveSlackStuds = 6,
 		cooldownSeconds = 0.25, requestGapSeconds = 0.1 },
+	-- S1 수평 이동 검사(서버 권위 - HeightGuard.evaluateHorizontal · 같은 0.25초 폴링). 토큰 버킷: 초당 rate만큼 차고(최대 rate × bucketSeconds + slackStuds - 지연 0.25로 표본이 몰려도 1초까지 흡수),
+	--   표본 사이 수평 이동만큼 쓴다. 모자라면 = 마지막 정상 자리로 되돌림(킥 · 자동 제재 없음 · 위반 횟수 로그). rate = 합법 이동 목록(legal)에서 지금 켜진 것 중 가장 큰 값:
+	--   walk = 걷기 상한(16 × 1.5) · glide = 활강 전진(서버 Attribute Gliding) × glideMargin · water = 걷기 상한 + 물살 최대(flowMaxStuds) · permit = 발사 허가 비행(점프대 · 통통 열매 · 보스 발사 · 붙잡기 올라서기) ·
+	--   대시 = 서버가 준 대시마다 그 거리(× dashMargin)를 따로 쌓아 dashWindowSeconds 동안 쓴다(2단 대시 = 두 번) · 밀림 burst(선인장) · 예외(붙잡힘 · 가둠 · 서버 순간이동 = HeightGuard.reset · 루트 고정 · 사망) = 검사 안 함.
+	--   서버 순간이동 표시 없는 큰 이동(옛 "한 폴링 50 넘으면 순간이동으로 인정" - S1에서 삭제)은 이 검사가 되돌린다.
+	--   permitSpeed = 발사 허가 비행 중 수평 상한(보스 판 털기 초속 약 350 - 점프대 · 통통 열매 허가도 같은 값: 발판 위치를 서버가 확인한 허가 창 안만).
+	--   walkMargin = 걷기 상한 물리 여유(경사 미끄럼 · 부딪힘 - S1 지연 실측: 상한 그대로면 24/s로 계속 걸을 때 버킷이 안 차 경계 오탐 1건) - 10% 미만 속도 조작은 못 잡는다(보고서).
+	moveGuard = { bucketSeconds = 1.5, slackStuds = 3, walkMargin = 1.1, glideMargin = 1.1, flowMaxStuds = 18, permitSpeed = 400, dashMargin = 1.15, dashWindowSeconds = 1.3, burstWindowSeconds = 1.0,
+		legal = { "걷기(이속 상한 24)", "대시 · 공중 대시 · 태초 2단 대시(서버 대시 허가)", "활강(Gliding)", "물살", "발사 허가(점프대 · 통통 열매 · 보스 던지기 · 회오리 · 판 털기 · 넉백 · 붙잡기 올라서기)",
+			"선인장 밀림(burst)", "원거리 공중 정지 · 일어나기(이동 0)", "사다리 · 덩굴(수직)", "서버 순간이동(Travel · 리프트 · 복귀 · 보스 입장 · 보스 기믹 = HeightGuard.reset)", "붙잡힘 · 가둠(exempt)" } },
 	heightGuard = { toleranceStuds = 1.0, strikes = 2, probeStuds = 3.5, teleportResetStuds = 50, graceSeconds = 1.0, exemptExtraSeconds = 0.5,
 		climbBox = Vector3.new(7, 10, 7) }, -- M1-4: 오르는 중 = 루트 둘레 이 상자 안에 사다리(TrussPart · Climbable)가 있을 때만 "서 있음"(지연 0.25 × 오르기 속도 여유)
 

@@ -512,6 +512,22 @@ function PlayerProfile.grantTitle(player, titleId)
 	return true
 end
 
+-- S1: 칭호 회수(격리된 태초만으로 받은 "태초의 선택" 등 - AcquisitionAudit · 운영 명령).
+function PlayerProfile.revokeTitle(player, titleId)
+	local profile = profiles[player]
+	if not profile or not profile.titles[titleId] then
+		return false
+	end
+	profile.titles[titleId] = nil
+	local keys = {}
+	for k in pairs(profile.titles) do
+		table.insert(keys, k)
+	end
+	table.sort(keys)
+	player:SetAttribute("Titles", table.concat(keys, ","))
+	return true
+end
+
 function PlayerProfile.hasTitle(player, titleId)
 	local profile = profiles[player]
 	return profile ~= nil and profile.titles[titleId] == true
@@ -788,10 +804,21 @@ end
 -- 골드처럼 잃을 자원이 없는 되돌릴 수 있는 사건이라 주기저장(60초)·퇴장저장으로
 -- 충분하다고 판단했다 - 최고 기록만 "다시 오르면 그만"이 아니라 경쟁 축(PRD 20.12)의
 -- 실제 성취라 크래시로 잃으면 아쉬움이 다르다.
+-- S1 2-1: 하드 상한(InfiniteStageConfig.hardMaxStage)을 넘는 스테이지 쓰기 = 거절 + 로그.
+local function overStageCap(player, stage, what)
+	local cap = require(ReplicatedStorage.Shared.data.InfiniteStageConfig).hardMaxStage
+	if type(stage) == "number" and stage > cap then
+		warn(("[forge-game] 스테이지 하드 상한: %s %s %s > %d - 거절"):format(tostring(player and player.Name), what, tostring(stage), cap))
+		PlayerProfile.stageCapRejects = (PlayerProfile.stageCapRejects or 0) + 1
+		return true
+	end
+	return false
+end
+
 function PlayerProfile.setInfiniteStage(player, stage)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
-	if not classState then
+	if not classState or overStageCap(player, stage, "setInfiniteStage") then
 		return false
 	end
 	classState.stageProgress.infinite = stage
@@ -817,7 +844,7 @@ end
 function PlayerProfile.setBossCleared(player, stage)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
-	if not classState or stage <= classState.stageProgress.bestBossCleared then
+	if not classState or stage <= classState.stageProgress.bestBossCleared or overStageCap(player, stage, "setBossCleared") then
 		return
 	end
 	classState.stageProgress.bestBossCleared = stage
@@ -829,7 +856,7 @@ end
 function PlayerProfile.raiseInfiniteBest(player, stage)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
-	if not classState or stage <= classState.stageProgress.infiniteBest then
+	if not classState or stage <= classState.stageProgress.infiniteBest or overStageCap(player, stage, "raiseInfiniteBest") then
 		return false
 	end
 	classState.stageProgress.infiniteBest = stage

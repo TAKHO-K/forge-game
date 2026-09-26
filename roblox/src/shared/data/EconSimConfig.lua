@@ -86,6 +86,16 @@ return {
 			enhanceTarget = 30, useProtection = true, rebirth = true,
 			gearCheckMinutes = 5, gemReroll = true, gemRoll = 1.1,
 		},
+		-- S1 2-5 속도 봉투(합법 최대 - 보고서 표에는 안 나온다): 전 부위 태초(스테이지 1부터 · what-if primordialHold.parts) · 최적 파티(4인 · 같이 사냥) · 조작 효율 1 · 하루 24시간.
+		--   이 곡선(플레이 시간 → 최고 스테이지) × AuditConfig.envelope.margin을 넘는 상승 = 리더보드 등재 보류(AcquisitionAudit).
+		envelope = {
+			displayName = "속도 봉투", hoursPerDay = 24, classId = "bow", huntTierMax = 6,
+			targetKillSeconds = 2.0, minSurviveHits = 3, dpsEfficiency = 1.0, moveOverheadSeconds = 0.3,
+			bossDpsEfficiency = 1.0, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.0, bossOverheadSeconds = 5,
+			partySize = 4, partyExpBonus = true, partyHuntsTogether = true,
+			enhanceTarget = 30, useProtection = true, rebirth = true,
+			gearCheckMinutes = 1, gemReroll = true, gemRoll = 1.125,
+		},
 	},
 	profileOrder = { "casual", "normal", "top" },
 

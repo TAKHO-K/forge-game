@@ -3595,6 +3595,7 @@ if RunService:IsStudio() then
 				{ "D1-2(나)", function() require(script.Parent.D1_2Verify).runLive(player, env) end }, -- D1-2: 태초 신발 · 장갑 착용(공격 간격 상한 · 걷기 · 대시 · 치명 피해 · Attribute) · 파티 PartyId · 막힘 예외
 				{ "MV1(나)", function() require(script.Parent.MV1Verify).runLive(player, env) end }, -- MV1: 대시 거리 · 공중 대시 · 2단 대시 · 공중 공격 예산 · 스택 · 낙하 · 쓰러짐 · 제외 · 붙잡기
 				{ "W1(나)", function() require(script.Parent.W1Verify).runLive(player) end }, -- W1: 전투 중 표시 · 공격 모션 중계 · 일어나기 무적 조건 · 루트 불변
+				{ "S1(나)", function() require(script.Parent.S1Verify).runLive(player, env) end }, -- S1: 이동 되돌림 · 대시 허가 · 미해금 공중 점프 · 둥지 원격 · 착지 위조 · 상한 · 원장 · 봉투 · 확률 · 운영
 				{ "A1(나)", function() require(script.Parent.A1Verify).runLive() end }, -- A1: CartoonStyle 멱등 · base 복귀 · 관리 밖 변화 0 · 몬스터별 AimHighlight 0
 				{ "M1-4(나)", function() require(script.Parent.M1_4Verify).runLive(player, env) end }, -- M1-4: 지형 표식 v2 · 캡슐(소품 포함) · 소품 라이브러리 · 지형 붙이기 · 사다리 곁 · 능선 위/너머 밀어내기 · 심해 관문 발판 · 무리 상한
 				{ "M1-3T(나)", function() require(script.Parent.M1_3TVerify).runLive(player, env) end }, -- M1-3 본편: 굽힌 지형 · 둥지 캡슐 통과 · 줍기(성공 · 쿨다운 · 멀리서 · 순간이동) · 저장 · 순환 · 선인장 · 외곽 밀어내기 · 스폰 높이
@@ -4001,6 +4002,16 @@ if RunService:IsStudio() and verifyEnabled("MV1(가)") then
 		local ok, err = pcall(require(script.Parent.MV1Verify).runPure)
 		if not ok then
 			warn(("[MV1(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ S1 자동 검증 블록(가) - 수평 이동 · 해금 높이 · 서버 궤적 낙하 · 스테이지 상한 · 배정밀도 · 획득 감사 · 비밀 둥지(docs/phase/S1-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("S1(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.S1Verify).runPure)
+		if not ok then
+			warn(("[S1(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

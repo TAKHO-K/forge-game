@@ -90,6 +90,7 @@ local function handleDash(player)
 	local range = JumpMath.dashRangeStuds(JumpMath.moveSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player)), session and tier.airDashRangeMultiplier or 1)
 	local startPos = rootPart.Position
 	local endPos = DashEndpoint.compute(player, startPos, direction, range)
+	require(script.Parent.HeightGuard).grantDash(player, range) -- S1: 서버가 준 대시 거리 = 합법 수평 이동
 
 	-- PRD 5.4 "대시 중 피격 데미지 50% 감소" - 대검 회전베기와 같은 통로(PlayerState).
 	PlayerState.setIncomingDamageMultiplierUntil(player, DashConfig.incomingDamageMultiplier, DashConfig.durationSeconds, "dash")

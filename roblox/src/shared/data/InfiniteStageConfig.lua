@@ -44,4 +44,7 @@ return {
 	-- 값: 21,230 = 상위 1%가 누적 2,190시간에 선 최고 스테이지(EconSim 기준선 - 천장 fromLevel 20,000 · late 1.01). 그 지점 최대 수치 ≈ 2.6e187(레벨 경험치 누적).
 	-- P2.5c 결정 1: 21,230 → 25,300 - 점진 감속 천장(CharacterLevelConfig.weaponGrowthSegments) + 환생 · 마일스톤 재설계를 모두 넣은 상위 1%가 2,190시간에 선 최고 스테이지(하네스).
 	designMaxStage = 25300,
+	-- S1 2-1: 서버 하드 상한(= 설계 최대). 스테이지 이동 · 보스 잔류 다음 칸 · 프로필 쓰기(setInfiniteStage · raiseInfiniteBest · setBossCleared)가 넘으면 거절 + 로그,
+	-- 저장 직전에 넘는 값이 있으면 그 저장을 거부(SaveSystem.stageCapViolations - 옛 값 유지 · 로그). 올릴 때 = 배정밀도 여유(S1 보고서 2-2) 안에서 이 값만.
+	hardMaxStage = 25300,
 }

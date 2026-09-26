@@ -572,6 +572,7 @@ local function regrowObstacles(c, effect)
 								local to = Vector3.new(target.X, v.root.Position.Y, target.Z)
 								if typeof(v.root) == "Instance" then
 									v.root.CFrame = CFrame.new(to) * v.root.CFrame.Rotation
+									HeightGuard.exempt(v.player, 0.5) -- S1: 서버 밀어내기(수평 검사 예외)
 								else
 									v.root.Position = to
 								end

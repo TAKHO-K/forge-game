@@ -301,8 +301,16 @@ local function nestPos(spec)
 	return Vector3.new(p.X, 0, p.Z)
 end
 
+-- 둥지 모델 이름: A · B = "Nest_<id>" · C(비밀 - S1) = 이름으로 자리가 드러나지 않게 중립 이름(해시).
+function WorldStructures.modelNameOf(spec)
+	if spec.track == "C" then
+		return ("Outcrop_%06d"):format(hashStr(spec.id) % 1000000)
+	end
+	return "Nest_" .. spec.id
+end
+
 local function buildNest(spec, list, templeCf)
-	local ctx = { spec = spec, zone = spec.zone, model = "Nest_" .. spec.id, jitter = (hashStr(spec.id) % 100) / 100 * 0.5 }
+	local ctx = { spec = spec, zone = spec.zone, model = WorldStructures.modelNameOf(spec), jitter = (hashStr(spec.id) % 100) / 100 * 0.5 }
 	local meta
 	if SPECIAL[spec.kit] then
 		meta = SPECIAL[spec.kit](ctx, list)

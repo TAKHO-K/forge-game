@@ -118,7 +118,7 @@ glideState.OnServerEvent:Connect(function(player, on)
 	if not humanoid or humanoid.Health <= 0 then
 		return
 	end
-	if on == true and MoveRules.tierOf(player).glide then
+	if on == true and MoveRules.tierOf(player).glide and AirState.session(player) ~= nil then -- S1 리뷰 9: 서버가 공중으로 볼 때만(땅에서 켜 수평 상한을 올리지 못하게)
 		glideOnAt[player] = os.clock()
 		character:SetAttribute("Gliding", true)
 	else

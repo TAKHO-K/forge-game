@@ -51,6 +51,7 @@ local function returnFromVoid(player, rootPart)
 	rootPart.AssemblyLinearVelocity = Vector3.zero
 	rootPart.CFrame = CFrame.new(destination)
 	HeightGuard.reset(player)
+	require(script.Parent.AirState).reset(player, destination) -- S1 리뷰 6: 심연 복귀 = 체공 끝(낙하 최고점이 옛 절벽에 남지 않게)
 	TeleportArrival.mark(player, destination) -- M1-2c 도착 대기
 	print(("[forge-game] 심연 복귀: %s (%.0f, %.1f, %.0f) → %s"):format(player.Name, fellAt.X, fellAt.Y, fellAt.Z, tostring(destination)))
 end

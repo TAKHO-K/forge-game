@@ -28,6 +28,7 @@ local TutorialState = require(script.Parent.TutorialState)
 local PartyState = require(script.Parent.PartyState)
 local DropNotice = require(script.Parent.DropNotice)
 local PrimordialRegistry = require(script.Parent.PrimordialRegistry) -- D1 태초 세계 번호 · 연출
+local AcquisitionAudit = require(script.Parent.AcquisitionAudit) -- S1 획득 감사(λ · 원장 · 처치 속도)
 local Leaderboard = require(script.Parent.Leaderboard) -- P3a B: 보스 클리어 기록
 local LeaderboardRules = require(ReplicatedStorage.Shared.LeaderboardRules) -- P3a A: 멤버별 진도 판정
 -- P2 G: 불러오는 순간 PartyState에 파티 경험치 조건 판정을 등록한다(경험치 지급 경로가 이 모듈을 지난다).
@@ -175,6 +176,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	-- 스테이지). 잡몹은 0개 이상의 배열이 돌아온다(기대 개수가 1을 넘으면 여러 개).
 	local armorDrops
 	local bossFirstClear = false
+	local primordialP = 0 -- S1 2-6: 이번 굴림 한 개가 태초일 확률(λ · 원장)
 	if isBoss then
 		-- 20-4 [1]: "그 스테이지 보스를 처음 깼는가"로 분기한다. 첫 처치는 등급을 끌어올린 확정 드랍
 		-- (Loot.rollBossFirstClearDrop), 재도전은 확정 1개(Loot.rollBossRetryDrop, 28-1 [2-2] - D1부터 토벌 표).
@@ -182,20 +184,26 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		local stage = monsterData.stageNumber
 		if PlayerProfile.hasBossFirstClearReward(recipient, stage) then
 			armorDrops = { Loot.rollBossRetryDrop(dropStage, classId) }
+			primordialP = DropTable.bossRetryGradeTable().primordial or 0
 		else
+			primordialP = DropTable.bossFirstClearGradeTable(PlayerProfile.getRebirthCount(recipient)).primordial or 0
 			armorDrops = { Loot.rollBossFirstClearDrop(dropStage, PlayerProfile.getRebirthCount(recipient), classId) }
 			PlayerProfile.markBossFirstClearReward(recipient, stage)
 			bossFirstClear = true
 		end
 	elseif isSparkle then
 		armorDrops = { Loot.rollSparkleArmorDrop(dropStage, monsterData.tierIndex, classId) }
+		primordialP = RareMonsterConfig.sparkleGradeChances.primordial or 0
 	else
 		-- 접두사 변종(22-2 [1]) - 기대 드랍 개수에도 보상 배율(= HP 배율)을 곱한다(공평성).
 		-- P2 E1 · E3: 태초 확률 = DropTable.effectiveRate(받는 사람의 활성 직업 최고 스테이지, 몬스터 tier, 받는 사람의 사냥 스테이지) - 조회 API와 같은 함수.
 		local primordialRate = DropTable.effectiveRate({ bestStage = PlayerProfile.getInfiniteStageBest(recipient) }, { tierIndex = monsterData.tierIndex }, dropStage)
 		-- G1-2: 처치 시간 공정성 보정 - 받는 사람이 처음 때린 뒤 죽기까지의 시간(한 방 · 이동 > 처치면 높은 tier 장비 개수가 줄어든다).
 		armorDrops = Loot.rollArmorDrop(dropStage, monsterData.tierIndex, MonsterState.getRewardMultiplier(target), classId, primordialRate, MonsterState.getKillSecondsFor(target, recipient))
+		primordialP = primordialRate or 0
 	end
+	AcquisitionAudit.addLambda(recipient, primordialP, #armorDrops) -- S1 2-6: λ += 굴림마다 태초 확률
+	AcquisitionAudit.noteKill(recipient) -- S1 2-7 처치 속도
 	-- D1: 출처 태그(M2 출처 태그와 같은 구조 - 태초 각인이 복사한다). 보스 = 첫 클리어 "boss" / 토벌(반복) "raid" · 반짝이 · 잡몹 = 구역.
 	local sourceKind = isBoss and (bossFirstClear and "boss" or "raid") or (isSparkle and "sparkle" or "field")
 	for _, armorDrop in ipairs(armorDrops) do
@@ -206,7 +214,8 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 			stage = dropStage,
 		}
 		if armorDrop.grade == "primordial" or armorDrop.grade == "ancient" then
-			PrimordialRegistry.onRolled(recipient, armorDrop, deathPosition, isBoss, { PlayerProfile = PlayerProfile, ImmediateSave = ImmediateSave })
+			PrimordialRegistry.onRolled(recipient, armorDrop, deathPosition, isBoss, { PlayerProfile = PlayerProfile, ImmediateSave = ImmediateSave },
+				armorDrop.grade == "primordial" and { rollId = AcquisitionAudit.newRollId(), p = primordialP } or nil) -- S1 2-3 발급 원장
 		end
 	end
 	for _, armorDrop in ipairs(armorDrops) do
@@ -250,6 +259,7 @@ local function handleBossDeath(attacker, target)
 		local ratio = contributions[member] or 0
 		if member.Parent and ratio >= CombatConfig.contributionRewardThreshold then
 			grantKillReward(member, target, monsterData, deathPosition, deferredBossDrops)
+			AcquisitionAudit.noteBossClear(member) -- S1 2-7 보스 클리어 속도
 			-- 28-1 S05: 보스 방지권 - 계정 단위 첫 클리어(직업별 bossFirstClearStages와 별개). 기여 10%를 넘긴 수령자만 여기까지 온다. 지급은 바로 아래 즉시 저장 요청에 실린다.
 			ProtectionTickets.grantForBoss(member, monsterData.stageNumber)
 			-- 30-0 S11: 보스 도감 도장 - 새로 찍힌 것은 아래 즉시 저장 요청에 실린다(견습 보스는 이 함수를 안 탄다).

@@ -456,7 +456,7 @@ function V.runLive(player, env)
 				end
 			end
 			if spec.track == "C" then
-				local model = Workspace.Ground:FindFirstChild("Nest_" .. spec.id, true)
+				local model = Workspace.Ground:FindFirstChild(WorldStructures.modelNameOf(spec), true) -- S1: C = 중립 이름
 				for _, d in ipairs(model and model:GetDescendants() or {}) do
 					if d:IsA("BillboardGui") or d:IsA("Highlight") or (d:IsA("BasePart") and (d:GetAttribute("Label") or d:GetAttribute("ExploreName"))) then
 						table.insert(cLabels, spec.id)
