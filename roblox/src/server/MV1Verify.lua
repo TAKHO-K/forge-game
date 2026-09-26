@@ -464,13 +464,13 @@ function V.runLive(player, env)
 		local standGap = moved and moved.player == player and (moved.position - (spot + Vector3.new(0, 3, 0))).Magnitude or math.huge
 		r.check(("치명 400 → %s(쓰러짐 %s · 고정 %s · 그을림 %s) → %.1f초 뒤 일어남 %s · 부활 체력 %.0f/%.0f · 부활 자리 ↔ 안전 지점 + 3 = %.1f"):format(k, tostring(knocked), tostring(anchored), tostring(charred ~= nil), MovementConfig.fall.knockdownSeconds,
 			tostring(character:GetAttribute("FallKnockdown") == nil), PlayerState.getHp(player), maxHp, standGap),
-			k == "knockdown" and knocked == true and anchored and charred ~= nil and character:GetAttribute("FallKnockdown") == nil and near(PlayerState.getHp(player), maxHp * MovementConfig.fall.reviveHpCapFraction, 1e-6) and standGap < 0.5) -- 부활 체력 = min(떨어지기 전 50%, 최대 × 0.3)
+			k == "knockdown" and knocked == true and anchored and charred ~= nil and character:GetAttribute("FallKnockdown") == nil and PlayerState.getHp(player) >= maxHp * MovementConfig.fall.reviveHpCapFraction - 1e-6 and PlayerState.getHp(player) <= maxHp * (MovementConfig.fall.reviveHpCapFraction + 0.05) and standGap < 0.5) -- 일어난 뒤 0.6초 자동 회복 몫(최대 5%) 허용 -- 부활 체력 = min(떨어지기 전 50%, 최대 × 0.3)
 		root.Anchored = true
 		root.CFrame = CFrame.new(spot)
 		PlayerState.setHp(player, maxHp * 0.1)
 		local kd = land(200) -- 피해가 체력보다 크면 죽지 않고 쓰러짐
 		task.wait(MovementConfig.fall.knockdownSeconds + 0.6)
-		r.check(("체력 10%%에서 속도 200(피해 %.0f%%) → %s(사망 대신 쓰러짐) · 체력 %.0f"):format(MoveRules.fallOutcome(200).fraction * 100, kd, PlayerState.getHp(player)), kd == "knockdown" and near(PlayerState.getHp(player), maxHp * 0.1, 1e-6)) -- 부활 체력 = 떨어지기 전(10%) - 일부러 떨어져 회복 못 함
+		r.check(("체력 10%%에서 속도 200(피해 %.0f%%) → %s(사망 대신 쓰러짐) · 체력 %.0f"):format(MoveRules.fallOutcome(200).fraction * 100, kd, PlayerState.getHp(player)), kd == "knockdown" and PlayerState.getHp(player) >= maxHp * 0.1 - 1e-6 and PlayerState.getHp(player) <= maxHp * 0.15) -- 부활 체력 = 떨어지기 전(10%) + 자동 회복 몫 - 일부러 떨어져 가득 회복 못 함
 		root.Anchored = true
 		root.CFrame = CFrame.new(spot)
 	end)
