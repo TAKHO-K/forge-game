@@ -116,7 +116,8 @@ function Kits.rock(ctx, list)
 		table.insert(protect, box(s.cf * CFrame.new(0, s.y + 4, 0), Vector3.new(R.step / 2, 3.5, R.step / 2)))
 	end
 	local spot = (cf * CFrame.new(0, spec.h, 0)).Position
-	return { spot = spot, leaps = leapsFor(heights, sk.gap, spec.h), protect = protect, pads = { { radius = rc + R.step / 2 + 4, blend = 34 } }, open = true }
+	local padR = R.top / 2 + (sk.padGap or sk.gap) + R.step / 2 -- 파트 0: jump1 = 옛 air1 받침(굽힌 지형 유지)
+	return { spot = spot, leaps = leapsFor(heights, sk.gap, spec.h), protect = protect, pads = { { radius = padR + R.step / 2 + 4, blend = 34 } }, open = true }
 end
 
 function Kits.tree(ctx, list)

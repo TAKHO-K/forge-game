@@ -127,7 +127,8 @@ return {
 	nests = NESTS,
 	-- 키트 공통 수치(이동 기준 movement-metrics v2 · 80% 여유 - 검증이 leaps를 Layout.moveSkill로 잰다)
 	kit = {
-		skill = { easy = { rise = 4, gap = 4 }, jump1 = { rise = 6, gap = 5 }, air1 = { rise = 9, gap = 7 }, air2 = { rise = 13, gap = 9 } },
+		-- padGap = 받침(지형 평지) 반경 계산에만 쓰는 간격(없으면 gap) - jump1은 옛 air1 받침(굽힌 지형)과 같게 둬 지형 서명 · 굽기가 안 바뀐다(파트 0)
+		skill = { easy = { rise = 4, gap = 4 }, jump1 = { rise = 6, gap = 5, padGap = 7 }, air1 = { rise = 9, gap = 7 }, air2 = { rise = 13, gap = 9 } },
 		rock = { top = 8, step = 6 },
 		tree = { trunk = 5, rise = 5, gap = 4, pad = 5, top = 12 },
 		tower = { wall = 2, door = { w = 5, h = 8 }, pad = 5, rise = 7, headroom = 7 },
