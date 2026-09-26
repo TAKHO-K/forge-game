@@ -172,7 +172,7 @@ local function bakeChunk(terrain, key, cx, cz)
 	end
 	terrain:WriteVoxels(region, V, mats, occs)
 	-- 옛 굽기가 더 높게 쌓은 복셀(모양을 낮춘 뒤 떠 있는 판으로 남았다 - M1-3 스크린샷): 이 덩어리 새 최고 높이 + 공기 부피 위를 천장까지 비운다
-	local clearFrom = math.ceil((math.max(topAll, airTop) + V * 2) / V) * V
+	local clearFrom = y1 -- 덮어쓴 끝 바로 위부터(한 칸 틈이 있으면 옛 칸이 남았다)
 	if clearFrom < CEILING then
 		terrain:FillBlock(CFrame.new(x0 + CHUNK * V / 2, (clearFrom + CEILING) / 2, z0 + CHUNK * V / 2), Vector3.new(CHUNK * V, CEILING - clearFrom, CHUNK * V), Enum.Material.Air)
 	end
