@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
+local WeaponRigSpec = require(ReplicatedStorage.Shared.data.WeaponRigSpec)
 local WeaponModelData = require(ReplicatedStorage.Shared.data.WeaponModelData)
 local WeaponEnhanceVisual = require(script.Parent.WeaponEnhanceVisual) -- 강화 단계 이펙트(30-0 S08) - 이 파일은 부르기만 한다
 
@@ -210,7 +211,21 @@ local function buildWeapon(classId, colorOverride)
 		instances.arrow = arrow
 	end
 
-	return { classId = classId, model = model, motion = motion, kind = model.kind, instances = instances, swingStartTime = nil }
+	-- MV1 무기 모델 규격(WeaponRigSpec): 쥐는 손 · 손잡이 점 · 배율만 여기서 적용한다(모션은 W1). 손잡이 점(원본 단위 × 배율)이 손에 오도록 무기를 옮긴다.
+	local rig = WeaponRigSpec[classId]
+	local grips, hands = {}, {}
+	for _, piece in ipairs(rig and rig.pieces or {}) do
+		local scale = piece.refLength / piece.nativeLength
+		local key = piece.name or "main"
+		grips[key] = piece.grip * scale
+		hands[key] = piece.hand
+		local part = (piece.name and instances.parts and instances.parts[piece.name]) or instances.part
+		local mesh = part and part:FindFirstChildOfClass("SpecialMesh")
+		if mesh then
+			mesh.Scale = Vector3.new(scale, scale, scale)
+		end
+	end
+	return { classId = classId, model = model, motion = motion, kind = model.kind, instances = instances, swingStartTime = nil, grips = grips, rigHands = hands }
 end
 
 local function refresh()
@@ -353,7 +368,8 @@ local function updateMeleeAlike(hands, model, motion, instances, alpha, singlePa
 		end
 
 		local angle = evalKeyframes(partMotion.keyframes, alpha, "angle")
-		part.CFrame = hand.CFrame * gripOffset * rotationCFrame((current.air and motion.air and motion.air.swingAxis) or partMotion.swingAxis, angle) -- MV1 공중 전용 베기
+		local grip = current.grips[model.kind == "mesh_pair" and partMotion.name or "main"] or Vector3.zero -- MV1 규격: 손잡이 점을 손에(휘두르기 축도 손잡이)
+		part.CFrame = hand.CFrame * gripOffset * rotationCFrame((current.air and motion.air and motion.air.swingAxis) or partMotion.swingAxis, angle) * CFrame.new(-grip) -- MV1 공중 전용 베기
 
 		local trail = model.kind == "mesh_pair" and instances.trails[partMotion.name] or instances.trail
 		if trail then
@@ -363,7 +379,7 @@ local function updateMeleeAlike(hands, model, motion, instances, alpha, singlePa
 end
 
 local function updateBow(hand, model, motion, instances, alpha)
-	local rootCFrame = hand.CFrame * model.gripOffset
+	local rootCFrame = hand.CFrame * model.gripOffset * CFrame.new(-(current.grips.main or Vector3.zero)) -- MV1 규격: 활 손잡이(가운데 마디)를 손에
 	if current.air and motion.air and motion.air.bowCantDeg then
 		rootCFrame = rootCFrame * CFrame.Angles(0, math.rad(motion.air.bowCantDeg), 0) -- MV1 공중 사격: 활을 비스듬히 눕힌다(프레야식)
 	end
@@ -465,7 +481,7 @@ local function updateFrame()
 	elseif current.kind == "mesh_pair" then
 		updateMeleeAlike(hands, current.model, current.motion, current.instances, alpha, nil, current.instances.parts)
 	elseif current.kind == "bow" then
-		updateBow(rightHand, current.model, current.motion, current.instances, alpha)
+		updateBow(hands[current.rigHands.main or "RightHand"] or rightHand, current.model, current.motion, current.instances, alpha) -- MV1 규격: 활 = 왼손
 	elseif current.kind == "specialmesh" then
 		updateStaff(rightHand, current.model, current.motion, current.instances, alpha)
 	end

@@ -68,7 +68,8 @@ return {
 		color = Color3.fromRGB(160, 132, 79),
 		-- 원본 활의 곡선은 X-Z 평면에 눕혀 있었다(활을 손에 쥐면 세로로 서야 하니
 		-- Z축으로 90도 돌려 세운다 - X 스프레드가 Y 세로축이 된다).
-		gripOffset = CFrame.new(0.35, 0, -0.3) * CFrame.Angles(0, 0, math.rad(90)),
+		-- MV1 규격(WeaponRigSpec): 활 = 왼손 - 옆 오프셋 부호를 뒤집었다(오른손 기준 +0.35는 왼손에서 몸 안쪽으로 파고들었다).
+		gripOffset = CFrame.new(-0.35, 0, -0.3) * CFrame.Angles(0, 0, math.rad(90)),
 		-- 활 몸체를 이루는 나무 마디 7개 - "Simple Bow Weapon Archery Arrow Fantasy" 원본의
 		-- 실측 좌표(피벗 기준 상대 위치·Y축 회전) 그대로. 처음엔 Z축 회전으로 잘못 옮겨서
 		-- (JSON 직렬화가 키 순서를 뒤섞어 표시해 rx/ry/rz를 착각했다) 활 모양이 뒤죽박죽
