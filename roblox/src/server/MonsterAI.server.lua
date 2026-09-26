@@ -91,13 +91,14 @@ local function computeOccupiedZones()
 end
 
 -- 범위 안에서 가장 가까운 플레이어의 캐릭터 루트파트. 없으면 nil.
-local function findNearestPlayerRootInRange(position, maxRange)
+local function findNearestPlayerRootInRange(position, maxRange, model)
 	local nearestRoot, nearestPlayer, nearestDistance = nil, nil, math.huge
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-		if rootPart then
+		-- C1 후속(리뷰 1): 잡몹은 기준 − 10보다 낮은 사람 · 막힐 사람을 어그로하지 않는다(MonsterState.canChase)
+		if rootPart and (model == nil or MonsterState.canChase(model, player, TutorialState.getMonsterStage(player))) then
 			-- 22-4: 수평 거리 + 높이차 상한(Reach). 절벽 위 플레이어는 어그로 대상이 아니다.
 			local distance = Reach.horizontalDistance(rootPart.Position, position)
 			if distance <= maxRange and distance < nearestDistance
@@ -224,8 +225,9 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage로 맞는다(TutorialState.getMonsterStage).
 	-- 29-2: 보스는 기본 공격의 피해 배율(data.basicAttackDamageMultiplier - 느린 보스는 한 방이 크고 빠른 보스는
 	-- 가볍다, 주기 × 배율은 6종이 같다)을 감소식을 거친 피해에 곱한다. 잡몹은 nil이라 기존과 같다.
-	local targetStage = TutorialState.getMonsterStage(targetPlayer)
-	applyHitToPlayer(targetPlayer, MonsterState.getAttackFor(model, targetStage), nil, data.basicAttackDamageMultiplier)
+	-- C1 후속(결정 2): 잡몹은 몹 기준 스테이지(참여자 중 최고 - 체력과 같은 기준)로 때린다. 참여 기록이 없으면 맞는 사람 스테이지.
+	local targetStage = MonsterState.getAttackStage(model, TutorialState.getMonsterStage(targetPlayer))
+	applyHitToPlayer(targetPlayer, MonsterState.getAttackFor(model, targetStage), nil, data.basicAttackDamageMultiplier, { levelGapStage = targetStage })
 end
 
 -- 보스 전용(15-1 → 21-3에서 BossPatterns.lua로 일반화). 패턴(강공격·진동파·낙석·돌진·
@@ -315,7 +317,7 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 
 			if state == "idle" then
-				local player, playerRoot = findNearestPlayerRootInRange(position, WorldConfig.aggro.rangeStuds)
+				local player, playerRoot = findNearestPlayerRootInRange(position, WorldConfig.aggro.rangeStuds, model)
 				if player then
 					MonsterState.setAiState(model, "chasing")
 					MonsterState.setAiTarget(model, player)
@@ -324,8 +326,8 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
-					local aggroStage = TutorialState.getMonsterStage(player)
-					PlayerState.setTickDamageSource(player, model, computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player) * PlayerDamage.getLevelGapTakeMultiplier(player)) -- G1-3 리뷰 3: 레벨차도 눈금에 -- P2.5c: 신규 보호도 눈금에
+					local aggroStage = MonsterState.getAttackStage(model, TutorialState.getMonsterStage(player)) -- C1: 잡몹 = 기준 스테이지
+					PlayerState.setTickDamageSource(player, model, computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player) * PlayerDamage.getLevelGapTakeMultiplier(player, not data.isBoss and aggroStage or nil)) -- G1-3 리뷰 3: 레벨차도 눈금에 -- P2.5c: 신규 보호도 눈금에
 					if data.isBoss then
 						BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)
 					end
@@ -389,8 +391,13 @@ RunService.Heartbeat:Connect(function(dt)
 					end
 				elseif data.isBoss then
 					tryBossAttack(model, data, position, target, targetRoot, dt)
+				elseif not MonsterState.canChase(model, target, TutorialState.getMonsterStage(target)) then
+					-- C1 후속(리뷰 1): 기준이 올라(높은 사람이 침) 이 사람이 기준 − 10보다 낮아졌다 - 놓고 다음 틱에 쫓을 수 있는 사람을 다시 찾는다(기준 공격력으로 즉사 방지)
+					MonsterState.setAiState(model, "idle")
+					MonsterState.setAiTarget(model, nil)
+					PlayerState.setTickDamageSource(target, model, nil)
 				else
-					MonsterState.noteParticipant(model, target, TutorialState.getMonsterStage(target)) -- C1: 쫓기는 사람 = 참여자(기준 스테이지에 든다)
+					MonsterState.noteParticipant(model, target, TutorialState.getMonsterStage(target)) -- C1: 쫓기는 사람 = 참여자(기준 스테이지에 든다 · 잡는 사람은 아님)
 					-- 쌍검 Q 그림자분신(20-6 [2]) - "이미 쫓기는 중인" 몹의 방향만 분신 쪽으로
 					-- 돌린다(도발이지 신규 어그로 획득이 아니다 - idle→chasing 진입은 위에서
 					-- 항상 실제 플레이어 거리만 본다, 웹 core/aggro.js의 같은 원칙을 재사용).

@@ -40,6 +40,16 @@ local materialGained = Instance.new("RemoteEvent")
 materialGained.Name = "MaterialGained"
 materialGained.Parent = ReplicatedStorage
 
+-- C1 후속: 막힌 타격(다른 사람 몹) 알림 - 때린 사람에게만. 클라 DamageNumbers가 피해 숫자 대신 "다른 사람 몹"을 띄운다.
+local ownedMobBlocked = Instance.new("RemoteEvent")
+ownedMobBlocked.Name = "OwnedMobBlocked"
+ownedMobBlocked.Parent = ReplicatedStorage
+MonsterState.setBlockedListener(function(model, player)
+	if typeof(player) == "Instance" and player.Parent then
+		ownedMobBlocked:FireClient(player, model)
+	end
+end)
+
 -- AttackServer.server.lua/SkillServer.server.lua가 각자 만든 RemoteEvent 인스턴스를 여기
 -- 넘겨준다(둘 다 같은 골드/레벨업 팝업 이벤트를 공유해야 한다 - 새로 만들지 않는다). 두
 -- 스크립트 다 자기 RemoteEvent를 만든 직후 이 함수를 부른다 - 순서 무관, init을 두 번
@@ -350,7 +360,7 @@ end
 -- 쓰이고 attacker 자체는 안 쓰인다 - 그래도 호출부 계약을 하나로 통일하기 위해 항상 받는다).
 function CombatResolution.resolveHit(attacker, target, isDead)
 	-- P2.5a D(결정 10): 파티 경험치의 "최근 활동" = 적에게 실제로 명중한 순간(평타 · 스킬 모두 여기로 온다). 구출 대상(피해 0 · 적 아님)은 세지 않는다.
-	if attacker and not MonsterState.isRescueTarget(target) then
+	if attacker and not MonsterState.isRescueTarget(target) and MonsterState.isActiveParticipant(target, attacker) then -- C1: 막힌 타격(다른 사람 몹)은 활동 아님
 		PartyState.noteActivity(attacker)
 	end
 	if not isDead then

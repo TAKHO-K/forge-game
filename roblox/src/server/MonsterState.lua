@@ -64,6 +64,12 @@ local function notifyRatio(model)
 	end
 end
 
+-- C1 후속: 막힌 타격(더 낮은 참여자가 잡는 몹을 더 높은 사람이 침) → 그 사람 화면에 "다른 사람 몹"(CombatResolution이 등록 - RemoteEvent).
+local blockedListener = nil
+function MonsterState.setBlockedListener(fn)
+	blockedListener = fn
+end
+
 -- variant(22-2) - 스폰 시점에 굴린 인스턴스별 변종 { isSparkle, prefix(MonsterPrefixData 항목
 -- 또는 nil), isChest }. data는 여러 인스턴스가 공유하는 원본 테이블이라 변종 배율을 data에
 -- 쓰지 않고 entry에만 둔다. 보스는 셋 다 없다(MonsterSpawner.spawn이 보스엔 안 굴린다).
@@ -263,7 +269,15 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 		local now = os.clock()
 		if attackerPlayer then
 			local stage = (stageResolver and typeof(attackerPlayer) == "Instance") and stageResolver(attackerPlayer) or attackerStage
-			mobRef = MobShare.touch(entry, attackerPlayer, stage, now)
+			local touchedRef, _wasReset, _rose, blocked = MobShare.touch(entry, attackerPlayer, stage, now)
+			mobRef = touchedRef
+			if blocked then
+				-- C1 후속(결정 1): 더 낮은 참여자가 잡는 몹 - 피해 0 · 참여 · 기여 없음 · 기준 그대로
+				if blockedListener then
+					blockedListener(model, attackerPlayer)
+				end
+				return false, 0
+			end
 		else
 			mobRef = MobShare.refresh(entry, now)
 			if entry.refStage == nil then
@@ -337,7 +351,7 @@ end
 function MonsterState.noteParticipant(model, player, stage)
 	local entry = monsters[model]
 	if entry and entry.participants and not entry.isChest and not entry.isRescueTarget then
-		local _, wasReset, rose = MobShare.touch(entry, player, stage, os.clock())
+		local _, wasReset, rose = MobShare.touch(entry, player, stage, os.clock(), true) -- 쫓김 = passive(잡는 사람 아님)
 		if wasReset or rose then
 			notifyRatio(model)
 		end
@@ -381,6 +395,15 @@ function MonsterState.onStageChanged(player, stage)
 		end
 	end
 	return resetModels
+end
+
+-- C1 후속: 이 타격이 "참여"였는가(잡몹 = 참여자 목록에 있음 · 보스 · 상자 = 항상). 막힌 타격은 파티 활동으로 안 센다.
+function MonsterState.isActiveParticipant(model, player)
+	local entry = monsters[model]
+	if not (entry and entry.participants) or entry.isChest then
+		return true
+	end
+	return entry.participants[player] ~= nil
 end
 
 -- C1: 보상 자격(기여 ≥ 10% · 같은 스테이지에서 쌓음 · 지금 스테이지 ≤ 기준). 반환 = bool, 이유.
@@ -447,6 +470,34 @@ function MonsterState.clearPlayerContributions(player)
 			entry.chestHitters[player] = nil
 		end
 	end
+end
+
+-- C1 후속(결정 2): 잡몹이 주는 피해의 스테이지 = 몹 기준 스테이지(체력과 같은 기준). 아무도 참여 안 했으면 맞는 사람 스테이지(fallback).
+-- 스테이지 1 탱커가 높은 몹을 약하게 맞으며 붙잡는 길을 막는다. 보스는 fallback 그대로(보스 data.attack이 이미 최종값).
+function MonsterState.getAttackStage(model, fallbackStage)
+	local entry = monsters[model]
+	if entry and entry.participants then
+		MobShare.refresh(entry, os.clock()) -- 리뷰 4: 만료된 옛 높은 기준을 읽지 않게
+		if entry.refStage then
+			return entry.refStage
+		end
+	end
+	return fallbackStage
+end
+
+-- C1 후속(리뷰 1): 이 잡몹이 이 사람을 쫓아도 되는가 - 막힐 사람(잡는 사람과 10 넘게 차이)도, 기준 − stealStageGap보다 낮은 사람도 안 쫓는다.
+-- 높은 사람이 초보 곁 몹을 태그하면 기준이 올라 몹이 초보를 기준 공격력으로 즉사시키던 길 · 스테이지 1 탱커가 높은 몹을 붙잡는 길을 막는다.
+function MonsterState.canChase(model, player, stage)
+	local entry = monsters[model]
+	if not (entry and entry.participants) or entry.data.isBoss then
+		return true
+	end
+	local now = os.clock()
+	MobShare.refresh(entry, now)
+	if MobShare.isBlocked(entry, player, stage, now) then
+		return false
+	end
+	return entry.refStage == nil or stage >= entry.refStage - CombatConfig.stealStageGap
 end
 
 -- 스테이지 배율이 적용된 공격력(19-4, InfiniteStage 직접 호출로 교체 - 예전

@@ -8,6 +8,12 @@
 --   · 기준이 내려갈 때(최고 참여자 이탈 · 무참여): 비율 유지. 떠난 높은 사람은 자기 스테이지 > 기준이라 보상 자격을 잃고(eligible),
 --     남은 사람은 같은 스테이지 동료가 그만큼 깎아 준 것과 같은 상황이라 이득 보는 사람이 없다.
 --   · 스테이지를 바꾸면(purge): 그 사람의 참여 · 기여 · 첫 타격 기록을 지운다. 그 사람만 닿았던 몹(다른 참여자 · 다른 기여 없음)은 체력 가득으로 초기화.
+--   · C1 후속(사용자 결정 + 리뷰): 새로 닿는 사람은 몹의 "잡는 사람"(8초 안에 때렸거나 도운 참여자 - activeAt) 전원과 스테이지 차가
+--     CombatConfig.stealStageGap(10) 이하여야 참여한다. 최저보다 10 넘게 높거나(= 결정 문구) 최고보다 10 넘게 낮으면 막힌다(참여 안 됨 · 피해 0 · 기준 안 오름 -
+--     파티 여부 무관). 10 이하면 기존 공유 규칙(스틸 가능 · 기준 상승 재정규화). 이미 참여 중인 사람은 나중에 온 사람 때문에 막히지 않는다(먼저 온 사람 우선).
+--     쫓기기만 한 참여자(passive)는 기준(= 체력 · 몹이 주는 피해)에는 들지만 잡는 사람이 아니다 - 막힘 판정에서 빠진다(낮은 사람이 몹을 끌고 다니거나 잠수
+--     파티원이 쫓기기만 해도 높은 사람이 막히는 방해 차단). 대신 몹은 기준 − 10보다 낮은 사람을 쫓지 않는다(MonsterAI - 초보 태그 즉사 · 1 탱커 차단). 목적 = 스침 손해 · 버스 · 낯선 사람 방해를 한 규칙으로. 그래서 기준 상승은
+--     "참여자가 없는(비었거나 전부 떠난) 몹에 높은 사람이 새로 닿을 때"만 일어난다 - 남은 비율은 그때 재정규화된다.
 -- 절대 HP(k^(스테이지 − 1))는 만들지 않는다 - 배율은 k^(스테이지 차)만 쓴다(스테이지 34,230에서도 inf · nan 없음 - 하한은 0으로 접힌다).
 -- entry 필드: hpRatio · refStage(nil = 아직 아무도) · participants([who] = 마지막 참여 시각) · partStage([who] = 기록을 쌓은 스테이지) ·
 --   contributions([who] = 기준 HP에 대한 누적 비율) · firstHitAt · hitCounts. who = Player 또는 표(검증 스탠드인) - 키로만 쓴다.
@@ -26,6 +32,7 @@ function MobShare.fresh(entry)
 	entry.contributions = {}
 	entry.firstHitAt = {}
 	entry.hitCounts = {}
+	entry.activeAt = {}
 	return entry
 end
 
@@ -56,21 +63,58 @@ local function rise(entry, newRef, now)
 	return true
 end
 
--- 창 밖 참여자를 빼고 기준을 다시 잡는다. 참여자가 하나도 없으면 기준은 그대로 둔다(다음에 닿는 사람이 정한다).
--- 반환: 기준 스테이지, 비율이 다시 환산됐는가(상승).
-function MobShare.refresh(entry, now)
+local function expire(entry, now)
 	local window = CombatConfig.participationWindowSeconds
-	local top = nil
 	for who, at in pairs(entry.participants) do
 		if now - at > window then
 			entry.participants[who] = nil
-		else
-			local stage = entry.partStage[who]
-			if stage and (top == nil or stage > top) then
-				top = stage
-			end
 		end
 	end
+end
+
+-- 잡는 사람(8초 안에 때렸거나 도운 참여자 - except는 빼고)의 최저 · 최고 스테이지. 없으면 nil.
+local function activeBand(entry, except, now)
+	local window = CombatConfig.participationWindowSeconds
+	local low, high = nil, nil
+	for who, at in pairs(entry.activeAt) do
+		local stage = entry.partStage[who]
+		if who ~= except and now - at <= window and stage then
+			low = (low == nil or stage < low) and stage or low
+			high = (high == nil or stage > high) and stage or high
+		end
+	end
+	return low, high
+end
+
+-- 이 스테이지 사람이 지금 이 몹에 새로 닿으면 막히는가(이미 참여 중이면 false).
+function MobShare.isBlocked(entry, who, stage, now)
+	if entry.participants[who] ~= nil and now - entry.participants[who] <= CombatConfig.participationWindowSeconds then
+		return false
+	end
+	local low, high = activeBand(entry, who, now)
+	if low == nil then
+		return false
+	end
+	return stage - low > CombatConfig.stealStageGap or high - stage > CombatConfig.stealStageGap
+end
+
+-- 창 안 참여자 중 최고 스테이지(except는 빼고). 없으면 nil.
+local function topStage(entry, except)
+	local top = nil
+	for who in pairs(entry.participants) do
+		local stage = entry.partStage[who]
+		if who ~= except and stage and (top == nil or stage > top) then
+			top = stage
+		end
+	end
+	return top
+end
+
+-- 창 밖 참여자를 빼고 기준을 다시 잡는다. 참여자가 하나도 없으면 기준은 그대로 둔다(다음에 닿는 사람이 정한다).
+-- 반환: 기준 스테이지, 비율이 다시 환산됐는가(상승).
+function MobShare.refresh(entry, now)
+	expire(entry, now)
+	local top = topStage(entry, nil)
 	if top == nil then
 		return entry.refStage, false
 	end
@@ -93,6 +137,7 @@ function MobShare.purge(entry, who)
 	entry.contributions[who] = nil
 	entry.firstHitAt[who] = nil
 	entry.hitCounts[who] = nil
+	entry.activeAt[who] = nil
 	if next(entry.participants) == nil and next(entry.contributions) == nil then
 		MobShare.fresh(entry)
 		return true
@@ -101,17 +146,25 @@ function MobShare.purge(entry, who)
 end
 
 -- 참여(타격 전 · 어그로 · 도움). 기록된 스테이지와 지금 스테이지가 다르면 먼저 지운다(스테이지 변경을 놓친 경로 - 견습 단계 전환 등 - 의 안전망).
--- 반환: 기준 스테이지, 초기화됐는가, 기준 상승으로 비율이 다시 환산됐는가.
-function MobShare.touch(entry, who, stage, now)
+-- passive = 쫓기기만 함(잡는 사람이 아님 - MonsterAI 어그로). 타격(applyDamage) · 도움(support)은 잡는 사람.
+-- 반환: 기준 스테이지, 초기화됐는가, 기준 상승으로 비율이 다시 환산됐는가, 막혔는가(잡는 사람과 stealStageGap 넘게 차이 - 참여 안 됨).
+function MobShare.touch(entry, who, stage, now, passive)
 	local wasReset = false
 	local recorded = entry.partStage[who]
 	if recorded ~= nil and recorded ~= stage then
 		wasReset = MobShare.purge(entry, who)
 	end
+	expire(entry, now)
+	if MobShare.isBlocked(entry, who, stage, now) then
+		return entry.refStage, wasReset, false, true
+	end
 	entry.participants[who] = now
 	entry.partStage[who] = stage
+	if not passive then
+		entry.activeAt[who] = now
+	end
 	local ref, rose = MobShare.refresh(entry, now)
-	return ref, wasReset, rose
+	return ref, wasReset, rose, false
 end
 
 -- 도움(치유 · 보호 · 버프): target이 지금 참여자면 helper도 참여자. 반환 = 참여시켰는가.
@@ -120,8 +173,8 @@ function MobShare.support(entry, helper, helperStage, target, now)
 	if at == nil or now - at > CombatConfig.participationWindowSeconds then
 		return false
 	end
-	MobShare.touch(entry, helper, helperStage, now)
-	return true
+	local _, _, _, blocked = MobShare.touch(entry, helper, helperStage, now)
+	return not blocked
 end
 
 -- 기준 HP로 환산한 피해 비율을 뺀다(touch 뒤에 부른다). 반환 = 죽었는가.

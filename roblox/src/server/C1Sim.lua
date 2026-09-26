@@ -44,7 +44,10 @@ local function hit(mob, who, now)
 		mob.partStage[who] = mob.partStage[who] or who.stage
 		return mob.hpRatio <= 0
 	end
-	local ref = MobShare.touch(mob, who, who.stage, now)
+	local ref, _wasReset, _rose, blocked = MobShare.touch(mob, who, who.stage, now)
+	if blocked then
+		return false, true -- C1 후속: 더 낮은 사람이 때리는 몹 - 피해 0
+	end
 	local ratio = k ^ (who.power - ref) / T * DT -- H(power) ÷ H(ref) - 절대 HP를 만들지 않는다
 	if ratio ~= ratio then
 		ratio = 0
@@ -192,7 +195,12 @@ local function scenarioB(mode)
 			return
 		end
 		s.fMob = s.fMob or table.remove(s.queue, 1) or newMob(s.mode)
-		if hit(s.fMob, s.F, now) then
+		local dead, blocked = hit(s.fMob, s.F, now)
+		if blocked then
+			s.fMob = newMob(s.mode) -- 낮은 계정이 잡는 몹 = 못 친다 → 자기 몹으로
+			dead = hit(s.fMob, s.F, now)
+		end
+		if dead then
 			payout(s.fMob, s.earned, now)
 			s.fMob = nil
 			s.fBusyUntil = now + TRAVEL
@@ -256,8 +264,12 @@ end
 -- e: 섞인 파티 1 · 300 · 3,000이 같은 무리에서 각자 자기 몹을 잡는다. overlap = 내 몹 중 바로 위 파티원의 광역이 한 번 스치는 비율(0 = 각자 몹만).
 --   새 규칙: 스치면 기준이 그 사람 스테이지로 올라 HP바가 가득으로 튄다 → 주인은 그 몹을 두고 새 몹으로(이동 1초). 스친 사람은 마무리하지 않는다(가장 나쁜 경우).
 --   옛 규칙: 스쳐도 스친 사람 스테이지 비율만 빠져 주인이 계속 친다.
-local function scenarioE(mode, overlap)
-	local people = { { power = 1, stage = 1 }, { power = 300, stage = 300 }, { power = 3000, stage = 3000 } }
+local function scenarioE(mode, overlap, stages)
+	stages = stages or { 1, 300, 3000 }
+	local people = {}
+	for _, st in ipairs(stages) do
+		table.insert(people, { power = st, stage = st })
+	end
 	local state = run(mode, function(m)
 		local s = start(m, { people = people, own = {}, deadUntil = {}, spillAt = {}, count = {}, acc = {} })
 		for i = 1, 3 do
@@ -281,11 +293,12 @@ local function scenarioE(mode, overlap)
 				end
 			elseif s.spillAt[i] and now >= s.spillAt[i] then
 				s.spillAt[i] = nil
+				local before = s.own[i].hpRatio
 				if hit(s.own[i], s.people[i + 1], now) then
 					payout(s.own[i], s.earned, now)
 					s.deadUntil[i] = now + TRAVEL
-				elseif s.mode == "new" then
-					s.deadUntil[i] = now + TRAVEL -- HP바가 가득으로 튐 → 두고 새 몹
+				elseif s.own[i].hpRatio > before + 0.2 then
+					s.deadUntil[i] = now + TRAVEL -- HP바가 크게 튐(기준 상승) → 두고 새 몹(조금 오른 건 계속 친다)
 				end
 			elseif hit(s.own[i], who, now) then
 				payout(s.own[i], s.earned, now)
@@ -309,11 +322,122 @@ local function scenarioF(mode)
 			return
 		end
 		if s.mode == "new" then
-			MobShare.touch(s.mob, s.M, s.M.stage, now) -- 몹이 잠수 멤버를 쫓는다(어그로 참여)
+			MobShare.touch(s.mob, s.M, s.M.stage, now, true) -- 몹이 잠수 멤버를 쫓는다(어그로 참여 = passive)
 		end
 		resolve(s, hit(s.mob, s.H, now), now)
 	end)
 	return perMinute(state.earned[state.M] or 0), perMinute(state.earned[state.H] or 0), C1Sim.normalRate(HIGH, 1)
+end
+
+-- i: 방해 - 높은 H(3,000)가 낮은 L(1)의 몹에 2초마다 광역 한 틱. L은 자기 몹을 계속 잡는다. 반환 = L 가치/분 · H가 L 몹에서 얻은 가치/분.
+--   옛 규칙: H의 한 틱은 H 스테이지 비율(4%)이라 L 몹을 거들고, 10%를 넘기면 H가 스테이지 3,000 보상을 가져간다(막타 저격).
+local function scenarioI(mode)
+	local state = run(mode, function(m)
+		return start(m, { L = { power = 1, stage = 1 }, H = { power = HIGH, stage = HIGH }, nextSpill = 1 })
+	end, function(s, now)
+		if respawn(s, now) or s.mobDead then
+			return
+		end
+		local dead = hit(s.mob, s.L, now)
+		if not dead and now >= s.nextSpill then
+			s.nextSpill = now + 2
+			local before = s.mob.hpRatio
+			dead = hit(s.mob, s.H, now)
+			if not dead and s.mob.hpRatio > before then
+				s.mob = newMob(s.mode) -- (C1 1차) 기준 상승 = 진행 소실 → 새 몹
+				table.insert(s.mobs, s.mob)
+			end
+		end
+		resolve(s, dead, now)
+	end)
+	return perMinute(state.earned[state.L] or 0), C1Sim.normalRate(1, 1), perMinute(state.earned[state.H] or 0)
+end
+
+-- j: 스테이지 1 탱커 T(힘 3,000 · 어그로만 · 안 때림) + 높은 딜러 D(3,000). 몹은 1초마다 T를 친다. T는 받는 스테이지 x에서 surviveTargetHits × k^(힘 − x)타를 버틴다.
+--   T가 죽으면 부활 + 복귀 15초 동안 파티 사냥이 멈춘다(가정). 받는 사람 = D. 정상 = T가 3,000에서 탱킹(같은 사람 · 정상 파티).
+--   옛 규칙 = 받는 피해가 T 자기 스테이지(1) → 사실상 안 죽는다. 새 규칙 = 몹 기준 스테이지(D가 때려 3,000).
+--   pull = 새 몹마다 T가 끌어오는 초(그동안 D는 안 친다 - 몹 참여자는 쫓기는 T뿐이라 기준 = T 스테이지). 한 틱 순서 = D 타격 → 몹 공격.
+--   새 규칙: 몹은 기준 − stealStageGap보다 낮은 사람을 쫓지 않는다(MonsterState.canChase) → D가 쳐서 기준이 3,000이 되면 T를 놓고 D를 문다(D도 7타 · 죽으면 15초).
+local function scenarioJ(mode, normal, pull)
+	pull = pull or 0
+	local surviveHits = BalanceAnchorConfig.surviveTargetHits
+	local state = run(mode, function(m)
+		return start(m, { T = { power = HIGH, stage = normal and HIGH or 1 }, D = { power = HIGH, stage = HIGH }, hp = {}, nextBite = 0, downUntil = 0, mobAt = 0 })
+	end, function(s, now)
+		if now < s.downUntil then
+			return
+		end
+		if respawn(s, now) then
+			s.mobAt = now
+			return
+		end
+		if s.mobDead then
+			return
+		end
+		local victim = s.T
+		if s.mode == "new" then
+			MobShare.refresh(s.mob, now)
+			local ref = s.mob.refStage
+			if ref == nil or s.T.stage >= ref - CombatConfig.stealStageGap then
+				MobShare.touch(s.mob, s.T, s.T.stage, now, true) -- 쫓김 = passive 참여
+			else
+				victim = s.D -- 기준 − 10보다 낮은 T는 안 쫓는다
+			end
+		end
+		if now - s.mobAt >= pull - 1e-9 then
+			local dead = hit(s.mob, s.D, now)
+			resolve(s, dead, now)
+			if dead then
+				return
+			end
+		end
+		if now >= s.nextBite then
+			s.nextBite = now + 1
+			local received = s.mode == "new" and (s.mob.refStage or victim.stage) or victim.stage
+			s.hp[victim] = (s.hp[victim] or 1) - 1 / (surviveHits * k ^ (victim.power - received))
+			if s.hp[victim] <= 0 then
+				s.hp[victim] = 1
+				s.downUntil = now + 15
+			end
+		end
+	end)
+	return perMinute(state.earned[state.D] or 0)
+end
+
+-- k: 사다리 - 스테이지 270 · 280 · 290 · 300(힘 = 스테이지) 네 명이 한 몹을 이어서 깎는다. i번째는 몹이 1 − 0.2i까지 줄면 손을 떼고 다음 사람이 넘겨받는다
+--   (막히면 풀릴 때까지 매 틱 재시도). 마지막 300이 마무리. 받는 사람 = 300. 정상 = 같은 네 명이 스테이지 300에서 함께(정상 파티).
+local function scenarioK(mode, normal)
+	local ladder = { 270, 280, 290, 300 }
+	local people = {}
+	for _, st in ipairs(ladder) do
+		table.insert(people, { power = st, stage = normal and 300 or st })
+	end
+	local state = run(mode, function(m)
+		return start(m, { people = people, step = 1 })
+	end, function(s, now)
+		if respawn(s, now) then
+			s.step = 1
+			return
+		end
+		if s.mobDead then
+			return
+		end
+		if normal then
+			for _, who in ipairs(s.people) do
+				if not s.mobDead then
+					resolve(s, hit(s.mob, who, now), now)
+				end
+			end
+			return
+		end
+		local who = s.people[s.step]
+		local dead, blocked = hit(s.mob, who, now)
+		resolve(s, dead, now)
+		if not dead and not blocked and s.step < #s.people and s.mob.hpRatio <= 1 - 0.2 * s.step then
+			s.step += 1
+		end
+	end)
+	return perMinute(state.earned[people[4]] or 0)
 end
 
 -- g: 토벌 - 보스 35를 깬 직후(힘 35) 스테이지를 낮췄다 올리며 토벌 스테이지를 고른다. 토벌 1회 = 보스 HP(몹 × hpMultiplier) 처치 + 입장 이동. 가치/분의 최대 vs 35.
@@ -390,13 +514,13 @@ function C1Sim.samples(stages, monsterData, prefixData, armorData)
 		local m2 = MobShare.fresh({})
 		MobShare.touch(m2, low, riseFrom, 0)
 		MobShare.applyRatio(m2, low, 0.5, 0)
-		MobShare.touch(m2, who, stage, 1)
+		MobShare.touch(m2, who, stage, CombatConfig.participationWindowSeconds + 1) -- 낮은 사람이 때리는 동안은 막힘 - 창 밖이 된 뒤 참여
 		-- 5칸 아래에서 50% → 오를 때(가까운 스테이지 - 값이 남는 경우)
 		local nearFrom = math.max(1, stage - 5)
 		local m3 = MobShare.fresh({})
 		MobShare.touch(m3, near, nearFrom, 0)
 		MobShare.applyRatio(m3, near, 0.5, 0)
-		MobShare.touch(m3, who, stage, 1)
+		MobShare.touch(m3, who, stage, CombatConfig.participationWindowSeconds + 1)
 		local best = BossData.stageInterval * math.floor(stage / BossData.stageInterval)
 		local raid = RaidRules.raidStage(stage, best)
 		local itemMax, bossItemMax = stage + dHi, (raid or stage) + bHi
@@ -455,16 +579,29 @@ function C1Sim.runAll()
 	local db, normalD = scenarioD("old")
 	local da = scenarioD("new")
 	add("d", "스테이지 연타로 몹 초기화(받는 사람 P)", db, da, normalD)
-	for _, overlap in ipairs({ 0, 0.1, 0.3 }) do
-		local eb, ea = scenarioE("old", overlap), scenarioE("new", overlap)
-		local pct = math.floor(overlap * 100 + 0.5)
-		for i = 1, 3 do
-			add(("e%d-%d"):format(i, pct), ("섞인 파티 - 스테이지 %d · 스침 %d%%(솔로 대비)"):format(ea[i].stage, pct), eb[i].rate, ea[i].rate, ea[i].normal)
+	for _, set in ipairs({ { 1, 300, 3000 }, { 295, 300, 305 } }) do
+		for _, overlap in ipairs({ 0, 0.1, 0.3 }) do
+			local eb, ea = scenarioE("old", overlap, set), scenarioE("new", overlap, set)
+			local pct = math.floor(overlap * 100 + 0.5)
+			for i = 1, 3 do
+				add(("e%d-%d-%d"):format(i, pct, set[1]), ("섞인 파티(%s) - 스테이지 %d · 스침 %d%%(솔로 대비)"):format(table.concat(set, "·"), ea[i].stage, pct), eb[i].rate, ea[i].rate, ea[i].normal)
+			end
 		end
 	end
 	local fb, fbH = scenarioF("old")
 	local fa, faH, normalF = scenarioF("new")
 	add("f", "잠수 파티원 버스(받는 사람 = 잠수 M · 정상 0)", fb, fa, 0, ("사냥꾼 H %.1f → %.1f / 솔로 %.1f"):format(fbH, faH, normalF))
+	local ib, iNormal, ibH = scenarioI("old")
+	local ia, _, iaH = scenarioI("new")
+	add("i-L", "방해: 높은 유저가 낮은 유저 몹에 2초마다 광역(받는 사람 = 낮은 L · 솔로 대비)", ib, ia, iNormal)
+	add("i-H", "방해: 같은 대본 - 높은 H가 L의 몹에서 가져간 가치(정상 0)", ibH, iaH, 0)
+	local kNormal = scenarioK("new", true)
+	add("k", "사다리 270 → 280 → 290 → 300 이어 깎기(받는 사람 = 300 · 정상 = 네 명이 300에서 파티)", scenarioK("old"), scenarioK("new"), kNormal)
+	for _, pull in ipairs({ 0, 1, 2 }) do
+		local jNormal = scenarioJ("new", true, pull)
+		add(("j-%d"):format(pull), ("스테이지 1 탱커 + 높은 딜러 파티 · 끌기 %d초(받는 사람 = 딜러 D · 정상 = 탱커가 3,000)"):format(pull),
+			scenarioJ("old", false, pull), scenarioJ("new", false, pull), jNormal)
+	end
 	local gBest, gNormal, gStage, gRows = scenarioG()
 	local gNote = {}
 	for _, r in ipairs(gRows) do

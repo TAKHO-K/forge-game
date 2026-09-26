@@ -324,7 +324,7 @@ attackRequest.OnServerEvent:Connect(function(player, aimPoint)
 		-- 붙여도 의미 있는 폭발 없이 시체와 함께 사라질 뿐이다.
 		-- 보물상자(22-2 [3])에는 화살이 안 꽂힌다 - 피해량이 무관한 대상에 지연 폭발을 남기면
 		-- "1초 간격" 규칙만 우회하는 셈이 된다.
-		if not isDead and wasQuickShotActive and projectileKind == "arrow" and not MonsterState.isChest(target) and not MonsterState.isRescueTarget(target) then
+		if not isDead and dealt > 0 and wasQuickShotActive and projectileKind == "arrow" and not MonsterState.isChest(target) and not MonsterState.isRescueTarget(target) then -- C1 리뷰 5: 막힌 타격(피해 0)엔 안 꽂힌다
 			local hitDirection = Vector3.new(currentRoot.Position.X - rootPart.Position.X, 0, currentRoot.Position.Z - rootPart.Position.Z)
 			hitDirection = hitDirection.Magnitude > 1e-3 and hitDirection.Unit or Vector3.new(0, 0, 1)
 			StuckArrowState.attach(target, player, atk, classId, attackerStage, hitDirection, requestedAt)

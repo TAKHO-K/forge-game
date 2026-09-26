@@ -61,22 +61,60 @@ function V.runPure()
 	local k = InfiniteStageConfig.growthRate
 	local W = CombatConfig.participationWindowSeconds
 
-	r.section("기준 스테이지 규칙", function()
+	r.section("기준 스테이지 · 스테이지 차 규칙", function()
+		local GAP = CombatConfig.stealStageGap
 		local low, high, mid = {}, {}, {}
 		local mob = MobShare.fresh({})
 		local ref = MobShare.touch(mob, low, 10, 0)
 		MobShare.applyRatio(mob, low, 0.6, 0)
 		r.check(("첫 참여 = 기준 %s · 비율 %.2f"):format(tostring(ref), mob.hpRatio), ref == 10 and near(mob.hpRatio, 0.4))
-		ref = MobShare.touch(mob, high, 30, 1)
+		local ref1, _, _, blocked = MobShare.touch(mob, high, 30, 1)
+		r.check(("참여자 최저 10 · 공격자 30(차 20 > %d) → 막힘 · 기준 %s · 비율 %.2f 그대로"):format(GAP, tostring(ref1), mob.hpRatio), blocked and ref1 == 10 and near(mob.hpRatio, 0.4) and mob.participants[high] == nil)
+		local t = W + 1
+		local ref2, _, rose = MobShare.touch(mob, high, 30, t)
 		local expect = 1 - 0.6 * k ^ (10 - 30)
-		r.check(("오를 때 재정규화 10 → 30: 비율 %.6f(기대 %.6f) · 낮은 기여 0.6 → %.6f(× k^−20) · 첫 타격 다시(%s) · 타격 수 다시(%s)"):format(mob.hpRatio, expect, mob.contributions[low], tostring(mob.firstHitAt[low]), tostring(mob.hitCounts[low])),
-			ref == 30 and near(mob.hpRatio, expect) and near(mob.contributions[low], 0.6 * k ^ -20) and mob.firstHitAt[low] == 1 and mob.hitCounts[low] == nil)
-		MobShare.touch(mob, mid, 20, 2)
-		r.check("낮은 사람이 더 와도 기준 그대로(30)", mob.refStage == 30)
+		r.check(("낮은 참여자 %d초 무참여 → 풀림 · 재정규화 10 → 30: 비율 %.6f(기대 %.6f) · 낮은 기여 0.6 → %.6f · 첫 타격 다시(%s) · 타격 수 다시(%s)"):format(W, mob.hpRatio, expect, mob.contributions[low], tostring(mob.firstHitAt[low]), tostring(mob.hitCounts[low])),
+			rose and ref2 == 30 and near(mob.hpRatio, expect) and near(mob.contributions[low], 0.6 * k ^ -20) and mob.firstHitAt[low] == t and mob.hitCounts[low] == nil)
+		MobShare.applyRatio(mob, high, 0.1, t)
+		local _, _, _, midBlocked = MobShare.touch(mob, mid, 20, t + 1)
+		MobShare.applyRatio(mob, mid, 0.05, t + 1)
+		r.check("높은 사람 몹에 낮은 사람(20)은 참여 가능(피해 = 기준 30 HP로 환산) · 기준 그대로 30", not midBlocked and mob.refStage == 30)
+		local _, _, _, highBlocked = MobShare.touch(mob, high, 30, t + 2)
+		r.check("먼저 참여한 높은 사람은 낮은 사람이 뒤에 끼어도 안 막힘(먼저 온 사람 우선 - 낮은 사람의 방해 차단)", not highBlocked)
 		local before = mob.hpRatio
-		ref = MobShare.touch(mob, low, 10, 1 + W + 0.5) -- high · mid 만료(마지막 1 · 2) - mid는 2 + W 이후라 아직 남음
-		r.check(("최고 참여자 %d초 무참여 → 기준 %s(참여자 중 최고 = 20) · 비율 유지 %.6f = %.6f"):format(W, tostring(ref), mob.hpRatio, before), ref == 20 and near(mob.hpRatio, before))
-		r.check("기준이 20으로 내려감 → 스테이지 30 사람 자격 없음(above_ref)", select(2, MobShare.eligible(mob, high, 30)) ~= nil)
+		ref = MobShare.touch(mob, low, 10, t + 2 + W + 0.5)
+		r.check(("참여자 전부 %d초 지나 낮은 사람만 → 기준 %s · 비율 유지 %.6f = %.6f"):format(W, tostring(ref), mob.hpRatio, before), ref == 10 and near(mob.hpRatio, before))
+		r.check("기준이 10으로 내려감 → 스테이지 30 사람 자격 없음(above_ref)", select(2, MobShare.eligible(mob, high, 30)) ~= nil)
+		-- 스틸 동작: 차 5 · 10 · 11
+		for _, gap in ipairs({ 5, 10, 11 }) do
+			local owner, thief = {}, {}
+			local m = MobShare.fresh({})
+			MobShare.touch(m, owner, 100, 0)
+			MobShare.applyRatio(m, owner, 0.5, 0)
+			local r2, _, rose2, b = MobShare.touch(m, thief, 100 + gap, 1)
+			if gap <= GAP then
+				local e2 = 1 - 0.5 * k ^ -gap
+				r.check(("스틸 차 %d: 참여 · 기준 %s · 재정규화 비율 %.4f(기대 %.4f) · 주인 기여 0.5 → %.4f"):format(gap, tostring(r2), m.hpRatio, e2, m.contributions[owner]),
+					not b and rose2 and r2 == 100 + gap and near(m.hpRatio, e2) and near(m.contributions[owner], 0.5 * k ^ -gap))
+			else
+				r.check(("스틸 차 %d: 막힘 · 기준 %s 그대로 · 비율 %.2f 그대로"):format(gap, tostring(r2), m.hpRatio), b and r2 == 100 and near(m.hpRatio, 0.5))
+			end
+		end
+		-- 쫓기기만 한 참여자(passive)는 잡는 사람이 아니다 → 막지 않는다 · 대신 기준이 오르면 몹이 안 쫓는다(canChase 조건)
+		local chased, dealer = {}, {}
+		local m2 = MobShare.fresh({})
+		MobShare.touch(m2, chased, 1, 0, true)
+		local ref3, _, _, b2 = MobShare.touch(m2, dealer, 3000, 0.5)
+		r.check(("쫓기기만 한 스테이지 1(passive) → 스테이지 3,000 딜러 안 막힘 · 기준 %s · 스테이지 1은 기준 − %d 아래라 몹이 안 쫓음(%s)"):format(tostring(ref3), GAP, tostring(1 < ref3 - GAP)),
+			not b2 and ref3 == 3000 and 1 < ref3 - GAP)
+		-- 대칭: 잡는 사람보다 10 넘게 낮은 사람도 새로 못 끼어든다(높은 파티 몹을 한 대 쳐서 그 파티원을 막는 방해 차단)
+		local hi, lo1, lo2 = {}, {}, {}
+		local m3 = MobShare.fresh({})
+		MobShare.touch(m3, hi, 300, 0)
+		MobShare.applyRatio(m3, hi, 0.1, 0)
+		local _, _, _, bl1 = MobShare.touch(m3, lo1, 1, 1)
+		local _, _, _, bl2 = MobShare.touch(m3, lo2, 290, 1)
+		r.check("잡는 사람 300 몹에 스테이지 1 → 막힘 · 290(차 10) → 참여", bl1 and not bl2)
 	end)
 
 	r.section("스테이지 변경 · 초기화", function()
@@ -109,7 +147,10 @@ function V.runPure()
 		local fighter, healer, idle = {}, {}, {}
 		local mob = MobShare.fresh({})
 		MobShare.touch(mob, fighter, 10, 0)
-		r.check("참여 중인 사람을 도움 → 도운 사람도 참여(기준 = 도운 사람 60)", MobShare.support(mob, healer, 60, fighter, 1) and mob.refStage == 60)
+		r.check("참여 중인 사람(10)을 치유사(18 - 차 8)가 도움 → 치유사도 참여(기준 = 18)", MobShare.support(mob, healer, 18, fighter, 1) and mob.refStage == 18)
+		local hitMob, hitter, bigHealer = MobShare.fresh({}), {}, {}
+		MobShare.touch(hitMob, hitter, 10, 0)
+		r.check("참여 중인 사람(10)을 치유사(60 - 차 50)가 도움 → 막힘(기준 그대로 10)", not MobShare.support(hitMob, bigHealer, 60, hitter, 1) and hitMob.refStage == 10)
 		r.check(("%d초 넘게 안 싸운 사람을 도움 → 참여 아님"):format(W), not MobShare.support(mob, idle, 90, fighter, 1 + W + 1))
 	end)
 
@@ -138,7 +179,7 @@ function V.runPure()
 		local rows = C1Sim.runAll()
 		local worst = "O"
 		for _, row in ipairs(rows) do
-			local isFun = row.id:match("^e") ~= nil
+			local isFun = row.id:match("^e") ~= nil or (row.id:match("^j%-") ~= nil and row.id ~= "j-0") -- 끌기 변형 = 잔여(결정 대기 - 보고서 ⑧)
 			r.note(("SIM|%s|%s|정상 %s|전 %s(%s) %s|후 %s(%s) %s|%s"):format(row.id, row.label, fmt(row.normal),
 				fmt(row.beforeRate), row.gainBefore and ("%+.1f%%"):format(row.gainBefore * 100) or "-", row.verdictBefore,
 				fmt(row.afterRate), ("%+.1f%%"):format(row.gainAfter * 100), row.verdictAfter, row.note or ""))
@@ -146,10 +187,10 @@ function V.runPure()
 				worst = row.verdictAfter
 			end
 		end
-		r.check(("악용 a ~ d · f ~ h 후 = 전부 O(+5%% 이하) · 최악 %s"):format(worst), worst == "O")
+		r.check(("악용 a ~ d · f ~ k(j = 끌기 0초) 후 = 전부 O(+5%% 이하) · 최악 %s - j 끌기 1 · 2초는 잔여로 따로 보고"):format(worst), worst == "O")
 		local e0 = true
 		for _, row in ipairs(rows) do
-			if row.id:match("^e%d%-0$") and math.abs(row.gainAfter) > 0.05 then
+			if row.id:match("^e%d%-0%-") and math.abs(row.gainAfter) > 0.05 then
 				e0 = false
 			end
 		end
@@ -207,11 +248,16 @@ function V.runLive(player, env)
 		MonsterState.applyDamage(model, hp(1) * 0.5, 1, low)
 		local ref1 = MonsterState.getRefStage(model)
 		r.check(("낮은 스탠드인(스테이지 1) 50%% → 기준 %s · 비율 %.3f"):format(tostring(ref1), MonsterState.getHpRatio(model)), ref1 == 1 and near(MonsterState.getHpRatio(model), 0.5, 1e-6))
+		local _, dealtBlocked = MonsterState.applyDamage(model, hp(30) * 0.2, 30, player)
+		r.check(("스탠드인(1) 참여 중 실제 Player(30 - 차 29) → 막힘: 들어간 피해 %s · 기준 %s · 비율 %.3f · 기여 %s"):format(tostring(dealtBlocked), tostring(MonsterState.getRefStage(model)),
+			MonsterState.getHpRatio(model), tostring(MonsterState.getContributors(model)[player])),
+			dealtBlocked == 0 and MonsterState.getRefStage(model) == 1 and near(MonsterState.getHpRatio(model), 0.5, 1e-6) and MonsterState.getContributors(model)[player] == nil)
+		task.wait(CombatConfig.participationWindowSeconds + 0.5)
 		MonsterState.applyDamage(model, 0, 30, player)
 		local expect = 1 - 0.5 * k ^ -29
 		local ref2, count = MonsterState.getRefStage(model)
-		r.check(("실제 Player(30) 참여 → 기준 %s · 참여 %d · 비율 %.4f(기대 %.4f) - 낮은 곳 깎은 몫이 30으로 안 샘"):format(tostring(ref2), count, MonsterState.getHpRatio(model), expect),
-			ref2 == 30 and count == 2 and near(MonsterState.getHpRatio(model), expect, 1e-6))
+		r.check(("%d초 뒤(스탠드인 무참여) 실제 Player(30) 참여 → 기준 %s · 참여 %d · 비율 %.4f(기대 %.4f) - 낮은 곳 깎은 몫이 30으로 안 샘"):format(CombatConfig.participationWindowSeconds, tostring(ref2), count, MonsterState.getHpRatio(model), expect),
+			ref2 == 30 and count == 1 and near(MonsterState.getHpRatio(model), expect, 1e-6))
 		MonsterState.applyDamage(model, hp(30) * 0.2, 30, player)
 		r.check(("Player 20%% → 자격 %s · 스탠드인(기여 %.3f) 자격 %s"):format(tostring(MonsterState.isRewardEligible(model, player, 30)),
 			MonsterState.getContributors(model)[low] or 0, tostring(MonsterState.isRewardEligible(model, low, 1))),
@@ -222,9 +268,9 @@ function V.runLive(player, env)
 		env.applyStage(player, 31)
 		task.wait()
 		local ref3 = MonsterState.getRefStage(model)
-		r.check(("스테이지 30 → 31: 내 기여 %s · 기준 %s · 비율 %.4f = %.4f · 파티 활동 %s"):format(tostring(MonsterState.getContributors(model)[player]), tostring(ref3),
+		r.check(("스테이지 30 → 31: 내 기여 %s · 기준 %s(참여자 없음 = 유지) · 비율 %.4f = %.4f(스탠드인 기여가 남아 초기화 안 함) · 파티 활동 %s"):format(tostring(MonsterState.getContributors(model)[player]), tostring(ref3),
 			MonsterState.getHpRatio(model), ratioBefore, tostring(PartyState.getLastActivity(player))),
-			MonsterState.getContributors(model)[player] == nil and ref3 == 1 and near(MonsterState.getHpRatio(model), ratioBefore, 1e-9) and PartyState.getLastActivity(player) == nil)
+			MonsterState.getContributors(model)[player] == nil and ref3 == 30 and near(MonsterState.getHpRatio(model), ratioBefore, 1e-9) and PartyState.getLastActivity(player) == nil)
 	end)
 
 	r.section("나만 참여한 몹 = 초기화 · HP바", function()
@@ -262,13 +308,19 @@ function V.runLive(player, env)
 		MonsterState.applyDamage(model, hp(32) * 0.1, 32, player)
 		local healer = { Name = "C1Healer", Parent = true }
 		local mobPos = model.PrimaryPart.Position
-		MonsterState.noteSupport(healer, 500, player, mobPos + Vector3.new(CombatConfig.supportRadiusStuds + 20, 0, 0))
+		MonsterState.noteSupport(healer, 40, player, mobPos + Vector3.new(CombatConfig.supportRadiusStuds + 20, 0, 0))
 		local farRef = MonsterState.getRefStage(model)
-		MonsterState.noteSupport(healer, 500, player, mobPos + Vector3.new(10, 0, 0))
+		local bigHealer = { Name = "C1BigHealer", Parent = true }
+		MonsterState.noteSupport(bigHealer, 500, player, mobPos + Vector3.new(10, 0, 0))
+		local bigRef = MonsterState.getRefStage(model)
+		MonsterState.noteSupport(healer, 40, player, mobPos + Vector3.new(10, 0, 0))
 		local nearRef = MonsterState.getRefStage(model)
+		local attackStage = MonsterState.getAttackStage(model, 32)
 		MonsterState.clearPlayerContributions(healer)
-		r.check(("치유사(500)가 참여 중인 Player를 도움: 몹에서 %d 밖 → 기준 %s(그대로 32) · 10 안 → 기준 %s"):format(CombatConfig.supportRadiusStuds, tostring(farRef), tostring(nearRef)),
-			farRef == 32 and nearRef == 500)
+		MonsterState.clearPlayerContributions(bigHealer)
+		r.check(("참여 중인 Player(32)를 도움: 치유사 40이 %d 밖 → 기준 %s(그대로) · 치유사 500이 10 안(차 468) → 막힘 %s · 치유사 40이 10 안(차 8) → 기준 %s · 몹이 주는 피해 스테이지 %s"):format(
+			CombatConfig.supportRadiusStuds, tostring(farRef), tostring(bigRef), tostring(nearRef), tostring(attackStage)),
+			farRef == 32 and bigRef == 32 and nearRef == 40 and attackStage == 40)
 		-- 어그로: 몹을 Player 곁에 두고 MonsterAI가 쫓게 한다
 		local chaser = MonsterSpawner.spawn(data, root.Position + Vector3.new(8, 0, 0), nil, {})
 		table.insert(spawned, chaser)
@@ -279,8 +331,36 @@ function V.runLive(player, env)
 			ref, count = MonsterState.getRefStage(chaser)
 		until ref ~= nil or os.clock() - t0 > 3
 		r.check(("곁의 몹이 쫓기 시작(MonsterAI) → 때리지 않아도 참여 · 기준 %s · 참여 %d"):format(tostring(ref), count or 0), ref == 32 and count == 1)
+		-- 리뷰 1: 높은 사람이 이 몹을 치면(쫓기기만 한 Player는 잡는 사람이 아니라 안 막힘) 기준 500 → 몹이 Player(32)를 놓는다(기준 공격력 즉사 방지)
+		local tagger = { Name = "C1Tagger", Parent = true }
+		local _, taggedDealt = MonsterState.applyDamage(chaser, hp(500) * 0.01, 500, tagger)
+		task.wait(0.5)
+		local stillChasing = MonsterState.getAiTarget(chaser) == player
+		r.check(("쫓기던 몹을 높은 스탠드인(500)이 침 → 들어간 피해 %s · 기준 %s · 0.5초 뒤 Player를 계속 쫓음 %s(기대 false)"):format(
+			tostring(taggedDealt and taggedDealt > 0), tostring(MonsterState.getRefStage(chaser)), tostring(stillChasing)),
+			taggedDealt > 0 and MonsterState.getRefStage(chaser) == 500 and not stillChasing)
+		MonsterState.clearPlayerContributions(tagger)
 		if MonsterState.getData(chaser) then
 			MonsterSpawner.despawn(chaser) -- 개발 캐릭터를 계속 때리지 않게 바로 치운다
+		end
+	end)
+
+	r.section("스틸 차 5 · 10 · 11(실제 applyDamage · 스탠드인)", function()
+		for i, gap in ipairs({ 5, 10, 11 }) do
+			local model = spawnMob(Vector3.new(60 + i * 20, 0, 0))
+			local owner = { Name = "C1Owner", Parent = true }
+			local thief = { Name = "C1Thief", Parent = true }
+			MonsterState.applyDamage(model, hp(100) * 0.5, 100, owner)
+			local _, dealt = MonsterState.applyDamage(model, hp(100 + gap) * 0.1, 100 + gap, thief)
+			local ref = MonsterState.getRefStage(model)
+			local ratio = MonsterState.getHpRatio(model)
+			if gap <= CombatConfig.stealStageGap then
+				local e = 1 - 0.5 * k ^ -gap - 0.1
+				r.check(("차 %d: 스틸 참여 · 기준 %s · 비율 %.4f(기대 %.4f) · 몹이 주는 피해 스테이지 %s"):format(gap, tostring(ref), ratio, e, tostring(MonsterState.getAttackStage(model, 1))),
+					dealt > 0 and ref == 100 + gap and near(ratio, e, 1e-6) and MonsterState.getAttackStage(model, 1) == 100 + gap)
+			else
+				r.check(("차 %d: 막힘 · 들어간 피해 %s · 기준 %s · 비율 %.2f 그대로"):format(gap, tostring(dealt), tostring(ref), ratio), dealt == 0 and ref == 100 and near(ratio, 0.5, 1e-6))
+			end
 		end
 	end)
 

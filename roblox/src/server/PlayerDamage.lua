@@ -100,11 +100,12 @@ end
 PlayerDamage.debugNewbieProtectionOff = false
 
 -- G1-3: 레벨차 계수 - 받는 피해(CharacterLevelConfig.levelGap). 스테이지 = 그 사람의 지금 스테이지(보스전이면 리더가 연 보스 스테이지와 같다 - 파티원은 자기 스테이지). 스탠드인은 1.
-function PlayerDamage.getLevelGapTakeMultiplier(targetPlayer)
+function PlayerDamage.getLevelGapTakeMultiplier(targetPlayer, stageOverride)
 	-- 리뷰 2: 보스전 중이면 보스 스테이지(BossEncounter가 거는 Attribute BossStage) - 파티원이 자기 스테이지를 1로 내려 두고 리더의 고스테이지 보스에 들어가
 	-- 받는 피해 벌점만 피하던 우회를 막는다(주는 피해는 원래 보스 스테이지). 신규 보호가 "지금 → 최고 스테이지"로 바꾼 것과 같은 이유.
 	local bossStage = typeof(targetPlayer) == "Instance" and targetPlayer:GetAttribute("BossStage") or nil
-	return CharacterLevel.levelGapTakeMultiplier(PlayerProfile.getCharacterLevel(targetPlayer), bossStage or PlayerProfile.getInfiniteStage(targetPlayer))
+	-- C1 후속: 잡몹 = 몹 기준 스테이지(stageOverride - MonsterAI가 넘긴다)
+	return CharacterLevel.levelGapTakeMultiplier(PlayerProfile.getCharacterLevel(targetPlayer), bossStage or stageOverride or PlayerProfile.getInfiniteStage(targetPlayer))
 end
 
 function PlayerDamage.getNewbieMultiplier(targetPlayer)
@@ -119,7 +120,7 @@ end
 local function applyFinalDamage(targetPlayer, damage, label, opts)
 	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
 	damage *= PlayerDamage.getNewbieMultiplier(targetPlayer)
-	damage *= PlayerDamage.getLevelGapTakeMultiplier(targetPlayer) -- G1-3: 레벨차 계수(받는 피해)
+	damage *= PlayerDamage.getLevelGapTakeMultiplier(targetPlayer, opts and opts.levelGapStage) -- G1-3: 레벨차 계수(받는 피해) · C1: 잡몹은 몹 기준 스테이지
 	-- 29-1(PRD 20.73 [2-8] A-1 "잡힌 동안 받는 피해"): 잡히면 못 피하므로 모든 패턴이 확정 피격이다 -
 	-- 배율(지금은 0 = 면역)을 곱하고, 0이면 피격 자체가 없던 것으로 친다(자동회복 타이머도 안 건드린다).
 	local trapMultiplier = PlayerState.getTrapDamageMultiplier(targetPlayer)
@@ -146,12 +147,12 @@ end
 -- 곱한 값)와 어긋나 "진동파 29% + 강공격 43% = 생존" 관계가 실제로는 111%로 깨졌다
 -- (21-3 [4] 검증에서 발견, 20.46 참고). PRD 표대로 "피해 ×m"으로 통일한다 - 그래야 ×2/×3이
 -- 직업·방어력과 무관하게 항상 생존 타수의 2/7·3/7이다.
-function PlayerDamage.applyHit(targetPlayer, rawAttack, label, damageMultiplier)
+function PlayerDamage.applyHit(targetPlayer, rawAttack, label, damageMultiplier, opts)
 	if (PlayerState.getHp(targetPlayer) or 0) <= 0 then
 		return 0 -- 죽어서 리스폰 대기 중인 시체는 때리지 않는다(사망 로그 중복 방지)
 	end
 	local damage = PlayerDamage.computeHitDamage(rawAttack, targetPlayer) * (damageMultiplier or 1)
-	return applyFinalDamage(targetPlayer, damage, label)
+	return applyFinalDamage(targetPlayer, damage, label, opts) -- opts.levelGapStage(C1 - 잡몹 기준 스테이지)
 end
 
 -- 최대체력 비율 피해(21-3, 보스 돌진 - 방어 무관). 받는 피해 배율(대시 50% 등)은 그대로
