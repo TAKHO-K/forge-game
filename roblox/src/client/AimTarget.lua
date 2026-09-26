@@ -21,6 +21,7 @@ local UserInputService = game:GetService("UserInputService")
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local OutlinePool = require(script.Parent.OutlinePool)
 
 local AimTarget = {}
 
@@ -69,26 +70,18 @@ function AimTarget.getWorldPointFromScreen(screenPos)
 	return ray.Origin + ray.Direction * t
 end
 
--- G1-1(3타 표시 C): 다음 타가 강타면 조준 외곽선 색을 바꾼다(로컬만 - 서버가 만든 기본 색은 모델마다 기억해 두고 되돌린다).
+-- G1-1(3타 표시 C): 다음 타가 강타면 조준 외곽선 색을 바꾼다(로컬만).
+-- A1: 조준 외곽선 = 외곽선 풀(OutlinePool)의 조준 슬롯 - 몬스터마다 꺼진 AimHighlight를 두지 않는다(꺼져도 255 슬롯을 차지 - 몬스터 120 = 120칸).
 local heavyReady = false
 local HEAVY_OUTLINE = UIColors.ember
-local baseOutline = setmetatable({}, { __mode = "k" }) -- [Highlight] = 서버가 준 색
 
-local function paintOutline(highlight)
-	if baseOutline[highlight] == nil then
-		baseOutline[highlight] = highlight.OutlineColor
-	end
-	highlight.OutlineColor = heavyReady and HEAVY_OUTLINE or baseOutline[highlight]
+local function paintAim()
+	OutlinePool.setAim(currentTarget, currentTarget and (heavyReady and HEAVY_OUTLINE or nil) or nil) -- nil 색 = CartoonStyleData.outline.aimColor
 end
 
 local function setVisual(model, on)
 	if not model then
 		return
-	end
-	local highlight = model:FindFirstChild("AimHighlight")
-	if highlight then
-		highlight.Enabled = on
-		paintOutline(highlight)
 	end
 	local head = model:FindFirstChild("Head")
 	local nameplateGui = head and head:FindFirstChild("NameplateGui")
@@ -105,6 +98,7 @@ local function setTarget(model)
 	setVisual(currentTarget, false)
 	currentTarget = model
 	setVisual(currentTarget, true)
+	paintAim()
 end
 
 -- 지금 조준점을 즉시 반영한다(클릭·탭 순간 호버 틱을 기다리지 않고 바로 갱신하기 위해
@@ -118,10 +112,7 @@ function AimTarget.setHeavyReady(on)
 		return
 	end
 	heavyReady = on
-	local highlight = currentTarget and currentTarget:FindFirstChild("AimHighlight")
-	if highlight then
-		paintOutline(highlight)
-	end
+	paintAim()
 end
 
 function AimTarget.refresh(aimPoint)

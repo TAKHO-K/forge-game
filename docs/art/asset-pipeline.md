@@ -56,6 +56,7 @@
 - 로블록스 재질 덮어쓰기(`MaterialService:SetBaseMaterialOverride`)는 **기본 재질 하나당 place 전체**다. 그래서 "구역별 재질"은 구역마다 다른 기본 재질을 쓰는 구조(M1-3 `TerrainGenData.palette`)로 가른다.
 - 이름 규칙: `Terrain_<기본 재질>`(예: `Terrain_Slate`). MaterialService 아래(폴더 깊이 무관)에 그 이름 · 같은 `BaseMaterial`의 MaterialVariant를 넣으면 서버 부팅 때 덮어쓰기를 켠다(`TerrainBake.applyVariants` · 로그 `지형 재질 변형 자리 N · 켠 것 k`). 지금은 없다(기본 재질).
 - 소품 · 구조물 파트도 같은 기본 재질을 쓰면 같이 바뀐다(예: 폐허 `Limestone`).
+- **A1(2026-09-27)**: 카툰 프로필은 위 `Terrain_` 자리 대신 **텍스처 없는 변형 `CartoonFlat_<재질>` 17개**(`shared/CartoonFlatVariants.model.json` - Rojo가 `MaterialService.CartoonStyle`로 옮겨지는 원본)로 덮는다 = 평면 면 음영 · 텍스처 0장. 게임 스크립트는 `MaterialVariant.BaseMaterial`을 쓸 수 없어(Plugin 권한) 변형은 반드시 Rojo 파일이나 place에 미리 있어야 한다. 전환 = `/gg style base | cartoon` · 규칙 = `docs/art/cartoon-pipeline.md`.
 
 | 기본 재질 | 쓰는 곳 | 여러 구역 공유 |
 |---|---|---|

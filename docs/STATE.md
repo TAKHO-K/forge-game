@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **C1 마무리(스틸 조건 3개 · 잠긴 몹 표시) · 2026-09-26** · 직전 보고서 = `docs/phase/C1-final-report.md`(그 전 `C1-report.md` · `M1-4-report.md`) · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **A1 카툰 파이프라인 기술 검증 · 2026-09-27** · 직전 보고서 = `docs/phase/A1-report.md`(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -18,6 +18,7 @@
 | 세계 지도 | **M1-4**: 소품 라이브러리(`ReplicatedStorage.Assets.Props` · 틀 36 · 맵 = 이름 · cf · 배율 · 교체 모델 `Shared.PropModels` · `docs/art/asset-pipeline.md`) · 빈 공간 채우기(구역 테마 소품 약 1,975 · 부팅 때 지형 레이캐스트 붙이기) · **커브길 = Terrain 재질 띠**(`RoadNet` · 지형 높이 따라 · 경사 ≤ 25° · 갈림길 → 랜드마크 · 표지판) · 절벽 · 외곽 벽 사다리 6 · **외곽 테마 경계**(T1 언덕 · T2 수정 절벽 · T3 바다 · T4 메사 + 협곡 · T5 폭풍 절벽 · T6 빙벽 + 빙하 틈 · 능선 전망 지점 · 밀어내기 = 능선 너머 · `TerrainGenData.edgeStyles`) · 능선 둥지 5 · **관문 = 공통 틀 + 보스별 장식**(`BossGateKit`) · 심해 관문 = 만 위 광장 + 둑길(`layout.gateSites`) · 폭풍 첨탑 장식 · 로컬 날씨(`GateWeather` · `CoastFx`) · 나무 잎 덩어리. 지형 버전 허브 · T1 · T2 · T4 · T5 · T6 = 2 · T3 = 3. **M1-3 대형 지형**: 로블록스 Terrain(생성기 = git `shared/TerrainShape` · `data/TerrainGenData` · 결과 = place에 굽기 `TerrainBakeRun` - Rojo 동기화 없음) · 구역 원 테두리 능선 · 꽃잎 사이 골짜기 · 외곽 설산 산맥(봉우리 170 ~ 400 - 보이는 경계 · 실제 차단 = 서버 밀어내기 2,640) · T1 폐허 · 작은 계곡 / T2 수정 동굴(파내기) / T3 물살 강 → 바다 만 · 수중 신전 / T4 사구 · 선인장 밭 · 오아시스 / T5 천둥 신전 · 쌍봉 흔들다리 / T6 산 중턱 호수 · 빙벽 · 둥지 3트랙 88곳(A 30 · B 18 · C 고정 6 · 순환 30 후보 · 마을 4 - `data/NestData` · 비밀 둥지 먼저 → 지형이 비움) · 구역 알(`data/EggData` · 알 정보창) · 스폰 지점 지형 판정. **M1-2c**: 덩굴 리프트 = 굵은 덩굴 + 잎사귀 바구니 · [F] 탑승(밟기 삭제) · 잠김 시든 갈색 + "Lv.○○ 필요" / 열림 초록 + 반딧불 · 처음 해금 알림 + 길 안내 · 나무 입구 정거장 안내판 · 순간이동 도착 대기(클라 `ArrivalHold` - 발판이 올 때까지 붙잡음) · 보스 입장/복귀도 미리 불러오기. **M1-3a 관문 등록**: 관문 = `BossData` 보스마다 `gate` 칸(보스 색 큰 아치 · 문양 · 빛기둥) · F(폰 버튼) 상호작용 또는 발판 입장으로 등록(v40 `world.bossGates`) · 등록 = 스테이지 창 [원격 입장](파티 = 한 명이라도) · 등록 전 = 길 안내 + "다음 목표" 추적 + [원격 입장] 잠금 · 등록 전/뒤 빛기둥 · 문양 구분(클라 `BossGateMarks`). **M1-2 후속**: 스폰 활성 110 · 유지 12초 · 지역명(오른쪽 위 [파티] · 골드 칩 위 - 나무 높이 · 정거장도) · 귀환 상태 = [귀환] · [돌아가기] 버튼 글씨 · 메뉴바 파티 칸 삭제(오른쪽 위 [파티] · P 키). **M1-2**: 허브 안전 400 · 거리 배치(대장간 거리 · 시장 · 커뮤니티 광장 · 포탈 광장) · 마을 귀환(H · 3초 시전 · 맞으면 취소 · 5분 돌아가기 1회) · 몬스터 스폰 범위(구역 원 반경 620 · 지점 34곳 · 지나가면 3마리 · 전투 중 정리 안 함) · 뿌리(충돌 · 땅속) + 코스 뿌리 · 윗잎 층 4장. **M1 그레이박스**: 반지름 3,000 · 허브 큰 나무 마을 · 꽃잎 구역 6(T1 수호자 · T2 수정 · T3 심해 · T4 전갈 · T5 폭풍 · T6 서리 - 스테이지 5k 보스 = 구역 k) · 구역 개방(계정 최고 보스) · 결계 · 포탈 · 귀환 · 파티원 곁 · 보스 관문 입장(길 안내) · 몬스터 지대 활성화 · 나무 점프맵 두 갈래(정거장 5 · 리프트 · 높이 표시 · 메타세쿼이아 로우폴리 원뿔 · 계절 색표) · 봉인 입구 5(티저 · 칭호) · 관문 빛기둥 | `docs/design/world-map-m1.md` · 수치 `shared/data/WorldMapData.lua` |
 | 이동 | **M1-4 사다리**: 오르기 상태 = 곁에 TrussPart · Climbable가 있을 때만 서 있음(`HeightGuard.nearClimbable` · 지연 0.25 되돌림 0). **M1-3 물**: 익사 없음 · 공중 점프 충전 = 물 밖 착지만 · 물속 대시 불가 · 물살(강 10/초 - 클라 끌림 · 서버 속도 기록) · 헤엄 = 실제 물 복셀일 때만 높이 검사 "서 있음"(`MovementConfig.water`). **M1-2c 발사 허가**: 점프대 · 통통 열매 · 수정 부수기 발판 · 보스 발사 전부 = 허가(설계 정점 + 공중 점프 전부 + 4 · 가장 최근 것만 · 착지까지 · 상한 뒤 내려가기만) - `server/LaunchPermit`(서버 위치 기록 0.5초로 발판 확인) · `HeightGuard.grantLaunch` · 수치 `MovementConfig.permit`. 새 수직 발사 요소 = 이 둘 중 하나로(감사 표 = M1-2c 보고서 ③). **M1-0 개편**: 공중 점프 충전 2(+6.12씩) · 공중대시 체공 1회 섞기 · 필드 = 아레나 같은 규칙 · 서버 높이 검증 허용 22.38 | `docs/design/movement-metrics.md` v2 |
 | 카메라 | **M1-0**: 기본 = 로블록스 기본 카메라(줌 22 · 10 ~ 60) · 설정 창 "탑다운 시점"(55° · 45 - 이번 접속 동안) · 보스전 최소 30° · 시점 고정 = 왼쪽 Ctrl · PC 스킬 줄 칸 / 폰 "고정" 버튼(대시 옆) | 같은 문서 §8 |
+| 카툰 스타일(A1) | `CartoonStyle.apply(base \| cartoon)` - 관리 속성만(조명 · 효과 4 · 물 · 17재질 색 · **텍스처 없는 MaterialVariant 17**(`shared/CartoonFlatVariants.model.json` - 평면 면 음영) · 허브 바닥 파트 색 · 작은 소품 그림자) · 멱등 · **기본 = base**(`CartoonStyleData.active` - 전환 = A2-1) · `/gg style base\|cartoon` · **외곽선 풀**(`client/OutlinePool` - 상한 80 · 조준 외곽선 통합 · 몬스터별 꺼진 AimHighlight 삭제) · 구역 색조(클라) · 시제품 `/gg a1 …`(슬라임 · 수호자 리그 · 전갈 꼬리 Bone · 대검 7등급 · 카툰 풀) · UI 목업 `client/A1UiMockups` · 검증 `A1(나)` | `docs/art/cartoon-pipeline.md` · `A1-report.md` |
 | 설정 창 | M1-0에 첫 창(카메라 토글 하나). 저장 · 키 재설정은 **P4-4** | `client/panels/Settings.lua` |
 | 저장 | **SAVE_VERSION 42**(v42 hints.stealLockSeen / v41 world.nests · world.nestDex · eggs / v40 world.bossGates / v38 world.portals · peakLevel / v39 titles) · Studio 수동 Play = `Player_<id>_manual`(M1-2 후속 - 실제 프로필은 읽기만) | `server/SaveSystem.lua` |
 
@@ -28,6 +29,8 @@
 > **C1 마무리 끝(2026-09-26)**: 스틸 조건 3개 · 잠긴 몹 표시 · 도움말 데이터 · 끌어오기 계측. **P4 도움말: 스틸 항목 준비됨**(`shared/data/HelpCodexData` + `TextData codex.stealLock.*` - 창 UI는 P4).
 
 > **C1 끝(2026-09-26)**: 잡몹 기준 스테이지 · 보상 자격 · 토벌 스테이지 규칙. 검증 정책 = COMMON §7-1 개정(이번 수정만 · 옛 블록은 실제로 건드렸을 때만 + 이유 한 줄).
+
+> **A1 끝(2026-09-27) - place 저장 불필요**: 승인 시트 10항목 · 잔디 3안 · 나무 2안 · 리그 게이트(BR1-4 · M2 착수 가능) · A2 = 8묶음 추천. **U1(새 단계 - BR2 뒤)** = HUD · 장비창 · 안내창 · 도움말 백과사전 전면 재구성(A1 목업 3종 · art-spec 9장 · 시트 16 ~ 18 · 단축키 충돌 표 `A1-report.md` §10-3).
 
 **다음** = D1(지시 순서 "C1 → D1") · M1-4 결정(§4 - 특히 **place 저장**) 뒤 로드맵(`docs/phase/roadmap-v2.md`): BR2(보스 세트 · 토벌 - 관문 자리 있음) · M2(몬스터 외형 · 종) · 펫 단계(알 부화 · 탑승 · 활강 - 둥지 B · C는 활강 착지 불가로 설계됨). 지형 모양을 바꾸면 `TerrainGenData.version[구역]`을 올리고 그 구역만 다시 굽고 place 저장. 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`.
 
@@ -44,6 +47,7 @@
 | ~~M1-3 1 ~ 6~~ | **닫힘(사용자 확정 2026-09-26)**: 1 place 저장 완료 · 2 알 확률 수정(A 높은 곳 59/40/1 · B 0/90/10 · C-필드 0/80/20 · C-히든 0/50/50 = 구역당 하루 1곳 이하일 때 · 넘으면 0/72/28 · 지금 구역당 1곳 · 하루 6곳) · 3 물속 대시 불가 유지 · 4 standMaxY 160 유지(활강 단계 재검토) · 5 도감 = 전부 · 칭호 = C-필드 · C-히든만 · 6 비밀 둥지 위치 서버 전용화 → **S1** |
 | M1-4 1 ~ 8 | 1 **place 저장** · 2 빈 공간 기준 60 · (나) ≤ 15%(13.6) · 3 스폰 상한 120 · 3(같은 세션 A/B · 깨끗한 Studio 재측정) · 4 능선 둥지 = A 높은 곳 · 5 사다리 밖 오르기 오탐 · 6 섬광 끄기 설정(P4-4) · 7 거리 상한 2,500 · 8 나무 잎 스타일 = A1 - `M1-4-report.md` ⑨ |
 | C1 (닫힘 · 기록) | **사용자 확정**: 1 → 스틸 차 10 규칙 · 2 → 받는 피해 = 몹 기준 스테이지 · 3 유지 · **4 S01(나) 검증(M1-2 스폰 방식으로 tier6 몹 없음)은 다음 마일스톤 전에 수정** · **5 원거리 재상승(높은 참여자가 8초 넘게 떨어졌다 돌아오면 피해 재축소) = 알파에서 체감 확인** |
+| A1 1 ~ 11 | 1 승인 시트 ① ~ ⑩ · 2 **잔디 (C) 추천**(place Decoration 끔 + 저장) · 3 나무 층층형 유지 · 4 등급 색 기존 + 태초 통합안 · 5 공유 재질 가르기(A2-1) · 6 cartoon 전환 시점(A2-1 끝) · 7 외곽선 상한 80 · 8 아이콘 12종 이미지 · 9 관문 코어 청록 공통 · 10 단축키 충돌 · 11 G1-2(나) 환경 의존 - `A1-report.md` §14 |
 | C1 마무리 1 ~ 5 | 1 대칭 판정 = "낮은 쪽은 같이 때리되 주인 집합 밖"으로 해석 · 2 낮은 부계정 = 안전 딜러(드랍 이득 없음) · 3 j 끌기 2초 +9.5% 주의(`/gg stats` 알파 수치) · 4 자물쇠 최대 0.5초 먼저 풀림 · **5 같은/낮은 스테이지로 맞춘 강한 계정이 follower로 초보 몹 보상(추천: follower 보상 자격 없음)** - `C1-final-report.md` ⑧ |
 | C1 후속 6 ~ 8 | 6 스테이지 1 탱커 끌기 잔여(끌기 1초 +13% · 2초 +33%) · 7 결정 문구와 다른 3가지(잡는 사람만 막음 · 대칭 · 어그로 필터) · 8 수치 유지 - `C1-report.md` ⑩ |
 | M1-3 7 · 8 | 7 창 열림 중 칩 버튼(설정 · 알)이 딤에 막힘(기존 동작) · 8 사당(B 기둥 코스 끝) 앞이 열림(폭 9.6 - 활강 단계에서 재측정) - `M1-3-report.md` ⑨ |
@@ -64,6 +68,7 @@
 - (M1-3a) 파티 "리더 미등록 + 다른 멤버 등록" 원격 입장은 순수 규칙만(다중 클라 불가). 검증 훅 `ServerStorage.StageMoveHook`(Studio 전용).
 - (M1-2 후속) S16(UI) 메뉴바 자체 점검은 칸 3개를 기대 - 파티 칸 삭제로 더 틀린다. M1-2(나) 귀환 3항목이 첫 Play에서 X · 다음 Play 7/7(원인 미확정 - 흔들림). 수동 Play에서 `/gg keycheck` 두 Play 왕복은 `_manual`이 서버마다 새로 시작해 안 이어진다.
 - S04(나) 멈춤 - `verify.exclude`로 회귀 제외(원인 미확정).
+- (A1에서 확인) G1-2(나) "처치 시간 측정 - 잡몹이 없다" X - 앞선 블록이 남긴 필드 몹에 의존(A1 변경 되돌려도 같은 X · S09 · S12와 함께 돌면 O) - S01(나)와 같은 계열.
 - (C1 마무리에서 발견) S11(가) "옛 스테이지 45 / 50 / 75 / 100 자리 강화석 ≈5" X(실제 ≈6 - 보스 배율 · 드랍 변경 뒤 옛 기대값) · 같은 Play 클라 S11(UI) 6/8(같은 계열). 저장 이관 항목은 O.
 - (C1 후속에서 발견) P25c(나) "최고 30 신규 보호 0.9612(기대 1)" X - BR1-2 보호 곡선 변경 뒤 기대값이 옛 값(C1 무관).
 - (C1에서 발견) S01(나) "tier6 0마리 처치" X - M1-2 스폰 방식(사람 곁에만 무리)부터 "구역 몹이 늘 있다" 전제가 깨짐(서버 `SpawnSitesAlive = 0` 확인). 실제 처치 경로 4항목은 O.

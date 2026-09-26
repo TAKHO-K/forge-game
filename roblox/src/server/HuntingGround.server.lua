@@ -223,6 +223,12 @@ do
 	end
 end
 
+-- A1: 카툰 스타일 프로필(CartoonStyleData.active - 지금 base = 위 값과 같다 · /gg style base|cartoon 으로 전환)
+do
+	local counts = require(ReplicatedStorage.Shared.CartoonStyle).apply(require(ReplicatedStorage.Shared.data.CartoonStyleData).active)
+	print(("[forge-game] 카툰 스타일 %s · 재질 %d · 덮어쓰기 %d · 소품 파트 %d"):format(workspace:GetAttribute("CartoonStyle"), counts.materials, counts.overrides, counts.propParts))
+end
+
 removeDefaultSpawns("HuntingGroundSpawn")
 removeDefaultBaseplate()
 createPlayerSpawn(WorldConfig.zones.spawn.arrival)

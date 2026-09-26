@@ -865,14 +865,7 @@ function spawnObstacle(state, zone, item)
 	})
 	model.PrimaryPart = root
 	local visuals = Looks.build(model, center, item, state.bossData)
-	-- 조준 대상 외곽선(몬스터와 같은 AimHighlight - AimTarget이 조준할 때만 켠다. 꺼진 Highlight는 동시 한도에 안 든다).
-	local aim = Instance.new("Highlight")
-	aim.Name = "AimHighlight"
-	aim.Enabled = false
-	aim.FillTransparency = 1
-	aim.OutlineColor = Color3.fromRGB(255, 230, 90) -- MonsterSpawner의 조준 외곽선과 같은 값
-	aim.OutlineTransparency = 0
-	aim.Parent = model
+	-- 조준 대상 외곽선 = 클라 외곽선 풀(A1 - client/OutlinePool). 꺼진 Highlight도 동시 255 슬롯을 차지하므로 미리 붙이지 않는다.
 	model.Parent = state.dressing
 	CollectionService:AddTag(model, "Monster")
 	CollectionService:AddTag(model, "RescueTarget") -- 클라가 "보스"를 찾을 때 건너뛴다(BossPatternVisuals.findBossModel)

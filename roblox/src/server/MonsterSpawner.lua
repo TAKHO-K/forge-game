@@ -181,15 +181,8 @@ local function buildModel(data, position, variant)
 		barFillCorner.Parent = barFill
 	end
 
-	-- 조준 대상 강조 외곽선(16-7) - 기본은 꺼져 있다. AimTarget.lua가 조준 대상 모델에서만
-	-- Enabled를 켠다.
-	local highlight = Instance.new("Highlight")
-	highlight.Name = "AimHighlight"
-	highlight.Enabled = false
-	highlight.FillTransparency = 1
-	highlight.OutlineColor = Color3.fromRGB(255, 230, 90)
-	highlight.OutlineTransparency = 0
-	highlight.Parent = model
+	-- 조준 대상 강조 외곽선(16-7)은 A1부터 클라 외곽선 풀(client/OutlinePool)이 조준 대상에만 단다 -
+	-- 몬스터마다 꺼진 Highlight를 미리 붙여 두면 꺼져 있어도 동시 255 슬롯을 차지한다(몬스터 120 = 120칸).
 
 	BossLook.buildAttachments(model, look, body.Position, head.Position)
 
@@ -198,7 +191,7 @@ local function buildModel(data, position, variant)
 end
 
 -- 보물상자 모델(22-2 [3]) - 기본 파트만(아트 동결). 조준·피격 경로가 잡몹과 같아야 하므로
--- 구조(HumanoidRootPart PrimaryPart + Head + NameplateGui/HpBar + AimHighlight + "Monster"
+-- 구조(HumanoidRootPart PrimaryPart + Head + NameplateGui/HpBar + "Monster"
 -- 태그)는 buildModel과 맞춘다 - AimTarget.lua·AimPicker·updateHpLabel이 그대로 동작한다.
 -- 멀리서 눈에 띄게: 잡몹보다 훨씬 큰 몸통 + 금테 + PointLight + 하늘로 뻗는 빛기둥(반짝이
 -- 이펙트 레이어와 같은 수단 - 상자는 우리가 만든 파트라 서버가 직접 붙여도 된다).
@@ -324,13 +317,7 @@ local function buildChestModel(position)
 	barFillCorner.CornerRadius = UDim.new(1, 0)
 	barFillCorner.Parent = barFill
 
-	local highlight = Instance.new("Highlight")
-	highlight.Name = "AimHighlight"
-	highlight.Enabled = false
-	highlight.FillTransparency = 1
-	highlight.OutlineColor = Color3.fromRGB(255, 230, 90)
-	highlight.OutlineTransparency = 0
-	highlight.Parent = model
+	-- 조준 외곽선 = 클라 외곽선 풀(A1 - 상자에도 Highlight를 미리 붙이지 않는다)
 
 	model.PrimaryPart = root
 	return model

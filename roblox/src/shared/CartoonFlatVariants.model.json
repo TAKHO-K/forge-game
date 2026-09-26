@@ -1,0 +1,158 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "CartoonFlat_Grass",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1280
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_LeafyGrass",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1284
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Rock",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 896
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Mud",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1344
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Limestone",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 820
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Slate",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 800
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Pavement",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 836
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Basalt",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 788
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Sand",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1296
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Sandstone",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 912
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Ground",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1360
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Cobblestone",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 880
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Snow",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1328
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Ice",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1536
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Glacier",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1552
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Salt",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1392
+        }
+      }
+    },
+    {
+      "Name": "CartoonFlat_Asphalt",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1376
+        }
+      }
+    }
+  ]
+}

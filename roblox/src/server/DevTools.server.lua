@@ -2324,6 +2324,50 @@ local function handleCommand(player, args)
 			end
 			reply(player, "killsim 중단: 보스가 사라졌습니다")
 		end)
+	elseif sub == "a1" then
+		-- A1 기술 검증 시제품(server/A1Prototypes): build | pose <1~5> | curl <0~1> | squash <0~1> | grass | clear
+		local Proto = require(script.Parent.A1Prototypes)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local folder = workspace:FindFirstChild("A1Proto")
+		local what = args[2] or "build"
+		if what == "build" and root then
+			Proto.clear()
+			local base = CFrame.new(root.Position * Vector3.new(1, 0, 1) + Vector3.new(0, root.Position.Y - 3, 0)) * CFrame.Angles(0, math.rad(180), 0)
+			Proto.mossSlime(base * CFrame.new(-8, 0, 12))
+			Proto.guardian(base * CFrame.new(10, 0, 22))
+			Proto.scorpionTail(base * CFrame.new(-16, 0, 26) * CFrame.Angles(0, math.rad(90), 0))
+			Proto.swordRow(base * CFrame.new(0, 0, 6))
+			reply(player, "A1 시제품 생성")
+		elseif what == "pose" and folder and folder:FindFirstChild("A1_GuardianRig") then
+			reply(player, "수호자 자세: " .. Proto.guardianPose(folder.A1_GuardianRig, tonumber(args[3]) or 1))
+		elseif what == "curl" and folder and folder:FindFirstChild("A1_ScorpionTail") then
+			Proto.tailCurl(folder.A1_ScorpionTail, tonumber(args[3]) or 1)
+			reply(player, "꼬리 감기 " .. tostring(args[3]))
+		elseif what == "squash" and folder and folder:FindFirstChild("A1_MossSlime") then
+			Proto.slimeSquash(folder.A1_MossSlime, tonumber(args[3]) or 1)
+			reply(player, "슬라임 찌부 " .. tostring(args[3]))
+		elseif what == "grass" and root then
+			local _, n = Proto.grassField(root.Position)
+			reply(player, ("카툰 풀 덩어리 %d"):format(n))
+		elseif what == "clear" then
+			Proto.clear()
+			reply(player, "A1 시제품 지움")
+		else
+			reply(player, "/gg a1 build | pose <1~5> | curl <0~1> | squash <0~1> | grass | clear")
+		end
+	elseif sub == "style" then
+		-- A1: 카툰 스타일 즉시 전환(A/B 비교) · check = 멱등 · 관리 속성 일치 · 관리 밖 변화 검사 결과만 출력
+		local CartoonStyle = require(game:GetService("ReplicatedStorage").Shared.CartoonStyle)
+		local name = args[2] or "cartoon"
+		if require(game:GetService("ReplicatedStorage").Shared.data.CartoonStyleData).profiles[name] == nil then
+			reply(player, "프로필: base | cartoon")
+		else
+			local t0 = os.clock()
+			local counts = CartoonStyle.apply(name)
+			local line = ("카툰 스타일 = %s(%.0fms · 재질 %d · 덮어쓰기 %d · 소품 파트 %d)"):format(name, (os.clock() - t0) * 1000, counts.materials, counts.overrides, counts.propParts)
+			print("[CartoonStyle] " .. line)
+			reply(player, line)
+		end
 	elseif sub == "stealhint" and args[2] == "reset" then
 		PlayerProfile.debugResetStealLockSeen(player) -- C1 마무리: 잠긴 몹 말풍선을 다시 보게(세션 메모리 - 백업 복원 대상)
 		reply(player, "잠긴 몹 말풍선 기록을 비웠습니다")
@@ -3514,6 +3558,7 @@ if RunService:IsStudio() then
 				{ "M1-0(나)", function() require(script.Parent.M1_0Verify).runLive(player, env) end }, -- M1-0: 합법 최대 높이 되돌림 0 · 기본 Shift Lock 꺼짐 · 아레나 공중 복귀 0
 				{ "M1-2(나)", function() require(script.Parent.M1_2Verify).runLive(player, env) end }, -- M1-2: 스폰 지점 실제 사이클 · 전투 중 보류 · 처치 중 남김 · 귀환 시전 · 취소 · 돌아가기 · 뿌리 밟기
 				{ "C1(나)", function() require(script.Parent.C1Verify).runLive(player, env) end }, -- C1: 기준 스테이지 상승 · 자격 · 스테이지 변경 지우기/초기화 · 만료 · 실제 처치 보상 · 치유 · 어그로 참여 · 토벌 검사
+				{ "A1(나)", function() require(script.Parent.A1Verify).runLive() end }, -- A1: CartoonStyle 멱등 · base 복귀 · 관리 밖 변화 0 · 몬스터별 AimHighlight 0
 				{ "M1-4(나)", function() require(script.Parent.M1_4Verify).runLive(player, env) end }, -- M1-4: 지형 표식 v2 · 캡슐(소품 포함) · 소품 라이브러리 · 지형 붙이기 · 사다리 곁 · 능선 위/너머 밀어내기 · 심해 관문 발판 · 무리 상한
 				{ "M1-3T(나)", function() require(script.Parent.M1_3TVerify).runLive(player, env) end }, -- M1-3 본편: 굽힌 지형 · 둥지 캡슐 통과 · 줍기(성공 · 쿨다운 · 멀리서 · 순간이동) · 저장 · 순환 · 선인장 · 외곽 밀어내기 · 스폰 높이
 				{ "M1-3(나)", function() require(script.Parent.M1_3Verify).runLive(player, env) end }, -- M1-3: 관문 등록 전 · 등록 · 원격 입장(솔로 · 파티) · 저장 유지 · 지형(물살 · 선인장 · 도달 · 낙하 복귀)
