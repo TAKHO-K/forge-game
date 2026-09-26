@@ -210,8 +210,9 @@ function V.runPure()
 		local function has(list, v)
 			return table.find(list, v) ~= nil
 		end
-		r.check(("붙잡기 올라서기(발 0 → 모서리 %.1f): 허가 있음 %s(되돌림 0 · 착지 뒤 기준 %.1f) / 허가 없음 %s(되돌림)"):format(top, table.concat(withP, ","), s1.supportY or -1, table.concat(noP, ",")),
-			not has(withP, "revert") and not has(withP, "strike") and near(s1.supportY, top) and has(noP, "revert"))
+		-- 허가 없음 = 모서리 위 공중 표본에서 경고(strike) - 되돌림은 옛 규칙대로 두 번 연속일 때(한 폴링 만에 올라서면 경고만 · S1 과제)
+		r.check(("붙잡기 올라서기(발 0 → 모서리 %.1f): 허가 있음 %s(경고 · 되돌림 0 · 착지 뒤 기준 %.1f) / 허가 없음 %s(경고 생김)"):format(top, table.concat(withP, ","), s1.supportY or -1, table.concat(noP, ",")),
+			not has(withP, "revert") and not has(withP, "strike") and near(s1.supportY, top) and (has(noP, "strike") or has(noP, "revert")))
 		local okV, why = MoveRules.ledgeClimbValid(20, 20.5, 14)
 		local _, why2 = MoveRules.ledgeClimbValid(26, 20, 14)
 		local _, why3 = MoveRules.ledgeClimbValid(30, 30, 14)
