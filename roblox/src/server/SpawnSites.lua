@@ -69,7 +69,7 @@ function SpawnSites.buildPoints()
 		for _, hp in ipairs(WorldMapLayout.huntPoints(zone)) do
 			local point = { zoneKey = zone.key, index = hp.index, position = hp.position, monsters = zone.hunt.monsters, slots = {}, active = false, lastNearAt = -math.huge }
 			for _, s in ipairs(hp.slots) do
-				table.insert(point.slots, { position = Vector3.new(s.X, WorldMapData.floorTopY + 1.5, s.Z) })
+				table.insert(point.slots, { position = Vector3.new(s.X, s.Y + 1.5, s.Z) }) -- M1-3: 슬롯 높이 = 지형 윗면(WorldMapLayout.huntPoints)
 			end
 			table.insert(list, point)
 		end

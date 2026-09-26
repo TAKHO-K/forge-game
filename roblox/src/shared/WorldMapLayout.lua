@@ -184,7 +184,6 @@ end
 local function featureFootprint(f)
 	return math.max(f.w or 0, f.d or 0, (f.size or 0) * 1.5 + 12) / 2 + ((f.kind == "plateau") and f.h / math.tan(math.rad(35)) or 0)
 end
-local NEST_EXTENT = 75 -- 둥지 구조가 기준점에서 뻗는 최대 길이(연속 점프 계단 8단 ≈ 71)
 
 -- 구역의 스폰 범위: { zoneKey, name, center(지면), radius, monsters }
 function Layout.huntRange(zone)
@@ -203,13 +202,18 @@ function Layout.huntRangeAt(position)
 	return nil
 end
 
--- 스폰 지점(캐시 · 고정 시드): [i] = { index, position(지면), slots = { 지면 위치 × group.count } }. 범위 안에 흩어 둔다(최소 간격 · 지형 · 둥지 · 캠프 · 관문 회피).
+-- 스폰 지점(캐시 · 고정 시드): [i] = { index, position(지면), slots = { 지면 위치 × group.count } }. 범위 안에 흩어 둔다(최소 간격 · 캠프 · 관문 · 옛 지형 · 둥지 · 선인장 밭 회피).
+-- M1-3 지형: 슬롯 + 둘레가 걷는 땅이어야 한다 - 물 없음 · 높이 차(가운데 · 슬롯 · 둘레 표본) ≤ terrain.maxRelief · 평지 위 terrain.maxAbove 이하(능선 · 대지 위 금지). 슬롯 높이 = 지형 윗면.
 local huntPointCache = {}
 function Layout.huntPoints(zone)
 	if huntPointCache[zone.key] then
 		return huntPointCache[zone.key]
 	end
+	local TerrainShape = require(ReplicatedStorage.Shared.TerrainShape)
+	local WorldStructures = require(ReplicatedStorage.Shared.WorldStructures)
+	local WSD = require(ReplicatedStorage.Shared.data.WorldStructureData)
 	local S = D.spawnSites
+	local TT = S.terrain
 	local range = Layout.huntRange(zone)
 	local seed = (S.seed + (table.find(D.zones, zone) or 1) * 7919) % 2147483647
 	local function rand()
@@ -223,20 +227,62 @@ function Layout.huntPoints(zone)
 	for _, f in ipairs(zone.features) do
 		table.insert(blockers, { p = Layout.toWorld(zone, f.r, f.lat), r = featureFootprint(f) + S.avoid.feature })
 	end
-	for _, n in ipairs(zone.nests) do
-		table.insert(blockers, { p = Layout.toWorld(zone, n.r, n.lat), r = NEST_EXTENT + S.avoid.nest })
+	for _, n in ipairs(WorldStructures.nestList()) do
+		if n.zone == zone.key then
+			local c = n.cf and n.cf.Position or n.spot
+			local r = (n.pads and n.pads[1] and n.pads[1].radius) or 10
+			table.insert(blockers, { p = c, r = math.max(r, 12) + S.avoid.nest })
+		end
+	end
+	if WSD.cactus.zone == zone.key then
+		for _, f in ipairs(WSD.cactus.fields) do
+			table.insert(blockers, { p = Layout.toWorld(zone, f.r, f.lat), r = f.outer + S.avoid.cactus })
+		end
 	end
 	local function flat(a, b)
 		return Vector3.new(a.X - b.X, 0, a.Z - b.Z).Magnitude
 	end
+	-- 걷는 땅인가(물 · 경사 · 높이) - 반환: ok, 슬롯 높이 목록
+	local function groundOk(p, turn)
+		local hs = {}
+		local lo, hi = math.huge, -math.huge
+		local function sample(x, z)
+			local c = TerrainShape.column(x, z)
+			if c.water then
+				return nil
+			end
+			lo, hi = math.min(lo, c.h), math.max(hi, c.h)
+			return c.h
+		end
+		local h0 = sample(p.X, p.Z)
+		if not h0 then
+			return false
+		end
+		for k = 1, S.group.count do
+			local sa = turn + (k - 1) / S.group.count * 2 * math.pi
+			local h = sample(p.X + math.cos(sa) * S.group.radius, p.Z + math.sin(sa) * S.group.radius)
+			if not h then
+				return false
+			end
+			hs[k] = h
+		end
+		for k = 0, TT.ringSamples - 1 do
+			local a = k / TT.ringSamples * 2 * math.pi
+			if not sample(p.X + math.cos(a) * TT.ringRadius, p.Z + math.sin(a) * TT.ringRadius) then
+				return false
+			end
+		end
+		return hi - lo <= TT.maxRelief and hi - TerrainShape.flatY <= TT.maxAbove, hs
+	end
 	local points = {}
 	local maxR = range.radius - S.edgeMargin - S.group.radius
-	for _ = 1, 6000 do
+	for _ = 1, 12000 do
 		if #points >= S.pointsPerRange then
 			break
 		end
 		local a, rr = rand() * 2 * math.pi, math.sqrt(rand()) * maxR
 		local p = range.center + Vector3.new(math.cos(a) * rr, 0, math.sin(a) * rr)
+		local turn = rand() * 2 * math.pi
 		local ok = true
 		for _, b in ipairs(blockers) do
 			if flat(p, b.p) < b.r + S.group.radius then
@@ -250,14 +296,18 @@ function Layout.huntPoints(zone)
 			end
 			ok = flat(p, q.position) >= S.pointSpacing
 		end
+		local hs
+		if ok then
+			ok, hs = groundOk(p, turn)
+		end
 		if ok then
 			local slots = {}
-			local turn = rand() * 2 * math.pi
 			for k = 1, S.group.count do
 				local sa = turn + (k - 1) / S.group.count * 2 * math.pi
-				slots[k] = p + Vector3.new(math.cos(sa) * S.group.radius, 0, math.sin(sa) * S.group.radius)
+				slots[k] = Vector3.new(p.X + math.cos(sa) * S.group.radius, hs[k], p.Z + math.sin(sa) * S.group.radius)
 			end
-			table.insert(points, { index = #points + 1, position = p, slots = slots })
+			local c = TerrainShape.column(p.X, p.Z)
+			table.insert(points, { index = #points + 1, position = Vector3.new(p.X, c.h, p.Z), slots = slots })
 		end
 	end
 	huntPointCache[zone.key] = points
@@ -273,20 +323,16 @@ local function prim(list, model, name, size, cf, color, opts)
 		transparency = opts.transparency, attrs = opts.attrs, neon = opts.neon, mesh = opts.mesh, query = opts.query,
 	})
 end
--- 바닥에 선 상자(중심 xz · 윗면 높이 top)
+-- 바닥에 선 상자(중심 xz · 윗면 높이 top). M1-3: 지형 위에 서므로 밑을 COLUMN_SINK만큼 땅속으로(복셀 높이 오차 · 뜬 틈 방지)
+local COLUMN_SINK = 2
 local function column(list, model, name, cfFlat, w, d, top, color, opts)
-	prim(list, model, name, Vector3.new(w, top, d), cfFlat * CFrame.new(0, top / 2, 0), color, opts)
+	prim(list, model, name, Vector3.new(w, top + COLUMN_SINK, d), cfFlat * CFrame.new(0, (top - COLUMN_SINK) / 2, 0), color, opts)
 end
 local function flatYaw(p, lookDir)
 	local base = Vector3.new(p.X, FLOOR, p.Z)
 	return CFrame.lookAt(base, base + Vector3.new(lookDir.X, 0, lookDir.Z))
 end
 
--- 경사로(쐐기): 바닥 cf에서 앞(-Z 로컬 = lookDir)으로 run만큼 가며 0 → h로 오른다. 높은 면이 앞쪽 끝.
-local function ramp(list, model, name, baseCf, run, h, width, color)
-	-- WedgePart: 높은 면 = 로컬 +Z · 경사 = -Z(ZoneTerrain 실측 주석). 우리는 앞(-Z)으로 오르게 하려고 Y축 180° 돌린다.
-	prim(list, model, name, Vector3.new(width, h, run), baseCf * CFrame.new(0, h / 2, -run / 2) * CFrame.Angles(0, math.pi, 0), color, { shape = "Wedge" })
-end
 
 -- 삼각형(a, b, c) = 쐐기 2개(로우폴리 면 - 메시 에셋 없이). 반환 = { { size, cf }, { size, cf } }. 두께 thickness(안쪽으로).
 function Layout.triangle(a, b, c, thickness)
@@ -881,56 +927,6 @@ function Layout.buildTree(list)
 	return T
 end
 
--- ─────────────────────────── 둥지 ───────────────────────────
--- 반환: prims에 도형을 넣고, 메타 { top = 둥지 자리(월드), difficulty, leaps = { { rise, gap, from, to } } }(검증이 이동 표로 잰다)
-function Layout.nest(zone, index, list)
-	local spec = zone.nests[index]
-	local N = D.nest
-	local model = "Zone_" .. zone.key
-	local look = dirOf(zone.angleDeg)
-	local base = Layout.toWorld(zone, spec.r, spec.lat)
-	local cf0 = flatYaw(base, look)
-	local meta = { difficulty = spec.difficulty, leaps = {}, index = index }
-	local c = D.colors.blockLight
-	if spec.difficulty == "walk" then
-		local w = N.walk
-		local run = w.ledgeH / math.tan(math.rad(w.slopeDeg))
-		column(list, model, "NestLedge", cf0, w.ledge, w.ledge, w.ledgeH, c)
-		ramp(list, model, "NestRamp", cf0 * CFrame.new(0, 0, w.ledge / 2 + run), run, w.ledgeH, w.width, c)
-		meta.top = (cf0 * CFrame.new(0, w.ledgeH, 0)).Position
-		meta.slopeDeg = w.slopeDeg
-	elseif spec.difficulty == "chain" then
-		local ch = N.chain
-		local spacing = ch.gap + ch.width
-		for i = 1, ch.steps do
-			local w = i == ch.steps and ch.ledge or ch.width
-			local z = -(i - 1) * spacing - (i == ch.steps and (ch.ledge - ch.width) / 2 or 0)
-			column(list, model, i == ch.steps and "NestLedge" or "NestStep", cf0 * CFrame.new(0, 0, z), w, w, i * ch.rise, c)
-			table.insert(meta.leaps, { rise = ch.rise, gap = ch.gap, need = "easy" })
-		end
-		meta.top = (cf0 * CFrame.new(0, ch.steps * ch.rise, -(ch.steps - 1) * spacing - (ch.ledge - ch.width) / 2)).Position
-	else
-		local pz = N.puzzle
-		-- 계단 2단(4 · 8) → 기둥(pillarH) → 도약(오름 rise · 간격 gap) → 선반(pillarH + rise)
-		local s = pz.stairGap + 4
-		column(list, model, "NestStep", cf0 * CFrame.new(0, 0, s * 2), 4, 4, pz.stairRise, c)
-		column(list, model, "NestStep", cf0 * CFrame.new(0, 0, s), 4, 4, pz.stairRise * 2, c)
-		column(list, model, "NestPillar", cf0, pz.pillarSize, pz.pillarSize, pz.pillarH, c)
-		local ledgeZ = -(pz.pillarSize / 2 + pz.gap + pz.ledge / 2)
-		local ledgeTop = pz.pillarH + pz.rise
-		column(list, model, "NestLedge", cf0 * CFrame.new(0, 0, ledgeZ), pz.ledge, pz.ledge, ledgeTop, c)
-		table.insert(meta.leaps, { rise = pz.stairRise, gap = pz.stairGap, need = "easy" })
-		table.insert(meta.leaps, { rise = pz.pillarH - pz.stairRise * 2, gap = pz.stairGap, need = "easy" })
-		table.insert(meta.leaps, { rise = pz.rise, gap = pz.gap, need = "puzzle" })
-		meta.top = (cf0 * CFrame.new(0, ledgeTop, ledgeZ)).Position
-		meta.ledgeFromGround = ledgeTop
-	end
-	-- 자리 표시(기능은 펫 단계)
-	prim(list, model, "NestSpot", Vector3.new(N.marker.size, 0.4, N.marker.size), CFrame.new(meta.top + Vector3.new(0, 0.2, 0)), D.colors.marker,
-		{ collide = false, neon = true, attrs = { NestZone = zone.key, NestIndex = index, NestDifficulty = spec.difficulty } })
-	return meta
-end
-
 -- ─────────────────────────── 구역 지형 ───────────────────────────
 -- 반환: 탐험 지점 · 이스터에그 자리 목록(월드) - 도형은 list에.
 local function buildFeature(zone, f, list)
@@ -939,15 +935,17 @@ local function buildFeature(zone, f, list)
 	local base = Layout.toWorld(zone, f.r, f.lat)
 	local cf0 = flatYaw(base, look)
 	local points = {}
-	local c, cd = D.colors.block, D.colors.blockDark
+	-- M1-3: 파트 색 · 재질 = 구역 지형 절벽 재질(지형과 이어져 보이게) · 대지(plateau) · 절벽(cliff)은 이제 지형(TerrainShape 모양 단계)이 만든다
+	local stone = require(ReplicatedStorage.Shared.WorldStructureKits).look(zone.key)
+	local c, cd = stone.color, stone.dark
+	local mat = { material = stone.material }
+	local FLAT_TOP = FLOOR + require(ReplicatedStorage.Shared.data.TerrainGenData).flatLevel
 	if f.kind == "plateau" then
-		column(list, model, "Plateau", cf0, f.w, f.d, f.h, c)
-		local run = f.h / math.tan(math.rad(35))
-		ramp(list, model, "PlateauRamp", cf0 * CFrame.new(0, 0, f.d / 2 + run), run, f.h, 12, c)
-		points.top = (cf0 * CFrame.new(0, f.h, 0)).Position
-		points.base = (cf0 * CFrame.new(0, 0, f.d / 2 + run + 6)).Position
+		local run = f.h / math.tan(math.rad(33))
+		points.top = Vector3.new(base.X, FLAT_TOP + f.h, base.Z)
+		points.base = (cf0 * CFrame.new(0, 0, math.max(f.w, f.d) / 2 + run + 6)).Position
 	elseif f.kind == "tower" then
-		column(list, model, "Tower", cf0, f.size, f.size, f.h, cd)
+		column(list, model, "Tower", cf0, f.size, f.size, f.h, cd, mat)
 		-- 1단 점프 계단 나선(오름 4 · 간격 4 · 폭 4 - 쉬움) - 탑 둘레 반경 R
 		local R = f.size / 2 * math.sqrt(2) + 3
 		local a, y = 0, 0
@@ -955,30 +953,29 @@ local function buildFeature(zone, f, list)
 			a += 2 * math.asin(8 / (2 * R))
 			y += 4
 			local p = cf0 * CFrame.new(math.cos(a) * R, 0, math.sin(a) * R)
-			column(list, model, "TowerStep", p, 4, 4, y, c)
+			column(list, model, "TowerStep", p, 4, 4, y, c, mat)
 		end
 		points.top = (cf0 * CFrame.new(0, f.h, 0)).Position
 		points.base = (cf0 * CFrame.new(0, 0, R + 6)).Position
 	elseif f.kind == "cliff" then
-		column(list, model, "Cliff", cf0, f.w, f.d, f.h, cd)
 		points.base = (cf0 * CFrame.new(0, 0, f.d / 2 + 10)).Position
 	elseif f.kind == "cave" then
 		local t = 8
-		column(list, model, "CaveWall", cf0 * CFrame.new(-(f.w / 2 - t / 2), 0, 0), t, f.d, f.h, cd)
-		column(list, model, "CaveWall", cf0 * CFrame.new(f.w / 2 - t / 2, 0, 0), t, f.d, f.h, cd)
-		column(list, model, "CaveBack", cf0 * CFrame.new(0, 0, -(f.d / 2 - t / 2)), f.w, t, f.h, cd)
-		prim(list, model, "CaveRoof", Vector3.new(f.w, 6, f.d), cf0 * CFrame.new(0, f.h + 3, 0), cd)
+		column(list, model, "CaveWall", cf0 * CFrame.new(-(f.w / 2 - t / 2), 0, 0), t, f.d, f.h, cd, mat)
+		column(list, model, "CaveWall", cf0 * CFrame.new(f.w / 2 - t / 2, 0, 0), t, f.d, f.h, cd, mat)
+		column(list, model, "CaveBack", cf0 * CFrame.new(0, 0, -(f.d / 2 - t / 2)), f.w, t, f.h, cd, mat)
+		prim(list, model, "CaveRoof", Vector3.new(f.w, 6, f.d), cf0 * CFrame.new(0, f.h + 3, 0), cd, mat)
 		points.inside = (cf0 * CFrame.new(0, 0, -f.d / 4)).Position
 		points.base = (cf0 * CFrame.new(0, 0, f.d / 2 + 8)).Position
 	elseif f.kind == "falls" then
 		-- 폭포 벽(앞) + 뒤 벽 · 사이 공간(옆으로 들어간다)
 		prim(list, model, "FallsFront", Vector3.new(f.w, f.h, 4), cf0 * CFrame.new(0, f.h / 2, 0), D.colors.blockLight, { collide = true, transparency = 0.3 })
-		column(list, model, "FallsBack", cf0 * CFrame.new(0, 0, -16), f.w + 20, 6, f.h + 10, cd)
+		column(list, model, "FallsBack", cf0 * CFrame.new(0, 0, -16), f.w + 20, 6, f.h + 10, cd, mat)
 		points.behind = (cf0 * CFrame.new(0, 0, -8)).Position
 		points.base = (cf0 * CFrame.new(0, 0, 12)).Position
 	elseif f.kind == "spire" then
-		column(list, model, "Spire", cf0, f.size, f.size, f.h * 0.6, cd)
-		column(list, model, "Spire", cf0, f.size * 0.6, f.size * 0.6, f.h, cd)
+		column(list, model, "Spire", cf0, f.size, f.size, f.h * 0.6, cd, mat)
+		column(list, model, "Spire", cf0, f.size * 0.6, f.size * 0.6, f.h, cd, mat)
 		points.base = (cf0 * CFrame.new(0, 0, f.size + 6)).Position
 	end
 	if f.explore then
@@ -996,23 +993,27 @@ local function buildLandmark(zone, list)
 	local model = "Landmark_" .. zone.key
 	local center = Layout.toWorld(zone, m.r + 90, 0)
 	local cf0 = flatYaw(center, dirOf(zone.angleDeg))
-	local cd = D.colors.blockDark
-	if m.kind == "monoliths" or m.kind == "spires" or m.kind == "iceWall" then
+	local look = require(ReplicatedStorage.Shared.WorldStructureKits).look(zone.key)
+	local cd = look.dark
+	local mat = { material = look.material }
+	if m.kind == "sunkenTemple" then
+		return center -- M1-3: 바다 만 속 수중 신전 = WorldStructures(둥지 t3_b_temple)가 짓는다
+	elseif m.kind == "monoliths" or m.kind == "spires" or m.kind == "iceWall" then
 		for i = 1, m.count do
 			local a = (i - 1) / m.count * 2 * math.pi
 			local w = m.kind == "iceWall" and 40 or 10
-			column(list, model, "Landmark", cf0 * CFrame.new(math.cos(a) * m.radius, 0, math.sin(a) * m.radius) * CFrame.Angles(0, a, 0), w, 10, m.height * (m.kind == "spires" and (0.6 + 0.4 * (i % 2)) or 1), cd)
+			column(list, model, "Landmark", cf0 * CFrame.new(math.cos(a) * m.radius, 0, math.sin(a) * m.radius) * CFrame.Angles(0, a, 0), w, 10, m.height * (m.kind == "spires" and (0.6 + 0.4 * (i % 2)) or 1), cd, mat)
 		end
 	elseif m.kind == "temple" or m.kind == "pyramid" then
 		local layers = m.kind == "pyramid" and 6 or 4
 		for i = 1, layers do
 			local s = m.radius * 2 * (1 - (i - 1) / layers)
-			column(list, model, "Landmark", cf0, s, s, m.height * i / layers, cd)
+			column(list, model, "Landmark", cf0, s, s, m.height * i / layers, cd, mat)
 		end
 	elseif m.kind == "stormSpire" then
-		column(list, model, "Landmark", cf0, m.radius, m.radius, m.height * 0.5, cd)
-		column(list, model, "Landmark", cf0, m.radius * 0.6, m.radius * 0.6, m.height, cd)
-		column(list, model, "Landmark", cf0, m.radius * 0.3, m.radius * 0.3, m.height + 40, cd)
+		column(list, model, "Landmark", cf0, m.radius, m.radius, m.height * 0.5, cd, mat)
+		column(list, model, "Landmark", cf0, m.radius * 0.6, m.radius * 0.6, m.height, cd, mat)
+		column(list, model, "Landmark", cf0, m.radius * 0.3, m.radius * 0.3, m.height + 40, cd, mat)
 	end
 	return center
 end
@@ -1021,22 +1022,8 @@ end
 function Layout.buildZone(zone, list)
 	local model = "Zone_" .. zone.key
 	local tint = zone.floorTint
-	local center = Layout.regionCenter(zone)
-	-- 구역 바닥(옅은 색 원판 - 구역 구분) · 몬스터 스폰 범위(M1-2 - 조금 진한 원판 + 경계 고리)
-	prim(list, "Floor_" .. zone.key, "ZoneFloor", Vector3.new(0.2, L.regionRadius * 2, L.regionRadius * 2), CFrame.new(center.X, FLOOR + 0.1, center.Z) * CFrame.Angles(0, 0, math.rad(90)), tint, { shape = "Cylinder", material = "SmoothPlastic" })
-	local range = Layout.huntRange(zone)
-	local look = D.spawnSites.look
-	local k = look.tintScale
-	prim(list, "Floor_" .. zone.key, "HuntRange", Vector3.new(0.2, range.radius * 2, range.radius * 2), CFrame.new(range.center.X, FLOOR + 0.15, range.center.Z) * CFrame.Angles(0, 0, math.rad(90)),
-		{ tint[1] * k, tint[2] * k, tint[3] * k }, { shape = "Cylinder", material = "SmoothPlastic", attrs = { HuntRange = zone.key } })
-	for i = 1, look.ringSegments do
-		local a1, a2 = (i - 1) / look.ringSegments * 2 * math.pi, i / look.ringSegments * 2 * math.pi
-		local p1 = range.center + Vector3.new(math.cos(a1), 0, math.sin(a1)) * range.radius
-		local p2 = range.center + Vector3.new(math.cos(a2), 0, math.sin(a2)) * range.radius
-		local mid = (p1 + p2) / 2
-		prim(list, "Floor_" .. zone.key, "HuntRangeEdge", Vector3.new(look.ringWidth, 0.2, (p2 - p1).Magnitude + look.ringWidth), CFrame.lookAt(Vector3.new(mid.X, FLOOR + 0.25, mid.Z), Vector3.new(p2.X, FLOOR + 0.25, p2.Z)),
-			{ tint[1] * k * 0.75, tint[2] * k * 0.75, tint[3] * k * 0.75 }, { collide = false, material = "SmoothPlastic" })
-	end
+	-- M1-3: 구역 바닥 색 원판 · 스폰 범위 원판/고리는 지형(재질 · 높낮이)이 대신한다(삭제) - 사냥터 이름 표시(클라)는 그대로
+	local _ = tint
 	-- 캠프(안전 · 포탈)
 	local camp = Layout.camp(zone)
 	prim(list, model, "Camp", Vector3.new(0.2, L.camp.radius * 2, L.camp.radius * 2), CFrame.new(camp.X, FLOOR + 0.35, camp.Z) * CFrame.Angles(0, 0, math.rad(90)), D.colors.safe, { shape = "Cylinder", material = "SmoothPlastic" })
@@ -1062,7 +1049,7 @@ function Layout.buildZone(zone, list)
 	column(list, model, "RaidGatePost", raidcf * CFrame.new(10, 0, 0), 4, 4, 22, D.colors.block)
 	prim(list, model, "RaidGateTop", Vector3.new(24, 3, 4), raidcf * CFrame.new(0, 23.5, 0), D.colors.block, { attrs = { RaidGate = zone.key, Label = "토벌 관문(BR2)" } })
 
-	local meta = { features = {}, eggs = {}, nests = {}, explore = {} }
+	local meta = { features = {}, eggs = {}, nests = {}, explore = {} } -- nests = M1-3 둥지 3트랙(WorldStructures - buildAll이 채운다)
 	for i, f in ipairs(zone.features) do
 		local pts = buildFeature(zone, f, list)
 		meta.features[i] = pts
@@ -1078,9 +1065,6 @@ function Layout.buildZone(zone, list)
 				{ collide = false, transparency = 1, attrs = { EasterEgg = e.id, Zone = zone.key } })
 			table.insert(meta.eggs, { id = e.id, position = at })
 		end
-	end
-	for i = 1, #zone.nests do
-		meta.nests[i] = Layout.nest(zone, i, list)
 	end
 	meta.landmark = buildLandmark(zone, list)
 	return meta
@@ -1364,19 +1348,8 @@ end
 -- 반환: prims, meta{ zones[key] = 구역 메타 }
 function Layout.buildAll()
 	local list = {}
-	-- 바닥 타일(세계 원 안)
-	local T = D.floorTileStuds
-	local n = math.ceil(D.worldRadiusStuds / T)
-	for ix = -n, n - 1 do
-		for iz = -n, n - 1 do
-			local cx, cz = (ix + 0.5) * T, (iz + 0.5) * T
-			local nearest = Vector3.new(math.clamp(0, ix * T, (ix + 1) * T), 0, math.clamp(0, iz * T, (iz + 1) * T)).Magnitude
-			if nearest < D.worldRadiusStuds then
-				prim(list, "Floor", "FloorTile", Vector3.new(T, D.floorThickness, T), CFrame.new(cx, FLOOR - D.floorThickness / 2, cz), D.colors.ground, { material = "SmoothPlastic" })
-			end
-		end
-	end
-	-- 세계 끝: 투명 벽 + 낮은 능선
+	-- M1-3: 바닥 = 로블록스 Terrain(굽기 - server/TerrainBake · 식 shared/TerrainShape). 옛 바닥 타일은 없다.
+	-- 세계 끝: 투명 벽(실제 차단 백업 - 보이는 경계 = 외곽 설산 지형 · 서버 밀어내기 = Travel)
 	local E = D.edge
 	for i = 1, E.segments do
 		local a = (i - 0.5) / E.segments * 2 * math.pi
@@ -1385,7 +1358,6 @@ function Layout.buildAll()
 		local p = d * E.radius
 		local cf = CFrame.lookAt(Vector3.new(p.X, FLOOR, p.Z), Vector3.new(p.X, FLOOR, p.Z) + d)
 		prim(list, "Edge", "EdgeWall", Vector3.new(len, E.wallHeight, 4), cf * CFrame.new(0, E.wallHeight / 2 - 2, 2), D.colors.block, { transparency = 1 })
-		prim(list, "Edge", "EdgeRidge", Vector3.new(len, E.ridgeHeight, E.ridgeWidth), cf * CFrame.new(0, E.ridgeHeight / 2, -E.ridgeWidth / 2 - 4), D.colors.blockDark)
 	end
 	Layout.buildHub(list)
 	Layout.buildSealed(list)
@@ -1394,6 +1366,15 @@ function Layout.buildAll()
 		meta.zones[z.key] = Layout.buildZone(z, list)
 	end
 	Layout.buildBossGates(list)
+	-- M1-3 둥지 3트랙 · 구조물(비밀 둥지 먼저 - 지형 마스크도 같은 목록에서 나온다)
+	local S = require(ReplicatedStorage.Shared.WorldStructures).build(list)
+	for _, n in ipairs(S.nests) do
+		local zm = meta.zones[n.zone]
+		if zm then
+			table.insert(zm.nests, n)
+		end
+	end
+	meta.structures = S
 	return list, meta
 end
 
@@ -1459,14 +1440,7 @@ function Layout.validate()
 			check(("지형 %d(%s)"):format(i, f.kind), p, footprint)
 			table.insert(solids, { name = ("지형 %d"):format(i), p = p, r = footprint })
 		end
-		for i, n in ipairs(z.nests) do
-			local meta = Layout.nest(z, i, {})
-			local p = Layout.toWorld(z, n.r, n.lat)
-			check(("둥지 %d(%s) 시작"):format(i, n.difficulty), p, 20)
-			check(("둥지 %d(%s) 끝"):format(i, n.difficulty), meta.top, 12)
-			table.insert(solids, { name = ("둥지 %d"):format(i), p = p, r = 20 })
-			table.insert(solids, { name = ("둥지 %d 끝"):format(i), p = meta.top, r = 12 })
-		end
+		-- (M1-3: 둥지 3트랙은 WorldCheck가 잰다 - 필수 길 · 구조물 겹침)
 		for i = 1, #solids do
 			for j = i + 1, #solids do
 				local a, b = solids[i], solids[j]

@@ -1076,6 +1076,7 @@ local HELP_TEXT = table.concat({
 	"/gg bossinfo - 지금 보스 인스턴스의 주력 패턴·패턴별 간격·변형 필드·실루엣을 콘솔에 출력(23-6 검증용)",
 	"/gg bossdmg <비율> - 지금 보스 HP를 최대치의 비율만큼 깎는다(사망 리셋 검증용, 예: 0.5)",
 	"/gg bosskilltest - 지금 보스를 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡는다(견습/무한 모드 처치 파이프라인 검증용, 23-1)",
+	"/gg terrain build <구역|all> - M1-3 지형 굽기 미리보기(진짜 굽기 = edit 모드 TerrainBake.build + place 저장) · /gg terrain check - 둥지 캡슐 통과 · 지형 표식",
 	"/gg terrain [clear|cost|ground|drop|rules|parts] - tier1에 테스트 지형(고원·30°경사·계단·70°경사·절벽·도랑) 생성 / 제거 / 지면 Raycast 부하 실측 / 잡몹 접지 상태 / 발밑 시험 드랍(22-4) / 배치 규칙 강제 검증 / 파트 수 실측(22-5)",
 	"/gg tutorial <0-7> - 견습 단계 강제 이동(0=미시작으로 리셋, 1~7=그 단계로 즉시 진입)",
 	"/gg tutorial off - 견습 종료하고 무한 모드로 복귀(완료 처리)",
@@ -1728,7 +1729,22 @@ local function handleCommand(player, args)
 			dropsAfter - dropsBefore))
 		reply(player, "killtest 완료 - 서버 로그 참고")
 	elseif sub == "terrain" then
-		if args[2] == "clear" then
+		if args[2] == "build" then
+			-- M1-3: 지형 굽기 미리보기(Play 중 - 끝나면 사라진다 · 진짜 굽기는 edit 모드 TerrainBake.build + place 저장). "/gg terrain build <구역|all>"
+			local TerrainBake = require(script.Parent.TerrainBake)
+			task.spawn(function()
+				local results = args[3] == "all" and TerrainBake.buildAll({ yield = true }) or { TerrainBake.build(args[3] or "tier1", { yield = true }) }
+				for _, r in ipairs(results) do
+					reply(player, ("지형 굽기 %s: 덩어리 %d · 복셀 %d · %.1f초"):format(r.key, r.chunks, r.voxels, r.seconds))
+				end
+			end)
+		elseif args[2] == "check" then
+			-- M1-3: 굽힌 지형에서 둥지 입구 → 둥지 캐릭터 캡슐 통과 검사 + 지형 표식
+			local TerrainBake = require(script.Parent.TerrainBake)
+			local bad, checked = TerrainBake.capsuleCheck(require(ReplicatedStorage.Shared.WorldStructures).nestList())
+			reply(player, ("캡슐 통과: 점 %d · 막힘 %d%s"):format(checked, #bad, #bad > 0 and (" - " .. table.concat(bad, " / ")) or ""))
+			TerrainBake.checkVersion()
+		elseif args[2] == "clear" then
 			clearTestTerrain(player)
 		elseif args[2] == "cost" then
 			reportProbeCost(player)

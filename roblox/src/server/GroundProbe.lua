@@ -2,7 +2,7 @@
 -- 추적(MonsterAI), 스폰 Y(HuntingGround), 드랍 스냅(ItemDropSpawner), 대시 지면 추종
 -- (DashEndpoint), 보스 돌진·낙석(BossPatterns) - 전부 여기를 거친다.
 --
--- 지면 = Workspace.Ground 폴더 아래 파트만이다(Include 필터). 몬스터·플레이어·드랍·이펙트·
+-- 지면 = Workspace.Ground 폴더 아래 파트 + Workspace.Terrain(M1-3 굽기)이다(Include 필터). 몬스터·플레이어·드랍·이펙트·
 -- 담장은 지면이 아니므로 Exclude 목록을 매번 만들 필요가 없다(DashEndpoint가 살아있는
 -- 몬스터 전원을 Exclude에 넣는 것과 대비 - 이 프로브는 초당 수백 번 불리므로 필터가 상수
 -- 크기여야 한다). 바닥을 만드는 쪽(HuntingGround·BossEncounter·DevTools 테스트 지형·앞으로의
@@ -35,7 +35,8 @@ function GroundProbe.folder()
 	end
 	params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
-	params.FilterDescendantsInstances = { folder }
+	params.FilterDescendantsInstances = { folder, Workspace.Terrain } -- M1-3: 바닥 = Terrain(굽기) + Ground 폴더 파트
+	params.IgnoreWater = true -- 물 = 지면 아님(몬스터 · 드랍은 물 위에 서지 않는다 - 스폰 지점은 물을 피한다)
 	return folder
 end
 

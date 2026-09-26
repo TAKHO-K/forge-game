@@ -207,7 +207,7 @@ return {
 	-- features(구역 좌표): 높이는 탐험 지역에(사냥 지대는 평평). kind = plateau(경사로로 걸어 오름) · tower(1단 점프 계단 나선) · cliff(못 오르는 벽 ≥ 23 - 경치 · 막음) ·
 	--   cave(굴 - 벽 둘 + 지붕) · falls(폭포 벽 + 뒤 공간) · spire(랜드마크 기둥 - 오르지 않음). explore = 둘러볼 지점 이름(발견 목록 · 탐험 표시).
 	-- eggs = 이스터에그 자리(발견 목록 데이터 틀만 - 보상은 칭호 · 꾸미기, 전투력 없음). at = 그 feature의 top | behind | inside | base.
-	-- nests = 둥지 자리(기능은 펫 단계) · difficulty = walk(경사로) | chain(1단 점프 계단) | puzzle(공중 점프 2 + 대시 한 번의 도약) - 구역마다 walk 포함.
+	-- 둥지 = M1-3 둥지 3트랙(data/NestData - 옛 walk · chain · puzzle 자리는 없앴다).
 	zones = {
 		{
 			key = "tier1", tierIndex = 1, hunt = { name = "석조 평원 사냥터", monsters = { { tier = 1, weight = 1 } } }, bossId = "section_guardian", angleDeg = -90, theme = "수호자의 석조 평원", floorTint = { 150, 156, 146 },
@@ -220,11 +220,6 @@ return {
 				{ kind = "cliff", r = 1450, lat = 520, w = 200, d = 60, h = 90 },
 			},
 			eggs = { { id = "t1_watch", feature = 2, at = "top" }, { id = "t1_cave", feature = 3, at = "inside" }, { id = "t1_falls", feature = 4, at = "behind" } },
-			nests = {
-				{ difficulty = "walk", r = 1000, lat = -120 }, { difficulty = "walk", r = 1900, lat = 120 },
-				{ difficulty = "chain", r = 1350, lat = 120 }, { difficulty = "chain", r = 2250, lat = 250 },
-				{ difficulty = "puzzle", r = 1550, lat = -120 }, { difficulty = "puzzle", r = 2150, lat = -520 },
-			},
 		},
 		{
 			key = "tier2", tierIndex = 2, hunt = { name = "수정 굴 사냥터", monsters = { { tier = 2, weight = 1 } } }, bossId = "crystal_queen", angleDeg = -30, theme = "수정 동굴", floorTint = { 150, 150, 162 },
@@ -237,16 +232,10 @@ return {
 				{ kind = "falls", r = 1500, lat = 560, w = 60, h = 70, explore = "빛 폭포 뒤" },
 			},
 			eggs = { { id = "t2_cave", feature = 1, at = "inside" }, { id = "t2_hill", feature = 3, at = "top" }, { id = "t2_falls", feature = 5, at = "behind" } },
-			nests = {
-				{ difficulty = "walk", r = 1000, lat = -150 }, { difficulty = "walk", r = 2200, lat = 150 },
-				{ difficulty = "chain", r = 1400, lat = 100 }, { difficulty = "chain", r = 1950, lat = -500 },
-				{ difficulty = "puzzle", r = 1700, lat = -100 }, { difficulty = "puzzle", r = 2300, lat = 380 },
-				{ difficulty = "chain", r = 1150, lat = -450 },
-			},
 		},
 		{
 			key = "tier3", tierIndex = 3, hunt = { name = "수몰 사원 사냥터", monsters = { { tier = 3, weight = 1 } } }, bossId = "abyssal_lord", angleDeg = 30, theme = "수몰 사원", floorTint = { 144, 154, 160 },
-			landmark = { kind = "temple", r = 2400, count = 4, radius = 50, height = 70 },
+			landmark = { kind = "sunkenTemple", r = 2550, count = 4, radius = 50, height = 70 }, -- M1-3: 바다 만 속 수중 신전(WorldStructures가 짓는다 - 바닥 = 만 바닥)
 			features = {
 				{ kind = "falls", r = 1050, lat = -420, w = 80, h = 80, explore = "사원 폭포 뒤" },
 				{ kind = "tower", r = 1450, lat = 360, size = 26, h = 80, explore = "잠긴 종탑 꼭대기" },
@@ -255,11 +244,6 @@ return {
 				{ kind = "cliff", r = 1600, lat = -560, w = 180, d = 50, h = 80 },
 			},
 			eggs = { { id = "t3_falls", feature = 1, at = "behind" }, { id = "t3_bell", feature = 2, at = "top" }, { id = "t3_cave", feature = 4, at = "inside" } },
-			nests = {
-				{ difficulty = "walk", r = 1000, lat = 150 }, { difficulty = "walk", r = 2000, lat = 140 },
-				{ difficulty = "chain", r = 1100, lat = 200 }, { difficulty = "chain", r = 2250, lat = -300 },
-				{ difficulty = "puzzle", r = 1700, lat = 120 }, { difficulty = "puzzle", r = 2100, lat = 520 },
-			},
 		},
 		{
 			key = "tier4", tierIndex = 4, hunt = { name = "모래 유적 사냥터", monsters = { { tier = 4, weight = 1 } } }, bossId = "scorpion_queen", angleDeg = 90, theme = "모래 유적", floorTint = { 162, 156, 140 },
@@ -272,11 +256,6 @@ return {
 				{ kind = "spire", r = 1600, lat = 560, size = 26, h = 110 },
 			},
 			eggs = { { id = "t4_tunnel", feature = 2, at = "inside" }, { id = "t4_obelisk", feature = 3, at = "top" }, { id = "t4_sandfall", feature = 4, at = "behind" } },
-			nests = {
-				{ difficulty = "walk", r = 1000, lat = 150 }, { difficulty = "walk", r = 2150, lat = 250 },
-				{ difficulty = "chain", r = 1150, lat = 150 }, { difficulty = "chain", r = 2000, lat = 200 },
-				{ difficulty = "puzzle", r = 1600, lat = -50 }, { difficulty = "puzzle", r = 2300, lat = -480 },
-			},
 		},
 		{
 			-- 폭풍 첨탑 = 특히 높게(사용자 지시): 첨탑 320 · 절벽 150.
@@ -290,12 +269,6 @@ return {
 				{ kind = "spire", r = 1650, lat = -600, size = 34, h = 200 },
 			},
 			eggs = { { id = "t5_windtop", feature = 1, at = "top" }, { id = "t5_plateau", feature = 3, at = "top" }, { id = "t5_cave", feature = 4, at = "inside" } },
-			nests = {
-				{ difficulty = "walk", r = 1000, lat = -150 }, { difficulty = "walk", r = 2100, lat = 120 },
-				{ difficulty = "chain", r = 1350, lat = 100 }, { difficulty = "chain", r = 2250, lat = 300 },
-				{ difficulty = "puzzle", r = 1700, lat = -150 }, { difficulty = "puzzle", r = 2000, lat = -520 },
-				{ difficulty = "puzzle", r = 1250, lat = -520 },
-			},
 		},
 		{
 			key = "tier6", tierIndex = 6, hunt = { name = "빙하 동굴 사냥터", monsters = { { tier = 6, weight = 1 } } }, bossId = "frost_giant", angleDeg = 210, theme = "빙하 동굴", floorTint = { 158, 162, 168 },
@@ -308,24 +281,7 @@ return {
 				{ kind = "tower", r = 1650, lat = 560, size = 24, h = 72, explore = "얼음 탑 꼭대기" },
 			},
 			eggs = { { id = "t6_cave", feature = 2, at = "inside" }, { id = "t6_glacier", feature = 3, at = "top" }, { id = "t6_falls", feature = 4, at = "behind" } },
-			nests = {
-				{ difficulty = "walk", r = 1000, lat = 150 }, { difficulty = "walk", r = 2150, lat = 120 },
-				{ difficulty = "chain", r = 1150, lat = 150 }, { difficulty = "chain", r = 2000, lat = 180 },
-				{ difficulty = "puzzle", r = 1700, lat = 120 }, { difficulty = "puzzle", r = 2350, lat = -250 },
-			},
 		},
-	},
-
-	-- 둥지 구조(movement-metrics v2 §4 - 자리만, 기능은 펫 단계). 높이 · 간격 = 발판 끝에서 끝.
-	--   walk: 경사로(각 slopeDeg ≤ 45 · 폭 ≥ 4)로 선반 높이 ledgeH.
-	--   chain: 1단 점프 계단 steps개(단마다 오름 rise ≤ 5 · 간격 gap ≤ 6 · 폭 width) - 맨 위 둥지(바닥에서 steps × rise).
-	--   puzzle: 계단으로 기둥 위(pillarH) → 한 번의 도약(오름 rise 11 ~ 15 · 간격 gap 20 ~ 30 = 공중 2 + 대시 칸 80%) → 선반. 선반 높이 = pillarH + rise ≥ 23(바닥에서 바로는 못 오른다).
-	--   실패하면 기둥 옆 바닥(계단 첫 단 바로 앞)에 떨어진다 - 높이 11에서 한 단 아래(처음부터 긴 길이 아니게). 선반 밑에 발판을 두면 그 발판에서 공중 2만으로 닿아 퍼즐이 깨진다.
-	nest = {
-		walk = { ledgeH = 12, slopeDeg = 35, width = 6, ledge = 12 },
-		chain = { steps = 8, rise = 4, gap = 5, width = 4, ledge = 8 },
-		puzzle = { pillarH = 11, pillarSize = 6, rise = 15, gap = 24, ledge = 8, stairRise = 4, stairGap = 4 }, -- 오름 15 > 공중 1 최대 13.32 → 공중 2 필요 · 간격 24 > 공중 2 최대(16 · H15) → 대시 필요
-		marker = { size = 3 },
 	},
 
 	-- 토벌 · 보스 관문 표지(M1 추가 - 사용자): 관문마다 보스 고유 색(BossData 머리색) 빛기둥 - 하늘까지 · 멀리서 보이게. 파트 1개 · 충돌 · 쿼리 없음 · Persistent 모델(스트리밍으로 안 사라진다).
@@ -412,7 +368,9 @@ return {
 	spawnSites = {
 		huntRange = { r = 1700, lat = 0, radius = 620 }, -- 구역 원(1700 · 850) 안 · 캠프(900)와 관문(2400)은 원 밖
 		pointSpacing = 120, pointsPerRange = 34, edgeMargin = 30, seed = 20260926,
-		avoid = { feature = 24, nest = 16, camp = 110, gate = 110 },
+		avoid = { feature = 24, nest = 16, camp = 110, gate = 110, cactus = 20 },
+		-- M1-3 지형: 스폰 지점은 걷는 땅만 - 가운데 · 슬롯 · 둘레(ringRadius · ringSamples) 높이 차 ≤ maxRelief · 평지 위 ≤ maxAbove · 물 0(물 · 선인장 · 절벽 위 스폰 금지)
+		terrain = { maxRelief = 6, maxAbove = 30, ringRadius = 30, ringSamples = 8 },
 		group = { count = 3, radius = 18 },
 		activateRadius = 110, keepRadius = 200, idleSeconds = 12, -- M1-3 전(M1-2 결정 2 사용자): 140 → 110 · 20 → 12초(걷는 1명당 동시 몬스터 줄이기)
 		checkSeconds = 1.0, combatHoldSeconds = 10,

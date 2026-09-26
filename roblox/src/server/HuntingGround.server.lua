@@ -193,6 +193,10 @@ end
 -- ═══ 실행 ═══
 
 local meta, counts = WorldMap.build()
+-- M1-3: 굽힌 지형 표식(버전 · 표본 서명)이 데이터와 같은가 - 다르면 경고만(런타임 생성 금지 · 다시 굽기 = Studio edit)
+task.spawn(function()
+	require(script.Parent.TerrainBake).checkVersion()
+end)
 do
 	local names = {}
 	for name, c in pairs(counts) do

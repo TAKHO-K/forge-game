@@ -121,28 +121,22 @@ function M1Verify.runPure()
 		r.check(("난이도 상승: 첫 구간 대시 조합 %d(기대 0) · 마지막 구간 %d(기대 > 0)"):format(dashFirst, dashLast), dashFirst == 0 and dashLast > 0)
 	end)
 	r.section("둥지", function()
+		-- M1-3: 옛 walk · chain · puzzle 자리 → 둥지 3트랙(WorldStructures). 상세 검사 = M1-3T(가)(WorldCheck) - 여기는 구역마다 개수 · 도달만.
+		local WorldStructures = require(ReplicatedStorage.Shared.WorldStructures)
 		for _, z in ipairs(D.zones) do
-			local counts, bad = { walk = 0, chain = 0, puzzle = 0 }, {}
-			for i, n in ipairs(z.nests) do
-				local meta = WorldMapLayout.nest(z, i, {})
-				counts[n.difficulty] += 1
-				for _, leap in ipairs(meta.leaps) do
-					local skill, name = WorldMapLayout.moveSkill(leap.rise, leap.gap)
-					if leap.need == "easy" and skill ~= "easy" then
-						table.insert(bad, ("%d %s(%s)"):format(i, n.difficulty, name))
-					elseif leap.need == "puzzle" and not (name == "공중2+대시") then
-						table.insert(bad, ("%d 퍼즐 도약 = %s(기대 공중2+대시)"):format(i, name))
+			local counts, bad = { A = 0, B = 0, C = 0 }, {}
+			for _, n in ipairs(WorldStructures.nestList()) do
+				if n.zone == z.key then
+					counts[n.track] += 1
+					for i, leap in ipairs(n.leaps or {}) do
+						if not WorldMapLayout.moveSkill(leap.rise, leap.gap) then
+							table.insert(bad, ("%s #%d"):format(n.id, i))
+						end
 					end
 				end
-				if n.difficulty == "walk" and meta.slopeDeg > 45 then
-					table.insert(bad, ("%d 경사 %.0f°"):format(i, meta.slopeDeg))
-				end
-				if n.difficulty == "puzzle" and meta.ledgeFromGround < 23 then
-					table.insert(bad, ("%d 선반 %.0f < 23"):format(i, meta.ledgeFromGround))
-				end
 			end
-			r.check(("둥지 %s: %d곳(걸어서 %d · 연속 점프 %d · 퍼즐 %d) · 위반 %d%s"):format(z.key, #z.nests, counts.walk, counts.chain, counts.puzzle, #bad, #bad > 0 and (" - " .. table.concat(bad, " / ")) or ""),
-				#z.nests >= 5 and #z.nests <= 8 and counts.walk >= 1 and #bad == 0)
+			r.check(("둥지 %s: A %d · B %d · C %d(순환 후보 포함) · 도달 불가 %d%s"):format(z.key, counts.A, counts.B, counts.C, #bad, #bad > 0 and (" - " .. table.concat(bad, " / ")) or ""),
+				counts.A == 5 and counts.B == 3 and counts.C >= 2 and #bad == 0)
 		end
 	end)
 	r.section("봉인 입구", function()
