@@ -137,7 +137,8 @@ return {
 				finalRiseMax = 6,
 				elementScale = 0.75, -- 밟는 칸 크기 배율(사용자 - 길이 나무보다 튀지 않게): 가지 · 잎 길이 · 열매 · 혹 · 점프대 갓. 가지 굵기(dia)는 균형 판정이라 그대로 · 열매 지름 최소 4 · 혹 최소 2.5
 				bounce = { reachStuds = 22, horizontalMax = 14 }, -- 통통 열매: 밟으면 발 +reach(클라 속도) - 공중 점프는 그 뒤에도 쓴다(서버 높이 검증 예외 - TreeLaunch)
-				pad = { maxGap = 44, maxRise = 18, flightSeconds = 1.1 }, -- 점프대: 다음 요소 가운데로 날린다(비행 시간 고정 포물선)
+				pad = { maxGap = 44, maxRise = 18, flightSeconds = 1.1, landRootAboveStuds = 3.5 }, -- 점프대: 다음 요소 가운데로 날린다(비행 시간 고정 포물선)
+				launchProbeStuds = 4.5, -- 클라가 "밟았다"로 읽는 루트 아래 광선 길이(TreeFx) - 발사 출발 발은 윗면 ~ 윗면 + (이 값 − 3). 설계 정점(WorldMapLayout.treeLaunch)이 이 범위의 최댓값을 쓴다
 				soft = { sinkStuds = 0.8, dropSeconds = 1.5, respawnSeconds = 4 },
 				hang = { rope = 10, swingDeg = 22, periodSeconds = 4.0 },
 				leafSway = { deg = 6, periodSeconds = 3.2 },
@@ -189,7 +190,14 @@ return {
 				fallDropStuds = 30,
 				deck = { y = 760, radius = 26 }, -- 정상 전망대(6구역이 내려다보인다)
 				dailyEgg = { label = "하루 1회 보상(펫 단계 - 무료 알)" }, -- 자리 표시만
-				lift = { angleDeg = 0, r = 70, label = "덩굴 리프트" }, -- 허브 바닥 · 줄기 옆(밟으면 가장 높은 열린 정거장)
+				-- 덩굴 리프트(M1-2c 가독성): 정거장 1 고리 아래에서 땅까지 굵은 덩굴 밧줄(vineDia · 두 가닥) + 잎 뭉치(leafEvery마다) + 아래 잎사귀 바구니 발판(basketRadius).
+				--   탄다 = 바구니 앞 [F](폰 = 상호작용 버튼 · promptDistance) → 가장 높은 열린 정거장. 잠김(역대 최고 레벨 < 첫 정거장) = 시든 갈색 + 자물쇠 표지 · 열림 = 초록 + 빛 + 반딧불(로컬).
+				--   색은 기존 색표에서(시든 = 껍질 barkDark · 살아 있음 = 덩굴 사다리 · 빛 = 여름 잎 발판 · 반딧불 = 길 안내 화살표). 반딧불 = 수 제한(rate × lifetime ≈ 12개) · maxDistance 밖이면 끔.
+				lift = { angleDeg = 0, r = 70, label = "덩굴 리프트", vineDia = 2.4, leafEvery = 10, basketRadius = 5, promptDistance = 10, signHeight = 11,
+					colors = { withered = { 108, 62, 44 }, alive = { 70, 110, 60 }, glow = { 118, 165, 94 }, firefly = { 255, 230, 120 } },
+					fireflies = { rate = 3, lifetime = 4, speed = 5, size = 0.35, maxDistance = 160 } },
+				-- 나무 입구 정거장 안내판(M1-2c): 코스 시작 각(station.startAngleDeg) · 반경 r · 판 크기 w × h(바닥에서 bottom 위). 글(정거장 · 필요 레벨 · 높이)은 클라가 쓴다(내 해금 표시).
+				entranceBoard = { r = 145, w = 14, h = 9, bottom = 2 },
 			},
 		},
 	},
@@ -386,6 +394,9 @@ return {
 		combatLockSeconds = 8,
 		arriveOffsetStuds = 5,
 		streamTimeoutSeconds = 3, -- RequestStreamAroundAsync 기다림 상한(넘으면 그냥 옮긴다)
+		-- M1-2c 도착 대기(클라 client/ArrivalHold): 서버 순간이동 뒤 발 아래 probeStuds 안에 발판이 아직 안 들어왔으면(스트리밍) 제자리에 붙잡고 기다린다(최대 holdMaxSeconds).
+		--   nearStuds = 서버가 알린 도착 자리와 이만큼 안이어야 대기(다른 이동이 먼저 덮었으면 안 붙잡는다).
+		arrival = { probeStuds = 40, holdMaxSeconds = 3, nearStuds = 12 },
 	},
 
 	-- 길 안내(바닥 빛줄기 · 화살표 - 튜토리얼과 공유하는 client/Wayfinder). 표시만.

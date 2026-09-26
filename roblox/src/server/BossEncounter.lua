@@ -34,6 +34,7 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local MonsterState = require(script.Parent.MonsterState)
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a 리뷰: 순간이동 뒤 높이 기준 새로(50 넘게 움직이면 자동이지만 명시)
+local TeleportArrival = require(script.Parent.TeleportArrival) -- M1-2c 도착 대기
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossPatterns = require(script.Parent.BossPatterns)
 
@@ -166,8 +167,10 @@ local function teleportTo(player, position)
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if rootPart then
+		TeleportArrival.preloadAsync(player, position) -- M1-2c: 기다리지 않는 미리 불러오기 + 도착 알림(클라가 발판이 들어올 때까지 붙잡는다)
 		rootPart.CFrame = CFrame.new(position, position + Vector3.new(0, 0, -1))
 		HeightGuard.reset(player)
+		TeleportArrival.mark(player, position)
 	end
 end
 

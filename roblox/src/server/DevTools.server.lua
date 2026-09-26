@@ -3493,6 +3493,7 @@ if RunService:IsStudio() then
 				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
 				{ "BR1-2(나)", function() require(script.Parent.BR1_2Verify).runLive(player, env) end }, -- BR1-2: 곡선 32발 · 동시 4보스 성능 · 반사 · 음파 · 색 맞추기 · 가둠 · 저장 v37
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
+				{ "M1-2c(나)", function() require(script.Parent.M1_2cVerify).runLive(player, env) end }, -- M1-2c: 나무 발사 전부 되돌림 0 · 허가 없이 같은 높이 → 되돌림 · 보스 발사 최대 · 리프트 [F] · 도착 낙하 없음
 				{ "G1-4(나)", function() require(script.Parent.G1_4Verify).runLive(player, env) end }, -- G1-4: 보스맵 잔류 · 다음 / 다시 도전 / 마을 · 90초
 				{ "G1-3(나)", function() require(script.Parent.G1_3Verify).runLive(player, env) end }, -- G1-3: 레벨차 계수(실제 Player)
 				{ "G1-2(나)", function() require(script.Parent.G1_2Verify).runLive(player, env) end }, -- G1-2: 자동 처리 · 처치 시간 측정
@@ -3850,6 +3851,16 @@ if RunService:IsStudio() and verifyEnabled("G1-3(가)") then
 		local ok, err = pcall(require(script.Parent.G1_3Verify).runPure)
 		if not ok then
 			warn(("[G1-3(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+-- ═══ M1-2c 자동 검증 블록(가) - 설계 정점 표 · 발사 허가 합성 표본 · 위치 기록 판정(docs/phase/M1-2c-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("M1-2c(가)") then
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.M1_2cVerify).runPure)
+		if not ok then
+			warn(("[M1-2c(가)] 검증 블록 에러: %s"):format(tostring(err)))
 		end
 	end)
 end

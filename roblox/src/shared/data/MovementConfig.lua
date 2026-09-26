@@ -34,6 +34,13 @@ return {
 	-- tolerance 1.0 = 복제 지연 · 보간 여유. 허용치를 넘으면 루트에서 아래로 (3 + 허용치 + probeStuds) 광선을 쏴 발 바로 아래 지면을 기준으로 다시 잰다(폴링이 짧은 착지를 놓친 경우 · FloorMaterial 지연).
 	-- teleportResetStuds: 한 폴링(0.25초)에 이만큼 넘게 움직이면 순간이동으로 보고 기준을 새로 잡는다(정상 최대 = 24 × 0.25 + 대시 16 = 22). graceSeconds = 그 뒤 유예.
 	-- exemptExtraSeconds: 넉백 · 회오리 · 파편 튕김은 서버가 보낸 순간부터 체공 + 이만큼 검사를 건너뛴다.
+	-- permit(M1-2c 발사 허가 - 점프대 · 통통 열매 · 보스 발사 패턴 공용 · server/LaunchPermit · HeightGuard.grant): 서버가 발사를 확인하면 "발 최고 높이 = 설계 정점 + 공중 점프 전부 + marginStuds"를 준다.
+	--   허용 = max(평소 허용, 허가 높이). 겹쳐 쌓지 않는다(가장 최근 것만). 만료 = 착지(허가 뒤 공중을 한 번 봤고 landGraceSeconds 지난 뒤 서 있으면) · 공중을 못 보고 unusedSeconds 동안 서 있으면(안 쓴 허가).
+	--   시간 상한(점프대 padSeconds · 보스 = 설계 체공 + bossExtraSeconds)이 지나면 바로 끊지 않고 "내려가기만"(가장 낮았던 발 + 평소 허용까지)으로 좁히다가 descendMaxSeconds 뒤 끝(활공 · 대시 대비).
+	--   점프대 확인 = 최근 historySeconds 동안 서버가 본 루트 위치 중 하나가 발판 기둥(반경 + reachSlackStuds · 윗면 − belowSlackStuds ~ 정점) 안(요청 시각의 "지금 거리"가 아니다) ·
+	--   요청이 위치보다 먼저 와도 pendingSeconds 동안 다시 본다 · 사람마다 cooldownSeconds.
+	permit = { marginStuds = 4, padSeconds = 4, bossExtraSeconds = 2, landGraceSeconds = 0.2, unusedSeconds = 1.0, descendMaxSeconds = 20,
+		historySeconds = 0.5, pendingSeconds = 0.5, reachSlackStuds = 4, belowSlackStuds = 8, cooldownSeconds = 0.25 },
 	heightGuard = { toleranceStuds = 1.0, strikes = 2, probeStuds = 3.5, teleportResetStuds = 50, graceSeconds = 1.0, exemptExtraSeconds = 0.5 },
 
 	-- 카메라(M1-0 - 사용자 결정): 기본 = 로블록스 기본 카메라(회전 · 줌 · 각도 자유)에 줌 범위만 건다(캐릭터가 작아 보이지 않게 기본 거리를 가깝게). 설정의 "탑다운 시점"을 켠 사람만

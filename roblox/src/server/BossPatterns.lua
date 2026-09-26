@@ -46,7 +46,7 @@ local ArenaContainment = require(ReplicatedStorage.Shared.ArenaContainment) -- P
 local BossArenaMap = require(script.Parent.BossArenaMap)
 local BossArenaMapData = require(ReplicatedStorage.Shared.data.BossArenaMapData)
 local BossArenaContainment = require(script.Parent.BossArenaContainment) -- P3d B2: 맵 이탈 복귀 보호(넉백 건너뛰기)
-local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 넉백 · 회오리 동안 서버 높이 검증 예외
+local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 넉백 · 회오리 동안 서버 높이 검증 예외 → M1-2c 발사 허가(설계 높이까지 · 착지하면 끝)
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local PlayerStun = require(script.Parent.PlayerStun) -- BR1-3 강화 평타 기절
 -- BR1: 새 조각(부채꼴 · 투사체 · 소용돌이) · 대공 잡기 · 환경 트랙 - 이 파일의 공용 함수 표(kit)를 받아 HANDLERS에 꽂는다.
@@ -708,7 +708,9 @@ local function runHitEffects(c, effects, v, from, coHits)
 			end
 			debugEvent("launch", { player = v.player, coHits = coHits or 1, heightStuds = height, limitedHeight = limitedHeight,
 				distanceStuds = distance, limitedDistance = limitedDistance, from = from, rootPosition = v.root.Position })
-			HeightGuard.exempt(v.player, JumpMath.launchAirSeconds(height) + (effect.holdSeconds and effect.holdSeconds / weight or 0) + (effect.escape and 1.5 or 0))
+			-- M1-2c: 통째 예외 대신 발사 허가(출발 발 + 이 높이 + 공중 점프 몫 + 여유 · 착지하면 끝 · 안전 상한 = 체공 + 붙잡힘 + 2초). 높이는 잘리기 전 값(클라가 쓰는 값 이상).
+			HeightGuard.grantLaunch(v.player, height, JumpMath.launchAirSeconds(height) + (effect.holdSeconds and effect.holdSeconds / weight or 0) + (effect.escape and 1.5 or 0),
+				("보스 발사(%s%s)"):format(tostring(c.st and c.st.current or "?"), effect.escape and " · 던짐" or ""))
 			sendTo(v.player, "launch", {
 				from = from, heightStuds = height, distanceStuds = distance,
 				holdSeconds = effect.holdSeconds and effect.holdSeconds / weight, spinRadiusStuds = effect.spinRadiusStuds,
@@ -2015,6 +2017,7 @@ local kit = {
 	debugEvent = debugEvent, serverNow = serverNow, rng = scatterRng, setBodyColor = setBodyColor, clearDaze = clearDaze,
 	kitZones = kitZones, groundAt = groundAt, sendPropsRemoved = sendPropsRemoved,
 }
+BossPatterns.kit = kit -- M1-2c 검증: 보스 발사를 최대 수치로 같은 서버 경로(runHitEffects)에 넣는다
 -- BR1: 보스를 seconds 동안 기절시킨다(환경 기믹 파훼 - 수정 공중 정원). 돌던 스킬을 끊고 헤롱 자세 · 그동안 스킬 · 추격 · 평타 없음(step이 true).
 function kit.stun(model, st, data, seconds)
 	BossPatterns.interrupt(model, data)

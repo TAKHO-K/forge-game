@@ -2,7 +2,9 @@
 --   기준 = 마지막으로 서 있던 발 높이(supportY - FloorMaterial이 Air가 아니거나 루트 아래 probeStuds 안에 무언가 있을 때). 발 − 기준 > 허용치(JumpMath.heightGuardAllowance -
 --   M1-0: 점프력 상한 1단 + 공중 점프 전부의 최대 도달 + 여유 = 7.92 × 2.7 + 1 = 22.38)가 strikes번 이어지면 서 있던 자리로 되돌리고 속도 0 · 로그 · 기록 시각(flaggedAt - 그 뒤에 끝난 보스전의 리더보드 기록을 거절한다).
 --   공중 점프(스택형)는 한 체공에 이 높이를 넘지 못한다(충전은 착지해야 찬다). 추방은 하지 않는다. 폴링이 정점을 놓치는 것은 괜찮다(정상 점프를 오탐하지 않는 쪽).
---   예외: 넉백 · 회오리 · 파편 튕김(보낸 쪽이 exempt) · 순간이동(reset - 한 폴링에 teleportResetStuds 넘게 움직여도 자동) · 루트 고정(잡힘 · 끼임) · 사망.
+--   발사 허가(M1-2c - MovementConfig.permit): 점프대 · 통통 열매(LaunchPermit - 서버가 발판 위였음을 확인) · 보스 발사 패턴(grantLaunch)은 "발 최고 높이"를 받는다 - 허용 = max(평소, 허가).
+--     가장 최근 허가 하나만 · 착지하면 끝 · 시간 상한 뒤엔 내려가기만. 허가 없이 같은 높이로 오르면 여전히 되돌린다.
+--   예외: 붙잡힘 · 가둠 · 석상(보낸 쪽이 exempt - 높이를 서버가 고정) · 순간이동(reset - 한 폴링에 teleportResetStuds 넘게 움직여도 자동) · 루트 고정(잡힘 · 끼임) · 사망.
 --   검증 체인은 캐릭터를 공중에 두는 옛 항목이 많아 debugOff로 끈다(G2a(나)만 자기 항목에서 켠다 - CharacterLevel.debugLevelGapOff와 같은 방식).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,15 +17,54 @@ local HeightGuard = {}
 HeightGuard.debugOff = false
 
 local cfg = MovementConfig.heightGuard
-local states = {} -- [Player] = { supportY, supportPos, strikes, graceUntil, exemptUntil, lastPos, flaggedAt, reverts }
+local PERMIT = MovementConfig.permit
+local states = {} -- [Player] = { supportY, supportPos, strikes, graceUntil, exemptUntil, lastPos, flaggedAt, reverts, permit, permits, landings }
 
 local function stateOf(player)
 	local st = states[player]
 	if not st then
-		st = { strikes = 0, graceUntil = 0, exemptUntil = 0, reverts = 0 }
+		st = HeightGuard.newState()
 		states[player] = st
 	end
 	return st
+end
+-- 검증용 빈 상태(합성 표본)
+function HeightGuard.newState()
+	return { strikes = 0, graceUntil = 0, exemptUntil = 0, reverts = 0, permits = 0, landings = 0 }
+end
+
+-- 허가 한 장(순수 - 검증이 합성 상태에 준다). 가장 최근 것만 = 덮어쓴다.
+function HeightGuard.grantAt(st, maxFeetY, seconds, source, now)
+	st.permit = { maxFeetY = maxFeetY, issuedAt = now, expiresAt = now + seconds, source = source, airSeen = false }
+	st.permits += 1
+	return st.permit
+end
+
+-- 허가 진행(판정 한 번마다 - evaluate 안). 착지 · 안 쓴 허가 · 시간 상한 뒤 내려가기만.
+local function stepPermit(st, sample, now)
+	local permit = st.permit
+	if not permit then
+		return nil
+	end
+	if sample.grounded then
+		local age = now - permit.issuedAt
+		if (permit.airSeen and age >= PERMIT.landGraceSeconds) or (not permit.airSeen and age >= PERMIT.unusedSeconds) then
+			st.permit = nil
+			st.landings += 1
+			return nil
+		end
+		return permit
+	end
+	permit.airSeen = true
+	if now >= permit.expiresAt then
+		if now >= permit.expiresAt + PERMIT.descendMaxSeconds then
+			st.permit = nil
+			return nil
+		end
+		permit.descending = true
+		permit.maxFeetY = math.min(permit.maxFeetY, sample.feetY + JumpMath.heightGuardAllowance())
+	end
+	return permit
 end
 
 -- 판정 한 번(순수 - 검증이 합성 표본으로 부른다). sample = { feetY, pos(루트 Vector3), grounded(bool), skip(bool - 사망 · 루트 고정), probe(fn → 발 바로 아래 지면 Y 또는 nil, 없어도 됨) }.
@@ -36,7 +77,11 @@ function HeightGuard.evaluate(st, sample, now)
 		st.strikes = 0
 		return "ok"
 	end
-	if moved > cfg.teleportResetStuds or st.supportY == nil then
+	local permit = stepPermit(st, sample, now)
+	-- 한 폴링에 멀리 움직임 = 순간이동으로 보고 기준을 새로(유일한 수평 이동 검사). 허가 비행 중(던지기 · 판 털기 - 초속 100 ~ 350)은 순간이동이 아니라 비행이다 - 기준을 공중으로 옮기지 않는다
+	-- (서버 순간이동은 reset이 허가를 지운다).
+	local flying = permit ~= nil and not permit.descending
+	if (moved > cfg.teleportResetStuds and not flying) or st.supportY == nil then
 		st.supportY, st.supportPos, st.strikes = sample.feetY, sample.pos, 0
 		st.graceUntil = math.max(st.graceUntil, now + cfg.graceSeconds)
 		return "reset"
@@ -49,7 +94,11 @@ function HeightGuard.evaluate(st, sample, now)
 		st.strikes = 0
 		return "ok"
 	end
-	if sample.feetY - st.supportY <= JumpMath.heightGuardAllowance() then
+	local limit = st.supportY + JumpMath.heightGuardAllowance()
+	if permit then
+		limit = math.max(limit, permit.maxFeetY)
+	end
+	if sample.feetY <= limit then
 		st.strikes = 0
 		return "ok"
 	end
@@ -66,7 +115,7 @@ function HeightGuard.evaluate(st, sample, now)
 	return "strike"
 end
 
--- 넉백 · 회오리 · 파편: 서버가 보낸 순간 부른다. seconds = 체공(+ 붙잡는 시간).
+-- 붙잡힘 · 가둠 · 석상(서버가 높이를 고정): 서버가 보낸 순간 부른다. seconds = 붙잡는 시간.
 function HeightGuard.exempt(player, seconds)
 	if typeof(player) ~= "Instance" then -- 리뷰 4: 검증 스탠드인(표)은 상태를 만들지 않는다
 		return
@@ -75,13 +124,50 @@ function HeightGuard.exempt(player, seconds)
 	st.exemptUntil = math.max(st.exemptUntil, os.clock() + seconds + cfg.exemptExtraSeconds)
 end
 
--- 서버 순간이동 뒤(복귀 · 심연 · 리스폰): 기준을 다음 폴링의 자리로 새로 잡는다.
+-- 발사 허가(점프대 · 통통 열매 - LaunchPermit가 발판 위였음을 확인한 뒤). maxFeetY = 설계 발 정점(공중 점프 몫 포함) - 여유는 여기서 더한다.
+function HeightGuard.grant(player, maxFeetY, seconds, source)
+	if typeof(player) ~= "Instance" then
+		return nil
+	end
+	return HeightGuard.grantAt(stateOf(player), maxFeetY + PERMIT.marginStuds, seconds, source, os.clock())
+end
+
+-- 순수: 서버가 보낸 발사(보스 패턴)의 출발 발 높이 상한. 서 있으면 지금 발 · 공중이면 서버가 늦게 볼 수 있으니 "마지막 지면 + 평소 허용"(그보다 높을 수 없다) ·
+-- 이미 허가를 받아 떠 있으면 그 허가 높이(연속으로 맞아도 앞 허가 위에서 다시 뜬다).
+function HeightGuard.launchBaseFeet(st, feetY, grounded)
+	local base = feetY
+	if not grounded then
+		base = math.max(feetY, (st.supportY or feetY) + JumpMath.heightGuardAllowance())
+	end
+	if st.permit then
+		base = math.max(base, st.permit.maxFeetY)
+	end
+	return base
+end
+
+-- 보스 발사(넉백 · 회오리 · 널뛰기 · 프라이팬 · 던지기 · 파편 튕김): 출발 발 + 발사 높이 + 공중 점프 전부 + 여유 · 시간 상한 = 설계 체공 + bossExtraSeconds(착지하면 먼저 끝).
+function HeightGuard.grantLaunch(player, riseStuds, airSeconds, source)
+	if typeof(player) ~= "Instance" then
+		return nil
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid then
+		return nil
+	end
+	local st = stateOf(player)
+	local base = HeightGuard.launchBaseFeet(st, root.Position.Y - MovementConfig.rootAboveFeetStuds, humanoid.FloorMaterial ~= Enum.Material.Air)
+	return HeightGuard.grantAt(st, base + riseStuds + JumpMath.airJumpsOnlyStuds() + PERMIT.marginStuds, airSeconds + PERMIT.bossExtraSeconds, source, os.clock())
+end
+
+-- 서버 순간이동 뒤(복귀 · 심연 · 리스폰): 기준을 다음 폴링의 자리로 새로 잡는다(허가도 끝 - 다른 자리).
 function HeightGuard.reset(player)
 	if typeof(player) ~= "Instance" then
 		return
 	end
 	local st = stateOf(player)
-	st.supportY, st.lastPos, st.strikes = nil, nil, 0
+	st.supportY, st.lastPos, st.strikes, st.permit = nil, nil, 0, nil
 	st.graceUntil = os.clock() + cfg.graceSeconds
 end
 
@@ -127,6 +213,7 @@ function HeightGuard.poll(player, now)
 			return hit and hit.Position.Y
 		end,
 	}
+	local permitBefore = st.permit
 	local verdict = HeightGuard.evaluate(st, sample, now)
 	if verdict == "revert" then
 		local from = root.Position
@@ -135,8 +222,9 @@ function HeightGuard.poll(player, now)
 		st.lastPos = st.supportPos
 		st.flaggedAt = now
 		st.reverts += 1
-		warn(("[forge-game] 높이 보정: %s 발 %.1f(기준 %.1f + 허용 %.2f 초과 %d회) → (%.0f, %.1f, %.0f)로 되돌림"):format(
-			player.Name, from.Y - MovementConfig.rootAboveFeetStuds, st.supportY, JumpMath.heightGuardAllowance(), cfg.strikes, st.supportPos.X, st.supportPos.Y, st.supportPos.Z))
+		warn(("[forge-game] 높이 보정: %s 발 %.1f(기준 %.1f + 허용 %.2f 초과 %d회 · 허가 %s) → (%.0f, %.1f, %.0f)로 되돌림"):format(
+			player.Name, from.Y - MovementConfig.rootAboveFeetStuds, st.supportY, JumpMath.heightGuardAllowance(), cfg.strikes,
+			permitBefore and ("%s ≤ %.1f"):format(tostring(permitBefore.source), permitBefore.maxFeetY) or "없음", st.supportPos.X, st.supportPos.Y, st.supportPos.Z))
 	end
 	return verdict
 end

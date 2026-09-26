@@ -117,6 +117,18 @@ function JumpMath.maxAirSeconds(h1, airJumps, dashSeconds, landY, aboveY, steps)
 	return best
 end
 
+-- 발사 뒤 공중 점프 전부를 정점마다 눌렀을 때 더 오르는 높이(M1-2c 발사 허가 - 점프력 상한 포함). 1단은 빠진다(발사가 1단을 대신한다).
+function JumpMath.airJumpsOnlyStuds()
+	local h1 = JumpMath.jumpHeight(MovementConfig.jumpHeightBonusCap)
+	return MovementConfig.airJump.charges * JumpMath.airJumpRise(h1)
+end
+
+-- 정해진 비행 시간 포물선(M1 점프대 · M1-2c): from → to를 seconds에 가는 초속도와 발 정점 상승(from 기준 - 위로 오르는 부분만).
+function JumpMath.arcLaunch(from, to, seconds)
+	local v = (to - from) / seconds + Vector3.new(0, g() * seconds / 2, 0)
+	return v, v.Y > 0 and v.Y * v.Y / (2 * g()) or 0
+end
+
 -- 넉백(launch) 포물선 체공: 최고 높이 h로 떴다가 같은 높이로(BossStormView.launch - 2v ÷ g).
 function JumpMath.launchAirSeconds(heightStuds)
 	return 2 * JumpMath.upSpeed(math.max(heightStuds or 0, 0.5)) / g()

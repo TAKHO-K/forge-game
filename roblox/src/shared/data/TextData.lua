@@ -118,5 +118,15 @@ return {
 
 		-- 채팅 · 알림
 		["chat.primalDrop"] = "★ {name}님이 <font color=\"{color}\">{item}</font>을 얻었습니다",
+
+		-- 덩굴 리프트 · 나무 입구 안내판(M1-2c)
+		["lift.locked"] = "🔒 덩굴 리프트\nLv.{level} 필요",
+		["lift.open"] = "덩굴 리프트\n정거장 {station} · 높이 {meters}m",
+		["lift.prompt"] = "타기 · 정거장 {station} (높이 {meters}m)",
+		["lift.unlockToast"] = "덩굴 리프트 - 정거장 {station}({name} · 높이 {meters}m)이 열렸습니다. 길 안내를 따라가세요",
+		["board.title"] = "나무 정거장 안내",
+		["board.row"] = "{station}. {name} · Lv.{level} · 높이 {meters}m",
+		["board.rowOpen"] = "{station}. {name} · Lv.{level} · 높이 {meters}m · 열림",
+		["board.footer"] = "덩굴 리프트(줄기 옆 바구니 [F])는 가장 높은 열린 정거장으로 갑니다",
 	},
 }

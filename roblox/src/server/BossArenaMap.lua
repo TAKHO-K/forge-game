@@ -313,7 +313,7 @@ local function fireBreak(state, obstacle, cause)
 				end
 			elseif onTop and not (BossArenaMap.isLaunchProtected and BossArenaMap.isLaunchProtected(player)) then -- P3d B2: 복귀 보호 중이면 안 튕긴다
 				table.insert(launched, player)
-				HeightGuard.exempt(player, JumpMath.launchAirSeconds(topBreak.heightStuds))
+				HeightGuard.grantLaunch(player, topBreak.heightStuds, JumpMath.launchAirSeconds(topBreak.heightStuds), "파편 튕김") -- M1-2c 발사 허가
 				if patternEvent then
 					patternEvent:FireClient(player, "launch", {
 						from = obstacle.center, heightStuds = topBreak.heightStuds, distanceStuds = topBreak.distanceStuds, zoneCenter = zone.center, zoneRadius = zone.radius,

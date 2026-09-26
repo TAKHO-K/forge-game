@@ -20,6 +20,7 @@ local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
 local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
 local BossEncounter = require(script.Parent.BossEncounter)
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 서버 높이 검증(같은 0.25초 폴링)
+local TeleportArrival = require(script.Parent.TeleportArrival)
 
 -- 바닥 윗면 관례(HuntingGround FLOOR_Y+FLOOR_THICKNESS/2 = 1) 위 3stud - 포탈 도착점·아레나
 -- 입장점이 쓰는 것과 같은 여유.
@@ -48,6 +49,7 @@ local function returnFromVoid(player, rootPart)
 	rootPart.AssemblyLinearVelocity = Vector3.zero
 	rootPart.CFrame = CFrame.new(destination)
 	HeightGuard.reset(player)
+	TeleportArrival.mark(player, destination) -- M1-2c 도착 대기
 	print(("[forge-game] 심연 복귀: %s (%.0f, %.1f, %.0f) → %s"):format(player.Name, fellAt.X, fellAt.Y, fellAt.Z, tostring(destination)))
 end
 

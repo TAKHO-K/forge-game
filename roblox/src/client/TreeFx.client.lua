@@ -1,6 +1,6 @@
 -- M1 나무 점프맵 요소(클라 - 내 캐릭터만 · 판정 최소). 수치 = WorldMapData.hub.tree.course. 도형 = WorldMapLayout.buildTree(서버가 짓는다 - 여기서는 속성으로 찾는다).
 --   통통 열매(TreeFruit = bounce): 밟으면 위로 크게 튄다(발 + bounce.reachStuds) · 점프대(TreePad): 정해진 포물선(flightSeconds)으로 착지 표시 자리까지 날린다.
---     둘 다 서버 높이 검증 예외를 요청한다(TreeLaunch - 서버가 거리를 확인하고 HeightGuard.exempt).
+--     둘 다 서버 높이 허가를 요청한다(LaunchPermitRequest(파트) - 서버가 자기 위치 기록으로 발판 위였음을 확인하고 설계 정점까지 허가 · M1-2c).
 --   말랑 열매(soft): 밟으면 살짝 가라앉다가 dropSeconds 뒤 떨어지고(로컬 - 충돌 끔) respawnSeconds 뒤 제자리(같은 파트를 되살린다 = 풀링).
 --   매달린 열매(hang) · 흔들리는 잎(LeafSway): 서버 시계 기준 진자 · 흔들림(모두 같은 위상) - 움직이는 발판은 속도를 같이 줘서 선 사람을 싣는다.
 local Players = game:GetService("Players")
@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 
 local player = Players.LocalPlayer
 local C = WorldMapData.hub.tree.course
@@ -50,7 +51,7 @@ task.spawn(function()
 	end
 	course.DescendantAdded:Connect(register) -- 스트리밍으로 들어온 파트
 	course.DescendantRemoving:Connect(unregister)
-	launchRemote = ReplicatedStorage:WaitForChild("TreeLaunch", 30)
+	launchRemote = ReplicatedStorage:WaitForChild("LaunchPermitRequest", 30)
 end)
 
 local params = RaycastParams.new()
@@ -58,7 +59,7 @@ params.FilterType = Enum.RaycastFilterType.Exclude
 
 local function standingPart(character, root)
 	params.FilterDescendantsInstances = { character }
-	local hit = Workspace:Raycast(root.Position, Vector3.new(0, -4.5, 0), params)
+	local hit = Workspace:Raycast(root.Position, Vector3.new(0, -C.launchProbeStuds, 0), params)
 	return hit and hit.Instance
 end
 
@@ -66,10 +67,10 @@ local flight = nil -- { v0, startedAt, seconds } - 점프대 비행(속도를 �
 local lastLaunchAt = 0
 local softState = {} -- [part] = { steppedAt, droppedAt }
 
-local function launch(root, id, velocity, seconds)
+local function launch(root, part, velocity, seconds)
 	lastLaunchAt = os.clock()
 	if launchRemote then
-		launchRemote:FireServer(id)
+		launchRemote:FireServer(part)
 	end
 	root.AssemblyLinearVelocity = velocity
 	if seconds then
@@ -142,15 +143,14 @@ RunService.Heartbeat:Connect(function()
 	end
 	local f = fruits[part]
 	if f and f.kind == "bounce" then
-		launch(root, part:GetAttribute("FruitId"), Vector3.new(root.AssemblyLinearVelocity.X, math.sqrt(2 * G * C.bounce.reachStuds), root.AssemblyLinearVelocity.Z))
+		launch(root, part, Vector3.new(root.AssemblyLinearVelocity.X, math.sqrt(2 * G * C.bounce.reachStuds), root.AssemblyLinearVelocity.Z))
 	elseif f and f.kind == "soft" and not softState[part] then
 		softState[part] = { steppedAt = os.clock() }
 		part.CFrame = f.base - Vector3.new(0, C.soft.sinkStuds, 0)
 	elseif pads[part] then
-		local target = pads[part] + Vector3.new(0, 3.5, 0) -- 착지 = 다음 요소 윗면 위 루트 높이
+		local target = pads[part] + Vector3.new(0, C.pad.landRootAboveStuds, 0) -- 착지 = 다음 요소 윗면 위 루트 높이
 		local T = C.pad.flightSeconds
-		local from = root.Position
-		local v = (target - from) / T + Vector3.new(0, G * T / 2, 0)
-		launch(root, part:GetAttribute("TreePad"), v, T)
+		local v = JumpMath.arcLaunch(root.Position, target, T) -- 서버 설계 정점(WorldMapLayout.treeLaunch)과 같은 식
+		launch(root, part, v, T)
 	end
 end)

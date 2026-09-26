@@ -470,6 +470,38 @@ function Layout.stations()
 	return list
 end
 
+-- M1-2c 발사 설계(점프대 · 통통 열매 - 요소 번호 i = TreePad · FruitId). 클라 발사(TreeFx) · 서버 허가(LaunchPermit) · 검증이 같은 값을 읽는다.
+--   출발 발 = 윗면 ~ 윗면 + (launchProbeStuds − 루트 높이)(클라가 루트 아래 광선으로 "밟았다"를 읽는다 - 떨어지며 밟으면 조금 위에서 출발) → 그 범위의 최고 정점.
+--   반환: { kind, top(윗면 Y), flightApexFeetY(비행만의 발 정점), apexFeetY(= 비행 정점 + 공중 점프 전부 - 정점마다 눌러도), radius(윗면 반경), target(착지 루트 · 점프대만) } 또는 nil
+function Layout.treeLaunch(i)
+	local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+	local MC = require(ReplicatedStorage.Shared.data.MovementConfig)
+	local C = D.hub.tree.course
+	local T = Layout.tree()
+	local el = T.elements[i]
+	if not el or (el.k ~= "pad" and el.k ~= "bounce") then
+		return nil
+	end
+	local top = el.center.Y -- 점프대 갓 · 열매 공 모두 center = 윗면(buildTree)
+	local rise = C.launchProbeStuds - MC.rootAboveFeetStuds
+	if el.k == "bounce" then
+		local apex = top + rise + C.bounce.reachStuds
+		return { kind = "bounce", top = top, flightApexFeetY = apex, apexFeetY = apex + JumpMath.airJumpsOnlyStuds(), radius = el.spec.dia / 2 }
+	end
+	local nextEl = T.elements[i + 1]
+	if not nextEl then
+		return nil
+	end
+	local target = nextEl.center + Vector3.new(0, C.pad.landRootAboveStuds, 0)
+	local apex = -math.huge
+	for _, lift in ipairs({ 0, rise }) do
+		local from = Vector3.new(el.center.X, top + lift + MC.rootAboveFeetStuds, el.center.Z)
+		local _, up = JumpMath.arcLaunch(from, target, C.pad.flightSeconds)
+		apex = math.max(apex, top + lift + up)
+	end
+	return { kind = "pad", top = top, flightApexFeetY = apex, apexFeetY = apex + JumpMath.airJumpsOnlyStuds(), radius = el.spec.padSize / 2, target = target }
+end
+
 -- 오르는 시간 추정(보통 실력 가정 course.secondsPer): 필요한 기술(skillOf - 검증이 넣어 준다)별 시간 + 요소 추가 시간.
 -- 반환: { [leg] = { inner = 초, outer = 초, innerMoves, outerMoves } }, 바닥 → 정상(빠른 길 · 느린 길), 최고 정거장 → 정상(빠른 · 느린)
 function Layout.treeClimbSeconds(skillOf)
@@ -774,11 +806,16 @@ function Layout.buildTree(list)
 				prim(list, model, "Rope", Vector3.new(0.4, D.hub.tree.course.hang.rope, 0.4), CFrame.new(c + Vector3.new(0, D.hub.tree.course.hang.rope / 2, 0)), barkDark, { collide = false, attrs = { RopeFor = i } })
 			end
 			a2.FruitId = i
+			if spec.k == "bounce" then
+				a2.DesignApexFeetY = Layout.treeLaunch(i).apexFeetY -- M1-2c: 설계 정점(공중 점프 몫 포함 - 서버 허가 = 이 값 + 여유)
+			end
 			prim(list, model, "Fruit_" .. spec.k, Vector3.new(spec.dia, spec.dia, spec.dia), CFrame.new(c - Vector3.new(0, spec.dia / 2, 0)), FC[spec.k], { shape = "Ball", material = "SmoothPlastic", attrs = a2 })
 		elseif spec.k == "pad" then
 			prim(list, model, "PadStem", Vector3.new(2, 6, 2), CFrame.new(c - Vector3.new(0, 3.6, 0)), barkDark, { attrs = attrs })
 			local a2 = table.clone(attrs)
 			a2.TreePad = i
+			local launchSpec = Layout.treeLaunch(i)
+			a2.DesignApexFeetY = launchSpec and launchSpec.apexFeetY or nil
 			local nextEl = T.elements[i + 1]
 			if nextEl then
 				a2.PadTargetX, a2.PadTargetY, a2.PadTargetZ = nextEl.center.X, nextEl.center.Y, nextEl.center.Z
@@ -1092,10 +1129,50 @@ function Layout.buildHub(list)
 		end
 	end
 	-- 덩굴 리프트(허브 바닥) · 구름층(연출 자리 - 옅은 원판 · 충돌 없음)
+	-- M1-2c: 정거장 1 고리 아래 → 땅까지 굵은 덩굴(두 가닥 · 잎 뭉치) + 잎사귀 바구니(VineLift - [F] 프롬프트 자리) + 표지 기둥. 색 = 잠김(시든) · 열림은 클라가 사람마다 칠한다(VineLiftView).
 	local lift = tree.course.lift
 	local lp = Layout.hubPoint(lift.angleDeg, lift.r)
-	prim(list, "Hub", "VineLift", Vector3.new(0.4, 10, 10), CFrame.new(lp.X, FLOOR + 0.5, lp.Z) * CFrame.Angles(0, 0, math.rad(90)), D.colors.barrier,
-		{ shape = "Cylinder", material = "SmoothPlastic", attrs = { VineLift = true, Label = lift.label } })
+	local LC = lift.colors
+	local vineTop = FLOOR + tree.course.legs[1].untilY - tree.course.station.thickness
+	local vineLen = vineTop - FLOOR
+	local outward = Vector3.new(lp.X, 0, lp.Z).Unit
+	local side = Vector3.new(-outward.Z, 0, outward.X)
+	prim(list, "Hub", "LiftVine", Vector3.new(vineLen, lift.vineDia, lift.vineDia), CFrame.new(lp.X, FLOOR + vineLen / 2, lp.Z) * CFrame.Angles(0, 0, math.rad(90)), LC.withered,
+		{ shape = "Cylinder", material = "SmoothPlastic", collide = false, attrs = { LiftPart = "vine" } })
+	prim(list, "Hub", "LiftVine", Vector3.new(vineLen, lift.vineDia * 0.5, lift.vineDia * 0.5), CFrame.new(Vector3.new(lp.X, FLOOR + vineLen / 2, lp.Z) + side * lift.vineDia * 0.6) * CFrame.Angles(0, 0, math.rad(90)) * CFrame.Angles(math.rad(4), 0, 0), LC.withered,
+		{ shape = "Cylinder", material = "SmoothPlastic", collide = false, attrs = { LiftPart = "vine" } })
+	for i = 1, math.floor((vineLen - 14) / lift.leafEvery) do
+		local y = FLOOR + 12 + i * lift.leafEvery
+		local s = (i % 2 == 0) and 1 or -1
+		prim(list, "Hub", "LiftLeaf", Vector3.new(2.6, 0.3, 1.4), CFrame.lookAt(Vector3.new(lp.X, y, lp.Z) + side * s * 1.8, Vector3.new(lp.X, y, lp.Z) + side * s * 4) * CFrame.Angles(math.rad(-20), 0, 0), LC.withered,
+			{ material = "SmoothPlastic", collide = false, attrs = { LiftPart = "leaf" } })
+	end
+	local br = lift.basketRadius
+	prim(list, "Hub", "VineLift", Vector3.new(0.6, br * 2, br * 2), CFrame.new(lp.X, FLOOR + 0.5, lp.Z) * CFrame.Angles(0, 0, math.rad(90)), LC.withered,
+		{ shape = "Cylinder", material = "SmoothPlastic", attrs = { VineLift = true, LiftPart = "basket" } })
+	for k = 0, 9 do -- 바구니 테두리 잎(비스듬히 세운 잎 10장 - 충돌 없음)
+		local a = k / 10 * 2 * math.pi
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local at = Vector3.new(lp.X, FLOOR + 1.6, lp.Z) + dir * (br - 0.3)
+		prim(list, "Hub", "LiftBasketLeaf", Vector3.new(2.6, 2.4, 0.3), CFrame.lookAt(at, at + dir) * CFrame.Angles(math.rad(-25), 0, 0), LC.withered,
+			{ material = "SmoothPlastic", collide = false, attrs = { LiftPart = "leaf" } })
+	end
+	-- 표지(자물쇠 · 정거장 안내 글은 클라 - 이 파트는 자리만): 바구니 옆 기둥 + 머리
+	local post = Vector3.new(lp.X, FLOOR, lp.Z) + outward * (br + 2.5)
+	prim(list, "Hub", "LiftSignPost", Vector3.new(0.6, lift.signHeight - 2, 0.6), CFrame.new(post + Vector3.new(0, (lift.signHeight - 2) / 2, 0)), tree.barkDark, { material = "SmoothPlastic" })
+	prim(list, "Hub", "LiftSign", Vector3.new(1, 1, 1), CFrame.new(post + Vector3.new(0, lift.signHeight, 0)), tree.barkDark,
+		{ material = "SmoothPlastic", collide = false, transparency = 1, attrs = { LiftPart = "sign" } })
+	-- 나무 입구 정거장 안내판(코스 시작 각 · 바깥 길 밖): 판(글 = 클라 SurfaceGui) + 기둥 둘
+	local EB = tree.course.entranceBoard
+	local ea = tree.course.station.startAngleDeg
+	local ep = Layout.hubPoint(ea, EB.r)
+	local eo = Vector3.new(ep.X, 0, ep.Z).Unit
+	local boardCf = CFrame.lookAt(Vector3.new(ep.X, FLOOR + EB.bottom + EB.h / 2, ep.Z), Vector3.new(ep.X, FLOOR + EB.bottom + EB.h / 2, ep.Z) + eo)
+	prim(list, "Hub", "StationBoard", Vector3.new(EB.w, EB.h, 0.6), boardCf, tree.barkDark, { material = "SmoothPlastic", attrs = { StationBoard = true } })
+	for _, sx in ipairs({ -1, 1 }) do
+		local foot = boardCf * CFrame.new(sx * (EB.w / 2 - 0.6), -EB.h / 2, 0.5)
+		prim(list, "Hub", "StationBoardPost", Vector3.new(0.6, EB.bottom + EB.h, 0.6), CFrame.new(foot.Position.X, FLOOR + (EB.bottom + EB.h) / 2, foot.Position.Z), tree.bark, { material = "SmoothPlastic" })
+	end
 	local cloud = tree.cloudLayer
 	prim(list, "BigTree", "CloudLayer", Vector3.new(cloud.thickness, cloud.radius * 2, cloud.radius * 2), CFrame.new(0, FLOOR + cloud.y, 0) * CFrame.Angles(0, 0, math.rad(90)), { 245, 245, 250 },
 		{ shape = "Cylinder", material = "SmoothPlastic", collide = false, transparency = cloud.transparency })

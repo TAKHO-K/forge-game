@@ -310,7 +310,9 @@ function M1Verify.runLive(player, env)
 		local lift = D.hub.tree.course.lift
 		st.padAt = -math.huge
 		put(WorldMapLayout.hubPoint(lift.angleDeg, lift.r, 4))
-		task.wait(1.2)
+		task.wait(0.6)
+		Travel.rideLift(player) -- M1-2c: 밟기 → 바구니 앞 [F](프롬프트 Triggered와 같은 함수)
+		task.wait(0.6)
 		local best = Travel.highestStation(PlayerProfile.getPeakLevel(player))
 		local stations = WorldMapLayout.stations()
 		local expectY = best > 0 and stations[best].y or nil

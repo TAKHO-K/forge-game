@@ -664,8 +664,18 @@ end)
 
 -- 점프대(서버 파트 - 태그 BossJumpPad · Attribute LaunchHeight): 내 캐릭터가 서 있으면 그 높이까지 띄운다(v = √(2gh)). 서버 높이 검증의 기준 = 점프대 윗면이라
 -- 허용(+22.38) 안이다. 한 번 띄우면 0.6초 동안은 다시 안 띄운다(떠오르는 첫 프레임에 또 밟힌 것으로 읽히지 않게).
+-- M1-2c: 띄울 때 LaunchPermitRequest(발판)를 보낸다 - 서버가 위치 기록으로 확인하고 설계 정점까지 높이 허가(공중 점프를 섞어도 되돌리지 않게).
 local CollectionService = game:GetService("CollectionService")
 local padCooldownUntil = 0
+local permitRemote = nil
+task.spawn(function()
+	permitRemote = ReplicatedStorage:WaitForChild("LaunchPermitRequest", 30)
+end)
+local function askPermit(pad)
+	if permitRemote then
+		permitRemote:FireServer(pad)
+	end
+end
 RunService.Heartbeat:Connect(function()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -692,6 +702,7 @@ RunService.Heartbeat:Connect(function()
 					end
 				end)
 				padCooldownUntil = os.clock() + total + 0.3
+				askPermit(pad)
 				BossFx.ring(pad.Position + Vector3.new(0, 0.3, 0), 1, 6, WHITE, 0.3)
 				break
 			end
@@ -699,6 +710,7 @@ RunService.Heartbeat:Connect(function()
 			local v = root.AssemblyLinearVelocity
 			root.AssemblyLinearVelocity = Vector3.new(v.X, math.sqrt(2 * Workspace.Gravity * height), v.Z)
 			padCooldownUntil = os.clock() + 0.6
+			askPermit(pad)
 			BossFx.ring(pad.Position + Vector3.new(0, 0.3, 0), 1, 5, WHITE, 0.3)
 			break
 		end

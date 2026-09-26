@@ -13,6 +13,9 @@ local BossJumpCourseMath = require(ReplicatedStorage.Shared.BossJumpCourseMath)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local GroundProbe = require(script.Parent.GroundProbe)
 local HeightGuard = require(script.Parent.HeightGuard)
+local LaunchPermit = require(script.Parent.LaunchPermit) -- M1-2c
+local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
+local ROOT_ABOVE = require(ReplicatedStorage.Shared.data.MovementConfig).rootAboveFeetStuds
 
 local BossJumpCourse = {}
 
@@ -162,6 +165,24 @@ local function newPad(name, size, position, color)
 	return pad
 end
 
+-- M1-2c 발사 허가: 클라(BossEnvironmentView)가 발판 위 루트(발판 중심 위 0 ~ 5)에서 띄우는 것과 같은 식의 최고 발 높이 + 공중 점프 몫
+function BossJumpCourse.padLaunchSpec(pad)
+	local top = pad.Position.Y + pad.Size.Y / 2
+	local rootMax = pad.Position.Y + 5 -- 클라가 "밟았다"로 읽는 루트 높이 상한(rel.Y ≤ 5)
+	local target = pad:GetAttribute("LaunchTarget")
+	local apexFeet
+	if typeof(target) == "Vector3" then
+		apexFeet = math.max(pad:GetAttribute("LaunchApexY") or target.Y + 8, rootMax + 2, target.Y + 1) - ROOT_ABOVE
+	else
+		apexFeet = rootMax - ROOT_ABOVE + (pad:GetAttribute("LaunchHeight") or 18)
+	end
+	return { top = top, center = pad.Position, radius = math.max(pad.Size.X, pad.Size.Z) / 2, apexFeetY = apexFeet + JumpMath.airJumpsOnlyStuds(), source = "수정 부수기 " .. pad.Name }
+end
+
+local function registerPad(pad)
+	LaunchPermit.register(pad, BossJumpCourse.padLaunchSpec(pad))
+end
+
 -- 1단계: 코스 발판 boostEvery칸마다 윗면에 높이 점프 발판(마지막 수정 발판 제외).
 local function helpStage1(state)
 	local placed = {}
@@ -171,6 +192,7 @@ local function helpStage1(state)
 				local pad = newPad("CourseBoostPad", Vector3.new(HELP.boostPadStuds, 0.3, HELP.boostPadStuds), p.position + Vector3.new(0, 0.15, 0), Color3.fromRGB(120, 230, 255))
 				pad:SetAttribute("LaunchHeight", HELP.boostHeightStuds)
 				pad:SetAttribute("CourseSite", site)
+				registerPad(pad)
 				table.insert(state.parts, pad)
 				table.insert(state.pads, pad)
 				table.insert(placed, pad.Position)
@@ -206,6 +228,7 @@ local function helpStage2(state)
 			pad:SetAttribute("LaunchTarget", target)
 			pad:SetAttribute("LaunchApexY", apexY)
 			pad:SetAttribute("CourseSite", site)
+			registerPad(pad)
 			table.insert(state.parts, pad)
 			table.insert(state.pads, pad)
 			table.insert(placed, pad.Position)
@@ -239,13 +262,7 @@ function BossJumpCourse.step(model, victims, floorY, now)
 	end
 	for _, v in ipairs(victims) do
 		local feet = v.feet or v.root.Position - Vector3.new(0, 3, 0)
-		-- 도움 발판 위: 클라가 띄운다 - 서버 높이 검증이 부정으로 보지 않게 체공만큼 예외
-		for _, pad in ipairs(state.pads) do
-			local rel = feet - pad.Position
-			if math.abs(rel.X) <= pad.Size.X / 2 + 0.5 and math.abs(rel.Z) <= pad.Size.Z / 2 + 0.5 and rel.Y >= -1 and rel.Y <= 3 and typeof(v.player) == "Instance" then
-				HeightGuard.exempt(v.player, 4)
-			end
-		end
+		-- 도움 발판 위: 클라가 띄우며 LaunchPermitRequest를 보낸다 → 서버 위치 기록으로 확인해 설계 정점까지 허가(M1-2c - 옛 틱 검사는 틱 사이에 밟고 떠난 사람을 놓쳤다)
 		local on = nil
 		for _, part in ipairs(state.parts) do
 			local rel = feet - part.Position

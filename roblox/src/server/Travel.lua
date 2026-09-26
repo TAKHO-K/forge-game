@@ -18,6 +18,8 @@ local PlayerState = require(script.Parent.PlayerState)
 local BossEncounter = require(script.Parent.BossEncounter)
 local PartyState = require(script.Parent.PartyState)
 local HeightGuard = require(script.Parent.HeightGuard)
+local LaunchPermit = require(script.Parent.LaunchPermit)
+local TeleportArrival = require(script.Parent.TeleportArrival)
 local BossGate = require(script.Parent.BossGate)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 
@@ -114,24 +116,28 @@ function Travel.pushOutPoint(zone, feet)
 end
 
 -- ─────────────────────────── 순간이동 ───────────────────────────
--- 도착지 미리 불러오기(스트리밍) 뒤 옮긴다. 반환: 미리 불러오기 성공 여부(로그 · 검증).
+-- 도착지 미리 불러오기(스트리밍) 뒤 옮긴다. 반환: 미리 불러오기 요청이 에러 없이 끝났는가(로그 · 검증).
+--   M1-2c: 로그의 "미리 불러오기 O"는 숫자 0이 아니라 글자 O(= 요청 성공). 요청이 끝나도 발판이 다 들어왔다는 보장은 아니라 도착 알림(TeleportArrival)으로 클라가 발 아래를 한 번 더 본다.
 function Travel.teleport(player, position, why)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root then
 		return false
 	end
+	local t0 = os.clock()
 	local streamed = pcall(function()
 		player:RequestStreamAroundAsync(position, T.streamTimeoutSeconds)
 	end)
+	local waited = os.clock() - t0
 	if not root.Parent then
 		return false
 	end
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.CFrame = CFrame.new(position) * root.CFrame.Rotation
 	HeightGuard.reset(player)
-	print(("[forge-game] 이동(%s): %s → (%.0f, %.0f, %.0f) · 미리 불러오기 %s"):format(why or "?", player.Name, position.X, position.Y, position.Z, streamed and "O" or "X"))
-	Travel.lastTeleport = { player = player, position = position, why = why, streamed = streamed }
+	TeleportArrival.mark(player, position)
+	print(("[forge-game] 이동(%s): %s → (%.0f, %.0f, %.0f) · 미리 불러오기 %s(%.2f초)"):format(why or "?", player.Name, position.X, position.Y, position.Z, streamed and "성공" or "실패", waited))
+	Travel.lastTeleport = { player = player, position = position, why = why, streamed = streamed, waited = waited }
 	return streamed
 end
 
@@ -309,6 +315,29 @@ function Travel.highestStation(peakLevel)
 	return best
 end
 
+-- 덩굴 리프트 타기(M1-2c - 바구니 앞 [F] 프롬프트 · 검증): 가장 높은 열린 정거장으로. 반환: 정거장 번호(0 = 잠김) · 보스전 중 · 멀면 nil
+function Travel.rideLift(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root or BossEncounter.getEncounter(player) then
+		return nil
+	end
+	local L = WorldMapData.hub.tree.course.lift
+	if (flat(root.Position) - flat(WorldMapLayout.hubPoint(L.angleDeg, L.r))).Magnitude > L.basketRadius + L.promptDistance + 2 then
+		return nil
+	end
+	local best = Travel.highestStation(PlayerProfile.getPeakLevel(player))
+	if best > 0 then
+		local s = stationList()[best]
+		local st = stateOf(player)
+		st.checkpoint = best
+		player:SetAttribute("TreeCheckpoint", best)
+		Travel.teleport(player, s.top + Vector3.new(0, 3, 0), ("덩굴 리프트 → 정거장 %d"):format(best))
+	else
+		PartyState.notify(player, ("덩굴 리프트 - 역대 최고 레벨 %d부터 첫 정거장이 열린다"):format(stationList()[1].unlockLevel))
+	end
+	return best
+end
+
 -- 정거장 = 줄기 둘레 고리 발판(반경 ringInner ~ ringOuter · 높이 y)
 local function onStation(feet)
 	local r = flat(feet).Magnitude
@@ -359,7 +388,7 @@ function Travel.checkSealed(player, st, feet, grounded, now)
 end
 
 -- ─────────────────────────── 폴링 ───────────────────────────
-local hubPortals, campPortals, gates, liftPoint
+local hubPortals, campPortals, gates
 local function buildPoints()
 	hubPortals, campPortals, gates = {}, {}, {}
 	for _, z in ipairs(ZONES) do
@@ -369,8 +398,6 @@ local function buildPoints()
 	for _, g in ipairs(WorldMapLayout.bossGates()) do
 		gates[g.bossId] = g.position -- M1-3: 관문 = 보스 목록(BossData gate) - 발판 키 = 보스 id
 	end
-	local lift = WorldMapData.hub.tree.course.lift
-	liftPoint = WorldMapLayout.hubPoint(lift.angleDeg, lift.r)
 end
 
 local function portalsAttribute(player)
@@ -460,19 +487,6 @@ function Travel.pollPlayer(player, root, humanoid, now)
 				return
 			end
 		end
-		if (flat(feet) - flat(liftPoint)).Magnitude <= 5 then
-			st.padAt = now
-			local best = Travel.highestStation(PlayerProfile.getPeakLevel(player))
-			if best > 0 then
-				local s = stationList()[best]
-				st.checkpoint = best
-				player:SetAttribute("TreeCheckpoint", best)
-				Travel.teleport(player, s.top + Vector3.new(0, 3, 0), ("덩굴 리프트 → 정거장 %d"):format(best))
-			else
-				PartyState.notify(player, ("덩굴 리프트 - 역대 최고 레벨 %d부터 첫 정거장이 열린다"):format(stationList()[1].unlockLevel))
-			end
-			return
-		end
 		-- 보스 관문
 		for key, g in pairs(gates) do
 			if (flat(feet) - flat(g)).Magnitude <= WorldMapData.layout.gate.radius and now - st.gateAt >= 3 then
@@ -550,25 +564,38 @@ function Travel.start(downPads)
 			PartyState.notify(player, "이동 불가 - " .. text)
 		end
 	end)
-	-- 나무 통통 열매 · 점프대: 클라가 튕기기 직전에 알린다 → 그 요소가 발 가까이(10 안)에 있으면 높이 검증 예외(점프대 비행 + 여유)
-	local launchEvent = Instance.new("RemoteEvent")
-	launchEvent.Name = "TreeLaunch"
-	launchEvent.Parent = ReplicatedStorage
-	local launchParts = {}
+	-- 나무 통통 열매 · 점프대: 클라가 튕기며 LaunchPermitRequest(파트)를 보낸다 → 서버 위치 기록으로 발판 위였음을 확인하면 설계 정점까지 높이 허가(M1-2c - LaunchPermit)
+	LaunchPermit.start()
 	local course = require(script.Parent.WorldMap).model("TreeCourse")
+	local registered = 0
 	for _, part in ipairs(course and course:GetDescendants() or {}) do
-		local id = part:GetAttribute("FruitId") or part:GetAttribute("TreePad")
-		if id and (part:GetAttribute("TreeFruit") == "bounce" or part:GetAttribute("TreePad")) then
-			launchParts[id] = part
+		local id = part:GetAttribute("TreePad") or (part:GetAttribute("TreeFruit") == "bounce" and part:GetAttribute("FruitId"))
+		local spec = id and WorldMapLayout.treeLaunch(id)
+		if spec then
+			local c = WorldMapLayout.tree().elements[id].center
+			LaunchPermit.register(part, { top = spec.top, center = c, radius = spec.radius, apexFeetY = spec.apexFeetY, source = ("나무 %s %d"):format(spec.kind == "pad" and "점프대" or "통통 열매", id) })
+			registered += 1
 		end
 	end
-	launchEvent.OnServerEvent:Connect(function(player, id)
-		local part = type(id) == "number" and launchParts[id]
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		if part and root and (root.Position - part.Position).Magnitude <= 10 then
-			HeightGuard.exempt(player, WorldMapData.hub.tree.course.pad.flightSeconds + 1.5)
+	Travel.launchSources = registered
+	-- 덩굴 리프트 [F](M1-2c): 바구니(VineLift)에 프롬프트 - 글(정거장 · 높이)과 켜짐(열림만)은 클라가 사람마다(VineLiftView)
+	local hub = require(script.Parent.WorldMap).model("Hub")
+	for _, part in ipairs(hub and hub:GetDescendants() or {}) do
+		if part:IsA("BasePart") and part:GetAttribute("VineLift") then
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "VineLiftPrompt"
+			prompt.ObjectText = WorldMapData.hub.tree.course.lift.label
+			prompt.ActionText = "타기"
+			prompt.KeyboardKeyCode = Enum.KeyCode.F
+			prompt.HoldDuration = 0
+			prompt.MaxActivationDistance = WorldMapData.hub.tree.course.lift.promptDistance
+			prompt.RequiresLineOfSight = false
+			prompt.Parent = part
+			prompt.Triggered:Connect(function(player)
+				Travel.rideLift(player)
+			end)
 		end
-	end)
+	end
 	local elapsed = 0
 	RunService.Heartbeat:Connect(function(dt)
 		elapsed += dt
@@ -593,7 +620,7 @@ function Travel.start(downPads)
 			end
 		end
 	end)
-	print(("[forge-game] 세계 이동 준비 - 구역 %d · 정거장 %d · 포탈 %d쌍"):format(#ZONES, #stationList(), #ZONES))
+	print(("[forge-game] 세계 이동 준비 - 구역 %d · 정거장 %d · 포탈 %d쌍 · 발사 허가 발판 %d"):format(#ZONES, #stationList(), #ZONES, Travel.launchSources or 0))
 end
 
 return Travel
