@@ -40,13 +40,13 @@ local materialGained = Instance.new("RemoteEvent")
 materialGained.Name = "MaterialGained"
 materialGained.Parent = ReplicatedStorage
 
--- C1 후속: 막힌 타격(다른 사람 몹) 알림 - 때린 사람에게만. 클라 DamageNumbers가 피해 숫자 대신 "다른 사람 몹"을 띄운다.
+-- C1 후속 · 마무리: 막힌 타격(잠긴 몹) 알림 - 때린 사람에게만. 클라 MobLockView가 반사 연출(피해 숫자 없음 - DamageNumbers) · 처음 1회면 말풍선(showHint - 저장 hints.stealLockSeen).
 local ownedMobBlocked = Instance.new("RemoteEvent")
 ownedMobBlocked.Name = "OwnedMobBlocked"
 ownedMobBlocked.Parent = ReplicatedStorage
 MonsterState.setBlockedListener(function(model, player)
 	if typeof(player) == "Instance" and player.Parent then
-		ownedMobBlocked:FireClient(player, model)
+		ownedMobBlocked:FireClient(player, model, PlayerProfile.markStealLockSeen(player))
 	end
 end)
 

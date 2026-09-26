@@ -9,11 +9,9 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 
-local Text = require(ReplicatedStorage.Shared.Text)
-
 local DamageNumbers = {}
 
--- C1 후속: 서버가 "다른 사람 몹"(더 낮은 참여자가 잡는 중 - 피해 0)이라고 알린 몹과 시각. 알림은 같은 타격의 피해 결과보다 먼저 온다(서버가 판정 중에 쏜다).
+-- C1 후속: 서버가 잠긴 몹(스틸 불가한 낮은 사람이 잡는 중 - 피해 0)이라고 알린 몹과 시각. 알림은 같은 타격의 피해 결과보다 먼저 온다(서버가 판정 중에 쏜다).
 local blockedAt = setmetatable({}, { __mode = "k" })
 task.spawn(function()
 	ReplicatedStorage:WaitForChild("OwnedMobBlocked").OnClientEvent:Connect(function(model)
@@ -39,6 +37,9 @@ function DamageNumbers.show(monsterModel, damage, isCrit, isHeal)
 	if not head then
 		return
 	end
+	if not isHeal and damage == 0 and blockedAt[monsterModel] and os.clock() - blockedAt[monsterModel] < CombatConfig.ownedMobLabelSeconds then
+		return -- C1 마무리: 잠긴 몹(피해 0) - 숫자 없이 반사 연출만(MobLockView)
+	end
 
 	-- 짧은 시간에 여러 대를 때리면 숫자가 겹쳐 안 보인다 - 이미 떠 있는 개수만큼 위로
 	-- 밀어서 계단식으로 쌓는다(스킬로 여러 마리를 동시에 때려도 같은 원칙이 그대로 적용된다).
@@ -61,11 +62,7 @@ function DamageNumbers.show(monsterModel, damage, isCrit, isHeal)
 	label.Size = UDim2.new(1, 0, 1, 0)
 	label.Text = (isHeal and "+" or "") .. NumberFormat.format(damage)
 	label.TextColor3 = isHeal and Color3.fromRGB(120, 230, 130) or Color3.fromRGB(255, 220, 60)
-	if not isHeal and damage == 0 and blockedAt[monsterModel] and os.clock() - blockedAt[monsterModel] < CombatConfig.ownedMobLabelSeconds then -- C1: 다른 사람 몹(피해 0) - 숫자 대신
-		label.Text = Text.get("combat.ownedMob")
-		label.TextColor3 = UIColors.rimHi
-		label.TextStrokeTransparency = UIColors.ownedMobStrokeTransparency
-	elseif not isHeal and monsterModel:GetAttribute("BossShielded") then -- BR1-2 보호막: 피해 숫자 대신 "무효"(피해로는 안 깨진다)
+	if not isHeal and monsterModel:GetAttribute("BossShielded") then -- BR1-2 보호막: 피해 숫자 대신 "무효"(피해로는 안 깨진다)
 		label.Text = "무효"
 		label.TextColor3 = Color3.fromRGB(170, 220, 255)
 		gui.StudsOffset += Vector3.new(math.random(-10, 10) / 10, 0, 0)

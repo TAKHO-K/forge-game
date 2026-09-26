@@ -2324,6 +2324,15 @@ local function handleCommand(player, args)
 			end
 			reply(player, "killsim 중단: 보스가 사라졌습니다")
 		end)
+	elseif sub == "stealhint" and args[2] == "reset" then
+		PlayerProfile.debugResetStealLockSeen(player) -- C1 마무리: 잠긴 몹 말풍선을 다시 보게(세션 메모리 - 백업 복원 대상)
+		reply(player, "잠긴 몹 말풍선 기록을 비웠습니다")
+	elseif sub == "stats" then
+		-- 알파 통계(T1 계측) - C1 결정 6 탱커 끌어오기
+		local snap = require(script.Parent.AlphaStats).snapshot()
+		local line = ("끌어오기 %d회 · 합 %.1f초 · 평균 %.2f초 · 약하게 맞은 공격 추정 %.1f · 최대 기준 상승 %d"):format(snap.pullCount, snap.pullSeconds, snap.pullAvgSeconds, snap.pullAvoidedHits, snap.pullMaxJump)
+		print("[AlphaStats] " .. line)
+		reply(player, line)
 	elseif sub == "bossintro" and args[2] == "reset" then
 		PlayerProfile.debugResetBossIntro(player) -- BR1-2: 첫 만남 카드를 다시 보게(세션 메모리 - 백업 복원 대상)
 		reply(player, "첫 만남 카드 기록을 비웠습니다")

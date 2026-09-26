@@ -87,7 +87,7 @@ return {
 
 		-- 보스 생존 중 이동 제한 · 포기(G1-5)
 		["giveup.title"] = "보스전 중에는 이동할 수 없습니다",
-		["combat.ownedMob"] = "다른 사람 몹", -- C1: 더 낮은 스테이지 참여자가 잡는 중(피해 0 - 8초 무참여면 풀림)
+		["combat.stealLockHint"] = "다른 유저가 사냥중이에요", -- C1 마무리: 잠긴 몹을 처음 때렸을 때 1회 말풍선(저장 hints.stealLockSeen)
 		["giveup.body"] = "포기하고 스테이지 {stage}(으)로 내려가 마을로 돌아갈까요?",
 		["giveup.bodyParty"] = "포기 투표를 열까요? 통과하면 파티 전원이 스테이지 {stage}(으)로 내려가 마을로 돌아갑니다.",
 		["giveup.ok"] = "포기",
@@ -147,5 +147,9 @@ return {
 		["egg.hatchCol"] = "{grade} 알",
 		["egg.dex"] = "비밀 둥지 발견 {count}곳",
 		["egg.chip"] = "알",
+
+		-- 도움말(백과사전) 항목 - 창 UI는 P4(목록 = HelpCodexData)
+		["codex.stealLock.title"] = "다른 유저가 사냥중인 몬스터",
+		["codex.stealLock.body"] = "체력바가 회색이고 자물쇠가 보이면 다른 유저가 먼저 사냥 중인 몬스터예요. 공격이 튕겨 나가요. 그 유저가 잠시 떠나면 자물쇠가 풀려요. 비슷한 성장 단계(같은 환생 · 가까운 레벨 · 가까운 스테이지)끼리는 같이 공격할 수 있고, 몬스터 체력의 {percent}% 이상 깎으면 보상을 받아요.", -- percent = CombatConfig.contributionRewardThreshold × 100(창이 넘긴다)
 	},
 }

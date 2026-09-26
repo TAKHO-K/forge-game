@@ -127,10 +127,22 @@ return {
 	participationWindowSeconds = 8,
 	-- 치유 · 보호 · 버프 참여는 치유사가 그 몹에서 이 거리 안일 때만(파티 버프는 거리 무관하게 걸린다 - C1 리뷰 1). 파티 경험치 공유 반경(PartyConfig 150)보다 좁은 "같은 싸움" 거리.
 	supportRadiusStuds = 60,
-	-- C1 후속(사용자 결정): 몹의 현재 참여자 중 가장 낮은 스테이지보다 이 값 넘게 높은 사람은 막힌다(피해 0 · 참여 안 됨 · 머리 위 "다른 사람 몹").
-	-- 이하면 기존 공유 규칙(스틸 가능 · 기준 상승 재정규화 · 기여 10%). 레벨이 아니라 스테이지 차. 낮은 참여자가 8초 무참여면 풀린다.
+	-- C1 마무리(사용자 결정): 스틸 가능 = 세 조건 AND(MobShare.canShare 하나가 판정 - 막힘 · 어그로 필터 · 클라 자물쇠가 같이 쓴다)
+	--   ① 환생 횟수 같음 ② 레벨 차 ≤ stealLevelGapTiers(둘 중 낮은 레벨이 든 구간의 gap) ③ 스테이지 차 ≤ stealStageGap.
+	-- 불충족 + 더 높은 스테이지 공격자 = 막힘(피해 0 · 참여 안 됨 · 자물쇠 반사 연출). 낮은 쪽이 치면 주인 그대로 같이 때림. 잡는 사람이 8초 무참여면 풀린다.
 	stealStageGap = 10,
-	ownedMobLabelSeconds = 1, -- 막힘 알림 뒤 이 시간 안의 피해 0 숫자를 "다른 사람 몹"으로 바꿔 그린다(클라 DamageNumbers)
+	stealLevelGapTiers = { -- minLevel 오름차순 - 낮은 레벨이 minLevel 이상인 마지막 줄
+		{ minLevel = 1, gap = 20 },
+		{ minLevel = 100, gap = 50 },
+		{ minLevel = 500, gap = 100 },
+		{ minLevel = 1000, gap = 250 },
+		{ minLevel = 5000, gap = 500 },
+	},
+	ownedMobLabelSeconds = 1, -- 막힘 알림 뒤 이 시간 안의 피해 0 숫자는 그리지 않는다(반사 연출이 대신 - 클라 DamageNumbers)
+	stealReflectCooldownSeconds = 0.3, -- 같은 몹의 반사 연출은 이 간격에 1번(클라 MobLockView)
+	stealLockHintSeconds = 3, -- 처음 1회 말풍선 "다른 유저가 사냥중이에요" 표시 시간(저장 hints.stealLockSeen)
+	-- 반사 연출(클라 MobLockView - 연출만 · 피해 반사 없음 · 소리 없음). 입자 = 보호막 1 + 조각 fragmentCount(합 ≤ 6).
+	stealReflectFx = { seconds = 0.35, shieldGrow = 1.25, shieldStartTransparency = 0.45, fragmentCount = 4, fragmentSize = 0.45, fragmentFlyStuds = 4.5, fragmentSpreadDeg = 35 },
 	stageChangeCooldownSeconds = 1,
 
 	-- 점프 중 기본공격 입력 버퍼(19-2). 점프 중엔 공격이 나가지 않고 회전만 한다 - 착지

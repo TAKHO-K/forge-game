@@ -357,7 +357,7 @@ end
 --   T가 죽으면 부활 + 복귀 15초 동안 파티 사냥이 멈춘다(가정). 받는 사람 = D. 정상 = T가 3,000에서 탱킹(같은 사람 · 정상 파티).
 --   옛 규칙 = 받는 피해가 T 자기 스테이지(1) → 사실상 안 죽는다. 새 규칙 = 몹 기준 스테이지(D가 때려 3,000).
 --   pull = 새 몹마다 T가 끌어오는 초(그동안 D는 안 친다 - 몹 참여자는 쫓기는 T뿐이라 기준 = T 스테이지). 한 틱 순서 = D 타격 → 몹 공격.
---   새 규칙: 몹은 기준 − stealStageGap보다 낮은 사람을 쫓지 않는다(MonsterState.canChase) → D가 쳐서 기준이 3,000이 되면 T를 놓고 D를 문다(D도 7타 · 죽으면 15초).
+--   새 규칙: 몹은 나보다 높은 참여자와 스틸 불가한 사람을 쫓지 않는다(MonsterState.canChase → MobShare.tooWeakFor) → D가 쳐서 기준이 3,000이 되면 T를 놓고 D를 문다(D도 7타 · 죽으면 15초).
 local function scenarioJ(mode, normal, pull)
 	pull = pull or 0
 	local surviveHits = BalanceAnchorConfig.surviveTargetHits
@@ -377,8 +377,7 @@ local function scenarioJ(mode, normal, pull)
 		local victim = s.T
 		if s.mode == "new" then
 			MobShare.refresh(s.mob, now)
-			local ref = s.mob.refStage
-			if ref == nil or s.T.stage >= ref - CombatConfig.stealStageGap then
+			if not MobShare.tooWeakFor(s.mob, s.T, s.T.stage) then -- 어그로 필터 = 서버 MonsterState.canChase와 같은 canShare
 				MobShare.touch(s.mob, s.T, s.T.stage, now, true) -- 쫓김 = passive 참여
 			else
 				victim = s.D -- 기준 − 10보다 낮은 T는 안 쫓는다
@@ -438,6 +437,25 @@ local function scenarioK(mode, normal)
 		end
 	end)
 	return perMinute(state.earned[people[4]] or 0)
+end
+
+-- l · m(C1 마무리): 스틸 시도 - 주인 O가 자기 몹을 잡고, 도둑 X(힘 = 자기 스테이지)는 O가 10%를 넘긴 몹에 매 틱 끼어든다(자기 몹 없음).
+--   반환 = X가 O의 몹에서 가져간 가치/분(정상 0) · O 가치/분 · O 솔로. 사람 = { stage, level, rebirth }(MobShare.profileOf가 읽는다).
+local function scenarioSteal(mode, owner, thief)
+	local state = run(mode, function(m)
+		return start(m, { O = { power = owner.stage, stage = owner.stage, level = owner.level, rebirth = owner.rebirth },
+			X = { power = thief.stage, stage = thief.stage, level = thief.level, rebirth = thief.rebirth } })
+	end, function(s, now)
+		if respawn(s, now) or s.mobDead then
+			return
+		end
+		local dead = hit(s.mob, s.O, now)
+		if not dead and (s.mob.contributions[s.O] or 0) >= 0.1 then
+			dead = hit(s.mob, s.X, now)
+		end
+		resolve(s, dead, now)
+	end)
+	return perMinute(state.earned[state.X] or 0), perMinute(state.earned[state.O] or 0), C1Sim.normalRate(owner.stage, 1)
 end
 
 -- g: 토벌 - 보스 35를 깬 직후(힘 35) 스테이지를 낮췄다 올리며 토벌 스테이지를 고른다. 토벌 1회 = 보스 HP(몹 × hpMultiplier) 처치 + 입장 이동. 가치/분의 최대 vs 35.
@@ -601,6 +619,16 @@ function C1Sim.runAll()
 		local jNormal = scenarioJ("new", true, pull)
 		add(("j-%d"):format(pull), ("스테이지 1 탱커 + 높은 딜러 파티 · 끌기 %d초(받는 사람 = 딜러 D · 정상 = 탱커가 3,000)"):format(pull),
 			scenarioJ("old", false, pull), scenarioJ("new", false, pull), jNormal)
+	end
+	local stealCases = {
+		{ id = "l", label = "스틸: 환생 · 레벨 같고 스테이지 1(주인) vs 3,000(도둑)", owner = { stage = 1, level = 300, rebirth = 2 }, thief = { stage = 3000, level = 300, rebirth = 2 } },
+		{ id = "m", label = "스틸: 환생 다름(0 vs 1) · 레벨 같음 · 스테이지 100(주인) vs 105(도둑)", owner = { stage = 100, level = 150, rebirth = 0 }, thief = { stage = 105, level = 150, rebirth = 1 } },
+	}
+	for _, case in ipairs(stealCases) do
+		local xb, ob = scenarioSteal("old", case.owner, case.thief)
+		local xa, oa, oSolo = scenarioSteal("new", case.owner, case.thief)
+		add(case.id, case.label .. " - 받는 사람 = 도둑(정상 0)", xb, xa, 0, ("주인 %.3g → %.3g / 솔로 %.3g · 판정 canShare = %s"):format(ob, oa, oSolo,
+			tostring(MobShare.canShare(case.owner, case.thief))))
 	end
 	local gBest, gNormal, gStage, gRows = scenarioG()
 	local gNote = {}

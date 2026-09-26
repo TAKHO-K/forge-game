@@ -15,6 +15,7 @@ local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixDat
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local C1Sim = require(script.Parent.C1Sim)
+local AlphaStats = require(script.Parent.AlphaStats)
 
 local V = {}
 
@@ -105,16 +106,71 @@ function V.runPure()
 		local m2 = MobShare.fresh({})
 		MobShare.touch(m2, chased, 1, 0, true)
 		local ref3, _, _, b2 = MobShare.touch(m2, dealer, 3000, 0.5)
-		r.check(("쫓기기만 한 스테이지 1(passive) → 스테이지 3,000 딜러 안 막힘 · 기준 %s · 스테이지 1은 기준 − %d 아래라 몹이 안 쫓음(%s)"):format(tostring(ref3), GAP, tostring(1 < ref3 - GAP)),
-			not b2 and ref3 == 3000 and 1 < ref3 - GAP)
-		-- 대칭: 잡는 사람보다 10 넘게 낮은 사람도 새로 못 끼어든다(높은 파티 몹을 한 대 쳐서 그 파티원을 막는 방해 차단)
-		local hi, lo1, lo2 = {}, {}, {}
+		local weak = MobShare.tooWeakFor(m2, chased, 1)
+		r.check(("쫓기기만 한 스테이지 1(passive) → 스테이지 3,000 딜러 안 막힘 · 기준 %s · 스테이지 1은 3,000과 스틸 불가라 몹이 안 쫓음(tooWeakFor %s)"):format(tostring(ref3), tostring(weak)),
+			not b2 and ref3 == 3000 and weak)
+		-- C1 마무리: 스틸 불가한 낮은 사람은 막히지 않고 같이 때린다(follower) - 주인(잡는 사람 집합)은 그대로라 그 파티원(305)은 계속 낄 수 있다(대칭 판정의 목적 유지)
+		local hi, lo1, friend = {}, {}, {}
 		local m3 = MobShare.fresh({})
 		MobShare.touch(m3, hi, 300, 0)
 		MobShare.applyRatio(m3, hi, 0.1, 0)
 		local _, _, _, bl1 = MobShare.touch(m3, lo1, 1, 1)
-		local _, _, _, bl2 = MobShare.touch(m3, lo2, 290, 1)
-		r.check("잡는 사람 300 몹에 스테이지 1 → 막힘 · 290(차 10) → 참여", bl1 and not bl2)
+		local _, _, _, bl2 = MobShare.touch(m3, friend, 305, 1.5)
+		r.check(("잡는 사람 300 몹에 스테이지 1 → 막힘 %s · 참여 %s · 잡는 사람 %s(기대 아님) · 뒤에 온 305(300과 차 5) → 막힘 %s · 기준 %s"):format(tostring(bl1),
+			tostring(m3.participants[lo1] ~= nil), tostring(m3.activeAt[lo1] ~= nil), tostring(bl2), tostring(m3.refStage)),
+			not bl1 and m3.participants[lo1] ~= nil and m3.activeAt[lo1] == nil and not bl2 and m3.refStage == 305)
+		MobShare.touch(m3, lo1, 1, 1.5 + W + 1)
+		r.check("주인들이 8초 떠난 뒤 낮은 사람이 다시 치면 → 잡는 사람(새 주인)", m3.activeAt[lo1] ~= nil)
+		-- 리뷰 1: 쫓기기만 하는 높은 H(3,000)가 있는 몹을 낮은 L(1)이 먼저 쳐도 주인이 안 된다 → H가 친 뒤 H의 파티원 M(3,000)이 막히지 않는다
+		local H, L, M = {}, {}, {}
+		local m4 = MobShare.fresh({})
+		MobShare.touch(m4, H, 3000, 0, true)
+		MobShare.touch(m4, L, 1, 0.5)
+		MobShare.touch(m4, H, 3000, 1)
+		local _, _, _, mBlocked = MobShare.touch(m4, M, 3000, 1.5)
+		r.check(("쫓김 중인 3,000 몹을 1이 먼저 침 → 1 주인 %s(기대 아님) · 3,000 주인 %s · 파티원 3,000 막힘 %s(기대 아님)"):format(tostring(m4.activeAt[L] ~= nil), tostring(m4.activeAt[H] ~= nil), tostring(mBlocked)),
+			m4.activeAt[L] == nil and m4.activeAt[H] ~= nil and not mBlocked)
+	end)
+
+	r.section("스틸 가능 판정 canShare(환생 · 레벨 구간 · 스테이지 차)", function()
+		local function P(stage, level, rebirth)
+			return { stage = stage, level = level, rebirth = rebirth or 0 }
+		end
+		-- 레벨 구간 경계: 낮은 레벨 기준 gap - (낮은 레벨, 허용 최대 차)
+		local rows = { { 1, 20 }, { 99, 20 }, { 100, 50 }, { 499, 50 }, { 500, 100 }, { 999, 100 }, { 1000, 250 }, { 4999, 250 }, { 5000, 500 }, { 9000, 500 } }
+		for _, row in ipairs(rows) do
+			local low, gap = row[1], row[2]
+			local inside = MobShare.canShare(P(100, low), P(100, low + gap))
+			local outside = MobShare.canShare(P(100, low), P(100, low + gap + 1))
+			local swapped = MobShare.canShare(P(100, low + gap), P(100, low)) -- 대칭
+			r.check(("TABLE|레벨|낮은 %d|허용 %d|차 %d → %s|차 %d → %s|순서 바꿈 %s"):format(low, MobShare.levelGapFor(low), gap, inside and "가능" or "불가", gap + 1, outside and "가능" or "불가", swapped and "가능" or "불가"),
+				MobShare.levelGapFor(low) == gap and inside and not outside and swapped)
+		end
+		r.check("TABLE|레벨|99 vs 120(차 21 - 낮은 99 구간 20) → 불가 · 100 vs 150(차 50 - 낮은 100 구간 50) → 가능", not MobShare.canShare(P(1, 99), P(1, 120)) and MobShare.canShare(P(1, 100), P(1, 150)))
+		r.check("TABLE|스테이지|차 10 → 가능 · 차 11 → 불가(레벨 · 환생 같음)", MobShare.canShare(P(100, 50), P(110, 50)) and not MobShare.canShare(P(100, 50), P(111, 50)))
+		r.check("TABLE|환생|0 vs 1(레벨 · 스테이지 같음) → 불가 · 3 vs 3 → 가능", not MobShare.canShare(P(100, 50, 0), P(100, 50, 1)) and MobShare.canShare(P(100, 50, 3), P(100, 50, 3)))
+		-- l · m 판정(시뮬과 같은 사람)
+		local lOwner, lThief = { level = 300, rebirth = 2 }, { level = 300, rebirth = 2 }
+		local ml = MobShare.fresh({})
+		MobShare.touch(ml, lOwner, 1, 0)
+		local _, _, _, lBlocked = MobShare.touch(ml, lThief, 3000, 1)
+		r.check("l: 환생 · 레벨 같고 스테이지 1(주인) vs 3,000 → 막힘", lBlocked)
+		local mOwner, mThief, mLow = { level = 150, rebirth = 0 }, { level = 150, rebirth = 1 }, { level = 150, rebirth = 1 }
+		local mm = MobShare.fresh({})
+		MobShare.touch(mm, mOwner, 100, 0)
+		local _, _, _, mBlocked = MobShare.touch(mm, mThief, 105, 1)
+		local _, _, _, mLowBlocked = MobShare.touch(mm, mLow, 95, 1)
+		r.check(("m: 환생 0(주인 100) vs 1 · 레벨 같음 → 105 막힘 %s · 95(낮은 쪽) → 같이 때림(막힘 %s · 주인 그대로 %s)"):format(tostring(mBlocked), tostring(mLowBlocked), tostring(mm.activeAt[mLow] == nil)),
+			mBlocked and not mLowBlocked and mm.activeAt[mLow] == nil and mm.refStage == 100)
+		-- 클라 자물쇠: 서버 목록 문자열 → lockedFor(서버 isBlocked와 같은 판정)
+		local enc = MobShare.encodeHunters(mm, 1, function(at)
+			return 1000 + at
+		end)
+		local me = { userId = 77, stage = 105, level = 150, rebirth = 1 }
+		local friendMe = { userId = 78, stage = 104, level = 150, rebirth = 0 }
+		r.check(("자물쇠 목록 \"%s\" → 환생 다른 105 = 잠김 %s · 같은 환생 104 = 잠김 %s · 만료 뒤(서버 시각 +%d) = 잠김 %s"):format(enc,
+			tostring(MobShare.lockedFor(enc, me, 1001)), tostring(MobShare.lockedFor(enc, friendMe, 1001)), W + 1, tostring(MobShare.lockedFor(enc, me, 1001 + W + 1))),
+			MobShare.lockedFor(enc, me, 1001) and not MobShare.lockedFor(enc, friendMe, 1001) and not MobShare.lockedFor(enc, me, 1001 + W + 1))
 	end)
 
 	r.section("스테이지 변경 · 초기화", function()
@@ -306,11 +362,12 @@ function V.runLive(player, env)
 	r.section("치유 참여 · 어그로 참여", function()
 		local model = spawnMob(Vector3.new(0, 0, 30))
 		MonsterState.applyDamage(model, hp(32) * 0.1, 32, player)
-		local healer = { Name = "C1Healer", Parent = true }
+		local mirror = { level = player:GetAttribute("CharacterLevel") or 1, rebirth = player:GetAttribute("RebirthCount") or 0 } -- C1 마무리: 스탠드인 레벨 · 환생 = 개발 계정(스테이지 차만 보게)
+		local healer = { Name = "C1Healer", Parent = true, level = mirror.level, rebirth = mirror.rebirth }
 		local mobPos = model.PrimaryPart.Position
 		MonsterState.noteSupport(healer, 40, player, mobPos + Vector3.new(CombatConfig.supportRadiusStuds + 20, 0, 0))
 		local farRef = MonsterState.getRefStage(model)
-		local bigHealer = { Name = "C1BigHealer", Parent = true }
+		local bigHealer = { Name = "C1BigHealer", Parent = true, level = mirror.level, rebirth = mirror.rebirth }
 		MonsterState.noteSupport(bigHealer, 500, player, mobPos + Vector3.new(10, 0, 0))
 		local bigRef = MonsterState.getRefStage(model)
 		MonsterState.noteSupport(healer, 40, player, mobPos + Vector3.new(10, 0, 0))
@@ -333,7 +390,11 @@ function V.runLive(player, env)
 		r.check(("곁의 몹이 쫓기 시작(MonsterAI) → 때리지 않아도 참여 · 기준 %s · 참여 %d"):format(tostring(ref), count or 0), ref == 32 and count == 1)
 		-- 리뷰 1: 높은 사람이 이 몹을 치면(쫓기기만 한 Player는 잡는 사람이 아니라 안 막힘) 기준 500 → 몹이 Player(32)를 놓는다(기준 공격력 즉사 방지)
 		local tagger = { Name = "C1Tagger", Parent = true }
+		local pullsBefore = AlphaStats.snapshot().pullCount
 		local _, taggedDealt = MonsterState.applyDamage(chaser, hp(500) * 0.01, 500, tagger)
+		local pullSnap = AlphaStats.snapshot()
+		r.check(("결정 6 계측: 쫓기기만 하던 몹을 500이 침(기준 32 → 500) → 끌어오기 %d → %d회 · 최대 상승 %d"):format(pullsBefore, pullSnap.pullCount, pullSnap.pullMaxJump),
+			pullSnap.pullCount == pullsBefore + 1 and pullSnap.pullMaxJump >= 468)
 		task.wait(0.5)
 		local stillChasing = MonsterState.getAiTarget(chaser) == player
 		r.check(("쫓기던 몹을 높은 스탠드인(500)이 침 → 들어간 피해 %s · 기준 %s · 0.5초 뒤 Player를 계속 쫓음 %s(기대 false)"):format(
@@ -351,8 +412,15 @@ function V.runLive(player, env)
 			local owner = { Name = "C1Owner", Parent = true }
 			local thief = { Name = "C1Thief", Parent = true }
 			MonsterState.applyDamage(model, hp(100) * 0.5, 100, owner)
+			local encodedOwner = model:GetAttribute("MobHunters")
 			local _, dealt = MonsterState.applyDamage(model, hp(100 + gap) * 0.1, 100 + gap, thief)
 			local ref = MonsterState.getRefStage(model)
+			if i == 1 then
+				local lockMe = { userId = 1, stage = 120, level = 1, rebirth = 0 }
+				r.check(("자물쇠 Attribute MobHunters = \"%s\" → 스테이지 120 화면 잠김 %s · 스테이지 105 화면 잠김 %s"):format(tostring(encodedOwner),
+					tostring(MobShare.lockedFor(encodedOwner, lockMe, workspace:GetServerTimeNow())), tostring(MobShare.lockedFor(encodedOwner, { userId = 1, stage = 105, level = 1, rebirth = 0 }, workspace:GetServerTimeNow()))),
+					encodedOwner ~= nil and MobShare.lockedFor(encodedOwner, lockMe, workspace:GetServerTimeNow()) and not MobShare.lockedFor(encodedOwner, { userId = 1, stage = 105, level = 1, rebirth = 0 }, workspace:GetServerTimeNow()))
+			end
 			local ratio = MonsterState.getHpRatio(model)
 			if gap <= CombatConfig.stealStageGap then
 				local e = 1 - 0.5 * k ^ -gap - 0.1

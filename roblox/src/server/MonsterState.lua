@@ -30,6 +30,7 @@ local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestC
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig) -- C1 도움 참여 반경
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 local MobShare = require(ReplicatedStorage.Shared.MobShare) -- C1: 기준 스테이지(참여자 중 최고)로 잡몹 피해 환산
+local AlphaStats = require(script.Parent.AlphaStats) -- C1 마무리: 결정 6 탱커 끌어오기 계측
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel) -- G1-3: 레벨차 계수 -- G1-2: 처치 시간 상한(fairness.maxSecondsPerHit)
 
 local MonsterState = {}
@@ -64,10 +65,27 @@ local function notifyRatio(model)
 	end
 end
 
--- C1 후속: 막힌 타격(더 낮은 참여자가 잡는 몹을 더 높은 사람이 침) → 그 사람 화면에 "다른 사람 몹"(CombatResolution이 등록 - RemoteEvent).
+-- C1 후속: 막힌 타격(스틸 불가한 낮은 사람이 잡는 몹을 더 높은 사람이 침) → 그 사람 화면에 반사 연출(CombatResolution이 등록 - RemoteEvent).
 local blockedListener = nil
 function MonsterState.setBlockedListener(fn)
 	blockedListener = fn
+end
+
+-- C1 마무리: 잡는 사람 목록 → 모델 Attribute MobHunters(클라 MobLockView가 자물쇠 · 회색 체력바를 각자 판정 - MobShare.lockedFor).
+-- 만료는 서버 시각으로 적어 두므로 서버가 따로 지우지 않아도 클라가 풀린다. 타격마다 만료가 늘어나 글이 바뀌므로 같은 사람 집합이면 0.5초에 1번만 쓴다.
+local HUNTERS_REWRITE_SECONDS = 0.5
+local function syncHunters(model, entry, now)
+	local serverNow = workspace:GetServerTimeNow()
+	local encoded = MobShare.encodeHunters(entry, now, function(at)
+		return serverNow + (at - now)
+	end)
+	local idKey = encoded:gsub(",[%d%.]+;", ";"):gsub(",[%d%.]+$", "")
+	if idKey == entry.huntersKey and now - (entry.huntersWrittenAt or 0) < HUNTERS_REWRITE_SECONDS then
+		return
+	end
+	entry.huntersKey = idKey
+	entry.huntersWrittenAt = now
+	model:SetAttribute("MobHunters", encoded ~= "" and encoded or nil)
 end
 
 -- variant(22-2) - 스폰 시점에 굴린 인스턴스별 변종 { isSparkle, prefix(MonsterPrefixData 항목
@@ -269,15 +287,23 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 		local now = os.clock()
 		if attackerPlayer then
 			local stage = (stageResolver and typeof(attackerPlayer) == "Instance") and stageResolver(attackerPlayer) or attackerStage
-			local touchedRef, _wasReset, _rose, blocked = MobShare.touch(entry, attackerPlayer, stage, now)
+			local oldRef = entry.refStage
+			local touchedRef, _wasReset, rose, blocked = MobShare.touch(entry, attackerPlayer, stage, now)
 			mobRef = touchedRef
 			if blocked then
-				-- C1 후속(결정 1): 더 낮은 참여자가 잡는 몹 - 피해 0 · 참여 · 기여 없음 · 기준 그대로
+				-- C1 후속(결정 1): 스틸 불가 + 더 높은 스테이지 - 피해 0 · 참여 · 기여 없음 · 기준 그대로
 				if blockedListener then
 					blockedListener(model, attackerPlayer)
 				end
 				return false, 0
 			end
+			-- 결정 6 계측: 쫓기기만 하던 몹(pullStartedAt)이 첫 타격 한 번에 기준이 stealStageGap 넘게 오름 = 탱커 끌어오기
+			local pullLive = entry.pullLastAt and now - entry.pullLastAt <= CombatConfig.participationWindowSeconds -- 리뷰 3: 끊긴 지 8초 넘은 옛 끌기는 안 센다
+			if entry.pullStartedAt and pullLive and rose and oldRef and touchedRef - oldRef > CombatConfig.stealStageGap then
+				AlphaStats.notePull(now - entry.pullStartedAt, touchedRef - oldRef, entry.data.attackCooldownSeconds or 1)
+			end
+			entry.pullStartedAt = nil
+			syncHunters(model, entry, now)
 		else
 			mobRef = MobShare.refresh(entry, now)
 			if entry.refStage == nil then
@@ -351,7 +377,15 @@ end
 function MonsterState.noteParticipant(model, player, stage)
 	local entry = monsters[model]
 	if entry and entry.participants and not entry.isChest and not entry.isRescueTarget then
-		local _, wasReset, rose = MobShare.touch(entry, player, stage, os.clock(), true) -- 쫓김 = passive(잡는 사람 아님)
+		local now = os.clock()
+		local _, wasReset, rose = MobShare.touch(entry, player, stage, now, true) -- 쫓김 = passive(잡는 사람 아님)
+		if not MobShare.hasHunters(entry, now) then
+			if entry.pullLastAt and now - entry.pullLastAt > CombatConfig.participationWindowSeconds then
+				entry.pullStartedAt = nil -- 끊겼다 다시 쫓김 = 새 끌기
+			end
+			entry.pullStartedAt = entry.pullStartedAt or now -- 결정 6 계측: 아무도 안 때린 채 쫓기는 중
+			entry.pullLastAt = now
+		end
 		if wasReset or rose then
 			notifyRatio(model)
 		end
@@ -372,8 +406,11 @@ function MonsterState.noteSupport(helper, helperStage, target, helperPosition)
 		local root = entry.participants and entry.participants[target] and model.PrimaryPart
 		if root and (root.Position - helperPosition).Magnitude <= radius then
 			local was = entry.hpRatio
-			if MobShare.support(entry, helper, helperStage, target, now) and entry.hpRatio ~= was then
-				notifyRatio(model)
+			if MobShare.support(entry, helper, helperStage, target, now) then
+				syncHunters(model, entry, now)
+				if entry.hpRatio ~= was then
+					notifyRatio(model)
+				end
 			end
 		end
 	end
@@ -392,6 +429,7 @@ function MonsterState.onStageChanged(player, stage)
 			else
 				MobShare.refresh(entry, now)
 			end
+			syncHunters(model, entry, now)
 		end
 	end
 	return resetModels
@@ -453,8 +491,14 @@ end
 -- releaseChasersOf와 같은 "떠나는 쪽이 자기 흔적을 지운다" 원칙).
 function MonsterState.clearPlayerContributions(player)
 	for model, entry in pairs(monsters) do
-		if entry.participants and MobShare.purge(entry, player) then -- C1: 잡몹 = 참여 · 스테이지 기록까지(혼자였던 몹은 초기화)
-			notifyRatio(model)
+		if entry.participants then
+			local had = entry.partStage[player] ~= nil
+			if MobShare.purge(entry, player) then -- C1: 잡몹 = 참여 · 스테이지 기록까지(혼자였던 몹은 초기화)
+				notifyRatio(model)
+			end
+			if had then
+				syncHunters(model, entry, os.clock())
+			end
 		end
 		if entry.contributions then
 			entry.contributions[player] = nil
@@ -485,7 +529,7 @@ function MonsterState.getAttackStage(model, fallbackStage)
 	return fallbackStage
 end
 
--- C1 후속(리뷰 1): 이 잡몹이 이 사람을 쫓아도 되는가 - 막힐 사람(잡는 사람과 10 넘게 차이)도, 기준 − stealStageGap보다 낮은 사람도 안 쫓는다.
+-- C1 후속(리뷰 1) · C1 마무리: 이 잡몹이 이 사람을 쫓아도 되는가 - 막힐 사람도, 나보다 높은 참여자와 스틸 불가한 사람도 안 쫓는다(판정 = MobShare.canShare 하나).
 -- 높은 사람이 초보 곁 몹을 태그하면 기준이 올라 몹이 초보를 기준 공격력으로 즉사시키던 길 · 스테이지 1 탱커가 높은 몹을 붙잡는 길을 막는다.
 function MonsterState.canChase(model, player, stage)
 	local entry = monsters[model]
@@ -497,7 +541,7 @@ function MonsterState.canChase(model, player, stage)
 	if MobShare.isBlocked(entry, player, stage, now) then
 		return false
 	end
-	return entry.refStage == nil or stage >= entry.refStage - CombatConfig.stealStageGap
+	return not MobShare.tooWeakFor(entry, player, stage)
 end
 
 -- 스테이지 배율이 적용된 공격력(19-4, InfiniteStage 직접 호출로 교체 - 예전

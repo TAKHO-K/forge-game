@@ -1834,6 +1834,24 @@ function PlayerProfile.markBossIntroSeen(player, bossId)
 	return true
 end
 
+-- C1 마무리(v42): 잠긴 몹을 처음 때렸는가 - 처음이면 본 것으로 적고 true(말풍선 1회 · 저장은 다음 정기 · 퇴장 저장).
+function PlayerProfile.markStealLockSeen(player)
+	local profile = profiles[player]
+	if not profile or profile.hints.stealLockSeen == true then
+		return false
+	end
+	profile.hints.stealLockSeen = true
+	return true
+end
+
+-- 검증 · 스크린샷 전용(/gg stealhint reset): 말풍선을 다시 보게.
+function PlayerProfile.debugResetStealLockSeen(player)
+	local profile = profiles[player]
+	if profile then
+		profile.hints.stealLockSeen = false
+	end
+end
+
 -- 검증 · 스크린샷 전용(/gg bossintro reset): 본 보스 집합을 비운다.
 function PlayerProfile.debugResetBossIntro(player)
 	local profile = profiles[player]

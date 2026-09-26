@@ -35,7 +35,9 @@ return {
 	rimTransparency = 0.72, -- alpha .28
 	rimHi = Color3.fromRGB(210, 225, 245), -- 상단 하이라이트(목업 --rim-hi, 반투명 얇은 선에만 쓴다)
 	rimHiTransparency = 0.45, -- alpha .55
-	ownedMobStrokeTransparency = 0.35, -- C1 "다른 사람 몹" 글자 테두리(밝은 하늘 · 들판 위에서도 읽히게)
+	mobLockedBar = Color3.fromRGB(150, 152, 158), -- C1 마무리: 잠긴 몹(다른 유저가 사냥 중) 체력바 채움 - 회색
+	mobLockIcon = Color3.fromRGB(235, 237, 242), -- 잠긴 몹 체력바 왼쪽 자물쇠(어두운 바 위에서 읽히게 밝게)
+	stealShield = Color3.fromRGB(170, 220, 255), -- 반사 연출 보호막 물결 · 튕겨 나가는 조각
 	ember = Color3.fromRGB(255, 122, 47), -- 강조 - 공격·강화(목업 --ember)
 	emberDim = Color3.fromRGB(168, 67, 26), -- ember의 어두운 짝(눌림·비활성)
 	hp = Color3.fromRGB(226, 59, 59), -- 체력(목업 --hp)
