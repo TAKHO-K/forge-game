@@ -60,7 +60,7 @@ function InventorySync.primordialEquipped(profile)
 	return false
 end
 
--- D1-2: 착용한 태초 부위 목록("gloves,shoes" 모양 · 없으면 "") → Player Attribute PrimordialParts(클라 PrimordialFx: 장갑 = 강공격 흰 번개 · 신발 = 흰 발자국).
+-- D1-2: 착용한 태초 부위 목록("gloves,shoes" 모양 · 없으면 "") → Player Attribute PrimordialParts(클라 PrimordialFx: 장갑 = 강공격 흰 번개 · 신발 = 자리만 - 발자국은 D1-3에서 삭제).
 function InventorySync.primordialParts(profile)
 	local equipment = activeEquipment(profile)
 	local parts = {}

@@ -25,6 +25,14 @@ return {
 	-- D1-2: 반짝이(처치당 RareMonsterConfig.sparkleChance) 확정 장비 · 골드를 모형에 넣는다(누적 기대 도착 - 보스와 같은 방식). D1 전 모형은 반짝이를 안 셌다.
 	modelSparkleDrops = true,
 
+	-- D1-3(사용자 결정 - D1-2 보고 ⑧ 2 · 7): 도달 시간 목표 = 현실 모형(보스 · 반짝이 장비 포함 - modelBossDrops · modelSparkleDrops) 기준.
+	--   캐주얼 스테이지 1,000 = 40 ~ 45h(옛 55 ~ 60h는 보스 · 반짝이 장비가 없던 E1 모형에서 잡은 값).
+	--   상위 1% 설계 최대 = 2,190h ± 10% + 모형 오차 1%(D1-2 1,964h = 하한 1,971h의 0.4% 아래를 오차로 수용 - 보스 레버 L2 미적용 · k 불변).
+	targets = {
+		casualStage1000Hours = { 40, 45 },
+		topDesignHours = 2190, topDesignTolerance = 0.10, modelNoise = 0.01,
+	},
+
 	-- E3 도달 시간 곡선의 이정표(마지막 = InfiniteStageConfig.designMaxStage를 EconSim이 붙인다 - P2.5a)
 	milestones = { 10, 20, 50, 100, 500, 1000, 2000, 5000, 10000, 15000, 17000, 20000 }, -- P2.5c: 20 · 17,000 추가(사용자 보고 표)
 

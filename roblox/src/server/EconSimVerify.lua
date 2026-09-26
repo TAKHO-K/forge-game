@@ -147,9 +147,16 @@ function EconSimVerify.runPure()
 			local stage10 = normal.reached[10] and normal.reached[10].seconds / 3600 or math.huge
 			local design = InfiniteStageConfig.designMaxStage
 			local topDesign = top.reached[design] and top.reached[design].seconds / 3600 or math.huge
-			r.check(("9 P2.5a 일반: 환생 5회차 %.2f시간(기대 11 ~ 13) · 첫 12시간 레벨업 평균 %.2f분(기대 ≤ 5) · 스테이지 10 %.2f시간(기대 ≤ 0.5) / 상위 1%% 설계 최대 %d 도달 %.0f시간(기대 2,190 ± 10%%)"):format(
-				rebirth5, avgMinutes, stage10, design, topDesign),
-				rebirth5 >= 11 and rebirth5 <= 13 and avgMinutes <= 5 and stage10 <= 0.5 and math.abs(topDesign - 2190) <= 219)
+			local goal = EconSimConfig.targets -- D1-3: 목표 = 현실 모형 기준(허용 = ±tolerance에 모형 오차 modelNoise를 더한 폭)
+			local lo, hi = goal.topDesignHours * (1 - goal.topDesignTolerance) * (1 - goal.modelNoise), goal.topDesignHours * (1 + goal.topDesignTolerance) * (1 + goal.modelNoise)
+			r.check(("9 P2.5a 일반: 환생 5회차 %.2f시간(기대 11 ~ 13) · 첫 12시간 레벨업 평균 %.2f분(기대 ≤ 5) · 스테이지 10 %.2f시간(기대 ≤ 0.5) / 상위 1%% 설계 최대 %d 도달 %.0f시간(기대 %.0f ~ %.0f)"):format(
+				rebirth5, avgMinutes, stage10, design, topDesign, lo, hi),
+				rebirth5 >= 11 and rebirth5 <= 13 and avgMinutes <= 5 and stage10 <= 0.5 and topDesign >= lo and topDesign <= hi)
+			-- D1-3: 캐주얼 스테이지 1,000 도달(현실 모형 목표 - EconSimConfig.targets.casualStage1000Hours)
+			local casual = data.runs.casual
+			local casual1000 = casual and casual.reached[1000] and casual.reached[1000].seconds / 3600 or math.huge
+			local band = goal.casualStage1000Hours
+			r.check(("9b D1-3 캐주얼 스테이지 1,000 도달 %.1f시간(기대 %d ~ %d)"):format(casual1000, band[1], band[2]), casual1000 >= band[1] and casual1000 <= band[2])
 		end)
 	end
 

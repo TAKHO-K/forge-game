@@ -20,7 +20,8 @@
 return {
 	-- 스폰 시점 판정(웹과 동일 시점 - "스폰 시 낮은 확률로 특별한 몬스터가 대신 등장한다").
 	-- 잡몹 리스폰마다 매번 다시 굴린다(MonsterSpawner.spawn이 매 스폰마다 호출).
-	sparkleChance = 0.005,
+	-- D1-3(사용자 결정 - D1-2 보고 ④ 결정 3): 0.5% → 0.1%. 새 등급표 그대로 0.5%면 1인 태초 +40% · 10만 h 하루 알림 약 58회라 출현을 낮췄다.
+	sparkleChance = 0.001,
 
 	-- 확정 드랍 등급 분포. D1-2(사용자 결정): 태초 · 고대 = 보스 첫 클리어(DropTableData.bossGrades.firstClear)의 절반, 나머지를 영웅 · 전설 · 유물로(영웅 이상 확정).
 	-- 옛 값(웹 - 유물 90 · 고대 9 · 태초 1%)은 처치당 태초 0.005%로 D1 잡몹(0.0001%)의 50배라 태초 공급을 반짝이가 지배했다(D1 리뷰 1).
@@ -41,7 +42,8 @@ return {
 	-- 수입의 약 +5%.
 	-- D1-2(사용자 결정 - 금빛 몹 = 골드 크게): 10 → 25마리분(반짝이 1마리 ≈ 잡몹 25.5마리 골드). 사냥 골드 몫 = 0.5% × 25.5 ≈ 11%(목표 10 ~ 15% - 보고서 D1-2 ④).
 	-- 처치 때 금화 분수 연출(client/SparkleMonsterVisual - coinFountain). 강화 재료 마릿수분은 옛 10 그대로(materialBonusKillEquivalent - 재료 공급은 안 바꾼다).
-	goldBonusKillEquivalent = 25,
+	-- D1-3(사용자 결정): 출현 0.1%에 맞춰 25 → 125마리분(사냥 골드 중 반짝이 몫 ≈ 0.1% × 125.5 ≈ 11% 유지).
+	goldBonusKillEquivalent = 125,
 	materialBonusKillEquivalent = 10,
 	-- 금화 분수(처치 지점 · 같은 서버 곁의 사람 화면): 입자 예산 = 한 번 최대 count개 · lifeSeconds 뒤 전부 사라짐(파티클 없이 파트 - 드랍 번개와 같은 방식).
 	coinFountain = { count = 18, lifeSeconds = 1.4, upSpeed = 26, spread = 9, gravity = 60, size = 0.55, maxDistance = 160 },

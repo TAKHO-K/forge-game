@@ -3,7 +3,7 @@
 --   ① 본인 연출: 서버 PrimordialFx → 태초 = 흰 섬광 + 필드에서만 0.6초 슬로우(화면 연출 - 시야가 조이고 색이 빠졌다 돌아온다 · 게임 시간은 안 멈춘다) + 효과음 자리 ·
 --      고대 = 고대 색 빛기둥(본인 화면만) + 옅은 섬광. 흰 빛기둥(전원 30초)은 서버 파트(PrimordialRegistry.spawnBeacon).
 --   ⑤ 흰 오라: Attribute PrimordialEquipped인 사람 발밑에 흰 고리 + 빛 - 내 캐릭터에서 auraMaxDistance 안일 때만(외곽선 Highlight를 안 쓴다 - 외곽선 풀 상한과 무관).
---   D1-2 딜 부위 고유 연출(PrimordialData.unique): 태초 장갑 = 강공격이 맞으면 대상에 흰 번개(서버 PrimordialGlovesBolt) · 태초 신발 = 걸을 때 흰 발자국(Attribute PrimordialParts에 shoes).
+--   D1-2 딜 부위 고유 연출(PrimordialData.unique): 태초 장갑 = 강공격이 맞으면 대상에 흰 번개(서버 PrimordialGlovesBolt) (태초 신발 흰 발자국은 D1-3에서 삭제 - 2단 대시(MV1)로 대체).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -253,77 +253,3 @@ local function glovesBolt(position)
 	end)
 end
 ReplicatedStorage:WaitForChild("PrimordialGlovesBolt").OnClientEvent:Connect(glovesBolt)
-
--- ── D1-2 태초 신발: 흰 발자국(걸은 거리 everyStuds마다 좌우 번갈아 · lifeSeconds 동안 흐려짐 · 사람마다 최대 maxAlive개 · 오라와 같은 거리 안에서만) ──
-local FOOT = UNIQUE.footprint
-local walkers = {} -- [Player] = { last = Vector3, left = bool, alive = { { part, bornAt } } }
-
-local function hasPrimordialShoes(other)
-	local parts = other:GetAttribute("PrimordialParts")
-	return type(parts) == "string" and parts:find("shoes", 1, true) ~= nil
-end
-
-local function clearWalker(other)
-	local walker = walkers[other]
-	if walker then
-		for _, foot in ipairs(walker.alive) do
-			foot.part:Destroy()
-		end
-		walkers[other] = nil
-	end
-end
-
-RunService.Heartbeat:Connect(function()
-	local now = os.clock()
-	local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	for _, other in ipairs(Players:GetPlayers()) do
-		local character = other.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if root and humanoid and myRoot and hasPrimordialShoes(other) and (root.Position - myRoot.Position).Magnitude <= PrimordialData.auraMaxDistance then
-			local walker = walkers[other] or { last = root.Position, left = true, alive = {} }
-			walkers[other] = walker
-			local flat = Vector3.new(root.Position.X - walker.last.X, 0, root.Position.Z - walker.last.Z)
-			if humanoid.FloorMaterial ~= Enum.Material.Air and flat.Magnitude >= FOOT.everyStuds then
-				local forward = flat.Unit
-				local side = forward:Cross(Vector3.yAxis) * (walker.left and FOOT.sideOffset or -FOOT.sideOffset)
-				local foot = Instance.new("Part")
-				foot.Name = "PrimordialFootprint"
-				foot.Anchored, foot.CanCollide, foot.CanQuery, foot.CanTouch, foot.CastShadow = true, false, false, false, false
-				foot.Material = Enum.Material.SmoothPlastic -- 네온은 오라 빛에 하얗게 날아가 안 보였다(D1-2 스크린샷) - 색이 그대로 보이게
-				foot.Color = FOOT.color
-				foot.Size = FOOT.size
-				foot.Transparency = 0.2
-				local ground = root.Position - Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2 - 0.02, 0)
-				foot.CFrame = CFrame.lookAt(ground + side, ground + side + forward)
-				foot.Parent = Workspace
-				table.insert(walker.alive, { part = foot, bornAt = now })
-				if #walker.alive > FOOT.maxAlive then
-					table.remove(walker.alive, 1).part:Destroy()
-				end
-				walker.left = not walker.left
-				walker.last = root.Position
-			elseif flat.Magnitude >= FOOT.everyStuds then
-				walker.last = root.Position -- 공중: 발자국 없이 기준만 옮긴다
-			end
-		elseif walkers[other] and #walkers[other].alive == 0 then
-			walkers[other] = nil
-		end
-	end
-	for other, walker in pairs(walkers) do
-		for i = #walker.alive, 1, -1 do
-			local foot = walker.alive[i]
-			local age = now - foot.bornAt
-			if age >= FOOT.lifeSeconds then
-				foot.part:Destroy()
-				table.remove(walker.alive, i)
-			else
-				foot.part.Transparency = 0.2 + 0.8 * (age / FOOT.lifeSeconds)
-			end
-		end
-		if other.Parent == nil then
-			clearWalker(other)
-		end
-	end
-end)
-
