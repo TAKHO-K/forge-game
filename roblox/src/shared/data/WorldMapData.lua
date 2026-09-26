@@ -35,6 +35,11 @@ local LAYOUT = {
 	roadWidth = 16,
 	-- 길 = 허브 끝 → 입구(결계 문) → 캠프 → 사냥 지대 1 · 2 · 3 → 관문. 길 안내(Wayfinder)가 같은 점을 따라간다.
 	barrierGateR = 850, -- 결계 문(길이 구역 원을 지나는 자리)
+	-- M1-4 관문 자리 바꾸기(구역 관문 = 기본 gate · 여기 적은 구역만): r · lat(구역 좌표) · y(판 윗면 - 바닥 기준) · shoreR = 길이 끝나는 기슭(그 뒤 = 둑길 · 다리 · 물 위).
+	--   심해 군주(T3): 강 → 바다로 이어지는 만 위 신전(기둥 위 광장 · 둑길 · 부서진 회랑 · 물속 계단 → 수중 신전 문). 걸어서 간다(둑길).
+	gateSites = {
+		tier3 = { r = 2540, lat = 0, y = 2.4, shoreR = 2432, plaza = 64, causewayWidth = 12, water = true, style = "abyss" },
+	},
 }
 
 return {
@@ -286,6 +291,16 @@ return {
 
 	-- 토벌 · 보스 관문 표지(M1 추가 - 사용자): 관문마다 보스 고유 색(BossData 머리색) 빛기둥 - 하늘까지 · 멀리서 보이게. 파트 1개 · 충돌 · 쿼리 없음 · Persistent 모델(스트리밍으로 안 사라진다).
 	gatePillar = { width = 8, height = 1800, transparency = 0.35 },
+	-- M1-4 관문 주변 날씨(클라 전용 · 로컬 · 입자 수 상한 - client/GateWeather): 관문 반경 radius 안에 들어오면 켠다.
+	--   sea(심해) = 물보라 · 옅은 안개(해안 거품은 CoastFx) / storm(폭풍) = 비(카메라 둘레) + 먹구름 + 드문 흐린 섬광(구름 속 넓은 은은한 빛 - 보스 낙뢰(노란 줄기 · 바닥 표시) · 피뢰침 경고와 다른 모양 · 색 · 광과민 배려: 밝기 낮게 · 간격 길게).
+	gateWeather = {
+		maxParticles = 140, -- 동시 입자 상한(rate × lifetime 합 - 넘으면 비율대로 줄인다)
+		tier3 = { kind = "sea", radius = 280, spray = { count = 4, rate = 3, lifetime = 3, size = 3 }, mist = { rate = 2, lifetime = 8, size = 26, transparency = 0.8 } },
+		tier5 = { kind = "storm", radius = 320, rain = { rate = 45, lifetime = 1.1, speed = 90 }, cloud = { height = 150, radius = 190, color = { 70, 74, 90 }, transparency = 0.35 },
+			flash = { everySeconds = { 16, 32 }, seconds = 0.45, brightness = 0.7, range = 160, color = { 190, 196, 255 } } },
+	},
+	-- M1-4 해안 거품(클라 전용 - client/CoastFx): T3 해안선 · 만 둘레 점마다 거품 입자(가까운 near개만 켠다 · 반경 radius 안)
+	coastFx = { spacing = 60, near = 6, radius = 220, rate = 3, lifetime = 2.2, size = 5 },
 	-- M1-3 관문 등록(사용자 - 한눈에 관문 · 색 확실 · 크게 · 상호작용으로 첫 등록). 관문 위치 · 색 = BossData 보스마다 gate 칸.
 	--   아치: 폭 width(기둥 사이) · 높이 height · 기둥 postSize · 들보 beam · 문양 emblem(마름모 한 변). 빛기둥 = gatePillar(등록 전 흐리게 깜빡 · 뒤 밝게 꾸준히 - 사람마다 = 클라).
 	--   등록 = 관문 앞 ProximityPrompt(F 짧게 · 폰 = 상호작용 버튼 · promptDistance 안) 또는 보스 스테이지에서 발판을 밟아 입장(관문 방문) - 가까이(hintDistance) 오면 "관문 등록 [F]" 큰 안내(등록 전만).

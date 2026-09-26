@@ -236,7 +236,11 @@ function RoadNet.zonePath(zone)
 	local Layout = require(ReplicatedStorage.Shared.WorldMapLayout)
 	local C, F = R.clearAt, R.flatAt
 	local wps = {}
+	local site = Layout.gateSite(zone)
 	for _, pt in ipairs(Layout.route(zone)) do
+		if pt.id == "gate" and site and site.shoreR then
+			break -- M1-4: 물 위 관문 = 길은 기슭에서 끝(그 뒤 = 둑길 파트)
+		end
 		local kind = pt.id:match("^ground") and "ground" or pt.id
 		table.insert(wps, { id = pt.id, x = pt.p.X, z = pt.p.Z, clear = C[kind] or 40, flat = F[kind] })
 	end
@@ -328,11 +332,18 @@ end
 -- 길목 사이 길이(곡선) - 거리 표 · 이동 시간
 function RoadNet.length(zone, fromId, toId)
 	local p = RoadNet.zonePath(zone)
+	local extra = 0
+	if toId == "gate" and not p.marks.gate and p.marks.shore then -- 물 위 관문: 기슭까지 길 + 둑길(직선)
+		local Layout = require(ReplicatedStorage.Shared.WorldMapLayout)
+		local g, sh = Layout.gate(zone), p.pts[p.marks.shore]
+		extra = math.sqrt((g.X - sh.x) ^ 2 + (g.Z - sh.z) ^ 2)
+		toId = "shore"
+	end
 	local a, b = p.marks[fromId], p.marks[toId]
 	if not a or not b then
 		return 0
 	end
-	return math.abs(p.pts[b].s - p.pts[a].s)
+	return math.abs(p.pts[b].s - p.pts[a].s) + extra
 end
 
 -- 길 안내 점(간격 약 24 - 길목 포함)
@@ -344,6 +355,9 @@ function RoadNet.guidePoints(zone, spacing)
 			table.insert(out, Vector3.new(q.x, q.y, q.z))
 			last = q.s
 		end
+	end
+	if not p.marks.gate then -- 물 위 관문: 둑길 끝(관문)까지
+		table.insert(out, require(ReplicatedStorage.Shared.WorldMapLayout).gate(zone))
 	end
 	return out
 end

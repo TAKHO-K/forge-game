@@ -11,8 +11,8 @@ return {
 	designGradeDeg = 12, -- 설계 경사 상한(걷기 편하게) · 검사 상한 = capGradeDeg
 	capGradeDeg = 25, -- 사용자: 경사 상한 약 25°
 	-- 길목 둘레 곧은 반경(구불거림 0 · 높이 = 평지): 캠프 · 사냥 지대 · 관문 판과 맞물린다
-	clearAt = { hubEdge = 30, barrierGate = 40, camp = 70, ground = 130, gate = 80, landmark = 50 },
-	flatAt = { barrierGate = 30, camp = 70, ground = 150, gate = 90 }, -- 이 반경 안은 평지(평탄 마스크와 같은 값 - TerrainGenData.flatten)
+	clearAt = { hubEdge = 30, barrierGate = 40, camp = 70, ground = 130, gate = 80, landmark = 50, shore = 40 },
+	flatAt = { barrierGate = 30, camp = 70, ground = 150, gate = 90, shore = 24 }, -- 이 반경 안은 평지(평탄 마스크와 같은 값 - TerrainGenData.flatten)
 	-- 막힘 회피(구불거림을 줄여 비껴간다): 둥지 받침 · 옛 지형 · 구조물 + 여유
 	avoidMargin = 18,
 	-- 구역 스타일: amp = 구불거림 폭 · lambda = 파장 · material = 길 재질(흙 · 자갈) · edge = 가장자리 재질(없으면 같음)

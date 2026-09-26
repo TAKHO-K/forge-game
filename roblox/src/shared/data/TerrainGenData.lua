@@ -69,7 +69,7 @@ return {
 	flatten = { roadMargin = 10, roadBlend = 70, campRadius = 70, groundRadius = 150, gateRadius = 90, raidRadius = 40, featureMargin = 14, blend = 60, sealedRadius = 70 },
 	-- 보호 부피(사용자 보강 ①): 둥지 · 동굴 · 통로 부피 + 여유 protectMargin(= 통로 폭 여유 8) 안은 굽기 뒤에도 공기(2차 비우기 FillBlock/FillBall Air).
 	protectMargin = 4,
-	water = { material = "Water", color = { 70, 130, 170 }, transparency = 0.35, waveSize = 0.08, waveSpeed = 6, reflectance = 0.6 },
+	water = { material = "Water", color = { 70, 130, 170 }, transparency = 0.35, waveSize = 0.13, waveSpeed = 8, reflectance = 0.6 }, -- M1-4: 물결(전역 - 강 · 호수도 같이) 0.08 → 0.13 · 해안 · 신전은 로컬 거품(CoastFx · GateWeather)
 	-- 재질 색(place 전체 - 굽기가 설정). 기존 WorldMapData 회색 · 구역 바닥 색 계열 + 자연색.
 	materialColors = {
 		Grass = { 106, 138, 78 }, LeafyGrass = { 88, 128, 70 }, Limestone = { 196, 190, 170 }, Rock = { 128, 124, 118 }, Mud = { 92, 76, 58 },

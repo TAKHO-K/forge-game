@@ -43,7 +43,14 @@ function Layout.camp(zone)
 	return Layout.toWorld(zone, L.camp.r, L.camp.lat)
 end
 function Layout.gate(zone)
+	local site = L.gateSites and L.gateSites[zone.key] -- M1-4 관문 자리 바꾸기(심해 = 만 위 신전)
+	if site then
+		return Layout.toWorld(zone, site.r, site.lat, site.y)
+	end
 	return Layout.toWorld(zone, L.gate.r, L.gate.lat)
+end
+function Layout.gateSite(zone)
+	return L.gateSites and L.gateSites[zone.key]
 end
 
 -- M1-3 관문 등록: 보스 관문 목록 = BossData 보스마다 gate 칸(zone = 구역 관문 자리 · at = { angleDeg, r } = 구역 없는 새 보스). 새 보스는 gate 한 줄로 등록 · 원격 입장 · 길 안내가 붙는다.
@@ -74,7 +81,9 @@ function Layout.bossGates()
 				dir = dirOf(g.at.angleDeg)
 				position = dir * g.at.r + Vector3.new(0, FLOOR, 0)
 			end
-			table.insert(gateCache, { bossId = boss.id, name = boss.displayName, zoneKey = zone and zone.key or nil, position = position, dir = dir, color = g.color })
+			local site = zone and Layout.gateSite(zone)
+			local approach = site and site.shoreR and { Layout.toWorld(zone, site.shoreR, site.lat) } or nil
+			table.insert(gateCache, { bossId = boss.id, name = boss.displayName, zoneKey = zone and zone.key or nil, position = position, dir = dir, color = g.color, style = g.style, approach = approach })
 		end
 	end
 	return gateCache
@@ -141,6 +150,10 @@ function Layout.route(zone)
 	}
 	for i, g in ipairs(Layout.grounds(zone)) do
 		table.insert(points, { id = "ground" .. i, p = g.center })
+	end
+	local site = Layout.gateSite(zone)
+	if site and site.shoreR then
+		table.insert(points, { id = "shore", p = Layout.toWorld(zone, site.shoreR, site.lat) }) -- M1-4: 길 끝(기슭) → 둑길 · 다리로 관문
 	end
 	table.insert(points, { id = "gate", p = Layout.gate(zone) })
 	return points
@@ -1034,6 +1047,28 @@ local function buildLandmark(zone, list)
 		column(list, model, "Landmark", cf0, m.radius, m.radius, m.height * 0.5, cd, mat)
 		column(list, model, "Landmark", cf0, m.radius * 0.6, m.radius * 0.6, m.height, cd, mat)
 		column(list, model, "Landmark", cf0, m.radius * 0.3, m.radius * 0.3, m.height + 40, cd, mat)
+		-- M1-4 폭풍 첨탑 = 폭풍 군주 관문 해금 장소(사용자: 번개가 칠 것 같은 폭풍우 첨탑 · 기본 묘사만): 톱니 날개 · 층 띠 · 노란 전기 줄(보스맵 색) · 꼭대기 피뢰 왕관 · 관문 쪽 돌 마당
+		local metal, metalLight, yellow = { 70, 76, 96 }, { 104, 112, 134 }, { 255, 236, 110 }
+		for i = 0, 5 do
+			local a = i / 6 * 2 * math.pi + 0.3
+			local fin = cf0 * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, m.radius / 2 + 3)
+			prim(list, model, "SpireFin", Vector3.new(4, 70 + (i % 2) * 30, 12), fin * CFrame.new(0, (70 + (i % 2) * 30) / 2 - 2, 0) * CFrame.Angles(math.rad(-8), 0, 0), metal, { material = "Basalt", shape = "Wedge" })
+		end
+		for _, band in ipairs({ { y = m.height * 0.5, w = m.radius + 6 }, { y = m.height, w = m.radius * 0.6 + 5 } }) do
+			prim(list, model, "SpireBand", Vector3.new(band.w, 3, band.w), cf0 * CFrame.new(0, band.y + 1.5, 0) * CFrame.Angles(0, math.rad(12), 0), metalLight, { material = "Metal" })
+		end
+		for side = 0, 3 do -- 몸통 네 면 지그재그 전기 줄(가는 네온)
+			local face = cf0 * CFrame.Angles(0, side * math.pi / 2, 0) * CFrame.new(0, 0, m.radius * 0.3 + 0.4)
+			for k = 0, 9 do
+				local y = m.height * 0.5 + 8 + k * 16
+				prim(list, model, "SpireBolt", Vector3.new(0.7, 17, 0.5), face * CFrame.new((k % 2 == 0) and 2.5 or -2.5, y, 0) * CFrame.Angles(0, 0, math.rad((k % 2 == 0) and 18 or -18)), yellow, { collide = false, neon = true })
+			end
+		end
+		for i = 0, 3 do -- 꼭대기 피뢰 왕관
+			local a = i / 4 * 2 * math.pi + math.pi / 4
+			prim(list, model, "SpireRod", Vector3.new(1, 30, 1), cf0 * CFrame.new(math.cos(a) * 4, m.height + 55, math.sin(a) * 4) * CFrame.Angles(math.cos(a) * 0.2, 0, -math.sin(a) * 0.2), metalLight, { collide = false, material = "Metal" })
+		end
+		prim(list, model, "SpireCourt", Vector3.new(0.6, 76, 76), CFrame.new(center.X, FLOOR + 0.3, center.Z) * CFrame.new(-dirOf(zone.angleDeg) * 60) * CFrame.Angles(0, 0, math.rad(90)), metalLight, { shape = "Cylinder", material = "Slate" })
 	end
 	return center
 end
@@ -1333,36 +1368,99 @@ end
 -- 한눈에 관문(사용자): 보스 색 큰 아치(기둥 · 들보) + 들보 앞 문양(등록하면 켜진다 - 클라가 사람마다 칠한다) + 안쪽 빛 막 + 발판(밟으면 입장) + 빛기둥(Persistent - 멀리서 등록 여부).
 --   PromptAnchor = 등록 상호작용(F · 폰 버튼 - 서버 BossGate가 ProximityPrompt를 붙인다). 모델 = BossGate_<bossId>.
 function Layout.buildBossGates(list)
-	local G = D.bossGate
+	-- M1-4: 공통 틀 + 보스별 장식 모듈(shared/BossGateKit) - 판정 · 등록 표시(발판 · 프롬프트 · 문양 · 빛기둥)는 공통 틀에만
+	local Kit = require(ReplicatedStorage.Shared.BossGateKit)
 	for _, g in ipairs(Layout.bossGates()) do
-		local model = "BossGate_" .. g.bossId
-		local cf = flatYaw(g.position, g.dir)
-		local half = G.width / 2
-		local dark = { math.floor(g.color[1] * 0.45), math.floor(g.color[2] * 0.45), math.floor(g.color[3] * 0.45) }
-		column(list, model, "BossGatePost", cf * CFrame.new(-half, 0, 0), G.postSize, G.postSize, G.height, dark, { material = "SmoothPlastic" })
-		column(list, model, "BossGatePost", cf * CFrame.new(half, 0, 0), G.postSize, G.postSize, G.height, dark, { material = "SmoothPlastic" })
-		prim(list, model, "BossGateTop", Vector3.new(G.width + G.postSize + 6, G.beam, G.postSize + 2), cf * CFrame.new(0, G.height + G.beam / 2, 0), dark, { material = "SmoothPlastic" })
-		-- 기둥 안쪽 모서리 띠(보스 색 - 늘 켜짐 · 아치 윤곽)
-		for _, sx in ipairs({ -1, 1 }) do
-			prim(list, model, "BossGateTrim", Vector3.new(1.2, G.height, 1.2), cf * CFrame.new(sx * (half - G.postSize / 2 - 0.6), G.height / 2, G.postSize / 2 + 0.2), g.color, { collide = false, neon = true })
+		local base = g.position
+		local cf = CFrame.lookAt(base, base + Vector3.new(g.dir.X, 0, g.dir.Z))
+		Kit.build(list, prim, g, cf)
+	end
+	Layout.buildGateSites(list)
+end
+
+-- M1-4 관문 자리 조립(layout.gateSites) - 심해 군주 = 만 위 신전: 기둥 위 광장 · 둑길(기슭 → 광장) · 부서진 회랑 · 물속 계단(→ 수중 신전 문) · 등불.
+--   자세한 묘사 대신 보스맵 느낌 + 색(수몰 사원: 짙은 청록 → 밝은 청록 타일 · 사용자 지시) · 걸어서 간다(둑길 폭 12 · 경사 완만).
+function Layout.buildGateSites(list)
+	for _, zone in ipairs(D.zones) do
+		local site = Layout.gateSite(zone)
+		if site and site.style == "abyss" then
+			local model = "Landmark_" .. zone.key .. "_gateSite" -- Persistent(멀리서 보이는 신전)
+			local deckY = FLOOR + site.y
+			local out = dirOf(zone.angleDeg)
+			local center = Layout.gate(zone)
+			local cf = CFrame.lookAt(Vector3.new(center.X, deckY, center.Z), Vector3.new(center.X, deckY, center.Z) + out) -- −Z = 바깥(바다)
+			local tile, tileDark, stone, glow = { 96, 170, 172 }, { 58, 112, 120 }, { 70, 96, 104 }, { 120, 230, 220 }
+			local half = site.plaza / 2
+			local bedY = FLOOR - 20
+			-- 광장(타일 · 가장자리 턱)
+			prim(list, model, "TemplePlaza", Vector3.new(site.plaza, 2, site.plaza), cf * CFrame.new(0, -1, 0), tile, { material = "Slate" })
+			for k = -3, 3 do
+				prim(list, model, "PlazaTile", Vector3.new(site.plaza - 6, 0.1, 1), cf * CFrame.new(0, 0.05, k * 8), tileDark, { material = "Slate", collide = false })
+			end
+			for _, sx in ipairs({ -1, 1 }) do
+				prim(list, model, "PlazaCurb", Vector3.new(1.6, 1, site.plaza), cf * CFrame.new(sx * (half - 0.8), 0.5, 0), stone, { material = "Slate" })
+			end
+			-- 받침 기둥(물 밑 바닥까지 - 바깥 가장자리 가운데는 물길로 비운다)
+			for _, px in ipairs({ -1, 0, 1 }) do
+				for _, pz in ipairs({ -1, 0, 1 }) do
+					if not (px == 0 and pz == -1) then
+						local c = cf * CFrame.new(px * (half - 5), 0, pz * (half - 5))
+						local topY = deckY - 2
+						prim(list, model, "PlazaPillar", Vector3.new(6, topY - bedY, 6), CFrame.new(c.X, (topY + bedY) / 2, c.Z), stone, { material = "Slate" })
+					end
+				end
+			end
+			-- 부서진 회랑(양옆 기둥 줄 - 몇 개는 부러졌다 · 들보 조각 · 쓰러진 기둥)
+			local broken = { [2] = 0.45, [4] = 0.3, [5] = 0.6 }
+			for _, sx in ipairs({ -1, 1 }) do
+				for k = 1, 5 do
+					local h = 16 * (broken[(sx > 0) and k or (6 - k)] or 1)
+					local z = -half + 6 + (k - 1) * (site.plaza - 12) / 4
+					prim(list, model, "CorridorPillar", Vector3.new(3, h, 3), cf * CFrame.new(sx * (half - 4), h / 2, z), tile, { material = "Slate" })
+					if h >= 16 then
+						prim(list, model, "CorridorCap", Vector3.new(4.4, 1, 4.4), cf * CFrame.new(sx * (half - 4), h + 0.5, z), tileDark, { material = "Slate" })
+					end
+				end
+				prim(list, model, "CorridorBeam", Vector3.new(2, 1.6, (site.plaza - 12) / 2), cf * CFrame.new(sx * (half - 4), 17.3, -half + 6 + (site.plaza - 12) / 8), tileDark, { material = "Slate" })
+				prim(list, model, "CorridorFallen", Vector3.new(12, 3, 3), cf * CFrame.new(sx * (half - 10), 1.5, half * 0.35) * CFrame.Angles(0, math.rad(sx * 30), 0), tile, { material = "Slate", shape = "Cylinder" })
+			end
+			-- 물속 계단(바깥 가장자리 → 물 아래 - 수중 신전 문으로 헤엄쳐 들어가는 길 = 두 신전의 연결)
+			for k = 1, 5 do
+				prim(list, model, "SeaStair", Vector3.new(10, 1, 3), cf * CFrame.new(0, -1.2 * k + 0.5, -half - (k - 0.5) * 3), stone, { material = "Slate" })
+			end
+			-- 등불(모서리 4 - 청록 빛)
+			for _, sx in ipairs({ -1, 1 }) do
+				for _, sz in ipairs({ -1, 1 }) do
+					local c = cf * CFrame.new(sx * (half - 2), 0, sz * (half - 2))
+					prim(list, model, "LanternPost", Vector3.new(1, 5, 1), c * CFrame.new(0, 2.5, 0), stone, { material = "Slate" })
+					prim(list, model, "Lantern", Vector3.new(1.6, 1.6, 1.6), c * CFrame.new(0, 5.6, 0), glow, { neon = true, collide = false })
+				end
+			end
+			-- 둑길(기슭 → 광장 허브 쪽 가장자리): 판 조각 + 낮은 난간(몇 칸 무너짐) + 물속 받침
+			local shore = Layout.toWorld(zone, site.shoreR, site.lat)
+			local TerrainShape = require(ReplicatedStorage.Shared.TerrainShape)
+			local startY = math.max(TerrainShape.baseHeight(shore.X, shore.Z), FLOOR + TerrainShape.data.flatLevel)
+			local endP = (cf * CFrame.new(0, 0, half)).Position
+			local a = Vector3.new(shore.X, startY, shore.Z)
+			local b = Vector3.new(endP.X, deckY, endP.Z)
+			local n = math.ceil((b - a).Magnitude / 8)
+			for i = 1, n do
+				local p0 = a:Lerp(b, (i - 1) / n)
+				local p1 = a:Lerp(b, i / n)
+				local mid = (p0 + p1) / 2
+				local seg = CFrame.lookAt(mid, p1)
+				local L1 = (p1 - p0).Magnitude + 0.3
+				prim(list, model, "Causeway", Vector3.new(site.causewayWidth, 1.6, L1), seg * CFrame.new(0, -0.8, 0), stone, { material = "Slate" })
+				for _, sx in ipairs({ -1, 1 }) do
+					if (i + (sx > 0 and 1 or 0)) % 4 ~= 0 then -- 난간 몇 칸은 무너졌다
+						prim(list, model, "CausewayRail", Vector3.new(0.8, 1.4, L1), seg * CFrame.new(sx * (site.causewayWidth / 2 - 0.4), 0.7, 0), tileDark, { material = "Slate" })
+					end
+				end
+				if i % 2 == 0 and mid.Y - 1.6 > bedY + 2 then
+					prim(list, model, "CausewayPier", Vector3.new(site.causewayWidth - 2, mid.Y - 1.6 - bedY, 3), CFrame.new(mid.X, (mid.Y - 1.6 + bedY) / 2, mid.Z) * (seg - seg.Position), stone, { material = "Slate" })
+				end
+			end
 		end
-		prim(list, model, "BossGateTrim", Vector3.new(G.width - G.postSize, 1.2, 1.2), cf * CFrame.new(0, G.height - 0.6, G.postSize / 2 + 0.2), g.color, { collide = false, neon = true })
-		-- 문양(들보 앞 · 허브 쪽 면 = 로컬 +Z - flatYaw의 −Z가 바깥): 마름모 + 가로 띠 - 등록 전 꺼짐 · 등록 뒤 켜짐(클라)
-		prim(list, model, "BossGateEmblem", Vector3.new(G.emblem, G.emblem, 1), cf * CFrame.new(0, G.height + G.beam / 2, G.postSize / 2 + 1.6) * CFrame.Angles(0, 0, math.rad(45)), g.color,
-			{ collide = false, neon = true, attrs = { GateEmblem = g.bossId } })
-		prim(list, model, "BossGateEmblem", Vector3.new(G.width * 0.7, 1.4, 1), cf * CFrame.new(0, G.height + G.beam / 2, G.postSize / 2 + 1.4), g.color,
-			{ collide = false, neon = true, attrs = { GateEmblem = g.bossId } })
-		-- 안쪽 빛 막(문 안 - 통과 가능 · 흐릿하게)
-		prim(list, model, "BossGateVeil", Vector3.new(G.width - G.postSize, G.height, 0.4), cf * CFrame.new(0, G.height / 2, 0), g.color, { collide = false, neon = true, transparency = 0.78 })
-		-- 발판(밟으면 입장 - 서버 거리 폴링) · 등록 프롬프트 자리
-		prim(list, model, "BossGatePad", Vector3.new(0.4, L.gate.radius * 2, L.gate.radius * 2), CFrame.new(g.position.X, FLOOR + 0.45, g.position.Z) * CFrame.Angles(0, 0, math.rad(90)), g.color,
-			{ shape = "Cylinder", material = "SmoothPlastic", attrs = { BossGate = g.zoneKey or g.bossId, BossId = g.bossId } })
-		prim(list, model, "PromptAnchor", Vector3.new(2, 2, 2), cf * CFrame.new(0, 5, G.promptOffset), -- 허브 쪽 · 발판(반경 18) 밖
-			 g.color, { collide = false, transparency = 1, attrs = { GatePrompt = g.bossId } })
-		-- 빛기둥(Persistent · 보스 색 - 등록 전 흐리게 깜빡 · 뒤 밝게 꾸준히 = 클라)
-		local P = D.gatePillar
-		prim(list, "GatePillars", "GatePillar", Vector3.new(P.width, P.height, P.width), CFrame.new(g.position.X, FLOOR + P.height / 2, g.position.Z), g.color,
-			{ collide = false, neon = true, transparency = P.transparency, attrs = { GatePillar = g.zoneKey or g.bossId, BossId = g.bossId } })
 	end
 end
 

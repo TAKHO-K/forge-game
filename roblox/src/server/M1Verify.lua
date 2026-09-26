@@ -46,7 +46,7 @@ function M1Verify.runPure()
 		r.check(("배치 규칙: 지형 · 둥지 · 사냥 지대 · 도로 · 캠프 · 관문 겹침 %d(기대 0)%s"):format(#problems, #problems > 0 and (" - " .. table.concat(problems, " / ")) or ""), #problems == 0)
 		for _, z in ipairs(D.zones) do
 			local a, b = WorldMapLayout.routeLength(z, "hubEdge", "camp"), WorldMapLayout.routeLength(z, "camp", "gate")
-			r.check(("거리 %s: 허브 끝 → 캠프 %.0f(480 ~ 640 · %.0f초) · 캠프 → 관문 %.0f(1,440 ~ 2,400 · %.0f초)"):format(z.key, a, a / 16, b, b / 16), a >= 480 and a <= 640 and b >= 1440 and b <= 2400)
+			r.check(("거리 %s: 허브 끝 → 캠프 %.0f(480 ~ 640 · %.0f초) · 캠프 → 관문 %.0f(1,440 ~ 2,500 · %.0f초 - M1-4 곡선 길 + 둑길)"):format(z.key, a, a / 16, b, b / 16), a >= 480 and a <= 640 and b >= 1440 and b <= 2500)
 		end
 	end)
 	r.section("구역-보스", function()

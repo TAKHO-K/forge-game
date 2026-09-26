@@ -768,7 +768,7 @@ local SPECIES = {
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "색 맞추기", line = "머리 위 표시(●빨강 / ▲파랑)와 같은 색 발판에 서라 - 밟을 때마다 색이 바뀐다", icon = "≈", diagram = "platform" },
 		id = "abyssal_lord", displayName = "심해 군주", bodyColor = abyssalBody, headColor = abyssalHead,
-		gate = { zone = "tier3", color = { 40, 140, 255 } },
+		gate = { zone = "tier3", color = { 40, 140, 255 }, style = "abyss" }, -- M1-4: 장식 모듈(shared/BossGateKit) · 자리 = WorldMapData.layout.gateSites.tier3(만 위 신전)
 		sizeScale = 3, bodyAspect = Vector3.new(1.05, 0.95, 1.15),
 		attachments = {
 			{ anchor = "body", offset = Vector3.new(1.3, 0.9, 0), size = Vector3.new(0.9, 0.5, 0.9), rotationDeg = Vector3.new(0, 0, -30), kind = "wedge", color = "head", name = "LeftFin" },
@@ -1177,7 +1177,7 @@ local SPECIES = {
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "번개 조준경", line = "번개 조준경을 피뢰침으로 유인하세요! 피뢰침 {N}개를 충전하면 폭풍을 막습니다.", icon = "ϟ", diagram = "rod", countKey = "rods" },
 		id = "storm_lord", displayName = "폭풍 군주", bodyColor = stormBody, headColor = stormHead,
-		gate = { zone = "tier5", color = { 255, 240, 80 } },
+		gate = { zone = "tier5", color = { 255, 240, 80 }, style = "storm" }, -- M1-4: 장식 모듈 · 폭풍 첨탑 발치
 		-- 가장 바쁜 보스: 전역 쿨 5초에 쿨이 짧은 스킬들. 평타도 잦고 가볍다.
 		sizeScale = 3, bodyAspect = Vector3.new(0.9, 1.2, 0.9),
 		attachments = {
