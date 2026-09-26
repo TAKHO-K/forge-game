@@ -93,3 +93,10 @@
 - 스트리밍 = **place 설정**(`rojo serve`는 NotScriptable 속성이라 못 쓴다 - `docs/perf/streaming-settings.md`). `default.project.json` 값은 `rojo build` 기록. 나무 · 빛기둥 · 랜드마크 = Persistent(부모에 붙이기 **전에** 설정해야 먹는다). `LevelOfDetail`(StreamingMesh)은 런타임 스크립트가 못 쓴다(Plugin 권한) → Persistent로 대체.
 - 장식 = CanCollide · CanQuery · CanTouch 끔 · 그림자 끔. 봉인 벽 = 충돌만(쿼리 없음).
 - 대기 밀도 0.3 → 0.08(`WorldMapData.atmosphere` - 서버 부팅 때 적용).
+
+## 6. M1-3 대형 지형 · 둥지 3트랙 (2026-09-26)
+
+- 지형 = 로블록스 Terrain · 식 `shared/TerrainShape.lua` · 수치 `data/TerrainGenData.lua` · 굽기 `server/TerrainBake.lua`(edit 실행기 `TerrainBakeRun`) · 절차 `docs/perf/streaming-settings.md` §4. 큰 모양 = 지형, 정밀하게 밟는 곳 = 파트(`shared/WorldStructures.lua` · `WorldStructureKits.lua`).
+- 둥지 = `data/NestData.lua`(88곳 · 구역당 A 5 · B 3 · C 2(순환 후보 5) + 허브 C-마을 4) · 비밀 둥지 먼저 → 지형이 받침 · 흙더미 · 보호 부피로 비운다 · 순수 검사 `shared/WorldCheck.lua`(12항목) · 굽기 뒤 캐릭터 캡슐 검사 `TerrainBake.capsuleCheck`.
+- 구역 알 = `data/EggData.lua` · 서버 `server/NestServer.lua` · 클라 `NestView` · 알 정보창 `panels/EggInfo`. 표 · 좌표 = `docs/phase/M1-3-report.md` ③.
+- 외곽 = 보이는 경계(설산 산맥 · T3 바다) + 서버 밀어내기(`TerrainGenData.edgeGuard`) + 투명 벽 2,960.
