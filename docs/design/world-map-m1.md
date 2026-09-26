@@ -100,3 +100,11 @@
 - 둥지 = `data/NestData.lua`(88곳 · 구역당 A 5 · B 3 · C 2(순환 후보 5) + 허브 C-마을 4) · 비밀 둥지 먼저 → 지형이 받침 · 흙더미 · 보호 부피로 비운다 · 순수 검사 `shared/WorldCheck.lua`(12항목) · 굽기 뒤 캐릭터 캡슐 검사 `TerrainBake.capsuleCheck`.
 - 구역 알 = `data/EggData.lua` · 서버 `server/NestServer.lua` · 클라 `NestView` · 알 정보창 `panels/EggInfo`. 표 · 좌표 = `docs/phase/M1-3-report.md` ③.
 - 외곽 = 보이는 경계(설산 산맥 · T3 바다) + 서버 밀어내기(`TerrainGenData.edgeGuard`) + 투명 벽 2,960.
+
+## 7. M1-4 지형 채우기 · 커브길 · 무리 스폰 · 외곽 테마 · 관문 틀 (2026-09-26)
+
+- 소품 = 라이브러리 틀(`data/PropData` · `shared/PropKit` · `server/PropLibrary`) · 흩뿌리기 `data/PropScatterData` · `shared/PropScatter` · 교체 절차 `docs/art/asset-pipeline.md`.
+- 길 = `data/RoadData` · `shared/RoadNet`(길목 = `WorldMapLayout.route` id 그대로 · 곡선 · 지형 높이 · Terrain 재질 띠). 물 위 관문(`layout.gateSites` shoreR)은 길이 기슭에서 끝나고 둑길 파트가 잇는다.
+- 무리 스폰 = `WorldMapData.spawnSites`(지점 80 · 무리 3 ~ 5 · `groupSizes` · `caps`).
+- 외곽 = `TerrainGenData.edgeStyles`(구역 테마 · 능선 · 산길 · 전망 지점 · 협곡 · 빙하 틈) · 밀어내기 = `TerrainShape.edgeAllowR`(능선 너머) · 능선 둥지 = `NestData` crest.
+- 관문 = `shared/BossGateKit`(공통 틀 + `DECOR[style]`) · 날씨 = `WorldMapData.gateWeather` · `coastFx`. 표 · 수치 = `docs/phase/M1-4-report.md`.

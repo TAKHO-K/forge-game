@@ -65,5 +65,7 @@ Rojo는 Terrain 복셀을 동기화하지 않는다(프로젝트 `Workspace`는 
 | 구역 | 지형 버전 | 마지막 굽기 | 비고 |
 |---|---|---|---|
 | hub · tier1 ~ tier6 | 1 | 2026-09-26(M1-3) | 표면 = 평지 0.6(점유율 → 표면 식 실측: 표면 = 칸 바닥 + 2 + 4 × 점유율) |
+| hub · tier1 · tier2 · tier4 · tier5 · tier6 | 2 | 2026-09-26(M1-4) | 커브길 재질 띠 · 외곽 테마 경계 · Basalt 색 · 해안 모래 · 빙벽 재질 |
+| tier3 | 3 | 2026-09-26(M1-4) | 곶 좁게(바다가 트이게) |
 
 - 재질 색(Terrain:SetMaterialColor) · 물 색 · 투명도 · 물결도 굽기가 place에 쓴다(`TerrainGenData.materialColors` · `water`).
