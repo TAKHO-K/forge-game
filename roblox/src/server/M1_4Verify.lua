@@ -355,7 +355,7 @@ function V.runPure()
 		local Travel = require(script.Parent.Travel)
 		for _, z in ipairs(WorldMapData.zones) do
 			local st = ES[z.key]
-			local ang = z.angleDeg + 4
+			local ang = z.angleDeg + ((st.lookout and st.lookout.deg) or -2) -- 전망 지점(바다 = 곶 사이)
 			local allow = TerrainShape.edgeAllowRAt(ang)
 			local d = WorldMapLayout.dirOf(ang)
 			if st.kind == "sea" then

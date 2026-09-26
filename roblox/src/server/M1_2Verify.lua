@@ -218,8 +218,13 @@ function M1_2Verify.simulateHunter(mode, killSeconds, hours, zoneIndex)
 	local stepIndex, target, hitLeft, pointKills, waited = 1, nil, 0, 0, 0
 	local kills, aliveSum, aliveMax, activeSum, ticks, nextTick = 0, 0, 0, 0, 0, 0
 	local total = hours * 3600
+	local steps = 0
 	while now < total do
 		now += DT
+		steps += 1
+		if steps % 600 == 0 then
+			task.wait() -- M1-4: 지점 80곳 · 긴 시뮬이 스크립트 시간 한도를 넘지 않게
+		end
 		if now >= nextTick then
 			nextTick = now + WorldMapData.spawnSites.checkSeconds
 			SpawnSites.tick(list, { pos }, now, hooks)
@@ -475,17 +480,14 @@ function M1_2Verify.runPure()
 		for _, id in ipairs({ "casual", "normal", "top" }) do
 			local prof = EconSimConfig.profiles[id]
 			local demand = 3600 / (prof.targetKillSeconds + prof.moveOverheadSeconds)
-			local stay = M1_2Verify.simulateHunter("stay", prof.targetKillSeconds, 2)
-			local walk = M1_2Verify.simulateHunter("walk", prof.targetKillSeconds, 2)
-			local a0, i0 = S.activateRadius, S.idleSeconds
-			S.activateRadius, S.idleSeconds = 140, 20
-			local walkOld = M1_2Verify.simulateHunter("walk", prof.targetKillSeconds, 2)
-			S.activateRadius, S.idleSeconds = a0, i0
-			table.insert(rows, ("%s 수요 %.0f/시 · 서서 %.0f(몬스터 없어 기다림 %.1f%%) · 걸어 %.0f(옛 %.0f) · 동시 몬스터 평균 %.1f 최대 %d(옛 %.1f · %d) · 켜진 지점 %.1f(옛 %.1f)"):format(
-				prof.displayName, demand, stay.killsPerHour, stay.waitFraction * 100, walk.killsPerHour, walkOld.killsPerHour, walk.aliveAvg, walk.aliveMax, walkOld.aliveAvg, walkOld.aliveMax, walk.activeAvg, walkOld.activeAvg))
-			ok = ok and stay.waitFraction == 0 and walk.killsPerHour == walkOld.killsPerHour and walk.aliveAvg < walkOld.aliveAvg
+			-- M1-4 무리 스폰(지점 80 · 무리 3 ~ 5): 옛 "140 · 20초 대비" 비교는 M1-2 결정으로 닫혔다 - 공급 · 걷기 처치만 본다(30분 표본)
+			local stay = M1_2Verify.simulateHunter("stay", prof.targetKillSeconds, 0.5)
+			local walk = M1_2Verify.simulateHunter("walk", prof.targetKillSeconds, 0.5)
+			table.insert(rows, ("%s 수요 %.0f/시 · 서서 %.0f(몬스터 없어 기다림 %.1f%%) · 걸어 %.0f · 동시 몬스터 평균 %.1f 최대 %d · 켜진 지점 %.1f"):format(
+				prof.displayName, demand, stay.killsPerHour, stay.waitFraction * 100, walk.killsPerHour, walk.aliveAvg, walk.aliveMax, walk.activeAvg))
+			ok = ok and stay.waitFraction <= 0.05 and walk.killsPerHour > 0
 		end
-		r.check("스폰 공급이 처치를 막지 않음(서 있는 사냥꾼 기다림 0 - 3마리 · 리스폰 5초 · EconSim은 스폰 값을 안 읽는다) · 걷는 사냥꾼 처치 같고 동시 몬스터 감소: " .. table.concat(rows, " / "), ok)
+		r.check("스폰 공급이 처치를 막지 않음(서 있는 사냥꾼 기다림 ≤ 5% - M1-4 무리 3 ~ 5 · 리스폰 5초 · EconSim은 스폰 값을 안 읽는다) · 걷는 사냥꾼 처치: " .. table.concat(rows, " / "), ok)
 	end)
 	local pass, total = r.summary()
 	print(("===M1-2 검증 끝(가)=== %d/%d 통과"):format(pass, total))

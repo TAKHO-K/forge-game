@@ -464,7 +464,7 @@ function V.runLive(player, env)
 				end
 			end
 		end
-		r.check(("오늘 켜진 둥지 %d(A 30 · B 18 · C 고정 6 · 순환 6 · 마을 4 = 64) · F 프롬프트 %d · C 둥지 이름표 · 빛 표지 %d"):format(active, prompts, #cLabels), active == 64 and prompts == active and #cLabels == 0)
+		r.check(("오늘 켜진 둥지 %d(A 30 + 능선 5(M1-4) · B 18 · C 고정 6 · 순환 6 · 마을 4 = 69) · F 프롬프트 %d · C 둥지 이름표 · 빛 표지 %d"):format(active, prompts, #cLabels), active == 69 and prompts == active and #cLabels == 0)
 		local guided = player:GetAttribute("BossGateId")
 		r.check(("C 둥지는 길 안내 · 목표 추적 대상이 아니다(길 안내 = 관문만: %s)"):format(tostring(guided)), true)
 	end)

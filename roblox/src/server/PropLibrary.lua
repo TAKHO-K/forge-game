@@ -146,14 +146,21 @@ end
 local snapParams = RaycastParams.new()
 snapParams.FilterType = Enum.RaycastFilterType.Include
 local snapStats = { checked = 0, moved = 0, maxDelta = 0 }
-local function snapCf(cf)
+local function snapCf(cf, reach)
 	snapParams.FilterDescendantsInstances = { workspace.Terrain }
-	local hit = workspace:Raycast(cf.Position + Vector3.new(0, 60, 0), Vector3.new(0, -140, 0), snapParams)
 	snapStats.checked += 1
-	if not hit or hit.Material == Enum.Material.Water then
+	-- 발자국 7점(가운데 · 네 방향 · 대각 둘)의 가장 낮은 지형(배치 식 PropScatter.groundUnder와 같은 규칙 - 비탈에서 뜨지 않게)
+	local low = nil
+	for _, o in ipairs({ Vector3.zero, Vector3.new(reach, 0, 0), Vector3.new(-reach, 0, 0), Vector3.new(0, 0, reach), Vector3.new(0, 0, -reach), Vector3.new(reach * 0.7, 0, reach * 0.7), Vector3.new(-reach * 0.7, 0, -reach * 0.7) }) do
+		local hit = workspace:Raycast(cf.Position + o + Vector3.new(0, 60, 0), Vector3.new(0, -140, 0), snapParams)
+		if hit and hit.Material ~= Enum.Material.Water then
+			low = math.min(low or math.huge, hit.Position.Y)
+		end
+	end
+	if not low then
 		return cf
 	end
-	local want = hit.Position.Y - 0.3
+	local want = low - 0.3
 	local d = want - cf.Position.Y
 	snapStats.maxDelta = math.max(snapStats.maxDelta, math.abs(d))
 	if math.abs(d) > 0.75 then
@@ -172,7 +179,7 @@ function PropLibrary.instantiate(entry)
 	m:SetAttribute("PropSource", nil)
 	m:SetAttribute("Prop", entry.prop)
 	applyScale(m, entry.scale or Vector3.one)
-	m:PivotTo(entry.snap and snapCf(entry.cf) or entry.cf)
+	m:PivotTo(entry.snap and snapCf(entry.cf, math.sqrt((entry.size.X / 2) ^ 2 + (entry.size.Z / 2) ^ 2)) or entry.cf)
 	for k, v in pairs(entry.attrs or {}) do
 		m:SetAttribute(k, v)
 	end

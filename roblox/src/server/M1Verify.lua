@@ -135,8 +135,9 @@ function M1Verify.runPure()
 					end
 				end
 			end
-			r.check(("둥지 %s: A %d · B %d · C %d(순환 후보 포함) · 도달 불가 %d%s"):format(z.key, counts.A, counts.B, counts.C, #bad, #bad > 0 and (" - " .. table.concat(bad, " / ")) or ""),
-				counts.A == 5 and counts.B == 3 and counts.C >= 2 and #bad == 0)
+			local crestWant = (z.key ~= "tier3") and 1 or 0 -- M1-4 능선 전망 둥지(외곽 테마 - T3 바다 제외)
+			r.check(("둥지 %s: A %d(능선 %d 포함) · B %d · C %d(순환 후보 포함) · 도달 불가 %d%s"):format(z.key, counts.A, crestWant, counts.B, counts.C, #bad, #bad > 0 and (" - " .. table.concat(bad, " / ")) or ""),
+				counts.A == 5 + crestWant and counts.B == 3 and counts.C >= 2 and #bad == 0)
 		end
 	end)
 	r.section("봉인 입구", function()

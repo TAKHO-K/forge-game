@@ -648,7 +648,7 @@ local function edgeApply(key, h, x, z, R, ang)
 	local v = FLAT + rise + fbm(x / 90, z / 90, s + 71, 2) * 5 * slopeK
 	-- 배경 봉우리(능선 너머)
 	local B = st.back
-	if B and R > cr + ES.crestWidth * 0.5 then
+	if B and R > cr + ES.crestWidth then -- 능선 위 평평한 폭은 비운다(전망 지점 · M1-4 Play 1: 배경 봉우리가 능선 가운데까지 들어와 T4 능선이 185)
 		for _, pk in ipairs(TerrainShape.edgePeaksNear(ang)) do
 			local w = pk.w * B.wMul
 			local dx, dz = x - pk.x, z - pk.z
@@ -657,7 +657,8 @@ local function edgeApply(key, h, x, z, R, ang)
 				if B.flat then
 					k = math.min(1, k / B.flat) -- 메사: 윗면을 깎아 평평한 대지
 				end
-				local pv = FLAT + st.crestH * 0.6 + pk.h * B.hMul * k * (0.9 + 0.2 * fbm(x / 110, z / 110, s + 13, 2))
+				local fade = smoothstep(cr + ES.crestWidth, cr + ES.crestWidth + 40, R)
+				local pv = FLAT + st.crestH * 0.6 + pk.h * B.hMul * k * fade * (0.9 + 0.2 * fbm(x / 110, z / 110, s + 13, 2))
 				if pv > v then
 					v = pv
 				end
