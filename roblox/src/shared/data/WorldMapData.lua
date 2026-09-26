@@ -301,7 +301,7 @@ return {
 	gateWeather = {
 		maxParticles = 140, -- 동시 입자 상한(rate × lifetime 합 - 넘으면 비율대로 줄인다)
 		tier3 = { kind = "sea", radius = 280, spray = { count = 4, rate = 3, lifetime = 3, size = 3 }, mist = { rate = 2, lifetime = 8, size = 26, transparency = 0.8 } },
-		tier5 = { kind = "storm", radius = 320, rain = { rate = 45, lifetime = 1.1, speed = 90 }, cloud = { height = 150, radius = 190, color = { 70, 74, 90 }, transparency = 0.35 },
+		tier5 = { kind = "storm", radius = 320, rain = { rate = 45, lifetime = 1.1, speed = 90 }, cloud = { height = 150, radius = 110, lumps = 7, color = { 58, 60, 72 }, transparency = 0.12 },
 			flash = { everySeconds = { 16, 32 }, seconds = 0.45, brightness = 0.7, range = 160, color = { 190, 196, 255 } } },
 	},
 	-- M1-4 해안 거품(클라 전용 - client/CoastFx): T3 해안선 · 만 둘레 점마다 거품 입자(가까운 near개만 켠다 · 반경 radius 안)
@@ -396,7 +396,7 @@ return {
 		groupSizes = { default = { { 3, 30 }, { 4, 40 }, { 5, 30 } }, tier1 = { { 3, 80 }, { 4, 20 } } }, -- { 마릿수, 무게 } - 초보 구역 T1은 작게
 		-- 상한(M1-4 - 성능 20인 p95 ≤ 1.55ms 안): 서버 전체 지점 몬스터 maxMonsters · 사람당 동시 켜진 무리 maxGroupsPerPlayer(가장 가까운 사람 몫 - 가까운 지점부터 켠다).
 		--   넘으면 그 지점은 켜지지 않고 기다린다(다음 틱 · 다른 무리가 정리되면). 잔류 규칙(유지 반경 · 12초 · 전투 보류)은 그대로.
-		caps = { maxMonsters = 180, maxGroupsPerPlayer = 3 },
+		caps = { maxMonsters = 120, maxGroupsPerPlayer = 3 }, -- 180 → 120(M1-4 실측): 같은 세션 옛 설정 20인 = 몬스터 89 · p95 1.78 / 새 설정 상한 180 = 200마리 · 2.11 · 130 = 2.09 → 기준선 + 0.45(M1 여유) 안으로
 		activateRadius = 110, keepRadius = 200, idleSeconds = 12, -- M1-3 전(M1-2 결정 2 사용자): 140 → 110 · 20 → 12초(걷는 1명당 동시 몬스터 줄이기)
 		checkSeconds = 1.0, combatHoldSeconds = 10,
 		-- 표시: 범위 바닥 = 구역 바닥보다 조금 진한 원판 + 경계 고리(얇은 판 조각) · 경계를 넘으면 화면 위쪽에 사냥터 이름(nameSeconds - 가운데 금지 구역 밖)

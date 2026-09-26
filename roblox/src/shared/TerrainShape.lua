@@ -811,6 +811,7 @@ function TerrainShape.column(x, z, skipStruct)
 	if sea and sea > h then
 		water = math.max(water or -math.huge, sea)
 	end
+	local beach = sea ~= nil and h < sea + 3 -- M1-4: 바다 해안 얕은 곳 · 물가 = 모래(진흙 바닥이 수면에 점점이 드러나 보였다)
 	-- M1-4 길 재질 띠(반폭 안 · 물 · 깎인 곳 아님)
 	local road = nil
 	if not water and not carved then
@@ -829,7 +830,7 @@ function TerrainShape.column(x, z, skipStruct)
 			end
 		end
 	end
-	return { h = h, water = water, flow = flow, zone = TerrainShape.zoneAt(x, z), carved = carved, road = road }
+	return { h = h, water = water, flow = flow, zone = TerrainShape.zoneAt(x, z), carved = carved, road = road, beach = beach }
 end
 
 function TerrainShape.height(x, z)
@@ -917,6 +918,9 @@ function TerrainShape.material(x, z, col, slopeDeg)
 		return G.hub.material
 	end
 	local above = col.h - FLOOR
+	if col.beach then
+		return "Sand" -- 바다 해안(모래사장 · 얕은 바닥)
+	end
 	if col.water and col.water > col.h then
 		return pal.bed
 	end
@@ -925,7 +929,7 @@ function TerrainShape.material(x, z, col, slopeDeg)
 	end
 	local snowLine = (G.edgeStyles[col.zone.key] and G.edgeStyles[col.zone.key].snowLine) or math.huge -- M1-4: 눈 = 구역 테마(T6 · 높은 T2 · T5 봉우리만)
 	if above > snowLine + G.snowVary * fbm(x / 90, z / 90, G.seed + 41, 2) then
-		return slopeDeg > G.steepDeg + 15 and G.rockMaterial or G.snowMaterial
+		return slopeDeg > G.steepDeg + 15 and pal.cliff or G.snowMaterial -- M1-4: 눈선 위 급경사 = 구역 절벽 재질(T6 빙벽이 바위 줄무늬로 보였다)
 	end
 	if slopeDeg > G.steepDeg then
 		return pal.cliff

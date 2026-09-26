@@ -112,7 +112,10 @@ function WorldMap.build()
 	local prims, meta = WorldMapLayout.buildAll()
 	local models, counts = {}, {}
 	local libN, libCustom = PropLibrary.ensureAll()
-	for _, p in ipairs(prims) do
+	for i, p in ipairs(prims) do
+		if i % 250 == 0 then
+			task.wait() -- M1-4: 도형 약 5,000 + 소품 지형 붙이기(광선) - 부팅이 스크립트 시간 한도를 넘지 않게(넘으면 HuntingGround 부팅 전체가 죽는다)
+		end
 		local m = modelAt(root, models, p.model)
 		if p.prop then -- M1-4 소품 = 라이브러리 모델 복제(shared/PropKit · server/PropLibrary)
 			PropLibrary.instantiate(p).Parent = m

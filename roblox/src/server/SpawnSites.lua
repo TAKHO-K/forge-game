@@ -266,6 +266,10 @@ function SpawnSites.start()
 		if not entry or entry.point.zoneKey ~= zoneKey then
 			return false
 		end
+		local _, aliveNow = SpawnSites.stats()
+		if aliveNow >= CFG.caps.maxMonsters then
+			return true -- M1-4 서버 상한: 리스폰도 넘기지 않는다(자리는 비워 두고 다음 처치 때 다시 본다)
+		end
 		if entry.point.active and entry.slot.used and not (entry.slot.model and liveHooks.alive(entry.slot.model)) then
 			entry.slot.model = liveHooks.spawn(entry.point, entry.slot)
 		end

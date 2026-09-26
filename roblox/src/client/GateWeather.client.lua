@@ -92,16 +92,30 @@ local function build(site)
 		end
 	elseif S.kind == "storm" then
 		local C = S.cloud
-		local cloud = Instance.new("Part")
-		cloud.Name = "StormCloud"
-		cloud.Shape = Enum.PartType.Cylinder
-		cloud.Anchored, cloud.CanCollide, cloud.CanQuery, cloud.CanTouch, cloud.CastShadow = true, false, false, false, false
-		cloud.Size = Vector3.new(24, C.radius * 2, C.radius * 2)
-		cloud.CFrame = CFrame.new(pos + Vector3.new(0, C.height, 0) + site.dir * 80) * CFrame.Angles(0, 0, math.rad(90))
-		cloud.Color = color3(C.color)
-		cloud.Material = Enum.Material.SmoothPlastic
-		cloud.Transparency = C.transparency
-		cloud.Parent = folder
+		-- 먹구름 = 어두운 타원 덩어리 여러 개(M1-4 스크린샷: 원판 하나는 투명한 렌즈처럼 보였다)
+		local center = pos + Vector3.new(0, C.height, 0) + site.dir * 80
+		local lumps = {}
+		for i = 1, C.lumps do
+			local a = (i - 1) / C.lumps * 2 * math.pi + i * 0.7
+			local r = (i == 1) and 0 or C.radius * (0.35 + 0.35 * ((i * 37) % 10) / 10)
+			local s = C.radius * (0.55 + 0.25 * ((i * 53) % 10) / 10)
+			local lump = Instance.new("Part")
+			lump.Name = "StormCloud"
+			lump.Anchored, lump.CanCollide, lump.CanQuery, lump.CanTouch, lump.CastShadow = true, false, false, false, false
+			lump.Size = Vector3.new(s * 2, s * 0.55, s * 1.6)
+			lump.CFrame = CFrame.new(center + Vector3.new(math.cos(a) * r, ((i * 29) % 7) - 3, math.sin(a) * r)) * CFrame.Angles(0, a, 0)
+			lump.Color = color3(C.color)
+			lump.Material = Enum.Material.SmoothPlastic
+			lump.Transparency = C.transparency
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = lump
+			lump.Parent = folder
+			table.insert(lumps, lump)
+			table.insert(out.parts, lump)
+		end
+		local cloud = lumps[1]
+		out.lumps = lumps
 		local light = Instance.new("PointLight")
 		light.Brightness = 0
 		light.Range = S.flash.range
@@ -141,10 +155,12 @@ local function flash(site)
 	local b = site.built
 	local base = color3(S.cloud.color)
 	b.light.Brightness = S.flash.brightness
-	b.cloud.Color = base:Lerp(color3(S.flash.color), 0.35)
 	local info = TweenInfo.new(S.flash.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	TweenService:Create(b.light, info, { Brightness = 0 }):Play()
-	TweenService:Create(b.cloud, info, { Color = base }):Play()
+	for _, lump in ipairs(b.lumps) do
+		lump.Color = base:Lerp(color3(S.flash.color), 0.35)
+		TweenService:Create(lump, info, { Color = base }):Play()
+	end
 end
 
 local acc = 0
