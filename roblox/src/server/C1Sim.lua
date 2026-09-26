@@ -444,7 +444,7 @@ end
 local function scenarioSteal(mode, owner, thief)
 	local state = run(mode, function(m)
 		return start(m, { O = { power = owner.stage, stage = owner.stage, level = owner.level, rebirth = owner.rebirth },
-			X = { power = thief.stage, stage = thief.stage, level = thief.level, rebirth = thief.rebirth } })
+			X = { power = thief.power or thief.stage, stage = thief.stage, level = thief.level, rebirth = thief.rebirth } })
 	end, function(s, now)
 		if respawn(s, now) or s.mobDead then
 			return
@@ -623,6 +623,9 @@ function C1Sim.runAll()
 	local stealCases = {
 		{ id = "l", label = "스틸: 환생 · 레벨 같고 스테이지 1(주인) vs 3,000(도둑)", owner = { stage = 1, level = 300, rebirth = 2 }, thief = { stage = 3000, level = 300, rebirth = 2 } },
 		{ id = "m", label = "스틸: 환생 다름(0 vs 1) · 레벨 같음 · 스테이지 100(주인) vs 105(도둑)", owner = { stage = 100, level = 150, rebirth = 0 }, thief = { stage = 105, level = 150, rebirth = 1 } },
+		-- n(C1 결정 5 보정): 강한 계정(환생 2 · 레벨 400 · 힘 = 스테이지 3,000)이 스테이지를 초보와 같게 / 낮게 맞춰 초보 몹을 친다
+		{ id = "n", label = "스틸: 강한 계정(환생 2 · 레벨 400 · 힘 3,000)이 스테이지를 초보(환생 0 · 레벨 30 · 100)와 같게 100", owner = { stage = 100, level = 30, rebirth = 0 }, thief = { stage = 100, level = 400, rebirth = 2, power = 3000 } },
+		{ id = "n-low", label = "스틸: 같은 강한 계정이 스테이지를 초보보다 낮게 95", owner = { stage = 100, level = 30, rebirth = 0 }, thief = { stage = 95, level = 400, rebirth = 2, power = 3000 } },
 	}
 	for _, case in ipairs(stealCases) do
 		local xb, ob = scenarioSteal("old", case.owner, case.thief)

@@ -160,8 +160,56 @@ function V.runPure()
 		MobShare.touch(mm, mOwner, 100, 0)
 		local _, _, _, mBlocked = MobShare.touch(mm, mThief, 105, 1)
 		local _, _, _, mLowBlocked = MobShare.touch(mm, mLow, 95, 1)
-		r.check(("m: 환생 0(주인 100) vs 1 · 레벨 같음 → 105 막힘 %s · 95(낮은 쪽) → 같이 때림(막힘 %s · 주인 그대로 %s)"):format(tostring(mBlocked), tostring(mLowBlocked), tostring(mm.activeAt[mLow] == nil)),
-			mBlocked and not mLowBlocked and mm.activeAt[mLow] == nil and mm.refStage == 100)
+		r.check(("m: 환생 0(주인 100) vs 1 · 레벨 같음 → 105 막힘 %s · 95(스테이지는 낮지만 성장이 높음 - 결정 5 보정) → 막힘 %s"):format(tostring(mBlocked), tostring(mLowBlocked)),
+			mBlocked and mLowBlocked and mm.activeAt[mLow] == nil and mm.refStage == 100)
+		-- n(C1 결정 5 보정): 막힘 방향 = 성장(환생 → 레벨) 또는 스테이지
+		local newbie = { level = 30, rebirth = 0 }
+		for _, case in ipairs({ { stage = 100, tag = "같게 100" }, { stage = 95, tag = "낮게 95" } }) do
+			local strong = { level = 400, rebirth = 2 }
+			local mn = MobShare.fresh({})
+			MobShare.touch(mn, newbie, 100, 0)
+			local _, _, _, nBlocked = MobShare.touch(mn, strong, case.stage, 1)
+			r.check(("n: 강한 계정(환생 2 · 레벨 400)이 스테이지를 초보(환생 0 · 레벨 30 · 100)와 %s → 막힘 %s · 기준 %s"):format(case.tag, tostring(nBlocked), tostring(mn.refStage)),
+				nBlocked and mn.activeAt[strong] == nil and mn.participants[strong] == nil and mn.refStage == 100)
+		end
+		local sameRebirthHigh = { level = 200, rebirth = 0 }
+		local mr = MobShare.fresh({})
+		MobShare.touch(mr, newbie, 100, 0)
+		local _, _, _, lvBlocked = MobShare.touch(mr, sameRebirthHigh, 100, 1)
+		r.check(("n: 환생 같고 레벨 200 vs 30(차 170 > 20) · 같은 스테이지 → 레벨 높은 쪽 막힘 %s"):format(tostring(lvBlocked)), lvBlocked)
+		local weak = { level = 30, rebirth = 0 }
+		local ms = MobShare.fresh({})
+		local strongOwner = { level = 400, rebirth = 2 }
+		MobShare.touch(ms, strongOwner, 100, 0)
+		local _, _, _, wBlocked = MobShare.touch(ms, weak, 100, 1)
+		local _, _, _, wHigherBlocked = MobShare.touch(MobShare.fresh({}), weak, 100, 1)
+		r.check(("n 반대: 초보(성장 낮음)가 강한 주인(100) 몹을 같은 스테이지에서 → 같이 때림(막힘 %s · 주인 그대로 %s)"):format(tostring(wBlocked), tostring(ms.activeAt[weak] == nil)),
+			not wBlocked and ms.activeAt[weak] == nil and not wHigherBlocked)
+		local mg = MobShare.fresh({})
+		MobShare.touch(mg, strongOwner, 100, 0)
+		local rebirthReset = { level = 900, rebirth = 1 } -- 성장은 낮지만(환생 1 < 2) 스테이지가 더 높은 follower = 기준을 끌어올림 → 막힘
+		local _, _, _, gBlocked = MobShare.touch(mg, rebirthReset, 300, 1)
+		r.check(("n 반대: 성장 낮지만 스테이지 더 높은(300) 사람 → 막힘 %s · 기준 %s(주인 몹 체력 · 피해 안 오름)"):format(tostring(gBlocked), tostring(mg.refStage)), gBlocked and mg.refStage == 100)
+		-- 리뷰 1: 강한 S가 먼저 쫓기기만 함(passive) → 초보 B가 쳐서 주인 → S는 쫓김 참여자여도 막힘(몹도 S를 놓는다 - canChase = isBlocked)
+		local mp = MobShare.fresh({})
+		local passiveStrong = { level = 400, rebirth = 2 }
+		MobShare.touch(mp, passiveStrong, 100, 0, true)
+		local _, _, _, bBlocked = MobShare.touch(mp, newbie, 100, 0.5)
+		local chaseBlocked = MobShare.isBlocked(mp, passiveStrong, 100, 1)
+		local _, _, _, sBlocked = MobShare.touch(mp, passiveStrong, 100, 1)
+		r.check(("리뷰 1: 강한 S 먼저 쫓김 → 초보 B 타격(막힘 %s · 주인 %s) → S 판정 막힘 %s · S 타격 막힘 %s"):format(tostring(bBlocked), tostring(mp.activeAt[newbie] ~= nil), tostring(chaseBlocked), tostring(sBlocked)),
+			not bBlocked and mp.activeAt[newbie] ~= nil and chaseBlocked and sBlocked and mp.contributions[passiveStrong] == nil)
+		-- 리뷰 2: 성장이 같은 급(레벨 31 vs 30 - 표 안)이면 스테이지로만 가른다 → 스테이지 낮은 쪽(80)은 follower
+		local mq = MobShare.fresh({})
+		local owner30 = { level = 30, rebirth = 0 }
+		local near31 = { level = 31, rebirth = 0 }
+		MobShare.touch(mq, owner30, 95, 0)
+		local _, _, _, qBlocked = MobShare.touch(mq, near31, 80, 1)
+		r.check(("리뷰 2: 레벨 31(스테이지 80) vs 주인 30(95) - 성장 같은 급 → 막힘 %s · follower %s"):format(tostring(qBlocked), tostring(mq.activeAt[near31] == nil)),
+			not qBlocked and mq.activeAt[near31] == nil and mq.refStage == 95)
+		-- follower는 싸움 중 새 잡는 사람 때문에 막히지 않는다(때린 기록 = 면제)
+		local _, _, _, againBlocked = MobShare.touch(mq, near31, 80, 2)
+		r.check(("리뷰 2: 이미 때린 follower 다시 침 → 막힘 %s"):format(tostring(againBlocked)), not againBlocked)
 		-- 클라 자물쇠: 서버 목록 문자열 → lockedFor(서버 isBlocked와 같은 판정)
 		local enc = MobShare.encodeHunters(mm, 1, function(at)
 			return 1000 + at
@@ -381,6 +429,8 @@ function V.runLive(player, env)
 		-- 어그로: 몹을 Player 곁에 두고 MonsterAI가 쫓게 한다
 		local chaser = MonsterSpawner.spawn(data, root.Position + Vector3.new(8, 0, 0), nil, {})
 		table.insert(spawned, chaser)
+		-- 스포너가 지면 탐지로 몹을 윗면에 놓는다 - 캐릭터가 나무 터널 안(허브 시작 자리)이면 높이차 > 8이라 어그로 불가 → 캐릭터를 몹과 같은 층 곁으로 옮긴다
+		root.CFrame = CFrame.new(chaser.PrimaryPart.Position + Vector3.new(-8, 0, 0))
 		local t0 = os.clock()
 		local ref, count
 		repeat

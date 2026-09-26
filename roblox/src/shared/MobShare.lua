@@ -16,6 +16,7 @@
 --     "참여자가 없는(비었거나 전부 떠난) 몹에 높은 사람이 새로 닿을 때"만 일어난다 - 남은 비율은 그때 재정규화된다.
 --   · C1 마무리(사용자 결정): "스테이지 차 10"을 canShare(환생 같음 · 레벨 차 표 · 스테이지 차 10 AND)로 교체. 막힘 = 스틸 불가 + 더 높은 스테이지.
 --     스틸 불가한 낮은 사람은 막히지 않고 같이 때린다(follower - 기여는 기준 HP로 환산돼 사실상 0 · 잡는 사람 집합(주인)은 안 바뀐다 - 대칭 판정의 목적 유지).
+--   · C1 결정 5 보정(사용자 결정): 막힘 방향에 성장(환생 → 레벨 - compareGrowth)을 더함. 성장이 더 높거나 스테이지가 더 높으면 막힌다(blocksAgainst).
 -- 절대 HP(k^(스테이지 − 1))는 만들지 않는다 - 배율은 k^(스테이지 차)만 쓴다(스테이지 34,230에서도 inf · nan 없음 - 하한은 0으로 접힌다).
 -- entry 필드: hpRatio · refStage(nil = 아직 아무도) · participants([who] = 마지막 참여 시각) · partStage([who] = 기록을 쌓은 스테이지) ·
 --   contributions([who] = 기준 HP에 대한 누적 비율) · firstHitAt · hitCounts. who = Player 또는 표(검증 스탠드인) - 키로만 쓴다.
@@ -105,9 +106,30 @@ function MobShare.canShare(a, b)
 	return math.abs(a.stage - b.stage) <= CombatConfig.stealStageGap
 end
 
--- 막힘 = 스틸 불가 + 더 높은 스테이지 공격자.
+-- C1 결정 5 보정: 성장 비교 = 환생 → 같으면 레벨. 반환 1(a가 높음) · -1(b가 높음) · 0(같음).
+function MobShare.compareGrowth(a, b)
+	if a.rebirth ~= b.rebirth then
+		return a.rebirth > b.rebirth and 1 or -1
+	end
+	if a.level ~= b.level then
+		return a.level > b.level and 1 or -1
+	end
+	return 0
+end
+
+-- 성장 차 자체가 스틸 불가 사유인가(환생 다름 · 레벨 차 > 구간 표). 아니면 성장은 "같은 급"으로 본다(리뷰 2 - 레벨 1 차이로 방향이 뒤집히지 않게).
+local function growthApart(a, b)
+	return a.rebirth ~= b.rebirth or math.abs(a.level - b.level) > MobShare.levelGapFor(math.min(a.level, b.level))
+end
+
+-- 막힘 = 스틸 불가 + (성장이 더 높음 - 스테이지를 초보와 같게 · 낮게 맞춘 강한 계정 · 또는 스테이지가 더 높음).
+-- 스테이지 쪽을 남긴 이유: 성장이 낮아도(환생 직후 계정 등) 더 높은 스테이지 follower는 기준을 끌어올려 주인 몹의 체력 · 피해를 키우고 어그로를 떼어 낸다.
+-- 그래서 같이 때리는(follower) 쪽 = 스틸 불가인데 성장도 스테이지도 높지 않은 사람뿐.
 local function blocksAgainst(me, other)
-	return me.stage > other.stage and not MobShare.canShare(me, other)
+	if MobShare.canShare(me, other) then
+		return false
+	end
+	return (growthApart(me, other) and MobShare.compareGrowth(me, other) > 0) or me.stage > other.stage
 end
 
 -- 잡는 사람(8초 안에 때렸거나 도운 참여자 - except는 빼고)마다 fn(who, profile). 주인 = 그중 처음 때린 사람(이 집합이 비면 해제).
@@ -131,10 +153,13 @@ function MobShare.hasHunters(entry, now)
 	end)
 end
 
--- 이 사람이 지금 이 몹에 새로 닿으면 막히는가(이미 참여 중이면 false - 먼저 온 사람 우선).
+-- 이 사람이 지금 이 몹에 새로 닿으면 막히는가(이미 때리거나 도운 참여자면 false - 먼저 온 사람 우선 · 쫓기기만 한 사람은 새로 닿는 것과 같다).
 -- 잡는 사람 중 누구와라도 "스틸 불가 + 내가 더 높음"이면 막힌다. 낮은 쪽은 막히지 않고 같이 때린다(주인은 그대로 - touch의 follower).
 function MobShare.isBlocked(entry, who, stage, now)
-	if entry.participants[who] ~= nil and now - entry.participants[who] <= CombatConfig.participationWindowSeconds then
+	-- 면제 = 이미 때리거나 도운 참여자(잡는 사람 · follower). 쫓기기만 한 참여자는 면제 안 함(리뷰 1 - 먼저 쫓긴 강한 계정이 초보가 주인이 된 몹을 계속 끌고 치는 길 차단)
+	local window = CombatConfig.participationWindowSeconds
+	local at = entry.participants[who]
+	if at ~= nil and now - at <= window and (entry.contributions[who] ~= nil or (entry.activeAt[who] ~= nil and now - entry.activeAt[who] <= window)) then
 		return false
 	end
 	local me = MobShare.profileOf(who, stage)
