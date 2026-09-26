@@ -31,7 +31,7 @@ local stations = WorldMapLayout.stations()
 local liftPoint = WorldMapLayout.hubPoint(L.angleDeg, L.r)
 
 local function metersOf(s)
-	return ("%d"):format(math.floor((s.y - FLOOR) * COURSE.metersPerStud + 0.5))
+	return ("%d"):format(math.floor((s.y - FLOOR) * WorldMapData.hub.tree.metersPerStud + 0.5))
 end
 
 local function highest()

@@ -136,6 +136,7 @@ function Travel.teleport(player, position, why)
 	root.CFrame = CFrame.new(position) * root.CFrame.Rotation
 	HeightGuard.reset(player)
 	TeleportArrival.mark(player, position)
+	stateOf(player).teleportAt = os.clock()
 	print(("[forge-game] 이동(%s): %s → (%.0f, %.0f, %.0f) · 미리 불러오기 %s(%.2f초)"):format(why or "?", player.Name, position.X, position.Y, position.Z, streamed and "성공" or "실패", waited))
 	Travel.lastTeleport = { player = player, position = position, why = why, streamed = streamed, waited = waited }
 	return streamed
@@ -511,7 +512,9 @@ function Travel.pollPlayer(player, root, humanoid, now)
 	if st.checkpoint then
 		local s = stationList()[st.checkpoint]
 		local inTree = flat(feet).Magnitude <= 160
-		if inTree and grounded and feet.Y < s.y - WorldMapData.hub.tree.course.fallDropStuds then
+		-- M1-2c: 순간이동 직후 1초는 건너뛴다 - 클라가 옮겨진 자리를 받기 전에 보낸 옛 위치(바닥)를 떨어짐으로 읽어 같은 정거장으로 한 번 더 옮겼다(리프트 [F] 실측)
+		local justMoved = now - (st.teleportAt or -math.huge) < 1
+		if inTree and grounded and not justMoved and feet.Y < s.y - WorldMapData.hub.tree.course.fallDropStuds then
 			Travel.teleport(player, s.top + Vector3.new(0, 3, 0), ("떨어짐 → 정거장 %d"):format(st.checkpoint))
 			return
 		end
