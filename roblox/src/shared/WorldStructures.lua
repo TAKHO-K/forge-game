@@ -329,7 +329,7 @@ local function buildNest(spec, list, templeCf)
 			local tw = 30
 			local back = -templeCf.LookVector
 			local q = templeCf.Position + back * (tw / 2 + T.d / 2 + T.wall + 0.2)
-			p, look, baseY = Vector3.new(q.X, 0, q.Z), back, templeCf.Position.Y
+			p, look, baseY = Vector3.new(q.X, 0, q.Z), back, templeCf.Position.Y + 1.5 -- 신전 받침단 위(받침단이 방 바닥 안으로 들어오지 않게 - M1-3 Play 1)
 		end
 		if spec.cover == "underwater" then
 			local zone = zoneOf(spec.zone)

@@ -51,7 +51,7 @@ local NESTS = {
 	{ id = "t3_b_temple", zone = "tier3", track = "B", top = true, kit = "sunken" },
 	{ id = "t3_b_spire", zone = "tier3", track = "B", r = 1650, lat = -720, kit = "tower", w = 16, h = 44, cols = 2 },
 	{ id = "t3_b_shrine", zone = "tier3", track = "B", r = 2300, lat = 520, face = 30, kit = "shrine" },
-	{ id = "t3_c_field", zone = "tier3", track = "C", sub = "field", r = 2010, lat = -500, kit = "alcove", cover = "underwater", river = 4, hint = { "flow", "fireflies" } },
+	{ id = "t3_c_field", zone = "tier3", track = "C", sub = "field", r = 1710, lat = -440, kit = "alcove", cover = "underwater", river = 4, hint = { "flow", "fireflies" } },
 	{ id = "t3_c_h1", zone = "tier3", track = "C", sub = "hidden", r = 1300, lat = -662, face = -70, kit = "alcove", cover = "waterfall", hint = { "flow" } },
 	{ id = "t3_c_h2", zone = "tier3", track = "C", sub = "hidden", r = 2450, lat = 290, face = 60, kit = "alcove", cover = "fakeWall", hint = { "stone" } },
 	{ id = "t3_c_h3", zone = "tier3", track = "C", sub = "hidden", r = 1200, lat = 560, kit = "alcove", cover = "vine", hint = { "fireflies" } },

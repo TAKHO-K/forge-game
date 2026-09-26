@@ -496,7 +496,7 @@ function Kits.alcove(ctx, list)
 	if cover == "underwater" and ctx.river then
 		local rv = ctx.river
 		local out = (cf * CFrame.new(0, 0, doorZ - 4)).Position
-		table.insert(meta.protect, { kind = "tunnel", pts = { { out.X, out.Z, cf.Position.Y - 0.5 }, { rv.bankX, rv.bankZ, rv.bedY + 1 }, { rv.x, rv.z, rv.bedY } }, radius = 5, height = 8, water = rv.level })
+		table.insert(meta.protect, { kind = "tunnel", pts = { { out.X, out.Z, cf.Position.Y - 1 }, { rv.bankX, rv.bankZ, rv.bedY + 1 }, { rv.x, rv.z, rv.bedY } }, radius = 5, height = 8, water = rv.level })
 		meta.path = { Vector3.new(rv.x, rv.bedY + 1, rv.z), Vector3.new(rv.bankX, rv.bedY + 2, rv.bankZ), out, cf.Position }
 	else
 		meta.path = { (doorCf * CFrame.new(0, 0, -(corridor + 3))).Position, (doorCf * CFrame.new(0, 0, -corridor / 2)).Position, doorCf.Position, cf.Position }

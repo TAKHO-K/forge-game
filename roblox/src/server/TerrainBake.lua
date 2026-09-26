@@ -340,6 +340,8 @@ function TerrainBake.capsuleCheck(nests)
 		end
 		table.insert(pts, n.spot)
 		local hit = nil
+		-- 점프맵 둥지(도약 표가 있다): 입구 → 둥지 직선 쓸기는 하지 않는다(벽 · 발판을 뚫고 지나가는 선 - 도약은 검증 (가)가 이동표로 잰다) · 점 검사는 한다
+		local jump = n.leaps ~= nil and #n.leaps > 0
 		for i, p in ipairs(pts) do
 			local center = p + Vector3.new(0, FOOT_CLEAR + BODY.Y / 2, 0)
 			for a = 0, 5 do
@@ -356,7 +358,7 @@ function TerrainBake.capsuleCheck(nests)
 				hit = hit or ("점 %d 머리 %s"):format(i, up.Instance.Name)
 			end
 			local dist = i > 1 and (pts[i - 1] - p).Magnitude or 0
-			if i > 1 and dist > 0.5 then
+			if i > 1 and dist > 0.5 and not (jump and i == #pts) then
 				local from = pts[i - 1] + Vector3.new(0, FOOT_CLEAR + BODY.Y / 2, 0)
 				for _, dir in ipairs({ { from, center }, { center, from } }) do
 					local r = Workspace:Blockcast(CFrame.new(dir[1]), BODY, dir[2] - dir[1], capsuleParams)

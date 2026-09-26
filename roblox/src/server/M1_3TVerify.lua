@@ -485,13 +485,13 @@ function V.runLive(player, env)
 		end
 		put(Vector3.new(c.x + c.touch + 1.2, c.y + 3.1, c.z))
 		local minHp = hp0
-		for _ = 1, 20 do
+		for _ = 1, 18 do -- 4.5초(상한 창 5초 안 - 5초를 넘기면 창 경계에서 4번째가 정상으로 난다: Play 1)
 			task.wait(0.25)
 			root.CFrame = CFrame.new(Vector3.new(c.x + c.touch + 1.2, c.y + 3.1, c.z))
 			minHp = math.min(minHp, PlayerState.getHp(player) or 0)
 		end
 		local hits = WorldHazards.stats.cactusHits - hits0
-		r.check(("선인장 곁 5초: 피해 %d번(상한 %d) · 막힘 %d · 체력 %.0f → 최저 %.0f(0 아님)"):format(hits, WorldStructureDataHazard().maxPerWindow, WorldHazards.stats.cactusCapped - cap0, hp0 or 0, minHp or 0),
+		r.check(("선인장 곁 4.5초: 피해 %d번(상한 %d) · 막힘 %d · 체력 %.0f → 최저 %.0f(0 아님)"):format(hits, WorldStructureDataHazard().maxPerWindow, WorldHazards.stats.cactusCapped - cap0, hp0 or 0, minHp or 0),
 			hits >= 1 and hits <= WorldStructureDataHazard().maxPerWindow and (minHp or 0) > 0)
 		PlayerState.setHp(player, PlayerState.getMaxHp(player))
 		-- 물 판정(복셀) · 강 흐름(식)
@@ -504,15 +504,24 @@ function V.runLive(player, env)
 		r.check(("강 한가운데 물 판정 %s · 허브 %s · 흐름 %.1f(하류)"):format(tostring(inWater), tostring(onLand), flow and flow.Magnitude or 0), inWater and not onLand and flow ~= nil and flow.Magnitude > 0)
 		-- 외곽 밀어내기(실제 폴링)
 		HeightGuard.debugOff = guardOff
-		local d = WorldMapLayout.dirOf(-79)
-		local q = d * 2720
-		local top = TerrainShape.height(q.X, q.Z)
+		-- 허용 반경 밖 · 높은 곳 복귀(standMaxY) 아래 비탈을 찾는다(Play 1: 212 비탈은 높은 곳 복귀가 먼저 허브로 보냈다 - 규칙대로)
+		local q, top
+		for a = -89, 89, 3 do
+			for rr = TerrainGenData.edgeGuard.allowR + 15, 2900, 10 do
+				local p = WorldMapLayout.dirOf(a) * rr
+				local h = TerrainShape.height(p.X, p.Z)
+				if not q and h - TerrainShape.flatY > 25 and h - TerrainShape.flatY < WorldMapData.progress.standMaxY - 30 and not TerrainShape.waterAt(p.X, p.Z) and TerrainShape.edgeAllowR(p.X, p.Z) < rr then
+					q, top = p, h
+				end
+			end
+		end
+		assert(q, "시험 비탈 없음")
 		local before = Travel.stateOf(player).edgePushes or 0
 		put(Vector3.new(q.X, top + 3.2, q.Z))
 		task.wait(1.2)
 		local after = Travel.stateOf(player).edgePushes or 0
 		local R2 = flat(root.Position, Vector3.zero)
-		r.check(("설산 비탈(r 2,720 · 높이 %.0f)에 서면 → 밀어내기 %d번 · 지금 반경 %.0f(≤ %d)"):format(top - TerrainShape.flatY, after - before, R2, TerrainGenData.edgeGuard.allowR), after > before and R2 <= TerrainGenData.edgeGuard.allowR)
+		r.check(("설산 비탈(r %.0f · 높이 %.0f)에 서면 → 밀어내기 %d번 · 지금 반경 %.0f(≤ %d)"):format(flat(q, Vector3.zero), top - TerrainShape.flatY, after - before, R2, TerrainGenData.edgeGuard.allowR), after > before and R2 <= TerrainGenData.edgeGuard.allowR)
 		HeightGuard.debugOff = true
 		r.check(("MaxSlopeAngle(지금 캐릭터) = %.0f°(TerrainConfig 45 - 걷는 경사 한계)"):format(humanoid.MaxSlopeAngle), math.abs(humanoid.MaxSlopeAngle - 45) < 0.5)
 	end)
