@@ -31,8 +31,13 @@ function MotionTiming.clip(classId, index, air)
 	return w.attacks[math.clamp(index or 1, 1, #w.attacks)]
 end
 
--- 배율 적용 구간 길이. 반환 { ant, act, rec, total, hit(= ant) }.
-function MotionTiming.scale(clip, speed, heavy)
+-- 원거리 발사 시각(서버 = 모션 - 상수 · PlayerMotionData.rangedReleaseSeconds).
+function MotionTiming.releaseSeconds(classId)
+	return PlayerMotionData.rangedReleaseSeconds[classId]
+end
+
+-- 배율 적용 구간 길이. 반환 { ant, act, rec, total, hit(= ant) }. keepAnt = 전조를 줄이지 않는다(원거리 - 전조 끝 = 서버 발사 시각 상수).
+function MotionTiming.scale(clip, speed, heavy, keepAnt)
 	local S = PlayerMotionData.speedScale
 	local ant, act, rec = clip.ant, clip.act, clip.rec
 	if heavy then
@@ -47,13 +52,17 @@ function MotionTiming.scale(clip, speed, heavy)
 		over -= cut
 		return value - cut
 	end
-	ant = take(ant, math.min(ant, math.max(ant * S.antMinFraction, S.antMinSeconds)))
+	if not keepAnt then
+		ant = take(ant, math.min(ant, math.max(ant * S.antMinFraction, S.antMinSeconds)))
+	end
 	rec = take(rec, rec * S.recMinFraction)
 	act = take(act, math.min(act, math.max(act * S.actMinFraction, S.actMinSeconds)))
 	if over > 1e-9 then -- 최소 길이로도 못 맞추면: 회복 → 전조를 더(0.01까지) 줄이고, 그래도 넘으면 셋을 같은 비율로(타격 프레임은 여전히 전조 끝)
 		rec = take(rec, math.min(rec, 0.01))
-		ant = take(ant, math.min(ant, 0.01))
-		if over > 1e-9 then
+		if not keepAnt then
+			ant = take(ant, math.min(ant, 0.01))
+		end
+		if over > 1e-9 and not keepAnt then
 			local k = (ant + act + rec - over) / (ant + act + rec)
 			ant, act, rec = ant * k, act * k, rec * k
 		end
@@ -61,18 +70,21 @@ function MotionTiming.scale(clip, speed, heavy)
 	return { ant = ant, act = act, rec = rec, total = ant + act + rec, hit = ant }
 end
 
--- 애니메이션 타격 프레임(요청 순간 = 0부터 초).
+-- 애니메이션 타격 프레임(요청 순간 = 0부터 초). 원거리 = 발사 예약 시각(상수 - 모든 배율 · 타 · 공중).
 function MotionTiming.hitSeconds(classId, index, speed, heavy, air)
+	if RANGED[classId] then
+		return MotionTiming.releaseSeconds(classId)
+	end
 	local clip = MotionTiming.clip(classId, index, air)
 	return clip and MotionTiming.scale(clip, speed, heavy).hit or 0
 end
 
--- 서버 피해 시각(요청을 받은 순간 = 0부터 · 투사체 비행 시간 제외): 근접 = 즉시(0) · 원거리 = 발사 = 이 함수(서버 AttackServer가 부른다).
+-- 서버 피해 시각(요청을 받은 순간 = 0부터 · 투사체 비행 시간 제외): 근접 = 즉시(0) · 원거리 = 발사 상수(서버 AttackServer · BalanceSim이 부른다 - W1 전 값 그대로).
 function MotionTiming.serverSeconds(classId, index, speed, heavy, air)
 	if not RANGED[classId] then
 		return 0
 	end
-	return MotionTiming.hitSeconds(classId, index, speed, heavy, air)
+	return MotionTiming.releaseSeconds(classId)
 end
 
 -- 시각표(W1-4 검증 · 보고서): 무기 × 타(1 · 2 · 3 · 강 · 공중) × 배율 → { classId, label, speed, anim, server, diff }.

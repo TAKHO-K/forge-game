@@ -25,6 +25,10 @@ P.idlePeriodSeconds = 2.4 -- 전투 대기 숨쉬기 주기
 P.moveBlendSpeed = 4 -- 이동 속도(stud/s) 0 → 이 값 이상에서 이동 자세 가중치 1
 P.speedScale = { antMinFraction = 0.4, antMinSeconds = 0.015, recMinFraction = 0.3, actMinFraction = 0.5, actMinSeconds = 0.03 } -- MotionTiming.scale
 P.heavySlow = 0.7 -- 3타 강공격 = 따라 휘두름 · 회복을 이만큼 느리게(타격 프레임은 그대로 - 서버 즉시 판정)
+-- 원거리 서버 발사 시각(초 - 요청 뒤 · 투사체 비행 제외) = W1 전 서버 값 그대로(옛 AttackMotionData releaseT × 길이: 활 0.78 × 0.55 · 지팡이 0.55 × 0.35) ·
+--   공격 속도 · 3타 · 공중과 무관(옛 서버와 같다). 밸런스 불변: 이 값을 바꾸면 처치 시간이 바뀐다(W1 후속 실측 - 0.20초로 줄였더니 EconSim 상위 1% 25,300이
+--   1,968 → 1,759시간). 모션이 이 시각에 맞춘다: 활 · 지팡이는 발사를 예약(큐)해 이 시각에 놓는다 - 공격 간격이 더 짧으면 당긴 채 연사(WeaponVisual).
+P.rangedReleaseSeconds = { bow = 0.78 * 0.55, healer = 0.55 * 0.35 }
 
 -- 넘어짐 → 일어나기(W1 · BR1-4가 부른다): 장난감처럼 튕김 → 짧게 누움 → 무기별 일어나기 → 전투 자세 · 전체 ≤ 0.8초 ·
 --   일어나는 동안 서버 무적(getupInvulnSeconds - 서버가 발사 허가 · 강제 이동 기록을 본 뒤에만) · 입력 버퍼(공격 · 대시 = 끝나는 순간 나간다).
@@ -124,13 +128,13 @@ W.bow = {
 	move = { Waist = { -5, -15, 0 }, Neck = { 0, 15, 0 }, LeftShoulder = { 15, 0, -10 }, LeftElbow = { 25, 0, 0 }, LeftWrist = { -10, 0, 0 } },
 	dash = { Waist = { -20, -10, 0 }, Neck = { 15, 10, 0 }, LeftShoulder = { -15, 0, -20 }, LeftElbow = { 40, 0, 0 }, LeftWrist = { -20, 0, 0 } },
 	getupRise = { Root = { 20, 0, 0, 0, -1.3, 0 }, Waist = { -20, -20, 0 }, LeftShoulder = { 30, 0, -10 }, LeftElbow = { 30, 0, 0 }, RightHip = { 70, 0, 0 }, RightKnee = { -90, 0, 0 }, LeftHip = { 20, 0, 0 }, LeftKnee = { -50, 0, 0 } },
-	-- 원거리 공격: 전조 = 들어 올리며 당김(draw 0 → 1) · 타격 프레임 = 놓음(서버 발사 시각) · 동작 = 시위 튕김 · 회복 = 조준 자세 유지 → 대기
+	-- 원거리 공격: 전조 = 들어 올리며 당김(draw 0 → 1 · 길이 = 서버 발사 시각 rangedReleaseSeconds) · 타격 프레임 = 놓음 · 동작 = 시위 튕김 · 회복 = 조준 유지 → 대기. 연사 = 큐(WeaponVisual)
 	attacks = {
-		{ ant = 0.2, act = 0.05, rec = 0.08, cocked = BOW_STANCE, contact = BOW_AIM, through = BOW_AIM, settle = BOW_AIM, draw = { 0, 1, 0, 0 } },
-		{ ant = 0.2, act = 0.05, rec = 0.08, cocked = BOW_AIM, contact = BOW_AIM, through = BOW_AIM, settle = BOW_AIM, draw = { 0, 1, 0, 0 } },
-		{ ant = 0.2, act = 0.05, rec = 0.08, cocked = BOW_AIM, contact = BOW_AIM, through = BOW_AIM, settle = BOW_STANCE, draw = { 0, 1, 0, 0 } },
+		{ ant = 0.429, act = 0.05, rec = 0.08, cocked = BOW_STANCE, contact = BOW_AIM, through = BOW_AIM, settle = BOW_AIM, draw = { 0, 1, 0, 0 } },
+		{ ant = 0.429, act = 0.05, rec = 0.08, cocked = BOW_AIM, contact = BOW_AIM, through = BOW_AIM, settle = BOW_AIM, draw = { 0, 1, 0, 0 } },
+		{ ant = 0.429, act = 0.05, rec = 0.08, cocked = BOW_AIM, contact = BOW_AIM, through = BOW_AIM, settle = BOW_STANCE, draw = { 0, 1, 0, 0 } },
 	},
-	air = { ant = 0.18, act = 0.05, rec = 0.1, cocked = BOW_AIM, -- 프레야식: 정지(AirHover) 동안 아래로 겨눔
+	air = { ant = 0.429, act = 0.05, rec = 0.1, cocked = BOW_AIM, -- 프레야식: 정지(AirHover) 동안 아래로 겨눔
 		contact = { Waist = { -25, -55, 0 }, Neck = { 15, 50, 0 }, LeftShoulder = { 50, 0, -60 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { 0, 0, 0 } },
 		through = { Waist = { -25, -55, 0 }, Neck = { 15, 50, 0 }, LeftShoulder = { 50, 0, -60 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { 0, 0, 0 } }, settle = BOW_STANCE, draw = { 0, 1, 0, 0 } },
 }
@@ -147,13 +151,13 @@ W.healer = {
 	dash = { Waist = { -20, 0, 0 }, Neck = { 15, 0, 0 }, RightShoulder = { 10, 0, 15 }, RightElbow = { 40, 0, 0 }, RightWrist = { -80, 0, 0 } },
 	getupRise = { Root = { 25, 0, 0, 0, -1.3, 0 }, Waist = { -25, 0, 0 }, RightShoulder = { 40, 0, 10 }, RightElbow = { 40, 0, 0 }, RightWrist = { -110, 0, 0 }, RightHip = { 70, 0, 0 }, RightKnee = { -90, 0, 0 }, LeftHip = { 10, 0, 0 }, LeftKnee = { -40, 0, 0 } }, -- 지팡이를 짚고(θ −30)
 	attacks = {
-		{ ant = 0.12, act = 0.04, rec = 0.064, cocked = ST_STANCE, contact = ST_THRUST, through = ST_THRUST, settle = ST_RAISE },
-		{ ant = 0.12, act = 0.04, rec = 0.064, cocked = ST_RAISE, contact = ST_THRUST, through = ST_THRUST, settle = ST_RAISE },
-		{ ant = 0.12, act = 0.04, rec = 0.064, cocked = ST_RAISE, contact = ST_THRUST, through = ST_THRUST, settle = ST_STANCE },
+		{ ant = 0.1925, act = 0.04, rec = 0.064, cocked = ST_STANCE, contact = ST_THRUST, through = ST_THRUST, settle = ST_RAISE },
+		{ ant = 0.1925, act = 0.04, rec = 0.064, cocked = ST_RAISE, contact = ST_THRUST, through = ST_THRUST, settle = ST_RAISE },
+		{ ant = 0.1925, act = 0.04, rec = 0.064, cocked = ST_RAISE, contact = ST_THRUST, through = ST_THRUST, settle = ST_STANCE },
 	},
 	-- 치유(스킬 모션 = K - 자세 자리만): 위로 높이 들기(θ 90)
 	heal = { Waist = { 12, 0, 0 }, Neck = { -20, 0, 0 }, RightShoulder = { 175, 0, 5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -95, 0, 0 } },
-	air = { ant = 0.12, act = 0.04, rec = 0.1, cocked = ST_RAISE, -- 공중 영창 후 아래로(θ −40)
+	air = { ant = 0.1925, act = 0.04, rec = 0.1, cocked = ST_RAISE, -- 공중 영창 후 아래로(θ −40)
 		contact = { Waist = { -30, 0, 0 }, Neck = { 20, 0, 0 }, RightShoulder = { 55, 0, 0 }, RightElbow = { 5, 0, 0 }, RightWrist = { -100, 0, 0 } },
 		through = { Waist = { -30, 0, 0 }, Neck = { 20, 0, 0 }, RightShoulder = { 55, 0, 0 }, RightElbow = { 5, 0, 0 }, RightWrist = { -100, 0, 0 } }, settle = ST_STANCE },
 }

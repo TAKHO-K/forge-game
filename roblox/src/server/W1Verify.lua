@@ -73,6 +73,9 @@ function V.runPure()
 			end
 		end
 		r.note(table.concat(lines, " · "))
+		-- W1 후속: 원거리 서버 발사 시각 = W1 전 값(활 0.78 × 0.55 · 지팡이 0.55 × 0.35) - 밸런스 불변(EconSim 대조)
+		r.check(("원거리 서버 발사 시각 = W1 전 값: 활 %.4f(0.4290) · 지팡이 %.4f(0.1925)"):format(MotionTiming.serverSeconds("bow", 1, 2.5, true, true), MotionTiming.serverSeconds("healer", 2, 1, false, false)),
+			math.abs(MotionTiming.serverSeconds("bow", 1, 2.5, true, true) - 0.429) < 1e-9 and math.abs(MotionTiming.serverSeconds("healer", 2, 1, false, false) - 0.1925) < 1e-9)
 		r.check(("무기 5 × 타 5 × 배율 2 = %d칸 · 최대 차이 %.3f초(%s %s ×%.1f) ≤ 0.05"):format(#rows, worst, worstRow and worstRow.classId or "-", worstRow and worstRow.label or "-", worstRow and worstRow.speed or 0),
 			#rows == 50 and worst <= 0.05 + 1e-9)
 		local rangedSame = true
@@ -90,16 +93,18 @@ function V.runPure()
 		for classId, w in pairs(PlayerMotionData.weapons) do
 			local clips = table.clone(w.attacks)
 			table.insert(clips, w.air)
+			local ranged = MotionTiming.isRanged(classId)
 			for i, clip in ipairs(clips) do
 				for _, speed in ipairs({ 1.5, 2, 2.5 }) do
-					local t = MotionTiming.scale(clip, speed, false)
+					local t = MotionTiming.scale(clip, speed, false, ranged)
 					local antMin = math.min(clip.ant, math.max(clip.ant * S.antMinFraction, S.antMinSeconds))
 					local recCut = t.rec < clip.rec - 1e-9
 					local actCut = t.act < clip.act - 1e-9
-					local ok = math.abs(t.total - (clip.ant + clip.act + clip.rec) / speed) < 1e-6
+					local ok = (ranged and math.abs(t.ant - MotionTiming.releaseSeconds(classId)) < 1e-9) -- 원거리: 전조 = 서버 발사 상수(안 줄인다 - 연사 = 큐)
+						or (math.abs(t.total - (clip.ant + clip.act + clip.rec) / speed) < 1e-6
 						and (not recCut or t.ant <= antMin + 1e-9)
 						and (not actCut or t.rec <= clip.rec * S.recMinFraction + 1e-9)
-						and t.act >= math.min(clip.act, S.actMinSeconds) - 1e-9
+						and t.act >= math.min(clip.act, S.actMinSeconds) - 1e-9)
 					if not ok then
 						table.insert(bad, ("%s#%d ×%.1f"):format(classId, i, speed))
 					end
@@ -128,7 +133,13 @@ function V.runPure()
 				table.insert(bad, classId .. " 3타 아님")
 			end
 			local class = ClassData.classes[classId]
-			if class then
+			if MotionTiming.isRanged(classId) then
+				local rel = MotionTiming.releaseSeconds(classId)
+				table.insert(lens, ("%s 발사 %.4f(W1 전 서버 값)"):format(classId, rel))
+				if math.abs(w.attacks[1].ant - rel) > 1e-9 then
+					table.insert(bad, classId .. " 전조 ≠ 서버 발사 시각")
+				end
+			elseif class then
 				local cd = PlayerCombat.getAttackCooldown(classId, 0, 1)
 				local total = w.attacks[1].ant + w.attacks[1].act + w.attacks[1].rec
 				table.insert(lens, ("%s %.3f/%.3f"):format(classId, total, cd))

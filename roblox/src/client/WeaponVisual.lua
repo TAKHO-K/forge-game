@@ -364,6 +364,33 @@ local function sampleAttack(clip, tm, tau)
 	end
 end
 
+-- 원거리(활 · 지팡이) 공격 = 발사 예약 큐: 요청마다 "요청 + 서버 발사 시각(상수)"에 놓는다. 첫 발 = 들어 올리며 당김 · 이어지는 발 = 조준을 유지한 채
+-- 놓자마자(시위 튕김 act) 다음 예약 시각까지 다시 당김(연사) · 큐가 비면 회복 → 끝. 반환: pose(nil = 끝) · 당김 · 동작 구간인가.
+local function rangedPose(a, now)
+	local c, h, s = poseOf(a.clip.cocked), poseOf(a.clip.contact), poseOf(a.clip.settle)
+	local nextRel = a.queue[1]
+	if nextRel and now >= nextRel then
+		table.remove(a.queue, 1) -- 놓음 = 타격 프레임(서버 발사 시각과 같다)
+		a.lastRelease = now
+		nextRel = a.queue[1]
+	end
+	local act = a.tm.act
+	if a.lastRelease and now - a.lastRelease < act then
+		return h, 0, true
+	end
+	if nextRel then
+		local from = a.lastRelease and (a.lastRelease + act) or a.start
+		local u = math.clamp((now - from) / math.max(nextRel - from, 1e-3), 0, 1)
+		return a.lastRelease and h or mix(c, h, EASE.inQuad(u)), EASE.outCubic(u), false
+	end
+	a.recovering = true
+	local r = (now - ((a.lastRelease or now) + act)) / math.max(a.tm.rec, 1e-3)
+	if r >= 1 then
+		return nil
+	end
+	return mix(h, s, EASE.inOutSine(math.max(r, 0))), 0, false
+end
+
 local function getupPose(st, w, tau)
 	local G = M.getup
 	local bounce, lie, rise, stance = poseOf(G.bounce), poseOf(G.lie), poseOf(w.getupRise), poseOf(w.stance)
@@ -404,6 +431,14 @@ local function targetPose(st, now, root)
 	end
 	-- 공격
 	local a = st.attack
+	if a and a.ranged then
+		local pose, draw, act = rangedPose(a, now)
+		if pose then
+			return pose, a.blendKey, a.blendDur, true, draw, act, true
+		end
+		st.attack = nil
+		a = nil
+	end
 	if a then
 		if a.freezeUntil and now < a.freezeUntil then
 			local pose, draw = sampleAttack(a.clip, a.tm, a.tm.ant)
@@ -616,7 +651,8 @@ local function placeWeapon(st, now, camPos)
 		if wcf then
 			placePiece(p, wcf)
 			if p.root then
-				local showArrow = f.inHand and (st.attack == nil or (now - st.attack.start) < st.attack.tm.ant)
+				local a = st.attack
+				local showArrow = f.inHand and not (a and a.ranged and ((a.lastRelease and now - a.lastRelease < a.tm.act) or a.recovering))
 				updateBow(weapon, p, wcf, f.inHand and f.draw or 0, showArrow)
 			end
 		end
@@ -659,12 +695,28 @@ local function startAttack(st, index, heavy, air)
 	if not clip then
 		return
 	end
-	local tm = MotionTiming.scale(clip, speedOf(st), heavy)
 	local now = os.clock()
 	st.lastAttackAt = now
 	if not st.drawn then -- 공격 = 즉시 전투 자세(꺼내기 생략 - 무기가 곧장 손으로)
 		st.drawn, st.drawStart = true, -math.huge
 	end
+	if MotionTiming.isRanged(st.classId) then -- 원거리 = 발사 예약 큐(서버 발사 시각 상수 - rangedPose)
+		local release = now + MotionTiming.releaseSeconds(st.classId)
+		local cur = st.attack
+		if cur and cur.ranged and not cur.recovering then
+			table.insert(cur.queue, release) -- 당긴 채 이어 쏜다
+			return
+		end
+		st.attack = { ranged = true, clip = clip, tm = MotionTiming.scale(clip, speedOf(st), heavy, true), start = now, queue = { release }, heavy = heavy, air = air, index = index,
+			blendKey = "atk" .. tostring(now), blendDur = M.blend.attackIn }
+		st.getupStart = nil
+		local airData = air and AttackMotionData[st.classId] and AttackMotionData[st.classId].air
+		if airData and airData.bodyPitchDeg and st.character then
+			require(script.Parent.AirMotion).play(st.character, "lean", MotionTiming.releaseSeconds(st.classId) + (airData.hoverSeconds or 0), airData.bodyPitchDeg)
+		end
+		return
+	end
+	local tm = MotionTiming.scale(clip, speedOf(st), heavy)
 	local prev = st.attack
 	if prev and prev.heavyScaled then
 		prev.heavyScaled(false)
@@ -738,11 +790,10 @@ end
 function WeaponVisual.getReleaseDelay()
 	local st = stateFor(player)
 	local a = st and st.attack
-	if not a then
+	if not a or not a.ranged or not a.queue[1] then
 		return 0
 	end
-	local frozen = a.freezeUntil and (os.clock() - a.frozeAt) or 0
-	return math.max(a.tm.ant - (os.clock() - a.start - frozen), 0)
+	return math.max(a.queue[1] - os.clock(), 0) -- 가장 먼저 예약된 발사(결과는 요청 순서대로 온다)
 end
 
 -- 대시 자세(나 = DashInput · 남 = 중계 "dash").
