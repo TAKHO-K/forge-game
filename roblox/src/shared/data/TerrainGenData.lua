@@ -18,7 +18,7 @@ local ZONE_PALETTE = {
 
 return {
 	-- 지형 버전(구역별 - 모양을 바꾸면 그 구역 숫자를 올리고 다시 굽는다). 서버 시작 때 Terrain Attribute TerrainVersion_<구역>과 다르면 경고만(런타임 생성 금지).
-	version = { hub = 1, tier1 = 1, tier2 = 1, tier3 = 1, tier4 = 1, tier5 = 1, tier6 = 1 },
+	version = { hub = 2, tier1 = 2, tier2 = 2, tier3 = 2, tier4 = 2, tier5 = 2, tier6 = 2 }, -- M1-4: 커브길 · 외곽 테마 경계 · Basalt 색(전 구역 다시 굽기)
 	seed = 20260926,
 	voxel = 4, -- 로블록스 Terrain 해상도(고정)
 	-- 평지 높이 = 바닥 윗면 + flatLevel(도로 · 캠프 · 관문 판이 지형 위에 얹힌다 - 굽기 실측으로 맞춘 값). bottomY = 지형 바닥(심연 복귀선 −24 위에서 끝낸다).
@@ -36,13 +36,34 @@ return {
 	-- 외곽 설산(보이는 경계 - 실제 차단은 서버 밀어내기 WorldMapData.edgeGuard): r start → full에서 오르고 높이 base ± vary(방위 잡음) · 봉우리 결 ridges. 3,200까지 이어져 끝이 안 보인다.
 	--   산맥 = 밑 둔덕(base - 안부 높이) + 봉우리 줄(peakEveryDeg마다 하나 · 반경 peakR ± · 높이 peakH ± · 폭 peakWidth ±) + 날카로운 능선 결(ridge). 벽처럼 윗면이 평평하지 않게.
 	edge = { start = 2560, full = 2900, outer = 3200, base = 90, vary = 30, lambdaDeg = 18, ridgeAmp = 70, ridgeLambda = 110, startVary = 170, startLambdaDeg = 9, -- base 150 → 90: 봉우리 사이가 평평한 흰 띠로 보였다(M1-3 스크린샷)
-		peakEveryDeg = 5, peakJitterDeg = 2, peakR = { 2720, 3080 }, peakH = { 170, 400 }, peakWidth = { 130, 260 }, backFill = 1e9 }, -- 끝 채움 끔(r 3,050 밖 채움이 봉우리 뒤로 평평한 흰 띠를 만들었다 - 산맥 둔덕 90 ~ 160이 끝까지 이어진다)
+		peakEveryDeg = 5, peakJitterDeg = 2, peakR = { 2930, 3140 }, peakH = { 170, 400 }, peakWidth = { 130, 260 }, backFill = 1e9 }, -- 끝 채움 끔(r 3,050 밖 채움이 봉우리 뒤로 평평한 흰 띠를 만들었다 - 산맥 둔덕 90 ~ 160이 끝까지 이어진다) -- M1-4: 봉우리 줄 = 능선 너머 배경(구역 테마 edgeStyles가 높이 · 폭 · 모양을 바꾼다)
+	-- ═══ M1-4 외곽 테마 경계(사용자: 설산 일색 탈피 · 오를 수 있게 · 능선 = 전망 지점 · 서버 밀어내기는 능선 너머에서만) ═══
+	--   공통: 능선 반경 crestR(± crestWobble 방위 잡음) · 발치 = 능선 − approach · 능선 위 평평한 폭 crestWidth · 그 너머 = 배경(backSlope로 오르고 봉우리 줄 · 밀어내기).
+	--   구역 경계(방위 ± blendDeg)는 두 테마를 섞는다(분지 · 봉인 입구가 그 자리에 있다). kind:
+	--   hills = 완만한 언덕(어디로든 걸어 오름) · cliff = 아래 완만 + 가파른 절벽 면(face 폭) · mesa = 계단식 대지 2단(벽 wall 폭 - 층 사이 step1) · icewall = 빙벽(wallH 높이 · 벽 뒤는 완만) · sea = 해안(coastR에서 바다로 · 수면 seaLevel · 바닥 bed).
+	--   오르는 길: trail = 발치 → 전망 지점(방위 from → to 도 · 폭 · 경사 ≤ 25) · lookout = 전망 지점(방위 도 · 평평한 판 반경) · 능선 둥지(NestData "crest").
+	--   배경 봉우리: back = { hMul(높이 배율) · wMul(폭 배율) · flat(윗면 깎기 - 메사) } · snowLine = 눈 선(없으면 눈 없음) · backSlope = 능선 너머 오르막.
+	edgeStyles = {
+		crestR = 2770, crestWobble = 22, crestLambdaDeg = 12, approach = 200, crestWidth = 44, blendDeg = 7, allowMargin = 8,
+		tier1 = { kind = "hills", crestH = 80, backSlope = 0.35, back = { hMul = 0.5, wMul = 1.4 }, lookout = { deg = 3, radius = 16 } }, -- 수호자 봉 · 둘째 봉우리 사이
+		tier2 = { kind = "cliff", crestH = 110, face = 22, backSlope = 0.6, back = { hMul = 0.85, wMul = 0.8 }, snowLine = 300,
+			trail = { from = -14, to = -4, width = 12 }, lookout = { deg = -4, radius = 16 } },
+		tier3 = { kind = "sea", coastR = 2650, coastWobble = 45, beach = 70, seaLevel = -0.8, bed = -18 },
+		tier4 = { kind = "mesa", crestH = 112, step1 = 60, step1R = 50, wall = 7, backSlope = 0.5, back = { hMul = 0.7, wMul = 1.3, flat = 0.55 },
+			trail = { from = 17, to = 6, width = 12 }, lookout = { deg = 6, radius = 16 }, -- 태양 모래산(−8.5°)을 피해
+			canyon = { lat = -100, fromR = 2470, toR = 2740, width = 30 } }, -- 막다른 협곡(메사 벽 사이 - 걸어 들어간다)
+		tier5 = { kind = "cliff", crestH = 120, face = 18, backSlope = 0.8, back = { hMul = 1.05, wMul = 0.5 }, snowLine = 330,
+			trail = { from = 5, to = 15, width = 12 }, lookout = { deg = 15, radius = 16 } },
+		tier6 = { kind = "icewall", crestH = 100, wallH = 72, wall = 5, wallBack = 90, backSlope = 0.6, back = { hMul = 1.0, wMul = 1.0 }, snowLine = 20,
+			trail = { from = 6, to = 16, width = 12 }, lookout = { deg = 16, radius = 16 },
+			crevasse = { fromDeg = 0, toDeg = 10, width = 6, depth = 11 } }, -- 빙하 틈(능선 위 - 폭 6 · 깊이 11: 빠져도 공중 점프 1로 나온다)
+	},
 	-- 눈 · 바위 선: 높이(바닥 기준) snowLine ± snowVary 위 = 눈 · 경사 steepDeg 넘으면 바위(구역 cliff 재질).
 	snowLine = 170, snowVary = 25, snowMaterial = "Snow", steepDeg = 40, rockMaterial = "Rock",
 	-- 바깥 고리 확장 자리(WorldMapData.reserved.outerRing - 꽃잎 사이) = 설산 속 분지 + 허브 쪽에서 들어가는 골짜기(봉인 입구 문 앞까지 걸어서).
 	-- 서버 경계 백업(사용자 보강 ②): 발이 반경 allowR(설산 발치) 밖에 서 있으면 안쪽으로 pushStuds 밀어낸다. 봉인 입구 분지 · 골짜기와 바다 만(헤엄) 안은 basinAllowR까지.
 	--   밀어낼 자리 = 안쪽으로 searchStep씩 걸어 들어가며 물 아닌 · 평지 + landMaxAbove 이하 땅. 바다 만 둘레(반경 + 둑) 안의 마른 기슭도 basinAllowR까지(리뷰).
-	edgeGuard = { allowR = 2640, basinAllowR = 2945, pushStuds = 8, searchStep = 20, landMaxAbove = 30 },
+	edgeGuard = { allowR = 2640, basinAllowR = 2945, pushStuds = 8, searchStep = 20, landMaxAbove = 30 }, -- M1-4: 땅 허용 반경은 edgeStyles 능선(allowR = 옛 값 · 검사 참고용)
 	reservedBasin = { centerR = 2760, radius = 170, blend = 90, corridorFromR = 2200, corridorWidth = 50, corridorBlend = 90 },
 	-- 평탄 마스크 공통(도로 · 캠프 · 사냥 지대 · 관문 · 결계 문 · 옛 지형 · 봉인 입구): 반경 + margin 안 = 평지 · 그 밖 blend에 걸쳐 원래 지형으로.
 	flatten = { roadMargin = 10, roadBlend = 70, campRadius = 70, groundRadius = 150, gateRadius = 90, raidRadius = 40, featureMargin = 14, blend = 60, sealedRadius = 70 },

@@ -81,7 +81,9 @@ function WorldCheck.run()
 	for _, n in ipairs(nests) do
 		local k = n.zone
 		per[k] = per[k] or { A = 0, B = 0, Cf = 0, Ch = 0, Cv = 0 }
-		if n.track == "A" then
+		if n.track == "A" and n.crest then
+			per[k].crest = (per[k].crest or 0) + 1 -- M1-4 능선 전망 둥지(외곽 테마 - T3 바다 제외)
+		elseif n.track == "A" then
 			per[k].A += 1
 		elseif n.track == "B" then
 			per[k].B += 1
@@ -96,11 +98,12 @@ function WorldCheck.run()
 	local mixBad = {}
 	for _, z in ipairs(WorldMapData.zones) do
 		local c = per[z.key] or {}
-		if c.A ~= 5 or c.B ~= 3 or c.Cf ~= 1 or c.Ch ~= NestData.rotateCandidates then
-			table.insert(mixBad, ("%s A%d B%d C고정%d C순환%d"):format(z.key, c.A or 0, c.B or 0, c.Cf or 0, c.Ch or 0))
+		local wantCrest = (TerrainGenData.edgeStyles[z.key] and TerrainGenData.edgeStyles[z.key].kind ~= "sea") and 1 or 0
+		if c.A ~= 5 or c.B ~= 3 or c.Cf ~= 1 or c.Ch ~= NestData.rotateCandidates or (c.crest or 0) ~= wantCrest then
+			table.insert(mixBad, ("%s A%d(+능선 %d) B%d C고정%d C순환%d"):format(z.key, c.A or 0, c.crest or 0, c.B or 0, c.Cf or 0, c.Ch or 0))
 		end
 	end
-	add(("트랙 섞기: 구역마다 A 5 · B 3 · C 2(고정 1 + 순환 후보 %d) · 허브 C-마을 %d"):format(NestData.rotateCandidates, per.hub and per.hub.Cv or 0), #mixBad == 0 and per.hub and per.hub.Cv == 4, table.concat(mixBad, " / "))
+	add(("트랙 섞기: 구역마다 A 5 + 능선 1(바다 T3 제외 - M1-4) · B 3 · C 2(고정 1 + 순환 후보 %d) · 허브 C-마을 %d"):format(NestData.rotateCandidates, per.hub and per.hub.Cv or 0), #mixBad == 0 and per.hub and per.hub.Cv == 4, table.concat(mixBad, " / "))
 	-- 2 도달: 도약마다 이동표(공중 점프 2 + 대시 한도 안 · 80% 여유)
 	local bad, hardest = {}, {}
 	for _, n in ipairs(nests) do

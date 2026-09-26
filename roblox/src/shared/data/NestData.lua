@@ -106,6 +106,14 @@ local NESTS = {
 	{ id = "t6_c_h4", zone = "tier6", track = "C", sub = "hidden", r = 1200, lat = -600, face = 30, kit = "alcove", cover = "ice", hint = { "stone" } },
 	{ id = "t6_c_h5", zone = "tier6", track = "C", sub = "hidden", r = 1450, lat = 700, face = -60, kit = "alcove", cover = "vine", hint = { "fireflies" } },
 
+	-- ═══ M1-4 능선 전망 둥지(외곽 테마 경계 - 산길 · 사다리로 능선까지 걸어 오른 곳 · 트랙 A 높은 곳) ═══ 자리 = TerrainGenData.edgeStyles[구역].lookout(방위 도 · 능선 반경 + 능선 폭/2)의 구역 좌표 · level = 능선 높이
+	--   T3은 바다(능선 없음)라 없다. 개인 쿨다운 · 줍기 위치 검증은 다른 둥지와 같다.
+	{ id = "t1_a_crest", zone = "tier1", track = "A", high = true, crest = true, r = 2788, lat = 146, kit = "ledge", level = 80 },
+	{ id = "t2_a_crest", zone = "tier2", track = "A", high = true, crest = true, r = 2785, lat = -195, kit = "ledge", level = 110 },
+	{ id = "t4_a_crest", zone = "tier4", track = "A", high = true, crest = true, r = 2777, lat = 292, kit = "ledge", level = 112 },
+	{ id = "t5_a_crest", zone = "tier5", track = "A", high = true, crest = true, r = 2697, lat = 723, kit = "ledge", level = 120 },
+	{ id = "t6_a_crest", zone = "tier6", track = "A", high = true, crest = true, r = 2684, lat = 770, kit = "ledge", level = 100 },
+
 	-- ═══ 허브 C-마을(안전 · 가기 쉬움 - 한 단계 낮게) ═══ eggZone = 어느 구역 알이 나오는가(허브는 구역이 없다)
 	{ id = "hub_c_chimney", zone = "hub", track = "C", sub = "village", kit = "chimney", facility = "forge", eggZone = "tier1" },
 	{ id = "hub_c_attic", zone = "hub", track = "C", sub = "village", kit = "attic", facility = "market", eggZone = "tier2" },

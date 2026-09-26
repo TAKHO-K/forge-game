@@ -249,6 +249,56 @@ local function buildMasks()
 			end
 		end
 	end
+	-- M1-4 외곽 오르는 길 · 전망 판 · 협곡 · 빙하 틈(구역 테마 edgeStyles)
+	local ES = G.edgeStyles
+	for _, zone in ipairs(ZONES) do
+		local st = ES[zone.key]
+		if st and st.kind ~= "sea" then
+			local function at(deg, R)
+				local a = math.rad(zone.angleDeg + deg)
+				return math.cos(a) * R, math.sin(a) * R
+			end
+			if st.lookout then
+				local lx, lz = at(st.lookout.deg, ES.crestR + ES.crestWidth / 2)
+				addPad(shape, lx, lz, st.lookout.radius, 16, FLAT + st.crestH, "set", "lookout")
+			end
+			if st.trail then
+				local T = st.trail
+				local pts = {}
+				local n = 10
+				local x0, z0 = at(T.from, TerrainShape.crestR(zone.angleDeg + T.from) - ES.approach - 20)
+				local y0 = TerrainShape.naturalAt(x0, z0)
+				for i = 0, n do
+					local t = i / n
+					local deg = T.from + (T.to - T.from) * t
+					local cr = TerrainShape.crestR(zone.angleDeg + deg)
+					local R = (cr - ES.approach - 20) + (ES.approach + 20 + ES.crestWidth / 2) * t
+					if i == n then
+						R = ES.crestR + ES.crestWidth / 2 -- 끝 = 전망 판
+					end
+					local x, z = at(deg, R)
+					table.insert(pts, { x, z, y0 + (FLAT + st.crestH - y0) * t })
+				end
+				addPath(shape, pts, T.width / 2, 10, "set", "edgeTrail")
+			end
+			if st.canyon then
+				local C = st.canyon
+				local ax, az = w2(zone, C.fromR, C.lat)
+				local bx, bz = w2(zone, C.toR, C.lat)
+				addCarve(carves, { pts = { { ax, az, FLAT }, { bx, bz, FLAT } }, inner = C.width / 2, slope = 4, depth = 0, floor = true, reach = 40, tag = "canyon" })
+			end
+			if st.crevasse then
+				local C = st.crevasse
+				local pts = {}
+				for deg = C.fromDeg, C.toDeg, 2 do
+					local cr = TerrainShape.crestR(zone.angleDeg + deg)
+					local x, z = at(deg, cr + ES.crestWidth / 2)
+					table.insert(pts, { x, z, FLAT + st.crestH - C.depth })
+				end
+				addCarve(carves, { pts = pts, inner = C.width / 2, slope = 5, depth = 0, floor = true, reach = 20, tag = "crevasse" })
+			end
+		end
+	end
 	-- 봉인 입구 · 바깥 고리 분지(꽃잎 사이 설산 속 - 허브 쪽 골짜기로 걸어 들어간다)
 	local RB = G.reservedBasin
 	for _, a in ipairs(WorldMapData.reserved.outerRing.angles) do
@@ -537,6 +587,142 @@ function TerrainShape.edgePeaksNear(angDeg)
 end
 TerrainShape.edgePeaks = EDGE_PEAKS
 
+-- ─────────────────────────── M1-4 외곽 테마 경계 ───────────────────────────
+local ES = G.edgeStyles
+function TerrainShape.crestR(angDeg)
+	return ES.crestR + ES.crestWobble * noise1(angDeg / ES.crestLambdaDeg, G.seed + 61)
+end
+function TerrainShape.coastR(angDeg)
+	local st = ES.tier3
+	return st.coastR + st.coastWobble * noise1(angDeg / 9, G.seed + 67)
+end
+-- 능선 앞 오르막(능선 반경 cr까지 0 → crestH) · 능선 위 평평 · 너머 오르막. 반환 = 평지 위 높이
+local function beltRise(st, R, cr)
+	local foot = cr - ES.approach
+	local Hc = st.crestH
+	if R <= foot then
+		return 0
+	end
+	if R > cr then
+		if R <= cr + ES.crestWidth then
+			return Hc
+		end
+		return Hc + (R - cr - ES.crestWidth) * st.backSlope
+	end
+	if st.kind == "hills" then
+		return Hc * smoothstep(foot, cr, R)
+	elseif st.kind == "cliff" then
+		local faceR = cr - st.face
+		return 0.25 * Hc * smoothstep(foot, faceR, R) + 0.75 * Hc * smoothstep(faceR, cr, R)
+	elseif st.kind == "mesa" then
+		local s1 = foot + st.step1R
+		return st.step1 * smoothstep(s1, s1 + st.wall, R) + (Hc - st.step1) * smoothstep(cr - st.wall, cr, R)
+	elseif st.kind == "icewall" then
+		local w = cr - st.wallBack
+		local low = 0.12 * Hc
+		return low * smoothstep(foot, w, R) + (st.wallH - low) * smoothstep(w, w + st.wall, R) + (Hc - st.wallH) * smoothstep(w + st.wall, cr, R)
+	end
+	return 0
+end
+TerrainShape.beltRise = beltRise
+-- 한 테마를 적용한 높이(자연 높이 h 위에): 땅 = max(h, 능선 + 배경 봉우리) · 바다 = 해안 너머로 바닥까지 낮춘다
+local function edgeApply(key, h, x, z, R, ang)
+	local st = ES[key]
+	if not st then
+		return h
+	end
+	local s = G.seed
+	if st.kind == "sea" then
+		local cR = TerrainShape.coastR(ang)
+		if R <= cR - 40 then
+			return h
+		end
+		local k = smoothstep(cR - 40, cR + st.beach, R)
+		return h + ((FLOOR + st.bed) - h) * k
+	end
+	local cr = TerrainShape.crestR(ang)
+	local rise = beltRise(st, R, cr)
+	-- 비탈 잡음(능선 위는 평평하게 두고 오르막에만 - 각진 모양 대신 완만한 굴곡)
+	local foot = cr - ES.approach
+	local slopeK = smoothstep(foot, foot + 40, R) * (1 - smoothstep(cr - 30, cr, R))
+	local v = FLAT + rise + fbm(x / 90, z / 90, s + 71, 2) * 5 * slopeK
+	-- 배경 봉우리(능선 너머)
+	local B = st.back
+	if B and R > cr + ES.crestWidth * 0.5 then
+		for _, pk in ipairs(TerrainShape.edgePeaksNear(ang)) do
+			local w = pk.w * B.wMul
+			local dx, dz = x - pk.x, z - pk.z
+			local k = math.exp(-2 * (dx * dx + dz * dz) / (w * w))
+			if k > 0.01 then
+				if B.flat then
+					k = math.min(1, k / B.flat) -- 메사: 윗면을 깎아 평평한 대지
+				end
+				local pv = FLAT + st.crestH * 0.6 + pk.h * B.hMul * k * (0.9 + 0.2 * fbm(x / 110, z / 110, s + 13, 2))
+				if pv > v then
+					v = pv
+				end
+			end
+		end
+	end
+	return math.max(h, v)
+end
+-- 이 방위의 테마 둘(자기 · 이웃)과 섞는 비율
+local function edgeKeys(ang)
+	local zone = TerrainShape.zoneAt(math.cos(math.rad(ang)), math.sin(math.rad(ang)))
+	local d = ((ang - zone.angleDeg + 180) % 360) - 180 -- −30 ~ 30
+	local nbAng = zone.angleDeg + (d >= 0 and 60 or -60)
+	local nb = TerrainShape.zoneAt(math.cos(math.rad(nbAng)), math.sin(math.rad(nbAng)))
+	local k = 0.5 + 0.5 * smoothstep(0, ES.blendDeg, 30 - math.abs(d))
+	return zone.key, nb.key, k
+end
+TerrainShape.edgeKeys = edgeKeys
+function TerrainShape.edgeBlend(h, x, z, R)
+	local ang = math.deg(math.atan2(z, x))
+	local self, nb, k = edgeKeys(ang)
+	local hs = edgeApply(self, h, x, z, R, ang)
+	if k >= 0.999 then
+		return hs
+	end
+	local hn = edgeApply(nb, h, x, z, R, ang)
+	return hn + (hs - hn) * k
+end
+-- 바다 수면(T3 해안 너머 · 경계 섞임 포함): 수면 Y 또는 nil
+function TerrainShape.seaLevelAt(x, z)
+	local R = math.sqrt(x * x + z * z)
+	local st = ES.tier3
+	if R < st.coastR - st.coastWobble - 60 then
+		return nil
+	end
+	local ang = math.deg(math.atan2(z, x))
+	local self, nb, k = edgeKeys(ang)
+	local w = (self == "tier3" and k or 0) + (nb == "tier3" and (1 - k) or 0)
+	if w >= 0.35 and R > TerrainShape.coastR(ang) - 40 then
+		return FLOOR + st.seaLevel
+	end
+	return nil
+end
+-- 밀어내기 반경(땅): 능선 + 능선 폭 + 여유(두 테마 중 큰 쪽) · 바다 테마 = 해안 + 30(물 위는 edgeAllowR가 따로 넓힌다)
+local function allowFor(key, ang)
+	local st = ES[key]
+	if st and st.kind == "sea" then
+		return TerrainShape.coastR(ang) + 30
+	end
+	return math.max(TerrainShape.crestR(ang), ES.crestR) + ES.crestWidth + ES.allowMargin
+end
+-- 밀어내기 도착점으로 받는 높이 상한(평지 위): 능선 높이 + 12(두 테마 중 큰 쪽) - 능선 너머에서 밀리면 능선 위로(발치까지 끌어내리지 않는다)
+function TerrainShape.edgeLandMaxAt(angDeg)
+	local self, nb = edgeKeys(angDeg)
+	local a, b = ES[self], ES[nb]
+	return math.max(a and a.crestH or 0, b and b.crestH or 0) + 12
+end
+function TerrainShape.edgeAllowRAt(angDeg)
+	local self, nb, k = edgeKeys(angDeg)
+	if k >= 0.999 then
+		return allowFor(self, angDeg)
+	end
+	return math.max(allowFor(self, angDeg), allowFor(nb, angDeg))
+end
+
 function TerrainShape.naturalAt(x, z)
 	local R = math.sqrt(x * x + z * z)
 	local zone = TerrainShape.zoneAt(x, z)
@@ -567,31 +753,9 @@ function TerrainShape.naturalAt(x, z)
 			end
 		end
 	end
-	-- 외곽 설산(산맥: 밑 둔덕 + 봉우리 줄 + 능선 결)
-	local E = G.edge
-	local ang = math.deg(math.atan2(z, x))
-	local start = E.start - E.startVary * math.max(0, noise1(ang / E.startLambdaDeg, s + 51))
-	if R > start - 200 then
-		local e = smoothstep(start, E.full, R) ^ 1.4
-		local eh = E.base + E.vary * noise1(ang / E.lambdaDeg, s + 5)
-		local ridge = (1 - math.abs(fbm(x / E.ridgeLambda, z / E.ridgeLambda, s + 9, 3))) ^ 2 * E.ridgeAmp
-		local v = FLAT + e * (eh + ridge)
-		for _, pk in ipairs(TerrainShape.edgePeaksNear(ang)) do
-			local dx, dz = x - pk.x, z - pk.z
-			local k = math.exp(-2 * (dx * dx + dz * dz) / (pk.w * pk.w))
-			if k > 0.01 then
-				local pv = FLAT + pk.h * k * (0.85 + 0.3 * (1 - math.abs(fbm(x / 70, z / 70, s + 13, 2))))
-				if pv > v then
-					v = pv
-				end
-			end
-		end
-		if R > E.backFill then -- 세계 끝 뒤(투명 벽 밖)는 채워 끝이 안 보이게 - 평평한 띠가 되지 않게 능선 결 · 잡음
-			v = math.max(v, FLAT + eh * 0.5 + ridge * 2.2 + math.abs(fbm(x / 120, z / 120, s + 17, 3)) * 120) -- 봉우리보다 낮게 · 들쭉날쭉(평평한 띠가 윗선으로 보였다)
-		end
-		if v > h then
-			h = v
-		end
+	-- M1-4 외곽 테마 경계(구역마다 - 경계 방위는 두 테마를 섞는다): TerrainShape.edgeApply
+	if R > G.edgeStyles.crestR - G.edgeStyles.approach - G.edgeStyles.crestWobble - 260 then
+		h = TerrainShape.edgeBlend(h, x, z, R)
 	end
 	-- 봉우리(가우스 + 결)
 	for _, p in ipairs(PEAKS) do
@@ -641,6 +805,11 @@ function TerrainShape.column(x, z, skipStruct)
 		end
 	end
 	h = math.max(h, FLOOR + G.minBedY)
+	-- M1-4 바다(T3 해안 너머 - 수면 위로 솟은 곶 · 바위는 물 없음)
+	local sea = TerrainShape.seaLevelAt(x, z)
+	if sea and sea > h then
+		water = math.max(water or -math.huge, sea)
+	end
 	-- M1-4 길 재질 띠(반폭 안 · 물 · 깎인 곳 아님)
 	local road = nil
 	if not water and not carved then
@@ -753,7 +922,8 @@ function TerrainShape.material(x, z, col, slopeDeg)
 	if col.road then
 		return col.road -- M1-4 길(구역 흙 · 자갈 띠 - RoadData)
 	end
-	if above > G.snowLine + G.snowVary * fbm(x / 90, z / 90, G.seed + 41, 2) then
+	local snowLine = (G.edgeStyles[col.zone.key] and G.edgeStyles[col.zone.key].snowLine) or math.huge -- M1-4: 눈 = 구역 테마(T6 · 높은 T2 · T5 봉우리만)
+	if above > snowLine + G.snowVary * fbm(x / 90, z / 90, G.seed + 41, 2) then
 		return slopeDeg > G.steepDeg + 15 and G.rockMaterial or G.snowMaterial
 	end
 	if slopeDeg > G.steepDeg then
@@ -773,8 +943,9 @@ end
 function TerrainShape.edgeAllowR(x, z)
 	local EG = G.edgeGuard
 	local R = math.sqrt(x * x + z * z)
-	if R <= EG.allowR then
-		return EG.allowR
+	local allow = TerrainShape.edgeAllowRAt(math.deg(math.atan2(z, x))) -- M1-4: 능선 너머에서만(구역 테마)
+	if R <= allow then
+		return allow
 	end
 	local RB = G.reservedBasin
 	for _, a in ipairs(WorldMapData.reserved.outerRing.angles) do
@@ -782,12 +953,12 @@ function TerrainShape.edgeAllowR(x, z)
 		local along = x * d.X + z * d.Z
 		local side = math.abs(-x * d.Z + z * d.X)
 		if along > RB.corridorFromR - 50 and side <= math.max(RB.corridorWidth / 2 + 10, (along > RB.centerR - RB.radius) and RB.radius or 0) then
-			return EG.basinAllowR
+			return math.max(allow, EG.basinAllowR)
 		end
 	end
 	local c = TerrainShape.column(x, z)
 	if c.water then
-		return EG.basinAllowR
+		return math.max(allow, EG.basinAllowR)
 	end
 	-- 바다 만 둘레(반경 + 둑) 안의 마른 기슭도(리뷰: 만 옆 모래사장에서 밀려났다)
 	for _, zone in ipairs(ZONES) do
@@ -795,11 +966,11 @@ function TerrainShape.edgeAllowR(x, z)
 		if bay then
 			local bx, bz = w2(zone, bay.r, bay.lat)
 			if (x - bx) ^ 2 + (z - bz) ^ 2 <= (bay.radius + bay.shoreBlend) ^ 2 then
-				return EG.basinAllowR
+				return math.max(allow, EG.basinAllowR)
 			end
 		end
 	end
-	return EG.allowR
+	return allow
 end
 
 return TerrainShape

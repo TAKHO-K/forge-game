@@ -64,5 +64,7 @@ return {
 		{ zone = "tier3", feature = 5, side = 0 },
 		{ zone = "tier6", feature = 1, side = 0 },
 	},
-	ladder = { standoff = 1.2, landing = 7 }, -- 사다리 = 절벽 면에서 standoff 앞 · 꼭대기 발판 길이(절벽 가장자리 너머까지)
+	ladder = { standoff = 1.2, landing = 7 },
+	-- M1-4 외곽 벽 사다리(구역 테마 경계 - 메사 계단 벽 · 빙벽): 방위 deg에서 발치 → 능선으로 지형을 훑어 벽(10 안에 20 넘게 오름)마다 하나씩
+	edgeLadders = { { zone = "tier4", deg = 12 }, { zone = "tier6", deg = 22 } }, -- 사다리 = 절벽 면에서 standoff 앞 · 꼭대기 발판 길이(절벽 가장자리 너머까지)
 }

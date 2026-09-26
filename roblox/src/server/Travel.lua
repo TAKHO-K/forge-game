@@ -126,10 +126,13 @@ function Travel.edgePushPoint(feet)
 		return nil
 	end
 	local dir = flat(feet).Unit
-	for r = math.min(allow, EG.allowR) - EG.pushStuds, 0, -EG.searchStep do
+	-- M1-4: 허용 반경 = 능선 너머(구역 테마) · 도착 = 안쪽으로 걸으며 물 아닌 · 능선 높이 + 12 이하 땅(능선 위 전망 지점에 머문다)
+	local landMax = math.max(EG.landMaxAbove, TerrainShape.edgeLandMaxAt(math.deg(math.atan2(feet.Z, feet.X))))
+	local step = math.min(EG.searchStep, 10)
+	for r = TerrainShape.edgeAllowRAt(math.deg(math.atan2(feet.Z, feet.X))) - EG.pushStuds, 0, -step do
 		local p = dir * r
 		local c = TerrainShape.column(p.X, p.Z)
-		if not c.water and c.h - TerrainShape.flatY <= EG.landMaxAbove then
+		if not c.water and c.h - TerrainShape.flatY <= landMax then
 			return Vector3.new(p.X, c.h + 3, p.Z)
 		end
 	end

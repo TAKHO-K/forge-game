@@ -228,6 +228,44 @@ local function build()
 		local cf = CFrame.lookAt(Vector3.new(base.X, groundY, base.Z), Vector3.new(base.X, groundY, base.Z) + out)
 		table.insert(ladders, { zone = cl.zone, cf = cf, height = h, top = top, base = Vector3.new(base.X, groundY, base.Z), landing = blend + LD.standoff + LD.landing, out = out })
 	end
+	-- 외곽 벽 사다리: 방위 한 줄을 1 간격으로 훑어 벽을 찾는다(벽 아래 = 사다리 발 · 벽 위 = 발판)
+	local ES = TerrainGenData.edgeStyles
+	for _, el in ipairs(S.edgeLadders or {}) do
+		local zone = Layout.zoneByKey(el.zone)
+		local ang = zone.angleDeg + el.deg
+		local dir = Vector3.new(math.cos(math.rad(ang)), 0, math.sin(math.rad(ang)))
+		local cr = TerrainShape.crestR(ang)
+		local R = cr - ES.approach
+		while R < cr do
+			local h0 = TerrainShape.baseHeight(dir.X * R, dir.Z * R)
+			local h1 = TerrainShape.baseHeight(dir.X * (R + 10), dir.Z * (R + 10))
+			if h1 - h0 > 20 then
+				-- 벽 시작(바닥이 오르기 시작하는 곳)과 끝(윗면)
+				local r0 = R
+				while TerrainShape.baseHeight(dir.X * (r0 + 1), dir.Z * (r0 + 1)) - h0 < 0.6 do
+					r0 += 1
+				end
+				local r1 = r0
+				local prev = TerrainShape.baseHeight(dir.X * r1, dir.Z * r1)
+				repeat
+					r1 += 1
+					local hh = TerrainShape.baseHeight(dir.X * r1, dir.Z * r1)
+					local grew = hh - prev
+					prev = hh
+				until grew < 0.4 or r1 > r0 + 30
+				local top = prev
+				local base = dir * (r0 - LD.standoff)
+				local gy = TerrainShape.baseHeight(base.X, base.Z)
+				local h = 2 * math.ceil((top - gy + 1) / 2)
+				local out = -dir -- 사다리 앞(오르는 사람) = 허브 쪽
+				local cf = CFrame.lookAt(Vector3.new(base.X, gy, base.Z), Vector3.new(base.X, gy, base.Z) + out)
+				table.insert(ladders, { zone = el.zone, cf = cf, height = h, top = top, base = Vector3.new(base.X, gy, base.Z), landing = (r1 - r0) + LD.standoff + 4, out = out, edge = true })
+				R = r1 + 5
+			else
+				R += 4
+			end
+		end
+	end
 	local extra = {}
 	for _, ld in ipairs(ladders) do
 		table.insert(extra, { x = ld.base.X, z = ld.base.Z, r = 14, why = "ladder" })

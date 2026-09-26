@@ -384,6 +384,7 @@ local function buildNest(spec, list, templeCf)
 		meta.baseY = meta.baseY or ctx.baseY
 	end
 	meta.id, meta.zone, meta.track, meta.sub, meta.top, meta.high, meta.kit, meta.cover = spec.id, spec.zone, spec.track, spec.sub, spec.top, spec.high, spec.kit, spec.cover
+	meta.crest = spec.crest -- M1-4 능선 전망 둥지
 	meta.model = ctx.model
 	meta.cf = meta.cf or ctx.cf
 	Kits.nestMarker(ctx, list, meta.spot)
