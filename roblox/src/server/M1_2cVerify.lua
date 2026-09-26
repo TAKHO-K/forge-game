@@ -62,7 +62,7 @@ local function bossLaunches()
 	local tornado = storm.tornado.onHit[1]
 	local pan = BossData.bosses.abyssal_lord.environment.onStart.pan
 	local throw = BossData.mechanics.airGrab.throw
-	local topBreak = BossArenaMapData.topBreak
+	local topBreak = BossArenaMapData.obstacle.topBreak
 	local R = BossArenaMapData.geometry and BossArenaMapData.geometry.radiusStuds or 140
 	return {
 		{ name = "넉백(폭풍 내려치기 · 4명 함께)", effect = { type = "launch", heightStuds = strike.heightStuds, distanceStuds = strike.distanceStuds, extraHeightPerCoHit = strike.extraHeightPerCoHit, maxHeightStuds = strike.maxHeightStuds }, coHits = 4, height = strike.maxHeightStuds },
@@ -334,18 +334,29 @@ function M1_2cVerify.runLive(player, env)
 				partOf[id] = part
 			end
 		end
-		local st = HeightGuard.getState(player) or {}
 		local rows, totalReverts, launched, permitsBefore = {}, 0, 0, LaunchPermit.stats.granted
 		for _, item in ipairs(treeLaunches()) do
 			local part = partOf[item.id]
 			if part then
-				HeightGuard.reset(player)
+				-- 발판 위 +6에 붙잡아 두고(순간이동 유예 1초가 지나게 - 유예 중 발사는 허가 없이도 안 잡혀 검증이 무의미) 유예를 끈 뒤 놓는다 → 떨어져 밟고 발사
 				local el = WorldMapLayout.tree().elements[item.id]
-				put(Vector3.new(el.center.X, item.spec.top + 5, el.center.Z))
-				local reverts0 = (HeightGuard.getState(player) or st).reverts or 0
+				local attachment = Instance.new("Attachment")
+				attachment.Parent = root
+				local align = Instance.new("AlignPosition")
+				align.Mode = Enum.PositionAlignmentMode.OneAttachment
+				align.Attachment0 = attachment
+				align.RigidityEnabled = true
+				align.Position = Vector3.new(el.center.X, item.spec.top + 6 + ROOT_ABOVE, el.center.Z)
+				align.Parent = root
+				put(align.Position)
+				task.wait(0.7)
+				local hs = HeightGuard.getState(player)
+				hs.graceUntil = 0
+				local reverts0 = hs.reverts
+				align:Destroy()
+				attachment:Destroy()
 				local peakFeet = flight(2.6)
-				local stNow = HeightGuard.getState(player)
-				local reverts = stNow.reverts - reverts0
+				local reverts = hs.reverts - reverts0
 				totalReverts += reverts
 				if peakFeet - item.spec.top > 8 then
 					launched += 1
@@ -441,10 +452,16 @@ function M1_2cVerify.runLive(player, env)
 			r.check(("%s: 설계 높이 %.1f · 거리 %.0f → 실측 발 +%.1f · 수평 최대 %.0f · 맵 밖 복귀 %d · 되돌림 %d(기대 0)"):format(b.name, b.height, b.effect.distanceStuds or 0,
 				peakFeet - startFeet, far, returned, reverts), reverts == 0)
 		end
-		hook:Invoke(player, "/gg god off")
-		BossEncounter.despawnFor(player)
-		task.wait(0.5)
 	end)
+	-- 보스 절이 도중에 에러가 나도 보스 · 무적을 치운다(다음 절 - 보스전 중이면 리프트가 안 된다)
+	pcall(function()
+		ServerStorage.DevCommandHook:Invoke(player, "/gg god off")
+	end)
+	if BossEncounter.getEncounter(player) then
+		BossEncounter.leaveFor(player)
+	end
+	BossEncounter.despawnFor(player)
+	task.wait(0.8)
 
 	r.section("덩굴 리프트 [F] · 도착 대기", function()
 		HeightGuard.debugOff = true

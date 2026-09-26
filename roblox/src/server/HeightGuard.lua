@@ -61,8 +61,11 @@ local function stepPermit(st, sample, now)
 			st.permit = nil
 			return nil
 		end
+		-- 내려가기만: 상한 뒤 가장 낮았던 발(이번 표본 전까지) + 평소 허용 - 이번 표본으로 먼저 올리면 다시 오르기를 못 잡는다(M1-2c 첫 Play X)
+		local low = permit.lowFeetY or sample.feetY
 		permit.descending = true
-		permit.maxFeetY = math.min(permit.maxFeetY, sample.feetY + JumpMath.heightGuardAllowance())
+		permit.maxFeetY = math.min(permit.maxFeetY, low + JumpMath.heightGuardAllowance())
+		permit.lowFeetY = math.min(low, sample.feetY)
 	end
 	return permit
 end

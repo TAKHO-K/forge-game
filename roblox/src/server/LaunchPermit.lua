@@ -18,12 +18,18 @@ local ROOT_ABOVE = MovementConfig.rootAboveFeetStuds
 local LaunchPermit = {}
 LaunchPermit.stats = { granted = 0, rejected = 0, deferred = 0, last = nil }
 
-local sources = setmetatable({}, { __mode = "k" }) -- [BasePart] = spec
-local history = setmetatable({}, { __mode = "k" }) -- [Player] = { { t, pos }, … }(오래된 것부터)
-local pending = setmetatable({}, { __mode = "k" }) -- [Player] = { part, untilAt }
-local lastGrantAt = setmetatable({}, { __mode = "k" })
+-- 강한 표(M1-2c 첫 Play X: 약한 키 표는 Lua 참조가 없는 인스턴스 프록시를 거둬 가 등록이 전부 사라졌다) - 지울 때는 Destroying · PlayerRemoving으로.
+local sources = {} -- [BasePart] = spec
+local history = {} -- [Player] = { { t, pos }, … }(오래된 것부터)
+local pending = {} -- [Player] = { part, untilAt }
+local lastGrantAt = {}
 
 function LaunchPermit.register(part, spec)
+	if not sources[part] then
+		part.Destroying:Connect(function()
+			sources[part] = nil
+		end)
+	end
 	sources[part] = spec
 end
 
@@ -111,6 +117,9 @@ function LaunchPermit.start()
 	remote.Parent = ReplicatedStorage
 	remote.OnServerEvent:Connect(function(player, part)
 		LaunchPermit.request(player, part)
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		history[player], pending[player], lastGrantAt[player] = nil, nil, nil
 	end)
 	RunService.Heartbeat:Connect(function()
 		local now = os.clock()
