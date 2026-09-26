@@ -72,14 +72,46 @@ function NestServer.timedOpen(serverTime)
 	return (serverTime % T.periodSeconds) < T.openSeconds
 end
 
--- 트랙 → 등급 분포 · 재생성 키
-function NestServer.gradeKey(spec)
+-- 트랙 키(재생성 · 로그): A · Ahigh · B · Btop · Cvillage · Cfield · Chidden
+function NestServer.trackKey(spec)
 	if spec.track == "A" then
 		return spec.high and "Ahigh" or "A"
 	elseif spec.track == "B" then
 		return spec.top and "Btop" or "B"
 	end
 	return spec.sub == "village" and "Cvillage" or (spec.sub == "field" and "Cfield" or "Chidden")
+end
+
+-- 그날 구역에서 켜지는 진짜 히든 둥지 수(순환: 후보 중 하루 1곳)
+function NestServer.hiddenActiveCount(zoneKey, day)
+	local n = 0
+	for _, id in ipairs(hiddenByZone[zoneKey] or {}) do
+		if NestServer.activeHidden(zoneKey, day) == id then
+			n += 1
+		end
+	end
+	return n
+end
+
+-- 등급 분포 키: 진짜 히든은 그날 구역에서 켜진 수가 hiddenFullRareMaxPerZone 이하일 때만 희귀 50 표 · 넘으면 ChiddenCrowded(M1-3 결정 2)
+function NestServer.gradeKey(spec, day)
+	local key = NestServer.trackKey(spec)
+	if key == "Chidden" and NestServer.hiddenActiveCount(spec.zone, day or NestServer.dayIndex(os.time())) > EggData.hiddenFullRareMaxPerZone then
+		return "ChiddenCrowded"
+	end
+	return key
+end
+
+-- 칭호 문턱에 세는 비밀 둥지 수(C-필드 · C-진짜 히든만 - 마을 제외: M1-3 결정 5). dex = { [id] = true }
+function NestServer.titleCount(dex)
+	local n = 0
+	for id in pairs(dex) do
+		local spec = specById[id]
+		if spec and spec.track == "C" and spec.sub ~= "village" then
+			n += 1
+		end
+	end
+	return n
 end
 
 local function seedOf(userId, nestId, picks)
@@ -115,7 +147,7 @@ end
 
 -- 순수: 다음에 주울 수 있는 unix 시각
 function NestServer.nextAt(userId, spec, picks, unix)
-	local R = NestData.respawn[NestServer.gradeKey(spec)] or NestData.respawn.B
+	local R = NestData.respawn[NestServer.trackKey(spec)] or NestData.respawn.B
 	if R.daily then
 		return nextDayStart(unix)
 	elseif R.seconds then
@@ -201,9 +233,10 @@ function NestServer.tryPickup(player, nestId, opts)
 	local discovered, dexCount, title = false, nil, nil
 	if spec.track == "C" then
 		discovered, dexCount = PlayerProfile.discoverNest(player, nestId)
-		if discovered then
+		if discovered and spec.sub ~= "village" then -- 도감은 전부 · 칭호는 필드 · 히든만(결정 5)
+			local counted = NestServer.titleCount(PlayerProfile.getNestDex(player))
 			for _, t in ipairs(NestData.dex.titles) do
-				if dexCount >= t.count and PlayerProfile.grantTitle(player, t.id) then
+				if counted >= t.count and PlayerProfile.grantTitle(player, t.id) then
 					title = t.id
 				end
 			end

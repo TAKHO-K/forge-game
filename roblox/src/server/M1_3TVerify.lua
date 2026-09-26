@@ -86,11 +86,50 @@ function V.runPure()
 			end
 		end
 		local G = EggData.grades
-		local floorsOk = G.A.normal > 0 and G.Cvillage.normal > 0 and G.Ahigh.normal == 0 and G.B.normal == 0 and G.Btop.normal == 0 and G.Cfield.normal == 0 and G.Chidden.normal == 0
-			and G.Chidden.rare >= math.max(G.Btop.rare, G.B.rare, G.Cfield.rare, G.Ahigh.rare, G.A.rare, G.Cvillage.rare)
+		-- M1-3 결정 2(사용자 확정): A 높은 곳 = 저점 보통 · 좋은 약 40 · 희귀 거의 없음(≤ 2) / B = 저점 좋은 · 희귀 약 10 / C-필드 = 저점 좋은 · 희귀 약 20 /
+		--   C-히든 = 저점 좋은 · 희귀 50(구역당 하루 1곳 이하) · 넘으면 25 ~ 30 / C-마을 = C-필드보다 한 단계 낮게(저점 보통)
+		local near = function(v, want, tol)
+			return math.abs(v - want) <= tol
+		end
+		local rows = {
+			{ "A 높은 곳 저점 보통 · 좋은 ≈ 40 · 희귀 ≤ 2", G.Ahigh.normal > 0 and near(G.Ahigh.good, 40, 3) and G.Ahigh.rare <= 2 },
+			{ "B 저점 좋은 · 희귀 ≈ 10", G.B.normal == 0 and near(G.B.rare, 10, 2) },
+			{ "C-필드 저점 좋은 · 희귀 ≈ 20", G.Cfield.normal == 0 and near(G.Cfield.rare, 20, 2) },
+			{ "C-히든(구역당 1곳 이하) 저점 좋은 · 희귀 50", G.Chidden.normal == 0 and G.Chidden.rare == 50 },
+			{ "C-히든(넘으면) 희귀 25 ~ 30", G.ChiddenCrowded.normal == 0 and G.ChiddenCrowded.rare >= 25 and G.ChiddenCrowded.rare <= 30 },
+			{ "C-마을 = C-필드보다 한 단계 낮게(저점 보통)", G.Cvillage.normal > 0 and G.Cfield.normal == 0 },
+			{ "A 저점 보통", G.A.normal > 0 },
+		}
+		local badRows = {}
+		for _, row in ipairs(rows) do
+			if not row[2] then
+				table.insert(badRows, row[1])
+			end
+		end
 		local hatchOk = EggData.hatch.rare.epic > EggData.hatch.good.epic and EggData.hatch.good.epic > EggData.hatch.normal.epic
 		r.check(("알 등급 분포 합 100 · 부화 표 합 100: 위반 %d%s"):format(#bad, #bad > 0 and (" - " .. table.concat(bad, " / ")) or ""), #bad == 0)
-		r.check(("트랙 저점: A · C-마을 보통 이상 · A 높은 곳 · B · C-필드 · C-히든 좋은 이상 · C-히든 희귀 비중 최고 %s · 희귀 알 부화 보정 %s"):format(tostring(floorsOk), tostring(hatchOk)), floorsOk and hatchOk)
+		r.check(("트랙 저점 · 희귀 비중(결정 2) 7줄: 위반 %d%s · 희귀 알 부화 보정 %s"):format(#badRows, #badRows > 0 and (" - " .. table.concat(badRows, " / ")) or "", tostring(hatchOk)), #badRows == 0 and hatchOk)
+		-- 진짜 히든이 하루에 몇 곳 켜지나(구역당 · 전체) → 쓰는 표
+		local perZone, total = {}, 0
+		for day = 20000, 20029 do
+			for _, z in ipairs(WorldMapData.zones) do
+				local n = NestServer.hiddenActiveCount(z.key, day)
+				perZone[n] = (perZone[n] or 0) + 1
+				total += n
+			end
+		end
+		local anyHidden
+		for _, sp in ipairs(NestData.nests) do
+			if sp.sub == "hidden" and not anyHidden then
+				anyHidden = sp
+			end
+		end
+		local hiddenKey = NestServer.gradeKey(anyHidden, 20000)
+		r.check(("진짜 히든 하루 켜짐: 구역당 %s곳(30일 × 6구역 표본) · 하루 전체 %.0f곳 → 쓰는 분포 = %s(희귀 %d)"):format(next(perZone) and tostring(next(perZone)) or "?", total / 30, hiddenKey, G[hiddenKey].rare),
+			perZone[1] == 30 * #WorldMapData.zones and hiddenKey == "Chidden")
+		-- 칭호 문턱 = C-필드 · C-히든만(마을 제외 · 결정 5)
+		local dex = { hub_c_chimney = true, hub_c_attic = true, t1_c_field = true, t2_c_h1 = true }
+		r.check(("칭호 문턱 집계: 도감 4곳(마을 2 · 필드 1 · 히든 1) → 칭호에 세는 수 %d(기대 2)"):format(NestServer.titleCount(dex)), NestServer.titleCount(dex) == 2)
 		-- 구역 알: 색(관문 색) 6가지 다름 · 풀 4종 · 후보 2(서로 다름)
 		local colors, pools, dupe = {}, 0, 0
 		local BossData = require(ReplicatedStorage.Shared.data.BossData)
@@ -116,7 +155,7 @@ function V.runPure()
 		for _, key in ipairs({ "A", "Ahigh", "B", "Btop", "Cvillage", "Cfield", "Chidden" }) do
 			local spec
 			for _, s in ipairs(NestData.nests) do
-				if NestServer.gradeKey(s) == key then
+				if NestServer.trackKey(s) == key then
 					spec = s
 				end
 			end
@@ -136,7 +175,7 @@ function V.runPure()
 		local unix = 1790000000
 		local A, B, Bt, Ch
 		for _, s in ipairs(NestData.nests) do
-			local k = NestServer.gradeKey(s)
+			local k = NestServer.trackKey(s)
 			A = A or (k == "A" and s)
 			B = B or (k == "B" and s)
 			Bt = Bt or (k == "Btop" and s)

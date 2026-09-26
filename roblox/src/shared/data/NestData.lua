@@ -153,7 +153,7 @@ return {
 	pickFx = { rise = 4, riseDiscovered = 9, seconds = 0.6, secondsDiscovered = 1.4, lightBrightness = 4, lightRange = 16, toastDelay = 0.8 },
 	-- 번개 문(시간형 C - 폭풍 첨탑 신전 뒤): 주기 periodSeconds 중 openSeconds 동안 열림(서버 시각 기준 - 모두 같다)
 	timedDoor = { periodSeconds = 150, openSeconds = 18, graceSeconds = 1.5 },
-	-- 발견 도감(C 처음 발견 - 칭호 · 꾸미기만): 개수 문턱마다 칭호(WorldMapData.sealed.title과 같은 칭호 집합 titles)
+	-- 발견 도감(C 처음 발견 - 칭호 · 꾸미기만): 도감 = C 전부(마을 포함) 집계 · 칭호 문턱 = C-필드 · C-진짜 히든만 센다(M1-3 결정 5 - 허브 굴뚝 하나로 칭호가 나오지 않게)
 	dex = { titles = { { count = 1, id = "nestSeeker", name = "둥지 탐험가" }, { count = 10, id = "secretKeeper", name = "비밀 수집가" } }, discoverSeconds = 2.5 },
 	-- 알 가방 상한(다 차면 못 줍는다 - 부화 · 펫 단계에서 쓴다)
 	eggCap = 40,

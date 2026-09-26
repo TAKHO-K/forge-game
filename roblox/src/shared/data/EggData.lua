@@ -34,16 +34,21 @@ return {
 		rare = { pattern = 3, glow = { brightness = 1.6, range = 10 } },
 		patternDarken = 0.55,
 	},
-	-- 트랙별 등급 분포(%) - 저점 = 0이 아닌 가장 낮은 등급. A.high = 직접 오른 높은 곳(저점 보장) · B.top = B 최상위.
+	-- 트랙별 등급 분포(%) - 저점 = 0이 아닌 가장 낮은 등급. Ahigh = 직접 오른 높은 곳 · Btop = B 최상위(하루 1회).
+	-- M1-3 결정 2(사용자 확정 2026-09-26): A 높은 곳 = 저점 보통 · 좋은 약 40 · 희귀 거의 없음 / B = 저점 좋은 · 희귀 약 10 / C-필드 = 저점 좋은 · 희귀 약 20 /
+	--   C-진짜 히든 = 저점 좋은 · 희귀 50(하루 구역당 켜지는 진짜 히든이 hiddenFullRareMaxPerZone곳 이하일 때만 - 넘으면 ChiddenCrowded 25 ~ 30) / C-마을 = C-필드보다 한 단계 낮게(저점 보통).
+	--   Btop · A · C-마을은 이번 결정에 없어 그대로.
 	grades = {
 		A = { normal = 80, good = 18, rare = 2 },
-		Ahigh = { normal = 0, good = 88, rare = 12 },
+		Ahigh = { normal = 59, good = 40, rare = 1 },
 		Cvillage = { normal = 75, good = 23, rare = 2 },
-		B = { normal = 0, good = 82, rare = 18 },
+		B = { normal = 0, good = 90, rare = 10 },
 		Btop = { normal = 0, good = 65, rare = 35 },
-		Cfield = { normal = 0, good = 78, rare = 22 },
+		Cfield = { normal = 0, good = 80, rare = 20 },
 		Chidden = { normal = 0, good = 50, rare = 50 },
+		ChiddenCrowded = { normal = 0, good = 72, rare = 28 },
 	},
+	hiddenFullRareMaxPerZone = 1,
 	-- 부화 결과 등급 확률(사전 고지 · 알 정보창) - 펫 등급 이름은 자리 표시(펫 단계에서 확정)
 	hatchGrades = { "common", "uncommon", "rare", "epic" },
 	hatchGradeNames = { common = "일반", uncommon = "고급", rare = "희귀", epic = "영웅" },
