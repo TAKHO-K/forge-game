@@ -313,12 +313,13 @@ function TerrainBake.checkVersion()
 end
 
 -- ─────────────────────────── 굽기 뒤 캐릭터 캡슐 통과 검사(사용자 보강 ①) ───────────────────────────
--- 경로 점(발)마다: 몸통 상자(폭 1.8 · 높이 4.2 · 발 위 0.5부터)를 이웃 점까지 양방향으로 밀어 보고(Blockcast) · 점마다 가로 광선 6 + 위 광선으로 막힘을 찾는다.
+-- 경로 점(발)마다: 몸통 상자(폭 1.8 · 높이 3.8 · 발 위 1.2부터 - 캐릭터는 2 이하 턱을 저절로 넘는다: 0.5에서 재면 걷는 요철에 스쳤다)를 이웃 점까지 양방향으로 밀어 보고(Blockcast) · 점마다 가로 광선 6 + 위 광선으로 막힘을 찾는다.
 -- 지형 + 충돌 파트(쿼리 가능)만 막힘 - 통과 덮개(가짜 벽 · 덩굴 · 폭포)는 쿼리가 없어 안 걸린다. 시간 문(TimedDoor)은 열린 때로 친다. 물은 막힘이 아니다.
 local capsuleParams = RaycastParams.new()
 capsuleParams.FilterType = Enum.RaycastFilterType.Exclude
 capsuleParams.IgnoreWater = true
-local BODY = Vector3.new(1.8, 4.2, 1.8)
+local BODY = Vector3.new(1.8, 3.8, 1.8)
+local FOOT_CLEAR = 1.2
 local function exclusions()
 	local list = {}
 	for _, p in ipairs(Workspace:GetDescendants()) do
@@ -340,7 +341,7 @@ function TerrainBake.capsuleCheck(nests)
 		table.insert(pts, n.spot)
 		local hit = nil
 		for i, p in ipairs(pts) do
-			local center = p + Vector3.new(0, 0.5 + BODY.Y / 2, 0)
+			local center = p + Vector3.new(0, FOOT_CLEAR + BODY.Y / 2, 0)
 			for a = 0, 5 do
 				local d = Vector3.new(math.cos(a * math.pi / 3), 0, math.sin(a * math.pi / 3)) * (BODY.X / 2)
 				for _, dy in ipairs({ -1.4, 0, 1.4 }) do
@@ -356,7 +357,7 @@ function TerrainBake.capsuleCheck(nests)
 			end
 			local dist = i > 1 and (pts[i - 1] - p).Magnitude or 0
 			if i > 1 and dist > 0.5 then
-				local from = pts[i - 1] + Vector3.new(0, 0.5 + BODY.Y / 2, 0)
+				local from = pts[i - 1] + Vector3.new(0, FOOT_CLEAR + BODY.Y / 2, 0)
 				for _, dir in ipairs({ { from, center }, { center, from } }) do
 					local r = Workspace:Blockcast(CFrame.new(dir[1]), BODY, dir[2] - dir[1], capsuleParams)
 					if r then
