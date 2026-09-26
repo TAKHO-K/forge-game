@@ -118,6 +118,9 @@ function M1_2Verify.simulateCycles(cycles, seed)
 		res.dyingKept += report.dying
 	end
 	for c = 1, cycles do
+		if c % 5 == 0 then
+			task.wait() -- M1-4: 지점 80곳(480) · 사이클마다 틱 40번 - 스크립트 시간 한도(서버 멈춤)를 넘지 않게
+		end
 		local point = list[rng:NextInteger(1, #list)]
 		-- 파티원 둘: 하나는 지점을 지나가고, 가끔 하나는 근처(유지 반경 안)에 남는다
 		local walker = point.position + Vector3.new(CFG.activateRadius * 0.5, 0, 0)

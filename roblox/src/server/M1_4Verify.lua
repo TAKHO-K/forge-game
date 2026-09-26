@@ -497,14 +497,14 @@ function V.runLive(player, env)
 			end
 		end
 		local sn = PropLibrary.snapStats()
-		r.check(("라이브러리 %d종(틀 %d · 교체 %d) · 맵 소품 %d · 지형 붙이기 %d중 옮김 %d(최대 차 %.2f - 다시 굽기 뒤 ≤ 1.5 기대)"):format(lib, templ, lib - templ, n, sn.checked, sn.moved, sn.maxDelta),
+		r.check(("라이브러리 %d종(틀 %d · 교체 %d) · 맵 소품 %d · 지형 붙이기 %d중 옮김 %d(최대 차 %.2f - 다시 굽기 뒤 ≤ 2.5 · 옮김 ≤ 3%% 기대 - 복셀 4 해상도)"):format(lib, templ, lib - templ, n, sn.checked, sn.moved, sn.maxDelta),
 			lib == #(function()
 				local t = {}
 				for k in pairs(PropData.templates) do
 					table.insert(t, k)
 				end
 				return t
-			end)() and n > 1000 and sn.maxDelta <= 1.5)
+			end)() and n > 1000 and sn.maxDelta <= 2.5 and sn.moved <= sn.checked * 0.03)
 	end)
 	r.section("사다리 = 서 있음(곁에 TrussPart)", function()
 		local ld = PropScatter.data().ladders[1]
