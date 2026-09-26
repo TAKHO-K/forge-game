@@ -188,8 +188,21 @@ function SpawnSites.tick(list, foci, now, hooks)
 				end
 				table.insert(report.turnedOn, point)
 			end
+		elseif active and wasActive then
+			-- 상한 때 건너뛴 리스폰 자리를 여유가 생기면 채운다(가까운 사람 순서 그대로)
+			for _, slot in ipairs(point.slots) do
+				if slot.capSkipped and slot.used and alive < caps.maxMonsters and not (slot.model and hooks.alive(slot.model)) then
+					slot.capSkipped = nil
+					slot.model = hooks.spawn(point, slot)
+					report.spawned += slot.model and 1 or 0
+					alive += slot.model and 1 or 0
+				end
+			end
 		elseif wasActive and not active then
 			point.active, point.size = false, nil
+			for _, slot in ipairs(point.slots) do
+				slot.capSkipped = nil
+			end
 			for _, slot in ipairs(point.slots) do
 				local model = slot.model
 				slot.model = nil
@@ -268,7 +281,8 @@ function SpawnSites.start()
 		end
 		local _, aliveNow = SpawnSites.stats()
 		if aliveNow >= CFG.caps.maxMonsters then
-			return true -- M1-4 서버 상한: 리스폰도 넘기지 않는다(자리는 비워 두고 다음 처치 때 다시 본다)
+			entry.slot.capSkipped = true -- M1-4 서버 상한: 리스폰도 넘기지 않는다 - 틱이 상한 여유가 생기면 채운다(리뷰: 영구히 비던 문제)
+			return true
 		end
 		if entry.point.active and entry.slot.used and not (entry.slot.model and liveHooks.alive(entry.slot.model)) then
 			entry.slot.model = liveHooks.spawn(entry.point, entry.slot)

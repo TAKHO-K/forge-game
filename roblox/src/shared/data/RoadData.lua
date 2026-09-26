@@ -14,7 +14,8 @@ return {
 	clearAt = { hubEdge = 30, barrierGate = 40, camp = 70, ground = 130, gate = 80, landmark = 50, shore = 40 },
 	flatAt = { barrierGate = 30, camp = 70, ground = 150, gate = 90, shore = 24 }, -- 이 반경 안은 평지(평탄 마스크와 같은 값 - TerrainGenData.flatten)
 	-- 막힘 회피(구불거림을 줄여 비껴간다): 둥지 받침 · 옛 지형 · 구조물 + 여유
-	avoidMargin = 18,
+	avoidMargin = 18, nestAvoid = 26, -- nestAvoid = 둥지 자리(구역 좌표) 둘레 반경
+	taperStuds = 80, -- 길목 곧은 반경 밖에서 구불거림이 다 커지기까지
 	-- 구역 스타일: amp = 구불거림 폭 · lambda = 파장 · material = 길 재질(흙 · 자갈) · edge = 가장자리 재질(없으면 같음)
 	zones = {
 		tier1 = { amp = 34, lambda = 230, material = "Ground" }, -- 초원 흙길
@@ -25,6 +26,6 @@ return {
 		tier6 = { amp = 24, lambda = 180, material = "Ground" }, -- 눈 위 흙길
 	},
 	-- 갈림길: 관문 → 랜드마크(사용자: 허브 → 구역 입구 → 관문 → 랜드마크 연결) · 표지판 = 갈림길 · 캠프
-	landmarkBranch = { fromBeforeGate = 140 }, -- 관문 앞 이만큼에서 갈라져 랜드마크로
-	sign = { height = 7, labelMaxDistance = 160 },
+	landmarkBranch = { fromBeforeGate = 140, midR = 20, midLat = 80, forkClear = 20, midClear = 30 }, -- 관문 앞 이만큼에서 갈라져 랜드마크로(가운데 점 = 관문 반경 + midR · 옆 midLat)
+	sign = { height = 7, labelMaxDistance = 160, offset = 4 }, -- offset = 길 가장자리에서 표지판까지
 }

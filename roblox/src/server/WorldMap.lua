@@ -104,10 +104,18 @@ local function makePart(p)
 end
 
 -- 한 번만 짓는다(HuntingGround 부팅). 반환: 메타(구역별 탐험 · 이스터에그 · 둥지) · 모델별 파트 수.
+local building = false
 function WorldMap.build()
 	if built then
 		return built.meta, built.counts
 	end
+	while building do -- M1-4: 짓는 중 양보가 생겼다 - 두 번 짓지 않게 기다린다(리뷰)
+		task.wait()
+	end
+	if built then
+		return built.meta, built.counts
+	end
+	building = true
 	local root = GroundProbe.folder()
 	local prims, meta = WorldMapLayout.buildAll()
 	local models, counts = {}, {}
@@ -139,6 +147,7 @@ function WorldMap.build()
 	local sn = PropLibrary.snapStats()
 	print(("[forge-game] M1 맵: 도형 %d · 소품 라이브러리 %d종(교체 모델 %d) · 소품 배치 %d(지형 붙이기 %d · 옮김 %d · 최대 차 %.2f) · Persistent = 나무 · 빛기둥 · 랜드마크"):format(#prims, libN, libCustom, propPlaced, sn.checked, sn.moved, sn.maxDelta))
 	built = { models = models, meta = meta, counts = counts }
+	building = false
 	workspace:GetAttributeChangedSignal("Season"):Connect(function()
 		WorldMap.setSeason(workspace:GetAttribute("Season"))
 	end)

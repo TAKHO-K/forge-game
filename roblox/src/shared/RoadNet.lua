@@ -52,7 +52,7 @@ local function blockers(zone)
 	end
 	for _, n in ipairs(NestData.nests) do
 		if n.zone == zone.key and n.r and n.lat then
-			circle(Layout.toWorld(zone, n.r, n.lat), 26)
+			circle(Layout.toWorld(zone, n.r, n.lat), R.nestAvoid)
 		end
 	end
 	local zd = TerrainGenData.zones[zone.key] or {}
@@ -137,7 +137,7 @@ local function makePath(zone, waypoints, style, phase, list)
 		local taper = 1
 		for _, w in ipairs(waypoints) do
 			local d = math.sqrt((q.x - w.x) ^ 2 + (q.z - w.z) ^ 2)
-			taper = math.min(taper, smoothstep(w.clear, w.clear + 80, d))
+			taper = math.min(taper, smoothstep(w.clear, w.clear + R.taperStuds, d))
 		end
 		local o = style.amp * (math.sin(2 * math.pi * s / style.lambda + phase) + 0.35 * math.sin(2 * math.pi * s / (style.lambda * 0.43) + phase * 2.3)) / 1.35 * taper
 		local chosen = 0
@@ -265,6 +265,10 @@ function RoadNet.branchPath(zone)
 	local Layout = require(ReplicatedStorage.Shared.WorldMapLayout)
 	local main = RoadNet.zonePath(zone)
 	local gi = main.marks.gate
+	if not gi then -- 물 위 관문(길이 기슭에서 끝) = 갈림길 없음(리뷰: marks.gate가 없으면 main.pts[nil])
+		cache[key] = false
+		return nil
+	end
 	local gs = main.pts[gi].s - R.landmarkBranch.fromBeforeGate
 	local fork = main.pts[gi]
 	for i = gi, 1, -1 do
@@ -274,14 +278,15 @@ function RoadNet.branchPath(zone)
 		end
 	end
 	local side = (zoneIndex(zone) % 2 == 0) and 1 or -1
-	local mid = Layout.toWorld(zone, L.gate.r + 20, side * 80)
+	local LB = R.landmarkBranch
+	local mid = Layout.toWorld(zone, L.gate.r + LB.midR, side * LB.midLat)
 	local lc = Layout.toWorld(zone, lm.r + 90, 0)
 	local toHub = Vector3.new(-lc.X, 0, -lc.Z).Unit
 	local sideV = Layout.toWorld(zone, 0, side) - Layout.toWorld(zone, 0, 0)
 	local endP = lc + (toHub * 0.4 + Vector3.new(sideV.X, 0, sideV.Z).Unit).Unit * (lm.radius + 30)
 	local wps = {
-		{ id = "fork", x = fork.x, z = fork.z, clear = 20 },
-		{ id = "mid", x = mid.X, z = mid.Z, clear = 30 },
+		{ id = "fork", x = fork.x, z = fork.z, clear = LB.forkClear },
+		{ id = "mid", x = mid.X, z = mid.Z, clear = LB.midClear },
 		{ id = "landmark", x = endP.X, z = endP.Z, clear = R.clearAt.landmark },
 	}
 	local style = { amp = R.zones[zone.key].amp * 0.4, lambda = R.zones[zone.key].lambda * 0.6 }
@@ -390,7 +395,7 @@ function RoadNet.signs()
 			local tx, tz = nq.x - q.x, nq.z - q.z
 			local tl = math.max(math.sqrt(tx * tx + tz * tz), 1e-6)
 			local nx, nz = -tz / tl, tx / tl
-			local x, z = q.x + nx * (R.half + 4) * sideK, q.z + nz * (R.half + 4) * sideK
+			local x, z = q.x + nx * (R.half + R.sign.offset) * sideK, q.z + nz * (R.half + R.sign.offset) * sideK
 			table.insert(list, { cf = CFrame.lookAt(Vector3.new(x, q.y, z), Vector3.new(q.x, q.y, q.z)), label = label, zone = zone.key })
 		end
 		at(main.marks.barrierGate, "캠프 · 관문 →", 1)
