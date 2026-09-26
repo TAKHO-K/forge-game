@@ -345,6 +345,21 @@ local function buildNest(spec, list, templeCf)
 			ctx.river = { x = c.X, z = c.Z, bankX = bank.X, bankZ = bank.Z, level = level, bedY = level - R.depth + 1 }
 			look, baseY = toRiver, level + 1.2
 		end
+		-- 흙더미에 묻는 숨은 방: 문 = 자연 지형이 가장 낮은 쪽(내리막 - 물리적으로 말이 되게 · 문 앞 통로가 언덕에 막히지 않게). 신전 뒤 · 물속 · 흙더미 없는 방은 그대로.
+		if spec.kit == "alcove" and not spec.templeBack and spec.cover ~= "underwater" and not spec.noMound and spec.cover ~= "slab" and spec.cover ~= "oasis" and spec.cover ~= "trunk" then
+			local TerrainShape = require(ReplicatedStorage.Shared.TerrainShape)
+			local best, bestH = look, math.huge
+			for k = 0, 15 do
+				local a = k / 16 * 2 * math.pi
+				local d = Vector3.new(math.cos(a), 0, math.sin(a))
+				local q = p + d * 22
+				local h = TerrainShape.baseHeight(q.X, q.Z) + 0.02 * (1 - d:Dot(look)) -- 같으면 원래 방향 쪽
+				if h < bestH then
+					best, bestH = d, h
+				end
+			end
+			look = best
+		end
 		ctx.toHub = toHub
 		ctx.cf = CFrame.lookAt(Vector3.new(p.X, baseY, p.Z), Vector3.new(p.X, baseY, p.Z) + look)
 		ctx.baseY = baseY

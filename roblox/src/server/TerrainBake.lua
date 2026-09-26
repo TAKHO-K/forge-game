@@ -119,13 +119,30 @@ local function bakeChunk(terrain, key, cx, cz)
 				local dz = ((n and n.h or c.h) - (s and s.h or c.h)) / (2 * V)
 				local slope = math.deg(math.atan(math.sqrt(dx * dx + dz * dz)))
 				local solid = mat(TerrainShape.material(c.x, c.z, c, slope))
+				-- 공기 부피 칸 표시(위에서 아래로 - 공기 칸 바로 아래 칸은 부피 바닥에 맞춘다)
+				local airCell, airFloor = nil, nil
+				if c.air then
+					airCell, airFloor = {}, {}
+					for j = 1, ny do
+						local yc = y0 + (j - 1) * V + V / 2
+						if yc < c.h + V then
+							local inside, _, floor = TerrainShape.airAt(c.x, yc, c.z, c.air)
+							if inside then
+								airCell[j], airFloor[j] = true, floor
+							end
+						end
+					end
+				end
 				for j = 1, ny do
 					local yb = y0 + (j - 1) * V
 					local yc = yb + V / 2
 					-- 표면 = 가장 위 칸 바닥 + V/2 + V × 점유율(Studio 실측 - 점유율 0.01 → +2.05 · 0.5 → +4 · 1 → +6) → 점유율 = (h − V/2 − 칸 바닥) / V
 					local occ = math.clamp((c.h - V / 2 - yb) / V, 0, 1)
+					if airCell and not airCell[j] and airCell[j + 1] and airFloor[j + 1] then
+						occ = math.min(occ, math.clamp((airFloor[j + 1] - V / 2 - yb) / V, 0, 1)) -- 부피 바닥 바로 아래 칸(바닥이 칸 위로 솟지 않게)
+					end
 					local m = occ > 0 and solid or air
-					if c.air and occ > 0 then
+					if c.air and occ > 0 and airCell and airCell[j] then
 						local inside, wy = TerrainShape.airAt(c.x, yc, c.z, c.air)
 						if inside then
 							if wy and yb < wy then

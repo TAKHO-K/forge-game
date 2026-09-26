@@ -124,7 +124,8 @@ return {
 		templeTower = { pad = 5, rise = 9 },
 		shrine = { pillars = { { h = 5, gap = 4 }, { h = 13, gap = 7 }, { h = 24, gap = 11 } }, dashGap = 22, top = 26, size = 12, roofH = 8, pillar = 5 },
 		cliffCave = { rise = 9, gap = 6, ledge = 6, width = 10, height = 9, depth = 22, chamber = 16, mound = 26 },
-		alcove = { w = 8, d = 8, h = 7, wall = 1.5, door = 5, doorH = 6, mound = 11, moundRadius = 15, moundBlend = 20 },
+		-- 흙더미 = 방 뒤쪽(moundBack)으로 비껴 쌓고 문 앞 통로(corridor)를 흙더미 밖까지 비운다(M1-3 첫 굽기: 흙더미가 문 앞까지 덮어 20곳 막힘)
+		alcove = { w = 8, d = 8, h = 7, wall = 1.5, door = 5, doorH = 6, mound = 11, moundRadius = 11, moundBlend = 16, moundBack = 6, corridor = 14, apron = 7, apronBlend = 14 },
 		caveCourse = { pillars = { { h = 6, gap = 4 }, { h = 13, gap = 5 }, { h = 20, gap = 5 } }, ledge = 27 },
 		bridge = { width = 8, plank = 4, sag = 3.5, rail = 3.2, hut = 11, hutH = 8 },
 		gorgeExit = { rise = 4.6, steps = 4, size = 4 },

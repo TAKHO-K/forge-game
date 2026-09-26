@@ -627,12 +627,15 @@ function TerrainShape.baseHeight(x, z)
 	return TerrainShape.column(x, z, true).h
 end
 
--- 3D: 이 점이 공기 부피(굴 · 보호 부피) 안인가. 반환: 공기?, 그 부피의 물 높이(있으면)
+-- 3D: 이 점이 공기 부피(굴 · 보호 부피) 안인가. 반환: 공기?, 그 점에서 부피 바닥 높이(굽기가 바로 아래 칸의 점유율을 이 높이에 맞춘다 - 표면 = 칸 위 + 2 규칙)
 local function inAir(v, x, y, z, margin)
 	if v.kind == "box" then
 		local l = v.cf:PointToObjectSpace(Vector3.new(x, y, z))
 		local h = v.half
-		return math.abs(l.X) <= h.X + margin and math.abs(l.Z) <= h.Z + margin and l.Y >= -h.Y and l.Y <= h.Y + margin
+		if math.abs(l.X) <= h.X + margin and math.abs(l.Z) <= h.Z + margin and l.Y >= -h.Y and l.Y <= h.Y + margin then
+			return true, v.cf.Position.Y - h.Y
+		end
+		return false
 	elseif v.kind == "tunnel" then
 		for i = 2, #v.pts do
 			local a, b = v.pts[i - 1], v.pts[i]
@@ -642,7 +645,7 @@ local function inAir(v, x, y, z, margin)
 				local floor = a[3] + (b[3] - a[3]) * t
 				local top = floor + (v.height + margin) * math.sqrt(math.max(0, 1 - (d / r) ^ 2))
 				if y >= floor and y <= top then
-					return true
+					return true, floor
 				end
 			end
 		end
@@ -654,7 +657,10 @@ local function inAir(v, x, y, z, margin)
 		if d > r then
 			return false
 		end
-		return y >= v.floor and y <= v.floor + (v.height + margin) * math.sqrt(math.max(0, 1 - (d / r) ^ 2))
+		if y >= v.floor and y <= v.floor + (v.height + margin) * math.sqrt(math.max(0, 1 - (d / r) ^ 2)) then
+			return true, v.floor
+		end
+		return false
 	end
 end
 -- 이 열에 공기 부피가 걸치는가(굽기가 3D 검사를 할지) - 굴(기본) + 보호 부피(구조물)
@@ -672,11 +678,14 @@ function TerrainShape.airVolumesNear(x, z)
 end
 function TerrainShape.airAt(x, y, z, list)
 	for _, v in ipairs(list or TerrainShape.airVolumesNear(x, z) or {}) do
-		if y >= v.minY and y <= v.maxY and inAir(v, x, y, z, v.protect and G.protectMargin or 0) then
-			return true, v.water
+		if y >= v.minY and y <= v.maxY then
+			local inside, floor = inAir(v, x, y, z, v.protect and G.protectMargin or 0)
+			if inside then
+				return true, v.water, floor
+			end
 		end
 	end
-	return false, nil
+	return false, nil, nil
 end
 TerrainShape.inAir = inAir
 

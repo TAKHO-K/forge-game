@@ -483,12 +483,15 @@ function Kits.alcove(ctx, list)
 	local noMound = spec.noMound or cover == "slab" or cover == "oasis" or cover == "timed"
 	if not noMound then
 		local lvl = (cover == "buried") and (h + t + 4) or (h + t + A.mound)
-		meta.pads = { { radius = A.moundRadius, blend = A.moundBlend, raise = lvl, offset = Vector3.new(0, 0, 2) } }
+		-- 흙더미(방 뒤쪽) + 통로 입구 앞마당(바닥 높이 - 바깥 땅이 조금 높아 입구가 막히지 않게)
+		meta.pads = { { radius = A.moundRadius, blend = A.moundBlend, raise = lvl, offset = Vector3.new(0, 0, A.moundBack) },
+			{ radius = A.apron, blend = A.apronBlend, offset = Vector3.new(0, 0, -(d / 2 + t) - A.corridor - A.apron * 0.5) } }
 	else
 		meta.pads = { { radius = w / 2 + 8, blend = 14 } }
 	end
 	table.insert(meta.protect, box(cf * CFrame.new(0, h / 2, 0), Vector3.new(w / 2 + t, h / 2 + t / 2, d / 2 + t)))
-	table.insert(meta.protect, box(cf * CFrame.new(0, doorH / 2 + 0.5, doorZ - 3), Vector3.new(dw / 2, doorH / 2 + 0.5, 3)))
+	local corridor = noMound and 3 or A.corridor
+	table.insert(meta.protect, box(cf * CFrame.new(0, doorH / 2 + 0.5, doorZ - corridor / 2), Vector3.new(dw / 2, doorH / 2 + 0.5, corridor / 2)))
 	-- 물속 입구(T3): 방 바닥 = 강 수면 + 1 · 문 앞 굴이 강바닥까지 내려간다(물이 찬다)
 	if cover == "underwater" and ctx.river then
 		local rv = ctx.river
@@ -496,7 +499,7 @@ function Kits.alcove(ctx, list)
 		table.insert(meta.protect, { kind = "tunnel", pts = { { out.X, out.Z, cf.Position.Y - 0.5 }, { rv.bankX, rv.bankZ, rv.bedY + 1 }, { rv.x, rv.z, rv.bedY } }, radius = 5, height = 8, water = rv.level })
 		meta.path = { Vector3.new(rv.x, rv.bedY + 1, rv.z), Vector3.new(rv.bankX, rv.bedY + 2, rv.bankZ), out, cf.Position }
 	else
-		meta.path = { (doorCf * CFrame.new(0, 0, -5)).Position, doorCf.Position, cf.Position }
+		meta.path = { (doorCf * CFrame.new(0, 0, -(corridor + 3))).Position, (doorCf * CFrame.new(0, 0, -corridor / 2)).Position, doorCf.Position, cf.Position }
 	end
 	-- 환경 힌트(표시 없음 - 사람이 알아채는 것)
 	for _, hint in ipairs(spec.hint or {}) do
