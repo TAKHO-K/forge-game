@@ -204,7 +204,7 @@ function Layout.huntRangeAt(position)
 	return nil
 end
 
--- 스폰 지점(캐시 · 고정 시드): [i] = { index, position(지면), slots = { 지면 위치 × group.count } }. 범위 안에 흩어 둔다(최소 간격 · 캠프 · 관문 · 옛 지형 · 둥지 · 선인장 밭 회피).
+-- 스폰 지점(캐시 · 고정 시드): [i] = { index, position(지면), slots = { 지면 위치 × group.maxSize } }. 범위 안에 흩어 둔다(최소 간격 · 캠프 · 관문 · 옛 지형 · 둥지 · 선인장 밭 회피).
 -- M1-3 지형: 슬롯 + 둘레가 걷는 땅이어야 한다 - 물 없음 · 높이 차(가운데 · 슬롯 · 둘레 표본) ≤ terrain.maxRelief · 평지 위 terrain.maxAbove 이하(능선 · 대지 위 금지). 슬롯 높이 = 지형 윗면.
 local huntPointCache = {}
 function Layout.huntPoints(zone)
@@ -236,6 +236,16 @@ function Layout.huntPoints(zone)
 			table.insert(blockers, { p = c, r = math.max(r, 12) + S.avoid.nest })
 		end
 	end
+	-- M1-4: 채우기 소품 · 절벽 사다리(발자국 + 여유) - 소품이 먼저 놓이고 스폰 지점이 피한다
+	local PropScatter = require(ReplicatedStorage.Shared.PropScatter)
+	for _, pp in ipairs(PropScatter.placements()) do
+		if pp.zone == zone.key then
+			table.insert(blockers, { p = Vector3.new(pp.x, 0, pp.z), r = pp.fp + S.avoid.prop })
+		end
+	end
+	for _, ld in ipairs(PropScatter.data().ladders) do
+		table.insert(blockers, { p = ld.base, r = 14 })
+	end
 	if WSD.cactus.zone == zone.key then
 		for _, f in ipairs(WSD.cactus.fields) do
 			table.insert(blockers, { p = Layout.toWorld(zone, f.r, f.lat), r = f.outer + S.avoid.cactus })
@@ -260,8 +270,8 @@ function Layout.huntPoints(zone)
 		if not h0 then
 			return false
 		end
-		for k = 1, S.group.count do
-			local sa = turn + (k - 1) / S.group.count * 2 * math.pi
+		for k = 1, S.group.maxSize do
+			local sa = turn + (k - 1) / S.group.maxSize * 2 * math.pi
 			local h = sample(p.X + math.cos(sa) * S.group.radius, p.Z + math.sin(sa) * S.group.radius)
 			if not h then
 				return false
@@ -304,8 +314,8 @@ function Layout.huntPoints(zone)
 		end
 		if ok then
 			local slots = {}
-			for k = 1, S.group.count do
-				local sa = turn + (k - 1) / S.group.count * 2 * math.pi
+			for k = 1, S.group.maxSize do
+				local sa = turn + (k - 1) / S.group.maxSize * 2 * math.pi
 				slots[k] = Vector3.new(p.X + math.cos(sa) * S.group.radius, hs[k], p.Z + math.sin(sa) * S.group.radius)
 			end
 			local c = TerrainShape.column(p.X, p.Z)

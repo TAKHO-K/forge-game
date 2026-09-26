@@ -367,11 +367,16 @@ return {
 	--   어떤 몬스터가 나오는지 = 구역 hunt.monsters(가중치 - M2에서 종을 늘리면 데이터만). 서버 몬스터 수 = 사람 주변 지점 수 × group.count(맵 크기와 무관).
 	spawnSites = {
 		huntRange = { r = 1700, lat = 0, radius = 620 }, -- 구역 원(1700 · 850) 안 · 캠프(900)와 관문(2400)은 원 밖
-		pointSpacing = 120, pointsPerRange = 34, edgeMargin = 30, seed = 20260926,
-		avoid = { feature = 24, nest = 16, camp = 110, gate = 110, cactus = 20 },
+		-- M1-4 무리 스폰(사용자): 지점 34 → 80(2.35배 · 간격 120 → 72) · 다가가면 지점 둘레(group.radius)에 무리 3 ~ 5마리(구역 표 groupSizes - T1 = 3 위주) · 무리 안 종류 = 구역 풀(hunt.monsters - 성향 조합은 M2)
+		pointSpacing = 72, pointsPerRange = 80, edgeMargin = 30, seed = 20260926,
+		avoid = { feature = 24, nest = 16, camp = 110, gate = 110, cactus = 20, prop = 6 }, -- prop = 채우기 소품 발자국 + 여유(M1-4)
 		-- M1-3 지형: 스폰 지점은 걷는 땅만 - 가운데 · 슬롯 · 둘레(ringRadius · ringSamples) 높이 차 ≤ maxRelief · 평지 위 ≤ maxAbove · 물 0(물 · 선인장 · 절벽 위 스폰 금지)
 		terrain = { maxRelief = 6, maxAbove = 30, ringRadius = 30, ringSamples = 8 },
-		group = { count = 3, radius = 18 },
+		group = { maxSize = 5, radius = 15 }, -- 슬롯 = maxSize개(지형 판정) · 켜질 때 무리 크기를 뽑아 앞에서부터 쓴다
+		groupSizes = { default = { { 3, 30 }, { 4, 40 }, { 5, 30 } }, tier1 = { { 3, 80 }, { 4, 20 } } }, -- { 마릿수, 무게 } - 초보 구역 T1은 작게
+		-- 상한(M1-4 - 성능 20인 p95 ≤ 1.55ms 안): 서버 전체 지점 몬스터 maxMonsters · 사람당 동시 켜진 무리 maxGroupsPerPlayer(가장 가까운 사람 몫 - 가까운 지점부터 켠다).
+		--   넘으면 그 지점은 켜지지 않고 기다린다(다음 틱 · 다른 무리가 정리되면). 잔류 규칙(유지 반경 · 12초 · 전투 보류)은 그대로.
+		caps = { maxMonsters = 180, maxGroupsPerPlayer = 3 },
 		activateRadius = 110, keepRadius = 200, idleSeconds = 12, -- M1-3 전(M1-2 결정 2 사용자): 140 → 110 · 20 → 12초(걷는 1명당 동시 몬스터 줄이기)
 		checkSeconds = 1.0, combatHoldSeconds = 10,
 		-- 표시: 범위 바닥 = 구역 바닥보다 조금 진한 원판 + 경계 고리(얇은 판 조각) · 경계를 넘으면 화면 위쪽에 사냥터 이름(nameSeconds - 가운데 금지 구역 밖)

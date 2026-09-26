@@ -253,7 +253,7 @@ function M1_2Verify.simulateHunter(mode, killSeconds, hours, zoneIndex)
 			local here = route[stepIndex]
 			local best, bestD = nil, 60
 			for m in pairs(alive) do
-				if mode == "stay" or (m.point == here and pointKills < WorldMapData.spawnSites.group.count) then
+				if mode == "stay" or (m.point == here and pointKills < (here.size or 3)) then -- M1-4: 무리 크기(3 ~ 5)
 					local d = flat(m.pos, pos)
 					if d < bestD then
 						best, bestD = m, d
@@ -263,7 +263,7 @@ function M1_2Verify.simulateHunter(mode, killSeconds, hours, zoneIndex)
 			if best then
 				target, hitLeft = best, killSeconds
 				best.target = true
-			elseif mode == "walk" and here.active and pointKills >= WorldMapData.spawnSites.group.count then
+			elseif mode == "walk" and here.active and pointKills >= (here.size or 3) then
 				stepIndex, pointKills = stepIndex % #route + 1, 0 -- 이 지점 다 잡았다 → 다음 지점
 			elseif mode == "stay" then
 				waited += DT -- 서 있는데 잡을 몬스터가 없다(공급 부족)
@@ -541,7 +541,7 @@ function M1_2Verify.runLive(player, env)
 						seen[s.model] = true
 					end
 				end
-				spawnedOk += (p.active and n == #p.slots) and 1 or 0
+				spawnedOk += (p.active and n == (p.size or -1)) and 1 or 0 -- M1-4: 무리 크기만큼(3 ~ 5)
 				table.clear(SpawnSites.debugFoci)
 				task.wait(CFG.idleSeconds + CFG.checkSeconds * 2.2)
 				local left = 0
@@ -552,7 +552,7 @@ function M1_2Verify.runLive(player, env)
 				cycles += 1
 			end
 			local leaks, orphans = SpawnSites.audit()
-			r.check(("실제 사이클 %d회(정리 %d초로 줄여서): 지나가면 %d마리 생성 %d/%d · 떠나면 정리 %d/%d · 중복 %d · 누수 %d · 주인 없는 구역 잡몹 %d"):format(cycles, CFG.idleSeconds, CFG.group.count, spawnedOk, cycles, clearedOk, cycles, dup, leaks, orphans),
+			r.check(("실제 사이클 %d회(정리 %d초로 줄여서): 지나가면 무리(최대 %d마리) 생성 %d/%d · 떠나면 정리 %d/%d · 중복 %d · 누수 %d · 주인 없는 구역 잡몹 %d"):format(cycles, CFG.idleSeconds, CFG.group.maxSize, spawnedOk, cycles, clearedOk, cycles, dup, leaks, orphans),
 				spawnedOk == cycles and clearedOk == cycles and dup == 0 and leaks == 0 and orphans == 0)
 			-- 전투 중 보류: 켜고 떠난 뒤 한 마리를 계속 때린다 → 정리 안 됨 → 멈추면 정리
 			local p = zone1[1]

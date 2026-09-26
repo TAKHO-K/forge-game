@@ -275,7 +275,7 @@ function M1Verify.runLive(player, env)
 		put(WorldConfig.zones.spawn.arrival + Vector3.new(0, 5, 0))
 		task.wait(D.spawnSites.idleSeconds + 2.5)
 		local a2, alive2 = SpawnSites.stats()
-		r.check(("사냥 지대 곁 → 켜진 지대 %d · 몬스터 %d / 모두 떠나 %d초 → 켜진 지대 %d · 몬스터 %d"):format(a1, alive1, D.spawnSites.idleSeconds, a2, alive2), a1 >= 1 and alive1 >= D.spawnSites.group.count and a2 == 0 and alive2 == 0)
+		r.check(("사냥 지대 곁 → 켜진 지대 %d · 몬스터 %d / 모두 떠나 %d초 → 켜진 지대 %d · 몬스터 %d"):format(a1, alive1, D.spawnSites.idleSeconds, a2, alive2), a1 >= 1 and alive1 >= 3 and a2 == 0 and alive2 == 0)
 	end)
 	r.section("보스 관문", function()
 		local stage = nil

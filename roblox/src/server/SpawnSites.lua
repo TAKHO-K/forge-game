@@ -1,5 +1,6 @@
 -- M1-2 몬스터 스폰 범위(사용자: 넓은 범위 + 지나가면 생성 · 떠나면 정리). 구역마다 넓은 원 안에 흩어 둔 스폰 지점(shared/WorldMapLayout.huntPoints) -
--- 지점 activateRadius 안에 누가 들어오면 그 둘레 슬롯(group.count)에 몬스터를 세우고, keepRadius 안에 아무도 없이 idleSeconds가 지나면 치운다.
+-- 지점 activateRadius 안에 누가 들어오면 그 둘레 슬롯에 무리(M1-4 - 구역 groupSizes 표로 3 ~ 5마리)를 세우고, keepRadius 안에 아무도 없이 idleSeconds가 지나면 치운다.
+-- M1-4 상한: 서버 전체 지점 몬스터 caps.maxMonsters · 사람당 동시 켜진 무리 caps.maxGroupsPerPlayer(가장 가까운 사람 몫 · 가까운 지점부터) - 넘으면 켜지 않고 기다린다.
 -- 정리 규칙(버그 방지 - 사용자): ① 반경 안에 아무도 없고 ② 시간이 지났고 ③ 그 지점 몬스터가 전투 중이 아닐 때만(어그로 대상 · combatHoldSeconds 안 피격이면 보류).
 --   처치 판정 중인 몬스터(tryClaimDeath를 이미 누가 가져감 - 보상 처리 중)는 건드리지 않는다 → 보상 · 드랍 누락 0. 정리할 몬스터는 정리가 먼저 tryClaimDeath를 가져가
 --   그 뒤 들어온 타격은 처치로 이어지지 않는다(경합 가드 공유). 파티원이 흩어져 있어도 지점마다 "누구든 가까이"라 각자 주변이 유지된다.
@@ -62,6 +63,23 @@ function SpawnSites.pickMonster(list, roll)
 	return MonsterData[MonsterData.tierOrder[list[#list].tier]]
 end
 
+-- 무리 크기 뽑기(구역 표 · 없으면 default) - roll 0 ~ 1
+function SpawnSites.pickSize(zoneKey, roll)
+	local tbl = CFG.groupSizes[zoneKey] or CFG.groupSizes.default
+	local total = 0
+	for _, e in ipairs(tbl) do
+		total += e[2]
+	end
+	local x = (roll or rng:NextNumber()) * total
+	for _, e in ipairs(tbl) do
+		x -= e[2]
+		if x <= 0 then
+			return math.min(e[1], CFG.group.maxSize)
+		end
+	end
+	return math.min(tbl[#tbl][1], CFG.group.maxSize)
+end
+
 -- 지점 목록 만들기(구역 순서 · 지점 순서 - 고정 시드라 매번 같다)
 function SpawnSites.buildPoints()
 	local list = {}
@@ -77,11 +95,51 @@ function SpawnSites.buildPoints()
 	return list
 end
 
--- 핵심 틱: foci(사람 위치들) · now → 켜고 끄기. hooks = { spawn(point, slot) → model | nil, alive(model), engaged(model, now), claim(model) → bool, remove(model) }.
--- 반환: { spawned, cleared, held(전투라 미룸), dying(처치 판정 중이라 남김) }
+-- 핵심 틱: foci(사람 위치들) · now → 켜고 끄기. hooks = { spawn(point, slot) → model | nil, alive(model), engaged(model, now), claim(model) → bool, remove(model), size(point) → 마릿수(없으면 표에서 뽑기) }.
+-- 반환: { spawned, cleared, held(전투라 미룸), dying(처치 판정 중이라 남김), capped(상한이라 안 켬), turnedOn, turnedOff }
+-- 순서(M1-4): 가장 가까운 사람까지 거리 순으로 본다 - 상한에 걸리면 먼 지점이 기다린다.
 function SpawnSites.tick(list, foci, now, hooks)
-	local report = { spawned = 0, cleared = 0, held = 0, dying = 0, turnedOn = {}, turnedOff = {} }
+	local report = { spawned = 0, cleared = 0, held = 0, dying = 0, capped = 0, turnedOn = {}, turnedOff = {} }
+	local caps = CFG.caps
+	-- 지점마다 가장 가까운 사람 · 거리
+	local order = {}
+	local alive = 0
 	for _, point in ipairs(list) do
+		local best, bestD = nil, math.huge
+		for fi, p in ipairs(foci) do
+			local d = flatDistance(p, point.position)
+			if d < bestD then
+				best, bestD = fi, d
+			end
+		end
+		point.nearFocus, point.nearD = best, bestD
+		table.insert(order, point)
+		for _, slot in ipairs(point.slots) do
+			if slot.model and hooks.alive(slot.model) then
+				alive += 1
+			end
+		end
+	end
+	table.sort(order, function(a, b)
+		if a.nearD ~= b.nearD then
+			return a.nearD < b.nearD
+		end
+		if a.zoneKey ~= b.zoneKey then
+			return a.zoneKey < b.zoneKey
+		end
+		return a.index < b.index
+	end)
+	-- 사람마다 지금 곁(활성 반경 안)에 켜진 무리 수 · 그중 가장 가까운 거리(가장 가까운 사람 몫). 지나온 무리(유지 반경에서 정리를 기다리는 것)는 세지 않는다 -
+	-- 그걸 세면 걷는 사람 앞 지점이 영영 안 켜졌다(M1-4 사냥꾼 시뮬).
+	local groups, groupMinD = {}, {}
+	for _, point in ipairs(order) do
+		if point.active and point.nearFocus and point.nearD <= CFG.activateRadius then
+			local f = point.nearFocus
+			groups[f] = (groups[f] or 0) + 1
+			groupMinD[f] = math.min(groupMinD[f] or math.huge, point.nearD)
+		end
+	end
+	for _, point in ipairs(order) do
 		local near, kept = 0, 0
 		for _, p in ipairs(foci) do
 			local d = flatDistance(p, point.position)
@@ -108,16 +166,30 @@ function SpawnSites.tick(list, foci, now, hooks)
 		local active, lastNearAt = SpawnSites.nextState(point.active, point.lastNearAt, near, kept, now, engaged)
 		point.lastNearAt = lastNearAt
 		if active and not wasActive then
-			point.active = true
-			for _, slot in ipairs(point.slots) do
-				if not (slot.model and hooks.alive(slot.model)) then
-					slot.model = hooks.spawn(point, slot)
-					report.spawned += slot.model and 1 or 0
+			local size = (hooks.size and hooks.size(point)) or SpawnSites.pickSize(point.zoneKey)
+			local f = point.nearFocus
+			-- 사람 몫이 찼어도 새 지점이 곁의 무리보다 더 가까우면 켠다(앞으로 걸어가는 사람) - 전체 상한은 늘 지킨다
+			local full = f and (groups[f] or 0) >= caps.maxGroupsPerPlayer and point.nearD >= (groupMinD[f] or math.huge)
+			if full or alive + size > caps.maxMonsters then
+				report.capped += 1 -- 상한: 켜지 않고 기다린다(다음 틱에 다시 본다)
+			else
+				point.active, point.size = true, size
+				if f and point.nearD <= CFG.activateRadius then
+					groups[f] = (groups[f] or 0) + 1
+					groupMinD[f] = math.min(groupMinD[f] or math.huge, point.nearD)
 				end
+				for i, slot in ipairs(point.slots) do
+					slot.used = i <= size
+					if slot.used and not (slot.model and hooks.alive(slot.model)) then
+						slot.model = hooks.spawn(point, slot)
+						report.spawned += slot.model and 1 or 0
+						alive += slot.model and 1 or 0
+					end
+				end
+				table.insert(report.turnedOn, point)
 			end
-			table.insert(report.turnedOn, point)
 		elseif wasActive and not active then
-			point.active = false
+			point.active, point.size = false, nil
 			for _, slot in ipairs(point.slots) do
 				local model = slot.model
 				slot.model = nil
@@ -125,6 +197,7 @@ function SpawnSites.tick(list, foci, now, hooks)
 					if hooks.claim(model) then
 						hooks.remove(model)
 						report.cleared += 1
+						alive -= 1
 					else
 						report.dying += 1 -- 처치 판정 중(보상 처리 중) - 그쪽이 치운다 · 지점이 꺼져 있어 되살리지 않는다
 					end
@@ -193,7 +266,7 @@ function SpawnSites.start()
 		if not entry or entry.point.zoneKey ~= zoneKey then
 			return false
 		end
-		if entry.point.active and not (entry.slot.model and liveHooks.alive(entry.slot.model)) then
+		if entry.point.active and entry.slot.used and not (entry.slot.model and liveHooks.alive(entry.slot.model)) then
 			entry.slot.model = liveHooks.spawn(entry.point, entry.slot)
 		end
 		return true
@@ -216,7 +289,7 @@ function SpawnSites.start()
 		ReplicatedStorage:SetAttribute("SpawnSitesActive", activePoints) -- 검증 · 성능 표(서버 상태를 Attribute로)
 		ReplicatedStorage:SetAttribute("SpawnSitesAlive", alive)
 	end)
-	print(("[forge-game] 스폰 지점 %d곳 대기(구역당 %d · 활성 반경 %d · 유지 %d · 정리 %d초 · 전투 보류 %d초)"):format(#points, CFG.pointsPerRange, CFG.activateRadius, CFG.keepRadius, CFG.idleSeconds, CFG.combatHoldSeconds))
+	print(("[forge-game] 스폰 지점 %d곳 대기(구역당 %d · 무리 최대 %d · 활성 반경 %d · 유지 %d · 정리 %d초 · 전투 보류 %d초 · 상한 서버 %d마리 · 사람당 무리 %d)"):format(#points, CFG.pointsPerRange, CFG.group.maxSize, CFG.activateRadius, CFG.keepRadius, CFG.idleSeconds, CFG.combatHoldSeconds, CFG.caps.maxMonsters, CFG.caps.maxGroupsPerPlayer))
 end
 
 -- 검증 · 성능 측정용 가짜 초점(서버 가짜 플레이어 자리 - PerfProbe)
