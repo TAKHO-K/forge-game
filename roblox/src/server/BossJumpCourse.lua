@@ -173,13 +173,15 @@ function BossJumpCourse.padLaunchSpec(pad)
 	local target = pad:GetAttribute("LaunchTarget")
 	local apexFeet
 	local radius = math.max(pad.Size.X, pad.Size.Z) / 2
+	local cornerRadius = Vector3.new(pad.Size.X, 0, pad.Size.Z).Magnitude / 2 -- 리뷰 7: 사각 발판 모서리(수평 속도 추정만 - 발판 기둥 판정은 옛 반경)
 	local hSpeed -- S1 후속 0-4: 발사 발판 수평 = 클라 포물선(BossEnvironmentView)의 (평면 거리 ÷ 비행 시간) 최대 - 밟는 루트 높이 두 끝 · 발판 가장자리 · 높이 발판 = 걷기 그대로(nil)
 	if typeof(target) == "Vector3" then
 		apexFeet = math.max(pad:GetAttribute("LaunchApexY") or target.Y + PL.defaultApexAboveTargetStuds, rootMax + PL.apexMinAboveRootStuds, target.Y + PL.targetClearStuds) - ROOT_ABOVE
 		local g = Workspace.Gravity
-		local flat = Vector3.new(target.X - pad.Position.X, 0, target.Z - pad.Position.Z).Magnitude + radius
+		local flat = Vector3.new(target.X - pad.Position.X, 0, target.Z - pad.Position.Z).Magnitude + cornerRadius
 		hSpeed = 0
-		for _, rootY in ipairs({ pad.Position.Y, rootMax }) do
+		local fixedApex = pad:GetAttribute("LaunchApexY") or target.Y + PL.defaultApexAboveTargetStuds
+		for _, rootY in ipairs({ pad.Position.Y, rootMax, math.clamp(fixedApex - PL.apexMinAboveRootStuds, pad.Position.Y, rootMax) }) do -- 리뷰 7: 정점이 "루트 + 2"로 꺾이는 점 = 비행 시간 최소
 			local apexY = math.max(pad:GetAttribute("LaunchApexY") or target.Y + PL.defaultApexAboveTargetStuds, rootY + PL.apexMinAboveRootStuds, target.Y + PL.targetClearStuds)
 			local total = math.sqrt(2 * g * (apexY - rootY)) / g + math.sqrt(2 * (apexY - target.Y) / g)
 			hSpeed = math.max(hSpeed, flat / total)

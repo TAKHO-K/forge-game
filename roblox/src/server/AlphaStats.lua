@@ -46,6 +46,9 @@ local KEY = (RunService:IsStudio() and AuditConfig.testKeyPrefix or "") .. "summ
 
 -- 서버 종료 요약 한 줄 저장(BindToClose). 반환: ok
 function AlphaStats.saveSummary()
+	if counters.pullCount == 0 then -- 리뷰 6: 빈 서버 요약은 남기지 않는다(한 키에 동시 종료가 몰릴 때 쓰기 수를 줄이고 100칸을 밀어내지 않게)
+		return true, nil
+	end
 	local entry = { at = os.time(), jobId = game.JobId, uptime = os.time() - startedAt, counters = table.clone(counters) }
 	local ok = pcall(function()
 		store():UpdateAsync(KEY, function(list)

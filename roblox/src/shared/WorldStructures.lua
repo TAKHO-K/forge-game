@@ -301,10 +301,11 @@ local function nestPos(spec)
 	return Vector3.new(p.X, 0, p.Z)
 end
 
--- 둥지 모델 이름: A · B = "Nest_<id>" · C(비밀 - S1) = 이름으로 자리가 드러나지 않게 중립 이름(해시).
+-- 둥지 모델 이름: A · B = "Nest_<id>" · C(비밀 - S1) = 이름으로 자리가 드러나지 않게 중립 이름.
+-- S1 후속 0-6(리뷰 1): 옛 "Outcrop_<해시>"는 C만 쓰는 접두사라 그 자체가 표식이었다 → 다른 구조물 모델 이름 규칙("Struct_<구역>_<종류>")에 섞는다(구조물 모양 = A2).
 function WorldStructures.modelNameOf(spec)
 	if spec.track == "C" then
-		return ("Outcrop_%06d"):format(hashStr(spec.id) % 1000000)
+		return ("Struct_%s_ruins%03d"):format(spec.zone, hashStr(spec.id) % 1000) -- 40곳 겹침 0(%100은 1쌍 겹침)
 	end
 	return "Nest_" .. spec.id
 end

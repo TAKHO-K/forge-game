@@ -231,7 +231,7 @@ end
 -- "목표 초 안에 잡는 HP ÷ atk"는 한 번만 이분법으로 구하고 재사용한다(키 = 직업 · 공속 보너스 · 목표 초).
 local hpRatioCache = {}
 function EconSim.maxHpPerAtk(loadout, seconds)
-	local key = ("%s|%.9f|%.4f|%s|%.4f"):format(loadout.classId, PlayerCombat.getSpeedMultiplier(loadout.speedPercentBonus), seconds, tostring(SkillData.healer.E.attackMultiplier), loadout.critDmg) -- D1-2: 공속은 상한 뒤 배율로(상한 위 값은 같은 결과) · 태초 장갑 치명 피해도 처치 시간을 바꾼다
+	local key = ("%s|%.9f|%.4f|%s|%.4f|%s"):format(loadout.classId, PlayerCombat.getSpeedMultiplier(loadout.speedPercentBonus), seconds, tostring(SkillData.healer.E.attackMultiplier), loadout.critDmg, tostring(CombatConfig.attackSpeedCapIncludesBuffs)) -- D1-2: 공속은 상한 뒤 배율로(상한 위 값은 같은 결과) · 태초 장갑 치명 피해도 처치 시간을 바꾼다
 	local cached = hpRatioCache[key]
 	if cached then
 		return cached

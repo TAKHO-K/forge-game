@@ -15,7 +15,6 @@ local NestState = require(script.Parent.NestState)
 
 local anchors = {} -- [id] = part
 local eggs = {} -- [id] = { model, grade }
-local FIREFLY = Color3.fromRGB(255, 230, 120)
 
 -- 구역 알 색 = 그 구역 보스의 관문 색
 local ZONE_COLOR = {}
@@ -117,25 +116,7 @@ local function refreshAll()
 	end
 end
 
--- 환경 힌트(반딧불): 둥지 입구 근처 앵커(속성 Ambient = fireflies - S1 후속 0-6 중립 이름)에 기본 입자 몇 개(빛나는 작은 점 - VineLiftView와 같은 방식)
-local function addHint(part)
-	if part:GetAttribute("Ambient") ~= "fireflies" or part:FindFirstChild("Motes") then
-		return
-	end
-	local e = Instance.new("ParticleEmitter")
-	e.Name = "Motes"
-	e.Shape = Enum.ParticleEmitterShape.Sphere
-	e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
-	e.Rate = 1.2
-	e.Lifetime = NumberRange.new(3, 4.5)
-	e.Speed = NumberRange.new(0.6, 1.4)
-	e.SpreadAngle = Vector2.new(180, 180)
-	e.Size = NumberSequence.new(0.3)
-	e.Color = ColorSequence.new(FIREFLY)
-	e.LightEmission = 1
-	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.2), NumberSequenceKeypoint.new(0.7, 0.35), NumberSequenceKeypoint.new(1, 1) })
-	e.Parent = part
-end
+-- 환경 힌트(반딧불)는 서버가 붙인다(S1 후속 0-6 리뷰 1 - 힌트 속성을 클라에 남기지 않는다 · NestServer.start).
 
 local function track(part)
 	if not part:IsA("BasePart") then
@@ -148,8 +129,6 @@ local function track(part)
 			refresh(id)
 		end)
 		task.defer(refresh, id)
-	elseif part:GetAttribute("Ambient") then
-		addHint(part)
 	end
 end
 

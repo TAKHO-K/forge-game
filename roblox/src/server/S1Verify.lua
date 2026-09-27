@@ -124,22 +124,33 @@ function V.runPure()
 				maxPad = math.max(maxPad, (Vector3.new(s.target.X - c.X, 0, s.target.Z - c.Z).Magnitude + s.radius) / WorldMapData.hub.tree.course.pad.flightSeconds)
 			end
 		end
-		-- 지연 0.25 흉내: 설계 수평 maxPad/s 점프대 비행 1.1초를 0.25초 폴링으로 보되 표본이 두 폴링씩 몰리고(0 · 2칸) 허가는 0.5초 늦게 온다(pending → 위치 기록) → 되돌림 0
-		local lagSt = HeightGuard.newState()
-		lagSt.exemptUntil, lagSt.graceUntil = 0, 0
-		local x, lagOut = 0, {}
-		for i = 0, 8 do
-			local now = 20 + i * 0.25
-			if i == 2 then
-				HeightGuard.grantAt(lagSt, 1000, MovementConfig.permit.padSeconds, "합성 점프대(늦은 허가)", now, maxPad * MovementConfig.moveGuard.padSpeedMargin)
+		-- 지연 0.25 흉내: 설계 수평 maxPad/s 점프대 비행을 0.25초 폴링으로 보되 표본이 두 폴링씩 몰린다(허가는 지연된 위치 기록으로 - 비행 표본보다 먼저).
+		-- 리뷰 5: 걷기 버킷만으로 통과하지 않게 버킷이 빈 채 시작(직전까지 걸어 옴) + 허가 없는 대조군은 되돌림이 나와야 한다.
+		local function lagRun(withPermit)
+			local lagSt = HeightGuard.newState()
+			lagSt.exemptUntil, lagSt.graceUntil = 0, 0
+			lagSt.hGood, lagSt.hAt, lagSt.bucket = Vector3.new(0, 3, 0), 20, 0
+			local x, out = 0, {}
+			for i = 1, 8 do
+				local now = 20 + i * 0.25
+				if withPermit and i == 1 then -- 서버는 발판 위 표본(지연된 위치 기록)으로 허가한 뒤에 비행 표본을 본다
+					HeightGuard.grantAt(lagSt, 1000, MovementConfig.permit.padSeconds, "합성 점프대(늦은 허가)", now, maxPad * MovementConfig.moveGuard.padSpeedMargin)
+				end
+				if i <= 5 then
+					x += (i % 2 == 1) and maxPad * 0.5 or 0 -- 몰림: 두 폴링 몫이 한 표본에
+				end
+				local ctx = HeightGuard.horizontalContext(lagSt, fakeChar, fakeRoot, fakeHum, now)
+				local v = HeightGuard.evaluateHorizontal(lagSt, { pos = Vector3.new(x, 3, 0) }, now, ctx)
+				if v == "hrevert" then
+					x = lagSt.hGood.X
+				end
+				table.insert(out, v == "ok" and "o" or "R")
 			end
-			if i >= 1 and i <= 5 then
-				x += (i % 2 == 1) and maxPad * 0.5 or 0 -- 몰림(첫 몫은 허가 전 - 버킷이 받는다): 두 폴링 몫이 한 표본에(평균 = 설계 속도)
-			end
-			local ctx = HeightGuard.horizontalContext(lagSt, fakeChar, fakeRoot, fakeHum, now)
-			table.insert(lagOut, HeightGuard.evaluateHorizontal(lagSt, { pos = Vector3.new(x, 3, 0) }, now, ctx) == "ok" and "o" or "R")
+			return table.concat(out)
 		end
-		r.check(("지연 0.25 점프대(설계 %.1f/s · 표본 몰림 · 허가 0.5초 늦음): %s(기대 되돌림 0)"):format(maxPad, table.concat(lagOut)), not table.concat(lagOut):find("R"))
+		local lagWith, lagWithout = lagRun(true), lagRun(false)
+		r.check(("지연 0.25 점프대(설계 %.1f/s · 버킷 빈 채 · 표본 몰림): 허가 %s(기대 되돌림 0) · 허가 없음 %s(기대 되돌림 있음)"):format(maxPad, lagWith, lagWithout),
+			not lagWith:find("R") and lagWithout:find("R") ~= nil)
 		r.check(("발판 허가 수평: 점프대(설계 40/s) %.0f(기대 40 × %.2f) · 통통 열매 %.1f(기대 = 걷기 %.1f) · 나무 점프대 %d개 설계 최대 %.1f/s × 여유 = %.1f(기대 < 보스 %d)"):format(
 			padRate, MovementConfig.moveGuard.padSpeedMargin, fruitRate, walkRate, padCount, maxPad, maxPad * MovementConfig.moveGuard.padSpeedMargin, MovementConfig.moveGuard.permitSpeed),
 			math.abs(padRate - 40 * MovementConfig.moveGuard.padSpeedMargin) < 1e-6 and fruitRate == walkRate and padCount > 0 and maxPad * MovementConfig.moveGuard.padSpeedMargin < MovementConfig.moveGuard.permitSpeed)
@@ -348,23 +359,26 @@ function V.runLive(player, env)
 	r.section("비밀 둥지 단서 이름(S1 후속 0-6)", function()
 		local OLD = { AlcoveFloor = true, AlcoveWall = true, AlcoveLintel = true, AlcoveRoof = true, FallenSlab = true, BuriedLintel = true, FakeWall = true, OddStone = true,
 			TimedDoor = true, GazeboPost = true, HollowTrunk = true, HollowRoof = true, VineCurtain = true, MossLine = true, FallSheet = true, NestHint = true }
-		local oldNames, oldAttrs, cycles, ambients = 0, 0, 0, 0
+		local oldNames, clueAttrs, outcrops, motes = 0, 0, 0, 0
 		for _, d in ipairs(workspace.Ground:GetDescendants()) do
 			if OLD[d.Name] then
 				oldNames += 1
 			end
-			if d:GetAttribute("TimedDoor") ~= nil or d:GetAttribute("NestHint") ~= nil then
-				oldAttrs += 1
+			if d.Name:match("^Outcrop_") then
+				outcrops += 1
 			end
-			if d:GetAttribute("Cycle") then
-				cycles += 1
+			for _, key in ipairs({ "TimedDoor", "NestHint", "Cycle", "Ambient" }) do
+				if d:GetAttribute(key) ~= nil then
+					clueAttrs += 1
+				end
 			end
-			if d:GetAttribute("Ambient") then
-				ambients += 1
+			if d:IsA("ParticleEmitter") and d.Name == "Motes" then
+				motes += 1
 			end
 		end
-		r.check(("월드 옛 단서 이름 %d · 옛 속성 %d(기대 0 0) · 번개 문(Cycle) %d · 환경 힌트(Ambient) %d(기대 둘 다 > 0 - 동작 불변)"):format(oldNames, oldAttrs, cycles, ambients),
-			oldNames == 0 and oldAttrs == 0 and cycles > 0 and ambients > 0)
+		local doors = require(script.Parent.NestServer).timedDoorCount()
+		r.check(("월드 옛 단서 이름 %d · C 전용 모델 이름(Outcrop_) %d · 단서 속성(TimedDoor · NestHint · Cycle · Ambient) %d(기대 0 0 0 - 서버가 읽고 지움) · 서버 번개 문 %d · 반딧불 입자(서버) %d(기대 둘 다 > 0 - 동작 불변)"):format(oldNames, outcrops, clueAttrs, doors, motes),
+			oldNames == 0 and outcrops == 0 and clueAttrs == 0 and doors > 0 and motes > 0)
 	end)
 
 	r.section("스테이지 상한 · 저장 전 자름", function()
@@ -453,11 +467,12 @@ function V.runLive(player, env)
 			rel == "released" and forged.primordial.quarantined == nil and rev == "revoked" and legit.primordial.revoked ~= nil and logEntry ~= nil)
 		-- ⑤ S1 후속 0-5: /ops stats(이 서버 메모리) · 종료 요약 저장(검증 모드 = _verify 저장소) → /ops stats all
 		local AlphaStats = require(script.Parent.AlphaStats)
+		AlphaStats.notePull(0.5, 12, 1) -- 리뷰 6: 빈 서버는 저장을 건너뛴다 - 검증용 끌어오기 1건(Studio 메모리 카운터)
 		local here = hook:Invoke(player, "/ops stats")
-		local saved = AlphaStats.saveSummary()
+		local saved, entry = AlphaStats.saveSummary()
 		local all = hook:Invoke(player, "/ops stats all")
 		r.check(("운영 stats: 이 서버 → \"%s\" · 요약 저장 %s · all → \"%s\""):format(tostring(here), tostring(saved), tostring(all)),
-			type(here) == "string" and here:find("끌어오기") ~= nil and saved == true and type(all) == "string" and all:find("저장된 서버") ~= nil)
+			type(here) == "string" and here:find("끌어오기") ~= nil and saved == true and entry ~= nil and type(all) == "string" and all:find("저장된 서버") ~= nil)
 		-- 되돌리기
 		profile.inventory = savedInv
 		profile.audit = savedAudit

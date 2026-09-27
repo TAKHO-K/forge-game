@@ -294,6 +294,25 @@ local function refreshActive()
 end
 NestServer.refreshActive = refreshActive
 
+-- 검증: 서버가 모은 번개 문 파트(속성은 시작 때 지운다 - 리뷰 1)
+function NestServer.debugTimedDoors()
+	local list = {}
+	for _, parts in pairs(timedDoors) do
+		for _, p in ipairs(parts) do
+			table.insert(list, p)
+		end
+	end
+	return list
+end
+
+function NestServer.timedDoorCount()
+	local n = 0
+	for _, parts in pairs(timedDoors) do
+		n += #parts
+	end
+	return n
+end
+
 function NestServer.start()
 	if syncRemote then
 		return
@@ -324,6 +343,24 @@ function NestServer.start()
 			local key = part:GetAttribute("Cycle")
 			timedDoors[key] = timedDoors[key] or {}
 			table.insert(timedDoors[key], part)
+			part:SetAttribute("Cycle", nil) -- 리뷰 1: 서버가 목록을 가졌으면 속성은 지운다(C 둥지에만 있는 속성 = 클라가 읽는 표식 · 굽기는 Studio edit 빌드에서 읽는다)
+		elseif part:IsA("BasePart") and part:GetAttribute("Ambient") then -- 환경 힌트: 반딧불 입자는 서버가 붙이고 속성은 지운다(리뷰 1 - 옛 클라 NestView가 속성으로 찾았다)
+			if part:GetAttribute("Ambient") == "fireflies" then
+				local e = Instance.new("ParticleEmitter")
+				e.Name = "Motes"
+				e.Shape = Enum.ParticleEmitterShape.Sphere
+				e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+				e.Rate = 1.2
+				e.Lifetime = NumberRange.new(3, 4.5)
+				e.Speed = NumberRange.new(0.6, 1.4)
+				e.SpreadAngle = Vector2.new(180, 180)
+				e.Size = NumberSequence.new(0.3)
+				e.Color = ColorSequence.new(Color3.fromRGB(255, 230, 120))
+				e.LightEmission = 1
+				e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.2), NumberSequenceKeypoint.new(0.7, 0.35), NumberSequenceKeypoint.new(1, 1) })
+				e.Parent = part
+			end
+			part:SetAttribute("Ambient", nil)
 		end
 	end
 	refreshActive()

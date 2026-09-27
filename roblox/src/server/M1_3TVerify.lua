@@ -520,12 +520,9 @@ function V.runLive(player, env)
 		NestServer.debugDayShift = 0
 		NestServer.refreshActive()
 		local open = NestServer.timedOpen(Workspace:GetServerTimeNow())
-		local doors, consistent = 0, true
-		for _, d in ipairs(Workspace.Ground:GetDescendants()) do
-			if d:IsA("BasePart") and d:GetAttribute("Cycle") then
-				doors += 1
-				consistent = consistent and (d.CanCollide == not open)
-			end
+		local doors, consistent = NestServer.timedDoorCount(), true -- S1 후속 리뷰 1: 속성은 시작 때 지운다 - 서버 목록으로 센다
+		for _, d in ipairs(NestServer.debugTimedDoors()) do
+			consistent = consistent and (d.CanCollide == not open)
 		end
 		r.check(("번개 문 %d개 · 지금 열림 %s · 충돌 상태 일치 %s(주기 %d초 중 %d초 열림)"):format(doors, tostring(open), tostring(consistent), NestData.timedDoor.periodSeconds, NestData.timedDoor.openSeconds), doors == 1 and consistent)
 	end)

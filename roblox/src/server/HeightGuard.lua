@@ -37,6 +37,10 @@ end
 -- 허가 한 장(순수 - 검증이 합성 상태에 준다). 가장 최근 것만 = 덮어쓴다.
 -- hRate(S1 후속 0-4) = 설계 체공 동안 수평 상한(stud/s) - 보스 발사 = moveGuard.permitSpeed(400) · 점프대 = 설계 수평 속도 × padSpeedMargin · nil = 걷기 그대로(통통 열매 · 붙잡기).
 function HeightGuard.grantAt(st, maxFeetY, seconds, source, now, hRate)
+	local prev = st.permit
+	if prev and prev.hRate and now <= prev.expiresAt then -- 리뷰 2: 날아가는 중 받은 새 허가(붙잡기 등)가 앞 허가(보스 발사 400)의 수평 상한을 끊지 않게 - 설계 체공 안이면 이어받는다
+		hRate = math.max(hRate or 0, prev.hRate)
+	end
 	st.permit = { maxFeetY = maxFeetY, issuedAt = now, expiresAt = now + seconds, source = source, airSeen = false, hRate = hRate }
 	st.permits += 1
 	return st.permit
