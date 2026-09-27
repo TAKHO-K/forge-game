@@ -442,7 +442,8 @@ statusLine.TextColor3 = UIColors.danger
 statusLine.Text = ""
 statusLine.Parent = panel
 
--- C2: 권장 전투력 줄(자리만 - 최종 스타일 U1). 고른 보스 칸이 있으면 그 스테이지, 없으면 지금 스테이지의 tier1 몹 기준.
+-- C2: 권장 전투력 줄(자리만 - 최종 스타일 U1). 고른 보스 칸이 있으면 그 스테이지, 없으면 지금 스테이지 - 스테이지 권장(기준 구역 몹 = 대표가 사냥하는 구역).
+--   보스전은 배율 제외(CombatFormulaData.bossExempt)라 보스 칸의 값은 "그 스테이지 권장" 참고용.
 local recommendLine = Instance.new("TextLabel")
 recommendLine.Name = "RecommendLine"
 recommendLine.Position = UDim2.new(0, 16, 1, -34)
@@ -553,6 +554,7 @@ end
 
 local function setStatus(text)
 	statusLine.Text = text or ""
+	recommendLine.Visible = CombatFormula.enabled() and statusLine.Text == "" -- C2 리뷰 1: 상태 문구와 겹치지 않게
 end
 
 -- 지금 창 안의 보스 스테이지(최대 maxStages개 - 21칸 안에는 4 ~ 5개)를 서버에 묻는다. 요청 간격 하한(서버가 "rate"로 거절한다)보다 촘촘하지 않게 한 번으로 모아 보낸다.
@@ -722,7 +724,7 @@ end
 
 -- 예외 3(목록을 연 채로 스테이지가 바뀔 때, 파티 투표 이동 포함): 세 Attribute를 구독해
 -- 열려 있는 동안은 그 자리에서 다시 그린다(windowStart는 유지 - 보던 자리를 안 바꾼다).
-for _, attr in ipairs({ "InfiniteStage", "InfiniteStageBest", "BestBossCleared", "RebirthCount", "BossGatesUsable" }) do -- BossGatesUsable = M1-3 원격 입장 버튼
+for _, attr in ipairs({ "InfiniteStage", "InfiniteStageBest", "BestBossCleared", "RebirthCount", "BossGatesUsable", "CombatPower" }) do -- BossGatesUsable = M1-3 원격 입장 버튼 · CombatPower = C2 권장 줄
 	player:GetAttributeChangedSignal(attr):Connect(render)
 end
 -- 보스를 잡았거나(BestBossCleared) 직업이 바뀌면(ClassId - 장비 수령 기록이 직업별) 열려 있는 동안 다시 묻는다.

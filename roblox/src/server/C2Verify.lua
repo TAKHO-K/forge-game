@@ -86,9 +86,11 @@ function V.runPure()
 
 	r.section("스위치 끔 = 옛 공식", function()
 		CombatFormulaData.enabled = false
-		local deal, take = CombatFormula.dealMultiplier(1, 100), CombatFormula.takeMultiplier(1, 100, 10)
-		local gapOld = CharacterLevel.levelGapDealMultiplier(1, 1000)
+		local ok, deal, take, gapOld = pcall(function() -- 리뷰 8: 에러가 나도 스위치를 되돌린다
+			return CombatFormula.dealMultiplier(1, 100), CombatFormula.takeMultiplier(1, 100, 10), CharacterLevel.levelGapDealMultiplier(1, 1000)
+		end)
 		CombatFormulaData.enabled = true
+		assert(ok, deal)
 		local gapNew = CharacterLevel.levelGapDealMultiplier(1, 1000)
 		r.check(("끔: 주는 %.3f · 받는 %.3f = 1 · 레벨차 계수 되살아남 %.3f < 1 · 켬: 레벨차 %.3f = 1(통합)"):format(deal, take, gapOld, gapNew),
 			deal == 1 and take == 1 and gapOld < 1 and gapNew == 1)
@@ -133,7 +135,7 @@ function V.runLive(player, env)
 	for _, m in ipairs(MonsterState.getAllModels()) do
 		before[m] = true
 	end
-	PlayerState.setIncomingDamageMultiplierUntil(player, 0, 40) -- 표본 잡몹 리스폰이 개발 캐릭터를 치지 않게(P3b 함정)
+	PlayerState.setIncomingDamageMultiplierUntil(player, 0, 40, "c2verify") -- 표본 잡몹 리스폰이 개발 캐릭터를 치지 않게(P3b 함정)
 
 	r.section("전투력 동기화", function()
 		task.wait(1.2)

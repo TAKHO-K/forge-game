@@ -214,6 +214,7 @@ local function performAttack(aimPoint, isAir)
 		player:GetAttribute("AttackSpeedBuffMultiplier")
 	)
 	local now = os.clock()
+	lastSwingClose = false -- C2 리뷰 3: 이번 요청이 휘두르기를 재생하지 않았으면 투사체를 그린다(지난 휘두르기 값이 남지 않게)
 	if now - lastSwingTick >= cooldown then
 		lastSwingTick = now
 		local heavy = predictIsHeavyHit(isAir)

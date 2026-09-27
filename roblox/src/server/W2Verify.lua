@@ -222,6 +222,9 @@ function V.runLive(player, env)
 		local t0 = os.clock()
 		while os.clock() - t0 < 40 and ReplicatedStorage:GetAttribute("W2Phase") == "melee" do
 			H.fullHeal(player)
+			if not still.Parent then -- C2 묶음 Play: 표본이 죽으면 같은 자리에 다시(잡몹은 받는 피해 배율이 안 먹는다 - W2 함정)
+				still = spawnMob(base + fwd * 7, "still")
+			end
 			task.wait(0.2)
 		end
 		-- 2) 활: 가만한 몹(10 앞) + 움직이는 몹(10 앞 오른쪽 · 반경 4 원 · 초당 8) - 발사 후 비행 중 몹이 움직여 허용 폭 경계를 오간다
@@ -235,6 +238,12 @@ function V.runLive(player, env)
 		while os.clock() - t0 < 110 and ReplicatedStorage:GetAttribute("W2Phase") == "bow" do
 			local dt = RunService.Heartbeat:Wait()
 			angle += dt * 8 / 4
+			if not moving.Parent then
+				moving = spawnMob(center + right * 4, "moving")
+			end
+			if not still.Parent then
+				still = spawnMob(base + fwd * 10 - right * 5, "still")
+			end
 			if moving.Parent then
 				moving:PivotTo(CFrame.new(center + right * (math.cos(angle) * 4) + fwd * (math.sin(angle) * 4)))
 			end
