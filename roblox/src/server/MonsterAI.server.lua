@@ -258,6 +258,9 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 		return
 	end
 	MonsterState.setLastAttackTick(model, now)
+	-- BR1-4b 모션(판정과 무관): 평타 휘두름 - 클라 BossAnimator가 이 순간을 타격 프레임으로(좌우 번갈아 = 횟수)
+	model:SetAttribute("BossSwingAt", workspace:GetServerTimeNow())
+	model:SetAttribute("BossSwingN", (model:GetAttribute("BossSwingN") or 0) + 1)
 	for _, v in ipairs(victims) do
 		local far = Reach.horizontalDistance(v.root.Position, monsterPosition) > data.attackRangeStuds
 		local multiplier = (data.basicAttackDamageMultiplier or 1) * (far and (data.attackFarMultiplier or 1) or 1)

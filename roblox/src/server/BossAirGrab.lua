@@ -20,6 +20,9 @@ local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossArenaContainment = require(script.Parent.BossArenaContainment)
 local HeightGuard = require(script.Parent.HeightGuard)
+local BossRigSpec = require(ReplicatedStorage.Shared.data.BossRigSpec)
+local BossRig = require(ReplicatedStorage.Shared.BossRig)
+local BossMotion = require(ReplicatedStorage.Shared.BossMotion)
 local PlayerStun = require(script.Parent.PlayerStun) -- BR1-3 기절 면역(연속 기절 방지 - 얼림도 같은 규칙)
 
 local BossAirGrab = {}
@@ -140,8 +143,49 @@ local function freeze(c, v)
 	print(("[forge-game] 대공 잡기: %s 얼림(판정 창 누적 체공 %.2f초)"):format(tostring(v.player.Name), air))
 end
 
--- 들고 있는 자리: 보스 머리 위 둘레(index마다 90° 벌린다).
+-- BR1-4b(4b-3 · 4b-5): 관절 리그 보스는 **보이는 손 · 어깨 · 꼬리 · 집게 부착점**에 매단다 - 모션과 같은 식(shared/BossMotion)으로 서버가 FK를 풀어 그 자리를 쓴다(클라 BossAnimator도 같은 자리에 그린다).
+-- 반환: 루트 자리, 부착점 이름(없으면 nil = 옛 머리 위 둘레).
+local rigCache = {}
+local function rigHoldPoint(c, index)
+	local rigId = c.model:GetAttribute("BossRig")
+	local rig = rigId and BossRigSpec.rigs[rigId]
+	local root = c.model.PrimaryPart
+	if not rig or not root then
+		return nil
+	end
+	local cache = rigCache[rigId]
+	if not cache then
+		cache = { ctx = BossMotion.context(rigId, rig, c.data.skills, c.data.moveSpeedStuds), rest = BossMotion.prepare(rig) }
+		rigCache[rigId] = cache
+	end
+	local slots = BossRigSpec.holdSlots[rig.plan] or BossRigSpec.holdSlots.biped
+	local slot = slots[math.min(index, #slots)]
+	local m = c.model
+	local st = { act = m:GetAttribute("BossAct"), actAt = m:GetAttribute("BossActAt"), actHit = m:GetAttribute("BossActHit"), speed = 0,
+		pickAt = m:GetAttribute("BossPickAt") }
+	local plan = m:GetAttribute("BossThrowPlan") -- 4b 리뷰 1: 지난 회차의 던지기 예정은 버린다(클라 readState와 같은 거르기)
+	st.throwPlan = (plan and st.actAt and plan > st.actAt) and plan or nil
+	local S = root.Size.X / 2
+	-- 한 틱에 보스당 한 번만 자세 · FK를 푼다(잡힌 사람 여럿이면 부착점만 꺼낸다)
+	local tick = c.st.rigHoldTick
+	if not tick or tick.at ~= c.now or tick.root ~= root.CFrame then
+		local pose = BossMotion.evaluate(cache.ctx, st, kit.serverNow())
+		local upright = CFrame.new(root.Position) * CFrame.Angles(0, math.atan2(-root.CFrame.LookVector.X, -root.CFrame.LookVector.Z), 0)
+		tick = { at = c.now, root = root.CFrame, frames = BossRig.solve(rig, upright, S, BossMotion.toTransforms(cache.rest, S, pose)) }
+		c.st.rigHoldTick = tick
+	end
+	local a = rig.attach[slot]
+	local host = a and tick.frames[a.part]
+	local at = host and host * CFrame.new(a.at * S)
+	return at and (at.Position - Vector3.new(0, BossRigSpec.holdHangStuds, 0)) or nil, slot
+end
+
+-- 들고 있는 자리: 리그 부착점(위) · 없으면 보스 머리 위 둘레(index마다 90° 벌린다).
 local function holdPoint(c, index)
+	local rigPoint, slot = rigHoldPoint(c, index)
+	if rigPoint then
+		return rigPoint, slot
+	end
 	local origin = kit.xz(c.model:GetPivot().Position)
 	local a = math.rad(90 * (index - 1) + 45)
 	local at = origin + Vector3.new(math.cos(a), 0, math.sin(a)) * CONFIG.holdOffsetStuds
@@ -190,7 +234,7 @@ local function grab(c, v)
 	local from = v.root.Position
 	BossTrap.release(v.player, "chain") -- 얼음 → 손(유예 없음 - 바로 다음 잡힘)
 	local index = #st.grabHeld + 1
-	local point = holdPoint(c, index)
+	local point, slot = holdPoint(c, index)
 	if not BossTrap.trap(v.player, {
 		kind = skill.trap.kind, rescueType = skill.trap.rescueType, autoReleaseSeconds = SAFETY_TRAP_SECONDS,
 		context = { origin = point, zoneKey = MonsterState.getZoneKey(c.model), bossModel = c.model, grab = true, color = c.data.headColor },
@@ -207,6 +251,9 @@ local function grab(c, v)
 	held[v.player] = true
 	HeightGuard.exempt(v.player, SAFETY_TRAP_SECONDS)
 	setRootAt(v, point)
+	if realPlayer(v.player) then
+		v.player:SetAttribute("BossHoldSlot", slot) -- BR1-4b: 클라가 보이는 부착점에 붙여 그린다
+	end
 	gaugeAttribute(st)
 	kit.send(st, "grabPick", {
 		userId = realPlayer(v.player) and v.player.UserId or nil, from = from, point = point, liftSeconds = CONFIG.liftSeconds,
@@ -230,6 +277,7 @@ local function releaseAll(c, reason)
 	for _, player in ipairs(st.grabHeld or {}) do
 		if realPlayer(player) and player.Parent then
 			player:SetAttribute("BossGrabGauge", nil)
+			player:SetAttribute("BossHoldSlot", nil)
 		end
 	end
 	st.grabHeld = {}
@@ -272,11 +320,19 @@ local function throwAll(c)
 		end
 	end
 	kit.send(st, "grabThrow", { userIds = ids, motion = skill.motion, bossId = c.data.id, bossPosition = c.model:GetPivot().Position, color = c.data.headColor })
+	-- 4b 리뷰 3: 던지는 출발 높이는 옛 들기 높이 그대로(던지기 전조 자세의 손 높이면 포물선이 길어져 벽을 넘을 수 있다 - 던짐 판정 불변)
+	for _, player in ipairs(st.grabHeld) do
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			setRootAt({ root = root }, Vector3.new(root.Position.X, st.floorY + CONFIG.holdLiftStuds + ROOT_ABOVE_FEET, root.Position.Z))
+		end
+	end
 	local held = grabsByModel[c.model]
 	grabsByModel[c.model] = nil
 	for _, player in ipairs(st.grabHeld) do
 		if realPlayer(player) and player.Parent then
 			player:SetAttribute("BossGrabGauge", nil)
+			player:SetAttribute("BossHoldSlot", nil)
 		end
 		if held and held[player] then
 			local record = BossTrap.getRecord(player)
@@ -296,6 +352,7 @@ BossAirGrab.handler = {
 	start = function(c)
 		local st, skill = c.st, c.skill
 		st.phase = "grabTelegraph"
+		c.model:SetAttribute("BossThrowPlan", nil) -- 4b 리뷰 1: 지난 회차 값 지우기
 		st.phaseEndsAt = c.now + skill.telegraphSeconds
 		st.grabStartedAt = c.now
 		st.grabMarks = {}
@@ -359,7 +416,10 @@ BossAirGrab.handler = {
 		for index, player in ipairs(st.grabHeld) do
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if root then
-				local point = holdPoint(c, index)
+				local point, slot = holdPoint(c, index)
+				if slot and realPlayer(player) and player:GetAttribute("BossHoldSlot") ~= slot then
+					player:SetAttribute("BossHoldSlot", slot) -- 4b 리뷰 2: 한 명이 풀려 순서가 당겨지면 보이는 자리도 같이
+				end
 				setRootAt({ root = root }, point)
 				local entry = handTargets[player]
 				if entry and entry.model and entry.model.Parent then
@@ -372,6 +432,7 @@ BossAirGrab.handler = {
 			if not v then
 				st.phase = "grabHold"
 				st.phaseEndsAt = c.now + CONFIG.holdSeconds
+				c.model:SetAttribute("BossThrowPlan", kit.serverNow() + CONFIG.holdSeconds) -- BR1-4b 모션(판정과 무관): 던지는 예정 시각 - 클라가 던지기 전조를 미리 시작한다
 				return
 			end
 			local timedOut = c.now - st.grabChaseStartedAt >= CONFIG.chaseMaxSeconds
@@ -466,6 +527,7 @@ BossTrap.onReleased(function(player, record, reason)
 	end
 	if realPlayer(player) and player.Parent then
 		player:SetAttribute("BossGrabGauge", nil)
+		player:SetAttribute("BossHoldSlot", nil)
 	end
 	local entry = handTargets[player]
 	if entry then
@@ -533,6 +595,7 @@ function BossAirGrab.press(player)
 			BossTrap.release(player, "escaped")
 			if realPlayer(player) and player.Parent then
 				player:SetAttribute("BossGrabGauge", nil)
+				player:SetAttribute("BossHoldSlot", nil)
 			end
 		end
 		return true

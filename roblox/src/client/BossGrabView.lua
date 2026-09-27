@@ -14,6 +14,12 @@ local Workspace = game:GetService("Workspace")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Text = require(ReplicatedStorage.Shared.Text)
 local BossFx = require(script.Parent.BossFx)
+local BossRigSpec = require(ReplicatedStorage.Shared.data.BossRigSpec)
+
+-- BR1-4b: 관절 리그 보스는 자기 팔 · 집게 · 꼬리로 잡고 던진다(client/BossAnimator) - 옛 대체 연출(떠다니는 손 파트)은 그리지 않는다.
+local function rigged(bossId)
+	return bossId ~= nil and BossRigSpec.rigs[bossId] ~= nil
+end
 
 local BossGrabView = {}
 
@@ -117,14 +123,16 @@ function BossGrabView.telegraph(data)
 	elseif data.motion == "wind" then
 		shape, size, transparency, color = Enum.PartType.Cylinder, Vector3.new(6, 3.5, 3.5), 0.55, WHITE
 	end
-	local hand = newPart(size, color, transparency, shape)
-	hand.Material = data.motion == "wind" and Enum.Material.Neon or Enum.Material.SmoothPlastic
 	local base = data.center + Vector3.new(0, 4, 0)
-	hand.CFrame = CFrame.new(base)
-	TweenService:Create(hand, TweenInfo.new(data.seconds * 0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		CFrame = CFrame.new(base + Vector3.new(0, 13, 0)) * CFrame.Angles(math.rad(-20), 0, 0),
-	}):Play()
-	table.insert(hands, hand)
+	if not rigged(data.bossId) then
+		local hand = newPart(size, color, transparency, shape)
+		hand.Material = data.motion == "wind" and Enum.Material.Neon or Enum.Material.SmoothPlastic
+		hand.CFrame = CFrame.new(base)
+		TweenService:Create(hand, TweenInfo.new(data.seconds * 0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			CFrame = CFrame.new(base + Vector3.new(0, 13, 0)) * CFrame.Angles(math.rad(-20), 0, 0),
+		}):Play()
+		table.insert(hands, hand)
+	end
 	-- 아레나 전역 신호(BR1-2): 보스 위 "점프하지 마" 표지 - 뛰는 사람 실루엣 + 빨간 금지 원 + 시전 막대(모두에게 보인다).
 	local anchor = newPart(Vector3.one * 0.2, WHITE, 1)
 	anchor.CFrame = CFrame.new(base + Vector3.new(0, 18, 0))
@@ -284,10 +292,12 @@ function BossGrabView.pick(data)
 		destroy(block)
 	end
 	-- BR1-2: 사람마다 손 하나 - 들린 사람의 루트를 매 프레임 따라간다(서버가 보스 둘레로 옮긴다 - 아래 RenderStepped).
-	local hand = newPart(Vector3.new(3.2, 1.2, 3.8), data.color or DANGER, 0)
-	hand.CFrame = CFrame.new(data.from + Vector3.new(0, 2.2, 0))
-	table.insert(hands, hand)
-	followHands[hand] = data.userId
+	if not rigged(data.bossId) then
+		local hand = newPart(Vector3.new(3.2, 1.2, 3.8), data.color or DANGER, 0)
+		hand.CFrame = CFrame.new(data.from + Vector3.new(0, 2.2, 0))
+		table.insert(hands, hand)
+		followHands[hand] = data.userId
+	end
 	BossFx.ring(data.from, 1, 6, WHITE, 0.3)
 	BossFx.shake(data.from, 0.4)
 end
@@ -303,6 +313,11 @@ function BossGrabView.throw(data)
 		size = Vector3.new(5, 1.4, 4)
 	elseif data.motion == "wind" then
 		size, material, transparency, color = Vector3.new(3, 10, 10), Enum.Material.Neon, 0.5, WHITE
+	end
+	if rigged(data.bossId) then -- 리그 보스는 자기 몸으로 던진다 - 충격 고리 · 바람 줄 · 흔들림만
+		BossFx.ring(center, 2, 18, WHITE, 0.4)
+		BossFx.shake(center, 0.8)
+		return
 	end
 	local arm = newPart(size, color, transparency)
 	arm.Material = material

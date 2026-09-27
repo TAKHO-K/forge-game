@@ -88,6 +88,9 @@ local function disposePuppet()
 end
 
 local function buildPuppet(model)
+	if model:GetAttribute("BossRig") then
+		return nil -- BR1-4b: 관절 리그 보스는 client/BossAnimator가 몸을 움직인다(인형 복제 없음 - 먼지 · 풍압 연출만 이 모듈)
+	end
 	if puppet and puppet.model == model then
 		return puppet
 	end

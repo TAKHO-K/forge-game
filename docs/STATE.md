@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **BR1-4b 파트 0(후속 정리) · 2026-09-27 밤** · 직전 보고서 = `docs/phase/BR1-4b0-report.md`(그 전 `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **BR1-4b(보스 모션) · 2026-09-27 밤** · 직전 보고서 = `docs/phase/BR1-4b-report.md`(그 전 `BR1-4b0-report.md` · `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -56,7 +56,9 @@
 
 > **BR1-4b 파트 0 끝(2026-09-27 밤) - place 저장 불필요**: 속사 중 공속 상한 `attackSpeedMaxMultiplierBuffed` 6.25(옛 스위치 삭제) · 옵션 상한 위력 2.55 · 치명 1.79 · 대검 Q/E 7.65 · 쌍검 E 10.2(도달 최대 위) · 낙하 안전 높이 = max(`fall.safeHeight` 24.38, 플레이어 정점 + 3) · 공중 대시 = 궤적 최고점 재측정 · 29-2 · 29-4 블록 삭제 · BR1-4a 리뷰 4건 · 개발 명령 `/gg fall <높이>` · EconSim 차이 0(`BR1-4b0-report.md`).
 
-> **BR1-4b 시작 지점(이번 묶음에서 착수 안 함 - 사용자 시간)**: 4b-1 모션 구조(AnimationController · Animator · 서버 AlignPosition · 클라 보간 · 판정 시각 = 4a 그대로) · 4b-2 돌진 낚아채기(A1 원형 `A1Prototypes.guardian`) · 4b-3 전갈 꼬리 Bone 3 × 8(A1 원형 `scorpionTail`) · 4b-4 붕괴 연출(조각 바닥은 4a에 있음 - 아래로 꺼지는 트윈 · 심연 그라데이션 · 먼지 · 구멍 위 구조물) · 4b-5 넘어짐 → `WeaponVisual.playGetup`. 검증 = 보스 6종 대표 동작 스크린샷 · 12인 step(4a 최대 1,677μs) · 판정 시각 차이 0.
+> **BR1-4b 끝(2026-09-27 밤) - place 저장 불필요**: 보스 6종 관절 리그(`shared/data/BossRigSpec` · `shared/BossRig`) · 모션 = 클라 `client/BossAnimator`(Motor6D.Transform · 클라 보간 · 스프링 · LOD) + 순수 계산 `shared/BossMotion`(데이터 `BossMotionData` - 관절 이름으로만) · 서버 알림 Attribute(`BossAct*` · `BossStun*` · `BossPick*` · `BossThrow*` · `BossEnv*` · `BossSwing*` - 판정 경로 불변) · 대공 잡기 들기 자리 = 리그 부착점 FK(손 · 어깨 · 꼬리 3 · 집게 - `holdSlots`) · 붕괴 심연 층 · 확인 도구 `/gg boss anim <보스> <동작|all>` · 판정 시각 차이 0 · 12인 1,806μs(`BR1-4b-report.md`).
+
+> **BR1-4c 시작 지점(사용자 추가 지시 - 플레이 체감)**: c-1 붕괴 뒤 남는 바닥(원인 후보 = 둔덕은 **중심 조각** 기준으로만 꺼짐 → 여러 조각에 걸친 가운데 큰 둔덕이 남는다 · 실측 확인 필요) · c-2 폭풍 회오리(tornado 투사체 접근 표시 · 맞으면 둘레를 돌며 떠오름 - BR1-4a `STORM_WHIRL_LAUNCH` 2.5초) · c-3 유도 투사체 공통 규칙(대상 고정 · 0.5초 갱신 · 3초 뒤 직진 · 회전 상한) · c-4 진입 연출 · c-5 처치 연출. 첫 Play에 BR1-4b(나)(전갈 꼬리 밑 4마디 실전 높이) 포함.
 
 **다음** = BR1-4b(모션 - 위 시작 지점) · BR1-4(보스 손질 - 시작 지점 = 바로 아래 인용)(이동 보안 - `MoveRules.s1Limits`) · M1-4 결정(§4 - 특히 **place 저장**) 뒤 로드맵(`docs/phase/roadmap-v2.md`): BR2(보스 세트 · 토벌 - 관문 자리 있음) · M2(몬스터 외형 · 종) · 펫 단계(알 부화 · 탑승 · 활강 - 둥지 B · C는 활강 착지 불가로 설계됨). 지형 모양을 바꾸면 `TerrainGenData.version[구역]`을 올리고 그 구역만 다시 굽고 place 저장. 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`.
 
@@ -88,6 +90,7 @@
 | S1 후속 1 ~ 5 | 1 공속 버프 포함 스위치(+19.6% - 추천 끄기 유지) · 2 상한 3종 제안값 < 도달 최대(추천 도달 최대 위로) · 3 신발 속도 구간 쌍검 ÷ 대검 1.36 ~ 1.48 · 4 공중 정체 3.5초 · 5 C 둥지 모양(A2) - `S1-fix-report.md` |
 | BR1-4a 1 ~ 4 | 1 대공 잡기 누적 0.65(53 · 75 · 83%) · 2 고정 %에 신규 보호 유지 · 3 구멍 위 구조물 · ~~4 29-x 옛 블록~~(BR1-4b 파트 0에서 정리) - `BR1-4a-report.md` |
 | BR1-4b0 1 · 2 | 1 에네르기파 도트 7회(시전당 최대 45% - 설계값) · 2 잡힌 사람 퇴장 = 던짐으로 셈 - `BR1-4b0-report.md` |
+| BR1-4b 1 ~ 4 | 1 서버 Anchored 루트 + 클라 보간(AlignPosition 대신) · 2 잡힌 사람 자리 = 보이는 부착점 · 3 동작 없는 스킬 = 원형 동작 공유 · 4 판 털기 반짝임 이미 있음 - `BR1-4b-report.md` |
 | MV1b 1 · 2 | 1 재분류 B 2곳 지붕 없음(활강 착지 가능 - 추천 유지) · 2 바위 계단 2번째 도약 = 1단 + 대시(추천 유지) - `MV1b-report.md` |
 | D1-3 1 | 캐주얼 1,000 = 39.2h(목표 하한 40의 0.8h 아래 - 추천: 하한 39 또는 오차 수용) - `D1-3-report.md` ⑤ |
 | ~~D1 1 ~ 4 · 6 · 9~~ | D1-2에서 처리(모형 = 보스 포함 · 상한 · 격차 · 반짝이 · 무기 태초 문구) |

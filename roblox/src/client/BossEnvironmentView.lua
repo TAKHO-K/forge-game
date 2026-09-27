@@ -31,6 +31,7 @@ local STYLE_MATERIAL = {
 }
 
 local live = {}
+local voidToken = 0 -- BR1-4b: 심연 먼지 루프(구멍이 바뀌면 끝)
 local voids = {} -- BR1-3 무너진 조각(검은 구멍) - 다음 붕괴 · 보스전 끝까지 남는다(전조가 current를 새로 만들어도 지우지 않는다)
 local VOID = Color3.fromRGB(12, 10, 14)
 local current = nil -- { zones, parts = { [zone index] = { parts } }, style, active, forces }
@@ -392,21 +393,85 @@ local function clearVoids(withDust)
 		end
 	end
 	voids = {}
+	voidToken += 1 -- 먼지 루프 끝
 end
 
--- BR1-3 무너진 조각: 바닥이 사라진 검은 구멍(조각 모양) + 무너지는 파편. 이전 조각은 먼지와 함께 돌아온다(구멍을 치운다).
+-- BR1-4b 4b-6 심연 층: 무너진 조각 아래 깊이마다 어두워지는 판(위 = 흙빛 반투명 → 아래 = 검정) - 바닥이 "꺼진" 깊이감. 판정 없음(서버 조각 바닥이 실제로 꺼진다).
+local ABYSS_LAYERS = {
+	{ depth = 1.2, color = Color3.fromRGB(52, 42, 36), transparency = 0.6 }, -- 가장자리 흙(반투명 - 아래가 비쳐 깊어 보인다)
+	{ depth = 5, color = Color3.fromRGB(28, 22, 24), transparency = 0.45 },
+	{ depth = 12, color = Color3.fromRGB(14, 11, 15), transparency = 0.25 },
+	{ depth = 24, color = VOID, transparency = 0 },
+}
+local ROCK = Color3.fromRGB(58, 50, 46)
+
+-- 구멍 위 구조물(BR1-4a 결정 3): 판정은 그대로(서 있을 수 있다) - 심연에서 솟은 돌기둥을 그 아래 그려 떠 있지 않게 보인다.
+local function inSlice(z, pos)
+	local d = Vector3.new(pos.X - z.center.X, 0, pos.Z - z.center.Z)
+	local r = d.Magnitude
+	if r < z.hub or r > z.radius + 2 then
+		return false
+	end
+	local a = math.deg(math.atan2(d.Z, d.X))
+	local rel = (a - z.startDeg) % 360
+	return rel <= z.widthDeg
+end
+
+local function structureColumns(z, parts)
+	for _, dressing in ipairs(Workspace:GetChildren()) do
+		if dressing.Name:find("^BossArenaDressing_") then
+			for _, model in ipairs(dressing:GetChildren()) do
+				local ok, cf, size = pcall(function()
+					return model:GetBoundingBox()
+				end)
+				if ok and cf and inSlice(z, cf.Position) and cf.Position.Y - size.Y / 2 > z.center.Y - 3 then
+					local bottom = cf.Position.Y - size.Y / 2
+					local w = math.max(math.min(size.X, size.Z) * 0.8, 2)
+					local column = newPart(Vector3.new(w, 32, w), ROCK, 0, Enum.Material.Slate)
+					column.CFrame = CFrame.new(cf.Position.X, bottom - 16, cf.Position.Z)
+					table.insert(parts, column)
+				end
+			end
+		end
+	end
+end
+
+-- BR1-3 무너진 조각: 바닥이 사라진 구멍(조각 모양) + 무너지는 파편. 이전 조각은 먼지와 함께 돌아온다(구멍을 치운다).
+-- BR1-4b 4b-6: 평면 검은 판 → 깊이 층(어둠 그라데이션) + 아래로 떨어지는 파편 · 가장자리 부스러기 + 심연에서 올라오는 먼지(무너진 동안).
 local function collapse(data)
 	clearVoids(true)
+	local token = voidToken
 	for _, z in ipairs(data.zones) do
-		local parts = arcParts(z.center, z.startDeg + z.widthDeg / 2, z.widthDeg, z.hub, z.radius, VOID, 0, Enum.Material.SmoothPlastic)
+		local parts = {}
+		for _, layer in ipairs(ABYSS_LAYERS) do
+			for _, part in ipairs(arcParts(z.center, z.startDeg + z.widthDeg / 2, z.widthDeg, z.hub, z.radius, layer.color, layer.transparency, Enum.Material.SmoothPlastic)) do
+				part.CFrame = part.CFrame - Vector3.new(0, layer.depth, 0)
+				table.insert(parts, part)
+			end
+		end
+		structureColumns(z, parts)
 		table.insert(voids, { zone = z, parts = parts })
 		local mid = math.rad(z.startDeg + z.widthDeg / 2)
 		local dir = Vector3.new(math.cos(mid), 0, math.sin(mid))
-		for i = 1, 14 do
+		for i = 1, 18 do -- 무너지는 조각 파편: 위로 튀었다가 심연으로 떨어진다
 			local at = z.center + dir * (z.hub + (z.radius - z.hub) * math.random()) + Vector3.new(0, 0.5, 0)
-			BossFx.chunk(at, Vector3.new(math.random(-6, 6), 8, math.random(-6, 6)), 1.6, DUST, 1.0)
+			BossFx.chunk(at, Vector3.new(math.random(-6, 6), i % 3 == 0 and 8 or -14, math.random(-6, 6)), 1.2 + math.random() * 1.2, i % 2 == 0 and DUST or ROCK, 1.4)
+		end
+		for k = 0, 6 do -- 두 경계선의 부스러기
+			for _, edgeDeg in ipairs({ z.startDeg, z.startDeg + z.widthDeg }) do
+				local e = math.rad(edgeDeg)
+				local at = z.center + Vector3.new(math.cos(e), 0, math.sin(e)) * (z.hub + (z.radius - z.hub) * k / 6) + Vector3.new(0, 0.3, 0)
+				BossFx.chunk(at, Vector3.new(math.random(-3, 3), -6, math.random(-3, 3)), 0.8, ROCK, 1.0)
+			end
 		end
 		BossFx.shake(z.center + dir * 30, 1)
+		task.spawn(function() -- 심연에서 올라오는 먼지(무너진 동안)
+			while token == voidToken and current do
+				local at = z.center + dir * (z.hub + (z.radius - z.hub) * math.random()) + Vector3.new(math.random(-8, 8), -10, math.random(-8, 8))
+				BossFx.puff(at, 3 + math.random() * 3, DUST, 0.8, Vector3.new(0, 6, 0))
+				task.wait(0.35)
+			end
+		end)
 	end
 end
 

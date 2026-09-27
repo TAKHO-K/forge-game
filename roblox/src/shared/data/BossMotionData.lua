@@ -1,0 +1,620 @@
+-- BR1-4b 보스 모션 데이터(4b-2 · 4b-3). 관절 이름(shared/data/BossRigSpec)으로만 부위를 가리킨다 - 모델을 바꿔도 관절 이름이 같으면 그대로 쓴다.
+-- 자세(pose) = { [관절 이름] = { rx, ry, rz, px, py, pz } } - 각 = 도, 자리 = 단위(sizeScale 1 기준 · 모델 크기를 곱한다) · **부모 부위 축 기준**(기준 자세 rot와 무관 - shared/BossMotion이 변환).
+--   부호(A1 실측): 아래로 늘어진 팔 · 다리를 rx +θ = 앞으로 든다 · 무릎 굽힘 rx −θ · 허리 앞 숙임 rx −θ · 고개 숙임 rx −θ · 오른팔 rz + = 옆으로 벌림(왼팔 −) · ry + = 왼쪽으로 돈다.
+-- 동작(clip) = {
+--   pre = { { f, pose, ease } … }  전조: f = 스킬 시작 → 때리는 순간(서버 전조 bubbleSeconds) 사이 비율 - 전조가 길든 짧든 **때리는 순간에 동작이 온다**(판정 시각 불변).
+--   post = { { s, pose, ease } … } 동작 · 지나침 · 회복: s = 때리는 순간 뒤 초.
+--   loop = { period, poses = { … } } 마지막 키 뒤 스킬이 끝날 때까지 되풀이(채널 - 빔 · 회오리).
+--   hitstop(초) · squash(단위 - 몸 눌림) · tremble = { from, amp, joints } 전조 끝 떨림(강화 평타 - BR1-3 규칙) · flash = 부위 이름(떨림 동안 번쩍) }
+-- ease = "in" | "out" | "inout" | "back"(살짝 지나쳐 돌아옴) - 직선 보간 없음. 동작 사이 섞기 = blendIn(기본 0.18초) · 끝 섞기 0.3초.
+local D = {}
+
+-- 좌우 대칭: _R ↔ _L 이름을 바꾸고 ry · rz · px 부호를 뒤집는다.
+local function mirror(pose)
+	local out = {}
+	for joint, v in pairs(pose) do
+		local name = joint:gsub("_R$", "_TMP"):gsub("_L$", "_R"):gsub("_TMP$", "_L")
+		out[name] = { v[1] or 0, -(v[2] or 0), -(v[3] or 0), -(v[4] or 0), v[5] or 0, v[6] or 0 }
+	end
+	return out
+end
+D.mirror = mirror
+
+local function merge(...)
+	local out = {}
+	for _, pose in ipairs({ ... }) do
+		for joint, v in pairs(pose) do
+			out[joint] = v
+		end
+	end
+	return out
+end
+D.merge = merge
+
+local function mirrorClip(clip)
+	local out = {}
+	for k, v in pairs(clip) do
+		out[k] = v
+	end
+	for _, list in ipairs({ "pre", "post" }) do
+		if clip[list] then
+			out[list] = {}
+			for i, key in ipairs(clip[list]) do
+				out[list][i] = { f = key.f, s = key.s, ease = key.ease, pose = mirror(key.pose) }
+			end
+		end
+	end
+	if clip.tremble then
+		out.tremble = { from = clip.tremble.from, amp = clip.tremble.amp, joints = {} }
+		for i, j in ipairs(clip.tremble.joints) do
+			out.tremble.joints[i] = j:gsub("_R$", "_TMP"):gsub("_L$", "_R"):gsub("_TMP$", "_L")
+		end
+	end
+	return out
+end
+
+-- ═══════════════════════════ 두 발 몸(biped) 공통 ═══════════════════════════
+local B = {}
+D.biped = B
+
+-- 대기: 호흡(몸통이 부풀었다 줄어듦 = 허리 · 어깨 · 엉덩이 높이) · 체중 이동(좌우) · 두리번(머리가 먼저 → 몸이 따라옴)
+B.idle = {
+	breath = { period = 3.4, waist = 2.2, shoulder = 2.5, lift = 0.025 },
+	sway = { period = 7.5, roll = 2.2, shift = 0.05 },
+	look = { everySeconds = 4.5, yawDeg = 32, bodyFollow = 0.35, neckSpeed = 5, bodySpeed = 1.6 },
+}
+
+-- 걷기: 발이 땅에 붙어 미끄러지지 않게 = 걸음 위상을 **이동 거리 ÷ 보폭**으로 진행(shared/BossMotion). 엉덩이 흔들 각 = asin(보폭 ÷ (2 × 다리 길이))로 보폭과 맞춘다.
+--   knee = 앞으로 옮기는 발의 무릎 굽힘 · arm = 팔 흔들 · bob = 몸 위아래 · lean = 달릴수록 앞으로 숙임(속도 비) · turnLean = 방향 전환 때 몸을 먼저 기울임(도 / (rad/s))
+B.walk = { stride = 0.75, knee = 38, arm = 18, bob = 0.06, lean = 8, twist = 5, turnLean = 7, runAt = 1.6 }
+
+-- 전투 준비 자세(평타 사이 - 이전 타의 회복이 다음 타의 전조)
+B.guard = {
+	Waist = { -6, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.08, 0 },
+	Shoulder_R = { 32, 0, 12 }, Elbow_R = { 62, 0, 0 }, Shoulder_L = { 26, 0, -12 }, Elbow_L = { 58, 0, 0 },
+	Hip_L = { 12, 0, -3 }, Hip_R = { 8, 0, 3 }, Knee_L = { -20, 0, 0 }, Knee_R = { -16, 0, 0 }, Ankle_L = { 8, 0, 0 }, Ankle_R = { 8, 0, 0 },
+}
+
+-- 평타(작은 모션 = 짧은 전조): 준비 자세 → 빠른 한 방 → 살짝 지나침 → 천천히 준비 자세
+local basicR = {
+	post = {
+		{ s = 0.07, ease = "out", pose = merge(B.guard, { Waist = { -12, -28, 0 }, Shoulder_R = { 100, 0, 8 }, Elbow_R = { 12, 0, 0 }, Neck = { -4, 10, 0 } }) },
+		{ s = 0.17, ease = "back", pose = merge(B.guard, { Waist = { -16, -34, 0 }, Shoulder_R = { 88, 0, -12 }, Elbow_R = { 6, 0, 0 }, Neck = { -6, 12, 0 } }) },
+		{ s = 0.62, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.04,
+}
+B.clips = {}
+B.clips.basic_R = basicR
+B.clips.basic_L = mirrorClip(basicR)
+
+-- 강화 평타(스킬 swipe · 큰 휘두름): 팔을 휘두를 듯 떨림 + 무기 번쩍(전조 끝 40%) → 가로 휩쓸기 → 지나침 → 회복
+B.clips.swipe = {
+	pre = {
+		{ f = 0.35, ease = "inout", pose = merge(B.guard, { Waist = { 2, -40, 0 }, Shoulder_R = { 40, 0, 75 }, Elbow_R = { 35, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.14, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { 4, -55, 0 }, Shoulder_R = { 30, 0, 95 }, Elbow_R = { 25, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.18, 0 }, Neck = { 0, 20, 0 } }) },
+	},
+	post = {
+		{ s = 0.09, ease = "out", pose = merge(B.guard, { Waist = { -10, 45, 0 }, Shoulder_R = { 90, 0, 5 }, Elbow_R = { 8, 0, 0 }, Neck = { 0, -15, 0 } }) },
+		{ s = 0.22, ease = "back", pose = merge(B.guard, { Waist = { -12, 58, 0 }, Shoulder_R = { 80, 0, -35 }, Elbow_R = { 15, 0, 0 }, Neck = { 0, -18, 0 } }) },
+		{ s = 0.85, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.07, squash = 0.1,
+	tremble = { from = 0.6, amp = 3.5, joints = { "Shoulder_R", "Elbow_R" } },
+	flash = "weapon", -- 무기(없으면 오른손)를 번쩍
+}
+
+-- 두 손 내려찍기(큰 모션 = 긴 전조 · 큰 피해): 들어 올려 뒤로 젖힘(웅크림) → 내려찍기 → 몸 눌림 + 히트스톱 → 천천히 일어남
+local SLAM_UP = { Waist = { 16, 0, 0 }, Neck = { 14, 0, 0 }, Shoulder_R = { 175, 0, 14 }, Shoulder_L = { 175, 0, -14 }, Elbow_R = { 38, 0, 0 }, Elbow_L = { 38, 0, 0 },
+	RootJoint = { 0, 0, 0, 0, -0.12, 0 }, Hip_L = { 18, 0, -4 }, Hip_R = { 18, 0, 4 }, Knee_L = { -30, 0, 0 }, Knee_R = { -30, 0, 0 }, Ankle_L = { 12, 0, 0 }, Ankle_R = { 12, 0, 0 } }
+local SLAM_HIT = { Waist = { -38, 0, 0 }, Neck = { -10, 0, 0 }, Shoulder_R = { 55, 0, 8 }, Shoulder_L = { 55, 0, -8 }, Elbow_R = { 8, 0, 0 }, Elbow_L = { 8, 0, 0 },
+	RootJoint = { 0, 0, 0, 0, -0.42, -0.1 }, Hip_L = { 40, 0, -6 }, Hip_R = { 40, 0, 6 }, Knee_L = { -62, 0, 0 }, Knee_R = { -62, 0, 0 }, Ankle_L = { 22, 0, 0 }, Ankle_R = { 22, 0, 0 } }
+B.clips.slam = {
+	pre = {
+		{ f = 0.3, ease = "inout", pose = merge(SLAM_UP, { Waist = { 8, 0, 0 }, Shoulder_R = { 130, 0, 14 }, Shoulder_L = { 130, 0, -14 } }) },
+		{ f = 0.85, ease = "out", pose = SLAM_UP },
+		{ f = 1.0, ease = "in", pose = merge(SLAM_UP, { Waist = { 20, 0, 0 }, Shoulder_R = { 188, 0, 12 }, Shoulder_L = { 188, 0, -12 } }) },
+	},
+	post = {
+		{ s = 0.09, ease = "in", pose = SLAM_HIT },
+		{ s = 0.3, ease = "out", pose = merge(SLAM_HIT, { Waist = { -44, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.48, -0.12 } }) },
+		{ s = 1.1, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.1, squash = 0.25,
+}
+
+-- 한 손 주먹 내리꽂기(fist)
+B.clips.punch = {
+	pre = {
+		{ f = 0.5, ease = "inout", pose = merge(B.guard, { Waist = { 6, 30, 0 }, Shoulder_R = { -25, 0, 20 }, Elbow_R = { 95, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.12, 0.05 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { 10, 38, 0 }, Shoulder_R = { -35, 0, 22 }, Elbow_R = { 110, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.16, 0.08 } }) },
+	},
+	post = {
+		{ s = 0.08, ease = "out", pose = merge(B.guard, { Waist = { -22, -30, 0 }, Shoulder_R = { 105, 0, 5 }, Elbow_R = { 5, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.25, -0.15 } }) },
+		{ s = 0.2, ease = "back", pose = merge(B.guard, { Waist = { -26, -36, 0 }, Shoulder_R = { 95, 0, -5 }, Elbow_R = { 2, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.28, -0.18 } }) },
+		{ s = 0.9, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.07, squash = 0.12,
+}
+
+-- 발 구르기(stomp)
+B.clips.stomp = {
+	pre = {
+		{ f = 0.6, ease = "inout", pose = merge(B.guard, { Hip_R = { 75, 0, 5 }, Knee_R = { -95, 0, 0 }, Ankle_R = { 10, 0, 0 }, Waist = { 6, 0, 8 }, Shoulder_R = { 20, 0, 45 }, Shoulder_L = { 20, 0, -45 }, RootJoint = { 0, 0, 0, -0.06, 0.05, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Hip_R = { 90, 0, 5 }, Knee_R = { -105, 0, 0 }, Ankle_R = { 15, 0, 0 }, Waist = { 10, 0, 10 }, Shoulder_R = { 25, 0, 55 }, Shoulder_L = { 25, 0, -55 }, RootJoint = { 0, 0, 0, -0.08, 0.1, 0 } }) },
+	},
+	post = {
+		{ s = 0.07, ease = "in", pose = merge(B.guard, { Hip_R = { 5, 0, 5 }, Knee_R = { -10, 0, 0 }, Waist = { -18, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.35, 0 }, Hip_L = { 30, 0, -4 }, Knee_L = { -50, 0, 0 } }) },
+		{ s = 0.24, ease = "out", pose = merge(B.guard, { Hip_R = { 8, 0, 5 }, Knee_R = { -18, 0, 0 }, Waist = { -22, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.4, 0 }, Hip_L = { 34, 0, -4 }, Knee_L = { -56, 0, 0 } }) },
+		{ s = 1.0, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.09, squash = 0.2,
+}
+
+-- 하늘로 들기 · 영창(hand · staff · 투사체 · 낙석 등 시전형)
+B.clips.cast = {
+	pre = {
+		{ f = 0.4, ease = "inout", pose = merge(B.guard, { Shoulder_R = { 120, 0, 20 }, Elbow_R = { 30, 0, 0 }, Waist = { 8, 10, 0 }, Neck = { 12, 0, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Shoulder_R = { 168, 0, 12 }, Elbow_R = { 10, 0, 0 }, Waist = { 12, 12, 0 }, Neck = { 22, 0, 0 }, RootJoint = { 0, 0, 0, 0, 0.04, 0 } }) },
+	},
+	post = {
+		{ s = 0.1, ease = "out", pose = merge(B.guard, { Shoulder_R = { 95, 0, 10 }, Elbow_R = { 5, 0, 0 }, Waist = { -14, -8, 0 }, Neck = { -4, 0, 0 } }) },
+		{ s = 0.24, ease = "back", pose = merge(B.guard, { Shoulder_R = { 80, 0, 5 }, Elbow_R = { 5, 0, 0 }, Waist = { -18, -12, 0 } }) },
+		{ s = 0.9, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.03,
+}
+
+-- 포효(roar · sonic): 가슴을 펴고 고개를 젖힘 · 두 팔 벌림 · 입 벌림 → 떨림 유지
+local ROAR = { Waist = { 20, 0, 0 }, Neck = { 32, 0, 0 }, Jaw = { 0, 0, 0, 0, -0.12, 0 }, Shoulder_R = { 30, 0, 70 }, Shoulder_L = { 30, 0, -70 }, Elbow_R = { 35, 0, 0 }, Elbow_L = { 35, 0, 0 },
+	RootJoint = { 0, 0, 0, 0, -0.1, 0.05 }, Hip_L = { 10, 0, -8 }, Hip_R = { 10, 0, 8 }, Knee_L = { -18, 0, 0 }, Knee_R = { -18, 0, 0 } }
+B.clips.roar = {
+	pre = {
+		{ f = 0.5, ease = "inout", pose = merge(B.guard, { Waist = { -20, 0, 0 }, Neck = { -18, 0, 0 }, Shoulder_R = { 45, 0, 20 }, Shoulder_L = { 45, 0, -20 }, Elbow_R = { 90, 0, 0 }, Elbow_L = { 90, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.2, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { -26, 0, 0 }, Neck = { -22, 0, 0 }, Shoulder_R = { 50, 0, 15 }, Shoulder_L = { 50, 0, -15 }, Elbow_R = { 105, 0, 0 }, Elbow_L = { 105, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.25, 0 } }) },
+	},
+	post = {
+		{ s = 0.12, ease = "out", pose = ROAR },
+		{ s = 0.3, ease = "back", pose = merge(ROAR, { Waist = { 24, 0, 0 }, Neck = { 38, 0, 0 } }) },
+	},
+	loop = { period = 0.16, poses = { ROAR, merge(ROAR, { Waist = { 22, 0, 2 }, Neck = { 36, 0, -3 } }) } },
+	hitstop = 0.05, tremble = { from = 0.7, amp = 2.5, joints = { "Waist", "Neck" } },
+}
+
+-- 두 손 앞으로 모아 쏘기(빔 · 파도 · 소용돌이 채널)
+local BEAM = { Waist = { -8, 0, 0 }, Shoulder_R = { 88, 0, -18 }, Shoulder_L = { 88, 0, 18 }, Elbow_R = { 5, 0, 0 }, Elbow_L = { 5, 0, 0 }, Wrist_R = { -60, 0, 0 }, Wrist_L = { -60, 0, 0 },
+	RootJoint = { 0, 0, 0, 0, -0.12, 0 }, Hip_L = { 25, 0, -5 }, Hip_R = { -5, 0, 5 }, Knee_L = { -30, 0, 0 }, Knee_R = { -8, 0, 0 } }
+B.clips.beam = {
+	pre = {
+		{ f = 0.5, ease = "inout", pose = merge(B.guard, { Waist = { 10, 35, 0 }, Shoulder_R = { 40, 0, 10 }, Shoulder_L = { 60, 0, 30 }, Elbow_R = { 90, 0, 0 }, Elbow_L = { 90, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.18, 0.08 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { 14, 42, 0 }, Shoulder_R = { 35, 0, 5 }, Shoulder_L = { 55, 0, 35 }, Elbow_R = { 100, 0, 0 }, Elbow_L = { 100, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.22, 0.1 } }) },
+	},
+	post = { { s = 0.1, ease = "out", pose = BEAM } },
+	loop = { period = 0.12, poses = { BEAM, merge(BEAM, { Waist = { -9, 0, 1 }, Shoulder_R = { 89, 1, -18 } }) } },
+	hitstop = 0.03, tremble = { from = 0.6, amp = 2, joints = { "Shoulder_R", "Shoulder_L" } },
+}
+
+-- 회오리(spin): 팔 벌리고 제자리 돌기(루트 관절 ry가 계속 돈다 - BossMotion spin)
+B.clips.spin = {
+	pre = {
+		{ f = 0.6, ease = "inout", pose = merge(B.guard, { Waist = { 6, 50, 0 }, Shoulder_R = { 20, 0, 60 }, Shoulder_L = { 20, 0, -60 }, RootJoint = { 0, 0, 0, 0, -0.2, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { 8, 65, 0 }, Shoulder_R = { 15, 0, 75 }, Shoulder_L = { 15, 0, -75 }, RootJoint = { 0, 0, 0, 0, -0.25, 0 } }) },
+	},
+	post = { { s = 0.1, ease = "out", pose = { Waist = { -6, 0, 0 }, Shoulder_R = { 10, 0, 88 }, Shoulder_L = { 10, 0, -88 }, Elbow_R = { 5, 0, 0 }, Elbow_L = { 5, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.05, 0 } } } },
+	loop = { period = 0.4, poses = { { Waist = { -6, 0, 0 }, Shoulder_R = { 10, 0, 88 }, Shoulder_L = { 10, 0, -88 } }, { Waist = { -4, 0, 3 }, Shoulder_R = { 14, 0, 84 }, Shoulder_L = { 6, 0, -92 } } } },
+	spin = 720, -- 도/초(때리는 순간부터)
+}
+
+-- 달리기 자세 위에 덮는 윗몸(돌진 · 쫓아가 잡기)
+B.clips.charge = {
+	pre = {
+		-- 발 긁기: 몸을 낮추고 뒤로 젖혔다가(웅크림) 앞으로 숙이며 오른발로 땅을 긁는다
+		{ f = 0.2, ease = "inout", pose = merge(B.guard, { Waist = { -25, 0, 0 }, Neck = { 18, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.3, 0.1 }, Hip_R = { -30, 0, 3 }, Knee_R = { -40, 0, 0 } }) },
+		{ f = 0.4, ease = "inout", pose = merge(B.guard, { Waist = { -30, 0, 0 }, Neck = { 22, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.32, 0.1 }, Hip_R = { 10, 0, 3 }, Knee_R = { -20, 0, 0 } }) },
+		{ f = 0.6, ease = "inout", pose = merge(B.guard, { Waist = { -25, 0, 0 }, Neck = { 18, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.3, 0.1 }, Hip_R = { -30, 0, 3 }, Knee_R = { -40, 0, 0 } }) },
+		{ f = 0.8, ease = "inout", pose = merge(B.guard, { Waist = { -30, 0, 0 }, Neck = { 22, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.32, 0.1 }, Hip_R = { 10, 0, 3 }, Knee_R = { -20, 0, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { -34, 0, 0 }, Neck = { 26, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.35, 0.12 }, Shoulder_R = { -20, 0, 15 }, Shoulder_L = { -20, 0, -15 } }) },
+	},
+	post = { { s = 0.12, ease = "out", pose = { Waist = { -32, 0, 0 }, Neck = { 26, 0, 0 }, Shoulder_R = { -30, 0, 18 }, Shoulder_L = { -30, 0, -18 }, Elbow_R = { 40, 0, 0 }, Elbow_L = { 40, 0, 0 } } } },
+	loop = { period = 0.3, poses = { { Waist = { -32, 0, 0 }, Neck = { 26, 0, 0 }, Shoulder_R = { -30, 0, 18 }, Shoulder_L = { -30, 0, -18 } }, { Waist = { -30, 0, 2 }, Neck = { 24, 0, 0 }, Shoulder_R = { -26, 0, 18 }, Shoulder_L = { -34, 0, -18 } } } },
+	upper = true, -- 다리는 걸음(달리기)이 그린다
+	hitstop = 0.03,
+}
+
+-- 대공 잡기(4b-3 · 09-27 정정 흐름): 전조 = 두 팔을 하늘로(점프하지 마) · 쫓기 = 달리며 두 팔을 앞으로 · 낚아챔 = 팔 휘두름 + 히트스톱 + 표정 · 들기 = 머리 위로 · 발버둥에 흔들림
+local GRAB_UP = { Waist = { 10, 0, 0 }, Neck = { 24, 0, 0 }, Shoulder_R = { 160, 0, 32 }, Shoulder_L = { 160, 0, -32 }, Elbow_R = { 22, 0, 0 }, Elbow_L = { 22, 0, 0 },
+	RootJoint = { 0, 0, 0, 0, -0.1, 0 }, Hip_L = { 14, 0, -6 }, Hip_R = { 14, 0, 6 }, Knee_L = { -24, 0, 0 }, Knee_R = { -24, 0, 0 } }
+B.clips.grab_tele = {
+	pre = {
+		{ f = 0.15, ease = "out", pose = GRAB_UP },
+		{ f = 0.7, ease = "inout", pose = merge(GRAB_UP, { Shoulder_R = { 165, 0, 38 }, Shoulder_L = { 165, 0, -38 } }) },
+		{ f = 1.0, ease = "inout", pose = merge(GRAB_UP, { Waist = { 4, 0, 0 }, Neck = { 10, 0, 0 }, Shoulder_R = { 120, 0, 30 }, Shoulder_L = { 120, 0, -30 }, RootJoint = { 0, 0, 0, 0, -0.22, 0 } }) },
+	},
+	tremble = { from = 0.75, amp = 2.5, joints = { "Shoulder_R", "Shoulder_L" } },
+}
+B.clips.grab_reach = { -- 쫓는 동안(윗몸만 · 다리는 달리기)
+	post = { { s = 0.15, ease = "out", pose = { Waist = { -22, 0, 0 }, Neck = { 20, 0, 0 }, Shoulder_R = { 95, 0, 25 }, Shoulder_L = { 95, 0, -25 }, Elbow_R = { 12, 0, 0 }, Elbow_L = { 12, 0, 0 } } } },
+	upper = true,
+}
+B.clips.grab_snatch = { -- 낚아채는 순간(BossPickAt) - 더하는 층(지금 자세에 더한다 - 작은 값): 팔을 바깥으로 뺐다가 안으로 휘둘러 낚아챔 + 눈 치켜뜸 · 입 벌림
+	post = {
+		{ s = 0.0, ease = "out", pose = { Waist = { 0, -25, 0 }, Shoulder_R = { -30, 0, 40 }, Elbow_R = { -5, 0, 0 } } },
+		{ s = 0.1, ease = "in", pose = { Waist = { -6, 20, 0 }, Shoulder_R = { 15, 0, -15 }, Elbow_R = { 15, 0, 0 }, Eyes = { 0, 0, 0, 0, 0.03, 0 }, Jaw = { 0, 0, 0, 0, -0.1, 0 } } },
+		{ s = 0.35, ease = "back", pose = { Waist = { -3, 8, 0 }, Shoulder_R = { 5, 0, 0 }, Jaw = { 0, 0, 0, 0, -0.05, 0 } } },
+		{ s = 0.7, ease = "inout", pose = {} },
+	},
+	hitstop = 0.09, face = true,
+}
+local HOLD = { Waist = { 4, 0, 0 }, Neck = { 8, 0, 0 }, Shoulder_R = { 112, 0, 22 }, Shoulder_L = { 112, 0, -22 }, Elbow_R = { 18, 0, 0 }, Elbow_L = { 18, 0, 0 }, -- 몸 앞 위로 뻗어 매단다(잡힌 사람이 주먹에 가려지지 않게)
+	RootJoint = { 0, 0, 0, 0, -0.06, 0 }, Hip_L = { 10, 0, -6 }, Hip_R = { 10, 0, 6 }, Knee_L = { -16, 0, 0 }, Knee_R = { -16, 0, 0 } }
+B.clips.grab_hold = {
+	post = { { s = 0.25, ease = "out", pose = HOLD } },
+	loop = { period = 0.5, poses = { HOLD, merge(HOLD, { Waist = { 5, 4, 2 }, Shoulder_R = { 109, 0, 24 }, Shoulder_L = { 115, 0, -20 } }) } }, -- 발버둥에 흔들림
+}
+B.holdPose = HOLD
+
+-- 던지기(보스마다 다른 던지기 - 아래 보스 표가 고른다). 전조 = BossThrowPlan 앞 throwWindup초.
+B.clips.throw_overhead = { -- 수호자: 두 손 머리 뒤로 → 앞으로 내던짐
+	pre = {
+		{ f = 0.6, ease = "inout", pose = merge(HOLD, { Waist = { 22, 0, 0 }, Neck = { 20, 0, 0 }, Shoulder_R = { 195, 0, 20 }, Shoulder_L = { 195, 0, -20 }, Elbow_R = { 50, 0, 0 }, Elbow_L = { 50, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.2, 0.1 } }) },
+		{ f = 1.0, ease = "out", pose = merge(HOLD, { Waist = { 26, 0, 0 }, Neck = { 22, 0, 0 }, Shoulder_R = { 205, 0, 18 }, Shoulder_L = { 205, 0, -18 }, Elbow_R = { 55, 0, 0 }, Elbow_L = { 55, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.25, 0.12 } }) },
+	},
+	post = {
+		{ s = 0.1, ease = "out", pose = { Waist = { -34, 0, 0 }, Neck = { -6, 0, 0 }, Shoulder_R = { 75, 0, 10 }, Shoulder_L = { 75, 0, -10 }, Elbow_R = { 5, 0, 0 }, Elbow_L = { 5, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.3, -0.15 }, Hip_L = { 30, 0, 0 }, Knee_L = { -45, 0, 0 } } },
+		{ s = 0.3, ease = "back", pose = { Waist = { -40, 0, 0 }, Shoulder_R = { 60, 0, 5 }, Shoulder_L = { 60, 0, -5 }, RootJoint = { 0, 0, 0, 0, -0.34, -0.18 }, Hip_L = { 34, 0, 0 }, Knee_L = { -50, 0, 0 } } },
+		{ s = 1.1, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.08, squash = 0.12,
+}
+B.clips.throw_spin = { -- 서리 거인: 한 바퀴 돌며 옆으로 내던짐(해머 던지기)
+	pre = {
+		{ f = 0.5, ease = "inout", pose = merge(HOLD, { Waist = { 6, 60, 0 }, Shoulder_R = { 60, 0, 85 }, Shoulder_L = { 60, 0, -85 }, RootJoint = { 0, 0, 0, 0, -0.2, 0 } }) },
+		{ f = 1.0, ease = "in", pose = merge(HOLD, { Waist = { 8, 80, 0 }, Shoulder_R = { 40, 0, 95 }, Shoulder_L = { 40, 0, -95 }, RootJoint = { 0, 0, 0, 0, -0.25, 0 } }) },
+	},
+	post = {
+		{ s = 0.12, ease = "out", pose = { Waist = { -10, -60, 0 }, Shoulder_R = { 95, 0, -20 }, Shoulder_L = { 40, 0, -80 }, Elbow_R = { 5, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.2, -0.1 } } },
+		{ s = 0.34, ease = "back", pose = { Waist = { -12, -72, 0 }, Shoulder_R = { 85, 0, -35 }, Shoulder_L = { 30, 0, -70 }, RootJoint = { 0, 0, 0, 0, -0.22, -0.12 } } },
+		{ s = 1.2, ease = "inout", pose = B.guard },
+	},
+	spinPre = 360, -- 전조 동안 몸이 한 바퀴(루트 ry)
+	hitstop = 0.08, squash = 0.1,
+}
+B.clips.throw_tail = { -- 심해 군주: 몸을 비틀어 꼬리로 후려 날림
+	pre = {
+		{ f = 1.0, ease = "inout", pose = merge(HOLD, { Waist = { 4, -60, 0 }, RootJoint = { 0, -40, 0, 0, -0.2, 0 }, Tail1 = { 0, 60, 0 }, Tail2 = { 0, 20, 0 }, Tail3 = { 0, 15, 0 } }) },
+	},
+	post = {
+		{ s = 0.12, ease = "out", pose = { Waist = { -8, 55, 0 }, RootJoint = { 0, 60, 0, 0, -0.2, 0 }, Shoulder_R = { 100, 0, 40 }, Shoulder_L = { 100, 0, -40 }, Tail1 = { 0, -75, 0 }, Tail2 = { 0, -25, 0 }, Tail3 = { 0, -20, 0 } } },
+		{ s = 0.35, ease = "back", pose = { Waist = { -8, 65, 0 }, RootJoint = { 0, 70, 0, 0, -0.2, 0 }, Tail1 = { 0, -85, 0 }, Tail2 = { 0, -30, 0 }, Tail3 = { 0, -25, 0 } } },
+		{ s = 1.2, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.08,
+}
+B.clips.throw_push = { -- 수정 여왕: 두 손바닥을 앞으로 - 보이지 않는 힘으로 밀어 날림
+	pre = {
+		{ f = 1.0, ease = "inout", pose = merge(HOLD, { Waist = { 14, 0, 0 }, Shoulder_R = { 60, 0, 10 }, Shoulder_L = { 60, 0, -10 }, Elbow_R = { 110, 0, 0 }, Elbow_L = { 110, 0, 0 }, Wrist_R = { -40, 0, 0 }, Wrist_L = { -40, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.12, 0.1 } }) },
+	},
+	post = {
+		{ s = 0.08, ease = "out", pose = { Waist = { -16, 0, 0 }, Shoulder_R = { 92, 0, -12 }, Shoulder_L = { 92, 0, 12 }, Elbow_R = { 0, 0, 0 }, Elbow_L = { 0, 0, 0 }, Wrist_R = { -80, 0, 0 }, Wrist_L = { -80, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.1, -0.12 } } },
+		{ s = 0.3, ease = "back", pose = { Waist = { -20, 0, 0 }, Shoulder_R = { 95, 0, -15 }, Shoulder_L = { 95, 0, 15 }, Wrist_R = { -85, 0, 0 }, Wrist_L = { -85, 0, 0 } } },
+		{ s = 1.1, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.06,
+}
+B.clips.throw_staff = { -- 폭풍 군주: 지팡이를 아래에서 위로 올려 쳐 바람으로 날림
+	pre = {
+		{ f = 1.0, ease = "inout", pose = merge(HOLD, { Waist = { -14, 30, 0 }, Shoulder_R = { -30, 0, 20 }, Elbow_R = { 20, 0, 0 }, Shoulder_L = { 40, 0, -30 }, RootJoint = { 0, 0, 0, 0, -0.3, 0 } }) },
+	},
+	post = {
+		{ s = 0.1, ease = "out", pose = { Waist = { 16, -20, 0 }, Neck = { 20, 0, 0 }, Shoulder_R = { 175, 0, 10 }, Elbow_R = { 5, 0, 0 }, Shoulder_L = { 60, 0, -40 }, RootJoint = { 0, 0, 0, 0, 0.08, 0 } } },
+		{ s = 0.32, ease = "back", pose = { Waist = { 20, -24, 0 }, Neck = { 24, 0, 0 }, Shoulder_R = { 185, 0, 5 }, Shoulder_L = { 55, 0, -45 } } },
+		{ s = 1.1, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.06,
+}
+B.throwWindup = 0.7 -- 던지기 전조 초(BossThrowPlan 앞)
+
+-- 피격(작게 움찔 - 더하는 층)
+B.flinch = { seconds = 0.26, pose = { Waist = { 7, 0, 3 }, Neck = { 10, 0, 0 }, RootJoint = { 0, 0, 0, 0, 0, 0.05 } } }
+
+-- 기절(비틀거림 → 주저앉음 → 일어남): stagger = 앞 0.55초 · rise = 끝 0.8초 · 그 사이 주저앉아 머리 빙빙
+B.stun = {
+	stagger = { Waist = { -12, 0, 10 }, Neck = { -18, 0, 12 }, Shoulder_R = { 20, 0, 30 }, Shoulder_L = { 10, 0, -20 }, Elbow_R = { 20, 0, 0 }, Elbow_L = { 25, 0, 0 },
+		RootJoint = { 0, 0, 12, 0.05, -0.2, 0 }, Hip_L = { 25, 0, -8 }, Knee_L = { -45, 0, 0 }, Hip_R = { -8, 0, 6 }, Knee_R = { -10, 0, 0 } },
+	sit = { RootJoint = { -8, 0, 0, 0, -1.55, -0.2 }, Waist = { -18, 0, 0 }, Neck = { -22, 0, 0 }, Shoulder_R = { 15, 0, 28 }, Shoulder_L = { 15, 0, -28 }, Elbow_R = { 25, 0, 0 }, Elbow_L = { 25, 0, 0 },
+		Hip_L = { 82, 0, -14 }, Hip_R = { 82, 0, 14 }, Knee_L = { -12, 0, 0 }, Knee_R = { -18, 0, 0 }, Ankle_L = { -20, 0, 0 }, Ankle_R = { -20, 0, 0 } },
+	staggerSeconds = 0.55, riseSeconds = 0.8, wobble = { hz = 0.9, neck = 12, waist = 5 },
+	eyes = { 0, 0, 90 }, -- 눈 = 빙글(세로 막대)
+}
+
+-- 사망(쓰러짐): 뒤로 넘어진다 → 누운 채 사라짐(클라가 복제해 그린다 - 서버 모델은 곧 지워진다)
+B.death = {
+	keys = {
+		{ s = 0.25, ease = "out", pose = { Waist = { 12, 0, 0 }, Neck = { 25, 0, 0 }, Shoulder_R = { 40, 0, 50 }, Shoulder_L = { 40, 0, -50 }, RootJoint = { 0, 0, 0, 0, -0.15, 0.1 }, Hip_L = { 20, 0, 0 }, Knee_L = { -40, 0, 0 } } },
+		{ s = 1.0, ease = "in", pose = { RootJoint = { 80, 0, 5, 0, -1.3, 0.6 }, Waist = { 10, 0, 0 }, Neck = { 20, 15, 0 }, Shoulder_R = { 30, 0, 80 }, Shoulder_L = { 30, 0, -80 }, Elbow_R = { 20, 0, 0 }, Elbow_L = { 20, 0, 0 }, Hip_L = { -20, 0, -6 }, Hip_R = { -30, 0, 6 }, Knee_L = { -30, 0, 0 }, Knee_R = { -10, 0, 0 } } },
+		{ s = 1.2, ease = "out", pose = { RootJoint = { 86, 0, 5, 0, -1.4, 0.65 }, Waist = { 8, 0, 0 }, Neck = { 22, 18, 0 }, Shoulder_R = { 25, 0, 84 }, Shoulder_L = { 25, 0, -84 }, Hip_L = { -18, 0, -6 }, Hip_R = { -28, 0, 6 }, Knee_L = { -28, 0, 0 }, Knee_R = { -8, 0, 0 } } },
+	},
+	hitstopAt = 1.0, fadeFrom = 2.0, fadeSeconds = 1.0, eyes = { 0, 0, 90 },
+}
+
+-- ═══════════════════════════ 전갈(scorpion) ═══════════════════════════
+local S = {}
+D.scorpion = S
+
+local function legs(f)
+	local out = {}
+	for k = 1, 3 do
+		for _, side in ipairs({ "L", "R" }) do
+			local x = side == "R" and 1 or -1
+			local hip, knee = f(k, x)
+			out[("Hip%d_%s"):format(k, side)] = hip
+			out[("Knee%d_%s"):format(k, side)] = knee
+		end
+	end
+	return out
+end
+local function tails(f)
+	local out = {}
+	for t = 1, 3 do
+		for i = 1, 8 do
+			local v = f(t, i)
+			if v then
+				out[("Tail%d_%d"):format(t, i)] = v
+			end
+		end
+	end
+	return out
+end
+S.legs, S.tails = legs, tails
+
+S.idle = {
+	breath = { period = 2.8, lift = 0.03, claw = 6 },
+	tail = { period = 2.6, yaw = 7, curl = 4, travel = 0.55 }, -- 꼬리마다 위상이 달라 따로 흔들린다(BossRigSpec chains.phase)
+	look = { everySeconds = 3.5, yawDeg = 25, bodyFollow = 0.2, neckSpeed = 6, bodySpeed = 2 },
+}
+-- 세 다리씩 번갈아 딛기(1L · 2R · 3L ↔ 1R · 2L · 3R) - 위상 = 이동 거리 ÷ 보폭
+S.walk = { stride = 0.55, swing = 22, lift = 18, bob = 0.04, runAt = 1.6, turnLean = 4, groupA = { "1_L", "2_R", "3_L" } }
+
+S.guard = merge(
+	{ RootJoint = { 0, 0, 0, 0, -0.05, 0 }, Shoulder_R = { 10, 0, 0 }, Shoulder_L = { 10, 0, 0 }, Pincer_R = { 0, 0, 25 }, Pincer_L = { 0, 0, -25 } },
+	tails(function(_, i)
+		return i <= 2 and { -8, 0, 0 } or nil
+	end)
+)
+S.clips = {}
+local snapR = {
+	post = {
+		{ s = 0.06, ease = "out", pose = merge(S.guard, { Shoulder_R = { -30, 12, 0 }, Elbow_R = { -25, 0, 0 }, Pincer_R = { 0, 0, 0 }, RootJoint = { 0, 8, 0, 0, -0.08, -0.08 } }) },
+		{ s = 0.16, ease = "back", pose = merge(S.guard, { Shoulder_R = { -36, 16, 0 }, Elbow_R = { -30, 0, 0 }, Pincer_R = { 0, 0, -6 }, RootJoint = { 0, 10, 0, 0, -0.1, -0.1 } }) },
+		{ s = 0.5, ease = "inout", pose = S.guard },
+	},
+	hitstop = 0.03,
+}
+S.clips.basic_R = snapR
+S.clips.basic_L = mirrorClip(snapR)
+
+-- 강화 평타(집게 찰싹): 집게를 옆으로 크게 벌려 떨다가 가로로 후려침
+S.clips.swipe = {
+	pre = {
+		{ f = 0.4, ease = "inout", pose = merge(S.guard, { Shoulder_R = { 20, -45, 0 }, Elbow_R = { 20, 0, 0 }, Pincer_R = { 0, 0, 40 }, RootJoint = { 0, -15, 0, 0, -0.1, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(S.guard, { Shoulder_R = { 25, -60, 0 }, Elbow_R = { 25, 0, 0 }, Pincer_R = { 0, 0, 45 }, RootJoint = { 0, -22, 0, 0, -0.14, 0 } }) },
+	},
+	post = {
+		{ s = 0.08, ease = "out", pose = merge(S.guard, { Shoulder_R = { -20, 45, 0 }, Elbow_R = { -15, 0, 0 }, Pincer_R = { 0, 0, 0 }, RootJoint = { 0, 22, 0, 0, -0.12, 0 } }) },
+		{ s = 0.22, ease = "back", pose = merge(S.guard, { Shoulder_R = { -24, 58, 0 }, Elbow_R = { -18, 0, 0 }, RootJoint = { 0, 28, 0, 0, -0.12, 0 } }) },
+		{ s = 0.8, ease = "inout", pose = S.guard },
+	},
+	hitstop = 0.06, squash = 0.06,
+	tremble = { from = 0.6, amp = 4, joints = { "Shoulder_R", "Pincer_R" } },
+	flash = "Pincer_R",
+}
+-- 꼬리 찌르기(sting · stingJab): 세 꼬리를 뒤로 당겼다가 앞으로 내리꽂음
+local function tailPose(base, step, yaw)
+	return tails(function(t, i)
+		return { (i == 1 and base or step), (i == 1 and (yaw or 0) * (t - 2) or 0), 0 }
+	end)
+end
+S.clips.sting = {
+	pre = {
+		{ f = 0.5, ease = "inout", pose = merge(S.guard, tailPose(22, 6), { RootJoint = { 6, 0, 0, 0, -0.08, 0.1 } }) },
+		{ f = 1.0, ease = "out", pose = merge(S.guard, tailPose(30, 8), { RootJoint = { 8, 0, 0, 0, -0.1, 0.12 } }) },
+	},
+	post = {
+		{ s = 0.08, ease = "out", pose = merge(S.guard, tailPose(-28, -9), { RootJoint = { -10, 0, 0, 0, -0.18, -0.15 } }) },
+		{ s = 0.24, ease = "back", pose = merge(S.guard, tailPose(-34, -11), { RootJoint = { -12, 0, 0, 0, -0.2, -0.18 } }) },
+		{ s = 0.8, ease = "inout", pose = S.guard },
+	},
+	hitstop = 0.06, squash = 0.1,
+}
+-- 땅 파기(잠행 · 개미지옥 · 잠행 찌르기 시작): 몸을 낮추고 다리를 벌려 모래를 판다
+local DIG = merge(legs(function(_, x)
+	return { 0, 0, x * 18 }, { 0, 0, -x * 10 }
+end), { RootJoint = { -6, 0, 0, 0, -0.55, 0 }, Shoulder_R = { -30, 20, 0 }, Shoulder_L = { -30, -20, 0 } })
+S.clips.dig = {
+	pre = {
+		{ f = 0.25, ease = "inout", pose = merge(DIG, { RootJoint = { -6, 0, 4, 0, -0.45, 0 } }) },
+		{ f = 0.5, ease = "inout", pose = merge(DIG, { RootJoint = { -6, 0, -4, 0, -0.5, 0 } }) },
+		{ f = 0.75, ease = "inout", pose = merge(DIG, { RootJoint = { -6, 0, 4, 0, -0.55, 0 } }) },
+		{ f = 1.0, ease = "inout", pose = DIG },
+	},
+	post = { { s = 0.1, ease = "out", pose = DIG } },
+	loop = { period = 0.3, poses = { merge(DIG, { RootJoint = { -6, 0, 3, 0, -0.55, 0 } }), merge(DIG, { RootJoint = { -6, 0, -3, 0, -0.55, 0 } }) } },
+}
+-- 두 집게 휩쓸기(clawSweep): 두 집게를 활짝 벌렸다가 안으로 끌어모음
+S.clips.clawSweep = {
+	pre = {
+		{ f = 0.5, ease = "inout", pose = merge(S.guard, { Shoulder_R = { 15, -55, 0 }, Shoulder_L = { 15, 55, 0 }, Pincer_R = { 0, 0, 45 }, Pincer_L = { 0, 0, -45 }, RootJoint = { 4, 0, 0, 0, -0.1, 0.05 } }) },
+		{ f = 1.0, ease = "out", pose = merge(S.guard, { Shoulder_R = { 20, -70, 0 }, Shoulder_L = { 20, 70, 0 }, Pincer_R = { 0, 0, 50 }, Pincer_L = { 0, 0, -50 }, RootJoint = { 6, 0, 0, 0, -0.14, 0.08 } }) },
+	},
+	post = {
+		{ s = 0.09, ease = "out", pose = merge(S.guard, { Shoulder_R = { -15, 30, 0 }, Shoulder_L = { -15, -30, 0 }, Pincer_R = { 0, 0, 0 }, Pincer_L = { 0, 0, 0 }, RootJoint = { -6, 0, 0, 0, -0.16, -0.1 } }) },
+		{ s = 0.25, ease = "back", pose = merge(S.guard, { Shoulder_R = { -20, 38, 0 }, Shoulder_L = { -20, -38, 0 }, RootJoint = { -8, 0, 0, 0, -0.18, -0.12 } }) },
+		{ s = 0.9, ease = "inout", pose = S.guard },
+	},
+	hitstop = 0.07, squash = 0.1, tremble = { from = 0.7, amp = 3, joints = { "Shoulder_R", "Shoulder_L" } },
+}
+-- 아르마딜로 태세(curl): 몸을 말고 꼬리로 덮는다
+local CURL = merge(legs(function(_, x)
+	return { 0, 0, -x * 25 }, { 0, 0, x * 20 }
+end), tails(function(_, i)
+	return { i == 1 and -20 or -12, 0, 0 }
+end), { RootJoint = { -12, 0, 0, 0, -0.4, 0 }, Shoulder_R = { -40, 30, 0 }, Shoulder_L = { -40, -30, 0 }, Neck = { -20, 0, 0 } })
+S.clips.curl = {
+	pre = { { f = 1.0, ease = "inout", pose = CURL } },
+	post = { { s = 0.1, ease = "out", pose = CURL } },
+	loop = { period = 0.8, poses = { CURL, merge(CURL, { RootJoint = { -13, 0, 1, 0, -0.42, 0 } }) } },
+}
+-- 대공 잡기: 전조 = 집게 · 꼬리를 하늘로 / 들기 = 꼬리 끝 · 가운데 · 밑에 한 명씩(4b-5) / 던지기 = 꼬리 투석(뒤로 감았다가 앞으로 채찍)
+local S_UP = merge(S.guard, tails(function(_, i)
+	return { i == 1 and 12 or 5, 0, 0 }
+end), { Shoulder_R = { -50, -20, 0 }, Shoulder_L = { -50, 20, 0 }, Pincer_R = { 0, 0, 45 }, Pincer_L = { 0, 0, -45 }, RootJoint = { 8, 0, 0, 0, 0.1, 0.05 }, Neck = { 15, 0, 0 } })
+S.clips.grab_tele = { pre = { { f = 0.2, ease = "out", pose = S_UP }, { f = 1.0, ease = "inout", pose = merge(S_UP, { RootJoint = { 4, 0, 0, 0, -0.1, 0 } }) } }, tremble = { from = 0.75, amp = 3, joints = { "Shoulder_R", "Shoulder_L" } } }
+S.clips.grab_reach = { post = { { s = 0.15, ease = "out", pose = { Shoulder_R = { -10, -10, 0 }, Shoulder_L = { -10, 10, 0 }, Pincer_R = { 0, 0, 45 }, Pincer_L = { 0, 0, -45 } } } }, upper = true }
+S.clips.grab_snatch = {
+	post = {
+		{ s = 0.0, ease = "out", pose = merge(tails(function(_, i)
+			return { i == 1 and 20 or 6, 0, 0 }
+		end), { Pincer_R = { 0, 0, 45 } }) },
+		{ s = 0.1, ease = "in", pose = merge(tails(function(_, i)
+			return { i == 1 and -15 or -6, 0, 0 }
+		end), { Pincer_R = { 0, 0, 0 }, Jaw = { 0, 0, 0, 0, -0.08, 0 } }) },
+		{ s = 0.6, ease = "inout", pose = {} },
+	},
+	hitstop = 0.09, face = true,
+}
+local S_HOLD = merge(S.guard, tails(function(t, i)
+	return { i == 1 and 6 or 2, i == 1 and (t - 2) * 18 or 0, 0 }
+end), { RootJoint = { 4, 0, 0, 0, 0, 0 } })
+S.clips.grab_hold = { post = { { s = 0.25, ease = "out", pose = S_HOLD } }, loop = { period = 0.45, poses = { S_HOLD, merge(S_HOLD, { RootJoint = { 5, 3, 2, 0, 0, 0 } }) } } }
+S.holdPose = S_HOLD
+S.clips.throw_tail = {
+	pre = { { f = 1.0, ease = "inout", pose = merge(S_HOLD, tails(function(t, i)
+		return { i == 1 and 26 or 7, (t - 2) * 10, 0 }
+	end), { RootJoint = { 10, 0, 0, 0, -0.15, 0.12 } }) } },
+	post = {
+		{ s = 0.09, ease = "out", pose = merge(S.guard, tails(function(_, i)
+			return { i == 1 and -30 or -10, 0, 0 }
+		end), { RootJoint = { -12, 0, 0, 0, -0.2, -0.15 } }) },
+		{ s = 0.3, ease = "back", pose = merge(S.guard, tails(function(_, i)
+			return { i == 1 and -36 or -12, 0, 0 }
+		end), { RootJoint = { -14, 0, 0, 0, -0.22, -0.18 } }) },
+		{ s = 1.0, ease = "inout", pose = S.guard },
+	},
+	hitstop = 0.08, squash = 0.1,
+}
+S.throwWindup = 0.6
+S.flinch = { seconds = 0.24, pose = { RootJoint = { 6, 0, 3, 0, 0.05, 0.06 }, Neck = { 10, 0, 0 } } }
+S.stun = {
+	stagger = merge(legs(function(k, x)
+		return { 0, (k - 2) * 8, x * 10 }, { 0, 0, -x * 6 }
+	end), { RootJoint = { 0, 0, 14, 0, -0.2, 0 }, Neck = { -10, 0, 10 } }),
+	sit = merge(legs(function(_, x)
+		return { 0, 0, x * 35 }, { 0, 0, -x * 25 }
+	end), tails(function(_, i)
+		return { i == 1 and 40 or 12, 0, 0 }
+	end), { RootJoint = { 0, 0, 0, 0, -0.75, 0 }, Neck = { -18, 0, 0 }, Shoulder_R = { -45, 30, 0 }, Shoulder_L = { -45, -30, 0 } }),
+	staggerSeconds = 0.5, riseSeconds = 0.7, wobble = { hz = 1.1, neck = 10, waist = 0 }, eyes = { 0, 0, 90 },
+}
+S.death = {
+	keys = {
+		{ s = 0.25, ease = "out", pose = merge(tails(function(_, i)
+			return { i == 1 and 30 or 8, 0, 0 }
+		end), { RootJoint = { 10, 0, 0, 0, 0.1, 0 } }) },
+		{ s = 1.0, ease = "in", pose = merge(legs(function(k, x)
+			return { 0, (k - 2) * 12, -x * 40 }, { 0, 0, x * 50 }
+		end), tails(function(_, i)
+			return { i == 1 and 70 or 16, 0, 0 }
+		end), { RootJoint = { 0, 0, 170, 0, -0.1, 0 }, Shoulder_R = { -40, 30, 0 }, Shoulder_L = { -40, -30, 0 } }) },
+	},
+	hitstopAt = 1.0, fadeFrom = 2.0, fadeSeconds = 1.0, eyes = { 0, 0, 90 },
+}
+
+-- ═══════════════════════════ 보스별(스킬 id → 동작 · 걷기 · 던지기 · 무게) ═══════════════════════════
+-- skill 값 = 동작 이름(그 보스 plan의 clips) 또는 { clip, upper }. 없는 스킬은 primitive · motion 기본표(defaults)로.
+D.bosses = {
+	section_guardian = {
+		walk = { stride = 0.7, knee = 36, arm = 16, bob = 0.07 },
+		skills = { heavy = "slam", shockwave = "stomp", meteor = "cast", charge = "charge", cross = "punch", swipe = "swipe", fists = "punch", orbs = "cast", earthSplit = "punch", mirror = "cast", innerSmash = "slam" },
+		env = "slam", throw = "throw_overhead",
+		signature = { "heavy", "charge" },
+	},
+	frost_giant = {
+		walk = { stride = 0.8, knee = 30, arm = 12, bob = 0.09, lean = 6 },
+		skills = { slam = "slam", icefall = "cast", spike = "stomp", roar = "roar", swipe = "swipe", spear = "cast", stomp = "stomp", snowball = "cast", mirror = "cast", innerSmash = "slam" },
+		env = "roar", throw = "throw_spin",
+		signature = { "slam", "roar" },
+	},
+	abyssal_lord = {
+		walk = { stride = 0.65, knee = 34, arm = 16, bob = 0.06 },
+		skills = { sweep = "slam", tide = "stomp", spout = "cast", colors = "cast", swipe = "swipe", tailSweep = "tailSweep", vortex = "vortex", bubbles = "cast", mirror = "cast" },
+		env = "beam", throw = "throw_tail",
+		signature = { "tailSweep", "vortex" },
+	},
+	crystal_queen = {
+		walk = { stride = 0.62, knee = 32, arm = 14, bob = 0.05, twist = 8 },
+		skills = { burst = "cast", drop = "cast", energyBeam = "beam", orgel = "orgel", swipe = "swipe", spikes = "punch", shards = "cast", mirrorDash = "charge", mirror = "cast" },
+		env = "cast", throw = "throw_push",
+		signature = { "energyBeam", "orgel" },
+	},
+	scorpion_queen = {
+		walk = { stride = 0.55, swing = 22, lift = 18 },
+		skills = { claw = "clawSweep", sting = "sting", stab = "dig", sandSearch = "dig", swipe = "swipe", stingJab = "sting", ambush = "dig", clawSweep = "clawSweep", armadillo = "curl" },
+		env = "dig", throw = "throw_tail",
+		signature = { "clawSweep", "stab" },
+	},
+	storm_lord = {
+		walk = { stride = 0.66, knee = 34, arm = 14, bob = 0.06, twist = 6 },
+		skills = { discharge = "stomp", whirl = "spin", strike = "cast", rods = "cast", swipe = "swipe", tornado = "cast", thunderRing = "stomp", boltSpear = "cast", mirror = "cast", innerSmash = "punch" },
+		env = "beam", throw = "throw_staff",
+		signature = { "whirl", "strike" },
+	},
+}
+
+-- 보스 전용 대표 동작(두 발 몸 위에 얹는다)
+local tailSweep = {
+	pre = {
+		{ f = 0.6, ease = "inout", pose = merge(B.guard, { Waist = { 4, 55, 0 }, RootJoint = { 0, 30, 0, 0, -0.15, 0 }, Tail1 = { 0, -40, 0 }, Tail2 = { 0, -15, 0 }, Tail3 = { 0, -10, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { 6, 65, 0 }, RootJoint = { 0, 40, 0, 0, -0.18, 0 }, Tail1 = { 0, -55, 0 }, Tail2 = { 0, -20, 0 }, Tail3 = { 0, -15, 0 } }) },
+	},
+	post = {
+		{ s = 0.1, ease = "out", pose = merge(B.guard, { Waist = { -4, -40, 0 }, RootJoint = { 0, -80, 0, 0, -0.15, 0 }, Tail1 = { 0, 70, 0 }, Tail2 = { 0, 30, 0 }, Tail3 = { 0, 25, 0 }, Tail4 = { 0, 15, 0 } }) },
+		{ s = 0.3, ease = "back", pose = merge(B.guard, { Waist = { -6, -48, 0 }, RootJoint = { 0, -95, 0, 0, -0.15, 0 }, Tail1 = { 0, 85, 0 }, Tail2 = { 0, 35, 0 }, Tail3 = { 0, 28, 0 }, Tail4 = { 0, 18, 0 } }) },
+		{ s = 1.1, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.07, squash = 0.08,
+}
+local VORTEX = { Waist = { -4, 0, 0 }, Shoulder_R = { 90, 0, 60 }, Shoulder_L = { 90, 0, -60 }, Elbow_R = { 40, 0, 0 }, Elbow_L = { 40, 0, 0 }, Neck = { 10, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.1, 0 } }
+local vortex = {
+	pre = {
+		{ f = 0.5, ease = "inout", pose = merge(B.guard, { Shoulder_R = { 120, 0, 40 }, Shoulder_L = { 120, 0, -40 }, Waist = { 10, 0, 0 }, Neck = { 18, 0, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, { Shoulder_R = { 150, 0, 45 }, Shoulder_L = { 150, 0, -45 }, Waist = { 14, 0, 0 }, Neck = { 24, 0, 0 }, RootJoint = { 0, 0, 0, 0, 0.05, 0 } }) },
+	},
+	post = { { s = 0.1, ease = "out", pose = VORTEX } },
+	loop = { period = 1.2, poses = { VORTEX, merge(VORTEX, { Waist = { -4, 25, 0 }, Shoulder_R = { 80, 0, 70 } }), VORTEX, merge(VORTEX, { Waist = { -4, -25, 0 }, Shoulder_L = { 80, 0, -70 } }) } },
+	hitstop = 0.03,
+}
+local ORGEL = { Waist = { 6, 0, 0 }, Neck = { 14, 0, 0 }, Shoulder_R = { 150, 0, 12 }, Elbow_R = { 12, 0, 0 }, Shoulder_L = { 35, 0, -25 }, Elbow_L = { 70, 0, 0 } }
+local orgel = { -- 수정 여왕: 홀을 높이 들어 종을 울리듯 흔든다
+	pre = {
+		{ f = 0.5, ease = "inout", pose = merge(B.guard, ORGEL) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, ORGEL, { Shoulder_R = { 165, 0, 8 } }) },
+	},
+	post = { { s = 0.12, ease = "out", pose = merge(ORGEL, { Shoulder_R = { 130, 0, 20 }, Waist = { -4, 0, 0 } }) } },
+	loop = { period = 0.6, poses = { merge(ORGEL, { Shoulder_R = { 140, 0, 25 } }), merge(ORGEL, { Shoulder_R = { 150, 0, -5 } }) } },
+	hitstop = 0.04,
+}
+D.bossClips = {
+	abyssal_lord = { tailSweep = tailSweep, vortex = vortex },
+	crystal_queen = { orgel = orgel },
+}
+
+-- 스킬이 표에 없을 때: primitive · motion → 동작
+D.defaults = {
+	biped = { circleBoss = "slam", ring = "stomp", circleTarget = "cast", charge = "charge", line = "punch", sector = "swipe", projectile = "cast", reflect = "cast", sweep = "beam", vortex = "cast", sonic = "roar", colorMatch = "cast", orgel = "cast", boomerang = "charge", lightningRods = "cast", sandSearch = "cast" },
+	scorpion = { circleBoss = "clawSweep", ring = "clawSweep", circleTarget = "sting", charge = "dig", line = "sting", sector = "clawSweep", projectile = "sting", reflect = "curl", sandSearch = "dig" },
+}
+
+-- 무게(4b-2 무게감): 보스 rig.weight × 이 값으로 히트스톱 · 몸 눌림을 키운다
+D.weightScale = { hitstop = 1, squash = 1 }
+
+return D

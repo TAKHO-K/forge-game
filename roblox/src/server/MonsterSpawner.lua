@@ -11,6 +11,7 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 local BossLook = require(ReplicatedStorage.Shared.BossLook)
+local BossRig = require(ReplicatedStorage.Shared.BossRig)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
@@ -120,7 +121,15 @@ local function buildModel(data, position, variant)
 
 	-- G1-1: 루트 · 몸통 · 머리 조립은 shared/BossLook(서버 · 클라 뷰포트 공용 - 값 · 순서 · 이름 그대로 옮김).
 	local look = { sizeScale = sizeScale, bodyColor = bodyColor, headColor = headColor, bodyAspect = bodyAspect, attachments = data.attachments }
-	local root, body, head = BossLook.buildCore(model, look, position)
+	-- BR1-4b: 보스(분신 포함 - 겉모습이 같아야 한다)는 관절 리그(shared/BossRig · BossRigSpec)로 짓는다 - 루트는 그대로 서버 Anchored(판정 위치) · 부위는 Motor6D · 모션 = 클라(BossAnimator).
+	local rig = (data.isBoss and BossRig.specFor(data.id)) or (data.isDecoy and BossRig.specFor(data.rigId)) or nil
+	local root, body, head
+	if rig then
+		root, body, head = BossRig.build(model, rig, look, position)
+		model:SetAttribute("BossRig", data.isBoss and data.id or data.rigId)
+	else
+		root, body, head = BossLook.buildCore(model, look, position)
+	end
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.MaxHealth = 100
@@ -184,7 +193,9 @@ local function buildModel(data, position, variant)
 	-- 조준 대상 강조 외곽선(16-7)은 A1부터 클라 외곽선 풀(client/OutlinePool)이 조준 대상에만 단다 -
 	-- 몬스터마다 꺼진 Highlight를 미리 붙여 두면 꺼져 있어도 동시 255 슬롯을 차지한다(몬스터 120 = 120칸).
 
-	BossLook.buildAttachments(model, look, body.Position, head.Position)
+	if not rig then
+		BossLook.buildAttachments(model, look, body.Position, head.Position) -- 리그 보스는 부착물이 리그 부위다
+	end
 
 	model.PrimaryPart = root
 	return model
@@ -462,7 +473,7 @@ end
 function MonsterSpawner.spawnRescueTarget(def, zoneKey)
 	local look = def.lookLike
 	local data = {
-		id = "rescue_target", displayName = look and look.displayName or def.displayName, isRescueTarget = true, isDecoy = look ~= nil,
+		id = "rescue_target", displayName = look and look.displayName or def.displayName, isRescueTarget = true, isDecoy = look ~= nil, rigId = look and look.id or nil,
 		bodyColor = look and look.bodyColor or def.color, headColor = look and look.headColor or def.color,
 		bodyAspect = look and look.bodyAspect or def.bodyAspect,
 		sizeScale = look and look.sizeScale or nil, attachments = look and look.attachments or nil,

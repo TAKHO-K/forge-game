@@ -1110,7 +1110,7 @@ local SPECIES = {
 				recoverInZone = { tag = "quicksand", seconds = 6.0 },
 				-- depthStuds 2.0: 보스 루트는 바닥 + 1.5라 몸통 윗면이 바닥 위 2.76, 꼬리 끝이 3.8이다(sizeScale 2.8) → 2.0 내려가면
 				-- 몸통은 0.76만 남은 순간 가려지고 꼬리가 1.8stud 솟은 채 달린다. 더 내리면 꼬리까지 바닥 밑으로 들어간다.
-				burrow = { depthStuds = 2.0, enterSeconds = 0.5, exitSeconds = 0.4, visibleParts = { "TailSpike" } },
+				burrow = { depthStuds = 2.0, enterSeconds = 0.5, exitSeconds = 0.4, visibleParts = { "Tail1_5", "Tail1_6", "Tail1_7", "Tail1_8", "Tail2_5", "Tail2_6", "Tail2_7", "Tail2_8", "Tail3_5", "Tail3_6", "Tail3_7", "Tail3_8" } }, -- BR1-4b: 리그 꼬리 3개의 끝 4마디(옛 TailSpike)
 				onStart = { { type = "spawnPropsAround", prop = "pit", count = 3, minStuds = 14, maxStuds = 26, clearStuds = 6 } },
 				onEnd = { { type = "destroyProps", prop = "pit", which = "all" } },
 				arenaMarginStuds = 5, -- 몸통 반폭 1.2 × 2.8 × 1.3 = 4.4보다 조금 크게

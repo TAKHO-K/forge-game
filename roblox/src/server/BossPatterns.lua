@@ -157,10 +157,36 @@ local function debugEvent(kind, record)
 end
 local judgeHits = nil
 
+-- BR1-4b 모션 상태(판정과 무관 - 클라 BossAnimator가 읽는다 · 멤버 아닌 구경꾼에게도 보이게 모델 Attribute): 기절 · 잡기 단계 · 환경 변화 전조.
+--   BossStunAt / BossStunUntil(서버 시각) · BossPickAt · BossPickN(낚아챈 순간) · BossThrowAt · BossEnv / BossEnvAt / BossEnvHit(환경 전조 시작 · 전조 초).
+local function noteMotion(st, kind, payload)
+	local model = st.model
+	if not model or not model.Parent then
+		return
+	end
+	local t = serverNow()
+	if kind == "daze" then
+		model:SetAttribute("BossStunAt", t)
+		model:SetAttribute("BossStunUntil", t + (payload.seconds or 0))
+	elseif kind == "grabPick" then
+		model:SetAttribute("BossPickAt", t)
+		model:SetAttribute("BossPickN", (model:GetAttribute("BossPickN") or 0) + 1)
+	elseif kind == "grabThrow" then
+		model:SetAttribute("BossThrowAt", t)
+	elseif kind == "envTelegraph" then
+		model:SetAttribute("BossEnv", payload.id)
+		model:SetAttribute("BossEnvAt", t)
+		model:SetAttribute("BossEnvHit", payload.seconds or 0)
+	elseif kind == "envEnd" then
+		model:SetAttribute("BossEnv", nil)
+	end
+end
+
 local function send(st, kind, payload)
 	if BossPatterns.debugSendHook then
 		BossPatterns.debugSendHook(kind, payload, serverNow(), st)
 	end
+	noteMotion(st, kind, payload)
 	for _, member in ipairs(st.members or {}) do
 		if typeof(member) == "Instance" and member.Parent then -- 자동 검증의 스탠드인 멤버(테이블)에게는 보내지 않는다
 			patternEvent:FireClient(member, kind, payload)
@@ -275,6 +301,7 @@ end
 
 -- 헤롱 자세 해제 - 똑바로 세운다(돌진 종료·중단·리셋 공통).
 local function clearDaze(model, st)
+	model:SetAttribute("BossStunUntil", nil) -- BR1-4b 모션: 기절 끝(일어나기)
 	if st.dazeBase then
 		model:PivotTo(CFrame.new(st.dazeBase))
 		st.dazeBase = nil
@@ -385,6 +412,7 @@ local function ensureState(model, data)
 		local now = os.clock()
 		st.phase = "normal"
 		st.phaseEndsAt = 0
+		st.model = model -- BR1-4b: send()가 모션 상태 Attribute를 이 모델에 적는다
 		st.graceUntil = now + (data.scheduler.entryGraceSeconds or 0)
 		st.waves = {}
 		st.floorY = floorYUnder(MonsterState.getSpawnPosition(model))
@@ -422,6 +450,7 @@ local function endSkill(model, st, data, now, interrupted)
 	st.phase = "normal"
 	st.current = nil
 	st.skill = nil
+	model:SetAttribute("BossAct", nil) -- BR1-4b 모션: 스킬 끝(클라가 동작을 풀어 제자리로)
 	BossScheduler.onSkillEnd(st.sched, data.skills, id, now)
 	MonsterState.setLastAttackTick(model, now) -- 스킬 직후 바로 평타가 또 나가지 않게(15-1과 같다)
 end
@@ -2101,6 +2130,11 @@ local function startSkill(model, st, data, id, now, position, targetRoot)
 		seconds = handler.bubbleSeconds(c),
 		scale = ((skill.primitive == "gimmick" or skill.gate) and (st.hintLevel or 0) >= 1) and BossData.mechanics.hint.bubbleScale or nil,
 	})
+	-- BR1-4b 모션(판정과 무관): 클라 BossAnimator가 동작을 고르고 "때리는 순간"(= 전조 끝 bubbleSeconds)에 맞춘다
+	model:SetAttribute("BossActAt", serverNow())
+	-- 때리는 순간 = 첫 판정(전조 telegraphSeconds) - 말풍선 시간(bubbleSeconds)은 여러 번 치는 스킬이면 전체 길이다(기믹은 힌트 배율이 들어간 말풍선 시간)
+	model:SetAttribute("BossActHit", (skill.primitive ~= "gimmick" and skill.telegraphSeconds) or handler.bubbleSeconds(c))
+	model:SetAttribute("BossAct", id)
 	handler.start(c)
 	runEffects(c, skill.onStart, {}) -- 29-3: 스킬이 시작되며 까는 것(모래 구덩이)
 end

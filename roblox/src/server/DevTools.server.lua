@@ -21,6 +21,11 @@ if not RunService:IsStudio() then
 	return
 end
 
+-- BR1-4b 4b-8: 모션 확인 신호(/gg boss anim) - 클라 BossAnimator가 받는다(Studio 전용 - 미리 만들어 둬야 클라가 연결한다)
+local bossAnimPreviewEvent = Instance.new("RemoteEvent")
+bossAnimPreviewEvent.Name = "BossAnimPreview"
+bossAnimPreviewEvent.Parent = ReplicatedStorage
+
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
@@ -1092,6 +1097,7 @@ local HELP_TEXT = table.concat({
 	"/gg bagclear - 실제 가방을 비우고 바로 저장(백업 없음 - 테스트 진행 중이면 거절, 28-1 S04 사전 작업)",
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
 	"/gg gold <n> - 골드를 n으로 맞춘다(0 이상, /gg reset으로 복원 - 구매 · 골드 부족 화면 검증용)",
+	"/gg boss anim <보스 id> <동작|all> [반복] - BR1-4b 모션 확인: 내 앞에 전시용 리그를 세우고 동작 되풀이(idle · walk · run · basic · flinch · stun · death · grab · throw · 스킬 id) · 끄기 = /gg boss anim off",
 	"/gg fall <높이> - 나무 둘레 밖 허브 바닥 위 <높이>로 실제 순간이동해 떨어진다(낙하 피해 실측 - BR1-4b 파트 0-4)",
 	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록(실제 키 타입 포함) · /gg ticket grantboss <스테이지> - 처치 없이 보스 첫 클리어 지급 함수 호출 · /gg ticket clear - 방지권 · 받은 기록을 비우고 저장",
 	"/gg drop force <등급> [부위] [ground] - D1: 그 등급 장비 1개를 실제 드랍 경로로(출처 태그 · 태초 = 시험 키 세계 번호 · 칭호 · 흰 빛기둥 · 본인 연출 · 배너 / 고대 = 같은 서버 알림 · 고대 빛기둥). 태초는 가방(ground = 땅에 - 빛기둥 확인)",
@@ -1343,6 +1349,20 @@ local function handleCommand(player, args)
 		reply(player, "보스 배치: " .. table.concat(cells, " "))
 		local problems = BossRules.validatePlacement()
 		reply(player, #problems == 0 and "배치표 검사 통과" or ("배치표 위반: " .. table.concat(problems, " / ")))
+	elseif sub == "boss" and args[2] == "anim" and args[3] then
+		-- BR1-4b 4b-8 모션 확인: "/gg boss anim <보스 id> <동작> [반복 횟수]" - 내 앞에 그 보스 리그(전시용 - 이 클라에만 · 판정 없음)를 세우고 동작을 되풀이한다.
+		-- 동작 = idle · walk · run · basic · flinch · stun · death · grab · throw · 스킬 id(BossData skillOrder) · all(차례로). 끄기 = "/gg boss anim off".
+		local event = bossAnimPreviewEvent
+		if args[3] == "off" then
+			event:FireClient(player, nil)
+			reply(player, "모션 확인 끔")
+		elseif not BossData.bosses[args[3]] then
+			reply(player, "보스 id: section_guardian · frost_giant · abyssal_lord · crystal_queen · scorpion_queen · storm_lord")
+		else
+			local action = args[4] or "all"
+			event:FireClient(player, { bossId = args[3], action = action, rep = tonumber(args[5]) })
+			reply(player, ("모션 확인: %s · %s%s"):format(args[3], action, args[5] and (" × " .. args[5]) or " (끄기 = /gg boss anim off)"))
+		end
 	elseif sub == "boss" and args[2] == "pattern" and args[3] then
 		-- BR1-2 패턴 단독 발동(Studio · 개발 계정만): "/gg boss pattern <보스 id> <패턴 id> [스테이지]" - 그 보스를 부르고 그 패턴 하나만 되풀이(2초 쉬고 다시).
 		-- 패턴 id 목록 = docs/design/boss-patterns-explained.md. 패턴 없이 부르면 그 보스의 패턴 id를 알려 준다. 끄기 = "/gg boss pattern off"
@@ -3606,6 +3626,7 @@ if RunService:IsStudio() then
 				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
 				{ "BR1-2(나)", function() require(script.Parent.BR1_2Verify).runLive(player, env) end }, -- BR1-2: 곡선 32발 · 동시 4보스 성능 · 반사 · 음파 · 색 맞추기 · 가둠 · 저장 v37
 				{ "BR1-4a(나)", function() require(script.Parent.BR14aVerify).runLive(player, env) end }, -- BR1-4a: 고정 % 피해 · 에네르기파 · 회오리 되돌림 0 · 대공 잡기 강제 체공 · 붕괴 실제 낙하 · 아레나 낙하 제외
+				{ "BR1-4b(나)", function() require(script.Parent.BR14bVerify).runLive(player, env) end }, -- BR1-4b: 리그 6종 스폰 · 알림 = 판정 시각 · 잡기 부착점
 				{ "BR1-4b0(나)", function() require(script.Parent.BR14b0Verify).runLive(player, env) end }, -- BR1-4b 파트 0: 공중 대시 낙하 최고점 · 수호자 잡기 → 돌진 연속 금지(실제 step)
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "M1-2c(나)", function() require(script.Parent.M1_2cVerify).runLive(player, env) end }, -- M1-2c: 나무 발사 전부 되돌림 0 · 허가 없이 같은 높이 → 되돌림 · 보스 발사 최대 · 리프트 [F] · 도착 낙하 없음
@@ -4006,6 +4027,15 @@ if RunService:IsStudio() and verifyEnabled("MV1(가)") then
 		local ok, err = pcall(require(script.Parent.MV1Verify).runPure)
 		if not ok then
 			warn(("[MV1(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+if RunService:IsStudio() and verifyEnabled("BR1-4b(가)") then -- BR1-4b: 리그 무결성 · 동작 관절 · 자세 범위 · 타격 프레임 · 발 미끄러짐 · 부착점 · 비용 · 판 털기 거리
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.BR14bVerify).runPure)
+		if not ok then
+			print("===BR1-4b 검증 끝(가)=== 에러: " .. tostring(err))
 		end
 	end)
 end
