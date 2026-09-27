@@ -254,6 +254,14 @@ function HeightGuard.exempt(player, seconds)
 	st.exemptUntil = math.max(st.exemptUntil, os.clock() + seconds + cfg.exemptExtraSeconds)
 end
 
+-- BR1-4c 리뷰: 서버가 옮기던 붙잡기가 끝나면 남은 예외 시간을 바로 끝낸다(exempt의 여유 시간 동안 검사 없이 움직이지 못하게).
+function HeightGuard.endExempt(player)
+	if typeof(player) ~= "Instance" then
+		return
+	end
+	stateOf(player).exemptUntil = os.clock()
+end
+
 -- 발사 허가(점프대 · 통통 열매 - LaunchPermit가 발판 위였음을 확인한 뒤). maxFeetY = 설계 발 정점(공중 점프 몫 포함) - 여유는 여기서 더한다.
 -- hSpeed = 설계 수평 속도(점프대 포물선 - 없으면 걷기 그대로) · 여유 = moveGuard.padSpeedMargin.
 function HeightGuard.grant(player, maxFeetY, seconds, source, hSpeed)

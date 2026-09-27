@@ -82,11 +82,26 @@ local function spawnPit(data)
 	local slope = newFlatDisc(data.position, data.radius, data.color, Enum.Material.Sand, 0.08)
 	local core = newFlatDisc(data.position, data.coreRadius, DANGER_COLOR, Enum.Material.Neon, 0.14)
 	slope.Name = "BossArenaPit"
+	-- BR1-4c c-12: 구덩이 테두리 = 한 톤 어두운 모래 둑 + 둘레 조약돌(구덩이 가장자리가 바닥과 구분되게 - 판정 반경 그대로)
+	local rim = newFlatDisc(data.position, data.radius + 0.9, data.color:Lerp(Color3.new(0, 0, 0), 0.22), Enum.Material.Sand, 0.05)
+	local pebbles = {}
+	for k = 1, 7 do
+		local a = k / 7 * 2 * math.pi + 0.4
+		local pebble = newPart(Vector3.one * (0.9 + (k % 3) * 0.3), data.color:Lerp(Color3.new(0, 0, 0), 0.35), 1, Enum.Material.SmoothPlastic)
+		pebble.Shape = Enum.PartType.Ball
+		pebble.CFrame = CFrame.new(data.position + Vector3.new(math.cos(a) * (data.radius + 0.5), 0.3, math.sin(a) * (data.radius + 0.5)))
+		table.insert(pebbles, pebble)
+	end
 	local info = TweenInfo.new(data.armSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	TweenService:Create(slope, info, { Transparency = 0.15 }):Play()
 	TweenService:Create(core, info, { Transparency = 0.3 }):Play()
+	TweenService:Create(rim, info, { Transparency = 0 }):Play()
+	for _, pebble in ipairs(pebbles) do
+		TweenService:Create(pebble, info, { Transparency = 0 }):Play()
+		pebble.Parent = rim
+	end
 	props[data.id] = {
-		part = slope, extra = core, position = data.position, radius = data.radius, isPit = true,
+		part = slope, extra = core, rim = rim, position = data.position, radius = data.radius, isPit = true,
 		coreRadius = data.coreRadius, pull = data.pullStudsPerSecond, armedAt = os.clock() + data.armSeconds,
 	}
 end
@@ -120,6 +135,9 @@ function BossArenaPropsView.remove(ids)
 			if entry.extra then
 				fadeAndDestroy(entry.extra, 0.3)
 			end
+			if entry.rim then
+				entry.rim:Destroy()
+			end
 			entry.part.CanCollide = false
 			if not entry.isPit then
 				entry.part.Color = IMPACT_COLOR -- 부서지는 순간 = 임팩트(흰색)
@@ -134,6 +152,9 @@ function BossArenaPropsView.clear()
 		entry.part:Destroy()
 		if entry.extra then
 			entry.extra:Destroy()
+		end
+		if entry.rim then
+			entry.rim:Destroy()
 		end
 		props[id] = nil
 	end

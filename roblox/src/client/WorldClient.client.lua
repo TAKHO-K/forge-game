@@ -153,8 +153,26 @@ objectiveLabel.Name = "ObjectiveLabel"
 objectiveLabel.AnchorPoint = Vector2.new(1, 0)
 objectiveLabel.Visible = false
 objectiveLabel.Parent = hud
+-- BR1-4c c-6: 거리 표시 옆 [끄기]/[안내 켜기] - 끄면 길 안내(빛줄기 · 화살표 · 거리 표시) 전체가 사라지고, 같은 자리 버튼이나 목적지 재선택으로 다시 켠다(이번 접속 동안 - 저장은 P4d).
+local guideToggle = Instance.new("TextButton")
+guideToggle.Name = "GuideToggle"
+guideToggle.AnchorPoint = Vector2.new(1, 0)
+guideToggle.Size = UDim2.new(0, 64, 0, 24)
+guideToggle.Font = Theme.font
+guideToggle.TextSize = Theme.textSize("caption")
+guideToggle.TextColor3 = UIColors.textPrimary
+guideToggle.BackgroundColor3 = UIColors.panel
+guideToggle.BackgroundTransparency = UIColors.panelTransparency
+guideToggle.Visible = false
+guideToggle.Parent = hud
+Theme.corner(guideToggle, 6)
+guideToggle.Activated:Connect(function()
+	Wayfinder.setHidden(not Wayfinder.isHidden())
+end)
 local function placeObjective()
 	objectiveLabel.Position = UDim2.new(0, regionLabel.AbsolutePosition.X - 6, 0, regionLabel.AbsolutePosition.Y)
+	local leftOf = objectiveLabel.Visible and objectiveLabel.AbsolutePosition.X - objectiveLabel.AbsoluteSize.X or regionLabel.AbsolutePosition.X
+	guideToggle.Position = UDim2.new(0, leftOf - 6, 0, regionLabel.AbsolutePosition.Y)
 end
 regionLabel:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeObjective)
 regionLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeObjective)
@@ -319,11 +337,21 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 	local g = gate and WorldMapLayout.bossGate(gate)
-	objectiveLabel.Visible = g ~= nil and regionLabel.Visible
+	-- BR1-4c c-6: 보스전 중 = 길 안내 전체 숨김(경로는 기억 - 돌아오면 이전 목적지로 다시) · 끄기 버튼 = 안내 전체 끄기/켜기
+	local owner = Wayfinder.activeOwner()
+	local inBoss = player:GetAttribute("BossEncounterId") ~= nil
+	local dest = Wayfinder.destination()
+	guideToggle.Visible = owner ~= nil and not inBoss and regionLabel.Visible
+	guideToggle.Text = Wayfinder.isHidden() and "안내 켜기" or "끄기"
+	objectiveLabel.Visible = (g ~= nil or dest ~= nil) and regionLabel.Visible and not Wayfinder.isHidden() and owner ~= nil
 	if g and root then
 		local d = Vector3.new(g.position.X - root.Position.X, 0, g.position.Z - root.Position.Z).Magnitude
 		objectiveLabel.Text = ("다음 목표: %s 관문을 찾아라 · %dm"):format(g.name, math.floor(d * TREE.metersPerStud + 0.5))
 		objectiveLabel.TextColor3 = Color3.fromRGB(g.color[1], g.color[2], g.color[3])
-		placeObjective()
+	elseif dest and root then
+		local d = Vector3.new(dest.X - root.Position.X, 0, dest.Z - root.Position.Z).Magnitude
+		objectiveLabel.Text = ("안내 · %dm"):format(math.floor(d * TREE.metersPerStud + 0.5))
+		objectiveLabel.TextColor3 = UIColors.textPrimary
 	end
+	placeObjective()
 end)

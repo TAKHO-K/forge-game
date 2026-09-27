@@ -210,6 +210,18 @@ do
 	}
 end
 
+-- BR1-4c c-10 발 접지: 발바닥 점(클라 BossAnimator가 매 프레임 가장 낮은 발을 땅에 맞춘다 - 뜬 발 · 바닥 관통 없음). 두 발 = 발 파트 밑면 · 전갈 = 다리 끝.
+for _, rig in pairs(BossRigSpec.rigs) do
+	rig.feet = {}
+	for _, j in ipairs(rig.joints) do
+		if j.part == "Foot_L" or j.part == "Foot_R" then
+			table.insert(rig.feet, { part = j.part, at = V(0, -j.size.Y / 2, 0) })
+		elseif j.part:match("^Shin%d_[LR]$") then
+			table.insert(rig.feet, { part = j.part, at = V(0, -j.size.Y / 2, 0) })
+		end
+	end
+end
+
 -- 색 역할 → 실제 색(bodyColor · headColor = BossData · accent = 위 표 · 나머지 = 파생).
 function BossRigSpec.colorOf(role, look, rig)
 	if role == "head" then

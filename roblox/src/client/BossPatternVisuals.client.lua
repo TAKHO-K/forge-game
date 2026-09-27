@@ -489,10 +489,17 @@ local function focus(data)
 	local line = newPart(Vector3.new(data.halfWidth * 2, 0.2, length), DANGER_COLOR, 0.8)
 	local y = data.floorY + 0.15 + moundLiftSegment(Vector3.new(data.bossPosition.X, data.floorY, data.bossPosition.Z), Vector3.new(data.endPosition.X, data.floorY, data.endPosition.Z), data.halfWidth) -- P3c B4
 	line.CFrame = CFrame.lookAt(Vector3.new(mid.X, y, mid.Z), Vector3.new(data.endPosition.X, y, data.endPosition.Z))
-	-- 예고 시간 동안 점점 진해진다.
-	TweenService:Create(line, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-		Transparency = 0.35,
+	-- 예고 시간 동안 점점 진해진다(BR1-4c c-7: 끝에 갈수록 더 진하게 0.1 + 가장자리 흰 선 - "뭐든 부순다").
+	TweenService:Create(line, TweenInfo.new(data.seconds, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+		Transparency = 0.1,
 	}):Play()
+	for _, side in ipairs({ -1, 1 }) do
+		local edge = newPart(Vector3.new(0.35, 0.22, length), Color3.new(1, 1, 1), 0.9)
+		edge.Material = Enum.Material.Neon
+		edge.CFrame = line.CFrame * CFrame.new(side * data.halfWidth, 0.02, 0)
+		edge.Parent = line
+		TweenService:Create(edge, TweenInfo.new(data.seconds, Enum.EasingStyle.Quint, Enum.EasingDirection.In), { Transparency = 0.15 }):Play()
+	end
 	chargeLine = line
 end
 
@@ -781,6 +788,8 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossBR1View.projBounce(data)
 	elseif kind == "projEnd" then
 		BossBR1View.projEnd(data)
+	elseif kind == "projRiders" then
+		BossBR1View.projRiders(data) -- BR1-4c c-11 눈덩이에 붙은 사람 수 → 그림 크기
 	elseif kind == "vortex" then
 		BossBR1View.vortex(data)
 	elseif kind == "vortexBurst" then
@@ -825,7 +834,11 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	elseif kind == "spikeImpact" then
 		BossBR13View.spikeImpact(data)
 	elseif kind == "playerStun" then
-		BossBR13View.playerStun(data)
+		if data.style == "snow" then
+			BossBR1View.snowStun(data) -- BR1-4c c-11 눈덩이에서 튀어나온 기절(눈송이 · 비틀 → 일어나기)
+		else
+			BossBR13View.playerStun(data)
+		end
 	elseif kind == "sweepTelegraph" then
 		BossBR13View.sweepTelegraph(data)
 	elseif kind == "sweepFire" then

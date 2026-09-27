@@ -155,6 +155,12 @@ local MECHANICS = {
 	--   맞는 순간 진행 중 패턴은 끊긴다 · 기절 동안 새 패턴 · 평타 없음 · 보스 최대 체력 × damageMaxHpFraction. cooldownSeconds 안에 또 맞으면 에어본 없이 피해만(연속 에어본 방지).
 	--   판정 = 되튕겨진 투사체(owner.kind == "player")가 보스 곁 hitRadiusStuds + 투사체 반경 안. 지금 되튕기는 수단은 개발 명령(/gg reflectshot)뿐 - 성기사 방패 패링 연결은 K.
 	--   BR1-3 결정 6(사용자): 피해 = 1회당 보스 최대 체력 5% **고정**(fixedDamage - 레벨차 계수 · 받는 피해 배율(게이트) 미적용 - 기믹 보상). 보호막(수정 부수기)만 막는다.
+	-- BR1-4c c-3 보스 유도 투사체 공통 규칙(사용자): 대상 = 처음 조준한 사람 고정 · retargetSeconds마다 그 사람의 지금 자리로 목표 갱신 · homingSeconds까지만 따라가고 그 뒤 마지막 방향으로 직진.
+	--   회전 상한 = 스킬마다 turnRateDeg(초당 최대 회전 각) - 옆으로 달리거나 대시하면 피한다(회피 검사 BossSkillMath.dodgeChecks "옆으로 달려 따돌리기").
+	homing = { retargetSeconds = 0.5, homingSeconds = 3.0 },
+	-- BR1-4c c-4 보스 진입 연출(사용자): 첫 도전 = 보스 줌인(이름) bossSeconds → 아군 한 명씩 memberSeconds(전체 maxSeconds 안 - 많으면 아군 컷이 짧아진다) · 재도전 · 재입장 = 보스 컷만 shortSeconds.
+	--   연출 동안 보스 행동 · 피해 없음 · 입력 잠금(루트 고정) · 리더보드 기록 시간은 연출이 끝난 뒤부터(서버 시각).
+	intro = { bossSeconds = 1.4, memberSeconds = 0.6, maxSeconds = 3.8, shortSeconds = 1.2 },
 	bossAirborne = { liftStuds = 10, riseSeconds = 0.35, fallSeconds = 0.35, stunSeconds = 3.0, damageMaxHpFraction = 0.05, fixedDamage = true, cooldownSeconds = 12, hitRadiusStuds = 4 },
 
 	-- BR1-3 플레이어 기절(강화 평타 onHit "stun" · server/PlayerStun): 맞으면 seconds 동안 제자리(루트 고정 - 출처 "stun"). 기절이 풀린 뒤 immuneSeconds 동안은
@@ -353,6 +359,9 @@ local QUAKE_COUNT_WEIGHTS = { -- [곡선 단계] = { [3박] = 확률, [4박], [5
 	{ [3] = 0.25, [4] = 0.45, [5] = 0.3 },
 	{ [3] = 0.1, [4] = 0.4, [5] = 0.5 },
 }
+-- BR1-4c c-9 지진파 뒤 흐름(사용자): 마지막 파동 뒤 "마무리 강타"(finishSeconds - 피해 없는 연출 · 판정 추가 없음) → 숨 고르기(restSeconds - 가까이 와 때릴 틈) → 다음 패턴.
+--   스킬은 여전히 파동이 최대 반경까지 가야 끝난다(판정 불변) - 마무리 + 휴식이 그보다 짧으면 스킬 길이는 그대로다.
+local QUAKE_AFTER = { finishSeconds = 0.8, restSeconds = 2.0 }
 local function quakeRhythm(speedStuds, gapAfterGround, gapAfterAir, layers, layerGapSeconds)
 	return {
 		sequences = QUAKE_SEQUENCES, countWeightsByTier = QUAKE_COUNT_WEIGHTS,
@@ -428,6 +437,7 @@ local function guardianSkills()
 			-- (두 종류 모두 들어가고 같은 종류 3연속 없음 - BossSkillMath.rollRhythm). 간격 = 하단 뒤 1.5(다시 뛰기 1.175 이상) · 상단 뒤 1.3(서 있다가 뛰기).
 			-- 위 rhythm은 회피 검사 · 모형의 대표값(3박) - 실제 시전은 이 표로 굴린다. 하네스가 가능한 순서 전부를 회피 부등식에 넣는다.
 			randomRhythm = quakeRhythm(24, 1.5, 1.3),
+			afterWaves = QUAKE_AFTER,
 			waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4,
 			-- 공중 판정 여유 - 지면 거리가 서 있을 때(HipHeight + 루트 반높이)보다 이만큼 더 크면 공중(21-3 실측).
 			airborneClearanceStuds = 0.5,
@@ -773,6 +783,10 @@ local SPECIES = {
 				-- 사용자 요청: 벽에 닿으면 최대 2번 튕긴다 - 튕기는 순간 **가장 먼 사람의 (예측) 자리**를 기억해 그쪽으로 곧게 굴러간다(튕김마다 다시 맞을 수 있다).
 				-- 튕긴 뒤에도 옆 6 = 0.97초 · 점프로 넘기는 그대로다(굴러오는 것이 보인다 - 벽에서 가장 먼 사람까지는 멀다).
 				bounces = 2, bounceRetarget = "farthest", bounceLifetimeSeconds = 9,
+				-- BR1-4c c-11: 맞으면 눈덩이 겉에 반쯤 파묻혀 같이 구른다 → maxSeconds 또는 다음 벽 튕김 중 먼저 → 안전한 자리로 튀어나와 stunSeconds 기절.
+				--   파묻힘 + 기절 ≤ 2.7초(사용자 ≤ 3초). 여러 명이 붙으면 눈덩이가 그림으로만 커진다(판정 반경 radiusStuds는 그대로 - 회피 부등식 불변).
+				--   피해는 맞는 순간 한 번(기존 ×2 그대로) - 파묻힌 동안은 잡힘(BossTrap - 면역)이라 튕겨 돌아와도 다시 안 맞는다.
+				engulf = { maxSeconds = 1.2, stunSeconds = 1.5, growPerRider = 0.12, maxGrow = 1.48, ejectClearanceStuds = 1.5 },
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "눈덩이",
 			},
 		},
@@ -834,6 +848,7 @@ local SPECIES = {
 					{ gapSeconds = 1.5, speedStuds = 18, layers = 2, layerGapSeconds = 4 / 18, air = { minStuds = 4, maxStuds = 14 } },
 				},
 				randomRhythm = quakeRhythm(24, 1.6, 1.5, 2, 4 / 24), -- BR1-2 지진파 무작위(해일 - 두 겹 · 겹 통과 0.33초 ≤ 체공 0.54 · 뒷겹만큼 간격을 늘렸다)
+				afterWaves = QUAKE_AFTER,
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				layers = 2, layerGapSeconds = 4 / 24,
 				damage = { kind = "attack", multiplier = 1 }, damageLabel = "해일",
@@ -1228,6 +1243,7 @@ local SPECIES = {
 				-- 2박 = 공중 파동(발 +4 ~ 14 - 서 있는다). 3박 속도는 메아리와 같은 20(빠른 파동이 느린 파동을 뒤따르면 멀리서 따라잡아 "다시 뛰기"가 깨진다).
 				rhythm = { label = "천둥 · 공중 메아리 · 천둥", { speedStuds = 36 }, { gapSeconds = 1.2, speedStuds = 20, air = { minStuds = 4, maxStuds = 14 } }, { gapSeconds = 1.2, speedStuds = 20 } },
 				randomRhythm = quakeRhythm(20, 1.3, 1.2), -- BR1-2 지진파 무작위(방전 고리 - 한 속도라 거리마다 차가 같다)
+				afterWaves = QUAKE_AFTER,
 				waveSpeedStuds = 24, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				damage = { kind = "attack", multiplier = 1.5 }, damageLabel = "방전 고리",
 				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
@@ -1318,6 +1334,7 @@ local SPECIES = {
 				telegraphSeconds = 1.6, waveCount = 3, repeatIntervalSeconds = 1.6,
 				rhythm = { label = "느린 고리 · 공중 · 느린 고리", { speedStuds = 12 }, { gapSeconds = 1.6, speedStuds = 12, air = { minStuds = 4, maxStuds = 14 } }, { gapSeconds = 1.6, speedStuds = 12 } },
 				randomRhythm = quakeRhythm(12, 1.6, 1.6), -- BR1-2 지진파 무작위(느린 천둥 고리)
+				afterWaves = QUAKE_AFTER,
 				waveSpeedStuds = 12, waveThicknessStuds = 4, hopHeightStuds = 4, airborneClearanceStuds = 0.5,
 				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "천둥 고리",
 			},

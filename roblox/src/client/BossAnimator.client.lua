@@ -15,6 +15,7 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossMotion = require(ReplicatedStorage.Shared.BossMotion)
 local BossRig = require(ReplicatedStorage.Shared.BossRig)
 local BossMotionData = require(ReplicatedStorage.Shared.data.BossMotionData)
+local BossFx = require(script.Parent.BossFx)
 
 local localPlayer = Players.LocalPlayer
 local LOD = BossRigSpec.lod
@@ -101,6 +102,9 @@ local function readState(e, now)
 		st.env, st.envEndAt = nil, nil
 	end
 	st.swingAt, st.swingN = m:GetAttribute("BossSwingAt"), m:GetAttribute("BossSwingN")
+	st.hopAt, st.hopSeconds = m:GetAttribute("BossHopAt"), m:GetAttribute("BossHopSeconds")
+	st.inCombat = m:GetAttribute("BossEncounterId") ~= nil -- BR1-4c c-10: 보스전 중 기본 자세 = 전투 준비
+	st.actPhase, st.actPhaseAt = m:GetAttribute("BossActPhase"), m:GetAttribute("BossActPhaseAt")
 	st.pickAt = m:GetAttribute("BossPickAt")
 	local plan, thrown = m:GetAttribute("BossThrowPlan"), m:GetAttribute("BossThrowAt")
 	if st.act and plan and st.actAt and plan > st.actAt then
@@ -160,6 +164,27 @@ local function stepSprings(e, dt, accelLocal)
 	end
 end
 
+-- BR1-4c c-7 돌진 전조 "노려봄": 눈이 붉게 빛나고(세기 = 전조 진행) 코에서 콧김 먼지
+local GLARE = Color3.fromRGB(255, 40, 30)
+local SNORT = Color3.fromRGB(235, 228, 214)
+local function applyGlare(e, info, now)
+	local eyes = e.model:FindFirstChild("Eyes")
+	if not eyes then
+		return
+	end
+	e.eyeColor = e.eyeColor or eyes.Color
+	local g = info.glare or 0
+	eyes.Color = e.eyeColor:Lerp(GLARE, math.clamp(g * 1.4, 0, 1))
+	if g > 0.2 and now - (e.lastSnort or 0) > 0.45 then
+		e.lastSnort = now
+		local mouth = e.model:FindFirstChild("Rig_Mouth", true)
+		if mouth and mouth:IsA("Attachment") then
+			local out = mouth.WorldCFrame.LookVector
+			BossFx.puff(mouth.WorldPosition + out * 1.5, 1.5 + g * 2, SNORT, 0.5, (out * 6 + Vector3.new(0, 2, 0)))
+		end
+	end
+end
+
 local function applyFlash(e, info)
 	local part = info.flash == "weapon" and e.weapon or (info.flash and e.model:FindFirstChild(info.flash))
 	if e.flashPart and e.flashPart ~= part then
@@ -176,6 +201,57 @@ local function applyFlash(e, info)
 		e.flashPart.Color, e.flashPart.Material = e.flashColor, e.flashMaterial
 		e.flashPart = nil
 	end
+end
+
+-- BR1-4c c-5 헤롱 별: 머리 위를 빙빙 도는 별 3개(쓰러진 보스 · 전시 리그 사망)
+local STAR = Color3.fromRGB(255, 230, 90)
+local function updateStars(e, show, now)
+	if not show then
+		if e.stars then
+			for _, p in ipairs(e.stars) do
+				p:Destroy()
+			end
+			e.stars = nil
+		end
+		return
+	end
+	local head = e.model:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	if not e.stars then
+		e.stars = {}
+		for i = 1, 3 do
+			local p = Instance.new("Part")
+			p.Name = "DizzyStar"
+			p.Shape = Enum.PartType.Ball
+			p.Size = Vector3.one * 0.35 * e.S
+			p.Material = Enum.Material.Neon
+			p.Color = STAR
+			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+			p.Parent = e.model
+			e.stars[i] = p
+		end
+	end
+	local r = head.Size.X * 0.75
+	for i, p in ipairs(e.stars) do
+		local a = now * 5 + i * (2 * math.pi / 3)
+		p.Position = head.Position + Vector3.new(math.cos(a) * r, head.Size.Y * 0.8 + math.sin(now * 7 + i) * 0.1 * e.S, math.sin(a) * r)
+	end
+end
+
+-- 막타 순간 카메라가 살짝 당겨졌다 돌아옴(화면만 - 슬로모션 동안)
+local function deathZoom(position)
+	local camera = Workspace.CurrentCamera
+	if not camera or camera.CameraType ~= Enum.CameraType.Custom or (camera.CFrame.Position - position).Magnitude > 180 then
+		return
+	end
+	local fov = camera.FieldOfView
+	local TweenService = game:GetService("TweenService")
+	TweenService:Create(camera, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FieldOfView = fov * 0.82 }):Play()
+	task.delay(1.2, function()
+		TweenService:Create(camera, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { FieldOfView = fov }):Play()
+	end)
 end
 
 -- 사망: 서버 모델은 곧 지워진다 → 보이는 몸을 복제해 이 클라에서 쓰러뜨리고 사라지게
@@ -223,6 +299,7 @@ local function startDeathClone(e)
 	end
 	e.deathClone = ce
 	rigs[clone] = ce
+	deathZoom(e.visPos)
 end
 
 local function updateEntry(e, now, dt, camPos)
@@ -309,6 +386,25 @@ local function updateEntry(e, now, dt, camPos)
 
 	-- 쓰기: RootJoint = 보간 오프셋 · 자세
 	local transforms = BossMotion.toTransforms(e.rest, e.S, pose)
+	-- BR1-4c c-10 발 접지: 가장 낮은 발바닥을 기준 높이(발 −1.5)에 맞춘다(뜬 발 · 바닥 관통 없음) - 뛰어오른 동작 · 사망은 뺀다 · 부드럽게 · 한도 ±0.6 단위
+	local fix = 0
+	if e.rig.feet and #e.rig.feet > 0 and not info.airborne and not st.deadAt and distance <= LOD.fullStuds then
+		local frames = BossRig.solve(e.rig, CFrame.identity, e.S, transforms)
+		local minY = math.huge
+		for _, f in ipairs(e.rig.feet) do
+			local cf = frames[f.part]
+			if cf then
+				minY = math.min(minY, (cf * CFrame.new(f.at * e.S)).Position.Y)
+			end
+		end
+		if minY < math.huge then
+			fix = math.clamp(-1.5 * e.S - minY, -0.6 * e.S, 0.6 * e.S)
+		end
+	end
+	e.footFix = (e.footFix or 0) + (fix - (e.footFix or 0)) * (1 - math.exp(-dt * 20))
+	if math.abs(e.footFix) > 1e-3 then
+		transforms.RootJoint = CFrame.new(0, e.footFix, 0) * (transforms.RootJoint or CFrame.identity)
+	end
 	local rootMotor = e.motors.RootJoint
 	if rootMotor then
 		local visual = CFrame.new(e.visPos) * CFrame.Angles(0, e.visYaw, 0)
@@ -323,6 +419,10 @@ local function updateEntry(e, now, dt, camPos)
 	end
 	if not e.isClone then
 		applyFlash(e, info)
+		applyGlare(e, info, now)
+	end
+	if e.isClone or e.preview then
+		updateStars(e, info.stars and (info.fade or 0) < 1, now)
 	end
 	if (e.isClone or e.preview) and info.fade then
 		for part, base in pairs(e.isClone and e.baseTransparency or e.preview.baseTransparency) do

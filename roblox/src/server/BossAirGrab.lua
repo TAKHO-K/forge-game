@@ -67,7 +67,8 @@ local function accumulate(c)
 	end
 	local dt = math.min(st.dt or 1 / 30, 0.1)
 	for _, v in ipairs(kit.victims(st)) do
-		if isBubbled(v.player) or kit.airSecondsOf(st, v.player, c.now) > 0 then
+		-- BR1-4c c-11: 잡힌 사람(눈덩이에 파묻혀 구르는 중 포함 - 가둠 제외)은 땅 위 취급 - 체공을 세지 않는다
+		if isBubbled(v.player) or (not BossTrap.isTrapped(v.player) and kit.airSecondsOf(st, v.player, c.now) > 0) then
 			st.grabAirAccum[v.player] = (st.grabAirAccum[v.player] or 0) + dt
 		end
 	end
@@ -162,7 +163,7 @@ local function rigHoldPoint(c, index)
 	local slot = slots[math.min(index, #slots)]
 	local m = c.model
 	local st = { act = m:GetAttribute("BossAct"), actAt = m:GetAttribute("BossActAt"), actHit = m:GetAttribute("BossActHit"), speed = 0,
-		pickAt = m:GetAttribute("BossPickAt") }
+		pickAt = m:GetAttribute("BossPickAt"), inCombat = true } -- BR1-4c: 클라와 같은 보스전 기본 자세
 	local plan = m:GetAttribute("BossThrowPlan") -- 4b 리뷰 1: 지난 회차의 던지기 예정은 버린다(클라 readState와 같은 거르기)
 	st.throwPlan = (plan and st.actAt and plan > st.actAt) and plan or nil
 	local S = root.Size.X / 2

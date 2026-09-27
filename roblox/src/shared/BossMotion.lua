@@ -175,6 +175,13 @@ function BossMotion.sampleClip(clip, tRel, hit, weight)
 		info.flash = clip.flash
 		info.flashAmount = ramp * (0.5 + 0.5 * math.sin(tRel * TAU * 6))
 	end
+	if clip.airborne and hit > 0 and tRel >= clip.airborne.from * hit and tRel <= clip.airborne.to * hit then
+		info.airborne = true
+	end
+	-- BR1-4c c-7: 노려봄(전조 동안 눈 빛남 세기 0 → 1)
+	if clip.glare and hit > 0 and tRel < hit + 0.1 then
+		info.glare = clamp01(tRel / hit)
+	end
 	-- 몸 눌림(무게감) · 제자리 돌기
 	if (clip.squash or clip.spin or clip.spinPre) then
 		local copy = lerpPose(pose, {}, 0)
@@ -320,8 +327,8 @@ function BossMotion.evaluate(ctx, st, now)
 	addTo(pose, ctx.rig.plan == "scorpion" and "RootJoint" or "Waist", 2, bodyYaw)
 	addTo(pose, "RootJoint", 3, math.clamp(-(st.turn or 0) * (W.turnLean or 6), -12, 12))
 
-	-- 전투 준비 자세(평타 뒤 4초 · 스킬 중)
-	local combat = st.swingAt and clamp01(1 - (now - st.swingAt - 3) / 1) or 0
+	-- 전투 준비 자세(평타 뒤 4초 · BR1-4c c-10: 보스전 중(st.inCombat)이면 늘 - 패턴 사이에 대기 자세로 돌아갔다 다시 드는 순간이 없게)
+	local combat = st.inCombat and 1 or (st.swingAt and clamp01(1 - (now - st.swingAt - 3) / 1) or 0)
 	if combat > 0 and P.guard then
 		blend(pose, P.guard, combat * 0.85, (st.speed or 0) > 1 and isUpper or nil)
 	end
@@ -354,6 +361,12 @@ function BossMotion.evaluate(ctx, st, now)
 			if cinfo.flash then
 				info.flash, info.flashAmount = cinfo.flash, cinfo.flashAmount * w
 			end
+			if cinfo.glare then
+				info.glare = cinfo.glare * w
+			end
+			if cinfo.airborne and w > 0.3 then
+				info.airborne = true
+			end
 		end
 		return w
 	end
@@ -379,6 +392,16 @@ function BossMotion.evaluate(ctx, st, now)
 			end
 		else
 			actLayer(BossMotion.clipNameForSkill(ctx.rigId, ctx.rig, st.act, skill), st.actAt, st.actHit, st.actEndAt)
+			-- BR1-4c: 지진파 뛰어오름마다 웅크림 → 공중 → 내려찍기(서버 BossHopAt · 뛰는 시간 = 착지 = 파동)
+			if st.hopAt and st.hopSeconds and st.hopAt >= st.actAt and P.clips.hopSlam and now - st.hopAt < st.hopSeconds + 0.8 then
+				actLayer("hopSlam", st.hopAt, st.hopSeconds, st.actEndAt)
+			end
+			-- BR1-4c c-9: 스킬 뒤 단계(마무리 강타 → 숨 고르기)
+			local phaseClip = st.actPhase and P.phaseClips and P.phaseClips[st.actPhase]
+			if phaseClip and st.actPhaseAt then
+				local clip = BossMotion.clip(ctx.rigId, ctx.rig, phaseClip)
+				actLayer(phaseClip, st.actPhaseAt, clip and clip.finishHit or 0, st.actEndAt)
+			end
 		end
 	end
 	-- 던진 순간부터 회복까지(스킬이 이미 끝났어도 - 전조와 같은 시간축)
@@ -432,6 +455,11 @@ function BossMotion.evaluate(ctx, st, now)
 	if st.deadAt then
 		local Dd = P.death
 		local t = now - st.deadAt
+		if Dd.slowSeconds then -- BR1-4c c-5: 막타 뒤 잠깐 슬로모션(화면만)
+			t = t < Dd.slowSeconds and t * Dd.slowRate or Dd.slowSeconds * Dd.slowRate + (t - Dd.slowSeconds)
+		end
+		info.slow = (now - st.deadAt) < (Dd.slowSeconds or 0)
+		info.stars = Dd.stars and t > (Dd.hitstopAt or 1) - 0.3 or nil
 		local hitstop = t > Dd.hitstopAt and t < Dd.hitstopAt + 0.08 * weight
 		local p = BossMotion.sampleClip({ post = Dd.keys }, hitstop and Dd.hitstopAt or (t > Dd.hitstopAt and t - 0.08 * weight or t), 0)
 		blend(pose, p, ease("out", t / 0.12))

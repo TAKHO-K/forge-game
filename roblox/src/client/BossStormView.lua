@@ -187,8 +187,10 @@ local function lift(data, root, humanoid)
 		local rise = math.min(t / LIFT_RISE_SECONDS, 1)
 		local radius = startRadius + (data.spinRadiusStuds - startRadius) * rise
 		local angle = startAngle + t * LIFT_TURNS_PER_SECOND * 2 * math.pi
-		local position = center + Vector3.new(math.cos(angle) * radius, data.heightStuds * rise, math.sin(angle) * radius)
-		root.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
+		-- BR1-4c c-2 휘말림: 나선으로 서서히 떠오른다(처음 0.3초에 40% · 끝에 최고 높이 - 서버 발사 허가 높이 안) + 몸이 스스로 돌며 기운다(카메라는 안 돈다)
+		local spiral = 0.4 * rise + 0.6 * (1 - (1 - math.min(t / total, 1)) ^ 2)
+		local position = center + Vector3.new(math.cos(angle) * radius, data.heightStuds * spiral, math.sin(angle) * radius)
+		root.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle * 2.5, 0) * CFrame.Angles(math.rad(12 * math.sin(t * 9)), 0, math.rad(18))
 		root.AssemblyLinearVelocity = Vector3.zero
 		root.AssemblyAngularVelocity = Vector3.zero
 	end)

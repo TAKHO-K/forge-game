@@ -3626,7 +3626,8 @@ if RunService:IsStudio() then
 				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
 				{ "BR1-2(나)", function() require(script.Parent.BR1_2Verify).runLive(player, env) end }, -- BR1-2: 곡선 32발 · 동시 4보스 성능 · 반사 · 음파 · 색 맞추기 · 가둠 · 저장 v37
 				{ "BR1-4a(나)", function() require(script.Parent.BR14aVerify).runLive(player, env) end }, -- BR1-4a: 고정 % 피해 · 에네르기파 · 회오리 되돌림 0 · 대공 잡기 강제 체공 · 붕괴 실제 낙하 · 아레나 낙하 제외
-				{ "BR1-4b(나)", function() require(script.Parent.BR14bVerify).runLive(player, env) end }, -- BR1-4b: 리그 6종 스폰 · 알림 = 판정 시각 · 잡기 부착점
+				{ "BR1-4b(나)", function() require(script.Parent.BR14bVerify).runLive(player, env) end },
+				{ "BR1-4c(나)", function() require(script.Parent.BR14cVerify).runLive(player, env) end }, -- BR1-4c: 붕괴 원인 · 3점 낙하 · 진입 연출 · 유도 규칙 · 처치 정리 · 지진파 단계 -- BR1-4b: 리그 6종 스폰 · 알림 = 판정 시각 · 잡기 부착점
 				{ "BR1-4b0(나)", function() require(script.Parent.BR14b0Verify).runLive(player, env) end }, -- BR1-4b 파트 0: 공중 대시 낙하 최고점 · 수호자 잡기 → 돌진 연속 금지(실제 step)
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "M1-2c(나)", function() require(script.Parent.M1_2cVerify).runLive(player, env) end }, -- M1-2c: 나무 발사 전부 되돌림 0 · 허가 없이 같은 높이 → 되돌림 · 보스 발사 최대 · 리프트 [F] · 도착 낙하 없음
@@ -4027,6 +4028,15 @@ if RunService:IsStudio() and verifyEnabled("MV1(가)") then
 		local ok, err = pcall(require(script.Parent.MV1Verify).runPure)
 		if not ok then
 			warn(("[MV1(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+if RunService:IsStudio() and verifyEnabled("BR1-4c(가)") then -- BR1-4c: 유도 회전 상한 · 지진파 도달 · 지진파 뒤 흐름 · 모션 자가 점검
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.BR14cVerify).runPure)
+		if not ok then
+			print("===BR1-4c 검증 끝(가)=== 에러: " .. tostring(err))
 		end
 	end)
 end

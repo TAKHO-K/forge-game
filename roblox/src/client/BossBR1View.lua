@@ -225,7 +225,23 @@ function BossBR1View.projSpawn(data)
 		part.Material = style.material
 	end
 	part.CFrame = CFrame.lookAt(data.position, data.position + data.dir)
-	projectiles[data.id] = { part = part, position = data.position, dir = data.dir, speed = data.speed, style = style, heightMode = data.heightMode, radius = data.radius }
+	projectiles[data.id] = { part = part, position = data.position, dir = data.dir, speed = data.speed, style = style, heightMode = data.heightMode, radius = data.radius, scale = 1, traveled = 0 }
+	if data.style == "tornado" then
+		-- BR1-4c c-2: 다가오는 게 보이게 - 판정 반경(radius) · 높이(groundHitHeightStuds 14) 안의 깔때기 5층 + 바닥 먼지 고리 + 진행 방향 바닥 띠 + 가까울수록 바람 줄기
+		part.Transparency = 1
+		local r = data.radius
+		local t = { rings = {}, floorY = data.position.Y - r * 0.6 }
+		for k = 1, 5 do
+			local rk = r * (0.62 + 0.095 * k)
+			local ring = newPart(Vector3.new(2.6, rk * 2, rk * 2), k % 2 == 0 and Color3.fromRGB(215, 225, 235) or Color3.fromRGB(170, 185, 200), 0.35 + 0.05 * k, Enum.PartType.Cylinder)
+			ring.Material = Enum.Material.SmoothPlastic
+			table.insert(t.rings, { part = ring, h = 1.3 + (k - 1) * 2.75, speed = 6 + k * 1.5, phase = k * 1.1 })
+		end
+		t.dust = newPart(Vector3.new(0.3, r * 2.6, r * 2.6), Color3.fromRGB(205, 190, 160), 0.55, Enum.PartType.Cylinder)
+		t.band = newPart(Vector3.new(r * 2, 0.15, 26), DANGER, 0.72)
+		t.nextStreak = 0
+		projectiles[data.id].tornado = t
+	end
 end
 
 function BossBR1View.projSync(data)
@@ -259,12 +275,162 @@ function BossBR1View.projEnd(data)
 	projectiles[data.id] = nil
 	if p then
 		destroy(p.part)
+		if p.tornado then
+			for _, ring in ipairs(p.tornado.rings) do
+				destroy(ring.part)
+			end
+			destroy(p.tornado.dust)
+			destroy(p.tornado.band)
+		end
 	end
 	for i = 1, 6 do
 		local a = i / 6 * 2 * math.pi
 		BossFx.chunk(data.position, Vector3.new(math.cos(a) * 14, 10, math.sin(a) * 14), 0.6, WHITE, 0.4)
 	end
 	BossFx.ring(data.position, 1, 5, WHITE, 0.3)
+end
+
+-- ─────────────────────────── BR1-4c c-11 눈덩이 파묻힘 ───────────────────────────
+-- 서버: 맞은 사람 = 잡힘("snowball") + BossSnowballId/Phase Attribute · 이 파일: 그 사람을 눈덩이 겉에 반쯤 파묻어(다리만 밖) 공과 같이 굴린다(그림만 - 판정 자리는 서버).
+-- 내 캐릭터가 파묻히면 카메라는 회전 없이 공 중심만 부드럽게 따라간다(대상 = 숨은 기준점) + 화면 가장자리 옅은 서리 테두리.
+local riding = {} -- [Player] = true
+local camAnchor, frost = nil, nil
+
+function BossBR1View.projRiders(data)
+	local p = projectiles[data.id]
+	if p then
+		p.scale = data.scale or 1
+		p.part.Size = p.style.size(p.radius) * p.scale -- 그림만 커진다(판정 반경은 서버 radiusStuds 그대로)
+	end
+end
+
+local function frostEdges(on)
+	if on and not frost then
+		frost = Instance.new("ScreenGui")
+		frost.Name = "SnowballFrost"
+		frost.IgnoreGuiInset = true
+		frost.DisplayOrder = 5
+		for _, e in ipairs({ { UDim2.new(1, 0, 0.16, 0), UDim2.fromScale(0, 0), 90 }, { UDim2.new(1, 0, 0.16, 0), UDim2.fromScale(0, 0.84), -90 },
+			{ UDim2.new(0.1, 0, 1, 0), UDim2.fromScale(0, 0), 0 }, { UDim2.new(0.1, 0, 1, 0), UDim2.fromScale(0.9, 0), 180 } }) do
+			local f = Instance.new("Frame")
+			f.Size, f.Position = e[1], e[2]
+			f.BackgroundColor3 = Color3.fromRGB(215, 238, 255)
+			f.BorderSizePixel = 0
+			local g = Instance.new("UIGradient")
+			g.Rotation = e[3]
+			g.Transparency = NumberSequence.new(0.35, 1) -- 가장자리 옅게 → 안쪽 투명
+			g.Parent = f
+			f.Parent = frost
+		end
+		frost.Parent = player:WaitForChild("PlayerGui")
+	elseif not on and frost then
+		frost:Destroy()
+		frost = nil
+	end
+end
+
+local function setCameraFollow(on, center)
+	local camera = Workspace.CurrentCamera
+	if on then
+		if not camAnchor then
+			camAnchor = Instance.new("Part")
+			camAnchor.Name = "SnowballCamAnchor"
+			camAnchor.Anchored, camAnchor.CanCollide, camAnchor.CanQuery, camAnchor.CanTouch = true, false, false, false
+			camAnchor.Transparency = 1
+			camAnchor.Size = Vector3.one * 0.2
+			camAnchor.CFrame = CFrame.new(center)
+			camAnchor.Parent = Workspace
+			camera.CameraSubject = camAnchor
+		end
+	elseif camAnchor then
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		camera.CameraSubject = humanoid
+		camAnchor:Destroy()
+		camAnchor = nil
+	end
+end
+
+local function updateRiders(dt)
+	for _, other in ipairs(Players:GetPlayers()) do
+		local id = other:GetAttribute("BossSnowballId")
+		local p = id and projectiles[id]
+		local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if p and root then
+			riding[other] = true
+			local r = p.radius * (p.scale or 1)
+			local flat = Vector3.new(p.dir.X, 0, p.dir.Z)
+			flat = flat.Magnitude > 1e-3 and flat.Unit or Vector3.new(0, 0, -1)
+			local axis = Vector3.yAxis:Cross(flat) -- 윗점이 진행 방향으로 가는 구르기 축
+			local roll = (p.traveled or 0) / math.max(r, 1) + (other:GetAttribute("BossSnowballPhase") or 0)
+			local u = CFrame.fromAxisAngle(axis, roll):VectorToWorldSpace(Vector3.yAxis) -- 공 중심 → 그 사람 쪽
+			local center = p.position
+			local at = center + u * (r * 0.85) -- 몸통은 눈 속 · 다리(루트 아래 = 바깥)가 삐져나온다
+			root.CFrame = CFrame.fromMatrix(at, axis, -u) -- 몸의 위 = 공 중심 쪽(머리가 눈 속)
+			if other == player then
+				setCameraFollow(true, center)
+				camAnchor.CFrame = CFrame.new(camAnchor.Position:Lerp(center + Vector3.new(0, 2, 0), 1 - math.exp(-10 * dt))) -- 위치만 · 회전 없음
+				frostEdges(true)
+			end
+		elseif riding[other] then
+			riding[other] = nil
+			if other == player then
+				setCameraFollow(false)
+				frostEdges(false)
+			end
+		end
+	end
+end
+
+-- 튀어나온 뒤 기절(style "snow"): 머리 위 작은 눈송이 · 눈 털며 비틀(루트가 고정된 동안 좌우로 흔들림 + 눈가루) → 끝나면 W1 일어나기.
+function BossBR1View.snowStun(data)
+	local target = data.userId and Players:GetPlayerByUserId(data.userId)
+	local character = target and target.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local head = character and character:FindFirstChild("Head")
+	if not root then
+		return
+	end
+	if head then
+		local gui = Instance.new("BillboardGui")
+		gui.Size = UDim2.new(0, 70, 0, 26)
+		gui.StudsOffset = Vector3.new(0, 2, 0)
+		gui.AlwaysOnTop = true
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Text = "❄ ❄"
+		label.TextScaled = true
+		label.TextColor3 = Color3.fromRGB(225, 245, 255)
+		label.TextStrokeTransparency = 0.4
+		label.Parent = gui
+		gui.Adornee = head
+		gui.Parent = head
+		task.delay(data.seconds, function()
+			gui:Destroy()
+		end)
+	end
+	local base = root.CFrame
+	local started = os.clock()
+	local connection
+	connection = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - started
+		if t >= data.seconds or not root.Parent or not root.Anchored then
+			connection:Disconnect()
+			if root.Parent then
+				require(script.Parent.WeaponVisual).playGetup(target) -- W1 일어나기
+			end
+			return
+		end
+		local sway = math.sin(t * 9) * math.rad(9) * (1 - t / data.seconds * 0.5)
+		root.CFrame = base * CFrame.Angles(0, 0, sway) -- 비틀(몸 털기)
+		if math.random() < 0.18 then
+			BossFx.chunk(root.Position + Vector3.new(0, 1.5, 0), Vector3.new((math.random() - 0.5) * 10, 6, (math.random() - 0.5) * 10), 0.35, WHITE, 0.4)
+		end
+	end)
+	for i = 1, 8 do -- 튀어나오는 순간 눈 파편
+		local a = i / 8 * 2 * math.pi
+		BossFx.chunk(root.Position, Vector3.new(math.cos(a) * 12, 12, math.sin(a) * 12), 0.6, WHITE, 0.5)
+	end
 end
 
 -- ─────────────────────────── vortex ───────────────────────────
@@ -468,14 +634,43 @@ function BossBR1View.debugState()
 end
 
 RunService.RenderStepped:Connect(function(dt)
+	updateRiders(dt)
 	for _, p in pairs(projectiles) do
 		p.position += p.dir * p.speed * dt
+		p.traveled = (p.traveled or 0) + p.speed * dt
 		if p.part.Parent then
 			local cf = CFrame.lookAt(p.position, p.position + p.dir)
 			if p.style.spin then
 				cf = CFrame.new(p.position) * CFrame.Angles(0, os.clock() * 8, math.rad(90))
 			end
 			p.part.CFrame = cf
+		end
+		local t = p.tornado
+		if t then
+			local now = os.clock()
+			local base = Vector3.new(p.position.X, t.floorY, p.position.Z)
+			for _, ring in ipairs(t.rings) do
+				local wob = Vector3.new(math.sin(now * 2 + ring.phase) * 0.6, 0, math.cos(now * 1.7 + ring.phase) * 0.6)
+				ring.part.CFrame = CFrame.new(base + wob + Vector3.new(0, ring.h, 0)) * CFrame.Angles(0, now * ring.speed, 0) * CFrame.Angles(0, 0, math.rad(90))
+			end
+			t.dust.CFrame = CFrame.new(base + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, now * 3, 0) * CFrame.Angles(0, 0, math.rad(90))
+			local flat = Vector3.new(p.dir.X, 0, p.dir.Z)
+			if flat.Magnitude > 1e-3 then
+				local ahead = base + flat.Unit * (p.radius + 13) + Vector3.new(0, 0.12, 0)
+				t.band.CFrame = CFrame.lookAt(ahead, ahead + flat.Unit)
+			end
+			-- 가까울수록 바람 줄기가 많아진다(60 stud 밖 0 → 곁 초당 14)
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			local d = root and (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(base.X, 0, base.Z)).Magnitude or math.huge
+			local rate = math.clamp(1 - d / 60, 0, 1) * 14
+			t.nextStreak -= dt * rate
+			while t.nextStreak <= 0 and rate > 0 do
+				t.nextStreak += 1
+				local a = math.random() * 2 * math.pi
+				local at = base + Vector3.new(math.cos(a) * p.radius * 1.4, 1 + math.random() * 10, math.sin(a) * p.radius * 1.4)
+				BossFx.streak(at, Vector3.new(-math.sin(a), 0.25, math.cos(a)), 5, 0.25, WHITE, 0.35, 22)
+			end
 		end
 	end
 	if vortex then

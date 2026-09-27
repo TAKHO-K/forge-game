@@ -179,6 +179,9 @@ local function noteMotion(st, kind, payload)
 		model:SetAttribute("BossEnvHit", payload.seconds or 0)
 	elseif kind == "envEnd" then
 		model:SetAttribute("BossEnv", nil)
+	elseif kind == "shockTelegraph" then -- BR1-4c: 지진파 뛰어오름(서버 PivotTo가 몸을 들고 · 클라가 팔다리를 웅크렸다 내려찍는다)
+		model:SetAttribute("BossHopAt", t)
+		model:SetAttribute("BossHopSeconds", payload.seconds)
 	end
 end
 
@@ -451,6 +454,7 @@ local function endSkill(model, st, data, now, interrupted)
 	st.current = nil
 	st.skill = nil
 	model:SetAttribute("BossAct", nil) -- BR1-4b 모션: 스킬 끝(클라가 동작을 풀어 제자리로)
+	model:SetAttribute("BossActPhase", nil)
 	BossScheduler.onSkillEnd(st.sched, data.skills, id, now)
 	MonsterState.setLastAttackTick(model, now) -- 스킬 직후 바로 평타가 또 나가지 않게(15-1과 같다)
 end
@@ -1025,7 +1029,24 @@ HANDLERS.ring = {
 			if st.wavesSpawned < #st.ringWaves then
 				local waves = st.ringWaves
 				startHop(c, waves[st.wavesSpawned + 1].startSeconds - waves[st.wavesSpawned].startSeconds)
+			elseif skill.afterWaves then
+				-- BR1-4c c-9: 마지막 파동 뒤 마무리 강타(연출 - 피해 없음) → 숨 고르기 → (파동이 다 지나가면) 끝
+				st.phase = "quakeFinish"
+				st.phaseEndsAt = c.now + skill.afterWaves.finishSeconds
+				c.model:SetAttribute("BossActPhaseAt", serverNow())
+				c.model:SetAttribute("BossActPhase", "finish")
 			else
+				st.phase = "shockWait"
+			end
+		elseif st.phase == "quakeFinish" then
+			if c.now >= st.phaseEndsAt then
+				st.phase = "quakeRest"
+				st.phaseEndsAt = c.now + skill.afterWaves.restSeconds
+				c.model:SetAttribute("BossActPhaseAt", serverNow())
+				c.model:SetAttribute("BossActPhase", "rest")
+			end
+		elseif st.phase == "quakeRest" then
+			if c.now >= st.phaseEndsAt then
 				st.phase = "shockWait"
 			end
 		elseif #st.waves == 0 then -- shockWait
@@ -2285,6 +2306,10 @@ end
 -- members를 직접 받는다 - 보스가 처치된 뒤에는 MonsterState가 이미 비워져 st.members를 읽을 수 없다.
 function BossPatterns.clearProps(model, members)
 	local st = MonsterState.getBossPatternState(model)
+	if st then -- BR1-4c c-5: 처치 순간 남은 투사체 · 파동도 즉시 없앤다(처치 뒤 사망 0 - 스텝이 멈춰도 목록을 남기지 않는다)
+		BossHandlersBR1.clearProjectiles(st)
+		st.waves = {}
+	end
 	BossArenaProps.clear(model)
 	removeDecoys(model) -- 29-5: 분열 도중에 보스전이 끝나도(처치·이탈) 분신이 남지 않는다
 	BossSandSearch.clear(model) -- BR1-3 모래 둔덕

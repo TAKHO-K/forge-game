@@ -15,6 +15,10 @@ local G = WorldMapData.guide
 local player = Players.LocalPlayer
 local routes = {} -- [owner] = { points, order }
 local order = 0
+-- BR1-4c c-6: 사람이 안내를 껐나(우상단 거리 표시의 [안내 끄기] - 이번 접속 동안만 · 저장은 P4d) · 목적지를 다시 고르면(setPoints) 다시 켜진다.
+local hidden = false
+local changed = Instance.new("BindableEvent")
+Wayfinder.changed = changed.Event
 local folder, beam, arrows = nil, nil, {}
 
 local function ensureParts()
@@ -67,6 +71,29 @@ end
 function Wayfinder.setPoints(owner, points)
 	order += 1
 	routes[owner] = { points = points, order = order }
+	if hidden then
+		hidden = false -- 목적지 재선택 = 안내 다시 켜기
+		changed:Fire()
+	end
+end
+
+function Wayfinder.setHidden(value)
+	hidden = value == true
+	changed:Fire()
+end
+
+function Wayfinder.destination()
+	local r = current()
+	return r and r.points[#r.points] or nil
+end
+
+function Wayfinder.isHidden()
+	return hidden
+end
+
+-- 보이는가: 경로가 있고 · 안 껐고 · 보스전 중이 아니다(보스전에 들어가면 끄고 돌아오면 이전 목적지로 다시 보인다 - 경로는 그대로 기억)
+function Wayfinder.isShowing()
+	return current() ~= nil and not hidden and player:GetAttribute("BossEncounterId") == nil
 end
 
 function Wayfinder.clear(owner)
@@ -120,7 +147,7 @@ local function refresh()
 	local r = current()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not r or not root or #r.points == 0 then
+	if not r or not root or #r.points == 0 or not Wayfinder.isShowing() then
 		hideAll()
 		return
 	end

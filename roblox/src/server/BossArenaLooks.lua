@@ -1,4 +1,4 @@
--- 보스맵 구조물의 겉모습(P3c B - kind별 빌더). 충돌은 BossArenaMap의 투명 기둥이 한다 - 여기 파트는 전부 충돌 · 조준 없음이고, 보이는 모양이 충돌 원 안에 들어간다
+-- 보스맵 구조물의 겉모습(P3c B · BR1-4c c-12 레시피 - shared/data/ArenaPropData). 충돌은 BossArenaMap의 투명 기둥이 한다 - 여기 파트는 전부 충돌 · 조준 없음이고, 보이는 모양이 충돌 원 안에 들어간다
 -- (맞았을 때 크기가 줄지 않는다 - P3a). 최종 에셋으로 바꿀 때 이 파일만 갈아 끼운다(모델 복제).
 -- item = ArenaLayout 배치 한 칸 { kind, group, x, z, radius, rotationDeg, colliders(아레나 기준 x · z · r · h · tall) }. center = 바닥 위 한가운데(Vector3).
 
@@ -43,14 +43,6 @@ function BossArenaLooks.discCFrame(x, topY, z, thickness)
 	return CFrame.new(x, topY - thickness / 2, z) * CFrame.Angles(0, 0, math.rad(90))
 end
 
--- 선 원기둥(세로) - 밑면 Y = baseY.
-local function uprightCylinder(model, name, x, baseY, z, radius, height, color, transparency)
-	return newPart(model, {
-		name = name, shape = "cylinder", size = Vector3.new(height, radius * 2, radius * 2), color = color, transparency = transparency,
-		cframe = CFrame.new(x, baseY + height / 2, z) * CFrame.Angles(0, 0, math.rad(90)),
-	})
-end
-
 local function heightOf(item)
 	if item.group == "big" then
 		return OBSTACLE.climbHeightStuds
@@ -58,246 +50,163 @@ local function heightOf(item)
 	return OBSTACLE.heightStuds
 end
 
-local LOOKS = {}
+-- ═══ BR1-4c c-12 레시피 빌더(shared/data/ArenaPropData - 조각 목록 × 맵 팔레트) ═══
+local PROP = require(ReplicatedStorage.Shared.data.ArenaPropData)
+local WHITE, BLACK = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
 
--- ═══ 작은 구조물(P3a 모양 그대로) ═══
-function LOOKS.boulder(model, center, item, spec)
-	local r = item.radius
-	local side = (item.id % 2 == 0) and 1 or -1
-	return {
-		newPart(model, { name = "ObstacleRock", shape = "ball", size = Vector3.new(r * 2, r * 2, r * 2), color = spec.color, transparency = spec.transparency, cframe = CFrame.new(center + Vector3.new(0, r * 0.75, 0)) }),
-		newPart(model, { name = "ObstacleRock", shape = "ball", size = Vector3.new(r, r, r) * 1.05, color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(r * 0.3 * side, r * 0.3, r * 0.2)) }),
-	}
+-- 톤 → 색 · 재질 · 투명도(가독성 규칙: top 밝게 · base 어둡게 · detail/crystal = 맵 장식색 · glow = 보스 머리색 빛)
+local function luminance(c)
+	return 0.299 * c.R + 0.587 * c.G + 0.114 * c.B
 end
 
-function LOOKS.block(model, center, item, spec)
-	local r, h = item.radius, heightOf(item)
-	return {
-		newPart(model, { name = "ObstacleBlock", size = Vector3.new(r * 1.35, h + 0.5, r * 1.2), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, math.rad(item.rotationDeg), math.rad(6)) }),
-		newPart(model, { name = "ObstacleBlock", size = Vector3.new(r * 0.6, r * 0.7, r * 0.6), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(r * 0.3, r * 0.35, -r * 0.25)) * CFrame.Angles(math.rad(10), math.rad(item.rotationDeg + 53), 0) }),
-	}
-end
-
-function LOOKS.stump(model, center, item, spec)
-	local r, h = item.radius, heightOf(item)
-	return {
-		uprightCylinder(model, "ObstacleStump", center.X, center.Y, center.Z, r * 0.95, h + 0.5, spec.color, spec.transparency),
-		newPart(model, { name = "ObstacleStump", size = Vector3.new(r * 1.3, 1.2, r * 1.3), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(0, h + 0.8, 0)) * CFrame.Angles(math.rad(8), math.rad(item.rotationDeg), math.rad(-6)) }),
-	}
-end
-
-function LOOKS.cluster(model, center, item, spec)
-	local r, h = item.radius, heightOf(item)
-	local parts = {}
-	for k = 0, 2 do
-		local angle = math.rad(k * 120 + item.rotationDeg)
-		local height = h + 1 - k * 1.2
-		local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * (k == 0 and 0 or r * 0.5)
-		table.insert(parts, newPart(model, {
-			name = "ObstacleCrystal", size = Vector3.new(r * 0.7, height, r * 0.7), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(center + offset + Vector3.new(0, height / 2, 0)) * CFrame.Angles(math.rad(k * 9), math.rad(k * 40 + 20), math.rad(-k * 12)),
-		}))
+local function toneOf(tone, spec, bossData)
+	local color, transparency = spec.color or Color3.fromRGB(128, 128, 128), spec.transparency or 0
+	local map = bossData and BossArenaMapData.maps[bossData.id]
+	if map and math.abs(luminance(color) - luminance(map.floor.color)) < PROP.tones.minFloorContrast then
+		color = color:Lerp(BLACK, PROP.tones.contrastDarken) -- 바닥과 대비(가독성)
 	end
-	return parts
-end
-
--- ═══ 큰 블록(B2 - 윗면 climbHeightStuds에 올라선다) ═══
--- 돌무더기: 가운데 낮은 원통(보이는 윗면 = 실제로 서는 면) + 둘레에 둥근 돌 일곱이 뭉친 모양.
-function LOOKS.rockpile(model, center, item, spec)
-	local r, h = item.radius, OBSTACLE.climbHeightStuds
-	local parts = { uprightCylinder(model, "ObstacleRockpileCore", center.X, center.Y, center.Z, r - 0.6, h, spec.color, spec.transparency) }
-	for k = 0, 6 do
-		local angle = math.rad(item.rotationDeg + k * 360 / 7 + (k % 2) * 11)
-		local size = 1.6 + (k % 3) * 0.15 -- 공 반경 - 꼭대기(1.8 × 반경)가 윗면(3.5)을 넘지 않는다
-		local at = center + Vector3.new(math.cos(angle) * (r - size), size * 0.8, math.sin(angle) * (r - size))
-		table.insert(parts, newPart(model, {
-			name = "ObstacleRockpileStone", shape = "ball", size = Vector3.new(size, size, size) * 2, color = spec.color:Lerp(Color3.new(0, 0, 0), 0.08 * (k % 3)),
-			transparency = spec.transparency, cframe = CFrame.new(at),
-		}))
-	end
-	return parts
-end
-
--- 고인돌: 받침돌 셋 위에 둥근 판돌(판 윗면 = 서는 면). 판의 반경 = 충돌 원 반경.
-function LOOKS.dolmen(model, center, item, spec)
-	local r, h = item.radius, OBSTACLE.climbHeightStuds
-	local slab = 0.9
-	local parts = {}
-	for k = 0, 2 do
-		local angle = math.rad(item.rotationDeg + k * 120)
-		local legHeight = h - slab
-		table.insert(parts, newPart(model, {
-			name = "ObstacleDolmenLeg", size = Vector3.new(2, legHeight, 2.6), color = spec.color:Lerp(Color3.new(0, 0, 0), 0.12), transparency = spec.transparency,
-			cframe = CFrame.new(center + Vector3.new(math.cos(angle) * r * 0.55, legHeight / 2, math.sin(angle) * r * 0.55)) * CFrame.Angles(0, -angle, math.rad(4)),
-		}))
-	end
-	table.insert(parts, newPart(model, {
-		name = "ObstacleDolmenSlab", shape = "cylinder", size = Vector3.new(slab, r * 2, r * 2), color = spec.color, transparency = spec.transparency,
-		cframe = BossArenaLooks.discCFrame(center.X, center.Y + h, center.Z, slab),
-	}))
-	return parts
-end
-
--- ═══ 작은 지형지물(B3) - 충돌 원마다 한 덩어리 ═══
-local function eachCollider(item, center, fn)
-	local parts = {}
-	for index, c in ipairs(item.colliders) do
-		local at = Vector3.new(center.X + (c.x - item.x), center.Y, center.Z + (c.z - item.z))
-		for _, part in ipairs(fn(at, c, index)) do
-			table.insert(parts, part)
+	if tone == "top" then
+		return color:Lerp(WHITE, PROP.tones.topLighten), Enum.Material.SmoothPlastic, transparency
+	elseif tone == "base" then
+		return color:Lerp(BLACK, PROP.tones.baseDarken), Enum.Material.SmoothPlastic, transparency
+	elseif tone == "detail" or tone == "crystal" then
+		local d = PROP.detail[bossData and bossData.id or ""] or PROP.detail.default
+		if tone == "crystal" then
+			return d.color, Enum.Material.Neon, math.max(d.transparency, 0.1)
 		end
+		return d.color, d.material, d.transparency
+	elseif tone == "glow" then
+		return (bossData and bossData.headColor) or color, Enum.Material.Neon, 0
 	end
-	return parts
+	return color, Enum.Material.SmoothPlastic, transparency
 end
 
-function LOOKS.icePillars(model, center, item, spec)
-	return eachCollider(item, center, function(at, c)
-		return {
-			uprightCylinder(model, "FeatureIcePillar", at.X, at.Y, at.Z, c.r * 0.9, c.h - 0.6, spec.color, spec.transparency),
-			newPart(model, { name = "FeatureIceTip", shape = "ball", size = Vector3.new(c.r * 1.6, c.r * 1.6, c.r * 1.6), color = spec.color, transparency = spec.transparency,
-				cframe = CFrame.new(at + Vector3.new(0, c.h - 0.8, 0)) }),
-		}
-	end)
+local function piecePart(model, piece, cf, size, spec, bossData)
+	local color, material, transparency = toneOf(piece.t, spec, bossData)
+	if piece.s == "wedge" then
+		local w = Instance.new("WedgePart")
+		w.Anchored, w.CanCollide, w.CanQuery, w.CanTouch = true, false, false, false
+		w.Size, w.CFrame, w.Color, w.Material, w.Transparency = size, cf, color, material, transparency
+		w.TopSurface, w.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+		w.Name = "Prop" .. piece.n
+		w.Parent = model
+		return w
+	elseif piece.s == "cyl" then
+		return newPart(model, { name = "Prop" .. piece.n, shape = "cylinder", size = Vector3.new(size.Y, size.X, size.Z), color = color, material = material,
+			transparency = transparency, shadow = piece.t ~= "detail", cframe = cf * CFrame.Angles(0, 0, math.rad(90)) })
+	end
+	return newPart(model, { name = "Prop" .. piece.n, shape = piece.s == "ball" and "ball" or nil, size = piece.s == "ball" and Vector3.one * size.X or size,
+		color = color, material = material, transparency = transparency, cframe = cf })
 end
 
-function LOOKS.snowMound(model, center, item, spec)
-	return eachCollider(item, center, function(at, c)
-		-- 공의 윗부분만 바닥 위로 - 바닥에서의 반경이 충돌 원 안이다.
-		local ballRadius = (c.h * c.h + (c.r * 0.85) ^ 2) / (2 * c.h)
-		return { newPart(model, { name = "FeatureSnowMound", shape = "ball", size = Vector3.new(ballRadius, ballRadius, ballRadius) * 2, color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(at + Vector3.new(0, c.h - ballRadius, 0)) }) }
-	end)
+-- 조각 하나: origin(바닥 가운데) · yaw · r · h 기준
+local function placePiece(model, piece, origin, yaw, r, h, spec, bossData)
+	if piece.mound then -- 눈더미: 공 윗부분만 바닥 위(바닥 반경 = 충돌 원 × 0.85)
+		local ball = (h * h + (r * 0.85) ^ 2) / (2 * h)
+		return newPart(model, { name = "Prop" .. piece.n, shape = "ball", size = Vector3.one * ball * 2, color = (toneOf(piece.t, spec, bossData)),
+			transparency = spec.transparency, cframe = CFrame.new(origin + Vector3.new(0, h - ball, 0)) })
+	end
+	local sz, at, rot = piece.size, piece.at, piece.rot or { 0, 0, 0 }
+	local size = piece.u and Vector3.new(sz[1] * r, sz[2] * r, sz[3] * r) or Vector3.new(sz[1] * r, sz[2] * h, sz[3] * r)
+	local cf = CFrame.new(origin) * yaw * CFrame.new(at[1] * r, at[2] * h, at[3] * r) * CFrame.Angles(math.rad(rot[1]), math.rad(rot[2]), math.rad(rot[3]))
+	return piecePart(model, piece, cf, size, spec, bossData)
 end
 
-function LOOKS.statue(model, center, item, spec)
-	return eachCollider(item, center, function(at, c)
-		local yaw = CFrame.Angles(0, math.rad(item.rotationDeg), 0)
-		return {
-			newPart(model, { name = "FeatureStatuePlinth", size = Vector3.new(2.6, 1.5, 2.6), color = spec.color:Lerp(Color3.new(0, 0, 0), 0.15), cframe = CFrame.new(at + Vector3.new(0, 0.75, 0)) * yaw }),
-			newPart(model, { name = "FeatureStatueBody", size = Vector3.new(1.6, 4, 1.1), color = spec.color, cframe = CFrame.new(at + Vector3.new(0, 3.5, 0)) * yaw }),
-			newPart(model, { name = "FeatureStatueHead", shape = "ball", size = Vector3.new(1.4, 1.4, 1.4), color = spec.color, cframe = CFrame.new(at + Vector3.new(0, 6.2, 0)) }),
-		}
-	end)
-end
-
--- 두 기둥 + 위를 가로지르는 들보(들보는 캐릭터 머리보다 높다 - 사이로 지나간다). broken이면 들보가 반쯤 무너져 기울었다.
-local function gate(model, center, item, spec, legShape, broken)
+-- 두 기둥 사이 들보(span 조각) - 들보는 캐릭터 머리보다 높다(사이로 지나간다). broken이면 반쯤 무너져 기울었다.
+local function placeSpan(model, piece, item, center, spec, bossData, broken)
 	local shape = SHAPES[item.kind]
-	local parts = eachCollider(item, center, function(at, c)
-		if legShape == "cylinder" then
-			return { uprightCylinder(model, "FeatureGateLeg", at.X, at.Y, at.Z, c.r, c.h, spec.color, spec.transparency) }
-		end
-		local side = c.r * 1.35
-		return { newPart(model, { name = "FeatureGateLeg", size = Vector3.new(side, c.h, side), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(at + Vector3.new(0, c.h / 2, 0)) * CFrame.Angles(0, math.rad(item.rotationDeg), 0) }) }
-	end)
 	local a, b = item.colliders[1], item.colliders[2]
-	local mid = Vector3.new(center.X + ((a.x + b.x) / 2 - item.x), center.Y + shape.lintelStuds + 0.6, center.Z + ((a.z + b.z) / 2 - item.z))
+	local mid = Vector3.new(center.X + ((a.x + b.x) / 2 - item.x), center.Y + shape.lintelStuds + piece.at[2], center.Z + ((a.z + b.z) / 2 - item.z))
 	local span = math.sqrt((a.x - b.x) ^ 2 + (a.z - b.z) ^ 2) + a.r * 2
 	local look = CFrame.new(mid) * CFrame.Angles(0, math.rad(-item.rotationDeg), broken and math.rad(9) or 0)
-	table.insert(parts, newPart(model, { name = "FeatureGateLintel", size = Vector3.new(broken and span * 0.7 or span, 1.2, 2), color = spec.color, transparency = spec.transparency,
-		cframe = broken and (look * CFrame.new(-span * 0.15, 0, 0)) or look }))
-	return parts
+	local size = Vector3.new(span * piece.size[1] * (broken and 0.7 or 1), piece.size[2], piece.size[3])
+	return piecePart(model, piece, broken and (look * CFrame.new(-span * 0.15, 0, 0)) or look, size, spec, bossData)
 end
 
-function LOOKS.brokenArch(model, center, item, spec)
-	return gate(model, center, item, spec, "cylinder", true)
+local function findOverride(name)
+	local shared = ReplicatedStorage:FindFirstChild("Shared")
+	local folder = shared and shared:FindFirstChild("PropModels")
+	local m = folder and folder:FindFirstChild(name)
+	return m and m:IsA("Model") and m or nil
 end
 
-function LOOKS.ruinGate(model, center, item, spec)
-	return gate(model, center, item, spec, "block", false)
-end
-
-function LOOKS.crystalCluster(model, center, item, spec)
-	return eachCollider(item, center, function(at, c, index)
-		return { newPart(model, { name = "FeatureCrystal", size = Vector3.new(c.r * 1.3, c.h, c.r * 1.3), color = spec.color, transparency = spec.transparency, material = Enum.Material.Neon,
-			cframe = CFrame.new(at + Vector3.new(0, c.h / 2, 0)) * CFrame.Angles(math.rad(index * 5), math.rad(item.rotationDeg + index * 40), math.rad(-index * 4)) }) }
-	end)
-end
-
-function LOOKS.ruinFragment(model, center, item, spec)
-	return eachCollider(item, center, function(at, c)
-		return {
-			newPart(model, { name = "FeatureRuinFragment", size = Vector3.new(c.r * 1.35, c.h, c.r * 1.05), color = spec.color, transparency = spec.transparency,
-				cframe = CFrame.new(at + Vector3.new(0, c.h / 2, 0)) * CFrame.Angles(0, math.rad(item.rotationDeg), math.rad(5)) }),
-		}
-	end)
-end
-
-function LOOKS.cactus(model, center, item, spec)
-	return eachCollider(item, center, function(at, c)
-		local yaw = math.rad(item.rotationDeg)
-		local dir = Vector3.new(math.cos(yaw), 0, math.sin(yaw))
-		return {
-			uprightCylinder(model, "FeatureCactus", at.X, at.Y, at.Z, 0.7, c.h, spec.color),
-			uprightCylinder(model, "FeatureCactusArm", at.X + dir.X * 0.85, at.Y + 2.4, at.Z + dir.Z * 0.85, 0.3, 2, spec.color),
-			uprightCylinder(model, "FeatureCactusArm", at.X - dir.X * 0.85, at.Y + 3.2, at.Z - dir.Z * 0.85, 0.3, 1.6, spec.color),
-		}
-	end)
-end
-
-function LOOKS.rodWreck(model, center, item, spec)
-	return eachCollider(item, center, function(at, c, index)
-		if index == 1 then
-			return {
-				newPart(model, { name = "FeatureRodBase", size = Vector3.new(1.1, 0.5, 1.1), color = spec.color, cframe = CFrame.new(at + Vector3.new(0, 0.25, 0)) }),
-				newPart(model, { name = "FeatureRod", size = Vector3.new(0.5, c.h, 0.5), color = spec.color, material = Enum.Material.Metal,
-					cframe = CFrame.new(at + Vector3.new(0, c.h / 2, 0)) * CFrame.Angles(math.rad(6), 0, math.rad(-5)) }),
-			}
+-- 레시피(또는 교체 모델)로 짓는다. 반환: 그린 파트 목록.
+local function buildRecipe(model, center, item, spec, bossData)
+	local override = findOverride("Arena_" .. item.kind)
+	local yaw = CFrame.Angles(0, math.rad(item.rotationDeg or 0), 0)
+	local parts = {}
+	if override then -- A2 교체 모델: 피벗 = 바닥 가운데 · 기준 반경 refRadius에서 만든 모델을 반경 비로 키운다(발자국 = 충돌 원 계약)
+		local clone = override:Clone()
+		clone:ScaleTo(item.radius / PROP.library.refRadius)
+		clone:PivotTo(CFrame.new(center) * yaw)
+		for _, d in ipairs(clone:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.Anchored, d.CanCollide, d.CanQuery, d.CanTouch = true, false, false, false
+				d.Parent = model
+				table.insert(parts, d)
+			end
 		end
-		return { newPart(model, { name = "FeatureRodDebris", size = Vector3.new(c.r * 1.3, c.h, c.r * 1.2), color = spec.color:Lerp(Color3.new(0, 0, 0), 0.2),
-			cframe = CFrame.new(at + Vector3.new(0, c.h / 2, 0)) * CFrame.Angles(0, math.rad(item.rotationDeg + 30), math.rad(12)) }) }
-	end)
-end
-
-function LOOKS.rubble(model, center, item, spec)
-	return eachCollider(item, center, function(at, c, index)
-		return { newPart(model, { name = "FeatureRubble", size = Vector3.new(c.r * 1.35, c.h, c.r * 1.2), color = spec.color, transparency = spec.transparency,
-			cframe = CFrame.new(at + Vector3.new(0, c.h / 2, 0)) * CFrame.Angles(math.rad(index * 6), math.rad(item.rotationDeg + index * 47), 0) }) }
-	end)
-end
-
-function LOOKS.runeStones(model, center, item, spec, bossData)
-	return eachCollider(item, center, function(at, c)
-		local yaw = CFrame.Angles(0, math.rad(item.rotationDeg), 0)
-		return {
-			newPart(model, { name = "FeatureRuneStone", size = Vector3.new(1.3, c.h, 0.9), color = spec.color, cframe = CFrame.new(at + Vector3.new(0, c.h / 2, 0)) * yaw }),
-			newPart(model, { name = "FeatureRuneGlow", size = Vector3.new(0.6, 0.6, 0.95), color = bossData and bossData.headColor or spec.color, material = Enum.Material.Neon, shadow = false,
-				cframe = CFrame.new(at + Vector3.new(0, c.h * 0.6, 0)) * yaw }),
-		}
-	end)
+		clone:Destroy()
+		return parts
+	end
+	local recipe = PROP.recipes[item.kind] or PROP.recipes.block
+	if recipe.perCollider then
+		for index, c in ipairs(item.colliders) do
+			local origin = Vector3.new(center.X + (c.x - item.x), center.Y, center.Z + (c.z - item.z))
+			local pieces = recipe.variants and (recipe.variants[index] or recipe.variants[#recipe.variants]) or recipe
+			for _, piece in ipairs(pieces) do
+				if not piece.span then
+					table.insert(parts, placePiece(model, piece, origin, yaw, c.r, c.h, spec, bossData))
+				end
+			end
+		end
+		for _, piece in ipairs(recipe) do
+			if piece.span then
+				table.insert(parts, placeSpan(model, piece, item, center, spec, bossData, recipe.lintel and recipe.lintel.broken))
+			end
+		end
+	else
+		for _, piece in ipairs(recipe) do
+			table.insert(parts, placePiece(model, piece, center, yaw, item.radius, heightOf(item), spec, bossData))
+		end
+	end
+	return parts
 end
 
 -- 겉모습을 짓는다. 반환: 그린 파트 목록(맞을 때 어두워지는 대상).
 function BossArenaLooks.build(model, center, item, bossData)
-	local look = LOOKS[item.kind] or LOOKS.block
-	return look(model, center, item, item.spec, bossData)
+	return buildRecipe(model, center, item, item.spec, bossData)
 end
 
--- B2 금 간 표시(부서지기 직전): 충돌 원마다 윗면에 어두운 금(기존 외곽선 색). 반환: 그린 파트 목록.
--- P3d-F B3: 탑다운 · 폰에서 보이게 - 한가운데서 뻗는 굵은 금 lines줄(가지 하나씩) + 보이는 파트 색을 위험색 쪽으로(BossArenaMapData.obstacle.daisCrackLook).
-function BossArenaLooks.crack(model, center, item)
-	local look = BossArenaMapData.obstacle.daisCrackLook
-	for _, part in ipairs(model:GetDescendants()) do
-		if part:IsA("BasePart") and part.Transparency < 1 and part.Name ~= "ObstacleCrack" then
-			part.Color = part.Color:Lerp(UIColors.danger, look.tintFraction)
+-- 금 간 표시(BR1-4c c-12 단계 - ArenaPropData.crackStages): 1단계 = 가는 금 · 2단계 = 굵은 금 + 빨간 빛 금 + 위험색 틴트(옛 P3d-F B3 모양 = 2단계).
+-- 충돌 원마다 윗면에 한가운데서 뻗는 금 lines줄(가지 하나씩). 판정 자리는 그대로(겉모습만). 반환: 그린 파트 목록.
+function BossArenaLooks.crack(model, center, item, stage)
+	stage = stage or #PROP.crackStages
+	local look = PROP.crackStages[stage]
+	if look.tintFraction > 0 then
+		for _, part in ipairs(model:GetDescendants()) do
+			if part:IsA("BasePart") and part.Transparency < 1 and part.Name ~= "ObstacleCrack" then
+				part.Color = part.Color:Lerp(UIColors.danger, look.tintFraction)
+			end
 		end
 	end
 	local parts = {}
 	for _, c in ipairs(item.colliders) do
 		local at = Vector3.new(center.X + (c.x - item.x), center.Y + c.h + 0.06, center.Z + (c.z - item.z))
 		for k = 0, look.lines - 1 do
-			local angle = math.rad(item.rotationDeg + k * (360 / look.lines) + 15)
+			local angle = math.rad(item.rotationDeg + k * (360 / look.lines) + 15 + (stage == 1 and 40 or 0))
 			local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
 			local length = math.max(c.r * 0.85, 1)
 			table.insert(parts, newPart(model, {
 				name = "ObstacleCrack", size = Vector3.new(length, 0.1, look.widthStuds), color = BossArenaMapData.outlineColor, shadow = false,
 				cframe = CFrame.new(at + dir * (length / 2)) * CFrame.Angles(0, -angle, 0),
 			}))
+			if look.glow then -- 붕괴 예고: 금 속 빨간 빛(탑다운 · 폰에서 보이게)
+				table.insert(parts, newPart(model, {
+					name = "ObstacleCrack", size = Vector3.new(length * 0.8, 0.12, look.widthStuds * 0.4), color = UIColors.danger, material = Enum.Material.Neon, shadow = false,
+					cframe = CFrame.new(at + dir * (length * 0.45) + Vector3.new(0, 0.02, 0)) * CFrame.Angles(0, -angle, 0),
+				}))
+			end
 			-- 가지: 금 끝에서 30° 꺾여 반 길이
 			local branch = angle + math.rad(k % 2 == 0 and 30 or -30)
 			local tip = at + dir * length
@@ -308,6 +217,70 @@ function BossArenaLooks.crack(model, center, item)
 		end
 	end
 	return parts
+end
+
+-- 남은 타격 → 균열 단계(0 = 금 없음)
+function BossArenaLooks.crackStageFor(hitsLeft)
+	local stage = 0
+	for index, look in ipairs(PROP.crackStages) do
+		if hitsLeft <= look.hitsLeft then
+			stage = index
+		end
+	end
+	return stage
+end
+
+-- 라이브러리(ReplicatedStorage.Assets.Props.Arena_<kind>): 기준 크기(refRadius) 모델 한 벌 - A2 카툰 모델 교체의 본(같은 이름을 Shared.PropModels에 두면 그걸 쓴다).
+function BossArenaLooks.ensureLibrary()
+	local assets = ReplicatedStorage:FindFirstChild("Assets") or Instance.new("Folder")
+	assets.Name = "Assets"
+	assets.Parent = ReplicatedStorage
+	local props = assets:FindFirstChild(PROP.library.folder) or Instance.new("Folder")
+	props.Name = PROP.library.folder
+	props.Parent = assets
+	local made = 0
+	for kind in pairs(PROP.recipes) do
+		local name = "Arena_" .. kind
+		if not props:FindFirstChild(name) then
+			local m = Instance.new("Model")
+			m.Name = name
+			local shape = SHAPES[kind]
+			local colliders = {}
+			for _, c in ipairs(shape and shape.colliders or { { 0, 0, PROP.library.refRadius, OBSTACLE.heightStuds } }) do
+				table.insert(colliders, { x = c[1], z = c[2], r = c[3], h = c[4] })
+			end
+			local big = kind == "rockpile" or kind == "dolmen"
+			local item = { kind = kind, group = big and "big" or (shape and "feature" or "small"), x = 0, z = 0, radius = PROP.library.refRadius, rotationDeg = 0, colliders = colliders }
+			buildRecipe(m, Vector3.zero, item, { color = Color3.fromRGB(150, 150, 160) }, nil)
+			m.WorldPivot = CFrame.new()
+			m:SetAttribute("PropSource", findOverride(name) and "custom" or "recipe")
+			m.Parent = props
+			made += 1
+		end
+	end
+	return made
+end
+
+-- 레시피 조각 수(구조물 하나 - 성능 상한 검사): kind · 충돌 원 수
+function BossArenaLooks.pieceCount(kind, colliderCount)
+	local recipe = PROP.recipes[kind]
+	if not recipe then
+		return 0
+	end
+	if not recipe.perCollider then
+		return #recipe
+	end
+	local n = 0
+	for index = 1, colliderCount do
+		local pieces = recipe.variants and (recipe.variants[index] or recipe.variants[#recipe.variants]) or recipe
+		for _, piece in ipairs(pieces) do
+			n += piece.span and 0 or 1
+		end
+	end
+	for _, piece in ipairs(recipe) do
+		n += piece.span and 1 or 0
+	end
+	return n
 end
 
 return BossArenaLooks

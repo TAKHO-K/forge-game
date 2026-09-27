@@ -35,6 +35,7 @@ local KIND_NAMES = {
 	grabbed = "대공 잡기", -- BR1
 	airFrozen = "얼음(대공 잡기 대기)", -- BR1 사슬: 가까운 사람부터 잡힌다
 	bubbled = "공중 가둠", -- BR1-2: 점프 연타로 탈출
+	snowball = "눈덩이", -- BR1-4c c-11: 1.2초 안에 저절로 튀어나온다(구출 없음)
 }
 -- 29-5: 구출 입력이 F 홀드 하나로 통일됐다 - 픽토그램은 "손"(꾹 누른다) 하나이고, 다른 길이 있는 종류만 그 길을 덧붙인다
 -- (빙결 = 얼음을 때려도 된다 · 결정화 = 진짜를 찾아 때린다).
@@ -253,7 +254,7 @@ function BossTrapView.start()
 					ownCountdown.Size = UDim2.new(remaining, 0, 1, 0)
 					ownRescue.Size = UDim2.new(rescue, 0, 1, 0)
 				end
-			elseif kind then
+			elseif kind and kind ~= "snowball" then -- c-11 눈덩이는 짧고 구출이 없다 - 남의 머리 위 표시를 안 띄운다
 				local entry = ensureBillboard(target)
 				if entry then
 					local remaining, rescue = readBars(target)

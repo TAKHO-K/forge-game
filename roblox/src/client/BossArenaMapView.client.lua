@@ -13,10 +13,11 @@ local RunService = game:GetService("RunService")
 
 local BossFxData = require(ReplicatedStorage.Shared.data.BossFxData)
 local BossFx = require(script.Parent.BossFx)
+local DEBRIS = require(ReplicatedStorage.Shared.data.ArenaPropData).debris -- BR1-4c c-12 파편을 더 잘 보이게
 
 local breakEvent = ReplicatedStorage:WaitForChild("BossArenaObstacleBreak")
 
-local PIECES = 10
+local PIECES = DEBRIS.pieces -- 옛 10
 local FLY_SECONDS = 0.7
 local DUST_COLOR = Color3.fromRGB(235, 228, 214) -- 흙먼지(먼지 공통 - BossPatternVisuals와 같은 값)
 
@@ -36,7 +37,17 @@ local function burst(data)
 		local start = data.position + dir * radius * 0.4
 		-- 바깥으로 radius × 2.4 · 위로 3 ~ 6(옛 모양) - 속도 = 거리 ÷ 시간, 중력으로 떨어진다.
 		local velocity = dir * radius * 2.4 / FLY_SECONDS + Vector3.new(0, rng:NextNumber(25, 32), 0) -- 꼭대기 3 ~ 5(중력 × 0.5)
-		BossFx.chunk(start, velocity, size * 0.55, (data.color or Color3.new(0.5, 0.5, 0.5)):Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.25)), FLY_SECONDS)
+		BossFx.chunk(start, velocity, size * 0.55 * DEBRIS.sizeScale, (data.color or Color3.new(0.5, 0.5, 0.5)):Lerp(index % 3 == 0 and Color3.new(1, 1, 1) or Color3.new(0, 0, 0), rng:NextNumber(0, 0.25)), FLY_SECONDS)
+	end
+	-- BR1-4c c-12: 부서지는 순간 흰 번쩍 고리 + 바닥 먼지(탑다운에서 "부서졌다"가 한눈에)
+	local floorY = data.position.Y - (data.height or 4) / 2
+	if DEBRIS.flash then
+		BossFx.ring(Vector3.new(data.position.X, floorY + 0.15, data.position.Z), radius * 0.5, radius * 2.2, Color3.new(1, 1, 1), 0.3, 0.25)
+	end
+	for index = 1, DEBRIS.dustPuffs do
+		local angle = (index / DEBRIS.dustPuffs) * 2 * math.pi
+		local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
+		BossFx.puff(Vector3.new(data.position.X, floorY + 0.8, data.position.Z) + dir * radius * 0.8, rng:NextNumber(2, 3), dustColor(data.color), 0.6, dir * 6 + Vector3.new(0, 1.5, 0))
 	end
 end
 

@@ -17,6 +17,9 @@ local PlayerDamage = require(script.Parent.PlayerDamage)
 local HeightGuard = require(script.Parent.HeightGuard)
 local AirState = require(script.Parent.AirState) -- 파트 0: 원거리 공중 정지 = 체공
 local BossMechanics = require(script.Parent.BossMechanics) -- BR1-3 아르마딜로 태세(반사의 귀)
+local PlayerStun = require(script.Parent.PlayerStun) -- BR1-4c c-11 눈덩이에서 튀어나온 뒤 기절
+local BossArenaMap = require(script.Parent.BossArenaMap) -- BR1-4c c-11 배출 자리(구조물 밖)
+local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
 
 local BossHandlersBR1 = {}
 
@@ -195,7 +198,7 @@ local function launchProjectile(c, index, target)
 	nextProjectileId += 1
 	local projectile = {
 		id = nextProjectileId, position = position, dir = dir, speed = skill.speedStuds, turnRad = math.rad(skill.turnRateDeg or 0),
-		radius = skill.radiusStuds, expiresAt = c.now + (skill.lifetimeSeconds or 6), target = target.player,
+		radius = skill.radiusStuds, expiresAt = c.now + (skill.lifetimeSeconds or 6), target = target.player, bornAt = c.now,
 		heightMode = skill.heightMode or "air", pierce = skill.pierce == true, hitBy = {}, skill = skill, data = c.data, model = c.model,
 		bouncesLeft = skill.bounces or 0,
 		-- BR1-2 반사 대비(K 성기사 패링 · 반사 대결): 소유자 · 반사 가능 · 반사 횟수
@@ -246,6 +249,131 @@ BossHandlersBR1.projectile = {
 	end,
 }
 
+-- ─────────────────────────── BR1-4c c-11 눈덩이 파묻힘(skill.engulf) ───────────────────────────
+-- 맞은 사람은 잡힘(BossTrap kind "snowball" - 구출 없음 · 면역)으로 눈덩이 중심 위에 고정된다(서버 = 판정 자리 · 클라가 겉에 반쯤 파묻힌 모습 · 구르기를 그린다).
+-- 서버가 옮기는 동안은 높이 검사 예외(HeightGuard.exempt - 되돌림 0). 대공 잡기는 잡힌 사람(가둠 제외)을 얼리지도 체공으로 세지도 않는다 = 땅을 구르는 중은 지면 취급.
+local function riderRoot(player)
+	local character = typeof(player) == "Instance" and player.Character
+	return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function setRiderAttributes(player, id, phase)
+	if typeof(player) == "Instance" and player.Parent then
+		player:SetAttribute("BossSnowballId", id)
+		player:SetAttribute("BossSnowballPhase", phase)
+	end
+end
+
+local placeSafe -- 아래(ejectPoint 뒤)에서 정의
+
+local function sendRiders(st, p)
+	local e = p.skill.engulf
+	kit.send(st, "projRiders", { id = p.id, scale = math.min(1 + e.growPerRider * #p.riders, e.maxGrow) })
+end
+
+local function engulf(model, st, p, v, now)
+	local e = p.skill.engulf
+	if (PlayerState.getHp(v.player) or 0) <= 0 or BossTrap.isTrapped(v.player) then
+		return
+	end
+	if not BossTrap.trap(v.player, { kind = "snowball", autoReleaseSeconds = e.maxSeconds + 1, context = { bossModel = model, snowballId = p.id },
+		onAutoRelease = function(player) -- 리뷰 2: 투사체 틱이 멈춰(보스 복귀 등) 안전장치로 풀릴 때도 안전한 자리로 옮기고 속성 · 예외를 정리한다
+			placeSafe(model, st, p, player)
+		end,
+	}) then
+		return
+	end
+	p.riders = p.riders or {}
+	local phase = #p.riders * 2.1
+	table.insert(p.riders, { player = v.player, untilAt = now + e.maxSeconds, phase = phase })
+	HeightGuard.exempt(v.player, e.maxSeconds + 1)
+	setRiderAttributes(v.player, p.id, phase)
+	sendRiders(st, p)
+	kit.debugEvent("snowballEngulf", { player = v.player, id = p.id, at = now })
+end
+
+-- 튀어나올 자리: 눈덩이 자리(지면) - 구조물과 겹치면 아레나 가운데 쪽으로 옮겨 가며 찾는다(벽 안 · 구조물 안 X). 무너진 조각 위면 기존 낙하 규칙(전멸기 + 복귀)이 받는다.
+local function ejectPoint(model, st, p)
+	local zone = kit.zoneOf(model)
+	local zoneKey = MonsterState.getZoneKey(model)
+	local clearance = p.skill.engulf.ejectClearanceStuds
+	local half = BossData.mechanics.dodge.characterHalfWidthStuds
+	local center = Vector3.new(zone.center.X, st.floorY, zone.center.Z)
+	local at = Vector3.new(p.position.X, st.floorY, p.position.Z)
+	local toCenter = center - at
+	local limit = (zone.radius or 140) - half - clearance
+	if toCenter.Magnitude > 1e-3 and (at - center).Magnitude > limit then
+		at = center - toCenter.Unit * limit
+	end
+	for _ = 1, 24 do
+		if not (zoneKey and BossArenaMap.overlapsObstacle(zoneKey, at, half, clearance)) then
+			break
+		end
+		toCenter = center - at
+		if toCenter.Magnitude < 2 then
+			break
+		end
+		at += toCenter.Unit * 2
+	end
+	return at + Vector3.new(0, MovementConfig.rootAboveFeetStuds, 0)
+end
+
+-- 안전한 자리로 옮기고 속성 · 높이 검사 예외를 정리한다(배출 · 안전장치 해제 · 처치 순간 공통). 반환: 옮긴 자리.
+placeSafe = function(model, st, p, player)
+	setRiderAttributes(player, nil, nil)
+	p.hitBy[player] = true -- 리뷰 1: 튕김이 hitBy를 비운 틱에 튀어나와도 같은 눈덩이에 다시 안 맞는다
+	local at = ejectPoint(model, st, p)
+	local root = riderRoot(player)
+	if root then
+		root.CFrame = CFrame.new(at) * CFrame.Angles(0, math.atan2(-p.dir.X, -p.dir.Z), 0)
+		HeightGuard.reset(player)
+		HeightGuard.endExempt(player) -- 리뷰 3
+	elseif type(player) == "table" and player.root then
+		player.root.Position = at
+	end
+	return at
+end
+
+local function eject(model, st, p, rider, why)
+	local player = rider.player
+	if not BossTrap.isTrapped(player) or (BossTrap.getRecord(player).kind ~= "snowball") then
+		setRiderAttributes(player, nil, nil)
+		return -- 이미 다른 길(리셋 · 퇴장 · 안전장치)로 풀렸다
+	end
+	local at = placeSafe(model, st, p, player)
+	BossTrap.release(player, "snowball")
+	local seconds = p.skill.engulf.stunSeconds
+	if PlayerStun.stun(player, seconds, true) then
+		kit.send(st, "playerStun", { userId = typeof(player) == "Instance" and player.UserId or nil, seconds = seconds, style = "snow" })
+	end
+	kit.debugEvent("snowballEject", { player = player, id = p.id, at = os.clock(), why = why, position = at })
+end
+
+local function stepRiders(model, st, p, now, bounced, finished)
+	if not p.riders or #p.riders == 0 then
+		return
+	end
+	local keep = {}
+	for _, rider in ipairs(p.riders) do
+		local record = BossTrap.getRecord(rider.player)
+		if not record or record.kind ~= "snowball" then
+			setRiderAttributes(rider.player, nil, nil) -- 다른 길로 풀렸다
+		elseif finished or bounced or now >= rider.untilAt then
+			eject(model, st, p, rider, finished and "end" or (bounced and "wall" or "time"))
+		else
+			local root = riderRoot(rider.player)
+			if root then
+				root.CFrame = CFrame.new(p.position + Vector3.new(0, p.radius * 0.5, 0)) * root.CFrame.Rotation
+			end
+			table.insert(keep, rider)
+		end
+	end
+	if #keep ~= #p.riders then
+		p.riders = keep
+		sendRiders(st, p)
+	end
+end
+
 -- 살아 있는 투사체를 한 틱 움직이고 맞힌다(스킬 진행과 무관 - BossPatterns.step이 매 틱 부른다).
 function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 	local list = st.projectiles
@@ -259,6 +387,7 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 	local ended = {}
 	for _, p in ipairs(list) do
 		local done = now >= p.expiresAt
+		local bounced = false
 		local holding = p.holdUntil and now < p.holdUntil -- BR1-2 반사: 보스 곁에서 모으는 중
 		if not done and not holding and p.holdUntil and not p.announced then
 			p.announced = true
@@ -272,8 +401,15 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 					target = v
 				end
 			end
-			if target and p.turnRad > 0 then
-				local desired = predictedAim(p.skill, p.position, target.root, p.heightMode) - p.position -- 예측 조준으로 돈다
+			-- BR1-4c c-3: 따라가는 시간은 homingSeconds까지(날기 시작부터 - 반사로 모으던 시간 제외) · 목표 자리는 retargetSeconds마다 대상의 지금 자리로 갱신
+			local homing = BossData.mechanics.homing
+			local flying = now - (p.holdUntil or p.bornAt or now)
+			if target and p.turnRad > 0 and flying <= homing.homingSeconds then
+				if not p.aimAt or now >= (p.retargetAt or 0) then
+					p.aimAt = target.root.Position
+					p.retargetAt = now + homing.retargetSeconds
+				end
+				local desired = p.aimAt - p.position
 				if p.heightMode == "ground" then
 					desired = Vector3.new(desired.X, 0, desired.Z)
 				end
@@ -303,6 +439,7 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 					-- 벽 튕김(skill.bounces): 벽 안으로 되돌리고, bounceRetarget = "farthest"면 **튕기는 순간 가장 먼 사람의 (예측) 자리**를 기억해
 					-- 그쪽으로 곧게 간다(아니면 거울 반사). 튕길 때마다 이미 맞은 사람도 다시 맞을 수 있다.
 					p.bouncesLeft -= 1
+					bounced = true
 					local outward = Vector3.new(p.position.X - zone.center.X, 0, p.position.Z - zone.center.Z).Unit
 					p.position = Vector3.new(zone.center.X, p.position.Y, zone.center.Z) + outward * (zone.radius - p.radius - 0.5)
 					local newDir = nil
@@ -376,6 +513,9 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 						if p.skill.trapOnHits then
 							BossHandlersBR1.noteTrapHit(c, v, p.skill.trapOnHits)
 						end
+						if p.skill.engulf then
+							engulf(model, st, p, v, now)
+						end
 						kit.debugEvent("projectileHit", { player = v.player, id = p.id, at = now })
 						if not p.pierce then
 							done = true
@@ -385,6 +525,7 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 				end
 			end
 		end
+		stepRiders(model, st, p, now, bounced, done)
 		if done then
 			table.insert(ended, { id = p.id, position = p.position })
 		else
@@ -464,6 +605,21 @@ end
 
 function BossHandlersBR1.clearProjectiles(st)
 	if st and st.projectiles then
+		for _, p in ipairs(st.projectiles) do -- BR1-4c c-11: 눈덩이에 파묻힌 사람은 튀어나온다(처치 · 리셋 순간)
+			for _, rider in ipairs(p.riders or {}) do
+				local record = BossTrap.getRecord(rider.player)
+				if record and record.kind == "snowball" then
+					if st.model and st.floorY then
+						placeSafe(st.model, st, p, rider.player) -- 리뷰 2: 제자리(구조물 안 · 구멍 위)에서 풀지 않는다
+					else
+						setRiderAttributes(rider.player, nil, nil)
+					end
+					BossTrap.release(rider.player, "snowball")
+				else
+					setRiderAttributes(rider.player, nil, nil)
+				end
+			end
+		end
 		st.projectiles = {}
 	end
 	if st then

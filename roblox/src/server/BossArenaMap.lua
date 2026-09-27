@@ -26,6 +26,8 @@ local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 파편 튕김 동
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig) -- G2a B5: 무너짐 낙하 속도
 local Looks = require(script.Parent.BossArenaLooks)
+local ArenaPropData = require(ReplicatedStorage.Shared.data.ArenaPropData) -- BR1-4c c-12: 벽 밖 장식을 배경 톤으로
+task.defer(Looks.ensureLibrary) -- BR1-4c c-12: ReplicatedStorage.Assets.Props.Arena_<kind>(A2 교체 본)
 
 local BossArenaMap = {}
 
@@ -229,9 +231,49 @@ function BossArenaMap.setSliceCollapsed(zoneKey, index, collapsed)
 		changed += 1
 	end
 	local zone = WorldConfig.zones[zoneKey]
-	for _, mound in ipairs(state and BossArenaMap.moundsOf(zoneKey) or {}) do -- (active 표는 이 아래에 선언 - 접근 함수로)
-		if require(ReplicatedStorage.Shared.BossSkillMath).sliceIndexOf(zone.center, mound.Position, state.count, state.hubRadius, 0) == index then
-			mound.CanCollide, mound.CanQuery, mound.Transparency = not collapsed, not collapsed, collapsed and 1 or 0
+	local sliceIndexOf = require(ReplicatedStorage.Shared.BossSkillMath).sliceIndexOf
+	if state then
+		state.collapsed = state.collapsed or {}
+		state.collapsed[index] = collapsed or nil
+	end
+	-- 리뷰 4: 같은 둔덕(같은 중심)의 층들은 가장 넓은 아래층 반경으로 함께 판정한다(위층만 남아 공중에 뜨지 않게)
+	local moundList = state and BossArenaMap.moundsOf(zoneKey) or {}
+	local bottomRadius = {}
+	for _, a in ipairs(moundList) do
+		local r = a.Size.Y / 2
+		for _, b in ipairs(moundList) do
+			if math.abs(a.Position.X - b.Position.X) < 0.01 and math.abs(a.Position.Z - b.Position.Z) < 0.01 then
+				r = math.max(r, b.Size.Y / 2)
+			end
+		end
+		bottomRadius[a] = r
+	end
+	for _, mound in ipairs(moundList) do -- (active 표는 이 아래에 선언 - 접근 함수로)
+		local down
+		if BossArenaMap.debugMoundCenterOnly then -- 검증(BR1-4c c-1 원인 실측): 옛 규칙 = 둔덕 중심이 든 조각만
+			down = state.collapsed[sliceIndexOf(zone.center, mound.Position, state.count, state.hubRadius, 0) or -1] == true
+		else
+			-- BR1-4c c-1: 둔덕(원판 층)이 무너진 조각에 **조금이라도 걸치면** 통째로 꺼진다 - 옛 규칙(중심 조각만)은 여러 조각에 걸친 둔덕이
+			-- 무너진 조각 위에 그 높이의 바닥으로 남았다(사용자 체감 "중앙 구역 높이만큼 안 부서짐"). 걸친 다른 조각 쪽 사람은 둔덕 높이만큼 바닥으로 내려설 뿐이다.
+			local r = bottomRadius[mound] -- 원판(축 X) 지름 = Size.Y · 같은 둔덕의 가장 아래층
+			down = false
+			for k = 0, 23 do
+				local a = k / 24 * 2 * math.pi
+				for _, f in ipairs({ 0.98, 0.6, 0.25 }) do
+					local p = mound.Position + Vector3.new(math.cos(a) * r * f, 0, math.sin(a) * r * f)
+					local i = sliceIndexOf(zone.center, p, state.count, state.hubRadius, 0)
+					if i and state.collapsed[i] then
+						down = true
+						break
+					end
+				end
+				if down then
+					break
+				end
+			end
+		end
+		if down == mound.CanCollide then
+			mound.CanCollide, mound.CanQuery, mound.Transparency = not down, not down, down and 1 or 0
 			changed += 1
 		end
 	end
@@ -921,6 +963,7 @@ function BossArenaMap.waveHitDais(zoneKey, id)
 	if obstacle.waveHits >= rule.crackAfterWaves then
 		if not obstacle.cracked then
 			obstacle.cracked = true
+			obstacle.crackStage = #ArenaPropData.crackStages -- 단상 첫 지진파 = 바로 붕괴 예고 단계
 			for _, part in ipairs(Looks.crack(obstacle.model, obstacle.center, obstacle.item)) do
 				table.insert(obstacle.visuals, part)
 			end
@@ -1028,9 +1071,12 @@ function spawnObstacle(state, zone, item)
 			if obstacle.escape then
 				BossArenaMap.fireEncase(state, obstacle, needed - obstacle.hits)
 			end
-			if not obstacle.cracked and needed - obstacle.hits <= OBSTACLE.crackAtHitsLeft then
-				obstacle.cracked = true
-				for _, part in ipairs(Looks.crack(model, center, item)) do
+			-- BR1-4c c-12: 균열 단계(가는 금 → 붕괴 예고) - 마지막 단계 = 옛 crackAtHitsLeft(1)와 같은 순간
+			local stage = Looks.crackStageFor(needed - obstacle.hits)
+			if stage > (obstacle.crackStage or 0) then
+				obstacle.crackStage = stage
+				obstacle.cracked = needed - obstacle.hits <= OBSTACLE.crackAtHitsLeft
+				for _, part in ipairs(Looks.crack(model, center, item, stage)) do
 					table.insert(visuals, part)
 				end
 			end
@@ -1098,8 +1144,14 @@ function BossArenaMap.dress(zoneKey, bossData, seed)
 	for _, spec in ipairs(theme.decor or {}) do
 		local builder = DECOR[spec.kind]
 		if builder then
+			-- BR1-4c c-12 가독성: 벽 밖 장식(기둥 · 가시 · 오벨리스크)은 테라스 색 쪽으로 눌러 배경으로(구조물 · 바닥 무늬는 그대로)
+			local drawn = spec
+			if spec.color and spec.ring then
+				drawn = table.clone(spec)
+				drawn.color = spec.color:Lerp(theme.rim.color, ArenaPropData.tones.decorMuteFraction)
+			end
 			for index, angleDeg in ipairs(spec.angles or { 0 }) do
-				builder(dressing, zone, spec, angleDeg, index, bossData, theme)
+				builder(dressing, zone, drawn, angleDeg, index, bossData, theme)
 				if not spec.angles then
 					break
 				end

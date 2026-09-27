@@ -272,6 +272,10 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 end
 
 local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetRoot, dt)
+	local introUntil = model:GetAttribute("BossIntroUntil") -- BR1-4c c-4: 진입 연출 동안 보스 행동 없음(패턴 · 추격 · 평타)
+	if introUntil and workspace:GetServerTimeNow() < introUntil then
+		return
+	end
 	if BossPatterns.step(model, data, monsterPosition, targetPlayer, targetRoot, dt, BossEncounter.getMembersOfModel(model)) then
 		return
 	end

@@ -278,6 +278,10 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	if not entry then
 		return false, 0
 	end
+	local introUntil = model:GetAttribute("BossIntroUntil") -- BR1-4c c-4: 진입 연출 동안 보스는 피해를 받지 않는다
+	if introUntil and workspace:GetServerTimeNow() < introUntil then
+		return false, 0
+	end
 	-- G1-3: 레벨차 계수 - 주는 피해(CharacterLevelConfig.levelGap). 스테이지 = 잡몹은 때린 사람의 스테이지, 보스는 보스 스테이지. 실제 Player만(스탠드인 · 구출 · 상자는 영향 없음).
 	local damageBeforeGap = damage -- G2a(사용자 결정 - G1-3 결정 필요 2): 보스 기여도는 계수를 곱하기 전 피해로 센다(저레벨 파티원이 10% 문턱에서 빠지지 않게)
 	local fixed = hitInfo ~= nil and hitInfo.fixed == true -- BR1-3 고정 피해(보스 에어본 5% - 레벨차 계수 · 받는 피해 배율 없이, 보호막만 막는다)

@@ -31,9 +31,9 @@ function PlayerStun.grantImmunity(player, seconds)
 	immuneUntil[player] = math.max(immuneUntil[player] or 0, os.clock() + (seconds or CONFIG.immuneSeconds))
 end
 
--- 반환: 기절했는가.
-function PlayerStun.stun(player, seconds)
-	if PlayerStun.isImmune(player) or BossTrap.isTrapped(player) or PlayerState.isInvulnerable(player) or (PlayerState.getHp(player) or 0) <= 0 then
+-- 반환: 기절했는가. afterTrap = 잡힘이 풀린 직후의 면역을 무시한다(BR1-4c c-11 눈덩이 - 튀어나오는 것 자체가 기절로 이어지는 한 동작).
+function PlayerStun.stun(player, seconds, afterTrap)
+	if (PlayerStun.isImmune(player) and not afterTrap) or BossTrap.isTrapped(player) or PlayerState.isInvulnerable(player) or (PlayerState.getHp(player) or 0) <= 0 then
 		return false
 	end
 	local now = os.clock()

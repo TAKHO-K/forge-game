@@ -542,6 +542,11 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		else
 			table.insert(checks, { label = "궤도 바꾸기(인지)", availableSeconds = arrival, requiredSeconds = dodge.perceptionSeconds, distanceStuds = 0, ok = arrival >= dodge.perceptionSeconds })
 		end
+		-- BR1-4c c-3 유도 규칙: 옆으로 달리면(걷기) 닿는 거리(반경 + 몸 반폭)에서 필요한 회전 = 걷기 ÷ 거리(rad/s)가 회전 상한보다 커야 따돌린다(대시면 더 쉽다).
+		if (skill.turnRateDeg or 0) > 0 then
+			local needDeg = math.deg(walkSpeedStuds / (skill.radiusStuds + half))
+			table.insert(checks, { label = "옆으로 달려 따돌리기(회전 상한)", availableSeconds = needDeg, requiredSeconds = skill.turnRateDeg, distanceStuds = skill.radiusStuds + half, ok = needDeg > skill.turnRateDeg })
+		end
 	elseif primitive == "lightningRods" then
 		-- BR1-2 번개 조준경: 표적이 된 뒤 조준경이 멈추기까지(mark + track) 가장 가까운 피뢰침으로 유인 · 멈춘 뒤(lock) 낙뢰 원 밖으로
 		walk("피뢰침으로 유인", skill.markSeconds + skill.trackSeconds, skill.dodge.distanceStuds)

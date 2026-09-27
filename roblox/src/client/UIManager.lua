@@ -423,7 +423,10 @@ end
 
 -- 창 위 클릭·탭 기본공격을 막을 때 gameProcessedEvent만 믿지 말고 이 값도 같이 보라는
 -- 지시(18-1 [3]) - AttackInput.client.lua가 참조한다.
-UIManager.isInputBlocked = isModalOpen
+-- BR1-4c c-4: 보스 진입 연출 동안(서버 Player Attribute BossIntroLock)도 전투 입력(공격 · 스킬 · 대시)을 막는다.
+UIManager.isInputBlocked = function()
+	return isModalOpen() or game:GetService("Players").LocalPlayer:GetAttribute("BossIntroLock") == true
+end
 
 -- [InputDiag] 임시 진단 통로(S20 사전 작업 - I 키가 실제 키보드에서 안 열리는 원인 조사): InputDiag.client.lua가 함수를 꽂으면 아래 단계마다 한 줄을 남긴다. 원인 확인 뒤 제거한다.
 UIManager.inputDiag = nil

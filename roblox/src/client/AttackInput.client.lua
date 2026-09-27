@@ -172,7 +172,7 @@ local function performAttack(aimPoint, isAir)
 	-- 21-1 [1]-C: 채널링 중(서버가 PlayerState.setChannelingUntil로 올려 둔 Attribute)엔
 	-- 요청도 스윙 모션도 내지 않는다 - 서버가 어차피 거부하지만, 모션만 재생되면 "쳤는데
 	-- 안 맞는다"는 거짓 피드백이 된다(위 lastSwingTick 주석과 같은 이유). 판정은 서버다.
-	if player:GetAttribute("IsChanneling") or player:GetAttribute("BossTrapKind") then
+	if player:GetAttribute("IsChanneling") or player:GetAttribute("BossTrapKind") or player:GetAttribute("BossIntroLock") then -- BR1-4c c-4: 진입 연출 중 입력 잠금
 		return -- 29-1: 잡힌 동안에도 같다(서버 BossTrap이 올린 Attribute - 판정은 서버)
 	end
 	if WeaponVisual.bufferInput(function()
@@ -254,7 +254,7 @@ local function fireAttack(aimPoint)
 	if UIManager.isInputBlocked() then
 		return
 	end
-	if player:GetAttribute("IsChanneling") or player:GetAttribute("BossTrapKind") then
+	if player:GetAttribute("IsChanneling") or player:GetAttribute("BossTrapKind") or player:GetAttribute("BossIntroLock") then -- BR1-4c c-4: 진입 연출 중 입력 잠금
 		return -- 21-1 [1]-C: 채널링 중엔 회전조차 하지 않는다(돌기만 하고 안 때리면 더 어색하다). 29-1: 잡힘도 같다
 	end
 	AimTarget.refresh(aimPoint)
