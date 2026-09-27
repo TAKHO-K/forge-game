@@ -389,6 +389,10 @@ function HeightGuard.poll(player, now)
 		return "hrevert"
 	end
 	local verdict = HeightGuard.evaluate(st, sample, now)
+	if st.trace then -- 검증 계측(G2aVerify가 켤 때만): 판정 · 발 − 기준 · 유예/예외 남은 시간
+		table.insert(st.trace, ("%s(%.1f/%s/g%.1f/e%.1f)"):format(verdict, sample.feetY - (st.supportY or sample.feetY), sample.grounded and "G" or "A",
+			math.max(0, st.graceUntil - now), math.max(0, st.exemptUntil - now)))
+	end
 	if verdict == "revert" then
 		local from = root.Position
 		root.AssemblyLinearVelocity = Vector3.zero

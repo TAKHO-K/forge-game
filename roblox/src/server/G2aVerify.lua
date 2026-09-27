@@ -188,6 +188,7 @@ function G2aVerify.runLive(player, env)
 		align.Parent = root
 		local t0 = os.clock()
 		local caught
+		st.trace = {}
 		local hoverRise = 0 -- S1 계측: 서버가 본 띄워 두기 높이(클라 물리가 제약을 따랐는가)
 		while os.clock() - t0 < 3 do
 			task.wait(0.05)
@@ -199,6 +200,9 @@ function G2aVerify.runLive(player, env)
 		end
 		align:Destroy()
 		attachment:Destroy()
+		print(("[G2a][나] 띄워 두기 판정 흔적: %s · 캐릭터 같음 %s · 루트 부모 %s · Anchored %s"):format(table.concat(st.trace, " "),
+			tostring(player.Character == character), tostring(root.Parent ~= nil), tostring(root.Anchored)))
+		st.trace = nil
 		task.wait(1)
 		r.check(("넉백 높이 %d(허용 %.2f 초과): 서버가 본 루트 최고 +%.1f · 되돌림 %d(기대 0 - 넉백 예외)"):format(launchHeight, JumpMath.heightGuardAllowance(), launchRise, afterLaunch),
 			afterLaunch == 0 and patternEvent ~= nil)
