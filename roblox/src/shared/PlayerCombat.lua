@@ -96,13 +96,12 @@ function PlayerCombat.getSpeedMultiplier(speedPercentBonus)
 	return math.min(1 + (speedPercentBonus or 0), CombatConfig.attackSpeedMaxMultiplier)
 end
 
--- S1 후속 0-2: 최종 공격 속도 배율(장비 · 보석 × 버프). CombatConfig.attackSpeedCapIncludesBuffs = true면 버프(활 속사)까지 곱한 뒤 상한(×2.5) 하나로 자른다 -
--- false(지금 - 결정 대기)면 옛 규칙(장비 · 보석만 상한 · 버프는 그 밖에서 곱 - 실효 최대 ×6.25). 켜면 EconSim 상위 1% 25,300 +19.6%(S1-fix 보고서 0-2).
+-- 최종 공격 속도 배율(장비 · 보석 × 버프). BR1-4b 파트 0-1(롤 "치명적 속도" 방식): 평소 = 장비 · 보석 상한 ×2.5 · 버프(활 속사) 중에만
+-- 상한이 CombatConfig.attackSpeedMaxMultiplierBuffed(×6.25 = 지금 나오는 최대 실효값)로 오른다 - 앞으로 공속 출처가 늘어도 이 값을 못 넘는다.
 function PlayerCombat.getTotalSpeedMultiplier(speedPercentBonus, buffSpeedMultiplier)
-	if CombatConfig.attackSpeedCapIncludesBuffs then
-		return math.min((1 + (speedPercentBonus or 0)) * (buffSpeedMultiplier or 1), CombatConfig.attackSpeedMaxMultiplier)
-	end
-	return PlayerCombat.getSpeedMultiplier(speedPercentBonus) * (buffSpeedMultiplier or 1)
+	buffSpeedMultiplier = buffSpeedMultiplier or 1
+	local total = PlayerCombat.getSpeedMultiplier(speedPercentBonus) * buffSpeedMultiplier
+	return math.min(total, buffSpeedMultiplier > 1 and CombatConfig.attackSpeedMaxMultiplierBuffed or CombatConfig.attackSpeedMaxMultiplier)
 end
 
 -- 치명타 판정 + 적용 - 유일한 위치(10-4 [3]). base는 평타의 getAttack 결과일 수도,

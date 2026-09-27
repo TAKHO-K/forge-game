@@ -446,8 +446,13 @@ BossTrap.onReleased(function(player, record, reason)
 	local st = model and MonsterState.getBossPatternState(model)
 	if reason == "auto" then
 		throw(player, record)
-	elseif (reason == "rescued" or reason == "escaped") and st then
-		st.grabEscaped = (st.grabEscaped or 0) + 1
+	elseif st then
+		-- BR1-4b 리뷰 1: 퇴장 · 리셋("reset")도 잡힘 목록에서 뺀다(남으면 전원 탈출 기절이 안 나고 새 캐릭터가 머리 위로 끌려간다). 탈출 수는 구출 · 발버둥만 센다.
+		if reason == "rescued" or reason == "escaped" then
+			st.grabEscaped = (st.grabEscaped or 0) + 1
+		elseif st.grabHeld and table.find(st.grabHeld, player) then
+			st.grabThrown = (st.grabThrown or 0) + 1 -- 파트 0 리뷰 2: 퇴장 · 리셋은 탈출이 아니다 - "전원 탈출" 기절 조건에서 뺀다(던짐처럼 센다)
+		end
 		local at = st.grabHeld and table.find(st.grabHeld, player)
 		if at then
 			table.remove(st.grabHeld, at)

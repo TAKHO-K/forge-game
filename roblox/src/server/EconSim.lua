@@ -152,8 +152,8 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	if whatIf.attackSpeedCap then -- 공격 속도 상한(math.huge = D1-2 전 - 상한 없음)
 		set(CombatConfig, "attackSpeedMaxMultiplier", whatIf.attackSpeedCap)
 	end
-	if whatIf.attackSpeedCapIncludesBuffs ~= nil then -- S1 후속 0-2: 속사 버프까지 공속 상한 안(true)
-		set(CombatConfig, "attackSpeedCapIncludesBuffs", whatIf.attackSpeedCapIncludesBuffs)
+	if whatIf.attackSpeedCapBuffed then -- BR1-4b 파트 0-1: 속사 버프 중 공속 상한(2.5 = 옛 스위치 "버프 포함" 켬과 같음)
+		set(CombatConfig, "attackSpeedMaxMultiplierBuffed", whatIf.attackSpeedCapBuffed)
 	end
 	if whatIf.glovesCritDmgBonus then -- 태초 장갑 치명 피해(0 = 고유 효과 끔)
 		set(PrimordialData.unique, "glovesCritDmgBonus", whatIf.glovesCritDmgBonus)
@@ -231,7 +231,7 @@ end
 -- "목표 초 안에 잡는 HP ÷ atk"는 한 번만 이분법으로 구하고 재사용한다(키 = 직업 · 공속 보너스 · 목표 초).
 local hpRatioCache = {}
 function EconSim.maxHpPerAtk(loadout, seconds)
-	local key = ("%s|%.9f|%.4f|%s|%.4f|%s"):format(loadout.classId, PlayerCombat.getSpeedMultiplier(loadout.speedPercentBonus), seconds, tostring(SkillData.healer.E.attackMultiplier), loadout.critDmg, tostring(CombatConfig.attackSpeedCapIncludesBuffs)) -- D1-2: 공속은 상한 뒤 배율로(상한 위 값은 같은 결과) · 태초 장갑 치명 피해도 처치 시간을 바꾼다
+	local key = ("%s|%.9f|%.4f|%s|%.4f|%s"):format(loadout.classId, PlayerCombat.getSpeedMultiplier(loadout.speedPercentBonus), seconds, tostring(SkillData.healer.E.attackMultiplier), loadout.critDmg, tostring(CombatConfig.attackSpeedMaxMultiplierBuffed)) -- D1-2: 공속은 상한 뒤 배율로(상한 위 값은 같은 결과) · 태초 장갑 치명 피해도 처치 시간을 바꾼다
 	local cached = hpRatioCache[key]
 	if cached then
 		return cached

@@ -250,6 +250,9 @@ function BossArenaMap.disableSliceFloor(zoneKey)
 		base.floor.CanCollide, base.floor.CanQuery, base.floor.Transparency = true, true, 0
 		base.rim.CanCollide, base.rim.CanQuery = true, true
 	end
+	for _, mound in ipairs(BossArenaMap.moundsOf(zoneKey)) do -- BR1-4b 리뷰 2: 무너진 조각 위 둔덕도 되돌린다(전멸 리셋은 다시 dress하지 않는다)
+		mound.CanCollide, mound.CanQuery, mound.Transparency = true, true, 0
+	end
 	return true
 end
 

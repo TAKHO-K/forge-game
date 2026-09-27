@@ -44,15 +44,19 @@ return {
 
 	-- MV1 낙하(사용자 결정 · 보완): 판정 = 착지 순간 수직 속도(공중 점프 · 활강으로 떨어지는 속도를 죽이면 산다 = "낙법") → 환산 높이 h = v² ÷ 2g(MoveRules.fallHeightOf).
 	--   피해 = 최대 체력 × clamp((h − 안전 높이) ÷ (lethalHeight − 안전 높이), 0, 1) - 고정 %최대체력 · 방어 · 피해 감소 · 방어막 무시(판정형 피해).
-	--   안전 높이 = 합법 점프 정점(점프력 옵션 상한 + 공중 점프 전부 = 21.38 - JumpMath.maxClimbStuds) + safeMarginStuds → 평소 점프 · 사다리는 피해 0.
+	--   안전 높이 safeHeight(= FallSafeHeight · BR1-4b 파트 0-4 사용자 확정: 환생 단계와 무관한 고정값) = 최대 합법 3단 점프 정점(지상 점프 + 공중 점프 2회 · 점프력 옵션 상한
+	--     = 21.38 - JumpMath.maxClimbStuds(2, false, jumpHeightBonusCap)) + 여유 3 → 환생 0 유저가 턱에서 내려와도 · 평소 점프 · 사다리는 피해 0(검증 MV1(가)가 정점 ≤ 이 값인지 대조).
+	--     ※ K에서 무게 등으로 점프 높이가 바뀌면 가장 높이 뛰는 조합의 3단 정점 + 3으로 이 값을 다시 계산한다.
+	--     실제 안전 높이 = max(safeHeight, 그 플레이어의 현재 최대 합법 정점 + apexMarginStuds)(MoveRules.fallSafeHeight(player) - 사용자 보충: 점프력이 높은 사람도 자기 점프로는 안 다침).
 	--   lethalHeight = 나무 세 번째 정거장 높이(360 - WorldMapLayout.stations()[3] · 검증 MV1(가)가 대조) - 그 높이에서 그냥 떨어지면 100% = 쓰러짐.
-	--   100%(또는 피해로 체력 0) = 쓰러짐("쿵!" · 그을린 모습 knockdownSeconds) → 마지막 안전 지점(이번 체공을 시작한 땅)에서 체력 가득 · 아이템 손실 없음.
+	--   100%(또는 피해로 체력 0) = 쓰러짐("쿵!" · 그을린 모습 knockdownSeconds) → 마지막 안전 지점(이번 체공을 시작한 땅) · 부활 체력 ≤ reviveHpCapFraction · 아이템 손실 없음.
+	--   낙법 = 공중 점프 · 활강 · 공중 대시(속도 0으로 끊음 - 서버 궤적 최고점도 대시 자리로 다시 잰다 · DashServer)로 착지 속도를 줄이는 것.
 	--   불꽃 꼬리(경고) = 예상 피해가 flameWarnFraction 이상인 속도로 떨어지는 동안.
 	--   제외(서버가 판정): 강제 이동 후 착지(보스 던지기 · 회오리 · 넉백 · 점프대 · 통통 열매 = HeightGuard 발사 허가 · 예외가 permitGraceSeconds 안 - 새 강제 이동은 HeightGuard.exempt 또는 grantLaunch를 부른다) ·
 	--     사다리에서 떨어짐 · 나무 점프맵(허브 나무 둘레 WorldMapData.progress.treeRadius 안 - 체크포인트 복귀 규칙) · 보스전(BossEncounterId - 아레나 낙사 기믹 규칙) · 물 착지 · 넉백 잠금(클라 AirLocked).
 	--   reportMaxSpeed = 클라가 보낸 속도 상한(그 위는 자른다) · reportMinGapSeconds = 사람마다 보고 간격 · charredSeconds = 일어난 뒤에도 그을린 모습이 남는 시간.
 	fall = {
-		safeMarginStuds = 3, lethalHeight = 360, flameWarnFraction = 0.5,
+		safeHeight = 24.38, apexMarginStuds = 3, lethalHeight = 360, flameWarnFraction = 0.5,
 		knockdownSeconds = 1.6, charredSeconds = 5, permitGraceSeconds = 1.0,
 		reportMaxSpeed = 2000, reportMinGapSeconds = 0.3,
 		-- 리뷰 1(보안): 보고 = 서버가 본 체공과 맞아야 인정 - 서버 체공 세션이 끝난 지 reportWindowSeconds 안(또는 진행 중)이고 체공 시간 ≥ 보고 속도의 자유 낙하 시간(v ÷ g) × airtimeSlack.

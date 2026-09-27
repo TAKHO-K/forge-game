@@ -145,10 +145,12 @@ function V.runPure()
 		local F = MovementConfig.fall
 		local sp = JumpMath.fallSpeedFromHeight
 		local safe = MoveRules.fallSafeHeight()
-		local o1, o2, o3, o4 = MoveRules.fallOutcome(sp(JumpMath.maxClimbStuds(2, false, 0.1))), MoveRules.fallOutcome(sp(safe + 0.25 * (F.lethalHeight - safe))), MoveRules.fallOutcome(sp((safe + F.lethalHeight) / 2)), MoveRules.fallOutcome(sp(F.lethalHeight) + 1e-6)
+		local apex = JumpMath.maxClimbStuds(MovementConfig.airJump.charges, false, MovementConfig.jumpHeightBonusCap) -- BR1-4b 파트 0-4: 고정 안전 높이가 최대 합법 3단 정점 위인가
+		local o1, o2, o3, o4 = MoveRules.fallOutcome(sp(apex)), MoveRules.fallOutcome(sp(safe + 0.25 * (F.lethalHeight - safe))), MoveRules.fallOutcome(sp((safe + F.lethalHeight) / 2)), MoveRules.fallOutcome(sp(F.lethalHeight) + 1e-6)
+		local o0 = MoveRules.fallOutcome(sp(safe) - 1e-6)
 		local st3 = WorldMapLayout.stations()[3]
-		r.check(("안전 높이 %.2f(합법 정점 + %d) · 정점 21.38 낙하 → %s · 1/4 높이 → %.1f%% · 가운데 → %.1f%% · 치명 %d(= 나무 세 번째 정거장 %.0f) → %s"):format(safe, F.safeMarginStuds, o1.kind, o2.fraction * 100, o3.fraction * 100, F.lethalHeight, st3.y - WorldMapData.floorTopY, o4.kind),
-			o1.kind == "none" and near(o2.fraction, 0.25, 1e-6) and near(o3.fraction, 0.5, 1e-6) and o4.kind == "knockdown" and near(st3.y - WorldMapData.floorTopY, F.lethalHeight, 0.5))
+		r.check(("안전 높이 %.2f(고정 · 3단 정점 %.2f + %.2f) · 정점 낙하 → %s · 안전 높이 낙하 → %s · 1/4 높이 → %.1f%% · 가운데 → %.1f%% · 치명 %d(= 나무 세 번째 정거장 %.0f) → %s"):format(safe, apex, safe - apex, o1.kind, o0.kind, o2.fraction * 100, o3.fraction * 100, F.lethalHeight, st3.y - WorldMapData.floorTopY, o4.kind),
+			safe > apex and o1.kind == "none" and o0.kind == "none" and near(o2.fraction, 0.25, 1e-6) and near(o3.fraction, 0.5, 1e-6) and o4.kind == "knockdown" and near(st3.y - WorldMapData.floorTopY, F.lethalHeight, 0.5))
 		local nanOut = MoveRules.fallOutcome(0 / 0)
 		r.check(("이상한 보고(NaN) → %s · 음수 → %s"):format(nanOut.kind, MoveRules.fallOutcome(-500).kind), nanOut.kind == "none" and MoveRules.fallOutcome(-500).kind == "none")
 		local ex = {
@@ -444,7 +446,7 @@ function V.runLive(player, env)
 		local n = land(90)
 		local d = land(200)
 		local hpAfter = PlayerState.getHp(player)
-		local expect = MoveRules.fallOutcome(200).fraction
+		local expect = MoveRules.fallOutcome(200, player).fraction -- BR1-4b 파트 0-4: 안전 높이 = 플레이어별
 		r.check(("속도 90 → %s · 200 → %s(체력 %.1f%% 잃음 · 기대 %.1f%%)"):format(n, d, (1 - hpAfter / maxHp) * 100, expect * 100), n == "none" and d == "damage" and near(1 - hpAfter / maxHp, expect, 1e-6))
 		PlayerState.setHp(player, maxHp)
 		player:SetAttribute("BossEncounterId", "verify")

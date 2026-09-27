@@ -112,7 +112,7 @@ function FallServer.onLanded(player, speed, flags)
 		speed = serverSpeed
 	end
 	session.fallHandled = true
-	local out = MoveRules.fallOutcome(speed)
+	local out = MoveRules.fallOutcome(speed, player)
 	local entry = { player = player, speed = speed, clientSpeed = clientSpeed, server = serverSpeed ~= nil, kind = out.kind, fraction = out.fraction }
 	FallServer.log = entry
 	if out.kind == "none" then
@@ -154,7 +154,7 @@ local function onServerLanded(st, session)
 		end
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		local speed = AirState.fallSpeedOf(session)
-		if not root or not speed or MoveRules.fallOutcome(speed).kind == "none" then
+		if not root or not speed or MoveRules.fallOutcome(speed, player).kind == "none" then
 			return
 		end
 		local inWater = require(script.Parent.WorldHazards).inWater(root.Position)

@@ -89,6 +89,11 @@ local function handleDash(player)
 	local tier = MoveRules.tierOf(player)
 	local range = JumpMath.dashRangeStuds(JumpMath.moveSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player)), session and tier.airDashRangeMultiplier or 1)
 	local startPos = rootPart.Position
+	if session and session.peakY then
+		-- BR1-4b 파트 0-4: 공중 대시는 낙하 속도를 0으로 끊는다(클라 DashInput) = 낙법 → 서버 낙하 궤적 최고점도 대시 자리부터 다시 잰다(서버가 본 자리 - 지연만큼 높게 = 보수적).
+		session.peakY = math.min(session.peakY, startPos.Y)
+		session.lowY = session.peakY
+	end
 	local endPos = DashEndpoint.compute(player, startPos, direction, range)
 	require(script.Parent.HeightGuard).grantDash(player, range) -- S1: 서버가 준 대시 거리 = 합법 수평 이동
 

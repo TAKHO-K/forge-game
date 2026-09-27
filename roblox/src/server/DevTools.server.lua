@@ -46,9 +46,7 @@ local BossMechanics = require(script.Parent.BossMechanics)
 local BossTrap = require(script.Parent.BossTrap)
 local BossSim = require(ReplicatedStorage.Shared.BossSim)
 local BossMechanicsVerify = require(script.Parent.BossMechanicsVerify)
--- 29-2 쿨타임·우선순위 구동 + 보스별 스킬표 자동 검증.
-local BossSkillVerify = require(script.Parent.BossSkillVerify)
-local BossGimmick4Verify = require(script.Parent.BossGimmick4Verify)
+-- (29-2 · 29-4 자동 검증 블록은 BR1-4b 파트 0-5에서 삭제 - BR1 이전 기대값 · BR1(가)(나) · BR1-2(가) · BR1-4a(가)(나)가 대신한다.)
 -- 28-1(S01) 드랍 규칙 자동 검증 - (가)는 서버 시작 때, (나)는 위 보스 검증 체인의 끝에서 돈다.
 local LootRuleVerify = require(script.Parent.LootRuleVerify)
 -- 30-0 S02 v23 -> v24 이관(부풀려진 itemLevel 절단) 자동 검증 - (가)는 서버 시작 때, (나)는 위 체인의 끝(읽기 전용).
@@ -1094,6 +1092,7 @@ local HELP_TEXT = table.concat({
 	"/gg bagclear - 실제 가방을 비우고 바로 저장(백업 없음 - 테스트 진행 중이면 거절, 28-1 S04 사전 작업)",
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
 	"/gg gold <n> - 골드를 n으로 맞춘다(0 이상, /gg reset으로 복원 - 구매 · 골드 부족 화면 검증용)",
+	"/gg fall <높이> - 나무 둘레 밖 허브 바닥 위 <높이>로 실제 순간이동해 떨어진다(낙하 피해 실측 - BR1-4b 파트 0-4)",
 	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록(실제 키 타입 포함) · /gg ticket grantboss <스테이지> - 처치 없이 보스 첫 클리어 지급 함수 호출 · /gg ticket clear - 방지권 · 받은 기록을 비우고 저장",
 	"/gg drop force <등급> [부위] [ground] - D1: 그 등급 장비 1개를 실제 드랍 경로로(출처 태그 · 태초 = 시험 키 세계 번호 · 칭호 · 흰 빛기둥 · 본인 연출 · 배너 / 고대 = 같은 서버 알림 · 고대 빛기둥). 태초는 가방(ground = 땅에 - 빛기둥 확인)",
 	"/gg dropnotice <등급> [n] [same] - 가짜 드랍 알림 n건(기본 1)을 내 파티(솔로면 나 자신)에게 주입(30-0 S10, 스크린샷 · 검증용). 등급 = relic|ancient|primordial(태초는 서버 전체 배너 + 채팅 줄) · same = 같은 사람 이름으로(묶음 확인)",
@@ -1962,6 +1961,13 @@ local function handleCommand(player, args)
 			PlayerProfile.addGold(player, target - PlayerProfile.getGold(player))
 			reply(player, ("골드를 %d로 설정 - 보유 %d"):format(target, PlayerProfile.getGold(player)))
 		end
+	elseif sub == "fall" and tonumber(args[2]) then
+		-- BR1-4b 파트 0-4: 낙하 실측 - 나무 둘레 밖(허브 바닥 x 0 · z = 나무 반경 + 60) 위 h로 실제 순간이동(Travel = HeightGuard 기준 재설정)만 한다 · 낙하 · 판정은 실제 경로 그대로
+		local h = math.clamp(tonumber(args[2]), 0, 800)
+		local spot = Vector3.new(0, require(ReplicatedStorage.Shared.data.WorldMapData).floorTopY + h + 3, require(ReplicatedStorage.Shared.data.WorldMapData).progress.treeRadius + 60)
+		PlayerState.setHp(player, PlayerState.getMaxHp(player))
+		require(script.Parent.Travel).teleport(player, spot, "낙하 실측(/gg fall)")
+		reply(player, ("낙하 실측: 바닥 위 %.0f(%s)에서 떨어진다"):format(h, tostring(spot)))
 	elseif sub == "mat" and args[2] and tonumber(args[3]) then
 		-- 강화 재료 지급(28-1 S04) - 강화 소모 · 부족 거절 검증용. 다른 명령처럼 백업 뒤 세션 메모리만 바꾼다(/gg reset으로 복원).
 		local materialId = args[2]
@@ -3548,14 +3554,10 @@ if RunService:IsStudio() then
 			require(script.Parent.BossEncounter).debugLingerOff = true -- G1-4: 처치 직후 복귀를 전제로 한 옛 검증 - G1-4(나)가 자기 항목에서만 켠다
 			CharacterLevel.debugLevelGapOff = true -- G1-3: 레벨차 계수도 체인 동안 끈다(옛 피해 기대값 - G1-3(나)가 자기 항목에서만 켠다)
 			require(script.Parent.HeightGuard).debugOff = true -- G2a: 서버 높이 검증도 체인 동안 끈다(캐릭터를 공중 · 구조물 위에 두는 옛 항목 - G2a(나)가 자기 항목에서만 켠다)
-			-- 29-1(뼈대 회귀) → 29-2(가: 순수 계산) → 29-2(나: 실제 서버 경로) 순서로 이어서 돈다 - 같은 플레이어·같은
+			-- 29-1(뼈대 회귀) → S01(나) … 순서로 이어서 돈다 - 같은 플레이어·같은
 			-- 아레나를 쓰므로 겹치면 안 된다. 하나가 에러로 끊겨도 다음은 돈다.
 			for _, stage in ipairs({
 				{ "29-1", function() BossMechanicsVerify.run(player, env) end },
-				{ "29-2(가)", BossSkillVerify.runPure },
-				{ "29-2(나)", function() BossSkillVerify.runLive(player, env) end },
-				{ "29-4(가)", BossGimmick4Verify.runPure },
-				{ "29-4(나)", function() BossGimmick4Verify.runLive(player, env) end },
 				{ "S01(나)", function() LootRuleVerify.runLive(player, env) end },
 				{ "S02(나)", function() ItemLevelMigrateVerify.runLive(player) end },
 				{ "S03(나)", function() EnhanceVerify.runLive(player, env) end },
@@ -3604,6 +3606,7 @@ if RunService:IsStudio() then
 				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
 				{ "BR1-2(나)", function() require(script.Parent.BR1_2Verify).runLive(player, env) end }, -- BR1-2: 곡선 32발 · 동시 4보스 성능 · 반사 · 음파 · 색 맞추기 · 가둠 · 저장 v37
 				{ "BR1-4a(나)", function() require(script.Parent.BR14aVerify).runLive(player, env) end }, -- BR1-4a: 고정 % 피해 · 에네르기파 · 회오리 되돌림 0 · 대공 잡기 강제 체공 · 붕괴 실제 낙하 · 아레나 낙하 제외
+				{ "BR1-4b0(나)", function() require(script.Parent.BR14b0Verify).runLive(player, env) end }, -- BR1-4b 파트 0: 공중 대시 낙하 최고점 · 수호자 잡기 → 돌진 연속 금지(실제 step)
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "M1-2c(나)", function() require(script.Parent.M1_2cVerify).runLive(player, env) end }, -- M1-2c: 나무 발사 전부 되돌림 0 · 허가 없이 같은 높이 → 되돌림 · 보스 발사 최대 · 리프트 [F] · 도착 낙하 없음
 				{ "G1-4(나)", function() require(script.Parent.G1_4Verify).runLive(player, env) end }, -- G1-4: 보스맵 잔류 · 다음 / 다시 도전 / 마을 · 90초
@@ -4003,6 +4006,15 @@ if RunService:IsStudio() and verifyEnabled("MV1(가)") then
 		local ok, err = pcall(require(script.Parent.MV1Verify).runPure)
 		if not ok then
 			warn(("[MV1(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+if RunService:IsStudio() and verifyEnabled("BR1-4b0(가)") then -- BR1-4b 파트 0: 속사 중 공속 상한 · 상한 3종 · 낙하 표(플레이어별 안전 높이) · 치명 초과 현황
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.BR14b0Verify).runPure)
+		if not ok then
+			print("===BR1-4b0 검증 끝(가)=== 에러: " .. tostring(err))
 		end
 	end)
 end

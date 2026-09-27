@@ -184,7 +184,7 @@ function Option.sumAxisBonus(sources, axisId, classId)
 end
 
 -- 치명 전용 집계 - id="crit"인 원소만 모아 {critRate, critDmg} 두 값을 각각 sumWithCap한다
--- (둘 다 상한 없음, OptionData.crit.cap=nil - 20.67 [6-3]). Option.valueOf가 crit id에는
+-- (BR1-4b 파트 0-2부터 둘 다 OptionData.crit.cap 1.79 - 도달 최대 위). Option.valueOf가 crit id에는
 -- 이미 {critRate, critDmg} 테이블을 돌려주므로 그 값을 축별로 나눠 모으기만 한다.
 function Option.critBonus(sources, classId)
 	local critRates, critDmgs = {}, {}

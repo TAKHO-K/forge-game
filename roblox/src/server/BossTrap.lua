@@ -131,7 +131,8 @@ function BossTrap.release(player, reason)
 	PlayerState.setTrapped(player, nil)
 	-- 29-3: 풀려난 직후 유예 - 잡힌 동안 시작된 예고는 피할 수 없었다(BossData.mechanics.trap.releaseGraceSeconds).
 	-- 보스전이 끝나거나 리셋돼 풀린 것("reset")은 유예가 필요 없다.
-	if reason == "auto" or reason == "rescued" then
+	-- BR1-4b 리뷰 4: 대공 잡기 발버둥 탈출도 유예(구출과 같은 탈출 - 붕괴 구멍 위에서 바로 낙사하지 않게) · 거품 가둠(공중 가둠) 탈출은 유예 없음 그대로(파트 0 리뷰 1 - 거품 → 잡기 연계)
+	if reason == "auto" or reason == "rescued" or (reason == "escaped" and record.kind == "grabbed") then
 		local trapConfig = BossData.mechanics.trap
 		-- P3d-F B6: 출처별 칸 - 0배(지금 값)면 무적 플래그, 아니면 배율
 		if trapConfig.damageTakenMultiplier <= 0 then

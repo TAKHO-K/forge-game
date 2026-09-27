@@ -95,10 +95,18 @@ end
 function MoveRules.fallHeightOf(speed)
 	return speed * speed / (2 * MovementConfig.gravity)
 end
--- 안전 높이 = 합법 점프 정점(점프력 상한 + 공중 점프 전부) + 여유.
-function MoveRules.fallSafeHeight()
+-- 안전 높이(BR1-4b 파트 0-4 사용자 확정) = max(고정값 MovementConfig.fall.safeHeight, 그 플레이어의 현재 최대 합법 정점 + apexMarginStuds).
+--   고정값 = 기본 3단 점프 높이는 누구나 무피해 · 두 번째 항 = 점프력이 높은 사람도 자기 점프로는 안 다침.
+--   플레이어 정점 = 해금 공중 점프 수(MoveRules.tierOf) × 점프력 - 개인 점프력 출처가 아직 없어 HeightGuard와 같이 상한(jumpHeightBonusCap)으로 본다
+--   (펫 옵션 · K 무게가 생기면 여기서 그 사람 값을 쓴다). player 없음(클라 불꽃 문턱) = 고정값.
+function MoveRules.fallSafeHeight(player)
+	local F = MovementConfig.fall
+	if not player then
+		return F.safeHeight
+	end
 	local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
-	return JumpMath.maxClimbStuds(MovementConfig.airJump.charges, false, MovementConfig.jumpHeightBonusCap) + MovementConfig.fall.safeMarginStuds
+	local apex = JumpMath.maxReachStuds(JumpMath.jumpHeight(MovementConfig.jumpHeightBonusCap), MoveRules.tierOf(player).airJumps)
+	return math.max(F.safeHeight, apex + F.apexMarginStuds)
 end
 
 -- 기준 속도: 안전(이 아래 피해 0 · 보고 문턱) · 불꽃(예상 피해 flameWarnFraction) · 치명.
@@ -110,14 +118,14 @@ function MoveRules.fallSpeeds()
 end
 
 -- 착지 수직 속도(양수 = 아래로) → { kind = "none" | "damage" | "knockdown", fraction(최대 체력 비율 = clamp((h − 안전) ÷ (치명 − 안전), 0, 1)), height(환산 높이) }.
-function MoveRules.fallOutcome(speed)
+function MoveRules.fallOutcome(speed, player)
 	local F = MovementConfig.fall
 	speed = math.clamp(tonumber(speed) or 0, 0, F.reportMaxSpeed)
 	if speed ~= speed then
 		return { kind = "none", fraction = 0, height = 0 }
 	end
 	local h = MoveRules.fallHeightOf(speed)
-	local safe = MoveRules.fallSafeHeight()
+	local safe = MoveRules.fallSafeHeight(player)
 	local fraction = math.clamp((h - safe) / (F.lethalHeight - safe), 0, 1)
 	if fraction <= 0 then
 		return { kind = "none", fraction = 0, height = h }

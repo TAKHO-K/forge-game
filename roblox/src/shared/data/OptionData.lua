@@ -47,11 +47,13 @@ return {
 	-- 옵션 정의. category: "dps"/"survival"/"utility"/"classSkill"(20.67 [5] 카테고리 구분 -
 	-- 카테고리 안에서만 등가, 카테고리 사이엔 등가를 두지 않는다). cap=nil은 "합산 상한 없음"
 	-- (20.67 [7] - 자기 제한적이거나 별도 상한이 실효인 축).
+	-- BR1-4b 파트 0-2(사용자 결정): 위력 · 치명 · 스킬 피해(대검 Q/E · 쌍검 E)의 cap = 지금 도달 가능한 최대(8자리 = 장비 3 + 보석 5 전부 태초 · 롤 최대 1.125 ·
+	--   아이템 레벨 = 스테이지 하드 상한 25,300)를 소수 둘째 자리에서 올린 값 → 안 잘린다(EconSim 불변). 위력 2.548 · 치명 1.784(확률 · 피해 같은 값) · 대검 Q/E 7.645 · 쌍검 E 10.193.
 	options = {
-		attackPercent = { displayName = "위력", category = "dps", baseValue = 0.30, cap = nil },
+		attackPercent = { displayName = "위력", category = "dps", baseValue = 0.30, cap = 2.55 },
 		speedPercent = { displayName = "신속", category = "dps", baseValue = 0.30, cap = nil },
 		-- 치명: 치확 +a%p·치피 +b(각각 독립 롤) - a=b=21%p(20.67 [6-3], 활 기준 위력 등가 해).
-		crit = { displayName = "치명", category = "dps", critRateBase = 0.21, critDmgBase = 0.21, cap = nil },
+		crit = { displayName = "치명", category = "dps", critRateBase = 0.21, critDmgBase = 0.21, cap = 1.79 },
 		maxHpPercent = { displayName = "건강", category = "survival", baseValue = 0.10, cap = 0.20 },
 		-- 방어: 생존 기여를 건강과 맞추려면 ρ(GemData.survivalReductionAtAnchor)로 나눈 값이
 		-- 필요하다(20.67 [3] "value = ... × ρ 보정", Gem.lua의 옛 AXIS_CORRECTION.defensePercent와
@@ -66,14 +68,14 @@ return {
 
 		-- 직업 특화 8종(20.67 [2][8]). classId·slot은 SkillData[classId][slot]을 가리킨다 -
 		-- 표시명은 여기 두지 않고 그 데이터에서 읽는다(위 모듈 주석).
-		skill_greatsword_Q = { classId = "greatsword", slot = "Q", category = "classSkill", baseValue = 0.90, cap = nil },
-		skill_greatsword_E = { classId = "greatsword", slot = "E", category = "classSkill", baseValue = 0.90, cap = nil },
+		skill_greatsword_Q = { classId = "greatsword", slot = "Q", category = "classSkill", baseValue = 0.90, cap = 7.65 },
+		skill_greatsword_E = { classId = "greatsword", slot = "E", category = "classSkill", baseValue = 0.90, cap = 7.65 },
 		-- 속사: 배율 2.5 상한(기존 attackSpeedCap)이 실효 상한이라 %합산 상한을 따로 두지 않는다.
 		skill_bow_Q = { classId = "bow", slot = "Q", category = "classSkill", baseValue = 0.60, cap = nil },
 		skill_bow_E = { classId = "bow", slot = "E", category = "classSkill", baseValue = -0.30, cap = 0.50 },
 		-- 그림자분신: 지속 ≤ 쿨다운(14초)이 되도록 상한 180%.
 		skill_dualblade_Q = { classId = "dualblade", slot = "Q", category = "classSkill", baseValue = 0.60, cap = 1.80 },
-		skill_dualblade_E = { classId = "dualblade", slot = "E", category = "classSkill", baseValue = 1.20, cap = nil },
+		skill_dualblade_E = { classId = "dualblade", slot = "E", category = "classSkill", baseValue = 1.20, cap = 10.2 },
 		skill_healer_Q = { classId = "healer", slot = "Q", category = "classSkill", baseValue = -0.30, cap = 0.50 },
 		skill_healer_E = { classId = "healer", slot = "E", category = "classSkill", baseValue = -0.60, cap = 0.90 },
 	},

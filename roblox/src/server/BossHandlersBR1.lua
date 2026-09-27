@@ -757,7 +757,7 @@ BossHandlersBR1.sweep = {
 							end
 						end
 						if hit then
-							st.beamLocks[p] = { untilAt = c.now + maxSeconds, nextTickAt = c.now }
+							st.beamLocks[p] = { untilAt = c.now + maxSeconds, nextTickAt = c.now, ticks = 0, maxTicks = math.floor(maxSeconds / skill.tickSeconds + 1e-6) + 1 } -- BR1-4b 리뷰 3: 틱을 개수로 센다(0 · 0.25 · … · 1.5 = 7회 - 부동소수점에 따라 6회로 빠지던 것)
 							st.beamDealt[p] = st.beamDealt[p] or 0
 							HeightGuard.grantBurst(p, skill.pull.speedStuds * maxSeconds + 4) -- 끌림(클라)만큼 수평 허가
 							kit.send(st, "beamPull", { userId = typeof(p) == "Instance" and p.UserId or nil, toward = Vector3.new(st.sweepOrigin.X, st.floorY, st.sweepOrigin.Z), speed = skill.pull.speedStuds, seconds = maxSeconds })
@@ -772,13 +772,14 @@ BossHandlersBR1.sweep = {
 			if (PlayerState.getHp(p) or 0) <= 0 then
 				st.beamLocks[p] = nil
 			else
-				while c.now >= lock.nextTickAt and lock.nextTickAt < lock.untilAt do
+				while c.now >= lock.nextTickAt and lock.ticks < lock.maxTicks do
 					local remaining = PlayerState.getMaxHp(p) * skill.castMaxHpFraction - st.beamDealt[p]
 					if remaining > 0 then
 						st.beamDealt[p] += PlayerDamage.applyHit(p, c.data.attack, skill.damageLabel, skill.damage.multiplier, { maxDamage = remaining })
 						BossTrap.noteSkillHit(p)
 					end
 					lock.nextTickAt += skill.tickSeconds
+					lock.ticks += 1
 				end
 				if c.now >= lock.untilAt or f >= 1 then
 					beamRelease(c, p, c.now)

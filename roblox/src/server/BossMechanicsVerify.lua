@@ -15,10 +15,8 @@ local RunService = game:GetService("RunService")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
-local BossSim = require(ReplicatedStorage.Shared.BossSim)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
-local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local BossEncounter = require(script.Parent.BossEncounter)
 local BossPatterns = require(script.Parent.BossPatterns)
@@ -33,8 +31,6 @@ local BossMechanicsVerify = {}
 
 local GUARDIAN = "section_guardian"
 
-local EXPECTED_GUARDIAN = { 73.30, 37.85 }
-local SIM_TOLERANCE_SECONDS = 0.06
 
 local function near(actual, expected, tolerance)
 	return actual ~= nil and math.abs(actual - expected) <= tolerance
@@ -76,9 +72,7 @@ local function runPure()
 		local expectedG = 1 / BossData.intervalPowerRatio -- P2.5a: 옛 1 / k^stageInterval(k = 1.155) - 보스 한 간격 힘 비율을 데이터로 고정
 		r.check(("게이트 g = N_max^(p-1) = %.4f (= 1/k^%d = %.4f, p=%.4f)"):format(
 			g, BossData.stageInterval, expectedG, BossRules.partyHpExponent()), near(g, expectedG, 1e-9))
-		r.check(("4인 x g = %.4f = 솔로 1.0 (기믹을 무시하는 정원 파티의 딜 = 기믹을 푸는 솔로의 딜)"):format(
-			PartyConfig.maxMembers * g / BossRules.partySizeHpMultiplier(PartyConfig.maxMembers)),
-			near(PartyConfig.maxMembers * g / BossRules.partySizeHpMultiplier(PartyConfig.maxMembers), 1, 1e-9))
+		-- BR1-4b 파트 0-5: "4인 x g = 솔로 1.0" 항목 삭제 - BR1-2 파티 보정(N^0.93)으로 전제가 바뀌었다(BR1-2(가)가 잰다).
 
 		local heavyShare = BossData.bosses[GUARDIAN].skills.heavy.damage.multiplier / BalanceAnchorConfig.surviveTargetHits
 		r.check(("기믹 실패 f = %.2f, 허용 구간 [0.50, %.4f) - 하한 2f>=1, 상한 f + 강타 %.4f < 1"):format(f, 1 - heavyShare, heavyShare),
@@ -95,15 +89,7 @@ local function runPure()
 			near(lifestealSeconds, 13.75, 1e-6))
 	end)
 
-	r.section("모형", function()
-		local solo = BossSim.run(GUARDIAN, { partySize = 1 })
-		local party = BossSim.run(GUARDIAN, { partySize = 4 })
-		r.check(("구간 수호자(기믹·게이트 없음) 솔로 %.2f초(기대 %.2f) / 4인 %.2f초(기대 %.2f), 슬롯 강%d 진%d 낙%d 돌%d 십%d"):format(
-			solo.seconds, EXPECTED_GUARDIAN[1], party.seconds, EXPECTED_GUARDIAN[2],
-			solo.counts.heavy, solo.counts.shockwave, solo.counts.meteor, solo.counts.charge, solo.counts.cross),
-			near(solo.seconds, EXPECTED_GUARDIAN[1], SIM_TOLERANCE_SECONDS) and near(party.seconds, EXPECTED_GUARDIAN[2], SIM_TOLERANCE_SECONDS)
-				and solo.gimmickCount == 0)
-	end)
+	-- BR1-4b 파트 0-5: "모형"(구간 수호자 기믹 · 게이트 없음 처치 시간 73.30 / 37.85) 삭제 - BR1부터 수호자도 기믹 · 새 패턴표라 옛 기대값(BR1(가) · BossSim.checkPairs가 대신한다).
 
 	local passCount, totalCount = r.summary()
 	print(("===29-1 검증 끝(가)=== %d/%d 통과"):format(passCount, totalCount))
@@ -181,10 +167,7 @@ local function runLive(player, env)
 	r.section("구간 수호자 회귀", function()
 		local model, data = spawnGuardian(player, env)
 		local clocks = BossPatterns.debugClocks(model)
-		local source = BossData.bosses[GUARDIAN]
-		r.check(("구간 수호자: mechanics=%s, skills.gimmick=%s, 스킬표가 BossData 원본 그대로(스테이지 5 = 범위 배율 1)=%s"):format(
-			tostring(data.mechanics), tostring(data.skills.gimmick), tostring(data.skills == source.skills)),
-			data.id == GUARDIAN and data.mechanics == nil and data.skills.gimmick == nil and data.skills == source.skills)
+		-- BR1-4b 파트 0-5: "mechanics = nil · 스킬표 원본 그대로" 항목 삭제(BR1부터 수호자에 기믹 · 스테이지 곡선 표)
 		r.check(("패턴 시계(초): 강공격 %.1f 진동파 %.1f 낙석 %.1f 돌진 %.1f 십자 %.1f 기믹 %s (기대 6/11/13/15/17/없음)"):format(
 			clocks.heavy or -1, clocks.shockwave or -1, clocks.meteor or -1, clocks.charge or -1, clocks.cross or -1, tostring(clocks.gimmick)),
 			near(clocks.heavy, 6, 0.5) and near(clocks.shockwave, 11, 0.5) and near(clocks.meteor, 13, 0.5)
@@ -199,13 +182,7 @@ local function runLive(player, env)
 		r.check(("보스 피해: 넣은 값 %.2f = 들어간 값 %.2f = HP 감소 %.2f"):format(maxHp * 0.01, dealt, hpBefore - hpAfter),
 			near(dealt, maxHp * 0.01, 1e-6) and near(hpBefore - hpAfter, maxHp * 0.01, 1e-6))
 		fullHeal(player)
-		local chargeFraction = data.skills.charge.damage.fraction
-		BossMechanics.beginActivation(model)
-		BossMechanics.applyGimmickDamage(model, player, chargeFraction, "돌진(검증)")
-		r.check(("돌진 %%피해 경로: 풀피에서 %.0f%% → 남은 %.1f%%(기대 %.1f%%) - 29-2에서 80 → 55%%, 생존"):format(
-			chargeFraction * 100, hpFraction(player) * 100, (1 - chargeFraction) * 100),
-			near(hpFraction(player), 1 - chargeFraction, 1e-6) and PlayerState.getHp(player) > 0)
-		fullHeal(player)
+		-- BR1-4b 파트 0-5: "돌진 %피해 경로" 항목 삭제 - BR1-4a부터 돌진 = 능력치 피해(×3.85 · fraction 없음 → 옛 경로가 에러였다 · BR1-4a(가)가 잰다).
 	end)
 
 	-- [3][4] %최대체력 피해 - 방어 우회, 1회로 안 죽는다, 기믹 1회 합계 상한
@@ -370,10 +347,11 @@ local function runLive(player, env)
 		task.wait(0.5)
 		step()
 		local failRatio = dealt()
-		r.check(("파훼 실패: 게이트 %s(받는 피해 x%.4f), 플레이어 체력 %.1f%%(기대 %.0f%% - 1회로 안 죽는다), 잡힘=%s(%s)"):format(
-			tostring(BossMechanics.isGateArmed(model)), failRatio, hpFraction(player) * 100, (1 - f) * 100,
+		-- BR1-4b 파트 0-5: 체력 기대(1 − f) 삭제 - BR1-3부터 기믹 실패 피해는 보스별 기믹 모듈이 준다(BR1(나)가 잰다). 게이트 · 잡힘만 본다.
+		r.check(("파훼 실패: 게이트 %s(받는 피해 x%.4f), 잡힘=%s(%s)"):format(
+			tostring(BossMechanics.isGateArmed(model)), failRatio,
 			tostring(BossTrap.isTrapped(player)), tostring(player:GetAttribute("BossTrapKind"))),
-			BossMechanics.isGateArmed(model) and near(failRatio, g, 1e-9) and near(hpFraction(player), 1 - f, 1e-6)
+			BossMechanics.isGateArmed(model) and near(failRatio, g, 1e-9)
 				and PlayerState.getHp(player) > 0 and BossTrap.isTrapped(player) and player:GetAttribute("BossTrapKind") == "frozen")
 
 		-- 전멸 리셋: 게이트·잡힘이 처음 상태로, 힌트가 한 단계 오른다.
