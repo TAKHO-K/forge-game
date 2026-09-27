@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **S1(밤샘 묶음 - 이동 · 획득 보안) · 2026-09-27** · 직전 보고서 = `docs/phase/S1-report.md`(그 전 `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **S1 후속(묶음 파트 0 - 보안 · 경제) · 2026-09-27** · 직전 보고서 = `docs/phase/S1-fix-report.md`(그 전 `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -22,7 +22,7 @@
 | 카툰 스타일(A1) | `CartoonStyle.apply(base \| cartoon)` - 관리 속성만(조명 · 효과 4 · 물 · 17재질 색 · **텍스처 없는 MaterialVariant 17**(`shared/CartoonFlatVariants.model.json` - 평면 면 음영) · 허브 바닥 파트 색 · 작은 소품 그림자) · 멱등 · **기본 = base**(`CartoonStyleData.active` - 전환 = A2-1) · `/gg style base\|cartoon` · **외곽선 풀**(`client/OutlinePool` - 상한 80 · 조준 외곽선 통합 · 몬스터별 꺼진 AimHighlight 삭제) · 구역 색조(클라) · 시제품 `/gg a1 …`(슬라임 · 수호자 리그 · 전갈 꼬리 Bone · 대검 7등급 · 카툰 풀) · UI 목업 `client/A1UiMockups` · 검증 `A1(나)` | `docs/art/cartoon-pipeline.md` · `A1-report.md` |
 | 플레이어 모션 · 무기(W1) | **코드 포즈 데이터**(에셋 업로드 없음): `shared/data/PlayerMotionData`(무기별 대기 · 이동 · 대시 · 활강 · 꺼내기/수납 · 1 ~ 3타 · 강공격 · 공중 · 넘어짐 → 일어나기 0.78초) · `shared/MotionTiming`(전조 → 동작 → 회복 · 배율 ×2.5 전조부터 · 원거리 = 서버 발사 상수(W1 전 값 0.429 · 0.1925 - 밸런스) + 모션 발사 예약 큐) · `client/PoseRig`(관절 Transform = **PreSimulation**에 써야 물리에 들어간다 · FK · 보조 손 · 시위 IK) · `client/WeaponVisual`(**모든 캐릭터** - 서버 중계 `AttackMotion` · `AirMoveFx` dash/getup · Attribute `CombatUntil`) · 일어나기 서버 무적 `PlayerGetup`(강제 이동 기록 있을 때만) · 규격 `WeaponRigSpec`(hold · 부착점 Grip/Tip/Support/StringNock · 지팡이 머리 = +Y) + 검사 `WeaponRigCheck` · 교체 모델 자리 `Shared.WeaponModels` · 스크린샷 훅 `PlayerGui.W1PoseHook`(Studio) | `W1-report.md` · `docs/art/asset-pipeline.md` §4 |
 | 공중 전투 · 무기 규격(MV1) | 공중 공격 예산 = 해금 공중 점프 + 공중 대시(서버 거부) · 뜨면 강공격 스택 0 · 공중 판정 높이차 근접 14 · 원거리 30(`CombatConfig.airAttack`) · 무기별 공중 동작 틀(대검 내려찍기 · 쌍검 회전 · 활 · 지팡이 0.25초 공중 정지 - 임시 모션) · **`WeaponRigSpec`**(쥐는 손 · 손잡이 점 · 날 축 · 기준 크기 · 보조 손 · 비전투 자리 · 날 선 앞 · 준비 자세) - 지금 모델은 잡는 방식만 맞춤, 모션은 **W1** | `MV1-report.md` ④ ⑦ |
-| 보안(S1) | **이동**: 서버 수평 토큰 버킷(`HeightGuard.evaluateHorizontal` · 합법 목록 = `MovementConfig.moveGuard.legal` · 대시 · 밀림 허가 · 표시 없는 순간이동 = 되돌림) · 높이 허용 = 해금 단계별 · 낙하 = 서버 궤적(`AirState` peakY · 신고 없어도 처리) · 비밀 둥지 C = `server/SecretNestData`(클라 0 · 45 안에서 앵커 노출). **획득**: 스테이지 하드 상한 25,300(저장 · 로드 때 자름) · 태초 발급 원장(`AcquisitionAudit` · rollId) · 원장 없음 = 격리(원장 이전 = `preLedger` 집계 대상) · 집계 = 드랍 출처 · 속도 봉투(`AuditConfig.envelope` - 25,300 = 1,169h) · 포아송 1e-6 · 처치 속도 · 운영 `/ops`(`OpsConfig.userIds`) · 서버가 캐릭터를 옮기면 반드시 `HeightGuard.reset`/`exempt`(reset 뒤 유예 = 도착 자리 근처만) · 클라 낙하 신고 = 서버 착지 전이면 `pending` | `S1-report.md` |
+| 보안(S1) | **S1 후속**: 공중 정체 검사(활강 · 원거리 정지 · 허가 · 예외 밖에서 3.5초 넘게 안 내려가면 되돌림 - `heightGuard.stallSeconds`) · 허가별 수평 상한(`permit.hRate` - 보스 발사 400 · 발판 = 설계 × `padSpeedMargin` 1.25 · 열매 · 붙잡기 = 걷기 · 체공 안이면 앞 상한 이어받기) · `/ops stats [all]` + 종료 요약(`AlphaStats_v1`) · C 둥지 이름 = `Struct_<구역>_ruinsNNN` · 단서 속성(`Cycle` · `Ambient`)은 서버가 시작 때 읽고 지움(반딧불 = 서버) · 최종 피해 버킷 상한 1.05 · 공속 버프 포함 상한 = 스위치 `attackSpeedCapIncludesBuffs`(기본 false - 켜면 상위 1% +19.6%). **이동**: 서버 수평 토큰 버킷(`HeightGuard.evaluateHorizontal` · 합법 목록 = `MovementConfig.moveGuard.legal` · 대시 · 밀림 허가 · 표시 없는 순간이동 = 되돌림) · 높이 허용 = 해금 단계별 · 낙하 = 서버 궤적(`AirState` peakY · 신고 없어도 처리) · 비밀 둥지 C = `server/SecretNestData`(클라 0 · 45 안에서 앵커 노출). **획득**: 스테이지 하드 상한 25,300(저장 · 로드 때 자름) · 태초 발급 원장(`AcquisitionAudit` · rollId) · 원장 없음 = 격리(원장 이전 = `preLedger` 집계 대상) · 집계 = 드랍 출처 · 속도 봉투(`AuditConfig.envelope` - 25,300 = 1,169h) · 포아송 1e-6 · 처치 속도 · 운영 `/ops`(`OpsConfig.userIds`) · 서버가 캐릭터를 옮기면 반드시 `HeightGuard.reset`/`exempt`(reset 뒤 유예 = 도착 자리 근처만) · 클라 낙하 신고 = 서버 착지 전이면 `pending` | `S1-report.md` |
 | 설정 창 | M1-0에 첫 창(카메라 토글 하나). 저장 · 키 재설정은 **P4-4** | `client/panels/Settings.lua` |
 | 저장 | **SAVE_VERSION 44**(v44 audit - λ · 태초 굴림 수 · 플레이 시간 / v43 장비 태초 각인 primordial · 출처 source · 옛 태초 = 이전 태초 + 잠금 / v42 hints.stealLockSeen / v41 world.nests · world.nestDex · eggs / v40 world.bossGates / v38 world.portals · peakLevel / v39 titles) · Studio 수동 Play = `Player_<id>_manual`(M1-2 후속 - 실제 프로필은 읽기만) | `server/SaveSystem.lua` |
 
@@ -49,6 +49,8 @@
 > **W1 끝(2026-09-27) - place 저장 불필요 · 업로드 불필요**: 무기 5종 모션 세트 · 시각표 50칸 최대 0.045초 · 남의 캐릭터도 같은 모션 · 일어나기(BR1-4가 `WeaponVisual.playGetup` 호출) · 최종 키프레임 = A2 · 스킬 모션 = K.
 
 > **S1 끝(2026-09-27) - place 저장 불필요**: 이동 보안(수평 · 해금 높이 · 서버 낙하 · 비밀 둥지) · 획득 보안(상한 · 원장 · 격리 · 봉투 · 확률 · 운영). 경제 상한 조사표 = 보고서 [3].
+
+> **S1 후속 끝(2026-09-27) - place 저장 불필요**: 결정 대기 = 공속 스위치 · 상한 3종 · 쌍검 ÷ 대검 속도 구간(`S1-fix-report.md`). 공중 정체 검사 Play 확인 = BR1-4a 첫 Play.
 
 **다음** = BR1-4(보스 손질 - 시작 지점 = 바로 아래 인용)(이동 보안 - `MoveRules.s1Limits`) · M1-4 결정(§4 - 특히 **place 저장**) 뒤 로드맵(`docs/phase/roadmap-v2.md`): BR2(보스 세트 · 토벌 - 관문 자리 있음) · M2(몬스터 외형 · 종) · 펫 단계(알 부화 · 탑승 · 활강 - 둥지 B · C는 활강 착지 불가로 설계됨). 지형 모양을 바꾸면 `TerrainGenData.version[구역]`을 올리고 그 구역만 다시 굽고 place 저장. 패턴 하나만 볼 때 = `/gg boss pattern <보스> <패턴>`(끄기 `off`). 인원별 서버 부하 = `/gg perf world [crowd]`. 계절 = Workspace Attribute `Season`.
 
@@ -77,6 +79,7 @@
 | MV1 1 ~ 13 | **1 · 2 · 4 · 5 · 6 · 7 · 9 · 10 · 13 닫힘(MV1b - 사용자 지시 반영)**: 1 바위 = 1단 점프 계단 · 메사 · 피라미드 = B · 2 유지 · 4 뿌리 55° · 5 유지 · 6 유지 · 7 세트 4칸 + 글라이더 별도 · 9 서버 정지 기록 · 10 유지 · 13 유지. 남음: 3 관통돌진(K) · 8 낙하 대조(→ S1) · 11 공중 높이차(체감) · 12 W1 범위 - `MV1-report.md` |
 | W1 1 ~ 6 | 1 ~~원거리 발사 시각 변경~~ → W1 후속 되돌림(밸런스) · 2 근접 전조 0.045초(서버 즉시 판정) · 3 남의 강화 이펙트 · 4 활 교체 모델 · 5 일어나기 무적 = 보스 발사 1건당 1회(리뷰 반영) · 6 모션 품질 초안 - `W1-report.md` |
 | S1 1 ~ 10 | 1 수평 여유(10% 미만 속도 조작) · 2 원장 이전 태초 preLedger · 3 태초 리더보드 UI · 4 비밀 둥지 남은 단서 · 5 속사 버프 상한 밖 · 6 C1 계측 라이브 · 7 발사 허가 400/s · 8 상한 없는 스탯 4종 · 9 봉투 x축 · 10 G2a(나) 띄워 두기 체인 첫머리 미적발(미확인 - 다음 세션 첫 Play에서 계측 줄 확인) - `S1-report.md` |
+| S1 후속 1 ~ 5 | 1 공속 버프 포함 스위치(+19.6% - 추천 끄기 유지) · 2 상한 3종 제안값 < 도달 최대(추천 도달 최대 위로) · 3 신발 속도 구간 쌍검 ÷ 대검 1.36 ~ 1.48 · 4 공중 정체 3.5초 · 5 C 둥지 모양(A2) - `S1-fix-report.md` |
 | MV1b 1 · 2 | 1 재분류 B 2곳 지붕 없음(활강 착지 가능 - 추천 유지) · 2 바위 계단 2번째 도약 = 1단 + 대시(추천 유지) - `MV1b-report.md` |
 | D1-3 1 | 캐주얼 1,000 = 39.2h(목표 하한 40의 0.8h 아래 - 추천: 하한 39 또는 오차 수용) - `D1-3-report.md` ⑤ |
 | ~~D1 1 ~ 4 · 6 · 9~~ | D1-2에서 처리(모형 = 보스 포함 · 상한 · 격차 · 반짝이 · 무기 태초 문구) |
@@ -102,6 +105,7 @@
 - (M1-2 후속) S16(UI) 메뉴바 자체 점검은 칸 3개를 기대 - 파티 칸 삭제로 더 틀린다. M1-2(나) 귀환 3항목이 첫 Play에서 X · 다음 Play 7/7(원인 미확정 - 흔들림). 수동 Play에서 `/gg keycheck` 두 Play 왕복은 `_manual`이 서버마다 새로 시작해 안 이어진다.
 - ~~(MV1에서 확인 · 옛 기대값) M1-3T(가) "SAVE_VERSION 41" · M1-0(가) 파동 4개~~ → MV1b에서 기대값 갱신(30/30 · 10/10).
 - S04(나) 멈춤 - `verify.exclude`로 회귀 제외(원인 미확정).
+- (S1 후속) G2a(나) 띄워 두기가 체인 첫머리(서버 시작 약 12초 뒤)에서만 발 +17 ~ 20에 멈춘다(클라가 AlignPosition을 끝까지 안 따름 - 천장 · 도착 대기 · 붙잡기 · 복제 정지 아님 · 원인 미확정). 서버 판정은 옳음 · 이제 공중 정체 검사가 잡는다. M1-3T(나) "순간이동 1초 뒤 줍기" 이유 코드가 흔들림(teleport / few_samples - 줍기는 늘 거절).
 - (A1에서 확인) G1-2(나) "처치 시간 측정 - 잡몹이 없다" X - 앞선 블록이 남긴 필드 몹에 의존(A1 변경 되돌려도 같은 X · S09 · S12와 함께 돌면 O) - S01(나)와 같은 계열.
 - (C1 마무리에서 발견) S11(가) "옛 스테이지 45 / 50 / 75 / 100 자리 강화석 ≈5" X(실제 ≈6 - 보스 배율 · 드랍 변경 뒤 옛 기대값) · 같은 Play 클라 S11(UI) 6/8(같은 계열). 저장 이관 항목은 O.
 - (D1에서 확인 · 옛 기대값) S12b(가) "제단 오프셋 |z| > 22"(M1-2에서 제단이 광장 가운데로) · G1-2(가) "SAVE_VERSION 기대 36" · S11(UI) "골드·경험치 20마리분"(보스 hpMultiplier 24).
