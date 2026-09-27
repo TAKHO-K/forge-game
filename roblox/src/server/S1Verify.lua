@@ -129,16 +129,14 @@ function V.runPure()
 		local function lagRun(withPermit)
 			local lagSt = HeightGuard.newState()
 			lagSt.exemptUntil, lagSt.graceUntil = 0, 0
-			lagSt.hGood, lagSt.hAt, lagSt.bucket = Vector3.new(0, 3, 0), 20, 0
+			lagSt.hGood, lagSt.hAt = Vector3.new(0, 3, 0), 20 -- 버킷 = 걸어 온 상태(가득 - 리뷰 5 대조군이 되돌림을 내도록 비행은 2초)
 			local x, out = 0, {}
-			for i = 1, 8 do
+			for i = 1, 8 do -- 2초(점프대 두 번 이어 타기)
 				local now = 20 + i * 0.25
 				if withPermit and i == 1 then -- 서버는 발판 위 표본(지연된 위치 기록)으로 허가한 뒤에 비행 표본을 본다
 					HeightGuard.grantAt(lagSt, 1000, MovementConfig.permit.padSeconds, "합성 점프대(늦은 허가)", now, maxPad * MovementConfig.moveGuard.padSpeedMargin)
 				end
-				if i <= 5 then
-					x += (i % 2 == 1) and maxPad * 0.5 or 0 -- 몰림: 두 폴링 몫이 한 표본에
-				end
+				x += (i % 2 == 1) and maxPad * 0.5 or 0 -- 몰림: 두 폴링 몫이 한 표본에
 				local ctx = HeightGuard.horizontalContext(lagSt, fakeChar, fakeRoot, fakeHum, now)
 				local v = HeightGuard.evaluateHorizontal(lagSt, { pos = Vector3.new(x, 3, 0) }, now, ctx)
 				if v == "hrevert" then
@@ -149,13 +147,45 @@ function V.runPure()
 			return table.concat(out)
 		end
 		local lagWith, lagWithout = lagRun(true), lagRun(false)
-		r.check(("지연 0.25 점프대(설계 %.1f/s · 버킷 빈 채 · 표본 몰림): 허가 %s(기대 되돌림 0) · 허가 없음 %s(기대 되돌림 있음)"):format(maxPad, lagWith, lagWithout),
+		r.check(("지연 0.25 점프대(설계 %.1f/s · 2초 · 표본 몰림): 허가 %s(기대 되돌림 0) · 허가 없음 %s(기대 되돌림 있음)"):format(maxPad, lagWith, lagWithout),
 			not lagWith:find("R") and lagWithout:find("R") ~= nil)
 		r.check(("발판 허가 수평: 점프대(설계 40/s) %.0f(기대 40 × %.2f) · 통통 열매 %.1f(기대 = 걷기 %.1f) · 나무 점프대 %d개 설계 최대 %.1f/s × 여유 = %.1f(기대 < 보스 %d)"):format(
 			padRate, MovementConfig.moveGuard.padSpeedMargin, fruitRate, walkRate, padCount, maxPad, maxPad * MovementConfig.moveGuard.padSpeedMargin, MovementConfig.moveGuard.permitSpeed),
 			math.abs(padRate - 40 * MovementConfig.moveGuard.padSpeedMargin) < 1e-6 and fruitRate == walkRate and padCount > 0 and maxPad * MovementConfig.moveGuard.padSpeedMargin < MovementConfig.moveGuard.permitSpeed)
 		-- 한 폴링 합법 최대(걷기 + 대시 몫) < 버킷 + 허가 · 합법 목록
 		r.note(("합법 이동 목록(데이터 MovementConfig.moveGuard.legal): %s"):format(table.concat(MovementConfig.moveGuard.legal, " · ")))
+	end)
+
+	r.section("공중 정체(S1 후속 0-1)", function()
+		local HG = require(script.Parent.HeightGuard)
+		local stallS = MovementConfig.heightGuard.stallSeconds
+		local function run(feetAt, seconds, flags)
+			local st = HG.newState()
+			st.allowance = 22.38
+			HG.evaluate(st, { feetY = 0, pos = Vector3.new(0, 3, 0), grounded = true }, 0)
+			local out = {}
+			local t = 0
+			while t < seconds do
+				t += 0.25
+				local f = feetAt(t)
+				table.insert(out, HG.evaluate(st, { feetY = f, pos = Vector3.new(0, f + 3, 0), grounded = false, gliding = flags and flags.gliding, probe = flags and flags.probe }, t))
+			end
+			return out
+		end
+		local function reverts(list)
+			local n = 0
+			for _, v in ipairs(list) do
+				n += v == "revert" and 1 or 0
+			end
+			return n
+		end
+		local hover = reverts(run(function(t) return math.min(t * 40, 17.3) end, 6))
+		local glide = reverts(run(function(t) return math.min(t * 40, 17.3) end, 6, { gliding = true }))
+		-- 합법 최대: 점프 → 공중 점프 2 → 대시 두 번(수평 - 높이 유지) → 떨어짐(약 2.6초 공중 · 한 번도 이륙 표본 아래로 안 내려감)
+		local legal = reverts(run(function(t) if t < 1.6 then return 6 + t * 8 elseif t < 2.2 then return 18.8 else return 18.8 - (t - 2.2) * 40 end end, 2.8))
+		local ledgeFloor = reverts(run(function(t) return math.min(t * 40, 17.3) end, 6, { probe = function() return 16 end })) -- 발 바로 아래 얇은 파트(FloorMaterial Air)
+		r.check(("허용 아래 띄워 두기(발 +17.3 · 6초) 되돌림 %d(기대 ≥ 1 - %.1f초) · 같은 동작 활강 표시 %d(기대 0) · 합법 최대 체공 2.8초 %d(기대 0) · 발밑 지면(probe) %d(기대 0)"):format(hover, stallS, glide, legal, ledgeFloor),
+			hover >= 1 and glide == 0 and legal == 0 and ledgeFloor == 0)
 	end)
 
 	r.section("해금 단계별 높이 허용 · 서버 궤적 낙하", function()

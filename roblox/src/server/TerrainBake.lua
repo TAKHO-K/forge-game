@@ -355,8 +355,8 @@ capsuleParams.FilterType = Enum.RaycastFilterType.Exclude
 capsuleParams.IgnoreWater = true
 local BODY = Vector3.new(1.8, 3.8, 1.8)
 local FOOT_CLEAR = 1.2
-local function exclusions()
-	local list = {}
+local function exclusions(extra)
+	local list = table.clone(extra or {}) -- S1 후속: 서버 실행 중에는 번개 문 속성(Cycle)을 시작 때 지운다 - 호출부가 서버 문 목록을 넘긴다(NestServer.debugTimedDoors)
 	for _, p in ipairs(Workspace:GetDescendants()) do
 		if p:IsA("BasePart") and (p:GetAttribute("Cycle") or p:GetAttribute("NestId") or p:FindFirstAncestorOfClass("Model") and p:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid")) then
 			table.insert(list, p)
@@ -364,8 +364,8 @@ local function exclusions()
 	end
 	return list
 end
-function TerrainBake.capsuleCheck(nests)
-	capsuleParams.FilterDescendantsInstances = exclusions()
+function TerrainBake.capsuleCheck(nests, extraExclude)
+	capsuleParams.FilterDescendantsInstances = exclusions(extraExclude)
 	local bad = {}
 	local checked = 0
 	for _, n in ipairs(nests) do

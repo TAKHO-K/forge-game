@@ -219,7 +219,7 @@ function G2aVerify.runLive(player, env)
 			afterLaunch == 0 and patternEvent ~= nil)
 		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(허용 + 10) 되돌림 %s초 뒤(허용을 처음 넘은 표본부터 · 기대 ≤ 1.5 - 폴링 0.25 × 연속 2 · 서버가 본 최고 +%.1f · 허용 %.2f · off %s) · 기록 시각 있음 %s"):format(
 			afterJump, caught and ("%.2f"):format(caught) or "없음", hoverRise, st.allowance or -1, tostring(HeightGuard.debugOff), tostring(st.flaggedAt ~= nil)),
-			afterJump == 0 and caught ~= nil and caught <= 1.5 and st.flaggedAt ~= nil)
+			afterJump == 0 and caught ~= nil and (caught <= 1.5 or (exceededAt == nil and caught <= MovementConfig.heightGuard.stallSeconds + 1)) and st.flaggedAt ~= nil) -- S1 후속: 허용 아래에서 버티면 공중 정체로 잡힌다(stallSeconds)
 		-- ③ 리더보드: 이 판(10초 전 시작)에 되돌림이 있었다 → 거절
 		local judged = Leaderboard.onBossCleared({ stage = 10, bossId = "x", bossMaxHp = 1, seconds = 10, isParty = false, members = { { player = player, advanced = false, reason = "verify", ratio = 1 } }, contributors = {} })
 		local clean = Leaderboard.onBossCleared({ stage = 10, bossId = "x", bossMaxHp = 1, seconds = 0.01, isParty = false, members = { { player = player, advanced = false, reason = "verify", ratio = 1 } }, contributors = {} })

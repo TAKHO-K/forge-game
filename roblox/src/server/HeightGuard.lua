@@ -96,7 +96,24 @@ function HeightGuard.evaluate(st, sample, now)
 	end
 	if sample.grounded then
 		st.supportY, st.supportPos, st.strikes = sample.feetY, sample.pos, 0
+		st.stallSince = nil
 		return "ok"
+	end
+	-- S1 후속 0-1: 공중 정체 - 서버가 아는 합법 정체(활강 · 원거리 공중 정지 · 허가 · 예외 · 유예) 밖에서 stallSeconds 넘게 stallDropStuds도 안 내려가면 되돌린다
+	if sample.gliding or sample.hovering or permit or now < st.graceUntil or now < st.exemptUntil then
+		st.stallSince = nil
+	elseif not st.stallSince or sample.feetY < st.stallLow - cfg.stallDropStuds then
+		st.stallLow, st.stallSince = sample.feetY, now
+	elseif now - st.stallSince > cfg.stallSeconds then
+		local groundY = sample.probe and sample.probe()
+		if groundY and sample.feetY - groundY <= cfg.probeStuds then
+			st.stallSince = nil -- 발 바로 아래 지면(FloorMaterial이 Air로 읽힌 얇은 파트 · 경사) = 서 있음
+		else
+			st.stallSince = nil
+			st.strikes = 0
+			st.lastRevertWhy = "stall"
+			return "revert"
+		end
 	end
 	if now < st.graceUntil or now < st.exemptUntil then
 		st.strikes = 0
@@ -119,6 +136,7 @@ function HeightGuard.evaluate(st, sample, now)
 	st.strikes += 1
 	if st.strikes >= cfg.strikes then
 		st.strikes = 0
+		st.lastRevertWhy = "height"
 		return "revert"
 	end
 	return "strike"
@@ -361,6 +379,8 @@ function HeightGuard.poll(player, now)
 		grounded = humanoid.FloorMaterial ~= Enum.Material.Air or (state == Enum.HumanoidStateType.Climbing and HeightGuard.nearClimbable(character, root))
 			or swimming or state == Enum.HumanoidStateType.Seated,
 		skip = root.Anchored or humanoid.Health <= 0,
+		gliding = character:GetAttribute("Gliding") == true, -- S1 후속 0-1 공중 정체: 서버 활강 상태(GlideState)
+		hovering = require(script.Parent.AirState).isHovering(player, now), -- 원거리 공중 정지(서버 기록)
 		probe = function()
 			probeParams.FilterDescendantsInstances = { character }
 			local hit = Workspace:Raycast(root.Position, Vector3.new(0, -(MovementConfig.rootAboveFeetStuds + JumpMath.heightGuardAllowance() + cfg.probeStuds), 0), probeParams)
@@ -407,8 +427,8 @@ function HeightGuard.poll(player, now)
 		st.flaggedAt = now
 		st.reverts += 1
 		st.permit = nil -- 리뷰: 위반으로 되돌렸으면 남은 허가도 끝
-		warn(("[forge-game] 높이 보정: %s 발 %.1f(기준 %.1f + 허용 %.2f 초과 %d회 · 허가 %s) → (%.0f, %.1f, %.0f)로 되돌림"):format(
-			player.Name, from.Y - MovementConfig.rootAboveFeetStuds, st.supportY, st.allowance or JumpMath.heightGuardAllowance(), cfg.strikes,
+		warn(("[forge-game] 높이 보정%s: %s 발 %.1f(기준 %.1f + 허용 %.2f 초과 %d회 · 허가 %s) → (%.0f, %.1f, %.0f)로 되돌림"):format(
+			st.lastRevertWhy == "stall" and ("(공중 정체 %.1f초)"):format(cfg.stallSeconds) or "", player.Name, from.Y - MovementConfig.rootAboveFeetStuds, st.supportY, st.allowance or JumpMath.heightGuardAllowance(), cfg.strikes,
 			permitBefore and ("%s ≤ %.1f"):format(tostring(permitBefore.source), permitBefore.maxFeetY) or "없음", st.supportPos.X, st.supportPos.Y, st.supportPos.Z))
 	end
 	return verdict
