@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **W2(공격 잔상 · 판정 일치 · 투사체 · 피해 숫자 준비) + 파트 0 · 2026-09-28 새벽** · 직전 보고서 = `docs/phase/W2-report.md`(그 전 `BR1-4c-report.md` · `BR1-4b-report.md` · `BR1-4b0-report.md` · `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **C2(전투 공식 CombatFormulaV2) + W2 마무리 + 파트 0(COMMON §7-2 ~ §7-4) · 2026-09-28** · 직전 보고서 = `docs/phase/C2-report.md`(그 전 `W2-report.md` · `BR1-4c-report.md` · `BR1-4b-report.md` · `BR1-4b0-report.md` · `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -28,6 +28,8 @@
 | 저장 | **SAVE_VERSION 44**(v44 audit - λ · 태초 굴림 수 · 플레이 시간 / v43 장비 태초 각인 primordial · 출처 source · 옛 태초 = 이전 태초 + 잠금 / v42 hints.stealLockSeen / v41 world.nests · world.nestDex · eggs / v40 world.bossGates / v38 world.portals · peakLevel / v39 titles) · Studio 수동 Play = `Player_<id>_manual`(M1-2 후속 - 실제 프로필은 읽기만) | `server/SaveSystem.lua` |
 
 ## 3. 다음 단계
+
+> **C2 끝(2026-09-28) - place 저장 불필요**: 전투력(한 대 기대 피해) ÷ 권장(대표 장비 = EconSim 일반 첫 도달) → 주는 피해(평탄 0.7 ~ 1.3 · 1.5 = 처치 시간 0.52배 · 0.5 = 5.5배) · 받는 피해 = 벌칙만 · 레벨차 계수 통합 · 보스전 제외 · 스위치 `CombatFormulaData.enabled`(기본 켬). EconSim 목표 전부 안(상위 1% 1,952h · 캐주얼 1,000 39.1h). 경험치 악용 = 1순위(구조)로 해결. W2 마무리 = 궁수 당김 고정점(머리 기준) · 활/지팡이 가까운 대상 휘두르기 · 활 공중 발사 0.2초. **다음 = M2**(결정 필요 C2-1 · 4 · 7 먼저).
 
 > **M1-4 끝(2026-09-26) - place 저장 필요**(전 구역 다시 구움). 무리 스폰 = 지점 80 · 무리 3 ~ 5 · 상한 서버 120 · 사람당 곁 무리 3(`WorldMapData.spawnSites`).
 
@@ -74,6 +76,7 @@
 
 | 출처 | 내용 |
 |---|---|
+| C2 1 ~ 9 | 1 후반 일반 몹 28대 / 3초 체감(수정 안 함) · 2 보스전 제외 유지 · 3 받는 피해 벌칙만 유지 · 4 "일반 환생 5 약 12h" = 실측 5.1h(12h는 일반 1,000) · 5 잡몹 기여도 배율 뒤 · 6 전투력 표시 = 공격만 · 7 대표 표 급변(500 → 700) · 8 남의 화면 휘두르기 안 보임 · 9 보스 칸 권장 줄 - `C2-report.md` §5 |
 | ~~M1-0 ① ~ ④~~ | **닫힘(M1-0 후속 · 2026-09-25 사용자 확정 - 전부 추천)**: ① 지평선 위 커서 = 커서 광선 수평 방향 조준 ② 보스전 중만 카메라 최소 30° ③ 시점 고정 중 HUD 클릭 불가 유지 ④ 필드 몬스터 공중 회피 유지 |
 | ~~BR1 ① ~ ⑤~~ | BR1-2에서 다시 맞춤(근접 솔로 전멸 32% · 서리 55% · 파티 p 0.93) |
 | ~~BR1-2 1 ~ 7~~ | **닫힘(BR1-3 - 사용자 확정)**: 1 모형 확인은 카툰 · 모션 뒤 · 2 ④ 8발 유지 · 3 평타 체감은 모션 단계 · 4 공동 책임 45% 유지 · 5 파티 보정은 재측정 뒤(→ BR1-3 1) + 설치형 공격 규칙 · 6 에어본 5% 고정 |
@@ -109,6 +112,7 @@
 
 ## 5. 알려진 X(재조사 안 함 - 목록만)
 
+- C2: 투사체 ⑦ 재측정(지연 0.25 · 움직이는 몹 50발) 표본 부족 X(5발) · W2 리본 4직업 스크린샷 미완(눈 바닥에서 안 보임) · G1-3(가) 기대값 갱신 필요(레벨차 계수 통합).
 - G1-1(UI) 고리 타이밍 · 29-1 첫 기믹 +0.35초(서버 시작 부하) · S12b(UI) · S16(UI) · S19b(UI) · P25b(UI)(계정 가방 상태) - G1-5 / G2a 전 블록 Play와 같은 계열.
 - 29-1 일부 X = BR1 의도된 수치 변경(기대값 갱신 안 함). (BR1(나) 눈덩이 "끝 0"은 BR1-2 첫 Play에서 고침 - 67/67)
 - (M1) 29-3 · 29-5 블록 삭제(삭제된 스킬). ~~S12b(나) CommunityCenter~~ → M1-2에서 커뮤니티 광장 건물 기준으로 고침(13/13). `ZoneTerrain` · `TeleportPad`는 이제 아무도 짓지 않는다(삭제 안 함).
