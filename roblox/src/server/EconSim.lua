@@ -152,6 +152,9 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	if whatIf.attackSpeedCap then -- 공격 속도 상한(math.huge = D1-2 전 - 상한 없음)
 		set(CombatConfig, "attackSpeedMaxMultiplier", whatIf.attackSpeedCap)
 	end
+	if whatIf.attackSpeedCapIncludesBuffs ~= nil then -- S1 후속 0-2: 속사 버프까지 공속 상한 안(true)
+		set(CombatConfig, "attackSpeedCapIncludesBuffs", whatIf.attackSpeedCapIncludesBuffs)
+	end
 	if whatIf.glovesCritDmgBonus then -- 태초 장갑 치명 피해(0 = 고유 효과 끔)
 		set(PrimordialData.unique, "glovesCritDmgBonus", whatIf.glovesCritDmgBonus)
 	end

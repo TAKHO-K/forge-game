@@ -320,8 +320,8 @@ function NestServer.start()
 			prompt.Triggered:Connect(function(player)
 				NestServer.tryPickup(player, id)
 			end)
-		elseif part:IsA("BasePart") and part:GetAttribute("TimedDoor") then
-			local key = part:GetAttribute("TimedDoor")
+		elseif part:IsA("BasePart") and part:GetAttribute("Cycle") then -- 번개 문(S1 후속 0-6: 속성 이름 중립 · 값 = true - 옛 값은 둥지 id였다)
+			local key = part:GetAttribute("Cycle")
 			timedDoors[key] = timedDoors[key] or {}
 			table.insert(timedDoors[key], part)
 		end

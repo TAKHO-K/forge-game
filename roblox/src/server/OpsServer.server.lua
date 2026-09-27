@@ -5,6 +5,7 @@
 --   /ops versions <userId>                저장 버전 목록(DataStore 30일 보관)
 --   /ops restore <userId> <version>        저장 버전 복구(그 사람이 이 서버에 없어야 한다 - 다른 서버 접속은 운영 절차로 확인)
 --   /ops review <userId>                  검토 대기 목록(최근)
+--   /ops stats [all]                       알파 통계(C1 끌어오기 계측 - 이 서버 메모리 · all = 서버 종료 때 저장된 요약 합 - S1 후속 0-5)
 -- 결과는 명령한 사람 채팅 줄(시스템 메시지)로 돌려준다. 자동 제재는 없다.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -137,6 +138,18 @@ function handlers.review(args)
 	return #rows > 0 and table.concat(rows, " / ") or "none(이 서버 기록)"
 end
 
+function handlers.stats(args)
+	local AlphaStats = require(script.Parent.AlphaStats)
+	if args[2] == "all" then
+		local total, servers, uptime = AlphaStats.loadTotals()
+		if not total then
+			return "failed: 저장소 읽기"
+		end
+		return ("저장된 서버 %d개 · 가동 %.1f시간 · %s"):format(servers, uptime / 3600, AlphaStats.describe(total))
+	end
+	return "이 서버: " .. AlphaStats.describe(AlphaStats.snapshot())
+end
+
 -- 반환: 결과 문자열(허용 밖 = nil - 조용히 무시).
 function Ops.handle(player, text)
 	if not allowed(player) then
@@ -156,6 +169,8 @@ function Ops.handle(player, text)
 	replyRemote:FireClient(player, result)
 	return result
 end
+
+require(script.Parent.AlphaStats).start() -- S1 후속 0-5: 서버 종료 때 알파 통계 요약 저장
 
 local command = Instance.new("TextChatCommand")
 command.Name = "ForgeOps"

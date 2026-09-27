@@ -114,12 +114,18 @@ return {
 
 	-- D1-2 능력치 상한(조사표 = docs/phase/D1-2-report.md ①). 공격 속도 배율(신발 속도% + 보석 신속 → 1 + 합)의 상한 - 기본 대비 ×2.5.
 	-- 이유: D1 위력표로 태초 신발이 ×10.8(쌍검 평타 0.016초 = 한 프레임보다 짧다)이 됐다. 전설 신발(×2.15)이 이미 실제로 쓰이는 값이라 그 바로 위로 잡았다
-	-- (쌍검 0.07초 · 활 0.13초 - 스윙 모션은 쿨다운보다 길어 원래부터 다시 시작된다 · 서버 요청 초당 약 14회). 활 속사 버프(SkillData.bow.Q.attackSpeedCap)는 따로 곱한다.
+	-- (쌍검 0.07초 · 활 0.13초 - 스윙 모션은 쿨다운보다 길어 원래부터 다시 시작된다 · 서버 요청 초당 약 14회). 활 속사 버프는 attackSpeedCapIncludesBuffs(아래)에 따라 상한 안/밖.
 	-- 태초 신발 = 이 상한 보장(Loot.getShoesSpeedPercent). 이동 속도 상한은 MovementConfig.moveSpeedMaxMultiplier(×1.5).
 	attackSpeedMaxMultiplier = 2.5,
+	-- S1 후속 0-2: true = 버프(활 속사)까지 곱한 최종 배율에 위 상한(PlayerCombat.getTotalSpeedMultiplier). 기본 false = 옛 규칙(버프는 상한 밖) -
+	-- 켜면 EconSim(프로필 = 활) 상위 1% 25,300이 1,968 → 2,354시간(+19.6% - 밸런스 불변 ±3% 초과)이라 결정 대기.
+	attackSpeedCapIncludesBuffs = false,
 	-- D1-2: 치명 피해 추가분(보석 5칸 + 장비 3부위 치명 옵션 합 + 태초 장갑 고유 효과)의 상한. 옵션 8자리 전부 태초 · 롤 최대 · 최고 레벨 ≈ +1.8 + 태초 장갑 +0.4 = 2.2 -
 	-- 지금 도달 가능한 최대를 안 자르는 안전 천장(리뷰 3 - 1.5면 치명 몰빵 기존 계정이 조용히 약해진다). 확정 치명 넘침 전환분(resolveGuaranteedCrit)은 이 밖에서 더해진다(버프 규칙 - 의도).
 	critDmgBonusCap = 2.2,
+	-- S1 후속 0-3: 최종 피해 버킷(강화 단계 + 옵션 finalDamage 축 - PlayerCombat.getFinalDamageBonus) 합의 상한. 지금 출처는 강화뿐(+30 × 3.5% = +105%)이라 안 잘린다 -
+	-- 새 출처가 생겨도 이 천장 안(EconSim 불변 확인). 위력 · 치명 확률 · 스킬 피해 옵션은 제안값이 도달 최대보다 낮아 미적용(S1-fix 보고서 0-3).
+	finalDamageBonusCap = 1.05,
 
 	-- 조작감(19-2) - 공격 방향 회전. 클릭 방향과 15도 이내면 회전 없이 즉시 공격하고
 	-- (몬스터가 계속 움직이므로 임계값이 없으면 미세 회전 딜레이가 매번 붙어 답답해진다),

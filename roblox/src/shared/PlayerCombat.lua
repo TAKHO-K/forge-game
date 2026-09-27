@@ -54,7 +54,7 @@ end
 -- 평타 · 스킬(getAttack)과 치유량(HealCast)이 같은 함수를 쓴다. 지금 "finalDamage" 옵션 종류는 없다(C6 - 새 옵션 종류를 만들지 않았다) - 출처가 생기면
 -- 호출부가 넘기는 optionBonus(PlayerProfile.getOptionBonus(player, "finalDamage"))에 자동으로 들어온다.
 function PlayerCombat.getFinalDamageBonus(weaponLevel, optionBonus)
-	return Sanitize.number(Enhance.getFinalDamageBonus(weaponLevel) + (optionBonus or 0), 0)
+	return Sanitize.number(math.min(Enhance.getFinalDamageBonus(weaponLevel) + (optionBonus or 0), CombatConfig.finalDamageBonusCap), 0) -- S1 후속 0-3: 버킷 합 상한
 end
 
 -- optionFinalDamageBonus(P2.5a) = 옵션 · 보석이 최종 데미지 버킷에 더하는 값(없으면 0). 강화 몫은 weapon.level에서 여기서 더한다.
@@ -94,6 +94,15 @@ end
 -- D1-2: 공격 속도 상한(CombatConfig.attackSpeedMaxMultiplier) - 이동 속도는 JumpMath.moveSpeedMultiplier가 따로 자른다.
 function PlayerCombat.getSpeedMultiplier(speedPercentBonus)
 	return math.min(1 + (speedPercentBonus or 0), CombatConfig.attackSpeedMaxMultiplier)
+end
+
+-- S1 후속 0-2: 최종 공격 속도 배율(장비 · 보석 × 버프). CombatConfig.attackSpeedCapIncludesBuffs = true면 버프(활 속사)까지 곱한 뒤 상한(×2.5) 하나로 자른다 -
+-- false(지금 - 결정 대기)면 옛 규칙(장비 · 보석만 상한 · 버프는 그 밖에서 곱 - 실효 최대 ×6.25). 켜면 EconSim 상위 1% 25,300 +19.6%(S1-fix 보고서 0-2).
+function PlayerCombat.getTotalSpeedMultiplier(speedPercentBonus, buffSpeedMultiplier)
+	if CombatConfig.attackSpeedCapIncludesBuffs then
+		return math.min((1 + (speedPercentBonus or 0)) * (buffSpeedMultiplier or 1), CombatConfig.attackSpeedMaxMultiplier)
+	end
+	return PlayerCombat.getSpeedMultiplier(speedPercentBonus) * (buffSpeedMultiplier or 1)
 end
 
 -- 치명타 판정 + 적용 - 유일한 위치(10-4 [3]). base는 평타의 getAttack 결과일 수도,
@@ -205,7 +214,7 @@ end
 function PlayerCombat.getAttackCooldown(classId, speedPercentBonus, buffSpeedMultiplier)
 	local class = ClassData.classes[classId]
 	return CombatConfig.attackCooldownSeconds
-		/ (class.atkSpeed * PlayerCombat.getSpeedMultiplier(speedPercentBonus) * (buffSpeedMultiplier or 1))
+		/ (class.atkSpeed * PlayerCombat.getTotalSpeedMultiplier(speedPercentBonus, buffSpeedMultiplier))
 end
 
 return PlayerCombat

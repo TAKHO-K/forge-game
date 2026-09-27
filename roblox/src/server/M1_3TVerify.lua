@@ -522,7 +522,7 @@ function V.runLive(player, env)
 		local open = NestServer.timedOpen(Workspace:GetServerTimeNow())
 		local doors, consistent = 0, true
 		for _, d in ipairs(Workspace.Ground:GetDescendants()) do
-			if d:IsA("BasePart") and d:GetAttribute("TimedDoor") then
+			if d:IsA("BasePart") and d:GetAttribute("Cycle") then
 				doors += 1
 				consistent = consistent and (d.CanCollide == not open)
 			end

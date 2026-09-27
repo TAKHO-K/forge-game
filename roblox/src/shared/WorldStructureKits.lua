@@ -400,6 +400,7 @@ end
 
 -- ─────────────────────────── C: 숨은 방(덮개 변형) ───────────────────────────
 -- 방: 안 w × d × h · 벽 두께 · 앞 문(door × doorH). 흙더미(raise)가 방을 덮고 보호 부피가 안과 문 앞을 비운다(끼임 0).
+-- S1 후속 0-6: 파트 · 속성 이름은 중립(Rock · Trunk · Foliage · Water · Post · Ambient · Cycle) - 옛 이름(AlcoveWall · FakeWall · TimedDoor · NestHint …)이 클라에서 비밀 둥지(C) 자리를 알려 줬다. 모양은 A2.
 function Kits.alcove(ctx, list)
 	local spec, cf = ctx.spec, ctx.cf
 	local A = K.alcove
@@ -416,16 +417,16 @@ function Kits.alcove(ctx, list)
 			local a = (i - 0.5) / segs * 2 * math.pi
 			if math.abs(((a + math.pi) % (2 * math.pi)) - math.pi) > 0.42 then -- 앞(−Z) 한 칸 비움
 				local p = cf * CFrame.new(math.sin(a) * R, 0, -math.cos(a) * R)
-				prim(list, m, "HollowTrunk", Vector3.new(4.4, h + 16, 2.2), CFrame.lookAt(p.Position, cf.Position) * CFrame.new(0, (h + 16) / 2 - SINK, 0), WOOD.color, { material = "Wood" })
+				prim(list, m, "Trunk", Vector3.new(4.4, h + 16, 2.2), CFrame.lookAt(p.Position, cf.Position) * CFrame.new(0, (h + 16) / 2 - SINK, 0), WOOD.color, { material = "Wood" })
 			end
 		end
-		prim(list, m, "HollowRoof", Vector3.new(2, 2 * R + 2, 2 * R + 2), cf * CFrame.new(0, h + 1, 0) * CFrame.Angles(0, 0, math.rad(90)), WOOD.color, { shape = "Cylinder", material = "Wood" })
+		prim(list, m, "Trunk", Vector3.new(2, 2 * R + 2, 2 * R + 2), cf * CFrame.new(0, h + 1, 0) * CFrame.Angles(0, 0, math.rad(90)), WOOD.color, { shape = "Cylinder", material = "Wood" })
 		for k = 0, 3 do
 			local a = k / 4 * 2 * math.pi + ctx.jitter
 			PropKit.place(list, m, "Common_LeafClump", cf * CFrame.new(math.cos(a) * 8, h + 16, math.sin(a) * 8), Vector3.new(18 / 14, 12 / 9, 18 / 14)) -- M1-4 소품 라이브러리
 		end
 		for k = 1, 4 do -- 덩굴 커튼(통과)
-			prim(list, m, "VineCurtain", Vector3.new(0.4, doorH + 3, 0.4), cf * CFrame.new(-2 + (k - 1) * 1.3, (doorH + 3) / 2, -R + 0.4), LEAF.color, { material = LEAF.material, collide = false })
+			prim(list, m, "Foliage", Vector3.new(0.4, doorH + 3, 0.4), cf * CFrame.new(-2 + (k - 1) * 1.3, (doorH + 3) / 2, -R + 0.4), LEAF.color, { material = LEAF.material, collide = false })
 		end
 		meta.roof = { y = (cf * CFrame.new(0, h, 0)).Position.Y, center = cf.Position, halfX = R, halfZ = R }
 		meta.door = { pos = (cf * CFrame.new(0, 0, -R)).Position, width = 4, dir = cf.LookVector }
@@ -438,49 +439,49 @@ function Kits.alcove(ctx, list)
 	-- 바닥 · 벽 · 지붕
 	local wood = cover == "oasis"
 	local mat = wood and WOOD or look
-	prim(list, m, "AlcoveFloor", Vector3.new(w + 2 * t, 1, d + 2 * t), cf * CFrame.new(0, -0.5, 0), look.dark, { material = look.material })
+	prim(list, m, "Rock", Vector3.new(w + 2 * t, 1, d + 2 * t), cf * CFrame.new(0, -0.5, 0), look.dark, { material = look.material })
 	local wallH = cover == "oasis" and 3 or h
 	if cover == "oasis" then -- 정자: 기둥 4 + 낮은 난간 3면 + 지붕
 		for _, sx in ipairs({ -1, 1 }) do
 			for _, sz in ipairs({ -1, 1 }) do
-				prim(list, m, "GazeboPost", Vector3.new(1, h, 1), cf * CFrame.new(sx * (w / 2 + t / 2), h / 2, sz * (d / 2 + t / 2)), WOOD.color, { material = "Wood" })
+				prim(list, m, "Post", Vector3.new(1, h, 1), cf * CFrame.new(sx * (w / 2 + t / 2), h / 2, sz * (d / 2 + t / 2)), WOOD.color, { material = "Wood" })
 			end
 		end
 	end
-	prim(list, m, "AlcoveWall", Vector3.new(w + 2 * t, wallH, t), cf * CFrame.new(0, wallH / 2, d / 2 + t / 2), mat.color, { material = mat.material })
+	prim(list, m, "Rock", Vector3.new(w + 2 * t, wallH, t), cf * CFrame.new(0, wallH / 2, d / 2 + t / 2), mat.color, { material = mat.material })
 	for _, sx in ipairs({ -1, 1 }) do
-		prim(list, m, "AlcoveWall", Vector3.new(t, wallH, d), cf * CFrame.new(sx * (w / 2 + t / 2), wallH / 2, 0), mat.color, { material = mat.material })
+		prim(list, m, "Rock", Vector3.new(t, wallH, d), cf * CFrame.new(sx * (w / 2 + t / 2), wallH / 2, 0), mat.color, { material = mat.material })
 	end
 	local dw = cover == "slab" and w or A.door
 	local sideW = (w + 2 * t - dw) / 2
 	if sideW > 0.1 then
 		for _, sx in ipairs({ -1, 1 }) do
-			prim(list, m, "AlcoveWall", Vector3.new(sideW, wallH, t), cf * CFrame.new(sx * (dw / 2 + sideW / 2), wallH / 2, -(d / 2 + t / 2)), mat.color, { material = mat.material })
+			prim(list, m, "Rock", Vector3.new(sideW, wallH, t), cf * CFrame.new(sx * (dw / 2 + sideW / 2), wallH / 2, -(d / 2 + t / 2)), mat.color, { material = mat.material })
 		end
 	end
 	if cover ~= "oasis" and h - doorH > 0.1 then
-		prim(list, m, "AlcoveLintel", Vector3.new(dw, h - doorH, t), cf * CFrame.new(0, doorH + (h - doorH) / 2, -(d / 2 + t / 2)), mat.color, { material = mat.material })
+		prim(list, m, "Rock", Vector3.new(dw, h - doorH, t), cf * CFrame.new(0, doorH + (h - doorH) / 2, -(d / 2 + t / 2)), mat.color, { material = mat.material })
 	end
 	if cover == "slab" then -- 쓰러진 큰 돌판이 지붕(기울어짐)
-		prim(list, m, "FallenSlab", Vector3.new(w + 8, 2.4, d + 8), cf * CFrame.new(0, h + 1.4, 0) * CFrame.Angles(math.rad(6), 0, math.rad(-5)), look.color, { material = look.material })
+		prim(list, m, "Rock", Vector3.new(w + 8, 2.4, d + 8), cf * CFrame.new(0, h + 1.4, 0) * CFrame.Angles(math.rad(6), 0, math.rad(-5)), look.color, { material = look.material })
 	else
-		prim(list, m, "AlcoveRoof", Vector3.new(w + 2 * t + (wood and 3 or 0), t, d + 2 * t + (wood and 3 or 0)), cf * CFrame.new(0, h + t / 2, 0), (wood and WOOD or look).dark or WOOD.color, { material = mat.material })
+		prim(list, m, "Rock", Vector3.new(w + 2 * t + (wood and 3 or 0), t, d + 2 * t + (wood and 3 or 0)), cf * CFrame.new(0, h + t / 2, 0), (wood and WOOD or look).dark or WOOD.color, { material = mat.material })
 	end
 	local doorZ = -(d / 2 + t)
 	local doorCf = cf * CFrame.new(0, 0, doorZ)
 	-- 덮개(통과 - 충돌 · 쿼리 없음)
 	if cover == "fakeWall" then
-		prim(list, m, "FakeWall", Vector3.new(dw + 2.5, doorH + 1.5, 1.4), doorCf * CFrame.new(0, (doorH + 1.5) / 2, -0.8), look.color, { material = look.material, collide = false })
+		prim(list, m, "Rock", Vector3.new(dw + 2.5, doorH + 1.5, 1.4), doorCf * CFrame.new(0, (doorH + 1.5) / 2, -0.8), look.color, { material = look.material, collide = false })
 	elseif cover == "vine" then
 		for k = 1, 6 do
-			prim(list, m, "VineCurtain", Vector3.new(0.35, doorH + 2, 0.35), doorCf * CFrame.new(-2.5 + (k - 1), (doorH + 2) / 2, -0.7), LEAF.color, { material = LEAF.material, collide = false })
+			prim(list, m, "Foliage", Vector3.new(0.35, doorH + 2, 0.35), doorCf * CFrame.new(-2.5 + (k - 1), (doorH + 2) / 2, -0.7), LEAF.color, { material = LEAF.material, collide = false })
 		end
 	elseif cover == "waterfall" then
-		prim(list, m, "FallSheet", Vector3.new(dw + 6, 26, 0.6), doorCf * CFrame.new(0, 12, -2), { 120, 180, 230 }, { material = "Glass", transparency = 0.45, collide = false })
+		prim(list, m, "Water", Vector3.new(dw + 6, 26, 0.6), doorCf * CFrame.new(0, 12, -2), { 120, 180, 230 }, { material = "Glass", transparency = 0.45, collide = false })
 	elseif cover == "buried" then
-		prim(list, m, "BuriedLintel", Vector3.new(dw + 5, 2, 3), doorCf * CFrame.new(0, doorH + 1, -0.6) * CFrame.Angles(0, 0, math.rad(4)), look.color, { material = look.material })
+		prim(list, m, "Rock", Vector3.new(dw + 5, 2, 3), doorCf * CFrame.new(0, doorH + 1, -0.6) * CFrame.Angles(0, 0, math.rad(4)), look.color, { material = look.material })
 	elseif cover == "timed" then
-		prim(list, m, "TimedDoor", Vector3.new(dw, doorH, 1), doorCf * CFrame.new(0, doorH / 2, 0), { 60, 58, 70 }, { material = look.material, attrs = { TimedDoor = spec.id } })
+		prim(list, m, "Rock", Vector3.new(dw, doorH, 1), doorCf * CFrame.new(0, doorH / 2, 0), { 60, 58, 70 }, { material = look.material, attrs = { Cycle = true } })
 	end
 	-- 흙더미(방을 덮는다 - 비밀 둥지 먼저 → 그 위에 지형) · 보호 부피(안 + 문 앞 통로)
 	local noMound = spec.noMound or cover == "slab" or cover == "oasis" or cover == "timed"
@@ -507,11 +508,11 @@ function Kits.alcove(ctx, list)
 	-- 환경 힌트(표시 없음 - 사람이 알아채는 것)
 	for _, hint in ipairs(spec.hint or {}) do
 		if hint == "stone" then
-			prim(list, m, "OddStone", Vector3.new(3.2, 2.6, 2.4), doorCf * CFrame.new(dw / 2 + 3.5, 1.1, -2.5) * CFrame.Angles(math.rad(8), math.rad(23), math.rad(14)), look.color, { material = look.material })
+			prim(list, m, "Rock", Vector3.new(3.2, 2.6, 2.4), doorCf * CFrame.new(dw / 2 + 3.5, 1.1, -2.5) * CFrame.Angles(math.rad(8), math.rad(23), math.rad(14)), look.color, { material = look.material })
 		elseif hint == "moss" then
-			prim(list, m, "MossLine", Vector3.new(0.5, 0.12, 9), doorCf * CFrame.new(-dw / 2 - 1, 0.15, -5) * CFrame.Angles(0, math.rad(12), 0), LEAF.color, { material = LEAF.material, collide = false })
+			prim(list, m, "Foliage", Vector3.new(0.5, 0.12, 9), doorCf * CFrame.new(-dw / 2 - 1, 0.15, -5) * CFrame.Angles(0, math.rad(12), 0), LEAF.color, { material = LEAF.material, collide = false })
 		elseif hint == "fireflies" or hint == "birds" or hint == "flow" then
-			prim(list, m, "NestHint", Vector3.new(1, 1, 1), doorCf * CFrame.new(0, doorH + 2, -4), { 0, 0, 0 }, { collide = false, transparency = 1, attrs = { NestHint = hint } })
+			prim(list, m, "Ambient", Vector3.new(1, 1, 1), doorCf * CFrame.new(0, doorH + 2, -4), { 0, 0, 0 }, { collide = false, transparency = 1, attrs = { Ambient = hint } })
 			if hint == "birds" then -- 앉은 새(몸 · 머리 - 소리 에셋 없음)
 				local perch = cf * CFrame.new(1.5, h + t + (noMound and 0.6 or A.mound + 0.6), 0)
 				PropKit.place(list, m, "Common_Bird", perch * CFrame.new(0, -0.45, 0)) -- M1-4 소품 라이브러리

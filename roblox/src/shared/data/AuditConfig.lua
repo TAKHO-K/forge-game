@@ -6,6 +6,8 @@ return {
 	opsLogStore = "OpsLog_v1", -- 운영 명령 기록: 키 "log" = 최근 opsLogKeep개
 	excludedStore = "PrimordialExcluded_v1", -- 명예의 전당 · 번호 집계에서 뺀 세계 번호(회수 · 격리): 키 "numbers" = { [번호 문자열] = 이유 }
 	boardStore = "PrimordialCount_v1", -- 태초 리더보드(OrderedDataStore): 값 = 개수 × 1e10 + (9999999999 − 달성 unix) - 동점 = 먼저 달성
+	alphaStatsStore = "AlphaStats_v1", -- S1 후속 0-5: 서버 종료 때 알파 통계 요약(AlphaStats): 키 "summaries" = 최근 alphaStatsKeep개 { at, jobId, uptime, 카운터 } · 검증 모드 = "_verify" 저장소
+	alphaStatsKeep = 100,
 	testKeyPrefix = "studio_",
 	reviewKeep = 30,
 	opsLogKeep = 200,

@@ -184,7 +184,8 @@ function G2aVerify.runLive(player, env)
 		align.Mode = Enum.PositionAlignmentMode.OneAttachment
 		align.Attachment0 = attachment
 		align.RigidityEnabled = true
-		align.Position = base + Vector3.new(0, JumpMath.heightGuardAllowance() + 3, 0)
+		-- S1 후속 0-1: +3이면 체인 첫머리(접속 5초 뒤)에 클라 물리가 목표까지 못 올라가 서버가 본 발이 허용 아래(+20.5 < 22.38)에 머물렀다 = 검증 여유 부족(서버 판정은 켜져 있었다 - 판정 흔적) → +10
+		align.Position = base + Vector3.new(0, JumpMath.heightGuardAllowance() + 10, 0)
 		align.Parent = root
 		local t0 = os.clock()
 		local caught
@@ -206,7 +207,7 @@ function G2aVerify.runLive(player, env)
 		task.wait(1)
 		r.check(("넉백 높이 %d(허용 %.2f 초과): 서버가 본 루트 최고 +%.1f · 되돌림 %d(기대 0 - 넉백 예외)"):format(launchHeight, JumpMath.heightGuardAllowance(), launchRise, afterLaunch),
 			afterLaunch == 0 and patternEvent ~= nil)
-		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(허용 + 3) 되돌림 %s초 뒤(기대 ≤ 1.5 - 폴링 0.25 × 연속 2 · 서버가 본 최고 +%.1f · 허용 %.2f · off %s) · 기록 시각 있음 %s"):format(
+		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(허용 + 10) 되돌림 %s초 뒤(기대 ≤ 1.5 - 폴링 0.25 × 연속 2 · 서버가 본 최고 +%.1f · 허용 %.2f · off %s) · 기록 시각 있음 %s"):format(
 			afterJump, caught and ("%.2f"):format(caught) or "없음", hoverRise, st.allowance or -1, tostring(HeightGuard.debugOff), tostring(st.flaggedAt ~= nil)),
 			afterJump == 0 and caught ~= nil and caught <= 1.5 and st.flaggedAt ~= nil)
 		-- ③ 리더보드: 이 판(10초 전 시작)에 되돌림이 있었다 → 거절

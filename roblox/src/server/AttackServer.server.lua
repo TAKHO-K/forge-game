@@ -367,7 +367,7 @@ local function handleAttack(player, aimPoint, clientAir)
 	-- 가정한 근사치다. 콤보로 스윙이 끊기고 새로 시작되는 드문 경우엔 클라 쪽 실제
 	-- 재생 시점과 몇십ms 어긋날 수 있지만, 피해 판정 자체(누가 맞았는가)에는 영향이 없다).
 	-- W1: 발사 시각 = 모션 타격 프레임(MotionTiming - 공격 속도 배율 · 3타 · 공중 반영 · 클라 WeaponVisual과 같은 함수 - 시각표 W1 보고서 ④)
-	local motionSpeed = PlayerCombat.getSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player)) * buffSpeedMultiplier
+	local motionSpeed = PlayerCombat.getTotalSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player), buffSpeedMultiplier)
 	local releaseDelay = MotionTiming.serverSeconds(classId, MotionTiming.comboIndex(comboCounts[player]), motionSpeed, isComboHit, isAir)
 	local travelTime = distance / ProjectileConfig.speedStudsPerSec[projectileKind]
 

@@ -617,7 +617,9 @@ function Travel.start(downPads)
 		local spec = id and WorldMapLayout.treeLaunch(id)
 		if spec then
 			local c = WorldMapLayout.tree().elements[id].center
-			LaunchPermit.register(part, { top = spec.top, center = c, radius = spec.radius, apexFeetY = spec.apexFeetY, source = ("나무 %s %d"):format(spec.kind == "pad" and "점프대" or "통통 열매", id) })
+			-- S1 후속 0-4: 점프대 수평 = (다음 요소까지 평면 거리 + 발판 반경) ÷ 비행 시간(TreeFx 포물선) · 통통 열매 = 제 속도 그대로(nil = 걷기)
+			local hSpeed = spec.kind == "pad" and (Vector3.new(spec.target.X - c.X, 0, spec.target.Z - c.Z).Magnitude + spec.radius) / WorldMapData.hub.tree.course.pad.flightSeconds or nil
+			LaunchPermit.register(part, { top = spec.top, center = c, radius = spec.radius, apexFeetY = spec.apexFeetY, hSpeed = hSpeed, source = ("나무 %s %d"):format(spec.kind == "pad" and "점프대" or "통통 열매", id) })
 			registered += 1
 		end
 	end

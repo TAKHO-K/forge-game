@@ -245,7 +245,7 @@ local function attrOf(st, name)
 end
 
 local function speedOf(st)
-	return PlayerCombat.getSpeedMultiplier(attrOf(st, "SpeedPercentBonus")) * (attrOf(st, "AttackSpeedBuffMultiplier") or 1)
+	return PlayerCombat.getTotalSpeedMultiplier(attrOf(st, "SpeedPercentBonus"), attrOf(st, "AttackSpeedBuffMultiplier"))
 end
 
 local function inCombat(st, now)

@@ -2406,8 +2406,8 @@ local function handleCommand(player, args)
 		reply(player, "잠긴 몹 말풍선 기록을 비웠습니다")
 	elseif sub == "stats" then
 		-- 알파 통계(T1 계측) - C1 결정 6 탱커 끌어오기
-		local snap = require(script.Parent.AlphaStats).snapshot()
-		local line = ("끌어오기 %d회 · 합 %.1f초 · 평균 %.2f초 · 약하게 맞은 공격 추정 %.1f · 최대 기준 상승 %d"):format(snap.pullCount, snap.pullSeconds, snap.pullAvgSeconds, snap.pullAvoidedHits, snap.pullMaxJump)
+		local AlphaStats = require(script.Parent.AlphaStats)
+		local line = AlphaStats.describe(AlphaStats.snapshot())
 		print("[AlphaStats] " .. line)
 		reply(player, line)
 	elseif sub == "bossintro" and args[2] == "reset" then

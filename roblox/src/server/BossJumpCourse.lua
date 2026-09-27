@@ -172,12 +172,22 @@ function BossJumpCourse.padLaunchSpec(pad)
 	local rootMax = pad.Position.Y + PL.probeRootStuds -- 클라가 "밟았다"로 읽는 루트 높이 상한
 	local target = pad:GetAttribute("LaunchTarget")
 	local apexFeet
+	local radius = math.max(pad.Size.X, pad.Size.Z) / 2
+	local hSpeed -- S1 후속 0-4: 발사 발판 수평 = 클라 포물선(BossEnvironmentView)의 (평면 거리 ÷ 비행 시간) 최대 - 밟는 루트 높이 두 끝 · 발판 가장자리 · 높이 발판 = 걷기 그대로(nil)
 	if typeof(target) == "Vector3" then
 		apexFeet = math.max(pad:GetAttribute("LaunchApexY") or target.Y + PL.defaultApexAboveTargetStuds, rootMax + PL.apexMinAboveRootStuds, target.Y + PL.targetClearStuds) - ROOT_ABOVE
+		local g = Workspace.Gravity
+		local flat = Vector3.new(target.X - pad.Position.X, 0, target.Z - pad.Position.Z).Magnitude + radius
+		hSpeed = 0
+		for _, rootY in ipairs({ pad.Position.Y, rootMax }) do
+			local apexY = math.max(pad:GetAttribute("LaunchApexY") or target.Y + PL.defaultApexAboveTargetStuds, rootY + PL.apexMinAboveRootStuds, target.Y + PL.targetClearStuds)
+			local total = math.sqrt(2 * g * (apexY - rootY)) / g + math.sqrt(2 * (apexY - target.Y) / g)
+			hSpeed = math.max(hSpeed, flat / total)
+		end
 	else
 		apexFeet = rootMax - ROOT_ABOVE + (pad:GetAttribute("LaunchHeight") or PL.defaultBoostHeightStuds)
 	end
-	return { top = top, center = pad.Position, radius = math.max(pad.Size.X, pad.Size.Z) / 2, apexFeetY = apexFeet + JumpMath.airJumpsOnlyStuds(), source = "수정 부수기 " .. pad.Name }
+	return { top = top, center = pad.Position, radius = radius, apexFeetY = apexFeet + JumpMath.airJumpsOnlyStuds(), hSpeed = hSpeed, source = "수정 부수기 " .. pad.Name }
 end
 
 local function registerPad(pad)

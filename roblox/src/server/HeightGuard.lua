@@ -35,8 +35,9 @@ function HeightGuard.newState()
 end
 
 -- 허가 한 장(순수 - 검증이 합성 상태에 준다). 가장 최근 것만 = 덮어쓴다.
-function HeightGuard.grantAt(st, maxFeetY, seconds, source, now)
-	st.permit = { maxFeetY = maxFeetY, issuedAt = now, expiresAt = now + seconds, source = source, airSeen = false }
+-- hRate(S1 후속 0-4) = 설계 체공 동안 수평 상한(stud/s) - 보스 발사 = moveGuard.permitSpeed(400) · 점프대 = 설계 수평 속도 × padSpeedMargin · nil = 걷기 그대로(통통 열매 · 붙잡기).
+function HeightGuard.grantAt(st, maxFeetY, seconds, source, now, hRate)
+	st.permit = { maxFeetY = maxFeetY, issuedAt = now, expiresAt = now + seconds, source = source, airSeen = false, hRate = hRate }
 	st.permits += 1
 	return st.permit
 end
@@ -214,8 +215,8 @@ function HeightGuard.horizontalContext(st, character, root, humanoid, now)
 	if humanoid:GetState() == Enum.HumanoidStateType.Swimming or require(script.Parent.WorldHazards).inWater(root.Position) then
 		rate = math.max(rate, walk + MG.flowMaxStuds)
 	end
-	if st.permit and now <= st.permit.expiresAt then -- 리뷰 4: 설계 체공 안만(내려가기 단계 = 걷기 · 활강 속도)
-		rate = math.max(rate, MG.permitSpeed)
+	if st.permit and st.permit.hRate and now <= st.permit.expiresAt then -- 리뷰 4: 설계 체공 안만(내려가기 단계 = 걷기 · 활강 속도) · S1 후속 0-4: 허가마다 수평 상한
+		rate = math.max(rate, st.permit.hRate)
 	end
 	return { rate = rate, exempt = now < st.exemptUntil, grace = now < st.graceUntil }
 end
@@ -230,11 +231,12 @@ function HeightGuard.exempt(player, seconds)
 end
 
 -- 발사 허가(점프대 · 통통 열매 - LaunchPermit가 발판 위였음을 확인한 뒤). maxFeetY = 설계 발 정점(공중 점프 몫 포함) - 여유는 여기서 더한다.
-function HeightGuard.grant(player, maxFeetY, seconds, source)
+-- hSpeed = 설계 수평 속도(점프대 포물선 - 없으면 걷기 그대로) · 여유 = moveGuard.padSpeedMargin.
+function HeightGuard.grant(player, maxFeetY, seconds, source, hSpeed)
 	if typeof(player) ~= "Instance" then
 		return nil
 	end
-	return HeightGuard.grantAt(stateOf(player), maxFeetY + PERMIT.marginStuds, seconds, source, os.clock())
+	return HeightGuard.grantAt(stateOf(player), maxFeetY + PERMIT.marginStuds, seconds, source, os.clock(), hSpeed and hSpeed * MG.padSpeedMargin or nil)
 end
 
 -- 순수: 서버가 보낸 발사(보스 패턴)의 출발 발 높이 상한. 서 있으면 지금 발 · 공중이면 서버가 늦게 볼 수 있으니 "마지막 지면 + 평소 허용"(그보다 높을 수 없다) ·
@@ -264,7 +266,7 @@ function HeightGuard.grantLaunch(player, riseStuds, airSeconds, source)
 	local st = stateOf(player)
 	st.forcedLaunch = { at = os.clock(), used = false, source = source } -- W1 리뷰 1: 서버가 건 발사만 따로(일어나기 무적 = 1건당 1회 소비)
 	local base = HeightGuard.launchBaseFeet(st, root.Position.Y - MovementConfig.rootAboveFeetStuds, humanoid.FloorMaterial ~= Enum.Material.Air)
-	return HeightGuard.grantAt(st, base + riseStuds + JumpMath.airJumpsOnlyStuds() + PERMIT.marginStuds, airSeconds + PERMIT.bossExtraSeconds, source, os.clock())
+	return HeightGuard.grantAt(st, base + riseStuds + JumpMath.airJumpsOnlyStuds() + PERMIT.marginStuds, airSeconds + PERMIT.bossExtraSeconds, source, os.clock(), MG.permitSpeed)
 end
 
 -- 서버 순간이동 뒤(복귀 · 심연 · 리스폰): 기준을 다음 폴링의 자리로 새로 잡는다(허가도 끝 - 다른 자리).

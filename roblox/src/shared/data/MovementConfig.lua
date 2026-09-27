@@ -97,9 +97,10 @@ return {
 	--   walk = 걷기 상한(16 × 1.5) · glide = 활강 전진(서버 Attribute Gliding) × glideMargin · water = 걷기 상한 + 물살 최대(flowMaxStuds) · permit = 발사 허가 비행(점프대 · 통통 열매 · 보스 발사 · 붙잡기 올라서기) ·
 	--   대시 = 서버가 준 대시마다 그 거리(× dashMargin)를 따로 쌓아 dashWindowSeconds 동안 쓴다(2단 대시 = 두 번) · 밀림 burst(선인장) · 예외(붙잡힘 · 가둠 · 서버 순간이동 = HeightGuard.reset · 루트 고정 · 사망) = 검사 안 함.
 	--   서버 순간이동 표시 없는 큰 이동(옛 "한 폴링 50 넘으면 순간이동으로 인정" - S1에서 삭제)은 이 검사가 되돌린다.
-	--   permitSpeed = 발사 허가 비행 중 수평 상한(보스 판 털기 초속 약 350 - 점프대 · 통통 열매 허가도 같은 값: 발판 위치를 서버가 확인한 허가 창 안만).
+	--   permitSpeed = 서버가 건 보스 발사(grantLaunch - 넉백 · 회오리 · 판 털기 초속 약 350 · 던지기) 설계 체공 중 수평 상한.
+	--   padSpeedMargin(S1 후속 0-4) = 플레이어 발판 허가(나무 점프대 · 수정 부수기 발판)의 수평 상한 = 설계 수평 속도(포물선 거리 ÷ 비행 시간) × 이 여유. 통통 열매 · 붙잡기 = 걷기 그대로(수평 속도를 안 준다).
 	--   walkMargin = 걷기 상한 물리 여유(경사 미끄럼 · 부딪힘 - S1 지연 실측: 상한 그대로면 24/s로 계속 걸을 때 버킷이 안 차 경계 오탐 1건) - 10% 미만 속도 조작은 못 잡는다(보고서).
-	moveGuard = { bucketSeconds = 1.5, slackStuds = 3, walkMargin = 1.1, glideMargin = 1.1, flowMaxStuds = 18, permitSpeed = 400, dashMargin = 1.15, dashWindowSeconds = 1.3, burstWindowSeconds = 1.0,
+	moveGuard = { bucketSeconds = 1.5, slackStuds = 3, walkMargin = 1.1, glideMargin = 1.1, flowMaxStuds = 18, permitSpeed = 400, padSpeedMargin = 1.25, dashMargin = 1.15, dashWindowSeconds = 1.3, burstWindowSeconds = 1.0,
 		legal = { "걷기(이속 상한 24)", "대시 · 공중 대시 · 태초 2단 대시(서버 대시 허가)", "활강(Gliding)", "물살", "발사 허가(점프대 · 통통 열매 · 보스 던지기 · 회오리 · 판 털기 · 넉백 · 붙잡기 올라서기)",
 			"선인장 밀림(burst)", "원거리 공중 정지 · 일어나기(이동 0)", "사다리 · 덩굴(수직)", "서버 순간이동(Travel · 리프트 · 복귀 · 보스 입장 · 보스 기믹 = HeightGuard.reset)", "붙잡힘 · 가둠(exempt)" } },
 	heightGuard = { toleranceStuds = 1.0, strikes = 2, probeStuds = 3.5, teleportResetStuds = 50, graceSeconds = 1.0, exemptExtraSeconds = 0.5,

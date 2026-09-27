@@ -3,7 +3,7 @@
 --   서버가 "최근 historySeconds 동안 이 사람 루트가 그 발판 기둥 안에 있었는가"를 자기 위치 기록으로 확인하고(요청이 도착한 순간의 거리가 아니다 - 빠르게 떠오르는 중이라
 --   도착 시각 거리는 지연 · 접근 방향에 따라 10을 넘는다: M1-2c 원인) → HeightGuard.grant(설계 정점).
 --   요청이 위치 기록보다 먼저 오면 pendingSeconds 동안 새 기록으로 다시 본다. 사람마다 cooldownSeconds · 허가는 가장 최근 것만(HeightGuard).
---   발판 등록 = register(part, spec) · spec = { top(윗면 Y), center(Vector3 - 윗면 가운데 XZ), radius, apexFeetY(설계 발 정점 - 공중 점프 몫 포함), seconds?, source }.
+--   발판 등록 = register(part, spec) · spec = { top(윗면 Y), center(Vector3 - 윗면 가운데 XZ), radius, apexFeetY(설계 발 정점 - 공중 점프 몫 포함), seconds?, source, hSpeed?(설계 수평 속도 - 없으면 걷기) }.
 --   서버가 직접 보내는 보스 발사(넉백 등)는 이 모듈이 아니라 HeightGuard.grantLaunch(보낸 쪽이 사실을 안다).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -85,7 +85,7 @@ end
 local function grant(player, part, spec, now, deferred)
 	lastGrantAt[player] = now
 	pending[player] = nil
-	HeightGuard.grant(player, spec.apexFeetY, spec.seconds or PERMIT.padSeconds, spec.source or part.Name)
+	HeightGuard.grant(player, spec.apexFeetY, spec.seconds or PERMIT.padSeconds, spec.source or part.Name, spec.hSpeed)
 	LaunchPermit.stats.granted += 1
 	if deferred then
 		LaunchPermit.stats.deferred += 1

@@ -96,15 +96,37 @@ function V.runPure()
 		local gFar = HeightGuard.evaluateHorizontal(gs, { pos = Vector3.new(500, 3, 0) }, 10.25, { rate = walk, grace = true })
 		local gBack = gs.hGood and gs.hGood.X or -1
 		local ps = HeightGuard.newState()
-		ps.permit = { expiresAt = 5, maxFeetY = 100 }
+		ps.permit = { expiresAt = 5, maxFeetY = 100, hRate = MovementConfig.moveGuard.permitSpeed } -- S1 후속 0-4: 보스 발사(grantLaunch)만 400
 		ps.exemptUntil, ps.graceUntil = 0, 0
 		local fakeChar = { GetAttribute = function() return nil end }
 		local fakeHum = { GetState = function() return Enum.HumanoidStateType.Running end }
 		local fakeRoot = { Position = Vector3.new(0, 2000, 0) } -- 물 밖
 		local inside = HeightGuard.horizontalContext(ps, fakeChar, fakeRoot, fakeHum, 4).rate
 		local after = HeightGuard.horizontalContext(ps, fakeChar, fakeRoot, fakeHum, 6).rate
-		r.check(("유예: 도착 근처 → %s · 500 밖 → %s(기준 = 도착 %.0f) · 허가 속도 설계 체공 안 %.0f · 뒤 %.0f"):format(gNear, gFar, gBack, inside, after),
+		r.check(("유예: 도착 근처 → %s · 500 밖 → %s(기준 = 도착 %.0f) · 보스 발사 허가 속도 설계 체공 안 %.0f · 뒤 %.0f"):format(gNear, gFar, gBack, inside, after),
 			gNear == "ok" and gFar == "hrevert" and gBack == 0 and inside == MovementConfig.moveGuard.permitSpeed and after < MovementConfig.moveGuard.permitSpeed)
+		-- S1 후속 0-4: 발판 허가 = 설계 수평 속도 × 여유(점프대) · 통통 열매(hSpeed 없음) = 걷기 그대로 · 나무 점프대 설계 수평 최대(표)
+		local walkRate = HeightGuard.horizontalContext(HeightGuard.newState(), fakeChar, fakeRoot, fakeHum, 4).rate
+		local pads = HeightGuard.newState()
+		HeightGuard.grantAt(pads, 100, 1.1, "합성 점프대", 3, 40 * MovementConfig.moveGuard.padSpeedMargin)
+		local padRate = HeightGuard.horizontalContext(pads, fakeChar, fakeRoot, fakeHum, 3.5).rate
+		local fruit = HeightGuard.newState()
+		HeightGuard.grantAt(fruit, 100, 4, "합성 통통 열매", 3, nil)
+		local fruitRate = HeightGuard.horizontalContext(fruit, fakeChar, fakeRoot, fakeHum, 3.5).rate
+		local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
+		local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+		local maxPad, padCount = 0, 0
+		for i in ipairs(WorldMapLayout.tree().elements) do
+			local s = WorldMapLayout.treeLaunch(i)
+			if s and s.kind == "pad" then
+				padCount += 1
+				local c = WorldMapLayout.tree().elements[i].center
+				maxPad = math.max(maxPad, (Vector3.new(s.target.X - c.X, 0, s.target.Z - c.Z).Magnitude + s.radius) / WorldMapData.hub.tree.course.pad.flightSeconds)
+			end
+		end
+		r.check(("발판 허가 수평: 점프대(설계 40/s) %.0f(기대 40 × %.2f) · 통통 열매 %.1f(기대 = 걷기 %.1f) · 나무 점프대 %d개 설계 최대 %.1f/s × 여유 = %.1f(기대 < 보스 %d)"):format(
+			padRate, MovementConfig.moveGuard.padSpeedMargin, fruitRate, walkRate, padCount, maxPad, maxPad * MovementConfig.moveGuard.padSpeedMargin, MovementConfig.moveGuard.permitSpeed),
+			math.abs(padRate - 40 * MovementConfig.moveGuard.padSpeedMargin) < 1e-6 and fruitRate == walkRate and padCount > 0 and maxPad * MovementConfig.moveGuard.padSpeedMargin < MovementConfig.moveGuard.permitSpeed)
 		-- 한 폴링 합법 최대(걷기 + 대시 몫) < 버킷 + 허가 · 합법 목록
 		r.note(("합법 이동 목록(데이터 MovementConfig.moveGuard.legal): %s"):format(table.concat(MovementConfig.moveGuard.legal, " · ")))
 	end)
@@ -307,6 +329,28 @@ function V.runLive(player, env)
 		r.check(("클라 신고 2000 · 서버 궤적 높이 3 → %s(쓴 속도 %.1f · 서버 값 %s)"):format(res, log.speed or -1, tostring(log.server)), res == "none" and log.server == true and math.abs(log.speed - math.sqrt(2 * workspace.Gravity * 3)) < 0.5) -- 높이 3 자유 낙하 속도 √(2g·3) ≈ 34(안전 아래)
 	end)
 
+	r.section("비밀 둥지 단서 이름(S1 후속 0-6)", function()
+		local OLD = { AlcoveFloor = true, AlcoveWall = true, AlcoveLintel = true, AlcoveRoof = true, FallenSlab = true, BuriedLintel = true, FakeWall = true, OddStone = true,
+			TimedDoor = true, GazeboPost = true, HollowTrunk = true, HollowRoof = true, VineCurtain = true, MossLine = true, FallSheet = true, NestHint = true }
+		local oldNames, oldAttrs, cycles, ambients = 0, 0, 0, 0
+		for _, d in ipairs(workspace.Ground:GetDescendants()) do
+			if OLD[d.Name] then
+				oldNames += 1
+			end
+			if d:GetAttribute("TimedDoor") ~= nil or d:GetAttribute("NestHint") ~= nil then
+				oldAttrs += 1
+			end
+			if d:GetAttribute("Cycle") then
+				cycles += 1
+			end
+			if d:GetAttribute("Ambient") then
+				ambients += 1
+			end
+		end
+		r.check(("월드 옛 단서 이름 %d · 옛 속성 %d(기대 0 0) · 번개 문(Cycle) %d · 환경 힌트(Ambient) %d(기대 둘 다 > 0 - 동작 불변)"):format(oldNames, oldAttrs, cycles, ambients),
+			oldNames == 0 and oldAttrs == 0 and cycles > 0 and ambients > 0)
+	end)
+
 	r.section("스테이지 상한 · 저장 전 자름", function()
 		local before = PlayerProfile.getInfiniteStage(player)
 		local set = PlayerProfile.setInfiniteStage(player, InfiniteStageConfig.hardMaxStage + 1)
@@ -369,15 +413,21 @@ function V.runLive(player, env)
 		local okUnlucky, tail = AcquisitionAudit.checkProbability(player)
 		r.check(("확률: 운 좋은 계정(λ 0.05 · 1개) → %s · 태초 3개 · λ 0.001 → %s(P = %.2g < 1e-6 = 검토 대기 · 제재 없음)"):format(okLucky and "통과" or "검토", okUnlucky and "통과" or "검토", tail or -1),
 			okLucky == true and okUnlucky == false)
-		-- ③ 속도 봉투: 플레이 1시간 · 최고 스테이지(지금 계정 값)가 봉투 초과면 보류
+		-- ③ 속도 봉투: 플레이 0시간(봉투 1 × 1.1) · 최고 스테이지(지금 계정 값)가 봉투 초과 = 보류. S1 후속 0-7: 개발 계정은 /gg 표시(gg_tainted)가 먼저 막아
+		--   실제 봉투 판정까지 못 갔다(S1 미확인) → 이 항목 동안만 표시 검사를 끄고 eligibility의 봉투 분기까지 실제로 태운다.
 		local Leaderboard = require(script.Parent.Leaderboard)
-		profile.audit.playSeconds = 3600
+		local savedTainted = PlayerProfile.isLeaderboardTainted
+		PlayerProfile.isLeaderboardTainted = function()
+			return false
+		end
+		profile.audit.playSeconds = 0
 		local best = PlayerProfile.getAccountBestStage(player)
 		local _, reasonFast = Leaderboard.eligibility(player)
 		profile.audit.playSeconds = math.floor(AuditMath.hoursForStage(best) * 3600) + 3600
 		local _, reasonOk = Leaderboard.eligibility(player)
-		r.check(("속도 봉투: 최고 %d · 플레이 1시간(봉투 %.0f × 1.1) → %s · 합법 시간 → %s"):format(best, AuditMath.envelopeStage(1), tostring(reasonFast), tostring(reasonOk)),
-			(best <= AuditMath.envelopeStage(1) * AuditConfig.envelope.margin or reasonFast == "velocity_hold") and reasonOk ~= "velocity_hold")
+		PlayerProfile.isLeaderboardTainted = savedTainted
+		r.check(("속도 봉투(실제 eligibility · 표시 검사 끔): 최고 %d · 플레이 0시간(봉투 %.1f) → %s(기대 velocity_hold) · 합법 시간 → %s(기대 ok)"):format(best, AuditMath.envelopeStage(0) * AuditConfig.envelope.margin, tostring(reasonFast), tostring(reasonOk)),
+			best > AuditMath.envelopeStage(0) * AuditConfig.envelope.margin and reasonFast == "velocity_hold" and reasonOk == "ok")
 		-- ④ 운영 명령: 격리 해제(원장 확인은 운영 판단) · 기록
 		local hook = ServerStorage:FindFirstChild("OpsHook")
 		local rel, logEntry = hook:Invoke(player, "/ops release " .. player.UserId .. " 999999")
@@ -385,6 +435,13 @@ function V.runLive(player, env)
 		r.check(("운영: release 위조(번호 999999) → %s(격리 %s) · revoke 잡몹 → %s(회수 · 칭호 %s) · 기록 %s"):format(tostring(rel), tostring(forged.primordial.quarantined), tostring(rev),
 			tostring(PlayerProfile.hasTitle(player, PrimordialData.titleId)), logEntry and logEntry.text or "-"),
 			rel == "released" and forged.primordial.quarantined == nil and rev == "revoked" and legit.primordial.revoked ~= nil and logEntry ~= nil)
+		-- ⑤ S1 후속 0-5: /ops stats(이 서버 메모리) · 종료 요약 저장(검증 모드 = _verify 저장소) → /ops stats all
+		local AlphaStats = require(script.Parent.AlphaStats)
+		local here = hook:Invoke(player, "/ops stats")
+		local saved = AlphaStats.saveSummary()
+		local all = hook:Invoke(player, "/ops stats all")
+		r.check(("운영 stats: 이 서버 → \"%s\" · 요약 저장 %s · all → \"%s\""):format(tostring(here), tostring(saved), tostring(all)),
+			type(here) == "string" and here:find("끌어오기") ~= nil and saved == true and type(all) == "string" and all:find("저장된 서버") ~= nil)
 		-- 되돌리기
 		profile.inventory = savedInv
 		profile.audit = savedAudit

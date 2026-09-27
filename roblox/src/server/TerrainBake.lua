@@ -349,7 +349,7 @@ end
 
 -- ─────────────────────────── 굽기 뒤 캐릭터 캡슐 통과 검사(사용자 보강 ①) ───────────────────────────
 -- 경로 점(발)마다: 몸통 상자(폭 1.8 · 높이 3.8 · 발 위 1.2부터 - 캐릭터는 2 이하 턱을 저절로 넘는다: 0.5에서 재면 걷는 요철에 스쳤다)를 이웃 점까지 양방향으로 밀어 보고(Blockcast) · 점마다 가로 광선 6 + 위 광선으로 막힘을 찾는다.
--- 지형 + 충돌 파트(쿼리 가능)만 막힘 - 통과 덮개(가짜 벽 · 덩굴 · 폭포)는 쿼리가 없어 안 걸린다. 시간 문(TimedDoor)은 열린 때로 친다. 물은 막힘이 아니다.
+-- 지형 + 충돌 파트(쿼리 가능)만 막힘 - 통과 덮개(가짜 벽 · 덩굴 · 폭포)는 쿼리가 없어 안 걸린다. 시간 문(속성 Cycle)은 열린 때로 친다. 물은 막힘이 아니다.
 local capsuleParams = RaycastParams.new()
 capsuleParams.FilterType = Enum.RaycastFilterType.Exclude
 capsuleParams.IgnoreWater = true
@@ -358,7 +358,7 @@ local FOOT_CLEAR = 1.2
 local function exclusions()
 	local list = {}
 	for _, p in ipairs(Workspace:GetDescendants()) do
-		if p:IsA("BasePart") and (p:GetAttribute("TimedDoor") or p:GetAttribute("NestId") or p:FindFirstAncestorOfClass("Model") and p:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid")) then
+		if p:IsA("BasePart") and (p:GetAttribute("Cycle") or p:GetAttribute("NestId") or p:FindFirstAncestorOfClass("Model") and p:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid")) then
 			table.insert(list, p)
 		end
 	end

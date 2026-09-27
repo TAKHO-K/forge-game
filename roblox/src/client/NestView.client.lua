@@ -117,13 +117,13 @@ local function refreshAll()
 	end
 end
 
--- 환경 힌트(반딧불): 둥지 입구 근처 앵커(NestHint = fireflies)에 기본 입자 몇 개(빛나는 작은 점 - VineLiftView와 같은 방식)
+-- 환경 힌트(반딧불): 둥지 입구 근처 앵커(속성 Ambient = fireflies - S1 후속 0-6 중립 이름)에 기본 입자 몇 개(빛나는 작은 점 - VineLiftView와 같은 방식)
 local function addHint(part)
-	if part:GetAttribute("NestHint") ~= "fireflies" or part:FindFirstChild("NestFireflies") then
+	if part:GetAttribute("Ambient") ~= "fireflies" or part:FindFirstChild("Motes") then
 		return
 	end
 	local e = Instance.new("ParticleEmitter")
-	e.Name = "NestFireflies"
+	e.Name = "Motes"
 	e.Shape = Enum.ParticleEmitterShape.Sphere
 	e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
 	e.Rate = 1.2
@@ -148,7 +148,7 @@ local function track(part)
 			refresh(id)
 		end)
 		task.defer(refresh, id)
-	elseif part:GetAttribute("NestHint") then
+	elseif part:GetAttribute("Ambient") then
 		addHint(part)
 	end
 end
