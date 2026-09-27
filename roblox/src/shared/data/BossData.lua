@@ -120,8 +120,8 @@ local MECHANICS = {
 	--   시전이 끝나면 얼린 사람 전원을 **가까운 순서대로** 잡는다 - 보스가 이동 속도 × chaseSpeedMultiplier로 다가가(chaseReachStuds 안 · 최대 chaseMaxSeconds) 들어 올린다(liftSeconds).
 	--     잡힌 사람은 보스 머리 위 둘레(holdLiftStuds · holdOffsetStuds)에 들려 보스를 따라간다.
 	--   마지막 사람을 잡은 뒤 holdSeconds(길게) → 던짐(보스별 던지는 모션 · 아레나 벽 앞 wallMarginStuds까지 - 맵 밖이면 기존 복귀) + 현재 체력 × currentHpFraction.
-	--   발악(사용자): 잡힌 사람들이 **게이지 하나**를 함께 연타로 줄인다 - 필요 횟수 = pressesBase + pressesPerExtra × (얼린 인원 − 1). 먼저 잡힌 사람은 혼자 누르는 시간이 길다.
-	--     게이지 0 → 전원(잡힘 + 아직 얼음) 풀림 + 보스 기절 stunSeconds. 동료가 손(꼬리)을 rescueHits만큼 때리거나 곁에서 F 홀드 → 같다.
+	--   BR1-4a 탈출(사용자 정정): 사람마다 발버둥 게이지(pressesBase회 · 초당 maxPressesPerSecond까지) 또는 동료가 그 사람 손을 rescueHits번 · 곁에서 F 홀드 → 그 사람만 풀림.
+	--     보스 기절(stunSeconds)은 ① 잡힌 전원 탈출(아무도 안 던져짐) ② 시전 판정에 아무도 안 걸림 - 두 경우만. holdSeconds 안에 못 빠져나온 사람 = 던짐(기절 없음).
 	--   잡기 동안 보스는 새 패턴을 시작하지 않는다(스킬 진행 중) · 얼음 · 잡힘 · 던짐은 서버 높이 검증 예외.
 	--   BR1-4a 4a-2(사용자): 얼림 판정 = **시전 끝 judgeWindowSeconds(1.5초) 동안의 누적 체공 ≥ airAccumSeconds**(옛 "연속 1.2초"). 강제 체공(넉백 · 발사 허가) ·
 	--     원거리 공중 정지 · 가둠도 체공으로 센다. 봇 시뮬(로컬 - 지면 체류 0.2 ~ 1초 · 1단 0.54 / 공중 점프 섞음): 0.65초 → 습관 점프 환생 0 53% · 1 75% · 3 83% · 멈춘 유저 0%
@@ -139,7 +139,7 @@ local MECHANICS = {
 		throw = { heightStuds = 14, wallMarginStuds = 12, minDistanceStuds = 40 }, -- 넉백 상한을 거치지 않는다(escape) - 맵 밖이면 기존 복귀
 		currentHpFraction = 0.5,
 		stunSeconds = 4.0,
-		struggle = { maxPressesPerSecond = 6, pressesBase = 18, pressesPerExtra = 8 },
+		struggle = { maxPressesPerSecond = 6, pressesBase = 18 }, -- BR1-4a: 사람마다(옛 공유 게이지 + 인원당 8은 폐기)
 		rescueHits = { requiredHits = 3, hitIntervalSeconds = 0.5 },
 		maxAirSeconds = 1.961, -- 한 체공 최대(공중 점프 2 + 대시 - movement-metrics v2 · JumpMath.maxAirSeconds) - 회피 검사 "보고 착지"의 기준
 	},
@@ -945,7 +945,8 @@ local SPECIES = {
 			-- BR1-3 에네르기파(옛 벽 반사 레이저 `beam` 대체 · primitive "sweep" = BossHandlersBR1) - BR1-3의 반원 180° 휩쓸기(걸어서 뒤로 · ×3.2)는 아래 BR1-4a 규칙으로 바뀌었다(파티클 방출기 0 - 부품 · 트윈).
 			-- BR1-4a 4a-3(사용자 개정): 사거리 = 맵 절반(lengthArenaFraction × 아레나 지름 = 반지름) · **점프로 넘는 낮은 빔**(beamHeightStuds - 발이 이보다 높으면 안 맞는다) ·
 			--   sweepDeg 540°를 sweepSeconds 3.6초(한 바퀴 2.4초 = 한 자리를 1 ~ 2번 지나간다 - 한 바퀴에 점프 1 ~ 2회로 읽힌다) · 시작 = 대상 방향 − startLeadDeg(발사 0.4초 뒤 대상에 닿는다) ·
-			--   가끔(gapChance) 보스 곁 gapInnerStuds 안이 빈틈(빔이 그 밖에서 시작 - 전조에 안전 원) · 평소 빔 시작 = innerStuds(보스 몸 밖).
+			--   가끔(gapChance) 보스 곁 gapInnerStuds 안이 빈틈(빔이 그 밖에서 시작 - 안전색 원) · 평소 빔 시작 = innerStuds(보스 몸 밖).
+			--   예고(사용자 정정) = 540° 전체를 칠하지 않고 레이저보다 0.6초 앞서 도는 바닥 띠 + 회전 화살표(클라 BossBR13View - 지나간 자리는 표시 없음).
 			--   맞으면 끌림(pull - 보스 쪽으로 speedStuds · 최대 maxSeconds) 동안 tickSeconds마다 도트(능력치 기반 - 앵커 ×0.45 = 6.4%) → 풀림 + immuneSeconds 면역(이번 시전에 다시 안 걸린다).
 			--   안전장치: 시전당 한 사람 총 피해 ≤ 최대 체력 × castMaxHpFraction(45% - 첫 타 + 도트 6번 = 앵커 45%). 회피(BossSkillMath.beamJumpWorst): 빔이 한 자리를 지나는 시간 × 여유 ≤ 1단 점프로 빔 위에 떠 있는 시간.
 			energyBeam = {

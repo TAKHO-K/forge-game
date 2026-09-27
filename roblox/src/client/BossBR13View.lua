@@ -1,6 +1,6 @@
 -- BR1-3 새 패턴의 그림 - 서버(BossHandlersBR1)가 보낸 사실만 그린다. 판정 없음. 파티클 방출기 0(부품 · 트윈 · BossFx 풀).
 --   swipeOutline  강화 평타 부채꼴 테두리 흰 선 두 줄(보스 몸 밖부터 - 가려지지 않게) + 무기 번쩍
---   sweep         에네르기파(BR1-4a): 빔 고리(위험색) + 시작선 + 회전 화살표 한 바퀴 반 + 빈틈 안전 원 · 머리 위 ↻×1.5 → 낮은 빔이 540° 돈다 · 끌림(beamPull)
+--   sweep         에네르기파(BR1-4a): 레이저보다 0.6초 앞서 도는 바닥 띠 + 회전 화살표(지나간 자리는 표시 없음) + 빈틈 안전 원 · 머리 위 ↻×1.5 → 낮은 빔이 540° 돈다 · 끌림(beamPull)
 --   boomerang     분신 돌격: 선(위험색) + 선 끝 분신 실루엣 · 화살표 → 분신이 벽까지 갔다가 돌아와 흡수(선은 끝까지 남는다)
 --   armadillo     아르마딜로 태세: 가시가 돋고(전조) → 가시 껍질 + 머리 위 "✋ 공격 멈춤" → 반격 가시(날아와 바닥 원에 꽂힌다)
 --   playerStun    기절한 사람 머리 위 별
@@ -199,39 +199,31 @@ local function clearSweep()
 	end
 end
 
--- BR1-4a 에네르기파(낮은 빔 540°): 전조 = 빔이 도는 고리(inner ~ length - 보이는 장판 = 판정) + 빔 시작선 + 회전 화살표(한 바퀴 반) + 빈틈이면 보스 곁 안전 원(초록 테두리).
+-- BR1-4a 에네르기파(낮은 빔 540°) 예고(사용자 정정): 540° 전체를 한 번에 칠하지 않는다(어디로 피할지 안 보인다).
+--   바닥 띠(레이저 궤적 예고) = 레이저보다 BEAM_LEAD_SECONDS 앞서 같은 방향으로 도는 바닥 선 + 띠 바깥 끝의 회전 화살표 · 레이저가 지나간 자리는 아무것도 안 남는다.
+--   전조 동안 띠는 시작선에 서 있다가 발사 BEAM_LEAD_SECONDS 전부터 돈다 · 빈틈 회차는 보스 곁 원을 안전색으로.
+local BEAM_LEAD_SECONDS = 0.6
 function BossBR13View.sweepTelegraph(data)
 	clearSweep()
-	sweep = { data = data, parts = {} }
+	sweep = { data = data, parts = {}, fireAt = os.clock() + data.seconds }
 	local color = data.color or DANGER
-	for _, part in ipairs(wedge(data.center, 0, 360, data.inner, data.length, DANGER, 0.93)) do
-		TweenService:Create(part, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 0.75 }):Play()
-		table.insert(sweep.parts, part)
+	local span = data.length - data.inner
+	local band = newPart(Vector3.new(3, 0.2, span), DANGER, 0.35)
+	local arrowA = newPart(Vector3.new(1.2, 0.2, 4), WHITE, 0.05)
+	local arrowB = newPart(Vector3.new(1.2, 0.2, 4), WHITE, 0.05)
+	for _, p in ipairs({ band, arrowA, arrowB }) do
+		table.insert(sweep.parts, p)
 	end
-	local startDir = Vector3.new(math.cos(math.rad(data.startDeg)), 0, math.sin(math.rad(data.startDeg)))
-	table.insert(sweep.parts, segment(data.center + startDir * data.inner, data.center + startDir * data.length, data.halfWidth * 2, color, 0.3, 0.3))
-	if data.gap then -- 보스 곁 빈틈(안전) - 초록 테두리 원
+	sweep.band, sweep.arrowA, sweep.arrowB = band, arrowA, arrowB
+	if data.gap then -- 보스 곁 빈틈(안전) - 안전색 원판 + 테두리
+		local safe = disc(data.center, data.inner - 0.6, UIColors.success, 0.7)
+		table.insert(sweep.parts, safe)
 		for _, part in ipairs(arcLine(data.center, data.inner - 0.6, 0, 360, 0.8, UIColors.success, 0.1, 0.35)) do
 			table.insert(sweep.parts, part)
 		end
 	end
-	-- 바닥 회전 화살표: 시작선에서 한 바퀴 반(반경 11 · 두 겹 - 540°를 읽히게)
-	for turn = 0, 1 do
-		local fromDeg = data.startDeg + data.dirSign * 360 * turn
-		local span = turn == 0 and 330 or 170
-		local toDeg = fromDeg + data.dirSign * span
-		local r = 11 + turn * 3
-		for _, part in ipairs(arcLine(data.center, r, fromDeg, toDeg, 1.0, WHITE, 0.05, 0.5)) do
-			table.insert(sweep.parts, part)
-		end
-		local tipAt = data.center + Vector3.new(math.cos(math.rad(toDeg)), 0, math.sin(math.rad(toDeg))) * r
-		local tangent = Vector3.new(-math.sin(math.rad(toDeg)), 0, math.cos(math.rad(toDeg))) * data.dirSign
-		for _, side in ipairs({ 1, -1 }) do
-			local back = tipAt - tangent * 3 + Vector3.new(math.cos(math.rad(toDeg)), 0, math.sin(math.rad(toDeg))) * 1.8 * side
-			table.insert(sweep.parts, segment(back, tipAt, 1.0, WHITE, 0.05, 0.5))
-		end
-	end
 	-- 기 모으기: 보스 앞(시작선 쪽) 낮은 높이에 빛이 커진다
+	local startDir = Vector3.new(math.cos(math.rad(data.startDeg)), 0, math.sin(math.rad(data.startDeg)))
 	local orb = newPart(Vector3.one * 0.6, color, 0.1, Enum.PartType.Ball)
 	orb.CFrame = CFrame.new(data.center + startDir * 5 + Vector3.new(0, data.beamHeight, 0))
 	TweenService:Create(orb, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.one * 5 }):Play()
@@ -242,6 +234,32 @@ function BossBR13View.sweepTelegraph(data)
 	if head then
 		-- 위에서 보면 +각 = 시계 방향(X → Z) - 화면 기준 화살표 · 한 바퀴 반
 		sweep.gui = billboard(head, (data.dirSign > 0 and "↻" or "↺") .. "×1.5", WHITE, nil, UDim2.new(0, 120, 0, 90))
+	end
+end
+
+-- 바닥 띠 · 화살표 자리(매 프레임) - 발사 시각(전조 끝) 기준 BEAM_LEAD_SECONDS 앞의 레이저 각. 레이저가 끝나기 전에 띠가 끝 각에 닿으면 숨긴다.
+local function updateBand(d)
+	local skill = { sweepDeg = d.sweepDeg, sweepSeconds = d.sweepSeconds, startLeadDeg = d.startLeadDeg }
+	local ahead = os.clock() - sweep.fireAt + BEAM_LEAD_SECONDS
+	local done = ahead > d.sweepSeconds
+	for _, p in ipairs({ sweep.band, sweep.arrowA, sweep.arrowB }) do
+		p.Transparency = done and 1 or (p == sweep.band and 0.35 or 0.05)
+	end
+	if done then
+		return
+	end
+	local deg = BossSkillMath.sweepAngleAt(skill, d.angleDeg, d.dirSign, math.max(ahead, 0))
+	local dir = Vector3.new(math.cos(math.rad(deg)), 0, math.sin(math.rad(deg)))
+	local y = Vector3.new(0, 0.25, 0)
+	local mid = d.center + dir * ((d.inner + d.length) / 2) + y
+	sweep.band.CFrame = CFrame.lookAt(mid, mid + dir)
+	-- 화살표: 띠 바깥 끝에서 회전 방향(접선)으로 "<" 두 획
+	local tangent = Vector3.new(-dir.Z, 0, dir.X) * d.dirSign
+	local tip = d.center + dir * (d.length - 4) + tangent * 5 + y
+	for i, p in ipairs({ sweep.arrowA, sweep.arrowB }) do
+		local side = i == 1 and 1 or -1
+		local back = tip - tangent * 3 + dir * 1.8 * side
+		p.CFrame = CFrame.lookAt((tip + back) / 2, tip)
 	end
 end
 
@@ -474,6 +492,9 @@ end
 
 -- 매 프레임: 빔 회전 · 분신 이동(서버와 같은 함수로 시계를 따라간다 - 판정은 서버)
 RunService.RenderStepped:Connect(function()
+	if sweep and sweep.band then
+		updateBand(sweep.data) -- BR1-4a: 레이저 궤적 예고 띠(0.6초 앞)
+	end
 	if sweep and sweep.beam and sweep.startedAt then
 		local d = sweep.data
 		local skill = { sweepDeg = d.sweepDeg, sweepSeconds = d.sweepSeconds, startLeadDeg = d.startLeadDeg }

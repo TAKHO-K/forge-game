@@ -214,19 +214,28 @@ function BossArenaMap.enableSliceFloor(zoneKey, count, hubRadius)
 	hub.Color, hub.Material = color, material
 	base.floor.CanCollide, base.floor.CanQuery, base.floor.Transparency = false, false, 1
 	base.rim.CanCollide, base.rim.CanQuery = false, false -- 테라스 원판(바닥 − 1.5)이 아레나 전체 아래에 깔려 있다 - 켜 두면 구멍으로 떨어진 사람이 그 위에 선다(BR1-4a Play 1)
-	local state = { model = model, slices = slices, hub = hub }
+	local state = { model = model, slices = slices, hub = hub, count = count, hubRadius = hubRadius }
 	sliceFloors[zoneKey] = state
 	return state
 end
 
--- 조각 하나를 무너뜨림(collapsed = true) / 되돌림. 반환: 바꾼 파트 수.
+-- 조각 하나를 무너뜨림(collapsed = true) / 되돌림 - 그 조각 위 둔덕(지면 폴더 층 원판)도 같이(Play 2: 둔덕이 남아 떨어진 사람이 그 위에 섰다). 반환: 바꾼 파트 수.
 function BossArenaMap.setSliceCollapsed(zoneKey, index, collapsed)
 	local state = sliceFloors[zoneKey]
 	local parts = state and state.slices[index]
+	local changed = 0
 	for _, p in ipairs(parts or {}) do
 		p.CanCollide, p.CanQuery, p.Transparency = not collapsed, not collapsed, collapsed and 1 or 0
+		changed += 1
 	end
-	return parts and #parts or 0
+	local zone = WorldConfig.zones[zoneKey]
+	for _, mound in ipairs(state and BossArenaMap.moundsOf(zoneKey) or {}) do -- (active 표는 이 아래에 선언 - 접근 함수로)
+		if require(ReplicatedStorage.Shared.BossSkillMath).sliceIndexOf(zone.center, mound.Position, state.count, state.hubRadius, 0) == index then
+			mound.CanCollide, mound.CanQuery, mound.Transparency = not collapsed, not collapsed, collapsed and 1 or 0
+			changed += 1
+		end
+	end
+	return changed
 end
 
 function BossArenaMap.disableSliceFloor(zoneKey)
@@ -1103,6 +1112,12 @@ function BossArenaMap.dress(zoneKey, bossData, seed)
 		zoneKey, seed, #layout.items, #(layout.mounds or {}), layout.attempts, report.minWallGap, report.minPairGap, report.coverage * 100,
 		tostring(report.connected), (os.clock() - startedAt) * 1000))
 	return state
+end
+
+-- BR1-4a: 이 아레나의 둔덕 파트(조각 붕괴가 같이 끈다)
+function BossArenaMap.moundsOf(zoneKey)
+	local state = active[zoneKey]
+	return state and state.mounds or {}
 end
 
 function BossArenaMap.undress(zoneKey)

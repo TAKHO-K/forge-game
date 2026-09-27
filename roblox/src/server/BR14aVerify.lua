@@ -100,11 +100,10 @@ function V.runPure()
 		-- 발버둥 게이지(표): 필요 횟수 = base + perExtra × (인원 − 1) · 초당 상한 maxPressesPerSecond · 들고 있기 holdSeconds
 		local s = g.struggle
 		local cells = {}
-		for n = 1, 4 do
-			local need = s.pressesBase + s.pressesPerExtra * (n - 1)
-			table.insert(cells, ("%d명 %d회 = 최대 속도 %.1f초 · 초당 4회 %.1f초"):format(n, need, need / (n * s.maxPressesPerSecond), need / (n * 4)))
+		for _, rate in ipairs({ s.maxPressesPerSecond, 4, 3 }) do -- 사람마다 게이지(인원과 무관)
+			table.insert(cells, ("초당 %d회 %.1f초"):format(rate, s.pressesBase / rate))
 		end
-		r.note(("발버둥(들고 있기 %.1f초 · 구출 %d타 %.1f초 간격 → 최소 %.1f초): %s"):format(g.holdSeconds, g.rescueHits.requiredHits, g.rescueHits.hitIntervalSeconds,
+		r.note(("발버둥(사람마다 %d회 · 들고 있기 %.1f초 · 구출 %d타 %.1f초 간격 → 최소 %.1f초): %s"):format(s.pressesBase, g.holdSeconds, g.rescueHits.requiredHits, g.rescueHits.hitIntervalSeconds,
 			(g.rescueHits.requiredHits - 1) * g.rescueHits.hitIntervalSeconds, table.concat(cells, " / ")))
 		r.check(("솔로 탈출(초당 4회) %.1f초 ≤ 들고 있기 %.1f초"):format(s.pressesBase / 4, g.holdSeconds), s.pressesBase / 4 <= g.holdSeconds)
 	end)
@@ -171,13 +170,32 @@ function V.runPure()
 				end
 			end
 		end
-		local pairsBad = 0
+		-- 2연타: 전멸기 · 기믹(%최대체력 고정 - 90% 전멸기는 무엇과 붙어도 100%를 넘는다 = BR1-2부터 설계)이 낀 쌍은 빼고, 일반 패턴끼리의 위반 = 0 ·
+		-- 바뀐 패턴(돌진 · 잠행 찌르기 · 에네르기파 · 대공 잡기 · 회오리)이 낀 위반은 전부 전멸기 · 기믹 쌍인지 본다.
+		local CHANGED = { charge = true, stab = true, energyBeam = true, grab = true, whirl = true, tornado = true }
+		local normalBad, changedBad, allBad = {}, {}, 0
 		for _, id in ipairs(ALL) do
-			local _, violations = BossSim.checkPairs(id)
-			pairsBad += violations
+			local boss = BossData.bosses[id]
+			local rows, violations = BossSim.checkPairs(id)
+			allBad += violations
+			local function fixed(sid)
+				local s = boss.skills[sid]
+				return s.role == "gimmick" or FIXED_PRIMITIVES[s.primitive] == true
+			end
+			for _, row in ipairs(rows) do
+				if row.possible and row.share >= 1 then
+					if not fixed(row.first) and not fixed(row.second) then
+						table.insert(normalBad, ("%s %s→%s %.0f%%"):format(id, row.first, row.second, row.share * 100))
+						if CHANGED[row.first] or CHANGED[row.second] then
+							table.insert(changedBad, ("%s %s→%s"):format(id, row.first, row.second))
+						end
+					end
+				end
+			end
 		end
-		r.check(("보스 아레나 낙하 = 제외(%s) · 회피 부등식 위반 %d%s · 2연타 위반 %d(기대 0 0)"):format(tostring(reason), #failed, #failed > 0 and (" - " .. table.concat(failed, " · ")) or "", pairsBad),
-			reason == "boss" and #failed == 0 and pairsBad == 0)
+		r.check(("보스 아레나 낙하 = 제외(%s) · 회피 부등식 위반 %d%s · 2연타: 일반 패턴끼리 위반 %d%s · 바뀐 패턴 낀 일반 위반 %d(기대 0 0 0 · 참고 전멸기 · 기믹 포함 전체 %d)"):format(tostring(reason), #failed,
+			#failed > 0 and (" - " .. table.concat(failed, " · ")) or "", #normalBad, #normalBad > 0 and (" - " .. table.concat(normalBad, " · ", 1, math.min(#normalBad, 6))) or "", #changedBad, allBad),
+			reason == "boss" and #failed == 0 and #normalBad == 0 and #changedBad == 0)
 	end)
 
 	local pass, total = r.summary()
@@ -367,6 +385,56 @@ function V.runLive(player, env)
 		BossTrap.release(player, "reset")
 	end)
 
+	r.section("4a-2 대공 잡기 기절 조건(3경우 × 1 · 2 · 4인)", function()
+		local BossAirGrab = require(script.Parent.BossAirGrab)
+		local g = BossData.mechanics.airGrab
+		local cells, ok = {}, true
+		for _, n in ipairs({ 1, 2, 4 }) do
+			for _, case in ipairs({ "none", "allEscape", "oneThrown" }) do
+				local model, data, encounter = H.spawnBoss(player, env, "section_guardian", 4210 + n, 15)
+				assert(model, "보스 스폰 실패")
+				local zone = WorldConfig.zones[encounter.zoneKey]
+				root.Anchored = true
+				root.CFrame = CFrame.new(zone.center + Vector3.new(0, FLOOR + 3, 70))
+				local fakes = {}
+				for i = 1, n do
+					local a = i / n * 2 * math.pi
+					local f = H.newStandIn(model, ("G%d"):format(i), zone.center + Vector3.new(math.cos(a) * 14, FLOOR + 3, math.sin(a) * 14))
+					f.debugAirborne = case ~= "none" or nil
+					table.insert(standIns, f)
+					table.insert(fakes, f)
+				end
+				local st = MonsterState.getBossPatternState(model)
+				hook()
+				BossPatterns.force(model, data, "grab")
+				local escaped = false
+				H.drive(player, root, model, data, data.skills.grab.telegraphSeconds + g.chaseMaxSeconds * n + g.holdSeconds + 3, function()
+					if case ~= "none" and not escaped and st.grabHeld and #st.grabHeld == n then
+						escaped = true -- 전원 잡힌 뒤: allEscape = 전원 발버둥 · oneThrown = 첫 사람만 남기고 발버둥
+						for i, f in ipairs(fakes) do
+							if case == "allEscape" or i > 1 then
+								f.debugAirborne = nil
+								for _ = 1, g.struggle.pressesBase do
+									BossAirGrab.press(f)
+								end
+							end
+						end
+					end
+					return countKind("grabEnd") > 0 -- 기절 = beginStun이 grabEnd{stunned = true} · 던짐 = grabEnd{stunned = false}
+				end)
+				local _, endEvt = countKind("grabEnd")
+				local stunned = endEvt and endEvt.payload.stunned == true
+				local expect = case ~= "oneThrown"
+				local pass = stunned == expect and (case == "none" or escaped)
+				ok = ok and pass
+				table.insert(cells, ("%d인 %s → 기절 %s%s"):format(n, case == "none" and "아무도 안 걸림" or (case == "allEscape" and "전원 탈출" or "1명 던짐"), tostring(stunned), pass and "" or "(X)"))
+				H.clearStandIns(player, standIns)
+				BossEncounter.despawnFor(player)
+			end
+		end
+		r.check(("기절 조건(기대: 안 걸림 · 전원 탈출 = 기절 / 1명 이상 던짐 = 기절 없음): %s"):format(table.concat(cells, " · ")), ok)
+	end)
+
 	r.section("4a-5 붕괴(바닥이 실제로 꺼짐 · 실제 Player)", function()
 		local model, data, encounter = H.spawnBoss(player, env, "section_guardian", 4501, 15)
 		assert(model, "보스 스폰 실패")
@@ -405,6 +473,12 @@ function V.runLive(player, env)
 		local nowPos = root.Position
 		local offHole = edge and not require(script.Parent.BossEnvironment).blocksBoss(model, nowPos)
 		local base = BossArenaMap.buildBase(encounter.zoneKey)
+		local probe = RaycastParams.new()
+		probe.FilterType = Enum.RaycastFilterType.Exclude
+		probe.FilterDescendantsInstances = { character }
+		local under = Workspace:Raycast(root.Position, Vector3.new(0, -30, 0), probe)
+		r.note(("붕괴 계측: 자리 조각 %s(무너진 %s) · 루트 Y %.1f(바닥 %.1f) · 발밑 %s · 보호 %s · 잡힘 %s"):format(tostring(BossSkillMath.sliceIndexOf(z.center, spot, 8, z.hub, 0)), tostring(z.index),
+			root.Position.Y, FLOOR, under and (under.Instance:GetFullName() .. (" @%.1f"):format(under.Position.Y)) or "없음", tostring(require(script.Parent.BossArenaContainment).isProtected(player)), tostring(BossTrap.getRecord(player) ~= nil)))
 		r.check(("조각 바닥 %s · 무너진 조각 충돌 파트 %d(기대 0) · 떨어짐 %s → 가장자리 복귀 %s(구멍 밖 %s) · 바닥 원판 꺼짐 %s"):format(tostring(sliceFloor ~= nil), collided, tostring(fall ~= nil),
 			edge and ("(%.0f, %.0f)"):format(edge.X, edge.Z) or "없음", tostring(offHole), tostring(base.floor.CanCollide == false)),
 			sliceFloor ~= nil and collided == 0 and fall ~= nil and offHole and base.floor.CanCollide == false)

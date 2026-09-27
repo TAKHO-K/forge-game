@@ -3,9 +3,10 @@
 --   시전(스킬 telegraphSeconds 5초): 보스 위 "점프하지 마" · BR1-4a: 시전 끝 judgeWindowSeconds(1.5초) 동안의 **누적 체공**(강제 체공 · 원거리 정지 · 가둠 포함)이
 --   airAccumSeconds(0.65초)에 닿는 순간 그 자리에 얼림 · 창 안에서 떠 있는 사람 머리 위 손바닥이 누적만큼 찬다
 --   → 시전 끝: 얼린 사람이 없으면 끝. 있으면 가장 가까운 사람부터(잡는 순간 거리로 다시) 보스가 이동 속도 × chaseSpeedMultiplier로 다가가 잡는다 - 잡힌 사람은 보스 머리 위 둘레에 들려 따라간다
---   → 마지막 사람을 잡은 뒤 holdSeconds → 전원 던짐(보스별 던지는 모션 · 벽 앞까지) + 현재 체력 × currentHpFraction
---   발악: 잡힌 사람들의 점프 연타가 **게이지 하나**를 함께 줄인다(필요 횟수 = pressesBase + pressesPerExtra × (얼린 인원 − 1)) → 0이면 전원 풀림 + 보스 기절
---   구출(동료가 손 3타 · 곁에서 F 홀드) · 도발 → 같다(전원 풀림 + 기절). 잡기 동안 보스는 새 패턴을 고르지 않는다(스킬 진행 중) · 환경 변화는 따로 돈다.
+--   → 마지막 사람을 잡은 뒤 holdSeconds 안에 못 빠져나온 사람 = 던짐(보스별 던지는 모션 · 벽 앞까지) + 현재 체력 × currentHpFraction(발사 허가 - 되돌림 0)
+--   BR1-4a(사용자 정정): 탈출은 **사람마다** - 자기 발버둥 게이지(pressesBase회)를 채우거나 동료가 그 사람의 손을 때려(3타) · 곁에서 F 홀드로 풀어 준다.
+--   보스 기절은 두 경우만: ① 잡힌 사람 전원이 탈출(한 명도 안 던져짐) ② 시전 판정에 아무도 안 걸림(전조를 읽고 점프 안 함). 한 명이라도 던져지면 기절 없음.
+--   도발(성기사 - K)로 풀린 사람은 탈출로 친다. 잡기 동안 보스는 새 패턴을 고르지 않는다(스킬 진행 중) · 환경 변화는 따로 돈다.
 --   공중 가둠(거품 · 회오리 - kind "bubbled")에 갇힌 사람은 "공중"이다 - 얼림 · 잡기로 이어진다(BR1-2 §4).
 -- 판정 · 잡힘 · 던짐 발신은 서버, 손 모션 · 들림 · 던짐 물리는 클라(BossGrabView · 기존 BossStormView.launch).
 local Players = game:GetService("Players")
@@ -173,11 +174,12 @@ local function setRootAt(v, point)
 	end
 end
 
+-- 사람마다 발버둥 게이지(남은 비율 - 가득 1 → 0이면 탈출).
 local function gaugeAttribute(st)
-	local left = st.grabGauge and math.clamp(1 - st.grabGauge.done / st.grabGauge.need, 0, 1) or nil
 	for _, player in ipairs(st.grabHeld or {}) do
-		if realPlayer(player) and player.Parent then
-			player:SetAttribute("BossGrabGauge", left)
+		local g = st.grabGauges and st.grabGauges[player]
+		if g and realPlayer(player) and player.Parent then
+			player:SetAttribute("BossGrabGauge", math.clamp(1 - g.done / g.need, 0, 1))
 		end
 	end
 end
@@ -199,6 +201,7 @@ local function grab(c, v)
 		return
 	end
 	table.insert(st.grabHeld, v.player)
+	st.grabGauges[v.player] = { need = CONFIG.struggle.pressesBase, done = 0 }
 	local held = grabsByModel[c.model] or {}
 	grabsByModel[c.model] = held
 	held[v.player] = true
@@ -208,7 +211,7 @@ local function grab(c, v)
 	kit.send(st, "grabPick", {
 		userId = realPlayer(v.player) and v.player.UserId or nil, from = from, point = point, liftSeconds = CONFIG.liftSeconds,
 		bossId = c.data.id, motion = skill.motion, color = c.data.headColor, bossPosition = Vector3.new(c.position.X, st.floorY, c.position.Z),
-		need = st.grabGauge.need,
+		need = CONFIG.struggle.pressesBase,
 	})
 	kit.debugEvent("grabPick", { player = v.player, at = c.now, index = index })
 end
@@ -234,7 +237,7 @@ end
 
 local function beginStun(c, why)
 	local st = c.st
-	releaseAll(c, "rescued")
+	releaseAll(c, "reset") -- 이미 전원 풀렸다(탈출) 또는 아무도 없다(안 걸림) - 남은 기록만 치운다
 	st.phase = "grabStun"
 	st.phaseEndsAt = c.now + CONFIG.stunSeconds
 	st.dazeBase = c.model:GetPivot().Position
@@ -297,11 +300,11 @@ BossAirGrab.handler = {
 		st.grabStartedAt = c.now
 		st.grabMarks = {}
 		st.grabAirAccum = {}
-		st.grabRescued = false
+		st.grabGauges, st.grabEscaped, st.grabThrown = {}, 0, 0
 		st.grabFrozen = {}
 		st.grabFrozenCount = 0
 		st.grabHeld = {}
-		st.grabGauge = nil
+
 		kit.send(st, "grabTelegraph", {
 			center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.telegraphSeconds,
 			bossId = c.data.id, motion = skill.motion, color = c.data.headColor, noJump = true,
@@ -326,15 +329,13 @@ BossAirGrab.handler = {
 			clearMarks(c)
 			if st.grabFrozenCount == 0 then
 				kit.send(st, "grabMiss", {})
-				kit.endSkill(c.model, st, c.data, c.now)
+				beginStun(c, "아무도 안 걸림") -- BR1-4a: 전조를 읽고 아무도 안 떴으면 보스가 헛손질 → 기절
 				return
 			end
-			local struggle = CONFIG.struggle
-			st.grabGauge = { need = struggle.pressesBase + struggle.pressesPerExtra * (st.grabFrozenCount - 1), done = 0 }
 			st.phase = "grabChase"
 			st.grabChaseStartedAt = c.now
-			kit.debugEvent("grab", { count = st.grabFrozenCount, at = c.now, need = st.grabGauge.need })
-			print(("[forge-game] 대공 잡기: %d명 얼림 → 가까운 순서로 잡으러 간다(발악 %d회)"):format(st.grabFrozenCount, st.grabGauge.need))
+			kit.debugEvent("grab", { count = st.grabFrozenCount, at = c.now, need = CONFIG.struggle.pressesBase })
+			print(("[forge-game] 대공 잡기: %d명 얼림 → 가까운 순서로 잡으러 간다(사람마다 발버둥 %d회)"):format(st.grabFrozenCount, CONFIG.struggle.pressesBase))
 			return
 		end
 		if st.phase == "grabStun" then
@@ -344,9 +345,14 @@ BossAirGrab.handler = {
 			end
 			return
 		end
-		-- 잡기 · 들고 있기 공통: 구출 · 발악 · 도발 → 전원 풀림 + 기절
-		if st.grabRescued or (st.grabGauge and st.grabGauge.done >= st.grabGauge.need) then
-			beginStun(c, st.grabRescued and "구출" or "발악")
+		-- 잡기 · 들고 있기 공통: 잡힌 사람 전원이 (각자) 빠져나왔고 얼린 사람도 없다 → 한 명도 안 던져졌으면 기절
+		if #st.grabHeld == 0 and next(st.grabFrozen) == nil and st.grabFrozenCount > 0 then -- 얼음 상태에서 구출된 사람도 탈출로 친다
+			if st.grabThrown == 0 then
+				beginStun(c, "전원 탈출")
+			else
+				kit.send(st, "grabEnd", { stunned = false })
+				kit.endSkill(c.model, st, c.data, c.now)
+			end
 			return
 		end
 		-- 들린 사람은 보스를 따라간다(손 = 구출 대상도 같이)
@@ -394,6 +400,7 @@ BossAirGrab.handler = {
 			if c.now < st.phaseEndsAt then
 				return
 			end
+			st.grabThrown += #st.grabHeld
 			throwAll(c)
 			kit.send(st, "grabEnd", { stunned = false })
 			kit.endSkill(c.model, st, c.data, c.now)
@@ -406,7 +413,7 @@ BossAirGrab.handler = {
 }
 
 -- ─────────────────────────── 풀림 ───────────────────────────
--- 자동 해제 = 던짐(피해는 풀리기 직전에 넣었다). 구출 · 도발 = 그 보스가 기절한다(step이 grabRescued를 보고 grabStun으로 넘어간다).
+-- 자동 해제 = 던짐(피해는 풀리기 직전에 넣었다). 발버둥 · 구출 · 도발 = 그 사람만 탈출(BR1-4a - 전원 탈출이면 step이 기절로 넘어간다).
 local function throw(player, record)
 	local model = record.context and record.context.bossModel
 	local st = model and MonsterState.getBossPatternState(model)
@@ -439,8 +446,15 @@ BossTrap.onReleased(function(player, record, reason)
 	local st = model and MonsterState.getBossPatternState(model)
 	if reason == "auto" then
 		throw(player, record)
-	elseif reason == "rescued" and st then
-		st.grabRescued = true
+	elseif (reason == "rescued" or reason == "escaped") and st then
+		st.grabEscaped = (st.grabEscaped or 0) + 1
+		local at = st.grabHeld and table.find(st.grabHeld, player)
+		if at then
+			table.remove(st.grabHeld, at)
+		end
+		if st.grabGauges then
+			st.grabGauges[player] = nil
+		end
 	end
 	if st and kit then
 		kit.send(st, "grabRelease", { userId = realPlayer(player) and player.UserId or nil, reason = reason })
@@ -520,11 +534,15 @@ function BossAirGrab.press(player)
 	end
 	local model = record.context and record.context.bossModel
 	local st = model and MonsterState.getBossPatternState(model)
-	if not (st and st.grabGauge) then
+	local g = st and st.grabGauges and st.grabGauges[player]
+	if not g then
 		return false
 	end
-	st.grabGauge.done += 1
+	g.done += 1
 	gaugeAttribute(st)
+	if g.done >= g.need then
+		BossTrap.release(player, "escaped") -- BR1-4a: 스스로 발버둥으로 탈출(그 사람만)
+	end
 	return true
 end
 struggleEvent.OnServerEvent:Connect(BossAirGrab.press)
