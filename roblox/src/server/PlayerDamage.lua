@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 전투 공식(받는 피해 = 방어 ÷ 권장 방어)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
 local PlayerShield = require(script.Parent.PlayerShield)
@@ -108,6 +109,25 @@ function PlayerDamage.getLevelGapTakeMultiplier(targetPlayer, stageOverride)
 	return CharacterLevel.levelGapTakeMultiplier(PlayerProfile.getCharacterLevel(targetPlayer), bossStage or stageOverride or PlayerProfile.getInfiniteStage(targetPlayer))
 end
 
+-- C2 전투 공식 받는 피해 배율: 방어 ÷ 권장 방어(그 스테이지 · 때린 몹 공격 rawAttack) → CombatFormula 곡선. 스테이지 = 레벨차 계수와 같은 선택(보스전 = 보스 스테이지 · 잡몹 = 몹 기준).
+--   방어가 먹는 피해(applyHit · 체력바 눈금)만 - %최대체력 · 현재 체력 비율 피해는 방어 무시라 안 곱한다. 스위치가 꺼져 있거나 스탠드인이면 1.
+function PlayerDamage.getCombatTakeMultiplier(targetPlayer, rawAttack, stageOverride)
+	if not CombatFormula.enabled() or typeof(targetPlayer) ~= "Instance" or type(rawAttack) ~= "number" then
+		return 1
+	end
+	local classId = PlayerProfile.getClassId(targetPlayer)
+	if not classId then
+		return 1
+	end
+	local bossStage = targetPlayer:GetAttribute("BossStage")
+	if bossStage and CombatFormula.bossExempt() then
+		return 1 -- 보스전 제외(CombatFormulaData.bossExempt)
+	end
+	local stage = bossStage or stageOverride or PlayerProfile.getInfiniteStage(targetPlayer)
+	local defense = PlayerCombat.getDefense(classId, Loot.getArmorDefense(PlayerProfile.getEquippedArmor(targetPlayer)), PlayerProfile.getDefensePercentBonus(targetPlayer))
+	return CombatFormula.takeMultiplier(defense, stage, rawAttack)
+end
+
 function PlayerDamage.getNewbieMultiplier(targetPlayer)
 	if PlayerDamage.debugNewbieProtectionOff then
 		return 1
@@ -160,6 +180,7 @@ function PlayerDamage.applyHit(targetPlayer, rawAttack, label, damageMultiplier,
 		return 0 -- 죽어서 리스폰 대기 중인 시체는 때리지 않는다(사망 로그 중복 방지)
 	end
 	local damage = PlayerDamage.computeHitDamage(rawAttack, targetPlayer) * (damageMultiplier or 1)
+		* PlayerDamage.getCombatTakeMultiplier(targetPlayer, rawAttack, opts and opts.levelGapStage) -- C2 받는 피해 배율
 	return applyFinalDamage(targetPlayer, damage, label, opts) -- opts.levelGapStage(C1 - 잡몹 기준 스테이지)
 end
 

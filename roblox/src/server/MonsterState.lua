@@ -31,6 +31,7 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig) -- C1 �
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 local MobShare = require(ReplicatedStorage.Shared.MobShare) -- C1: 기준 스테이지(참여자 중 최고)로 잡몹 피해 환산
 local AlphaStats = require(script.Parent.AlphaStats) -- C1 마무리: 결정 6 탱커 끌어오기 계측
+local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 전투 공식(주는 피해 배율)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel) -- G1-3: 레벨차 계수 -- G1-2: 처치 시간 상한(fairness.maxSecondsPerHit)
 
 local MonsterState = {}
@@ -319,6 +320,11 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	if typeof(attackerPlayer) == "Instance" and not entry.isRescueTarget and not entry.isChest and not fixed then
 		local gapStage = entry.data.isBoss and entry.data.stageNumber or mobRef
 		damage *= CharacterLevel.levelGapDealMultiplier(attackerPlayer:GetAttribute("CharacterLevel"), gapStage)
+		-- C2 전투 공식: 전투력(Player Attribute CombatPower - CombatPowerSync) ÷ 권장(잡몹 = 이 몹 기준 HP · 보스 = 보스 스테이지 tier1) → 배율. 스킬 · 치명 · 보석 등 모든 피해원이 여기를 지난다.
+		--   보스 기여도는 위 damageBeforeGap(배율 전)으로 센다 - 레벨차 계수와 같은 이유. 스위치가 꺼져 있으면 1.
+		if CombatFormula.enabled() and not (entry.data.isBoss and CombatFormula.bossExempt()) then -- 보스전 제외(CombatFormulaData.bossExempt)
+			damage *= CombatFormula.dealMultiplier(attackerPlayer:GetAttribute("CombatPower"), gapStage, not entry.data.isBoss and entry.data.hp or nil)
+		end
 	end
 
 	if entry.data.isBoss then

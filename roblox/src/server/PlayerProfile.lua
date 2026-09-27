@@ -11,6 +11,8 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local ClassData = require(ReplicatedStorage.Shared.data.ClassData) -- C2 전투력(직업 치명)
+local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 전투력
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath) -- G2a: 걷기 배율 상한
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
@@ -113,6 +115,19 @@ function PlayerProfile.getCritBonus(player)
 	end
 	local critRate, critDmg = Option.critBonus(buildOptionSources(classState), profile.classId)
 	return critRate, math.min(critDmg + Loot.getGlovesCritDmgBonus(classState.equipment.gloves), CombatConfig.critDmgBonusCap)
+end
+
+-- C2 전투력(한 대 기대 피해 = 공격력 × 치명 기대 - shared/CombatFormula). 공격력은 AttackServer와 같은 인자(무기 · 레벨 · 위력 · 최종 피해 · 마일스톤) · 치명 = 직업 + 옵션(버프 제외).
+function PlayerProfile.getCombatPower(player)
+	local classId = PlayerProfile.getClassId(player)
+	local weapon = PlayerProfile.getWeapon(player)
+	local class = classId and ClassData.classes[classId]
+	if not class or not weapon then
+		return 0
+	end
+	local atk = PlayerCombat.getAttack(weapon, classId, PlayerProfile.getCharacterLevel(player), PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player))
+	local critRate, critDmg = PlayerProfile.getCritBonus(player)
+	return CombatFormula.offensePowerOf(atk, class.critRate + critRate, class.critDmg + critDmg)
 end
 
 -- MV1 태초 신발 = 2단 대시 충전 · 태초 장갑 = 붙잡기(DashServer · MovementServer가 읽는다).

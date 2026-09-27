@@ -28,6 +28,9 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local HudIcons = require(script.Parent.HudIcons)
 local StageRewardBand = require(script.Parent.StageRewardBand)
 local UIManager = require(script.Parent.UIManager)
+local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 권장 전투력(자리만 - U1)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local stageMoveRequest = ReplicatedStorage:WaitForChild("StageMoveRequest")
 local stageMoveResult = ReplicatedStorage:WaitForChild("StageMoveResult")
@@ -439,6 +442,19 @@ statusLine.TextColor3 = UIColors.danger
 statusLine.Text = ""
 statusLine.Parent = panel
 
+-- C2: 권장 전투력 줄(자리만 - 최종 스타일 U1). 고른 보스 칸이 있으면 그 스테이지, 없으면 지금 스테이지의 tier1 몹 기준.
+local recommendLine = Instance.new("TextLabel")
+recommendLine.Name = "RecommendLine"
+recommendLine.Position = UDim2.new(0, 16, 1, -34)
+recommendLine.Size = UDim2.new(1, -32, 0, 26)
+recommendLine.BackgroundTransparency = 1
+recommendLine.Font = Enum.Font.Gotham
+recommendLine.TextSize = 12
+recommendLine.TextXAlignment = Enum.TextXAlignment.Left
+recommendLine.TextColor3 = UIColors.textSecondary
+recommendLine.Text = ""
+recommendLine.Parent = panel
+
 local isOpen = false
 local windowStart = 1
 local chipStart = 1 -- 지금 보이는 칩 묶음의 첫 스테이지(1 · 51 · 101 …) - 창이 옮겨 가면 그 창이 든 묶음으로 따라간다(◀ ▶로 묶음만 따로 넘길 수도 있다)
@@ -509,6 +525,12 @@ local function render()
 		end
 	end
 	prevButton.Visible = windowStart > 1
+	local recStage = selectedStage or (player:GetAttribute("InfiniteStage") or 1)
+	recommendLine.Visible = CombatFormula.enabled() and statusLine.Text == ""
+	recommendLine.Text = Text.get("combat.recommend", {
+		rec = NumberFormat.format(CombatFormula.display(CombatFormula.recommendedPower(recStage))),
+		mine = NumberFormat.format(CombatFormula.display(player:GetAttribute("CombatPower") or 0)),
+	})
 	-- 구간 칩: 상태 색 · 기호(✓ ●) + 지금 보고 있는 구간은 rimHi 테두리.
 	for i, chip in ipairs(chips) do
 		local first = chipStart + (i - 1) * WINDOW_SIZE

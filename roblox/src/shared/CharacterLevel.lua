@@ -17,6 +17,7 @@ local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLeve
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2: 전투 공식이 켜져 있으면 레벨차 계수는 1(전투력 비율에 통합)
 
 local CharacterLevel = {}
 
@@ -183,7 +184,7 @@ CharacterLevel.debugLevelGapOff = false
 
 -- 벌점이 붙는 칸 수(0 이상). level · stage가 없으면 0.
 function CharacterLevel.levelGapStages(level, stage)
-	if CharacterLevel.debugLevelGapOff or type(level) ~= "number" or type(stage) ~= "number" then
+	if CharacterLevel.debugLevelGapOff or CombatFormula.enabled() or type(level) ~= "number" or type(stage) ~= "number" then
 		return 0
 	end
 	local config = CharacterLevelConfig.levelGap

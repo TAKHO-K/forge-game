@@ -1045,9 +1045,9 @@ local function debugPose(st, now)
 	if d.clip == "getup" then
 		st.getupStart = now - d.tau
 		st.attack = nil
-	elseif d.clip:sub(1, 6) == "attack" or d.clip == "heavy" or d.clip == "air" then
+	elseif d.clip:sub(1, 6) == "attack" or d.clip == "heavy" or d.clip == "air" or d.clip == "close" then
 		local index = d.clip == "heavy" and 3 or tonumber(d.clip:sub(7)) or 1
-		local clip = MotionTiming.clip(st.classId, index, d.clip == "air")
+		local clip = d.clip == "close" and w.closeSwing or MotionTiming.clip(st.classId, index, d.clip == "air") -- W2-4 "close" = 가까운 대상 휘두르기
 		local tm = MotionTiming.scale(clip, d.speed, d.clip == "heavy")
 		st.attack = { clip = clip, tm = tm, start = now - d.tau, heavy = d.clip == "heavy", air = d.clip == "air", index = index, blendKey = "dbg" .. d.clip .. d.tau, blendDur = 0.01, hitDone = true }
 		st.getupStart = nil

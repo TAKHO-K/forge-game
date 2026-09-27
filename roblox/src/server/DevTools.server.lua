@@ -3581,6 +3581,7 @@ if RunService:IsStudio() then
 			require(script.Parent.PlayerDamage).debugNewbieProtectionOff = true
 			require(script.Parent.BossEncounter).debugLingerOff = true -- G1-4: 처치 직후 복귀를 전제로 한 옛 검증 - G1-4(나)가 자기 항목에서만 켠다
 			CharacterLevel.debugLevelGapOff = true -- G1-3: 레벨차 계수도 체인 동안 끈다(옛 피해 기대값 - G1-3(나)가 자기 항목에서만 켠다)
+			require(ReplicatedStorage.Shared.CombatFormula).debugOff = true -- C2: 전투 공식 배율도 체인 동안 끈다(옛 피해 기대값 - C2(나)가 자기 항목에서만 켠다)
 			require(script.Parent.HeightGuard).debugOff = true -- G2a: 서버 높이 검증도 체인 동안 끈다(캐릭터를 공중 · 구조물 위에 두는 옛 항목 - G2a(나)가 자기 항목에서만 켠다)
 			-- 29-1(뼈대 회귀) → S01(나) … 순서로 이어서 돈다 - 같은 플레이어·같은
 			-- 아레나를 쓰므로 겹치면 안 된다. 하나가 에러로 끊겨도 다음은 돈다.
@@ -3637,7 +3638,8 @@ if RunService:IsStudio() then
 				{ "BR1-4b(나)", function() require(script.Parent.BR14bVerify).runLive(player, env) end },
 				{ "BR1-4c(나)", function() require(script.Parent.BR14cVerify).runLive(player, env) end }, -- BR1-4c: 붕괴 원인 · 3점 낙하 · 진입 연출 · 유도 규칙 · 처치 정리 · 지진파 단계 -- BR1-4b: 리그 6종 스폰 · 알림 = 판정 시각 · 잡기 부착점
 				{ "BR1-4b0(나)", function() require(script.Parent.BR14b0Verify).runLive(player, env) end }, -- BR1-4b 파트 0: 공중 대시 낙하 최고점 · 수호자 잡기 → 돌진 연속 금지(실제 step)
-				{ "W2(나)", function() require(script.Parent.W2Verify).runLive(player, env) end }, -- W2: 파트 0 회오리 지연 되돌림 · 피해 이벤트 구조 · 클라 표본 창(근접 궤적 시각 · 투사체 화면 ↔ 서버)
+				{ "W2(나)", function() require(script.Parent.W2Verify).runLive(player, env) end },
+				{ "C2(나)", function() require(script.Parent.C2Verify).runLive(player, env) end }, -- C2: 전투력 동기화 · 스테이지 5 · 100 · 1,000 × 비율 0.7 · 1.0 · 1.5 처치 타수 · 받는 피해 배율 -- W2: 파트 0 회오리 지연 되돌림 · 피해 이벤트 구조 · 클라 표본 창(근접 궤적 시각 · 투사체 화면 ↔ 서버)
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "M1-2c(나)", function() require(script.Parent.M1_2cVerify).runLive(player, env) end }, -- M1-2c: 나무 발사 전부 되돌림 0 · 허가 없이 같은 높이 → 되돌림 · 보스 발사 최대 · 리프트 [F] · 도착 낙하 없음
 				{ "G1-4(나)", function() require(script.Parent.G1_4Verify).runLive(player, env) end }, -- G1-4: 보스맵 잔류 · 다음 / 다시 도전 / 마을 · 90초
@@ -3661,6 +3663,7 @@ if RunService:IsStudio() then
 			end
 			require(script.Parent.PlayerDamage).debugNewbieProtectionOff = false
 			CharacterLevel.debugLevelGapOff = false
+			require(ReplicatedStorage.Shared.CombatFormula).debugOff = false
 			require(script.Parent.HeightGuard).debugOff = false
 			require(script.Parent.BossEncounter).debugLingerOff = DevToolsConfig.verifyArmed -- 체인 밖 옛 블록(27-x)도 잔류 없이(아래 서버 시작 설정과 같다)
 			-- S04 사전 작업(PRD 20.83 [8]): 옛 블록을 포함한 검증 체인 전체가 실제 가방을 그대로 남겼는가. 기준은 이 서버의 첫 백업
@@ -4037,6 +4040,15 @@ if RunService:IsStudio() and verifyEnabled("MV1(가)") then
 		local ok, err = pcall(require(script.Parent.MV1Verify).runPure)
 		if not ok then
 			warn(("[MV1(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+if RunService:IsStudio() and verifyEnabled("C2(가)") then -- C2: 전투 공식 곡선 · 권장 · 스위치 끔 · 파트 A 값
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.C2Verify).runPure)
+		if not ok then
+			print("===C2 검증 끝(가)=== 에러: " .. tostring(err))
 		end
 	end)
 end

@@ -51,6 +51,8 @@ local Awaken = require(ReplicatedStorage.Shared.Awaken) -- D1: 태초 각성 비
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
+local CombatFormulaData = require(ReplicatedStorage.Shared.data.CombatFormulaData) -- C2 전투 공식 스위치(what-if combatFormulaV2)
+local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula)
 
 local EconSim = {}
 
@@ -132,6 +134,26 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	end
 	if whatIf.expStageCap ~= nil then -- D1 격차 참고안(게임에 없는 규칙): 사냥 경험치 = min(사냥 스테이지, 레벨 스테이지 + offset)의 경험치 - 전투력이 높아 더 높이 사냥해도 경험치는 레벨이 정한다
 		set(EconSimConfig, "expStageCap", whatIf.expStageCap)
+	end
+	if whatIf.huntBelowBest ~= nil then -- C2 B-5 악용 프로필: 최고 스테이지 − d에서 사냥(처치 시간 목표 무시 · 생존 타수만)
+		set(EconSimConfig, "huntBelowBest", whatIf.huntBelowBest)
+	end
+	if whatIf.expGemBonus ~= nil then -- C2 B-5 악용 프로필: 경험치 보석 올인(성장 옵션 합 - 게임 상한 OptionData 성장 cap). 공격 보석을 빼는 손해는 안 센다(악용 상한)
+		set(EconSimConfig, "expGemBonus", whatIf.expGemBonus)
+	end
+	if whatIf.combatFormulaV2 ~= nil then -- C2: 전투 공식 스위치 켬/끔 비교
+		set(CombatFormulaData, "enabled", whatIf.combatFormulaV2)
+	end
+	if whatIf.combatFormula then -- C2 곡선 탐색: { deal = 표, take = 표, defenseScale = 값, noBoss = true(보스 배율 끔) }
+		for key, value in pairs(whatIf.combatFormula) do
+			if key == "defenseScale" then
+				set(CombatFormulaData.representative, "defenseScale", value)
+			elseif key == "noBoss" then
+				set(EconSimConfig, "c2NoBoss", value)
+			else
+				set(CombatFormulaData, key, value)
+			end
+		end
 	end
 	if whatIf.dpsPrimordialStep then -- D1 격차 추천안 확인: 딜 부위(장갑 · 신발)만 태초 단계 배율을 바꾼다(갑옷 방어 = defenseGradeMultiplier는 그대로 ×2.5)
 		set(ArmorData.grades.primordial, "dropPower", ArmorData.grades.ancient.dropPower * whatIf.dpsPrimordialStep)
@@ -266,8 +288,10 @@ EconSim.tierData = tierData
 
 -- 이 loadout으로 tier 몬스터를 seconds 안에 잡을 수 있는 가장 높은 스테이지(1 ~ maxStage, 보스 스테이지 제외). efficiency = 조작 효율.
 -- G1-3: 레벨차 계수(주는 피해)가 있으면 그 스테이지의 실효 HP = HP ÷ 계수(게임 MonsterState.applyDamage와 같은 함수). HP ÷ 계수는 스테이지에 단조 증가.
+-- C2: 전투 공식 배율(전투력 ÷ 권장 - 게임 MonsterState.applyDamage와 같은 함수 · 꺼져 있으면 1)도 나눈다. 배율은 스테이지에 단조 감소라 단조성 유지.
 local function effectiveMonsterHp(loadout, baseHp, stage)
-	return InfiniteStage.getMonsterHp(baseHp, stage) / CharacterLevel.levelGapDealMultiplier(loadout.level, stage)
+	local hp = InfiniteStage.getMonsterHp(baseHp, stage)
+	return hp / CharacterLevel.levelGapDealMultiplier(loadout.level, stage) / CombatFormula.dealMultiplier(CombatFormula.offensePower(loadout), stage, baseHp)
 end
 EconSim.effectiveMonsterHp = effectiveMonsterHp
 
@@ -293,7 +317,8 @@ function EconSim.highestStageBySurvive(loadout, tierIndex, minHits, maxStage)
 	local attackBase = tierData(tierIndex).attack
 	local newbie = PlayerCombat.getNewbieDamageMultiplier(maxStage + 1) -- P2.5c 신규 보호: 게임과 같이 최고 스테이지(= reach = maxStage + 1) 기준
 	local function ok(stage)
-		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(attackBase, stage), newbie * CharacterLevel.levelGapTakeMultiplier(loadout.level, stage)) >= minHits -- G1-3: 받는 피해 계수
+		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(attackBase, stage), newbie * CharacterLevel.levelGapTakeMultiplier(loadout.level, stage)
+			* CombatFormula.takeMultiplier(loadout.defense, stage, InfiniteStage.getMonsterAttack(attackBase, stage))) >= minHits -- G1-3: 받는 피해 계수 · C2 받는 피해 배율
 	end
 	if not ok(1) then
 		return 1
@@ -512,7 +537,7 @@ EconSim.loadoutFor = loadoutFor
 local function expMultiplier(profile)
 	local eligible = profile.partyExpBonus and (profile.partyHuntsTogether or not EconSimConfig.partyExpRequiresPresence)
 	local partyBonus = eligible and PartyState.getExpBonusForCount(profile.partySize) or 0
-	return PlayerProfile.combineExpMultiplier(0, partyBonus)
+	return PlayerProfile.combineExpMultiplier(EconSimConfig.expGemBonus or 0, partyBonus) -- C2 B-5: 경험치 보석(악용 what-if - 기본 0)
 end
 
 -- 무작위 축 보석의 기대값 - DPS 3축(위력 · 신속 · 치명 - OptionData category "dps", 20.67 [5] "카테고리 안에서 등가")이 풀에서 나올 확률만큼
@@ -768,8 +793,10 @@ local function fightBosses(state, profile, loadout, run)
 		local data = BossRules.buildInstanceData(bossStage, BossRules.bossIdForStage(bossStage), profile.partySize)
 		-- 파티 딜 = 인원 × 내 딜(같은 수준의 파티원 가정 - [가정]). 보스 HP는 BossRules가 이미 인원 배율(N^p)을 곱했다.
 		local effectiveHp = data.hp / (profile.bossDpsEfficiency * profile.partySize) / CharacterLevel.levelGapDealMultiplier(loadout.level, bossStage) -- G1-3: 레벨차 계수
+			/ ((EconSimConfig.c2NoBoss or CombatFormula.bossExempt()) and 1 or CombatFormula.dealMultiplier(CombatFormula.offensePower(loadout), bossStage)) -- C2: 보스 = 스테이지 권장(기준 구역) · 보스전 제외면 1
 		-- 생존: 보스 평타(BossRules가 계산한 attack)에 최소 생존 타수를 버텨야 도전한다(잡몹과 같은 minSurviveHits).
-		if BalanceSim.getSurviveHits(loadout, data.attack, PlayerCombat.getNewbieDamageMultiplier(bossStage) * CharacterLevel.levelGapTakeMultiplier(loadout.level, bossStage)) < profile.minSurviveHits then -- P2.5c 신규 보호 · G1-3 레벨차
+		if BalanceSim.getSurviveHits(loadout, data.attack, PlayerCombat.getNewbieDamageMultiplier(bossStage) * CharacterLevel.levelGapTakeMultiplier(loadout.level, bossStage)
+			* (CombatFormula.bossExempt() and 1 or CombatFormula.takeMultiplier(loadout.defense, bossStage, data.attack))) < profile.minSurviveHits then -- P2.5c 신규 보호 · G1-3 레벨차 · C2 받는 피해 배율
 			break
 		end
 		local seconds = EconSim.killSeconds(loadout, effectiveHp, profile.bossKillLimitSeconds)
@@ -843,6 +870,9 @@ local function chooseHunt(loadout, profile, maxStage, gearMode)
 		local stage = math.min(byKill, bySurvive)
 		if EconSimConfig.expLevelGap then -- 참고안: 경험치가 줄기 시작하는 칸 위로는 사냥하지 않는다(경험치/초 최적 - 그 위는 칸당 감쇠가 k보다 크다)
 			stage = math.max(1, math.min(stage, CharacterLevel.getStageForLevel(loadout.level) + EconSimConfig.expLevelGap.start))
+		end
+		if EconSimConfig.huntBelowBest then -- C2 B-5 악용 프로필: 최고 − d(생존 타수가 허락하는 한)
+			stage = math.max(1, math.min(bySurvive, maxStage - EconSimConfig.huntBelowBest))
 		end
 		if BossRules.isBossStage(stage) and stage > 1 then
 			stage -= 1
@@ -1014,6 +1044,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		weaponGrade = state.weaponGrade, levelAfter = state.level,
 		glovesAttack = Loot.getGlovesAttackPercent(state.gear.gloves), armorDefense = Loot.getArmorDefense(state.gear.armor),
 		gemCount = gemCount, gemAvgLevel = gemCount > 0 and gemLevels / gemCount or 0, gemAttackBonus = gemBonus,
+		loadout = loadoutFor(state), -- C2: 청크 끝 loadout(대표 장비 전투력 · 방어 곡선 - EconSimReport · 하네스)
 	}
 end
 
@@ -1044,7 +1075,7 @@ local function tutorialPhase(state, profile, run)
 		local tier = tierData(data.tierIndex)
 		for _ = 1, data.killTarget do
 			local loadout = loadoutFor(state)
-			local kill = EconSim.killSeconds(loadout, InfiniteStage.getMonsterHp(tier.hp, TutorialData.monsterStage) / profile.dpsEfficiency, 600)
+			local kill = EconSim.killSeconds(loadout, effectiveMonsterHp(loadout, tier.hp, TutorialData.monsterStage) / profile.dpsEfficiency, 600) -- C2: 게임과 같은 배율
 			state.seconds += kill + profile.moveOverheadSeconds
 			state.huntSeconds += kill + profile.moveOverheadSeconds
 			state.gold += InfiniteStage.getGoldReward(tier.goldDrop, TutorialData.monsterStage)
@@ -1052,7 +1083,8 @@ local function tutorialPhase(state, profile, run)
 		end
 		local boss = BossRules.buildTutorialInstanceData(data.tierIndex, TutorialData.monsterStage, data.bossPatternKeys, data.bossHpScale, TutorialData.bossWeaponMultiplier(step))
 		local loadout = loadoutFor(state)
-		local spent = EconSim.killSeconds(loadout, boss.hp / profile.bossDpsEfficiency, 600) * profile.bossAttemptsPerClear + profile.bossOverheadSeconds
+		local spent = EconSim.killSeconds(loadout, boss.hp / profile.bossDpsEfficiency / (CombatFormula.bossExempt() and 1 or CombatFormula.dealMultiplier(CombatFormula.offensePower(loadout), TutorialData.monsterStage)), 600)
+			* profile.bossAttemptsPerClear + profile.bossOverheadSeconds
 		state.seconds += spent
 		state.bossSeconds += spent
 		state.gold += boss.goldDrop

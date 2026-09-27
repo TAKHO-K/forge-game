@@ -15,6 +15,9 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ArenaShape = require(ReplicatedStorage.Shared.ArenaShape)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 권장 전투력(자리만 - U1)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local CHECK_INTERVAL_SECONDS = 0.3
 local DISPLAY_SECONDS = 2.5
@@ -50,6 +53,21 @@ stroke.Color = UIColors.rim
 stroke.Transparency = 1
 stroke.Parent = label
 
+-- C2: 사냥 구역 입구 = 권장 전투력 줄(그 구역 몹 · 지금 스테이지 기준 - 자리만, 최종 스타일 U1)
+local recommendLabel = Instance.new("TextLabel")
+recommendLabel.Name = "ZoneRecommendLabel"
+recommendLabel.AnchorPoint = Vector2.new(0.5, 0)
+recommendLabel.Position = UDim2.new(0.5, 0, 0, 150)
+recommendLabel.Size = UDim2.new(0, 420, 0, 22)
+recommendLabel.BackgroundTransparency = 1
+recommendLabel.TextTransparency = 1
+recommendLabel.Font = Enum.Font.Gotham
+recommendLabel.TextSize = 14
+recommendLabel.TextColor3 = UIColors.textPrimary
+recommendLabel.TextStrokeTransparency = 1
+recommendLabel.Text = ""
+recommendLabel.Parent = screenGui
+
 -- 어느 구역 AABB 안에 있는지(복도는 nil).
 local function findZone(position)
 	for _, zoneKey in ipairs(WorldConfig.zoneOrder) do
@@ -65,8 +83,11 @@ local currentZoneKey = nil
 
 local currentRangeKey = nil
 
-local function show(text, color, seconds)
+local function show(text, color, seconds, subText)
 	label.Text = text
+	recommendLabel.Text = subText or ""
+	local tweenSub = TweenInfo.new(0.15)
+	TweenService:Create(recommendLabel, tweenSub, { TextTransparency = subText and 0 or 1, TextStrokeTransparency = subText and 0.5 or 1 }):Play()
 	label.TextColor3 = color
 	local tweenIn = TweenInfo.new(0.15)
 	TweenService:Create(label, tweenIn, { BackgroundTransparency = 0.15, TextTransparency = 0 }):Play()
@@ -77,21 +98,28 @@ local function show(text, color, seconds)
 			local tweenOut = TweenInfo.new(0.5)
 			TweenService:Create(label, tweenOut, { BackgroundTransparency = 1, TextTransparency = 1 }):Play()
 			TweenService:Create(stroke, tweenOut, { Transparency = 1 }):Play()
+			TweenService:Create(recommendLabel, tweenOut, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 		end
 	end)
 end
 
 local function showWarning(zoneKey, zone)
-	local text, color
+	local text, color, sub
 	if zone.role == "tier" then
 		local monster = MonsterData[zoneKey]
 		text = ("%s 구역 진입 - tier %d"):format(monster.displayName, zone.tierIndex)
 		color = monster.bodyColor
+		if CombatFormula.enabled() then
+			sub = Text.get("combat.recommend", {
+				rec = NumberFormat.format(CombatFormula.display(CombatFormula.recommendedPower(player:GetAttribute("InfiniteStage") or 1, monster.hp))),
+				mine = NumberFormat.format(CombatFormula.display(player:GetAttribute("CombatPower") or 0)),
+			})
+		end
 	else
 		text = ("%s 진입"):format(zone.displayName or zoneKey)
 		color = UIColors.textPrimary
 	end
-	show(text, color, DISPLAY_SECONDS)
+	show(text, color, DISPLAY_SECONDS, sub)
 end
 
 task.spawn(function()

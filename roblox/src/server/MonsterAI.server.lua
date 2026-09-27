@@ -334,7 +334,9 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 					-- (아래 else 분기의 clear까지) 고정한다.
 					local aggroStage = MonsterState.getAttackStage(model, TutorialState.getMonsterStage(player)) -- C1: 잡몹 = 기준 스테이지
-					PlayerState.setTickDamageSource(player, model, computeHitDamage(MonsterState.getAttackFor(model, aggroStage), player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player) * PlayerDamage.getLevelGapTakeMultiplier(player, not data.isBoss and aggroStage or nil)) -- G1-3 리뷰 3: 레벨차도 눈금에 -- P2.5c: 신규 보호도 눈금에
+					local tickAttack = MonsterState.getAttackFor(model, aggroStage)
+					PlayerState.setTickDamageSource(player, model, computeHitDamage(tickAttack, player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player) * PlayerDamage.getLevelGapTakeMultiplier(player, not data.isBoss and aggroStage or nil)
+						* PlayerDamage.getCombatTakeMultiplier(player, tickAttack, not data.isBoss and aggroStage or nil)) -- C2: 전투 공식 받는 피해도 눈금에 -- G1-3 리뷰 3: 레벨차도 눈금에 -- P2.5c: 신규 보호도 눈금에
 					if data.isBoss then
 						BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)
 					end
@@ -354,7 +356,9 @@ RunService.Heartbeat:Connect(function(dt)
 						end
 						target = nearest
 						MonsterState.setAiTarget(model, nearest)
-						PlayerState.setTickDamageSource(nearest, model, computeHitDamage(MonsterState.getAttackFor(model, TutorialState.getMonsterStage(nearest)), nearest) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(nearest) * PlayerDamage.getLevelGapTakeMultiplier(nearest))
+						local tickAttack = MonsterState.getAttackFor(model, TutorialState.getMonsterStage(nearest))
+						PlayerState.setTickDamageSource(nearest, model, computeHitDamage(tickAttack, nearest) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(nearest) * PlayerDamage.getLevelGapTakeMultiplier(nearest)
+							* PlayerDamage.getCombatTakeMultiplier(nearest, tickAttack)) -- C2
 					end
 				end
 				local targetCharacter = target and target.Character

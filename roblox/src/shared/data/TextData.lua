@@ -168,5 +168,7 @@ return {
 		-- 도움말(백과사전) 항목 - 창 UI는 P4(목록 = HelpCodexData)
 		["codex.stealLock.title"] = "다른 유저가 사냥중인 몬스터",
 		["codex.stealLock.body"] = "체력바가 회색이고 자물쇠가 보이면 다른 유저가 먼저 사냥 중인 몬스터예요. 공격이 튕겨 나가요. 그 유저가 잠시 떠나면 자물쇠가 풀려요. 비슷한 성장 단계(같은 환생 · 가까운 레벨 · 가까운 스테이지)끼리는 같이 공격할 수 있고, 몬스터 체력의 {percent}% 이상 깎으면 보상을 받아요.", -- percent = CombatConfig.contributionRewardThreshold × 100(창이 넘긴다)
+		-- C2 권장 전투력(자리만 - 최종 스타일 U1): 스테이지 선택 · 구역 입구
+		["combat.recommend"] = "권장 전투력 {rec} / 내 전투력 {mine}", -- rec · mine = NumberFormat.format(CombatFormula.display(...))
 	},
 }
