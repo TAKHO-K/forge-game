@@ -349,6 +349,7 @@ function M1_2cVerify.runLive(player, env)
 				align.Position = Vector3.new(el.center.X, item.spec.top + 6 + ROOT_ABOVE, el.center.Z)
 				align.Parent = root
 				put(align.Position)
+				HeightGuard.reset(player) -- S1 후속: 서버 순간이동 표시(S1부터 표시 없는 큰 이동 = 수평 되돌림 - 이 절이 발판에 못 올라가 30곳 중 3곳만 떴다)
 				task.wait(0.7)
 				local hs = HeightGuard.getState(player)
 				hs.graceUntil = 0

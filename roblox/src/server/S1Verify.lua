@@ -124,6 +124,22 @@ function V.runPure()
 				maxPad = math.max(maxPad, (Vector3.new(s.target.X - c.X, 0, s.target.Z - c.Z).Magnitude + s.radius) / WorldMapData.hub.tree.course.pad.flightSeconds)
 			end
 		end
+		-- 지연 0.25 흉내: 설계 수평 maxPad/s 점프대 비행 1.1초를 0.25초 폴링으로 보되 표본이 두 폴링씩 몰리고(0 · 2칸) 허가는 0.5초 늦게 온다(pending → 위치 기록) → 되돌림 0
+		local lagSt = HeightGuard.newState()
+		lagSt.exemptUntil, lagSt.graceUntil = 0, 0
+		local x, lagOut = 0, {}
+		for i = 0, 8 do
+			local now = 20 + i * 0.25
+			if i == 2 then
+				HeightGuard.grantAt(lagSt, 1000, MovementConfig.permit.padSeconds, "합성 점프대(늦은 허가)", now, maxPad * MovementConfig.moveGuard.padSpeedMargin)
+			end
+			if i >= 1 and i <= 5 then
+				x += (i % 2 == 1) and maxPad * 0.5 or 0 -- 몰림(첫 몫은 허가 전 - 버킷이 받는다): 두 폴링 몫이 한 표본에(평균 = 설계 속도)
+			end
+			local ctx = HeightGuard.horizontalContext(lagSt, fakeChar, fakeRoot, fakeHum, now)
+			table.insert(lagOut, HeightGuard.evaluateHorizontal(lagSt, { pos = Vector3.new(x, 3, 0) }, now, ctx) == "ok" and "o" or "R")
+		end
+		r.check(("지연 0.25 점프대(설계 %.1f/s · 표본 몰림 · 허가 0.5초 늦음): %s(기대 되돌림 0)"):format(maxPad, table.concat(lagOut)), not table.concat(lagOut):find("R"))
 		r.check(("발판 허가 수평: 점프대(설계 40/s) %.0f(기대 40 × %.2f) · 통통 열매 %.1f(기대 = 걷기 %.1f) · 나무 점프대 %d개 설계 최대 %.1f/s × 여유 = %.1f(기대 < 보스 %d)"):format(
 			padRate, MovementConfig.moveGuard.padSpeedMargin, fruitRate, walkRate, padCount, maxPad, maxPad * MovementConfig.moveGuard.padSpeedMargin, MovementConfig.moveGuard.permitSpeed),
 			math.abs(padRate - 40 * MovementConfig.moveGuard.padSpeedMargin) < 1e-6 and fruitRate == walkRate and padCount > 0 and maxPad * MovementConfig.moveGuard.padSpeedMargin < MovementConfig.moveGuard.permitSpeed)

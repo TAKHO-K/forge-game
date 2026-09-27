@@ -184,16 +184,23 @@ function G2aVerify.runLive(player, env)
 		align.Mode = Enum.PositionAlignmentMode.OneAttachment
 		align.Attachment0 = attachment
 		align.RigidityEnabled = true
-		-- S1 후속 0-1: +3이면 체인 첫머리(접속 5초 뒤)에 클라 물리가 목표까지 못 올라가 서버가 본 발이 허용 아래(+20.5 < 22.38)에 머물렀다 = 검증 여유 부족(서버 판정은 켜져 있었다 - 판정 흔적) → +10
+		-- S1 후속 0-1: 체인 첫머리(접속 몇 초 뒤)에만 서버가 본 루트가 +18 ~ 20에서 멈췄다(+3 · +10 둘 다 - 판정 흔적: 유예 0 · 예외 0 · 꺼짐 false · 발 < 허용 = 서버는 본 대로 옳게 판정).
+		--   같은 동작(넉백 → 띄워 두기)을 체인 뒤에 하면 목표까지 올라가 0.95초에 되돌린다 = 접속 직후 클라가 제약을 늦게 따르거나 위치 복제가 멈춘 것(서버 틈 아님).
+		--   → 목표 +10 · 최대 6초 유지(클라가 따라오면 잡힌다) · 서버가 본 위치가 그대로인 표본 수를 같이 찍는다.
 		align.Position = base + Vector3.new(0, JumpMath.heightGuardAllowance() + 10, 0)
 		align.Parent = root
 		local t0 = os.clock()
 		local caught
 		st.trace = {}
 		local hoverRise = 0 -- S1 계측: 서버가 본 띄워 두기 높이(클라 물리가 제약을 따랐는가)
-		while os.clock() - t0 < 3 do
+		local staticSamples, lastY = 0, nil
+		while os.clock() - t0 < 6 do
 			task.wait(0.05)
 			hoverRise = math.max(hoverRise, root.Position.Y - base.Y)
+			if lastY and math.abs(root.Position.Y - lastY) < 1e-3 then
+				staticSamples += 1
+			end
+			lastY = root.Position.Y
 			if st.reverts > revertsBeforeAlign then
 				caught = os.clock() - t0
 				break
@@ -201,15 +208,15 @@ function G2aVerify.runLive(player, env)
 		end
 		align:Destroy()
 		attachment:Destroy()
-		print(("[G2a][나] 띄워 두기 판정 흔적: %s · 캐릭터 같음 %s · 루트 부모 %s · Anchored %s"):format(table.concat(st.trace, " "),
-			tostring(player.Character == character), tostring(root.Parent ~= nil), tostring(root.Anchored)))
+		print(("[G2a][나] 띄워 두기 판정 흔적: %s · 캐릭터 같음 %s · 루트 부모 %s · Anchored %s · 서버가 본 위치 그대로인 표본(0.05초) %d · 잡힌 시각 %s초 · 서버 시작 뒤 %.1f초"):format(table.concat(st.trace, " "),
+			tostring(player.Character == character), tostring(root.Parent ~= nil), tostring(root.Anchored), staticSamples, caught and ("%.2f"):format(caught) or "없음", workspace.DistributedGameTime))
 		st.trace = nil
 		task.wait(1)
 		r.check(("넉백 높이 %d(허용 %.2f 초과): 서버가 본 루트 최고 +%.1f · 되돌림 %d(기대 0 - 넉백 예외)"):format(launchHeight, JumpMath.heightGuardAllowance(), launchRise, afterLaunch),
 			afterLaunch == 0 and patternEvent ~= nil)
-		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(허용 + 10) 되돌림 %s초 뒤(기대 ≤ 1.5 - 폴링 0.25 × 연속 2 · 서버가 본 최고 +%.1f · 허용 %.2f · off %s) · 기록 시각 있음 %s"):format(
+		r.check(("1단 점프 되돌림 %d(기대 0) · 띄워 두기(허용 + 10) 되돌림 %s초 뒤(기대 ≤ 6 - 폴링 0.25 × 연속 2 + 클라가 따라오는 시간 · 서버가 본 최고 +%.1f · 허용 %.2f · off %s) · 기록 시각 있음 %s"):format(
 			afterJump, caught and ("%.2f"):format(caught) or "없음", hoverRise, st.allowance or -1, tostring(HeightGuard.debugOff), tostring(st.flaggedAt ~= nil)),
-			afterJump == 0 and caught ~= nil and caught <= 1.5 and st.flaggedAt ~= nil)
+			afterJump == 0 and caught ~= nil and caught <= 6 and st.flaggedAt ~= nil)
 		-- ③ 리더보드: 이 판(10초 전 시작)에 되돌림이 있었다 → 거절
 		local judged = Leaderboard.onBossCleared({ stage = 10, bossId = "x", bossMaxHp = 1, seconds = 10, isParty = false, members = { { player = player, advanced = false, reason = "verify", ratio = 1 } }, contributors = {} })
 		local clean = Leaderboard.onBossCleared({ stage = 10, bossId = "x", bossMaxHp = 1, seconds = 0.01, isParty = false, members = { { player = player, advanced = false, reason = "verify", ratio = 1 } }, contributors = {} })
