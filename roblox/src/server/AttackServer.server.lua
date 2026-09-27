@@ -380,6 +380,11 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 		local raycastParams = RaycastParams.new()
 		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 		local excluded = { character }
+		for _, other in ipairs(Players:GetPlayers()) do -- W2 결정 5: 다른 플레이어 몸은 막지 않는다(담장 · 지형만)
+			if other.Character and other.Character ~= character then
+				table.insert(excluded, other.Character)
+			end
+		end
 		for _, model in ipairs(MonsterState.getAllModels()) do
 			table.insert(excluded, model)
 		end

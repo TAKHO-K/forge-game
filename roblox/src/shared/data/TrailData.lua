@@ -6,7 +6,7 @@ local T = {}
 
 T.defaultSkin = "default"
 
--- 칼날 리본(대검 = 넓고 묵직한 호 · 쌍검 = 양손 칼날 각각 얇은 리본 · 활 · 지팡이 = 근접 리본 없음)
+-- 칼날 리본(대검 = 넓고 묵직한 호 · 쌍검 = 양손 칼날 각각 얇은 리본 · 활 · 지팡이 = 가까운 대상 휘두르기에만 - W2-4)
 T.ribbon = {
 	lifetime = 0.2, -- 0.15 ~ 0.25
 	startTransparency = 0.35, -- 1 · 2타(얇고 은은하게) - 끝 = 1(서서히 사라짐)
@@ -17,6 +17,7 @@ T.ribbon = {
 		gloss = { outerStuds = 0.9, transparency = 0.65, lifetime = 0.25 }, -- 칼끝 바깥으로 이만큼 더 나간 옅은 리본
 	},
 	classes = { greatsword = true, dualblade = true, paladin = true }, -- 근접 리본을 켜는 직업
+	closeClasses = { bow = true, healer = true }, -- W2-4: 대상이 아주 가까워 휘두를 때만(PlayerMotionData.closeSwing) 켜는 직업 - 규칙(너비 · 수명 · 강공격)은 위와 같다
 }
 
 -- 투사체 꼬리(화살 = 가늘고 밝게 + 촉 빛 · 지팡이 = 굵게 + 옅은 파티클) - 강공격 = 더 길고 밝게

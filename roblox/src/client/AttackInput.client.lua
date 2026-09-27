@@ -27,7 +27,8 @@ local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming)
 
 -- W2 요청 번호: 서버가 결과 · 발사 알림에 돌려준다 → 원거리는 "그 요청을 보낸 시각 + 서버 발사 지연 + 서버 비행 시간"에 화살이 닿게 그린다.
 local requestSeq = 0
-local pendingShots = {} -- [seq] = { sentAt, index, heavy }
+local pendingShots = {} -- [seq] = { sentAt, index, heavy, close(W2-4 휘두르기 = 투사체 안 그림) }
+local lastSwingClose = false
 local lastSwingIndex, lastSwingHeavy = 1, false
 
 -- MV1 공중 공격(환생 1회부터 - MovementUnlockData): 한 체공 예산(MoveRules.airAttackBudget = 해금된 공중 점프 + 이번 체공의 공중 대시) 안에서는 공중에서 바로 친다.
@@ -217,11 +218,11 @@ local function performAttack(aimPoint, isAir)
 		lastSwingTick = now
 		local heavy = predictIsHeavyHit(isAir)
 		lastSwingIndex, lastSwingHeavy = MotionTiming.comboIndex(predictedComboCount), heavy
-		WeaponVisual.playSwing(heavy, isAir) -- W2 칼날 리본 = WeaponVisual(동작 구간에만 · 강공격 = 넓게 + 광택)
+		lastSwingClose = WeaponVisual.playSwing(heavy, isAir, AimTarget.getCurrentTarget()) -- W2 칼날 리본 = WeaponVisual(동작 구간에만 · 강공격 = 넓게 + 광택) · W2-4 가까운 대상 = 휘두르기
 		AttackTrail.debugFire("swing", { at = now, heavy = heavy, index = lastSwingIndex })
 	end
 	if ProjectileConfig.kindByClass[classId] then
-		pendingShots[seq] = { sentAt = now, index = lastSwingIndex, heavy = lastSwingHeavy }
+		pendingShots[seq] = { sentAt = now, index = lastSwingIndex, heavy = lastSwingHeavy, close = lastSwingClose }
 		if seq - 64 > 0 then
 			pendingShots[seq - 64] = nil -- 답이 안 온 요청(헛스윙 · 쿨다운 무시) 정리
 		end
@@ -440,6 +441,9 @@ attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit, isBuffedShot
 	local now = os.clock()
 	local releaseAt = shot and serverRelease and (shot.sentAt + serverRelease) or (now + WeaponVisual.getReleaseDelay())
 	local arriveAt = shot and serverTravel and (releaseAt + serverTravel) or nil
+	if shot and shot.close then
+		return -- W2-4: 가까운 대상 휘두르기 - 화살 · 구슬 없이 휘두른 무기가 맞힌다(피해 · 판정 시각은 서버 그대로 - 결과 이벤트가 불꽃 · 숫자)
+	end
 	task.delay(math.max(releaseAt - now, 0), function()
 		local targetHead = monsterModel and monsterModel:FindFirstChild("Head")
 		local muzzle = WeaponVisual.getMuzzleWorldPosition()

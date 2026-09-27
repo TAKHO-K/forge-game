@@ -191,6 +191,9 @@ local function buildWeapon(classId, colorOverride, parentFolder)
 			local part = buildMeshPart(folder, "Staff", model.meshId, model.size, model.color, model.textureId)
 			part:FindFirstChildOfClass("SpecialMesh").Scale = Vector3.one * scale
 			p.part, p.mesh = part, part:FindFirstChildOfClass("SpecialMesh")
+			if TrailData.ribbon.closeClasses[classId] and model.trailTop then -- W2-4 가까운 대상 휘두르기 리본
+				p.trail, p.gloss = attachTrail(part, model.trailTop, model.trailBottom)
+			end
 		elseif model.kind == "bow" then
 			local root = Instance.new("Part")
 			root.Name = "Weapon_BowRoot"
@@ -199,6 +202,9 @@ local function buildWeapon(classId, colorOverride, parentFolder)
 			root.Anchored, root.CanCollide, root.CanQuery, root.CanTouch, root.CastShadow = true, false, false, false, false
 			root.Parent = folder
 			p.root = root
+			if TrailData.ribbon.closeClasses[classId] and model.trailTop then -- W2-4 가까운 대상 휘두르기 리본(활 root에 부착)
+				p.trail, p.gloss = attachTrail(root, model.trailTop, model.trailBottom)
+			end
 			p.limbs = {}
 			for i, limb in ipairs(model.limbs) do
 				local part = Instance.new("Part")
@@ -400,19 +406,39 @@ local function rangedPose(a, now)
 		nextRel = a.queue[1]
 	end
 	local act = a.tm.act
-	if a.lastRelease and now - a.lastRelease < act then
+	-- W2-6 당기는 손(활 IK): handDraw = 쉬는 시위(0) → 당김 고정점(1) · kick = 놓은 뒤 튕김(0 ~ 1 ~ 0). 반환 draw = 시위 당김(놓은 뒤 = 0 - 손이 얼굴 옆에 남아도 시위는 쉰다).
+	local B = M.bowHand
+	local since = a.lastRelease and now - a.lastRelease
+	a.kick = (since and since < B.kickSeconds) and math.sin(math.pi * since / B.kickSeconds) or 0
+	a.returning = false
+	if since and since < act then
+		a.handDraw = 1
 		return h, 0, true
 	end
 	if nextRel then
 		local from = a.lastRelease and (a.lastRelease + act) or a.start
 		local u = math.clamp((now - from) / math.max(nextRel - from, 1e-3), 0, 1)
-		return a.lastRelease and h or mix(c, h, EASE.inQuad(u)), EASE.outCubic(u), false
+		if a.lastRelease then -- 연사: 앞 returnFraction 동안 손이 시위로 돌아가(다음 화살 잡기) → 다시 당김
+			local g = B.returnFraction
+			if u < g then
+				a.handDraw = 1 - EASE.inOutSine(u / g)
+				a.returning = true -- 새 화살은 손이 시위에 닿을 때 보인다
+				return h, 0, false
+			end
+			local d = EASE.outCubic((u - g) / (1 - g))
+			a.handDraw = d
+			return h, d, false
+		end
+		local d = EASE.outCubic(u)
+		a.handDraw = d
+		return mix(c, h, EASE.inQuad(u)), d, false
 	end
 	a.recovering = true
 	local r = (now - ((a.lastRelease or now) + act)) / math.max(a.tm.rec, 1e-3)
 	if r >= 1 then
 		return nil
 	end
+	a.handDraw = 1 - EASE.inOutSine(math.max(r, 0)) -- 회복: 손이 얼굴 옆에서 시위로 돌아간다
 	return mix(h, s, EASE.inOutSine(math.max(r, 0))), 0, false
 end
 
@@ -434,6 +460,40 @@ local function getupTotal()
 	return G.bounceSeconds + G.lieSeconds + G.riseSeconds + G.settleSeconds
 end
 WeaponVisual.getupTotal = getupTotal
+
+-- W2 결정 1: 대상 쪽으로 몸 돌리기(Root 관절 - 루트 파트 · 판정 불변). 공격이 끝나면 포즈에서 빠져 blend로 풀린다.
+local function withTurn(a, pose, now)
+	if a.turnYaw then
+		pose.Root = CFrame.Angles(0, a.turnYaw * math.min((now - a.start) / M.turnToTarget.seconds, 1), 0)
+	end
+	return pose
+end
+
+-- 대상 방향(루트 기준 수평 각 - 왼쪽 +). 앞 minDeg 안이면 nil(돌지 않는다).
+local function turnYawTo(st, target)
+	local root = st.character and st.character:FindFirstChild("HumanoidRootPart")
+	local tp = target and target.PrimaryPart
+	if not root or not tp then
+		return nil
+	end
+	local l = root.CFrame:VectorToObjectSpace(tp.Position - root.Position)
+	if l.X * l.X + l.Z * l.Z < 0.25 then
+		return nil
+	end
+	local yaw = math.atan2(-l.X, -l.Z)
+	if math.abs(math.deg(yaw)) < M.turnToTarget.minDeg then
+		return nil
+	end
+	return yaw
+end
+
+-- W2-4 활 · 지팡이: 대상이 가까우면(루트 ↔ 루트 closeSwing.rangeStuds 안 · 지상) 휘두르기.
+local function isCloseSwing(st, target, air)
+	local w = M.weapons[st.classId]
+	local root = st.character and st.character:FindFirstChild("HumanoidRootPart")
+	local tp = target and target.PrimaryPart
+	return not air and w ~= nil and w.closeSwing ~= nil and root ~= nil and tp ~= nil and (tp.Position - root.Position).Magnitude <= M.closeSwing.rangeStuds
+end
 
 -- 한 캐릭터의 목표 포즈. 반환: pose(CFrame 표) · blendKey · blendDur · inHand(무기가 손에) · draw(활) · trailOn · ik(허용)
 local function targetPose(st, now, root)
@@ -457,9 +517,9 @@ local function targetPose(st, now, root)
 	-- 공격
 	local a = st.attack
 	if a and a.ranged then
-		local pose, draw, act = rangedPose(a, now)
+		local pose, draw = rangedPose(a, now)
 		if pose then
-			return pose, a.blendKey, a.blendDur, true, draw, act, true
+			return pose, a.blendKey, a.blendDur, true, draw, false, true -- 쏘기 = 리본 없음(W2-4 휘두르기만)
 		end
 		st.attack = nil
 		a = nil
@@ -467,7 +527,7 @@ local function targetPose(st, now, root)
 	if a then
 		if a.freezeUntil and now < a.freezeUntil then
 			local pose, draw = sampleAttack(a.clip, a.tm, a.tm.ant)
-			return pose, a.blendKey, a.blendDur, true, draw, true, true
+			return withTurn(a, pose, now), a.blendKey, a.blendDur, true, draw, true, true
 		end
 		if a.freezeUntil then
 			a.start += a.freezeUntil - a.frozeAt
@@ -478,11 +538,11 @@ local function targetPose(st, now, root)
 			a.hitDone = true
 			a.freezeUntil, a.frozeAt = now + (a.hitstop or M.hitstopSeconds), now
 			local pose, draw = sampleAttack(a.clip, a.tm, a.tm.ant)
-			return pose, a.blendKey, a.blendDur, true, draw, true, true
+			return withTurn(a, pose, now), a.blendKey, a.blendDur, true, draw, true, true
 		end
 		if tau < a.tm.total then
 			local pose, draw, act = sampleAttack(a.clip, a.tm, tau)
-			return pose, a.blendKey, a.blendDur, true, draw, act, true
+			return withTurn(a, pose, now), a.blendKey, a.blendDur, true, draw, act, true
 		end
 		st.attack = nil
 		if a.heavyScaled then
@@ -543,12 +603,17 @@ local function placePiece(p, cf)
 	end
 end
 
-local function updateBow(weapon, p, bowCF, draw, showArrow)
+local function updateBow(weapon, p, bowCF, draw, showArrow, palmW)
 	local model = weapon.model
 	for _, limb in ipairs(p.limbs) do
 		limb.part.CFrame = bowCF * CFrame.new(limb.spec.relPos) * CFrame.Angles(0, math.rad(limb.spec.relRotYDeg), 0)
 	end
-	local nock = p.nockLocal + Vector3.new(0, 0, draw * (p.spec.drawStuds or 1.2))
+	local maxDraw = p.spec.drawStuds or 1.2
+	local nock = p.nockLocal + Vector3.new(0, 0, draw * maxDraw)
+	if palmW and draw > 0 then -- W2-6: 시위 가운데 = 당기는 손바닥(고정점 IK) - 활 몸 쪽 · 최대 당김 · 옆 0.6까지만
+		local l = bowCF:PointToObjectSpace(palmW)
+		nock = Vector3.new(math.clamp(l.X, -0.6, 0.6), math.clamp(l.Y, -0.6, 0.6), math.clamp(l.Z, p.nockLocal.Z, p.nockLocal.Z + maxDraw))
+	end
 	local function seg(part, fromLocal, toLocal)
 		local a, b = bowCF:PointToWorldSpace(fromLocal), bowCF:PointToWorldSpace(toLocal)
 		part.Size = Vector3.new((b - a).Magnitude, part.Size.Y, part.Size.Z)
@@ -560,6 +625,12 @@ local function updateBow(weapon, p, bowCF, draw, showArrow)
 	if showArrow then
 		local nockW = bowCF:PointToWorldSpace(nock)
 		local fwd = bowCF:VectorToWorldSpace(Vector3.new(0, 0, -1))
+		if palmW and draw > 0 then -- 화살 = 시위 가운데 → 활 손잡이(화살 받침) 쪽
+			local rest = bowCF:PointToWorldSpace(p.gripLocal)
+			if (rest - nockW).Magnitude > 0.05 then
+				fwd = (rest - nockW).Unit
+			end
+		end
 		p.arrow.CFrame = CFrame.lookAt(nockW + fwd * (model.arrowSize.Z / 2), nockW + fwd * 2)
 	end
 	return bowCF:PointToWorldSpace(nock)
@@ -640,8 +711,24 @@ local function updatePose(st, now, camPos)
 	end
 	local mainCF = pieceCFrame(main, hand, heavyMul)
 	if ik == "string" and main.nockLocal then
-		local nockW = mainCF:PointToWorldSpace(main.nockLocal + Vector3.new(0, 0, draw * (main.spec.drawStuds or 1.2)))
-		st.frame.ikMiss = PoseRig.solveArm(rig, T, cf, "Right", nockW, POLE_STRING, PALM.RightHand, nil, appliedW.RightShoulder or 1)
+		local spec = main.spec
+		local a = st.attack
+		local handDraw, kick = draw, 0
+		if a and a.ranged and a.handDraw then
+			handDraw, kick = a.handDraw, a.kick or 0
+		end
+		local target
+		local headCF = cf.Head
+		if spec.drawAnchor and headCF then -- W2-6: 쉬는 시위 → 머리 기준 고정점(턱 · 뺨 옆) · 놓을 때 튕김 · 머리 뒷면 쪽으로는 handBackLimit까지만
+			local anchor = spec.drawAnchor + (spec.releaseKick or Vector3.zero) * kick
+			local restLocal = headCF:PointToObjectSpace(mainCF:PointToWorldSpace(main.nockLocal))
+			local l = restLocal:Lerp(anchor, handDraw)
+			target = headCF:PointToWorldSpace(Vector3.new(l.X, l.Y, math.min(l.Z, spec.handBackLimit or 0.3)))
+		else
+			target = mainCF:PointToWorldSpace(main.nockLocal + Vector3.new(0, 0, draw * (spec.drawStuds or 1.2)))
+		end
+		local wristT = kick > 0 and spec.releaseOpenDeg and CFrame.Angles(math.rad(-spec.releaseOpenDeg * kick), 0, 0) or nil
+		st.frame.ikMiss = PoseRig.solveArm(rig, T, cf, "Right", target, spec.drawPole or POLE_STRING, PALM.RightHand, wristT, appliedW.RightShoulder or 1)
 	elseif ik == "support" and main.supportLocal then
 		local target = mainCF:PointToWorldSpace(main.supportLocal * heavyMul)
 		st.frame.ikMiss = PoseRig.solveArm(rig, T, cf, "Left", target, POLE_SUPPORT, PALM.LeftHand, CFrame.Angles(0, 0, math.rad(90)), appliedW.RightShoulder or 1)
@@ -677,8 +764,9 @@ local function placeWeapon(st, now, camPos)
 			placePiece(p, wcf)
 			if p.root then
 				local a = st.attack
-				local showArrow = f.inHand and not (a and a.ranged and ((a.lastRelease and now - a.lastRelease < a.tm.act) or a.recovering))
-				updateBow(weapon, p, wcf, f.inHand and f.draw or 0, showArrow)
+				local showArrow = f.inHand and not (a and a.ranged and ((a.lastRelease and now - a.lastRelease < a.tm.act) or a.recovering or a.returning))
+				local rh = f.inHand and character:FindFirstChild(p.spec.stringHand or "RightHand")
+				updateBow(weapon, p, wcf, f.inHand and f.draw or 0, showArrow, rh and rh.CFrame:PointToWorldSpace(PALM[rh.Name] or PALM.RightHand))
 			end
 		end
 		if p.trail then
@@ -718,41 +806,46 @@ local function bindPlayer(p)
 	refresh()
 end
 
-local function startAttack(st, index, heavy, air)
+local function startAttack(st, index, heavy, air, target)
 	if not st or not st.classId then
-		return
+		return false
 	end
 	local clip = MotionTiming.clip(st.classId, index, air)
 	if not clip then
-		return
+		return false
+	end
+	local close = MotionTiming.isRanged(st.classId) and isCloseSwing(st, target, air)
+	if close then
+		clip = M.weapons[st.classId].closeSwing
 	end
 	local now = os.clock()
 	st.lastAttackAt = now
 	if not st.drawn then -- 공격 = 즉시 전투 자세(꺼내기 생략 - 무기가 곧장 손으로)
 		st.drawn, st.drawStart = true, -math.huge
 	end
-	if MotionTiming.isRanged(st.classId) then -- 원거리 = 발사 예약 큐(서버 발사 시각 상수 - rangedPose)
-		local release = now + MotionTiming.releaseSeconds(st.classId)
+	if MotionTiming.isRanged(st.classId) and not close then -- 원거리 = 발사 예약 큐(서버 발사 시각 상수 - rangedPose)
+		local release = now + MotionTiming.releaseSeconds(st.classId, air)
 		local cur = st.attack
 		if cur and cur.ranged and not cur.recovering then
 			table.insert(cur.queue, release) -- 당긴 채 이어 쏜다
-			return
+			return false
 		end
 		st.attack = { ranged = true, clip = clip, tm = MotionTiming.scale(clip, speedOf(st), heavy, true), start = now, queue = { release }, heavy = heavy, air = air, index = index,
 			blendKey = "atk" .. tostring(now), blendDur = M.blend.attackIn }
 		st.getupStart = nil
 		local airData = air and AttackMotionData[st.classId] and AttackMotionData[st.classId].air
 		if airData and airData.bodyPitchDeg and st.character then
-			require(script.Parent.AirMotion).play(st.character, "lean", MotionTiming.releaseSeconds(st.classId) + (airData.hoverSeconds or 0), airData.bodyPitchDeg)
+			require(script.Parent.AirMotion).play(st.character, "lean", MotionTiming.releaseSeconds(st.classId, air) + (airData.hoverSeconds or 0), airData.bodyPitchDeg)
 		end
-		return
+		return false
 	end
-	local tm = MotionTiming.scale(clip, speedOf(st), heavy)
+	local tm = MotionTiming.scale(clip, speedOf(st), heavy, close) -- 휘두르기(W2-4) = 전조 고정(타격 = 서버 발사 시각)
 	local prev = st.attack
 	if prev and prev.heavyScaled then
 		prev.heavyScaled(false)
 	end
-	st.attack = { clip = clip, tm = tm, start = now, heavy = heavy, air = air, index = index, blendKey = "atk" .. tostring(now), blendDur = math.min(M.blend.attackIn, tm.ant) }
+	st.attack = { clip = clip, tm = tm, start = now, heavy = heavy, air = air, index = index, blendKey = "atk" .. tostring(now), blendDur = math.min(M.blend.attackIn, tm.ant),
+		turnYaw = turnYawTo(st, target), close = close }
 	st.getupStart = nil
 	-- 3타 강공격: 메시 ×1.3(SpecialMesh 배율 - 파트 크기는 메시에 안 먹는다)
 	if heavy and st.weapon then
@@ -780,13 +873,15 @@ local function startAttack(st, index, heavy, air)
 			require(script.Parent.AirMotion).play(st.character, "lean", seconds + (airData.hoverSeconds or 0), airData.bodyPitchDeg)
 		end
 	end
+	return close
 end
 
--- 내 스윙(서버 확인 없이 즉시 - 판정은 서버). isHeavy = 3타 강공격 예측 · isAir = 공중 공격.
-function WeaponVisual.playSwing(isHeavy, isAir)
+-- 내 스윙(서버 확인 없이 즉시 - 판정은 서버). isHeavy = 3타 강공격 예측 · isAir = 공중 공격 · target = 클라 조준 대상(AimTarget - 서버와 같은 AimPicker · 연출용).
+-- 반환: 활 · 지팡이 가까운 대상 휘두르기인가(W2-4 - 화살 · 구슬을 안 그린다).
+function WeaponVisual.playSwing(isHeavy, isAir, target)
 	local st = stateFor(player)
 	if not st then
-		return
+		return false
 	end
 	local now = os.clock()
 	if now - st.lastAttackAt > CombatConfig.comboResetWindowSeconds then
@@ -794,7 +889,7 @@ function WeaponVisual.playSwing(isHeavy, isAir)
 	end
 	st.combo += 1
 	local index = isHeavy and 3 or MotionTiming.comboIndex(st.combo)
-	startAttack(st, index, isHeavy, isAir)
+	return startAttack(st, index, isHeavy, isAir, target)
 end
 
 -- 남의 공격(서버 중계 AttackMotion) · 검증 더미.

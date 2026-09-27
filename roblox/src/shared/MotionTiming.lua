@@ -31,9 +31,9 @@ function MotionTiming.clip(classId, index, air)
 	return w.attacks[math.clamp(index or 1, 1, #w.attacks)]
 end
 
--- 원거리 발사 시각(서버 = 모션 - 상수 · PlayerMotionData.rangedReleaseSeconds).
-function MotionTiming.releaseSeconds(classId)
-	return PlayerMotionData.rangedReleaseSeconds[classId]
+-- 원거리 발사 시각(서버 = 모션 - 상수 · PlayerMotionData.rangedReleaseSeconds). air = 공중 사격(W2 결정 4 - rangedAirReleaseSeconds가 있으면 그 값).
+function MotionTiming.releaseSeconds(classId, air)
+	return (air and PlayerMotionData.rangedAirReleaseSeconds[classId]) or PlayerMotionData.rangedReleaseSeconds[classId]
 end
 
 -- 배율 적용 구간 길이. 반환 { ant, act, rec, total, hit(= ant) }. keepAnt = 전조를 줄이지 않는다(원거리 - 전조 끝 = 서버 발사 시각 상수).
@@ -70,10 +70,10 @@ function MotionTiming.scale(clip, speed, heavy, keepAnt)
 	return { ant = ant, act = act, rec = rec, total = ant + act + rec, hit = ant }
 end
 
--- 애니메이션 타격 프레임(요청 순간 = 0부터 초). 원거리 = 발사 예약 시각(상수 - 모든 배율 · 타 · 공중).
+-- 애니메이션 타격 프레임(요청 순간 = 0부터 초). 원거리 = 발사 예약 시각(상수 - 배율 · 타 무관 · 공중은 rangedAirReleaseSeconds).
 function MotionTiming.hitSeconds(classId, index, speed, heavy, air)
 	if RANGED[classId] then
-		return MotionTiming.releaseSeconds(classId)
+		return MotionTiming.releaseSeconds(classId, air)
 	end
 	local clip = MotionTiming.clip(classId, index, air)
 	return clip and MotionTiming.scale(clip, speed, heavy).hit or 0
@@ -84,7 +84,7 @@ function MotionTiming.serverSeconds(classId, index, speed, heavy, air)
 	if not RANGED[classId] then
 		return 0
 	end
-	return MotionTiming.releaseSeconds(classId)
+	return MotionTiming.releaseSeconds(classId, air)
 end
 
 -- 시각표(W1-4 검증 · 보고서): 무기 × 타(1 · 2 · 3 · 강 · 공중) × 배율 → { classId, label, speed, anim, server, diff }.

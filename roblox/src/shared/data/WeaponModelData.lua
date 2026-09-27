@@ -93,6 +93,9 @@ return {
 		arrowSize = Vector3.new(0.06, 0.06, 1.5),
 		arrowColor = Color3.fromRGB(200, 180, 140),
 		effectAnchor = Vector3.new(0, 0, 0), -- 강화 이펙트(30-0 S08)가 붙는 자리 = 활 몸체의 가운데(root 원점)
+		-- W2-4 근접 휘두르기 리본(TrailData.ribbon.closeClasses) - 활 root 로컬: 위 날개 끝 쪽 · 가운데 쪽
+		trailTop = Vector3.new(2.7, 0, 0.5),
+		trailBottom = Vector3.new(1.2, 0, -0.5),
 	},
 
 	healer = {
@@ -103,5 +106,8 @@ return {
 		color = Color3.fromRGB(215, 200, 235),
 		gripOffset = CFrame.new(0.15, -0.1, -0.15),
 		effectAnchor = Vector3.new(0, 0, 1.4), -- 강화 이펙트(30-0 S08)가 붙는 자리 = 지팡이 상단 1/4(머리 쪽, size.Z/4) - 밑동 · 그립은 피한다
+		-- W2-4 근접 휘두르기 리본(TrailData.ribbon.closeClasses) - 파트 로컬(메시 +Y = 머리): 머리 쪽 끝 · 가운데 위
+		trailTop = Vector3.new(0, 2.6, 0),
+		trailBottom = Vector3.new(0, 1.2, 0),
 	},
 }

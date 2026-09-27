@@ -33,6 +33,15 @@ P.heavySlow = 0.7 -- 3타 강공격 = 따라 휘두름 · 회복을 이만큼 �
 --   공격 속도 · 3타 · 공중과 무관(옛 서버와 같다). 밸런스 불변: 이 값을 바꾸면 처치 시간이 바뀐다(W1 후속 실측 - 0.20초로 줄였더니 EconSim 상위 1% 25,300이
 --   1,968 → 1,759시간). 모션이 이 시각에 맞춘다: 활 · 지팡이는 발사를 예약(큐)해 이 시각에 놓는다 - 공격 간격이 더 짧으면 당긴 채 연사(WeaponVisual).
 P.rangedReleaseSeconds = { bow = 0.78 * 0.55, healer = 0.55 * 0.35 }
+-- W2 결정 4: 공중 사격만 시위를 빨리 놓는다 - 공중 정지(AttackMotionData.bow.air.hoverSeconds 0.25) 안에 발사(옛 0.429 = 떨어지기 시작한 뒤 발사).
+--   공중 공격 수는 체공 예산(MoveRules.airAttackBudget)이 정하므로 공중 피해 ÷ 지상 ≤ 0.66 불변 · 정지 시간 · 대공 잡기 체공 기록 불변. 지팡이(0.1925)는 이미 정지 안.
+P.rangedAirReleaseSeconds = { bow = 0.2 }
+-- W2-6 활 당기는 손: 놓는 순간 튕김(kickSeconds - 손목 펴기 포함) · 연사 사이 "다음 화살 잡기" = 발사 간격의 앞 returnFraction 동안 손이 시위로 돌아간다.
+P.bowHand = { kickSeconds = 0.12, returnFraction = 0.35 }
+-- W2 결정 1: 근접 대상(클라 조준 = 서버와 같은 AimPicker)이 옆 · 뒤면 몸을 먼저 그쪽으로 빠르게 돌려 휘두른다(Root 관절 - 연출만 · 판정 · 루트 파트 불변) → 리본 방향 = 맞은 방향
+P.turnToTarget = { minDeg = 50, seconds = 0.04 }
+-- W2-4 활 · 지팡이: 대상이 이 거리(루트 ↔ 루트) 안이면 쏘는 대신 휘두르는 모습(피해 · 판정 시각 = 원거리 그대로 - 타격 프레임 = 서버 발사 시각 · 화살 · 구슬은 안 그린다)
+P.closeSwing = { rangeStuds = 6 }
 
 -- 넘어짐 → 일어나기(W1 · BR1-4가 부른다): 장난감처럼 튕김 → 짧게 누움 → 무기별 일어나기 → 전투 자세 · 전체 ≤ 0.8초 ·
 --   일어나는 동안 서버 무적(getupInvulnSeconds - 서버가 발사 허가 · 강제 이동 기록을 본 뒤에만) · 입력 버퍼(공격 · 대시 = 끝나는 순간 나간다).
@@ -123,9 +132,12 @@ W.dualblade = {
 }
 
 -- ───────── 활(왼손 활 · 오른손 시위) - 활 든 왼팔을 뻗고 오른손을 볼까지 당겨 놓는다 · 공중 = 짧은 정지 후 아래로 ─────────
--- 활 날개 = 왼손 엄지 쪽(θ = 왼 어깨 x + 팔꿈치 x + 손목 x). 조준 = 몸을 오른쪽으로 60° 틀고(허리 y −60) 왼팔을 과녁 쪽으로(어깨 z −60 = 바깥 → 앞) · 오른손 = 시위 IK.
+-- 활 날개 = 왼손 엄지 쪽(θ = 왼 어깨 x + 팔꿈치 x + 손목 x). 조준(W2-6) = 몸을 옆으로 90° 틀고(허리 y −90 · 왼 어깨가 과녁 쪽) 머리는 과녁을 본다(목 +85) ·
+--   왼팔 = 활을 과녁 쪽으로 곧게(화살 축이 당김 고정점 = 턱 · 뺨 옆을 지나게 - WeaponRigSpec.bow.drawAnchor) · 오른손 = 시위 IK(고정점까지).
+--   값 = 체형 4종 모형 최적화(화살 방향 = 앞 수평 · 공중 = 13° 아래 + 몸 숙임 22°) - 활은 23° 눕힘(오른쪽 위로).
 local BOW_STANCE = { Waist = { 0, -25, 0 }, Neck = { 0, 25, 0 }, LeftShoulder = { 35, 0, -10 }, LeftElbow = { 30, 0, 0 }, LeftWrist = { -10, 0, 0 } } -- 활을 몸 앞 낮게(θ 55)
-local BOW_AIM = { Waist = { 0, -60, 0 }, Neck = { 0, 55, 0 }, LeftShoulder = { 90, 0, -60 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { 0, 0, 0 } }
+local BOW_AIM = { Waist = { -5, -90, 0 }, Neck = { 5, 85, 0 }, LeftShoulder = { 32.7, -42.7, -68.5 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { -21.5, 45, -29.5 } }
+local BOW_AIM_AIR = { Waist = { -12, -90, 0 }, Neck = { 12, 85, 0 }, LeftShoulder = { 45.2, -37.8, -57.8 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { -16.6, 45, -35.1 } }
 W.bow = {
 	ik = "string", -- 오른손 → 시위 당김 점(당김 = draw 0 ~ 1)
 	stance = BOW_STANCE,
@@ -138,9 +150,13 @@ W.bow = {
 		{ ant = 0.429, act = 0.05, rec = 0.08, cocked = BOW_AIM, contact = BOW_AIM, through = BOW_AIM, settle = BOW_AIM, draw = { 0, 1, 0, 0 } },
 		{ ant = 0.429, act = 0.05, rec = 0.08, cocked = BOW_AIM, contact = BOW_AIM, through = BOW_AIM, settle = BOW_STANCE, draw = { 0, 1, 0, 0 } },
 	},
-	air = { ant = 0.429, act = 0.05, rec = 0.1, cocked = BOW_AIM, -- 프레야식: 정지(AirHover) 동안 아래로 겨눔
-		contact = { Waist = { -25, -55, 0 }, Neck = { 15, 50, 0 }, LeftShoulder = { 50, 0, -60 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { 0, 0, 0 } },
-		through = { Waist = { -25, -55, 0 }, Neck = { 15, 50, 0 }, LeftShoulder = { 50, 0, -60 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { 0, 0, 0 } }, settle = BOW_STANCE, draw = { 0, 1, 0, 0 } },
+	-- W2-4 가까운 대상: 활을 왼 어깨 위로 들었다가 앞 오른쪽 아래로 후려친다(타격 = 서버 발사 시각 - ant 고정)
+	closeSwing = { ant = P.rangedReleaseSeconds.bow, act = 0.08, rec = 0.12,
+		cocked = { Waist = { 5, 30, 0 }, Neck = { 0, -25, 0 }, LeftShoulder = { 150, 0, -30 }, LeftElbow = { 40, 0, 0 }, LeftWrist = { -20, 0, 0 } },
+		contact = { Waist = { -15, -30, 0 }, Neck = { 10, 25, 0 }, LeftShoulder = { 70, 0, 20 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -60, 0, 0 } },
+		through = { Waist = { -20, -45, 0 }, Neck = { 10, 35, 0 }, LeftShoulder = { 40, 0, 40 }, LeftElbow = { 15, 0, 0 }, LeftWrist = { -70, 0, 0 } }, settle = BOW_STANCE },
+	air = { ant = 0.2, act = 0.05, rec = 0.1, cocked = BOW_AIM, -- 프레야식: 정지(AirHover 0.25) 안에 아래로 겨눠 놓는다(ant = rangedAirReleaseSeconds.bow)
+		contact = BOW_AIM_AIR, through = BOW_AIM_AIR, settle = BOW_STANCE, draw = { 0, 1, 0, 0 } },
 }
 
 -- ───────── 지팡이(양손) - 양손으로 들어 올려 영창 → 앞으로 뻗기 · 치유는 위로 들기 ─────────
@@ -159,6 +175,11 @@ W.healer = {
 		{ ant = 0.1925, act = 0.04, rec = 0.064, cocked = ST_RAISE, contact = ST_THRUST, through = ST_THRUST, settle = ST_RAISE },
 		{ ant = 0.1925, act = 0.04, rec = 0.064, cocked = ST_RAISE, contact = ST_THRUST, through = ST_THRUST, settle = ST_STANCE },
 	},
+	-- W2-4 가까운 대상: 오른 어깨 위로 젖혔다가 왼쪽 아래로 대각 휘두르기(대검 1타 틀 · 타격 = 서버 발사 시각)
+	closeSwing = { ant = P.rangedReleaseSeconds.healer, act = 0.08, rec = 0.1,
+		cocked = { Waist = { 8, -40, 0 }, Neck = { 0, 30, 0 }, RightShoulder = { 150, -10, 30 }, RightElbow = { 60, 0, 0 }, RightWrist = { -20, 0, 0 } },
+		contact = { Waist = { -10, 20, 0 }, Neck = { 0, -15, 0 }, RightShoulder = { 75, -20, -10 }, RightElbow = { 15, 0, 0 }, RightWrist = { -75, 0, 0 } },
+		through = { Waist = { -10, 45, 0 }, Neck = { 0, -30, 0 }, RightShoulder = { 25, 0, -40 }, RightElbow = { 30, 0, 0 }, RightWrist = { -60, 0, 0 } }, settle = ST_STANCE },
 	-- 치유(스킬 모션 = K - 자세 자리만): 위로 높이 들기(θ 90)
 	heal = { Waist = { 12, 0, 0 }, Neck = { -20, 0, 0 }, RightShoulder = { 175, 0, 5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -95, 0, 0 } },
 	air = { ant = 0.1925, act = 0.04, rec = 0.1, cocked = ST_RAISE, -- 공중 영창 후 아래로(θ −40)

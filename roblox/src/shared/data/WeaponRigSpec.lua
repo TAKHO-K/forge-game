@@ -15,7 +15,11 @@
 --     refLength      기준 크기(끝에서 끝 · stud) · nativeLength = 지금 메시의 원본 길이 → 배율 = refLength ÷ nativeLength(균일)
 --     hold           쥔 방향 = 모델 축 → 손 축(손 축: 팔을 내리면 −Y = 손가락 · −Z = 엄지(앞) · +X = 오른쪽). 칼 = 끝이 엄지 쪽 · 날 선이 손가락 쪽(베는 방향).
 --     support        양손 무기 보조 손(반대 손) 자리(모델 로컬 · 원본 단위) - 팔 = IK(client/PoseRig)
---     stringNock · drawStuds   활: 시위 가운데(쉬는 자리) · 최대 당김(+Z 방향 stud) - 오른손 = IK로 이 점을 쥔다
+--     stringNock · drawStuds   활: 시위 가운데(쉬는 자리) · 최대 당김(+Z 방향 stud - 시위 표시 상한). 오른손 = IK로 쉬는 시위 → 당김 고정점
+--     drawAnchor     활(W2-6): 다 당긴 오른손 손바닥 자리 = 머리 로컬(+X 오른쪽 · +Y 위 · −Z 얼굴 앞) - 턱 · 뺨 옆(머리 상자 밖 · 얼굴 앞쪽 절반).
+--                    머리 기준이라 체형 · 크기가 달라도 손이 얼굴 옆에 온다(옛 = 활 축으로 drawStuds 당김 → 목 뒤로 파고들었다). 시위 가운데는 손바닥을 따라간다.
+--     drawPole       당기는 팔꿈치 방향(몸통 로컬 - 오른쪽 = 과녁 반대 · 살짝 아래 = 팔꿈치 어깨 높이) · handBackLimit = 손바닥 머리 로컬 z 상한(머리 뒷면 0.6보다 앞)
+--     releaseKick · releaseOpenDeg   놓는 순간 손이 튕기는 거리(머리 로컬 - 뒤 · 바깥) · 손목을 펴는 각(도)
 --     sheath         비전투 자리: mount = "back"(UpperTorso) | "hip"(LowerTorso) · pos = 그 파트 기준 손잡이 점 자리 · z · x = 모델 +Z · +X가 향할 방향(그 파트 축)
 local function holdOf(xTo, yTo, zTo)
 	return CFrame.fromMatrix(Vector3.zero, xTo, yTo, zTo)
@@ -60,6 +64,9 @@ SPEC.weapons = {
 			{ hand = "LeftHand", grip = Vector3.new(0, 0, -0.67), tipAxis = "+X", refLength = 5.74, nativeLength = 5.74,
 				hold = holdOf(Vector3.new(0, 0, -1), Vector3.new(-1, 0, 0), Vector3.new(0, 1, 0)),
 				stringNock = Vector3.new(0, 0, 0.7347), drawStuds = 1.6, stringHand = "RightHand",
+				-- W2-6: 체형 4종(표준 · 큰 · 작은 · 날씬 - Studio 실측 부착점) 모형에서 손 · 아래팔 · 활이 머리 상자를 안 뚫고 · 팔꿈치 = 어깨 +0.12 ~ 0.27 · 화살 축 어긋남 ≤ 0.13
+				drawAnchor = Vector3.new(1.0, -0.55, -0.1), drawPole = Vector3.new(1, -0.2, 0), handBackLimit = 0.3,
+				releaseKick = Vector3.new(0.3, 0.05, 0.25), releaseOpenDeg = 35,
 				sheath = { mount = "back", pos = Vector3.new(0, 0.25, 0.75), z = Vector3.new(0, 0, -1), x = Vector3.new(0.55, 1, 0) } }, -- 등(대각 · 시위가 몸 쪽)
 		},
 	},

@@ -74,8 +74,9 @@ function V.runPure()
 		end
 		r.note(table.concat(lines, " · "))
 		-- W1 후속: 원거리 서버 발사 시각 = W1 전 값(활 0.78 × 0.55 · 지팡이 0.55 × 0.35) - 밸런스 불변(EconSim 대조)
-		r.check(("원거리 서버 발사 시각 = W1 전 값: 활 %.4f(0.4290) · 지팡이 %.4f(0.1925)"):format(MotionTiming.serverSeconds("bow", 1, 2.5, true, true), MotionTiming.serverSeconds("healer", 2, 1, false, false)),
-			math.abs(MotionTiming.serverSeconds("bow", 1, 2.5, true, true) - 0.429) < 1e-9 and math.abs(MotionTiming.serverSeconds("healer", 2, 1, false, false) - 0.1925) < 1e-9)
+		r.check(("원거리 서버 발사 시각 = W1 전 값: 활 %.4f(0.4290) · 지팡이 %.4f(0.1925) · 활 공중 %.4f(0.2000 - W2 결정 4)"):format(MotionTiming.serverSeconds("bow", 1, 2.5, true, false), MotionTiming.serverSeconds("healer", 2, 1, false, false), MotionTiming.serverSeconds("bow", 1, 2.5, true, true)),
+			math.abs(MotionTiming.serverSeconds("bow", 1, 2.5, true, false) - 0.429) < 1e-9 and math.abs(MotionTiming.serverSeconds("healer", 2, 1, false, false) - 0.1925) < 1e-9
+				and math.abs(MotionTiming.serverSeconds("bow", 1, 2.5, true, true) - 0.2) < 1e-9)
 		r.check(("무기 5 × 타 5 × 배율 2 = %d칸 · 최대 차이 %.3f초(%s %s ×%.1f) ≤ 0.05"):format(#rows, worst, worstRow and worstRow.classId or "-", worstRow and worstRow.label or "-", worstRow and worstRow.speed or 0),
 			#rows == 50 and worst <= 0.05 + 1e-9)
 		local rangedSame = true
@@ -100,7 +101,7 @@ function V.runPure()
 					local antMin = math.min(clip.ant, math.max(clip.ant * S.antMinFraction, S.antMinSeconds))
 					local recCut = t.rec < clip.rec - 1e-9
 					local actCut = t.act < clip.act - 1e-9
-					local ok = (ranged and math.abs(t.ant - MotionTiming.releaseSeconds(classId)) < 1e-9) -- 원거리: 전조 = 서버 발사 상수(안 줄인다 - 연사 = 큐)
+					local ok = (ranged and math.abs(t.ant - MotionTiming.releaseSeconds(classId, clip == w.air)) < 1e-9) -- W2 결정 4: 공중 = 공중 발사 시각 -- 원거리: 전조 = 서버 발사 상수(안 줄인다 - 연사 = 큐)
 						or (math.abs(t.total - (clip.ant + clip.act + clip.rec) / speed) < 1e-6
 						and (not recCut or t.ant <= antMin + 1e-9)
 						and (not actCut or t.rec <= clip.rec * S.recMinFraction + 1e-9)
