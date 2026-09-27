@@ -3603,6 +3603,7 @@ if RunService:IsStudio() then
 				{ "M1(나)", function() require(script.Parent.M1Verify).runLive(player, env) end }, -- M1: 잠금 · 포탈 · 귀환 · 몬스터 지대 · 보스 관문 · 나무 리프트 · 떨어짐 · 복귀 · 봉인 입구
 				{ "BR1(나)", function() require(script.Parent.BR1Verify).runLive(player, env) end }, -- BR1: 새 패턴 6종 강제 · 대공 잡기(N초 · 던짐 · 구출 → 기절) · 환경 변화 · 12인 step 시간
 				{ "BR1-2(나)", function() require(script.Parent.BR1_2Verify).runLive(player, env) end }, -- BR1-2: 곡선 32발 · 동시 4보스 성능 · 반사 · 음파 · 색 맞추기 · 가둠 · 저장 v37
+				{ "BR1-4a(나)", function() require(script.Parent.BR14aVerify).runLive(player, env) end }, -- BR1-4a: 고정 % 피해 · 에네르기파 · 회오리 되돌림 0 · 대공 잡기 강제 체공 · 붕괴 실제 낙하 · 아레나 낙하 제외
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "M1-2c(나)", function() require(script.Parent.M1_2cVerify).runLive(player, env) end }, -- M1-2c: 나무 발사 전부 되돌림 0 · 허가 없이 같은 높이 → 되돌림 · 보스 발사 최대 · 리프트 [F] · 도착 낙하 없음
 				{ "G1-4(나)", function() require(script.Parent.G1_4Verify).runLive(player, env) end }, -- G1-4: 보스맵 잔류 · 다음 / 다시 도전 / 마을 · 90초
@@ -4007,6 +4008,15 @@ if RunService:IsStudio() and verifyEnabled("MV1(가)") then
 end
 
 -- ═══ S1 자동 검증 블록(가) - 수평 이동 · 해금 높이 · 서버 궤적 낙하 · 스테이지 상한 · 배정밀도 · 획득 감사 · 비밀 둥지(docs/phase/S1-report.md) ═══
+if RunService:IsStudio() and verifyEnabled("BR1-4a(가)") then -- BR1-4a: 피해 종류 표 · 대공 잡기 창 · 회오리 직후 · 에네르기파 점프 · 회오리 체공 · 붕괴 건너기 · 회피 부등식 · 2연타
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.BR14aVerify).runPure)
+		if not ok then
+			print("===BR1-4a 검증 끝(가)=== 에러: " .. tostring(err))
+		end
+	end)
+end
+
 if RunService:IsStudio() and verifyEnabled("S1(가)") then
 	task.spawn(function()
 		local ok, err = pcall(require(script.Parent.S1Verify).runPure)

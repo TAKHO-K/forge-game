@@ -832,6 +832,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossBR13View.sweepFire(data)
 	elseif kind == "sweepEnd" then
 		BossBR13View.sweepEnd()
+	elseif kind == "beamPull" then -- BR1-4a 에네르기파 끌림(내 캐릭터)
+		BossBR13View.beamPull(data)
+	elseif kind == "beamRelease" then
+		BossBR13View.beamRelease(data)
 	elseif kind == "boomTelegraph" then
 		BossBR13View.boomTelegraph(data)
 	elseif kind == "boomRun" then

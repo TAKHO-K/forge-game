@@ -123,10 +123,14 @@ local MECHANICS = {
 	--   발악(사용자): 잡힌 사람들이 **게이지 하나**를 함께 연타로 줄인다 - 필요 횟수 = pressesBase + pressesPerExtra × (얼린 인원 − 1). 먼저 잡힌 사람은 혼자 누르는 시간이 길다.
 	--     게이지 0 → 전원(잡힘 + 아직 얼음) 풀림 + 보스 기절 stunSeconds. 동료가 손(꼬리)을 rescueHits만큼 때리거나 곁에서 F 홀드 → 같다.
 	--   잡기 동안 보스는 새 패턴을 시작하지 않는다(스킬 진행 중) · 얼음 · 잡힘 · 던짐은 서버 높이 검증 예외.
+	--   BR1-4a 4a-2(사용자): 얼림 판정 = **시전 끝 judgeWindowSeconds(1.5초) 동안의 누적 체공 ≥ airAccumSeconds**(옛 "연속 1.2초"). 강제 체공(넉백 · 발사 허가) ·
+	--     원거리 공중 정지 · 가둠도 체공으로 센다. 봇 시뮬(로컬 - 지면 체류 0.2 ~ 1초 · 1단 0.54 / 공중 점프 섞음): 0.65초 → 습관 점프 환생 0 53% · 1 75% · 3 83% · 멈춘 유저 0%
+	--     (0.6 = 62 · 81 · 87% · 0.7 = 45 · 69 · 79% - 세 단계 모두 60 ~ 80%에 드는 값은 없다 - 평균이 가장 가운데인 0.65).
+	--   warnAirSeconds = 스킬 발동 조건(누가 이만큼 연속으로 떠 있을 때만 쓴다 - 땅에서만 싸우면 안 온다)만.
 	airGrab = {
 		warnAirSeconds = 0.6,
-		airSeconds = 1.2,
-		noticeSeconds = 0.5,
+		judgeWindowSeconds = 1.5,
+		airAccumSeconds = 0.65,
 		chaseSpeedMultiplier = 2.5, chaseReachStuds = 7, chaseMaxSeconds = 3.0,
 		liftSeconds = 0.35,
 		holdSeconds = 6.0,
@@ -295,6 +299,12 @@ local MECHANICS = {
 
 local P = MECHANICS.priority
 
+-- BR1-4a 4a-4 폭풍 군주 회오리(회오리 · 회오리 이동 공통 onHit): 떠서 도는 시간 holdSeconds 1.5 → 2.5초 · 끝나면 도는 방향 접선으로 **물리 발사**(위로 flingUpStuds · 수평 flingDistanceStuds -
+--   클라가 속도만 주고 중력이 나머지 · 수평 = 넉백 상한 12(BossArenaMapData.containment.maxLaunchDistanceStuds)와 같게 · 착지점은 아레나 경계 안으로 자른다(ArenaContainment.limitLaunch)) ·
+--   서버 발사 허가 = 체공 + 발사 비행(수평 400/s) → 되돌림 0.
+--   무적 immuneSeconds = 뜨기 0.3 + 돌기 2.5 + 발사 비행 약 0.5 + 일어나기 0.78 ≈ 4.1(조작을 잃은 동안 안 맞는다 - 옛 2.5).
+local STORM_WHIRL_LAUNCH = { type = "launch", heightStuds = 6, distanceStuds = 0, holdSeconds = 2.5, spinRadiusStuds = 3, flingDistanceStuds = 12, flingUpStuds = 3, immuneSeconds = 4.1 }
+
 -- ═══ BR1 공통 스킬(docs/design/boss-br1.md §1-1 · §2) - 6종이 같은 뼈대를 쓰고 이름 · 모션(motion = 클라 인형 스타일 키)만 다르다 ═══
 -- 강화 평타: 피할 수 있는 작은 일격(무게 작음 - 전조 1.1초 · ×1.4 = 20%). 앞 100° · 반경 14 부채꼴(sector). 보스 앞 8에 선 사람이 옆으로
 -- 8 × sin 50° + 1 = 7.1 → 0.5 + 7.1 ÷ 16 × 1.25 = 1.05초 ≤ 1.1. 뒤로 물러나도 되고 공중 점프 1회(발 13.3 > 8)로도 피한다.
@@ -314,11 +324,12 @@ local function enhancedBasic(label, motion)
 end
 
 -- 대공 잡기(§2): 누군가 연속 체공 ≥ warnAirSeconds일 때만 쓴다(땅에서만 싸우면 안 온다 - 공중 남용에 대한 대답). 전조 2.5초(큰 모션 - 손 · 꼬리 ·
--- 집게를 하늘로) = 보고 내려올 시간(한 체공 최대 1.96초 + 인지 0.5). 판정 = 그 순간 연속 체공 ≥ airGrab.airSeconds인 사람 전원(BossAirGrab).
+-- 집게를 하늘로) = 보고 내려올 시간(한 체공 최대 1.96초 + 인지 0.5). 판정 = 시전 끝 1.5초 누적 체공 ≥ airGrab.airAccumSeconds인 사람 전원(BossAirGrab · BR1-4a).
 local function airGrab(label, motion)
 	return {
 		primitive = "grab", bubble = "grab", motion = motion,
 		cooldownSeconds = 16, firstAvailableSeconds = 20, priority = P.normal,
+		lowerAfter = { skills = { "whirl", "tornado" }, priority = 1 }, -- BR1-4a 4a-2: 회오리 직후(방금 띄운 사람이 아직 공중) 대공 잡기 우선순위를 낮춘다(BossScheduler ⑥-2)
 		conditions = { { type = "memberAirborneFor", seconds = MECHANICS.airGrab.warnAirSeconds } },
 		telegraphSeconds = 5.0, -- BR1-2: 시전 전체 약 5초("점프하지 마" 표시 · 그동안 N초 넘게 뜨면 얼림)
 		trap = { kind = "grabbed", rescueType = "grab" },
@@ -442,7 +453,7 @@ local function guardianSkills()
 			telegraphSeconds = 2.2, speedStuds = 60, pathHalfWidthStuds = 4, dashCount = 1,
 			recoverSeconds = 4.0, dazeSinkStuds = 1.2, dazeTiltDeg = 25,
 			arenaMarginStuds = 4, -- 보스 몸통 반폭(1.2×3=3.6)보다 조금 크게
-			damage = { kind = "maxHp", fraction = 0.55 }, damageLabel = "돌진",
+			damage = { kind = "attack", multiplier = 0.55 * BalanceAnchorConfig.surviveTargetHits }, damageLabel = "돌진", -- BR1-4a 4a-1: 일반 패턴 = 능력치 기반(옛 최대 체력 55% = 앵커 같은 몫 ×3.85)
 		},
 		-- 십자 화염. 보스 중심 4방향(첫 볼리는 대상 방향, 90도 간격) 벽까지. 두 번째 볼리는 rotateDeg 돌려서 -
 		-- 첫 볼리를 피해 대각선에 섰으면 다시 옆으로 걸어야 한다. 회피 = 옆으로 3 + 1 = 4stud.
@@ -639,13 +650,14 @@ local SPECIES = {
 		-- 늘 남는다 - 보스 · 사람이 가운데로 건너간다) 무작위 collapse(2)조각이 무너진다. 고르는 규칙: 보스가 선 조각 · 멤버 스폰(복귀 자리) 조각은 빼고, 둘은 서로 붙지 않게(nonAdjacent),
 		-- 지난번 무너진 조각은 되도록 피한다. 전조 telegraphSeconds = 조각 경계선을 따라 금 + 조각 위험색 + 흔들림(보이는 장판 = 실제 판정).
 		--   회피: 조각 안 가장 먼 자리(반경 140 · 가운데 각)에서 옆 조각까지 140 × sin 22.5° = 53.6 + 1 → 0.5 + 54.6 ÷ 16 × 1.25 = 4.77초 ≤ 5.0.
-		--   무너진 조각(바닥이 사라진 검은 구멍)에 **발을 딛으면**(떠 있으면 아직) 떨어진다 = 최대 체력 fall.maxHpFraction(25%) + 바닥 아래로 → 맵 이탈 복귀(본인 스폰 · 보호 0.75초 - 기존 규칙).
+		--   무너진 조각은 바닥이 **실제로 꺼진다**(BR1-4a - 조각 바닥 파트 충돌 끔) → 떨어지면 전멸기 피해 + 가장자리 복귀(아래 fall). 점프 · 대시로 건너면 안전.
 		--   보스도 무너진 조각으로는 걷지 않는다(MonsterAI · 돌진이 조각 경계에서 멈춘다). 복구 = **다음 붕괴 때** 이전 조각이 돌아오고 새 조각이 무너진다(무너진 채 cooldownSeconds 유지).
 		environment = {
 			id = "groundCollapse", style = "collapse", kind = "collapse", motion = "fist", damageLabel = "지반 붕괴",
 			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 5.0, durationSeconds = 0,
 			zones = { shape = "slices", count = 8, collapse = 2, hubRadiusStuds = 8, nonAdjacent = true },
-			fall = { maxHpFraction = 0.25, dropStuds = 14 },
+			-- BR1-4a 4a-5: 바닥이 실제로 꺼진다(조각 바닥 파트) · 떨어지면(발이 바닥 아래 triggerBelowStuds) 전멸기 피해(mechanics.gimmickFail 55 → 85%) + 무너진 조각 가장자리 복귀(edgeInsetStuds 안쪽).
+			fall = { wipe = true, triggerBelowStuds = 2, edgeInsetStuds = 4 },
 		},
 	},
 	{
@@ -930,16 +942,21 @@ local SPECIES = {
 				telegraphSeconds = 1.5, count = 1, radiusStuds = 10, scatterStuds = 0,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "수정 낙하",
 			},
-			-- BR1-3 에네르기파 휩쓸기(사용자 - 옛 벽 반사 레이저 `beam` 대체 · primitive "sweep" = BossHandlersBR1): 보스 앞에 빛이 커진다(기 모으기 telegraphSeconds) + 머리 위
-			-- 회전 방향 화살표(시계 / 반시계 - 무작위) → 굵은 레이저(반폭 halfWidthStuds - 그림)가 보스 둘레 sweepDeg(180°)를 sweepSeconds 동안 휩쓴다.
-			--   휩쓰는 반원 = 대상 쪽 반(대상 방향이 한가운데) · 반경 radiusStuds - 바닥에 보이는 반원 = 판정. 안전 = **보스 뒤 반원**(또는 반경 밖). 회전 방향을 보면 늦게 오는 쪽이 보인다.
-			--   회피(BossSkillMath.dodgeChecks "sweep"): 반원 안 모든 자리(근접 8 ~ 반경)에서 가장 가까운 안전(뒤 반원 경계 · 반경 밖)까지 걷는 시간 ≤ 전조 + 빔이 그 각에 닿기까지.
-			--   큰 모션 = 큰 피해 ×3.2(46% - 큼). 파티클 방출기 0(부품 · 트윈 - 클라 BossBR1View).
+			-- BR1-3 에네르기파(옛 벽 반사 레이저 `beam` 대체 · primitive "sweep" = BossHandlersBR1) - BR1-3의 반원 180° 휩쓸기(걸어서 뒤로 · ×3.2)는 아래 BR1-4a 규칙으로 바뀌었다(파티클 방출기 0 - 부품 · 트윈).
+			-- BR1-4a 4a-3(사용자 개정): 사거리 = 맵 절반(lengthArenaFraction × 아레나 지름 = 반지름) · **점프로 넘는 낮은 빔**(beamHeightStuds - 발이 이보다 높으면 안 맞는다) ·
+			--   sweepDeg 540°를 sweepSeconds 3.6초(한 바퀴 2.4초 = 한 자리를 1 ~ 2번 지나간다 - 한 바퀴에 점프 1 ~ 2회로 읽힌다) · 시작 = 대상 방향 − startLeadDeg(발사 0.4초 뒤 대상에 닿는다) ·
+			--   가끔(gapChance) 보스 곁 gapInnerStuds 안이 빈틈(빔이 그 밖에서 시작 - 전조에 안전 원) · 평소 빔 시작 = innerStuds(보스 몸 밖).
+			--   맞으면 끌림(pull - 보스 쪽으로 speedStuds · 최대 maxSeconds) 동안 tickSeconds마다 도트(능력치 기반 - 앵커 ×0.45 = 6.4%) → 풀림 + immuneSeconds 면역(이번 시전에 다시 안 걸린다).
+			--   안전장치: 시전당 한 사람 총 피해 ≤ 최대 체력 × castMaxHpFraction(45% - 첫 타 + 도트 6번 = 앵커 45%). 회피(BossSkillMath.beamJumpWorst): 빔이 한 자리를 지나는 시간 × 여유 ≤ 1단 점프로 빔 위에 떠 있는 시간.
 			energyBeam = {
 				primitive = "sweep", bubble = "sweep", motion = "beamCharge",
 				cooldownSeconds = 16, priority = P.normal,
-				telegraphSeconds = 2.5, sweepSeconds = 2.0, sweepDeg = 180, radiusStuds = 60, halfWidthStuds = 4,
-				damage = { kind = "attack", multiplier = 3.2 }, damageLabel = "에네르기파",
+				telegraphSeconds = 2.5, sweepSeconds = 3.6, sweepDeg = 540, startLeadDeg = 60,
+				lengthArenaFraction = 0.5, radiusStuds = 140, innerStuds = 6, gapChance = 0.35, gapInnerStuds = 14,
+				halfWidthStuds = 1.5, beamHeightStuds = 2.5, tickSeconds = 0.25,
+				pull = { speedStuds = 10, maxSeconds = 1.5, immuneSeconds = 2.0 },
+				castMaxHpFraction = 0.45,
+				damage = { kind = "attack", multiplier = 0.45 }, damageLabel = "에네르기파",
 			},
 			-- BR1-3 전멸기 "수정 오르골"(사용자 - 프리즘 분열 대체 · 빛 · 프리즘 · 공명 · primitive "orgel" = server/BossOrgel): 여왕 둘레(bellRingStuds)에 수정 종 bells개.
 			-- 색 = 색약 안전(Okabe-Ito 주황 · 하늘 · 청록 · 노랑 · 자주) + 종 몸통 모양(● ▲ ■ ◆ ★) - 색 · 모양 이중 구분.
@@ -1095,7 +1112,7 @@ local SPECIES = {
 				onStart = { { type = "spawnPropsAround", prop = "pit", count = 3, minStuds = 14, maxStuds = 26, clearStuds = 6 } },
 				onEnd = { { type = "destroyProps", prop = "pit", which = "all" } },
 				arenaMarginStuds = 5, -- 몸통 반폭 1.2 × 2.8 × 1.3 = 4.4보다 조금 크게
-				damage = { kind = "maxHp", fraction = MECHANICS.gimmickFailMaxHpFraction / 2 }, damageLabel = "잠행 찌르기",
+				damage = { kind = "attack", multiplier = MECHANICS.gimmickFailMaxHpFraction / 2 * BalanceAnchorConfig.surviveTargetHits }, damageLabel = "잠행 찌르기", -- BR1-4a 4a-1: 일반 패턴 = 능력치 기반(옛 27.5% = 앵커 같은 몫 ×1.925)
 				onComplete = { { type = "regrowObstacles", count = 1 } }, -- P3d D1 지형 재생성(찍은 뒤 전역 쿨 안에 1개 - BossArenaMapData.regrow)
 			},
 			-- BR1-3 전멸기 "진짜 전갈 찾기"(사용자 - 갑각 태세 삭제 · primitive "sandSearch" = server/BossSandSearch): 여왕이 모래 속으로 숨는다(telegraphSeconds - 먼지 · 파고들기) →
@@ -1226,7 +1243,7 @@ local SPECIES = {
 				telegraphSeconds = 1.5, count = 1, radiusStuds = 8, scatterStuds = 0,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "회오리",
 				impactStyle = "whirl",
-				onHit = { { type = "launch", heightStuds = 6, distanceStuds = 0, holdSeconds = 1.5, spinRadiusStuds = 3, immuneSeconds = 2.5 } },
+				onHit = { STORM_WHIRL_LAUNCH },
 			},
 			-- 낙뢰. 대상 위치에 2연발(둘째는 그 순간의 위치). 29-4: **피뢰침 충전 수단이자 뇌운 장막(게이트)의 판정**이다.
 			--   · 낙뢰의 원 안(+ chargeZone.reachStuds)에 피뢰침이 있으면 그 피뢰침이 seconds(12초) 동안 충전된다. 두 피뢰침이 동시에
@@ -1288,7 +1305,7 @@ local SPECIES = {
 				telegraphSeconds = 1.3, count = 1,
 				speedStuds = 10, turnRateDeg = 30, radiusStuds = 5, lifetimeSeconds = 6, heightMode = "ground", groundHitHeightStuds = 14, pierce = true,
 				targetRule = "target", leadSeconds = 0.8,
-				onHit = { { type = "launch", heightStuds = 6, distanceStuds = 0, holdSeconds = 1.5, spinRadiusStuds = 3, immuneSeconds = 2.5 } },
+				onHit = { STORM_WHIRL_LAUNCH },
 				trapOnHits = { hits = 2, windowSeconds = 8, liftStuds = 8, seconds = 5, presses = 10, style = "tornado" }, -- BR1-2 공중 가둠(거품탄과 같은 규칙 - 회오리 속)
 				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "회오리 이동",
 			},

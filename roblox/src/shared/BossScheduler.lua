@@ -107,6 +107,10 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 			local blocked = not holdsReservation and reserved ~= nil and now + ctx.boundSeconds(id) + gap > reserved
 			if not blocked then
 				local priority = skill.priority or 0
+				-- ⑥-2(BR1-4a): lowerAfter = { skills, priority } - 직전 스킬이 목록에 있으면 우선순위를 그만큼 낮춘다(후보에서 빼지는 않는다 - notAfter와 다르다)
+				if skill.lowerAfter and state.lastSkillId and table.find(skill.lowerAfter.skills, state.lastSkillId) then
+					priority -= skill.lowerAfter.priority
+				end
 				if skill.starvationSeconds and now - state.lastUsedAt[id] >= skill.starvationSeconds then
 					priority += config.starvationPriorityBonus
 				end

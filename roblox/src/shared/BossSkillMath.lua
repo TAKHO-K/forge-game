@@ -161,9 +161,25 @@ end
 -- ─────────────────────────── BR1-3 새 조각의 순수 계산(서버 판정 · 클라 그림 · 하네스가 같은 함수) ───────────────────────────
 -- 에네르기파 휩쓸기(sweep): 시작 각 = 대상 방향 − 방향 × sweepDeg ÷ 2(dirSign +1 = 반시계 · −1 = 시계). t초(발사부터) 뒤 빔의 각(도). 끝났으면 끝 각 + done.
 function BossSkillMath.sweepAngleAt(skill, centerDeg, dirSign, t)
-	local startDeg = centerDeg - dirSign * skill.sweepDeg / 2
+	local startDeg = centerDeg - dirSign * (skill.startLeadDeg or skill.sweepDeg / 2) -- BR1-4a: 540° 빔은 대상 앞 startLeadDeg에서 시작
 	local f = math.clamp(t / skill.sweepSeconds, 0, 1)
 	return startDeg + dirSign * skill.sweepDeg * f, t >= skill.sweepSeconds
+end
+
+-- BR1-4a 에네르기파(낮은 빔 540°): 빔이 한 자리(반경 r)를 지나는 시간 = 2·atan((반폭 + 몸통 반폭) ÷ r) ÷ 각속도 · 1단 점프로 발이 빔 위(beamHeightStuds)에 있는 시간과 비교.
+-- 빔 시작 반경(innerStuds)이 가장 나쁘다(가까울수록 각이 넓다). 반환: 가장 나쁜 자리의 { r, passSeconds, clearSeconds }.
+function BossSkillMath.beamJumpWorst(skill, jumpHeightStuds, gravity)
+	local dodge = BossData.mechanics.dodge
+	local omega = math.rad(skill.sweepDeg / skill.sweepSeconds)
+	local clear = 2 * math.sqrt(2 * math.max(jumpHeightStuds - skill.beamHeightStuds, 0) / gravity)
+	local worst = nil
+	for r = skill.innerStuds, skill.radiusStuds, 1 do
+		local pass = 2 * math.atan((skill.halfWidthStuds + dodge.characterHalfWidthStuds) / r) / omega
+		if not worst or pass > worst.passSeconds then
+			worst = { r = r, passSeconds = pass, clearSeconds = clear }
+		end
+	end
+	return worst
 end
 
 -- 휩쓸기 회피 최악(근접 standoff ~ 반경): 반원 안 자리(가운데 각에서 φ · 거리 d)에서 가장 가까운 안전(뒤 반원 경계까지 d·cosφ · 반경 밖 R − d)까지 걷는 시간과
@@ -543,9 +559,16 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		-- BR1-2 되돌아오는 투사체: 모으기 + 원거리 자리(rangedStandoff)에서 닿기까지 안에 옆으로 (반경 + 몸통)
 		walk("되돌아오는 것 옆으로", skill.projectile.windupSeconds + dodge.rangedStandoffStuds / skill.projectile.speedStuds, skill.projectile.radiusStuds + half)
 	elseif primitive == "sweep" then
-		-- BR1-3 에네르기파: 반원 안 가장 나쁜 자리에서 뒤 반원 · 반경 밖까지(BossSkillMath.sweepWorst)
-		local available, required, distance = BossSkillMath.sweepWorst(skill, standoffStuds, walkSpeedStuds)
-		table.insert(checks, { label = "휩쓸기 뒤 반원 · 밖으로", availableSeconds = available, requiredSeconds = required, distanceStuds = distance, ok = available >= required })
+		if skill.beamHeightStuds then
+			-- BR1-4a 에네르기파(낮은 빔 540°): 빔이 지나가는 순간 점프로 넘는다 - 지나는 시간 × 여유 ≤ 1단 점프로 빔 위에 뜬 시간(가장 나쁜 자리 = 빔 시작 반경)
+			local MovementConfig = require(game:GetService("ReplicatedStorage").Shared.data.MovementConfig)
+			local w = BossSkillMath.beamJumpWorst(skill, MovementConfig.jumpHeightStuds, MovementConfig.gravity)
+			table.insert(checks, { label = ("빔 점프로 넘기(반경 %d)"):format(w.r), availableSeconds = w.clearSeconds, requiredSeconds = w.passSeconds * dodge.marginFactor, distanceStuds = 0, ok = w.clearSeconds >= w.passSeconds * dodge.marginFactor })
+		else
+			-- BR1-3 에네르기파: 반원 안 가장 나쁜 자리에서 뒤 반원 · 반경 밖까지(BossSkillMath.sweepWorst)
+			local available, required, distance = BossSkillMath.sweepWorst(skill, standoffStuds, walkSpeedStuds)
+			table.insert(checks, { label = "휩쓸기 뒤 반원 · 밖으로", availableSeconds = available, requiredSeconds = required, distanceStuds = distance, ok = available >= required })
+		end
 	elseif primitive == "boomerang" then
 		-- BR1-3 분신 부메랑: 선 옆으로(가는 길) - 오는 길은 같은 선(그대로 보인다)
 		walk("분신 길 옆으로", skill.telegraphSeconds, skill.halfWidthStuds + half)
@@ -553,9 +576,11 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		-- BR1-3 진짜 전갈 찾기(가장 먼 둔덕까지) · 수정 오르골(종 사이 최악 네 번) - 제한 시간 안에 걸어서
 		walk(primitive == "orgel" and "종 다섯 번 치기" or "진짜 둔덕까지", skill.limitSeconds, skill.dodge.distanceStuds)
 	elseif primitive == "grab" then
-		-- BR1 대공 잡기: 보고 내려올 시간 - 인지 + 한 체공 최대(공중 점프 2 + 대시 = 1.961초 - movement-metrics v2). 착지하면 연속 체공이 0이 된다.
-		local need = dodge.perceptionSeconds + BossData.mechanics.airGrab.maxAirSeconds
-		table.insert(checks, { label = "보고 착지", availableSeconds = skill.telegraphSeconds, requiredSeconds = need, distanceStuds = 0, ok = skill.telegraphSeconds >= need })
+		-- BR1 대공 잡기 · BR1-4a: 판정 창(시전 끝 judgeWindowSeconds) 전에 보고 내려온다 - 인지 + 한 체공 최대(공중 점프 2 + 대시 = 1.961초). 창 안의 짧은 점프 한 번(0.54초)은 누적 상한 아래.
+		local grabCfg = BossData.mechanics.airGrab
+		local need = dodge.perceptionSeconds + grabCfg.maxAirSeconds
+		local available = skill.telegraphSeconds - grabCfg.judgeWindowSeconds
+		table.insert(checks, { label = "보고 착지(판정 창 전)", availableSeconds = available, requiredSeconds = need, distanceStuds = 0, ok = available >= need })
 	elseif primitive == "vortex" then
 		-- BR1 소용돌이: 당기는 힘을 거슬러(걷기 − 당김) 반경 밖으로 · 끌림이 끝난 뒤 폭발 원 밖.
 		walk("끌림 거슬러 밖으로", skill.telegraphSeconds, skill.radiusStuds + half, (walkSpeedStuds - skill.pullStudsPerSecond) / walkSpeedStuds)
@@ -665,6 +690,9 @@ function BossSkillMath.damageShares(skill, surviveTargetHits)
 	end
 	if primitive == "colorMatch" or primitive == "lightningRods" or primitive == "sandSearch" or primitive == "orgel" then
 		return skill.failMaxHpFraction, skill.failMaxHpFraction -- BR1-2 색 맞추기 · 번개 조준경 실패(보호막 무시 90%)
+	end
+	if primitive == "sweep" and skill.castMaxHpFraction then
+		return skill.castMaxHpFraction, skill.castMaxHpFraction -- BR1-4a 에네르기파: 한 번 걸리면 끌림 동안 도트 - 실수 1회 = 시전당 상한(45%)
 	end
 	if primitive == "sonic" then
 		return skill.tickFraction, skill.tickFraction * skill.ticks -- BR1-2 음파: 한 틱 · 전부(보호막 무시 - 발동당 상한 대신 틱 합 90%)

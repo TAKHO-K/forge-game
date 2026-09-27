@@ -661,6 +661,11 @@ function BossHandlersBR1.trackAir(st, now)
 			airborne = member.debugAirborne -- 검증 스탠드인
 		end
 		airborne = airborne or AirState.isHovering(member, now) -- 파트 0: 원거리 공중 정지도 체공(서버 AirState 기록 - 클라 상태가 잠깐 바뀌어도 이어 센다)
+		-- BR1-4a 4a-2: 강제 체공(넉백 · 발사 - 클라가 PlatformStand라 Jumping · Freefall이 아니다)도 체공 = 발사 허가가 살아 있고 발밑이 공중
+		if not airborne and humanoid and typeof(member) == "Instance" and humanoid.FloorMaterial == Enum.Material.Air then
+			local guard = HeightGuard.getState(member)
+			airborne = guard ~= nil and guard.permit ~= nil
+		end
 		if airborne and (PlayerState.getHp(member) or 0) > 0 then
 			st.airSince[member] = st.airSince[member] or now
 		else
@@ -680,27 +685,41 @@ function BossHandlersBR1.airSecondsOf(st, player, now)
 	return since and (now - since) or 0
 end
 
--- ─────────────────────────── sweep(BR1-3 에네르기파 휩쓸기) ───────────────────────────
--- 기 모으기(전조 - 보스 앞 빛이 커진다 · 머리 위 회전 화살표) → 빔이 보스 둘레 sweepDeg를 sweepSeconds 동안 돈다. 판정 = 빔이 지나간 각(지난 틱 ~ 이번 틱)에 든 사람 ·
--- 반경 radiusStuds 안 · 발 기준 같은 층 - 한 사람 한 번. 휩쓰는 범위 = 대상 방향이 한가운데인 반원(바닥에 보이는 반원 = 판정 - 빔 굵기는 그림).
+-- ─────────────────────────── sweep(BR1-3 에네르기파 휩쓸기 → BR1-4a 낮은 빔 540°) ───────────────────────────
+-- 기 모으기(전조 - 보스 앞 빛 · 회전 화살표 · 빔 시작선 · 빈틈이면 보스 곁 안전 원) → 낮은 빔(발 위 beamHeightStuds)이 innerStuds(빈틈 = gapInnerStuds) ~ 길이(아레나 반지름 ×
+-- lengthArenaFraction × 2)를 sweepDeg(540°) 돈다. 판정 = 빔이 지난 각(지난 틱 ~ 이번 틱 · 반폭 + 몸통)에 든 사람 · 발이 빔 높이 이하 · 같은 층 · 면역 · 끌림 중 아님.
+-- 걸리면 끌림(클라 - 보스 쪽 speedStuds · maxSeconds) + tickSeconds 도트(능력치 기반) → 풀림 + immuneSeconds 면역. 시전당 한 사람 총 피해 ≤ 최대 체력 × castMaxHpFraction.
+-- 옛 반원 휩쓸기(beamHeightStuds 없는 스킬)는 없다 - 데이터가 새 규칙만 쓴다.
+local function beamRelease(c, player, now)
+	local st, skill = c.st, c.skill
+	st.beamLocks[player] = nil
+	st.beamImmune[player] = now + skill.pull.immuneSeconds
+	kit.send(st, "beamRelease", { userId = typeof(player) == "Instance" and player.UserId or nil })
+end
+
 BossHandlersBR1.sweep = {
 	bubbleSeconds = function(c)
 		return c.skill.telegraphSeconds + c.skill.sweepSeconds
 	end,
 	start = function(c)
 		local st, skill = c.st, c.skill
+		local zone = kit.zoneOf(c.model)
 		st.phase = "sweepCharge"
 		st.phaseEndsAt = c.now + skill.telegraphSeconds
 		st.sweepCenterDeg = angleToTarget(c)
 		st.sweepDir = kit.rng:NextNumber() < 0.5 and 1 or -1
 		st.sweepOrigin = kit.xz(c.position)
-		st.sweepHit = {}
+		st.sweepLength = (zone.radius or skill.radiusStuds) * 2 * skill.lengthArenaFraction
+		st.sweepGap = kit.rng:NextNumber() < skill.gapChance
+		st.sweepInner = st.sweepGap and skill.gapInnerStuds or skill.innerStuds
+		st.beamLocks, st.beamImmune, st.beamDealt = {}, {}, {}
 		local startDeg = BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, 0)
 		kit.send(st, "sweepTelegraph", {
-			center = Vector3.new(st.sweepOrigin.X, st.floorY, st.sweepOrigin.Z), angleDeg = st.sweepCenterDeg, startDeg = startDeg, widthDeg = skill.sweepDeg,
-			radius = skill.radiusStuds, halfWidth = skill.halfWidthStuds, dirSign = st.sweepDir, seconds = skill.telegraphSeconds, sweepSeconds = skill.sweepSeconds,
-			bossId = c.data.id, color = c.data.headColor,
+			center = Vector3.new(st.sweepOrigin.X, st.floorY, st.sweepOrigin.Z), angleDeg = st.sweepCenterDeg, startDeg = startDeg, sweepDeg = skill.sweepDeg, startLeadDeg = skill.startLeadDeg,
+			length = st.sweepLength, inner = st.sweepInner, gap = st.sweepGap, halfWidth = skill.halfWidthStuds, beamHeight = skill.beamHeightStuds,
+			dirSign = st.sweepDir, seconds = skill.telegraphSeconds, sweepSeconds = skill.sweepSeconds, bossId = c.data.id, color = c.data.headColor,
 		})
+		kit.debugEvent("sweepStart", { at = c.now, gap = st.sweepGap, inner = st.sweepInner, length = st.sweepLength, dir = st.sweepDir, startDeg = startDeg })
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
@@ -710,34 +729,72 @@ BossHandlersBR1.sweep = {
 			end
 			st.phase = "sweepFire"
 			st.sweepStartedAt = c.now
-			st.sweepPrevOffset = 0
+			st.sweepPrevProgress = 0
 			kit.send(st, "sweepFire", { seconds = skill.sweepSeconds })
 		end
 		local t = c.now - st.sweepStartedAt
 		local f = math.clamp(t / skill.sweepSeconds, 0, 1)
-		local offset = skill.sweepDeg * f
+		local progress = skill.sweepDeg * f -- 시작 각에서 돈 양(0 ~ 540)
 		local startDeg = BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, 0)
 		local floor = Vector3.new(0, st.floorY, 0)
-		kit.judgeBegin()
-		for _, v in ipairs(kit.victims(st)) do
-			if not st.sweepHit[v.player] then
-				local rel = kit.xz(v.root.Position) - st.sweepOrigin
-				local d = rel.Magnitude
-				local o = ((math.deg(math.atan2(rel.Z, rel.X)) - startDeg) * st.sweepDir) % 360
-				if d <= skill.radiusStuds and (d < 1e-3 or (o >= st.sweepPrevOffset - 1e-6 and o <= offset + 1e-6)) and Reach.sameLayer(v.groundFeet, floor) then
-					st.sweepHit[v.player] = true
-					kit.applySkillDamage(c.model, c.data, skill, v.player)
+		local maxSeconds = skill.pull.maxSeconds
+		-- 새로 걸린 사람
+		if f < 1 then
+			for _, v in ipairs(kit.victims(st)) do
+				local p = v.player
+				if not st.beamLocks[p] and c.now >= (st.beamImmune[p] or 0) and not BossTrap.isTrapped(p) then
+					local rel = kit.xz(v.root.Position) - st.sweepOrigin
+					local r = rel.Magnitude
+					local feetAbove = v.feet.Y - st.floorY
+					if r >= st.sweepInner - 0.5 and r <= st.sweepLength and feetAbove <= skill.beamHeightStuds and Reach.sameLayer(v.groundFeet, floor) then
+						local half = math.deg(math.atan((skill.halfWidthStuds + 1) / math.max(r, 1)))
+						local o0 = ((math.deg(math.atan2(rel.Z, rel.X)) - startDeg) * st.sweepDir) % 360
+						local hit = false
+						for k = 0, math.ceil(skill.sweepDeg / 360) do
+							local o = o0 + 360 * k
+							if o >= st.sweepPrevProgress - half and o <= progress + half then
+								hit = true
+							end
+						end
+						if hit then
+							st.beamLocks[p] = { untilAt = c.now + maxSeconds, nextTickAt = c.now }
+							st.beamDealt[p] = st.beamDealt[p] or 0
+							HeightGuard.grantBurst(p, skill.pull.speedStuds * maxSeconds + 4) -- 끌림(클라)만큼 수평 허가
+							kit.send(st, "beamPull", { userId = typeof(p) == "Instance" and p.UserId or nil, toward = Vector3.new(st.sweepOrigin.X, st.floorY, st.sweepOrigin.Z), speed = skill.pull.speedStuds, seconds = maxSeconds })
+							kit.debugEvent("beamHit", { player = p, at = c.now, r = r, feetAbove = feetAbove })
+						end
+					end
 				end
 			end
 		end
-		kit.judgeEnd(c, { kind = "sector", origin = Vector3.new(st.sweepOrigin.X, st.floorY, st.sweepOrigin.Z), angleDeg = st.sweepCenterDeg, widthDeg = skill.sweepDeg, radius = skill.radiusStuds, inner = 0 })
-		st.sweepPrevOffset = offset
-		if f >= 1 then
+		-- 걸린 사람: 도트(시전당 상한) · 끌림 끝 → 풀림 + 면역
+		for p, lock in pairs(st.beamLocks) do
+			if (PlayerState.getHp(p) or 0) <= 0 then
+				st.beamLocks[p] = nil
+			else
+				while c.now >= lock.nextTickAt and lock.nextTickAt < lock.untilAt do
+					local remaining = PlayerState.getMaxHp(p) * skill.castMaxHpFraction - st.beamDealt[p]
+					if remaining > 0 then
+						st.beamDealt[p] += PlayerDamage.applyHit(p, c.data.attack, skill.damageLabel, skill.damage.multiplier, { maxDamage = remaining })
+						BossTrap.noteSkillHit(p)
+					end
+					lock.nextTickAt += skill.tickSeconds
+				end
+				if c.now >= lock.untilAt or f >= 1 then
+					beamRelease(c, p, c.now)
+				end
+			end
+		end
+		st.sweepPrevProgress = progress
+		if f >= 1 and next(st.beamLocks) == nil then
 			kit.send(st, "sweepEnd", {})
 			kit.endSkill(c.model, st, c.data, c.now)
 		end
 	end,
 	interrupt = function(c)
+		for p in pairs(c.st.beamLocks or {}) do
+			beamRelease(c, p, c.now)
+		end
 		kit.send(c.st, "sweepEnd", {})
 	end,
 }

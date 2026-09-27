@@ -115,19 +115,31 @@ function BossArenaContainment.checkMember(encounter, member)
 		end)
 		to = Vector3.new(point.X, (GroundProbe.surfaceY(point.X, point.Z, floorTopY) or floorTopY) + 3, point.Z)
 	end
+	BossArenaContainment.relocate(member, to, reason, encounter.zoneKey, spawn and "스폰 자리" or "안전 지점(스폰 자리가 막힘)", spawn)
+	return true
+end
+
+-- 서버가 멤버를 아레나 안 한 자리로 옮긴다(맵 이탈 복귀 · BR1-4a 붕괴 가장자리 복귀 공통): 순간이동 표시(HeightGuard · 도착 대기 · 체공 세션) + 보호 returnProtectSeconds + 기록.
+function BossArenaContainment.relocate(member, to, reason, zoneKey, label, spawn)
+	local character = member.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return false
+	end
 	local from = root.Position
 	local hpBefore = PlayerState.getHp(member)
 	character:PivotTo(CFrame.new(to))
 	HeightGuard.reset(member)
+	require(script.Parent.AirState).reset(member) -- 옛 체공(떨어지던 궤적)이 착지 낙하로 남지 않게
 	TeleportArrival.mark(member, to) -- M1-2c 도착 대기
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.AssemblyAngularVelocity = Vector3.zero
 	PlayerState.setInvulnerableUntil(member, CONTAINMENT.returnProtectSeconds, "returnProtect") -- P3d-F B6: 무적은 별도 플래그(회전베기 등 다른 출처의 배율을 덮지 않는다)
 	protectedUntil[member] = os.clock() + CONTAINMENT.returnProtectSeconds
 	local hpAfter = PlayerState.getHp(member)
-	table.insert(corrections, { player = member, zoneKey = encounter.zoneKey, reason = reason, from = from, to = to, at = os.clock(), hpBefore = hpBefore, hpAfter = hpAfter, spawn = spawn })
-	print(("[forge-game] 위치 보정(맵 이탈 복귀): %s - %s (%.1f, %.1f, %.1f) → %s (%.1f, %.1f, %.1f), 체력 %s 그대로 · 보호 %.2f초"):format(
-		member.Name, reason, from.X, from.Y, from.Z, spawn and "스폰 자리" or "안전 지점(스폰 자리가 막힘)", to.X, to.Y, to.Z, tostring(hpAfter), CONTAINMENT.returnProtectSeconds))
+	table.insert(corrections, { player = member, zoneKey = zoneKey, reason = reason, from = from, to = to, at = os.clock(), hpBefore = hpBefore, hpAfter = hpAfter, spawn = spawn })
+	print(("[forge-game] 위치 보정(맵 이탈 복귀): %s - %s (%.1f, %.1f, %.1f) → %s (%.1f, %.1f, %.1f), 체력 %s · 보호 %.2f초"):format(
+		member.Name, reason, from.X, from.Y, from.Z, label or "?", to.X, to.Y, to.Z, tostring(hpAfter), CONTAINMENT.returnProtectSeconds))
 	return true
 end
 

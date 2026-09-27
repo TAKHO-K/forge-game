@@ -183,7 +183,7 @@ local function runPure()
 		r.check(("회오리: 낙뢰와 같은 조각(launch) - 높이 %d · 거리 %d(제자리) · 도는 시간 %.1f초(20.77의 1.5 ~ 2초) · 조작을 잃는 시간 %.2f초 ≤ 면역 %.1f초 ≤ 전역 쿨 %d초(내려온 직후 확정 피격 없음) · 뜬 루트 높이차 %.1f(점프 중이면 %.1f > 8 - 그래서 층은 발밑 지면으로 판단한다)"):format(
 			lift.heightStuds, lift.distanceStuds, lift.holdSeconds, helpless, lift.immuneSeconds, boss.scheduler.globalCooldownSeconds,
 			lift.heightStuds + 1.5, lift.heightStuds + 1.5 + 7.2),
-			lift.type == "launch" and lift.distanceStuds == 0 and lift.holdSeconds >= 1.5 and lift.holdSeconds <= 2 and helpless <= lift.immuneSeconds
+			lift.type == "launch" and lift.distanceStuds == 0 and lift.holdSeconds >= 1.5 and lift.holdSeconds <= 3 and helpless <= lift.immuneSeconds -- BR1-4a: 돌기 2.5초 + 끝 물리 발사
 				and lift.immuneSeconds <= boss.scheduler.globalCooldownSeconds and lift.heightStuds < WorldConfig.walls.heightStuds)
 		local mechanics = BossData.mechanics
 		local slack = 1 - (mechanics.gimmickFailMaxHpFraction + 3 / 7)

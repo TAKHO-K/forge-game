@@ -140,6 +140,113 @@ function BossArenaMap.debugDestroyBases(activeZones)
 end
 
 
+-- ─────────────────────────── BR1-4a 4a-5 조각 바닥(지반 붕괴 - 바닥이 실제로 꺼진다) ───────────────────────────
+-- 붕괴 환경이 처음 전조를 띄울 때 원판 바닥(충돌 · 쿼리)을 끄고 조각 바닥(count조각 × 삼각형 subSteps개 = 쐐기 파트 2개씩 + 가운데 허브 원판)을 지면 폴더에 깐다.
+-- 무너진 조각 = 그 조각 파트의 충돌 · 쿼리를 끈다(캐릭터 물리가 실제로 떨어진다 · 지면 광선도 구멍으로 읽는다). 보스전이 끝나면(BossEnvironment.clear · reset) 원판으로 되돌린다.
+local SLICE_SUB_STEPS = 3 -- 45° 조각 = 15° 삼각형 3개(바깥 가장자리 호와 현의 차이 ≤ 반경 × (1 − cos 7.5°) ≈ 1.2)
+local sliceFloors = {} -- [zoneKey] = { model, slices = { [index] = { parts } }, hub }
+
+-- 수평 삼각형(a · b · c - 같은 Y = 판 한가운데 높이) = 쐐기 파트 2개(두께 thickness).
+local function wedgeTriangle(parent, a, b, c, thickness, color, material)
+	local ab, ac, bc = b - a, c - a, c - b
+	local abd, acd, bcd = ab:Dot(ab), ac:Dot(ac), bc:Dot(bc)
+	if abd > acd and abd > bcd then
+		c, a = a, c
+	elseif acd > bcd and acd > abd then
+		a, b = b, a
+	end
+	ab, ac, bc = b - a, c - a, c - b
+	local right = ac:Cross(ab).Unit
+	local up = bc:Cross(right).Unit
+	local back = bc.Unit
+	local height = math.abs(ab:Dot(up))
+	local parts = {}
+	for i, spec in ipairs({ { size = Vector3.new(thickness, height, math.abs(ab:Dot(back))), cf = CFrame.fromMatrix((a + b) / 2, right, up, back) },
+		{ size = Vector3.new(thickness, height, math.abs(ac:Dot(back))), cf = CFrame.fromMatrix((a + c) / 2, -right, up, -back) } }) do
+		local w = Instance.new("WedgePart")
+		w.Name = "BossArenaSliceFloor"
+		w.Anchored = true
+		w.CanTouch = false
+		w.Size = spec.size
+		w.CFrame = spec.cf
+		w.Color, w.Material = color, material
+		w.TopSurface, w.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+		w.Parent = parent
+		parts[i] = w
+	end
+	return parts
+end
+
+function BossArenaMap.enableSliceFloor(zoneKey, count, hubRadius)
+	if sliceFloors[zoneKey] then
+		return sliceFloors[zoneKey]
+	end
+	local base = BossArenaMap.buildBase(zoneKey)
+	local zone = WorldConfig.zones[zoneKey]
+	local radius = GEOMETRY.radiusStuds + GEOMETRY.wallThicknessStuds
+	local thickness = GEOMETRY.floorThicknessStuds
+	local y = FLOOR_TOP_Y - thickness / 2
+	local model = Instance.new("Model")
+	model.Name = "BossArenaSliceFloor_" .. zoneKey
+	model.Parent = GroundProbe.folder()
+	local color, material = base.floor.Color, base.floor.Material
+	local center = Vector3.new(zone.center.X, y, zone.center.Z)
+	local slices = {}
+	local width = 360 / count
+	for k = 1, count do
+		local parts = {}
+		for s = 0, SLICE_SUB_STEPS - 1 do
+			local a0 = math.rad((k - 1) * width + width * s / SLICE_SUB_STEPS)
+			local a1 = math.rad((k - 1) * width + width * (s + 1) / SLICE_SUB_STEPS)
+			local p0 = center + Vector3.new(math.cos(a0), 0, math.sin(a0)) * radius
+			local p1 = center + Vector3.new(math.cos(a1), 0, math.sin(a1)) * radius
+			for _, w in ipairs(wedgeTriangle(model, center, p0, p1, thickness, color, material)) do
+				table.insert(parts, w)
+			end
+		end
+		slices[k] = parts
+	end
+	local hub = newPart(model, {
+		name = "BossArenaSliceHub", shape = "cylinder", collide = true,
+		size = Vector3.new(thickness + 0.02, hubRadius * 2, hubRadius * 2),
+		cframe = discCFrame(zone.center.X, FLOOR_TOP_Y + 0.01, zone.center.Z, thickness + 0.02),
+	})
+	hub.Color, hub.Material = color, material
+	base.floor.CanCollide, base.floor.CanQuery, base.floor.Transparency = false, false, 1
+	local state = { model = model, slices = slices, hub = hub }
+	sliceFloors[zoneKey] = state
+	return state
+end
+
+-- 조각 하나를 무너뜨림(collapsed = true) / 되돌림. 반환: 바꾼 파트 수.
+function BossArenaMap.setSliceCollapsed(zoneKey, index, collapsed)
+	local state = sliceFloors[zoneKey]
+	local parts = state and state.slices[index]
+	for _, p in ipairs(parts or {}) do
+		p.CanCollide, p.CanQuery, p.Transparency = not collapsed, not collapsed, collapsed and 1 or 0
+	end
+	return parts and #parts or 0
+end
+
+function BossArenaMap.disableSliceFloor(zoneKey)
+	local state = sliceFloors[zoneKey]
+	if not state then
+		return false
+	end
+	sliceFloors[zoneKey] = nil
+	state.model:Destroy()
+	local base = bases[zoneKey]
+	if base then
+		base.floor.CanCollide, base.floor.CanQuery, base.floor.Transparency = true, true, 0
+	end
+	return true
+end
+
+function BossArenaMap.sliceFloorOf(zoneKey)
+	return sliceFloors[zoneKey]
+end
+
+
 local function applyTheme(base, theme)
 	base.floor.Color, base.floor.Material = theme.floor.color, theme.floor.material
 	base.rim.Color, base.rim.Material = theme.rim.color, theme.rim.material

@@ -1,6 +1,6 @@
 -- BR1-3 새 패턴의 그림 - 서버(BossHandlersBR1)가 보낸 사실만 그린다. 판정 없음. 파티클 방출기 0(부품 · 트윈 · BossFx 풀).
 --   swipeOutline  강화 평타 부채꼴 테두리 흰 선 두 줄(보스 몸 밖부터 - 가려지지 않게) + 무기 번쩍
---   sweep         에네르기파: 휩쓸 반원(위험색) + 보스 앞 기 모으기(커지는 빛) + 바닥 회전 화살표 · 머리 위 ↻/↺ → 굵은 빔이 돈다
+--   sweep         에네르기파(BR1-4a): 빔 고리(위험색) + 시작선 + 회전 화살표 한 바퀴 반 + 빈틈 안전 원 · 머리 위 ↻×1.5 → 낮은 빔이 540° 돈다 · 끌림(beamPull)
 --   boomerang     분신 돌격: 선(위험색) + 선 끝 분신 실루엣 · 화살표 → 분신이 벽까지 갔다가 돌아와 흡수(선은 끝까지 남는다)
 --   armadillo     아르마딜로 태세: 가시가 돋고(전조) → 가시 껍질 + 머리 위 "✋ 공격 멈춤" → 반격 가시(날아와 바닥 원에 꽂힌다)
 --   playerStun    기절한 사람 머리 위 별
@@ -199,38 +199,49 @@ local function clearSweep()
 	end
 end
 
+-- BR1-4a 에네르기파(낮은 빔 540°): 전조 = 빔이 도는 고리(inner ~ length - 보이는 장판 = 판정) + 빔 시작선 + 회전 화살표(한 바퀴 반) + 빈틈이면 보스 곁 안전 원(초록 테두리).
 function BossBR13View.sweepTelegraph(data)
 	clearSweep()
 	sweep = { data = data, parts = {} }
 	local color = data.color or DANGER
-	for _, part in ipairs(wedge(data.center, data.angleDeg, data.widthDeg, 0, data.radius, DANGER, 0.9)) do
-		TweenService:Create(part, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 0.5 }):Play()
+	for _, part in ipairs(wedge(data.center, 0, 360, data.inner, data.length, DANGER, 0.93)) do
+		TweenService:Create(part, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 0.75 }):Play()
 		table.insert(sweep.parts, part)
 	end
-	-- 바닥 회전 화살표: 시작 쪽에서 끝 쪽으로 반경 10의 호 + 끝의 화살촉
-	local fromDeg = data.startDeg
-	local toDeg = data.startDeg + data.dirSign * data.widthDeg * 0.9
-	for _, part in ipairs(arcLine(data.center, 11, fromDeg, toDeg, 1.2, WHITE, 0.05, 0.5)) do
-		table.insert(sweep.parts, part)
+	local startDir = Vector3.new(math.cos(math.rad(data.startDeg)), 0, math.sin(math.rad(data.startDeg)))
+	table.insert(sweep.parts, segment(data.center + startDir * data.inner, data.center + startDir * data.length, data.halfWidth * 2, color, 0.3, 0.3))
+	if data.gap then -- 보스 곁 빈틈(안전) - 초록 테두리 원
+		for _, part in ipairs(arcLine(data.center, data.inner - 0.6, 0, 360, 0.8, UIColors.success, 0.1, 0.35)) do
+			table.insert(sweep.parts, part)
+		end
 	end
-	local tipAt = data.center + Vector3.new(math.cos(math.rad(toDeg)), 0, math.sin(math.rad(toDeg))) * 11
-	local tangent = Vector3.new(-math.sin(math.rad(toDeg)), 0, math.cos(math.rad(toDeg))) * data.dirSign
-	for _, side in ipairs({ 1, -1 }) do
-		local back = tipAt - tangent * 3 + Vector3.new(math.cos(math.rad(toDeg)), 0, math.sin(math.rad(toDeg))) * 1.8 * side
-		table.insert(sweep.parts, segment(back, tipAt, 1.2, WHITE, 0.05, 0.5))
+	-- 바닥 회전 화살표: 시작선에서 한 바퀴 반(반경 11 · 두 겹 - 540°를 읽히게)
+	for turn = 0, 1 do
+		local fromDeg = data.startDeg + data.dirSign * 360 * turn
+		local span = turn == 0 and 330 or 170
+		local toDeg = fromDeg + data.dirSign * span
+		local r = 11 + turn * 3
+		for _, part in ipairs(arcLine(data.center, r, fromDeg, toDeg, 1.0, WHITE, 0.05, 0.5)) do
+			table.insert(sweep.parts, part)
+		end
+		local tipAt = data.center + Vector3.new(math.cos(math.rad(toDeg)), 0, math.sin(math.rad(toDeg))) * r
+		local tangent = Vector3.new(-math.sin(math.rad(toDeg)), 0, math.cos(math.rad(toDeg))) * data.dirSign
+		for _, side in ipairs({ 1, -1 }) do
+			local back = tipAt - tangent * 3 + Vector3.new(math.cos(math.rad(toDeg)), 0, math.sin(math.rad(toDeg))) * 1.8 * side
+			table.insert(sweep.parts, segment(back, tipAt, 1.0, WHITE, 0.05, 0.5))
+		end
 	end
-	-- 기 모으기: 보스 앞(대상 쪽) 머리 높이에 빛이 커진다
-	local front = Vector3.new(math.cos(math.rad(data.angleDeg)), 0, math.sin(math.rad(data.angleDeg)))
+	-- 기 모으기: 보스 앞(시작선 쪽) 낮은 높이에 빛이 커진다
 	local orb = newPart(Vector3.one * 0.6, color, 0.1, Enum.PartType.Ball)
-	orb.CFrame = CFrame.new(data.center + front * 5 + Vector3.new(0, 5, 0))
-	TweenService:Create(orb, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.one * 7 }):Play()
+	orb.CFrame = CFrame.new(data.center + startDir * 5 + Vector3.new(0, data.beamHeight, 0))
+	TweenService:Create(orb, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.one * 5 }):Play()
 	table.insert(sweep.parts, orb)
 	sweep.orb = orb
 	local boss = bossNear(data.center)
 	local head = boss and boss:FindFirstChild("Head")
 	if head then
-		-- 위에서 보면 +각 = 시계 방향(X → Z) - 화면 기준 화살표
-		sweep.gui = billboard(head, data.dirSign > 0 and "↻" or "↺", WHITE, nil, UDim2.new(0, 90, 0, 90))
+		-- 위에서 보면 +각 = 시계 방향(X → Z) - 화면 기준 화살표 · 한 바퀴 반
+		sweep.gui = billboard(head, (data.dirSign > 0 and "↻" or "↺") .. "×1.5", WHITE, nil, UDim2.new(0, 120, 0, 90))
 	end
 end
 
@@ -242,8 +253,9 @@ function BossBR13View.sweepFire(data)
 	if sweep.orb then
 		destroy(sweep.orb)
 	end
-	local beam = newPart(Vector3.new(d.halfWidth * 2, 3, d.radius), d.color or DANGER, 0.05)
-	local core = newPart(Vector3.new(d.halfWidth * 0.8, 3.4, d.radius), WHITE, 0.2)
+	local span = d.length - d.inner
+	local beam = newPart(Vector3.new(d.halfWidth * 2, d.beamHeight, span), d.color or DANGER, 0.05)
+	local core = newPart(Vector3.new(d.halfWidth * 0.8, d.beamHeight * 1.1, span), WHITE, 0.2)
 	table.insert(sweep.parts, beam)
 	table.insert(sweep.parts, core)
 	sweep.beam, sweep.core, sweep.startedAt = beam, core, os.clock()
@@ -252,6 +264,36 @@ end
 
 function BossBR13View.sweepEnd()
 	clearSweep()
+end
+
+-- 끌림(내 캐릭터만): seconds 동안 보스 쪽으로 speed(수평) - 서버가 같은 거리만큼 수평 허가를 준다. 풀림(beamRelease)이 오면 먼저 끝난다.
+local pullUntil = 0
+function BossBR13View.beamPull(data)
+	if data.userId ~= Players.LocalPlayer.UserId then
+		return
+	end
+	pullUntil = os.clock() + data.seconds
+	local connection
+	connection = RunService.Heartbeat:Connect(function()
+		local character = Players.LocalPlayer.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if os.clock() >= pullUntil or not root then
+			connection:Disconnect()
+			return
+		end
+		local flat = Vector3.new(data.toward.X - root.Position.X, 0, data.toward.Z - root.Position.Z)
+		if flat.Magnitude > 3 then
+			local v = root.AssemblyLinearVelocity
+			local pull = flat.Unit * data.speed
+			root.AssemblyLinearVelocity = Vector3.new(pull.X, v.Y, pull.Z)
+		end
+	end)
+end
+
+function BossBR13View.beamRelease(data)
+	if data.userId == Players.LocalPlayer.UserId then
+		pullUntil = 0
+	end
 end
 
 -- ─────────────────────────── 분신 부메랑 ───────────────────────────
@@ -434,10 +476,10 @@ end
 RunService.RenderStepped:Connect(function()
 	if sweep and sweep.beam and sweep.startedAt then
 		local d = sweep.data
-		local skill = { sweepDeg = d.widthDeg, sweepSeconds = d.sweepSeconds }
+		local skill = { sweepDeg = d.sweepDeg, sweepSeconds = d.sweepSeconds, startLeadDeg = d.startLeadDeg }
 		local deg = BossSkillMath.sweepAngleAt(skill, d.angleDeg, d.dirSign, os.clock() - sweep.startedAt)
 		local dir = Vector3.new(math.cos(math.rad(deg)), 0, math.sin(math.rad(deg)))
-		local mid = d.center + dir * (d.radius / 2) + Vector3.new(0, 1.8, 0)
+		local mid = d.center + dir * ((d.inner + d.length) / 2) + Vector3.new(0, d.beamHeight / 2, 0) -- BR1-4a: 낮은 빔(발 위 beamHeight - 점프로 넘는다)
 		sweep.beam.CFrame = CFrame.lookAt(mid, mid + dir)
 		sweep.core.CFrame = sweep.beam.CFrame
 	end

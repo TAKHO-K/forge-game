@@ -710,11 +710,13 @@ local function runHitEffects(c, effects, v, from, coHits)
 			debugEvent("launch", { player = v.player, coHits = coHits or 1, heightStuds = height, limitedHeight = limitedHeight,
 				distanceStuds = distance, limitedDistance = limitedDistance, from = from, rootPosition = v.root.Position })
 			-- M1-2c: 통째 예외 대신 발사 허가(출발 발 + 이 높이 + 공중 점프 몫 + 여유 · 착지하면 끝 · 안전 상한 = 체공 + 붙잡힘 + 2초). 높이는 잘리기 전 값(클라가 쓰는 값 이상).
-			HeightGuard.grantLaunch(v.player, height, JumpMath.launchAirSeconds(height) + (effect.holdSeconds and effect.holdSeconds / weight or 0) + (effect.escape and 1.5 or 0),
+			local fling = effect.flingDistanceStuds and JumpMath.launchAirSeconds(height + (effect.flingUpStuds or 0)) or 0 -- BR1-4a 회오리 끝 물리 발사(위로 · 수평)
+			HeightGuard.grantLaunch(v.player, height + (effect.flingUpStuds or 0), JumpMath.launchAirSeconds(height) + (effect.holdSeconds and effect.holdSeconds / weight or 0) + fling + (effect.escape and 1.5 or 0),
 				("보스 발사(%s%s)"):format(tostring(c.st and c.st.current or "?"), effect.escape and " · 던짐" or ""))
 			sendTo(v.player, "launch", {
 				from = from, heightStuds = height, distanceStuds = distance,
 				holdSeconds = effect.holdSeconds and effect.holdSeconds / weight, spinRadiusStuds = effect.spinRadiusStuds,
+				flingDistanceStuds = effect.flingDistanceStuds and effect.flingDistanceStuds / weight, flingUpStuds = effect.flingUpStuds,
 				zoneCenter = zone.center, zoneRadius = zone.radius, escape = effect.escape,
 			})
 		end

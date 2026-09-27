@@ -1,6 +1,7 @@
 -- BR1 대공 잡기 → BR1-2 개정(docs/design/boss-br1-2.md §3 - 6종 공통 규칙, 모션만 보스별). primitive = "grab" 핸들러 + 잡힘 종류 "airFrozen"(얼음) · "grabbed"(손).
 -- 흐름(수치 = BossData.mechanics.airGrab):
---   시전(스킬 telegraphSeconds 5초): 보스 위 "점프하지 마" · 떠 있는 사람 머리 위 손바닥이 찬다 · 시전 시작 + noticeSeconds 뒤부터 센 연속 체공이 airSeconds를 넘는 순간 그 자리에 얼림
+--   시전(스킬 telegraphSeconds 5초): 보스 위 "점프하지 마" · BR1-4a: 시전 끝 judgeWindowSeconds(1.5초) 동안의 **누적 체공**(강제 체공 · 원거리 정지 · 가둠 포함)이
+--   airAccumSeconds(0.65초)에 닿는 순간 그 자리에 얼림 · 창 안에서 떠 있는 사람 머리 위 손바닥이 누적만큼 찬다
 --   → 시전 끝: 얼린 사람이 없으면 끝. 있으면 가장 가까운 사람부터(잡는 순간 거리로 다시) 보스가 이동 속도 × chaseSpeedMultiplier로 다가가 잡는다 - 잡힌 사람은 보스 머리 위 둘레에 들려 따라간다
 --   → 마지막 사람을 잡은 뒤 holdSeconds → 전원 던짐(보스별 던지는 모션 · 벽 앞까지) + 현재 체력 × currentHpFraction
 --   발악: 잡힌 사람들의 점프 연타가 **게이지 하나**를 함께 줄인다(필요 횟수 = pressesBase + pressesPerExtra × (얼린 인원 − 1)) → 0이면 전원 풀림 + 보스 기절
@@ -48,24 +49,32 @@ local function isBubbled(player)
 	return record ~= nil and record.kind == "bubbled"
 end
 
--- 시전 중 "센" 연속 체공 = min(실제 연속 체공, 시전 시작 + noticeSeconds부터 흐른 시간). 공중 가둠은 그 시간 내내 공중이다.
+-- BR1-4a: 판정 창(시전 끝 judgeWindowSeconds) 안에서 센 누적 체공. 공중 가둠은 그 시간 내내 공중이다. 강제 체공 · 원거리 정지는 trackAir가 체공으로 센다.
 local function countedAir(c, player)
-	local since = c.now - (c.st.grabStartedAt + CONFIG.noticeSeconds)
-	if since <= 0 then
-		return 0
-	end
-	if isBubbled(player) then
-		return since
-	end
-	return math.min(kit.airSecondsOf(c.st, player, c.now), since)
+	return (c.st.grabAirAccum and c.st.grabAirAccum[player]) or 0
 end
 
-local function markLevel(airSeconds)
-	if airSeconds < CONFIG.warnAirSeconds then
+-- 판정 창 안 한 틱: 떠 있으면 누적에 dt를 더한다.
+local function accumulate(c)
+	local st = c.st
+	st.grabAirAccum = st.grabAirAccum or {}
+	if c.now < st.phaseEndsAt - CONFIG.judgeWindowSeconds then
+		return
+	end
+	local dt = math.min(st.dt or 1 / 30, 0.1)
+	for _, v in ipairs(kit.victims(st)) do
+		if isBubbled(v.player) or kit.airSecondsOf(st, v.player, c.now) > 0 then
+			st.grabAirAccum[v.player] = (st.grabAirAccum[v.player] or 0) + dt
+		end
+	end
+end
+
+local function markLevel(accum)
+	if accum <= 0 then
 		return 0
 	end
-	-- 0.25 단위로 끊어 보낸다(바뀔 때만 발신 - 매 틱 보내지 않는다).
-	local level = math.clamp((airSeconds - CONFIG.warnAirSeconds) / (CONFIG.airSeconds - CONFIG.warnAirSeconds), 0, 1)
+	-- 0.25 단위로 끊어 보낸다(바뀔 때만 발신 - 매 틱 보내지 않는다). 가득 = 얼림.
+	local level = math.clamp(accum / CONFIG.airAccumSeconds, 0, 1)
 	return math.max(math.floor(level * 4 + 1e-6) / 4, 0.25)
 end
 
@@ -74,7 +83,7 @@ local function sendMarks(c)
 	st.grabMarks = st.grabMarks or {}
 	for _, v in ipairs(kit.victims(st)) do
 		local frozen = st.grabFrozen[v.player]
-		local level = (frozen or (BossTrap.isTrapped(v.player) and not isBubbled(v.player))) and 0 or markLevel(kit.airSecondsOf(st, v.player, c.now))
+		local level = (frozen or (BossTrap.isTrapped(v.player) and not isBubbled(v.player))) and 0 or markLevel(countedAir(c, v.player))
 		if st.grabMarks[v.player] ~= level then
 			st.grabMarks[v.player] = level
 			kit.send(st, "grabMark", { userId = realPlayer(v.player) and v.player.UserId or nil, level = level })
@@ -92,7 +101,7 @@ local function clearMarks(c)
 	st.grabMarks = {}
 end
 
--- 얼릴 수 있는가: 센 연속 체공 ≥ N · (진짜 사람은) 지면 거리까지 재도 떠 있다(가둠은 예외) · 무적 · 복귀 보호 아님 · 가둠 말고 다른 잡힘 아님 · 살아 있다.
+-- 얼릴 수 있는가: 판정 창 누적 체공 ≥ airAccumSeconds · (진짜 사람은) 지면 거리까지 재도 떠 있다(가둠은 예외) · 무적 · 복귀 보호 아님 · 가둠 말고 다른 잡힘 아님 · 살아 있다.
 local function freezable(c, v)
 	if c.st.grabFrozen[v.player] or (PlayerState.getHp(v.player) or 0) <= 0 or PlayerStun.isImmune(v.player) then
 		return false
@@ -104,7 +113,7 @@ local function freezable(c, v)
 	if not bubbled and (PlayerState.isInvulnerable(v.player) or BossArenaContainment.isProtected(v.player)) then
 		return false
 	end
-	if countedAir(c, v.player) < CONFIG.airSeconds then
+	if countedAir(c, v.player) < CONFIG.airAccumSeconds then
 		return false
 	end
 	return bubbled or not realPlayer(v.player) or kit.isAirborne(v.player.Character, 0.5)
@@ -127,7 +136,7 @@ local function freeze(c, v)
 	HeightGuard.exempt(v.player, SAFETY_TRAP_SECONDS)
 	kit.send(st, "grabFreeze", { userIds = { userIdOf(v.player) }, positions = { v.root.Position }, bossId = c.data.id, color = c.data.headColor })
 	kit.debugEvent("grabFreeze", { player = v.player, at = c.now, air = air })
-	print(("[forge-game] 대공 잡기: %s 얼림(센 체공 %.2f초)"):format(tostring(v.player.Name), air))
+	print(("[forge-game] 대공 잡기: %s 얼림(판정 창 누적 체공 %.2f초)"):format(tostring(v.player.Name), air))
 end
 
 -- 들고 있는 자리: 보스 머리 위 둘레(index마다 90° 벌린다).
@@ -287,6 +296,7 @@ BossAirGrab.handler = {
 		st.phaseEndsAt = c.now + skill.telegraphSeconds
 		st.grabStartedAt = c.now
 		st.grabMarks = {}
+		st.grabAirAccum = {}
 		st.grabRescued = false
 		st.grabFrozen = {}
 		st.grabFrozenCount = 0
@@ -295,14 +305,15 @@ BossAirGrab.handler = {
 		kit.send(st, "grabTelegraph", {
 			center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.telegraphSeconds,
 			bossId = c.data.id, motion = skill.motion, color = c.data.headColor, noJump = true,
-			warnAirSeconds = CONFIG.warnAirSeconds, airSeconds = CONFIG.airSeconds, noticeSeconds = CONFIG.noticeSeconds,
+			judgeWindowSeconds = CONFIG.judgeWindowSeconds, airAccumSeconds = CONFIG.airAccumSeconds,
 		})
 		sendMarks(c)
 	end,
 	step = function(c)
 		local st = c.st
 		if st.phase == "grabTelegraph" then
-			-- 시전 내내: N초 넘게 뜬 사람은 그 순간 얼린다
+			-- 판정 창(시전 끝 1.5초): 누적 체공이 기준에 닿는 순간 얼린다
+			accumulate(c)
 			for _, v in ipairs(kit.victims(st)) do
 				if freezable(c, v) then
 					freeze(c, v)

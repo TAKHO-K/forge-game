@@ -149,8 +149,36 @@ local function lift(data, root, humanoid)
 			anchor:Destroy()
 		end)
 	end
+	-- BR1-4a 4a-4: 다 돈 뒤 도는 방향 접선으로 물리 발사 - 속도만 주고 중력이 나머지(착지점은 아레나 경계 안으로 자른다 · 서버 발사 허가가 비행을 덮는다)
+	local function fling(angle)
+		connection:Disconnect()
+		local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle))
+		local zone = data.zoneRadius and { center = data.zoneCenter, radius = data.zoneRadius } or nil
+		local up, distance = ArenaContainment.limitLaunch(zone, root.Position, tangent, data.flingUpStuds or 0, data.flingDistanceStuds)
+		local g = Workspace.Gravity
+		local vUp = math.sqrt(2 * g * math.max(up, 0))
+		local drop = math.max(root.Position.Y - center.Y, 0) -- 도는 높이(루트) → 원래 루트 높이까지
+		local air = (vUp + math.sqrt(vUp * vUp + 2 * g * drop)) / g
+		root.AssemblyLinearVelocity = tangent * (distance / air) + Vector3.new(0, vUp, 0)
+		root.AssemblyAngularVelocity = Vector3.zero
+		local landing = Vector3.new(root.Position.X, center.Y, root.Position.Z) + tangent * distance
+		TweenService:Create(anchor, TweenInfo.new(air, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Position = landing }):Play()
+		task.delay(air + 0.1, function()
+			if humanoid.Parent then
+				humanoid.PlatformStand = false
+				if camera and camera.CameraSubject == anchor then
+					camera.CameraSubject = humanoid
+				end
+			end
+			anchor:Destroy()
+		end)
+	end
 	connection = RunService.Heartbeat:Connect(function()
 		local t = os.clock() - startedAt
+		if t >= total and data.flingDistanceStuds and root.Parent and humanoid.Health > 0 and not root.Anchored then
+			fling(startAngle + total * LIFT_TURNS_PER_SECOND * 2 * math.pi)
+			return
+		end
 		-- 도중에 죽었거나 잡혔으면(서버가 루트를 고정한다) 바로 놓는다.
 		if t >= total or not root.Parent or humanoid.Health <= 0 or root.Anchored then
 			finish(Vector3.new(root.Position.X, center.Y, root.Position.Z))

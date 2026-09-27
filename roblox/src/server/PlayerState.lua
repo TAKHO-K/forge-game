@@ -144,7 +144,8 @@ end
 -- 최종 배율 = 살아 있는 출처 배율의 곱. 완전 무적(0배)은 배율이 아니라 별도 플래그(setInvulnerableUntil)다. 만료 시각을 넘긴 출처는
 -- 읽을 때 저절로 빠진다(해제 호출이 필요 없다) · 푸는 쪽은 자기 키만 지운다.
 -- [Player] 칸: incomingMultipliers = { [sourceKey] = { multiplier, untilAt } } · invulnerableUntil = { [sourceKey] = untilAt }
-function PlayerState.setIncomingDamageMultiplierUntil(player, multiplier, durationSeconds, sourceKey)
+-- technique(BR1-4a 4a-1): 이 감소가 "기술"인가(대검 회전베기 채널 · 앞으로 성기사 패링 · 치유사 성역). 전멸기 · 기믹(%최대체력 고정 피해)은 기술 감소와 무적(0)만 받는다.
+function PlayerState.setIncomingDamageMultiplierUntil(player, multiplier, durationSeconds, sourceKey, technique)
 	assert(sourceKey, "setIncomingDamageMultiplierUntil: sourceKey가 필요하다(출처별 칸)")
 	local entry = players[player]
 	if not entry then
@@ -157,7 +158,7 @@ function PlayerState.setIncomingDamageMultiplierUntil(player, multiplier, durati
 	if existing and existing.untilAt > os.clock() and existing.multiplier <= multiplier and existing.untilAt >= newUntil then
 		return
 	end
-	entry.incomingMultipliers[sourceKey] = { multiplier = multiplier, untilAt = newUntil }
+	entry.incomingMultipliers[sourceKey] = { multiplier = multiplier, untilAt = newUntil, technique = technique == true }
 end
 
 -- 이 출처의 배율만 푼다(다른 출처는 그대로).
@@ -226,7 +227,8 @@ end
 -- 모든 피격 경로의 마지막 공통 지점(PlayerDamage.applyFinalDamage)이 매 피격마다 곱한다. 무적이면 0, 아니면 살아 있는 출처 배율의 곱(없으면 1).
 -- G1-0(P3d-F 결정 1): 곱의 최종 하한 = CombatConfig.incomingDamageMultiplierFloor(0.25) - 감소가 여럿 겹쳐도 그 밑으로는 안 내려간다(무적은 위 플래그로만).
 -- 1보다 큰 배율(받는 피해 증가)은 하한과 무관하다.
-function PlayerState.getIncomingDamageMultiplier(player)
+-- techniqueOnly(BR1-4a 4a-1): 전멸기 · 기믹 고정 피해 = 기술 감소(technique)와 무적 · 면역(배율 0 - 잡힘 해제 유예 등)만 곱한다(대시 50% 같은 감소는 빼고).
+function PlayerState.getIncomingDamageMultiplier(player, techniqueOnly)
 	local entry = players[player]
 	if not entry then
 		return 1
@@ -237,7 +239,9 @@ function PlayerState.getIncomingDamageMultiplier(player)
 	local now, product = os.clock(), 1
 	for key, rec in pairs(entry.incomingMultipliers or {}) do
 		if rec.untilAt > now then
-			product *= rec.multiplier
+			if not techniqueOnly or rec.technique or rec.multiplier == 0 then
+				product *= rec.multiplier
+			end
 		else
 			entry.incomingMultipliers[key] = nil
 		end

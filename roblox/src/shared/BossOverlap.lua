@@ -164,11 +164,11 @@ local function patternShape(skill, boss, player, zoneRadius)
 			return len(x - player.x, z - player.z) <= radius
 		end, available, true, "walk"
 	elseif primitive == "sweep" then
-		-- BR1-3 에네르기파: 대상 쪽 반원(반경 radiusStuds) · 쓸 수 있는 시간 = 전조 + 휩쓸기 절반(대상 각에 닿기까지)
+		-- BR1-4a 에네르기파: 낮은 빔이 540° - 고리 안 어디든 빔이 지나간다(걸어서 못 벗어난다) · 점프로 넘는다(공중이면 안 맞는 바닥 판정)
 		return function(x, z)
-			local rx, rz = x - boss.x, z - boss.z
-			return len(rx, rz) <= skill.radiusStuds and (rx * dirx + rz * dirz) >= 0
-		end, skill.telegraphSeconds + skill.sweepSeconds / 2, true, "walk"
+			local d = len(x - boss.x, z - boss.z)
+			return d >= (skill.innerStuds or 0) and d <= skill.radiusStuds
+		end, skill.telegraphSeconds, true, "jump"
 	elseif primitive == "boomerang" then
 		-- BR1-3 분신 부메랑: 대상 쪽 부채 선(반폭) - 직선과 같은 모양
 		local dirs = {}

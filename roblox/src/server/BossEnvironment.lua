@@ -299,8 +299,71 @@ function BossEnvironment.firstBlockedAlong(model, origin, dir, length)
 	return nil
 end
 
+-- BR1-4a 4a-5 지반 붕괴(env.fall.wipe): 조각 바닥이 실제로 꺼진다(BossArenaMap 조각 바닥) - 캐릭터가 물리로 떨어져 발이 바닥 아래 triggerBelowStuds를 넘으면
+-- 전멸기 피해(mechanics.gimmickFail - 이 보스전 첫 낙하 55% · 그 뒤 85% · 보호막 무시 · 고정 %) + **무너진 조각 가장자리**(옆 조각 · 구멍 가장자리에서 edgeInsetStuds 안쪽)로 복귀(즉사 아님 ·
+-- 보호 returnProtectSeconds). 점프 · 대시로 구멍을 건너면(발이 반대쪽 바닥에 닿으면) 아무 일 없다 - 건널 수 있는 폭 = BossSkillMath.sliceCrossRadius(환생 단계별 틈 폭 표).
+local function edgePoint(model, st, env, z, position)
+	local zone = kit.zoneOf(model)
+	local center = xz(zone.center)
+	local rel = xz(position) - center
+	local arenaR = zone.radius or z.radius
+	local r = math.clamp(rel.Magnitude, z.hub + env.fall.edgeInsetStuds, arenaR - env.fall.edgeInsetStuds)
+	local offset = ((math.deg(math.atan2(rel.Z, rel.X)) - z.startDeg) % 360)
+	for step = 0, 12 do
+		local rr = math.max(r - step * 4, z.hub + 1)
+		local inset = math.deg(env.fall.edgeInsetStuds / rr)
+		local deg = offset < z.widthDeg / 2 and (z.startDeg - inset) or (z.startDeg + z.widthDeg + inset)
+		local p = center + Vector3.new(math.cos(math.rad(deg)), 0, math.sin(math.rad(deg))) * rr
+		if not BossArenaMap.overlapsObstacle(st.zoneKey, p, 1.5, 0.5) and not inAnyHazard(st.env and st.env.collapsed or {}, p) then
+			return Vector3.new(p.X, st.floorY + 3, p.Z)
+		end
+	end
+	return Vector3.new(center.X, st.floorY + 3, center.Z) -- 가운데 허브(늘 남는다)
+end
+
+local function checkCollapseFalls(model, st, env, e, zones, now)
+	e.fell = e.fell or {}
+	e.fellCount = e.fellCount or {}
+	local fail = BossData.mechanics.gimmickFail
+	for _, v in ipairs(kit.victims(st)) do
+		local player = v.player
+		local recently = e.fell[player] and now - e.fell[player] < 1.5
+		if not recently and not BossTrap.isTrapped(player) and not BossArenaContainment.isProtected(player) and inAnyHazard(zones, v.root.Position) then
+			local fell
+			if typeof(player) == "Instance" then
+				fell = v.feet.Y < st.floorY - env.fall.triggerBelowStuds -- 실제로 바닥 아래로 떨어졌다(조각 바닥이 꺼졌다 - 떠서 건너는 중이면 발이 아직 위)
+			else
+				fell = player.debugAirborne ~= true -- 검증 스탠드인(물리 없음): 떠 있지 않으면 떨어진 것으로
+			end
+			if fell then
+				e.fell[player] = now
+				local first = not e.fellCount[player]
+				e.fellCount[player] = (e.fellCount[player] or 0) + 1
+				local fraction = first and fail.firstMaxHpFraction or fail.maxHpFraction
+				PlayerDamage.applyMaxHpFraction(player, fraction, env.damageLabel .. " - 낙사", { ignoresShield = fail.ignoresShield })
+				BossTrap.noteSkillHit(player)
+				local z = nil
+				for _, zz in ipairs(zones) do
+					if BossEnvironment.insideHazard(zz, v.root.Position) then
+						z = zz
+					end
+				end
+				local to = edgePoint(model, st, env, z or zones[1], v.root.Position)
+				if typeof(player) == "Instance" then
+					BossArenaContainment.relocate(player, to, "collapseEdge", st.zoneKey, "무너진 조각 가장자리")
+				else
+					v.root.Position = to
+				end
+				kit.send(st, "voidFall", { userId = typeof(player) == "Instance" and player.UserId or nil, position = Vector3.new(v.root.Position.X, st.floorY, v.root.Position.Z), edge = to })
+				kit.debugEvent("voidFall", { player = player, at = now, fraction = fraction, edge = to })
+				print(("[forge-game] 낙사(%s): %s - 최대 체력 %.0f%%(%s) · 가장자리 복귀"):format(env.id, tostring(player.Name), fraction * 100, first and "첫 낙하" or "다시"))
+			end
+		end
+	end
+end
+
 -- 발을 딛으면 떨어진다: 최대 체력 fall.maxHpFraction + 바닥 아래로(맵 이탈 복귀가 본인 스폰 · 보호 0.75초로 받는다 - BossArenaContainment).
--- 떠 있으면 아직 · 잡힌 사람 · 복귀 보호 중 · 이번 발동에 날아간 사람(판 털기)은 안 떨어진다.
+-- 떠 있으면 아직 · 잡힌 사람 · 복귀 보호 중 · 이번 발동에 날아간 사람(판 털기)은 안 떨어진다. (심해 판 털기 - 붕괴는 위 checkCollapseFalls)
 local function checkFalls(st, env, e, zones, now)
 	e.fell = e.fell or {}
 	for _, v in ipairs(kit.victims(st)) do
@@ -357,6 +420,9 @@ local function begin(model, st, data, env, e, now)
 	e.phase = "telegraph"
 	e.phaseEndsAt = now + env.telegraphSeconds
 	e.zones = env.kind == "collapse" and planSlices(model, st, env, e) or placeZones(model, st, data, env)
+	if env.kind == "collapse" then
+		BossArenaMap.enableSliceFloor(st.zoneKey, env.zones.count, env.zones.hubRadiusStuds) -- BR1-4a: 첫 붕괴 전조에 조각 바닥으로(보스전 끝까지)
+	end
 	e.launched = nil
 	e.taken = {}
 	e.usedImpossible = false
@@ -379,6 +445,12 @@ local function activate(model, st, data, env, e, now)
 		-- BR1-3: 이전 조각이 돌아오고 새 조각이 무너진다 - 무너진 채 다음 붕괴(cooldownSeconds)까지
 		local restored = e.collapsed
 		e.collapsed = e.zones
+		for _, z in ipairs(restored or {}) do
+			BossArenaMap.setSliceCollapsed(st.zoneKey, z.index, false) -- BR1-4a: 옛 조각이 돌아온다
+		end
+		for _, z in ipairs(e.zones) do
+			BossArenaMap.setSliceCollapsed(st.zoneKey, z.index, true) -- 새 조각 바닥이 실제로 꺼진다
+		end
 		e.phaseEndsAt = now + env.cooldownSeconds
 		local names = {}
 		for _, z in ipairs(e.zones) do
@@ -484,7 +556,11 @@ function BossEnvironment.step(model, st, data, now, _dt)
 	end
 	local voids = voidZonesOf(st, env)
 	if voids and #voids > 0 then
-		checkFalls(st, env, e, voids, now) -- BR1-3 무너진 조각 · 들린 판
+		if env.fall and env.fall.wipe then
+			checkCollapseFalls(model, st, env, e, voids, now) -- BR1-4a 무너진 조각(바닥이 실제로 꺼진다)
+		else
+			checkFalls(st, env, e, voids, now) -- 들린 판(심해)
+		end
 	end
 	if e.phase == "armed" or e.phase == "cooldown" or (env.kind == "collapse" and e.phase == "active") then
 		if now >= e.phaseEndsAt then
@@ -566,11 +642,13 @@ function BossEnvironment.reset(model, st)
 		st.env = nil
 	end
 	clearCourse(model)
+	BossArenaMap.disableSliceFloor(MonsterState.getZoneKey(model)) -- BR1-4a: 조각 바닥 → 원판
 end
 
 -- 보스전 종료(처치 · 이탈): 수정 공중 정원의 파트(발판 · 점프대 · 핵)를 치운다 - 구역은 논리뿐이라 남는 것이 없다.
 function BossEnvironment.clear(model)
 	clearCourse(model)
+	BossArenaMap.disableSliceFloor(MonsterState.getZoneKey(model)) -- BR1-4a: 조각 바닥 → 원판
 end
 
 -- 자동 검증 전용: 지금 이 보스의 코스 파트 수(발판 + 벽) · 수정 수

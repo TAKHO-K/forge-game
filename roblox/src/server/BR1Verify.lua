@@ -100,9 +100,12 @@ function BR1Verify.runPure()
 		local maxAir = JumpMath.maxAirSeconds(h1, 2, DashConfig.durationSeconds)
 		local single = JumpMath.maxAirSeconds(h1, 1, nil)
 		local double = JumpMath.maxAirSeconds(h1, 2, nil)
-		r.check(("N = %.1f초: 1단 + 공중 1(%.3f초) < N < 공중 2(%.3f) · 한 체공 최대 %.3f(데이터 %.3f) · 전조 %.1f ≥ 인지 + 최대 체공 %.2f"):format(grab.airSeconds, single, double, maxAir, grab.maxAirSeconds,
-			BossData.bosses.section_guardian.skills.grab.telegraphSeconds, 0.5 + grab.maxAirSeconds),
-			grab.airSeconds > single and grab.airSeconds < double and near(maxAir, grab.maxAirSeconds, 0.01) and BossData.bosses.section_guardian.skills.grab.telegraphSeconds >= 0.5 + grab.maxAirSeconds)
+		-- BR1-4a: 판정 = 시전 끝 judgeWindowSeconds 누적 체공 ≥ airAccumSeconds - 창 안 1단 점프 한 번(%.3f)은 안 잡히고 · 창 전 인지 + 최대 체공이면 내려온다
+		local oneJump = JumpMath.maxAirSeconds(h1, 0, nil)
+		local telegraph = BossData.bosses.section_guardian.skills.grab.telegraphSeconds
+		r.check(("누적 %.2f초(창 %.1f초): 1단 점프 %.3f < 누적 < 1단 + 공중 1 %.3f · 한 체공 최대 %.3f(데이터 %.3f) · 창 전 %.1f ≥ 인지 + 최대 체공 %.2f"):format(grab.airAccumSeconds, grab.judgeWindowSeconds,
+			oneJump, single, maxAir, grab.maxAirSeconds, telegraph - grab.judgeWindowSeconds, 0.5 + grab.maxAirSeconds),
+			grab.airAccumSeconds > oneJump and grab.airAccumSeconds < single and near(maxAir, grab.maxAirSeconds, 0.01) and telegraph - grab.judgeWindowSeconds >= 0.5 + grab.maxAirSeconds)
 	end)
 	r.section("첫 도전 모형", function()
 		for _, id in ipairs(ALL_BOSSES) do
@@ -396,7 +399,7 @@ function BR1Verify.runLive(player, env)
 			end)
 			local airGrabbed = BossTrap.getRecord(air)
 			local hpBefore = PlayerState.getHp(air)
-			r.check(("%s 대공 잡기: 연속 체공 ≥ %.1f초 잡힘 %s(종류 %s) · 판정 0.4초 전부터 뜬 사람 안 잡힘 %s"):format(bossId, BossData.mechanics.airGrab.airSeconds,
+			r.check(("%s 대공 잡기: 창 누적 체공 ≥ %.2f초 잡힘 %s(종류 %s) · 판정 0.4초 전부터 뜬 사람 안 잡힘 %s"):format(bossId, BossData.mechanics.airGrab.airAccumSeconds,
 				tostring(airGrabbed ~= nil), tostring(airGrabbed and airGrabbed.kind), tostring(BossTrap.getRecord(late) == nil)), airGrabbed ~= nil and airGrabbed.kind == "grabbed" and BossTrap.getRecord(late) == nil)
 			air.debugAirborne, late.debugAirborne = nil, nil
 			drive(player, root, model, data, BossData.mechanics.airGrab.holdSeconds + 1.5, function()
@@ -482,8 +485,9 @@ function BR1Verify.runLive(player, env)
 					return countKind("voidFall") > 0
 				end)
 				local lost = (before - PlayerState.getHp(victim)) / PlayerState.getMaxHp(victim)
+				local expectFall = envData.fall.wipe and BossData.mechanics.gimmickFail.firstMaxHpFraction or envData.fall.maxHpFraction -- BR1-4a: 붕괴 = 전멸기 첫 낙하(55%)
 				r.check(("%s 환경 %s: 전조 %.1f초 → 구역 %d개 · 빈 바닥 발 딛음 → 낙사 %d · 체력 −%.0f%%(기대 %.0f%%)"):format(bossId, envData.id, envData.telegraphSeconds, #telegraphPayload.zones,
-					countKind("voidFall"), lost * 100, envData.fall.maxHpFraction * 100), countKind("voidFall") >= 1 and near(lost, envData.fall.maxHpFraction, 0.02))
+					countKind("voidFall"), lost * 100, expectFall * 100), countKind("voidFall") >= 1 and near(lost, expectFall, 0.02))
 				if envData.kind == "collapse" then
 					r.check(("%s 무너진 조각 유지 %d(기대 %d - 다음 붕괴까지)"):format(bossId, #(st.env.collapsed or {}), envData.zones.collapse), #(st.env.collapsed or {}) == envData.zones.collapse)
 				else

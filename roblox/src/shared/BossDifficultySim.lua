@@ -249,7 +249,7 @@ function BossDifficultySim.run(bossId, options)
 							local ticks = cfg.envTicks.min + math.floor(rng() * (cfg.envTicks.max - cfg.envTicks.min + 1))
 							local share = math.min(ticks * (env.tick and env.tick.fraction or 0), BossData.mechanics.environment.maxHpFractionPerActivation)
 							if env.fall and not env.onStart then -- 판 털기는 날아간 사람이 낙사 면제(날아감 = onStart 몫)
-								share += env.fall.maxHpFraction -- BR1-3 무너진 바닥 낙사 한 번(가정)
+								share += env.fall.wipe and BossData.mechanics.gimmickFail.firstMaxHpFraction or env.fall.maxHpFraction -- BR1-3 무너진 바닥 낙사 한 번(가정) · BR1-4a 붕괴 = 전멸기 첫 낙하
 							end
 							if env.onStart and env.onStart.damage then
 								share += env.onStart.damage.multiplier / surviveHits

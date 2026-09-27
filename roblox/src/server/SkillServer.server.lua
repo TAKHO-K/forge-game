@@ -245,7 +245,7 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 	end
 	PlayerState.setMoveSpeedMultiplier(player, sourceKey, def.channelMoveSpeedMultiplier, def.channelSeconds + 0.5, PlayerProfile.refreshMovementSpeed) -- 끝 처리가 끊겨도 채널 뒤 저절로 풀린다
 	PlayerProfile.refreshMovementSpeed(player)
-	PlayerState.setIncomingDamageMultiplierUntil(player, def.incomingDamageMultiplier, def.channelSeconds, sourceKey) -- P3d-F B6: 출처 = 이 스킬(대시 · 복귀 보호와 곱해진다)
+	PlayerState.setIncomingDamageMultiplierUntil(player, def.incomingDamageMultiplier, def.channelSeconds, sourceKey, true) -- P3d-F B6: 출처 = 이 스킬(대시 · 복귀 보호와 곱해진다) · BR1-4a: 기술 감소(전멸기 · 기믹 피해에도 먹는다)
 	-- 21-1 [1]-C: 채널링 중 평타 차단(PRD 4.3 "채널링 3초는 평타 시간에서 뺀다") - 이게
 	-- 계수 프리미엄의 대가다. AttackServer가 PlayerState.isChanneling으로 거부한다.
 	PlayerState.setChannelingUntil(player, def.channelSeconds)

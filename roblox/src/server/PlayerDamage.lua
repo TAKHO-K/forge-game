@@ -117,10 +117,18 @@ end
 
 -- 감소율까지 적용된 최종 피해를 넣고 사망 처리까지 한다 - 모든 피격 경로의 마지막 공통
 -- 지점. 받는 피해 배율(대검 E 채널링·대시, PlayerState)은 여기서 곱한다.
+-- opts.fixed(BR1-4a 4a-1 - 전멸기 · 기믹 = %최대체력 고정): 레벨차 계수를 안 곱하고 받는 피해 배율은 기술 감소 · 무적만(대시 등 빼고). 신규 보호(스테이지 ≤ 20)는 그대로.
+-- opts.maxDamage(BR1-4a 에네르기파 - 시전당 총 피해 상한): 배율을 다 곱한 뒤 이 값에서 자른다.
 local function applyFinalDamage(targetPlayer, damage, label, opts)
-	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer)
+	local fixed = opts and opts.fixed
+	damage *= PlayerState.getIncomingDamageMultiplier(targetPlayer, fixed)
 	damage *= PlayerDamage.getNewbieMultiplier(targetPlayer)
-	damage *= PlayerDamage.getLevelGapTakeMultiplier(targetPlayer, opts and opts.levelGapStage) -- G1-3: 레벨차 계수(받는 피해) · C1: 잡몹은 몹 기준 스테이지
+	if not fixed then
+		damage *= PlayerDamage.getLevelGapTakeMultiplier(targetPlayer, opts and opts.levelGapStage) -- G1-3: 레벨차 계수(받는 피해) · C1: 잡몹은 몹 기준 스테이지
+	end
+	if opts and opts.maxDamage then
+		damage = math.min(damage, opts.maxDamage)
+	end
 	-- 29-1(PRD 20.73 [2-8] A-1 "잡힌 동안 받는 피해"): 잡히면 못 피하므로 모든 패턴이 확정 피격이다 -
 	-- 배율(지금은 0 = 면역)을 곱하고, 0이면 피격 자체가 없던 것으로 친다(자동회복 타이머도 안 건드린다).
 	local trapMultiplier = PlayerState.getTrapDamageMultiplier(targetPlayer)
@@ -155,15 +163,16 @@ function PlayerDamage.applyHit(targetPlayer, rawAttack, label, damageMultiplier,
 	return applyFinalDamage(targetPlayer, damage, label, opts) -- opts.levelGapStage(C1 - 잡몹 기준 스테이지)
 end
 
--- 최대체력 비율 피해(21-3, 보스 돌진 - 방어 무관). 받는 피해 배율(대시 50% 등)은 그대로
--- 곱한다 - "방어 무관"이지 "감소 무관"이 아니다(PRD 5.4 대시 설계가 만든 "일단 대시 vs
--- 제대로 피하기"의 대비를 여기서도 유지한다, 20.46 [0] 계산 참고).
+-- 최대체력 비율 피해 = 전멸기 · 기믹(BR1-4a 4a-1 사용자 규칙): 방어 · 레벨차 · 대시 같은 감소 미적용 - 기술 감소(technique)와 무적 · 신규 보호만.
+-- 일반 패턴은 능력치 기반(applyHit - 옛 %최대체력 돌진 · 잠행 찌르기는 앵커 같은 몫의 공격 배율로 바꿨다). 부르는 곳 = 기믹 실패 · 전멸기 · 환경 도트 · 낙사 · 반사 · 구덩이 · 분신 폭발.
 -- opts.ignoresShield(BR1): 쉴드를 건드리지 않고 HP를 깎는다 - 핵심 기믹 실패(BossData.mechanics.gimmickFail).
 function PlayerDamage.applyMaxHpFraction(targetPlayer, fraction, label, opts)
 	if (PlayerState.getHp(targetPlayer) or 0) <= 0 then
 		return 0
 	end
-	return applyFinalDamage(targetPlayer, PlayerState.getMaxHp(targetPlayer) * fraction, label, opts)
+	local fixedOpts = table.clone(opts or {})
+	fixedOpts.fixed = true
+	return applyFinalDamage(targetPlayer, PlayerState.getMaxHp(targetPlayer) * fraction, label, fixedOpts)
 end
 
 -- BR1 대공 잡기의 던짐: **현재** 체력의 비율(방어 무시 · 받는 피해 감소 = 신규 보호 · 레벨차 · 버프 · 무적 적용 · 쉴드 적용 - 설계 §2 결정).
