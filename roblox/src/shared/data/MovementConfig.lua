@@ -105,8 +105,8 @@ return {
 			"선인장 밀림(burst)", "원거리 공중 정지 · 일어나기(이동 0)", "사다리 · 덩굴(수직)", "서버 순간이동(Travel · 리프트 · 복귀 · 보스 입장 · 보스 기믹 = HeightGuard.reset)", "붙잡힘 · 가둠(exempt)" } },
 	-- stallSeconds · stallDropStuds(S1 후속 0-1 - 공중 정체): 활강 · 원거리 공중 정지 · 허가 · 예외 · 유예 밖에서 공중으로 stallSeconds 넘게 stallDropStuds만큼도 안 내려가면 되돌린다
 	--   (허용 높이 아래에 떠서 버티는 "날기" - G2a(나) 체인 첫머리에 서버가 본 위치가 발 +17.3에서 6초 정지했는데 아무 검사도 안 걸렸다). 합법 최대 = 공중 점프 2 + 대시 약 2.0초(JumpMath.maxAirSeconds) ·
-	--   태초 2단 대시 · 지연 0.25 몰림 여유 = 3.5초. 발 아래 probe 안에 지면이 보이면 서 있는 것으로 친다(FloorMaterial이 Air로 읽히는 얇은 파트 · 경사 끝).
-	heightGuard = { toleranceStuds = 1.0, strikes = 2, probeStuds = 3.5, teleportResetStuds = 50, graceSeconds = 1.0, exemptExtraSeconds = 0.5, stallSeconds = 3.5, stallDropStuds = 1.0,
+	--   태초 2단 대시 · 지연 0.25 몰림 여유 · 태초 장갑 매달림(hangMaxSeconds 4 + 오르기 0.22 - 허가가 거절돼도: 정체 리뷰 2) = 5초. 발 아래 probe 안에 지면이 보이면 서 있는 것으로 친다.
+	heightGuard = { toleranceStuds = 1.0, strikes = 2, probeStuds = 3.5, teleportResetStuds = 50, graceSeconds = 1.0, exemptExtraSeconds = 0.5, stallSeconds = 5.0, stallDropStuds = 1.0,
 		climbBox = Vector3.new(7, 10, 7) }, -- M1-4: 오르는 중 = 루트 둘레 이 상자 안에 사다리(TrussPart · Climbable)가 있을 때만 "서 있음"(지연 0.25 × 오르기 속도 여유)
 
 	-- M1-3 물(Terrain 물 - 익사 없음 · 로블록스 기본 헤엄): 공중 점프 충전은 물 밖 착지에서만 돌아온다(물에 떠 있기만으로는 안 찬다 - 물 → 공중 점프 무한 사다리 방지).

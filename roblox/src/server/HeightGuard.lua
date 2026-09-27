@@ -84,6 +84,7 @@ function HeightGuard.evaluate(st, sample, now)
 	st.lastPos = sample.pos
 	if sample.skip then
 		st.strikes = 0
+		st.stallSince = nil -- 정체 리뷰 1: 루트 고정(잡힘 · 끼임)이 풀린 첫 폴링에 바로 되돌리지 않게
 		return "ok"
 	end
 	local permit = stepPermit(st, sample, now)
@@ -99,8 +100,9 @@ function HeightGuard.evaluate(st, sample, now)
 		st.stallSince = nil
 		return "ok"
 	end
-	-- S1 후속 0-1: 공중 정체 - 서버가 아는 합법 정체(활강 · 원거리 공중 정지 · 허가 · 예외 · 유예) 밖에서 stallSeconds 넘게 stallDropStuds도 안 내려가면 되돌린다
-	if sample.gliding or sample.hovering or permit or now < st.graceUntil or now < st.exemptUntil then
+	-- S1 후속 0-1: 공중 정체 - 서버가 아는 합법 정체(원거리 공중 정지 · 설계 체공 안의 허가 · 예외 · 유예 · 물속) 밖에서 stallSeconds 넘게 stallDropStuds도 안 내려가면 되돌린다.
+	--   활강은 면제가 아니다(정체 리뷰 4 - 켜 두기만 하면 무한 면제였다): 합법 활강은 초당 descentSpeed(5)로 내려가 스스로 초기화된다. 허가는 설계 체공(expiresAt) 안만(리뷰 3 - "내려가기만" 20초 면제 차단).
+	if sample.hovering or sample.inWater or (permit and now <= permit.expiresAt) or now < st.graceUntil or now < st.exemptUntil then
 		st.stallSince = nil
 	elseif not st.stallSince or sample.feetY < st.stallLow - cfg.stallDropStuds then
 		st.stallLow, st.stallSince = sample.feetY, now
@@ -379,8 +381,8 @@ function HeightGuard.poll(player, now)
 		grounded = humanoid.FloorMaterial ~= Enum.Material.Air or (state == Enum.HumanoidStateType.Climbing and HeightGuard.nearClimbable(character, root))
 			or swimming or state == Enum.HumanoidStateType.Seated,
 		skip = root.Anchored or humanoid.Health <= 0,
-		gliding = character:GetAttribute("Gliding") == true, -- S1 후속 0-1 공중 정체: 서버 활강 상태(GlideState)
-		hovering = require(script.Parent.AirState).isHovering(player, now), -- 원거리 공중 정지(서버 기록)
+		hovering = require(script.Parent.AirState).isHovering(player, now), -- S1 후속 0-1 공중 정체: 원거리 공중 정지(서버 기록)
+		inWater = require(script.Parent.WorldHazards).inWater(root.Position), -- 정체 리뷰 5: 물 위에 떠 있기(헤엄 상태가 서버에 안 보여도)
 		probe = function()
 			probeParams.FilterDescendantsInstances = { character }
 			local hit = Workspace:Raycast(root.Position, Vector3.new(0, -(MovementConfig.rootAboveFeetStuds + JumpMath.heightGuardAllowance() + cfg.probeStuds), 0), probeParams)
@@ -424,7 +426,13 @@ function HeightGuard.poll(player, now)
 		root.AssemblyLinearVelocity = Vector3.zero
 		root.CFrame = CFrame.new(st.supportPos) * (root.CFrame - root.CFrame.Position)
 		st.lastPos = st.supportPos
-		st.flaggedAt = now
+		-- 정체 리뷰(공통): 공중 정체 한 번은 리더보드 표시를 안 한다(오탐 한 번에 기록이 사라지지 않게) - 30초 안 두 번째부터
+		if st.lastRevertWhy ~= "stall" or now - (st.lastStallAt or -math.huge) <= 30 then
+			st.flaggedAt = now
+		end
+		if st.lastRevertWhy == "stall" then
+			st.lastStallAt = now
+		end
 		st.reverts += 1
 		st.permit = nil -- 리뷰: 위반으로 되돌렸으면 남은 허가도 끝
 		warn(("[forge-game] 높이 보정%s: %s 발 %.1f(기준 %.1f + 허용 %.2f 초과 %d회 · 허가 %s) → (%.0f, %.1f, %.0f)로 되돌림"):format(

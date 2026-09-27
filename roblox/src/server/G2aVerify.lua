@@ -194,7 +194,7 @@ function G2aVerify.runLive(player, env)
 		st.trace = {}
 		local hoverRise = 0 -- S1 계측: 서버가 본 띄워 두기 높이(클라 물리가 제약을 따랐는가)
 		local staticSamples, lastY, exceededAt = 0, nil, nil
-		while os.clock() - t0 < 6 do
+		while os.clock() - t0 < MovementConfig.heightGuard.stallSeconds + 2 do -- 허용 아래로 버티면 공중 정체(stallSeconds)가 잡는다
 			task.wait(0.05)
 			hoverRise = math.max(hoverRise, root.Position.Y - base.Y)
 			if not exceededAt and root.Position.Y - base.Y > (st.allowance or JumpMath.heightGuardAllowance()) then

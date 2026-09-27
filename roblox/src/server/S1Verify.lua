@@ -179,13 +179,15 @@ function V.runPure()
 			end
 			return n
 		end
-		local hover = reverts(run(function(t) return math.min(t * 40, 17.3) end, 6))
-		local glide = reverts(run(function(t) return math.min(t * 40, 17.3) end, 6, { gliding = true }))
+		local hover = reverts(run(function(t) return math.min(t * 40, 17.3) end, 7))
+		local glide = reverts(run(function(t) return math.min(t * 40, 17.3) end, 7, { gliding = true })) -- 정체 리뷰 4: 활강 표시만으로는 면제 아님(내려가야 한다)
+		local glideDescend = reverts(run(function(t) return math.max(19.4 - MovementConfig.glide.descentSpeed * t, 0.5) end, 7, { gliding = true }))
 		-- 합법 최대: 점프 → 공중 점프 2 → 대시 두 번(수평 - 높이 유지) → 떨어짐(약 2.6초 공중 · 한 번도 이륙 표본 아래로 안 내려감)
 		local legal = reverts(run(function(t) if t < 1.6 then return 6 + t * 8 elseif t < 2.2 then return 18.8 else return 18.8 - (t - 2.2) * 40 end end, 2.8))
-		local ledgeFloor = reverts(run(function(t) return math.min(t * 40, 17.3) end, 6, { probe = function() return 16 end })) -- 발 바로 아래 얇은 파트(FloorMaterial Air)
-		r.check(("허용 아래 띄워 두기(발 +17.3 · 6초) 되돌림 %d(기대 ≥ 1 - %.1f초) · 같은 동작 활강 표시 %d(기대 0) · 합법 최대 체공 2.8초 %d(기대 0) · 발밑 지면(probe) %d(기대 0)"):format(hover, stallS, glide, legal, ledgeFloor),
-			hover >= 1 and glide == 0 and legal == 0 and ledgeFloor == 0)
+		local ledgeFloor = reverts(run(function(t) return math.min(t * 40, 17.3) end, 7, { probe = function() return 16 end })) -- 발 바로 아래 얇은 파트(FloorMaterial Air)
+		local hang = reverts(run(function(t) return math.min(t * 40, 17.3) end, 4.4)) -- 붙잡기 매달림 4 + 오르기 0.22(허가 거절돼도)
+		r.check(("허용 아래 띄워 두기(발 +17.3 · 7초) 되돌림 %d(기대 ≥ 1 - %.1f초) · 같은 동작 활강 표시만 %d(기대 ≥ 1) · 활강 하강 %d(기대 0) · 합법 최대 체공 2.8초 %d · 매달림 4.4초 %d · 발밑 지면(probe) %d(기대 0 0 0)"):format(hover, stallS, glide, glideDescend, legal, hang, ledgeFloor),
+			hover >= 1 and glide >= 1 and glideDescend == 0 and legal == 0 and hang == 0 and ledgeFloor == 0)
 	end)
 
 	r.section("해금 단계별 높이 허용 · 서버 궤적 낙하", function()
