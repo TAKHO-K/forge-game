@@ -213,6 +213,7 @@ function BossArenaMap.enableSliceFloor(zoneKey, count, hubRadius)
 	})
 	hub.Color, hub.Material = color, material
 	base.floor.CanCollide, base.floor.CanQuery, base.floor.Transparency = false, false, 1
+	base.rim.CanCollide, base.rim.CanQuery = false, false -- 테라스 원판(바닥 − 1.5)이 아레나 전체 아래에 깔려 있다 - 켜 두면 구멍으로 떨어진 사람이 그 위에 선다(BR1-4a Play 1)
 	local state = { model = model, slices = slices, hub = hub }
 	sliceFloors[zoneKey] = state
 	return state
@@ -238,6 +239,7 @@ function BossArenaMap.disableSliceFloor(zoneKey)
 	local base = bases[zoneKey]
 	if base then
 		base.floor.CanCollide, base.floor.CanQuery, base.floor.Transparency = true, true, 0
+		base.rim.CanCollide, base.rim.CanQuery = true, true
 	end
 	return true
 end

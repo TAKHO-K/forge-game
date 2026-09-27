@@ -47,7 +47,7 @@ local function newRecorder(tag)
 	return r
 end
 
-local ALL = { "section_guardian", "frost_giant", "deep_lord", "crystal_queen", "scorpion_queen", "storm_lord" }
+local ALL = { "section_guardian", "frost_giant", "abyssal_lord", "crystal_queen", "scorpion_queen", "storm_lord" }
 
 -- 전멸기 · 기믹(%최대체력이 맞는 패턴) - 나머지 스킬의 maxHp 피해 = 규칙 위반
 local FIXED_PRIMITIVES = { colorMatch = true, lightningRods = true, sandSearch = true, orgel = true, sonic = true, reflect = true, pillarRoar = true, split = true }

@@ -664,7 +664,7 @@ function BossHandlersBR1.trackAir(st, now)
 		-- BR1-4a 4a-2: 강제 체공(넉백 · 발사 - 클라가 PlatformStand라 Jumping · Freefall이 아니다)도 체공 = 발사 허가가 살아 있고 발밑이 공중
 		if not airborne and humanoid and typeof(member) == "Instance" and humanoid.FloorMaterial == Enum.Material.Air then
 			local guard = HeightGuard.getState(member)
-			airborne = guard ~= nil and guard.permit ~= nil
+			airborne = guard ~= nil and guard.permit ~= nil and now <= guard.permit.expiresAt -- 설계 체공 안의 허가만(Play 1: 지난 허가가 남은 고정 루트를 체공으로 셌다)
 		end
 		if airborne and (PlayerState.getHp(member) or 0) > 0 then
 			st.airSince[member] = st.airSince[member] or now
