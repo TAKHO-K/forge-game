@@ -220,7 +220,7 @@ function V.runLive(player, env)
 		local still = spawnMob(base + fwd * 7, "still")
 		ReplicatedStorage:SetAttribute("W2Phase", "melee")
 		local t0 = os.clock()
-		while os.clock() - t0 < 40 and ReplicatedStorage:GetAttribute("W2Phase") == "melee" do
+		while os.clock() - t0 < 60 and ReplicatedStorage:GetAttribute("W2Phase") == "melee" do -- C2 묶음 Play: 40 → 60(도구 왕복)
 			H.fullHeal(player)
 			if not still.Parent then -- C2 묶음 Play: 표본이 죽으면 같은 자리에 다시(잡몹은 받는 피해 배율이 안 먹는다 - W2 함정)
 				still = spawnMob(base + fwd * 7, "still")
@@ -235,7 +235,7 @@ function V.runLive(player, env)
 		ReplicatedStorage:SetAttribute("W2Phase", "bow")
 		t0 = os.clock()
 		local angle = 0
-		while os.clock() - t0 < 110 and ReplicatedStorage:GetAttribute("W2Phase") == "bow" do
+		while os.clock() - t0 < 240 and ReplicatedStorage:GetAttribute("W2Phase") == "bow" do -- C2 묶음 Play: 110 → 240(50발 이상)
 			local dt = RunService.Heartbeat:Wait()
 			angle += dt * 8 / 4
 			if not moving.Parent then
