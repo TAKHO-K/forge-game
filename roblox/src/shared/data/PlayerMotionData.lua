@@ -8,12 +8,16 @@
 --
 -- 공격 클립(attack1 ~ 3 · heavy · air) = 전조(ant) → 동작(act) → 회복(rec) 세 구간 · 키 포즈 4개:
 --   cocked(전조 시작 = 준비) → contact(전조 끝 = 타격 프레임 - hit) → through(동작 끝 = 따라 휘두름) → settle(회복 끝 = 다음 타의 준비 자세 또는 전투 대기)
---   근접 서버 피해 = 요청 즉시(AttackServer) → 타격 프레임(ant) ≤ 0.05초(W1-4 시각표). 무게감 = 준비 자세(이전 타의 회복이 다음 타의 전조) · 긴 따라 휘두름 · 몸통 회전 · 히트스톱.
+--   근접 서버 피해 = 요청 즉시(AttackServer) → 타격 프레임(ant) = 1프레임(W2-2 - 궤적도 요청 순간). 무게감 = 준비 자세(이전 타의 회복이 다음 타의 전조) · 긴 따라 휘두름 · 몸통 회전 · 히트스톱.
 --   원거리 서버 발사 = MotionTiming.releaseSeconds(같은 함수) → 타격 프레임 = 전조 끝(시위 놓음 · 구슬 발사).
 --   구간 이징(선형 금지): ant = inQuad(가속) · act = outCubic(못 박듯 멈춤) · rec = inOutSine. 공격 속도가 빨라지면 전조부터 줄인다(MotionTiming.scale).
 --
 -- 상태 전환(대기 ↔ 이동 ↔ 수납 ↔ 대시 ↔ 활강 ↔ 공격 끝) = blend 0.15 ~ 0.3초(비선형 - smootherstep).
 local P = {}
+
+-- W2-2: 근접 타격 프레임 = 1프레임(서버는 요청을 받는 즉시 판정 · 궤적은 요청 순간 - 셋이 같은 순간). 옛 전조 0.045(대검 · 성기사) · 0.03(쌍검).
+--   무게감 = 앞 타의 회복(rec)이 다음 타의 준비 자세 + 따라 휘두름(act) · 히트스톱(판정 시각은 그대로 - 모션이 판정에 맞춘다).
+local MELEE_CONTACT = 1 / 60
 
 -- 공통 수치
 P.blend = { min = 0.15, max = 0.3, default = 0.2, attackIn = 0.06 } -- attackIn = 공격 시작 때 지금 자세 → cocked(전조 안에 들어가야 타격 프레임이 늦지 않는다)
@@ -62,19 +66,19 @@ W.greatsword = {
 	dash = { Waist = { -20, -10, 0 }, Neck = { 15, 5, 0 }, RightShoulder = { 10, 0, 15 }, RightElbow = { 40, 0, 0 }, RightWrist = { -80, 0, 0 } }, -- 몸을 숙이고 칼끝을 앞 아래로(θ −30)
 	getupRise = { Root = { 25, 0, 0, 0, -1.3, 0 }, Waist = { -25, 0, 0 }, RightShoulder = { 40, 0, 15 }, RightElbow = { 40, 0, 0 }, RightWrist = { -110, 0, 0 }, RightHip = { 70, 0, 0 }, RightKnee = { -90, 0, 0 }, LeftHip = { 10, 0, 0 }, LeftKnee = { -40, 0, 0 } }, -- 칼을 짚고(θ −30) 한쪽 무릎으로
 	attacks = {
-		{ ant = 0.045, act = 0.12, rec = 0.235, cocked = GS_OVER_R, -- 1타: 오른 위 → 왼 아래 대각
+		{ ant = MELEE_CONTACT, act = 0.12, rec = 0.235, cocked = GS_OVER_R, -- 1타: 오른 위 → 왼 아래 대각
 			contact = { Waist = { -10, 20, 0 }, Neck = { 0, -15, 0 }, RightShoulder = { 75, -20, -10 }, RightElbow = { 15, 0, 0 }, RightWrist = { -75, 0, 0 } }, -- θ 15
 			through = GS_LOW_L, settle = GS_LOW_L },
-		{ ant = 0.045, act = 0.12, rec = 0.235, cocked = GS_LOW_L, -- 2타: 왼 아래 → 오른 위 거슬러 베기
+		{ ant = MELEE_CONTACT, act = 0.12, rec = 0.235, cocked = GS_LOW_L, -- 2타: 왼 아래 → 오른 위 거슬러 베기
 			contact = { Waist = { -5, -15, 0 }, Neck = { 0, 10, 0 }, RightShoulder = { 95, 10, 30 }, RightElbow = { 15, 0, 0 }, RightWrist = { -90, 0, 0 } }, -- θ 20
 			through = { Waist = { 5, -40, 0 }, Neck = { 0, 25, 0 }, RightShoulder = { 140, 10, 55 }, RightElbow = { 25, 0, 0 }, RightWrist = { -70, 0, 0 } }, -- θ 95
 			settle = GS_OVERHEAD }, -- → 3타 준비(머리 위)
-		{ ant = 0.045, act = 0.14, rec = 0.215, cocked = GS_OVERHEAD, -- 3타: 내려찍기
+		{ ant = MELEE_CONTACT, act = 0.14, rec = 0.215, cocked = GS_OVERHEAD, -- 3타: 내려찍기
 			contact = { Waist = { -25, 0, 0 }, Neck = { 15, 0, 0 }, RightShoulder = { 60, 0, 5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -70, 0, 0 } }, -- θ 0
 			through = { Waist = { -35, 0, 0 }, Neck = { 20, 0, 0 }, RightShoulder = { 35, 0, 5 }, RightElbow = { 5, 0, 0 }, RightWrist = { -80, 0, 0 } }, -- θ −40(땅을 찍는다)
 			settle = GS_STANCE },
 	},
-	air = { ant = 0.045, act = 0.15, rec = 0.205, cocked = { Waist = { 10, 0, 0 }, RightShoulder = { 165, 0, 10 }, RightElbow = { 50, 0, 0 }, RightWrist = { -20, 0, 0 } }, -- 공중 내려찍기(몸 앞 기울임 = AirMotion)
+	air = { ant = MELEE_CONTACT, act = 0.15, rec = 0.205, cocked = { Waist = { 10, 0, 0 }, RightShoulder = { 165, 0, 10 }, RightElbow = { 50, 0, 0 }, RightWrist = { -20, 0, 0 } }, -- 공중 내려찍기(몸 앞 기울임 = AirMotion)
 		contact = { Waist = { -30, 0, 0 }, Neck = { 20, 0, 0 }, RightShoulder = { 45, 0, 5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -70, 0, 0 } }, -- θ −15
 		through = { Waist = { -35, 0, 0 }, Neck = { 20, 0, 0 }, RightShoulder = { 20, 0, 5 }, RightElbow = { 5, 0, 0 }, RightWrist = { -75, 0, 0 } }, settle = GS_STANCE }, -- θ −50
 }
@@ -102,18 +106,18 @@ W.dualblade = {
 	dash = { Waist = { -25, 0, 0 }, Neck = { 20, 0, 0 }, RightShoulder = { 5, 0, 20 }, RightElbow = { 50, 0, 0 }, RightWrist = { -85, 0, 0 }, LeftShoulder = { 5, 0, -20 }, LeftElbow = { 50, 0, 0 }, LeftWrist = { -85, 0, 0 } }, -- 숙이고 칼끝 앞 아래(θ −30)
 	getupRise = { Root = { 20, 0, 0, 0, -1.3, 0 }, Waist = { -20, 0, 0 }, RightShoulder = { 20, 0, 30 }, RightElbow = { 60, 0, 0 }, LeftShoulder = { 20, 0, -30 }, LeftElbow = { 60, 0, 0 }, RightHip = { 60, 0, 0 }, RightKnee = { -80, 0, 0 }, LeftHip = { 60, 0, 0 }, LeftKnee = { -80, 0, 0 } }, -- 웅크렸다 튀어 오름
 	attacks = {
-		{ ant = 0.03, act = 0.06, rec = 0.085, cocked = DB_R_UP, -- 1타 오른손 대각
+		{ ant = MELEE_CONTACT, act = 0.06, rec = 0.085, cocked = DB_R_UP, -- 1타 오른손 대각
 			contact = with(DB_L_GUARD, { Waist = { -8, 10, 0 }, Neck = { 0, -8, 0 }, RightShoulder = { 80, 0, -5 }, RightElbow = { 15, 0, 0 }, RightWrist = { -80, 0, 0 } }), -- θ 15
 			through = DB_R_LOW, settle = DB_L_UP },
-		{ ant = 0.03, act = 0.06, rec = 0.085, cocked = DB_L_UP, -- 2타 왼손 대각
+		{ ant = MELEE_CONTACT, act = 0.06, rec = 0.085, cocked = DB_L_UP, -- 2타 왼손 대각
 			contact = with(DB_R_GUARD, { Waist = { -8, -10, 0 }, Neck = { 0, 8, 0 }, LeftShoulder = { 80, 0, 5 }, LeftElbow = { 15, 0, 0 }, LeftWrist = { -80, 0, 0 } }),
 			through = DB_L_LOW, settle = DB_CROSS_UP },
-		{ ant = 0.03, act = 0.07, rec = 0.075, cocked = DB_CROSS_UP, -- 3타 교차(두 칼이 X자로 몸 앞을 지난다)
+		{ ant = MELEE_CONTACT, act = 0.07, rec = 0.075, cocked = DB_CROSS_UP, -- 3타 교차(두 칼이 X자로 몸 앞을 지난다)
 			contact = { Waist = { -15, 0, 0 }, Neck = { 10, 0, 0 }, RightShoulder = { 80, 0, -15 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 }, LeftShoulder = { 80, 0, 15 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 } }, -- θ 10
 			through = { Waist = { -20, 0, 0 }, Neck = { 12, 0, 0 }, RightShoulder = { 45, 0, -40 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 }, LeftShoulder = { 45, 0, 40 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 } }, -- θ −25
 			settle = DB_STANCE },
 	},
-	air = { ant = 0.03, act = 0.2, rec = 0.1, cocked = DB_CROSS_UP, -- 공중 회전 베기(몸 한 바퀴 = AirMotion spin) - 두 팔을 옆으로 벌려 칼이 원을 그린다
+	air = { ant = MELEE_CONTACT, act = 0.2, rec = 0.1, cocked = DB_CROSS_UP, -- 공중 회전 베기(몸 한 바퀴 = AirMotion spin) - 두 팔을 옆으로 벌려 칼이 원을 그린다
 		contact = { Waist = { -5, 0, 0 }, RightShoulder = { 80, 0, 70 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 }, LeftShoulder = { 80, 0, -70 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 } },
 		through = { Waist = { -5, 0, 0 }, RightShoulder = { 70, 0, 80 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 }, LeftShoulder = { 70, 0, -80 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 } }, settle = DB_STANCE },
 }
@@ -169,11 +173,11 @@ local PH_DOWN = { Waist = { -20, 0, 0 }, LeftShoulder = { 55, 0, -10 }, LeftElbo
 W.paladin = {
 	stance = PH_STANCE, move = PH_STANCE, dash = PH_STANCE, getupRise = PH_STANCE,
 	attacks = {
-		{ ant = 0.045, act = 0.12, rec = 0.205, cocked = PH_UP, contact = PH_DOWN, through = PH_DOWN, settle = PH_UP },
-		{ ant = 0.045, act = 0.12, rec = 0.205, cocked = PH_UP, contact = PH_DOWN, through = PH_DOWN, settle = PH_UP },
-		{ ant = 0.045, act = 0.14, rec = 0.205, cocked = PH_UP, contact = PH_DOWN, through = PH_DOWN, settle = PH_STANCE },
+		{ ant = MELEE_CONTACT, act = 0.12, rec = 0.205, cocked = PH_UP, contact = PH_DOWN, through = PH_DOWN, settle = PH_UP },
+		{ ant = MELEE_CONTACT, act = 0.12, rec = 0.205, cocked = PH_UP, contact = PH_DOWN, through = PH_DOWN, settle = PH_UP },
+		{ ant = MELEE_CONTACT, act = 0.14, rec = 0.205, cocked = PH_UP, contact = PH_DOWN, through = PH_DOWN, settle = PH_STANCE },
 	},
-	air = { ant = 0.045, act = 0.15, rec = 0.205, cocked = PH_UP, contact = PH_DOWN, through = PH_DOWN, settle = PH_STANCE },
+	air = { ant = MELEE_CONTACT, act = 0.15, rec = 0.205, cocked = PH_UP, contact = PH_DOWN, through = PH_DOWN, settle = PH_STANCE },
 }
 
 -- 활강(모든 무기 공통 - 무기는 수납 자리로): 두 팔을 머리 위 글라이더로

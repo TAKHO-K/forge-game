@@ -19,6 +19,8 @@ local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming)
 local WeaponRigCheck = require(ReplicatedStorage.Shared.WeaponRigCheck)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local PoseRig = require(script.Parent.PoseRig)
+local AttackTrail = require(script.Parent.AttackTrail) -- W2 칼날 리본 스타일(스킨)
+local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
 local WeaponEnhanceVisual = require(script.Parent.WeaponEnhanceVisual) -- 강화 단계 이펙트(30-0 S08 - 내 무기만) - 이 파일은 부르기만 한다
 
 local WeaponVisual = {}
@@ -44,23 +46,44 @@ local function destroyDeep(value)
 	end
 end
 
-local function attachTrail(part, topLocal, bottomLocal, width, color)
+-- W2 칼날 리본(TrailData.ribbon): 칼밑 ↔ 칼끝 두 부착점 사이 리본(폭 = 칼날 길이 - 대검 넓고 묵직 · 쌍검 칼마다 얇게) + 강공격 광택 리본(칼끝 ↔ 칼끝 바깥).
+--   동작 구간(act)에만 켠다 · 색 · 빛남 = 스킨(AttackTrail.ribbonStyle - 공격 시작 때 칠한다) · 수명 · 테이퍼 · 강공격 규칙은 스킨 무관.
+local function attachTrail(part, topLocal, bottomLocal)
 	local topAttach = Instance.new("Attachment")
 	topAttach.Position = topLocal
 	topAttach.Parent = part
 	local bottomAttach = Instance.new("Attachment")
 	bottomAttach.Position = bottomLocal
 	bottomAttach.Parent = part
-	local trail = Instance.new("Trail")
-	trail.Attachment0 = topAttach
-	trail.Attachment1 = bottomAttach
-	trail.Lifetime = 0.22
-	trail.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, width), NumberSequenceKeypoint.new(1, 0) })
-	trail.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(1, 1) })
-	trail.Color = ColorSequence.new(color)
-	trail.Enabled = false
-	trail.Parent = part
-	return trail
+	local function newTrail(a0, a1)
+		local trail = Instance.new("Trail")
+		trail.Attachment0, trail.Attachment1 = a0, a1
+		trail.FaceCamera = true
+		trail.MinLength = 0.05
+		trail.Enabled = false
+		trail.Parent = part
+		return trail
+	end
+	local trail = newTrail(topAttach, bottomAttach)
+	local outer = Instance.new("Attachment")
+	outer.Position = topLocal + (topLocal - bottomLocal).Unit * TrailData.ribbon.heavy.gloss.outerStuds
+	outer.Parent = part
+	local gloss = newTrail(outer, topAttach)
+	return trail, gloss
+end
+
+local function paintRibbon(p, who, heavy)
+	local key = tostring(typeof(who) == "Instance" and who:IsA("Player") and who:GetAttribute("TrailSkin") or "default") .. (heavy and "H" or "") .. (AttackTrail.dimOthers() and "D" or "")
+	if p.ribbonKey == key then
+		return
+	end
+	p.ribbonKey = key
+	local style = AttackTrail.ribbonStyle(who, heavy)
+	local t = p.trail
+	t.Color, t.Transparency, t.LightEmission, t.WidthScale, t.Lifetime = style.color, style.transparency, style.lightEmission, style.widthScale, style.lifetime
+	if style.gloss then
+		p.gloss.Color, p.gloss.Transparency, p.gloss.LightEmission, p.gloss.WidthScale, p.gloss.Lifetime = style.color, style.gloss.transparency, style.lightEmission, style.widthScale, style.gloss.lifetime
+	end
 end
 
 -- MeshPart.MeshId는 런타임 스크립트에서 못 쓴다 → Part + SpecialMesh(레거시 메시).
@@ -161,7 +184,9 @@ local function buildWeapon(classId, colorOverride, parentFolder)
 			local part = buildMeshPart(folder, spec.name or "Blade", model.meshId, model.size, model.color)
 			part:FindFirstChildOfClass("SpecialMesh").Scale = Vector3.one * scale
 			p.part, p.mesh = part, part:FindFirstChildOfClass("SpecialMesh")
-			p.trail = motion and attachTrail(part, model.trailTop, model.trailBottom, motion.trailWidth, motion.trailColor)
+			if TrailData.ribbon.classes[classId] and model.trailTop then
+				p.trail, p.gloss = attachTrail(part, model.trailTop, model.trailBottom)
+			end
 		elseif model.kind == "specialmesh" then
 			local part = buildMeshPart(folder, "Staff", model.meshId, model.size, model.color, model.textureId)
 			part:FindFirstChildOfClass("SpecialMesh").Scale = Vector3.one * scale
@@ -657,7 +682,13 @@ local function placeWeapon(st, now, camPos)
 			end
 		end
 		if p.trail then
-			p.trail.Enabled = f.trailOn and f.inHand
+			local heavy = f.heavyMul > 1 -- 3타 · 공중 3타 강공격(무기 ×1.3 구간과 같다)
+			local on = f.trailOn and f.inHand
+			if on then
+				paintRibbon(p, st.key, heavy)
+			end
+			p.trail.Enabled = on
+			p.gloss.Enabled = on and heavy
 		end
 	end
 end

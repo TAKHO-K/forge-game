@@ -69,6 +69,9 @@ local function effectParent(weapon)
 end
 
 local function trailsOf(weapon)
+	do -- W2: 칼날 리본 색 · 폭 = 통일 기본색 + 스킨만(client/AttackTrail · WeaponVisual) - 강화 단계는 리본을 안 바꾼다(강화 빛 · 파티클은 그대로)
+		return {}
+	end
 	local instances = weapon.instances
 	if weapon.kind == "mesh" then
 		return { instances.trail }

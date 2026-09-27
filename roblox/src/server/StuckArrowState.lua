@@ -88,8 +88,10 @@ local function explode(record)
 
 	local damage, isCrit = PlayerCombat.calcDamage(record.base, record.classId)
 	-- 29-3: 지연 폭발은 보스의 반사 태세에 반사되지 않는다(indirect) - 언제 꽂았든 터지는 시각은 플레이어가 고르지 못한다.
+	local hitPosition = model.PrimaryPart and model.PrimaryPart.Position -- W2-3 서버 적중 지점
 	local isDead, dealt = MonsterState.applyDamage(model, damage, record.attackerStage, record.player, { indirect = true })
 	damage = dealt -- 29-1: 실제로 들어간 피해(보스 파훼 게이트 반영)
+	require(script.Parent.DamageFeed).emit(model, hitPosition, dealt, "skill", record.player, isCrit) -- W2-3(꽂힌 화살 폭발 = 속사 스킬 몫)
 
 	stuckArrowResult:FireClient(record.player, model, record.id, damage, isCrit, isDead)
 	CombatResolution.resolveHit(record.player, model, isDead)

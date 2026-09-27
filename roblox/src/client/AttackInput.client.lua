@@ -21,6 +21,14 @@ local DamageNumbers = require(script.Parent.DamageNumbers)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
 local AirHover = require(script.Parent.AirHover)
+local AttackTrail = require(script.Parent.AttackTrail) -- W2 공격 궤적(무기 발광 대신)
+local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
+local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming)
+
+-- W2 요청 번호: 서버가 결과 · 발사 알림에 돌려준다 → 원거리는 "그 요청을 보낸 시각 + 서버 발사 지연 + 서버 비행 시간"에 화살이 닿게 그린다.
+local requestSeq = 0
+local pendingShots = {} -- [seq] = { sentAt, index, heavy }
+local lastSwingIndex, lastSwingHeavy = 1, false
 
 -- MV1 공중 공격(환생 1회부터 - MovementUnlockData): 한 체공 예산(MoveRules.airAttackBudget = 해금된 공중 점프 + 이번 체공의 공중 대시) 안에서는 공중에서 바로 친다.
 -- 예산을 넘거나 해금 전이면 옛 규칙(점프 중 클릭 = 착지 순간 발동하는 버퍼). 판정 · 예산 확정은 서버(AttackServer · AirState) - 여기는 모션 · 요청만.
@@ -180,7 +188,9 @@ local function performAttack(aimPoint, isAir)
 	end) then
 		return -- W1: 일어나는 중 = 끝나는 순간 낸다(입력 버퍼)
 	end
-	attackRequest:FireServer(aimPoint, isAir == true)
+	requestSeq += 1
+	local seq = requestSeq
+	attackRequest:FireServer(aimPoint, isAir == true, seq)
 	if isAir then
 		airAttacksThisAir += 1
 		-- MV1 원거리 공중 정지(활 · 지팡이 - AttackMotionData[직업].air.hoverSeconds)
@@ -205,7 +215,16 @@ local function performAttack(aimPoint, isAir)
 	local now = os.clock()
 	if now - lastSwingTick >= cooldown then
 		lastSwingTick = now
-		WeaponVisual.playSwing(predictIsHeavyHit(isAir), isAir)
+		local heavy = predictIsHeavyHit(isAir)
+		lastSwingIndex, lastSwingHeavy = MotionTiming.comboIndex(predictedComboCount), heavy
+		WeaponVisual.playSwing(heavy, isAir) -- W2 칼날 리본 = WeaponVisual(동작 구간에만 · 강공격 = 넓게 + 광택)
+		AttackTrail.debugFire("swing", { at = now, heavy = heavy, index = lastSwingIndex })
+	end
+	if ProjectileConfig.kindByClass[classId] then
+		pendingShots[seq] = { sentAt = now, index = lastSwingIndex, heavy = lastSwingHeavy }
+		if seq - 64 > 0 then
+			pendingShots[seq - 64] = nil -- 답이 안 온 요청(헛스윙 · 쿨다운 무시) 정리
+		end
 	end
 end
 
@@ -405,24 +424,63 @@ end
 -- 이 핸들러는 "쐈다"만 알 뿐 결과를 모른다(그래서 onArrive 콜백이 없다 - 그냥 날아가는
 -- 모습만 보여준다). isBuffedShot(20-5 [1]) - 백스텝샷이 적용된 화살이면 Projectiles가
 -- 굵고 밝은 변형으로 그린다.
-attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit, isBuffedShot)
+attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit, isBuffedShot, seq, serverRelease, serverTravel, serverAnchor)
 	local classId = player:GetAttribute("ClassId")
 	local projectileKind = ProjectileConfig.kindByClass[classId]
 	if not projectileKind then
 		return
 	end
-
-	-- 스윙이 아직 "발사 시점"(타격 프레임)에 안 닿았으면 그때까지 기다렸다가 쏜다(9-2/14-2 -
-	-- 시위가 안 당겨진 채로 화살이 나가는 어색함을 막는다). 서버도 같은 시각을
-	-- MotionTiming(W1 - 공유 순수 함수)으로 계산해 피해 판정 시점을 맞춘다.
-	local releaseDelay = WeaponVisual.getReleaseDelay()
-	task.delay(releaseDelay, function()
+	-- W2: 서버 시각표에 맞춘다 - 발사 = 요청 보낸 시각 + 서버 발사 지연 · 도착 = 발사 + 서버 비행 시간.
+	--   서버 판정 = (요청이 서버에 닿은 시각) + 같은 두 값 → 화면 도착은 서버 판정보다 올라가는 편도 지연만큼 이르다(결과 · 숫자는 왕복 뒤 - 보고서 W2-3 규칙).
+	--   왕복 지연이 발사 지연보다 길면 남은 비행만 그린다(최소 0.03초). 요청 번호를 못 찾으면(유실) 옛 방식(모션 발사 큐 · 거리 ÷ 속도).
+	local shot = seq and pendingShots[seq]
+	if seq then
+		pendingShots[seq] = nil
+	end
+	local now = os.clock()
+	local releaseAt = shot and serverRelease and (shot.sentAt + serverRelease) or (now + WeaponVisual.getReleaseDelay())
+	local arriveAt = shot and serverTravel and (releaseAt + serverTravel) or nil
+	task.delay(math.max(releaseAt - now, 0), function()
 		local targetHead = monsterModel and monsterModel:FindFirstChild("Head")
 		local muzzle = WeaponVisual.getMuzzleWorldPosition()
 		if not targetHead or not muzzle then
 			return -- 발사 시점에 대상이 이미 사라졌다(드문 경우) - 보여줄 화살 자체가 없다.
 		end
-		Projectiles.fire(projectileKind, muzzle, targetHead.Position, isCrit, isBuffedShot and "empowered" or "normal")
+		local heavy = shot and shot.heavy or false
+		local targetRoot = monsterModel.PrimaryPart
+		Projectiles.fire(projectileKind, muzzle, targetHead.Position, isCrit, isBuffedShot and "empowered" or "normal", function(aim, tracking)
+			AttackTrail.debugFire("arrive", { seq = seq, at = os.clock(), aim = aim, tracking = tracking, target = monsterModel, arriveAt = arriveAt })
+		end, {
+			travelSeconds = arriveAt and (arriveAt - os.clock()) or nil,
+			style = AttackTrail.tailStyle(player, projectileKind, heavy),
+			target = monsterModel, anchor = serverAnchor or (targetRoot and targetRoot.Position), tolerance = ProjectileConfig.hitToleranceStuds,
+		})
+		AttackTrail.debugFire("release", { seq = seq, at = os.clock(), releaseAt = releaseAt, arriveAt = arriveAt, target = monsterModel, muzzle = muzzle })
+	end)
+end)
+
+-- W2 남의 화살 · 구슬(서버 중계 AttackShotRelay - 궤적 꼬리 스킨이 남에게도 보인다): 받은 순간부터 서버 발사 지연 · 비행 시간 그대로.
+ReplicatedStorage:WaitForChild("AttackShotRelay").OnClientEvent:Connect(function(who, monsterModel, serverRelease, serverTravel, comboIndex, isHeavy, serverAnchor)
+	if typeof(who) ~= "Instance" or who == player then
+		return
+	end
+	local classId = who:GetAttribute("ClassId")
+	local kind = ProjectileConfig.kindByClass[classId or ""]
+	local hand = who.Character and (who.Character:FindFirstChild("RightHand") or who.Character:FindFirstChild("Right Arm"))
+	local mine = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not kind or not hand or not mine or (hand.Position - mine.Position).Magnitude > TrailData.othersDrawStuds then
+		return
+	end
+	task.delay(serverRelease or 0, function()
+		local head = monsterModel and monsterModel:FindFirstChild("Head")
+		if not head or not hand.Parent then
+			return
+		end
+		local root = monsterModel.PrimaryPart
+		Projectiles.fire(kind, hand.Position, head.Position, false, "normal", nil, {
+			travelSeconds = serverTravel, style = AttackTrail.tailStyle(who, kind, isHeavy),
+			target = monsterModel, anchor = serverAnchor or (root and root.Position), tolerance = ProjectileConfig.hitToleranceStuds,
+		})
 	end)
 end)
 
@@ -430,9 +488,17 @@ end)
 -- 보내주므로 똑같이 즉시 표시한다(더 이상 클라가 따로 늦출 필요가 없다 - 20-2b 이전엔
 -- 여기서 투사체 도착을 기다렸지만, 이제 그 기다림 자체를 서버가 이미 하고 왔다).
 -- missed(20-2b)면 빗나간 것 - 아무 이펙트도 재생하지 않는다.
-attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, isComboHit, missed, isBuffedShot)
+attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, isComboHit, missed, isBuffedShot, seq, hitPosition)
+	AttackTrail.debugFire("result", { seq = seq, at = os.clock(), missed = missed == true, damage = damage, target = monsterModel, hitPosition = hitPosition })
 	if missed then
 		return
+	end
+	-- W2 적중 불꽃(서버 적중 지점 · 서버 확정 뒤): 강공격 = 크게 · 투사체 = 작게
+	local classId = player:GetAttribute("ClassId")
+	if isComboHit then
+		AttackTrail.spark(player, hitPosition, TrailData.spark.heavyCount)
+	elseif ProjectileConfig.kindByClass[classId or ""] then
+		AttackTrail.spark(player, hitPosition, TrailData.spark.projectileCount)
 	end
 	showResult(monsterModel, damage, isCrit, died, isComboHit, isBuffedShot)
 end)

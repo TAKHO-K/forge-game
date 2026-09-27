@@ -1049,6 +1049,8 @@ local HELP_TEXT = table.concat({
 	"/gg enhance <n> - 무기 강화 단계 지정(0~" .. EnhanceConfig.maxLevel .. ")",
 	"/gg weapon <n|등급명> - 무기 등급 지정(0~6 또는 " .. table.concat(ArmorData.gradeOrder, "/") .. ")",
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
+	"/gg hitbox <on|off> - W2-2 실제 판정 표시(평타 사거리 원 · 서버 투사체 경로 · 허용 폭 · 적중 지점 - 나에게만)",
+	"/gg trail <스킨 id> - W2 궤적 스킨 교체(서버 소유 확인 - default · devMint · devIndigo(개발 전용))",
 	"/gg stage <n> - 무한 스테이지 지정(생존타수/보상 배율 계산용, 물리적 이동 아님)",
 	"/gg measure [stage] - 지금 조건의 생존 타수·60초 총딜·처치 시간·권장 스테이지를 콘솔에 출력",
 	"/gg curve - 레벨 1~125의 레벨당 목표 마릿수·실제 계산 마릿수·+25% 가정 마릿수 표를 콘솔에 출력(25-1)",
@@ -1250,6 +1252,12 @@ local function handleCommand(player, args)
 		if applyWeaponGrade(player, args[2]) then
 			reply(player, "무기 등급 " .. args[2] .. " 적용")
 		end
+	elseif sub == "hitbox" and (args[2] == "on" or args[2] == "off") then
+		player:SetAttribute("DebugHitbox", args[2] == "on" or nil)
+		reply(player, "판정 표시 " .. args[2])
+	elseif sub == "trail" and args[2] then
+		local ok, why = require(script.Parent.TrailSkinService).set(player, args[2])
+		reply(player, ok and ("궤적 스킨 " .. args[2]) or ("궤적 스킨 거부: " .. tostring(why)))
 	elseif sub == "class" and args[2] then
 		ensureBackup(player)
 		if applyClass(player, args[2]) then
@@ -3629,6 +3637,7 @@ if RunService:IsStudio() then
 				{ "BR1-4b(나)", function() require(script.Parent.BR14bVerify).runLive(player, env) end },
 				{ "BR1-4c(나)", function() require(script.Parent.BR14cVerify).runLive(player, env) end }, -- BR1-4c: 붕괴 원인 · 3점 낙하 · 진입 연출 · 유도 규칙 · 처치 정리 · 지진파 단계 -- BR1-4b: 리그 6종 스폰 · 알림 = 판정 시각 · 잡기 부착점
 				{ "BR1-4b0(나)", function() require(script.Parent.BR14b0Verify).runLive(player, env) end }, -- BR1-4b 파트 0: 공중 대시 낙하 최고점 · 수호자 잡기 → 돌진 연속 금지(실제 step)
+				{ "W2(나)", function() require(script.Parent.W2Verify).runLive(player, env) end }, -- W2: 파트 0 회오리 지연 되돌림 · 피해 이벤트 구조 · 클라 표본 창(근접 궤적 시각 · 투사체 화면 ↔ 서버)
 				{ "G1-5(나)", function() require(script.Parent.G1_5Verify).runLive(player, env) end }, -- G1-5: 보스 포기 · 탈퇴 → 스테이지 −1
 				{ "M1-2c(나)", function() require(script.Parent.M1_2cVerify).runLive(player, env) end }, -- M1-2c: 나무 발사 전부 되돌림 0 · 허가 없이 같은 높이 → 되돌림 · 보스 발사 최대 · 리프트 [F] · 도착 낙하 없음
 				{ "G1-4(나)", function() require(script.Parent.G1_4Verify).runLive(player, env) end }, -- G1-4: 보스맵 잔류 · 다음 / 다시 도전 / 마을 · 90초
@@ -4028,6 +4037,15 @@ if RunService:IsStudio() and verifyEnabled("MV1(가)") then
 		local ok, err = pcall(require(script.Parent.MV1Verify).runPure)
 		if not ok then
 			warn(("[MV1(가)] 검증 블록 에러: %s"):format(tostring(err)))
+		end
+	end)
+end
+
+if RunService:IsStudio() and verifyEnabled("W2(가)") then -- W2: 스킨 금지 검사 · 단계 표 · 궤적 크기 = 판정 함수 · 모션 타격 프레임 = 판정 시각
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.W2Verify).runPure)
+		if not ok then
+			print("===W2 검증 끝(가)=== 에러: " .. tostring(err))
 		end
 	end)
 end

@@ -1,3 +1,4 @@
+-- W2: 무기 발광(내 무기 PointLight · 남의 오른손 빛) 삭제 → 공격 궤적(client/AttackTrail)의 굵기 단계가 "다음이 강공격"을 알린다. 남은 것 = 폰 3칸 막대 · 조준 외곽선 색.
 -- 3타 강타 표시(M1-0 후속 - 사용자: 발밑 3칸 고리는 버튼 · 화면과 겹쳐 난잡 → 제거. 발밑은 점프 · 대시 표시 전용).
 --   ① 내 무기 발광 단계: 1 · 2타 = 은은하게 → 다음 타가 강타(준비)면 밝게 + 한 번 번쩍. 색 = UIColors.comboGlow(보라 - 강화 이펙트의 ember · gold · danger · 흰색과 구분).
 --      빛은 무기의 이펙트 자리(WeaponModelData.effectAnchor - 강화 빛과 같은 자리)에 PointLight 하나. 수치 = CombatConfig.comboGlow.
@@ -14,7 +15,6 @@ local UserInputService = game:GetService("UserInputService")
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local AimTarget = require(script.Parent.AimTarget)
-local WeaponVisual = require(script.Parent.WeaponVisual)
 
 local ComboGlow = {}
 
@@ -23,35 +23,7 @@ local cfg = CombatConfig.comboGlow
 local GLOW_COLOR = UIColors[cfg.colorKey]
 
 local player = Players.LocalPlayer
-local filled, lastComboAt, flashUntil = 0, 0, 0
-local light -- 내 무기의 PointLight(무기를 새로 지으면 같이 지워진다 - 그때 다시 단다)
-
-local function stageOf(count)
-	if count <= 0 then
-		return nil
-	end
-	return count == COUNT - 1 and cfg.mine.ready or cfg.mine.hit
-end
-
-local function ensureLight()
-	if light and light.Parent and light.Parent.Parent then
-		return light
-	end
-	local part, anchorPosition = WeaponVisual.getEffectAttach()
-	if not part then
-		return nil
-	end
-	local attachment = Instance.new("Attachment")
-	attachment.Name = "ComboGlowAnchor"
-	attachment.Position = anchorPosition
-	attachment.Parent = part
-	light = Instance.new("PointLight")
-	light.Name = "ComboGlow"
-	light.Color = GLOW_COLOR
-	light.Shadows = false
-	light.Parent = attachment
-	return light
-end
+local filled, lastComboAt = 0, 0
 
 -- 폰 3칸 막대
 local bars, barHolder = {}, nil
@@ -104,9 +76,6 @@ end
 function ComboGlow.onCombo(comboCount, isHeavyHit)
 	filled = isHeavyHit and 0 or ((comboCount - 1) % COUNT) + 1
 	lastComboAt = os.clock()
-	if filled == COUNT - 1 then
-		flashUntil = os.clock() + cfg.flashSeconds
-	end
 	paint()
 end
 
@@ -125,88 +94,16 @@ function ComboGlow.debugState()
 	for _, bar in ipairs(bars) do
 		on += bar.BackgroundColor3 == GLOW_COLOR and 1 or 0
 	end
-	return { filled = filled, brightness = light and light.Parent and light.Enabled and light.Brightness or 0, bars = on }
+	return { filled = filled, brightness = 0, bars = on } -- W2: 무기 발광 삭제(brightness 항상 0 - 궤적 단계가 대신)
 end
-
--- 남의 발광(준비 단계만 · 약하게)
-local othersLight = {} -- [Player] = PointLight
-local othersChangedAt = {} -- [Player] = os.clock()
-
-local function setOthers(other, on)
-	local existing = othersLight[other]
-	if not on then
-		if existing then
-			existing:Destroy()
-			othersLight[other] = nil
-		end
-		return
-	end
-	local hand = other.Character and (other.Character:FindFirstChild("RightHand") or other.Character:FindFirstChild("Right Arm"))
-	if not hand then
-		return
-	end
-	if existing and existing.Parent == hand then
-		return
-	end
-	if existing then
-		existing:Destroy()
-	end
-	local created = Instance.new("PointLight")
-	created.Name = "ComboGlowOther"
-	created.Color = GLOW_COLOR
-	created.Brightness = cfg.others.ready.brightness
-	created.Range = cfg.others.ready.range
-	created.Shadows = false
-	created.Parent = hand
-	othersLight[other] = created
-end
-
-local function watchOther(other)
-	if other == player then
-		return
-	end
-	other:GetAttributeChangedSignal("ComboStage"):Connect(function()
-		othersChangedAt[other] = os.clock()
-		setOthers(other, other:GetAttribute("ComboStage") == COUNT - 1)
-	end)
-end
-
-for _, other in ipairs(Players:GetPlayers()) do
-	watchOther(other)
-end
-Players.PlayerAdded:Connect(watchOther)
-Players.PlayerRemoving:Connect(function(other)
-	setOthers(other, false)
-	othersChangedAt[other] = nil
-end)
 
 task.spawn(buildBars)
 paint()
 
 RunService.RenderStepped:Connect(function()
-	local now = os.clock()
-	if filled > 0 and now - lastComboAt > CombatConfig.comboResetWindowSeconds then
+	if filled > 0 and os.clock() - lastComboAt > CombatConfig.comboResetWindowSeconds then
 		ComboGlow.reset()
 	end
-	for other, at in pairs(othersChangedAt) do
-		if othersLight[other] and now - at > CombatConfig.comboResetWindowSeconds then
-			setOthers(other, false)
-		end
-	end
-	local stage = stageOf(filled)
-	if not stage then
-		if light and light.Parent then
-			light.Enabled = false
-		end
-		return
-	end
-	local glow = ensureLight()
-	if not glow then
-		return
-	end
-	glow.Enabled = true
-	glow.Range = stage.range
-	glow.Brightness = now < flashUntil and cfg.flashBrightness or stage.brightness
 end)
 
 return ComboGlow

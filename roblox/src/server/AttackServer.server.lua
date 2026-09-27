@@ -26,6 +26,11 @@ local BossHandlersBR1 = require(script.Parent.BossHandlersBR1) -- BR1-2 투사�
 local AirState = require(script.Parent.AirState) -- MV1 공중 공격 예산 · 강공격 스택 초기화
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming) -- W1: 원거리 발사 시각 = 모션 타격 프레임(클라와 같은 함수)
+local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
+local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
+local DamageFeed = require(script.Parent.DamageFeed) -- W2-3 서버 확정 피해 방송(프로토타입 - 플래그 꺼짐)
+require(script.Parent.TrailSkinService) -- W2 궤적 스킨(Player Attribute TrailSkin - 접속 때 기본값)
+local RunService = game:GetService("RunService")
 
 local attackRequest = Instance.new("RemoteEvent")
 attackRequest.Name = "AttackRequest"
@@ -50,6 +55,29 @@ local attackMotion = Instance.new("RemoteEvent")
 attackMotion.Name = "AttackMotion"
 attackMotion.Parent = ReplicatedStorage
 local MOTION_SEND_STUDS = 220 -- client/WeaponVisual DRAW_RANGE_STUDS와 같게
+
+-- W2 남의 화살 · 구슬(궤적 꼬리 - 스킨이 남에게도 보인다): 받아들여진 원거리 발사만 (공격자, 대상, 발사 지연, 비행 시간, 콤보 순번, 3타 강공격)으로 가까운 다른 사람에게.
+local attackShotRelay = Instance.new("RemoteEvent")
+attackShotRelay.Name = "AttackShotRelay"
+attackShotRelay.Parent = ReplicatedStorage
+
+-- W2-2 판정 표시(/gg hitbox on|off - Player Attribute DebugHitbox): 실제 판정 범위 · 서버가 계산한 투사체 경로 · 적중 지점을 그 사람에게만(client/HitboxDebugView).
+local hitboxDebug = Instance.new("RemoteEvent")
+hitboxDebug.Name = "HitboxDebug"
+hitboxDebug.Parent = ReplicatedStorage
+local function debugHitbox(player, info)
+	if player:GetAttribute("DebugHitbox") then
+		pcall(hitboxDebug.FireClient, hitboxDebug, player, info) -- 표시 실패가 판정 흐름을 끊지 않게(리뷰)
+	end
+end
+-- W2-2 검증(Studio): 서버 판정 순간(os.clock - Studio Play는 서버 · 클라가 한 프로세스)을 Player Attribute로 남긴다 - 클라 궤적 시각과 비교.
+local IS_STUDIO = RunService:IsStudio()
+local function markJudged(player, seq)
+	if IS_STUDIO then
+		player:SetAttribute("W2JudgedAt", os.clock())
+		player:SetAttribute("W2JudgedSeq", seq or 0)
+	end
+end
 
 -- 처치 순간 골드 팝업(10-1)용. 골드 자체는 PlayerProfile.addGold가 Attribute로 이미
 -- 동기화한다 - 이 이벤트는 "방금 얼마 벌었다"는 일회성 연출 신호만 보낸다.
@@ -128,7 +156,7 @@ local function notifyZoneBlocked(player)
 end
 
 local lastAttackDebug = {} -- [Player] = { status, isAir, isComboHit, combo } - 검증 훅(MV1(나))이 읽는다
-local function handleAttack(player, aimPoint, clientAir)
+local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	-- 프로필 로드가 아직 안 끝난 접속 직후, 혹은 클래스를 아직 안 고른 상태에서 공격이
 	-- 들어올 수 있다 - 공격력·쿨다운 둘 다 클래스가 있어야 계산할 수 있으니 헛스윙으로
 	-- 처리한다(10-3 [3] - 클래스 배율이 실제로 평타에 반영되는 첫 지점).
@@ -150,6 +178,8 @@ local function handleAttack(player, aimPoint, clientAir)
 		return
 	end
 
+	-- W2: 요청 번호(클라가 붙인다) - 결과 · 발사 알림에 그대로 돌려줘 클라가 "어느 요청의 결과인가"를 맞춘다(판정에는 안 쓴다)
+	local seq = (type(clientSeq) == "number" and clientSeq == clientSeq and math.abs(clientSeq) < 2 ^ 31) and math.floor(clientSeq) or nil
 	local now = os.clock()
 	local last = lastAttackTick[player]
 	-- 신발 공속 보너스(16-6) - 미착용이면 PlayerProfile.getSpeedPercentBonus가 0을 돌려줘
@@ -215,7 +245,6 @@ local function handleAttack(player, aimPoint, clientAir)
 	end
 	lastAttackDebug[player] = { status = "swing", isAir = isAir, isComboHit = isComboHit, combo = comboCounts[player] }
 	comboUpdate:FireClient(player, comboCounts[player], isComboHit)
-	player:SetAttribute("ComboStage", comboCounts[player] % CombatConfig.comboHitEvery) -- 남의 화면 무기 발광(M1-0 후속 - client/ComboGlow · 표시만)
 	for _, other in ipairs(Players:GetPlayers()) do -- W1 남의 화면 공격 모션
 		local root = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
 		if root and (root.Position - rootPart.Position).Magnitude <= MOTION_SEND_STUDS then
@@ -237,7 +266,12 @@ local function handleAttack(player, aimPoint, clientAir)
 	-- MV1: 공중 공격은 아래 대상까지(CombatConfig.airAttack - 근접 · 원거리 높이차 상한)
 	local layer = isAir and (ProjectileConfig.kindByClass[classId] and CombatConfig.airAttack.rangedLayerStuds or CombatConfig.airAttack.meleeLayerStuds) or nil
 	local target = AimPicker.pick(rootPart.Position, safeAimPoint, attackRange, MonsterState.getAllModels(), layer)
+	if player:GetAttribute("DebugHitbox") then -- W2-2 판정 표시: 사거리 원(AimPicker = 원 안 1명) · 높이 허용 · 고른 대상
+		debugHitbox(player, { kind = "range", origin = rootPart.Position, range = attackRange, layer = layer or TerrainConfig.heightToleranceStuds,
+			target = target and target.PrimaryPart and target.PrimaryPart.Position or nil, seq = seq })
+	end
 	if not target then
+		markJudged(player, seq)
 		return -- 사거리 안에 몬스터가 없다 - 헛스윙
 	end
 
@@ -318,15 +352,18 @@ local function handleAttack(player, aimPoint, clientAir)
 	if not projectileKind then
 		-- 근접(대검·쌍검) - 즉시 판정(기존 동작 그대로, 20-2a까지와 완전히 같다).
 		-- 29-1: applyDamage의 둘째 반환값 = 실제로 들어간 피해(보스 파훼 게이트 ×g 반영). 숫자·흡혈이 이 값을 쓴다.
+		local hitPosition = target.PrimaryPart and target.PrimaryPart.Position -- W2: 서버 적중 지점(피해 숫자 · 이펙트 자리)
 		local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player)
 		damage = dealt
+		markJudged(player, seq)
 		MonsterSpawner.updateHpLabel(target)
 		-- 흡혈(26-2, PRD 20.67 [6-1]) - 실제로 데미지가 몬스터에게 들어간 직후에만 회복한다
 		-- (여기·아래 원거리 도달 판정 두 곳 - "damage 확정"을 "실제로 맞았다"로 해석했다,
 		-- 원거리가 빗나가는 경우까지 회복시키면 안 되므로).
 		PlayerProfile.applyLifesteal(player, damage)
 		glovesBolt(player, target, isComboHit, damage)
-		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false, isBuffedShot)
+		attackResult:FireClient(player, target, damage, isCrit, isDead, isComboHit, false, isBuffedShot, seq, hitPosition)
+		DamageFeed.emit(target, hitPosition, damage, DamageFeed.kindOf(isComboHit), player, isCrit)
 		CombatResolution.resolveHit(player, target, isDead)
 		return
 	end
@@ -349,7 +386,9 @@ local function handleAttack(player, aimPoint, clientAir)
 		raycastParams.FilterDescendantsInstances = excluded
 		local wallHit = Workspace:Raycast(rootPart.Position, launchPosition - rootPart.Position, raycastParams)
 		if wallHit and wallHit.Distance < distance - 1 then
-			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot)
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot, seq, nil)
+			debugHitbox(player, { kind = "blocked", origin = rootPart.Position, wall = wallHit.Position, seq = seq })
+			markJudged(player, seq)
 			return
 		end
 	end
@@ -359,7 +398,6 @@ local function handleAttack(player, aimPoint, clientAir)
 	-- 그 순간부터 날아가게 하고(activeLaunched), 실제 피해 적용은 화살/구슬이 도달할
 	-- 시점(releaseDelay + travelTime 뒤)까지 미룬다. isBuffedShot(20-5 [1])도 같이 보내
 	-- 클라가 백스텝샷 적용 화살을 굵고 밝게 그리게 한다.
-	attackLaunched:FireClient(player, target, isCrit, isBuffedShot)
 
 	-- releaseDelay - 활은 시위를 당기는 예비동작이 끝나야 실제로 발사된다(9-2/14-2,
 	-- WeaponVisual.getReleaseDelay와 같은 산식을 공유 정적 데이터로 재계산한다 - 서버는
@@ -370,35 +408,56 @@ local function handleAttack(player, aimPoint, clientAir)
 	local motionSpeed = PlayerCombat.getTotalSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player), buffSpeedMultiplier)
 	local releaseDelay = MotionTiming.serverSeconds(classId, MotionTiming.comboIndex(comboCounts[player]), motionSpeed, isComboHit, isAir)
 	local travelTime = distance / ProjectileConfig.speedStudsPerSec[projectileKind]
+	-- W2: 발사 지연 · 비행 시간을 같이 보낸다 - 클라는 그 요청 번호를 보낸 시각 + 이 두 값으로 화살 · 구슬을 그려 서버 도달 시각에 닿게 한다(비행 거리 = 서버 루트 → 대상 루트).
+	--   launchPosition = 서버 허용 폭의 기준점(요청을 처리한 순간 대상 자리) - 클라 화살 끝점이 같은 기준으로 맞음/빗나감을 고른다(리뷰).
+	attackLaunched:FireClient(player, target, isCrit, isBuffedShot, seq, releaseDelay, travelTime, launchPosition)
+	local comboIndex = MotionTiming.comboIndex(comboCounts[player])
+	for _, other in ipairs(Players:GetPlayers()) do -- W2 남의 화면 투사체(궤적 꼬리) - 받는 쪽이 그리는 거리(TrailData.othersDrawStuds) 안만
+		local root = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if root and (root.Position - rootPart.Position).Magnitude <= TrailData.othersDrawStuds then
+			attackShotRelay:FireClient(other, player, target, releaseDelay, travelTime, comboIndex, isComboHit, launchPosition)
+		end
+	end
+	local originAtLaunch = rootPart.Position
 
 	task.delay(releaseDelay + travelTime, function()
 		-- 도달 시점 재검증. 몬스터가 이미 없어졌으면(다른 공격자가 먼저 죽였거나 despawn)
 		-- MonsterState.getData가 nil을 돌려준다 - 조용히 빗나간다.
 		local currentRoot = target.Parent and target.PrimaryPart
 		if not currentRoot or not MonsterState.getData(target) then
-			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot)
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot, seq, nil)
+			markJudged(player, seq)
 			return
+		end
+		if player:GetAttribute("DebugHitbox") then -- W2-2: 서버가 계산한 경로(발사 자리 → 발사 순간 대상 자리) · 도달 순간 대상 자리 · 허용 폭
+			debugHitbox(player, { kind = "projectile", origin = originAtLaunch, launch = launchPosition, arrive = currentRoot.Position, tolerance = ProjectileConfig.hitToleranceStuds,
+				hit = launchPosition == nil or (currentRoot.Position - launchPosition).Magnitude <= ProjectileConfig.hitToleranceStuds, seq = seq })
 		end
 
 		-- 비행 중 이동한 거리가 허용 폭(ProjectileConfig.hitToleranceStuds)을 넘으면
 		-- 빗나간다 - "몬스터가 움직이므로 빗나갈 수 있다"는 지시를 그대로 구현한다.
 		if launchPosition and (currentRoot.Position - launchPosition).Magnitude > ProjectileConfig.hitToleranceStuds then
-			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot)
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot, seq, nil)
+			markJudged(player, seq)
 			return
 		end
 
 		-- BR1-2 투사체 반사: 보스가 반사 중이면 피해 0 + 쏜 사람 쪽으로 되돌린다(BossHandlersBR1.tryReflect - 근접 분기는 위에서 이미 끝났다)
 		if MonsterState.getData(target).isBoss and BossHandlersBR1.tryReflect(target, player) then
-			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot)
+			attackResult:FireClient(player, target, 0, false, false, isComboHit, true, isBuffedShot, seq, nil)
+			markJudged(player, seq)
 			return
 		end
 		-- 29-3: 이 투사체를 "쏜" 시각을 같이 넘긴다 - 보스의 반사 태세는 태세가 선 뒤에 쏜 것만 반사한다(이미 날아가던
 		-- 화살·구슬은 0 피해로 끝날 뿐이다, BossMechanics.beginReflect).
+		local hitPosition = currentRoot.Position -- W2: 서버 적중 지점(도달 순간 대상 자리)
 		local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player, { committedAt = requestedAt }) -- 29-1: 위 근접 분기와 같다
+		markJudged(player, seq)
 		MonsterSpawner.updateHpLabel(target)
 		PlayerProfile.applyLifesteal(player, dealt) -- 26-2, 위 근접 분기와 같은 지점(실제 명중 후)
 		glovesBolt(player, target, isComboHit, dealt)
-		attackResult:FireClient(player, target, dealt, isCrit, isDead, isComboHit, false, isBuffedShot)
+		attackResult:FireClient(player, target, dealt, isCrit, isDead, isComboHit, false, isBuffedShot, seq, hitPosition)
+		DamageFeed.emit(target, hitPosition, dealt, DamageFeed.kindOf(isComboHit), player, isCrit)
 		CombatResolution.resolveHit(player, target, isDead)
 
 		-- 꽂히는 화살(20-5 [2]) - 활 전용(ProjectileConfig.kindByClass가 "arrow"인

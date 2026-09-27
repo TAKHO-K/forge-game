@@ -153,26 +153,36 @@ objectiveLabel.Name = "ObjectiveLabel"
 objectiveLabel.AnchorPoint = Vector2.new(1, 0)
 objectiveLabel.Visible = false
 objectiveLabel.Parent = hud
--- BR1-4c c-6: 거리 표시 옆 [끄기]/[안내 켜기] - 끄면 길 안내(빛줄기 · 화살표 · 거리 표시) 전체가 사라지고, 같은 자리 버튼이나 목적지 재선택으로 다시 켠다(이번 접속 동안 - 저장은 P4d).
+-- W2-5(BR1-4c c-6 정리): 따로 뜨던 [끄기] 버튼 삭제 → 목표 · 거리 표시 자체를 눌러 켜고 끈다(투명 버튼이 표시를 덮는다).
+--   켜짐 → 누르면 길 안내(빛줄기 · 화살표) 전체 꺼짐 + 표시는 흐리게 "길 안내 꺼짐 · 눌러서 켜기" / 다시 누르면 이전 목적지로 켜짐(이번 접속 동안 - 저장은 P4d).
+--   누르는 영역 = 표시 + 위아래 여유(폰 터치 최소 Theme.touchMin) · PC = 마우스를 올리면 한 줄 설명. 보스전 중 자동 숨김 · 복귀 때 다시 켬(c-6 그대로). 최종 스타일 = U1.
 local guideToggle = Instance.new("TextButton")
 guideToggle.Name = "GuideToggle"
-guideToggle.AnchorPoint = Vector2.new(1, 0)
-guideToggle.Size = UDim2.new(0, 64, 0, 24)
-guideToggle.Font = Theme.font
-guideToggle.TextSize = Theme.textSize("caption")
-guideToggle.TextColor3 = UIColors.textPrimary
-guideToggle.BackgroundColor3 = UIColors.panel
-guideToggle.BackgroundTransparency = UIColors.panelTransparency
-guideToggle.Visible = false
-guideToggle.Parent = hud
-Theme.corner(guideToggle, 6)
+guideToggle.BackgroundTransparency = 1
+guideToggle.Text = ""
+guideToggle.AnchorPoint = Vector2.new(0, 0.5)
+guideToggle.Position = UDim2.new(0, 0, 0.5, 0)
+guideToggle.Size = UDim2.new(1, 0, 0, Theme.isMobile and Theme.touchMin or 28)
+guideToggle.Parent = objectiveLabel
 guideToggle.Activated:Connect(function()
 	Wayfinder.setHidden(not Wayfinder.isHidden())
 end)
+local guideTip = regionLabel:Clone()
+guideTip.Name = "GuideToggleTip"
+guideTip.AnchorPoint = Vector2.new(1, 0)
+guideTip.Position = UDim2.new(1, 0, 1, 4)
+guideTip.TextColor3 = UIColors.textSecondary
+guideTip.Visible = false
+guideTip.Parent = objectiveLabel
+guideToggle.MouseEnter:Connect(function()
+	guideTip.Text = Wayfinder.isHidden() and "눌러서 길 안내 켜기" or "눌러서 길 안내 끄기"
+	guideTip.Visible = true
+end)
+guideToggle.MouseLeave:Connect(function()
+	guideTip.Visible = false
+end)
 local function placeObjective()
 	objectiveLabel.Position = UDim2.new(0, regionLabel.AbsolutePosition.X - 6, 0, regionLabel.AbsolutePosition.Y)
-	local leftOf = objectiveLabel.Visible and objectiveLabel.AbsolutePosition.X - objectiveLabel.AbsoluteSize.X or regionLabel.AbsolutePosition.X
-	guideToggle.Position = UDim2.new(0, leftOf - 6, 0, regionLabel.AbsolutePosition.Y)
 end
 regionLabel:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeObjective)
 regionLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeObjective)
@@ -341,10 +351,12 @@ RunService.Heartbeat:Connect(function(dt)
 	local owner = Wayfinder.activeOwner()
 	local inBoss = player:GetAttribute("BossEncounterId") ~= nil
 	local dest = Wayfinder.destination()
-	guideToggle.Visible = owner ~= nil and not inBoss and regionLabel.Visible
-	guideToggle.Text = Wayfinder.isHidden() and "안내 켜기" or "끄기"
-	objectiveLabel.Visible = (g ~= nil or dest ~= nil) and regionLabel.Visible and not Wayfinder.isHidden() and owner ~= nil
-	if g and root then
+	objectiveLabel.Visible = (g ~= nil or dest ~= nil) and regionLabel.Visible and owner ~= nil and not inBoss
+	objectiveLabel.TextTransparency = Wayfinder.isHidden() and 0.45 or 0
+	if Wayfinder.isHidden() then
+		objectiveLabel.Text = "길 안내 꺼짐 · 눌러서 켜기"
+		objectiveLabel.TextColor3 = UIColors.textPrimary
+	elseif g and root then
 		local d = Vector3.new(g.position.X - root.Position.X, 0, g.position.Z - root.Position.Z).Magnitude
 		objectiveLabel.Text = ("다음 목표: %s 관문을 찾아라 · %dm"):format(g.name, math.floor(d * TREE.metersPerStud + 0.5))
 		objectiveLabel.TextColor3 = Color3.fromRGB(g.color[1], g.color[2], g.color[3])

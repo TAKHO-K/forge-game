@@ -9,13 +9,16 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
+local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
 
 local Projectiles = {}
 
-local POOL_SIZE_PER_KIND = 6
+-- W2 ⑨: 속사 버프 최대(공속 ×6.25 · 활 쿨다운 0.053초 · 체공 ≈ 0.43 + 0.27초)면 동시에 약 13발이 난다 - 6개 풀은 날던 화살을 도중에 빼 써서 순간이동 · 끊김이 났다 → 16.
+local POOL_SIZE_PER_KIND = 24 -- 내 화살 + 남의 화살(중계) 같이
 
 -- 20-2b: 비행 속도가 서버(AttackServer.server.lua)의 도달 시점 계산과 반드시 같아야 해서
 -- ProjectileConfig.lua(단일 출처)로 옮겼다 - 여기 하드코딩하지 않는다.
@@ -105,7 +108,20 @@ local function buildOrb()
 	trail.Enabled = false
 	trail.Parent = part
 
-	return { part = part, trail = trail, light = light }
+	-- W2-2: 구슬 옅은 파티클(날아가는 동안만)
+	local P = TrailData.projectile.orb.particles
+	local particles = Instance.new("ParticleEmitter")
+	particles.Rate = P.rate
+	particles.Lifetime = NumberRange.new(P.lifetime)
+	particles.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, P.size), NumberSequenceKeypoint.new(1, 0) })
+	particles.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 1) })
+	particles.Speed = NumberRange.new(0.5, 1.5)
+	particles.SpreadAngle = Vector2.new(180, 180)
+	particles.LightEmission = 0.8
+	particles.Enabled = false
+	particles.Parent = part
+
+	return { part = part, trail = trail, light = light, particles = particles }
 end
 
 local pools = {
@@ -119,10 +135,24 @@ for i = 1, POOL_SIZE_PER_KIND do
 	pools.orb[i] = buildOrb()
 end
 
+local flying -- [slot] = 날고 있는 것(아래 fire) - 빈 슬롯을 먼저 고른다
 local function nextSlot(kind)
 	local list = pools[kind]
+	for _ = 1, #list do -- W2 리뷰: 날고 있는 슬롯은 건너뛴다(남의 화살과 풀을 같이 써도 내 화살이 도중에 뺏기지 않게)
+		poolIndex[kind] = (poolIndex[kind] % #list) + 1
+		local slot = list[poolIndex[kind]]
+		if not flying[slot] then
+			return slot
+		end
+	end
 	poolIndex[kind] = (poolIndex[kind] % #list) + 1
-	return list[poolIndex[kind]]
+	local slot = list[poolIndex[kind]]
+	local old = flying[slot]
+	flying[slot] = nil
+	if old and old.onArrive then
+		old.onArrive(old.fallback, false) -- 다 차서 덮어쓸 때: 이전 것의 도착 콜백을 지금 부른다(안 불리고 사라지지 않게)
+	end
+	return slot
 end
 
 -- 발사 순간 섬광(20-5 [1] - "발사 순간과 적중 순간을 시각적으로 구분해라. 지금은 둘 다
@@ -130,7 +160,7 @@ end
 -- HitEffects.playHit의 버스트가 있다(AttackInput.client.lua showResult) - 여기선 그
 -- 반대편(발사)에 짧은 섬광 하나를 더해 쌍을 맞춘다. HitEffects.lua와 같은 풀링 원칙,
 -- 다만 발사 이펙트는 몬스터당이 아니라 화살 개수만큼이라 풀을 따로 작게 둔다.
-local FLASH_POOL_SIZE = 6
+local FLASH_POOL_SIZE = 12 -- W2 ⑨: 투사체 풀과 같이 키움
 local flashPool = {}
 for i = 1, FLASH_POOL_SIZE do
 	local part = Instance.new("Part")
@@ -168,22 +198,32 @@ local function muzzleFlash(position, color, isEmpowered)
 end
 
 -- kind: "arrow" | "orb". fromPosition/toPosition: Vector3(월드 좌표). isCrit이면 색이
--- 바뀐다(지시 사항 - "치명타일 때 더 강하게" 판단, 투사체는 발사 시점에 이미 서버가
--- 치명타 여부를 알려준 뒤라 크리티얼 색을 곧바로 입힐 수 있다 - 근접 스윙은 발사
--- 시점에 아직 서버 응답 전이라 이렇게 못 한다, HitEffects.lua와 AttackInput.client.lua
--- 주석 참고). variant(20-5 [1], 선택값): "empowered"면 백스텝샷이 적용된 평타 화살 -
--- 굵고 밝게, 빛까지 켜서 "스킬이다"가 한눈에 읽히게 한다(nil/"normal"이면 기존 평타
--- 화살 그대로, orb에는 영향 없다 - 힐러 스킬은 아직 없다). onArrive는 도착한 프레임에
--- 정확히 한 번 불린다 - 데미지 숫자·피격/사망 이펙트를 이 시점에 맞춰 재생하면
--- "판정 시점과 도달 시점이 어긋나는" 문제가 없다.
-function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArrive)
+-- 바뀐다(치명타 여부는 발사 시점에 서버가 이미 알려준다). variant(20-5 [1], 선택값): "empowered"면
+-- 백스텝샷이 적용된 평타 화살 - 굵고 밝게, 빛까지 켠다. onArrive는 도착한 프레임에 정확히 한 번 불린다.
+-- opts(W2, 선택): { travelSeconds = 서버 비행 시간(없으면 거리 ÷ 속도) · style = AttackTrail.tailStyle(궤적 꼬리 색 · 폭 · 길이) ·
+--   target = 대상 모델 · anchor = 발사 순간 대상 루트 자리(클라 화면) · tolerance = 서버 허용 폭 }
+--   target이 있으면 매 프레임 끝점을 다시 잡는다(서버 규칙의 거울): 대상 루트가 anchor에서 tolerance 안이면 지금 머리 쪽으로(맞는 화살),
+--   넘으면 anchor 쪽으로(빗나가는 화살). 도착 순간 = 서버 도달 시각(요청 시각 + 발사 지연 + 비행 시간 - AttackInput이 맞춘다).
+flying = {} -- [slot] = { from, startAt, travel, target, anchor, headOffset, tolerance, fallback, onArrive, kind }
+
+local function aimOf(f)
+	local target = f.target
+	local root = target and target.Parent and target.PrimaryPart
+	if root and f.anchor and (root.Position - f.anchor).Magnitude <= f.tolerance then
+		return root.Position + f.headOffset, true
+	end
+	return f.fallback, false
+end
+
+function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArrive, opts)
 	local slot = nextSlot(kind)
 	local part, trail = slot.part, slot.trail
 	local isEmpowered = kind == "arrow" and variant == "empowered"
+	opts = opts or {}
 
 	local distance = (toPosition - fromPosition).Magnitude
 	local speed = ProjectileConfig.speedStudsPerSec[kind]
-	local travelTime = math.max(distance / speed, 0.03)
+	local travelTime = math.max(opts.travelSeconds or distance / speed, 0.03)
 
 	if isEmpowered then
 		part.Color = isCrit and ARROW_EMPOWERED_CRIT_COLOR or ARROW_EMPOWERED_COLOR
@@ -196,11 +236,32 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 		end
 		trail.Lifetime = kind == "arrow" and 0.15 or 0.2
 	end
+	-- W2 궤적 꼬리(스킨 색 · 콤보 단계 폭): 꼬리 띠 = 진행 방향에 수직(위아래 두 점)
+	local style = opts.style
+	if style then
+		trail.Color = style.color
+		trail.Transparency = style.transparency
+		trail.Lifetime = isEmpowered and math.max(style.lifetime, 0.28) or style.lifetime
+		trail.LightEmission = style.lightEmission or 0
+		trail.FaceCamera = true
+		trail.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.15) })
+		local half = style.width / 2 * (isEmpowered and 1.6 or 1)
+		trail.Attachment0.Position = Vector3.new(0, half, 0)
+		trail.Attachment1.Position = Vector3.new(0, -half, 0)
+	end
 	if slot.light then
 		slot.light.Color = part.Color
 		if kind == "arrow" then
-			slot.light.Enabled = isEmpowered -- 평타 화살은 빛을 켜지 않는다("작고 조용하되").
+			-- W2-2: 화살촉 작은 빛(평타 = 은은하게 · 백스텝샷 = 옛 밝기)
+			local tip = TrailData.projectile.arrow.tipLight
+			slot.light.Enabled = true
+			slot.light.Brightness = isEmpowered and 2 or tip.brightness
+			slot.light.Range = isEmpowered and 10 or tip.range
 		end
+	end
+	if slot.particles then -- W2-2 지팡이 구슬: 옅은 파티클 몇 개(스킨 파티클 색)
+		slot.particles.Color = ColorSequence.new(style and style.particle or part.Color)
+		slot.particles.Enabled = true
 	end
 	muzzleFlash(fromPosition, part.Color, isEmpowered)
 
@@ -208,23 +269,44 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 	part.Transparency = 0
 	trail.Enabled = true
 
-	local tween = TweenService:Create(part, TweenInfo.new(travelTime, Enum.EasingStyle.Linear), {
-		CFrame = CFrame.lookAt(toPosition, toPosition + (toPosition - fromPosition)),
-	})
-	tween:Play()
-
-	task.delay(travelTime, function()
-		part.Transparency = 1
-		trail.Enabled = false
-		if kind == "arrow" and slot.light then
-			slot.light.Enabled = false -- orb(힐러)의 항상 켜진 빛은 건드리지 않는다.
-		end
-		if onArrive then
-			onArrive()
-		end
-	end)
-
+	local targetRoot = opts.target and opts.target.PrimaryPart
+	flying[slot] = {
+		kind = kind, from = fromPosition, startAt = os.clock(), travel = travelTime, onArrive = onArrive,
+		target = opts.target, anchor = opts.anchor, tolerance = opts.tolerance or 0, fallback = toPosition,
+		headOffset = targetRoot and (toPosition - targetRoot.Position) or Vector3.zero,
+	}
 	return travelTime
 end
+
+-- 날아가는 투사체: 매 프레임 끝점을 다시 잡아 선형으로(서버와 같은 직선 · 중력 없음)
+RunService.Heartbeat:Connect(function()
+	local now = os.clock()
+	for slot, f in pairs(flying) do
+		local t = (now - f.startAt) / f.travel
+		local aim, tracking = aimOf(f)
+		if t >= 1 then
+			flying[slot] = nil
+			if (aim - f.from).Magnitude > 1e-3 then
+				slot.part.CFrame = CFrame.lookAt(aim, aim + (aim - f.from))
+			end
+			slot.part.Transparency = 1
+			slot.trail.Enabled = false
+			if f.kind == "arrow" and slot.light then
+				slot.light.Enabled = false -- orb(힐러)의 항상 켜진 빛은 건드리지 않는다.
+			end
+			if slot.particles then
+				slot.particles.Enabled = false
+			end
+			if f.onArrive then
+				f.onArrive(aim, tracking)
+			end
+		else
+			local pos = f.from:Lerp(aim, t)
+			if (aim - pos).Magnitude > 1e-3 then
+				slot.part.CFrame = CFrame.lookAt(pos, aim)
+			end
+		end
+	end
+end)
 
 return Projectiles

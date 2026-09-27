@@ -10,11 +10,12 @@ local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Toggle = require(script.Parent.Parent.ui.kit.Toggle)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local UIManager = require(script.Parent.Parent.UIManager)
+local AttackTrail = require(script.Parent.Parent.AttackTrail)
 
 local SettingsPanel = {}
 SettingsPanel.id = "settings"
 
-local PANEL_SIZE = Vector2.new(420, 190)
+local PANEL_SIZE = Vector2.new(420, 240) -- W2: 궤적 토글 한 줄 추가
 local PAD = 12
 
 local player = Players.LocalPlayer
@@ -45,7 +46,16 @@ local function build()
 	shiftHint.TextWrapped = true
 	shiftHint.Position = UDim2.new(0, PAD, 0, PAD + 72)
 	shiftHint.Size = UDim2.new(1, -PAD * 2, 0, 20)
-	built = { panel = panel, toggle = toggle }
+	-- W2: 다른 유저 궤적 흐리게(파티 전투 화면 정리 - 이 클라 · 이번 접속 동안 · 저장은 P4-4)
+	local dimToggle = Toggle.build({
+		parent = panel.content, name = "DimOthersTrailToggle", text = Text.get("settings.dimOthersTrail"),
+		value = AttackTrail.dimOthers(), width = PANEL_SIZE.X - PAD * 2,
+		position = UDim2.new(0, PAD, 0, PAD + 100),
+		onChanged = function(value)
+			AttackTrail.setDimOthers(value)
+		end,
+	})
+	built = { panel = panel, toggle = toggle, dimToggle = dimToggle }
 end
 
 function SettingsPanel.toggle()
@@ -53,6 +63,7 @@ function SettingsPanel.toggle()
 		build()
 	end
 	built.toggle.setValue(player:GetAttribute("CameraTopDown") == true, true)
+	built.dimToggle.setValue(AttackTrail.dimOthers(), true)
 	UIManager.switchTo(SettingsPanel.id)
 end
 

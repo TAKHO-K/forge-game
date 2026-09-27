@@ -23,6 +23,7 @@ local Reach = require(ReplicatedStorage.Shared.Reach)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
+local DamageFeed = require(script.Parent.DamageFeed) -- W2-3 서버 확정 피해 방송
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local TutorialState = require(script.Parent.TutorialState)
 local PlayerState = require(script.Parent.PlayerState)
@@ -91,8 +92,10 @@ local function strikeTarget(player, classId, atk, target, coefficient, attackerS
 	-- 반복하지 않는다). 버프가 없으면 getField가 기본값 1을 돌려줘 기존과 동일하다.
 	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
 	-- 29-1: 둘째 반환값 = 실제로 들어간 피해(보스 파훼 게이트 ×g 반영) - 숫자·흡혈이 이 값을 쓴다.
+	local hitPosition = target.PrimaryPart and target.PrimaryPart.Position -- W2-3 서버 적중 지점
 	local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player, committedAt and { committedAt = committedAt } or nil)
 	damage = dealt
+	DamageFeed.emit(target, hitPosition, dealt, "skill", player, isCrit) -- W2-3(프로토타입 - 플래그 꺼짐)
 	MonsterSpawner.updateHpLabel(target)
 	PlayerProfile.applyLifesteal(player, damage) -- 26-2, AttackServer 평타와 같은 지점(damage 확정 직후)
 	CombatResolution.resolveHit(player, target, isDead)
