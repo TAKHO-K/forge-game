@@ -330,7 +330,7 @@ local function airGrab(label, motion)
 		primitive = "grab", bubble = "grab", motion = motion,
 		cooldownSeconds = 16, firstAvailableSeconds = 20, priority = P.normal,
 		lowerAfter = { skills = { "whirl", "tornado" }, priority = 1 }, -- BR1-4a 4a-2: 회오리 직후(방금 띄운 사람이 아직 공중) 대공 잡기 우선순위를 낮춘다(BossScheduler ⑥-2)
-		conditions = { { type = "memberAirborneFor", seconds = MECHANICS.airGrab.warnAirSeconds } },
+		conditions = { { type = "memberAirborneFor", seconds = MECHANICS.airGrab.warnAirSeconds }, { type = "notAfter", skills = { "charge" } } }, -- BR1-4a: 돌진(55%) 직후 금지(2연타 105%)
 		telegraphSeconds = 5.0, -- BR1-2: 시전 전체 약 5초("점프하지 마" 표시 · 그동안 N초 넘게 뜨면 얼림)
 		trap = { kind = "grabbed", rescueType = "grab" },
 		damage = { kind = "currentHp", fraction = MECHANICS.airGrab.currentHpFraction }, damageLabel = label,
@@ -448,6 +448,7 @@ local function guardianSkills()
 		-- 헤롱거린다 - 돌진을 피한 사람에게만 주어지는 딜타임이다.
 		charge = {
 			primitive = "charge", bubble = "charge",
+			conditions = { { type = "notAfter", skills = { "grab" } } }, -- BR1-4a: 대공 잡기 직후 금지(현재 체력 50% + 55% = 2연타 105%)
 			cooldownSeconds = 15, priority = P.normal,
 			-- BR1(사용자 - 돌진은 전조를 크게): 1.5 → 2.2초(발 긁기가 길어진다). 피해 55%는 그대로.
 			telegraphSeconds = 2.2, speedStuds = 60, pathHalfWidthStuds = 4, dashCount = 1,
