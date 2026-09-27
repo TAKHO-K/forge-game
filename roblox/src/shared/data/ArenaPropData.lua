@@ -4,13 +4,14 @@
 --
 -- ★ 가독성 규칙 하나(형태 = 윗면 · 색 = 톤):
 --   올라갈 수 있는 큰 블록(group big) = **평평하고 밝은 윗면 판**(top 톤 · 테두리 띠) + 어두운 옆면 - "밝은 평면 = 설 수 있다".
+--     올라갈 수 있으면서 부서지면(지금 큰 블록 전부 - hitsToBreak) 처음부터 윗면 테두리에 어두운 금 무늬(W2 파트 0 - "설 수 있지만 부서진다").
 --   부서지는 구조물(group small · feature) = **둥글거나 뾰족한 윗면**(평평한 밝은 판 없음) · 옆면 톤 + 밑동 어둡게 + 맵 장식(이끼 · 눈 · 수정 · 모래 · 금속).
 --   그냥 장식(벽 바깥 테라스) = 채도 · 명도를 테라스 색 쪽으로 decorMuteFraction만큼 눌러 배경으로 물러난다(외곽선 모델은 그대로).
 --
 -- 조각 = { n = 이름, s = "block" | "ball" | "cyl"(세운 원기둥) | "wedge", t = 톤, size = { x, y, z }, at = { x, y, z }, rot = { x, y, z }(도), u = true(크기를 전부 r배) }
 --   크기 · 자리: x · z = r배(반경), y = h배(높이) - big/small은 r = 배치 반경 · h = 윗면 높이, perCollider 레시피는 충돌 원마다 그 원의 r · h.
 --   특수: mound = true(눈더미 - 공 윗부분이 충돌 원 안) · span = true(첫 두 기둥 사이 들보 - y = lintelStuds + at.y 절대값 · size.y 절대 두께).
--- 톤 = top(밝게) · side(구조물 색) · base(어둡게) · detail(맵 장식색) · glow(보스 머리색 빛) · crystal(맵 장식색 빛).
+-- 톤 = top(밝게) · side(구조물 색) · base(어둡게) · crack(아주 어둡게 - 테두리 금) · detail(맵 장식색) · glow(보스 머리색 빛) · crystal(맵 장식색 빛).
 
 local OBSTACLE = require(script.Parent.BossArenaMapData).obstacle
 
@@ -21,6 +22,7 @@ local tones = {
 	-- 바닥과 대비: 구조물 색의 밝기가 바닥과 minFloorContrast보다 가까우면(빙하 · 모래처럼 밝은 바닥) 구조물 색을 contrastDarken만큼 어둡게 한 뒤 톤을 나눈다
 	minFloorContrast = 0.2,
 	contrastDarken = 0.32,
+	crackDarken = 0.6, -- W2 파트 0: 테두리 금 무늬(crack 톤) = 구조물 색 → 검정 쪽
 }
 
 -- 맵 장식색(맵 테마) - A1 카툰 팔레트 쪽 채도 있는 한 톤.
@@ -39,8 +41,39 @@ local maxPartsPerStructure = 20
 
 local P = {}
 
--- ═══ 올라갈 수 있는 큰 블록(윗면 = climbHeightStuds · 밝은 판) ═══
-P.rockpile = {
+-- W2 파트 0 가독성 보완: 올라갈 수 있으면서 부서지는 것(큰 블록 - 단상 · 큰 바위판) = 평평한 윗면 + **처음부터 테두리에 금 무늬**.
+--   윗면 가장자리에서 안쪽으로 뻗는 어두운 가는 금(바깥 끝 → 안쪽) + 곁가지 - 판정 · 충돌 무관(보이는 조각만).
+local function rimCracks(topY, rimRadius, anglesDeg)
+	local pieces = {}
+	for i, deg in ipairs(anglesDeg) do
+		-- 바깥 마디(테두리에서 안쪽으로) → 안쪽 마디(28° 꺾임 - 번개 모양) + 홀수 번째는 곁가지
+		local a = math.rad(deg)
+		local outer = (i % 2 == 0) and 0.32 or 0.26
+		local mid = rimRadius - outer / 2
+		table.insert(pieces, { n = "RimCrack", s = "block", t = "crack", size = { outer, 0.02, 0.07 }, at = { math.cos(a) * mid, topY, math.sin(a) * mid }, rot = { 0, -deg, 0 } })
+		local bend = deg + ((i % 2 == 0) and 28 or -28)
+		local b = math.rad(bend)
+		local inner = 0.2
+		local joint = rimRadius - outer
+		local c = Vector3.new(math.cos(a) * joint - math.cos(b) * inner / 2, 0, math.sin(a) * joint - math.sin(b) * inner / 2)
+		table.insert(pieces, { n = "RimCrack", s = "block", t = "crack", size = { inner, 0.02, 0.055 }, at = { c.X, topY, c.Z }, rot = { 0, -bend, 0 } })
+		if i % 2 == 1 then -- 곁가지(바깥 끝 가까이서 비스듬히)
+			local s = a + math.rad(9)
+			table.insert(pieces, { n = "RimCrack", s = "block", t = "crack", size = { 0.13, 0.02, 0.045 }, at = { math.cos(s) * (rimRadius - 0.1), topY, math.sin(s) * (rimRadius - 0.1) }, rot = { 0, -(deg + 50), 0 } })
+		end
+	end
+	return pieces
+end
+
+local function withCracks(recipe, cracks)
+	for _, piece in ipairs(cracks) do
+		table.insert(recipe, piece)
+	end
+	return recipe
+end
+
+-- ═══ 올라갈 수 있는 큰 블록(윗면 = climbHeightStuds · 밝은 판 + 테두리 금) ═══
+P.rockpile = withCracks({
 	{ n = "Core", s = "cyl", t = "side", size = { 1.84, 0.9, 1.84 }, at = { 0, 0.45, 0 } },
 	{ n = "Bevel", s = "cyl", t = "side", size = { 1.9, 0.08, 1.9 }, at = { 0, 0.92, 0 } },
 	{ n = "Top", s = "cyl", t = "top", size = { 1.78, 0.03, 1.78 }, at = { 0, 0.985, 0 } }, -- 윗면 = 1.0h(서는 면)
@@ -51,8 +84,8 @@ P.rockpile = {
 	{ n = "Stone", s = "ball", t = "side", size = { 0.28, 0.28, 0.28 }, at = { 0.35, 0.22, -0.85 }, u = true },
 	{ n = "Patch", s = "cyl", t = "detail", size = { 0.5, 0.02, 0.36 }, at = { 0.45, 1.0, 0.35 } },
 	{ n = "Patch", s = "cyl", t = "detail", size = { 0.36, 0.02, 0.5 }, at = { -0.5, 1.0, -0.3 } },
-}
-P.dolmen = {
+}, rimCracks(1.0, 0.89, { 20, 150, 265 }))
+P.dolmen = withCracks({
 	{ n = "Leg", s = "block", t = "base", size = { 0.24, 0.78, 0.3 }, at = { 0.55, 0.39, 0 }, rot = { 0, 0, 4 } },
 	{ n = "Leg", s = "block", t = "base", size = { 0.24, 0.78, 0.3 }, at = { -0.28, 0.39, 0.48 }, rot = { 0, 120, 4 } },
 	{ n = "Leg", s = "block", t = "base", size = { 0.24, 0.78, 0.3 }, at = { -0.28, 0.39, -0.48 }, rot = { 0, 240, 4 } },
@@ -60,7 +93,7 @@ P.dolmen = {
 	{ n = "Top", s = "cyl", t = "top", size = { 1.9, 0.03, 1.9 }, at = { 0, 0.985, 0 } },
 	{ n = "Patch", s = "cyl", t = "detail", size = { 0.45, 0.02, 0.3 }, at = { -0.4, 1.0, 0.45 } },
 	{ n = "Patch", s = "cyl", t = "detail", size = { 0.3, 0.02, 0.42 }, at = { 0.5, 1.0, -0.35 } },
-}
+}, rimCracks(1.0, 0.95, { 75, 200, 320 }))
 
 -- ═══ 작은 구조물(윗면 = heightStuds · 못 올라간다 = 뾰족 · 둥근 윗면) ═══
 P.block = { -- 모서리 깎은 바위(지붕 모양 능선)

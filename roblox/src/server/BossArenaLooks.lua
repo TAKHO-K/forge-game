@@ -69,6 +69,8 @@ local function toneOf(tone, spec, bossData)
 		return color:Lerp(WHITE, PROP.tones.topLighten), Enum.Material.SmoothPlastic, transparency
 	elseif tone == "base" then
 		return color:Lerp(BLACK, PROP.tones.baseDarken), Enum.Material.SmoothPlastic, transparency
+	elseif tone == "crack" then
+		return color:Lerp(BLACK, PROP.tones.crackDarken), Enum.Material.SmoothPlastic, 0
 	elseif tone == "detail" or tone == "crystal" then
 		local d = PROP.detail[bossData and bossData.id or ""] or PROP.detail.default
 		if tone == "crystal" then
