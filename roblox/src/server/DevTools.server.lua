@@ -1364,7 +1364,7 @@ local function handleCommand(player, args)
 		end
 	elseif sub == "fillbag" then
 		local profile = PlayerProfile.getProfile(player)
-		local free = profile and (profile.inventorySlots - #profile.inventory) or 0
+		local free = profile and (PlayerProfile.inventoryCapacity(profile) - #profile.inventory) or 0
 		local want = tonumber(args[2]) and math.floor(tonumber(args[2])) or free
 		if not profile then
 			reply(player, "프로필이 아직 없습니다")
@@ -1379,7 +1379,7 @@ local function handleCommand(player, args)
 					table.insert(summary, ("%s %d"):format(grade, byGrade[grade]))
 				end
 			end
-			reply(player, ("가방에 장비 %d개 지급(요청 %d) - 지금 %d / %d칸 · %s"):format(added, want, #profile.inventory, profile.inventorySlots, table.concat(summary, " · ")))
+			reply(player, ("가방에 장비 %d개 지급(요청 %d) - 지금 %d / %d칸 · %s"):format(added, want, #profile.inventory, PlayerProfile.inventoryCapacity(profile), table.concat(summary, " · ")))
 		end
 	elseif sub == "enhance" and tonumber(args[2]) then
 		ensureBackup(player)

@@ -24,6 +24,8 @@ local GemData = require(ReplicatedStorage.Shared.data.GemData)
 
 return {
 	minGradeIndex = 3,
+	-- QUEUE-10h Q13: 옵션 비활성 스위치({ [옵션 id] = true }) - 드랍 · 환생 · 리롤 풀(Option.poolFor)에서 빠지고 확률 공개(shared/Disclosure)가 같은 풀을 읽어 즉시 반영된다. 이미 붙은 옵션 값은 그대로.
+	disabled = {},
 
 	-- P2 D1(결정 5A): 옵션 levelFactor의 레벨 125 동결 해제 - 125 뒤로는 완만한 로그 곡선 f(L) = f(125) × (1 + levelLogSlope × log2(L / 125)).
 	-- 값 = 일반 프로필에서 "보석이 전체 전투력(공격력)에서 차지하는 비중"이 125 ~ 4738 구간에서 약 40 ~ 55%에 머물도록 EconSim으로 고른 p(docs/phase/P2-log.md).

@@ -36,7 +36,7 @@ confirmOverlay.Parent = content
 local confirmBox = Instance.new("Frame")
 confirmBox.AnchorPoint = Vector2.new(0.5, 0.5)
 confirmBox.Position = UDim2.new(0.5, 0, 0.5, 0)
-confirmBox.Size = UDim2.new(0, 300, 0, 168)
+confirmBox.Size = UDim2.new(0, 340, 0, 168) -- Q13: [분해한다] 버튼 자리만큼 넓힘
 confirmBox.BackgroundColor3 = UIColors.panel
 confirmBox.BackgroundTransparency = 0.05
 confirmBox.ZIndex = 21
@@ -119,6 +119,39 @@ local confirmNoCorner = Instance.new("UICorner")
 confirmNoCorner.CornerRadius = UDim.new(0, 8)
 confirmNoCorner.Parent = confirmNo
 
+-- Q13 등급 선택 일괄 분해(무료) - 같은 기준 등급 · 대상 = Loot.isBulkDismantleTarget(서버와 같은 함수 - 잠금 · 초월 · 태초 · 영웅 미만 제외)
+local Loot = require(ReplicatedStorage.Shared.Loot)
+local confirmDismantle = Instance.new("TextButton")
+confirmDismantle.Name = "DismantleBulkButton"
+confirmDismantle.AnchorPoint = Vector2.new(1, 1)
+confirmDismantle.Position = UDim2.new(1, -212, 1, -12)
+confirmDismantle.Size = UDim2.new(0, 108, 0, 32)
+confirmDismantle.BackgroundColor3 = UIColors.panel
+confirmDismantle.BackgroundTransparency = UIColors.panelTransparency
+confirmDismantle.Font = Enum.Font.GothamBold
+confirmDismantle.TextSize = Theme.textSize("body")
+confirmDismantle.TextColor3 = UIColors.textPrimary
+confirmDismantle.ZIndex = 21
+confirmDismantle.Parent = confirmBox
+local confirmDismantleCorner = Instance.new("UICorner")
+confirmDismantleCorner.CornerRadius = UDim.new(0, 8)
+confirmDismantleCorner.Parent = confirmDismantle
+local function dismantleCount()
+	local n = 0
+	for _, item in ipairs(S.inventory) do
+		if Loot.isBulkDismantleTarget(item, S.bulkSellCutoffGrade) then
+			n += 1
+		end
+	end
+	return n
+end
+confirmDismantle.Activated:Connect(function()
+	confirmOverlay.Visible = false
+	if dismantleCount() > 0 then
+		sellRequest:FireServer("dismantleBulk", S.bulkSellCutoffGrade)
+	end
+end)
+
 confirmNo.Activated:Connect(function()
 	confirmOverlay.Visible = false
 end)
@@ -138,6 +171,10 @@ bulkSellButton.Activated:Connect(function()
 	end
 	confirmText.Text = ("잠기지 않고 착용 중이 아닌 %d개를 팔아 %s골드를 받는다. 되돌릴 수 없다."):format(
 		count, NumberFormat.format(total))
+	local nd = dismantleCount()
+	confirmDismantle.Text = ("분해 %d"):format(nd) -- Q13: 영웅 이상만 보석으로(태초 · 초월 제외)
+	confirmDismantle.AutoButtonColor = nd > 0
+	confirmDismantle.TextTransparency = nd > 0 and 0 or 0.5
 	local visual = highestSoldGradeId and ItemVisualData.gradeVisuals[highestSoldGradeId]
 	confirmHighestDot.BackgroundColor3 = visual and visual.color or UIColors.textTertiary
 	confirmHighestLabel.TextColor3 = visual and visual.color or UIColors.textTertiary

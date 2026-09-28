@@ -1,0 +1,152 @@
+-- QUEUE-10h Q13 P4b 확률 공개 창(퀘스트 창 [확률 공개] 줄이 연다). 값 = shared/Disclosure.build(서버 굴림과 같은 표 · 함수 - 클라가 직접 계산해도 서버와 같다) · 문구 = TextData(prob.*).
+--   ① 잡몹 장비 등급(티어별) ② 보스 첫 클리어 · 토벌 · 반짝이 ③ 강화(+0 ~ +29 결과 5종) ④ 옵션 리롤(내 직업 풀 - 비활성 스위치 반영) ⑤ 스킬 변형(내 직업) ⑥ 부화(부화 레벨 × 알 등급) · 표 버전.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local EggData = require(ReplicatedStorage.Shared.data.EggData)
+local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+local SkillVariantData = require(ReplicatedStorage.Shared.data.SkillVariantData)
+local Disclosure = require(ReplicatedStorage.Shared.Disclosure)
+local Text = require(ReplicatedStorage.Shared.Text)
+local Panel = require(script.Parent.Parent.ui.kit.Panel)
+local Theme = require(script.Parent.Parent.ui.kit.Theme)
+local UIManager = require(script.Parent.Parent.UIManager)
+
+local ProbabilityPanel = {}
+ProbabilityPanel.id = "probability"
+
+local PANEL_SIZE = Vector2.new(560, 420)
+local PAD = 12
+
+local built
+local order = 0
+
+local function line(text, sizeName, colorName)
+	order += 1
+	local label = Theme.label(built.scroll, text, sizeName, colorName)
+	label.Name = "Line" .. order
+	label.LayoutOrder = order
+	label.TextWrapped = true
+	label.AutomaticSize = Enum.AutomaticSize.Y
+	label.Size = UDim2.new(1, 0, 0, Theme.textSize(sizeName) + 6)
+	return label
+end
+
+local function pct(x)
+	local v = x * 100
+	if v >= 1 then
+		return ("%.2f%%"):format(v)
+	end
+	return ("%.4f%%"):format(v)
+end
+
+local function gradeRowsText(rows)
+	local parts = {}
+	for _, r in ipairs(rows) do
+		local g = ArmorData.grades[r.id]
+		table.insert(parts, ("%s %s"):format(g and g.displayName or r.id, pct(r.chance)))
+	end
+	return table.concat(parts, " · ")
+end
+
+local function optionName(id)
+	local def = OptionData.options[id]
+	if def and def.displayName then
+		return def.displayName
+	end
+	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
+	local s = def and def.classId and SkillData[def.classId] and SkillData[def.classId][def.slot]
+	return s and s.name or id
+end
+
+local function render()
+	if not built then
+		return
+	end
+	for _, c in ipairs(built.scroll:GetChildren()) do
+		if c:IsA("GuiObject") then
+			c:Destroy()
+		end
+	end
+	order = 0
+	local d = Disclosure.build()
+	local classId = Players.LocalPlayer:GetAttribute("ClassId")
+	line(Text.get("prob.field"), "body", "textPrimary")
+	for tier, rows in ipairs(d.drop.field) do
+		line(("T%d: %s"):format(tier, gradeRowsText(rows)), "caption", "textSecondary")
+	end
+	line(Text.get("prob.boss"), "body", "textPrimary")
+	line(Text.get("prob.firstClear") .. gradeRowsText(d.drop.firstClear), "caption", "textSecondary")
+	line(Text.get("prob.raid") .. gradeRowsText(d.drop.raid), "caption", "textSecondary")
+	line(Text.get("prob.sparkle") .. gradeRowsText(d.drop.sparkle), "caption", "textSecondary")
+	line(Text.get("prob.enhance"), "body", "textPrimary")
+	for _, r in ipairs(d.enhance) do
+		line(("+%d → +%d %s · 유지 %s · -1 %s · -2 %s · 초기화 %s"):format(r.level, r.level + 1, pct(r.success), pct(r.maintain), pct(r.down1), pct(r.down2), pct(r.reset)), "caption", "textSecondary")
+	end
+	line(Text.get("prob.option"), "body", "textPrimary")
+	local pool = d.options[classId] or d.options[next(d.options)]
+	local names = {}
+	for _, r in ipairs(pool or {}) do
+		table.insert(names, ("%s %s"):format(optionName(r.id), pct(r.chance)))
+	end
+	line(table.concat(names, " · "), "caption", "textSecondary")
+	local off = {}
+	for id in pairs(d.optionDisabled or {}) do
+		table.insert(off, optionName(id))
+	end
+	if #off > 0 then
+		line(Text.get("prob.optionOff", { list = table.concat(off, " · ") }), "caption", "textSecondary")
+	end
+	line(Text.get("prob.variant", { appear = pct(d.variants.appearChance), kills = tostring(d.variantRerollKills) }), "body", "textPrimary")
+	for _, r in ipairs(d.variants.classes[classId] or {}) do
+		local t = SkillVariantData.templates[r.id]
+		line(("%s %s %s"):format(r.slot, t and t.name or r.id, pct(r.chance)), "caption", "textSecondary")
+	end
+	line(Text.get("prob.hatch"), "body", "textPrimary")
+	for _, lv in ipairs(d.hatch.levels) do
+		local parts = {}
+		for _, eggGrade in ipairs(EggData.gradeOrder) do
+			local t = lv.byEgg[eggGrade]
+			table.insert(parts, ("%s %.1f/%.1f/%.1f/%.1f"):format(EggData.gradeNames[eggGrade], t.common, t.uncommon, t.rare, t.epic))
+		end
+		line(("Lv.%d(%d회~) %s"):format(lv.level, lv.hatches, table.concat(parts, " · ")), "caption", "textSecondary")
+	end
+	line(Text.get("prob.version", { version = d.version }), "caption", "textTertiary")
+end
+
+local function build()
+	local panel = Panel.create({ id = ProbabilityPanel.id, kind = "window", title = Text.get("prob.title"), size = PANEL_SIZE })
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Name = "Body"
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.Size = UDim2.new(1, 0, 1, 0)
+	scroll.ScrollBarThickness = 4
+	scroll.ScrollBarImageColor3 = Theme.color("rim")
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	scroll.Parent = panel.content
+	local list = Instance.new("UIListLayout")
+	list.Padding = UDim.new(0, 4)
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = scroll
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop, pad.PaddingBottom = UDim.new(0, PAD), UDim.new(0, PAD + 4), UDim.new(0, PAD), UDim.new(0, PAD)
+	pad.Parent = scroll
+	built = { panel = panel, scroll = scroll }
+end
+
+function ProbabilityPanel.open()
+	if not built then
+		build()
+	end
+	render()
+	UIManager.switchTo(ProbabilityPanel.id)
+end
+
+function ProbabilityPanel.debugRefs()
+	return built
+end
+
+return ProbabilityPanel

@@ -27,8 +27,14 @@ inventoryFetch.Name = "InventoryFetch"
 inventoryFetch.Parent = ReplicatedStorage
 
 local PlayerProfile
+local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 
 local InventorySync = {}
+
+-- QUEUE-10h Q13 가방 칸 수(식 한 곳): 저장값(inventorySlots = 옛 기본 20 + 마일스톤) + 실험 스위치(SaveConfig.bagBaseSlots − 20). 저장은 건드리지 않는다.
+function InventorySync.capacity(profile)
+	return (profile and profile.inventorySlots or 0) + math.max(0, (SaveConfig.bagBaseSlots or SaveConfig.defaultInventorySlots) - SaveConfig.defaultInventorySlots)
+end
 
 -- 19-1: 장비는 이제 profile.classes[profile.classId] 아래에 있다. classId 미선택이면
 -- (classes 인덱스 자체가 없다) 셋 다 nil로 취급한다 - 아직 착용할 직업이 없는 상태다.
@@ -42,7 +48,7 @@ function InventorySync.snapshot(profile)
 	local equipment = activeEquipment(profile)
 	return {
 		inventory = profile.inventory,
-		slots = profile.inventorySlots,
+		slots = InventorySync.capacity(profile), -- Q13: 실험 스위치 포함
 		armor = equipment.armor,
 		gloves = equipment.gloves,
 		shoes = equipment.shoes,

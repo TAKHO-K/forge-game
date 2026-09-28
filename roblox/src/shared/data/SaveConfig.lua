@@ -104,4 +104,6 @@ return {
 	-- 인벤토리 칸 수 초기값. 웹에는 대응하는 상수가 없어 잠정값이다 - 상점에서 칸 확장을
 	-- 만들 때 실제 기준(가격 곡선 등)과 함께 재조정한다.
 	defaultInventorySlots = 20,
+	-- QUEUE-10h Q13 P4b: 가방 기본 칸 실험 스위치(30 ~ 40). 저장값(inventorySlots)은 그대로 두고 칸 수 = 저장값 + (이 값 − 20) - InventorySync.capacity 한 곳. 20으로 되돌리면 옛 칸 수.
+	bagBaseSlots = 30,
 }

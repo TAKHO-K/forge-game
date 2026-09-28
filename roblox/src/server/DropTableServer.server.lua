@@ -15,6 +15,11 @@ query.Parent = ReplicatedStorage
 
 local lastAt = {}
 
+do -- QUEUE-10h Q13: 확률 공개 표 버전(서버 굴림과 같은 소스의 지문) - 표가 바뀌면 이 줄의 값이 바뀐다
+	local d = require(ReplicatedStorage.Shared.Disclosure).build()
+	print(("[Q13][확률표] 버전 %s · 잡몹 티어 %d · 강화 %d단계 · 부화 레벨 %d"):format(d.version, #d.drop.field, #d.enhance, #d.hatch.levels))
+end
+
 query.OnServerInvoke = function(player, tierIndex)
 	if type(tierIndex) ~= "number" or tierIndex ~= math.floor(tierIndex) or tierIndex < 1 or tierIndex > #MonsterData.tierOrder then
 		return nil

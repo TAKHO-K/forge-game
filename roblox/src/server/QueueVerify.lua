@@ -467,6 +467,103 @@ function V.runPure()
 		check("새 계정(저장 없음 → 빈 표 이관) = 이정표 1 · 출석 0(리뷰 치명)", okNew and fresh.quests and fresh.quests.guide == 1 and type(fresh.quests.attendance) == "table" and fresh.quests.attendance.count == 0)
 	end)
 
+	section("Q13 가방 · 일괄 분해 · 확률 공개(몬테카를로 10만 회)", function()
+		local Loot = require(ReplicatedStorage.Shared.Loot)
+		local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
+		local InventorySync = require(script.Parent.InventorySync)
+		check(("가방 칸 = 저장 20 + 스위치 %d → %d(저장값 그대로)"):format(SaveConfig.bagBaseSlots, InventorySync.capacity({ inventorySlots = 20 })), InventorySync.capacity({ inventorySlots = 20 }) == SaveConfig.bagBaseSlots and SaveConfig.bagBaseSlots >= 30 and SaveConfig.bagBaseSlots <= 40)
+		local t = Loot.isBulkDismantleTarget
+		check("일괄 분해 대상: 영웅 ~ 기준 · 잠금 · 초월 · 태초 · 희귀 · 기준 초과 제외", t({ grade = "epic" }, "legendary") and t({ grade = "legendary" }, "legendary")
+			and not t({ grade = "epic", locked = true }, "legendary") and not t({ grade = "transcendent" }, "legendary") and not t({ grade = "primordial" }, "legendary")
+			and not t({ grade = "rare" }, "legendary") and not t({ grade = "legendary" }, "epic") and not t({ grade = "relic" }, "relic"))
+		local Disclosure = require(ReplicatedStorage.Shared.Disclosure)
+		local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
+		local d1 = Disclosure.build()
+		local offId = OptionData.commonOrder[1]
+		OptionData.disabled[offId] = true
+		local d2 = Disclosure.build()
+		OptionData.disabled[offId] = nil
+		local d3 = Disclosure.build()
+		check(("옵션 비활성 스위치 = 공개 표 즉시 반영(풀 %d → %d) · 버전 %s → %s → 되돌리면 %s"):format(#d1.options.bow, #d2.options.bow, d1.version, d2.version, d3.version), #d2.options.bow == #d1.options.bow - 1 and d1.version ~= d2.version and d1.version == d3.version)
+		local N = 100000
+		local rng = Random.new(2029)
+		local errs = {}
+		-- ① 잡몹 등급(서버 rollArmorDrop의 등급 가지 = 태초 따로 굴림 + 나머지 정규화) vs 공개 표
+		local DropTable = require(ReplicatedStorage.Shared.DropTable)
+		local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+		local worstField = 0
+		for tier, rows in ipairs(d1.drop.field) do
+			local counts = {}
+			local pr = DropTable.primordialBaseRate(tier)
+			local gt = MonsterData.dropGradeTableByTier[tier] or MonsterData.dropGradeTableByTier[1]
+			for _ = 1, N do
+				local g = rng:NextNumber() < pr and "primordial" or Loot.gradeForRoll(gt, rng:NextNumber(), "primordial")
+				counts[g] = (counts[g] or 0) + 1
+			end
+			for _, r in ipairs(rows) do
+				worstField = math.max(worstField, math.abs((counts[r.id] or 0) / N - r.chance))
+			end
+		end
+		errs.field = worstField
+		-- ② 강화(서버 Enhance.rollResult) 표본 단계
+		local Enhance = require(ReplicatedStorage.Shared.Enhance)
+		local worstEnh = 0
+		for _, level in ipairs({ 0, 10, 18, 22, 29 }) do
+			local o = Enhance.getOutcomeTable(level, false, false, false)
+			local counts = {}
+			for _ = 1, N do
+				local k = Enhance.rollResult(o, rng:NextNumber())
+				counts[k] = (counts[k] or 0) + 1
+			end
+			for k, v in pairs(o) do
+				worstEnh = math.max(worstEnh, math.abs((counts[k] or 0) / N - v))
+			end
+		end
+		errs.enhance = worstEnh
+		-- ③ 옵션(서버 Option.rollFor - 영웅)
+		local Option = require(ReplicatedStorage.Shared.Option)
+		local oc = {}
+		for _ = 1, N do
+			local o = Option.rollFor("epic", "bow")
+			oc[o.id] = (oc[o.id] or 0) + 1
+		end
+		local worstOpt = 0
+		for _, r in ipairs(d1.options.bow) do
+			worstOpt = math.max(worstOpt, math.abs((oc[r.id] or 0) / N - r.chance))
+		end
+		errs.option = worstOpt
+		-- ④ 스킬 변형(서버 SkillVariant.roll)
+		local SkillVariant = require(ReplicatedStorage.Shared.SkillVariant)
+		local vc = {}
+		for _ = 1, N do
+			local v = SkillVariant.roll("greatsword", rng)
+			vc[v.slot .. v.id] = (vc[v.slot .. v.id] or 0) + 1
+		end
+		local worstVar = 0
+		for _, r in ipairs(d1.variants.classes.greatsword) do
+			worstVar = math.max(worstVar, math.abs((vc[r.slot .. r.id] or 0) / N - r.chance))
+		end
+		errs.variant = worstVar
+		-- ⑤ 부화(서버 Pet.rollHatch) - 희귀 알 · 부화 레벨 5
+		local Pet = require(ReplicatedStorage.Shared.Pet)
+		local hc = {}
+		for _ = 1, N do
+			local r = Pet.rollHatch({ zone = "tier1", grade = "rare", species = { "stoneTurtle", "mossHare" } }, 5, rng)
+			hc[r.grade] = (hc[r.grade] or 0) + 1
+		end
+		local worstHatch = 0
+		for g, v in pairs(d1.hatch.levels[5].byEgg.rare) do
+			worstHatch = math.max(worstHatch, math.abs((hc[g] or 0) / N - v / 100))
+		end
+		errs.hatch = worstHatch
+		print(("[Q13][몬테카를로] 10만 회 최대 절대 오차(%%p): 잡몹 %.3f · 강화 %.3f · 옵션 %.3f · 변형 %.3f · 부화 %.3f"):format(errs.field * 100, errs.enhance * 100, errs.option * 100, errs.variant * 100, errs.hatch * 100))
+		local ok = true
+		for _, e in pairs(errs) do
+			ok = ok and e <= 0.005
+		end
+		check("몬테카를로 10만 회 = 공개 표(모든 표 최대 오차 ≤ 0.5%p)", ok)
+	end)
+
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
 end

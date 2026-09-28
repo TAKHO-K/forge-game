@@ -1100,6 +1100,35 @@ function PlayerProfile.dismantleItem(player, index)
 	return true, item.grade
 end
 
+-- QUEUE-10h Q13 등급 선택 일괄 분해(무료 · 대상 = Loot.isBulkDismantleTarget - 잠금 · 초월 · 태초 보호). 한 개 분해(dismantleItem)와 같은 결과(같은 등급 · 레벨 · 옵션의 보석). 반환 = 분해 개수
+function PlayerProfile.dismantleItemsUpTo(player, gradeId)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState or type(gradeId) ~= "string" then
+		return 0
+	end
+	local remaining, n = {}, 0
+	for _, item in ipairs(profile.inventory) do
+		if Loot.isBulkDismantleTarget(item, gradeId) then
+			table.insert(classState.gemInventory, { grade = item.grade, itemLevel = item.itemLevel, option = item.option })
+			n += 1
+		else
+			table.insert(remaining, item)
+		end
+	end
+	if n > 0 then
+		profile.inventory = remaining
+		InventorySync.push(player, profile)
+		GemSync.push(player)
+	end
+	return n
+end
+
+-- 가방 칸 수(Q13): 저장값(inventorySlots = 기본 20 + 마일스톤) + 실험 스위치(SaveConfig.bagBaseSlots − 옛 기본 20). 저장은 건드리지 않는다(스위치를 내리면 그대로 돌아간다).
+function PlayerProfile.inventoryCapacity(profile)
+	return InventorySync.capacity(profile) -- 식 한 곳(InventorySync - 클라 스냅샷 slots와 같은 값)
+end
+
 -- ═══ 보석 가루(P2.5b C) ═══
 -- 증감 통로는 이 함수 하나(분해가 더하고 재련 · 변환권 구매가 뺀다 - 빼는 쪽은 호출부가 먼저 잔량을 확인한다). Attribute GemDust로 클라에 내린다.
 function PlayerProfile.addGemDust(player, amount)
@@ -1713,7 +1742,7 @@ function PlayerProfile.addArmorDrop(player, item, options)
 		return true, processed
 	end
 	-- D1(리뷰 3): 태초는 칸이 가득이어도 가방에 넣는다(options.force) - 땅에 두면 주인이 나갈 때 세계 번호가 붙은 아이템이 사라진다. 칸 초과는 판매 · 분해로 풀린다.
-	if #profile.inventory >= profile.inventorySlots and not (options and options.force) then
+	if #profile.inventory >= PlayerProfile.inventoryCapacity(profile) and not (options and options.force) then
 		return false
 	end
 	table.insert(profile.inventory, item)
@@ -1764,7 +1793,7 @@ function PlayerProfile.unequipItem(player, part)
 		return false, "no_class"
 	end
 	local classState = activeClassState(profile)
-	local reason = Equip.unequipBlockReason(classState and classState.equipment or {}, part, #profile.inventory, profile.inventorySlots, classState ~= nil)
+	local reason = Equip.unequipBlockReason(classState and classState.equipment or {}, part, #profile.inventory, PlayerProfile.inventoryCapacity(profile), classState ~= nil)
 	if reason then
 		return false, reason
 	end

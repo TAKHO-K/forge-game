@@ -116,6 +116,9 @@ function QuestsPanel.render()
 		label("…", 14)
 		return
 	end
+	row(Text.get("prob.row"), Text.get("prob.open"), true, function() -- Q13 확률 공개 창
+		require(script.Parent.Probability).open()
+	end, "ProbabilityRow")
 	if view.guide then -- Q12 첫 5분 이정표(지금 할 일)
 		label(Text.get("guide.now", { index = tostring(view.guide.index), total = tostring(view.guide.total), text = Text.get(view.guide.text) }), 16, Theme.color("xp"))
 	end

@@ -76,13 +76,18 @@ end
 -- 플레이어의 직업 2종만"). classId가 nil이거나 알 수 없으면 공통 8종만.
 local function poolFor(classId)
 	local pool = {}
+	local disabled = OptionData.disabled or {} -- Q13 비활성 스위치
 	for _, id in ipairs(OptionData.commonOrder) do
-		table.insert(pool, id)
+		if not disabled[id] then
+			table.insert(pool, id)
+		end
 	end
 	local classIds = classId and OptionData.classSkillOptions[classId]
 	if classIds then
 		for _, id in ipairs(classIds) do
-			table.insert(pool, id)
+			if not disabled[id] then
+				table.insert(pool, id)
+			end
 		end
 	end
 	return pool

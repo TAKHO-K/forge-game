@@ -83,6 +83,15 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg)
 		if soldCount > 0 then
 			ImmediateSave.request(player)
 		end
+	elseif action == "dismantleBulk" then -- Q13: 등급 선택 일괄 분해(무료 · 잠금 · 초월 · 태초 보호 = Loot.isBulkDismantleTarget)
+		if type(arg) ~= "string" then
+			return
+		end
+		local n = PlayerProfile.dismantleItemsUpTo(player, arg)
+		if n > 0 then
+			print(("[Q13] 일괄 분해: %s ~%s → 보석 %d개"):format(player.Name, arg, n))
+			ImmediateSave.request(player)
+		end
 	else
 		return
 	end
