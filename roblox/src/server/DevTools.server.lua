@@ -179,6 +179,7 @@ local function restore(player)
 		return
 	end
 	PlayerProfile.restoreForDevTools(player, backup.snapshot)
+	require(script.Parent.PetService).onLoaded(player) -- Q11 리뷰: 복원한 펫 상태로 동행 Attribute · 화면 다시(없는 펫이 남지 않게)
 	SaveCoordinator.setDevToolsSuspended(player, false)
 	backups[player] = nil
 	print(("[DevTools] %s 원본 프로필로 복원 완료(가방 %d칸) - 저장 차단 해제"):format(player.Name, (bagFingerprint(player))))
@@ -1266,16 +1267,15 @@ local function handleCommand(player, args)
 	elseif sub == "pet" and args[2] then
 		-- Q11: /gg pet egg <tier1..6> <normal|good|rare>(알 지급) · hatch <알 번호> · ff(부화 시간 끝내기) · claim <번호> · equip <번호|off> · view
 		local PetService = require(script.Parent.PetService)
+		ensureBackup(player) -- 리뷰: 받기(즉시 저장) · 시간 넘기기 · 동행도 백업 뒤에
 		local state = PlayerProfile.getPetState(player)
 		if args[2] == "egg" and args[3] then
-			ensureBackup(player)
 			local EggDataDev = require(ReplicatedStorage.Shared.data.EggData)
 			local zone = EggDataDev.zones[args[3]] and args[3] or "tier1"
 			local pool = EggDataDev.zones[zone].pool
 			PlayerProfile.addEgg(player, { zone = zone, grade = args[4] or "normal", species = { pool[1], pool[2] }, nest = "dev", at = os.time() }, 40)
 			require(script.Parent.NestServer).sync(player)
 		elseif args[2] == "hatch" and tonumber(args[3]) then
-			ensureBackup(player)
 			reply(player, ("부화 시작 %s"):format(tostring(select(2, PetService.hatch(player, math.floor(tonumber(args[3])))) or "O")))
 		elseif args[2] == "ff" and state then
 			for _, h in ipairs(state.hatching) do
@@ -1288,6 +1288,9 @@ local function handleCommand(player, args)
 			PetService.equip(player, tonumber(args[3]) and math.floor(tonumber(args[3])) or nil)
 		end
 		local v = PetService.view(player)
+		if not v then
+			return
+		end
 		reply(player, ("펫 %d · 부화 중 %d/%d · 누적 %d(레벨 %d) · 동행 %s · 자동 줍기 %s · 알 %d"):format(#v.pets, #v.hatching, v.queueCap, v.hatchCount, v.hatchLevel,
 			tostring(player:GetAttribute("PetSpecies")), tostring(v.autoPickup), #PlayerProfile.getEggs(player)))
 	elseif sub == "soul" and args[2] then

@@ -65,8 +65,10 @@ RunService.Heartbeat:Connect(function()
 					-- 22-4: 수평 2stud + 높이차 상한 4(TerrainConfig.pickupHeightToleranceStuds) - 발밑만.
 					-- 언덕 아래 아이템은 위에서 못 줍는다(내려가야 한다).
 					local petRange, petHeight = PetService.pickupRange(owner) -- Q11: 펫 자동 줍기(해금 + 동행) = 반경만 넓힌다(줍기 · 칸 확인 · 바닥 제거는 아래 tryPickup 한 곳)
-					if Reach.within(root.Position, model.PrimaryPart.Position, math.max(WorldConfig.items.pickupRangeStuds, petRange),
-						math.max(TerrainConfig.pickupHeightToleranceStuds, petHeight)) then
+					if Reach.within(root.Position, model.PrimaryPart.Position, WorldConfig.items.pickupRangeStuds, TerrainConfig.pickupHeightToleranceStuds) then
+						tryPickup(model, owner)
+					elseif petRange > 0 and not ItemDropState.isFullNotified(model) -- 리뷰: 가방 가득으로 한 번 막힌 드랍은 자동 줍기 반경에서 매 프레임 다시 시도하지 않는다(발밑은 그대로)
+						and Reach.within(root.Position, model.PrimaryPart.Position, petRange, petHeight) then
 						tryPickup(model, owner)
 					end
 				end

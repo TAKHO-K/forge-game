@@ -2236,13 +2236,20 @@ function PlayerProfile.getPetState(player)
 	if type(profile.pets) ~= "table" then
 		profile.pets = require(ReplicatedStorage.Shared.Pet).newState()
 	end
-	return profile.pets
+	local pets = profile.pets -- 리뷰: 모양이 깨진 저장(하위 필드 없음)도 기본값으로
+	pets.list = type(pets.list) == "table" and pets.list or {}
+	pets.hatching = type(pets.hatching) == "table" and pets.hatching or {}
+	pets.hatchCount = type(pets.hatchCount) == "number" and pets.hatchCount or 0
+	return pets
 end
 
--- Q11 부화: 알 가방에서 index번 알을 꺼낸다(부화 대기열로 옮길 때만). 반환 = 알 | nil
-function PlayerProfile.takeEgg(player, index)
+-- Q11 부화: 알 가방에서 index번 알을 꺼낸다(부화 대기열로 옮길 때만). at = 클라가 본 그 알의 획득 시각(리뷰: 연타로 번호가 밀려 다른 알이 부화하지 않게 대조). 반환 = 알 | nil
+function PlayerProfile.takeEgg(player, index, at)
 	local profile = profiles[player]
 	if not profile or type(index) ~= "number" or not profile.eggs[index] then
+		return nil
+	end
+	if at ~= nil and profile.eggs[index].at ~= at then
 		return nil
 	end
 	return table.remove(profile.eggs, index)

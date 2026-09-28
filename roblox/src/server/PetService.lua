@@ -60,7 +60,7 @@ local function push(player)
 end
 
 -- 부화 시작: 알 가방 index번 알 → 대기열(대기열이 가득이면 거절 - 알은 가방에 그대로)
-function PetService.hatch(player, index)
+function PetService.hatch(player, index, at)
 	local state = PlayerProfile.getPetState(player)
 	if not PetData.enabled or not state then
 		return false, "off"
@@ -68,7 +68,7 @@ function PetService.hatch(player, index)
 	if #state.hatching >= Pet.queueCap(PlayerProfile.getCharacterLevel(player) or 1) then
 		return false, "queue_full"
 	end
-	local egg = PlayerProfile.takeEgg(player, index)
+	local egg = PlayerProfile.takeEgg(player, index, at)
 	if not egg then
 		return false, "no_egg"
 	end
@@ -79,7 +79,7 @@ function PetService.hatch(player, index)
 	return true
 end
 
--- 부화 받기: 시간이 다 된 대기열 index번 → 펫(보관 상한이면 거절 - 알은 대기열에 남는다)
+-- 부화 받기: 시간이 다 된 대기열 index번 → 펫(보관 상한이면 거절 - 알은 대기열에 남는다). 스위치(enabled)를 꺼도 이미 부화 중인 알은 받게 둔다(알 손실 없음 - 의도).
 function PetService.claim(player, index, rng)
 	local state = PlayerProfile.getPetState(player)
 	local h = state and type(index) == "number" and state.hatching[index]
@@ -151,9 +151,13 @@ function PetService.start()
 	syncRemote = ReplicatedStorage:FindFirstChild("PetSync") or Instance.new("RemoteEvent")
 	syncRemote.Name = "PetSync"
 	syncRemote.Parent = ReplicatedStorage
-	remote.OnServerEvent:Connect(function(player, action, a)
+	local ACTIONS = { view = true, hatch = true, claim = true, equip = true }
+	remote.OnServerEvent:Connect(function(player, action, a, b)
+		if type(action) ~= "string" or not ACTIONS[action] then -- 리뷰: 허용 동작만 제한 키로(표가 커지지 않게)
+			return
+		end
 		local now = os.clock()
-		local key = tostring(action)
+		local key = action
 		lastRequest[player] = lastRequest[player] or {}
 		if lastRequest[player][key] and now - lastRequest[player][key] < 0.2 then
 			return
@@ -161,8 +165,8 @@ function PetService.start()
 		lastRequest[player][key] = now
 		if action == "view" then
 			push(player)
-		elseif action == "hatch" and type(a) == "number" then
-			PetService.hatch(player, math.floor(a))
+		elseif action == "hatch" and type(a) == "number" and type(b) == "number" then
+			PetService.hatch(player, math.floor(a), b)
 		elseif action == "claim" and type(a) == "number" then
 			PetService.claim(player, math.floor(a))
 		elseif action == "equip" and (a == nil or type(a) == "number") then

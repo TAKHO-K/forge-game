@@ -103,7 +103,7 @@ local function eggRow(egg, i)
 	cand.Size = UDim2.new(1, -150, 0, 18)
 	if petRequest and PetData.enabled then -- Q11 부화
 		local b = Button.build({ parent = frame, kind = "primary", text = Text.get("pet.hatch"), width = 96, position = UDim2.new(1, -6, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = function()
-			petRequest:FireServer("hatch", i)
+			petRequest:FireServer("hatch", i, egg.at) -- 서버가 같은 알인지 대조
 		end })
 		b.root.Name = "HatchButton"
 	end
