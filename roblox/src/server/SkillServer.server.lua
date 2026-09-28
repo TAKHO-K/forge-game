@@ -704,6 +704,7 @@ local function handleSkill(player, slot, aimPoint)
 	if not def then
 		return
 	end
+	def = SkillStats.effectiveDef(player, classId, slot, def) -- QUEUE-10h Q9 K4: 범위 변형(사거리 · 반경만 - 사본)
 
 	-- 26-2(PRD 20.67 [2] "백스텝샷/치유 - 쿨다운 ×(1-x)") - 옵션 baseValue가 음수라 1+합산이
 	-- 곧 (1-x)다(Option.sumWithCap이 상한을 ±50%로 대칭 clamp해 0 이하로 못 내려간다). 이

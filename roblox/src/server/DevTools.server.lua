@@ -1242,6 +1242,27 @@ local function handleCommand(player, args)
 		local zone, count, scale = SetBonus.state(eq)
 		reply(player, ("세트 %s · %s %d부위 · 세대 ×%.2f · 최대 체력 옵션 %.3f · 최종 피해 옵션 %.3f"):format(SetData.enabled and "켬" or "끔", tostring(zone), count, scale,
 			PlayerProfile.getOptionBonus(player, "maxHpPercent"), PlayerProfile.getOptionBonus(player, "finalDamage")))
+	elseif sub == "variant" and args[2] then
+		-- Q9 K4: /gg variant give <칸 Q|E|R> <변형 wide|swift|heavy> [부위](착용 부위에 붙임 - 백업 뒤) · reroll <가방 index> · show(지금 직업 칸별 곱)
+		local SkillStats = require(script.Parent.SkillStats)
+		local classId = PlayerProfile.getClassId(player)
+		if args[2] == "give" and args[3] and args[4] then
+			ensureBackup(player)
+			local eq = PlayerProfile.debugEquipment(player)
+			local part = args[5] or "armor"
+			if eq and eq[part] then
+				eq[part].skillVariant = { classId = classId, slot = args[3], id = args[4] }
+			end
+		elseif args[2] == "reroll" and tonumber(args[3]) then
+			local ok, v = PlayerProfile.rerollSkillVariant(player, math.floor(tonumber(args[3])))
+			reply(player, ("변형 리롤 → %s %s"):format(tostring(ok), type(v) == "table" and (v.slot .. " " .. v.id) or tostring(v)))
+		end
+		local rows = {}
+		for _, slot in ipairs({ "Q", "E", "R" }) do
+			local m = SkillStats.variantMods(player, classId, slot)
+			table.insert(rows, ("%s 피해×%.2f 쿨×%.2f 범위×%.2f"):format(slot, m.damage, m.cooldown, m.range))
+		end
+		reply(player, ("스킬 변형(%s): %s"):format(tostring(classId), table.concat(rows, " · ")))
 	elseif sub == "soul" and args[2] then
 		-- Q8 K3: /gg soul die(보스전 중 죽기 - 실제 사망 경로) · revive(부활 - 개발) · state · dcsim(튕김 기록만 흉내 - 재접속 시험은 실제 재접속)
 		local SoulService = require(script.Parent.SoulService)

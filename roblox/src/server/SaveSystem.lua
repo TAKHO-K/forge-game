@@ -1124,6 +1124,11 @@ local function migrate(data)
 		data.version = 50
 	end
 
+	if data.version < 51 then
+		-- QUEUE-10h Q9 K4: 장비 item.skillVariant(스킬 변형 { classId, slot, id }) - 옛 장비는 없음(nil = 변형 없음 · 채울 값 없음). 버전만 올린다(규칙 - 저장 구조 변경 표시).
+		data.version = 51
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data

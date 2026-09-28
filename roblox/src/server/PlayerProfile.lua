@@ -2150,6 +2150,30 @@ function PlayerProfile.getTrainingView(player)
 	return { training = copyTree(profile.training), abilities = copyTree(classState.abilities or {}), classId = profile.classId, bestStage = PlayerProfile.getAccountBestStage(player) }
 end
 
+-- QUEUE-10h Q9 K4 스킬 변형 리롤: 가방 index 장비(변형이 이미 붙은 것)를 지금 직업 풀에서 다시 굴린다(같은 표 = 확률 공개). 잠금 · 초월은 안 된다. 반환: true, 새 변형 | false, 이유
+function PlayerProfile.rerollSkillVariant(player, index)
+	local profile = profiles[player]
+	local item = profile and profile.inventory[index]
+	if not item then
+		return false, "not_found"
+	end
+	if not item.skillVariant then
+		return false, "no_variant"
+	end
+	if item.locked or item.grade == "transcendent" then
+		return false, "locked"
+	end
+	local SkillVariant = require(ReplicatedStorage.Shared.SkillVariant)
+	local SkillVariantData = require(ReplicatedStorage.Shared.data.SkillVariantData)
+	local cost = require(ReplicatedStorage.Shared.GoldCost).cost(require(ReplicatedStorage.Shared.data.MonsterData).tier1.goldDrop * SkillVariantData.rerollKills, PlayerProfile.getAccountBestStage(player), "variantReroll")
+	if not PlayerProfile.trySpendGold(player, cost) then
+		return false, "no_gold"
+	end
+	item.skillVariant = SkillVariant.roll(profile.classId, Random.new())
+	InventorySync.push(player, profile)
+	return true, item.skillVariant, cost
+end
+
 -- 퀘스트 상태(살아 있는 표 - QuestService만 고친다). 없으면(옛 세이브 이관 전 등) 새로 만든다.
 function PlayerProfile.getQuestState(player)
 	local profile = profiles[player]

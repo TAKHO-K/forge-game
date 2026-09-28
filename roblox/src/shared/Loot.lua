@@ -20,6 +20,8 @@ local Option = require(ReplicatedStorage.Shared.Option)
 local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7
 -- P2 E1: 등급 확률 · 태초 확률은 드랍표 단일 소스(DropTable)에서 읽는다.
 local DropTable = require(ReplicatedStorage.Shared.DropTable)
+local SkillVariant = require(ReplicatedStorage.Shared.SkillVariant) -- Q9 K4
+local SkillVariantData = require(ReplicatedStorage.Shared.data.SkillVariantData)
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
 
 local lootRng = Random.new()
@@ -134,6 +136,9 @@ local function buildDropItem(gradeId, monsterStage, itemLevel, tierIndex, classI
 	if gradeId == TranscendentData.gradeId then -- C5-7: 특수 옵션(부위 고정 · 리롤 불가) · 기본 잠금
 		item.special = TranscendentData.specialByPart[item.part]
 		item.locked = true
+	end
+	if classId and Option.hasOptionPool(gradeId) and lootRng:NextNumber() < SkillVariantData.appearChance then -- QUEUE-10h Q9 K4: 스킬 변형(받는 사람 직업 · 영웅 이상의 10%)
+		item.skillVariant = SkillVariant.roll(classId, lootRng)
 	end
 	return item
 end

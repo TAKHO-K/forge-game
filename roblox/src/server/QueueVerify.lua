@@ -320,6 +320,47 @@ function V.runPure()
 		check(("스위치 끔 = 영혼 없음 · 부활 체력 %.0f%%"):format(SoulData.reviveHpFraction * 100), not off and SoulData.reviveHpFraction == 0.3)
 	end)
 
+	section("Q9 K4 스킬 변형", function()
+		local SkillVariant = require(ReplicatedStorage.Shared.SkillVariant)
+		local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+		local sumsOk = true
+		for _, classId in ipairs(ClassData.order) do
+			local sum = 0
+			for _, row in ipairs(SkillVariant.rows(classId)) do
+				sum += row.chance
+				sumsOk = sumsOk and row.slot ~= "T"
+			end
+			sumsOk = sumsOk and math.abs(sum - 1) < 1e-9
+		end
+		check("직업마다 변형 확률 합 1 · 궁극기(T) 없음", sumsOk)
+		local rng = Random.new(7)
+		local counts, N = {}, 20000
+		for _ = 1, N do
+			local v = SkillVariant.roll("bow", rng)
+			local key = v.slot .. v.id
+			counts[key] = (counts[key] or 0) + 1
+		end
+		local worst = 0
+		for _, row in ipairs(SkillVariant.rows("bow")) do
+			worst = math.max(worst, math.abs((counts[row.slot .. row.id] or 0) / N - row.chance))
+		end
+		check(("굴림 {N}회 = 공개 표(최대 오차 %.4f ≤ 0.015)"):format(worst):gsub("{N}", tostring(N)), worst <= 0.015)
+		local eq = { armor = { grade = "epic", skillVariant = { classId = "bow", slot = "Q", id = "swift" } }, gloves = { grade = "relic", skillVariant = { classId = "bow", slot = "Q", id = "heavy" } },
+			shoes = { grade = "legendary", skillVariant = { classId = "greatsword", slot = "E", id = "wide" } } }
+		local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+		local rank = function(g)
+			return table.find(ArmorData.gradeOrder, g) or 0
+		end
+		local q = SkillVariant.modsFor(eq, "bow", "Q", rank)
+		local gsE = SkillVariant.modsFor(eq, "bow", "E", rank)
+		check(("칸당 높은 등급 하나(유물 묵직하게 피해 ×%.2f) · 다른 직업 변형 = 꺼짐(×%.2f)"):format(q.damage, gsE.damage), q.id == "heavy" and q.damage == 1.05 and gsE.damage == 1 and gsE.range == 1)
+		local d = SkillVariant.describe(eq.shoes.skillVariant, "bow")
+		check("툴팁: 다른 직업 = 꺼짐 표시 대상", d and d.active == false and d.text:find("넓게") ~= nil)
+		local SaveSystem = require(script.Parent.SaveSystem)
+		local ok, m = pcall(SaveSystem.migrate, { version = 50, gold = 0, classes = {}, inventory = { { grade = "epic", part = "armor" } }, training = { attack = 0, hp = 0, defense = 0 }, quests = { main = 1 } })
+		check(("이관 v50 → v%s(변형 없는 옛 장비 그대로)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 51 and m.inventory[1].skillVariant == nil)
+	end)
+
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
 end

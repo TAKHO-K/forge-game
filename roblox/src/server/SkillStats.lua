@@ -17,6 +17,33 @@ local PlayerState = require(script.Parent.PlayerState)
 
 local SkillStats = {}
 
+local SkillVariant = require(ReplicatedStorage.Shared.SkillVariant) -- QUEUE-10h Q9 K4 스킬 변형(피해 계수 · 쿨다운 · 범위 - 이 파일 한 곳)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+
+local function gradeRank(gradeId)
+	return table.find(ArmorData.gradeOrder, gradeId) or 0
+end
+
+-- 지금 직업 · 이 칸에 걸리는 스킬 변형 곱(착용 3부위 - 칸당 높은 등급 하나)
+function SkillStats.variantMods(player, classId, slot)
+	return SkillVariant.modsFor(PlayerProfile.debugEquipment(player), classId, slot, gradeRank)
+end
+
+-- 범위 변형을 반영한 스킬 정의(사거리 · 반경만 곱한 얕은 사본 - 변형이 없으면 원본 그대로). SkillServer가 판정 전에 부른다.
+function SkillStats.effectiveDef(player, classId, slot, def)
+	local mods = SkillStats.variantMods(player, classId, slot)
+	if mods.range == 1 then
+		return def
+	end
+	local copy = table.clone(def)
+	for _, key in ipairs({ "rangeStuds", "radiusStuds", "lengthStuds" }) do
+		if type(copy[key]) == "number" then
+			copy[key] *= mods.range
+		end
+	end
+	return copy
+end
+
 -- 그 스킬 칸의 옵션 합(없으면 0). 옵션 id = OptionData의 skill_<직업>_<칸>.
 function SkillStats.optionBonus(player, classId, slot)
 	return PlayerProfile.getOptionBonus(player, ("skill_%s_%s"):format(classId, slot))
@@ -37,7 +64,7 @@ function SkillStats.hitCoefficient(player, classId, slot, def)
 	if not def.coefficient then
 		return nil
 	end
-	return def.coefficient * (1 + SkillStats.optionBonus(player, classId, slot)) / (def.tickCount or 1)
+	return def.coefficient * (1 + SkillStats.optionBonus(player, classId, slot)) * SkillStats.variantMods(player, classId, slot).damage / (def.tickCount or 1) -- Q9 변형 피해
 end
 
 -- 실제 쿨다운(26-2 옵션 · S13b 쉴드 쿨다운). SkillServer의 쿨다운 게이트와 결과 이벤트가 이 값을 쓴다.
@@ -54,7 +81,7 @@ function SkillStats.cooldown(player, classId, slot, def)
 	if def.shape == "dash" then
 		cooldownSeconds *= require(script.Parent.TranscendentService).dashCooldownScale(player) -- C5-7b 광폭: 돌진형 스킬 쿨 × 0.8(전투 중)
 	end
-	return cooldownSeconds
+	return cooldownSeconds * SkillStats.variantMods(player, classId, slot).cooldown -- Q9 변형 쿨다운
 end
 
 -- 속사(활 Q) 공속 배율 = min(상한, (기본 + 직업 치명 확률 × 계수) × (1 + 옵션)) - 옵션은 상한으로 자르기 전에 곱한다(26-2).
