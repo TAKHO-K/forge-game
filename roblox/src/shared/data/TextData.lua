@@ -183,5 +183,26 @@ return {
 		["codex.stealLock.body"] = "체력바가 회색이고 자물쇠가 보이면 다른 유저가 먼저 사냥 중인 몬스터예요. 공격이 튕겨 나가요. 그 유저가 잠시 떠나면 자물쇠가 풀려요. 비슷한 성장 단계(같은 환생 · 가까운 레벨 · 가까운 스테이지)끼리는 같이 공격할 수 있고, 몬스터 체력의 {percent}% 이상 깎으면 보상을 받아요.", -- percent = CombatConfig.contributionRewardThreshold × 100(창이 넘긴다)
 		-- C2 권장 전투력(자리만 - 최종 스타일 U1): 스테이지 선택 · 구역 입구
 		["combat.recommend"] = "권장 전투력 {rec} / 내 전투력 {mine}", -- rec · mine = NumberFormat.format(CombatFormula.display(...))
+		-- QUEUE-10h Q7 장비 툴팁 줄(ItemDescribe.item note)
+		["item.setLine"] = "세트: {name}",
+		["item.sourceLine"] = "출처: {source}",
+		-- QUEUE-10h Q6 · Q7 퀘스트 · 수련 창(panels/Quests)
+		["quests.title"] = "퀘스트 · 수련",
+		["quests.login"] = "오늘의 첫 접속 보상",
+		["quests.main"] = "메인 퀘스트 {index}/{total} - {name}",
+		["quests.mainUnlock"] = "열리는 것: {unlock}",
+		["quests.mainDone"] = "메인 퀘스트를 모두 마쳤습니다",
+		["quests.daily"] = "일간 퀘스트(매일 UTC 0시 초기화)",
+		["quests.weekly"] = "주간 퀘스트(월요일 초기화)",
+		["quests.chest"] = "일간 완료 상자",
+		["quests.progress"] = "{name} ({n}/{target})",
+		["quests.claim"] = "받기",
+		["quests.claimed"] = "받음",
+		["quests.training"] = "공용 수련(모든 직업)",
+		["quests.abilities"] = "직업 고유 능력(지금 직업)",
+		["quests.trainRow"] = "{name} {level}/{cap} · 단계당 +{per}%",
+		["quests.trainButton"] = "{cost} 골드",
+		["quests.trainCap"] = "상한",
+		["quests.currencies"] = "반짝 조각 {shard} · 시즌 패스 경험치 {pass}",
 	},
 }

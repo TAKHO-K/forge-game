@@ -200,6 +200,24 @@ function HudIcons.stage(parent, size, color)
 	return canvas
 end
 
+-- QUEUE-10h Q7 퀘스트: 두루마리 종이(둥근 판) + 체크 줄 셋(짧은 막대 = 체크 · 긴 막대 = 글줄)
+function HudIcons.quest(parent, size, color)
+	local iconColor = color or UIColors.textPrimary
+	local canvas = Instance.new("Frame")
+	canvas.BackgroundTransparency = 1
+	canvas.Size = UDim2.new(0, size, 0, size)
+	canvas.Parent = parent
+	local paper = newFrame(canvas, UDim2.new(0, size * 0.72, 0, size * 0.86), Vector2.new(0.5, 0.5), UDim2.new(0.5, 0, 0.5, 0), 0, iconColor)
+	paper.BackgroundTransparency = 0.75
+	round(paper, size * 0.1)
+	for i = 0, 2 do
+		local y = size * (0.26 + i * 0.22)
+		round(newFrame(canvas, UDim2.new(0, size * 0.12, 0, size * 0.12), Vector2.new(0, 0.5), UDim2.new(0, size * 0.24, 0, y), 0, iconColor), size * 0.03)
+		round(newFrame(canvas, UDim2.new(0, size * 0.3, 0, size * 0.08), Vector2.new(0, 0.5), UDim2.new(0, size * 0.42, 0, y), 0, iconColor), size * 0.03)
+	end
+	return canvas
+end
+
 -- 쿨다운 링 - 위 모듈 설명 참고("스톱워치 눈금" 방식). diameter는 슬롯 지름과 같게 준다.
 -- 반환값은 update(remainingRatio) 함수 하나 - remainingRatio=1이면 전부 어둡게(막 씀),
 -- 0이면 전부 밝게(사용 가능). SkillSlots.client.lua의 setCooldown이 이 update를 부른다.

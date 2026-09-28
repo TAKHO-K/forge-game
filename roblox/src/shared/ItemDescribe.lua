@@ -116,8 +116,21 @@ function ItemDescribe.item(item, classId)
 		meta = metaFn(item),
 		options = optionLines(item, classId),
 		note = (function()
-			local crit, special = critNote(item), specialNote(item)
-			return crit and special and (crit .. "\n" .. special) or crit or special
+			local lines = {}
+			for _, line in ipairs({ critNote(item) or false, specialNote(item) or false }) do
+				if line then
+					table.insert(lines, line)
+				end
+			end
+			local setName = item.setZone and require(script.Parent.SetBonus).setName(item.setZone, item.dropStage) -- Q7: 세트 계열(Q5)
+			if setName then
+				table.insert(lines, Text.get("item.setLine", { name = setName }))
+			end
+			local where = require(script.Parent.PrimordialStamp).sourceText(item.source) -- Q7: 출처(Q5 보스 출처 태그 포함)
+			if where then
+				table.insert(lines, Text.get("item.sourceLine", { source = where }))
+			end
+			return #lines > 0 and table.concat(lines, "\n") or nil
 		end)(),
 	}
 end

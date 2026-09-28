@@ -38,7 +38,7 @@ function Training.killsFor(def, level)
 end
 
 function Training.costFor(def, level, bestStage)
-	return GoldCost.cost(MonsterData.tier1.goldDrop * Training.killsFor(def, level), bestStage, def.maxLevel and "classAbility" or "training")
+	return GoldCost.cost(MonsterData.tier1.goldDrop * Training.killsFor(def, level), bestStage, Training.statDef(def.id) == def and "training" or "classAbility")
 end
 
 -- 합연산 몫: levels = { [id] = 단계 } · defs = 목록. bucket("attack" | "hp") 또는 axis(옵션 축 id) 하나로 모은다.

@@ -245,10 +245,12 @@ function V.runPure()
 			Training.capFor(atk, 95) == 9 and Training.capFor(Training.abilityDef("bow", "bow_might"), 9999) == 50)
 		check("수련 가격 단계마다 오름 · 스테이지 따라 오름", Training.costFor(atk, 5, 100) > Training.costFor(atk, 4, 100) and Training.costFor(atk, 5, 500) > Training.costFor(atk, 5, 100))
 		local bonus = Training.bucketBonus({ attack = 10, hp = 4 }, { gs_might = 5 }, "greatsword", "attack")
-		check(("공격 버킷 합연산 = 10 × 0.005 + 5 × 0.004 = %.3f · 다른 직업 능력 무시"):format(bonus), math.abs(bonus - 0.07) < 1e-12
-			and math.abs(Training.bucketBonus({ attack = 10 }, { gs_might = 5 }, "bow", "attack") - 0.05) < 1e-12)
+		local want = 10 * atk.perLevel + 5 * Training.abilityDef("greatsword", "gs_might").perLevel
+		check(("공격 버킷 합연산 = %.4f · 다른 직업 능력 무시"):format(bonus), math.abs(bonus - want) < 1e-12
+			and math.abs(Training.bucketBonus({ attack = 10 }, { gs_might = 5 }, "bow", "attack") - 10 * atk.perLevel) < 1e-12)
 		local def = Training.axisValues({ defense = 4 }, { gs_guard = 3 }, "greatsword", "defensePercent")
-		check("방어 축 = 수련 + 철벽", def and math.abs(def[1] - (4 * 0.005 + 3 * 0.004)) < 1e-12)
+		check("방어 축 = 수련 + 철벽", def and math.abs(def[1] - (4 * Training.statDef("defense").perLevel + 3 * Training.abilityDef("greatsword", "gs_guard").perLevel)) < 1e-12)
+		check(("수련 최대 단계 %d(스테이지 99,999에서도)"):format(Training.capFor(atk, 99999)), Training.capFor(atk, 99999) == atk.maxLevel)
 		-- 퀘스트: 같은 날 = 같은 목록(중복 없음) · 진행 → 받기 → 두 번 못 받음 · 상자 = 전부 완료 뒤
 		local day = 20000
 		local listA, listB = Quest.dailyFor(day), Quest.dailyFor(day)

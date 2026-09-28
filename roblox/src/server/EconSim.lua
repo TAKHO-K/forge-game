@@ -738,7 +738,7 @@ local function tryTrainWithGold(state)
 	if not EconSimConfig.modelTraining then
 		return
 	end
-	local reserve = Enhance.getCost(state.weaponLevel, state.reach) * (EconSimConfig.trainingReserveEnhance or 0)
+	local reserve = (Enhance.getCost(state.weaponLevel, state.reach) or 0) * (EconSimConfig.trainingReserveEnhance or 0) -- 강화 최대면 비용 nil
 	local guard = 0
 	while guard < 2000 do
 		guard += 1

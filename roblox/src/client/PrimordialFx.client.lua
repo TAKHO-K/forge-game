@@ -23,9 +23,18 @@ local player = Players.LocalPlayer
 local ACCENT_HEX = PrimordialData.accentColor:ToHex()
 
 -- ── ③ 배너 + 채팅 ──
+-- QUEUE-10h Q7-10: 태초 = 같은 서버 알림 칸("[이 서버]" · 무지개 없음) / 초월 = 전 서버 배너("[전 서버]" · 흑금 글자 · 무지개). 두 표시가 섞이지 않게 머리말 · 색 · 무지개가 다르다.
+local function isTranscendent(entry)
+	return entry.grade == TranscendentData.gradeId
+end
+
 local function bannerParts(entry)
+	local global = isTranscendent(entry)
+	local gradeWord = global and "초월" or "태초"
 	local parts = {
-		{ text = entry.no and ("★ 세계 %d번째 태초 ★ "):format(entry.no) or "★ 태초 ★ ", color = PrimordialData.auraColor, bold = true },
+		{ text = global and "[전 서버] " or "[이 서버] ", colorName = "textSecondary", bold = true },
+		{ text = entry.no and ("%s 세계 %d번째 %s %s "):format(global and TranscendentData.announce.glyph or "★", entry.no, gradeWord, global and TranscendentData.announce.glyph or "★")
+			or ("★ %s ★ "):format(gradeWord), color = global and TranscendentData.announce.color or PrimordialData.auraColor, bold = true },
 		{ text = tostring(entry.name or PrimordialData.fallbackName), color = PrimordialData.accentColor, bold = true },
 	}
 	local sourceText = PrimordialStamp.sourceText(entry.source)
@@ -37,7 +46,8 @@ end
 
 local function chatLine(entry)
 	local sourceText = PrimordialStamp.sourceText(entry.source)
-	return ('★ %s - <font color="#%s">%s</font>%s'):format(entry.no and ("세계 %d번째 태초"):format(entry.no) or "태초", ACCENT_HEX, tostring(entry.name or PrimordialData.fallbackName),
+	local gradeWord = isTranscendent(entry) and "초월" or "태초"
+	return ('%s ★ %s - <font color="#%s">%s</font>%s'):format(isTranscendent(entry) and "[전 서버]" or "[이 서버]", entry.no and ("세계 %d번째 %s"):format(entry.no, gradeWord) or gradeWord, ACCENT_HEX, tostring(entry.name or PrimordialData.fallbackName),
 		sourceText and (" · " .. sourceText) or "")
 end
 
@@ -45,7 +55,7 @@ ReplicatedStorage:WaitForChild("PrimordialBanner").OnClientEvent:Connect(functio
 	if type(entry) ~= "table" then
 		return
 	end
-	Toast.push("TC", { richParts = bannerParts(entry), seconds = PrimordialData.bannerSeconds, fadeSeconds = 0.4, rainbow = true })
+	Toast.push("TC", { richParts = bannerParts(entry), seconds = isTranscendent(entry) and PrimordialData.bannerSeconds or math.max(3, PrimordialData.bannerSeconds - 2), fadeSeconds = 0.4, rainbow = isTranscendent(entry) }) -- Q7-10
 	local channels = TextChatService:FindFirstChild("TextChannels")
 	local general = channels and channels:FindFirstChild("RBXGeneral")
 	if general then
