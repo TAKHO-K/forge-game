@@ -302,7 +302,7 @@ function Layout.huntPoints(zone)
 	local points = {}
 	local maxR = range.radius - S.edgeMargin - S.group.radius
 	for _ = 1, 30000 do -- 파트 0: 12,000 → 30,000(바위 둥지 받침이 줄어 T4가 78곳에서 멈췄다 - 80곳을 채운 구역은 같은 난수 순서라 그대로)
-		if #points >= S.pointsPerRange then
+		if #points >= (S.pointsByZone and S.pointsByZone[zone.key] or S.pointsPerRange) then -- Q1 구역별 지점 수
 			break
 		end
 		local a, rr = rand() * 2 * math.pi, math.sqrt(rand()) * maxR
@@ -335,8 +335,9 @@ function Layout.huntPoints(zone)
 			table.insert(points, { index = #points + 1, position = Vector3.new(p.X, c.h, p.Z), slots = slots })
 		end
 	end
-	if #points < S.pointsPerRange then
-		warn(("[forge-game] 스폰 지점 %s: %d/%d곳만 채움(시도 상한) - 둥지 · 소품 · 지형 회피를 확인"):format(zone.key, #points, S.pointsPerRange)) -- 파트 0 리뷰
+	local wantPoints = S.pointsByZone and S.pointsByZone[zone.key] or S.pointsPerRange
+	if #points < wantPoints then
+		warn(("[forge-game] 스폰 지점 %s: %d/%d곳만 채움(시도 상한) - 둥지 · 소품 · 지형 회피를 확인"):format(zone.key, #points, wantPoints)) -- 파트 0 리뷰
 	end
 	huntPointCache[zone.key] = points
 	return points

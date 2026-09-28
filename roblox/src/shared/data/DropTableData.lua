@@ -54,7 +54,7 @@ local DropTableData = {
 	--   T1 ~ T5 0.985 · T6 1.000 · 처치 0.8 ~ 2.0초 범위 최저 0.959(3.0초 0.946). 근거 = docs/design/field-drop-tables.md.
 	--   dropCountBasis = "killUnits"(새 식) | "legacy"(옛 HP 비 ÷ r(t) - 되돌리기 스위치).
 	dropCountBasis = "killUnits",
-	fieldDropCountAdjust = { 1.0, 1.028, 1.061, 0.944, 0.924, 0.975 },
+	fieldDropCountAdjust = { 1.0, 1.028, 1.061, 0.944, 0.924, 0.958 }, -- Q1: T6 0.975 → 0.958(T6 스폰 지점 80 → 88 = 이동 ÷ √1.1)
 
 	-- G1-2(D0 결정 4 나 - 공정성 식 보정): tier 공정성 식(MonsterData)은 "처치 시간 ∝ HP"를 전제로 tier마다 시간당 장비 가치를 같게 맞춘다. 한 방에 잡거나
 	-- 처치보다 이동이 길면 이 전제가 깨져 높은 tier(드래곤 HP ×7.8)가 시간당 훨씬 유리했다(D0 (c)). 보정 = 장비 기대 개수 × c(DropTable.timeFairnessFactor):

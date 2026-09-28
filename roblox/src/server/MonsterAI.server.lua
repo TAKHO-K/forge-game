@@ -27,6 +27,9 @@ local BossEnvironment = require(script.Parent.BossEnvironment) -- BR1 리뷰 1: 
 -- 재선택하고(PRD 20.47 [6](나)), 패턴 피해·연출 대상 목록(멤버 전원)을 BossPatterns에 넘긴다.
 local BossEncounter = require(script.Parent.BossEncounter)
 local Temperament = require(script.Parent.MonsterTemperament) -- M2 성향 카드
+local MobAttackShape = require(ReplicatedStorage.Shared.MobAttackShape) -- Q1 모양 공격(드래곤 - 종 data attacks 조각)
+local HeightGuard = require(script.Parent.HeightGuard) -- Q1 날개 돌풍 넉백 = 보스와 같은 발사 허가
+local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 
 local syncHud = PlayerDamage.syncHud
 
@@ -210,7 +213,97 @@ local applyHitToPlayer = PlayerDamage.applyHit
 --   windup.seconds 뒤 사거리 안에 남아 있으면 때린다 · 전조 중 사거리를 벗어나면 헛침(쿨 그대로 - 다시 들어오면 새 전조).
 local windupStartedAt = setmetatable({}, { __mode = "k" })
 
+-- Q1 모양 공격(MonsterSpeciesData attacks - 드래곤): 전조(제자리 · 방향 고정) → 모양 안 전원 판정(+ 넉백 조각) → 회복(제자리) → cooldown.
+--   판정은 서버 · 예고 · 연출은 클라(모델 Attribute MobAttack = "id|전조 초|시각" · MobStrike = "id|시각" → client/MobAttackView · MonsterRigAnimator).
+--   다른 사람도 모양 안이면 맞는다 - 단 이 몹이 쫓을 수 있는 사람만(C1 canChase - 높은 기준 스테이지 몹의 공격이 낮은 사람을 즉사시키지 않게).
+local shaped = setmetatable({}, { __mode = "k" }) -- [model] = { attack, started, facing, counter, nextAt }
+local holdUntil = setmetatable({}, { __mode = "k" }) -- [model] = 이 시각까지 제자리(포효 경계 · 공격 회복)
+
+local function isHolding(model)
+	local st = shaped[model]
+	return (st and st.attack ~= nil) or os.clock() < (holdUntil[model] or 0)
+end
+
+local function faceToward(model, position, point)
+	local d = Vector3.new(point.X - position.X, 0, point.Z - position.Z)
+	if d.Magnitude < 0.05 then
+		return nil
+	end
+	model:PivotTo(CFrame.lookAt(position, position + d.Unit))
+	return d.Unit
+end
+
+local function clearShaped(model)
+	local st = shaped[model]
+	if st and st.attack then
+		st.attack = nil
+		model:SetAttribute("MobWindup", nil)
+		model:SetAttribute("MobAttack", nil)
+	end
+end
+
+local function knockBack(player, root, from, launch)
+	if typeof(player) ~= "Instance" or require(script.Parent.UltimateService).isUnstoppable(player) then -- K1 파괴의 화신 = 넉백 면역(보스와 같다)
+		return
+	end
+	HeightGuard.grantLaunch(player, launch.heightStuds, JumpMath.launchAirSeconds(launch.heightStuds) + 0.5, "잡몹 넉백")
+	BossPatterns.sendTo(player, "launch", { from = from, heightStuds = launch.heightStuds, distanceStuds = launch.distanceStuds, escape = true }) -- 구역 없음 = 상한만(필드)
+end
+
+local function tryShapedAttack(model, data, monsterPosition, targetPlayer, targetRoot)
+	local st = shaped[model]
+	if not st then
+		st = {}
+		shaped[model] = st
+	end
+	local now = os.clock()
+	local attack = st.attack
+	if attack then
+		if now - st.started < attack.windup.seconds then
+			return
+		end
+		st.attack = nil
+		model:SetAttribute("MobStrike", ("%s|%.3f"):format(attack.id, now)) -- 동작 신호를 먼저(클라 예고가 번쩍 → 사라짐)
+		model:SetAttribute("MobWindup", nil)
+		model:SetAttribute("MobAttack", nil)
+		MonsterState.setLastAttackTick(model, now)
+		holdUntil[model] = now + attack.recover
+		st.nextAt = now + attack.recover + attack.cooldown
+		for _, player in ipairs(Players:GetPlayers()) do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root and (PlayerState.getHp(player) or 0) > 0 and not Temperament.inSafeZone(root.Position)
+				and MobAttackShape.contains(attack, monsterPosition, st.facing, root.Position)
+				and (player == targetPlayer or MonsterState.canChase(model, player, TutorialState.getMonsterStage(player))) then
+				local stage = MonsterState.getAttackStage(model, TutorialState.getMonsterStage(player))
+				applyHitToPlayer(player, MonsterState.getAttackFor(model, stage), nil, attack.damage, { levelGapStage = stage })
+				if attack.launch and (PlayerState.getHp(player) or 0) > 0 then
+					knockBack(player, root, monsterPosition, attack.launch)
+				end
+			end
+		end
+		return
+	end
+	if now < (st.nextAt or 0) or now < (holdUntil[model] or 0) or (PlayerState.getHp(targetPlayer) or 0) <= 0 then
+		return
+	end
+	if not Reach.within(targetRoot.Position, monsterPosition, data.attackRangeStuds) then
+		return
+	end
+	local facing = model.PrimaryPart.CFrame.LookVector
+	local chosen
+	chosen, st.counter = MobAttackShape.choose(data.species.attacks, MobAttackShape.isBehind(monsterPosition, facing, targetRoot.Position), st.counter)
+	if chosen.prefer ~= "behind" then
+		facing = faceToward(model, monsterPosition, targetRoot.Position) or facing -- 앞 공격은 전조 시작에 대상 쪽으로 돈다(그 뒤 방향 고정)
+	end
+	st.attack, st.started, st.facing = chosen, now, Vector3.new(facing.X, 0, facing.Z)
+	model:SetAttribute("MobAttack", ("%s|%.2f|%.3f"):format(chosen.id, chosen.windup.seconds, now))
+	model:SetAttribute("MobWindup", chosen.windup.seconds)
+end
+
 local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
+	if data.species and data.species.attacks then
+		return tryShapedAttack(model, data, monsterPosition, targetPlayer, targetRoot)
+	end
 	if PlayerState.getHp(targetPlayer) <= 0 then
 		return -- 죽어서 리스폰 대기 중인 시체는 때리지 않는다(사망 로그 중복 방지)
 	end
@@ -321,6 +414,16 @@ local function beginChase(model, data, player)
 	MonsterState.setAiState(model, "chasing")
 	MonsterState.setAiTarget(model, player)
 	Temperament.alert(model, data)
+	local species = data.species
+	if species and species.alertHoldSeconds then -- Q1: 발견 → 제자리 포효(경계 모션) 뒤 접근
+		holdUntil[model] = os.clock() + species.alertHoldSeconds
+		if species.attacks and model.PrimaryPart then
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				faceToward(model, model.PrimaryPart.Position, root.Position)
+			end
+		end
+	end
 	-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
 	-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
 	-- (아래 else 분기의 clear까지) 고정한다.
@@ -434,6 +537,7 @@ RunService.Heartbeat:Connect(function(dt)
 						windupStartedAt[model] = nil
 						model:SetAttribute("MobWindup", nil)
 					end
+					clearShaped(model) -- Q1: 모양 공격 전조도 같이 끝
 					if data.isBoss then
 						BossPatterns.interrupt(model, data)
 					end
@@ -463,8 +567,11 @@ RunService.Heartbeat:Connect(function(dt)
 					-- (막힘 시간 계산에 안 들어간다).
 					local goal = decoyPosition or targetRoot.Position
 					local moved = true
-					if Reach.horizontalDistance(goal, position) > data.chaseStopDistanceStuds and not MonsterState.isRooted(model) then -- K2 덫 속박
+					if Reach.horizontalDistance(goal, position) > data.chaseStopDistanceStuds and not MonsterState.isRooted(model) and not isHolding(model) then -- K2 덫 속박 · Q1 포효 · 모양 공격 제자리
 						moved = stepToward(model, position, goal, MonsterState.getMoveSpeed(model), dt)
+						if data.species and data.species.attacks and model.PrimaryPart then -- Q1: 모양 공격 종은 가는 쪽을 본다(판정 방향 = 보이는 방향)
+							faceToward(model, model.PrimaryPart.Position, goal)
+						end
 					end
 					if not decoyPosition then
 						tryAttack(model, data, position, target, targetRoot)

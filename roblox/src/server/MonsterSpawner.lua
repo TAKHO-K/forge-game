@@ -133,20 +133,25 @@ local function buildModel(data, position, variant)
 		model:SetAttribute("MonsterRig", data.speciesId)
 		local hitbox = Instance.new("Part")
 		hitbox.Name = "Hitbox"
-		hitbox.Size = Vector3.new(2.4, 4.6, 1.6) * sizeScale -- 옛 몸통(2.4 × 3 × 1.2) + 머리 공(1.6) 합친 상자
+		local box = data.species and data.species.hitbox -- Q1: 큰 몸(드래곤)은 종 hitbox(몸 단위 - 크기 · 가운데)
+		local hitboxOffset = box and box.center * sizeScale or Vector3.new(0, 0.8 * sizeScale, 0)
+		hitbox.Size = box and box.size * sizeScale or Vector3.new(2.4, 4.6, 1.6) * sizeScale -- 옛 몸통(2.4 × 3 × 1.2) + 머리 공(1.6) 합친 상자
+		if box then
+			model:SetAttribute("BodyRadius", math.min(box.size.X, box.size.Z) / 2 * sizeScale) -- AimPicker.pick: 근접 거리 = 루트 거리 − 몸 반경
+		end
 		hitbox.Transparency = 1
 		hitbox.Anchored = false
 		hitbox.Massless = true
 		hitbox.CanCollide = false
 		hitbox.CanTouch = false
 		hitbox.CanQuery = true
-		hitbox.CFrame = root.CFrame * CFrame.new(0, 0.8 * sizeScale, 0)
+		hitbox.CFrame = root.CFrame * CFrame.new(hitboxOffset)
 		hitbox.Parent = model
 		local weld = Instance.new("Motor6D")
 		weld.Name = "HitboxJoint"
 		weld.Part0 = root
 		weld.Part1 = hitbox
-		weld.C0 = CFrame.new(0, 0.8 * sizeScale, 0)
+		weld.C0 = CFrame.new(hitboxOffset)
 		weld.Parent = root
 	else
 		root, body, head = BossLook.buildCore(model, look, position)

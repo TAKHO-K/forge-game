@@ -6,7 +6,11 @@
 --   detectRadius(stud) · alertMotion("turn" 돌아봄 · "mark" ! 표시 · "roar" 포효) · approach("charge" 돌진 · "sneak" 살금 · "hop" 통통 · "surround" 포위) · speed(이동 배율 - 기준 MonsterData.moveSpeedStuds 10)
 --   groupSize = { 최소, 최대 }(한 스폰 지점 무리 - 지점마다 종 하나) · leashDistance(스폰 자리에서 이 거리 넘으면 복귀 + 체력 회복) · linkAggro(무리 반격).
 --   안전 지대(허브 · 구역 캠프) 진입 금지는 전 종 공통(MonsterAI). T1 · T2 선공형(선공 + 추적 + 매복) 스폰 비율 ≤ 30%(검사 = M2Verify).
--- 드래곤(옛 T6)은 참조 이미지에 없어 retired - 지시의 드래곤 규칙(무리 1 ~ 2 · 링크 어그로 없음 · 스폰 간격 ≥ 감지 ×2 + 여유)은 T6 선공 대형종 얼음 골렘에 적용(묶음 결정 B-1).
+-- QUEUE-10h Q1: T6 눈토끼 → 푸른 드래곤(blue_dragon · 얼음 계열 · 옛 T6 드래곤 수치 = 티어 data 그대로). 눈토끼는 retiredBy로 스폰 풀에서만 빠진다(데이터 · 참조 이미지 유지).
+--   드래곤 규칙(무리 1 ~ 2 · 링크 어그로 없음 · 스폰 간격 72 ≥ 감지 16 × 2 + 10)은 드래곤으로 돌아가고, 얼음 골렘은 일반 선공 무리(3 ~ 4)로 되돌린다(묶음 결정 B-1 해제).
+--   chaseCapped = 선공이어도 추적 동시 상한(chaseCapPerPlayer)을 같이 센다 · alertHoldSeconds = 발견 뒤 제자리 포효 시간(경계 모션 - 그동안 안 움직임).
+--   attacks = 모양 공격 조각(MonsterAI 공용 - shared/MobAttackShape): 전조(windup.seconds · poses) → 동작(모양 안 전원 판정 · damage = 평타 배율 · launch = 넉백만) → 회복(recover - 제자리).
+--     고르는 법: 대상이 등 뒤(prefer = "behind")면 그 공격, 아니면 prefer 없는 공격을 차례로. 주기 = 전조 + 회복 + cooldown → damage는 주기 × 평타(초당 피해 ≈ 티어 평타)로 맞춘 값.
 -- 평타 전조(windup): 서버가 전조 시간만큼 기다렸다 때린다(사거리 안에 남아 있으면) · 클라 MonsterRigAnimator가 관절 포즈로 보인다. 시범 3종(슬라임 · 멧돼지 · 골렘) → 묶음 F1에서 12종 전부(참조 이미지 전조 문구 기준 · 0.6 ~ 1.3초).
 local MonsterSpeciesData = {}
 
@@ -44,11 +48,26 @@ MonsterSpeciesData.species = {
 		aggro = "passive", detectRadius = 0, alertMotion = "turn", approach = "hop", speed = 0.9, groupSize = { 3, 5 }, leashDistance = 38,
 		windup = { seconds = 1.0, poses = { RootJoint = { y = 0.2 }, Wool = { y = 0.4 } } } },
 	ice_golem = { tier = 6, displayName = "얼음 골렘", body = C(170, 215, 245), head = C(200, 230, 250), accent = C(80, 155, 215),
-		aggro = "aggressive", detectRadius = 14, alertMotion = "roar", approach = "charge", speed = 0.8, groupSize = { 1, 2 }, leashDistance = 45, linkAggro = false,
+		aggro = "aggressive", detectRadius = 14, alertMotion = "roar", approach = "charge", speed = 0.8, groupSize = { 3, 4 }, leashDistance = 45, -- Q1: 드래곤 규칙 해제(1 ~ 2 → 3 ~ 4)
 		windup = { seconds = 1.3, poses = { Arm_L = { rx = 150 }, Arm_R = { rx = 150 }, RootJoint = { rx = -8 } } } },
-	snow_rabbit = { tier = 6, displayName = "눈토끼", body = C(245, 247, 252), head = C(250, 250, 255), accent = C(245, 180, 195),
+	snow_rabbit = { tier = 6, displayName = "눈토끼", retiredBy = "blue_dragon", -- Q1: retired → 푸른 드래곤으로 교체(스폰 풀에서만 빠짐) body = C(245, 247, 252), head = C(250, 250, 255), accent = C(245, 180, 195),
 		aggro = "pack", detectRadius = 0, alertMotion = "turn", approach = "hop", speed = 1.3, groupSize = { 4, 5 }, leashDistance = 45, linkAggro = true,
 		windup = { seconds = 0.6, poses = { Ear_L = { rx = -45 }, Ear_R = { rx = -45 }, RootJoint = { y = -0.15 } } } },
+	-- Q1 푸른 드래곤(T6 · 가장 위험한 잡몹 · 무리 1 ~ 2): 얼음 청색 본체 + 밝은 하늘색 배(head 색 = 배 · 턱) + 얼음 결정 강조(accent)
+	blue_dragon = { tier = 6, displayName = "푸른 드래곤", body = C(70, 130, 205), head = C(175, 225, 250), accent = C(200, 240, 255),
+		aggro = "aggressive", detectRadius = 16, alertMotion = "roar", alertHoldSeconds = 0.8, approach = "charge", speed = 0.85, groupSize = { 1, 2 }, leashDistance = 50, linkAggro = false,
+		chaseCapped = true, attackRange = 12, chaseStop = 7,
+		alertPose = { poses = { Neck1 = { rx = 20 }, Neck = { rx = 15 }, Jaw = { rx = -30 }, Wing_L = { rz = -25 }, Wing_R = { rz = 25 } } }, -- 포효(경계 - alertHoldSeconds 동안 · 클라 MonsterRigAnimator)
+		hitbox = { size = Vector3.new(3.4, 5.0, 6.4), center = Vector3.new(0, 1.6, -0.8) }, -- 몸 단위(× sizeScale) - 몸통 + 목 + 머리(날개 · 꼬리 끝 제외)
+		attacks = {
+			{ id = "frostBreath", shape = "cone", range = 14, halfAngle = 35, damage = 2.2, recover = 0.6, cooldown = 0.8,
+				windup = { seconds = 0.8, poses = { Neck1 = { rx = 25 }, Neck = { rx = 10 }, Jaw = { rx = -35 } } } }, -- 목 뒤로 젖힘 + 입 벌림 + 바닥 서리 궤적(클라)
+			{ id = "tailSweep", shape = "rearArc", range = 12, prefer = "behind", damage = 1.9, recover = 0.5, cooldown = 0.8,
+				windup = { seconds = 0.6, poses = { Tail1 = { rx = -35 }, Tail2 = { rx = -20 }, Tail3 = { rx = -15 } } } }, -- 꼬리 들어 올림
+			{ id = "wingGust", shape = "circle", range = 10, damage = 1.0, recover = 0.6, cooldown = 0.8,
+				launch = { heightStuds = 2, distanceStuds = 16 }, -- 넉백만(낮게 · 멀리 - 낙하는 FallServer 규칙 그대로)
+				windup = { seconds = 0.7, poses = { Wing_L = { rz = -55 }, Wing_R = { rz = 55 }, RootJoint = { y = 0.3 } } } }, -- 날개 펼침
+		} },
 }
 
 -- 옛 종(티어 대표 이름 - 22-2). 스폰 풀에서 빠졌다(retired - 데이터 · 이름은 티어 표에 남는다: MonsterData.tierN.retiredName).

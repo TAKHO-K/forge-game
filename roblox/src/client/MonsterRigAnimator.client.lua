@@ -33,6 +33,15 @@ local function watch(model)
 		local id = model:GetAttribute("MonsterRig")
 		local def = id and MonsterSpeciesData.species[id]
 		local windup = def and def.windup
+		local attackTag = model:GetAttribute("MobAttack") -- Q1 모양 공격(드래곤): "id|전조 초|시각" - 그 공격의 전조 포즈
+		if def and def.attacks and attackTag then
+			local attackId = string.match(attackTag, "^([^|]+)")
+			for _, attack in ipairs(def.attacks) do
+				if attack.id == attackId then
+					windup = attack.windup
+				end
+			end
+		end
 		if not windup then
 			return
 		end
@@ -49,10 +58,39 @@ local function watch(model)
 	end)
 end
 
+-- Q1 포효(경계 모션): 서버 MobAlert("roar|시각") → 종 alertPose를 alertHoldSeconds 동안(전조와 같은 틀 - 끝나면 되돌림)
+local function watchAlert(model)
+	model:GetAttributeChangedSignal("MobAlert"):Connect(function()
+		local id = model:GetAttribute("MonsterRig")
+		local def = id and MonsterSpeciesData.species[id]
+		if not (def and def.alertPose and model:GetAttribute("MobAlert")) or active[model] then
+			return
+		end
+		local camera = workspace.CurrentCamera
+		if camera and model.PrimaryPart and (model.PrimaryPart.Position - camera.CFrame.Position).Magnitude > LOD_STUDS then
+			return
+		end
+		local seconds = def.alertHoldSeconds or 0.8
+		local st = { started = os.clock(), seconds = seconds * 0.4, motors = motorsFor(model, def.alertPose.poses) }
+		active[model] = st
+		task.delay(seconds, function()
+			if active[model] == st then
+				st.releaseAt = os.clock()
+			end
+		end)
+	end)
+end
+
 for _, model in ipairs(CollectionService:GetTagged("Monster")) do
 	watch(model)
+	watchAlert(model)
 end
-CollectionService:GetInstanceAddedSignal("Monster"):Connect(watch)
+CollectionService:GetInstanceAddedSignal("Monster"):Connect(function(model)
+	watch(model)
+	if model:IsA("Model") then
+		watchAlert(model)
+	end
+end)
 
 RunService.PreSimulation:Connect(function()
 	local now = os.clock()

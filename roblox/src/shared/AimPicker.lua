@@ -32,7 +32,7 @@ function AimPicker.pick(originPosition, aimPoint, rangeStuds, candidates, layerT
 		if root and model.Parent then
 			local offset = root.Position - originPosition
 			local flat = Vector3.new(offset.X, 0, offset.Z)
-			local dist = flat.Magnitude
+			local dist = math.max(flat.Magnitude - (model:GetAttribute("BodyRadius") or 0), 0) -- Q1: 큰 몸(드래곤)은 몸 반경만큼 가깝게 친다(루트가 몸 한가운데)
 			if dist <= rangeStuds and Reach.sameLayer(root.Position, originPosition, layerTolerance) then
 				if dist < nearestDist then
 					nearest, nearestDist = model, dist

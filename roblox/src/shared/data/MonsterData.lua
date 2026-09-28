@@ -228,6 +228,8 @@ for _, id in ipairs(speciesIds) do
 	end
 	data.species = def
 	data.moveSpeedStuds = tierData.moveSpeedStuds * (def.speed or 1)
+	data.attackRangeStuds = def.attackRange or tierData.attackRangeStuds -- Q1: 모양 공격 종(드래곤)은 전조를 거는 거리가 길다
+	data.chaseStopDistanceStuds = def.chaseStop or tierData.chaseStopDistanceStuds -- Q1: 큰 몸(드래곤)은 더 멀리서 멈춘다
 	MonsterData.species[id] = data
 	tierNames[def.tier] = tierNames[def.tier] or {}
 	table.insert(tierNames[def.tier], def.displayName)

@@ -45,13 +45,13 @@ function T.leashOf(data)
 	return s and s.leashDistance or WorldConfig.aggro.leashRangeStuds
 end
 
--- 이 사람을 지금 쫓는 추적형 수
+-- 이 사람을 지금 쫓는 추적형 수(+ chaseCapped 종)
 function T.chaseCount(player)
 	local n = 0
 	for _, model in ipairs(MonsterState.getAllModels()) do
 		if MonsterState.getAiTarget(model) == player then
 			local s = T.speciesOf(MonsterState.getData(model))
-			if s and s.aggro == "chase" then
+			if s and (s.aggro == "chase" or s.chaseCapped) then -- Q1: 드래곤(chaseCapped)도 같은 상한에 센다
 				n += 1
 			end
 		end
@@ -71,7 +71,7 @@ function T.acquire(model, data, position, findNearest)
 	end
 	if s.aggro == "aggressive" or s.aggro == "ambush" or s.aggro == "chase" then
 		local filter = notSafe
-		if s.aggro == "chase" then
+		if s.aggro == "chase" or s.chaseCapped then -- Q1: 추적 동시 상한 규칙(선공 드래곤 포함)
 			filter = function(root, player)
 				return notSafe(root) and T.chaseCount(player) < MonsterSpeciesData.chaseCapPerPlayer
 			end

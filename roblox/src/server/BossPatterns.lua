@@ -211,6 +211,7 @@ local function sendTo(player, kind, payload)
 		patternEvent:FireClient(player, kind, payload)
 	end
 end
+BossPatterns.sendTo = sendTo -- Q1: 잡몹 모양 공격 넉백도 같은 "launch" 연출 경로(client BossStormView.launch)
 
 -- 아레나 kit의 논리 구역(tag가 붙은 정적 파트 - 심해 군주의 단·폭풍 군주의 피뢰침). kit은 보스전 내내 그대로라 한 번만 만든다.
 local function kitZones(model, st, data, tag)

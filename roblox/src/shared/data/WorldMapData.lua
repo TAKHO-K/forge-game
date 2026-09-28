@@ -283,7 +283,7 @@ return {
 			eggs = { { id = "t5_windtop", feature = 1, at = "top" }, { id = "t5_plateau", feature = 3, at = "top" }, { id = "t5_cave", feature = 4, at = "inside" } },
 		},
 		{
-			key = "tier6", tierIndex = 6, hunt = { name = "빙하 동굴 사냥터", monsters = { { species = "ice_golem", weight = 0.35 }, { species = "snow_rabbit", weight = 0.65 } } }, bossId = "frost_giant", angleDeg = 210, theme = "빙하 동굴", floorTint = { 158, 162, 168 },
+			key = "tier6", tierIndex = 6, hunt = { name = "빙하 동굴 사냥터", monsters = { { species = "ice_golem", weight = 0.65 }, { species = "blue_dragon", weight = 0.35 } } }, bossId = "frost_giant", angleDeg = 210, theme = "빙하 동굴", floorTint = { 158, 162, 168 },
 			landmark = { kind = "iceWall", r = 2400, count = 3, radius = 80, height = 120 },
 			features = {
 				{ kind = "cliff", r = 1100, lat = -450, w = 160, d = 70, h = 120, explore = "빙벽" },
@@ -391,6 +391,7 @@ return {
 		huntRange = { r = 1700, lat = 0, radius = 620 }, -- 구역 원(1700 · 850) 안 · 캠프(900)와 관문(2400)은 원 밖
 		-- M1-4 무리 스폰(사용자): 지점 34 → 80(2.35배 · 간격 120 → 72) · 다가가면 지점 둘레(group.radius)에 무리 3 ~ 5마리(구역 표 groupSizes - T1 = 3 위주) · 무리 안 종류 = 구역 풀(hunt.monsters - 성향 조합은 M2)
 		pointSpacing = 72, pointsPerRange = 80, edgeMargin = 30, seed = 20260926,
+		pointsByZone = { tier6 = 88 }, -- Q1: T6 = 푸른 드래곤 무리 1 ~ 2(평균 무리 2.8) → 지점 ×1.1(같은 난수 순서라 앞 80곳은 그대로 · 뒤에 8곳 추가) + 드랍 개수 보정(DropTableData.fieldDropCountAdjust)
 		avoid = { feature = 24, nest = 16, camp = 110, gate = 110, cactus = 20, prop = 6 }, -- prop = 채우기 소품 발자국 + 여유(M1-4)
 		-- M1-3 지형: 스폰 지점은 걷는 땅만 - 가운데 · 슬롯 · 둘레(ringRadius · ringSamples) 높이 차 ≤ maxRelief · 평지 위 ≤ maxAbove · 물 0(물 · 선인장 · 절벽 위 스폰 금지)
 		terrain = { maxRelief = 6, maxAbove = 30, ringRadius = 30, ringSamples = 8 },

@@ -2,7 +2,8 @@
 --   초안 = 단순 도형(block · ball · wedge) · 몸체당 파트 ≤ 10 · SmoothPlastic 단색 · 외형 파트는 CanCollide · CanQuery · CanTouch 전부 끔(판정은 MonsterSpawner의 투명 Hitbox · 루트 - 크기 = 옛 몸통 + 머리 그대로).
 --   카툰 교체 = 같은 이름 파트 자리에 메시를 끼우면 된다(관절 이름 · 계층 · 부모 공간 자리가 약속 - docs/design/monster-body-draft.md).
 -- 표준 부위 이름(필요한 것만 쓴다): Body(몸통 - 필수 · 색 틴트 · 피격 번쩍임) · Head(머리 - 필수 · 이름표 · 피해 숫자 기준) · Eyes · Leg_FL/FR/BL/BR(네 발) · Leg_L/R(두 발 · 막대 다리) ·
---   Arm_L/R · Fist_L/R · Claw_L/R · Tail1..n · Wing_L/R · Ear_L/R · Horn_L/R · Shell / Shell1..n(등 껍데기 · 수정) · Tentacle1..n · Wool(털 덩어리) · Tusk_L/R · Moss(등 이끼) · Flower.
+--   Arm_L/R · Fist_L/R · Claw_L/R · Tail1..n · Wing_L/R · Ear_L/R · Horn_L/R · Shell / Shell1..n(등 껍데기 · 수정) · Tentacle1..n · Wool(털 덩어리) · Tusk_L/R · Moss(등 이끼) · Flower
+--   · Neck1..n(긴 목 마디 - 관절 이름 = 파트 이름 · Head의 관절 "Neck"과 겹치지 않게 번호를 붙인다) · Jaw(아래턱 - 입 벌림). Q1 푸른 드래곤만 파트 ≤ 14(maxParts).
 -- 관절 이름: Body = "RootJoint" · Head = "Neck" · 나머지 = 부위 이름과 같다(모션 · 전조 포즈는 관절 이름으로만 가리킨다).
 -- 단위: sizeScale 1 기준 · 루트 = (0, 0, 0) · 발바닥 = y −1.5 · 앞 = −Z. 색 역할 = BossRigSpec.colorOf(body · head · dark · accent · eye · mouth).
 local V = Vector3.new
@@ -157,9 +158,28 @@ rigs.snow_rabbit = { joints = {
 	J("Tail", "Body", V(0.4, 0.4, 0.4), "head", V(0, 0.1, 0.75), { shape = "ball" }),
 } }
 
+-- Q1 T6 푸른 드래곤(14파트 - 드래곤만 ≤ 14): 몸통 · 긴 목(Neck1) · 머리 · 턱 · 눈 · 날개 · 꼬리 3마디 · 네 발. 몸 단위 × sizeScale(T6 1.672) → 높이 11.4 · 길이 23.9 · 날개 폭 17.7 stud(FK 실측)
+--   (플레이어 키 5의 약 2.2배 · 4.6배 - 아트 자료 docs/art/ref/19_monsters_T6_blue_dragon.md). 판정 = 종 hitbox(몸통 + 목 + 머리 상자).
+rigs.blue_dragon = { maxParts = 14, joints = {
+	J("Body", R, V(3.0, 2.2, 4.6), "body", V(0, 0.9, 0)),
+	J("Leg_FL", "Body", V(0.8, 1.4, 0.8), "body", V(-1.1, -1.0, -1.5), { pivot = V(0, 0.7, 0) }),
+	J("Leg_FR", "Body", V(0.8, 1.4, 0.8), "body", V(1.1, -1.0, -1.5), { pivot = V(0, 0.7, 0) }),
+	J("Leg_BL", "Body", V(0.8, 1.4, 0.8), "body", V(-1.1, -1.0, 1.5), { pivot = V(0, 0.7, 0) }),
+	J("Leg_BR", "Body", V(0.8, 1.4, 0.8), "body", V(1.1, -1.0, 1.5), { pivot = V(0, 0.7, 0) }),
+	J("Neck1", "Body", V(1.0, 2.8, 1.0), "body", V(0, 0.9, -2.0), { pivot = V(0, -1.4, 0), rot = V(-20, 0, 0) }),
+	J("Head", "Neck1", V(1.6, 1.2, 2.2), "body", V(0, 1.4, 0), { pivot = V(0, -0.3, 0.6), rot = V(20, 0, 0) }),
+	J("Jaw", "Head", V(1.3, 0.3, 1.6), "head", V(0, -0.6, 0.3), { pivot = V(0, 0.15, 0.8) }),
+	J("Eyes", "Head", V(1.2, 0.2, 0.1), "accent", V(0, 0.2, -1.1), { material = "Neon" }),
+	J("Wing_L", "Body", V(4.0, 0.2, 2.6), "body", V(-1.5, 0.8, -0.4), { pivot = V(2.0, 0, 0), rot = V(0, 0, -20) }),
+	J("Wing_R", "Body", V(4.0, 0.2, 2.6), "body", V(1.5, 0.8, -0.4), { pivot = V(-2.0, 0, 0), rot = V(0, 0, 20) }),
+	J("Tail1", "Body", V(1.0, 0.9, 2.6), "body", V(0, 0.3, 2.3), { pivot = V(0, 0, -1.3), rot = V(10, 0, 0) }),
+	J("Tail2", "Tail1", V(0.75, 0.7, 2.4), "body", V(0, 0, 1.3), { pivot = V(0, 0, -1.2) }),
+	J("Tail3", "Tail2", V(0.5, 0.5, 2.2), "accent", V(0, 0, 1.2), { pivot = V(0, 0, -1.1) }),
+} }
+
 for _, rig in pairs(rigs) do
 	rig.attach = rig.attach or {}
-	assert(#rig.joints <= 10, "M2 몸체 초안은 파트 10개 이하")
+	assert(#rig.joints <= (rig.maxParts or 10), "M2 몸체 초안은 파트 10개 이하(드래곤 14 - maxParts)")
 end
 
 return { rigs = rigs, maxParts = 10 }

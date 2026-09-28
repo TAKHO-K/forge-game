@@ -1423,7 +1423,9 @@ local function handleCommand(player, args)
 		local SpeciesData = require(ReplicatedStorage.Shared.data.MonsterSpeciesData)
 		local ids = {}
 		for id, def in pairs(SpeciesData.species) do
-			table.insert(ids, { id = id, tier = def.tier })
+			if not def.retiredBy then -- Q1: 은퇴 종(눈토끼 → 푸른 드래곤)은 줄 세우기에서 뺀다(/gg m2 spawn snow_rabbit은 그대로 된다)
+				table.insert(ids, { id = id, tier = def.tier })
+			end
 		end
 		table.sort(ids, function(a, b)
 			if a.tier ~= b.tier then
@@ -1436,8 +1438,16 @@ local function handleCommand(player, args)
 		if not root then
 			reply(player, "캐릭터 없음")
 		elseif args[2] == "lineup" then
+			local widths, total = {}, 0 -- Q1: 몸 폭만큼 띄운다(드래곤 날개 폭 약 18)
 			for i, e in ipairs(ids) do
-				local position = root.Position + look * 16 + right * ((i - 6.5) * 6)
+				widths[i] = e.id == "blue_dragon" and 22 or 7
+				total += widths[i]
+			end
+			local cursor = -total / 2
+			for i, e in ipairs(ids) do
+				cursor += widths[i] / 2
+				local position = root.Position + look * (e.id == "blue_dragon" and 26 or 16) + right * cursor
+				cursor += widths[i] / 2
 				local mob = MonsterSpawner.spawn(MonsterData.species[e.id], position, nil, {})
 				mob:SetAttribute("DevFrozen", true)
 				mob:SetAttribute("C3Immortal", true)
@@ -1458,12 +1468,21 @@ local function handleCommand(player, args)
 			mob:SetAttribute("DevFrozen", true)
 			mob:SetAttribute("C3Immortal", true)
 			mob:PivotTo(CFrame.lookAt(mob.PrimaryPart.Position, root.Position * Vector3.new(1, 0, 1) + Vector3.new(0, mob.PrimaryPart.Position.Y, 0)))
-			local w = MonsterData.species[args[3]].species.windup
+			local def = MonsterData.species[args[3]].species
+			local w = def.windup
 			task.spawn(function()
-				for _ = 1, 6 do
+				for n = 1, 6 do
+					local attack = def.attacks and def.attacks[(n - 1) % #def.attacks + 1] -- Q1 모양 공격 종: 공격마다 전조를 차례로(클라 MobAttackView 예고 포함)
+					if attack then
+						w = attack.windup
+						mob:SetAttribute("MobAttack", ("%s|%.2f|%.3f"):format(attack.id, w.seconds, os.clock()))
+					end
 					mob:SetAttribute("MobWindup", w and w.seconds or 1)
 					task.wait((w and w.seconds or 1) + 0.1)
 					mob:SetAttribute("MobWindup", nil)
+					if attack then
+						mob:SetAttribute("MobStrike", ("%s|%.3f"):format(attack.id, os.clock()))
+					end
 					task.wait(0.8)
 				end
 			end)

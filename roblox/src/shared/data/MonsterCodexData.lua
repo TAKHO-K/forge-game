@@ -30,6 +30,7 @@ local HINTS = {
 	cloud_sheep = { hint = "털이 어두워지면 주변에 낙뢰가 떨어져요.", where = "폭풍 첨탑" },
 	ice_golem = { hint = "느리지만 한 방이 커요. 두 주먹을 들면 멀리 떨어지세요.", where = "빙하 동굴" },
 	snow_rabbit = { hint = "한 마리를 때리면 무리 전체가 달려들어요.", where = "빙하 동굴" },
+	blue_dragon = { hint = "목을 젖히면 앞으로 서리 숨결, 꼬리를 들면 뒤를 쓸어요. 날개를 펴면 밀려나요.", where = "빙하 동굴" }, -- Q1
 }
 
 C.entries = {}

@@ -17,9 +17,10 @@
 | 번개 임프(T5) | Body · Head · Eyes · Horn_L/R · Arm_L/R · Leg_L/R · Tail (10) | - |
 | 구름 양(T5) | Body(공) · Wool(공) · Head · Eyes · Leg ×4 (8) | - |
 | 얼음 골렘(T6) | Body · Head · Eyes · Arm_L/R · Fist_L/R · Leg_L/R (9) | 1.3초 두 주먹 머리 위 |
-| 눈토끼(T6) | Body(공) · Head(공) · Eyes · Ear_L/R · Tail(공) (6) | - |
+| 눈토끼(T6) | Body(공) · Head(공) · Eyes · Ear_L/R · Tail(공) (6) | **retired → 푸른 드래곤으로 교체**(QUEUE-10h Q1 · 데이터 · 참조 이미지 유지) |
+| 푸른 드래곤(T6) `blue_dragon` | Body · Neck1 · Head · Jaw · Eyes · Wing_L/R · Tail1~3 · Leg_FL/FR/BL/BR (14 - 드래곤만 ≤ 14) | 포효 0.8(경계) · 숨결 0.8 · 꼬리 0.6 · 돌풍 0.7(모양 공격 `attacks`) - 아트 기준 `docs/art/ref/19_monsters_T6_blue_dragon.md` |
 
-표준에 새로 넣은 부위 이름: Eye_L/R · Tusk_L/R · Moss · Shell1..n · Wool · Flower · Fist_L/R · Horn_L/R · Tentacle1..n(BossRigSpec에 없던 것).
+표준에 새로 넣은 부위 이름: Eye_L/R · Tusk_L/R · Moss · Shell1..n · Wool · Flower · Fist_L/R · Horn_L/R · Tentacle1..n(BossRigSpec에 없던 것) · Q1: Neck1..n(긴 목 마디 - Head 관절 `Neck`과 안 겹치게 번호) · Jaw(아래턱 - 관절 이름이 BossRigSpec 서리 거인의 Jaw와 같다).
 
 ## 카툰 교체 방법
 1. 카툰 메시(MeshPart)를 부위마다 만들고 이름을 이 표의 파트 이름과 같게 둔다(Body · Head는 필수).
