@@ -81,7 +81,9 @@ function SkillStats.cooldown(player, classId, slot, def)
 	if def.shape == "dash" then
 		cooldownSeconds *= require(script.Parent.TranscendentService).dashCooldownScale(player) -- C5-7b 광폭: 돌진형 스킬 쿨 × 0.8(전투 중)
 	end
-	return cooldownSeconds * SkillStats.variantMods(player, classId, slot).cooldown -- Q9 변형 쿨다운
+	-- QUEUE-10h Q10 K5 스킬 가속(옵션 축 "skillHaste" - 점수): 쿨 = 기본 × 100 ÷ (100 + 가속). 궁극기(T)는 별도("ultCharge" - UltimateService 충전). 지금 옵션 풀에는 없다(0 - 결정 필요).
+	local haste = math.max(0, PlayerProfile.getOptionBonus(player, "skillHaste"))
+	return cooldownSeconds * SkillStats.variantMods(player, classId, slot).cooldown * 100 / (100 + haste) -- Q9 변형 쿨다운 · Q10 가속
 end
 
 -- 속사(활 Q) 공속 배율 = min(상한, (기본 + 직업 치명 확률 × 계수) × (1 + 옵션)) - 옵션은 상한으로 자르기 전에 곱한다(26-2).

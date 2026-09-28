@@ -55,7 +55,8 @@ function U.add(player, amount)
 		return
 	end
 	local scale = isBossFight(player) and 1 or UltimateData.huntChargeScale
-	U.set(player, U.get(player) + amount * scale)
+	local chargeBonus = typeof(player) == "Instance" and math.max(0, require(script.Parent.PlayerProfile).getOptionBonus(player, "ultCharge")) or 0 -- QUEUE-10h Q10 K5: "궁극기 충전 속도" 옵션 축(스킬 가속과 별도 · 지금 풀에 없음 = 0)
+	U.set(player, U.get(player) + amount * scale * (1 + chargeBonus))
 end
 
 -- 준 피해: units = 타 단위(atk로 나눈 계수) · dealt = 실제 피해 · distance = 시전자 ↔ 대상(활)

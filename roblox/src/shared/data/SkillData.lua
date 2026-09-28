@@ -35,8 +35,9 @@ local SkillData = {
 			-- 여러 몬스터를 꿰뚫을 여지가 있다 - 18stud로 잡는다. 0.25초(72stud/s)는 평타
 			-- 쿨다운(0.28초/atkSpeed)보다 짧게 느껴지도록 잡은 값 - 정확한 체감은 실기로
 			-- 맞춘다(지시 [4], SkillServer.server.lua/WeaponVisual 쪽 참고).
-			rangeStuds = 18,
-			durationSeconds = 0.25,
+			-- QUEUE-10h Q10 K5: 18 → 24(MV1에서 대시가 22가 돼 돌진이 대시보다 짧았다 - 돌진 ≥ 대시) · 시간 0.25 → 0.33(초속 약 72 그대로).
+			rangeStuds = 24,
+			durationSeconds = 0.33,
 			-- 경로 좌우로 몬스터를 인식하는 폭(선분 판정의 반경) - 칼날 리치를 감안한 값,
 			-- 몬스터 판정 파트가 대략 반지름 2stud대라 5stud면 스치는 정도도 맞는다.
 			hitRadiusStuds = 5,
