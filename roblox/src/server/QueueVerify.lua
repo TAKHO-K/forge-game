@@ -123,6 +123,30 @@ function V.runPure()
 			breath.windup.seconds == 0.8 and tail.windup.seconds == 0.6 and gust.windup.seconds == 0.7)
 	end)
 
+	section("Q3 보스 드랍표", function()
+		local BossData = require(ReplicatedStorage.Shared.data.BossData)
+		local DropTable = require(ReplicatedStorage.Shared.DropTable)
+		local raidSum = 0
+		for _, w in pairs(DropTableData.raidWeights) do
+			raidSum += w
+		end
+		check(("토벌 정수 가중치 합 %d = %d"):format(raidSum, DropTableData.fieldWeightDenominator), raidSum == DropTableData.fieldWeightDenominator)
+		check("보상 표시 = 굴림 표(첫 클리어 · 토벌 같은 표)", DropTable.bossFirstClearGradeTable(0) == DropTableData.bossGrades.firstClear and DropTable.bossRetryGradeTable() == DropTableData.bossGrades.raid)
+		local units, gold = {}, {}
+		for _, id in ipairs(BossData.pools[1].bossIds) do
+			local b = BossData.bosses[id]
+			table.insert(units, ("%s %.1f"):format(id, b.rewardKillUnits or b.hpMultiplier))
+			gold[b.goldMultiplier or 0] = true
+		end
+		local sameUnits = true
+		local first = BossData.bosses[BossData.pools[1].bossIds[1]]
+		for _, id in ipairs(BossData.pools[1].bossIds) do
+			local b = BossData.bosses[id]
+			sameUnits = sameUnits and math.abs((b.rewardKillUnits or b.hpMultiplier) - (first.rewardKillUnits or first.hpMultiplier)) < 1e-9
+		end
+		check(("6종 강화석 단위 같음(%s)"):format(table.concat(units, " · ")), sameUnits)
+	end)
+
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
 end

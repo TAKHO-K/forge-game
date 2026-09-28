@@ -12,10 +12,12 @@
 
 | Q1 푸른 드래곤 | bbc2c4a | 종 · 리그 14 · 공격 3종(모양 공격 조각) · 포효 · 추적 상한 · 스폰 T6 88 · 아트 자료 · QueueVerify 29/29 로컬 |
 
-| Q2 일반 몹 드랍표 | (이 커밋) | `docs/design/field-drop-tables.md` · 판매가 0 버그 수정(옛 칸 없는 조합) · 공정성 로그 새 식 · 시간당 위력 0.985 ~ 1.000 |
+| Q2 일반 몹 드랍표 | 2572e7b | `docs/design/field-drop-tables.md` · 판매가 0 버그 수정(옛 칸 없는 조합) · 공정성 로그 새 식 · 시간당 위력 0.985 ~ 1.000 |
+
+| Q3 보스 드랍표 | (이 커밋) | `docs/design/boss-drop-tables.md` · 수정 여왕 강화석 60% → 같은 단위(rewardKillUnits) · QueueVerify 32/32 |
 
 ## 지금
-- Q3 보스별 드랍표 점검(`docs/design/boss-drop-tables.md`)
+- Q4 장비 점검(`docs/design/equipment-audit.md`) + 판매가 스위치
 
 ## 다음 할 일
 - Q1 → Q2 → Q3 → Q4 → Play A

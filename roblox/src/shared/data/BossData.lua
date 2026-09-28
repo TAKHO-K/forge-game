@@ -926,6 +926,7 @@ local SPECIES = {
 		-- BR1-2: 수정 부수기 동안 보호막(딜 0 - 솔로 약 45초)이 있어 HP를 60초분 × 0.7로(난이도 모형 - 처치 시간 목표 45 ~ 90초)
 		-- BR1-3: 수정 오르골(보여 주기 + 종 치기 동안 보스를 못 때린다 - 옛 분열보다 길다) → 0.7 → 0.6(모형 솔로 처치 107초 → 목표 안)
 		hpMultiplier = MECHANICS.sim.referenceKillSeconds / BalanceAnchorConfig.killTargetSeconds * 0.6,
+		rewardKillUnits = MECHANICS.sim.referenceKillSeconds / BalanceAnchorConfig.killTargetSeconds, -- Q3: 강화석 단위 = 60초분(다른 5종과 같다) - HP ×0.6은 보호막 시간 보정이라 전투 시간은 같다(옛: 강화석 60%)
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
 		skillOrder = { "burst", "drop", "energyBeam", "orgel", "swipe", "grab", "spikes", "shards", "mirrorDash", "mirror" },

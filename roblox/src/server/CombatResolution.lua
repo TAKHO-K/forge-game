@@ -167,7 +167,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	-- 견습 중에는 recipientStage(견습 단계의 스테이지)가 minStage 미만이라 자연히 안 나온다 - 별도 분기 없음.
 	local killUnits
 	if isBoss then
-		killUnits = BossData.bosses[monsterData.id].hpMultiplier
+		killUnits = BossData.bosses[monsterData.id].rewardKillUnits or BossData.bosses[monsterData.id].hpMultiplier -- Q3: 보스 보상 단위(미리보기 BossRewardPreview와 같은 식)
 	elseif isSparkle then
 		killUnits = MonsterState.getKillUnits(target) + RareMonsterConfig.materialBonusKillEquivalent -- D1-2: 재료는 옛 10마리분(골드 보너스와 분리)
 	else

@@ -60,7 +60,8 @@ end
 -- 경험치 배수 = PlayerProfile.combineExpMultiplier(옵션 · 파티) - getExpGainMultiplier와 같은 값이지만 파티 칩 표시(부수 효과)는 부르지 않는다.
 function BossRewardPreview.stonesFor(player, stage, bossId)
 	local expMultiplier = PlayerProfile.combineExpMultiplier(PlayerProfile.getOptionBonus(player, "expGain"), PartyState.getExpBonusFor(player))
-	local killUnits = BossData.bosses[bossId].hpMultiplier
+	local boss = BossData.bosses[bossId]
+	local killUnits = boss.rewardKillUnits or boss.hpMultiplier -- Q3: 보스 보상 단위(지급 CombatResolution과 같은 식)
 	local stones = {}
 	for _, materialId in ipairs(EnhanceMaterialData.order) do
 		if stage >= EnhanceMaterialData.materials[materialId].minStage then
