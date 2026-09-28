@@ -68,7 +68,11 @@ local DropTableData = {
 	bossGrades = {
 		-- C5-7 초월(TranscendentData.drop): 첫 클리어 0.001% · 토벌 0.0002% - 영웅 몫에서 같은 양을 뺀다(합 1 · 끝자리 맞추기 G1-1(가)).
 		firstClear = { epic = 0.62 - 0.00001, legendary = 0.326, relic = 0.05, ancient = 0.0039, primordial = 0.0001, transcendent = 0.00001 },
-		raid = { epic = 0.78 - 0.000002, legendary = 0.20948, relic = 0.01, ancient = 0.0005, primordial = 0.00002, transcendent = 0.000002 },
+		raid = nil, -- 묶음 F2: 아래 raidWeights(정수 가중치 · 합 검사)로 만든다
+	},
+	-- 묶음 F2(BR2 데이터 정리 - 추천값): 토벌 = 태초 0.002 · 고대 0.048 · 유물 0.95 · 전설 21 · 영웅 78%(초월 0.0002% = 영웅 몫에서) - 분모 fieldWeightDenominator.
+	--   옛 값: 전설 20.948 · 유물 1 · 고대 0.05 · 태초 0.002 · 영웅 78 − 초월. 보상 목록(스테이지 선택 띠 · 확률 공개)은 이 표를 그대로 읽는다(DropTable.bossRetryGradeTable).
+	raidWeights = { primordial = 200, ancient = 4800, relic = 95000, legendary = 2100000, epic = 7799980, transcendent = 20,
 	},
 
 	primordial = {
@@ -102,6 +106,17 @@ for tierIndex, band in ipairs(DropTableData.fieldBandByTier) do
 	end
 	assert(sum == DropTableData.fieldWeightDenominator, ("잡몹 드랍 가중치 합 %d ≠ %d (구간 %d)"):format(sum, DropTableData.fieldWeightDenominator, band))
 	DropTableData.armorGradeByTier[tierIndex] = row
+end
+
+do -- 토벌 표(정수 가중치 → 확률 · 합 검사)
+	local sum, row = 0, {}
+	for gradeId, w in pairs(DropTableData.raidWeights) do
+		assert(w == math.floor(w) and w >= 0, "드랍 가중치는 0 이상 정수")
+		sum += w
+		row[gradeId] = w / DropTableData.fieldWeightDenominator
+	end
+	assert(sum == DropTableData.fieldWeightDenominator, ("토벌 드랍 가중치 합 %d ≠ %d"):format(sum, DropTableData.fieldWeightDenominator))
+	DropTableData.bossGrades.raid = row
 end
 
 return DropTableData
