@@ -520,11 +520,13 @@ end
 
 local function loadoutFor(state)
 	-- W3b 파트 0: 장비 옵션(영웅 이상 1개 - Option.optionSlotsFor)을 위력 환산 roll로 붙인다(state.itemOptionRoll - runProgress가 옵션 굴림 단계로 정한다 · nil = 옛 모형 = 장비 옵션 안 셈).
-	local gear = state.gear
-	if state.itemOptionRoll then
-		gear = {}
-		for part, item in pairs(state.gear) do
-			gear[part] = Option.hasOptionPool(item.grade) and { grade = item.grade, itemLevel = item.itemLevel, option = { id = "attackPercent", roll = state.itemOptionRoll, roll2 = state.itemOptionRoll } } or item
+	-- 리뷰 3: nil이면 옵션을 벗긴다(견습 지급 장비의 시드 없는 무작위 옵션이 옛 모형 비교에 섞이지 않게)
+	local gear = {}
+	for part, item in pairs(state.gear) do
+		if state.itemOptionRoll and Option.hasOptionPool(item.grade) then
+			gear[part] = { grade = item.grade, itemLevel = item.itemLevel, option = { id = "attackPercent", roll = state.itemOptionRoll, roll2 = state.itemOptionRoll } }
+		else
+			gear[part] = { grade = item.grade, itemLevel = item.itemLevel }
 		end
 	end
 	return BalanceSim.buildLoadout({

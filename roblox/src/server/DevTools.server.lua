@@ -1305,10 +1305,13 @@ local function handleCommand(player, args)
 		applyStage(player, stage)
 		task.wait(0.3)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		-- W3b 리뷰 1: 권장 = 대표 × 후반 벽 배수(lateLift) → 대표 = 권장 ÷ 배수. 다섯째 인자 = 권장 대비 비율(벽 확인 - 예 0.9 · 0.97)
 		local rec = CombatFormula.recommendedPower(stage)
+		local ratio = tonumber(args[5])
+		local power = ratio and rec * ratio or rec / CombatFormula.lateLift(stage)
 		local bow = ClassData.classes.bow
 		local critRate = math.min(bow.critRate + PlayerCombat.getLevelCritBonus(stage), 1)
-		local atk = rec / (1 + critRate * (bow.critDmg - 1))
+		local atk = power / (1 + critRate * (bow.critDmg - 1))
 		local speedBonus = stage >= 200 and 1.5 or 0
 		local interval, scale = PlayerCombat.getAttackTempo("bow", speedBonus, 1)
 		local rng = Random.new(stage)
@@ -1326,7 +1329,7 @@ local function handleCommand(player, args)
 					if rng:NextNumber() < critRate then
 						damage *= bow.critDmg
 					end
-					player:SetAttribute("CombatPower", rec) -- 대표 = 권장(동기화가 1초마다 덮는다 - 매 타 직전에)
+					player:SetAttribute("CombatPower", power) -- 대표(동기화가 1초마다 덮는다 - 매 타 직전에)
 					dead = MonsterState.applyDamage(mob, damage, stage, player)
 				end
 				MonsterSpawner.despawn(mob)
@@ -1343,7 +1346,7 @@ local function handleCommand(player, args)
 			local classAtk = atk / bow.atk * class.atk
 			table.insert(skills, ("%s(%.1f) %.2f방 · 치명 %.2f방"):format(def.name, def.coefficient, t1Hp / (def.coefficient * classAtk), t1Hp / (def.coefficient * classAtk * class.critDmg)))
 		end
-		print(("C3HITS|%d|간격 %.2f · 한 타 ×%.2f · 치명 %.0f%%|%s|%s"):format(stage, interval, scale, critRate * 100, table.concat(rows, " · "), table.concat(skills, " · ")))
+		print(("C3HITS|%d|비율 %.3f · 피해 배율 ×%.3f · 간격 %.2f · 한 타 ×%.2f · 치명 %.0f%%|%s|%s"):format(stage, power / rec, CombatFormula.dealMultiplier(power, stage), interval, scale, critRate * 100, table.concat(rows, " · "), table.concat(skills, " · ")))
 		reply(player, ("스테이지 %d: %s"):format(stage, table.concat(rows, " · ")))
 	elseif sub == "c3" and args[2] == "clear" then
 		for _, model in ipairs(MonsterState.getAllModels()) do

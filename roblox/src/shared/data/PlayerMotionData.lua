@@ -270,8 +270,9 @@ P.reach = {
 local S = {}
 -- 대검 Q 관통돌진: 오른 허리 뒤로 칼을 당겨 몸을 감았다가(전조) → 깊은 런지로 앞으로 곧게 찌르며 미끄러진다(대시 0.25초 = 동작) → 무게에 끌려 한 발 더 → 중단
 local GS_COIL = with(body(0.4, -12, -28, 0), { Waist = { 0, -45, 0 }, Neck = { 0, 35, 0 }, RightShoulder = { 25, 0, 25 }, RightElbow = { 95, 0, 0 }, RightWrist = { -110, 0, 0 } }) -- θ 10(허리 옆 뒤)
-local GS_THRUST = with(body(0.55, 32, 4, 16), { Waist = { -18, 5, 0 }, Neck = { 12, -5, 0 }, RightShoulder = { 88, 0, 5 }, RightElbow = { 5, 0, 0 }, RightWrist = { -93, 0, 0 } }) -- θ 0 앞으로 곧게
-local GS_THRUST_END = with(body(0.62, 34, 6, 20), { Waist = { -24, 8, 0 }, Neck = { 16, -6, 0 }, RightShoulder = { 94, 0, 3 }, RightElbow = { 2, 0, 0 }, RightWrist = { -98, 0, 0 } })
+-- Play 1 다듬음: 숙임(루트 + 허리)만큼 칼도 같이 기울어 칼끝이 땅을 찍었다 → 어깨를 숙임만큼 더 들어 칼을 수평으로(θ = 어깨 + 팔꿈치 + 손목 − 숙임) · 무릎 덜 굽힘
+local GS_THRUST = with(body(0.35, 30, 4, 10), { Waist = { -10, 5, 0 }, Neck = { 10, -5, 0 }, RightShoulder = { 115, 0, 5 }, RightElbow = { 5, 0, 0 }, RightWrist = { -93, 0, 0 } }) -- 몸 기준 θ 27 − 숙임 20 ≈ 앞으로 곧게
+local GS_THRUST_END = with(body(0.4, 32, 6, 12), { Waist = { -14, 8, 0 }, Neck = { 12, -6, 0 }, RightShoulder = { 120, 0, 3 }, RightElbow = { 2, 0, 0 }, RightWrist = { -98, 0, 0 } })
 -- 대검 E 회전베기: 왼 허리 장전 → 칼을 오른쪽 옆으로 수평으로 뻗고 낮은 자세로 온몸이 돈다(틱 1초마다 한 바퀴 · 틱 순간 가장 빠름) → 무게에 끌려 멈춤
 local GS_SPIN = with(body(0.34, 0, 0, 4), { Waist = { -6, 0, 0 }, Neck = { 0, 0, 0 }, RightShoulder = { 88, 0, 55 }, RightElbow = { 5, 0, 0 }, RightWrist = { -92, 0, 0 } }) -- θ 0 · 오른쪽 옆
 S.greatsword = {
@@ -281,7 +282,7 @@ S.greatsword = {
 }
 -- 쌍검 Q 그림자분신: 두 칼을 얼굴 앞 X로 모았다가 → 양옆으로 떨쳐 펼치며 반 발 물러선다(분신이 그 자리에)
 local DB_CROSS = db({ { RightShoulder = { 110, 0, -35 }, RightElbow = { 40, 0, 0 }, RightWrist = { -20, 0, 0 } }, { LeftShoulder = { 110, 0, 35 }, LeftElbow = { 40, 0, 0 }, LeftWrist = { -20, 0, 0 } }, body(0.25, 0, 0, 2) }, { Waist = { 4, 0, 0 }, Neck = { -4, 0, 0 } })
-local DB_SPREAD = db({ { RightShoulder = { 75, 0, 85 }, RightElbow = { 5, 0, 0 }, RightWrist = { -80, 0, 0 } }, { LeftShoulder = { 75, 0, -85 }, LeftElbow = { 5, 0, 0 }, LeftWrist = { -80, 0, 0 } }, body(0.35, -16, 0, -4) }, { Waist = { 8, 0, 0 }, Neck = { -6, 0, 0 } })
+local DB_SPREAD = db({ { RightShoulder = { 55, 0, 50 }, RightElbow = { 5, 0, 0 }, RightWrist = { -60, 0, 0 } }, { LeftShoulder = { 55, 0, -50 }, LeftElbow = { 5, 0, 0 }, LeftWrist = { -60, 0, 0 } }, body(0.3, -16, 0, -4) }, { Waist = { 8, 0, 0 }, Neck = { -6, 0, 0 } }) -- 앞 아래 사선으로 떨침(Play 1: 옆 수평은 T자처럼 보였다)
 -- 쌍검 E 난무: 틱(1/6초)마다 한 칼 - 오른칼 · 왼칼을 번갈아 몸을 좌우로 틀며 벤다
 local DB_FLURRY_R = db({ DB_R_LOW, DB_L_HIGH, body(0.32, 16, 12, 6) }, { Waist = { -10, 28, 0 }, Neck = { 0, -20, 0 } })
 local DB_FLURRY_L = db({ DB_L_LOW, DB_R_HIGH, body(0.32, -10, -12, 6) }, { Waist = { -10, -28, 0 }, Neck = { 0, 20, 0 } })
@@ -348,17 +349,19 @@ W.healer.getupRise = with(ST_STANCE, body(0.3, 14, 0, 6))
 W.paladin.getupKneel = PH_STANCE
 
 -- ───────── 대시(무기별 - 온몸 숙여 박차기 · W3a 다리 키) ─────────
-W.greatsword.dash = with(W.greatsword.dash, body(0.45, 28, 0, 22))
-W.dualblade.dash = with(W.dualblade.dash, body(0.4, 30, 0, 26))
-W.bow.dash = with(W.bow.dash, body(0.4, 26, 0, 20))
-W.healer.dash = with(W.healer.dash, body(0.4, 26, 0, 20))
+-- Play 1: 숙임 20 ~ 26°는 무기 끝이 땅에 박혔다 → 12 ~ 14°
+W.greatsword.dash = with(W.greatsword.dash, body(0.3, 26, 0, 12))
+W.dualblade.dash = with(W.dualblade.dash, body(0.28, 28, 0, 14))
+W.bow.dash = with(W.bow.dash, body(0.28, 24, 0, 12))
+W.healer.dash = with(W.healer.dash, body(0.28, 24, 0, 12))
 
 -- ───────── 사망 · 부활(모든 캐릭터 - 서버가 BreakJointsOnDeath 끔 · 쓰러진 뒤 부활까지 그대로 누움) ─────────
 -- 사망 = 비틀(뒤로 젖히며 무릎이 풀림) → 무릎 꿇음 → 앞으로 엎어짐(무기는 손에 쥔 채). 부활 = 한쪽 무릎(무기별 getupKneel)에서 → 일어나 → 전투 자세.
 P.death = { staggerSeconds = 0.22, kneelSeconds = 0.3, fallSeconds = 0.38,
 	stagger = with(body(0.2, -8, 0, -6), { Waist = { 10, 0, 0 }, Neck = { -15, 0, 0 }, RightShoulder = { 10, 0, 15 }, LeftShoulder = { 10, 0, -15 } }),
 	kneel = { Root = { -10, 0, 0, 0, -1.2, 0 }, Waist = { -10, 0, 0 }, Neck = { 20, 0, 0 }, RightShoulder = { 5, 0, 10 }, LeftShoulder = { 5, 0, -10 }, RightHip = { 95, 0, 0 }, RightKnee = { -95, 0, 0 }, LeftHip = { 5, 0, 0 }, LeftKnee = { -105, 0, 0 } },
-	lie = { Root = { -82, 0, 8, 0, -2.3, -0.4 }, Waist = { 5, 0, 0 }, Neck = { -25, 20, 0 }, RightShoulder = { 150, 0, 25 }, RightElbow = { 20, 0, 0 }, LeftShoulder = { 150, 0, -25 }, LeftElbow = { 20, 0, 0 }, RightHip = { 5, 0, 0 }, LeftHip = { 20, 0, 0 }, LeftKnee = { -30, 0, 0 } },
+	lie = { Root = { -82, 0, 8, 0, -1.95, -0.4 }, Waist = { 5, 0, 0 }, Neck = { -25, 20, 0 }, RightShoulder = { 150, 0, 25 }, RightElbow = { 20, 0, 0 }, RightWrist = { -80, 0, 0 }, LeftShoulder = { 150, 0, -25 }, LeftElbow = { 20, 0, 0 }, LeftWrist = { -80, 0, 0 },
+		RightHip = { 5, 0, 0 }, LeftHip = { 20, 0, 0 }, LeftKnee = { -30, 0, 0 } }, -- Play 1: 몸이 땅에 묻히고 무기가 솟음 → 높이 −2.3 → −1.95 · 손목으로 무기 눕힘
 }
 P.respawn = { kneelSeconds = 0.25, riseSeconds = 0.4, settleSeconds = 0.15 }
 
