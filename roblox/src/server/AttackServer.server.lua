@@ -25,6 +25,7 @@ local StuckArrowState = require(script.Parent.StuckArrowState)
 local TutorialState = require(script.Parent.TutorialState)
 local BossHandlersBR1 = require(script.Parent.BossHandlersBR1) -- BR1-2 투사체 반사
 local AirState = require(script.Parent.AirState) -- MV1 공중 공격 예산 · 강공격 스택 초기화
+local TranscendentService = require(script.Parent.TranscendentService) -- C5-7
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming) -- W1: 원거리 발사 시각 = 모션 타격 프레임(클라와 같은 함수)
 local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
@@ -431,6 +432,9 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 			-- 원거리가 빗나가는 경우까지 회복시키면 안 되므로).
 			PlayerProfile.applyLifesteal(player, dealt)
 			glovesBolt(player, target, isComboHit, dealt)
+			if isComboHit and dealt > 0 then -- C5-7 초월 특수 옵션(강탈 변환 · 역전 기절 · 비상 초기화)
+				TranscendentService.onHeavyHit(player, target, attackerStage, atk, isAir, MonsterState.getData(target) ~= nil and MonsterState.getData(target).isBoss == true)
+			end
 			attackResult:FireClient(player, target, dealt, hitCrit, isDead, isComboHit, false, isBuffedShot, seq, hitPosition)
 			DamageFeed.emit(target, hitPosition, dealt, DamageFeed.kindOf(isComboHit), player, hitCrit)
 			CombatResolution.resolveHit(player, target, isDead)

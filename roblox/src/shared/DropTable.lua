@@ -13,6 +13,7 @@ local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfi
 local DropTable = {}
 
 local PRIMORDIAL = "primordial"
+local TRANSCENDENT = "transcendent" -- C5-7
 
 -- G1-2: 처치 시간 공정성 보정(규칙 = DropTableData.fairness 주석). killSeconds가 nil이면 1(보정 없음 - 옛 호출). hpUnits ≤ 1이면 1.
 function DropTable.timeFairnessFactor(killSeconds, hpUnits)
@@ -92,31 +93,52 @@ function DropTable.effectiveRate(playerInfo, monsterInfo, huntStage)
 	return Sanitize.number(rate, 0)
 end
 
--- 태초 확률이 primordialRate일 때 등급 gradeId가 나올 확률(태초를 먼저 굴리고, 아니면 기본 표에서 태초를 뺀 나머지를 비율대로).
--- primordialRate가 nil이면 감쇠 전 기본 확률(판매가 계산 등 - "그 등급으로 뽑힐 확률").
-function DropTable.gradeChance(tierIndex, gradeId, primordialRate)
+-- C5-7 초월 감쇠 전 확률(장비 1개당) = fieldRate × tier 배율. 감쇠 = 태초와 같은 레벨 감쇠.
+function DropTable.transcendentBaseRate(tierIndex)
+	local config = DropTableData.transcendent
+	if not config then
+		return 0
+	end
+	return config.fieldRate * (config.fieldTierScale[tierIndex] or 1)
+end
+
+function DropTable.effectiveTranscendentRate(playerInfo, monsterInfo, huntStage)
+	return Sanitize.number(DropTable.transcendentBaseRate(monsterInfo.tierIndex) * DropTable.levelDecay(playerInfo and playerInfo.bestStage, huntStage), 0)
+end
+
+-- 태초 확률이 primordialRate · 초월 확률이 transcendentRate일 때 등급 gradeId가 나올 확률(초월 → 태초 순서로 먼저 굴리고, 아니면 기본 표에서 둘을 뺀 나머지를 비율대로).
+-- 확률 인자가 nil이면 감쇠 전 기본 확률(판매가 계산 등 - "그 등급으로 뽑힐 확률").
+function DropTable.gradeChance(tierIndex, gradeId, primordialRate, transcendentRate)
 	local row = DropTable.armorGradeTable(tierIndex)
 	local rate = primordialRate or DropTable.primordialBaseRate(tierIndex)
+	local tRate = transcendentRate or DropTable.transcendentBaseRate(tierIndex)
+	if gradeId == TRANSCENDENT then
+		return tRate
+	end
 	if gradeId == PRIMORDIAL then
-		return rate
+		return rate * (1 - tRate)
 	end
 	local chance = row[gradeId]
 	if not chance then
 		return nil
 	end
-	local rest = 1 - (row[PRIMORDIAL] or 0)
-	return chance / rest * (1 - rate)
+	local rest = 1 - (row[PRIMORDIAL] or 0) - (row[TRANSCENDENT] or 0)
+	return chance / rest * (1 - rate) * (1 - tRate)
 end
 
 -- 등급 분포 한 줄 전체({ [등급] = 확률 }, 합 1) - 조회 API · EconSim 기대 개수용.
-function DropTable.gradeRow(tierIndex, primordialRate)
+function DropTable.gradeRow(tierIndex, primordialRate, transcendentRate)
 	local row = {}
 	for gradeId in pairs(DropTable.armorGradeTable(tierIndex)) do
-		row[gradeId] = DropTable.gradeChance(tierIndex, gradeId, primordialRate)
+		row[gradeId] = DropTable.gradeChance(tierIndex, gradeId, primordialRate, transcendentRate)
 	end
-	local rate = primordialRate or DropTable.primordialBaseRate(tierIndex)
+	local rate = DropTable.gradeChance(tierIndex, PRIMORDIAL, primordialRate, transcendentRate)
 	if rate > 0 then
 		row[PRIMORDIAL] = rate
+	end
+	local tRate = DropTable.gradeChance(tierIndex, TRANSCENDENT, primordialRate, transcendentRate)
+	if tRate > 0 then
+		row[TRANSCENDENT] = tRate
 	end
 	return row
 end

@@ -11,12 +11,17 @@ return {
 			condition = "드랍 태초 장비(세계 번호가 붙는 태초)를 처음 얻는다 - 태초 보석 · 무기 환생 태초 · 계승 결과는 해당 없음",
 			acquire = { kind = "dropPrimordial", sources = { "boss", "raid", "field", "sparkle" }, parts = { "armor", "gloves", "shoes" } },
 			grantedBy = "server/PrimordialRegistry.onRolled" },
+		-- C5-7 초월자: 드랍 초월 장비(세계 번호)를 처음 얻는다 - 흑금 그라데이션(topGrades).
+		transcendentOne = { id = "transcendentOne", name = "초월자", grade = "transcendent",
+			condition = "드랍 초월 장비(세계 번호가 붙는 초월)를 처음 얻는다",
+			acquire = { kind = "dropPrimordial", sources = { "boss", "raid", "field", "sparkle" }, parts = { "armor", "gloves", "shoes" } },
+			grantedBy = "server/PrimordialRegistry.onRolled" },
 		curiousCaptain = { id = "curiousCaptain", name = "호기심 대장", grade = "rare", condition = "봉인 입구 틈까지 올라간다", grantedBy = "server/Travel" },
 		nestSeeker = { id = "nestSeeker", name = "둥지 탐험가", grade = "epic", condition = "비밀 둥지를 처음 찾는다", grantedBy = "server/NestServer" },
 		secretKeeper = { id = "secretKeeper", name = "비밀 수집가", grade = "legendary", condition = "비밀 둥지 10곳을 찾는다", grantedBy = "server/NestServer" },
 	},
-	nameplateOrder = { "primordialChosen" }, -- 이름표에 보이는 칭호(이번 = 태초의 선택만)
-	topGrades = { primordial = true }, -- 흰 글자 위로 무지개 띠가 훑고 지나감(사용자 결정)
+	nameplateOrder = { "transcendentOne", "primordialChosen" }, -- 이름표에 보이는 칭호(앞이 우선 - C5-7 초월자)
+	topGrades = { primordial = true, transcendent = true }, -- 흰 글자 위로 무지개 띠가 훑고 지나감(사용자 결정)
 	gradientSeconds = 2.6, -- 띠가 한 번 지나가는 시간(천천히)
 	offsetStuds = 1.15, -- 이름표 위로
 	maxDistanceStuds = 80, -- 멀면 숨김

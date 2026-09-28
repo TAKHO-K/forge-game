@@ -18,9 +18,20 @@ local Workspace = game:GetService("Workspace")
 
 local PrimordialRegistry = {}
 
+local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7
 local store = DataStoreService:GetDataStore(PrimordialData.storeName)
 local isStudio = RunService:IsStudio()
-local topic = PrimordialData.topic .. (isStudio and "_studio" or "")
+local _topic = PrimordialData.topic .. (isStudio and "_studio" or "") -- C5-7: 태초 토픽은 더 안 쓴다(전 서버 알림 = 초월만)
+local transcendentTopic = TranscendentData.announce.topic .. (isStudio and "_studio" or "") -- C5-7 전 서버 알림은 초월만
+
+-- C5-7 등급별 키 · 칭호(태초 = PrimordialData · 초월 = TranscendentData.announce).
+local function gradeConfig(gradeId)
+	if gradeId == TranscendentData.gradeId then
+		return { counterKey = TranscendentData.announce.counterKey, recentKey = TranscendentData.announce.recentKey, titleId = TranscendentData.announce.titleId, global = true }
+	end
+	return { counterKey = PrimordialData.counterKey, recentKey = PrimordialData.recentKey, titleId = PrimordialData.titleId, global = false } -- 태초 = 같은 서버 알림만(C5-7 - 전 서버 배너 제거)
+end
+PrimordialRegistry.gradeConfig = gradeConfig
 
 local bannerRemote = Instance.new("RemoteEvent")
 bannerRemote.Name = "PrimordialBanner" -- 서버 → 클라: 상단 배너 + 채팅 줄(전 서버 태초 · 같은 서버 고대)
@@ -52,8 +63,8 @@ function PrimordialRegistry.filterName(name, fromUserId)
 end
 
 -- 카운터 +1 → 새 번호(재시도 포함 · 실패 = nil). 순수 UpdateAsync 하나 - 동시 요청이 겹쳐도 각자 다른 값을 받는다.
-function PrimordialRegistry.nextNumber(test)
-	local key = keyFor(PrimordialData.counterKey, test)
+function PrimordialRegistry.nextNumber(test, gradeId)
+	local key = keyFor(gradeConfig(gradeId).counterKey, test)
 	for _ = 1, PrimordialData.claimRetries do
 		local ok, value = pcall(function()
 			return store:UpdateAsync(key, function(current)
@@ -70,7 +81,7 @@ end
 
 -- 최근 목록 앞에 기록을 넣는다(recentKeep개 유지 · 같은 번호는 한 번만).
 local function appendRecent(entry, test)
-	local key = keyFor(PrimordialData.recentKey, test)
+	local key = keyFor(gradeConfig(entry.grade).recentKey, test) -- C5-7 등급별 목록
 	local ok = pcall(function()
 		store:UpdateAsync(key, function(list)
 			list = type(list) == "table" and list or {}
@@ -90,9 +101,9 @@ local function appendRecent(entry, test)
 end
 
 -- 최근 목록 읽기(명예의 전당 - 알림이 유실돼도 여기서 복원된다).
-function PrimordialRegistry.readRecent(test)
+function PrimordialRegistry.readRecent(test, gradeId)
 	local ok, list = pcall(function()
-		return store:GetAsync(keyFor(PrimordialData.recentKey, test))
+		return store:GetAsync(keyFor(gradeConfig(gradeId).recentKey, test))
 	end)
 	if ok and type(list) == "table" then
 		return list
@@ -133,11 +144,12 @@ function PrimordialRegistry.claim(player, item, options)
 		rollId = options.rollId, -- S1 2-3 발급 원장 키(드랍 굴림마다 - CombatResolution). 없으면(운영 지급 · 옛 경로) 집계 · 칭호 대상이 아니다
 		p = options.p, -- 그 굴림의 태초 확률
 	}
+	stamp.grade = item.grade -- C5-7: 각인에 등급(초월 = 별도 카운터 · 원장 · 명예의 전당 칸)
 	item.primordial = stamp
-	item.locked = true -- ⑦ 태초 기본 잠금
+	item.locked = true -- ⑦ 태초 · 초월 기본 잠금
 	local done = false
 	task.spawn(function()
-		local no = PrimordialRegistry.nextNumber(options.test)
+		local no = PrimordialRegistry.nextNumber(options.test, item.grade)
 		stamp.no = no
 		stamp.pending = nil
 		done = true
@@ -148,7 +160,7 @@ function PrimordialRegistry.claim(player, item, options)
 		if stamp.rollId then -- S1 2-3: 원장(번호가 정해진 뒤 한 번 - 번호 실패여도 굴림은 기록)
 			local AcquisitionAudit = require(script.Parent.AcquisitionAudit)
 			stamp.ledger = AcquisitionAudit.writeLedger({ rollId = stamp.rollId, userId = stamp.ownerId, source = item.source, p = stamp.p, stage = item.source and item.source.stage,
-				at = stamp.at, jobId = game.JobId, no = no, part = item.part, test = options.test == true }) and "ok" or "failed"
+				at = stamp.at, jobId = game.JobId, no = no, part = item.part, test = options.test == true, grade = item.grade }) and "ok" or "failed"
 			if stamp.ledger ~= "ok" then
 				warn(("[forge-game] 태초 원장 쓰기 실패 - %s · 굴림 %s(다음 로드 때 격리될 수 있다 - 운영 해제)"):format(ownerName, stamp.rollId))
 			end
@@ -160,16 +172,18 @@ function PrimordialRegistry.claim(player, item, options)
 			return
 		end
 		local shownName = PrimordialRegistry.filterName(ownerName, player and player.UserId or 0)
-		local entry = { no = no, name = shownName, userId = stamp.ownerId, at = stamp.at, part = item.part, source = item.source, jobId = game.JobId }
+		local entry = { no = no, name = shownName, userId = stamp.ownerId, at = stamp.at, part = item.part, source = item.source, jobId = game.JobId, grade = item.grade }
 		if no then
 			appendRecent(entry, options.test)
 		end
 		announceLocal(entry)
-		local ok = pcall(function()
-			MessagingService:PublishAsync(topic, entry)
-		end)
-		if ok then
-			stats.published += 1
+		if gradeConfig(item.grade).global then -- C5-7: 전 서버 채팅 · 배너는 초월만(태초 = 같은 서버 배너 + 본인 큰 연출)
+			local ok = pcall(function()
+				MessagingService:PublishAsync(transcendentTopic, entry)
+			end)
+			if ok then
+				stats.published += 1
+			end
 		end
 	end)
 	return function(timeoutSeconds)
@@ -186,7 +200,7 @@ function PrimordialRegistry.start()
 	task.spawn(function()
 		for attempt = 1, 6 do -- 리뷰 8: 구독 실패 = 뒤로 미루며 다시(명예의 전당은 5분 폴링으로 따로 복원된다)
 			local ok = pcall(function()
-				MessagingService:SubscribeAsync(topic, function(message)
+				MessagingService:SubscribeAsync(transcendentTopic, function(message) -- C5-7: 전 서버 구독은 초월 토픽(태초 토픽은 더 안 보낸다)
 					local entry = message and message.Data
 					if type(entry) == "table" and entry.jobId ~= game.JobId then
 						stats.received += 1
@@ -208,16 +222,18 @@ fxRemote.Name = "PrimordialFx" -- 서버 → 받은 사람: 본인 획득 연출
 fxRemote.Parent = ReplicatedStorage
 
 -- ① 태초 흰 빛기둥(같은 서버 전원 30초): 서버 파트 · 스트리밍 Persistent(멀리 있는 사람에게도 내려간다 - 부모 연결 전에 설정). 파티클 없이 파트 + 투명도.
-local function spawnBeacon(position)
+local function spawnBeacon(position, gradeId)
+	local isTranscendent = gradeId == TranscendentData.gradeId -- C5-7: 흑금 빛기둥(최상단 · 더 오래)
+	local color = isTranscendent and TranscendentData.announce.color or PrimordialData.auraColor
 	local model = Instance.new("Model")
-	model.Name = "PrimordialBeacon"
+	model.Name = isTranscendent and "TranscendentBeacon" or "PrimordialBeacon"
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
-	local height = PrimordialData.pillarHeights.primordial * 2
+	local height = PrimordialData.pillarHeights.primordial * 2 * (isTranscendent and 1.4 or 1)
 	local pillar = Instance.new("Part")
 	pillar.Name = "Pillar"
 	pillar.Anchored, pillar.CanCollide, pillar.CanQuery, pillar.CanTouch, pillar.CastShadow = true, false, false, false, false
 	pillar.Material = Enum.Material.Neon
-	pillar.Color = PrimordialData.auraColor
+	pillar.Color = color
 	pillar.Transparency = 0.15
 	pillar.Size = Vector3.new(PrimordialData.beaconWidth, height, PrimordialData.beaconWidth)
 	pillar.CFrame = CFrame.new(position + Vector3.new(0, height / 2, 0))
@@ -227,7 +243,7 @@ local function spawnBeacon(position)
 		ray.Name = "Ray"
 		ray.Anchored, ray.CanCollide, ray.CanQuery, ray.CanTouch, ray.CastShadow = true, false, false, false, false
 		ray.Material = Enum.Material.Neon
-		ray.Color = PrimordialData.auraColor
+		ray.Color = color
 		ray.Transparency = 0.45
 		ray.Size = Vector3.new(0.3, 14, 0.3)
 		ray.CFrame = CFrame.new(position) * CFrame.Angles(0, math.rad(60 * i), 0) * CFrame.Angles(math.rad(35), 0, 0) * CFrame.new(0, 7, 0)
@@ -235,7 +251,7 @@ local function spawnBeacon(position)
 	end
 	model.PrimaryPart = pillar
 	model.Parent = Workspace
-	task.delay(PrimordialData.pillarSeconds, function()
+	task.delay(isTranscendent and TranscendentData.announce.pillarSeconds or PrimordialData.pillarSeconds, function()
 		model:Destroy()
 	end)
 	return model
@@ -244,8 +260,11 @@ PrimordialRegistry.spawnBeacon = spawnBeacon
 
 -- D1-2: 칭호 "태초의 선택" 획득 조건(TitleData.acquire) - 드랍 출처 태그가 있는 태초 장비(갑옷 · 장갑 · 신발)만. 보석(part = nil · 옵션만) · 출처 없는 것은 거절.
 function PrimordialRegistry.titleEarnedBy(item)
-	local acquire = TitleData.titles[PrimordialData.titleId].acquire
-	if acquire.kind ~= "dropPrimordial" or type(item) ~= "table" or item.grade ~= "primordial" then
+	if type(item) ~= "table" then
+		return false
+	end
+	local acquire = TitleData.titles[gradeConfig(item.grade).titleId].acquire -- C5-7: 초월 = "초월자"
+	if acquire.kind ~= "dropPrimordial" or (item.grade ~= "primordial" and item.grade ~= TranscendentData.gradeId) then
 		return false
 	end
 	local kind = type(item.source) == "table" and item.source.kind
@@ -256,7 +275,7 @@ end
 -- 고대: 본인 큰 연출(고대 색 빛기둥 - 본인 화면만) · 같은 서버 알림은 DropNotice(서버 범위)가 한다 · 전 서버 알림 없음.
 -- deps = { PlayerProfile, ImmediateSave }(순환 require를 피하려고 호출부가 넘긴다).
 function PrimordialRegistry.onRolled(player, item, position, inBossFight, deps, options)
-	if item.grade == "primordial" then
+	if item.grade == "primordial" or item.grade == TranscendentData.gradeId then -- C5-7 초월 = 태초 경로 + 전 서버(claim) + 흑금 빛기둥
 		options = table.clone(options or {})
 		options.onNumbered = function()
 			-- 번호가 채워진 아이템을 클라에 다시 보내고(가방 · 착용 어디에 있든 같은 참조) 즉시 저장
@@ -269,11 +288,11 @@ function PrimordialRegistry.onRolled(player, item, position, inBossFight, deps, 
 		end
 		local wait = PrimordialRegistry.claim(player, item, options)
 		if deps and deps.PlayerProfile and typeof(player) == "Instance" and PrimordialRegistry.titleEarnedBy(item) then
-			deps.PlayerProfile.grantTitle(player, PrimordialData.titleId)
+			deps.PlayerProfile.grantTitle(player, gradeConfig(item.grade).titleId)
 		end
-		spawnBeacon(position)
+		spawnBeacon(position, item.grade)
 		if typeof(player) == "Instance" and player:IsA("Player") then
-			fxRemote:FireClient(player, { grade = "primordial", position = position, inBoss = inBossFight == true })
+			fxRemote:FireClient(player, { grade = item.grade, position = position, inBoss = inBossFight == true })
 		end
 		return wait
 	elseif item.grade == "ancient" then

@@ -141,14 +141,14 @@ function AcquisitionAudit.primordialItems(profile)
 		return list
 	end
 	for _, item in ipairs(profile.inventory or {}) do
-		if type(item) == "table" and item.grade == "primordial" then
+		if type(item) == "table" and (item.grade == "primordial" or item.grade == "transcendent") then -- C5-7: 초월도 같은 원장 · 격리 규칙(자동 격리 1순위)
 			table.insert(list, item)
 		end
 	end
 	for _, cs in pairs(profile.classes or {}) do
 		for _, part in ipairs({ "armor", "gloves", "shoes" }) do
 			local item = cs.equipment and cs.equipment[part]
-			if type(item) == "table" and item.grade == "primordial" then
+			if type(item) == "table" and (item.grade == "primordial" or item.grade == "transcendent") then
 				table.insert(list, item)
 			end
 		end

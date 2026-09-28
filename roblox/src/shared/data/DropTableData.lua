@@ -84,8 +84,9 @@ return {
 	--   raid = 토벌(반복 보스 = 첫 클리어가 아닌 처치 - 옛 retry 일반 90 · 희귀 10을 대체): 영웅 78 · 전설 20.948 · 유물 1 · 고대 0.05 · 태초 0.002%.
 	--   토벌 1회 확률은 잡몹보다 높고 첫 클리어보다 크게 낮다(지시 원칙).
 	bossGrades = {
-		firstClear = { epic = 0.62, legendary = 0.326, relic = 0.05, ancient = 0.0039, primordial = 0.0001 },
-		raid = { epic = 0.78, legendary = 0.20948, relic = 0.01, ancient = 0.0005, primordial = 0.00002 },
+		-- C5-7 초월(TranscendentData.drop): 첫 클리어 0.001% · 토벌 0.0002% - 영웅 몫에서 같은 양을 뺀다(합 1 · 끝자리 맞추기 G1-1(가)).
+		firstClear = { epic = 0.62 - 0.00001, legendary = 0.326, relic = 0.05, ancient = 0.0039, primordial = 0.0001, transcendent = 0.00001 },
+		raid = { epic = 0.78 - 0.000002, legendary = 0.20948, relic = 0.01, ancient = 0.0005, primordial = 0.00002, transcendent = 0.000002 },
 	},
 
 	primordial = {
@@ -100,5 +101,10 @@ return {
 		-- 몬스터 공격이 세서 더 낮은 스테이지에서 잡는다 - p99 66). 70칸 = 몬스터 HP ×4.0. 0이 되는 격차 = 70 + 71 = 141(옛 감쇠 폭 "시작 ×2.1 → 0 ×7.5"의 비 ×3.6을 그대로 -
 		-- 1.02^71 ≈ 4.1). 근거 = docs/phase/P25a-log.md.
 		levelDecay = { startGap = 70, perLevel = 0.014 },
+	},
+	-- C5-7 초월 잡몹 별도 굴림(태초와 같은 방식 · 같은 레벨 감쇠): 장비 1개당 fieldRate × tier 3구간 배율(TranscendentData.drop) - 동접 1,000 기준 전 출처 합계 1 ~ 2개/일(EconSim C5 표).
+	transcendent = {
+		fieldRate = 0.0000001,
+		fieldTierScale = { 0.7, 0.7, 1, 1, 1.4, 1.4 },
 	},
 }

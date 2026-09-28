@@ -109,8 +109,10 @@ local function build()
 	return true
 end
 
+local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7 명예의 전당 별도 칸(초월 줄 = 맨 앞 · ✦)
 local function lineFor(entry)
-	local head = ("#%s %s"):format(tostring(entry.no or "?"), tostring(entry.name or PrimordialData.fallbackName))
+	local mark = entry.grade == TranscendentData.gradeId and (TranscendentData.announce.glyph .. "초월 ") or ""
+	local head = ("%s#%s %s"):format(mark, tostring(entry.no or "?"), tostring(entry.name or PrimordialData.fallbackName))
 	local sourceText = PrimordialStamp.sourceText(entry.source)
 	local date = PrimordialStamp.dateText(entry.at)
 	local tail = table.concat({ date or "", sourceText or "" }, " · ")
@@ -135,10 +137,15 @@ end
 -- 원본에서 다시 읽는다(서버 시작 · 5분마다 · 검증). 반환 = 읽기 성공 여부.
 function HallOfFame.refresh()
 	local list = PrimordialRegistry.readRecent()
+	local transcendentList = PrimordialRegistry.readRecent(nil, TranscendentData.gradeId) or {} -- C5-7 별도 칸(맨 앞)
 	lastReadOk = list ~= nil
 	if list then
 		local AcquisitionAudit = require(script.Parent.AcquisitionAudit) -- S1 2-4: 회수 · 격리 번호 = 결번(명예의 전당에서 뺀다)
 		entries = {}
+		for _, row in ipairs(transcendentList) do
+			row.grade = row.grade or TranscendentData.gradeId
+			table.insert(entries, row)
+		end
 		for _, row in ipairs(list) do
 			if not AcquisitionAudit.isNumberExcluded(row.no) then
 				table.insert(entries, row)

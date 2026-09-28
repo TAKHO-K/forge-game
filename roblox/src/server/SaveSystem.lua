@@ -1063,6 +1063,24 @@ local function migrate(data)
 		data.version = 46
 	end
 
+	if data.version < 47 then
+		-- C5-7 초월: 장비 special(부위 고정 특수 옵션) · 각인 grade - 옛 세이브에 초월은 없다(태초 각인에 grade를 채운다).
+		local function stampGrade(item)
+			if type(item) == "table" and type(item.primordial) == "table" and item.primordial.grade == nil then
+				item.primordial.grade = item.grade
+			end
+		end
+		for _, item in ipairs(data.inventory or {}) do
+			stampGrade(item)
+		end
+		for _, cs in pairs(data.classes or {}) do
+			for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+				stampGrade(cs.equipment and cs.equipment[part])
+			end
+		end
+		data.version = 47
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data

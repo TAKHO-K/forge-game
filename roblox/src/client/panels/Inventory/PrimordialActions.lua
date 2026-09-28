@@ -39,7 +39,7 @@ function PrimordialActions.create(makeActionButton, setHint)
 	function self.refresh(kind, key, item, hintBusy)
 		target = nil
 		button.Visible = false
-		if not kind or not item or item.grade ~= "primordial" then
+		if not kind or not item or (item.grade ~= "primordial" and item.grade ~= "transcendent") then -- C5-7 초월도 각성(무료)
 			return
 		end
 		local best = player:GetAttribute("AccountBestStage") or 1
@@ -49,7 +49,7 @@ function PrimordialActions.create(makeActionButton, setHint)
 		button.Active = reason == nil
 		button.AutoButtonColor = reason == nil
 		button.TextTransparency = reason == nil and 0 or 0.6
-		button.Text = reason == nil and ("각성 %s"):format(NumberFormat.format(Awaken.cost(best))) or "각성"
+		button.Text = reason == nil and (Awaken.cost(best, item) == 0 and "각성(무료)" or ("각성 %s"):format(NumberFormat.format(Awaken.cost(best, item)))) or "각성"
 		if not hintBusy then
 			local line = PrimordialStamp.detailLine(item.primordial)
 			if line then

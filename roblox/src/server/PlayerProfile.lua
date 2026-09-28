@@ -11,6 +11,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig) -- C5-1 dealGear.parts
+local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData) -- C2 전투력(직업 치명)
 local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 전투력
@@ -1053,6 +1054,9 @@ function PlayerProfile.dismantleItem(player, index)
 	if not itemGradeIndex or itemGradeIndex < DISMANTLE_MIN_GRADE_INDEX then
 		return false, "grade_too_low"
 	end
+	if item.grade == TranscendentData.gradeId and TranscendentData.dismantleBlocked then -- C5-7: 초월은 분해 불가
+		return false, "transcendent"
+	end
 
 	table.remove(profile.inventory, index)
 	table.insert(classState.gemInventory, { grade = item.grade, itemLevel = item.itemLevel, option = item.option })
@@ -1892,6 +1896,9 @@ function PlayerProfile.sellItem(player, index)
 	end
 	if item.locked then
 		return false, "locked"
+	end
+	if item.grade == TranscendentData.gradeId and TranscendentData.sellBlocked then -- C5-7: 초월은 판매 불가
+		return false, "transcendent"
 	end
 
 	local price = Loot.getSellPrice(item)

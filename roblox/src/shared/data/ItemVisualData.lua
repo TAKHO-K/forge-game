@@ -83,6 +83,15 @@ return {
 			toastTextSize = 34,
 			rainbow = true,
 		},
+		-- C5-7 초월: 흑금(검은 본체 + 옅은 금빛 균열 + 미세 무지개 - 보스 경고색 330 ~ 50° 밖). color = 글자 · 테두리 기본색(금) · blackGold = 칸 배경을 검게 + 금 균열(U1에서 최종 스타일 - 지금은 기본색만).
+		transcendent = {
+			color = Color3.fromRGB(214, 176, 62),
+			statMultiplier = GRADE_STEP ^ 7,
+			glowBrightness = 5.5, glowRange = 28,
+			burstOnDrop = true,
+			toastTextSize = 36,
+			blackGold = true,
+		},
 	},
 
 	-- 부위별 모양(치수만 - 전부 단일 Part, 몬스터와 같은 "도형으로 표현" 방식). 지금은

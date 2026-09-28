@@ -106,8 +106,8 @@ function Inherit.resultItem(a, b, keep)
 	for key, value in pairs(b) do
 		item[key] = value
 	end
-	if item.grade == "primordial" then
-		item.locked = true -- D1 ⑦(리뷰 5): 계승 결과가 태초면 기본 잠금(각인 primordial · source는 B를 그대로 따른다)
+	if item.grade == "primordial" or item.grade == "transcendent" then
+		item.locked = true -- D1 ⑦(리뷰 5): 계승 결과가 태초 · 초월(C5-7)이면 기본 잠금(각인 · special · source는 B를 그대로 따른다)
 	end
 	local set = keep == "a" and Inherit.optionSet(a) or Inherit.optionSet(b)
 	item.option = Option.optionSlotsFor(b.grade) >= 1 and copyOption(set[1]) or nil

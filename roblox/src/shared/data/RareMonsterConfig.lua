@@ -26,7 +26,7 @@ return {
 	-- 확정 드랍 등급 분포. D1-2(사용자 결정): 태초 · 고대 = 보스 첫 클리어(DropTableData.bossGrades.firstClear)의 절반, 나머지를 영웅 · 전설 · 유물로(영웅 이상 확정).
 	-- 옛 값(웹 - 유물 90 · 고대 9 · 태초 1%)은 처치당 태초 0.005%로 D1 잡몹(0.0001%)의 50배라 태초 공급을 반짝이가 지배했다(D1 리뷰 1).
 	-- 공급 = docs/phase/D1-2-report.md ④(처치당 태초 = sparkleChance × 0.005%). 합 = 1(검증 D1-2(가)).
-	sparkleGradeChances = { epic = 0.55, legendary = 0.36, relic = 0.088, ancient = 0.00195, primordial = 0.00005 },
+	sparkleGradeChances = { epic = 0.55 - 0.000005, legendary = 0.36, relic = 0.088, ancient = 0.00195, primordial = 0.00005, transcendent = 0.000005 }, -- C5-7 초월 0.0005%(영웅 몫에서)
 
 	-- 골드는 오히려 줄어든다(웹 BALANCE.rareGoldMultiplier=0.5, PRD 8.0-5 "골드는 적게
 	-- (보상이 아이템이므로)") - 확정 최고 등급 드랍 하나가 보상의 전부라는 뜻을 골드에도

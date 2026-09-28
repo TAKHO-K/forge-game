@@ -14,6 +14,7 @@ local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
+local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local PrimordialStamp = require(ReplicatedStorage.Shared.PrimordialStamp)
 local Toast = require(script.Parent.ui.kit.Toast)
@@ -134,7 +135,13 @@ ReplicatedStorage:WaitForChild("PrimordialFx").OnClientEvent:Connect(function(in
 	if type(info) ~= "table" then
 		return
 	end
-	if info.grade == "primordial" then
+	if info.grade == "transcendent" then -- C5-7: 흑금 섬광 + 긴 슬로우(필드에서만)
+		flash(TranscendentData.announce.color, 0, PrimordialData.flashSeconds * 1.5)
+		if not info.inBoss then
+			slowMotion(TranscendentData.announce.slowSeconds)
+		end
+		playSound()
+	elseif info.grade == "primordial" then
 		flash(PrimordialData.auraColor, 0, PrimordialData.flashSeconds)
 		if not info.inBoss then
 			slowMotion(PrimordialData.slowSeconds)
@@ -184,11 +191,14 @@ RunService.RenderStepped:Connect(function(dt)
 	for _, other in ipairs(Players:GetPlayers()) do
 		local character = other.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		local wants = root and eye and other:GetAttribute("PrimordialEquipped") == true and (root.Position - eye).Magnitude <= PrimordialData.auraMaxDistance
+		local transcendent = (other:GetAttribute("TranscendentParts") or 0) > 0 -- C5-7 흑금 오라(초월 착용 - 태초 흰 오라보다 우선)
+		local wants = root and eye and (other:GetAttribute("PrimordialEquipped") == true or transcendent) and (root.Position - eye).Magnitude <= PrimordialData.auraMaxDistance
 		if wants then
 			local aura = auras[other] or makeAura()
 			auras[other] = aura
 			local pulse = 0.5 + 0.1 * math.sin(spin * 3)
+			local color = transcendent and TranscendentData.announce.color or PrimordialData.auraColor
+			aura.ring.Color, aura.light.Color = color, color
 			aura.ring.Transparency = pulse
 			aura.ring.CFrame = CFrame.new(root.Position - Vector3.new(0, 2.8, 0)) * CFrame.Angles(0, spin, math.rad(90))
 		else

@@ -511,7 +511,7 @@ local function refreshDetailBody()
 		sellButton.AutoButtonColor = true
 		sellButton.Active = true
 		sellButton.TextTransparency = item.locked and 0.6 or 0
-		local dismantleEligible = not item.locked and S.isDismantleEligibleGrade(item.grade)
+		local dismantleEligible = not item.locked and S.isDismantleEligibleGrade(item.grade) and item.grade ~= "transcendent" -- C5-7: 초월은 분해 불가(버튼 비활성 · 힌트)
 		dismantleButton.AutoButtonColor = dismantleEligible
 		dismantleButton.Active = dismantleEligible
 		dismantleButton.TextTransparency = dismantleEligible and 0 or 0.6
@@ -781,7 +781,7 @@ lockButton.Activated:Connect(function()
 	if not item then
 		return
 	end
-	if item.grade == "primordial" and item.locked then
+	if (item.grade == "primordial" or item.grade == "transcendent") and item.locked then -- C5-7 초월도 이중 확인 해제
 		-- D1 ⑦: 태초 잠금 해제 = 확인 창 두 번(18번 시트 확인 창) → 서버도 이중 확인 표식이 없으면 거절한다.
 		local index = S.selectedValue
 		local first, second = require(script.Parent.PrimordialActions).unlockTexts(item)

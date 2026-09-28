@@ -17,6 +17,7 @@ local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMateria
 -- 26-1: 장비 생성 지점에서 옵션을 굴린다(PRD 20.67 [1] "옵션 굴림 시점은 장비가 생성되는
 -- 모든 지점"). Option.rollFor가 알아서 옵션 풀이 없는 등급(일반·희귀)엔 nil을 돌려준다.
 local Option = require(ReplicatedStorage.Shared.Option)
+local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7
 -- P2 E1: 등급 확률 · 태초 확률은 드랍표 단일 소스(DropTable)에서 읽는다.
 local DropTable = require(ReplicatedStorage.Shared.DropTable)
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
@@ -109,7 +110,7 @@ local function rollGrade(gradeTable, excludeGrade)
 end
 
 local function buildDropItem(gradeId, monsterStage, itemLevel, tierIndex, classId)
-	return {
+	local item = {
 		grade = gradeId,
 		part = Loot.rollItemPart(),
 		dropStage = monsterStage,
@@ -118,6 +119,11 @@ local function buildDropItem(gradeId, monsterStage, itemLevel, tierIndex, classI
 		locked = false,
 		option = Option.rollFor(gradeId, classId),
 	}
+	if gradeId == TranscendentData.gradeId then -- C5-7: 특수 옵션(부위 고정 · 리롤 불가) · 기본 잠금
+		item.special = TranscendentData.specialByPart[item.part]
+		item.locked = true
+	end
+	return item
 end
 
 function Loot.rollItemLevel(stage, deltaTable)
@@ -150,18 +156,21 @@ end
 -- P2 E1 · E4: primordialRate(= DropTable.effectiveRate - 호출부 CombatResolution이 받는 사람 기준으로 구한다)가 오면 아이템마다 태초를 먼저 굴리고,
 -- 아니면 기본 표에서 태초를 뺀 나머지 분포로 굴린다. 태초의 itemLevel = 그 몬스터를 잡은 사냥 스테이지(몬스터 레벨 - 편차 δ 없음).
 -- primordialRate가 nil이면 옛 굴림 그대로(기본 표 - tier6 태초 0.1% 포함).
-function Loot.rollArmorDrop(monsterStage, tierIndex, rewardMultiplier, classId, primordialRate, killSeconds)
+-- C5-7 transcendentRate(DropTable.effectiveTranscendentRate - 호출부): 초월을 태초보다 먼저 굴린다(itemLevel = 사냥 스테이지 - 태초와 같다).
+function Loot.rollArmorDrop(monsterStage, tierIndex, rewardMultiplier, classId, primordialRate, killSeconds, transcendentRate)
 	local gradeTable = MonsterData.dropGradeTableByTier[tierIndex] or MonsterData.dropGradeTableByTier[1]
 	local items = {}
 	for _ = 1, Loot.rollCount(Loot.expectedArmorDropCount(tierIndex, rewardMultiplier, killSeconds)) do -- G1-2: 처치 시간 공정성 보정
 		local gradeId
-		if primordialRate then
+		if transcendentRate and lootRng:NextNumber() < transcendentRate then
+			gradeId = TranscendentData.gradeId
+		elseif primordialRate then
 			gradeId = lootRng:NextNumber() < primordialRate and "primordial" or rollGrade(gradeTable, "primordial")
 		else
 			gradeId = rollGrade(gradeTable)
 		end
 		if gradeId then -- 확률 합이 1 미만인 경우의 방어적 처리(지금 표는 전부 정확히 1.0)
-			local itemLevel = (primordialRate and gradeId == "primordial") and math.max(1, monsterStage) or Loot.rollItemLevel(monsterStage, ArmorData.itemLevelDelta)
+			local itemLevel = ((primordialRate and gradeId == "primordial") or gradeId == TranscendentData.gradeId) and math.max(1, monsterStage) or Loot.rollItemLevel(monsterStage, ArmorData.itemLevelDelta)
 			table.insert(items, buildDropItem(gradeId, monsterStage, itemLevel, tierIndex, classId))
 		end
 	end
@@ -205,7 +214,7 @@ end
 function Loot.rollBossFirstClearDrop(bossStage, rebirthCount, classId)
 	local gradeTable = DropTable.bossFirstClearGradeTable(rebirthCount) -- G1-1: 보상 띠와 같은 함수
 
-	local grade = rollGrade(gradeTable) or ArmorData.gradeOrder[#ArmorData.gradeOrder]
+	local grade = rollGrade(gradeTable) or "primordial" -- C5-7: 방어적 기본값은 태초(초월은 확률로만)
 	return buildDropItem(grade, bossStage, Loot.rollItemLevel(bossStage, ArmorData.bossItemLevelDelta), 1, classId)
 end
 
@@ -234,7 +243,7 @@ end
 -- rollBossFirstClearDrop과 다르다 - 반환 모양은 동일(TutorialState가 ItemDropSpawner.spawn에
 -- 그대로 넘긴다, 잡몹/보스 확정 드랍과 같은 "주웠다" 연출을 그대로 재사용). 28-1: itemLevel = stage(δ = 0 고정).
 function Loot.buildFixedArmorDrop(grade, part, stage, tierIndex, classId)
-	return {
+	local item = {
 		grade = grade,
 		part = part,
 		dropStage = stage,
@@ -243,6 +252,11 @@ function Loot.buildFixedArmorDrop(grade, part, stage, tierIndex, classId)
 		locked = false,
 		option = Option.rollFor(grade, classId),
 	}
+	if grade == TranscendentData.gradeId then -- C5-7: 고정 지급(/gg drop force · 검증)도 특수 옵션 · 기본 잠금
+		item.special = TranscendentData.specialByPart[part]
+		item.locked = true
+	end
+	return item
 end
 
 -- 장비 방어력 보너스(갑옷 전용). item이 nil이면(미착용) 0 - PlayerCombat.getDefense의

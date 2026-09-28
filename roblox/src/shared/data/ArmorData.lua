@@ -54,6 +54,8 @@ end
 -- 비교 = ×1.0 · 1.2 · 1.25 · 1.3 · 1.6 · 2.0(보고서 D1-2 ②): 상한 도달 시간 비 ≤ 1.3을 두 프로필(상위 1% 1.26 · 일반 1.26) 모두 여유 있게 지키는 가장 큰 값 = 1.25(×1.3은 상위 1% 1.302).
 -- "수렴 뒤 스테이지 차 ≤ 150"은 딜 우위가 조금이라도 있으면(×1.0 + 치명 피해 고유 효과도 +1,155) 못 맞춘다 - 결정 대기. 신발은 공격 속도 상한에 걸려 이 배율이 딜에 안 닿는다.
 local DPS_PRIMORDIAL_STEP = 1.25
+-- C5-7 초월(docs/design/transcendent-tier.md): 딜 부위 = 태초 × dpsStepOverPrimordial(= 고대 × 1.5) · 갑옷 방어 = 태초 × armorStep. 값 = shared/data/TranscendentData.
+local TranscendentData = require(script.Parent.TranscendentData)
 
 return {
 	baseDefense = CombatConfig.playerDefense,
@@ -64,7 +66,8 @@ return {
 	-- 각 줄은 맵이라 순회 순서가 없다 - 이 배열이 결정적 순서를 정한다),
 	-- Loot.rollBossFirstClearDrop의 등급 상향(MonsterData.shiftGradeTableUp), 인벤토리
 	-- 일괄판매 컷오프도 전부 이 배열을 본다.
-	gradeOrder = { "normal", "rare", "epic", "legendary", "relic", "ancient", "primordial" },
+	gradeOrder = { "normal", "rare", "epic", "legendary", "relic", "ancient", "primordial", "transcendent" }, -- C5-7: 8번째 초월(무기 환생 등급은 6 = 태초까지 - PlayerProfile.rebirth)
+	maxWeaponGradeIndex = 6, -- 무기 등급(환생) 상한 index(태초) - 초월은 드랍 장비만
 	-- G1-2(D0 결정 4 - 규칙 위반 해소): 분해 가능 등급의 문턱(gradeOrder 번호) - 이 번호 이상이면 분해 → 보석(영웅 이상, 값 그대로). 옛 코드는 서버 PlayerProfile과
 	-- 클라 Store에 각각 3을 박아 두었다. 보석은 옵션이 있는 등급에서만 생기므로 OptionData.minGradeIndex와 같은 값이어야 한다(검증 G1-2(가)).
 	dismantleMinGradeIndex = 3,
@@ -132,6 +135,14 @@ return {
 			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[7],
 			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 6, -- 옛 배율(몬스터 tier 공정성 식 고정 입력 - D1)
 			dropPower = dropPower[6] * DPS_PRIMORDIAL_STEP, -- D1-2: 딜 부위(장갑 · 신발)만 - 갑옷 방어는 위 defenseGradeMultiplier(×2.5)
+		},
+		-- C5-7 초월: 드랍 장비 전용(환생 무기 · 분해 · 합성 · 운영 지급 제외). 공정성 식(fairnessGradeByTier)에는 없다 - 몬스터 수치 불변.
+		transcendent = {
+			id = "transcendent",
+			displayName = "초월",
+			defenseGradeMultiplier = ARMOR_NORMAL * dropPower[7] * TranscendentData.armorStep,
+			fairnessMultiplier = ARMOR_NORMAL * STEP ^ 7,
+			dropPower = dropPower[6] * DPS_PRIMORDIAL_STEP * TranscendentData.dpsStepOverPrimordial, -- = 고대 × 1.5
 		},
 	},
 

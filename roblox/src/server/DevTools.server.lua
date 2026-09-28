@@ -281,7 +281,7 @@ local function applyWeaponGrade(player, gradeArg)
 	end
 	if not gradeIndex or not ArmorData.gradeOrder[gradeIndex + 1] then
 		reply(player, ("알 수 없는 무기 등급: %s (0~%d 또는 등급명: %s)"):format(
-			tostring(gradeArg), #ArmorData.gradeOrder - 1, table.concat(ArmorData.gradeOrder, "/")))
+			tostring(gradeArg), ArmorData.maxWeaponGradeIndex, table.concat(ArmorData.gradeOrder, "/", 1, ArmorData.maxWeaponGradeIndex + 1))) -- C5-7: 무기 등급은 태초까지
 		return false
 	end
 	PlayerProfile.setWeaponGrade(player, gradeIndex)
@@ -1356,6 +1356,18 @@ local function handleCommand(player, args)
 		end
 		print(("C3HITS|%d|비율 %.3f · 피해 배율 ×%.3f · 간격 %.2f · 한 타 ×%.2f · 치명 %.0f%%|%s|%s"):format(stage, power / rec, CombatFormula.dealMultiplier(power, stage), interval, scale, critRate * 100, table.concat(rows, " · "), table.concat(skills, " · ")))
 		reply(player, ("스테이지 %d: %s"):format(stage, table.concat(rows, " · ")))
+	elseif sub == "c5" and args[2] == "dodge" then
+		-- C5-7: 아슬아슬 회피 통계(등록 · 표본 · 회피 · 적중) - 오판정 실측은 로그 C5DODGE 줄
+		local T = require(script.Parent.TranscendentService)
+		local s = T.stats
+		print(("C5DODGE|registered %d|sampled %d|dodges %d|hits %d|fragment %s|closeDodges %s"):format(s.registered, s.sampled, s.dodges, s.hits, tostring(player:GetAttribute("Fragment")), tostring(player:GetAttribute("CloseDodges"))))
+		reply(player, ("회피 통계: 등록 %d · 표본 %d · 회피 %d · 적중 %d · 파편 %s"):format(s.registered, s.sampled, s.dodges, s.hits, tostring(player:GetAttribute("Fragment"))))
+	elseif sub == "c5" and args[2] == "fragment" then
+		local ok = require(script.Parent.TranscendentService).debugGrantFragment(player, args[3] or "circleBoss")
+		reply(player, ok and ("파편 저장: " .. tostring(player:GetAttribute("Fragment"))) or "강탈 장갑(초월)이 없다 - /gg gear transcendent <itemLevel> gloves")
+	elseif sub == "c5" and args[2] == "dodgefire" then
+		require(script.Parent.TranscendentService).debugFireDodge(player, args[3] or "circleBoss")
+		reply(player, "회피 이벤트 강제 발생")
 	elseif sub == "c4" and args[2] == "overcrit" then
 		-- C4-3 검증: /gg c4 overcrit - 버프 뺀 치명 확률 합을 지금 · 100 · 110 · 130%로 강제(옵션 치명 강제값)해 실제 서버 함수의 공격력 % · 공격력 · 전투력을 찍고 되돌린다
 		local RS = game:GetService("ReplicatedStorage")

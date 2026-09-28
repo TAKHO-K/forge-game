@@ -409,7 +409,7 @@ local function expectedCandidates(tierIndex, drops, minGradeIndex, primordialRat
 		local gradeId = ArmorData.gradeOrder[index]
 		gradeCumulative += (row[gradeId] or 0)
 		local deltaCumulative = 0
-		if gradeId == "primordial" then
+		if gradeId == "primordial" or gradeId == "transcendent" then -- C5-7: 초월도 편차 없음(itemLevel = 사냥 스테이지)
 			if gradeCumulative > 0 and drops * gradeCumulative >= 1 then
 				table.insert(list, { grade = gradeId, delta = 0 })
 			end
@@ -591,7 +591,7 @@ local function doRebirth(state, profile, whatIf)
 	-- 환생 지급 보석(PlayerProfile.rebirth): 그 슬롯 상한 등급 · itemLevel = 환생 순간 레벨의 스테이지 척도(P2.5a 결정 9 - CharacterLevel.getStageForLevel) · 옵션 무작위.
 	tryPlaceGem(state, profile, slot, Gem.gradeCapForSlot(slot), CharacterLevel.getStageForLevel(levelAtRebirth), whatIf, true)
 	if state.rebirth == GemData.maxRebirthCount and Gem.allSlotsFilled(state.gems) then
-		state.weaponGrade = #ArmorData.gradeOrder - 1
+		state.weaponGrade = ArmorData.maxWeaponGradeIndex -- C5-7: 태초(6) - gradeOrder 끝은 초월
 	end
 end
 

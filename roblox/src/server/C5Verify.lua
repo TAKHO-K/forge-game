@@ -114,6 +114,43 @@ function V.runPure()
 		check(("T1 비치명: 옛 장비만(itemLevel 1) %d방 · 해당 레벨 1부위 %d방 · 치명 %d방(기대 옛 ≥ 새 × 2 · 새 ≤ 2 · 치명 1 - 절대값 3/2는 결정 필요)"):format(oldNon, newNon, newCrit), oldNon >= newNon * 2 and newNon <= 2 and newCrit == 1)
 	end)
 
+	section("C5-7 초월", function()
+		local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+		local DropTable = require(ReplicatedStorage.Shared.DropTable)
+		local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData)
+		local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
+		local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData)
+		local Loot = require(ReplicatedStorage.Shared.Loot)
+		local Awaken = require(ReplicatedStorage.Shared.Awaken)
+		local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
+		check(("등급 순서 끝 = 초월 · 무기 등급 상한 index %d = 태초"):format(ArmorData.maxWeaponGradeIndex), ArmorData.gradeOrder[#ArmorData.gradeOrder] == "transcendent" and ArmorData.gradeOrder[ArmorData.maxWeaponGradeIndex + 1] == "primordial")
+		local g = ArmorData.grades
+		check(("딜 부위 위력: 초월 %.2f = 고대 %.2f × 1.5 · 갑옷 방어 초월 = 태초 × %.1f"):format(g.transcendent.dropPower, g.ancient.dropPower, TranscendentData.armorStep),
+			math.abs(g.transcendent.dropPower - g.ancient.dropPower * 1.5) < 1e-9 and math.abs(g.transcendent.defenseGradeMultiplier - g.primordial.defenseGradeMultiplier * TranscendentData.armorStep) < 1e-9)
+		local function sum(t)
+			local x = 0
+			for _, v in pairs(t) do
+				x += v
+			end
+			return x
+		end
+		check(("드랍표 합 1(첫 클리어 %.10f · 토벌 %.10f · 반짝이 %.10f) · 초월 확률 0.001%% · 0.0002%% · 0.0005%%"):format(sum(DropTableData.bossGrades.firstClear), sum(DropTableData.bossGrades.raid), sum(RareMonsterConfig.sparkleGradeChances)),
+			math.abs(sum(DropTableData.bossGrades.firstClear) - 1) < 1e-9 and math.abs(sum(DropTableData.bossGrades.raid) - 1) < 1e-9 and math.abs(sum(RareMonsterConfig.sparkleGradeChances) - 1) < 1e-9
+				and DropTableData.bossGrades.firstClear.transcendent == 0.00001 and DropTableData.bossGrades.raid.transcendent == 0.000002 and RareMonsterConfig.sparkleGradeChances.transcendent == 0.000005)
+		local rowOk = true
+		for tier = 1, 6 do
+			local row = DropTable.gradeRow(tier)
+			rowOk = rowOk and math.abs(sum(row) - 1) < 1e-9 and (row.transcendent or 0) > 0
+		end
+		check(("잡몹 분포 합 1(초월 별도 굴림 tier1 %.9f · tier6 %.9f = ×0.7 / ×1.4)"):format(DropTable.transcendentBaseRate(1), DropTable.transcendentBaseRate(6)),
+			rowOk and math.abs(DropTable.transcendentBaseRate(1) - 0.0000001 * 0.7) < 1e-15 and math.abs(DropTable.transcendentBaseRate(6) - 0.0000001 * 1.4) < 1e-15)
+		local item = Loot.buildFixedArmorDrop("transcendent", "gloves", 100, 1, "bow")
+		check(("초월 드랍 = special %s(장갑 = 강탈) · 기본 잠금 %s"):format(tostring(item.special), tostring(item.locked)), item.special == "plunder" and item.locked == true)
+		check(("각성: 초월 무료(비용 %d) · 허용 · 분해 금지 · 판매 금지 데이터"):format(Awaken.cost(1000, item)), Awaken.cost(1000, item) == 0 and Awaken.blockReason(item, 1000) == nil and TranscendentData.dismantleBlocked and TranscendentData.sellBlocked)
+		local color = GradeColor.hex("transcendent")
+		check(("등급 색 %s(금 - 보스 경고색 밖) · 파편 표 6 · 특수 옵션 3부위"):format(color), color == "#d6b03e" and TranscendentData.plunder.fragments.circleBoss ~= nil and TranscendentData.specialByPart.armor == "reversal" and TranscendentData.specialByPart.shoes == "soar")
+	end)
+
 	print(("===C5 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 end
 

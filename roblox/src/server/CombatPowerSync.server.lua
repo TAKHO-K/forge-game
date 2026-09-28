@@ -3,6 +3,9 @@
 local Players = game:GetService("Players")
 
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local TranscendentService = require(script.Parent.TranscendentService) -- C5-7
+local MonsterState = require(script.Parent.MonsterState)
+MonsterState.bossDamageHook = TranscendentService.bossDamageMultiplier -- C5-7 역전 보스 +15%
 
 local INTERVAL_SECONDS = 1
 
@@ -15,6 +18,7 @@ task.spawn(function()
 					player:SetAttribute("CombatPower", power)
 				end
 			end
+			pcall(TranscendentService.syncAura, player) -- C5-7 보스전 흑금 오라(TranscendentParts)
 			local okLevel, best = pcall(PlayerProfile.getDealItemLevelBest, player) -- C5-1 뒤처짐 신호(MonsterState가 읽는다)
 			if okLevel and player:GetAttribute("DealItemLevel") ~= best then
 				player:SetAttribute("DealItemLevel", best)

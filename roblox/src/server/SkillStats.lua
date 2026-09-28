@@ -37,7 +37,8 @@ function SkillStats.hitCoefficient(player, classId, slot, def)
 	if not def.coefficient then
 		return nil
 	end
-	return def.coefficient * (1 + SkillStats.optionBonus(player, classId, slot)) / (def.tickCount or 1)
+	local scale = slot == "Q" and require(script.Parent.TranscendentService).qCoefficientScale(player) or 1 -- C5-7 역전 Q 강화판(HP ≤ 20% ×1.5)
+	return def.coefficient * (1 + SkillStats.optionBonus(player, classId, slot)) / (def.tickCount or 1) * scale
 end
 
 -- 실제 쿨다운(26-2 옵션 · S13b 쉴드 쿨다운). SkillServer의 쿨다운 게이트와 결과 이벤트가 이 값을 쓴다.
@@ -50,6 +51,9 @@ function SkillStats.cooldown(player, classId, slot, def)
 			cooldownSeconds = def.shield.cooldownSeconds -- S13b: 딜링모드 쉴드 시전은 쉴드의 쿨다운(치유 옵션은 그대로 곱한다)
 		end
 		cooldownSeconds *= 1 + SkillStats.optionBonus(player, classId, slot)
+	end
+	if slot == "Q" then
+		cooldownSeconds *= require(script.Parent.TranscendentService).qCooldownScale(player) -- C5-7 역전 Q 강화판(쿨 −50%)
 	end
 	return cooldownSeconds
 end
