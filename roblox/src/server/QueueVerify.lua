@@ -299,7 +299,7 @@ function V.runPure()
 	section("Q8 K3 영혼", function()
 		local SoulService = require(script.Parent.SoulService)
 		local SoulData = require(ReplicatedStorage.Shared.data.SoulData)
-		local enc = { id = "t1" }
+		local enc = { id = "t1", model = {} }
 		local a, b, c = { Name = "A", UserId = 1 }, { Name = "B", UserId = 2 }, { Name = "C", UserId = 3 }
 		SoulService.onDied(a, enc, Vector3.new(0, 0, 0))
 		local becameSoul = SoulService.consumePending(a, enc)
@@ -308,8 +308,16 @@ function V.runPure()
 		check("견습 보스전 = 영혼 없음(옛 즉시 리스폰)", not SoulService.consumePending(b, { id = "tut", isTutorial = true }) and not SoulService.isSoul(b))
 		SoulService.onDied(c, enc, Vector3.new(100, 0, 0))
 		SoulService.consumePending(c, enc)
-		local n = SoulService.reviveSanctuary({ center = Vector3.new(0, 0, 0), radius = 16, startedAt = os.clock() - 5 })
-		check(("성역 끝 부활 = 성역 안 사망자만(%d명 · A 풀림 · C 남음)"):format(n), n == 1 and not SoulService.isSoul(a) and SoulService.isSoul(c))
+		local sanct = { center = Vector3.new(0, 0, 0), radius = 16, startedAt = os.clock() - 5 }
+		local other = SoulService.reviveSanctuary(sanct, { id = "다른 보스전" })
+		local d = { Name = "D", UserId = 4 }
+		SoulService.onDied(d, enc, Vector3.new(2, 0, 0)) -- 리스폰 대기 중
+		local n = SoulService.reviveSanctuary(sanct, enc)
+		check(("성역 끝 부활 = 시전자 보스전 · 성역 안 사망자만(다른 보스전 %d명 · %d명 · A 풀림 · C 남음)"):format(other, n), other == 0 and n == 2 and not SoulService.isSoul(a) and SoulService.isSoul(c))
+		local dSoul = SoulService.consumePending(d, enc)
+		check("리스폰 대기 중 성역 끝 = 리스폰 때 영혼 대신 부활", not dSoul and not SoulService.isSoul(d))
+		SoulService.onDied(d, { id = "잔류", model = {}, lingering = true }, Vector3.new(0, 0, 0))
+		check("잔류(처치 뒤) 창 사망 = 영혼 아님", not SoulService.consumePending(d, { id = "잔류" }) and not SoulService.isSoul(d))
 		SoulService.clearEncounter(enc)
 		check("보스전 끝 · 전멸 = 영혼 전원 풀림", not SoulService.isSoul(c) and #SoulService.soulsOf(enc) == 0)
 		local was = SoulData.enabled
@@ -356,6 +364,8 @@ function V.runPure()
 		check(("칸당 높은 등급 하나(유물 묵직하게 피해 ×%.2f) · 다른 직업 변형 = 꺼짐(×%.2f)"):format(q.damage, gsE.damage), q.id == "heavy" and q.damage == 1.05 and gsE.damage == 1 and gsE.range == 1)
 		local d = SkillVariant.describe(eq.shoes.skillVariant, "bow")
 		check("툴팁: 다른 직업 = 꺼짐 표시 대상", d and d.active == false and d.text:find("넓게") ~= nil)
+		local sw = SkillVariant.describe({ classId = "greatsword", slot = "E", id = "swift" }, "greatsword")
+		check(("툴팁 반올림: 재빠르게 = −5%%(Play E에서 −6%%로 보였다) → %s"):format(sw and sw.text or "nil"), sw and sw.text:find("피해 -5%", 1, true) ~= nil and sw.text:find("쿨다운 -5%", 1, true) ~= nil)
 		local SaveSystem = require(script.Parent.SaveSystem)
 		local ok, m = pcall(SaveSystem.migrate, { version = 50, gold = 0, classes = {}, inventory = { { grade = "epic", part = "armor" } }, training = { attack = 0, hp = 0, defense = 0 }, quests = { main = 1 } })
 		check(("이관 v50 → v%s(변형 없는 옛 장비 그대로)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 51 and m.inventory[1].skillVariant == nil)

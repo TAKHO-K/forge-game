@@ -29,7 +29,7 @@ end
 
 -- 보스전 사망 순간(BossEncounter Humanoid.Died): 영혼 대기로 적어 둔다(전멸이면 곧 clearEncounter가 지운다)
 function SoulService.onDied(player, encounter, position)
-	if not SoulData.enabled or not encounter or encounter.isTutorial then
+	if not SoulData.enabled or not encounter or encounter.isTutorial or encounter.lingering or not encounter.model then -- 잔류(처치 뒤) 창 사망 = 영혼 아님
 		return
 	end
 	pending[player] = { encounter = encounter, diedAt = os.clock(), deathPos = position }
@@ -40,6 +40,15 @@ function SoulService.consumePending(player, encounter)
 	local p = pending[player]
 	pending[player] = nil
 	if not p or p.encounter ~= encounter then
+		return false
+	end
+	if p.reviveOnSpawn then -- 리스폰 대기 중에 성역이 끝났다 = 영혼 대신 부활 체력으로 선다
+		local maxHp = PlayerState.getMaxHp(player)
+		if maxHp then
+			PlayerState.setHp(player, math.max(1, maxHp * SoulData.reviveHpFraction))
+			require(script.Parent.PlayerDamage).syncHud(player)
+		end
+		print(("[K3] 부활: %s(%s) - 체력 %.0f%%"):format(tostring(player.Name), p.reviveOnSpawn, SoulData.reviveHpFraction * 100))
 		return false
 	end
 	souls[player] = p
@@ -73,15 +82,23 @@ function SoulService.revive(player, reason)
 	return true
 end
 
--- 성역 끝: 그 성역 안에서 성역 동안 죽은 영혼만(sanctuary = { center, radius, startedAt })
-function SoulService.reviveSanctuary(sanctuary)
+-- 성역 끝: 시전자의 보스전에서 그 성역 안 · 성역 동안 죽은 사람만(sanctuary = { center, radius, startedAt }) - 영혼은 바로 부활 · 리스폰 대기(pending)는 리스폰 때 부활
+function SoulService.reviveSanctuary(sanctuary, encounter)
+	local function inside(s)
+		local p = s.deathPos
+		return encounter ~= nil and s.encounter == encounter and p ~= nil and s.diedAt >= (sanctuary.startedAt or 0)
+			and (Vector3.new(p.X - sanctuary.center.X, 0, p.Z - sanctuary.center.Z)).Magnitude <= sanctuary.radius
+	end
 	local n = 0
 	for player, s in pairs(souls) do
-		local p = s.deathPos
-		if p and s.diedAt >= (sanctuary.startedAt or 0) and (Vector3.new(p.X - sanctuary.center.X, 0, p.Z - sanctuary.center.Z)).Magnitude <= sanctuary.radius then
-			if SoulService.revive(player, "성역") then
-				n += 1
-			end
+		if inside(s) and SoulService.revive(player, "성역") then
+			n += 1
+		end
+	end
+	for _, p in pairs(pending) do
+		if inside(p) then
+			p.reviveOnSpawn = "성역"
+			n += 1
 		end
 	end
 	return n

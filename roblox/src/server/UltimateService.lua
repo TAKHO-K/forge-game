@@ -278,7 +278,7 @@ function U.cast(player, classId, rootPart, aimPoint)
 			if index then
 				table.remove(sanctuaries, index)
 			end
-			local revived = require(script.Parent.SoulService).reviveSanctuary(s) -- Q8 K3: 성역이 끝날 때 성역 안에서 죽은 영혼 1회 부활
+			local revived = def.reviveOnEnd and require(script.Parent.SoulService).reviveSanctuary(s, require(script.Parent.BossEncounter).getEncounter(player)) or 0 -- Q8 K3: 성역이 끝날 때 성역 안에서 죽은 사람 1회 부활(시전자의 보스전만)
 			if revived > 0 then
 				print(("[K3] 성역 부활: %s의 성역 → %d명"):format(player.Name, revived))
 			end

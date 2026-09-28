@@ -184,6 +184,7 @@ function MonsterState.resetBossHp(model)
 	if entry and entry.data.isBoss then
 		entry.hp = entry.maxHp
 		entry.contributions = {} -- 처음부터 다시 - 리셋 전 기여는 무효(HP가 복구됐으므로).
+		entry.resetGen = (entry.resetGen or 0) + 1 -- Q8: 튕김 때 맡긴 옛 판 기여도 무효
 	end
 end
 
@@ -535,19 +536,20 @@ end
 -- 모든 몬스터의 기여 기록에 남아 있을 수 있으므로 전부 지운다 - 안 지우면 이미 나간
 -- Player 인스턴스를 몬스터가 죽을 때까지 계속 들고 있게 된다(MonsterAI.server.lua의
 -- releaseChasersOf와 같은 "떠나는 쪽이 자기 흔적을 지운다" 원칙).
-local carried = {} -- Q8 튕김 복귀: [userId] = { [보스 model] = 기여 비율 } - 퇴장 때 지우기 전에 맡긴다(BossEncounter.rejoin이 되찾는다)
+local carried = {} -- Q8 튕김 복귀: [userId] = { [보스 model] = { ratio, gen } } - 퇴장 때 지우기 전에 맡긴다(BossEncounter.rejoin이 되찾는다)
 function MonsterState.takeCarriedContribution(userId, model)
 	local byModel = carried[userId]
-	local ratio = byModel and byModel[model]
+	local rec = byModel and byModel[model]
 	carried[userId] = nil
-	return ratio
+	local entry = monsters[model]
+	return rec and entry and rec.gen == (entry.resetGen or 0) and rec.ratio or nil -- 전멸 리셋 뒤 = 옛 판 기여 무효
 end
 
 function MonsterState.clearPlayerContributions(player)
 	for model, entry in pairs(monsters) do
-		if entry.maxHp and entry.contributions and entry.contributions[player] and typeof(player) == "Instance" then -- Q8: 보스 기여만 맡긴다
+		if entry.data.isBoss and entry.contributions and entry.contributions[player] and typeof(player) == "Instance" then -- Q8: 보스 기여만 맡긴다
 			carried[player.UserId] = carried[player.UserId] or {}
-			carried[player.UserId][model] = entry.contributions[player]
+			carried[player.UserId][model] = { ratio = entry.contributions[player], gen = entry.resetGen or 0 }
 		end
 		if entry.participants then
 			local had = entry.partStage[player] ~= nil
@@ -718,6 +720,12 @@ end
 
 function MonsterState.clear(model)
 	monsters[model] = nil
+	for userId, byModel in pairs(carried) do -- Q8: 사라진 보스에 맡긴 기여도 지운다(표가 쌓이지 않게)
+		byModel[model] = nil
+		if next(byModel) == nil then
+			carried[userId] = nil
+		end
+	end
 end
 
 -- 사거리 판정 등 전체 몬스터를 훑어야 하는 로직용. 순서는 보장하지 않는다.

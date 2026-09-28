@@ -85,7 +85,7 @@ function SkillVariant.describe(v, activeClassId)
 		local m = t[key]
 		if m and m ~= 1 then
 			local label = ({ damage = "피해", cooldown = "쿨다운", range = "범위" })[key]
-			table.insert(parts, ("%s %+d%%"):format(label, math.floor((m - 1) * 100 + (m > 1 and 0.5 or -0.5))))
+			table.insert(parts, ("%s %+d%%"):format(label, math.floor((m - 1) * 100 + 0.5)))
 		end
 	end
 	local class = ClassData.classes[v.classId]

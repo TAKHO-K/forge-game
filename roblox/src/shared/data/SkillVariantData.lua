@@ -10,13 +10,15 @@ return {
 		wide = { name = "넓게", damage = 0.95, range = 1.05 },
 		swift = { name = "재빠르게", damage = 0.95, cooldown = 0.95 },
 		heavy = { name = "묵직하게", damage = 1.05, cooldown = 1.05 },
+		far = { name = "멀리", range = 1.05, cooldown = 1.05 }, -- 피해 계수가 없는 범위 스킬용 맞교환(Play E 리뷰 - wide는 피해 −5%가 안 먹어 순수 이득이었다)
 	},
 	-- 직업 · 칸마다 가능한 변형(1 ~ 2개) · 가중치(정수 - 확률 공개)
+	-- 칸마다 "실제로 먹는 축 두 개"만(피해 = coefficient · 범위 = rangeStuds/radiusStuds/lengthStuds · 쿨). 두 번째 축이 없는 칸(활 Q · 쌍검 Q · 치유사 Q · E)은 비운다.
 	pools = {
-		greatsword = { Q = { { id = "wide", w = 1 }, { id = "heavy", w = 1 } }, E = { { id = "wide", w = 1 }, { id = "swift", w = 1 } }, R = { { id = "wide", w = 1 } } },
-		dualblade = { Q = { { id = "swift", w = 1 } }, E = { { id = "heavy", w = 1 }, { id = "swift", w = 1 } }, R = { { id = "swift", w = 1 } } },
-		bow = { Q = { { id = "heavy", w = 1 }, { id = "swift", w = 1 } }, E = { { id = "wide", w = 1 }, { id = "heavy", w = 1 } }, R = { { id = "wide", w = 1 } } },
-		healer = { Q = { { id = "swift", w = 1 } }, E = { { id = "wide", w = 1 }, { id = "swift", w = 1 } }, R = { { id = "wide", w = 1 } } },
+		greatsword = { Q = { { id = "wide", w = 1 }, { id = "heavy", w = 1 } }, E = { { id = "wide", w = 1 }, { id = "swift", w = 1 } }, R = { { id = "far", w = 1 } } },
+		dualblade = { E = { { id = "heavy", w = 1 }, { id = "swift", w = 1 } }, R = { { id = "far", w = 1 } } },
+		bow = { E = { { id = "far", w = 1 } }, R = { { id = "heavy", w = 1 }, { id = "swift", w = 1 } } },
+		healer = { R = { { id = "far", w = 1 } } },
 	},
 	slots = { "Q", "E", "R" },
 }

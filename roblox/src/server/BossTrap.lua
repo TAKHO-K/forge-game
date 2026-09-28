@@ -300,7 +300,7 @@ function BossTrap.createPrompt(player, record)
 end
 
 local function canHold(trapped, record, rescuer)
-	if rescuer == trapped or records[rescuer] or (PlayerState.getHp(rescuer) or 0) <= 0 then
+	if rescuer == trapped or records[rescuer] or (PlayerState.getHp(rescuer) or 0) <= 0 or require(script.Parent.SoulService).isSoul(rescuer) then -- Q8: 영혼은 구출 불가
 		return false
 	end
 	local reach = reachOf(record)

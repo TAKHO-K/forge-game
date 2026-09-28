@@ -38,7 +38,7 @@ return {
 		healer = {
 			name = "생명의 성역", shape = "ultSanctuary",
 			durationSeconds = 6, radiusStuds = 16, healPerSecondMaxHp = 0.03, -- 파티원 HP 1 바닥(일반 피해만 - 즉사 · 전멸기 · 최대 체력 % 기믹 · 낙사는 못 막음) · 초당 최대 체력 3%
-			reviveOnEnd = false, -- 성역 안 사망자 종료 시 부활 = K3(영혼 상태) 뒤 - 지금은 즉시 리스폰 구조라 자리만
+			reviveOnEnd = true, -- Q8 K3: 성역이 끝날 때 성역 안 · 성역 동안 죽은 사람 부활(영혼 = 즉시 · 리스폰 대기 = 리스폰 때) - SoulService.reviveSanctuary
 		},
 	},
 }

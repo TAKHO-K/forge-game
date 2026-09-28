@@ -688,6 +688,9 @@ function BossEncounter.leaveFor(player)
 	else
 		print(("[forge-game] 보스전 이탈: %s (남은 멤버 %d, HP 배수 %.3f 유지)"):format(
 			player.Name, #encounter.members, encounter.data.partyHpMultiplier or 1))
+		if BossEncounter.livingMemberCount(encounter) == 0 then -- Q8: 남은 사람이 전부 영혼 · 리스폰 대기 = 전멸(죽는 순간만 보면 보스전이 멈춘다)
+			task.defer(BossEncounter.resetFor, encounter.members[1])
+		end
 	end
 end
 
@@ -759,6 +762,7 @@ function BossEncounter.retryLinger(encounter)
 	if not encounter.lingering or not encounter.slot or #encounter.members == 0 then
 		return false
 	end
+	SoulService.clearEncounter(encounter) -- Q8: 새 판은 전원 산 채로
 	local zone = WorldConfig.zones[encounter.zoneKey]
 	BossArenaMap.resetObstacles(encounter.zoneKey)
 	for i, member in ipairs(encounter.members) do
@@ -794,6 +798,7 @@ end
 -- 24-1 파티: 살아 있는 멤버가 하나라도 남아 있으면 리셋하지 않는다(PRD 20.47 [6](다) "생존자
 -- 0명 → 즉시 전체 리셋", 솔로 N=1이면 정확히 21-3 규칙). 죽은 멤버는 리스폰 후 아레나로
 -- 돌아온다(아래 CharacterAdded 훅).
+BossEncounter.debugHoldWipe = setmetatable({}, { __mode = "k" }) -- DevTools 전용(/gg soul hold on|off)
 function BossEncounter.resetFor(player)
 	local encounter = encounterOf[player]
 	local model = encounter and encounter.model -- G1-4: 잔류 중이면 nil(리셋할 보스가 없다)
@@ -801,7 +806,7 @@ function BossEncounter.resetFor(player)
 		return
 	end
 	local survivors = BossEncounter.livingMemberCount(encounter, player)
-	if survivors > 0 then
+	if survivors > 0 or BossEncounter.debugHoldWipe[player] then -- Q8 Play: 개발 명령 /gg soul hold(1인 Play에서 영혼 관전 확인용)
 		print(("[forge-game] 파티원 사망: %s - 생존자 %d명 남아 보스 유지"):format(player.Name, survivors))
 		return
 	end

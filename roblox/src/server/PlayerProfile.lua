@@ -2165,11 +2165,15 @@ function PlayerProfile.rerollSkillVariant(player, index)
 	end
 	local SkillVariant = require(ReplicatedStorage.Shared.SkillVariant)
 	local SkillVariantData = require(ReplicatedStorage.Shared.data.SkillVariantData)
+	local classId = item.skillVariant.classId -- 같은 직업 풀(지금 직업이 아니라 그 장비의 변형 직업)
+	if #SkillVariant.rows(classId) == 0 then
+		return false, "no_pool" -- 골드를 빼기 전에(굴림 결과 nil = 변형만 사라지는 일 없게)
+	end
 	local cost = require(ReplicatedStorage.Shared.GoldCost).cost(require(ReplicatedStorage.Shared.data.MonsterData).tier1.goldDrop * SkillVariantData.rerollKills, PlayerProfile.getAccountBestStage(player), "variantReroll")
 	if not PlayerProfile.trySpendGold(player, cost) then
 		return false, "no_gold"
 	end
-	item.skillVariant = SkillVariant.roll(profile.classId, Random.new())
+	item.skillVariant = SkillVariant.roll(classId, Random.new())
 	InventorySync.push(player, profile)
 	return true, item.skillVariant, cost
 end

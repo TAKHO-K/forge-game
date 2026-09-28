@@ -1242,8 +1242,8 @@ local function handleCommand(player, args)
 		local zone, count, scale = SetBonus.state(eq)
 		reply(player, ("세트 %s · %s %d부위 · 세대 ×%.2f · 최대 체력 옵션 %.3f · 최종 피해 옵션 %.3f"):format(SetData.enabled and "켬" or "끔", tostring(zone), count, scale,
 			PlayerProfile.getOptionBonus(player, "maxHpPercent"), PlayerProfile.getOptionBonus(player, "finalDamage")))
-	elseif sub == "variant" and args[2] then
-		-- Q9 K4: /gg variant give <칸 Q|E|R> <변형 wide|swift|heavy> [부위](착용 부위에 붙임 - 백업 뒤) · reroll <가방 index> · show(지금 직업 칸별 곱)
+	elseif sub == "skillvar" and args[2] then
+		-- Q9 K4: /gg skillvar give <칸 Q|E|R> <변형 wide|swift|heavy> [부위](착용 부위에 붙임 - 백업 뒤) · reroll <가방 index> · show(지금 직업 칸별 곱)
 		local SkillStats = require(script.Parent.SkillStats)
 		local classId = PlayerProfile.getClassId(player)
 		if args[2] == "give" and args[3] and args[4] then
@@ -1272,6 +1272,8 @@ local function handleCommand(player, args)
 			humanoid.Health = 0
 		elseif args[2] == "revive" then
 			SoulService.revive(player, "개발 명령")
+		elseif args[2] == "hold" then
+			require(script.Parent.BossEncounter).debugHoldWipe[player] = args[3] == "on" or nil
 		end
 		local enc = require(script.Parent.BossEncounter).getEncounter(player)
 		reply(player, ("영혼 %s · 보스전 %s · 살아 있는 멤버 %s"):format(tostring(SoulService.isSoul(player)), enc and tostring(enc.id) or "없음",
