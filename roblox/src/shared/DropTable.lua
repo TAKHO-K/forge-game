@@ -70,11 +70,9 @@ function DropTable.armorGradeTable(tierIndex)
 	return DropTableData.armorGradeByTier[tierIndex] or DropTableData.armorGradeByTier[1]
 end
 
--- 감쇠 전 태초 확률(장비 1개당) = 드래곤 확률 ÷ dragonOverTier[t](칸이 없으면 0).
+-- 감쇠 전 태초 확률(장비 1개당) = 잡몹 등급표의 태초 칸(M2 - 정수 가중치 표 · 옛 dragonRate ÷ dragonOverTier는 안 쓴다).
 function DropTable.primordialBaseRate(tierIndex)
-	local config = DropTableData.primordial
-	local divisor = config.dragonOverTier[tierIndex]
-	return divisor and config.dragonRate / divisor or 0
+	return DropTable.armorGradeTable(tierIndex)[PRIMORDIAL] or 0
 end
 
 -- 레벨 감쇠 배수(0 ~ 1): 격차 = 최고 − 사냥 스테이지. 격차 ≥ startGap이면 (격차 − startGap + 1) × perLevel만큼 깎는다(0 미만 금지).

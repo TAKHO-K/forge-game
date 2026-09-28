@@ -213,6 +213,7 @@ return {
 		},
 	},
 
+	-- M2(묶음 B): hunt.monsters = 종 풀({ species = MonsterSpeciesData id, weight } - 지점마다 종 하나 · T1 · T2 선공형 스폰 비율 30%) · 옛 { tier, weight } 형식도 계속 읽는다.
 	-- ═══ 구역 6개 ═══ hunt = 몬스터 스폰 범위(이름 · 나오는 몬스터 { tier = MonsterData.tierOrder 번호, weight } - M2에서 종 추가 = 이 목록만) · tierIndex = 기존 tier(몬스터 · 드랍 그대로) · bossId = 이 구역의 진행 보스(BossData.placement.laps[1]과 같은 순서 - 검증이 대조).
 	-- 배정: T1 = 견습 보스(구간 수호자 - 스테이지 5) · T2 ~ T6 = BR 모형 난이도 순(처음 만남 · 스테이지 30 · 솔로 전멸률 - M1 보고서 표).
 	-- features(구역 좌표): 높이는 탐험 지역에(사냥 지대는 평평). kind = plateau(경사로로 걸어 오름) · tower(1단 점프 계단 나선) · cliff(못 오르는 벽 ≥ 23 - 경치 · 막음) ·
@@ -221,7 +222,7 @@ return {
 	-- 둥지 = M1-3 둥지 3트랙(data/NestData - 옛 walk · chain · puzzle 자리는 없앴다).
 	zones = {
 		{
-			key = "tier1", tierIndex = 1, hunt = { name = "석조 평원 사냥터", monsters = { { tier = 1, weight = 1 } } }, bossId = "section_guardian", angleDeg = -90, theme = "수호자의 석조 평원", floorTint = { 150, 156, 146 },
+			key = "tier1", tierIndex = 1, hunt = { name = "석조 평원 사냥터", monsters = { { species = "moss_slime", weight = 0.65 }, { species = "rock_boar", weight = 0.35 } } }, bossId = "section_guardian", angleDeg = -90, theme = "수호자의 석조 평원", floorTint = { 150, 156, 146 },
 			landmark = { kind = "monoliths", r = 2400, count = 8, radius = 60, height = 34 },
 			features = {
 				{ kind = "plateau", r = 1100, lat = 300, w = 120, d = 90, h = 40, explore = "절벽 위 전망" },
@@ -233,7 +234,7 @@ return {
 			eggs = { { id = "t1_watch", feature = 2, at = "top" }, { id = "t1_cave", feature = 3, at = "inside" }, { id = "t1_falls", feature = 4, at = "behind" } },
 		},
 		{
-			key = "tier2", tierIndex = 2, hunt = { name = "수정 굴 사냥터", monsters = { { tier = 2, weight = 1 } } }, bossId = "crystal_queen", angleDeg = -30, theme = "수정 동굴", floorTint = { 150, 150, 162 },
+			key = "tier2", tierIndex = 2, hunt = { name = "수정 굴 사냥터", monsters = { { species = "crystal_beetle", weight = 0.75 }, { species = "amethyst_bat", weight = 0.25 } } }, bossId = "crystal_queen", angleDeg = -30, theme = "수정 동굴", floorTint = { 150, 150, 162 },
 			landmark = { kind = "spires", r = 2400, count = 5, radius = 70, height = 130 },
 			features = {
 				{ kind = "cave", r = 1100, lat = 320, w = 70, d = 90, h = 30, explore = "수정 굴" },
@@ -245,7 +246,7 @@ return {
 			eggs = { { id = "t2_cave", feature = 1, at = "inside" }, { id = "t2_hill", feature = 3, at = "top" }, { id = "t2_falls", feature = 5, at = "behind" } },
 		},
 		{
-			key = "tier3", tierIndex = 3, hunt = { name = "수몰 사원 사냥터", monsters = { { tier = 3, weight = 1 } } }, bossId = "abyssal_lord", angleDeg = 30, theme = "수몰 사원", floorTint = { 144, 154, 160 },
+			key = "tier3", tierIndex = 3, hunt = { name = "수몰 사원 사냥터", monsters = { { species = "hermit_knight", weight = 0.6 }, { species = "bubble_jelly", weight = 0.4 } } }, bossId = "abyssal_lord", angleDeg = 30, theme = "수몰 사원", floorTint = { 144, 154, 160 },
 			landmark = { kind = "sunkenTemple", r = 2550, count = 4, radius = 50, height = 70 }, -- M1-3: 바다 만 속 수중 신전(WorldStructures가 짓는다 - 바닥 = 만 바닥)
 			features = {
 				{ kind = "falls", r = 1050, lat = -420, w = 80, h = 80, explore = "사원 폭포 뒤" },
@@ -257,7 +258,7 @@ return {
 			eggs = { { id = "t3_falls", feature = 1, at = "behind" }, { id = "t3_bell", feature = 2, at = "top" }, { id = "t3_cave", feature = 4, at = "inside" } },
 		},
 		{
-			key = "tier4", tierIndex = 4, hunt = { name = "모래 유적 사냥터", monsters = { { tier = 4, weight = 1 } } }, bossId = "scorpion_queen", angleDeg = 90, theme = "모래 유적", floorTint = { 162, 156, 140 },
+			key = "tier4", tierIndex = 4, hunt = { name = "모래 유적 사냥터", monsters = { { species = "sand_scorpion", weight = 0.5 }, { species = "cactus_imp", weight = 0.5 } } }, bossId = "scorpion_queen", angleDeg = 90, theme = "모래 유적", floorTint = { 162, 156, 140 },
 			landmark = { kind = "pyramid", r = 2400, count = 1, radius = 70, height = 90 },
 			features = {
 				{ kind = "plateau", r = 1100, lat = 300, w = 140, d = 90, h = 30, explore = "모래 언덕 위" },
@@ -270,7 +271,7 @@ return {
 		},
 		{
 			-- 폭풍 첨탑 = 특히 높게(사용자 지시): 첨탑 320 · 절벽 150.
-			key = "tier5", tierIndex = 5, hunt = { name = "폭풍 첨탑 사냥터", monsters = { { tier = 5, weight = 1 } } }, bossId = "storm_lord", angleDeg = 150, theme = "폭풍 첨탑", floorTint = { 146, 150, 158 },
+			key = "tier5", tierIndex = 5, hunt = { name = "폭풍 첨탑 사냥터", monsters = { { species = "bolt_imp", weight = 0.5 }, { species = "cloud_sheep", weight = 0.5 } } }, bossId = "storm_lord", angleDeg = 150, theme = "폭풍 첨탑", floorTint = { 146, 150, 158 },
 			landmark = { kind = "stormSpire", r = 2400, count = 1, radius = 40, height = 320 },
 			features = {
 				{ kind = "tower", r = 1100, lat = 320, size = 28, h = 120, explore = "바람 탑 꼭대기" },
@@ -282,7 +283,7 @@ return {
 			eggs = { { id = "t5_windtop", feature = 1, at = "top" }, { id = "t5_plateau", feature = 3, at = "top" }, { id = "t5_cave", feature = 4, at = "inside" } },
 		},
 		{
-			key = "tier6", tierIndex = 6, hunt = { name = "빙하 동굴 사냥터", monsters = { { tier = 6, weight = 1 } } }, bossId = "frost_giant", angleDeg = 210, theme = "빙하 동굴", floorTint = { 158, 162, 168 },
+			key = "tier6", tierIndex = 6, hunt = { name = "빙하 동굴 사냥터", monsters = { { species = "ice_golem", weight = 0.35 }, { species = "snow_rabbit", weight = 0.65 } } }, bossId = "frost_giant", angleDeg = 210, theme = "빙하 동굴", floorTint = { 158, 162, 168 },
 			landmark = { kind = "iceWall", r = 2400, count = 3, radius = 80, height = 120 },
 			features = {
 				{ kind = "cliff", r = 1100, lat = -450, w = 160, d = 70, h = 120, explore = "빙벽" },

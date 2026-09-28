@@ -54,13 +54,26 @@ function SpawnSites.pickMonster(list, roll)
 		total += m.weight
 	end
 	local x = (roll or rng:NextNumber()) * total
+	local function dataOf(m) -- M2: 종 항목({ species, weight }) = 종 data · 옛 항목({ tier, weight }) = 티어 data
+		return m.species and MonsterData.species[m.species] or MonsterData[MonsterData.tierOrder[m.tier]]
+	end
 	for _, m in ipairs(list) do
 		x -= m.weight
 		if x <= 0 then
-			return MonsterData[MonsterData.tierOrder[m.tier]]
+			return dataOf(m)
 		end
 	end
-	return MonsterData[MonsterData.tierOrder[list[#list].tier]]
+	return dataOf(list[#list])
+end
+
+-- M2: 종의 무리 크기(groupSize = { 최소, 최대 } - 균등) · 없으면 nil(구역 표 pickSize)
+function SpawnSites.pickSpeciesSize(data, roll)
+	local g = data and data.species and data.species.groupSize
+	if not g then
+		return nil
+	end
+	local n = g[1] + math.floor((roll or rng:NextNumber()) * (g[2] - g[1] + 1))
+	return math.min(math.clamp(n, g[1], g[2]), CFG.group.maxSize)
 end
 
 -- 무리 크기 뽑기(구역 표 · 없으면 default) - roll 0 ~ 1
@@ -166,7 +179,8 @@ function SpawnSites.tick(list, foci, now, hooks)
 		local active, lastNearAt = SpawnSites.nextState(point.active, point.lastNearAt, near, kept, now, engaged)
 		point.lastNearAt = lastNearAt
 		if active and not wasActive then
-			local size = (hooks.size and hooks.size(point)) or SpawnSites.pickSize(point.zoneKey)
+			point.pick = SpawnSites.pickMonster(point.monsters) -- M2: 지점마다 종 하나(무리 = 같은 종 · 같은 PackId)
+			local size = (hooks.size and hooks.size(point)) or SpawnSites.pickSpeciesSize(point.pick) or SpawnSites.pickSize(point.zoneKey)
 			local f = point.nearFocus
 			-- 사람 몫이 찼어도 새 지점이 곁의 무리보다 더 가까우면 켠다(앞으로 걸어가는 사람) - 전체 상한은 늘 지킨다
 			local full = f and (groups[f] or 0) >= caps.maxGroupsPerPlayer and point.nearD >= (groupMinD[f] or math.huge)
@@ -225,8 +239,9 @@ end
 -- 실제 서버 훅
 local liveHooks = {
 	spawn = function(point, slot)
-		local model = MonsterSpawner.spawn(SpawnSites.pickMonster(point.monsters), slot.position, point.zoneKey)
+		local model = MonsterSpawner.spawn(point.pick or SpawnSites.pickMonster(point.monsters), slot.position, point.zoneKey)
 		if model then
+			model:SetAttribute("PackId", point.zoneKey .. "#" .. tostring(point.index)) -- M2 무리 반격(linkAggro) · 한 지점 = 한 무리
 			slotByKey[key(MonsterState.getSpawnPosition(model) or slot.position)] = { point = point, slot = slot }
 		end
 		return model

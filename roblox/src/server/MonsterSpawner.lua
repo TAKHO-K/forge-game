@@ -127,6 +127,27 @@ local function buildModel(data, position, variant)
 	if rig then
 		root, body, head = BossRig.build(model, rig, look, position)
 		model:SetAttribute("BossRig", data.isBoss and data.id or data.rigId)
+	elseif data.rig then
+		-- M2 잡몹 몸체(MonsterRigSpec - 같은 조립 함수) · 외형 파트는 조준 광선에 안 걸린다(CanQuery 끔) → 옛 몸통 + 머리 크기의 투명 Hitbox가 조준 · 판정 자리를 그대로 지킨다.
+		root, body, head = BossRig.build(model, data.rig, look, position)
+		model:SetAttribute("MonsterRig", data.speciesId)
+		local hitbox = Instance.new("Part")
+		hitbox.Name = "Hitbox"
+		hitbox.Size = Vector3.new(2.4, 4.6, 1.6) * sizeScale -- 옛 몸통(2.4 × 3 × 1.2) + 머리 공(1.6) 합친 상자
+		hitbox.Transparency = 1
+		hitbox.Anchored = false
+		hitbox.Massless = true
+		hitbox.CanCollide = false
+		hitbox.CanTouch = false
+		hitbox.CanQuery = true
+		hitbox.CFrame = root.CFrame * CFrame.new(0, 0.8 * sizeScale, 0)
+		hitbox.Parent = model
+		local weld = Instance.new("Motor6D")
+		weld.Name = "HitboxJoint"
+		weld.Part0 = root
+		weld.Part1 = hitbox
+		weld.C0 = CFrame.new(0, 0.8 * sizeScale, 0)
+		weld.Parent = root
 	else
 		root, body, head = BossLook.buildCore(model, look, position)
 	end

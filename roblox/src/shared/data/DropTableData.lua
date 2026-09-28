@@ -19,27 +19,6 @@
 --   새 표로 바꾸면 몬스터 수치와 판매가가 같이 움직인다(몬스터는 지시 밖 · 판매가는 고대 ×950 · 태초 ×1,000으로 튄다). 근거 = docs/phase/D1-report.md.
 
 local dragonRate = 0.000001 -- D1: 0.001 → 0.000001(0.0001%) - tier6 장비 1개당 태초(나머지 tier는 dragonOverTier로 더 낮다)
-local ancientRate = 0.00002 -- D1: 잡몹 고대 0.002%(옛 tier5 0.5% · tier6 1.9%)
-
--- 옛 비율 그대로 흡수: base의 등급들을 fixed(고정 등급 확률)를 뺀 나머지에 맞춰 늘린다.
-local function absorb(base, fixed)
-	local fixedSum, baseSum = 0, 0
-	for _, chance in pairs(fixed) do
-		fixedSum += chance
-	end
-	for _, chance in pairs(base) do
-		baseSum += chance
-	end
-	local row = {}
-	for gradeId, chance in pairs(base) do
-		row[gradeId] = chance * (1 - fixedSum) / baseSum
-	end
-	for gradeId, chance in pairs(fixed) do
-		row[gradeId] = chance
-	end
-	return row
-end
-
 -- D1 전 표(웹 DROP_GRADE_TABLE 16-5 조사값 · tier6 태초 0.1%) - 공정성 · 판매가 고정 기준.
 local fairnessGradeByTier = {
 	{ normal = 0.90, rare = 0.10 },
@@ -50,20 +29,23 @@ local fairnessGradeByTier = {
 	{ rare = 0.10, epic = 0.30, legendary = 0.40, relic = 0.18, ancient = 0.019, primordial = 0.001 },
 }
 
-return {
+local DropTableData = {
 	fairnessGradeByTier = fairnessGradeByTier,
 	sellReferencePrimordialRate = 0.001, -- D1: 판매가 역산용 옛 dragonRate(Loot.getSellPrice - 값 고정)
 
 	-- D1 잡몹 장비 1개의 등급 분포. 유물 = tier4 0.3% · tier5 0.4% · tier6 0.5%(≤ 0.5% · 높은 tier가 높게) · 고대 = 옛 칸(tier5 · 6)만 0.002% ·
 	-- 태초 = 아래 primordial 별도 굴림(tier6 칸 = dragonRate). tier1 ~ 3은 옛 표 그대로(유물 이상 칸이 원래 없다).
-	armorGradeByTier = {
-		fairnessGradeByTier[1],
-		fairnessGradeByTier[2],
-		fairnessGradeByTier[3],
-		absorb({ normal = 0.20, rare = 0.40, epic = 0.30, legendary = 0.09 }, { relic = 0.003 }),
-		absorb({ normal = 0.05, rare = 0.25, epic = 0.40, legendary = 0.25 }, { relic = 0.004, ancient = ancientRate }),
-		absorb({ rare = 0.10, epic = 0.30, legendary = 0.40 }, { relic = 0.005, ancient = ancientRate, primordial = dragonRate }),
+	-- M2(묶음 B-6 - 사용자 확정 표): 잡몹 장비 1개의 등급 분포 = 정수 가중치(분모 fieldWeightDenominator) · 3구간(T1–T2 · T3–T4 · T5–T6).
+	--   규칙: 태초 + 고대 → + 유물 → + 전설 = 4% · 영웅 10 · 희귀 25 · 일반 61(세 구간 공통). 유물 · 전설은 "유물 0.5 · 전설 3" 가정값을 이 규칙으로 맞춘 값.
+	--   태초 칸 = 감쇠 전 태초 확률(DropTable.primordialBaseRate - 레벨 감쇠 · 별도 굴림 그대로) · 초월 = 아래 transcendent 바닥 굴림(C5-7 재사용).
+	--   서버 굴림(Loot) · 확률 공개(DropTable.disclosure) · EconSim이 모두 armorGradeByTier(= 이 가중치 ÷ 분모)를 읽는다. 옛 D1 표(absorb) = git 43c7cc4 이전.
+	fieldWeightDenominator = 10000000,
+	fieldGradeWeights = {
+		{ primordial = 35, ancient = 165, relic = 35800, legendary = 364000, epic = 1000000, rare = 2500000, normal = 6100000 }, -- T1–T2
+		{ primordial = 50, ancient = 250, relic = 50700, legendary = 349000, epic = 1000000, rare = 2500000, normal = 6100000 }, -- T3–T4
+		{ primordial = 70, ancient = 330, relic = 71600, legendary = 328000, epic = 1000000, rare = 2500000, normal = 6100000 }, -- T5–T6
 	},
+	fieldBandByTier = { 1, 1, 2, 2, 3, 3 },
 
 	-- G1-2(D0 결정 4 나 - 공정성 식 보정): tier 공정성 식(MonsterData)은 "처치 시간 ∝ HP"를 전제로 tier마다 시간당 장비 가치를 같게 맞춘다. 한 방에 잡거나
 	-- 처치보다 이동이 길면 이 전제가 깨져 높은 tier(드래곤 HP ×7.8)가 시간당 훨씬 유리했다(D0 (c)). 보정 = 장비 기대 개수 × c(DropTable.timeFairnessFactor):
@@ -108,3 +90,18 @@ return {
 		fieldTierScale = { 0.7, 0.7, 1, 1, 1.4, 1.4 },
 	},
 }
+
+-- M2 잡몹 등급표 = 정수 가중치 ÷ 분모(합 검사 - 틀리면 서버가 시작하지 않는다)
+DropTableData.armorGradeByTier = {}
+for tierIndex, band in ipairs(DropTableData.fieldBandByTier) do
+	local weights, sum, row = DropTableData.fieldGradeWeights[band], 0, {}
+	for gradeId, w in pairs(weights) do
+		assert(w == math.floor(w) and w >= 0, "드랍 가중치는 0 이상 정수")
+		sum += w
+		row[gradeId] = w / DropTableData.fieldWeightDenominator
+	end
+	assert(sum == DropTableData.fieldWeightDenominator, ("잡몹 드랍 가중치 합 %d ≠ %d (구간 %d)"):format(sum, DropTableData.fieldWeightDenominator, band))
+	DropTableData.armorGradeByTier[tierIndex] = row
+end
+
+return DropTableData

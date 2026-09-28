@@ -26,6 +26,7 @@ local BossEnvironment = require(script.Parent.BossEnvironment) -- BR1 리뷰 1: 
 -- 24-1 파티: 보스의 평타·패턴 조준 대상을 "살아 있는 멤버 중 가장 가까운 사람"으로 매 틱
 -- 재선택하고(PRD 20.47 [6](나)), 패턴 피해·연출 대상 목록(멤버 전원)을 BossPatterns에 넘긴다.
 local BossEncounter = require(script.Parent.BossEncounter)
+local Temperament = require(script.Parent.MonsterTemperament) -- M2 성향 카드
 
 local syncHud = PlayerDamage.syncHud
 
@@ -91,7 +92,7 @@ local function computeOccupiedZones()
 end
 
 -- 범위 안에서 가장 가까운 플레이어의 캐릭터 루트파트. 없으면 nil.
-local function findNearestPlayerRootInRange(position, maxRange, model)
+local function findNearestPlayerRootInRange(position, maxRange, model, filter)
 	local nearestRoot, nearestPlayer, nearestDistance = nil, nil, math.huge
 
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -102,7 +103,7 @@ local function findNearestPlayerRootInRange(position, maxRange, model)
 			-- 22-4: 수평 거리 + 높이차 상한(Reach). 절벽 위 플레이어는 어그로 대상이 아니다.
 			local distance = Reach.horizontalDistance(rootPart.Position, position)
 			if distance <= maxRange and distance < nearestDistance
-				and Reach.sameLayer(rootPart.Position, position) then
+				and Reach.sameLayer(rootPart.Position, position) and (filter == nil or filter(rootPart, player)) then -- M2: 성향 필터(안전 지대 · 추적 상한)
 				nearestRoot, nearestPlayer, nearestDistance = rootPart, player, distance
 			end
 		end
@@ -205,6 +206,10 @@ local applyHitToPlayer = PlayerDamage.applyHit
 -- (뺄셈이 아니라 감소율 나눗셈)을 쓴다 - 웹에서 뺄셈으로 만들었던 무적 버그 구조를 피한다.
 -- 9-5에서 피격 상한을 없앴다 - 상한은 즉사가 주는 "스펙이 모자란다"는 신호를 뭉갰다
 -- (PRD-forge-game-roblox.md 20.11-4 참고).
+-- M2 평타 전조(MonsterSpeciesData windup - 시범 3종): 쿨이 찬 첫 틱에 전조 시작(모델 Attribute MobWindup = 초 - 클라 MonsterRigAnimator 포즈) →
+--   windup.seconds 뒤 사거리 안에 남아 있으면 때린다 · 전조 중 사거리를 벗어나면 헛침(쿨 그대로 - 다시 들어오면 새 전조).
+local windupStartedAt = setmetatable({}, { __mode = "k" })
+
 local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	if PlayerState.getHp(targetPlayer) <= 0 then
 		return -- 죽어서 리스폰 대기 중인 시체는 때리지 않는다(사망 로그 중복 방지)
@@ -212,6 +217,10 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 
 	-- 22-4: 수평 사거리 + 높이차 상한 - 절벽 위아래로는 못 때린다(Reach.lua).
 	if not Reach.within(targetRoot.Position, monsterPosition, data.attackRangeStuds) then
+		if windupStartedAt[model] then
+			windupStartedAt[model] = nil
+			model:SetAttribute("MobWindup", nil) -- 헛침
+		end
 		return
 	end
 
@@ -219,6 +228,19 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 	local last = MonsterState.getLastAttackTick(model)
 	if last and now - last < data.attackCooldownSeconds then
 		return
+	end
+	local windup = data.species and data.species.windup
+	if windup then
+		local started = windupStartedAt[model]
+		if not started then
+			windupStartedAt[model] = now
+			model:SetAttribute("MobWindup", windup.seconds)
+			return
+		elseif now - started < windup.seconds then
+			return
+		end
+		windupStartedAt[model] = nil
+		model:SetAttribute("MobWindup", nil)
 	end
 	MonsterState.setLastAttackTick(model, now)
 
@@ -292,6 +314,23 @@ local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetR
 	tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot) -- BR1-2
 end
 
+-- M2: 추격 시작(자연 어그로 · 반격 · 무리 반격 공용) - 옛 idle 분기의 본문 그대로 + 알림 모션.
+local function beginChase(model, data, player)
+	MonsterState.setAiState(model, "chasing")
+	MonsterState.setAiTarget(model, player)
+	Temperament.alert(model, data)
+	-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
+	-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
+	-- (아래 else 분기의 clear까지) 고정한다.
+	local aggroStage = MonsterState.getAttackStage(model, TutorialState.getMonsterStage(player)) -- C1: 잡몹 = 기준 스테이지
+	local tickAttack = MonsterState.getAttackFor(model, aggroStage)
+	PlayerState.setTickDamageSource(player, model, computeHitDamage(tickAttack, player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player) * PlayerDamage.getLevelGapTakeMultiplier(player, not data.isBoss and aggroStage or nil)
+		* PlayerDamage.getCombatTakeMultiplier(player, tickAttack, not data.isBoss and aggroStage or nil)) -- C2: 전투 공식 받는 피해도 눈금에 -- G1-3 리뷰 3: 레벨차도 눈금에 -- P2.5c: 신규 보호도 눈금에
+	if data.isBoss then
+		BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)
+	end
+end
+
 RunService.Heartbeat:Connect(function(dt)
 	local occupiedZones = computeOccupiedZones()
 
@@ -322,23 +361,17 @@ RunService.Heartbeat:Connect(function(dt)
 			if data.isChest or data.isRescueTarget then -- 29-3 구출 대상(얼음 덩어리)도 같다
 				continue
 			end
+			if model:GetAttribute("DevFrozen") then -- M2 개발 명령 /gg m2 lineup(Studio - 줄 세우기 스크린샷)
+				continue
+			end
 
 			if state == "idle" then
-				local player, playerRoot = findNearestPlayerRootInRange(position, WorldConfig.aggro.rangeStuds, model)
+				local player, _, why = Temperament.acquire(model, data, position, findNearestPlayerRootInRange)
 				if player then
-					MonsterState.setAiState(model, "chasing")
-					MonsterState.setAiTarget(model, player)
+					beginChase(model, data, player)
 					state = "chasing"
-
-					-- 체력바 눈금(9-5)은 "지금 상대하는 몬스터의 평타"다 - 전투 중 계속 바뀌면
-					-- 혼란스러우니 어그로가 붙는 이 순간에만 값을 정하고, 전투가 끝날 때까지
-					-- (아래 else 분기의 clear까지) 고정한다.
-					local aggroStage = MonsterState.getAttackStage(model, TutorialState.getMonsterStage(player)) -- C1: 잡몹 = 기준 스테이지
-					local tickAttack = MonsterState.getAttackFor(model, aggroStage)
-					PlayerState.setTickDamageSource(player, model, computeHitDamage(tickAttack, player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player) * PlayerDamage.getLevelGapTakeMultiplier(player, not data.isBoss and aggroStage or nil)
-						* PlayerDamage.getCombatTakeMultiplier(player, tickAttack, not data.isBoss and aggroStage or nil)) -- C2: 전투 공식 받는 피해도 눈금에 -- G1-3 리뷰 3: 레벨차도 눈금에 -- P2.5c: 신규 보호도 눈금에
-					if data.isBoss then
-						BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)
+					if why == "retaliate" then
+						Temperament.linkPack(model, data, player, beginChase) -- M2 무리 반격
 					end
 				end
 			end
@@ -383,7 +416,8 @@ RunService.Heartbeat:Connect(function(dt)
 				-- 22-4: 네 번째 출구 - 대상이 높이차 상한(8) 너머로 올라갔거나 내려갔다(절벽 위아래).
 				-- 못 때리는 대상을 절벽 밑에서 영원히 노려보는 대신 집으로 돌아간다.
 				if not targetRoot or targetIsDead
-					or (not data.isBoss and distanceFromHome > WorldConfig.aggro.leashRangeStuds)
+					or (not data.isBoss and distanceFromHome > Temperament.leashOf(data)) -- M2: 종마다 리쉬
+					or (not data.isBoss and targetRoot and Temperament.inSafeZone(targetRoot.Position)) -- M2: 안전 지대 진입 금지
 					or isOutsideZoneBounds(position, zoneKey)
 					or (targetRoot and not GroundProbe.sameGroundLayer(position, targetRoot.Position)
 						and not (data.isBoss and BossEnvironment.onGardenPlatform(model, targetRoot.Position))) then -- 29-4: 뜬 대상은 발밑 지면으로 판단한다 · BR1 리뷰 1: 수정 공중 정원 발판 위 대상은 놓치지 않는다
@@ -453,6 +487,7 @@ RunService.Heartbeat:Connect(function(dt)
 					model:PivotTo(CFrame.new(home))
 					MonsterState.setAiState(model, "idle")
 					blockedSince[model] = nil
+					Temperament.onReturnedHome(model, data) -- M2: 복귀 = 체력 회복
 				elseif stepToward(model, position, home, MonsterState.getMoveSpeed(model), dt) then
 					blockedSince[model] = nil
 				else
@@ -465,6 +500,7 @@ RunService.Heartbeat:Connect(function(dt)
 						model:PivotTo(CFrame.new(home))
 						MonsterState.setAiState(model, "idle")
 						blockedSince[model] = nil
+						Temperament.onReturnedHome(model, data)
 					end
 				end
 			end

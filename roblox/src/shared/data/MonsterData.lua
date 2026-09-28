@@ -200,6 +200,42 @@ for tierIndex, info in ipairs(TIER_INFO) do
 	}
 end
 
+-- M2 종 × 티어: 종 data = 티어 data 복사(HP · 공격 · 보상 · 크기 · 히트박스 그대로) + 종의 이름 · 색 · 몸체 · 성향(MonsterSpeciesData). 옛 티어 대표 이름은 retiredName으로 남기고
+--   티어 displayName은 그 티어 종 이름 모음(드랍 조회 · 견습 문구가 읽는다).
+local MonsterSpeciesData = require(script.Parent.MonsterSpeciesData)
+local MonsterRigSpec = require(script.Parent.MonsterRigSpec)
+MonsterData.species = {}
+local tierNames = {}
+local speciesIds = {}
+for id in pairs(MonsterSpeciesData.species) do
+	table.insert(speciesIds, id)
+end
+table.sort(speciesIds)
+for _, id in ipairs(speciesIds) do
+	local def = MonsterSpeciesData.species[id]
+	local tierData = MonsterData[MonsterData.tierOrder[def.tier]]
+	local data = table.clone(tierData)
+	data.speciesId = id
+	data.displayName = def.displayName
+	data.bodyColor = def.body
+	data.headColor = def.head
+	data.rig = MonsterRigSpec.rigs[id]
+	if data.rig then
+		data.rig.accent = def.accent
+	end
+	data.species = def
+	data.moveSpeedStuds = tierData.moveSpeedStuds * (def.speed or 1)
+	MonsterData.species[id] = data
+	tierNames[def.tier] = tierNames[def.tier] or {}
+	table.insert(tierNames[def.tier], def.displayName)
+end
+for tierIndex, key in ipairs(MonsterData.tierOrder) do
+	MonsterData[key].retiredName = MonsterSpeciesData.retired[key]
+	if tierNames[tierIndex] then
+		MonsterData[key].displayName = table.concat(tierNames[tierIndex], " · ")
+	end
+end
+
 -- 공정성 항등식 자체 검증용 데이터(16-6 지시 - "6개 tier 전부 수치로 확인하고 결과를
 -- 보여줘라"). 이 모듈은 데이터만 계산해 두고, 실제 콘솔 출력은 HuntingGround.server.lua가
 -- 서버 시작 시 한 번 찍는다(데이터 모듈에 print 부작용을 두지 않는다는 이 프로젝트

@@ -187,6 +187,14 @@ function MonsterState.resetBossHp(model)
 	end
 end
 
+-- M2 이탈 복귀(MonsterTemperament.onReturnedHome): 잡몹 체력 · 참여 기록을 새로(스폰 때와 같다). 상자 · 구출 대상 · 보스는 대상이 아니다.
+function MonsterState.resetTrash(model)
+	local entry = monsters[model]
+	if entry and not entry.data.isBoss and not entry.isChest and not entry.isRescueTarget then
+		MobShare.fresh(entry)
+	end
+end
+
 -- 29-1 - 보스의 받는 피해 배율(파훼 게이트 ×g, 기회 창 ×m). BossMechanics만 쓴다. 기본 1.
 function MonsterState.setDamageTakenMultiplier(model, multiplier)
 	local entry = monsters[model]

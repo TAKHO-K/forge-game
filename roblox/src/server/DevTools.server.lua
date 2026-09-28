@@ -1372,6 +1372,67 @@ local function handleCommand(player, args)
 			moves, notices = hook:Invoke(player, "tick")
 		end
 		reply(player, ("자동 이동 목표 %s · 관문 %s · 누적 이동 %s · 알림 %s · 설정 %s"):format(tostring(target), tostring(gate), tostring(moves), tostring(notices), tostring(player:GetAttribute("AutoStage"))))
+	elseif sub == "m2" then
+		-- M2 종 · 성향 확인: /gg m2 lineup(12종 한 줄 - 멈춤 · 안 죽음) · /gg m2 spawn <종> [앞 거리] [마릿수](살아 있는 몹 - 같은 PackId) · /gg m2 windup <종>(멈춘 몹 전조 반복) · /gg m2 state(내 곁 몹 상태)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+		local SpeciesData = require(ReplicatedStorage.Shared.data.MonsterSpeciesData)
+		local ids = {}
+		for id, def in pairs(SpeciesData.species) do
+			table.insert(ids, { id = id, tier = def.tier })
+		end
+		table.sort(ids, function(a, b)
+			return a.tier ~= b.tier and a.tier < b.tier or a.id < b.id
+		end)
+		local look = root and Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+		local right = look and Vector3.new(-look.Z, 0, look.X)
+		if not root then
+			reply(player, "캐릭터 없음")
+		elseif args[2] == "lineup" then
+			for i, e in ipairs(ids) do
+				local position = root.Position + look * 16 + right * ((i - 6.5) * 6)
+				local mob = MonsterSpawner.spawn(MonsterData.species[e.id], position, nil, {})
+				mob:SetAttribute("DevFrozen", true)
+				mob:SetAttribute("C3Immortal", true)
+				mob:PivotTo(CFrame.lookAt(mob.PrimaryPart.Position, mob.PrimaryPart.Position - look))
+			end
+			reply(player, ("M2 줄 세우기 %d종(T1 → T6 · 왼쪽부터)"):format(#ids))
+		elseif args[2] == "spawn" and MonsterData.species[args[3] or ""] then
+			local count = math.clamp(math.floor(tonumber(args[5]) or 1), 1, 5)
+			local pack = ("dev#%d"):format(math.random(1, 1e6))
+			for i = 1, count do
+				local position = root.Position + look * (tonumber(args[4]) or 20) + right * ((i - (count + 1) / 2) * 4)
+				local mob = MonsterSpawner.spawn(MonsterData.species[args[3]], position, nil, {})
+				mob:SetAttribute("PackId", pack)
+			end
+			reply(player, ("M2 %s × %d (앞 %s)"):format(args[3], count, tostring(tonumber(args[4]) or 20)))
+		elseif args[2] == "windup" and MonsterData.species[args[3] or ""] then
+			local mob = MonsterSpawner.spawn(MonsterData.species[args[3]], root.Position + look * 10, nil, {})
+			mob:SetAttribute("DevFrozen", true)
+			mob:SetAttribute("C3Immortal", true)
+			mob:PivotTo(CFrame.lookAt(mob.PrimaryPart.Position, root.Position * Vector3.new(1, 0, 1) + Vector3.new(0, mob.PrimaryPart.Position.Y, 0)))
+			local w = MonsterData.species[args[3]].species.windup
+			task.spawn(function()
+				for _ = 1, 6 do
+					mob:SetAttribute("MobWindup", w and w.seconds or 1)
+					task.wait((w and w.seconds or 1) + 0.1)
+					mob:SetAttribute("MobWindup", nil)
+					task.wait(0.8)
+				end
+			end)
+			reply(player, ("M2 전조 %s(%s초 × 6)"):format(args[3], tostring(w and w.seconds)))
+		else
+			local lines = {}
+			for _, model in ipairs(MonsterState.getAllModels()) do
+				local data = MonsterState.getData(model)
+				if data and data.speciesId and model.PrimaryPart and (model.PrimaryPart.Position - root.Position).Magnitude < 80 then
+					local target = MonsterState.getAiTarget(model)
+					table.insert(lines, ("%s:%s%s"):format(data.speciesId, MonsterState.getAiState(model), target and ("→" .. target.Name) or ""))
+				end
+			end
+			print("M2STATE|" .. table.concat(lines, " "))
+			reply(player, ("M2 곁 몹 %d: %s"):format(#lines, table.concat(lines, " "):sub(1, 180)))
+		end
 	elseif sub == "c5" and args[2] == "phantom" then
 		-- C5-7b 환영: /gg c5 phantom [n] - 서버 굴림(rollPhantom) n회(기본 1,000) 표본 → 비율 · 강공격 수(3번째마다). 초월 장갑 착용이 필요하다.
 		local T = require(script.Parent.TranscendentService)
