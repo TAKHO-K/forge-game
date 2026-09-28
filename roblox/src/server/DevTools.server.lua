@@ -4383,6 +4383,15 @@ if RunService:IsStudio() and verifyEnabled("C5(가)") then -- C5: 딜 부위 지
 	end)
 end
 
+if RunService:IsStudio() and verifyEnabled("Q0(가)") then -- QUEUE-10h: 드랍 개수 · 태초 가중치 · 알림 범위(항목마다 QueueVerify에 section 추가)
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.QueueVerify).runPure)
+		if not ok then
+			print("===Q 검증 끝(가)=== 에러: " .. tostring(err))
+		end
+	end)
+end
+
 if RunService:IsStudio() and verifyEnabled("C4(가)") then -- C4: 치명 출처 · 오버치명 · 잡몹 HP 구간 · 보스 공격 완화 · 원거리 지연 보정 · 툴팁
 	task.spawn(function()
 		local ok, err = pcall(require(script.Parent.C4Verify).runPure)

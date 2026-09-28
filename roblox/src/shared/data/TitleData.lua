@@ -10,7 +10,7 @@ return {
 		primordialChosen = { id = "primordialChosen", name = "태초의 선택", grade = "primordial",
 			condition = "드랍 태초 장비(세계 번호가 붙는 태초)를 처음 얻는다 - 태초 보석 · 무기 환생 태초 · 계승 결과는 해당 없음",
 			acquire = { kind = "dropPrimordial", sources = { "boss", "raid", "field", "sparkle" }, parts = { "armor", "gloves", "shoes" } },
-			grantedBy = "server/PrimordialRegistry.onRolled" },
+			grantedBy = "server/PrimordialRegistry.onRolled" }, -- QUEUE-10h Q0-6: 새로 주지 않는다(칭호 = 초월부터 · DropNoticeData.globalGrades) - 이미 가진 계정은 표시 유지
 		-- C5-7 초월자: 드랍 초월 장비(세계 번호)를 처음 얻는다 - 흑금 그라데이션(topGrades).
 		transcendentOne = { id = "transcendentOne", name = "초월자", grade = "transcendent",
 			condition = "드랍 초월 장비(세계 번호가 붙는 초월)를 처음 얻는다",

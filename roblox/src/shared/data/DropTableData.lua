@@ -39,13 +39,22 @@ local DropTableData = {
 	--   규칙: 태초 + 고대 → + 유물 → + 전설 = 4% · 영웅 10 · 희귀 25 · 일반 61(세 구간 공통). 유물 · 전설은 "유물 0.5 · 전설 3" 가정값을 이 규칙으로 맞춘 값.
 	--   태초 칸 = 감쇠 전 태초 확률(DropTable.primordialBaseRate - 레벨 감쇠 · 별도 굴림 그대로) · 초월 = 아래 transcendent 바닥 굴림(C5-7 재사용).
 	--   서버 굴림(Loot) · 확률 공개(DropTable.disclosure) · EconSim이 모두 armorGradeByTier(= 이 가중치 ÷ 분모)를 읽는다. 옛 D1 표(absorb) = git 43c7cc4 이전.
+	--   QUEUE-10h Q0 결정 2(사용자 확정 · 조정안 2): 태초 35 / 50 / 70 → 2 / 3 / 3(0.00002 / 0.00003 / 0.00003%) · 빠진 몫은 유물로(일반 61% 정수 유지 · 합 검사 그대로).
 	fieldWeightDenominator = 10000000,
 	fieldGradeWeights = {
-		{ primordial = 35, ancient = 165, relic = 35800, legendary = 364000, epic = 1000000, rare = 2500000, normal = 6100000 }, -- T1–T2
-		{ primordial = 50, ancient = 250, relic = 50700, legendary = 349000, epic = 1000000, rare = 2500000, normal = 6100000 }, -- T3–T4
-		{ primordial = 70, ancient = 330, relic = 71600, legendary = 328000, epic = 1000000, rare = 2500000, normal = 6100000 }, -- T5–T6
+		{ primordial = 2, ancient = 165, relic = 35833, legendary = 364000, epic = 1000000, rare = 2500000, normal = 6100000 }, -- T1–T2
+		{ primordial = 3, ancient = 250, relic = 50747, legendary = 349000, epic = 1000000, rare = 2500000, normal = 6100000 }, -- T3–T4
+		{ primordial = 3, ancient = 330, relic = 71667, legendary = 328000, epic = 1000000, rare = 2500000, normal = 6100000 }, -- T5–T6
 	},
 	fieldBandByTier = { 1, 1, 2, 2, 3, 3 },
+
+	-- QUEUE-10h Q0 결정 1(사용자 확정): 잡몹 장비 기대 개수 = dropChance × killUnits × fieldDropCountAdjust[tier](MonsterData.dropCountMultiplier).
+	--   옛 식(HP 비 ÷ 옛 공정성 r(t))은 D1 전 표의 티어 격차를 전제로 해 M2 평평한 등급표에서 T6 시간당 위력이 T1의 0.40이었다.
+	--   보정 = 이동 시간 포함 시간당 장비 위력을 최고 티어 대비 0.95 ~ 1.00(T6 ≤ 1.00)으로 맞춘 값 - 대표 T1 처치 1.35초 · 무리 평균(Q1 뒤 T6 = 골렘 3 ~ 4 + 푸른 드래곤 1 ~ 2)에서
+	--   T1 ~ T5 0.985 · T6 1.000 · 처치 0.8 ~ 2.0초 범위 최저 0.959(3.0초 0.946). 근거 = docs/design/field-drop-tables.md.
+	--   dropCountBasis = "killUnits"(새 식) | "legacy"(옛 HP 비 ÷ r(t) - 되돌리기 스위치).
+	dropCountBasis = "killUnits",
+	fieldDropCountAdjust = { 1.0, 1.028, 1.061, 0.944, 0.924, 0.975 },
 
 	-- G1-2(D0 결정 4 나 - 공정성 식 보정): tier 공정성 식(MonsterData)은 "처치 시간 ∝ HP"를 전제로 tier마다 시간당 장비 가치를 같게 맞춘다. 한 방에 잡거나
 	-- 처치보다 이동이 길면 이 전제가 깨져 높은 tier(드래곤 HP ×7.8)가 시간당 훨씬 유리했다(D0 (c)). 보정 = 장비 기대 개수 × c(DropTable.timeFairnessFactor):
@@ -66,8 +75,9 @@ local DropTableData = {
 	--   raid = 토벌(반복 보스 = 첫 클리어가 아닌 처치 - 옛 retry 일반 90 · 희귀 10을 대체): 영웅 78 · 전설 20.948 · 유물 1 · 고대 0.05 · 태초 0.002%.
 	--   토벌 1회 확률은 잡몹보다 높고 첫 클리어보다 크게 낮다(지시 원칙).
 	bossGrades = {
+		-- QUEUE-10h Q0 결정 2: 첫 클리어 태초 0.01 → 0.1%(늘어난 0.09%p = 영웅 몫에서). 범위 밖이면 이 값만 0.05 ~ 0.2% 안에서 보정.
 		-- C5-7 초월(TranscendentData.drop): 첫 클리어 0.001% · 토벌 0.0002% - 영웅 몫에서 같은 양을 뺀다(합 1 · 끝자리 맞추기 G1-1(가)).
-		firstClear = { epic = 0.62 - 0.00001, legendary = 0.326, relic = 0.05, ancient = 0.0039, primordial = 0.0001, transcendent = 0.00001 },
+		firstClear = { epic = 0.62 - 0.00001 - 0.0009, legendary = 0.326, relic = 0.05, ancient = 0.0039, primordial = 0.001, transcendent = 0.00001 },
 		raid = nil, -- 묶음 F2: 아래 raidWeights(정수 가중치 · 합 검사)로 만든다
 	},
 	-- 묶음 F2(BR2 데이터 정리 - 추천값): 토벌 = 태초 0.002 · 고대 0.048 · 유물 0.95 · 전설 21 · 영웅 78%(초월 0.0002% = 영웅 몫에서) - 분모 fieldWeightDenominator.

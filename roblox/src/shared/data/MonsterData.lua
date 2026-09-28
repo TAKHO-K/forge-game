@@ -153,6 +153,9 @@ for tierIndex, info in ipairs(TIER_INFO) do
 	-- 28-1 [2-1] 이름 변경(옛 itemLevelBonus, 값은 그대로): itemLevel에 곱하던 값이 "기대 드랍 개수에 곱하는 값"이 됐다 -
 	-- 공정성 항등식의 r^(p−1) 몫을 개수가 맡는다(Loot.expectedArmorDropCount). itemLevel은 스테이지가 정한다.
 	local dropCountMultiplier = r ^ (p - 1) * s
+	if DropTableData.dropCountBasis == "killUnits" then -- QUEUE-10h Q0 결정 1: 개수 = killUnits × 티어 보정(DropTableData.fieldDropCountAdjust)
+		dropCountMultiplier = hpMultiplier * DropTableData.fieldDropCountAdjust[tierIndex]
+	end
 	local sizeScale = r ^ 0.5
 
 	local hp = BASE_HP * hpMultiplier

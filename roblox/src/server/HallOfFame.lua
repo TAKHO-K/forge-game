@@ -45,7 +45,7 @@ local function makeFace(face)
 	title.Font = Enum.Font.GothamBlack
 	title.TextSize = 44
 	title.TextColor3 = PrimordialData.accentColor
-	title.Text = "★ 명예의 전당 · 태초 ★"
+	title.Text = "✦ 명예의 전당 · 초월 ✦"
 	title.Parent = gui
 	local labels = {}
 	for i = 1, PrimordialData.recentKeep do
@@ -136,10 +136,11 @@ end
 
 -- 원본에서 다시 읽는다(서버 시작 · 5분마다 · 검증). 반환 = 읽기 성공 여부.
 function HallOfFame.refresh()
-	local list = PrimordialRegistry.readRecent()
-	local transcendentList = PrimordialRegistry.readRecent(nil, TranscendentData.gradeId) or {} -- C5-7 별도 칸(맨 앞)
-	lastReadOk = list ~= nil
-	if list then
+	local list = {} -- Q0-6: 명예의 전당 = 초월만(태초 목록은 읽지 않는다 - 원본 DataStore는 그대로)
+	local rawTranscendent = PrimordialRegistry.readRecent(nil, TranscendentData.gradeId) -- C5-7 별도 칸(맨 앞)
+	local transcendentList = rawTranscendent or {}
+	lastReadOk = rawTranscendent ~= nil
+	if lastReadOk then
 		local AcquisitionAudit = require(script.Parent.AcquisitionAudit) -- S1 2-4: 회수 · 격리 번호 = 결번(명예의 전당에서 뺀다)
 		entries = {}
 		for _, row in ipairs(transcendentList) do
@@ -158,6 +159,9 @@ end
 
 -- 이 서버에 알림이 온 순간: 같은 번호가 없으면 앞에 넣는다.
 local function onAnnounce(entry)
+	if not require(ReplicatedStorage.Shared.data.DropNoticeData).globalGrades[entry.grade] then -- Q0-6: 태초 = 같은 서버 배너만(석판 안 올림)
+		return
+	end
 	if require(script.Parent.AcquisitionAudit).isNumberExcluded(entry.no) then
 		return
 	end

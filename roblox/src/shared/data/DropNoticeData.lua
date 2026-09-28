@@ -6,13 +6,17 @@
 --   · 태초(서버 전체)만 예외 - 피드가 아니라 화면 상단 가운데 배너 한 줄 4초 + 채팅 1줄.
 -- 그래서 원래 지시서의 대기열(queueMax 8) · 등급별 우선순위 · 태초 8초는 쓰지 않는다.
 
-return {
+local DropNoticeData = {
 	-- 이 등급이 굴려지면 같은 파티 전원(본인 포함)에게 알린다. 솔로(파티 없음)는 serverWideGrades에 든 것만 알린다.
 	partyGrades = { relic = true, ancient = true, primordial = true, transcendent = true },
 	-- 이 등급이 굴려지면 같은 서버 전원에게 알린다(파티 알림을 대신한다 - 배너 + 채팅 1줄).
 	-- D1 ⑧: 고대 = 같은 서버 알림(전 서버 없음). 태초는 여기서 빼고 registryGrades로 - PrimordialRegistry가 세계 번호와 함께 전 서버 배너 + 채팅을 보낸다(중복 배너 방지).
 	serverWideGrades = { ancient = true },
 	registryGrades = { transcendent = true, primordial = true },
+	-- QUEUE-10h Q0-6 알림 규칙(사용자 확정 · 최우선): 전 서버 알림(MessagingService) · 명예의 전당 · 칭호 = 이 표의 등급만(초월부터).
+	--   태초 = 출처(잡몹 · 반짝이 · 보스 첫 클리어 · 토벌 · 세대 변이) 상관없이 같은 서버 알림(배너 + 채팅 줄 · 빛기둥) + 본인 연출만.
+	--   읽는 곳 = announceScope(아래) · PrimordialRegistry(gradeConfig · 최근 목록 · 칭호) · HallOfFame.
+	globalGrades = { transcendent = true },
 
 	feedRows = 3, -- 드랍 피드 최대 줄 수
 	seconds = 4, -- 피드 · 배너 표시 시간(초) - 이 시간이 지나면 흐려지기 시작한다
@@ -20,3 +24,19 @@ return {
 	groupWindowSeconds = 1, -- 같은 사람의 알림이 이 시간 안에 여럿이면 한 줄로 묶는다("… 외 1")
 	moreFormat = " 외 %d", -- 묶음 표기 - %d = 묶인 나머지 건수
 }
+
+-- Q0-6 알림 범위 단일 소스(순수 함수 - 하네스 · 감사 표가 읽는다): "global"(전 서버 + 같은 서버) · "server"(같은 서버) · "party" · nil.
+function DropNoticeData.announceScope(grade, inParty)
+	if DropNoticeData.globalGrades[grade] then
+		return "global"
+	end
+	if DropNoticeData.registryGrades[grade] or DropNoticeData.serverWideGrades[grade] then
+		return "server"
+	end
+	if inParty and DropNoticeData.partyGrades[grade] then
+		return "party"
+	end
+	return nil
+end
+
+return DropNoticeData

@@ -19,6 +19,7 @@ local Workspace = game:GetService("Workspace")
 local PrimordialRegistry = {}
 
 local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7
+local DropNoticeData = require(ReplicatedStorage.Shared.data.DropNoticeData) -- Q0-6 알림 범위 단일 소스(globalGrades)
 local store = DataStoreService:GetDataStore(PrimordialData.storeName)
 local isStudio = RunService:IsStudio()
 local _topic = PrimordialData.topic .. (isStudio and "_studio" or "") -- C5-7: 태초 토픽은 더 안 쓴다(전 서버 알림 = 초월만)
@@ -27,9 +28,9 @@ local transcendentTopic = TranscendentData.announce.topic .. (isStudio and "_stu
 -- C5-7 등급별 키 · 칭호(태초 = PrimordialData · 초월 = TranscendentData.announce).
 local function gradeConfig(gradeId)
 	if gradeId == TranscendentData.gradeId then
-		return { counterKey = TranscendentData.announce.counterKey, recentKey = TranscendentData.announce.recentKey, titleId = TranscendentData.announce.titleId, global = true }
+		return { counterKey = TranscendentData.announce.counterKey, recentKey = TranscendentData.announce.recentKey, titleId = TranscendentData.announce.titleId, global = DropNoticeData.globalGrades[gradeId] == true }
 	end
-	return { counterKey = PrimordialData.counterKey, recentKey = PrimordialData.recentKey, titleId = PrimordialData.titleId, global = false } -- 태초 = 같은 서버 알림만(C5-7 - 전 서버 배너 제거)
+	return { counterKey = PrimordialData.counterKey, recentKey = PrimordialData.recentKey, titleId = PrimordialData.titleId, global = DropNoticeData.globalGrades[gradeId] == true } -- 태초 = 같은 서버 알림만(C5-7 - 전 서버 배너 제거)
 end
 PrimordialRegistry.gradeConfig = gradeConfig
 
@@ -173,7 +174,7 @@ function PrimordialRegistry.claim(player, item, options)
 		end
 		local shownName = PrimordialRegistry.filterName(ownerName, player and player.UserId or 0)
 		local entry = { no = no, name = shownName, userId = stamp.ownerId, at = stamp.at, part = item.part, source = item.source, jobId = game.JobId, grade = item.grade }
-		if no then
+		if no and gradeConfig(item.grade).global then -- Q0-6: 명예의 전당(최근 목록) = 전 서버 등급만(초월부터)
 			appendRecent(entry, options.test)
 		end
 		announceLocal(entry)
@@ -261,6 +262,9 @@ PrimordialRegistry.spawnBeacon = spawnBeacon
 -- D1-2: 칭호 "태초의 선택" 획득 조건(TitleData.acquire) - 드랍 출처 태그가 있는 태초 장비(갑옷 · 장갑 · 신발)만. 보석(part = nil · 옵션만) · 출처 없는 것은 거절.
 function PrimordialRegistry.titleEarnedBy(item)
 	if type(item) ~= "table" then
+		return false
+	end
+	if not gradeConfig(item.grade).global then -- Q0-6: 칭호 = 전 서버 등급만(초월부터) - 태초의 선택은 새로 주지 않는다(이미 가진 칭호는 그대로)
 		return false
 	end
 	local acquire = TitleData.titles[gradeConfig(item.grade).titleId].acquire -- C5-7: 초월 = "초월자"
