@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **C3(전투 템포 · 꾹 누르기 · 클릭 지점 발사 · 경제 재맞춤) + W3a(공격 모션 전면) + 파트 0(§7-5 · 코요테 · 환생 12h) · 2026-09-28** · 직전 보고서 = `docs/phase/C3-report.md`(그 전 `C2-report.md` · `W2-report.md` · `BR1-4c-report.md` · `BR1-4b-report.md` · `BR1-4b0-report.md` · `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **W3b(나머지 모션 전면 - 스킬 8 · 피격 · 기절 · 넘어짐 · 이동 · 사망 · 부활) + 파트 0(성장 곡선 2,500h · 후반 벽) · 2026-09-28** · 직전 보고서 = `docs/phase/W3b-report.md`(+ `W3b-part0.md` · 모션 기준 `docs/design/motion-standard.md`)(그 전 `C3-report.md` · `C2-report.md` · `W2-report.md` · `BR1-4c-report.md` · `BR1-4b-report.md` · `BR1-4b0-report.md` · `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -28,6 +28,8 @@
 | 저장 | **SAVE_VERSION 45**(v45 캐릭터 경험치 곡선 이관 - 레벨 · 진행률 유지 / v44 audit - λ · 태초 굴림 수 · 플레이 시간 / v43 장비 태초 각인 primordial · 출처 source · 옛 태초 = 이전 태초 + 잠금 / v42 hints.stealLockSeen / v41 world.nests · world.nestDex · eggs / v40 world.bossGates / v38 world.portals · peakLevel / v39 titles) · Studio 수동 Play = `Player_<id>_manual`(M1-2 후속 - 실제 프로필은 읽기만) | `server/SaveSystem.lua` |
 
 ## 3. 다음 단계
+
+> **W3b 끝(2026-09-28) - place 저장 불필요**: 모션 = 스킬 8종 전용(채널 = 서버 틱 시계 · 판정 시각 불변 확인) · 덧씌움 반응(피격 · 착지 · 도약 · 기절 · 넉백) · 넘어짐 무기별 무릎 · 사망(`BreakJointsOnDeath` 끔) · 부활 · 스킬 · 2단 대시 중계 · `/gg anim` 19종 추가 · 기준 = `docs/design/motion-standard.md`(K의 R · T도). 파트 0: 상위 1% 25,300 **2,501h**(목표 2,500 ±10%) · 캐주얼 1,000 37.4h · 일반 환생 5 11.17h(EconSim이 장비 옵션을 처음 셈) · 후반 벽 `CombatFormulaData.lateWall`(5,000 → 7,500 권장 ×1.2 · 평탄 하한 0.95 - 평균 굴림 0.91 = 피해 ×0.95 · 상위 굴림 0.97 벌칙 없음) · 천장 몫 17,000 0.9941 · EconSim 옵션 굴림 3단계(`optionRoll` · what-if `rollLow` · `rollHigh` · `noItemOptions`). 지연 0.25 코요테 O · **지연 0.25 움직이는 몹 원거리 적중 51%(결정 W3b 8)** · 1타 구간 환생 5 직후 13.5h(결정 W3b 6). `/gg c3 mob … 1` = 진짜 무적(C3Immortal - 옛 배율은 보스 전용이라 안 먹었다). **다음 = M2**(결정 W3b 6 · 8 먼저).
 
 > **C3 + W3a 끝(2026-09-28) - place 저장 불필요**: 최상위 원칙 = 사람 기준 템포 · 편하고 재밌게 · 입력 속도로 강해지지 않음. 후반 대표 T1 4.8 → 2.75타(실측 3.5) · T6 37.6 → 4.95(5.9) · 초당 입력 7.5 → 3.0 · EconSim 상위 1% 1,946.6h · 캐주얼 1,000 38.5h · 일반 환생 5 12.60h(경험치 앵커 125 = 170,000). 모션 = 다리 · 체중 · 대검 양손 · 쌍검 시차 · 지팡이 시전 손 · 강궁 반동 · 대검 키프레임 비교(`client/KeyframeCompare`). 코요테 0.1 · 선입력 0.1(못 넘는 틈 53). **다음 = W3b**(스킬 · 피격 · 넘어짐 모션) - 첫 Play에 지연 0.25 코요테 · 투사체 50발(`C3-report.md` 결정 11).
 
@@ -78,6 +80,7 @@
 
 | 출처 | 내용 |
 |---|---|
+| W3b 1 ~ 10 | 1 평균 0.91 · 상위 0.97(동시 목표 불가) · 2 천장 몫 0.9941 · 3 장비 옵션 반영(37.4h · 11.17h) · 4 캐주얼 후반 0.73 · 5 캐주얼 득템 P90 9.3h(가루) · **6 1타 구간 13.5h → 보스 공격 곡선 600 ~ 2,000 완화 추천** · 7 S1 봉투 큰 값 · **8 지연 0.25 원거리 51% → 서버 보정 반경 + 속도 × 지연 추천** · 9 벽 T6 8.65타 · 10 채널 틱 표시 지연 - `W3b-report.md` §6 |
 | C3 1 ~ 11 | 1 T1 실측 3.5타(목표 2 ~ 3) · 2 초반 · 환생 5 직후 대표 한 방 구조 · 3 tier1 HP 66 · 4 EconSim 목표 처치 시간 ×0.45 · 5 치명 +0.15 한 단 · 6 스킬 계수 유지 · 7 강궁 수치 · 8 v46 없음 · 9 코드 모션 유지(키프레임 선택) · 10 폰 버튼 최종 배치(U1) · 11 지연 0.25 코요테 · 투사체 50발 미측정 - `C3-report.md` §8 |
 | ~~C2 1 · 4 · 7 · 8~~ | C3에서 처리(1 템포 · 4 환생 12h · 7 표시 곡선 · 8 남의 화면 휘두르기) - 나머지 C2 2 · 3 · 5 · 6 · 9 = 추천대로 |
 | C2 1 ~ 9(옛 기록) | 1 후반 일반 몹 28대 / 3초 체감(수정 안 함) · 2 보스전 제외 유지 · 3 받는 피해 벌칙만 유지 · 4 "일반 환생 5 약 12h" = 실측 5.1h(12h는 일반 1,000) · 5 잡몹 기여도 배율 뒤 · 6 전투력 표시 = 공격만 · 7 대표 표 급변(500 → 700) · 8 남의 화면 휘두르기 안 보임 · 9 보스 칸 권장 줄 - `C2-report.md` §5 |
