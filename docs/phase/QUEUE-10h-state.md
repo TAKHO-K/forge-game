@@ -36,10 +36,21 @@
 | 보스 선택 창 보상 띠 | △ 창 스크린샷만(`playA-stage-panel.png`) · 보스 칸 클릭 못 함 | 단일 소스 = QueueVerify Q3 O |
 | 스크립트 오류 | 0 | 로그 Error = MCP 마우스 도구뿐 |
 
-| Q5 BR2 | (이 커밋) | 세트(`SetData` · `SetBonus` - 옵션 합산 공통 입구 · 스위치 기본 끔) · `item.setZone` SAVE v49(출처 태그로 이관) · 토벌 입장(관문 발판 · `RaidRequest` · `BossEncounter.spawnRaidFor` - 솔로) · 개발 `/gg tp` `/gg set` `/gg raid` · QueueVerify 46/46 |
+| Q5 BR2 | 2dc3f61 | 세트(`SetData` · `SetBonus` - 옵션 합산 공통 입구 · 스위치 기본 끔) · `item.setZone` SAVE v49(출처 태그로 이관) · 토벌 입장(관문 발판 · `RaidRequest` · `BossEncounter.spawnRaidFor` - 솔로) · 개발 `/gg tp` `/gg set` `/gg raid` · QueueVerify 46/46 |
+
+## Play B 결과(07:03 ~ 07:08 · 1회)
+| 항목 | 결과 | 근거 |
+|---|---|---|
+| QueueVerify(Q5 이관 · 세트 · 토벌 규칙 포함) | O 46/46 | `===Q 검증 끝(가)=== 46/46 통과` · `이관 v48 → v49 ... O` |
+| 저장 왕복(옛 v48 → 새 v49 · 종료 저장 → 원본 읽기) | O | `_verify` 원본 version 49 · 토벌 드랍 legendary source=raid(section_guardian) setZone=tier1 |
+| 세트 3부위 효과 | O | 켬 `tier1 3부위 · 최대 체력 0.050 · 최종 피해 0.050` · 끔 0.000 |
+| 토벌 입장 · 거부 | O | 원격 미등록 → gate_unregistered · 발판 경로 → raid_entered(토벌 스테이지 45) · 처치 = 전설(토벌 표) · 진도 not_next · 잔류 없이 종료 |
+| 보스 출처 태그 | O | 위 저장 원본 source.kind = raid |
+| /gg tp tier6 · 드래곤 자연 스폰 | O | 지점 1 곁 도착 · 드래곤 무리 1마리(규칙 1 ~ 2) · 골렘 무리 3 |
+| 스크립트 오류 | 0 | |
 
 ## 지금
-- Play B(BR2): 저장 왕복 · 세트 3부위 · 토벌 입장 · 거부 · 출처 태그
+- Q6 G3(수련 · 직업 능력 · 퀘스트 · 메인 퀘스트 · 골드 예산)
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)
