@@ -12,6 +12,12 @@ local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Option = require(ReplicatedStorage.Shared.Option)
+local Text = require(ReplicatedStorage.Shared.Text)
+
+-- C4-3: 치명 옵션이면 툴팁 한 줄(오버치명 전환 안내) - ItemTooltip이 옵션 줄 아래 작은 글씨로 그린다.
+local function critNote(item)
+	return item and item.option and item.option.id == "crit" and Text.get("item.critOverflowNote") or nil
+end
 
 local ItemDescribe = {}
 
@@ -89,6 +95,7 @@ function ItemDescribe.item(item, classId)
 		gradeId = item.grade,
 		meta = metaFn(item),
 		options = optionLines(item, classId),
+		note = critNote(item),
 	}
 end
 
@@ -100,7 +107,7 @@ function ItemDescribe.gem(gem, classId)
 	else
 		title = ("%s %s 보석 · Lv.%d"):format(gradeName(gem.grade), optionName(gem.option.id), gem.itemLevel or 0)
 	end
-	return { title = title, gradeId = gem.grade, meta = "무기 보석", options = optionLines(gem, classId) }
+	return { title = title, gradeId = gem.grade, meta = "무기 보석", options = optionLines(gem, classId), note = critNote(gem) }
 end
 
 -- 무기(등급 · 강화 단계). 무기는 옵션이 없다(20.67 [1]).

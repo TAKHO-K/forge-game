@@ -57,7 +57,14 @@ function ItemTooltip.build(props)
 		optionLabels[index] = label
 	end
 
-	local refs = { root = root, title = title, meta = meta, optionLabels = optionLabels }
+	-- C4-3 안내 한 줄(desc.note - 치명 옵션 = 오버치명 전환). 옵션 줄 바로 아래 작은 글씨.
+	local note = Theme.label(root, "", "caption", "textSecondary")
+	note.Name = "Note"
+	note.ZIndex = z + 1
+	note.Size = UDim2.new(1, -PAD * 2, 0, metaHeight)
+	note.Visible = false
+
+	local refs = { root = root, title = title, meta = meta, optionLabels = optionLabels, note = note }
 
 	-- desc = ItemDescribe 결과. 높이를 돌려준다(줄 수만큼).
 	function refs.set(desc)
@@ -76,6 +83,12 @@ function ItemTooltip.build(props)
 		end
 		local optionCount = math.min(desc.options and #desc.options or 0, #optionLabels)
 		local height = PAD * 2 + titleHeight + metaHeight + LINE_GAP + optionCount * optionHeight + (optionCount > 0 and LINE_GAP or 0)
+		note.Visible = desc.note ~= nil
+		if desc.note then
+			note.Text = desc.note
+			note.Position = UDim2.new(0, PAD, 0, height - PAD)
+			height += metaHeight
+		end
 		root.Size = UDim2.new(0, width, 0, height)
 		return height
 	end

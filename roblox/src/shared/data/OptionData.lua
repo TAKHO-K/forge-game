@@ -53,7 +53,9 @@ return {
 		attackPercent = { displayName = "위력", category = "dps", baseValue = 0.30, cap = 2.55 },
 		speedPercent = { displayName = "신속", category = "dps", baseValue = 0.30, cap = nil },
 		-- 치명: 치확 +a%p·치피 +b(각각 독립 롤) - a=b=21%p(20.67 [6-3], 활 기준 위력 등가 해).
-		crit = { displayName = "치명", category = "dps", critRateBase = 0.21, critDmgBase = 0.21, cap = 1.79 },
+		-- C4-2(사용자 - "치명만 올리는 게 정답"이 안 되게): 0.21 → 0.115. 옛 값은 대표 전 구간에서 치명 1칸 = 위력 1칸의 약 2배 가치(위력은 합연산 버킷이 커서 체감 · 치명 피해는 여유가 큼) →
+		--   0.115면 초반 약 1.0 · 100% 뒤 약 1.2배(치명 확률 몫 = 오버치명 전환 · 치명 피해 몫). 상한 1.79는 그대로(이제 안 닿는다).
+		crit = { displayName = "치명", category = "dps", critRateBase = 0.115, critDmgBase = 0.115, cap = 1.79 },
 		maxHpPercent = { displayName = "건강", category = "survival", baseValue = 0.10, cap = 0.20 },
 		-- 방어: 생존 기여를 건강과 맞추려면 ρ(GemData.survivalReductionAtAnchor)로 나눈 값이
 		-- 필요하다(20.67 [3] "value = ... × ρ 보정", Gem.lua의 옛 AXIS_CORRECTION.defensePercent와

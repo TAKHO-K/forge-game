@@ -18,6 +18,8 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local GemData = require(ReplicatedStorage.Shared.data.GemData) -- C4-2 환생 보상 치명(환생 횟수 상한)
+local OptionData = require(ReplicatedStorage.Shared.data.OptionData) -- C4-3 오버치명 전환분이 따르는 위력 버킷 상한
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local EnhanceEffect = require(ReplicatedStorage.Shared.EnhanceEffect)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
@@ -228,6 +230,28 @@ function PlayerCombat.getLevelCritBonus(level)
 		end
 	end
 	return curve[#curve].bonus
+end
+
+-- C4-2 환생 보상 치명 확률(환생 횟수 × CombatConfig.critRebirthBonus · 상한 = 마지막 환생).
+function PlayerCombat.getRebirthCritBonus(rebirthCount)
+	return math.clamp(rebirthCount or 0, 0, GemData.maxRebirthCount) * (CombatConfig.critRebirthBonus or 0)
+end
+
+-- C4-2 · C4-3 치명 확률 출처 합(버프 제외 - 게임 PlayerProfile · EconSim BalanceSim이 같은 함수).
+--   반환: (직업 기본에 더할 치명 확률 - 직업 + 이 값 ≤ 1로 자름, 100% 초과분이 바뀐 공격력 %).
+--   optionCritRate = 장비 · 보석 치명 옵션 합(Option.critBonus - 옵션 상한 안).
+function PlayerCombat.resolveCrit(classId, level, rebirthCount, optionCritRate)
+	local class = ClassData.classes[classId]
+	local base = class and class.critRate or 0
+	local bonus = PlayerCombat.getLevelCritBonus(level) + PlayerCombat.getRebirthCritBonus(rebirthCount) + (optionCritRate or 0)
+	local over = math.max(base + bonus - 1, 0)
+	local rule = CombatConfig.overCrit
+	return bonus - over, over * (rule and rule.attackPercentPerCrit or 0)
+end
+
+-- C4-3 위력 버킷 합: 장비 · 보석 위력 옵션(상한 안) + 오버치명 전환분 → 같은 옵션 상한(OptionData.options.attackPercent.cap)으로 자른다.
+function PlayerCombat.capAttackPercentOption(optionAttackPercent, overCritAttackPercent)
+	return math.min((optionAttackPercent or 0) + (overCritAttackPercent or 0), OptionData.options.attackPercent.cap)
 end
 
 -- C3 전 쿨다운식 = 이제 "DPS 기준"(한 초에 넣는 피해를 정하는 가상 간격). 실제 입력 간격은 아래 getAttackTempo.

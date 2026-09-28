@@ -1349,6 +1349,70 @@ local function handleCommand(player, args)
 		end
 		print(("C3HITS|%d|비율 %.3f · 피해 배율 ×%.3f · 간격 %.2f · 한 타 ×%.2f · 치명 %.0f%%|%s|%s"):format(stage, power / rec, CombatFormula.dealMultiplier(power, stage), interval, scale, critRate * 100, table.concat(rows, " · "), table.concat(skills, " · ")))
 		reply(player, ("스테이지 %d: %s"):format(stage, table.concat(rows, " · ")))
+	elseif sub == "c4" and args[2] == "overcrit" then
+		-- C4-3 검증: /gg c4 overcrit - 버프 뺀 치명 확률 합을 지금 · 100 · 110 · 130%로 강제(옵션 치명 강제값)해 실제 서버 함수의 공격력 % · 공격력 · 전투력을 찍고 되돌린다
+		local RS = game:GetService("ReplicatedStorage")
+		local PlayerCombat = require(RS.Shared.PlayerCombat)
+		local ClassData = require(RS.Shared.data.ClassData)
+		local CharacterLevel = require(RS.Shared.CharacterLevel)
+		local classId = PlayerProfile.getClassId(player)
+		local class = ClassData.classes[classId]
+		local level = PlayerProfile.getCharacterLevel(player)
+		local rebirths = PlayerProfile.getRebirthCount(player)
+		local fixed = class.critRate + PlayerCombat.getLevelCritBonus(level) + PlayerCombat.getRebirthCritBonus(rebirths)
+		local rows = {}
+		for _, total in ipairs({ false, 1.0, 1.1, 1.3 }) do
+			PlayerProfile.debugOptionCritRate[player] = total and (total - fixed) or nil
+			local rate = PlayerProfile.getCritBonus(player)
+			local over = PlayerProfile.getOverCritAttackPercent(player)
+			local atkPct = PlayerProfile.getAttackPercentBonus(player)
+			local atk = PlayerCombat.getAttack(PlayerProfile.getWeapon(player), classId, level, atkPct, PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player))
+			table.insert(rows, ("%s: 치명 %.1f%% · 초과→위력 +%.1f%% · 위력 합 %.3f · 공격력 %.4g · 전투력 %.4g"):format(total and ("강제 %.0f%%"):format(total * 100) or "지금", (class.critRate + rate) * 100, over * 100, atkPct, atk, PlayerProfile.getCombatPower(player)))
+		end
+		PlayerProfile.debugOptionCritRate[player] = nil
+		for _, row in ipairs(rows) do
+			print("C4OVER|" .. classId .. "|레벨 " .. level .. " · 환생 " .. rebirths .. "|" .. row)
+		end
+		reply(player, "오버치명 표(로그 C4OVER)")
+	elseif sub == "c4" and args[2] == "hits" and tonumber(args[3]) then
+		-- C4-1 검증: /gg c4 hits <스테이지> <대표 전투력> <치명 확률> <치명 피해> <한 타 배율> [직업 공격 배율 비] - 실제 MonsterState.applyDamage 경로로 비치명만 · 치명만 처치 타수(T1 · T6)
+		--   + 스킬 한 번(대검 Q · 대검 E 한 틱 · 쌍검 E 한 틱 - 대표 공격력 × 직업 공격 배율 비)의 T1 처치 타수. 값은 EconSim 대표(하네스 PT 줄)를 넣는다.
+		local RS = game:GetService("ReplicatedStorage")
+		local ClassData = require(RS.Shared.data.ClassData)
+		local SkillData = require(RS.Shared.data.SkillData)
+		local MonsterData = require(RS.Shared.data.MonsterData)
+		local stage = math.floor(tonumber(args[3]))
+		local power, critRate, critDmg, scale = tonumber(args[4]) or 1, tonumber(args[5]) or 0, tonumber(args[6]) or 2, tonumber(args[7]) or 1
+		ensureBackup(player)
+		applyStage(player, stage)
+		task.wait(0.3)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local atk = power / (1 + math.clamp(critRate, 0, 1) * (critDmg - 1))
+		local function hitsFor(tierIndex, damage)
+			local mob = MonsterSpawner.spawn(MonsterData["tier" .. tierIndex], root.Position + Vector3.new(0, -200, 0), nil, {})
+			mob.PrimaryPart.Anchored = true
+			mob:SetAttribute("C3Mob", true)
+			local n, dead = 0, false
+			while not dead and n < 200 do
+				n += 1
+				player:SetAttribute("CombatPower", power)
+				dead = MonsterState.applyDamage(mob, damage, stage, player)
+			end
+			MonsterSpawner.despawn(mob)
+			return n
+		end
+		local parts = {}
+		for _, tierIndex in ipairs({ 1, 6 }) do
+			table.insert(parts, ("T%d 비치명 %d · 치명 %d"):format(tierIndex, hitsFor(tierIndex, atk * scale), hitsFor(tierIndex, atk * scale * critDmg)))
+		end
+		local bow = ClassData.classes.bow
+		for _, s in ipairs({ { "greatsword", "Q", 1 }, { "greatsword", "E", 3 }, { "dualblade", "E", 6 } }) do
+			local class, def = ClassData.classes[s[1]], SkillData[s[1]][s[2]]
+			local hit = atk / bow.atk * class.atk * def.coefficient / s[3]
+			table.insert(parts, ("%s(%s) 비치명 %d · 치명 %d"):format(def.name, s[3] > 1 and "한 틱" or "한 번", hitsFor(1, hit), hitsFor(1, hit * class.critDmg)))
+		end
+		print(("C4HITS|%d|전투력 %.4g · 치명 %.0f%% · 치피 %.2f · 한 타 ×%.2f|%s"):format(stage, power, critRate * 100, critDmg, scale, table.concat(parts, " · ")))
+		reply(player, ("스테이지 %d: %s"):format(stage, table.concat(parts, " · ")))
 	elseif sub == "c3" and args[2] == "clear" then
 		for _, model in ipairs(MonsterState.getAllModels()) do
 			if model:GetAttribute("C3Mob") then
@@ -4147,6 +4211,15 @@ if RunService:IsStudio() and verifyEnabled("C2(가)") then -- C2: 전투 공식 
 		local ok, err = pcall(require(script.Parent.C2Verify).runPure)
 		if not ok then
 			print("===C2 검증 끝(가)=== 에러: " .. tostring(err))
+		end
+	end)
+end
+
+if RunService:IsStudio() and verifyEnabled("C4(가)") then -- C4: 치명 출처 · 오버치명 · 잡몹 HP 구간 · 보스 공격 완화 · 원거리 지연 보정 · 툴팁
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.C4Verify).runPure)
+		if not ok then
+			print("===C4 검증 끝(가)=== 에러: " .. tostring(err))
 		end
 	end)
 end

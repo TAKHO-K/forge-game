@@ -7,6 +7,9 @@ return {
 		["help.more"] = "눌러서 자세히 ▼",
 		["help.less"] = "접기 ▲",
 
+		-- C4-3 치명 옵션 툴팁 한 줄(오버치명 전환 - CombatConfig.overCrit)
+		["item.critOverflowNote"] = "치명 확률 100% 초과분은 공격력으로 바뀜",
+
 		-- 강화대
 		["enhance.help.short"] = "실패할 때마다 불씨가 차고, 가득 차면 다음 강화는 반드시 성공합니다.",
 		["enhance.help.detail"] = "0~{safeTo}강은 실패해도 단계가 그대로입니다. {dropFrom}강부터 실패하면 단계가 내려갈 수 있고, {resetFrom}강부터는 실패 시 {resetTo}강으로 초기화될 수 있습니다.",

@@ -380,7 +380,7 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	entry.lastDamagedAt = os.clock() -- M1-2: 스폰 지점 정리 보류(맞는 중인 공유 몬스터는 치우지 않는다 - SpawnSites)
 	local prefixHpMultiplier = entry.prefix and entry.prefix.hpMultiplier or 1
 	-- C1: 기준 스테이지 HP로 환산(옛 = 때린 사람 스테이지 HP - 낮은 스테이지 피해가 높은 몹으로 샜다). 첫 타격 · 타격 수(G1-2 리뷰 2 k 상한)도 MobShare가 쌓는다.
-	local effectiveMaxHp = InfiniteStage.getMonsterHp(entry.data.hp, mobRef) * prefixHpMultiplier
+	local effectiveMaxHp = InfiniteStage.getTrashHp(entry.data.hp, mobRef) * prefixHpMultiplier -- C4-1 잡몹 구간 배율
 	local ratioDealt = effectiveMaxHp > 0 and (damage / effectiveMaxHp) or 0
 	return MobShare.applyRatio(entry, attackerPlayer, ratioDealt, os.clock()), damage
 end

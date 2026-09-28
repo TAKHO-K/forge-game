@@ -234,7 +234,8 @@ function EconSim.gemValue(gem, classId)
 	if not gem then
 		return 0
 	end
-	return Option.valueOf(gem.option, gem.grade, gem.itemLevel, classId)
+	local value = Option.valueOf(gem.option, gem.grade, gem.itemLevel, classId)
+	return type(value) == "table" and value.critRate or value -- C4-2: 치명 축 보석 = 확률 값으로 비교(같은 홈은 늘 같은 축)
 end
 
 -- ═══ 전투 ═══
@@ -253,7 +254,7 @@ end
 -- "목표 초 안에 잡는 HP ÷ atk"는 한 번만 이분법으로 구하고 재사용한다(키 = 직업 · 공속 보너스 · 목표 초).
 local hpRatioCache = {}
 function EconSim.maxHpPerAtk(loadout, seconds)
-	local key = ("%s|%.9f|%.4f|%s|%.4f|%s"):format(loadout.classId, PlayerCombat.getSpeedMultiplier(loadout.speedPercentBonus), seconds, tostring(SkillData.healer.E.attackMultiplier), loadout.critDmg, tostring(CombatConfig.attackSpeedMaxMultiplierBuffed)) .. ("|%.4f"):format(PlayerCombat.getLevelCritBonus(loadout.level)) -- C3 리뷰 7: 레벨 치명 곡선 · D1-2: 공속은 상한 뒤 배율로(상한 위 값은 같은 결과) · 태초 장갑 치명 피해도 처치 시간을 바꾼다
+	local key = ("%s|%.9f|%.4f|%s|%.4f|%s"):format(loadout.classId, PlayerCombat.getSpeedMultiplier(loadout.speedPercentBonus), seconds, tostring(SkillData.healer.E.attackMultiplier), loadout.critDmg, tostring(CombatConfig.attackSpeedMaxMultiplierBuffed)) .. ("|%.4f"):format(loadout.critRate) -- C3 리뷰 7 · C4-2: 치명 확률(레벨 곡선 · 환생 · 옵션) · D1-2: 공속은 상한 뒤 배율로(상한 위 값은 같은 결과) · 태초 장갑 치명 피해도 처치 시간을 바꾼다
 	local cached = hpRatioCache[key]
 	if cached then
 		return cached
@@ -290,7 +291,7 @@ EconSim.tierData = tierData
 -- G1-3: 레벨차 계수(주는 피해)가 있으면 그 스테이지의 실효 HP = HP ÷ 계수(게임 MonsterState.applyDamage와 같은 함수). HP ÷ 계수는 스테이지에 단조 증가.
 -- C2: 전투 공식 배율(전투력 ÷ 권장 - 게임 MonsterState.applyDamage와 같은 함수 · 꺼져 있으면 1)도 나눈다. 배율은 스테이지에 단조 감소라 단조성 유지.
 local function effectiveMonsterHp(loadout, baseHp, stage)
-	local hp = InfiniteStage.getMonsterHp(baseHp, stage)
+	local hp = InfiniteStage.getTrashHp(baseHp, stage) -- C4-1 잡몹 구간 배율
 	return hp / CharacterLevel.levelGapDealMultiplier(loadout.level, stage) / CombatFormula.dealMultiplier(CombatFormula.offensePower(loadout), stage, baseHp)
 end
 EconSim.effectiveMonsterHp = effectiveMonsterHp
@@ -339,51 +340,14 @@ function EconSim.highestStageBySurvive(loadout, tierIndex, minHits, maxStage)
 end
 
 -- ═══ 60초 로테이션 총딜(치명 옵션 포함) ═══
--- BalanceSim.buildLoadout은 치명 옵션을 안 넣는다(gemBonusesFor가 공격력% · 공속% · 방어% · 체력%만). 실제 게임은 치명 옵션을 **평타에만** 더한다
--- (AttackServer가 PlayerProfile.getCritBonus를 critRateBonus · critDmgBonus로 넘긴다 - SkillServer 스킬 경로는 옵션 치명을 안 읽는다). 그래서:
---   평타 피해 = 직업 치명을 옵션만큼 올린 사본으로 돌린 simulateCombat의 autoDamage, 스킬 피해 = 원본으로 돌린 simulateCombat의 skillDamageTotal.
--- 사본에서 활 속사 배율(castSelfBuff는 ClassData.critRate만 읽는다 - 게임에서 옵션 치명은 속사 배율을 안 올린다)이 달라지지 않게
--- SkillData.bow.Q.attackSpeedBase를 같은 몫만큼 낮춰 둔다(속사 배율 = min(상한, base + 치확 × 계수)가 원본과 같다).
+-- C4-2: BalanceSim.buildLoadout이 이제 치명 옵션(확률 · 피해)을 센다(게임 PlayerProfile.getCritBonus와 같은 출처 - 평타 · 스킬 둘 다) - 옛 "직업 치명 사본" 우회는 지웠다.
+--   활 속사 배율은 그대로 ClassData.critRate만 읽는다(게임 castSelfBuff와 같다).
 function EconSim.rotationDamage(spec, gems, durationSeconds)
 	assert(EconSim.isAllowed(), "EconSim: Studio · DevToolsConfig.econSim 전용")
 	local loadoutSpec = table.clone(spec)
 	loadoutSpec.gems = gems
 	local base = BalanceSim.simulateCombat(BalanceSim.buildLoadout(loadoutSpec), { useSkills = true, durationSeconds = durationSeconds or 60 })
-	local sources = {}
-	for _, gem in ipairs(gems or {}) do
-		if type(gem) == "table" then
-			table.insert(sources, gem)
-		end
-	end
-	local critRate, critDmg = Option.critBonus(sources, spec.classId)
-	if critRate == 0 and critDmg == 0 then
-		return base.totalDamage, base
-	end
-	local classes = ClassData.classes
-	local original = classes[spec.classId]
-	local patched = table.clone(original)
-	patched.critRate += critRate
-	patched.critDmg += math.min(critDmg, CombatConfig.critDmgBonusCap) -- D1-2 리뷰 2: 게임(PlayerProfile.getCritBonus)과 같은 상한
-	local bowQ = SkillData[spec.classId] and SkillData[spec.classId].Q
-	local restoreSpeedBase = nil
-	if bowQ and bowQ.shape == "selfBuff" then
-		restoreSpeedBase = bowQ.attackSpeedBase
-	end
-	classes[spec.classId] = patched
-	if restoreSpeedBase then
-		bowQ.attackSpeedBase = restoreSpeedBase - critRate * bowQ.attackSpeedCritCoefficient
-	end
-	local ok, withCrit = pcall(function()
-		return BalanceSim.simulateCombat(BalanceSim.buildLoadout(loadoutSpec), { useSkills = true, durationSeconds = durationSeconds or 60 })
-	end)
-	classes[spec.classId] = original
-	if restoreSpeedBase then
-		bowQ.attackSpeedBase = restoreSpeedBase
-	end
-	if not ok then
-		error(withCrit, 0)
-	end
-	return withCrit.autoDamage + base.skillDamageTotal, base
+	return base.totalDamage, base
 end
 
 -- ═══ 강화 몬테카를로(E4 · 진행 시뮬) ═══
@@ -538,9 +502,24 @@ local function loadoutFor(state)
 		gems = state.gems,
 		permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel), -- P2.5c B2: 마일스톤 버킷(붙는 곳 = MilestoneData.stat)
 		permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel),
+		rebirth = state.rebirth, -- C4-2 환생 보상 치명
 	})
 end
 EconSim.loadoutFor = loadoutFor
+
+-- C4-1 "해당 레벨대 장비가 한 부위도 없는" 대표: 장비 3부위의 itemLevel만 EconSimConfig.oldGearLevelScale배(등급 · 옵션 그대로).
+function EconSim.oldGearLoadout(state)
+	local saved = state.gear
+	local old = {}
+	for part, item in pairs(saved) do
+		old[part] = table.clone(item)
+		old[part].itemLevel = math.max(1, math.floor(item.itemLevel * (EconSimConfig.oldGearLevelScale or 0.5)))
+	end
+	state.gear = old
+	local loadout = loadoutFor(state)
+	state.gear = saved
+	return loadout
+end
 
 -- P2 G: 게임의 파티 경험치 보너스는 "같은 구역 · 반경 · 최근 활동" 파티원만 센다(PartyExpBonus) - 시뮬 사냥은 솔로라([가정] partyHuntsTogether = false)
 -- EconSimConfig.partyExpRequiresPresence가 켜져 있으면 사냥 보너스가 없다. p2before(옛 규칙 - 파티 소속만 되면 거리 무관)는 이 스위치를 끈다.
@@ -571,7 +550,8 @@ local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, for
 	local old = state.gems[slot]
 	local oldValue = type(old) == "table" and EconSim.gemValue(old, state.classId) or -1
 	if profile.gemReroll and Gem.isRerollableGrade(gradeId) then
-		local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, math.min(profile.gemRoll * rollScale, OptionData.rollMax)) -- 굴림 상한(1.125) 안
+		local axis = (profile.gemCritSlots and table.find(profile.gemCritSlots, slot)) and "crit" or "attackPercent" -- C4-2: 대표가 치명 축으로 맞추는 홈(EconSimConfig 프로필)
+		local gem = EconSim.makeGem(axis, gradeId, itemLevel, math.min(profile.gemRoll * rollScale, OptionData.rollMax)) -- 굴림 상한(1.125) 안
 		local tickets = #Option.poolFor(state.classId)
 		local price = GoldCost.cost(MonsterData.tier1.goldDrop, state.reach, "rerollTicket") * GemData.rerollTicketGoldMultiplier * tickets -- GemServer.rerollTicketPrice와 같은 식
 		if (forced or EconSim.gemValue(gem, state.classId) > oldValue) and state.gold >= price then
@@ -873,11 +853,11 @@ local function expGapMultiplier(level, stage)
 	return over > 0 and math.max(rule.floor, 1 - over * rule.perStage) or 1
 end
 
-local function chooseHunt(loadout, profile, maxStage, gearMode)
+local function chooseHunt(loadout, profile, maxStage, gearMode, targetKillSeconds)
 	local options = {}
 	local bestRate = 0
 	for tierIndex = 1, profile.huntTierMax do
-		local byKill = EconSim.highestStageByKill(loadout, tierIndex, profile.targetKillSeconds, profile.dpsEfficiency, maxStage)
+		local byKill = EconSim.highestStageByKill(loadout, tierIndex, targetKillSeconds or profile.targetKillSeconds, profile.dpsEfficiency, maxStage)
 		local bySurvive = EconSim.highestStageBySurvive(loadout, tierIndex, profile.minSurviveHits, maxStage)
 		local stage = math.min(byKill, bySurvive)
 		if EconSimConfig.expLevelGap then -- 참고안: 경험치가 줄기 시작하는 칸 위로는 사냥하지 않는다(경험치/초 최적 - 그 위는 칸당 감쇠가 k보다 크다)
@@ -947,7 +927,9 @@ local function stepLevel(state, profile, run, rng, whatIf)
 			need -= state.exp - expBeforeBoss
 			state.exp = expBeforeBoss
 		end
-		hunt = chooseHunt(loadout, profile, math.max(1, state.reach - 1), state.gearMode and { armor = state.gear.armor }) -- 보스 스테이지(state.reach)는 아레나라 잡몹이 없다
+		-- C4-1: 환생 5 전(최고 > 10)은 초반 편안 처치 시간(대표 비치명 2방 · 치명 1방)
+		local early = profile.earlyTargetKillSeconds and state.rebirth < GemData.maxRebirthCount and state.reach > 10
+		hunt = chooseHunt(loadout, profile, math.max(1, state.reach - 1), state.gearMode and { armor = state.gear.armor }, early and profile.earlyTargetKillSeconds or nil) -- 보스 스테이지(state.reach)는 아레나라 잡몹이 없다
 		tier = tierData(hunt.tier)
 		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * expGapMultiplier(state.level, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth) * CharacterLevel.getExpScale(state.level) -- P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
@@ -1057,6 +1039,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		glovesAttack = Loot.getGlovesAttackPercent(state.gear.gloves), armorDefense = Loot.getArmorDefense(state.gear.armor),
 		gemCount = gemCount, gemAvgLevel = gemCount > 0 and gemLevels / gemCount or 0, gemAttackBonus = gemBonus,
 		loadout = loadoutFor(state), -- C2: 청크 끝 loadout(대표 장비 전투력 · 방어 곡선 - EconSimReport · 하네스)
+		oldGearLoadout = EconSim.oldGearLoadout(state), -- C4-1: 같은 상태에서 장비 3부위만 옛것(itemLevel × oldGearLevelScale)이면(보고 · 검증용)
 	}
 end
 

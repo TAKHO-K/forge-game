@@ -14,6 +14,7 @@ local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
+local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData) -- C4 파트 0-2 보스 공격 완화
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 
 local BossRules = {}
@@ -230,7 +231,7 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 	local trashGold = InfiniteStage.getGoldReward(trashBase.goldDropUnscaled or trashBase.goldDrop, stage) -- C3-3
 	local trashExp = InfiniteStage.getExpReward(trashBase.bossExpReward or trashBase.expReward, stage) -- C3-3 리뷰 3: 보스 경험치 = 압축 전 기준(MonsterData.bossExpReward)
 
-	local attack = trashAttack * boss.attackMultiplier
+	local attack = trashAttack * boss.attackMultiplier * InfiniteStage.interpBand(BossCurveData.attackEase, stage) -- C4 파트 0-2
 
 	return {
 		id = boss.id,

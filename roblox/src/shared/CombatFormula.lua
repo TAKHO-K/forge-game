@@ -75,13 +75,13 @@ end
 
 -- 권장 전투력(스테이지 · 몹 기본 HP - 없으면 기준 구역 몹 = 스테이지 권장): 그 몹 HP(스테이지 적용) ÷ 대표 한 대 수 × 후반 벽 배수.
 function CombatFormula.recommendedPower(stage, baseHp)
-	return math.max(InfiniteStage.getMonsterHp(baseHp or referenceBaseHp(), stage) / CombatFormula.representativeHits(stage) * CombatFormula.lateLift(stage), 1e-9)
+	return math.max(InfiniteStage.getTrashHp(baseHp or referenceBaseHp(), stage) / CombatFormula.representativeHits(stage) * CombatFormula.lateLift(stage), 1e-9) -- C4-1 잡몹 구간 배율(대표 = 잡몹 기준)
 end
 
 -- C3 0-3 화면 표시용 권장 전투력(판정은 recommendedPower): 표시 곡선(representative.displayHits - 실제 힘 점프를 완만히) 기준.
 function CombatFormula.displayRecommendedPower(stage, baseHp)
 	local points = CombatFormulaData.representative.displayHits or CombatFormulaData.representative.hits
-	return math.max(InfiniteStage.getMonsterHp(baseHp or referenceBaseHp(), stage) / interpLog(points, stage) * CombatFormula.lateLift(stage), 1e-9)
+	return math.max(InfiniteStage.getTrashHp(baseHp or referenceBaseHp(), stage) / interpLog(points, stage) * CombatFormula.lateLift(stage), 1e-9)
 end
 
 -- 권장 방어(스테이지 · 때린 몹의 공격 - 없으면 기준 구역 몹): α × 몹 공격 × 대표 방어 비율.

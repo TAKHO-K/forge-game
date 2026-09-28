@@ -36,6 +36,31 @@ function InfiniteStage.getMonsterHp(baseHp, stage)
 	return baseHp * InfiniteStage.getMultiplier(stage)
 end
 
+-- 표(스테이지 → 배율) 로그 보간 · 표 밖 = 끝값(빈 표 = 1).
+function InfiniteStage.interpBand(points, stage)
+	local n = points and #points or 0
+	if n == 0 then
+		return 1
+	end
+	if stage <= points[1][1] then
+		return points[1][2]
+	end
+	for i = 2, n do
+		local b = points[i]
+		if stage <= b[1] then
+			local a = points[i - 1]
+			local u = (stage - a[1]) / (b[1] - a[1])
+			return math.exp(math.log(a[2]) + (math.log(b[2]) - math.log(a[2])) * u)
+		end
+	end
+	return points[n][2]
+end
+
+-- C4-1 잡몹 HP = 몬스터 HP × 구간 배율(InfiniteStageConfig.trashHpBand). 보스(BossRules)는 getMonsterHp 그대로.
+function InfiniteStage.getTrashHp(baseHp, stage)
+	return InfiniteStage.getMonsterHp(baseHp, stage) * InfiniteStage.interpBand(InfiniteStageConfig.trashHpBand, stage)
+end
+
 function InfiniteStage.getMonsterAttack(baseAttack, stage)
 	return baseAttack * InfiniteStage.getMultiplier(stage)
 end

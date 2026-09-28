@@ -65,10 +65,12 @@ return {
 	--   gemRoll            원하는 축을 맞췄을 때의 옵션 롤 값(0.875 ~ 1.125)
 	--   optionRoll         (W3b 파트 0) 옵션 굴림 배율 - 보석 · 장비 옵션 롤에 곱한다(nil = 1 = 평균 굴림 · 상한 rollMax). what-if optionRoll이 앞선다(optionRollTiers)
 	--   itemAxis           (W3b 파트 0) 장비 옵션 축 - nil = 무작위(DPS 축 기대 몫) · "attack" = 3부위 모두 위력(원하는 축 - 리롤 · 득템 끝). what-if itemAxis가 앞선다
+	--   earlyTargetKillSeconds (C4-1) 환생 5 전(최고 스테이지 > 10) 편안한 처치 시간 - 대표가 비치명 2방 · 치명 1방에 잡는 곳에서 사냥(nil = targetKillSeconds)
+	--   gemCritSlots       (C4-2) 원하는 축으로 맞추는 보석 홈 중 치명 축인 홈(나머지 = 위력) - 대표 치명 출처(보석 몫)
 	profiles = {
 		casual = {
 			displayName = "캐주얼", hoursPerDay = 1, classId = "bow", huntTierMax = 3,
-			targetKillSeconds = 1.8, minSurviveHits = 5, dpsEfficiency = 0.7, moveOverheadSeconds = 1.5,
+			targetKillSeconds = 1.8, minSurviveHits = 5, dpsEfficiency = 0.7, moveOverheadSeconds = 1.5, earlyTargetKillSeconds = nil,
 			bossDpsEfficiency = 0.6, bossKillLimitSeconds = 120, bossAttemptsPerClear = 2.0, bossOverheadSeconds = 30,
 			partySize = 1, partyExpBonus = false,
 			enhanceTarget = 18, useProtection = false, rebirth = true, -- P2.5a: 최대 +25 → +30에 맞춰 목표 ×30/25(15 → 18 · 20 → 24 · 25 → 30)
@@ -77,7 +79,7 @@ return {
 		},
 		normal = {
 			displayName = "일반", hoursPerDay = 3, classId = "bow", huntTierMax = 5,
-			targetKillSeconds = 1.35, minSurviveHits = 4, dpsEfficiency = 0.85, moveOverheadSeconds = 1.0,
+			targetKillSeconds = 1.35, minSurviveHits = 4, dpsEfficiency = 0.85, moveOverheadSeconds = 1.0, earlyTargetKillSeconds = 0.8, gemCritSlots = { 1 },
 			bossDpsEfficiency = 0.75, bossKillLimitSeconds = 90, bossAttemptsPerClear = 1.5, bossOverheadSeconds = 20,
 			partySize = 1, partyExpBonus = false,
 			enhanceTarget = 24, useProtection = false, rebirth = true,
@@ -85,7 +87,7 @@ return {
 		},
 		top = {
 			displayName = "상위 1%", hoursPerDay = 12, classId = "bow", huntTierMax = 6,
-			targetKillSeconds = 1.125, minSurviveHits = 3, dpsEfficiency = 0.95, moveOverheadSeconds = 0.6,
+			targetKillSeconds = 1.125, minSurviveHits = 3, dpsEfficiency = 0.95, moveOverheadSeconds = 0.6, earlyTargetKillSeconds = nil, gemCritSlots = { 1 },
 			bossDpsEfficiency = 0.9, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.1, bossOverheadSeconds = 10,
 			partySize = 4, partyExpBonus = true, partyHuntsTogether = false,
 			enhanceTarget = 30, useProtection = true, rebirth = true,
@@ -95,7 +97,7 @@ return {
 		--   이 곡선(플레이 시간 → 최고 스테이지) × AuditConfig.envelope.margin을 넘는 상승 = 리더보드 등재 보류(AcquisitionAudit).
 		envelope = {
 			displayName = "속도 봉투", hoursPerDay = 24, classId = "bow", huntTierMax = 6,
-			targetKillSeconds = 0.9, minSurviveHits = 3, dpsEfficiency = 1.0, moveOverheadSeconds = 0.3,
+			targetKillSeconds = 0.9, minSurviveHits = 3, dpsEfficiency = 1.0, moveOverheadSeconds = 0.3, gemCritSlots = { 1 },
 			bossDpsEfficiency = 1.0, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.0, bossOverheadSeconds = 5,
 			partySize = 4, partyExpBonus = true, partyHuntsTogether = true,
 			enhanceTarget = 30, useProtection = true, rebirth = true,
@@ -108,6 +110,8 @@ return {
 	-- W3b 파트 0 옵션 굴림 3단계(U[rollMin, rollMax] = U[0.875, 1.125]): 하위 30% 평균 · 전체 평균 · 상위 30% 평균. 상위 = "편하게 깨는 장비" 모형(장비 옵션 축 = 위력 · what-if rollHigh).
 	--   평균 = 프로필 기본(보석 = 프로필 규칙 · 장비 옵션 = 무작위 축 기대 몫). W3b 전 모형은 장비 옵션을 아예 안 셌다(what-if noItemOptions로 비교).
 	optionRollTiers = { low = 0.9125, mid = 1.0, high = 1.0875 },
+	-- C4-1 "옛 장비만" 비교(EconSim.oldGearLoadout): 장비 3부위 itemLevel × 이 값(등급 · 옵션 그대로 - 한 레벨대 뒤처진 장비).
+	oldGearLevelScale = 0.5,
 
 	-- E5 태초 선택지(P2: 게임 드랍표 그대로 - DropTable.effectiveRate · 레벨 감쇠 포함). 비교: 같은 플레이어가
 	--   (A) 드래곤(highTier)을 자기 스테이지보다 Δ 낮은 스테이지에서 잡기 vs (B) tier t(lowTiers)를 자기 스테이지에서 잡기. 보석 레벨 = 잡은 스테이지(몬스터 레벨, 결정 6B E4).

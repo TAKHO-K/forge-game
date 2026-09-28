@@ -28,7 +28,7 @@ local EconSimTables = {}
 -- 결과 = A ÷ B. 1 초과면 "낮은 스테이지 드래곤"이 태초 기준 우세(지배 전략). 손익분기 배수 M* = 드래곤 ÷ tier t 확률 배수가 이 값일 때 A ÷ B = 1
 -- (배수 ≤ M*면 지배 전략 아님). A ÷ B는 배수에 비례한다.
 local function perMinute(loadout, tierIndex, stage, profile)
-	local hp = InfiniteStage.getMonsterHp(EconSim.tierData(tierIndex).hp, stage)
+	local hp = InfiniteStage.getTrashHp(EconSim.tierData(tierIndex).hp, stage) -- C4-1
 	local kill = EconSim.killSeconds(loadout, hp / profile.dpsEfficiency, 600)
 	local killsPerMinute = 60 / (kill + profile.moveOverheadSeconds)
 	return {

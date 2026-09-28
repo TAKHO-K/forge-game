@@ -106,16 +106,31 @@ function PlayerProfile.getOptionBonus(player, axisId)
 end
 
 -- 치명(crit) 전용 - {critRate, critDmg} 두 값을 같이 돌려준다(20.67 [6-3], Option.critBonus 참고).
--- D1-2: 치명 피해 = 옵션 합 + 태초 장갑 고유 효과(Loot.getGlovesCritDmgBonus) - 합계 상한 CombatConfig.critDmgBonusCap. 치명 확률은 100%를 넘으면 의미가 없다(확정 치명 버프 중에만 피해로 전환 - PlayerCombat.resolveGuaranteedCrit).
+-- D1-2: 치명 피해 = 옵션 합 + 태초 장갑 고유 효과(Loot.getGlovesCritDmgBonus) - 합계 상한 CombatConfig.critDmgBonusCap. 치명 확률(버프 제외)은 100%에서 자르고 넘친 몫은 위력으로 바뀐다(C4-3 - getOverCritAttackPercent). 확정 치명 버프 넘침은 따로(PlayerCombat.resolveGuaranteedCrit).
+PlayerProfile.debugOptionCritRate = {} -- C4 검증 전용: player → 옵션 치명 확률 강제값(DevTools /gg c4 overcrit가 넣고 되돌린다)
 function PlayerProfile.getCritBonus(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
 		return 0, 0
 	end
-	local critRate, critDmg = Option.critBonus(buildOptionSources(classState), profile.classId)
-	critRate += PlayerCombat.getLevelCritBonus(CharacterLevel.getLevelFromExp(classState.characterExp)) -- C3-3 대표 치명 곡선(레벨 구간)
+	local optionRate, critDmg = Option.critBonus(buildOptionSources(classState), profile.classId)
+	optionRate = PlayerProfile.debugOptionCritRate[player] or optionRate -- C4 검증(/gg c4 overcrit - Studio 전용)
+	-- C4-2 · C4-3: 레벨 곡선 + 환생 보상 + 옵션 → 직업 기본과 합쳐 100%에서 자름(넘친 몫은 getAttackPercentBonus가 위력으로)
+	local critRate = PlayerCombat.resolveCrit(profile.classId, CharacterLevel.getLevelFromExp(classState.characterExp), classState.rebirthCount, optionRate)
 	return critRate, math.min(critDmg + Loot.getGlovesCritDmgBonus(classState.equipment.gloves), CombatConfig.critDmgBonusCap)
+end
+
+-- C4-3 오버치명 전환분(치명 확률 100% 초과 몫 → 공격력 % - 위력 버킷 상한은 getAttackPercentBonus가 자른다).
+function PlayerProfile.getOverCritAttackPercent(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return 0
+	end
+	local optionRate = PlayerProfile.debugOptionCritRate[player] or Option.critBonus(buildOptionSources(classState), profile.classId)
+	local _, over = PlayerCombat.resolveCrit(profile.classId, CharacterLevel.getLevelFromExp(classState.characterExp), classState.rebirthCount, optionRate)
+	return over
 end
 
 -- C2 전투력(한 대 기대 피해 = 공격력 × 치명 기대 - shared/CombatFormula). 공격력은 AttackServer와 같은 인자(무기 · 레벨 · 위력 · 최종 피해 · 마일스톤) · 치명 = 직업 + 옵션(버프 제외).
@@ -1496,7 +1511,7 @@ end
 -- 자리를 공유한다 - 보석 전용 곱셈 지점을 새로 만들지 않는다).
 function PlayerProfile.getAttackPercentBonus(player)
 	local glovesBonus = Loot.getGlovesAttackPercent(PlayerProfile.getEquipped(player, "gloves"))
-	return glovesBonus + PlayerProfile.getOptionBonus(player, "attackPercent")
+	return glovesBonus + PlayerCombat.capAttackPercentOption(PlayerProfile.getOptionBonus(player, "attackPercent"), PlayerProfile.getOverCritAttackPercent(player)) -- C4-3 오버치명 전환분 = 같은 위력 버킷 · 같은 상한
 end
 
 -- 장비 3부위 옵션 + 보석 5개의 defensePercent 옵션 합(26-2, PRD 20.67 [14] 3단계) -

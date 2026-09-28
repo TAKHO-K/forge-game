@@ -97,6 +97,8 @@ local function gemBonusesFor(classId, armorItem, glovesItem, shoesItem, gems)
 		speedPercent = Option.sumAxisBonus(sources, "speedPercent", classId),
 		defensePercent = Option.sumAxisBonus(sources, "defensePercent", classId),
 		maxHpPercent = Option.sumAxisBonus(sources, "maxHpPercent", classId),
+		critRate = (Option.critBonus(sources, classId)), -- C4-2: 치명 옵션도 센다(게임 PlayerProfile.getCritBonus와 같은 출처)
+		critDmg = select(2, Option.critBonus(sources, classId)),
 	}
 end
 
@@ -109,18 +111,20 @@ end
 -- 여기서 새 공식을 만들지 않고 PlayerProfile과 같은 지점에 합류시킨다).
 -- permanentMultiplier · permanentHpMultiplier(P2.5b D - 선택, 기본 1) = 환생 후 레벨 마일스톤 영구 배율 - 게임과 같이 공격력(PlayerCombat.getAttack) · 최대체력에 곱한다
 -- (최대체력 몫은 MilestoneData.stat = "survival"일 때만 1이 아니다 - 호출부가 Milestone.maxHpMultiplier로 넘긴다).
-local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems, permanentMultiplier, permanentHpMultiplier)
+local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems, permanentMultiplier, permanentHpMultiplier, rebirthCount)
 	local class = ClassData.classes[classId]
 	assert(class, "알 수 없는 classId: " .. tostring(classId))
 
 	local weapon = { id = WeaponData.starterId, level = weaponLevel or 0, grade = weaponGrade or 0 }
 	local gemBonus = gemBonusesFor(classId, armorItem, glovesItem, shoesItem, gems)
-	local attackPercentBonus = Loot.getGlovesAttackPercent(glovesItem) + gemBonus.attackPercent
+	-- C4-2 · C4-3: 치명 확률 = 직업 + 레벨 곡선 + 환생 보상 + 옵션(100%에서 자름) · 넘친 몫 = 위력 버킷(게임 PlayerProfile과 같은 함수 PlayerCombat.resolveCrit)
+	local critRateBonus, overCritAttack = PlayerCombat.resolveCrit(classId, level, rebirthCount, gemBonus.critRate)
+	local attackPercentBonus = Loot.getGlovesAttackPercent(glovesItem) + PlayerCombat.capAttackPercentOption(gemBonus.attackPercent, overCritAttack)
 	local speedPercentBonus = Loot.getShoesSpeedPercent(shoesItem) + gemBonus.speedPercent
 	local armorBonus = Loot.getArmorDefense(armorItem)
 	local maxHpBonus = Loot.getMaxHpBonus(armorItem)
-	-- D1-2: 태초 장갑 치명 피해(PlayerProfile.getCritBonus와 같은 상한). 치명 옵션은 이 시뮬이 원래 안 센다(보석 = 위력 가정).
-	local critDmg = class.critDmg + math.min(Loot.getGlovesCritDmgBonus(glovesItem), CombatConfig.critDmgBonusCap)
+	-- D1-2: 태초 장갑 치명 피해 + C4-2 치명 옵션 피해(PlayerProfile.getCritBonus와 같은 합 · 같은 상한).
+	local critDmg = class.critDmg + math.min(Loot.getGlovesCritDmgBonus(glovesItem) + gemBonus.critDmg, CombatConfig.critDmgBonusCap)
 
 	return {
 		classId = classId,
@@ -134,10 +138,11 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 		attackPercentBonus = attackPercentBonus,
 		attackCooldown = PlayerCombat.getAttackCooldown(classId, speedPercentBonus),
 		attackRange = PlayerCombat.getAttackRange(classId),
-		critRate = math.min(class.critRate + PlayerCombat.getLevelCritBonus(level), 1), -- C3-3 대표 치명 곡선(게임 PlayerProfile.getCritBonus와 같은 함수)
+		critRate = class.critRate + critRateBonus, -- C4-2 대표 치명(게임 PlayerProfile.getCritBonus와 같은 함수 - 이미 ≤ 1)
+		overCritAttackPercent = overCritAttack, -- C4-3 보고용
 		critDmg = critDmg,
 		-- 치명타 평균 배율 - calcDamage의 기대값(확률 롤을 매번 시뮬레이션하지 않고 기대치로 계산).
-		critMultAvg = 1 + math.min(class.critRate + PlayerCombat.getLevelCritBonus(level), 1) * (critDmg - 1),
+		critMultAvg = 1 + (class.critRate + critRateBonus) * (critDmg - 1),
 		-- 3타 강타 평균 배율(CombatConfig.comboHitEvery/comboHitMultiplier) - 쉬지 않고 계속
 		-- 공격한다고 가정할 때(콤보 리셋 없음) N번에 한 번 1.8배가 나오는 것의 평균.
 		comboMultAvg = 1 + (CombatConfig.comboHitMultiplier - 1) / CombatConfig.comboHitEvery,
@@ -154,7 +159,7 @@ function BalanceSim.buildLoadout(spec)
 	return buildLoadoutCore(
 		spec.classId, spec.level, spec.weaponLevel, spec.weaponGrade,
 		buildItem("armor", gear.armor), buildItem("gloves", gear.gloves), buildItem("shoes", gear.shoes),
-		spec.gems, spec.permanentMultiplier, spec.permanentHpMultiplier
+		spec.gems, spec.permanentMultiplier, spec.permanentHpMultiplier, spec.rebirth
 	)
 end
 
@@ -162,9 +167,9 @@ end
 -- 없으면 nil)으로 loadout을 만든다. DevTools의 "/gg measure"가 쓴다 - 합성 조건이 아니라
 -- 지금 이 플레이어가 실제로 들고 있는 장비 그대로 잰다. gems(23-4 신설) - weapon.gems를
 -- 그대로 넘기면 위력·신속·방어·건강 네 축 보너스가 전부 반영된다(gemBonusesFor).
-function BalanceSim.buildLoadoutFromEquipment(classId, level, weaponLevel, weaponGrade, equipment, gems)
+function BalanceSim.buildLoadoutFromEquipment(classId, level, weaponLevel, weaponGrade, equipment, gems, rebirthCount)
 	equipment = equipment or {}
-	return buildLoadoutCore(classId, level, weaponLevel, weaponGrade, equipment.armor, equipment.gloves, equipment.shoes, gems)
+	return buildLoadoutCore(classId, level, weaponLevel, weaponGrade, equipment.armor, equipment.gloves, equipment.shoes, gems, nil, nil, rebirthCount)
 end
 
 -- 생존 타수. CombatConfig.damageReductionAlpha 유도식(hits = maxHp×(D+αA)/(αA²))과 완전히
@@ -194,7 +199,7 @@ end
 -- 유효 최대체력"으로 쓰는 것과 같은 값 - InfiniteStage.getMonsterHp 재사용).
 function BalanceSim.getMonsterHp(stage, tierKey)
 	local tierData = MonsterData[tierKey or "tier1"]
-	return InfiniteStage.getMonsterHp(tierData.hp, stage)
+	return InfiniteStage.getTrashHp(tierData.hp, stage) -- C4-1 잡몹 구간 배율
 end
 
 -- 스킬 없는 순수 평타만의 durationSeconds초 총딜 - 평균 배율 근사(19-3a 원본 그대로). 빠른

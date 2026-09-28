@@ -26,7 +26,16 @@ return {
 
 	-- C3-3 대표 치명 곡선(사용자 - 3타 콤보에 치명이 자주 섞이게 · 100% 초과 처리는 K5): 캐릭터 레벨 구간별 치명 확률 +(직업 기본 · 옵션에 더한다 - PlayerCombat.getLevelCritBonus).
 	--   레벨 사이 = 선형 · 끝 밖 = 끝값. 평타 · 스킬 · 전투력 · EconSim이 같은 함수(PlayerProfile.getCritBonus · BalanceSim.buildLoadout).
-	critCurve = { { level = 1, bonus = 0.15 }, { level = 1000, bonus = 0.15 } },
+	-- C4-2 대표 치명 곡선(사용자 - 환생 5 ≈ 50% · 레벨 250 ~ 400 ≈ 80 ~ 90% · 레벨 약 500 ≈ 100%): 레벨 몫은 환생 5 뒤 급성장 구간에서 오른다(환생마다 레벨 1로 돌아가 환생 전엔 거의 평평).
+	--   출처 예산(활 대표 · docs/phase/C4-report.md §3): 직업 0.15 + 레벨(이 표) + 환생 보상(critRebirthBonus) + 보석(대표 = 1번 홈 태초 보석 치명 축) + 장비 옵션(무작위 축) + 골드 수련(G3 - 자리만 · 지금 0).
+	--   G3 골드 수련이 들어오면 그 몫만큼 이 표의 끝값을 낮춘다(결정 C4 - 레벨 몫 50% → 약 35%).
+	critCurve = { { level = 1, bonus = 0.10 }, { level = 100, bonus = 0.12 }, { level = 250, bonus = 0.37 }, { level = 400, bonus = 0.45 }, { level = 500, bonus = 0.55 } },
+	-- C4-2 환생 보상 치명 확률(환생 1회당 · 환생 횟수 상한 GemData.maxRebirthCount까지 - PlayerCombat.getRebirthCritBonus).
+	critRebirthBonus = 0.06,
+	-- C4-3 오버치명: 버프를 뺀 치명 확률(직업 + 레벨 + 환생 + 옵션)이 100%를 넘은 몫 → 공격력 %(합연산 위력 버킷 - 옵션 위력과 같은 상한 OptionData.options.attackPercent.cap).
+	--   attackPercentPerCrit = 초과 치명 1(=100%p)당 공격력 %(1 = 100%). 값 = 100% 직전 치명 1%p의 기대 가치(대표 레벨 500 ~ 2,000 = 위력 약 2.0%p)의 약 50%(docs/phase/C4-report.md §5).
+	--   치명 피해 전환은 없다(추가분 상한 critDmgBonusCap에 다시 막힌다 - 사용자 결정). 버프 치명(백스텝샷 · 확정 치명)은 전환 안 함(버프 규칙 resolveGuaranteedCrit 그대로).
+	overCrit = { attackPercentPerCrit = 1.0 },
 
 	-- 공격력은 10-2부터 여기 없다 - WeaponData.weapons.starter_sword.baseAttack(=10, 옮긴
 	-- 값 그대로)을 기준으로 무기 기본값×강화 배율×등급 배율×클래스 배율로 계산한다
