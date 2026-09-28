@@ -1010,6 +1010,45 @@ local function migrate(data)
 		data.version = 44
 	end
 
+	if data.version < 45 then
+		-- C3 0-3: 캐릭터 경험치 곡선 변경(목표 마릿수 앵커 50 · 75 · 100 · 125 = 60 · 350 · 2,500 · 20,000 → 240 · 1,400 · 10,000 · 115,000 · 126+ 배수 20,000 ÷ 150 → 115,000 ÷ 150).
+		-- 옛 곡선(v44 - 리터럴로 보존)으로 레벨과 진행률을 읽고 새 곡선에서 같은 레벨 · 같은 진행률로 옮긴다(v35와 같은 방식 - 레벨이 내려가지 않게).
+		local OLD = { { 1, 5 }, { 25, 15 }, { 50, 60 }, { 75, 350 }, { 100, 2500 }, { 125, 20000 } }
+		local function oldKills(level)
+			if level <= OLD[1][1] then
+				return OLD[1][2]
+			end
+			for i = 2, #OLD do
+				local a, b = OLD[i - 1], OLD[i]
+				if level <= b[1] then
+					return a[2] + (b[2] - a[2]) * (level - a[1]) / (b[1] - a[1])
+				end
+			end
+			return 150
+		end
+		local function oldNeed(level)
+			local scale = level > 125 and math.max((20000 / 150) * 0.99 ^ (level - 126), 1) or 1
+			return math.floor(oldKills(level) * CharacterLevel.getMonsterExpAtLevel(level) * scale + 0.5)
+		end
+		for _, classState in pairs(data.classes or {}) do
+			local exp = type(classState) == "table" and classState.characterExp
+			if type(exp) == "number" and exp == exp and exp > 0 and exp < math.huge then
+				local level, threshold = 1, 0
+				while level < 1000000 do
+					local need = oldNeed(level)
+					if exp < threshold + need then
+						break
+					end
+					threshold += need
+					level += 1
+				end
+				local fraction = math.clamp((exp - threshold) / math.max(oldNeed(level), 1), 0, 1)
+				classState.characterExp = CharacterLevel.getExpForLevel(level) + fraction * CharacterLevel.getExpToNextLevel(level)
+			end
+		end
+		data.version = 45
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data
