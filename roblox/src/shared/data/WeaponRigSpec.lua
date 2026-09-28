@@ -44,7 +44,7 @@ SPEC.weapons = {
 		hands = "both",
 		pieces = {
 			{ hand = "RightHand", grip = Vector3.new(0, 0, -1.1), tipAxis = "+Z", refLength = 5.5, nativeLength = SWORD_NATIVE, hold = BLADE_HOLD,
-				support = Vector3.new(0, 0, -1.45), -- 오른손 바로 아래(자루 끝 쪽)
+				support = Vector3.new(0, 0, -1.58), -- 오른손 아래 자루 끝(W3a: −1.45 = 0.58 stud로 두 손이 겹쳐 한 손처럼 보였다 → 자루 끝 −1.6 바로 안 = 0.8 stud · 양손 그립)
 				sheath = { mount = "back", pos = Vector3.new(0.45, 0.95, 0.72), z = Vector3.new(-0.55, -1, 0.05), x = Vector3.new(0, 0, 1) } }, -- 등 대각(손잡이 = 오른 어깨 위)
 		},
 	},

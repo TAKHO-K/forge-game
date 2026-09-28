@@ -467,7 +467,9 @@ WeaponVisual.getupTotal = getupTotal
 -- W2 결정 1: 대상 쪽으로 몸 돌리기(Root 관절 - 루트 파트 · 판정 불변). 공격이 끝나면 포즈에서 빠져 blend로 풀린다.
 local function withTurn(a, pose, now)
 	if a.turnYaw then
-		pose.Root = CFrame.Angles(0, a.turnYaw * math.min((now - a.start) / M.turnToTarget.seconds, 1), 0)
+		local turn = CFrame.Angles(0, a.turnYaw * math.min((now - a.start) / M.turnToTarget.seconds, 1), 0)
+		pose = table.clone(pose)
+		pose.Root = pose.Root and turn * pose.Root or turn -- W3a: 클립의 Root(체중 · 몸 돌림)에 대상 쪽 돌기를 곱한다
 	end
 	return pose
 end
@@ -504,6 +506,10 @@ local function targetPose(st, now, root)
 	if not w then
 		return {}, "none", M.blend.default, false, 0, false, false
 	end
+	-- W3a 키프레임판 재생 중(KeyframeCompare - Animator가 몸을 움직인다): 포즈를 안 쓰고 무기 · 보조 손 IK만(리본 켬)
+	if st.external and now < st.external then
+		return {}, "external", M.blend.min, true, 0, true, true
+	end
 	-- 넘어짐 → 일어나기(최우선 - 전신)
 	if st.getupStart then
 		local tau = now - st.getupStart
@@ -522,6 +528,14 @@ local function targetPose(st, now, root)
 	if a and a.ranged then
 		local pose, draw = rangedPose(a, now)
 		if pose then
+			local since = a.heavyShot and a.lastRelease and now - a.lastRelease
+			if since and since < M.heavyShot.recoilSeconds then -- W3a 강궁 반동: 쏜 뒤 몸이 살짝 밀린다(sin 모양)
+				local k = math.sin(math.pi * since / M.heavyShot.recoilSeconds)
+				pose = table.clone(pose)
+				for name, cf in pairs(poseOf(M.heavyShot.recoil)) do
+					pose[name] = (pose[name] or CFrame.identity) * CFrame.identity:Lerp(cf, k)
+				end
+			end
 			return pose, a.blendKey, a.blendDur, true, draw, false, true -- 쏘기 = 리본 없음(W2-4 휘두르기만)
 		end
 		st.attack = nil
@@ -606,12 +620,12 @@ local function placePiece(p, cf)
 	end
 end
 
-local function updateBow(weapon, p, bowCF, draw, showArrow, palmW)
+local function updateBow(weapon, p, bowCF, draw, showArrow, palmW, drawScale)
 	local model = weapon.model
 	for _, limb in ipairs(p.limbs) do
 		limb.part.CFrame = bowCF * CFrame.new(limb.spec.relPos) * CFrame.Angles(0, math.rad(limb.spec.relRotYDeg), 0)
 	end
-	local maxDraw = p.spec.drawStuds or 1.2
+	local maxDraw = (p.spec.drawStuds or 1.2) * (drawScale or 1) -- W3a 강궁 = 시위를 더 깊게
 	local nock = p.nockLocal + Vector3.new(0, 0, draw * maxDraw)
 	if palmW and draw > 0 then -- W2-6: 시위 가운데 = 당기는 손바닥(고정점 IK) - 활 몸 쪽 · 최대 당김 · 옆 0.6까지만
 		local l = bowCF:PointToObjectSpace(palmW)
@@ -650,6 +664,7 @@ local function pieceCFrame(p, handCF, heavyMul)
 	return handCF * CFrame.new(PALM[p.spec.hand]) * p.spec.hold * CFrame.new(-p.gripLocal * heavyMul)
 end
 
+local LEG_JOINTS = { RightHip = true, LeftHip = true, RightKnee = true, LeftKnee = true, RightAnkle = true, LeftAnkle = true }
 local function updatePose(st, now, camPos)
 	local character = st.character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -698,9 +713,21 @@ local function updatePose(st, now, camPos)
 		end
 	end
 	st.applied, st.appliedW = applied, appliedW
-	local T = PoseRig.apply(rig, applied, appliedW)
+	-- W3a: 다리 · 발 키는 서 있을 때만 - 걷는 동안은 이동 속도만큼 가중치를 줄여 애니메이터 걸음을 살린다(공중 = 그대로)
+	local applyW = appliedW
+	local v = root.AssemblyLinearVelocity
+	local moving = humanoid.FloorMaterial ~= Enum.Material.Air and math.clamp(Vector3.new(v.X, 0, v.Z).Magnitude / M.moveBlendSpeed, 0, 1) or 0
+	if moving > 0 then
+		applyW = table.clone(appliedW)
+		for name in pairs(LEG_JOINTS) do
+			if applyW[name] then
+				applyW[name] *= 1 - moving
+			end
+		end
+	end
+	local T = PoseRig.apply(rig, applied, applyW)
 	local heavyMul = (st.attack and st.attack.heavy) and HEAVY_WEAPON_SCALE or 1
-	st.frame = { inHand = inHand, draw = draw, trailOn = trailOn, heavyMul = heavyMul }
+	st.frame = { inHand = inHand, draw = draw, trailOn = trailOn, heavyMul = heavyMul, drawScale = (st.attack and st.attack.heavyShot) and M.heavyShot.drawStudsScale or 1 }
 	-- 보조 손 · 시위 IK(무기가 손에 있고 포즈가 허용할 때 - 꺼내는 중 · 활강 · 넘어져 누운 동안은 끔). 무기 자리 = 이번 포즈의 FK 손.
 	local main = st.weapon.pieces.main
 	local ik = M.weapons[st.classId] and M.weapons[st.classId].ik
@@ -723,7 +750,7 @@ local function updatePose(st, now, camPos)
 		local target
 		local headCF = cf.Head
 		if spec.drawAnchor and headCF then -- W2-6: 쉬는 시위 → 머리 기준 고정점(턱 · 뺨 옆) · 놓을 때 튕김 · 머리 뒷면 쪽으로는 handBackLimit까지만
-			local anchor = spec.drawAnchor + (spec.releaseKick or Vector3.zero) * kick
+			local anchor = spec.drawAnchor + (spec.releaseKick or Vector3.zero) * kick + ((a and a.heavyShot) and M.heavyShot.drawAnchorExtra * handDraw or Vector3.zero) -- W3a 강궁 = 더 깊게
 			local restLocal = headCF:PointToObjectSpace(mainCF:PointToWorldSpace(main.nockLocal))
 			local l = restLocal:Lerp(anchor, handDraw)
 			target = headCF:PointToWorldSpace(Vector3.new(l.X, l.Y, math.min(l.Z, spec.handBackLimit or 0.3)))
@@ -769,7 +796,7 @@ local function placeWeapon(st, now, camPos)
 				local a = st.attack
 				local showArrow = f.inHand and not (a and a.ranged and ((a.lastRelease and now - a.lastRelease < a.tm.act) or a.recovering or a.returning))
 				local rh = f.inHand and character:FindFirstChild(p.spec.stringHand or "RightHand")
-				updateBow(weapon, p, wcf, f.inHand and f.draw or 0, showArrow, rh and rh.CFrame:PointToWorldSpace(PALM[rh.Name] or PALM.RightHand))
+				updateBow(weapon, p, wcf, f.inHand and f.draw or 0, showArrow, rh and rh.CFrame:PointToWorldSpace(PALM[rh.Name] or PALM.RightHand), f.drawScale)
 			end
 		end
 		if p.trail then
@@ -809,7 +836,8 @@ local function bindPlayer(p)
 	refresh()
 end
 
-local function startAttack(st, index, heavy, air, target)
+-- opts(W3a · /gg anim): { close = 가까운 대상 휘두르기 강제 · heavyShot = 강궁 강제 }
+local function startAttack(st, index, heavy, air, target, opts)
 	if not st or not st.classId then
 		return false
 	end
@@ -817,7 +845,9 @@ local function startAttack(st, index, heavy, air, target)
 	if not clip then
 		return false
 	end
-	local close = MotionTiming.isRanged(st.classId) and isCloseSwing(st, target, air)
+	local close = MotionTiming.isRanged(st.classId) and ((opts and opts.close) or isCloseSwing(st, target, air))
+	-- W3a 강궁(활 Q 버프 중 - 서버 중계 Attribute AttackSpeedBuffMultiplier) = 깊은 당김 + 반동
+	local heavyShot = st.classId == "bow" and ((opts and opts.heavyShot) or (attrOf(st, "AttackSpeedBuffMultiplier") or 1) > 1)
 	if close then
 		clip = M.weapons[st.classId].closeSwing
 	end
@@ -831,10 +861,11 @@ local function startAttack(st, index, heavy, air, target)
 		local cur = st.attack
 		if cur and cur.ranged and not cur.recovering then
 			table.insert(cur.queue, release) -- 당긴 채 이어 쏜다
+			cur.heavyShot = heavyShot
 			return false
 		end
 		st.attack = { ranged = true, clip = clip, tm = MotionTiming.scale(clip, speedOf(st), heavy, true), start = now, queue = { release }, heavy = heavy, air = air, index = index,
-			blendKey = "atk" .. tostring(now), blendDur = M.blend.attackIn }
+			blendKey = "atk" .. tostring(now), blendDur = M.blend.attackIn, heavyShot = heavyShot }
 		st.getupStart = nil
 		local airData = air and AttackMotionData[st.classId] and AttackMotionData[st.classId].air
 		if airData and airData.bodyPitchDeg and st.character then
@@ -1199,6 +1230,53 @@ if RunService:IsStudio() then
 		return nil
 	end
 	hook.Parent = player:WaitForChild("PlayerGui")
+end
+
+-- W3a 확인 도구 /gg anim <직업> <동작> [반복](서버 DevTools가 Player Attribute DevAnim = "동작|반복|난수"를 올린다 - 내 캐릭터가 반복 재생 · 판정 없음)
+do
+	local ORDER = { attack1 = { 1 }, attack2 = { 2 }, attack3 = { 3 }, heavy = { 3 }, combo = { 1, 2, 3 } }
+	player:GetAttributeChangedSignal("DevAnim"):Connect(function()
+		local raw = player:GetAttribute("DevAnim")
+		if type(raw) ~= "string" then
+			return
+		end
+		local clip, count = string.match(raw, "^(%w+)|(%d+)|")
+		count = tonumber(count) or 1
+		task.spawn(function()
+			task.wait(0.4) -- 직업 전환 · 무기 교체를 기다린다
+			for _ = 1, count do
+				local st = stateFor(player)
+				if not st or not st.classId then
+					return
+				end
+				if clip == "getup" then
+					WeaponVisual.playGetup(player)
+					task.wait(getupTotal() + 0.4)
+				elseif clip == "kf" then
+					local track, length = require(script.Parent.KeyframeCompare).play(player.Character)
+					if track then
+						st.external = os.clock() + length + 0.1
+						task.wait(length + 0.5)
+					end
+				else
+					local interval = CombatConfig.attackTempo.baseIntervalSeconds
+					local steps = ORDER[clip] or { 1 }
+					for i, index in ipairs(steps) do
+						local heavy = clip == "heavy" or (clip == "combo" and i == 3)
+						local air = clip == "air"
+						local opts = { close = clip == "close", heavyShot = clip == "heavyshot" }
+						startAttack(st, index, heavy, air, nil, opts)
+						local wait = interval
+						if clip == "heavyshot" then
+							wait = interval * 1.6 -- 강궁 간격(SkillData.bow.Q.heavyShot.intervalMultiplier)
+						end
+						task.wait(wait)
+					end
+					task.wait(0.5)
+				end
+			end
+		end)
+	end)
 end
 
 -- 남의 공격 중계(서버 AttackServer → AttackMotion)

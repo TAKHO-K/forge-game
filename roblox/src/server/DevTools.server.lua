@@ -1258,6 +1258,99 @@ local function handleCommand(player, args)
 	elseif sub == "trail" and args[2] then
 		local ok, why = require(script.Parent.TrailSkinService).set(player, args[2])
 		reply(player, ok and ("궤적 스킨 " .. args[2]) or ("궤적 스킨 거부: " .. tostring(why)))
+	elseif sub == "anim" and args[2] then
+		-- C3 W3a 확인 도구: /gg anim <직업> <동작> [반복] - 내 캐릭터가 그 동작을 반복 재생(클라 WeaponVisual - 판정 없음).
+		--   동작 = attack1 · attack2 · attack3 · heavy · air · combo(1 → 2 → 3) · heavyshot(활 강궁) · close(활 · 지팡이 가까이) · getup · kf(대검 3타 키프레임판 - Studio)
+		local classId = args[2]
+		if classId ~= player:GetAttribute("ClassId") then
+			ensureBackup(player)
+			applyClass(player, classId)
+		end
+		local clip = args[3] or "combo"
+		local count = math.clamp(math.floor(tonumber(args[4]) or 3), 1, 50)
+		player:SetAttribute("DevAnim", ("%s|%d|%d"):format(clip, count, math.random(1, 1e6)))
+		reply(player, ("모션 %s %s × %d"):format(classId, clip, count))
+	elseif sub == "c3" and args[2] == "mob" then
+		-- C3 검증 표본 몹: /gg c3 mob <앞 거리> [옆] [tier] [안죽음 1] - 내 앞(바라보는 방향) 자리에 고정 잡몹
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			local look = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+			local right = Vector3.new(-look.Z, 0, look.X)
+			local position = root.Position + look * (tonumber(args[3]) or 8) + right * (tonumber(args[4]) or 0)
+			local MonsterData = require(game:GetService("ReplicatedStorage").Shared.data.MonsterData)
+			local tierKey = "tier" .. tostring(math.clamp(tonumber(args[5]) or 1, 1, 6))
+			local mob = MonsterSpawner.spawn(MonsterData[tierKey], position, nil, {})
+			mob.PrimaryPart.Anchored = true
+			mob:PivotTo(CFrame.new(position))
+			mob:SetAttribute("C3Mob", true)
+			mob.Name = "C3Mob"
+			if args[6] == "1" then
+				MonsterState.setDamageTakenMultiplier(mob, 1e-6)
+			end
+			reply(player, ("표본 몹 %s @ %s"):format(tierKey, tostring(position)))
+		end
+	elseif sub == "c3" and args[2] == "hits" and tonumber(args[3]) then
+		-- C3-3 검증: /gg c3 hits <스테이지> [시행] - 대표 전투력(권장 = 비율 1.0) · 대표 템포(활 · 스테이지 200+ = 공속 상한)로 실제 MonsterState.applyDamage 경로의 T1 · T6 처치 타수(3타 콤보 · 치명 굴림 포함)
+		local RS = game:GetService("ReplicatedStorage")
+		local CombatFormula = require(RS.Shared.CombatFormula)
+		local PlayerCombat = require(RS.Shared.PlayerCombat)
+		local ClassData = require(RS.Shared.data.ClassData)
+		local SkillData = require(RS.Shared.data.SkillData)
+		local MonsterData = require(RS.Shared.data.MonsterData)
+		local CombatConfig = require(RS.Shared.data.CombatConfig)
+		local stage = math.floor(tonumber(args[3]))
+		local trials = math.clamp(math.floor(tonumber(args[4]) or 20), 1, 200)
+		ensureBackup(player)
+		applyStage(player, stage)
+		task.wait(0.3)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local rec = CombatFormula.recommendedPower(stage)
+		local bow = ClassData.classes.bow
+		local critRate = math.min(bow.critRate + PlayerCombat.getLevelCritBonus(stage), 1)
+		local atk = rec / (1 + critRate * (bow.critDmg - 1))
+		local speedBonus = stage >= 200 and 1.5 or 0
+		local interval, scale = PlayerCombat.getAttackTempo("bow", speedBonus, 1)
+		local rng = Random.new(stage)
+		local rows = {}
+		for _, tierIndex in ipairs({ 1, 6 }) do
+			local total, maxN = 0, 0
+			for _ = 1, trials do
+				local mob = MonsterSpawner.spawn(MonsterData["tier" .. tierIndex], root.Position + Vector3.new(0, -200, 0), nil, {})
+				mob.PrimaryPart.Anchored = true
+				mob:SetAttribute("C3Mob", true)
+				local n, dead = 0, false
+				while not dead and n < 200 do
+					n += 1
+					local damage = atk * scale * ((n % CombatConfig.comboHitEvery == 0) and CombatConfig.comboHitMultiplier or 1)
+					if rng:NextNumber() < critRate then
+						damage *= bow.critDmg
+					end
+					player:SetAttribute("CombatPower", rec) -- 대표 = 권장(동기화가 1초마다 덮는다 - 매 타 직전에)
+					dead = MonsterState.applyDamage(mob, damage, stage, player)
+				end
+				MonsterSpawner.despawn(mob)
+				total += n
+				maxN = math.max(maxN, n)
+			end
+			table.insert(rows, ("T%d 평균 %.2f타(최대 %d)"):format(tierIndex, total / trials, maxN))
+		end
+		-- 스킬 한 방 / 두 방(대표 공격력 · 직업 공격 배율 비로 환산 - 기대 T1 HP ÷ 스킬 한 번 · 치명이면 × 치명 피해)
+		local t1Hp = require(RS.Shared.InfiniteStage).getMonsterHp(MonsterData.tier1.hp, stage)
+		local skills = {}
+		for _, s in ipairs({ { "greatsword", "Q" }, { "greatsword", "E" }, { "dualblade", "E" } }) do
+			local class, def = ClassData.classes[s[1]], SkillData[s[1]][s[2]]
+			local classAtk = atk / bow.atk * class.atk
+			table.insert(skills, ("%s(%.1f) %.2f방 · 치명 %.2f방"):format(def.name, def.coefficient, t1Hp / (def.coefficient * classAtk), t1Hp / (def.coefficient * classAtk * class.critDmg)))
+		end
+		print(("C3HITS|%d|간격 %.2f · 한 타 ×%.2f · 치명 %.0f%%|%s|%s"):format(stage, interval, scale, critRate * 100, table.concat(rows, " · "), table.concat(skills, " · ")))
+		reply(player, ("스테이지 %d: %s"):format(stage, table.concat(rows, " · ")))
+	elseif sub == "c3" and args[2] == "clear" then
+		for _, model in ipairs(MonsterState.getAllModels()) do
+			if model:GetAttribute("C3Mob") then
+				MonsterSpawner.despawn(model)
+			end
+		end
+		reply(player, "표본 몹 정리")
 	elseif sub == "class" and args[2] then
 		ensureBackup(player)
 		if applyClass(player, args[2]) then
