@@ -114,8 +114,9 @@ W.greatsword = {
 			through = with(body(0.34, 14, -22, 4), { Waist = { -10, -62, 0 }, Neck = { 0, 45, 0 }, RightShoulder = { 75, 0, 70 }, RightElbow = { 15, 0, 0 }, RightWrist = { -85, 0, 0 } }), -- 오른쪽 뒤까지 끌려감(θ 5)
 			settle = GS_OVERHEAD }, -- 회복 = 3타 준비(머리 위로 크게 · 몸을 감는다)
 		{ ant = MELEE_CONTACT, act = 0.2, rec = 0.26, cocked = GS_OVERHEAD, -- 3타: 몸을 크게 돌리며 온몸으로 내려찍기
-			contact = with(body(0.6, 28, 18, 10), { Waist = { -32, 12, 0 }, Neck = { 20, -10, 0 }, RightShoulder = { 80, 0, 5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -75, 0, 0 } }), -- θ 15
-			through = with(body(0.75, 30, 22, 14), { Waist = { -42, 18, 0 }, Neck = { 25, -15, 0 }, RightShoulder = { 45, 0, 5 }, RightElbow = { 5, 0, 0 }, RightWrist = { -85, 0, 0 } }), -- θ −35(땅을 찍는다)
+			-- Play 3 다듬음: 옛 초안(루트 −0.6 ~ −0.75 · 숙임 10 ~ 14° · 손목 −75)은 몸이 너무 가라앉아 칼이 땅속으로 들어가 안 보였다
+			contact = with(body(0.38, 24, 16, 6), { Waist = { -22, 12, 0 }, Neck = { 14, -10, 0 }, RightShoulder = { 95, 0, 5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -45, 0, 0 } }), -- θ 60(앞으로 내리꽂는 중)
+			through = with(body(0.45, 26, 20, 8), { Waist = { -30, 16, 0 }, Neck = { 18, -14, 0 }, RightShoulder = { 70, 0, 5 }, RightElbow = { 5, 0, 0 }, RightWrist = { -55, 0, 0 } }), -- θ 20(앞 아래로 찍은 끝)
 			settle = GS_READY },
 	},
 	air = { ant = MELEE_CONTACT, act = 0.17, rec = 0.2, cocked = with(GS_OVERHEAD, { RightHip = { 55, 0, 0 }, RightKnee = { -80, 0, 0 }, LeftHip = { 35, 0, 0 }, LeftKnee = { -60, 0, 0 }, Root = { 0, 0, 0 } }), -- 공중 내려찍기(다리 접음 · 몸 앞 기울임 = AirMotion)
