@@ -463,6 +463,8 @@ function V.runPure()
 		local SaveSystem = require(script.Parent.SaveSystem)
 		local ok, m = pcall(SaveSystem.migrate, { version = 49, gold = 0, classes = {}, inventory = {} })
 		check(("이관 옛 계정 → v%s: 이정표 · 출석 없음(새 계정만)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 53 and type(m.quests) == "table" and m.quests.guide == nil and m.quests.attendance == nil)
+		local okNew, fresh = pcall(SaveSystem.migrate, {})
+		check("새 계정(저장 없음 → 빈 표 이관) = 이정표 1 · 출석 0(리뷰 치명)", okNew and fresh.quests and fresh.quests.guide == 1 and type(fresh.quests.attendance) == "table" and fresh.quests.attendance.count == 0)
 	end)
 
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))

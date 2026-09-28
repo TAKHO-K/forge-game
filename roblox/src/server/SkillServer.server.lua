@@ -50,8 +50,8 @@ skillCastResult.Parent = ReplicatedStorage
 local debugCapture = {}
 local function sendResult(player, slot, payload)
 	skillCastResult:FireClient(player, slot, payload)
-	if payload.ok and (payload.kind == nil or not tostring(payload.kind):find("Tick")) then -- Q12 이정표: 스킬 · 궁극기 한 번 씀(틱은 빼고)
-		require(script.Parent.QuestService).note(player, slot == "T" and "ult" or "skill", 1)
+	if payload.ok and slot ~= "T" and payload.tickIndex == nil and payload.kind ~= "tick" and payload.kind ~= "ultHit" and payload.kind ~= "flurryTick" then -- Q12 이정표: 스킬 시전(틱 · 적중 · 덫 발동 빼고 - 리뷰) · 궁극기는 T 시전 성공 한 곳(아래)
+		require(script.Parent.QuestService).note(player, "skill", 1)
 	end
 	local sink = debugCapture[player]
 	if sink then
@@ -696,6 +696,7 @@ local function handleSkill(player, slot, aimPoint)
 		if ok then
 			result.ok = true
 			sendResult(player, slot, result)
+			require(script.Parent.QuestService).note(player, "ult", 1) -- Q12 이정표: 궁극기 맛보기
 		else
 			reject(player, slot, result)
 		end

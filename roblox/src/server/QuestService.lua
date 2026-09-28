@@ -61,7 +61,17 @@ function QuestService.view(player)
 		main = step and { index = state.main, total = #QuestData.main, id = step.id, name = step.name, unlock = step.unlock, done = Quest.mainDone(step, facts), reward = step.reward } or nil,
 		currencies = state.currencies,
 		guide = state.guide and QuestData.ftue[state.guide] and { index = state.guide, total = #QuestData.ftue, id = QuestData.ftue[state.guide].id, text = QuestData.ftue[state.guide].text, card = QuestData.ftue[state.guide].card } or nil, -- Q12
-		attendance = type(state.attendance) == "table" and { count = state.attendance.count, claimed = state.attendance.claimed, rewards = QuestData.attendance } or nil, -- Q12
+		attendance = (function() -- Q12 · 리뷰: 7칸 다 받으면 창에서 숨김
+			local att = state.attendance
+			if type(att) ~= "table" then
+				return nil
+			end
+			local all = true
+			for _, entry in ipairs(QuestData.attendance) do
+				all = all and att.claimed[tostring(entry.day)] == true
+			end
+			return not all and { count = att.count, claimed = att.claimed, rewards = QuestData.attendance } or nil
+		end)(),
 		training = tv and trainRows(TrainingData.stats, tv.training, "stat") or {},
 		abilities = tv and trainRows(TrainingData.classAbilities[tv.classId], tv.abilities, "ability") or {},
 	}
@@ -123,10 +133,20 @@ function QuestService.grant(player, reward)
 end
 
 -- 서버 이벤트 → 진행
+local usedEvents = {} -- 리뷰: 일간 · 주간 · 이정표 어디에도 없는 이벤트는 바로 돌아간다(스킬 · 줍기는 자주 온다)
+for _, list in ipairs({ QuestData.dailyPool, QuestData.weekly, QuestData.ftue }) do
+	for _, q in ipairs(list) do
+		usedEvents[q.event] = true
+	end
+end
+
 function QuestService.note(player, event, amount)
 	local state = PlayerProfile.getQuestState(player)
-	if not state then
+	if not state or not usedEvents[event] then
 		return
+	end
+	if not state.guide and (event == "skill" or event == "ult" or event == "pickup" or event == "equip") then
+		return -- 이정표를 마쳤으면 이 넷은 일간 · 주간에 없다(위 표) - dailyFor 셔플을 매번 돌지 않게
 	end
 	local reached, advanced = Quest.note(state, event, amount or 1, os.time())
 	if #reached > 0 then

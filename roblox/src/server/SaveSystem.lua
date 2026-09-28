@@ -350,6 +350,7 @@ end
 -- 부풀려진 장비 itemLevel을 min(itemLevel, dropStage + 2)로 절단 - 스키마 변화 없음, 30-0 S02) -> 25(강화 천장 게이지
 -- weapon.enhanceGauge 신설 - 전부 0, 30-0 S03) -> 26(강화 재료 보유량 materials 신설 - 전부 0, 30-0 S04) -> 27(방지권 purchases.protectionTickets · protectionClaimedStages 신설 - 0장 · 빈 집합, 30-0 S05) -> 28(bossFirstClearStages · tutorial.granted의 키를 문자열로 통일 - 스키마 변화 없음, 30-0 S05 후속) -> 29(보스 도감 도장 purchases.bossCodex 신설 - 빈 집합, 30-0 S11) -> 30(안내 플래그 hints, S20e) -> 31(보석 가루 gemDust 신설 - 0, P2.5b C) -> 32(환생 후 마일스톤 milestones · milestoneUnlocks 신설 - 빈 표 · 0, P2.5b D) -> 33(마일스톤 재설계 - milestones 표를 milestoneLevel 숫자로, P2.5c B2) -> 34(리더보드 기록 제외 leaderboardTainted 신설 - 보스 클리어가 있던 세이브는 true, P3a B3).
 local function migrate(data)
+	local isNewAccount = data.version == nil -- Q12 리뷰(치명): 새 계정 = 저장 없음(raw nil → {}) - 빈 표도 이관 체인을 다 탄다
 	data.version = data.version or 0
 
 	if data.version < 1 then
@@ -1140,7 +1141,7 @@ local function migrate(data)
 
 	if data.version < 53 then
 		-- QUEUE-10h Q12: quests.guide(첫 5분 이정표) · quests.attendance(7일 출석)는 새 계정만 - 옛 계정(이미 이관된 상태 · 위 v50 단계가 방금 만든 상태 포함)은 둘 다 없음.
-		if type(data.quests) == "table" then
+		if type(data.quests) == "table" and not isNewAccount then -- 새 계정은 위 v50 단계의 Quest.newState(이정표 1 · 출석 0)를 그대로 둔다
 			data.quests.guide = nil
 			data.quests.attendance = nil
 		end
