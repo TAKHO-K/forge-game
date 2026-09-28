@@ -266,10 +266,23 @@ reopenButton.TextSize = 14
 reopenButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 reopenButton.TextColor3 = Color3.new(1, 1, 1)
 reopenButton.Parent = screenGui
-reopenButton.Activated:Connect(function()
+local function openClassSelect()
 	panel.Visible = true
 	UIManager.fitToScreen(panel, screenGui)
-end)
+end
+reopenButton.Activated:Connect(openClassSelect)
+-- Q14 P4e: 폰에서는 이 자리가 조이스틱 예약 구역(ScreenMap.mobileReserved.BL - 좌 40% × 하 45%) 안이다 → 숨기고 설정 창 [직업 변경]이 연다(BindableEvent OpenClassSelect).
+local openSignal = Instance.new("BindableEvent")
+openSignal.Name = "OpenClassSelect"
+openSignal.Parent = script
+openSignal.Event:Connect(openClassSelect)
+local Theme = require(script.Parent.ui.kit.Theme)
+local function applyMobileHide()
+	Theme.recompute()
+	reopenButton.Visible = not Theme.isMobile
+end
+applyMobileHide()
+player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(applyMobileHide)
 
 local function onClassIdChanged()
 	local classId = player:GetAttribute("ClassId")

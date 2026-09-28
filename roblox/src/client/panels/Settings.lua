@@ -15,13 +15,19 @@ local AttackTrail = require(script.Parent.Parent.AttackTrail)
 local SettingsPanel = {}
 SettingsPanel.id = "settings"
 
-local PANEL_SIZE = Vector2.new(420, 340) -- W2: 궤적 토글 한 줄 추가 · W3c: 화면 흔들림 토글 한 줄 · C5-4: 자동 이동 한 줄
+local PANEL_SIZE = Vector2.new(420, 440) -- Q14: 섬광 줄이기 · 직업 변경 한 줄씩 -- W2: 궤적 토글 한 줄 추가 · W3c: 화면 흔들림 토글 한 줄 · C5-4: 자동 이동 한 줄
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local AutoStageData = require(ReplicatedStorage.Shared.data.AutoStageData)
 local PAD = 12
 
 local player = Players.LocalPlayer
 local built
+local saveRemote = ReplicatedStorage:WaitForChild("SettingsSave", 10) -- Q14: 설정 저장(서버가 검증 · 저장 · Attribute 적용)
+local function save(key, value)
+	if saveRemote then
+		saveRemote:FireServer(key, value)
+	end
+end
 
 local function build()
 	local panel = Panel.create({
@@ -36,6 +42,7 @@ local function build()
 		position = UDim2.new(0, PAD, 0, PAD),
 		onChanged = function(value)
 			player:SetAttribute("CameraTopDown", value)
+			save("cameraTopDown", value)
 		end,
 	})
 	local hint = Theme.label(panel.content, Text.get("settings.cameraTopDownHint"), "caption", "textSecondary")
@@ -55,6 +62,7 @@ local function build()
 		position = UDim2.new(0, PAD, 0, PAD + 100),
 		onChanged = function(value)
 			AttackTrail.setDimOthers(value)
+			save("dimOthersTrail", value)
 		end,
 	})
 	-- W3c: 화면 흔들림 끄기(타격 · 스킬 = CameraShake · 보스 = BossFx - 이 클라 · 이번 접속 동안 · 저장은 P4-4)
@@ -65,12 +73,23 @@ local function build()
 		onChanged = function(value)
 			player:SetAttribute("SettingScreenShake", value)
 			player:SetAttribute("SettingBossScreenShake", value)
+			save("screenShake", value)
+		end,
+	})
+	-- Q14 번개 · 태초 화면 섬광 줄이기(보스 경고는 밝기만 - 관문 날씨 섬광 끔)
+	local flashToggle = Toggle.build({
+		parent = panel.content, name = "ReduceFlashesToggle", text = Text.get("settings.reduceFlashes"),
+		value = player:GetAttribute("ReduceFlashes") == true, width = PANEL_SIZE.X - PAD * 2,
+		position = UDim2.new(0, PAD, 0, PAD + 196),
+		onChanged = function(value)
+			player:SetAttribute("ReduceFlashes", value)
+			save("reduceFlashes", value)
 		end,
 	})
 	-- C5-4 자동 스테이지 이동(보통 → 편함 → 도전 → 끄기 순환 - 서버 RemoteEvent AutoStageSetting · 이번 접속 동안 · 저장은 P4-4)
 	local autoLabel = Theme.label(panel.content, Text.get("settings.autoStage"), "body", "textPrimary")
 	autoLabel.Name = "AutoStageLabel"
-	autoLabel.Position = UDim2.new(0, PAD, 0, PAD + 196)
+	autoLabel.Position = UDim2.new(0, PAD, 0, PAD + 244)
 	autoLabel.Size = UDim2.new(1, -PAD * 2 - 120, 0, 32)
 	local function presetName(id)
 		for _, preset in ipairs(AutoStageData.presets) do
@@ -82,7 +101,7 @@ local function build()
 	end
 	local autoButton = Button.build({
 		parent = panel.content, name = "AutoStageButton", kind = "secondary", width = 110,
-		position = UDim2.new(1, -PAD - 110, 0, PAD + 196),
+		position = UDim2.new(1, -PAD - 110, 0, PAD + 244),
 		text = presetName(player:GetAttribute("AutoStage") or AutoStageData.default),
 		onActivated = function()
 			local current = player:GetAttribute("AutoStage") or AutoStageData.default
@@ -96,10 +115,25 @@ local function build()
 			ReplicatedStorage:WaitForChild("AutoStageSetting"):FireServer(nextId)
 		end,
 	})
+	-- Q14 P4e: [직업 변경](폰에서는 왼쪽 아래 버튼이 조이스틱 구역이라 숨는다 - 여기서 연다 · PC도 같이 쓴다)
+	local classButton = Button.build({
+		parent = panel.content, name = "ClassChangeButton", kind = "secondary", width = 110,
+		position = UDim2.new(0, PAD, 0, PAD + 292),
+		text = Text.get("settings.classChange"),
+		onActivated = function()
+			local ui = player:FindFirstChild("PlayerScripts") and player.PlayerScripts:FindFirstChild("ClassSelectUI")
+			local signal = ui and ui:FindFirstChild("OpenClassSelect")
+			if signal then
+				UIManager.close(SettingsPanel.id)
+				signal:Fire()
+			end
+		end,
+	})
+	classButton.root.Name = "ClassChangeButton"
 	player:GetAttributeChangedSignal("AutoStage"):Connect(function()
 		autoButton.setText(presetName(player:GetAttribute("AutoStage") or AutoStageData.default))
 	end)
-	built = { panel = panel, toggle = toggle, dimToggle = dimToggle, shakeToggle = shakeToggle, autoButton = autoButton }
+	built = { panel = panel, toggle = toggle, dimToggle = dimToggle, shakeToggle = shakeToggle, flashToggle = flashToggle, autoButton = autoButton }
 end
 
 function SettingsPanel.toggle()
@@ -109,6 +143,7 @@ function SettingsPanel.toggle()
 	built.toggle.setValue(player:GetAttribute("CameraTopDown") == true, true)
 	built.dimToggle.setValue(AttackTrail.dimOthers(), true)
 	built.shakeToggle.setValue(player:GetAttribute("SettingScreenShake") ~= false, true)
+	built.flashToggle.setValue(player:GetAttribute("ReduceFlashes") == true, true)
 	UIManager.switchTo(SettingsPanel.id)
 end
 

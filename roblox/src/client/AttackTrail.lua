@@ -14,6 +14,12 @@ local AttackTrail = {}
 local player = Players.LocalPlayer
 
 local dimOthers = TrailData.dimOthers.default
+if player:GetAttribute("SettingDimOthers") ~= nil then -- Q14: 저장된 설정(서버 SettingsService가 로드 때 건다)
+	dimOthers = player:GetAttribute("SettingDimOthers") == true
+end
+player:GetAttributeChangedSignal("SettingDimOthers"):Connect(function()
+	dimOthers = player:GetAttribute("SettingDimOthers") == true
+end)
 function AttackTrail.setDimOthers(on)
 	dimOthers = on == true
 end

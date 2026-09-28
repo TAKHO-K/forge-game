@@ -573,6 +573,22 @@ function V.runPure()
 		check("몬테카를로 10만 회 = 공개 표(모든 표 최대 오차 ≤ 0.5%p)", ok)
 	end)
 
+	section("Q14 설정 저장", function()
+		local SettingsService = require(script.Parent.SettingsService)
+		local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData)
+		local s = SettingsService.sanitize
+		check("설정 검증: 불리언 · 프리셋만(잘못된 값 = 거절)", s("reduceFlashes", true) == true and s("screenShake", false) == false and s("reduceFlashes", "yes") == nil
+			and s("autoStage", "nope") == nil and s("nokey", true) == nil and s("autoStage", require(ReplicatedStorage.Shared.data.AutoStageData).default) ~= nil)
+		local attrsOk = true
+		for _, key in ipairs(SettingsData.order) do
+			attrsOk = attrsOk and SettingsData.keys[key] ~= nil and #SettingsData.keys[key].attrs >= 1
+		end
+		check("설정 키 5 = 적용 Attribute(카메라 · 섬광 · 흔들림 · 궤적 · 자동 이동)", attrsOk and #SettingsData.order == 5)
+		local SaveSystem = require(script.Parent.SaveSystem)
+		local ok, m = pcall(SaveSystem.migrate, { version = 53, gold = 0, classes = {}, inventory = {}, quests = { main = 1 } })
+		check(("이관 v53 → v%s: settings 빈 표(= 기본값)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 54 and type(m.settings) == "table" and next(m.settings) == nil)
+	end)
+
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
 end

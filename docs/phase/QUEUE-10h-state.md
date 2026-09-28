@@ -122,7 +122,7 @@
 
 | Q13 가방 · 일괄 분해 · 확률 공개 | 5e72192 | 가방 스위치 30(저장 불변) · 일괄 분해(잠금 · 초월 · 태초 보호) · Disclosure 한 소스 · 확률 창 · 표 버전 · 옵션 비활성 스위치 · 몬테카를로 10만 회(최대 0.29%p) · QueueVerify 88/88 |
 
-| Play F + 리뷰 6(Q13) | (이 커밋) | 아래 표 · 옛 검증 3곳 칸 수 · 확률 표시 · 변형 장비 일괄 분해 제외 · 지문 정확 곱 |
+| Play F + 리뷰 6(Q13) | c708f0d | 아래 표 · 옛 검증 3곳 칸 수 · 확률 표시 · 변형 장비 일괄 분해 제외 · 지문 정확 곱 |
 
 ## Play F 결과(약 11분 · 재Play 없음 · 게임 스크립트 오류 0 - MCP 마우스 경로 CoreGui 경고만)
 | 확인 | 결과 | 근거 |
@@ -137,8 +137,10 @@
 | 확률 창 | O(실제 클릭) · 리뷰 3 확인 | `probability.png` - 태초 · 초월이 0.0000%로 보임 → 유효숫자 표시로 수정 |
 | 저장 왕복(v53) | O | `_verify` 원본: version 53 · pets 2(동행 1 · 누적 2) · guide 4 · 출석 1 · claimed["1"] · 알 1 · 가방 10 |
 
+| Q14 설정 저장 + P4e | (이 커밋) | SettingsData · SettingsService · SAVE v54 · 섬광 줄이기 · 직업 변경 폰 숨김 → 설정 창 · docs/design/settings-hud-q14.md · QueueVerify 91/91 |
+
 ## 지금
-- Q14 설정 저장 + P4e HUD
+- Q15 번역 기반 + T1 통계
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)

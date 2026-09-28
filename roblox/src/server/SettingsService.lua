@@ -1,0 +1,98 @@
+-- QUEUE-10h Q14 P4d 설정 저장 서버: Remote SettingsSave(key, value) → 검증(SettingsData) → profile.settings(SAVE v54) → Player Attribute 적용. 로드 때 저장값 전부 적용.
+--   자동 스테이지(AutoStage.server)는 Attribute AutoStage를 읽고 그 Remote(AutoStageSetting)가 SettingsService.set으로 저장한다(입구 하나).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData)
+local AutoStageData = require(ReplicatedStorage.Shared.data.AutoStageData)
+local PlayerProfile = require(script.Parent.PlayerProfile)
+
+local SettingsService = {}
+
+local function validPreset(id)
+	for _, preset in ipairs(AutoStageData.presets) do
+		if preset.id == id then
+			return true
+		end
+	end
+	return false
+end
+
+local function defaultOf(key)
+	local def = SettingsData.keys[key]
+	if def.kind == "preset" then
+		return AutoStageData.default
+	end
+	return def.default
+end
+
+-- 값 검증: 맞으면 값, 아니면 nil
+function SettingsService.sanitize(key, value)
+	local def = SettingsData.keys[key]
+	if not def then
+		return nil
+	end
+	if def.kind == "boolean" then
+		if type(value) == "boolean" then -- (a and b or nil 꼴은 false를 nil로 바꾼다 - "끄기"가 저장 안 되던 것)
+			return value
+		end
+		return nil
+	elseif def.kind == "preset" then
+		return type(value) == "string" and validPreset(value) and value or nil
+	end
+	return nil
+end
+
+local function apply(player, key, value)
+	for _, attr in ipairs(SettingsData.keys[key].attrs) do
+		player:SetAttribute(attr, value)
+	end
+end
+
+function SettingsService.set(player, key, value)
+	local v = SettingsService.sanitize(key, value)
+	local settings = PlayerProfile.getSettings(player)
+	if v == nil or not settings then
+		return false
+	end
+	settings[key] = v
+	apply(player, key, v)
+	return true
+end
+
+function SettingsService.onLoaded(player)
+	local settings = PlayerProfile.getSettings(player)
+	if not settings then
+		return
+	end
+	for _, key in ipairs(SettingsData.order) do
+		local v = SettingsService.sanitize(key, settings[key])
+		if v == nil then
+			v = defaultOf(key)
+		end
+		apply(player, key, v)
+	end
+end
+
+function SettingsService.start()
+	local remote = ReplicatedStorage:FindFirstChild("SettingsSave") or Instance.new("RemoteEvent")
+	remote.Name = "SettingsSave"
+	remote.Parent = ReplicatedStorage
+	local last = {}
+	remote.OnServerEvent:Connect(function(player, key, value)
+		if type(key) ~= "string" or not SettingsData.keys[key] then
+			return
+		end
+		local now = os.clock()
+		if last[player] and now - last[player] < 0.1 then
+			return
+		end
+		last[player] = now
+		SettingsService.set(player, key, value)
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		last[player] = nil
+	end)
+end
+
+return SettingsService

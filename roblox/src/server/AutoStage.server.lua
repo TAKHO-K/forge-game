@@ -33,13 +33,14 @@ local stats = { moves = 0, gateNotices = 0 } -- 검증
 local AutoStage = { stats = stats }
 
 local function presetOf(player)
-	return presetById[settings[player] or AutoStageData.default] or presetById[AutoStageData.default]
+	return presetById[settings[player] or player:GetAttribute("AutoStage") or AutoStageData.default] or presetById[AutoStageData.default] -- Q14: 로드 때 저장값(Attribute)
 end
 
 settingRemote.OnServerEvent:Connect(function(player, presetId)
 	if type(presetId) == "string" and presetById[presetId] then
 		settings[player] = presetId
 		player:SetAttribute("AutoStage", presetId)
+		require(script.Parent.SettingsService).set(player, "autoStage", presetId) -- Q14: 저장(설정 입구 하나)
 	end
 end)
 

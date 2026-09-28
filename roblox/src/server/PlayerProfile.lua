@@ -2256,6 +2256,18 @@ function PlayerProfile.addEgg(player, egg, cap)
 	return true
 end
 
+-- Q14 설정(살아 있는 표 - SettingsService만 고친다). 없으면 빈 표(= 전부 기본값).
+function PlayerProfile.getSettings(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	if type(profile.settings) ~= "table" then
+		profile.settings = {}
+	end
+	return profile.settings
+end
+
 -- Q11 펫 상태(살아 있는 표 - PetService만 고친다). 없으면 새로 만든다.
 function PlayerProfile.getPetState(player)
 	local profile = profiles[player]
@@ -2371,6 +2383,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		training = deepCopy(profile.training), -- Q6(v50): 새 저장 필드 = 백업 대상(COMMON §1)
 		quests = deepCopy(profile.quests), -- Q6(v50)
 		pets = deepCopy(profile.pets), -- Q11(v52)
+		settings = deepCopy(profile.settings), -- Q14(v54)
 		peakLevel = profile.peakLevel, -- M1(v38)
 		titles = deepCopy(profile.titles), -- M1(v39): 칭호(봉인 입구 검증이 지급한다)
 		eggs = deepCopy(profile.eggs), -- M1-3(v41): 알 가방(둥지 검증이 줍는다) - world(nests · nestDex)는 위 world 통째 복사에 들어 있다
@@ -2412,6 +2425,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.world = snapshot.world and deepCopy(snapshot.world) or profile.world
 	profile.training = snapshot.training and deepCopy(snapshot.training) or profile.training -- Q6(v50)
 	profile.pets = snapshot.pets and deepCopy(snapshot.pets) or nil -- Q11(v52): 스냅샷 때 없었으면 없던 상태로
+	profile.settings = snapshot.settings and deepCopy(snapshot.settings) or nil -- Q14(v54)
 	profile.quests = snapshot.quests and deepCopy(snapshot.quests) or nil -- Q6(v50) · 리뷰 4: 스냅샷 때 없었으면 없던 상태로(검증이 만든 퀘스트 상태가 남지 않게)
 	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
 	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles

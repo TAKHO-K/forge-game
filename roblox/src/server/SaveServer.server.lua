@@ -17,6 +17,8 @@ local QuestService = require(script.Parent.QuestService) -- Q6 G3 퀘스트 · �
 QuestService.start()
 local PetService = require(script.Parent.PetService) -- Q11 펫 Remote
 PetService.start()
+local SettingsService = require(script.Parent.SettingsService) -- Q14 설정 저장 Remote
+SettingsService.start()
 
 local function loadForPlayer(player)
 	local profile, err = SaveSystem.loadProfile(player)
@@ -42,6 +44,7 @@ local function loadForPlayer(player)
 	task.spawn(AcquisitionAudit.auditProfile, player) -- S1: 원장 없는 태초 격리 · 확률 검사(자동 제재 없음)
 	QuestService.onLoaded(player) -- Q6: 날짜 넘김 · 화면 표
 	PetService.onLoaded(player) -- Q11: 데리고 다니는 펫 Attribute · 화면 표
+	SettingsService.onLoaded(player) -- Q14: 저장된 설정을 Attribute로
 end
 
 Players.PlayerAdded:Connect(loadForPlayer)

@@ -97,7 +97,7 @@ local function slowMotion(seconds)
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Name = "PrimordialSlow"
 	grade.Saturation = -0.7
-	grade.Brightness = 0.08
+	grade.Brightness = game:GetService("Players").LocalPlayer:GetAttribute("ReduceFlashes") and 0 or 0.08 -- Q14: 섬광 줄이기 = 화면 밝아짐 없음(채도만)
 	grade.Parent = Lighting
 	camera.FieldOfView = baseFov * 0.86
 	TweenService:Create(camera, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { FieldOfView = baseFov }):Play()

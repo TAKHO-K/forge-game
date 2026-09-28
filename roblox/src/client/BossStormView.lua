@@ -286,7 +286,8 @@ end
 function BossStormView.dischargeRods(flash)
 	for part in pairs(charged) do
 		if flash and part.Parent then
-			part.Color = IMPACT_COLOR
+			local reduce = game:GetService("Players").LocalPlayer:GetAttribute("ReduceFlashes") -- Q14: 섬광 줄이기 = 흰 번쩍 대신 밝기만 조금(경고는 그대로 보인다)
+			part.Color = reduce and part.Color:Lerp(IMPACT_COLOR, 0.35) or IMPACT_COLOR
 			task.delay(0.3, function()
 				restoreRod(part)
 			end)
