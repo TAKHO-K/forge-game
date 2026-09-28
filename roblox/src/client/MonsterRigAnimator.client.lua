@@ -9,6 +9,7 @@ local MonsterSpeciesData = require(ReplicatedStorage.Shared.data.MonsterSpeciesD
 
 local active = {} -- [Model] = { started, seconds, motors = { [Motor6D] = CFrame 목표 } }
 local RELEASE_SECONDS = 0.15
+local LOD_STUDS = 160 -- 먼 몹 애니메이션 LOD(묶음 F1): 카메라에서 이보다 멀면 전조 포즈를 건너뛴다(보스 리그 lod.fullStuds와 같은 거리)
 
 local function poseCFrame(p)
 	return CFrame.new(0, p.y or 0, 0) * CFrame.Angles(math.rad(p.rx or 0), math.rad(p.ry or 0), math.rad(p.rz or 0))
@@ -36,6 +37,10 @@ local function watch(model)
 			return
 		end
 		local seconds = model:GetAttribute("MobWindup")
+		local camera = workspace.CurrentCamera
+		if seconds and camera and model.PrimaryPart and (model.PrimaryPart.Position - camera.CFrame.Position).Magnitude > LOD_STUDS then
+			return
+		end
 		if seconds then
 			active[model] = { started = os.clock(), seconds = seconds, motors = motorsFor(model, windup.poses) }
 		elseif active[model] then

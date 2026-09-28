@@ -226,10 +226,12 @@ local function tryAttack(model, data, monsterPosition, targetPlayer, targetRoot)
 
 	local now = os.clock()
 	local last = MonsterState.getLastAttackTick(model)
-	if last and now - last < data.attackCooldownSeconds then
+	local windup = data.species and data.species.windup
+	-- 전조는 쿨 안에서 시작한다(주기 = 쿨 그대로 → 몹 초당 피해 불변). 전조가 쿨보다 길면(얼음 골렘 1.3) 주기 = 전조.
+	local readyAfter = data.attackCooldownSeconds - (windup and not windupStartedAt[model] and windup.seconds or 0)
+	if last and now - last < readyAfter then
 		return
 	end
-	local windup = data.species and data.species.windup
 	if windup then
 		local started = windupStartedAt[model]
 		if not started then

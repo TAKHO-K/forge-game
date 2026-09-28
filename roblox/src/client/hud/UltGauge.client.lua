@@ -65,6 +65,38 @@ end
 player:GetAttributeChangedSignal("UltGauge"):Connect(refresh)
 refresh()
 
+-- 가득 참 발광(묶음 F1): 테두리 맥동
+game:GetService("RunService").RenderStepped:Connect(function()
+	local full = (player:GetAttribute("UltGauge") or 0) >= UltimateData.max
+	stroke.Thickness = full and (3 + 1.5 * (1 + math.sin(os.clock() * 6))) or 3
+end)
+
+-- 발동 컷인(묶음 F1 · 0.3초 이내): 내 궁극기가 서버에서 받아들여지면 이름을 화면 가운데 잠깐
+local cutin = Instance.new("TextLabel")
+cutin.Name = "UltCutin"
+cutin.AnchorPoint = Vector2.new(0.5, 0.5)
+cutin.Position = UDim2.fromScale(0.5, 0.38)
+cutin.Size = UDim2.fromOffset(520, 70)
+cutin.BackgroundTransparency = 1
+cutin.Font = Enum.Font.GothamBlack
+cutin.TextSize = 44
+cutin.TextColor3 = Color3.fromRGB(255, 225, 120)
+cutin.TextStrokeTransparency = 0.2
+cutin.Visible = false
+cutin.Parent = gui
+ReplicatedStorage:WaitForChild("SkillCastResult").OnClientEvent:Connect(function(slot, data)
+	if slot ~= "T" or not data.ok or data.kind == "ultHit" then
+		return
+	end
+	local classId = player:GetAttribute("ClassId")
+	local def = classId and UltimateData.skills[classId]
+	cutin.Text = def and def.name or "궁극기"
+	cutin.Visible = true
+	task.delay(0.3, function()
+		cutin.Visible = false
+	end)
+end)
+
 local function request()
 	if UIManager.isInputBlocked() or (player:GetAttribute("UltGauge") or 0) < UltimateData.max then
 		return
