@@ -64,10 +64,14 @@ local function onLanded()
 	character:SetAttribute("AirLocked", nil)
 	-- C3 0-2 점프 선입력: 착지 직전 bufferSeconds 안에 누른 점프 = 이 착지에서 지상 점프
 	if os.clock() - bufferedAt <= cfg.bufferSeconds and not locked and humanoid.Health > 0 and not humanoid.PlatformStand then
-		local state = humanoid:GetState()
-		if state == Enum.HumanoidStateType.Landed or state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.RunningNoPhysics then
-			humanoid.Jump = true
-		end
+		-- 착지 상태 콜백 안의 Jump = true는 엔진이 무시했다(C3 Play 1) - 다음 프레임에 지상 점프 상태로 바꾼다(엔진이 1단 속도를 넣는다)
+		local h = humanoid
+		task.defer(function()
+			local state = h:GetState()
+			if h.Health > 0 and (state == Enum.HumanoidStateType.Landed or state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.RunningNoPhysics) then
+				h:ChangeState(Enum.HumanoidStateType.Jumping)
+			end
+		end)
 	end
 	bufferedAt = -math.huge
 end

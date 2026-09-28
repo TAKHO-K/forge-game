@@ -27,6 +27,8 @@ local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming)
 
 -- W2 요청 번호: 서버가 결과 · 발사 알림에 돌려준다 → 원거리는 "그 요청을 보낸 시각 + 서버 발사 지연 + 서버 비행 시간"에 화살이 닿게 그린다.
 local requestSeq = 0
+-- C3-1: 마지막으로 공격을 낸 시각 - 누를 때 적고, 회전을 거쳐 실제 요청을 보낸 순간 다시 적는다(리뷰 5: 서버가 재는 간격 = 요청 사이 - 회전으로 늦게 나간 요청 다음 타가 서버에서 버려지지 않게)
+local lastIntentAt = -math.huge
 local pendingShots = {} -- [seq] = { sentAt, index, heavy, close(W2-4 휘두르기 = 투사체 안 그림) }
 local lastSwingClose = false
 local lastSwingIndex, lastSwingHeavy = 1, false
@@ -192,6 +194,7 @@ local function performAttack(aimPoint, isAir)
 	requestSeq += 1
 	local seq = requestSeq
 	attackRequest:FireServer(aimPoint, isAir == true, seq)
+	lastIntentAt = math.max(lastIntentAt, os.clock())
 	if isAir then
 		airAttacksThisAir += 1
 		-- MV1 원거리 공중 정지(활 · 지팡이 - AttackMotionData[직업].air.hoverSeconds)
@@ -349,7 +352,6 @@ end
 --   한 번 누름 = 1회. 간격 안에 누르면 버리지 않고 준비되는 순간 1회(누름 버퍼 - 여러 번 눌러도 1회). 서버도 간격(+ 흔들림 여유)으로 막는다.
 local heldSource = nil -- "mouse" | "button" (누르고 있는 입력)
 local queuedSource = nil -- 간격 안에 누른 1회(준비되면 낸다)
-local lastIntentAt = -math.huge -- 마지막으로 공격을 낸 시각(회전을 거쳐 실제 요청은 조금 뒤일 수 있다)
 
 local function currentInterval()
 	local classId = player:GetAttribute("ClassId")

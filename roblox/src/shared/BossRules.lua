@@ -228,7 +228,7 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 	local trashHp = InfiniteStage.getMonsterHp(trashBase.hpUnscaled or trashBase.hp, stage) -- C3-3: 보스 = 잡몹 tier 비 압축 전 HP(보스 처치 시간 불변)
 	local trashAttack = InfiniteStage.getMonsterAttack(trashBase.attack, stage)
 	local trashGold = InfiniteStage.getGoldReward(trashBase.goldDropUnscaled or trashBase.goldDrop, stage) -- C3-3
-	local trashExp = InfiniteStage.getExpReward(trashBase.expReward, stage)
+	local trashExp = InfiniteStage.getExpReward(trashBase.bossExpReward or trashBase.expReward, stage) -- C3-3 리뷰 3: 보스 경험치 = 압축 전 기준(MonsterData.bossExpReward)
 
 	local attack = trashAttack * boss.attackMultiplier
 

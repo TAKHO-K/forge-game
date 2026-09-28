@@ -179,6 +179,8 @@ for tierIndex, info in ipairs(TIER_INFO) do
 		killUnits = hpMultiplier,
 		hpUnscaled = BASE_HP * oldHpMultiplier,
 		goldDropUnscaled = BASE_GOLD * oldHpMultiplier,
+		-- 보스 경험치 = 압축 전 HP × 계수 × 전체 배율(tier1 비) - 레벨 요구치(tier1 경험치 기준)에 대한 보스 경험치 비가 C3 전과 같다(리뷰 3)
+		bossExpReward = BASE_HP * oldHpMultiplier * CharacterLevelConfig.monsterExpCoefficient * (MonsterData.tierHpRelative[1] or 1),
 
 		radiusPx = BASE_RADIUS_PX * sizeScale,
 		sizeScale = sizeScale,

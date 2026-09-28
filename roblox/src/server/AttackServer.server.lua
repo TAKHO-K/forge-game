@@ -169,16 +169,20 @@ local function knockMonster(model, fromPosition, studs)
 	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	local excluded = { model }
+	local excluded = MonsterState.getAllModels() -- 리뷰 6: 다른 몹 · 플레이어는 벽 · 땅이 아니다
 	for _, other in ipairs(Players:GetPlayers()) do
 		if other.Character then
 			table.insert(excluded, other.Character)
 		end
 	end
 	params.FilterDescendantsInstances = excluded
-	local offset = flat.Unit * studs
-	if Workspace:Raycast(root.Position, offset, params) then
-		return -- 벽
+	local dir = flat.Unit
+	local offset = dir * studs
+	local reach = studs + (data.radiusPx or 12) / 10 + 0.5 -- 몸 반경(px ÷ 10 = stud) 여유
+	for _, h in ipairs({ -1.5, 0, 1.5 }) do -- 발 · 몸 · 머리 높이(루트보다 낮은 턱도)
+		if Workspace:Raycast(root.Position + Vector3.new(0, h, 0), dir * reach, params) then
+			return -- 벽
+		end
 	end
 	local destination = root.Position + offset
 	local ground = Workspace:Raycast(destination + Vector3.new(0, 4, 0), Vector3.new(0, -12, 0), params)
@@ -452,9 +456,8 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	end
 	raycastParams.FilterDescendantsInstances = excluded
 	local wallHit = Workspace:Raycast(shotOrigin, pathEnd - shotOrigin, raycastParams)
-	local wallDistance = wallHit and wallHit.Distance or math.huge
 	if wallHit then
-		pathEnd = wallHit.Position
+		pathEnd = wallHit.Position -- 헛발사 화살이 멈추는 자리(대상 판정은 아래 대상마다)
 	end
 
 	-- W1: 발사 시각 = 모션 타격 프레임(MotionTiming - 클라 WeaponVisual과 같은 함수) · W2: 발사 지연 · 비행 시간을 같이 보내 클라가 서버 도달 시각에 닿게 그린다.
@@ -464,13 +467,18 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	local comboIndex = MotionTiming.comboIndex(comboCounts[player])
 	local heavyFlag = heavyShot ~= nil -- C3-2 강궁: 큰 화살 · 넉백 연출(클라)
 
+	-- 대상마다 시야 검사(리뷰 1 · 2): 원점 → 그 몹 몸 중심 레이가 담장 · 지형에 먼저 막히면 제외(땅을 클릭해도 몹 발밑 땅이 몹을 가리지 않는다 · 얇은 벽 너머 보정 대상은 막힌다).
+	--   관통 뒤 대상도 공격자 구역 규칙을 따른다.
 	local hitsToApply = {}
 	for _, pathTarget in ipairs(pathTargets) do
 		local root = pathTarget.PrimaryPart
 		local position = root and root.Position
 		local distance = position and (position - shotOrigin).Magnitude or 0
-		if position and distance < wallDistance - 1 then
-			table.insert(hitsToApply, { target = pathTarget, launchPosition = position, distance = distance })
+		if position and distance > 0 and ZoneBounds.isInside(rootPart.Position, MonsterState.getZoneKey(pathTarget)) then
+			local blocked = Workspace:Raycast(shotOrigin, position - shotOrigin, raycastParams)
+			if not blocked or blocked.Distance >= distance - 1 then
+				table.insert(hitsToApply, { target = pathTarget, launchPosition = position, distance = distance })
+			end
 		end
 	end
 	local first = hitsToApply[1]
