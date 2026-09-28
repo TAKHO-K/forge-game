@@ -141,7 +141,7 @@
 
 | Q14 리뷰 7 + Q15 번역 · T1 | e8fdb82 | 설정 창 스크롤(폰 잘림 - 치명) · 자동 이동 입구 하나(Attribute) · 설정 요청 키별 trailing · 복원 뒤 적용 · 문구 / Telemetry(누적 · 5분 · 퇴장 · 드라이런 · 분류 스위치 · 표본) · 화폐 4 입구 · 퍼널 · 복귀 · 용어집 · 하드코딩 2,073 목록 · 변형 문구 TextData · QueueVerify 94/94 |
 
-| Play G + 리뷰 8(Q15) | (이 커밋) | 아래 표 · 메뉴바 × 대시 재배치 연결 · 판매 골드 통계 · 화폐별 잔액 · 주기 전송 보호 · 퇴장 순서 |
+| Play G + 리뷰 8(Q15) | 1ba5273 | 아래 표 · 메뉴바 × 대시 재배치 연결 · 판매 골드 통계 · 화폐별 잔액 · 주기 전송 보호 · 퇴장 순서 |
 
 ## Play G 결과(약 8분 · 재Play 없음 · 게임 스크립트 오류 0)
 | 확인 | 결과 | 근거 |
@@ -154,8 +154,10 @@
 | 통계 드라이런 | O | `[T1][드라이런] 퍼널 1 ftue_fight` · `경제 gold source Gameplay 합 2212 · stage_1+ · class_dualblade · rebirth_3+` |
 | 나머지 P4e(친구 부르기 · 파티 HUD 690 · 알림 행 24 · 태초 띠 524 · 폰 태초 알림 12 · 도감 띠 · 요청 배너 · 채팅 × 메뉴바) | 미확인(시간 · 1클라) | 보고서 "다음 Play" 목록 |
 
+| 추가 대기열 마무리 | (이 커밋) | 보고서 §8 ~ 12(항목 표 · 이름 규칙 · 결정 필요 12 선택지별 결과표 · 사용자 확인 · 다음 Play) · STATE · open-plan |
+
 ## 지금
-- 추가 대기열 마무리(보고서 Q8 ~ Q15 · STATE · open-plan)
+- **전부 끝** - 새 작업 없음(지시: 결정 필요 선택지별 결과표까지 만들고 멈춤 = 보고서 §10)
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)
