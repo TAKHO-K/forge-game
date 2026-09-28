@@ -187,6 +187,26 @@ function MonsterState.resetBossHp(model)
 	end
 end
 
+-- K2 R 스킬: 속박(잡몹 - MonsterAI가 이동을 멈춘다) · 약점(받는 피해 배율 - applyDamage 맨 앞 · 고정 피해 제외).
+function MonsterState.setRooted(model, seconds)
+	local entry = monsters[model]
+	if entry then
+		entry.rootedUntil = math.max(entry.rootedUntil or 0, os.clock() + seconds)
+	end
+end
+
+function MonsterState.isRooted(model)
+	local entry = monsters[model]
+	return entry ~= nil and (entry.rootedUntil or 0) > os.clock()
+end
+
+function MonsterState.setVulnerable(model, multiplier, seconds)
+	local entry = monsters[model]
+	if entry then
+		entry.vulnMultiplier, entry.vulnUntil = multiplier, os.clock() + seconds
+	end
+end
+
 -- M2 이탈 복귀(MonsterTemperament.onReturnedHome): 잡몹 체력 · 참여 기록을 새로(스폰 때와 같다). 상자 · 구출 대상 · 보스는 대상이 아니다.
 function MonsterState.resetTrash(model)
 	local entry = monsters[model]
@@ -294,6 +314,9 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 		return false, 0
 	end
 	-- G1-3: 레벨차 계수 - 주는 피해(CharacterLevelConfig.levelGap). 스테이지 = 잡몹은 때린 사람의 스테이지, 보스는 보스 스테이지. 실제 Player만(스탠드인 · 구출 · 상자는 영향 없음).
+	if entry.vulnUntil and os.clock() < entry.vulnUntil and not (hitInfo ~= nil and hitInfo.fixed == true) then
+		damage *= entry.vulnMultiplier -- K2 활 사냥꾼의 덫(보스 = 받는 피해 +10% 4초 · 모든 공격자)
+	end
 	local damageBeforeGap = damage -- G2a(사용자 결정 - G1-3 결정 필요 2): 보스 기여도는 계수를 곱하기 전 피해로 센다(저레벨 파티원이 10% 문턱에서 빠지지 않게)
 	local fixed = hitInfo ~= nil and hitInfo.fixed == true -- BR1-3 고정 피해(보스 에어본 5% - 레벨차 계수 · 받는 피해 배율 없이, 보호막만 막는다)
 	-- C1: 잡몹은 먼저 참여시켜 기준 스테이지(참여자 중 최고)를 정한다 - 레벨차 계수 · 환산 HP 둘 다 이 기준(때린 사람 스테이지가 아니다).

@@ -93,6 +93,7 @@ local function strikeTarget(player, classId, atk, target, coefficient, attackerS
 	-- 반복하지 않는다). 버프가 없으면 getField가 기본값 1을 돌려줘 기존과 동일하다.
 	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
 	damage *= UltimateService.damageMultiplier(player) -- K1 대검 파괴의 화신(공격력 +30% = 최종 피해 배율)
+	damage *= BuffState.getField(player, "warcryBuff", "multiplier", 1) -- K2 대검 전장의 포효(파티 공격력 +10%)
 	-- 29-1: 둘째 반환값 = 실제로 들어간 피해(보스 파훼 게이트 ×g 반영) - 숫자·흡혈이 이 값을 쓴다.
 	local hitPosition = target.PrimaryPart and target.PrimaryPart.Position -- W2-3 서버 적중 지점
 	local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player, committedAt and { committedAt = committedAt } or nil)
@@ -474,6 +475,158 @@ local function castHeal(player, slot, def, classId, cooldownSeconds)
 	})
 end
 
+-- ═══ K2 R 스킬(묶음 F3) ═══
+local function nearestMonster(position, rangeStuds)
+	local best, bestD = nil, rangeStuds
+	for _, model in ipairs(filterSameZone(position, MonsterState.getAllModels())) do
+		local data = MonsterState.getData(model)
+		local root = model.PrimaryPart
+		if root and data and not data.isChest and not data.isRescueTarget then
+			local d = Reach.horizontalDistance(root.Position, position)
+			if d <= bestD then
+				best, bestD = model, d
+			end
+		end
+	end
+	return best
+end
+
+-- 쌍검 암영 표식: 20 stud 안 가장 가까운 대상 뒤로 순간이동(이동 = 클라 재생 · 대시 결과와 같은 모양) + 6초 표식(그 대상에게 치명 +20%p - AttackServer)
+local function castShadowMark(player, slot, def, rootPart, cooldownSeconds)
+	local target = nearestMonster(rootPart.Position, def.rangeStuds)
+	if not target then
+		reject(player, slot, "no_target") -- 대상이 없으면 쿨을 쓰지 않는다
+		return
+	end
+	markCast(player, slot)
+	local tpos = target.PrimaryPart.Position
+	local away = Vector3.new(tpos.X - rootPart.Position.X, 0, tpos.Z - rootPart.Position.Z)
+	local direction = away.Magnitude > 1e-3 and away.Unit or Vector3.new(0, 0, 1)
+	local finalEnd = computeDashEndpoint(player, rootPart.Position, direction, away.Magnitude + def.behindStuds)
+	BuffState.apply(player, "shadowMark", { durationSeconds = def.markSeconds, target = target, critRateBonus = def.critRateBonus, displayName = def.name, colorName = "danger" })
+	target:SetAttribute("ShadowMarkBy", player.UserId)
+	task.delay(def.markSeconds, function()
+		if target.Parent and target:GetAttribute("ShadowMarkBy") == player.UserId then
+			target:SetAttribute("ShadowMarkBy", nil)
+		end
+	end)
+	sendResult(player, slot, { ok = true, kind = "dash", cooldownSeconds = cooldownSeconds, startPosition = rootPart.Position, endPosition = finalEnd, durationSeconds = def.durationSeconds, hits = {} })
+end
+
+-- 활 사냥꾼의 덫: 클릭 지점(40 stud 안)에 설치 · 최대 2개(넘으면 가장 오래된 것 제거) · 20초. 몹이 반경 안에 들어오면 1회 발동:
+--   잡몹 = 피해(계수) + 2초 속박 · 보스 = 속박 대신 받는 피해 +10% 4초(MonsterState.setVulnerable - 모든 공격자).
+local traps = {} -- [Player] = { { position, untilAt, part, def } }
+local function castHunterTrap(player, slot, def, rootPart, aimPoint, cooldownSeconds)
+	if typeof(aimPoint) ~= "Vector3" or aimPoint ~= aimPoint or Reach.horizontalDistance(aimPoint, rootPart.Position) > def.maxCastStuds then
+		reject(player, slot, "aim")
+		return
+	end
+	markCast(player, slot)
+	traps[player] = traps[player] or {}
+	local list = traps[player]
+	if #list >= def.maxTraps then
+		local old = table.remove(list, 1)
+		if old.part then
+			old.part:Destroy()
+		end
+	end
+	local part = Instance.new("Part")
+	part.Name = "HunterTrap"
+	part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch = true, false, false, false
+	part.Shape = Enum.PartType.Cylinder
+	part.Size = Vector3.new(0.3, def.triggerRadiusStuds * 2, def.triggerRadiusStuds * 2)
+	part.CFrame = CFrame.new(aimPoint) * CFrame.Angles(0, 0, math.rad(90))
+	part.Color = UIColors.classAccent.bow or Color3.fromRGB(120, 220, 120)
+	part.Material = Enum.Material.Neon
+	part.Transparency = 0.55
+	part.Parent = Workspace
+	table.insert(list, { position = aimPoint, untilAt = os.clock() + def.lifeSeconds, part = part, def = def })
+	sendResult(player, slot, { ok = true, kind = "trap", cooldownSeconds = cooldownSeconds, position = aimPoint, hits = {} })
+end
+
+game:GetService("RunService").Heartbeat:Connect(function()
+	local now = os.clock()
+	for player, list in pairs(traps) do
+		for i = #list, 1, -1 do
+			local trap = list[i]
+			local fired = false
+			if now < trap.untilAt and player.Parent then
+				for _, model in ipairs(MonsterState.getAllModels()) do
+					local root = model.PrimaryPart
+					local data = MonsterState.getData(model)
+					if root and data and not data.isChest and not data.isRescueTarget and Reach.horizontalDistance(root.Position, trap.position) <= trap.def.triggerRadiusStuds then
+						fired = true
+						if data.isBoss then
+							MonsterState.setVulnerable(model, 1 + trap.def.bossDamageTakenBonus, trap.def.bossDebuffSeconds)
+						else
+							MonsterState.setRooted(model, trap.def.rootSeconds)
+							local weapon = PlayerProfile.getWeapon(player)
+							local classId = PlayerProfile.getClassId(player)
+							if weapon and classId then
+								local hit = strikeTarget(player, classId, SkillStats.attack(player, classId, weapon), model, trap.def.coefficient, TutorialState.getMonsterStage(player))
+								sendResult(player, "R", { ok = true, kind = "ultHit", hits = { hit } })
+							end
+						end
+						print(("[K2] 사냥꾼의 덫 발동: %s → %s(%s)"):format(player.Name, model.Name, data.isBoss and "보스 약점" or "속박"))
+						break
+					end
+				end
+			end
+			if fired or now >= trap.untilAt or not player.Parent then
+				if trap.part then
+					trap.part:Destroy()
+				end
+				table.remove(list, i)
+			end
+		end
+	end
+end)
+
+-- 대검 전장의 포효: 반경 12 잡몹 도발 3초(나를 쫓게 - 보스 도발은 BossPatterns.onTaunt 훅 단계) · 자신 받는 피해 ×0.75 5초 · 파티 공격력 +10% 6초
+local function castWarcry(player, slot, def, rootPart, cooldownSeconds)
+	markCast(player, slot)
+	local taunted = 0
+	for _, model in ipairs(SkillCombat.hitsInCircle(rootPart.Position, def.radiusStuds, filterSameZone(rootPart.Position, MonsterState.getAllModels()))) do
+		local data = MonsterState.getData(model)
+		if data and not data.isBoss and not data.isChest and not data.isRescueTarget then
+			MonsterState.setAiState(model, "chasing")
+			MonsterState.setAiTarget(model, player)
+			taunted += 1
+		end
+	end
+	PlayerState.setIncomingDamageMultiplierUntil(player, def.selfIncomingMultiplier, def.selfSeconds, "skill:greatsword:R")
+	local PartyState = require(script.Parent.PartyState)
+	local party = PartyState.getParty(player)
+	for _, member in ipairs(party and PartyState.getMemberPlayers(party) or { player }) do
+		if typeof(member) == "Instance" then
+			BuffState.apply(member, "warcryBuff", { durationSeconds = def.partySeconds, multiplier = 1 + def.partyAttackBonus, displayName = def.name, colorName = "ember" })
+		end
+	end
+	print(("[K2] 전장의 포효: %s 도발 %d"):format(player.Name, taunted))
+	sendResult(player, slot, { ok = true, kind = "tick", cooldownSeconds = cooldownSeconds, casterPosition = rootPart.Position, radiusStuds = def.radiusStuds, hits = {}, taunted = taunted })
+end
+
+-- 치유사 구원의 기도: 반경 20 파티원(자신 포함) 최대 체력 30% 회복 · 부활은 K3(영혼 상태) 뒤
+local function castPrayer(player, slot, def, rootPart, cooldownSeconds)
+	markCast(player, slot)
+	local PartyState = require(script.Parent.PartyState)
+	local party = PartyState.getParty(player)
+	local healedCount = 0
+	for _, member in ipairs(party and PartyState.getMemberPlayers(party) or { player }) do
+		local character = typeof(member) == "Instance" and member.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local hp, maxHp = PlayerState.getHp(member), PlayerState.getMaxHp(member)
+		if root and hp and hp > 0 and maxHp and Reach.horizontalDistance(root.Position, rootPart.Position) <= def.radiusStuds then
+			PlayerState.setHp(member, math.min(hp + maxHp * def.healMaxHpFraction, maxHp))
+			require(script.Parent.PlayerDamage).syncHud(member)
+			healedCount += 1
+		end
+	end
+	UltimateService.onHeal(player, def.healMaxHpFraction * healedCount, 1) -- K1 충전
+	print(("[K2] 구원의 기도: %s 회복 %d명"):format(player.Name, healedCount))
+	sendResult(player, slot, { ok = true, kind = "tick", cooldownSeconds = cooldownSeconds, casterPosition = rootPart.Position, radiusStuds = def.radiusStuds, hits = {}, healed = healedCount })
+end
+
 -- 딜링모드(힐러 E, 20-6 [6]) - 만료 없는 토글. 실제 체력 소모·평타 배율 적용은 여기서 하지
 -- 않는다(HealerDealingMode.server.lua가 Heartbeat로 소모를, AttackServer.server.lua가
 -- attackMultiplier를 각각 담당) - 이 함수는 BuffState를 켜고 끄는 스위치 역할만 한다.
@@ -500,7 +653,7 @@ local function castToggle(player, slot, def)
 end
 
 local function handleSkill(player, slot, aimPoint)
-	if slot ~= "Q" and slot ~= "E" and slot ~= "T" then
+	if slot ~= "Q" and slot ~= "E" and slot ~= "R" and slot ~= "T" then
 		return
 	end
 
@@ -586,6 +739,14 @@ local function handleSkill(player, slot, aimPoint)
 	elseif def.shape == "toggle" then
 		markCast(player, slot)
 		castToggle(player, slot, def)
+	elseif def.shape == "shadowMark" then -- K2 R(대상 없으면 거부 - 쿨 안 씀)
+		castShadowMark(player, slot, def, rootPart, cooldownSeconds)
+	elseif def.shape == "hunterTrap" then
+		castHunterTrap(player, slot, def, rootPart, aimPoint, cooldownSeconds)
+	elseif def.shape == "warcry" then
+		castWarcry(player, slot, def, rootPart, cooldownSeconds)
+	elseif def.shape == "prayer" then
+		castPrayer(player, slot, def, rootPart, cooldownSeconds)
 	end
 end
 skillRequest.OnServerEvent:Connect(handleSkill)
@@ -607,6 +768,12 @@ if game:GetService("RunService"):IsStudio() then
 end
 
 Players.PlayerRemoving:Connect(function(player)
+	for _, trap in ipairs(traps[player] or {}) do
+		if trap.part then
+			trap.part:Destroy()
+		end
+	end
+	traps[player] = nil
 	lastCastTick[player] = nil
 	debugCapture[player] = nil
 end)

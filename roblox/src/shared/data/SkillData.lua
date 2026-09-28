@@ -11,7 +11,7 @@
 -- 프리미엄 `0.15×(1-channelMoveSpeedMultiplier)` 반영, 스테이지 환산까지 끝난 검증값).
 -- 20-2a 작업 지시문에 있던 "계수8/쿨다운10, 계수14/쿨다운14/채널0.8초"는 두 PRD 어디에도
 -- 기록이 없는 값이라([0] 확인 결과 사용자 승인) 채택하지 않았다.
-return {
+local SkillData = {
 	greatsword = {
 		Q = {
 			name = "관통돌진",
@@ -282,3 +282,28 @@ return {
 		},
 	},
 }
+
+-- K2 R 스킬(묶음 F3 - 지시서 초안 · docs/design/skills-RT.md): 쿨 20 ~ 30초 · 서버 판정(SkillServer) · 궁극기와 같은 DPS 규칙(딜러 최고 ÷ 최저 ≤ 1.32 - k2 하네스).
+SkillData.dualblade.R = {
+	name = "암영 표식", shape = "shadowMark",
+	cooldownSeconds = 25, rangeStuds = 20, behindStuds = 3, durationSeconds = 0.08, -- 20 stud 안 가장 가까운 대상 뒤로 순간이동
+	markSeconds = 6, critRateBonus = 0.20, -- 그 대상에게 내 치명 +20%p(100% 넘는 몫 = 기존 오버치명 규칙)
+}
+SkillData.bow.R = {
+	name = "사냥꾼의 덫", shape = "hunterTrap",
+	cooldownSeconds = 20, maxTraps = 2, lifeSeconds = 20, triggerRadiusStuds = 4, maxCastStuds = 40, -- 클릭 지점 설치 · 최대 2개
+	coefficient = 2.0, rootSeconds = 2, -- 잡몹 = 피해 + 2초 속박
+	bossDamageTakenBonus = 0.10, bossDebuffSeconds = 4, -- 보스 = 속박 대신 받는 피해 +10% 4초
+}
+SkillData.greatsword.R = {
+	name = "전장의 포효", shape = "warcry",
+	cooldownSeconds = 30, radiusStuds = 12, tauntSeconds = 3, -- 반경 12 도발 3초(잡몹 = 어그로를 나에게)
+	selfIncomingMultiplier = 0.75, selfSeconds = 5, -- 자신 받는 피해 −25% 5초
+	partyAttackBonus = 0.10, partySeconds = 6, -- 파티 공격력 +10% 6초(치유사 버프와 곱 - K5 재계산 대상)
+}
+SkillData.healer.R = {
+	name = "구원의 기도", shape = "prayer",
+	cooldownSeconds = 30, radiusStuds = 20, healMaxHpFraction = 0.30, -- 반경 20 파티 최대 체력 30% 회복 · 부활은 K3(영혼 상태) 뒤
+}
+
+return SkillData

@@ -6,7 +6,7 @@ local PanelRegistry = {}
 
 PanelRegistry.forbiddenKeys = {
 	[Enum.KeyCode.W] = true, [Enum.KeyCode.A] = true, [Enum.KeyCode.S] = true, [Enum.KeyCode.D] = true,
-	[Enum.KeyCode.Q] = true, [Enum.KeyCode.E] = true, [Enum.KeyCode.F] = true,
+	[Enum.KeyCode.Q] = true, [Enum.KeyCode.E] = true, [Enum.KeyCode.F] = true, [Enum.KeyCode.R] = true, [Enum.KeyCode.T] = true, -- K1 · K2: R 스킬 · T 궁극기
 	[Enum.KeyCode.Space] = true, [Enum.KeyCode.X] = true, [Enum.KeyCode.Backspace] = true, [Enum.KeyCode.Tab] = true,
 	[Enum.KeyCode.Escape] = true, [Enum.KeyCode.LeftShift] = true, [Enum.KeyCode.RightShift] = true,
 	[Enum.KeyCode.One] = true, [Enum.KeyCode.Two] = true, [Enum.KeyCode.Three] = true, [Enum.KeyCode.Four] = true, [Enum.KeyCode.Five] = true,

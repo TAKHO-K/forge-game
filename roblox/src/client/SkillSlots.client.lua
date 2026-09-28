@@ -68,7 +68,7 @@ local READY_FLASH_TWEEN = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingD
 local SLOTS = {
 	{ id = "q", key = "Q", skillIcon = true },
 	{ id = "e", key = "E", skillIcon = true },
-	{ id = "locked1", locked = true },
+	{ id = "r", key = "R", skillIcon = true }, -- K2 R(묶음 F3 - 아이콘은 A2 · 지금은 빈 칸 + 키)
 	{ id = "locked2", locked = true },
 	{ id = "locked3", locked = true },
 }

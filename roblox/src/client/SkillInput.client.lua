@@ -37,13 +37,13 @@ local playerGui = player:WaitForChild("PlayerGui")
 local skillSlotsGui = playerGui:WaitForChild("SkillSlotsGui")
 local localCastSignal = skillSlotsGui:WaitForChild("SkillCastLocal")
 
-local KEY_TO_SLOT = { [Enum.KeyCode.Q] = "Q", [Enum.KeyCode.E] = "E" }
+local KEY_TO_SLOT = { [Enum.KeyCode.Q] = "Q", [Enum.KeyCode.E] = "E", [Enum.KeyCode.R] = "R" } -- K2 R(묶음 F3)
 
 -- 서버 왕복 전에 한 번 더 막는 로컬 게이트(지시 [5] 검증 2 - "쿨다운 중 다시 누르면
 -- 아무 일도 일어나지 않는다"). 서버도 독립적으로 다시 검사한다(클라를 믿지 않는다,
 -- SkillServer.server.lua) - 이건 그냥 연타로 서버에 불필요한 요청을 안 보내기 위한
 -- UX 1차 방어일 뿐이다.
-local localCooldownUntil = { Q = 0, E = 0 }
+local localCooldownUntil = { Q = 0, E = 0, R = 0 }
 
 -- 스킬 적중 피드백(20-2a [4]) - 3타 강타(0.08초)보다 조금 무겁게. "스킬은 더 무겁게
 -- 느껴져야 한다"는 지시대로 실기로 맞춘 값.
@@ -96,7 +96,12 @@ local function requestSkill(slot)
 		WeaponVisual.playSwing(true)
 	end
 
-	skillRequest:FireServer(slot)
+	local aim = nil
+	if slot == "R" then -- K2: 활 덫 = 클릭 지점(서버가 거리 검사) · 나머지 R은 서버가 무시
+		local mouse = player:GetMouse()
+		aim = mouse and mouse.Hit and mouse.Hit.Position or nil
+	end
+	skillRequest:FireServer(slot, aim)
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
@@ -112,7 +117,7 @@ end)
 -- 21-2 [3]: 슬롯 탭/클릭(모바일의 유일한 스킬 입력) - 키 입력과 같은 함수로 들어간다.
 local slotTapped = skillSlotsGui:WaitForChild("SkillSlotTapped")
 slotTapped.Event:Connect(function(slotId)
-	if slotId == "q" or slotId == "e" then
+	if slotId == "q" or slotId == "e" or slotId == "r" then
 		requestSkill(slotId:upper())
 	end
 end)

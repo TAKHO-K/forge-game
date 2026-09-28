@@ -459,7 +459,7 @@ RunService.Heartbeat:Connect(function(dt)
 					-- (막힘 시간 계산에 안 들어간다).
 					local goal = decoyPosition or targetRoot.Position
 					local moved = true
-					if Reach.horizontalDistance(goal, position) > data.chaseStopDistanceStuds then
+					if Reach.horizontalDistance(goal, position) > data.chaseStopDistanceStuds and not MonsterState.isRooted(model) then -- K2 덫 속박
 						moved = stepToward(model, position, goal, MonsterState.getMoveSpeed(model), dt)
 					end
 					if not decoyPosition then

@@ -394,6 +394,10 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	-- 있다고 백스텝샷 충전을 대신 태우면 안 된다).
 	local optionCritRate, optionCritDmg = PlayerProfile.getCritBonus(player)
 	local critRateBonus = buffCritRateBonus + optionCritRate
+	local shadowMark = BuffState.get(player, "shadowMark") -- K2 쌍검 암영 표식: 표식 대상에게 치명 +20%p(넘는 몫 = 기존 오버치명)
+	if shadowMark and target and shadowMark.target == target then
+		critRateBonus += shadowMark.critRateBonus
+	end
 	local isGuaranteedCritActive = BuffState.get(player, "guaranteedCrit") ~= nil
 	local forceCrit, guaranteedCritDmgBonus = PlayerCombat.resolveGuaranteedCrit(classId, isGuaranteedCritActive, critRateBonus)
 	local critDmgBonus = guaranteedCritDmgBonus + optionCritDmg
@@ -403,6 +407,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	-- "최종 피해") - 이 아래로는 배율 계산이 없다. 버프 없으면 getField 기본값 1로 무동작.
 	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
 	damage *= UltimateService.damageMultiplier(player) -- K1 대검 파괴의 화신
+	damage *= BuffState.getField(player, "warcryBuff", "multiplier", 1) -- K2 대검 전장의 포효(파티 공격력 +10%)
 	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage를 쓴다(TutorialState.getMonsterStage).
 	local attackerStage = TutorialState.getMonsterStage(player)
 
@@ -419,7 +424,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	local wasQuickShotActive = BuffState.get(player, "quickShot") ~= nil
 	local requestedAt = os.clock()
 
-	local healerBuff = BuffState.getField(player, "healerBuff", "multiplier", 1) * UltimateService.damageMultiplier(player) -- K1: 묶음 둘째 타 · 관통 뒤 대상도 같은 최종 배율
+	local healerBuff = BuffState.getField(player, "healerBuff", "multiplier", 1) * UltimateService.damageMultiplier(player) * BuffState.getField(player, "warcryBuff", "multiplier", 1) -- K1 · K2: 묶음 둘째 타 · 관통 뒤 대상도 같은 최종 배율
 	-- C5-7b 환영(초월 장갑): 기본 공격이 대상에 들어간 뒤 요청 1회당 한 번 굴린다(서버) → 같은 대상에 추가타 1회 = 기본 공격 피해 1회분(한 타 배율 · 딜링모드 · 치명 · 힐러 버프 · 3타 배율 제외).
 	--   환영 추가타 heavyEvery번째 = 강공격(3타 배율 · 강공격 연출). 보스 포함(applyDamage가 파훼 게이트 · 보호막을 그대로 적용). 흡혈 · 태초 번개 · 비상 초기화는 안 건다(플레이어 본인의 타격만).
 	local phantomRolled = false
