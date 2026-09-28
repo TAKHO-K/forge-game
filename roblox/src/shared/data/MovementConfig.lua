@@ -13,7 +13,10 @@ return {
 	-- MV1: charges = 해금 최대(환생 3회). 사람마다 쓰는 수 = MovementUnlockData(환생 0 = 0 · 1 ~ 2 = 1 · 3+ = 2) - 서버 높이 검증 허용치는 이 최대로 잰다(느슨한 쪽 - S1에서 사람별로 좁힌다).
 	-- newPressGapSeconds: 누른 채로 있으면 JumpRequest가 반복된다 - 직전 요청과 이만큼 떨어진 요청만 새 누름. minAirSeconds: 이륙 직후의 같은 누름을 공중 점프로 읽지 않게.
 	-- dashPendingSeconds: 공중대시를 요청한 뒤 결과(서버 왕복)가 올 때까지 공중 점프를 막는 여유(결과가 오면 트윈 끝 시각으로 덮는다 - 트윈이 끝나며 속도 0이라 그 사이 점프는 충전만 날아간다).
-	airJump = { charges = 2, heightFraction = 0.85, newPressGapSeconds = 0.1, minAirSeconds = 0.05, dashPendingSeconds = 0.5 },
+	-- C3 0-2 coyoteSeconds: 점프 없이 발판에서 떨어진 직후 이만큼 안에 누른 점프 = 지상 점프(1단 속도 · 충전 안 씀 - 공중 점프 충전은 착지 때만).
+	--   서버 높이 검사는 "마지막 선 발 높이 + 최대 도달"이라 발판보다 낮은 곳에서 뛴 1단은 평지 점프 이하 = 따로 허가 없이 합법(수치 = movement-metrics v3-2).
+	-- bufferSeconds: 떨어지는 중 발밑 지면까지 이 시간 안에 닿을 거리에서 누른 점프(또는 공중 점프를 못 쓰는 때 누른 점프)는 착지 순간 지상 점프로 실행.
+	airJump = { charges = 2, heightFraction = 0.85, newPressGapSeconds = 0.1, minAirSeconds = 0.05, dashPendingSeconds = 0.5, coyoteSeconds = 0.1, bufferSeconds = 0.1 },
 
 	-- MV1 활강(사용자 - 젤다 고공비행 느낌 · 환생 2회 해금): 공중에서 대시를 길게 누르면(DashConfig.input.glideHoldSeconds) 켜진다.
 	--   forwardSpeed = 수평 전진(stud/s - 바라보는 방향 · 이동 속도 옵션과 무관: S1 속도 상한을 한 값으로 둔다) · descentSpeed = 하강(stud/s - 일정) · turnDegPerSecond = 이동 입력 쪽으로 도는 속도.

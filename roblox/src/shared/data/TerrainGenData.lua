@@ -3,7 +3,7 @@
 -- 좌표: 구역 좌표(r = 원점에서 바깥쪽 · lat = 옆) - WorldMapLayout.toWorld와 같다. 높이 level = 바닥 윗면(floorTopY) 기준 위(+) · 아래(−).
 -- 구조 원칙(사용자): 큰 모양(언덕 · 능선 · 산 · 계곡 · 물 · 동굴) = 지형 / 정밀하게 밟는 곳(둥지 오르기 · 점프맵 · 다리 · 신전) = 파트(WorldStructureData · NestData).
 --   둥지 · 구조물 · 길 · 캠프 · 관문이 지형의 입력이다(평탄 · 보호 부피) - 생성기가 그 자리를 먼저 비우고 둘레에 지형을 쌓는다.
--- 이동 기준(movement-metrics v3 - MV1): 발 최대 19.44(옵션 21.38) · 못 오르는 벽 ≥ 23(태초 장갑 붙잡기 30.5) · 못 넘는 틈 ≥ 52(대시 22 - 이속 상한 74 · MoveRules.s1Limits) · 걷는 경사 ≤ 45°(TerrainConfig) - 필수 길 = 평탄 도로(걷기).
+-- 이동 기준(movement-metrics v3 - MV1): 발 최대 19.44(옵션 21.38) · 못 오르는 벽 ≥ 23(태초 장갑 붙잡기 30.5) · 못 넘는 틈 ≥ 53(대시 22 · 코요테 포함 - 이속 상한 76 · MoveRules.s1Limits) · 걷는 경사 ≤ 45°(TerrainConfig) - 필수 길 = 평탄 도로(걷기).
 -- 표본 높이는 standMaxY(160 - WorldMapData.progress) 아래만 "오를 수 있는 곳"으로 설계한다. 봉우리(200+)는 경치 - 기어오르면 기존 높은 곳 복귀 · 외곽 밀어내기(서버).
 
 local ZONE_PALETTE = {

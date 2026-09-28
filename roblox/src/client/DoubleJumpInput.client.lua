@@ -31,6 +31,8 @@ local airborne = false
 local airStartedAt = 0
 local locked = false -- 넉백 · 무너짐 낙하 뒤 착지까지
 local lastRequestAt = -math.huge
+local airFromJump = false -- C3 0-2: 이번 체공이 점프로 시작했나(아니면 발판에서 떨어짐 = 코요테 창)
+local bufferedAt = -math.huge -- C3 0-2: 착지 직전 누른 점프(착지 순간 지상 점프)
 
 -- MV1: 해금된 공중 점프 충전
 local function unlockedCharges()
@@ -60,6 +62,14 @@ local function onLanded()
 	character:SetAttribute("AirJumpsLeft", unlockedCharges())
 	character:SetAttribute("AirDashesUsed", nil)
 	character:SetAttribute("AirLocked", nil)
+	-- C3 0-2 점프 선입력: 착지 직전 bufferSeconds 안에 누른 점프 = 이 착지에서 지상 점프
+	if os.clock() - bufferedAt <= cfg.bufferSeconds and not locked and humanoid.Health > 0 and not humanoid.PlatformStand then
+		local state = humanoid:GetState()
+		if state == Enum.HumanoidStateType.Landed or state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.RunningNoPhysics then
+			humanoid.Jump = true
+		end
+	end
+	bufferedAt = -math.huge
 end
 
 local function bind(newCharacter)
@@ -81,6 +91,7 @@ local function bind(newCharacter)
 			end
 			airborne = true
 			airStartedAt = os.clock()
+			airFromJump = new == Enum.HumanoidStateType.Jumping
 		end
 	end)
 	humanoid:GetPropertyChangedSignal("PlatformStand"):Connect(function()
@@ -92,6 +103,14 @@ local function bind(newCharacter)
 			character:SetAttribute("AirLocked", true)
 		end
 	end)
+end
+
+-- 발밑 지면이 발에서 dist 안에 있나(자기 캐릭터 제외)
+local downParams = RaycastParams.new()
+downParams.FilterType = Enum.RaycastFilterType.Exclude
+local function groundWithin(dist)
+	downParams.FilterDescendantsInstances = { character }
+	return workspace:Raycast(root.Position, Vector3.new(0, -(MovementConfig.rootAboveFeetStuds + dist), 0), downParams) ~= nil
 end
 
 local function onJumpRequest()
@@ -110,14 +129,29 @@ local function onJumpRequest()
 		GlideController.stop("jump")
 		return
 	end
-	if not airborne or now - airStartedAt < cfg.minAirSeconds then
+	if not airborne then
 		return
 	end
-	local left = character:GetAttribute("AirJumpsLeft") or 0
-	if left <= 0 or locked or humanoid.PlatformStand or root.Anchored or humanoid.Health <= 0 or now < (character:GetAttribute("AirDashUntil") or 0) then
+	if locked or humanoid.PlatformStand or root.Anchored or humanoid.Health <= 0 or now < (character:GetAttribute("AirDashUntil") or 0) then
 		return
 	end
 	local v = root.AssemblyLinearVelocity
+	-- C3 0-2 코요테 타임: 점프 없이 떨어진 지 coyoteSeconds 안 = 지상 점프(1단 속도 · 충전 그대로). 이 체공은 이제 점프로 시작한 것으로 친다.
+	if not airFromJump and now - airStartedAt <= cfg.coyoteSeconds then
+		airFromJump = true
+		local up = humanoid.UseJumpPower and humanoid.JumpPower or JumpMath.upSpeed(humanoid.JumpHeight)
+		root.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, up), v.Z)
+		return
+	end
+	if now - airStartedAt < cfg.minAirSeconds then
+		return
+	end
+	-- C3 0-2 점프 선입력: 떨어지는 중 발밑 지면이 bufferSeconds 안에 닿을 거리 · 공중 점프 충전 없음 = 착지 순간 지상 점프(충전 아낌)
+	local left = character:GetAttribute("AirJumpsLeft") or 0
+	if left <= 0 or (v.Y < 0 and groundWithin(-v.Y * cfg.bufferSeconds)) then
+		bufferedAt = now
+		return
+	end
 	local rise = JumpMath.airJumpRise(JumpMath.jumpHeight(0)) -- 점프력 옵션 출처는 아직 없다(0)
 	root.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, JumpMath.upSpeed(rise)), v.Z) -- 오르는 중 속도가 더 크면 그대로(정점을 낮추지 않는다)
 	character:SetAttribute("AirJumpsLeft", left - 1)
