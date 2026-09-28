@@ -80,15 +80,20 @@ return {
 	-- 승인으로 PRD를 따른다(관통사격/투사체 스킬이 아니라 대시+버프).
 	bow = {
 		Q = {
-			name = "속사",
+			name = "강궁", -- C3-2(사용자 확정): 옛 "속사" 재설계 - 버프 동안 느리고 묵직한 한 발(빠른 입력 보너스 없음 · 꾹 누르면 자동 발사)
 			shape = "selfBuff", -- 대상 없음, 자기 자신에게 배율을 건다([1] 프레임워크의 첫 사용자).
 			cooldownSeconds = 18,
 			durationSeconds = 6,
 			-- 공식(PRD 4.3, 웹·PRD 완전 일치 - 20-2b [0] 확인, 유일하게 불일치 없는 Q스킬):
 			-- 공속배율 = min(cap, base + 치명타확률×critCoefficient).
+			-- C3-2: 이 배율 = 이제 "DPS 배율"(PlayerCombat.getAttackTempo - 옛 속사 DPS 그대로). 발사 간격은 오히려 느려진다(heavyShot).
 			attackSpeedBase = 1.0,
 			attackSpeedCritCoefficient = 1.5,
 			attackSpeedCap = 2.5,
+			-- C3-2 강궁: 간격 × intervalMultiplier(평소보다 느림) · 한 발 = 옛 속사 DPS × 간격 × damageMultiplier(DPS 같음 - EconSim 확인) ·
+			--   pierce = 첫 대상 뒤 경로의 몹을 더 맞힘(서버 AttackServer) · knockbackStuds = 맞은 잡몹을 쏜 방향으로 짧게 밀기(서버 AttackServer - 벽 · 낭떠러지면 안 민다 · 보스 제외) ·
+			--   arrowScale = 화살 크기(클라 Projectiles) · 모션 = 더 깊게 당김 + 쏜 뒤 반동(PlayerMotionData.weapons.bow.heavyShot).
+			heavyShot = { intervalMultiplier = 1.6, damageMultiplier = 1.0, pierce = 1, knockbackStuds = 1.5, arrowScale = 1.8 },
 
 			-- 꽂히는 화살(20-5 [2], PRD 20.39 숙제 3번 - "공격속도 버프는 체감이 약한데,
 			-- 몸에 화살이 쌓이면 '빨라졌다'가 눈으로 읽힌다"). 속사가 켜져 있는 동안 명중한

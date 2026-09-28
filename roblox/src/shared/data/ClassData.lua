@@ -50,6 +50,7 @@ return {
 			displayName = "도적",
 			atk = 0.85,
 			atkSpeed = 1.6,
+			hitsPerSwing = 2, -- C3-2: 한 번의 공격 = 두 칼 2타 묶음(한 판정 · 입력 1회 · 타마다 피해 ÷ 2 - 빠른 느낌은 모션으로)
 			def = 0.6,
 			critRate = 0.30,
 			critDmg = 2.0,

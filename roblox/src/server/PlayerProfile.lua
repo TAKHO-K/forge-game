@@ -114,6 +114,7 @@ function PlayerProfile.getCritBonus(player)
 		return 0, 0
 	end
 	local critRate, critDmg = Option.critBonus(buildOptionSources(classState), profile.classId)
+	critRate += PlayerCombat.getLevelCritBonus(CharacterLevel.getLevelFromExp(classState.characterExp)) -- C3-3 대표 치명 곡선(레벨 구간)
 	return critRate, math.min(critDmg + Loot.getGlovesCritDmgBonus(classState.equipment.gloves), CombatConfig.critDmgBonusCap)
 end
 

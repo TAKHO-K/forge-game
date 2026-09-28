@@ -1,6 +1,6 @@
 -- W1 모션 시각 계산(순수 - 클라 재생 · 서버 원거리 발사 시각 · 검증 시각표가 같은 함수를 쓴다).
 --   공격 클립 = 전조(ant) → 동작(act) → 회복(rec) · 타격 프레임 = 전조 끝(PlayerMotionData 머리 주석).
---   공격 속도 배율(장비 · 보석 × 버프 = PlayerCombat.getTotalSpeedMultiplier(상한 ×2.5 · 속사 버프 중 CombatConfig.attackSpeedMaxMultiplierBuffed ×6.25)) → 전체 길이 = 원래 ÷ 배율.
+--   공격 속도 배율(C3-2: PlayerCombat.getMotionSpeed = 기본 간격 ÷ 실제 간격 - 1 ~ 1.36 · 강궁 1) → 전체 길이 = 원래 ÷ 배율.
 --   줄이는 순서(W1-3): 전조 → 회복 → 동작(타격 프레임이 보이게 동작은 마지막 · 최소 길이 보장).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

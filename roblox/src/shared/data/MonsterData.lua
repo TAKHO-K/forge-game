@@ -78,6 +78,16 @@ MonsterData.shiftGradeTableUp = shiftGradeTableUp
 
 MonsterData.fairnessExponent = 2 -- p. 이 값 하나만 튜닝 노브다.
 
+-- C3-3(사용자 - 사람 기준 타수: 대표 전투력 1.0에서 T1 2 ~ 3타 · T6 = T1의 최대 2배): 잡몹 HP의 tier 비(옛 tier1 앵커 80 기준 배율).
+--   옛 비 = r^p(1 · 1.22 · 1.68 · 2.74 · 4.62 · 7.82)는 T6가 T1의 7.8배라 대표가 T1 2타면 T6 16타였다.
+--   새 비 = 모양 1 · 1.02 · 1.04 · 1.2 · 1.3 · 1.8(T6 = T1 × 1.8) × 전체 0.825. 모양은 대표 기준 구역(tier5 - CombatFormulaData.representative.referenceTier) 대비 전부 C2 평탄 구간 안
+--   (1 ÷ 1.3 ~ 1 ÷ 0.7)이라 몹마다 권장 정규화가 배율 1로 남는다. 전체 0.825 = EconSim 목표(상위 1% 25,300 · 캐주얼 1,000 · 일반 환생 5)에 맞춘 보정(지시 "몹 체력으로 보정" -
+--   타수는 목표 처치 시간 ÷ 간격이 정해서 이 값과 무관 · 스테이지 대응만 옮긴다 · 격자 = docs/phase/C3-report.md).
+--   tier1 = 66(옛 앵커 80 × 0.825): 골드 단위(GoldCost = tier1.goldDrop)도 × 0.825지만 처치당 골드도 × 0.825라 "몇 마리분" 가격은 그대로.
+--   공정성: 보상(경험치 = HP 비례 · 골드 · 드랍 개수 · 처치 단위 killUnits)은 HP와 같은 배율 s = 새 비 ÷ r^p를 곱한다 → 시간당 보상 = 옛 항등식 그대로(아래 fairnessCheck).
+--   공격력 = 옛 r^(p−1) 그대로(생존 불변). 보스 · 견습 보스 = 옛 HP · 골드(hpUnscaled · goldDropUnscaled - BossRules가 읽는다 · 보스 처치 시간 불변).
+MonsterData.tierHpRelative = { 0.825, 0.8415, 0.858, 0.99, 1.0725, 1.485 }
+
 -- D1: 공정성 입력 = D1 전 표(DropTableData.fairnessGradeByTier) × 옛 배율(fairnessMultiplier) 고정 - 드랍표 · 등급 위력 개편이 몬스터 HP · 골드 · 드랍 개수를 안 바꾼다.
 local function expectedGradeValue(tierIndex)
 	local row = DropTableData.fairnessGradeByTier[tierIndex]
@@ -135,12 +145,14 @@ end
 for tierIndex, info in ipairs(TIER_INFO) do
 	local r = MonsterData.getRewardRatio(tierIndex)
 	local p = MonsterData.fairnessExponent
-	local hpMultiplier = r ^ p
+	local oldHpMultiplier = r ^ p
+	local hpMultiplier = MonsterData.tierHpRelative[tierIndex] or oldHpMultiplier -- C3-3
+	local s = hpMultiplier / oldHpMultiplier -- 보상도 같은 배율(시간당 공정성 유지)
 	local attackMultiplier = r ^ (p - 1)
-	local goldMultiplier = r ^ p
+	local goldMultiplier = hpMultiplier
 	-- 28-1 [2-1] 이름 변경(옛 itemLevelBonus, 값은 그대로): itemLevel에 곱하던 값이 "기대 드랍 개수에 곱하는 값"이 됐다 -
 	-- 공정성 항등식의 r^(p−1) 몫을 개수가 맡는다(Loot.expectedArmorDropCount). itemLevel은 스테이지가 정한다.
-	local dropCountMultiplier = r ^ (p - 1)
+	local dropCountMultiplier = r ^ (p - 1) * s
 	local sizeScale = r ^ 0.5
 
 	local hp = BASE_HP * hpMultiplier
@@ -163,6 +175,10 @@ for tierIndex, info in ipairs(TIER_INFO) do
 		expReward = hp * CharacterLevelConfig.monsterExpCoefficient,
 		dropCountMultiplier = dropCountMultiplier,
 		rewardRatio = r,
+		-- C3-3: 처치 단위(드랍 시간 공정성 · 반짝이 · 감사 - 옛 r^p 자리) = HP 비 · 보스용 옛 HP · 골드(tier 비 압축 전 - BossRules)
+		killUnits = hpMultiplier,
+		hpUnscaled = BASE_HP * oldHpMultiplier,
+		goldDropUnscaled = BASE_GOLD * oldHpMultiplier,
 
 		radiusPx = BASE_RADIUS_PX * sizeScale,
 		sizeScale = sizeScale,
@@ -190,9 +206,8 @@ end
 MonsterData.fairnessCheck = {}
 for tierIndex = 1, #TIER_INFO do
 	local r = MonsterData.getRewardRatio(tierIndex)
-	local p = MonsterData.fairnessExponent
-	local hpMultiplier = r ^ p
-	local dropCountMultiplier = r ^ (p - 1)
+	local hpMultiplier = MonsterData[MonsterData.tierOrder[tierIndex]].killUnits -- C3-3: 새 HP 비(보상 배율 같이)
+	local dropCountMultiplier = MonsterData[MonsterData.tierOrder[tierIndex]].dropCountMultiplier
 	local eGT = expectedGradeValue(tierIndex)
 	local rewardPerTime = (dropCountMultiplier * eGT) / hpMultiplier
 	table.insert(MonsterData.fairnessCheck, {

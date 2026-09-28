@@ -276,7 +276,10 @@ local function attrOf(st, name)
 end
 
 local function speedOf(st)
-	return PlayerCombat.getTotalSpeedMultiplier(attrOf(st, "SpeedPercentBonus"), attrOf(st, "AttackSpeedBuffMultiplier"))
+	if not st.classId or st.classId == "" then
+		return 1
+	end
+	return PlayerCombat.getMotionSpeed(st.classId, attrOf(st, "SpeedPercentBonus"), attrOf(st, "AttackSpeedBuffMultiplier")) -- C3-2: 기본 간격 ÷ 실제 간격(1 ~ 1.36 - 서버 AttackServer와 같은 함수)
 end
 
 local function inCombat(st, now)
@@ -893,8 +896,9 @@ function WeaponVisual.playSwing(isHeavy, isAir, target)
 end
 
 -- 남의 공격(서버 중계 AttackMotion) · 검증 더미.
-function WeaponVisual.playRemote(key, comboCount, isHeavy, isAir)
-	startAttack(stateFor(key), isHeavy and 3 or MotionTiming.comboIndex(comboCount), isHeavy, isAir)
+-- C3 0-3: target = 서버가 고른 대상(중계 - 돌아서 휘두르기 · 가까운 대상 휘두르기가 남의 화면에도 보인다).
+function WeaponVisual.playRemote(key, comboCount, isHeavy, isAir, target)
+	startAttack(stateFor(key), isHeavy and 3 or MotionTiming.comboIndex(comboCount), isHeavy, isAir, typeof(target) == "Instance" and target or nil)
 end
 
 -- 3타 강타 히트스톱(16-7) - 지금 포즈를 durationSeconds 동안 얼린다(타격 프레임 히트스톱과 겹치면 긴 쪽).
@@ -1201,9 +1205,9 @@ end
 task.spawn(function()
 	local relay = ReplicatedStorage:WaitForChild("AttackMotion", 30)
 	if relay then
-		relay.OnClientEvent:Connect(function(who, comboCount, isHeavy, isAir)
+		relay.OnClientEvent:Connect(function(who, comboCount, isHeavy, isAir, target)
 			if typeof(who) == "Instance" and who ~= player then
-				WeaponVisual.playRemote(who, comboCount, isHeavy, isAir)
+				WeaponVisual.playRemote(who, comboCount, isHeavy, isAir, target)
 			end
 		end)
 	end

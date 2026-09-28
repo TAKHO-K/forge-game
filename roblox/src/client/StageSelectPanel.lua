@@ -529,7 +529,7 @@ local function render()
 	local recStage = selectedStage or (player:GetAttribute("InfiniteStage") or 1)
 	recommendLine.Visible = CombatFormula.enabled() and statusLine.Text == ""
 	recommendLine.Text = Text.get("combat.recommend", {
-		rec = NumberFormat.format(CombatFormula.display(CombatFormula.recommendedPower(recStage))),
+		rec = NumberFormat.format(CombatFormula.display(CombatFormula.displayRecommendedPower(recStage))), -- C3 0-3 표시 곡선
 		mine = NumberFormat.format(CombatFormula.display(player:GetAttribute("CombatPower") or 0)),
 	})
 	-- 구간 칩: 상태 색 · 기호(✓ ●) + 지금 보고 있는 구간은 rimHi 테두리.

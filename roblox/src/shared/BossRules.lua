@@ -225,9 +225,9 @@ end
 -- partySizeHpMultiplier 전용 - 견습 호출부는 nil(=1)을 넘긴다(견습은 항상 싱글). densityExtra(S14)는 스킬표 사본에 더하는 낙하 원 개수 -
 -- 견습 호출부는 안 넘겨서 0이다(견습 보스는 밀도 0).
 function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra, partySize, densityExtra)
-	local trashHp = InfiniteStage.getMonsterHp(trashBase.hp, stage)
+	local trashHp = InfiniteStage.getMonsterHp(trashBase.hpUnscaled or trashBase.hp, stage) -- C3-3: 보스 = 잡몹 tier 비 압축 전 HP(보스 처치 시간 불변)
 	local trashAttack = InfiniteStage.getMonsterAttack(trashBase.attack, stage)
-	local trashGold = InfiniteStage.getGoldReward(trashBase.goldDrop, stage)
+	local trashGold = InfiniteStage.getGoldReward(trashBase.goldDropUnscaled or trashBase.goldDrop, stage) -- C3-3
 	local trashExp = InfiniteStage.getExpReward(trashBase.expReward, stage)
 
 	local attack = trashAttack * boss.attackMultiplier

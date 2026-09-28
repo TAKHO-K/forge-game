@@ -64,6 +64,12 @@ function CombatFormula.recommendedPower(stage, baseHp)
 	return math.max(InfiniteStage.getMonsterHp(baseHp or referenceBaseHp(), stage) / CombatFormula.representativeHits(stage), 1e-9)
 end
 
+-- C3 0-3 화면 표시용 권장 전투력(판정은 recommendedPower): 표시 곡선(representative.displayHits - 실제 힘 점프를 완만히) 기준.
+function CombatFormula.displayRecommendedPower(stage, baseHp)
+	local points = CombatFormulaData.representative.displayHits or CombatFormulaData.representative.hits
+	return math.max(InfiniteStage.getMonsterHp(baseHp or referenceBaseHp(), stage) / interpLog(points, stage), 1e-9)
+end
+
 -- 권장 방어(스테이지 · 때린 몹의 공격 - 없으면 기준 구역 몹): α × 몹 공격 × 대표 방어 비율.
 function CombatFormula.recommendedDefense(stage, attack)
 	local a = attack or InfiniteStage.getMonsterAttack(MonsterData[MonsterData.tierOrder[CombatFormulaData.representative.referenceTier]].attack, stage)

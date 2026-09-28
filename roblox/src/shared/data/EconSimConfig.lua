@@ -45,6 +45,8 @@ return {
 	--   classId            직업(E3 · E4는 궁수 = BalanceAnchorConfig.referenceClassId와 같은 기준)
 	--   huntTierMax        갈 수 있는 가장 높은 사냥 구역 tier - 청크마다 1 ~ 이 값 중 경험치/초가 가장 좋은 구역을 고른다(5% 안이면 높은 tier - 드랍 등급)
 	--   targetKillSeconds  사냥 스테이지 고르는 기준 - 로테이션 처치 시간이 이 값 이하인 가장 높은 스테이지
+	--                      C3-3: × 0.45(4.0 · 3.0 · 2.5 · 2.0 → 1.8 · 1.35 · 1.125 · 0.9) - 새 템포(간격 0.45 ~ 0.33초)에서 대표(일반)가 기준 구역 몹을 약 3 ~ 4번 휘둘러 잡는 곳
+	--                      (= 사용자 목표 타수 T1 2 ~ 3 · T6 4 ~ 6). 옛 값은 초당 7.5타 템포의 3초(28타)였다.
 	--   minSurviveHits     그 스테이지 몬스터에게 버틸 타수 하한(BalanceSim.getSurviveHits)
 	--   dpsEfficiency      조작 효율 - 실제 DPS = 시뮬 DPS × 이 값(스킬 순서 · 빗맞음 · 이동)
 	--   moveOverheadSeconds 처치 1마리마다 붙는 이동 · 탐색 시간
@@ -63,7 +65,7 @@ return {
 	profiles = {
 		casual = {
 			displayName = "캐주얼", hoursPerDay = 1, classId = "bow", huntTierMax = 3,
-			targetKillSeconds = 4.0, minSurviveHits = 5, dpsEfficiency = 0.7, moveOverheadSeconds = 1.5,
+			targetKillSeconds = 1.8, minSurviveHits = 5, dpsEfficiency = 0.7, moveOverheadSeconds = 1.5,
 			bossDpsEfficiency = 0.6, bossKillLimitSeconds = 120, bossAttemptsPerClear = 2.0, bossOverheadSeconds = 30,
 			partySize = 1, partyExpBonus = false,
 			enhanceTarget = 18, useProtection = false, rebirth = true, -- P2.5a: 최대 +25 → +30에 맞춰 목표 ×30/25(15 → 18 · 20 → 24 · 25 → 30)
@@ -72,7 +74,7 @@ return {
 		},
 		normal = {
 			displayName = "일반", hoursPerDay = 3, classId = "bow", huntTierMax = 5,
-			targetKillSeconds = 3.0, minSurviveHits = 4, dpsEfficiency = 0.85, moveOverheadSeconds = 1.0,
+			targetKillSeconds = 1.35, minSurviveHits = 4, dpsEfficiency = 0.85, moveOverheadSeconds = 1.0,
 			bossDpsEfficiency = 0.75, bossKillLimitSeconds = 90, bossAttemptsPerClear = 1.5, bossOverheadSeconds = 20,
 			partySize = 1, partyExpBonus = false,
 			enhanceTarget = 24, useProtection = false, rebirth = true,
@@ -80,7 +82,7 @@ return {
 		},
 		top = {
 			displayName = "상위 1%", hoursPerDay = 12, classId = "bow", huntTierMax = 6,
-			targetKillSeconds = 2.5, minSurviveHits = 3, dpsEfficiency = 0.95, moveOverheadSeconds = 0.6,
+			targetKillSeconds = 1.125, minSurviveHits = 3, dpsEfficiency = 0.95, moveOverheadSeconds = 0.6,
 			bossDpsEfficiency = 0.9, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.1, bossOverheadSeconds = 10,
 			partySize = 4, partyExpBonus = true, partyHuntsTogether = false,
 			enhanceTarget = 30, useProtection = true, rebirth = true,
@@ -90,7 +92,7 @@ return {
 		--   이 곡선(플레이 시간 → 최고 스테이지) × AuditConfig.envelope.margin을 넘는 상승 = 리더보드 등재 보류(AcquisitionAudit).
 		envelope = {
 			displayName = "속도 봉투", hoursPerDay = 24, classId = "bow", huntTierMax = 6,
-			targetKillSeconds = 2.0, minSurviveHits = 3, dpsEfficiency = 1.0, moveOverheadSeconds = 0.3,
+			targetKillSeconds = 0.9, minSurviveHits = 3, dpsEfficiency = 1.0, moveOverheadSeconds = 0.3,
 			bossDpsEfficiency = 1.0, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.0, bossOverheadSeconds = 5,
 			partySize = 4, partyExpBonus = true, partyHuntsTogether = true,
 			enhanceTarget = 30, useProtection = true, rebirth = true,

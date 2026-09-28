@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local SkillData = require(ReplicatedStorage.Shared.data.SkillData) -- C3-2 강궁(heavyShot)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
@@ -210,10 +211,55 @@ end
 -- 2.5배" 같은 자기 버프가 있을 때 호출부가 BuffState에서 읽어 넘긴다(신발과 같은
 -- 자리 - 곱셈 지점이 흩어지면 나중에 또 다른 공속 버프가 생겼을 때 어디에 곱해야
 -- 할지 매번 찾아야 한다).
+-- C3-3 대표 치명 곡선: 캐릭터 레벨 → 치명 확률 +(CombatConfig.critCurve - 구간 선형 · 끝 밖 = 끝값).
+function PlayerCombat.getLevelCritBonus(level)
+	local curve = CombatConfig.critCurve
+	if not curve or #curve == 0 then
+		return 0
+	end
+	level = level or 1
+	if level <= curve[1].level then
+		return curve[1].bonus
+	end
+	for i = 2, #curve do
+		local a, b = curve[i - 1], curve[i]
+		if level <= b.level then
+			return a.bonus + (b.bonus - a.bonus) * (level - a.level) / (b.level - a.level)
+		end
+	end
+	return curve[#curve].bonus
+end
+
+-- C3 전 쿨다운식 = 이제 "DPS 기준"(한 초에 넣는 피해를 정하는 가상 간격). 실제 입력 간격은 아래 getAttackTempo.
 function PlayerCombat.getAttackCooldown(classId, speedPercentBonus, buffSpeedMultiplier)
 	local class = ClassData.classes[classId]
 	return CombatConfig.attackCooldownSeconds
 		/ (class.atkSpeed * PlayerCombat.getTotalSpeedMultiplier(speedPercentBonus, buffSpeedMultiplier))
+end
+
+-- C3-2 공격 템포(사람 기준 - 누르고 있기 = 연타 = 같은 DPS). 반환: 실제 간격(초), 한 타의 피해 배율, 한 번 입력의 타 수.
+--   간격 = 기본 간격 ÷ 장비 · 보석 공속(버프 제외)을 최소 간격에서 멈춘다(CombatConfig.attackTempo). 최소 간격을 넘는 공속 · 버프 몫은 전부 한 번의 피해 %로 간다:
+--   피해 배율 = 실제 간격 ÷ 옛 쿨다운(getAttackCooldown - 버프 포함) → 초당 피해 = 옛 식과 같다(옵션 · 신발 · 버프 모든 공속원에 같은 규칙). 묶음(쌍검 두 칼) = 타마다 ÷ 타 수.
+--   활 강궁(버프 중 - SkillData.bow.Q.heavyShot): 간격 × intervalMultiplier(느려짐) · 한 발 × damageMultiplier(속사 때 DPS 그대로 × 이 값).
+function PlayerCombat.getAttackTempo(classId, speedPercentBonus, buffSpeedMultiplier)
+	local T = CombatConfig.attackTempo
+	local class = ClassData.classes[classId]
+	local interval = math.max(T.minIntervalSeconds, T.baseIntervalSeconds / PlayerCombat.getSpeedMultiplier(speedPercentBonus))
+	local power = 1
+	local skill = (buffSpeedMultiplier or 1) > 1 and SkillData[classId] and SkillData[classId].Q
+	local heavy = skill and skill.heavyShot
+	if heavy then
+		interval *= heavy.intervalMultiplier
+		power = heavy.damageMultiplier
+	end
+	local hits = class.hitsPerSwing or 1
+	return interval, interval / PlayerCombat.getAttackCooldown(classId, speedPercentBonus, buffSpeedMultiplier) * power / hits, hits
+end
+
+-- C3-2 모션 재생 배율(MotionTiming.scale): 기본 간격 ÷ 실제 간격(1 ~ 1.36 · 강궁 = 1).
+function PlayerCombat.getMotionSpeed(classId, speedPercentBonus, buffSpeedMultiplier)
+	local interval = PlayerCombat.getAttackTempo(classId, speedPercentBonus, buffSpeedMultiplier)
+	return math.max(1, CombatConfig.attackTempo.baseIntervalSeconds / interval)
 end
 
 return PlayerCombat

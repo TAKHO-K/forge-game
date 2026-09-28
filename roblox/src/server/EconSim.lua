@@ -941,7 +941,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
 		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * sparkleGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때)
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)
-		killUnits = tier.rewardRatio ^ MonsterData.fairnessExponent
+		killUnits = tier.killUnits -- C3-3
 		-- P2 E5: 처치 1마리당 태초 장비 기대 개수(서버 굴림과 같은 effectiveRate - 레벨 감쇠 포함)
 		primordialPerKill = Loot.expectedArmorDropCount(hunt.tier, 1, hunt.killSeconds) * primordialRateAt(state, hunt.tier, hunt.stage)
 	end

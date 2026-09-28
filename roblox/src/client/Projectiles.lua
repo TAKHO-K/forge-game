@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 
 local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
 local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
+local SkillData = require(ReplicatedStorage.Shared.data.SkillData) -- C3-2 강궁 화살 크기
 
 local Projectiles = {}
 
@@ -219,6 +220,7 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 	local slot = nextSlot(kind)
 	local part, trail = slot.part, slot.trail
 	local isEmpowered = kind == "arrow" and variant == "empowered"
+	local isHeavy = kind == "arrow" and variant == "heavy" -- C3-2 강궁: 큰 화살(SkillData.bow.Q.heavyShot.arrowScale) · 굵은 꼬리
 	opts = opts or {}
 
 	local distance = (toPosition - fromPosition).Magnitude
@@ -229,6 +231,10 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 		part.Color = isCrit and ARROW_EMPOWERED_CRIT_COLOR or ARROW_EMPOWERED_COLOR
 		part.Size = slot.baseSize * ARROW_EMPOWERED_SCALE
 		trail.Lifetime = 0.28
+	elseif isHeavy then
+		part.Color = isCrit and ARROW_CRIT_COLOR or ARROW_COLOR
+		part.Size = slot.baseSize * SkillData.bow.Q.heavyShot.arrowScale
+		trail.Lifetime = 0.3
 	else
 		part.Color = isCrit and (kind == "arrow" and ARROW_CRIT_COLOR or ORB_CRIT_COLOR) or (kind == "arrow" and ARROW_COLOR or ORB_COLOR)
 		if slot.baseSize then
@@ -245,7 +251,7 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 		trail.LightEmission = style.lightEmission or 0
 		trail.FaceCamera = true
 		trail.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.15) })
-		local half = style.width / 2 * (isEmpowered and 1.6 or 1)
+		local half = style.width / 2 * ((isEmpowered or isHeavy) and 1.6 or 1)
 		trail.Attachment0.Position = Vector3.new(0, half, 0)
 		trail.Attachment1.Position = Vector3.new(0, -half, 0)
 	end
@@ -263,7 +269,7 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 		slot.particles.Color = ColorSequence.new(style and style.particle or part.Color)
 		slot.particles.Enabled = true
 	end
-	muzzleFlash(fromPosition, part.Color, isEmpowered)
+	muzzleFlash(fromPosition, part.Color, isEmpowered or isHeavy)
 
 	part.CFrame = CFrame.lookAt(fromPosition, toPosition)
 	part.Transparency = 0

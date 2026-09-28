@@ -7,7 +7,23 @@ return {
 	attackRangeStuds = 10,
 
 	-- 웹 attackInterval 그대로(시간값이라 stud 환산 대상이 아니다).
+	-- C3-2부터 = "DPS 기준 간격"(PlayerCombat.getAttackCooldown - 초당 피해를 정한다). 실제 입력 간격은 아래 attackTempo.
 	attackCooldownSeconds = 0.28,
+
+	-- C3-2 공격 템포(사용자 원칙 - 사람 기준: 클릭 횟수 · 손 피로 · 누르고 있기 = 연타 = 같은 DPS).
+	--   실제 간격 = baseIntervalSeconds ÷ 장비 · 보석 공속(버프 제외) - minIntervalSeconds(초당 3회)에서 멈춘다. 넘는 공속 · 버프 = 한 번의 피해 %(PlayerCombat.getAttackTempo - DPS 옛 식과 같다).
+	--   holdRepeat = 좌클릭 · 폰 공격 버튼을 누르고 있으면 간격마다 다음 타(클라 AttackInput) · 누름 1회 = 1회 · 쿨다운 중 누름 = 준비되는 순간 1회(버퍼).
+	--   serverGraceSeconds = 서버가 받아 주는 이른 요청 폭(네트워크 흔들림 - 받은 요청의 시각은 max(지금, 지난 시각 + 간격)으로 적어 평균 빈도는 간격을 못 넘는다).
+	attackTempo = { baseIntervalSeconds = 0.45, minIntervalSeconds = 0.33, serverGraceSeconds = 0.05 },
+
+	-- C3-4 원거리 조준 = 클릭 지점으로 발사(AimPicker.pickPath - 클라 조준 표시 · 서버 판정 같은 함수). bodyRadiusStuds = 화살 경로에서 몹 몸 중심까지 이 안이면 맞는다 ·
+	--   assistRadiusStuds = 경로에 아무도 없을 때만 조준점 둘레 이 반경 안 몹 1명(작게 - 옛 "방향에 가장 가까운 몹"이 조준점 근처 자연 슬라임을 먼저 잡던 문제) ·
+	--   muzzleUpStuds = 서버 발사 원점 = 루트 + 위로 이만큼(가슴 높이) · phoneAutoAimDeg = 폰 공격 버튼 자동 조준 앞 원뿔 반각(없으면 정면으로).
+	rangedAim = { bodyRadiusStuds = 2.2, assistRadiusStuds = 3, muzzleUpStuds = 0.5, phoneAutoAimDeg = 60 },
+
+	-- C3-3 대표 치명 곡선(사용자 - 3타 콤보에 치명이 자주 섞이게 · 100% 초과 처리는 K5): 캐릭터 레벨 구간별 치명 확률 +(직업 기본 · 옵션에 더한다 - PlayerCombat.getLevelCritBonus).
+	--   레벨 사이 = 선형 · 끝 밖 = 끝값. 평타 · 스킬 · 전투력 · EconSim이 같은 함수(PlayerProfile.getCritBonus · BalanceSim.buildLoadout).
+	critCurve = { { level = 1, bonus = 0.15 }, { level = 1000, bonus = 0.15 } },
 
 	-- 공격력은 10-2부터 여기 없다 - WeaponData.weapons.starter_sword.baseAttack(=10, 옮긴
 	-- 값 그대로)을 기준으로 무기 기본값×강화 배율×등급 배율×클래스 배율로 계산한다

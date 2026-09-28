@@ -8,6 +8,7 @@
 -- aimPoint가 없으면) 사거리 안 최근접으로 대체한다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Reach = require(ReplicatedStorage.Shared.Reach)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 
 local AimPicker = {}
 
@@ -50,6 +51,59 @@ function AimPicker.pick(originPosition, aimPoint, rangeStuds, candidates, layerT
 	end
 
 	return aligned or nearest
+end
+
+-- C3-4 원거리 = 클릭 지점으로 발사(마크 활처럼). 원점(쏘는 사람) → 조준점 직선(3D)을 사거리까지 = 화살 경로. 반환: 맞는 몹 목록(경로를 따라 가까운 순 - 관통이면 앞에서부터 여러 명), 경로 끝점.
+--   경로 위 몹 = 몸 중심이 경로에서 CombatConfig.rangedAim.bodyRadiusStuds 안(선분 끝 = min(조준점까지, 사거리) + 같은 여유 - 조준점이 몸 표면이면 몸 중심이 조금 뒤다).
+--   경로 위에 없으면 조준 보정 = 조준점에서 assistRadiusStuds 안 · 사거리 안 몹 중 조준점에 가장 가까운 1명(옛 "조준 방향에 가장 가까운 몹" 대체 - 자연 슬라임이 먼저 잡히던 문제).
+--   조준점이 없거나 원점과 겹치면 fallbackDir(바라보는 방향) 쪽으로 사거리 끝까지. 클라(조준 표시)와 서버(판정)가 같은 함수.
+function AimPicker.pickPath(originPosition, aimPoint, rangeStuds, candidates, fallbackDir, maxHits)
+	local A = CombatConfig.rangedAim
+	local offset = aimPoint and (aimPoint - originPosition) or nil
+	local dir, length
+	if offset and offset.Magnitude > 0.5 and offset.Magnitude == offset.Magnitude then
+		dir = offset.Unit
+		length = math.min(offset.Magnitude + A.bodyRadiusStuds, rangeStuds)
+	else
+		local f = fallbackDir and Vector3.new(fallbackDir.X, 0, fallbackDir.Z) or Vector3.new(0, 0, -1)
+		dir = f.Magnitude > 1e-3 and f.Unit or Vector3.new(0, 0, -1)
+		length = rangeStuds
+	end
+	local onPath = {}
+	for _, model in ipairs(candidates) do
+		local root = model.PrimaryPart
+		if root and model.Parent then
+			local rel = root.Position - originPosition
+			local t = rel:Dot(dir)
+			if t > 0 and t <= length then
+				local perp = (rel - dir * t).Magnitude
+				if perp <= A.bodyRadiusStuds then
+					table.insert(onPath, { model = model, t = t })
+				end
+			end
+		end
+	end
+	table.sort(onPath, function(a, b)
+		return a.t < b.t
+	end)
+	local hits = {}
+	for i = 1, math.min(#onPath, maxHits or 1) do
+		hits[i] = onPath[i].model
+	end
+	if #hits == 0 and aimPoint then
+		local best, bestDist = nil, A.assistRadiusStuds
+		for _, model in ipairs(candidates) do
+			local root = model.PrimaryPart
+			if root and model.Parent and (root.Position - originPosition).Magnitude <= rangeStuds then
+				local d = (root.Position - aimPoint).Magnitude
+				if d <= bestDist then
+					best, bestDist = model, d
+				end
+			end
+		end
+		hits[1] = best
+	end
+	return hits, originPosition + dir * math.min(length, rangeStuds)
 end
 
 return AimPicker

@@ -140,7 +140,7 @@ end
 -- G1-2: killSeconds(선택) = 받는 사람의 이 몬스터 처치 시간 - 주면 처치 시간 공정성 보정을 곱한다(DropTable.timeFairnessFactor · H = tier HP 배율 × 접두사 배율).
 function Loot.expectedArmorDropCount(tierIndex, rewardMultiplier, killSeconds)
 	local tierData = MonsterData[MonsterData.tierOrder[tierIndex]] or MonsterData.tier1
-	local hpUnits = (tierData.rewardRatio ^ MonsterData.fairnessExponent) * (rewardMultiplier or 1)
+	local hpUnits = tierData.killUnits * (rewardMultiplier or 1) -- C3-3: HP 비(옛 r^p)
 	return ArmorData.dropChance * tierData.dropCountMultiplier * (rewardMultiplier or 1) * DropTable.timeFairnessFactor(killSeconds, hpUnits)
 end
 

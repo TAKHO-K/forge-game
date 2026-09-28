@@ -31,7 +31,7 @@ function DropTableQuery.describe(playerInfo, tierIndex, huntStage, expGainMultip
 			table.insert(grades, { id = gradeId, chance = row[gradeId] })
 		end
 	end
-	local killUnits = MonsterData[key].rewardRatio ^ MonsterData.fairnessExponent -- MonsterState.getKillUnits의 접두사 없는 값
+	local killUnits = MonsterData[key].killUnits -- C3-3 -- MonsterState.getKillUnits의 접두사 없는 값
 	local materials = {}
 	for _, materialId in ipairs(EnhanceMaterialData.order) do
 		if huntStage >= EnhanceMaterialData.materials[materialId].minStage then

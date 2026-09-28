@@ -172,7 +172,7 @@ end
 -- 사냥 부하: 직업 평타 쿨다운마다 가장 가까운 잡몹을 때린다(서버 · 클라 경로 = 실제 평타와 같다).
 local function huntLoad(player)
 	local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
-	local cooldown = PlayerCombat.getAttackCooldown(PlayerProfile.getClassId(player), 0)
+	local cooldown = PlayerCombat.getAttackTempo(PlayerProfile.getClassId(player), 0) -- C3-2: 실제 입력 간격
 	local acc = 0
 	local hits, kills = 0, 0
 	local function tick(dt)
@@ -279,7 +279,7 @@ function PerfProbe.runWorld(player, counts, seconds, crowd)
 	local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 	local SpawnSites = require(script.Parent.SpawnSites)
 	local attackResult = ReplicatedStorage:WaitForChild("AttackResult")
-	local cooldown = PlayerCombat.getAttackCooldown(PlayerProfile.getClassId(player), 0)
+	local cooldown = PlayerCombat.getAttackTempo(PlayerProfile.getClassId(player), 0) -- C3-2: 실제 입력 간격
 	-- M1-2: 사냥꾼은 구역 스폰 범위의 지점 두 곳 사이를 걷기 16으로 오간다(지나가면 생성 · 떠나면 정리가 실제로 돈다) - 구역을 차례로 나눠 준다
 	local routes = {}
 	for _, z in ipairs(WorldMapData.zones) do

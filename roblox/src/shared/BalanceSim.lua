@@ -133,10 +133,10 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 		attackPercentBonus = attackPercentBonus,
 		attackCooldown = PlayerCombat.getAttackCooldown(classId, speedPercentBonus),
 		attackRange = PlayerCombat.getAttackRange(classId),
-		critRate = class.critRate,
+		critRate = math.min(class.critRate + PlayerCombat.getLevelCritBonus(level), 1), -- C3-3 대표 치명 곡선(게임 PlayerProfile.getCritBonus와 같은 함수)
 		critDmg = critDmg,
 		-- 치명타 평균 배율 - calcDamage의 기대값(확률 롤을 매번 시뮬레이션하지 않고 기대치로 계산).
-		critMultAvg = 1 + class.critRate * (critDmg - 1),
+		critMultAvg = 1 + math.min(class.critRate + PlayerCombat.getLevelCritBonus(level), 1) * (critDmg - 1),
 		-- 3타 강타 평균 배율(CombatConfig.comboHitEvery/comboHitMultiplier) - 쉬지 않고 계속
 		-- 공격한다고 가정할 때(콤보 리셋 없음) N번에 한 번 1.8배가 나오는 것의 평균.
 		comboMultAvg = 1 + (CombatConfig.comboHitMultiplier - 1) / CombatConfig.comboHitEvery,
@@ -258,7 +258,7 @@ function BalanceSim.simulateCombat(loadout, opts)
 	local finished = false
 
 	local function critMultFor(critRateBonus)
-		local rate = math.min(class.critRate + (critRateBonus or 0), 1)
+		local rate = math.min((loadout.critRate or class.critRate) + (critRateBonus or 0), 1) -- C3-3: 직업 + 레벨 치명 곡선(buildLoadout)
 		return 1 + rate * (loadout.critDmg - 1)
 	end
 
@@ -346,7 +346,7 @@ function BalanceSim.simulateCombat(loadout, opts)
 		end
 		addDamage(target, record.base * loadout.critMultAvg, skills.Q.name .. "(꽂힌 화살)")
 	end
-	local function attachArrow(target, at)
+	local function attachArrow(target, at, scale)
 		local def = skills.Q
 		while #target.stuckArrows >= def.stuckArrowMaxPerMonster do
 			explodeArrow(target, target.stuckArrows[1])
@@ -354,7 +354,7 @@ function BalanceSim.simulateCombat(loadout, opts)
 				return
 			end
 		end
-		local record = { base = atk * def.stuckArrowDamageCoefficient, exploded = false }
+		local record = { base = atk * def.stuckArrowDamageCoefficient * (scale or 1), exploded = false } -- C3-2: 한 발이 커진 만큼 화살도(AttackServer와 같다)
 		table.insert(target.stuckArrows, record)
 		schedule(at + def.stuckArrowDelaySeconds, function()
 			explodeArrow(target, record)
@@ -373,8 +373,9 @@ function BalanceSim.simulateCombat(loadout, opts)
 	if skills.Q and skills.Q.shape == "selfBuff" then
 		quickShotMult = math.min(skills.Q.attackSpeedCap, skills.Q.attackSpeedBase + class.critRate * skills.Q.attackSpeedCritCoefficient)
 	end
-	local cooldownBase = PlayerCombat.getAttackCooldown(classId, loadout.speedPercentBonus, 1)
-	local cooldownBuffed = PlayerCombat.getAttackCooldown(classId, loadout.speedPercentBonus, quickShotMult)
+	-- C3-2: 실제 간격 · 한 번의 피해 배율 = PlayerCombat.getAttackTempo(AttackServer와 같은 함수 - 초당 피해 = 옛 쿨다운식 · 강궁 = 느린 간격 × 큰 한 발)
+	local cooldownBase, scaleBase, hitsBase = PlayerCombat.getAttackTempo(classId, loadout.speedPercentBonus, 1)
+	local cooldownBuffed, scaleBuffed = PlayerCombat.getAttackTempo(classId, loadout.speedPercentBonus, quickShotMult)
 
 	-- 다음 평타 가능 시각: 서버는 "요청 시점 t'의 버프 상태로 계산한 쿨다운"으로 판정한다
 	-- (t' - last >= cooldown(t')). 버프 쿨다운으로 잡은 후보 시각에 버프가 이미 꺼져 있으면
@@ -410,6 +411,9 @@ function BalanceSim.simulateCombat(loadout, opts)
 		if dealingModeActive then
 			base *= skills.E.attackMultiplier * PlayerCombat.getInvestmentScale(loadout.weaponLevel, loadout.attackPercentBonus, skills.E.investmentScaling)
 		end
+		local wasQuickShotActive = isQuickShot(t)
+		local swingScale = wasQuickShotActive and scaleBuffed or scaleBase
+		base *= swingScale * hitsBase -- C3-2 한 번의 피해(묶음 = 같은 순간 · 기대 치명이라 합으로) - 백스텝 추가 피해는 발당 고정(아래 - 5발 총량 불변)
 		local critRateBonus = 0
 		if backstepCharges > 0 then
 			base += skills.E.damageCoefficient * atk
@@ -427,7 +431,6 @@ function BalanceSim.simulateCombat(loadout, opts)
 			critMult = critMultFor(critRateBonus)
 		end
 		local damage = base * critMult
-		local wasQuickShotActive = isQuickShot(t)
 		result.autoHits += 1
 
 		if not projectileKind then
@@ -440,7 +443,7 @@ function BalanceSim.simulateCombat(loadout, opts)
 			end
 			local isDead = addDamage(target, damage)
 			if not isDead and wasQuickShotActive and projectileKind == "arrow" then
-				attachArrow(target, t)
+				attachArrow(target, t, swingScale)
 			end
 		end)
 	end

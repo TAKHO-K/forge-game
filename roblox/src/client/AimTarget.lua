@@ -21,6 +21,8 @@ local UserInputService = game:GetService("UserInputService")
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local OutlinePool = require(script.Parent.OutlinePool)
 
 local AimTarget = {}
@@ -39,7 +41,8 @@ local currentTarget = nil -- Model
 -- 화면 좌표 -> 바닥 위 월드 좌표. 실제 지형·몬스터에 레이캐스트해 맞으면 그 지점을,
 -- 아무것도 안 맞으면 플레이어 발밑 높이의 수평면과의 교차점을 쓴다(카메라가 하늘을
 -- 향한 각도라 아무것도 안 맞는 경우 대비).
-function AimTarget.getWorldPointFromScreen(screenPos)
+-- C3-4 rangedReach(원거리 사거리 - 없으면 옛 규칙): 레이가 아무것도 못 맞히면(허공) 카메라 방향으로 캐릭터 너머 사거리 끝 = 반드시 발사할 점. 다른 플레이어 몸은 조준을 막지 않는다(W2 결정 5와 같이).
+function AimTarget.getWorldPointFromScreen(screenPos, rangedReach)
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if not rootPart then
@@ -50,10 +53,21 @@ function AimTarget.getWorldPointFromScreen(screenPos)
 
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { character }
+	local excluded = { character }
+	if rangedReach then
+		for _, other in ipairs(Players:GetPlayers()) do
+			if other.Character and other ~= player then
+				table.insert(excluded, other.Character)
+			end
+		end
+	end
+	params.FilterDescendantsInstances = excluded
 	local result = workspace:Raycast(ray.Origin, ray.Direction * RAYCAST_DISTANCE_STUDS, params)
 	if result then
 		return result.Position
+	end
+	if rangedReach then
+		return ray.Origin + ray.Direction.Unit * ((rootPart.Position - ray.Origin).Magnitude + rangedReach)
 	end
 
 	local groundY = rootPart.Position.Y
@@ -133,6 +147,12 @@ function AimTarget.refresh(aimPoint)
 	local weaponLevel = player:GetAttribute("WeaponLevel") or 0
 	local rangeStuds = classId and classId ~= "" and PlayerCombat.getBuffedAttackRange(classId, rangeMultiplier, weaponLevel) or 0
 	local candidates = CollectionService:GetTagged("Monster")
+	if classId and ProjectileConfig.kindByClass[classId] then
+		-- C3-4 원거리: 화살 경로(서버 AttackServer와 같은 함수 · 원점 = 루트 + 가슴 높이) 위 첫 몹 = 조준 표시
+		local hits = AimPicker.pickPath(rootPart.Position + Vector3.new(0, CombatConfig.rangedAim.muzzleUpStuds, 0), lastAimPoint, rangeStuds, candidates, rootPart.CFrame.LookVector, 1)
+		setTarget(hits[1])
+		return
+	end
 	setTarget(AimPicker.pick(rootPart.Position, lastAimPoint, rangeStuds, candidates))
 end
 
@@ -174,7 +194,9 @@ task.spawn(function()
 		end
 
 		if screenPos then
-			AimTarget.refresh(AimTarget.getWorldPointFromScreen(screenPos))
+			local classId = player:GetAttribute("ClassId") or ""
+			local reach = ProjectileConfig.kindByClass[classId] and PlayerCombat.getBuffedAttackRange(classId, player:GetAttribute("RangeMultiplier") or 1, player:GetAttribute("WeaponLevel") or 0) or nil
+			AimTarget.refresh(AimTarget.getWorldPointFromScreen(screenPos, reach))
 		else
 			AimTarget.refresh(nil) -- 마지막 조준점을 그대로 재평가(대상이 죽었으면 최근접으로 대체)
 		end

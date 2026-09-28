@@ -64,7 +64,7 @@ function SkillTooltipText.build(classId, slot, info)
 	elseif shape == "circle" then
 		add("설명", ("%s 동안 제자리에서 돌며 반경 안의 적을 %d번 벤다. 이동 속도 ×%s · 받는 피해 ×%s."):format(seconds(def.channelSeconds), ticks, num(def.channelMoveSpeedMultiplier), num(def.incomingDamageMultiplier)))
 	elseif shape == "selfBuff" then
-		add("설명", ("%s 동안 공격 속도가 빨라진다. 그동안 명중한 평타마다 화살이 꽂혀 %s 뒤 터진다."):format(seconds(def.durationSeconds), seconds(def.stuckArrowDelaySeconds)))
+		add("설명", ("%s 동안 활을 깊게 당겨 느리지만 묵직한 큰 화살을 쏜다(적 %d명 관통 · 짧게 밀침). 명중한 화살은 꽂혀 %s 뒤 터진다."):format(seconds(def.durationSeconds), (def.heavyShot and def.heavyShot.pierce or 0) + 1, seconds(def.stuckArrowDelaySeconds)))
 	elseif shape == "dash" then
 		add("설명", ("뒤로 %s 스터드 물러나고, 다음 평타 %d발이 강해진다."):format(num(def.rangeStuds), def.chargesGranted))
 	elseif shape == "summon" then
@@ -92,7 +92,7 @@ function SkillTooltipText.build(classId, slot, info)
 			add("예상 피해", "불러오는 중…", "textTertiary")
 		end
 	elseif shape == "selfBuff" then
-		add("효과", stats and ("공격 속도 ×%s(상한 ×%s)%s"):format(num(stats.speedMultiplier), num(def.attackSpeedCap), optionText) or "불러오는 중…", "ember")
+		add("효과", stats and ("초당 피해 ×%s(상한 ×%s)%s · 발사 간격 ×%s"):format(num(stats.speedMultiplier), num(def.attackSpeedCap), optionText, num(def.heavyShot and def.heavyShot.intervalMultiplier or 1)) or "불러오는 중…", "ember")
 		add("예상 피해", stats and ("꽂힌 화살 1개 %s(공격력의 %s)"):format(num(stats.arrowDamage), pct(def.stuckArrowDamageCoefficient)) or "불러오는 중…", "ember")
 	elseif shape == "dash" then
 		add("효과", ("다음 평타 %d발: 치명 확률 +%s · 추가 피해 공격력의 %s · 사거리 ×%s"):format(def.chargesGranted, pct(def.critRateBonus), pct(def.damageCoefficient), num(def.rangeMultiplier)))
@@ -166,7 +166,7 @@ function SkillTooltipText.build(classId, slot, info)
 	elseif shape == "singleChannel" then
 		add("규칙", ("대상이 죽거나 사거리를 벗어나면 남은 타격은 사라진다 · 사거리 안에 적이 없으면 쿨타임 없이 취소 · 분신 중이면 첫 %d타만 확정 치명"):format(def.guaranteedCritHits or 1))
 	elseif shape == "selfBuff" then
-		add("규칙", ("공격 속도 = (1 + 직업 치명 확률 × %s) × (1 + 옵션), 상한 ×%s · 화살은 몬스터마다 최대 %d개"):format(num(def.attackSpeedCritCoefficient), num(def.attackSpeedCap), def.stuckArrowMaxPerMonster))
+		add("규칙", ("초당 피해 배율 = (1 + 직업 치명 확률 × %s) × (1 + 옵션), 상한 ×%s - 느려진 간격만큼 한 발이 커진다 · 꾹 누르면 자동 발사(빨리 눌러도 더 빨라지지 않는다) · 화살은 몬스터마다 최대 %d개"):format(num(def.attackSpeedCritCoefficient), num(def.attackSpeedCap), def.stuckArrowMaxPerMonster))
 	elseif shape == "dash" then
 		add("규칙", "강해진 평타는 맞든 빗나가든 쏠 때 1발씩 줄어든다 · 늘어난 사거리는 몬스터 인식 범위를 넘지 않는다")
 	elseif shape == "summon" then

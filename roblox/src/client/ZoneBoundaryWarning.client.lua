@@ -111,7 +111,7 @@ local function showWarning(zoneKey, zone)
 		color = monster.bodyColor
 		if CombatFormula.enabled() then
 			sub = Text.get("combat.recommend", {
-				rec = NumberFormat.format(CombatFormula.display(CombatFormula.recommendedPower(player:GetAttribute("InfiniteStage") or 1, monster.hp))),
+				rec = NumberFormat.format(CombatFormula.display(CombatFormula.displayRecommendedPower(player:GetAttribute("InfiniteStage") or 1, monster.hp))), -- C3 0-3 표시 곡선
 				mine = NumberFormat.format(CombatFormula.display(player:GetAttribute("CombatPower") or 0)),
 			})
 		end

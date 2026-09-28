@@ -127,6 +127,55 @@ local slotPress = Instance.new("BindableEvent")
 slotPress.Name = "SkillSlotPress"
 slotPress.Parent = screenGui
 
+-- C3-1 폰 공격 버튼(터치 배치만): 점프 버튼 왼쪽 · 같은 크기 · 같은 아래 선(오른손 엄지). 누르고 있으면 공격 간격마다 자동 공격(AttackInput이 이 신호를 받는다 - down true/false).
+--   조준 = 자동(정면 가까운 적 · 없으면 정면 · 시점 고정이면 화면 가운데 - AttackInput.phoneAimPoint). 최종 스타일 = U1.
+local attackPress = Instance.new("BindableEvent")
+attackPress.Name = "AttackButtonPress"
+attackPress.Parent = screenGui
+local ATTACK_BUTTON_GAP = 12
+local attackButton = Instance.new("TextButton")
+attackButton.Name = "AttackButton"
+attackButton.AutoButtonColor = false
+attackButton.Text = "공격"
+attackButton.Font = Enum.Font.GothamBold
+attackButton.TextScaled = true
+attackButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+attackButton.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+attackButton.BackgroundTransparency = 0.25
+attackButton.AnchorPoint = Vector2.new(1, 1)
+attackButton.Visible = false
+attackButton.Parent = screenGui
+do
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = attackButton
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(255, 255, 255)
+	stroke.Transparency = 0.4
+	stroke.Thickness = 2
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = attackButton
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop, pad.PaddingBottom = UDim.new(0.3, 0), UDim.new(0.3, 0)
+	pad.PaddingLeft, pad.PaddingRight = UDim.new(0.2, 0), UDim.new(0.2, 0)
+	pad.Parent = attackButton
+	local activeInput = nil
+	attackButton.InputBegan:Connect(function(input)
+		if activeInput == nil and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+			activeInput = input
+			attackButton.BackgroundTransparency = 0.05
+			attackPress:Fire(true)
+		end
+	end)
+	attackButton.InputEnded:Connect(function(input)
+		if input == activeInput or (activeInput and input.UserInputType == activeInput.UserInputType and input.UserInputType == Enum.UserInputType.MouseButton1) then
+			activeInput = nil
+			attackButton.BackgroundTransparency = 0.25
+			attackPress:Fire(false)
+		end
+	end)
+end
+
 -- SkillInput.client.lua가 WaitForChild로 찾는 로컬 전용 신호(20-2a) - ComboPipsAnchor
 -- (AttackInput.client.lua)와 같은 "잘 알려진 자리" 계약 패턴. RemoteEvent가 아니라
 -- BindableEvent다 - 같은 클라 안 두 LocalScript끼리만 오가고 네트워크를 안 탄다(그래서
@@ -412,6 +461,7 @@ local function applyLayout()
 		end
 	end
 
+	attackButton.Visible = touch
 	if not touch then
 		row.AnchorPoint = ROW_ANCHOR_POINT
 		row.Position = ROW_POSITION
@@ -432,6 +482,9 @@ local function applyLayout()
 	dashHolder.Parent = screenGui
 	dashHolder.AnchorPoint = Vector2.new(0, 1)
 	dashHolder.Position = UDim2.new(0, TOUCH_DASH_LEFT, 1, -(jump.bottom + TOUCH_EDGE_MARGIN))
+	-- C3-1 공격 버튼: 점프 버튼(오른쪽 끝 = 화면 오른쪽 − right + size · 아래 = 화면 아래 − bottom + size) 왼쪽 ATTACK_BUTTON_GAP
+	attackButton.Size = UDim2.new(0, jump.size, 0, jump.size)
+	attackButton.Position = UDim2.new(1, -(jump.right + ATTACK_BUTTON_GAP), 1, -(jump.bottom - jump.size))
 
 	if RunService:IsStudio() and not UserInputService.TouchEnabled and not jumpMock then
 		jumpMock = Instance.new("Frame")

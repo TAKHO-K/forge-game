@@ -208,7 +208,7 @@ local function performAttack(aimPoint, isAir)
 	-- 신발 공속 보너스(16-6) + 활 속사 버프(20-2b) - 둘 다 서버가 동기화해 둔 Attribute를
 	-- 그대로 읽는다(클라이언트가 장비·버프 상태를 따로 계산하지 않는다). 이건 로컬
 	-- 예측(스윙 애니메이션을 지금 새로 재생할지)일 뿐 - 실제 쿨다운 판정은 언제나 서버다.
-	local cooldown = PlayerCombat.getAttackCooldown(
+	local cooldown = PlayerCombat.getAttackTempo( -- C3-2: 실제 입력 간격(서버와 같은 함수)
 		classId,
 		player:GetAttribute("SpeedPercentBonus"),
 		player:GetAttribute("AttackSpeedBuffMultiplier")
@@ -344,20 +344,122 @@ end
 -- 클릭·탭한 곳으로 기본공격(16-7 [3], 18-2부터 유일한 공격 수단). gameProcessedEvent가
 -- true면 이미 어떤 GuiObject가 이 입력을 먹었다는 뜻(인벤토리·이동 조이스틱 등) - 그때는
 -- 공격을 쏘지 않는다.
--- PC는 기본 카메라가 좌클릭 드래그를 쓰지 않아(마우스 이동만으로 회전) 클릭 자체를 그냥
--- 공격으로 써도 된다. 모바일은 UserInputService.TouchTap이 "드래그가 아닌 순수 탭"만
--- 걸러서 보내주므로(카메라 회전 드래그는 별도 TouchPan으로 소비된다) 따로 탭/드래그
--- 구분 로직을 만들 필요가 없다.
+-- C3-1 꾹 누르기 자동 반복(사용자 확정 - 사람 기준: 누르고 있기 = 연타 = 같은 DPS · 오토클리커 이득 0):
+--   좌클릭 · 폰 공격 버튼을 누르고 있으면 공격 간격(PlayerCombat.getAttackTempo)마다 다음 타(3타 콤보 그대로 - 조준은 매번 지금 커서 · 자동 조준).
+--   한 번 누름 = 1회. 간격 안에 누르면 버리지 않고 준비되는 순간 1회(누름 버퍼 - 여러 번 눌러도 1회). 서버도 간격(+ 흔들림 여유)으로 막는다.
+local heldSource = nil -- "mouse" | "button" (누르고 있는 입력)
+local queuedSource = nil -- 간격 안에 누른 1회(준비되면 낸다)
+local lastIntentAt = -math.huge -- 마지막으로 공격을 낸 시각(회전을 거쳐 실제 요청은 조금 뒤일 수 있다)
+
+local function currentInterval()
+	local classId = player:GetAttribute("ClassId")
+	if not classId or classId == "" then
+		return CombatConfig.attackTempo.baseIntervalSeconds
+	end
+	return (PlayerCombat.getAttackTempo(classId, player:GetAttribute("SpeedPercentBonus"), player:GetAttribute("AttackSpeedBuffMultiplier")))
+end
+
+-- C3-4 폰 공격 버튼 조준: 시점 고정(Shift Lock) = 화면 가운데 · 아니면 정면 원뿔(phoneAutoAimDeg) 안 사거리 안 가장 가까운 몹 · 없으면 정면으로 사거리 끝.
+local function phoneAimPoint()
+	local character = player.Character
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then
+		return nil
+	end
+	local classId = player:GetAttribute("ClassId") or ""
+	local range = classId ~= "" and PlayerCombat.getBuffedAttackRange(classId, player:GetAttribute("RangeMultiplier") or 1, player:GetAttribute("WeaponLevel") or 0) or 10
+	if player:GetAttribute("ShiftLocked") then
+		local viewport = workspace.CurrentCamera.ViewportSize
+		return AimTarget.getWorldPointFromScreen(Vector2.new(viewport.X / 2, viewport.Y / 2), ProjectileConfig.kindByClass[classId] and range or nil)
+	end
+	local look = Vector3.new(rootPart.CFrame.LookVector.X, 0, rootPart.CFrame.LookVector.Z)
+	look = look.Magnitude > 1e-3 and look.Unit or Vector3.new(0, 0, -1)
+	local cosLimit = math.cos(math.rad(CombatConfig.rangedAim.phoneAutoAimDeg))
+	local best, bestDist = nil, math.huge
+	for _, model in ipairs(game:GetService("CollectionService"):GetTagged("Monster")) do
+		local root = model.PrimaryPart
+		if root and model.Parent then
+			local offset = root.Position - rootPart.Position
+			local flat = Vector3.new(offset.X, 0, offset.Z)
+			local dist = flat.Magnitude
+			if dist <= range and dist < bestDist and (dist < 1e-3 or flat.Unit:Dot(look) >= cosLimit) then
+				best, bestDist = root, dist
+			end
+		end
+	end
+	if best then
+		return best.Position
+	end
+	return rootPart.Position + look * range
+end
+
+local function aimPointFor(source)
+	if source == "button" then
+		return phoneAimPoint()
+	end
+	local classId = player:GetAttribute("ClassId") or ""
+	local ranged = ProjectileConfig.kindByClass[classId] ~= nil
+	local range = ranged and PlayerCombat.getBuffedAttackRange(classId, player:GetAttribute("RangeMultiplier") or 1, player:GetAttribute("WeaponLevel") or 0) or nil
+	local mouse = UserInputService:GetMouseLocation()
+	return AimTarget.getWorldPointFromScreen(Vector2.new(mouse.X, mouse.Y), range) -- C3-4: 원거리 = 허공이면 카메라 방향 사거리 끝(반드시 발사)
+end
+
+local function attackNow(source)
+	local aimPoint = aimPointFor(source)
+	if aimPoint then
+		lastIntentAt = os.clock()
+		fireAttack(aimPoint)
+	end
+end
+
+local function press(source)
+	if os.clock() - lastIntentAt >= currentInterval() then
+		attackNow(source)
+	else
+		queuedSource = source -- 누름 버퍼(1회)
+	end
+end
+
+RunService.Heartbeat:Connect(function()
+	local source = heldSource or queuedSource
+	if source and os.clock() - lastIntentAt >= currentInterval() then
+		queuedSource = nil
+		attackNow(source)
+	end
+end)
+
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then
 		return
 	end
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		local worldPoint = AimTarget.getWorldPointFromScreen(Vector2.new(input.Position.X, input.Position.Y))
-		if worldPoint then
-			fireAttack(worldPoint)
-		end
+		heldSource = "mouse"
+		press("mouse")
 	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 and heldSource == "mouse" then
+		heldSource = nil
+	end
+end)
+-- 창이 포커스를 잃으면(알트 탭 등) 뗌 신호가 안 올 수 있다 - 누르고 있기를 푼다
+UserInputService.WindowFocusReleased:Connect(function()
+	heldSource = nil
+	queuedSource = nil
+end)
+
+-- C3-1 폰 공격 버튼(SkillSlots가 점프 버튼 옆에 그린다 - 누름 · 뗌 신호)
+task.spawn(function()
+	local gui = player:WaitForChild("PlayerGui"):WaitForChild("SkillSlotsGui")
+	local attackPress = gui:WaitForChild("AttackButtonPress")
+	attackPress.Event:Connect(function(down)
+		if down then
+			heldSource = "button"
+			press("button")
+		elseif heldSource == "button" then
+			heldSource = nil
+		end
+	end)
 end)
 
 UserInputService.TouchTap:Connect(function(touchPositions, gameProcessedEvent)
@@ -368,11 +470,37 @@ UserInputService.TouchTap:Connect(function(touchPositions, gameProcessedEvent)
 	if not screenPos then
 		return
 	end
-	local worldPoint = AimTarget.getWorldPointFromScreen(screenPos)
-	if worldPoint then
+	local classId = player:GetAttribute("ClassId") or ""
+	local range = ProjectileConfig.kindByClass[classId] and PlayerCombat.getBuffedAttackRange(classId, player:GetAttribute("RangeMultiplier") or 1, player:GetAttribute("WeaponLevel") or 0) or nil
+	local worldPoint = AimTarget.getWorldPointFromScreen(screenPos, range)
+	if worldPoint and os.clock() - lastIntentAt >= currentInterval() then -- 화면 탭 = 그 지점으로 1회(간격 안이면 무시 - 누름 버퍼는 버튼 · 클릭만)
+		lastIntentAt = os.clock()
 		fireAttack(worldPoint)
 	end
 end)
+
+-- 검증 훅(Studio): 클라 execute_luau → PlayerGui.C3HoldHook:Invoke(action) - "down" · "up"(좌클릭 누름 · 뗌 흉내) · "button_down" · "button_up" · "press"(누름 1회) · "state"
+if RunService:IsStudio() then
+	local hook = Instance.new("BindableFunction")
+	hook.Name = "C3HoldHook"
+	hook.OnInvoke = function(action)
+		if action == "down" then
+			heldSource = "mouse"
+			press("mouse")
+		elseif action == "up" then
+			heldSource = nil
+		elseif action == "button_down" then
+			heldSource = "button"
+			press("button")
+		elseif action == "button_up" then
+			heldSource = nil
+		elseif action == "press" then
+			press("mouse")
+		end
+		return { held = heldSource, queued = queuedSource, interval = currentInterval(), lastIntentAt = lastIntentAt, seq = requestSeq }
+	end
+	hook.Parent = player:WaitForChild("PlayerGui")
+end
 
 -- 3타 강타 적중 피드백(16-7) - "타격감이 이번 작업의 진짜 목표"라는 지시. 히트스톱
 -- 0.05~0.12초 범위에서 실기로 맞춰본 값(0.08초 - 근접·원거리 전 클래스에서 "묵직하다"는
@@ -426,7 +554,7 @@ end
 -- 이 핸들러는 "쐈다"만 알 뿐 결과를 모른다(그래서 onArrive 콜백이 없다 - 그냥 날아가는
 -- 모습만 보여준다). isBuffedShot(20-5 [1]) - 백스텝샷이 적용된 화살이면 Projectiles가
 -- 굵고 밝은 변형으로 그린다.
-attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit, isBuffedShot, seq, serverRelease, serverTravel, serverAnchor)
+attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit, isBuffedShot, seq, serverRelease, serverTravel, serverAnchor, isHeavyShot)
 	local classId = player:GetAttribute("ClassId")
 	local projectileKind = ProjectileConfig.kindByClass[classId]
 	if not projectileKind then
@@ -448,24 +576,26 @@ attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit, isBuffedShot
 	task.delay(math.max(releaseAt - now, 0), function()
 		local targetHead = monsterModel and monsterModel:FindFirstChild("Head")
 		local muzzle = WeaponVisual.getMuzzleWorldPosition()
-		if not targetHead or not muzzle then
+		-- C3-4: 대상 없음(허공 · 벽) = 서버 경로 끝(serverAnchor)으로 날아가 사라진다 - "반드시 발사"
+		local toPosition = targetHead and targetHead.Position or serverAnchor
+		if not toPosition or not muzzle then
 			return -- 발사 시점에 대상이 이미 사라졌다(드문 경우) - 보여줄 화살 자체가 없다.
 		end
 		local heavy = shot and shot.heavy or false
-		local targetRoot = monsterModel.PrimaryPart
-		Projectiles.fire(projectileKind, muzzle, targetHead.Position, isCrit, isBuffedShot and "empowered" or "normal", function(aim, tracking)
+		local targetRoot = monsterModel and monsterModel.PrimaryPart
+		Projectiles.fire(projectileKind, muzzle, toPosition, isCrit, isHeavyShot and "heavy" or (isBuffedShot and "empowered" or "normal"), function(aim, tracking)
 			AttackTrail.debugFire("arrive", { seq = seq, at = os.clock(), aim = aim, tracking = tracking, target = monsterModel, arriveAt = arriveAt })
 		end, {
 			travelSeconds = arriveAt and (arriveAt - os.clock()) or nil,
 			style = AttackTrail.tailStyle(player, projectileKind, heavy),
-			target = monsterModel, anchor = serverAnchor or (targetRoot and targetRoot.Position), tolerance = ProjectileConfig.hitToleranceStuds,
+			target = targetHead and monsterModel or nil, anchor = serverAnchor or (targetRoot and targetRoot.Position), tolerance = ProjectileConfig.hitToleranceStuds,
 		})
 		AttackTrail.debugFire("release", { seq = seq, at = os.clock(), releaseAt = releaseAt, arriveAt = arriveAt, target = monsterModel, muzzle = muzzle })
 	end)
 end)
 
 -- W2 남의 화살 · 구슬(서버 중계 AttackShotRelay - 궤적 꼬리 스킨이 남에게도 보인다): 받은 순간부터 서버 발사 지연 · 비행 시간 그대로.
-ReplicatedStorage:WaitForChild("AttackShotRelay").OnClientEvent:Connect(function(who, monsterModel, serverRelease, serverTravel, comboIndex, isHeavy, serverAnchor)
+ReplicatedStorage:WaitForChild("AttackShotRelay").OnClientEvent:Connect(function(who, monsterModel, serverRelease, serverTravel, comboIndex, isHeavy, serverAnchor, isHeavyShot)
 	if typeof(who) ~= "Instance" or who == player then
 		return
 	end
@@ -478,13 +608,14 @@ ReplicatedStorage:WaitForChild("AttackShotRelay").OnClientEvent:Connect(function
 	end
 	task.delay(serverRelease or 0, function()
 		local head = monsterModel and monsterModel:FindFirstChild("Head")
-		if not head or not hand.Parent then
+		local toPosition = head and head.Position or serverAnchor -- C3-4: 대상 없는 발사도 그린다
+		if not toPosition or not hand.Parent then
 			return
 		end
-		local root = monsterModel.PrimaryPart
-		Projectiles.fire(kind, hand.Position, head.Position, false, "normal", nil, {
+		local root = monsterModel and monsterModel.PrimaryPart
+		Projectiles.fire(kind, hand.Position, toPosition, false, isHeavyShot and "heavy" or "normal", nil, {
 			travelSeconds = serverTravel, style = AttackTrail.tailStyle(who, kind, isHeavy),
-			target = monsterModel, anchor = serverAnchor or (root and root.Position), tolerance = ProjectileConfig.hitToleranceStuds,
+			target = head and monsterModel or nil, anchor = serverAnchor or (root and root.Position), tolerance = ProjectileConfig.hitToleranceStuds,
 		})
 	end)
 end)
