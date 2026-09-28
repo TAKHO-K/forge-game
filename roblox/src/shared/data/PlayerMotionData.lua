@@ -42,6 +42,10 @@ P.bowHand = { kickSeconds = 0.12, returnFraction = 0.35 }
 --   쏜 뒤 반동 = recoilSeconds 동안 recoil 포즈를 sin 모양으로 더 한다(몸이 뒤로 살짝 밀림 - Root 뒤로 · 허리 젖힘 · 머리는 과녁 유지).
 P.heavyShot = { drawAnchorExtra = Vector3.new(0.25, 0.05, 0.45), drawStudsScale = 1.35, recoilSeconds = 0.26,
 	recoil = { Root = { 6, 0, 0, 0, 0, 0.35 }, Waist = { 10, 0, 0 }, Neck = { -6, 0, 0 } } }
+-- W3c-2 궁수 E "비장의 한 발"(E 뒤 첫 평타 - VfxData.bowFinisher.armSeconds): 강궁보다 더 깊게 당김 · 당김이 stillFraction만큼 일찍 끝나 짧게 정적(발사 시각은 그대로 - 전조 안에서) ·
+--   쏜 뒤 더 큰 반동(몸이 뒤로 밀림).
+P.finisherShot = { drawAnchorExtra = Vector3.new(0.35, 0.08, 0.65), drawStudsScale = 1.55, stillFraction = 0.22, recoilSeconds = 0.36,
+	recoil = { Root = { 9, 0, 0, 0, 0, 0.6 }, Waist = { 14, 0, 0 }, Neck = { -9, 0, 0 } } }
 -- W2 결정 1: 근접 대상(클라 조준 = 서버와 같은 AimPicker)이 옆 · 뒤면 몸을 먼저 그쪽으로 빠르게 돌려 휘두른다(Root 관절 - 연출만 · 판정 · 루트 파트 불변) → 리본 방향 = 맞은 방향
 P.turnToTarget = { minDeg = 50, seconds = 0.04 }
 -- W2-4 활 · 지팡이: 대상이 이 거리(루트 ↔ 루트) 안이면 쏘는 대신 휘두르는 모습(피해 · 판정 시각 = 원거리 그대로 - 타격 프레임 = 서버 발사 시각 · 화살 · 구슬은 안 그린다)
@@ -119,9 +123,19 @@ W.greatsword = {
 			through = with(body(0.45, 26, 20, 8), { Waist = { -30, 16, 0 }, Neck = { 18, -14, 0 }, RightShoulder = { 70, 0, 5 }, RightElbow = { 5, 0, 0 }, RightWrist = { -55, 0, 0 } }), -- θ 20(앞 아래로 찍은 끝)
 			settle = GS_READY },
 	},
-	air = { ant = MELEE_CONTACT, act = 0.17, rec = 0.2, cocked = with(GS_OVERHEAD, { RightHip = { 55, 0, 0 }, RightKnee = { -80, 0, 0 }, LeftHip = { 35, 0, 0 }, LeftKnee = { -60, 0, 0 }, Root = { 0, 0, 0 } }), -- 공중 내려찍기(다리 접음 · 몸 앞 기울임 = AirMotion)
-		contact = { Waist = { -30, 0, 0 }, Neck = { 20, 0, 0 }, RightShoulder = { 45, 0, 5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -70, 0, 0 }, RightHip = { 40, 0, 0 }, RightKnee = { -60, 0, 0 }, LeftHip = { 20, 0, 0 }, LeftKnee = { -40, 0, 0 } }, -- θ −15
-		through = { Waist = { -38, 0, 0 }, Neck = { 22, 0, 0 }, RightShoulder = { 20, 0, 5 }, RightElbow = { 5, 0, 0 }, RightWrist = { -75, 0, 0 }, RightHip = { 30, 0, 0 }, RightKnee = { -45, 0, 0 }, LeftHip = { 15, 0, 0 }, LeftKnee = { -30, 0, 0 } }, settle = GS_READY }, -- θ −50
+	-- W3c-1 공중 내려찍기(사용자: 아쉬움 → 다시): 체공 중 정점으로 갈수록 칼을 머리 뒤로 크게 끌어올린다(airReady - 양손 · 등 젖힘 · 무릎 당김 · 공중 공격이 남았을 때만)
+	--   → 타격 프레임(1프레임 - 서버 즉시 판정 · 판정 시각 불변) = 머리 위 앞으로 넘어오는 칼(θ 70) + 히트스톱(VfxData.greatswordAir) → 몸을 접으며 수직으로 내려찍어 칼끝이 발 앞 아래까지 끌려 내려감(θ −85).
+	--   착지 = 먼지 고리 + "쿵"(client/SkillVfx · WeaponVisual 착지 감지). 리본 = 동작 구간(act) 칼끝 궤적 그대로.
+	airReady = { Waist = { 18, -8, 0 }, Neck = { -14, 6, 0 }, RightShoulder = { 170, 0, 12 }, RightElbow = { 95, 0, 0 }, RightWrist = { 0, 0, 0 }, -- θ 265(칼끝이 등 뒤로 늘어짐)
+		RightHip = { 60, 0, 0 }, RightKnee = { -95, 0, 0 }, LeftHip = { 45, 0, 0 }, LeftKnee = { -75, 0, 0 } },
+	air = { ant = MELEE_CONTACT, act = 0.2, rec = 0.22,
+		cocked = { Waist = { 18, -8, 0 }, Neck = { -14, 6, 0 }, RightShoulder = { 170, 0, 12 }, RightElbow = { 95, 0, 0 }, RightWrist = { 0, 0, 0 },
+			RightHip = { 60, 0, 0 }, RightKnee = { -95, 0, 0 }, LeftHip = { 45, 0, 0 }, LeftKnee = { -75, 0, 0 } }, -- = airReady(끊김 없이)
+		contact = { Waist = { -12, 0, 0 }, Neck = { 8, 0, 0 }, RightShoulder = { 125, 0, 8 }, RightElbow = { 20, 0, 0 }, RightWrist = { -75, 0, 0 },
+			RightHip = { 55, 0, 0 }, RightKnee = { -85, 0, 0 }, LeftHip = { 40, 0, 0 }, LeftKnee = { -70, 0, 0 } }, -- θ 70(머리 위에서 앞으로 넘어오는 중)
+		through = { Waist = { -48, 0, 0 }, Neck = { 28, 0, 0 }, RightShoulder = { 35, 0, 5 }, RightElbow = { 0, 0, 0 }, RightWrist = { -120, 0, 0 },
+			RightHip = { 30, 0, 0 }, RightKnee = { -40, 0, 0 }, LeftHip = { 12, 0, 0 }, LeftKnee = { -22, 0, 0 } }, -- θ −85(몸을 접어 수직으로 내려찍음 · 다리 펴 착지 준비)
+		settle = GS_READY },
 }
 
 -- ───────── 쌍검(양손 각 1 · W3a) - 몸 회전 + 한 발 스텝과 함께 두 칼 시차 교차 베기 · 3타 = 양손 동시 크게 ─────────

@@ -32,7 +32,12 @@ end)
 
 -- durationSeconds 동안 studsAmplitude 크기로 흔든다(원본 AttackInput.client.lua의
 -- CAMERA_SHAKE_SECONDS=0.15/CAMERA_SHAKE_STUDS=0.35와 같은 기본값을 호출부가 넘긴다).
+-- W3c: 설정 "화면 흔들림" 끔(LocalPlayer Attribute SettingScreenShake = false - client/panels/Settings)이면 아무것도 안 한다.
 function CameraShake.trigger(durationSeconds, studsAmplitude)
+	local localPlayer = game:GetService("Players").LocalPlayer
+	if localPlayer and localPlayer:GetAttribute("SettingScreenShake") == false then
+		return
+	end
 	shakeDurationSeconds = durationSeconds
 	shakeAmplitudeStuds = studsAmplitude
 	shakeUntil = os.clock() + durationSeconds

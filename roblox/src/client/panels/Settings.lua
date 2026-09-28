@@ -15,7 +15,7 @@ local AttackTrail = require(script.Parent.Parent.AttackTrail)
 local SettingsPanel = {}
 SettingsPanel.id = "settings"
 
-local PANEL_SIZE = Vector2.new(420, 240) -- W2: 궤적 토글 한 줄 추가
+local PANEL_SIZE = Vector2.new(420, 290) -- W2: 궤적 토글 한 줄 추가 · W3c: 화면 흔들림 토글 한 줄
 local PAD = 12
 
 local player = Players.LocalPlayer
@@ -55,7 +55,17 @@ local function build()
 			AttackTrail.setDimOthers(value)
 		end,
 	})
-	built = { panel = panel, toggle = toggle, dimToggle = dimToggle }
+	-- W3c: 화면 흔들림 끄기(타격 · 스킬 = CameraShake · 보스 = BossFx - 이 클라 · 이번 접속 동안 · 저장은 P4-4)
+	local shakeToggle = Toggle.build({
+		parent = panel.content, name = "ScreenShakeToggle", text = Text.get("settings.screenShake"),
+		value = player:GetAttribute("SettingScreenShake") ~= false, width = PANEL_SIZE.X - PAD * 2,
+		position = UDim2.new(0, PAD, 0, PAD + 148),
+		onChanged = function(value)
+			player:SetAttribute("SettingScreenShake", value)
+			player:SetAttribute("SettingBossScreenShake", value)
+		end,
+	})
+	built = { panel = panel, toggle = toggle, dimToggle = dimToggle, shakeToggle = shakeToggle }
 end
 
 function SettingsPanel.toggle()
@@ -64,6 +74,7 @@ function SettingsPanel.toggle()
 	end
 	built.toggle.setValue(player:GetAttribute("CameraTopDown") == true, true)
 	built.dimToggle.setValue(AttackTrail.dimOthers(), true)
+	built.shakeToggle.setValue(player:GetAttribute("SettingScreenShake") ~= false, true)
 	UIManager.switchTo(SettingsPanel.id)
 end
 

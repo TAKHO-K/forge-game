@@ -1261,6 +1261,7 @@ local function handleCommand(player, args)
 	elseif sub == "anim" and args[2] then
 		-- C3 W3a 확인 도구: /gg anim <직업> <동작> [반복] - 내 캐릭터가 그 동작을 반복 재생(클라 WeaponVisual - 판정 없음).
 		--   동작 = attack1 · attack2 · attack3 · heavy · air · combo(1 → 2 → 3) · heavyshot(활 강궁) · close(활 · 지팡이 가까이) · getup · kf(대검 3타 키프레임판 - Studio)
+		--   W3c: airattack(대검 점프 → 칼 들어 올림 → 내려찍기 → 착지 먼지) · bow skille(+ 비장의 한 발 발사 · 적중) · healer skille(+ 검보라 시전 · 어둠 구슬 비행 · 적중)
 		--   W3b: skillq · skille · flinch · bighit · knock · stun · dash · dash2 · takeoff · coyote · airjump · glidein · glideout · land · landheavy · death · respawn · draw · sheathe(docs/design/motion-standard.md)
 		local classId = args[2]
 		if classId ~= player:GetAttribute("ClassId") then

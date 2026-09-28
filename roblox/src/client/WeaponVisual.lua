@@ -23,6 +23,9 @@ local PoseRig = require(script.Parent.PoseRig)
 local AttackTrail = require(script.Parent.AttackTrail) -- W2 칼날 리본 스타일(스킨)
 local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
 local WeaponEnhanceVisual = require(script.Parent.WeaponEnhanceVisual) -- 강화 단계 이펙트(30-0 S08 - 내 무기만) - 이 파일은 부르기만 한다
+local SkillVfx = require(script.Parent.SkillVfx) -- W3c 공중 내려찍기 먼지 · 비장의 한 발 빛 모임 · 어둠 시전(미리보기)
+local VfxData = require(ReplicatedStorage.Shared.data.VfxData)
+local MoveRules = require(ReplicatedStorage.Shared.MoveRules) -- W3c 공중 공격 해금(칼 들어 올림)
 
 local WeaponVisual = {}
 
@@ -34,6 +37,8 @@ local HEAVY_WEAPON_SCALE = 1.3
 local DRAW_RANGE_STUDS = 220 -- 남의 캐릭터를 이 거리 안에서만 그린다(멀면 무기 숨김 · 관절 안 건드림)
 
 local rigs = {} -- [key(Player 또는 더미 Model)] = 상태
+local lastSwingFinisher = false -- W3c-2(WeaponVisual.lastSwingFinisher)
+local previewShot -- W3c /gg anim 미리보기(아래 정의)
 local current = nil -- 내 무기(WeaponEnhanceVisual · ComboGlow 호환 - { classId, model, motion, kind, instances })
 
 -- ─────────────────────────── 무기 만들기 ───────────────────────────
@@ -465,6 +470,9 @@ local function rangedPose(a, now)
 			a.handDraw = d
 			return h, d, false
 		end
+		if a.finisher then -- W3c 비장의 한 발: 당김이 일찍 끝나 짧게 정적(발사 시각 불변)
+			u = math.min(u / (1 - M.finisherShot.stillFraction), 1)
+		end
 		local d = EASE.outCubic(u)
 		a.handDraw = d
 		return mix(c, h, EASE.inQuad(u)), d, false
@@ -564,6 +572,12 @@ local function isCloseSwing(st, target, air)
 	return not air and w ~= nil and w.closeSwing ~= nil and root ~= nil and tp ~= nil and (tp.Position - root.Position).Magnitude <= M.closeSwing.rangeStuds
 end
 
+-- W3c-1: 이 캐릭터가 공중 공격을 할 수 있는 해금 단계인가(플레이어만 - 더미 = 아님)
+local function canAirAttack(st)
+	local key = st.key
+	return typeof(key) == "Instance" and key:IsA("Player") and MoveRules.tierOf(key).airAttack == true
+end
+
 -- 한 캐릭터의 목표 포즈. 반환: pose(CFrame 표) · blendKey · blendDur · inHand(무기가 손에) · draw(활) · trailOn · ik(허용)
 local function targetPose(st, now, root)
 	local w = M.weapons[st.classId]
@@ -603,11 +617,12 @@ local function targetPose(st, now, root)
 	if a and a.ranged then
 		local pose, draw = rangedPose(a, now)
 		if pose then
-			local since = a.heavyShot and a.lastRelease and now - a.lastRelease
-			if since and since < M.heavyShot.recoilSeconds then -- W3a 강궁 반동: 쏜 뒤 몸이 살짝 밀린다(sin 모양)
-				local k = math.sin(math.pi * since / M.heavyShot.recoilSeconds)
+			local R = a.finisher and M.finisherShot or M.heavyShot -- W3c 비장의 한 발 = 더 큰 반동
+			local since = (a.heavyShot or a.finisher) and a.lastRelease and now - a.lastRelease
+			if since and since < R.recoilSeconds then -- W3a 강궁 반동: 쏜 뒤 몸이 살짝 밀린다(sin 모양)
+				local k = math.sin(math.pi * since / R.recoilSeconds)
 				pose = table.clone(pose)
-				for name, cf in pairs(poseOf(M.heavyShot.recoil)) do
+				for name, cf in pairs(poseOf(R.recoil)) do
 					pose[name] = (pose[name] or CFrame.identity) * CFrame.identity:Lerp(cf, k)
 				end
 			end
@@ -701,6 +716,11 @@ local function targetPose(st, now, root)
 	local pose = mix(poseOf(w.stance), poseOf(w.move), m)
 	local breathe = math.sin(now * 2 * math.pi / M.idlePeriodSeconds) * (1 - m)
 	pose.Waist = (pose.Waist or CFrame.identity) * CFrame.Angles(math.rad(1.5 * breathe), 0, 0)
+	-- W3c-1 대검: 체공 중(공중 공격이 남았을 때) 정점으로 갈수록 칼을 머리 뒤로 끌어올린다 → 공중 내려찍기의 준비 자세(판정 · 규칙 불변 - 자세만)
+	if w.airReady and st.air and not st.slamAt and (st.debugAirReady or canAirAttack(st)) and not character:GetAttribute("AirLocked") and not character:GetAttribute("FallKnockdown") then
+		local k = math.clamp(1 - v.Y / VfxData.greatswordAir.readyRiseSpeed, 0, 1)
+		pose = mix(pose, poseOf(w.airReady), EASE.inOutSine(k))
+	end
 	return pose, "stance", M.blend.default, true, 0, false, true
 end
 
@@ -874,7 +894,13 @@ local function updatePose(st, now, camPos)
 	local grounded = st.key == player and humanoid.FloorMaterial ~= Enum.Material.Air or (st.key ~= player and math.abs(vy) < 1.5)
 	if humanoid.Health > 0 then
 		local O = M.overlay
-		if st.air and grounded then
+		if st.air and grounded and st.slamAt then -- W3c-1 공중 내려찍기 뒤 착지 = 먼지 고리 + "쿵"(연출만)
+			if now - st.slamAt <= VfxData.greatswordAir.landWindowSeconds then
+				SkillVfx.slamLanding(character, st.key == player)
+				WeaponVisual.playOverlay(st.key, "landHeavy")
+			end
+			st.slamAt = nil
+		elseif st.air and grounded then
 			local fall = -st.lastVy
 			if not character:GetAttribute("FallKnockdown") and not character:GetAttribute("AirLocked") and not character:GetAttribute("Gliding") then
 				if fall >= O.heavySpeed then
@@ -888,6 +914,9 @@ local function updatePose(st, now, camPos)
 		end
 	end
 	st.air = not grounded
+	if grounded and st.slamAt and now - st.slamAt > VfxData.greatswordAir.landWindowSeconds then
+		st.slamAt = nil
+	end
 	if not grounded then
 		st.lastVy = vy
 	end
@@ -950,7 +979,7 @@ local function updatePose(st, now, camPos)
 	end
 	local T = PoseRig.apply(rig, applied, applyW)
 	local heavyMul = (st.attack and st.attack.heavy) and HEAVY_WEAPON_SCALE or 1
-	st.frame = { inHand = inHand, draw = draw, trailOn = trailOn, heavyMul = heavyMul, drawScale = (st.attack and st.attack.heavyShot) and M.heavyShot.drawStudsScale or 1 }
+	st.frame = { inHand = inHand, draw = draw, trailOn = trailOn, heavyMul = heavyMul, drawScale = (st.attack and st.attack.finisher) and M.finisherShot.drawStudsScale or ((st.attack and st.attack.heavyShot) and M.heavyShot.drawStudsScale or 1) }
 	-- 보조 손 · 시위 IK(무기가 손에 있고 포즈가 허용할 때 - 꺼내는 중 · 활강 · 넘어져 누운 동안은 끔). 무기 자리 = 이번 포즈의 FK 손.
 	local main = st.weapon.pieces.main
 	local ik = M.weapons[st.classId] and M.weapons[st.classId].ik
@@ -973,7 +1002,7 @@ local function updatePose(st, now, camPos)
 		local target
 		local headCF = cf.Head
 		if spec.drawAnchor and headCF then -- W2-6: 쉬는 시위 → 머리 기준 고정점(턱 · 뺨 옆) · 놓을 때 튕김 · 머리 뒷면 쪽으로는 handBackLimit까지만
-			local anchor = spec.drawAnchor + (spec.releaseKick or Vector3.zero) * kick + ((a and a.heavyShot) and M.heavyShot.drawAnchorExtra * handDraw or Vector3.zero) -- W3a 강궁 = 더 깊게
+			local anchor = spec.drawAnchor + (spec.releaseKick or Vector3.zero) * kick + ((a and a.finisher) and M.finisherShot.drawAnchorExtra * handDraw or ((a and a.heavyShot) and M.heavyShot.drawAnchorExtra * handDraw or Vector3.zero)) -- W3a 강궁 = 더 깊게 · W3c 비장의 한 발 = 더 깊게
 			local restLocal = headCF:PointToObjectSpace(mainCF:PointToWorldSpace(main.nockLocal))
 			local l = restLocal:Lerp(anchor, handDraw)
 			target = headCF:PointToWorldSpace(Vector3.new(l.X, l.Y, math.min(l.Z, spec.handBackLimit or 0.3)))
@@ -1084,14 +1113,23 @@ local function startAttack(st, index, heavy, air, target, opts)
 	end
 	if MotionTiming.isRanged(st.classId) and not close then -- 원거리 = 발사 예약 큐(서버 발사 시각 상수 - rangedPose)
 		local release = now + MotionTiming.releaseSeconds(st.classId, air)
+		-- W3c-2 비장의 한 발: 활 E 뒤 첫 평타(armSeconds 안) = 새로 깊게 당김 + 빛 모임(발사 시각 = 그대로)
+		local finisher = st.classId == "bow" and ((opts and opts.finisher) or (st.finisherArmedAt ~= nil and now - st.finisherArmedAt <= VfxData.bowFinisher.armSeconds))
+		st.finisherArmedAt = nil
+		if st.key == player then
+			lastSwingFinisher = finisher == true
+		end
+		if finisher then
+			SkillVfx.bowGather(st.character, release - now)
+		end
 		local cur = st.attack
-		if cur and cur.ranged and not cur.recovering then
+		if cur and cur.ranged and not cur.recovering and not finisher then
 			table.insert(cur.queue, release) -- 당긴 채 이어 쏜다
 			cur.heavyShot = heavyShot
 			return false
 		end
 		st.attack = { ranged = true, clip = clip, tm = MotionTiming.scale(clip, speedOf(st), heavy, true), start = now, queue = { release }, heavy = heavy, air = air, index = index,
-			blendKey = "atk" .. tostring(now), blendDur = M.blend.attackIn, heavyShot = heavyShot }
+			blendKey = "atk" .. tostring(now), blendDur = M.blend.attackIn, heavyShot = heavyShot, finisher = finisher }
 		st.getupStart = nil
 		local airData = air and AttackMotionData[st.classId] and AttackMotionData[st.classId].air
 		if airData and airData.bodyPitchDeg and st.character then
@@ -1107,6 +1145,10 @@ local function startAttack(st, index, heavy, air, target, opts)
 	st.attack = { clip = clip, tm = tm, start = now, heavy = heavy, air = air, index = index, blendKey = "atk" .. tostring(now), blendDur = math.min(M.blend.attackIn, tm.ant),
 		turnYaw = turnYawTo(st, target), close = close }
 	st.getupStart = nil
+	if air and M.weapons[st.classId] and M.weapons[st.classId].airReady then -- W3c-1 대검 공중 내려찍기: 타격 프레임 히트스톱 + 착지 먼지(체공당 1회)
+		st.attack.hitstop = VfxData.greatswordAir.hitstopSeconds
+		st.slamAt = now
+	end
 	-- 3타 강공격: 메시 ×1.3(SpecialMesh 배율 - 파트 크기는 메시에 안 먹는다)
 	if heavy and st.weapon then
 		local meshes = {}
@@ -1134,6 +1176,11 @@ local function startAttack(st, index, heavy, air, target, opts)
 		end
 	end
 	return close
+end
+
+-- W3c-2: 방금 시작한 내 원거리 공격이 비장의 한 발인가(AttackInput이 요청 기록에 붙인다 - 서버 버프가 실제로 붙었는지는 발사 이벤트 isBuffedShot)
+function WeaponVisual.lastSwingFinisher()
+	return lastSwingFinisher
 end
 
 -- 내 스윙(서버 확인 없이 즉시 - 판정은 서버). isHeavy = 3타 강공격 예측 · isAir = 공중 공격 · target = 클라 조준 대상(AimTarget - 서버와 같은 AimPicker · 연출용).
@@ -1251,6 +1298,9 @@ function WeaponVisual.playSkill(key, slot)
 	end
 	st.attack = { skill = slot, clip = clip, tm = tm, start = now, heavyShot = clip.heavyShot, blendKey = "skill" .. tostring(now), blendDur = math.min(M.blend.attackIn, clip.ant) }
 	st.getupStart = nil
+	if st.classId == "bow" and slot == "E" then -- W3c-2: 다음 평타 1발 = 비장의 한 발
+		st.finisherArmedAt = now
+	end
 	return true
 end
 
@@ -1393,6 +1443,18 @@ local function debugPose(st, now)
 		st.dashUntil = d.clip == "dash2" and now + 1 or 0
 		st.glideUntil = (d.clip == "glideIn" or d.clip == "glideOut") and now + 1 or 0
 		st.overlays = { { def = M.overlay[d.clip], start = now - d.tau } }
+		return true
+	end
+	if d.clip == "finisher" and st.classId == "bow" then -- W3c-2 비장의 한 발 자세(tau = 당김 시작부터 - 발사 = 서버 발사 시각 · 뒤 = 반동)
+		local rel = MotionTiming.releaseSeconds(st.classId, false)
+		local start = now - d.tau
+		local clip = w.attacks[1]
+		st.attack = { ranged = true, clip = clip, tm = MotionTiming.scale(clip, 1, false, true), start = start, queue = { start + rel }, index = 1, finisher = true,
+			blendKey = "dbgfin" .. d.tau, blendDur = 0.01 }
+		if d.tau >= rel then
+			st.attack.queue, st.attack.lastRelease = {}, start + rel
+		end
+		st.getupStart = nil
 		return true
 	end
 	if d.clip == "getup" then
@@ -1550,6 +1612,36 @@ if RunService:IsStudio() then
 	hook.Parent = player:WaitForChild("PlayerGui")
 end
 
+-- W3c 미리보기 발사(/gg anim bow|healer skille - 판정 없음): 활 = 비장의 한 발(깊게 당김 · 빛 모임 → 큰 화살 · 공기 고리 · 흔들림 → 충격 · 히트스톱 · 관통 빛줄기) ·
+--   지팡이 = 딜링모드 어둠 구슬(시전 → 비행 → 터졌다 빨려 듦). 앞 20스터드 허공 지점으로.
+previewShot = function(st)
+	local root = st.character and st.character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local isBow = st.classId == "bow"
+	startAttack(st, 1, false, false, nil, { finisher = isBow })
+	task.delay(MotionTiming.releaseSeconds(st.classId, false), function()
+		local Projectiles = require(script.Parent.Projectiles)
+		local muzzle = WeaponVisual.getMuzzleWorldPosition() or (root.Position + Vector3.new(0, 1.5, 0))
+		local dir = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+		local to = muzzle + dir * 20
+		local kind = isBow and "arrow" or "orb"
+		if isBow then
+			SkillVfx.bowRelease(muzzle, dir, true)
+		end
+		Projectiles.fire(kind, muzzle, to, false, isBow and "finisher" or "dark", function(aim)
+			if isBow then
+				SkillVfx.bowImpact(aim, dir, true)
+				SkillVfx.bowStreak(muzzle, aim)
+				WeaponVisual.applyHitstop(VfxData.bowFinisher.hitstopSeconds)
+			else
+				SkillVfx.darkImpact(aim)
+			end
+		end, { style = AttackTrail.tailStyle(player, kind, false) })
+	end)
+end
+
 -- W3a 확인 도구 /gg anim <직업> <동작> [반복](서버 DevTools가 Player Attribute DevAnim = "동작|반복|난수"를 올린다 - 내 캐릭터가 반복 재생 · 판정 없음)
 do
 	local ORDER = { attack1 = { 1 }, attack2 = { 2 }, attack3 = { 3 }, heavy = { 3 }, combo = { 1, 2, 3 } }
@@ -1575,8 +1667,30 @@ do
 					WeaponVisual.playGetup(player)
 					task.wait(getupTotal() + 0.4)
 				elseif clip == "skillq" or clip == "skille" then -- W3b 스킬(채널 = SkillData 길이)
+					if clip == "skille" and st.classId == "healer" then
+						SkillVfx.darkCast(st.character) -- W3c-3 딜링모드 켜는 순간(실제 = DealingModeActive 변화 - SkillVfx.watchDealingMode)
+					end
 					WeaponVisual.playSkill(player, clip == "skillq" and "Q" or "E")
 					task.wait((st.attack and st.attack.tm.total or 0.6) + 0.5)
+					if clip == "skille" and (st.classId == "bow" or st.classId == "healer") then
+						previewShot(st) -- W3c: 비장의 한 발 · 어둠 구슬(발사 · 비행 · 적중 - 판정 없음)
+						task.wait(1.2)
+					end
+				elseif clip == "airattack" then -- W3c-1: 점프 → 정점 가까이 칼을 머리 뒤로 → 공중 내려찍기 → 착지 먼지(판정 없음 · 해금 단계 무관)
+					local root = st.character:FindFirstChild("HumanoidRootPart")
+					local hum = st.character:FindFirstChildOfClass("Humanoid")
+					st.debugAirReady = true
+					if hum then
+						hum:ChangeState(Enum.HumanoidStateType.Jumping)
+					end
+					local t0 = os.clock()
+					task.wait(0.1)
+					while root and root.AssemblyLinearVelocity.Y > 3 and os.clock() - t0 < 1.2 do
+						task.wait()
+					end
+					startAttack(st, 1, false, true, nil)
+					task.wait(1.6)
+					st.debugAirReady = nil
 				elseif W3B_OVERLAY[clip] then -- 덧씌움 반응 · 대시
 					if clip == "glidein" then
 						st.glideUntil = os.clock() + 1.4

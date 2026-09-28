@@ -15,6 +15,8 @@ local Workspace = game:GetService("Workspace")
 local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
 local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData) -- C3-2 강궁 화살 크기
+local VfxData = require(ReplicatedStorage.Shared.data.VfxData) -- W3c 비장의 한 발 · 어둠 구슬
+local SkillVfx = require(script.Parent.SkillVfx)
 
 local Projectiles = {}
 
@@ -122,7 +124,9 @@ local function buildOrb()
 	particles.Enabled = false
 	particles.Parent = part
 
-	return { part = part, trail = trail, light = light, particles = particles }
+	local slot = { part = part, trail = trail, light = light, particles = particles, baseSize = part.Size }
+	SkillVfx.decorateOrb(slot) -- W3c 딜링모드 어둠 구슬(보라 테두리 껍질 · 어둠 입자 - 평소 숨김)
+	return slot
 end
 
 local pools = {
@@ -198,6 +202,7 @@ local function muzzleFlash(position, color, isEmpowered)
 	}):Play()
 end
 
+-- W3c variant 추가: "finisher" = 궁수 E 비장의 한 발(강궁보다 한 단계 큰 화살 · 굵은 빛 꼬리) · "dark" = 치유사 딜링모드 어둠 구슬(검은 핵 · 보라 테두리 · 어둠 연기 꼬리).
 -- kind: "arrow" | "orb". fromPosition/toPosition: Vector3(월드 좌표). isCrit이면 색이
 -- 바뀐다(치명타 여부는 발사 시점에 서버가 이미 알려준다). variant(20-5 [1], 선택값): "empowered"면
 -- 백스텝샷이 적용된 평타 화살 - 굵고 밝게, 빛까지 켠다. onArrive는 도착한 프레임에 정확히 한 번 불린다.
@@ -221,13 +226,20 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 	local part, trail = slot.part, slot.trail
 	local isEmpowered = kind == "arrow" and variant == "empowered"
 	local isHeavy = kind == "arrow" and variant == "heavy" -- C3-2 강궁: 큰 화살(SkillData.bow.Q.heavyShot.arrowScale) · 굵은 꼬리
+	local isFinisher = kind == "arrow" and variant == "finisher"
+	local isDark = kind == "orb" and variant == "dark"
+	local F = VfxData.bowFinisher
 	opts = opts or {}
 
 	local distance = (toPosition - fromPosition).Magnitude
 	local speed = ProjectileConfig.speedStudsPerSec[kind]
 	local travelTime = math.max(opts.travelSeconds or distance / speed, 0.03)
 
-	if isEmpowered then
+	if isFinisher then
+		part.Color = isCrit and F.critColor or F.color
+		part.Size = slot.baseSize * F.arrowScale
+		trail.Lifetime = F.trailLifetime
+	elseif isEmpowered then
 		part.Color = isCrit and ARROW_EMPOWERED_CRIT_COLOR or ARROW_EMPOWERED_COLOR
 		part.Size = slot.baseSize * ARROW_EMPOWERED_SCALE
 		trail.Lifetime = 0.28
@@ -247,11 +259,11 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 	if style then
 		trail.Color = style.color
 		trail.Transparency = style.transparency
-		trail.Lifetime = isEmpowered and math.max(style.lifetime, 0.28) or style.lifetime
+		trail.Lifetime = isFinisher and F.trailLifetime or (isEmpowered and math.max(style.lifetime, 0.28) or style.lifetime)
 		trail.LightEmission = style.lightEmission or 0
 		trail.FaceCamera = true
 		trail.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.15) })
-		local half = style.width / 2 * ((isEmpowered or isHeavy) and 1.6 or 1)
+		local half = style.width / 2 * (isFinisher and F.trailWidthScale or ((isEmpowered or isHeavy) and 1.6 or 1))
 		trail.Attachment0.Position = Vector3.new(0, half, 0)
 		trail.Attachment1.Position = Vector3.new(0, -half, 0)
 	end
@@ -261,15 +273,18 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 			-- W2-2: 화살촉 작은 빛(평타 = 은은하게 · 백스텝샷 = 옛 밝기)
 			local tip = TrailData.projectile.arrow.tipLight
 			slot.light.Enabled = true
-			slot.light.Brightness = isEmpowered and 2 or tip.brightness
-			slot.light.Range = isEmpowered and 10 or tip.range
+			slot.light.Brightness = isFinisher and F.light.brightness or (isEmpowered and 2 or tip.brightness)
+			slot.light.Range = isFinisher and F.light.range or (isEmpowered and 10 or tip.range)
 		end
 	end
 	if slot.particles then -- W2-2 지팡이 구슬: 옅은 파티클 몇 개(스킨 파티클 색)
 		slot.particles.Color = ColorSequence.new(style and style.particle or part.Color)
 		slot.particles.Enabled = true
 	end
-	muzzleFlash(fromPosition, part.Color, isEmpowered or isHeavy)
+	if kind == "orb" then
+		SkillVfx.styleOrb(slot, isDark, isCrit) -- 꺼짐이면 밝은 구슬로 되돌린다(빛 세기 · 크기는 위에서)
+	end
+	muzzleFlash(fromPosition, isDark and VfxData.healerDark.rim or part.Color, isEmpowered or isHeavy or isFinisher)
 
 	part.CFrame = CFrame.lookAt(fromPosition, toPosition)
 	part.Transparency = 0
@@ -303,6 +318,7 @@ RunService.Heartbeat:Connect(function()
 			if slot.particles then
 				slot.particles.Enabled = false
 			end
+			SkillVfx.orbArrived(slot)
 			if f.onArrive then
 				f.onArrive(aim, tracking)
 			end

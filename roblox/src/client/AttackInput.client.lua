@@ -17,6 +17,9 @@ local Projectiles = require(script.Parent.Projectiles)
 local AimTarget = require(script.Parent.AimTarget)
 local UIManager = require(script.Parent.UIManager)
 local CameraShake = require(script.Parent.CameraShake)
+local SkillVfx = require(script.Parent.SkillVfx) -- W3c 비장의 한 발 · 어둠 구슬 적중
+local VfxData = require(ReplicatedStorage.Shared.data.VfxData)
+SkillVfx.watchDealingMode() -- W3c-3 딜링모드 켜는 순간 검보라 소용돌이(모든 플레이어)
 local DamageNumbers = require(script.Parent.DamageNumbers)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 local AttackMotionData = require(ReplicatedStorage.Shared.data.AttackMotionData)
@@ -226,7 +229,7 @@ local function performAttack(aimPoint, isAir)
 		AttackTrail.debugFire("swing", { at = now, heavy = heavy, index = lastSwingIndex })
 	end
 	if ProjectileConfig.kindByClass[classId] then
-		pendingShots[seq] = { sentAt = now, index = lastSwingIndex, heavy = lastSwingHeavy, close = lastSwingClose }
+		pendingShots[seq] = { sentAt = now, index = lastSwingIndex, heavy = lastSwingHeavy, close = lastSwingClose, finisher = WeaponVisual.lastSwingFinisher() } -- W3c 비장의 한 발
 		if seq - 64 > 0 then
 			pendingShots[seq - 64] = nil -- 답이 안 온 요청(헛스윙 · 쿨다운 무시) 정리
 		end
@@ -527,7 +530,8 @@ local BUFFED_CAMERA_SHAKE_STUDS = 0.2
 -- isComboHit(16-7)이면 죽었든 아니든 히트스톱·카메라 흔들림은 그대로 재생한다 - 강타가
 -- 처치를 낸 순간도 "강타였다"는 느낌은 여전히 필요하다. isBuffedShot(20-5 [1])도 같은
 -- 원칙 - 강타와 겹치면 강타 값(더 큰 쪽)만 쓴다.
-local function showResult(monsterModel, damage, isCrit, died, isComboHit, isBuffedShot)
+local finisherShots = {} -- W3c-2 [요청 번호] = { dir } - 비장의 한 발(적중 = 큰 충격 · 긴 히트스톱)
+local function showResult(monsterModel, damage, isCrit, died, isComboHit, isBuffedShot, isFinisher)
 	DamageNumbers.show(monsterModel, damage, isCrit)
 
 	local holdSeconds = nil
@@ -535,6 +539,9 @@ local function showResult(monsterModel, damage, isCrit, died, isComboHit, isBuff
 		holdSeconds = HEAVY_HITSTOP_SECONDS
 		WeaponVisual.applyHitstop(HEAVY_HITSTOP_SECONDS)
 		CameraShake.trigger(CAMERA_SHAKE_SECONDS, CAMERA_SHAKE_STUDS)
+	elseif isFinisher then -- W3c-2: 흔들림은 SkillVfx.bowImpact(적중 충격과 같이)
+		holdSeconds = VfxData.bowFinisher.hitstopSeconds
+		WeaponVisual.applyHitstop(holdSeconds)
 	elseif isBuffedShot then
 		holdSeconds = BUFFED_HITSTOP_SECONDS
 		WeaponVisual.applyHitstop(BUFFED_HITSTOP_SECONDS)
@@ -585,8 +592,24 @@ attackLaunched.OnClientEvent:Connect(function(monsterModel, isCrit, isBuffedShot
 		end
 		local heavy = shot and shot.heavy or false
 		local targetRoot = monsterModel and monsterModel.PrimaryPart
-		Projectiles.fire(projectileKind, muzzle, toPosition, isCrit, isHeavyShot and "heavy" or (isBuffedShot and "empowered" or "normal"), function(aim, tracking)
+		local variant = isHeavyShot and "heavy" or (isBuffedShot and "empowered" or "normal")
+		local finisher = isBuffedShot and shot and shot.finisher -- W3c-2 비장의 한 발(E 뒤 첫 발 · 서버 버프가 실제로 붙은 발)
+		if finisher then
+			variant = "finisher"
+			local dir = toPosition - muzzle
+			finisherShots[seq] = { dir = dir }
+			task.delay(4, function()
+				finisherShots[seq] = nil
+			end)
+			SkillVfx.bowRelease(muzzle, dir, true)
+		elseif projectileKind == "orb" and player:GetAttribute("DealingModeActive") then
+			variant = "dark" -- W3c-3 딜링모드 어둠 구슬
+		end
+		Projectiles.fire(projectileKind, muzzle, toPosition, isCrit, variant, function(aim, tracking)
 			AttackTrail.debugFire("arrive", { seq = seq, at = os.clock(), aim = aim, tracking = tracking, target = monsterModel, arriveAt = arriveAt })
+			if finisher and isHeavyShot then
+				SkillVfx.bowStreak(muzzle, aim) -- 관통(강궁 버프 중)이면 경로에 빛줄기
+			end
 		end, {
 			travelSeconds = arriveAt and (arriveAt - os.clock()) or nil,
 			style = AttackTrail.tailStyle(player, projectileKind, heavy),
@@ -615,7 +638,8 @@ ReplicatedStorage:WaitForChild("AttackShotRelay").OnClientEvent:Connect(function
 			return
 		end
 		local root = monsterModel and monsterModel.PrimaryPart
-		Projectiles.fire(kind, hand.Position, toPosition, false, isHeavyShot and "heavy" or "normal", nil, {
+		local variant = isHeavyShot and "heavy" or ((kind == "orb" and who:GetAttribute("DealingModeActive")) and "dark" or "normal") -- W3c-3 남의 어둠 구슬
+		Projectiles.fire(kind, hand.Position, toPosition, false, variant, nil, {
 			travelSeconds = serverTravel, style = AttackTrail.tailStyle(who, kind, isHeavy),
 			target = head and monsterModel or nil, anchor = serverAnchor or (root and root.Position), tolerance = ProjectileConfig.hitToleranceStuds,
 		})
@@ -638,5 +662,12 @@ attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, 
 	elseif ProjectileConfig.kindByClass[classId or ""] then
 		AttackTrail.spark(player, hitPosition, TrailData.spark.projectileCount)
 	end
-	showResult(monsterModel, damage, isCrit, died, isComboHit, isBuffedShot)
+	local fin = seq and finisherShots[seq]
+	local at = hitPosition or (monsterModel and monsterModel.PrimaryPart and monsterModel.PrimaryPart.Position)
+	if fin and at then
+		SkillVfx.bowImpact(at, fin.dir, true) -- W3c-2 큰 충격 · 쏜 방향으로 밀리는 조각(넉백 강조 - 연출만)
+	elseif at and ProjectileConfig.kindByClass[classId or ""] == "orb" and player:GetAttribute("DealingModeActive") then
+		SkillVfx.darkImpact(at) -- W3c-3 터졌다 → 빨려 듦
+	end
+	showResult(monsterModel, damage, isCrit, died, isComboHit, isBuffedShot, fin ~= nil)
 end)
