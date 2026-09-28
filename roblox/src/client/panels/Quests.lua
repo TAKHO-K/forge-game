@@ -25,7 +25,13 @@ local view
 local order = 0
 
 local function build()
-	local panel = Panel.create({ id = QuestsPanel.id, kind = "window", title = Text.get("quests.title"), size = PANEL_SIZE })
+	local panel = Panel.create({ id = QuestsPanel.id, kind = "window", title = Text.get("quests.title"), size = PANEL_SIZE,
+		onOpen = function() -- Play C: 단축키 J · 메뉴바로 열면(UIManager.open) render가 안 불려 본문이 비었다 → 열릴 때 그리고 새 표 요청
+			task.defer(function()
+				QuestsPanel.render()
+				requestRemote:FireServer("view")
+			end)
+		end })
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Name = "Body"
 	scroll.BackgroundTransparency = 1
@@ -127,7 +133,7 @@ function QuestsPanel.render()
 				send("claim", "daily", q.id)
 			end, "Daily_" .. q.id)
 	end
-	row(Text.get("quests.chest"), Text.get("quests.claim"), view.chestReady, function()
+	row(Text.get("quests.chest"), view.chestClaimed and Text.get("quests.claimed") or Text.get("quests.claim"), view.chestReady, function()
 		send("claim", "chest")
 	end, "ChestRow")
 	label(Text.get("quests.weekly"), 16)

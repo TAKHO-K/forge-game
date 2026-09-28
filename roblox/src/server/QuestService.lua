@@ -57,6 +57,7 @@ function QuestService.view(player)
 		weekly = questNames(QuestData.weekly, state.weekly),
 		loginReady = state.loginDay ~= state.day,
 		chestReady = chestReady and state.chestDay ~= state.day,
+		chestClaimed = state.chestDay == state.day, -- Play C: 받은 뒤 버튼 글 = 받음
 		main = step and { index = state.main, total = #QuestData.main, id = step.id, name = step.name, unlock = step.unlock, done = Quest.mainDone(step, facts), reward = step.reward } or nil,
 		currencies = state.currencies,
 		training = tv and trainRows(TrainingData.stats, tv.training, "stat") or {},

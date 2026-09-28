@@ -7,28 +7,27 @@ local TweenService = game:GetService("TweenService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula)
-local HudChip = require(script.Parent.HudChip)
 
 local player = Players.LocalPlayer
+-- Play C: 새 칩(4번째)은 오른쪽 세로 칩 줄 아래 [가방] 버튼과 겹쳤다 → 레벨 칩 안에 "· CP n"으로 붙인다(칩 폭만 늘어난다 · 새 슬롯 없음)
 local topChipsRow = player:WaitForChild("PlayerGui"):WaitForChild("TopChipsGui"):WaitForChild("TopChipsRow")
-local chip = HudChip.new(topChipsRow, 4)
-chip.Name = "CombatPowerChip"
+local chip = topChipsRow:WaitForChild("LevelChip")
 
 local prefix = Instance.new("TextLabel")
-prefix.Name = "Prefix"
-prefix.LayoutOrder = 1
+prefix.Name = "CombatPowerPrefix"
+prefix.LayoutOrder = 3
 prefix.BackgroundTransparency = 1
 prefix.AutomaticSize = Enum.AutomaticSize.X
 prefix.Size = UDim2.new(0, 0, 1, 0)
 prefix.Font = Enum.Font.GothamBold
 prefix.TextSize = 13
 prefix.TextColor3 = UIColors.textSecondary
-prefix.Text = "CP"
+prefix.Text = " · CP"
 prefix.Parent = chip
 
 local value = Instance.new("TextLabel")
 value.Name = "CombatPowerLabel"
-value.LayoutOrder = 2
+value.LayoutOrder = 4
 value.BackgroundTransparency = 1
 value.AutomaticSize = Enum.AutomaticSize.X
 value.Size = UDim2.new(0, 0, 1, 0)
@@ -38,7 +37,7 @@ value.TextColor3 = UIColors.textPrimary
 value.Text = "-"
 value.Parent = chip
 
-local scale = Instance.new("UIScale")
+local scale = chip:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
 scale.Parent = chip
 
 local last
