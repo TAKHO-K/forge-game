@@ -170,6 +170,20 @@ function V.runPure()
 		end
 		check(("판매가 모드 %s · 전 티어 등급 순서(위 등급 ≥ 아래 · 0 없음) 위반 %d: %s"):format(ArmorData.sellPriceMode, #bad, table.concat(bad, ", ")), #bad == 0)
 		check("초월 판매가 0(판매 불가)", Loot.getSellPrice({ tierIndex = 6, grade = "transcendent", dropStage = 100 }) == 0)
+		local Inherit = require(ReplicatedStorage.Shared.Inherit)
+		local InheritConfig = require(ReplicatedStorage.Shared.data.InheritConfig)
+		local a = { grade = "legendary", part = "gloves", itemLevel = 10 }
+		local bP = { grade = "primordial", part = "gloves", itemLevel = 10, locked = false }
+		check("계승 결과 태초 = 잠김", Inherit.resultItem(a, bP, "b").locked == true)
+		check("계승 결과 전설 = 안 잠김", Inherit.resultItem(bP, { grade = "legendary", part = "gloves", itemLevel = 10, locked = true }, "b").locked == nil)
+		check("초월 = 계승 재료 불가", Inherit.blockReason({ grade = "transcendent", part = "gloves", itemLevel = 10 }, { grade = "primordial", part = "gloves", itemLevel = 10 }, "b", true) == "a_transcendent")
+		local prev, okCost = 0, true
+		for _, gradeId in ipairs(ArmorData.gradeOrder) do
+			local v = InheritConfig.goldKillEquivalent[gradeId]
+			okCost = okCost and v ~= nil and v > prev
+			prev = v or prev
+		end
+		check("계승비 등급 순서(초월 칸 포함)", okCost)
 	end)
 
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))

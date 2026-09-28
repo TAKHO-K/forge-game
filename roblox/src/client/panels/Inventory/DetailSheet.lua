@@ -499,7 +499,8 @@ local function refreshDetailBody()
 		dname.Text = described.title .. " (가방)" -- P3b C1: 장착 여부(착용 칸은 "(착용 중)")
 		dname.TextColor3 = color
 		-- 굴림은 판매가 뒤(폰 시트 폭에서 줄임표로 잘릴 때 판매 판단에 쓰는 판매가가 먼저 남게 - 굴림은 옵션 게이지로도 보인다).
-		dmeta.Text = ("%s · 판매가 %s%s"):format(described.meta, NumberFormat.format(Loot.getSellPrice(item)), rollText(item))
+		local sellable = item.grade ~= "transcendent" -- Q4: 초월 = 판매 불가(서버가 막는다) - "판매가 0" · 켜진 판매 버튼 대신 "판매 불가"
+		dmeta.Text = sellable and ("%s · 판매가 %s%s"):format(described.meta, NumberFormat.format(Loot.getSellPrice(item)), rollText(item)) or ("%s · 판매 불가%s"):format(described.meta, rollText(item))
 		setDpicIcon(item.part or "armor", color)
 		dpicStroke.Color = color
 		dpicStroke.Transparency = 0
@@ -508,9 +509,9 @@ local function refreshDetailBody()
 		lockButton.AutoButtonColor = true
 		lockButton.Active = true
 		lockIconHolder.Visible = true
-		sellButton.AutoButtonColor = true
-		sellButton.Active = true
-		sellButton.TextTransparency = item.locked and 0.6 or 0
+		sellButton.AutoButtonColor = sellable
+		sellButton.Active = sellable
+		sellButton.TextTransparency = (item.locked or not sellable) and 0.6 or 0
 		local dismantleEligible = not item.locked and S.isDismantleEligibleGrade(item.grade) and item.grade ~= "transcendent" -- C5-7: 초월은 분해 불가(버튼 비활성 · 힌트)
 		dismantleButton.AutoButtonColor = dismantleEligible
 		dismantleButton.Active = dismantleEligible

@@ -1034,7 +1034,7 @@ function PlayerProfile.rebirth(player)
 	-- 비우지 않으므로, 나중에 다시 빈 슬롯이 생길 방법이 없다) - 그 우연한 정합성을
 	-- 20.38 [2]가 이미 기록해 뒀다.
 	if classState.rebirthCount == GemData.maxRebirthCount and Gem.allSlotsFilled(classState.weapon.gems) then
-		classState.weapon.grade = 6
+		classState.weapon.grade = ArmorData.maxWeaponGradeIndex -- Q4: 하드코딩 6 → 데이터(태초)
 	end
 
 	-- 레벨·무기 등급·보석 슬롯 Attribute를 한 번에 맞춘다(setClassId와 같은 지점 - 과거
@@ -2105,7 +2105,7 @@ function PlayerProfile.setItemLocked(player, index, locked, confirmToken)
 		return false
 	end
 	-- D1 ⑦: 태초 잠금 해제는 이중 확인을 거친 요청만(클라 확인 창 두 번 → 토큰). 잠그기는 그대로.
-	if not locked and item.grade == "primordial" and confirmToken ~= PlayerProfile.PRIMORDIAL_UNLOCK_TOKEN then
+	if not locked and (item.grade == "primordial" or item.grade == "transcendent") and confirmToken ~= PlayerProfile.PRIMORDIAL_UNLOCK_TOKEN then -- Q4: 초월도 이중 확인
 		return false
 	end
 	item.locked = locked

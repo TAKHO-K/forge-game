@@ -11,5 +11,6 @@ return {
 		relic = 320,
 		ancient = 640,
 		primordial = 1280,
+		transcendent = 2560, -- Q4: 초월 칸(없으면 일반 20으로 계산돼 희귀보다 쌌다 - 등급 1단계 ×2 규칙)
 	},
 }

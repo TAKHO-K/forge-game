@@ -3,7 +3,7 @@
 ## 1. 등급
 
 - 8번째 등급 `transcendent`(`ArmorData.gradeOrder` 마지막). 색 = 흑금(검은 본체 + 옅은 금빛 균열 + 미세 무지개 - 보스 경고색 330 ~ 50°와 구분). 등급 색표 · 이름표 · 아이콘 자리. `SAVE_VERSION`↑(등급 문자열 · 각인 · 원장).
-- 위력: 딜 부위(장갑 · 신발) 초월 = 고대 × 1.5(`ArmorData.dpsTranscendentStep`) · 갑옷 = 태초 × 1.5. 보유자 도달 시간 비 ≤ 1.5(EconSim).
+- 위력: 딜 부위(장갑 · 신발) 초월 = 고대 × 1.5(`TranscendentData.dpsStepOverPrimordial`) · 갑옷 = 태초 × 1.5. 보유자 도달 시간 비 ≤ 1.5(EconSim).
 
 ## 2. 공급(바닥 드랍 자체 확률 - `DropTableData`)
 

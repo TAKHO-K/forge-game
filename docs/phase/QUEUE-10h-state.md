@@ -16,10 +16,36 @@
 
 | Q3 보스 드랍표 | ddac156 | `docs/design/boss-drop-tables.md` · 수정 여왕 강화석 60% → 같은 단위(rewardKillUnits) · QueueVerify 32/32 |
 
-| Q0 · Q1 리뷰 반영 + Q4 판매가 스위치 | (이 커밋) | 몸 반경 도달 공용(`Reach.withinModel` - 조준 · 스킬 원 · 선 · 채널 · 화살) · 전조 상태 정리 · 거리 맞춘 공격 · 넉백 공통 입구(`BossPatterns.launchPlayer`) · 눈금 · 분신 · 은퇴 이름 · 눈토끼 색 · 결번 · 판매가 `sellPriceMode = current` · QueueVerify 36/36 |
+| Q0 · Q1 리뷰 반영 + Q4 판매가 스위치 | 1348f50 | 몸 반경 도달 공용(`Reach.withinModel` - 조준 · 스킬 원 · 선 · 채널 · 화살) · 전조 상태 정리 · 거리 맞춘 공격 · 넉백 공통 입구(`BossPatterns.launchPlayer`) · 눈금 · 분신 · 은퇴 이름 · 눈토끼 색 · 결번 · 판매가 `sellPriceMode = current` · QueueVerify 36/36 |
+
+| Q4 장비 점검 | (이 커밋) | `docs/design/equipment-audit.md` · 계승 잠금 · 초월 계승 금지 · 초월 계승비 · 판매 불가 표시 · 무기 등급 · 초월 즉시 저장 · QueueVerify 40/40 |
+| Play A | (Play - 코드 변경 없음) | 아래 결과 |
+
+## Play A 결과(06:49 ~ 06:55 · 1회 · 재Play 없음)
+| 항목 | 결과 | 근거 |
+|---|---|---|
+| QueueVerify Q0(가) | O 36/36 | `===Q 검증 끝(가)=== 36/36 통과` |
+| 태초(보스 출처 · 잡몹 출처) 알림 | O 같은 서버만 | `[Q0][알림] primordial 출처=boss 범위=server 명예의 전당 대상=false 칭호 대상=false` · 태초 토픽 수신 0 · 채팅 줄 "★ 세계 112번째 태초" |
+| 초월 알림 | O 전 서버 | `범위=global 명예의 전당 대상=true` · 초월 토픽(TranscendentFound_studio) 수신 1(로그 "발송=0"은 발급 직후에 센 시점 차 - DevTools 대기 추가) |
+| 줄 세우기 스크린샷(허브 광장 · 가림 없음) | O | `Claude outputs/QUEUE-10h/playA-lineup.png` - 12종 + 드래곤(체력바 겹침 = 기록) |
+| 드래곤 공격 3종 전조 · 예고 | O | `playA-dragon-montage.png` - 원(돌풍 · 날개 펼침) · 앞 부채꼴(숨결) · 뒤 반원(꼬리) |
+| 드래곤 쓰러짐 | △ 경로 O · 연출 캡처 놓침 | `[killtest] 푸른 드래곤 처치 - 골드 +9 · 경험치 +70` |
+| 드래곤 무리 1 ~ 2(자연 스폰) | 미확인(T6로 서버 이동 불가 - 클라 이동은 서버가 되돌림) | 데이터 · 하네스 O |
+| R 4종 | △ 대검 O(`[K2] 전장의 포효 도발 1`) · 쌍검 · 활 · 치유사 로그 없음 | 직업 전환 = 그 직업 진행(치유사 Lv 2)이라 R 잠김 추정 - 다음 Play는 직업마다 레벨 · 환생 맞춘 뒤 |
+| G-1 ~ 3 · 비상 공중 초기화 | 미확인(시간) | 다음 Play 목록 |
+| 보스 선택 창 보상 띠 | △ 창 스크린샷만(`playA-stage-panel.png`) · 보스 칸 클릭 못 함 | 단일 소스 = QueueVerify Q3 O |
+| 스크립트 오류 | 0 | 로그 Error = MCP 마우스 도구뿐 |
 
 ## 지금
-- Q4 장비 점검(`docs/design/equipment-audit.md`) - 읽기 조사 서브에이전트 결과 대기 중
+- Q5 BR2(세트 · 보스 출처 태그 · 토벌 입장 · 빛기둥)
+
+## Play A 계획(12분 이내 · 재Play 금지)
+0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)
+1. VerifyArmedUntil + VerifyOnly "Q0(가)" → QueueVerify 줄
+2. /gg drop force primordial armor boss → [Q0][알림] 범위=server 발송=0 · /gg drop force transcendent gloves → 범위=global
+3. /gg m2 lineup(허브 밖 넓은 곳 - /gg stage로 T6 사냥터) → 스크린샷 · /gg m2 windup blue_dragon → 전조 3종 캡처 · /gg m2 spawn blue_dragon 20 2 → 무리 · 쓰러짐
+4. 지난 묶음: /gg gear transcendent 46 shoes → 공중 강공격(비상) · /gg class * + R · G-1 ~ 3
+5. 보스 선택 창 보상 띠 스크린샷 1장
 
 ## 기대값 갱신 필요(옛 검증 블록 - §7-1: 돌리지 않음)
 - D1Verify(첫 클리어 태초 0.0001 · 토벌 옛 값) · LootRuleVerify [4](개수 = dropChance × r(t)) · [9](공정성 공통값 1.23728) · G1_2Verify(옛 개수 식) · P2Verify E2 · P25cVerify 태초 비 · M1_2Verify · M1_4Verify · M1_3TVerify(지점 수 = 구역 × 80 → T6 88) · BalanceDecisionVerify · DropNoticeVerify(태초 등록 등급) · G1_1Verify
@@ -56,6 +82,7 @@
 1. **캐주얼 1,000 = 28.5h(목표 31 ~ 38.5)** - 변경 전 HEAD부터 27.5h(M2 등급표가 T1 ~ T3에 영웅 · 전설을 줌). 드랍 개수 전체 배율 0.6 ~ 1.0으로는 안 움직임 → Q6 수련 가격 · 상한으로 맞춤(지시 규칙) 예정.
 2. 첫 태초가 일찍 옴(일반 104h 50%) - 보스 첫 클리어 0.1%가 주 공급. 범위 안이라 보정 안 함.
 3. **docs/art/ref는 .gitignore 대상** - 아트 자료 `19_monsters_T6_blue_dragon.md` · art-spec 색인 줄은 로컬에만 있다(푸시 안 됨). 추천 = `.gitignore`에 `!docs/art/ref/*.md` 예외(문서만 추적).
+9. **초월 고유 효과 상속 · 옵션 상한 · 딜 부위 표시**(equipment-audit §5 1 ~ 3).
 4. 태초의 선택 칭호 - 이미 가진 계정은 유지(저장 데이터 손실 금지) · 새 지급만 중단.
 5. 드래곤 공격 배율(숨결 2.2 · 꼬리 1.9 · 돌풍 1.0 = 한 사람 초당 피해 ≤ 평타) · 크기(키 2.2배 · 길이 4.6배) · 판정 상자 5.7 × 8.4 × 10.7 - Play 체감 확인.
 7. **판매가 티어 무관화**(옛 표 역산 → 같은 등급이 티어마다 4 ~ 10배 차 · 등급 역전 T6 전설 15 < 일반 120골드) - Q4에서 스위치로.

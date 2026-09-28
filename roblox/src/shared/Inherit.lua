@@ -88,6 +88,9 @@ function Inherit.blockReason(a, b, keep, hasClass)
 	if a.locked then
 		return "a_locked"
 	end
+	if a.grade == "transcendent" then
+		return "a_transcendent" -- Q4: 초월은 분해 · 판매 불가(C5-7) - 계승 재료(A 환급 = 분해와 같은 보석)도 불가
+	end
 	if b.locked then
 		return "locked"
 	end
@@ -106,12 +109,12 @@ function Inherit.resultItem(a, b, keep)
 	for key, value in pairs(b) do
 		item[key] = value
 	end
+	item.locked = nil
 	if item.grade == "primordial" or item.grade == "transcendent" then
-		item.locked = true -- D1 ⑦(리뷰 5): 계승 결과가 태초 · 초월(C5-7)이면 기본 잠금(각인 · special · source는 B를 그대로 따른다)
+		item.locked = true -- D1 ⑦(리뷰 5): 계승 결과가 태초 · 초월(C5-7)이면 기본 잠금(각인 · special · source는 B를 그대로 따른다) - Q4: 옛 코드는 아래 줄이 이 잠금을 다시 지웠다
 	end
 	local set = keep == "a" and Inherit.optionSet(a) or Inherit.optionSet(b)
 	item.option = Option.optionSlotsFor(b.grade) >= 1 and copyOption(set[1]) or nil
-	item.locked = nil
 	return item
 end
 

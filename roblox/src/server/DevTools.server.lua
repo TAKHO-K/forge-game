@@ -2306,12 +2306,26 @@ local function handleCommand(player, args)
 			local parts = { "armor", "gloves", "shoes" }
 			local item = LootModule.buildFixedArmorDrop(grade, args[4] and table.find(parts, args[4]) and args[4] or parts[math.random(1, 3)], stage, 6, PlayerProfile.getClassId(player))
 			item.source = { kind = "dev", stage = stage }
+			local sourceArg = (args[4] == "boss" or args[5] == "boss" or args[6] == "boss") and "boss" or ((args[4] == "field" or args[5] == "field" or args[6] == "field") and "field" or nil)
+			if sourceArg then -- Q0-6 Play A: 출처를 정해 알림 범위가 출처와 무관한지 본다(/gg drop force primordial armor boss)
+				item.source = { kind = sourceArg, bossId = sourceArg == "boss" and "section_guardian" or nil, zone = sourceArg == "field" and "tier1" or nil, stage = stage }
+			end
+			local publishedBefore = Registry.stats().published
 			local position = root and root.Position - Vector3.new(0, 2.5, 0) or Vector3.zero
 			local inBoss = require(script.Parent.BossEncounter).getEncounter(player) ~= nil
 			local waitNo = Registry.onRolled(player, item, position, inBoss, { PlayerProfile = PlayerProfile, ImmediateSave = require(script.Parent.ImmediateSave) }, { test = true })
 			require(script.Parent.DropNotice).publish(player, item)
 			local ground = args[4] == "ground" or args[5] == "ground"
 			local no = waitNo and waitNo(10) -- 개발 명령만 번호를 기다린다(게임 경로는 안 기다림)
+			for _ = 1, 30 do -- Play A: 번호 발급 뒤 최근 목록(DataStore) → 발송 순서라 발송 수는 늦게 오른다 - 전 서버 등급만 최대 3초 기다린다
+				if not Registry.gradeConfig(grade).global or Registry.stats().published > publishedBefore then
+					break
+				end
+				task.wait(0.1)
+			end
+			print(("[Q0][알림] %s 출처=%s 범위=%s 전 서버 발송=%d(MessagingService) 명예의 전당 대상=%s 칭호 대상=%s"):format(grade, tostring(item.source and item.source.kind),
+				tostring(require(ReplicatedStorage.Shared.data.DropNoticeData).announceScope(grade, false)), Registry.stats().published - publishedBefore,
+				tostring(Registry.gradeConfig(grade).global), tostring(Registry.titleEarnedBy(item))))
 			if grade == "primordial" and not ground and PlayerProfile.addArmorDrop(player, item, { noAutoProcess = true, force = true }) then
 				reply(player, ("태초 %s 지급(가방) - 시험 세계 번호 %s"):format(item.part, tostring(no)))
 			else
