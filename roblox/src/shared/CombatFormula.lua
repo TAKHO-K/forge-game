@@ -59,15 +59,29 @@ local function referenceBaseHp()
 	return MonsterData[MonsterData.tierOrder[CombatFormulaData.representative.referenceTier]].hp
 end
 
--- 권장 전투력(스테이지 · 몹 기본 HP - 없으면 기준 구역 몹 = 스테이지 권장): 그 몹 HP(스테이지 적용) ÷ 대표 한 대 수.
+-- W3b 파트 0 후반 벽(CombatFormulaData.lateWall): 권장 배수(lift - 평균 굴림 대표 비율 = 1 ÷ lift) · 주는 피해 평탄 하한(flatLow - 벽이 실제로 물리는 선). 표 밖 = 끝값.
+function CombatFormula.lateLift(stage)
+	local wall = CombatFormulaData.lateWall
+	return wall and interpLog(wall.lift, stage) or 1
+end
+
+function CombatFormula.dealFlatLow(stage)
+	local wall = CombatFormulaData.lateWall
+	if not wall or type(stage) ~= "number" then
+		return CombatFormulaData.deal.flatLow
+	end
+	return interpLog(wall.flatLow, stage)
+end
+
+-- 권장 전투력(스테이지 · 몹 기본 HP - 없으면 기준 구역 몹 = 스테이지 권장): 그 몹 HP(스테이지 적용) ÷ 대표 한 대 수 × 후반 벽 배수.
 function CombatFormula.recommendedPower(stage, baseHp)
-	return math.max(InfiniteStage.getMonsterHp(baseHp or referenceBaseHp(), stage) / CombatFormula.representativeHits(stage), 1e-9)
+	return math.max(InfiniteStage.getMonsterHp(baseHp or referenceBaseHp(), stage) / CombatFormula.representativeHits(stage) * CombatFormula.lateLift(stage), 1e-9)
 end
 
 -- C3 0-3 화면 표시용 권장 전투력(판정은 recommendedPower): 표시 곡선(representative.displayHits - 실제 힘 점프를 완만히) 기준.
 function CombatFormula.displayRecommendedPower(stage, baseHp)
 	local points = CombatFormulaData.representative.displayHits or CombatFormulaData.representative.hits
-	return math.max(InfiniteStage.getMonsterHp(baseHp or referenceBaseHp(), stage) / interpLog(points, stage), 1e-9)
+	return math.max(InfiniteStage.getMonsterHp(baseHp or referenceBaseHp(), stage) / interpLog(points, stage) * CombatFormula.lateLift(stage), 1e-9)
 end
 
 -- 권장 방어(스테이지 · 때린 몹의 공격 - 없으면 기준 구역 몹): α × 몹 공격 × 대표 방어 비율.
@@ -76,30 +90,31 @@ function CombatFormula.recommendedDefense(stage, attack)
 	return math.max(CombatConfig.damageReductionAlpha * a * interpLog(CombatFormulaData.representative.defenseRatio, stage) * CombatFormulaData.representative.defenseScale, 1e-9)
 end
 
--- 곡선(연속 · 단조 증가): r → 배율.
-local function curve(c, r)
+-- 곡선(연속 · 단조 증가): r → 배율. flatLow = 평탄 하한 덮어쓰기(후반 벽 - nil = c.flatLow · kneeLow 이상이어야 연속).
+local function curve(c, r, flatLow)
+	flatLow = flatLow or c.flatLow
 	if r ~= r or r <= 0 then
 		return c.floor
 	end
 	if r >= c.flatHigh then
 		return math.min((r / c.flatHigh) ^ c.highExponent, c.highCap)
-	elseif r >= c.flatLow then
+	elseif r >= flatLow then
 		return 1
 	end
-	local knee = (c.kneeLow / c.flatLow) ^ c.midExponent
+	local knee = (c.kneeLow / flatLow) ^ c.midExponent
 	if r >= c.kneeLow then
-		return (r / c.flatLow) ^ c.midExponent
+		return (r / flatLow) ^ c.midExponent
 	end
 	return math.max(knee * (r / c.kneeLow) ^ c.lowExponent, c.floor)
 end
 CombatFormula.curve = curve
 
--- 주는 피해 배율(스위치가 꺼져 있으면 1).
-function CombatFormula.dealMultiplierForRatio(r)
+-- 주는 피해 배율(스위치가 꺼져 있으면 1). stage = 후반 벽 평탄 하한을 읽을 스테이지(nil = 기본 flatLow).
+function CombatFormula.dealMultiplierForRatio(r, stage)
 	if not CombatFormula.enabled() then
 		return 1
 	end
-	return curve(CombatFormulaData.deal, r)
+	return curve(CombatFormulaData.deal, r, CombatFormula.dealFlatLow(stage))
 end
 
 -- stage = 몹 기준 스테이지(보스 = 보스 스테이지) · baseHp = 몹 기본 HP(nil = 기준 구역 = 보스).
@@ -107,7 +122,7 @@ function CombatFormula.dealMultiplier(power, stage, baseHp)
 	if not CombatFormula.enabled() or type(power) ~= "number" or power <= 0 or type(stage) ~= "number" then
 		return 1
 	end
-	return Sanitize.number(curve(CombatFormulaData.deal, power / CombatFormula.recommendedPower(stage, baseHp)), 1)
+	return Sanitize.number(curve(CombatFormulaData.deal, power / CombatFormula.recommendedPower(stage, baseHp), CombatFormula.dealFlatLow(stage)), 1)
 end
 
 -- 받는 피해 배율(스위치가 꺼져 있으면 1): q = 방어 ÷ 권장 방어 → 1 ÷ 곡선.
@@ -131,9 +146,9 @@ function CombatFormula.bossExempt()
 	return CombatFormulaData.bossExempt == true
 end
 
--- 처치 시간 배수(대표 = 1 · 보고서 · 표시): 1 ÷ (r × m(r)).
-function CombatFormula.killTimeFactor(r)
-	return 1 / math.max(r * CombatFormula.dealMultiplierForRatio(r), 1e-9)
+-- 처치 시간 배수(대표 = 1 · 보고서 · 표시): 1 ÷ (r × m(r)). stage = 후반 벽 평탄 하한(nil = 기본).
+function CombatFormula.killTimeFactor(r, stage)
+	return 1 / math.max(r * CombatFormula.dealMultiplierForRatio(r, stage), 1e-9)
 end
 
 -- 화면 표시 숫자.

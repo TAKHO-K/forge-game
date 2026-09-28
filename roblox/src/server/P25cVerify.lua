@@ -225,7 +225,7 @@ function P25cVerify.runPure()
 		end
 		r.check(("A1 구간 %d개 · 오름차순 %s · 몫 (0, 1] %s · 경계 이어짐 %s · 설계 최대 %d까지 레벨 결손 %.0f스테이지(g = k였다면 0)"):format(#segments, tostring(ascending), tostring(sharesOk), tostring(continuous), InfiniteStageConfig.designMaxStage, deficit),
 			#segments >= 5 and ascending and sharesOk and continuous and deficit > 365 and deficit < 2000)
-		r.check(("A2 설계 최대 %d(기대 25,300 - 상위 1%% 2,190시간 · 하네스) · 안전 상한 %d(기대 34,230)"):format(InfiniteStageConfig.designMaxStage, InfiniteStageConfig.safeStageCap),
+		r.check(("A2 설계 최대 %d(기대 25,300 - 상위 1%% 2,500시간(W3b 파트 0) · 하네스) · 안전 상한 %d(기대 34,230)"):format(InfiniteStageConfig.designMaxStage, InfiniteStageConfig.safeStageCap),
 			InfiniteStageConfig.designMaxStage == 25300 and InfiniteStageConfig.safeStageCap == 34230)
 	end)
 

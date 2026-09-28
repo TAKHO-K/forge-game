@@ -69,6 +69,7 @@ local function buildItem(part, gearSpec)
 		itemLevel = gearSpec.itemLevel,
 		tierIndex = gearSpec.tierIndex or 1,
 		locked = true,
+		option = gearSpec.option, -- W3b 파트 0: 장비 옵션(EconSim 옵션 굴림 단계 - 없으면 nil = 옛 계산)
 	}
 end
 

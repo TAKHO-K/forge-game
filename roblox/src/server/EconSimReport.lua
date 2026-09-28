@@ -780,7 +780,7 @@ local function writeCeiling(w, runs, profileIds)
 	for _, segment in ipairs(CharacterLevelConfig.weaponGrowthSegments) do
 		table.insert(segs, ("Lv.%d ~ k^%s"):format(segment.fromLevel, num(segment.kShare, 4)))
 	end
-	w.line(("무기 성장 구간(g = k^몫 · `CharacterLevelConfig.weaponGrowthSegments`): %s. 목표 = 상위 1%% 360시간 ≈ 10,000 · 1,080시간 ≈ 17,000 · 2,190시간 = 설계 최대(%d) · 인접 1,000칸 구간의 스테이지당 시간 비 ≤ 1.5."):format(
+	w.line(("무기 성장 구간(g = k^몫 · `CharacterLevelConfig.weaponGrowthSegments`): %s. 목표 = 상위 1%% 360시간 ≈ 10,000 · 1,020시간 ≈ 17,000 · 2,500시간 = 설계 최대(%d - W3b 파트 0) · 인접 1,000칸 구간의 스테이지당 시간 비 ≤ 1.5."):format(
 		table.concat(segs, " · "), InfiniteStageConfig.designMaxStage))
 	w.line("")
 	local header = { "| 누적 시간 |" }

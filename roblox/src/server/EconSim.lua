@@ -519,12 +519,20 @@ local function newState(profile)
 end
 
 local function loadoutFor(state)
+	-- W3b 파트 0: 장비 옵션(영웅 이상 1개 - Option.optionSlotsFor)을 위력 환산 roll로 붙인다(state.itemOptionRoll - runProgress가 옵션 굴림 단계로 정한다 · nil = 옛 모형 = 장비 옵션 안 셈).
+	local gear = state.gear
+	if state.itemOptionRoll then
+		gear = {}
+		for part, item in pairs(state.gear) do
+			gear[part] = Option.hasOptionPool(item.grade) and { grade = item.grade, itemLevel = item.itemLevel, option = { id = "attackPercent", roll = state.itemOptionRoll, roll2 = state.itemOptionRoll } } or item
+		end
+	end
 	return BalanceSim.buildLoadout({
 		classId = state.classId,
 		level = state.level,
 		weaponLevel = state.weaponLevel,
 		weaponGrade = state.weaponGrade,
-		gear = state.gear,
+		gear = gear,
 		gems = state.gems,
 		permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel), -- P2.5c B2: 마일스톤 버킷(붙는 곳 = MilestoneData.stat)
 		permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel),
@@ -556,10 +564,12 @@ end
 -- 슬롯에 보석 후보를 놓아 본다. 변환권을 쓸 수 있는 등급(고대 · 태초 - Gem.isRerollableGrade)이고 프로필이 다시 굴리면 원하는 축(위력) · gemRoll로
 -- 만들고 그 값이 지금 보석보다 좋을 때만 변환권 값(풀 크기 N회 기대 - 원하는 축 1개 / N)을 낸다. 아니면 무작위 축 기대값.
 local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, forced)
+	-- W3b 파트 0: 옵션 굴림 단계(하위 · 평균 · 상위 - EconSimConfig.optionRollTiers) - 보석 롤에 곱한다(무작위 축 기대값 포함). what-if optionRoll이 프로필 값보다 앞선다.
+	local rollScale = (whatIf and whatIf.optionRoll) or profile.optionRoll or 1
 	local old = state.gems[slot]
 	local oldValue = type(old) == "table" and EconSim.gemValue(old, state.classId) or -1
 	if profile.gemReroll and Gem.isRerollableGrade(gradeId) then
-		local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, profile.gemRoll)
+		local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, math.min(profile.gemRoll * rollScale, OptionData.rollMax)) -- 굴림 상한(1.125) 안
 		local tickets = #Option.poolFor(state.classId)
 		local price = GoldCost.cost(MonsterData.tier1.goldDrop, state.reach, "rerollTicket") * GemData.rerollTicketGoldMultiplier * tickets -- GemServer.rerollTicketPrice와 같은 식
 		if (forced or EconSim.gemValue(gem, state.classId) > oldValue) and state.gold >= price then
@@ -570,7 +580,7 @@ local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, for
 			return
 		end
 	end
-	local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, randomAxisRoll(state.classId))
+	local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, randomAxisRoll(state.classId) * rollScale)
 	if forced or EconSim.gemValue(gem, state.classId) > oldValue then
 		state.gems[slot] = gem
 		state.gemReplacements += forced and 0 or 1
@@ -1128,6 +1138,11 @@ function EconSim.runProgress(profileId, whatIf)
 	local run = { profileId = profileId, milestones = milestones, reached = {}, rebirthAt = {}, chunks = {}, cap = cap, stall = nil }
 	run.expMult = EconSim.withOverrides(whatIf, expMultiplier, profile) -- what-if(p2before의 옛 파티 규칙)를 따른다
 	local state = newState(profile)
+	-- W3b 파트 0 옵션 굴림 단계: 장비 옵션 roll(위력 환산) = 축(무작위 = DPS 축 기대 몫 · "attack" = 원하는 축) × 굴림 배율. what-if itemOptions = false = 옛 모형(장비 옵션 안 셈).
+	if not (whatIf and whatIf.itemOptions == false) then
+		local axis = (whatIf and whatIf.itemAxis) or profile.itemAxis
+		state.itemOptionRoll = (axis == "attack" and 1 or randomAxisRoll(state.classId)) * math.min((whatIf and whatIf.optionRoll) or profile.optionRoll or 1, OptionData.rollMax)
+	end
 	local rng = Random.new(EconSimConfig.seed)
 	if profile.tutorial then
 		run.tutorialSeconds = tutorialPhase(state, profile, run) -- P3d G-d

@@ -130,7 +130,7 @@ function EconSimVerify.runPure()
 			local target = EconSimConfig.healer.shareTarget
 			r.check(("7 E6 도적 3 + 치유사 1 비중 없음 %.2f%% · 평균 %.2f%% · 상위 %.2f%%(기대 전부 ≥ %.0f%%)"):format(tiers.none.share.dualblade * 100, tiers.average.share.dualblade * 100, tiers.top.share.dualblade * 100, target * 100),
 				tiers.none.share.dualblade >= target and tiers.average.share.dualblade >= target and tiers.top.share.dualblade >= target)
-			-- P2.5a 목표(결과 모양): 일반 환생 5회차 약 12시간 · 첫 12시간 레벨업 평균 ≤ 5분 · 스테이지 10 ≤ 30분 · 상위 1% 설계 최대 도달 ≈ 2,190시간(±10%).
+			-- P2.5a 목표(결과 모양): 일반 환생 5회차 약 12시간 · 첫 12시간 레벨업 평균 ≤ 5분 · 스테이지 10 ≤ 30분 · 상위 1% 설계 최대 도달 ≈ EconSimConfig.targets.topDesignHours(W3b 파트 0: 2,500시간 ±10%).
 			local normal, top = data.runs.normal, data.runs.top
 			local rebirth5 = normal.rebirthAt[5] and normal.rebirthAt[5] / 3600 or math.huge
 			local t, n, sum = 0, 0, 0

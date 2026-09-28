@@ -29,8 +29,9 @@ return {
 	--   캐주얼 스테이지 1,000 = 40 ~ 45h(옛 55 ~ 60h는 보스 · 반짝이 장비가 없던 E1 모형에서 잡은 값).
 	--   상위 1% 설계 최대 = 2,190h ± 10% + 모형 오차 1%(D1-2 1,964h = 하한 1,971h의 0.4% 아래를 오차로 수용 - 보스 레버 L2 미적용 · k 불변).
 	targets = {
-		casualStage1000Hours = { 40, 45 },
-		topDesignHours = 2190, topDesignTolerance = 0.10, modelNoise = 0.01,
+		-- W3b 파트 0(사용자 확정 2026-09-28): 상위 1% 25,300 = 2,500h(허용 2,250 ~ 2,750 = ± 10%) · 캐주얼 1,000 약 39h(C3 38.5h를 기준으로 36 ~ 42).
+		casualStage1000Hours = { 36, 42 },
+		topDesignHours = 2500, topDesignTolerance = 0.10, modelNoise = 0.01,
 	},
 
 	-- E3 도달 시간 곡선의 이정표(마지막 = InfiniteStageConfig.designMaxStage를 EconSim이 붙인다 - P2.5a)
@@ -62,6 +63,8 @@ return {
 	--   gearCheckMinutes   가방 점검 간격(분) - 이 간격마다 그동안 주운 장비 · 분해 보석 중 가장 좋은 것으로 바꾼다(점수가 조금이라도 좋으면)
 	--   gemReroll          고대 · 태초 보석을 원하는 축이 나올 때까지 변환권으로 다시 굴리는가
 	--   gemRoll            원하는 축을 맞췄을 때의 옵션 롤 값(0.875 ~ 1.125)
+	--   optionRoll         (W3b 파트 0) 옵션 굴림 배율 - 보석 · 장비 옵션 롤에 곱한다(nil = 1 = 평균 굴림 · 상한 rollMax). what-if optionRoll이 앞선다(optionRollTiers)
+	--   itemAxis           (W3b 파트 0) 장비 옵션 축 - nil = 무작위(DPS 축 기대 몫) · "attack" = 3부위 모두 위력(원하는 축 - 리롤 · 득템 끝). what-if itemAxis가 앞선다
 	profiles = {
 		casual = {
 			displayName = "캐주얼", hoursPerDay = 1, classId = "bow", huntTierMax = 3,
@@ -97,9 +100,14 @@ return {
 			partySize = 4, partyExpBonus = true, partyHuntsTogether = true,
 			enhanceTarget = 30, useProtection = true, rebirth = true,
 			gearCheckMinutes = 1, gemReroll = true, gemRoll = 1.125,
+			optionRoll = 1.125, itemAxis = "attack", -- W3b 파트 0: 합법 최대 = 장비 옵션도 위력 · 최대 굴림
 		},
 	},
 	profileOrder = { "casual", "normal", "top" },
+
+	-- W3b 파트 0 옵션 굴림 3단계(U[rollMin, rollMax] = U[0.875, 1.125]): 하위 30% 평균 · 전체 평균 · 상위 30% 평균. 상위 = "편하게 깨는 장비" 모형(장비 옵션 축 = 위력 · what-if rollHigh).
+	--   평균 = 프로필 기본(보석 = 프로필 규칙 · 장비 옵션 = 무작위 축 기대 몫). W3b 전 모형은 장비 옵션을 아예 안 셌다(what-if noItemOptions로 비교).
+	optionRollTiers = { low = 0.9125, mid = 1.0, high = 1.0875 },
 
 	-- E5 태초 선택지(P2: 게임 드랍표 그대로 - DropTable.effectiveRate · 레벨 감쇠 포함). 비교: 같은 플레이어가
 	--   (A) 드래곤(highTier)을 자기 스테이지보다 Δ 낮은 스테이지에서 잡기 vs (B) tier t(lowTiers)를 자기 스테이지에서 잡기. 보석 레벨 = 잡은 스테이지(몬스터 레벨, 결정 6B E4).
@@ -183,5 +191,8 @@ return {
 		noMilestone = { milestoneStat = "none" }, -- P2.5c B2: 마일스톤 버킷을 끈 곡선(영향 비교)
 		milestoneAttack = { milestoneStat = "attack" }, -- P2.5c B2: 버킷 = 공격력(E1 비교)
 		milestoneSurvival = { milestoneStat = "survival" }, -- P2.5c B2: 버킷 = 최대 체력(E1 비교)
+		rollLow = { optionRoll = 0.9125 }, -- W3b 파트 0: 하위 굴림(무작위 축)
+		rollHigh = { optionRoll = 1.0875, itemAxis = "attack" }, -- W3b 파트 0: 상위 굴림(장비 옵션 위력 · 상위 30%)
+		noItemOptions = { itemOptions = false }, -- W3b 파트 0: 옛 모형(장비 옵션 안 셈)
 	},
 }
