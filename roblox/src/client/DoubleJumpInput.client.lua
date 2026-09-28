@@ -145,6 +145,7 @@ local function onJumpRequest()
 		airFromJump = true
 		local up = humanoid.UseJumpPower and humanoid.JumpPower or JumpMath.upSpeed(humanoid.JumpHeight)
 		root.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, up), v.Z)
+		WeaponVisual.playOverlay(nil, "coyote") -- W3b: 발끝으로 모서리를 차고 몸을 앞으로
 		return
 	end
 	if now - airStartedAt < cfg.minAirSeconds then
@@ -160,6 +161,7 @@ local function onJumpRequest()
 	root.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, JumpMath.upSpeed(rise)), v.Z) -- 오르는 중 속도가 더 크면 그대로(정점을 낮추지 않는다)
 	character:SetAttribute("AirJumpsLeft", left - 1)
 	AirMotion.play(character, "flip", MovementConfig.airMotion.flipSeconds)
+	WeaponVisual.playOverlay(nil, "airJump") -- W3b: 무릎 당겨 안기
 	airMoveFx:FireServer("flip")
 end
 UserInputService.JumpRequest:Connect(onJumpRequest)
@@ -178,12 +180,20 @@ end
 -- 남의 공중 점프 · 대시 모션(서버 중계).
 airMoveFx.OnClientEvent:Connect(function(who, kind)
 	local other = typeof(who) == "Instance" and who:IsA("Player") and who.Character
-	if kind == "dash" then
-		WeaponVisual.playDash(who, DashConfig.durationSeconds) -- W1 대시 무기 자세
+	if kind == "dash" or kind == "dash2" then
+		WeaponVisual.playDash(who, DashConfig.durationSeconds, kind == "dash2") -- W1 대시 무기 자세 · W3b 2단
+		if other then
+			AirMotion.play(other, "lean", DashConfig.durationSeconds)
+		end
+	elseif kind == "skillQ" or kind == "skillE" then
+		WeaponVisual.playSkill(who, kind == "skillQ" and "Q" or "E") -- W3b 스킬 모션
 	elseif kind == "getup" then
 		WeaponVisual.playGetup(who) -- W1 넘어짐 → 일어나기
 	elseif other then
 		AirMotion.play(other, kind, kind == "flip" and MovementConfig.airMotion.flipSeconds or DashConfig.durationSeconds)
+		if kind == "flip" then
+			WeaponVisual.playOverlay(who, "airJump")
+		end
 	end
 end)
 

@@ -18,6 +18,7 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming)
 local WeaponRigCheck = require(ReplicatedStorage.Shared.WeaponRigCheck)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local SkillData = require(ReplicatedStorage.Shared.data.SkillData) -- W3b 채널 스킬 길이 · 틱 간격(서버 틱과 같은 값)
 local PoseRig = require(script.Parent.PoseRig)
 local AttackTrail = require(script.Parent.AttackTrail) -- W2 칼날 리본 스타일(스킨)
 local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
@@ -268,6 +269,7 @@ local function newState(key, character, getAttr)
 		drawn = false, drawStart = -math.huge, attack = nil, getupStart = nil, dashUntil = 0,
 		applied = {}, appliedW = {}, from = {}, fromW = {}, blendKey = nil, blendStart = 0, blendDur = M.blend.default,
 		combo = 0, lastAttackAt = -math.huge, forcedDrawn = nil,
+		overlays = {}, deathStart = nil, respawnStart = nil, air = false, lastVy = 0, -- W3b 덧씌움 반응 · 사망 · 부활 · 착지 감지
 	}
 end
 
@@ -286,7 +288,7 @@ local function inCombat(st, now)
 	if st.forcedDrawn ~= nil then
 		return st.forcedDrawn
 	end
-	if attrOf(st, "BossEncounterId") or st.attack or st.getupStart then
+	if attrOf(st, "BossEncounterId") or st.attack or st.getupStart or st.respawnStart or st.deathStart then
 		return true
 	end
 	if os.clock() - st.lastAttackAt < M.combatHoldSeconds then
@@ -398,6 +400,37 @@ local function sampleAttack(clip, tm, tau)
 	end
 end
 
+-- W3b 채널 스킬(대검 E · 쌍검 E): tm.chan = 채널 길이(시전 순간부터 · 서버 틱과 같은 시계) · tm.period = 틱 간격.
+--   [0, ant) 전조 → [ant, chan) 채널(회전 = 틱 한 번에 spinDeg · 틱 순간 가장 빠름 / 번갈아 = 틱마다 한 칼) → act(through) → rec(settle).
+local function sampleChannel(clip, tm, tau)
+	local ch = clip.channel
+	local pose, trail
+	if tau < tm.ant then
+		pose, trail = mix(poseOf(clip.cocked), poseOf(clip.contact), EASE.inQuad(tau / math.max(tm.ant, 1e-4))), false
+	elseif tau < tm.chan then
+		trail = true
+		if ch.alternate then
+			local k = math.floor(tau / tm.period)
+			local u = (tau - k * tm.period) / tm.period
+			local n = #ch.alternate
+			pose = mix(poseOf(ch.alternate[k % n + 1]), poseOf(ch.alternate[(k + 1) % n + 1]), EASE.outCubic(u))
+		else
+			pose = poseOf(clip.contact)
+		end
+	elseif tau < tm.chan + tm.act then
+		pose, trail = mix(poseOf(clip.contact), poseOf(clip.through), EASE.outCubic((tau - tm.chan) / math.max(tm.act, 1e-4))), true
+	else
+		pose, trail = mix(poseOf(clip.through), poseOf(clip.settle), EASE.inOutSine(math.min((tau - tm.chan - tm.act) / math.max(tm.rec, 1e-4), 1))), false
+	end
+	if ch.spinDeg and tau < tm.chan then -- 온몸 회전(Root): 틱 순간(τ = k × 주기)에 가장 빠르고 채널 끝 = 정면(한 바퀴 단위)
+		local x = tau / tm.period
+		local yaw = ch.spinDeg * x + math.sign(ch.spinDeg) * (ch.wobbleDeg or 0) * math.sin(2 * math.pi * x) / math.pi
+		pose = table.clone(pose)
+		pose.Root = CFrame.Angles(0, math.rad(yaw), 0) * (pose.Root or CFrame.identity)
+	end
+	return pose, trail
+end
+
 -- 원거리(활 · 지팡이) 공격 = 발사 예약 큐: 요청마다 "요청 + 서버 발사 시각(상수)"에 놓는다. 첫 발 = 들어 올리며 당김 · 이어지는 발 = 조준을 유지한 채
 -- 놓자마자(시위 튕김 act) 다음 예약 시각까지 다시 당김(연사) · 큐가 비면 회복 → 끝. 반환: pose(nil = 끝) · 당김 · 동작 구간인가.
 local function rangedPose(a, now)
@@ -453,10 +486,41 @@ local function getupPose(st, w, tau)
 		return mix(bounce, lie, EASE.outBack(tau / t1) * 0.35) -- 튕김(장난감처럼 - 뒤로 젖히며 살짝 넘침)
 	elseif tau < t2 then
 		return mix(bounce, lie, 0.35 + 0.65 * EASE.outCubic((tau - t1) / G.lieSeconds))
-	elseif tau < t3 then
-		return mix(lie, rise, EASE.outCubic((tau - t2) / G.riseSeconds))
+	elseif tau < t3 then -- W3b: 누움 → 무기 짚고 한쪽 무릎(kneelFraction) → 무기 들며 선다
+		local kneel = poseOf(w.getupKneel)
+		local tk = G.riseSeconds * (kneel and G.kneelFraction or 0)
+		if kneel and tau < t2 + tk then
+			return mix(lie, kneel, EASE.outCubic((tau - t2) / tk))
+		end
+		return mix(kneel or lie, rise, EASE.outCubic((tau - t2 - tk) / (G.riseSeconds - tk)))
 	end
 	return mix(rise, stance, EASE.inOutSine(math.min((tau - t3) / G.settleSeconds, 1)))
+end
+
+-- W3b 사망(비틀 → 무릎 → 엎어짐 · 그대로 누움) · 부활(한쪽 무릎 → 일어남 → 전투 자세).
+local function deathPose(tau)
+	local D = M.death
+	local a, b, c = poseOf(D.stagger), poseOf(D.kneel), poseOf(D.lie)
+	if tau < D.staggerSeconds then
+		return mix({}, a, EASE.outCubic(tau / D.staggerSeconds))
+	elseif tau < D.staggerSeconds + D.kneelSeconds then
+		return mix(a, b, EASE.inQuad((tau - D.staggerSeconds) / D.kneelSeconds)) -- 무릎이 풀려 떨어진다(가속)
+	end
+	return mix(b, c, EASE.outBack(math.min((tau - D.staggerSeconds - D.kneelSeconds) / D.fallSeconds, 1))) -- 엎어지며 살짝 튕김
+end
+local function respawnTotal()
+	local R = M.respawn
+	return R.kneelSeconds + R.riseSeconds + R.settleSeconds
+end
+local function respawnPose(w, tau)
+	local R = M.respawn
+	local kneel, rise, stance = poseOf(w.getupKneel or w.getupRise), poseOf(w.getupRise), poseOf(w.stance)
+	if tau < R.kneelSeconds then
+		return kneel
+	elseif tau < R.kneelSeconds + R.riseSeconds then
+		return mix(kneel, rise, EASE.outCubic((tau - R.kneelSeconds) / R.riseSeconds))
+	end
+	return mix(rise, stance, EASE.inOutSine(math.min((tau - R.kneelSeconds - R.riseSeconds) / R.settleSeconds, 1)))
 end
 local function getupTotal()
 	local G = M.getup
@@ -510,6 +574,17 @@ local function targetPose(st, now, root)
 	if st.external and now < st.external then
 		return {}, "external", M.blend.min, true, 0, true, true
 	end
+	-- W3b 사망(최우선 - 부활 전까지 누움) · 부활
+	if st.deathStart then
+		return deathPose(now - st.deathStart), "death", M.blend.min, true, 0, false, false
+	end
+	if st.respawnStart then
+		local tau = now - st.respawnStart
+		if tau < respawnTotal() then
+			return respawnPose(w, tau), "respawn", 0.01, true, 0, false, tau > M.respawn.kneelSeconds
+		end
+		st.respawnStart = nil
+	end
 	-- 넘어짐 → 일어나기(최우선 - 전신)
 	if st.getupStart then
 		local tau = now - st.getupStart
@@ -541,6 +616,34 @@ local function targetPose(st, now, root)
 		st.attack = nil
 		a = nil
 	end
+	if a and a.skill then -- W3b 스킬: 한 번 동작 = 공격 클립과 같은 샘플 · 채널 = 서버 틱 시계(히트스톱은 포즈만 멈추고 시계는 그대로)
+		local clip = a.clip
+		if a.freezeUntil and now < a.freezeUntil then
+			return a.frozenPose or {}, a.blendKey, a.blendDur, true, a.frozenDraw or 0, clip.trail == true, clip.ik ~= false
+		end
+		if a.freezeUntil then
+			if not clip.channel then
+				a.start += a.freezeUntil - a.frozeAt
+			end
+			a.freezeUntil, a.frozeAt = nil, nil
+		end
+		local tau = now - a.start
+		if tau < a.tm.total then
+			local pose, draw, trail
+			if clip.channel then
+				pose, trail = sampleChannel(clip, a.tm, tau)
+				draw = 0
+			else
+				local act
+				pose, draw, act = sampleAttack(clip, a.tm, tau)
+				trail = act
+			end
+			a.frozenPose, a.frozenDraw = pose, draw
+			return pose, a.blendKey, a.blendDur, true, draw, clip.trail == true and trail, clip.ik ~= false
+		end
+		st.attack = nil
+		a = nil
+	end
 	if a then
 		if a.freezeUntil and now < a.freezeUntil then
 			local pose, draw = sampleAttack(a.clip, a.tm, a.tm.ant)
@@ -567,7 +670,7 @@ local function targetPose(st, now, root)
 		end
 	end
 	local character = st.character
-	if character:GetAttribute("Gliding") then
+	if character:GetAttribute("Gliding") or now < (st.glideUntil or 0) then
 		return poseOf(M.glide), "glide", M.blend.default, false, 0, false, false
 	end
 	if now < st.dashUntil and st.drawn then
@@ -599,6 +702,81 @@ local function targetPose(st, now, root)
 	local breathe = math.sin(now * 2 * math.pi / M.idlePeriodSeconds) * (1 - m)
 	pose.Waist = (pose.Waist or CFrame.identity) * CFrame.Angles(math.rad(1.5 * breathe), 0, 0)
 	return pose, "stance", M.blend.default, true, 0, false, true
+end
+
+-- W3b 덧씌움 세기 곡선: 빠르게 들어가(peak - outCubic) → hold → 천천히 풀림(inOutSine).
+local function overlayK(def, t)
+	local seconds = def.seconds
+	local up = seconds * (def.peak or 0.3)
+	local hold = def.hold or 0
+	if t < up then
+		return EASE.outCubic(t / up)
+	elseif t < up + hold then
+		return 1
+	end
+	return 1 - EASE.inOutSine(math.min((t - up - hold) / math.max(seconds - up - hold, 1e-3), 1))
+end
+
+-- 이번 프레임 덧씌움 { [관절] = { cf, k } } 또는 nil. 시간 반응(st.overlays) + 기절(st.stun) + 넉백 체공(내 캐릭터 AirLocked · 붙잡힘 아님).
+local function overlayPose(st, now, character)
+	local out = nil
+	local function add(tbl, k, sway)
+		if k <= 0.001 then
+			return
+		end
+		out = out or {}
+		for name, cf in pairs(poseOf(tbl)) do
+			if sway and sway[name] then
+				cf = cf * CFrame.Angles(0, 0, math.rad(sway[name]))
+			end
+			local prev = out[name]
+			if prev then
+				out[name] = { cf = prev.cf * CFrame.identity:Lerp(cf, k), k = math.max(prev.k, k) }
+			else
+				out[name] = { cf = cf, k = k }
+			end
+		end
+	end
+	for i = #st.overlays, 1, -1 do
+		local o = st.overlays[i]
+		local t = now - o.start
+		if t >= o.def.seconds then
+			table.remove(st.overlays, i)
+		else
+			add(o.def.pose, overlayK(o.def, t))
+		end
+	end
+	local s = st.stun
+	if s then
+		local C = M.overlay.stun
+		local t = now - s.start
+		if t >= s.seconds then
+			st.stun = nil
+		else
+			local k = t < C.staggerSeconds and EASE.outCubic(t / C.staggerSeconds) or 1
+			if t > s.seconds - C.recoverSeconds then
+				k = 1 - EASE.inOutSine((t - (s.seconds - C.recoverSeconds)) / C.recoverSeconds)
+			end
+			local wave = math.sin(2 * math.pi * t / C.swayPeriod)
+			local sway = {}
+			for name, deg in pairs(C.sway) do
+				sway[name] = deg * wave
+			end
+			if t < C.staggerSeconds then
+				add(M.overlay.big.pose, 1 - t / C.staggerSeconds)
+			end
+			add(C.dazed, k, sway)
+		end
+	end
+	if st.key == player and (character:GetAttribute("AirLocked") or now < (st.debugKnockUntil or 0)) and not st.getupStart then
+		st.knockK = math.min((st.knockK or 0) + 0.12, 1)
+	else
+		st.knockK = math.max((st.knockK or 0) - 0.2, 0)
+	end
+	if st.knockK > 0 then
+		add(M.overlay.knockAir, EASE.inOutSine(st.knockK))
+	end
+	return out
 end
 
 -- ─────────────────────────── 매 프레임 ───────────────────────────
@@ -685,6 +863,34 @@ local function updatePose(st, now, camPos)
 	if not rig then
 		return
 	end
+	-- W3b 사망 감지(모든 캐릭터) · 착지 · 도약 감지(세로 속도 - 남의 캐릭터도 같은 식)
+	if humanoid.Health <= 0 and not st.deathStart then
+		st.deathStart, st.attack, st.getupStart, st.respawnStart = now, nil, nil, nil
+		if st.key == player then
+			root.Anchored = true -- 쓰러진 자리에 둔다(관절이 안 끊기는 몸이 통째로 구르지 않게 - 부활하면 새 캐릭터)
+		end
+	end
+	local vy = root.AssemblyLinearVelocity.Y
+	local grounded = st.key == player and humanoid.FloorMaterial ~= Enum.Material.Air or (st.key ~= player and math.abs(vy) < 1.5)
+	if humanoid.Health > 0 then
+		local O = M.overlay
+		if st.air and grounded then
+			local fall = -st.lastVy
+			if not character:GetAttribute("FallKnockdown") and not character:GetAttribute("AirLocked") and not character:GetAttribute("Gliding") then
+				if fall >= O.heavySpeed then
+					WeaponVisual.playOverlay(st.key, "landHeavy")
+				elseif fall >= O.softSpeed then
+					WeaponVisual.playOverlay(st.key, "landSoft")
+				end
+			end
+		elseif not st.air and not grounded and vy > 12 then
+			WeaponVisual.playOverlay(st.key, "takeoff")
+		end
+	end
+	st.air = not grounded
+	if not grounded then
+		st.lastVy = vy
+	end
 	-- 전투 상태 → 꺼내기 · 수납
 	local combat = humanoid.Health > 0 and inCombat(st, now)
 	if combat ~= st.drawn then
@@ -722,6 +928,23 @@ local function updatePose(st, now, camPos)
 		for name in pairs(LEG_JOINTS) do
 			if applyW[name] then
 				applyW[name] *= 1 - moving
+			end
+		end
+	end
+	-- W3b 덧씌움 반응(피격 · 착지 · 도약 · 기절 · 넉백 체공): 지금 포즈 위에 곱한다 · 포즈에 없는 관절 = 세기만큼 애니메이터 위로(저장된 blend 상태는 안 바꾼다)
+	local over = overlayPose(st, now, character)
+	if over then
+		if applied == st.applied then
+			applied = table.clone(applied)
+		end
+		if applyW == appliedW then
+			applyW = table.clone(appliedW)
+		end
+		for name, o in pairs(over) do
+			if applied[name] and (applyW[name] or 0) > 0 then
+				applied[name] = applied[name] * CFrame.identity:Lerp(o.cf, o.k)
+			else
+				applied[name], applyW[name] = o.cf, math.max(o.k, applyW[name] or 0)
 			end
 		end
 	end
@@ -822,9 +1045,12 @@ local function bindPlayer(p)
 	end)
 	rigs[p] = st
 	local function refresh()
+		local died = st.deathStart ~= nil and st.character ~= p.Character -- W3b: 쓰러진 뒤 새 캐릭터 = 부활 동작
 		st.character = p.Character
 		st.attack, st.getupStart, st.applied, st.appliedW, st.from, st.fromW, st.blendKey = nil, nil, {}, {}, {}, {}, nil
 		st.drawn, st.drawStart = false, -math.huge
+		st.deathStart, st.stun, st.overlays, st.air = nil, nil, {}, false
+		st.respawnStart = died and os.clock() or nil
 		rebuild(st)
 	end
 	p.CharacterAdded:Connect(function()
@@ -957,12 +1183,75 @@ function WeaponVisual.getReleaseDelay()
 	return math.max(a.queue[1] - os.clock(), 0) -- 가장 먼저 예약된 발사(결과는 요청 순서대로 온다)
 end
 
--- 대시 자세(나 = DashInput · 남 = 중계 "dash").
-function WeaponVisual.playDash(key, seconds)
+-- 대시 자세(나 = DashInput · 남 = 중계 "dash" · "dash2"). second = MV1 2단 대시(몸을 비틀어 한 번 더 박참 - 덧씌움).
+function WeaponVisual.playDash(key, seconds, second)
 	local st = stateFor(key or player)
 	if st then
 		st.dashUntil = os.clock() + (seconds or 0.3)
+		if second then
+			WeaponVisual.playOverlay(key or player, "dash2")
+		end
 	end
+end
+
+-- W3b 덧씌움 반응(이름 = PlayerMotionData.overlay의 표 - flinch · big · landSoft · landHeavy · takeoff · coyote · airJump · dash2 · glideIn · glideOut).
+function WeaponVisual.playOverlay(key, name)
+	local st = stateFor(key or player)
+	local def = M.overlay[name]
+	if not st or type(def) ~= "table" or not def.pose or st.deathStart then
+		return
+	end
+	for i = #st.overlays, 1, -1 do -- 같은 반응은 새로 시작(쌓지 않는다)
+		if st.overlays[i].def == def then
+			table.remove(st.overlays, i)
+		end
+	end
+	table.insert(st.overlays, { def = def, start = os.clock() })
+end
+
+-- 피격(나 = PlayerHitFeedback): 한 대가 최대 체력의 bigHitFraction 이상 = 큰 피격 · 아니면 움찔.
+function WeaponVisual.playHit(key, damage, maxHp)
+	local big = (maxHp or 0) > 0 and (damage or 0) / maxHp >= M.overlay.bigHitFraction
+	WeaponVisual.playOverlay(key, big and "big" or "flinch")
+end
+
+-- 기절(보스 playerStun - 모든 화면): 비틀 → 휘청 → 회복(seconds 전체).
+function WeaponVisual.playStun(key, seconds)
+	local st = stateFor(key or player)
+	if st and not st.deathStart then
+		st.stun = { start = os.clock(), seconds = math.max(seconds or 1, M.overlay.stun.staggerSeconds + M.overlay.stun.recoverSeconds) }
+	end
+end
+
+-- W3b 스킬 모션(나 = SkillInput · 남 = 중계 "skillQ" · "skillE"). 채널 길이 · 틱 간격 = SkillData(서버 틱과 같은 값).
+function WeaponVisual.playSkill(key, slot)
+	local st = stateFor(key or player)
+	local set = st and st.classId and M.skills[st.classId]
+	local clip = set and set[slot]
+	if not clip or st.deathStart then
+		return false
+	end
+	local now = os.clock()
+	st.lastAttackAt = now
+	if not st.drawn then
+		st.drawn, st.drawStart = true, -math.huge
+	end
+	local prev = st.attack
+	if prev and prev.heavyScaled then
+		prev.heavyScaled(false)
+	end
+	local tm = { ant = clip.ant, act = clip.act, rec = clip.rec, hit = clip.ant }
+	if clip.channel then
+		local def = SkillData[st.classId] and SkillData[st.classId][slot]
+		local chan = def and def.channelSeconds or 1
+		tm.chan, tm.period = chan, chan / math.max(def and def.tickCount or 1, 1)
+		tm.total = chan + clip.act + clip.rec
+	else
+		tm.total = clip.ant + clip.act + clip.rec
+	end
+	st.attack = { skill = slot, clip = clip, tm = tm, start = now, heavyShot = clip.heavyShot, blendKey = "skill" .. tostring(now), blendDur = math.min(M.blend.attackIn, clip.ant) }
+	st.getupStart = nil
+	return true
 end
 
 -- 입력 버퍼(내 캐릭터 - 공격 · 대시): 일어나는 중이면 fn을 맡아 두었다 끝나는 순간 낸다(마지막 것 하나 · bufferSeconds 안에 누른 것만). 맡았으면 true.
@@ -1235,6 +1524,9 @@ end
 -- W3a 확인 도구 /gg anim <직업> <동작> [반복](서버 DevTools가 Player Attribute DevAnim = "동작|반복|난수"를 올린다 - 내 캐릭터가 반복 재생 · 판정 없음)
 do
 	local ORDER = { attack1 = { 1 }, attack2 = { 2 }, attack3 = { 3 }, heavy = { 3 }, combo = { 1, 2, 3 } }
+	-- W3b: 동작 이름 → 덧씌움 표 이름(dash · dash2 = 대시 자세 + 2단 비틀기)
+	local W3B_OVERLAY = { flinch = "flinch", bighit = "big", land = "landSoft", landheavy = "landHeavy", takeoff = "takeoff", coyote = "coyote", airjump = "airJump",
+		glidein = "glideIn", glideout = "glideOut", dash = "dash", dash2 = "dash2" }
 	player:GetAttributeChangedSignal("DevAnim"):Connect(function()
 		local raw = player:GetAttribute("DevAnim")
 		if type(raw) ~= "string" then
@@ -1249,9 +1541,47 @@ do
 				if not st or not st.classId then
 					return
 				end
+				st.lastAttackAt = os.clock() -- 무기를 든 채 보이게
 				if clip == "getup" then
 					WeaponVisual.playGetup(player)
 					task.wait(getupTotal() + 0.4)
+				elseif clip == "skillq" or clip == "skille" then -- W3b 스킬(채널 = SkillData 길이)
+					WeaponVisual.playSkill(player, clip == "skillq" and "Q" or "E")
+					task.wait((st.attack and st.attack.tm.total or 0.6) + 0.5)
+				elseif W3B_OVERLAY[clip] then -- 덧씌움 반응 · 대시
+					if clip == "glidein" then
+						st.glideUntil = os.clock() + 1.4
+					elseif clip == "glideout" then
+						st.glideUntil = os.clock() + 0.6
+						task.delay(0.6, WeaponVisual.playOverlay, player, "glideOut")
+					end
+					if clip == "dash" or clip == "dash2" then
+						WeaponVisual.playDash(player, 0.3, clip == "dash2")
+					elseif clip ~= "glideout" then
+						WeaponVisual.playOverlay(player, W3B_OVERLAY[clip])
+					end
+					task.wait(1.6)
+				elseif clip == "knock" then -- 넉백 체공(1초 유지) → 넘어짐 → 일어나기
+					st.debugKnockUntil = os.clock() + 1
+					task.wait(1)
+					WeaponVisual.playGetup(player)
+					task.wait(getupTotal() + 0.4)
+				elseif clip == "stun" then
+					WeaponVisual.playStun(player, 2.5)
+					task.wait(2.9)
+				elseif clip == "death" or clip == "respawn" then
+					if clip == "death" then
+						st.deathStart = os.clock()
+						task.wait(2)
+					end
+					st.deathStart, st.respawnStart = nil, os.clock()
+					task.wait(respawnTotal() + 0.5)
+				elseif clip == "draw" or clip == "sheathe" then -- 수납 → 꺼내기(sheathe = 반대)
+					st.forcedDrawn = clip == "sheathe"
+					task.wait(0.8)
+					st.forcedDrawn = clip ~= "sheathe"
+					task.wait(1)
+					st.forcedDrawn = nil
 				elseif clip == "kf" then
 					local track, length = require(script.Parent.KeyframeCompare).play(player.Character)
 					if track then

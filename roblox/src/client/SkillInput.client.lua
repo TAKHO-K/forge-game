@@ -27,6 +27,7 @@ local SkillEffects = require(script.Parent.SkillEffects)
 
 local skillRequest = ReplicatedStorage:WaitForChild("SkillRequest")
 local skillCastResult = ReplicatedStorage:WaitForChild("SkillCastResult")
+local airMoveFx = ReplicatedStorage:WaitForChild("AirMoveFx") -- W3b 스킬 모션 중계(그리기만)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -88,10 +89,12 @@ local function requestSkill(slot)
 	localCooldownUntil[slot] = os.clock() + def.cooldownSeconds
 	localCastSignal:Fire(slot, def.cooldownSeconds)
 
-	-- 기존 평타 모션을 그대로 재사용한다(지시 [4] - 새 애니메이션 금지, 재생속도·스케일
-	-- 조정까지만 허용). 3타 강타 변형(playSwing(true))이 이미 그 조정을 갖고 있어 그대로
-	-- 쓴다 - 차별화는 아래 SkillCastResult 핸들러의 이펙트가 맡는다.
-	WeaponVisual.playSwing(true)
+	-- W3b: 스킬마다 전용 모션(PlayerMotionData.skills - 준비 → 발동 → 회복 · 채널 = 서버 틱 시계). 남에게는 중계(그리기만).
+	if WeaponVisual.playSkill(nil, slot) then
+		airMoveFx:FireServer("skill" .. slot)
+	else
+		WeaponVisual.playSwing(true)
+	end
 
 	skillRequest:FireServer(slot)
 end

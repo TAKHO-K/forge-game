@@ -838,6 +838,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 			BossBR1View.snowStun(data) -- BR1-4c c-11 눈덩이에서 튀어나온 기절(눈송이 · 비틀 → 일어나기)
 		else
 			BossBR13View.playerStun(data)
+			local target = data.userId and game:GetService("Players"):GetPlayerByUserId(data.userId)
+			if target then
+				require(script.Parent.WeaponVisual).playStun(target, data.seconds) -- W3b 비틀 → 휘청 → 회복
+			end
 		end
 	elseif kind == "sweepTelegraph" then
 		BossBR13View.sweepTelegraph(data)

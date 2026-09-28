@@ -23,7 +23,7 @@ local PlayerMotionData = require(ReplicatedStorage.Shared.data.PlayerMotionData)
 AirState.start()
 FallServer.start()
 
-local KINDS = { flip = true, lean = true, dash = true } -- W1: dash = 대시 무기 자세(표시만)
+local KINDS = { flip = true, lean = true, dash = true, dash2 = true, skillQ = true, skillE = true } -- W1: dash = 대시 무기 자세(표시만) · W3b dash2 = 2단 대시 · skillQ/E = 스킬 모션(그리기만 - 판정 무관)
 
 local airMoveFx = Instance.new("RemoteEvent")
 airMoveFx.Name = "AirMoveFx"
@@ -208,8 +208,20 @@ if RunService:IsStudio() then -- 검증 훅(MV1(나) - 서버 검증이 같은 �
 	hook.Parent = game:GetService("ServerStorage")
 end
 
+-- W3b 사망 모션: 죽어도 관절을 끊지 않는다(클라 WeaponVisual이 비틀 → 무릎 → 엎어짐을 그린다 - 부활 = 새 캐릭터)
+local function onCharacter(character)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	if humanoid then
+		humanoid.BreakJointsOnDeath = false
+	end
+end
+
 local function onPlayer(player)
 	player.DevEnableMouseLock = false
+	player.CharacterAdded:Connect(onCharacter)
+	if player.Character then
+		task.spawn(onCharacter, player.Character)
+	end
 end
 
 Players.PlayerAdded:Connect(onPlayer)

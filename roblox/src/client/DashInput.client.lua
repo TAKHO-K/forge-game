@@ -34,6 +34,7 @@ local localCastSignal = skillSlotsGui:WaitForChild("SkillCastLocal")
 local slotPress = skillSlotsGui:WaitForChild("SkillSlotPress")
 
 local localDash = MoveRules.newDashState()
+local pendingSecond = false
 
 local function primordialShoes()
 	local parts = player:GetAttribute("PrimordialParts")
@@ -65,6 +66,7 @@ local function requestDash()
 		return
 	end
 	local ok, _, second = MoveRules.tryDash(localDash, os.clock(), charges)
+	pendingSecond = second == true -- W3b 2단 대시 모션(결과가 오면 쓴다)
 	if not ok then
 		return
 	end
@@ -218,6 +220,7 @@ dashResult.OnClientEvent:Connect(function(data)
 	local classId = player:GetAttribute("ClassId")
 	local color = (classId and classId ~= "" and UIColors.classAccent[classId]) or UIColors.ember
 	SkillEffects.dashAfterimage(data.startPosition, data.endPosition, color, data.durationSeconds)
-	WeaponVisual.playDash(nil, data.durationSeconds) -- W1 대시 무기 자세(남에게는 중계 "dash")
-	airMoveFx:FireServer("dash")
+	WeaponVisual.playDash(nil, data.durationSeconds, pendingSecond) -- W1 대시 무기 자세 · W3b 2단 대시 비틀기(남에게는 중계 "dash" · "dash2")
+	airMoveFx:FireServer(pendingSecond and "dash2" or "dash")
+	pendingSecond = false
 end)

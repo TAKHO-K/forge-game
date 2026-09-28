@@ -14,4 +14,8 @@ feedback.OnClientEvent:Connect(function(damage, absorbed)
 		return
 	end
 	DamageNumbers.showTaken(player.Character, damage or 0, absorbed or 0)
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health > 0 then -- W3b 피격 반응(움찔 · 큰 피격 = 뒤로 밀림)
+		require(script.Parent.WeaponVisual).playHit(player, (damage or 0) + (absorbed or 0), humanoid.MaxHealth)
+	end
 end)
