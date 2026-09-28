@@ -78,17 +78,34 @@ function SettingsService.start()
 	local remote = ReplicatedStorage:FindFirstChild("SettingsSave") or Instance.new("RemoteEvent")
 	remote.Name = "SettingsSave"
 	remote.Parent = ReplicatedStorage
-	local last = {}
+	local last = {} -- [Player][key] = { at, pending } - 리뷰: 키마다 · 너무 빠른 요청은 버리지 않고 마지막 값을 잠시 뒤 적용(trailing)
 	remote.OnServerEvent:Connect(function(player, key, value)
 		if type(key) ~= "string" or not SettingsData.keys[key] then
 			return
 		end
+		last[player] = last[player] or {}
+		local rec = last[player][key] or { at = 0 }
+		last[player][key] = rec
 		local now = os.clock()
-		if last[player] and now - last[player] < 0.1 then
+		if now - rec.at >= 0.1 then
+			rec.at = now
+			SettingsService.set(player, key, value)
+			require(script.Parent.ImmediateSave).request(player)
 			return
 		end
-		last[player] = now
-		SettingsService.set(player, key, value)
+		local scheduled = rec.pending ~= nil
+		rec.pending = { value = value }
+		if not scheduled then
+			task.delay(0.1, function()
+				local p = rec.pending
+				rec.pending = nil
+				if p and player.Parent then
+					rec.at = os.clock()
+					SettingsService.set(player, key, p.value)
+					require(script.Parent.ImmediateSave).request(player)
+				end
+			end)
+		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		last[player] = nil

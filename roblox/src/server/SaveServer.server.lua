@@ -19,6 +19,7 @@ local PetService = require(script.Parent.PetService) -- Q11 펫 Remote
 PetService.start()
 local SettingsService = require(script.Parent.SettingsService) -- Q14 설정 저장 Remote
 SettingsService.start()
+require(script.Parent.Telemetry).start() -- Q15 T1 통계(몇 분마다 · 퇴장 때 전송 · Studio = 드라이런)
 
 local function loadForPlayer(player)
 	local profile, err = SaveSystem.loadProfile(player)
@@ -34,6 +35,7 @@ local function loadForPlayer(player)
 	-- 받는다 - 접속 직후에도 한 번 밀어준다(이후 변경은 PlayerProfile의 각 뮤테이터가 push).
 	InventorySync.push(player, profile)
 	if PlayerProfile.grantComebackIfAway(player) then -- C5-5 복귀 부스트(7일 이상 뒤 접속 → 60분 ×1.5) - 토스트
+		require(script.Parent.Telemetry).custom(player, "Comeback", 1) -- Q15 T1: 복귀(7일 이상 뒤 접속)
 		task.spawn(function() -- 묶음 A 리뷰: AutoStage.server가 SystemNotice를 만들기 전 첫 접속자 경합 - 로드를 막지 않고 기다린다
 			local notice = ReplicatedStorage:WaitForChild("SystemNotice", 10)
 			if notice and player.Parent then

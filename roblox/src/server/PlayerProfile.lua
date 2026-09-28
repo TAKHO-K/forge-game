@@ -36,6 +36,7 @@ local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMateria
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 -- S21-0 A2: 보상 계산 출구(NaN·inf 오염 차단).
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
+local Telemetry = require(script.Parent.Telemetry) -- Q15 T1: 화폐 입구(골드 · 재료 · 보석 가루)에서 한 줄씩
 -- P2.5b A: 장비 계승 규칙(클라 미리 판정과 같은 순수 함수).
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
 local Awaken = require(ReplicatedStorage.Shared.Awaken) -- D1 태초 각성
@@ -325,8 +326,10 @@ function PlayerProfile.addGold(player, amount)
 	if not profile then
 		return
 	end
-	profile.gold += Sanitize.number(amount, 0) -- S21-0 A2: 보상 계산 출구 - 오염된 보상은 이번만 0으로 건너뛴다
+	local add = Sanitize.number(amount, 0)
+	profile.gold += add -- S21-0 A2: 보상 계산 출구 - 오염된 보상은 이번만 0으로 건너뛴다
 	player:SetAttribute("Gold", profile.gold)
+	Telemetry.economy(player, "gold", "source", add)
 end
 
 -- 골드가 충분하면 차감하고 true, 부족하면 아무것도 바꾸지 않고 false(10-2 [3] - 확인과
@@ -338,6 +341,7 @@ function PlayerProfile.trySpendGold(player, amount)
 	end
 	profile.gold -= amount
 	player:SetAttribute("Gold", profile.gold)
+	Telemetry.economy(player, "gold", "sink", amount)
 	return true
 end
 
@@ -354,6 +358,7 @@ function PlayerProfile.addMaterial(player, materialId, amount)
 	end
 	profile.materials[materialId] += amount
 	player:SetAttribute(materialAttributeName(materialId), profile.materials[materialId])
+	Telemetry.economy(player, materialId, "source", amount) -- 화폐 표에 있는 재료(강화석)만 센다
 end
 
 -- 충분하면 차감하고 true, 부족하면 아무것도 바꾸지 않고 false(trySpendGold와 같은 원자성).
@@ -364,6 +369,7 @@ function PlayerProfile.trySpendMaterial(player, materialId, amount)
 	end
 	profile.materials[materialId] -= amount
 	player:SetAttribute(materialAttributeName(materialId), profile.materials[materialId])
+	Telemetry.economy(player, materialId, "sink", amount)
 	return true
 end
 
@@ -1136,7 +1142,9 @@ function PlayerProfile.addGemDust(player, amount)
 	if not profile then
 		return
 	end
-	profile.gemDust = math.max(0, profile.gemDust + math.floor(Sanitize.number(amount, 0)))
+	local delta = math.floor(Sanitize.number(amount, 0))
+	Telemetry.economy(player, "gemDust", delta >= 0 and "source" or "sink", math.abs(delta))
+	profile.gemDust = math.max(0, profile.gemDust + delta)
 	player:SetAttribute("GemDust", profile.gemDust)
 end
 

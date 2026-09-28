@@ -36,8 +36,18 @@ local function build()
 		title = Text.get("settings.title"),
 		size = PANEL_SIZE,
 	})
+	-- Q14 리뷰(치명): 폰 창(높이 0.88 × 화면)에서는 본문이 약 220 ~ 300px라 아래 줄([직업 변경] 등)이 잘렸다 → 본문을 스크롤로
+	local body = Instance.new("ScrollingFrame")
+	body.Name = "Body"
+	body.BackgroundTransparency = 1
+	body.BorderSizePixel = 0
+	body.Size = UDim2.new(1, 0, 1, 0)
+	body.ScrollBarThickness = 4
+	body.ScrollBarImageColor3 = Theme.color("rim")
+	body.CanvasSize = UDim2.new(0, 0, 0, PAD + 292 + 44 + PAD)
+	body.Parent = panel.content
 	local toggle = Toggle.build({
-		parent = panel.content, name = "CameraTopDownToggle", text = Text.get("settings.cameraTopDown"),
+		parent = body, name = "CameraTopDownToggle", text = Text.get("settings.cameraTopDown"),
 		value = player:GetAttribute("CameraTopDown") == true, width = PANEL_SIZE.X - PAD * 2,
 		position = UDim2.new(0, PAD, 0, PAD),
 		onChanged = function(value)
@@ -45,19 +55,19 @@ local function build()
 			save("cameraTopDown", value)
 		end,
 	})
-	local hint = Theme.label(panel.content, Text.get("settings.cameraTopDownHint"), "caption", "textSecondary")
+	local hint = Theme.label(body, Text.get("settings.cameraTopDownHint"), "caption", "textSecondary")
 	hint.Name = "CameraHint"
 	hint.TextWrapped = true
 	hint.Position = UDim2.new(0, PAD, 0, PAD + 48)
 	hint.Size = UDim2.new(1, -PAD * 2, 0, 20)
-	local shiftHint = Theme.label(panel.content, Text.get("settings.shiftLockHint"), "caption", "textSecondary")
+	local shiftHint = Theme.label(body, Text.get("settings.shiftLockHint"), "caption", "textSecondary")
 	shiftHint.Name = "ShiftLockHint"
 	shiftHint.TextWrapped = true
 	shiftHint.Position = UDim2.new(0, PAD, 0, PAD + 72)
 	shiftHint.Size = UDim2.new(1, -PAD * 2, 0, 20)
 	-- W2: 다른 유저 궤적 흐리게(파티 전투 화면 정리 - 이 클라 · 이번 접속 동안 · 저장은 P4-4)
 	local dimToggle = Toggle.build({
-		parent = panel.content, name = "DimOthersTrailToggle", text = Text.get("settings.dimOthersTrail"),
+		parent = body, name = "DimOthersTrailToggle", text = Text.get("settings.dimOthersTrail"),
 		value = AttackTrail.dimOthers(), width = PANEL_SIZE.X - PAD * 2,
 		position = UDim2.new(0, PAD, 0, PAD + 100),
 		onChanged = function(value)
@@ -67,7 +77,7 @@ local function build()
 	})
 	-- W3c: 화면 흔들림 끄기(타격 · 스킬 = CameraShake · 보스 = BossFx - 이 클라 · 이번 접속 동안 · 저장은 P4-4)
 	local shakeToggle = Toggle.build({
-		parent = panel.content, name = "ScreenShakeToggle", text = Text.get("settings.screenShake"),
+		parent = body, name = "ScreenShakeToggle", text = Text.get("settings.screenShake"),
 		value = player:GetAttribute("SettingScreenShake") ~= false, width = PANEL_SIZE.X - PAD * 2,
 		position = UDim2.new(0, PAD, 0, PAD + 148),
 		onChanged = function(value)
@@ -78,7 +88,7 @@ local function build()
 	})
 	-- Q14 번개 · 태초 화면 섬광 줄이기(보스 경고는 밝기만 - 관문 날씨 섬광 끔)
 	local flashToggle = Toggle.build({
-		parent = panel.content, name = "ReduceFlashesToggle", text = Text.get("settings.reduceFlashes"),
+		parent = body, name = "ReduceFlashesToggle", text = Text.get("settings.reduceFlashes"),
 		value = player:GetAttribute("ReduceFlashes") == true, width = PANEL_SIZE.X - PAD * 2,
 		position = UDim2.new(0, PAD, 0, PAD + 196),
 		onChanged = function(value)
@@ -87,7 +97,7 @@ local function build()
 		end,
 	})
 	-- C5-4 자동 스테이지 이동(보통 → 편함 → 도전 → 끄기 순환 - 서버 RemoteEvent AutoStageSetting · 이번 접속 동안 · 저장은 P4-4)
-	local autoLabel = Theme.label(panel.content, Text.get("settings.autoStage"), "body", "textPrimary")
+	local autoLabel = Theme.label(body, Text.get("settings.autoStage"), "body", "textPrimary")
 	autoLabel.Name = "AutoStageLabel"
 	autoLabel.Position = UDim2.new(0, PAD, 0, PAD + 244)
 	autoLabel.Size = UDim2.new(1, -PAD * 2 - 120, 0, 32)
@@ -100,7 +110,7 @@ local function build()
 		return AutoStageData.presets[1].name
 	end
 	local autoButton = Button.build({
-		parent = panel.content, name = "AutoStageButton", kind = "secondary", width = 110,
+		parent = body, name = "AutoStageButton", kind = "secondary", width = 110,
 		position = UDim2.new(1, -PAD - 110, 0, PAD + 244),
 		text = presetName(player:GetAttribute("AutoStage") or AutoStageData.default),
 		onActivated = function()
@@ -117,7 +127,7 @@ local function build()
 	})
 	-- Q14 P4e: [직업 변경](폰에서는 왼쪽 아래 버튼이 조이스틱 구역이라 숨는다 - 여기서 연다 · PC도 같이 쓴다)
 	local classButton = Button.build({
-		parent = panel.content, name = "ClassChangeButton", kind = "secondary", width = 110,
+		parent = body, name = "ClassChangeButton", kind = "secondary", width = 110,
 		position = UDim2.new(0, PAD, 0, PAD + 292),
 		text = Text.get("settings.classChange"),
 		onActivated = function()

@@ -119,6 +119,7 @@ function QuestService.grant(player, reward)
 	end
 	if state and reward.sparkleShard then
 		state.currencies.sparkleShard = (state.currencies.sparkleShard or 0) + reward.sparkleShard
+		require(script.Parent.Telemetry).economy(player, "sparkleShard", "source", reward.sparkleShard, "TimedReward")
 		table.insert(parts, ("반짝 조각 %d"):format(reward.sparkleShard))
 	end
 	if state and reward.rebirthTicket then -- Q12 7일 출석 2일차(자리 - 지금 환생은 비용이 없어 쓰는 곳 없음)
@@ -168,12 +169,7 @@ end
 
 -- Q12 온보딩 퍼널 자리(Q15 Telemetry가 받는다 - 지금은 로그만)
 function QuestService.funnel(player, step)
-	local ok, Telemetry = pcall(require, script.Parent:FindFirstChild("Telemetry"))
-	if ok and type(Telemetry) == "table" and Telemetry.funnel then
-		Telemetry.funnel(player, step)
-	else
-		print(("[Q12][퍼널] %s %s"):format(player.Name, tostring(step)))
-	end
+	require(script.Parent.Telemetry).funnel(player, step) -- Q15: 퍼널 = Telemetry(Studio = 드라이런 로그)
 end
 
 local function deepCopy(v)

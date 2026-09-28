@@ -27,29 +27,28 @@ for _, preset in ipairs(AutoStageData.presets) do
 	presetById[preset.id] = preset
 end
 
-local settings = {} -- [Player] = preset id
 local lastGateNotice = {} -- [Player] = { stage, at }
 local stats = { moves = 0, gateNotices = 0 } -- 검증
 local AutoStage = { stats = stats }
 
 local function presetOf(player)
-	return presetById[settings[player] or player:GetAttribute("AutoStage") or AutoStageData.default] or presetById[AutoStageData.default] -- Q14: 로드 때 저장값(Attribute)
+	return presetById[player:GetAttribute("AutoStage") or AutoStageData.default] or presetById[AutoStageData.default] -- Q14 리뷰: 값 = Attribute 하나(SettingsService가 적용 - 입구 둘이 갈라지지 않게)
 end
 
 settingRemote.OnServerEvent:Connect(function(player, presetId)
 	if type(presetId) == "string" and presetById[presetId] then
-		settings[player] = presetId
-		player:SetAttribute("AutoStage", presetId)
-		require(script.Parent.SettingsService).set(player, "autoStage", presetId) -- Q14: 저장(설정 입구 하나)
+		require(script.Parent.SettingsService).set(player, "autoStage", presetId) -- Q14: 저장 + Attribute 적용(설정 입구 하나)
 	end
 end)
 
 Players.PlayerAdded:Connect(function(player)
-	player:SetAttribute("AutoStage", AutoStageData.default)
+	if player:GetAttribute("AutoStage") == nil then -- Q14 리뷰: 저장값(SettingsService.onLoaded)을 덮지 않게
+		player:SetAttribute("AutoStage", AutoStageData.default)
+	end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-	settings[player], lastGateNotice[player] = nil, nil
+	lastGateNotice[player] = nil
 end)
 
 -- 이 플레이어가 지금 갈 수 있는 자동 이동 목표(nil = 없음). 반환: 목표 스테이지, 막은 관문 스테이지(있으면).

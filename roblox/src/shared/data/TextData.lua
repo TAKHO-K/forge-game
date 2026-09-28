@@ -137,11 +137,16 @@ return {
 		["comeback.welcome"] = "돌아온 걸 환영해요! 60분 동안 ×1.5", -- C5-5
 		["generation.enter"] = "{index}세대 · {name} 몬스터가 나타납니다", -- C5-6 세대 진입(내 스테이지 기준)
 		["settings.cameraTopDown"] = "탑다운 시점(위에서 내려다보기)",
-		["settings.cameraTopDownHint"] = "끄면 로블록스 기본 카메라입니다. 이번 접속 동안 유지됩니다.",
+		["settings.cameraTopDownHint"] = "끄면 로블록스 기본 카메라입니다. 설정은 계정에 저장됩니다.",
 		["settings.dimOthersTrail"] = "다른 유저 공격 궤적 흐리게",
 		["settings.screenShake"] = "화면 흔들림(타격 · 스킬 · 보스)",
 		["settings.reduceFlashes"] = "번개 · 화면 섬광 줄이기(보스 경고는 밝기만)",
 		["settings.classChange"] = "직업 변경",
+		["variant.line"] = "스킬 변형: {class} {slot} {name}({parts})",
+		["variant.off"] = "{line} - 다른 직업(꺼짐)",
+		["variant.axis.damage"] = "피해 {pct}%",
+		["variant.axis.cooldown"] = "쿨다운 {pct}%",
+		["variant.axis.range"] = "범위 {pct}%",
 		["settings.shiftLockHint"] = "시점 고정: PC는 왼쪽 Ctrl, 모바일은 대시 버튼 옆 고정 버튼입니다.",
 		["shiftLock.button"] = "고정",
 		["shiftLock.chipKey"] = "[Ctrl]",

@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SkillVariantData = require(ReplicatedStorage.Shared.data.SkillVariantData)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local Text = require(ReplicatedStorage.Shared.Text) -- Q15: 표시 문구 = TextData(variant.*)
 
 local SkillVariant = {}
 
@@ -84,13 +85,12 @@ function SkillVariant.describe(v, activeClassId)
 	for _, key in ipairs({ "damage", "cooldown", "range" }) do
 		local m = t[key]
 		if m and m ~= 1 then
-			local label = ({ damage = "피해", cooldown = "쿨다운", range = "범위" })[key]
-			table.insert(parts, ("%s %+d%%"):format(label, math.floor((m - 1) * 100 + 0.5)))
+			table.insert(parts, Text.get("variant.axis." .. key, { pct = ("%+d"):format(math.floor((m - 1) * 100 + 0.5)) }))
 		end
 	end
 	local class = ClassData.classes[v.classId]
 	return {
-		text = ("스킬 변형: %s %s %s(%s)"):format(class and class.displayName or v.classId, v.slot, t.name, table.concat(parts, " · ")),
+		text = Text.get("variant.line", { class = class and class.displayName or v.classId, slot = v.slot, name = t.name, parts = table.concat(parts, " · ") }),
 		active = v.classId == activeClassId,
 	}
 end

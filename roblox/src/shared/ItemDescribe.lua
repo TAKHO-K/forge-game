@@ -124,7 +124,7 @@ function ItemDescribe.item(item, classId)
 			end
 			local variant = item.skillVariant and require(script.Parent.SkillVariant).describe(item.skillVariant, classId) -- Q9 K4: 스킬 변형(다른 직업 = 꺼짐)
 			if variant then
-				table.insert(lines, variant.active and variant.text or (variant.text .. " - 다른 직업(꺼짐)"))
+				table.insert(lines, variant.active and variant.text or Text.get("variant.off", { line = variant.text }))
 			end
 			local setName = item.setZone and require(script.Parent.SetBonus).setName(item.setZone, item.dropStage) -- Q7: 세트 계열(Q5)
 			if setName then

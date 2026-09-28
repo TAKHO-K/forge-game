@@ -589,6 +589,32 @@ function V.runPure()
 		check(("이관 v53 → v%s: settings 빈 표(= 기본값)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 54 and type(m.settings) == "table" and next(m.settings) == nil)
 	end)
 
+	section("Q15 T1 통계", function()
+		local Telemetry = require(script.Parent.Telemetry)
+		local TelemetryData = require(ReplicatedStorage.Shared.data.TelemetryData)
+		local b = Telemetry.bucket
+		check(("값 구간화: 스테이지 1 → %s · 49 → %s · 50 → %s · 30,000 → %s"):format(b(1, TelemetryData.stageBuckets), b(49, TelemetryData.stageBuckets), b(50, TelemetryData.stageBuckets), b(30000, TelemetryData.stageBuckets)),
+			b(1, TelemetryData.stageBuckets) == "1+" and b(49, TelemetryData.stageBuckets) == "1+" and b(50, TelemetryData.stageBuckets) == "50+" and b(30000, TelemetryData.stageBuckets) == "20000+")
+		local n, same = 0, true
+		for uid = 1, 20000 do
+			if Telemetry.sampled(uid, 0.25) then
+				n += 1
+			end
+			same = same and Telemetry.sampled(uid, 0.25) == Telemetry.sampled(uid, 0.25)
+		end
+		check(("표본 비율 0.25 = 사람 단위 고정 · 실제 %.3f"):format(n / 20000), same and math.abs(n / 20000 - 0.25) < 0.02)
+		local count = 0
+		for _ in pairs(TelemetryData.currencies) do
+			count += 1
+		end
+		local QuestData = require(ReplicatedStorage.Shared.data.QuestData)
+		local funnelOk = #TelemetryData.funnelOrder == #QuestData.ftue
+		for i, step in ipairs(QuestData.ftue) do
+			funnelOk = funnelOk and TelemetryData.funnelOrder[i] == step.funnel
+		end
+		check(("화폐 %d ≤ 5 · 퍼널 순서 = 이정표 %d단계 · 구매 분류 꺼짐(자리)"):format(count, #QuestData.ftue), count <= 5 and funnelOk and TelemetryData.categories.purchase.enabled == false)
+	end)
+
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
 end

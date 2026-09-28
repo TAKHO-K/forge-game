@@ -180,6 +180,7 @@ local function restore(player)
 	end
 	PlayerProfile.restoreForDevTools(player, backup.snapshot)
 	require(script.Parent.PetService).onLoaded(player) -- Q11 리뷰: 복원한 펫 상태로 동행 Attribute · 화면 다시(없는 펫이 남지 않게)
+	require(script.Parent.SettingsService).onLoaded(player) -- Q14 리뷰: 복원한 설정도 Attribute로
 	SaveCoordinator.setDevToolsSuspended(player, false)
 	backups[player] = nil
 	print(("[DevTools] %s 원본 프로필로 복원 완료(가방 %d칸) - 저장 차단 해제"):format(player.Name, (bagFingerprint(player))))

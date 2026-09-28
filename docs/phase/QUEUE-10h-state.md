@@ -137,10 +137,12 @@
 | 확률 창 | O(실제 클릭) · 리뷰 3 확인 | `probability.png` - 태초 · 초월이 0.0000%로 보임 → 유효숫자 표시로 수정 |
 | 저장 왕복(v53) | O | `_verify` 원본: version 53 · pets 2(동행 1 · 누적 2) · guide 4 · 출석 1 · claimed["1"] · 알 1 · 가방 10 |
 
-| Q14 설정 저장 + P4e | (이 커밋) | SettingsData · SettingsService · SAVE v54 · 섬광 줄이기 · 직업 변경 폰 숨김 → 설정 창 · docs/design/settings-hud-q14.md · QueueVerify 91/91 |
+| Q14 설정 저장 + P4e | e6ab9ea | SettingsData · SettingsService · SAVE v54 · 섬광 줄이기 · 직업 변경 폰 숨김 → 설정 창 · docs/design/settings-hud-q14.md · QueueVerify 91/91 |
+
+| Q14 리뷰 7 + Q15 번역 · T1 | (이 커밋) | 설정 창 스크롤(폰 잘림 - 치명) · 자동 이동 입구 하나(Attribute) · 설정 요청 키별 trailing · 복원 뒤 적용 · 문구 / Telemetry(누적 · 5분 · 퇴장 · 드라이런 · 분류 스위치 · 표본) · 화폐 4 입구 · 퍼널 · 복귀 · 용어집 · 하드코딩 2,073 목록 · 변형 문구 TextData · QueueVerify 94/94 |
 
 ## 지금
-- Q15 번역 기반 + T1 통계
+- Play G(Q14 ~ Q15)
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)
