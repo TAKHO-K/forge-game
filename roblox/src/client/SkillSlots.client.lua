@@ -618,6 +618,9 @@ end)
 -- 실려 온다("tick"은 없다 - 채널링 중 매 틱마다 링이 리셋되는 버그를 피한다). ok=false면
 -- (쿨다운 중 요청 등 드문 경합) 로컬 낙관적 표시를 지운다.
 local function applyServerResult(slotId, data)
+	if slotId == "t" then
+		return -- K1 궁극기 = 쿨다운 칸이 아니라 게이지(hud/UltGauge)
+	end
 	if not data.ok then
 		activeCooldown[slotId] = nil
 		setCooldown(slotId, 0, 0)

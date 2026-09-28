@@ -26,6 +26,7 @@ local TutorialState = require(script.Parent.TutorialState)
 local BossHandlersBR1 = require(script.Parent.BossHandlersBR1) -- BR1-2 투사체 반사
 local AirState = require(script.Parent.AirState) -- MV1 공중 공격 예산 · 강공격 스택 초기화
 local TranscendentService = require(script.Parent.TranscendentService) -- C5-7
+local UltimateService = require(script.Parent.UltimateService) -- K1 궁극기(충전 · 대검 변신 배율 · 충격파)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming) -- W1: 원거리 발사 시각 = 모션 타격 프레임(클라와 같은 함수)
 local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
@@ -401,6 +402,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	-- 힐러 버프(24-3, PRD 20.64) - SkillServer.strikeTarget과 같은 지점(calcDamage 직후,
 	-- "최종 피해") - 이 아래로는 배율 계산이 없다. 버프 없으면 getField 기본값 1로 무동작.
 	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
+	damage *= UltimateService.damageMultiplier(player) -- K1 대검 파괴의 화신
 	-- 23-1: 견습 중이면 무한 stage 대신 그 단계의 잡몹 stage를 쓴다(TutorialState.getMonsterStage).
 	local attackerStage = TutorialState.getMonsterStage(player)
 
@@ -417,7 +419,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	local wasQuickShotActive = BuffState.get(player, "quickShot") ~= nil
 	local requestedAt = os.clock()
 
-	local healerBuff = BuffState.getField(player, "healerBuff", "multiplier", 1)
+	local healerBuff = BuffState.getField(player, "healerBuff", "multiplier", 1) * UltimateService.damageMultiplier(player) -- K1: 묶음 둘째 타 · 관통 뒤 대상도 같은 최종 배율
 	-- C5-7b 환영(초월 장갑): 기본 공격이 대상에 들어간 뒤 요청 1회당 한 번 굴린다(서버) → 같은 대상에 추가타 1회 = 기본 공격 피해 1회분(한 타 배율 · 딜링모드 · 치명 · 힐러 버프 · 3타 배율 제외).
 	--   환영 추가타 heavyEvery번째 = 강공격(3타 배율 · 강공격 연출). 보스 포함(applyDamage가 파훼 게이트 · 보호막을 그대로 적용). 흡혈 · 태초 번개 · 비상 초기화는 안 건다(플레이어 본인의 타격만).
 	local phantomRolled = false
@@ -465,6 +467,10 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 			-- 원거리가 빗나가는 경우까지 회복시키면 안 되므로).
 			PlayerProfile.applyLifesteal(player, dealt)
 			glovesBolt(player, target, isComboHit, dealt)
+			UltimateService.onDealt(player, classId, atk > 0 and dealt / atk or 0, dealt, hitCrit, hitPosition and (hitPosition - rootPart.Position).Magnitude or 0, target) -- K1 충전
+			if hitIndex == 1 then
+				UltimateService.onBasicHit(player, classId, rootPart, target) -- K1 대검 변신 충격파
+			end
 			if isComboHit and dealt > 0 then -- C5-7b 비상: 공중 강공격 적중 → 공중 행동 초기화
 				TranscendentService.onHeavyHit(player, isAir)
 			end
@@ -585,6 +591,8 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 			MonsterSpawner.updateHpLabel(hitTarget)
 			PlayerProfile.applyLifesteal(player, dealt) -- 26-2, 위 근접 분기와 같은 지점(실제 명중 후)
 			glovesBolt(player, hitTarget, isComboHit, dealt)
+			local shooterRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			UltimateService.onDealt(player, classId, atk > 0 and dealt / atk or 0, dealt, hitCrit, shooterRoot and (hitPosition - shooterRoot.Position).Magnitude or 0, hitTarget) -- K1 충전(원거리 도달 - 먼 적중 가중)
 			attackResult:FireClient(player, hitTarget, dealt, hitCrit, isDead, isComboHit, false, isBuffedShot, seq, hitPosition, heavyFlag)
 			DamageFeed.emit(hitTarget, hitPosition, dealt, DamageFeed.kindOf(isComboHit), player, hitCrit)
 			CombatResolution.resolveHit(player, hitTarget, isDead)

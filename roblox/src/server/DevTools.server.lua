@@ -1372,6 +1372,31 @@ local function handleCommand(player, args)
 			moves, notices = hook:Invoke(player, "tick")
 		end
 		reply(player, ("자동 이동 목표 %s · 관문 %s · 누적 이동 %s · 알림 %s · 설정 %s"):format(tostring(target), tostring(gate), tostring(moves), tostring(notices), tostring(player:GetAttribute("AutoStage"))))
+	elseif sub == "ult" then
+		-- K1 궁극기: /gg ult fill(게이지 100) · /gg ult state · /gg ult forge(위조 요청 거부 검사 - 게이지 0 요청 · 활 먼 조준)
+		local Ultimate = require(script.Parent.UltimateService)
+		local debugCast = game:GetService("ServerStorage"):FindFirstChild("SkillCastDebug")
+		if args[2] == "fill" then
+			Ultimate.set(player, 100)
+			reply(player, "궁극기 게이지 100")
+		elseif args[2] == "forge" and debugCast then
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			Ultimate.set(player, 0)
+			local r1 = debugCast:Invoke(player, "T", root and root.Position)
+			local reason1 = r1[1] and r1[1].payload and r1[1].payload.reason
+			local reason2 = "-"
+			if PlayerProfile.getClassId(player) == "bow" and root then
+				Ultimate.set(player, 100)
+				local r2 = debugCast:Invoke(player, "T", root.Position + Vector3.new(500, 0, 0))
+				reason2 = tostring(r2[1] and r2[1].payload and r2[1].payload.reason)
+			end
+			print(("K1FORGE|gauge0 %s|bowFar %s|gaugeAfter %.1f"):format(tostring(reason1), reason2, Ultimate.get(player)))
+			reply(player, ("위조 요청: 게이지 0 → %s · 활 500 stud 조준 → %s · 게이지 %.1f"):format(tostring(reason1), reason2, Ultimate.get(player)))
+		else
+			local st = Ultimate.stats()
+			print(("K1STATE|gauge %.1f|casts %d|unstoppable %s|floor %s"):format(Ultimate.get(player), st.casts, tostring(Ultimate.isUnstoppable(player)), tostring(Ultimate.hasHpFloor(player))))
+			reply(player, ("궁극기 게이지 %.1f · 발동 %d · 변신 %s · 성역 바닥 %s"):format(Ultimate.get(player), st.casts, tostring(Ultimate.isUnstoppable(player)), tostring(Ultimate.hasHpFloor(player))))
+		end
 	elseif sub == "m2" then
 		-- M2 종 · 성향 확인: /gg m2 lineup(12종 한 줄 - 멈춤 · 안 죽음) · /gg m2 spawn <종> [앞 거리] [마릿수](살아 있는 몹 - 같은 PackId) · /gg m2 windup <종>(멈춘 몹 전조 반복) · /gg m2 state(내 곁 몹 상태)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")

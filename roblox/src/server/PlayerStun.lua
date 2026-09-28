@@ -33,6 +33,9 @@ end
 
 -- 반환: 기절했는가. afterTrap = 잡힘이 풀린 직후의 면역을 무시한다(BR1-4c c-11 눈덩이 - 튀어나오는 것 자체가 기절로 이어지는 한 동작).
 function PlayerStun.stun(player, seconds, afterTrap)
+	if require(script.Parent.UltimateService).isUnstoppable(player) then -- K1 대검 파괴의 화신: 경직 면역
+		return false
+	end
 	if (PlayerStun.isImmune(player) and not afterTrap) or BossTrap.isTrapped(player) or PlayerState.isInvulnerable(player) or (PlayerState.getHp(player) or 0) <= 0 then
 		return false
 	end

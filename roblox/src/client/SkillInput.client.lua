@@ -142,6 +142,8 @@ skillCastResult.OnClientEvent:Connect(function(slot, data)
 		end
 		SkillEffects.dashAfterimage(data.startPosition, data.endPosition, color, data.durationSeconds)
 		playHits(data.hits)
+	elseif data.kind == "ultHit" then
+		playHits(data.hits) -- K1 궁극기 타격(피해 숫자 · 적중 연출 - 링은 hud/UltGauge)
 	elseif data.kind == "tick" then
 		SkillEffects.expandingRing(data.casterPosition, data.radiusStuds, color, 0.4)
 		playHits(data.hits)

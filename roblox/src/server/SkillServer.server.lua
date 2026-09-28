@@ -33,6 +33,7 @@ local SummonState = require(script.Parent.SummonState)
 local DashEndpoint = require(script.Parent.DashEndpoint)
 local HealCast = require(script.Parent.HealCast)
 local SkillStats = require(script.Parent.SkillStats)
+local UltimateService = require(script.Parent.UltimateService) -- K1 궁극기(T)
 
 local skillRequest = Instance.new("RemoteEvent")
 skillRequest.Name = "SkillRequest"
@@ -80,8 +81,8 @@ end
 -- 이 아래 castLineAttack/castCircleChannel)는 그대로 동작한다.
 -- committedAt(29-3, 선택): 이 타격이 속한 시전을 시작한 시각 - 채널링 틱만 넘긴다(즉발 스킬은 nil = 지금). 보스의 반사
 -- 태세가 "태세가 선 뒤에 시작한 공격"만 반사하는 데 쓴다(이미 돌던 회전베기·난무는 0 피해로 끝날 뿐이다).
-local function strikeTarget(player, classId, atk, target, coefficient, attackerStage, forceCrit, critDmgBonus, committedAt)
-	local base = atk * coefficient
+local function strikeTarget(player, classId, atk, target, coefficient, attackerStage, forceCrit, critDmgBonus, committedAt, extraDamage)
+	local base = atk * coefficient + (extraDamage or 0) -- K1: extraDamage = 쌍검 궁극기 표식이 모은 피해
 	-- 26-2(PRD 20.67 [14] 4단계 "치명") - 장비·보석 치명 옵션 합을 더한다. critDmgBonus는
 	-- 호출부(쌍검 Q 확정 치명타)가 넘긴 값이 있으면 거기에 더한다(둘 다 기본 0/nil).
 	local optionCritRate, optionCritDmg = PlayerProfile.getCritBonus(player)
@@ -91,6 +92,7 @@ local function strikeTarget(player, classId, atk, target, coefficient, attackerS
 	-- 더 이상 배율을 곱하는 계산이 없다(15-1의 "감소식 앞에 곱해 앵커가 어긋난" 실수를
 	-- 반복하지 않는다). 버프가 없으면 getField가 기본값 1을 돌려줘 기존과 동일하다.
 	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
+	damage *= UltimateService.damageMultiplier(player) -- K1 대검 파괴의 화신(공격력 +30% = 최종 피해 배율)
 	-- 29-1: 둘째 반환값 = 실제로 들어간 피해(보스 파훼 게이트 ×g 반영) - 숫자·흡혈이 이 값을 쓴다.
 	local hitPosition = target.PrimaryPart and target.PrimaryPart.Position -- W2-3 서버 적중 지점
 	local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player, committedAt and { committedAt = committedAt } or nil)
@@ -99,8 +101,21 @@ local function strikeTarget(player, classId, atk, target, coefficient, attackerS
 	MonsterSpawner.updateHpLabel(target)
 	PlayerProfile.applyLifesteal(player, damage) -- 26-2, AttackServer 평타와 같은 지점(damage 확정 직후)
 	CombatResolution.resolveHit(player, target, isDead)
+	local casterRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	UltimateService.onDealt(player, classId, coefficient, damage, isCrit, casterRoot and hitPosition and (casterRoot.Position - hitPosition).Magnitude or 0, target) -- K1 충전(스킬 타격)
 	return { target = target, damage = damage, isCrit = isCrit, isDead = isDead }
 end
+
+-- K1: 궁극기 타격 = 스킬과 같은 피해 경로(치명 · 힐러 버프 · 보상 · 숫자). 결과는 슬롯 "T" 틱으로 클라에 보낸다(피해 숫자 · 적중 연출).
+UltimateService.register(function(player, classId, target, coefficient, extraDamage)
+	local weapon = PlayerProfile.getWeapon(player)
+	if not weapon or not target.Parent or not MonsterState.getData(target) then
+		return nil
+	end
+	local hit = strikeTarget(player, classId, SkillStats.attack(player, classId, weapon), target, coefficient, TutorialState.getMonsterStage(player), nil, nil, nil, extraDamage)
+	sendResult(player, "T", { ok = true, kind = "ultHit", hits = { hit } })
+	return hit
+end)
 
 -- 쌍검 Q 확정 치명타(20-6) 해석 - BuffState 조회는 이 서버 스크립트에서만 하고, 실제
 -- forceCrit/critDmgBonus 판단은 PlayerCombat.resolveGuaranteedCrit(순수 함수)에 맡긴다
@@ -444,7 +459,10 @@ end
 local function castHeal(player, slot, def, classId, cooldownSeconds)
 	markCast(player, slot)
 	local shieldMode = HealCast.usesShield(player, def)
-	local healAmount, isCrit = HealCast.cast(player, def, classId, cooldownSeconds)
+	local healAmount, isCrit, healed, shielded = HealCast.cast(player, def, classId, cooldownSeconds)
+	-- K1 치유사 충전: 받은 사람 수 × 한 사람 몫(최대 체력 비율)
+	local share = def.healPercentOfMaxHp * HealCast.healingPower(player) * (shieldMode and def.shield and def.shield.healRatio or 1)
+	UltimateService.onHeal(player, share * (1 + #(healed or {}) + #(shielded or {})), 1)
 
 	sendResult(player, slot, {
 		ok = true,
@@ -481,8 +499,8 @@ local function castToggle(player, slot, def)
 	})
 end
 
-local function handleSkill(player, slot)
-	if slot ~= "Q" and slot ~= "E" then
+local function handleSkill(player, slot, aimPoint)
+	if slot ~= "Q" and slot ~= "E" and slot ~= "T" then
 		return
 	end
 
@@ -499,6 +517,22 @@ local function handleSkill(player, slot)
 
 	-- 20-2a: 지금은 대검만 채워져 있다(SkillData.lua) - 나머지 직업은 빈 테이블이라
 	-- def가 nil이면 조용히 무시한다(지시 [5] 검증 7 - 에러가 나면 안 된다).
+	-- K1 궁극기(T): 게이지 · 대상 · 조준 검사 = UltimateService.cast(서버 판정 - 클라는 "쓰겠다" + 클릭 지점만)
+	if slot == "T" then
+		local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if not rootPart then
+			return
+		end
+		local ok, result = UltimateService.cast(player, classId, rootPart, aimPoint)
+		if ok then
+			result.ok = true
+			sendResult(player, slot, result)
+		else
+			reject(player, slot, result)
+		end
+		return
+	end
+
 	local classSkills = SkillData[classId]
 	local def = classSkills and classSkills[slot]
 	if not def then
@@ -562,10 +596,10 @@ if game:GetService("RunService"):IsStudio() then
 	local debugCast = Instance.new("BindableFunction")
 	debugCast.Name = "SkillCastDebug"
 	debugCast.Parent = game:GetService("ServerStorage")
-	debugCast.OnInvoke = function(player, slot)
+	debugCast.OnInvoke = function(player, slot, aimPoint)
 		lastCastTick[player] = nil
 		debugCapture[player] = {}
-		local ok, err = pcall(handleSkill, player, slot)
+		local ok, err = pcall(handleSkill, player, slot, aimPoint) -- K1: T는 클릭 지점(위조 검사)
 		local captured = debugCapture[player]
 		debugCapture[player] = nil
 		return ok and captured or { error = tostring(err) }

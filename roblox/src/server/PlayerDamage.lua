@@ -62,8 +62,18 @@ function PlayerDamage.takeDamage(targetPlayer, damage, opts)
 	if not opts.ignoresShield then
 		hpDamage, absorbed = PlayerShield.absorb(targetPlayer, damage)
 	end
-	local newHp = math.max(PlayerState.getHp(targetPlayer) - hpDamage, 0)
+	local hpBefore = PlayerState.getHp(targetPlayer)
+	local newHp = math.max(hpBefore - hpDamage, 0)
+	-- K1 치유사 생명의 성역: 일반 피해만 HP 1 바닥(최대 체력 % 기믹 · 전멸기(opts.fixed) · 판정형(ignoresShield - 낙사 · 핵심 기믹 실패)은 못 막는다)
+	local Ultimate = typeof(targetPlayer) == "Instance" and targetPlayer:IsA("Player") and require(script.Parent.UltimateService)
+	if Ultimate and not opts.fixed and not opts.ignoresShield and hpBefore >= 1 and newHp < 1 and Ultimate.hasHpFloor(targetPlayer) then
+		newHp = 1
+		print(("[K1] 생명의 성역: %s HP 1 바닥"):format(targetPlayer.Name))
+	end
 	PlayerState.setHp(targetPlayer, newHp)
+	if Ultimate and hpDamage > 0 then
+		Ultimate.onTaken(targetPlayer, hpDamage) -- K1 대검 충전(받은 피해)
+	end
 	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)
 	if typeof(targetPlayer) == "Instance" and targetPlayer:IsA("Player") then
 		require(script.Parent.TranscendentService).syncFrenzy(targetPlayer) -- C5-7b 광폭: 맞은 순간 전투 중
@@ -165,7 +175,7 @@ local function applyFinalDamage(targetPlayer, damage, label, opts)
 	-- 오염된 값과 곱해져도 여기서 한 번 더 끊는다.
 	damage = Sanitize.number(damage, 0)
 	-- 반환은 지금까지처럼 피해 하나(호출자들이 "피격이 있었나"로 읽는다) - 쉴드가 다 막아도 피격은 피격이다. 흡수량이 필요한 곳은 takeDamage를 직접 부른다.
-	return (PlayerDamage.takeDamage(targetPlayer, damage, { label = label, ignoresShield = opts and opts.ignoresShield }))
+	return (PlayerDamage.takeDamage(targetPlayer, damage, { label = label, ignoresShield = opts and opts.ignoresShield, fixed = fixed })) -- K1: fixed(최대 체력 % 기믹 · 전멸기) = 성역 HP 바닥 밖
 end
 
 -- 몬스터 공격력(rawAttack)을 방어력 감소식에 넣어 적용한다 - 잡몹 평타·보스 평타·강공격·

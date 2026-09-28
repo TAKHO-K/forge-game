@@ -712,7 +712,8 @@ local function runHitEffects(c, effects, v, from, coHits)
 				send(c.st, "playerStun", { userId = typeof(v.player) == "Instance" and v.player.UserId or nil, seconds = effect.seconds })
 				debugEvent("playerStun", { player = v.player, at = c.now, seconds = effect.seconds })
 			end
-		elseif effect.type == "launch" and not BossTrap.isTrapped(v.player) and not BossArenaContainment.isProtected(v.player) then -- P3d B2: 맵 이탈 복귀 직후 보호 중이면 안 뜬다
+		elseif effect.type == "launch" and not BossTrap.isTrapped(v.player) and not BossArenaContainment.isProtected(v.player)
+			and not (typeof(v.player) == "Instance" and require(script.Parent.UltimateService).isUnstoppable(v.player)) then -- K1 대검 파괴의 화신: 넉백 면역 -- P3d B2: 맵 이탈 복귀 직후 보호 중이면 안 뜬다
 			c.st.lastLaunch = { player = v.player, at = c.now, effect = effect } -- 자동 검증이 읽는다
 			-- 29-5 탱커 훅 ③: 무게 계수(지금은 전원 1.0 - BossMechanics.weightFactorOf). 무거울수록 낮게·가까이·짧게 뜬다 -
 			-- 높이·거리·체공·면역 시간을 계수로 나눈다(조작을 잃는 시간이 짧아지면 면역도 같이 짧아져야 공짜 면역이 안 된다).
