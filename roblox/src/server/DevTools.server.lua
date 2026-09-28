@@ -1286,7 +1286,7 @@ local function handleCommand(player, args)
 			mob:SetAttribute("C3Mob", true)
 			mob.Name = "C3Mob"
 			if args[6] == "1" then
-				MonsterState.setDamageTakenMultiplier(mob, 1e-6)
+				mob:SetAttribute("C3Immortal", true) -- W3b: 잡몹은 setDamageTakenMultiplier가 안 먹는다(보스 전용) → MonsterState가 이 표식을 보고 피해 0
 			end
 			reply(player, ("표본 몹 %s @ %s"):format(tierKey, tostring(position)))
 		end
