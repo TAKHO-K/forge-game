@@ -203,6 +203,55 @@ for i, classId in ipairs(ClassData.order) do
 	makeButton(ClassData.classes[classId], i)
 end
 
+-- QUEUE-10h Q7-8: 준비 중 직업 카드(성기사 = 뿅망치 2D 실루엣 + Coming Soon · 누를 수 없음 - 버튼이 아니라 Frame)
+for i, info in ipairs(ClassData.comingSoon or {}) do
+	local card = Instance.new("Frame")
+	card.Name = "ComingSoon_" .. info.id
+	card.LayoutOrder = #ClassData.order + i
+	card.Size = UDim2.new(0, 356, 0, 64)
+	card.BackgroundColor3 = UIColors.lockedBg
+	card.BorderSizePixel = 0
+	card.Parent = body
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = card
+	local icon = Instance.new("Frame") -- 뿅망치: 손잡이 + 머리(둥근 통)
+	icon.Name = "HammerSilhouette"
+	icon.BackgroundTransparency = 1
+	icon.Size = UDim2.new(0, 48, 0, 48)
+	icon.Position = UDim2.new(0, 10, 0.5, -24)
+	icon.Parent = card
+	local handle = Instance.new("Frame")
+	handle.BackgroundColor3 = UIColors.lockedIcon
+	handle.BorderSizePixel = 0
+	handle.AnchorPoint = Vector2.new(0.5, 0.5)
+	handle.Size = UDim2.new(0, 7, 0, 34)
+	handle.Position = UDim2.new(0.5, 4, 0.5, 6)
+	handle.Rotation = 30
+	handle.Parent = icon
+	local head = Instance.new("Frame")
+	head.BackgroundColor3 = UIColors.lockedIcon
+	head.BorderSizePixel = 0
+	head.AnchorPoint = Vector2.new(0.5, 0.5)
+	head.Size = UDim2.new(0, 30, 0, 18)
+	head.Position = UDim2.new(0.5, -6, 0.5, -12)
+	head.Rotation = 30
+	head.Parent = icon
+	local headCorner = Instance.new("UICorner")
+	headCorner.CornerRadius = UDim.new(0, 8)
+	headCorner.Parent = head
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Position = UDim2.new(0, 70, 0, 0)
+	label.Size = UDim2.new(1, -80, 1, 0)
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 16
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextColor3 = UIColors.lockedText
+	label.Text = ("%s(%s) · Coming Soon"):format(info.displayName, info.weaponName)
+	label.Parent = card
+end
+
 -- 재변경용 상시 버튼(좌하단 - 강화 UI는 화면 중앙 하단, 공격 버튼은 우하단이라 겹치지 않는다).
 -- y오프셋 34: 16-1에서 생긴 맨 아래 경험치바(ExpBar.client.lua, 높이 26)와 겹치지 않게
 -- 8px 띄운다(Studio 실측으로 -24 그대로 두면 2px 겹치는 걸 확인했다).

@@ -26,6 +26,8 @@
 
 return {
 	order = { "greatsword", "dualblade", "bow", "healer" },
+	-- QUEUE-10h Q7-8: 직업 선택칸의 준비 중 직업(고를 수 없음 - 2D 실루엣 + Coming Soon). 실제 직업이 되면 classes · order로 옮긴다.
+	comingSoon = { { id = "paladin", displayName = "성기사", weaponName = "뿅망치" } },
 
 	-- rangeMultiplier(19-2) - CombatConfig.attackRangeStuds(=10, 대검 기준 웹 원본값)에
 	-- 곱하는 클래스별 사거리 배율. 쌍검은 그대로 1.0(지시 - "가장 짧은 사거리가 쌍검의
