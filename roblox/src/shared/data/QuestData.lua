@@ -2,7 +2,7 @@
 --   §7-6: 기존 출석 · 의뢰판 · 시즌 미션 코드는 없었다(검색 0) → 이 파일이 단일 시스템. Q12 FTUE · 7일 출석도 여기 events · rewards를 재사용한다.
 --   날짜 = 서버 UTC 날짜(os.date("!*t")) · 주 = 월요일 시작 UTC. 일간 = pool에서 dailyCount개(날짜 시드 - 모두에게 같은 목록) · 주간 = weekly 전부.
 --   이벤트 이름(QuestService.note가 받는 것): kill(잡몹 처치) · bossClear(보스 처치 - 첫 클리어 · 재도전 · 토벌) · raidClear · enhance(강화 시도) · gem(보석 장착 · 재련) · egg(알 획득) · train(수련 · 능력 구매) · sparkle(반짝이 처치).
---   보상 = { gold = 몇 마리분(GoldCost "quest" × 계정 최고 스테이지), enhanceStone = n, egg = n(구역 = 계정이 연 가장 높은 구역 · 등급 보통), sparkleShard = n(반짝 조각 - 새 재화 자리), passExp = n(시즌 패스 경험치 자리) }.
+--   보상 = { gold = 몇 마리분(GoldCost "quest" × 계정 최고 스테이지), enhanceStone = n, egg = n(구역 = tier1 · 등급 보통 - 펫 단계에서 구역 선택), sparkleShard = n(반짝 조각 - 새 재화 자리), passExp = n(시즌 패스 경험치 자리) }.
 return {
 	dailyCount = 3,
 	dailyPool = {

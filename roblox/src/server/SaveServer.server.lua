@@ -13,6 +13,8 @@ local ImmediateSave = require(script.Parent.ImmediateSave)
 local InventorySync = require(script.Parent.InventorySync)
 local AcquisitionAudit = require(script.Parent.AcquisitionAudit)
 AcquisitionAudit.start()
+local QuestService = require(script.Parent.QuestService) -- Q6 G3 퀘스트 · 수련 Remote
+QuestService.start()
 
 local function loadForPlayer(player)
 	local profile, err = SaveSystem.loadProfile(player)
@@ -36,6 +38,7 @@ local function loadForPlayer(player)
 		end)
 	end
 	task.spawn(AcquisitionAudit.auditProfile, player) -- S1: 원장 없는 태초 격리 · 확률 검사(자동 제재 없음)
+	QuestService.onLoaded(player) -- Q6: 날짜 넘김 · 화면 표
 end
 
 Players.PlayerAdded:Connect(loadForPlayer)

@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local SetBonus = require(ReplicatedStorage.Shared.SetBonus) -- Q5 BR2 세트
+local Training = require(ReplicatedStorage.Shared.Training) -- Q6 G3 수련 · 직업 능력
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig) -- C5-1 dealGear.parts
@@ -106,7 +107,15 @@ function PlayerProfile.getOptionBonus(player, axisId)
 	if not classState then
 		return 0
 	end
-	return Option.sumAxisBonus(buildOptionSources(classState), axisId, profile.classId, SetBonus.extraValues(classState.equipment, axisId)) -- Q5 세트(공통 입구)
+	local extra = SetBonus.extraValues(classState.equipment, axisId) -- Q5 세트(공통 입구)
+	local trained = Training.axisValues(profile.training, classState.abilities, profile.classId, axisId) -- Q6 수련 · 직업 능력(방어 · 속도 · 치유 축)
+	if trained then
+		extra = extra or {}
+		for _, v in ipairs(trained) do
+			table.insert(extra, v)
+		end
+	end
+	return Option.sumAxisBonus(buildOptionSources(classState), axisId, profile.classId, extra)
 end
 
 -- 치명(crit) 전용 - {critRate, critDmg} 두 값을 같이 돌려준다(20.67 [6-3], Option.critBonus 참고).
@@ -193,7 +202,8 @@ local function syncMilestoneAttributes(player, profile)
 	local classState = activeClassState(profile)
 	local claimed = classState and classState.milestoneLevel or 0
 	player:SetAttribute("MilestoneLevel", claimed)
-	player:SetAttribute("MilestoneMultiplier", Milestone.attackMultiplier(claimed))
+	player:SetAttribute("MilestoneMultiplier", Milestone.attackMultiplier(claimed) + Training.bucketBonus(profile.training, classState and classState.abilities, profile.classId, "attack")) -- Q6: 수련 · 직업 능력 합연산
+	player:SetAttribute("TrainingLevels", ("%d,%d,%d"):format(profile.training and profile.training.attack or 0, profile.training and profile.training.hp or 0, profile.training and profile.training.defense or 0)) -- Q6 수련 창 표시
 end
 
 -- 로드 직후(PlayerProfile.init)와 직업 전환 직후(setClassId) 둘 다 "지금 활성 직업의
@@ -704,7 +714,7 @@ function PlayerProfile.getMilestoneMultiplier(player)
 	if not classState then
 		return 1
 	end
-	return Milestone.attackMultiplier(classState.milestoneLevel or 0)
+	return Milestone.attackMultiplier(classState.milestoneLevel or 0) + Training.bucketBonus(profile.training, classState.abilities, profile.classId, "attack") -- Q6 G3: 영구 버킷 합연산(수련 · 직업 능력)
 end
 
 -- 최대 체력 배율(버킷이 최대 체력 쪽일 때만 1이 아니다 - Milestone.maxHpMultiplier).
@@ -714,7 +724,7 @@ function PlayerProfile.getMilestoneMaxHpMultiplier(player)
 	if not classState then
 		return 1
 	end
-	return Milestone.maxHpMultiplier(classState.milestoneLevel or 0)
+	return Milestone.maxHpMultiplier(classState.milestoneLevel or 0) + Training.bucketBonus(profile.training, classState.abilities, profile.classId, "hp") -- Q6 G3
 end
 
 -- 해금 효과를 그 순간 적용한다(계정 효과 - 한 번만). 예약(reserved) 해금은 기록만 남는다.
@@ -2096,6 +2106,97 @@ end
 
 -- 서버만 호출한다(13-1). 잠금은 착용/해제와 같은 되돌릴 수 있는 사건이라(다시 누르면 그만)
 -- 즉시저장하지 않는다.
+-- ═══ QUEUE-10h Q6 G3 수련 · 직업 고유 능력 · 퀘스트 ═══
+-- 구매: kind = "stat"(공용 수련 - TrainingData.stats id) | "ability"(활성 직업 능력 id). 상한 = 계정 최고 스테이지 연동 · 가격 = Training.costFor(서버가 다시 계산). 반환: true, 새 단계, 가격 | false, 이유
+function PlayerProfile.buyTraining(player, kind, id)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	local def, levels
+	if kind == "stat" then
+		def, levels = Training.statDef(id), profile.training
+	elseif kind == "ability" then
+		def = Training.abilityDef(profile.classId, id)
+		classState.abilities = classState.abilities or {}
+		levels = classState.abilities
+	end
+	if not def or type(levels) ~= "table" then
+		return false, "unknown"
+	end
+	local level = tonumber(levels[def.id]) or 0
+	local best = PlayerProfile.getAccountBestStage(player)
+	if level >= Training.capFor(def, best) then
+		return false, "cap"
+	end
+	local cost = Training.costFor(def, level, best)
+	if not PlayerProfile.trySpendGold(player, cost) then
+		return false, "no_gold"
+	end
+	levels[def.id] = level + 1
+	syncMilestoneAttributes(player, profile)
+	return true, level + 1, cost
+end
+
+function PlayerProfile.getTrainingView(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return nil
+	end
+	return { training = copyTree(profile.training), abilities = copyTree(classState.abilities or {}), classId = profile.classId, bestStage = PlayerProfile.getAccountBestStage(player) }
+end
+
+-- 퀘스트 상태(살아 있는 표 - QuestService만 고친다). 없으면(옛 세이브 이관 전 등) 새로 만든다.
+function PlayerProfile.getQuestState(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	if type(profile.quests) ~= "table" then
+		profile.quests = require(ReplicatedStorage.Shared.Quest).newState(os.time())
+	end
+	return profile.quests
+end
+
+-- 메인 퀘스트 조건 사실(shared/Quest.mainDone이 읽는다)
+function PlayerProfile.getQuestFacts(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return {}
+	end
+	local socketed = 0
+	for slot = 1, Gem.slotCount do
+		if Gem.isFilled(classState.weapon.gems, slot) then
+			socketed += 1
+		end
+	end
+	local maxRebirth = 0
+	for _, cs in pairs(profile.classes) do
+		maxRebirth = math.max(maxRebirth, cs.rebirthCount or 0)
+	end
+	return {
+		tutorialDone = profile.tutorial and profile.tutorial.completed == true,
+		bestBossCleared = classState.stageProgress and classState.stageProgress.bestBossCleared or 0,
+		weaponLevel = classState.weapon.level or 0,
+		gemSocketed = socketed,
+		eggs = #(profile.eggs or {}),
+		rebirth = maxRebirth,
+	}
+end
+
+-- 알 1개 지급(퀘스트 보상 - 둥지 기록 없이 가방에만). 반환: 넣었는가(가방 상한이면 false)
+function PlayerProfile.addEgg(player, egg, cap)
+	local profile = profiles[player]
+	if not profile or #profile.eggs >= cap then
+		return false
+	end
+	table.insert(profile.eggs, egg)
+	return true
+end
+
 -- Q5 개발 명령(/gg set equip) 전용: 착용 3부위의 세트 계열을 바꾼다(호출부가 백업 - 세션 메모리). 반환 = 착용 표
 function PlayerProfile.debugStampEquipmentSet(player, zoneKey)
 	local profile = profiles[player]
@@ -2180,6 +2281,8 @@ function PlayerProfile.snapshotForDevTools(player)
 		hints = deepCopy(profile.hints), -- 30-0 S20e: 수동 Play에서 보석상인을 쓰면 안내 플래그가 켜지고 Play 종료 때 실제 프로필에 저장됐다(S20e 실측) - 같은 이유로 되돌린다.
 		autoProcess = deepCopy(profile.autoProcess), -- G1-2(v36): 새 저장 필드는 백업 대상(COMMON §1)
 		world = deepCopy(profile.world), -- M1(v38): 포탈 개방 - 새 저장 필드는 백업 대상(COMMON §1)
+		training = deepCopy(profile.training), -- Q6(v50): 새 저장 필드 = 백업 대상(COMMON §1)
+		quests = deepCopy(profile.quests), -- Q6(v50)
 		peakLevel = profile.peakLevel, -- M1(v38)
 		titles = deepCopy(profile.titles), -- M1(v39): 칭호(봉인 입구 검증이 지급한다)
 		eggs = deepCopy(profile.eggs), -- M1-3(v41): 알 가방(둥지 검증이 줍는다) - world(nests · nestDex)는 위 world 통째 복사에 들어 있다
@@ -2219,6 +2322,8 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.leaderboardTainted = snapshot.leaderboardTainted
 	profile.comeback = snapshot.comeback and deepCopy(snapshot.comeback) or { untilAt = 0 } -- 묶음 A 리뷰: C5-5 v48 복귀 부스트도 되돌린다
 	profile.world = snapshot.world and deepCopy(snapshot.world) or profile.world
+	profile.training = snapshot.training and deepCopy(snapshot.training) or profile.training -- Q6(v50)
+	profile.quests = snapshot.quests and deepCopy(snapshot.quests) or profile.quests -- Q6(v50)
 	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
 	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles
 	profile.eggs = snapshot.eggs and deepCopy(snapshot.eggs) or profile.eggs

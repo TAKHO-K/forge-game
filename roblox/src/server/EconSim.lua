@@ -43,6 +43,8 @@ local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local DropTable = require(ReplicatedStorage.Shared.DropTable)
 local Milestone = require(ReplicatedStorage.Shared.Milestone) -- P2.5b D: 환생 후 레벨 마일스톤(영구 배율)
+local Training = require(ReplicatedStorage.Shared.Training) -- Q6 G3 수련 · 직업 능력
+local TrainingData = require(ReplicatedStorage.Shared.data.TrainingData)
 local MilestoneData = require(ReplicatedStorage.Shared.data.MilestoneData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PartyState = require(script.Parent.PartyState)
@@ -481,6 +483,9 @@ local function newState(profile)
 		bossPartTurn = 0,
 		awakenCount = 0, -- D1: 각성 횟수(태초 보유 what-if)
 		awakenGold = 0,
+		training = { attack = 0, hp = 0, defense = 0 }, -- Q6 G3 수련(계정) · 능력(직업)
+		abilities = {},
+		spend = { enhance = 0, protection = 0, gem = 0, awaken = 0, training = 0, ability = 0 }, -- Q6 골드 사용처 집계
 		sparkleTally = {}, -- D1-2: 반짝이 장비 누적 기대 도착(등급마다)
 		sparkleGot = {}, -- D1-2: 반짝이 장비 누적 기대 개수(공급 표 - 등급마다)
 		sparkles = 0,
@@ -508,8 +513,8 @@ local function loadoutFor(state)
 		weaponGrade = state.weaponGrade,
 		gear = gear,
 		gems = state.gems,
-		permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel), -- P2.5c B2: 마일스톤 버킷(붙는 곳 = MilestoneData.stat)
-		permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel),
+		permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel) + (EconSimConfig.modelTraining and Training.bucketBonus(state.training, state.abilities, state.classId, "attack") or 0), -- P2.5c B2: 마일스톤 버킷 · Q6 수련 · 직업 능력(합연산 - 게임 PlayerProfile.getMilestoneMultiplier와 같은 식)
+		permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel) + (EconSimConfig.modelTraining and Training.bucketBonus(state.training, state.abilities, state.classId, "hp") or 0),
 		rebirth = state.rebirth, -- C4-2 환생 보상 치명
 	})
 end
@@ -564,6 +569,7 @@ local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, for
 		local price = GoldCost.cost(MonsterData.tier1.goldDrop, state.reach, "rerollTicket") * GemData.rerollTicketGoldMultiplier * tickets -- GemServer.rerollTicketPrice와 같은 식
 		if (forced or EconSim.gemValue(gem, state.classId) > oldValue) and state.gold >= price then
 			state.gold -= price
+			state.spend.gem += price
 			state.rerollTickets += tickets
 			state.gems[slot] = gem
 			state.gemReplacements += forced and 0 or 1
@@ -677,6 +683,7 @@ local function checkBag(state, profile, tierIndex, stage, kills, whatIf, killSec
 				if state.gold >= cost then
 					state.gold -= cost
 					state.awakenGold += cost
+					state.spend.awaken += cost
 					state.awakenCount += 1
 					item.itemLevel = state.reach
 					replaced += 1
@@ -704,6 +711,7 @@ local function tryEnhanceWithGold(state, profile, rng)
 					local price = Enhance.getProtectionPrice(kind, state.reach)
 					if state.gold >= cost + price then
 						state.gold -= price
+						state.spend.protection += price
 						state.tickets[kind] += 1
 					end
 				end
@@ -711,6 +719,7 @@ local function tryEnhanceWithGold(state, profile, rng)
 		end
 		local useDrop, useReset = Enhance.resolveProtectionFlags(level, gaugeFull, profile.useProtection, profile.useProtection, state.tickets.drop, state.tickets.reset)
 		state.gold -= cost
+		state.spend.enhance += cost
 		if mat then
 			state.materials[mat.id] -= mat.count
 		end
@@ -720,6 +729,44 @@ local function tryEnhanceWithGold(state, profile, rng)
 			state.tickets[result.blockedBy] -= 1
 		end
 		state.weaponLevel, state.gauge = result.level, result.gauge
+	end
+end
+
+-- Q6 G3: 강화가 쓰고 남은 골드로 수련 · 직업 능력(가장 싼 다음 단계부터 - 상한 = 계정 최고 스테이지 연동). 게임과 같은 가격 · 상한 함수(shared/Training).
+--   다음 강화 비용 × EconSimConfig.trainingReserveEnhance만큼은 남긴다(강화 우선).
+local function tryTrainWithGold(state)
+	if not EconSimConfig.modelTraining then
+		return
+	end
+	local reserve = Enhance.getCost(state.weaponLevel, state.reach) * (EconSimConfig.trainingReserveEnhance or 0)
+	local guard = 0
+	while guard < 2000 do
+		guard += 1
+		local bestDef, bestLevels, bestCost, bestKind
+		for _, def in ipairs(TrainingData.stats) do
+			local level = state.training[def.id] or 0
+			if level < Training.capFor(def, state.reach) then
+				local cost = Training.costFor(def, level, state.reach)
+				if not bestCost or cost < bestCost then
+					bestDef, bestLevels, bestCost, bestKind = def, state.training, cost, "training"
+				end
+			end
+		end
+		for _, def in ipairs(TrainingData.classAbilities[state.classId] or {}) do
+			local level = state.abilities[def.id] or 0
+			if level < Training.capFor(def, state.reach) then
+				local cost = Training.costFor(def, level, state.reach)
+				if not bestCost or cost < bestCost then
+					bestDef, bestLevels, bestCost, bestKind = def, state.abilities, cost, "ability"
+				end
+			end
+		end
+		if not bestDef or state.gold - bestCost < reserve then
+			return
+		end
+		state.gold -= bestCost
+		state.spend[bestKind] += bestCost
+		bestLevels[bestDef.id] = (bestLevels[bestDef.id] or 0) + 1
 	end
 end
 
@@ -1008,6 +1055,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 			end
 			replaced += changed
 			tryEnhanceWithGold(state, profile, rng)
+			tryTrainWithGold(state) -- Q6
 			-- 아무것도 안 바뀐 점검이면 사냥 선택 · 보스 판정이 그대로라 다시 계산하지 않는다(긴 레벨에서 점검 수백 번 - 계산 시간).
 			if anyChange or state.gearMode ~= modeBefore or state.weaponLevel ~= weaponBefore then
 				refresh()
@@ -1016,6 +1064,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	end
 	state.exp = -need -- 넘친 경험치는 다음 레벨로
 	tryEnhanceWithGold(state, profile, rng)
+	tryTrainWithGold(state) -- Q6
 	local levelBefore = state.level
 	state.level += 1
 	state.reclaimKills += kills

@@ -13,6 +13,9 @@ function GemEquip.handle(player, slot, gemInventoryIndex)
 		return false, "invalid"
 	end
 	local success, reason = PlayerProfile.equipGem(player, math.floor(slot), math.floor(gemInventoryIndex))
+	if success == true then
+		require(script.Parent.QuestService).note(player, "gem", 1) -- Q6 G3 퀘스트(보석 장착)
+	end
 	return success == true, reason
 end
 

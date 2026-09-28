@@ -230,6 +230,7 @@ function NestServer.tryPickup(player, nestId, opts)
 		end
 		return reject("full")
 	end
+	require(script.Parent.QuestService).note(player, "egg", 1) -- Q6 G3 퀘스트(알 줍기)
 	local discovered, dexCount, title = false, nil, nil
 	if spec.track == "C" then
 		discovered, dexCount = PlayerProfile.discoverNest(player, nestId)

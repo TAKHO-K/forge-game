@@ -236,6 +236,54 @@ function V.runPure()
 		check(("토벌 스테이지 47/45 → %s · 미클리어 보스 50 → %s · 원격 미등록 → %s"):format(tostring(s1), tostring(whyU), tostring(whyR)), s1 == 45 and okU == false and whyU == "boss_stage_uncleared" and okR == false and whyR == "gate_unregistered")
 	end)
 
+	section("Q6 G3 수련 · 능력 · 퀘스트", function()
+		local Training = require(ReplicatedStorage.Shared.Training)
+		local Quest = require(ReplicatedStorage.Shared.Quest)
+		local QuestData = require(ReplicatedStorage.Shared.data.QuestData)
+		local atk = Training.statDef("attack")
+		check(("수련 상한 = 최고 스테이지 ÷ 10: 스테이지 95 → %d · 능력 상한 50: 스테이지 9,999 → %d"):format(Training.capFor(atk, 95), Training.capFor(Training.abilityDef("bow", "bow_might"), 9999)),
+			Training.capFor(atk, 95) == 9 and Training.capFor(Training.abilityDef("bow", "bow_might"), 9999) == 50)
+		check("수련 가격 단계마다 오름 · 스테이지 따라 오름", Training.costFor(atk, 5, 100) > Training.costFor(atk, 4, 100) and Training.costFor(atk, 5, 500) > Training.costFor(atk, 5, 100))
+		local bonus = Training.bucketBonus({ attack = 10, hp = 4 }, { gs_might = 5 }, "greatsword", "attack")
+		check(("공격 버킷 합연산 = 10 × 0.005 + 5 × 0.004 = %.3f · 다른 직업 능력 무시"):format(bonus), math.abs(bonus - 0.07) < 1e-12
+			and math.abs(Training.bucketBonus({ attack = 10 }, { gs_might = 5 }, "bow", "attack") - 0.05) < 1e-12)
+		local def = Training.axisValues({ defense = 4 }, { gs_guard = 3 }, "greatsword", "defensePercent")
+		check("방어 축 = 수련 + 철벽", def and math.abs(def[1] - (4 * 0.005 + 3 * 0.004)) < 1e-12)
+		-- 퀘스트: 같은 날 = 같은 목록(중복 없음) · 진행 → 받기 → 두 번 못 받음 · 상자 = 전부 완료 뒤
+		local day = 20000
+		local listA, listB = Quest.dailyFor(day), Quest.dailyFor(day)
+		local ids, dup = {}, false
+		for i, q in ipairs(listA) do
+			dup = dup or ids[q.id] ~= nil or listB[i].id ~= q.id
+			ids[q.id] = true
+		end
+		check(("일간 %d개 · 날짜 시드 고정 · 중복 없음"):format(#listA), #listA == QuestData.dailyCount and not dup)
+		local now = day * 86400 + 3600
+		local st = Quest.newState(now)
+		local first = listA[1]
+		local none = Quest.claim(st, "daily", first.id, now)
+		Quest.note(st, first.event, first.target, now)
+		local r1 = Quest.claim(st, "daily", first.id, now)
+		local r2, why2 = Quest.claim(st, "daily", first.id, now)
+		check("일간: 미완료 거부 → 완료 받기 → 다시 거부(claimed)", none == nil and r1 ~= nil and r2 == nil and why2 == "claimed")
+		local chestBefore = Quest.claim(st, "chest", nil, now)
+		for _, q in ipairs(listA) do
+			Quest.note(st, q.event, q.target, now)
+		end
+		local chest = Quest.claim(st, "chest", nil, now)
+		local login1, login2 = Quest.claim(st, "login", nil, now), Quest.claim(st, "login", nil, now)
+		check("상자 = 일간 전부 뒤 1회 · 접속 보상 하루 1회", chestBefore == nil and chest ~= nil and login1 ~= nil and login2 == nil)
+		Quest.roll(st, now + 86400)
+		check("날짜 넘김 = 일간 진행 · 접속 초기화", next(st.daily) == nil and Quest.claim(st, "login", nil, now + 86400) ~= nil)
+		local mainNo = Quest.claim(st, "main", nil, now, { tutorialDone = false })
+		local mainOk = Quest.claim(st, "main", nil, now, { tutorialDone = true })
+		check(("메인: 견습 전 거부 → 뒤 받기(다음 단계 %d)"):format(st.main), mainNo == nil and mainOk ~= nil and st.main == 2)
+		local SaveSystem = require(script.Parent.SaveSystem)
+		local ok, m = pcall(SaveSystem.migrate, { version = 49, gold = 0, classes = { bow = { equipment = {} } }, inventory = {} })
+		check(("이관 v49 → v%s: training · abilities · quests 채움"):format(ok and tostring(m.version) or "에러"),
+			ok and m.version >= 50 and type(m.training) == "table" and m.training.attack == 0 and type(m.classes.bow.abilities) == "table" and type(m.quests) == "table" and m.quests.main == 1)
+	end)
+
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
 end

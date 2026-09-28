@@ -125,6 +125,7 @@ function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 	if outcome.blockedBy then
 		PlayerProfile.trySpendProtectionTicket(player, outcome.blockedBy, 1)
 	end
+	require(script.Parent.QuestService).note(player, "enhance", 1) -- Q6 G3 퀘스트(강화 시도)
 
 	local payload = send(player, {
 		result = outcome.result,

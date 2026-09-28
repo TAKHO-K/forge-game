@@ -254,6 +254,19 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 			print(("[forge-game] 드랍: %s등급 %s (%s)"):format(armorDrop.grade, armorDrop.part, kind))
 		end
 	end
+	-- Q6 G3 퀘스트 진행(서버 처치 경로 한 곳 - 받는 사람마다)
+	local QuestService = require(script.Parent.QuestService)
+	if isBoss then
+		QuestService.note(recipient, "bossClear", 1)
+		if monsterData.isRaid then
+			QuestService.note(recipient, "raidClear", 1)
+		end
+	else
+		QuestService.note(recipient, "kill", 1)
+		if isSparkle then
+			QuestService.note(recipient, "sparkle", 1)
+		end
+	end
 end
 
 local function handleBossDeath(attacker, target)

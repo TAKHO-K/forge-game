@@ -54,6 +54,7 @@ function GemCraftRequest.handle(player, action, a, b, c)
 		if not ok then
 			return false, result
 		end
+		require(script.Parent.QuestService).note(player, "gem", 1) -- Q6 G3 퀘스트(재련)
 		return true, nil, { itemLevel = result }
 	end
 	return false, "invalid"

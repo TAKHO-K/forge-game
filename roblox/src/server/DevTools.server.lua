@@ -1242,6 +1242,40 @@ local function handleCommand(player, args)
 		local zone, count, scale = SetBonus.state(eq)
 		reply(player, ("세트 %s · %s %d부위 · 세대 ×%.2f · 최대 체력 옵션 %.3f · 최종 피해 옵션 %.3f"):format(SetData.enabled and "켬" or "끔", tostring(zone), count, scale,
 			PlayerProfile.getOptionBonus(player, "maxHpPercent"), PlayerProfile.getOptionBonus(player, "finalDamage")))
+	elseif sub == "q6" and args[2] then
+		-- Q6 G3: /gg q6 view · note <이벤트> [n] · claim <daily|weekly|login|chest|main> [id] · train <stat|ability> <id> [횟수] - 실제 서버 경로(QuestService)
+		local QuestService = require(script.Parent.QuestService)
+		if args[2] == "note" and args[3] then
+			QuestService.note(player, args[3], tonumber(args[4]) or 1)
+		elseif args[2] == "claim" and args[3] then
+			local ok, why = QuestService.claim(player, args[3], args[4])
+			reply(player, ("퀘스트 받기 %s %s → %s %s"):format(args[3], tostring(args[4]), tostring(ok), tostring(why)))
+		elseif args[2] == "train" and args[3] and args[4] then
+			for _ = 1, math.clamp(math.floor(tonumber(args[5]) or 1), 1, 50) do
+				local ok, why = QuestService.train(player, args[3], args[4])
+				if not ok then
+					reply(player, ("수련 멈춤: %s"):format(tostring(why)))
+					break
+				end
+			end
+		end
+		local v = QuestService.view(player)
+		if v then
+			local rows = {}
+			for _, q in ipairs(v.daily) do
+				table.insert(rows, ("%s %d/%d%s"):format(q.id, q.n, q.target, q.claimed and "✓" or ""))
+			end
+			local tr = {}
+			for _, t in ipairs(v.training) do
+				table.insert(tr, ("%s %d/%d(%d골드)"):format(t.id, t.level, t.cap, t.cost))
+			end
+			for _, t in ipairs(v.abilities) do
+				table.insert(tr, ("%s %d/%d"):format(t.id, t.level, t.cap))
+			end
+			reply(player, ("일간 %s · 접속 %s · 상자 %s · 메인 %s(%s - %s) · 조각 %d · 패스 %d · 수련 %s · 공격 배율 %.3f · 최대 체력 배율 %.3f"):format(table.concat(rows, " "), tostring(v.loginReady), tostring(v.chestReady),
+				v.main and v.main.index or "끝", v.main and v.main.name or "-", v.main and tostring(v.main.done) or "-", v.currencies.sparkleShard or 0, v.currencies.passExp or 0, table.concat(tr, " "),
+				PlayerProfile.getMilestoneMultiplier(player), PlayerProfile.getMilestoneMaxHpMultiplier(player)))
+		end
 	elseif sub == "raid" and args[2] then
 		-- Q5 BR2 토벌 입장: /gg raid <보스 id> [remote] - BossGate.enterRaid(발판 = 아님 · remote = 원격 · 관문 등록 필요)
 		local result = require(script.Parent.BossGate).enterRaid(player, args[2], args[3] == "remote")

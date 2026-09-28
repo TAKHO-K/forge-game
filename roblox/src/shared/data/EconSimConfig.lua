@@ -199,4 +199,6 @@ return {
 		rollHigh = { optionRoll = 1.0875, itemAxis = "attack" }, -- W3b 파트 0: 상위 굴림(장비 옵션 위력 · 상위 30%)
 		noItemOptions = { itemOptions = false }, -- W3b 파트 0: 옛 모형(장비 옵션 안 셈)
 	},
+	modelTraining = true, -- QUEUE-10h Q6 G3: 수련 · 직업 능력 구매(강화가 쓰고 남은 골드 - EconSim.tryTrainWithGold)
+	trainingReserveEnhance = 1, -- 다음 강화 비용 × 이 배수는 남기고 산다(강화 우선)
 }
