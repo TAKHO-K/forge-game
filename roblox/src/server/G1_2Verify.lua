@@ -154,17 +154,17 @@ function G1_2Verify.runLive(player, env)
 			r.check(("%s: 가방 %+d · 보석 %+d · 골드 %+d(판매가 %d) - 기대 %s"):format(label, dBag, dGems, dGold, price, expect), pass)
 		end
 		-- 가방이 가득이면 "가방" 경우가 거절되므로 한 칸 비운다(백업이 되돌림)
-		if #profile.inventory >= profile.inventorySlots then
+		if #profile.inventory >= PlayerProfile.inventoryCapacity(profile) then
 			table.remove(profile.inventory)
 		end
 		run("켜짐(영웅 이하) · 영웅", true, "epic", false, "gem")
 		run("켜짐 · 희귀", true, "rare", false, "gold")
 		run("켜짐 · 전설(기준 위)", true, "legendary", false, "bag")
-		if #profile.inventory >= profile.inventorySlots then
+		if #profile.inventory >= PlayerProfile.inventoryCapacity(profile) then
 			table.remove(profile.inventory)
 		end
 		run("켜짐 · 잠긴 영웅", true, "epic", true, "bag")
-		if #profile.inventory >= profile.inventorySlots then
+		if #profile.inventory >= PlayerProfile.inventoryCapacity(profile) then
 			table.remove(profile.inventory)
 		end
 		run("꺼짐 · 영웅", false, "epic", false, "bag")

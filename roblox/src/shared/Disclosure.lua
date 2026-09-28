@@ -21,7 +21,7 @@ function Disclosure.optionPool(classId)
 	local pool = Option.poolFor(classId)
 	local rows = {}
 	for _, id in ipairs(pool) do
-		table.insert(rows, { id = id, chance = 1 / #pool })
+		table.insert(rows, { id = id, chance = 1 / #pool }) -- 풀이 비면 행 없음(rollFor = 옵션 없음)
 	end
 	return rows
 end
@@ -67,7 +67,8 @@ function Disclosure.fingerprint(t)
 	local function feed(s)
 		for i = 1, #s do
 			h = bit32.bxor(h, string.byte(s, i))
-			h = (h * 16777619) % 4294967296
+			local lo, hi = h % 65536, (h - h % 65536) / 65536 -- 리뷰: 2^53 넘는 곱을 16비트로 나눠 정확한 32비트 곱
+			h = (lo * 16777619 + ((hi * 16777619) % 65536) * 65536) % 4294967296
 		end
 	end
 	local function walk(v)

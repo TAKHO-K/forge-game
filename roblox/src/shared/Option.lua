@@ -106,6 +106,9 @@ function Option.rollFor(gradeId, classId)
 		return nil
 	end
 	local pool = poolFor(classId)
+	if #pool == 0 then -- Q13 리뷰: 비활성 스위치로 풀이 비면 옵션 없음(오류 대신)
+		return nil
+	end
 	local id = pool[optionRng:NextInteger(1, #pool)]
 	local option = { id = id, roll = Option.rollValue() }
 	if OptionData.options[id].critRateBase then

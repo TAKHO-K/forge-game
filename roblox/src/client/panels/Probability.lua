@@ -33,12 +33,14 @@ local function line(text, sizeName, colorName)
 	return label
 end
 
-local function pct(x)
+local function pct(x) -- 리뷰: 아주 작은 확률(초월 1e-7 등)도 0으로 안 보이게 유효숫자로
 	local v = x * 100
-	if v >= 1 then
+	if v == 0 then
+		return "0%"
+	elseif v >= 1 then
 		return ("%.2f%%"):format(v)
 	end
-	return ("%.4f%%"):format(v)
+	return ("%.3g%%"):format(v)
 end
 
 local function gradeRowsText(rows)
@@ -78,14 +80,14 @@ local function render()
 	end
 	line(Text.get("prob.boss"), "body", "textPrimary")
 	line(Text.get("prob.firstClear") .. gradeRowsText(d.drop.firstClear), "caption", "textSecondary")
-	line(Text.get("prob.raid") .. gradeRowsText(d.drop.raid), "caption", "textSecondary")
+	line(Text.get("prob.raid", { sec = tostring(require(ReplicatedStorage.Shared.data.DropTableData).raidTimeFairness.referenceSeconds) }) .. gradeRowsText(d.drop.raid), "caption", "textSecondary")
 	line(Text.get("prob.sparkle") .. gradeRowsText(d.drop.sparkle), "caption", "textSecondary")
 	line(Text.get("prob.enhance"), "body", "textPrimary")
 	for _, r in ipairs(d.enhance) do
 		line(("+%d → +%d %s · 유지 %s · -1 %s · -2 %s · 초기화 %s"):format(r.level, r.level + 1, pct(r.success), pct(r.maintain), pct(r.down1), pct(r.down2), pct(r.reset)), "caption", "textSecondary")
 	end
 	line(Text.get("prob.option"), "body", "textPrimary")
-	local pool = d.options[classId] or d.options[next(d.options)]
+	local pool = d.options[classId] or Disclosure.optionPool(nil) -- 직업 없음 = 공통 풀(실제 rollFor(nil)과 같음)
 	local names = {}
 	for _, r in ipairs(pool or {}) do
 		table.insert(names, ("%s %s"):format(optionName(r.id), pct(r.chance)))

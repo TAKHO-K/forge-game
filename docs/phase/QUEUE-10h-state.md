@@ -120,10 +120,25 @@
 
 | Q12 FTUE + 7일 출석 | eeafcd9 · d5be771(리뷰 치명 수정) | 이정표 8단계(퀘스트 상태 · 보상 없음 · 퍼널 자리) · 궁극기 맛보기 · 스킬 카드 · TC 토스트 · 7일 출석(새 계정만) · SAVE v53 · docs/design/ftue-attendance-q12.md · QueueVerify 83/83 |
 
-| Q13 가방 · 일괄 분해 · 확률 공개 | (이 커밋) | 가방 스위치 30(저장 불변) · 일괄 분해(잠금 · 초월 · 태초 보호) · Disclosure 한 소스 · 확률 창 · 표 버전 · 옵션 비활성 스위치 · 몬테카를로 10만 회(최대 0.29%p) · QueueVerify 88/88 |
+| Q13 가방 · 일괄 분해 · 확률 공개 | 5e72192 | 가방 스위치 30(저장 불변) · 일괄 분해(잠금 · 초월 · 태초 보호) · Disclosure 한 소스 · 확률 창 · 표 버전 · 옵션 비활성 스위치 · 몬테카를로 10만 회(최대 0.29%p) · QueueVerify 88/88 |
+
+| Play F + 리뷰 6(Q13) | (이 커밋) | 아래 표 · 옛 검증 3곳 칸 수 · 확률 표시 · 변형 장비 일괄 분해 제외 · 지문 정확 곱 |
+
+## Play F 결과(약 11분 · 재Play 없음 · 게임 스크립트 오류 0 - MCP 마우스 경로 CoreGui 경고만)
+| 확인 | 결과 | 근거 |
+|---|---|---|
+| QueueVerify · 확률표 버전 | O 88/88 · 006383a8(로컬과 같음) | 몬테카를로 10만 회 최대 0.286%p |
+| 알 → 부화 → 받기 → 동행 | O | 수정 박쥐(새끼 용 · 희귀) → 날개 달린 펫이 옆에서 따라옴 `Claude outputs/Q11-Q13/pet-dragon.png` · 두 번째 = 프리즘 도마뱀(강아지 · 고급) |
+| 자동 줍기(Lv 200) | O | 9 stud 밖 드랍: 펫 없음 1.5초 뒤 남음 · 펫 동행 1.5초 안에 주움 · 가방 칸 35(25 + 스위치 10) |
+| 가방 가득 · 자동 줍기 | 미확인(시간) | tryPickup 한 곳 그대로 · 리뷰 반영(가득 표시된 드랍은 반경 밖 재시도 안 함) |
+| 일괄 분해 | O | `~legendary` → 영웅 · 전설 10개만 보석으로 · 유물 · 고대 · 희귀 이하 남음(태초 · 초월 제외는 로컬 검증) |
+| 이정표 | O | 토스트 "스킬 카드" `guide-toast.png` · 퍼널 로그 ftue_drop · ftue_equip · 퀘스트 창 "지금 할 일 4/8" |
+| 7일 출석 1일차 | O(실제 클릭) | `quests-guide-attendance.png` · [받기] 클릭 → `[Q6] 퀘스트 보상 attendance 1 → 알 1` |
+| 확률 창 | O(실제 클릭) · 리뷰 3 확인 | `probability.png` - 태초 · 초월이 0.0000%로 보임 → 유효숫자 표시로 수정 |
+| 저장 왕복(v53) | O | `_verify` 원본: version 53 · pets 2(동행 1 · 누적 2) · guide 4 · 출석 1 · claimed["1"] · 알 1 · 가방 10 |
 
 ## 지금
-- Play F(Q11 ~ Q13)
+- Q14 설정 저장 + P4e HUD
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)

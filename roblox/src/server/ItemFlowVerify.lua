@@ -100,7 +100,7 @@ function ItemFlowVerify.runLive(player, env)
 	local profile = PlayerProfile.getProfile(player)
 	local classState = profile.classes[profile.classId]
 	local bag = PlayerProfile.getInventory(player)
-	local slots = profile.inventorySlots
+	local slots = PlayerProfile.inventoryCapacity(profile)
 
 	local function seed()
 		table.clear(bag)

@@ -376,7 +376,7 @@ local function runBossDrops(player, env, r, profile, root)
 	r.section("[12] 보스 재도전 · 가방 가득 → 복귀한 자리 발밑", function()
 		local filler = { grade = "normal", part = "armor", dropStage = 1, itemLevel = 1, tierIndex = 1, locked = true }
 		table.clear(profile.inventory)
-		for index = 1, profile.inventorySlots do
+		for index = 1, PlayerProfile.inventoryCapacity(profile) do
 			profile.inventory[index] = table.clone(filler)
 		end
 		local model, data = spawnBossAt(player, env, stage)
@@ -399,7 +399,7 @@ local function runBossDrops(player, env, r, profile, root)
 		local gradeOk = dropItem ~= nil and require(game:GetService("ReplicatedStorage").Shared.DropTable).bossRetryGradeTable()[dropItem.grade] ~= nil -- D1: 재도전 = 토벌 표
 			and dropItem.itemLevel >= stage and dropItem.itemLevel <= stage + ArmorData.bossItemLevelDelta[#ArmorData.bossItemLevelDelta].delta -- P2.5c: +15
 		local alreadyNotified = drop ~= nil and ItemDropState.isFullNotified(drop)
-		local bagUnchanged = #profile.inventory == profile.inventorySlots
+		local bagUnchanged = #profile.inventory == PlayerProfile.inventoryCapacity(profile)
 		clearGroundDrops(grounded)
 		r.check(("재도전 처치(가방 가득): 땅의 드랍 모델 %d개(기대 1) · 플레이어까지 %.1fstud(기대 ≤ 10) · 아레나까지 %.0fstud(기대 멀리) · 캐릭터가 사냥터로 복귀=%s · 가방 직행 %d회(기대 0) · 땅 스폰 %d회(기대 1) · 가득 알림 %d회(기대 1) · 줍기 판정의 중복 알림 차단=%s · 가방 그대로=%s · 아이템 등급/itemLevel 정상=%s ★진짜 합격 기준"):format(
 			#grounded, distanceToPlayer, distanceToArena, tostring(returned), toBagAfter - toBagBefore, toGroundAfter - toGroundBefore,

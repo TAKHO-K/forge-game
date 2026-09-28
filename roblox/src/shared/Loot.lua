@@ -395,7 +395,7 @@ end
 
 -- QUEUE-10h Q13 등급 선택 일괄 분해 대상(서버 판정 · 클라 미리보기 같은 함수): 잠금 X · 영웅(분해 최소) ~ 기준 등급(일괄판매 상한 이하) · 초월 · 태초 보호(태초는 기본 잠금이지만 풀어도 일괄에선 빼 준다 - 한 개씩만).
 function Loot.isBulkDismantleTarget(item, cutoffGradeId)
-	if type(item) ~= "table" or item.locked or item.grade == TranscendentData.gradeId or item.grade == "primordial" then
+	if type(item) ~= "table" or item.locked or item.grade == TranscendentData.gradeId or item.grade == "primordial" or item.skillVariant then -- 리뷰: 스킬 변형 장비도 일괄에선 빼 준다(한 개씩만)
 		return false
 	end
 	local function indexOf(id)

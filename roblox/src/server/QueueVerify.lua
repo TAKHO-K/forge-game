@@ -505,6 +505,9 @@ function V.runPure()
 			end
 		end
 		errs.field = worstField
+		if task and task.wait then
+			task.wait() -- 리뷰: 10만 회 묶음 사이에 양보(서버 시작 멈춤 방지)
+		end
 		-- ② 강화(서버 Enhance.rollResult) 표본 단계
 		local Enhance = require(ReplicatedStorage.Shared.Enhance)
 		local worstEnh = 0
@@ -520,6 +523,9 @@ function V.runPure()
 			end
 		end
 		errs.enhance = worstEnh
+		if task and task.wait then
+			task.wait()
+		end
 		-- ③ 옵션(서버 Option.rollFor - 영웅)
 		local Option = require(ReplicatedStorage.Shared.Option)
 		local oc = {}
@@ -532,6 +538,9 @@ function V.runPure()
 			worstOpt = math.max(worstOpt, math.abs((oc[r.id] or 0) / N - r.chance))
 		end
 		errs.option = worstOpt
+		if task and task.wait then
+			task.wait()
+		end
 		-- ④ 스킬 변형(서버 SkillVariant.roll)
 		local SkillVariant = require(ReplicatedStorage.Shared.SkillVariant)
 		local vc = {}

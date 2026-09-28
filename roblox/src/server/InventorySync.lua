@@ -32,6 +32,7 @@ local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local InventorySync = {}
 
 -- QUEUE-10h Q13 가방 칸 수(식 한 곳): 저장값(inventorySlots = 옛 기본 20 + 마일스톤) + 실험 스위치(SaveConfig.bagBaseSlots − 20). 저장은 건드리지 않는다.
+--   주의(리뷰): defaultInventorySlots(20)는 "저장값의 기준"으로 고정한다 - 새 계정 기본 칸을 늘리고 싶으면 이 값이 아니라 bagBaseSlots를 올린다(둘 다 올리면 이중으로 더해지거나 0이 된다).
 function InventorySync.capacity(profile)
 	return (profile and profile.inventorySlots or 0) + math.max(0, (SaveConfig.bagBaseSlots or SaveConfig.defaultInventorySlots) - SaveConfig.defaultInventorySlots)
 end

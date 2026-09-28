@@ -1264,6 +1264,32 @@ local function handleCommand(player, args)
 			table.insert(rows, ("%s 피해×%.2f 쿨×%.2f 범위×%.2f"):format(slot, m.damage, m.cooldown, m.range))
 		end
 		reply(player, ("스킬 변형(%s): %s"):format(tostring(classId), table.concat(rows, " · ")))
+	elseif sub == "q12" and args[2] then
+		-- Q12: /gg q12 reset(이정표 1단계 · 출석 새로 - 새 계정 흉내) · note <이벤트>(실제 QuestService.note) · state
+		ensureBackup(player)
+		local QuestService = require(script.Parent.QuestService)
+		local state = PlayerProfile.getQuestState(player)
+		if args[2] == "reset" and state then
+			state.guide = 1
+			state.attendance = { count = 0, lastDay = -1, claimed = {} }
+			require(ReplicatedStorage.Shared.Quest).roll(state, os.time())
+		elseif args[2] == "note" and args[3] then
+			QuestService.note(player, args[3], 1)
+		end
+		QuestService.push(player)
+		reply(player, ("이정표 %s · 출석 %s"):format(tostring(state and state.guide), state and state.attendance and (state.attendance.count .. "일") or "없음"))
+	elseif sub == "bag" and args[2] then
+		-- Q13: /gg bag dismantle <기준 등급>(실제 PlayerProfile.dismantleItemsUpTo - 원격과 같은 함수) · cap
+		ensureBackup(player)
+		local profile = PlayerProfile.getProfile(player)
+		if args[2] == "dismantle" and args[3] then
+			reply(player, ("일괄 분해 ~%s → %d개"):format(args[3], PlayerProfile.dismantleItemsUpTo(player, args[3])))
+		end
+		local grades = {}
+		for _, item in ipairs(profile and profile.inventory or {}) do
+			table.insert(grades, item.grade .. (item.locked and "(잠금)" or ""))
+		end
+		reply(player, ("가방 %d / %d칸: %s"):format(profile and #profile.inventory or 0, PlayerProfile.inventoryCapacity(profile), table.concat(grades, " ")))
 	elseif sub == "pet" and args[2] then
 		-- Q11: /gg pet egg <tier1..6> <normal|good|rare>(알 지급) · hatch <알 번호> · ff(부화 시간 끝내기) · claim <번호> · equip <번호|off> · view
 		local PetService = require(script.Parent.PetService)
