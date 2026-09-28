@@ -371,6 +371,58 @@ function V.runPure()
 		check(("이관 v50 → v%s(변형 없는 옛 장비 그대로)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 51 and m.inventory[1].skillVariant == nil)
 	end)
 
+	section("Q11 펫", function()
+		local Pet = require(ReplicatedStorage.Shared.Pet)
+		local PetData = require(ReplicatedStorage.Shared.data.PetData)
+		local EggData = require(ReplicatedStorage.Shared.data.EggData)
+		local sumsOk, upOk = true, true
+		for level = 1, #PetData.levels do
+			for _, eg in ipairs(EggData.gradeOrder) do
+				local t = Pet.hatchTable(eg, level)
+				local sum = 0
+				for _, g in ipairs(EggData.hatchGrades) do
+					sum += t[g]
+				end
+				sumsOk = sumsOk and math.abs(sum - 100) < 1e-9
+				if level > 1 then
+					local prev = Pet.hatchTable(eg, level - 1)
+					upOk = upOk and t.epic >= prev.epic and t.common <= prev.common
+				end
+			end
+		end
+		check("부화 확률표 = 레벨 · 알 등급마다 합 100 · 레벨이 오르면 영웅 ↑ 일반 ↓", sumsOk and upOk)
+		check(("부화 레벨: 0회 %d · 3회 %d · 49회 %d · 50회 %d"):format(Pet.levelOf(0), Pet.levelOf(3), Pet.levelOf(49), Pet.levelOf(50)), Pet.levelOf(0) == 1 and Pet.levelOf(3) == 2 and Pet.levelOf(49) == 4 and Pet.levelOf(50) == 5)
+		local rng = Random.new(11)
+		local egg = { zone = "tier2", grade = "good", species = { "crystalBat", "prismLizard" } }
+		local N, counts, first = 20000, {}, 0
+		for _ = 1, N do
+			local r = Pet.rollHatch(egg, 3, rng)
+			counts[r.grade] = (counts[r.grade] or 0) + 1
+			if r.species == "crystalBat" then
+				first += 1
+			end
+		end
+		local t, worst = Pet.hatchTable("good", 3), 0
+		for _, g in ipairs(EggData.hatchGrades) do
+			worst = math.max(worst, math.abs((counts[g] or 0) / N * 100 - t[g]))
+		end
+		check(("부화 {N}회 = 공개 표(최대 오차 %.2f%%p ≤ 1) · 종 반반 %.3f"):format(worst, first / N):gsub("{N}", tostring(N)), worst <= 1 and math.abs(first / N - 0.5) < 0.015)
+		check("해금: 자동 줍기 200 · 대기열 +1 300", not Pet.unlocked(199, "autoPickup") and Pet.unlocked(200, "autoPickup") and Pet.queueCap(299) == 1 and Pet.queueCap(300) == 2)
+		local bodyOk, partsOk = true, true
+		for id in pairs(EggData.species) do
+			bodyOk = bodyOk and PetData.rigs[PetData.bodyOf[id] or ""] ~= nil
+		end
+		for _, rig in pairs(PetData.rigs) do
+			partsOk = partsOk and #rig <= 8
+		end
+		check("종 24 = 몸 틀(강아지 · 고양이 · 새끼 용) 지정 · 리그 파트 ≤ 8", bodyOk and partsOk)
+		local SaveSystem = require(script.Parent.SaveSystem)
+		local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
+		local ok, m = pcall(SaveSystem.migrate, { version = 51, gold = 0, classes = {}, inventory = {}, eggs = { egg }, training = { attack = 0, hp = 0, defense = 0 }, quests = { main = 1 } })
+		check(("이관 v51 → v%s: pets 빈 상태 · 알 가방 유지 · SAVE_VERSION %d"):format(ok and tostring(m.version) or "에러", SaveConfig.saveVersion),
+			ok and m.version == 52 and SaveConfig.saveVersion == 52 and type(m.pets) == "table" and #m.pets.list == 0 and m.pets.hatchCount == 0 and #m.eggs == 1)
+	end)
+
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
 end

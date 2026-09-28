@@ -1263,6 +1263,33 @@ local function handleCommand(player, args)
 			table.insert(rows, ("%s 피해×%.2f 쿨×%.2f 범위×%.2f"):format(slot, m.damage, m.cooldown, m.range))
 		end
 		reply(player, ("스킬 변형(%s): %s"):format(tostring(classId), table.concat(rows, " · ")))
+	elseif sub == "pet" and args[2] then
+		-- Q11: /gg pet egg <tier1..6> <normal|good|rare>(알 지급) · hatch <알 번호> · ff(부화 시간 끝내기) · claim <번호> · equip <번호|off> · view
+		local PetService = require(script.Parent.PetService)
+		local state = PlayerProfile.getPetState(player)
+		if args[2] == "egg" and args[3] then
+			ensureBackup(player)
+			local EggDataDev = require(ReplicatedStorage.Shared.data.EggData)
+			local zone = EggDataDev.zones[args[3]] and args[3] or "tier1"
+			local pool = EggDataDev.zones[zone].pool
+			PlayerProfile.addEgg(player, { zone = zone, grade = args[4] or "normal", species = { pool[1], pool[2] }, nest = "dev", at = os.time() }, 40)
+			require(script.Parent.NestServer).sync(player)
+		elseif args[2] == "hatch" and tonumber(args[3]) then
+			ensureBackup(player)
+			reply(player, ("부화 시작 %s"):format(tostring(select(2, PetService.hatch(player, math.floor(tonumber(args[3])))) or "O")))
+		elseif args[2] == "ff" and state then
+			for _, h in ipairs(state.hatching) do
+				h.doneAt = os.time()
+			end
+		elseif args[2] == "claim" and tonumber(args[3]) then
+			local ok, pet = PetService.claim(player, math.floor(tonumber(args[3])))
+			reply(player, ("부화 받기 %s %s"):format(tostring(ok), type(pet) == "table" and (pet.species .. " " .. pet.grade) or tostring(pet)))
+		elseif args[2] == "equip" then
+			PetService.equip(player, tonumber(args[3]) and math.floor(tonumber(args[3])) or nil)
+		end
+		local v = PetService.view(player)
+		reply(player, ("펫 %d · 부화 중 %d/%d · 누적 %d(레벨 %d) · 동행 %s · 자동 줍기 %s · 알 %d"):format(#v.pets, #v.hatching, v.queueCap, v.hatchCount, v.hatchLevel,
+			tostring(player:GetAttribute("PetSpecies")), tostring(v.autoPickup), #PlayerProfile.getEggs(player)))
 	elseif sub == "soul" and args[2] then
 		-- Q8 K3: /gg soul die(보스전 중 죽기 - 실제 사망 경로) · revive(부활 - 개발) · state · dcsim(튕김 기록만 흉내 - 재접속 시험은 실제 재접속)
 		local SoulService = require(script.Parent.SoulService)

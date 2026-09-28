@@ -13,6 +13,7 @@ local ItemDropState = require(script.Parent.ItemDropState)
 local ItemDropSpawner = require(script.Parent.ItemDropSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local InventorySync = require(script.Parent.InventorySync)
+local PetService = require(script.Parent.PetService)
 
 -- 줍는 순간의 반응(14-1 "줍는 순간의 반응")용. 인벤토리 자체는 InventorySync가 이미
 -- 밀어주므로, 이 이벤트는 "방금 이걸 주웠다"는 일회성 연출 신호만 보낸다(goldGained와
@@ -63,8 +64,9 @@ RunService.Heartbeat:Connect(function()
 				if root and model.PrimaryPart and not require(script.Parent.SoulService).isSoul(owner) then -- Q8: 영혼 = 줍기 불가
 					-- 22-4: 수평 2stud + 높이차 상한 4(TerrainConfig.pickupHeightToleranceStuds) - 발밑만.
 					-- 언덕 아래 아이템은 위에서 못 줍는다(내려가야 한다).
-					if Reach.within(root.Position, model.PrimaryPart.Position, WorldConfig.items.pickupRangeStuds,
-						TerrainConfig.pickupHeightToleranceStuds) then
+					local petRange, petHeight = PetService.pickupRange(owner) -- Q11: 펫 자동 줍기(해금 + 동행) = 반경만 넓힌다(줍기 · 칸 확인 · 바닥 제거는 아래 tryPickup 한 곳)
+					if Reach.within(root.Position, model.PrimaryPart.Position, math.max(WorldConfig.items.pickupRangeStuds, petRange),
+						math.max(TerrainConfig.pickupHeightToleranceStuds, petHeight)) then
 						tryPickup(model, owner)
 					end
 				end

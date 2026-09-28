@@ -260,6 +260,7 @@ local function defaultProfile()
 		audit = { lambda = 0, primordialRolls = 0, playSeconds = 0 }, -- S1(v44): 획득 감사(AcquisitionAudit)
 		training = { attack = 0, hp = 0, defense = 0 }, -- QUEUE-10h Q6(v50): 공용 수련 단계(계정 - TrainingData.stats)
 		quests = nil, -- QUEUE-10h Q6(v50): 퀘스트 상태(shared/Quest.newState - 로드 때 채움)
+		pets = nil, -- QUEUE-10h Q11(v52): 펫 상태(shared/Pet.newState - { list, equipped, hatchCount, hatching })
 		comeback = { untilAt = 0 }, -- C5-5(v48): 복귀 부스트 만료 unix 초(0 = 없음) - SaveServer가 로드 직후 마지막 저장 savedAt과 비교해 준다
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
@@ -1127,6 +1128,14 @@ local function migrate(data)
 	if data.version < 51 then
 		-- QUEUE-10h Q9 K4: 장비 item.skillVariant(스킬 변형 { classId, slot, id }) - 옛 장비는 없음(nil = 변형 없음 · 채울 값 없음). 버전만 올린다(규칙 - 저장 구조 변경 표시).
 		data.version = 51
+	end
+
+	if data.version < 52 then
+		-- QUEUE-10h Q11: 펫(pets) - 없으면 빈 상태(옛 알 가방 eggs는 그대로 = 부화 재료).
+		if type(data.pets) ~= "table" then
+			data.pets = require(ReplicatedStorage.Shared.Pet).newState()
+		end
+		data.version = 52
 	end
 
 	data.savedAt = data.savedAt or 0

@@ -1,7 +1,8 @@
 -- M1-3 알 가방 · 알 정보창(오른쪽 칩 스택의 [알] 버튼이 연다). 본문 = 스크롤(폰에서도 글씨 실효 12 이상).
 --   ① 알 목록(최근 것부터): 알 색 견본(구역 = 관문 색) · 구역 알 이름 · 등급 · 개체 후보 2(반반)
---   ② 부화 결과 확률(사전 고지 - EggData.hatch · 알 등급별 표) ③ 비밀 둥지 발견 수. 부화 자체는 펫 단계.
--- 값 = NestState(서버 NestSync) · 문구 = TextData(egg.*).
+--   ② 부화 결과 확률(사전 고지 - EggData.hatch · 알 등급별 표) ③ 비밀 둥지 발견 수.
+--   Q11: 알마다 [부화] · 부화 중(남은 시간 · [받기]) · 펫 목록([데리고 다니기]) · 부화 레벨 확률표(Pet.hatchTable - 서버 굴림과 같은 함수).
+-- 값 = NestState(서버 NestSync) · PetSync(서버 PetService) · 문구 = TextData(egg.* · pet.*).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EggData = require(ReplicatedStorage.Shared.data.EggData)
@@ -10,6 +11,13 @@ local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local UIManager = require(script.Parent.Parent.UIManager)
 local NestState = require(script.Parent.Parent.NestState)
+local Button = require(script.Parent.Parent.ui.kit.Button)
+local Pet = require(ReplicatedStorage.Shared.Pet)
+local PetData = require(ReplicatedStorage.Shared.data.PetData)
+
+local petView = nil -- 서버 PetService.view(PetSync)
+local petRequest = ReplicatedStorage:WaitForChild("PetRequest", 10)
+local petSync = ReplicatedStorage:WaitForChild("PetSync", 10)
 
 local EggInfoPanel = {}
 EggInfoPanel.id = "eggInfo"
@@ -92,7 +100,71 @@ local function eggRow(egg, i)
 	local cand = Theme.label(frame, Text.get("egg.candidates", { a = EggData.species[egg.species[1]] or "?", b = EggData.species[egg.species[2]] or "?" }), "caption", "textSecondary")
 	cand.Name = "EggCandidates"
 	cand.Position = UDim2.new(0, 38, 0, 24)
-	cand.Size = UDim2.new(1, -44, 0, 18)
+	cand.Size = UDim2.new(1, -150, 0, 18)
+	if petRequest and PetData.enabled then -- Q11 부화
+		local b = Button.build({ parent = frame, kind = "primary", text = Text.get("pet.hatch"), width = 96, position = UDim2.new(1, -6, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = function()
+			petRequest:FireServer("hatch", i)
+		end })
+		b.root.Name = "HatchButton"
+	end
+end
+
+local function petRow(text, sub, buttonText, onPress, name)
+	order += 1
+	local frame = Instance.new("Frame")
+	frame.Name = name
+	frame.LayoutOrder = order
+	frame.Size = UDim2.new(1, 0, 0, ROW_H)
+	frame.BackgroundColor3 = Theme.color("slot")
+	frame.BackgroundTransparency = 0.4
+	frame.Parent = built.scroll
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 6)
+	corner.Parent = frame
+	local a = Theme.label(frame, text, "body", "textPrimary")
+	a.Position = UDim2.new(0, 10, 0, 3)
+	a.Size = UDim2.new(1, -130, 0, 20)
+	local b = Theme.label(frame, sub, "caption", "textSecondary")
+	b.Position = UDim2.new(0, 10, 0, 24)
+	b.Size = UDim2.new(1, -130, 0, 18)
+	if buttonText then
+		local btn = Button.build({ parent = frame, kind = "primary", text = buttonText, width = 110, position = UDim2.new(1, -6, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = onPress })
+		btn.root.Name = "ActionButton"
+	end
+end
+
+-- Q11: 부화 중 · 펫 · 부화 레벨 확률표
+local function petSection()
+	if not petView then
+		return
+	end
+	local unixNow = os.time() + (petView.unix and (petView.unix - (petView.clientAt or os.time())) or 0)
+	line(Text.get("pet.hatchingHeader", { n = #petView.hatching, cap = petView.queueCap }), "body", "textPrimary", "HatchingHeader")
+	for _, h in ipairs(petView.hatching) do
+		local left = math.max(0, h.doneAt - unixNow)
+		local zoneName = EggData.zones[h.zone] and EggData.zones[h.zone].name or tostring(h.zone)
+		petRow(Text.get("egg.row", { egg = zoneName, grade = EggData.gradeNames[h.grade] or h.grade }),
+			left > 0 and Text.get("pet.left", { s = tostring(left) }) or Text.get("pet.ready"),
+			left <= 0 and Text.get("pet.claim") or nil, function()
+				petRequest:FireServer("claim", h.index)
+			end, "Hatching" .. h.index)
+	end
+	line(Text.get("pet.listHeader", { n = #petView.pets, cap = petView.petCap, auto = petView.autoPickup and Text.get("pet.autoOn") or Text.get("pet.autoOff", { level = tostring(petView.unlocks.autoPickup) }) }), "body", "textPrimary", "PetHeader")
+	for _, p in ipairs(petView.pets) do
+		petRow(("%s · %s"):format(p.name, EggData.hatchGradeNames[p.grade] or p.grade), PetData.bodyNames[p.body] or p.body,
+			p.equipped and Text.get("pet.unequip") or Text.get("pet.equip"), function()
+				petRequest:FireServer("equip", (not p.equipped) and p.index or nil)
+			end, "Pet" .. p.index)
+	end
+	line(Text.get("pet.levelHeader", { level = petView.hatchLevel, count = petView.hatchCount }), "body", "textPrimary", "HatchLevel")
+	for level, row in ipairs(PetData.levels) do
+		local parts = {}
+		for _, eggGrade in ipairs(EggData.gradeOrder) do
+			local t = Pet.hatchTable(eggGrade, level)
+			table.insert(parts, ("%s %.1f/%.1f/%.1f/%.1f"):format(EggData.gradeNames[eggGrade], t.common, t.uncommon, t.rare, t.epic))
+		end
+		line(Text.get("pet.levelRow", { level = level, hatches = row.hatches, rows = table.concat(parts, " · ") }), "caption", level == petView.hatchLevel and "textPrimary" or "textSecondary", "LevelRow" .. level)
+	end
 end
 
 -- 부화 결과 확률 표: 열 = 알 등급(보통 · 좋은 · 희귀) · 줄 = 결과 등급(일반 · 고급 · 희귀 · 영웅)
@@ -151,6 +223,7 @@ local function render()
 		end
 	end
 	hatchTable()
+	petSection()
 	line(Text.get("egg.dex", { count = NestState.dex }), "caption", "textSecondary", "Dex")
 end
 
@@ -175,9 +248,22 @@ local function build()
 	NestState.changed:Connect(render)
 end
 
+if petSync then
+	petSync.OnClientEvent:Connect(function(view)
+		if type(view) == "table" then
+			view.clientAt = os.time()
+			petView = view
+			render()
+		end
+	end)
+end
+
 function EggInfoPanel.toggle()
 	if not built then
 		build()
+	end
+	if petRequest then
+		petRequest:FireServer("view")
 	end
 	render()
 	UIManager.switchTo(EggInfoPanel.id)

@@ -91,7 +91,7 @@
 
 | Q10 K5 재조정 | 956e3e8 | 관통돌진 24 · 가속/충전 식(축 = 풀 밖) · DPS 비 1.310 · docs/design/k5-rebalance.md |
 
-| Play E + 리뷰 5 | (이 커밋) | 아래 표 · 영혼 입구 보강 · 변형 풀 정리 · QueueVerify 72/72 |
+| Play E + 리뷰 5 | ec87db2 | 아래 표 · 영혼 입구 보강 · 변형 풀 정리 · QueueVerify 72/72 |
 
 ## Play E 결과(약 13분 · 재Play 없음 · 스크립트 오류 0)
 | 확인 | 결과 | 근거 |
@@ -116,8 +116,10 @@
 - 기록 10: 리롤 = 변형 직업 풀 · 풀 없으면 골드 전에 거부
 - 결정 필요로: 기록 8(영혼 전 설치물 기여) · 9(영혼도 인원수 - 모래 더미 · 오르골) · 11(`debugEquipment` 이름)
 
+| Q11 펫 최소판 | (이 커밋) | PetData · Pet · PetService · PetView · 알 창 부화 · 부화 레벨 확률표 · 자동 줍기(Lv 200 · ItemDropServer 반경만) · SAVE v52 · /gg pet · docs/design/pets-q11.md · art ref 20(로컬) · QueueVerify 78/78 |
+
 ## 지금
-- Q11 펫 최소판
+- Q11 리뷰 → Q12 FTUE + 7일 출석
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)

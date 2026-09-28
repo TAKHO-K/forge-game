@@ -177,6 +177,18 @@ return {
 		["egg.hatchCol"] = "{grade} 알",
 		["egg.dex"] = "비밀 둥지 발견 {count}곳",
 		["egg.chip"] = "알",
+		["pet.hatch"] = "부화",
+		["pet.hatchingHeader"] = "부화 중 {n}/{cap}",
+		["pet.left"] = "{s}초 남음",
+		["pet.ready"] = "부화 완료",
+		["pet.claim"] = "받기",
+		["pet.listHeader"] = "펫 {n}/{cap} · 자동 줍기 {auto}",
+		["pet.autoOn"] = "켜짐(펫 동행)",
+		["pet.autoOff"] = "Lv.{level}에 열림",
+		["pet.equip"] = "데리고 다니기",
+		["pet.unequip"] = "내려놓기",
+		["pet.levelHeader"] = "부화 레벨 {level}(누적 부화 {count}) - 레벨별 결과 확률(일반/고급/희귀/영웅 %)",
+		["pet.levelRow"] = "Lv.{level}(부화 {hatches}회~): {rows}",
 
 		-- 도움말(백과사전) 항목 - 창 UI는 P4(목록 = HelpCodexData)
 		["codex.stealLock.title"] = "다른 유저가 사냥중인 몬스터",

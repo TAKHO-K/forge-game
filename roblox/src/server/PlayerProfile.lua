@@ -2227,6 +2227,27 @@ function PlayerProfile.addEgg(player, egg, cap)
 	return true
 end
 
+-- Q11 펫 상태(살아 있는 표 - PetService만 고친다). 없으면 새로 만든다.
+function PlayerProfile.getPetState(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	if type(profile.pets) ~= "table" then
+		profile.pets = require(ReplicatedStorage.Shared.Pet).newState()
+	end
+	return profile.pets
+end
+
+-- Q11 부화: 알 가방에서 index번 알을 꺼낸다(부화 대기열로 옮길 때만). 반환 = 알 | nil
+function PlayerProfile.takeEgg(player, index)
+	local profile = profiles[player]
+	if not profile or type(index) ~= "number" or not profile.eggs[index] then
+		return nil
+	end
+	return table.remove(profile.eggs, index)
+end
+
 -- Q5 개발 명령(/gg set equip) 전용: 착용 3부위의 세트 계열을 바꾼다(호출부가 백업 - 세션 메모리). 반환 = 착용 표
 function PlayerProfile.debugStampEquipmentSet(player, zoneKey)
 	local profile = profiles[player]
@@ -2313,6 +2334,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		world = deepCopy(profile.world), -- M1(v38): 포탈 개방 - 새 저장 필드는 백업 대상(COMMON §1)
 		training = deepCopy(profile.training), -- Q6(v50): 새 저장 필드 = 백업 대상(COMMON §1)
 		quests = deepCopy(profile.quests), -- Q6(v50)
+		pets = deepCopy(profile.pets), -- Q11(v52)
 		peakLevel = profile.peakLevel, -- M1(v38)
 		titles = deepCopy(profile.titles), -- M1(v39): 칭호(봉인 입구 검증이 지급한다)
 		eggs = deepCopy(profile.eggs), -- M1-3(v41): 알 가방(둥지 검증이 줍는다) - world(nests · nestDex)는 위 world 통째 복사에 들어 있다
@@ -2353,6 +2375,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.comeback = snapshot.comeback and deepCopy(snapshot.comeback) or { untilAt = 0 } -- 묶음 A 리뷰: C5-5 v48 복귀 부스트도 되돌린다
 	profile.world = snapshot.world and deepCopy(snapshot.world) or profile.world
 	profile.training = snapshot.training and deepCopy(snapshot.training) or profile.training -- Q6(v50)
+	profile.pets = snapshot.pets and deepCopy(snapshot.pets) or nil -- Q11(v52): 스냅샷 때 없었으면 없던 상태로
 	profile.quests = snapshot.quests and deepCopy(snapshot.quests) or nil -- Q6(v50) · 리뷰 4: 스냅샷 때 없었으면 없던 상태로(검증이 만든 퀘스트 상태가 남지 않게)
 	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
 	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles
