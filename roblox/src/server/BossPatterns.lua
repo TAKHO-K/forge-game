@@ -49,7 +49,6 @@ local BossArenaContainment = require(script.Parent.BossArenaContainment) -- P3d 
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 넉백 · 회오리 동안 서버 높이 검증 예외 → M1-2c 발사 허가(설계 높이까지 · 착지하면 끝)
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local PlayerStun = require(script.Parent.PlayerStun) -- BR1-3 강화 평타 기절
-local TranscendentService = require(script.Parent.TranscendentService) -- C5-7 아슬아슬 회피 위험 범위
 -- BR1: 새 조각(부채꼴 · 투사체 · 소용돌이) · 대공 잡기 · 환경 트랙 - 이 파일의 공용 함수 표(kit)를 받아 HANDLERS에 꽂는다.
 local BossHandlersBR1 = require(script.Parent.BossHandlersBR1)
 local BossAirGrab = require(script.Parent.BossAirGrab)
@@ -808,7 +807,6 @@ local function beginPulse(c)
 		innerRadius = (pulse.innerRadiusStuds or 0) > 0 and pulse.innerRadiusStuds or nil,
 		seconds = skill.telegraphSeconds,
 	})
-	TranscendentService.registerDanger(st.members, c.position, pulse.radiusStuds, pulse.innerRadiusStuds, st.phaseEndsAt, "circleBoss", c.model) -- C5-7 아슬아슬 회피
 end
 
 HANDLERS.circleBoss = {
@@ -1124,9 +1122,6 @@ local function updateTrackers(c)
 		end
 		st.trackers = nil
 		send(st, "meteorLock", { positions = st.meteorPositions, radius = st.shotRadius or c.skill.radiusStuds, seconds = st.phaseEndsAt - c.now, style = c.skill.impactStyle })
-		for _, position in pairs(st.meteorPositions) do -- C5-7 아슬아슬 회피(낙뢰 · 낙빙 고정 자리)
-			TranscendentService.registerDanger(st.members, position, st.shotRadius or c.skill.radiusStuds, nil, st.phaseEndsAt, "circleTarget", c.model)
-		end
 		debugEvent("trackLock", { locked = locked, at = c.now, judgeAt = st.phaseEndsAt, positions = st.meteorPositions })
 	end
 end

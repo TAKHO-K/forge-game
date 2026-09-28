@@ -13,10 +13,28 @@ local Loot = require(ReplicatedStorage.Shared.Loot)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Option = require(ReplicatedStorage.Shared.Option)
 local Text = require(ReplicatedStorage.Shared.Text)
+local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7b 특수 옵션 툴팁
 
 -- C4-3: 치명 옵션이면 툴팁 한 줄(오버치명 전환 안내) - ItemTooltip이 옵션 줄 아래 작은 글씨로 그린다.
 local function critNote(item)
 	return item and item.option and item.option.id == "crit" and Text.get("item.critOverflowNote") or nil
+end
+
+-- C5-7b: 초월이면 부위 고정 특수 옵션 한 줄(치명 안내가 있으면 그 아래 줄로).
+local function specialNote(item)
+	if not item or item.grade ~= TranscendentData.gradeId then
+		return nil
+	end
+	local id = TranscendentData.specialByPart[item.part or "armor"]
+	if id == "phantom" then
+		return Text.get("transcendent.special.phantom", { chance = tostring(math.floor(TranscendentData.phantom.chance * 100 + 0.5)) })
+	elseif id == "frenzy" then
+		local f = TranscendentData.frenzy
+		return Text.get("transcendent.special.frenzy", { speed = tostring(math.floor(f.moveSpeedBonus * 100 + 0.5)), dash = tostring(math.floor((1 - f.dashCooldownScale) * 100 + 0.5)) })
+	elseif id == "soar" then
+		return Text.get("transcendent.special.soar", { cd = ("%d"):format(TranscendentData.soar.resetCooldownSeconds) })
+	end
+	return nil
 end
 
 local ItemDescribe = {}
@@ -95,7 +113,10 @@ function ItemDescribe.item(item, classId)
 		gradeId = item.grade,
 		meta = metaFn(item),
 		options = optionLines(item, classId),
-		note = critNote(item),
+		note = (function()
+			local crit, special = critNote(item), specialNote(item)
+			return crit and special and (crit .. "\n" .. special) or crit or special
+		end)(),
 	}
 end
 

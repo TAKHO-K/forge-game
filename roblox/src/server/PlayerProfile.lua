@@ -1612,7 +1612,8 @@ function PlayerProfile.refreshMovementSpeed(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.WalkSpeed = BASE_WALK_SPEED_STUDS * JumpMath.moveSpeedMultiplier(bonus) * PlayerState.getMoveSpeedMultiplier(player) -- P3d-F: 출처별 이동속도 배율(회전베기 감속 등)
+		local frenzy = player:GetAttribute("FrenzyActive") == true and TranscendentData.frenzy.moveSpeedBonus or 0 -- C5-7b 광폭(전투 중 +10% - 걷기 배율 상한 ×1.5 안: 신발 % 합에 더한다)
+		humanoid.WalkSpeed = BASE_WALK_SPEED_STUDS * JumpMath.moveSpeedMultiplier(bonus + frenzy) * PlayerState.getMoveSpeedMultiplier(player) -- P3d-F: 출처별 이동속도 배율(회전베기 감속 등)
 		-- G2a: 걷기 배율은 MovementConfig.moveSpeedMaxMultiplier(×1.5)에서 멈춘다 - 공격 속도(SpeedPercentBonus Attribute · PlayerCombat.getAttackCooldown)는 D1-2부터 CombatConfig.attackSpeedMaxMultiplier(×2.5)에서 멈춘다.
 	end
 end

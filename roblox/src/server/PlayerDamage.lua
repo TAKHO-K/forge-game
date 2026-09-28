@@ -64,10 +64,10 @@ function PlayerDamage.takeDamage(targetPlayer, damage, opts)
 	end
 	local newHp = math.max(PlayerState.getHp(targetPlayer) - hpDamage, 0)
 	PlayerState.setHp(targetPlayer, newHp)
-	if hpDamage > 0 or absorbed > 0 then
-		require(script.Parent.TranscendentService).noteDamaged(targetPlayer) -- C5-7 아슬아슬 회피(피해 0 판정)
-	end
 	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)
+	if typeof(targetPlayer) == "Instance" and targetPlayer:IsA("Player") then
+		require(script.Parent.TranscendentService).syncFrenzy(targetPlayer) -- C5-7b 광폭: 맞은 순간 전투 중
+	end
 	PlayerDamage.syncHud(targetPlayer)
 	if not opts.silent and typeof(targetPlayer) == "Instance" and targetPlayer:IsA("Player") then
 		hitFeedback:FireClient(targetPlayer, hpDamage, absorbed) -- P3a D4

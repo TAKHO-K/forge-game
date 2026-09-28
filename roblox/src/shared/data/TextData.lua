@@ -9,6 +9,10 @@ return {
 
 		-- C4-3 치명 옵션 툴팁 한 줄(오버치명 전환 - CombatConfig.overCrit)
 		["item.critOverflowNote"] = "치명 확률 100% 초과분은 공격력으로 바뀜",
+		-- C5-7b 초월 특수 옵션 툴팁 한 줄(TranscendentData - 숫자는 ItemDescribe가 넘긴다)
+		["transcendent.special.phantom"] = "환영: 기본 공격 {chance}% 확률로 환영 추가타 · 3번째마다 강공격",
+		["transcendent.special.frenzy"] = "광폭: 전투 중 이속 · 공속 +{speed}% · 대시 쿨 −{dash}%",
+		["transcendent.special.soar"] = "비상: 공중 강공격 적중 시 공중 행동 초기화(쿨 {cd}초)",
 
 		-- 강화대
 		["enhance.help.short"] = "실패할 때마다 불씨가 차고, 가득 차면 다음 강화는 반드시 성공합니다.",

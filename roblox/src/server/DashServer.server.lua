@@ -76,7 +76,8 @@ local function handleDash(player)
 	end
 	local st = dashStates[player] or MoveRules.newDashState()
 	dashStates[player] = st
-	local ok, reason, second = MoveRules.tryDash(st, now, charges)
+	local cooldownScale = require(script.Parent.TranscendentService).dashCooldownScale(player) -- C5-7b 광폭(전투 중 × 0.8)
+	local ok, reason, second = MoveRules.tryDash(st, now, charges, cooldownScale)
 	if not ok then
 		dashResult:FireClient(player, { ok = false, reason = reason })
 		return reason
@@ -102,7 +103,7 @@ local function handleDash(player)
 
 	dashResult:FireClient(player, {
 		ok = true,
-		cooldownSeconds = DashConfig.cooldownSeconds,
+		cooldownSeconds = DashConfig.cooldownSeconds * cooldownScale,
 		-- MV1 2단 대시: 첫 대시 뒤 두 번째 창이 열려 있으면 그 끝까지 남은 초(클라 쿨 링 · 충전 표시) · second = 이번이 두 번째였나
 		chainSeconds = (charges >= 2 and not second) and DashConfig.primordialShoes.chainWindowSeconds or nil,
 		second = second,

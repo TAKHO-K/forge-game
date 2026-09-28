@@ -227,7 +227,9 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	local buffSpeedMultiplier = BuffState.getValue(player, "quickShot", 1)
 	-- C3-2 공격 템포: 실제 간격 · 한 타 피해 배율 · 묶음 타 수(PlayerCombat.getAttackTempo - 초당 피해 = 옛 쿨다운식). 연타해도 누르고 있기보다 빨라지지 않는다:
 	--   이른 요청은 흔들림 여유(serverGraceSeconds)까지만 받고, 받은 요청의 시각은 max(지금, 지난 시각 + 간격)으로 적는다(평균 빈도 ≤ 1 ÷ 간격).
-	local interval, swingScale, swingHits = PlayerCombat.getAttackTempo(classId, PlayerProfile.getSpeedPercentBonus(player), buffSpeedMultiplier)
+	-- C5-7b 광폭: 전투 중 공속 +10%(FrenzyAttackBonus - 신발 % 합에 더한다 → 상한 ×2.5 · 최소 간격 · 넘는 몫 피해 환산 규칙 그대로 · 클라 예측과 같은 합).
+	local speedBonus = PlayerProfile.getSpeedPercentBonus(player) + (player:GetAttribute("FrenzyAttackBonus") or 0)
+	local interval, swingScale, swingHits = PlayerCombat.getAttackTempo(classId, speedBonus, buffSpeedMultiplier)
 	if last and now - last < interval - CombatConfig.attackTempo.serverGraceSeconds then
 		return -- 쿨다운이 안 지났다 - 조용히 무시
 	end
@@ -261,6 +263,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	-- 19-1: 공격 시도(헛스윙 포함)도 "전투 중"이다 - 자동회복이 싸우는 동안엔 켜지지
 	-- 않아야 한다(PlayerRegen.server.lua 주석 참고).
 	PlayerState.setLastCombatActionAt(player, now)
+	TranscendentService.syncFrenzy(player) -- C5-7b 광폭: 공격 순간 전투 중
 
 	-- 3타 강타 콤보 카운터 - 헛스윙도 포함해 이 시점에서 갱신한다(웹과 동일 지점).
 	local lastCombo = lastComboAttackTick[player]
@@ -365,9 +368,10 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 
 	-- 딜링모드(힐러 E, 20-6 [6], PRD 4.3 "평타 배율을 딜로 환산") - 버프가 없으면
 	-- BuffState.getField가 기본값 1을 돌려줘 다른 3직업은 기존과 완전히 동일하게 계산된다.
-	base *= BuffState.getField(player, "dealingMode", "attackMultiplier", 1)
+	local dealingFactor = BuffState.getField(player, "dealingMode", "attackMultiplier", 1) -- C5-7b: 환영 추가타도 같은 값을 쓴다
 		-- P2.5a D(결정 8): 딜링모드의 투자 기울기(강화 · 위력% 투자가 클수록 배율이 딜러보다 가파르게 큰다 - PlayerCombat.getInvestmentScale).
 		* PlayerCombat.getInvestmentScale(weapon.level, PlayerProfile.getAttackPercentBonus(player), BuffState.getField(player, "dealingMode", "investmentScaling", nil))
+	base *= dealingFactor
 
 	-- 활 백스텝샷(20-2b [1][4], PRD-forge-game.md 4.3) - "다음 평타 5발에 마법피해 추가 +
 	-- 그 5발 치명타 확률 +30%p". 버프가 없으면 두 값 다 0이라 기존과 똑같이 계산된다.
@@ -413,6 +417,34 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	local requestedAt = os.clock()
 
 	local healerBuff = BuffState.getField(player, "healerBuff", "multiplier", 1)
+	-- C5-7b 환영(초월 장갑): 기본 공격이 대상에 들어간 뒤 요청 1회당 한 번 굴린다(서버) → 같은 대상에 추가타 1회 = 기본 공격 피해 1회분(한 타 배율 · 딜링모드 · 치명 · 힐러 버프 · 3타 배율 제외).
+	--   환영 추가타 heavyEvery번째 = 강공격(3타 배율 · 강공격 연출). 보스 포함(applyDamage가 파훼 게이트 · 보호막을 그대로 적용). 흡혈 · 태초 번개 · 비상 초기화는 안 건다(플레이어 본인의 타격만).
+	local phantomRolled = false
+	local function phantomStrike(phantomTarget)
+		if phantomRolled or not phantomTarget.Parent or not MonsterState.getData(phantomTarget) then
+			return
+		end
+		phantomRolled = true
+		local isHeavy = TranscendentService.rollPhantom(player)
+		if isHeavy == nil then
+			return
+		end
+		local phantomBase = atk * swingScale * dealingFactor * (isHeavy and CombatConfig.comboHitMultiplier or 1)
+		local phantomDamage, phantomCrit = PlayerCombat.calcDamage(phantomBase, classId, critRateBonus, forceCrit, critDmgBonus)
+		phantomDamage *= healerBuff
+		local position = phantomTarget.PrimaryPart and phantomTarget.PrimaryPart.Position
+		local isDead, dealt = MonsterState.applyDamage(phantomTarget, phantomDamage, attackerStage, player)
+		MonsterSpawner.updateHpLabel(phantomTarget)
+		attackResult:FireClient(player, phantomTarget, dealt, phantomCrit, isDead, isHeavy, false, false, nil, position)
+		DamageFeed.emit(phantomTarget, position, dealt, DamageFeed.kindOf(isHeavy), player, phantomCrit)
+		CombatResolution.resolveHit(player, phantomTarget, isDead)
+		if position then
+			TranscendentService.firePhantomFx(player, position, isHeavy)
+		end
+		if lastAttackDebug[player] then
+			lastAttackDebug[player].phantom = { heavy = isHeavy, dealt = dealt }
+		end
+	end
 	if not projectileKind then
 		-- 근접(대검·쌍검) - 즉시 판정(기존 동작 그대로, 20-2a까지와 완전히 같다).
 		-- C3-2: 쌍검 = 한 번의 입력 = 두 칼 묶음(swingHits타 - 같은 대상 · 타마다 치명 굴림 · 콤보는 한 번 셌다).
@@ -432,14 +464,17 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 			-- 원거리가 빗나가는 경우까지 회복시키면 안 되므로).
 			PlayerProfile.applyLifesteal(player, dealt)
 			glovesBolt(player, target, isComboHit, dealt)
-			if isComboHit and dealt > 0 then -- C5-7 초월 특수 옵션(강탈 변환 · 역전 기절 · 비상 초기화)
-				TranscendentService.onHeavyHit(player, target, attackerStage, atk, isAir, MonsterState.getData(target) ~= nil and MonsterState.getData(target).isBoss == true)
+			if isComboHit and dealt > 0 then -- C5-7b 비상: 공중 강공격 적중 → 공중 행동 초기화
+				TranscendentService.onHeavyHit(player, isAir)
 			end
 			attackResult:FireClient(player, target, dealt, hitCrit, isDead, isComboHit, false, isBuffedShot, seq, hitPosition)
 			DamageFeed.emit(target, hitPosition, dealt, DamageFeed.kindOf(isComboHit), player, hitCrit)
 			CombatResolution.resolveHit(player, target, isDead)
 			if isDead or not MonsterState.getData(target) then
 				break
+			end
+			if hitIndex == swingHits and dealt > 0 then
+				phantomStrike(target) -- C5-7b 환영(묶음 타가 다 들어간 뒤 한 번)
 			end
 		end
 		return
@@ -466,7 +501,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	end
 
 	-- W1: 발사 시각 = 모션 타격 프레임(MotionTiming - 클라 WeaponVisual과 같은 함수) · W2: 발사 지연 · 비행 시간을 같이 보내 클라가 서버 도달 시각에 닿게 그린다.
-	local motionSpeed = PlayerCombat.getMotionSpeed(classId, PlayerProfile.getSpeedPercentBonus(player), buffSpeedMultiplier)
+	local motionSpeed = PlayerCombat.getMotionSpeed(classId, speedBonus, buffSpeedMultiplier)
 	local releaseDelay = MotionTiming.serverSeconds(classId, MotionTiming.comboIndex(comboCounts[player]), motionSpeed, isComboHit, isAir)
 	local speed = ProjectileConfig.speedStudsPerSec[projectileKind]
 	local comboIndex = MotionTiming.comboIndex(comboCounts[player])
@@ -552,6 +587,12 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 			attackResult:FireClient(player, hitTarget, dealt, hitCrit, isDead, isComboHit, false, isBuffedShot, seq, hitPosition, heavyFlag)
 			DamageFeed.emit(hitTarget, hitPosition, dealt, DamageFeed.kindOf(isComboHit), player, hitCrit)
 			CombatResolution.resolveHit(player, hitTarget, isDead)
+			if isComboHit and dealt > 0 then -- C5-7b 비상(원거리 도달 - 근접 분기와 같은 조건)
+				TranscendentService.onHeavyHit(player, isAir)
+			end
+			if hitIndex == 1 and not isDead and dealt > 0 then
+				phantomStrike(hitTarget) -- C5-7b 환영(첫 대상 · 도달 순간 즉시 - 근접 규칙)
+			end
 			if heavyShot and not isDead and dealt > 0 and hitTarget.Parent then
 				knockMonster(hitTarget, originAtLaunch, heavyShot.knockbackStuds) -- C3-2 강궁 짧은 넉백
 			end

@@ -21,34 +21,23 @@ return {
 	sellBlocked = true,
 	awakenFree = true,
 
-	-- 아슬아슬 회피(서버 공통 판정 - TranscendentService): 전조 종료 windowSeconds 전에 위험 범위 안 → 적중 순간 밖 + 피해 0.
-	--   graceSeconds = 적중 판정 뒤 이만큼 안에 피해가 없어야 "피해 0"(판정 틱 · 지연 여유). 지연 0.25 오판정 목표 각 ≤ 5%(Play 실측).
-	closeDodge = { windowSeconds = 0.4, graceSeconds = 0.15 },
+	-- 특수 옵션(부위별 1개 고정 · 리롤 불가 · 본인만). C5-7b(사용자 결정): 강탈 · 역전 · 아슬아슬 회피 폐기 → 환영 · 광폭. 판정 = TranscendentService.
+	--   부위 고정이라 item.special(v47 옛 값 plunder · reversal 포함)은 읽지 않고 이 표로 정한다 - 저장 구조 변경 없음.
+	specialByPart = { gloves = "phantom", armor = "frenzy", shoes = "soar" },
+	specialNames = { phantom = "환영", frenzy = "광폭", soar = "비상" },
 
-	-- 특수 옵션(부위별 1개 고정 · 리롤 불가 · 본인만) - item.special
-	specialByPart = { gloves = "plunder", armor = "reversal", shoes = "soar" },
-	specialNames = { plunder = "강탈", reversal = "역전", soar = "비상" },
+	-- 환영(幻影 - 장갑): 기본 공격이 대상에 들어가면 chance 확률(서버 굴림)로 등 뒤 환영이 같은 대상에 추가타 1회 = 기본 공격 피해 1회분(한 타 배율 · 딜링모드 · 치명 굴림 포함 · 3타 배율 제외).
+	--   환영 추가타 heavyEvery번째마다 강공격(3타 강공격 배율 · 연출). 공격 요청 1회당 최대 1번 · 보스 포함 · 근접 즉시 판정(원거리 직업도 화살 도달 순간 같은 대상에 즉시).
+	--   연출(클라 PrimordialFx): 등 뒤 back · up stud에 흑금 무기 + 팔(임시 파트) · 추가타 때 대상으로 lungeSeconds 찌르고 돌아온다 · sendStuds 안의 사람에게만.
+	phantom = { chance = 0.25, heavyEvery = 3, sendStuds = 120, backStuds = 2.2, upStuds = 1.6, lungeSeconds = 0.16, returnSeconds = 0.22, bodyTransparency = 0.45 },
 
-	-- 강탈: 아슬아슬 회피한 패턴의 파편 1개 저장(새 회피 = 교체 · 보스전 끝 holdSeconds 뒤 소멸) → 다음 강공격(3타) 또는 Q에서 플레이어판으로 변환.
-	--   파편 = 보스 스킬 primitive → { kind(연출 종류), radius(적중 반경) , multiplier(플레이어 공격력 계수 - 보스 수치 아님) }. 잡몹에도 사용.
-	--   지시의 8종 매핑(지진파 · 돌진 · 눈덩이 · 낙뢰 · 회오리 · 독침 · 레이저 · 판 뒤집기) - 판정은 전부 "대상 둘레 원형 추가 타격"(고유 연출 · 띄움 · 투사체형 반사는 A2/BR2 - 결정 필요).
-	plunder = {
-		holdSeconds = 30,
-		fragments = {
-			circleBoss = { kind = "quake", label = "소형 파동", radius = 10, multiplier = 1.2 },
-			ring = { kind = "quake", label = "소형 파동", radius = 10, multiplier = 1.2 },
-			charge = { kind = "dashSlash", label = "돌진 베기", radius = 7, multiplier = 1.5 },
-			circleTarget = { kind = "meteor", label = "낙뢰 1발", radius = 6, multiplier = 1.8 },
-			line = { kind = "laser", label = "짧은 레이저", radius = 8, multiplier = 1.4 },
-			gimmick = { kind = "flip", label = "앞 원형 넉백", radius = 9, multiplier = 1.0 },
-		},
-		fallback = { kind = "quake", label = "소형 파동", radius = 8, multiplier = 1.0 },
-	},
+	-- 광폭(狂暴 - 갑옷): 전투 중(최근 combatWindowSeconds 안에 공격했거나 맞음 - PlayerState.lastCombatActionAt) 이동 속도 +moveSpeedBonus · 공격 속도 +attackSpeedBonus(신발 공속 % 합에 더한다 →
+	--   공속 상한 ×2.5 · 최소 간격 0.33초 · 넘는 몫 = 피해 환산 그대로) · 대시(DashConfig) · 돌진형 스킬(shape = "dash") 쿨 × dashCooldownScale. 이속은 JumpMath.moveSpeedMultiplier 상한(×1.5) 안.
+	--   발동 중 흑금 오라가 짙어진다(auraTransparency - 평소 0.5 맥동).
+	frenzy = { combatWindowSeconds = 5, moveSpeedBonus = 0.10, attackSpeedBonus = 0.10, dashCooldownScale = 0.8, auraTransparency = 0.15 },
 
-	-- 역전: HP ≤ stunThreshold → 강공격이 잡몹 기절(stunSeconds) + 보스 피해 +bossBonus / HP ≤ surgeThreshold → Q 강화판(계수 × surgeCoefficient · 쿨 × surgeCooldownScale). 받는 피해 감소 · 회복 없음.
-	reversal = { stunThreshold = 0.5, stunSeconds = 0.6, bossBonus = 0.15, surgeThreshold = 0.2, surgeCoefficient = 1.5, surgeCooldownScale = 0.5 },
-
-	-- 비상: 아슬아슬 회피 또는 공중 강공격 적중 시 공중 행동(공중 점프 · 대시 · 공격) 초기화(쿨 resetCooldownSeconds). 최고 높이 상한(MovementConfig)은 그대로.
+	-- 비상(신발): 공중 강공격(3타)이 적에게 적중하면 공중 행동(공중 점프 · 대시 · 공격) 초기화(쿨 resetCooldownSeconds). 공중 스킬은 원래 착지 판정 · 공중 행동을 쓰지 않는다(SkillServer - 유지).
+	--   최고 높이 상한(MovementConfig · HeightGuard 24.38)은 그대로 - 세션 정점은 안 건드린다.
 	soar = { resetCooldownSeconds = 4 },
 
 	-- 알림 · 낭만(태초 = 같은 서버만 · 초월 = 전 서버): 세계 번호 카운터 · 최근 목록 · 토픽 · 칭호 · 색.

@@ -286,7 +286,7 @@ local function speedOf(st)
 	if not st.classId or st.classId == "" then
 		return 1
 	end
-	return PlayerCombat.getMotionSpeed(st.classId, attrOf(st, "SpeedPercentBonus"), attrOf(st, "AttackSpeedBuffMultiplier")) -- C3-2: 기본 간격 ÷ 실제 간격(1 ~ 1.36 - 서버 AttackServer와 같은 함수)
+	return PlayerCombat.getMotionSpeed(st.classId, (attrOf(st, "SpeedPercentBonus") or 0) + (attrOf(st, "FrenzyAttackBonus") or 0), attrOf(st, "AttackSpeedBuffMultiplier")) -- C3-2: 기본 간격 ÷ 실제 간격(1 ~ 1.36 - 서버 AttackServer와 같은 함수)
 end
 
 local function inCombat(st, now)

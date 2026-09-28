@@ -197,6 +197,9 @@ RunService.RenderStepped:Connect(function(dt)
 			local aura = auras[other] or makeAura()
 			auras[other] = aura
 			local pulse = 0.5 + 0.1 * math.sin(spin * 3)
+			if transcendent and other:GetAttribute("FrenzyActive") == true then
+				pulse = TranscendentData.frenzy.auraTransparency + 0.05 * math.sin(spin * 6) -- C5-7b 광폭 발동 중 오라가 짙다(빠르게 맥동)
+			end
 			local color = transcendent and TranscendentData.announce.color or PrimordialData.auraColor
 			aura.ring.Color, aura.light.Color = color, color
 			aura.ring.Transparency = pulse
@@ -263,3 +266,95 @@ local function glovesBolt(position)
 	end)
 end
 ReplicatedStorage:WaitForChild("PrimordialGlovesBolt").OnClientEvent:Connect(glovesBolt)
+
+-- ── C5-7b 환영(초월 장갑): Attribute PhantomGloves인 사람 등 뒤에 흑금 무기 + 팔(임시 파트 조합 - 판정 없음) · 서버 TranscendentEvent "phantom"이 오면 대상으로 찌르고 돌아온다 ──
+local PHANTOM = TranscendentData.phantom
+local phantoms = {} -- [Player] = { folder, arm, blade, edge, lunge = { at, target, heavy } }
+
+local function fxPart(parent, size, color, material)
+	local part = Instance.new("Part")
+	part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+	part.Size, part.Color, part.Material = size, color, material
+	part.Transparency = PHANTOM.bodyTransparency
+	part.Parent = parent
+	return part
+end
+
+local function makePhantom()
+	local folder = Instance.new("Folder")
+	folder.Name = "TranscendentPhantom"
+	local p = {
+		folder = folder,
+		arm = fxPart(folder, Vector3.new(0.7, 0.7, 2.2), TranscendentData.announce.darkColor, Enum.Material.SmoothPlastic),
+		blade = fxPart(folder, Vector3.new(0.25, 0.5, 3.4), TranscendentData.announce.darkColor, Enum.Material.SmoothPlastic),
+		edge = fxPart(folder, Vector3.new(0.08, 0.12, 3.4), TranscendentData.announce.color, Enum.Material.Neon),
+	}
+	folder.Parent = Workspace
+	return p
+end
+
+local function removePhantom(target)
+	local p = phantoms[target]
+	if p then
+		p.folder:Destroy()
+		phantoms[target] = nil
+	end
+end
+
+-- 팔(어깨 = home) → 무기가 앞(aim 방향)으로 뻗는다.
+local function placePhantom(p, home, aim, scale)
+	local look = aim - home
+	if look.Magnitude < 1e-3 then
+		return
+	end
+	local frame = CFrame.lookAt(home, aim)
+	p.arm.CFrame = frame * CFrame.new(0, 0, -1.1)
+	p.blade.CFrame = frame * CFrame.new(0, 0, -2.2 - 1.7 * scale)
+	p.edge.CFrame = p.blade.CFrame * CFrame.new(0, 0.3, 0)
+end
+
+RunService.RenderStepped:Connect(function()
+	local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local eye = myRoot and myRoot.Position or (Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame.Position)
+	local now = os.clock()
+	for _, other in ipairs(Players:GetPlayers()) do
+		local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if root and eye and other:GetAttribute("PhantomGloves") == true and (root.Position - eye).Magnitude <= PrimordialData.auraMaxDistance then
+			local p = phantoms[other] or makePhantom()
+			phantoms[other] = p
+			local home = (root.CFrame * CFrame.new(0, PHANTOM.upStuds + 0.15 * math.sin(now * 2), PHANTOM.backStuds)).Position -- 등 뒤에 떠 있다(천천히 오르내림)
+			local aim = home + root.CFrame.LookVector * 4 + Vector3.new(0, 0.6, 0)
+			local lunge = p.lunge
+			if lunge then
+				local t = now - lunge.at
+				local total = PHANTOM.lungeSeconds + PHANTOM.returnSeconds
+				if t >= total then
+					p.lunge = nil
+				else
+					local k = t < PHANTOM.lungeSeconds and t / PHANTOM.lungeSeconds or 1 - (t - PHANTOM.lungeSeconds) / PHANTOM.returnSeconds
+					local strikeHome = home:Lerp(lunge.target - (lunge.target - home).Unit * 3.5, k) -- 대상 앞 3.5 stud까지 찌른다
+					placePhantom(p, strikeHome, lunge.target, lunge.heavy and 1.35 or 1)
+					continue
+				end
+			end
+			placePhantom(p, home, aim, 1)
+		else
+			removePhantom(other)
+		end
+	end
+	for target in pairs(phantoms) do
+		if target.Parent == nil then
+			removePhantom(target)
+		end
+	end
+end)
+
+ReplicatedStorage:WaitForChild("TranscendentEvent").OnClientEvent:Connect(function(payload)
+	if type(payload) ~= "table" or payload.kind ~= "phantom" or typeof(payload.position) ~= "Vector3" then
+		return
+	end
+	local p = phantoms[payload.owner]
+	if p then
+		p.lunge = { at = os.clock(), target = payload.position, heavy = payload.heavy == true } -- 강공격 = 무기가 1.35배 길게 뻗는다(본인 화면은 AttackResult 강공격 불꽃도 같이)
+	end
+end)

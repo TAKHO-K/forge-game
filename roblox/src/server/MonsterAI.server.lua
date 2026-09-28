@@ -343,9 +343,6 @@ RunService.Heartbeat:Connect(function(dt)
 				end
 			end
 
-			if state == "chasing" and not data.isBoss and (model:GetAttribute("StunUntil") or 0) > os.clock() then
-				continue -- C5-7 역전: 강공격 잡몹 짧은 기절(추격 · 평타 멈춤)
-			end
 			if state == "chasing" then
 				local target = MonsterState.getAiTarget(model)
 				-- 24-1 파티 보스: 대상이 죽었거나 더 가까운 멤버가 있으면 그쪽으로 바꾼다(어그로 수치는

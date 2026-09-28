@@ -36,20 +36,22 @@ function MoveRules.newDashState()
 	return { cooldownUntil = -math.huge, secondUntil = -math.huge, lastAt = -math.huge }
 end
 
-function MoveRules.tryDash(st, now, charges)
+-- cooldownScale(선택 - C5-7b 광폭 전투 중 0.8): 쿨다운 × 이 값(서버 DashServer · 클라 DashInput이 같은 값을 넘긴다).
+function MoveRules.tryDash(st, now, charges, cooldownScale)
+	local cooldown = DashConfig.cooldownSeconds * (cooldownScale or 1)
 	if now - st.lastAt < DashConfig.durationSeconds then
 		return false, "busy" -- 앞 대시가 아직 끝나지 않았다(트윈이 겹치지 않게)
 	end
 	if (charges or 1) >= 2 and now <= st.secondUntil then
 		st.secondUntil = -math.huge
-		st.cooldownUntil = now + DashConfig.cooldownSeconds -- 쿨다운은 두 번째를 쓴 순간부터
+		st.cooldownUntil = now + cooldown -- 쿨다운은 두 번째를 쓴 순간부터
 		st.lastAt = now
 		return true, nil, true
 	end
 	if now < st.cooldownUntil then
 		return false, "cooldown"
 	end
-	st.cooldownUntil = now + DashConfig.cooldownSeconds -- 창을 놓치면 이 쿨다운 그대로
+	st.cooldownUntil = now + cooldown -- 창을 놓치면 이 쿨다운 그대로
 	st.secondUntil = (charges or 1) >= 2 and now + DashConfig.primordialShoes.chainWindowSeconds or -math.huge
 	st.lastAt = now
 	return true, nil, false

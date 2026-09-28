@@ -1,6 +1,6 @@
--- C5-7 초월 특수 옵션 · 아슬아슬 회피(서버 판정 - docs/design/transcendent-tier.md §4 · §5). 수치 = shared/data/TranscendentData.
---   위험 범위 등록(registerDanger - BossPatterns 원형 패턴이 전조를 보낼 때) → 전조 종료 window 전 표본(안에 있던 사람) → 적중 뒤 grace 안 피해 0 + 밖이면 회피 이벤트.
---   회피 이벤트 → 강탈(파편 저장) · 비상(공중 행동 초기화). 강공격 적중 → 강탈 변환 · 역전 기절 · 비상 초기화. 보스 피해 +15% · Q 강화판은 훅(MonsterState.bossDamageHook · SkillStats).
+-- C5-7 초월 특수 옵션(서버 판정 - docs/design/transcendent-tier.md §4). 수치 = shared/data/TranscendentData.
+--   C5-7b(사용자 결정): 아슬아슬 회피 · 강탈 · 역전 폐기 → 환영(장갑) · 광폭(갑옷) · 비상(신발 - 초기화 조건 = 공중 강공격 적중만).
+--   환영 = AttackServer가 기본 공격 적중 뒤 rollPhantom → 추가타(피해 계산은 AttackServer - 평타와 같은 식). 광폭 = 전투 중 Attribute(FrenzyActive · FrenzyAttackBonus) → 이속(PlayerProfile) · 공속(AttackServer · 클라 예측) · 대시(DashServer) · 돌진형 스킬(SkillStats).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -9,27 +9,25 @@ local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local PlayerState = require(script.Parent.PlayerState)
 local AirState = require(script.Parent.AirState)
-local Reach = require(ReplicatedStorage.Shared.Reach)
 
 local T = {}
 
 local event = Instance.new("RemoteEvent")
-event.Name = "TranscendentEvent" -- 서버 → 클라: { kind = "closeDodge" | "fragment" | "fragmentUsed" | "surge" | "airReset", ... }
+event.Name = "TranscendentEvent" -- 서버 → 클라: { kind = "airReset" | "phantom", ... }
 event.Parent = ReplicatedStorage
 
-local lastDamagedAt = {} -- [Player] = os.clock() (PlayerDamage.takeDamage가 부른다)
-local fragments = {} -- [Player] = { key, fragment, at, bossModel }
 local lastAirReset = {} -- [Player] = os.clock()
-local stats = { registered = 0, sampled = 0, dodges = 0, hits = 0 } -- 검증 · 오판정 실측(/gg c5 dodge)
-T.stats = stats
-T.onCloseDodge = {} -- 검증 훅 목록(player, key)
+local phantomCounts = {} -- [Player] = 환영 추가타 수(heavyEvery번째 = 강공격 · 메모리만)
+local rng = Random.new()
+T.rng = rng -- 검증(표본 굴림)이 같은 굴림 경로를 쓴다
 
+-- 부위 고정 옵션: 옛 item.special(plunder · reversal - v47)은 읽지 않는다(저장 구조 그대로 · 표가 정한다).
 function T.specialOf(player, part)
 	local item = PlayerProfile.getEquipped(player, part)
 	if type(item) ~= "table" or item.grade ~= TranscendentData.gradeId then
 		return nil
 	end
-	return item.special or TranscendentData.specialByPart[part]
+	return TranscendentData.specialByPart[part]
 end
 
 function T.hasSpecial(player, name)
@@ -52,37 +50,56 @@ function T.equippedCount(player)
 	return n
 end
 
-function T.noteDamaged(player)
-	lastDamagedAt[player] = os.clock()
+-- ── 환영(장갑) ──
+-- 공격 요청 1회당 한 번만 부른다(AttackServer). 반환 = nil(안 나감) | isHeavy(true = heavyEvery번째 → 강공격).
+function T.rollPhantom(player)
+	if not T.hasSpecial(player, "phantom") then
+		return nil
+	end
+	local rule = TranscendentData.phantom
+	if rng:NextNumber() >= rule.chance then
+		return nil
+	end
+	local n = (phantomCounts[player] or 0) + 1
+	phantomCounts[player] = n
+	return n % rule.heavyEvery == 0
 end
 
-local function hpFraction(player)
-	local hp, maxHp = PlayerState.getHp(player) or 0, PlayerState.getMaxHp(player) or 1
-	return maxHp > 0 and hp / maxHp or 1
+-- 추가타 연출(곁의 사람에게 - 판정과 무관한 표시 신호).
+function T.firePhantomFx(player, position, isHeavy)
+	for _, other in ipairs(Players:GetPlayers()) do
+		local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if root and (root.Position - position).Magnitude <= TranscendentData.phantom.sendStuds then
+			event:FireClient(other, { kind = "phantom", owner = player, position = position, heavy = isHeavy })
+		end
+	end
 end
 
--- 역전: HP ≤ 50%(강공격 기절 · 보스 +15%) / ≤ 20%(Q 강화판)
-function T.reversalActive(player)
-	return T.hasSpecial(player, "reversal") and hpFraction(player) <= TranscendentData.reversal.stunThreshold
+-- ── 광폭(갑옷) ──
+function T.frenzyActive(player)
+	if not T.hasSpecial(player, "frenzy") then
+		return false
+	end
+	local last = PlayerState.getLastCombatActionAt(player)
+	return last ~= nil and os.clock() - last <= TranscendentData.frenzy.combatWindowSeconds
 end
 
-function T.surgeActive(player)
-	return T.hasSpecial(player, "reversal") and hpFraction(player) <= TranscendentData.reversal.surgeThreshold
+-- 대시 · 돌진형 스킬 쿨 배율(발동 중 0.8).
+function T.dashCooldownScale(player)
+	return T.frenzyActive(player) and TranscendentData.frenzy.dashCooldownScale or 1
 end
 
-function T.bossDamageMultiplier(player)
-	return T.reversalActive(player) and (1 + TranscendentData.reversal.bossBonus) or 1
+-- 상태가 바뀐 순간만 Attribute · 이속을 다시 맞춘다(공격 · 피격 직후 AttackServer · PlayerDamage가 부르고, CombatPowerSync 1초 루프가 만료를 잡는다).
+function T.syncFrenzy(player)
+	local active = T.frenzyActive(player)
+	if (player:GetAttribute("FrenzyActive") == true) ~= active then
+		player:SetAttribute("FrenzyActive", active or nil)
+		player:SetAttribute("FrenzyAttackBonus", active and TranscendentData.frenzy.attackSpeedBonus or nil) -- 클라 공속 예측(AttackInput · WeaponVisual)도 같은 값을 더한다
+		PlayerProfile.refreshMovementSpeed(player)
+	end
 end
 
-function T.qCoefficientScale(player)
-	return T.surgeActive(player) and TranscendentData.reversal.surgeCoefficient or 1
-end
-
-function T.qCooldownScale(player)
-	return T.surgeActive(player) and TranscendentData.reversal.surgeCooldownScale or 1
-end
-
--- 비상: 공중 행동 초기화(쿨 4초). 최고 높이 상한은 HeightGuard가 그대로 잰다(세션 정점은 안 건드린다).
+-- ── 비상(신발): 공중 강공격 적중 → 공중 행동 초기화(쿨 4초). 최고 높이 상한은 HeightGuard가 그대로 잰다(세션 정점은 안 건드린다). ──
 local function airReset(player, why)
 	if not T.hasSpecial(player, "soar") then
 		return false
@@ -98,140 +115,41 @@ local function airReset(player, why)
 	lastAirReset[player] = now
 	session.airAttacks, session.airDashes = 0, 0
 	session.ledgeUsed = false
-	player:SetAttribute("AirJumpsUsed", 0) -- 클라 공중 점프 충전 표시(DoubleJumpInput이 읽는다 - 없으면 무시)
+	player:SetAttribute("AirJumpsUsed", 0) -- 클라 공중 점프 충전 표시(없으면 무시)
 	event:FireClient(player, { kind = "airReset", why = why })
 	return true
 end
 
-local function grantFragment(player, key, bossModel)
-	if not T.hasSpecial(player, "plunder") then
-		return false
-	end
-	local fragment = TranscendentData.plunder.fragments[key] or TranscendentData.plunder.fallback
-	fragments[player] = { key = key, fragment = fragment, at = os.clock(), bossModel = bossModel }
-	player:SetAttribute("Fragment", fragment.kind)
-	event:FireClient(player, { kind = "fragment", fragment = fragment.kind, label = fragment.label })
-	return true
-end
-
-function T.fragmentOf(player)
-	local f = fragments[player]
-	if not f then
-		return nil
-	end
-	-- 보스전 끝(모델 사라짐) 뒤 holdSeconds 지나면 소멸
-	if (not f.bossModel or not f.bossModel.Parent) and os.clock() - f.at > TranscendentData.plunder.holdSeconds then
-		fragments[player] = nil
-		player:SetAttribute("Fragment", nil)
-		return nil
-	end
-	return f
-end
-
-local function fireDodge(player, key, bossModel)
-	stats.dodges += 1
-	player:SetAttribute("CloseDodges", (player:GetAttribute("CloseDodges") or 0) + 1)
-	event:FireClient(player, { kind = "closeDodge", key = key })
-	grantFragment(player, key, bossModel)
-	airReset(player, "dodge")
-	for _, fn in ipairs(T.onCloseDodge) do
-		task.spawn(fn, player, key)
-	end
-end
-
--- 위험 범위 등록(원형): members = 보스전 인원 · center · radius(· inner) · endsAt = 적중 시각(os.clock) · key = 패턴 primitive(파편 표 키) · bossModel.
---   inside(pos) = 수평 거리로 판정(호출부 판정과 같은 Reach.horizontalDistance).
-function T.registerDanger(members, center, radius, inner, endsAt, key, bossModel)
-	if type(members) ~= "table" or type(center) ~= "userdata" or type(radius) ~= "number" then
-		return
-	end
-	local rule = TranscendentData.closeDodge
-	local sampleAt = endsAt - rule.windowSeconds
-	stats.registered += 1
-	local function inside(player)
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if not root then
-			return false
-		end
-		local d = Reach.horizontalDistance(root.Position, center)
-		return d <= radius and d >= (inner or 0)
-	end
-	task.delay(math.max(sampleAt - os.clock(), 0), function()
-		local wasInside = {}
-		for _, player in ipairs(members) do
-			if player.Parent and inside(player) then
-				wasInside[player] = true
-				stats.sampled += 1
-			end
-		end
-		if next(wasInside) == nil then
-			return
-		end
-		task.delay(math.max(endsAt + rule.graceSeconds - os.clock(), 0), function()
-			for player in pairs(wasInside) do
-				if player.Parent then
-					local damagedAt = lastDamagedAt[player]
-					if not inside(player) and (not damagedAt or damagedAt < endsAt - 0.05) then
-						fireDodge(player, key, bossModel)
-					else
-						stats.hits += 1
-					end
-				end
-			end
-		end)
-	end)
-end
-
--- 강공격(3타) 적중 뒤(AttackServer): 강탈 변환 · 역전 잡몹 기절 · 비상 공중 초기화. 반환 = 추가 타격 수(검증).
-function T.onHeavyHit(player, target, attackerStage, atk, isAir, isBoss)
-	local extra = 0
-	local MonsterState = require(script.Parent.MonsterState)
-	if T.reversalActive(player) and not isBoss and target and target.Parent then
-		target:SetAttribute("StunUntil", os.clock() + TranscendentData.reversal.stunSeconds) -- MonsterAI가 읽는다(추격 · 평타 멈춤)
-	end
-	local f = T.fragmentOf(player)
-	if f and target and target.PrimaryPart then
-		local center = target.PrimaryPart.Position
-		for _, model in ipairs(MonsterState.getAllModels()) do
-			if model.PrimaryPart and Reach.horizontalDistance(model.PrimaryPart.Position, center) <= f.fragment.radius then
-				MonsterState.applyDamage(model, atk * f.fragment.multiplier, attackerStage, player)
-				extra += 1
-			end
-		end
-		fragments[player] = nil
-		player:SetAttribute("Fragment", nil)
-		event:FireClient(player, { kind = "fragmentUsed", fragment = f.fragment.kind, center = center, radius = f.fragment.radius })
-	end
+-- 강공격(3타)이 적에게 적중한 뒤(AttackServer - 근접 · 원거리 도달). 비상 초기화는 공중 강공격만.
+function T.onHeavyHit(player, isAir)
 	if isAir then
-		airReset(player, "airHeavy")
+		return airReset(player, "airHeavy")
 	end
-	return extra
+	return false
 end
 
--- 보스전 오라(타인에게 보임): Player Attribute TranscendentParts(0 ~ 3) - CombatPowerSync가 1초마다 갱신한다.
+-- 보스전 오라(타인에게 보임): Player Attribute TranscendentParts(0 ~ 3) - CombatPowerSync가 1초마다 갱신한다. 환영 표시 = PhantomGloves.
 function T.syncAura(player)
 	local n = T.equippedCount(player)
 	if player:GetAttribute("TranscendentParts") ~= n then
 		player:SetAttribute("TranscendentParts", n)
 	end
+	local phantom = T.hasSpecial(player, "phantom")
+	if (player:GetAttribute("PhantomGloves") == true) ~= phantom then
+		player:SetAttribute("PhantomGloves", phantom or nil)
+	end
+	T.syncFrenzy(player)
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	lastDamagedAt[player], fragments[player], lastAirReset[player] = nil, nil, nil
+	lastAirReset[player], phantomCounts[player] = nil, nil
 end)
 
--- 검증 · 개발 명령용
-function T.debugGrantFragment(player, key)
-	return grantFragment(player, key, nil)
-end
-
-function T.debugFireDodge(player, key)
-	fireDodge(player, key, nil)
-end
-
-if RunService:IsStudio() then
+if RunService:IsStudio() then -- 검증 · 개발 명령용
 	T.debugAirReset = airReset
+	function T.debugResetPhantom(player)
+		phantomCounts[player] = nil
+	end
 end
 
 return T

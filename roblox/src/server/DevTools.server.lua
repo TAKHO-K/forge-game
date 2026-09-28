@@ -1356,18 +1356,33 @@ local function handleCommand(player, args)
 		end
 		print(("C3HITS|%d|비율 %.3f · 피해 배율 ×%.3f · 간격 %.2f · 한 타 ×%.2f · 치명 %.0f%%|%s|%s"):format(stage, power / rec, CombatFormula.dealMultiplier(power, stage), interval, scale, critRate * 100, table.concat(rows, " · "), table.concat(skills, " · ")))
 		reply(player, ("스테이지 %d: %s"):format(stage, table.concat(rows, " · ")))
-	elseif sub == "c5" and args[2] == "dodge" then
-		-- C5-7: 아슬아슬 회피 통계(등록 · 표본 · 회피 · 적중) - 오판정 실측은 로그 C5DODGE 줄
+	elseif sub == "c5" and args[2] == "phantom" then
+		-- C5-7b 환영: /gg c5 phantom [n] - 서버 굴림(rollPhantom) n회(기본 1,000) 표본 → 비율 · 강공격 수(3번째마다). 초월 장갑 착용이 필요하다.
 		local T = require(script.Parent.TranscendentService)
-		local s = T.stats
-		print(("C5DODGE|registered %d|sampled %d|dodges %d|hits %d|fragment %s|closeDodges %s"):format(s.registered, s.sampled, s.dodges, s.hits, tostring(player:GetAttribute("Fragment")), tostring(player:GetAttribute("CloseDodges"))))
-		reply(player, ("회피 통계: 등록 %d · 표본 %d · 회피 %d · 적중 %d · 파편 %s"):format(s.registered, s.sampled, s.dodges, s.hits, tostring(player:GetAttribute("Fragment"))))
-	elseif sub == "c5" and args[2] == "fragment" then
-		local ok = require(script.Parent.TranscendentService).debugGrantFragment(player, args[3] or "circleBoss")
-		reply(player, ok and ("파편 저장: " .. tostring(player:GetAttribute("Fragment"))) or "강탈 장갑(초월)이 없다 - /gg gear transcendent <itemLevel> gloves")
-	elseif sub == "c5" and args[2] == "dodgefire" then
-		require(script.Parent.TranscendentService).debugFireDodge(player, args[3] or "circleBoss")
-		reply(player, "회피 이벤트 강제 발생")
+		local n = math.clamp(math.floor(tonumber(args[3]) or 1000), 1, 100000)
+		T.debugResetPhantom(player)
+		local fired, heavy = 0, 0
+		for _ = 1, n do
+			local r = T.rollPhantom(player)
+			if r ~= nil then
+				fired += 1
+				heavy += r and 1 or 0
+			end
+		end
+		T.debugResetPhantom(player)
+		print(("C5PHANTOM|n %d|fired %d|rate %.4f|heavy %d"):format(n, fired, fired / n, heavy))
+		reply(player, fired == 0 and "환영 장갑(초월)이 없다 - /gg gear transcendent <itemLevel> gloves" or ("환영 %d/%d(%.1f%%) · 강공격 %d"):format(fired, n, fired / n * 100, heavy))
+	elseif sub == "c5" and args[2] == "frenzy" then
+		-- C5-7b 광폭: 지금 상태 · 걷기 속도 · 공속 합 · 대시 쿨 배율(전투 중으로 만들려면 한 번 공격하거나 맞는다)
+		local T = require(script.Parent.TranscendentService)
+		T.syncFrenzy(player)
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		print(("C5FRENZY|active %s|walk %.2f|speedBonus %.3f|frenzyAtk %s|dashScale %.2f"):format(tostring(T.frenzyActive(player)), humanoid and humanoid.WalkSpeed or -1, PlayerProfile.getSpeedPercentBonus(player), tostring(player:GetAttribute("FrenzyAttackBonus")), T.dashCooldownScale(player)))
+		reply(player, ("광폭 %s · 걷기 %.2f · 대시 쿨 ×%.2f"):format(T.frenzyActive(player) and "발동" or "꺼짐", humanoid and humanoid.WalkSpeed or -1, T.dashCooldownScale(player)))
+	elseif sub == "c5" and args[2] == "soar" then
+		-- C5-7b 비상: 공중에서 부르면 공중 강공격 적중과 같은 초기화 경로(onHeavyHit(isAir = true)) - 쿨 4초 안이면 거절
+		local ok = require(script.Parent.TranscendentService).onHeavyHit(player, true)
+		reply(player, ok and "비상: 공중 행동 초기화" or "비상 거절(신발 초월 없음 · 지상 · 쿨 4초)")
 	elseif sub == "c4" and args[2] == "overcrit" then
 		-- C4-3 검증: /gg c4 overcrit - 버프 뺀 치명 확률 합을 지금 · 100 · 110 · 130%로 강제(옵션 치명 강제값)해 실제 서버 함수의 공격력 % · 공격력 · 전투력을 찍고 되돌린다
 		local RS = game:GetService("ReplicatedStorage")

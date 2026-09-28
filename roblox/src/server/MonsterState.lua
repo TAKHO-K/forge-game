@@ -339,9 +339,6 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 		-- 29-1 파훼 게이트·기회 창(BossMechanics가 setDamageTakenMultiplier로 건다). 기여도도 받는 피해 배율까지는 곱한다.
 		-- G2a: 레벨차 계수만 빼고 센다(계수가 1이면 합이 1(= maxHp)로 닫히고, 벌점을 받는 멤버가 있으면 합이 1보다 조금 크다 - 문턱 · 표시 모두 이 값).
 		local taken = fixed and 1 or (entry.damageTakenMultiplier or 1)
-		if attackerPlayer and MonsterState.bossDamageHook then
-			taken *= MonsterState.bossDamageHook(attackerPlayer) -- C5-7 역전(HP ≤ 50% 보스 피해 +15%) - TranscendentService가 건다
-		end
 		if entry.shielded then -- BR1-2 수정 여왕 보호막: 피해로는 절대 안 깨진다(수정 둘을 깨야 풀린다 - BossEnvironment) · 클라는 "무효"로 그린다
 			taken = 0
 		end

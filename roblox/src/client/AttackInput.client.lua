@@ -216,7 +216,7 @@ local function performAttack(aimPoint, isAir)
 	-- 예측(스윙 애니메이션을 지금 새로 재생할지)일 뿐 - 실제 쿨다운 판정은 언제나 서버다.
 	local cooldown = PlayerCombat.getAttackTempo( -- C3-2: 실제 입력 간격(서버와 같은 함수)
 		classId,
-		player:GetAttribute("SpeedPercentBonus"),
+		(player:GetAttribute("SpeedPercentBonus") or 0) + (player:GetAttribute("FrenzyAttackBonus") or 0), -- C5-7b 광폭 공속(서버와 같은 합)
 		player:GetAttribute("AttackSpeedBuffMultiplier")
 	)
 	local now = os.clock()
@@ -361,7 +361,7 @@ local function currentInterval()
 	if not classId or classId == "" then
 		return CombatConfig.attackTempo.baseIntervalSeconds
 	end
-	return (PlayerCombat.getAttackTempo(classId, player:GetAttribute("SpeedPercentBonus"), player:GetAttribute("AttackSpeedBuffMultiplier")))
+	return (PlayerCombat.getAttackTempo(classId, (player:GetAttribute("SpeedPercentBonus") or 0) + (player:GetAttribute("FrenzyAttackBonus") or 0), player:GetAttribute("AttackSpeedBuffMultiplier")))
 end
 
 -- C3-4 폰 공격 버튼 조준: 시점 고정(Shift Lock) = 화면 가운데 · 아니면 정면 원뿔(phoneAutoAimDeg) 안 사거리 안 가장 가까운 몹 · 없으면 정면으로 사거리 끝.

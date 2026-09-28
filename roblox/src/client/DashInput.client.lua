@@ -14,6 +14,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
+local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7b 광폭 대시 쿨
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local UIManager = require(script.Parent.UIManager)
@@ -65,7 +66,8 @@ local function requestDash()
 	if airborne and (character:GetAttribute("AirDashesUsed") or 0) >= MoveRules.airDashesAllowed(charges >= 2) then
 		return
 	end
-	local ok, _, second = MoveRules.tryDash(localDash, os.clock(), charges)
+	local cooldownScale = player:GetAttribute("FrenzyActive") == true and TranscendentData.frenzy.dashCooldownScale or 1 -- C5-7b 광폭(서버와 같은 배율)
+	local ok, _, second = MoveRules.tryDash(localDash, os.clock(), charges, cooldownScale)
 	pendingSecond = second == true -- W3b 2단 대시 모션(결과가 오면 쓴다)
 	if not ok then
 		return
@@ -77,7 +79,7 @@ local function requestDash()
 	character:SetAttribute("DashReadyAt", localDash.cooldownUntil) -- 충전 표시(AirChargeDots)가 쿨다운 중이면 공중대시 칸을 회색으로(M1-0 후속)
 	character:SetAttribute("DashSecondUntil", localDash.secondUntil > os.clock() and localDash.secondUntil or nil) -- MV1 2단 대시 창
 	if second or charges < 2 or localDash.secondUntil < os.clock() then
-		localCastSignal:Fire("dash", DashConfig.cooldownSeconds)
+		localCastSignal:Fire("dash", DashConfig.cooldownSeconds * cooldownScale)
 	end
 	dashRequest:FireServer()
 end

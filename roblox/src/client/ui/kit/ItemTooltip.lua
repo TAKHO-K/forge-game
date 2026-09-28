@@ -85,9 +85,11 @@ function ItemTooltip.build(props)
 		local height = PAD * 2 + titleHeight + metaHeight + LINE_GAP + optionCount * optionHeight + (optionCount > 0 and LINE_GAP or 0)
 		note.Visible = desc.note ~= nil
 		if desc.note then
+			local lines = select(2, desc.note:gsub("\n", "")) + 1 -- C5-7b: 치명 안내 + 초월 특수 옵션 = 두 줄
 			note.Text = desc.note
+			note.Size = UDim2.new(1, -PAD * 2, 0, metaHeight * lines)
 			note.Position = UDim2.new(0, PAD, 0, height - PAD)
-			height += metaHeight
+			height += metaHeight * lines
 		end
 		root.Size = UDim2.new(0, width, 0, height)
 		return height
