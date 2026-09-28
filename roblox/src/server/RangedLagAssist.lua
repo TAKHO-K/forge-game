@@ -16,17 +16,18 @@ local echo = Instance.new("RemoteEvent")
 echo.Name = "LatencyEcho"
 echo.Parent = ReplicatedStorage
 
-local pending = {} -- player -> { token, sentAt }
+local pending = {} -- player -> { [token] = sentAt } (C5 파트 0-1 리뷰 3: 표식마다 - 왕복이 탐침 간격을 넘는 사람의 늦은 응답도 표본이 된다. 옛 코드는 매 탐침이 덮어써 그 사람은 표본 0 = 보정 0)
 local samples = {} -- player -> { rtt... } (최근 lagSampleCount)
 
 echo.OnServerEvent:Connect(function(player, token)
 	local p = pending[player]
-	if not p or token ~= p.token then
+	local sentAt = p and type(token) == "number" and p[token]
+	if not sentAt then
 		return
 	end
-	pending[player] = nil
+	p[token] = nil
 	local list = samples[player] or {}
-	table.insert(list, math.min(os.clock() - p.sentAt, A.lagMaxSeconds))
+	table.insert(list, math.min(os.clock() - sentAt, A.lagMaxSeconds))
 	while #list > A.lagSampleCount do
 		table.remove(list, 1)
 	end
@@ -42,9 +43,17 @@ task.spawn(function()
 	local nextToken = 0
 	while true do
 		task.wait(A.lagProbeSeconds)
+		local now = os.clock()
 		for _, player in ipairs(Players:GetPlayers()) do
 			nextToken += 1
-			pending[player] = { token = nextToken, sentAt = os.clock() }
+			local p = pending[player] or {}
+			for token, sentAt in pairs(p) do
+				if now - sentAt > A.lagMaxSeconds then -- 상한을 넘긴 표식은 버린다(표본이 되어도 상한값이라 정보가 없다)
+					p[token] = nil
+				end
+			end
+			p[nextToken] = now
+			pending[player] = p
 			echo:FireClient(player, nextToken)
 		end
 	end

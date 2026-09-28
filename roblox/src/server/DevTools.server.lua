@@ -519,7 +519,7 @@ local function measure(player, stageOverride)
 	}
 	local stage = stageOverride or PlayerProfile.getInfiniteStage(player) or 1
 
-	local loadout = BalanceSim.buildLoadoutFromEquipment(classId, level, weapon.level, weapon.grade, equipment, weapon.gems)
+	local loadout = BalanceSim.buildLoadoutFromEquipment(classId, level, weapon.level, weapon.grade, equipment, weapon.gems, PlayerProfile.getRebirthCount(player)) -- C5 파트 0-1(리뷰 2): 환생 보상 치명
 	local autoAttack60 = BalanceSim.simulateAutoAttack(loadout, 60)
 
 	-- 20-7: 순수 평타(비행시간·콤보 카운터 반영) / 실전 로테이션(Q+E) / 광역(동시 2마리 - 격자
@@ -1311,7 +1311,12 @@ local function handleCommand(player, args)
 		local ratio = tonumber(args[5])
 		local power = ratio and rec * ratio or rec / CombatFormula.lateLift(stage)
 		local bow = ClassData.classes.bow
-		local critRate = math.min(bow.critRate + PlayerCombat.getLevelCritBonus(stage), 1)
+		-- C5 파트 0-2(기대값 갱신): 대표 치명 = 직업 + 레벨 곡선 + 환생 보상(C4-2 PlayerCombat.resolveCrit - 옛 코드는 레벨 곡선에 스테이지를 넣었다).
+		--   대표 = 스테이지 600 미만은 환생 0 · 레벨 = min(스테이지, 125), 600 이상은 환생 5 · 레벨 = 스테이지 − CharacterLevelConfig.levelStageOffset(EconSim 일반 프로필 첫 도달과 같은 척도). 여섯째 인자 = 치명 확률 직접 지정.
+		local CharacterLevelConfig = require(RS.Shared.data.CharacterLevelConfig)
+		local repRebirth = stage >= 600 and 5 or 0
+		local repLevel = repRebirth > 0 and math.max(1, stage - CharacterLevelConfig.levelStageOffset) or math.min(stage, 125)
+		local critRate = tonumber(args[6]) or math.min(bow.critRate + PlayerCombat.resolveCrit("bow", repLevel, repRebirth, 0), 1)
 		local atk = power / (1 + critRate * (bow.critDmg - 1))
 		local speedBonus = stage >= 200 and 1.5 or 0
 		local interval, scale = PlayerCombat.getAttackTempo("bow", speedBonus, 1)
@@ -1340,7 +1345,7 @@ local function handleCommand(player, args)
 			table.insert(rows, ("T%d 평균 %.2f타(최대 %d)"):format(tierIndex, total / trials, maxN))
 		end
 		-- 스킬 한 방 / 두 방(대표 공격력 · 직업 공격 배율 비로 환산 - 기대 T1 HP ÷ 스킬 한 번 · 치명이면 × 치명 피해)
-		local t1Hp = require(RS.Shared.InfiniteStage).getMonsterHp(MonsterData.tier1.hp, stage)
+		local t1Hp = require(RS.Shared.InfiniteStage).getTrashHp(MonsterData.tier1.hp, stage) -- C5 파트 0-1(리뷰 6): 잡몹 구간 배율 포함
 		local skills = {}
 		for _, s in ipairs({ { "greatsword", "Q" }, { "greatsword", "E" }, { "dualblade", "E" } }) do
 			local class, def = ClassData.classes[s[1]], SkillData[s[1]][s[2]]
@@ -2275,7 +2280,7 @@ local function handleCommand(player, args)
 		local stage = tonumber(args[3]) and math.floor(tonumber(args[3])) or (PlayerProfile.getInfiniteStage(player) or 1)
 		local uptime = 0.65
 		local p = BossRules.partyHpExponent()
-		local trashHp = BalanceSim.getMonsterHp(stage)
+		local trashHp = require(ReplicatedStorage.Shared.InfiniteStage).getMonsterHp(MonsterData.tier1.hp, stage) -- C5 파트 0-1(리뷰 5): 보스 = 잡몹 구간 배율(C4-1) 전 HP(BossRules와 같다)
 		local bossSoloHp = trashHp * BossData.bosses[BossData.pools[1].bossIds[1]].hpMultiplier
 		local function rowFor(label, loadout)
 			local rotation = BalanceSim.simulateCombat(loadout, { useSkills = true })

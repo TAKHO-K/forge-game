@@ -188,7 +188,7 @@ local function huntLoad(player)
 		end
 		local stage = TutorialState.getMonsterStage(player)
 		local prefix = MonsterState.getPrefix(target)
-		local maxHp = InfiniteStage.getMonsterHp(MonsterState.getData(target).hp, stage) * (prefix and prefix.hpMultiplier or 1)
+		local maxHp = InfiniteStage.getTrashHp(MonsterState.getData(target).hp, stage) * (prefix and prefix.hpMultiplier or 1)
 		local isDead, dealt = MonsterState.applyDamage(target, maxHp / HITS_PER_KILL, stage, player)
 		MonsterSpawner.updateHpLabel(target)
 		hits += 1
@@ -362,7 +362,7 @@ function PerfProbe.runWorld(player, counts, seconds, crowd)
 					if best then
 						local stage = TutorialState.getMonsterStage(player)
 						local prefix = MonsterState.getPrefix(best)
-						local maxHp = InfiniteStage.getMonsterHp(MonsterState.getData(best).hp, stage) * (prefix and prefix.hpMultiplier or 1)
+						local maxHp = InfiniteStage.getTrashHp(MonsterState.getData(best).hp, stage) * (prefix and prefix.hpMultiplier or 1)
 						local isDead, dealt = MonsterState.applyDamage(best, maxHp / HITS_PER_KILL, stage, player)
 						MonsterSpawner.updateHpLabel(best)
 						hits += 1

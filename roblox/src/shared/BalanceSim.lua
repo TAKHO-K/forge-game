@@ -742,9 +742,10 @@ end
 -- unit = 무기 기본 atk 단위(atk ÷ 클래스 배율) - PRD-forge-game.md 4.4의 "60초 딜 총합
 -- (atk-단위)" 표(쌍검 436.5·활 408.5·대검 330.8)와 같은 눈금이라 그 표와 바로 비교된다.
 -- stage는 정수가 아니어도 된다(InfiniteStage.getMultiplier가 실수 지수) - solveKillOffset이 쓴다.
+-- C5 파트 0-2: 앵커 곡선의 몹 HP는 잡몹 구간 배율(C4-1 InfiniteStageConfig.trashHpBand) 전의 원 HP - 앵커는 "레벨 ↔ 스테이지" 척도의 정의라 구간 배율 밖에서 잰다(EconSimTables.samples와 같다).
 function BalanceSim.measurePoint(loadout, stage)
 	local monsterAttack = BalanceSim.getMonsterAttack(stage)
-	local monsterHp = BalanceSim.getMonsterHp(stage)
+	local monsterHp = InfiniteStage.getMonsterHp(MonsterData.tier1.hp, stage)
 	local surviveHits, dmgPerHit = BalanceSim.getSurviveHits(loadout, monsterAttack)
 	local killAuto = BalanceSim.simulateCombat(loadout, { useSkills = false, targetHp = monsterHp, durationSeconds = 600, turnDelaySeconds = 0.125 })
 	local killRotation = BalanceSim.simulateCombat(loadout, { useSkills = true, targetHp = monsterHp, durationSeconds = 600, turnDelaySeconds = 0.125 })

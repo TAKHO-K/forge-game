@@ -53,8 +53,8 @@ local STAT_ROWS = {
 	{ key = "defense", label = "방어력", fmt = function(v) return NumberFormat.format(math.floor(v)) end },
 	{ key = "maxHp", label = "최대 체력", fmt = function(v) return NumberFormat.format(math.floor(v)) end },
 	{ key = "speedPercent", label = "이동 · 공격 속도", fmt = function(v) return ("+%.1f%%"):format(v * 100) end },
-	{ key = "critRate", label = "치명 확률(옵션)", fmt = function(v) return ("+%.1f%%p"):format(v * 100) end },
-	{ key = "critDmg", label = "치명 피해(옵션)", fmt = function(v) return ("+%.2f"):format(v) end },
+	{ key = "critRate", label = "치명 확률(레벨 · 환생 · 옵션)", fmt = function(v) return ("+%.1f%%p"):format(v * 100) end },
+	{ key = "critDmg", label = "치명 피해(옵션 · 태초 장갑)", fmt = function(v) return ("+%.2f"):format(v) end },
 }
 
 local built -- refs

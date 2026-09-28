@@ -549,8 +549,8 @@ local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, for
 	local rollScale = (whatIf and whatIf.optionRoll) or profile.optionRoll or 1
 	local old = state.gems[slot]
 	local oldValue = type(old) == "table" and EconSim.gemValue(old, state.classId) or -1
+	local axis = (profile.gemCritSlots and table.find(profile.gemCritSlots, slot)) and "crit" or "attackPercent" -- C4-2: 대표가 치명 축으로 맞추는 홈(EconSimConfig 프로필)
 	if profile.gemReroll and Gem.isRerollableGrade(gradeId) then
-		local axis = (profile.gemCritSlots and table.find(profile.gemCritSlots, slot)) and "crit" or "attackPercent" -- C4-2: 대표가 치명 축으로 맞추는 홈(EconSimConfig 프로필)
 		local gem = EconSim.makeGem(axis, gradeId, itemLevel, math.min(profile.gemRoll * rollScale, OptionData.rollMax)) -- 굴림 상한(1.125) 안
 		local tickets = #Option.poolFor(state.classId)
 		local price = GoldCost.cost(MonsterData.tier1.goldDrop, state.reach, "rerollTicket") * GemData.rerollTicketGoldMultiplier * tickets -- GemServer.rerollTicketPrice와 같은 식
@@ -562,7 +562,9 @@ local function tryPlaceGem(state, profile, slot, gradeId, itemLevel, whatIf, for
 			return
 		end
 	end
-	local gem = EconSim.makeGem("attackPercent", gradeId, itemLevel, randomAxisRoll(state.classId) * rollScale)
+	-- C5 파트 0-1(리뷰 1): 치명 홈은 치명 보석끼리만 비교한다(옛 코드는 변환 불가 등급 · 골드 부족일 때 위력 눈금(0.30) 후보가 치명 눈금(0.115)을 이겨 치명 홈이 위력으로 뒤집히고 못 돌아왔다).
+	--   치명 홈의 무작위 드랍 후보 = 그 등급 · itemLevel의 치명 보석(치명 축은 드랍의 1/N - 그 홈에 치명만 끼우는 플레이어의 근사).
+	local gem = axis == "crit" and EconSim.makeGem("crit", gradeId, itemLevel, rollScale) or EconSim.makeGem("attackPercent", gradeId, itemLevel, randomAxisRoll(state.classId) * rollScale)
 	if forced or EconSim.gemValue(gem, state.classId) > oldValue then
 		state.gems[slot] = gem
 		state.gemReplacements += forced and 0 or 1

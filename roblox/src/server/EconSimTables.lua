@@ -229,7 +229,9 @@ end
 -- ═══ 표본 대조(P2.5a 앵커 - 새 k에서 다시 푼 값) ═══
 -- ① 생존 앵커(CombatConfig.damageReductionAlpha · maxHpBonusBase): 앵커 장비(레벨 = itemLevel = 스테이지)에서 스테이지 1,000 · 5,000 · 20,000 모두 7.0타
 --    (옛 k의 레벨 100 비율을 새 k의 고스테이지에서 다시 풀었다 - 상수 +10 HP · +5 방어 몫이 사라지는 곳).
--- ② 처치 앵커(CharacterLevelConfig.levelStageOffset): 앵커 장비 레벨 L로 스테이지 L + 167의 tier1을 2.5초(BalanceAnchorConfig.killTargetSeconds)에 잡는다 - L = 100 · 1000.
+-- ② 처치 앵커(CharacterLevelConfig.levelStageOffset): 앵커 장비 레벨 L로 스테이지 L + 167의 tier1을 BalanceAnchorConfig.killTargetSeconds초에 잡는다 - L = 100 · 1000.
+--    C5 파트 0-2(기대값 갱신): 몹 HP = 잡몹 구간 배율(C4-1 trashHpBand) 전의 원 HP(InfiniteStage.getMonsterHp) - 앵커는 척도(레벨 ↔ 스테이지)의 정의라 구간 배율 밖에서 잰다
+--    (1,167은 혹 ×20 안이라 30초가 나왔다). 목표 초는 C3 템포 · C4 치명 곡선 뒤 값(2.5 → BalanceAnchorConfig 주석).
 -- ③ 치유사(결정 8): 딜링모드 ÷ 검사 = 평균 투자 0.875 · 최상위 투자 HealerTopScale(1.1) · 도적 3 + 1 비중(평균) ≥ 12%.
 function EconSimTables.samples(healer)
 	local samples = {}
@@ -245,7 +247,7 @@ function EconSimTables.samples(healer)
 	for _, level in ipairs({ 100, 1000 }) do
 		local loadout = BalanceSim.buildAnchorLoadout(classId, level, 0)
 		local stage = CharacterLevel.getStageForLevel(level)
-		local kill = EconSim.killSeconds(loadout, BalanceSim.getMonsterHp(stage), 600)
+		local kill = EconSim.killSeconds(loadout, InfiniteStage.getMonsterHp(EconSim.tierData(1).hp, stage), 600) -- C5 파트 0-2: 구간 배율 전 원 HP
 		table.insert(samples, { id = ("처치 앵커 레벨 %d · 스테이지 %d"):format(level, stage), expected = BalanceAnchorConfig.killTargetSeconds, value = kill, ok = math.abs(kill - BalanceAnchorConfig.killTargetSeconds) <= 0.1 })
 	end
 	local scaling = SkillData.healer.E.investmentScaling
