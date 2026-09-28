@@ -60,6 +60,8 @@ function QuestService.view(player)
 		chestClaimed = state.chestDay == state.day, -- Play C: 받은 뒤 버튼 글 = 받음
 		main = step and { index = state.main, total = #QuestData.main, id = step.id, name = step.name, unlock = step.unlock, done = Quest.mainDone(step, facts), reward = step.reward } or nil,
 		currencies = state.currencies,
+		guide = state.guide and QuestData.ftue[state.guide] and { index = state.guide, total = #QuestData.ftue, id = QuestData.ftue[state.guide].id, text = QuestData.ftue[state.guide].text, card = QuestData.ftue[state.guide].card } or nil, -- Q12
+		attendance = type(state.attendance) == "table" and { count = state.attendance.count, claimed = state.attendance.claimed, rewards = QuestData.attendance } or nil, -- Q12
 		training = tv and trainRows(TrainingData.stats, tv.training, "stat") or {},
 		abilities = tv and trainRows(TrainingData.classAbilities[tv.classId], tv.abilities, "ability") or {},
 	}
@@ -109,6 +111,10 @@ function QuestService.grant(player, reward)
 		state.currencies.sparkleShard = (state.currencies.sparkleShard or 0) + reward.sparkleShard
 		table.insert(parts, ("반짝 조각 %d"):format(reward.sparkleShard))
 	end
+	if state and reward.rebirthTicket then -- Q12 7일 출석 2일차(자리 - 지금 환생은 비용이 없어 쓰는 곳 없음)
+		state.currencies.rebirthTicket = (state.currencies.rebirthTicket or 0) + reward.rebirthTicket
+		table.insert(parts, ("환생 무료권 %d"):format(reward.rebirthTicket))
+	end
 	if state and reward.passExp then
 		state.currencies.passExp = (state.currencies.passExp or 0) + reward.passExp
 		table.insert(parts, ("패스 경험치 %d"):format(reward.passExp))
@@ -122,10 +128,31 @@ function QuestService.note(player, event, amount)
 	if not state then
 		return
 	end
-	local reached = Quest.note(state, event, amount or 1, os.time())
+	local reached, advanced = Quest.note(state, event, amount or 1, os.time())
 	if #reached > 0 then
 		print(("[Q6] 퀘스트 목표 도달: %s - %s"):format(player.Name, table.concat(reached, ",")))
+	end
+	if advanced then -- Q12 첫 5분 이정표
+		QuestService.funnel(player, advanced.funnel)
+		local nextStep = state.guide and QuestData.ftue[state.guide]
+		if nextStep and nextStep.fillUlt then -- 궁극기 맛보기: 이 단계에 들어서면 게이지 한 번 가득
+			local UltimateData = require(ReplicatedStorage.Shared.data.UltimateData)
+			require(script.Parent.UltimateService).set(player, UltimateData.max)
+		end
+		print(("[Q12] 이정표: %s - %s 끝 → %s"):format(player.Name, advanced.id, nextStep and nextStep.id or "완료"))
+	end
+	if #reached > 0 or advanced then
 		push(player)
+	end
+end
+
+-- Q12 온보딩 퍼널 자리(Q15 Telemetry가 받는다 - 지금은 로그만)
+function QuestService.funnel(player, step)
+	local ok, Telemetry = pcall(require, script.Parent:FindFirstChild("Telemetry"))
+	if ok and type(Telemetry) == "table" and Telemetry.funnel then
+		Telemetry.funnel(player, step)
+	else
+		print(("[Q12][퍼널] %s %s"):format(player.Name, tostring(step)))
 	end
 end
 

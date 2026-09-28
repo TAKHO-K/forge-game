@@ -419,8 +419,50 @@ function V.runPure()
 		local SaveSystem = require(script.Parent.SaveSystem)
 		local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 		local ok, m = pcall(SaveSystem.migrate, { version = 51, gold = 0, classes = {}, inventory = {}, eggs = { egg }, training = { attack = 0, hp = 0, defense = 0 }, quests = { main = 1 } })
-		check(("이관 v51 → v%s: pets 빈 상태 · 알 가방 유지 · SAVE_VERSION %d"):format(ok and tostring(m.version) or "에러", SaveConfig.saveVersion),
-			ok and m.version == 52 and SaveConfig.saveVersion == 52 and type(m.pets) == "table" and #m.pets.list == 0 and m.pets.hatchCount == 0 and #m.eggs == 1)
+		check(("이관 v51 → v%s(≥ 52): pets 빈 상태 · 알 가방 유지 · SAVE_VERSION %d"):format(ok and tostring(m.version) or "에러", SaveConfig.saveVersion),
+			ok and m.version >= 52 and SaveConfig.saveVersion >= 52 and type(m.pets) == "table" and #m.pets.list == 0 and m.pets.hatchCount == 0 and #m.eggs == 1)
+	end)
+
+	section("Q12 첫 5분 이정표 · 7일 출석", function()
+		local Quest = require(ReplicatedStorage.Shared.Quest)
+		local QuestData = require(ReplicatedStorage.Shared.data.QuestData)
+		local now = 1790000000
+		local st = Quest.newState(now)
+		local _, wrong = Quest.note(st, "enhance", 1, now)
+		local seq, okSeq = {}, true
+		for _, step in ipairs(QuestData.ftue) do
+			local _, adv = Quest.note(st, step.event, 1, now)
+			okSeq = okSeq and adv ~= nil and adv.id == step.id
+			table.insert(seq, step.id)
+		end
+		check(("이정표 %d단계 = 순서대로(엉뚱한 이벤트 무시) · 끝 = nil · 퍼널 이름 전부"):format(#QuestData.ftue), wrong == nil and okSeq and st.guide == nil)
+		local funnelOk, ultStep = true, nil
+		for _, step in ipairs(QuestData.ftue) do
+			funnelOk = funnelOk and type(step.funnel) == "string"
+			if step.fillUlt then
+				ultStep = step.id
+			end
+		end
+		check(("궁극기 맛보기 단계 %s · 스킬 안내 카드 1장"):format(tostring(ultStep)), funnelOk and ultStep == "g_ult")
+		local a = Quest.newState(now)
+		Quest.roll(a, now)
+		local c1 = a.attendance.count
+		Quest.roll(a, now + 3600)
+		local same = a.attendance.count
+		Quest.roll(a, now + 86400 * 5)
+		local r1 = Quest.claim(a, "attendance", "1", now + 86400 * 5)
+		local r1b, why1b = Quest.claim(a, "attendance", "1", now + 86400 * 5)
+		local r3, why3 = Quest.claim(a, "attendance", "3", now + 86400 * 5)
+		local r2 = Quest.claim(a, "attendance", "2", now + 86400 * 5)
+		check(("출석: 첫날 %d · 같은 날 %d · 며칠 뒤 %d(빠진 날 = 다음 칸) · 1일차 알 · 다시 %s · 3일차 %s · 2일차 무료권"):format(c1, same, a.attendance.count, tostring(why1b), tostring(why3)),
+			c1 == 1 and same == 1 and a.attendance.count == 2 and r1 and r1.egg == 1 and r1b == nil and why1b == "claimed" and r3 == nil and why3 == "not_done" and r2 and r2.rebirthTicket == 1)
+		for d = 6, 20 do
+			Quest.roll(a, now + 86400 * d)
+		end
+		check("출석 7칸에서 멈춤", a.attendance.count == #QuestData.attendance and #QuestData.attendance == 7)
+		local SaveSystem = require(script.Parent.SaveSystem)
+		local ok, m = pcall(SaveSystem.migrate, { version = 49, gold = 0, classes = {}, inventory = {} })
+		check(("이관 옛 계정 → v%s: 이정표 · 출석 없음(새 계정만)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 53 and type(m.quests) == "table" and m.quests.guide == nil and m.quests.attendance == nil)
 	end)
 
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))

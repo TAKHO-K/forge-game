@@ -116,6 +116,20 @@ function QuestsPanel.render()
 		label("…", 14)
 		return
 	end
+	if view.guide then -- Q12 첫 5분 이정표(지금 할 일)
+		label(Text.get("guide.now", { index = tostring(view.guide.index), total = tostring(view.guide.total), text = Text.get(view.guide.text) }), 16, Theme.color("xp"))
+	end
+	if view.attendance then -- Q12 7일 출석
+		label(Text.get("attendance.title", { count = tostring(view.attendance.count) }), 16)
+		for _, entry in ipairs(view.attendance.rewards) do
+			local key = tostring(entry.day)
+			local claimed = view.attendance.claimed[key] == true
+			local ready = entry.day <= view.attendance.count and not claimed
+			row(Text.get("attendance.day", { day = key, reward = Text.get("attendance.reward." .. key) }), claimed and Text.get("quests.claimed") or Text.get("quests.claim"), ready, function()
+				send("claim", "attendance", key)
+			end, "Attendance_" .. key)
+		end
+	end
 	row(Text.get("quests.login"), view.loginReady and Text.get("quests.claim") or Text.get("quests.claimed"), view.loginReady, function()
 		send("claim", "login")
 	end, "LoginRow")

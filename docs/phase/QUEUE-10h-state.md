@@ -116,10 +116,12 @@
 - 기록 10: 리롤 = 변형 직업 풀 · 풀 없으면 골드 전에 거부
 - 결정 필요로: 기록 8(영혼 전 설치물 기여) · 9(영혼도 인원수 - 모래 더미 · 오르골) · 11(`debugEquipment` 이름)
 
-| Q11 펫 최소판 | (이 커밋) | PetData · Pet · PetService · PetView · 알 창 부화 · 부화 레벨 확률표 · 자동 줍기(Lv 200 · ItemDropServer 반경만) · SAVE v52 · /gg pet · docs/design/pets-q11.md · art ref 20(로컬) · QueueVerify 78/78 |
+| Q11 펫 최소판 | 194d775 · 7e2a233(리뷰) | PetData · Pet · PetService · PetView · 알 창 부화 · 부화 레벨 확률표 · 자동 줍기(Lv 200 · ItemDropServer 반경만) · SAVE v52 · /gg pet · docs/design/pets-q11.md · art ref 20(로컬) · QueueVerify 78/78 |
+
+| Q12 FTUE + 7일 출석 | (이 커밋) | 이정표 8단계(퀘스트 상태 · 보상 없음 · 퍼널 자리) · 궁극기 맛보기 · 스킬 카드 · TC 토스트 · 7일 출석(새 계정만) · SAVE v53 · docs/design/ftue-attendance-q12.md · QueueVerify 83/83 |
 
 ## 지금
-- Q11 리뷰 → Q12 FTUE + 7일 출석
+- Q13 가방 30칸 · 일괄 분해 · 확률 공개
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)

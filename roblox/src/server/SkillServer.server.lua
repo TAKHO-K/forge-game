@@ -50,6 +50,9 @@ skillCastResult.Parent = ReplicatedStorage
 local debugCapture = {}
 local function sendResult(player, slot, payload)
 	skillCastResult:FireClient(player, slot, payload)
+	if payload.ok and (payload.kind == nil or not tostring(payload.kind):find("Tick")) then -- Q12 이정표: 스킬 · 궁극기 한 번 씀(틱은 빼고)
+		require(script.Parent.QuestService).note(player, slot == "T" and "ult" or "skill", 1)
+	end
 	local sink = debugCapture[player]
 	if sink then
 		table.insert(sink, { slot = slot, payload = payload })

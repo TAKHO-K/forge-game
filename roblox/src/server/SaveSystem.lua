@@ -1138,6 +1138,15 @@ local function migrate(data)
 		data.version = 52
 	end
 
+	if data.version < 53 then
+		-- QUEUE-10h Q12: quests.guide(첫 5분 이정표) · quests.attendance(7일 출석)는 새 계정만 - 옛 계정(이미 이관된 상태 · 위 v50 단계가 방금 만든 상태 포함)은 둘 다 없음.
+		if type(data.quests) == "table" then
+			data.quests.guide = nil
+			data.quests.attendance = nil
+		end
+		data.version = 53
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data

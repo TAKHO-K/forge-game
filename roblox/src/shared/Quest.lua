@@ -35,7 +35,8 @@ function Quest.dailyFor(day)
 end
 
 function Quest.newState(now)
-	return { day = Quest.dayOf(now), daily = {}, week = Quest.weekOf(now), weekly = {}, loginDay = -1, chestDay = -1, main = 1, currencies = { sparkleShard = 0, passExp = 0 } }
+	return { day = Quest.dayOf(now), daily = {}, week = Quest.weekOf(now), weekly = {}, loginDay = -1, chestDay = -1, main = 1, currencies = { sparkleShard = 0, passExp = 0 },
+		guide = 1, attendance = { count = 0, lastDay = -1, claimed = {} } } -- Q12(v53): 첫 5분 이정표 · 7일 출석(새 계정만 - 옛 계정은 이관에서 nil)
 end
 
 -- 날짜 · 주가 바뀌었으면 진행을 비운다(되돌리기 없음 - 받은 보상은 이미 들어갔다). 반환 = 바뀌었는가
@@ -48,6 +49,12 @@ function Quest.roll(state, now)
 	end
 	if state.week ~= week then
 		state.week, state.weekly = week, {}
+		changed = true
+	end
+	local att = state.attendance -- Q12: 접속한 날마다 한 칸(7칸까지)
+	if type(att) == "table" and att.lastDay ~= day and att.count < #QuestData.attendance then
+		att.count += 1
+		att.lastDay = day
 		changed = true
 	end
 	return changed
@@ -72,7 +79,13 @@ function Quest.note(state, event, amount, now)
 	end
 	bump(Quest.dailyFor(state.day), state.daily)
 	bump(QuestData.weekly, state.weekly)
-	return reached
+	local guideStep = state.guide and QuestData.ftue[state.guide] -- Q12 이정표: 지금 단계의 이벤트면 다음 단계로
+	local advanced = nil
+	if guideStep and guideStep.event == event then
+		advanced = guideStep
+		state.guide = state.guide < #QuestData.ftue and state.guide + 1 or nil
+	end
+	return reached, advanced
 end
 
 local function find(list, id)
@@ -131,6 +144,21 @@ function Quest.claim(state, kind, id, now, facts)
 		end
 		state.main += 1
 		return step.reward
+	elseif kind == "attendance" then -- Q12: id = 날짜 칸 번호(문자열) · 센 날까지만 · 한 번씩
+		local att = state.attendance
+		local n = tonumber(id)
+		local entry = n and QuestData.attendance[n]
+		if type(att) ~= "table" or not entry then
+			return nil, "unknown"
+		end
+		if n > att.count then
+			return nil, "not_done"
+		end
+		if att.claimed[tostring(n)] then
+			return nil, "claimed"
+		end
+		att.claimed[tostring(n)] = true -- 문자열 키(DataStore 왕복 뒤에도 같은 키)
+		return entry.reward
 	end
 	return nil, "unknown"
 end

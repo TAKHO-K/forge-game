@@ -37,6 +37,7 @@ local function tryPickup(model, owner)
 		if item.grade == "primordial" or item.grade == "transcendent" then -- Q4: 초월도(세계 번호가 붙는 등급)
 			require(script.Parent.ImmediateSave).request(owner) -- D1: 태초(가방이 가득이라 땅에 있던 것)를 주우면 즉시 저장
 		end
+		require(script.Parent.QuestService).note(owner, "pickup", 1) -- Q12 이정표: 첫 드랍 줍기
 		if not processed then -- G1-2 리뷰 3: 자동 처리됐으면 "획득" 대신 자동 처리 알림만(InventorySync)
 			itemPickedUp:FireClient(owner, item)
 		end

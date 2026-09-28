@@ -17,6 +17,9 @@ function ItemEquip.handle(player, action, arg)
 			return false, "invalid"
 		end
 		success, reason = PlayerProfile.equipItem(player, math.floor(arg))
+		if success == true then
+			require(script.Parent.QuestService).note(player, "equip", 1) -- Q12 이정표: 첫 장착
+		end
 	elseif action == "unequip" then
 		if type(arg) ~= "string" then
 			return false, "invalid"
