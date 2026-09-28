@@ -41,6 +41,18 @@ local function getGradeChance(tierIndex, gradeId)
 	if row[gradeId] then
 		return row[gradeId]
 	end
+	-- Q2(버그 수정): M2 표부터 옛 표에 칸이 없는 조합(T1 영웅 이상 · T6 일반 등)이 떨어진다 - 칸이 없으면 판매가 0이었다.
+	--   가장 가까운 티어의 옛 칸을 기준으로 쓴다(거리가 같으면 낮은 티어 먼저). 티어 무관 판매가로 바꿀지는 결정 필요(QUEUE-10h Q2).
+	if gradeId ~= "primordial" then
+		for d = 1, #DropTableData.fairnessGradeByTier do
+			for _, t in ipairs({ tierIndex - d, tierIndex + d }) do
+				local other = DropTableData.fairnessGradeByTier[t]
+				if other and other[gradeId] then
+					return other[gradeId]
+				end
+			end
+		end
+	end
 	if gradeId == "primordial" then
 		local divisor = DropTableData.primordial.dragonOverTier[tierIndex]
 		return divisor and DropTableData.sellReferencePrimordialRate / divisor or nil

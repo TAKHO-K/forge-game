@@ -253,6 +253,16 @@ for tierIndex = 1, #TIER_INFO do
 	local dropCountMultiplier = MonsterData[MonsterData.tierOrder[tierIndex]].dropCountMultiplier
 	local eGT = expectedGradeValue(tierIndex)
 	local rewardPerTime = (dropCountMultiplier * eGT) / hpMultiplier
+	if DropTableData.dropCountBasis == "killUnits" then -- Q2: 새 개수 식의 항등식 = 개수 × 현행 표 기대 위력(dropPower) ÷ HP 비 ÷ tier1 값(= 티어 보정 × 위력 비 - 이동 보정 몫만큼 1에서 벗어난다)
+		local function nowPower(t)
+			local sum = 0
+			for gradeId, chance in pairs(DropTableData.armorGradeByTier[t]) do
+				sum += chance * ArmorData.grades[gradeId].dropPower
+			end
+			return sum
+		end
+		rewardPerTime = (DropTableData.fieldDropCountAdjust[tierIndex] * nowPower(tierIndex)) / (DropTableData.fieldDropCountAdjust[1] * nowPower(1))
+	end
 	table.insert(MonsterData.fairnessCheck, {
 		tier = tierIndex,
 		r = r,
