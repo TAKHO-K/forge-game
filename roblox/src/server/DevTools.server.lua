@@ -1360,9 +1360,8 @@ local function handleCommand(player, args)
 		-- C5-5 복귀 부스트 강제(마지막 저장을 8일 전으로 보고 판정 함수를 다시 부른다 - 저장 필드는 백업 대상 · Play가 끝나면 되돌린다)
 		ensureBackup(player)
 		local profile = PlayerProfile.getProfile(player)
-		profile.savedAt = os.time() - 8 * 86400
 		profile.comeback = { untilAt = 0 }
-		local on = PlayerProfile.grantComebackIfAway(player)
+		local on = PlayerProfile.grantComebackIfAway(player, nil, os.time() - 8 * 86400) -- 마지막 저장 = 8일 전으로 보고 판정(진짜 savedAt은 안 바꾼다)
 		reply(player, ("복귀 부스트 %s(경험치 배수 %.2f · 만료 %d초 뒤)"):format(on and "켜짐" or "꺼짐", PlayerProfile.getExpGainMultiplier(player), (profile.comeback.untilAt or 0) - os.time()))
 	elseif sub == "c5" and args[2] == "auto" then
 		-- C5-4 자동 이동 즉시 검사(목표 · 관문)

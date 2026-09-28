@@ -79,8 +79,13 @@ end
 -- 보스 장비 드랍은 땅이 아니라 가방으로 바로 간다(PRD 20.81 [C-1]) - 보스 처치 직후 멤버 전원이 사냥터로 돌아가서
 -- 아레나 땅에 남은 드랍은 주울 수 없었다. 성공하면 줍기와 같은 ItemPickedUp(획득 팝업)을 쏜다. 가방이 가득이면 false를
 -- 돌려주고 호출부가 deferred에 담는다 - 땅에 떨어뜨리는 일은 복귀 텔레포트 뒤(flushDeferredBossDrops)다.
+-- 묶음 A 리뷰 치명 1: 세계 번호 등급(태초 · 초월)은 등록 · 가방 직행 · 즉시 저장 경로가 같다 - 등급 비교를 한 곳에 모은다.
+local function isNumberedGrade(grade)
+	return grade == "primordial" or grade == "transcendent"
+end
+
 local function deliverBossDropToBag(recipient, item)
-	local added, processed = PlayerProfile.addArmorDrop(recipient, item, item.grade == "primordial" and { noAutoProcess = true, force = true } or nil) -- D1: 태초는 칸 초과로도 가방
+	local added, processed = PlayerProfile.addArmorDrop(recipient, item, isNumberedGrade(item.grade) and { noAutoProcess = true, force = true } or nil) -- D1: 태초(묶음 A 리뷰: + 초월)는 칸 초과로도 가방
 	if not added then
 		return false
 	end
@@ -178,6 +183,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	local armorDrops
 	local bossFirstClear = false
 	local primordialP = 0 -- S1 2-6: 이번 굴림 한 개가 태초일 확률(λ · 원장)
+	local transcendentP = 0 -- 묶음 A 리뷰: 초월 원장 p(보스 표 · 반짝이 · 잡몹 굴림 확률)
 	if isBoss then
 		-- 20-4 [1]: "그 스테이지 보스를 처음 깼는가"로 분기한다. 첫 처치는 등급을 끌어올린 확정 드랍
 		-- (Loot.rollBossFirstClearDrop), 재도전은 확정 1개(Loot.rollBossRetryDrop, 28-1 [2-2] - D1부터 토벌 표).
@@ -186,8 +192,10 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		if PlayerProfile.hasBossFirstClearReward(recipient, stage) then
 			armorDrops = { Loot.rollBossRetryDrop(dropStage, classId) }
 			primordialP = DropTable.bossRetryGradeTable().primordial or 0
+			transcendentP = DropTable.bossRetryGradeTable().transcendent or 0
 		else
 			primordialP = DropTable.bossFirstClearGradeTable(PlayerProfile.getRebirthCount(recipient)).primordial or 0
+			transcendentP = DropTable.bossFirstClearGradeTable(PlayerProfile.getRebirthCount(recipient)).transcendent or 0
 			armorDrops = { Loot.rollBossFirstClearDrop(dropStage, PlayerProfile.getRebirthCount(recipient), classId) }
 			PlayerProfile.markBossFirstClearReward(recipient, stage)
 			bossFirstClear = true
@@ -195,6 +203,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	elseif isSparkle then
 		armorDrops = { Loot.rollSparkleArmorDrop(dropStage, monsterData.tierIndex, classId) }
 		primordialP = RareMonsterConfig.sparkleGradeChances.primordial or 0
+		transcendentP = RareMonsterConfig.sparkleGradeChances.transcendent or 0
 	else
 		-- 접두사 변종(22-2 [1]) - 기대 드랍 개수에도 보상 배율(= HP 배율)을 곱한다(공평성).
 		-- P2 E1 · E3: 태초 확률 = DropTable.effectiveRate(받는 사람의 활성 직업 최고 스테이지, 몬스터 tier, 받는 사람의 사냥 스테이지) - 조회 API와 같은 함수.
@@ -203,6 +212,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		local transcendentRate = DropTable.effectiveTranscendentRate({ bestStage = PlayerProfile.getInfiniteStageBest(recipient) }, { tierIndex = monsterData.tierIndex }, dropStage) -- C5-7
 		armorDrops = Loot.rollArmorDrop(dropStage, monsterData.tierIndex, MonsterState.getRewardMultiplier(target) * PlayerProfile.getComebackMultiplier(recipient), classId, primordialRate, MonsterState.getKillSecondsFor(target, recipient), transcendentRate) -- C5-5 복귀 부스트(드랍 기대 개수 ×1.5)
 		primordialP = primordialRate or 0
+		transcendentP = transcendentRate or 0
 	end
 	AcquisitionAudit.addLambda(recipient, primordialP, #armorDrops) -- S1 2-6: λ += 굴림마다 태초 확률
 	AcquisitionAudit.noteKill(recipient) -- S1 2-7 처치 속도
@@ -215,9 +225,9 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 			zone = (not isBoss and monsterData.tierIndex) and ("tier%d"):format(monsterData.tierIndex) or nil,
 			stage = dropStage,
 		}
-		if armorDrop.grade == "primordial" or armorDrop.grade == "ancient" then
+		if isNumberedGrade(armorDrop.grade) or armorDrop.grade == "ancient" then
 			PrimordialRegistry.onRolled(recipient, armorDrop, deathPosition, isBoss, { PlayerProfile = PlayerProfile, ImmediateSave = ImmediateSave },
-				armorDrop.grade == "primordial" and { rollId = AcquisitionAudit.newRollId(), p = primordialP } or nil) -- S1 2-3 발급 원장
+				isNumberedGrade(armorDrop.grade) and { rollId = AcquisitionAudit.newRollId(), p = armorDrop.grade == "primordial" and primordialP or transcendentP } or nil) -- S1 2-3 발급 원장
 		end
 	end
 	for _, armorDrop in ipairs(armorDrops) do
@@ -231,7 +241,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 				table.insert(deferredBossDrops, { player = recipient, item = armorDrop })
 			end
 			print(("[forge-game] 드랍: %s등급 %s (%s) → %s"):format(armorDrop.grade, armorDrop.part, kind, inBag and "가방" or "땅(가방 가득)"))
-		elseif armorDrop.grade == "primordial" and PlayerProfile.addArmorDrop(recipient, armorDrop, { noAutoProcess = true, force = true }) then
+		elseif isNumberedGrade(armorDrop.grade) and PlayerProfile.addArmorDrop(recipient, armorDrop, { noAutoProcess = true, force = true }) then
 			-- D1: 필드 태초는 가방 직행(칸이 가득이어도 - 리뷰 3) + 즉시 저장(세계 번호가 붙은 아이템이 땅에 남지 않게).
 			ImmediateSave.request(recipient)
 			print(("[forge-game] 드랍: 태초 %s (%s) → 가방 · 세계 번호 %s"):format(armorDrop.part, kind, tostring(armorDrop.primordial and armorDrop.primordial.no)))

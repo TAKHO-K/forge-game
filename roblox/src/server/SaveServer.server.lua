@@ -28,10 +28,12 @@ local function loadForPlayer(player)
 	-- 받는다 - 접속 직후에도 한 번 밀어준다(이후 변경은 PlayerProfile의 각 뮤테이터가 push).
 	InventorySync.push(player, profile)
 	if PlayerProfile.grantComebackIfAway(player) then -- C5-5 복귀 부스트(7일 이상 뒤 접속 → 60분 ×1.5) - 토스트
-		local notice = ReplicatedStorage:FindFirstChild("SystemNotice")
-		if notice then
-			notice:FireClient(player, require(ReplicatedStorage.Shared.Text).get("comeback.welcome"))
-		end
+		task.spawn(function() -- 묶음 A 리뷰: AutoStage.server가 SystemNotice를 만들기 전 첫 접속자 경합 - 로드를 막지 않고 기다린다
+			local notice = ReplicatedStorage:WaitForChild("SystemNotice", 10)
+			if notice and player.Parent then
+				notice:FireClient(player, require(ReplicatedStorage.Shared.Text).get("comeback.welcome"))
+			end
+		end)
 	end
 	task.spawn(AcquisitionAudit.auditProfile, player) -- S1: 원장 없는 태초 격리 · 확률 검사(자동 제재 없음)
 end

@@ -489,13 +489,13 @@ function PlayerProfile.getComebackMultiplier(player)
 end
 
 -- C5-5: 로드 직후(SaveServer) - 마지막 저장(savedAt)이 awayDays 이상 전이면 부스트를 켠다(서버 판정). 반환 = 켰는가.
-function PlayerProfile.grantComebackIfAway(player, now)
+function PlayerProfile.grantComebackIfAway(player, now, savedAtOverride)
 	local profile = profiles[player]
 	if not profile then
 		return false
 	end
 	now = now or os.time()
-	local savedAt = type(profile.savedAt) == "number" and profile.savedAt or 0
+	local savedAt = savedAtOverride or (type(profile.savedAt) == "number" and profile.savedAt or 0) -- savedAtOverride = 개발 명령(/gg c5 comeback) - 진짜 savedAt을 바꾸면 다음 저장이 stale_session으로 멈춘다(묶음 A 리뷰)
 	profile.comeback = type(profile.comeback) == "table" and profile.comeback or { untilAt = 0 }
 	if savedAt > 0 and now - savedAt >= ComebackData.awayDays * 86400 and now >= (profile.comeback.untilAt or 0) then
 		profile.comeback.untilAt = now + ComebackData.boostSeconds
@@ -1817,7 +1817,7 @@ function PlayerProfile.awakenItem(player, kind, key, expectedNo)
 	if reason then
 		return false, reason
 	end
-	if not PlayerProfile.trySpendGold(player, Awaken.cost(best)) then
+	if not PlayerProfile.trySpendGold(player, Awaken.cost(best, item)) then -- 묶음 A 리뷰: 초월 각성 무료(클라 표시와 같게)
 		return false, "no_gold"
 	end
 	item.itemLevel = best
@@ -2195,6 +2195,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.milestoneUnlocks = snapshot.milestoneUnlocks or profile.milestoneUnlocks
 	profile.inventorySlots = snapshot.inventorySlots or profile.inventorySlots
 	profile.leaderboardTainted = snapshot.leaderboardTainted
+	profile.comeback = snapshot.comeback and deepCopy(snapshot.comeback) or { untilAt = 0 } -- 묶음 A 리뷰: C5-5 v48 복귀 부스트도 되돌린다
 	profile.world = snapshot.world and deepCopy(snapshot.world) or profile.world
 	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
 	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles

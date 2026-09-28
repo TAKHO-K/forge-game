@@ -76,7 +76,7 @@ function AutoStage.targetFor(player)
 	local clearedBoss = PlayerProfile.getBestBossCleared(player) or 0
 	local blockedGate = nil
 	local target = nil
-	for stage = math.min(best, current + 1), current + 1, -1 do -- 위에서 내려오며 첫 조건 만족(비율은 스테이지에 단조 감소)
+	for stage = best, current + 1, -1 do -- 위(지금 최고)에서 내려오며 첫 조건 만족(비율은 스테이지에 단조 감소) - 묶음 A 리뷰: 옛 범위는 current + 1 한 칸만 봤다
 		if not BossRules.isBossStage(stage) then
 			local gate = BossRules.getBossStageBelow(stage)
 			if gate > 0 and gate > clearedBoss then
@@ -89,6 +89,10 @@ function AutoStage.targetFor(player)
 	end
 	if target and target <= current then
 		target = nil
+	end
+	-- 지금 최고에 있고 바로 위가 안 깬 보스 관문이면 도전 알림(자동 이동은 최고 기록을 넘지 않는다 - 묶음 A 리뷰)
+	if not target and not blockedGate and current >= best and BossRules.isBossStage(current + 1) and current + 1 > clearedBoss then
+		blockedGate = current + 1
 	end
 	return target, blockedGate
 end
