@@ -72,7 +72,7 @@ function V.runPure()
 			mono = mono and hp > prev
 			prev = hp
 		end
-		for stage = 6000, 34230, 97 do
+		for stage = 6097, 34230, 97 do -- C5 파트 0(Play 1 X): 6000에서 다시 시작하면 같은 값끼리 비교돼 X(검증 쪽 원인)
 			local hp = InfiniteStage.getTrashHp(MonsterData.tier1.hp, stage)
 			mono = mono and hp > prev
 			prev = hp
