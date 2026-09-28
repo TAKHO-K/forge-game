@@ -29,6 +29,7 @@ local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 local MotionTiming = require(ReplicatedStorage.Shared.MotionTiming) -- W1: 원거리 발사 시각 = 모션 타격 프레임(클라와 같은 함수)
 local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
 local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
+local RangedLagAssist = require(script.Parent.RangedLagAssist) -- C4 파트 0: 원거리 보정 반경 = 기본 + 몹 속도 × 편도 지연
 local DamageFeed = require(script.Parent.DamageFeed) -- W2-3 서버 확정 피해 방송(프로토타입 - 플래그 꺼짐)
 require(script.Parent.TrailSkinService) -- W2 궤적 스킨(Player Attribute TrailSkin - 접속 때 기본값)
 local RunService = game:GetService("RunService")
@@ -317,7 +318,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 		end
 		local skill = BuffState.get(player, "quickShot") ~= nil and SkillData[classId] and SkillData[classId].Q
 		heavyShot = skill and skill.heavyShot or nil
-		pathTargets, pathEnd = AimPicker.pickPath(shotOrigin, safeAimPoint, attackRange, MonsterState.getAllModels(), rootPart.CFrame.LookVector, 1 + (heavyShot and heavyShot.pierce or 0))
+		pathTargets, pathEnd = AimPicker.pickPath(shotOrigin, safeAimPoint, attackRange, MonsterState.getAllModels(), rootPart.CFrame.LookVector, 1 + (heavyShot and heavyShot.pierce or 0), RangedLagAssist.extraFor(player))
 		target = pathTargets[1]
 		relayMotion(target)
 		if player:GetAttribute("DebugHitbox") then -- W2-2 판정 표시: 화살 경로(원점 → 끝 · 몸 반경) · 고른 대상

@@ -57,7 +57,7 @@ end
 --   경로 위 몹 = 몸 중심이 경로에서 CombatConfig.rangedAim.bodyRadiusStuds 안(선분 끝 = min(조준점까지, 사거리) + 같은 여유 - 조준점이 몸 표면이면 몸 중심이 조금 뒤다).
 --   경로 위에 없으면 조준 보정 = 조준점에서 assistRadiusStuds 안 · 사거리 안 몹 중 조준점에 가장 가까운 1명(옛 "조준 방향에 가장 가까운 몹" 대체 - 자연 슬라임이 먼저 잡히던 문제).
 --   조준점이 없거나 원점과 겹치면 fallbackDir(바라보는 방향) 쪽으로 사거리 끝까지. 클라(조준 표시)와 서버(판정)가 같은 함수.
-function AimPicker.pickPath(originPosition, aimPoint, rangeStuds, candidates, fallbackDir, maxHits)
+function AimPicker.pickPath(originPosition, aimPoint, rangeStuds, candidates, fallbackDir, maxHits, assistExtra)
 	local A = CombatConfig.rangedAim
 	local offset = aimPoint and (aimPoint - originPosition) or nil
 	local dir, length
@@ -91,12 +91,14 @@ function AimPicker.pickPath(originPosition, aimPoint, rangeStuds, candidates, fa
 		hits[i] = onPath[i].model
 	end
 	if #hits == 0 and aimPoint then
-		local best, bestDist = nil, A.assistRadiusStuds
+		-- C4 파트 0: assistExtra(선택 - 서버만) = 몹마다 더 넓힐 반경(속도 × 지연) · 상한 assistMaxStuds.
+		local best, bestDist = nil, math.huge
 		for _, model in ipairs(candidates) do
 			local root = model.PrimaryPart
 			if root and model.Parent and (root.Position - originPosition).Magnitude <= rangeStuds then
 				local d = (root.Position - aimPoint).Magnitude
-				if d <= bestDist then
+				local allowed = assistExtra and math.min(A.assistRadiusStuds + assistExtra(model), A.assistMaxStuds) or A.assistRadiusStuds
+				if d <= allowed and d <= bestDist then
 					best, bestDist = model, d
 				end
 			end

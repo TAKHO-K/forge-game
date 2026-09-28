@@ -19,7 +19,10 @@ return {
 	-- C3-4 원거리 조준 = 클릭 지점으로 발사(AimPicker.pickPath - 클라 조준 표시 · 서버 판정 같은 함수). bodyRadiusStuds = 화살 경로에서 몹 몸 중심까지 이 안이면 맞는다 ·
 	--   assistRadiusStuds = 경로에 아무도 없을 때만 조준점 둘레 이 반경 안 몹 1명(작게 - 옛 "방향에 가장 가까운 몹"이 조준점 근처 자연 슬라임을 먼저 잡던 문제) ·
 	--   muzzleUpStuds = 서버 발사 원점 = 루트 + 위로 이만큼(가슴 높이) · phoneAutoAimDeg = 폰 공격 버튼 자동 조준 앞 원뿔 반각(없으면 정면으로).
-	rangedAim = { bodyRadiusStuds = 2.2, assistRadiusStuds = 3, muzzleUpStuds = 0.5, phoneAutoAimDeg = 60 },
+	--   C4 파트 0(W3b 결정 8): 서버 보정 반경 = assistRadiusStuds + 몹 수평 속도 × 편도 지연(서버 → 클라 → 서버 왕복 핑 × lagOneWayScale) · 상한 assistMaxStuds(서버만 - 클라 조준 표시는 기본 반경).
+	--   lagProbeSeconds = 서버 왕복 핑 측정 간격 · lagSampleCount = 중앙값 표본 수 · lagMaxSeconds = 핑 상한(이상치) · mobSpeedSampleSeconds = 몹 속도 표본 간격(서버 PivotTo 이동이라 물리 속도가 0).
+	rangedAim = { bodyRadiusStuds = 2.2, assistRadiusStuds = 3, muzzleUpStuds = 0.5, phoneAutoAimDeg = 60,
+		assistMaxStuds = 5, lagOneWayScale = 0.5, lagProbeSeconds = 1, lagSampleCount = 5, lagMaxSeconds = 1, mobSpeedSampleSeconds = 0.1 },
 
 	-- C3-3 대표 치명 곡선(사용자 - 3타 콤보에 치명이 자주 섞이게 · 100% 초과 처리는 K5): 캐릭터 레벨 구간별 치명 확률 +(직업 기본 · 옵션에 더한다 - PlayerCombat.getLevelCritBonus).
 	--   레벨 사이 = 선형 · 끝 밖 = 끝값. 평타 · 스킬 · 전투력 · EconSim이 같은 함수(PlayerProfile.getCritBonus · BalanceSim.buildLoadout).
