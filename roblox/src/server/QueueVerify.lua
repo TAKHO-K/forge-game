@@ -150,6 +150,13 @@ function V.runPure()
 			sameUnits = sameUnits and math.abs((b.rewardKillUnits or b.hpMultiplier) - (first.rewardKillUnits or first.hpMultiplier)) < 1e-9
 		end
 		check(("6종 강화석 단위 같음(%s)"):format(table.concat(units, " · ")), sameUnits)
+		local short, full = DropTable.bossRetryGradeTable(12), DropTable.bossRetryGradeTable(200)
+		local sumShort = 0
+		for _, p in pairs(short) do
+			sumShort += p
+		end
+		check(("토벌 전투 시간 공정성: 12초 태초 %.6f%% · 120초 이상 %.6f%% · 합 %.9f"):format(short.primordial * 100, full.primordial * 100, sumShort),
+			math.abs(short.primordial - full.primordial * 0.1) < 1e-12 and full == DropTableData.bossGrades.raid and math.abs(sumShort - 1) < 1e-9)
 	end)
 
 	section("Q4 판매가", function()

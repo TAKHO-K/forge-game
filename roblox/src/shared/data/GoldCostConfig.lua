@@ -18,6 +18,9 @@ return {
 		protection = 1,
 		inherit = 1, -- P2.5b A: 장비 계승(기본 비용 = tier1 잡몹 골드 × InheritConfig.goldKillEquivalent[B 등급]) - 변환권과 같은 기준 1
 		awaken = 1, -- D1: 태초 각성(기본 비용 = tier1 잡몹 골드 × PrimordialData.awakenGoldKills) - 같은 기준 1(shared/Awaken)
+		training = 1, -- QUEUE-10h Q6 G3 공용 수련(기본 비용 = tier1 잡몹 골드 × TrainingData 몇 마리분)
+		classAbility = 1, -- Q6 직업 고유 능력(같은 단위)
+		quest = 1, -- Q6 퀘스트 · 접속 보상 골드(몇 마리분 - 수입과 같은 율)
 		refine = 1, -- P2.5b B: 보석 재련(기본 비용 = tier1 잡몹 골드 × GemData.dust.refineGoldKills[대상 등급]) - 같은 기준 1
 	},
 }

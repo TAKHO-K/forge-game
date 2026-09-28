@@ -232,8 +232,8 @@ end
 
 -- 보스 재도전 확정 드랍(28-1 [2-2]) - 확정 1개(확률 굴림 없음, 기존 25%에서 상향). 등급 상승은 첫 클리어 전용이라
 -- 등급표는 tier1(일반·희귀만)이고, itemLevel 편향만 첫 클리어와 같다.
-function Loot.rollBossRetryDrop(bossStage, classId)
-	local grade = rollGrade(DropTable.bossRetryGradeTable()) or ArmorData.gradeOrder[1] -- G1-1: 보상 띠와 같은 함수(값 = 옛 tier1 표)
+function Loot.rollBossRetryDrop(bossStage, classId, fightSeconds)
+	local grade = rollGrade(DropTable.bossRetryGradeTable(fightSeconds)) or ArmorData.gradeOrder[1] -- G1-1: 보상 띠와 같은 함수 · 리뷰: 전투 시간 공정성(fightSeconds)
 	return buildDropItem(grade, bossStage, Loot.rollItemLevel(bossStage, ArmorData.bossItemLevelDelta), 1, classId)
 end
 
@@ -371,6 +371,15 @@ function Loot.getSellPrice(item)
 		return 0
 	end
 	local expectedKills = 1 / (ArmorData.dropChance * gradeChance)
+	if ArmorData.sellPriceMode == "current" then -- 리뷰: 등급마다 회수율이 따로 수렴하면 판매 총수입 = 회수율 × 등급 수 → 등급 수로 나눠 합이 회수율로 모이게
+		local grades = 0
+		for gradeId, chance in pairs(DropTable.gradeRow(item.tierIndex or 1)) do
+			if chance > 0 and gradeId ~= TranscendentData.gradeId then
+				grades += 1
+			end
+		end
+		expectedKills /= math.max(1, grades)
+	end
 	local cap = ArmorData.sellCapKills and ArmorData.sellCapKills[item.grade]
 	if cap and ArmorData.sellPriceMode == "current" then
 		expectedKills = math.min(expectedKills, cap / ArmorData.sellRecoveryRate) -- 고대 · 태초 = 처치 골드 cap마리분이 상한

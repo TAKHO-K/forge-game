@@ -489,6 +489,11 @@ function BossEncounter.setEntryExclusion(fn)
 	entryExclusion = fn
 end
 
+-- 리뷰(Q5): 토벌 입장도 같은 제외 규칙(견습 중)을 본다
+function BossEncounter.isEntryExcluded(player)
+	return entryExclusion(player) == true
+end
+
 -- 파티 보스에 들어가는 실제 멤버와 빠지는 실제 멤버(견습 중). 더미는 원래 텔레포트 · 피격 · 보상 대상이 아니라 어느 쪽에도 없다(머릿수 N에는 PartyState.getSize가 센다).
 -- 입장 검사 · 투표 · 스폰이 모두 이 함수로 같은 대상을 본다.
 function BossEncounter.getEntryMembers(party)

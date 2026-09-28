@@ -82,6 +82,9 @@ local DropTableData = {
 	},
 	-- 묶음 F2(BR2 데이터 정리 - 추천값): 토벌 = 태초 0.002 · 고대 0.048 · 유물 0.95 · 전설 21 · 영웅 78%(초월 0.0002% = 영웅 몫에서) - 분모 fieldWeightDenominator.
 	--   옛 값: 전설 20.948 · 유물 1 · 고대 0.05 · 태초 0.002 · 영웅 78 − 초월. 보상 목록(스테이지 선택 띠 · 확률 공개)은 이 표를 그대로 읽는다(DropTable.bossRetryGradeTable).
+	-- QUEUE-10h 리뷰 3 치명(토벌 반복 악용): 토벌 표의 고대 · 태초 · 초월 확률 × min(1, 전투 초 ÷ referenceSeconds) - 빠진 몫은 영웅(잡몹 처치 시간 공정성과 같은 원리).
+	--   낮은 스테이지 토벌을 몇 초 주기로 되풀이하면 태초가 잡몹의 약 180배로 나왔다. 기준 120초 = EconSim 평균 보스전(일반 134.9초) - 이 안에서는 옛 모형과 같다.
+	raidTimeFairness = { referenceSeconds = 120, grades = { "ancient", "primordial", "transcendent" } },
 	raidWeights = { primordial = 200, ancient = 4800, relic = 95000, legendary = 2100000, epic = 7799980, transcendent = 20,
 	},
 

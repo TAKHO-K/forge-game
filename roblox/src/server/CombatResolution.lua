@@ -191,9 +191,11 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		-- 재입장 자체는 막지 않는다(지시 원문) - 막는 것은 등급 상승뿐이다.
 		local stage = monsterData.stageNumber
 		if monsterData.isRaid or PlayerProfile.hasBossFirstClearReward(recipient, stage) then -- Q5: 토벌 = 항상 토벌 표(첫 클리어 기록 안 함)
-			armorDrops = { Loot.rollBossRetryDrop(dropStage, classId) }
-			primordialP = DropTable.bossRetryGradeTable().primordial or 0
-			transcendentP = DropTable.bossRetryGradeTable().transcendent or 0
+			local fightEncounter = BossEncounter.getEncounterByModel(target)
+			local fightSeconds = fightEncounter and fightEncounter.startedAt and math.max(0, os.clock() - fightEncounter.startedAt) or 0 -- 리뷰 치명: 전투 시간 공정성(짧은 반복 토벌)
+			armorDrops = { Loot.rollBossRetryDrop(dropStage, classId, fightSeconds) }
+			primordialP = DropTable.bossRetryGradeTable(fightSeconds).primordial or 0
+			transcendentP = DropTable.bossRetryGradeTable(fightSeconds).transcendent or 0
 		else
 			primordialP = DropTable.bossFirstClearGradeTable(PlayerProfile.getRebirthCount(recipient)).primordial or 0
 			transcendentP = DropTable.bossFirstClearGradeTable(PlayerProfile.getRebirthCount(recipient)).transcendent or 0
@@ -273,9 +275,11 @@ local function handleBossDeath(attacker, target)
 		local ratio = contributions[member] or 0
 		if member.Parent and ratio >= CombatConfig.contributionRewardThreshold then
 			grantKillReward(member, target, monsterData, deathPosition, deferredBossDrops)
-			AcquisitionAudit.noteBossClear(member) -- S1 2-7 보스 클리어 속도
-			-- 28-1 S05: 보스 방지권 - 계정 단위 첫 클리어(직업별 bossFirstClearStages와 별개). 기여 10%를 넘긴 수령자만 여기까지 온다. 지급은 바로 아래 즉시 저장 요청에 실린다.
-			ProtectionTickets.grantForBoss(member, monsterData.stageNumber)
+			if not monsterData.isRaid then -- 리뷰: 토벌은 보스 클리어 속도 감사 · 방지권(보스 스테이지 첫 클리어 보상)을 안 탄다
+				AcquisitionAudit.noteBossClear(member) -- S1 2-7 보스 클리어 속도
+				-- 28-1 S05: 보스 방지권 - 계정 단위 첫 클리어(직업별 bossFirstClearStages와 별개). 기여 10%를 넘긴 수령자만 여기까지 온다. 지급은 바로 아래 즉시 저장 요청에 실린다.
+				ProtectionTickets.grantForBoss(member, monsterData.stageNumber)
+			end
 			-- 30-0 S11: 보스 도감 도장 - 새로 찍힌 것은 아래 즉시 저장 요청에 실린다(견습 보스는 이 함수를 안 탄다).
 			PlayerProfile.markBossCodex(member, monsterData.id)
 			ImmediateSave.request(member)

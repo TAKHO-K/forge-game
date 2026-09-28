@@ -164,7 +164,10 @@ function BossGate.setupRaidRemote()
 	local remote = ReplicatedStorage:FindFirstChild("RaidRequest") or Instance.new("RemoteEvent")
 	remote.Name = "RaidRequest"
 	remote.Parent = ReplicatedStorage
-	local last = setmetatable({}, { __mode = "k" })
+	local last = {} -- 리뷰: 약한 키 대신 강한 표 + 퇴장 정리(메모리 노트 - 약한 인스턴스 키 사라짐 전례)
+	game:GetService("Players").PlayerRemoving:Connect(function(player)
+		last[player] = nil
+	end)
 	remote.OnServerEvent:Connect(function(player, bossId)
 		local now = os.clock()
 		if type(bossId) ~= "string" or not BossData.bosses[bossId] or (last[player] and now - last[player] < 1) then
@@ -189,6 +192,9 @@ function BossGate.enterRaid(player, bossId, remote)
 		PartyState.notify(player, "토벌은 지금 혼자만 들어갈 수 있습니다(파티 토벌은 준비 중)")
 		return "party_later"
 	end
+	if BossEncounter.isEntryExcluded(player) then -- 리뷰: 견습 중 제외(파티 보스 입장과 같은 규칙)
+		return "tutorial"
+	end
 	local ok, why, raidStage = BossGate.raidCheck(player, bossId, remote)
 	if not ok then
 		return why
@@ -203,8 +209,11 @@ end
 -- 관문 발판을 밟았다(key = 발판의 BossId). 반환: 처리 결과 코드(로그 · 검증).
 function BossGate.enter(player, bossId)
 	local stage = PlayerProfile.getInfiniteStage(player)
-	if not stage or not BossRules.isBossStage(stage) or stage <= (PlayerProfile.getBestBossCleared(player) or 0) then
-		-- Q5: 미클리어 보스 스테이지가 아니면 이 관문 보스의 토벌(관문을 밟은 것 = 방문 등록 + 토벌 입장)
+	if not stage or not BossRules.isBossStage(stage) then
+		return "not_boss_stage" -- 리뷰: 사냥 중 발판을 밟아 바로 토벌되지 않게(비보스 스테이지 토벌 = 스테이지 창 [토벌] - 원격 RaidRequest)
+	end
+	if stage <= (PlayerProfile.getBestBossCleared(player) or 0) then
+		-- Q5: 깬 보스 스테이지에서 밟으면 이 관문 보스의 토벌(옛 재도전 자리 - 방문 등록 + 토벌 입장)
 		BossGate.register(player, bossId)
 		return BossGate.enterRaid(player, bossId, false)
 	end

@@ -34,8 +34,25 @@ function DropTable.bossFirstClearGradeTable(_rebirthCount)
 	return DropTableData.bossGrades.firstClear
 end
 
-function DropTable.bossRetryGradeTable()
-	return DropTableData.bossGrades.raid
+function DropTable.bossRetryGradeTable(fightSeconds)
+	local base = DropTableData.bossGrades.raid
+	local fair = DropTableData.raidTimeFairness
+	if fightSeconds == nil or not fair then
+		return base -- 표시(보상 띠 · 확률 공개) = 기준 표
+	end
+	local scale = math.clamp(fightSeconds / fair.referenceSeconds, 0, 1)
+	if scale >= 1 then
+		return base
+	end
+	local row, moved = table.clone(base), 0 -- QUEUE-10h 리뷰: 짧은 토벌은 상위 등급을 영웅으로(합 1 유지)
+	for _, gradeId in ipairs(fair.grades) do
+		if row[gradeId] then
+			moved += row[gradeId] * (1 - scale)
+			row[gradeId] *= scale
+		end
+	end
+	row.epic = (row.epic or 0) + moved
+	return row
 end
 
 -- D1 ⑩ 확률 공개(정보창 데이터 - 창 UI는 U1): 드랍표 3종 = 보스 첫 클리어 · 토벌 · 잡몹(tier마다 태초 별도 굴림 포함 · 감쇠 전).

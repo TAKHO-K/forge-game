@@ -91,6 +91,7 @@ local function defaultClassState()
 		-- 환생 후 레벨 마일스톤(P2.5c B2, v33 - v32의 회차별 표 milestones를 대신한다) - 이 직업이 받은 마지막 능력치 마일스톤 레벨(0 = 없음 · 200 · 250 …).
 		-- 직업별(레벨 · 환생이 직업별이다). 버킷 값은 이 레벨에서 계산한다. 규칙 = shared/Milestone.lua.
 		milestoneLevel = 0,
+		abilities = {}, -- QUEUE-10h Q6(v50): 직업 고유 능력 단계({ [능력 id] = 단계 } - TrainingData.classAbilities)
 		-- C5-2(v46) 되찾기 기준: 환생 순간 레벨의 회차 누적 최대(0 = 환생 전). 이 레벨 미만에서는 캐릭터 경험치 × reclaimDivisors[환생 횟수](CharacterLevel.getReclaimMultiplier).
 		reclaimLevel = 0,
 
@@ -257,6 +258,8 @@ local function defaultProfile()
 		-- M1-3(v41): 알 가방(부화 · 펫은 펫 단계) - { { zone = 구역 키, grade = "normal" | "good" | "rare", species = { 후보 id 2 }, nest = 둥지 id, at = unix 초 } } · 상한 NestData.eggCap.
 		eggs = {},
 		audit = { lambda = 0, primordialRolls = 0, playSeconds = 0 }, -- S1(v44): 획득 감사(AcquisitionAudit)
+		training = { attack = 0, hp = 0, defense = 0 }, -- QUEUE-10h Q6(v50): 공용 수련 단계(계정 - TrainingData.stats)
+		quests = nil, -- QUEUE-10h Q6(v50): 퀘스트 상태(shared/Quest.newState - 로드 때 채움)
 		comeback = { untilAt = 0 }, -- C5-5(v48): 복귀 부스트 만료 unix 초(0 = 없음) - SaveServer가 로드 직후 마지막 저장 savedAt과 비교해 준다
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
@@ -1105,6 +1108,20 @@ local function migrate(data)
 			end
 		end
 		data.version = 49
+	end
+
+	if data.version < 50 then
+		-- QUEUE-10h Q6 G3: 공용 수련(training) · 직업 고유 능력(classes[].abilities) · 퀘스트(quests) - 없는 필드만 채운다(옛 값 보존).
+		data.training = type(data.training) == "table" and data.training or { attack = 0, hp = 0, defense = 0 }
+		for _, cs in pairs(data.classes or {}) do
+			if type(cs) == "table" then
+				cs.abilities = type(cs.abilities) == "table" and cs.abilities or {}
+			end
+		end
+		if type(data.quests) ~= "table" then
+			data.quests = require(ReplicatedStorage.Shared.Quest).newState(os.time())
+		end
+		data.version = 50
 	end
 
 	data.savedAt = data.savedAt or 0
