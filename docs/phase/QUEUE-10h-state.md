@@ -70,7 +70,8 @@
 | CP 칩 | △ → 수정 | 새 칩이 [가방] 버튼과 겹침 → 레벨 칩 안 "· CP n"(다음 Play 확인) |
 
 | Q7 성기사 칸 | 00e5451 | |
-| Play D + 리뷰 4 반영 | (이 커밋) | 아래 |
+| Play D + 리뷰 4 반영 | 4d3c04f | 아래 |
+| 앞 대기열 마무리 | (이 커밋) | 보고서 · STATE · open-plan |
 
 ## Play D 결과(07:26 ~ 07:36 · 1회 · 폰 창 = 뷰포트 842 × 592 · ForceTouchLayout)
 | 항목 | 결과 | 근거 |
@@ -86,7 +87,7 @@
 | 스크립트 오류 | 0 | |
 
 ## 지금
-- 앞 대기열 마무리(최종 보고서 · STATE · open-plan) → 추가 대기열 Q8
+- 추가 대기열 Q8(K3 영혼 상태)
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)
