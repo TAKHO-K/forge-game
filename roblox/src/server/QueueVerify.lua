@@ -296,6 +296,30 @@ function V.runPure()
 			ok and m.version >= 50 and type(m.training) == "table" and m.training.attack == 0 and type(m.classes.bow.abilities) == "table" and type(m.quests) == "table" and m.quests.main == 1)
 	end)
 
+	section("Q8 K3 영혼", function()
+		local SoulService = require(script.Parent.SoulService)
+		local SoulData = require(ReplicatedStorage.Shared.data.SoulData)
+		local enc = { id = "t1" }
+		local a, b, c = { Name = "A", UserId = 1 }, { Name = "B", UserId = 2 }, { Name = "C", UserId = 3 }
+		SoulService.onDied(a, enc, Vector3.new(0, 0, 0))
+		local becameSoul = SoulService.consumePending(a, enc)
+		check("보스전 사망 → 리스폰 = 영혼 · 공격 거부", becameSoul and SoulService.isSoul(a) and SoulService.rejectAction(a, "공격") and not SoulService.rejectAction(b, "공격"))
+		SoulService.onDied(b, { id = "tut", isTutorial = true }, Vector3.new(0, 0, 0))
+		check("견습 보스전 = 영혼 없음(옛 즉시 리스폰)", not SoulService.consumePending(b, { id = "tut", isTutorial = true }) and not SoulService.isSoul(b))
+		SoulService.onDied(c, enc, Vector3.new(100, 0, 0))
+		SoulService.consumePending(c, enc)
+		local n = SoulService.reviveSanctuary({ center = Vector3.new(0, 0, 0), radius = 16, startedAt = os.clock() - 5 })
+		check(("성역 끝 부활 = 성역 안 사망자만(%d명 · A 풀림 · C 남음)"):format(n), n == 1 and not SoulService.isSoul(a) and SoulService.isSoul(c))
+		SoulService.clearEncounter(enc)
+		check("보스전 끝 · 전멸 = 영혼 전원 풀림", not SoulService.isSoul(c) and #SoulService.soulsOf(enc) == 0)
+		local was = SoulData.enabled
+		SoulData.enabled = false
+		SoulService.onDied(a, enc, Vector3.new(0, 0, 0))
+		local off = SoulService.consumePending(a, enc)
+		SoulData.enabled = was
+		check(("스위치 끔 = 영혼 없음 · 부활 체력 %.0f%%"):format(SoulData.reviveHpFraction * 100), not off and SoulData.reviveHpFraction == 0.3)
+	end)
+
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
 end

@@ -535,8 +535,20 @@ end
 -- 모든 몬스터의 기여 기록에 남아 있을 수 있으므로 전부 지운다 - 안 지우면 이미 나간
 -- Player 인스턴스를 몬스터가 죽을 때까지 계속 들고 있게 된다(MonsterAI.server.lua의
 -- releaseChasersOf와 같은 "떠나는 쪽이 자기 흔적을 지운다" 원칙).
+local carried = {} -- Q8 튕김 복귀: [userId] = { [보스 model] = 기여 비율 } - 퇴장 때 지우기 전에 맡긴다(BossEncounter.rejoin이 되찾는다)
+function MonsterState.takeCarriedContribution(userId, model)
+	local byModel = carried[userId]
+	local ratio = byModel and byModel[model]
+	carried[userId] = nil
+	return ratio
+end
+
 function MonsterState.clearPlayerContributions(player)
 	for model, entry in pairs(monsters) do
+		if entry.maxHp and entry.contributions and entry.contributions[player] and typeof(player) == "Instance" then -- Q8: 보스 기여만 맡긴다
+			carried[player.UserId] = carried[player.UserId] or {}
+			carried[player.UserId][model] = entry.contributions[player]
+		end
 		if entry.participants then
 			local had = entry.partStage[player] ~= nil
 			if MobShare.purge(entry, player) then -- C1: 잡몹 = 참여 · 스테이지 기록까지(혼자였던 몹은 초기화)

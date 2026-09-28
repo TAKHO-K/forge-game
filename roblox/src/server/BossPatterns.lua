@@ -276,7 +276,7 @@ local function victims(st)
 	for _, member in ipairs(st.members or {}) do
 		local character = member.Parent and member.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if root and (PlayerState.getHp(member) or 0) > 0 then
+		if root and (PlayerState.getHp(member) or 0) > 0 and not require(script.Parent.SoulService).isSoul(member) then -- Q8: 영혼 = 기믹 · 판정 대상 밖(대공 잡기 · 끌림 · 표적 포함)
 			local feet = feetOf(character, root)
 			table.insert(list, { player = member, root = root, feet = feet, groundFeet = groundFeetOf(st, feet) })
 		end

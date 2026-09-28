@@ -236,10 +236,12 @@ function BossEncounter.debugAddMember(model, fakeMember)
 	return true
 end
 
+local SoulService = require(script.Parent.SoulService) -- QUEUE-10h Q8 K3 영혼 상태
+
 local function isAlive(player)
 	local hp = PlayerState.getHp(player)
 	local character = player.Character
-	return hp ~= nil and hp > 0 and character ~= nil and character:FindFirstChild("HumanoidRootPart") ~= nil
+	return hp ~= nil and hp > 0 and character ~= nil and character:FindFirstChild("HumanoidRootPart") ~= nil and not SoulService.isSoul(player) -- Q8: 영혼 = 살아 있지 않은 멤버(보스 대상 · 전멸 판정)
 end
 
 -- 살아 있는 멤버 중 position에 가장 가까운 사람(MonsterAI의 보스 평타·패턴 조준 대상 재선택 -
@@ -607,6 +609,7 @@ end
 -- encounter 전체를 끝낸다(처치는 destroyModel=false - MonsterSpawner.despawn이 사체 유지 후
 -- 정리한다 / 물러남은 true - 즉시 지운다). 남은 멤버 전원을 사냥터로 돌려보내고 슬롯을 반납한다.
 local function endEncounter(encounter, destroyModel)
+	SoulService.clearEncounter(encounter) -- Q8: 보스전 끝 = 영혼 전원 복귀
 	BossTrap.releaseAll(encounter.members, "reset") -- 29-1: 잡힌 채로 사냥터에 돌아가지 않는다
 	if encounter.model then -- G1-4: 잔류 중에는 보스 모델이 없다
 		BossPatterns.clearProps(encounter.model, encounter.members) -- 29-3: 동적 지형(얼음 기둥)은 보스전과 함께 사라진다
@@ -670,6 +673,7 @@ function BossEncounter.leaveFor(player)
 	end
 	encounterOf[player] = nil
 	setEncounterAttribute(player, nil)
+	SoulService.clearPlayer(player) -- Q8
 	BossTrap.release(player, "reset") -- 29-1
 	BossPatterns.clearPropsFor(player) -- 29-3
 	BossPatterns.clearTelegraphsFor(player) -- P3a D3: 이 사람의 화면에 떠 있던 예고도 지운다(판정 대상에서 빠졌다)
@@ -707,6 +711,7 @@ function BossEncounter.enterLinger(model)
 	if not encounter then
 		return false
 	end
+	SoulService.clearEncounter(encounter) -- Q8: 처치 = 영혼 전원 복귀(잔류 창에서도 살아 있게)
 	if encounter.isTutorial or encounter.raid or BossEncounter.debugLingerOff then -- Q5: 토벌도 잔류 없이 복귀(다음 · 다시 도전 = 스테이지 → 보스 함수라 토벌 레벨과 안 맞는다)
 		endEncounter(encounter, false)
 		return false
@@ -804,6 +809,8 @@ function BossEncounter.resetFor(player)
 	if not data then
 		return
 	end
+	SoulService.clearEncounter(encounter) -- Q8: 전멸(전원 영혼) = 옛 실패 흐름(리셋) + 영혼 전부 풀림
+	print(("[K3] 전멸: %s - 살아 있는 멤버 0 → 보스 리셋(실패 흐름)"):format(data.displayName))
 	BossPatterns.reset(model, data)
 	MonsterState.resetBossHp(model)
 	encounter.startedAt = os.clock() -- P3a(리뷰 4): 재도전 = 처음부터 - 기록 시간도 새로 잰다
@@ -837,7 +844,31 @@ end
 -- 보스전이 남아 있다는 것 자체가 "아직 그 보스전 중"이라는 뜻이므로, 이 하나의 조건만
 -- 보면 된다 - 별도 "보스전 중" 플래그를 새로 만들지 않는다(19-4가 겪은 유령 상태
 -- 문제를 반복하지 않으려면 진실의 출처를 하나로 유지해야 한다).
+-- Q8 튕김 복귀: 그 보스전이 아직 살아 있으면 멤버로 다시 넣고(보상 자격 = 옛 Player의 기여를 넘겨받음) 다음 스폰에서 영혼으로 관전.
+function BossEncounter.rejoin(player)
+	local rec = SoulService.takeRejoin(player)
+	local encounter = rec and rec.encounter
+	if not encounter or not encounter.model or not encounter.model.Parent or encounter.lingering or #encounter.members == 0 or encounterOf[player] then
+		return false
+	end
+	table.insert(encounter.members, player)
+	encounterOf[player] = encounter
+	setEncounterAttribute(player, encounter.id, encounter.stage)
+	local contributions = MonsterState.getContributors(encounter.model)
+	local ratio = MonsterState.takeCarriedContribution(player.UserId, encounter.model) or (rec.oldPlayer and contributions[rec.oldPlayer]) -- 퇴장 때 맡긴 기여(보상 자격 유지)
+	if ratio then
+		contributions[player] = (contributions[player] or 0) + ratio
+		if rec.oldPlayer then
+			contributions[rec.oldPlayer] = nil
+		end
+	end
+	SoulService.onDied(player, encounter, nil)
+	print(("[K3] 튕김 복귀: %s → 보스전 %s(영혼 관전)"):format(player.Name, tostring(encounter.id)))
+	return true
+end
+
 Players.PlayerAdded:Connect(function(player)
+	BossEncounter.rejoin(player)
 	player.CharacterAdded:Connect(function(character)
 		-- 21-3 [1]: 죽는 순간(Humanoid.Died - PlayerDamage가 Health=0을 넣는 그 신호) 보스를
 		-- 리셋한다. task.defer로 한 틱 미룬다 - Died가 보스 패턴의 피해 적용 도중(BossPatterns.
@@ -845,6 +876,8 @@ Players.PlayerAdded:Connect(function(player)
 		local humanoid = character:WaitForChild("Humanoid")
 		humanoid.Died:Connect(function()
 			if encounterOf[player] then
+				local root = character:FindFirstChild("HumanoidRootPart")
+				SoulService.onDied(player, encounterOf[player], root and root.Position) -- Q8: 리스폰하면 영혼(전멸이면 resetFor가 지운다)
 				task.defer(BossEncounter.resetFor, player)
 			end
 		end)
@@ -855,6 +888,9 @@ Players.PlayerAdded:Connect(function(player)
 		end
 		local zone = WorldConfig.zones[encounter.zoneKey]
 		teleportTo(player, entryPositionForIndex(zone, memberIndex(encounter, player), #encounter.members))
+		if SoulService.consumePending(player, encounter) then
+			return -- Q8: 영혼 = 관전(보스 패턴 유예를 걸지 않는다)
+		end
 		-- 재도전 2초 유예 - 솔로(또는 전원 사망 리셋 직후)만. 파티에서 남이 싸우는 중에 부활자
 		-- 하나가 보스 패턴을 멈추게 할 수는 없다(PRD 20.47 [6](나) "부활자는 보스를 멈출 수 없다").
 		if BossEncounter.livingMemberCount(encounter) <= 1 then
@@ -868,6 +904,10 @@ end)
 
 -- 퇴장 - 자기 보스전에서만 빠진다(파티면 나머지가 이어서 싸운다, N·HP 배수 고정).
 Players.PlayerRemoving:Connect(function(player)
+	local encounter = encounterOf[player]
+	if encounter and encounter.party and #encounter.members > 1 then
+		SoulService.noteDisconnect(player, encounter) -- Q8: 파티 보스전이 이어지면 재접속 때 영혼으로 관전 복귀
+	end
 	BossEncounter.leaveFor(player)
 	hintWipes[player] = nil
 	introSeenStages[player.UserId] = nil

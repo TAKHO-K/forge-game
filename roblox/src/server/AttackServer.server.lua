@@ -197,6 +197,9 @@ end
 
 local lastAttackDebug = {} -- [Player] = { status, isAir, isComboHit, combo } - 검증 훅(MV1(나))이 읽는다
 local function handleAttack(player, aimPoint, clientAir, clientSeq)
+	if require(script.Parent.SoulService).rejectAction(player, "공격") then -- Q8: 영혼 = 공격 불가(서버 거부)
+		return
+	end
 	-- 프로필 로드가 아직 안 끝난 접속 직후, 혹은 클래스를 아직 안 고른 상태에서 공격이
 	-- 들어올 수 있다 - 공격력·쿨다운 둘 다 클래스가 있어야 계산할 수 있으니 헛스윙으로
 	-- 처리한다(10-3 [3] - 클래스 배율이 실제로 평타에 반영되는 첫 지점).

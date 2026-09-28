@@ -58,6 +58,9 @@ end
 -- 반환: 쉴드 흡수 전 피해(= damage), 쉴드가 흡수한 양, 이번에 죽었는가.
 function PlayerDamage.takeDamage(targetPlayer, damage, opts)
 	opts = opts or {}
+	if require(script.Parent.SoulService).isSoul(targetPlayer) then -- Q8: 영혼은 피해를 안 받는다(서버 판정 한 곳)
+		return 0, 0, false
+	end
 	local hpDamage, absorbed = damage, 0
 	if not opts.ignoresShield then
 		hpDamage, absorbed = PlayerShield.absorb(targetPlayer, damage)

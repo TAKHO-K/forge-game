@@ -60,7 +60,7 @@ RunService.Heartbeat:Connect(function()
 				local owner = ownerId and Players:GetPlayerByUserId(ownerId)
 				local character = owner and owner.Character
 				local root = character and character:FindFirstChild("HumanoidRootPart")
-				if root and model.PrimaryPart then
+				if root and model.PrimaryPart and not require(script.Parent.SoulService).isSoul(owner) then -- Q8: 영혼 = 줍기 불가
 					-- 22-4: 수평 2stud + 높이차 상한 4(TerrainConfig.pickupHeightToleranceStuds) - 발밑만.
 					-- 언덕 아래 아이템은 위에서 못 줍는다(내려가야 한다).
 					if Reach.within(root.Position, model.PrimaryPart.Position, WorldConfig.items.pickupRangeStuds,

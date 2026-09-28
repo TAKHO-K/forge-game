@@ -255,7 +255,7 @@ function U.cast(player, classId, rootPart, aimPoint)
 		end)
 		return true, { kind = "ultMark", target = markTarget, seconds = def.durationSeconds }
 	elseif def.shape == "ultSanctuary" then
-		local s = { caster = player, center = rootPart.Position, radius = def.radiusStuds, untilAt = now + def.durationSeconds }
+		local s = { caster = player, center = rootPart.Position, radius = def.radiusStuds, untilAt = now + def.durationSeconds, startedAt = os.clock() }
 		table.insert(sanctuaries, s)
 		player:SetAttribute("UltSanctuary", ("%.1f,%.1f,%.1f|%d"):format(s.center.X, s.center.Y, s.center.Z, math.random(1, 1e6)))
 		task.spawn(function()
@@ -276,6 +276,10 @@ function U.cast(player, classId, rootPart, aimPoint)
 			local index = table.find(sanctuaries, s)
 			if index then
 				table.remove(sanctuaries, index)
+			end
+			local revived = require(script.Parent.SoulService).reviveSanctuary(s) -- Q8 K3: 성역이 끝날 때 성역 안에서 죽은 영혼 1회 부활
+			if revived > 0 then
+				print(("[K3] 성역 부활: %s의 성역 → %d명"):format(player.Name, revived))
 			end
 		end)
 		return true, { kind = "ultSanctuary", center = s.center, radiusStuds = s.radius, seconds = def.durationSeconds }

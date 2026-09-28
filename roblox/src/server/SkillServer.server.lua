@@ -622,7 +622,10 @@ local function castPrayer(player, slot, def, rootPart, cooldownSeconds)
 		local character = typeof(member) == "Instance" and member.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		local hp, maxHp = PlayerState.getHp(member), PlayerState.getMaxHp(member)
-		if root and hp and hp > 0 and maxHp and Reach.horizontalDistance(root.Position, rootPart.Position) <= def.radiusStuds then
+		if root and require(script.Parent.SoulService).isSoul(member) and Reach.horizontalDistance(root.Position, rootPart.Position) <= def.radiusStuds then
+			require(script.Parent.SoulService).revive(member, "구원의 기도") -- Q8 K3: 기도 = 반경 안 영혼 부활(회복 대신)
+			healedCount += 1
+		elseif root and hp and hp > 0 and maxHp and Reach.horizontalDistance(root.Position, rootPart.Position) <= def.radiusStuds then
 			local newHp = math.min(hp + maxHp * def.healMaxHpFraction, maxHp)
 			PlayerState.setHp(member, newHp)
 			require(script.Parent.PlayerDamage).syncHud(member)
@@ -661,6 +664,9 @@ end
 
 local function handleSkill(player, slot, aimPoint)
 	if slot ~= "Q" and slot ~= "E" and slot ~= "R" and slot ~= "T" then
+		return
+	end
+	if require(script.Parent.SoulService).rejectAction(player, "스킬 " .. slot) then -- Q8: 영혼 = 스킬 · 궁극기 불가(서버 거부)
 		return
 	end
 

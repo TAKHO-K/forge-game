@@ -1242,6 +1242,19 @@ local function handleCommand(player, args)
 		local zone, count, scale = SetBonus.state(eq)
 		reply(player, ("세트 %s · %s %d부위 · 세대 ×%.2f · 최대 체력 옵션 %.3f · 최종 피해 옵션 %.3f"):format(SetData.enabled and "켬" or "끔", tostring(zone), count, scale,
 			PlayerProfile.getOptionBonus(player, "maxHpPercent"), PlayerProfile.getOptionBonus(player, "finalDamage")))
+	elseif sub == "soul" and args[2] then
+		-- Q8 K3: /gg soul die(보스전 중 죽기 - 실제 사망 경로) · revive(부활 - 개발) · state · dcsim(튕김 기록만 흉내 - 재접속 시험은 실제 재접속)
+		local SoulService = require(script.Parent.SoulService)
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if args[2] == "die" and humanoid then
+			PlayerState.setHp(player, 0)
+			humanoid.Health = 0
+		elseif args[2] == "revive" then
+			SoulService.revive(player, "개발 명령")
+		end
+		local enc = require(script.Parent.BossEncounter).getEncounter(player)
+		reply(player, ("영혼 %s · 보스전 %s · 살아 있는 멤버 %s"):format(tostring(SoulService.isSoul(player)), enc and tostring(enc.id) or "없음",
+			enc and tostring(require(script.Parent.BossEncounter).livingMemberCount(enc)) or "-"))
 	elseif sub == "q6" and args[2] then
 		-- Q6 G3: /gg q6 view · note <이벤트> [n] · claim <daily|weekly|login|chest|main> [id] · train <stat|ability> <id> [횟수] - 실제 서버 경로(QuestService)
 		local QuestService = require(script.Parent.QuestService)
