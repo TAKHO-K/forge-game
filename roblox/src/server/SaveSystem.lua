@@ -257,6 +257,7 @@ local function defaultProfile()
 		-- M1-3(v41): 알 가방(부화 · 펫은 펫 단계) - { { zone = 구역 키, grade = "normal" | "good" | "rare", species = { 후보 id 2 }, nest = 둥지 id, at = unix 초 } } · 상한 NestData.eggCap.
 		eggs = {},
 		audit = { lambda = 0, primordialRolls = 0, playSeconds = 0 }, -- S1(v44): 획득 감사(AcquisitionAudit)
+		comeback = { untilAt = 0 }, -- C5-5(v48): 복귀 부스트 만료 unix 초(0 = 없음) - SaveServer가 로드 직후 마지막 저장 savedAt과 비교해 준다
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
 		gemDust = 0,
@@ -1079,6 +1080,11 @@ local function migrate(data)
 			end
 		end
 		data.version = 47
+	end
+
+	if data.version < 48 then
+		data.comeback = type(data.comeback) == "table" and data.comeback or { untilAt = 0 } -- C5-5 복귀 부스트
+		data.version = 48
 	end
 
 	data.savedAt = data.savedAt or 0

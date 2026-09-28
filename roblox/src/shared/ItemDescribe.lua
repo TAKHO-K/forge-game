@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local StageGeneration = require(ReplicatedStorage.Shared.StageGeneration) -- C5-6
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
@@ -108,8 +109,9 @@ local PART_META = {
 function ItemDescribe.item(item, classId)
 	local part = item.part or "armor"
 	local metaFn = PART_META[part] or PART_META.armor
+	local suffix = StageGeneration.itemSuffix(item) -- C5-6 세대 세트 이름 접미사(주운 스테이지 ≥ 17,000)
 	return {
-		title = ("%s %s"):format(gradeName(item.grade), ItemVisualData.partDisplayNames[part] or "장비"),
+		title = ("%s %s%s"):format(gradeName(item.grade), ItemVisualData.partDisplayNames[part] or "장비", suffix and (" · " .. suffix) or ""),
 		gradeId = item.grade,
 		meta = metaFn(item),
 		options = optionLines(item, classId),

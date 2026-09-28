@@ -35,6 +35,9 @@ local SIGNALS = {
 	{ remote = "TreasureChestNotice", lane = "TC", make = function(message)
 		return { text = message, colorName = "gold", seconds = 5, fadeSeconds = 0.3 }
 	end },
+	{ remote = "SystemNotice", lane = "TC", make = function(message) -- C5-4 자동 이동 · 관문 도전 · C5-5 복귀 부스트(서버 문장 = TextData 키로 만든 완성 문장)
+		return { text = message, colorName = "gold", seconds = 4, fadeSeconds = 0.4 }
+	end },
 	{ remote = "ItemPickedUp", lane = "BC", make = function(item)
 		local grade = ArmorData.grades[item.grade]
 		local visual = ItemVisualData.gradeVisuals[item.grade]

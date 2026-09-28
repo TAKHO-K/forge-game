@@ -230,6 +230,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	-- C5-7b 광폭: 전투 중 공속 +10%(FrenzyAttackBonus - 신발 % 합에 더한다 → 상한 ×2.5 · 최소 간격 · 넘는 몫 피해 환산 규칙 그대로 · 클라 예측과 같은 합).
 	local speedBonus = PlayerProfile.getSpeedPercentBonus(player) + (player:GetAttribute("FrenzyAttackBonus") or 0)
 	local interval, swingScale, swingHits = PlayerCombat.getAttackTempo(classId, speedBonus, buffSpeedMultiplier)
+	swingScale *= PlayerCombat.getFrenzyOverflowDamageScale(PlayerProfile.getSpeedPercentBonus(player), player:GetAttribute("FrenzyAttackBonus")) -- 상한에 막힌 광폭 몫 = 피해
 	if last and now - last < interval - CombatConfig.attackTempo.serverGraceSeconds then
 		return -- 쿨다운이 안 지났다 - 조용히 무시
 	end

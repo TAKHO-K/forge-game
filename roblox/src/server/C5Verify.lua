@@ -111,7 +111,8 @@ function V.runPure()
 		end
 		-- 지시의 절대 타수(옛 장비 3방 · 새 장비 비치명 2방)는 스테이지 15 대표가 T1을 약 2.6배 과잉 처치하는 지금 곡선(1 ~ 10 누구나 한 방 · 초반 편안)과 양립하지 않는다(결정 필요) → 상대 신호로 본다: 옛 장비 = 새 장비 타수 × 2 이상.
 		local oldNon, newNon, newCrit = hitsFor(1, false), hitsFor(15, false), hitsFor(15, true)
-		check(("T1 비치명: 옛 장비만(itemLevel 1) %d방 · 해당 레벨 1부위 %d방 · 치명 %d방(기대 옛 ≥ 새 × 2 · 새 ≤ 2 · 치명 1 - 절대값 3/2는 결정 필요)"):format(oldNon, newNon, newCrit), oldNon >= newNon * 2 and newNon <= 2 and newCrit == 1)
+		-- 묶음 A-4a(사용자 확정): 절대 타수 점검 폐기 → 상대 신호 ×2만 본다(새 장비 치명 타수는 기록만).
+		check(("T1 비치명: 옛 장비만(itemLevel 1) %d방 · 해당 레벨 1부위 %d방 · 치명 %d방(기대 옛 ≥ 새 × 2)"):format(oldNon, newNon, newCrit), oldNon >= newNon * 2)
 	end)
 
 	section("C5-7 초월", function()

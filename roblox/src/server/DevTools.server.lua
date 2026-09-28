@@ -1356,6 +1356,23 @@ local function handleCommand(player, args)
 		end
 		print(("C3HITS|%d|비율 %.3f · 피해 배율 ×%.3f · 간격 %.2f · 한 타 ×%.2f · 치명 %.0f%%|%s|%s"):format(stage, power / rec, CombatFormula.dealMultiplier(power, stage), interval, scale, critRate * 100, table.concat(rows, " · "), table.concat(skills, " · ")))
 		reply(player, ("스테이지 %d: %s"):format(stage, table.concat(rows, " · ")))
+	elseif sub == "c5" and args[2] == "comeback" then
+		-- C5-5 복귀 부스트 강제(마지막 저장을 8일 전으로 보고 판정 함수를 다시 부른다 - 저장 필드는 백업 대상 · Play가 끝나면 되돌린다)
+		ensureBackup(player)
+		local profile = PlayerProfile.getProfile(player)
+		profile.savedAt = os.time() - 8 * 86400
+		profile.comeback = { untilAt = 0 }
+		local on = PlayerProfile.grantComebackIfAway(player)
+		reply(player, ("복귀 부스트 %s(경험치 배수 %.2f · 만료 %d초 뒤)"):format(on and "켜짐" or "꺼짐", PlayerProfile.getExpGainMultiplier(player), (profile.comeback.untilAt or 0) - os.time()))
+	elseif sub == "c5" and args[2] == "auto" then
+		-- C5-4 자동 이동 즉시 검사(목표 · 관문)
+		local hook = game:GetService("ServerStorage"):FindFirstChild("AutoStageHook")
+		local target, gate, moves, notices
+		if hook then -- "a and f()"는 반환값이 1개로 잘린다
+			target, gate = hook:Invoke(player)
+			moves, notices = hook:Invoke(player, "tick")
+		end
+		reply(player, ("자동 이동 목표 %s · 관문 %s · 누적 이동 %s · 알림 %s · 설정 %s"):format(tostring(target), tostring(gate), tostring(moves), tostring(notices), tostring(player:GetAttribute("AutoStage"))))
 	elseif sub == "c5" and args[2] == "phantom" then
 		-- C5-7b 환영: /gg c5 phantom [n] - 서버 굴림(rollPhantom) n회(기본 1,000) 표본 → 비율 · 강공격 수(3번째마다). 초월 장갑 착용이 필요하다.
 		local T = require(script.Parent.TranscendentService)
@@ -1377,8 +1394,9 @@ local function handleCommand(player, args)
 		local T = require(script.Parent.TranscendentService)
 		T.syncFrenzy(player)
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-		print(("C5FRENZY|active %s|walk %.2f|speedBonus %.3f|frenzyAtk %s|dashScale %.2f"):format(tostring(T.frenzyActive(player)), humanoid and humanoid.WalkSpeed or -1, PlayerProfile.getSpeedPercentBonus(player), tostring(player:GetAttribute("FrenzyAttackBonus")), T.dashCooldownScale(player)))
-		reply(player, ("광폭 %s · 걷기 %.2f · 대시 쿨 ×%.2f"):format(T.frenzyActive(player) and "발동" or "꺼짐", humanoid and humanoid.WalkSpeed or -1, T.dashCooldownScale(player)))
+		local overflow = require(ReplicatedStorage.Shared.PlayerCombat).getFrenzyOverflowDamageScale(PlayerProfile.getSpeedPercentBonus(player), player:GetAttribute("FrenzyAttackBonus")) -- 묶음 A-2: 상한에 막힌 광폭 몫 = 한 타 피해
+		print(("C5FRENZY|active %s|walk %.2f|speedBonus %.3f|frenzyAtk %s|dashScale %.2f|overflowDmg %.3f"):format(tostring(T.frenzyActive(player)), humanoid and humanoid.WalkSpeed or -1, PlayerProfile.getSpeedPercentBonus(player), tostring(player:GetAttribute("FrenzyAttackBonus")), T.dashCooldownScale(player), overflow))
+		reply(player, ("광폭 %s · 걷기 %.2f · 대시 쿨 ×%.2f · 상한 초과 피해 ×%.3f"):format(T.frenzyActive(player) and "발동" or "꺼짐", humanoid and humanoid.WalkSpeed or -1, T.dashCooldownScale(player), overflow))
 	elseif sub == "c5" and args[2] == "soar" then
 		-- C5-7b 비상: 공중에서 부르면 공중 강공격 적중과 같은 초기화 경로(onHeavyHit(isAir = true)) - 쿨 4초 안이면 거절
 		local ok = require(script.Parent.TranscendentService).onHeavyHit(player, true)

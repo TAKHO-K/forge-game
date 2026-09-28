@@ -12,6 +12,7 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig) -- C5-1 dealGear.parts
 local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7
+local ComebackData = require(ReplicatedStorage.Shared.data.ComebackData) -- C5-5
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData) -- C2 전투력(직업 치명)
 local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 전투력
@@ -477,7 +478,30 @@ end
 function PlayerProfile.getExpGainMultiplier(player)
 	local partyBonus = PartyState.getExpBonusFor(player)
 	PartyState.showAppliedExpBonus(player, partyBonus) -- P2.5a D(결정 7): 칩 = 이번에 실제로 적용한 보너스
-	return PlayerProfile.combineExpMultiplier(PlayerProfile.getOptionBonus(player, "expGain"), partyBonus)
+	return PlayerProfile.combineExpMultiplier(PlayerProfile.getOptionBonus(player, "expGain"), partyBonus) * PlayerProfile.getComebackMultiplier(player) -- C5-5 복귀 부스트
+end
+
+-- C5-5 복귀 부스트 배수(경험치 · 재료 = getExpGainMultiplier · 장비 기대 개수 = CombatResolution). 만료(untilAt) 전이면 ComebackData.multiplier, 아니면 1.
+function PlayerProfile.getComebackMultiplier(player)
+	local profile = profiles[player]
+	local untilAt = profile and type(profile.comeback) == "table" and profile.comeback.untilAt or 0
+	return (type(untilAt) == "number" and os.time() < untilAt) and ComebackData.multiplier or 1
+end
+
+-- C5-5: 로드 직후(SaveServer) - 마지막 저장(savedAt)이 awayDays 이상 전이면 부스트를 켠다(서버 판정). 반환 = 켰는가.
+function PlayerProfile.grantComebackIfAway(player, now)
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	now = now or os.time()
+	local savedAt = type(profile.savedAt) == "number" and profile.savedAt or 0
+	profile.comeback = type(profile.comeback) == "table" and profile.comeback or { untilAt = 0 }
+	if savedAt > 0 and now - savedAt >= ComebackData.awayDays * 86400 and now >= (profile.comeback.untilAt or 0) then
+		profile.comeback.untilAt = now + ComebackData.boostSeconds
+	end
+	player:SetAttribute("ComebackUntil", profile.comeback.untilAt or 0)
+	return now < (profile.comeback.untilAt or 0)
 end
 
 -- 재생(healingPower, 26-2) 배수 - 자동회복(PlayerRegen.server.lua)·힐러 치유(SkillServer
@@ -2138,6 +2162,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		titles = deepCopy(profile.titles), -- M1(v39): 칭호(봉인 입구 검증이 지급한다)
 		eggs = deepCopy(profile.eggs), -- M1-3(v41): 알 가방(둥지 검증이 줍는다) - world(nests · nestDex)는 위 world 통째 복사에 들어 있다
 		leaderboardTainted = profile.leaderboardTainted, -- P3a(v34): 검증이 기록 경로를 재려고 끈 값을 되돌린다(COMMON §1 "새 저장 필드는 백업 대상에").
+		comeback = deepCopy(profile.comeback), -- C5-5(v48): 복귀 부스트(검증이 강제로 켠다 - 새 저장 필드는 백업 대상)
 	}
 end
 

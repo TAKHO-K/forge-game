@@ -4,8 +4,8 @@
 return {
 	triggerRatio = 1.3, -- 이 비율 이상일 때만 움직인다(넉넉함의 문턱 - 평탄 상한 1.3과 같다)
 	presets = { -- 설정값(이동 목표 비율) · 순서 = 설정 창 버튼 순환 순서
-		{ id = "normal", name = "보통", ratio = 1.0 },
 		{ id = "easy", name = "편함", ratio = 1.2 },
+		{ id = "normal", name = "보통", ratio = 1.0 },
 		{ id = "challenge", name = "도전", ratio = 0.85 },
 		{ id = "off", name = "끄기", ratio = nil },
 	},

@@ -281,6 +281,19 @@ function PlayerCombat.getAttackTempo(classId, speedPercentBonus, buffSpeedMultip
 	return interval, interval / PlayerCombat.getAttackCooldown(classId, speedPercentBonus, buffSpeedMultiplier) * power / hits, hits
 end
 
+-- C5-7b 광폭 보정(묶음 A-2): 광폭 공속(frenzyBonus)은 신발 % 합에 더해 상한(attackSpeedMaxMultiplier)을 따른다 - 상한에 막혀 버려진 광폭 몫만
+--   C3 초과분 → 피해 환산과 같은 1:1 비율(초당 피해 ∝ 공속)로 한 타 피해 배율로 돌려준다. 광폭 몫만 보므로 신발 초과분은 여전히 버려진다(곱셈 우회 없음).
+function PlayerCombat.getFrenzyOverflowDamageScale(speedPercentBonus, frenzyBonus)
+	frenzyBonus = frenzyBonus or 0
+	if frenzyBonus <= 0 then
+		return 1
+	end
+	local raw = 1 + (speedPercentBonus or 0) + frenzyBonus
+	local capped = PlayerCombat.getSpeedMultiplier((speedPercentBonus or 0) + frenzyBonus)
+	local wasted = math.min(frenzyBonus, math.max(0, raw - capped))
+	return (capped + wasted) / capped
+end
+
 -- C3-2 모션 재생 배율(MotionTiming.scale): 기본 간격 ÷ 실제 간격(1 ~ 1.36 · 강궁 = 1).
 function PlayerCombat.getMotionSpeed(classId, speedPercentBonus, buffSpeedMultiplier)
 	local interval = PlayerCombat.getAttackTempo(classId, speedPercentBonus, buffSpeedMultiplier)

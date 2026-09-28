@@ -201,7 +201,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		local primordialRate = DropTable.effectiveRate({ bestStage = PlayerProfile.getInfiniteStageBest(recipient) }, { tierIndex = monsterData.tierIndex }, dropStage)
 		-- G1-2: 처치 시간 공정성 보정 - 받는 사람이 처음 때린 뒤 죽기까지의 시간(한 방 · 이동 > 처치면 높은 tier 장비 개수가 줄어든다).
 		local transcendentRate = DropTable.effectiveTranscendentRate({ bestStage = PlayerProfile.getInfiniteStageBest(recipient) }, { tierIndex = monsterData.tierIndex }, dropStage) -- C5-7
-		armorDrops = Loot.rollArmorDrop(dropStage, monsterData.tierIndex, MonsterState.getRewardMultiplier(target), classId, primordialRate, MonsterState.getKillSecondsFor(target, recipient), transcendentRate)
+		armorDrops = Loot.rollArmorDrop(dropStage, monsterData.tierIndex, MonsterState.getRewardMultiplier(target) * PlayerProfile.getComebackMultiplier(recipient), classId, primordialRate, MonsterState.getKillSecondsFor(target, recipient), transcendentRate) -- C5-5 복귀 부스트(드랍 기대 개수 ×1.5)
 		primordialP = primordialRate or 0
 	end
 	AcquisitionAudit.addLambda(recipient, primordialP, #armorDrops) -- S1 2-6: λ += 굴림마다 태초 확률

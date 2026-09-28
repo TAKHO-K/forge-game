@@ -210,6 +210,18 @@ stageMoveRequest.OnServerEvent:Connect(function(player, targetStage)
 	onStageMove(player, targetStage)
 end)
 -- M1-3 검증(Studio 전용): 서버 검증 블록이 클라 요청과 같은 핸들러를 부른다(관문 등록 전 · 뒤 원격 입장 · 파티) - 라이브에는 없다.
+-- C5-4 자동 이동(AutoStage.server.lua): 같은 onStageMove를 탄다(연타 제한 · 보스 · 파티 규칙 그대로). 반환 = 실제로 스테이지가 바뀌었는가.
+do
+	local autoHook = Instance.new("BindableFunction")
+	autoHook.Name = "AutoStageMoveHook"
+	autoHook.OnInvoke = function(player, targetStage)
+		local before = PlayerProfile.getInfiniteStage(player)
+		onStageMove(player, targetStage)
+		return PlayerProfile.getInfiniteStage(player) == targetStage and before ~= targetStage
+	end
+	autoHook.Parent = game:GetService("ServerStorage")
+end
+
 if game:GetService("RunService"):IsStudio() then
 	local hook = Instance.new("BindableEvent")
 	hook.Name = "StageMoveHook"

@@ -15,7 +15,9 @@ local AttackTrail = require(script.Parent.Parent.AttackTrail)
 local SettingsPanel = {}
 SettingsPanel.id = "settings"
 
-local PANEL_SIZE = Vector2.new(420, 290) -- W2: 궤적 토글 한 줄 추가 · W3c: 화면 흔들림 토글 한 줄
+local PANEL_SIZE = Vector2.new(420, 340) -- W2: 궤적 토글 한 줄 추가 · W3c: 화면 흔들림 토글 한 줄 · C5-4: 자동 이동 한 줄
+local Button = require(script.Parent.Parent.ui.kit.Button)
+local AutoStageData = require(ReplicatedStorage.Shared.data.AutoStageData)
 local PAD = 12
 
 local player = Players.LocalPlayer
@@ -65,7 +67,39 @@ local function build()
 			player:SetAttribute("SettingBossScreenShake", value)
 		end,
 	})
-	built = { panel = panel, toggle = toggle, dimToggle = dimToggle, shakeToggle = shakeToggle }
+	-- C5-4 자동 스테이지 이동(보통 → 편함 → 도전 → 끄기 순환 - 서버 RemoteEvent AutoStageSetting · 이번 접속 동안 · 저장은 P4-4)
+	local autoLabel = Theme.label(panel.content, Text.get("settings.autoStage"), "body", "textPrimary")
+	autoLabel.Name = "AutoStageLabel"
+	autoLabel.Position = UDim2.new(0, PAD, 0, PAD + 196)
+	autoLabel.Size = UDim2.new(1, -PAD * 2 - 120, 0, 32)
+	local function presetName(id)
+		for _, preset in ipairs(AutoStageData.presets) do
+			if preset.id == id then
+				return preset.name
+			end
+		end
+		return AutoStageData.presets[1].name
+	end
+	local autoButton = Button.build({
+		parent = panel.content, name = "AutoStageButton", kind = "secondary", width = 110,
+		position = UDim2.new(1, -PAD - 110, 0, PAD + 196),
+		text = presetName(player:GetAttribute("AutoStage") or AutoStageData.default),
+		onActivated = function()
+			local current = player:GetAttribute("AutoStage") or AutoStageData.default
+			local nextId = AutoStageData.presets[1].id
+			for index, preset in ipairs(AutoStageData.presets) do
+				if preset.id == current then
+					nextId = (AutoStageData.presets[index + 1] or AutoStageData.presets[1]).id
+					break
+				end
+			end
+			ReplicatedStorage:WaitForChild("AutoStageSetting"):FireServer(nextId)
+		end,
+	})
+	player:GetAttributeChangedSignal("AutoStage"):Connect(function()
+		autoButton.setText(presetName(player:GetAttribute("AutoStage") or AutoStageData.default))
+	end)
+	built = { panel = panel, toggle = toggle, dimToggle = dimToggle, shakeToggle = shakeToggle, autoButton = autoButton }
 end
 
 function SettingsPanel.toggle()

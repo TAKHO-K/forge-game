@@ -131,6 +131,10 @@ return {
 
 		-- 설정 · 시점(M1-0)
 		["settings.title"] = "설정",
+		["settings.autoStage"] = "자동 스테이지 이동(비율 1.3 넘으면 위로)", -- C5-4
+		["autoStage.moved"] = "자동 이동: 스테이지 {from} → {to}", -- C5-4
+		["autoStage.bossGate"] = "보스 관문(스테이지 {stage})이 기다려요 - 도전해 보세요!", -- C5-4
+		["comeback.welcome"] = "돌아온 걸 환영해요! 60분 동안 ×1.5", -- C5-5
 		["settings.cameraTopDown"] = "탑다운 시점(위에서 내려다보기)",
 		["settings.cameraTopDownHint"] = "끄면 로블록스 기본 카메라입니다. 이번 접속 동안 유지됩니다.",
 		["settings.dimOthersTrail"] = "다른 유저 공격 궤적 흐리게",
