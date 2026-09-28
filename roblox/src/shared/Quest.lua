@@ -16,16 +16,20 @@ end
 
 -- 그날 일간 목록(날짜 시드 - 모두 같다 · 중복 없음)
 function Quest.dailyFor(day)
+	-- 리뷰 4: 옛 LCG(곱이 2^53을 넘어 하위 비트 소실 → 거의 늘 같은 3개 · pool 4 · 8개면 무한 루프) → Random.new(날짜) + Fisher-Yates(끝이 보장된다)
 	local pool = QuestData.dailyPool
-	local picked, used = {}, {}
-	local seed = (day * 1103515245 + 12345) % 2147483648
-	while #picked < math.min(QuestData.dailyCount, #pool) do
-		seed = (seed * 1103515245 + 12345) % 2147483648
-		local index = seed % #pool + 1
-		if not used[index] then
-			used[index] = true
-			table.insert(picked, pool[index])
-		end
+	local order = {}
+	for i = 1, #pool do
+		order[i] = i
+	end
+	local rng = Random.new(day)
+	for i = #order, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		order[i], order[j] = order[j], order[i]
+	end
+	local picked = {}
+	for i = 1, math.min(QuestData.dailyCount, #pool) do
+		table.insert(picked, pool[order[i]])
 	end
 	return picked
 end

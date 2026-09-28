@@ -2136,6 +2136,8 @@ function PlayerProfile.buyTraining(player, kind, id)
 	end
 	levels[def.id] = level + 1
 	syncMilestoneAttributes(player, profile)
+	PlayerProfile.refreshMaxHp(player) -- 리뷰 4: 체력 · 속도 수련은 그 자리에서 반영(equipGem과 같은 패턴)
+	PlayerProfile.refreshMovementSpeed(player)
 	return true, level + 1, cost
 end
 
@@ -2323,7 +2325,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.comeback = snapshot.comeback and deepCopy(snapshot.comeback) or { untilAt = 0 } -- 묶음 A 리뷰: C5-5 v48 복귀 부스트도 되돌린다
 	profile.world = snapshot.world and deepCopy(snapshot.world) or profile.world
 	profile.training = snapshot.training and deepCopy(snapshot.training) or profile.training -- Q6(v50)
-	profile.quests = snapshot.quests and deepCopy(snapshot.quests) or profile.quests -- Q6(v50)
+	profile.quests = snapshot.quests and deepCopy(snapshot.quests) or nil -- Q6(v50) · 리뷰 4: 스냅샷 때 없었으면 없던 상태로(검증이 만든 퀘스트 상태가 남지 않게)
 	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
 	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles
 	profile.eggs = snapshot.eggs and deepCopy(snapshot.eggs) or profile.eggs

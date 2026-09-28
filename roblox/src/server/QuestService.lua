@@ -129,12 +129,31 @@ function QuestService.note(player, event, amount)
 	end
 end
 
+local function deepCopy(v)
+	if type(v) ~= "table" then
+		return v
+	end
+	local out = {}
+	for k, x in pairs(v) do
+		out[k] = deepCopy(x)
+	end
+	return out
+end
+
 function QuestService.claim(player, kind, id)
 	local state = PlayerProfile.getQuestState(player)
 	if not state then
 		return false, "no_profile"
 	end
-	local reward, why = Quest.claim(state, kind, id, os.time(), PlayerProfile.getQuestFacts(player))
+	if kind ~= "main" and not PlayerProfile.getTutorialCompleted(player) then -- 리뷰 4: 견습 중에는 접속 · 일간 · 주간 · 상자 보상 없음(메인 1단계 = 견습 마치기만)
+		return false, "tutorial"
+	end
+	local now, facts = os.time(), PlayerProfile.getQuestFacts(player)
+	local probeReward = Quest.claim(deepCopy(state), kind, id, now, facts) -- 리뷰 4: 알 보상은 가방에 자리가 있을 때만(받은 표시를 먼저 확정하고 알이 사라지던 문제)
+	if probeReward and (probeReward.egg or 0) > 0 and #PlayerProfile.getEggs(player) + probeReward.egg > NestData.eggCap then
+		return false, "egg_full"
+	end
+	local reward, why = Quest.claim(state, kind, id, now, facts)
 	if not reward then
 		return false, why
 	end
@@ -146,6 +165,9 @@ function QuestService.claim(player, kind, id)
 end
 
 function QuestService.train(player, kind, id)
+	if not PlayerProfile.getTutorialCompleted(player) then -- 리뷰 4: 견습 중 수련 없음
+		return false, "tutorial"
+	end
 	local ok, levelOrWhy, cost = PlayerProfile.buyTraining(player, kind, id)
 	if ok then
 		print(("[Q6] 수련: %s %s %s → 단계 %d(골드 %d)"):format(player.Name, kind, tostring(id), levelOrWhy, cost))
@@ -172,10 +194,12 @@ function QuestService.start()
 	updateRemote.Parent = ReplicatedStorage
 	remote.OnServerEvent:Connect(function(player, action, a, b)
 		local now = os.clock()
-		if lastRequest[player] and now - lastRequest[player] < 0.2 then
+		local key = tostring(action) -- 리뷰 4: 요청 제한을 동작별로(창 열 때 view 직후의 [받기]가 버려지지 않게)
+		lastRequest[player] = lastRequest[player] or {}
+		if lastRequest[player][key] and now - lastRequest[player][key] < 0.2 then
 			return
 		end
-		lastRequest[player] = now
+		lastRequest[player][key] = now
 		if action == "view" then
 			push(player)
 		elseif action == "claim" and type(a) == "string" and (b == nil or type(b) == "string") then

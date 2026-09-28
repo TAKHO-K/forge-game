@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Text = require(ReplicatedStorage.Shared.Text)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
@@ -148,7 +149,7 @@ function QuestsPanel.render()
 		for _, t in ipairs(rows) do
 			local atCap = t.level >= t.cap
 			row(Text.get("quests.trainRow", { name = t.name, level = tostring(t.level), cap = tostring(t.cap), per = ("%.2f"):format(t.perLevel * 100) }),
-				atCap and Text.get("quests.trainCap") or Text.get("quests.trainButton", { cost = tostring(t.cost) }), not atCap, function()
+				atCap and Text.get("quests.trainCap") or Text.get("quests.trainButton", { cost = NumberFormat.format(t.cost) }), not atCap, function()
 					send("train", t.kind, t.id)
 				end, "Train_" .. t.id)
 		end

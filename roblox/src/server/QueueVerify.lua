@@ -260,6 +260,16 @@ function V.runPure()
 			ids[q.id] = true
 		end
 		check(("일간 %d개 · 날짜 시드 고정 · 중복 없음"):format(#listA), #listA == QuestData.dailyCount and not dup)
+		local seen, kinds = {}, 0
+		for d = 20000, 20059 do
+			for _, q in ipairs(Quest.dailyFor(d)) do
+				if not seen[q.id] then
+					seen[q.id] = true
+					kinds += 1
+				end
+			end
+		end
+		check(("60일 동안 일간 풀 %d/%d종 등장(리뷰 4 - 옛 LCG는 3종 고정)"):format(kinds, #QuestData.dailyPool), kinds == #QuestData.dailyPool)
 		local now = day * 86400 + 3600
 		local st = Quest.newState(now)
 		local first = listA[1]

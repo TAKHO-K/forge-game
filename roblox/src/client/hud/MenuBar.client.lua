@@ -232,6 +232,14 @@ local function relayout()
 	refs.bar.Size = UDim2.new(0, size, 0, height)
 	local placed = ScreenMap.slot("ML", "menuBar")
 	local shift = Theme.isMobile and ScreenMap.mobileMenuBarShiftUp(refs.gui.AbsoluteSize.Y, height) or 0
+	-- QUEUE-10h Play D: 터치 대시 버튼(SkillSlots DashHolder - 예약 구역 BL 위쪽에 놓인다)과 겹치면 그 위로 더 민다(메뉴 칸이 3개가 되며 38 × 40 겹침).
+	local dash = player.PlayerGui:FindFirstChild("DashHolder", true)
+	if Theme.isMobile and dash and dash:IsA("GuiObject") and dash.AbsoluteSize.Y > 0 and dash.AbsolutePosition.X < size + 40 then
+		local barTop = refs.gui.AbsoluteSize.Y / 2 - height / 2 - shift
+		local overlap = barTop + height - (dash.AbsolutePosition.Y - ScreenMap.menuBar.gap)
+		local room = math.max(0, barTop - ScreenMap.menuBar.topMargin)
+		shift += math.clamp(overlap, 0, room)
+	end
 	refs.bar.Position = UDim2.new(placed.position.X.Scale, placed.position.X.Offset, placed.position.Y.Scale, placed.position.Y.Offset - shift)
 	refreshLook() -- 견습 · 직업 선택 속성이 바뀌면 canOpen 막힘(회색)도 달라진다
 end
