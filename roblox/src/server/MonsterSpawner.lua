@@ -532,6 +532,7 @@ function MonsterSpawner.despawn(model)
 	local zoneKey = MonsterState.getZoneKey(model)
 
 	print(("[forge-game] 몬스터 사망: %s"):format(model.Name))
+	model:SetAttribute("DiedAt", os.clock()) -- 묶음 G: 사망 표식(쌍검 궁극기 처치 반환이 despawn과 구별)
 	MonsterState.clear(model) -- 죽는 즉시 타겟 후보에서 제외(findNearestMonsterInRange가 더 이상 고르지 않는다) - 상자면 피격 기록도 여기서 같이 사라진다(22-2 [3])
 
 	-- 마지막 데미지 숫자가 화면에서 사라질 시간만큼은 시체를 남겨둔다.

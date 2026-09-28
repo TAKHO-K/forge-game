@@ -139,9 +139,13 @@ function U.onBasicHit(player, classId, rootPart, primaryTarget)
 	end
 end
 
+local lastRejectLogAt = {}
 local function reject(player, reason)
 	stats.rejects[reason] = (stats.rejects[reason] or 0) + 1
-	print(("[K1] 궁극기 거부: %s - %s(게이지 %.1f)"):format(player.Name, reason, U.get(player)))
+	if os.clock() - (lastRejectLogAt[player] or -math.huge) >= 1 then -- 묶음 G: 거부 로그는 사람당 초당 1줄(연타 스팸)
+		lastRejectLogAt[player] = os.clock()
+		print(("[K1] 궁극기 거부: %s - %s(게이지 %.1f)"):format(player.Name, reason, U.get(player)))
+	end
 	return false, reason
 end
 
@@ -229,11 +233,11 @@ function U.cast(player, classId, rootPart, aimPoint)
 		task.spawn(function()
 			while os.clock() < mark.untilAt do
 				task.wait(0.1)
-				if not markTarget.Parent or not MonsterState.getData(markTarget) then -- 표식 중 처치 → 게이지 반환
+				if not markTarget.Parent or not MonsterState.getData(markTarget) then -- 표식 중 처치 → 게이지 반환(실제 사망만 - 묶음 G)
 					if marks[player] == mark then
 						marks[player] = nil
 					end
-					if player.Parent then
+					if player.Parent and markTarget:GetAttribute("DiedAt") then
 						U.set(player, U.get(player) + def.killRefund)
 						print(("[K1] 죽음의 계약: 표식 대상 처치 → 게이지 +%d"):format(def.killRefund))
 					end
@@ -304,7 +308,7 @@ task.defer(function()
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-	gauge[player], transformUntil[player], marks[player] = nil, nil, nil
+	gauge[player], transformUntil[player], marks[player], lastRejectLogAt[player] = nil, nil, nil, nil
 end)
 
 return U

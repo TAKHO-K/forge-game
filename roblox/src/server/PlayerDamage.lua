@@ -71,8 +71,8 @@ function PlayerDamage.takeDamage(targetPlayer, damage, opts)
 		print(("[K1] 생명의 성역: %s HP 1 바닥"):format(targetPlayer.Name))
 	end
 	PlayerState.setHp(targetPlayer, newHp)
-	if Ultimate and hpDamage > 0 then
-		Ultimate.onTaken(targetPlayer, hpDamage) -- K1 대검 충전(받은 피해)
+	if Ultimate and hpDamage > 0 and not opts.ignoresShield then
+		Ultimate.onTaken(targetPlayer, hpDamage) -- K1 대검 충전(받은 피해 - 낙사 · 판정형 · 자기 소모는 제외: 묶음 G)
 	end
 	PlayerState.setLastCombatActionAt(targetPlayer, os.clock()) -- 자동회복 5초 대기 타이머 리셋(17-1)
 	if typeof(targetPlayer) == "Instance" and targetPlayer:IsA("Player") then
