@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local SetBonus = require(ReplicatedStorage.Shared.SetBonus) -- Q5 BR2 세트
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig) -- C5-1 dealGear.parts
@@ -105,7 +106,7 @@ function PlayerProfile.getOptionBonus(player, axisId)
 	if not classState then
 		return 0
 	end
-	return Option.sumAxisBonus(buildOptionSources(classState), axisId, profile.classId)
+	return Option.sumAxisBonus(buildOptionSources(classState), axisId, profile.classId, SetBonus.extraValues(classState.equipment, axisId)) -- Q5 세트(공통 입구)
 end
 
 -- 치명(crit) 전용 - {critRate, critDmg} 두 값을 같이 돌려준다(20.67 [6-3], Option.critBonus 참고).
@@ -2095,6 +2096,27 @@ end
 
 -- 서버만 호출한다(13-1). 잠금은 착용/해제와 같은 되돌릴 수 있는 사건이라(다시 누르면 그만)
 -- 즉시저장하지 않는다.
+-- Q5 개발 명령(/gg set equip) 전용: 착용 3부위의 세트 계열을 바꾼다(호출부가 백업 - 세션 메모리). 반환 = 착용 표
+function PlayerProfile.debugStampEquipmentSet(player, zoneKey)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return nil
+	end
+	for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+		if classState.equipment[part] then
+			classState.equipment[part].setZone = zoneKey
+		end
+	end
+	return classState.equipment
+end
+
+function PlayerProfile.debugEquipment(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	return classState and classState.equipment
+end
+
 function PlayerProfile.setItemLocked(player, index, locked, confirmToken)
 	local profile = profiles[player]
 	if not profile then

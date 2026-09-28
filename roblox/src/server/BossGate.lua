@@ -152,11 +152,61 @@ function BossGate.setRemoteReturnPoints(members)
 	end
 end
 
+BossGate.raidReasonText = { -- Q5 토벌 거부 사유(RaidRules.check 이유 코드) - 번역 키는 U1(TextData)에서
+	no_clear = "토벌 - 보스를 한 번 이상 클리어하면 열립니다",
+	boss_stage_uncleared = "토벌 - 아직 깨지 않은 보스 스테이지에서는 토벌할 수 없습니다",
+	boss_not_met = "토벌 - 이 보스를 먼저 클리어해야 합니다",
+	gate_unregistered = "토벌 - 원격 입장은 관문을 먼저 등록해야 합니다(파티원 한 명이라도)",
+}
+
+-- 원격 토벌 요청(클라 → 서버: RaidRequest(bossId)) - 스테이지 선택 창 [토벌] 버튼(U1)이 쏜다. 1초 1회.
+function BossGate.setupRaidRemote()
+	local remote = ReplicatedStorage:FindFirstChild("RaidRequest") or Instance.new("RemoteEvent")
+	remote.Name = "RaidRequest"
+	remote.Parent = ReplicatedStorage
+	local last = setmetatable({}, { __mode = "k" })
+	remote.OnServerEvent:Connect(function(player, bossId)
+		local now = os.clock()
+		if type(bossId) ~= "string" or not BossData.bosses[bossId] or (last[player] and now - last[player] < 1) then
+			return
+		end
+		last[player] = now
+		local result = BossGate.enterRaid(player, bossId, true)
+		print(("[forge-game] 원격 토벌 %s: %s → %s"):format(bossId, player.Name, result))
+		if BossGate.raidReasonText[result] then
+			PartyState.notify(player, BossGate.raidReasonText[result])
+		end
+	end)
+end
+
+-- QUEUE-10h Q5 BR2 토벌 입장(솔로 - 파티 토벌은 결정 필요). remote = 원격(관문 등록 필요 - 한 명이라도) · 아니면 관문 발판을 밟은 경우.
+-- 반환: 결과 코드("raid_entered" · RaidRules 이유 · "in_encounter" · "party_later").
+function BossGate.enterRaid(player, bossId, remote)
+	if BossEncounter.getEncounter(player) then
+		return "in_encounter"
+	end
+	if PartyState.getParty(player) then
+		PartyState.notify(player, "토벌은 지금 혼자만 들어갈 수 있습니다(파티 토벌은 준비 중)")
+		return "party_later"
+	end
+	local ok, why, raidStage = BossGate.raidCheck(player, bossId, remote)
+	if not ok then
+		return why
+	end
+	BossEncounter.setReturnPoint(player, BossGate.returnPointForBoss(bossId))
+	if not BossEncounter.spawnRaidFor(player, bossId, raidStage) then
+		return "spawn_failed"
+	end
+	return "raid_entered"
+end
+
 -- 관문 발판을 밟았다(key = 발판의 BossId). 반환: 처리 결과 코드(로그 · 검증).
 function BossGate.enter(player, bossId)
 	local stage = PlayerProfile.getInfiniteStage(player)
-	if not stage or not BossRules.isBossStage(stage) then
-		return "not_boss_stage"
+	if not stage or not BossRules.isBossStage(stage) or stage <= (PlayerProfile.getBestBossCleared(player) or 0) then
+		-- Q5: 미클리어 보스 스테이지가 아니면 이 관문 보스의 토벌(관문을 밟은 것 = 방문 등록 + 토벌 입장)
+		BossGate.register(player, bossId)
+		return BossGate.enterRaid(player, bossId, false)
 	end
 	if BossEncounter.getEncounter(player) then
 		return "in_encounter"

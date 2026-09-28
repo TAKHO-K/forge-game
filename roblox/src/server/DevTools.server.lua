@@ -1210,6 +1210,42 @@ local function handleCommand(player, args)
 		reply(player, ("econ %s %s 계산 시작 - 끝나면 요약이 한 줄 더 온다"):format(args[2] or "all", args[3] or "baseline"))
 	elseif sub == "anchor" then
 		applyAnchor(player, args[2])
+	elseif sub == "tp" and args[2] then
+		-- QUEUE-10h: 구역 사냥 지점 순간이동(실제 서버 경로 Travel.teleport - 높이 · 수평 검사 예외 · 도착 대기 포함). /gg tp tier6 [지점 번호]
+		local WMD = require(ReplicatedStorage.Shared.data.WorldMapData)
+		local Layout = require(ReplicatedStorage.Shared.WorldMapLayout)
+		local zone
+		for _, z in ipairs(WMD.zones) do
+			if z.key == args[2] then
+				zone = z
+			end
+		end
+		if not zone then
+			reply(player, "구역 키: tier1 ~ tier6")
+		else
+			local points = Layout.huntPoints(zone)
+			local point = points[math.clamp(math.floor(tonumber(args[3]) or 1), 1, #points)]
+			local ok = require(script.Parent.Travel).teleport(player, point.position + Vector3.new(30, 4, 0), "개발 /gg tp")
+			reply(player, ("%s 사냥 지점 %s(곁 30) 순간이동 %s"):format(zone.key, tostring(args[3] or 1), tostring(ok)))
+		end
+	elseif sub == "set" and args[2] then
+		-- Q5 BR2 세트: /gg set on|off(SetData.enabled - 이번 서버 동안) · /gg set equip <구역 키>(착용 3부위 setZone을 그 구역으로 - 세션 메모리 · 백업 뒤) · /gg set state
+		local SetData = require(ReplicatedStorage.Shared.data.SetData)
+		local SetBonus = require(ReplicatedStorage.Shared.SetBonus)
+		if args[2] == "on" or args[2] == "off" then
+			SetData.enabled = args[2] == "on"
+		elseif args[2] == "equip" and args[3] then
+			ensureBackup(player)
+			PlayerProfile.debugStampEquipmentSet(player, args[3])
+		end
+		local eq = PlayerProfile.debugEquipment(player) or {}
+		local zone, count, scale = SetBonus.state(eq)
+		reply(player, ("세트 %s · %s %d부위 · 세대 ×%.2f · 최대 체력 옵션 %.3f · 최종 피해 옵션 %.3f"):format(SetData.enabled and "켬" or "끔", tostring(zone), count, scale,
+			PlayerProfile.getOptionBonus(player, "maxHpPercent"), PlayerProfile.getOptionBonus(player, "finalDamage")))
+	elseif sub == "raid" and args[2] then
+		-- Q5 BR2 토벌 입장: /gg raid <보스 id> [remote] - BossGate.enterRaid(발판 = 아님 · remote = 원격 · 관문 등록 필요)
+		local result = require(script.Parent.BossGate).enterRaid(player, args[2], args[3] == "remote")
+		reply(player, ("토벌 %s%s → %s"):format(args[2], args[3] == "remote" and "(원격)" or "", tostring(result)))
 	elseif sub == "level" and tonumber(args[2]) then
 		ensureBackup(player)
 		applyLevel(player, math.floor(tonumber(args[2])))

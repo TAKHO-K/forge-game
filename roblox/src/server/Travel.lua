@@ -537,6 +537,8 @@ function Travel.pollPlayer(player, root, humanoid, now)
 				print(("[forge-game] 관문 %s: %s → %s"):format(key, player.Name, result))
 				if result == "not_boss_stage" or result == "wrong_gate" then
 					PartyState.notify(player, "관문 - 이 보스의 스테이지를 고르면 열린다(등록은 관문 앞 [F])")
+				elseif BossGate.raidReasonText[result] then -- Q5 토벌 거부 사유
+					PartyState.notify(player, BossGate.raidReasonText[result])
 				end
 				return
 			end
@@ -586,6 +588,7 @@ end
 function Travel.start(downPads)
 	buildPoints()
 	BossGate.setupPrompts(require(script.Parent.GroundProbe).folder())
+	BossGate.setupRaidRemote() -- Q5 원격 토벌
 	Travel.downPads = downPads
 	local request = Instance.new("RemoteEvent")
 	request.Name = "TravelRequest"

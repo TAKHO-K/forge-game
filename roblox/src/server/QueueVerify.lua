@@ -186,6 +186,49 @@ function V.runPure()
 		check("계승비 등급 순서(초월 칸 포함)", okCost)
 	end)
 
+	section("Q5 BR2 세트 · 태그 · 저장 · 토벌", function()
+		local SetBonus = require(ReplicatedStorage.Shared.SetBonus)
+		local SetData = require(ReplicatedStorage.Shared.data.SetData)
+		check("출처 → 세트 계열: 보스 = 관문 구역 · 잡몹 = 사냥 구역 · 개발 = 없음",
+			SetBonus.zoneFromSource({ kind = "boss", bossId = "crystal_queen" }) == "tier2" and SetBonus.zoneFromSource({ kind = "raid", bossId = "frost_giant" }) == "tier6"
+				and SetBonus.zoneFromSource({ kind = "field", zone = "tier3" }) == "tier3" and SetBonus.zoneFromSource({ kind = "dev" }) == nil)
+		check(("세트 이름 = 구역 테마 + 세트: %s · 세대 %s"):format(tostring(SetBonus.setName("tier1", 100)), tostring(SetBonus.setName("tier1", 17500))),
+			SetBonus.setName("tier1", 100) == "수호자의 석조 평원 세트" and SetBonus.setName("tier1", 17500) == "잿빛 수호자의 석조 평원 세트")
+		local function eq(z1, z2, z3, stage)
+			return { armor = { setZone = z1, dropStage = stage or 100 }, gloves = { setZone = z2, dropStage = stage or 100 }, shoes = { setZone = z3, dropStage = stage or 100 } }
+		end
+		local was = SetData.enabled
+		SetData.enabled = true
+		local hp2 = SetBonus.extraValues(eq("tier1", "tier1", "tier2"), "maxHpPercent")
+		local fd2 = SetBonus.extraValues(eq("tier1", "tier1", "tier2"), "finalDamage")
+		local fd3 = SetBonus.extraValues(eq("tier1", "tier1", "tier1"), "finalDamage")
+		local fdGen = SetBonus.extraValues(eq("tier1", "tier1", "tier1", 17500), "finalDamage")
+		SetData.enabled = false
+		local off = SetBonus.extraValues(eq("tier1", "tier1", "tier1"), "finalDamage")
+		SetData.enabled = was
+		check(("2부위 = 최대 체력 %.2f · 최종 피해 없음 / 3부위 최종 피해 %.2f · 세대 1 %.3f · 스위치 끔 = 없음"):format(hp2 and hp2[1] or -1, fd3 and fd3[1] or -1, fdGen and fdGen[1] or -1),
+			hp2 and hp2[1] == 0.05 and fd2 == nil and fd3 and fd3[1] == 0.05 and fdGen and math.abs(fdGen[1] - 0.055) < 1e-9 and off == nil)
+		-- 저장 이관 왕복(v48 → v49): setZone은 없는 필드만 채우고 한 번 더 돌려도 같다
+		local SaveSystem = require(script.Parent.SaveSystem)
+		local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
+		local old = { version = 48, gold = 0, classes = { greatsword = { equipment = { armor = { grade = "epic", part = "armor", source = { kind = "boss", bossId = "storm_lord" } } } } },
+			inventory = { { grade = "rare", part = "gloves", source = { kind = "field", zone = "tier4" } }, { grade = "rare", part = "shoes" }, { grade = "epic", part = "shoes", setZone = "tier1", source = { kind = "field", zone = "tier3" } } } }
+		local ok, migrated = pcall(SaveSystem.migrate, old)
+		local m = ok and migrated or {}
+		check(("이관 v48 → v%s(현재 %d): 보스 갑옷 %s · 잡몹 장갑 %s · 태그 없음 %s · 이미 있음 유지 %s"):format(tostring(m.version), SaveConfig.saveVersion,
+			tostring(m.classes and m.classes.greatsword.equipment.armor.setZone), tostring(m.inventory and m.inventory[1].setZone), tostring(m.inventory and m.inventory[2].setZone), tostring(m.inventory and m.inventory[3].setZone)),
+			ok and m.version == SaveConfig.saveVersion and SaveConfig.saveVersion >= 49 and m.classes.greatsword.equipment.armor.setZone == "tier5" and m.inventory[1].setZone == "tier4"
+				and m.inventory[2].setZone == nil and m.inventory[3].setZone == "tier1")
+		local ok2, again = pcall(SaveSystem.migrate, m)
+		check("이관 두 번 = 같음(멱등)", ok2 and again.inventory[1].setZone == "tier4" and again.version == m.version)
+		-- 토벌 규칙(순수 - C1 RaidRules): 스테이지 = min(선택, 최근 클리어 보스) · 미클리어 보스 스테이지 불가
+		local RaidRules = require(ReplicatedStorage.Shared.RaidRules)
+		local s1 = select(3, RaidRules.check({ currentStage = 47, bestBossCleared = 45, bossId = "section_guardian", remote = false }))
+		local okU, whyU = RaidRules.check({ currentStage = 50, bestBossCleared = 45, bossId = "section_guardian", remote = false })
+		local okR, whyR = RaidRules.check({ currentStage = 47, bestBossCleared = 45, bossId = "section_guardian", remote = true, gateUsable = false })
+		check(("토벌 스테이지 47/45 → %s · 미클리어 보스 50 → %s · 원격 미등록 → %s"):format(tostring(s1), tostring(whyU), tostring(whyR)), s1 == 45 and okU == false and whyU == "boss_stage_uncleared" and okR == false and whyR == "gate_unregistered")
+	end)
+
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 	return pass, total
 end

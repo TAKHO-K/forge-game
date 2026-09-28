@@ -462,6 +462,24 @@ function BossEncounter.spawnFor(player, stage)
 		data.displayName, stage, player.Name, encounter.zoneKey))
 end
 
+-- QUEUE-10h Q5 BR2 토벌 입장(솔로): 고른 보스(bossId)를 토벌 스테이지(RaidRules - min(선택 스테이지, 최근 클리어 보스 스테이지)) 레벨로 연다.
+--   토벌 스테이지는 보스 스테이지가 아닐 수 있다(스테이지 → 보스 함수를 안 쓴다) · data.isRaid = 드랍 = 토벌 표 · 진도 · 리더보드 기록 없음 · 잔류 없이 복귀(CombatResolution · enterLinger).
+--   입장 판정은 호출부(BossGate.enterRaid → BossGate.raidCheck)가 먼저 한다.
+function BossEncounter.spawnRaidFor(player, bossId, stage)
+	if encounterOf[player] or not BossData.bosses[bossId] or type(stage) ~= "number" or stage < 1 then
+		return nil
+	end
+	local data = BossRules.buildInstanceData(stage, bossId, 1)
+	if not data then
+		return nil
+	end
+	data.isRaid = true
+	local encounter = spawnEncounter(data, stage, { player }, nil, 1, player, false)
+	encounter.raid = true
+	print(("[forge-game] 토벌 등장: %s - 토벌 스테이지 %d, 대상 %s (아레나 %s)"):format(data.displayName, stage, player.Name, encounter.zoneKey))
+	return encounter
+end
+
 -- 파티 보스에서 뺄 멤버를 가리는 함수(S12, PRD 20.73 [7-2] - 견습 중인 멤버). TutorialState가 자기를 등록한다(TutorialState → BossEncounter 방향이라 여기서 require하면 순환).
 local entryExclusion = function()
 	return false
@@ -684,7 +702,7 @@ function BossEncounter.enterLinger(model)
 	if not encounter then
 		return false
 	end
-	if encounter.isTutorial or BossEncounter.debugLingerOff then
+	if encounter.isTutorial or encounter.raid or BossEncounter.debugLingerOff then -- Q5: 토벌도 잔류 없이 복귀(다음 · 다시 도전 = 스테이지 → 보스 함수라 토벌 레벨과 안 맞는다)
 		endEncounter(encounter, false)
 		return false
 	end

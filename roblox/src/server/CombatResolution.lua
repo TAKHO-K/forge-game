@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
+local SetBonus = require(ReplicatedStorage.Shared.SetBonus) -- Q5 BR2 세트 계열 태그
 local DropTable = require(ReplicatedStorage.Shared.DropTable)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
@@ -189,7 +190,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		-- (Loot.rollBossFirstClearDrop), 재도전은 확정 1개(Loot.rollBossRetryDrop, 28-1 [2-2] - D1부터 토벌 표).
 		-- 재입장 자체는 막지 않는다(지시 원문) - 막는 것은 등급 상승뿐이다.
 		local stage = monsterData.stageNumber
-		if PlayerProfile.hasBossFirstClearReward(recipient, stage) then
+		if monsterData.isRaid or PlayerProfile.hasBossFirstClearReward(recipient, stage) then -- Q5: 토벌 = 항상 토벌 표(첫 클리어 기록 안 함)
 			armorDrops = { Loot.rollBossRetryDrop(dropStage, classId) }
 			primordialP = DropTable.bossRetryGradeTable().primordial or 0
 			transcendentP = DropTable.bossRetryGradeTable().transcendent or 0
@@ -225,6 +226,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 			zone = (not isBoss and monsterData.tierIndex) and ("tier%d"):format(monsterData.tierIndex) or nil,
 			stage = dropStage,
 		}
+		armorDrop.setZone = SetBonus.zoneFromSource(armorDrop.source) -- Q5 BR2 세트 계열(구역) - SAVE v49
 		if isNumberedGrade(armorDrop.grade) or armorDrop.grade == "ancient" then
 			PrimordialRegistry.onRolled(recipient, armorDrop, deathPosition, isBoss, { PlayerProfile = PlayerProfile, ImmediateSave = ImmediateSave },
 				isNumberedGrade(armorDrop.grade) and { rollId = AcquisitionAudit.newRollId(), p = armorDrop.grade == "primordial" and primordialP or transcendentP } or nil) -- S1 2-3 발급 원장
@@ -328,7 +330,9 @@ local function handleBossDeath(attacker, target)
 			table.insert(contributorList, contributor)
 		end
 	end
-	local recordOk, recordErr = pcall(Leaderboard.onBossCleared, {
+	local recordOk, recordErr = true, nil
+	if not monsterData.isRaid then -- Q5: 토벌은 리더보드 기록 없음(토벌 스테이지 ≠ 보스 스테이지일 수 있다)
+	recordOk, recordErr = pcall(Leaderboard.onBossCleared, {
 		stage = monsterData.stageNumber,
 		bossId = monsterData.id,
 		bossMaxHp = select(2, MonsterState.getBossHp(target)),
@@ -338,6 +342,7 @@ local function handleBossDeath(attacker, target)
 		members = clearMembers,
 		contributors = contributorList, -- 도중에 빠진 멤버도 피해를 넣었다 - 이론 최소 시간에 넣는다
 	})
+	end
 	if not recordOk then
 		warn(("[forge-game] 리더보드 기록 처리 에러(처치는 계속): %s"):format(tostring(recordErr)))
 	end

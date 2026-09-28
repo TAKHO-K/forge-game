@@ -18,7 +18,7 @@
 
 | Q0 · Q1 리뷰 반영 + Q4 판매가 스위치 | 1348f50 | 몸 반경 도달 공용(`Reach.withinModel` - 조준 · 스킬 원 · 선 · 채널 · 화살) · 전조 상태 정리 · 거리 맞춘 공격 · 넉백 공통 입구(`BossPatterns.launchPlayer`) · 눈금 · 분신 · 은퇴 이름 · 눈토끼 색 · 결번 · 판매가 `sellPriceMode = current` · QueueVerify 36/36 |
 
-| Q4 장비 점검 | (이 커밋) | `docs/design/equipment-audit.md` · 계승 잠금 · 초월 계승 금지 · 초월 계승비 · 판매 불가 표시 · 무기 등급 · 초월 즉시 저장 · QueueVerify 40/40 |
+| Q4 장비 점검 | 698eaea | `docs/design/equipment-audit.md` · 계승 잠금 · 초월 계승 금지 · 초월 계승비 · 판매 불가 표시 · 무기 등급 · 초월 즉시 저장 · QueueVerify 40/40 |
 | Play A | (Play - 코드 변경 없음) | 아래 결과 |
 
 ## Play A 결과(06:49 ~ 06:55 · 1회 · 재Play 없음)
@@ -36,8 +36,10 @@
 | 보스 선택 창 보상 띠 | △ 창 스크린샷만(`playA-stage-panel.png`) · 보스 칸 클릭 못 함 | 단일 소스 = QueueVerify Q3 O |
 | 스크립트 오류 | 0 | 로그 Error = MCP 마우스 도구뿐 |
 
+| Q5 BR2 | (이 커밋) | 세트(`SetData` · `SetBonus` - 옵션 합산 공통 입구 · 스위치 기본 끔) · `item.setZone` SAVE v49(출처 태그로 이관) · 토벌 입장(관문 발판 · `RaidRequest` · `BossEncounter.spawnRaidFor` - 솔로) · 개발 `/gg tp` `/gg set` `/gg raid` · QueueVerify 46/46 |
+
 ## 지금
-- Q5 BR2(세트 · 보스 출처 태그 · 토벌 입장 · 빛기둥)
+- Play B(BR2): 저장 왕복 · 세트 3부위 · 토벌 입장 · 거부 · 출처 태그
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)
@@ -82,6 +84,9 @@
 1. **캐주얼 1,000 = 28.5h(목표 31 ~ 38.5)** - 변경 전 HEAD부터 27.5h(M2 등급표가 T1 ~ T3에 영웅 · 전설을 줌). 드랍 개수 전체 배율 0.6 ~ 1.0으로는 안 움직임 → Q6 수련 가격 · 상한으로 맞춤(지시 규칙) 예정.
 2. 첫 태초가 일찍 옴(일반 104h 50%) - 보스 첫 클리어 0.1%가 주 공급. 범위 안이라 보정 안 함.
 3. **docs/art/ref는 .gitignore 대상** - 아트 자료 `19_monsters_T6_blue_dragon.md` · art-spec 색인 줄은 로컬에만 있다(푸시 안 됨). 추천 = `.gitignore`에 `!docs/art/ref/*.md` 예외(문서만 추적).
+10. **세트 스위치(SetData.enabled 기본 끔)** - 2부위 최대 체력 +5% · 3부위 최종 피해 +5% · 세대 ×(1 + 0.1 × 세대). 성장 예산 재측정(Q6) 때 켤지 결정. 추천 = 켬(최종 피해 버킷 상한 1.05 안).
+11. **파티 토벌** - 이번엔 솔로만(RaidRules.partyBossStage 자리 있음) · 관문 발판 = 비보스 스테이지에서 밟으면 토벌 입장(실수 입장 가능성 - 관문은 구역 밖 전용 구조물).
+12. 토벌 빛기둥 · 길 안내 = U1(스테이지 창 [토벌] 버튼 + BossGate 길 안내 재사용)로 이월.
 9. **초월 고유 효과 상속 · 옵션 상한 · 딜 부위 표시**(equipment-audit §5 1 ~ 3).
 4. 태초의 선택 칭호 - 이미 가진 계정은 유지(저장 데이터 손실 금지) · 새 지급만 중단.
 5. 드래곤 공격 배율(숨결 2.2 · 꼬리 1.9 · 돌풍 1.0 = 한 사람 초당 피해 ≤ 평타) · 크기(키 2.2배 · 길이 4.6배) · 판정 상자 5.7 × 8.4 × 10.7 - Play 체감 확인.

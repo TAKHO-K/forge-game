@@ -173,12 +173,15 @@ end
 -- 이 모양을 공유한다, 20.67 [1] "장비 옵션 1개 ≙ 보석 1개"). axisId와 option.id가 같은
 -- 원소만 값을 낸다(다른 옵션이 붙은 자리는 기여가 없다). Option.valueOf·Option.sumWithCap
 -- 두 순수 함수를 그대로 합성한 것뿐 - 새 계산식을 만들지 않는다(20.67 [14] 3단계 지시).
-function Option.sumAxisBonus(sources, axisId, classId)
+function Option.sumAxisBonus(sources, axisId, classId, extraValues)
 	local values = {}
 	for _, source in ipairs(sources) do
 		if source and source.option and source.option.id == axisId then
 			table.insert(values, Option.valueOf(source.option, source.grade, source.itemLevel, classId))
 		end
+	end
+	for _, v in ipairs(extraValues or {}) do -- Q5 세트 효과(SetBonus.extraValues) - 옵션과 같은 상한 안에서 합산
+		table.insert(values, v)
 	end
 	return Option.sumWithCap(values, axisId)
 end

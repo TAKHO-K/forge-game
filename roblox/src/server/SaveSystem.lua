@@ -1087,6 +1087,26 @@ local function migrate(data)
 		data.version = 48
 	end
 
+	if data.version < 49 then
+		-- QUEUE-10h Q5 BR2: 장비 세트 계열 item.setZone(구역 키) - 옛 장비는 출처 태그(source - v43)로 채운다(보스 = 관문 구역 · 잡몹 · 반짝이 = 사냥 구역 · 그 밖 = 세트 아님).
+		--   값을 지우거나 바꾸지 않는다(없는 필드만 채움) - 태그가 없는 옛 장비(v43 전 드랍)는 세트 아님으로 남는다.
+		local SetBonus = require(ReplicatedStorage.Shared.SetBonus)
+		local function stampSet(item)
+			if type(item) == "table" and item.setZone == nil then
+				item.setZone = SetBonus.zoneFromSource(item.source)
+			end
+		end
+		for _, item in ipairs(data.inventory or {}) do
+			stampSet(item)
+		end
+		for _, cs in pairs(data.classes or {}) do
+			for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+				stampSet(cs.equipment and cs.equipment[part])
+			end
+		end
+		data.version = 49
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data
