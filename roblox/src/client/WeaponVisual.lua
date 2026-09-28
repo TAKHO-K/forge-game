@@ -1366,6 +1366,35 @@ local function debugPose(st, now)
 	st.forcedDrawn = d.clip ~= "sheathed"
 	st.drawn = st.forcedDrawn
 	st.drawStart = -math.huge
+	-- W3b 고정(스크린샷): skillQ · skillE · death · respawn · stun · knock · 덧씌움 이름(PlayerMotionData.overlay)
+	st.deathStart, st.respawnStart, st.stun, st.overlays, st.debugKnockUntil = nil, nil, nil, {}, nil
+	if d.clip == "skillQ" or d.clip == "skillE" then
+		if not (st.attack and st.attack.skill == d.clip:sub(6)) then
+			WeaponVisual.playSkill(st.key, d.clip:sub(6))
+		end
+		if st.attack then
+			st.attack.start, st.attack.freezeUntil, st.attack.blendDur = now - d.tau, nil, 0.01
+		end
+		return true
+	elseif d.clip == "death" then
+		st.attack, st.deathStart = nil, now - d.tau
+		return true
+	elseif d.clip == "respawn" then
+		st.attack, st.respawnStart = nil, now - math.min(d.tau, respawnTotal() - 0.01)
+		return true
+	elseif d.clip == "stun" then
+		st.attack, st.stun = nil, { start = now - d.tau, seconds = 2.5 }
+		return true
+	elseif d.clip == "knock" then
+		st.attack, st.debugKnockUntil, st.knockK = nil, now + 1, 1
+		return true
+	elseif type(M.overlay[d.clip]) == "table" and M.overlay[d.clip].pose then
+		st.attack = nil
+		st.dashUntil = d.clip == "dash2" and now + 1 or 0
+		st.glideUntil = (d.clip == "glideIn" or d.clip == "glideOut") and now + 1 or 0
+		st.overlays = { { def = M.overlay[d.clip], start = now - d.tau } }
+		return true
+	end
 	if d.clip == "getup" then
 		st.getupStart = now - d.tau
 		st.attack = nil
