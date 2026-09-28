@@ -81,8 +81,8 @@ end
 -- 이 아래 castLineAttack/castCircleChannel)는 그대로 동작한다.
 -- committedAt(29-3, 선택): 이 타격이 속한 시전을 시작한 시각 - 채널링 틱만 넘긴다(즉발 스킬은 nil = 지금). 보스의 반사
 -- 태세가 "태세가 선 뒤에 시작한 공격"만 반사하는 데 쓴다(이미 돌던 회전베기·난무는 0 피해로 끝날 뿐이다).
-local function strikeTarget(player, classId, atk, target, coefficient, attackerStage, forceCrit, critDmgBonus, committedAt, extraDamage)
-	local base = atk * coefficient + (extraDamage or 0) -- K1: extraDamage = 쌍검 궁극기 표식이 모은 피해
+local function strikeTarget(player, classId, atk, target, coefficient, attackerStage, forceCrit, critDmgBonus, committedAt, extraDamage, noCharge)
+	local base = atk * coefficient
 	-- 26-2(PRD 20.67 [14] 4단계 "치명") - 장비·보석 치명 옵션 합을 더한다. critDmgBonus는
 	-- 호출부(쌍검 Q 확정 치명타)가 넘긴 값이 있으면 거기에 더한다(둘 다 기본 0/nil).
 	local optionCritRate, optionCritDmg = PlayerProfile.getCritBonus(player)
@@ -94,6 +94,7 @@ local function strikeTarget(player, classId, atk, target, coefficient, attackerS
 	damage *= BuffState.getField(player, "healerBuff", "multiplier", 1)
 	damage *= UltimateService.damageMultiplier(player) -- K1 대검 파괴의 화신(공격력 +30% = 최종 피해 배율)
 	damage *= BuffState.getField(player, "warcryBuff", "multiplier", 1) -- K2 대검 전장의 포효(파티 공격력 +10%)
+	damage += extraDamage or 0 -- K1 쌍검 궁극기: 표식이 모은 피해(이미 치명 · 버프가 곱해진 값 - 배율 뒤에 더한다 · 리뷰 4)
 	-- 29-1: 둘째 반환값 = 실제로 들어간 피해(보스 파훼 게이트 ×g 반영) - 숫자·흡혈이 이 값을 쓴다.
 	local hitPosition = target.PrimaryPart and target.PrimaryPart.Position -- W2-3 서버 적중 지점
 	local isDead, dealt = MonsterState.applyDamage(target, damage, attackerStage, player, committedAt and { committedAt = committedAt } or nil)
@@ -103,20 +104,12 @@ local function strikeTarget(player, classId, atk, target, coefficient, attackerS
 	PlayerProfile.applyLifesteal(player, damage) -- 26-2, AttackServer 평타와 같은 지점(damage 확정 직후)
 	CombatResolution.resolveHit(player, target, isDead)
 	local casterRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	UltimateService.onDealt(player, classId, coefficient, damage, isCrit, casterRoot and hitPosition and (casterRoot.Position - hitPosition).Magnitude or 0, target) -- K1 충전(스킬 타격)
+	if not noCharge then -- 궁극기 자신의 타격은 게이지를 다시 채우지 않는다(리뷰 3 - 연속 발동 방지)
+		UltimateService.onDealt(player, classId, coefficient, damage, isCrit, casterRoot and hitPosition and (casterRoot.Position - hitPosition).Magnitude or 0, target) -- K1 충전(스킬 타격)
+	end
 	return { target = target, damage = damage, isCrit = isCrit, isDead = isDead }
 end
 
--- K1: 궁극기 타격 = 스킬과 같은 피해 경로(치명 · 힐러 버프 · 보상 · 숫자). 결과는 슬롯 "T" 틱으로 클라에 보낸다(피해 숫자 · 적중 연출).
-UltimateService.register(function(player, classId, target, coefficient, extraDamage)
-	local weapon = PlayerProfile.getWeapon(player)
-	if not weapon or not target.Parent or not MonsterState.getData(target) then
-		return nil
-	end
-	local hit = strikeTarget(player, classId, SkillStats.attack(player, classId, weapon), target, coefficient, TutorialState.getMonsterStage(player), nil, nil, nil, extraDamage)
-	sendResult(player, "T", { ok = true, kind = "ultHit", hits = { hit } })
-	return hit
-end)
 
 -- 쌍검 Q 확정 치명타(20-6) 해석 - BuffState 조회는 이 서버 스크립트에서만 하고, 실제
 -- forceCrit/critDmgBonus 판단은 PlayerCombat.resolveGuaranteedCrit(순수 함수)에 맡긴다
@@ -140,6 +133,19 @@ local function filterSameZone(casterPosition, candidates)
 	end
 	return filtered
 end
+
+-- K1: 궁극기 타격 = 스킬과 같은 피해 경로(치명 · 힐러 버프 · 보상 · 숫자). 결과는 슬롯 "T" 틱으로 클라에 보낸다(피해 숫자 · 적중 연출).
+UltimateService.register(function(player, classId, target, coefficient, extraDamage)
+	local weapon = PlayerProfile.getWeapon(player)
+	if not weapon or not target.Parent or not MonsterState.getData(target) then
+		return nil
+	end
+	local hit = strikeTarget(player, classId, SkillStats.attack(player, classId, weapon), target, coefficient, TutorialState.getMonsterStage(player), nil, nil, nil, extraDamage, true)
+	sendResult(player, "T", { ok = true, kind = "ultHit", hits = { hit } })
+	return hit
+end, function(position) -- 리뷰 1: 궁극기 대상 후보 = 스킬과 같은 구역 필터
+	return filterSameZone(position, MonsterState.getAllModels())
+end)
 
 -- 담장에 막히는지 Raycast로 확인해 최종 도착점을 정한다(20-2a 관통돌진, 20-2b 백스텝샷이
 -- 공유하는 "돌진형" 판정의 공통부 - 방향만 서로 다르다). 21-2부터 DashEndpoint.lua
@@ -551,10 +557,10 @@ game:GetService("RunService").Heartbeat:Connect(function()
 			local trap = list[i]
 			local fired = false
 			if now < trap.untilAt and player.Parent then
-				for _, model in ipairs(MonsterState.getAllModels()) do
+				for _, model in ipairs(filterSameZone(trap.position, MonsterState.getAllModels())) do -- 리뷰 1: 구역 필터 · 같은 층
 					local root = model.PrimaryPart
 					local data = MonsterState.getData(model)
-					if root and data and not data.isChest and not data.isRescueTarget and Reach.horizontalDistance(root.Position, trap.position) <= trap.def.triggerRadiusStuds then
+					if root and data and not data.isChest and not data.isRescueTarget and Reach.horizontalDistance(root.Position, trap.position) <= trap.def.triggerRadiusStuds and Reach.sameLayer(root.Position, trap.position) then
 						fired = true
 						if data.isBoss then
 							MonsterState.setVulnerable(model, 1 + trap.def.bossDamageTakenBonus, trap.def.bossDebuffSeconds)
@@ -617,12 +623,13 @@ local function castPrayer(player, slot, def, rootPart, cooldownSeconds)
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		local hp, maxHp = PlayerState.getHp(member), PlayerState.getMaxHp(member)
 		if root and hp and hp > 0 and maxHp and Reach.horizontalDistance(root.Position, rootPart.Position) <= def.radiusStuds then
-			PlayerState.setHp(member, math.min(hp + maxHp * def.healMaxHpFraction, maxHp))
+			local newHp = math.min(hp + maxHp * def.healMaxHpFraction, maxHp)
+			PlayerState.setHp(member, newHp)
 			require(script.Parent.PlayerDamage).syncHud(member)
 			healedCount += 1
+			UltimateService.onHeal(player, newHp - hp, maxHp) -- K1 충전 = 실제 회복량(만피 파티원은 0 - 리뷰 2)
 		end
 	end
-	UltimateService.onHeal(player, def.healMaxHpFraction * healedCount, 1) -- K1 충전
 	print(("[K2] 구원의 기도: %s 회복 %d명"):format(player.Name, healedCount))
 	sendResult(player, slot, { ok = true, kind = "tick", cooldownSeconds = cooldownSeconds, casterPosition = rootPart.Position, radiusStuds = def.radiusStuds, hits = {}, healed = healedCount })
 end

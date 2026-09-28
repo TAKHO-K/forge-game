@@ -211,7 +211,7 @@ function Leaderboard.memberDpsCap(member)
 	local class = ClassData.classes[classId]
 	local cooldown = PlayerCombat.getAttackCooldown(classId, summary.speedPercent)
 	local critDamage = class.critDmg + (summary.critDmg or 0) + CombatConfig.guaranteedCritOverflowBonus
-	local ultBonus = 1 + require(ReplicatedStorage.Shared.data.UltimateData).leaderboardDpsCapBonus -- K1 궁극기 몫
+	local ultBonus = (1 + require(ReplicatedStorage.Shared.data.UltimateData).leaderboardDpsCapBonus) * (1 + require(ReplicatedStorage.Shared.data.SkillData).greatsword.R.partyAttackBonus) -- K1 궁극기 · K2 포효 몫(리뷰 10)
 	return LeaderboardRules.memberDpsCap(summary.attack, cooldown, critDamage, maxBossDamageTaken * (1 + PartyConfig.healerBuffFraction) * ultBonus)
 end
 

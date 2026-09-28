@@ -16,6 +16,7 @@ local gauge = {} -- [Player] = 0 ~ max
 local transformUntil = {} -- [Player] = os.clock() 만료(대검)
 local marks = {} -- [Player] = { target, untilAt, stored }(쌍검)
 local sanctuaries = {} -- { caster, center, radius, untilAt }(치유사)
+local candidatesAt -- function(position) → 같은 구역 몹 목록(SkillServer filterSameZone - 리뷰 1)
 local striker -- function(player, classId, target, coefficient, extraDamage) → hit(SkillServer - extraDamage = 계수 피해에 더할 고정 피해)
 local stats = { casts = 0, rejects = {} } -- 검증 · 개발 명령
 
@@ -30,8 +31,13 @@ local function publish(player)
 	end
 end
 
-function U.register(strikeFn)
+function U.register(strikeFn, candidatesFn)
 	striker = strikeFn
+	candidatesAt = candidatesFn
+end
+
+local function candidates(position)
+	return candidatesAt and candidatesAt(position) or MonsterState.getAllModels()
 end
 
 function U.get(player)
@@ -126,7 +132,7 @@ function U.onBasicHit(player, classId, rootPart, primaryTarget)
 	end
 	local def = UltimateData.skills.greatsword.shockwave
 	local center = rootPart.Position + rootPart.CFrame.LookVector * def.forwardStuds
-	for _, target in ipairs(SkillCombat.hitsInCircle(center, def.radiusStuds, MonsterState.getAllModels())) do
+	for _, target in ipairs(SkillCombat.hitsInCircle(center, def.radiusStuds, candidates(center))) do
 		if target ~= primaryTarget then
 			striker(player, classId, target, def.coefficient)
 		end
@@ -160,7 +166,7 @@ function U.cast(player, classId, rootPart, aimPoint)
 	local markTarget
 	if def.shape == "ultMark" then
 		local best, bestD = nil, def.rangeStuds
-		for _, model in ipairs(MonsterState.getAllModels()) do
+		for _, model in ipairs(candidates(rootPart.Position)) do
 			local root = model.PrimaryPart
 			local data = MonsterState.getData(model)
 			if root and data and not data.isChest and not data.isRescueTarget then
@@ -184,13 +190,16 @@ function U.cast(player, classId, rootPart, aimPoint)
 		transformUntil[player] = now + def.durationSeconds
 		player:SetAttribute("UltTransform", def.bodyScale)
 		task.delay(def.durationSeconds, function()
+			if (transformUntil[player] or 0) > os.clock() + 0.05 then
+				return -- 리뷰 8: 그 사이 다시 변신했다 - 뒤의 변신이 끝낸다
+			end
 			transformUntil[player] = nil
 			if player.Parent then
 				player:SetAttribute("UltTransform", nil)
 				local character = player.Character
 				local root = character and character:FindFirstChild("HumanoidRootPart")
 				if root then
-					for _, target in ipairs(SkillCombat.hitsInCircle(root.Position, def.finale.radiusStuds, MonsterState.getAllModels())) do
+					for _, target in ipairs(SkillCombat.hitsInCircle(root.Position, def.finale.radiusStuds, candidates(root.Position))) do
 						striker(player, classId, target, def.finale.coefficient)
 					end
 				end
@@ -207,7 +216,7 @@ function U.cast(player, classId, rootPart, aimPoint)
 				if not player.Parent then
 					return
 				end
-				for _, target in ipairs(SkillCombat.hitsInCircle(center, def.radiusStuds, MonsterState.getAllModels())) do
+				for _, target in ipairs(SkillCombat.hitsInCircle(center, def.radiusStuds, candidates(center))) do
 					striker(player, classId, target, def.coefficient / def.tickCount)
 				end
 			end

@@ -1407,7 +1407,10 @@ local function handleCommand(player, args)
 			table.insert(ids, { id = id, tier = def.tier })
 		end
 		table.sort(ids, function(a, b)
-			return a.tier ~= b.tier and a.tier < b.tier or a.id < b.id
+			if a.tier ~= b.tier then
+				return a.tier < b.tier
+			end
+			return a.id < b.id
 		end)
 		local look = root and Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
 		local right = look and Vector3.new(-look.Z, 0, look.X)

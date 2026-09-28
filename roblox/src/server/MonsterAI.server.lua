@@ -430,6 +430,10 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 닿을 수 있다) - 포기하고 돌아간다.
 					MonsterState.setAiState(model, "returning")
 					MonsterState.setAiTarget(model, nil)
+					if windupStartedAt[model] then -- 리뷰 6: 추격이 끝나면 전조도 끝(포즈 굳음 · 다음 추격 즉시 타격 방지)
+						windupStartedAt[model] = nil
+						model:SetAttribute("MobWindup", nil)
+					end
 					if data.isBoss then
 						BossPatterns.interrupt(model, data)
 					end
