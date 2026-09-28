@@ -1185,6 +1185,7 @@ function PlayerProfile.sellGem(player, index)
 	local price = Sanitize.number(GemCraft.sellPrice(gem, PlayerProfile.getAccountBestStage(player)), 0) -- S21-0 A2: 보상 계산 출구
 	table.remove(classState.gemInventory, index)
 	profile.gold += price
+	Telemetry.economy(player, "gold", "source", price, "Shop") -- Q15 리뷰: 판매 골드도(addGold를 안 거친다)
 	player:SetAttribute("Gold", profile.gold)
 	GemSync.push(player)
 	return true, price
@@ -1733,6 +1734,7 @@ function PlayerProfile.autoProcessDrop(player, item)
 	end
 	local price = Loot.getSellPrice(item)
 	profile.gold += price
+	Telemetry.economy(player, "gold", "source", price, "Shop") -- Q15 리뷰: 자동 판매
 	player:SetAttribute("Gold", profile.gold)
 	return { kind = "sell", grade = item.grade, part = item.part, gold = price }
 end
@@ -1977,6 +1979,7 @@ function PlayerProfile.sellItem(player, index)
 	local price = Loot.getSellPrice(item)
 	table.remove(profile.inventory, index)
 	profile.gold += price
+	Telemetry.economy(player, "gold", "source", price, "Shop") -- Q15 리뷰: 판매
 	player:SetAttribute("Gold", profile.gold)
 	InventorySync.push(player, profile)
 	return price
@@ -2023,6 +2026,7 @@ function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 
 	profile.inventory = remaining
 	profile.gold += totalGold
+	Telemetry.economy(player, "gold", "source", totalGold, "Shop") -- Q15 리뷰: 일괄 판매
 	player:SetAttribute("Gold", profile.gold)
 	InventorySync.push(player, profile)
 	return soldCount, totalGold

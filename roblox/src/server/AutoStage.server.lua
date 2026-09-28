@@ -37,7 +37,9 @@ end
 
 settingRemote.OnServerEvent:Connect(function(player, presetId)
 	if type(presetId) == "string" and presetById[presetId] then
-		require(script.Parent.SettingsService).set(player, "autoStage", presetId) -- Q14: 저장 + Attribute 적용(설정 입구 하나)
+		if require(script.Parent.SettingsService).set(player, "autoStage", presetId) then -- Q14: 저장 + Attribute 적용(설정 입구 하나)
+			require(script.Parent.ImmediateSave).request(player) -- Q15 리뷰: 다른 설정과 같이 즉시 저장(스로틀 공유)
+		end
 	end
 end)
 

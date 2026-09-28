@@ -275,6 +275,17 @@ UIManager.changed:Connect(function(id, isOpen)
 end)
 inventoryFull.OnClientEvent:Connect(onBagFull)
 refs.gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+-- Play G: 대시 버튼(SkillSlots DashHolder)은 메뉴바보다 늦게 생기고 터치 배치로 바뀌면 자리가 움직인다 → 그때마다 다시 민다(첫 배치 때 없으면 밀기가 빠졌다 - 40px 겹침).
+task.spawn(function()
+	local dash = player.PlayerGui:WaitForChild("SkillSlotsGui", 30)
+	dash = dash and dash:WaitForChild("DashHolder", 30)
+	if dash and dash:IsA("GuiObject") then
+		relayout()
+		dash:GetPropertyChangedSignal("AbsolutePosition"):Connect(relayout)
+		dash:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+		dash:GetPropertyChangedSignal("Visible"):Connect(relayout)
+	end
+end)
 for _, name in ipairs({ "TutorialCompleted", "TutorialStep", "ClassId" }) do
 	player:GetAttributeChangedSignal(name):Connect(relayout)
 end

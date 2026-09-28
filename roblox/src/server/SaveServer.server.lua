@@ -57,6 +57,7 @@ Players.PlayerAdded:Connect(loadForPlayer)
 -- 오판하는 사례를 11-1 테스트 중 실제로 재현했다). flush는 그 예약을 취소하고 지금
 -- 한 번만 저장한다.
 Players.PlayerRemoving:Connect(function(player)
+	require(script.Parent.Telemetry).onLeaving(player) -- Q15: 프로필을 지우기 전에 통계 전송
 	ImmediateSave.flush(player)
 	PlayerProfile.clear(player)
 end)

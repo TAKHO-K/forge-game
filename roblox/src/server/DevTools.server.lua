@@ -1265,6 +1265,11 @@ local function handleCommand(player, args)
 			table.insert(rows, ("%s 피해×%.2f 쿨×%.2f 범위×%.2f"):format(slot, m.damage, m.cooldown, m.range))
 		end
 		reply(player, ("스킬 변형(%s): %s"):format(tostring(classId), table.concat(rows, " · ")))
+	elseif sub == "t1" and args[2] == "flush" then
+		-- Q15: /gg t1 flush - 누적된 통계를 지금 보낸다(Studio = [T1][드라이런] 로그)
+		local Telemetry = require(script.Parent.Telemetry)
+		local n = Telemetry.flush(player)
+		reply(player, ("통계 전송 %d건 · 누적 경제 %d · 커스텀 %d · 퍼널 %d"):format(n, Telemetry.stats.economy, Telemetry.stats.custom, Telemetry.stats.funnel))
 	elseif sub == "q12" and args[2] then
 		-- Q12: /gg q12 reset(이정표 1단계 · 출석 새로 - 새 계정 흉내) · note <이벤트>(실제 QuestService.note) · state
 		ensureBackup(player)

@@ -139,10 +139,23 @@
 
 | Q14 설정 저장 + P4e | e6ab9ea | SettingsData · SettingsService · SAVE v54 · 섬광 줄이기 · 직업 변경 폰 숨김 → 설정 창 · docs/design/settings-hud-q14.md · QueueVerify 91/91 |
 
-| Q14 리뷰 7 + Q15 번역 · T1 | (이 커밋) | 설정 창 스크롤(폰 잘림 - 치명) · 자동 이동 입구 하나(Attribute) · 설정 요청 키별 trailing · 복원 뒤 적용 · 문구 / Telemetry(누적 · 5분 · 퇴장 · 드라이런 · 분류 스위치 · 표본) · 화폐 4 입구 · 퍼널 · 복귀 · 용어집 · 하드코딩 2,073 목록 · 변형 문구 TextData · QueueVerify 94/94 |
+| Q14 리뷰 7 + Q15 번역 · T1 | e8fdb82 | 설정 창 스크롤(폰 잘림 - 치명) · 자동 이동 입구 하나(Attribute) · 설정 요청 키별 trailing · 복원 뒤 적용 · 문구 / Telemetry(누적 · 5분 · 퇴장 · 드라이런 · 분류 스위치 · 표본) · 화폐 4 입구 · 퍼널 · 복귀 · 용어집 · 하드코딩 2,073 목록 · 변형 문구 TextData · QueueVerify 94/94 |
+
+| Play G + 리뷰 8(Q15) | (이 커밋) | 아래 표 · 메뉴바 × 대시 재배치 연결 · 판매 골드 통계 · 화폐별 잔액 · 주기 전송 보호 · 퇴장 순서 |
+
+## Play G 결과(약 8분 · 재Play 없음 · 게임 스크립트 오류 0)
+| 확인 | 결과 | 근거 |
+|---|---|---|
+| QueueVerify · 확률표 | O 94/94 · 버전 0eef433c | 서버 시작 줄 |
+| HUD 자체 점검(842 × 534 폰 창) | O 겹침 0 · 중앙 침범 0 | `[S06][UI]` · 메뉴바 BL 식 O |
+| 직업 변경 버튼 × 조이스틱 구역 | O(숨김) | ForceTouchLayout 뒤 ClassReopenButton Visible = false · 설정 창 [직업 변경] 보임 `Claude outputs/Q14-Q15/phone-settings.png` |
+| 메뉴바 × 대시(터치) | **X → 수정** | 메뉴바 (14,138) 48 × 156 · 대시 (24,254) 54 × 54 = 40px 겹침(`phone-hud.png`) - 밀기 식은 있었지만 대시가 늦게 생겨 첫 배치에 빠짐 → DashHolder 위치 · 크기 · 보임 변화에 재배치 연결(다음 Play 확인) |
+| 설정 저장 왕복(v54) | O(실제 클릭) | 섬광 줄이기 켬 · 흔들림 끔 → `_verify` 원본 version 54 · reduceFlashes=true · screenShake=false |
+| 통계 드라이런 | O | `[T1][드라이런] 퍼널 1 ftue_fight` · `경제 gold source Gameplay 합 2212 · stage_1+ · class_dualblade · rebirth_3+` |
+| 나머지 P4e(친구 부르기 · 파티 HUD 690 · 알림 행 24 · 태초 띠 524 · 폰 태초 알림 12 · 도감 띠 · 요청 배너 · 채팅 × 메뉴바) | 미확인(시간 · 1클라) | 보고서 "다음 Play" 목록 |
 
 ## 지금
-- Play G(Q14 ~ Q15)
+- 추가 대기열 마무리(보고서 Q8 ~ Q15 · STATE · open-plan)
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)
