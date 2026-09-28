@@ -7,6 +7,8 @@ local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 
 local StageGeneration = require(ReplicatedStorage.Shared.StageGeneration)
+local Text = require(ReplicatedStorage.Shared.Text)
+local Toast = require(script.Parent.ui.kit.Toast)
 
 local player = Players.LocalPlayer
 local painted = {} -- [Model] = { parts = { [BasePart] = 원래 색 }, name = 원래 DisplayName, index }
@@ -25,6 +27,9 @@ local function restore(model)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	if humanoid and record.name then
 		humanoid.DisplayName = record.name
+	end
+	if record.label and record.label.Parent and record.labelText then
+		record.label.Text = record.labelText
 	end
 	painted[model] = nil
 end
@@ -54,13 +59,26 @@ local function paint(model, generation)
 			humanoid.DisplayName = generation.prefix .. " " .. humanoid.DisplayName
 		end
 	end
+	-- 묶음 A Play 1: 조준 이름표는 NameplateGui.NameLabel 글씨를 그대로 보여 준다(AimTarget) - 여기에도 앞말
+	local nameplate = model:FindFirstChild("NameplateGui", true)
+	local label = nameplate and nameplate:FindFirstChild("NameLabel")
+	if label and label:IsA("TextLabel") then
+		record.label, record.labelText = label, label.Text
+		if not label.Text:find(generation.prefix, 1, true) then
+			label.Text = generation.prefix .. " " .. label.Text
+		end
+	end
 	painted[model] = record
 end
 
 local function refresh()
 	local stage = player:GetAttribute("InfiniteStage")
 	local generation = StageGeneration.forStage(stage)
-	currentIndex = generation and generation.index or 0
+	local newIndex = generation and generation.index or 0
+	if newIndex > 0 and newIndex ~= currentIndex then -- 새 세대에 들어섰다(내 스테이지 기준) - 토스트 1회
+		Toast.push("TC", { text = Text.get("generation.enter", { name = generation.prefix, index = tostring(newIndex) }), colorName = "gold", seconds = 4, fadeSeconds = 0.4 })
+	end
+	currentIndex = newIndex
 	if not generation then
 		for model in pairs(painted) do
 			restore(model)
