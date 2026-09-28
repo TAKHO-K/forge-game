@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **C2(전투 공식 CombatFormulaV2) + W2 마무리 + 파트 0(COMMON §7-2 ~ §7-4) · 2026-09-28** · 직전 보고서 = `docs/phase/C2-report.md`(그 전 `W2-report.md` · `BR1-4c-report.md` · `BR1-4b-report.md` · `BR1-4b0-report.md` · `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **C3(전투 템포 · 꾹 누르기 · 클릭 지점 발사 · 경제 재맞춤) + W3a(공격 모션 전면) + 파트 0(§7-5 · 코요테 · 환생 12h) · 2026-09-28** · 직전 보고서 = `docs/phase/C3-report.md`(그 전 `C2-report.md` · `W2-report.md` · `BR1-4c-report.md` · `BR1-4b-report.md` · `BR1-4b0-report.md` · `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -11,7 +11,7 @@
 
 | 영역 | 상태 | 문서 |
 |---|---|---|
-| 전투 · 직업 4종(대검 · 쌍검 · 활 · 치유사) · 스킬 Q/E · 대시 | 동작 | PRD 20.x · `docs/design/skills-RT.md`(R/T 예정) |
+| 전투 · 직업 4종(대검 · 쌍검 · 활 · 치유사) · 스킬 Q/E · 대시 | **C3**: 꾹 누르기 자동 공격(좌클릭 · 폰 공격 버튼 - 누름 버퍼 · 서버 간격 + 여유 0.05) · 템포 `PlayerCombat.getAttackTempo`(간격 0.45 ÷ 공속 · 최소 0.33 · 넘는 공속 · 버프 = 한 타 피해 % - DPS 옛 식과 같음) · 쌍검 2타 묶음 · 활 Q = 강궁(간격 ×1.6 · 관통 1 · 넉백 · DPS = 옛 속사) · 원거리 = 클릭 지점 발사(`AimPicker.pickPath` · 허공도 발사 · 폰 정면 자동 조준) · 치명 곡선 +0.15(`CombatConfig.critCurve`) · 잡몹 tier HP 비 압축(`MonsterData.tierHpRelative` · 보상 같은 배율 · 보스 = 압축 전) · 확인 `/gg anim` · `/gg c3 hits` | PRD 20.x · `docs/design/skills-RT.md`(R/T 예정) |
 | 공유 잡몹 판정 · 보상 자격 | **D1-2: 같은 파티끼리 막힘 제외**(`MobShare.sameParty` · Player Attribute `PartyId` · 자물쇠 문자열에 파티 칸 · 시뮬 o = 파티 버스 ×2.7). **C1 결정 5 보정(2026-09-27)**: 막힘 = 스틸 불가 + (성장이 더 높음(환생 → 레벨 `MobShare.compareGrowth` · 성장 차가 스틸 불가 사유일 때) 또는 스테이지가 더 높음) - 스테이지를 낮춘 강한 계정도 막힘 · 막힘 면제 = 때리거나 도운 참여자만(쫓기기만 = 면제 없음) · 시뮬 n · n-low 0 O(`C1-fix5-report.md`). **C1 마무리**: 스틸 가능 = `MobShare.canShare`(환생 같음 · 레벨 차 ≤ 낮은 레벨 구간 표 `stealLevelGapTiers` · 스테이지 차 ≤ 10) - 막힘 · 어그로 필터 · 클라 자물쇠가 이 함수 하나 · 막힘 = 스틸 불가 + 더 높은 스테이지(피해 0 · 회색 체력바 + 자물쇠 · 반사 연출 · 첫 1회 말풍선 `hints.stealLockSeen`) · 낮은 쪽은 같이 때리되 주인(잡는 사람) 집합에 못 들어감 · 몹 Attribute `MobHunters` → 클라 `MobLockView` · 끌어오기 계측 `server/AlphaStats`(`/gg stats`). **C1 후속**: 몹이 주는 피해 = 기준 스테이지. **C1**: 잡몹 기준 스테이지 = 최근 8초 참여자(타격 · 쫓김 · 60 안 치유/보호) 중 최고 · 모든 피해를 기준 HP로 환산 · 기준 상승 = 재정규화(기여도 같이 줄임) · 하강 = 비율 유지 · 스테이지 변경 = 내 기록 삭제(혼자면 초기화) · 클라 이동 요청 1초 1회 · 자격 = 기여 10% + 같은 스테이지 + ≤ 기준 · 토벌 스테이지 규칙(`RaidRules` · `BossGate.raidCheck` - 입장 경로는 BR2) · 악용 시뮬레이터 `server/C1Sim`(a ~ h 전부 O) | `shared/MobShare` · `docs/phase/C1-report.md` |
 | 무한 스테이지 · 보스 6종(5스테이지마다) · 파티 4인 · 기믹 | **BR1-4a**: 전멸기 · 기믹 = 고정 %(`PlayerDamage.applyMaxHpFraction` - 기술 감소 `technique` · 무적 · 신규 보호만) · 일반 패턴 = 능력치(돌진 ×3.85 · 잠행 찌르기 ×1.925) · 대공 잡기 = 시전 끝 1.5초 누적 0.65(강제 체공 포함 · 회오리 직후 `lowerAfter`) · 사람마다 탈출(발버둥 18 · 손 3타) · 기절 = 전원 탈출 · 아무도 안 걸림만 · 에네르기파 = 낮은 빔 540°(점프 · 빈틈 · 끌림 1.5 + 면역 2 · 시전당 45% · 예고 = 0.6초 앞 바닥 띠) · 회오리 2.5초 + 물리 발사 · 붕괴 = 조각 바닥 실제로 꺼짐(`BossArenaMap.enableSliceFloor`) + 전멸기 피해 + 가장자리 복귀 · 수호자 잡기 ↔ 돌진 `notAfter`. **M1-2 C안**: 전갈 가짜 둔덕 · 수정 틀린 종 = 파티 전원 최대 체력 비율(인원별 표 - 모형 파티 전멸 31 ~ 44%). **BR1-3 기믹 3차**: 강화 평타 기절 0.7초 + 면역 2초 · 지반 붕괴 = 피자 8조각 낙사 · 판 털기(심해) · 분신 부메랑 · 에네르기파 휩쓸기 · 수정 오르골(수정 전멸기) · 아르마딜로 태세 · 진짜 전갈 찾기(전갈 전멸기 - 갑각 태세 삭제) · 에어본 5% 고정 · 설치형 공격 규칙. **BR1-2 난이도 2차**: 스테이지 곡선 표 4단계(`BossCurveData` - 인당 투사체 최대 8 · 아레나 상한 48) · 초반 보호 1 ~ 30 · 첫 만남 전멸기 카드 · 대공 잡기 재작업(점프하지 마 → 잡아 모음 → 던짐) · 공중 가둠 · 반사(6종) + 반사 에어본 · 음파 포효 · 색 맞추기 · 프라이팬 · 수정 부수기(점프맵 + 45/90초 도움) · 여러 개미지옥 · 번개 조준경(폭풍 전멸기) · 지진파 무작위 표 · 평타 사거리 26 · 근접 원형 구역 · 파티 N^0.93 · 공동 책임 45% | `docs/design/boss-rules.md` · `boss-br1.md` · `boss-br1-2.md` |
 | 강화 · 방어구 3부위 · 보석 · 계승 · 환생 · 리더보드 | 동작 | PRD · `docs/econ/` |
@@ -25,9 +25,11 @@
 | 공중 전투 · 무기 규격(MV1) | 공중 공격 예산 = 해금 공중 점프 + 공중 대시(서버 거부) · 뜨면 강공격 스택 0 · 공중 판정 높이차 근접 14 · 원거리 30(`CombatConfig.airAttack`) · 무기별 공중 동작 틀(대검 내려찍기 · 쌍검 회전 · 활 · 지팡이 0.25초 공중 정지 - 임시 모션) · **`WeaponRigSpec`**(쥐는 손 · 손잡이 점 · 날 축 · 기준 크기 · 보조 손 · 비전투 자리 · 날 선 앞 · 준비 자세) - 지금 모델은 잡는 방식만 맞춤, 모션은 **W1** | `MV1-report.md` ④ ⑦ |
 | 보안(S1) | **S1 후속**: 공중 정체 검사(원거리 정지 · 설계 체공 안 허가 · 예외 · 물속 밖에서 5초 넘게 안 내려가면 되돌림 - 활강은 내려가서 스스로 초기화 - `heightGuard.stallSeconds`) · 허가별 수평 상한(`permit.hRate` - 보스 발사 400 · 발판 = 설계 × `padSpeedMargin` 1.25 · 열매 · 붙잡기 = 걷기 · 체공 안이면 앞 상한 이어받기) · `/ops stats [all]` + 종료 요약(`AlphaStats_v1`) · C 둥지 이름 = `Struct_<구역>_ruinsNNN` · 단서 속성(`Cycle` · `Ambient`)은 서버가 시작 때 읽고 지움(반딧불 = 서버) · 최종 피해 버킷 상한 1.05 · 공속 버프 포함 상한 = 스위치 `attackSpeedCapIncludesBuffs`(기본 false - 켜면 상위 1% +19.6%). **이동**: 서버 수평 토큰 버킷(`HeightGuard.evaluateHorizontal` · 합법 목록 = `MovementConfig.moveGuard.legal` · 대시 · 밀림 허가 · 표시 없는 순간이동 = 되돌림) · 높이 허용 = 해금 단계별 · 낙하 = 서버 궤적(`AirState` peakY · 신고 없어도 처리) · 비밀 둥지 C = `server/SecretNestData`(클라 0 · 45 안에서 앵커 노출). **획득**: 스테이지 하드 상한 25,300(저장 · 로드 때 자름) · 태초 발급 원장(`AcquisitionAudit` · rollId) · 원장 없음 = 격리(원장 이전 = `preLedger` 집계 대상) · 집계 = 드랍 출처 · 속도 봉투(`AuditConfig.envelope` - 25,300 = 1,169h) · 포아송 1e-6 · 처치 속도 · 운영 `/ops`(`OpsConfig.userIds`) · 서버가 캐릭터를 옮기면 반드시 `HeightGuard.reset`/`exempt`(reset 뒤 유예 = 도착 자리 근처만) · 클라 낙하 신고 = 서버 착지 전이면 `pending` | `S1-report.md` |
 | 설정 창 | M1-0에 첫 창(카메라 토글 하나). 저장 · 키 재설정은 **P4-4** | `client/panels/Settings.lua` |
-| 저장 | **SAVE_VERSION 44**(v44 audit - λ · 태초 굴림 수 · 플레이 시간 / v43 장비 태초 각인 primordial · 출처 source · 옛 태초 = 이전 태초 + 잠금 / v42 hints.stealLockSeen / v41 world.nests · world.nestDex · eggs / v40 world.bossGates / v38 world.portals · peakLevel / v39 titles) · Studio 수동 Play = `Player_<id>_manual`(M1-2 후속 - 실제 프로필은 읽기만) | `server/SaveSystem.lua` |
+| 저장 | **SAVE_VERSION 45**(v45 캐릭터 경험치 곡선 이관 - 레벨 · 진행률 유지 / v44 audit - λ · 태초 굴림 수 · 플레이 시간 / v43 장비 태초 각인 primordial · 출처 source · 옛 태초 = 이전 태초 + 잠금 / v42 hints.stealLockSeen / v41 world.nests · world.nestDex · eggs / v40 world.bossGates / v38 world.portals · peakLevel / v39 titles) · Studio 수동 Play = `Player_<id>_manual`(M1-2 후속 - 실제 프로필은 읽기만) | `server/SaveSystem.lua` |
 
 ## 3. 다음 단계
+
+> **C3 + W3a 끝(2026-09-28) - place 저장 불필요**: 최상위 원칙 = 사람 기준 템포 · 편하고 재밌게 · 입력 속도로 강해지지 않음. 후반 대표 T1 4.8 → 2.75타(실측 3.5) · T6 37.6 → 4.95(5.9) · 초당 입력 7.5 → 3.0 · EconSim 상위 1% 1,946.6h · 캐주얼 1,000 38.5h · 일반 환생 5 12.60h(경험치 앵커 125 = 170,000). 모션 = 다리 · 체중 · 대검 양손 · 쌍검 시차 · 지팡이 시전 손 · 강궁 반동 · 대검 키프레임 비교(`client/KeyframeCompare`). 코요테 0.1 · 선입력 0.1(못 넘는 틈 53). **다음 = W3b**(스킬 · 피격 · 넘어짐 모션) - 첫 Play에 지연 0.25 코요테 · 투사체 50발(`C3-report.md` 결정 11).
 
 > **C2 끝(2026-09-28) - place 저장 불필요**: 전투력(한 대 기대 피해) ÷ 권장(대표 장비 = EconSim 일반 첫 도달) → 주는 피해(평탄 0.7 ~ 1.3 · 1.5 = 처치 시간 0.52배 · 0.5 = 5.5배) · 받는 피해 = 벌칙만 · 레벨차 계수 통합 · 보스전 제외 · 스위치 `CombatFormulaData.enabled`(기본 켬). EconSim 목표 전부 안(상위 1% 1,952h · 캐주얼 1,000 39.1h). 경험치 악용 = 1순위(구조)로 해결. W2 마무리 = 궁수 당김 고정점(머리 기준) · 활/지팡이 가까운 대상 휘두르기 · 활 공중 발사 0.2초. **다음 = M2**(결정 필요 C2-1 · 4 · 7 먼저).
 
@@ -76,7 +78,9 @@
 
 | 출처 | 내용 |
 |---|---|
-| C2 1 ~ 9 | 1 후반 일반 몹 28대 / 3초 체감(수정 안 함) · 2 보스전 제외 유지 · 3 받는 피해 벌칙만 유지 · 4 "일반 환생 5 약 12h" = 실측 5.1h(12h는 일반 1,000) · 5 잡몹 기여도 배율 뒤 · 6 전투력 표시 = 공격만 · 7 대표 표 급변(500 → 700) · 8 남의 화면 휘두르기 안 보임 · 9 보스 칸 권장 줄 - `C2-report.md` §5 |
+| C3 1 ~ 11 | 1 T1 실측 3.5타(목표 2 ~ 3) · 2 초반 · 환생 5 직후 대표 한 방 구조 · 3 tier1 HP 66 · 4 EconSim 목표 처치 시간 ×0.45 · 5 치명 +0.15 한 단 · 6 스킬 계수 유지 · 7 강궁 수치 · 8 v46 없음 · 9 코드 모션 유지(키프레임 선택) · 10 폰 버튼 최종 배치(U1) · 11 지연 0.25 코요테 · 투사체 50발 미측정 - `C3-report.md` §8 |
+| ~~C2 1 · 4 · 7 · 8~~ | C3에서 처리(1 템포 · 4 환생 12h · 7 표시 곡선 · 8 남의 화면 휘두르기) - 나머지 C2 2 · 3 · 5 · 6 · 9 = 추천대로 |
+| C2 1 ~ 9(옛 기록) | 1 후반 일반 몹 28대 / 3초 체감(수정 안 함) · 2 보스전 제외 유지 · 3 받는 피해 벌칙만 유지 · 4 "일반 환생 5 약 12h" = 실측 5.1h(12h는 일반 1,000) · 5 잡몹 기여도 배율 뒤 · 6 전투력 표시 = 공격만 · 7 대표 표 급변(500 → 700) · 8 남의 화면 휘두르기 안 보임 · 9 보스 칸 권장 줄 - `C2-report.md` §5 |
 | ~~M1-0 ① ~ ④~~ | **닫힘(M1-0 후속 · 2026-09-25 사용자 확정 - 전부 추천)**: ① 지평선 위 커서 = 커서 광선 수평 방향 조준 ② 보스전 중만 카메라 최소 30° ③ 시점 고정 중 HUD 클릭 불가 유지 ④ 필드 몬스터 공중 회피 유지 |
 | ~~BR1 ① ~ ⑤~~ | BR1-2에서 다시 맞춤(근접 솔로 전멸 32% · 서리 55% · 파티 p 0.93) |
 | ~~BR1-2 1 ~ 7~~ | **닫힘(BR1-3 - 사용자 확정)**: 1 모형 확인은 카툰 · 모션 뒤 · 2 ④ 8발 유지 · 3 평타 체감은 모션 단계 · 4 공동 책임 45% 유지 · 5 파티 보정은 재측정 뒤(→ BR1-3 1) + 설치형 공격 규칙 · 6 에어본 5% 고정 |
@@ -112,6 +116,7 @@
 
 ## 5. 알려진 X(재조사 안 함 - 목록만)
 
+- C3: Play 2 스테이지 5,000 실험 뒤 부활 지점 몹에 반복 사망(검증 쪽 - 스테이지를 되돌린 뒤 새 Play) · `MV1JumpHook`은 부활하면 사라진다(PlayerGui 직속 - 옛 구조) · 잡몹은 받는 피해 배율이 안 먹어 표본 몹을 경우마다 새로 세운다(`/gg c3 mob`).
 - C2: 투사체 ⑦ 재측정(지연 0.25 · 움직이는 몹 50발) 표본 부족 X(5발) · W2 리본 4직업 스크린샷 미완(눈 바닥에서 안 보임) · G1-3(가) 기대값 갱신 필요(레벨차 계수 통합).
 - G1-1(UI) 고리 타이밍 · 29-1 첫 기믹 +0.35초(서버 시작 부하) · S12b(UI) · S16(UI) · S19b(UI) · P25b(UI)(계정 가방 상태) - G1-5 / G2a 전 블록 Play와 같은 계열.
 - 29-1 일부 X = BR1 의도된 수치 변경(기대값 갱신 안 함). (BR1(나) 눈덩이 "끝 0"은 BR1-2 첫 Play에서 고침 - 67/67)
