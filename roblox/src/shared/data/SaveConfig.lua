@@ -76,7 +76,7 @@ return {
 	-- 38(M1) - world = { portals = { [구역 키] = true } }(입구 캠프 첫 방문으로 연 포탈 - 계정 공유) · peakLevel(역대 최고 캐릭터 레벨 - 환생해도 안 내려간다 · 나무 가지 정거장 기준)
 	-- 신설. 기존 세이브: portals 빈 표 · peakLevel = 지금 직업들 레벨 중 최대(환생 전 기록은 저장에 없어 복원 불가). SaveSystem.migrate()의 v37->v38 참고.
 	-- 37(BR1-2) - hints.bossIntroSeen(보스 id 문자열 키 집합) 신설 - 처음 만난 보스의 전멸기 카드를 한 번만 띄운다. 기존 세이브는 빈 표. SaveSystem.migrate()의 v36->v37 참고.
-	saveVersion = 45, -- C3 0-3: 캐릭터 경험치 곡선 변경 이관(레벨 · 진행률 유지 - 스키마 필드 변화 없음) / v44 S1: audit(획득 감사 - λ 태초 확률 합 · 태초 굴림 수 · 플레이 시간 - 속도 봉투) / v43 D1: 장비 태초 각인(primordial - 세계 번호 · 이전 태초 legacy) · 출처 태그(source) · 태초 기본 잠금 / v42 C1 마무리: hints.stealLockSeen(잠긴 몹 말풍선 1회) / v41 M1-3 둥지: world.nests(개인 쿨다운 · 줍기 횟수) · world.nestDex(비밀 둥지 발견 도감) · eggs(알 가방) / v40 world.bossGates(관문 등록) · v39 titles(칭호 - 호기심 대장) · v38 world.portals · peakLevel
+	saveVersion = 46, -- C5-2: classes[].reclaimLevel(되찾기 기준 - 환생 순간 레벨 최대) / v45 C3 0-3: 캐릭터 경험치 곡선 변경 이관(레벨 · 진행률 유지 - 스키마 필드 변화 없음) / v44 S1: audit(획득 감사 - λ 태초 확률 합 · 태초 굴림 수 · 플레이 시간 - 속도 봉투) / v43 D1: 장비 태초 각인(primordial - 세계 번호 · 이전 태초 legacy) · 출처 태그(source) · 태초 기본 잠금 / v42 C1 마무리: hints.stealLockSeen(잠긴 몹 말풍선 1회) / v41 M1-3 둥지: world.nests(개인 쿨다운 · 줍기 횟수) · world.nestDex(비밀 둥지 발견 도감) · eggs(알 가방) / v40 world.bossGates(관문 등록) · v39 titles(칭호 - 호기심 대장) · v38 world.portals · peakLevel
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",

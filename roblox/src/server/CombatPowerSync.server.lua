@@ -15,6 +15,10 @@ task.spawn(function()
 					player:SetAttribute("CombatPower", power)
 				end
 			end
+			local okLevel, best = pcall(PlayerProfile.getDealItemLevelBest, player) -- C5-1 뒤처짐 신호(MonsterState가 읽는다)
+			if okLevel and player:GetAttribute("DealItemLevel") ~= best then
+				player:SetAttribute("DealItemLevel", best)
+			end
 		end
 		task.wait(INTERVAL_SECONDS)
 	end

@@ -126,11 +126,15 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 	-- D1-2: 태초 장갑 치명 피해 + C4-2 치명 옵션 피해(PlayerProfile.getCritBonus와 같은 합 · 같은 상한).
 	local critDmg = class.critDmg + math.min(Loot.getGlovesCritDmgBonus(glovesItem) + gemBonus.critDmg, CombatConfig.critDmgBonusCap)
 
+	-- C5-1 딜 부위 itemLevel(지수 몫 - PlayerCombat.getAttack 7번째 인자 · 뒤처짐 신호 = 최고값)
+	local dealItemLevels = { gloves = glovesItem and glovesItem.itemLevel or 0, shoes = shoesItem and shoesItem.itemLevel or 0 }
 	return {
 		classId = classId,
 		level = level,
 		class = class,
-		atk = PlayerCombat.getAttack(weapon, classId, level, attackPercentBonus, nil, permanentMultiplier),
+		dealItemLevels = dealItemLevels,
+		dealItemLevelBest = math.max(dealItemLevels.gloves, dealItemLevels.shoes),
+		atk = PlayerCombat.getAttack(weapon, classId, level, attackPercentBonus, nil, permanentMultiplier, dealItemLevels),
 		defense = PlayerCombat.getDefense(classId, armorBonus, gemBonus.defensePercent),
 		maxHp = (CombatConfig.playerMaxHp + maxHpBonus) * (1 + gemBonus.maxHpPercent) * (permanentHpMultiplier or 1),
 		speedPercentBonus = speedPercentBonus,
@@ -192,7 +196,7 @@ end
 -- 기본값 tier1 - CombatConfig.damageReductionAlpha 앵커가 쓰는 것과 같은 관례.
 function BalanceSim.getMonsterAttack(stage, tierKey)
 	local tierData = MonsterData[tierKey or "tier1"]
-	return InfiniteStage.getMonsterAttack(tierData.attack, stage)
+	return InfiniteStage.getTrashAttack(tierData.attack, stage) -- C5-3 잡몹 공격 구간 배율(생존 앵커 1,000 · 5,000 · 20,000은 표 밖 = 1)
 end
 
 -- tier 몬스터 1마리의 스테이지 적용 최대 HP(MonsterState.applyDamage가 "attackerStage 기준

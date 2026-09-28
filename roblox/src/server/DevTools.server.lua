@@ -241,14 +241,16 @@ local function applyFillBag(player, want)
 end
 
 -- 갑옷·장갑·신발 3부위 전부 같은 등급·itemLevel로 즉시 장착시킨다.
-local function applyGear(player, grade, itemLevel)
+local function applyGear(player, grade, itemLevel, onlyPart)
 	if not isValidGrade(grade) then
 		reply(player, ("알 수 없는 등급: %s (사용 가능: %s)"):format(tostring(grade), table.concat(ArmorData.gradeOrder, "/")))
 		return false
 	end
 	local classId = PlayerProfile.getClassId(player)
 	for _, part in ipairs({ "armor", "gloves", "shoes" }) do
-		PlayerProfile.setEquippedDirect(player, part, buildGearItem(part, grade, itemLevel, nil, classId))
+		if not onlyPart or onlyPart == part then -- C5-1: 부위 하나만(뒤처짐 신호 Play - /gg gear <grade> <itemLevel> [part])
+			PlayerProfile.setEquippedDirect(player, part, buildGearItem(part, grade, itemLevel, nil, classId))
+		end
 	end
 	return true
 end
@@ -1043,7 +1045,7 @@ local HELP_TEXT = table.concat({
 	"/gg econ [all|casual|normal|top] [what-if] - P0 경제 시뮬(EconSimConfig). 표는 출력 창 [ECONMD] → docs/econ/_extract.py, 채팅엔 요약만",
 	"/gg anchor [classId] - 앵커 조건 적용(레벨100+일반itemLevel100 3부위+강화0+스테이지100)",
 	"/gg level <n> - 캐릭터 레벨 직접 지정",
-	"/gg gear <grade> <itemLevel> - 갑옷/장갑/신발 3부위 동일 조건으로 장착",
+	"/gg gear <grade> <itemLevel> [armor|gloves|shoes] - 갑옷/장갑/신발 3부위(또는 한 부위) 동일 조건으로 장착",
 	"/gg additem <part> <grade> <itemLevel> - 잠기지 않은 아이템 1개를 인벤토리에 직접 추가(분해·판매 UI 클릭 검증용, part=armor/gloves/shoes)",
 	"/gg fillbag [n] - 등급 · 부위가 섞인 잠기지 않은 장비를 가방에 n개 지급(기본 = 가방이 가득 찰 만큼 · 가득 참 시험용 · /gg reset으로 복원)",
 	"/gg enhance <n> - 무기 강화 단계 지정(0~" .. EnhanceConfig.maxLevel .. ")",
@@ -1214,7 +1216,7 @@ local function handleCommand(player, args)
 		reply(player, "레벨 " .. args[2] .. " 적용")
 	elseif sub == "gear" and args[2] and tonumber(args[3]) then
 		ensureBackup(player)
-		if applyGear(player, args[2], math.floor(tonumber(args[3]))) then
+		if applyGear(player, args[2], math.floor(tonumber(args[3])), args[4]) then
 			reply(player, ("장비 3부위를 %s등급 itemLevel%s로 적용"):format(args[2], args[3]))
 		end
 	elseif sub == "additem" and args[2] and args[3] and tonumber(args[4]) then
@@ -1371,7 +1373,7 @@ local function handleCommand(player, args)
 			local rate = PlayerProfile.getCritBonus(player)
 			local over = PlayerProfile.getOverCritAttackPercent(player)
 			local atkPct = PlayerProfile.getAttackPercentBonus(player)
-			local atk = PlayerCombat.getAttack(PlayerProfile.getWeapon(player), classId, level, atkPct, PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player))
+			local atk = PlayerCombat.getAttack(PlayerProfile.getWeapon(player), classId, level, atkPct, PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player), PlayerProfile.getDealItemLevels(player))
 			table.insert(rows, ("%s: 치명 %.1f%% · 초과→위력 +%.1f%% · 위력 합 %.3f · 공격력 %.4g · 전투력 %.4g"):format(total and ("강제 %.0f%%"):format(total * 100) or "지금", (class.critRate + rate) * 100, over * 100, atkPct, atk, PlayerProfile.getCombatPower(player)))
 		end
 		PlayerProfile.debugOptionCritRate[player] = nil
@@ -4216,6 +4218,15 @@ if RunService:IsStudio() and verifyEnabled("C2(가)") then -- C2: 전투 공식 
 		local ok, err = pcall(require(script.Parent.C2Verify).runPure)
 		if not ok then
 			print("===C2 검증 끝(가)=== 에러: " .. tostring(err))
+		end
+	end)
+end
+
+if RunService:IsStudio() and verifyEnabled("C5(가)") then -- C5: 딜 부위 지수 몫 · 뒤처짐 신호 · 스테이지 15 타수 신호 · 처치 앵커
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.C5Verify).runPure)
+		if not ok then
+			print("===C5 검증 끝(가)=== 에러: " .. tostring(err))
 		end
 	end)
 end

@@ -97,14 +97,16 @@ function P25aVerify.runPure()
 		local cells, ok = {}, true
 		for _, stage in ipairs({ 1000, 5000, 20000 }) do
 			local loadout = BalanceSim.buildAnchorLoadout(classId, stage, 0)
-			local hits = BalanceSim.getSurviveHits(loadout, BalanceSim.getMonsterAttack(stage))
+			local hits = BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, stage)) -- C5-3: 앵커 = 잡몹 공격 구간 배율 전 원 값
 			table.insert(cells, ("%d → %.4f"):format(stage, hits))
 			ok = ok and math.abs(hits - BalanceAnchorConfig.surviveTargetHits) <= 0.02
 		end
 		r.check(("C1.4 생존 앵커(α %.6f · 최대체력 기준 %.4f): %s(기대 7.0 ± 0.02)"):format(CombatConfig.damageReductionAlpha, CombatConfig.maxHpBonusBase, table.concat(cells, " · ")), ok)
-		local offset = BalanceSim.solveKillOffset()
-		r.check(("C1.5 처치 앵커 오프셋 %.3f(반올림 = CharacterLevelConfig.levelStageOffset %d)"):format(offset, CharacterLevelConfig.levelStageOffset),
-			math.floor(offset + 0.5) == CharacterLevelConfig.levelStageOffset)
+		-- C5-1(기대값 갱신): C3 템포 뒤 처치 시간이 타수 계단이라 이분법 오프셋(solveKillOffset)이 계단 끝에 앉는다(186 · 144) → 오프셋 167 자리의 처치 시간이 목표(BalanceAnchorConfig.killTargetSeconds ± 0.1)인지로 본다.
+		local anchorLevel = BalanceAnchorConfig.referenceLevel
+		local point = BalanceSim.measurePoint(BalanceSim.buildAnchorLoadout(classId, anchorLevel, 0), anchorLevel + CharacterLevelConfig.levelStageOffset)
+		r.check(("C1.5 처치 앵커: 레벨 %d · 스테이지 %d 처치 %.3f초(기대 %.2f ± 0.1 · 이분법 오프셋 %.1f 참고)"):format(anchorLevel, anchorLevel + CharacterLevelConfig.levelStageOffset, point.killRotationSeconds, BalanceAnchorConfig.killTargetSeconds, BalanceSim.solveKillOffset()),
+			math.abs(point.killRotationSeconds - BalanceAnchorConfig.killTargetSeconds) <= 0.1)
 	end)
 
 	r.section("[C2 · C3] 무기 성장 · 경험치 · 환생", function()

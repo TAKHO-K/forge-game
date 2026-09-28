@@ -153,17 +153,24 @@ function P25cVerify.runPure()
 		for count = 0, 6 do
 			mults[count + 1] = CharacterLevel.getRebirthExpMultiplier(count)
 		end
-		r.check(("C1 환생 필요 레벨 %s(기대 25 · 50 · 75 · 100 · 125) · 경험치 배율 환생 0 ~ 6회 %s(기대 1 ~ 6 · 표 밖 = 마지막 6)"):format(table.concat(levels, " · "), table.concat(mults, " · ")),
-			table.concat(levels, ",") == "25,50,75,100,125" and table.concat(mults, ",") == "1,2,3,4,5,6,6" and CharacterLevel.getRebirthRequiredLevel(5) == nil)
+		-- C5-2(기대값 갱신): 회차 배율 1 ~ 6 → 전부 1(되찾기 reclaimDivisors 4 · 8 · 16 · 32 · 64가 대체).
+		local reclaim = {}
+		for count = 1, 5 do
+			reclaim[count] = CharacterLevel.getReclaimMultiplier(count, 1, 125)
+		end
+		r.check(("C1 환생 필요 레벨 %s(기대 25 · 50 · 75 · 100 · 125) · 경험치 배율 환생 0 ~ 6회 %s(기대 전부 1 - C5-2) · 되찾기 배수 %s(기대 4 · 8 · 16 · 32 · 64) · 기준 넘으면 1: %g"):format(
+			table.concat(levels, " · "), table.concat(mults, " · "), table.concat(reclaim, " · "), CharacterLevel.getReclaimMultiplier(5, 125, 125)),
+			table.concat(levels, ",") == "25,50,75,100,125" and table.concat(mults, ",") == "1,1,1,1,1,1,1" and CharacterLevel.getRebirthRequiredLevel(5) == nil
+				and table.concat(reclaim, ",") == "4,8,16,32,64" and CharacterLevel.getReclaimMultiplier(5, 125, 125) == 1 and CharacterLevel.getReclaimMultiplier(0, 1, 125) == 1)
 		local anchors = CharacterLevelConfig.killTargetAnchors
-		r.check(("C2 목표 마릿수: 마지막 앵커 레벨 %d(기대 125 - Option 동결 레벨) · K(125) %g · K(126) %g(기대 150 = 25 × 5회 뒤 배율 %g) · K(20000) %g · 앵커 사이 증가 %s"):format(
-			anchors[#anchors].level, CharacterLevel.getTargetKills(125), CharacterLevel.getTargetKills(126), CharacterLevel.getRebirthExpMultiplier(5), CharacterLevel.getTargetKills(20000),
+		r.check(("C2 목표 마릿수: 마지막 앵커 레벨 %d(기대 125 - Option 동결 레벨) · K(125) %g · K(126) %g(기대 killTargetLate 첫 값 %g - C5-2) · K(20000) %g · 앵커 사이 증가 %s"):format(
+			anchors[#anchors].level, CharacterLevel.getTargetKills(125), CharacterLevel.getTargetKills(126), CharacterLevelConfig.killTargetLate[1][2], CharacterLevel.getTargetKills(20000),
 			tostring(CharacterLevel.getTargetKills(100) > CharacterLevel.getTargetKills(75) and CharacterLevel.getTargetKills(75) > CharacterLevel.getTargetKills(50))),
-			anchors[#anchors].level == 125 and CharacterLevel.getTargetKills(126) == 25 * CharacterLevel.getRebirthExpMultiplier(5) and CharacterLevel.getTargetKills(20000) == CharacterLevel.getTargetKills(126)
-				and CharacterLevel.getTargetKills(100) > CharacterLevel.getTargetKills(75))
+			anchors[#anchors].level == 125 and CharacterLevel.getTargetKills(126) == CharacterLevelConfig.killTargetLate[1][2] and CharacterLevel.getTargetKills(20000) == CharacterLevelConfig.killTargetLate[#CharacterLevelConfig.killTargetLate][2]
+				and CharacterLevel.getTargetKills(100) > CharacterLevel.getTargetKills(75)) -- C5-2: 126+ = killTargetLate 곡선(첫 값 · 끝값)
 		-- 5회 뒤 "레벨이 스테이지를 따라가는 간격"이 옛 곡선(25마리 · 배율 1)과 같다: K ÷ 배율 = 25.
-		r.check(("C3 5회 뒤 K ÷ 배율 = %g(기대 25 - 옛 곡선과 같은 간격)"):format(CharacterLevel.getTargetKills(500) / CharacterLevel.getRebirthExpMultiplier(5)),
-			CharacterLevel.getTargetKills(500) / CharacterLevel.getRebirthExpMultiplier(5) == 25)
+		r.check(("C3 5회 뒤 K(500) = %g(기대 killTargetLate 첫 값 %g - C5-2) · K(17000) %g ≤ K(5000) %g(뒤로 갈수록 낮다)"):format(CharacterLevel.getTargetKills(500), CharacterLevelConfig.killTargetLate[1][2], CharacterLevel.getTargetKills(17000), CharacterLevel.getTargetKills(5000)),
+			CharacterLevel.getTargetKills(500) == CharacterLevelConfig.killTargetLate[1][2] and CharacterLevel.getTargetKills(17000) <= CharacterLevel.getTargetKills(5000))
 	end)
 
 	r.section("[D] 강화 비용(구매력)", function()

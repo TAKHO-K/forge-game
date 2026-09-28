@@ -293,6 +293,7 @@ EconSim.tierData = tierData
 local function effectiveMonsterHp(loadout, baseHp, stage)
 	local hp = InfiniteStage.getTrashHp(baseHp, stage) -- C4-1 잡몹 구간 배율
 	return hp / CharacterLevel.levelGapDealMultiplier(loadout.level, stage) / CombatFormula.dealMultiplier(CombatFormula.offensePower(loadout), stage, baseHp)
+		/ CombatFormula.gearLagMultiplier(loadout.dealItemLevelBest, stage) -- C5-1 뒤처짐 신호(게임 MonsterState.applyDamage와 같은 함수)
 end
 EconSim.effectiveMonsterHp = effectiveMonsterHp
 
@@ -318,8 +319,8 @@ function EconSim.highestStageBySurvive(loadout, tierIndex, minHits, maxStage)
 	local attackBase = tierData(tierIndex).attack
 	local newbie = PlayerCombat.getNewbieDamageMultiplier(maxStage + 1) -- P2.5c 신규 보호: 게임과 같이 최고 스테이지(= reach = maxStage + 1) 기준
 	local function ok(stage)
-		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(attackBase, stage), newbie * CharacterLevel.levelGapTakeMultiplier(loadout.level, stage)
-			* CombatFormula.takeMultiplier(loadout.defense, stage, InfiniteStage.getMonsterAttack(attackBase, stage))) >= minHits -- G1-3: 받는 피해 계수 · C2 받는 피해 배율
+		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getTrashAttack(attackBase, stage), newbie * CharacterLevel.levelGapTakeMultiplier(loadout.level, stage)
+			* CombatFormula.takeMultiplier(loadout.defense, stage, InfiniteStage.getTrashAttack(attackBase, stage))) >= minHits -- C5-3 잡몹 공격 구간 배율(게임 MonsterState.getMonsterAttack과 같다) -- G1-3: 받는 피해 계수 · C2 받는 피해 배율
 	end
 	if not ok(1) then
 		return 1
@@ -431,10 +432,15 @@ local function primordialRateAt(state, tierIndex, stage)
 end
 EconSim.primordialRateAt = primordialRateAt
 
+-- C5-1: 딜 부위 점수 = (1 + 기본 %) × itemLevel 지수 배율(CharacterLevel.getDealGearPartMultiplier - 옛 점수는 25 동결 %뿐이라 같은 등급이면 교체가 없었다). 신발 % = 공속 상한 안.
 local PART_SCORE = {
 	armor = Loot.getArmorDefense,
-	gloves = Loot.getGlovesAttackPercent,
-	shoes = Loot.getShoesSpeedPercent,
+	gloves = function(item)
+		return (1 + Loot.getGlovesAttackPercent(item)) * CharacterLevel.getDealGearPartMultiplier(item and item.itemLevel or 0)
+	end,
+	shoes = function(item)
+		return PlayerCombat.getSpeedMultiplier(Loot.getShoesSpeedPercent(item)) * CharacterLevel.getDealGearPartMultiplier(item and item.itemLevel or 0)
+	end,
 }
 
 local function newState(profile)
@@ -479,6 +485,8 @@ local function newState(profile)
 		sparkleGot = {}, -- D1-2: 반짝이 장비 누적 기대 개수(공급 표 - 등급마다)
 		sparkles = 0,
 		bossDeltaTurn = 0,
+		reclaimLevel = 0, -- C5-2 되찾기 기준(게임 classState.reclaimLevel)
+		reclaimKills = 0, -- C5-2: 환생 뒤 되찾기까지 처치 수(보고)
 	}
 end
 
@@ -574,6 +582,8 @@ end
 local function doRebirth(state, profile, whatIf)
 	local levelAtRebirth = state.level
 	state.rebirth += 1
+	state.reclaimLevel = math.max(state.reclaimLevel or 0, levelAtRebirth) -- C5-2 되찾기 기준(게임 PlayerProfile.rebirth와 같다)
+	state.reclaimKills = 0
 	state.level = 1
 	state.exp = 0
 	state.weaponGrade = state.rebirth
@@ -802,7 +812,7 @@ local function fightBosses(state, profile, loadout, run)
 		state.bossSeconds += spent
 		state.gold += data.goldDrop
 		state.bossGold += data.goldDrop
-		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(state.rebirth) * CharacterLevel.getExpScale(state.level) -- P2.5c: 환생 경험치 배율(캐릭터 경험치에만 - 게임 PlayerProfile.addCharacterExp와 같다) · P3c C4 126 뒤 배수
+		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(state.rebirth) * (CharacterLevelConfig.rebirth.reclaimBossExp and CharacterLevel.getReclaimMultiplier(state.rebirth, state.level, state.reclaimLevel) or 1) * CharacterLevel.getExpScale(state.level) -- C5-2 되찾기(보스는 데이터 스위치) · P2.5c: 환생 경험치 배율(캐릭터 경험치에만 - 게임 PlayerProfile.addCharacterExp와 같다) · P3c C4 126 뒤 배수
 		state.exp += data.expReward * run.expMult * rebirthMult
 		state.bossExp += data.expReward * run.expMult * rebirthMult
 		local drop, reset = Enhance.getBossGrant(bossStage)
@@ -933,7 +943,8 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		local early = profile.earlyTargetKillSeconds and state.rebirth < GemData.maxRebirthCount and state.reach > 10
 		hunt = chooseHunt(loadout, profile, math.max(1, state.reach - 1), state.gearMode and { armor = state.gear.armor }, early and profile.earlyTargetKillSeconds or nil) -- 보스 스테이지(state.reach)는 아레나라 잡몹이 없다
 		tier = tierData(hunt.tier)
-		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * expGapMultiplier(state.level, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth) * CharacterLevel.getExpScale(state.level) -- P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
+		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * expGapMultiplier(state.level, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth)
+			* CharacterLevel.getReclaimMultiplier(state.rebirth, state.level, state.reclaimLevel) * CharacterLevel.getExpScale(state.level) -- C5-2 되찾기 · P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
 		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * sparkleGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때)
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)
@@ -1007,6 +1018,11 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	tryEnhanceWithGold(state, profile, rng)
 	local levelBefore = state.level
 	state.level += 1
+	state.reclaimKills += kills
+	-- C5-2 되찾기 기록: 환생 r 뒤 이전 최고 레벨에 처음 닿은 시각 · 처치 수(run.reclaimDone[r])
+	if state.rebirth > 0 and state.level >= state.reclaimLevel and not run.reclaimDone[state.rebirth] then
+		run.reclaimDone[state.rebirth] = { seconds = state.seconds - (run.rebirthAt[state.rebirth] or 0), kills = state.reclaimKills, level = state.reclaimLevel }
+	end
 	-- P2.5b D · P2.5c B2: 게임과 같은 규칙(Milestone.plan)으로 능력치 마일스톤을 받는다(환생 5회 뒤 사다리 - 해금은 전투에 무관해 안 센다).
 	local plan = Milestone.plan(state.rebirth, state.level, state.milestoneLevel, 0)
 	if plan and plan.statGained > 0 then
@@ -1122,7 +1138,7 @@ function EconSim.runProgress(profileId, whatIf)
 	local cap = InfiniteStageConfig.safeStageCap
 	local milestones = table.clone(EconSimConfig.milestones)
 	table.insert(milestones, InfiniteStageConfig.designMaxStage) -- P2.5a R2: 설계 최대 스테이지(안전 상한은 진행 끝 조건으로만 쓴다)
-	local run = { profileId = profileId, milestones = milestones, reached = {}, rebirthAt = {}, chunks = {}, cap = cap, stall = nil }
+	local run = { profileId = profileId, milestones = milestones, reached = {}, rebirthAt = {}, reclaimDone = {}, chunks = {}, cap = cap, stall = nil } -- C5-2 reclaimDone[r] = { seconds, kills, level }
 	run.expMult = EconSim.withOverrides(whatIf, expMultiplier, profile) -- what-if(p2before의 옛 파티 규칙)를 따른다
 	local state = newState(profile)
 	-- W3b 파트 0 옵션 굴림 단계: 장비 옵션 roll(위력 환산) = 축(무작위 = DPS 축 기대 몫 · "attack" = 원하는 축) × 굴림 배율. what-if itemOptions = false = 옛 모형(장비 옵션 안 셈).

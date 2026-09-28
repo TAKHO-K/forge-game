@@ -8,7 +8,8 @@
 -- 원본 상수를 바꿀 때 같이 다시 돌려야 한다").
 return {
 	surviveTargetHits = 7, -- CombatConfig.damageReductionAlpha 앵커(17-1)와 같은 값.
-	killTargetSeconds = 2.5, -- 21-1 지시 - 로테이션(Q+E) 기준 tier1 1마리 처치 시간.
+	-- C5-1(기대값 갱신 - 결정 2): 2.5 → 1.72. C3 템포 · C4 치명 곡선 뒤 앵커 장비(레벨 100 · 1,000 둘 다)의 실측 1.7211초. 앵커 장비는 itemLevel = 레벨이라 C5-1 딜 부위 지수 몫에 불변.
+	killTargetSeconds = 1.72, -- 로테이션(Q+E) 기준 tier1 1마리 처치 시간(구간 배율 전 원 HP).
 
 	-- 처치 시간 목표를 어느 직업으로 재는가 - α 앵커가 bow였으므로 같은 직업으로 통일한다.
 	referenceClassId = "bow",

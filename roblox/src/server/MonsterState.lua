@@ -327,6 +327,9 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 		if CombatFormula.enabled() and not (entry.data.isBoss and CombatFormula.bossExempt()) then -- 보스전 제외(CombatFormulaData.bossExempt)
 			damage *= CombatFormula.dealMultiplier(attackerPlayer:GetAttribute("CombatPower"), gapStage, not entry.data.isBoss and entry.data.hp or nil)
 		end
+		if not entry.data.isBoss then -- C5-1 장비 뒤처짐 신호(잡몹만 - Player Attribute DealItemLevel = CombatPowerSync)
+			damage *= CombatFormula.gearLagMultiplier(attackerPlayer:GetAttribute("DealItemLevel"), gapStage)
+		end
 	end
 
 	if entry.data.isBoss then
@@ -568,7 +571,7 @@ function MonsterState.getAttackFor(model, targetStage)
 	if entry.data.isBoss then
 		return entry.data.attack
 	end
-	return InfiniteStage.getMonsterAttack(entry.data.attack, targetStage)
+	return InfiniteStage.getTrashAttack(entry.data.attack, targetStage) -- C5-3 잡몹 공격 구간 배율
 end
 
 function MonsterState.getGoldDropFor(model, stage)

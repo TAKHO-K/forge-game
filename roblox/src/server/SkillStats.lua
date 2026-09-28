@@ -29,7 +29,7 @@ function SkillStats.attack(player, classId, weapon)
 		return 0
 	end
 	return PlayerCombat.getAttack(weapon, classId, PlayerProfile.getCharacterLevel(player), PlayerProfile.getAttackPercentBonus(player),
-		PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player)) -- P2.5a R5: 최종 데미지 버킷 · P2.5b D: 마일스톤 영구 배율
+		PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player), PlayerProfile.getDealItemLevels(player)) -- C5-1 딜 부위 itemLevel 지수 · P2.5a R5: 최종 데미지 버킷 · P2.5b D: 마일스톤 영구 배율
 end
 
 -- 타격 1회의 공격력 대비 계수(옵션 반영 · 채널형은 틱 수로 나눈 값). 계수가 없는 스킬(버프 · 소환 · 치유)은 nil.

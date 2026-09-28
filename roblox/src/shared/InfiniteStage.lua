@@ -65,6 +65,11 @@ function InfiniteStage.getMonsterAttack(baseAttack, stage)
 	return baseAttack * InfiniteStage.getMultiplier(stage)
 end
 
+-- C5-3 잡몹 공격 = 몬스터 공격 × 구간 배율(InfiniteStageConfig.trashAttackBand). 보스(BossRules)는 getMonsterAttack 그대로(attackEase 별도).
+function InfiniteStage.getTrashAttack(baseAttack, stage)
+	return InfiniteStage.getMonsterAttack(baseAttack, stage) * InfiniteStage.interpBand(InfiniteStageConfig.trashAttackBand, stage)
+end
+
 -- P2.5a C8: 골드 전용 배수 = goldGrowthRate^(stage − 1)(k가 아니다 - InfiniteStageConfig.goldGrowthRate 주석). 몬스터 골드와 GoldCost(비용)가 이 한 함수를 쓴다.
 function InfiniteStage.getGoldMultiplier(stage)
 	return InfiniteStageConfig.goldGrowthRate ^ (stage - 1)

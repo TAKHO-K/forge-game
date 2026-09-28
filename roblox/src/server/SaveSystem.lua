@@ -91,6 +91,8 @@ local function defaultClassState()
 		-- 환생 후 레벨 마일스톤(P2.5c B2, v33 - v32의 회차별 표 milestones를 대신한다) - 이 직업이 받은 마지막 능력치 마일스톤 레벨(0 = 없음 · 200 · 250 …).
 		-- 직업별(레벨 · 환생이 직업별이다). 버킷 값은 이 레벨에서 계산한다. 규칙 = shared/Milestone.lua.
 		milestoneLevel = 0,
+		-- C5-2(v46) 되찾기 기준: 환생 순간 레벨의 회차 누적 최대(0 = 환생 전). 이 레벨 미만에서는 캐릭터 경험치 × reclaimDivisors[환생 횟수](CharacterLevel.getReclaimMultiplier).
+		reclaimLevel = 0,
 
 		-- ⚠ 29-5부터 **아무도 읽지 않는다**: 보스의 정체는 스테이지 번호만의 함수가 됐다(BossRules.bossIdForStage, PRD 20.80 [A]).
 		-- 필드는 지우지 않는다 - 옛 세이브가 검증(아래 type 검사)·이관을 그대로 통과하고, 되돌릴 일이 생겨도 데이터가 남아 있다.
@@ -1049,6 +1051,18 @@ local function migrate(data)
 		data.version = 45
 	end
 
+	if data.version < 46 then
+		-- C5-2 되찾기 기준 레벨: 옛 세이브는 환생 순간 레벨 기록이 없다 → 그 회차의 필요 레벨(25 × 환생 횟수 - CharacterLevel.getRebirthRequiredLevel(횟수 − 1))로 본다(보수적 - 실제는 그 이상).
+		local CharacterLevelForReclaim = require(game:GetService("ReplicatedStorage").Shared.CharacterLevel)
+		for _, classState in pairs(data.classes or {}) do
+			if type(classState) == "table" and type(classState.reclaimLevel) ~= "number" then
+				local count = type(classState.rebirthCount) == "number" and classState.rebirthCount or 0
+				classState.reclaimLevel = count > 0 and (CharacterLevelForReclaim.getRebirthRequiredLevel(count - 1) or 0) or 0
+			end
+		end
+		data.version = 46
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data
@@ -1156,6 +1170,7 @@ local function isValidProfile(data)
 			or type(classState.gemInventory) ~= "table"
 			or type(classState.bossRotation) ~= "table"
 			or type(classState.milestoneLevel) ~= "number" or classState.milestoneLevel % 1 ~= 0 or classState.milestoneLevel < 0 -- 마일스톤 기록(v33): 0 이상 정수
+			or type(classState.reclaimLevel) ~= "number" or classState.reclaimLevel < 0 -- C5-2 되찾기 기준(v46): 0 이상
 		then
 			return false
 		end

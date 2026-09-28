@@ -86,7 +86,7 @@ end
 
 -- 권장 방어(스테이지 · 때린 몹의 공격 - 없으면 기준 구역 몹): α × 몹 공격 × 대표 방어 비율.
 function CombatFormula.recommendedDefense(stage, attack)
-	local a = attack or InfiniteStage.getMonsterAttack(MonsterData[MonsterData.tierOrder[CombatFormulaData.representative.referenceTier]].attack, stage)
+	local a = attack or InfiniteStage.getTrashAttack(MonsterData[MonsterData.tierOrder[CombatFormulaData.representative.referenceTier]].attack, stage) -- C5-3 잡몹 공격 구간 배율
 	return math.max(CombatConfig.damageReductionAlpha * a * interpLog(CombatFormulaData.representative.defenseRatio, stage) * CombatFormulaData.representative.defenseScale, 1e-9)
 end
 
@@ -139,6 +139,20 @@ function CombatFormula.takeMultiplier(defense, stage, attack)
 		return 1
 	end
 	return Sanitize.number(CombatFormula.takeMultiplierForRatio(defense / CombatFormula.recommendedDefense(stage, attack)), 1)
+end
+
+-- C5-1 장비 뒤처짐 신호(CombatFormulaData.gearLag): bestDealItemLevel = 가장 좋은 딜 부위 itemLevel(nil = 모름 → 1 · 0 = 미착용 → 벌점) · stage = 몹 기준 스테이지. 잡몹 전용(호출부가 보스를 거른다).
+function CombatFormula.gearLagMultiplier(bestDealItemLevel, stage)
+	local rule = CombatFormulaData.gearLag
+	if not rule or not rule.enabled or not CombatFormula.enabled() or type(bestDealItemLevel) ~= "number" or type(stage) ~= "number" or stage <= rule.fromStage then
+		return 1
+	end
+	local n = interpLog(rule.lagStages, stage)
+	local lag = stage - bestDealItemLevel
+	if lag + 1e-9 < n then -- 로그 보간 부동소수(10.000000000000002)로 N 정확히 부족한 경우가 빠지지 않게
+		return 1
+	end
+	return Sanitize.number(math.max(1 / (1 + lag / n), rule.floor or 0), 1)
 end
 
 -- 보스전 제외인가(CombatFormulaData.bossExempt).

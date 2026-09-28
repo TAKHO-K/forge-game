@@ -40,7 +40,7 @@ return {
 		{ fromLevel = 6000, kShare = 0.9795 },
 		{ fromLevel = 8000, kShare = 0.9875 },
 		{ fromLevel = 10000, kShare = 0.9996 },
-		{ fromLevel = 17000, kShare = 0.9941 }, -- W3b 파트 0(사용자 확정 상위 1% 25,300 = 2,500h): 0.9975 → 0.9941(후반 벽 CombatFormulaData.lateWall과 함께 - 벽만으로는 2,207 ~ 2,244h · docs/phase/W3b-part0.md)
+		{ fromLevel = 17000, kShare = 0.990 }, -- C5-2(상위 1% 25,300 = 2,500h ± 10% - 되찾기 · 125 이후 K 곡선(천장 K 8)으로 레벨이 빨라져 0.9941 → 0.990 · EconSim 격자 0.9941 1,640h · 0.9925 1,886h · 0.991 2,231h) · W3b 파트 0(사용자 확정 상위 1% 25,300 = 2,500h): 0.9975 → 0.9941(후반 벽 CombatFormulaData.lateWall과 함께 - 벽만으로는 2,207 ~ 2,244h · docs/phase/W3b-part0.md)
 	},
 
 	-- P2.5a C10 · E: 레벨 → 스테이지 척도. 앵커 장비(일반 3부위 itemLevel = 레벨, 무기 등급 0 · +0)로 tier1을 2.5초에 잡는 스테이지 = 레벨 + 이 값
@@ -48,6 +48,11 @@ return {
 	-- 몬스터 HP(k^(S−1))의 접합 배율이 달라 앵커 장비만으로 167스테이지 위를 잡는다. 이 척도를 두 곳이 같이 쓴다: 환생 지급 보석 itemLevel(PlayerProfile.rebirth -
 	-- 결정 9 "환생 당시 캐릭터 레벨") · 경험치 기준 스테이지(CharacterLevel.getMonsterExpAtLevel - 레벨 L → L+1 필요 경험치 = K(L) × 스테이지 L + 이 값의 tier1 경험치).
 	levelStageOffset = 167,
+	-- C5-1 공격력 지수 몫(docs/design/growth-curve-v2.md §3): 레벨 26+ 성장 부분(g^main × k^Σ몫)의 지수 몫 share를 딜 부위(parts - 장갑 · 신발) itemLevel 지수로 옮긴다.
+	--   공격력 = … × 성장부(레벨)^(1 − share) × Π 성장부(부위 itemLevel)^(share ÷ 부위 수) - 앵커 장비(itemLevel = 레벨)에서는 옛 값과 같다(P25a 처치 앵커 불변 · 오프셋 167 그대로).
+	--   뜻: 같은 레벨에서 딜 부위 itemLevel이 스테이지를 따라오지 않으면 그만큼 약하다(장비 사이클 = 드랍 itemLevel ± 2 규칙). 옛 코드는 장갑 · 신발 itemLevel이 25에서 동결이라 등급이 같으면 교체가 없었다.
+	--   share 0.35 = EconSim 격자(docs/phase/C5-report.md) - 환생 5 뒤 지수 몫 레벨 약 60% · 장비 약 35%. 0 = 옛 동작.
+	dealGear = { share = 0.35, parts = { "gloves", "shoes" } },
 
 	-- 몬스터 처치 경험치 계수(17-1). MonsterData.lua가 각 tier의 expReward를
 	-- `hp × monsterExpCoefficient`로 계산하는 데 쓴다 - "몬스터 경험치는 그 몬스터의 최대
@@ -83,8 +88,8 @@ return {
 	-- C3 0-3(사용자 결정 - 원래 목표 "하루 4h × 3일"): 일반 환생 5회 = 약 12h로 복원(C2 실측 5.1h). 50 · 75 · 100 = ×4 · 125 = ×8.5(옛 60 · 350 · 2,500 · 20,000 - C3 템포 · 전투 공식 재맞춤 뒤 값).
 	--   EconSim 격자 = docs/phase/C3-report.md(스테이지 · 드랍 · 전투 공식 불변 - 이 표와 뒤 배수만).
 	killTargetAnchors = {
-		{ level = 1, kills = 5 },
-		{ level = 25, kills = 15 },
+		{ level = 1, kills = 4 }, -- C5-2 초반 압축(환생 1 일반 35분 목표 - 옛 5 · 15)
+		{ level = 25, kills = 10 },
 		{ level = 50, kills = 240 },
 		{ level = 75, kills = 1400 },
 		{ level = 100, kills = 10000 },
@@ -92,14 +97,18 @@ return {
 	},
 	-- P2.5c 결정 3: 마지막 앵커 뒤(126 ~ - 5회 환생 뒤에만 닿는다)의 목표 마릿수. 환생 구간 곡선(위)과 따로 둔다 - 5회 뒤 레벨이 사냥 스테이지를 따라가는
 	-- 간격이 옛 곡선(25마리 · 배율 1)과 같도록 = 25 × 5회 뒤 경험치 배율(expMultipliers[6]).
-	killTargetAfterAnchors = 25 * 6,
+	-- C5-2: 환생 회차 배율(expMultipliers ×1 ~ 6)이 되찾기(reclaimDivisors)로 대체되어 5회 뒤 배율이 1 → 옛 간격(25마리)을 그대로 두려면 25(옛 25 × 6 ÷ 6).
+	killTargetAfterAnchors = 25,
+	-- C5-2 125 이후 목표 마릿수 곡선(레벨 → K · 선형 보간 · 표 밖 = 끝값 - 위 killTargetAfterAnchors보다 앞선다): 레벨업 간격 ≈ 스테이지 진행 간격(중반 2 ~ 4분 · 후반 8 ~ 15분 · 천장 20 ~ 30분 - EconSim GAP 줄).
+	--   레벨이 스테이지를 앞서는 후반(격차 −160 ~ −190)에서는 마리당 경험치가 필요 경험치보다 k^160 작아 K가 같아도 간격이 길어진다 → 뒤로 갈수록 K를 낮춘다.
+	killTargetLate = { { 126, 120 }, { 2000, 120 }, { 5000, 25 }, { 17000, 8 } }, -- EconSim: 일반 중반 1.0분 → 약 2분 · 천장 43분 → 약 29분(docs/phase/C5-report.md)
 	-- P3c C4(사용자 확정 - 레벨 125 → 126 필요 경험치를 매끄럽게): 126부터는 필요 경험치와 **획득 경험치**를 같은 배수로 키운다(CharacterLevel.getExpScale) -
 	-- 레벨당 처치 수(K = 150 · 사냥 속도)는 그대로이고 경험치 숫자만 이어진다. 배수 = 마지막 앵커 마릿수 ÷ 뒤 마릿수(20,000 ÷ 150 ≈ 133.3) →
 	-- 필요 경험치(126) ÷ (125) = E(126) ÷ E(125)(한 스테이지의 경험치 성장 = 급감 없음). 옛 값(배수 없음)은 이 경계에서 약 130배 급감했다(P2.5c 결정 필요 4).
 	-- 기존 세이브(126 이상)는 v35 이관이 레벨 · 진행률을 그대로 두고 경험치만 옮긴다(SaveSystem.migrate).
 	-- expScaleDecayPerLevel: 배수는 126부터 레벨마다 ×0.99씩 줄어 1에서 멈춘다(약 490레벨 뒤 - 레벨 약 612). 한 스테이지의 경험치 성장(×1.02)이 더 커서 필요 경험치는 여전히
 	-- 매 레벨 오른다(×1.0098). 줄이지 않으면 설계 최대 · 안전 상한(34,230)의 누적 경험치가 133배로 커져 "모든 수치 < 1e300"(S21-0 · P25a 불변식)을 넘었다(P3c Play 1 - 1.32e302).
-	expScaleAfterAnchors = 170000 / (25 * 6), -- C3 0-3: 마지막 앵커 마릿수 ÷ 뒤 마릿수(앵커와 같이 바꾼다 - 125 → 126 경험치 이어짐)
+	expScaleAfterAnchors = 170000 / 120, -- C5-2: 125 → 126 이어짐 = K(125) ÷ K(126)(killTargetLate 첫 값) · C3 0-3: 마지막 앵커 마릿수 ÷ 뒤 마릿수(앵커와 같이 바꾼다 - 125 → 126 경험치 이어짐) · C5-2: 뒤 마릿수 150 → 25
 	expScaleDecayPerLevel = 0.99,
 
 	-- P2 B(초반 가속, 결정 2B): i번째 환생에 필요한 캐릭터 레벨(index = 지금까지의 환생 횟수 + 1). P2 전에는 25 × i 고정식(25 · 50 · 75 · 100 · 125)이
@@ -112,7 +121,9 @@ return {
 	--   무료 폭 = freePowerRatio(몬스터가 이만큼 세질 때까지는 벌점 없음 - COMMON §1 "힘 비율로": 1.02^100 = 스테이지 100칸).
 	--   차이 > 0이면 주는 피해 × max(dealFloor, 1 − dealPerStage × 차이) · 받는 피해 × min(takeCap, 1 + takePerStage × 차이) - 잡몹 · 보스 · 모든 피격 경로(진행을 막는 것은 생존).
 	--   기울기 · 하한 · 상한 = D0 what-if 하네스 W1 그대로(−1% · 하한 0.25 / +2% · 상한 ×3).
-	levelGap = { freePowerRatio = 1.02 ^ 100, dealPerStage = 0.01, dealFloor = 0.25, takePerStage = 0.02, takeCap = 3 },
+	levelGap = { freePowerRatio = 1.02 ^ 100, dealPerStage = 0.01, dealFloor = 0.25, takePerStage = 0.02, takeCap = 3,
+		-- C5-2 무료 폭(docs/design/growth-curve-v2.md §4 - 측정 잣대 · 전투 공식이 켜져 있으면 벌점은 없다): 스테이지 − (레벨 + levelStageOffset) ≤ base + 스테이지 × perStage. EconSim "레벨 − 스테이지 격차" 시계열이 전 구간 이 폭 안인지 본다(CharacterLevel.freeWidth).
+		freeWidth = { base = 100, perStage = 0.05 } },
 
 	rebirth = {
 		-- P2.5a C3: 25 · 50 · 65 · 80 · 90 → 78 · 155 · 202 · 248 · 279(옛 표 × 3.1). 새 곡선(k = 1.02 · 경험치 기준 스테이지 = 레벨 + 167)에서 일반 프로필
@@ -122,6 +133,13 @@ return {
 		-- P2.5c 결정 3: 환생할수록 경험치 획득 배율이 오른다(로블록스 관례 - 환생 직후 레벨이 매우 빨리 오른다). index = 지금까지의 환생 횟수 + 1(환생 0회 = [1]).
 		-- 캐릭터 경험치에만 곱한다(PlayerProfile.addCharacterExp · CharacterLevel.getRebirthExpMultiplier) - 재료 기대 개수(경험치 배수를 쓰는 Loot.expectedMaterialCount)에는
 		-- 안 곱한다(재료 공급이 환생 회차로 바뀌지 않게). 5회 뒤 값은 영구다.
-		expMultipliers = { 1, 2, 3, 4, 5, 6 },
+		-- C5-2: 회차 배율은 되찾기(아래 reclaimDivisors)로 대체 - 전부 1(표는 남긴다 - 옛 검증 · 보고서 형식).
+		expMultipliers = { 1, 1, 1, 1, 1, 1 },
+		-- C5-2 되찾기(docs/design/growth-curve-v2.md §4): 환생 뒤 이전 최고 레벨(classState.reclaimLevel - 환생 순간 레벨의 최대)까지는 필요 경험치 ÷ 이 값(= 획득 × 이 값 - CharacterLevel.getReclaimMultiplier) ·
+		--   index = 환생 횟수(1 ~ 5) · 넘으면 원래 곡선. 경험치 획득은 스테이지 기준 그대로. 환생 5 되찾기(1 → 125) 목표 3 ~ 10분(즉시 완료 금지) · 회차마다 이전보다 빠르게.
+		--   값 = EconSim 실측(일반 - 되찾기 시간이 회차마다 줄게 · 환생 5 = 약 3분): 지시의 4 · 8 · 16 · 32 · 64는 환생 1이 6분 · 환생 5가 보스 1마리로 즉시 끝났다(docs/phase/C5-report.md).
+		reclaimDivisors = { 2, 4, 6, 10, 200 },
+		-- 되찾기 배수를 보스 경험치에도 곱하는가(false = 사냥만 - 보스 한 마리 × 200으로 즉시 완료되는 것을 막는다).
+		reclaimBossExp = false,
 	},
 }

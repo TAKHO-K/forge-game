@@ -356,7 +356,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	-- 즉시 정해져야 클라가 "맞을지 미리 안다"는 위화감 없이 보인다(Projectiles.lua 원본
 	-- 주석과 같은 이유). 실제로 맞는지(도달 시점 재검증)는 아래에서 따로 판단한다.
 	local characterLevel = PlayerProfile.getCharacterLevel(player)
-	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player)) -- P2.5a R5: 최종 데미지 버킷 · P2.5b D: 마일스톤 영구 배율
+	local atk = PlayerCombat.getAttack(weapon, classId, characterLevel, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player), PlayerProfile.getDealItemLevels(player)) -- C5-1 딜 부위 itemLevel 지수 -- P2.5a R5: 최종 데미지 버킷 · P2.5b D: 마일스톤 영구 배율
 	local base = atk * swingScale -- C3-2 한 타 피해 배율(느린 간격 · 넘는 공속 · 강궁 = 한 방이 커진다 - 초당 피해 불변)
 	if isComboHit then
 		base *= CombatConfig.comboHitMultiplier

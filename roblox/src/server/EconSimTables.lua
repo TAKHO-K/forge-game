@@ -239,7 +239,7 @@ function EconSimTables.samples(healer)
 	for _, entry in ipairs({ { 1000, 0.02 }, { 5000, 0.02 }, { 20000, 0.02 } }) do
 		local stage = entry[1]
 		local loadout = BalanceSim.buildAnchorLoadout(classId, stage, 0)
-		local survive = BalanceSim.getSurviveHits(loadout, BalanceSim.getMonsterAttack(stage))
+		local survive = BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(EconSim.tierData(1).attack, stage)) -- C5-3: 앵커 = 잡몹 공격 구간 배율(trashAttackBand) 전 원 값(1,000이 표 안)
 		table.insert(samples, {
 			id = ("생존 앵커 %d"):format(stage), expected = 7, value = survive, ok = survive == survive and survive < math.huge and math.abs(survive - 7) <= entry[2],
 		})

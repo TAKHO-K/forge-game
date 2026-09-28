@@ -152,7 +152,8 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	CombatResolution.goldGained:FireClient(recipient, goldDrop)
 
 	local expReward = MonsterState.getExpRewardFor(target, recipientStage)
-	local oldLevel, newLevel = PlayerProfile.addCharacterExp(recipient, expReward)
+	local targetData = MonsterState.getData(target)
+	local oldLevel, newLevel = PlayerProfile.addCharacterExp(recipient, expReward, { fromBoss = targetData ~= nil and targetData.isBoss == true }) -- C5-2: 보스 경험치는 되찾기 배수 제외
 	if newLevel and newLevel ~= oldLevel then
 		CombatResolution.levelUp:FireClient(recipient, newLevel)
 	end

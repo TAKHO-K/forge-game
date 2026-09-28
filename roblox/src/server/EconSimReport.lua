@@ -890,6 +890,17 @@ local function writeP25cMisc(w, runs, profileIds)
 		num(PlayerCombat.getNewbieDamageMultiplier(15), 3), num(PlayerCombat.getNewbieDamageMultiplier(20), 3), p.untilStage + 1,
 		table.concat(CharacterLevelConfig.rebirth.requiredLevels, " · "), table.concat(CharacterLevelConfig.rebirth.expMultipliers, " · ")))
 	w.line("")
+	-- C5-2 되찾기: 환생 r 뒤 이전 최고 레벨까지 걸린 시간(분) · 처치 수(run.reclaimDone)
+	for _, id in ipairs(profileIds) do
+		local parts = {}
+		for r = 1, 5 do
+			local done = runs[id].reclaimDone and runs[id].reclaimDone[r]
+			table.insert(parts, done and ("%d회 Lv.%d %.1f분 · %d마리"):format(r, done.level, done.seconds / 60, done.kills) or ("%d회 -"):format(r))
+			w.row("c5_reclaim", { id, r, done and done.level or "", done and done.seconds / 60 or "", done and done.kills or "" })
+		end
+		w.line(("되찾기(%s): %s"):format(id, table.concat(parts, " / ")))
+	end
+	w.line("")
 	w.line("| 프로필 | 스테이지 10 · 20(시간) | 환생 1 · 2 · 3 · 4 · 5회차(누적 시간) | 환생 5회까지 레벨업 수 · 평균 간격(분) | 첫 12시간 레벨업 수 · 평균 간격(분) |")
 	w.line("|---|---|---|---|---|")
 	w.row("p25c_rebirth", { "profile", "stage10_h", "stage20_h", "r1", "r2", "r3", "r4", "r5", "levels_to_r5", "avg_min_to_r5", "levels_12h", "avg_min_12h" })

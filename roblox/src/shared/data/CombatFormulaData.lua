@@ -52,6 +52,12 @@ D.lateWall = {
 --   모자라면 (q ÷ 0.7)^−2(하한 곡선 0.25 = 최대 4배).
 D.take = { flatLow = 0.7, flatHigh = 1.3, highExponent = 0.7, highCap = 1, midExponent = 1, kneeLow = 0.7, lowExponent = 2, floor = 0.25 }
 
+-- C5-1 장비 뒤처짐 신호(docs/design/growth-curve-v2.md §3): 가장 좋은 딜 부위(장갑 · 신발) itemLevel이 몹 기준 스테이지보다 N 이상 낮으면 잡몹 피해 × 1 ÷ (1 + 부족분 ÷ N)
+--   (부족분 = N이면 타수 ×2 = "타수 +1" 신호 · 2N이면 ×3). N = 스테이지 → 로그 보간(초반 10 · 중반 50 · 후반 100). fromStage 이하는 적용 안 함(스테이지 1 ~ 10 누구나 한 방 유지).
+--   보스전 미적용(bossExempt와 같은 원칙 - 보스는 실력). 계산 = CombatFormula.gearLagMultiplier(서버 MonsterState.applyDamage · EconSim.effectiveMonsterHp가 같은 함수).
+--   floor = 배율 하한(임의 결정 - 지시에는 없음: 부족분이 N의 3배를 넘으면 더 안 깎인다 = "타수 ×4"까지. 없으면 초반(N 10) 30칸만 뒤처져도 ÷4가 되어 사냥이 막힌다).
+D.gearLag = { enabled = true, fromStage = 10, floor = 0.25, lagStages = { { 10, 10 }, { 1000, 10 }, { 2000, 50 }, { 5000, 100 } } }
+
 -- 보스전 제외(주는 · 받는 피해 배율 모두 1): 보스 난이도는 파훼 · HP 설계(BossRules)가 맡는다. 넣으면 보스 앞 비율이 프로필마다 크게 갈려(상위 ≈ 1.9 · 캐주얼 ≈ 0.33)
 --   상위 1% 25,300이 −4% · 캐주얼 후반이 +7%로 목표를 벗어났다(C2 EconSim 분리 실험 - 보스만 끄면 둘 다 목표 안).
 D.bossExempt = true

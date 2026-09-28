@@ -38,6 +38,19 @@ function CharacterLevel.getTargetKills(level)
 		end
 	end
 	if level > ANCHORS[#ANCHORS].level then
+		local late = CharacterLevelConfig.killTargetLate -- C5-2: 125 이후 곡선(레벨 → K · 선형 보간)
+		if late and #late > 0 then
+			if level <= late[1][1] then
+				return late[1][2]
+			end
+			for i = 2, #late do
+				local a, b = late[i - 1], late[i]
+				if level <= b[1] then
+					return a[2] + (b[2] - a[2]) * (level - a[1]) / (b[1] - a[1])
+				end
+			end
+			return late[#late][2]
+		end
 		return CharacterLevelConfig.killTargetAfterAnchors or ANCHORS[#ANCHORS].kills -- P2.5c: 5회 환생 뒤 곡선
 	end
 	return ANCHORS[#ANCHORS].kills
@@ -136,9 +149,10 @@ end
 -- (P2.5a: g = k = 1.02 · P2.5c: 레벨 구간마다 g = k^kShare - CharacterLevelConfig.weaponGrowthSegments(점진 감속 천장). 아래는 옛 설명)
 -- 26+는 20.10이 정한 지수식(g=1.15, 몬스터 k=1.155보다 살짝 낮게 - 스테이지가 오를수록
 -- 아주 조금씩 어려워지도록 의도된 격차).
-function CharacterLevel.getWeaponExpMultiplier(level)
+-- 26+ 성장 부분(정점 배율 제외 · 25 이하 = 1): g^(주 구간 레벨 수) × k^(Σ 구간 몫 × 레벨 수) - 레벨과 딜 부위 itemLevel(C5-1)이 같은 함수를 쓴다.
+local function growthPart(level)
 	if level <= STAT_LINEAR_MAX_LEVEL then
-		return 1 + CharacterLevelConfig.statBonusPerLevel * (level - 1)
+		return 1
 	end
 	-- P2.5c 결정 1 구간별 g: 첫 구간 전은 weaponMultGrowthRate, 각 구간(fromLevel ~ 다음 fromLevel)은 k^kShare(천장 - 점진 감속).
 	local segments = CharacterLevelConfig.weaponGrowthSegments
@@ -152,7 +166,44 @@ function CharacterLevel.getWeaponExpMultiplier(level)
 		local nextFrom = segments[index + 1] and segments[index + 1].fromLevel or math.huge
 		shareLevels += segment.kShare * (math.min(level, nextFrom) - segment.fromLevel)
 	end
-	return PEAK_MULTIPLIER * (CharacterLevelConfig.weaponMultGrowthRate ^ mainLevels) * (InfiniteStageConfig.growthRate ^ shareLevels)
+	return (CharacterLevelConfig.weaponMultGrowthRate ^ mainLevels) * (InfiniteStageConfig.growthRate ^ shareLevels)
+end
+CharacterLevel.growthPart = growthPart
+
+-- C5-1 딜 부위 지수 몫(CharacterLevelConfig.dealGear.share - 없으면 0 = 옛 동작).
+local function dealShare()
+	local rule = CharacterLevelConfig.dealGear
+	return rule and rule.share or 0
+end
+
+function CharacterLevel.getWeaponExpMultiplier(level)
+	if level <= STAT_LINEAR_MAX_LEVEL then
+		return 1 + CharacterLevelConfig.statBonusPerLevel * (level - 1)
+	end
+	-- C5-1: 성장 부분의 (1 − share)만 레벨이 맡는다(share는 딜 부위 itemLevel - getDealGearMultiplier).
+	return PEAK_MULTIPLIER * growthPart(level) ^ (1 - dealShare())
+end
+
+-- C5-1 딜 부위 하나의 배율 = 성장부(itemLevel)^(share ÷ 부위 수). itemLevel이 없거나(미착용) 25 이하면 1.
+function CharacterLevel.getDealGearPartMultiplier(itemLevel)
+	local rule = CharacterLevelConfig.dealGear
+	if not rule or rule.share <= 0 then
+		return 1
+	end
+	return growthPart(math.max(tonumber(itemLevel) or 0, 0)) ^ (rule.share / #rule.parts)
+end
+
+-- C5-1 딜 부위 전체 배율(PlayerCombat.getAttack이 곱한다). itemLevels = { gloves = itemLevel, shoes = itemLevel }(없는 부위 = 0 = 그 부위 배율 1 → 벌점).
+function CharacterLevel.getDealGearMultiplier(itemLevels)
+	local rule = CharacterLevelConfig.dealGear
+	if not rule or rule.share <= 0 then
+		return 1
+	end
+	local multiplier = 1
+	for _, part in ipairs(rule.parts) do
+		multiplier *= CharacterLevel.getDealGearPartMultiplier(itemLevels and itemLevels[part] or 0)
+	end
+	return multiplier
 end
 
 -- 아이템 레벨계수(Loot.getArmorDefense가 곱한다). 1~25는 무기 배율과 같은 선형식(레벨25
@@ -206,6 +257,25 @@ end
 -- P2 B: 환생 rebirthCount회 상태에서 다음 환생에 필요한 레벨(PlayerProfile.rebirth · 환생 UI · EconSim이 이 함수 하나를 본다). 표 밖(최대 회차)이면 nil.
 function CharacterLevel.getRebirthRequiredLevel(rebirthCount)
 	return CharacterLevelConfig.rebirth.requiredLevels[(rebirthCount or 0) + 1]
+end
+
+-- C5-2 되찾기 배율(CharacterLevelConfig.rebirth.reclaimDivisors): 환생 rebirthCount회 · 지금 레벨 level이 이전 최고 레벨 reclaimLevel 미만이면 그 회차의 배수, 아니면 1.
+--   캐릭터 경험치에만 곱한다(PlayerProfile.addCharacterExp · EconSim - 재료 · 골드에는 안 곱한다).
+function CharacterLevel.getReclaimMultiplier(rebirthCount, level, reclaimLevel)
+	local list = CharacterLevelConfig.rebirth.reclaimDivisors
+	if not list or (rebirthCount or 0) <= 0 or type(reclaimLevel) ~= "number" or (level or 1) >= reclaimLevel then
+		return 1
+	end
+	return list[math.clamp(rebirthCount, 1, #list)]
+end
+
+-- C5-2 무료 폭(측정 잣대): 스테이지 stage에서 레벨이 설계 대응(레벨 + levelStageOffset)보다 이만큼 뒤져도 "무료".
+function CharacterLevel.freeWidth(stage)
+	local rule = CharacterLevelConfig.levelGap.freeWidth
+	if not rule then
+		return InfiniteStage.stagesForPowerRatio(CharacterLevelConfig.levelGap.freePowerRatio)
+	end
+	return rule.base + (stage or 0) * rule.perStage
 end
 
 -- P2.5c 결정 3: 환생 rebirthCount회 상태의 캐릭터 경험치 획득 배율(CharacterLevelConfig.rebirth.expMultipliers - 표 밖이면 마지막 값). 캐릭터 경험치에만 곱한다.

@@ -10,6 +10,7 @@ local Loot = require(ReplicatedStorage.Shared.Loot)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
+local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig) -- C5-1 dealGear.parts
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData) -- C2 전투력(직업 치명)
 local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 전투력
@@ -141,7 +142,7 @@ function PlayerProfile.getCombatPower(player)
 	if not class or not weapon then
 		return 0
 	end
-	local atk = PlayerCombat.getAttack(weapon, classId, PlayerProfile.getCharacterLevel(player), PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player))
+	local atk = PlayerCombat.getAttack(weapon, classId, PlayerProfile.getCharacterLevel(player), PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player), PlayerProfile.getDealItemLevels(player))
 	local critRate, critDmg = PlayerProfile.getCritBonus(player)
 	return CombatFormula.offensePowerOf(atk, class.critRate + critRate, class.critDmg + critDmg)
 end
@@ -646,7 +647,7 @@ function PlayerProfile.getOpenPortals(player)
 	return profile and profile.world.portals or {}
 end
 
-function PlayerProfile.addCharacterExp(player, amount)
+function PlayerProfile.addCharacterExp(player, amount, opts) -- opts.fromBoss(C5-2): 보스 경험치는 되찾기 배수를 안 받는다(CharacterLevelConfig.rebirth.reclaimBossExp)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
@@ -656,8 +657,9 @@ function PlayerProfile.addCharacterExp(player, amount)
 	-- S21-0 A2: 보상 계산 출구.
 	-- P2.5c 결정 3: 환생 회차 배율(CharacterLevel.getRebirthExpMultiplier)은 캐릭터 경험치에만 - 재료 기대 개수가 쓰는 getExpGainMultiplier에는 안 넣는다.
 	-- P3c C4: 레벨 126부터 필요 경험치와 같은 배수(CharacterLevel.getExpScale - 지금 레벨 기준)를 곱한다 - 처치 수는 그대로.
+	-- C5-2 되찾기: 이전 최고 레벨(reclaimLevel)까지 회차별 배수(CharacterLevel.getReclaimMultiplier) - 옛 회차 배율(getRebirthExpMultiplier - 이제 1)을 대체.
 	classState.characterExp += Sanitize.number(amount * PlayerProfile.getExpGainMultiplier(player) * CharacterLevel.getRebirthExpMultiplier(classState.rebirthCount)
-		* CharacterLevel.getExpScale(oldLevel), 0)
+		* ((opts and opts.fromBoss and not CharacterLevelConfig.rebirth.reclaimBossExp) and 1 or CharacterLevel.getReclaimMultiplier(classState.rebirthCount, oldLevel, classState.reclaimLevel)) * CharacterLevel.getExpScale(oldLevel), 0)
 	local newLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
 	player:SetAttribute("CharacterExp", classState.characterExp)
 	if newLevel ~= oldLevel then
@@ -972,6 +974,7 @@ function PlayerProfile.rebirth(player)
 	end
 
 	classState.rebirthCount += 1
+	classState.reclaimLevel = math.max(classState.reclaimLevel or 0, currentLevel) -- C5-2 되찾기: 이전 최고 레벨(회차 누적 최대 - v46)
 	classState.characterExp = 0
 	-- 무한 스테이지도 1로 되돌린다(PRD에 명시된 문구는 없다 - "임의 결정" 목록 참고).
 	-- 근거: 목표 마릿수 곡선(25-1, CharacterLevelConfig.killTargetAnchors)은 "몬스터 스테이지=
@@ -1495,6 +1498,24 @@ function PlayerProfile.getEquippedArmor(player)
 	return PlayerProfile.getEquipped(player, "armor")
 end
 
+-- C5-1 딜 부위 itemLevel(PlayerCombat.getAttack 7번째 인자 · CombatPowerSync가 최고값을 Player Attribute DealItemLevel로 내린다 - MonsterState 뒤처짐 신호).
+function PlayerProfile.getDealItemLevels(player)
+	local levels = {}
+	for _, part in ipairs(CharacterLevelConfig.dealGear and CharacterLevelConfig.dealGear.parts or {}) do
+		local item = PlayerProfile.getEquipped(player, part)
+		levels[part] = item and item.itemLevel or 0
+	end
+	return levels
+end
+
+function PlayerProfile.getDealItemLevelBest(player)
+	local best = 0
+	for _, level in pairs(PlayerProfile.getDealItemLevels(player)) do
+		best = math.max(best, level)
+	end
+	return best
+end
+
 -- 신발 이동+공속 비율 보너스(16-6, 기존 장비 기본효과 - 옵션과 별개 층, 20.67 [1] "부위
 -- 기본 스탯 축을 제외하지 않는다") + 장비 3부위 옵션 + 보석 5개의 speedPercent 옵션 합
 -- (26-2, PlayerProfile.getOptionBonus) - PlayerCombat.getAttackCooldown과
@@ -1733,7 +1754,7 @@ function PlayerProfile.getStatSummary(player)
 	local level = CharacterLevel.getLevelFromExp(classState.characterExp)
 	local critRate, critDmg = PlayerProfile.getCritBonus(player)
 	return {
-		attack = PlayerCombat.getAttack(classState.weapon, profile.classId, level, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player)),
+		attack = PlayerCombat.getAttack(classState.weapon, profile.classId, level, PlayerProfile.getAttackPercentBonus(player), PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player), PlayerProfile.getDealItemLevels(player)),
 		defense = PlayerCombat.getDefense(profile.classId, Loot.getArmorDefense(classState.equipment.armor), PlayerProfile.getDefensePercentBonus(player)),
 		maxHp = computeMaxHp(player),
 		speedPercent = PlayerProfile.getSpeedPercentBonus(player),
