@@ -283,6 +283,14 @@ function U.stats()
 	return stats
 end
 
+-- 검증 · 개발 명령(/gg ult selftest): 이 사람 자리에 성역을 편다(치유사가 아니어도)
+function U.debugSanctuary(player, seconds)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if root then
+		table.insert(sanctuaries, { caster = player, center = root.Position, radius = UltimateData.skills.healer.radiusStuds, untilAt = os.clock() + seconds })
+	end
+end
+
 -- 보스 입장 = 0(파티 전원)
 task.defer(function()
 	local BossEncounter = require(script.Parent.BossEncounter)
