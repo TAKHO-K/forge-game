@@ -113,6 +113,11 @@ function V.runPure()
 		local b1, c1 = MobAttackShape.choose(def.attacks, false, 0)
 		local b2 = MobAttackShape.choose(def.attacks, false, c1)
 		check(("공격 고르기: 등 뒤 = %s · 앞 = %s → %s"):format(a1.id, b1.id, b2.id), a1.id == "tailSweep" and b1.id == "frostBreath" and b2.id == "wingGust")
+		local far1, cf = MobAttackShape.choose(def.attacks, false, 1, 11) -- 차례상 돌풍(10)이지만 거리 11 = 건너뛰고 숨결(14)
+		local none = MobAttackShape.choose(def.attacks, false, 0, 15)
+		check(("거리 조건: 11 → %s · 15 → %s"):format(far1 and far1.id or "없음", none and none.id or "없음"), far1 and far1.id == "frostBreath" and cf == 3 and none == nil)
+		local Reach = require(ReplicatedStorage.Shared.Reach)
+		check("몸 반경 도달: BodyRadius 없는 대상 = Reach.within과 같음", Reach.withinModel(nil, Vector3.new(10, 0, 0), Vector3.new(0, 0, 0), 10) and not Reach.withinModel(nil, Vector3.new(10.5, 0, 0), Vector3.new(0, 0, 0), 10))
 		-- 초당 피해 ≈ 티어 평타(1초 주기 × 1.0): 공격 배율 ÷ 주기(전조 + 회복 + cooldown)
 		local worst = 0
 		for _, a in ipairs(def.attacks) do
@@ -145,6 +150,26 @@ function V.runPure()
 			sameUnits = sameUnits and math.abs((b.rewardKillUnits or b.hpMultiplier) - (first.rewardKillUnits or first.hpMultiplier)) < 1e-9
 		end
 		check(("6종 강화석 단위 같음(%s)"):format(table.concat(units, " · ")), sameUnits)
+	end)
+
+	section("Q4 판매가", function()
+		local Loot = require(ReplicatedStorage.Shared.Loot)
+		local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+		local bad = {}
+		for tierIndex = 1, 6 do
+			local prev = -1
+			for _, gradeId in ipairs(ArmorData.gradeOrder) do
+				if gradeId ~= "transcendent" then
+					local price = Loot.getSellPrice({ tierIndex = tierIndex, grade = gradeId, dropStage = 100 })
+					if price <= 0 or price < prev then
+						table.insert(bad, ("T%d %s %d"):format(tierIndex, gradeId, price))
+					end
+					prev = price
+				end
+			end
+		end
+		check(("판매가 모드 %s · 전 티어 등급 순서(위 등급 ≥ 아래 · 0 없음) 위반 %d: %s"):format(ArmorData.sellPriceMode, #bad, table.concat(bad, ", ")), #bad == 0)
+		check("초월 판매가 0(판매 불가)", Loot.getSellPrice({ tierIndex = 6, grade = "transcendent", dropStage = 100 }) == 0)
 	end)
 
 	print(("===Q 검증 끝(가)=== %d/%d 통과"):format(pass, total))

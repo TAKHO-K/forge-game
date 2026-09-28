@@ -28,8 +28,6 @@ local BossEnvironment = require(script.Parent.BossEnvironment) -- BR1 리뷰 1: 
 local BossEncounter = require(script.Parent.BossEncounter)
 local Temperament = require(script.Parent.MonsterTemperament) -- M2 성향 카드
 local MobAttackShape = require(ReplicatedStorage.Shared.MobAttackShape) -- Q1 모양 공격(드래곤 - 종 data attacks 조각)
-local HeightGuard = require(script.Parent.HeightGuard) -- Q1 날개 돌풍 넉백 = 보스와 같은 발사 허가
-local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 
 local syncHud = PlayerDamage.syncHud
 
@@ -242,15 +240,7 @@ local function clearShaped(model)
 	end
 end
 
-local function knockBack(player, root, from, launch)
-	if typeof(player) ~= "Instance" or require(script.Parent.UltimateService).isUnstoppable(player) then -- K1 파괴의 화신 = 넉백 면역(보스와 같다)
-		return
-	end
-	HeightGuard.grantLaunch(player, launch.heightStuds, JumpMath.launchAirSeconds(launch.heightStuds) + 0.5, "잡몹 넉백")
-	BossPatterns.sendTo(player, "launch", { from = from, heightStuds = launch.heightStuds, distanceStuds = launch.distanceStuds, escape = true }) -- 구역 없음 = 상한만(필드)
-end
-
-local function tryShapedAttack(model, data, monsterPosition, targetPlayer, targetRoot)
+local function tryShapedAttack(model, data, monsterPosition, targetPlayer, targetRoot, resolveOnly)
 	local st = shaped[model]
 	if not st then
 		st = {}
@@ -275,15 +265,15 @@ local function tryShapedAttack(model, data, monsterPosition, targetPlayer, targe
 				and MobAttackShape.contains(attack, monsterPosition, st.facing, root.Position)
 				and (player == targetPlayer or MonsterState.canChase(model, player, TutorialState.getMonsterStage(player))) then
 				local stage = MonsterState.getAttackStage(model, TutorialState.getMonsterStage(player))
-				applyHitToPlayer(player, MonsterState.getAttackFor(model, stage), nil, attack.damage, { levelGapStage = stage })
-				if attack.launch and (PlayerState.getHp(player) or 0) > 0 then
-					knockBack(player, root, monsterPosition, attack.launch)
+				local dealt = applyHitToPlayer(player, MonsterState.getAttackFor(model, stage), nil, attack.damage, { levelGapStage = stage })
+				if attack.launch and (dealt or 0) > 0 and (PlayerState.getHp(player) or 0) > 0 then -- 리뷰: 무적(피해 0)이면 넉백도 없다
+					BossPatterns.launchPlayer(player, monsterPosition, attack.launch.heightStuds, attack.launch.distanceStuds, "잡몹 넉백") -- 공통 입구(보스와 같은 면역 · 무게)
 				end
 			end
 		end
 		return
 	end
-	if now < (st.nextAt or 0) or now < (holdUntil[model] or 0) or (PlayerState.getHp(targetPlayer) or 0) <= 0 then
+	if resolveOnly or now < (st.nextAt or 0) or now < (holdUntil[model] or 0) or (PlayerState.getHp(targetPlayer) or 0) <= 0 then
 		return
 	end
 	if not Reach.within(targetRoot.Position, monsterPosition, data.attackRangeStuds) then
@@ -291,7 +281,11 @@ local function tryShapedAttack(model, data, monsterPosition, targetPlayer, targe
 	end
 	local facing = model.PrimaryPart.CFrame.LookVector
 	local chosen
-	chosen, st.counter = MobAttackShape.choose(data.species.attacks, MobAttackShape.isBehind(monsterPosition, facing, targetRoot.Position), st.counter)
+	chosen, st.counter = MobAttackShape.choose(data.species.attacks, MobAttackShape.isBehind(monsterPosition, facing, targetRoot.Position), st.counter,
+		Reach.horizontalDistance(targetRoot.Position, monsterPosition)) -- 리뷰: 대상이 그 공격 범위 밖이면 고르지 않는다(돌풍 10 < 전조 거리 12)
+	if not chosen then
+		return -- 맞는 공격이 없다(더 다가간다)
+	end
 	if chosen.prefer ~= "behind" then
 		facing = faceToward(model, monsterPosition, targetRoot.Position) or facing -- 앞 공격은 전조 시작에 대상 쪽으로 돈다(그 뒤 방향 고정)
 	end
@@ -429,7 +423,13 @@ local function beginChase(model, data, player)
 	-- (아래 else 분기의 clear까지) 고정한다.
 	local aggroStage = MonsterState.getAttackStage(model, TutorialState.getMonsterStage(player)) -- C1: 잡몹 = 기준 스테이지
 	local tickAttack = MonsterState.getAttackFor(model, aggroStage)
-	PlayerState.setTickDamageSource(player, model, computeHitDamage(tickAttack, player) * (data.basicAttackDamageMultiplier or 1) * PlayerDamage.getNewbieMultiplier(player) * PlayerDamage.getLevelGapTakeMultiplier(player, not data.isBoss and aggroStage or nil)
+	local tickMultiplier = data.basicAttackDamageMultiplier or 1
+	if species and species.attacks then -- Q1 리뷰: 모양 공격 종의 눈금 = 가장 센 한 방(숨결 ×2.2)
+		for _, attack in ipairs(species.attacks) do
+			tickMultiplier = math.max(tickMultiplier, attack.damage)
+		end
+	end
+	PlayerState.setTickDamageSource(player, model, computeHitDamage(tickAttack, player) * tickMultiplier * PlayerDamage.getNewbieMultiplier(player) * PlayerDamage.getLevelGapTakeMultiplier(player, not data.isBoss and aggroStage or nil)
 		* PlayerDamage.getCombatTakeMultiplier(player, tickAttack, not data.isBoss and aggroStage or nil)) -- C2: 전투 공식 받는 피해도 눈금에 -- G1-3 리뷰 3: 레벨차도 눈금에 -- P2.5c: 신규 보호도 눈금에
 	if data.isBoss then
 		BossPatterns.onAggro(model, data) -- 패턴 시계는 전투가 붙는 순간부터(21-3)
@@ -551,6 +551,11 @@ RunService.Heartbeat:Connect(function(dt)
 					MonsterState.setAiState(model, "idle")
 					MonsterState.setAiTarget(model, nil)
 					PlayerState.setTickDamageSource(target, model, nil)
+					if windupStartedAt[model] then -- Q1 리뷰: 이 출구도 전조 상태를 지운다(다음 추격 첫 틱 즉시 판정 방지)
+						windupStartedAt[model] = nil
+						model:SetAttribute("MobWindup", nil)
+					end
+					clearShaped(model)
 				else
 					MonsterState.noteParticipant(model, target, TutorialState.getMonsterStage(target)) -- C1: 쫓기는 사람 = 참여자(기준 스테이지에 든다 · 잡는 사람은 아님)
 					-- 쌍검 Q 그림자분신(20-6 [2]) - "이미 쫓기는 중인" 몹의 방향만 분신 쪽으로
@@ -572,6 +577,9 @@ RunService.Heartbeat:Connect(function(dt)
 						if data.species and data.species.attacks and model.PrimaryPart then -- Q1: 모양 공격 종은 가는 쪽을 본다(판정 방향 = 보이는 방향)
 							faceToward(model, model.PrimaryPart.Position, goal)
 						end
+					end
+					if decoyPosition and data.species and data.species.attacks then
+						tryShapedAttack(model, data, position, target, targetRoot, true) -- Q1 리뷰: 분신에 끌려도 이미 건 전조는 끝낸다(새 전조는 안 건다)
 					end
 					if not decoyPosition then
 						tryAttack(model, data, position, target, targetRoot)

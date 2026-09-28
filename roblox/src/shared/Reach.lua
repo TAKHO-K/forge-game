@@ -25,4 +25,14 @@ function Reach.within(a, b, rangeStuds, toleranceStuds)
 	return Reach.horizontalDistance(a, b) <= rangeStuds and Reach.sameLayer(a, b, toleranceStuds)
 end
 
+-- Q1 리뷰: 큰 몸 몬스터(드래곤 - 모델 Attribute BodyRadius · 서버 MonsterSpawner가 종 hitbox에서 붙인다)는 루트가 몸 한가운데라
+-- 공격 쪽 도달 판정(조준 · 평타 · 스킬 원 · 선 · 채널 틱 · 화살 경로)을 몸 반경만큼 넓힌다. 몬스터 → 플레이어 판정(몹 평타 · 어그로)은 그대로.
+function Reach.bodyRadius(model)
+	return (typeof(model) == "Instance" and model:GetAttribute("BodyRadius")) or 0
+end
+
+function Reach.withinModel(model, targetPosition, originPosition, rangeStuds, toleranceStuds)
+	return Reach.within(targetPosition, originPosition, rangeStuds + Reach.bodyRadius(model), toleranceStuds)
+end
+
 return Reach

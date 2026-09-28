@@ -181,4 +181,10 @@ return {
 	-- 드랍되면서 "한 사이클 등가" 전제(등급 2종)가 더는 정확히 성립하지 않는다 - 재검증은
 	-- 다음 밸런스 세션 몫으로 남긴다.
 	sellRecoveryRate = 0.3,
+	-- QUEUE-10h Q4(스위치 · 결정 필요): 판매가의 "그 등급 확률" 출처.
+	--   "current"(기본) = 현행 잡몹 등급표(DropTable.gradeRow - 그 아이템 tier 구간)로 역산 → 위 "한 사이클 등가"(판매 총수입 ≈ 처치 골드 × 회수율)가 다시 성립한다.
+	--     고대 · 태초는 현행 확률로 역산하면 수만 마리분이 되어 sellCapKills(처치 골드 몇 마리분)로 자른다 - 등급 순서(위 등급이 더 비쌈)는 유지.
+	--   "legacyTier" = D1 전 표(DropTableData.fairnessGradeByTier - 티어마다 다름 · 옛 칸이 없으면 가장 가까운 티어) - M2 평평한 표와 섞이면 T6 일반이 T6 전설보다 비싸다(등급 역전).
+	sellPriceMode = "current",
+	sellCapKills = { ancient = 2000, primordial = 10000 },
 }

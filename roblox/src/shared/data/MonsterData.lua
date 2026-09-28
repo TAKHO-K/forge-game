@@ -231,8 +231,10 @@ for _, id in ipairs(speciesIds) do
 	data.attackRangeStuds = def.attackRange or tierData.attackRangeStuds -- Q1: 모양 공격 종(드래곤)은 전조를 거는 거리가 길다
 	data.chaseStopDistanceStuds = def.chaseStop or tierData.chaseStopDistanceStuds -- Q1: 큰 몸(드래곤)은 더 멀리서 멈춘다
 	MonsterData.species[id] = data
-	tierNames[def.tier] = tierNames[def.tier] or {}
-	table.insert(tierNames[def.tier], def.displayName)
+	if not def.retiredBy then -- Q1 리뷰: 은퇴 종(눈토끼)은 티어 대표 이름 모음에서 뺀다(드랍 조회 문구)
+		tierNames[def.tier] = tierNames[def.tier] or {}
+		table.insert(tierNames[def.tier], def.displayName)
+	end
 end
 for tierIndex, key in ipairs(MonsterData.tierOrder) do
 	MonsterData[key].retiredName = MonsterSpeciesData.retired[key]

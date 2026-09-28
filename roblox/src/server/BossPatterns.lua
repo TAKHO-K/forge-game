@@ -211,7 +211,22 @@ local function sendTo(player, kind, payload)
 		patternEvent:FireClient(player, kind, payload)
 	end
 end
-BossPatterns.sendTo = sendTo -- Q1: 잡몹 모양 공격 넉백도 같은 "launch" 연출 경로(client BossStormView.launch)
+BossPatterns.sendTo = sendTo
+
+-- Q1 리뷰(공통 입구): 한 사람 넉백 - 보스 onHit launch와 같은 면역 조건(덫 · 맵 이탈 복귀 보호 · 파괴의 화신) · 무게 계수 · 발사 허가 · 계측을 거친다.
+-- 구역(아레나) 없이 부른다 = 클라가 높이 · 거리 상한만 적용(escape 아님). 잡몹 모양 공격(MonsterAI 날개 돌풍)이 쓴다. 반환 = 실제로 띄웠는가.
+function BossPatterns.launchPlayer(player, from, heightStuds, distanceStuds, source)
+	if BossTrap.isTrapped(player) or BossArenaContainment.isProtected(player)
+		or (typeof(player) == "Instance" and require(script.Parent.UltimateService).isUnstoppable(player)) then
+		return false
+	end
+	local weight = BossMechanics.weightFactorOf(player)
+	local height, distance = heightStuds / weight, distanceStuds / weight
+	HeightGuard.grantLaunch(player, height, JumpMath.launchAirSeconds(height) + 0.5, source or "넉백")
+	debugEvent("launch", { player = player, coHits = 1, heightStuds = height, distanceStuds = distance, from = from, source = source })
+	sendTo(player, "launch", { from = from, heightStuds = height, distanceStuds = distance })
+	return true
+end
 
 -- 아레나 kit의 논리 구역(tag가 붙은 정적 파트 - 심해 군주의 단·폭풍 군주의 피뢰침). kit은 보스전 내내 그대로라 한 번만 만든다.
 local function kitZones(model, st, data, tag)

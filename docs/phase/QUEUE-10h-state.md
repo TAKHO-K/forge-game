@@ -14,10 +14,15 @@
 
 | Q2 일반 몹 드랍표 | 2572e7b | `docs/design/field-drop-tables.md` · 판매가 0 버그 수정(옛 칸 없는 조합) · 공정성 로그 새 식 · 시간당 위력 0.985 ~ 1.000 |
 
-| Q3 보스 드랍표 | (이 커밋) | `docs/design/boss-drop-tables.md` · 수정 여왕 강화석 60% → 같은 단위(rewardKillUnits) · QueueVerify 32/32 |
+| Q3 보스 드랍표 | ddac156 | `docs/design/boss-drop-tables.md` · 수정 여왕 강화석 60% → 같은 단위(rewardKillUnits) · QueueVerify 32/32 |
+
+| Q0 · Q1 리뷰 반영 + Q4 판매가 스위치 | (이 커밋) | 몸 반경 도달 공용(`Reach.withinModel` - 조준 · 스킬 원 · 선 · 채널 · 화살) · 전조 상태 정리 · 거리 맞춘 공격 · 넉백 공통 입구(`BossPatterns.launchPlayer`) · 눈금 · 분신 · 은퇴 이름 · 눈토끼 색 · 결번 · 판매가 `sellPriceMode = current` · QueueVerify 36/36 |
 
 ## 지금
-- Q4 장비 점검(`docs/design/equipment-audit.md`) + 판매가 스위치
+- Q4 장비 점검(`docs/design/equipment-audit.md`) - 읽기 조사 서브에이전트 결과 대기 중
+
+## 기대값 갱신 필요(옛 검증 블록 - §7-1: 돌리지 않음)
+- D1Verify(첫 클리어 태초 0.0001 · 토벌 옛 값) · LootRuleVerify [4](개수 = dropChance × r(t)) · [9](공정성 공통값 1.23728) · G1_2Verify(옛 개수 식) · P2Verify E2 · P25cVerify 태초 비 · M1_2Verify · M1_4Verify · M1_3TVerify(지점 수 = 구역 × 80 → T6 88) · BalanceDecisionVerify · DropNoticeVerify(태초 등록 등급) · G1_1Verify
 
 ## 다음 할 일
 - Q1 → Q2 → Q3 → Q4 → Play A

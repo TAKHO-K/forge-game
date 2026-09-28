@@ -50,7 +50,7 @@ MonsterSpeciesData.species = {
 	ice_golem = { tier = 6, displayName = "얼음 골렘", body = C(170, 215, 245), head = C(200, 230, 250), accent = C(80, 155, 215),
 		aggro = "aggressive", detectRadius = 14, alertMotion = "roar", approach = "charge", speed = 0.8, groupSize = { 3, 4 }, leashDistance = 45, -- Q1: 드래곤 규칙 해제(1 ~ 2 → 3 ~ 4)
 		windup = { seconds = 1.3, poses = { Arm_L = { rx = 150 }, Arm_R = { rx = 150 }, RootJoint = { rx = -8 } } } },
-	snow_rabbit = { tier = 6, displayName = "눈토끼", retiredBy = "blue_dragon", -- Q1: retired → 푸른 드래곤으로 교체(스폰 풀에서만 빠짐) body = C(245, 247, 252), head = C(250, 250, 255), accent = C(245, 180, 195),
+	snow_rabbit = { tier = 6, displayName = "눈토끼", retiredBy = "blue_dragon", body = C(245, 247, 252), head = C(250, 250, 255), accent = C(245, 180, 195), -- Q1: retired → 푸른 드래곤으로 교체(스폰 풀에서만 빠짐)
 		aggro = "pack", detectRadius = 0, alertMotion = "turn", approach = "hop", speed = 1.3, groupSize = { 4, 5 }, leashDistance = 45, linkAggro = true,
 		windup = { seconds = 0.6, poses = { Ear_L = { rx = -45 }, Ear_R = { rx = -45 }, RootJoint = { y = -0.15 } } } },
 	-- Q1 푸른 드래곤(T6 · 가장 위험한 잡몹 · 무리 1 ~ 2): 얼음 청색 본체 + 밝은 하늘색 배(head 색 = 배 · 턱) + 얼음 결정 강조(accent)

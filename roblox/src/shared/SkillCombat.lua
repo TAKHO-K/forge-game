@@ -31,7 +31,7 @@ function SkillCombat.hitsOnSegment(startPos, endPos, radiusStuds, candidates)
 			end
 			local closest = segStart + segDelta * t
 			local pathY = startPos.Y + (endPos.Y - startPos.Y) * t
-			if (point - closest).Magnitude <= radiusStuds
+			if (point - closest).Magnitude <= radiusStuds + Reach.bodyRadius(model) -- Q1 리뷰: 큰 몸
 				and Reach.sameLayer(root.Position, Vector3.new(0, pathY, 0)) then
 				table.insert(hits, model)
 			end
@@ -48,7 +48,7 @@ function SkillCombat.hitsInCircle(center, radiusStuds, candidates)
 	for _, model in ipairs(candidates) do
 		local root = model.PrimaryPart
 		if root and model.Parent then
-			if (flat(root.Position) - flatCenter).Magnitude <= radiusStuds and Reach.sameLayer(root.Position, center) then
+			if (flat(root.Position) - flatCenter).Magnitude <= radiusStuds + Reach.bodyRadius(model) and Reach.sameLayer(root.Position, center) then -- Q1 리뷰: 큰 몸
 				table.insert(hits, model)
 			end
 		end

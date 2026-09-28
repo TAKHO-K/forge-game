@@ -43,11 +43,15 @@ function MobAttackShape.isBehind(origin, facing, point)
 	return flat(facing).Unit:Dot(d.Unit) < 0
 end
 
--- 다음 공격 고르기: 대상이 등 뒤면 prefer = "behind" 공격 · 아니면 prefer 없는 공격을 차례로(counter = 몹마다 센 횟수). 반환 = attack, 새 counter
-function MobAttackShape.choose(attacks, behind, counter)
+-- 다음 공격 고르기: 대상이 등 뒤면 prefer = "behind" 공격 · 아니면 prefer 없는 공격을 차례로(counter = 몹마다 센 횟수).
+-- distance(선택) = 대상까지 수평 거리 - 범위(range)가 그보다 짧은 공격은 뺀다(Q1 리뷰: 돌풍 10 < 전조 거리 12). 반환 = attack(없으면 nil), 새 counter
+function MobAttackShape.choose(attacks, behind, counter, distance)
+	local function fits(attack)
+		return distance == nil or attack.range >= distance
+	end
 	if behind then
 		for _, attack in ipairs(attacks) do
-			if attack.prefer == "behind" then
+			if attack.prefer == "behind" and fits(attack) then
 				return attack, counter
 			end
 		end
@@ -59,10 +63,17 @@ function MobAttackShape.choose(attacks, behind, counter)
 		end
 	end
 	if #front == 0 then
-		return attacks[1], counter
+		return nil, counter
 	end
-	local nextCounter = (counter or 0) + 1
-	return front[(nextCounter - 1) % #front + 1], nextCounter
+	local nextCounter = counter or 0
+	for _ = 1, #front do -- 차례대로 보되 범위가 안 맞는 공격은 건너뛴다(차례는 넘긴다)
+		nextCounter += 1
+		local attack = front[(nextCounter - 1) % #front + 1]
+		if fits(attack) then
+			return attack, nextCounter
+		end
+	end
+	return nil, counter
 end
 
 return MobAttackShape

@@ -431,7 +431,7 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 			return -- 대상이 이미 죽었거나 사라졌다 - 남은 타격은 손실(재탐색 안 함)
 		end
 		local targetRoot = lockedTarget.PrimaryPart
-		if not targetRoot or not Reach.within(targetRoot.Position, rootNow.Position, def.rangeStuds) then
+		if not targetRoot or not Reach.withinModel(lockedTarget, targetRoot.Position, rootNow.Position, def.rangeStuds) then -- Q1 리뷰: 고른 판정(AimPicker)과 같은 몸 반경
 			PlayerState.clearChanneling(player)
 			return -- 대상이 사거리를 벗어났다(22-4: 수평 거리 + 높이차 상한)
 		end

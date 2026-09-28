@@ -357,11 +357,24 @@ function Loot.getSellPrice(item)
 	if not item then
 		return 0
 	end
-	local gradeChance = getGradeChance(item.tierIndex or 1, item.grade)
-	if not gradeChance then
+	local gradeChance
+	if ArmorData.sellPriceMode == "current" then -- Q4: 현행 등급표로 역산(판매 총수입 = 처치 골드 × 회수율 등가)
+		local row = DropTable.gradeRow(item.tierIndex or 1)
+		gradeChance = row[item.grade]
+		if item.grade == TranscendentData.gradeId then
+			gradeChance = nil -- 초월 = 판매 불가(C5-7)
+		end
+	else
+		gradeChance = getGradeChance(item.tierIndex or 1, item.grade)
+	end
+	if not gradeChance or gradeChance <= 0 then
 		return 0
 	end
 	local expectedKills = 1 / (ArmorData.dropChance * gradeChance)
+	local cap = ArmorData.sellCapKills and ArmorData.sellCapKills[item.grade]
+	if cap and ArmorData.sellPriceMode == "current" then
+		expectedKills = math.min(expectedKills, cap / ArmorData.sellRecoveryRate) -- 고대 · 태초 = 처치 골드 cap마리분이 상한
+	end
 	local goldPerKill = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, item.dropStage)
 	return math.floor(expectedKills * goldPerKill * ArmorData.sellRecoveryRate)
 end

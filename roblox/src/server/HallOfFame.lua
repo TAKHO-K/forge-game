@@ -162,7 +162,7 @@ local function onAnnounce(entry)
 	if not require(ReplicatedStorage.Shared.data.DropNoticeData).globalGrades[entry.grade] then -- Q0-6: 태초 = 같은 서버 배너만(석판 안 올림)
 		return
 	end
-	if require(script.Parent.AcquisitionAudit).isNumberExcluded(entry.no) then
+	if entry.grade ~= TranscendentData.gradeId and require(script.Parent.AcquisitionAudit).isNumberExcluded(entry.no) then -- Q1 리뷰: 결번 목록 = 태초 번호(초월 번호는 별도 카운터 - refresh와 같게)
 		return
 	end
 	for _, row in ipairs(entries) do

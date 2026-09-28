@@ -32,8 +32,8 @@ function AimPicker.pick(originPosition, aimPoint, rangeStuds, candidates, layerT
 		if root and model.Parent then
 			local offset = root.Position - originPosition
 			local flat = Vector3.new(offset.X, 0, offset.Z)
-			local dist = math.max(flat.Magnitude - (model:GetAttribute("BodyRadius") or 0), 0) -- Q1: 큰 몸(드래곤)은 몸 반경만큼 가깝게 친다(루트가 몸 한가운데)
-			if dist <= rangeStuds and Reach.sameLayer(root.Position, originPosition, layerTolerance) then
+			local dist = flat.Magnitude
+			if dist <= rangeStuds + Reach.bodyRadius(model) and Reach.sameLayer(root.Position, originPosition, layerTolerance) then -- Q1: 큰 몸(드래곤)은 몸 반경만큼 넓게(방향 · 점수는 루트 거리)
 				if dist < nearestDist then
 					nearest, nearestDist = model, dist
 				end
@@ -75,9 +75,10 @@ function AimPicker.pickPath(originPosition, aimPoint, rangeStuds, candidates, fa
 		if root and model.Parent then
 			local rel = root.Position - originPosition
 			local t = rel:Dot(dir)
-			if t > 0 and t <= length then
+			local bodyExtra = Reach.bodyRadius(model) -- Q1 리뷰: 큰 몸은 화살 경로 판정도 몸 반경만큼 넓다
+			if t > 0 and t <= length + bodyExtra then
 				local perp = (rel - dir * t).Magnitude
-				if perp <= A.bodyRadiusStuds then
+				if perp <= A.bodyRadiusStuds + bodyExtra then
 					table.insert(onPath, { model = model, t = t })
 				end
 			end
