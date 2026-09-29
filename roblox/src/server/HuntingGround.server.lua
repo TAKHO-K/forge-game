@@ -185,6 +185,18 @@ local function createGemMerchant(communityZone)
 	prompt.MaxActivationDistance = merchant.promptDistanceStuds
 	prompt.Parent = stall -- 서버 반경의 기준점(= position)과 같은 자리 - 프롬프트가 뜬 곳에서 누른 요청은 항상 반경 안이다
 
+	-- QUEUE-B1 B2: 상점 창(골드 소모처 · 치장 · 편의 · 시즌 - client/panels/Shop) 입구 = 같은 상인의 두 번째 프롬프트(F - 허브 안이라 전투 키와 안 겹친다). NPC 외형은 그대로.
+	local shopPrompt = Instance.new("ProximityPrompt")
+	shopPrompt.Name = "ShopPrompt"
+	shopPrompt.ObjectText = merchant.objectText
+	shopPrompt.ActionText = "상점"
+	shopPrompt.KeyboardKeyCode = Enum.KeyCode.F
+	shopPrompt.HoldDuration = 0
+	shopPrompt.RequiresLineOfSight = false
+	shopPrompt.MaxActivationDistance = merchant.promptDistanceStuds
+	shopPrompt.UIOffset = Vector2.new(0, 72) -- 보석 공방 프롬프트 아래에(두 개가 겹치지 않게)
+	shopPrompt.Parent = stall
+
 	model.PrimaryPart = stall
 	model.Parent = Workspace
 	return model
