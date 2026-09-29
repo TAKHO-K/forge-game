@@ -1,6 +1,6 @@
 -- A2-N2 2-1 구역 조명 · 분위기 전환(클라 전용 · ArtStyleV1 스위치 뒤 · 값 = shared/data/ArtV1ZoneData).
 --   켜짐: 내 캐릭터가 있는 구역(허브 · T1 ~ T6)의 프리셋으로 Lighting · Atmosphere · 색 보정 · 블룸 · 하늘을 tweenSeconds 동안 부드럽게 옮긴다.
---   꺼짐: 서버가 적용한 프로필(Workspace Attribute CartoonStyle → CartoonStyleData)의 같은 값 + 켜기 전 ClockTime · 하늘로 되돌린다 = 지금 게임과 같다.
+--   꺼짐: 서버가 적용한 프로필(Workspace Attribute CartoonStyle → CartoonStyleData)의 같은 값 + 켜기 전 ClockTime · 하늘 · 구역이 덮은 지형 색을 되돌린다 = 지금 게임과 같다.
 --   효과 인스턴스는 서버 CartoonStyle이 만든 것(Atmosphere · Bloom · CartoonColorCorrection)을 로컬에서만 바꾼다(클라 변경은 복제 안 됨).
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -32,6 +32,31 @@ local function sky()
 end
 
 local saved = nil -- 켜기 전 관리 밖 값(ClockTime · 하늘)
+local overridden = {} -- [재질 이름] = true: 지금 구역 terrain이 덮은 재질(떠날 때 · 끌 때 프로필 색으로)
+
+-- 프로필이 칠한 재질 색(서버 CartoonStyle.apply와 같은 값 - 없으면 지금 색 유지)
+local function profileColor(material)
+	local profile = CartoonStyleData.profiles[Workspace:GetAttribute("CartoonStyle") or "base"]
+	local c = profile and profile.materialColors and profile.materialColors[material]
+	return c and (typeof(c) == "table" and c3(c) or c) or nil
+end
+
+local function setTerrain(zoneTerrain)
+	local terrain = Workspace.Terrain
+	for material in pairs(overridden) do
+		if not (zoneTerrain and zoneTerrain[material]) then
+			local c = profileColor(material)
+			if c then
+				terrain:SetMaterialColor(Enum.Material[material], c)
+			end
+			overridden[material] = nil
+		end
+	end
+	for material, c in pairs(zoneTerrain or {}) do
+		terrain:SetMaterialColor(Enum.Material[material], c3(c))
+		overridden[material] = true
+	end
+end
 local current = nil -- 지금 적용한 구역 키
 local tweens = {}
 
@@ -66,6 +91,7 @@ local function applyZone(key)
 		s.StarCount = z.sky.stars
 		play(s, { SunAngularSize = z.sky.sun })
 	end
+	setTerrain(z.terrain)
 end
 
 -- 서버 프로필 값으로 되돌림(CartoonStyle.apply가 쓴 것과 같은 값 · 같은 키만)
@@ -90,6 +116,7 @@ local function restore()
 			end
 		end
 	end
+	setTerrain(nil)
 	if saved then
 		Lighting.ClockTime = saved.clock
 		local s = sky()

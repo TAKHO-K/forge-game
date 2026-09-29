@@ -77,7 +77,7 @@ end
 
 local function styleTrail(trail, theme, spec)
 	trail.Color = ColorSequence.new(theme.core, theme.edge)
-	trail.Lifetime = spec.lifetime
+	trail.Lifetime = spec.lifetime * Fx.slow()
 	trail.WidthScale = NumberSequence.new(1, 0.15)
 	trail.Transparency = seq(spec.transparency and spec.transparency[1] or 0.2, 1)
 	local a0, a1 = trail.Attachment0, trail.Attachment1
@@ -168,7 +168,7 @@ RunService.Heartbeat:Connect(function()
 			if now >= st.dashUntil then
 				styleTrail(st.dash, dashTheme, dashTheme.dash)
 			end
-			st.dashUntil = now + D.dashHoldSeconds
+			st.dashUntil = now + D.dashHoldSeconds * Fx.slow()
 		end
 		st.dash.Enabled = dashTheme ~= nil and dashTheme ~= false and now < st.dashUntil
 		-- ② 점프 이펙트(위 속도가 갑자기 늘어남 = 지상 점프 · 공중 점프)

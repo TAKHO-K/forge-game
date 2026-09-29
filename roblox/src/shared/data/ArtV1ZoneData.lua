@@ -3,7 +3,7 @@
 --   값 = Lighting 속성 · Lighting 자식 효과(Atmosphere · CartoonColorCorrection · Bloom - 서버 CartoonStyle이 만든 이름 그대로) · Sky 별 · 해 크기. 색 = {R, G, B}.
 --   ClockTime은 서버 관리 밖 속성 - 클라에서만 바꾸고 끌 때 켜기 전 값으로 되돌린다(서버 snapshotUnmanaged는 서버 값만 본다).
 --   구역 판정 = WorldMapLayout.inHub / zoneAt(구역 원) - 원 밖(길)은 fallback. 보스전 중(Player Attribute BossEncounterId)에는 전환하지 않는다(보스 연출 우선).
---   지형 재질 색 · 물 = 전역 한 벌이라 서버 프로필(CartoonStyleData artV1.materialColors · terrain)에 둔다.
+--   지형 재질 색 · 물 = 전역 한 벌이라 서버 프로필(CartoonStyleData artV1.materialColors · terrain)에 둔다. 구역 프리셋의 terrain = 그 구역 안에서만 덮는 재질 색(클라 Terrain:SetMaterialColor - 복제 안 됨 · 다른 구역 · 끄면 프로필 값으로 되돌림).
 
 local function preset(t)
 	return t
@@ -36,9 +36,9 @@ return {
 		}),
 		-- T2 수정 동굴: 보라 늦은 오후 - 먼 곳은 짙은 보라 안개 · 수정(청록)만 튄다
 		tier2 = preset({
-			clock = 15.2, brightness = 1.9, ambient = { 100, 98, 116 }, outdoor = { 134, 130, 150 }, shiftTop = { 236, 228, 250 },
+			clock = 15.2, brightness = 1.9, ambient = { 104, 100, 120 }, outdoor = { 140, 134, 156 }, shiftTop = { 240, 232, 252 },
 			atmosphere = { density = 0.24, offset = 0.1, color = { 150, 130, 196 }, decay = { 96, 76, 150 }, haze = 1.6, glare = 0 },
-			cc = { brightness = 0.02, contrast = 0.1, saturation = -0.12, tint = { 246, 240, 255 } },
+			cc = { brightness = 0.02, contrast = 0.1, saturation = -0.08, tint = { 248, 244, 255 } },
 			bloom = { intensity = 0.5, size = 20, threshold = 1.4 },
 			sky = { stars = 0, sun = 6 },
 		}),
@@ -65,12 +65,13 @@ return {
 			cc = { brightness = 0.03, contrast = 0.12, saturation = -0.1, tint = { 232, 234, 255 } },
 			bloom = { intensity = 0.5, size = 20, threshold = 1.4 },
 			sky = { stars = 0, sun = 6 },
+			terrain = { Ground = { 112, 108, 120 } }, -- T5 바닥 = Ground(흙길과 공유 재질 - 황토색이 폭풍 팔레트와 어긋났다) → 이 구역 안에서만 회청
 		}),
 		-- T6 빙하 동굴: 차가운 오전 - 눈 과노출을 대비 · 밝기로 누른다
 		tier6 = preset({
-			clock = 11, brightness = 1.9, ambient = { 104, 114, 134 }, outdoor = { 150, 166, 190 }, shiftTop = { 234, 246, 255 },
+			clock = 11, brightness = 1.8, ambient = { 104, 114, 134 }, outdoor = { 150, 166, 190 }, shiftTop = { 234, 246, 255 },
 			atmosphere = { density = 0.15, offset = 0.06, color = { 210, 232, 250 }, decay = { 156, 198, 236 }, haze = 1.0, glare = 0 },
-			cc = { brightness = -0.05, contrast = 0.14, saturation = 0.04, tint = { 242, 250, 255 } },
+			cc = { brightness = -0.06, contrast = 0.16, saturation = 0.04, tint = { 242, 250, 255 } },
 			bloom = { intensity = 0.4, size = 18, threshold = 1.5 },
 			sky = { stars = 0, sun = 9 },
 		}),

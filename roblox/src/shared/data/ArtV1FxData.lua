@@ -14,15 +14,16 @@ return {
 	--   motes = 기둥을 타고 오르는 반짝이(rate × 수명 = 동시 수) · ring = 등장 때 바닥에서 퍼지는 링 · flash = 등장 흰 번쩍 공
 	drop = {
 		normal = { glow = nil, motes = 0 },
-		rare = { glow = { height = 4, width = 0.5, transparency = 0.55 }, motes = 0 },
+		rare = { glow = { height = 5, width = 0.8, transparency = 0.35 }, motes = 0 }, -- Play 2: 0.5 · 0.55는 번개 없는 희귀에서 거의 안 보였다
 		epic = { glow = { height = 6, width = 0.7, transparency = 0.6 }, motes = 2 },
 		legendary = { glow = { height = 13, width = 0.9, transparency = 0.6 }, motes = 4, ring = 9 },
 		relic = { glow = { height = 18, width = 1.1, transparency = 0.58 }, motes = 6, ring = 11 },
 		ancient = { glow = { height = 23, width = 1.3, transparency = 0.55 }, motes = 8, ring = 13, flash = 3 },
 		primordial = { glow = { height = 30, width = 1.6, transparency = 0.5, rim = C(255, 60, 200), core = C(255, 255, 255) }, motes = 10, ring = 16, flash = 4 },
-		transcendent = { glow = { height = 36, width = 1.8, transparency = 0.25, rim = GOLD, core = BLACK }, motes = 12, ring = 18, flash = 4, moteColor = C(255, 208, 92) },
+		transcendent = { glow = { height = 36, width = 1.8, transparency = 0.1, rim = GOLD, core = BLACK }, motes = 12, ring = 18, flash = 4, moteColor = C(255, 208, 92) }, -- 검은 심 = 비발광 띠(ArtV1Dopamine)
 		moteLifetime = 1.6, moteSpeed = 3.2, moteSize = 0.28, ringSeconds = 0.7, flashSeconds = 0.18,
 		transcendentColor = GOLD, -- ItemVisualData 초월 색과 같다(땅 드랍 표시 전용)
+		dropLightScale = 0.5, -- 서버 드랍 광원 밝기 배율(이 화면만 - 바닥이 하얗게 날리지 않게)
 	},
 
 	levelUp = { seconds = 1.0, ringSize = 6, ringColor = C(255, 244, 170), flashColor = C(255, 255, 255), particles = 16, particleColor = C(255, 226, 90), speed = 9, spread = 25, gravity = 4, size = 0.35 },
@@ -35,7 +36,7 @@ return {
 		seconds = 1.2, speed = 8, spread = 60, gravity = 10, size = 0.4,
 	},
 
-	rebirth = { seconds = 1.6, color = C(140, 110, 230), light = C(214, 200, 255), pillar = { height = 16, width = 2.2, topWidth = 0.6 }, rings = { 8, 14 }, particles = 20, speed = 10, spread = 30, gravity = -2, size = 0.45,
+	rebirth = { seconds = 1.6, color = C(150, 100, 255), light = C(214, 200, 255), -- 기둥은 발광 0.5(Fx.pillar)라 채도 높은 보라 pillar = { height = 16, width = 2.2, topWidth = 0.6 }, rings = { 8, 14 }, particles = 20, speed = 10, spread = 30, gravity = -2, size = 0.45,
 		screenFlash = { brightness = 0.1, seconds = 0.22 } },
 
 	enhanceFail = {

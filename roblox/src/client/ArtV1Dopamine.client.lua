@@ -39,7 +39,7 @@ local function beam(folder, ground, height, width, color, transparency)
 	b.Attachment0, b.Attachment1 = a0, a1
 	b.FaceCamera = true
 	b.Segments = 1
-	b.LightEmission = 1
+	b.LightEmission = (color.R + color.G + color.B) / 3 < 0.3 and 0 or 1 -- 검은 심(초월)은 가산 발광이면 안 보인다 → 비발광 = 어두운 띠
 	b.Color = ColorSequence.new(color)
 	b.Width0, b.Width1 = width, width * 0.55
 	b.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, transparency), NumberSequenceKeypoint.new(0.6, math.min(1, transparency + 0.25)), NumberSequenceKeypoint.new(1, 1) })
@@ -146,6 +146,13 @@ local function build(model)
 	end
 	drops[model] = st
 	styleNameplate(model, true)
+	-- 드랍 광원(서버 PointLight - 등급 밝기)이 평면 조명 + 블룸에서 바닥을 하얗게 날렸다(Play 2) → 이 화면에서만 × dropLightScale
+	for _, light in ipairs(model:GetDescendants()) do
+		if light:IsA("PointLight") and light:GetAttribute("ArtV1Brightness") == nil then
+			light:SetAttribute("ArtV1Brightness", light.Brightness)
+			light.Brightness *= D.dropLightScale
+		end
+	end
 	-- 등장(가까이 있을 때만 - 스트리밍으로 다시 들어온 먼 드랍은 조용히)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if root and (root.Position - ground).Magnitude < 150 then
@@ -173,6 +180,13 @@ local function unbuild(model)
 		st.folder:Destroy()
 		drops[model] = nil
 		styleNameplate(model, false)
+		for _, light in ipairs(model:GetDescendants()) do
+			local b = light:IsA("PointLight") and light:GetAttribute("ArtV1Brightness")
+			if b then
+				light.Brightness = b
+				light:SetAttribute("ArtV1Brightness", nil)
+			end
+		end
 	end
 end
 

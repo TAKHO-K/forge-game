@@ -166,7 +166,7 @@ function Fx.pillar(pos, o)
 	beam.Attachment0, beam.Attachment1 = a0, a1
 	beam.FaceCamera = true
 	beam.Segments = 1
-	beam.LightEmission = 1
+	beam.LightEmission = 0.5 -- 1(가산)은 블룸과 겹쳐 색이 흰색으로 날아갔다(Play 2 - 환생 보라 · 부화 등급 색)
 	beam.Color = ColorSequence.new(o.color)
 	beam.Width0, beam.Width1 = o.width, o.topWidth or o.width * 0.5
 	beam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(0.5, 0.45), NumberSequenceKeypoint.new(1, 1) })
