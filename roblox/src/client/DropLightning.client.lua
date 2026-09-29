@@ -14,7 +14,13 @@ local BOLT = PrimordialData.bolt
 local rng = Random.new()
 local bolts = {} -- [model] = { folder, core, segments = {}, branch = {}, nextAt, flashAt, ground, height, color }
 
+local ArtV1FxData = require(ReplicatedStorage.Shared.data.ArtV1FxData) -- A2-N2: 아트 스위치 뒤 번개 색 덮어쓰기(전설 = 진한 주황 - 블룸에서 유물 금과 겹쳤다)
+
 local function dropColor(gradeId)
+	local art = Workspace:GetAttribute("ArtStyleV1") and ArtV1FxData.drop[gradeId]
+	if art and art.boltColor then
+		return art.boltColor
+	end
 	if gradeId == "primordial" then
 		return PrimordialData.auraColor
 	end

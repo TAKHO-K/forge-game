@@ -94,7 +94,7 @@ local function track(player, character)
 	if not (root and hum) then
 		return
 	end
-	local st = { player = player, root = root, hum = hum, isLocal = player == localPlayer, lastVy = 0, lastStep = root.Position, dashUntil = 0 }
+	local st = { player = player, root = root, hum = hum, isLocal = player == localPlayer, lastVy = 0, lastStep = root.Position, lastPos = root.Position, dashUntil = 0 }
 	st.dash = makeTrail(root, "ArtV1DashTrail", 0.8)
 	st.glide = makeTrail(root, "ArtV1GlideTrail", 0.4)
 	chars[character] = st
@@ -149,7 +149,7 @@ local function footprint(st, theme)
 	Debris:AddItem(p, f.seconds + 0.05)
 end
 
-RunService.Heartbeat:Connect(function()
+RunService.Heartbeat:Connect(function(dt)
 	local on = Fx.isOn()
 	local camera = Workspace.CurrentCamera
 	local eye = camera and camera.CFrame.Position
@@ -161,7 +161,11 @@ RunService.Heartbeat:Connect(function()
 		end
 		local near = st.isLocal or (eye and (st.root.Position - eye).Magnitude <= FxData.budget.otherPlayerDistance)
 		local vel = st.root.AssemblyLinearVelocity
-		local flat = Vector3.new(vel.X, 0, vel.Z).Magnitude
+		-- 수평 속도 = 위치 변화량(Play 4: 대시는 루트를 CFrame 트윈으로 옮겨 AssemblyLinearVelocity가 0이었다 · 남의 캐릭터도 복제 위치로 같게 잰다)
+		local pos = st.root.Position
+		local moved = Vector3.new(pos.X - st.lastPos.X, 0, pos.Z - st.lastPos.Z).Magnitude
+		st.lastPos = pos
+		local flat = (dt > 0 and moved < 60) and moved / dt or 0 -- 60 stud 넘게 한 번에 = 순간이동(대시 아님)
 		local gliding = character:GetAttribute("Gliding") == true
 		-- ① 대시 트레일
 		local dashTheme = on and near and themeOf(st.player, "dashTrail")

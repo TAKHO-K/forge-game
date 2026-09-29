@@ -16,7 +16,7 @@ return {
 		normal = { glow = nil, motes = 0 },
 		rare = { glow = { height = 5, width = 0.8, transparency = 0.35 }, motes = 0 }, -- Play 2: 0.5 · 0.55는 번개 없는 희귀에서 거의 안 보였다
 		epic = { glow = { height = 6, width = 0.7, transparency = 0.6 }, motes = 2 },
-		legendary = { glow = { height = 13, width = 0.9, transparency = 0.45, color = C(255, 110, 20) }, motes = 4, ring = 9, ringColor = C(255, 130, 40) }, -- Play 3 · 검토: 등급 주황이 블룸에서 노랑으로 번져 유물 금과 겹쳤다 → 빛 띠 · 링만 진한 주황(등급 색 자체는 그대로)
+		legendary = { glow = { height = 13, width = 0.9, transparency = 0.45, color = C(255, 110, 20) }, motes = 4, ring = 9, ringColor = C(255, 130, 40), boltColor = C(255, 118, 30) }, -- Play 3 · 검토: 등급 주황이 블룸에서 노랑으로 번져 유물 금과 겹쳤다 → 빛 띠 · 링만 진한 주황(등급 색 자체는 그대로)
 		relic = { glow = { height = 18, width = 1.1, transparency = 0.58 }, motes = 6, ring = 11 },
 		ancient = { glow = { height = 23, width = 1.3, transparency = 0.55 }, motes = 8, ring = 13, flash = 3 },
 		primordial = { glow = { height = 30, width = 1.6, transparency = 0.5, rim = C(255, 60, 200), core = C(255, 255, 255) }, motes = 10, ring = 16, flash = 4 },
