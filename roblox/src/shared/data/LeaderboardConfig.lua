@@ -8,7 +8,7 @@
 return {
 	namePrefix = "ForgeLB_v1",
 
-	-- 시즌(P3c C7 - 사용자 확정 "시즌 = 4주"): seasonStartUnix가 있으면 시즌 번호가 그날부터 seasonLengthDays(28)마다 자동으로 오른다(LeaderboardRules.seasonAt) -
+	-- 시즌(P3c C7 - 사용자 확정 "시즌 = 4주"): seasonStartUnix가 있으면 시즌 번호가 그날부터 seasonLengthDays(56 - QUEUE-B1 8주)마다 자동으로 오른다(LeaderboardRules.seasonAt) -
 	-- 새 시즌 = 새 저장소 이름(_s<번호>_ - 빈 순위표, 0부터 시작). 끝난 시즌의 상위 기록은 "명예의 전당"(hallTopN)으로 한 번 복사해 둔다(Leaderboard.snapshotHall).
 	-- 영구 개인 최고(profile의 bestBossCleared)는 시즌과 무관하게 그대로다. 시작일 0 = 아직 안 정함 - seasonId 고정(결정 필요: 첫 시즌 시작일).
 	seasonId = 1,

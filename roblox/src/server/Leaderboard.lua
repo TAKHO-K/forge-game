@@ -41,7 +41,7 @@ function Leaderboard.writeMode()
 	return DevToolsConfig.verifyArmed and "verify" or "off"
 end
 
--- P3c C7: 지금 시즌(시작일 + 28일마다 자동 - LeaderboardRules.seasonAt). 검증은 debugSeason으로 시즌을 고정한다.
+-- P3c C7: 지금 시즌(시작일 + seasonLengthDays(QUEUE-B1: 56일)마다 자동 - LeaderboardRules.seasonAt). 검증은 debugSeason으로 시즌을 고정한다.
 Leaderboard.debugSeason = nil
 function Leaderboard.currentSeason()
 	return Leaderboard.debugSeason or LeaderboardRules.seasonAt(os.time(), LeaderboardConfig)
