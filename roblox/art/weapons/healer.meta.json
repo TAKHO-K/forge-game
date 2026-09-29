@@ -84,7 +84,7 @@
   "legendary": {
    "parts": {
     "Shaft": {
-     "tris": 152,
+     "tris": 128,
      "origin": [
       0.0,
       0.0,
@@ -94,7 +94,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 236,
+     "tris": 264,
      "origin": [
       0.0,
       0.0,
@@ -134,7 +134,7 @@
      "color": "#FF9933"
     },
     "Band": {
-     "tris": 66,
+     "tris": 94,
      "origin": [
       0.0,
       0.0,
@@ -145,15 +145,15 @@
     }
    },
    "partCount": 6,
-   "totalTris": 596,
+   "totalTris": 628,
    "triBudget": 800,
-   "budgetUse": 0.745,
+   "budgetUse": 0.785,
    "partCap": 12
   },
   "transcendent": {
    "parts": {
     "Shaft": {
-     "tris": 126,
+     "tris": 76,
      "origin": [
       0.0,
       0.0,
@@ -163,7 +163,7 @@
      "color": "#262230"
     },
     "Head": {
-     "tris": 210,
+     "tris": 238,
      "origin": [
       0.0,
       0.0,
@@ -203,7 +203,7 @@
      "color": "#D6B03E"
     },
     "Band": {
-     "tris": 66,
+     "tris": 94,
      "origin": [
       0.0,
       0.0,
@@ -264,9 +264,9 @@
     }
    },
    "partCount": 11,
-   "totalTris": 752,
+   "totalTris": 758,
    "triBudget": 800,
-   "budgetUse": 0.94,
+   "budgetUse": 0.948,
    "partCap": 16
   },
   "rare": {
@@ -282,7 +282,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 126,
+     "tris": 138,
      "origin": [
       0.0,
       0.0,
@@ -323,9 +323,9 @@
     }
    },
    "partCount": 5,
-   "totalTris": 420,
+   "totalTris": 432,
    "triBudget": 800,
-   "budgetUse": 0.525,
+   "budgetUse": 0.54,
    "partCap": 8
   },
   "epic": {
@@ -341,7 +341,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 218,
+     "tris": 246,
      "origin": [
       0.0,
       0.0,
@@ -382,15 +382,15 @@
     }
    },
    "partCount": 5,
-   "totalTris": 512,
+   "totalTris": 540,
    "triBudget": 800,
-   "budgetUse": 0.64,
+   "budgetUse": 0.675,
    "partCap": 8
   },
   "relic": {
    "parts": {
     "Shaft": {
-     "tris": 126,
+     "tris": 76,
      "origin": [
       0.0,
       0.0,
@@ -400,7 +400,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 210,
+     "tris": 238,
      "origin": [
       0.0,
       0.0,
@@ -440,7 +440,7 @@
      "color": "#FFD700"
     },
     "Band": {
-     "tris": 66,
+     "tris": 94,
      "origin": [
       0.0,
       0.0,
@@ -461,15 +461,15 @@
     }
    },
    "partCount": 7,
-   "totalTris": 606,
+   "totalTris": 612,
    "triBudget": 800,
-   "budgetUse": 0.757,
+   "budgetUse": 0.765,
    "partCap": 12
   },
   "ancient": {
    "parts": {
     "Shaft": {
-     "tris": 126,
+     "tris": 76,
      "origin": [
       0.0,
       0.0,
@@ -479,7 +479,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 210,
+     "tris": 238,
      "origin": [
       0.0,
       0.0,
@@ -519,7 +519,7 @@
      "color": "#E0393E"
     },
     "Band": {
-     "tris": 66,
+     "tris": 94,
      "origin": [
       0.0,
       0.0,
@@ -560,15 +560,15 @@
     }
    },
    "partCount": 9,
-   "totalTris": 690,
+   "totalTris": 696,
    "triBudget": 800,
-   "budgetUse": 0.863,
+   "budgetUse": 0.87,
    "partCap": 12
   },
   "primordial": {
    "parts": {
     "Shaft": {
-     "tris": 126,
+     "tris": 76,
      "origin": [
       0.0,
       0.0,
@@ -578,7 +578,7 @@
      "color": "#ECE2F0"
     },
     "Head": {
-     "tris": 210,
+     "tris": 238,
      "origin": [
       0.0,
       0.0,
@@ -618,7 +618,7 @@
      "color": "#ECE8F6"
     },
     "Band": {
-     "tris": 66,
+     "tris": 94,
      "origin": [
       0.0,
       0.0,
@@ -679,9 +679,9 @@
     }
    },
    "partCount": 11,
-   "totalTris": 771,
+   "totalTris": 777,
    "triBudget": 800,
-   "budgetUse": 0.964,
+   "budgetUse": 0.971,
    "partCap": 16
   }
  }

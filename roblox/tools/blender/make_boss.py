@@ -56,7 +56,94 @@ def rig_section_guardian():
     return dict(joints=J, body=(60, 20, 70), head=(90, 30, 100), accent=(190, 110, 255))
 
 
-RIGS = {"section_guardian": rig_section_guardian}
+def chain(J, prefix, parent, count, length, w0, w1, at, rot0, rot_step, color="body", flat=1.0, tip_color=None, tip_shape=None, tip_material=None):
+    """BossRigSpec chain 이식: n마디 · 끝으로 굵기 w0 → w1 · 첫 마디 rot0 · 다음부터 rotStep"""
+    for i in range(1, count + 1):
+        f = (i - 1) / max(count - 1, 1)
+        w = w0 + (w1 - w0) * f
+        name = "%s%d" % (prefix, i)
+        J.append(dict(name=name, parent=parent, part=name, size=(w * flat, length, w), color=(tip_color if (i == count and tip_color) else color),
+                      material=(tip_material if i == count else None), shape=(tip_shape if (i == count and tip_shape) else "block"),
+                      at=at if i == 1 else (0, -length / 2, 0), pivot=(0, length / 2, 0), rot=rot0 if i == 1 else rot_step))
+        parent = name
+
+
+def white(c, t=0.3):
+    return tuple(int(round(x + (255 - x) * t)) for x in c)
+
+
+TIER = {1: (111, 158, 76), 2: (63, 142, 92), 3: (74, 122, 46), 4: (168, 95, 38), 6: (224, 80, 92)}  # MonsterData 티어 색(BossData tierColor) · 머리 = 흰색 쪽 0.3
+
+
+def rig_frost_giant():
+    J = biped(dict(hips=(1.4, 0.5, 0.9), torso=(1.9, 1.9, 1.15), head=(1.0, 1.0, 1.0), thigh=(0.62, 1.0), shin=(0.56, 1.0), foot=(0.72, 0.3, 1.0),
+                   upperArm=(0.58, 1.05), forearm=(0.58, 1.0), hand=(0.72, 0.8, 0.72), shoulderX=1.22, stance=0.42))
+    J.append(dict(name="Horn_L", parent="Head", part="LeftHorn", size=(0.3, 1.0, 0.3), shape="wedge", color="accent", at=(-0.45, 0.45, 0), pivot=(0, -0.45, 0), rot=(0, 0, 25)))
+    J.append(dict(name="Horn_R", parent="Head", part="RightHorn", size=(0.3, 1.0, 0.3), shape="wedge", color="accent", at=(0.45, 0.45, 0), pivot=(0, -0.45, 0), rot=(0, 180, 25)))
+    chain(J, "Beard", "Head", 3, 0.38, 0.62, 0.3, (0, -0.45, -0.3), (-8, 0, 0), (-6, 0, 0), color="accent", flat=1.1)
+    J.append(dict(name="Club", parent="Hand_R", part="IceClub", size=(0.55, 2.6, 0.55), shape="cyl", color="accent", material="Ice", at=(0, -0.35, 0), pivot=(0, 0.9, 0)))
+    return dict(joints=J, body=TIER[2], head=white(TIER[2]), accent=(200, 240, 255))
+
+
+def rig_abyssal_lord():
+    J = biped(dict(hips=(1.5, 0.5, 1.1), torso=(2.3, 1.6, 1.4), head=(1.1, 0.9, 1.1), thigh=(0.66, 0.72), shin=(0.6, 0.72), foot=(0.8, 0.25, 1.15),
+                   upperArm=(0.62, 0.95), forearm=(0.6, 0.9), hand=(0.72, 0.72, 0.72), shoulderX=1.42, stance=0.46))
+    J.append(dict(name="Fin_L", parent="Head", part="LeftFin", size=(0.25, 0.8, 0.9), shape="wedge", color="accent", at=(-0.6, 0.1, 0.1), pivot=(0, -0.2, 0), rot=(0, 0, 35)))
+    J.append(dict(name="Fin_R", parent="Head", part="RightFin", size=(0.25, 0.8, 0.9), shape="wedge", color="accent", at=(0.6, 0.1, 0.1), pivot=(0, -0.2, 0), rot=(0, 0, -35)))
+    J.append(dict(name="Crest", parent="Body", part="BackFin", size=(0.25, 1.1, 1.2), shape="wedge", color="accent", at=(0, 0.4, 0.7), pivot=(0, -0.3, 0), rot=(0, 180, 0)))
+    chain(J, "Tail", "Hips", 6, 0.75, 0.75, 0.32, (0, -0.15, 0.5), (-75, 0, 0), (-9, 0, 0), color="head", flat=1.2, tip_color="accent", tip_shape="wedge")
+    J.append(dict(name="Trident", parent="Hand_R", part="Trident", size=(0.22, 4.2, 0.22), shape="cyl", color="accent", at=(0, -0.3, 0), pivot=(0, -0.6, 0)))
+    J.append(dict(name="TridentHead", parent="Trident", part="TridentHead", size=(0.9, 0.7, 0.15), shape="wedge", color="accent", material="Neon", at=(0, 2.1, 0), pivot=(0, -0.35, 0)))
+    return dict(joints=J, body=TIER[1], head=white(TIER[1]), accent=(60, 200, 255))
+
+
+def rig_crystal_queen():
+    J = biped(dict(hips=(1.2, 0.5, 0.9), torso=(1.5, 1.7, 0.9), head=(0.9, 0.95, 0.9), headShape="ball", thigh=(0.5, 0.9), shin=(0.45, 0.9), foot=(0.55, 0.25, 0.9),
+                   upperArm=(0.45, 0.95), forearm=(0.42, 0.9), hand=(0.5, 0.6, 0.5), shoulderX=0.95, stance=0.35))
+    for i, (tag, at, r0) in enumerate((("F", (0, 0, -0.45), (12, 0, 0)), ("B", (0, 0, 0.45), (-12, 0, 0)), ("L", (-0.6, 0, 0), (0, 0, -12)), ("R", (0.6, 0, 0), (0, 0, 12)))):
+        w0, w1 = (1.25, 1.35) if i < 2 else (0.95, 1.05)
+        chain(J, "Skirt" + tag, "Hips", 2, 0.75, w0, w1, (at[0], at[1] - 0.1, at[2]), r0, tuple(x * 0.5 for x in r0), color="head", tip_color="accent", tip_material="Glass")
+    J.append(dict(name="Crown", parent="Head", part="Crown", size=(0.8, 0.5, 0.8), shape="cyl", color="accent", material="Neon", at=(0, 0.5, 0), pivot=(0, -0.2, 0), rot=(0, 0, 90)))
+    J.append(dict(name="Wing_L", parent="Body", part="LeftShard", size=(0.35, 1.6, 0.35), shape="wedge", color="accent", material="Glass", at=(-0.4, 0.5, 0.45), pivot=(0, -0.7, 0), rot=(-15, 0, 30)))
+    J.append(dict(name="Wing_R", parent="Body", part="RightShard", size=(0.35, 1.6, 0.35), shape="wedge", color="accent", material="Glass", at=(0.4, 0.5, 0.45), pivot=(0, -0.7, 0), rot=(-15, 180, 30)))
+    J.append(dict(name="Scepter", parent="Hand_R", part="Scepter", size=(0.18, 2.4, 0.18), shape="cyl", color="head", at=(0, -0.25, 0), pivot=(0, -0.5, 0)))
+    J.append(dict(name="ScepterGem", parent="Scepter", part="ScepterGem", size=(0.5, 0.5, 0.5), shape="ball", color="accent", material="Neon", at=(0, 1.25, 0), pivot=(0, 0, 0)))
+    return dict(joints=J, body=TIER[6], head=white(TIER[6]), accent=(150, 240, 255))
+
+
+def rig_storm_lord():
+    J = biped(dict(hips=(1.3, 0.5, 0.9), torso=(1.7, 1.8, 1.0), head=(0.95, 1.0, 0.95), thigh=(0.55, 0.95), shin=(0.5, 0.95), foot=(0.6, 0.25, 0.95),
+                   upperArm=(0.5, 1.0), forearm=(0.48, 0.95), hand=(0.55, 0.6, 0.55), shoulderX=1.05, stance=0.38))
+    J.append(dict(name="Blade_L", parent="Body", part="LeftBlade", size=(0.3, 1.5, 0.3), shape="wedge", color="accent", at=(-0.95, 0.9, 0), pivot=(0, -0.6, 0), rot=(0, 0, 15)))
+    J.append(dict(name="Blade_R", parent="Body", part="RightBlade", size=(0.3, 1.5, 0.3), shape="wedge", color="accent", at=(0.95, 0.9, 0), pivot=(0, -0.6, 0), rot=(0, 180, 15)))
+    chain(J, "CapeL", "Body", 3, 0.8, 0.8, 0.95, (-0.42, 0.8, 0.55), (-6, 0, 0), (-3, 0, 0), color="dark")
+    chain(J, "CapeR", "Body", 3, 0.8, 0.8, 0.95, (0.42, 0.8, 0.55), (-6, 0, 0), (-3, 0, 0), color="dark")
+    J.append(dict(name="Staff", parent="Hand_R", part="Staff", size=(0.25, 4.6, 0.25), shape="cyl", color="dark", at=(0, -0.3, 0), pivot=(0, -0.4, 0)))
+    J.append(dict(name="StaffOrb", parent="Staff", part="StaffOrb", size=(0.7, 0.7, 0.7), shape="ball", color="accent", material="Neon", at=(0, 2.35, 0), pivot=(0, 0, 0)))
+    return dict(joints=J, body=TIER[3], head=white(TIER[3]), accent=(255, 240, 90))
+
+
+def rig_scorpion_queen():
+    J = [dict(name="RootJoint", parent="HumanoidRootPart", part="Body", size=(2.4, 0.9, 2.2), color="body", at=(0, -0.1, 0), pivot=(0, 0, 0)),
+         dict(name="Neck", parent="Body", part="Head", size=(1.3, 0.7, 0.9), color="head", at=(0, 0.05, -1.1), pivot=(0, 0, 0.42)),
+         dict(name="Eyes", parent="Head", part="Eyes", size=(0.8, 0.14, 0.08), color="eye", material="Neon", at=(0, 0.15, -0.45), pivot=(0, 0, 0.02)),
+         dict(name="Jaw", parent="Head", part="Mouth", size=(0.6, 0.12, 0.08), color="mouth", at=(0, -0.18, -0.45), pivot=(0, 0.04, 0.02))]
+    for side, x in (("L", -1), ("R", 1)):
+        for k, z in enumerate((-0.6, 0.15, 0.85), 1):
+            leg = "%d_%s" % (k, side)
+            J.append(dict(name="Hip" + leg, parent="Body", part="Thigh" + leg, size=(0.28, 1.0, 0.28), color="head", at=(x * 1.2, -0.15, z), pivot=(0, 0.5, 0), rot=(0, 0, x * 125)))
+            J.append(dict(name="Knee" + leg, parent="Thigh" + leg, part="Shin" + leg, size=(0.24, 1.95, 0.24), color="dark", at=(0, -0.5, 0), pivot=(0, 0.975, 0), rot=(0, 0, -x * 95)))
+        J.append(dict(name="Shoulder_" + side, parent="Body", part="UpperArm_" + side, size=(0.4, 1.0, 0.4), color="head", at=(x * 0.95, 0.05, -1.05), pivot=(0, 0.5, 0), rot=(95, x * -25, 0)))
+        J.append(dict(name="Elbow_" + side, parent="UpperArm_" + side, part="Forearm_" + side, size=(0.42, 1.0, 0.42), color="body", at=(0, -0.5, 0), pivot=(0, 0.5, 0), rot=(40, 0, 0)))
+        J.append(dict(name="Wrist_" + side, parent="Forearm_" + side, part="Hand_" + side, size=(0.8, 0.9, 0.5), color="head", at=(0, -0.5, 0), pivot=(0, 0.4, 0), rot=(-45, 0, 0)))
+        J.append(dict(name="Pincer_" + side, parent="Hand_" + side, part="Pincer_" + side, size=(0.3, 0.9, 0.3), shape="wedge", color="accent", at=(-x * 0.25, -0.4, 0), pivot=(0, 0.45, 0), rot=(0, 0, x * 10)))
+    for t, yaw in enumerate((-30, 0, 30), 1):
+        chain(J, "Tail%d_" % t, "Body", 8, 0.55, 0.45, 0.24, ((t - 2) * 0.45, 0.3, 1.0), (-127, yaw, 0), (-20, 0, 0), color="body", tip_color="accent", tip_shape="wedge", tip_material="Neon")
+    return dict(joints=J, body=TIER[4], head=white(TIER[4]), accent=(255, 190, 60))
+
+
+RIGS = {"section_guardian": rig_section_guardian, "frost_giant": rig_frost_giant, "abyssal_lord": rig_abyssal_lord, "crystal_queen": rig_crystal_queen,
+        "storm_lord": rig_storm_lord, "scorpion_queen": rig_scorpion_queen}
 
 
 def color_of(role, rig):
@@ -102,9 +189,10 @@ def old_shape(j):
     sh = j.get("shape", "block")
     if sh == "ball":
         return A.ellipsoid((sx / 2, sy / 2, sz / 2), n=12, rings=8)
-    if sh == "cyl":
-        return A.lathe([(0.0, -sx / 2), (sy / 2, -sx / 2), (sy / 2, sx / 2), (0.0, sx / 2)], 12, axis="X")
-    return A.box(sx, sy, sz)
+    if sh == "wedge":  # Roblox 쐐기: 아래 전체 · 위는 뒤(+Z) 모서리만
+        v = [(-sx / 2, -sy / 2, -sz / 2), (sx / 2, -sy / 2, -sz / 2), (sx / 2, -sy / 2, sz / 2), (-sx / 2, -sy / 2, sz / 2), (-sx / 2, sy / 2, sz / 2), (sx / 2, sy / 2, sz / 2)]
+        return v, [(0, 1, 2, 3), (3, 2, 5, 4), (0, 4, 5, 1), (0, 3, 4), (1, 5, 2)]
+    return A.box(sx, sy, sz)  # "cyl"은 BossRig.newPart가 처리하지 않아 게임에서도 상자다
 
 
 def guardian_shape(part, j):
@@ -171,8 +259,268 @@ def guardian_shape(part, j):
     return A.box(sx, sy, sz)
 
 
+def taper_seg(sx, sy, sz, k_end=0.8, b=0.1, bulge=1.06):
+    """마디(관절 = 위 +sy/2 · 끝 = 아래): 위에서 아래로 가늘어지는 모따기 덩어리"""
+    return yloft([(-sy / 2, sx * k_end, sz * k_end, 0), (-sy * 0.1, sx * bulge, sz * bulge, 0), (sy / 2, sx, sz, 0)], b)
+
+
+def biped_generic(part, j, st):
+    """두 발 보스 공통 부위. st = 스타일: shoulders(어깨 폭 배) · waist(허리 폭 배) · head("helm" | "round" | "hood") · fist(주먹 배) · robe(치마 길이)"""
+    sx, sy, sz = j["size"]
+    if part == "Hips":
+        g = yloft([(-sy / 2, sx * 0.9, sz * 0.9, 0), (0, sx * 1.05, sz * 1.05, 0), (sy / 2, sx, sz, 0)], 0.14)
+        if st.get("robe"):
+            r = st["robe"]
+            g = A.merge(g, yloft([(-sy / 2 - r, sx * 1.35, sz * 1.35, 0.04), (-sy / 2 - r * 0.4, sx * 1.18, sz * 1.18, 0), (sy / 2 - 0.05, sx * 1.0, sz * 1.0, 0)], 0.16))
+        return g
+    if part == "Body":
+        w0, w1 = st.get("waist", 0.8), st.get("shoulders", 1.1)
+        return yloft([(-sy / 2, sx * w0, sz * 0.85, 0.04), (-sy * 0.15, sx * (w0 + w1) / 2, sz * 1.0, -0.05), (sy * 0.3, sx * w1, sz * 1.05, -0.08), (sy / 2, sx * w1 * 0.9, sz * 0.88, 0)], 0.22)
+    if part == "Head":
+        style = st.get("head", "helm")
+        if style == "round" or j.get("shape") == "ball":
+            return A.merge(A.ellipsoid((sx * 0.52, sy * 0.52, sz * 0.52), n=14, rings=8), A.ellipsoid((sx * 0.22, sy * 0.14, sz * 0.14), n=8, rings=4, center=(0, -sy * 0.18, -sz * 0.44)))
+        if style == "hood":
+            hood = yloft([(-sy / 2, sx * 0.9, sz * 0.95, 0.04), (0, sx * 1.1, sz * 1.1, 0.02), (sy * 0.35, sx * 0.95, sz, 0.08), (sy / 2 + 0.15, sx * 0.3, sz * 0.35, 0.3)], 0.14)
+            return hood
+        head = yloft([(-sy / 2, sx * 0.78, sz * 0.82, 0), (-sy * 0.1, sx * 0.98, sz, 0), (sy * 0.3, sx, sz, -0.03), (sy / 2, sx * 0.8, sz * 0.82, 0.04)], 0.15)
+        return A.merge(head, A.box(sx * 1.02, sy * 0.14, 0.2, b=0.05, center=(0, sy * 0.22, -sz / 2 - 0.02)))
+    if part == "Eyes":
+        return A.merge(*[A.xform(A.box(sx * 0.42, sy * 1.3, 0.1, b=0.02), m=A.rot(rz=s * 10), t=(s * sx * 0.3, 0, -0.03)) for s in (-1, 1)])
+    if part == "Mouth":
+        return A.box(sx, sy, 0.1, b=0.03, center=(0, 0, -0.02))
+    if part.startswith("Thigh"):
+        return taper_seg(sx, sy, sz, 0.88, 0.14)
+    if part.startswith("Shin"):
+        return A.merge(taper_seg(sx, sy, sz, 1.08, 0.13, 0.95), A.ellipsoid((sx * 0.5, sy * 0.24, sz * 0.36), n=10, rings=5, center=(0, sy * 0.4, -sz * 0.32)))
+    if part.startswith("Foot"):
+        return A.loft([[(x, y, z) for x, y in A.chamfer_rect(w, h, 0.07)] for z, w, h in ((sz * 0.5, sx * 0.9, sy), (-sz * 0.2, sx, sy), (-sz * 0.5, sx * 0.82, sy * 0.7))])
+    if part.startswith("UpperArm"):
+        return taper_seg(sx, sy, sz, 0.88, 0.14)
+    if part.startswith("Forearm"):
+        return yloft([(-sy / 2, sx * 1.12, sz * 1.1, 0), (-sy * 0.15, sx * 1.1, sz * 1.08, 0), (sy / 2, sx * 0.9, sz * 0.9, 0)], 0.15)
+    if part.startswith("Hand"):
+        k = st.get("fist", 1.0)
+        return A.merge(yloft([(-sy / 2 * k, sx * k, sz * 0.95 * k, 0), (0, sx * 1.08 * k, sz * 1.02 * k, 0), (sy / 2 * 0.9, sx * 0.92 * k, sz * 0.9 * k, 0)], 0.16),
+                       A.xform(A.box(sx * 0.9 * k, sy * 0.3, 0.22, b=0.07), t=(0, -sy * 0.25, -sz * 0.52 * k)))
+    return None
+
+
+def chain_seg(j, flat_tail=False):
+    """사슬 마디(관절 = 위): 위 → 아래로 좁아지는 둥근 마디"""
+    sx, sy, sz = j["size"]
+    rings = []
+    for y, k in ((sy / 2, 1.0), (0.0, 1.06), (-sy / 2, 0.86)):
+        rings.append([(x * k, y, z * k) for x, z in A.circle2d(sz / 2, 8, rx=sx / 2)])
+    return A.loft(rings)
+
+
+def frost_extra(part, j):
+    sx, sy, sz = j["size"]
+    if part.startswith("UpperArm"):  # 윗팔 + 어깨 위 얼음 결정 덩어리(갑주 자리 - 머리보다 높게 솟음)
+        side = -1 if part.endswith("_L") else 1
+        arm = biped_generic(part, j, STYLE["frost_giant"])
+        cl = [A.crystal(h, r, sides=6, tip_h=h * 0.4, base_h=0.15, center=(side * dx, sy * 0.5 + h * 0.3, dz), m=A.rot(rz=-side * tilt, rx=tx))
+              for h, r, dx, dz, tilt, tx in ((1.5, 0.36, 0.05, 0.0, 12, 0), (1.05, 0.26, 0.32, 0.15, 35, 10), (0.8, 0.22, -0.2, -0.2, -8, -15))]
+        return A.merge(arm, *cl)
+    if part in ("LeftHorn", "RightHorn"):  # 굽은 얼음 뿔(밑 굵고 끝 뾰족 · 바깥으로 휨)
+        return A.tube(A.bezier((0, -sy / 2, 0), (0.05, 0.0, -0.05), (0.25, sy * 0.35, -0.1), (0.35, sy * 0.75, 0.05), n=6), lambda u: 0.24 * (1 - u) + 0.02, sides=6, tip_end=True)
+    if part.startswith("Beard"):  # 얼음 고드름 수염(아래로 뾰족)
+        n = int(part[-1])
+        return A.merge(*[A.crystal(sy * (1.9 - 0.3 * abs(k)), sz * 0.36, sides=5, tip_h=sy * 0.5, base_h=0.05, center=(k * sx * 0.3, -sy * 0.1, 0), m=A.rot(rx=180)) for k in ((-1, 0, 1) if n < 3 else (-0.5, 0.5))])
+    if part == "IceClub":  # 깎인 얼음 곤봉(손잡이 → 끝이 굵은 결정 덩어리)
+        grip = A.lathe([(0.0, -1.3), (0.14, -1.3), (0.16, -0.4), (0.22, 0.2), (0.0, 0.3)], 8)
+        head = A.crystal(1.7, 0.5, sides=6, tip_h=0.5, base_h=0.35, center=(0, 0.75, 0))
+        spikes = [A.crystal(0.6, 0.12, sides=4, tip_h=0.2, base_h=0.05, center=(0.4 * math.cos(a), 0.9, 0.4 * math.sin(a)), m=A.rot(rz=-math.degrees(math.cos(a)) * 0.8, rx=math.degrees(math.sin(a)) * 0.8)) for a in (0.5, 2.6, 4.4)]
+        return A.merge(grip, head, *spikes)
+    return None
+
+
+def fin_fan(w, h, lobes=3, depth=0.1):
+    """부채 지느러미(XY 윤곽 · 끝 물결)"""
+    outline = [(0.0, 0.0)]
+    for i in range(lobes * 2 + 1):
+        a = math.pi * 0.5 * i / (lobes * 2)
+        r = h * (1.0 if i % 2 == 0 else 0.78)
+        outline.append((w * math.sin(a) * r / h, r * math.cos(a)))
+    n = len(outline)
+    v = [(x, y, depth / 2) for x, y in outline] + [(x, y, -depth / 2) for x, y in outline]
+    f = [tuple(range(n)), tuple(reversed(range(n, 2 * n)))] + [(i, n + i, n + (i + 1) % n, (i + 1) % n) for i in range(n)]
+    return v, f
+
+
+def abyssal_extra(part, j):
+    sx, sy, sz = j["size"]
+    if part in ("LeftFin", "RightFin"):  # 머리 옆 부채 지느러미
+        g = A.xform(fin_fan(0.9, 1.0, 3, 0.1), m=A.rot(ry=90), t=(0, -sy / 2, 0.3))
+        return g
+    if part == "BackFin":  # 등 지느러미(높게 · 뒤로 휨)
+        return A.xform(fin_fan(1.3, 1.4, 4, 0.14), m=A.rot(ry=90, rx=-20), t=(0, -sy / 2, 0.4))
+    if part.startswith("Tail") and part[4:].isdigit():
+        if part == "Tail6":  # 꼬리 끝 = 두 갈래 지느러미
+            return A.merge(chain_seg(j), *[A.xform(fin_fan(0.7, 1.1, 2, 0.12), m=A.rot(rz=180 + s * 30), t=(0, -sy / 2, 0)) for s in (-1, 1)])
+        return A.merge(chain_seg(j), A.crystal(0.4, 0.1, sides=4, tip_h=0.15, base_h=0.05, center=(0, 0, sz * 0.5), m=A.rot(rx=90)))
+    if part == "Trident":
+        return A.lathe([(0.0, -2.1), (0.2, -2.1), (0.24, 0.0), (0.2, 2.1), (0.0, 2.1)], 8)  # 자루 반경 2배
+    if part == "TridentHead":  # 세 갈래 창날
+        prongs = [A.tube([(x, -0.3, 0), (x * 1.1, 0.35, 0), (x * 0.9, 0.9 + (0.25 if x == 0 else 0), 0)], lambda u: 0.17 * (1 - u) + 0.02, sides=4, flat=0.6, tip_end=True) for x in (-0.6, 0.0, 0.6)]  # 머리 폭 1.5배
+        bar = A.tube([(-0.64, -0.3, 0), (0, -0.45, 0), (0.64, -0.3, 0)], 0.15, sides=5)
+        return A.merge(bar, *prongs)
+    return None
+
+
+def crystal_extra(part, j):
+    sx, sy, sz = j["size"]
+    if part.startswith("Skirt"):  # 수정 치마 판: 위 좁고 아래로 퍼지며 끝이 뾰족(끝 마디 = 결정)
+        tip = part.endswith("2")
+        rings = [[(x, y, z * 0.35) for x, z in A.chamfer_rect(w, sz, 0.08)] for y, w in ((sy / 2, sx * 0.85), (-sy / 2, sx * 1.05))]
+        g = A.loft(rings, tip1=(0, -sy / 2 - (0.45 if tip else 0.0), 0)) if tip else A.loft(rings)
+        return g
+    if part == "Crown":  # 가시 왕관(리그 cyl 회전 90° - 로컬 X가 위)
+        ring = A.lathe([(0.34, -0.12), (0.4, -0.12), (0.4, 0.1), (0.34, 0.1)], 12, axis="X")
+        spikes = [A.xform(A.crystal(0.55 if k % 2 == 0 else 0.35, 0.09, sides=4, tip_h=0.2, base_h=0.04), m=A.rot(rz=-90), t=(0.2 + (0.2 if k % 2 == 0 else 0.1), 0.37 * math.cos(2 * math.pi * k / 6), 0.37 * math.sin(2 * math.pi * k / 6))) for k in range(6)]
+        return A.merge(ring, *spikes)
+    if part in ("LeftShard", "RightShard"):  # 등 수정 날개 = 큰 결정 + 작은 결정
+        return A.merge(A.crystal(sy * 1.3, sx * 0.55, sides=5, tip_h=0.5, base_h=0.15, center=(0, 0.1, 0)), A.crystal(sy * 0.7, sx * 0.35, sides=5, tip_h=0.3, base_h=0.1, center=(0.25, -0.2, 0.1), m=A.rot(rz=-25)))
+    if part == "Scepter":
+        return A.merge(A.lathe([(0.0, -1.2), (0.15, -1.2), (0.17, 1.0), (0.28, 1.1), (0.0, 1.2)], 8))  # 홀 자루 2배
+    if part == "ScepterGem":
+        return A.crystal(0.7, 0.25, sides=6, tip_h=0.25, base_h=0.2)
+    return None
+
+
+def storm_extra(part, j):
+    sx, sy, sz = j["size"]
+    if part in ("LeftBlade", "RightBlade"):  # 어깨 칼날: 휜 초승달 날
+        return A.tube(A.bezier((0, -sy * 0.5, 0), (0.25, 0.0, 0), (0.2, sy * 0.45, 0), (-0.15, sy * 0.8, 0), n=6), lambda u: 0.2 * (1 - u) + 0.02, sides=4, flat=0.35, tip_end=True)
+    if part.startswith("Cape"):  # 망토 판(아래로 넓어짐 · 끝 마디는 갈라진 끝)
+        last = part.endswith("3")
+        idx = int(part[-1])
+        spread = {1: (0.95, 1.15), 2: (1.15, 1.45), 3: (1.45, 1.9)}[idx]  # 밑으로 갈수록 벌어진 삼각 망토(밑 폭 ≈ 어깨의 1.4배)
+        shift = (-1 if part.startswith("CapeL") else 1) * (0.1 * (idx - 1))
+        rings = [[(x + shift * (k_ + 0.5), y, z * 0.18) for x, z in A.chamfer_rect(w, sz, 0.05)] for k_, (y, w) in enumerate(((sy / 2, sx * spread[0]), (-sy / 2, sx * spread[1])))]
+        g = A.loft(rings)
+        if last:
+            g = A.merge(g, *[A.xform(A.lathe([(0.0, 0.0), (sx * 0.28, 0.0), (0.0, -0.35)], 4), s=(1, 1, 0.3), t=(x, -sy / 2, 0)) for x in (-sx * 0.3, sx * 0.3)])
+        return g
+    if part == "Staff":  # 비틀린 지팡이 + 끝 갈고리
+        rings = [[(x, y, z) for x, z in A.circle2d(0.26 - 0.04 * k / 6, 5, start=k * 0.5)] for k, y in enumerate([-2.3 + 4.6 * i / 6 for i in range(7)])]  # 자루 2배
+        hook = A.tube([(0, 2.2, 0), (0.35, 2.55, 0), (0.1, 2.85, 0), (-0.3, 2.6, 0)], lambda u: 0.12 * (1 - u) + 0.03, sides=5, tip_end=True)
+        return A.merge(A.loft(rings), hook)
+    if part == "StaffOrb":  # 구슬 + 번개 고리
+        return A.merge(A.ellipsoid((sx / 2, sy / 2, sz / 2), n=12, rings=7),
+                       A.tube([(0.55 * math.cos(a), 0.12 * math.sin(3 * a), 0.55 * math.sin(a)) for a in (2 * math.pi * i / 12 for i in range(13))], 0.05, sides=4, cap0=False))
+    return None
+
+
+def scorpion_shape(part, j):
+    sx, sy, sz = j["size"]
+    if part == "Body":  # 마디 등딱지(가운데 볼록 · 뒤로 좁게) - 몸 1.4배(파트 크기보다 크게)
+        sx, sy, sz = sx * 1.4, sy * 1.4, sz * 1.25
+        segs = []
+        for k in range(4):
+            z0, z1 = -sz / 2 + sz * k / 4, -sz / 2 + sz * (k + 1) / 4
+            w = sx * (1.0 - 0.08 * k)
+            segs.append(A.loft([[(x, y, z) for x, y in A.chamfer_rect(w * s, sy * s, 0.3)] for z, s in ((z0, 0.92), (z0 + 0.1, 1.0), (z1 - 0.04, 0.97))]))
+        return A.merge(*segs)
+    if part == "Head":  # 왕관 달린 머리
+        head = A.loft([[(x, y, z) for x, y in A.chamfer_rect(w, sy, 0.18)] for z, w in ((sz / 2, sx * 0.95), (0, sx), (-sz / 2, sx * 0.7))])
+        crown = [A.crystal(0.45 if k == 0 else 0.3, 0.09, sides=4, tip_h=0.15, base_h=0.04, center=(0.3 * k, sy * 0.5, 0.1), m=A.rot(rz=-15 * k)) for k in (-1, 0, 1)]
+        return A.merge(head, *crown)
+    if part in ("Eyes", "Mouth"):
+        return biped_generic(part, j, {})
+    if part.startswith("Thigh"):
+        return taper_seg(sx * 1.6, sy, sz * 1.6, 0.8, 0.08)
+    if part.startswith("Shin"):  # 끝이 뾰족한 다리(1.5배 굵게)
+        return A.loft([[(x, y, z) for x, z in A.circle2d(sx / 2 * k * 1.5, 6)] for y, k in ((sy / 2, 1.0), (0.1, 1.1), (-sy / 2 + 0.3, 0.55))], tip1=(0, -sy / 2, 0))
+    if part.startswith("UpperArm") or part.startswith("Forearm"):
+        return taper_seg(sx, sy, sz, 0.85, 0.1)
+    if part.startswith("Hand"):  # 집게 몸통(두툼) + 고정 날
+        palm = A.ellipsoid((sx * 0.6, sy * 0.55, sz * 0.7), n=10, rings=6)
+        fixed = A.tube(A.bezier((sx * 0.2, -sy * 0.3, 0), (sx * 0.35, -sy * 0.7, 0), (sx * 0.1, -sy * 1.0, 0), (-sx * 0.1, -sy * 1.05, 0), n=5), lambda u: 0.2 * (1 - u) + 0.03, sides=5, tip_end=True)
+        return A.merge(palm, fixed)
+    if part.startswith("Pincer"):  # 움직이는 날(휜 칼날)
+        return A.tube(A.bezier((0, sy / 2, 0), (-0.15, 0.0, 0), (-0.05, -sy * 0.4, 0), (0.15, -sy / 2, 0), n=5), lambda u: 0.14 * (1 - u) + 0.02, sides=5, tip_end=True)
+    if part.startswith("Tail"):
+        last = part.endswith("_8")
+        if last:  # 독침(발광)
+            return A.merge(A.ellipsoid((sx * 0.6, sy * 0.4, sz * 0.6), n=8, rings=5), A.tube(A.bezier((0, -0.1, 0), (0, -0.4, 0), (0, -0.6, -0.15), (0, -0.62, -0.35), n=4), lambda u: 0.12 * (1 - u) + 0.01, sides=5, tip_end=True))
+        seg = chain_seg(j)
+        if part.startswith("Tail2_"):  # 가운데 꼬리만 1.5배 굵게(주인공 꼬리)
+            seg = A.xform(seg, s=(1.5, 1.0, 1.5))
+        return A.merge(seg, A.crystal(0.24, 0.06, sides=4, tip_h=0.1, base_h=0.03, center=(0, 0, sz * 0.5 * (1.5 if part.startswith("Tail2_") else 1)), m=A.rot(rx=90)))
+    return None
+
+
+def body_decor(boss, part, j):
+    """보스별 몸 장식(Body · Hips 메시에 합친다 - 파트 수 그대로): 수호자와 다른 실루엣 한 겹"""
+    sx, sy, sz = j["size"]
+    out = []
+    if boss == "frost_giant" and part == "Body":
+        for s in (-1, 1):  # 어깨 얼음 가시 3
+            out += [A.crystal(h, r_, sides=6, tip_h=h * 0.35, base_h=0.12, center=(s * (sx * 0.62 - 0.2 * k), sy * 0.5 + h * 0.25, 0.12 * k - 0.08), m=A.rot(rz=-s * (12 + 14 * k), rx=8 * k))
+                    for k, (h, r_) in enumerate(((1.25, 0.34), (0.95, 0.26), (0.7, 0.2)))]  # 얼음 어깨 덩어리(가장 큰 결정 = 머리 높이의 1.2배)
+        out += [A.ellipsoid((0.3, 0.22, 0.3), n=8, rings=4, center=(0.42 * math.cos(a), sy * 0.5 + 0.02, 0.4 * math.sin(a) * 0.9)) for a in (2 * math.pi * i / 7 for i in range(7))]  # 털 깃
+    if boss == "frost_giant" and part == "Hips":
+        out += [A.ellipsoid((0.28, 0.24, 0.26), n=8, rings=4, center=(sx * 0.55 * math.cos(a), -0.05, sz * 0.55 * math.sin(a))) for a in (2 * math.pi * i / 8 for i in range(8))]  # 털 허리띠
+    if boss == "abyssal_lord" and part == "Body":
+        for s in (-1, 1):  # 조개 어깨(골 파인 반구)
+            shell = A.ellipsoid((0.7, 0.42, 0.72), n=12, rings=5, center=(s * sx * 0.48, sy * 0.46, 0), squash_bottom=0.2)
+            ribs = [A.tube([(s * sx * 0.48 + 0.55 * math.cos(a), sy * 0.46, 0.55 * math.sin(a)), (s * sx * 0.48, sy * 0.46 + 0.45, 0)], 0.06, sides=4) for a in (0.4, 1.3, 2.2, 3.1, 4.0, 5.0)]
+            out += [shell] + ribs
+        out += [A.ellipsoid((0.26, 0.2, 0.08), n=8, rings=3, center=(x, y, -sz * 0.55)) for y in (sy * 0.15, -sy * 0.05, -sy * 0.25) for x in (-0.36, 0.0, 0.36)]  # 가슴 비늘 판
+    if boss == "abyssal_lord" and part == "Hips":  # 촉수 치마: 굵은 촉수 7이 아래로 퍼져 끝이 말림(밑 폭 = 어깨의 1.3배)
+        for k in range(7):
+            a = math.pi * (0.1 + 0.8 * k / 6) + math.pi
+            dx, dz = math.cos(a), math.sin(a) * 0.9
+            path = [(dx * 0.55, 0.0, dz * 0.45), (dx * 1.1, -0.7, dz * 0.8), (dx * 1.55, -1.3, dz * 1.1), (dx * 1.75, -1.45, dz * 1.2 - 0.25)]
+            out.append(A.tube(A.bezier(*path, n=5), lambda u: 0.26 * (1 - u) + 0.07, sides=6, tip_end=True))
+    if boss == "abyssal_lord" and part == "Body":  # 등 소라 껍데기(뒤로 튀어나온 나선 원뿔)
+        cone = A.lathe([(0.0, -0.7), (0.75, -0.55), (0.8, -0.2), (0.55, -0.1), (0.6, 0.2), (0.35, 0.3), (0.38, 0.55), (0.0, 0.95)], 10)
+        out.append(A.xform(cone, m=A.rot(rx=-60), t=(0, sy * 0.1, sz * 0.62)))
+    if boss == "storm_lord" and part == "Body":
+        collar = [A.xform(A.box(0.5, 1.0, 0.12, b=0.04), m=A.rot(rx=-25, rz=s * 30), t=(s * 0.45, sy * 0.62, 0.2)) for s in (-1, 1)]  # 높은 깃
+        rune = A.xform(zigzag_bolt(), t=(0, 0.1, -sz * 0.55))
+        out += collar + [rune]
+    if boss == "crystal_queen" and part == "Body":
+        for s in (-1, 1):
+            out += [A.crystal(0.6, 0.14, sides=5, tip_h=0.22, base_h=0.05, center=(s * sx * 0.48, sy * 0.52, 0), m=A.rot(rz=-s * 30))]
+        out += [A.crystal(0.45, 0.18, sides=6, tip_h=0.16, base_h=0.14, center=(0, sy * 0.15, -sz * 0.55), m=A.rot(rx=90))]  # 가슴 보석
+    return out
+
+
+def zigzag_bolt():
+    pts = [(0.0, 0.45), (0.22, 0.1), (-0.05, 0.05), (0.18, -0.4)]
+    outline = [(x + 0.1, y) for x, y in pts] + [(x - 0.1, y) for x, y in reversed(pts)]
+    n = len(outline)
+    v = [(x, y, 0.06) for x, y in outline] + [(x, y, -0.06) for x, y in outline]
+    return v, [tuple(range(n)), tuple(reversed(range(n, 2 * n)))] + [(i, n + i, n + (i + 1) % n, (i + 1) % n) for i in range(n)]
+
+
+def make_shape(boss, part, j):
+    if boss == "scorpion_queen":
+        g = scorpion_shape(part, j)
+    else:
+        extra = {"frost_giant": frost_extra, "abyssal_lord": abyssal_extra, "crystal_queen": crystal_extra, "storm_lord": storm_extra}[boss]
+        g = extra(part, j)
+        if g is None:
+            g = biped_generic(part, j, STYLE[boss])
+        deco = body_decor(boss, part, j)
+        if g is not None and deco:
+            g = A.merge(g, *deco)
+    return g if g is not None else old_shape(j)
+
+
+STYLE = {"frost_giant": dict(shoulders=1.45, waist=0.8, head="helm", fist=1.3), "abyssal_lord": dict(shoulders=1.12, waist=0.8, head="helm", fist=1.05),
+         "crystal_queen": dict(shoulders=1.0, waist=0.62, head="round", fist=0.9, robe=0.35), "storm_lord": dict(shoulders=1.05, waist=0.7, head="hood", fist=0.95, robe=0.55)}
+
+
 SHAPES = {"section_guardian": guardian_shape}
-OUTLINE_PARTS = {"section_guardian": ["Body", "Head", "UpperArm_L", "UpperArm_R", "Forearm_L", "Forearm_R", "Hand_L", "Hand_R", "LeftPauldron", "RightPauldron"]}
+for _b in STYLE.keys() | {"scorpion_queen"}:
+    SHAPES[_b] = (lambda b_: (lambda part, j: make_shape(b_, part, j)))(_b)
+OUTLINE_PARTS = {"section_guardian": ["Body", "Head", "UpperArm_L", "UpperArm_R", "Forearm_L", "Forearm_R", "Hand_L", "Hand_R", "LeftPauldron", "RightPauldron"],
+                 # 파트 상한 30 안에서만(수정 여왕 30 · 전갈 여왕 48 = 리그부터 상한 이상 → 껍데기 없음 · Highlight 유지)
+                 "frost_giant": ["Body", "Head", "Hand_L", "Hand_R", "UpperArm_L", "UpperArm_R", "IceClub"], "abyssal_lord": ["Body", "Head"], "storm_lord": ["Body", "Head", "Hips"]}
 
 
 def build(boss, old=False, hull=True):

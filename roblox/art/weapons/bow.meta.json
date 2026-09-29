@@ -134,7 +134,7 @@
      "color": "#EBEBEB"
     },
     "Tips": {
-     "tris": 68,
+     "tris": 60,
      "origin": [
       0.0,
       0.0,
@@ -154,7 +154,7 @@
      "color": "#FFF4D6"
     },
     "Fuller": {
-     "tris": 120,
+     "tris": 132,
      "origin": [
       0.0,
       0.0,
@@ -165,9 +165,9 @@
     }
    },
    "partCount": 8,
-   "totalTris": 636,
+   "totalTris": 640,
    "triBudget": 800,
-   "budgetUse": 0.795,
+   "budgetUse": 0.8,
    "partCap": 12
   },
   "transcendent": {
@@ -223,7 +223,7 @@
      "color": "#EBEBEB"
     },
     "Tips": {
-     "tris": 68,
+     "tris": 60,
      "origin": [
       0.0,
       0.0,
@@ -243,7 +243,7 @@
      "color": "#FFD65A"
     },
     "Fuller": {
-     "tris": 120,
+     "tris": 132,
      "origin": [
       0.0,
       0.0,
@@ -314,9 +314,9 @@
     }
    },
    "partCount": 14,
-   "totalTris": 774,
+   "totalTris": 778,
    "triBudget": 800,
-   "budgetUse": 0.968,
+   "budgetUse": 0.973,
    "partCap": 16
   },
   "rare": {
@@ -372,7 +372,7 @@
      "color": "#EBEBEB"
     },
     "Fuller": {
-     "tris": 120,
+     "tris": 132,
      "origin": [
       0.0,
       0.0,
@@ -383,9 +383,9 @@
     }
    },
    "partCount": 6,
-   "totalTris": 564,
+   "totalTris": 576,
    "triBudget": 800,
-   "budgetUse": 0.705,
+   "budgetUse": 0.72,
    "partCap": 8
   },
   "epic": {
@@ -411,7 +411,7 @@
      "color": "#603E28"
     },
     "Limb_Top": {
-     "tris": 184,
+     "tris": 154,
      "origin": [
       0.0,
       0.0,
@@ -421,7 +421,7 @@
      "color": "#684228"
     },
     "Limb_Bottom": {
-     "tris": 184,
+     "tris": 154,
      "origin": [
       0.0,
       0.0,
@@ -441,7 +441,7 @@
      "color": "#EBEBEB"
     },
     "Fuller": {
-     "tris": 120,
+     "tris": 132,
      "origin": [
       0.0,
       0.0,
@@ -452,9 +452,9 @@
     }
    },
    "partCount": 6,
-   "totalTris": 636,
+   "totalTris": 588,
    "triBudget": 800,
-   "budgetUse": 0.795,
+   "budgetUse": 0.735,
    "partCap": 8
   },
   "relic": {
@@ -510,7 +510,7 @@
      "color": "#EBEBEB"
     },
     "Tips": {
-     "tris": 68,
+     "tris": 60,
      "origin": [
       0.0,
       0.0,
@@ -530,7 +530,7 @@
      "color": "#FFF4D6"
     },
     "Fuller": {
-     "tris": 120,
+     "tris": 132,
      "origin": [
       0.0,
       0.0,
@@ -551,9 +551,9 @@
     }
    },
    "partCount": 9,
-   "totalTris": 600,
+   "totalTris": 604,
    "triBudget": 800,
-   "budgetUse": 0.75,
+   "budgetUse": 0.755,
    "partCap": 12
   },
   "ancient": {
@@ -609,7 +609,7 @@
      "color": "#EBEBEB"
     },
     "Tips": {
-     "tris": 68,
+     "tris": 60,
      "origin": [
       0.0,
       0.0,
@@ -629,7 +629,7 @@
      "color": "#FFF4D6"
     },
     "Fuller": {
-     "tris": 120,
+     "tris": 132,
      "origin": [
       0.0,
       0.0,
@@ -670,9 +670,9 @@
     }
    },
    "partCount": 11,
-   "totalTris": 684,
+   "totalTris": 688,
    "triBudget": 800,
-   "budgetUse": 0.855,
+   "budgetUse": 0.86,
    "partCap": 12
   },
   "primordial": {
@@ -728,7 +728,7 @@
      "color": "#EBEBEB"
     },
     "Tips": {
-     "tris": 68,
+     "tris": 60,
      "origin": [
       0.0,
       0.0,
@@ -748,7 +748,7 @@
      "color": "#FFF4D6"
     },
     "Fuller": {
-     "tris": 120,
+     "tris": 132,
      "origin": [
       0.0,
       0.0,
@@ -809,9 +809,9 @@
     }
    },
    "partCount": 13,
-   "totalTris": 765,
+   "totalTris": 769,
    "triBudget": 800,
-   "budgetUse": 0.956,
+   "budgetUse": 0.961,
    "partCap": 16
   }
  }
