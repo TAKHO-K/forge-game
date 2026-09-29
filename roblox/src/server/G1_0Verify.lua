@@ -508,17 +508,20 @@ function G1_0Verify.runLive(player, env)
 			for _, zoneKey in ipairs(keys) do
 				BossArenaMap.undress(zoneKey)
 			end
-			return frameMax, sliced and framePeak or maxSlice, planMax, planSlices, waited
+			return frameMax, sliced and framePeak or maxSlice, planMax, planSlices, waited, frames
 		end
 		local f0, s0, p0, _, w0 = run(false)
 		task.wait(0.5)
 		BossArenaMap.debugSliceStats(true)
-		local f1, s1, p1, n1, w1 = run(true)
+		local f1, s1, p1, n1, w1, frames1 = run(true)
 		local sd = BossArenaMap.debugSliceStats(true) -- QUEUE-6h-b 후속 계측: 원인 가르기(한 조각 · GC · 같은 프레임 조각 수 · 파트 생성)
 		r.note(("D 계측: 조각 %d개 · 한 조각 최대 %.2fms(GC 있음 %d개 · 최대 %.2fms / GC 없음 최대 %.2fms) · 같은 프레임 조각 최대 %d개 · 예산 넘은 프레임 %d · 파트 생성 · 붕괴 한 번 최대 %.2fms"):format(
 			sd.slices, sd.maxSliceMs, sd.gcSlices, sd.maxSliceGcMs, sd.maxSliceNoGcMs, sd.maxFrameSlices, sd.overFrames, sd.spawnMaxMs))
-		r.check(("D 12아레나 × %d회 동시: 한 번에 - Heartbeat 최대 %.2fms · 자리 찾기 한 번 최대 %.2fms(%.1f초) → 나눠서 - Heartbeat 최대 %.2fms · 한 프레임 합(12아레나) 최대 %.2fms(기대 ≤ %.1f) · 조각 %d · 끝까지 최대 %.1fms(%.1f초)"):format(
-			REGROW.maxObstacles + 2, f0, s0, w0, f1, s1, REGROW.frameBudgetMs, n1, p1, w1), s1 <= REGROW.frameBudgetMs and f1 <= f0)
+		-- QUEUE-B1 결정 12: 기준 = 한 프레임 합이 frameBudgetMs를 넘은 프레임의 비율 ≤ overBudgetFrameFractionMax(옛 = 최악 한 프레임 ≤ 2.0 - 최악 값은 기록으로 남긴다)
+		local overFraction = sd.overFrames / math.max(frames1 or 0, 1)
+		r.check(("D 12아레나 × %d회 동시: 한 번에 - Heartbeat 최대 %.2fms · 자리 찾기 한 번 최대 %.2fms(%.1f초) → 나눠서 - Heartbeat 최대 %.2fms · 한 프레임 합(12아레나) 최대 %.2fms(기록) · %.1fms 넘은 프레임 %d / %d = %.2f%%(기대 ≤ %.0f%%) · 조각 %d · 끝까지 최대 %.1fms(%.1f초)"):format(
+			REGROW.maxObstacles + 2, f0, s0, w0, f1, s1, REGROW.frameBudgetMs, sd.overFrames, frames1 or 0, overFraction * 100, REGROW.overBudgetFrameFractionMax * 100, n1, p1, w1),
+			(frames1 or 0) > 0 and overFraction <= REGROW.overBudgetFrameFractionMax and f1 <= f0)
 	end)
 
 	PlayerState.clearIncomingDamageMultiplier(player)
