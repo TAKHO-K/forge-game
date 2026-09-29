@@ -280,13 +280,30 @@ function P3cVerify.runPure()
 			at125 >= 1 and at125 <= 1.1 and minR >= 1 and maxR <= 1.35 and CharacterLevel.getExpectedKills(126, 6) == math.ceil(CharacterLevel.getTargetKills(126) / 6 - 1e-9) and capExp < 1e300)
 		-- v35 이관: 레벨 300 중간(진행 40%)의 옛 경험치 → 새 곡선에서 같은 레벨 · 같은 진행률.
 		local SaveSystem = require(script.Parent.SaveSystem)
-		-- 옛 곡선(v34 - 배수 없음)의 레벨 300 임계값 · 필요량.
-		local function oldNeed(level)
-			return math.floor(CharacterLevel.getTargetKills(level) * CharacterLevel.getMonsterExpAtLevel(level) + 0.5)
+		-- 옛 곡선(v34 - 배수 없음)의 레벨 300 임계값 · 필요량. QUEUE-B1 결정 14: 표본은 **v34 시절 목표 마릿수 리터럴**로 만든다(SaveSystem v35 · v45 단계의 OLD 표 -
+		--   지금 K로 만들면 v34 세이브가 아니다). 원래 기대(레벨 300 · 진행률 0.4 유지)로 되돌림 - QUEUE-6h-b R1의 "≥ 300"은 v35 버그를 합격시켰다.
+		local OLD = { { 1, 5 }, { 25, 15 }, { 50, 60 }, { 75, 350 }, { 100, 2500 }, { 125, 20000 } }
+		local function oldKills(level)
+			if level <= OLD[1][1] then
+				return OLD[1][2]
+			end
+			for i = 2, #OLD do
+				local a, b = OLD[i - 1], OLD[i]
+				if level <= b[1] then
+					return a[2] + (b[2] - a[2]) * (level - a[1]) / (b[1] - a[1])
+				end
+			end
+			return 150
 		end
-		local oldAt300 = CharacterLevel.getExpForLevel(126)
-		for level = 126, 299 do
+		local function oldNeed(level)
+			return math.floor(oldKills(level) * CharacterLevel.getMonsterExpAtLevel(level) + 0.5)
+		end
+		local oldAt300, oldAt30 = 0, 0
+		for level = 1, 299 do
 			oldAt300 += oldNeed(level)
+			if level < 30 then
+				oldAt30 += oldNeed(level)
+			end
 		end
 		local oldNeed300 = oldNeed(300)
 		local data = SaveSystem.defaultProfile()
@@ -295,18 +312,18 @@ function P3cVerify.runPure()
 		data.classes[classId].characterExp = oldAt300 + oldNeed300 * 0.4
 		local low = next(data.classes, classId)
 		if low then
-			data.classes[low].characterExp = 1000
+			data.classes[low].characterExp = oldAt30 + oldNeed(30) * 0.5
 		end
 		local migrated = SaveSystem.migrate(data)
 		local exp = migrated.classes[classId].characterExp
 		local level = CharacterLevel.getLevelFromExp(exp)
 		local progress = CharacterLevel.getProgress(exp, level).ratio
-		-- QUEUE-6h-b R1: 기대값 갱신(v45 이관 1a2d82b가 v44 이하 경험치를 옛 곡선 리터럴로 다시 읽어 옮긴다 - 이 표본(지금 K로 만든 v34)은 v35 뒤 레벨 300이 아니게 되고
-		--   126 아래 값도 옮겨진다. 끝까지 이관한 결과 = 레벨이 내려가지 않음 · 126 아래 = 유한 양수 · 유효)
 		local lowExp = low and migrated.classes[low].characterExp
-		r.check(("C4 이관 v34 → v%d: 레벨 %d(기대 ≥ 300 - v45 재해석) · 진행률 %.3f · 126 아래 경험치 유한 양수 %s · isValidProfile %s"):format(migrated.version, level, progress,
-			tostring(not low or (type(lowExp) == "number" and lowExp > 0 and lowExp < math.huge)), tostring(SaveSystem.isValidProfile(migrated))),
-			migrated.version >= 45 and level >= 300 and (not low or (type(lowExp) == "number" and lowExp > 0 and lowExp < math.huge)) and SaveSystem.isValidProfile(migrated))
+		local lowLevel = lowExp and CharacterLevel.getLevelFromExp(lowExp)
+		local lowOk = not low or (lowLevel == 30 and math.abs(CharacterLevel.getProgress(lowExp, 30).ratio - 0.5) < 0.002)
+		r.check(("C4 이관 v34 → v%d: 레벨 %d(기대 300) · 진행률 %.3f(기대 0.400) · 126 아래(레벨 30 · 0.5) 유지 %s · isValidProfile %s"):format(migrated.version, level, progress,
+			tostring(lowOk), tostring(SaveSystem.isValidProfile(migrated))),
+			migrated.version >= 45 and level == 300 and math.abs(progress - 0.4) < 0.002 and lowOk and SaveSystem.isValidProfile(migrated))
 		local cfg = { seasonId = 3, seasonLengthDays = 28, seasonStartUnix = 0 }
 		local fixed = LeaderboardRules.seasonAt(1e9, cfg)
 		cfg.seasonStartUnix = 1000000000

@@ -11,3 +11,4 @@ LUAU=<luau.exe 경로> PRELUDE=server_prelude.luau EXTRA_SERVER=$(cat deps.txt) 
 - luau CLI = https://github.com/luau-lang/luau 릴리스(luau.exe · luau-analyze.exe · luau-compile.exe).
 - `save_lock_test.luau` = QUEUE-6h-b 후속 안전장치 ① 약한 세션 잠금(판정 · 옮겨 접속 대기 · 안 풀림 상한 · 저장 표식 놓기) · ② 손상 저장 음수 골드 → 0(12가지 - 가짜 DataStore는 테스트 파일이 `game.GetService`를 덮어 넣는다). 의존 = `SaveSystem`.
 - `request_gate_test.luau` = 안전장치 ③ 공통 요청 제한(`server/RequestGate` · 데이터 `RequestLimitConfig` - 실제 Remote 핸들러 연타 · 사람별 · Remote별 표 · 충전 · RemoteFunction 넘침 = 마지막 결과, 7가지). 의존 = attack_test 묶음 + `RequestGate`.
+- `migrate_curve_test.luau` = QUEUE-B1 결정 14 캐릭터 경험치 곡선 이관 왕복(v30 · v33 · v34 표본 = 옛 곡선 리터럴 · v44 표본 = 126+ 배수 곡선 · 레벨 30 ~ 300 · 경계 · `migrate({})`, 15가지). 의존 = `SaveSystem`.

@@ -899,25 +899,48 @@ local function migrate(data)
 
 	if data.version < 35 then
 		-- P3c C4: 레벨 126부터 필요 경험치가 레벨별 배수(CharacterLevel.getExpScale - 획득도 같은 배수, 처치 수는 그대로). 누적 임계값은 126까지 옛 값과 같다.
-		-- 옛 곡선(v34 - 필요 경험치 = round(K × E), 배수 없음)으로 레벨과 진행률을 읽고, 새 곡선에서 같은 레벨 · 같은 진행률의 값으로 옮긴다(126 아래 · 0은 그대로).
-		local base = CharacterLevel.getExpForLevel(126)
-		local function oldNeed(level)
-			return math.floor(CharacterLevel.getTargetKills(level) * CharacterLevel.getMonsterExpAtLevel(level) + 0.5)
+		-- 옛 곡선(v34 - 필요 경험치 = round(K × E), 배수 없음)으로 레벨과 진행률을 읽고, v35 곡선(126+ 배수)에서 같은 레벨 · 같은 진행률의 값으로 옮긴다(126 아래 · 0은 그대로).
+		-- QUEUE-B1 결정 14: 두 곡선 모두 **그 시절 리터럴**로 적는다(K = v45 단계의 OLD와 같은 표 · 배수 = 20,000 ÷ 150 × 0.99^(L − 126)). 옛 코드는 지금 CharacterLevel로
+		-- 읽고 써서, 곡선이 바뀐 뒤(C3 v45)에는 v34 레벨 200 → 127처럼 레벨이 떨어졌다(결과를 v45 단계가 한 번 더 옮긴다 - 여기 결과는 v44 곡선 값이어야 한다).
+		local OLD = { { 1, 5 }, { 25, 15 }, { 50, 60 }, { 75, 350 }, { 100, 2500 }, { 125, 20000 } }
+		local function oldKills(level)
+			if level <= OLD[1][1] then
+				return OLD[1][2]
+			end
+			for i = 2, #OLD do
+				local a, b = OLD[i - 1], OLD[i]
+				if level <= b[1] then
+					return a[2] + (b[2] - a[2]) * (level - a[1]) / (b[1] - a[1])
+				end
+			end
+			return 150
+		end
+		local function oldNeed(level) -- v34
+			return math.floor(oldKills(level) * CharacterLevel.getMonsterExpAtLevel(level) + 0.5)
+		end
+		local function newNeed(level) -- v35 ~ v44
+			local scale = level > 125 and math.max((20000 / 150) * 0.99 ^ (level - 126), 1) or 1
+			return math.floor(oldKills(level) * CharacterLevel.getMonsterExpAtLevel(level) * scale + 0.5)
+		end
+		local base = 0 -- 126 도달 누적(두 곡선이 같다)
+		for level = 1, 125 do
+			base += oldNeed(level)
 		end
 		for _, classState in pairs(data.classes) do
 			local exp = classState.characterExp
 			if type(exp) == "number" and exp == exp and exp > base and exp < math.huge then
-				local level, threshold = 126, base
+				local level, threshold, newThreshold = 126, base, base
 				while level < 1000000 do
 					local need = oldNeed(level)
 					if exp < threshold + need then
 						break
 					end
 					threshold += need
+					newThreshold += newNeed(level)
 					level += 1
 				end
-				local fraction = (exp - threshold) / oldNeed(level)
-				classState.characterExp = CharacterLevel.getExpForLevel(level) + fraction * CharacterLevel.getExpToNextLevel(level)
+				local fraction = math.clamp((exp - threshold) / math.max(oldNeed(level), 1), 0, 1)
+				classState.characterExp = newThreshold + fraction * newNeed(level)
 			end
 		end
 		data.version = 35
