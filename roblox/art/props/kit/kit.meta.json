@@ -1,0 +1,219 @@
+{
+ "version": "A2-N1",
+ "budget": 1500,
+ "partCap": 8,
+ "kit": {
+  "T1": [
+   "T1_RuinPillar",
+   "T1_RuinPillarBroken",
+   "T1_RuinFallen",
+   "T1_RockPillar",
+   "T1_StoneArch",
+   "T1_BalancedRock",
+   "T1_Boulder",
+   "T1_Monolith"
+  ],
+  "T2": [
+   "T2_CrystalCluster",
+   "T2_CrystalSpike",
+   "T2_CaveMouth",
+   "T2_Boulder",
+   "T2_CrystalSpire"
+  ],
+  "T3": [
+   "T3_CoastRock",
+   "T3_Shipwreck",
+   "T3_SunkenColumn",
+   "T3_CoralFan",
+   "T3_GiantClam"
+  ],
+  "T4": [
+   "T4_Cactus",
+   "T4_MushroomRock",
+   "T4_Hoodoo",
+   "T4_Boulder",
+   "T4_SandUrn"
+  ],
+  "T5": [
+   "T5_SpireRock",
+   "T5_StruckRock",
+   "T5_Boulder",
+   "T5_RodPillar",
+   "T5_FloatStone"
+  ],
+  "T6": [
+   "T6_IcePillar",
+   "T6_IceChunk",
+   "T6_SnowBoulder",
+   "T6_IceWallSlab",
+   "T6_SnowPine"
+  ]
+ },
+ "items": {
+  "T1_RuinPillar": {
+   "parts": 2,
+   "tris": 284,
+   "new": false
+  },
+  "T1_RuinPillarBroken": {
+   "parts": 1,
+   "tris": 188,
+   "new": false
+  },
+  "T1_RuinFallen": {
+   "parts": 1,
+   "tris": 188,
+   "new": false
+  },
+  "T1_RockPillar": {
+   "parts": 3,
+   "tris": 156,
+   "new": false
+  },
+  "T1_StoneArch": {
+   "parts": 3,
+   "tris": 156,
+   "new": false
+  },
+  "T1_BalancedRock": {
+   "parts": 2,
+   "tris": 104,
+   "new": false
+  },
+  "T1_Boulder": {
+   "parts": 3,
+   "tris": 156,
+   "new": false
+  },
+  "T1_Monolith": {
+   "parts": 1,
+   "tris": 74,
+   "new": false
+  },
+  "T2_CrystalCluster": {
+   "parts": 5,
+   "tris": 120,
+   "new": false
+  },
+  "T2_CrystalSpike": {
+   "parts": 4,
+   "tris": 116,
+   "new": false
+  },
+  "T2_CaveMouth": {
+   "parts": 5,
+   "tris": 192,
+   "new": false
+  },
+  "T2_Boulder": {
+   "parts": 2,
+   "tris": 104,
+   "new": false
+  },
+  "T2_CrystalSpire": {
+   "parts": 1,
+   "tris": 84,
+   "new": false
+  },
+  "T3_CoastRock": {
+   "parts": 3,
+   "tris": 152,
+   "new": false
+  },
+  "T3_Shipwreck": {
+   "parts": 4,
+   "tris": 236,
+   "new": false
+  },
+  "T3_SunkenColumn": {
+   "parts": 3,
+   "tris": 362,
+   "new": true
+  },
+  "T3_CoralFan": {
+   "parts": 2,
+   "tris": 226,
+   "new": true
+  },
+  "T3_GiantClam": {
+   "parts": 3,
+   "tris": 488,
+   "new": true
+  },
+  "T4_Cactus": {
+   "parts": 5,
+   "tris": 630,
+   "new": false
+  },
+  "T4_MushroomRock": {
+   "parts": 2,
+   "tris": 222,
+   "new": false
+  },
+  "T4_Hoodoo": {
+   "parts": 3,
+   "tris": 340,
+   "new": false
+  },
+  "T4_Boulder": {
+   "parts": 2,
+   "tris": 184,
+   "new": false
+  },
+  "T4_SandUrn": {
+   "parts": 2,
+   "tris": 266,
+   "new": true
+  },
+  "T5_SpireRock": {
+   "parts": 3,
+   "tris": 156,
+   "new": false
+  },
+  "T5_StruckRock": {
+   "parts": 4,
+   "tris": 188,
+   "new": false
+  },
+  "T5_Boulder": {
+   "parts": 2,
+   "tris": 104,
+   "new": false
+  },
+  "T5_RodPillar": {
+   "parts": 3,
+   "tris": 222,
+   "new": true
+  },
+  "T5_FloatStone": {
+   "parts": 3,
+   "tris": 148,
+   "new": true
+  },
+  "T6_IcePillar": {
+   "parts": 3,
+   "tris": 144,
+   "new": false
+  },
+  "T6_IceChunk": {
+   "parts": 3,
+   "tris": 78,
+   "new": false
+  },
+  "T6_SnowBoulder": {
+   "parts": 2,
+   "tris": 148,
+   "new": false
+  },
+  "T6_IceWallSlab": {
+   "parts": 1,
+   "tris": 100,
+   "new": false
+  },
+  "T6_SnowPine": {
+   "parts": 3,
+   "tris": 178,
+   "new": true
+  }
+ }
+}
