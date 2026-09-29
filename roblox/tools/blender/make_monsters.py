@@ -433,14 +433,14 @@ def ice_golem(P):
 
 def blue_dragon(P):
     b = P["Body"]["center"]
-    body = A.loft([[(x, y + b[1] + dy, z) for x, y in A.circle2d(r * 1.0, 10, rx=r * 1.3)] for z, r, dy in ((-2.5, 0.85, 0.1), (-1.8, 1.2, 0.05), (-0.9, 1.22, 0.0), (0.4, 1.15, 0.0), (1.6, 1.0, 0.0), (2.4, 0.72, 0.05))])  # 가슴 앞으로 볼록 · 박스 꽉
+    body = A.loft([[(x, y + b[1] + dy, z) for x, y in A.circle2d(r * 1.0, 10, rx=r * 1.3)] for z, r, dy in ((-2.5, 0.95, 0.12), (-1.8, 1.38, 0.06), (-0.9, 1.42, 0.0), (0.4, 1.32, 0.0), (1.6, 1.12, 0.0), (2.4, 0.8, 0.05))])  # 가슴 앞으로 볼록 · 박스보다 두툼(2차 패스 ×1.15)
     body = A.merge(body, *[A.crystal(0.7 - 0.08 * i, 0.16, sides=4, tip_h=0.3, base_h=0.08, center=(0, b[1] + 1.15, -1.3 + 0.8 * i), m=A.rot(rx=25)) for i in range(4)])  # 등 가시
     legs = {}
     for n_ in ("Leg_FL", "Leg_FR", "Leg_BL", "Leg_BR"):
         j = P[n_]["joint"]
         front = n_[4] == "F"
-        leg = A.tube(A.bezier(j, (j[0], j[1] - 0.6, j[2] + (0.25 if front else -0.25)), (j[0], j[1] - 1.1, j[2] - (0.1 if front else -0.1)), (j[0], -1.38, j[2] - 0.15), n=4), lambda u: 0.5 - 0.12 * u, sides=6)
-        foot = A.ellipsoid((0.46, 0.2, 0.56), n=7, rings=3, center=(j[0], -1.38, j[2] - 0.3))
+        leg = A.tube(A.bezier(j, (j[0], j[1] - 0.6, j[2] + (0.25 if front else -0.25)), (j[0], j[1] - 1.1, j[2] - (0.1 if front else -0.1)), (j[0], -1.38, j[2] - 0.15), n=4), lambda u: 0.6 - 0.12 * u, sides=6)
+        foot = A.ellipsoid((0.56, 0.24, 0.66), n=7, rings=3, center=(j[0], -1.38, j[2] - 0.3))
         toes = [A.tube([(j[0] + dx, -1.4, j[2] - 0.62), (j[0] + dx * 1.2, -1.45, j[2] - 0.88)], lambda u: 0.08 * (1 - u) + 0.02, sides=4, tip_end=True) for dx in (-0.2, 0.0, 0.2)]
         legs[n_] = A.merge(leg, foot, *toes)
     nk = P["Neck1"]

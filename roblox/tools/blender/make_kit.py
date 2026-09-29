@@ -37,12 +37,22 @@ NEW = {
     "T3_CoralFan": [dict(n="CoralFan", s=(7, 6, 1), p=(0, 3, 0), c=(235, 110, 90), col=False), dict(n="CoralRock", s=(4, 2, 3), p=(0, 0.6, 0), c="Rock")],
     "T3_GiantClam": [dict(n="ClamBottom", s=(6, 2, 5), p=(0, 1, 0), c=(201, 228, 234)), dict(n="ClamTop", s=(6, 2, 5), p=(0, 3.2, 1.2), r=(-35, 0, 0), c=(201, 228, 234)),
                      dict(n="Pearl", s=(1.4, 1.4, 1.4), p=(0, 2.4, -0.4), c=(250, 245, 255), sh="Ball", col=False)],
-    "T4_SandUrn": [dict(n="Urn", s=(4, 6, 4), p=(0, 3, 0), c=(205, 150, 60)), dict(n="UrnSand", s=(6, 1, 5), p=(0.5, 0.3, 0.3), c="Sand", col=False)],
-    "T5_RodPillar": [dict(n="RodBase", s=(4, 6, 4), p=(0, 3, 0), c="Basalt"), dict(n="Rod", s=(0.6, 12, 0.6), p=(0, 12, 0), c=(150, 156, 176)),
+    "T4_SandUrn": [dict(n="Urn", s=(4, 6, 4), p=(0, 3, 0), c=(190, 152, 90)), dict(n="UrnSand", s=(6, 1, 5), p=(0.5, 0.3, 0.3), c="Sand", col=False)],
+    "T5_RodPillar": [dict(n="RodBase", s=(6, 6, 6), p=(0, 3, 0), c="Basalt"), dict(n="Rod", s=(0.6, 12, 0.6), p=(0, 12, 0), c=(150, 156, 176)),
                      dict(n="RodGlow", s=(1.2, 1.2, 1.2), p=(0, 18.4, 0), c=(170, 200, 255), sh="Ball", col=False)],
     "T5_FloatStone": [dict(n="FloatStone", s=(6, 4, 5), p=(0, 7, 0), r=(8, 20, -6), c="Basalt", col=False), dict(n="FloatStone", s=(3, 2, 3), p=(4, 10, 2), r=(-10, 40, 12), c="Cobblestone", col=False),
                       dict(n="FloatBase", s=(5, 1.5, 5), p=(0, 0.5, 0), c="Cobblestone")],
     "T6_SnowPine": [dict(n="PineTrunk", s=(1.2, 4, 1.2), p=(0, 2, 0), c=WOOD), dict(n="PineCone", s=(7, 12, 7), p=(0, 9, 0), c=(70, 110, 90), col=False), dict(n="SnowCap", s=(5, 1.4, 5), p=(0, 13.5, 0), c="Snow", col=False)],
+}
+
+
+# 구역 장식(새 파트 - 틀에 추가 제안): T1 이끼 모자 · T2 결정 돌기 · T5 번개 줄기 + 떠 있는 조각
+DECOR = {
+    "T1_Boulder": [dict(n="MossCap", s=(6, 1.2, 5), p=(0.3, 4.6, 0), r=(10, 20, 8), c=(92, 150, 70))],
+    "T2_Boulder": [dict(n="CrystalBit", s=(1.2, 2.4, 1.2), p=(1.5, 4.8, -0.5), r=(15, 0, -20), c=(150, 220, 255)),
+                   dict(n="CrystalBit", s=(0.9, 1.6, 0.9), p=(5.4, 3.0, 2), r=(-10, 0, 25), c=(150, 220, 255))],
+    "T5_Boulder": [dict(n="BoltVein", s=(0.5, 5, 0.5), p=(0.2, 2.6, -3.2), c=(170, 200, 255))],
+    "T5_StruckRock": [dict(n="FloatChip", s=(2.4, 1.6, 2), p=(0.3, 11.5, 0.5), r=(20, 30, 15), c="Cobblestone")],
 }
 
 
@@ -99,6 +109,9 @@ def parse_templates():
             out[name] = parts
     for k, v in NEW.items():
         out[k] = [dict(dict(r=(0, 0, 0), sh="Block", col=True, dk=0.0), **p) for p in v]
+    for k, v in DECOR.items():  # 구역 장식 파트(틀 발자국 안 · col = false) - 같은 회색 바위가 구역마다 구별되게
+        if k in out:
+            out[k] = out[k] + [dict(dict(r=(0, 0, 0), sh="Block", col=False, dk=0.0), **p) for p in v]
     return out
 
 
@@ -113,14 +126,14 @@ def jitter(v, seed, amp):
     return tuple(c + amp * math.sin(seed * 12.9898 + i * 78.233 + c * 3.1) for i, c in enumerate(v))
 
 
-def rock(sx, sy, sz, seed=1, sides=7, rings=4, amp=0.07):
+def rock(sx, sy, sz, seed=1, sides=8, rings=4, amp=0.035):
     """깎은 바위: 단면 7각 · 층마다 비틀고 반지름 흔들기 · 위아래 모서리 깎음(상자 안)"""
     rs = []
     for k in range(rings):
         u = k / (rings - 1)
         y = -sy / 2 + sy * u
         shrink = 0.72 + 0.28 * math.sin(math.pi * (0.15 + 0.7 * u))
-        tw = 0.35 * k + seed
+        tw = 0.12 * k + seed
         ring = []
         for i in range(sides):
             a = tw + 2 * math.pi * i / sides
@@ -233,16 +246,24 @@ def shape_for(tname, p, idx):
         return crystal_in(sx, sy, sz, seed)
     if n in ("Landmark",):
         if tname == "T2_CrystalSpire":
-            return A.merge(A.crystal(sy, sx / 2, sides=6, tip_h=sy * 0.16, base_h=sy * 0.04), *[A.crystal(sy * 0.3, sx * 0.22, sides=5, tip_h=sy * 0.08, base_h=0.5, center=(sx * 0.4 * math.cos(a), -sy * 0.3, sz * 0.4 * math.sin(a)), m=A.rot(rz=-20 * math.cos(a), rx=20 * math.sin(a))) for a in (0.5, 2.6, 4.4)])
+            return A.merge(A.crystal(sy, sx * 0.42, sides=6, tip_h=sy * 0.14, base_h=sy * 0.03, center=(0, 0, 0)),
+                           A.crystal(sy * 0.72, sx * 0.34, sides=6, tip_h=sy * 0.12, base_h=sy * 0.03, center=(sx * 0.32, -sy * 0.14, sz * 0.12), m=A.rot(rz=-6)),
+                           A.crystal(sy * 0.55, sx * 0.3, sides=6, tip_h=sy * 0.1, base_h=sy * 0.03, center=(-sx * 0.3, -sy * 0.22, -sz * 0.1), m=A.rot(rz=7)))  # 결정 기둥 3개 묶음(바늘 → 덩어리)
         if tname == "T6_IceWallSlab":
             return A.merge(*[A.xform(A.crystal(sy * h, sx * 0.14, sides=5, tip_h=sy * 0.12, base_h=1.0), t=(sx * (k / 4 - 0.5) * 0.85, -sy * (1 - h) / 2, 0)) for k, h in enumerate((0.7, 0.95, 1.0, 0.85, 0.6))])
-        stone = rock(sx, sy, sz, seed, sides=5, rings=5, amp=0.04)  # 비석: 5각 깎은 돌 + 앞면 룬(홈 대신 돋을새김)
+        stone = A.loft([[(x * w, y, z * w) for x, z in A.chamfer_rect(sx, sz, sx * 0.22)] for y, w in ((-sy / 2, 1.0), (sy * 0.3, 0.92), (sy / 2 - sx * 0.3, 0.8))], tip1=(0, sy / 2, 0))  # 비석: 상자 폭을 채운 모따기 돌 + 뾰족 머리 + 앞면 룬
         rune = A.xform(A.box(sx * 0.12, sy * 0.35, 0.6, b=0.2), t=(0, sy * 0.1, -sz * 0.45))
         return A.merge(stone, rune)
     if n in ("RuinCapital", "ColumnCap"):
         return A.merge(A.box(sx, sy * 0.55, sz, b=0.15, center=(0, sy * 0.22, 0)), A.lathe([(sx * 0.32, -sy / 2), (sx * 0.42, 0.0), (sx * 0.3, sy * 0.0)], 12))
-    if n in ("SnowCap",):
+    if n in ("SnowCap", "MossCap"):
         return pillow(sx, sy, sz)
+    if n == "CrystalBit":
+        return A.crystal(sy, sx / 2, sides=5, tip_h=sy * 0.3, base_h=sy * 0.1)
+    if n == "BoltVein":
+        return A.merge(*[A.xform(A.box(0.35, sy / 3.2, 0.3), m=A.rot(rz=(-1) ** k * 28), t=((-1) ** k * 0.35, -sy / 3 + sy / 3 * k, 0)) for k in range(3)])
+    if n == "FloatChip":
+        return rock(sx, sy, sz, 7, 6, 3, 0.06)
     if n in ("Barnacle", "Scorch", "UrnSand"):
         return A.ellipsoid((sx / 2, sy / 2, sz / 2), n=12, rings=3, squash_bottom=0.2)
     if n in ("CaveDark",):
@@ -262,7 +283,7 @@ def shape_for(tname, p, idx):
     if n == "Urn":
         return urn(sx, sy, sz)
     if n == "Rod":
-        return A.merge(A.lathe([(sx / 2, -sy / 2), (sx / 2 * 0.8, sy / 2 - 1), (0.0, sy / 2)], 6), *[A.tube([(0, sy / 2 - 3 - 2 * k, 0), (s * 1.4, sy / 2 - 2.2 - 2 * k, 0)], lambda u: 0.18 * (1 - u) + 0.04, sides=4, tip_end=True) for k, s in ((0, 1), (1, -1))])
+        return A.merge(A.lathe([(sx * 1.25, -sy / 2), (sx, sy / 2 - 1.5), (0.0, sy / 2)], 6), *[A.tube([(0, sy / 2 - 3 - 2.4 * k, 0), (s * 1.9, sy / 2 - 2.0 - 2.4 * k, 0)], lambda u: 0.35 * (1 - u) + 0.06, sides=4, tip_end=True) for k, s in ((0, 1), (1, -1))])  # 막대 ×2.5 · 가지 굵게
     if n == "PineCone":
         return pine(sx, sy, sz)
     if n == "PineTrunk":
@@ -303,7 +324,7 @@ def build(tname, parts, old=False):
         rx, ry, rz = p["r"]
         g = A.xform(local, m=A.rot(rx=rx, ry=ry, rz=rz), t=p["p"])
         nm = p["n"] if names.count(p["n"]) == 1 else "%s_%d" % (p["n"], names[:i + 1].count(p["n"]))
-        objs.append(A.make_obj(nm, g, color(p), col, neon=p["n"] in ("RodGlow", "ScorchGlow", "Pearl"), origin=p["p"], mat_name="%s%s_%s" % ("old_" if old else "", tname, nm)))
+        objs.append(A.make_obj(nm, g, color(p), col, neon=p["n"] in ("RodGlow", "ScorchGlow", "Pearl", "BoltVein"), origin=p["p"], mat_name="%s%s_%s" % ("old_" if old else "", tname, nm)))
     return col, objs
 
 

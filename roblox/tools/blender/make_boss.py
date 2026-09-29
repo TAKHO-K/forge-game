@@ -397,7 +397,7 @@ def storm_extra(part, j):
         last = part.endswith("3")
         idx = int(part[-1])
         spread = {1: (0.95, 1.15), 2: (1.15, 1.45), 3: (1.45, 1.9)}[idx]  # 밑으로 갈수록 벌어진 삼각 망토(밑 폭 ≈ 어깨의 1.4배)
-        shift = (-1 if part.startswith("CapeL") else 1) * (0.1 * (idx - 1))
+        shift = (-1 if part.startswith("CapeL") else 1) * (0.32 * (idx - 1))  # 2차 패스: 옆으로 벌려 정면에서 보이게
         rings = [[(x + shift * (k_ + 0.5), y, z * 0.18) for x, z in A.chamfer_rect(w, sz, 0.05)] for k_, (y, w) in enumerate(((sy / 2, sx * spread[0]), (-sy / 2, sx * spread[1])))]
         g = A.loft(rings)
         if last:

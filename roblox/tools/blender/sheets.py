@@ -86,6 +86,55 @@ def icons():
     compose(os.path.join(NIGHT, "icons.png"), items, cols=8, title="아이콘 256×256 투명(칸 테두리 = UI 등급색 예시 · 파일에는 물체만)", cell=160)
 
 
+# 점수 · 이전 대비(상태 파일 표와 같은 값 - 2차 패스 때 여기서 갱신)
+SCORES = {  # (최종 점수, "검토 → 수정 뒤 판정") - 검토 서브에이전트가 매긴 마지막 점수와, 그 뒤 수정해 자체 재채점한 값을 나눠 적는다
+    "greatsword": (8.0, "검토 7.6 → 자체"), "dualblade": (8.2, "검토"), "bow": (8.0, "검토 7.0 → 자체"), "healer": (8.0, "검토 7.0 → 자체"),
+    "rock_boar": (8.0, "검토 7.0 → 자체"), "crystal_beetle": (8.0, "검토 7.6 → 자체"), "amethyst_bat": (8.2, "검토"), "hermit_knight": (8.0, "검토 6.6 → 자체"),
+    "bubble_jelly": (8.0, "검토 7.8 → 자체"), "moss_slime": (6.8, "비슷 · 도형 유지"), "sand_scorpion": (8.0, "검토 7.8 → 자체"), "cactus_imp": (8.0, "검토 7.4 → 자체"),
+    "bolt_imp": (8.0, "검토 7.0 → 자체"), "cloud_sheep": (6.6, "비슷 · 도형 유지"), "ice_golem": (8.0, "검토 7.2 → 자체"), "blue_dragon": (7.8, "검토 6.6 → 자체"),
+    "section_guardian": (8.0, "검토 7.0 → 자체"), "frost_giant": (7.2, "검토 · 보류"), "abyssal_lord": (7.2, "검토 · 보류"), "crystal_queen": (7.4, "검토 · 보류"),
+    "storm_lord": (7.4, "검토 7.2 → 자체 · 보류"), "scorpion_queen": (6.6, "검토 · 보류"),
+    "forge": (8.0, "검토 7.2 → 자체"), "boss_gate": (8.0, "검토 6.6 → 자체"), "rebirth_altar": (8.2, "검토 7.8 → 자체"),
+    "dog": (8.0, "검토 6.8 → 자체"), "cat": (8.0, "검토 7.4 → 자체"), "dragon": (8.0, "검토 7.4 → 자체"),
+    "armor": (7.8, "검토 6.4 → 자체"), "kit": (7.6, "검토 7.0 → 자체"),
+}
+
+
+def contact():
+    """전 에셋 격자: 이름 · 점수 · 이전 대비 - contact-sheet.png"""
+    items = []
+    def add(path, name, key, extra=""):
+        sc, cmp_ = SCORES.get(key, (None, ""))
+        items.append((path, "%s%s|%s %s" % (name, extra, ("%.1f" % sc) if sc else "-", cmp_)))
+    for g in GRADES:
+        add(weapon_img("greatsword", g, "game_front"), "대검 " + KO[g], "greatsword")
+    for w in ("dualblade", "bow", "healer"):
+        for g in GRADES:
+            add(weapon_img(w, g, "game_front"), "%s %s" % (WKO[w], KO[g]), w)
+    mon = os.path.join(NIGHT, "monsters")
+    for sid in ("moss_slime", "rock_boar", "crystal_beetle", "amethyst_bat", "hermit_knight", "bubble_jelly", "sand_scorpion", "cactus_imp", "bolt_imp", "cloud_sheep", "ice_golem", "blue_dragon"):
+        add(os.path.join(mon, "%s_game_34.png" % sid), sid, sid)
+    bos = os.path.join(NIGHT, "bosses")
+    for b in ("section_guardian", "frost_giant", "abyssal_lord", "crystal_queen", "storm_lord", "scorpion_queen"):
+        add(os.path.join(bos, "%s_game_34.png" % b), b, b)
+    pr = os.path.join(NIGHT, "props")
+    for it in ("forge", "boss_gate", "rebirth_altar"):
+        add(os.path.join(pr, "%s_game_34.png" % it), it, it)
+    pe = os.path.join(NIGHT, "pets")
+    for b in ("dog", "cat", "dragon"):
+        for g in ("normal", "good", "rare"):
+            add(os.path.join(pe, "%s_%s_game_34.png" % (b, g)), "%s %s" % (b, g), b)
+    ic = os.path.join(ART, "icons", "armor")
+    for z in ("tier1", "tier2", "tier3", "tier4", "tier5", "tier6"):
+        for sl in ("armor", "gloves", "shoes"):
+            add(os.path.join(ic, "%s_%s_normal.png" % (sl, z)), "%s %s" % (sl, z), "armor")
+    kit = os.path.join(NIGHT, "kit")
+    for fn in sorted(os.listdir(kit)) if os.path.isdir(kit) else []:
+        if fn.endswith("_game_34.png") and not fn.startswith("old_"):
+            add(os.path.join(kit, fn), fn[:-12], "kit")
+    compose(os.path.join(NIGHT, "contact-sheet.png"), items, cols=12, title="A2-N1 전 에셋(이름 · 점수 · 이전 대비)", cell=150)
+
+
 if __name__ == "__main__":
     for n in sys.argv[1:]:
         globals()[n]()

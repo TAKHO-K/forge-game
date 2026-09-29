@@ -67,22 +67,22 @@
   },
   "T1_RockPillar": {
    "parts": 3,
-   "tris": 156,
+   "tris": 180,
    "new": false
   },
   "T1_StoneArch": {
    "parts": 3,
-   "tris": 156,
+   "tris": 180,
    "new": false
   },
   "T1_BalancedRock": {
    "parts": 2,
-   "tris": 104,
+   "tris": 120,
    "new": false
   },
   "T1_Boulder": {
-   "parts": 3,
-   "tris": 156,
+   "parts": 4,
+   "tris": 276,
    "new": false
   },
   "T1_Monolith": {
@@ -102,22 +102,22 @@
   },
   "T2_CaveMouth": {
    "parts": 5,
-   "tris": 192,
+   "tris": 216,
    "new": false
   },
   "T2_Boulder": {
-   "parts": 2,
-   "tris": 104,
+   "parts": 4,
+   "tris": 160,
    "new": false
   },
   "T2_CrystalSpire": {
    "parts": 1,
-   "tris": 84,
+   "tris": 72,
    "new": false
   },
   "T3_CoastRock": {
    "parts": 3,
-   "tris": 152,
+   "tris": 168,
    "new": false
   },
   "T3_Shipwreck": {
@@ -167,17 +167,17 @@
   },
   "T5_SpireRock": {
    "parts": 3,
-   "tris": 156,
+   "tris": 180,
    "new": false
   },
   "T5_StruckRock": {
-   "parts": 4,
-   "tris": 188,
+   "parts": 5,
+   "tris": 236,
    "new": false
   },
   "T5_Boulder": {
-   "parts": 2,
-   "tris": 104,
+   "parts": 3,
+   "tris": 156,
    "new": false
   },
   "T5_RodPillar": {
@@ -187,7 +187,7 @@
   },
   "T5_FloatStone": {
    "parts": 3,
-   "tris": 148,
+   "tris": 164,
    "new": true
   },
   "T6_IcePillar": {
@@ -202,7 +202,7 @@
   },
   "T6_SnowBoulder": {
    "parts": 2,
-   "tris": 148,
+   "tris": 156,
    "new": false
   },
   "T6_IceWallSlab": {
