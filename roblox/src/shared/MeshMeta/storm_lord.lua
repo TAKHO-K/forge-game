@@ -28,7 +28,7 @@ return {
 		["CapeR2"] = { tris = 28, origin = { 0.42, 2.054, 0.634 }, center = { 1.279, 1.687, 0.874 } },
 		["CapeR3"] = { tris = 52, origin = { 0.42, 1.264, 0.759 }, center = { 1.812, 0.577, 1.172 } },
 		["Staff"] = { tris = 94, origin = { 1.299, 0.353, -0.216 }, center = { 1.222, 1.032, -0.175 } },
-		["StaffOrb"] = { tris = 314, origin = { 1.015, 3.062, 0.167 }, center = { 1.165, 3.667, 0.169 } },
+		["StaffOrb"] = { tris = 314, origin = { 1.015, 3.062, 0.167 }, center = { 1.157, 3.962, 0.169 } },
 		["Hips_Outline"] = { tris = 88, origin = { 0, 0.9, 0 }, center = { -0, 0.629, 0.041 } },
 		["Body_Outline"] = { tris = 144, origin = { 0, 1.15, 0 }, center = { 0, 2.421, -0.062 } },
 		["Head_Outline"] = { tris = 200, origin = { 0, 2.95, 0 }, center = { 0, 4.004, 0.138 } },
