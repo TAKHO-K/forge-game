@@ -1110,6 +1110,7 @@ local HELP_TEXT = table.concat({
 	"/gg ui <gallery|check|close> - 클라 UI 부품 전시장 열기 · 패널 규칙 자가 검사 · 닫기(30-0 S06, 결과는 클라 콘솔 [S06][UI])",
 	"/gg keycheck <스테이지> [save] - 실제 보스 처치 1회로 첫 클리어 확정 드랍 호출 횟수 · 저장 집합의 실제 키 타입을 찍는다(S05b) - save를 붙이면 두 기록(스테이지 · 견습 4단계)만 남기고 저장, Play 재시작 뒤 다시 불러 왕복을 확인 · /gg keyclean <스테이지> - 그 두 기록을 지우고 저장",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
+	"/gg mesh check <리그id> [모델경로] - B3 가져온 메시 모델 검사(이름 · 관절 · 삼각형 · 크기 · 팔레트 · 재질 O/X - 출력 창 [MeshCheck]) · /gg mesh swap <리그id> [모델경로] [배율] - 내 앞 미리보기 리그에 1:1 교체 · /gg mesh clear",
 }, "\n")
 
 -- /gg party selftest의 본문(24-1) - 자동 검증(S12(나))이 같은 코드를 회귀 확인으로 돌리려고 함수로 뺐다. 반환 = results(줄 목록) 또는 nil, 안내 문구.
@@ -2945,6 +2946,9 @@ local function handleCommand(player, args)
 		else
 			reply(player, "/gg a1 build | pose <1~5> | curl <0~1> | squash <0~1> | grass | clear")
 		end
+	elseif sub == "mesh" then
+		-- B3: Blender 메시 가져오기 검사 · 교체 미리보기(본체 = server/MeshImportDev - docs/art/blender-to-studio.md)
+		require(script.Parent.MeshImportDev).handle(player, args, reply)
 	elseif sub == "style" then
 		-- A1: 카툰 스타일 즉시 전환(A/B 비교) · check = 멱등 · 관리 속성 일치 · 관리 밖 변화 검사 결과만 출력
 		local CartoonStyle = require(game:GetService("ReplicatedStorage").Shared.CartoonStyle)
