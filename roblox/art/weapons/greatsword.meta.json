@@ -1,6 +1,6 @@
 {
+ "version": "A2-N1",
  "rigId": "greatsword",
- "source": "blender 5.2.2 LTS",
  "pivot": "Grip",
  "attachments": {
   "Grip": [
@@ -11,7 +11,7 @@
   "Tip": [
    0,
    0,
-   4.670000000000001
+   4.74
   ],
   "Support": [
    0,
@@ -20,44 +20,669 @@
   ]
  },
  "triBudget": 800,
+ "note": "",
  "looks": {
   "normal": {
    "parts": {
-    "Blade": 22,
-    "Fuller": 28,
-    "Guard": 28,
-    "Grip": 28,
-    "Pommel": 20
+    "Blade": {
+     "tris": 200,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#CED4E0"
+    },
+    "Guard": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#706862"
+    },
+    "Grip": {
+     "tris": 76,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#603E28"
+    },
+    "Pommel": {
+     "tris": 78,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#706862"
+    }
    },
-   "totalTris": 126
+   "partCount": 4,
+   "totalTris": 450,
+   "triBudget": 800,
+   "budgetUse": 0.562,
+   "partCap": 8
+  },
+  "rare": {
+   "parts": {
+    "Blade": {
+     "tris": 268,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#CED4E0"
+    },
+    "Fuller": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#4DA6FF"
+    },
+    "Guard": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#706862"
+    },
+    "Grip": {
+     "tris": 76,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#603E28"
+    },
+    "Pommel": {
+     "tris": 78,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#706862"
+    }
+   },
+   "partCount": 5,
+   "totalTris": 582,
+   "triBudget": 800,
+   "budgetUse": 0.728,
+   "partCap": 8
+  },
+  "epic": {
+   "parts": {
+    "Blade": {
+     "tris": 192,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#CED4E0"
+    },
+    "Fuller": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#A64DFF"
+    },
+    "Guard": {
+     "tris": 176,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#A64DFF"
+    },
+    "Grip": {
+     "tris": 76,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#603E28"
+    },
+    "Pommel": {
+     "tris": 78,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#A64DFF"
+    }
+   },
+   "partCount": 5,
+   "totalTris": 586,
+   "triBudget": 800,
+   "budgetUse": 0.733,
+   "partCap": 8
   },
   "legendary": {
    "parts": {
-    "Blade": 22,
-    "Fuller": 28,
-    "Guard": 28,
-    "Grip": 28,
-    "Pommel": 20,
-    "Wing_R": 8,
-    "Wing_L": 8,
-    "Gem": 20
+    "Blade": {
+     "tris": 192,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E8ECF4"
+    },
+    "Fuller": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    },
+    "Guard": {
+     "tris": 176,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    },
+    "Grip": {
+     "tris": 76,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#5A301E"
+    },
+    "Pommel": {
+     "tris": 78,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    },
+    "Gem": {
+     "tris": 24,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFF4D6"
+    }
    },
-   "totalTris": 162
+   "partCount": 6,
+   "totalTris": 610,
+   "triBudget": 800,
+   "budgetUse": 0.762,
+   "partCap": 12
+  },
+  "relic": {
+   "parts": {
+    "Blade": {
+     "tris": 192,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E8ECF4"
+    },
+    "Fuller": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FFD700"
+    },
+    "Guard": {
+     "tris": 176,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FFD700"
+    },
+    "Grip": {
+     "tris": 56,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#5A301E"
+    },
+    "Pommel": {
+     "tris": 82,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FFD700"
+    },
+    "Gem": {
+     "tris": 24,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFF4D6"
+    },
+    "Runes": {
+     "tris": 24,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFE25A"
+    }
+   },
+   "partCount": 7,
+   "totalTris": 618,
+   "triBudget": 800,
+   "budgetUse": 0.772,
+   "partCap": 12
+  },
+  "ancient": {
+   "parts": {
+    "Blade": {
+     "tris": 192,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E8ECF4"
+    },
+    "Fuller": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Guard": {
+     "tris": 176,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Grip": {
+     "tris": 56,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#5A301E"
+    },
+    "Pommel": {
+     "tris": 82,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Gem": {
+     "tris": 24,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFF4D6"
+    },
+    "Runes": {
+     "tris": 24,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Wing_R": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Wing_L": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    }
+   },
+   "partCount": 9,
+   "totalTris": 702,
+   "triBudget": 800,
+   "budgetUse": 0.877,
+   "partCap": 12
+  },
+  "primordial": {
+   "parts": {
+    "Blade": {
+     "tris": 192,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#F4F2FA"
+    },
+    "Fuller": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF3CC8"
+    },
+    "Guard": {
+     "tris": 176,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#ECE8F6"
+    },
+    "Grip": {
+     "tris": 56,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#784682"
+    },
+    "Pommel": {
+     "tris": 82,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#ECE8F6"
+    },
+    "Gem": {
+     "tris": 24,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFF4D6"
+    },
+    "Runes": {
+     "tris": 24,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF3CC8"
+    },
+    "Wing_R": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FAECF8"
+    },
+    "Wing_L": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FAECF8"
+    },
+    "Crystals": {
+     "tris": 32,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FF3CC8"
+    },
+    "Halo": {
+     "tris": 49,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FF3CC8"
+    }
+   },
+   "partCount": 11,
+   "totalTris": 783,
+   "triBudget": 800,
+   "budgetUse": 0.979,
+   "partCap": 16
   },
   "transcendent": {
    "parts": {
-    "Blade": 22,
-    "Fuller": 28,
-    "Guard": 28,
-    "Grip": 28,
-    "Pommel": 20,
-    "Wing_R": 8,
-    "Wing_L": 8,
-    "Gem": 20,
-    "Crack1": 12,
-    "Crack2": 12
+    "Blade": {
+     "tris": 192,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Fuller": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Guard": {
+     "tris": 176,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Grip": {
+     "tris": 56,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#181620"
+    },
+    "Pommel": {
+     "tris": 82,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Gem": {
+     "tris": 24,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD65A"
+    },
+    "Runes": {
+     "tris": 24,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Wing_R": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Wing_L": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Shards": {
+     "tris": 18,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Crack1": {
+     "tris": 36,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD05C"
+    },
+    "Crack2": {
+     "tris": 36,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD05C"
+    }
    },
-   "totalTris": 186
+   "partCount": 12,
+   "totalTris": 792,
+   "triBudget": 800,
+   "budgetUse": 0.99,
+   "partCap": 16
   }
  }
 }

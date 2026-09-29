@@ -9,8 +9,14 @@ from PIL import Image, ImageDraw, ImageFont
 FONT = "C:/Windows/Fonts/malgunbd.ttf" if os.path.exists("C:/Windows/Fonts/malgunbd.ttf") else "C:/Windows/Fonts/malgun.ttf"
 
 
-def main():
-    argv = sys.argv[1:]
+def compose(out, items, cols=4, title="", cell=360):
+    """items = [(이미지 경로, 이름), ...] - 명령줄 없이 다른 스크립트(sheets.py)에서 부를 때"""
+    args = ["--out", out, "--cols", str(cols), "--title", title, "--cell", str(cell)] + ["%s::%s" % it for it in items]
+    main(args)
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
     out, cols, title, cell = None, 4, "", 360
     items = []
     i = 0
