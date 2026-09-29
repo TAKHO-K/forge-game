@@ -1,0 +1,242 @@
+{
+ "version": "A2-N1",
+ "body": "dragon",
+ "pivot": "파트 중심(PetData pos)",
+ "triBudget": 800,
+ "looks": {
+  "normal": {
+   "parts": {
+    "Body": {
+     "tris": 120,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF963C"
+    },
+    "Head": {
+     "tris": 114,
+     "origin": [
+      0.0,
+      0.4,
+      -0.6
+     ],
+     "neon": false,
+     "color": "#FF963C"
+    },
+    "Horn": {
+     "tris": 76,
+     "origin": [
+      0.0,
+      0.72,
+      -0.5
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Wing_L": {
+     "tris": 28,
+     "origin": [
+      -0.7,
+      0.3,
+      0.0
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Wing_R": {
+     "tris": 28,
+     "origin": [
+      0.7,
+      0.3,
+      0.0
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Tail": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      0.0,
+      0.75
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Eyes": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.48,
+      -0.91
+     ],
+     "neon": false,
+     "color": "#191216"
+    }
+   },
+   "partCount": 7,
+   "totalTris": 510,
+   "triBudget": 800,
+   "budgetUse": 0.637
+  },
+  "good": {
+   "parts": {
+    "Body": {
+     "tris": 168,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF963C"
+    },
+    "Head": {
+     "tris": 114,
+     "origin": [
+      0.0,
+      0.4,
+      -0.6
+     ],
+     "neon": false,
+     "color": "#FF963C"
+    },
+    "Horn": {
+     "tris": 76,
+     "origin": [
+      0.0,
+      0.72,
+      -0.5
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Wing_L": {
+     "tris": 28,
+     "origin": [
+      -0.7,
+      0.3,
+      0.0
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Wing_R": {
+     "tris": 28,
+     "origin": [
+      0.7,
+      0.3,
+      0.0
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Tail": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      0.0,
+      0.75
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Eyes": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.48,
+      -0.91
+     ],
+     "neon": false,
+     "color": "#191216"
+    }
+   },
+   "partCount": 7,
+   "totalTris": 558,
+   "triBudget": 800,
+   "budgetUse": 0.698
+  },
+  "rare": {
+   "parts": {
+    "Body": {
+     "tris": 168,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF963C"
+    },
+    "Head": {
+     "tris": 114,
+     "origin": [
+      0.0,
+      0.4,
+      -0.6
+     ],
+     "neon": false,
+     "color": "#FF963C"
+    },
+    "Horn": {
+     "tris": 94,
+     "origin": [
+      0.0,
+      0.72,
+      -0.5
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Wing_L": {
+     "tris": 28,
+     "origin": [
+      -0.7,
+      0.3,
+      0.0
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Wing_R": {
+     "tris": 28,
+     "origin": [
+      0.7,
+      0.3,
+      0.0
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Tail": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      0.0,
+      0.75
+     ],
+     "neon": false,
+     "color": "#8C5221"
+    },
+    "Eyes": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.48,
+      -0.91
+     ],
+     "neon": false,
+     "color": "#191216"
+    }
+   },
+   "partCount": 7,
+   "totalTris": 576,
+   "triBudget": 800,
+   "budgetUse": 0.72
+  }
+ }
+}

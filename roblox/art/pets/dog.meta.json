@@ -1,0 +1,272 @@
+{
+ "version": "A2-N1",
+ "body": "dog",
+ "pivot": "파트 중심(PetData pos)",
+ "triBudget": 800,
+ "looks": {
+  "normal": {
+   "parts": {
+    "Body": {
+     "tris": 72,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#AA5AFF"
+    },
+    "Head": {
+     "tris": 138,
+     "origin": [
+      0.0,
+      0.4,
+      -0.6
+     ],
+     "neon": false,
+     "color": "#AA5AFF"
+    },
+    "Ear_L": {
+     "tris": 56,
+     "origin": [
+      -0.26,
+      0.62,
+      -0.55
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Ear_R": {
+     "tris": 56,
+     "origin": [
+      0.26,
+      0.62,
+      -0.55
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Leg_F": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      -0.4,
+      -0.3
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Leg_B": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      -0.4,
+      0.3
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Tail": {
+     "tris": 32,
+     "origin": [
+      0.0,
+      0.2,
+      0.62
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Eyes": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.48,
+      -0.88
+     ],
+     "neon": false,
+     "color": "#191216"
+    }
+   },
+   "partCount": 8,
+   "totalTris": 594,
+   "triBudget": 800,
+   "budgetUse": 0.743
+  },
+  "good": {
+   "parts": {
+    "Body": {
+     "tris": 134,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#AA5AFF"
+    },
+    "Head": {
+     "tris": 138,
+     "origin": [
+      0.0,
+      0.4,
+      -0.6
+     ],
+     "neon": false,
+     "color": "#AA5AFF"
+    },
+    "Ear_L": {
+     "tris": 56,
+     "origin": [
+      -0.26,
+      0.62,
+      -0.55
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Ear_R": {
+     "tris": 56,
+     "origin": [
+      0.26,
+      0.62,
+      -0.55
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Leg_F": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      -0.4,
+      -0.3
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Leg_B": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      -0.4,
+      0.3
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Tail": {
+     "tris": 32,
+     "origin": [
+      0.0,
+      0.2,
+      0.62
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Eyes": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.48,
+      -0.88
+     ],
+     "neon": false,
+     "color": "#191216"
+    }
+   },
+   "partCount": 8,
+   "totalTris": 656,
+   "triBudget": 800,
+   "budgetUse": 0.82
+  },
+  "rare": {
+   "parts": {
+    "Body": {
+     "tris": 134,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#AA5AFF"
+    },
+    "Head": {
+     "tris": 156,
+     "origin": [
+      0.0,
+      0.4,
+      -0.6
+     ],
+     "neon": false,
+     "color": "#AA5AFF"
+    },
+    "Ear_L": {
+     "tris": 56,
+     "origin": [
+      -0.26,
+      0.62,
+      -0.55
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Ear_R": {
+     "tris": 56,
+     "origin": [
+      0.26,
+      0.62,
+      -0.55
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Leg_F": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      -0.4,
+      -0.3
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Leg_B": {
+     "tris": 96,
+     "origin": [
+      0.0,
+      -0.4,
+      0.3
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Tail": {
+     "tris": 74,
+     "origin": [
+      0.0,
+      0.2,
+      0.62
+     ],
+     "neon": false,
+     "color": "#5E328C"
+    },
+    "Eyes": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.48,
+      -0.88
+     ],
+     "neon": false,
+     "color": "#191216"
+    }
+   },
+   "partCount": 8,
+   "totalTris": 716,
+   "triBudget": 800,
+   "budgetUse": 0.895
+  }
+ }
+}
