@@ -202,9 +202,9 @@
       -0.3
      ],
      "center": [
-      0.008,
-      -0.093,
-      -0.451
+      0.0,
+      -0.083,
+      -0.468
      ],
      "neon": false,
      "color": "#164D8C"
@@ -293,16 +293,16 @@
      "color": "#288CFF"
     },
     "Ear_L": {
-     "tris": 104,
+     "tris": 8,
      "origin": [
       -0.2,
       0.78,
       -0.58
      ],
      "center": [
-      -0.037,
-      0.765,
-      -0.599
+      -0.2,
+      0.756,
+      -0.58
      ],
      "neon": false,
      "color": "#164D8C"
@@ -323,46 +323,31 @@
      "color": "#164D8C"
     },
     "Leg_F": {
-     "tris": 255,
+     "tris": 231,
      "origin": [
       0.0,
       -0.38,
       -0.3
      ],
      "center": [
-      0.008,
-      -0.093,
-      -0.511
+      0.0,
+      -0.083,
+      -0.468
      ],
      "neon": false,
      "color": "#164D8C"
     },
     "Leg_B": {
-     "tris": 120,
+     "tris": 156,
      "origin": [
       0.0,
       -0.38,
       0.3
      ],
      "center": [
-      0.0,
-      -0.128,
-      0.141
-     ],
-     "neon": false,
-     "color": "#164D8C"
-    },
-    "Tail": {
-     "tris": 76,
-     "origin": [
-      0.0,
-      0.35,
-      0.6
-     ],
-     "center": [
-      0.055,
-      0.399,
-      0.61
+      0.009,
+      0.125,
+      0.482
      ],
      "neon": false,
      "color": "#164D8C"
@@ -381,19 +366,34 @@
      ],
      "neon": false,
      "color": "#191216"
+    },
+    "Deco": {
+     "tris": 132,
+     "origin": [
+      0.0,
+      0.7,
+      -0.58
+     ],
+     "center": [
+      0.0,
+      0.498,
+      -0.613
+     ],
+     "neon": false,
+     "color": "#F2C94C"
     }
    },
    "partCount": 8,
-   "totalTris": 795,
+   "totalTris": 767,
    "triBudget": 800,
-   "budgetUse": 0.994
+   "budgetUse": 0.959
   }
  },
- "gradeDeco": "좋은 = 장식(Leg_F · 용 Tail) · 희귀 = + 보석 · 무늬(Leg_B · 용 Tail) · 왕관(Ear_L · 용 Horn)",
+ "gradeDeco": "좋은 = 장식(Leg_F · 용 Tail - 두께 ×1.6) · 희귀 = 새 파트 Deco(금 #F2C94C - 왕관 가시 3 + 보석 · 원점 = 머리 위) · 강아지 · 고양이 희귀는 Tail을 Leg_B에 합침(파트 8 유지 - PetData.rigs 희귀 표 필요)",
  "glowPoint": [
   0,
   0.22,
-  -0.7
+  -0.74
  ],
  "glowNote": "희귀 알 펫 = 이 자리(몸 기준)에 PointLight(범위 4 · 밝기 1 · 구역 색) - 코드"
 }

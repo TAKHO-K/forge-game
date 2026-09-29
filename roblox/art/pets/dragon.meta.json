@@ -202,9 +202,9 @@
       0.75
      ],
      "center": [
-      0.152,
-      0.144,
-      0.229
+      0.262,
+      0.151,
+      0.207
      ],
      "neon": false,
      "color": "#8C5221"
@@ -263,16 +263,16 @@
      "color": "#FF963C"
     },
     "Horn": {
-     "tris": 172,
+     "tris": 76,
      "origin": [
       0.0,
       0.72,
       -0.5
      ],
      "center": [
-      0.005,
-      0.788,
-      -0.585
+      0.001,
+      0.722,
+      -0.43
      ],
      "neon": false,
      "color": "#8C5221"
@@ -308,16 +308,16 @@
      "color": "#8C5221"
     },
     "Tail": {
-     "tris": 287,
+     "tris": 233,
      "origin": [
       0.0,
       0.0,
       0.75
      ],
      "center": [
-      0.152,
-      0.144,
-      0.184
+      0.262,
+      0.151,
+      0.207
      ],
      "neon": false,
      "color": "#8C5221"
@@ -336,19 +336,34 @@
      ],
      "neon": false,
      "color": "#191216"
+    },
+    "Deco": {
+     "tris": 132,
+     "origin": [
+      0.0,
+      0.8,
+      -0.62
+     ],
+     "center": [
+      0.0,
+      0.588,
+      -0.643
+     ],
+     "neon": false,
+     "color": "#F2C94C"
     }
    },
-   "partCount": 7,
-   "totalTris": 789,
+   "partCount": 8,
+   "totalTris": 771,
    "triBudget": 800,
-   "budgetUse": 0.986
+   "budgetUse": 0.964
   }
  },
- "gradeDeco": "좋은 = 장식(Leg_F · 용 Tail) · 희귀 = + 보석 · 무늬(Leg_B · 용 Tail) · 왕관(Ear_L · 용 Horn)",
+ "gradeDeco": "좋은 = 장식(Leg_F · 용 Tail - 두께 ×1.6) · 희귀 = 새 파트 Deco(금 #F2C94C - 왕관 가시 3 + 보석 · 원점 = 머리 위) · 강아지 · 고양이 희귀는 Tail을 Leg_B에 합침(파트 8 유지 - PetData.rigs 희귀 표 필요)",
  "glowPoint": [
   0.1,
   0.3,
-  -0.64
+  -0.68
  ],
  "glowNote": "희귀 알 펫 = 이 자리(몸 기준)에 PointLight(범위 4 · 밝기 1 · 구역 색) - 코드"
 }

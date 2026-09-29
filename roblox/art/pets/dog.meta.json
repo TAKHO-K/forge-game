@@ -195,16 +195,16 @@
      "color": "#5E328C"
     },
     "Leg_F": {
-     "tris": 189,
+     "tris": 197,
      "origin": [
       0.0,
       -0.4,
       -0.3
      ],
      "center": [
-      0.0,
-      -0.09,
-      -0.455
+      -0.002,
+      -0.066,
+      -0.466
      ],
      "neon": false,
      "color": "#5E328C"
@@ -256,9 +256,9 @@
     }
    },
    "partCount": 8,
-   "totalTris": 679,
+   "totalTris": 687,
    "triBudget": 800,
-   "budgetUse": 0.849
+   "budgetUse": 0.859
   },
   "rare": {
    "parts": {
@@ -293,16 +293,16 @@
      "color": "#AA5AFF"
     },
     "Ear_L": {
-     "tris": 152,
+     "tris": 56,
      "origin": [
       -0.26,
       0.62,
       -0.55
      ],
      "center": [
-      -0.125,
-      0.603,
-      -0.619
+      -0.323,
+      0.497,
+      -0.528
      ],
      "neon": false,
      "color": "#5E328C"
@@ -323,22 +323,22 @@
      "color": "#5E328C"
     },
     "Leg_F": {
-     "tris": 181,
+     "tris": 157,
      "origin": [
       0.0,
       -0.4,
       -0.3
      ],
      "center": [
-      0.0,
-      -0.09,
-      -0.507
+      -0.002,
+      -0.066,
+      -0.443
      ],
      "neon": false,
      "color": "#5E328C"
     },
     "Leg_B": {
-     "tris": 126,
+     "tris": 128,
      "origin": [
       0.0,
       -0.4,
@@ -346,23 +346,8 @@
      ],
      "center": [
       0.0,
-      -0.123,
-      0.051
-     ],
-     "neon": false,
-     "color": "#5E328C"
-    },
-    "Tail": {
-     "tris": 32,
-     "origin": [
-      0.0,
-      0.2,
-      0.62
-     ],
-     "center": [
-      0.0,
-      0.213,
-      0.597
+      -0.105,
+      0.471
      ],
      "neon": false,
      "color": "#5E328C"
@@ -381,19 +366,34 @@
      ],
      "neon": false,
      "color": "#191216"
+    },
+    "Deco": {
+     "tris": 132,
+     "origin": [
+      0.0,
+      0.74,
+      -0.6
+     ],
+     "center": [
+      0.0,
+      0.398,
+      -0.623
+     ],
+     "neon": false,
+     "color": "#F2C94C"
     }
    },
    "partCount": 8,
-   "totalTris": 797,
+   "totalTris": 779,
    "triBudget": 800,
-   "budgetUse": 0.996
+   "budgetUse": 0.974
   }
  },
- "gradeDeco": "좋은 = 장식(Leg_F · 용 Tail) · 희귀 = + 보석 · 무늬(Leg_B · 용 Tail) · 왕관(Ear_L · 용 Horn)",
+ "gradeDeco": "좋은 = 장식(Leg_F · 용 Tail - 두께 ×1.6) · 희귀 = 새 파트 Deco(금 #F2C94C - 왕관 가시 3 + 보석 · 원점 = 머리 위) · 강아지 · 고양이 희귀는 Tail을 Leg_B에 합침(파트 8 유지 - PetData.rigs 희귀 표 필요)",
  "glowPoint": [
   0,
-  0.04,
-  -0.7
+  -0.02,
+  -0.74
  ],
  "glowNote": "희귀 알 펫 = 이 자리(몸 기준)에 PointLight(범위 4 · 밝기 1 · 구역 색) - 코드"
 }

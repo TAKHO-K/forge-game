@@ -43,8 +43,11 @@ def pets():
         m = meta("pets", body).get("looks", {})
         for g in ("normal", "good", "rare"):
             items.append((os.path.join(N2, "pets", "%s_%s_game_34.png" % (body, g)), "%s %s %d△" % (ko, GK[g], m.get(g, {}).get("totalTris", 0))))
+            items.append((os.path.join(N2, "pets", "%s_%s_sil_front.png" % (body, g)), "실루엣"))
+        for g in ("normal", "good", "rare"):
             items.append((os.path.join(N2, "pets", "%s_%s_game_front.png" % (body, g)), "정면"))
-    compose(os.path.join(N2, "pets-v2.png"), items, cols=6, title="펫 3 × 알 등급 3 v2 - 좋은 = 장식 · 희귀 = 장식 + 보석 · 무늬 · 왕관", cell=240)
+            items.append((os.path.join(N2, "pets", "%s_%s_game_side.png" % (body, g)), "옆"))
+    compose(os.path.join(N2, "pets-v2.png"), items, cols=6, title="펫 3 × 알 등급 3 v2(2차) - 좋은 = 굵은 장식 · 희귀 = 금 Deco(왕관 가시 3 + 보석)", cell=230)
 
 
 def weapons():
