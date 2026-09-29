@@ -583,6 +583,11 @@ function PlayerProfile.grantTitle(player, titleId)
 	end
 	table.sort(keys)
 	player:SetAttribute("Titles", table.concat(keys, ","))
+	task.defer(function() -- QUEUE-B1 B2: 업적(칭호 새로 받음) = 반짝 조각(늦은 require - CosmeticService → PlayerProfile 순환 방지)
+		if profiles[player] then
+			require(script.Parent.CosmeticService).onTitle(player, titleId)
+		end
+	end)
 	return true
 end
 
@@ -2280,6 +2285,21 @@ function PlayerProfile.getSettings(player)
 	return profile.settings
 end
 
+-- QUEUE-B1 B2(v56) 수익화 상태(살아 있는 표 - MonetizationService · CosmeticService · GiftService · SeasonPassService만 고친다). 없으면 nil(로드 전).
+function PlayerProfile.getMonetizationState(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	profile.cosmetics = type(profile.cosmetics) == "table" and profile.cosmetics or { themes = {}, gliderSkins = {}, equipped = {}, treeStations = {} }
+	profile.mailbox = type(profile.mailbox) == "table" and profile.mailbox or { gifts = {}, seq = 0 }
+	profile.seasonPass = type(profile.seasonPass) == "table" and profile.seasonPass or { season = 0, premium = false, claimedFree = {}, claimedPaid = {} }
+	profile.gamepasses = type(profile.gamepasses) == "table" and profile.gamepasses or {}
+	profile.purchases.receipts = profile.purchases.receipts or {}
+	profile.purchases.log = profile.purchases.log or {}
+	return { purchases = profile.purchases, cosmetics = profile.cosmetics, mailbox = profile.mailbox, seasonPass = profile.seasonPass, gamepasses = profile.gamepasses }
+end
+
 -- Q11 펫 상태(살아 있는 표 - PetService만 고친다). 없으면 새로 만든다.
 function PlayerProfile.getPetState(player)
 	local profile = profiles[player]
@@ -2402,6 +2422,12 @@ function PlayerProfile.snapshotForDevTools(player)
 		leaderboardTainted = profile.leaderboardTainted, -- P3a(v34): 검증이 기록 경로를 재려고 끈 값을 되돌린다(COMMON §1 "새 저장 필드는 백업 대상에").
 		comeback = deepCopy(profile.comeback), -- C5-5(v48): 복귀 부스트(검증이 강제로 켠다 - 새 저장 필드는 백업 대상)
 		sessionId = profile.sessionId, -- v55 약한 세션 잠금(새 저장 필드 = 백업 대상 - 저장마다 SaveSystem이 다시 쓴다)
+		cosmetics = deepCopy(profile.cosmetics), -- QUEUE-B1 B2(v56): 새 저장 필드 = 백업 대상(COMMON §1)
+		mailbox = deepCopy(profile.mailbox), -- v56
+		seasonPass = deepCopy(profile.seasonPass), -- v56
+		gamepasses = deepCopy(profile.gamepasses), -- v56 캐시
+		receipts = deepCopy(profile.purchases.receipts), -- v56
+		purchaseLog = deepCopy(profile.purchases.log), -- v56
 	}
 end
 
@@ -2440,6 +2466,12 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.pets = snapshot.pets and deepCopy(snapshot.pets) or nil -- Q11(v52): 스냅샷 때 없었으면 없던 상태로
 	profile.settings = snapshot.settings and deepCopy(snapshot.settings) or nil -- Q14(v54)
 	profile.sessionId = snapshot.sessionId or profile.sessionId -- v55
+	profile.cosmetics = snapshot.cosmetics and deepCopy(snapshot.cosmetics) or profile.cosmetics -- QUEUE-B1 B2(v56)
+	profile.mailbox = snapshot.mailbox and deepCopy(snapshot.mailbox) or profile.mailbox
+	profile.seasonPass = snapshot.seasonPass and deepCopy(snapshot.seasonPass) or profile.seasonPass
+	profile.gamepasses = snapshot.gamepasses and deepCopy(snapshot.gamepasses) or profile.gamepasses
+	profile.purchases.receipts = snapshot.receipts and deepCopy(snapshot.receipts) or profile.purchases.receipts
+	profile.purchases.log = snapshot.purchaseLog and deepCopy(snapshot.purchaseLog) or profile.purchases.log
 	profile.quests = snapshot.quests and deepCopy(snapshot.quests) or nil -- Q6(v50) · 리뷰 4: 스냅샷 때 없었으면 없던 상태로(검증이 만든 퀘스트 상태가 남지 않게)
 	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
 	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles

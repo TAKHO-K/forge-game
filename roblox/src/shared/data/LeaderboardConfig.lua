@@ -12,7 +12,7 @@ return {
 	-- 새 시즌 = 새 저장소 이름(_s<번호>_ - 빈 순위표, 0부터 시작). 끝난 시즌의 상위 기록은 "명예의 전당"(hallTopN)으로 한 번 복사해 둔다(Leaderboard.snapshotHall).
 	-- 영구 개인 최고(profile의 bestBossCleared)는 시즌과 무관하게 그대로다. 시작일 0 = 아직 안 정함 - seasonId 고정(결정 필요: 첫 시즌 시작일).
 	seasonId = 1,
-	seasonLengthDays = 28,
+	seasonLengthDays = 56, -- QUEUE-B1 B2(사용자 지시): 코드 리더보드 시즌 28일 → 8주(시즌 패스 SeasonPassData와 같은 시계)
 	seasonStartUnix = 0,
 	-- P3d G-e(사용자 결정): 첫 시즌 시작 = 소규모 오픈일 0시(KST). 날짜는 P6에서 확정 - { 년, 월, 일 }을 넣으면 seasonStartUnix 대신 그날 0시(KST)가 시작이다
 	-- (LeaderboardRules.seasonStartOf · kstMidnightUnix). nil = 아직 안 정함(seasonId 고정).

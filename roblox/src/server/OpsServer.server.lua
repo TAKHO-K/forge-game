@@ -5,6 +5,7 @@
 --   /ops versions <userId>                저장 버전 목록(DataStore 30일 보관)
 --   /ops restore <userId> <version>        저장 버전 복구(그 사람이 이 서버에 없어야 한다 - 다른 서버 접속은 운영 절차로 확인)
 --   /ops review <userId>                  검토 대기 목록(최근)
+--   /ops gift <userId> <cosmeticTheme|gliderSkin|sparkleShard> <id|개수> [메모]   선물함에 치장 · 치장 재화 넣기(QUEUE-B1 B2 - 치장만 · 이 서버에 없으면 다음 접속 때)
 --   /ops stats [all]                       알파 통계(C1 끌어오기 계측 - 이 서버 메모리 · all = 서버 종료 때 저장된 요약 합 - S1 후속 0-5)
 -- 결과는 명령한 사람 채팅 줄(시스템 메시지)로 돌려준다. 자동 제재는 없다.
 local Players = game:GetService("Players")
@@ -138,6 +139,15 @@ function handlers.review(args)
 	return #rows > 0 and table.concat(rows, " / ") or "none(이 서버 기록)"
 end
 
+function handlers.gift(args, player)
+	local userId, kind, value = tonumber(args[2]), tostring(args[3] or ""), args[4]
+	if not userId or kind == "" or value == nil then
+		return "bad_args"
+	end
+	local note = table.concat(args, " ", 5)
+	return require(script.Parent.GiftService).send(userId, kind, value, note, player and player.Name)
+end
+
 function handlers.stats(args)
 	local AlphaStats = require(script.Parent.AlphaStats)
 	if args[2] == "all" then
@@ -162,7 +172,7 @@ function Ops.handle(player, text)
 	table.remove(args, 1) -- "/ops"
 	local fn = handlers[args[1] or ""]
 	local ok, result = pcall(function()
-		return fn and fn(args) or "unknown"
+		return fn and fn(args, player) or "unknown"
 	end)
 	result = ok and result or ("error: " .. tostring(result))
 	logOps(player, text, result)

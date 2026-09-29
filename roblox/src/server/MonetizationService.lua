@@ -1,0 +1,317 @@
+-- QUEUE-B1 B2 수익화 서버(P4c 골격). 가격 · 상품 ID = shared/data/MonetizationData(자리값 0 = 준비 중) · 규칙 = shared/Monetization · 설계 = docs/design/monetization-p4c.md.
+--   ① 구매 처리: MarketplaceService.ProcessReceipt(이 게임의 유일한 콜백) - 구매 ID 기록(profile.purchases.receipts)으로 중복 지급 방지 → 지급 → **저장 성공을 확인한 뒤에만**
+--      PurchaseGranted(실패 = 기록 · 지급 되돌림 없이 NotProcessedYet → Roblox가 다음 접속 · 재시도 때 다시 부른다 - 지급은 멱등이라 두 번 불러도 같다). 구매 기록 = purchases.log.
+--   ② 판매 금지 목록: 서버 시작 때 Monetization.checkCatalog - 걸린 상품은 판매 목록에서 빠지고(구매 프롬프트 거부) 로그에 남는다.
+--   ③ 유료 랜덤: PolicyService ArePaidRandomItemsRestricted를 접속 때 캐시(조회 실패 = 제한) - paidRandom 상품은 제한 대상에게 프롬프트 자체를 막는다(지금 paidRandom 0개).
+--   ④ 게임패스(편의): 접속 때 UserOwnsGamePassAsync로 profile.gamepasses 캐시 갱신(조회 실패면 캐시 유지) · 구매 완료 이벤트로 즉시 반영 · 효과 = 각 시스템이 hasPass로 읽는다.
+--   ⑤ 창구 Remote ShopRequest(클라 → 서버) / ShopSync(서버 → 클라 화면 표) - 요청 제한 = RequestGate(공통 입구).
+local MarketplaceService = game:GetService("MarketplaceService")
+local PolicyService = game:GetService("PolicyService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
+local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData)
+local SeasonPassData = require(ReplicatedStorage.Shared.data.SeasonPassData)
+local NestData = require(ReplicatedStorage.Shared.data.NestData)
+local Monetization = require(ReplicatedStorage.Shared.Monetization)
+local PlayerProfile = require(script.Parent.PlayerProfile)
+local CosmeticService = require(script.Parent.CosmeticService)
+local SeasonPassService = require(script.Parent.SeasonPassService)
+local GiftService = require(script.Parent.GiftService)
+
+local MonetizationService = {}
+
+local catalogOk, catalogReasons, validProducts = Monetization.checkCatalog(MonetizationData, CosmeticSlotData, SeasonPassData)
+MonetizationService.catalogOk = catalogOk
+MonetizationService.catalogReasons = catalogReasons
+MonetizationService.validProducts = validProducts
+if not catalogOk then
+	for _, line in ipairs(catalogReasons) do
+		warn("[B2] 상품 등록 거부: " .. line)
+	end
+end
+
+local restricted = {} -- [Player] = bool(유료 랜덤 제한 - nil = 아직 모름 → failClosed면 제한)
+local syncRemote = nil
+
+-- 보상 적용(상품 grants · 시즌 줄 · 선물 공통). reward = { cosmeticTheme = id, gliderSkin = id, sparkleShard = n, egg = n, seasonPremium = true }.
+--   판매 금지 종류는 source == "product"일 때 거부(시즌 무료 줄 알 · 조각은 무료 보상). 반환: ok, 요약 | 이유
+function MonetizationService.applyReward(player, reward, source)
+	if type(reward) ~= "table" then
+		return false, "no_reward"
+	end
+	local parts = {}
+	if reward.egg and #PlayerProfile.getEggs(player) + reward.egg > NestData.eggCap then
+		return false, "egg_full" -- 받은 표시를 하기 전에 막는다(QuestService.claim과 같은 규칙)
+	end
+	for _, grant in ipairs(Monetization.rewardToGrants(reward)) do
+		if source == "product" then
+			local ok, why = Monetization.checkGrant(MonetizationData, grant)
+			if not ok then
+				return false, why
+			end
+		end
+		if grant.kind == "cosmeticTheme" or grant.kind == "gliderSkin" then
+			local got, why = CosmeticService.grant(player, grant.kind, grant.id)
+			if not got and why ~= "owned" then
+				return false, why
+			end
+			table.insert(parts, ("%s %s%s"):format(grant.kind, grant.id, got and "" or "(이미 있음)"))
+		elseif grant.kind == "seasonPremium" then
+			local got, why = SeasonPassService.setPremium(player)
+			if not got and why ~= "owned" then
+				return false, why
+			end
+			table.insert(parts, "시즌 유료 줄")
+		elseif grant.kind == "sparkleShard" or grant.kind == "egg" then
+			table.insert(parts, require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))
+		else
+			return false, "unknown_kind " .. tostring(grant.kind)
+		end
+	end
+	return true, table.concat(parts, " · ")
+end
+
+-- ── ① 구매 처리 ──
+-- 반환 = Enum.ProductPurchaseDecision. deps(검증 · 하네스) = { save = function(player) → 저장 성공 bool }
+function MonetizationService.processReceipt(receiptInfo, deps)
+	local Decision = Enum.ProductPurchaseDecision
+	local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
+	local s = player and PlayerProfile.getMonetizationState(player)
+	if not s then
+		return Decision.NotProcessedYet -- 접속 전 · 로드 전: 다음 접속 때 Roblox가 다시 부른다
+	end
+	local purchaseId = tostring(receiptInfo.PurchaseId)
+	if Monetization.hasReceipt(s.purchases, purchaseId) then
+		return Decision.PurchaseGranted -- 이미 지급(중복 호출)
+	end
+	local key = Monetization.productKeyById(MonetizationData, receiptInfo.ProductId)
+	local product = key and MonetizationData.products[key]
+	local function log(result)
+		Monetization.appendLog(s.purchases, { at = os.time(), key = key or ("?" .. tostring(receiptInfo.ProductId)), purchaseId = purchaseId,
+			robux = receiptInfo.CurrencySpent, result = result }, MonetizationData.logKeep)
+		print(("[B2] 구매 처리: %s - %s(%s) → %s"):format(player.Name, tostring(key), purchaseId, result))
+	end
+	if not product or not validProducts[key] then
+		log("unknown_or_rejected")
+		return Decision.NotProcessedYet
+	end
+	if not Monetization.paidRandomAllowed(product, MonetizationService.isRestricted(player)) then
+		log("paid_random_restricted")
+		return Decision.NotProcessedYet
+	end
+	Monetization.recordReceipt(s.purchases, purchaseId, os.time(), MonetizationData.receiptKeep)
+	local reward = {}
+	for _, grant in ipairs(product.grants) do
+		reward[grant.kind] = grant.id or grant.amount or true
+	end
+	local ok, summary = MonetizationService.applyReward(player, reward, "product")
+	if not ok then
+		Monetization.forgetReceipt(s.purchases, purchaseId)
+		log("grant_failed " .. tostring(summary))
+		return Decision.NotProcessedYet
+	end
+	log("granted " .. tostring(summary))
+	local saved = (deps and deps.save or function(p)
+		return require(script.Parent.ImmediateSave).flush(p)
+	end)(player)
+	if not saved then
+		-- 저장 실패: 기록을 빼고 NotProcessedYet → 다음 재시도가 다시 지급(멱등 - 치장 소유 · 유료 줄은 켜진 채라 같은 결과) · 그때 저장되면 Granted
+		Monetization.forgetReceipt(s.purchases, purchaseId)
+		log("save_failed_retry")
+		return Decision.NotProcessedYet
+	end
+	require(script.Parent.Telemetry).custom(player, "Purchase_" .. key, 1)
+	MonetizationService.push(player)
+	return Decision.PurchaseGranted
+end
+
+-- ── ③ 유료 랜덤 정책 ──
+function MonetizationService.isRestricted(player)
+	local value = restricted[player]
+	if value == nil then
+		return MonetizationData.policy.failClosed
+	end
+	return value
+end
+local function cachePolicy(player)
+	local ok, info = pcall(function()
+		return PolicyService:GetPolicyInfoForPlayerAsync(player)
+	end)
+	if ok and type(info) == "table" and type(info.ArePaidRandomItemsRestricted) == "boolean" then
+		restricted[player] = info.ArePaidRandomItemsRestricted
+	end
+end
+
+-- ── ④ 게임패스 ──
+function MonetizationService.hasPass(player, passKey)
+	local s = PlayerProfile.getMonetizationState(player)
+	return s ~= nil and s.gamepasses[passKey] == true
+end
+local function applyPassAttributes(player)
+	local s = PlayerProfile.getMonetizationState(player)
+	if not s or typeof(player) ~= "Instance" then
+		return
+	end
+	for key in pairs(MonetizationData.gamePasses) do
+		player:SetAttribute("Pass_" .. key, s.gamepasses[key] == true)
+	end
+	CosmeticService.applyAttributes(player) -- 이름표 색은 패스가 있어야 보인다
+end
+local function refreshPasses(player)
+	local s = PlayerProfile.getMonetizationState(player)
+	if not s then
+		return
+	end
+	for key, pass in pairs(MonetizationData.gamePasses) do
+		if pass.passId ~= 0 then
+			local ok, owns = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.passId)
+			end)
+			if ok then
+				s.gamepasses[key] = owns == true or nil
+			end -- 조회 실패 = 캐시 유지
+		end
+	end
+	applyPassAttributes(player)
+end
+
+-- ── ⑤ 화면 표 · 창구 ──
+function MonetizationService.view(player)
+	local s = PlayerProfile.getMonetizationState(player)
+	if not s then
+		return nil
+	end
+	local products = {}
+	for key, product in pairs(MonetizationData.products) do
+		products[key] = { robux = product.robux, ready = validProducts[key] == true and product.productId ~= 0,
+			blocked = not Monetization.paidRandomAllowed(product, MonetizationService.isRestricted(player)), paidRandom = product.paidRandom == true, odds = product.odds }
+	end
+	local passes = {}
+	for key, pass in pairs(MonetizationData.gamePasses) do
+		passes[key] = { robux = pass.robux, ready = pass.passId ~= 0, owned = s.gamepasses[key] == true }
+	end
+	return {
+		shards = CosmeticService.shards(player),
+		shardPrices = MonetizationData.shardPrices,
+		themes = table.clone(s.cosmetics.themes),
+		gliderSkins = table.clone(s.cosmetics.gliderSkins),
+		equipped = table.clone(s.cosmetics.equipped),
+		products = products,
+		passes = passes,
+		nameplateColors = MonetizationData.gamePasses.nameplateColor.colors,
+		season = SeasonPassService.view(player),
+		gifts = #s.mailbox.gifts,
+		paidRandomRestricted = MonetizationService.isRestricted(player),
+	}
+end
+function MonetizationService.push(player)
+	if syncRemote and typeof(player) == "Instance" and player.Parent then
+		syncRemote:FireClient(player, MonetizationService.view(player))
+	end
+end
+
+-- 로벅스 구매 프롬프트(서버가 연다 - 판매 목록 · 정책 확인 뒤). 반환: ok, 이유
+function MonetizationService.promptProduct(player, key)
+	local product = MonetizationData.products[key]
+	if not product or not validProducts[key] then
+		return false, "not_for_sale"
+	end
+	if product.productId == 0 then
+		return false, "not_ready"
+	end
+	if not Monetization.paidRandomAllowed(product, MonetizationService.isRestricted(player)) then
+		return false, "restricted"
+	end
+	MarketplaceService:PromptProductPurchase(player, product.productId)
+	return true
+end
+function MonetizationService.promptPass(player, key)
+	local pass = MonetizationData.gamePasses[key]
+	if not pass then
+		return false, "unknown"
+	end
+	if pass.passId == 0 then
+		return false, "not_ready"
+	end
+	if MonetizationService.hasPass(player, key) then
+		return false, "owned"
+	end
+	MarketplaceService:PromptGamePassPurchase(player, pass.passId)
+	return true
+end
+
+local ACTIONS = { view = true, buyShards = true, buyRobux = true, buyPass = true, equip = true, seasonClaim = true, giftClaim = true }
+function MonetizationService.handle(player, action, a, b)
+	if type(action) ~= "string" or not ACTIONS[action] then
+		return false, "bad_action"
+	end
+	local ok, why = true, nil
+	if action == "buyShards" and type(a) == "string" and type(b) == "string" then
+		ok, why = CosmeticService.buyWithShards(player, a, b)
+	elseif action == "buyRobux" and type(a) == "string" then
+		ok, why = MonetizationService.promptProduct(player, a)
+	elseif action == "buyPass" and type(a) == "string" then
+		ok, why = MonetizationService.promptPass(player, a)
+	elseif action == "equip" and type(a) == "string" and (b == nil or type(b) == "string") then
+		ok, why = CosmeticService.equip(player, a, b)
+	elseif action == "seasonClaim" and type(a) == "string" and type(b) == "number" then
+		ok, why = SeasonPassService.claim(player, a, b)
+	elseif action == "giftClaim" and type(a) == "string" then
+		local got = GiftService.claim(player, a)
+		ok, why = got > 0, if got > 0 then nil else "none"
+	elseif action ~= "view" then
+		ok, why = false, "bad_args"
+	end
+	MonetizationService.push(player)
+	return ok, why
+end
+
+function MonetizationService.onLoaded(player)
+	SeasonPassService.ensure(player)
+	CosmeticService.onLoaded(player)
+	applyPassAttributes(player) -- 캐시값으로 먼저(조회는 느리다)
+	task.spawn(function()
+		cachePolicy(player)
+		refreshPasses(player)
+		MonetizationService.push(player)
+	end)
+	GiftService.onLoaded(player)
+end
+
+function MonetizationService.start()
+	GiftService.start()
+	local request = ReplicatedStorage:FindFirstChild("ShopRequest") or Instance.new("RemoteEvent")
+	request.Name = "ShopRequest"
+	request.Parent = ReplicatedStorage
+	syncRemote = ReplicatedStorage:FindFirstChild("ShopSync") or Instance.new("RemoteEvent")
+	syncRemote.Name = "ShopSync"
+	syncRemote.Parent = ReplicatedStorage
+	local RequestGate = require(script.Parent.RequestGate)
+	request.OnServerEvent:Connect(function(player, action, a, b)
+		if not RequestGate.allow(player, "ShopRequest") then
+			return
+		end
+		MonetizationService.handle(player, action, a, b)
+	end)
+	MarketplaceService.ProcessReceipt = function(receiptInfo)
+		return MonetizationService.processReceipt(receiptInfo)
+	end
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+		local key = Monetization.passKeyById(MonetizationData, passId)
+		local s = key and purchased and PlayerProfile.getMonetizationState(player)
+		if s then
+			s.gamepasses[key] = true
+			applyPassAttributes(player)
+			require(script.Parent.ImmediateSave).request(player)
+			Monetization.appendLog(s.purchases, { at = os.time(), key = "pass_" .. key, purchaseId = "pass", robux = MonetizationData.gamePasses[key].robux, result = "pass_owned" }, MonetizationData.logKeep)
+			MonetizationService.push(player)
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		restricted[player] = nil
+	end)
+end
+
+return MonetizationService

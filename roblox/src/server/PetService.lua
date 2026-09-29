@@ -130,7 +130,10 @@ function PetService.pickupRange(player)
 	if not Pet.unlocked(PlayerProfile.getCharacterLevel(player) or 1, "autoPickup") then
 		return 0, 0
 	end
-	return PetData.autoPickupRange, PetData.autoPickupHeight
+	-- QUEUE-B1 B2: 게임패스 pickupRadius(편의) = 반경 × radiusMultiplier(해금 기준 · 펫 동행 조건은 그대로)
+	local s = PlayerProfile.getMonetizationState(player)
+	local mult = s and s.gamepasses.pickupRadius and require(ReplicatedStorage.Shared.data.MonetizationData).gamePasses.pickupRadius.radiusMultiplier or 1
+	return PetData.autoPickupRange * mult, PetData.autoPickupHeight
 end
 
 function PetService.onLoaded(player)

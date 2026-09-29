@@ -69,7 +69,7 @@ function ImmediateSave.flush(player)
 		pendingSaveScheduled[player] = nil
 	end
 	lastSaveAt[player] = os.clock()
-	SaveCoordinator.saveForPlayer(player)
+	return SaveCoordinator.saveForPlayer(player) -- QUEUE-B1 B2: 저장 성공 여부(구매 처리가 본다)
 end
 
 return ImmediateSave

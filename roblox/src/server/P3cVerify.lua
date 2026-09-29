@@ -333,7 +333,7 @@ function P3cVerify.runPure()
 		local before = LeaderboardRules.seasonAt(999999999, cfg)
 		r.check(("C7 시즌 번호: 시작일 없음 → seasonId(%d) · 시작 %d · 27일 23:59:59 %d · 28일 %d · 시작 전 %d · 기간 %d일 · 전당 상위 %d"):format(fixed, s1, s1b, s2, before,
 			LeaderboardConfig.seasonLengthDays, LeaderboardConfig.hallTopN),
-			fixed == 3 and s1 == 1 and s1b == 1 and s2 == 2 and before == 1 and LeaderboardConfig.seasonLengthDays == 28)
+			fixed == 3 and s1 == 1 and s1b == 1 and s2 == 2 and before == 1 and LeaderboardConfig.seasonLengthDays == 56) -- QUEUE-B1 B2: 실제 설정 = 8주(위 식 검사는 28일 합성 cfg 그대로)
 	end)
 
 	r.section("E4 보석 판매가", function()

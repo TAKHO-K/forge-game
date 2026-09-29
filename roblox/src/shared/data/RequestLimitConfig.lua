@@ -9,6 +9,8 @@ return {
 		ClassSelectRequest = { perSecond = 1, burst = 2 },
 		-- 창을 끄는 동안 위치를 연달아 보낼 수 있다(저장은 즉시 저장 스로틀이 따로 막는다)
 		SetInventoryWindowPosition = { perSecond = 20, burst = 20 },
+		-- QUEUE-B1 B2 상점 창구(구매 프롬프트 · 장착 · 받기) - 사람 손 속도면 닿지 않는다
+		ShopRequest = { perSecond = 4, burst = 8 },
 	},
 	-- RemoteFunction 기본(감사 F7 권고는 0.2초 캐시였지만 상태를 읽는 함수(가방 · 보석 · 요약)는 변경 직후 다시 읽으면 옛 값이 가서 통만 쓴다)
 	functionDefault = { perSecond = 10, burst = 20 },

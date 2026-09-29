@@ -29,13 +29,16 @@ inventoryFetch.Parent = ReplicatedStorage
 local PlayerProfile
 local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
+local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData) -- QUEUE-B1 B2: 가방 확장 게임패스
 
 local InventorySync = {}
 
 -- QUEUE-10h Q13 가방 칸 수(식 한 곳): 저장값(inventorySlots = 옛 기본 20 + 마일스톤) + 실험 스위치(SaveConfig.bagBaseSlots − 20). 저장은 건드리지 않는다.
 --   주의(리뷰): defaultInventorySlots(20)는 "저장값의 기준"으로 고정한다 - 새 계정 기본 칸을 늘리고 싶으면 이 값이 아니라 bagBaseSlots를 올린다(둘 다 올리면 이중으로 더해지거나 0이 된다).
 function InventorySync.capacity(profile)
-	return (profile and profile.inventorySlots or 0) + math.max(0, (SaveConfig.bagBaseSlots or SaveConfig.defaultInventorySlots) - SaveConfig.defaultInventorySlots)
+	-- QUEUE-B1 B2: 게임패스 bagExpand(편의) = + bonusSlots(캐시 profile.gamepasses - 패스를 잃으면 칸만 줄고 든 장비는 그대로 · 더 넣기만 막힌다)
+	local passBonus = profile and type(profile.gamepasses) == "table" and profile.gamepasses.bagExpand and MonetizationData.gamePasses.bagExpand.bonusSlots or 0
+	return (profile and profile.inventorySlots or 0) + math.max(0, (SaveConfig.bagBaseSlots or SaveConfig.defaultInventorySlots) - SaveConfig.defaultInventorySlots) + passBonus
 end
 
 -- 19-1: 장비는 이제 profile.classes[profile.classId] 아래에 있다. classId 미선택이면

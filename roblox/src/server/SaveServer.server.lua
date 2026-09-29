@@ -19,6 +19,8 @@ local PetService = require(script.Parent.PetService) -- Q11 펫 Remote
 PetService.start()
 local SettingsService = require(script.Parent.SettingsService) -- Q14 설정 저장 Remote
 SettingsService.start()
+local MonetizationService = require(script.Parent.MonetizationService) -- QUEUE-B1 B2 수익화(영수증 · 게임패스 · 정책 · 상점 창구 · 선물함)
+MonetizationService.start()
 require(script.Parent.Telemetry).start() -- Q15 T1 통계(몇 분마다 · 퇴장 때 전송 · Studio = 드라이런)
 
 local function loadForPlayer(player)
@@ -53,6 +55,7 @@ local function loadForPlayer(player)
 	QuestService.onLoaded(player) -- Q6: 날짜 넘김 · 화면 표
 	PetService.onLoaded(player) -- Q11: 데리고 다니는 펫 Attribute · 화면 표
 	SettingsService.onLoaded(player) -- Q14: 저장된 설정을 Attribute로
+	MonetizationService.onLoaded(player) -- QUEUE-B1 B2: 시즌 넘김 · 치장 Attribute · 게임패스 · 정책 · 선물함 팝업
 end
 
 Players.PlayerAdded:Connect(loadForPlayer)

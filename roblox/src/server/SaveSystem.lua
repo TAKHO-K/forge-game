@@ -206,7 +206,8 @@ local function defaultProfile()
 		-- "몇 칸인가"고 이건 "무엇이 들었는가"다.
 		inventory = {},
 
-		-- 구매한 게임패스 id 집합. {[id]=true} 형태. 상점이 없어 항상 빈 테이블이다.
+		-- 구매한 게임패스 집합. QUEUE-B1 B2(v56): { [MonetizationData.gamePasses 키] = true } - 접속 때 UserOwnsGamePassAsync로 다시 맞추는 캐시
+		-- (조회 실패면 이 값을 쓴다 - 산 사람이 혜택을 잃지 않게). 진실 = Roblox 소유 기록.
 		gamepasses = {},
 
 		-- 옵션 변환권(23-2, PRD 20.37 [6] "계정 공유(신규)"). 골드로만 구매(20.5-1 - 로벅스
@@ -220,6 +221,8 @@ local function defaultProfile()
 			optionRerollTickets = { ancient = 0, primordial = 0 },
 			protectionTickets = { drop = 0, reset = 0 },
 			protectionClaimedStages = {},
+			receipts = {}, -- QUEUE-B1 B2(v56): { { id = PurchaseId 문자열, at } } 최근 MonetizationData.receiptKeep개 - ProcessReceipt 중복 지급 방지
+			log = {}, -- QUEUE-B1 B2(v56): 구매 기록 { { at, key, purchaseId, robux, result } } 최근 logKeep줄
 			-- bossCodex(30-0 S11) = { [bossId] = true } - 기여 10% 이상으로 처치한 보스 종(계정 공유 · 표시는 스테이지 선택 패널의 도감 줄뿐, 성능 보상 없음). 키는 BossData.bosses의 id.
 			bossCodex = {},
 		},
@@ -271,6 +274,11 @@ local function defaultProfile()
 		pets = nil, -- QUEUE-10h Q11(v52): 펫 상태(shared/Pet.newState - { list, equipped, hatchCount, hatching })
 		settings = nil, -- QUEUE-10h Q14(v54): 설정({ [SettingsData 키] = 값 } - 없는 키 = 기본값 · SettingsService가 검증)
 		comeback = { untilAt = 0 }, -- C5-5(v48): 복귀 부스트 만료 unix 초(0 = 없음) - SaveServer가 로드 직후 마지막 저장 savedAt과 비교해 준다
+		-- QUEUE-B1 B2(v56) 수익화 골격: 치장(산 테마 세트 · 글라이더 스킨 · 칸별 장착 · 나무 정거장 조각 받은 기록 - 키는 전부 문자열) · 선물함 · 시즌 패스.
+		--   purchases.receipts(영수증 중복 방지 - 최근 PurchaseId) · purchases.log(구매 기록)는 아래 purchases 안.
+		cosmetics = { themes = {}, gliderSkins = {}, equipped = {}, treeStations = {} },
+		mailbox = { gifts = {}, seq = 0 }, -- gifts = { { id, kind, itemId | amount, from, note, at } } · seq = 이 계정 안 선물 번호
+		seasonPass = { season = 0, premium = false, claimedFree = {}, claimedPaid = {} }, -- season = 기록한 시즌 번호(바뀌면 경험치 · 받음 · 유료 초기화)
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
 		gemDust = 0,
@@ -1194,6 +1202,30 @@ local function migrate(data)
 			data.sessionId = ""
 		end
 		data.version = 55
+	end
+
+	if data.version < 56 then
+		-- QUEUE-B1 B2 수익화 골격: 치장 · 선물함 · 시즌 패스 · 영수증 · 구매 기록 - 옛 계정 = 빈 표(산 것 없음). gamepasses(옛 예약 칸)는 표로만 맞춘다.
+		if type(data.cosmetics) ~= "table" then
+			data.cosmetics = { themes = {}, gliderSkins = {}, equipped = {}, treeStations = {} }
+		end
+		if type(data.mailbox) ~= "table" then
+			data.mailbox = { gifts = {}, seq = 0 }
+		end
+		if type(data.seasonPass) ~= "table" then
+			data.seasonPass = { season = 0, premium = false, claimedFree = {}, claimedPaid = {} }
+		end
+		if type(data.gamepasses) ~= "table" then
+			data.gamepasses = {}
+		end
+		data.purchases = type(data.purchases) == "table" and data.purchases or {}
+		if type(data.purchases.receipts) ~= "table" then
+			data.purchases.receipts = {}
+		end
+		if type(data.purchases.log) ~= "table" then
+			data.purchases.log = {}
+		end
+		data.version = 56
 	end
 
 	data.savedAt = data.savedAt or 0

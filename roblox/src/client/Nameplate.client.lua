@@ -11,6 +11,7 @@ local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local TitleData = require(ReplicatedStorage.Shared.data.TitleData)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors) -- QUEUE-B1 B2: 이름표 색 게임패스(UIColors 기존 이름만)
 local RunService = game:GetService("RunService")
 
 local settings = SocialData.nameplate
@@ -105,6 +106,11 @@ local function attach(player, character)
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.Parent = billboard
 	refresh(player, label)
+	local function applyNameColor() -- QUEUE-B1 B2: Attribute NameplateColor(서버 CosmeticService - 패스 있을 때만) = UIColors 이름 · 없으면 흰색
+		local color = UIColors[player:GetAttribute("NameplateColor") or ""]
+		label.TextColor3 = typeof(color) == "Color3" and color or Color3.new(1, 1, 1)
+	end
+	applyNameColor()
 
 	local titleGui = Instance.new("BillboardGui")
 	titleGui.Name = "PlayerTitle"
@@ -137,6 +143,7 @@ local function attach(player, character)
 		player:GetPropertyChangedSignal("DisplayName"):Connect(function()
 			refresh(player, label)
 		end),
+		player:GetAttributeChangedSignal("NameplateColor"):Connect(applyNameColor),
 	}
 	billboard.Destroying:Connect(function()
 		for _, connection in ipairs(connections) do

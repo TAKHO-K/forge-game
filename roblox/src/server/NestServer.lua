@@ -234,6 +234,9 @@ function NestServer.tryPickup(player, nestId, opts)
 	local discovered, dexCount, title = false, nil, nil
 	if spec.track == "C" then
 		discovered, dexCount = PlayerProfile.discoverNest(player, nestId)
+		if discovered then
+			require(script.Parent.CosmeticService).onNestDex(player, nestId) -- QUEUE-B1 B2: 도감 새 칸 = 반짝 조각
+		end
 		if discovered and spec.sub ~= "village" then -- 도감은 전부 · 칭호는 필드 · 히든만(결정 5)
 			local counted = NestServer.titleCount(PlayerProfile.getNestDex(player))
 			for _, t in ipairs(NestData.dex.titles) do

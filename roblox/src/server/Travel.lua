@@ -23,6 +23,7 @@ local LaunchPermit = require(script.Parent.LaunchPermit)
 local TeleportArrival = require(script.Parent.TeleportArrival)
 local BossGate = require(script.Parent.BossGate)
 local ImmediateSave = require(script.Parent.ImmediateSave)
+local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData) -- QUEUE-B1 B2: 귀환 쿨 게임패스(편의)
 
 local Travel = {}
 
@@ -198,7 +199,7 @@ function Travel.requestHub(player, now)
 	if st.recall then
 		return false, "casting_already"
 	end
-	if now - st.hubAt < T.hubReturnCooldownSeconds then
+	if now - st.hubAt < Travel.recallCooldownSeconds(player) then
 		return false, "cooldown"
 	end
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -208,6 +209,13 @@ function Travel.requestHub(player, now)
 	st.recall = { startAt = now, hp = PlayerState.getHp(player), origin = root.Position }
 	player:SetAttribute("RecallCastUntil", serverNow() + T.recall.castSeconds)
 	return true, "casting"
+end
+
+-- QUEUE-B1 B2: 귀환 쿨(도착 뒤) - 게임패스 recallCooldown이면 × cooldownMultiplier(편의 · 캐시 = profile.gamepasses)
+function Travel.recallCooldownSeconds(player)
+	local s = PlayerProfile.getMonetizationState(player)
+	local pass = MonetizationData.gamePasses.recallCooldown
+	return T.hubReturnCooldownSeconds * (s and s.gamepasses.recallCooldown and pass.cooldownMultiplier or 1)
 end
 
 -- 시전 진행(Heartbeat 0.25초마다 · 검증은 now를 넣어 부른다). 반환: nil | "done" | "hit" | "boss"
@@ -234,7 +242,7 @@ function Travel.pollRecall(player, now)
 	local from = root and root.Position or cast.origin
 	clearCast(player, st, nil)
 	st.hubAt = now
-	player:SetAttribute("RecallReadyAt", serverNow() + T.hubReturnCooldownSeconds) -- 클라 카드 "귀환 대기"
+	player:SetAttribute("RecallReadyAt", serverNow() + Travel.recallCooldownSeconds(player)) -- 클라 카드 "귀환 대기"
 	st.checkpoint = nil
 	if not WorldMapLayout.inHub(from) then
 		st.back = { position = from, untilAt = now + T.recall.backSeconds }
@@ -550,6 +558,9 @@ function Travel.pollPlayer(player, root, humanoid, now)
 		if st.checkpoint ~= on then
 			st.checkpoint = on
 			player:SetAttribute("TreeCheckpoint", on)
+			-- QUEUE-B1 B2: 나무 정거장 처음 오르기 = 반짝 조각(정거장마다 1회 · 리프트 · 순간이동 도착 직후는 오르기가 아니라 제외)
+			local arrivedByTeleport = now - (st.teleportAt or -math.huge) < WorldMapData.travel.arrival.fallSkipAfterTeleportSeconds + 1
+			require(script.Parent.CosmeticService).onTreeStation(player, on, arrivedByTeleport)
 		end
 	end
 	if st.checkpoint then

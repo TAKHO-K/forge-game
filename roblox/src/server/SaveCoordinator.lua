@@ -73,27 +73,28 @@ function SaveCoordinator.setTeleportFrozen(player, frozen)
 	end
 end
 
+-- 반환: 이번 호출이 실제로 저장에 성공했나(건너뜀 · 실패 = false)
 function SaveCoordinator.saveForPlayer(player)
 	if devToolsSuspended[player] then
-		return
+		return false
 	end
 	if teleportFrozen[player] then
-		return
+		return false
 	end
 	if saveSuspended[player] then
-		return
+		return false
 	end
 
 	local profile = PlayerProfile.getProfile(player)
 	if not profile then
-		return
+		return false
 	end
 
 	while saving[player] do
 		task.wait()
 	end
 	if PlayerProfile.getProfile(player) ~= profile or teleportFrozen[player] or saveSuspended[player] then
-		return -- 기다리는 동안 프로필이 지워졌거나(퇴장) 동결·중단됐다
+		return false -- 기다리는 동안 프로필이 지워졌거나(퇴장) 동결·중단됐다
 	end
 	saving[player] = true
 	local ok, err = SaveSystem.saveProfile(player, profile)
@@ -112,6 +113,7 @@ function SaveCoordinator.saveForPlayer(player)
 			notify(player, "저장에 반복 실패했습니다. 지금까지의 변경사항이 저장되지 않았을 수 있습니다.")
 		end
 	end
+	return ok == true -- QUEUE-B1 B2: 구매 처리(ProcessReceipt)가 저장 성공을 확인한 뒤에만 PurchaseGranted를 돌려준다
 end
 
 return SaveCoordinator

@@ -1,5 +1,6 @@
 import re, os, sys
-SRC = r"C:\Users\xkrgh\vibe\game\roblox\src\server"
+# QUEUE-B1: 저장소 기준 상대 경로(옛 = 원래 폴더 절대 경로 - worktree의 새 모듈을 못 찾았다)
+SRC = os.environ.get("DEPS_SRC", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src", "server"))
 seen = set()
 stack = sys.argv[1].split(",")
 while stack:
