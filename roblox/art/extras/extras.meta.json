@@ -1,17 +1,35 @@
 {
- "version": "A2-N1",
+ "version": "A2-N2",
  "tris": {
-  "TelegraphCircle": 384,
-  "TelegraphCone": 128,
-  "ShockRing": 144,
-  "WarnPillar": 336,
-  "ImpactStar": 64,
-  "transcend_crystal": 291,
   "gate_decor_section_guardian": 316,
-  "gate_decor_frost_giant": 364,
+  "gate_decor_frost_giant": 284,
   "gate_decor_abyssal_lord": 568,
-  "gate_decor_crystal_queen": 256,
+  "gate_decor_crystal_queen": 304,
   "gate_decor_scorpion_queen": 682,
-  "gate_decor_storm_lord": 244
- }
+  "gate_decor_storm_lord": 244,
+  "vfx_TelegraphCircle": {
+   "Fill": 156,
+   "Edge": 384
+  },
+  "vfx_TelegraphCone": {
+   "Fill": 68,
+   "Edge": 288
+  },
+  "vfx_TelegraphLine": {
+   "Fill": 12,
+   "Edge": 108
+  },
+  "vfx_ShockRing": {
+   "Ring": 144
+  },
+  "vfx_WarnPillar": {
+   "Pillar": 244,
+   "Edge": 128
+  },
+  "vfx_ImpactStar": {
+   "Star": 64
+  },
+  "transcend_crystal": 291
+ },
+ "telegraphRule": "Fill(y 0 · 두께 0.02 · 반투명) + Edge(y 0.02 · 두께 0.06 · 불투명 · 깜빡임) · 테두리 폭 0.4 = 크기 8% · 흰색(색 = 코드)"
 }
