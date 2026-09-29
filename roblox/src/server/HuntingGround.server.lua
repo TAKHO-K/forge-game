@@ -227,8 +227,9 @@ end
 do
 	-- A2-S: 아트 샘플 스위치(기본 꺼짐 - ArtStyleV1Data.enabled). 켜져 있으면 조명도 샘플 프로필
 	local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
-	workspace:SetAttribute(ArtStyleV1Data.attribute, ArtStyleV1Data.enabled)
-	local profile = ArtStyleV1Data.enabled and ArtStyleV1Data.lightingProfile or require(ReplicatedStorage.Shared.data.CartoonStyleData).active
+	local artOn = ArtStyleV1Data.enabled or (game:GetService("RunService"):IsStudio() and ReplicatedStorage:GetAttribute("ArtStyleV1Force") == true) -- Studio 확인용: edit 모드에서 RS Attribute로 부팅부터 켬
+	workspace:SetAttribute(ArtStyleV1Data.attribute, artOn)
+	local profile = artOn and ArtStyleV1Data.lightingProfile or require(ReplicatedStorage.Shared.data.CartoonStyleData).active
 	local counts = require(ReplicatedStorage.Shared.CartoonStyle).apply(profile)
 	print(("[forge-game] 카툰 스타일 %s · 재질 %d · 덮어쓰기 %d · 소품 파트 %d"):format(workspace:GetAttribute("CartoonStyle"), counts.materials, counts.overrides, counts.propParts))
 end
