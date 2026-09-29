@@ -1,0 +1,32 @@
+{
+ "version": "A2-N1",
+ "triBudget": 800,
+ "tris": {
+  "armor_tier1_ancient": 400,
+  "armor_tier1_primordial": 481,
+  "armor_tier1_transcendent": 446,
+  "armor_tier2_ancient": 524,
+  "armor_tier2_primordial": 605,
+  "armor_tier2_transcendent": 570,
+  "armor_tier3_ancient": 598,
+  "armor_tier3_primordial": 679,
+  "armor_tier3_transcendent": 644,
+  "armor_tier4_ancient": 468,
+  "armor_tier4_primordial": 549,
+  "armor_tier4_transcendent": 514,
+  "armor_tier5_ancient": 396,
+  "armor_tier5_primordial": 477,
+  "armor_tier5_transcendent": 442,
+  "armor_tier6_ancient": 628,
+  "armor_tier6_primordial": 709,
+  "armor_tier6_transcendent": 674
+ },
+ "zones": {
+  "tier1": "석조 평원",
+  "tier2": "수정 동굴",
+  "tier3": "수몰 사원",
+  "tier4": "모래 유적",
+  "tier5": "폭풍 첨탑",
+  "tier6": "빙하 동굴"
+ }
+}
