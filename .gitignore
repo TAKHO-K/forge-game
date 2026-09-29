@@ -8,3 +8,6 @@ roblox/*.rbxlx
 
 # 아트 참고 이미지 - 타 게임 스크린샷이라 저장소에 넣지 않는다 (D0)
 docs/art/ref/
+
+# Python 캐시(Blender 스크립트 실행 산출물)
+__pycache__/
