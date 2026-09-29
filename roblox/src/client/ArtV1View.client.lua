@@ -8,6 +8,8 @@ local CollectionService = game:GetService("CollectionService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
 
 local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
@@ -160,6 +162,8 @@ end
 -- ─────────────── ③ 강화 성공 연출 ───────────────
 local X = ArtStyleV1Data.enhanceFx
 
+local slowK = 1 -- Studio 캡처용 슬로모션 배율(ReplicatedStorage Attribute ArtV1FxSlow - 실제 게임은 항상 1)
+
 local function fxPart(name, size, color, cf, shape)
 	local p = Instance.new("Part")
 	p.Name = name
@@ -173,12 +177,13 @@ local function fxPart(name, size, color, cf, shape)
 	return p
 end
 
-local function emit(pos, count, color, size, speed, spread, gravity)
+local function emit(pos, count, color, size, speed, spread, gravity, lifetime)
 	local holder = fxPart("ArtV1FxEmitter", Vector3.one * 0.1, color, CFrame.new(pos))
 	holder.Transparency = 1
 	local e = Instance.new("ParticleEmitter")
 	e.Rate = 0
-	e.Lifetime = NumberRange.new(X.particleLifetime[1], X.particleLifetime[2])
+	lifetime = lifetime or X.particleLifetime
+	e.Lifetime = NumberRange.new(lifetime[1], lifetime[2])
 	e.Speed = NumberRange.new(speed * 0.6, speed)
 	e.SpreadAngle = Vector2.new(spread, spread)
 	e.EmissionDirection = Enum.NormalId.Top
@@ -186,9 +191,10 @@ local function emit(pos, count, color, size, speed, spread, gravity)
 	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size), NumberSequenceKeypoint.new(1, 0) })
 	e.Color = ColorSequence.new(color)
 	e.LightEmission = 1
+	e.TimeScale = 1 / slowK
 	e.Parent = holder
 	e:Emit(count)
-	Debris:AddItem(holder, X.emitterSeconds)
+	Debris:AddItem(holder, X.emitterSeconds * slowK)
 end
 
 local function playEnhance(great)
@@ -197,28 +203,79 @@ local function playEnhance(great)
 		return
 	end
 	local S = great and X.great or X.success
+	slowK = RunService:IsStudio() and tonumber(ReplicatedStorage:GetAttribute("ArtV1FxSlow")) or 1
 	-- 흰 번쩍 → 퍼지는 고리 → 불꽃(대성공: + 금 별 + 빛기둥 + 약한 흔들림)
 	local flash = fxPart("ArtV1Flash", Vector3.one * 0.5, X.flashColor, CFrame.new(pos))
 	flash.Transparency = 0.1
-	TweenService:Create(flash, TweenInfo.new(S.flashSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * S.flashSize, Transparency = 1 }):Play()
-	Debris:AddItem(flash, S.flashSeconds + 0.05)
+	TweenService:Create(flash, TweenInfo.new(S.flashSeconds * slowK, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * S.flashSize, Transparency = 1 }):Play()
+	Debris:AddItem(flash, S.flashSeconds * slowK + 0.05)
 	local disc = CFrame.new(pos - Vector3.new(0, 0.25, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 	local ring = fxPart("ArtV1Ring", Vector3.new(0.08, 1, 1), X.ringColor, disc, Enum.PartType.Cylinder)
 	ring.Transparency = 0.2
-	TweenService:Create(ring, TweenInfo.new(S.ringSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.08, S.ringSize, S.ringSize), Transparency = 1 }):Play()
-	Debris:AddItem(ring, S.ringSeconds + 0.05)
+	TweenService:Create(ring, TweenInfo.new(S.ringSeconds * slowK, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.08, S.ringSize, S.ringSize), Transparency = 1 }):Play()
+	Debris:AddItem(ring, S.ringSeconds * slowK + 0.05)
 	emit(pos, S.sparks, S.sparkColor, S.sparkSize, S.sparkSpeed, S.sparkSpread, X.sparkGravity)
 	if great then
 		emit(pos + Vector3.new(0, 0.5, 0), S.stars, S.starColor, S.starSize, S.starSpeed, S.starSpread, S.starGravity)
+		local b = S.burst
+		emit(pos, b.count, b.color, b.size, b.speed, 180, 0, b.lifetime)
+		-- 빛기둥 = Beam(아래 → 위로 갈수록 투명): 솟음(riseFraction) 뒤 전체가 흐려지며 가늘어진다
 		local pl = S.pillar
-		local pillar = fxPart("ArtV1Pillar", Vector3.new(0.5, pl.width, pl.width), pl.color, CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), Enum.PartType.Cylinder)
-		pillar.Transparency = 0.25
-		local rise = TweenService:Create(pillar, TweenInfo.new(pl.seconds * 0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(pl.height, pl.width, pl.width), CFrame = CFrame.new(pos + Vector3.new(0, pl.height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2) })
-		rise.Completed:Connect(function() -- 사라짐은 솟음이 끝난 뒤 재생(같은 Size를 지연 트윈으로 미리 Play하면 솟음의 Size가 취소된다 - Play 실측)
-			TweenService:Create(pillar, TweenInfo.new(pl.seconds * 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = Vector3.new(pl.height, pl.width * 0.2, pl.width * 0.2) }):Play()
+		local host = fxPart("ArtV1Pillar", Vector3.one * 0.1, pl.color, CFrame.new(pos))
+		host.Transparency = 1
+		local a0 = Instance.new("Attachment")
+		a0.Parent = host
+		local a1 = Instance.new("Attachment")
+		a1.Position = Vector3.new(0, 0.2, 0)
+		a1.Parent = host
+		local beam = Instance.new("Beam")
+		beam.Attachment0, beam.Attachment1 = a0, a1
+		beam.FaceCamera = true
+		beam.Segments = 1
+		beam.LightEmission = 1
+		beam.Color = ColorSequence.new(pl.color)
+		beam.Width0, beam.Width1 = pl.width, pl.topWidth
+		beam.Parent = host
+		local tr = pl.transparency
+		local t0 = os.clock()
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			local e = (os.clock() - t0) / (pl.seconds * slowK)
+			if e >= 1 or not host.Parent then
+				conn:Disconnect()
+				host:Destroy()
+				return
+			end
+			local rise = math.clamp(e / pl.riseFraction, 0, 1)
+			a1.Position = Vector3.new(0, 0.2 + (pl.height - 0.2) * (1 - (1 - rise) ^ 2), 0)
+			local fade = math.clamp((e - pl.riseFraction) / (1 - pl.riseFraction), 0, 1) ^ 2
+			beam.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, tr[1] + (1 - tr[1]) * fade),
+				NumberSequenceKeypoint.new(0.5, tr[2] + (1 - tr[2]) * fade),
+				NumberSequenceKeypoint.new(1, tr[3]),
+			})
+			beam.Width0, beam.Width1 = pl.width * (1 - 0.7 * fade), pl.topWidth * (1 - 0.7 * fade)
 		end)
-		rise:Play()
-		Debris:AddItem(pillar, pl.seconds + 0.05)
+		-- 바닥 링: 강화대 발밑에서 넓게 퍼짐
+		local fr = S.floorRing
+		local floorY = forgeModel and forgeModel:GetPivot().Position.Y or pos.Y - 3
+		local floorDisc = CFrame.new(pos.X, floorY + 0.08, pos.Z) * CFrame.Angles(0, 0, math.pi / 2)
+		local floorRing = fxPart("ArtV1FloorRing", Vector3.new(fr.thick, 1, 1), fr.color, floorDisc, Enum.PartType.Cylinder)
+		floorRing.Transparency = fr.startTransparency
+		TweenService:Create(floorRing, TweenInfo.new(fr.seconds * slowK, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(fr.thick, fr.size, fr.size), Transparency = 1 }):Play()
+		Debris:AddItem(floorRing, fr.seconds * slowK + 0.05)
+		-- 짧은 화면 반짝임(설정 섬광 줄이기 = 건너뜀)
+		if S.screenFlash and not Players.LocalPlayer:GetAttribute("ReduceFlashes") then
+			local grade = Instance.new("ColorCorrectionEffect")
+			grade.Name = "ArtV1ScreenFlash"
+			grade.Brightness = S.screenFlash.brightness
+			grade.Parent = Lighting
+			local back = TweenService:Create(grade, TweenInfo.new(S.screenFlash.seconds * slowK, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 })
+			back.Completed:Connect(function()
+				grade:Destroy()
+			end)
+			back:Play()
+		end
 		if S.shake then
 			CameraShake.trigger(S.shake.seconds, S.shake.studs)
 		end

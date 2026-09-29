@@ -80,9 +80,13 @@ return {
 	forge = {
 		hideParts = { "Base", "AnvilTop" },
 		wood = C(104, 66, 40), woodTop = C(140, 96, 58), iron = C(78, 82, 100), ironTop = C(150, 156, 176), ironShade = C(52, 54, 68), -- 나무: (139, 90, 43)은 조명 아래 주황 호박처럼 떴다(Play 실측)
-		stone = C(128, 120, 118), stoneShade = C(86, 80, 84), ember = C(255, 140, 50), ingot = C(255, 170, 60), sign = C(255, 230, 90), signBoard = C(96, 62, 40),
-		light = { range = 9, brightness = 0.7, color = C(255, 170, 90) }, -- 16 · 1.6은 받침 · 굴뚝을 주황으로 물들였다(Play 실측)
+		scale = 1.7, -- A2-S2: 40스터드에서 "강화하는 곳"이 보이게 모델 전체 배율(바닥 y 0 기준 · 판정 파트는 그대로)
+		stone = C(156, 96, 70), stoneShade = C(104, 64, 54), -- A2-S2: 회색 돌(128, 120, 118)은 주변 회색 벽과 섞였다 → 따뜻한 벽돌색
+		ember = C(255, 140, 50), ingot = C(255, 170, 60), sign = C(255, 230, 90), signBoard = C(96, 62, 40),
+		light = { range = 18, brightness = 1.5, color = C(255, 140, 60) }, -- A2-S2: 화덕 주황 불빛(사용자 결정 - 주변을 주황으로 물들이는 게 목적)
 		embers = { rate = 4, lifetime = 1.6, speed = 3, size = 0.25, color = C(255, 160, 70) }, -- 굴뚝 불씨 ≤ 6(폰 예산)
+		smoke = { rate = 2, lifetime = { 3, 4.5 }, speed = { 1.2, 2 }, size = { 1.4, 3.6 }, transparency = { 0.35, 1 }, color = C(206, 202, 210), spread = 12, drift = V(0.6, 0, 0),
+			texture = "rbxasset://textures/particles/smoke_main.dds" }, -- 굴뚝 연기(느림 · 엔진 기본 텍스처) - 동시 ≤ 9개(rate × 최대 수명)
 		outlineTag = true, -- 상호작용 대상 = 외곽선 풀 후보(태그 OutlineTarget)
 	},
 
@@ -90,9 +94,14 @@ return {
 	enhanceFx = {
 		greatEvery = 5,
 		success = { seconds = 0.9, flashSize = 3, flashSeconds = 0.12, ringSize = 6, ringSeconds = 0.5, sparks = 12, sparkColor = C(255, 150, 60), sparkSize = 0.6, sparkSpeed = 11, sparkSpread = 55, shake = nil }, -- 불꽃 0.35는 강화대 거리에서 점으로만 보였다(Play 실측)
-		great = { seconds = 1.4, flashSize = 5, flashSeconds = 0.16, ringSize = 10, ringSeconds = 0.7, sparks = 20, sparkColor = C(255, 205, 70), sparkSize = 0.7, sparkSpeed = 16, sparkSpread = 70,
+		-- 대성공 입자 합 = sparks 14 + burst 6 + stars 4 = 24(CartoonStyleData.vfx.enhanceParticles · 폰 예산)
+		great = { seconds = 1.4, flashSize = 5, flashSeconds = 0.16, ringSize = 10, ringSeconds = 0.7, sparks = 14, sparkColor = C(255, 205, 70), sparkSize = 0.7, sparkSpeed = 16, sparkSpread = 70,
+			burst = { count = 6, color = C(255, 244, 200), size = 1.5, speed = 28, lifetime = { 0.16, 0.28 } }, -- 순간 폭발(사방 · 아주 짧게)
 			stars = 4, starColor = C(255, 240, 150), starSize = 1.1, starSpeed = 6, starSpread = 90, starGravity = 4,
-			pillar = { height = 9, width = 1.4, color = C(255, 214, 90), seconds = 1.2 }, shake = { seconds = 0.25, studs = 0.12 } },
+			pillar = { height = 12, width = 1.7, topWidth = 0.9, color = C(255, 214, 90), seconds = 1.2, riseFraction = 0.3, transparency = { 0.05, 0.5, 1 } }, -- 빛 띠(Beam): 아래 → 위로 갈수록 투명(투명도 = 바닥 · 가운데 · 꼭대기)
+			floorRing = { size = 16, thick = 0.12, seconds = 0.65, color = C(255, 205, 90), startTransparency = 0.15 }, -- 강화대 바닥에서 퍼지는 링
+			screenFlash = { brightness = 0.14, seconds = 0.22 }, -- 짧은 화면 반짝임(설정 섬광 줄이기 = 끔)
+			shake = { seconds = 0.25, studs = 0.12 } },
 		flashColor = WHITE, ringColor = C(255, 190, 90), sparkGravity = 30, particleLifetime = { 0.45, 0.8 }, emitterSeconds = 1.2,
 	},
 }

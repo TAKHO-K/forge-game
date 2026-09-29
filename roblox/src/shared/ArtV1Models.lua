@@ -144,14 +144,33 @@ function ArtV1Models.forge()
 	P("SignBoard", Vector3.new(2.4, 1.7, 0.25), D.signBoard, Vector3.new(-2.9, 6.2, 1.0))
 	P("EmblemHandle", Vector3.new(0.22, 1.1, 0.1), D.sign, Vector3.new(-2.9, 6.05, 0.83), nil, true, CFrame.Angles(0, 0, math.rad(-35)))
 	P("EmblemHead", Vector3.new(0.95, 0.42, 0.1), D.sign, Vector3.new(-2.62, 6.5, 0.83), nil, true, CFrame.Angles(0, 0, math.rad(-35)))
+	model.WorldPivot = CFrame.identity -- PrimaryPart를 두지 않는다(세운 원기둥 Stump를 PrimaryPart로 두면 PivotTo가 그 회전을 따라 모델 전체가 90° 눕는다 - Play 실측)
+	model:ScaleTo(D.scale or 1) -- 바닥 원점 기준 배율(파트만 있을 때 - 불빛 · 입자 값은 아래에서 데이터 그대로)
 	local light = Instance.new("PointLight")
 	light.Name = "ForgeGlow"
 	light.Range, light.Brightness, light.Color = D.light.range, D.light.brightness, D.light.color
 	light.Parent = mouth
 	local capAttach = Instance.new("Attachment")
 	capAttach.Name = "ChimneyTop"
-	capAttach.Position = Vector3.new(0, 3.4, 0)
+	capAttach.Position = Vector3.new(0, chimney.Size.Y / 2 + 0.3 * (D.scale or 1), 0)
 	capAttach.Parent = chimney
+	local s = D.smoke
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Name = "Smoke"
+	smoke.Texture = s.texture
+	smoke.Rate = s.rate
+	smoke.Lifetime = NumberRange.new(s.lifetime[1], s.lifetime[2])
+	smoke.Speed = NumberRange.new(s.speed[1], s.speed[2])
+	smoke.SpreadAngle = Vector2.new(s.spread, s.spread)
+	smoke.EmissionDirection = Enum.NormalId.Top
+	smoke.Acceleration = s.drift
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, s.size[1]), NumberSequenceKeypoint.new(1, s.size[2]) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, s.transparency[1]), NumberSequenceKeypoint.new(1, s.transparency[2]) })
+	smoke.Color = ColorSequence.new(s.color)
+	smoke.RotSpeed = NumberRange.new(-20, 20)
+	smoke.Rotation = NumberRange.new(0, 360)
+	smoke.LightInfluence = 1
+	smoke.Parent = capAttach
 	local e = Instance.new("ParticleEmitter")
 	e.Name = "Embers"
 	e.Rate = D.embers.rate
@@ -163,7 +182,6 @@ function ArtV1Models.forge()
 	e.Color = ColorSequence.new(D.embers.color)
 	e.LightEmission = 1
 	e.Parent = capAttach
-	model.WorldPivot = CFrame.identity -- PrimaryPart를 두지 않는다(세운 원기둥 Stump를 PrimaryPart로 두면 PivotTo가 그 회전을 따라 모델 전체가 90° 눕는다 - Play 실측)
 	return model
 end
 

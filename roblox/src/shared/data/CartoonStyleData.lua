@@ -100,8 +100,14 @@ artV1.effects = {
 	Atmosphere = { Density = 0.12, Offset = 0.05, Color = { 196, 222, 250 }, Decay = { 150, 182, 225 }, Glare = 0, Haze = 0.6 },
 	Bloom = { Enabled = true, Intensity = 0.4, Size = 18, Threshold = 1.5 },
 	SunRays = { Enabled = true, Intensity = 0.015, Spread = 0.15 },
-	CartoonColorCorrection = { Enabled = true, Brightness = 0.02, Contrast = 0.08, Saturation = 0.12, TintColor = { 255, 255, 255 } },
+	CartoonColorCorrection = { Enabled = true, Brightness = 0.02, Contrast = 0.08, Saturation = 0.08, TintColor = { 255, 255, 255 } }, -- A2-S2: 채도 +0.12 → +0.08(잔디가 형광에 가까웠다 - 사용자 결정)
 }
+-- A2-S2: 잔디를 조금 더 노랗고 어둡게(민트 슬라임 #68E0A0과 색상 · 명도 대비) - 나머지 재질은 cartoon 그대로
+artV1.materialColors = table.clone(cartoon.materialColors)
+artV1.materialColors.Grass = rgb("#7FA640") -- cartoon #6DBA46보다 노랑 쪽 · 어둡게
+artV1.materialColors.LeafyGrass = rgb("#6C9A3C") -- cartoon #5DAE45
+artV1.mapParts = table.clone(cartoon.mapParts)
+artV1.mapParts.HubFloor = rgb("#7AAB44") -- 허브 잔디(cartoon #6CC24A)도 같은 방향
 
 return {
 	active = "base", -- 부팅 때 적용할 프로필(A1 승인 뒤 "cartoon"으로). /gg style base|cartoon 으로 즉시 전환
