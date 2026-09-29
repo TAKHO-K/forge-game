@@ -103,6 +103,14 @@ local function spawnGuardian(player, env)
 	BossEncounter.setDebugForcedBoss(player, GUARDIAN)
 	BossEncounter.spawnFor(player, BossData.stageInterval)
 	local model = BossEncounter.getActive(player)
+	if model then
+		-- QUEUE-B1 결정 15: 검증 쪽 문제(BR1-4c 71d83d6 진입 연출 = 보스 피해 0 · 멤버 루트 고정 · 입력 잠금 · 패턴 유예). 바로 때리는 검증은 연출을 건너뛴다
+		--   (다른 블록의 공용 처치 헬퍼와 같은 한 줄 + 이 블록은 잡힘 해제 뒤 "루트 고정 = false"를 보므로 연출 고정도 푼다).
+		model:SetAttribute("BossIntroUntil", nil)
+		BossPatterns.setGrace(model, MonsterState.getData(model), 0)
+		player:SetAttribute("BossIntroLock", nil)
+		PlayerState.setAnchorHold(player, "intro", false)
+	end
 	return model, model and MonsterState.getData(model)
 end
 
