@@ -144,6 +144,9 @@
 
 - 회귀 전체(`regression = true`) · 사람 확인 항목(PRD 20.80 [H] 등) · 다중 클라 실기 · 폰 실기.
 - 대시보드 설정(사용자 작업 - 코드로 못 함): MaxPlayers 16 · Preferred 12 · 음성 채팅(근접) · 스트리밍 반경 600 · 매치메이킹 언어 가중치 · 오픈일 0시 KST.
+- 출시 체크리스트(QUEUE-B1 추가):
+  - [ ] **시즌 1 시작일 확정(추천: 오픈일, 8주)** → `LeaderboardConfig.firstSeasonDateKst = { 년, 월, 일 }`(리더보드 · 시즌 패스 공통 - 비어 있으면 서버 시작 경고 `[B2] 시즌 1 시작일 미정`)
+  - [ ] Creator Hub 상품 6 · 게임패스 4 번호 → `MonetizationData`(`docs/design/monetization-p4c.md` §9) · 서버 시작 로그에 `[B2] 상품 등록 거부` 없음
 
 ---
 
