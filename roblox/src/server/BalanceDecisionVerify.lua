@@ -1,5 +1,5 @@
 -- S13 자동 검증(PRD 20.81 [B-1] · [B-2] · [B-3] 파티 회복 · [C-5]) - 밸런스 결정 반영.
---   (가) 순수 함수 - 서버 시작 때(플레이어 없이): 4직업 앵커 로테이션 DPS(대검 615.5 · 쌍검 812.4 · 활 789.3 ±1%) · 쌍검 ÷ 대검 ≤ 1.322 · 서열 · 활 기준 앵커 · p · b 불변 ·
+--   (가) 순수 함수 - 서버 시작 때(플레이어 없이): 4직업 앵커 로테이션 DPS(대검 681.8 · 쌍검 855.4 · 활 905.6 ±1%) · 1위 ÷ 최저(R · T 포함 - QUEUE-B1 결정 13) ≤ 1.322 · 서열 · 활 기준 앵커 · p · b 불변 ·
 --     딜링모드 기존 세 줄(0.5992 · 0.6775 · 0.7258) · 보스전(회복률 0) 두 줄(기록용) · 직업 특화 옵션 색 데이터(ItemDescribe · classAccent).
 --   (나) 실제 Player + 스탠드인 파티 - 보스 검증 체인의 끝에서: 파티 회복 실제 경로(HealCast.cast) 7 ~ 13번.
 -- env = { ensureBackup, restore, applyOptionStack } - DevTools의 로컬 헬퍼. 검증이 바꾼 것(파티 · 옵션 · HP · 버프)은 (나)가 끝날 때 전부 되돌린다.
@@ -15,6 +15,8 @@ local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
+local TrainingData = require(ReplicatedStorage.Shared.data.TrainingData) -- QUEUE-B1 결정 13: 직업 능력 속도 축 최대
+local UltimateData = require(ReplicatedStorage.Shared.data.UltimateData) -- QUEUE-B1 결정 13: T 몫
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
@@ -63,6 +65,44 @@ local function anchorRotationUnits(classId)
 	return total / (loadout.atk / loadout.class.atk)
 end
 
+-- QUEUE-B1 결정 13: 위 로테이션 + R · T 몫(K5 docs/design/k5-rebalance.md §1 하네스와 같은 식 - 60초에 R은 쿨마다 · T는 1회).
+--   대검 R = 파티 공격 +% × 가동 · 쌍검 R = 표식 동안 치명 확률 상승분 × 가동 · 활 R = 계수 × 공격 × 평균 치명(쿨마다) ·
+--   T = 대검 공격 +% × 지속 + 마무리 · 활 계수 1회 · 쌍검 저장 몫 + 폭발. 같은 atk-단위.
+local function rotationWithRT(classId)
+	local loadout = BalanceSim.buildAnchorLoadout(classId, BalanceAnchorConfig.referenceLevel, 0)
+	local base = BalanceSim.simulateCombat(loadout, { useSkills = true }).totalDamage
+	local c = loadout.class
+	local critRate = math.min(c.critRate or 0, 1)
+	local critAvg = 1 + critRate * ((c.critDmg or 1) - 1)
+	local atk = loadout.atk
+	local R = SkillData[classId].R
+	local rDamage = 0
+	if classId == "dualblade" then
+		local boosted = math.min(critRate + R.critRateBonus, 1)
+		rDamage = base * ((1 + boosted * (c.critDmg - 1)) / critAvg - 1) * (R.markSeconds / R.cooldownSeconds)
+	elseif classId == "bow" then
+		rDamage = 60 / R.cooldownSeconds * R.coefficient * atk * critAvg
+	elseif classId == "greatsword" then
+		rDamage = base * R.partyAttackBonus * (R.partySeconds / R.cooldownSeconds)
+	end
+	local u = UltimateData.skills[classId]
+	local ult = classId == "greatsword" and (base * u.attackBonus * u.durationSeconds / 60 + u.finale.coefficient * atk * critAvg)
+		or classId == "bow" and u.coefficient * atk * critAvg
+		or (u.storeFraction * base / 60 * u.durationSeconds + u.burstCoefficient * atk * critAvg)
+	return (base + rDamage + ult) / (atk / c.atk)
+end
+
+-- QUEUE-B1 결정 13: 직업 능력(G3 수련) 속도 축 최대 몫(없으면 0).
+local function classAbilitySpeedMax(classId)
+	local total = 0
+	for _, def in ipairs(TrainingData.classAbilities[classId] or {}) do
+		if def.axis == "speedPercent" then
+			total += def.perLevel * def.maxLevel
+		end
+	end
+	return total
+end
+
 function BalanceDecisionVerify.runPure()
 	print("===S13 검증 시작(가)===")
 	local r = newRecorder("가")
@@ -77,8 +117,22 @@ function BalanceDecisionVerify.runPure()
 		-- QUEUE-6h-b R1: 기대값 갱신(C3 · K2 · K5 956e3e8 스킬 재조정 뒤 앵커 로테이션 값 - 옛 615.5 · 812.4 · 789.3)
 		r.check(("1 검사 %.1f(기대 681.8 ± 1%%) · 도적 %.1f(기대 855.4 ± 1%%) · 궁수 %.1f(기대 905.6 ± 1%%)"):format(dps.greatsword, dps.dualblade, dps.bow),
 			near(dps.greatsword, 681.8, 681.8 * 0.01) and near(dps.dualblade, 855.4, 855.4 * 0.01) and near(dps.bow, 905.6, 905.6 * 0.01))
-		local ratio = dps.dualblade / dps.greatsword
-		r.check(("2 도적 ÷ 검사 = %.4f(기대 ≤ 1.322 - 1.32 규칙 + 허용 오차 0.002) ★진짜 합격 기준"):format(ratio), ratio <= 1.322)
+		-- QUEUE-B1 결정 13: ★2 = 서열 1위 직업 ÷ 최저 직업, R · T 포함(K5 docs/design/k5-rebalance.md §1과 같은 식 - 옛 식 "도적 ÷ 검사"는 서열이 바뀐 뒤 1위를 안 봤다).
+		local withRT = {}
+		for _, classId in ipairs({ "greatsword", "dualblade", "bow" }) do
+			withRT[classId] = rotationWithRT(classId)
+		end
+		local top, low = "greatsword", "greatsword"
+		for classId, value in pairs(withRT) do
+			if value > withRT[top] then top = classId end
+			if value < withRT[low] then low = classId end
+		end
+		local ratio = withRT[top] / withRT[low]
+		local ability = 1 + classAbilitySpeedMax(top)
+		print(("[S13][가][측정] R · T 포함 60초(atk-단위): 검사 %.1f · 도적 %.1f · 궁수 %.1f · R · T 전 1위 ÷ 최저 %.4f"):format(withRT.greatsword, withRT.dualblade, withRT.bow,
+			math.max(dps.greatsword, dps.dualblade, dps.bow) / math.min(dps.greatsword, dps.dualblade, dps.bow)))
+		r.check(("2 1위(%s) ÷ 최저(%s) R · T 포함 = %.4f(기대 ≤ 1.322 - 1.32 규칙 + 허용 오차 0.002) · 1위 직업 능력 속도 최대 ×%.4f = %.4f(≤ 1.322) ★진짜 합격 기준"):format(
+			top, low, ratio, ability, ratio * ability), ratio <= 1.322 and ratio * ability <= 1.322)
 		-- QUEUE-6h-b R1: 기대값 갱신(K5 956e3e8 docs/design/k5-rebalance.md §1 - 최고 = 활 · 최저 = 대검 · 비 ≤ 1.32로 확정)
 		r.check(("3 서열 궁수 %.1f > 도적 %.1f > 검사 %.1f ★진짜 합격 기준"):format(dps.bow, dps.dualblade, dps.greatsword), dps.bow > dps.dualblade and dps.dualblade > dps.greatsword)
 	end)
