@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # A2-N1 펫(Blender bpy): PetData.rigs 몸 틀 3종(dog · cat · dragon) × 알 등급 3(normal · good · rare) 외형 차이.
 #   파트 이름 · 중심 위치 = PetData 그대로(코드가 이름 · 중심으로 움직인다 - 원점 = 파트 pos) · 파트 수 고정(≤ 8) → 등급 차이는 같은 파트 안의 형태 추가:
-#     보통 = 기본형 · 좋은 = 목 털 · 큰 꼬리(실루엣 한 단계) · 희귀 = 거기에 머리 볏 · 꼬리 끝 장식(한 단계 더 - 빛은 코드 PointLight).
+#     A2-N2: 보통 = 기본형 · 좋은 = 장식 1개 · 희귀 = 장식 + 보석 빛 + 무늬 + 작은 왕관(아래 NECK 주석).
 #   색 = 코드가 구역 색을 입힌다(여기 색은 렌더용: base = 구역 색 예시 · accent = ×0.55 · eye = 검정). 크기 = 캐릭터 머리(≈ 1.2).
 #   예산 = art-direction §6에 펫 칸이 없어 무기와 같은 800(따라다니는 모델) - 보고서 결정 필요.
 # 실행: bash bl.sh make_pets.py --items dog:normal,dog:good,... [--render 폴더] [--old] [--no-export]
@@ -42,7 +42,7 @@ def add(a, b):
 
 
 def eyes(c, dx, r=(0.07, 0.09, 0.04)):
-    return A.merge(*[A.ellipsoid(r, n=6, rings=3, center=add(c, (s * dx, 0, 0))) for s in (-1, 1)])
+    return A.merge(*[A.ellipsoid(r, n=5, rings=3, center=add(c, (s * dx, 0, 0))) for s in (-1, 1)])
 
 
 def ruff(center, r, k=8, y=0.0):
@@ -56,28 +56,79 @@ def ruff(center, r, k=8, y=0.0):
     return A.merge(A.ellipsoid((r * 0.8, 0.12, r * 0.8), n=8, rings=3, center=add(center, (0, y, 0))), *tufts)
 
 
+# ── A2-N2 등급 장식(사용자 결정): 보통 = 기본 · 좋은 = 장식 1개(강아지 목줄 · 고양이 리본 · 용 스카프) · 희귀 = 장식 + 빛 포인트(보석) + 무늬 + 작은 왕관.
+#   파트 수 고정(PetData ≤ 8)이라 장식은 "움직이지 않는 accent 파트"에 합친다(PetView: Wing · Head만 움직임):
+#   장식 · 보석 → Leg_F(용 = Tail) · 무늬 → Leg_B(용 = Tail) · 왕관 → Ear_L(용 = Horn). 보석 빛 = 메타 glowPoint(코드가 PointLight - 영웅 빛과 같은 방식).
+NECK = {"dog": ((0, 0.2, -0.44), 0.25, -48), "cat": ((0, 0.2, -0.42), 0.22, -50), "dragon": ((0, 0.22, -0.44), 0.23, -45)}  # 목 중심 · 반경 · 기울기(rx)
+HEAD_TOP = {"dog": (0, 0.74, -0.6), "cat": (0, 0.7, -0.58), "dragon": (0, 0.8, -0.62)}
+BODY_ELL = {"dog": (0.4, 0.33, 0.54, 0.02), "cat": (0.33, 0.28, 0.52, 0.0), "dragon": (0.32, 0.3, 0.46, 0.0)}
+GLOW = {}
+
+
+def ring_at(center, r, tilt, thick=0.07, flat=0.6):
+    pts = [(r * math.cos(a), 0.0, r * math.sin(a)) for a in (2 * math.pi * i / 10 for i in range(11))]
+    return A.xform(A.tube(pts, thick, sides=3, cap0=False, flat=flat), m=A.rot(rx=tilt), t=center)
+
+
+def gem_on(body, where):
+    GLOW[body] = where
+    return A.crystal(0.22, 0.1, sides=6, tip_h=0.08, base_h=0.06, center=where, m=A.rot(rx=-80))
+
+
+def small_crown(body):
+    x, y, z = HEAD_TOP[body]
+    band = A.lathe([(0.14, -0.05), (0.165, -0.05), (0.165, 0.05), (0.14, 0.05)], 8)  # 세운 띠(왕관으로 읽히게)
+    spikes = [A.crystal(0.2 if k % 2 == 0 else 0.15, 0.055, sides=3, tip_h=0.1, base_h=0.02, center=(0.15 * math.cos(a), 0.05, 0.15 * math.sin(a)))
+              for k, a in enumerate((-math.pi / 2, -math.pi / 2 - 0.9, -math.pi / 2 + 0.9))]
+    return A.xform(A.merge(band, *spikes), m=A.rot(rx=-12), s=(1.35, 1.35, 1.35), t=(x, y + 0.04, z))  # 머리 폭의 약 60%
+
+
+def spots(body, pts, r=(0.12, 0.035, 0.1)):
+    """몸 윗면 무늬 판(accent) - pts = (x, z) · 높이는 몸 타원면에서"""
+    rx, ry, rz, cy = BODY_ELL[body]
+    out = []
+    for x, z in pts:
+        k = max(0.0, 1 - (x / rx) ** 2 - ((z - 0.02) / rz) ** 2)
+        out.append(A.ellipsoid(r, n=5, rings=2, center=(x, cy + ry * math.sqrt(k) - 0.005, z), squash_bottom=0.4))
+    return A.merge(*out)
+
+
+def stripes(body, zs):
+    rx, ry, rz, cy = BODY_ELL[body]
+    out = []
+    for z in zs:
+        k = math.sqrt(max(0.0, 1 - ((z - 0.02) / rz) ** 2))
+        pts = [(rx * k * 1.04 * math.cos(a), cy + ry * k * 1.04 * math.sin(a), z) for a in (math.radians(d) for d in range(30, 160, 40))]
+        out.append(A.tube(pts, lambda u: 0.045 * math.sin(math.pi * (0.1 + 0.8 * u)) + 0.012, sides=3, flat=0.5, tip_end=False))
+    return A.merge(*out)
+
+
 def dog(grade):
     g = RANK[grade]
     o = {}
-    o["Body"] = A.merge(A.ellipsoid((0.4, 0.33, 0.54), n=9, rings=5, center=(0, 0.02, 0.02)),
-                        *([ruff((0, 0.2, -0.36), 0.46, k=5, y=0.0)] if g >= 1 else []))  # 좋은 = 5갈래 톱니 칼라(몸 폭 1.2배)
+    o["Body"] = A.ellipsoid((0.4, 0.33, 0.54), n=9, rings=5, center=(0, 0.02, 0.02))
     head = A.merge(A.ellipsoid((0.35, 0.32, 0.31), n=9, rings=5, center=(0, 0.42, -0.6)),
                    A.ellipsoid((0.17, 0.13, 0.16), n=7, rings=4, center=(0, 0.33, -0.86)),  # 주둥이
                    A.ellipsoid((0.06, 0.05, 0.05), n=6, rings=3, center=(0, 0.38, -1.0)))  # 코
-    if g >= 2:  # 머리 볏(털 세 가닥)
-        head = A.merge(head, *[A.tube([(dx, 0.7, -0.6), (dx * 1.6, 0.88, -0.52 - 0.04 * abs(dx) * 10)], lambda u: 0.07 * (1 - u) + 0.01, sides=4, tip_end=True) for dx in (-0.07, 0.0, 0.07)])
     o["Head"] = head
     for n, s in (("Ear_L", -1), ("Ear_R", 1)):  # 늘어진 귀(안쪽 → 바깥 아래)
         path = [(s * 0.2, 0.66, -0.56), (s * 0.34, 0.62, -0.54), (s * 0.4, 0.44, -0.52), (s * 0.37, 0.3 if g < 2 else 0.26, -0.5)]
         o[n] = A.tube(A.bezier(*path, n=5), lambda u: 0.09 + 0.03 * math.sin(math.pi * u), sides=5, flat=0.45, tip_end=False)
+    if g >= 2:
+        o["Ear_L"] = A.merge(o["Ear_L"], small_crown("dog"))
     for n, z in (("Leg_F", -0.3), ("Leg_B", 0.3)):
         leg = A.merge(A.lathe([(0.0, -0.18), (0.11, -0.16), (0.085, 0.0), (0.09, 0.15), (0.0, 0.16)], 6), A.ellipsoid((0.1, 0.05, 0.12), n=6, rings=2, center=(0, -0.16, -0.04)))
         o[n] = A.merge(*[A.xform(leg, t=(s * 0.2, -0.4, z)) for s in (-1, 1)])  # 다리 한 쌍 = 파트 하나(리그 Leg_F · Leg_B)
-    k = 1.0 if g == 0 else 1.2
+    if g >= 1:  # 좋은 = 두꺼운 목줄 + 둥근 이름표
+        c, r, tilt = NECK["dog"]
+        tag = A.xform(A.lathe([(0.0, -0.025), (0.1, -0.025), (0.1, 0.025), (0.0, 0.025)], 8, axis="Z"), t=(0, 0.04, -0.68))
+        o["Leg_F"] = A.merge(o["Leg_F"], ring_at(c, r, tilt, 0.08), *([tag] if g < 2 else []))
+    if g >= 2:  # 희귀 = 이름표 → 빛 보석 · 등 무늬 3 · 작은 왕관(Ear_L)
+        o["Leg_F"] = A.merge(o["Leg_F"], gem_on("dog", (0, 0.04, -0.7)))
+        o["Leg_B"] = A.merge(o["Leg_B"], spots("dog", [(-0.16, 0.05), (0.14, 0.24), (0.04, -0.18)], r=(0.14, 0.045, 0.12)))
+    k = 1.0
     tip = (0, 0.12 + 0.24 * k, 0.5 + 0.24 * k)  # 짧은 꼬리(≤ 0.35) · 45° 위 - 고양이의 긴 S자와 구별
     tail = A.tube([(0, 0.1, 0.46), (0, 0.2, 0.6), tip], lambda u: 0.085 * (1 - 0.4 * u) + 0.02, sides=6, tip_end=False)
-    if g >= 2:  # 꼬리 끝 털 뭉치
-        tail = A.merge(tail, A.ellipsoid((0.12, 0.12, 0.12), n=7, rings=4, center=tip))
     o["Tail"] = tail
     o["Eyes"] = eyes((0, 0.5, -0.86), 0.14)
     return o
@@ -86,29 +137,29 @@ def dog(grade):
 def cat(grade):
     g = RANK[grade]
     o = {}
-    o["Body"] = A.merge(A.ellipsoid((0.33, 0.28, 0.52), n=9, rings=5, center=(0, 0.0, 0.02)),
-                        *([ruff((0, 0.2, -0.36), 0.32, y=0.0, k=7)] if g >= 1 else []))
+    o["Body"] = A.ellipsoid((0.33, 0.28, 0.52), n=9, rings=5, center=(0, 0.0, 0.02))
     head = A.merge(A.ellipsoid((0.36, 0.28, 0.28), n=9, rings=5, center=(0, 0.42, -0.58)),
                    *[A.ellipsoid((0.12, 0.09, 0.1), n=6, rings=3, center=(s * 0.26, 0.32, -0.62)) for s in (-1, 1)])  # 볼 털
     o["Head"] = head
     for n, s in (("Ear_L", -1), ("Ear_R", 1)):  # 세모 귀(희귀 = 귀 끝 털)
         ear = A.xform(A.lathe([(0.0, 0.0), (0.11, 0.0), (0.0, 0.26)], 4), s=(1, 1, 0.55), m=A.rot(rz=-s * 12), t=(s * 0.2, 0.64, -0.58))
-        if g >= 2:
-            ear = A.merge(ear, A.tube([(s * 0.25, 0.86, -0.58), (s * 0.3, 1.0, -0.58)], lambda u: 0.04 * (1 - u) + 0.005, sides=3, tip_end=True))
+        if g >= 2 and s < 0:
+            ear = A.merge(ear, small_crown("cat"))
         o[n] = ear
-    leg = lambda x, z: A.xform(A.merge(A.lathe([(0.0, -0.16), (0.09, -0.16), (0.08, 0.0), (0.075, 0.15), (0.0, 0.16)], 6), A.ellipsoid((0.09, 0.045, 0.1), n=6, rings=3, center=(0, -0.15, -0.03))), t=(x, -0.38, z))
+    leg = lambda x, z: A.xform(A.merge(A.lathe([(0.0, -0.16), (0.09, -0.16), (0.08, 0.0), (0.075, 0.15), (0.0, 0.16)], 5), A.ellipsoid((0.09, 0.045, 0.1), n=5, rings=2, center=(0, -0.15, -0.03))), t=(x, -0.38, z))
     o["Leg_F"] = A.merge(leg(-0.17, -0.3), leg(0.17, -0.3))
     o["Leg_B"] = A.merge(leg(-0.17, 0.3), leg(0.17, 0.3))
-    k = 1.0 if g == 0 else 1.2
+    if g >= 1:  # 좋은 = 목 리본(얇은 띠 + 앞 나비 매듭 - 옆으로 넓은 실루엣)
+        c = (0, 0.22, -0.64)
+        lobes = [A.ellipsoid((0.12, 0.08, 0.045), n=6, rings=2, center=(c[0] + sgn * 0.12, c[1] + 0.02, c[2])) for sgn in (-1, 1)]  # 나비 날개 = 옆으로 넓게
+        tails = [A.xform(A.box(0.06, 0.13, 0.03, b=0.01), m=A.rot(rz=sgn * 25), t=(c[0] + sgn * 0.06, c[1] - 0.1, c[2])) for sgn in (-1, 1)]
+        o["Leg_F"] = A.merge(o["Leg_F"], ring_at(*NECK["cat"], thick=0.045), A.ellipsoid((0.065, 0.065, 0.05), n=5, rings=2, center=c), *lobes, *tails)
+    if g >= 2:  # 희귀 = 리본 가운데 빛 보석 · 등 줄무늬 3 · 작은 왕관(Ear_L)
+        o["Leg_F"] = A.merge(o["Leg_F"], gem_on("cat", (0, 0.22, -0.7)))
+        o["Leg_B"] = A.merge(o["Leg_B"], stripes("cat", (-0.08, 0.22)))
+    k = 1.0
     tail_path = A.bezier((0, 0.05, 0.5), (0, 0.2, 0.75), (0, 0.55 * k, 0.55), (0.12, 0.78 * k, 0.72), n=7)  # 위로 선 S자 긴 꼬리
-    th = 1.0 if g == 0 else 1.5  # 좋은 = 꼬리 1.5배 + 끝 뭉치
-    tail = A.tube(tail_path, lambda u: th * (0.07 * (1 - 0.3 * u) + 0.02), sides=6, tip_end=False)
-    if g >= 1:
-        tail = A.merge(tail, A.ellipsoid((0.17, 0.17, 0.17), n=7, rings=4, center=(0.12, 0.78 * k, 0.72)))
-    if g >= 2:  # 희귀 = 두 갈래 꼬리 끝
-        tail = A.merge(tail, A.tube([(0.12, 0.78 * k, 0.72), (0.26, 0.92 * k, 0.66)], lambda u: 0.06 * (1 - u) + 0.01, sides=5, tip_end=True),
-                       A.tube([(0.12, 0.78 * k, 0.72), (0.0, 0.95 * k, 0.8)], lambda u: 0.06 * (1 - u) + 0.01, sides=5, tip_end=True))
-    o["Tail"] = tail
+    o["Tail"] = A.tube(tail_path, lambda u: 1.2 * (0.07 * (1 - 0.3 * u) + 0.02), sides=5, tip_end=False)
     o["Eyes"] = eyes((0, 0.48, -0.83), 0.14, r=(0.065, 0.1, 0.04))
     return o
 
@@ -138,19 +189,25 @@ def dragon(grade):
     o = {}
     body = A.ellipsoid((0.32, 0.3, 0.46), n=9, rings=5, center=(0, 0, 0.02))
     belly = A.ellipsoid((0.22, 0.2, 0.3), n=8, rings=4, center=(0, -0.08, -0.12))
-    spikes = [A.crystal(0.3, 0.08, sides=4, tip_h=0.14, base_h=0.04, center=(0, 0.34, z), m=A.rot(rx=20)) for z in (-0.15, 0.1, 0.32)] if g >= 1 else []  # 좋은 = 등 가시 높이 0.25
-    o["Body"] = A.merge(body, belly, *spikes)
+    o["Body"] = A.merge(body, belly)
     o["Head"] = A.xform(A.merge(A.ellipsoid((0.3, 0.27, 0.3), n=9, rings=5, center=(0, 0.42, -0.58)), A.ellipsoid((0.2, 0.14, 0.18), n=7, rings=4, center=(0, 0.34, -0.84))), s=(1.15, 1.15, 1.15), t=(0, 0.42 * -0.15, -0.6 * -0.15))  # 머리 ×1.15(중심 고정)
     horns = [A.tube(A.bezier((s * 0.13, 0.6, -0.52), (s * 0.18, 0.74, -0.46), (s * 0.2, 0.84, -0.36), (s * 0.18, 0.88, -0.28), n=4), lambda u: 0.06 * (1 - u) + 0.01, sides=5, tip_end=True) for s in (-1, 1)]
-    if g >= 2:  # 희귀 = 뿔 왕관 3(가운데 하나 더)
-        horns.append(A.tube([(0, 0.66, -0.5), (0, 0.84, -0.46), (0.02, 1.0, -0.38)], lambda u: 0.09 * (1 - u) + 0.01, sides=5, tip_end=True))  # 가운데 뿔 = 머리 높이의 40%
+    if g >= 2:  # 희귀 = 뿔 사이 작은 왕관
+        horns.append(small_crown("dragon"))
     o["Horn"] = A.merge(*horns)
     fingers = 2  # 날개 뼈 2갈래(몸을 삼키지 않게)
     for n, s in (("Wing_L", -1), ("Wing_R", 1)):
-        o[n] = A.xform(pet_wing(s, fingers), m=A.rot(rz=s * 32), t=(s * 0.22, 0.3, 0.0), s=(0.7 if g < 2 else 0.82, 1, 0.7 if g < 2 else 0.82))  # 폭 70%(희귀 82%)
+        o[n] = A.xform(pet_wing(s, fingers), m=A.rot(rz=s * 32), t=(s * 0.22, 0.3, 0.0), s=(0.7, 1, 0.7))  # 폭 70%
     tail = A.tube(A.bezier((0, 0.0, 0.4), (0, -0.05, 0.7), (0.08, 0.05, 0.95), (0.15, 0.15, 1.1), n=6), lambda u: 0.12 * (1 - u) + 0.03, sides=6, tip_end=False)
-    spade = 0.13 if g < 2 else 0.2  # 꼬리 끝 스페이드(희귀 = 크게)
+    spade = 0.13
     tail = A.merge(tail, A.xform(A.lathe([(0.0, 0.0), (spade, 0.08), (spade * 0.6, 0.18), (0.0, 0.3)], 4), s=(1, 1, 0.35), m=A.rot(rx=-60), t=(0.15, 0.15, 1.1)))
+    if g >= 1:  # 좋은 = 목 스카프(고리 + 오른 어깨 뒤로 날리는 두 자락) - 움직이지 않는 Tail 파트에 합침
+        c, r, tilt = NECK["dragon"]
+        ends = [A.tube(A.bezier((0.18, 0.26, -0.36), (0.36, 0.3, -0.18), (0.42 + 0.06 * k_, 0.24 - 0.1 * k_, 0.05), (0.5 + 0.08 * k_, 0.18 - 0.14 * k_, 0.25), n=5),
+                       lambda u: 0.08 * (1 - 0.4 * u) + 0.02, sides=4, flat=0.35, tip_end=True) for k_ in (0, 1)]
+        tail = A.merge(tail, ring_at(c, r, tilt, 0.09), *ends)
+    if g >= 2:  # 희귀 = 스카프 매듭 빛 보석 · 등 비늘 판 3(무늬)
+        tail = A.merge(tail, gem_on("dragon", (0.1, 0.3, -0.64)), spots("dragon", [(0, -0.12), (0, 0.08), (0, 0.27)], r=(0.11, 0.05, 0.08)))
     o["Tail"] = tail
     o["Eyes"] = eyes((0, 0.48, -0.86), 0.13, r=(0.07, 0.09, 0.04))
     return o
@@ -214,7 +271,9 @@ def main():
                 o.hide_render = True
     if opt["export"]:
         for body, looks in metas.items():
-            A.write_json(os.path.join(OUT, "%s.meta.json" % body), {"version": "A2-N1", "body": body, "pivot": "파트 중심(PetData pos)", "triBudget": BUDGET, "looks": looks})
+            A.write_json(os.path.join(OUT, "%s.meta.json" % body), {"version": "A2-N2", "body": body, "pivot": "파트 중심(PetData pos)", "triBudget": BUDGET, "looks": looks,
+                                                                   "gradeDeco": "좋은 = 장식(Leg_F · 용 Tail) · 희귀 = + 보석 · 무늬(Leg_B · 용 Tail) · 왕관(Ear_L · 용 Horn)",
+                                                                   "glowPoint": list(GLOW.get(body, (0, 0, 0))), "glowNote": "희귀 알 펫 = 이 자리(몸 기준)에 PointLight(범위 4 · 밝기 1 · 구역 색) - 코드"})
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "pets.blend"))
     print("[make_pets] 끝")
 

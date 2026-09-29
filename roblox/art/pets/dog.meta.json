@@ -1,5 +1,5 @@
 {
- "version": "A2-N1",
+ "version": "A2-N2",
  "body": "dog",
  "pivot": "파트 중심(PetData pos)",
  "triBudget": 800,
@@ -13,6 +13,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.011,
+      0.02,
+      0.02
+     ],
      "neon": false,
      "color": "#AA5AFF"
     },
@@ -22,6 +27,11 @@
       0.0,
       0.4,
       -0.6
+     ],
+     "center": [
+      0.01,
+      0.42,
+      -0.674
      ],
      "neon": false,
      "color": "#AA5AFF"
@@ -33,6 +43,11 @@
       0.62,
       -0.55
      ],
+     "center": [
+      -0.323,
+      0.516,
+      -0.528
+     ],
      "neon": false,
      "color": "#5E328C"
     },
@@ -42,6 +57,11 @@
       0.26,
       0.62,
       -0.55
+     ],
+     "center": [
+      0.313,
+      0.509,
+      -0.531
      ],
      "neon": false,
      "color": "#5E328C"
@@ -53,6 +73,11 @@
       -0.4,
       -0.3
      ],
+     "center": [
+      0.0,
+      -0.425,
+      -0.324
+     ],
      "neon": false,
      "color": "#5E328C"
     },
@@ -62,6 +87,11 @@
       0.0,
       -0.4,
       0.3
+     ],
+     "center": [
+      0.0,
+      -0.425,
+      0.276
      ],
      "neon": false,
      "color": "#5E328C"
@@ -73,33 +103,48 @@
       0.2,
       0.62
      ],
+     "center": [
+      0.0,
+      0.213,
+      0.597
+     ],
      "neon": false,
      "color": "#5E328C"
     },
     "Eyes": {
-     "tris": 48,
+     "tris": 40,
      "origin": [
       0.0,
       0.48,
       -0.88
+     ],
+     "center": [
+      0.006,
+      0.5,
+      -0.86
      ],
      "neon": false,
      "color": "#191216"
     }
    },
    "partCount": 8,
-   "totalTris": 594,
+   "totalTris": 586,
    "triBudget": 800,
-   "budgetUse": 0.743
+   "budgetUse": 0.733
   },
   "good": {
    "parts": {
     "Body": {
-     "tris": 134,
+     "tris": 72,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.011,
+      0.02,
+      0.02
      ],
      "neon": false,
      "color": "#AA5AFF"
@@ -111,6 +156,11 @@
       0.4,
       -0.6
      ],
+     "center": [
+      0.01,
+      0.42,
+      -0.674
+     ],
      "neon": false,
      "color": "#AA5AFF"
     },
@@ -120,6 +170,11 @@
       -0.26,
       0.62,
       -0.55
+     ],
+     "center": [
+      -0.323,
+      0.516,
+      -0.528
      ],
      "neon": false,
      "color": "#5E328C"
@@ -131,15 +186,25 @@
       0.62,
       -0.55
      ],
+     "center": [
+      0.313,
+      0.509,
+      -0.531
+     ],
      "neon": false,
      "color": "#5E328C"
     },
     "Leg_F": {
-     "tris": 96,
+     "tris": 189,
      "origin": [
       0.0,
       -0.4,
       -0.3
+     ],
+     "center": [
+      0.0,
+      -0.09,
+      -0.455
      ],
      "neon": false,
      "color": "#5E328C"
@@ -150,6 +215,11 @@
       0.0,
       -0.4,
       0.3
+     ],
+     "center": [
+      0.0,
+      -0.425,
+      0.276
      ],
      "neon": false,
      "color": "#5E328C"
@@ -161,53 +231,78 @@
       0.2,
       0.62
      ],
+     "center": [
+      0.0,
+      0.213,
+      0.597
+     ],
      "neon": false,
      "color": "#5E328C"
     },
     "Eyes": {
-     "tris": 48,
+     "tris": 40,
      "origin": [
       0.0,
       0.48,
       -0.88
+     ],
+     "center": [
+      0.006,
+      0.5,
+      -0.86
      ],
      "neon": false,
      "color": "#191216"
     }
    },
    "partCount": 8,
-   "totalTris": 656,
+   "totalTris": 679,
    "triBudget": 800,
-   "budgetUse": 0.82
+   "budgetUse": 0.849
   },
   "rare": {
    "parts": {
     "Body": {
-     "tris": 134,
+     "tris": 72,
      "origin": [
       0.0,
       0.0,
       0.0
      ],
+     "center": [
+      0.011,
+      0.02,
+      0.02
+     ],
      "neon": false,
      "color": "#AA5AFF"
     },
     "Head": {
-     "tris": 156,
+     "tris": 138,
      "origin": [
       0.0,
       0.4,
       -0.6
      ],
+     "center": [
+      0.01,
+      0.42,
+      -0.674
+     ],
      "neon": false,
      "color": "#AA5AFF"
     },
     "Ear_L": {
-     "tris": 56,
+     "tris": 152,
      "origin": [
       -0.26,
       0.62,
       -0.55
+     ],
+     "center": [
+      -0.125,
+      0.603,
+      -0.619
      ],
      "neon": false,
      "color": "#5E328C"
@@ -219,54 +314,86 @@
       0.62,
       -0.55
      ],
+     "center": [
+      0.313,
+      0.49,
+      -0.532
+     ],
      "neon": false,
      "color": "#5E328C"
     },
     "Leg_F": {
-     "tris": 96,
+     "tris": 181,
      "origin": [
       0.0,
       -0.4,
       -0.3
      ],
+     "center": [
+      0.0,
+      -0.09,
+      -0.507
+     ],
      "neon": false,
      "color": "#5E328C"
     },
     "Leg_B": {
-     "tris": 96,
+     "tris": 126,
      "origin": [
       0.0,
       -0.4,
       0.3
      ],
+     "center": [
+      0.0,
+      -0.123,
+      0.051
+     ],
      "neon": false,
      "color": "#5E328C"
     },
     "Tail": {
-     "tris": 74,
+     "tris": 32,
      "origin": [
       0.0,
       0.2,
       0.62
      ],
+     "center": [
+      0.0,
+      0.213,
+      0.597
+     ],
      "neon": false,
      "color": "#5E328C"
     },
     "Eyes": {
-     "tris": 48,
+     "tris": 40,
      "origin": [
       0.0,
       0.48,
       -0.88
+     ],
+     "center": [
+      0.006,
+      0.5,
+      -0.86
      ],
      "neon": false,
      "color": "#191216"
     }
    },
    "partCount": 8,
-   "totalTris": 716,
+   "totalTris": 797,
    "triBudget": 800,
-   "budgetUse": 0.895
+   "budgetUse": 0.996
   }
- }
+ },
+ "gradeDeco": "좋은 = 장식(Leg_F · 용 Tail) · 희귀 = + 보석 · 무늬(Leg_B · 용 Tail) · 왕관(Ear_L · 용 Horn)",
+ "glowPoint": [
+  0,
+  0.04,
+  -0.7
+ ],
+ "glowNote": "희귀 알 펫 = 이 자리(몸 기준)에 PointLight(범위 4 · 밝기 1 · 구역 색) - 코드"
 }
