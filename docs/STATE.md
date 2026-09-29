@@ -1,7 +1,7 @@
 # 현재 상태 (STATE) - 매 단계 끝에 갱신
 
 > 단계를 시작할 때 PRD · README 전체 대신 이 파일 + 직전 보고서 + 관련 설계 문서만 읽는다(COMMON §7-1 검증 정책 v2).
-> 마지막 갱신: **10시간 대기열 전체 Q0 ~ Q15(2026-09-29 - `docs/phase/QUEUE-10h-report.md` §1 ~ 12 · 상태 `QUEUE-10h-state.md`)** · 그 전 **앞부분 Q0 ~ Q7** · 그 전 **6시간 묶음(2026-09-29 - `docs/phase/BUNDLE-6h-report.md` · C5 마무리 `docs/phase/C5-report.md` · M2 몸체 `docs/design/monster-body-draft.md`)** · 그 전 **C4 중단(2026-09-28 - `docs/phase/C4-report.md`)** · 그 전 **W3b(나머지 모션 전면 - 스킬 8 · 피격 · 기절 · 넘어짐 · 이동 · 사망 · 부활) + 파트 0(성장 곡선 2,500h · 후반 벽) · 2026-09-28** · 직전 보고서 = `docs/phase/W3b-report.md`(+ `W3b-part0.md` · 모션 기준 `docs/design/motion-standard.md`)(그 전 `C3-report.md` · `C2-report.md` · `W2-report.md` · `BR1-4c-report.md` · `BR1-4b-report.md` · `BR1-4b0-report.md` · `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
+> 마지막 갱신: **QUEUE-6h-b 후속(2026-09-29 밤 - `docs/phase/QUEUE-6h-b-report.md` §7)** · 그 전 **10시간 대기열 전체 Q0 ~ Q15(2026-09-29 - `docs/phase/QUEUE-10h-report.md` §1 ~ 12 · 상태 `QUEUE-10h-state.md`)** · 그 전 **앞부분 Q0 ~ Q7** · 그 전 **6시간 묶음(2026-09-29 - `docs/phase/BUNDLE-6h-report.md` · C5 마무리 `docs/phase/C5-report.md` · M2 몸체 `docs/design/monster-body-draft.md`)** · 그 전 **C4 중단(2026-09-28 - `docs/phase/C4-report.md`)** · 그 전 **W3b(나머지 모션 전면 - 스킬 8 · 피격 · 기절 · 넘어짐 · 이동 · 사망 · 부활) + 파트 0(성장 곡선 2,500h · 후반 벽) · 2026-09-28** · 직전 보고서 = `docs/phase/W3b-report.md`(+ `W3b-part0.md` · 모션 기준 `docs/design/motion-standard.md`)(그 전 `C3-report.md` · `C2-report.md` · `W2-report.md` · `BR1-4c-report.md` · `BR1-4b-report.md` · `BR1-4b0-report.md` · `BR1-4a-report.md` · `S1-fix-report.md` · `S1-report.md` · `W1-report.md` · `MV1b-report.md` · `MV1-report.md` · `D1-3-report.md` · `D1-2-report.md` · `D1-report.md` · `C1-fix5-report.md` · `A1-report.md`)(그 전 `C1-final-report.md` · `C1-report.md`) · 카툰 규칙 = `docs/art/cartoon-pipeline.md` · `docs/art/style-bible.md` v2 · 기준서 = `docs/art/ref/art-spec.md` · 에셋 교체 절차 = `docs/art/asset-pipeline.md` · 지형 굽기 = `docs/perf/streaming-settings.md` §4 · 스트리밍 = `docs/perf/streaming-settings.md` · 설계 = `docs/design/world-map-m1.md`(세계 지도 · 좌표) · 보스 = `docs/design/boss-br1-2.md` · 패턴 설명 = `docs/design/boss-patterns-explained.md`
 
 ## 1. 게임 한 줄
 
@@ -28,6 +28,8 @@
 | 저장 | **SAVE_VERSION 54**(v54 settings / v53 quests.guide · attendance(새 계정만) / v52 pets / v51 item.skillVariant) · 그 전 **SAVE_VERSION 50**(v50 training · classes[].abilities · quests / v49 item.setZone) · 그 전 **SAVE_VERSION 48**(v48 comeback - 복귀 부스트 만료 · v47 초월 · v46 reclaimLevel) · 그 전 **SAVE_VERSION 45**(v45 캐릭터 경험치 곡선 이관 - 레벨 · 진행률 유지 / v44 audit - λ · 태초 굴림 수 · 플레이 시간 / v43 장비 태초 각인 primordial · 출처 source · 옛 태초 = 이전 태초 + 잠금 / v42 hints.stealLockSeen / v41 world.nests · world.nestDex · eggs / v40 world.bossGates / v38 world.portals · peakLevel / v39 titles) · Studio 수동 Play = `Player_<id>_manual`(M1-2 후속 - 실제 프로필은 읽기만) | `server/SaveSystem.lua` |
 
 ## 3. 다음 단계
+
+> **QUEUE-6h-b 후속(2026-09-29 밤 - 보고서 §7)**: Rojo 실제 동기화 확인(COMMON §7-2 ①에 Studio 쪽 내용 대조) · 전체 재회귀 Play 1(실패 블록 56 → 15 · G1-5(나) · M1-2c(나) O) · 기대값 감사(의심 5 - v35 이관 버그 1) · 안전장치 = 약한 세션 잠금(**SAVE_VERSION 55** `sessionId`) · 음수 골드 → 0 · 공통 요청 제한(`server/RequestGate` · `data/RequestLimitConfig`) · 직업 선택 창 364 · 아레나 재생성 프레임 장부(2.52ms - 결정 12). 하네스 `save_lock_test` · `request_gate_test`. **다음 = 결정 12 ~ 15.**
 
 > **QUEUE-6h-b 알파 전 점검(2026-09-29 13:19 ~ 14:40 - `docs/phase/QUEUE-6h-b-report.md` · 키트 `QUEUE-6h-b-alpha-kit.md`)**: 새 기능 0 · 전체 회귀(검증 40여 파일 기대값 · 보스 진입 연출 해제) · 저장 감사(치명 0 · SaveAuditVerify R2(가)) · 보안 감사(Remote 123 · 치명 0 · 중요 6 수정) · EconSim 공통 난수(재기준선 상위 1% 2,322.6h · 캐주얼 28.9h) · 로컬 서버 하네스 `roblox/tools/harness`(복사 · 다인원 · 공격) · 서버 성능(24인 Heartbeat 1.23ms) · **Rojo 끊김 - 다음 = Connect 뒤 전 블록 재회귀**.
 
@@ -138,6 +140,7 @@
 
 ## 5. 알려진 X(재조사 안 함 - 목록만)
 
+- (QUEUE-6h-b 후속 · 전 블록 Play 1) 29-1(나) 7 X(검증 쪽 추정 - `BossMechanicsVerify` 진입 연출 해제 누락 · 결정 15) · S12b(UI) 파티 버튼 겹침 · S20b(UI) 보석 탭 칸 · S17(UI) 2 · P3a(나C) 전역 기믹 원 반경 nil(동시 실행 계열 추정) · S13(가) #4 앵커 오프셋 143.78 vs 167 · G1-0(나) D 2.52ms(결정 12).
 - C3: Play 2 스테이지 5,000 실험 뒤 부활 지점 몹에 반복 사망(검증 쪽 - 스테이지를 되돌린 뒤 새 Play) · `MV1JumpHook`은 부활하면 사라진다(PlayerGui 직속 - 옛 구조) · 잡몹은 받는 피해 배율이 안 먹어 표본 몹을 경우마다 새로 세운다(`/gg c3 mob`).
 - C2: 투사체 ⑦ 재측정(지연 0.25 · 움직이는 몹 50발) 표본 부족 X(5발) · W2 리본 4직업 스크린샷 미완(눈 바닥에서 안 보임) · G1-3(가) 기대값 갱신 필요(레벨차 계수 통합).
 - G1-1(UI) 고리 타이밍 · 29-1 첫 기믹 +0.35초(서버 시작 부하) · S12b(UI) · S16(UI) · S19b(UI) · P25b(UI)(계정 가방 상태) - G1-5 / G2a 전 블록 Play와 같은 계열.
