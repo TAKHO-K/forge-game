@@ -108,6 +108,24 @@ artV1.materialColors.Grass = rgb("#7FA640") -- cartoon #6DBA46보다 노랑 쪽 
 artV1.materialColors.LeafyGrass = rgb("#6C9A3C") -- cartoon #5DAE45
 artV1.mapParts = table.clone(cartoon.mapParts)
 artV1.mapParts.HubFloor = rgb("#7AAB44") -- 허브 잔디(cartoon #6CC24A)도 같은 방향
+-- A2-N2 2-1 배경 < 바닥 < 캐릭터 규칙: 구역 재질을 시트보다 채도 10 ~ 20% 낮게(구역 조명 프리셋 = ArtV1ZoneData가 클라에서 색을 입힌다)
+artV1.materialColors.Rock = rgb("#96928C") -- 모든 구역 급경사 공유 - 한 톤 어둡게(바닥보다 뒤로)
+artV1.materialColors.Mud = rgb("#76644C")
+artV1.materialColors.Limestone = rgb("#D6CAAC")
+artV1.materialColors.Slate = rgb("#564A88") -- T2 바닥: 수정 #D26CF0 · 딱정벌레가 튀게 한 단계 어둡게
+artV1.materialColors.Pavement = rgb("#645696")
+artV1.materialColors.Basalt = rgb("#3E3468")
+artV1.materialColors.Asphalt = rgb("#3E3854")
+artV1.materialColors.Sand = rgb("#E8C47C") -- T4: 시트 #F2C46B는 전갈 · 선인장과 명도가 붙었다
+artV1.materialColors.Sandstone = rgb("#D0965C")
+artV1.materialColors.Salt = rgb("#E8D8AC")
+artV1.materialColors.Ground = rgb("#AA8862")
+artV1.materialColors.Cobblestone = rgb("#4C506C")
+artV1.materialColors.Snow = rgb("#ECF2F8") -- T6: 순백은 흰 빛 이펙트 · 골렘을 날렸다
+artV1.materialColors.Ice = rgb("#A4CEEC")
+artV1.materialColors.Glacier = rgb("#88BAE2")
+artV1.terrain = { WaterColor = rgb("#2EAAC4"), WaterTransparency = 0.2, WaterReflectance = 0.05, WaterWaveSize = 0.08 }
+artV1.zoneTint = false -- 구역 색조는 ArtV1ZoneLighting 프리셋이 맡는다(CartoonZoneTint와 겹치지 않게)
 
 return {
 	active = "base", -- 부팅 때 적용할 프로필(A1 승인 뒤 "cartoon"으로). /gg style base|cartoon 으로 즉시 전환
