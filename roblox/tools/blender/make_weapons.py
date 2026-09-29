@@ -572,14 +572,97 @@ def healer_parts(grade):
     return parts
 
 
+# ────────────────────────── 성기사 뿅망치(A2-N2 · 출시 후 직업 - 게임 연결 없음 · +Z 머리 · 원점 = 오른손 손잡이) ──────────────────────────
+# WeaponRigSpec.paladin.Hammer: refLength 3.0 · tipAxis +Z · 원점을 손잡이 점으로 옮겨 지었다(가져올 때 grip = 0 · 규격 grip (0, 0, −0.75)은 옛 가운데 원점 기준).
+PH = dict(pommelZ=-0.72, headZ=1.86, headR=0.5, headL=1.5, topZ=2.36)
+
+
+def ph_bellows(grade):
+    """주름 통(뿅망치 머리) - X축 눕힌 통 · 주름 5 · 가운데 볼록"""
+    n = 8 if RANK[grade] <= RANK["rare"] else 7
+    L, R = PH["headL"] * 0.62, PH["headR"]
+    prof = []
+    k = 7
+    for i in range(k + 1):
+        x = -L / 2 + L * i / k
+        prof.append((R * (1.0 if i % 2 == 0 else 0.86) * (1 + 0.05 * math.sin(math.pi * i / k)), x))
+    return A.xform(A.lathe(prof, n, axis="X"), t=(0, 0, PH["headZ"]))
+
+
+def ph_caps(grade):
+    """양 끝 둥근 마개(통보다 굵게 - 망치 머리 실루엣) · 희귀 = 테 · 전설 = ×1.25"""
+    k = 1.25 if at_least(grade, "legendary") else 1.0
+    R = PH["headR"] * 1.12 * k
+    x0 = PH["headL"] * 0.31
+    prof = [(R * 0.8, 0.0), (R * 1.02, 0.12), (R * 0.9, 0.32), (R * 0.5, 0.42), (0.0, 0.44)]
+    if at_least(grade, "rare"):  # 희귀 = 마개 안쪽 넓은 테(실루엣 한 단계 - 통 끝이 한 번 더 벌어짐)
+        prof = [(R * 0.8, -0.02), (R * 1.22, 0.04), (R * 1.22, 0.1)] + prof[1:]
+    n = 8 if RANK[grade] <= RANK["rare"] else 7
+    cap = A.lathe(prof, n, axis="X")
+    return A.merge(*[A.xform(cap, t=(x0, 0, PH["headZ"])), A.xform(A.mirror_x(cap), t=(-x0, 0, PH["headZ"]))])
+
+
+def ph_grip(grade):
+    zs = [PH["pommelZ"] + 0.1 + (PH["headZ"] - PH["headR"] - PH["pommelZ"] - 0.1) * i / 5 for i in range(6)]
+    return A.loft([[(x, y, z) for x, y in A.circle2d(0.13 if i % 2 else 0.145, detail(grade))] for i, z in enumerate(zs)])
+
+
+def ph_pommel(grade):
+    g = A.xform(A.ellipsoid((0.2, 0.2, 0.18), n=detail(grade), rings=4), t=(0, 0, PH["pommelZ"]))
+    return g
+
+
+def ph_collar(grade):
+    """영웅 = 머리 밑 목 고리 + 양옆으로 말린 귀 2(대검 영웅 가드 말림과 같은 언어)"""
+    z = PH["headZ"] - PH["headR"] - 0.06
+    ring = A.xform(A.lathe([(0.16, -0.08), (0.24, 0.0), (0.16, 0.09)], 7, axis="Z"), t=(0, 0, z))
+    curls = []
+    for s in (-1, 1):
+        pts = [(s * (0.2 + 0.28 * math.sin(a)), 0, z - 0.3 + 0.3 * math.cos(a)) for a in (math.pi * i / 4 for i in range(1, 7))]
+        curls.append(A.tube(pts, lambda u: 0.07 * (1 - 0.5 * u) + 0.02, sides=4, tip_end=True))
+    return A.merge(ring, *curls)
+
+
+def paladin_parts(grade):
+    P = common_palette(grade, (238, 228, 206), A.WOOD_TOP)  # 본체 = 크림 주름 통(장난감 망치) · 마개 = 나무 → 영웅부터 등급 색
+    parts = [("Head", ph_bellows(grade), P["base"], False, 0.0), ("Caps", ph_caps(grade), P["trim"], False, 0.0),
+             ("Grip", ph_grip(grade), P["grip"], False, 0.0), ("Pommel", ph_pommel(grade), P["trim"], False, 0.0)]
+    hz, R = PH["headZ"], PH["headR"]
+    if at_least(grade, "rare"):  # 희귀 = 통 가운데 등급 색 띠
+        parts.append(("Fuller", A.xform(A.lathe([(R * 1.02, -0.11), (R * 1.16, 0.0), (R * 1.02, 0.11)], 8 if RANK[grade] <= RANK["rare"] else 7, axis="X"), t=(0, 0, hz)),
+                      P["accent"] if grade != "transcendent" else A.GOLD, False, 0.0))
+    if at_least(grade, "epic"):
+        parts.append(("Guard", ph_collar(grade), P["trim"], False, 0.0))
+    if at_least(grade, "legendary"):  # 전설 = 통 앞 보석(마개 ×1.25는 Caps에)
+        parts.append(("Gem", A.crystal(0.34, 0.15, sides=4, tip_h=0.12, base_h=0.1, center=(0, -R * 1.05, hz), m=A.rot(rx=90)), P["gem"], True, 0.0))
+    if at_least(grade, "relic"):  # 유물 = 마개 바깥 면 룬 가시 2 × 2(유물만 발광)
+        x0 = PH["headL"] * 0.31 + 0.44
+        sp = [spike((s * (x0 - 0.05), 0, hz + dz), (s * 0.8, 0, dz * 1.6), 0.42, 0.11) for s in (-1, 1) for dz in (-0.22, 0.22)]
+        parts.append(("Runes", A.merge(*sp), P["accent"] if grade == "relic" else P["trim"], grade == "relic", 0.0))
+    if at_least(grade, "ancient"):  # 고대 = 머리 위 깃털 날개(위로 펼침)
+        wc = P["accent"] if grade != "transcendent" else A.BLACK_BODY
+        parts += [("Wing_R", feather_wing((0.3, 0, PH["topZ"] - 0.1), 1, (0.9, 0.7, 0.5), (15, 38, 60), width=0.16), wc, False, 0.0),
+                  ("Wing_L", feather_wing((-0.3, 0, PH["topZ"] - 0.1), -1, (0.9, 0.7, 0.5), (15, 38, 60), width=0.16), wc, False, 0.0)]
+    if grade == "primordial":  # 태초 = 떠 있는 결정 2 + 손잡이 빛 테
+        parts += [("Crystals", float_crystals([(-1.15, 0, 1.2), (1.2, 0, 2.6)], 0.5, 0.12), P["accent"], True, 0.0),
+                  ("Halo", halo_ring((0, 0, 0.9), 0.45, axis="Z", tilt=15, thick=0.06, n=7), P["accent"], True, 0.0)]
+    if grade == "transcendent":  # 초월 = 검은 통 + 금빛 균열(통 둘레 관통 띠) + 흑금 조각 3
+        pts = [(x, 0, hz + 0.06 * (-1) ** i) for i, x in enumerate((-0.44, -0.2, 0.05, 0.28, 0.46))]
+        parts += [("Shards", float_shards([(-1.2, 0.0, 1.3), (1.25, 0.0, 2.2), (0.0, 0.0, 3.05)], 0.3), A.BLACK_BODY, False, 0.0),
+                  ("Crack1", crack_line(pts, R * 1.06, 0.07), A.GOLD_GLOW, True, 0.0)]
+    return parts
+
+
 # ────────────────────────── 공통 짓기 ──────────────────────────
-BUILDERS = {"greatsword": greatsword_parts, "dualblade": dualblade_parts, "bow": bow_parts, "healer": healer_parts}
+BUILDERS = {"greatsword": greatsword_parts, "dualblade": dualblade_parts, "bow": bow_parts, "healer": healer_parts, "paladin": paladin_parts}
 ATTACH = {"greatsword": dict(Grip=(0, 0, 0), Tip=(0, 0, GS["tipZ"]), Support=(0, 0, GS["supportZ"])),
           "dualblade": dict(Grip=(0, 0, 0), Tip=(0, 0, DB["tipZ"])),
           "bow": dict(Grip=(0, 0, 0), Tip=(BW["tipX"], 0, BW["nockZ"]), StringNock=(0, 0, BW["nockZ"])),
-          "healer": dict(Grip=(0, 0, 0), Tip=(0, ST["topY"], 0), Support=(0, 1.0, 0))}
+          "healer": dict(Grip=(0, 0, 0), Tip=(0, ST["topY"], 0), Support=(0, 1.0, 0)),
+          "paladin": dict(Grip=(0, 0, 0), Tip=(0, 0, PH["topZ"]))}
 NOTES = {"dualblade": "한 자루 모델을 BladeRight · BladeLeft 두 조각에 같이 쓴다(WeaponModels.dualblade 자식 2개로 복제)",
-         "bow": "String 파트는 렌더 · 아이콘 전용 - 게임은 시위를 코드로 그린다(가져올 때 String은 지운다)"}
+         "bow": "String 파트는 렌더 · 아이콘 전용 - 게임은 시위를 코드로 그린다(가져올 때 String은 지운다)",
+         "paladin": "뿅망치(WeaponRigSpec.paladin.Hammer) - 원점 = 손잡이 점(규격 grip (0, 0, −0.75)은 옛 가운데 원점 기준 → 가져올 때 grip = 0) · 방패는 아직 없음 · 게임 연결 없음(출시 후 직업)"}
 
 
 def build(weapon, grade):
@@ -617,7 +700,8 @@ def parse():
 # 렌더용 받침 회전(도) - 긴 축이 화면 위, 모양이 보이는 면이 카메라 정면(Blender +Y 쪽)
 DISPLAY_ROT = {"greatsword": (-90, 0, 0), "dualblade": (-90, 0, 0),  # 칼끝(Roblox +Z = Blender −Y) → 위
                "bow": (-90, -90, 0),  # 날개(Roblox +X) → 위 · 시위(Roblox +Z)는 화면 오른쪽 - 활의 휨이 정면에 보인다
-               "healer": (0, 0, 0)}  # 머리 = Roblox +Y = Blender +Z(이미 위)
+               "healer": (0, 0, 0),
+               "paladin": (-90, 0, 0)}  # 머리 = Roblox +Y = Blender +Z(이미 위)
 
 
 def main():
