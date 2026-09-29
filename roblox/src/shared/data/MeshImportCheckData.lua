@@ -51,6 +51,7 @@ MeshImportCheckData.swap = {
 	recolor = true, -- 교체 메시 색 = 리그 색 역할(종 · 보스 색 - 세대 틴트 · 피격 번쩍임 출발점이 같게). false면 가져온 색 유지
 	previewFolder = "MeshPreview", -- Workspace.MeshPreview.<리그 id>(개발 명령 미리보기)
 	previewDistance = 12, -- 개발자 앞 stud
+	metaResidualStuds = 0.05, -- A2-N2 메타 정렬: 파트마다 이동량이 평균에서 이만큼 넘게 벗어나면 배치가 깨진 것(축 · 배율 오류)
 }
 
 -- 교체 모델 자리(PropModels · WeaponModels와 같은 방식 - 경로 생략 시 찾는 곳)

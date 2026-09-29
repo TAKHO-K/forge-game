@@ -14,6 +14,35 @@ local MeshImportCheck = require(ReplicatedStorage.Shared.MeshImportCheck)
 
 local MeshSwap = {}
 
+-- A2-N2: 기준 루트 없는 가져오기(A2-N1 FBX)를 Blender 메타로 맞춘다. 메시는 휴식 자세 월드 방향으로 구워져 있다(회전 0) → 가져온 모델 안 상대 배치는 그대로고
+--   모르는 것은 평행 이동 하나뿐. 파트마다 (메타 경계 가운데 center - 가져온 파트 가운데)의 평균 = 이동량 · 가장 큰 어긋남 = 배치가 깨졌는지 검사(Data.swap.metaResidualStuds).
+--   points = { { name, center = {x,y,z} 가져온 모델 기준 } } · meta = { parts = { [이름] = { center = {x,y,z} } } } (리그 공간 · 배율 1). 반환 offset {x,y,z} · residual · 쓴 수.
+function MeshSwap.alignFromMeta(points, meta, scale)
+	local S = scale or 1
+	local sum, n = { 0, 0, 0 }, 0
+	local pairsUsed = {}
+	for _, p in ipairs(points) do
+		local m = meta and meta.parts and meta.parts[p.name]
+		if m and m.center then
+			local d = { m.center[1] * S - p.center[1], m.center[2] * S - p.center[2], m.center[3] * S - p.center[3] }
+			for k = 1, 3 do
+				sum[k] += d[k]
+			end
+			n += 1
+			table.insert(pairsUsed, d)
+		end
+	end
+	if n == 0 then
+		return nil, math.huge, 0
+	end
+	local offset = { sum[1] / n, sum[2] / n, sum[3] / n }
+	local residual = 0
+	for _, d in ipairs(pairsUsed) do
+		residual = math.max(residual, math.sqrt((d[1] - offset[1]) ^ 2 + (d[2] - offset[2]) ^ 2 + (d[3] - offset[3]) ^ 2))
+	end
+	return offset, residual, n
+end
+
 function MeshSwap.swap(rigModel, importModel, rigId, opts)
 	opts = opts or {}
 	local lines = {}
@@ -30,6 +59,22 @@ function MeshSwap.swap(rigModel, importModel, rigId, opts)
 	for _, d in ipairs(importModel:GetDescendants()) do
 		if d:IsA("BasePart") and d ~= ref and not Data.ignoreNames[d.Name] then
 			sources[d.Name] = sources[d.Name] or d
+		end
+	end
+	-- 기준 루트가 없고 메타(center)가 있으면: 기준 = 모델 피벗의 위치만(회전 0 - 구운 방향) + 메타 평균 이동량
+	local metaShift = nil
+	if not ref and opts.meta then
+		local base = CFrame.new(importModel:GetPivot().Position)
+		local points = {}
+		for name, src in pairs(sources) do
+			local c = base:PointToObjectSpace(src.Position)
+			table.insert(points, { name = name, center = { c.X, c.Y, c.Z } })
+		end
+		local offset, residual, used = MeshSwap.alignFromMeta(points, opts.meta, 1) -- 가져온 모델 단위(배율 전) - 아래 rel × S
+		if offset then
+			refCF = base * CFrame.new(-offset[1], -offset[2], -offset[3])
+			metaShift = { residual = residual, used = used }
+			table.insert(lines, ("[MeshSwap] 메타 정렬: 파트 %d · 가장 큰 어긋남 %.3f stud %s"):format(used, residual, residual <= Data.swap.metaResidualStuds and "O" or "X(배치 깨짐 - 가져오기 축 · 배율 확인)"))
 		end
 	end
 
@@ -100,7 +145,7 @@ function MeshSwap.swap(rigModel, importModel, rigId, opts)
 		count += 1
 	end
 	rigModel:SetAttribute("MeshSwapped", count)
-	table.insert(lines, ("[MeshSwap] %s ← %s: 끼움 %d/%d · 관절 다시 걸기 %d%s %s"):format(rigId, importModel:GetFullName(), count, #exp.order, rejoined,
+	table.insert(lines, ("[MeshSwap] %s ← %s(%s): 끼움 %d/%d · 관절 다시 걸기 %d%s %s"):format(rigId, importModel:GetFullName(), ref and "기준 루트" or (metaShift and "메타" or "모델 피벗"), count, #exp.order, rejoined,
 		#kept > 0 and (" · 그대로(파트) " .. table.concat(kept, ", ")) or "", count == #exp.order and "O" or "X"))
 	return count, lines
 end

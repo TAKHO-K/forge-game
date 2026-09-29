@@ -138,7 +138,7 @@ function MeshImportDev.handle(player, args: { string }, reply)
 		reply(player, "미리보기 리그를 못 지었다(캐릭터 · 색 데이터 확인)")
 		return
 	end
-	local _, lines = MeshSwap.swap(preview, model, rigId, { scale = scale })
+	local _, lines = MeshSwap.swap(preview, model, rigId, { scale = scale, meta = metaFor(model) or metaFor({ Name = rigId }) })
 	for _, line in ipairs(lines) do
 		print(line)
 	end
