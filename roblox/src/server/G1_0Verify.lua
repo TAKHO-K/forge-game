@@ -252,10 +252,17 @@ function G1_0Verify.runPure()
 		end
 		local maxGap, calls, spots, totalMs, maxMs = 0, 0, 0, 0, 0
 		local last = nil
+		-- QUEUE-B1 결정 3: 한 조각이 예산을 넘길 수 있는 간격(= 예산 × (1 − 양보 몫))보다 긴 간격의 비율로 판정(결정 12와 같은 식 · 최악 간격은 기록)
+		local overGapSeconds = REGROW.frameBudgetMs / 1000 * (1 - REGROW.yieldAtFraction)
+		local gaps, overGaps = 0, 0
 		local function checkpoint()
 			local now = os.clock()
 			if last then
 				maxGap = math.max(maxGap, now - last)
+				gaps += 1
+				if now - last > overGapSeconds then
+					overGaps += 1
+				end
 			end
 			calls += 1
 			last = now
@@ -293,9 +300,10 @@ function G1_0Verify.runPure()
 		end
 		r.note(("② 연결 검사 한 번 최대 %.3fms(참고 - 게임 경로는 자리 찾기 · 솟기 전 다시 보기 모두 나눠 돈다)"):format(openMax))
 		local bound = REGROW.frameBudgetMs * REGROW.yieldAtFraction + maxGap * 1000
-		r.check(("② %d회 자리 찾기(한 번에 돌면 평균 %.2f · 최대 %.2fms) · 체크포인트 %d번 · 가장 긴 간격 %.3fms → 한 프레임 상한 %.2f × %.1f + %.3f = %.2fms(기대 ≤ %.1f)"):format(
-			spots, totalMs / math.max(spots, 1), maxMs, calls, maxGap * 1000, REGROW.frameBudgetMs, REGROW.yieldAtFraction, maxGap * 1000, bound, REGROW.frameBudgetMs),
-			bound <= REGROW.frameBudgetMs)
+		local overFraction = overGaps / math.max(gaps, 1)
+		r.check(("② %d회 자리 찾기(한 번에 돌면 평균 %.2f · 최대 %.2fms) · 체크포인트 %d번 · 간격 %.3fms 넘음 %d / %d = %.3f%%(기대 ≤ %.0f%% - QUEUE-B1 결정 3) · 기록: 가장 긴 간격 %.3fms → 최악 한 프레임 %.2fms"):format(
+			spots, totalMs / math.max(spots, 1), maxMs, calls, overGapSeconds * 1000, overGaps, gaps, overFraction * 100, REGROW.overBudgetFrameFractionMax * 100, maxGap * 1000, bound),
+			gaps > 0 and overFraction <= REGROW.overBudgetFrameFractionMax)
 	end)
 
 	r.section("③ 단상 위 점프 = 평지 점프(발밑 지면)", function()

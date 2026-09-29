@@ -4087,6 +4087,34 @@ if RunService:IsStudio() and verifyEnabled("27-4(나)") then
 	Players.PlayerAdded:Connect(run27_4bVerification)
 end
 
+-- ═══ QUEUE-B1 결정 4: 무거운 (가) 블록은 29-1 체인이 끝난 뒤 ═══
+-- 서버 시작 때 (가) 대형 표본(S03 380만 롤 · S14 · P3c 100시드 · G1-0 ② 720회 자리 찾기)이 체인 첫머리의 실시간 측정(29-1 첫 기믹 · 힌트)과
+-- Studio 한 프로세스의 클라 타이밍 점검(S12b 툴팁 · S17)을 같이 밀었다(p1-regression.log: 10초 루프에 Heartbeat 18틱). 그래서 이 블록들은 목록에 모았다가
+-- 체인 끝(S04 가방 지문 뒤)에 차례로 돈다. 플레이어가 없는 Play(체인 없음)면 서버 시작 30초 뒤 돈다. 블록 id · 켜는 법(verifyEnabled)은 그대로.
+local heavyPure = {}
+local heavyChainState = "none" -- none | running | done
+local function runHeavyPureNow()
+	local list = heavyPure
+	heavyPure = {}
+	for _, entry in ipairs(list) do
+		local ok, err = pcall(entry.fn)
+		if not ok then
+			warn(("[%s] 검증 블록 에러: %s"):format(entry.id, tostring(err)))
+		end
+	end
+end
+local function deferHeavyPure(id, fn)
+	table.insert(heavyPure, { id = id, fn = fn })
+end
+if RunService:IsStudio() then
+	task.delay(30, function()
+		if heavyChainState == "none" then
+			heavyChainState = "done"
+			runHeavyPureNow()
+		end
+	end)
+end
+
 -- ═══ 29-1 자동 검증 블록 - 보스 공통 뼈대(체력 비례 피해·잡힘/구출·파훼 게이트·스케줄러·힌트) ═══
 -- 본문은 BossMechanicsVerify.lua(이 파일이 더 커지지 않게 뺐다). (나)는 실시간 스케줄러 측정 때문에
 -- 15초쯤 걸린다 - 다른 블록들이 "backups가 빌 때까지 최대 30초" 기다리므로, 이 블록이 중간에 끼면 뒤
@@ -4099,6 +4127,9 @@ if RunService:IsStudio() then
 			return
 		end
 		ran29_1 = true
+		if heavyChainState == "none" then
+			heavyChainState = "running" -- QUEUE-B1 결정 4: 무거운 (가)는 이 체인 끝에서
+		end
 		task.spawn(function()
 			local waited = 0
 			while not PlayerProfile.getProfile(player) and waited < 10 do
@@ -4107,6 +4138,8 @@ if RunService:IsStudio() then
 			end
 			if not PlayerProfile.getProfile(player) then
 				print("[29-1] 프로필 로드 실패(10초 대기) - 검증을 건너뜁니다")
+				heavyChainState = "done"
+				runHeavyPureNow()
 				return
 			end
 			local quiet, total = 0, 0
@@ -4220,6 +4253,11 @@ if RunService:IsStudio() then
 				print(("[S04][가방] 검증 체인 전 %s칸 → 후 %d칸 · 내용 같음=%s (기대 같은 칸 · 같은 내용) %s"):format(
 					tostring(firstBagCount[player]), bagCount, tostring(bagSame), bagSame and "O" or "X"))
 			end
+			if heavyChainState ~= "done" then
+				heavyChainState = "done"
+				print(("[DevTools] 무거운 (가) %d블록을 체인 끝에서 시작(QUEUE-B1 결정 4)"):format(#heavyPure))
+				runHeavyPureNow()
+			end
 		end)
 	end
 
@@ -4254,12 +4292,7 @@ end
 -- ═══ S03 자동 검증 블록(가) - 강화 확률표 · 골드표 · 천장(PRD 20.84) ═══
 -- 순수 함수 + 합성 프로필(플레이어 불필요). 분포 표본이 커서(25단계 × 20만 회) 단계마다 task.wait로 양보한다. (나)는 위 29-1 체인의 끝.
 if RunService:IsStudio() and verifyEnabled("S03(가)") then
-	task.spawn(function()
-		local ok, err = pcall(EnhanceVerify.runPure)
-		if not ok then
-			warn(("[S03(가)] 검증 블록 에러: %s"):format(tostring(err)))
-		end
-	end)
+	deferHeavyPure("S03(가)", EnhanceVerify.runPure) -- QUEUE-B1 결정 4: 체인 끝에서(무거운 표본)
 end
 
 -- ═══ S04 자동 검증 블록(가) - 강화 재료 순수 함수 · 기대 개수 식 · 저장 이관(PRD 20.85) ═══
@@ -4386,12 +4419,7 @@ end
 -- ═══ S14 자동 검증 블록(가) - 스테이지 밀도(낙하 원 개수) 식 · 사본 규칙 · 대상 조건 · 검사기 48칸 · 6종 몬테카를로 · 2연타 ═══
 -- 순수 함수(플레이어 불필요 - 검사기 48칸은 칸마다 양보하며 돈다). (나)는 위 29-1 체인의 끝(S13b (나) 다음) - 스테이지 100 구간 수호자 실제 스폰.
 if RunService:IsStudio() and verifyEnabled("S14(가)") then
-	task.spawn(function()
-		local ok, err = pcall(require(script.Parent.BossDensityVerify).runPure)
-		if not ok then
-			warn(("[S14(가)] 검증 블록 에러: %s"):format(tostring(err)))
-		end
-	end)
+	deferHeavyPure("S14(가)", require(script.Parent.BossDensityVerify).runPure) -- QUEUE-B1 결정 4: 체인 끝에서(무거운 표본)
 end
 
 -- ═══ S19b 자동 검증 블록(가) - 파티 연결 끊김 유예(PartyState 스탠드인) ═══
@@ -4522,12 +4550,7 @@ end
 
 -- ═══ P3c 자동 검증 블록(가) - 줄넘기 리듬 · 가장 가까운 대상 · 번개 · 이탈 시뮬 · 무작위 배치 100시드 · 경제 결정 · 보석 판매가(docs/phase/P3c-log.md) ═══
 if RunService:IsStudio() and verifyEnabled("P3c(가)") then
-	task.spawn(function()
-		local ok, err = pcall(require(script.Parent.P3cVerify).runPure)
-		if not ok then
-			warn(("[P3c(가)] 검증 블록 에러: %s"):format(tostring(err)))
-		end
-	end)
+	deferHeavyPure("P3c(가)", require(script.Parent.P3cVerify).runPure) -- QUEUE-B1 결정 4: 체인 끝에서(무거운 표본)
 end
 
 -- ═══ P3b 자동 검증 블록(가) - 장비 비교 줄 · 스킬 툴팁 글(docs/phase/P3b-log.md) ═══
@@ -4824,12 +4847,7 @@ end
 
 -- ═══ G1-0 자동 검증 블록(가) - 받는 피해 하한 · 재생성 체크포인트 · 단상 점프 · 복귀 경로 1,000회(docs/phase/G1-0-report.md) ═══
 if RunService:IsStudio() and verifyEnabled("G1-0(가)") then
-	task.spawn(function()
-		local ok, err = pcall(require(script.Parent.G1_0Verify).runPure)
-		if not ok then
-			warn(("[G1-0(가)] 검증 블록 에러: %s"):format(tostring(err)))
-		end
-	end)
+	deferHeavyPure("G1-0(가)", require(script.Parent.G1_0Verify).runPure) -- QUEUE-B1 결정 4: 체인 끝에서(무거운 표본)
 end
 
 -- 이 서버에서 건너뛴 검증 블록(DevToolsConfig.verify) - 체인 단계는 접속 뒤에 걸러지므로 이 줄에는 서버 시작 때 정해지는 블록만 든다.
