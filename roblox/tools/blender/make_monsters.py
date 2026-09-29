@@ -433,8 +433,8 @@ def ice_golem(P):
 
 def blue_dragon(P):
     b = P["Body"]["center"]
-    body = A.loft([[(x, y + b[1] + dy, z) for x, y in A.circle2d(r * 1.0, 10, rx=r * 1.3)] for z, r, dy in ((-2.5, 0.95, 0.12), (-1.8, 1.38, 0.06), (-0.9, 1.42, 0.0), (0.4, 1.32, 0.0), (1.6, 1.12, 0.0), (2.4, 0.8, 0.05))])  # 가슴 앞으로 볼록 · 박스보다 두툼(2차 패스 ×1.15)
-    body = A.merge(body, *[A.crystal(0.7 - 0.08 * i, 0.16, sides=4, tip_h=0.3, base_h=0.08, center=(0, b[1] + 1.15, -1.3 + 0.8 * i), m=A.rot(rx=25)) for i in range(4)])  # 등 가시
+    body = A.loft([[(x, y + b[1] + dy, z) for x, y in A.circle2d(r * 1.1, 10, rx=r * 1.45)] for z, r, dy in ((-2.5, 0.95, 0.12), (-1.8, 1.38, 0.06), (-0.9, 1.42, 0.0), (0.4, 1.32, 0.0), (1.6, 1.12, 0.0), (2.4, 0.8, 0.05))])  # 가슴 앞으로 볼록 · 박스보다 두툼(2차 패스 ×1.15)
+    body = A.merge(body, *[A.crystal(1.0 - 0.1 * i, 0.22, sides=4, tip_h=0.4, base_h=0.08, center=(0, b[1] + 1.3, -1.3 + 0.8 * i), m=A.rot(rx=25), ) for i in range(4)])  # 등 가시
     legs = {}
     for n_ in ("Leg_FL", "Leg_FR", "Leg_BL", "Leg_BR"):
         j = P[n_]["joint"]
@@ -448,9 +448,9 @@ def blue_dragon(P):
     neck = local(nk, A.merge(A.tube(spine, lambda u: 0.7 - 0.22 * u, sides=10), *[A.crystal(0.42, 0.12, sides=4, tip_h=0.16, base_h=0.05, center=(0, yy, 0.55 - 0.1 * i), m=A.rot(rx=70)) for i, yy in enumerate((-0.7, 0.1, 0.9))]))
     h = P["Head"]
     snout = A.loft([[(x, y, z) for x, y in A.chamfer_rect(w, hh, 0.18)] for z, w, hh in ((0.9, 1.3, 1.05), (0.1, 1.45, 1.1), (-0.6, 1.1, 0.8), (-1.15, 0.8, 0.55))])
-    horns = [A.tube(A.bezier((s * 0.45, 0.4, 0.6), (s * 0.6, 0.9, 0.9), (s * 0.55, 1.3, 1.4), (s * 0.4, 1.35, 1.8), n=5), lambda u, s=s: (0.2 if s < 0 else 0.17) * (1 - u) + 0.02, sides=6, tip_end=True) for s in (-1, 1)]
+    horns = [A.tube(A.bezier((s * 0.5, 0.45, 0.6), (s * 0.75, 1.05, 0.95), (s * 0.75, 1.6, 1.5), (s * 0.55, 1.75, 2.1), n=5), lambda u, s=s: (0.27 if s < 0 else 0.24) * (1 - u) + 0.03, sides=6, tip_end=True) for s in (-1, 1)]
     brow = A.box(1.4, 0.18, 0.5, b=0.06, center=(0, 0.42, -0.35))
-    head = local(h, A.merge(snout, brow))
+    head = local(h, A.xform(A.merge(snout, brow), s=(1.18, 1.18, 1.18)))  # A2-N2 머리 ×1.18
     head_horns = local(h, A.merge(*horns))
     head = A.merge(head, head_horns)
     jaw = local(P["Jaw"], A.merge(A.loft([[(x, y, z) for x, y in A.chamfer_rect(w, 0.3, 0.1)] for z, w in ((0.75, 1.15), (0.0, 1.2), (-0.8, 0.75))]),
@@ -460,7 +460,7 @@ def blue_dragon(P):
     wings = {}
     for n_, s in (("Wing_L", -1), ("Wing_R", 1)):
         j = P[n_]["joint"]
-        wings[n_] = A.xform(wing_membrane(s, span=4.3, bone=0.2), m=A.rot(rz=s * 20) @ A.rot(rx=-12), t=tuple(j), s=(1, 1.35, 1))
+        wings[n_] = A.xform(wing_membrane(s, span=6.4, bone=0.26), m=A.rot(rz=s * 24) @ A.rot(rx=-12), t=tuple(j), s=(1, 1.6, 1))  # A2-N2: 폭 4.3 → 6.4 · 높이 ×1.6(T6 최상위 - 날개 끝 사이 ≈ 몸 길이의 2.6배)
     tails = {}
     for n_, r0, r1 in (("Tail1", 0.55, 0.42), ("Tail2", 0.42, 0.3)):
         p = P[n_]
@@ -530,7 +530,7 @@ def main():
         print("[make_monsters] %s 파트 %d · 삼각형 %d / %d = %.0f%% · %s" % (sid, len(objs), total, budget, 100 * total / budget, {o.name: A.tri_count(o) for o in objs}))
         if opt["export"]:
             A.export_fbx(os.path.join(OUT, "%s.fbx" % sid), objs)
-            A.write_json(os.path.join(OUT, "%s.meta.json" % sid), dict(A.meta_of(objs, budget), version="A2-N1", rigId=sid, kind=rig.get("kind", "monster")))
+            A.write_json(os.path.join(OUT, "%s.meta.json" % sid), dict(A.meta_of(objs, budget), version=("A2-N2" if sid == "blue_dragon" else "A2-N1"), rigId=sid, kind=rig.get("kind", "monster")))
             bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "%s.blend" % sid))
         if opt["render"]:
             A.render_views(objs, os.path.join(opt["render"], sid), hull=0.035, res=(800, 800))

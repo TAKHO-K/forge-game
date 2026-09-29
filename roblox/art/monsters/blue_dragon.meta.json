@@ -7,13 +7,13 @@
     0.9,
     0.0
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
     0.0,
-    0.958,
+    1.034,
     -0.05
-   ]
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Leg_FL": {
    "tris": 102,
@@ -22,13 +22,13 @@
     -0.1,
     -1.5
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
     -1.1,
     -0.807,
     -1.649
-   ]
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Leg_FR": {
    "tris": 102,
@@ -37,13 +37,13 @@
     -0.1,
     -1.5
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
     1.1,
     -0.807,
     -1.649
-   ]
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Leg_BL": {
    "tris": 102,
@@ -52,13 +52,13 @@
     -0.1,
     1.5
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
     -1.1,
     -0.804,
     1.314
-   ]
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Leg_BR": {
    "tris": 102,
@@ -67,13 +67,13 @@
     -0.1,
     1.5
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
     1.1,
     -0.804,
     1.314
-   ]
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Neck1": {
    "tris": 184,
@@ -82,13 +82,13 @@
     1.8,
     -2.0
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
     0.0,
     3.025,
     -2.449
-   ]
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Head": {
    "tris": 204,
@@ -97,13 +97,13 @@
     4.4311,
     -2.9577
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
-    0.0,
-    5.131,
-    -3.233
-   ]
+    -0.007,
+    5.282,
+    -3.186
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Jaw": {
    "tris": 56,
@@ -112,13 +112,13 @@
     4.1311,
     -3.2577
    ],
-   "neon": false,
-   "color": "#AFE1FA",
    "center": [
     0.0,
     4.076,
     -4.083
-   ]
+   ],
+   "neon": false,
+   "color": "#AFE1FA"
   },
   "Eyes": {
    "tris": 96,
@@ -127,13 +127,13 @@
     4.9311,
     -4.6577
    ],
-   "neon": true,
-   "color": "#C8F0FF",
    "center": [
     0.0,
     4.931,
     -4.558
-   ]
+   ],
+   "neon": true,
+   "color": "#C8F0FF"
   },
   "Wing_L": {
    "tris": 86,
@@ -142,13 +142,13 @@
     1.7,
     -0.4
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
-    -3.294,
-    2.461,
-    -0.447
-   ]
+    -4.092,
+    3.032,
+    -0.474
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Wing_R": {
    "tris": 86,
@@ -157,13 +157,13 @@
     1.7,
     -0.4
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
-    3.294,
-    2.461,
-    -0.447
-   ]
+    4.092,
+    3.032,
+    -0.474
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Tail1": {
    "tris": 44,
@@ -172,13 +172,13 @@
     1.2,
     2.3
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
     0.0,
     1.038,
     3.569
-   ]
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Tail2": {
    "tris": 44,
@@ -187,13 +187,13 @@
     0.7485,
     4.8605
    ],
-   "neon": false,
-   "color": "#4682CD",
    "center": [
     0.0,
     0.599,
     6.032
-   ]
+   ],
+   "neon": false,
+   "color": "#4682CD"
   },
   "Tail3": {
    "tris": 48,
@@ -202,20 +202,21 @@
     0.3318,
     7.224
    ],
-   "neon": false,
-   "color": "#C8F0FF",
    "center": [
     0.04,
     0.127,
     8.439
-   ]
+   ],
+   "neon": false,
+   "color": "#C8F0FF"
   }
  },
  "partCount": 14,
  "totalTris": 1436,
  "triBudget": 1500,
  "budgetUse": 0.957,
- "version": "A2-N1",
+ "version": "A2-N2",
  "rigId": "blue_dragon",
- "kind": "monster"
+ "kind": "monster",
+ "sizeNote": "A2-N2: 날개 폭 4.3 → 6.4 · 머리 ×1.18 · 몸 ×1.1 · 뿔 · 등 가시 ×1.4(메시 안 - 관절 그대로). 게임 크기 자체를 키우려면 MonsterSpeciesData 배율 ×1.2 추천(판정 · 히트박스는 코드 - 결정 필요)"
 }
