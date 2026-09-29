@@ -77,6 +77,7 @@ end
 
 local function styleTrail(trail, theme, spec)
 	trail.Color = ColorSequence.new(theme.core, theme.edge)
+	trail.LightEmission = CosData.trailEmission
 	trail.Lifetime = spec.lifetime * Fx.slow()
 	trail.WidthScale = NumberSequence.new(1, 0.15)
 	trail.Transparency = seq(spec.transparency and spec.transparency[1] or 0.2, 1)
@@ -121,7 +122,7 @@ local function jumpFx(st, theme)
 	if not feet then
 		return
 	end
-	local ring = Fx.ring(feet, j.ring, 0.35, theme.edge, 0.1, 1 - (1 - 0.2) * opacityScale())
+	local ring = Fx.ring(feet, j.ring, 0.35, theme.edge, CosData.jumpRingThick, 1 - (1 - 0.1) * opacityScale())
 	ring.Material = Enum.Material.Neon
 	Fx.burst(feet + Vector3.new(0, 0.3, 0), particleCount(j.particles, st.isLocal), { color = theme.particle, size = j.size, speed = j.speed, spread = j.spread, gravity = j.gravity, lifetime = { 0.4, 0.8 } })
 end

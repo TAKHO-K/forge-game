@@ -16,7 +16,7 @@ return {
 		normal = { glow = nil, motes = 0 },
 		rare = { glow = { height = 5, width = 0.8, transparency = 0.35 }, motes = 0 }, -- Play 2: 0.5 · 0.55는 번개 없는 희귀에서 거의 안 보였다
 		epic = { glow = { height = 6, width = 0.7, transparency = 0.6 }, motes = 2 },
-		legendary = { glow = { height = 13, width = 0.9, transparency = 0.6 }, motes = 4, ring = 9 },
+		legendary = { glow = { height = 13, width = 0.9, transparency = 0.45, color = C(255, 110, 20) }, motes = 4, ring = 9, ringColor = C(255, 130, 40) }, -- Play 3 · 검토: 등급 주황이 블룸에서 노랑으로 번져 유물 금과 겹쳤다 → 빛 띠 · 링만 진한 주황(등급 색 자체는 그대로)
 		relic = { glow = { height = 18, width = 1.1, transparency = 0.58 }, motes = 6, ring = 11 },
 		ancient = { glow = { height = 23, width = 1.3, transparency = 0.55 }, motes = 8, ring = 13, flash = 3 },
 		primordial = { glow = { height = 30, width = 1.6, transparency = 0.5, rim = C(255, 60, 200), core = C(255, 255, 255) }, motes = 10, ring = 16, flash = 4 },
@@ -37,14 +37,15 @@ return {
 		seconds = 1.2, speed = 8, spread = 60, gravity = 10, size = 0.4,
 	},
 
-	rebirth = { seconds = 1.6, color = C(170, 90, 255), light = C(214, 200, 255), innerRing = C(255, 215, 90), -- 기둥은 발광 0.5(Fx.pillar)라 채도 높은 보라 · 안쪽 금 링 = 부화와 구별하는 표식 pillar = { height = 16, width = 2.2, topWidth = 0.6 }, rings = { 8, 14 }, particles = 20, speed = 10, spread = 30, gravity = -2, size = 0.45,
+	-- 환생: 기둥은 발광 0.5(Fx.pillar)라 채도 높은 보라 · 안쪽 금 링 = 부화와 구별하는 표식
+	rebirth = { seconds = 1.6, color = C(170, 90, 255), light = C(214, 200, 255), innerRing = C(255, 215, 90), pillar = { height = 16, width = 2.2, topWidth = 0.6 }, rings = { 8, 14 }, particles = 20, speed = 10, spread = 30, gravity = -2, size = 0.45,
 		screenFlash = { brightness = 0.1, seconds = 0.22 } },
 
 	enhanceFail = {
-		maintain = { smoke = 4, pieces = 0, ring = nil },
-		down = { smoke = 6, pieces = 6, ring = 5 },
+		maintain = { smoke = 6, pieces = 0, ring = nil },
+		down = { smoke = 9, pieces = 8, ring = 7 }, -- Play 3: 연기 4 · 링 5는 강화대 거리에서 거의 안 보였다
 		smokeColor = C(150, 146, 152), pieceColor = C(96, 96, 108), ringColor = C(70, 66, 84),
-		smokeSize = 1.1, smokeSpeed = 2.5, pieceSize = 0.25, pieceSpeed = 6, seconds = 0.8,
+		smokeSize = 1.6, smokeSpeed = 3, pieceSize = 0.35, pieceSpeed = 7, seconds = 0.8,
 		smokeTexture = "rbxasset://textures/particles/smoke_main.dds",
 	},
 

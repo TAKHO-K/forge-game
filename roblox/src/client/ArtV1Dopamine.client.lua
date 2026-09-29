@@ -108,6 +108,7 @@ local function build(model)
 		return
 	end
 	local color = colorOf(grade)
+	local glowColor = spec.glow and spec.glow.color or color -- 빛 띠 · 등장 링만 따로 칠할 수 있다(전설 진한 주황)
 	local folder = Instance.new("Folder")
 	folder.Name = "ArtV1DropGlow"
 	folder.Parent = model -- 줍기 · 만료 때 같이 사라진다
@@ -118,7 +119,7 @@ local function build(model)
 			table.insert(st.releases, beam(folder, ground, g.height, g.width * 1.6, g.rim, math.min(1, g.transparency + 0.15)))
 			table.insert(st.releases, beam(folder, ground, g.height * 0.92, g.width * 0.7, g.core, g.transparency * 0.6))
 		else
-			table.insert(st.releases, beam(folder, ground, g.height, g.width, color, g.transparency))
+			table.insert(st.releases, beam(folder, ground, g.height, g.width, glowColor, g.transparency))
 		end
 	end
 	if spec.motes > 0 then
@@ -160,7 +161,7 @@ local function build(model)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if root and (root.Position - ground).Magnitude < 150 then
 		if spec.ring then
-			Fx.ring(ground + Vector3.new(0, 0.12, 0), spec.ring, D.ringSeconds, color, 0.14, 0.1)
+			Fx.ring(ground + Vector3.new(0, 0.12, 0), spec.ring, D.ringSeconds, spec.ringColor or glowColor, 0.14, 0.1)
 		end
 		if spec.flash then
 			Fx.flash(ground + Vector3.new(0, 1.6, 0), spec.flash, D.flashSeconds)

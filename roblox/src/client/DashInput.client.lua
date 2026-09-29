@@ -221,7 +221,9 @@ dashResult.OnClientEvent:Connect(function(data)
 	end
 	local classId = player:GetAttribute("ClassId")
 	local color = (classId and classId ~= "" and UIColors.classAccent[classId]) or UIColors.ember
-	SkillEffects.dashAfterimage(data.startPosition, data.endPosition, color, data.durationSeconds)
+	if not (workspace:GetAttribute("ArtStyleV1") and player:GetAttribute("Cosmetic_dashTrail")) then -- A2-N2 2-3: 대시 트레일 치장을 낀 동안(아트 스위치 뒤)은 치장이 기본 잔상을 대신 그린다(client/ArtV1Cosmetics)
+		SkillEffects.dashAfterimage(data.startPosition, data.endPosition, color, data.durationSeconds)
+	end
 	WeaponVisual.playDash(nil, data.durationSeconds, pendingSecond) -- W1 대시 무기 자세 · W3b 2단 대시 비틀기(남에게는 중계 "dash" · "dash2")
 	airMoveFx:FireServer(pendingSecond and "dash2" or "dash")
 	pendingSecond = false

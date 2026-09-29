@@ -49,7 +49,7 @@ return {
 			cc = { brightness = -0.01, contrast = 0.08, saturation = -0.06, tint = { 238, 252, 255 } },
 			bloom = { intensity = 0.4, size = 18, threshold = 1.5 },
 			sky = { stars = 0, sun = 11 },
-			terrain = { Grass = { 86, 138, 118 }, LeafyGrass = { 72, 122, 108 } }, -- 검토: T3 사냥터가 T1과 같은 잔디라 구역 정체성이 없었다 → 물가 청록 이끼(이 구역 안에서만)
+			terrain = { Grass = { 80, 126, 110 }, LeafyGrass = { 68, 112, 100 } }, -- 검토: T3 사냥터가 T1과 같은 잔디라 구역 정체성이 없었다 → 물가 청록 이끼(이 구역 안에서만)
 		}),
 		-- T4 모래 유적: 오후 - 따뜻한 햇빛 · 모래먼지 원경(해 반사 줄기가 생겨 Glare 0)
 		tier4 = preset({
