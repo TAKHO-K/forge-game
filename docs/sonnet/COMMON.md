@@ -109,7 +109,7 @@
 
 - 여러 파트는 **구현 + 로컬 검증**(luau-analyze · 계산 하네스 · EconSim · 편집 모드)까지만 하고, Play는 **묶음 끝에 1 ~ 2회(최대 3회)** 몰아서 한다.
 - 예외: **저장 구조 · 보안 · 서버 권한 판정** 변경은 해당 파트 끝에 Play 1회 허용.
-- **Play 전 체크리스트**(낭비 Play 0 목표): ① Rojo 동기화 ② 지연 설정(`IncomingReplicationLag`) ③ 순간이동 = `TeleportArrival.mark` 경로 ④ 표본 몹 피해 배율 적용 ⑤ 계정 상태(스테이지 · 환생 · 장비).
+- **Play 전 체크리스트**(낭비 Play 0 목표): ① Rojo 동기화 — **Studio 쪽 파일 내용 대조(Rojo 실제 동기화)**: 이번에 바꾼 파일 2 ~ 3개의 Studio `Source`를 저장소 파일과 직접 비교한다(edit 모드 `execute_luau`로 길이 · 해시 또는 새 식별자 `find`). 플러그인이 "연결됨"이고 `rojo serve` 포트에 연결이 잡혀 있어도 내용이 옛것일 수 있다(QUEUE-6h-b 후속 2026-09-29 실측) ② 지연 설정(`IncomingReplicationLag`) ③ 순간이동 = `TeleportArrival.mark` 경로 ④ 표본 몹 피해 배율 적용 ⑤ 계정 상태(스테이지 · 환생 · 장비).
 - 한 Play에 검증 블록을 최대한 묶어 순서대로 실행하고, 스크린샷도 같은 Play에서 찍는다.
 
 ### 7-3. 사람 확인 분리 (사용자 지시 2026-09-28)
