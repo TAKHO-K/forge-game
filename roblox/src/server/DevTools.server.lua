@@ -4171,6 +4171,7 @@ if RunService:IsStudio() then
 				{ "G1-3(나)", function() require(script.Parent.G1_3Verify).runLive(player, env) end }, -- G1-3: 레벨차 계수(실제 Player)
 				{ "G1-2(나)", function() require(script.Parent.G1_2Verify).runLive(player, env) end }, -- G1-2: 자동 처리 · 처치 시간 측정
 				{ "G1-1(나)", function() require(script.Parent.G1_1Verify).runLive(player, env) end }, -- G1-1: 보상 띠 강화석 = 지급 식(경험치 배수)
+				{ "6hbF(나)", function() require(script.Parent.SaveLockVerify).runLive(player, env) end }, -- QUEUE-6h-b 후속: 새 계정 첫 로드 · 저장 왕복 · 약한 세션 잠금(실제 DataStore 대기 약 20초) · 음수 골드
 				{ "G1-0(나)", function() require(script.Parent.G1_0Verify).runLive(player, env) end }, -- G1-0: 받는 피해 하한 · 복귀 표본(벽 위 · 바깥 · 허공 · 연쇄) · 단상 점프 판정 · 12인 재생성 전후
 				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
 				{ "P3d(가E)", function() require(script.Parent.P3dVerify).runRegrowSeeds() end }, -- P3d: 재생성 100시드 × 6맵(무거운 계산 - 맨 끝)
