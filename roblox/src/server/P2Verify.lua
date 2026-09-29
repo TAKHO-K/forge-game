@@ -212,15 +212,16 @@ function P2Verify.runPure()
 	end)
 
 	r.section("[E] 드랍표 단일 소스 · 태초", function()
-		local divisors = { 1.30, 1.20, 1.08, 1 / 0.94, 1 / 0.97, 1 } -- P2.5c 결정 7(드래곤 최고 - tier4 · 5 = ×0.94 · ×0.97) · P2.5a C9 0.85 · 0.64 · 옛 1.9 · 1.7 · 1.35 · 1.1 · 1.05
+		-- QUEUE-6h-b R1: 기대값 갱신(M2 묶음 B-6 - 태초 기본 확률 = 잡몹 등급표 태초 칸(dragonRate ÷ dragonOverTier는 안 씀) · QUEUE-10h Q0 d699bb9 태초 가중치 2/3/3 ÷ 1,000만)
+		local weights = { 2, 2, 3, 3, 3, 3 }
 		local ok = true
 		local cells = {}
 		for tier = 1, 6 do
 			local rate = DropTable.primordialBaseRate(tier)
 			cells[tier] = ("%.5f%%"):format(rate * 100)
-			ok = ok and near(rate, DropTableData.primordial.dragonRate / divisors[tier], 1e-18) -- D1: dragonRate 0.001 → 0.000001(비율 구조 그대로)
+			ok = ok and near(rate, weights[tier] / DropTableData.fieldWeightDenominator, 1e-18)
 		end
-		r.check(("E2 tier1 ~ 6 태초 기본 확률 %s(기대 dragonRate(D1 0.0001%%) ÷ 1.30 · 1.20 · 1.08 · 1/0.94 · 1/0.97 · 1 - P2.5c)"):format(table.concat(cells, " · ")), ok)
+		r.check(("E2 tier1 ~ 6 태초 기본 확률 %s(기대 가중치 2 · 2 · 3 · 3 · 3 · 3 ÷ 1,000만 - M2 · Q0)"):format(table.concat(cells, " · ")), ok)
 		local decays = {}
 		-- P2.5a C9: 시작 70 · 1칸당 1.4%(옛 5 · 10%)
 		local expectedDecay = { [0] = 1, [69] = 1, [70] = 0.986, [100] = 0.566, [140] = 0.006, [141] = 0, [200] = 0 }
@@ -246,8 +247,9 @@ function P2Verify.runPure()
 			end
 		end
 		local tier6Same = true
+		local transcendent6 = DropTable.transcendentBaseRate(6) -- QUEUE-6h-b R1: 기대값 갱신(C5-7 초월 별도 굴림이 먼저 - 기본 표 칸마다 × (1 − 초월 확률))
 		for gradeId, chance in pairs(DropTableData.armorGradeByTier[6]) do -- D1: tier6 기본 표 = D1 표(옛 = OLD_GRADE_TABLE)
-			tier6Same = tier6Same and near(DropTable.gradeChance(6, gradeId), chance, 1e-12)
+			tier6Same = tier6Same and near(DropTable.gradeChance(6, gradeId), chance * (1 - transcendent6), 1e-12)
 		end
 		r.check(("E1.1 등급 분포 합 = 1(tier 6종 × 태초 확률 3종) %s · tier6 감쇠 없음 = 기본 표(D1)와 같다 %s"):format(tostring(sumOk), tostring(tier6Same)), sumOk and tier6Same)
 		local fairOk = true
@@ -279,15 +281,37 @@ function P2Verify.runPure()
 		local relicPrice = Loot.getSellPrice({ grade = "relic", tierIndex = 6, dropStage = 80 })
 		local expectedRelic = math.floor(1 / (ArmorData.dropChance * 0.18) * InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 80) * ArmorData.sellRecoveryRate)
 		local primPrice = Loot.getSellPrice({ grade = "primordial", tierIndex = 1, dropStage = 80 })
+		-- QUEUE-6h-b R1: 기대값 갱신(Q4 1348f50 sellPriceMode = current - 현행 표(gradeRow) 역산 ÷ 등급 수 · 고대/태초 sellCapKills 상한 · 초월 판매 불가) - legacy면 옛 식 그대로
+		local current = ArmorData.sellPriceMode == "current"
+		local function expectedPrice(gradeId, tier, stage, chance)
+			local gold = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage)
+			if not current then
+				return math.floor(1 / (ArmorData.dropChance * chance) * gold * ArmorData.sellRecoveryRate)
+			end
+			local row, grades = DropTable.gradeRow(tier), 0
+			for g, c in pairs(row) do
+				grades += (c > 0 and g ~= "transcendent") and 1 or 0
+			end
+			local kills = 1 / (ArmorData.dropChance * row[gradeId]) / math.max(1, grades)
+			local cap = ArmorData.sellCapKills and ArmorData.sellCapKills[gradeId]
+			if cap then
+				kills = math.min(kills, cap / ArmorData.sellRecoveryRate)
+			end
+			return math.floor(kills * gold * ArmorData.sellRecoveryRate)
+		end
+		if current then
+			expectedRelic = expectedPrice("relic", 6, 80)
+		end
 		local oldSame = true
 		for tier = 1, 5 do
-			for gradeId, chance in pairs(OLD_GRADE_TABLE[tier]) do
-				local expected = math.floor(1 / (ArmorData.dropChance * chance) * InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 300) * ArmorData.sellRecoveryRate)
-				oldSame = oldSame and Loot.getSellPrice({ grade = gradeId, tierIndex = tier, dropStage = 300 }) == expected
+			for gradeId, chance in pairs(current and DropTable.gradeRow(tier) or OLD_GRADE_TABLE[tier]) do
+				if gradeId ~= "transcendent" then
+					oldSame = oldSame and Loot.getSellPrice({ grade = gradeId, tierIndex = tier, dropStage = 300 }) == expectedPrice(gradeId, tier, 300, chance)
+				end
 			end
 		end
-		r.check(("E1.4b tier1 ~ 5 기존 등급 판매가(스테이지 300) = P2 전 식과 한 자리도 같다 %s(리뷰 지적 1)"):format(tostring(oldSame)), oldSame)
-		r.check(("E1.4 판매가: tier6 유물 %d(기대 P2 전 식 %d) · tier1 태초 %d(기대 > 0 - 전에는 표에 없어 0)"):format(relicPrice, expectedRelic, primPrice), relicPrice == expectedRelic and primPrice > 0)
+		r.check(("E1.4b tier1 ~ 5 판매가(스테이지 300) = %s 식과 한 자리도 같다 %s(리뷰 지적 1)"):format(current and "현행 표 역산(Q4)" or "P2 전", tostring(oldSame)), oldSame)
+		r.check(("E1.4 판매가: tier6 유물 %d(기대 %s 식 %d) · tier1 태초 %d(기대 > 0 - 전에는 표에 없어 0)"):format(relicPrice, current and "현행 표 역산(Q4)" or "P2 전", expectedRelic, primPrice), relicPrice == expectedRelic and primPrice > 0)
 		local described = DropTableQuery.describe({ bestStage = 100 }, 3, 90, 1)
 		local gradeSum = 0
 		for _, entry in ipairs(described.grades) do
@@ -403,6 +427,7 @@ function P2Verify.runLive(player, env)
 	end
 	env.ensureBackup(player) -- classes(스테이지 · 경험치 · 장비) · gold · 가방은 env.restore가 되돌린다
 	local savedDivisors = DropTableData.primordial.dragonOverTier
+	local savedTier1Primordial = DropTableData.armorGradeByTier[1].primordial -- QUEUE-6h-b R1: M2부터 태초 기본 확률 = 이 칸(E4 덮어쓰기 자리)
 	local monstersBefore, groundBefore = modelSet(MonsterState.getAllModels()), modelSet(ItemDropState.getAllModels())
 	local B, C, D = standIn("P2StandB", -9701), standIn("P2StandC", -9702), standIn("P2StandD", -9703)
 
@@ -464,8 +489,9 @@ function P2Verify.runLive(player, env)
 		r.check(("E1 조회 API(실제 Player · tier1): 사냥 %d · 최고 %s · 태초 %.6f%%(기대 서버 굴림과 같은 effectiveRate %.6f%%) · 감쇠 %.2f"):format(
 			stage, tostring(query and query.bestStage), (query and query.primordial.effectiveRate or -1) * 100, expectedRate * 100, query and query.primordial.levelDecay or -1),
 			query ~= nil and query.primordial.effectiveRate == expectedRate and query.huntStage == stage)
-		-- 태초 확률을 1로(드래곤 확률 0.1% ÷ 0.001) 잠깐 바꾸고 tier1을 실제 경로로 잡는다 - 장비가 나올 때까지(기대 개수 0.25/마리) 최대 60마리.
-		DropTableData.primordial.dragonOverTier = { DropTableData.primordial.dragonRate, 1.7, 1.35, 1.1, 1.05, 1 }
+		-- 태초 확률을 1로 잠깐 바꾸고 tier1을 실제 경로로 잡는다 - 장비가 나올 때까지(기대 개수 0.25/마리) 최대 60마리.
+		-- QUEUE-6h-b R1: 기대값 갱신(M2 묶음 B-6 - DropTable.primordialBaseRate = 잡몹 등급표 태초 칸 · dragonOverTier 덮어쓰기는 더 안 먹는다 → 등급표 tier1 태초 칸을 1로)
+		DropTableData.armorGradeByTier[1].primordial = 1
 		local drops = {}
 		local spot = WorldConfig.zones[WorldConfig.tierZoneOrder[1]].center + Vector3.new(0, 5, 0)
 		for _ = 1, 60 do
@@ -482,7 +508,7 @@ function P2Verify.runLive(player, env)
 				break
 			end
 		end
-		DropTableData.primordial.dragonOverTier = savedDivisors
+		DropTableData.armorGradeByTier[1].primordial = savedTier1Primordial
 		local ok = #drops > 0
 		local cells = {}
 		for _, item in ipairs(drops) do
@@ -494,6 +520,7 @@ function P2Verify.runLive(player, env)
 
 	-- 되돌리기
 	DropTableData.primordial.dragonOverTier = savedDivisors
+	DropTableData.armorGradeByTier[1].primordial = savedTier1Primordial
 	for _, member in ipairs({ player, B, C, D }) do
 		PartyExpBonus.debugSetPresence(member, nil)
 	end
@@ -519,9 +546,9 @@ function P2Verify.runLive(player, env)
 	end
 	r.check(("검증 뒤 되돌림: 파티 %s(기대 nil) · 스탠드인 파티 %s %s %s · 드랍표 칸 복원 %s · 치운 몬스터 %d · 치운 땅의 드랍 %d(검증이 만든 것 - 치운 뒤 남은 것 0)"):format(
 		tostring(PartyState.getParty(player)), tostring(PartyState.getParty(B)), tostring(PartyState.getParty(C)), tostring(PartyState.getParty(D)),
-		tostring(DropTableData.primordial.dragonOverTier == savedDivisors), leftoverMonsters, leftoverGround),
+		tostring(DropTableData.primordial.dragonOverTier == savedDivisors and DropTableData.armorGradeByTier[1].primordial == savedTier1Primordial), leftoverMonsters, leftoverGround),
 		PartyState.getParty(player) == nil and PartyState.getParty(B) == nil and PartyState.getParty(C) == nil and PartyState.getParty(D) == nil
-			and DropTableData.primordial.dragonOverTier == savedDivisors)
+			and DropTableData.primordial.dragonOverTier == savedDivisors and DropTableData.armorGradeByTier[1].primordial == savedTier1Primordial)
 
 	local pass, total = r.summary()
 	print(("===P2 검증 끝(나)=== %d/%d 통과"):format(pass, total))

@@ -507,14 +507,18 @@ function P3dVerify.runLive(player, env)
 		local since = os.clock()
 		BossPatterns.force(model, data, "shockwave")
 		local st = MonsterState.getBossPatternState(model)
+		local hpAtCut = nil -- QUEUE-6h-b R1: 단상이 무너진 파동의 판정이 끝난 시각의 체력(아래 cutoff 주석)
 		drive(player, root, model, data, 12, function()
+			if not hpAtCut then
+				for _, rec in ipairs(eventsOf("daisWave", since)) do
+					if rec.id == dais.id and rec.result == "break" and os.clock() >= rec.at + 0.8 then
+						hpAtCut = PlayerState.getHp(player)
+					end
+				end
+			end
 			return os.clock() - since > 1 and st.phase == "normal"
 		end, true)
-		local mine, s2Hits = 0, 0
-		for _, rec in ipairs(eventsOf("waveHit", since)) do
-			mine += rec.player == player and 1 or 0
-			s2Hits += rec.player == s2 and 1 or 0
-		end
+		hpAtCut = hpAtCut or PlayerState.getHp(player)
 		local results = {}
 		for _, rec in ipairs(eventsOf("daisWave", since)) do
 			if rec.id == dais.id then
@@ -527,12 +531,20 @@ function P3dVerify.runLive(player, env)
 				info = e.record
 			end
 		end
+		-- QUEUE-6h-b R1: 검증 환경(BR1-2 82191e4 - 지진파가 시전마다 3 ~ 5박 무작위. 단상은 2박째에 무너지고, 고정된 개발 캐릭터가 그 자리 허공에 남아 3박째부터 맞는다
+		--   = 실제로는 떨어져 바닥에 선 사람. 단상 규칙은 무너지는 파동까지만 센다 - 무너진 파동이 발밑을 지나 판정이 끝나는 시각(두께 ÷ 속도 ≈ 0.17초) + 여유, 다음 박은 ≥ 1.3초 뒤)
+		local cutoff = info and info.at + 0.8 or math.huge
+		local mine, s2Hits = 0, 0
+		for _, rec in ipairs(eventsOf("waveHit", since)) do
+			mine += (rec.player == player and rec.at <= cutoff) and 1 or 0
+			s2Hits += rec.player == s2 and 1 or 0
+		end
 		local droppedMe = false
 		for _, p in ipairs(info and info.onTop or {}) do
 			droppedMe = droppedMe or p == player
 		end
-		r.check(("C1 단상 위 지진파 판정 %d(기대 0) · 바닥 S2 %d(> 0) · 체력 %.1f → %.1f(피해 없음)"):format(mine, s2Hits, hpBefore, PlayerState.getHp(player)),
-			mine == 0 and s2Hits > 0 and near(PlayerState.getHp(player), hpBefore, 1e-6))
+		r.check(("C1 단상 위 지진파 판정 %d(기대 0 - 무너지는 파동까지) · 바닥 S2 %d(> 0) · 체력 %.1f → %.1f(피해 없음)"):format(mine, s2Hits, hpBefore, hpAtCut),
+			mine == 0 and s2Hits > 0 and near(hpAtCut, hpBefore, 1e-6))
 		r.check(("C2 단상 #%d 파동별: [%s](기대 1:crack · 2:break) · 무너질 때 위에 개발 캐릭터 %s · 남은 단상 %s"):format(dais.id, table.concat(results, " · "), tostring(droppedMe),
 			tostring(BossArenaMap.debugObstacle(encounter.zoneKey, dais.id) ~= nil)),
 			results[1] == "1:crack" and results[2] == "2:break" and droppedMe and BossArenaMap.debugObstacle(encounter.zoneKey, dais.id) == nil)

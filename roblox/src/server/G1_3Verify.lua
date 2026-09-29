@@ -45,6 +45,10 @@ function G1_3Verify.runPure()
 		local offset = CharacterLevelConfig.levelStageOffset
 		local saved = CharacterLevel.debugLevelGapOff
 		CharacterLevel.debugLevelGapOff = false
+		-- QUEUE-6h-b R1: 검증 환경(C2 3776da0 - 전투 공식이 켜져 있으면 레벨차 계수 = 1. (가) 체인은 공식을 안 끄므로 이 항목에서만 끄고 되돌린다)
+		local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula)
+		local savedFormulaOff = CombatFormula.debugOff
+		CombatFormula.debugOff = true
 		local edge = 1 + offset + free -- Lv.1이 벌점 없이 설 수 있는 가장 높은 스테이지
 		local atEdge = CharacterLevel.levelGapStages(1, edge)
 		local plus10 = { CharacterLevel.levelGapDealMultiplier(1, edge + 10), CharacterLevel.levelGapTakeMultiplier(1, edge + 10) }
@@ -53,6 +57,7 @@ function G1_3Verify.runPure()
 		CharacterLevel.debugLevelGapOff = true
 		local off = { CharacterLevel.levelGapDealMultiplier(1, 5000), CharacterLevel.levelGapTakeMultiplier(1, 5000) }
 		CharacterLevel.debugLevelGapOff = saved
+		CombatFormula.debugOff = savedFormulaOff
 		r.check(("무료 폭 %.2f칸(기대 100 - 힘 비율 1.02^100) · Lv.1 경계 스테이지 %.0f(= 1 + %d + 100) 칸 %.4f(기대 0) · +10칸 주는 ×%.2f 받는 ×%.2f(기대 0.90 · 1.20) · 스테이지 5000 ×%.2f · ×%.2f(기대 하한 %.2f · 상한 %.0f) · Lv.4800 ×%.2f · ×%.2f(기대 1 · 1) · 검증 스위치 ×%.0f · ×%.0f(기대 1 · 1)"):format(
 			free, edge, offset, atEdge, plus10[1], plus10[2], far[1], far[2], config.dealFloor, config.takeCap, leveled[1], leveled[2], off[1], off[2]),
 			near(free, 100, 1e-9) and near(atEdge, 0, 1e-9) and near(plus10[1], 0.9, 1e-9) and near(plus10[2], 1.2, 1e-9) and far[1] == config.dealFloor and far[2] == config.takeCap

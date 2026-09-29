@@ -242,6 +242,7 @@ function G2aVerify.runLive(player, env)
 		BossEncounter.spawnFor(player, STAGE)
 		local encounter = BossEncounter.getEncounter(player)
 		assert(encounter and encounter.model, "보스 스폰 실패")
+		encounter.model:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 환경(BR1-4c 71d83d6 진입 연출 동안 보스 피해 0 - 스폰 직후 한 대가 막혔다. 연출만 건너뛴다)
 		CharacterLevel.debugLevelGapOff = false
 		local hp0, maxHp = MonsterState.getBossHp(encounter.model)
 		MonsterState.applyDamage(encounter.model, maxHp * 0.01, STAGE, player)

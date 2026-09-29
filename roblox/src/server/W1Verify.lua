@@ -141,15 +141,16 @@ function V.runPure()
 					table.insert(bad, classId .. " 전조 ≠ 서버 발사 시각")
 				end
 			elseif class then
-				local cd = PlayerCombat.getAttackCooldown(classId, 0, 1)
+				-- QUEUE-6h-b R1: 기대값 갱신(C3-2 d35fec0부터 실제 입력 간격 = getAttackTempo(쌍검 = 2타 묶음 0.45초) · 옛 쿨다운 0.175는 DPS 기준값 - W3a efdcd6f가 쌍검 1타를 0.377로 늘림 → 1타 길이 ≤ 실제 간격)
+				local cd = PlayerCombat.getAttackTempo(classId, 0, 1)
 				local total = w.attacks[1].ant + w.attacks[1].act + w.attacks[1].rec
 				table.insert(lens, ("%s %.3f/%.3f"):format(classId, total, cd))
-				if math.abs(total - cd) > 0.05 then
-					table.insert(bad, classId .. " 길이 ≠ 공격 간격")
+				if total > cd + 0.05 then
+					table.insert(bad, classId .. " 길이 > 공격 간격")
 				end
 			end
 		end
-		r.check(("무기 5종 · 대기 · 이동 · 대시 · 일어나기 · 3타 · 공중 클립(전조 · 동작 · 회복 · 키 포즈 4 · R15 관절) · ×1 1타 길이 ≈ 공격 간격(%s) - 틀림 %d%s"):format(table.concat(lens, " · "), #bad, #bad > 0 and (" " .. table.concat(bad, " / ")) or ""), #bad == 0)
+		r.check(("무기 5종 · 대기 · 이동 · 대시 · 일어나기 · 3타 · 공중 클립(전조 · 동작 · 회복 · 키 포즈 4 · R15 관절) · ×1 1타 길이 ≤ 실제 공격 간격(%s) - 틀림 %d%s"):format(table.concat(lens, " · "), #bad, #bad > 0 and (" " .. table.concat(bad, " / ")) or ""), #bad == 0)
 		local B = PlayerMotionData.blend
 		r.check(("전환 blend %.2f ~ %.2f(기본 %.2f) · 꺼내기 두 구간 %.3f · %.3f 안(공격 시작만 %.2f - 타격 프레임 ≤ 0.05 때문 · 보고서)"):format(B.min, B.max, B.default,
 			PlayerMotionData.drawSeconds * PlayerMotionData.drawGrabT, PlayerMotionData.drawSeconds * (1 - PlayerMotionData.drawGrabT), B.attackIn),

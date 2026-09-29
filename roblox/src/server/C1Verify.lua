@@ -323,6 +323,9 @@ function V.runLive(player, env)
 	print("===C1 검증 시작(나)===")
 	local r = newRecorder("나")
 	env.ensureBackup(player)
+	-- QUEUE-6h-b R1: 검증 환경(C5-4 자동 스테이지 이동 - 5초마다 최고 기록 아래로 옮겨 8초 대기 칸의 참여 스테이지가 32 → 46으로 바뀌었다. 이 블록 동안 끈다)
+	local savedAutoStage = player:GetAttribute("AutoStage")
+	player:SetAttribute("AutoStage", "off")
 	local MonsterState = require(script.Parent.MonsterState)
 	local MonsterSpawner = require(script.Parent.MonsterSpawner)
 	local CombatResolution = require(script.Parent.CombatResolution)
@@ -428,7 +431,10 @@ function V.runLive(player, env)
 			CombatConfig.supportRadiusStuds, tostring(farRef), tostring(bigRef), tostring(nearRef), tostring(attackStage)),
 			farRef == 32 and bigRef == 32 and nearRef == 40 and attackStage == 40)
 		-- 어그로: 몹을 Player 곁에 두고 MonsterAI가 쫓게 한다
-		local chaser = MonsterSpawner.spawn(data, root.Position + Vector3.new(8, 0, 0), nil, {})
+		-- QUEUE-6h-b R1: 검증 환경(M2 921b7e8 - 안전 지대(허브 잎 덮개 반경 400 · 캠프) 안의 사람은 쫓던 몹이 바로 놓는다. 개발 캐릭터 시작 자리 = 허브 → 사냥터 지점 곁에서 잰다)
+		local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+		local huntSpot = require(ReplicatedStorage.Shared.WorldMapLayout).huntPoints(WorldMapData.zones[1])[1].position
+		local chaser = MonsterSpawner.spawn(data, huntSpot + Vector3.new(8, 0, 0), nil, {})
 		table.insert(spawned, chaser)
 		-- 스포너가 지면 탐지로 몹을 윗면에 놓는다 - 캐릭터가 나무 터널 안(허브 시작 자리)이면 높이차 > 8이라 어그로 불가 → 캐릭터를 몹과 같은 층 곁으로 옮긴다
 		root.CFrame = CFrame.new(chaser.PrimaryPart.Position + Vector3.new(-8, 0, 0))
@@ -497,6 +503,7 @@ function V.runLive(player, env)
 		end
 	end
 	env.restore(player)
+	player:SetAttribute("AutoStage", savedAutoStage)
 	local pass, total = r.summary()
 	print(("===C1 검증 끝(나)=== %d/%d 통과"):format(pass, total))
 end

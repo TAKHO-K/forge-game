@@ -119,9 +119,11 @@ function P25bVerify.runPure()
 		local cost1 = Inherit.cost("relic", 1, 0)
 		local cost1000 = Inherit.cost("relic", 1000, 0)
 		local expected1000 = GoldCost.cost(MonsterData.tier1.goldDrop * InheritConfig.goldKillEquivalent.relic, 1000, "inherit")
+		-- QUEUE-6h-b R1: 기대값 갱신(C3-3 d35fec0 - tier1.goldDrop = 6 × 0.825 = 4.95(정수 아님) → 스테이지 1 비용도 GoldCost처럼 내림)
+		local expected1 = math.floor(MonsterData.tier1.goldDrop * InheritConfig.goldKillEquivalent.relic)
 		r.check(("A1 비용: 유물 스테이지 1 = %d(기대 %d) · 1000 = %d(기대 %d - GoldCost 곡선) · 10%% 할인 %d"):format(
-			cost1, MonsterData.tier1.goldDrop * InheritConfig.goldKillEquivalent.relic, cost1000, expected1000, Inherit.cost("relic", 1000, 0.1)),
-			cost1 == MonsterData.tier1.goldDrop * InheritConfig.goldKillEquivalent.relic and cost1000 == expected1000 and Inherit.cost("relic", 1000, 0.1) == math.floor(expected1000 * 0.9))
+			cost1, expected1, cost1000, expected1000, Inherit.cost("relic", 1000, 0.1)),
+			cost1 == expected1 and cost1000 == expected1000 and Inherit.cost("relic", 1000, 0.1) == math.floor(expected1000 * 0.9))
 		local rising = true
 		for i = 2, #ArmorData.gradeOrder do
 			rising = rising and Inherit.cost(ArmorData.gradeOrder[i], 500, 0) > Inherit.cost(ArmorData.gradeOrder[i - 1], 500, 0)
@@ -188,9 +190,10 @@ function P25bVerify.runPure()
 			local goldB, dustB = GemCraft.refineCost(grades[i], 500)
 			rising = rising and goldB > goldA and dustB > dustA
 		end
-		r.check(("B2 비용: 태초 스테이지 1 = %d골드(기대 %d) · 1000 = %d(GoldCost %d) · 등급이 오를수록 골드 · 가루가 커진다 %s"):format(gold1, MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial,
+		-- QUEUE-6h-b R1: 기대값 갱신(C3-3 d35fec0 - tier1.goldDrop 4.95 → 스테이지 1 비용도 내림)
+		r.check(("B2 비용: 태초 스테이지 1 = %d골드(기대 %d) · 1000 = %d(GoldCost %d) · 등급이 오를수록 골드 · 가루가 커진다 %s"):format(gold1, math.floor(MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial),
 			gold1000, GoldCost.cost(MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial, 1000, "refine"), tostring(rising)),
-			gold1 == MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial and gold1000 == GoldCost.cost(MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial, 1000, "refine") and rising)
+			gold1 == math.floor(MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial) and gold1000 == GoldCost.cost(MonsterData.tier1.goldDrop * GemData.dust.refineGoldKills.primordial, 1000, "refine") and rising)
 	end)
 
 	r.section("[D] 환생 후 레벨 마일스톤", function()

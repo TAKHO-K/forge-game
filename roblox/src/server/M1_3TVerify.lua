@@ -330,11 +330,12 @@ function V.runPure()
 			MovementConfig.water.dashInWater == false and MovementConfig.water.rechargeInWater == false)
 	end)
 	r.section("스폰 지점(지형 판정)", function()
-		local bad, total = {}, 0
+		local bad, total, want = {}, 0, 0
 		local S = WorldMapData.spawnSites
 		for _, z in ipairs(WorldMapData.zones) do
 			local pts = WorldMapLayout.huntPoints(z)
 			total += #pts
+			want += S.pointsByZone and S.pointsByZone[z.key] or S.pointsPerRange -- QUEUE-6h-b R1: 기대값 갱신(Q1 bbc2c4a - T6 지점 88 = pointsByZone)
 			for _, p in ipairs(pts) do
 				local lo, hi = math.huge, -math.huge
 				for _, q in ipairs({ p.position, p.slots[1], p.slots[2], p.slots[3] }) do
@@ -355,7 +356,7 @@ function V.runPure()
 			end
 		end
 		r.check(("스폰 지점 %d곳(구역 %d × %d): 물 · 경사(≤ %d) · 절벽 위 · 선인장 위반 %d%s"):format(total, #WorldMapData.zones, S.pointsPerRange, S.terrain.maxRelief, #bad, #bad > 0 and (" - " .. table.concat(bad, " / ", 1, math.min(#bad, 6))) or ""),
-			#bad == 0 and total == #WorldMapData.zones * S.pointsPerRange)
+			#bad == 0 and total == want)
 	end)
 	r.section("봉우리 · 랜드마크 · 높은 곳 규칙", function()
 		local maxByZone = {}

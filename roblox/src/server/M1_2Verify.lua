@@ -348,7 +348,8 @@ function M1_2Verify.runPure()
 			local inRegion = flat(range.center, regionC) + range.radius <= D.layout.regionRadius
 			local campOut = flat(WorldMapLayout.camp(z), range.center) > range.radius and flat(WorldMapLayout.gate(z), range.center) > range.radius
 			table.insert(rows, ("%s %d곳 간격≥%.0f"):format(z.key, #pts, minGap))
-			ok = ok and #pts == S.pointsPerRange and minGap >= S.pointSpacing and outside == 0 and hitsBlock == 0 and inRegion and campOut and #z.hunt.monsters >= 1
+			-- QUEUE-6h-b R1: 기대값 갱신(Q1 bbc2c4a - T6 지점 88 = pointsByZone)
+			ok = ok and #pts == (S.pointsByZone and S.pointsByZone[z.key] or S.pointsPerRange) and minGap >= S.pointSpacing and outside == 0 and hitsBlock == 0 and inRegion and campOut and #z.hunt.monsters >= 1
 		end
 		r.check(("구역마다 스폰 지점(범위 반경 %d · 한곳에 몰리지 않게 최소 간격 %d · 캠프 · 관문 · 지형 · 둥지 회피 · 범위가 구역 원 안 · 캠프 · 관문은 범위 밖): %s"):format(S.huntRange.radius, S.pointSpacing, table.concat(rows, " · ")), ok)
 		local SpawnSites = require(script.Parent.SpawnSites)

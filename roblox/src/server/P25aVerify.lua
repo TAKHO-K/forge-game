@@ -81,12 +81,15 @@ function P25aVerify.runPure()
 
 	r.section("[C1] k · 기준값 · 상한", function()
 		local hp10 = InfiniteStage.getMonsterHp(MonsterData.tier1.hp, 10)
-		r.check(("C1.1 k = %.3f(기대 1.02) · 스테이지 1 tier1 HP %.0f · 공격 %.0f · 골드 %.0f(기대 80 · 8 · 6 - 기준값 고정) · 스테이지 10 HP %.4f(기대 80 × 1.02^9 = %.4f)"):format(
-			InfiniteStageConfig.growthRate, InfiniteStage.getMonsterHp(MonsterData.tier1.hp, 1), InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, 1), InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 1), hp10, 80 * 1.02 ^ 9),
-			InfiniteStageConfig.growthRate == 1.02 and MonsterData.tier1.hp == 80 and MonsterData.tier1.attack == 8 and MonsterData.tier1.goldDrop == 6 and near(hp10, 80 * 1.02 ^ 9, 1e-12))
+		-- QUEUE-6h-b R1: 기대값 갱신(C3-3 d35fec0 - 잡몹 HP · 골드 = 옛 앵커 80 · 6 × tierHpRelative[1] 0.825 = 66 · 4.95 · 공격 8 그대로)
+		local scale1 = MonsterData.tierHpRelative[1]
+		r.check(("C1.1 k = %.3f(기대 1.02) · 스테이지 1 tier1 HP %.0f · 공격 %.0f · 골드 %.0f(기대 80 × %.3f · 8 · 6 × %.3f 내림 - C3-3) · 스테이지 10 HP %.4f(기대 HP × 1.02^9 = %.4f)"):format(
+			InfiniteStageConfig.growthRate, InfiniteStage.getMonsterHp(MonsterData.tier1.hp, 1), InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, 1), InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, 1), scale1, scale1, hp10, 80 * scale1 * 1.02 ^ 9),
+			InfiniteStageConfig.growthRate == 1.02 and near(MonsterData.tier1.hp, 80 * scale1, 1e-12) and MonsterData.tier1.attack == 8 and near(MonsterData.tier1.goldDrop, 6 * scale1, 1e-12) and near(hp10, 80 * scale1 * 1.02 ^ 9, 1e-12))
 		local cap = InfiniteStageConfig.safeStageCap
 		local atCap, afterCap = largestValue(cap), largestValue(cap + 1)
-		r.check(("C1.2 안전 상한 %d: 최대 수치 %.3g < 1e300 · %d = %.3g ≥ 1e300(같은 정의를 새 k로)"):format(cap, atCap, cap + 1, afterCap), atCap < 1e300 and afterCap >= 1e300)
+		-- QUEUE-6h-b R1: 기대값 갱신(C3-3 잡몹 HP ×0.825 · P3c 경험치 곡선 뒤 최대 수치가 줄어 경계가 상한 뒤로 밀림 - 안전(상한 안 < 1e300)만 합격 기준 · 경계 딱 맞음은 참고)
+		r.check(("C1.2 안전 상한 %d: 최대 수치 %.3g < 1e300 · %d = %.3g(참고 - 옛 경계 ≥ 1e300)"):format(cap, atCap, cap + 1, afterCap), atCap < 1e300)
 		local design = InfiniteStageConfig.designMaxStage
 		local atDesign = largestValue(design)
 		r.check(("C1.3 설계 최대 %d: 최대 수치(보스 4인 · 레벨 경험치 누적) %.3g < 1e250(R2)"):format(design, atDesign), atDesign < 1e250)
@@ -116,15 +119,18 @@ function P25aVerify.runPure()
 		local main = CharacterLevel.getWeaponExpMultiplier(101) / CharacterLevel.getWeaponExpMultiplier(100)
 		local before = CharacterLevel.getWeaponExpMultiplier(late.fromLevel) / CharacterLevel.getWeaponExpMultiplier(late.fromLevel - 1)
 		local segOk, cells = true, {}
+		-- QUEUE-6h-b R1: 기대값 갱신(C5-1 dealGear.share 0.35 - 레벨이 성장 지수의 (1 − share)만 맡는다: g → g^(1 − share) · k^몫 → k^(몫 × (1 − share)))
+		local levelShare = 1 - (CharacterLevelConfig.dealGear and CharacterLevelConfig.dealGear.share or 0)
 		for _, segment in ipairs(segments) do
 			local ratio = CharacterLevel.getWeaponExpMultiplier(segment.fromLevel + 1) / CharacterLevel.getWeaponExpMultiplier(segment.fromLevel)
-			local expected = InfiniteStageConfig.growthRate ^ segment.kShare
+			local expected = InfiniteStageConfig.growthRate ^ (segment.kShare * levelShare)
 			segOk = segOk and near(ratio, expected, 1e-12)
 			table.insert(cells, ("%d→ %.6f(k^%.3f)"):format(segment.fromLevel, ratio, segment.kShare))
 		end
-		r.check(("C2.1 무기 계수 한 레벨 비: 100→101 %.6f(기대 g %.3f) · %d→%d %.6f(기대 g) · 구간 %d개 %s"):format(
-			main, CharacterLevelConfig.weaponMultGrowthRate, late.fromLevel - 1, late.fromLevel, before, #segments, table.concat(cells, " · ")),
-			near(main, CharacterLevelConfig.weaponMultGrowthRate, 1e-12) and near(before, CharacterLevelConfig.weaponMultGrowthRate, 1e-12) and segOk)
+		local gLevel = CharacterLevelConfig.weaponMultGrowthRate ^ levelShare
+		r.check(("C2.1 무기 계수 한 레벨 비(레벨 몫 %.2f): 100→101 %.6f(기대 g^몫 %.6f) · %d→%d %.6f(기대 g^몫) · 구간 %d개 %s"):format(
+			levelShare, main, gLevel, late.fromLevel - 1, late.fromLevel, before, #segments, table.concat(cells, " · ")),
+			near(main, gLevel, 1e-12) and near(before, gLevel, 1e-12) and segOk)
 		local expOk = true
 		for _, level in ipairs({ 1, 25, 100, 5000, 20000 }) do
 			-- P3c C4: 126부터 레벨별 경험치 배수(CharacterLevel.getExpScale)가 곱해진다(처치 수는 그대로).
@@ -184,18 +190,23 @@ function P25aVerify.runPure()
 		local weapon30 = { id = WeaponData.starterId, level = 30, grade = 0 }
 		local ratio = PlayerCombat.getAttack(weapon30, "greatsword", 100, 0) / PlayerCombat.getAttack(weapon0, "greatsword", 100, 0)
 		local withOption = PlayerCombat.getAttack(weapon30, "greatsword", 100, 0, 0.5) / PlayerCombat.getAttack(weapon30, "greatsword", 100, 0)
-		r.check(("C5.3 공격력(최종 데미지 버킷 포함) +30 ÷ +0 = %.9f(기대 20) · 옵션 최종 데미지 +50%% → ×%.6f(기대 (1 + 1.05 + 0.5) ÷ 2.05 = %.6f - 합연산)"):format(ratio, withOption, 2.55 / 2.05),
-			near(ratio, 20, 1e-9) and near(withOption, 2.55 / 2.05, 1e-12))
+		-- QUEUE-6h-b R1: 기대값 갱신(S1 후속 0-3 32c4c4f - 최종 데미지 버킷 합 상한 CombatConfig.finalDamageBonusCap 1.05 = +30 강화만으로 가득 → 옵션은 +0 무기에서 합연산 확인)
+		local cappedExpected = (1 + math.min(1.05 + 0.5, CombatConfig.finalDamageBonusCap)) / 2.05
+		local withOption0 = PlayerCombat.getAttack(weapon0, "greatsword", 100, 0, 0.5) / PlayerCombat.getAttack(weapon0, "greatsword", 100, 0)
+		r.check(("C5.3 공격력(최종 데미지 버킷 포함) +30 ÷ +0 = %.9f(기대 20) · 옵션 최종 데미지 +50%%: +30 ×%.6f(기대 상한 %.2f → %.6f) · +0 ×%.6f(기대 1.5 - 합연산)"):format(ratio, withOption, CombatConfig.finalDamageBonusCap, cappedExpected, withOption0),
+			near(ratio, 20, 1e-9) and near(withOption, cappedExpected, 1e-12) and near(withOption0, 1.5, 1e-12))
 	end)
 
 	r.section("[C6 · C8 · C9 · C10] 등급 · 골드 · 태초 · 보석", function()
 		local ok = true
+		-- QUEUE-6h-b R1: 기대값 갱신(D1 상위 등급 위력 가속 - 갑옷 방어 계단 = 희귀 ×1.45 · 영웅 ×1.45 · 전설 ×1.5 · 유물 ×1.7 · 고대 ×2 · 태초 ×2.5 · 초월 = C5-7 태초 × armorStep(D1Verify · C5 검증 몫). ×1.45는 무기 · 옵션 표(statMultiplier)만 - 초월까지)
+		local defenseSteps = { 1.45, 1.45, 1.5, 1.7, 2, 2.5 }
 		for i = 2, #ArmorData.gradeOrder do
 			local a, b = ArmorData.gradeOrder[i - 1], ArmorData.gradeOrder[i]
 			ok = ok and near(ItemVisualData.gradeVisuals[b].statMultiplier / ItemVisualData.gradeVisuals[a].statMultiplier, 1.45, 1e-12)
-				and near(ArmorData.grades[b].defenseGradeMultiplier / ArmorData.grades[a].defenseGradeMultiplier, 1.45, 1e-12)
+				and (defenseSteps[i - 1] == nil or near(ArmorData.grades[b].defenseGradeMultiplier / ArmorData.grades[a].defenseGradeMultiplier, defenseSteps[i - 1], 1e-12))
 		end
-		r.check(("C6 등급 1단계 ×1.45(무기 · 장갑 · 신발 · 옵션 표와 갑옷 표 모두) %s · 일반 1.0 · 갑옷 일반 %.3f · 태초 %.4f · tier6 r %.4f"):format(tostring(ok), ArmorData.grades.normal.defenseGradeMultiplier,
+		r.check(("C6 등급 1단계 ×1.45(무기 · 장갑 · 신발 · 옵션 표) · 갑옷 표 = D1 가속 계단 %s · 일반 1.0 · 갑옷 일반 %.3f · 태초 %.4f · tier6 r %.4f"):format(tostring(ok), ArmorData.grades.normal.defenseGradeMultiplier,
 			ItemVisualData.gradeVisuals.primordial.statMultiplier, MonsterData.getRewardRatio(6)), ok and ItemVisualData.gradeVisuals.normal.statMultiplier == 1 and ArmorData.grades.normal.defenseGradeMultiplier == 1.184)
 		local goldOk = InfiniteStage.getGoldReward(6, 1000) == math.floor(6 * InfiniteStageConfig.goldGrowthRate ^ 999) and GoldCostConfig.anchorStage.enhance == 1
 		local ratio = Enhance.getCost(20, 5001) / Enhance.getCost(20, 5000)

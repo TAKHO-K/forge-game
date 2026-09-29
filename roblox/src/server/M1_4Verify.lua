@@ -278,7 +278,7 @@ function V.runPure()
 		end
 		local okCount = true
 		for _, z in ipairs(WorldMapData.zones) do
-			okCount = okCount and byZone[z.key] == S.pointsPerRange
+			okCount = okCount and byZone[z.key] == (S.pointsByZone and S.pointsByZone[z.key] or S.pointsPerRange) -- QUEUE-6h-b R1: 기대값 갱신(Q1 bbc2c4a - T6 지점 88 = pointsByZone)
 		end
 		r.check(("스폰 지점 %d곳(구역마다 %d - 옛 34의 %.2f배) · 슬롯 %d(반경 %d)"):format(#list, S.pointsPerRange, S.pointsPerRange / 34, #list[1].slots, S.group.radius), okCount and #list[1].slots == S.group.maxSize)
 		-- 무리 크기 표
@@ -479,16 +479,20 @@ function V.runLive(player, env)
 	r.section("굽힌 지형 · 캡슐", function()
 		local bad = TerrainBake.checkVersion()
 		r.check(("지형 표식(버전 %d · 서명) 불일치 %d%s"):format(TerrainGenData.version.tier1, #bad, #bad > 0 and (" - " .. table.concat(bad, " / ")) or ""), #bad == 0)
-		local blocked, checked = TerrainBake.capsuleCheck(WorldStructures.nestList())
+		-- QUEUE-6h-b R1: 검증 환경(S1 후속 32c4c4f - 서버 실행 중엔 번개 문 표식(Cycle)을 지우고 이름도 "Rock"으로 중립화 → 호출부가 문 목록을 넘겨야 뺀다(M1-3T와 같게). 문이 닫힌 순간이면 t5_c_h1이 막힘으로 나왔다)
+		local blocked, checked = TerrainBake.capsuleCheck(WorldStructures.nestList(), require(script.Parent.NestServer).debugTimedDoors())
 		r.check(("둥지 캡슐 통과(파트 · 소품 포함 실제 서버) 점 %d: 막힘 %d%s"):format(checked, #blocked, #blocked > 0 and (" - " .. table.concat(blocked, " / ", 1, math.min(#blocked, 6))) or ""), #blocked == 0)
 	end)
 	r.section("소품 라이브러리 · 지형 붙이기", function()
 		local folder = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Props")
-		local lib = folder and #folder:GetChildren() or 0
+		local lib = 0 -- QUEUE-6h-b R1: 기대값 갱신(BR1-4c 71d83d6 c-12 - 같은 폴더에 보스맵 소품 본 Arena_<kind>(레시피)가 들어온다 · 맵 소품 라이브러리 수에서 뺀다)
 		local n, templ = 0, 0
 		for _, m in ipairs(folder and folder:GetChildren() or {}) do
 			if m:GetAttribute("PropSource") == "template" then
 				templ += 1
+			end
+			if m.Name:sub(1, 6) ~= "Arena_" then
+				lib += 1
 			end
 		end
 		for _, m in ipairs(Workspace:GetDescendants()) do

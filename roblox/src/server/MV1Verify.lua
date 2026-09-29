@@ -401,7 +401,8 @@ function V.runLive(player, env)
 	r.section("공중 공격(AttackHook)", function()
 		local hook = ServerStorage:FindFirstChild("AttackHook")
 		local classId = PlayerProfile.getClassId(player)
-		local cd = CombatConfig.attackCooldownSeconds / ClassData.classes[classId].atkSpeed + 0.08
+		-- QUEUE-6h-b R1: 기대값 갱신(C3-2 d35fec0 - 서버 입력 간격 = PlayerCombat.getAttackTempo(기본 0.45초 · 옛 쿨다운 0.28 ÷ 공속은 DPS 기준값) → 옛 간격으로 치면 둘째 타가 ignored)
+		local cd = require(ReplicatedStorage.Shared.PlayerCombat).getAttackTempo(classId, 0, 1) + 0.08
 		local function swing(air)
 			task.wait(cd)
 			return hook:Invoke(player, nil, air)

@@ -88,12 +88,17 @@ function P25cVerify.runPure()
 		end
 		r.check(("H2 지급 표 %s(기대 355 없음 · 360 하락 · 365 없음 · 540 하락 · 720 · 900 둘 다 · 옛 50 · 100 없음) · 설계 최대까지 하락 %d장(옛 번호면 약 850)"):format(table.concat(cells, " "), total),
 			grantsOk and total > 100 and total < 150)
-		local extras = {}
+		-- QUEUE-6h-b R1: 기대값 갱신(BR1-2 6300705 - densityExtra = 난이도 곡선 BossCurveData의 zoneExtra(BossSkillMath.curveRow) · 옛 stageDensity 계단 0 · 1 · 2 · 3 · 3 폐지 - 곡선 값 · 단조만 본다)
+		local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
+		local extras, curveOk, last = {}, true, -1
 		for _, stage in ipairs({ 350, 355, 535, 715, 5000 }) do
-			table.insert(extras, BossRules.densityExtra(stage))
+			local extra = BossRules.densityExtra(stage)
+			table.insert(extras, extra)
+			curveOk = curveOk and extra == (BossRules.isPairStage(stage) and 0 or BossSkillMath.curveRow(stage).zoneExtra) and extra >= last
+			last = extra
 		end
-		r.check(("H3 보스 밀도 시작 %d · 간격 %d(기대 175 · 180) · extra 350 · 355 · 535 · 715 · 5000 = %s(기대 0 · 1 · 2 · 3 · 3)"):format(density.startStage, density.stepStages, table.concat(extras, " · ")),
-			density.startStage == 175 and density.stepStages == 180 and table.concat(extras, ",") == "0,1,2,3,3" and samePower(density.startStage, 25, interval))
+		r.check(("H3 보스 밀도 시작 %d · 간격 %d(기대 175 · 180) · extra 350 · 355 · 535 · 715 · 5000 = %s(기대 곡선 zoneExtra · 단조 증가 - BR1-2)"):format(density.startStage, density.stepStages, table.concat(extras, " · ")),
+			density.startStage == 175 and density.stepStages == 180 and curveOk and samePower(density.startStage, 25, interval))
 	end)
 
 	r.section("[F · G] 보스 드랍 · 태초 tier", function()
@@ -114,30 +119,37 @@ function P25cVerify.runPure()
 			table.concat(deltas, " · "), table.concat(weights, " : "), samples, (counts[0] or 0) / samples, (counts[7] or 0) / samples, (counts[15] or 0) / samples, bad),
 			table.concat(deltas, ",") == "0,7,15" and table.concat(weights, ",") == "3,2,1" and bad == 0
 				and math.abs((counts[0] or 0) / samples - 0.5) <= 0.015 and math.abs((counts[7] or 0) / samples - 1 / 3) <= 0.015 and math.abs((counts[15] or 0) / samples - 1 / 6) <= 0.015)
+		-- QUEUE-6h-b R1: 기대값 갱신(M2 묶음 B-6 3구간 정수 가중치 · QUEUE-10h Q0 d699bb9 태초 2/3/3 - tier가 오를수록 줄지 않음 · 드래곤(tier6) 최고(같음 허용) · dragonRate ÷ dragonOverTier는 안 씀)
 		local rates, rising = {}, true
+		local weights = { 2, 2, 3, 3, 3, 3 }
 		for tier = 1, 6 do
 			rates[tier] = DropTable.primordialBaseRate(tier)
+			rising = rising and near(rates[tier], weights[tier] / DropTableData.fieldWeightDenominator, 1e-18)
 			if tier > 1 then
-				rising = rising and rates[tier] > rates[tier - 1]
+				rising = rising and rates[tier] >= rates[tier - 1]
 			end
 		end
-		local dragon = DropTableData.primordial.dragonRate
-		r.check(("G 태초 기본 확률 tier1 ~ 6 = %.4f%% · %.4f%% · %.4f%% · %.4f%% · %.4f%% · %.4f%% · tier가 오를수록 커진다 %s · tier4 · 5 ÷ 드래곤 = %.3f · %.3f(기대 0.94 · 0.97 - 드래곤 최고)"):format(
-			rates[1] * 100, rates[2] * 100, rates[3] * 100, rates[4] * 100, rates[5] * 100, rates[6] * 100, tostring(rising), rates[4] / dragon, rates[5] / dragon),
-			rising and rates[6] == dragon and near(rates[4] / dragon, 0.94, 1e-9) and near(rates[5] / dragon, 0.97, 1e-9))
+		r.check(("G 태초 기본 확률 tier1 ~ 6 = %.5f%% · %.5f%% · %.5f%% · %.5f%% · %.5f%% · %.5f%%(기대 가중치 2 · 2 · 3 · 3 · 3 · 3 ÷ 1,000만) · tier가 오를수록 줄지 않음 · 드래곤 최고 %s"):format(
+			rates[1] * 100, rates[2] * 100, rates[3] * 100, rates[4] * 100, rates[5] * 100, rates[6] * 100, tostring(rising)),
+			rising and rates[6] >= math.max(rates[1], rates[2], rates[3], rates[4], rates[5]))
 	end)
 
 	r.section("[B] 신규 보호", function()
 		local p = CombatConfig.newbieProtection
+		-- QUEUE-6h-b R1: 기대값 갱신(BR1-2 78ee3ae - 신규 보호 1 ~ 30: 1 ~ plateauStage 24 기하(×0.10 → ×0.30) · 25 ~ 30 smoothstep · 31부터 ×1)
 		local m1, m10, m20, m21 = PlayerCombat.getNewbieDamageMultiplier(1), PlayerCombat.getNewbieDamageMultiplier(10), PlayerCombat.getNewbieDamageMultiplier(20), PlayerCombat.getNewbieDamageMultiplier(21)
+		local mEnd, mAfter = PlayerCombat.getNewbieDamageMultiplier(p.untilStage), PlayerCombat.getNewbieDamageMultiplier(p.untilStage + 1)
+		local function geo(stage)
+			return p.atStage1 * (p.atPlateau / p.atStage1) ^ ((stage - 1) / (p.plateauStage - 1))
+		end
 		local monotone = true
 		for stage = 2, p.untilStage + 2 do
 			monotone = monotone and PlayerCombat.getNewbieDamageMultiplier(stage) >= PlayerCombat.getNewbieDamageMultiplier(stage - 1)
 		end
-		r.check(("B1 받는 피해 배율 스테이지 1 %.3f · 10 %.3f · 20 %.3f · 21 %.3f · nil %s(기대 %.2f · %.3f · %.3f · 1 · 1 - 기하 감소) · 단조 증가 %s"):format(
-			m1, m10, m20, m21, tostring(PlayerCombat.getNewbieDamageMultiplier(nil)), p.atStage1, p.atStage1 ^ (1 - 9 / p.untilStage), p.atStage1 ^ (1 - 19 / p.untilStage), tostring(monotone)),
-			near(m1, p.atStage1, 1e-12) and near(m10, p.atStage1 ^ (1 - 9 / p.untilStage), 1e-12) and near(m20, p.atStage1 ^ (1 - 19 / p.untilStage), 1e-12) and m21 == 1
-				and PlayerCombat.getNewbieDamageMultiplier(nil) == 1 and monotone and p.untilStage == 20)
+		r.check(("B1 받는 피해 배율 스테이지 1 %.3f · 10 %.3f · 20 %.3f · 21 %.3f · %d %.3f · %d %.3f · nil %s(기대 %.2f · %.3f · %.3f · %.3f - 기하 · %d < 1 · %d = 1) · 단조 증가 %s"):format(
+			m1, m10, m20, m21, p.untilStage, mEnd, p.untilStage + 1, mAfter, tostring(PlayerCombat.getNewbieDamageMultiplier(nil)), p.atStage1, geo(10), geo(20), geo(21), p.untilStage, p.untilStage + 1, tostring(monotone)),
+			near(m1, p.atStage1, 1e-12) and near(m10, geo(10), 1e-12) and near(m20, geo(20), 1e-12) and near(m21, geo(21), 1e-12) and mEnd < 1 and mAfter == 1
+				and PlayerCombat.getNewbieDamageMultiplier(nil) == 1 and monotone and p.untilStage == 30)
 		local loadout = BalanceSim.buildAnchorLoadout("bow", 1, 0)
 		local attack = BalanceSim.getMonsterAttack(1)
 		local plain = BalanceSim.getSurviveHits(loadout, attack)
@@ -158,10 +170,11 @@ function P25cVerify.runPure()
 		for count = 1, 5 do
 			reclaim[count] = CharacterLevel.getReclaimMultiplier(count, 1, 125)
 		end
-		r.check(("C1 환생 필요 레벨 %s(기대 25 · 50 · 75 · 100 · 125) · 경험치 배율 환생 0 ~ 6회 %s(기대 전부 1 - C5-2) · 되찾기 배수 %s(기대 4 · 8 · 16 · 32 · 64) · 기준 넘으면 1: %g"):format(
+		-- QUEUE-6h-b R1: 기대값 갱신(C5-2 43c7cc4 - 되찾기 배수 = EconSim 실측값 2 · 4 · 6 · 10 · 200(지시 4 · 8 · 16 · 32 · 64는 환생 5가 즉시 끝나 폐기 - CharacterLevelConfig 주석 · C5-report))
+		r.check(("C1 환생 필요 레벨 %s(기대 25 · 50 · 75 · 100 · 125) · 경험치 배율 환생 0 ~ 6회 %s(기대 전부 1 - C5-2) · 되찾기 배수 %s(기대 2 · 4 · 6 · 10 · 200) · 기준 넘으면 1: %g"):format(
 			table.concat(levels, " · "), table.concat(mults, " · "), table.concat(reclaim, " · "), CharacterLevel.getReclaimMultiplier(5, 125, 125)),
 			table.concat(levels, ",") == "25,50,75,100,125" and table.concat(mults, ",") == "1,1,1,1,1,1,1" and CharacterLevel.getRebirthRequiredLevel(5) == nil
-				and table.concat(reclaim, ",") == "4,8,16,32,64" and CharacterLevel.getReclaimMultiplier(5, 125, 125) == 1 and CharacterLevel.getReclaimMultiplier(0, 1, 125) == 1)
+				and table.concat(reclaim, ",") == "2,4,6,10,200" and CharacterLevel.getReclaimMultiplier(5, 125, 125) == 1 and CharacterLevel.getReclaimMultiplier(0, 1, 125) == 1)
 		local anchors = CharacterLevelConfig.killTargetAnchors
 		r.check(("C2 목표 마릿수: 마지막 앵커 레벨 %d(기대 125 - Option 동결 레벨) · K(125) %g · K(126) %g(기대 killTargetLate 첫 값 %g - C5-2) · K(20000) %g · 앵커 사이 증가 %s"):format(
 			anchors[#anchors].level, CharacterLevel.getTargetKills(125), CharacterLevel.getTargetKills(126), CharacterLevelConfig.killTargetLate[1][2], CharacterLevel.getTargetKills(20000),
@@ -219,16 +232,18 @@ function P25cVerify.runPure()
 			end
 		end
 		-- 구간 경계에서 한 레벨 비가 앞 구간 · 뒤 구간 몫과 같다(이어짐 - 계단 없음).
+		-- QUEUE-6h-b R1: 기대값 갱신(C5-1 dealGear.share 0.35 - 레벨이 성장 지수의 (1 − share)만 맡는다 → 몫 × (1 − share)로 비교 · 결손은 레벨 몫으로 나눠 옛 잣대(구간 몫만)로 잰다)
+		local levelShare = 1 - (CharacterLevelConfig.dealGear and CharacterLevelConfig.dealGear.share or 0)
 		local continuous = true
 		for index, segment in ipairs(segments) do
 			local before = CharacterLevel.getWeaponExpMultiplier(segment.fromLevel) / CharacterLevel.getWeaponExpMultiplier(segment.fromLevel - 1)
 			local after = CharacterLevel.getWeaponExpMultiplier(segment.fromLevel + 1) / CharacterLevel.getWeaponExpMultiplier(segment.fromLevel)
 			local previousShare = index > 1 and segments[index - 1].kShare or math.log(CharacterLevelConfig.weaponMultGrowthRate) / math.log(k)
-			continuous = continuous and near(before, k ^ previousShare, 1e-12) and near(after, k ^ segment.kShare, 1e-12)
+			continuous = continuous and near(before, k ^ (previousShare * levelShare), 1e-12) and near(after, k ^ (segment.kShare * levelShare), 1e-12)
 		end
 		local deficit = 0
 		for level = 26, InfiniteStageConfig.designMaxStage do
-			deficit += 1 - math.log(CharacterLevel.getWeaponExpMultiplier(level) / CharacterLevel.getWeaponExpMultiplier(level - 1)) / math.log(k)
+			deficit += 1 - math.log(CharacterLevel.getWeaponExpMultiplier(level) / CharacterLevel.getWeaponExpMultiplier(level - 1)) / math.log(k) / levelShare
 		end
 		r.check(("A1 구간 %d개 · 오름차순 %s · 몫 (0, 1] %s · 경계 이어짐 %s · 설계 최대 %d까지 레벨 결손 %.0f스테이지(g = k였다면 0)"):format(#segments, tostring(ascending), tostring(sharesOk), tostring(continuous), InfiniteStageConfig.designMaxStage, deficit),
 			#segments >= 5 and ascending and sharesOk and continuous and deficit > 365 and deficit < 2000)
@@ -275,11 +290,13 @@ function P25cVerify.runLive(player, env)
 			PlayerDamage.syncHud(player)
 			return dealt / raw
 		end
-		local r1, r10, r30, rAbuse = hitAt(1, 1), hitAt(10, 10), hitAt(30, 30), hitAt(1, 500)
+		-- QUEUE-6h-b R1: 기대값 갱신(BR1-2 78ee3ae - 신규 보호가 30까지(30 = ×0.961) → 보호 없는 첫 스테이지 = untilStage + 1 = 31)
+		local after = CombatConfig.newbieProtection.untilStage + 1
+		local r1, r10, r30, rAbuse = hitAt(1, 1), hitAt(10, 10), hitAt(after, after), hitAt(1, 500)
 		PlayerDamage.debugNewbieProtectionOff = savedOff
 		local ok = near(r1, PlayerCombat.getNewbieDamageMultiplier(1), 1e-6) and near(r10, PlayerCombat.getNewbieDamageMultiplier(10), 1e-6) and near(r30, 1, 1e-6) and near(rAbuse, 1, 1e-6)
-		r.check(("B 실제 applyHit ÷ 감소식 피해: 최고 1 %.4f · 10 %.4f · 30 %.4f(기대 %.3f · %.3f · 1) · 지금 1 + 최고 500 %.4f(기대 1 - 스테이지를 내려도 보호 없음)"):format(
-			r1, r10, r30, PlayerCombat.getNewbieDamageMultiplier(1), PlayerCombat.getNewbieDamageMultiplier(10), rAbuse), ok)
+		r.check(("B 실제 applyHit ÷ 감소식 피해: 최고 1 %.4f · 10 %.4f · %d %.4f(기대 %.3f · %.3f · 1) · 지금 1 + 최고 500 %.4f(기대 1 - 스테이지를 내려도 보호 없음)"):format(
+			r1, r10, after, r30, PlayerCombat.getNewbieDamageMultiplier(1), PlayerCombat.getNewbieDamageMultiplier(10), rAbuse), ok)
 	end)
 
 	r.section("[C] 환생 경험치 배율 - 실제 지급 경로", function()
@@ -294,9 +311,11 @@ function P25cVerify.runLive(player, env)
 		classState.characterExp = 0
 		PlayerProfile.addCharacterExp(player, 100)
 		local gain3 = classState.characterExp
-		r.check(("C 경험치 100 지급: 환생 0회 +%g · 3회 +%g(기대 ×%g = 100 × 옵션 · 파티 %.3f × 환생 배율) · getExpGainMultiplier(재료가 쓰는 배수) 0회 %.3f = 3회 %.3f(기대 같음 - 재료에는 환생 배율 없음)"):format(
-			gain0, gain3, CharacterLevel.getRebirthExpMultiplier(3), base, base, baseAt3),
-			near(gain0, 100 * base, 1e-9) and near(gain3, 100 * base * CharacterLevel.getRebirthExpMultiplier(3), 1e-9) and near(base, baseAt3, 1e-12))
+		-- QUEUE-6h-b R1: 기대값 갱신(C5-2 43c7cc4 - 환생 뒤 이전 최고 레벨(reclaimLevel)까지 되찾기 배수(getReclaimMultiplier - 3회 = ×6)가 곱해진다 · 회차 배율은 1)
+		local reclaim3 = CharacterLevel.getReclaimMultiplier(3, 1, classState.reclaimLevel)
+		r.check(("C 경험치 100 지급: 환생 0회 +%g · 3회 +%g(기대 ×%g × 되찾기 ×%g = 100 × 옵션 · 파티 %.3f × 환생 배율 × 되찾기) · getExpGainMultiplier(재료가 쓰는 배수) 0회 %.3f = 3회 %.3f(기대 같음 - 재료에는 환생 배율 없음)"):format(
+			gain0, gain3, CharacterLevel.getRebirthExpMultiplier(3), reclaim3, base, base, baseAt3),
+			near(gain0, 100 * base, 1e-9) and near(gain3, 100 * base * CharacterLevel.getRebirthExpMultiplier(3) * reclaim3, 1e-9) and near(base, baseAt3, 1e-12))
 	end)
 
 	r.section("[H] 방지권 지급 - 새 스테이지(계정 첫 클리어 지급 함수)", function()

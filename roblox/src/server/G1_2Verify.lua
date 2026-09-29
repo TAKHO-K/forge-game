@@ -116,11 +116,11 @@ function G1_2Verify.runPure()
 		bad.autoProcess = { enabled = true, maxGrade = "legendary" }
 		local bad2 = SaveSystem.defaultProfile()
 		bad2.autoProcess = { enabled = "yes", maxGrade = "epic" }
-		r.check(("SAVE_VERSION %d(기대 36) · v35 → v%d autoProcess 끔 %s · 기준 %s · 검사 %s · 전설 기준 거절 %s · 잘못된 켜짐 값 거절 %s"):format(SaveConfig.saveVersion, migrated.version,
+		r.check(("SAVE_VERSION %d(기대 ≥ 36) · v35 → v%d autoProcess 끔 %s · 기준 %s · 검사 %s · 전설 기준 거절 %s · 잘못된 켜짐 값 거절 %s"):format(SaveConfig.saveVersion, migrated.version,
 			tostring(migrated.autoProcess and migrated.autoProcess.enabled == false), tostring(migrated.autoProcess and migrated.autoProcess.maxGrade),
 			tostring(SaveSystem.isValidProfile(migrated)), tostring(not SaveSystem.isValidProfile(bad)), tostring(not SaveSystem.isValidProfile(bad2))),
-			SaveConfig.saveVersion == 36 and migrated.version == 36 and migrated.autoProcess.enabled == false and migrated.autoProcess.maxGrade == "epic"
-				and SaveSystem.isValidProfile(migrated) and not SaveSystem.isValidProfile(bad) and not SaveSystem.isValidProfile(bad2))
+			SaveConfig.saveVersion >= 36 and migrated.version == SaveConfig.saveVersion and migrated.autoProcess.enabled == false and migrated.autoProcess.maxGrade == "epic"
+				and SaveSystem.isValidProfile(migrated) and not SaveSystem.isValidProfile(bad) and not SaveSystem.isValidProfile(bad2)) -- QUEUE-6h-b R1: 기대값 갱신(36 고정 → 지금 버전까지 이관 · SAVE_VERSION 54)
 	end)
 
 	local pass, count = r.summary()

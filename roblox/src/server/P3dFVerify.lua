@@ -245,6 +245,7 @@ function P3dFVerify.runLive(player, env)
 		local zoneKey = encounter.zoneKey
 		BossPatterns.setGrace(model, data, 60)
 		PlayerState.clearIncomingDamageMultiplier(player)
+		PlayerState.setAnchorHold(player, "intro", false) -- QUEUE-6h-b R1: 검증 환경(BR1-4c 71d83d6 진입 연출이 "intro" 고정을 연출 시간 동안 건다 - 끼임 · 잡힘 칸만 재도록 푼다)
 		-- ① 끼인 동안 피격이 들어간다(옛: 0배)
 		local o1 = regrowOne(zoneKey, model)
 		assert(o1, "재생성 실패 1")

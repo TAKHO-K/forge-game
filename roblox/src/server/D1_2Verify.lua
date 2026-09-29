@@ -106,16 +106,18 @@ function V.runPure()
 			s += v
 		end
 		r.check(("TABLE|반짝이 영웅 %.4g · 전설 %.4g · 유물 %.4g · 고대 %.4g · 태초 %.4g(합 %.12f)"):format(t.epic, t.legendary, t.relic, t.ancient, t.primordial, s), near(s, 1, 1e-12))
-		r.check(("태초 · 고대 = 첫 클리어의 절반(%.5g · %.5g) · 영웅 이상 확정(일반 · 희귀 없음)"):format(fc.primordial / 2, fc.ancient / 2),
-			near(t.primordial, fc.primordial / 2, 1e-15) and near(t.ancient, fc.ancient / 2, 1e-15) and t.normal == nil and t.rare == nil)
-		-- 경계: 등급 순서(영웅 → 태초)로 누적 - u = 0 → 영웅 · 1 − 1e-15 → 태초 · 각 경계 바로 아래/위
-		local order = { "epic", "legendary", "relic", "ancient", "primordial" }
-		local acc, okB = 0, Loot.gradeForRoll(t, 0) == "epic" and Loot.gradeForRoll(t, 1 - 1e-15) == "primordial"
+		-- QUEUE-6h-b R1: 기대값 갱신(QUEUE-10h Q0 d699bb9 - 첫 클리어 태초만 0.01 → 0.1%로 올리고 반짝이 태초 0.005%는 그대로 = field-drop-tables.md §1 · 고대는 여전히 첫 클리어의 절반)
+		r.check(("태초 0.005%%(D1-2 값 - Q0가 첫 클리어만 올림) · 고대 = 첫 클리어의 절반(%.5g) · 영웅 이상 확정(일반 · 희귀 없음)"):format(fc.ancient / 2),
+			near(t.primordial, 0.00005, 1e-15) and near(t.ancient, fc.ancient / 2, 1e-15) and t.normal == nil and t.rare == nil)
+		-- 경계: 등급 순서(영웅 → 초월)로 누적 - u = 0 → 영웅 · 1 − 1e-15 → 초월 · 각 경계 바로 아래/위
+		-- QUEUE-6h-b R1: 기대값 갱신(C5-7 반짝이 초월 0.0005% = 표 끝 칸)
+		local order = { "epic", "legendary", "relic", "ancient", "primordial", "transcendent" }
+		local acc, okB = 0, Loot.gradeForRoll(t, 0) == "epic" and Loot.gradeForRoll(t, 1 - 1e-15) == "transcendent"
 		for i = 1, #order - 1 do
 			acc += t[order[i]]
 			okB = okB and Loot.gradeForRoll(t, acc - 1e-12) == order[i] and Loot.gradeForRoll(t, acc + 1e-12) == order[i + 1]
 		end
-		r.check("경계값: u = 0 영웅 · 1 − 1e-15 태초 · 누적 경계 ±1e-12 = 아래/위 등급", okB)
+		r.check("경계값: u = 0 영웅 · 1 − 1e-15 초월 · 누적 경계 ±1e-12 = 아래/위 등급", okB)
 		local rng, N, count = Random.new(20260927), 2000000, {}
 		for _ = 1, N do
 			local g = Loot.gradeForRoll(t, rng:NextNumber())
@@ -133,7 +135,8 @@ function V.runPure()
 			RareMonsterConfig.sparkleChance * (RareMonsterConfig.goldMultiplier - 1 + RareMonsterConfig.goldBonusKillEquivalent) / (1 + RareMonsterConfig.sparkleChance * (RareMonsterConfig.goldMultiplier - 1 + RareMonsterConfig.goldBonusKillEquivalent)) * 100),
 			RareMonsterConfig.materialBonusKillEquivalent == 10 and RareMonsterConfig.goldBonusKillEquivalent > 10)
 		local rows = DropTable.disclosure().sparkle
-		r.check(("확률 공개 반짝이 %d줄(영웅 ~ 태초)"):format(rows and #rows or 0), rows ~= nil and #rows == 5 and rows[1].id == "epic" and rows[5].id == "primordial")
+		-- QUEUE-6h-b R1: 기대값 갱신(C5-7 초월 칸 추가 - 6줄)
+		r.check(("확률 공개 반짝이 %d줄(영웅 ~ 초월)"):format(rows and #rows or 0), rows ~= nil and #rows == 6 and rows[1].id == "epic" and rows[6].id == "transcendent")
 		local fx = RareMonsterConfig.coinFountain
 		r.check(("금화 분수 입자 예산 = 한 번 %d개 · %.1f초"):format(fx.count, fx.lifeSeconds), fx.count <= 24 and fx.lifeSeconds <= 2)
 	end)
@@ -173,9 +176,10 @@ function V.runPure()
 		local function gear(kind, part, grade)
 			return { grade = grade or "primordial", part = part or "gloves", source = kind and { kind = kind } or nil }
 		end
+		-- QUEUE-6h-b R1: 기대값 갱신(QUEUE-10h Q0-6 d699bb9 - "태초의 선택" 새 지급 제거 · 칭호는 전 서버 등급(초월)부터 = 태초는 출처와 무관하게 전부 -)
 		local cases = {
-			{ "잡몹 태초 장갑", gear("field"), true }, { "보스 첫 클리어 태초 갑옷", gear("boss", "armor"), true }, { "토벌 태초 신발", gear("raid", "shoes"), true },
-			{ "반짝이 태초", gear("sparkle"), true }, { "태초 보석(부위 없음)", { grade = "primordial", itemLevel = 100, option = { id = "attackPercent", roll = 1 } }, false },
+			{ "잡몹 태초 장갑", gear("field"), false }, { "보스 첫 클리어 태초 갑옷", gear("boss", "armor"), false }, { "토벌 태초 신발", gear("raid", "shoes"), false },
+			{ "반짝이 태초", gear("sparkle"), false }, { "태초 보석(부위 없음)", { grade = "primordial", itemLevel = 100, option = { id = "attackPercent", roll = 1 } }, false },
 			{ "출처 없는 태초(계승 결과 등)", gear(nil), false }, { "시험 출처(/gg drop force)", gear("dev"), false }, { "고대 장갑", gear("field", "gloves", "ancient"), false },
 		}
 		local ok, cells = true, {}

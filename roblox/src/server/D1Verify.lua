@@ -72,31 +72,26 @@ function V.runPure()
 
 	r.section("드랍표 3종 - 합 · 지시 값 · 원칙", function()
 		local fc, raid = DropTableData.bossGrades.firstClear, DropTableData.bossGrades.raid
-		r.check(("첫 클리어 합 %.12f · 영웅 62 · 전설 32.6 · 유물 5 · 고대 0.39 · 태초 0.01%%(일반 · 희귀 없음 = 영웅 이상 보장)"):format(sum(fc)),
-			near(sum(fc), 1, 1e-12) and fc.epic == 0.62 and fc.legendary == 0.326 and fc.relic == 0.05 and fc.ancient == 0.0039 and fc.primordial == 0.0001 and not fc.normal and not fc.rare)
-		r.check(("토벌 합 %.12f · 영웅 78 · 전설 20.948 · 유물 1 · 고대 0.05 · 태초 0.002%%"):format(sum(raid)),
-			near(sum(raid), 1, 1e-12) and raid.epic == 0.78 and raid.legendary == 0.20948 and raid.relic == 0.01 and raid.ancient == 0.0005 and raid.primordial == 0.00002)
+		-- QUEUE-6h-b R1: 기대값 갱신(첫 클리어 태초 0.01 → 0.1% = QUEUE-10h Q0 d699bb9 · 초월 0.001% = C5-7 - 늘어난 몫은 영웅에서)
+		r.check(("첫 클리어 합 %.12f · 영웅 61.909 · 전설 32.6 · 유물 5 · 고대 0.39 · 태초 0.1 · 초월 0.001%%(일반 · 희귀 없음 = 영웅 이상 보장)"):format(sum(fc)),
+			near(sum(fc), 1, 1e-12) and near(fc.epic, 0.61909, 1e-12) and fc.legendary == 0.326 and fc.relic == 0.05 and fc.ancient == 0.0039 and fc.primordial == 0.001 and fc.transcendent == 0.00001 and not fc.normal and not fc.rare)
+		-- QUEUE-6h-b R1: 기대값 갱신(토벌 = 묶음 F2 raidWeights 정수 가중치 · 초월 0.0002% = C5-7)
+		r.check(("토벌 합 %.12f · 영웅 77.9998 · 전설 21 · 유물 0.95 · 고대 0.048 · 태초 0.002 · 초월 0.0002%%"):format(sum(raid)),
+			near(sum(raid), 1, 1e-12) and near(raid.epic, 0.779998, 1e-12) and near(raid.legendary, 0.21, 1e-12) and near(raid.relic, 0.0095, 1e-12) and near(raid.ancient, 0.00048, 1e-12)
+				and near(raid.primordial, 0.00002, 1e-15) and near(raid.transcendent, 0.000002, 1e-15))
+		-- QUEUE-6h-b R1: 기대값 갱신(M2 묶음 B-6 잡몹 등급표 = 3구간 정수 가중치 · 일반 61 · 희귀 25 · 영웅 10 · 전설 이상 4% - 옛 D1 "유물 ≤ 0.5 · 비율 유지" 폐지 · 태초 2/3/3 = QUEUE-10h Q0)
+		local primordialWeight = { 2, 2, 3, 3, 3, 3 }
 		for tierIndex = 1, 6 do
 			local row = DropTable.gradeRow(tierIndex)
-			local base = DropTableData.fairnessGradeByTier[tierIndex]
-			-- 일반 ~ 전설 비율 유지: 새 표의 (등급 ÷ 일반~전설 합) = 옛 표의 같은 값
-			local newSub, oldSub = 0, 0
-			for _, g in ipairs({ "normal", "rare", "epic", "legendary" }) do
-				newSub += DropTable.armorGradeTable(tierIndex)[g] or 0
-				oldSub += base[g] or 0
-			end
-			local ratioOk = true
-			for _, g in ipairs({ "normal", "rare", "epic", "legendary" }) do
-				if base[g] then
-					ratioOk = ratioOk and near((DropTable.armorGradeTable(tierIndex)[g] or 0) / newSub, base[g] / oldSub, 1e-12)
-				end
-			end
-			r.check(("잡몹 tier%d 합 %.12f · 유물 %.3f%% ≤ 0.5 · 고대 %.4f%% · 태초 %.6f%%(감쇠 전) · 일반 ~ 전설 비율 유지 %s"):format(tierIndex, sum(row), (row.relic or 0) * 100,
-				(row.ancient or 0) * 100, (row.primordial or 0) * 100, tostring(ratioOk)),
-				near(sum(row), 1, 1e-12) and (row.relic or 0) <= 0.005 + 1e-15 and ((row.ancient or 0) == 0 or near(row.ancient, 0.00002, 0.00002 * 1e-5)) -- 태초 별도 굴림만큼(× (1 − 태초)) 줄어든다
-					and (row.primordial or 0) <= 0.000001 + 1e-18 and ratioOk)
+			local base = DropTable.armorGradeTable(tierIndex)
+			local upper = (base.legendary or 0) + (base.relic or 0) + (base.ancient or 0) + (base.primordial or 0)
+			local m2Ok = near(base.normal, 0.61, 1e-12) and near(base.rare, 0.25, 1e-12) and near(base.epic, 0.10, 1e-12) and near(upper, 0.04, 1e-12)
+			r.check(("잡몹 tier%d 합 %.12f · 유물 %.3f%% · 고대 %.4f%% · 태초 %.6f%%(감쇠 전) · M2 규칙(일반 61 · 희귀 25 · 영웅 10 · 전설 이상 4%%) %s"):format(tierIndex, sum(row), (row.relic or 0) * 100,
+				(row.ancient or 0) * 100, (row.primordial or 0) * 100, tostring(m2Ok)),
+				near(sum(row), 1, 1e-12) and m2Ok and near(DropTable.primordialBaseRate(tierIndex), primordialWeight[tierIndex] / DropTableData.fieldWeightDenominator, 1e-18))
 		end
-		r.check("잡몹 tier6 고대 0.002% · 태초 0.0001%(지시 값)", near(DropTable.gradeRow(6).ancient, 0.00002, 1e-15) and near(DropTable.primordialBaseRate(6), 0.000001, 1e-18))
+		-- QUEUE-6h-b R1: 기대값 갱신(M2 T5–T6 고대 330 · QUEUE-10h Q0 태초 3 - 분모 1,000만)
+		r.check("잡몹 tier6 고대 0.0033% · 태초 0.00003%(M2 · Q0 지시 값)", near(DropTable.armorGradeTable(6).ancient, 0.000033, 1e-15) and near(DropTable.primordialBaseRate(6), 0.0000003, 1e-18))
 		-- 원칙: 토벌 1회 > 잡몹(장비 1개) · 토벌 ≪ 첫 클리어
 		local f6 = DropTable.gradeRow(6)
 		r.check(("원칙: 태초 잡몹 %.1e < 토벌 %.1e < 첫 클리어 %.1e · 고대 %.1e < %.1e < %.1e · 토벌 ≤ 첫 클리어 ÷ 5"):format(f6.primordial, raid.primordial, fc.primordial, f6.ancient, raid.ancient, fc.ancient),
@@ -136,8 +131,9 @@ function V.runPure()
 			table.insert(rows, ("%s[%.6f, %.6f)"):format(g, lo, acc))
 		end
 		r.check("첫 클리어 구간 경계(아래 끝 = 그 등급 · 위 끝 − 1e-12 = 그 등급 · 위 끝 = 다음 등급): " .. table.concat(rows, " "), okAll)
-		r.check(("u = 0 → %s · u = 1 − 1e-15 → %s(태초 · 끝)"):format(tostring(Loot.gradeForRoll(fc, 0)), tostring(Loot.gradeForRoll(fc, 1 - 1e-15))),
-			Loot.gradeForRoll(fc, 0) == "epic" and Loot.gradeForRoll(fc, 1 - 1e-15) == "primordial")
+		-- QUEUE-6h-b R1: 기대값 갱신(C5-7 초월이 첫 클리어 표 끝 칸 - 끝 = 초월)
+		r.check(("u = 0 → %s · u = 1 − 1e-15 → %s(초월 · 끝)"):format(tostring(Loot.gradeForRoll(fc, 0)), tostring(Loot.gradeForRoll(fc, 1 - 1e-15))),
+			Loot.gradeForRoll(fc, 0) == "epic" and Loot.gradeForRoll(fc, 1 - 1e-15) == "transcendent")
 		local rate = DropTable.primordialBaseRate(6)
 		r.check(("잡몹 tier6 태초 경계: u1 = %.1e − ε → 태초 · u1 = %.1e → 아님"):format(rate, rate), fieldGrade(6, rate - 1e-18, 0.5) == "primordial" and fieldGrade(6, rate, 0.5) ~= "primordial")
 	end)
@@ -182,7 +178,8 @@ function V.runPure()
 	r.section("등급 위력표(드랍 장비만)", function()
 		local expect = { 1, 1.45, 2.1025, 2.1025 * 1.5, 2.1025 * 1.5 * 1.7, 2.1025 * 1.5 * 1.7 * 2, 2.1025 * 1.5 * 1.7 * 2 * 2.5 }
 		local okAll, cells = true, {}
-		for i, g in ipairs(order) do
+		for i = 1, #expect do -- QUEUE-6h-b R1: 기대값 갱신(C5-7 8번째 초월 등급 = D1 위력표 밖 - 초월 값은 C5-7 검증 몫)
+			local g = order[i]
 			local grade = ArmorData.grades[g]
 			-- D1-2: 태초 딜 부위(dropPower) = 고대 × ArmorData.dpsPrimordialStep · 갑옷 태초 방어는 ×2.5 그대로(1.184 × expect[7])
 			local powerExpect = (g == "primordial") and expect[6] * ArmorData.dpsPrimordialStep or expect[i]
@@ -208,7 +205,7 @@ function V.runPure()
 		-- 스테이지 환산(k)
 		local k = InfiniteStageConfig.growthRate
 		local stepCells = {}
-		for i = 2, #order do
+		for i = 2, #expect do -- QUEUE-6h-b R1: 기대값 갱신(초월 = D1 위력표 밖)
 			table.insert(stepCells, ("%s→%s %.1f"):format(order[i - 1], order[i], math.log(expect[i] / expect[i - 1]) / math.log(k)))
 		end
 		local pl = math.log(expect[7] / expect[4]) / math.log(k)
@@ -222,10 +219,24 @@ function V.runPure()
 			return math.floor(1 / (ArmorData.dropChance * chance) * InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage) * ArmorData.sellRecoveryRate)
 		end
 		local okSell = true
-		for _, c in ipairs({ { "ancient", 6, 500 }, { "primordial", 6, 500 }, { "relic", 4, 100 }, { "primordial", 1, 30 }, { "legendary", 5, 1000 } }) do
-			okSell = okSell and Loot.getSellPrice({ grade = c[1], tierIndex = c[2], dropStage = c[3] }) == oldPrice(c[1], c[2], c[3])
+		if ArmorData.sellPriceMode == "current" then
+			-- QUEUE-6h-b R1: 기대값 갱신(Q4 1348f50 sellPriceMode = current - 현행 표 역산 · 등급 수로 나눔 · 고대/태초 상한 sellCapKills · 등급 순서)
+			local function price(grade, tierIndex, stage)
+				return Loot.getSellPrice({ grade = grade, tierIndex = tierIndex, dropStage = stage })
+			end
+			for _, c in ipairs({ { 6, 500 }, { 4, 100 }, { 5, 1000 } }) do
+				local gold = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, c[2])
+				okSell = okSell and price("legendary", c[1], c[2]) < price("relic", c[1], c[2]) and price("relic", c[1], c[2]) <= price("ancient", c[1], c[2])
+					and price("ancient", c[1], c[2]) <= price("primordial", c[1], c[2]) and price("primordial", c[1], c[2]) <= math.floor(ArmorData.sellCapKills.primordial * gold + 1e-6)
+					and price("transcendent", c[1], c[2]) == 0
+			end
+			r.check("판매가 = 현행 표 역산(Q4 current) · 전설 < 유물 ≤ 고대 ≤ 태초 ≤ 처치 골드 × 상한 · 초월 판매 불가(표본 3)", okSell)
+		else
+			for _, c in ipairs({ { "ancient", 6, 500 }, { "primordial", 6, 500 }, { "relic", 4, 100 }, { "primordial", 1, 30 }, { "legendary", 5, 1000 } }) do
+				okSell = okSell and Loot.getSellPrice({ grade = c[1], tierIndex = c[2], dropStage = c[3] }) == oldPrice(c[1], c[2], c[3])
+			end
+			r.check("판매가 = D1 전 식 그대로(고대 · 태초 · 유물 · 전설 표본 5)", okSell)
 		end
-		r.check("판매가 = D1 전 식 그대로(고대 · 태초 · 유물 · 전설 표본 5)", okSell)
 		local best = 1200
 		local cost = Awaken.cost(best)
 		r.check(("각성 비용 = tier1 골드 × %d마리 × 골드 성장(스테이지 %d) = %d"):format(PrimordialData.awakenGoldKills, best, cost),
@@ -324,8 +335,15 @@ function V.runLive(player, env)
 		local empty = #HallOfFame.shownNumbers()
 		local readOk = HallOfFame.refresh()
 		local shown = HallOfFame.shownNumbers()
-		r.check(("알림 누락 흉내(석판 비움 %d건) → 원본 다시 읽기 %s → 첫 줄 #%s(방금 번호 %s) · %d건"):format(empty, tostring(readOk), tostring(shown[1]), tostring(stamp and stamp.no), #shown),
-			empty == 0 and readOk and stamp and table.find(shown, stamp.no) ~= nil)
+		-- QUEUE-6h-b R1: 기대값 갱신(QUEUE-10h Q0-6 d699bb9 - 명예의 전당 = 초월만 · 태초는 같은 서버 배너만) - 복원 목록 = 초월 원본 목록 그대로 · 방금 태초 번호는 석판에 안 올라감
+		local transcendentRecent = Registry.readRecent(nil, "transcendent") or {}
+		local sameAsSource = #shown == #transcendentRecent
+		for i, row in ipairs(transcendentRecent) do
+			sameAsSource = sameAsSource and shown[i] == row.no
+		end
+		r.check(("알림 누락 흉내(석판 비움 %d건) → 원본 다시 읽기 %s → 첫 줄 #%s · %d건 = 초월 원본 %d건과 같음 %s(방금 태초 번호 %s는 석판 밖 - Q0-6)"):format(empty, tostring(readOk), tostring(shown[1]), #shown,
+			#transcendentRecent, tostring(sameAsSource), tostring(stamp and stamp.no)),
+			empty == 0 and readOk and stamp and sameAsSource)
 		-- 착용 표시
 		local index = #profile.inventory
 		PlayerProfile.equipItem(player, index)
@@ -337,6 +355,9 @@ function V.runLive(player, env)
 		r.check(("고대 드랍 → 세계 번호 발급 없음(발급 수 %d → %d)"):format(claimsBefore, Registry.stats().claims), Registry.stats().claims == claimsBefore)
 		local pillarOk = true
 		for _, grade in ipairs(ArmorData.gradeOrder) do
+			if not PrimordialData.pillarHeights[grade] then
+				continue -- QUEUE-6h-b R1: 기대값 갱신(C5-7 8번째 초월 = D1 번개 7단계 밖 - 초월 빛기둥은 PrimordialRegistry 비콘)
+			end
 			local model = require(script.Parent.ItemDropSpawner).spawn({ grade = grade, part = "shoes", itemLevel = 1, dropStage = 1, tierIndex = 1, locked = false },
 				(player.Character and player.Character.HumanoidRootPart.Position or Vector3.zero) + Vector3.new(0, 0, 20), player)
 			local lightOk = true

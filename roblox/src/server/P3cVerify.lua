@@ -257,7 +257,9 @@ function P3cVerify.runPure()
 			if rr < minR then
 				minR, minAt = rr, level
 			end
-			if rr > maxR then
+			-- QUEUE-6h-b R1: 기대값 갱신(상한 ×1.35 = C4 배수 구간(마지막 앵커 뒤)의 규칙. 앵커 구간 1 ~ 125는 선형 K 보간이라 25 부근 비가 크다 -
+			--   0-3 1a2d82b 앵커 50 = 240 · C5 마무리 92df2ac 앵커 24 = 5.9 → 25 = 10(@25 ×1.95). 앵커 구간은 최소(≥ 1)만 본다)
+			if rr > maxR and level >= CharacterLevelConfig.killTargetAnchors[#CharacterLevelConfig.killTargetAnchors].level then
 				maxR, maxAt = rr, level
 			end
 			if level % 5000 == 0 then
@@ -266,7 +268,7 @@ function P3cVerify.runPure()
 		end
 		local at125 = CharacterLevel.getExpToNextLevel(126) / CharacterLevel.getExpToNextLevel(125)
 		local capExp = CharacterLevel.getExpForLevel(34230)
-		r.check(("C4 레벨당 필요 경험치 비: 125 → 126 = ×%.4f(옛 ×0.0077) · 1 ~ 30,000 최소 ×%.4f(@%d) · 최대 ×%.4f(@%d, 상한 ×1.35) · 처치 수 126 = %d(×6 · 그대로 %d) · 배수 1로 돌아오는 레벨 %d · 누적(34,230) %.3g < 1e300"):format(
+		r.check(("C4 레벨당 필요 경험치 비: 125 → 126 = ×%.4f(옛 ×0.0077) · 1 ~ 30,000 최소 ×%.4f(@%d) · 최대(앵커 뒤) ×%.4f(@%d, 상한 ×1.35) · 처치 수 126 = %d(×6 · 그대로 %d) · 배수 1로 돌아오는 레벨 %d · 누적(34,230) %.3g < 1e300"):format(
 			at125, minR, minAt, maxR, maxAt, CharacterLevel.getExpectedKills(126, 6), math.ceil(CharacterLevel.getTargetKills(126) / 6 - 1e-9),
 			(function()
 				local l = 126
@@ -299,9 +301,12 @@ function P3cVerify.runPure()
 		local exp = migrated.classes[classId].characterExp
 		local level = CharacterLevel.getLevelFromExp(exp)
 		local progress = CharacterLevel.getProgress(exp, level).ratio
-		r.check(("C4 이관 v34 → v%d: 레벨 %d(기대 300) · 진행률 %.3f(기대 0.400) · 126 아래 경험치 그대로 %s · isValidProfile %s"):format(migrated.version, level, progress,
-			tostring(not low or migrated.classes[low].characterExp == 1000), tostring(SaveSystem.isValidProfile(migrated))),
-			migrated.version >= 35 and level == 300 and near(progress, 0.4, 1e-6) and (not low or migrated.classes[low].characterExp == 1000) and SaveSystem.isValidProfile(migrated))
+		-- QUEUE-6h-b R1: 기대값 갱신(v45 이관 1a2d82b가 v44 이하 경험치를 옛 곡선 리터럴로 다시 읽어 옮긴다 - 이 표본(지금 K로 만든 v34)은 v35 뒤 레벨 300이 아니게 되고
+		--   126 아래 값도 옮겨진다. 끝까지 이관한 결과 = 레벨이 내려가지 않음 · 126 아래 = 유한 양수 · 유효)
+		local lowExp = low and migrated.classes[low].characterExp
+		r.check(("C4 이관 v34 → v%d: 레벨 %d(기대 ≥ 300 - v45 재해석) · 진행률 %.3f · 126 아래 경험치 유한 양수 %s · isValidProfile %s"):format(migrated.version, level, progress,
+			tostring(not low or (type(lowExp) == "number" and lowExp > 0 and lowExp < math.huge)), tostring(SaveSystem.isValidProfile(migrated))),
+			migrated.version >= 45 and level >= 300 and (not low or (type(lowExp) == "number" and lowExp > 0 and lowExp < math.huge)) and SaveSystem.isValidProfile(migrated))
 		local cfg = { seasonId = 3, seasonLengthDays = 28, seasonStartUnix = 0 }
 		local fixed = LeaderboardRules.seasonAt(1e9, cfg)
 		cfg.seasonStartUnix = 1000000000
@@ -562,8 +567,9 @@ function P3cVerify.runLive(player, env)
 			end
 		end
 		local lost = (hpBefore - PlayerState.getHp(victim)) / maxHp
-		r.check(("A3 같은 사람이 1 · 2회차 모두 판정: 돌진 [%s](기대 1 · 2) · 잃은 체력 %.1f%%(기대 27.5 × 2 = 55 - 무적 시간 · 발동 상한이 2회차를 막지 않는다)"):format(
-			table.concat(hits, " · "), lost * 100), #hits == 2 and hits[1] == 1 and hits[2] == 2 and near(lost, 0.55, 0.01))
+		-- QUEUE-6h-b R1: 기대값 갱신(BR1-4a 24280ca - 잠행 찌르기 = 능력치 기반 피해(옛 고정 27.5%) → 잃은 체력은 스탠드인 능력치에 달림 · 판정 2회 + 피해 > 0만 본다)
+		r.check(("A3 같은 사람이 1 · 2회차 모두 판정: 돌진 [%s](기대 1 · 2) · 잃은 체력 %.1f%%(기대 > 0 - 능력치 기반 · 무적 시간 · 발동 상한이 2회차를 막지 않는다)"):format(
+			table.concat(hits, " · "), lost * 100), #hits == 2 and hits[1] == 1 and hits[2] == 2 and lost > 0)
 		clearStandIns(player, standIns)
 		root.Anchored = false
 		BossEncounter.despawnFor(player)
@@ -808,9 +814,17 @@ function P3cVerify.runLive(player, env)
 			drive(player, root, model, data, 9, function()
 				return st.phase == "normal"
 			end)
+			-- QUEUE-6h-b R1: 검증 환경(BR1-2 82191e4 - 지진파 3 ~ 5박 무작위. 단상은 2박째에 무너지고 고정된 캐릭터가 허공에 남아 다음 박에 맞는다 = 실제로는 떨어져 바닥에 선 사람.
+			--   단상 칸은 무너지는 파동의 판정이 끝날 때(+ 0.8초 - 다음 박은 ≥ 1.3초 뒤)까지만 센다)
+			local cutoff = math.huge
+			for _, e in ipairs(events) do
+				if spot.dais and e.kind == "daisWave" and e.record.result == "break" then
+					cutoff = math.min(cutoff, e.at + 0.8)
+				end
+			end
 			local waveHit = false
 			for _, e in ipairs(events) do
-				waveHit = waveHit or (e.kind == "waveHit" and e.record.player == player)
+				waveHit = waveHit or (e.kind == "waveHit" and e.record.player == player and e.at <= cutoff)
 			end
 			-- P3d C1: 단상 위는 안 맞는 것이 맞다(새 규칙) - 나머지 자리는 서 있으면 맞는다
 			allHit = allHit and (waveHit ~= (spot.dais == true))

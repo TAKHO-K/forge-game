@@ -322,6 +322,7 @@ local function killBoss(ctx, stage, secondsAgo, standInRatio)
 	if not model then
 		return false
 	end
+	model:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 환경(BR1-4c 71d83d6 진입 연출 동안 보스 피해 0 - 즉시 처치 경로가 막혔다. 연출만 건너뛴다)
 	BossEncounter.getEncounter(player).startedAt = os.clock() - secondsAgo
 	local pStage = TutorialState.getMonsterStage(player)
 	local _, maxHp = MonsterState.getBossHp(model)
