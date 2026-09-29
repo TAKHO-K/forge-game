@@ -16,7 +16,8 @@ from mathutils import Matrix, Vector  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.normpath(os.path.join(HERE, "..", "..", "art", "bosses"))
-BUDGET, PART_CAP = 6000, 30
+BUDGET, PART_CAP = 6000, 40  # A2-N2 사용자 결정: 보스 파트 상한 40(전갈 여왕 48 예외 - PART_CAP_OF)
+PART_CAP_OF = {"scorpion_queen": 48}
 V = Vector
 
 
@@ -75,6 +76,19 @@ def white(c, t=0.3):
 TIER = {1: (111, 158, 76), 2: (63, 142, 92), 3: (74, 122, 46), 4: (168, 95, 38), 6: (224, 80, 92)}  # MonsterData 티어 색(BossData tierColor) · 머리 = 흰색 쪽 0.3
 
 
+# A2-N2 사용자 결정: 보스 몸 색 = 종 테마 색(티어 색은 강조로만). 게임 BossData는 아직 티어 색 - 가져오기 때 ArtStyleV1 뒤에서 이 값(meta themeColors)으로 칠한다.
+THEME = {"frost_giant": dict(body=(96, 150, 204), head=(226, 240, 250), accent=(170, 232, 255)),       # 얼음 청 · 흰
+         "abyssal_lord": dict(body=(24, 66, 112), head=(36, 140, 146), accent=(70, 226, 214)),         # 심청 · 청록
+         "storm_lord": dict(body=(62, 64, 84), head=(98, 102, 126), accent=(255, 224, 64)),            # 먹색 + 번개 노랑
+         "crystal_queen": dict(body=(222, 120, 172), head=(246, 204, 224), accent=(84, 226, 214)),     # 분홍 + 청록 결정
+         "scorpion_queen": dict(body=(168, 95, 38), head=(206, 150, 104), accent=(255, 196, 60))}      # 설계서 = 모래 적갈 + 금 독침(유지)
+
+
+def themed(boss, d):
+    d.update(THEME[boss])
+    return d
+
+
 def rig_frost_giant():
     J = biped(dict(hips=(1.4, 0.5, 0.9), torso=(1.9, 1.9, 1.15), head=(1.0, 1.0, 1.0), thigh=(0.62, 1.0), shin=(0.56, 1.0), foot=(0.72, 0.3, 1.0),
                    upperArm=(0.58, 1.05), forearm=(0.58, 1.0), hand=(0.72, 0.8, 0.72), shoulderX=1.22, stance=0.42))
@@ -82,7 +96,7 @@ def rig_frost_giant():
     J.append(dict(name="Horn_R", parent="Head", part="RightHorn", size=(0.3, 1.0, 0.3), shape="wedge", color="accent", at=(0.45, 0.45, 0), pivot=(0, -0.45, 0), rot=(0, 180, 25)))
     chain(J, "Beard", "Head", 3, 0.38, 0.62, 0.3, (0, -0.45, -0.3), (-8, 0, 0), (-6, 0, 0), color="accent", flat=1.1)
     J.append(dict(name="Club", parent="Hand_R", part="IceClub", size=(0.55, 2.6, 0.55), shape="cyl", color="accent", material="Ice", at=(0, -0.35, 0), pivot=(0, 0.9, 0)))
-    return dict(joints=J, body=TIER[2], head=white(TIER[2]), accent=(200, 240, 255))
+    return themed("frost_giant", dict(joints=J))
 
 
 def rig_abyssal_lord():
@@ -94,7 +108,7 @@ def rig_abyssal_lord():
     chain(J, "Tail", "Hips", 6, 0.75, 0.75, 0.32, (0, -0.15, 0.5), (-75, 0, 0), (-9, 0, 0), color="head", flat=1.2, tip_color="accent", tip_shape="wedge")
     J.append(dict(name="Trident", parent="Hand_R", part="Trident", size=(0.22, 4.2, 0.22), shape="cyl", color="accent", at=(0, -0.3, 0), pivot=(0, -0.6, 0)))
     J.append(dict(name="TridentHead", parent="Trident", part="TridentHead", size=(0.9, 0.7, 0.15), shape="wedge", color="accent", material="Neon", at=(0, 2.1, 0), pivot=(0, -0.35, 0)))
-    return dict(joints=J, body=TIER[1], head=white(TIER[1]), accent=(60, 200, 255))
+    return themed("abyssal_lord", dict(joints=J))
 
 
 def rig_crystal_queen():
@@ -108,7 +122,7 @@ def rig_crystal_queen():
     J.append(dict(name="Wing_R", parent="Body", part="RightShard", size=(0.35, 1.6, 0.35), shape="wedge", color="accent", material="Glass", at=(0.4, 0.5, 0.45), pivot=(0, -0.7, 0), rot=(-15, 180, 30)))
     J.append(dict(name="Scepter", parent="Hand_R", part="Scepter", size=(0.18, 2.4, 0.18), shape="cyl", color="head", at=(0, -0.25, 0), pivot=(0, -0.5, 0)))
     J.append(dict(name="ScepterGem", parent="Scepter", part="ScepterGem", size=(0.5, 0.5, 0.5), shape="ball", color="accent", material="Neon", at=(0, 1.25, 0), pivot=(0, 0, 0)))
-    return dict(joints=J, body=TIER[6], head=white(TIER[6]), accent=(150, 240, 255))
+    return themed("crystal_queen", dict(joints=J))
 
 
 def rig_storm_lord():
@@ -120,7 +134,7 @@ def rig_storm_lord():
     chain(J, "CapeR", "Body", 3, 0.8, 0.8, 0.95, (0.42, 0.8, 0.55), (-6, 0, 0), (-3, 0, 0), color="dark")
     J.append(dict(name="Staff", parent="Hand_R", part="Staff", size=(0.25, 4.6, 0.25), shape="cyl", color="dark", at=(0, -0.3, 0), pivot=(0, -0.4, 0)))
     J.append(dict(name="StaffOrb", parent="Staff", part="StaffOrb", size=(0.7, 0.7, 0.7), shape="ball", color="accent", material="Neon", at=(0, 2.35, 0), pivot=(0, 0, 0)))
-    return dict(joints=J, body=TIER[3], head=white(TIER[3]), accent=(255, 240, 90))
+    return themed("storm_lord", dict(joints=J))
 
 
 def rig_scorpion_queen():
@@ -139,7 +153,7 @@ def rig_scorpion_queen():
         J.append(dict(name="Pincer_" + side, parent="Hand_" + side, part="Pincer_" + side, size=(0.3, 0.9, 0.3), shape="wedge", color="accent", at=(-x * 0.25, -0.4, 0), pivot=(0, 0.45, 0), rot=(0, 0, x * 10)))
     for t, yaw in enumerate((-30, 0, 30), 1):
         chain(J, "Tail%d_" % t, "Body", 8, 0.55, 0.45, 0.24, ((t - 2) * 0.45, 0.3, 1.0), (-127, yaw, 0), (-20, 0, 0), color="body", tip_color="accent", tip_shape="wedge", tip_material="Neon")
-    return dict(joints=J, body=TIER[4], head=white(TIER[4]), accent=(255, 190, 60))
+    return themed("scorpion_queen", dict(joints=J))
 
 
 RIGS = {"section_guardian": rig_section_guardian, "frost_giant": rig_frost_giant, "abyssal_lord": rig_abyssal_lord, "crystal_queen": rig_crystal_queen,
@@ -153,8 +167,8 @@ def color_of(role, rig):
         return A.mul(rig["body"], 0.7)
     if role == "accent":
         return rig["accent"]
-    if role == "eye":
-        return A.mix((255, 255, 255), rig["accent"], 0.35)
+    if role == "eye":  # 밝은 얼굴(서리 · 수정)에서는 흰 눈이 묻힌다 → 강조색 그대로(A2-N2)
+        return rig["accent"] if sum(rig["head"]) > 600 else A.mix((255, 255, 255), rig["accent"], 0.35)
     if role == "mouth":
         return (25, 18, 22)
     return rig["body"]
@@ -391,24 +405,30 @@ def crystal_extra(part, j):
 
 def storm_extra(part, j):
     sx, sy, sz = j["size"]
-    if part in ("LeftBlade", "RightBlade"):  # 어깨 칼날: 휜 초승달 날
-        return A.tube(A.bezier((0, -sy * 0.5, 0), (0.25, 0.0, 0), (0.2, sy * 0.45, 0), (-0.15, sy * 0.8, 0), n=6), lambda u: 0.2 * (1 - u) + 0.02, sides=4, flat=0.35, tip_end=True)
-    if part.startswith("Cape"):  # 망토 판(아래로 넓어짐 · 끝 마디는 갈라진 끝)
+    if part in ("LeftBlade", "RightBlade"):  # A2-N2: 어깨 번개 파편 = 위로 솟는 큰 지그재그 번개 2 + 작은 파편 1(노랑 · 정면 실루엣을 어깨 밖으로 키움)
+        side = -1 if part == "LeftBlade" else 1
+        big = A.xform(bolt_shape(2.3, 0.62, 0.2), m=A.rot(rz=-side * 18), t=(0, -sy * 0.35, 0))
+        small = A.xform(bolt_shape(1.2, 0.38, 0.16), m=A.rot(rz=-side * 48), t=(side * 0.18 * 0 + 0.3, -sy * 0.5, 0.15))
+        return A.merge(big, small)
+    if part.startswith("Cape"):  # 망토: A2-N2 = 날개처럼 펼침(밑 폭 ≈ 어깨의 2.2배) · 끝 마디는 번개 모양으로 찢어진 끝
         last = part.endswith("3")
         idx = int(part[-1])
-        spread = {1: (0.95, 1.15), 2: (1.15, 1.45), 3: (1.45, 1.9)}[idx]  # 밑으로 갈수록 벌어진 삼각 망토(밑 폭 ≈ 어깨의 1.4배)
-        shift = (-1 if part.startswith("CapeL") else 1) * (0.32 * (idx - 1))  # 2차 패스: 옆으로 벌려 정면에서 보이게
-        rings = [[(x + shift * (k_ + 0.5), y, z * 0.18) for x, z in A.chamfer_rect(w, sz, 0.05)] for k_, (y, w) in enumerate(((sy / 2, sx * spread[0]), (-sy / 2, sx * spread[1])))]
+        spread = {1: (1.0, 1.35), 2: (1.35, 1.85), 3: (1.85, 2.45)}[idx]
+        sgn = -1 if part.startswith("CapeL") else 1
+        shift = sgn * (0.5 * (idx - 1))
+        rings = [[(x + shift + sgn * 0.5 * k_, y, z * 0.18 + 0.12 * (idx - 1 + k_)) for x, z in A.chamfer_rect(w, sz, 0.05)] for k_, (y, w) in enumerate(((sy / 2, sx * spread[0]), (-sy / 2, sx * spread[1])))]
         g = A.loft(rings)
-        if last:
-            g = A.merge(g, *[A.xform(A.lathe([(0.0, 0.0), (sx * 0.28, 0.0), (0.0, -0.35)], 4), s=(1, 1, 0.3), t=(x, -sy / 2, 0)) for x in (-sx * 0.3, sx * 0.3)])
+        if last:  # 찢어진 끝 = 아래로 뾰족한 삼각 3개(번개 톱니)
+            x0 = shift + sgn * 0.5
+            g = A.merge(g, *[A.xform(A.lathe([(0.0, 0.0), (sx * 0.34, 0.0), (0.0, -0.55 - 0.2 * (k % 2))], 4), s=(1, 1, 0.3), t=(x0 + (k - 1) * sx * 0.7, -sy / 2, 0.36)) for k in range(3)])
         return g
     if part == "Staff":  # 비틀린 지팡이 + 끝 갈고리
         rings = [[(x, y, z) for x, z in A.circle2d(0.26 - 0.04 * k / 6, 5, start=k * 0.5)] for k, y in enumerate([-2.3 + 4.6 * i / 6 for i in range(7)])]  # 자루 2배
         hook = A.tube([(0, 2.2, 0), (0.35, 2.55, 0), (0.1, 2.85, 0), (-0.3, 2.6, 0)], lambda u: 0.12 * (1 - u) + 0.03, sides=5, tip_end=True)
         return A.merge(A.loft(rings), hook)
-    if part == "StaffOrb":  # 구슬 + 번개 고리
+    if part == "StaffOrb":  # 구슬 + 번개 고리 + 떠 있는 번개 파편 3(A2-N2)
         return A.merge(A.ellipsoid((sx / 2, sy / 2, sz / 2), n=12, rings=7),
+                       *[A.xform(bolt_shape(0.8, 0.28, 0.12), m=A.rot(rz=dz_), t=(dx_, dy_, 0.1)) for dx_, dy_, dz_ in ((-0.75, 0.35, 30), (0.8, 0.2, -35), (0.1, 0.75, 0))],
                        A.tube([(0.55 * math.cos(a), 0.12 * math.sin(3 * a), 0.55 * math.sin(a)) for a in (2 * math.pi * i / 12 for i in range(13))], 0.05, sides=4, cap0=False))
     return None
 
@@ -425,7 +445,7 @@ def scorpion_shape(part, j):
         return A.merge(*segs)
     if part == "Head":  # 왕관 달린 머리
         head = A.loft([[(x, y, z) for x, y in A.chamfer_rect(w, sy, 0.18)] for z, w in ((sz / 2, sx * 0.95), (0, sx), (-sz / 2, sx * 0.7))])
-        crown = [A.crystal(0.45 if k == 0 else 0.3, 0.09, sides=4, tip_h=0.15, base_h=0.04, center=(0.3 * k, sy * 0.5, 0.1), m=A.rot(rz=-15 * k)) for k in (-1, 0, 1)]
+        crown = [A.crystal(0.75 if k == 0 else 0.5, 0.13, sides=4, tip_h=0.15, base_h=0.04, center=(0.3 * k, sy * 0.5, 0.1), m=A.rot(rz=-15 * k)) for k in (-1, 0, 1)]
         return A.merge(head, *crown)
     if part in ("Eyes", "Mouth"):
         return biped_generic(part, j, {})
@@ -435,12 +455,14 @@ def scorpion_shape(part, j):
         return A.loft([[(x, y, z) for x, z in A.circle2d(sx / 2 * k * 1.5, 6)] for y, k in ((sy / 2, 1.0), (0.1, 1.1), (-sy / 2 + 0.3, 0.55))], tip1=(0, -sy / 2, 0))
     if part.startswith("UpperArm") or part.startswith("Forearm"):
         return taper_seg(sx, sy, sz, 0.85, 0.1)
-    if part.startswith("Hand"):  # 집게 몸통(두툼) + 고정 날
+    if part.startswith("Hand"):  # 집게 몸통(두툼) + 고정 날 - A2-N2: ×1.4(여왕 실루엣 = 큰 집게)
+        sx, sy, sz = sx * 1.4, sy * 1.4, sz * 1.4
         palm = A.ellipsoid((sx * 0.6, sy * 0.55, sz * 0.7), n=10, rings=6)
         fixed = A.tube(A.bezier((sx * 0.2, -sy * 0.3, 0), (sx * 0.35, -sy * 0.7, 0), (sx * 0.1, -sy * 1.0, 0), (-sx * 0.1, -sy * 1.05, 0), n=5), lambda u: 0.2 * (1 - u) + 0.03, sides=5, tip_end=True)
         return A.merge(palm, fixed)
-    if part.startswith("Pincer"):  # 움직이는 날(휜 칼날)
-        return A.tube(A.bezier((0, sy / 2, 0), (-0.15, 0.0, 0), (-0.05, -sy * 0.4, 0), (0.15, -sy / 2, 0), n=5), lambda u: 0.14 * (1 - u) + 0.02, sides=5, tip_end=True)
+    if part.startswith("Pincer"):  # 움직이는 날(휜 칼날) ×1.4
+        sy = sy * 1.4
+        return A.tube(A.bezier((0, sy / 2, 0), (-0.15, 0.0, 0), (-0.05, -sy * 0.4, 0), (0.15, -sy / 2, 0), n=5), lambda u: 0.2 * (1 - u) + 0.02, sides=5, tip_end=True)
     if part.startswith("Tail"):
         last = part.endswith("_8")
         if last:  # 독침(발광)
@@ -482,11 +504,25 @@ def body_decor(boss, part, j):
         collar = [A.xform(A.box(0.5, 1.0, 0.12, b=0.04), m=A.rot(rx=-25, rz=s * 30), t=(s * 0.45, sy * 0.62, 0.2)) for s in (-1, 1)]  # 높은 깃
         rune = A.xform(zigzag_bolt(), t=(0, 0.1, -sz * 0.55))
         out += collar + [rune]
+    if boss == "storm_lord" and part == "Head":  # A2-N2: 후드 위로 뒤로 휜 큰 뿔 2(머리 높이의 1.3배 - 먹색 덩어리 위 실루엣)
+        for sgn in (-1, 1):
+            out.append(A.tube(A.bezier((sgn * 0.3, sy * 0.25, 0.0), (sgn * 0.62, sy * 0.7, 0.1), (sgn * 0.8, sy * 1.15, 0.45), (sgn * 0.75, sy * 1.7, 0.8), n=6),
+                              lambda u: 0.27 * (1 - u) + 0.03, sides=6, tip_end=True))
     if boss == "crystal_queen" and part == "Body":
         for s in (-1, 1):
             out += [A.crystal(0.6, 0.14, sides=5, tip_h=0.22, base_h=0.05, center=(s * sx * 0.48, sy * 0.52, 0), m=A.rot(rz=-s * 30))]
         out += [A.crystal(0.45, 0.18, sides=6, tip_h=0.16, base_h=0.14, center=(0, sy * 0.15, -sz * 0.55), m=A.rot(rx=90))]  # 가슴 보석
     return out
+
+
+def bolt_shape(h, w, d):
+    """세운 지그재그 번개(아래 = 원점 · 위로 h) - 두께 d"""
+    pts = [(0.0, 0.0), (w * 0.55, h * 0.45), (w * 0.05, h * 0.5), (w * 0.6, h)]
+    outline = [(x + w * 0.22, y) for x, y in pts[1:]] + [(x - w * 0.22, y) for x, y in reversed(pts[:-1])]
+    outline = [pts[0]] + outline
+    n = len(outline)
+    v = [(x, y, d / 2) for x, y in outline] + [(x, y, -d / 2) for x, y in outline]
+    return v, [tuple(range(n)), tuple(reversed(range(n, 2 * n)))] + [(i, n + i, n + (i + 1) % n, (i + 1) % n) for i in range(n)]
 
 
 def zigzag_bolt():
@@ -519,8 +555,11 @@ SHAPES = {"section_guardian": guardian_shape}
 for _b in STYLE.keys() | {"scorpion_queen"}:
     SHAPES[_b] = (lambda b_: (lambda part, j: make_shape(b_, part, j)))(_b)
 OUTLINE_PARTS = {"section_guardian": ["Body", "Head", "UpperArm_L", "UpperArm_R", "Forearm_L", "Forearm_R", "Hand_L", "Hand_R", "LeftPauldron", "RightPauldron"],
-                 # 파트 상한 30 안에서만(수정 여왕 30 · 전갈 여왕 48 = 리그부터 상한 이상 → 껍데기 없음 · Highlight 유지)
-                 "frost_giant": ["Body", "Head", "Hand_L", "Hand_R", "UpperArm_L", "UpperArm_R", "IceClub"], "abyssal_lord": ["Body", "Head"], "storm_lord": ["Body", "Head", "Hips"]}
+                 # A2-N2: 상한 40 → 두 발 보스 5종 모두 큰 덩어리 10개(균형) · 전갈 여왕 = 리그 48(예외 상한) → 껍데기 0 · Highlight 유지
+                 "frost_giant": ["Body", "Head", "Hips", "UpperArm_L", "UpperArm_R", "Hand_L", "Hand_R", "Thigh_L", "Thigh_R", "IceClub"],
+                 "abyssal_lord": ["Body", "Head", "Hips", "UpperArm_L", "UpperArm_R", "Forearm_L", "Forearm_R", "Hand_L", "Hand_R", "BackFin"],
+                 "crystal_queen": ["Body", "Head", "Hips", "SkirtF1", "SkirtB1", "SkirtL1", "SkirtR1", "LeftShard", "RightShard", "Crown"],
+                 "storm_lord": ["Body", "Head", "Hips", "UpperArm_L", "UpperArm_R", "LeftBlade", "RightBlade", "CapeL3", "CapeR3", "Staff"]}
 
 
 def build(boss, old=False, hull=True):
@@ -569,11 +608,14 @@ def main():
         rig, col, objs, hulls = build(boss)
         allo = objs + hulls
         total = sum(A.tri_count(o) for o in allo)
-        print("[make_boss] %s 파트 %d(+외곽선 %d = %d / %d) · 삼각형 %d(외곽선 포함) / %d = %.0f%% · %s" % (boss, len(objs), len(hulls), len(allo), PART_CAP, total, BUDGET, 100 * total / BUDGET,
+        cap = PART_CAP_OF.get(boss, PART_CAP)
+        assert len(allo) <= cap, (boss, len(allo), cap)
+        print("[make_boss] %s 파트 %d(+외곽선 %d = %d / %d) · 삼각형 %d(외곽선 포함) / %d = %.0f%% · %s" % (boss, len(objs), len(hulls), len(allo), cap, total, BUDGET, 100 * total / BUDGET,
                                                                                          {o.name: A.tri_count(o) for o in objs}))
         if opt["export"]:
             A.export_fbx(os.path.join(OUT, "%s.fbx" % boss), allo)
-            meta = A.meta_of(allo, BUDGET, {"version": "A2-N1", "rigId": boss, "partCap": PART_CAP, "joints": {o.name: o["Joint"] for o in objs},
+            meta = A.meta_of(allo, BUDGET, {"version": "A2-N2", "rigId": boss, "partCap": cap,
+                                            "themeColors": {k: list(rig[k]) for k in ("body", "head", "accent")}, "joints": {o.name: o["Joint"] for o in objs},
                                             "outlineParts": [h.name for h in hulls], "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z"})
             A.write_json(os.path.join(OUT, "%s.meta.json" % boss), meta)
             bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "%s.blend" % boss))

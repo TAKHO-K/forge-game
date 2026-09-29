@@ -8,7 +8,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "Body": {
    "tris": 144,
@@ -18,17 +18,17 @@
     0.0
    ],
    "neon": false,
-   "color": "#4A7A2E"
+   "color": "#3E4054"
   },
   "Head": {
-   "tris": 60,
+   "tris": 200,
    "origin": [
     0.0,
     2.95,
     0.0
    ],
    "neon": false,
-   "color": "#80A26D"
+   "color": "#62667E"
   },
   "Thigh_L": {
    "tris": 44,
@@ -38,7 +38,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#4A7A2E"
+   "color": "#3E4054"
   },
   "Shin_L": {
    "tris": 124,
@@ -48,7 +48,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "Foot_L": {
    "tris": 44,
@@ -58,7 +58,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "UpperArm_L": {
    "tris": 44,
@@ -68,7 +68,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#4A7A2E"
+   "color": "#3E4054"
   },
   "Forearm_L": {
    "tris": 44,
@@ -78,7 +78,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#80A26D"
+   "color": "#62667E"
   },
   "Hand_L": {
    "tris": 72,
@@ -88,7 +88,7 @@
     -0.1322
    ],
    "neon": false,
-   "color": "#80A26D"
+   "color": "#62667E"
   },
   "Thigh_R": {
    "tris": 44,
@@ -98,7 +98,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#4A7A2E"
+   "color": "#3E4054"
   },
   "Shin_R": {
    "tris": 124,
@@ -108,7 +108,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "Foot_R": {
    "tris": 44,
@@ -118,7 +118,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "UpperArm_R": {
    "tris": 44,
@@ -128,7 +128,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#4A7A2E"
+   "color": "#3E4054"
   },
   "Forearm_R": {
    "tris": 44,
@@ -138,7 +138,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#80A26D"
+   "color": "#62667E"
   },
   "Hand_R": {
    "tris": 72,
@@ -148,7 +148,7 @@
     -0.1322
    ],
    "neon": false,
-   "color": "#80A26D"
+   "color": "#62667E"
   },
   "Eyes": {
    "tris": 56,
@@ -158,7 +158,7 @@
     -0.475
    ],
    "neon": true,
-   "color": "#FFFAC5"
+   "color": "#FFF4BC"
   },
   "Mouth": {
    "tris": 28,
@@ -171,24 +171,24 @@
    "color": "#191216"
   },
   "LeftBlade": {
-   "tris": 46,
+   "tris": 48,
    "origin": [
     -0.95,
     2.95,
     0.0
    ],
    "neon": false,
-   "color": "#FFF05A"
+   "color": "#FFE040"
   },
   "RightBlade": {
-   "tris": 46,
+   "tris": 48,
    "origin": [
     0.95,
     2.95,
     0.0
    ],
    "neon": false,
-   "color": "#FFF05A"
+   "color": "#FFE040"
   },
   "CapeL1": {
    "tris": 28,
@@ -198,7 +198,7 @@
     0.55
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "CapeL2": {
    "tris": 28,
@@ -208,17 +208,17 @@
     0.6336
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "CapeL3": {
-   "tris": 44,
+   "tris": 52,
    "origin": [
     -0.42,
     1.2642,
     0.7588
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "CapeR1": {
    "tris": 28,
@@ -228,7 +228,7 @@
     0.55
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "CapeR2": {
    "tris": 28,
@@ -238,17 +238,17 @@
     0.6336
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "CapeR3": {
-   "tris": 44,
+   "tris": 52,
    "origin": [
     0.42,
     1.2642,
     0.7588
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "Staff": {
    "tris": 94,
@@ -258,17 +258,17 @@
     -0.2157
    ],
    "neon": false,
-   "color": "#345520"
+   "color": "#2B2D3B"
   },
   "StaffOrb": {
-   "tris": 242,
+   "tris": 314,
    "origin": [
     1.0146,
     3.0615,
     0.167
    ],
    "neon": true,
-   "color": "#FFF05A"
+   "color": "#FFE040"
   },
   "Hips_Outline": {
    "tris": 88,
@@ -291,7 +291,7 @@
    "color": "#1E1B2E"
   },
   "Head_Outline": {
-   "tris": 60,
+   "tris": 200,
    "origin": [
     0.0,
     2.95,
@@ -299,15 +299,102 @@
    ],
    "neon": false,
    "color": "#1E1B2E"
+  },
+  "UpperArm_L_Outline": {
+   "tris": 44,
+   "origin": [
+    -1.05,
+    2.725,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "UpperArm_R_Outline": {
+   "tris": 44,
+   "origin": [
+    1.05,
+    2.725,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "LeftBlade_Outline": {
+   "tris": 48,
+   "origin": [
+    -0.95,
+    2.95,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "RightBlade_Outline": {
+   "tris": 48,
+   "origin": [
+    0.95,
+    2.95,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "CapeL3_Outline": {
+   "tris": 52,
+   "origin": [
+    -0.42,
+    1.2642,
+    0.7588
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "CapeR3_Outline": {
+   "tris": 52,
+   "origin": [
+    0.42,
+    1.2642,
+    0.7588
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Staff_Outline": {
+   "tris": 94,
+   "origin": [
+    1.2993,
+    0.3531,
+    -0.2157
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
   }
  },
- "partCount": 30,
- "totalTris": 2040,
+ "partCount": 37,
+ "totalTris": 2794,
  "triBudget": 6000,
- "budgetUse": 0.34,
- "version": "A2-N1",
+ "budgetUse": 0.466,
+ "version": "A2-N2",
  "rigId": "storm_lord",
- "partCap": 30,
+ "partCap": 40,
+ "themeColors": {
+  "body": [
+   62,
+   64,
+   84
+  ],
+  "head": [
+   98,
+   102,
+   126
+  ],
+  "accent": [
+   255,
+   224,
+   64
+  ]
+ },
  "joints": {
   "Hips": "RootJoint",
   "Body": "Waist",
@@ -340,7 +427,14 @@
  "outlineParts": [
   "Hips_Outline",
   "Body_Outline",
-  "Head_Outline"
+  "Head_Outline",
+  "UpperArm_L_Outline",
+  "UpperArm_R_Outline",
+  "LeftBlade_Outline",
+  "RightBlade_Outline",
+  "CapeL3_Outline",
+  "CapeR3_Outline",
+  "Staff_Outline"
  ],
  "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z"
 }

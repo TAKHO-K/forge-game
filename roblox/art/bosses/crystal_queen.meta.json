@@ -8,7 +8,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#9D3840"
+   "color": "#9B5478"
   },
   "Body": {
    "tris": 124,
@@ -18,7 +18,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E0505C"
+   "color": "#DE78AC"
   },
   "Head": {
    "tris": 244,
@@ -28,7 +28,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "Thigh_L": {
    "tris": 44,
@@ -38,7 +38,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E0505C"
+   "color": "#DE78AC"
   },
   "Shin_L": {
    "tris": 124,
@@ -48,7 +48,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#9D3840"
+   "color": "#9B5478"
   },
   "Foot_L": {
    "tris": 44,
@@ -58,7 +58,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#9D3840"
+   "color": "#9B5478"
   },
   "UpperArm_L": {
    "tris": 44,
@@ -68,7 +68,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E0505C"
+   "color": "#DE78AC"
   },
   "Forearm_L": {
    "tris": 44,
@@ -78,7 +78,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "Hand_L": {
    "tris": 72,
@@ -88,7 +88,7 @@
     -0.1253
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "Thigh_R": {
    "tris": 44,
@@ -98,7 +98,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E0505C"
+   "color": "#DE78AC"
   },
   "Shin_R": {
    "tris": 124,
@@ -108,7 +108,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#9D3840"
+   "color": "#9B5478"
   },
   "Foot_R": {
    "tris": 44,
@@ -118,7 +118,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#9D3840"
+   "color": "#9B5478"
   },
   "UpperArm_R": {
    "tris": 44,
@@ -128,7 +128,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E0505C"
+   "color": "#DE78AC"
   },
   "Forearm_R": {
    "tris": 44,
@@ -138,7 +138,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "Hand_R": {
    "tris": 72,
@@ -148,7 +148,7 @@
     -0.1253
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "Eyes": {
    "tris": 56,
@@ -158,7 +158,7 @@
     -0.45
    ],
    "neon": true,
-   "color": "#DAFAFF"
+   "color": "#54E2D6"
   },
   "Mouth": {
    "tris": 28,
@@ -178,7 +178,7 @@
     -0.45
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "SkirtF2": {
    "tris": 30,
@@ -188,7 +188,7 @@
     -0.6059
    ],
    "neon": false,
-   "color": "#96F0FF"
+   "color": "#54E2D6"
   },
   "SkirtB1": {
    "tris": 28,
@@ -198,7 +198,7 @@
     0.45
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "SkirtB2": {
    "tris": 30,
@@ -208,7 +208,7 @@
     0.6059
    ],
    "neon": false,
-   "color": "#96F0FF"
+   "color": "#54E2D6"
   },
   "SkirtL1": {
    "tris": 28,
@@ -218,7 +218,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "SkirtL2": {
    "tris": 30,
@@ -228,7 +228,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#96F0FF"
+   "color": "#54E2D6"
   },
   "SkirtR1": {
    "tris": 28,
@@ -238,7 +238,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "SkirtR2": {
    "tris": 30,
@@ -248,7 +248,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#96F0FF"
+   "color": "#54E2D6"
   },
   "Crown": {
    "tris": 188,
@@ -258,7 +258,7 @@
     0.0
    ],
    "neon": true,
-   "color": "#96F0FF"
+   "color": "#54E2D6"
   },
   "LeftShard": {
    "tris": 40,
@@ -268,7 +268,7 @@
     0.45
    ],
    "neon": false,
-   "color": "#96F0FF"
+   "color": "#54E2D6"
   },
   "RightShard": {
    "tris": 40,
@@ -278,7 +278,7 @@
     0.45
    ],
    "neon": false,
-   "color": "#96F0FF"
+   "color": "#54E2D6"
   },
   "Scepter": {
    "tris": 48,
@@ -288,7 +288,7 @@
     -0.2018
    ],
    "neon": false,
-   "color": "#E9848D"
+   "color": "#F6CCE0"
   },
   "ScepterGem": {
    "tris": 24,
@@ -298,16 +298,133 @@
     0.0418
    ],
    "neon": true,
-   "color": "#96F0FF"
+   "color": "#54E2D6"
+  },
+  "Hips_Outline": {
+   "tris": 88,
+   "origin": [
+    0.0,
+    0.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Body_Outline": {
+   "tris": 124,
+   "origin": [
+    0.0,
+    1.05,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Head_Outline": {
+   "tris": 244,
+   "origin": [
+    0.0,
+    2.75,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "SkirtF1_Outline": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.7,
+    -0.45
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "SkirtB1_Outline": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.7,
+    0.45
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "SkirtL1_Outline": {
+   "tris": 28,
+   "origin": [
+    -0.6,
+    0.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "SkirtR1_Outline": {
+   "tris": 28,
+   "origin": [
+    0.6,
+    0.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Crown_Outline": {
+   "tris": 188,
+   "origin": [
+    0.0,
+    3.6775,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "LeftShard_Outline": {
+   "tris": 40,
+   "origin": [
+    -0.4,
+    2.4,
+    0.45
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "RightShard_Outline": {
+   "tris": 40,
+   "origin": [
+    0.4,
+    2.4,
+    0.45
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
   }
  },
- "partCount": 30,
- "totalTris": 1856,
+ "partCount": 40,
+ "totalTris": 2692,
  "triBudget": 6000,
- "budgetUse": 0.309,
- "version": "A2-N1",
+ "budgetUse": 0.449,
+ "version": "A2-N2",
  "rigId": "crystal_queen",
- "partCap": 30,
+ "partCap": 40,
+ "themeColors": {
+  "body": [
+   222,
+   120,
+   172
+  ],
+  "head": [
+   246,
+   204,
+   224
+  ],
+  "accent": [
+   84,
+   226,
+   214
+  ]
+ },
  "joints": {
   "Hips": "RootJoint",
   "Body": "Waist",
@@ -340,6 +457,17 @@
   "Scepter": "Scepter",
   "ScepterGem": "ScepterGem"
  },
- "outlineParts": [],
+ "outlineParts": [
+  "Hips_Outline",
+  "Body_Outline",
+  "Head_Outline",
+  "SkirtF1_Outline",
+  "SkirtB1_Outline",
+  "SkirtL1_Outline",
+  "SkirtR1_Outline",
+  "Crown_Outline",
+  "LeftShard_Outline",
+  "RightShard_Outline"
+ ],
  "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z"
 }

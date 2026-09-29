@@ -18,7 +18,7 @@
     -1.1
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Eyes": {
    "tris": 56,
@@ -28,7 +28,7 @@
     -1.97
    ],
    "neon": true,
-   "color": "#FFE8BB"
+   "color": "#FFEABB"
   },
   "Mouth": {
    "tris": 28,
@@ -48,7 +48,7 @@
     -0.6
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Shin1_L": {
    "tris": 34,
@@ -68,7 +68,7 @@
     0.15
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Shin2_L": {
    "tris": 34,
@@ -88,7 +88,7 @@
     0.85
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Shin3_L": {
    "tris": 34,
@@ -108,7 +108,7 @@
     -1.05
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Forearm_L": {
    "tris": 44,
@@ -128,7 +128,7 @@
     -2.7586
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Pincer_L": {
    "tris": 48,
@@ -138,7 +138,7 @@
     -3.5488
    ],
    "neon": false,
-   "color": "#FFBE3C"
+   "color": "#FFC43C"
   },
   "Thigh1_R": {
    "tris": 44,
@@ -148,7 +148,7 @@
     -0.6
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Shin1_R": {
    "tris": 34,
@@ -168,7 +168,7 @@
     0.15
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Shin2_R": {
    "tris": 34,
@@ -188,7 +188,7 @@
     0.85
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Shin3_R": {
    "tris": 34,
@@ -208,7 +208,7 @@
     -1.05
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Forearm_R": {
    "tris": 44,
@@ -228,7 +228,7 @@
     -2.7586
    ],
    "neon": false,
-   "color": "#C28F67"
+   "color": "#CE9668"
   },
   "Pincer_R": {
    "tris": 48,
@@ -238,7 +238,7 @@
     -3.5488
    ],
    "neon": false,
-   "color": "#FFBE3C"
+   "color": "#FFC43C"
   },
   "Tail1_1": {
    "tris": 60,
@@ -318,7 +318,7 @@
     0.8451
    ],
    "neon": true,
-   "color": "#FFBE3C"
+   "color": "#FFC43C"
   },
   "Tail2_1": {
    "tris": 60,
@@ -398,7 +398,7 @@
     0.6373
    ],
    "neon": true,
-   "color": "#FFBE3C"
+   "color": "#FFC43C"
   },
   "Tail3_1": {
    "tris": 60,
@@ -478,16 +478,33 @@
     0.8451
    ],
    "neon": true,
-   "color": "#FFBE3C"
+   "color": "#FFC43C"
   }
  },
  "partCount": 48,
  "totalTris": 2954,
  "triBudget": 6000,
  "budgetUse": 0.492,
- "version": "A2-N1",
+ "version": "A2-N2",
  "rigId": "scorpion_queen",
- "partCap": 30,
+ "partCap": 48,
+ "themeColors": {
+  "body": [
+   168,
+   95,
+   38
+  ],
+  "head": [
+   206,
+   150,
+   104
+  ],
+  "accent": [
+   255,
+   196,
+   60
+  ]
+ },
  "joints": {
   "Body": "RootJoint",
   "Head": "Neck",
