@@ -12,6 +12,7 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 local BossLook = require(ReplicatedStorage.Shared.BossLook)
 local BossRig = require(ReplicatedStorage.Shared.BossRig)
+local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data) -- A2-S 아트 샘플 몸체(스위치 뒤 · 겉모습만)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
@@ -129,8 +130,13 @@ local function buildModel(data, position, variant)
 		model:SetAttribute("BossRig", data.isBoss and data.id or data.rigId)
 	elseif data.rig then
 		-- M2 잡몹 몸체(MonsterRigSpec - 같은 조립 함수) · 외형 파트는 조준 광선에 안 걸린다(CanQuery 끔) → 옛 몸통 + 머리 크기의 투명 Hitbox가 조준 · 판정 자리를 그대로 지킨다.
-		root, body, head = BossRig.build(model, data.rig, look, position)
+		-- A2-S: 스위치(Workspace.ArtStyleV1)가 켜져 있으면 아트 샘플 몸체(관절 이름 같음 · 아래 Hitbox는 그대로 = 판정 불변)
+		local artRig = workspace:GetAttribute(ArtStyleV1Data.attribute) and ArtStyleV1Data.monsterRigs[data.speciesId] or nil
+		root, body, head = BossRig.build(model, artRig or data.rig, look, position)
 		model:SetAttribute("MonsterRig", data.speciesId)
+		if artRig then
+			model:SetAttribute("ArtV1", true) -- 클라 ArtV1View가 대기 · 걷기 · 쓰러짐 움직임을 붙인다
+		end
 		local hitbox = Instance.new("Part")
 		hitbox.Name = "Hitbox"
 		local box = data.species and data.species.hitbox -- Q1: 큰 몸(드래곤)은 종 hitbox(몸 단위 - 크기 · 가운데)

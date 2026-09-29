@@ -25,6 +25,10 @@ local TrailData = require(ReplicatedStorage.Shared.data.TrailData)
 local WeaponEnhanceVisual = require(script.Parent.WeaponEnhanceVisual) -- 강화 단계 이펙트(30-0 S08 - 내 무기만) - 이 파일은 부르기만 한다
 local SkillVfx = require(script.Parent.SkillVfx) -- W3c 공중 내려찍기 먼지 · 비장의 한 발 빛 모임 · 어둠 시전(미리보기)
 local VfxData = require(ReplicatedStorage.Shared.data.VfxData)
+local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data) -- A2-S 아트 샘플(스위치 뒤 - 대검 등급 3단계 겉모습)
+local ArtV1Models = require(ReplicatedStorage.Shared.ArtV1Models)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules) -- W3c 공중 공격 해금(칼 들어 올림)
 
 local WeaponVisual = {}
@@ -116,9 +120,9 @@ local function buildMeshPart(folder, name, meshId, size, color, textureId)
 end
 
 -- 교체 모델(규격 통과만): ReplicatedStorage.Shared.WeaponModels.<직업>(.<조각 이름>)
-local function overrideModel(classId, pieceName)
+local function overrideModel(classId, pieceName, artModel)
 	local folder = ReplicatedStorage.Shared:FindFirstChild(WeaponRigSpec.overrideFolder)
-	local entry = folder and folder:FindFirstChild(classId)
+	local entry = artModel or (folder and folder:FindFirstChild(classId)) -- A2-S: 아트 샘플 모델도 같은 규격 검사를 거친다
 	if entry and pieceName then
 		entry = entry:FindFirstChild(pieceName) or nil
 	end
@@ -139,7 +143,7 @@ local function overrideModel(classId, pieceName)
 	return entry
 end
 
-local function buildWeapon(classId, colorOverride, parentFolder)
+local function buildWeapon(classId, colorOverride, parentFolder, artModel)
 	local model = WeaponModelData[classId]
 	local rig = WeaponRigSpec.weapons[classId]
 	if not model or not rig then
@@ -160,7 +164,7 @@ local function buildWeapon(classId, colorOverride, parentFolder)
 		local key = spec.name or "main"
 		local scale = WeaponRigSpec.scaleOf(spec)
 		local p = { spec = spec, scale = scale, key = key }
-		local custom = overrideModel(classId, spec.name)
+		local custom = overrideModel(classId, spec.name, artModel)
 		if custom then
 			local clone = custom:Clone()
 			for _, d in ipairs(clone:GetDescendants()) do
@@ -182,6 +186,9 @@ local function buildWeapon(classId, colorOverride, parentFolder)
 				return nil
 			end
 			p.custom = clone
+			if TrailData.ribbon.classes[classId] and clone:GetAttribute("TrailTop") and clone.PrimaryPart then -- A2-S: 교체 모델도 칼날 리본(부착점 = 모델 Attribute · PrimaryPart 로컬)
+				p.trail, p.gloss = attachTrail(clone.PrimaryPart, clone:GetAttribute("TrailTop"), clone:GetAttribute("TrailBottom"))
+			end
 			p.gripLocal = localOf(WeaponRigSpec.attachments.grip)
 			p.supportLocal = localOf(WeaponRigSpec.attachments.support)
 			p.nockLocal = localOf(WeaponRigSpec.attachments.stringNock)
@@ -318,8 +325,19 @@ local function rebuild(st)
 	if not classId or classId == "" or not st.character then
 		return
 	end
-	local primordialWeapon = (attrOf(st, "WeaponGrade") or 0) >= 6
-	st.weapon = buildWeapon(classId, primordialWeapon and Color3.fromRGB(245, 245, 250) or nil, Workspace)
+	local grade = attrOf(st, "WeaponGrade") or 0
+	local artModel = nil
+	if classId == "greatsword" and Workspace:GetAttribute(ArtStyleV1Data.attribute) then -- A2-S 대검 겉모습(같은 형태 · 등급 3단계) - 미리보기 = Attribute ArtV1WeaponLook
+		local preview = attrOf(st, "ArtV1WeaponLook")
+		local look = ArtStyleV1Data.greatsword.looks[preview] and preview or ArtStyleV1Data.greatsword.gradeLook[grade + 1] or "normal"
+		local gradeId = (ArtStyleV1Data.greatsword.looks[preview] and preview ~= "normal") and preview or ArmorData.gradeOrder[grade + 1]
+		artModel = ArtV1Models.greatsword(look, GradeColor.of(gradeId))
+	end
+	local primordialWeapon = artModel == nil and grade >= 6
+	st.weapon = buildWeapon(classId, primordialWeapon and Color3.fromRGB(245, 245, 250) or nil, Workspace, artModel)
+	if artModel then
+		artModel:Destroy() -- 무기 폴더에는 복제본이 들어간다
+	end
 	if st.weapon and st.key == player then
 		current = st.weapon
 		WeaponEnhanceVisual.apply(current, attrOf(st, "WeaponLevel") or 0)
@@ -1085,9 +1103,14 @@ local function bindPlayer(p)
 	p.CharacterAdded:Connect(function()
 		task.defer(refresh)
 	end)
-	for _, attr in ipairs({ "ClassId", "WeaponGrade" }) do
+	for _, attr in ipairs({ "ClassId", "WeaponGrade", "ArtV1WeaponLook" }) do
 		p:GetAttributeChangedSignal(attr):Connect(refresh)
 	end
+	Workspace:GetAttributeChangedSignal(ArtStyleV1Data.attribute):Connect(function() -- A2-S 스위치
+		if rigs[p] == st then
+			refresh()
+		end
+	end)
 	refresh()
 end
 

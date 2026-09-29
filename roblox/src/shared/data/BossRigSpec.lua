@@ -224,6 +224,9 @@ end
 
 -- 색 역할 → 실제 색(bodyColor · headColor = BossData · accent = 위 표 · 나머지 = 파생).
 function BossRigSpec.colorOf(role, look, rig)
+	if typeof(role) == "Color3" then -- A2-S 아트 샘플: 관절 표에 색을 직접 적은 부위
+		return role
+	end
 	if role == "head" then
 		return look.headColor
 	elseif role == "dark" then

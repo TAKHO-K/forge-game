@@ -89,10 +89,24 @@ local cartoon = {
 	zoneTint = true,
 }
 
+-- A2-S T1 무대(ArtStyleV1 스위치 뒤 - docs/art/art-direction-v1.md §4): cartoon 위에 조명 · 후처리만 조금 더 또렷하게(그늘 밝게 · 경계 선명 · 채도↑ · Neon만 번지는 블룸 · 푸른 원경)
+local artV1 = table.clone(cartoon)
+artV1.lighting = {
+	Ambient = { 100, 102, 116 }, OutdoorAmbient = { 158, 160, 172 }, Brightness = 2.5, ExposureCompensation = 0,
+	EnvironmentDiffuseScale = 0.45, EnvironmentSpecularScale = 0, ShadowSoftness = 0.06,
+	ColorShift_Top = { 255, 240, 220 }, ColorShift_Bottom = { 0, 0, 0 },
+}
+artV1.effects = {
+	Atmosphere = { Density = 0.12, Offset = 0.05, Color = { 196, 222, 250 }, Decay = { 150, 182, 225 }, Glare = 0, Haze = 0.6 },
+	Bloom = { Enabled = true, Intensity = 0.4, Size = 18, Threshold = 1.5 },
+	SunRays = { Enabled = true, Intensity = 0.015, Spread = 0.15 },
+	CartoonColorCorrection = { Enabled = true, Brightness = 0.02, Contrast = 0.08, Saturation = 0.12, TintColor = { 255, 255, 255 } },
+}
+
 return {
 	active = "base", -- 부팅 때 적용할 프로필(A1 승인 뒤 "cartoon"으로). /gg style base|cartoon 으로 즉시 전환
 	managed = managed,
-	profiles = { base = base, cartoon = cartoon },
+	profiles = { base = base, cartoon = cartoon, artV1 = artV1 }, -- artV1 = A2-S 샘플(/gg art on)
 	variantPrefix = "CartoonFlat_",
 
 	-- 구역 팔레트(art-spec 2장 - A1 확정표 · 관문 테두리 = 상호작용 신호). 코어(포탈 · 관문 안쪽)는 전 구역 공통.

@@ -121,6 +121,9 @@ function HitEffects.playDeath(monsterModel)
 	end
 
 	burst(body.Position, body.Color or DEATH_COLOR_FALLBACK, DEATH_MAX_SIZE, DEATH_DURATION)
+	if monsterModel:GetAttribute("ArtV1") then
+		return -- A2-S 아트 샘플 몸체: 쓰러짐(데굴 + 흐려짐)은 client/ArtV1View가 모든 사람 화면에서 같게 그린다
+	end
 
 	for _, part in ipairs({ body, head }) do
 		if part then

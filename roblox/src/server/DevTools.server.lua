@@ -2958,6 +2958,22 @@ local function handleCommand(player, args)
 			print("[CartoonStyle] " .. line)
 			reply(player, line)
 		end
+	elseif sub == "art" and (args[2] == "on" or args[2] == "off" or args[2] == "look") then
+		-- A2-S 아트 샘플 스위치: on/off = Workspace.ArtStyleV1 + 조명 프로필(켜면 artV1 · 끄면 CartoonStyleData.active) · 몬스터는 켠 뒤 새로 나는 몹부터
+		--   look <normal|legendary|transcendent|grade> = 내 대검 겉모습 미리보기(grade = 실제 등급)
+		local RS = game:GetService("ReplicatedStorage")
+		local ArtStyleV1Data = require(RS.Shared.data.ArtStyleV1Data)
+		if args[2] == "look" then
+			player:SetAttribute("ArtV1WeaponLook", (args[3] and args[3] ~= "grade") and args[3] or nil)
+			reply(player, "대검 겉모습 = " .. tostring(args[3] or "grade"))
+		else
+			local on = args[2] == "on"
+			workspace:SetAttribute(ArtStyleV1Data.attribute, on)
+			local profile = on and ArtStyleV1Data.lightingProfile or require(RS.Shared.data.CartoonStyleData).active
+			require(RS.Shared.CartoonStyle).apply(profile)
+			print(("[ArtV1] 스위치 %s · 조명 %s"):format(args[2], profile))
+			reply(player, ("아트 샘플 %s(조명 %s · 몬스터는 새로 나는 몹부터)"):format(args[2], profile))
+		end
 	elseif sub == "stealhint" and args[2] == "reset" then
 		PlayerProfile.debugResetStealLockSeen(player) -- C1 마무리: 잠긴 몹 말풍선을 다시 보게(세션 메모리 - 백업 복원 대상)
 		reply(player, "잠긴 몹 말풍선 기록을 비웠습니다")
