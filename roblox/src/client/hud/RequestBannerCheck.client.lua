@@ -167,7 +167,12 @@ local function run()
 		else
 			local list = body:FindFirstChildOfClass("UIListLayout")
 			local content, buttons, first = 0, 0, true
+			local contentAll, firstAll = 0, true -- QUEUE-6h-b 후속 결정 9: 준비 중 카드까지 넣은 내용(1024 × 768에서 스크롤 없이)
 			for _, child in ipairs(body:GetChildren()) do
+				if child:IsA("GuiObject") then
+					contentAll += child.Size.Y.Offset + (firstAll and 0 or list.Padding.Offset)
+					firstAll = false
+				end
 				-- QUEUE-6h-b R1: 기대값 갱신(Q7 00e5451 준비 중 직업 카드(ComingSoon_ · 64) 추가 - 합격 기준은 "버튼 4개가 스크롤 없이"라 카드는 내용 합에서 뺀다)
 				if child:IsA("GuiObject") and not string.find(child.Name, "ComingSoon_", 1, true) then
 					content += child.Size.Y.Offset + (first and 0 or list.Padding.Offset)
@@ -178,6 +183,7 @@ local function run()
 				end
 			end
 			local rows, allOk = {}, true
+			local cardRow = nil
 			for _, size in ipairs(RESOLUTIONS) do
 				local screenHeight = size[2] - INSET
 				local clone = realPanel:Clone()
@@ -194,10 +200,15 @@ local function run()
 				local inside = top >= SAFE - 1e-6 and top + height <= screenHeight - SAFE + 1e-6
 				local noScroll = content <= bodyHeight + 0.5
 				allOk = allOk and inside and noScroll
+				if size[1] == 1024 and size[2] == 768 then
+					cardRow = { bodyHeight, contentAll <= bodyHeight + 0.5 }
+				end
 				table.insert(rows, ("%d × %d(ScreenGui 높이 %d) → 패널 위 %.0f · 아래 %.0f %s · 본문 %.0f ≥ 내용 %.0f %s"):format(size[1], size[2], screenHeight, top, top + height, inside and "안" or "밖", bodyHeight, content, noScroll and "스크롤 없음" or "스크롤 필요(X)"))
 				clone:Destroy()
 			end
 			check(("직업 선택창(버튼 %d개 · 안전 여백 %d): %s"):format(buttons, SAFE, table.concat(rows, " / ")), allOk and buttons == 4)
+			check(("직업 선택창 1024 × 768: 준비 중 카드 포함 내용 %.0f ≤ 본문 %s(기대 스크롤 없음 - QUEUE-6h-b 후속 결정 9)"):format(contentAll, cardRow and ("%.0f"):format(cardRow[1]) or "?"),
+				cardRow ~= nil and cardRow[2])
 		end
 	end
 
