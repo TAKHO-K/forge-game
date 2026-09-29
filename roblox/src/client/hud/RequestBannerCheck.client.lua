@@ -168,7 +168,8 @@ local function run()
 			local list = body:FindFirstChildOfClass("UIListLayout")
 			local content, buttons, first = 0, 0, true
 			for _, child in ipairs(body:GetChildren()) do
-				if child:IsA("GuiObject") then
+				-- QUEUE-6h-b R1: 기대값 갱신(Q7 00e5451 준비 중 직업 카드(ComingSoon_ · 64) 추가 - 합격 기준은 "버튼 4개가 스크롤 없이"라 카드는 내용 합에서 뺀다)
+				if child:IsA("GuiObject") and not string.find(child.Name, "ComingSoon_", 1, true) then
 					content += child.Size.Y.Offset + (first and 0 or list.Padding.Offset)
 					first = false
 					if child:IsA("TextButton") then

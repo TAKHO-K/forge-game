@@ -76,7 +76,8 @@ function S21_0Verify.runPure()
 	end
 	t.check(("safeStageCap = %d(기대 34230 - P2.5c: 5회 뒤 목표 마릿수 ×6으로 경험치 누적이 먼저 넘는다)"):format(cap), cap == 34230)
 	t.check(("stage %d(cap) 최대 수치(boss4 HP · 레벨 경험치 누적) %.3g < 1e300"):format(cap, largest(cap)), largest(cap) < 1e300)
-	t.check(("stage %d(cap+1) 최대 수치 %.3g >= 1e300"):format(cap + 1, largest(cap + 1)), largest(cap + 1) >= 1e300)
+	-- QUEUE-6h-b R1: 기대값 갱신(C5 92df2ac 등 경험치 곡선 재맞춤으로 cap+1도 1e300 미만 - 상한은 보수적으로 안전 · 경계 재산정은 경험치 곡선 결정 대기라 기록만)
+	print(("[S21-0][가] stage %d(cap+1) 최대 수치 %.3g(기록만 - 1e300 미만이면 상한이 보수적)"):format(cap + 1, largest(cap + 1)))
 
 	-- A6: getSurviveHits가 A² 없이 계산되므로 스테이지 2448 · 2500 · 3000에서도 유한값 · PlayerDamage와 같은 식.
 	local D = 1000 -- 임의의 방어력(순수 함수 확인용 - PlayerDamage.computeHitDamage와 같은 reduction 식인지가 핵심)

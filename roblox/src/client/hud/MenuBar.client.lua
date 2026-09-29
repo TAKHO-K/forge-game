@@ -342,9 +342,10 @@ local function selfCheck()
 		for _, entry in ipairs(entries) do
 			table.insert(ids, ("%s(%s)"):format(entry.id, entry.hotkey and entry.hotkey.Name or "-"))
 		end
-		check(("등록 표: 메뉴 칸 %s(기대 inventory(B) · party(P) · stageSelect(M) 순) · 칸 상한 %d"):format(table.concat(ids, " · "), PanelRegistry.menuSlotLimit),
-			#entries == 3 and entries[1].id == "inventory" and entries[1].hotkey == Enum.KeyCode.B and entries[2].id == "party" and entries[2].hotkey == Enum.KeyCode.P
-				and entries[3].id == "stageSelect" and entries[3].hotkey == Enum.KeyCode.M and PanelRegistry.menuSlotLimit == 5)
+		-- QUEUE-6h-b R1: 삭제된 기능 참조 → 교체(M1-2 후속 53698a4 메뉴바 파티 칸 삭제 · Q7 e23d564 퀘스트 칸(J) 추가 - 파티 자리를 퀘스트(window)로)
+		check(("등록 표: 메뉴 칸 %s(기대 inventory(B) · stageSelect(M) · quests(J) 순) · 칸 상한 %d"):format(table.concat(ids, " · "), PanelRegistry.menuSlotLimit),
+			#entries == 3 and entries[1].id == "inventory" and entries[1].hotkey == Enum.KeyCode.B and entries[2].id == "stageSelect" and entries[2].hotkey == Enum.KeyCode.M
+				and entries[3].id == "quests" and entries[3].hotkey == Enum.KeyCode.J and PanelRegistry.menuSlotLimit == 5)
 		-- 6번째 칸 · 금지 키 · 겹치는 키는 error(합성 표를 같은 validate에 넣는다)
 		local six = {}
 		for index = 1, 6 do
@@ -447,7 +448,7 @@ local function selfCheck()
 		local function settle()
 			task.wait(0.4)
 		end
-		local partyItem = findItem("party")
+		local partyItem = findItem("quests") -- QUEUE-6h-b R1: 삭제된 기능 참조 → 교체(M1-2 후속 53698a4 메뉴바 파티 칸 삭제 · Q7 e23d564 퀘스트 칸(J) 추가 - 파티 자리를 퀘스트(window)로)
 		UIManager.closeAll()
 		settle()
 		onButtonPressed("inventory")
@@ -456,16 +457,16 @@ local function selfCheck()
 		settle()
 		local switchedToStage = windowToStage and UIManager.isOpen("stageSelect") and not UIManager.isOpen("inventory")
 			and stageItem.stroke.Color == UIColors.ember and bagItem.stroke.Color == UIColors.rim and not stageItem.blocked and not bagItem.blocked
-		onButtonPressed("party") -- station이 열린 채 window(파티) 버튼: 스테이지가 닫히고 파티가 열린다
+		onButtonPressed("quests") -- station이 열린 채 window(퀘스트 - 옛 파티 칸) 버튼: 스테이지가 닫히고 퀘스트가 열린다
 		settle()
-		local stageToParty = UIManager.isOpen("party") and not UIManager.isOpen("stageSelect")
+		local stageToParty = UIManager.isOpen("quests") and not UIManager.isOpen("stageSelect")
 		onButtonPressed("inventory") -- window → window
 		settle()
-		local windowToWindow = UIManager.isOpen("inventory") and not UIManager.isOpen("party") and #UIManager.getStack() == 1
+		local windowToWindow = UIManager.isOpen("inventory") and not UIManager.isOpen("quests") and #UIManager.getStack() == 1
 		onButtonPressed("inventory") -- 열린 버튼을 다시 누르면 닫힌다
 		settle()
 		local closedAgain = #UIManager.getStack() == 0
-		check(("전환: 가방 → 스테이지 버튼 = 가방 닫히고 스테이지 열림 %s · 스테이지 → 파티 버튼 %s · 파티 → 가방 버튼(window → window, 스택 1개) %s · 열린 버튼 다시 = 닫힘 %s(기대 전부 true)"):format(
+		check(("전환: 가방 → 스테이지 버튼 = 가방 닫히고 스테이지 열림 %s · 스테이지 → 퀘스트 버튼 %s · 퀘스트 → 가방 버튼(window → window, 스택 1개) %s · 열린 버튼 다시 = 닫힘 %s(기대 전부 true)"):format(
 			tostring(switchedToStage), tostring(stageToParty), tostring(windowToWindow), tostring(closedAgain)),
 			switchedToStage and stageToParty and windowToWindow and closedAgain)
 
@@ -544,7 +545,8 @@ local function selfCheck()
 		player:SetAttribute("TutorialCompleted", false)
 		player:SetAttribute("TutorialStep", 2)
 		task.wait(0.3)
-		local hiddenByTutorial = not stageItem.button.Visible and bagItem.button.Visible and findItem("party").button.Visible
+		-- QUEUE-6h-b R1: 기대값 갱신(파티 칸 삭제 · 퀘스트 칸도 견습 · 직업 선택 전에 숨는다(PanelRegistry menuHiddenWhile) - 견습 중 남는 칸 = 가방 1개)
+		local hiddenByTutorial = not stageItem.button.Visible and bagItem.button.Visible and not partyItem.button.Visible
 		local tutorialHeight = refs.bar.AbsoluteSize.Y
 		player:SetAttribute("TutorialCompleted", true)
 		player:SetAttribute("TutorialStep", saved[2])
@@ -555,11 +557,11 @@ local function selfCheck()
 		end
 		local stageEntry = stageItem.entry
 		local hiddenByNoClass = isHidden(stageEntry, fakePlayer("")) and isHidden(stageEntry, fakePlayer(nil)) and not isHidden(stageEntry, fakePlayer("bow"))
-			and not isHidden(bagItem.entry, fakePlayer("")) and not isHidden(findItem("party").entry, fakePlayer(""))
+			and not isHidden(bagItem.entry, fakePlayer("")) and isHidden(partyItem.entry, fakePlayer(""))
 		local shownAgain = stageItem.button.Visible and refs.bar.AbsoluteSize.Y == 3 * size + 2 * ScreenMap.menuBar.gap
-		check(("숨김: 견습 중 스테이지 숨음 %s(바 높이 %.0f - 기대 %d) · 직업 선택 전(가짜 Player 표) 스테이지만 숨음 %s · 돌아오면 다시 보이고 높이 %.0f(기대 %d) %s"):format(
-			tostring(hiddenByTutorial), tutorialHeight, 2 * size + ScreenMap.menuBar.gap, tostring(hiddenByNoClass), refs.bar.AbsoluteSize.Y, 3 * size + 2 * ScreenMap.menuBar.gap, tostring(shownAgain)),
-			hiddenByTutorial and tutorialHeight == 2 * size + ScreenMap.menuBar.gap and hiddenByNoClass and shownAgain)
+		check(("숨김: 견습 중 스테이지 · 퀘스트 숨음 %s(바 높이 %.0f - 기대 %d) · 직업 선택 전(가짜 Player 표) 스테이지 · 퀘스트만 숨음 %s · 돌아오면 다시 보이고 높이 %.0f(기대 %d) %s"):format(
+			tostring(hiddenByTutorial), tutorialHeight, size, tostring(hiddenByNoClass), refs.bar.AbsoluteSize.Y, 3 * size + 2 * ScreenMap.menuBar.gap, tostring(shownAgain)),
+			hiddenByTutorial and tutorialHeight == size and hiddenByNoClass and shownAgain)
 
 		-- 6. 파티 목록: 메뉴바 오른쪽 옆(x = 14 + 48 + 8)
 		local partyList = player.PlayerGui:FindFirstChild("PartyHudGui") and player.PlayerGui.PartyHudGui:FindFirstChild("PartyList")

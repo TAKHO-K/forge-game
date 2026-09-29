@@ -76,7 +76,9 @@ local function stoneEntries(stage, bossId)
 	for _, materialId in ipairs(EnhanceMaterialData.order) do
 		local material = EnhanceMaterialData.materials[materialId]
 		if stage >= material.minStage then
-			table.insert(entries, ("%s ≈%g"):format(material.displayName, material.dropChancePerKill * BossData.bosses[bossId].hpMultiplier))
+			-- QUEUE-6h-b R1: 기대값 갱신(Q3 ddac156 - 보스 보상 단위 = rewardKillUnits or hpMultiplier · 지급 · 띠와 같은 식)
+			local boss = BossData.bosses[bossId]
+			table.insert(entries, ("%s ≈%g"):format(material.displayName, material.dropChancePerKill * (boss.rewardKillUnits or boss.hpMultiplier)))
 		end
 	end
 	return entries
@@ -109,8 +111,12 @@ function BossRewardPreviewVerify.runPure()
 			ok = ok and #entries == expectedCount[stage]
 		end
 		local at50, at75 = stoneEntries(S50, bossId), stoneEntries(S75, bossId)
-		ok = ok and at50[1] == "강화석 ≈5" and at75[1] == "강화석 ≈5" and at75[2] == "상급 강화석 ≈5"
-		r.check(("옛 스테이지 45 / 50 / 75 / 100 자리 = 없음 / ≈5 / ≈5 + 상급 ≈5 / 같음(dropChancePerKill × 보스 hpMultiplier %d): %s"):format(BossData.bosses[bossId].hpMultiplier, table.concat(rows, " · ")), ok)
+		-- QUEUE-6h-b R1: 기대값 갱신(보스 hpMultiplier 20 → referenceKillSeconds ÷ killTargetSeconds(≈34.9 - BR1 e8a0bbe)라 옛 ≈5 고정 문자열 대신 데이터 식 값)
+		local boss = BossData.bosses[bossId]
+		local units = boss.rewardKillUnits or boss.hpMultiplier
+		local want = ("≈%g"):format(EnhanceMaterialData.materials[EnhanceMaterialData.order[1]].dropChancePerKill * units)
+		ok = ok and at50[1] == "강화석 " .. want and at75[1] == "강화석 " .. want and at75[2] == ("상급 강화석 ≈%g"):format(EnhanceMaterialData.materials[EnhanceMaterialData.order[2]].dropChancePerKill * units)
+		r.check(("옛 스테이지 45 / 50 / 75 / 100 자리 = 없음 / %s / %s + 상급 / 같음(dropChancePerKill × 보스 보상 단위 %.3f): %s"):format(want, want, units, table.concat(rows, " · ")), ok)
 	end)
 
 	r.section("[3] 입력 검사", function()

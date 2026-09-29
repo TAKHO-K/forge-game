@@ -68,16 +68,20 @@ local function runPure()
 
 	r.section("[1] densityExtra", function()
 		local stages = { 5, start, start + stepStages - interval, start + stepStages, start + 2 * stepStages - interval, start + 2 * stepStages, DENSE, DENSE * 5 }
-		local expected = { 0, 0, 0, 1, 1, 2, 3, 3 }
+		-- QUEUE-6h-b R1: 삭제된 기능 참조 → 교체(BR1-2 6300705 - 낙하 원 ± = BossCurveData 행의 zoneExtra가 옛 stageDensity 355 · 535 · 715를 대신한다 · 초반 -1)
+		local expected = {}
+		for index, stage in ipairs(stages) do
+			expected[index] = BossSkillMath.curveRow(stage).zoneExtra
+		end
 		local cells, ok = {}, true
 		for index, stage in ipairs(stages) do
 			local extra = BossRules.densityExtra(stage)
 			ok = ok and extra == expected[index]
 			table.insert(cells, ("%d→%d(기대 %d)"):format(stage, extra, expected[index]))
 		end
-		r.check(("1 densityExtra(시작 %d · 간격 %d · 상한 %d): %s · 견습 스테이지 1 → %d(기대 0) · isPairStage(100) = %s(기대 false - 자리만)"):format(
-			density.startStage, density.stepStages, density.maxExtra, table.concat(cells, " "), BossRules.densityExtra(1), tostring(BossRules.isPairStage(100))),
-			ok and BossRules.densityExtra(1) == 0 and BossRules.isPairStage(100) == false and density.startStage == InfiniteStage.fromLegacyStage(25, interval)
+		r.check(("1 densityExtra = 곡선 zoneExtra(BR1-2): %s · 스테이지 1 → %d(기대 곡선 첫 행 %d - 견습 보스는 호출부가 0을 넘긴다) · isPairStage(100) = %s(기대 false - 자리만)"):format(
+			table.concat(cells, " "), BossRules.densityExtra(1), BossSkillMath.curveRow(1).zoneExtra, tostring(BossRules.isPairStage(100))),
+			ok and BossRules.densityExtra(1) == BossSkillMath.curveRow(1).zoneExtra and BossRules.isPairStage(100) == false and density.startStage == InfiniteStage.fromLegacyStage(25, interval)
 				and density.stepStages == InfiniteStage.fromLegacySpan(25, interval) and density.maxExtra == 3)
 	end)
 
@@ -86,12 +90,14 @@ local function runPure()
 		local rawCount, rawScatter = source.count, source.scatterStuds
 		local data = BossRules.buildInstanceData(DENSE, GUARDIAN, 1)
 		local dense = data.skills.meteor
-		local scale = BossRules.skillRangeScale(DENSE)
-		local ok = dense ~= source and dense.count == rawCount + 3 and near(dense.scatterStuds, rawScatter * scale * math.sqrt((rawCount + 3) / rawCount), 1e-9)
-			and data.densityExtra == 3 and source.count == 3 and source.scatterStuds == 10
-			and dense.radiusStuds == source.radiusStuds * scale and dense.telegraphSeconds == source.telegraphSeconds and dense.cooldownSeconds == source.cooldownSeconds
-		r.check(("2 스테이지 " .. DENSE .. " 구간 수호자 낙석: count %d → %d(기대 3 → 6) · 산개 %.3f = 10 × 범위 배율 %.3f × √2 = %.3f · **BossData 원본은 count %d · 산개 %g 그대로** · 반경 = 원본 × 배율(밀도는 반경을 안 건드림) · 예고 · 쿨 그대로"):format(
-			rawCount, dense.count, dense.scatterStuds, scale, 10 * scale * math.sqrt(2), source.count, source.scatterStuds), ok)
+		-- QUEUE-6h-b R1: 기대값 갱신(BR1-2 6300705 - extra = 곡선 zoneExtra · 범위 = 이속 보정 × 곡선 zoneRangeScale)
+		local extra = BossRules.densityExtra(DENSE)
+		local scale = BossRules.skillRangeScale(DENSE) * BossSkillMath.curveRow(DENSE).zoneRangeScale
+		local ok = dense ~= source and dense.count == rawCount + extra and near(dense.scatterStuds, rawScatter * scale * math.sqrt((rawCount + extra) / rawCount), 1e-9)
+			and data.densityExtra == extra and source.count == 3 and source.scatterStuds == 10
+			and near(dense.radiusStuds, source.radiusStuds * scale, 1e-9) and dense.telegraphSeconds == source.telegraphSeconds and dense.cooldownSeconds == source.cooldownSeconds
+		r.check(("2 스테이지 " .. DENSE .. " 구간 수호자 낙석: count %d → %d(기대 3 + extra %d) · 산개 %.3f = 10 × 범위 배율 %.3f × √(%d/3) = %.3f · **BossData 원본은 count %d · 산개 %g 그대로** · 반경 = 원본 × 배율(밀도는 반경을 안 건드림) · 예고 · 쿨 그대로"):format(
+			rawCount, dense.count, extra, dense.scatterStuds, scale, rawCount + extra, 10 * scale * math.sqrt((rawCount + extra) / rawCount), source.count, source.scatterStuds), ok)
 
 		local cells, cellsOk = {}, true
 		for _, stage in ipairs({ start + stepStages - interval, start + stepStages, start + 2 * stepStages, DENSE }) do
@@ -100,15 +106,18 @@ local function runPure()
 			cellsOk = cellsOk and skill.count == expectedCount
 			table.insert(cells, ("%d→%d개"):format(stage, skill.count))
 		end
+		-- QUEUE-6h-b R1: 기대값 갱신(BR1-2 - 스테이지별 개수 = 3 + 곡선 zoneExtra · 낙빙 원본 count 2(BR1) + extra · 인원 몫은 그대로)
+		local icefall = BossData.bosses.frost_giant.skills.icefall
 		local four = BossRules.buildInstanceData(DENSE, "frost_giant", PartyConfig.maxMembers).skills.icefall
 		local fourTotal = four.count + four.countPerMember * PartyConfig.maxMembers
-		r.check(("2 스테이지별 낙석 개수 %s(기대 3 · 4 · 5 · 6) · 낙빙 %d인 스테이지 " .. DENSE .. ": count %d + 인원 몫 %d × %d = %d개(기대 5 + 4 = 9 - 인원 몫은 그대로)"):format(
-			table.concat(cells, " "), PartyConfig.maxMembers, four.count, four.countPerMember, PartyConfig.maxMembers, fourTotal), cellsOk and fourTotal == 9)
+		local fourWant = icefall.count + BossRules.densityExtra(DENSE) + icefall.countPerMember * PartyConfig.maxMembers
+		r.check(("2 스테이지별 낙석 개수 %s(기대 3 + 곡선 zoneExtra) · 낙빙 %d인 스테이지 " .. DENSE .. ": count %d + 인원 몫 %d × %d = %d개(기대 %d - 인원 몫은 그대로)"):format(
+			table.concat(cells, " "), PartyConfig.maxMembers, four.count, four.countPerMember, PartyConfig.maxMembers, fourTotal, fourWant), cellsOk and fourTotal == fourWant)
 	end)
 
 	r.section("[3] 대상 조건 · 아닌 스킬 불변", function()
 		local flagged, eligible, mismatched, unchanged, checked = {}, {}, {}, true, 0
-		local scale = BossRules.skillRangeScale(DENSE)
+		local scale = BossRules.skillRangeScale(DENSE) * BossSkillMath.curveRow(DENSE).zoneRangeScale -- QUEUE-6h-b R1: 기대값 갱신(BR1-2 곡선 zoneRangeScale)
 		for _, bossId in ipairs(BossData.pools[1].bossIds) do
 			local boss = BossData.bosses[bossId]
 			local data = BossRules.buildInstanceData(DENSE, bossId, 1)
@@ -123,7 +132,7 @@ local function runPure()
 				if isFlagged ~= isEligible then
 					table.insert(mismatched, bossId .. "." .. id)
 				end
-				if not isFlagged and skill.count ~= nil then
+				if not isFlagged and skill.count ~= nil and skill.primitive ~= "projectile" then -- QUEUE-6h-b R1: 투사체 개수는 BR1-2 곡선(perPersonCount)이 맡아 제외
 					checked += 1
 					local instance = data.skills[id]
 					if instance.count ~= skill.count or (skill.scatterStuds and not near(instance.scatterStuds, skill.scatterStuds * scale, 1e-9)) then
@@ -199,7 +208,8 @@ local function runPure()
 					end
 					table.insert(cells, ("%d인 파훼 후 %.1f초(%+.1f%%) · 초회 %.1f초(x%.2f)"):format(n, after.mean, delta * 100, never.mean, ratio))
 				end
-				r.check(("5 %s(extra %d): %s"):format(bossId, extra, table.concat(cells, " | ")), ok)
+				-- QUEUE-6h-b R1: 삭제된 기능 참조 → 기록만(29-5 파훼 후 · 초회 모형 - BR1 기믹 개편 뒤 초회 ×1.00 · 새 기믹 검사는 BR1(가) · BossMechanicsVerify 주석 92행과 같은 이유)
+				print(("[S14][가] 5 %s(extra %d): %s(기록만 - 옛 기준 %s)"):format(bossId, extra, table.concat(cells, " | "), ok and "O" or "X"))
 			end
 		end
 		r.check(("5 extra 0 대비 평균이 달라진 칸: %d개%s - %s"):format(#changed, #changed > 0 and (" [" .. table.concat(changed, " · ") .. "]") or "",
@@ -226,8 +236,9 @@ local function runPure()
 			local rawSingle, rawTotal = BossSkillMath.damageShares(raw, BalanceAnchorConfig.surviveTargetHits)
 			sharesSame = sharesSame and denseSingle == rawSingle and denseTotal == rawTotal
 		end
-		r.check(("6 인접 쌍 %d개 중 100%% 이상인 가능한 쌍 %d건(최악 %.1f%%) · 밀도 3스킬의 피해 몫 extra %d = extra 0: %s"):format(
-			pairCount, violations, worst * 100, density.maxExtra, tostring(sharesSame)), violations == 0 and worst < 1 and sharesSame)
+		-- QUEUE-6h-b R1: 기대값 갱신(BR1-2부터 전멸기 · 기믹 쌍은 100% 이상이 설계 - 일반 패턴 2연타는 BR1-4a(가)가 본다 · 여기서는 피해 몫 불변만)
+		r.check(("6 인접 쌍 %d개 중 100%% 이상인 가능한 쌍 %d건(참고 - 전멸기 · 기믹 포함 · 최악 %.1f%%) · 밀도 3스킬의 피해 몫 extra %d = extra 0: %s"):format(
+			pairCount, violations, worst * 100, density.maxExtra, tostring(sharesSame)), sharesSame)
 	end)
 
 	local pass, total = r.summary()
@@ -311,9 +322,10 @@ local function runLive(player, env)
 				end
 			end
 			local phase = BossPatterns.getPhase(model)
-			r.check(("7 스테이지 %d 구간 수호자 낙석 강제 시작(force=%s) 한 틱 뒤 phase=%s · 원 %d개(기대 6) · 아레나 밖 %d개(기대 0) · 인스턴스 count %d · 원본 count %d · 산개 %.1f(원본 %g × 배율 %.3f × √2)"):format(
-				stage, tostring(forced), phase, #positions, outside, skill.count, rawSkill.count, skill.scatterStuds, rawSkill.scatterStuds, data.skillRangeScale),
-				forced and phase == "meteorTelegraph" and #positions == 6 and outside == 0 and skill.count == 6 and rawSkill.count == 3)
+			local want = rawSkill.count + BossRules.densityExtra(stage) -- QUEUE-6h-b R1: 기대값 갱신(BR1-2 6300705 - 원 개수 = 원본 + 곡선 zoneExtra · 옛 +3 = 6)
+			r.check(("7 스테이지 %d 구간 수호자 낙석 강제 시작(force=%s) 한 틱 뒤 phase=%s · 원 %d개(기대 %d) · 아레나 밖 %d개(기대 0) · 인스턴스 count %d · 원본 count %d · 산개 %.1f(원본 %g × 배율 %.3f × 곡선 · √)"):format(
+				stage, tostring(forced), phase, #positions, want, outside, skill.count, rawSkill.count, skill.scatterStuds, rawSkill.scatterStuds, data.skillRangeScale),
+				forced and phase == "meteorTelegraph" and #positions == want and outside == 0 and skill.count == want and rawSkill.count == 3)
 		end)
 
 		r.section("[8] 겹친 원 한 번만", function()
@@ -345,7 +357,7 @@ local function runLive(player, env)
 
 		r.section("[9] 스테이지 25 · 견습", function()
 			local _, atTwentyFive = spawnBoss(player, env, GUARDIAN, dense.startStage)
-			local scale = BossRules.skillRangeScale(dense.startStage)
+			local scale = BossRules.skillRangeScale(dense.startStage) * BossSkillMath.curveRow(dense.startStage).zoneRangeScale -- QUEUE-6h-b R1: 기대값 갱신(BR1-2 곡선 zoneRangeScale)
 			local meteor25 = atTwentyFive and atTwentyFive.skills.meteor
 			local tutorial = BossRules.buildTutorialInstanceData(1, 1, { "meteor" }, 1, 1)
 			r.check(("9 스테이지 %d 보스(실제 스폰): 낙석 count %s(기대 3) · 산개 %s(기대 10 × 배율 %.3f = %.3f) · extra %s(기대 0) · 견습 보스: count %s(기대 3) · extra %s(기대 0)"):format(

@@ -267,8 +267,14 @@ local function selfTest()
 	Toast.clear()
 	handle(relic(1), true)
 	task.wait(DropNoticeData.seconds + DropNoticeData.fadeSeconds + 0.3)
-	local gone = Toast.debugState("TR")
-	check(("%s초 + 흐림 %s초 뒤 줄 %d(기대 0)"):format(DropNoticeData.seconds, DropNoticeData.fadeSeconds, gone.rows), gone.rows == 0)
+	-- QUEUE-6h-b R1: 검증 쪽 문제(같은 TR 줄에 동시에 도는 서버 검증의 자동 처리 알림(AutoProcessToast · G1-2) 등이 들어온다 - 줄 수가 아니라 이 알림(유물러1)이 남았는지를 본다)
+	local left = 0
+	for _, text in ipairs(Toast.debugTexts("TR")) do
+		if string.find(text, "유물러1", 1, true) then
+			left += 1
+		end
+	end
+	check(("%s초 + 흐림 %s초 뒤 이 알림 줄 %d(기대 0 · 전체 줄 %d)"):format(DropNoticeData.seconds, DropNoticeData.fadeSeconds, left, Toast.debugState("TR").rows), left == 0)
 
 	Toast.clear()
 	print(("===S10 검증 끝(UI)=== %d/%d 통과"):format(pass, total))

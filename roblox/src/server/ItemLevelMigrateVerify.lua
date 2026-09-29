@@ -107,10 +107,11 @@ function ItemLevelMigrateVerify.runPure()
 	r.section("이관", function()
 		local before = buildV23Profile()
 		local expected = deepCopy(before)
-		expected.version = SaveConfig.saveVersion
 		expected.inventory[1].itemLevel = 102
 		expected.inventory[2].itemLevel = 52
 		expected.classes[classB].equipment.armor.itemLevel = 32
+		-- QUEUE-6h-b R1: 기대값 갱신(v24 뒤 이관 단계(태초 필드 · settings 등 v54까지)가 필드를 더한다 - 기대 itemLevel만 미리 고친 v23 사본도 같은 체인에 통과시켜 비교)
+		expected = SaveSystem.migrate(expected)
 
 		local migrated = SaveSystem.migrate(deepCopy(before))
 		local bag, worn = migrated.inventory, migrated.classes[classB].equipment.armor

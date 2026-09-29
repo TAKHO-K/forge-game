@@ -70,6 +70,7 @@ function DropNoticeVerify.runPure()
 		relic = { solo = "-", party = "party" },
 		ancient = { solo = "server", party = "server" }, -- D1 ⑧: 고대 = 같은 서버 알림
 		primordial = { solo = "-", party = "-" }, -- D1: 태초 = PrimordialRegistry(세계 번호 · 전 서버) - DropNotice는 안 보낸다
+		transcendent = { solo = "-", party = "-" }, -- QUEUE-6h-b R1: 기대값 갱신(C5-7 04ca426 초월 = 8번째 등급 · registryGrades - PrimordialRegistry 전 서버 · DropNotice는 안 보낸다)
 	}
 	local mismatches, rows = {}, {}
 	for _, grade in ipairs(ArmorData.gradeOrder) do
@@ -80,7 +81,7 @@ function DropNoticeVerify.runPure()
 			table.insert(mismatches, grade)
 		end
 	end
-	r.check(("등급 필터 7등급: %s(기대 영웅 · 전설까지 발신 0 · 유물 = 파티만 · 고대 = 서버 전체 · 태초 = 세계 기록 모듈 - D1) 어긋난 등급 %d개"):format(table.concat(rows, " · "), #mismatches), #mismatches == 0 and #ArmorData.gradeOrder == 7)
+	r.check(("등급 필터 8등급: %s(기대 영웅 · 전설까지 발신 0 · 유물 = 파티만 · 고대 = 서버 전체 · 태초 · 초월 = 세계 기록 모듈 - D1 · C5-7) 어긋난 등급 %d개"):format(table.concat(rows, " · "), #mismatches), #mismatches == 0 and #ArmorData.gradeOrder == 8)
 
 	-- 데이터 표 정합: 등급 id가 실제 등급이고, 서버 전체 등급은 파티 등급의 부분집합이다. 사용자 결정 값(3줄 · 4초 · 묶기 1초).
 	local unknown = {}

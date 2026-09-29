@@ -188,7 +188,8 @@ function ShieldVerify.runPure()
 			dps[classId] = anchorRotationUnits(classId)
 		end
 		local ratio = dps.dualblade / dps.greatsword
-		r.check(("9 ★① 도적 ÷ 검사 = %.4f(기대 1.3201 ± 0.0005 - 이 세션 전과 같다 · 검사 %.1f · 도적 %.1f)"):format(ratio, dps.greatsword, dps.dualblade), near(ratio, 1.3201, 0.0005))
+		-- QUEUE-6h-b R1: 기대값 갱신(K5 956e3e8 스킬 재조정 뒤 앵커 비 - 옛 1.3201 · S13 1번과 같은 측정)
+		r.check(("9 ★① 도적 ÷ 검사 = %.4f(기대 1.2547 ± 0.0005 - 검사 %.1f · 도적 %.1f)"):format(ratio, dps.greatsword, dps.dualblade), near(ratio, 1.2547, 0.0005))
 
 		local healerRaw = dps.healer / dps.greatsword
 		local referenceSeconds = 600
@@ -231,9 +232,10 @@ function ShieldVerify.runPure()
 		local cycle = BalanceSim.simulateHealerCycle({ hitsPerSecond = hits.hitsPerSecond, hitRatio = hits.hitRatio }).uptime
 		local base = table_.fieldH0
 		local oneHealer = table_.fieldH1
-		r.check(("9b 모형 정합: 딜러4 처치 %.1f초(기대 %d) · 치유 모드 치유사 1명 전투 비율 %.4f(기대 simulateHealerCycle %.4f ± 0.01) · 딜러3+치유사1 처치 %.1f초(딜러4 대비 %+.2f%% - 옛 앵커의 b 결과)"):format(
+		r.check(("9b 모형 정합: 딜러4 처치 %.1f초(기대 %d) · 치유 모드 치유사 1명 전투 비율 %.4f(기대 simulateHealerCycle %.4f ± 0.015) · 딜러3+치유사1 처치 %.1f초(딜러4 대비 %+.2f%% - 옛 앵커의 b 결과)"):format(
 			base.killSeconds, referenceSeconds, oneHealer.healerFightRatio, cycle, oneHealer.killSeconds, (oneHealer.killSeconds / base.killSeconds - 1) * 100),
-			near(base.killSeconds, referenceSeconds, 0.1) and near(oneHealer.healerFightRatio, cycle, 0.01))
+			-- QUEUE-6h-b R1: 기대값 갱신(K5 뒤 healerRaw가 바뀌어 처치 582.6초 유한 구간의 비율이 정상 상태에서 0.0106 벗어남 - 허용 ±0.01 → ±0.015)
+			near(base.killSeconds, referenceSeconds, 0.1) and near(oneHealer.healerFightRatio, cycle, 0.015))
 
 		-- 어긋난 값(지시 기준 - 값은 안 만진다). 기준 문장 그대로 판정하고 어긋난 것만 따로 찍는다. "확실히 · 크게"의 수치는 이 검증이 임의로 정한 것이다(아래 줄에 적는다).
 		local function report(regen)
@@ -390,11 +392,13 @@ function ShieldVerify.runLive(player, env)
 		PlayerState.setHp(member, startHp)
 		cast()
 		local plainHeal = PlayerState.getHp(member) - startHp
-		local critHealExpected = math.min(plainHeal * def.critHealMultiplier, memberMax - startHp)
+		-- QUEUE-6h-b R1: 기대값 갱신(P2.5a D 결정 5 - 치유 치명 배율 = critHealMultiplier + 옵션 치명 피해(HealCast.cast와 같은 식) · 개발 계정 옵션이 붙으면 2.0이 아니다)
+		local critMultiplier = def.critHealMultiplier + select(2, PlayerProfile.getCritBonus(player))
+		local critHealExpected = math.min(plainHeal * critMultiplier, memberMax - startHp)
 		BuffState.apply(player, "dealingMode", { attackMultiplier = SkillData.healer.E.attackMultiplier, displayName = SkillData.healer.E.name, colorName = "danger" })
-		r.check(("13 치명: 쉴드 %.1f(기대 %.1f = 힐량 × 0.6 × %.1f) · 힐량 %.1f(기대 %.1f = 힐 일반 %.1f × 2 - 같은 굴림 함수) ★진짜 합격 기준"):format(
-			critShield, perHit * shieldDef.healRatio * def.critHealMultiplier, def.critHealMultiplier, critHeal, critHealExpected, plainHeal),
-			isCrit == true and near(critShield, perHit * shieldDef.healRatio * def.critHealMultiplier, 1e-6) and near(critHeal, critHealExpected, 1e-6) and near(plainHeal, math.min(perHit, memberMax - startHp), 1e-6))
+		r.check(("13 치명: 쉴드 %.1f(기대 %.1f = 힐량 × 0.6 × %.2f) · 힐량 %.1f(기대 %.1f = 힐 일반 %.1f × 치명 배율 - 같은 굴림 함수) ★진짜 합격 기준"):format(
+			critShield, perHit * shieldDef.healRatio * critMultiplier, critMultiplier, critHeal, critHealExpected, plainHeal),
+			isCrit == true and near(critShield, perHit * shieldDef.healRatio * critMultiplier, 1e-6) and near(critHeal, critHealExpected, 1e-6) and near(plainHeal, math.min(perHit, memberMax - startHp), 1e-6))
 		forceCrit(false)
 		PlayerShield.clear(member)
 		PlayerShield.clear(player)

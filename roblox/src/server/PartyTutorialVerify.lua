@@ -361,6 +361,9 @@ function PartyTutorialVerify.runLive(player, env)
 		BossEncounter.despawnFor(player)
 	end)
 
+	-- QUEUE-6h-b R1: 검증 쪽 문제(C5-4 자동 스테이지 이동이 처치 사이 대기 동안 스테이지를 12 → 49로 옮겼다 - C1Verify처럼 [7] 동안 끈다)
+	local savedAutoStage = player:GetAttribute("AutoStage")
+	player:SetAttribute("AutoStage", "off")
 	r.section("[7] 보상 기준: 견습 = 견습 스테이지 · 친구 = 자기 스테이지(파티 보너스는 둘 다)", function()
 		env.applyStage(player, FRIEND_STAGE)
 		-- P2 G: 파티 보너스는 조건(같은 구역 · 반경 · 최근 활동)을 만족한 파티원만 센다 - 스탠드인 B를 실제 Player와 같은 가상 구역 · 자리에 두고 방금 활동한 것으로 기록한다.
@@ -374,6 +377,9 @@ function PartyTutorialVerify.runLive(player, env)
 		local friendStage, friendGold, friendExp = killOne(player) -- 견습 아님 = 같은 파티의 친구 처지
 		-- P2.5c 결정 3: 캐릭터 경험치에는 환생 배율도 곱해진다(PlayerProfile.addCharacterExp).
 		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(PlayerProfile.getRebirthCount(player)) * CharacterLevel.getExpScale(player:GetAttribute("CharacterLevel") or 1) -- P3c C4: 126 뒤 배수
+		-- QUEUE-6h-b R1: 기대값 갱신(C5-2 43c7cc4 되찾기 배수 - 이전 최고 레벨(reclaimLevel) 아래면 회차별 ×2 ~ (개발 계정 ×10) · addCharacterExp와 같은 식)
+		local classState = PlayerProfile.getProfile(player).classes[PlayerProfile.getClassId(player)]
+		rebirthMult *= CharacterLevel.getReclaimMultiplier(PlayerProfile.getRebirthCount(player), player:GetAttribute("CharacterLevel") or 1, classState.reclaimLevel)
 		local expectedTutorial = InfiniteStage.getExpReward(MonsterData.tier1.expReward, TutorialData.monsterStage) * (1 + partyBonus) * rebirthMult
 		local expectedFriend = InfiniteStage.getExpReward(MonsterData.tier1.expReward, FRIEND_STAGE) * (1 + partyBonus) * rebirthMult
 		print(("[S12][나] 처치 로그 1(견습 중): 스테이지 %s · 골드 +%d · 경험치 +%.4f"):format(tostring(tutorialStage), tutorialGold, tutorialExp))
@@ -389,6 +395,7 @@ function PartyTutorialVerify.runLive(player, env)
 	-- P2 G: 가짜 위치는 섹션 밖에서 해제한다(섹션 도중 에러가 나도 남지 않게 - 리뷰 지적 7).
 	PartyExpBonus.debugSetPresence(player, nil)
 	PartyExpBonus.debugSetPresence(B, nil)
+	player:SetAttribute("AutoStage", savedAutoStage) -- QUEUE-6h-b R1: 위 [7]에서 끈 자동 이동 되돌림
 
 	-- [8] 되돌리기: 파티 · 견습 진행도 · 감싼 함수 · 직업 · 장비 · 골드 · 가방 · 위치. 검증이 만든 것은 없어야 한다.
 	dissolve()

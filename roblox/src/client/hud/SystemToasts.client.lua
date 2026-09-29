@@ -94,6 +94,8 @@ local function selfCheck()
 			{ remote = "LevelUp", value = 41, lane = "TC", text = "레벨업! Lv.41", color = "xp", grade = "important", seconds = 2, fade = 0.5 },
 			{ remote = "ZoneBlockedNotice", value = "구역 안으로 들어가야 공격할 수 있습니다", lane = "TC", text = "구역 안으로 들어가야 공격할 수 있습니다", color = "ember", seconds = 2, fade = 0.3 },
 			{ remote = "TreasureChestNotice", value = "보물상자가 tier 3 숲의 정령 구역에 나타났습니다! 함께 부수면 모두가 보상을 받습니다", lane = "TC", text = "보물상자가 tier 3 숲의 정령 구역에 나타났습니다! 함께 부수면 모두가 보상을 받습니다", color = "gold", seconds = 5, fade = 0.3 },
+			-- QUEUE-6h-b R1: 기대값 갱신(C5-4 92a761d SystemNotice 신호가 5번째 줄로 추가 - 표 6줄 · 줍기는 6번째)
+			{ remote = "SystemNotice", value = "자동 이동: 스테이지 12", lane = "TC", text = "자동 이동: 스테이지 12", color = "gold", seconds = 4, fade = 0.4 },
 			{ remote = "ItemPickedUp", value = sampleItem, lane = "BC", text = pickupText, rich = true, seconds = 0.8, fade = 0.8 },
 		}
 
@@ -112,7 +114,7 @@ local function selfCheck()
 				table.insert(oldGuis, name)
 			end
 		end
-		check(("신호 표 대조: 표 %d줄(기대 5) %s · 옛 알림 ScreenGui %d개(기대 0) %s"):format(#SIGNALS, table.concat(rows, " · "), #oldGuis, table.concat(oldGuis, ",")), tableOk and #oldGuis == 0)
+		check(("신호 표 대조: 표 %d줄(기대 6) %s · 옛 알림 ScreenGui %d개(기대 0) %s"):format(#SIGNALS, table.concat(rows, " · "), #oldGuis, table.concat(oldGuis, ",")), tableOk and #oldGuis == 0)
 
 		-- 2. 신호마다: make(값)의 문구 · 색 · 시간 · 흐림을 옛 값과 대조하고, 같은 함수로 실제로 띄워 줄 · 글씨색 · 실효 글씨 크기를 본다
 		for index, case in ipairs(cases) do
@@ -185,7 +187,7 @@ local function selfCheck()
 		local grades = { "rare", "legendary", "primordial" }
 		local pushes = {}
 		for index, grade in ipairs(grades) do
-			table.insert(pushes, Toast.push("BC", SIGNALS[5].make({ grade = grade, part = "armor", itemLevel = 40 + index })))
+			table.insert(pushes, Toast.push("BC", SIGNALS[6].make({ grade = grade, part = "armor", itemLevel = 40 + index })))
 		end
 		task.wait(0.2)
 		local bcState = Toast.debugState("BC")

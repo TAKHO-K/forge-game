@@ -1,6 +1,6 @@
 -- 보스 첫 클리어 보상 띠(30-0 S11, PRD 20.73 [4-2]) - 스테이지 선택 패널(StageSelectPanel)이 그리드와 페이지 버튼 사이에 끼우는 고정 크기 부품.
 -- 보스 칸을 누르면(선택) 그 보스의 이름 · 첫 클리어 보상(직업 / 계정 구분) · 매번 받는 것 · 도감이 보이고, [도전]을 눌러야 이동 요청이 나간다(파티 전원 텔레포트를 일으키는 클릭이라 확인 단계).
--- **문자열은 데이터에서 만든다**(숫자를 여기 적지 않는다): 20마리분 = BossData의 hpMultiplier · Lv 범위 = 스테이지 + ArmorData.bossItemLevelDelta의 최소 ~ 최대 · 강화석 ≈ dropChancePerKill × hpMultiplier
+-- **문자열은 데이터에서 만든다**(숫자를 여기 적지 않는다): 20마리분 = BossData의 goldMultiplier · Lv 범위 = 스테이지 + ArmorData.bossItemLevelDelta의 최소 ~ 최대 · 강화석 ≈ dropChancePerKill × hpMultiplier
 -- (minStage 미만이면 그 항목이 없다) · "영웅 이상" = 확정 장비 등급표에서 확률 > 0인 가장 낮은 등급(환생 0회 = 상향표, 1회 이상 = 기본표 - Loot.rollBossFirstClearDrop과 같은 분기) · 방지권 = Enhance.getBossGrant.
 -- 받을 것 / 받은 것 / 스테이지 없음("none")은 서버 응답(BossRewardPreview)이 정한다 - 클라는 판정하지 않는다. 받은 줄은 지우지 않고 textTertiary + "✓ 받음"으로 남긴다.
 -- 고정 크기만(AutomaticSize 없음). 글씨 12 미만 금지(Theme.textSize). 최상위 local 120개 이하.
@@ -103,7 +103,7 @@ end
 -- 순수: 스테이지 하나의 띠 내용. entry = { bossId, gearClaimed, dropTicket, resetTicket }. 반환 { title, rows = { { head, text(RichText), plain, claimed, isGear } }, help(등급 확률 줄바꿈), helpLines }.
 function StageRewardBand.describe(stage, entry, rebirthCount)
 	local boss = BossData.bosses[entry.bossId]
-	local units = boss.hpMultiplier
+	local units = boss.goldMultiplier -- QUEUE-6h-b R1 버그 수정: "매번" 줄 = 실제 지급 배수(BossRules goldDrop · expReward = goldMultiplier · expMultiplier) - 옛 hpMultiplier(34.88…)가 날것으로 찍혔다
 	local rows = {}
 
 	local grades = StageRewardBand.gradeRows(rebirthCount)
@@ -478,12 +478,20 @@ function StageRewardBand.selfTest(report)
 	report(("방지권 표시 45 / 50 / 75 / 100 = 없음 / 하락 / 하락 / 둘 다: [%s] [%s] [%s] [%s]"):format(t45, t50, t75, t100),
 		not has(t45, "방지권") and has(t50, "하락 방지권 ×1") and not has(t50, "초기화") and has(t75, "하락 방지권 ×1") and not has(t75, "초기화")
 			and has(t100, "하락 방지권 ×1") and has(t100, "초기화 방지권 ×1"))
-	report(("강화석 항목 45 / 50 / 75 / 100 = 없음 / ≈5 / ≈5 + 상급 ≈5 / 같음: 45 %s · 50 %s · 75 %s · 100 %s"):format(
-		tostring(has(t45, "강화석")), tostring(has(t50, "강화석 ≈5")), tostring(has(t75, "강화석 ≈5 · 상급 강화석 ≈5")), tostring(has(t100, "강화석 ≈5 · 상급 강화석 ≈5"))),
-		not has(t45, "강화석") and has(t50, "강화석 ≈5") and not has(t50, "상급") and has(t75, "강화석 ≈5 · 상급 강화석 ≈5") and has(t100, "강화석 ≈5 · 상급 강화석 ≈5"))
+	-- QUEUE-6h-b R1: 기대값 갱신(보스 hpMultiplier 20 → referenceKillSeconds ÷ killTargetSeconds(≈34.9 - BR1 e8a0bbe)라 옛 ≈5 고정 대신 데이터 식 값 · 표시와 같은 소수 한 자리)
+	local units = BossData.bosses.frost_giant.hpMultiplier
+	local function oneDecimal(value)
+		return ("%g"):format(math.floor(value * 10 + 0.5) / 10)
+	end
+	local stoneOne = "강화석 ≈" .. oneDecimal(EnhanceMaterialData.materials[EnhanceMaterialData.order[1]].dropChancePerKill * units)
+	local stoneBoth = stoneOne .. " · 상급 강화석 ≈" .. oneDecimal(EnhanceMaterialData.materials[EnhanceMaterialData.order[2]].dropChancePerKill * units)
+	report(("강화석 항목 45 / 50 / 75 / 100 = 없음 / %s / %s / 같음: 45 %s · 50 %s · 75 %s · 100 %s"):format(stoneOne, stoneBoth,
+		tostring(has(t45, "강화석")), tostring(has(t50, stoneOne)), tostring(has(t75, stoneBoth)), tostring(has(t100, stoneBoth))),
+		not has(t45, "강화석") and has(t50, stoneOne) and not has(t50, "상급") and has(t75, stoneBoth) and has(t100, stoneBoth))
 	local deltas = ArmorData.bossItemLevelDelta
 	local lvRange = ("Lv %d~%d"):format(S50 + deltas[1].delta, S50 + deltas[#deltas].delta) -- P2.5c 결정 6: +0 ~ +15
 	local titleHead = ("스테이지 %d 보스 · "):format(S50)
+	-- QUEUE-6h-b R1: 기대 '20마리분'은 그대로 맞다(골드 · 경험치 = BossData goldMultiplier · expMultiplier 20). 띠가 hpMultiplier(≈34.88 날것)를 찍는 것은 진짜 버그로 보고 - X로 남는다
 	report(("제목 · 매번 · Lv 범위: [%s] · %d: [%s] (기대 '%s…' · '20마리분' · '%s' · '???' 없음)"):format(d50.title, S50, t50, titleHead, lvRange),
 		string.sub(d50.title, 1, #titleHead) == titleHead and has(t50, "골드·경험치 20마리분") and has(t50, lvRange) and not has(d50.title .. t50, "???"))
 	-- G1-1: 매번 줄에 장비가 없다(첫 클리어 때 2개로 읽히던 것) · 재도전 줄 = 장비 1개 + 등급 확률(D1: 토벌 표 - 영웅 78% · … · 태초 0.002%)
@@ -496,9 +504,10 @@ function StageRewardBand.selfTest(report)
 	report(("매번 · 재도전 줄: 매번 [%s](기대 장비 없음) · 재도전 [%s](기대 '장비 1개' · '영웅 78%%' · '태초 0.002%%')"):format(everyRow.plain, retryRow.plain),
 		not has(everyRow.plain, "장비") and has(retryRow.plain, "장비 1개") and has(retryRow.plain, "영웅 78%") and has(retryRow.plain, "태초 0.002%"))
 	local r0, r1 = rowsOf(S50, entryOf(false, "available", "none"), 0), rowsOf(S50, entryOf(false, "available", "none"), 1)
-	report(("등급 이상 표기 · 확률 줄 수: 환생 0회 [%s] %d줄(기대 영웅 이상 · 5줄) / 환생 1회 [%s] %d줄(기대 영웅 이상 · 5줄 - D1 상향표 폐지)"):format(
+	-- QUEUE-6h-b R1: 기대값 갱신(C5-7 04ca426 초월 등급 추가 - 영웅 ~ 초월 6줄 · 옛 5줄)
+	report(("등급 이상 표기 · 확률 줄 수: 환생 0회 [%s] %d줄(기대 영웅 이상 · 6줄) / 환생 1회 [%s] %d줄(기대 영웅 이상 · 6줄 - D1 상향표 폐지)"):format(
 		string.match(r0.rows[1].plain, "%((%S+) 이상") or "?", r0.helpLines, string.match(r1.rows[1].plain, "%((%S+) 이상") or "?", r1.helpLines),
-		has(r0.rows[1].plain, "영웅 이상") and r0.helpLines == 5 and has(r1.rows[1].plain, "영웅 이상") and r1.helpLines == 5)
+		has(r0.rows[1].plain, "영웅 이상") and r0.helpLines == 6 and has(r1.rows[1].plain, "영웅 이상") and r1.helpLines == 6)
 	-- 직업 / 계정은 다른 축: 장비는 이 직업 기준, 방지권은 계정 기준 - 한 줄이 받은 것이어도 다른 줄은 밝다.
 	local axes = rowsOf(S50, entryOf(false, "claimed", "none"))
 	local gearRow, ticketRow = axes.rows[1], axes.rows[2]

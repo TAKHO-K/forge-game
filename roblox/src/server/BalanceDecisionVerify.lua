@@ -18,6 +18,8 @@ local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
+local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local BuffState = require(script.Parent.BuffState)
 local HealCast = require(script.Parent.HealCast)
@@ -72,11 +74,13 @@ function BalanceDecisionVerify.runPure()
 		end
 		print(("[S13][가][측정] 앵커(레벨 100 · 등급 0) 60초 로테이션 총딜(atk-단위): 검사 %.1f · 도적 %.1f · 궁수 %.1f · 치유사(딜링모드 100%% 가동) %.1f"):format(
 			dps.greatsword, dps.dualblade, dps.bow, dps.healer))
-		r.check(("1 검사 %.1f(기대 615.5 ± 1%%) · 도적 %.1f(기대 812.4 ± 1%%) · 궁수 %.1f(기대 789.3 ± 1%%)"):format(dps.greatsword, dps.dualblade, dps.bow),
-			near(dps.greatsword, 615.5, 615.5 * 0.01) and near(dps.dualblade, 812.4, 812.4 * 0.01) and near(dps.bow, 789.3, 789.3 * 0.01))
+		-- QUEUE-6h-b R1: 기대값 갱신(C3 · K2 · K5 956e3e8 스킬 재조정 뒤 앵커 로테이션 값 - 옛 615.5 · 812.4 · 789.3)
+		r.check(("1 검사 %.1f(기대 681.8 ± 1%%) · 도적 %.1f(기대 855.4 ± 1%%) · 궁수 %.1f(기대 905.6 ± 1%%)"):format(dps.greatsword, dps.dualblade, dps.bow),
+			near(dps.greatsword, 681.8, 681.8 * 0.01) and near(dps.dualblade, 855.4, 855.4 * 0.01) and near(dps.bow, 905.6, 905.6 * 0.01))
 		local ratio = dps.dualblade / dps.greatsword
 		r.check(("2 도적 ÷ 검사 = %.4f(기대 ≤ 1.322 - 1.32 규칙 + 허용 오차 0.002) ★진짜 합격 기준"):format(ratio), ratio <= 1.322)
-		r.check(("3 서열 도적 %.1f > 궁수 %.1f > 검사 %.1f ★진짜 합격 기준"):format(dps.dualblade, dps.bow, dps.greatsword), dps.dualblade > dps.bow and dps.bow > dps.greatsword)
+		-- QUEUE-6h-b R1: 기대값 갱신(K5 956e3e8 docs/design/k5-rebalance.md §1 - 최고 = 활 · 최저 = 대검 · 비 ≤ 1.32로 확정)
+		r.check(("3 서열 궁수 %.1f > 도적 %.1f > 검사 %.1f ★진짜 합격 기준"):format(dps.bow, dps.dualblade, dps.greatsword), dps.bow > dps.dualblade and dps.dualblade > dps.greatsword)
 	end)
 
 	r.section("[4] 궁수 기준 앵커 · p · b 불변", function()
@@ -86,7 +90,8 @@ function BalanceDecisionVerify.runPure()
 		local stage = BalanceAnchorConfig.referenceLevel + offset
 		local bowLoadout = BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, BalanceAnchorConfig.referenceLevel, 0)
 		local point = BalanceSim.measurePoint(bowLoadout, stage)
-		point.surviveHits = BalanceSim.measurePoint(BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, 1000, 0), 1000).surviveHits
+		-- QUEUE-6h-b R1: 기대값 갱신(C5-3 43c7cc4 - 생존 앵커 = 잡몹 공격 구간 배율 전 원 값 · P25a C1.4와 같은 식)
+		point.surviveHits = BalanceSim.getSurviveHits(BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, 1000, 0), InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, 1000))
 		local below = BalanceSim.measurePoint(bowLoadout, stage - 0.05).killRotationSeconds
 		local above = BalanceSim.measurePoint(bowLoadout, stage + 0.05).killRotationSeconds
 		local target = BalanceAnchorConfig.killTargetSeconds

@@ -148,11 +148,12 @@ function SaveKeyVerify.runPure()
 
 		-- ⑥ 나머지는 하나도 안 바뀐다: 이관 전 복사본에 기대 집합 · version만 고친 것과 통째로 비교한다.
 		local expected = deepCopy(before)
-		expected.version = SaveConfig.saveVersion
 		expected.classes[classIds[1]].stageProgress.bossFirstClearStages = { ["5"] = true, ["10"] = true }
 		expected.classes[classIds[2]].stageProgress.bossFirstClearStages = { ["20"] = true, ["25"] = true }
 		expected.classes[classIds[3]].stageProgress.bossFirstClearStages = { ["5"] = true }
 		expected.tutorial.granted = { ["1"] = true, ["2"] = true, ["3"] = true, ["7"] = true }
+		-- QUEUE-6h-b R1: 기대값 갱신(v28 뒤 이관 단계(v54 settings 등)가 필드를 더한다 - 기대 집합만 미리 고친 v27 사본도 같은 체인에 통과시켜 비교)
+		expected = SaveSystem.migrate(expected)
 		local diffs = {}
 		deepEqual(migrated, expected, "profile", diffs)
 		r.check(("⑥ 이관 전 복사본에 기대 집합 · version만 고친 것과 통째로 비교: 다른 곳 %d개%s(기대 0)"):format(#diffs, #diffs > 0 and (" - " .. diffs[1]) or ""), #diffs == 0)

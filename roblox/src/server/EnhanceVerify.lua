@@ -560,7 +560,8 @@ local function checkExpectedFormula(r)
 				MonsterState.init(fake, data, nil, nil, { prefix = prefixMultiplier ~= 1 and { hpMultiplier = prefixMultiplier } or nil })
 				local units = MonsterState.getKillUnits(fake)
 				MonsterState.clear(fake)
-				local goldRatio = data.goldDrop / MonsterData.tier1.goldDrop * prefixMultiplier
+				-- QUEUE-6h-b R1: 기대값 갱신(C3-3 d35fec0 - 마릿수분 = killUnits(새 HP 비 · tier1 0.825) × 접두사 · 골드 비(tier1 = 1)와는 전체 0.825만큼 다르다)
+				local goldRatio = data.killUnits * prefixMultiplier
 				allOk = allOk and math.abs(units - goldRatio) <= 1e-9
 				local cells = {}
 				local baseCount
@@ -575,7 +576,7 @@ local function checkExpectedFormula(r)
 			end
 			print(("[S04][가]   tier%d(r^p=%.3f): %s (경험치 배수 1.0/1.2/1.5)"):format(tierIndex, data.goldDrop / MonsterData.tier1.goldDrop, table.concat(rows, " · ")))
 		end
-		r.check(("tier1 ~ 6 × 접두사 1 · 3 × 배수 1.0/1.2/1.5: 기대 개수 = 0.25 × 마릿수분 × 배수(오차 ≤ 1e-9) · 마릿수분 = 골드 배율(goldDrop ÷ tier1 × 접두사)=%s · 배수 1.5 = 1.0의 1.5배=%s ★진짜 합격 기준(경험치 배수가 곱해진다)"):format(
+		r.check(("tier1 ~ 6 × 접두사 1 · 3 × 배수 1.0/1.2/1.5: 기대 개수 = 0.25 × 마릿수분 × 배수(오차 ≤ 1e-9) · 마릿수분 = killUnits × 접두사=%s · 배수 1.5 = 1.0의 1.5배=%s ★진짜 합격 기준(경험치 배수가 곱해진다)"):format(
 			tostring(allOk), tostring(halfOk)), allOk and halfOk)
 	end)
 end
@@ -773,6 +774,7 @@ local function killBossOnce(player, env, stage, standInRatio)
 	if not model then
 		return nil
 	end
+	model:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 쪽 문제(BR1-4c 71d83d6 진입 연출 동안 보스 피해 0 - 바로 때리는 검증은 연출을 건너뛴다)
 	local data = MonsterState.getData(model)
 	local playerStage = TutorialState.getMonsterStage(player)
 	local _, maxHp = MonsterState.getBossHp(model)

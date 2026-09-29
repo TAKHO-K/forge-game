@@ -1174,6 +1174,9 @@ local function runPartySelfTest(player)
 	BossEncounter.spawnForParty(party, player, stage)
 	local encounter = BossEncounter.getEncounter(player)
 	local model = encounter and encounter.model
+	if model then
+		model:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 쪽 문제(BR1-4c 71d83d6 진입 연출 동안 보스 피해 0 - 바로 때리는 검증은 연출을 건너뛴다)
+	end
 	local _, maxHpBefore = MonsterState.getBossHp(model)
 	local mult = encounter and encounter.data.partyHpMultiplier or 0
 	MonsterState.applyDamage(model, maxHpBefore * 0.05, stage, B) -- B 5% (제외돼야 한다)
@@ -3648,6 +3651,7 @@ if RunService:IsStudio() and verifyEnabled("27-1(나)") then
 			if not model then
 				print(("[27-1][A1] 보스 스폰 실패 - 건너뜀 %s"):format(record(false)))
 			else
+				model:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 쪽 문제(BR1-4c 71d83d6 진입 연출 동안 보스 피해 0 - 바로 때리는 검증은 연출을 건너뛴다)
 				local lowContributor = { Name = "StandIn9pct", Parent = true }
 				BossEncounter.debugAddMember(model, lowContributor)
 				local pStage = TutorialState.getMonsterStage(player)
@@ -3816,6 +3820,7 @@ if RunService:IsStudio() and verifyEnabled("27-3(나)") then
 				if not model then
 					return false
 				end
+				model:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 쪽 문제(BR1-4c 71d83d6 진입 연출 동안 보스 피해 0 - 바로 때리는 검증은 연출을 건너뛴다)
 				local pStage = TutorialState.getMonsterStage(player)
 				local _, maxHp = MonsterState.getBossHp(model)
 				if standInRatio then
@@ -4589,6 +4594,15 @@ if RunService:IsStudio() and verifyEnabled("Q0(가)") then -- QUEUE-10h: 드랍 
 		local ok, err = pcall(require(script.Parent.QueueVerify).runPure)
 		if not ok then
 			print("===Q 검증 끝(가)=== 에러: " .. tostring(err))
+		end
+	end)
+end
+
+if RunService:IsStudio() and verifyEnabled("R2(가)") then -- QUEUE-6h-b R2: 저장 안전 감사(이관 체인 · 멱등 · 새 계정 기본값 · 손상 입력 · NaN 저장 보호)
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.SaveAuditVerify).runPure)
+		if not ok then
+			print("===R2 검증 끝(가)=== 에러: " .. tostring(err))
 		end
 	end)
 end

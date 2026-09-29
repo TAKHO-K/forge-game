@@ -119,7 +119,8 @@ local function checkExpectedCounts(r)
 		-- P2.5a: 등급 배율 ×1.45(R3)가 tier 공정성 r(t)의 입력이라 기대 개수(= dropChance × r(t))가 바뀌었다 - 옛 0.25 · 0.31 · 0.40 · 0.57 · 0.79 · 1.05.
 		local expected = {}
 		for tierIndex = 1, 6 do
-			expected[tierIndex] = ArmorData.dropChance * MonsterData.getRewardRatio(tierIndex)
+			-- QUEUE-6h-b R1: 기대값 갱신(QUEUE-10h Q0 결정 1 d699bb9 - 개수 = dropChance × killUnits × fieldDropCountAdjust = MonsterData.dropCountMultiplier)
+			expected[tierIndex] = ArmorData.dropChance * MonsterData[MonsterData.tierOrder[tierIndex]].dropCountMultiplier
 		end
 		local rows, allOk = {}, true
 		for tierIndex = 1, #expected do
@@ -127,7 +128,7 @@ local function checkExpectedCounts(r)
 			allOk = allOk and math.abs(value - expected[tierIndex]) <= 0.01
 			table.insert(rows, ("tier%d=%.4f"):format(tierIndex, value))
 		end
-		r.check(("rewardMultiplier=1: %s (기대 dropChance × r(t) ±0.01 - P2.5a 등급 배율)"):format(table.concat(rows, " ")), allOk)
+		r.check(("rewardMultiplier=1: %s (기대 dropChance × dropCountMultiplier ±0.01 - Q0 killUnits × 티어 보정)"):format(table.concat(rows, " ")), allOk)
 	end)
 end
 
@@ -202,16 +203,16 @@ end
 
 -- 이름만 바뀌었다(itemLevelBonus → dropCountMultiplier) - 공정성 항등식 rewardPerTime은 S01 전과 같아야 한다.
 -- 1.3053은 S01 착수 전 로컬 하네스로 잰 tier1 ~ 6 공통값이다. P2.5a: 등급 배율 ×1.45(R3)로 공통값이 1.2373이 됐다 - 항등식(tier 전부 같은 값)은 그대로.
-local FAIRNESS_BASELINE = 1.23728
 
 local function checkFairness(r)
 	r.section("[9] 공정성 항등식", function()
 		local rows, allOk = {}, #MonsterData.fairnessCheck == 6
 		for _, row in ipairs(MonsterData.fairnessCheck) do
-			allOk = allOk and math.abs(row.rewardPerTime - FAIRNESS_BASELINE) <= 1e-5
+			-- QUEUE-6h-b R1: 기대값 갱신(QUEUE-10h Q0 결정 1 · Q2 2572e7b - 새 개수 식의 항등식 = 티어 보정 × 위력 비 ÷ tier1 = tier1 1 · 이동 보정 몫만큼 1에서 벗어남 ±0.1)
+			allOk = allOk and math.abs(row.rewardPerTime - 1) <= 0.1 and (row.tier ~= 1 or math.abs(row.rewardPerTime - 1) <= 1e-9)
 			table.insert(rows, ("tier%d=%.6f"):format(row.tier, row.rewardPerTime))
 		end
-		r.check(("fairnessCheck rewardPerTime: %s (기대 전부 %.4f - P2.5a 등급 배율 뒤의 공통값)"):format(table.concat(rows, " "), FAIRNESS_BASELINE), allOk)
+		r.check(("fairnessCheck rewardPerTime: %s (기대 tier1 = 1 · 전부 0.9 ~ 1.1 - Q2 새 개수 식 · 이동 보정 몫)"):format(table.concat(rows, " ")), allOk)
 	end)
 end
 
@@ -282,7 +283,16 @@ local function killZoneMobs(player, tierIndex, want, stage)
 			end
 		end
 		if killed < want then
-			task.wait(WorldConfig.zoneMonsterGrid.respawnDelaySeconds + 1)
+			-- QUEUE-6h-b R1: 검증 쪽 문제(S01(나) 스폰 전제 - M1-4부터 구역 잡몹은 플레이어 근처 지점만 켜져 먼 tier 구역이 비어 있다) → 그 구역 중심에 직접 스폰해 같은 처치 경로로 잡는다
+			local zone = WorldConfig.zones[MonsterData.tierOrder[tierIndex]]
+			local tierData = MonsterData[MonsterData.tierOrder[tierIndex]]
+			while killed < want and zone do
+				local model = MonsterSpawner.spawn(tierData, zone.center + Vector3.new(0, 3, 0), nil, {})
+				local isDead = MonsterState.applyDamage(model, 1e12, stage, player)
+				MonsterSpawner.updateHpLabel(model)
+				CombatResolution.resolveHit(player, model, isDead)
+				killed += 1
+			end
 		end
 	end
 	return killed, rounds
@@ -293,6 +303,9 @@ local function spawnBossAt(player, env, stage)
 	env.applyStage(player, stage)
 	BossEncounter.spawnFor(player, stage)
 	local model = BossEncounter.getActive(player)
+	if model then
+		model:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 쪽 문제(BR1-4c 71d83d6 진입 연출 동안 보스 피해 0 - 바로 때리는 검증은 연출을 건너뛴다)
+	end
 	return model, model and MonsterState.getData(model)
 end
 

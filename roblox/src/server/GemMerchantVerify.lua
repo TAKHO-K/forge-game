@@ -73,8 +73,9 @@ function GemMerchantVerify.runPure()
 	t.check(("배치: 프롬프트 거리 %s < 서버 반경 %s(프롬프트가 뜬 곳에서 누른 요청은 항상 반경 안)"):format(tostring(merchant.promptDistanceStuds), tostring(range)),
 		merchant.promptDistanceStuds < range and range > 0)
 	local toAltar = (altar - center).Magnitude
-	t.check(("배치: 환생 제단 옆(거리 %.1f - 두 프롬프트 반경이 같은 자리에서 겹치지 않을 만큼 · 옆이라 부를 만큼)"):format(toAltar),
-		toAltar >= WorldConfig.rebirthAltar.promptDistanceStuds + 4 and toAltar <= 30 and merchant.guideSeconds > 0)
+	-- QUEUE-6h-b R1: 기대값 갱신(M1-1 0716238 - 보석상인 = 허브 시장 앞 자리(제단 옆 아님)라 옛 "≤ 30 stud(옆)" 조건 삭제 · 겹치지 않음만 본다)
+	t.check(("배치: 환생 제단과 떨어짐(거리 %.1f - 두 프롬프트 반경이 같은 자리에서 겹치지 않을 만큼 · M1 시장 앞)"):format(toAltar),
+		toAltar >= WorldConfig.rebirthAltar.promptDistanceStuds + 4 and merchant.guideSeconds > 0)
 
 	-- 저장 이관: v29 → v30
 	local old = SaveSystem.defaultProfile()

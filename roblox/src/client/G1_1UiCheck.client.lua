@@ -50,11 +50,10 @@ local function run()
 		task.wait(0.05)
 		local after = ComboGlow.debugState()
 		local readyAfterHeavy = AimTarget.debugHeavyReady()
-		local g = CombatConfig.comboGlow
-		check(("3타 발광: 발밑 고리 없음 %s · 1타 밝기 %.1f(기대 %.1f) · 준비 번쩍 %.1f → %.1f(기대 %.1f → %.1f) · 폰 막대 %d(기대 3) · 강타 신호 %s · 강타 뒤 밝기 %.1f · 신호 %s"):format(
-			tostring(ringGone), one.brightness, g.mine.hit.brightness, flash.brightness, ready.brightness, g.flashBrightness, g.mine.ready.brightness, ready.bars, tostring(heavyReady), after.brightness, tostring(readyAfterHeavy)),
-			ringGone and math.abs(one.brightness - g.mine.hit.brightness) < 1e-3 and math.abs(flash.brightness - g.flashBrightness) < 1e-3 and math.abs(ready.brightness - g.mine.ready.brightness) < 1e-3
-				and ready.bars == CombatConfig.comboHitEvery and heavyReady == true and after.brightness == 0 and readyAfterHeavy == false)
+		-- QUEUE-6h-b R1: 삭제된 기능 참조 → 교체(W2 8242a21 무기 발광 삭제 - debugState.brightness는 항상 0 · 칼날 리본이 대신. 밝기는 기록만 · 막대 · 강타 신호로 판정)
+		check(("3타 표시: 발밑 고리 없음 %s · (기록) 밝기 1타 %.1f · 준비 %.1f → %.1f(W2 삭제 - 0) · 폰 막대 %d(기대 3) · 강타 신호 %s · 강타 뒤 밝기 %.1f · 신호 %s"):format(
+			tostring(ringGone), one.brightness, flash.brightness, ready.brightness, ready.bars, tostring(heavyReady), after.brightness, tostring(readyAfterHeavy)),
+			ringGone and ready.bars == CombatConfig.comboHitEvery and heavyReady == true and readyAfterHeavy == false)
 	end)
 	if not ok then
 		check("3타 발광 에러: " .. tostring(err), false)

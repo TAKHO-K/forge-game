@@ -6,6 +6,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
@@ -277,6 +278,7 @@ local function runLive(player, env)
 			r.check("솔로 보스 스폰 실패", false)
 			return
 		end
+		model:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 쪽 문제(BR1-4c 71d83d6 진입 연출 동안 보스 피해 0 - 바로 때리는 검증은 연출을 건너뛴다)
 		local bar, nameLabel = overheadBar(model)
 		r.check(("1 보스 모델 Attribute: BossHpRatio %s(기대 1) · BossName '%s'(기대 '%s') · BossEncounterId %s · 내 Attribute %s(같아야 한다)"):format(
 			tostring(model:GetAttribute("BossHpRatio")), tostring(model:GetAttribute("BossName")), data.displayName, tostring(model:GetAttribute("BossEncounterId")), tostring(player:GetAttribute("BossEncounterId"))),
@@ -309,6 +311,10 @@ local function runLive(player, env)
 		-- ── 파티 보스: 끊긴 멤버 ──
 		env.applyStage(player, STAGE)
 		local soloHp = BossRules.buildInstanceData(STAGE, guardian, 1).hp
+		-- QUEUE-6h-b R1: 기대값 갱신(M1-1 0716238 - 구간 수호자는 주인이 전에 만났으면 체력 × repeatHpMultiplier · BossEncounter.spawnEncounter와 같은 조건)
+		if PlayerProfile.hasSeenBoss(player, guardian) then
+			soloHp *= BossData.bosses[guardian].repeatHpMultiplier or 1
+		end
 		local b = standIn("점검끊김B", -197001)
 		local party = PartyState.create(player)
 		PartyState.attachMember(party, b)
@@ -318,6 +324,7 @@ local function runLive(player, env)
 		local partyModel = BossEncounter.getActive(player)
 		local hp0, maxHp0 = nil, nil
 		if partyModel then
+			partyModel:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 쪽 문제(BR1-4c 진입 연출 동안 피해 0)
 			hp0, maxHp0 = MonsterState.getBossHp(partyModel)
 		end
 		r.check(("6 끊긴 멤버는 입장 인원(HP 배수 N)에 안 든다: 스폰 %s · 파티 인원 %d(끊긴 멤버 포함 자리 %d) · 보스 최대 HP %s(기대 솔로 값 %s와 같다)"):format(

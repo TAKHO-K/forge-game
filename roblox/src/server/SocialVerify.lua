@@ -257,10 +257,10 @@ function SocialVerify.runPure()
 
 	r.section("가", "데이터 정합", function()
 		local altar = WorldConfig.rebirthAltar
-		local building = 20 -- 커뮤니티 센터 블록 반폭(HuntingGround: 40 × 40 발자국)
-		r.check("가", ("제단 값: 프롬프트 거리 %s < 서버 반경 %s · 센터 블록 밖(오프셋 |z| %s > %d + 2) · 반경 > 0"):format(
-			tostring(altar.promptDistanceStuds), tostring(altar.interactionRangeStuds), tostring(math.abs(altar.offsetFromCommunity.Z)), building),
-			altar.promptDistanceStuds < altar.interactionRangeStuds and math.abs(altar.offsetFromCommunity.Z) > building + 2 and altar.interactionRangeStuds > 0)
+		-- QUEUE-6h-b R1: 기대값 갱신(M1-1 0716238 - 제단 = 커뮤니티 자리 그대로(오프셋 0) · 건물은 그 바깥쪽이라 옛 "센터 블록 밖(|z| > 22)" 조건 삭제)
+		r.check("가", ("제단 값: 프롬프트 거리 %s < 서버 반경 %s · 반경 > 0"):format(
+			tostring(altar.promptDistanceStuds), tostring(altar.interactionRangeStuds)),
+			altar.promptDistanceStuds < altar.interactionRangeStuds and altar.interactionRangeStuds > 0)
 		local nameplate = SocialData.nameplate
 		local minSize = SocialData.label.sizeSteps[#SocialData.label.sizeSteps]
 		r.check("가", ("이름표 값: 글씨 %s(기대 12 이상 · 4단 중 하나) · 거리 %s · 조회 간격 %s초(기대 0.5)"):format(tostring(nameplate.textSize), tostring(nameplate.maxDistanceStuds), tostring(SocialData.inspect.minIntervalSeconds)),
