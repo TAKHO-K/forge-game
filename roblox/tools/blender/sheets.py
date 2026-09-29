@@ -46,6 +46,39 @@ def weapons():
     compose(os.path.join(NIGHT, "weapons-ladder.png"), items, cols=8, title="무기 4종 × 8등급 (A2-N1)", cell=200)
 
 
+def icons():
+    """아이콘 512 → 256(LANCZOS · 투명 유지) + 모음 icons.png(체크 무늬 위 · 등급 테두리 색 예시)"""
+    from PIL import Image, ImageDraw
+    rows = []
+    for kind in ("weapons", "armor"):
+        folder = os.path.join(ART, "icons", kind)
+        if not os.path.isdir(folder):
+            continue
+        for fn in sorted(os.listdir(folder)):
+            if not fn.endswith(".png"):
+                continue
+            path = os.path.join(folder, fn)
+            im = Image.open(path).convert("RGBA")
+            if im.size != (256, 256):
+                im = im.resize((256, 256), Image.LANCZOS)
+                im.save(path)
+            rows.append((kind, fn[:-4], im))
+    GC = {"normal": (230, 230, 230), "rare": (77, 166, 255), "epic": (166, 77, 255), "legendary": (255, 153, 51), "relic": (255, 215, 0), "ancient": (224, 57, 62), "primordial": (255, 60, 200), "transcendent": (214, 176, 62)}
+    items = []
+    tmp = os.path.join(NIGHT, "icons")
+    os.makedirs(tmp, exist_ok=True)
+    for kind, name, im in rows:
+        grade = name.rsplit("_", 1)[1]
+        cell = Image.new("RGBA", (256, 256), (58, 56, 72, 255))
+        d = ImageDraw.Draw(cell)
+        d.rectangle((3, 3, 252, 252), outline=GC.get(grade, (200, 200, 200)) + (255,), width=6)  # UI 테두리 예시(아이콘 파일에는 없음)
+        cell.alpha_composite(im)
+        out = os.path.join(tmp, "%s__%s.png" % (kind, name))
+        cell.convert("RGB").save(out)
+        items.append((out, name))
+    compose(os.path.join(NIGHT, "icons.png"), items, cols=8, title="아이콘 256×256 투명(칸 테두리 = UI 등급색 예시 · 파일에는 물체만)", cell=160)
+
+
 if __name__ == "__main__":
     for n in sys.argv[1:]:
         globals()[n]()
