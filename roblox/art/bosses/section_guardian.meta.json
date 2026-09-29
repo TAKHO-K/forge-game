@@ -1,0 +1,246 @@
+{
+ "parts": {
+  "Hips": {
+   "tris": 88,
+   "origin": [
+    0.0,
+    0.65,
+    0.0
+   ],
+   "neon": false,
+   "color": "#2A0E31"
+  },
+  "Body": {
+   "tris": 148,
+   "origin": [
+    0.0,
+    0.9,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Head": {
+   "tris": 108,
+   "origin": [
+    0.0,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Thigh_L": {
+   "tris": 44,
+   "origin": [
+    -0.5,
+    0.4,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3C1446"
+  },
+  "Shin_L": {
+   "tris": 164,
+   "origin": [
+    -0.5,
+    -0.4,
+    0.0
+   ],
+   "neon": false,
+   "color": "#2A0E31"
+  },
+  "Foot_L": {
+   "tris": 44,
+   "origin": [
+    -0.5,
+    -1.2,
+    0.0
+   ],
+   "neon": false,
+   "color": "#2A0E31"
+  },
+  "UpperArm_L": {
+   "tris": 44,
+   "origin": [
+    -1.5,
+    2.2625,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Forearm_L": {
+   "tris": 44,
+   "origin": [
+    -1.581,
+    1.4917,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Hand_L": {
+   "tris": 72,
+   "origin": [
+    -1.6793,
+    0.5561,
+    -0.1322
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Thigh_R": {
+   "tris": 44,
+   "origin": [
+    0.5,
+    0.4,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3C1446"
+  },
+  "Shin_R": {
+   "tris": 164,
+   "origin": [
+    0.5,
+    -0.4,
+    0.0
+   ],
+   "neon": false,
+   "color": "#2A0E31"
+  },
+  "Foot_R": {
+   "tris": 44,
+   "origin": [
+    0.5,
+    -1.2,
+    0.0
+   ],
+   "neon": false,
+   "color": "#2A0E31"
+  },
+  "UpperArm_R": {
+   "tris": 44,
+   "origin": [
+    1.5,
+    2.2625,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Forearm_R": {
+   "tris": 44,
+   "origin": [
+    1.581,
+    1.4917,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Hand_R": {
+   "tris": 72,
+   "origin": [
+    1.6793,
+    0.5561,
+    -0.1322
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Eyes": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    3.1415,
+    -0.5
+   ],
+   "neon": true,
+   "color": "#E8CCFF"
+  },
+  "Mouth": {
+   "tris": 48,
+   "origin": [
+    0.0,
+    2.8185,
+    -0.5
+   ],
+   "neon": false,
+   "color": "#191216"
+  },
+  "LeftPauldron": {
+   "tris": 387,
+   "origin": [
+    -1.5812,
+    2.447,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "RightPauldron": {
+   "tris": 523,
+   "origin": [
+    1.5812,
+    2.447,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Rune": {
+   "tris": 136,
+   "origin": [
+    0.0,
+    1.95,
+    -0.66
+   ],
+   "neon": true,
+   "color": "#BE6EFF"
+  }
+ },
+ "partCount": 20,
+ "totalTris": 2318,
+ "triBudget": 6000,
+ "budgetUse": 0.386,
+ "version": "A2-N1",
+ "rigId": "section_guardian",
+ "partCap": 30,
+ "joints": {
+  "Hips": "RootJoint",
+  "Body": "Waist",
+  "Head": "Neck",
+  "Thigh_L": "Hip_L",
+  "Shin_L": "Knee_L",
+  "Foot_L": "Ankle_L",
+  "UpperArm_L": "Shoulder_L",
+  "Forearm_L": "Elbow_L",
+  "Hand_L": "Wrist_L",
+  "Thigh_R": "Hip_R",
+  "Shin_R": "Knee_R",
+  "Foot_R": "Ankle_R",
+  "UpperArm_R": "Shoulder_R",
+  "Forearm_R": "Elbow_R",
+  "Hand_R": "Wrist_R",
+  "Eyes": "Eyes",
+  "Mouth": "Jaw",
+  "LeftPauldron": "Pauldron_L",
+  "RightPauldron": "Pauldron_R",
+  "Rune": "Rune"
+ },
+ "outlineParts": [
+  "Body_Outline",
+  "Head_Outline",
+  "UpperArm_L_Outline",
+  "Forearm_L_Outline",
+  "Hand_L_Outline",
+  "UpperArm_R_Outline",
+  "Forearm_R_Outline",
+  "Hand_R_Outline",
+  "LeftPauldron_Outline",
+  "RightPauldron_Outline"
+ ],
+ "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z"
+}
