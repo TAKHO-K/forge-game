@@ -510,7 +510,8 @@ def roblox_origin(obj):
 
 
 def meta_of(objs, budget, extra=None):
-    parts = {o["RigPart"]: {"tris": tri_count(o), "origin": roblox_origin(o), "neon": bool(o.get("Neon", False)),
+    # 외곽선 껍데기(<파트>_Outline)는 RigPart가 원래 파트와 같아 키가 겹친다 → 껍데기는 자기 이름으로(합쳐지면 삼각형 · 파트 수가 빠졌다)
+    parts = {(o.name.split(".")[0] if o.get("OutlineHull") else o["RigPart"]): {"tris": tri_count(o), "origin": roblox_origin(o), "neon": bool(o.get("Neon", False)),
                             "color": o.data.materials[0].get("PaletteRGB") if o.data.materials else None} for o in objs}
     total = sum(p["tris"] for p in parts.values())
     d = {"parts": parts, "partCount": len(parts), "totalTris": total, "triBudget": budget, "budgetUse": round(total / budget, 3)}

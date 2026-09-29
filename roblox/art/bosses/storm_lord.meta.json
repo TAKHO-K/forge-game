@@ -8,7 +8,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#345520"
   },
   "Body": {
    "tris": 144,
@@ -18,7 +18,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#4A7A2E"
   },
   "Head": {
    "tris": 60,
@@ -28,7 +28,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#80A26D"
   },
   "Thigh_L": {
    "tris": 44,
@@ -269,12 +269,42 @@
    ],
    "neon": true,
    "color": "#FFF05A"
+  },
+  "Hips_Outline": {
+   "tris": 88,
+   "origin": [
+    0.0,
+    0.9,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Body_Outline": {
+   "tris": 144,
+   "origin": [
+    0.0,
+    1.15,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Head_Outline": {
+   "tris": 60,
+   "origin": [
+    0.0,
+    2.95,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
   }
  },
- "partCount": 27,
- "totalTris": 1748,
+ "partCount": 30,
+ "totalTris": 2040,
  "triBudget": 6000,
- "budgetUse": 0.291,
+ "budgetUse": 0.34,
  "version": "A2-N1",
  "rigId": "storm_lord",
  "partCap": 30,

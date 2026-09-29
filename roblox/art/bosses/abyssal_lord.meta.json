@@ -18,7 +18,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#6F9E4C"
   },
   "Head": {
    "tris": 88,
@@ -28,7 +28,7 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#9ABB82"
   },
   "Thigh_L": {
    "tris": 44,
@@ -279,12 +279,32 @@
    ],
    "neon": true,
    "color": "#3CC8FF"
+  },
+  "Body_Outline": {
+   "tris": 804,
+   "origin": [
+    0.0,
+    0.69,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Head_Outline": {
+   "tris": 88,
+   "origin": [
+    0.0,
+    2.29,
+    0.0
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
   }
  },
- "partCount": 28,
- "totalTris": 2762,
+ "partCount": 30,
+ "totalTris": 3654,
  "triBudget": 6000,
- "budgetUse": 0.46,
+ "budgetUse": 0.609,
  "version": "A2-N1",
  "rigId": "abyssal_lord",
  "partCap": 30,
