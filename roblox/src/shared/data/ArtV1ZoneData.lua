@@ -49,6 +49,7 @@ return {
 			cc = { brightness = -0.01, contrast = 0.08, saturation = -0.06, tint = { 238, 252, 255 } },
 			bloom = { intensity = 0.4, size = 18, threshold = 1.5 },
 			sky = { stars = 0, sun = 11 },
+			terrain = { Grass = { 86, 138, 118 }, LeafyGrass = { 72, 122, 108 } }, -- 검토: T3 사냥터가 T1과 같은 잔디라 구역 정체성이 없었다 → 물가 청록 이끼(이 구역 안에서만)
 		}),
 		-- T4 모래 유적: 오후 - 따뜻한 햇빛 · 모래먼지 원경(해 반사 줄기가 생겨 Glare 0)
 		tier4 = preset({
@@ -60,12 +61,13 @@ return {
 		}),
 		-- T5 폭풍 첨탑: 먹구름 늦은 오후 - 가장 어둡지만 캐릭터 · 몬스터는 읽히게(환경광 유지)
 		tier5 = preset({
-			clock = 16.6, brightness = 1.9, ambient = { 112, 114, 142 }, outdoor = { 142, 146, 178 }, shiftTop = { 214, 216, 255 },
-			atmosphere = { density = 0.26, offset = 0.14, color = { 120, 122, 160 }, decay = { 70, 70, 120 }, haze = 2, glare = 0 },
-			cc = { brightness = 0.03, contrast = 0.12, saturation = -0.1, tint = { 232, 234, 255 } },
-			bloom = { intensity = 0.5, size = 20, threshold = 1.4 },
-			sky = { stars = 0, sun = 6 },
-			terrain = { Ground = { 112, 108, 120 } }, -- T5 바닥 = Ground(흙길과 공유 재질 - 황토색이 폭풍 팔레트와 어긋났다) → 이 구역 안에서만 회청
+			clock = 16.6, brightness = 1.9, ambient = { 112, 114, 142 }, outdoor = { 142, 146, 178 }, shiftTop = { 220, 225, 255 },
+			atmosphere = { density = 0.2, offset = 0.12, color = { 132, 136, 170 }, decay = { 70, 70, 120 }, haze = 1.2, glare = 0 },
+			cc = { brightness = 0.03, contrast = 0.12, saturation = -0.1, tint = { 236, 238, 255 } },
+			bloom = { intensity = 0.4, size = 18, threshold = 1.5 },
+			sky = { stars = 0, sun = 4 },
+			-- T5 바닥 = Ground(흙길과 공유 재질). 검토: 회청 바닥 + 남보라 안개 + 파랑 임프가 한 덩어리 → 바닥만 따뜻한 회색(색상 반대쪽)으로 이 구역 안에서만
+			terrain = { Ground = { 118, 112, 110 }, Cobblestone = { 88, 84, 86 } },
 		}),
 		-- T6 빙하 동굴: 차가운 오전 - 눈 과노출을 대비 · 밝기로 누른다
 		tier6 = preset({

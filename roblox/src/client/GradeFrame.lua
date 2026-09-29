@@ -51,7 +51,7 @@ function GradeFrame.apply(frame, stroke, glowFrame, gradeId)
 	end
 	local color = GradeFrame.colorOf(gradeId)
 	stroke.Thickness = spec.thickness
-	stroke.Transparency = 0
+	stroke.Transparency = spec.strokeTransparency or 0
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	if spec.blackGold then
 		local B = UiData.blackGold

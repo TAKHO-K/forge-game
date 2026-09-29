@@ -23,7 +23,8 @@ return {
 		transcendent = { glow = { height = 36, width = 1.8, transparency = 0.1, rim = GOLD, core = BLACK }, motes = 12, ring = 18, flash = 4, moteColor = C(255, 208, 92) }, -- 검은 심 = 비발광 띠(ArtV1Dopamine)
 		moteLifetime = 1.6, moteSpeed = 3.2, moteSize = 0.28, ringSeconds = 0.7, flashSeconds = 0.18,
 		transcendentColor = GOLD, -- ItemVisualData 초월 색과 같다(땅 드랍 표시 전용)
-		dropLightScale = 0.5, -- 서버 드랍 광원 밝기 배율(이 화면만 - 바닥이 하얗게 날리지 않게)
+		dropLightScale = 0.35, dropLightMaxRange = 10, -- 서버 드랍 광원 밝기 배율 · 범위 상한(이 화면만 - 검토: 여러 드랍이 겹쳐 잔디가 반경 10 넘게 흰노랑으로 탔다)
+		glowEmission = 0.4, -- 색 빛 띠 발광(1 = 가산이면 블룸에서 전설 주황이 노랑으로 번져 유물 금과 겹쳤다) · 흰 심 = 1 · 검은 심 = 0
 	},
 
 	levelUp = { seconds = 1.0, ringSize = 6, ringColor = C(255, 244, 170), flashColor = C(255, 255, 255), particles = 16, particleColor = C(255, 226, 90), speed = 9, spread = 25, gravity = 4, size = 0.35 },
@@ -32,11 +33,11 @@ return {
 		common = { color = C(240, 240, 232), ring = 5, particles = 8, pillar = nil },
 		uncommon = { color = C(126, 214, 110), ring = 7, particles = 12, pillar = nil },
 		rare = { color = C(90, 170, 255), ring = 9, particles = 16, pillar = { height = 8, width = 1.0 } },
-		epic = { color = C(190, 110, 255), ring = 11, particles = 20, pillar = { height = 12, width = 1.3 }, flash = 3 },
+		epic = { color = C(150, 80, 255), ring = 11, particles = 20, pillar = { height = 12, width = 1.3 }, flash = 3 }, -- Neon 링이 분홍으로 번져 보여 보라 쪽으로
 		seconds = 1.2, speed = 8, spread = 60, gravity = 10, size = 0.4,
 	},
 
-	rebirth = { seconds = 1.6, color = C(150, 100, 255), light = C(214, 200, 255), -- 기둥은 발광 0.5(Fx.pillar)라 채도 높은 보라 pillar = { height = 16, width = 2.2, topWidth = 0.6 }, rings = { 8, 14 }, particles = 20, speed = 10, spread = 30, gravity = -2, size = 0.45,
+	rebirth = { seconds = 1.6, color = C(170, 90, 255), light = C(214, 200, 255), innerRing = C(255, 215, 90), -- 기둥은 발광 0.5(Fx.pillar)라 채도 높은 보라 · 안쪽 금 링 = 부화와 구별하는 표식 pillar = { height = 16, width = 2.2, topWidth = 0.6 }, rings = { 8, 14 }, particles = 20, speed = 10, spread = 30, gravity = -2, size = 0.45,
 		screenFlash = { brightness = 0.1, seconds = 0.22 } },
 
 	enhanceFail = {
@@ -58,8 +59,8 @@ return {
 
 	-- 2-4 전투 이펙트 통일(client/HitEffects - 옆으로 퍼지는 링 = 타격): 일반 = 흰 심 + 직업 강조색 링 · 치명 = 흰 심 + 금노랑 링 · 강공격(3타) = 링 한 겹 더 · 궁극기 = UltGauge(강조색 2겹 - 기존)
 	combat = {
-		hitRingSeconds = 0.18, hitRingSize = 3.2, critRingSize = 4.6, critCore = C(255, 250, 240), critRim = C(255, 226, 110), -- 치명 테 = 금노랑(색상 51° - 위험색 330 ~ 50° 밖)
-		heavyRingSize = 6, heavyRingSeconds = 0.26, ultRingSize = 14, ultRingSeconds = 0.45, ringThick = 0.12,
+		hitRingSeconds = 0.18, hitRingSize = 4, critRingSize = 5.5, critCore = C(255, 250, 240), critRim = C(255, 226, 110), -- 치명 테 = 금노랑(색상 51° - 위험색 330 ~ 50° 밖)
+		heavyRingSize = 7, heavyRingSeconds = 0.26, ultRingSize = 14, ultRingSeconds = 0.45, ringThick = 0.3, -- 검토: 0.12는 옅은 호 하나라 존재감이 없었다
 		allyOpacityInBoss = 0.5, -- 보스전 중 아군 연출 불투명도 상한(§5)
 	},
 }

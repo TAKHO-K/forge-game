@@ -5,7 +5,7 @@ local C = Color3.fromRGB
 
 return {
 	grades = {
-		normal = { thickness = 1.5, sheen = 0, spin = 0, fill = 0.03, glow = 0 },
+		normal = { thickness = 1, sheen = 0, spin = 0, fill = 0.03, glow = 0, strokeTransparency = 0.4 }, -- 검토: 일반 흰 테두리가 희귀보다 또렷해 서열이 거꾸로 보였다
 		rare = { thickness = 2, sheen = 0.35, spin = 0, fill = 0.06, glow = 0 },
 		epic = { thickness = 2, sheen = 0.45, spin = 0, fill = 0.08, glow = 0.15 },
 		legendary = { thickness = 2.5, sheen = 0.55, spin = 40, fill = 0.1, glow = 0.25 },
@@ -15,7 +15,7 @@ return {
 		transcendent = { thickness = 3.5, blackGold = true, spin = 70, glow = 0.5 }, -- 흑금: 검은 칸 + 금 테두리 위를 도는 흰금 빛 + 금 숨쉬기
 	},
 	blackGold = {
-		cell = C(24, 22, 32), gold = C(214, 176, 62), shine = C(255, 236, 170), dark = C(92, 72, 24),
+		cell = C(24, 22, 32), gold = C(214, 176, 62), shine = C(255, 236, 170), dark = C(150, 116, 36), -- 검토: 어두운 금(92, 72, 24)이 올리브로 탁했다 → 금 쪽으로
 		breatheHz = 0.6, -- 금빛 숨쉬기(바깥 빛 투명도가 오르내린다)
 	},
 	glowPad = 8, -- 바깥 빛 여백(px)

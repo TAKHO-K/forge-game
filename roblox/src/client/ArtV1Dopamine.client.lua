@@ -39,7 +39,8 @@ local function beam(folder, ground, height, width, color, transparency)
 	b.Attachment0, b.Attachment1 = a0, a1
 	b.FaceCamera = true
 	b.Segments = 1
-	b.LightEmission = (color.R + color.G + color.B) / 3 < 0.3 and 0 or 1 -- 검은 심(초월)은 가산 발광이면 안 보인다 → 비발광 = 어두운 띠
+	local h, sat, v = color:ToHSV()
+	b.LightEmission = v < 0.3 and 0 or ((sat < 0.15 and v > 0.9) and 1 or D.glowEmission) -- 검은 심(초월) = 비발광 띠 · 흰 심 = 가산 · 색 띠 = 반쯤(블룸 번짐 방지)
 	b.Color = ColorSequence.new(color)
 	b.Width0, b.Width1 = width, width * 0.55
 	b.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, transparency), NumberSequenceKeypoint.new(0.6, math.min(1, transparency + 0.25)), NumberSequenceKeypoint.new(1, 1) })
@@ -150,7 +151,9 @@ local function build(model)
 	for _, light in ipairs(model:GetDescendants()) do
 		if light:IsA("PointLight") and light:GetAttribute("ArtV1Brightness") == nil then
 			light:SetAttribute("ArtV1Brightness", light.Brightness)
+			light:SetAttribute("ArtV1Range", light.Range)
 			light.Brightness *= D.dropLightScale
+			light.Range = math.min(light.Range, D.dropLightMaxRange)
 		end
 	end
 	-- 등장(가까이 있을 때만 - 스트리밍으로 다시 들어온 먼 드랍은 조용히)
@@ -184,6 +187,7 @@ local function unbuild(model)
 			local b = light:IsA("PointLight") and light:GetAttribute("ArtV1Brightness")
 			if b then
 				light.Brightness = b
+				light.Range = light:GetAttribute("ArtV1Range") or light.Range
 				light:SetAttribute("ArtV1Brightness", nil)
 			end
 		end
@@ -273,9 +277,9 @@ local function rebirth()
 	local R = FxData.rebirth
 	Fx.flash(feet + Vector3.new(0, 2.5, 0), 5, 0.18, R.light)
 	Fx.pillar(feet, { height = R.pillar.height, width = R.pillar.width, topWidth = R.pillar.topWidth, color = R.color, seconds = R.seconds })
-	Fx.ring(feet, R.rings[1], R.seconds * 0.4, R.light, 0.14, 0.05)
+	Fx.ring(feet, R.rings[1], R.seconds * 0.4, R.innerRing, 0.2, 0.05)
 	task.delay(0.2, function()
-		Fx.ring(feet, R.rings[2], R.seconds * 0.5, R.color, 0.14, 0.1)
+		Fx.ring(feet, R.rings[2], R.seconds * 0.5, R.color, 0.3, 0.1)
 	end)
 	Fx.burst(feet + Vector3.new(0, 0.5, 0), R.particles, { color = R.light, size = R.size, speed = R.speed, spread = R.spread, gravity = R.gravity, lifetime = { 0.8, 1.2 } })
 	Fx.screenFlash(R.screenFlash.brightness, R.screenFlash.seconds)
