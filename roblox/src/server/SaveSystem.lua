@@ -3,6 +3,7 @@
 -- 기본값·버전 이관만 안다 - 웹 core/save.js와 같은 역할, 같은 패턴(SAVE_VERSION+migrate()).
 
 local DataStoreService = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -23,6 +24,12 @@ local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMateria
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 
 local SaveSystem = {}
+
+-- 약한 세션 잠금(QUEUE-6h-b 후속 · v55): 이 서버의 표식. 저장할 때 sessionId에 쓰고, 퇴장 · 종료 저장은 ""(놓음)로 쓴다.
+-- game.JobId는 Studio에서 빈 문자열이라 서버 시작 때 GUID를 따로 만든다.
+local SERVER_SESSION_ID = HttpService:GenerateGUID(false)
+SaveSystem.serverSessionId = SERVER_SESSION_ID
+local releasing = {} -- [Player] = true: 다음 저장이 마지막(퇴장 · 종료) - sessionId를 놓는다
 
 -- 재료 id마다 0. defaultProfile · migrate 둘이 같은 모양을 만든다.
 local function defaultMaterials()
@@ -174,6 +181,7 @@ local function defaultProfile()
 	return {
 		version = SaveConfig.saveVersion,
 		savedAt = 0, -- migrate() 시점 데이터는 항상 "가장 오래된 것"으로 본다(웹 core/save.js와 같은 원칙)
+		sessionId = "", -- v55 약한 세션 잠금: 마지막으로 저장한 서버의 표식("" = 퇴장 · 종료 저장으로 놓음)
 
 		-- 계정 전체 공유(19-1 확정 - 직업을 바꿔도 빈털터리가 되지 않고, 다른 직업이 쓸
 		-- 장비를 자유롭게 넘길 수 있어야 한다는 설계). 직업별로 갈라지는 값은 전부
@@ -1157,6 +1165,14 @@ local function migrate(data)
 		data.version = 54
 	end
 
+	if data.version < 55 then
+		-- QUEUE-6h-b 후속: sessionId(약한 세션 잠금) - 옛 계정 = ""(놓음 - 기다리지 않는다).
+		if type(data.sessionId) ~= "string" then
+			data.sessionId = ""
+		end
+		data.version = 55
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data
@@ -1352,6 +1368,23 @@ function SaveSystem.loadProfile(player)
 
 		if ok then
 			local raw = result
+			local info = {}
+			-- 약한 세션 잠금: 다른 서버가 쥐고 있고(놓지 않음) 그 저장이 신선하면 잠깐 기다렸다 다시 읽는다 - 옛 서버의 퇴장 저장이 끝나면
+			-- sessionId가 ""가 되거나 savedAt이 바뀐다. 상한까지 안 풀리면 읽은 값으로 진행한다(막지 않는다 - 늦게 온 저장은 기존 stale_session이 막는다).
+			local waited = 0
+			while SaveSystem.heldElsewhere(raw, os.time()) and waited < SaveConfig.sessionLockMaxWaitSeconds and player.Parent do
+				task.wait(SaveConfig.sessionLockPollSeconds)
+				waited += SaveConfig.sessionLockPollSeconds
+				local okAgain, again = pcall(readStored, player)
+				if okAgain then
+					raw = again
+				end
+			end
+			if waited > 0 then
+				info.lockWaitedSeconds = waited
+				info.lockReleased = not SaveSystem.heldElsewhere(raw, os.time())
+				print(("[SaveSystem] 세션 잠금 대기: %s %d초 · 풀림=%s"):format(player.Name, waited, tostring(info.lockReleased)))
+			end
 			if raw ~= nil and type(raw.version) == "number" and raw.version > SaveConfig.saveVersion then
 				return nil, "future_version"
 			end
@@ -1360,8 +1393,14 @@ function SaveSystem.loadProfile(player)
 			if not isValidProfile(profile) then
 				return nil, "invalid_schema"
 			end
+			-- 손상 저장 음수 골드 → 0(save-audit-alpha 결정 3). 게임 경로로는 못 생긴다 - 생기면 로그 + 통계(SaveServer)로 알린다.
+			if profile.gold < 0 then
+				info.negativeGold = profile.gold
+				profile.gold = 0
+				warn(("[SaveSystem] 손상 저장 음수 골드 → 0: %s (저장값 %s)"):format(player.Name, tostring(info.negativeGold)))
+			end
 
-			return profile
+			return profile, nil, info
 		end
 
 		lastErr = result
@@ -1378,6 +1417,18 @@ end
 -- 원리)의 기준값이다. UpdateAsync의 old가 이 값보다 최신이면 - 즉 내가 모르는 사이
 -- 다른 서버가 이미 더 최근 저장을 남겼으면 - 내 메모리 상태로 덮어쓰지 않고 포기한다.
 -- 성공하면 true, 실패하면 false + 이유("stale_session" 또는 에러 메시지)를 돌려준다.
+-- 약한 세션 잠금 판정(순수 - 하네스 · 검증이 부른다): 저장값 raw를 다른 서버가 쥐고 있고(놓지 않음) 그 저장이 신선한가.
+function SaveSystem.heldElsewhere(raw, now)
+	return type(raw) == "table"
+		and type(raw.sessionId) == "string" and raw.sessionId ~= "" and raw.sessionId ~= SERVER_SESSION_ID
+		and type(raw.savedAt) == "number" and now - raw.savedAt < SaveConfig.sessionLockFreshSeconds
+end
+
+-- 다음 저장이 이 서버의 마지막 저장이다(퇴장 · 서버 종료) - sessionId를 ""로 써서 잠금을 놓는다. 새 로드(init)가 풀어 준다.
+function SaveSystem.markReleasing(player, on)
+	releasing[player] = on and true or nil
+end
+
 -- S1 2-8 운영: 저장 버전 목록 · 복구(DataStore 버전 = 30일 보관 - 탐지 · 복구는 30일 안). userId 키(Studio = 수동 · 검증 키 - 실제 프로필을 건드리지 않는다).
 --   복구는 그 사람이 이 서버에 없을 때만(있으면 메모리 상태가 곧 덮어쓴다 - 다른 서버 접속은 알 수 없다: 운영 절차로 확인).
 local function opsKey(userId)
@@ -1466,6 +1517,7 @@ function SaveSystem.saveProfile(player, profile)
 				sanitizeForSave(profile, old, "profile") -- S21-0 A3: NaN·inf가 저장 전체를 실패시키기 전에 그 필드만 되돌린다.
 				profile.savedAt = newSavedAt
 				profile.version = SaveConfig.saveVersion
+				profile.sessionId = releasing[player] and "" or SERVER_SESSION_ID -- v55 약한 세션 잠금
 				return profile
 			end)
 		end)

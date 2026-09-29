@@ -40,6 +40,7 @@ local TutorialState = require(script.Parent.TutorialState)
 local BossEncounter = require(script.Parent.BossEncounter)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local SaveCoordinator = require(script.Parent.SaveCoordinator)
+local SaveSystem = require(script.Parent.SaveSystem) -- QUEUE-6h-b 후속: 텔레포트 직전 저장이 세션 잠금을 놓는다
 
 local PartyCrossServer = {}
 
@@ -679,7 +680,9 @@ function PartyCrossServer.requestJoin(player, code, opts)
 	-- 서버가 읽는 값은 항상 이 flush 결과다(낙관적 동시성 savedAt 경합 없음).
 	state.phase = "saving"
 	if isInstance(player) then
+		SaveSystem.markReleasing(player, true) -- QUEUE-6h-b 후속: 이 flush가 출발 서버의 마지막 저장 - 세션 잠금을 놓는다
 		ImmediateSave.flush(player)
+		SaveSystem.markReleasing(player, false)
 		SaveCoordinator.setTeleportFrozen(player, true)
 	end
 

@@ -2401,6 +2401,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		eggs = deepCopy(profile.eggs), -- M1-3(v41): 알 가방(둥지 검증이 줍는다) - world(nests · nestDex)는 위 world 통째 복사에 들어 있다
 		leaderboardTainted = profile.leaderboardTainted, -- P3a(v34): 검증이 기록 경로를 재려고 끈 값을 되돌린다(COMMON §1 "새 저장 필드는 백업 대상에").
 		comeback = deepCopy(profile.comeback), -- C5-5(v48): 복귀 부스트(검증이 강제로 켠다 - 새 저장 필드는 백업 대상)
+		sessionId = profile.sessionId, -- v55 약한 세션 잠금(새 저장 필드 = 백업 대상 - 저장마다 SaveSystem이 다시 쓴다)
 	}
 end
 
@@ -2438,6 +2439,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.training = snapshot.training and deepCopy(snapshot.training) or profile.training -- Q6(v50)
 	profile.pets = snapshot.pets and deepCopy(snapshot.pets) or nil -- Q11(v52): 스냅샷 때 없었으면 없던 상태로
 	profile.settings = snapshot.settings and deepCopy(snapshot.settings) or nil -- Q14(v54)
+	profile.sessionId = snapshot.sessionId or profile.sessionId -- v55
 	profile.quests = snapshot.quests and deepCopy(snapshot.quests) or nil -- Q6(v50) · 리뷰 4: 스냅샷 때 없었으면 없던 상태로(검증이 만든 퀘스트 상태가 남지 않게)
 	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
 	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles

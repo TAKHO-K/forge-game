@@ -76,7 +76,7 @@ return {
 	-- 38(M1) - world = { portals = { [구역 키] = true } }(입구 캠프 첫 방문으로 연 포탈 - 계정 공유) · peakLevel(역대 최고 캐릭터 레벨 - 환생해도 안 내려간다 · 나무 가지 정거장 기준)
 	-- 신설. 기존 세이브: portals 빈 표 · peakLevel = 지금 직업들 레벨 중 최대(환생 전 기록은 저장에 없어 복원 불가). SaveSystem.migrate()의 v37->v38 참고.
 	-- 37(BR1-2) - hints.bossIntroSeen(보스 id 문자열 키 집합) 신설 - 처음 만난 보스의 전멸기 카드를 한 번만 띄운다. 기존 세이브는 빈 표. SaveSystem.migrate()의 v36->v37 참고.
-	saveVersion = 54, -- QUEUE-10h Q14: settings(설정 저장) / v53 Q12: quests.guide(첫 5분 이정표) · quests.attendance(7일 출석 - 새 계정만) / v52 Q11: pets(펫 목록 · 데리고 다니는 펫 · 부화 누적 · 부화 대기열) / v51 Q9: item.skillVariant / v50 Q6: training · classes[].abilities · quests / v49 Q5: item.setZone(세트 계열 - 출처 태그로 이관) / v48 C5-5: comeback(복귀 부스트 만료) / v47 C5-7: item.special(초월 특수 옵션) · 각인 grade / v46 C5-2: classes[].reclaimLevel(되찾기 기준 - 환생 순간 레벨 최대) / v45 C3 0-3: 캐릭터 경험치 곡선 변경 이관(레벨 · 진행률 유지 - 스키마 필드 변화 없음) / v44 S1: audit(획득 감사 - λ 태초 확률 합 · 태초 굴림 수 · 플레이 시간 - 속도 봉투) / v43 D1: 장비 태초 각인(primordial - 세계 번호 · 이전 태초 legacy) · 출처 태그(source) · 태초 기본 잠금 / v42 C1 마무리: hints.stealLockSeen(잠긴 몹 말풍선 1회) / v41 M1-3 둥지: world.nests(개인 쿨다운 · 줍기 횟수) · world.nestDex(비밀 둥지 발견 도감) · eggs(알 가방) / v40 world.bossGates(관문 등록) · v39 titles(칭호 - 호기심 대장) · v38 world.portals · peakLevel
+	saveVersion = 55, -- QUEUE-6h-b 후속: sessionId(약한 세션 잠금 - 저장한 서버 표식 · "" = 놓음) / v54 QUEUE-10h Q14: settings(설정 저장) / v53 Q12: quests.guide(첫 5분 이정표) · quests.attendance(7일 출석 - 새 계정만) / v52 Q11: pets(펫 목록 · 데리고 다니는 펫 · 부화 누적 · 부화 대기열) / v51 Q9: item.skillVariant / v50 Q6: training · classes[].abilities · quests / v49 Q5: item.setZone(세트 계열 - 출처 태그로 이관) / v48 C5-5: comeback(복귀 부스트 만료) / v47 C5-7: item.special(초월 특수 옵션) · 각인 grade / v46 C5-2: classes[].reclaimLevel(되찾기 기준 - 환생 순간 레벨 최대) / v45 C3 0-3: 캐릭터 경험치 곡선 변경 이관(레벨 · 진행률 유지 - 스키마 필드 변화 없음) / v44 S1: audit(획득 감사 - λ 태초 확률 합 · 태초 굴림 수 · 플레이 시간 - 속도 봉투) / v43 D1: 장비 태초 각인(primordial - 세계 번호 · 이전 태초 legacy) · 출처 태그(source) · 태초 기본 잠금 / v42 C1 마무리: hints.stealLockSeen(잠긴 몹 말풍선 1회) / v41 M1-3 둥지: world.nests(개인 쿨다운 · 줍기 횟수) · world.nestDex(비밀 둥지 발견 도감) · eggs(알 가방) / v40 world.bossGates(관문 등록) · v39 titles(칭호 - 호기심 대장) · v38 world.portals · peakLevel
 
 	-- Studio 재시작이나 배포 채널이 섞여도 예전 세이브 파일과 충돌하지 않게 버전을 이름에 박는다.
 	dataStoreName = "ForgeGamePlayerData_v1",
@@ -92,6 +92,14 @@ return {
 	-- BindToClose 조합). 강화처럼 되돌릴 수 없는 사건은 주기와 무관하게 즉시 저장한다
 	-- (10-2, EnhanceServer.server.lua의 스로틀 로직·예산 검산 참고).
 	autosaveIntervalSeconds = 60,
+
+	-- 약한 세션 잠금(QUEUE-6h-b 후속 - save-audit-alpha 결정 2). 서버를 옮겨 접속할 때 옛 서버의 퇴장 저장이 아직 안 끝났으면
+	-- 새 서버가 옛 값을 읽고, 그 뒤 새 서버의 저장이 전부 stale_session으로 멈춘다(진행 손실). 로드 때 저장된 sessionId가 다른 서버 것이고
+	-- 놓지 않았으며(퇴장 · 종료 저장이 "" 로 놓는다) savedAt이 신선하면(아래 초 안) 잠깐 기다렸다 다시 읽는다. 기다려도 안 풀리면 그대로 진행(약한 잠금 - 막지 않는다).
+	-- 신선 기준 = 자동저장 주기(60) + 여유 30: 살아 있는 세션의 마지막 저장은 최대 한 주기 전이다(30이면 주기 뒤쪽에서 옮긴 경우를 못 잡는다).
+	sessionLockFreshSeconds = 90,
+	sessionLockMaxWaitSeconds = 10, -- 로드를 최대 이만큼 미룬다(그 뒤엔 읽은 값으로 진행)
+	sessionLockPollSeconds = 2, -- 다시 읽는 간격(GetAsync 예산: 사람당 최대 5회)
 
 	-- 저장/불러오기 재시도 횟수(첫 시도 이후 추가로 몇 번 더 시도하는지)와 시도 사이 대기(초).
 	-- 배열 길이 = 재시도 횟수와 같아야 한다(총 시도 = 1 + 재시도 횟수, 대기는 시도 사이에만

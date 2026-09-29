@@ -22,7 +22,13 @@ SettingsService.start()
 require(script.Parent.Telemetry).start() -- Q15 T1 통계(몇 분마다 · 퇴장 때 전송 · Studio = 드라이런)
 
 local function loadForPlayer(player)
-	local profile, err = SaveSystem.loadProfile(player)
+	local profile, err, loadInfo = SaveSystem.loadProfile(player)
+	if loadInfo and loadInfo.negativeGold then -- QUEUE-6h-b 후속: 손상 저장 음수 골드 → 0(SaveSystem) - 통계 이벤트
+		require(script.Parent.Telemetry).custom(player, "SaveNegativeGold", loadInfo.negativeGold)
+	end
+	if loadInfo and loadInfo.lockWaitedSeconds then -- 약한 세션 잠금 대기(초 · 풀리지 않았으면 음수)
+		require(script.Parent.Telemetry).custom(player, "SaveSessionLockWait", loadInfo.lockReleased and loadInfo.lockWaitedSeconds or -loadInfo.lockWaitedSeconds)
+	end
 	if not profile then
 		warn(("[forge-game] 저장 데이터 불러오기 실패: %s - %s"):format(player.Name, tostring(err)))
 		profile = SaveSystem.defaultProfile()
@@ -58,7 +64,9 @@ Players.PlayerAdded:Connect(loadForPlayer)
 -- 한 번만 저장한다.
 Players.PlayerRemoving:Connect(function(player)
 	require(script.Parent.Telemetry).onLeaving(player) -- Q15: 프로필을 지우기 전에 통계 전송
+	SaveSystem.markReleasing(player, true) -- QUEUE-6h-b 후속: 퇴장 저장 = 마지막 저장 - 세션 잠금을 놓는다
 	ImmediateSave.flush(player)
+	SaveSystem.markReleasing(player, false)
 	PlayerProfile.clear(player)
 end)
 
@@ -76,6 +84,7 @@ end)
 -- 안에 남은 플레이어를 전부 저장한다. PlayerRemoving과 같은 이유로 flush를 쓴다.
 game:BindToClose(function()
 	for _, player in ipairs(Players:GetPlayers()) do
+		SaveSystem.markReleasing(player, true) -- 서버 종료 저장도 잠금을 놓는다
 		ImmediateSave.flush(player)
 	end
 end)
