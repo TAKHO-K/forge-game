@@ -512,7 +512,11 @@ function G1_0Verify.runLive(player, env)
 		end
 		local f0, s0, p0, _, w0 = run(false)
 		task.wait(0.5)
+		BossArenaMap.debugSliceStats(true)
 		local f1, s1, p1, n1, w1 = run(true)
+		local sd = BossArenaMap.debugSliceStats(true) -- QUEUE-6h-b 후속 계측: 원인 가르기(한 조각 · GC · 같은 프레임 조각 수 · 파트 생성)
+		r.note(("D 계측: 조각 %d개 · 한 조각 최대 %.2fms(GC 있음 %d개 · 최대 %.2fms / GC 없음 최대 %.2fms) · 같은 프레임 조각 최대 %d개 · 예산 넘은 프레임 %d · 파트 생성 · 붕괴 한 번 최대 %.2fms"):format(
+			sd.slices, sd.maxSliceMs, sd.gcSlices, sd.maxSliceGcMs, sd.maxSliceNoGcMs, sd.maxFrameSlices, sd.overFrames, sd.spawnMaxMs))
 		r.check(("D 12아레나 × %d회 동시: 한 번에 - Heartbeat 최대 %.2fms · 자리 찾기 한 번 최대 %.2fms(%.1f초) → 나눠서 - Heartbeat 최대 %.2fms · 한 프레임 합(12아레나) 최대 %.2fms(기대 ≤ %.1f) · 조각 %d · 끝까지 최대 %.1fms(%.1f초)"):format(
 			REGROW.maxObstacles + 2, f0, s0, w0, f1, s1, REGROW.frameBudgetMs, n1, p1, w1), s1 <= REGROW.frameBudgetMs and f1 <= f0)
 	end)

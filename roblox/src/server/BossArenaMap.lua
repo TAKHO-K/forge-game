@@ -608,10 +608,16 @@ end
 -- 리뷰 2: 예산은 **서버 전체 한 프레임** 기준이다(아레나 12개가 같은 프레임에 재개돼도 합이 예산 안) - 조각마다 쓴 시간을 프레임 누적(frameUsed)에 더하고,
 -- 누적이 기준을 넘으면 다음 프레임으로 넘긴다. 재개 직후에도 이 프레임의 누적이 이미 차 있으면 한 번 더 넘긴다.
 local frameId, frameUsed, frameUsedId, frameUsedPeak = 0, 0, 0, 0
+-- QUEUE-6h-b 후속 계측(검증용 - 동작에 영향 없음): 한 조각 최대 · 같은 프레임 조각 수 최대 · 조각 안 GC(힙 감소) · 파트 생성 최대
+local sliceDebug = { maxSliceMs = 0, maxSliceGcMs = 0, maxSliceNoGcMs = 0, gcSlices = 0, slices = 0, framesSlices = 0, maxFrameSlices = 0, spawnMaxMs = 0, overFrames = 0 }
 RunService.Heartbeat:Connect(function()
 	if frameUsedId == frameId then
 		frameUsedPeak = math.max(frameUsedPeak, frameUsed)
+		if frameUsed * 1000 > REGROW.frameBudgetMs then
+			sliceDebug.overFrames += 1
+		end
 	end
+	sliceDebug.framesSlices = 0
 	frameId += 1
 end)
 local function addFrameUsed(seconds)
@@ -619,6 +625,29 @@ local function addFrameUsed(seconds)
 		frameUsedId, frameUsed = frameId, 0
 	end
 	frameUsed += seconds
+end
+local function noteSlice(seconds, heapBefore)
+	local ms = seconds * 1000
+	local gc = gcinfo() < heapBefore - 64
+	sliceDebug.slices += 1
+	sliceDebug.maxSliceMs = math.max(sliceDebug.maxSliceMs, ms)
+	if gc then
+		sliceDebug.gcSlices += 1
+		sliceDebug.maxSliceGcMs = math.max(sliceDebug.maxSliceGcMs, ms)
+	else
+		sliceDebug.maxSliceNoGcMs = math.max(sliceDebug.maxSliceNoGcMs, ms)
+	end
+	sliceDebug.framesSlices += 1
+	sliceDebug.maxFrameSlices = math.max(sliceDebug.maxFrameSlices, sliceDebug.framesSlices)
+end
+function BossArenaMap.debugSliceStats(reset)
+	local out = table.clone(sliceDebug)
+	if reset then
+		for k in pairs(sliceDebug) do
+			sliceDebug[k] = 0
+		end
+	end
+	return out
 end
 local function frameFull(threshold)
 	return frameUsedId == frameId and frameUsed >= threshold
@@ -635,6 +664,7 @@ local function runInFrameBudget(fn)
 	local t0 = os.clock()
 	local result, why = fn()
 	addFrameUsed(os.clock() - t0)
+	sliceDebug.spawnMaxMs = math.max(sliceDebug.spawnMaxMs, (os.clock() - t0) * 1000)
 	return result, why
 end
 
@@ -655,21 +685,25 @@ local function newSlicer()
 		frames += 1
 	end
 	local sliceStart, maxSlice = os.clock(), 0
+	local heapAtStart = gcinfo()
 	local function checkpoint()
 		local elapsed = os.clock() - sliceStart
 		local used = frameUsedId == frameId and frameUsed or 0
 		if used + elapsed >= threshold then
 			addFrameUsed(elapsed)
+			noteSlice(elapsed, heapAtStart)
 			maxSlice = math.max(maxSlice, frameUsed)
 			repeat
 				RunService.Heartbeat:Wait()
 				frames += 1
 			until not frameFull(threshold)
 			sliceStart = os.clock()
+			heapAtStart = gcinfo()
 		end
 	end
 	local function stats()
 		addFrameUsed(os.clock() - sliceStart) -- 마지막 조각(끝까지)
+		noteSlice(os.clock() - sliceStart, heapAtStart)
 		sliceStart = os.clock()
 		return frames, math.max(maxSlice, frameUsed) * 1000
 	end
