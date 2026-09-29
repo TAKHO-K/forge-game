@@ -1,0 +1,91 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 276,
+   "origin": [
+    0.0,
+    -0.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#6E50B4"
+  },
+  "Head": {
+   "tris": 308,
+   "origin": [
+    0.0,
+    -0.7,
+    -1.4
+   ],
+   "neon": false,
+   "color": "#4D387E"
+  },
+  "Eyes": {
+   "tris": 120,
+   "origin": [
+    0.0,
+    -0.6,
+    -2.12
+   ],
+   "neon": true,
+   "color": "#F1DAFC"
+  },
+  "Leg_L": {
+   "tris": 204,
+   "origin": [
+    -0.85,
+    -1.15,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4D387E"
+  },
+  "Leg_R": {
+   "tris": 204,
+   "origin": [
+    0.85,
+    -1.15,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4D387E"
+  },
+  "Shell1": {
+   "tris": 28,
+   "origin": [
+    -0.45,
+    0.6,
+    0.15
+   ],
+   "neon": false,
+   "color": "#D796F5"
+  },
+  "Shell2": {
+   "tris": 28,
+   "origin": [
+    0.05,
+    0.85,
+    0.35
+   ],
+   "neon": false,
+   "color": "#D796F5"
+  },
+  "Shell3": {
+   "tris": 28,
+   "origin": [
+    0.55,
+    0.45,
+    -0.1
+   ],
+   "neon": false,
+   "color": "#D796F5"
+  }
+ },
+ "partCount": 8,
+ "totalTris": 1196,
+ "triBudget": 1500,
+ "budgetUse": 0.797,
+ "version": "A2-N1",
+ "rigId": "crystal_beetle",
+ "kind": "monster"
+}

@@ -1,0 +1,51 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 400,
+   "origin": [
+    0.0,
+    -0.4,
+    0.0
+   ],
+   "neon": false,
+   "color": "#78C85F"
+  },
+  "Head": {
+   "tris": 266,
+   "origin": [
+    0.0,
+    0.55,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3C8737"
+  },
+  "Eye_L": {
+   "tris": 120,
+   "origin": [
+    -0.45,
+    -0.15,
+    -1.22
+   ],
+   "neon": false,
+   "color": "#191216"
+  },
+  "Eye_R": {
+   "tris": 120,
+   "origin": [
+    0.45,
+    -0.15,
+    -1.22
+   ],
+   "neon": false,
+   "color": "#191216"
+  }
+ },
+ "partCount": 4,
+ "totalTris": 906,
+ "triBudget": 1500,
+ "budgetUse": 0.604,
+ "version": "A2-N1",
+ "rigId": "moss_slime",
+ "kind": "monster"
+}

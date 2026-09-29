@@ -1,0 +1,111 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 200,
+   "origin": [
+    0.0,
+    -0.1,
+    0.0
+   ],
+   "neon": false,
+   "color": "#8C8A84"
+  },
+  "Head": {
+   "tris": 152,
+   "origin": [
+    0.0,
+    -0.05,
+    -1.5
+   ],
+   "neon": false,
+   "color": "#A5A29B"
+  },
+  "Eyes": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    0.15,
+    -2.47
+   ],
+   "neon": false,
+   "color": "#191216"
+  },
+  "Tusk_L": {
+   "tris": 82,
+   "origin": [
+    -0.45,
+    -0.3,
+    -2.45
+   ],
+   "neon": false,
+   "color": "#C5DABE"
+  },
+  "Tusk_R": {
+   "tris": 82,
+   "origin": [
+    0.45,
+    -0.3,
+    -2.45
+   ],
+   "neon": false,
+   "color": "#C5DABE"
+  },
+  "Moss": {
+   "tris": 168,
+   "origin": [
+    0.0,
+    0.75,
+    0.1
+   ],
+   "neon": false,
+   "color": "#5A9646"
+  },
+  "Leg_FL": {
+   "tris": 58,
+   "origin": [
+    -0.6,
+    -0.85,
+    -1.0
+   ],
+   "neon": false,
+   "color": "#62615C"
+  },
+  "Leg_FR": {
+   "tris": 58,
+   "origin": [
+    0.6,
+    -0.85,
+    -1.0
+   ],
+   "neon": false,
+   "color": "#62615C"
+  },
+  "Leg_BL": {
+   "tris": 58,
+   "origin": [
+    -0.6,
+    -0.85,
+    1.0
+   ],
+   "neon": false,
+   "color": "#62615C"
+  },
+  "Leg_BR": {
+   "tris": 58,
+   "origin": [
+    0.6,
+    -0.85,
+    1.0
+   ],
+   "neon": false,
+   "color": "#62615C"
+  }
+ },
+ "partCount": 10,
+ "totalTris": 1012,
+ "triBudget": 1500,
+ "budgetUse": 0.675,
+ "version": "A2-N1",
+ "rigId": "rock_boar",
+ "kind": "monster"
+}

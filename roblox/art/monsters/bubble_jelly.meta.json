@@ -1,0 +1,81 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 318,
+   "origin": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "neon": false,
+   "color": "#6ED7E6"
+  },
+  "Head": {
+   "tris": 140,
+   "origin": [
+    0.0,
+    1.72,
+    0.0
+   ],
+   "neon": false,
+   "color": "#AAEBF5"
+  },
+  "Eyes": {
+   "tris": 144,
+   "origin": [
+    0.0,
+    1.05,
+    -1.05
+   ],
+   "neon": false,
+   "color": "#191216"
+  },
+  "Tentacle1": {
+   "tris": 78,
+   "origin": [
+    -0.5,
+    0.3,
+    -0.5
+   ],
+   "neon": false,
+   "color": "#4D97A1"
+  },
+  "Tentacle2": {
+   "tris": 78,
+   "origin": [
+    0.5,
+    0.3,
+    -0.5
+   ],
+   "neon": false,
+   "color": "#4D97A1"
+  },
+  "Tentacle3": {
+   "tris": 78,
+   "origin": [
+    -0.5,
+    0.3,
+    0.5
+   ],
+   "neon": false,
+   "color": "#4D97A1"
+  },
+  "Tentacle4": {
+   "tris": 78,
+   "origin": [
+    0.5,
+    0.3,
+    0.5
+   ],
+   "neon": false,
+   "color": "#4D97A1"
+  }
+ },
+ "partCount": 7,
+ "totalTris": 914,
+ "triBudget": 1500,
+ "budgetUse": 0.609,
+ "version": "A2-N1",
+ "rigId": "bubble_jelly",
+ "kind": "monster"
+}

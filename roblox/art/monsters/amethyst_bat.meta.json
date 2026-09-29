@@ -1,0 +1,81 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 388,
+   "origin": [
+    0.0,
+    0.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#5F4696"
+  },
+  "Head": {
+   "tris": 220,
+   "origin": [
+    0.0,
+    1.55,
+    -0.05
+   ],
+   "neon": false,
+   "color": "#5F4696"
+  },
+  "Ear_L": {
+   "tris": 70,
+   "origin": [
+    -0.35,
+    2.05,
+    -0.05
+   ],
+   "neon": false,
+   "color": "#433169"
+  },
+  "Ear_R": {
+   "tris": 70,
+   "origin": [
+    0.35,
+    2.05,
+    -0.05
+   ],
+   "neon": false,
+   "color": "#433169"
+  },
+  "Eyes": {
+   "tris": 144,
+   "origin": [
+    0.0,
+    1.05,
+    -0.7
+   ],
+   "neon": false,
+   "color": "#ECD3FA"
+  },
+  "Wing_L": {
+   "tris": 86,
+   "origin": [
+    -0.7,
+    1.0,
+    0.0
+   ],
+   "neon": false,
+   "color": "#C882F0"
+  },
+  "Wing_R": {
+   "tris": 86,
+   "origin": [
+    0.7,
+    1.0,
+    0.0
+   ],
+   "neon": false,
+   "color": "#C882F0"
+  }
+ },
+ "partCount": 7,
+ "totalTris": 1064,
+ "triBudget": 1500,
+ "budgetUse": 0.709,
+ "version": "A2-N1",
+ "rigId": "amethyst_bat",
+ "kind": "monster"
+}

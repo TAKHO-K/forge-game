@@ -1,0 +1,91 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 80,
+   "origin": [
+    0.0,
+    -0.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#EB6E5A"
+  },
+  "Head": {
+   "tris": 48,
+   "origin": [
+    0.0,
+    -0.25,
+    -0.7
+   ],
+   "neon": false,
+   "color": "#EB6E5A"
+  },
+  "Eyes": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    0.15,
+    -0.92
+   ],
+   "neon": false,
+   "color": "#191216"
+  },
+  "Shell": {
+   "tris": 198,
+   "origin": [
+    0.0,
+    0.4,
+    0.5
+   ],
+   "neon": false,
+   "color": "#EBDCBE"
+  },
+  "Claw_L": {
+   "tris": 150,
+   "origin": [
+    -1.1,
+    -0.6,
+    -0.8
+   ],
+   "neon": false,
+   "color": "#F58269"
+  },
+  "Claw_R": {
+   "tris": 150,
+   "origin": [
+    1.2,
+    -0.5,
+    -0.9
+   ],
+   "neon": false,
+   "color": "#F58269"
+  },
+  "Leg_L": {
+   "tris": 60,
+   "origin": [
+    -0.8,
+    -1.15,
+    0.0
+   ],
+   "neon": false,
+   "color": "#A44D3F"
+  },
+  "Leg_R": {
+   "tris": 60,
+   "origin": [
+    0.8,
+    -1.15,
+    0.0
+   ],
+   "neon": false,
+   "color": "#A44D3F"
+  }
+ },
+ "partCount": 8,
+ "totalTris": 842,
+ "triBudget": 1500,
+ "budgetUse": 0.561,
+ "version": "A2-N1",
+ "rigId": "hermit_knight",
+ "kind": "monster"
+}
