@@ -424,11 +424,12 @@ def bw_limb(sign, grade):
     n = len(path)
     g = A.tube(path, lambda u: 0.21 - 0.12 * u, sides=6 if RANK[grade] <= RANK["rare"] else (5 if RANK[grade] <= RANK["legendary"] else 4), flat=1.1, tip_end=True)  # 법선 = Y(날개 너비) · 종법선 = 휨 평면 두께(두툼하게)
     if at_least(grade, "rare"):  # 희귀 = 시위 걸이 뿔(날개 끝 바깥 짧은 가시)
-        g = A.merge(g, spike((sign * BW["tipX"], 0, BW["nockZ"]), (sign * 0.75, 0, 0.66), 0.8, 0.16))  # A2-N2 0.55 → 0.8
+        g = A.merge(g, spike((sign * BW["tipX"], 0, BW["nockZ"]), (sign * 0.75, 0, 0.66), 1.1, 0.18))  # A2-N2 0.55 → 0.8 → 2차 1.1(섬네일에서 약했다)
     if at_least(grade, "epic"):  # A2-N2 영웅 = 날개 가운데 바깥(−Z)으로 휜 초승달 날
         x, _, z = path[4]
-        g = A.merge(g, A.tube(A.bezier((x - sign * 0.2, 0, z), (x + sign * 0.05, 0, z - 0.45), (x + sign * 0.35, 0, z - 0.6), (x + sign * 0.6, 0, z - 0.45), n=4),
-                              lambda u: 0.12 * math.sin(math.pi * (0.15 + 0.85 * u)) + 0.02, sides=3, flat=0.6, tip_end=True))
+        k = 1.5  # 2차: 초승달 날 ×1.5(섬네일 · 폰 거리에서 사라졌다)
+        g = A.merge(g, A.tube(A.bezier((x - sign * 0.2, 0, z), (x + sign * 0.05 * k, 0, z - 0.45 * k), (x + sign * 0.35 * k, 0, z - 0.6 * k), (x + sign * 0.6 * k, 0, z - 0.45 * k), n=4),
+                              lambda u: 0.16 * math.sin(math.pi * (0.15 + 0.85 * u)) + 0.02, sides=3, flat=0.6, tip_end=True))
     if at_least(grade, "legendary"):  # 날개 끝 지느러미(실루엣 한 단계) - 되감긴 곳 바깥
         a = path[11]
         g = A.merge(g, A.tube([a, (a[0] + sign * 0.3, 0, a[2] - 0.58)], lambda u: 0.13 * (1 - u) + 0.01, sides=4, flat=0.8, tip_end=True))
@@ -527,6 +528,9 @@ def st_hooks(grade):
         cx, cy = 1.05, oy + 0.35  # A2-N2 영웅 = 오른쪽 바깥에 매단 초승달(머리 폭을 한쪽으로 키움 · 비대칭 유지)
         moon = [(cx + 0.38 * math.cos(a), cy + 0.38 * math.sin(a), 0) for a in (math.radians(d) for d in range(-110, 111, 44))]
         g = A.merge(g, A.tube(moon, lambda u: 0.13 * math.sin(math.pi * u) + 0.015, sides=3, flat=0.6, tip_end=True))
+        ex, ey, _ = right[-1]  # 2차: 매단 고리(떠 있는 점처럼 보였다 - 갈고리 끝과 초승달 위끝을 잇는다)
+        top = (cx + 0.38 * math.cos(math.radians(110)), cy + 0.38 * math.sin(math.radians(110)), 0)
+        g = A.merge(g, A.tube([(ex, ey, 0), ((ex + top[0]) / 2, max(ey, top[1]) + 0.12, 0), top], 0.045, sides=3))
     if at_least(grade, "legendary"):  # 머리 위 가시 왕관 3(실루엣 한 단계)
         spikes = [A.tube([(dx * 0.5, oy + 0.3, 0), (dx, oy + 0.3 + h, 0)], lambda u: 0.06 * (1 - u) + 0.01, sides=4, tip_end=True) for dx, h in ((-0.12, 0.62), (0.02, 0.78), (0.16, 0.55))]
         g = A.merge(g, *[A.xform(s_, t=(0, 0.1, 0)) for s_ in spikes])
@@ -591,15 +595,22 @@ def ph_bellows(grade):
 
 def ph_caps(grade):
     """양 끝 둥근 마개(통보다 굵게 - 망치 머리 실루엣) · 희귀 = 테 · 전설 = ×1.25"""
-    k = 1.25 if at_least(grade, "legendary") else 1.0
+    k = 1.12 if at_least(grade, "legendary") else 1.0  # 2차: ×1.25는 45°에서 주름(정체성)을 가렸다
     R = PH["headR"] * 1.12 * k
     x0 = PH["headL"] * 0.31
     prof = [(R * 0.8, 0.0), (R * 1.02, 0.12), (R * 0.9, 0.32), (R * 0.5, 0.42), (0.0, 0.44)]
-    if at_least(grade, "rare"):  # 희귀 = 마개 안쪽 넓은 테(실루엣 한 단계 - 통 끝이 한 번 더 벌어짐)
-        prof = [(R * 0.8, -0.02), (R * 1.22, 0.04), (R * 1.22, 0.1)] + prof[1:]
     n = 8 if RANK[grade] <= RANK["rare"] else 7
     cap = A.lathe(prof, n, axis="X")
     return A.merge(*[A.xform(cap, t=(x0, 0, PH["headZ"])), A.xform(A.mirror_x(cap), t=(-x0, 0, PH["headZ"]))])
+
+
+def ph_cap_rims(grade):
+    """2차: 희귀 = 마개 안쪽 넓은 테를 따로(등급 색) - 마개 겉면은 나무로 두고 테 · 귀만 등급 색(다른 무기의 띠 · 강조 언어)"""
+    k = 1.12 if at_least(grade, "legendary") else 1.0
+    R = PH["headR"] * 1.12 * k
+    x0 = PH["headL"] * 0.31
+    rim = A.lathe([(R * 0.8, -0.02), (R * 1.22, 0.04), (R * 1.22, 0.1), (R * 0.98, 0.13)], 8 if RANK[grade] <= RANK["rare"] else 7, axis="X")
+    return A.merge(A.xform(rim, t=(x0, 0, PH["headZ"])), A.xform(A.mirror_x(rim), t=(-x0, 0, PH["headZ"])))
 
 
 def ph_grip(grade):
@@ -625,9 +636,12 @@ def ph_collar(grade):
 
 def paladin_parts(grade):
     P = common_palette(grade, (238, 228, 206), A.WOOD_TOP)  # 본체 = 크림 주름 통(장난감 망치) · 마개 = 나무 → 영웅부터 등급 색
-    parts = [("Head", ph_bellows(grade), P["base"], False, 0.0), ("Caps", ph_caps(grade), P["trim"], False, 0.0),
+    cap_col = P["trim"] if grade in ("primordial", "transcendent") else (140, 96, 58)  # 2차: 마개 겉면 = 나무 #8C603A(영웅 ~ 고대에 등급 색이 머리 50% 넘게 덮었다)
+    parts = [("Head", ph_bellows(grade), P["base"], False, 0.0), ("Caps", ph_caps(grade), cap_col, False, 0.0),
              ("Grip", ph_grip(grade), P["grip"], False, 0.0), ("Pommel", ph_pommel(grade), P["trim"], False, 0.0)]
     hz, R = PH["headZ"], PH["headR"]
+    if at_least(grade, "rare"):
+        parts.append(("CapRims", ph_cap_rims(grade), P["accent"] if grade != "transcendent" else A.GOLD, False, 0.0))
     if at_least(grade, "rare"):  # 희귀 = 통 가운데 등급 색 띠
         parts.append(("Fuller", A.xform(A.lathe([(R * 1.02, -0.11), (R * 1.16, 0.0), (R * 1.02, 0.11)], 8 if RANK[grade] <= RANK["rare"] else 7, axis="X"), t=(0, 0, hz)),
                       P["accent"] if grade != "transcendent" else A.GOLD, False, 0.0))

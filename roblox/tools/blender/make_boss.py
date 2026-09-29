@@ -79,7 +79,7 @@ TIER = {1: (111, 158, 76), 2: (63, 142, 92), 3: (74, 122, 46), 4: (168, 95, 38),
 # A2-N2 사용자 결정: 보스 몸 색 = 종 테마 색(티어 색은 강조로만). 게임 BossData는 아직 티어 색 - 가져오기 때 ArtStyleV1 뒤에서 이 값(meta themeColors)으로 칠한다.
 THEME = {"frost_giant": dict(body=(96, 150, 204), head=(226, 240, 250), accent=(170, 232, 255)),       # 얼음 청 · 흰
          "abyssal_lord": dict(body=(24, 66, 112), head=(36, 140, 146), accent=(70, 226, 214)),         # 심청 · 청록
-         "storm_lord": dict(body=(62, 64, 84), head=(98, 102, 126), accent=(255, 224, 64)),            # 먹색 + 번개 노랑
+         "storm_lord": dict(body=(92, 97, 128), head=(118, 124, 156), accent=(255, 224, 64)),          # 먹색 + 번개 노랑 · 2차: 몸 #5C6180(T5 바닥 #3A3F5C · 외곽선보다 밝게 - 검토)
          "crystal_queen": dict(body=(222, 120, 172), head=(246, 204, 224), accent=(84, 226, 214)),     # 분홍 + 청록 결정
          "scorpion_queen": dict(body=(168, 95, 38), head=(206, 150, 104), accent=(255, 196, 60))}      # 설계서 = 모래 적갈 + 금 독침(유지)
 
@@ -130,8 +130,8 @@ def rig_storm_lord():
                    upperArm=(0.5, 1.0), forearm=(0.48, 0.95), hand=(0.55, 0.6, 0.55), shoulderX=1.05, stance=0.38))
     J.append(dict(name="Blade_L", parent="Body", part="LeftBlade", size=(0.3, 1.5, 0.3), shape="wedge", color="accent", at=(-0.95, 0.9, 0), pivot=(0, -0.6, 0), rot=(0, 0, 15)))
     J.append(dict(name="Blade_R", parent="Body", part="RightBlade", size=(0.3, 1.5, 0.3), shape="wedge", color="accent", at=(0.95, 0.9, 0), pivot=(0, -0.6, 0), rot=(0, 180, 15)))
-    chain(J, "CapeL", "Body", 3, 0.8, 0.8, 0.95, (-0.42, 0.8, 0.55), (-6, 0, 0), (-3, 0, 0), color="dark")
-    chain(J, "CapeR", "Body", 3, 0.8, 0.8, 0.95, (0.42, 0.8, 0.55), (-6, 0, 0), (-3, 0, 0), color="dark")
+    chain(J, "CapeL", "Body", 3, 0.8, 0.8, 0.95, (-0.42, 0.8, 0.55), (-6, 0, 0), (-3, 0, 0), color="dark", tip_color="lining")  # 2차: 찢어진 끝 마디 = 톤 다운 번개 노랑
+    chain(J, "CapeR", "Body", 3, 0.8, 0.8, 0.95, (0.42, 0.8, 0.55), (-6, 0, 0), (-3, 0, 0), color="dark", tip_color="lining")
     J.append(dict(name="Staff", parent="Hand_R", part="Staff", size=(0.25, 4.6, 0.25), shape="cyl", color="dark", at=(0, -0.3, 0), pivot=(0, -0.4, 0)))
     J.append(dict(name="StaffOrb", parent="Staff", part="StaffOrb", size=(0.7, 0.7, 0.7), shape="ball", color="accent", material="Neon", at=(0, 2.35, 0), pivot=(0, 0, 0)))
     return themed("storm_lord", dict(joints=J))
@@ -171,6 +171,8 @@ def color_of(role, rig):
         return rig["accent"] if sum(rig["head"]) > 600 else A.mix((255, 255, 255), rig["accent"], 0.35)
     if role == "mouth":
         return (25, 18, 22)
+    if role == "lining":  # 2차 폭풍 군주 망토 끝(#E8C040 - 발광 아님)
+        return (232, 192, 64)
     return rig["body"]
 
 
@@ -428,7 +430,7 @@ def storm_extra(part, j):
         return A.merge(A.loft(rings), hook)
     if part == "StaffOrb":  # 구슬 + 번개 고리 + 떠 있는 번개 파편 3(A2-N2)
         return A.merge(A.ellipsoid((sx / 2, sy / 2, sz / 2), n=12, rings=7),
-                       *[A.xform(bolt_shape(0.8, 0.28, 0.12), m=A.rot(rz=dz_), t=(dx_, dy_, 0.1)) for dx_, dy_, dz_ in ((-0.75, 0.35, 30), (0.8, 0.2, -35), (0.1, 0.75, 0))],
+                       *[A.xform(bolt_shape(0.8, 0.28, 0.12), m=A.rot(rz=dz_), t=(dx_, dy_, 0.1)) for dx_, dy_, dz_ in ((-1.35, 0.45, 30), (1.4, 0.25, -35), (0.1, 1.35, 0))],  # 2차: 파편 +0.6 벌림(어깨 번개와 겹쳐 붐볐다)
                        A.tube([(0.55 * math.cos(a), 0.12 * math.sin(3 * a), 0.55 * math.sin(a)) for a in (2 * math.pi * i / 12 for i in range(13))], 0.05, sides=4, cap0=False))
     return None
 

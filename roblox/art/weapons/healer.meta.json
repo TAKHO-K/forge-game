@@ -124,7 +124,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 288,
+     "tris": 302,
      "origin": [
       0.0,
       0.0,
@@ -200,9 +200,9 @@
     }
    },
    "partCount": 6,
-   "totalTris": 644,
+   "totalTris": 658,
    "triBudget": 800,
-   "budgetUse": 0.805,
+   "budgetUse": 0.823,
    "partCap": 12
   },
   "transcendent": {
@@ -223,7 +223,7 @@
      "color": "#262230"
     },
     "Head": {
-     "tris": 262,
+     "tris": 276,
      "origin": [
       0.0,
       0.0,
@@ -374,9 +374,9 @@
     }
    },
    "partCount": 11,
-   "totalTris": 766,
+   "totalTris": 780,
    "triBudget": 800,
-   "budgetUse": 0.958,
+   "budgetUse": 0.975,
    "partCap": 16
   },
   "rare": {
@@ -481,7 +481,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 270,
+     "tris": 284,
      "origin": [
       0.0,
       0.0,
@@ -489,7 +489,7 @@
      ],
      "center": [
       0.13,
-      3.017,
+      3.05,
       0.0
      ],
      "neon": false,
@@ -542,9 +542,9 @@
     }
    },
    "partCount": 5,
-   "totalTris": 564,
+   "totalTris": 578,
    "triBudget": 800,
-   "budgetUse": 0.705,
+   "budgetUse": 0.723,
    "partCap": 8
   },
   "relic": {
@@ -565,7 +565,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 262,
+     "tris": 276,
      "origin": [
       0.0,
       0.0,
@@ -656,9 +656,9 @@
     }
    },
    "partCount": 7,
-   "totalTris": 620,
+   "totalTris": 634,
    "triBudget": 800,
-   "budgetUse": 0.775,
+   "budgetUse": 0.792,
    "partCap": 12
   },
   "ancient": {
@@ -679,7 +679,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 262,
+     "tris": 276,
      "origin": [
       0.0,
       0.0,
@@ -800,9 +800,9 @@
     }
    },
    "partCount": 9,
-   "totalTris": 704,
+   "totalTris": 718,
    "triBudget": 800,
-   "budgetUse": 0.88,
+   "budgetUse": 0.897,
    "partCap": 12
   },
   "primordial": {
@@ -823,7 +823,7 @@
      "color": "#ECE2F0"
     },
     "Head": {
-     "tris": 262,
+     "tris": 276,
      "origin": [
       0.0,
       0.0,
@@ -974,9 +974,9 @@
     }
    },
    "partCount": 11,
-   "totalTris": 779,
+   "totalTris": 793,
    "triBudget": 800,
-   "budgetUse": 0.974,
+   "budgetUse": 0.991,
    "partCap": 16
   }
  }

@@ -104,7 +104,7 @@
      "color": "#EEE4CE"
     },
     "Caps": {
-     "tris": 188,
+     "tris": 124,
      "origin": [
       0.0,
       0.0,
@@ -148,6 +148,21 @@
      "neon": false,
      "color": "#8C603A"
     },
+    "CapRims": {
+     "tris": 120,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "center": [
+      0.0,
+      0.0,
+      1.86
+     ],
+     "neon": false,
+     "color": "#4DA6FF"
+    },
     "Fuller": {
      "tris": 44,
      "origin": [
@@ -164,10 +179,10 @@
      "color": "#4DA6FF"
     }
    },
-   "partCount": 5,
-   "totalTris": 496,
+   "partCount": 6,
+   "totalTris": 552,
    "triBudget": 800,
-   "budgetUse": 0.62,
+   "budgetUse": 0.69,
    "partCap": 8
   },
   "epic": {
@@ -188,7 +203,7 @@
      "color": "#EEE4CE"
     },
     "Caps": {
-     "tris": 164,
+     "tris": 108,
      "origin": [
       0.0,
       0.0,
@@ -196,11 +211,11 @@
      ],
      "center": [
       0.0,
-      -0.034,
+      -0.028,
       1.86
      ],
      "neon": false,
-     "color": "#A64DFF"
+     "color": "#8C603A"
     },
     "Grip": {
      "tris": 92,
@@ -228,6 +243,21 @@
       0.0,
       0.0,
       -0.72
+     ],
+     "neon": false,
+     "color": "#A64DFF"
+    },
+    "CapRims": {
+     "tris": 104,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "center": [
+      0.0,
+      -0.034,
+      1.86
      ],
      "neon": false,
      "color": "#A64DFF"
@@ -263,10 +293,10 @@
      "color": "#A64DFF"
     }
    },
-   "partCount": 6,
-   "totalTris": 564,
+   "partCount": 7,
+   "totalTris": 612,
    "triBudget": 800,
-   "budgetUse": 0.705,
+   "budgetUse": 0.765,
    "partCap": 8
   },
   "legendary": {
@@ -287,7 +317,7 @@
      "color": "#EEE4CE"
     },
     "Caps": {
-     "tris": 164,
+     "tris": 108,
      "origin": [
       0.0,
       0.0,
@@ -295,11 +325,11 @@
      ],
      "center": [
       0.0,
-      -0.042,
+      -0.032,
       1.86
      ],
      "neon": false,
-     "color": "#FF9933"
+     "color": "#8C603A"
     },
     "Grip": {
      "tris": 92,
@@ -327,6 +357,21 @@
       0.0,
       0.0,
       -0.72
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    },
+    "CapRims": {
+     "tris": 104,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "center": [
+      0.0,
+      -0.038,
+      1.86
      ],
      "neon": false,
      "color": "#FF9933"
@@ -377,10 +422,10 @@
      "color": "#FFF4D6"
     }
    },
-   "partCount": 7,
-   "totalTris": 580,
+   "partCount": 8,
+   "totalTris": 628,
    "triBudget": 800,
-   "budgetUse": 0.725,
+   "budgetUse": 0.785,
    "partCap": 12
   },
   "relic": {
@@ -401,7 +446,7 @@
      "color": "#EEE4CE"
     },
     "Caps": {
-     "tris": 164,
+     "tris": 108,
      "origin": [
       0.0,
       0.0,
@@ -409,11 +454,11 @@
      ],
      "center": [
       0.0,
-      -0.042,
+      -0.032,
       1.86
      ],
      "neon": false,
-     "color": "#FFD700"
+     "color": "#8C603A"
     },
     "Grip": {
      "tris": 68,
@@ -441,6 +486,21 @@
       0.0,
       0.0,
       -0.72
+     ],
+     "neon": false,
+     "color": "#FFD700"
+    },
+    "CapRims": {
+     "tris": 104,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "center": [
+      0.0,
+      -0.038,
+      1.86
      ],
      "neon": false,
      "color": "#FFD700"
@@ -506,10 +566,10 @@
      "color": "#FFD700"
     }
    },
-   "partCount": 8,
-   "totalTris": 560,
+   "partCount": 9,
+   "totalTris": 608,
    "triBudget": 800,
-   "budgetUse": 0.7,
+   "budgetUse": 0.76,
    "partCap": 12
   },
   "ancient": {
@@ -530,7 +590,7 @@
      "color": "#EEE4CE"
     },
     "Caps": {
-     "tris": 164,
+     "tris": 108,
      "origin": [
       0.0,
       0.0,
@@ -538,11 +598,11 @@
      ],
      "center": [
       0.0,
-      -0.042,
+      -0.032,
       1.86
      ],
      "neon": false,
-     "color": "#E0393E"
+     "color": "#8C603A"
     },
     "Grip": {
      "tris": 68,
@@ -570,6 +630,21 @@
       0.0,
       0.0,
       -0.72
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "CapRims": {
+     "tris": 104,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "center": [
+      0.0,
+      -0.038,
+      1.86
      ],
      "neon": false,
      "color": "#E0393E"
@@ -665,10 +740,10 @@
      "color": "#E0393E"
     }
    },
-   "partCount": 10,
-   "totalTris": 644,
+   "partCount": 11,
+   "totalTris": 692,
    "triBudget": 800,
-   "budgetUse": 0.805,
+   "budgetUse": 0.865,
    "partCap": 12
   },
   "primordial": {
@@ -689,7 +764,7 @@
      "color": "#ECE2F0"
     },
     "Caps": {
-     "tris": 164,
+     "tris": 108,
      "origin": [
       0.0,
       0.0,
@@ -697,7 +772,7 @@
      ],
      "center": [
       0.0,
-      -0.042,
+      -0.032,
       1.86
      ],
      "neon": false,
@@ -732,6 +807,21 @@
      ],
      "neon": false,
      "color": "#ECE8F6"
+    },
+    "CapRims": {
+     "tris": 104,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "center": [
+      0.0,
+      -0.038,
+      1.86
+     ],
+     "neon": false,
+     "color": "#FF3CC8"
     },
     "Fuller": {
      "tris": 38,
@@ -854,10 +944,10 @@
      "color": "#FF3CC8"
     }
    },
-   "partCount": 12,
-   "totalTris": 719,
+   "partCount": 13,
+   "totalTris": 767,
    "triBudget": 800,
-   "budgetUse": 0.899,
+   "budgetUse": 0.959,
    "partCap": 16
   },
   "transcendent": {
@@ -878,7 +968,7 @@
      "color": "#262230"
     },
     "Caps": {
-     "tris": 164,
+     "tris": 108,
      "origin": [
       0.0,
       0.0,
@@ -886,7 +976,7 @@
      ],
      "center": [
       0.0,
-      -0.042,
+      -0.032,
       1.86
      ],
      "neon": false,
@@ -918,6 +1008,21 @@
       0.0,
       0.0,
       -0.72
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "CapRims": {
+     "tris": 104,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "center": [
+      0.0,
+      -0.038,
+      1.86
      ],
      "neon": false,
      "color": "#D6B03E"
@@ -1043,10 +1148,10 @@
      "color": "#FFD05C"
     }
    },
-   "partCount": 12,
-   "totalTris": 698,
+   "partCount": 13,
+   "totalTris": 746,
    "triBudget": 800,
-   "budgetUse": 0.873,
+   "budgetUse": 0.932,
    "partCap": 16
   }
  }
