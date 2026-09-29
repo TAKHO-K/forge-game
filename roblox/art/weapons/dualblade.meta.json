@@ -1,0 +1,208 @@
+{
+ "version": "A2-N1",
+ "rigId": "dualblade",
+ "pivot": "Grip",
+ "attachments": {
+  "Grip": [
+   0,
+   0,
+   0
+  ],
+  "Tip": [
+   0,
+   0,
+   2.1
+  ]
+ },
+ "triBudget": 800,
+ "note": "한 자루 모델을 BladeRight · BladeLeft 두 조각에 같이 쓴다(WeaponModels.dualblade 자식 2개로 복제)",
+ "looks": {
+  "normal": {
+   "parts": {
+    "Blade": {
+     "tris": 180,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#CED4E0"
+    },
+    "Guard": {
+     "tris": 104,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#706862"
+    },
+    "Grip": {
+     "tris": 60,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#603E28"
+    },
+    "Pommel": {
+     "tris": 62,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#706862"
+    }
+   },
+   "partCount": 4,
+   "totalTris": 406,
+   "triBudget": 800,
+   "budgetUse": 0.507,
+   "partCap": 8
+  },
+  "legendary": {
+   "parts": {
+    "Blade": {
+     "tris": 180,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#CED4E0"
+    },
+    "Guard": {
+     "tris": 110,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    },
+    "Grip": {
+     "tris": 60,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#5A301E"
+    },
+    "Pommel": {
+     "tris": 62,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    },
+    "Gem": {
+     "tris": 16,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFF4D6"
+    }
+   },
+   "partCount": 5,
+   "totalTris": 428,
+   "triBudget": 800,
+   "budgetUse": 0.535,
+   "partCap": 12
+  },
+  "transcendent": {
+   "parts": {
+    "Blade": {
+     "tris": 152,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Guard": {
+     "tris": 110,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Grip": {
+     "tris": 44,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#181620"
+    },
+    "Pommel": {
+     "tris": 46,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Gem": {
+     "tris": 16,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD65A"
+    },
+    "Shards": {
+     "tris": 18,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Crack1": {
+     "tris": 36,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD05C"
+    }
+   },
+   "partCount": 7,
+   "totalTris": 422,
+   "triBudget": 800,
+   "budgetUse": 0.527,
+   "partCap": 16
+  }
+ }
+}

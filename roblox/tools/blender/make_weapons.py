@@ -288,7 +288,7 @@ DB = dict(tipZ=2.1, baseZ=0.28, pommelZ=-0.52, guardZ=0.2)
 
 
 def db_center_x(u):
-    return 0.26 * u * u  # 칼끝이 날(+X) 쪽으로 들린 초승달 → 등(−X)이 볼록
+    return 0.42 * u * u  # 칼끝이 날(+X) 쪽으로 들린 초승달 → 등(−X)이 볼록
 
 
 def db_blade(grade):
@@ -296,9 +296,9 @@ def db_blade(grade):
     rings = []
     for u in (0.0, 0.15, 0.35, 0.55, 0.75, 0.9):
         z = DB["baseZ"] + (DB["tipZ"] - DB["baseZ"]) * u
-        wp = 0.2 + 0.07 * math.sin(math.pi * min(1, u / 0.6)) * (1 - u) - 0.12 * u * u  # 날 쪽 배(0.3 부근) → 끝으로 가늘게
+        wp = 0.25 + 0.08 * math.sin(math.pi * min(1, u / 0.6)) * (1 - u) - 0.12 * u * u  # 날 쪽 배(0.3 부근) → 끝으로 가늘게
         wn = 0.1 - 0.06 * u
-        t = 0.075 - 0.04 * u
+        t = 0.09 - 0.045 * u
         cx = db_center_x(u)
         sec = [(wp, 0), (wp * 0.7, t * 0.5), (wp * 0.3, t), (-wn, t * 0.85), (-wn, -t * 0.85), (wp * 0.3, -t), (wp * 0.7, -t * 0.5)] if fine else \
             [(wp, 0), (wp * 0.35, t), (-wn, t * 0.85), (-wn, -t * 0.85), (wp * 0.35, -t)]
@@ -340,8 +340,8 @@ def dualblade_parts(grade):
         parts.append(("Gem", A.crystal(0.2, 0.08, sides=4, tip_h=0.08, base_h=0.08, center=(0.02, -0.12, DB["guardZ"]), m=A.rot(rx=90)), P["gem"], True, 0.0))
     if grade == "transcendent":
         pts = [(db_center_x(u) + dx, 0, DB["baseZ"] + (DB["tipZ"] - DB["baseZ"]) * u) for u, dx in ((0.12, 0.02), (0.3, 0.1), (0.48, -0.01), (0.66, 0.07), (0.8, 0.0))]
-        parts += [("Shards", float_shards([(-0.45, 0.1, 1.2), (0.55, -0.1, 1.6), (-0.3, 0.05, 2.0)], 0.13), A.BLACK_BODY, False, 0.0),
-                  ("Crack1", crack_line(pts, 0.1, 0.035), A.GOLD_GLOW, True, 0.0)]
+        parts += [("Shards", float_shards([(-0.62, 0.0, 1.15), (0.78, 0.0, 1.55), (-0.45, 0.0, 2.05)], 0.22), A.BLACK_BODY, False, 0.0),
+                  ("Crack1", crack_line(pts, 0.11, 0.06), A.GOLD_GLOW, True, 0.0)]
     return parts
 
 
@@ -351,28 +351,28 @@ BW = dict(tipX=2.87, nockZ=1.40)
 
 def bw_limb_path(sign):
     """손잡이 → 날개 끝(시위 매듭) → 바깥(−Z)으로 되감긴 반곡. 위 날개(+)가 더 크게 말림(비대칭)"""
-    body = A.bezier((0.42, 0, 0.0), (1.4, 0, -0.22), (2.45, 0, 0.42), (BW["tipX"], 0, BW["nockZ"]), n=7)
-    curl = [(3.04, 0, 1.47), (3.2, 0, 1.3), (3.22, 0, 1.08)] if sign > 0 else [(2.98, 0, 1.46), (3.08, 0, 1.33)]
+    body = A.bezier((0.42, 0, 0.0), (1.4, 0, -0.22), (2.45, 0, 0.42), (BW["tipX"], 0, BW["nockZ"]), n=9)
+    curl = [(3.1, 0, 1.46), (3.36, 0, 1.28), (3.46, 0, 0.98)] if sign > 0 else [(3.06, 0, 1.46), (3.26, 0, 1.3), (3.32, 0, 1.1)]
     return [(sign * x, y, z) for x, y, z in body + curl]
 
 
 def bw_limb(sign, grade):
     path = bw_limb_path(sign)
     n = len(path)
-    g = A.tube(path, lambda u: 0.15 - 0.1 * u, sides=5 if RANK[grade] <= RANK["legendary"] else 4, flat=0.55, tip_end=True)
+    g = A.tube(path, lambda u: 0.21 - 0.12 * u, sides=6 if RANK[grade] <= RANK["legendary"] else 4, flat=1.1, tip_end=True)  # 법선 = Y(날개 너비) · 종법선 = 휨 평면 두께(두툼하게)
     if at_least(grade, "legendary"):  # 날개 끝 지느러미(실루엣 한 단계) - 되감긴 곳 바깥
         a = path[n - 3]
-        g = A.merge(g, A.tube([a, (a[0] + sign * 0.18, 0, a[2] - 0.34)], lambda u: 0.08 * (1 - u) + 0.01, sides=4, flat=0.5, tip_end=True))
+        g = A.merge(g, A.tube([a, (a[0] + sign * 0.3, 0, a[2] - 0.58)], lambda u: 0.13 * (1 - u) + 0.01, sides=4, flat=0.8, tip_end=True))
     return g
 
 
 def bw_riser(grade):
-    prof = [(0.0, -0.62), (0.11, -0.56), (0.16, -0.4), (0.17, 0.0), (0.16, 0.4), (0.11, 0.56), (0.0, 0.62)]
+    prof = [(0.0, -0.66), (0.14, -0.6), (0.21, -0.42), (0.23, 0.0), (0.21, 0.42), (0.14, 0.6), (0.0, 0.66)]
     return A.xform(A.lathe(prof, detail(grade), axis="X"), s=(1, 1, 1.25), t=(0, 0, -0.03))
 
 
 def bw_grip(grade):
-    rings = [[(x, y, z) for x, y, z in [(xx, math.cos(2 * math.pi * k / detail(grade)) * r, math.sin(2 * math.pi * k / detail(grade)) * r * 1.2) for k in range(detail(grade))]] for xx, r in ((-0.32, 0.19), (-0.1, 0.205), (0.1, 0.205), (0.32, 0.19))]
+    rings = [[(x, y, z) for x, y, z in [(xx, math.cos(2 * math.pi * k / detail(grade)) * r, math.sin(2 * math.pi * k / detail(grade)) * r * 1.2) for k in range(detail(grade))]] for xx, r in ((-0.34, 0.25), (-0.1, 0.27), (0.1, 0.27), (0.34, 0.25))]
     return A.loft(rings)
 
 
@@ -382,14 +382,17 @@ def bow_parts(grade):
              ("Limb_Top", bw_limb(1, grade), P["base"], False, 0.0), ("Limb_Bottom", bw_limb(-1, grade), P["base"], False, 0.0),
              ("String", A.tube([(BW["tipX"], 0, BW["nockZ"]), (-BW["tipX"], 0, BW["nockZ"])], 0.028, sides=3), (235, 235, 235), False, 0.0)]
     if at_least(grade, "legendary"):
-        caps = A.merge(*[A.xform(A.lathe([(0.0, -0.14), (0.11, -0.06), (0.1, 0.08), (0.0, 0.14)], 5, axis="X"), t=(s * BW["tipX"], 0, BW["nockZ"])) for s in (1, -1)])
-        parts += [("Tips", caps, P["trim"], False, 0.0),
-                  ("Gem", A.crystal(0.26, 0.1, sides=4, tip_h=0.1, base_h=0.1, center=(0, 0, -0.24), m=A.rot(rx=90)), P["gem"], True, 0.0)]
+        caps = A.merge(*[A.xform(A.lathe([(0.0, -0.2), (0.18, -0.1), (0.17, 0.1), (0.0, 0.2)], 5, axis="X"), t=(s * BW["tipX"], 0, BW["nockZ"])) for s in (1, -1)])
+        # 손잡이 위아래 화살받이 판 2(과녁 쪽 −Z로 0.4 돌출 · 두께 0.25 - 전설 실루엣 한 단계)
+        rests = A.merge(*[A.tube([(s * 0.5, 0, -0.1), (s * 0.62, 0, -0.45), (s * 0.5, 0, -0.68)], lambda u: 0.14 * (1 - u) + 0.04, sides=4, flat=0.9, tip_end=True) for s in (1, -1)])
+        parts += [("Tips", A.merge(caps, rests), P["trim"], False, 0.0),
+                  ("Gem", A.crystal(0.36, 0.15, sides=4, tip_h=0.12, base_h=0.12, center=(0, 0, -0.36), m=A.rot(rx=90)), P["gem"], True, 0.0)]
     if grade == "transcendent":
         pts = [(x, 0, z) for x, _, z in bw_limb_path(1)[1:6]]
         pts = [(x + 0.02 * (-1) ** i, 0, z - 0.03 * (-1) ** i) for i, (x, _, z) in enumerate(pts)]
-        parts += [("Shards", float_shards([(0.9, 0.0, -0.75), (-1.2, 0.0, -0.7), (0.1, 0.0, -0.95)], 0.16), A.BLACK_BODY, False, 0.0),
-                  ("Crack1", crack_line(pts, 0.19, 0.04), A.GOLD_GLOW, True, 0.0)]
+        parts += [("Shards", float_shards([(1.05, 0.0, -0.75), (-1.35, 0.0, -0.7), (0.1, 0.0, -1.0)], 0.4), A.BLACK_BODY, False, 0.0),
+                  ("Crack1", crack_line(pts, 0.19, 0.07), A.GOLD_GLOW, True, 0.0),
+                  ("Crack2", crack_line([(-x, y, z) for x, y, z in pts], 0.19, 0.07), A.GOLD_GLOW, True, 0.0)]
     return parts
 
 
@@ -398,12 +401,13 @@ ST = dict(bottomY=-2.2, topY=3.4, orbY=3.02, neckY=2.5)
 
 
 def st_shaft(grade):
-    n = detail(grade) - 2 if RANK[grade] <= RANK["legendary"] else 4  # 6각(일반 · 전설) · 4각(초월) - 도는 단면 = 비틀림
+    n = detail(grade) - 2 if RANK[grade] <= RANK["legendary"] else 5  # 6각(일반 · 전설) · 4각(초월) - 도는 단면 = 비틀림
     rings = []
-    ys = [ST["bottomY"] + 0.2 + (ST["neckY"] - ST["bottomY"] - 0.2) * k / 8 for k in range(9)]
+    K = 12
+    ys = [ST["bottomY"] + 0.2 + (ST["neckY"] - ST["bottomY"] - 0.2) * k / K for k in range(K + 1)]
     for k, y in enumerate(ys):
-        u = k / 8
-        r = 0.085 + 0.07 * u ** 1.4  # 아래로 가늘게
+        u = k / K
+        r = 0.17 + 0.08 * u ** 1.4  # 아래로 가늘게(두툼함 - 밑동도 0.34 지름)
         cx = 0.07 * math.sin(math.pi * u)  # 살짝 휜 나무
         rings.append([(x + cx, y, z) for x, z in A.circle2d(r, n, start=2 * math.pi * u * 0.9)])
     return A.loft(rings)
@@ -412,11 +416,13 @@ def st_shaft(grade):
 def st_hooks(grade):
     """머리에서 갈라져 구슬을 감싸는 갈고리 두 가닥 - 왼쪽이 더 길게 말림(비대칭)"""
     oy = ST["orbY"]
-    left = A.bezier((-0.04, ST["neckY"], 0), (-0.62, oy - 0.25, 0), (-0.58, oy + 0.55, 0), (-0.02, oy + 0.46, 0), n=7) + [(0.14, oy + 0.3, 0)]
-    right = A.bezier((0.06, ST["neckY"], 0), (0.52, oy - 0.3, 0), (0.5, oy + 0.18, 0), (0.24, oy + 0.3, 0), n=5)
+    left = A.bezier((-0.04, ST["neckY"], 0), (-0.72, oy - 0.25, 0), (-0.68, oy + 0.65, 0), (-0.02, oy + 0.54, 0), n=7) + [(0.16, oy + 0.36, 0)]
+    right = A.bezier((0.06, ST["neckY"], 0), (0.62, oy - 0.3, 0), (0.6, oy + 0.2, 0), (0.28, oy + 0.36, 0), n=5)
     sides = 5 if RANK[grade] <= RANK["legendary"] else 4
-    g = A.merge(A.tube(left, lambda u: 0.13 - 0.1 * u, sides=sides, flat=0.8, tip_end=True),
-                A.tube(right, lambda u: 0.12 - 0.09 * u, sides=sides, flat=0.8, tip_end=True))
+    k = 1.25  # 머리 = 전체 길이의 약 18%(구슬 중심 기준 확대)
+    left, right = [[(x * k, oy + (y - oy) * k, z) for x, y, z in pts] for pts in (left, right)]
+    g = A.merge(A.tube(left, lambda u: 0.17 - 0.13 * u, sides=sides, flat=0.8, tip_end=True),
+                A.tube(right, lambda u: 0.16 - 0.12 * u, sides=sides, flat=0.8, tip_end=True))
     if at_least(grade, "legendary"):  # 머리 위 가시 왕관 3(실루엣 한 단계)
         spikes = [A.tube([(dx * 0.5, oy + 0.3, 0), (dx, oy + 0.3 + h, 0)], lambda u: 0.06 * (1 - u) + 0.01, sides=4, tip_end=True) for dx, h in ((-0.12, 0.62), (0.02, 0.78), (0.16, 0.55))]
         g = A.merge(g, *[A.xform(s_, t=(0, 0.1, 0)) for s_ in spikes])
@@ -425,14 +431,14 @@ def st_hooks(grade):
 
 def st_leaf():
     path = [(0.1, 1.95, 0), (0.38, 2.08, 0.02), (0.56, 2.3, 0.04), (0.6, 2.52, 0.05)]
-    return A.tube(path, lambda u: 0.11 * math.sin(math.pi * min(1.0, 0.15 + u)) + 0.015, sides=4, flat=0.25, tip_end=True)
+    return A.tube(path, lambda u: 0.16 * math.sin(math.pi * min(1.0, 0.15 + u)) + 0.02, sides=4, flat=0.3, tip_end=True)
 
 
 def healer_parts(grade):
     P = common_palette(grade, A.WOOD, A.IRON)
     orb = (140, 240, 200) if grade != "transcendent" else (255, 214, 90)
     parts = [("Shaft", st_shaft(grade), P["base"], False, 0.0), ("Head", st_hooks(grade), P["trim"] if grade != "normal" else A.WOOD_TOP, False, 0.0),
-             ("Orb", A.ellipsoid((0.27, 0.27, 0.27), n=detail(grade), rings=5, center=(0, ST["orbY"], 0)), orb, grade != "normal", 0.0),
+             ("Orb", A.ellipsoid((0.42, 0.42, 0.42), n=detail(grade), rings=5, center=(0, ST["orbY"], 0)), orb, grade != "normal", 0.0),
              ("Leaf", st_leaf(), (126, 196, 70) if grade != "transcendent" else A.GOLD, False, 0.0),
              ("Ferrule", A.xform(A.lathe([(0.0, -0.12), (0.07, -0.08), (0.11, 0.1), (0.1, 0.22)], detail(grade) - 2), t=(0, ST["bottomY"], 0)), P["trim"] if grade != "normal" else A.IRON, False, 0.0)]
     if at_least(grade, "legendary"):
@@ -440,8 +446,8 @@ def healer_parts(grade):
         parts.append(("Band", A.tube(ring, 0.06, sides=4, cap0=False), P["accent"], False, 0.0))
     if grade == "transcendent":
         pts = [(0.05 * (-1) ** k + 0.07 * math.sin(math.pi * (y - ST["bottomY"]) / (ST["neckY"] - ST["bottomY"])), y, 0) for k, y in enumerate((-1.2, -0.5, 0.2, 0.9, 1.6, 2.2))]
-        parts += [("Shards", float_shards([(-0.75, 3.2, 0.1), (0.72, 2.75, -0.1), (0.5, 3.65, 0.0), (-0.55, 2.35, 0.0)], 0.15), A.BLACK_BODY, False, 0.0),
-                  ("Crack1", crack_line(pts, 0.2, 0.04), A.GOLD_GLOW, True, 0.0)]
+        parts += [("Shards", float_shards([(-1.15, 3.3, 0.0), (1.1, 2.7, 0.0), (0.75, 3.95, 0.0)], 0.34), A.BLACK_BODY, False, 0.0),
+                  ("Crack1", crack_line(pts, 0.28, 0.07), A.GOLD_GLOW, True, 0.0)]
     return parts
 
 

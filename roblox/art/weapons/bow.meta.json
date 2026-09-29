@@ -1,0 +1,273 @@
+{
+ "version": "A2-N1",
+ "rigId": "bow",
+ "pivot": "Grip",
+ "attachments": {
+  "Grip": [
+   0,
+   0,
+   0
+  ],
+  "Tip": [
+   2.87,
+   0,
+   1.4
+  ],
+  "StringNock": [
+   0,
+   0,
+   1.4
+  ]
+ },
+ "triBudget": 800,
+ "note": "String 파트는 렌더 · 아이콘 전용 - 게임은 시위를 코드로 그린다(가져올 때 String은 지운다)",
+ "looks": {
+  "normal": {
+   "parts": {
+    "Riser": {
+     "tris": 80,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Grip": {
+     "tris": 60,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#603E28"
+    },
+    "Limb_Top": {
+     "tris": 142,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Limb_Bottom": {
+     "tris": 142,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "String": {
+     "tris": 8,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#EBEBEB"
+    }
+   },
+   "partCount": 5,
+   "totalTris": 432,
+   "triBudget": 800,
+   "budgetUse": 0.54,
+   "partCap": 8
+  },
+  "legendary": {
+   "parts": {
+    "Riser": {
+     "tris": 80,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Grip": {
+     "tris": 60,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#5A301E"
+    },
+    "Limb_Top": {
+     "tris": 148,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Limb_Bottom": {
+     "tris": 148,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "String": {
+     "tris": 8,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#EBEBEB"
+    },
+    "Tips": {
+     "tris": 68,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    },
+    "Gem": {
+     "tris": 16,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFF4D6"
+    }
+   },
+   "partCount": 7,
+   "totalTris": 528,
+   "triBudget": 800,
+   "budgetUse": 0.66,
+   "partCap": 12
+  },
+  "transcendent": {
+   "parts": {
+    "Riser": {
+     "tris": 60,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Grip": {
+     "tris": 44,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#181620"
+    },
+    "Limb_Top": {
+     "tris": 100,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Limb_Bottom": {
+     "tris": 100,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "String": {
+     "tris": 8,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#EBEBEB"
+    },
+    "Tips": {
+     "tris": 68,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Gem": {
+     "tris": 16,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD65A"
+    },
+    "Shards": {
+     "tris": 18,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Crack1": {
+     "tris": 36,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD05C"
+    },
+    "Crack2": {
+     "tris": 36,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD05C"
+    }
+   },
+   "partCount": 10,
+   "totalTris": 486,
+   "triBudget": 800,
+   "budgetUse": 0.608,
+   "partCap": 16
+  }
+ }
+}

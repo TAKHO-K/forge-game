@@ -1,0 +1,243 @@
+{
+ "version": "A2-N1",
+ "rigId": "healer",
+ "pivot": "Grip",
+ "attachments": {
+  "Grip": [
+   0,
+   0,
+   0
+  ],
+  "Tip": [
+   0,
+   3.4,
+   0
+  ],
+  "Support": [
+   0,
+   1.0,
+   0
+  ]
+ },
+ "triBudget": 800,
+ "note": "",
+ "looks": {
+  "normal": {
+   "parts": {
+    "Shaft": {
+     "tris": 152,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Head": {
+     "tris": 126,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#8C603A"
+    },
+    "Orb": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#8CF0C8"
+    },
+    "Leaf": {
+     "tris": 22,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#7EC446"
+    },
+    "Ferrule": {
+     "tris": 34,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#706862"
+    }
+   },
+   "partCount": 5,
+   "totalTris": 398,
+   "triBudget": 800,
+   "budgetUse": 0.497,
+   "partCap": 8
+  },
+  "legendary": {
+   "parts": {
+    "Shaft": {
+     "tris": 152,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Head": {
+     "tris": 144,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    },
+    "Orb": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#8CF0C8"
+    },
+    "Leaf": {
+     "tris": 22,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#7EC446"
+    },
+    "Ferrule": {
+     "tris": 34,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    },
+    "Band": {
+     "tris": 66,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF9933"
+    }
+   },
+   "partCount": 6,
+   "totalTris": 482,
+   "triBudget": 800,
+   "budgetUse": 0.603,
+   "partCap": 12
+  },
+  "transcendent": {
+   "parts": {
+    "Shaft": {
+     "tris": 126,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Head": {
+     "tris": 118,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Orb": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD65A"
+    },
+    "Leaf": {
+     "tris": 22,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Ferrule": {
+     "tris": 22,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Band": {
+     "tris": 66,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Shards": {
+     "tris": 18,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Crack1": {
+     "tris": 44,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD05C"
+    }
+   },
+   "partCount": 8,
+   "totalTris": 464,
+   "triBudget": 800,
+   "budgetUse": 0.58,
+   "partCap": 16
+  }
+ }
+}
