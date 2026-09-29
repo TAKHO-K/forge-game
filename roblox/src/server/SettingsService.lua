@@ -39,6 +39,11 @@ function SettingsService.sanitize(key, value)
 		return nil
 	elseif def.kind == "preset" then
 		return type(value) == "string" and validPreset(value) and value or nil
+	elseif def.kind == "volume" then -- B4 음량: 0 ~ 1 숫자(NaN · 범위 밖 = 거절) · 소수 둘째 자리로 맞춤(0.1 단계 누적 오차)
+		if type(value) == "number" and value == value and value >= 0 and value <= 1 then
+			return math.floor(value * 100 + 0.5) / 100
+		end
+		return nil
 	end
 	return nil
 end

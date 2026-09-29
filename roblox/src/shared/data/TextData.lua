@@ -142,6 +142,12 @@ return {
 		["settings.screenShake"] = "화면 흔들림(타격 · 스킬 · 보스)",
 		["settings.reduceFlashes"] = "번개 · 화면 섬광 줄이기(보스 경고는 밝기만)",
 		["settings.classChange"] = "직업 변경",
+		["settings.soundHeader"] = "소리 음량", -- B4
+		["settings.volume.sfx"] = "효과음", -- B4
+		["settings.volume.music"] = "음악", -- B4
+		["settings.volume.ui"] = "UI", -- B4
+		["settings.volume.bossCue"] = "보스 전조", -- B4
+		["settings.volumeValue"] = "{percent}%", -- B4 음량 값
 		["variant.line"] = "스킬 변형: {class} {slot} {name}({parts})",
 		["variant.off"] = "{line} - 다른 직업(꺼짐)",
 		["variant.axis.damage"] = "피해 {pct}%",

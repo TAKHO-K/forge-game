@@ -18,6 +18,8 @@ SettingsPanel.id = "settings"
 local PANEL_SIZE = Vector2.new(420, 440) -- Q14: 섬광 줄이기 · 직업 변경 한 줄씩 -- W2: 궤적 토글 한 줄 추가 · W3c: 화면 흔들림 토글 한 줄 · C5-4: 자동 이동 한 줄
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local AutoStageData = require(ReplicatedStorage.Shared.data.AutoStageData)
+local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData) -- B4 음량 줄(키 · Attribute · 기본값 · 단계)
+local SoundData = require(ReplicatedStorage.Shared.data.SoundData) -- B4 카테고리 순서 → 설정 키
 local PAD = 12
 
 local player = Players.LocalPlayer
@@ -44,7 +46,7 @@ local function build()
 	body.Size = UDim2.new(1, 0, 1, 0)
 	body.ScrollBarThickness = 4
 	body.ScrollBarImageColor3 = Theme.color("rim")
-	body.CanvasSize = UDim2.new(0, 0, 0, PAD + 292 + 44 + PAD)
+	body.CanvasSize = UDim2.new(0, 0, 0, PAD + 376 + #SoundData.categoryOrder * 52 + PAD) -- B4: 음량 제목(348) + 카테고리 줄 52씩
 	body.Parent = panel.content
 	local toggle = Toggle.build({
 		parent = body, name = "CameraTopDownToggle", text = Text.get("settings.cameraTopDown"),
@@ -140,10 +142,61 @@ local function build()
 		end,
 	})
 	classButton.root.Name = "ClassChangeButton"
+	-- B4 소리 음량(카테고리 4줄: 이름 · [−] · 값 · [+] - 버튼 높이 = Theme.buttonHeight(폰 44) · 저장 = 같은 SettingsSave)
+	local soundHeader = Theme.label(body, Text.get("settings.soundHeader"), "body", "textSecondary")
+	soundHeader.Name = "SoundHeader"
+	soundHeader.Position = UDim2.new(0, PAD, 0, PAD + 348)
+	soundHeader.Size = UDim2.new(1, -PAD * 2, 0, 24)
+	local volumeRows = {}
+	for index, categoryId in ipairs(SoundData.categoryOrder) do
+		local key = SoundData.categories[categoryId].settingKey
+		local def = SettingsData.keys[key]
+		local y = PAD + 376 + (index - 1) * 52
+		local nameLabel = Theme.label(body, Text.get("settings.volume." .. categoryId), "body", "textPrimary")
+		nameLabel.Name = "VolumeLabel_" .. categoryId
+		nameLabel.Position = UDim2.new(0, PAD, 0, y)
+		nameLabel.Size = UDim2.new(0, 140, 0, Theme.buttonHeight)
+		local valueLabel = Theme.label(body, "", "body", "textPrimary")
+		valueLabel.Name = "VolumeValue_" .. categoryId
+		valueLabel.TextXAlignment = Enum.TextXAlignment.Center
+		valueLabel.Position = UDim2.new(0, PAD + 244, 0, y)
+		valueLabel.Size = UDim2.new(0, 56, 0, Theme.buttonHeight)
+		local function current()
+			local v = player:GetAttribute(def.attrs[1])
+			return type(v) == "number" and v or def.default
+		end
+		local function render()
+			valueLabel.Text = Text.get("settings.volumeValue", { percent = tostring(math.floor(current() * 100 + 0.5)) })
+		end
+		local function step(sign)
+			local v = math.clamp(current() + sign * SettingsData.volumeStep, 0, 1)
+			v = math.floor(v * 100 + 0.5) / 100
+			player:SetAttribute(def.attrs[1], v)
+			save(key, v)
+			render()
+		end
+		Button.build({
+			parent = body, name = "VolumeDown_" .. categoryId, kind = "secondary", width = 88,
+			position = UDim2.new(0, PAD + 148, 0, y), text = "−",
+			onActivated = function()
+				step(-1)
+			end,
+		})
+		Button.build({
+			parent = body, name = "VolumeUp_" .. categoryId, kind = "secondary", width = 88,
+			position = UDim2.new(0, PAD + 308, 0, y), text = "+",
+			onActivated = function()
+				step(1)
+			end,
+		})
+		player:GetAttributeChangedSignal(def.attrs[1]):Connect(render)
+		render()
+		volumeRows[categoryId] = { render = render, valueLabel = valueLabel }
+	end
 	player:GetAttributeChangedSignal("AutoStage"):Connect(function()
 		autoButton.setText(presetName(player:GetAttribute("AutoStage") or AutoStageData.default))
 	end)
-	built = { panel = panel, toggle = toggle, dimToggle = dimToggle, shakeToggle = shakeToggle, flashToggle = flashToggle, autoButton = autoButton }
+	built = { panel = panel, toggle = toggle, dimToggle = dimToggle, shakeToggle = shakeToggle, flashToggle = flashToggle, autoButton = autoButton, volumeRows = volumeRows }
 end
 
 function SettingsPanel.toggle()
@@ -154,6 +207,9 @@ function SettingsPanel.toggle()
 	built.dimToggle.setValue(AttackTrail.dimOthers(), true)
 	built.shakeToggle.setValue(player:GetAttribute("SettingScreenShake") ~= false, true)
 	built.flashToggle.setValue(player:GetAttribute("ReduceFlashes") == true, true)
+	for _, row in pairs(built.volumeRows) do
+		row.render()
+	end
 	UIManager.switchTo(SettingsPanel.id)
 end
 

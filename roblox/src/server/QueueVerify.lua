@@ -583,7 +583,7 @@ function V.runPure()
 		for _, key in ipairs(SettingsData.order) do
 			attrsOk = attrsOk and SettingsData.keys[key] ~= nil and #SettingsData.keys[key].attrs >= 1
 		end
-		check("설정 키 5 = 적용 Attribute(카메라 · 섬광 · 흔들림 · 궤적 · 자동 이동)", attrsOk and #SettingsData.order == 5)
+		check("설정 키 9 = 적용 Attribute(카메라 · 섬광 · 흔들림 · 궤적 · 자동 이동 · B4 음량 4)", attrsOk and #SettingsData.order == 9)
 		local SaveSystem = require(script.Parent.SaveSystem)
 		local ok, m = pcall(SaveSystem.migrate, { version = 53, gold = 0, classes = {}, inventory = {}, quests = { main = 1 } })
 		check(("이관 v53 → v%s: settings 빈 표(= 기본값)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 54 and type(m.settings) == "table" and next(m.settings) == nil)
