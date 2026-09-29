@@ -45,7 +45,8 @@ function ProtectionTickets.tryBuy(player, kind)
 	end
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-	if not rootPart or not isNearStation(rootPart) then
+	-- QUEUE-B1 B2: 상점 창(보석상인 좌판 ShopPrompt - 골드 탭)에서도 산다 - 강화대 또는 보석상인 반경(가격 · 규칙은 그대로)
+	if not rootPart or not (isNearStation(rootPart) or require(script.Parent.GemMerchantAccess).evaluate(rootPart.Position)) then
 		return false, "not_near_station"
 	end
 	local price = Enhance.getProtectionPrice(kind, PlayerProfile.getAccountBestStage(player))
