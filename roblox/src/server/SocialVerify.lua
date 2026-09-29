@@ -4,7 +4,6 @@
 -- 클라 쪽(이름 클릭 메뉴 · 알림 툴팁 · 타이머 정지 · P 키 · 겹침 · 글씨 표)은 client/SocialSelfCheck.client.lua가 클라 콘솔에 [S12b][UI]로 찍는다.
 -- env = { ensureBackup, restore } - DevTools의 로컬 헬퍼.
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 

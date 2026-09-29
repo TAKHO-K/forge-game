@@ -2,7 +2,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
-local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
@@ -177,7 +176,6 @@ local function rebuildGrid()
 
 		S.applyGradeVisual(cell, gradeStroke, glow, item.grade)
 
-		local visual = ItemVisualData.gradeVisuals[item.grade]
 		local iconColor = GradeColor.of(item.grade, UIColors.textPrimary) -- G1-1: 태초도 제 색
 		local iconHolder = Instance.new("Frame")
 		iconHolder.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -265,7 +263,7 @@ local function rebuildGrid()
 	end
 
 	countLabel.Text = ("%d / %d"):format(#S.inventory, totalSlots)
-	local sellCount, sellTotal = S.bulkSellEstimate()
+	local _, sellTotal = S.bulkSellEstimate()
 	bulkEstimatePillLabel.Text = ("일괄판매 예상 +%s"):format(NumberFormat.format(sellTotal))
 	cutoffButton.Text = ArmorData.grades[S.bulkSellCutoffGrade].displayName .. " 이하 ▾"
 	goldPillLabel.Text = "보유 골드 " .. NumberFormat.format(player:GetAttribute("Gold") or 0)

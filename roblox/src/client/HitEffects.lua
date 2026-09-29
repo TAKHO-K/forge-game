@@ -11,7 +11,6 @@
 -- 이미 상시 존재하는 파트가 몬스터 9마리×3파트(Root·Body·Head)=27개인데 그 절반도 안
 -- 된다.
 
-local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 

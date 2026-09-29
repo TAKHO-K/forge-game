@@ -159,8 +159,10 @@ function V.runLive(player, env)
 					dead = MonsterState.applyDamage(mob, power, stage, player)
 					hits += 1
 				end
-				local expect = CombatFormula.representativeHits(stage) / (ratio * CombatFormula.dealMultiplierForRatio(ratio))
-				r.check(("스테이지 %d · 비율 %.1f: 실측 %d타 · 식 %.2f타(올림 %d) · 처치 시간 배수 %.2f(대표 1.0)"):format(stage, ratio, hits, expect, math.max(1, math.ceil(expect - 1e-6)), CombatFormula.killTimeFactor(ratio)),
+				-- QUEUE-6h-b R1: 기대값 갱신(C5-1 43c7cc4 장비 뒤처짐 신호 gearLagMultiplier - 잡몹 피해에 곱해진다(하한 0.25) · 개발 계정 DealItemLevel이 스테이지보다 낮으면 타수가 늘어난다)
+				local lag = CombatFormula.gearLagMultiplier(player:GetAttribute("DealItemLevel"), stage)
+				local expect = CombatFormula.representativeHits(stage) / (ratio * CombatFormula.dealMultiplierForRatio(ratio) * lag)
+				r.check(("스테이지 %d · 비율 %.1f: 실측 %d타 · 식 %.2f타(올림 %d · 뒤처짐 ×%.2f) · 처치 시간 배수 %.2f(대표 1.0)"):format(stage, ratio, hits, expect, math.max(1, math.ceil(expect - 1e-6)), lag, CombatFormula.killTimeFactor(ratio)),
 					math.abs(hits - math.max(1, math.ceil(expect - 1e-6))) <= 1)
 				MonsterSpawner.despawn(mob)
 			end

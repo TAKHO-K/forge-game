@@ -286,6 +286,7 @@ function BR1_2Verify.runLive(player, env)
 	local function setup(bossId, stage, seed)
 		local model, data, encounter = H.spawnBoss(player, env, bossId, seed, stage)
 		assert(model, "보스 스폰 실패")
+		model:SetAttribute("BossIntroUntil", nil) -- QUEUE-6h-b R1: 검증 쪽 문제(BR1-4c 71d83d6 진입 연출 동안 보스 피해 0 - 에어본 5% 피해가 막혀 체력바 1이었다)
 		local zone = WorldConfig.zones[encounter.zoneKey]
 		root.Anchored = true
 		root.CFrame = CFrame.new(zone.center + Vector3.new(0, FLOOR + 3, 70))

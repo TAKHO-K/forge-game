@@ -5,7 +5,6 @@
 --   클라 이단점프 · 공중대시 배타 · 구조물 낙하 · 카메라는 서버에서 못 누른다 - 스크린샷 Play에서 MCP로 잰다(보고서 ③).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
 local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
