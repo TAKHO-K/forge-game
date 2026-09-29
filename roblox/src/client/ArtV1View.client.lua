@@ -240,8 +240,19 @@ local function applySwitch()
 end
 Workspace:GetAttributeChangedSignal(ArtStyleV1Data.attribute):Connect(applySwitch)
 task.spawn(function()
-	Workspace:WaitForChild("EnhanceStation", 30)
+	local station = Workspace:WaitForChild("EnhanceStation", 30)
+	if not station then
+		return
+	end
+	station:WaitForChild("Base", 30) -- 강화대 모델은 비원자 스트리밍 - 모델이 먼저 오고 파트가 늦게 올 수 있다
 	applySwitch()
+	station.ChildAdded:Connect(function(child) -- 스트리밍으로 나갔다 다시 들어온 파트는 새 인스턴스라 숨김이 풀린다
+		if child.Name == "Base" and isOn() and not forgeModel then
+			setForge(true)
+		elseif isOn() and table.find(F.hideParts, child.Name) and child:IsA("BasePart") then
+			child.LocalTransparencyModifier = 1
+		end
+	end)
 end)
 
 -- 개발 확인용(Studio 전용 · 판정 없음): ReplicatedStorage Attribute ArtV1FxTest = "success" | "great"로 연출만 재생

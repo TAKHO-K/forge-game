@@ -1,7 +1,7 @@
 -- A2-S 아트 샘플 1세트(승인용 - docs/art/art-direction-v1.md · docs/phase/A2-S-report.md). 스위치 = Workspace Attribute ArtStyleV1(서버가 부팅 때 enabled로 켜고 끈다 · /gg art on|off).
 --   끄면 지금 게임과 완전히 같다: 몬스터 = MonsterRigSpec 몸체 · 무기 = 지금 메시 · 강화대 = 서버 도형 · 조명 = CartoonStyleData.active.
 --   판정 무관: 몬스터 Hitbox · 무기 규격(WeaponRigSpec 길이 · Grip) · 강화대 서버 파트(충돌 · 거리 판정 자리)는 그대로 - 여기 값은 겉모습만.
---   색 · 치수 · 시간은 전부 이 파일. 조립 = shared/ArtV1Models(무기 · 강화대) · shared/BossRig.build(몬스터 - 같은 관절 표 규격) · 움직임 · 연출 = client/ArtV1View.
+--   색 · 주요 치수 · 시간 · 수량은 이 파일. 강화대 · 대검의 부위 배치(모양 정의 - Blender 메시로 바뀔 자리)와 연출 이징 비율 몇 개는 shared/ArtV1Models · client/ArtV1View 안에 있다(A2-S 리뷰 - 본 제작 때 옮긴다). 조립 = shared/ArtV1Models(무기 · 강화대) · shared/BossRig.build(몬스터 - 같은 관절 표 규격) · 움직임 · 연출 = client/ArtV1View.
 local V = Vector3.new
 local C = Color3.fromRGB
 
