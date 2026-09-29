@@ -94,7 +94,7 @@
      "color": "#684228"
     },
     "Head": {
-     "tris": 144,
+     "tris": 236,
      "origin": [
       0.0,
       0.0,
@@ -114,7 +114,7 @@
      "color": "#8CF0C8"
     },
     "Leaf": {
-     "tris": 22,
+     "tris": 44,
      "origin": [
       0.0,
       0.0,
@@ -145,9 +145,9 @@
     }
    },
    "partCount": 6,
-   "totalTris": 482,
+   "totalTris": 596,
    "triBudget": 800,
-   "budgetUse": 0.603,
+   "budgetUse": 0.745,
    "partCap": 12
   },
   "transcendent": {
@@ -163,7 +163,7 @@
      "color": "#262230"
     },
     "Head": {
-     "tris": 118,
+     "tris": 210,
      "origin": [
       0.0,
       0.0,
@@ -183,7 +183,7 @@
      "color": "#FFD65A"
     },
     "Leaf": {
-     "tris": 22,
+     "tris": 44,
      "origin": [
       0.0,
       0.0,
@@ -212,6 +212,36 @@
      "neon": false,
      "color": "#D6B03E"
     },
+    "Runes": {
+     "tris": 90,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#D6B03E"
+    },
+    "Wing_R": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
+    "Wing_L": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#262230"
+    },
     "Shards": {
      "tris": 18,
      "origin": [
@@ -233,10 +263,425 @@
      "color": "#FFD05C"
     }
    },
-   "partCount": 8,
-   "totalTris": 464,
+   "partCount": 11,
+   "totalTris": 752,
    "triBudget": 800,
-   "budgetUse": 0.58,
+   "budgetUse": 0.94,
+   "partCap": 16
+  },
+  "rare": {
+   "parts": {
+    "Shaft": {
+     "tris": 152,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Head": {
+     "tris": 126,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#706862"
+    },
+    "Orb": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#8CF0C8"
+    },
+    "Leaf": {
+     "tris": 44,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#7EC446"
+    },
+    "Ferrule": {
+     "tris": 34,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#706862"
+    }
+   },
+   "partCount": 5,
+   "totalTris": 420,
+   "triBudget": 800,
+   "budgetUse": 0.525,
+   "partCap": 8
+  },
+  "epic": {
+   "parts": {
+    "Shaft": {
+     "tris": 152,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Head": {
+     "tris": 218,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#A64DFF"
+    },
+    "Orb": {
+     "tris": 64,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#8CF0C8"
+    },
+    "Leaf": {
+     "tris": 44,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#7EC446"
+    },
+    "Ferrule": {
+     "tris": 34,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#A64DFF"
+    }
+   },
+   "partCount": 5,
+   "totalTris": 512,
+   "triBudget": 800,
+   "budgetUse": 0.64,
+   "partCap": 8
+  },
+  "relic": {
+   "parts": {
+    "Shaft": {
+     "tris": 126,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Head": {
+     "tris": 210,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FFD700"
+    },
+    "Orb": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#8CF0C8"
+    },
+    "Leaf": {
+     "tris": 44,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#7EC446"
+    },
+    "Ferrule": {
+     "tris": 22,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FFD700"
+    },
+    "Band": {
+     "tris": 66,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FFD700"
+    },
+    "Runes": {
+     "tris": 90,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FFD700"
+    }
+   },
+   "partCount": 7,
+   "totalTris": 606,
+   "triBudget": 800,
+   "budgetUse": 0.757,
+   "partCap": 12
+  },
+  "ancient": {
+   "parts": {
+    "Shaft": {
+     "tris": 126,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#684228"
+    },
+    "Head": {
+     "tris": 210,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Orb": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#8CF0C8"
+    },
+    "Leaf": {
+     "tris": 44,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#7EC446"
+    },
+    "Ferrule": {
+     "tris": 22,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Band": {
+     "tris": 66,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Runes": {
+     "tris": 90,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Wing_R": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    },
+    "Wing_L": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#E0393E"
+    }
+   },
+   "partCount": 9,
+   "totalTris": 690,
+   "triBudget": 800,
+   "budgetUse": 0.863,
+   "partCap": 12
+  },
+  "primordial": {
+   "parts": {
+    "Shaft": {
+     "tris": 126,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#ECE2F0"
+    },
+    "Head": {
+     "tris": 210,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#ECE8F6"
+    },
+    "Orb": {
+     "tris": 48,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#8CF0C8"
+    },
+    "Leaf": {
+     "tris": 44,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#7EC446"
+    },
+    "Ferrule": {
+     "tris": 22,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#ECE8F6"
+    },
+    "Band": {
+     "tris": 66,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF3CC8"
+    },
+    "Runes": {
+     "tris": 90,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#ECE8F6"
+    },
+    "Wing_R": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF3CC8"
+    },
+    "Wing_L": {
+     "tris": 42,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": false,
+     "color": "#FF3CC8"
+    },
+    "Crystals": {
+     "tris": 32,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FF3CC8"
+    },
+    "Halo": {
+     "tris": 49,
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "neon": true,
+     "color": "#FF3CC8"
+    }
+   },
+   "partCount": 11,
+   "totalTris": 771,
+   "triBudget": 800,
+   "budgetUse": 0.964,
    "partCap": 16
   }
  }
