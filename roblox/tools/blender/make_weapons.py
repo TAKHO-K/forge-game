@@ -313,7 +313,7 @@ def float_crystals(anchors, h=0.5, r=0.12):
 
 def spike(base, d, L, r):
     tip = tuple(base[i] + d[i] * L for i in range(3))
-    return A.tube([base, tip], lambda u: r * (1 - u) + 0.01, sides=4, tip_end=True)
+    return A.tube([base, tip], lambda u: r * (1 - u) + 0.01, sides=3, tip_end=True)  # A2-N2: 4 → 3면(상위 등급 800 안 - 가시는 가늘어 차이 안 보임)
 
 
 # ────────────────────────── 쌍검(한 자루 - BladeRight · BladeLeft 공용) ──────────────────────────
@@ -343,7 +343,7 @@ def db_blade(grade):
     if at_least(grade, "rare"):  # 희귀 = 등 이빨 둘째(실루엣 한 단계)
         z1 = z0 + 0.42
         x1 = -0.07 + db_center_x((z1 - DB["baseZ"]) / (DB["tipZ"] - DB["baseZ"]))
-        teeth.append(A.tube([(x1, 0, z1 - 0.08), (x1 - 0.17, 0, z1 + 0.03), (x1 - 0.3, 0, z1 + 0.18)], lambda u: 0.07 * (1 - u) + 0.01, sides=4, flat=0.6, tip_end=True))
+        teeth.append(A.tube([(x1, 0, z1 - 0.1), (x1 - 0.22, 0, z1 + 0.04), (x1 - 0.4, 0, z1 + 0.24)], lambda u: 0.08 * (1 - u) + 0.01, sides=4, flat=0.6, tip_end=True))  # A2-N2 ×1.3
     return A.merge(g, *teeth)
 
 
@@ -353,6 +353,8 @@ def db_guard(grade):
     # D자 손가락 보호 고리(+X = 손가락 쪽 · 곡선 덩어리)
     bow = A.bezier((0.2, 0, gz - 0.02), (0.62, 0, gz - 0.02), (0.6, 0, DB["pommelZ"] + 0.02), (0.1, 0, DB["pommelZ"] + 0.04), n=7)
     g = A.merge(collar, A.tube(bow, lambda u: 0.05 + 0.02 * math.sin(math.pi * u), sides=5, flat=0.8))
+    if at_least(grade, "rare"):  # A2-N2 희귀 = 등 쪽 가드 가시(위로 휜 뿔 - 가드가 T자로 넓어짐)
+        g = A.merge(g, A.tube(A.bezier((-0.16, 0, gz), (-0.36, 0, gz + 0.02), (-0.5, 0, gz + 0.1), (-0.56, 0, gz + 0.3), n=5), lambda u: 0.075 * (1 - u) + 0.012, sides=4, flat=0.7, tip_end=True))
     if at_least(grade, "legendary"):  # 고리 바깥 가시 1(실루엣 한 단계)
         mid = A.bezier((0.2, 0, gz - 0.02), (0.62, 0, gz - 0.02), (0.6, 0, DB["pommelZ"] + 0.02), (0.1, 0, DB["pommelZ"] + 0.04), n=2)[1]
         g = A.merge(g, A.tube([mid, (mid[0] + 0.32, 0, mid[2] + 0.12)], lambda u: 0.07 * (1 - u) + 0.01, sides=4, flat=0.7, tip_end=True))
@@ -369,8 +371,8 @@ def db_pommel(grade):
     g = A.xform(A.lathe(prof, detail(grade), axis="Z"), t=(0, 0, DB["pommelZ"] + 0.06))
     if at_least(grade, "epic"):  # 영웅 = 폼멜 아래 말림 고리(곡선 한 단계)
         z = DB["pommelZ"] - 0.12
-        curl = [(-0.02 + 0.18 * math.sin(a), 0, z - 0.18 + 0.18 * math.cos(a)) for a in (math.pi * i / 6 for i in range(10))]
-        g = A.merge(g, A.tube(curl, lambda u: 0.055 * (1 - 0.5 * u) + 0.015, sides=4, tip_end=True))
+        curl = [(-0.02 + 0.26 * math.sin(a), 0, z - 0.26 + 0.26 * math.cos(a)) for a in (math.pi * i / 6 for i in range(10))]  # A2-N2 ×1.45
+        g = A.merge(g, A.tube(curl, lambda u: 0.07 * (1 - 0.5 * u) + 0.018, sides=4, tip_end=True))
     return g
 
 
@@ -422,7 +424,11 @@ def bw_limb(sign, grade):
     n = len(path)
     g = A.tube(path, lambda u: 0.21 - 0.12 * u, sides=6 if RANK[grade] <= RANK["rare"] else (5 if RANK[grade] <= RANK["legendary"] else 4), flat=1.1, tip_end=True)  # 법선 = Y(날개 너비) · 종법선 = 휨 평면 두께(두툼하게)
     if at_least(grade, "rare"):  # 희귀 = 시위 걸이 뿔(날개 끝 바깥 짧은 가시)
-        g = A.merge(g, spike((sign * BW["tipX"], 0, BW["nockZ"]), (sign * 0.75, 0, 0.66), 0.55, 0.14))
+        g = A.merge(g, spike((sign * BW["tipX"], 0, BW["nockZ"]), (sign * 0.75, 0, 0.66), 0.8, 0.16))  # A2-N2 0.55 → 0.8
+    if at_least(grade, "epic"):  # A2-N2 영웅 = 날개 가운데 바깥(−Z)으로 휜 초승달 날
+        x, _, z = path[4]
+        g = A.merge(g, A.tube(A.bezier((x - sign * 0.2, 0, z), (x + sign * 0.05, 0, z - 0.45), (x + sign * 0.35, 0, z - 0.6), (x + sign * 0.6, 0, z - 0.45), n=4),
+                              lambda u: 0.12 * math.sin(math.pi * (0.15 + 0.85 * u)) + 0.02, sides=3, flat=0.6, tip_end=True))
     if at_least(grade, "legendary"):  # 날개 끝 지느러미(실루엣 한 단계) - 되감긴 곳 바깥
         a = path[11]
         g = A.merge(g, A.tube([a, (a[0] + sign * 0.3, 0, a[2] - 0.58)], lambda u: 0.13 * (1 - u) + 0.01, sides=4, flat=0.8, tip_end=True))
@@ -452,7 +458,7 @@ def bow_parts(grade):
     if at_least(grade, "legendary"):
         caps = A.merge(*[A.xform(A.lathe([(0.0, -0.2), (0.18, -0.1), (0.17, 0.1), (0.0, 0.2)], 4, axis="X"), t=(s * BW["tipX"], 0, BW["nockZ"])) for s in (1, -1)])
         # 손잡이 위아래 화살받이 판 2(과녁 쪽 −Z로 0.4 돌출 · 두께 0.25 - 전설 실루엣 한 단계)
-        rests = A.merge(*[A.tube([(s * 0.5, 0, -0.1), (s * 0.62, 0, -0.45), (s * 0.5, 0, -0.68)], lambda u: 0.14 * (1 - u) + 0.04, sides=4, flat=0.9, tip_end=True) for s in (1, -1)])
+        rests = A.merge(*[A.tube([(s * 0.5, 0, -0.1), (s * 0.62, 0, -0.45), (s * 0.5, 0, -0.68)], lambda u: 0.14 * (1 - u) + 0.04, sides=3, flat=0.9, tip_end=True) for s in (1, -1)])
         parts += [("Tips", A.merge(caps, rests), P["trim"], False, 0.0),
                   ("Gem", A.crystal(0.36, 0.15, sides=4, tip_h=0.12, base_h=0.12, center=(0, 0, -0.36), m=A.rot(rx=90)), P["gem"], True, 0.0)]
     if at_least(grade, "rare"):  # 희귀 = 손잡이 등급 색 띠 2
@@ -473,9 +479,9 @@ def bow_parts(grade):
                   ("Wing_L", feather_wing((-0.62, 0, -0.1), -1, (0.75, 0.6, 0.45), (25, 50, 75), up=(0, 0, -1), side=(1, 0, 0), width=0.14), wc, False, 0.0)]
     if grade == "primordial":  # 태초 = 떠 있는 결정 2 + 손잡이 빛 테
         parts += [("Crystals", float_crystals([(1.4, 0, -0.85), (-1.1, 0, -0.95)], 0.55, 0.13), P["accent"], True, 0.0),
-                  ("Halo", halo_ring((0, 0, -0.05), 0.55, axis="X", tilt=15, thick=0.07), P["accent"], True, 0.0)]
+                  ("Halo", halo_ring((0, 0, -0.05), 0.55, axis="X", tilt=15, thick=0.07, n=7), P["accent"], True, 0.0)]
     if grade == "transcendent":
-        pts = [(x, 0, z) for x, _, z in bw_limb_path(1)[1:6]]
+        pts = [(x, 0, z) for x, _, z in bw_limb_path(1)[1:6:2] + bw_limb_path(1)[6:7]]
         pts = [(x + 0.02 * (-1) ** i, 0, z - 0.03 * (-1) ** i) for i, (x, _, z) in enumerate(pts)]
         parts += [("Shards", float_shards([(1.0, 0.0, -0.62), (-1.3, 0.0, -0.58), (0.1, 0.0, -0.78)], 0.5), A.BLACK_BODY, False, 0.0),
                   ("Crack1", crack_line(pts, 0.19, 0.07), A.GOLD_GLOW, True, 0.0),
@@ -511,13 +517,16 @@ def st_hooks(grade):
     g = A.merge(A.tube(left, lambda u: 0.17 - 0.13 * u, sides=sides, flat=0.8, tip_end=True),
                 A.tube(right, lambda u: 0.16 - 0.12 * u, sides=sides, flat=0.8, tip_end=True))
     if at_least(grade, "rare"):  # 희귀 = 머리 고리 바깥 가시 2(0.25)
-        g = A.merge(g, spike((-0.82, oy + 0.15, 0), (-0.9, 0.44, 0), 0.32, 0.08), spike((0.72, oy - 0.05, 0), (0.95, 0.3, 0), 0.3, 0.08))
+        g = A.merge(g, spike((-0.82, oy + 0.15, 0), (-0.9, 0.44, 0), 0.5, 0.1), spike((0.72, oy - 0.05, 0), (0.95, 0.3, 0), 0.46, 0.1))  # A2-N2 ×1.55
     if at_least(grade, "epic"):  # 영웅 = 두 갈고리 끝이 안쪽 나선으로 한 번 더 감김
         curls = []
         for pts_, s in ((left, 1), (right, -1)):
             ex, ey, _ = pts_[-1]
             curls.append(A.tube([(ex + s * 0.25 * math.sin(a), ey - 0.25 + 0.25 * math.cos(a), 0) for a in (math.pi * i / 5 for i in range(1, 9))], lambda u: 0.07 * (1 - 0.5 * u) + 0.02, sides=4, tip_end=True))  # 지름 0.5
         g = A.merge(g, *curls)
+        cx, cy = 1.05, oy + 0.35  # A2-N2 영웅 = 오른쪽 바깥에 매단 초승달(머리 폭을 한쪽으로 키움 · 비대칭 유지)
+        moon = [(cx + 0.38 * math.cos(a), cy + 0.38 * math.sin(a), 0) for a in (math.radians(d) for d in range(-110, 111, 44))]
+        g = A.merge(g, A.tube(moon, lambda u: 0.13 * math.sin(math.pi * u) + 0.015, sides=3, flat=0.6, tip_end=True))
     if at_least(grade, "legendary"):  # 머리 위 가시 왕관 3(실루엣 한 단계)
         spikes = [A.tube([(dx * 0.5, oy + 0.3, 0), (dx, oy + 0.3 + h, 0)], lambda u: 0.06 * (1 - u) + 0.01, sides=4, tip_end=True) for dx, h in ((-0.12, 0.62), (0.02, 0.78), (0.16, 0.55))]
         g = A.merge(g, *[A.xform(s_, t=(0, 0.1, 0)) for s_ in spikes])
@@ -542,7 +551,7 @@ def healer_parts(grade):
              ("Ferrule", A.xform(A.lathe([(0.0, -0.12), (0.07, -0.08), (0.11, 0.1), (0.1, 0.22)], detail(grade) - 2), t=(0, ST["bottomY"], 0)), P["trim"] if grade != "normal" else A.IRON, False, 0.0)]
     if at_least(grade, "legendary"):
         ring = [(0.2 * math.cos(2 * math.pi * k / 8), ST["neckY"] - 0.08, 0.2 * math.sin(2 * math.pi * k / 8)) for k in range(9)]
-        side_fins = [A.tube([(s * 0.3, ST["neckY"] + 0.1, 0), (s * 0.78, ST["neckY"] + 0.35, 0), (s * 1.0, ST["neckY"] + 0.85, 0)], lambda u: 0.11 * (1 - u) + 0.02, sides=4, flat=0.5, tip_end=True) for s in (-1, 1)]
+        side_fins = [A.tube([(s * 0.3, ST["neckY"] + 0.1, 0), (s * 0.78, ST["neckY"] + 0.35, 0), (s * 1.0, ST["neckY"] + 0.85, 0)], lambda u: 0.11 * (1 - u) + 0.02, sides=3, flat=0.5, tip_end=True) for s in (-1, 1)]
         parts.append(("Band", A.merge(A.tube(ring, 0.06, sides=4, cap0=False), *side_fins), P["accent"] if grade != "transcendent" else A.GOLD, False, 0.0))  # 머리 옆 날개 장식(머리 폭 1.5배)
     if at_least(grade, "relic"):  # 유물 = 자루 가운데 가시 고리(가시 4)
         y = 1.7  # 자루 위 1/3
@@ -555,7 +564,7 @@ def healer_parts(grade):
                   ("Wing_L", feather_wing((-0.6, ST["orbY"] - 0.4, 0), -1, (1.3, 1.0, 0.7), (35, 60, 85), up=(0, 1, 0), side=(1, 0, 0), width=0.2), wc, False, 0.0)]
     if grade == "primordial":  # 태초 = 떠 있는 결정 2 + 구슬 빛 테
         parts += [("Crystals", float_crystals([(-1.05, 3.5, 0), (1.0, 2.6, 0)], 0.55, 0.13), P["accent"], True, 0.0),
-                  ("Halo", halo_ring((0, ST["orbY"], 0), 0.75, axis="Z", tilt=25, thick=0.07), P["accent"], True, 0.0)]
+                  ("Halo", halo_ring((0, ST["orbY"], 0), 0.75, axis="Z", tilt=25, thick=0.07, n=7), P["accent"], True, 0.0)]
     if grade == "transcendent":
         pts = [(0.05 * (-1) ** k + 0.07 * math.sin(math.pi * (y - ST["bottomY"]) / (ST["neckY"] - ST["bottomY"])), y, 0) for k, y in enumerate((-1.2, -0.5, 0.2, 0.9, 1.6, 2.2))]
         parts += [("Shards", float_shards([(-1.0, 3.3, 0.0), (0.95, 2.6, 0.0), (0.7, 4.05, 0.0)], 0.46), A.BLACK_BODY, False, 0.0),
@@ -635,9 +644,9 @@ def main():
                 import json
                 with open(path, encoding="utf-8") as f:
                     old = json.load(f)
-            looks = old.get("looks", {}) if old.get("version") == "A2-N1" else {}
+            looks = old.get("looks", {}) if old.get("version") in ("A2-N1", "A2-N2") else {}
             looks.update(grades)
-            A.write_json(path, {"version": "A2-N1", "rigId": weapon, "pivot": "Grip", "attachments": ATTACH[weapon], "triBudget": TRI_BUDGET, "note": NOTES.get(weapon, ""), "looks": looks})
+            A.write_json(path, {"version": "A2-N2", "rigId": weapon, "pivot": "Grip", "attachments": ATTACH[weapon], "triBudget": TRI_BUDGET, "note": NOTES.get(weapon, ""), "looks": looks})
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "%s.blend" % groups[0][0]))
     if opt["render"]:
         for weapon, grade, objs in groups:

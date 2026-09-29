@@ -1,5 +1,5 @@
 {
- "version": "A2-N1",
+ "version": "A2-N2",
  "rigId": "dualblade",
  "pivot": "Grip",
  "attachments": {
@@ -26,6 +26,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.119,
+      -0.0,
+      1.175
+     ],
      "neon": false,
      "color": "#CED4E0"
     },
@@ -35,6 +40,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.168,
+      0.0,
+      -0.129
      ],
      "neon": false,
      "color": "#706862"
@@ -46,6 +56,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.0,
+      0.0,
+      -0.14
+     ],
      "neon": false,
      "color": "#603E28"
     },
@@ -55,6 +70,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.0,
+      -0.0,
+      -0.545
      ],
      "neon": false,
      "color": "#706862"
@@ -75,15 +95,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.086,
+      -0.0,
+      1.175
+     ],
      "neon": false,
      "color": "#CED4E0"
     },
     "Guard": {
-     "tris": 110,
+     "tris": 148,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.127,
+      0.0,
+      -0.009
      ],
      "neon": false,
      "color": "#FF9933"
@@ -95,6 +125,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.0,
+      0.0,
+      -0.14
+     ],
      "neon": false,
      "color": "#5A301E"
     },
@@ -104,6 +139,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.011,
+      -0.0,
+      -0.827
      ],
      "neon": false,
      "color": "#FF9933"
@@ -115,6 +155,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.112,
+      0.0,
+      0.956
+     ],
      "neon": false,
      "color": "#FF9933"
     },
@@ -125,14 +170,19 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.02,
+      -0.12,
+      0.2
+     ],
      "neon": true,
      "color": "#FFF4D6"
     }
    },
    "partCount": 6,
-   "totalTris": 570,
+   "totalTris": 608,
    "triBudget": 800,
-   "budgetUse": 0.713,
+   "budgetUse": 0.76,
    "partCap": 12
   },
   "transcendent": {
@@ -144,15 +194,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.086,
+      -0.0,
+      1.175
+     ],
      "neon": false,
      "color": "#262230"
     },
     "Guard": {
-     "tris": 110,
+     "tris": 148,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.127,
+      0.0,
+      -0.009
      ],
      "neon": false,
      "color": "#D6B03E"
@@ -163,6 +223,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.0,
+      0.0,
+      -0.14
      ],
      "neon": false,
      "color": "#181620"
@@ -174,6 +239,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.011,
+      -0.0,
+      -0.827
+     ],
      "neon": false,
      "color": "#D6B03E"
     },
@@ -183,6 +253,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.112,
+      0.0,
+      0.956
      ],
      "neon": false,
      "color": "#D6B03E"
@@ -194,15 +269,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.02,
+      -0.12,
+      0.2
+     ],
      "neon": true,
      "color": "#FFD65A"
     },
     "Runes": {
-     "tris": 12,
+     "tris": 8,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.034,
+      0.023,
+      1.495
      ],
      "neon": false,
      "color": "#D6B03E"
@@ -214,6 +299,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.313,
+      0.0,
+      0.383
+     ],
      "neon": false,
      "color": "#262230"
     },
@@ -223,6 +313,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      -0.26,
+      0.0,
+      0.36
      ],
      "neon": false,
      "color": "#262230"
@@ -234,6 +329,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.08,
+      0.012,
+      1.548
+     ],
      "neon": false,
      "color": "#262230"
     },
@@ -244,14 +344,19 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.149,
+      0.0,
+      1.112
+     ],
      "neon": true,
      "color": "#FFD05C"
     }
    },
    "partCount": 11,
-   "totalTris": 660,
+   "totalTris": 694,
    "triBudget": 800,
-   "budgetUse": 0.825,
+   "budgetUse": 0.868,
    "partCap": 16
   },
   "rare": {
@@ -263,15 +368,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.086,
+      -0.0,
+      1.175
+     ],
      "neon": false,
      "color": "#CED4E0"
     },
     "Guard": {
-     "tris": 104,
+     "tris": 142,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      -0.007,
+      0.0,
+      -0.009
      ],
      "neon": false,
      "color": "#706862"
@@ -282,6 +397,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.0,
+      0.0,
+      -0.14
      ],
      "neon": false,
      "color": "#603E28"
@@ -293,6 +413,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.0,
+      -0.0,
+      -0.545
+     ],
      "neon": false,
      "color": "#706862"
     },
@@ -303,14 +428,19 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.112,
+      0.0,
+      0.956
+     ],
      "neon": false,
      "color": "#4DA6FF"
     }
    },
    "partCount": 5,
-   "totalTris": 478,
+   "totalTris": 516,
    "triBudget": 800,
-   "budgetUse": 0.598,
+   "budgetUse": 0.645,
    "partCap": 8
   },
   "epic": {
@@ -322,15 +452,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.086,
+      -0.0,
+      1.175
+     ],
      "neon": false,
      "color": "#CED4E0"
     },
     "Guard": {
-     "tris": 104,
+     "tris": 142,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      -0.007,
+      0.0,
+      -0.009
      ],
      "neon": false,
      "color": "#A64DFF"
@@ -342,6 +482,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.0,
+      0.0,
+      -0.14
+     ],
      "neon": false,
      "color": "#603E28"
     },
@@ -351,6 +496,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.011,
+      -0.0,
+      -0.827
      ],
      "neon": false,
      "color": "#A64DFF"
@@ -362,14 +512,19 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.112,
+      0.0,
+      0.956
+     ],
      "neon": false,
      "color": "#A64DFF"
     }
    },
    "partCount": 5,
-   "totalTris": 548,
+   "totalTris": 586,
    "triBudget": 800,
-   "budgetUse": 0.685,
+   "budgetUse": 0.733,
    "partCap": 8
   },
   "relic": {
@@ -381,15 +536,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.086,
+      -0.0,
+      1.175
+     ],
      "neon": false,
      "color": "#CED4E0"
     },
     "Guard": {
-     "tris": 110,
+     "tris": 148,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.127,
+      0.0,
+      -0.009
      ],
      "neon": false,
      "color": "#FFD700"
@@ -401,6 +566,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.0,
+      0.0,
+      -0.14
+     ],
      "neon": false,
      "color": "#5A301E"
     },
@@ -410,6 +580,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.011,
+      -0.0,
+      -0.827
      ],
      "neon": false,
      "color": "#FFD700"
@@ -421,6 +596,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.112,
+      0.0,
+      0.956
+     ],
      "neon": false,
      "color": "#FFD700"
     },
@@ -431,24 +611,34 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.02,
+      -0.12,
+      0.2
+     ],
      "neon": true,
      "color": "#FFF4D6"
     },
     "Runes": {
-     "tris": 12,
+     "tris": 8,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.034,
+      0.023,
+      1.495
      ],
      "neon": true,
      "color": "#FFD700"
     }
    },
    "partCount": 7,
-   "totalTris": 522,
+   "totalTris": 556,
    "triBudget": 800,
-   "budgetUse": 0.652,
+   "budgetUse": 0.695,
    "partCap": 12
   },
   "ancient": {
@@ -460,15 +650,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.086,
+      -0.0,
+      1.175
+     ],
      "neon": false,
      "color": "#CED4E0"
     },
     "Guard": {
-     "tris": 110,
+     "tris": 148,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.127,
+      0.0,
+      -0.009
      ],
      "neon": false,
      "color": "#E0393E"
@@ -479,6 +679,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.0,
+      0.0,
+      -0.14
      ],
      "neon": false,
      "color": "#5A301E"
@@ -490,6 +695,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.011,
+      -0.0,
+      -0.827
+     ],
      "neon": false,
      "color": "#E0393E"
     },
@@ -499,6 +709,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.112,
+      0.0,
+      0.956
      ],
      "neon": false,
      "color": "#E0393E"
@@ -510,15 +725,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.02,
+      -0.12,
+      0.2
+     ],
      "neon": true,
      "color": "#FFF4D6"
     },
     "Runes": {
-     "tris": 12,
+     "tris": 8,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.034,
+      0.023,
+      1.495
      ],
      "neon": false,
      "color": "#E0393E"
@@ -530,6 +755,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.313,
+      0.0,
+      0.383
+     ],
      "neon": false,
      "color": "#E0393E"
     },
@@ -540,14 +770,19 @@
       0.0,
       0.0
      ],
+     "center": [
+      -0.26,
+      0.0,
+      0.36
+     ],
      "neon": false,
      "color": "#E0393E"
     }
    },
    "partCount": 9,
-   "totalTris": 606,
+   "totalTris": 640,
    "triBudget": 800,
-   "budgetUse": 0.757,
+   "budgetUse": 0.8,
    "partCap": 12
   },
   "primordial": {
@@ -559,15 +794,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.086,
+      -0.0,
+      1.175
+     ],
      "neon": false,
      "color": "#F4F2FA"
     },
     "Guard": {
-     "tris": 110,
+     "tris": 148,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.127,
+      0.0,
+      -0.009
      ],
      "neon": false,
      "color": "#ECE8F6"
@@ -579,6 +824,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.0,
+      0.0,
+      -0.14
+     ],
      "neon": false,
      "color": "#784682"
     },
@@ -588,6 +838,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.011,
+      -0.0,
+      -0.827
      ],
      "neon": false,
      "color": "#ECE8F6"
@@ -599,6 +854,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.112,
+      0.0,
+      0.956
+     ],
      "neon": false,
      "color": "#FF3CC8"
     },
@@ -609,15 +869,25 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.02,
+      -0.12,
+      0.2
+     ],
      "neon": true,
      "color": "#FFF4D6"
     },
     "Runes": {
-     "tris": 12,
+     "tris": 8,
      "origin": [
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      0.034,
+      0.023,
+      1.495
      ],
      "neon": false,
      "color": "#ECE8F6"
@@ -629,6 +899,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.313,
+      0.0,
+      0.383
+     ],
      "neon": false,
      "color": "#FF3CC8"
     },
@@ -638,6 +913,11 @@
       0.0,
       0.0,
       0.0
+     ],
+     "center": [
+      -0.26,
+      0.0,
+      0.36
      ],
      "neon": false,
      "color": "#FF3CC8"
@@ -649,6 +929,11 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.053,
+      0.0,
+      1.499
+     ],
      "neon": true,
      "color": "#FF3CC8"
     },
@@ -659,14 +944,19 @@
       0.0,
       0.0
      ],
+     "center": [
+      0.049,
+      0.0,
+      0.95
+     ],
      "neon": true,
      "color": "#FF3CC8"
     }
    },
    "partCount": 11,
-   "totalTris": 687,
+   "totalTris": 721,
    "triBudget": 800,
-   "budgetUse": 0.859,
+   "budgetUse": 0.901,
    "partCap": 16
   }
  }
