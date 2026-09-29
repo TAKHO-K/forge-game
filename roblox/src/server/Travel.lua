@@ -556,11 +556,14 @@ function Travel.pollPlayer(player, root, humanoid, now)
 	local on = grounded and onStation(feet)
 	if on then
 		if st.checkpoint ~= on then
+			local previous = st.checkpoint
 			st.checkpoint = on
 			player:SetAttribute("TreeCheckpoint", on)
 			-- QUEUE-B1 B2: 나무 정거장 처음 오르기 = 반짝 조각(정거장마다 1회 · 리프트 · 순간이동 도착 직후는 오르기가 아니라 제외)
+			-- 결정 9(리뷰): 바로 아래 정거장(또는 첫 정거장이면 바닥)에서 올라온 경우만 오르기로 센다 - 리프트로 간 뒤 옆 정거장을 오가 오르지 않은 칸을 받던 틈
 			local arrivedByTeleport = now - (st.teleportAt or -math.huge) < WorldMapData.travel.arrival.fallSkipAfterTeleportSeconds + 1
-			require(script.Parent.CosmeticService).onTreeStation(player, on, arrivedByTeleport)
+			local climbed = (on == 1 and previous == nil) or previous == on - 1
+			require(script.Parent.CosmeticService).onTreeStation(player, on, arrivedByTeleport or not climbed)
 		end
 	end
 	if st.checkpoint then

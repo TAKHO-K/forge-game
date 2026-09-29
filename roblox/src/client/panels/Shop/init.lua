@@ -1,7 +1,7 @@
 -- 상점 창(QUEUE-B1 B2 UI - P4c 골격) - 보석상인 좌판의 두 번째 ProximityPrompt(ShopPrompt · 서버 HuntingGround가 만든다)가 여는 station.
 --   탭 4개: [골드](GoldTab - 기존 골드 소모처 입구) · [치장](CosmeticTab - 조각 · 로벅스만) · [편의](ConvenienceTab - 게임패스) · [시즌](SeasonTab - 시즌 패스 40칸).
 --   이 창은 서버 상태의 진실을 갖지 않는다: ShopSync(MonetizationService.view) · GemSync · Attribute를 그리고, 요청은 ShopRequest(action, a, b) · 기존 Remote로 보낸다.
---   ShopRequest는 결과(ok · 이유)를 따로 돌려주지 않는다 - 요청 뒤 오는 ShopSync 표를 요청 전과 비교해 결과 한 줄을 정한다(pendingCheck).
+--   결과 = ShopResult(action, ok, why - QUEUE-B1 결정 10): 실패는 이유 한 줄 · 성공은 요청 뒤 오는 ShopSync 표를 요청 전과 비교한 문구(pendingCheck).
 --   배치 = Layout.compute(화면, 터치) 순수 함수 - 폰(폭 < 720 또는 높이 < 400)은 메뉴바 오른쪽부터 화면 끝까지 · 버튼 · 탭 44. 화면 크기 · 터치 판정이 바뀌면 다시 짓는다.
 --   R.debugForceScreen(Vector2)으로 가상 화면을 강제해 폰 배치를 PC 창에서 실제 인스턴스로 잴 수 있다(장비창과 같은 방식 - 자체 점검 · 스크린샷용).
 local Players = game:GetService("Players")
@@ -377,6 +377,18 @@ function R.start()
 	shopSync = ReplicatedStorage:WaitForChild("ShopSync")
 	buyRerollRemote = ReplicatedStorage:WaitForChild("BuyRerollTicketRequest")
 
+	-- QUEUE-B1 결정 10: 서버 결과(action, ok, why) - 실패면 이유 한 줄(표 비교 추정보다 우선) · 성공이면 다음 ShopSync의 추정 문구를 그대로 쓴다
+	local SHOP_REASON = { shards = "shop.reason.shards", owned = "shop.reason.owned", not_ready = "shop.reason.notReady", not_owned = "shop.reason.notOwned",
+		no_pass = "shop.reason.noPass", not_reached = "shop.reason.notReached", claimed = "shop.reason.claimed", not_premium = "shop.reason.notPremium",
+		egg_full = "shop.reason.eggFull", restricted = "shop.reason.restricted", none = "shop.reason.none" }
+	ReplicatedStorage:WaitForChild("ShopResult").OnClientEvent:Connect(function(_, ok, why)
+		if ok then
+			return
+		end
+		pendingCheck = nil
+		pendingSince = nil
+		setStatus(Text.get(SHOP_REASON[why] or "shop.reason.rejected", { reason = tostring(why) }), "danger")
+	end)
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, triggeringPlayer)
 		if prompt.Name == R.promptName and triggeringPlayer == player then
 			task.spawn(fetchGemTickets)

@@ -213,6 +213,32 @@ local ok, err = pcall(function()
 	check("선물 대기열: 저장 실패 → 대기열 남김 · 성공 → 비움 · 선물함 1건(중복 없음)", keptOnFail and #queueStore.u77 == 0 and #s.mailbox.gifts == 1,
 		("대기열 %d · 선물함 %d"):format(queueStore.u77 and #queueStore.u77 or -1, #s.mailbox.gifts))
 
+	-- ⑦-2 QUEUE-B1 결정 8 · 9: 이미 가진 것 영수증 = 조각 환산 · 저장 실패 = 조각 되돌림 · 지난 시즌 유료 줄 영수증 = 환산 · 같은 실패 줄 한 번 · 손상 표 복구
+	Data.products.theme_ember.productId = 9001
+	local shard0 = qs.currencies.sparkleShard
+	saveResult = false
+	local r1 = MS.processReceipt({ PlayerId = 77, ProductId = 9001, PurchaseId = "P-OWN", CurrencySpent = 199 }, deps)
+	local afterFail = qs.currencies.sparkleShard
+	saveResult = true
+	local r2 = MS.processReceipt({ PlayerId = 77, ProductId = 9001, PurchaseId = "P-OWN", CurrencySpent = 199 }, deps)
+	check("이미 가진 테마 영수증 = 조각 +120 환산 · 저장 실패 때 되돌림 · 재시도 Granted", tostring(r1):find("NotProcessedYet") ~= nil and afterFail == shard0
+		and tostring(r2):find("PurchaseGranted") ~= nil and qs.currencies.sparkleShard == shard0 + Data.ownedRefundShards.cosmeticTheme, ("%d → %d → %d"):format(shard0, afterFail, qs.currencies.sparkleShard))
+	s.seasonPass.premium = false
+	s.seasonPass.promptSeason = s.seasonPass.season - 1 -- 지난 시즌에 연 구매 창
+	local shard1 = qs.currencies.sparkleShard
+	MS.processReceipt({ PlayerId = 77, ProductId = 9002, PurchaseId = "P-OLDSEASON", CurrencySpent = 399 }, deps)
+	check("지난 시즌에 연 유료 줄 영수증 = 이번 시즌 유료 안 켜고 조각 환산", not s.seasonPass.premium and qs.currencies.sparkleShard == shard1 + Data.ownedRefundShards.seasonPremium and s.seasonPass.promptSeason == nil)
+	local logN = #s.purchases.log
+	MS.processReceipt({ PlayerId = 77, ProductId = 55555, PurchaseId = "P-UNK" }, deps)
+	MS.processReceipt({ PlayerId = 77, ProductId = 55555, PurchaseId = "P-UNK" }, deps)
+	check("알 수 없는 상품 재시도 = 기록 한 줄만", #s.purchases.log == logN + 1)
+	local pr = PlayerProfile.getProfile(player)
+	local keepCos = pr.cosmetics
+	pr.cosmetics = { themes = "깨짐" }
+	local fixed = PlayerProfile.getMonetizationState(player)
+	check("손상된 치장 칸 = 안쪽 표까지 복구(로드 막지 않음)", type(fixed.cosmetics.themes) == "table" and type(fixed.cosmetics.equipped) == "table")
+	pr.cosmetics = keepCos
+
 	-- ⑧ 저장 이관 v56: 빈 표 · v55 옛 표본(필드 없음) · 문자열 키 왕복
 	local fresh = SaveSystem.migrate({})
 	check("migrate({}) → v56 · 새 칸 모양", fresh.version == 56 and type(fresh.cosmetics.themes) == "table" and type(fresh.mailbox.gifts) == "table" and fresh.seasonPass.premium == false

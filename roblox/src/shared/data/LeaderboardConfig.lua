@@ -16,6 +16,8 @@ return {
 	seasonStartUnix = 0,
 	-- P3d G-e(사용자 결정): 첫 시즌 시작 = 소규모 오픈일 0시(KST). 날짜는 P6에서 확정 - { 년, 월, 일 }을 넣으면 seasonStartUnix 대신 그날 0시(KST)가 시작이다
 	-- (LeaderboardRules.seasonStartOf · kstMidnightUnix). nil = 아직 안 정함(seasonId 고정).
+	-- ★ QUEUE-B1 결정 7: **시즌 1 시작일(자리)** - 리더보드 · 시즌 패스(8주) 공통 시계. nil이면 시즌 번호가 seasonId로 고정 → 시즌 패스 유료 줄이 넘어가지 않는다(서버 시작 경고).
+	--   출시 체크리스트(docs/phase/roadmap-v2.md P6): "시즌 1 시작일 확정(추천: 오픈일, 8주)" - 예: firstSeasonDateKst = { 2026, 10, 14 }.
 	firstSeasonDateKst = nil,
 	-- 명예의 전당: 시즌이 끝나면 순위표마다 상위 hallTopN을 저장소 하나(<prefix>_hall, 키 s<시즌>)에 한 번 쓴다(값 = 모든 순위표 - 4MB 한도의 수십 분의 1).
 	-- 읽기는 서버가 hallCacheSeconds마다 한 번(시즌 탭 · 지난 시즌 순위표 - P3c E2).

@@ -35,6 +35,8 @@ return {
 	},
 	-- 반짝 조각 가격(로벅스 대신 조각으로 살 때 - 골드 불가). 조각을 **상품으로 직접** 팔지 않는다(유료 재화 상품 없음 - 시즌 유료 줄 보상에는 조각이 있다 · 조각은 치장만 산다 - 설계 문서 §3 · §10-2).
 	shardPrices = { theme = 120, gliderSkin = 80 },
+	-- QUEUE-B1 결정 8: 이미 가진 것을 (클라가 직접 연 구매 창으로) 산 영수증 · 지난 시즌에 연 유료 줄 영수증 = 반짝 조각으로 환산(자리값 - 조각 가격 기준).
+	ownedRefundShards = { cosmeticTheme = 120, gliderSkin = 80, seasonPremium = 120 },
 	-- 반짝 조각 출처(퀘스트 · 출석 · 메인 퀘스트 보상은 QuestData에 이미 있다 - 여기는 새 출처만)
 	shardSources = {
 		treeStation = 2, -- 나무 정거장 처음 오르기(정거장마다 1회 · 리프트 · 순간이동 도착은 제외)

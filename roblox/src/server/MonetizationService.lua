@@ -36,6 +36,7 @@ end
 local inFlight = {} -- 리뷰 의심: 처리 중(저장 대기) PurchaseId - 겹친 두 번째 호출은 NotProcessedYet
 local restricted = {} -- [Player] = bool(유료 랜덤 제한 - nil = 아직 모름 → failClosed면 제한)
 local syncRemote = nil
+local resultRemote = nil -- 결정 10: ShopResult(action, ok, why) - 창이 결과 한 줄을 정확히 쓴다
 
 -- 보상 적용(상품 grants · 시즌 줄 · 선물 공통). reward = { cosmeticTheme = id, gliderSkin = id, sparkleShard = n, egg = n, seasonPremium = true }.
 --   판매 금지 종류는 source == "product"일 때 거부(시즌 무료 줄 알 · 조각은 무료 보상). 반환: ok, 요약 | 이유
@@ -53,6 +54,8 @@ function MonetizationService.applyReward(player, reward, source)
 			if not ok then
 				return false, why
 			end
+		elseif source == "refund" and grant.kind ~= "sparkleShard" then -- 결정 8: 환산은 조각만
+			return false, "refund_kind"
 		elseif source == "seasonPaid" then -- 리뷰 중요 2: 유료 줄 = 로벅스로 산 보상 - 판매 금지 · 알(랜덤) 거부(데이터가 잘못돼도 지급 안 함)
 			local ok, why = Monetization.checkGrant(MonetizationData, grant, Monetization.PAID_ROW_KINDS)
 			if not ok then
@@ -99,9 +102,14 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 	local key = Monetization.productKeyById(MonetizationData, receiptInfo.ProductId)
 	local product = key and MonetizationData.products[key]
 	local function log(result)
+		print(("[B2] 구매 처리: %s - %s(%s) → %s"):format(player.Name, tostring(key), purchaseId, result))
+		for _, line in ipairs(s.purchases.log) do -- 결정 9: 재시도마다 같은 줄이 쌓이지 않게(알 수 없는 상품 · 정책 제한은 접속마다 다시 온다 - 운영 = 구매 기록으로 환불 판단)
+			if line.purchaseId == purchaseId and line.result == result then
+				return
+			end
+		end
 		Monetization.appendLog(s.purchases, { at = os.time(), key = key or ("?" .. tostring(receiptInfo.ProductId)), purchaseId = purchaseId,
 			robux = receiptInfo.CurrencySpent, result = result }, MonetizationData.logKeep)
-		print(("[B2] 구매 처리: %s - %s(%s) → %s"):format(player.Name, tostring(key), purchaseId, result))
 	end
 	if not product or not validProducts[key] then
 		log("unknown_or_rejected")
@@ -113,10 +121,27 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 	end
 	Monetization.recordReceipt(s.purchases, purchaseId, os.time(), MonetizationData.receiptKeep)
 	local reward = {}
+	local refund = 0
+	-- 결정 8: 이미 전부 가진 것(클라가 직접 연 구매 창) · 결정 9: 지난 시즌에 연 유료 줄 영수증이 다음 시즌에 온 것 → 조각 환산(유료 줄은 켜지 않는다)
+	local staleSeason = s.seasonPass.promptSeason ~= nil and s.seasonPass.promptSeason ~= SeasonPassService.currentSeason()
+	local hasPremium = false
 	for _, grant in ipairs(product.grants) do
-		reward[grant.kind] = grant.id or grant.amount or true
+		hasPremium = hasPremium or grant.kind == "seasonPremium"
 	end
-	local ok, summary = MonetizationService.applyReward(player, reward, "product")
+	if MonetizationService.ownsAll(player, product) or (hasPremium and staleSeason) then
+		for _, grant in ipairs(product.grants) do
+			refund += MonetizationData.ownedRefundShards[grant.kind] or 0
+		end
+		reward = { sparkleShard = refund }
+	else
+		for _, grant in ipairs(product.grants) do
+			reward[grant.kind] = grant.id or grant.amount or true
+		end
+	end
+	if hasPremium then
+		s.seasonPass.promptSeason = nil
+	end
+	local ok, summary = MonetizationService.applyReward(player, reward, refund > 0 and "refund" or "product")
 	if not ok then
 		Monetization.forgetReceipt(s.purchases, purchaseId)
 		log("grant_failed " .. tostring(summary))
@@ -132,6 +157,12 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 	if not saved then
 		-- 저장 실패: 기록을 빼고 NotProcessedYet → 다음 재시도가 다시 지급(멱등 - 치장 소유 · 유료 줄은 켜진 채라 같은 결과) · 그때 저장되면 Granted
 		Monetization.forgetReceipt(s.purchases, purchaseId)
+		if refund > 0 then -- 조각 환산은 더하기라 멱등이 아니다 - 되돌린다(재시도 때 다시 준다)
+			local quests = PlayerProfile.getQuestState(player)
+			if quests then
+				quests.currencies.sparkleShard = math.max(0, (quests.currencies.sparkleShard or 0) - refund)
+			end
+		end
 		log("save_failed_retry")
 		return Decision.NotProcessedYet
 	end
@@ -256,6 +287,12 @@ function MonetizationService.promptProduct(player, key)
 	if MonetizationService.ownsAll(player, product) then -- 리뷰 중요 3: 이미 가진 치장 · 이번 시즌 유료 줄을 다시 사지 않게(결제만 되고 받는 것 없음)
 		return false, "owned"
 	end
+	for _, grant in ipairs(product.grants) do
+		if grant.kind == "seasonPremium" then
+			local s = PlayerProfile.getMonetizationState(player)
+			s.seasonPass.promptSeason = SeasonPassService.currentSeason() -- 결정 9: 영수증이 다음 시즌에 오면 조각 환산
+		end
+	end
 	MarketplaceService:PromptProductPurchase(player, product.productId)
 	return true
 end
@@ -296,8 +333,16 @@ function MonetizationService.handle(player, action, a, b)
 	elseif action ~= "view" then
 		ok, why = false, "bad_args"
 	end
+	if resultRemote and action ~= "view" and typeof(player) == "Instance" and player.Parent then
+		resultRemote:FireClient(player, action, ok == true, why ~= nil and tostring(why) or nil)
+	end
 	MonetizationService.push(player)
 	return ok, why
+end
+
+-- 결정 9: DevTools 백업 복원(restoreForDevTools) 뒤 치장 · 패스 Attribute 다시 걸기
+function MonetizationService.reapplyAttributes(player)
+	applyPassAttributes(player)
 end
 
 function MonetizationService.onLoaded(player)
@@ -314,12 +359,20 @@ end
 
 function MonetizationService.start()
 	GiftService.start()
+	-- QUEUE-B1 결정 7: 시즌 1 시작일이 없으면 시즌 패스가 한 시즌에 멈춘다 - 서버 시작 경고(출시 체크리스트 P6)
+	local LeaderboardConfig = require(ReplicatedStorage.Shared.data.LeaderboardConfig)
+	if SeasonPassData.enabled and not LeaderboardConfig.firstSeasonDateKst and (LeaderboardConfig.seasonStartUnix or 0) <= 0 then
+		warn("[B2] 시즌 1 시작일 미정(LeaderboardConfig.firstSeasonDateKst) - 시즌 번호 고정 · 시즌 패스가 넘어가지 않는다(출시 전 확정)")
+	end
 	local request = ReplicatedStorage:FindFirstChild("ShopRequest") or Instance.new("RemoteEvent")
 	request.Name = "ShopRequest"
 	request.Parent = ReplicatedStorage
 	syncRemote = ReplicatedStorage:FindFirstChild("ShopSync") or Instance.new("RemoteEvent")
 	syncRemote.Name = "ShopSync"
 	syncRemote.Parent = ReplicatedStorage
+	resultRemote = ReplicatedStorage:FindFirstChild("ShopResult") or Instance.new("RemoteEvent")
+	resultRemote.Name = "ShopResult"
+	resultRemote.Parent = ReplicatedStorage
 	local RequestGate = require(script.Parent.RequestGate)
 	request.OnServerEvent:Connect(function(player, action, a, b)
 		if not RequestGate.allow(player, "ShopRequest") then

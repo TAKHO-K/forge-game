@@ -2291,12 +2291,23 @@ function PlayerProfile.getMonetizationState(player)
 	if not profile then
 		return nil
 	end
-	profile.cosmetics = type(profile.cosmetics) == "table" and profile.cosmetics or { themes = {}, gliderSkins = {}, equipped = {}, treeStations = {} }
-	profile.mailbox = type(profile.mailbox) == "table" and profile.mailbox or { gifts = {}, seq = 0 }
-	profile.seasonPass = type(profile.seasonPass) == "table" and profile.seasonPass or { season = 0, premium = false, claimedFree = {}, claimedPaid = {} }
-	profile.gamepasses = type(profile.gamepasses) == "table" and profile.gamepasses or {}
-	profile.purchases.receipts = profile.purchases.receipts or {}
-	profile.purchases.log = profile.purchases.log or {}
+	-- 결정 9(리뷰): 손상 저장 방어 - 최상위뿐 아니라 안쪽 표 · 숫자도 모양을 맞춘다(isValidProfile로 로드를 막지 않고 여기서 고친다 - 치장 칸 하나 때문에 계정을 못 여는 일이 없게)
+	local function tbl(v)
+		return type(v) == "table" and v or {}
+	end
+	local c = tbl(profile.cosmetics)
+	c.themes, c.gliderSkins, c.equipped, c.treeStations = tbl(c.themes), tbl(c.gliderSkins), tbl(c.equipped), tbl(c.treeStations)
+	profile.cosmetics = c
+	local m = tbl(profile.mailbox)
+	m.gifts, m.seq = tbl(m.gifts), type(m.seq) == "number" and m.seq or 0
+	profile.mailbox = m
+	local sp = tbl(profile.seasonPass)
+	sp.season, sp.premium = type(sp.season) == "number" and sp.season or 0, sp.premium == true
+	sp.claimedFree, sp.claimedPaid = tbl(sp.claimedFree), tbl(sp.claimedPaid)
+	profile.seasonPass = sp
+	profile.gamepasses = tbl(profile.gamepasses)
+	profile.purchases.receipts = tbl(profile.purchases.receipts)
+	profile.purchases.log = tbl(profile.purchases.log)
 	return { purchases = profile.purchases, cosmetics = profile.cosmetics, mailbox = profile.mailbox, seasonPass = profile.seasonPass, gamepasses = profile.gamepasses }
 end
 
@@ -2472,6 +2483,11 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.gamepasses = snapshot.gamepasses and deepCopy(snapshot.gamepasses) or profile.gamepasses
 	profile.purchases.receipts = snapshot.receipts and deepCopy(snapshot.receipts) or profile.purchases.receipts
 	profile.purchases.log = snapshot.purchaseLog and deepCopy(snapshot.purchaseLog) or profile.purchases.log
+	task.defer(function() -- 결정 9: 복원한 치장 · 패스를 Attribute로(늦은 require - 순환 방지)
+		if profiles[player] then
+			require(script.Parent.MonetizationService).reapplyAttributes(player)
+		end
+	end)
 	profile.quests = snapshot.quests and deepCopy(snapshot.quests) or nil -- Q6(v50) · 리뷰 4: 스냅샷 때 없었으면 없던 상태로(검증이 만든 퀘스트 상태가 남지 않게)
 	profile.peakLevel = snapshot.peakLevel or profile.peakLevel
 	profile.titles = snapshot.titles and deepCopy(snapshot.titles) or profile.titles
