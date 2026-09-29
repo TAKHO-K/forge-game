@@ -8,7 +8,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#8C8A84"
+   "color": "#8C8A84",
+   "center": [
+    -0.0,
+    -0.0,
+    0.035
+   ]
   },
   "Head": {
    "tris": 152,
@@ -18,7 +23,12 @@
     -1.5
    ],
    "neon": false,
-   "color": "#A5A29B"
+   "color": "#A5A29B",
+   "center": [
+    0.0,
+    -0.051,
+    -1.95
+   ]
   },
   "Eyes": {
    "tris": 96,
@@ -28,7 +38,12 @@
     -2.47
    ],
    "neon": false,
-   "color": "#191216"
+   "color": "#191216",
+   "center": [
+    0.0,
+    0.2,
+    -2.24
+   ]
   },
   "Tusk_L": {
    "tris": 82,
@@ -38,7 +53,12 @@
     -2.45
    ],
    "neon": false,
-   "color": "#C5DABE"
+   "color": "#C5DABE",
+   "center": [
+    -0.775,
+    0.193,
+    -2.667
+   ]
   },
   "Tusk_R": {
    "tris": 82,
@@ -48,7 +68,12 @@
     -2.45
    ],
    "neon": false,
-   "color": "#C5DABE"
+   "color": "#C5DABE",
+   "center": [
+    0.769,
+    0.165,
+    -2.651
+   ]
   },
   "Moss": {
    "tris": 168,
@@ -58,7 +83,12 @@
     0.1
    ],
    "neon": false,
-   "color": "#5A9646"
+   "color": "#5A9646",
+   "center": [
+    0.08,
+    0.963,
+    -0.115
+   ]
   },
   "Leg_FL": {
    "tris": 58,
@@ -68,7 +98,12 @@
     -1.0
    ],
    "neon": false,
-   "color": "#62615C"
+   "color": "#62615C",
+   "center": [
+    -0.6,
+    -1.165,
+    -1.0
+   ]
   },
   "Leg_FR": {
    "tris": 58,
@@ -78,7 +113,12 @@
     -1.0
    ],
    "neon": false,
-   "color": "#62615C"
+   "color": "#62615C",
+   "center": [
+    0.6,
+    -1.165,
+    -1.0
+   ]
   },
   "Leg_BL": {
    "tris": 58,
@@ -88,7 +128,12 @@
     1.0
    ],
    "neon": false,
-   "color": "#62615C"
+   "color": "#62615C",
+   "center": [
+    -0.6,
+    -1.165,
+    1.0
+   ]
   },
   "Leg_BR": {
    "tris": 58,
@@ -98,7 +143,12 @@
     1.0
    ],
    "neon": false,
-   "color": "#62615C"
+   "color": "#62615C",
+   "center": [
+    0.6,
+    -1.165,
+    1.0
+   ]
   }
  },
  "partCount": 10,

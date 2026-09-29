@@ -8,7 +8,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#F0F2F8"
+   "color": "#F0F2F8",
+   "center": [
+    0.029,
+    -0.1,
+    0.0
+   ]
   },
   "Wool": {
    "tris": 282,
@@ -18,7 +23,12 @@
     0.5
    ],
    "neon": false,
-   "color": "#F0F2F8"
+   "color": "#F0F2F8",
+   "center": [
+    0.046,
+    0.6,
+    0.475
+   ]
   },
   "Head": {
    "tris": 248,
@@ -28,7 +38,12 @@
     -1.45
    ],
    "neon": false,
-   "color": "#A8A9AE"
+   "color": "#A8A9AE",
+   "center": [
+    0.0,
+    0.231,
+    -1.75
+   ]
   },
   "Eyes": {
    "tris": 120,
@@ -38,7 +53,12 @@
     -2.27
    ],
    "neon": false,
-   "color": "#FDF3C5"
+   "color": "#FDF3C5",
+   "center": [
+    0.0,
+    0.35,
+    -2.25
+   ]
   },
   "Leg_FL": {
    "tris": 68,
@@ -48,7 +68,12 @@
     -0.8
    ],
    "neon": false,
-   "color": "#A8A9AE"
+   "color": "#A8A9AE",
+   "center": [
+    -0.589,
+    -1.225,
+    -0.8
+   ]
   },
   "Leg_FR": {
    "tris": 68,
@@ -58,7 +83,12 @@
     -0.8
    ],
    "neon": false,
-   "color": "#A8A9AE"
+   "color": "#A8A9AE",
+   "center": [
+    0.611,
+    -1.225,
+    -0.8
+   ]
   },
   "Leg_BL": {
    "tris": 68,
@@ -68,7 +98,12 @@
     0.8
    ],
    "neon": false,
-   "color": "#A8A9AE"
+   "color": "#A8A9AE",
+   "center": [
+    -0.589,
+    -1.225,
+    0.8
+   ]
   },
   "Leg_BR": {
    "tris": 68,
@@ -78,7 +113,12 @@
     0.8
    ],
    "neon": false,
-   "color": "#A8A9AE"
+   "color": "#A8A9AE",
+   "center": [
+    0.611,
+    -1.225,
+    0.8
+   ]
   }
  },
  "partCount": 8,

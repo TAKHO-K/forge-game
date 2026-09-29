@@ -509,9 +509,15 @@ def roblox_origin(obj):
     return [round(x, 4) for x in (CT @ obj.location)]
 
 
+def roblox_center(obj):
+    """오브젝트 월드 경계 상자 가운데(Roblox 좌표 · origin과 같은 좌표계) - 가져온 MeshPart의 Position(= 경계 상자 가운데)과 대조(A2-N2 /gg mesh 도우미)"""
+    lo, hi = bbox_world([obj])
+    return [round(x, 3) for x in (CT @ ((lo + hi) / 2))]
+
+
 def meta_of(objs, budget, extra=None):
     # 외곽선 껍데기(<파트>_Outline)는 RigPart가 원래 파트와 같아 키가 겹친다 → 껍데기는 자기 이름으로(합쳐지면 삼각형 · 파트 수가 빠졌다)
-    parts = {(o.name.split(".")[0] if o.get("OutlineHull") else o["RigPart"]): {"tris": tri_count(o), "origin": roblox_origin(o), "neon": bool(o.get("Neon", False)),
+    parts = {(o.name.split(".")[0] if o.get("OutlineHull") else o["RigPart"]): {"tris": tri_count(o), "origin": roblox_origin(o), "center": roblox_center(o), "neon": bool(o.get("Neon", False)),
                             "color": o.data.materials[0].get("PaletteRGB") if o.data.materials else None} for o in objs}
     total = sum(p["tris"] for p in parts.values())
     d = {"parts": parts, "partCount": len(parts), "totalTris": total, "triBudget": budget, "budgetUse": round(total / budget, 3)}

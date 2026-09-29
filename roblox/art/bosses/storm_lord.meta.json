@@ -8,7 +8,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    0.0,
+    0.625,
+    0.04
+   ]
   },
   "Body": {
    "tris": 144,
@@ -18,7 +23,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#3E4054"
+   "color": "#3E4054",
+   "center": [
+    0.0,
+    2.414,
+    -0.064
+   ]
   },
   "Head": {
    "tris": 200,
@@ -28,7 +38,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#62667E"
+   "color": "#62667E",
+   "center": [
+    0.0,
+    4.0,
+    0.149
+   ]
   },
   "Thigh_L": {
    "tris": 44,
@@ -38,7 +53,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#3E4054"
+   "color": "#3E4054",
+   "center": [
+    -0.38,
+    0.175,
+    0.0
+   ]
   },
   "Shin_L": {
    "tris": 124,
@@ -48,7 +68,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    -0.38,
+    -0.709,
+    -0.026
+   ]
   },
   "Foot_L": {
    "tris": 44,
@@ -58,7 +83,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    -0.38,
+    -1.375,
+    -0.237
+   ]
   },
   "UpperArm_L": {
    "tris": 44,
@@ -68,7 +98,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#3E4054"
+   "color": "#3E4054",
+   "center": [
+    -1.073,
+    2.378,
+    0.0
+   ]
   },
   "Forearm_L": {
    "tris": 44,
@@ -78,7 +113,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#62667E"
+   "color": "#62667E",
+   "center": [
+    -1.214,
+    1.407,
+    -0.09
+   ]
   },
   "Hand_L": {
    "tris": 72,
@@ -88,7 +128,12 @@
     -0.1322
    ],
    "neon": false,
-   "color": "#62667E"
+   "color": "#62667E",
+   "center": [
+    -1.273,
+    0.64,
+    -0.244
+   ]
   },
   "Thigh_R": {
    "tris": 44,
@@ -98,7 +143,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#3E4054"
+   "color": "#3E4054",
+   "center": [
+    0.38,
+    0.175,
+    0.0
+   ]
   },
   "Shin_R": {
    "tris": 124,
@@ -108,7 +158,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    0.38,
+    -0.709,
+    -0.026
+   ]
   },
   "Foot_R": {
    "tris": 44,
@@ -118,7 +173,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    0.38,
+    -1.375,
+    -0.237
+   ]
   },
   "UpperArm_R": {
    "tris": 44,
@@ -128,7 +188,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#3E4054"
+   "color": "#3E4054",
+   "center": [
+    1.073,
+    2.378,
+    0.0
+   ]
   },
   "Forearm_R": {
    "tris": 44,
@@ -138,7 +203,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#62667E"
+   "color": "#62667E",
+   "center": [
+    1.214,
+    1.407,
+    -0.09
+   ]
   },
   "Hand_R": {
    "tris": 72,
@@ -148,7 +218,12 @@
     -0.1322
    ],
    "neon": false,
-   "color": "#62667E"
+   "color": "#62667E",
+   "center": [
+    1.273,
+    0.64,
+    -0.244
+   ]
   },
   "Eyes": {
    "tris": 56,
@@ -158,7 +233,12 @@
     -0.475
    ],
    "neon": true,
-   "color": "#FFF4BC"
+   "color": "#FFF4BC",
+   "center": [
+    0.0,
+    3.52,
+    -0.525
+   ]
   },
   "Mouth": {
    "tris": 28,
@@ -168,7 +248,12 @@
     -0.475
    ],
    "neon": false,
-   "color": "#191216"
+   "color": "#191216",
+   "center": [
+    0.0,
+    3.14,
+    -0.515
+   ]
   },
   "LeftBlade": {
    "tris": 48,
@@ -178,7 +263,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#FFE040"
+   "color": "#FFE040",
+   "center": [
+    -1.209,
+    4.018,
+    0.065
+   ]
   },
   "RightBlade": {
    "tris": 48,
@@ -188,7 +278,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#FFE040"
+   "color": "#FFE040",
+   "center": [
+    0.406,
+    4.088,
+    -0.065
+   ]
   },
   "CapeL1": {
    "tris": 28,
@@ -198,7 +293,12 @@
     0.55
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    -0.74,
+    2.458,
+    0.651
+   ]
   },
   "CapeL2": {
    "tris": 28,
@@ -208,7 +308,12 @@
     0.6336
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    -1.279,
+    1.687,
+    0.874
+   ]
   },
   "CapeL3": {
    "tris": 52,
@@ -218,7 +323,12 @@
     0.7588
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    -1.812,
+    0.577,
+    1.172
+   ]
   },
   "CapeR1": {
    "tris": 28,
@@ -228,7 +338,12 @@
     0.55
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    0.74,
+    2.458,
+    0.651
+   ]
   },
   "CapeR2": {
    "tris": 28,
@@ -238,7 +353,12 @@
     0.6336
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    1.279,
+    1.687,
+    0.874
+   ]
   },
   "CapeR3": {
    "tris": 52,
@@ -248,7 +368,12 @@
     0.7588
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    1.812,
+    0.577,
+    1.172
+   ]
   },
   "Staff": {
    "tris": 94,
@@ -258,7 +383,12 @@
     -0.2157
    ],
    "neon": false,
-   "color": "#2B2D3B"
+   "color": "#2B2D3B",
+   "center": [
+    1.222,
+    1.032,
+    -0.175
+   ]
   },
   "StaffOrb": {
    "tris": 314,
@@ -268,7 +398,12 @@
     0.167
    ],
    "neon": true,
-   "color": "#FFE040"
+   "color": "#FFE040",
+   "center": [
+    1.165,
+    3.667,
+    0.169
+   ]
   },
   "Hips_Outline": {
    "tris": 88,
@@ -278,7 +413,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    -0.0,
+    0.629,
+    0.041
+   ]
   },
   "Body_Outline": {
    "tris": 144,
@@ -288,7 +428,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    0.0,
+    2.421,
+    -0.062
+   ]
   },
   "Head_Outline": {
    "tris": 200,
@@ -298,7 +443,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    0.0,
+    4.004,
+    0.138
+   ]
   },
   "UpperArm_L_Outline": {
    "tris": 44,
@@ -308,7 +458,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    -1.078,
+    2.377,
+    0.0
+   ]
   },
   "UpperArm_R_Outline": {
    "tris": 44,
@@ -318,7 +473,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    1.078,
+    2.377,
+    0.0
+   ]
   },
   "LeftBlade_Outline": {
    "tris": 48,
@@ -328,7 +488,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    -1.189,
+    4.018,
+    0.065
+   ]
   },
   "RightBlade_Outline": {
    "tris": 48,
@@ -338,7 +503,12 @@
     0.0
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    0.405,
+    4.087,
+    -0.065
+   ]
   },
   "CapeL3_Outline": {
    "tris": 52,
@@ -348,7 +518,12 @@
     0.7588
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    -1.816,
+    0.574,
+    1.151
+   ]
   },
   "CapeR3_Outline": {
    "tris": 52,
@@ -358,7 +533,12 @@
     0.7588
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    1.816,
+    0.574,
+    1.151
+   ]
   },
   "Staff_Outline": {
    "tris": 94,
@@ -368,7 +548,12 @@
     -0.2157
    ],
    "neon": false,
-   "color": "#1E1B2E"
+   "color": "#1E1B2E",
+   "center": [
+    1.224,
+    1.025,
+    -0.172
+   ]
   }
  },
  "partCount": 37,
