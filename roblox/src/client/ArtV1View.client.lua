@@ -130,6 +130,13 @@ local function setForge(on)
 		return
 	end
 	local ground = base.Position - Vector3.new(0, base.Size.Y / 2, 0)
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = { station }
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local hit = Workspace:Raycast(base.Position + Vector3.new(0, 20, 0), Vector3.new(0, -60, 0), params)
+	if hit then
+		ground = hit.Position -- 실제 바닥(허브 거리 바닥 y 1.35 - 서버 Base 밑면 y 0보다 높다)
+	end
 	local hub = WorldConfig.huntingGround.center
 	local face = Vector3.new(hub.X, ground.Y, hub.Z)
 	forgeModel = ArtV1Models.forge()
@@ -171,7 +178,7 @@ local function emit(pos, count, color, size, speed, spread, gravity)
 	holder.Transparency = 1
 	local e = Instance.new("ParticleEmitter")
 	e.Rate = 0
-	e.Lifetime = NumberRange.new(0.45, 0.8)
+	e.Lifetime = NumberRange.new(X.particleLifetime[1], X.particleLifetime[2])
 	e.Speed = NumberRange.new(speed * 0.6, speed)
 	e.SpreadAngle = Vector2.new(spread, spread)
 	e.EmissionDirection = Enum.NormalId.Top
@@ -181,7 +188,7 @@ local function emit(pos, count, color, size, speed, spread, gravity)
 	e.LightEmission = 1
 	e.Parent = holder
 	e:Emit(count)
-	Debris:AddItem(holder, 1.2)
+	Debris:AddItem(holder, X.emitterSeconds)
 end
 
 local function playEnhance(great)
@@ -200,14 +207,17 @@ local function playEnhance(great)
 	ring.Transparency = 0.2
 	TweenService:Create(ring, TweenInfo.new(S.ringSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.08, S.ringSize, S.ringSize), Transparency = 1 }):Play()
 	Debris:AddItem(ring, S.ringSeconds + 0.05)
-	emit(pos, S.sparks, S.sparkColor, 0.35, great and 20 or 14, great and 70 or 55, 30)
+	emit(pos, S.sparks, S.sparkColor, S.sparkSize, S.sparkSpeed, S.sparkSpread, X.sparkGravity)
 	if great then
-		emit(pos + Vector3.new(0, 0.5, 0), S.stars, S.starColor, 0.9, 6, 90, 4)
+		emit(pos + Vector3.new(0, 0.5, 0), S.stars, S.starColor, S.starSize, S.starSpeed, S.starSpread, S.starGravity)
 		local pl = S.pillar
 		local pillar = fxPart("ArtV1Pillar", Vector3.new(0.5, pl.width, pl.width), pl.color, CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), Enum.PartType.Cylinder)
 		pillar.Transparency = 0.25
-		TweenService:Create(pillar, TweenInfo.new(pl.seconds * 0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(pl.height, pl.width, pl.width), CFrame = CFrame.new(pos + Vector3.new(0, pl.height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2) }):Play()
-		TweenService:Create(pillar, TweenInfo.new(pl.seconds * 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, pl.seconds * 0.35), { Transparency = 1, Size = Vector3.new(pl.height, pl.width * 0.2, pl.width * 0.2) }):Play()
+		local rise = TweenService:Create(pillar, TweenInfo.new(pl.seconds * 0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(pl.height, pl.width, pl.width), CFrame = CFrame.new(pos + Vector3.new(0, pl.height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2) })
+		rise.Completed:Connect(function() -- 사라짐은 솟음이 끝난 뒤 재생(같은 Size를 지연 트윈으로 미리 Play하면 솟음의 Size가 취소된다 - Play 실측)
+			TweenService:Create(pillar, TweenInfo.new(pl.seconds * 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = Vector3.new(pl.height, pl.width * 0.2, pl.width * 0.2) }):Play()
+		end)
+		rise:Play()
 		Debris:AddItem(pillar, pl.seconds + 0.05)
 		if S.shake then
 			CameraShake.trigger(S.shake.seconds, S.shake.studs)

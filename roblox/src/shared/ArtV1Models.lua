@@ -138,6 +138,7 @@ function ArtV1Models.forge()
 	local mouth = P("HearthMouth", Vector3.new(1.7, 0.9, 0.12), D.ember, Vector3.new(0, 1.05, 2.18), nil, true)
 	local chimney = P("Chimney", Vector3.new(1.3, 6.2, 1.3), D.stoneShade, Vector3.new(0.6, 5.8, 3.7))
 	P("ChimneyCap", Vector3.new(1.8, 0.4, 1.8), D.ironShade, Vector3.new(0.6, 9.1, 3.7))
+	P("ChimneyGlow", Vector3.new(1.0, 0.2, 1.0), D.ember, Vector3.new(0.6, 9.35, 3.7), nil, true) -- 멀리서 보이는 불빛(굴뚝 꼭대기)
 	-- 표지판: 세로 기둥 + 판 + 노랑 망치 문양(상호작용 = 노랑 · 글자 없음)
 	P("SignPole", Vector3.new(0.35, 7.2, 0.35), D.wood, Vector3.new(-2.9, 3.6, 1.2))
 	P("SignBoard", Vector3.new(2.4, 1.7, 0.25), D.signBoard, Vector3.new(-2.9, 6.2, 1.0))
@@ -162,8 +163,7 @@ function ArtV1Models.forge()
 	e.Color = ColorSequence.new(D.embers.color)
 	e.LightEmission = 1
 	e.Parent = capAttach
-	model.PrimaryPart = model:FindFirstChild("Stump")
-	model.WorldPivot = CFrame.identity
+	model.WorldPivot = CFrame.identity -- PrimaryPart를 두지 않는다(세운 원기둥 Stump를 PrimaryPart로 두면 PivotTo가 그 회전을 따라 모델 전체가 90° 눕는다 - Play 실측)
 	return model
 end
 
