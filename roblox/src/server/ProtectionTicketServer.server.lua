@@ -7,6 +7,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ProtectionTickets = require(script.Parent.ProtectionTickets)
 
@@ -23,6 +24,9 @@ priceRequest.Name = "ProtectionTicketPriceRequest"
 priceRequest.Parent = ReplicatedStorage
 
 buyRequest.OnServerEvent:Connect(function(player, kind)
+	if not RequestGate.allow(player, "ProtectionTicketBuyRequest") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	local ok, priceOrReason = ProtectionTickets.tryBuy(player, kind)
 	buyResult:FireClient(player, {
 		ok = ok,
@@ -34,5 +38,7 @@ buyRequest.OnServerEvent:Connect(function(player, kind)
 end)
 
 priceRequest.OnServerInvoke = function(player)
-	return ProtectionTickets.getPrices(player)
+	return RequestGate.invoke(player, "ProtectionTicketPriceRequest", "", function() -- QUEUE-6h-b 후속: 공통 요청 제한
+		return ProtectionTickets.getPrices(player)
+	end)
 end

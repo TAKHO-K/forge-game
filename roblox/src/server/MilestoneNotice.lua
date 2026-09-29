@@ -3,6 +3,7 @@
 --   MilestoneFetch(RemoteFunction): 성장 보상 창이 열 때 묻는다 - { rebirthCount, level, claimedLevel, bonus, unlockCount }(P2.5c B2).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 
 local reached = Instance.new("RemoteEvent")
 reached.Name = "MilestoneReached"
@@ -24,7 +25,9 @@ end
 
 fetch.OnServerInvoke = function(player)
 	PlayerProfile = PlayerProfile or require(script.Parent.PlayerProfile) -- 순환 require 방지(PlayerProfile이 이 모듈을 require한다)
-	return PlayerProfile.getMilestoneSummary(player)
+	return RequestGate.invoke(player, "MilestoneFetch", "", function() -- QUEUE-6h-b 후속: 공통 요청 제한
+		return PlayerProfile.getMilestoneSummary(player)
+	end)
 end
 
 return MilestoneNotice

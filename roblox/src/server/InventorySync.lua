@@ -27,6 +27,7 @@ inventoryFetch.Name = "InventoryFetch"
 inventoryFetch.Parent = ReplicatedStorage
 
 local PlayerProfile
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 
 local InventorySync = {}
@@ -91,11 +92,13 @@ inventoryFetch.OnServerInvoke = function(player)
 	-- 순환 require 방지: PlayerProfile이 이 모듈을 require하므로, 여기서는 호출 시점에만
 	-- 늦게(lazy) require한다.
 	PlayerProfile = PlayerProfile or require(script.Parent.PlayerProfile)
-	local profile = PlayerProfile.getProfile(player)
-	if not profile then
-		return { inventory = {}, armor = nil, gloves = nil, shoes = nil }
-	end
-	return InventorySync.snapshot(profile)
+	return RequestGate.invoke(player, "InventoryFetch", "", function() -- QUEUE-6h-b 후속: 공통 요청 제한
+		local profile = PlayerProfile.getProfile(player)
+		if not profile then
+			return { inventory = {}, armor = nil, gloves = nil, shoes = nil }
+		end
+		return InventorySync.snapshot(profile)
+	end)
 end
 
 -- 칸이 가득 차서 줍지 못했을 때 한 번 알린다(12-1 [3]에서는 "드랍 자체를 포기"였으나

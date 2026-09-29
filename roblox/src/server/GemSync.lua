@@ -10,6 +10,7 @@
 -- PlayerProfile 자신이 push하게 만들어야 이런 누락이 구조적으로 안 생긴다).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 
 local gemSync = Instance.new("RemoteEvent")
 gemSync.Name = "GemSync"
@@ -52,7 +53,9 @@ function GemSync.push(player)
 end
 
 gemFetch.OnServerInvoke = function(player)
-	return snapshot(player)
+	return RequestGate.invoke(player, "GemFetch", "", function() -- QUEUE-6h-b 후속: 공통 요청 제한
+		return snapshot(player)
+	end)
 end
 
 return GemSync

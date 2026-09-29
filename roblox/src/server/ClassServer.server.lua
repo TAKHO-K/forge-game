@@ -9,6 +9,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local BuffState = require(script.Parent.BuffState)
@@ -26,10 +27,15 @@ classSummaryFetch.Name = "ClassSummaryFetch"
 classSummaryFetch.Parent = ReplicatedStorage
 
 classSummaryFetch.OnServerInvoke = function(player)
-	return PlayerProfile.getClassSummaries(player)
+	return RequestGate.invoke(player, "ClassSummaryFetch", "", function() -- QUEUE-6h-b 후속: 공통 요청 제한
+		return PlayerProfile.getClassSummaries(player)
+	end)
 end
 
 classSelectRequest.OnServerEvent:Connect(function(player, classId)
+	if not RequestGate.allow(player, "ClassSelectRequest") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	if type(classId) ~= "string" or not ClassData.classes[classId] then
 		return -- 존재하지 않는 클래스 - 공격 사거리 밖 요청과 같은 취급으로 조용히 무시
 	end

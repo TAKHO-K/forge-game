@@ -10,6 +10,7 @@ local AutoStageData = require(ReplicatedStorage.Shared.data.AutoStageData)
 local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula)
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local Text = require(ReplicatedStorage.Shared.Text)
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local BossEncounter = require(script.Parent.BossEncounter)
 local PartyState = require(script.Parent.PartyState)
@@ -36,6 +37,9 @@ local function presetOf(player)
 end
 
 settingRemote.OnServerEvent:Connect(function(player, presetId)
+	if not RequestGate.allow(player, "AutoStageSetting") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	if type(presetId) == "string" and presetById[presetId] then
 		if require(script.Parent.SettingsService).set(player, "autoStage", presetId) then -- Q14: 저장 + Attribute 적용(설정 입구 하나)
 			require(script.Parent.ImmediateSave).request(player) -- Q15 리뷰: 다른 설정과 같이 즉시 저장(스로틀 공유)

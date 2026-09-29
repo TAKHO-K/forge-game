@@ -13,6 +13,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 local PartyState = require(script.Parent.PartyState)
 local TutorialState = require(script.Parent.TutorialState)
 local BossEncounter = require(script.Parent.BossEncounter)
@@ -111,6 +112,9 @@ end
 local PARTY_ACTIONS = { invite = true, invite_remote = true, create = true, joincode = true, cancel_join = true, accept = true, decline = true, leave = true, kick = true, vote_agree = true, vote_reject = true }
 
 partyRequest.OnServerEvent:Connect(function(player, action, arg)
+	if not RequestGate.allow(player, "PartyRequest") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	if type(action) ~= "string" or not PARTY_ACTIONS[action] or partyThrottled(player, action, arg) then
 		return
 	end

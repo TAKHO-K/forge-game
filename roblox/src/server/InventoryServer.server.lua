@@ -5,6 +5,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local ItemEquip = require(script.Parent.ItemEquip)
@@ -47,6 +48,9 @@ setInventoryWindowPositionRequest.Parent = ReplicatedStorage
 -- classState.equipment[part]를 nil 조회로 조용히 거른다(19-1부터 활성 직업 아래) - 여기선
 -- 타입만 확인한다.
 equipRequest.OnServerEvent:Connect(function(player, action, arg)
+	if not RequestGate.allow(player, "EquipRequest") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	-- S20d: 판정은 ItemEquip.handle(요청 모양 검사 + PlayerProfile) 한 곳이고, 결과(성공 여부 · 이유 코드)를 요청한 클라에 알린다 - 옛 코드는 실패하면 아무 신호도 안 보냈다.
 	-- InventorySync는 PlayerProfile 안에서 이미 밀렸으므로 결과 이벤트는 항상 그 스냅샷 뒤에 온다.
 	local success, reason = ItemEquip.handle(player, action, arg)
@@ -63,6 +67,9 @@ end)
 -- PlayerProfile.sellItem/sellItemsBulkUpTo 안에서 서버가 한다 - 클라이언트는 "이
 -- 슬롯을(또는 이 등급 이하를) 팔겠다"는 의사만 보낸다.
 sellRequest.OnServerEvent:Connect(function(player, action, arg, signature)
+	if not RequestGate.allow(player, "SellRequest") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	local profile = PlayerProfile.getProfile(player)
 	if not profile then
 		return
@@ -105,6 +112,9 @@ end)
 
 -- 잠금 토글은 착용/해제와 같은 되돌릴 수 있는 사건이다 - 즉시저장하지 않는다.
 lockRequest.OnServerEvent:Connect(function(player, index, locked, confirmToken)
+	if not RequestGate.allow(player, "LockRequest") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	if not PlayerProfile.getProfile(player) then
 		return
 	end
@@ -148,6 +158,9 @@ local autoProcessRequest = Instance.new("RemoteEvent")
 autoProcessRequest.Name = "AutoProcessRequest"
 autoProcessRequest.Parent = ReplicatedStorage
 autoProcessRequest.OnServerEvent:Connect(function(player, enabled, maxGrade)
+	if not RequestGate.allow(player, "AutoProcessRequest") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	if not PlayerProfile.getProfile(player) then
 		return
 	end
@@ -156,6 +169,9 @@ end)
 
 -- 일괄판매 기준 등급 선택도 잠금과 같은 되돌릴 수 있는 사건이다 - 즉시저장하지 않는다.
 bulkSellCutoffRequest.OnServerEvent:Connect(function(player, gradeId)
+	if not RequestGate.allow(player, "BulkSellCutoffRequest") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	if not PlayerProfile.getProfile(player) then
 		return
 	end
@@ -182,11 +198,16 @@ inheritResult.Name = "InheritResult"
 inheritResult.Parent = ReplicatedStorage
 
 inheritPreview.OnServerInvoke = function(player, part, bagIndex)
-	local result, reason = ItemInherit.preview(player, part, bagIndex)
-	return result or { error = reason }
+	return RequestGate.invoke(player, "InheritPreview", tostring(part) .. ":" .. tostring(bagIndex), function() -- QUEUE-6h-b 후속: 공통 요청 제한
+		local result, reason = ItemInherit.preview(player, part, bagIndex)
+		return result or { error = reason }
+	end)
 end
 
 inheritRequest.OnServerEvent:Connect(function(player, part, bagIndex, keep)
+	if not RequestGate.allow(player, "InheritRequest") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	local success, reason = ItemInherit.handle(player, part, bagIndex, keep)
 	if success then
 		ImmediateSave.request(player)
@@ -196,6 +217,9 @@ end)
 
 -- 장비창 위치도 잠금·일괄판매 기준과 같은 되돌릴 수 있는 UI 사건이다 - 즉시저장하지 않는다.
 setInventoryWindowPositionRequest.OnServerEvent:Connect(function(player, x, y)
+	if not RequestGate.allow(player, "SetInventoryWindowPosition") then
+		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
+	end
 	if not PlayerProfile.getProfile(player) then
 		return
 	end

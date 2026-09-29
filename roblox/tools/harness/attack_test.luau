@@ -53,6 +53,8 @@ local ok, err = pcall(function()
 	for _ = 1, 100 do fire("SellRequest", "sell", 1, sig) end
 	check("판매 연타 100회(같은 칸 · 같은 확인값) = 1개만 팔림(밀려 올라온 다른 장비는 확인값 불일치로 거부)", #p.inventory == 4, ("남은 %d"):format(#p.inventory))
 	local sig2 = MODS.Loot.itemSignature(p.inventory[1])
+	local tWait = os.clock()
+	while os.clock() - tWait < 0.25 do end -- QUEUE-6h-b 후속: 공통 요청 제한(통 10 · 초당 10) - 연타 100회 직후 같은 순간의 정상 판매는 버려진다(의도) → 사람 손 간격을 둔다
 	fire("SellRequest", "sell", 1, sig2)
 	fire("SellRequest", "sell", 2, "위조")
 	check("정상 연속 판매는 바로 됨 · 확인값 위조는 거부", #p.inventory == 3, ("남은 %d"):format(#p.inventory))
