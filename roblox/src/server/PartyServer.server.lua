@@ -84,7 +84,25 @@ partyFriendsFetch.OnServerInvoke = function(player)
 	return list
 end
 
+-- QUEUE-6h-b R3 F3(보안): 동작별 요청 간격(초대 · 원격 초대 · 생성 · 코드 합류 = 크로스서버 메시지 · MemoryStore를 쓰는 것은 길게) - 알 수 없는 동작은 표에 넣기 전에 버린다
+local lastPartyAction = setmetatable({}, { __mode = "k" })
+local function partyThrottled(player, action)
+	local gap = PartyConfig.requestGapSeconds[action] or PartyConfig.requestGapSeconds.default
+	local now = os.clock()
+	local rec = lastPartyAction[player] or {}
+	lastPartyAction[player] = rec
+	if rec[action] and now - rec[action] < gap then
+		return true
+	end
+	rec[action] = now
+	return false
+end
+local PARTY_ACTIONS = { invite = true, invite_remote = true, create = true, joincode = true, cancel_join = true, accept = true, decline = true, leave = true, kick = true, vote_agree = true, vote_reject = true }
+
 partyRequest.OnServerEvent:Connect(function(player, action, arg)
+	if type(action) ~= "string" or not PARTY_ACTIONS[action] or partyThrottled(player, action) then
+		return
+	end
 	if action == "invite" then
 		local target = type(arg) == "number" and Players:GetPlayerByUserId(arg)
 		if not target then
@@ -104,6 +122,16 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 	elseif action == "invite_remote" then
 		-- 24-2: 다른 서버의 친구. 같은 서버에 있으면 PartyCrossServer가 로컬 초대로 돌린다.
 		if type(arg) ~= "number" or arg == player.UserId then
+			return
+		end
+		local isFriend = false -- QUEUE-6h-b R3 F3: 친구 목록(PartyFriendsFetch 캐시)에 있는 사람만(아무 UserId에게나 초대 팝업 스팸 차단)
+		for _, f in ipairs(cachedFriends[player] or {}) do
+			if f.userId == arg then
+				isFriend = true
+				break
+			end
+		end
+		if not isFriend then
 			return
 		end
 		local blocked = checkSelf(player)

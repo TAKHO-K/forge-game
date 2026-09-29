@@ -46,8 +46,19 @@ airMoveFx.OnServerEvent:Connect(function(player, kind)
 		return
 	end
 	last[kind] = now
+	-- QUEUE-6h-b R3 F4(보안): 종류를 번갈아 쏘는 증폭 차단 = 사람 단위 초당 합계 상한 + 가까운 사람에게만 중계
+	last.windowAt = last.windowAt or now
+	if now - last.windowAt >= 1 then
+		last.windowAt, last.windowCount = now, 0
+	end
+	last.windowCount = (last.windowCount or 0) + 1
+	if last.windowCount > MovementConfig.airMotion.relayMaxPerSecond then
+		return
+	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	for _, other in ipairs(Players:GetPlayers()) do
-		if other ~= player then
+		local otherRoot = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if otherRoot and root and (otherRoot.Position - root.Position).Magnitude <= MovementConfig.airMotion.relayRangeStuds then
 			airMoveFx:FireClient(other, player, kind)
 		end
 	end
@@ -172,7 +183,8 @@ local function handleLedge(player, ledgePoint, wallDir)
 	lastLedgeAt[player] = now
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root or typeof(wallDir) ~= "Vector3" or typeof(ledgePoint) ~= "Vector3" or not PlayerProfile.hasLedgeGrab(player) then
+	if not root or typeof(wallDir) ~= "Vector3" or typeof(ledgePoint) ~= "Vector3" or not PlayerProfile.hasLedgeGrab(player)
+		or ledgePoint ~= ledgePoint or math.abs(ledgePoint.X) == math.huge or math.abs(ledgePoint.Y) == math.huge or math.abs(ledgePoint.Z) == math.huge then -- QUEUE-6h-b R3 F15: NaN · inf 좌표 거절(광선 로그 스팸)
 		return "no_gloves"
 	end
 	local flat = Vector3.new(wallDir.X, 0, wallDir.Z)

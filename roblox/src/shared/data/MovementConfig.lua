@@ -71,7 +71,7 @@ return {
 
 	-- 공중 점프 · 공중대시 모션(클라가 그린다 - 판정 없음). 루트 관절(Motor6D) C0에 회전을 더한다: 공중 점프 = 앞으로 한 바퀴(flipSeconds), 공중대시 = 앞으로 기울임(leanDeg · 대시 시간 동안).
 	-- 입력 즉시 시작(준비 동작 없음). 남에게는 서버가 중계한다(relayMinGapSeconds보다 잦은 요청은 버린다).
-	airMotion = { flipSeconds = 0.32, leanDeg = 22, relayMinGapSeconds = 0.08 },
+	airMotion = { flipSeconds = 0.32, leanDeg = 22, relayMinGapSeconds = 0.08, relayMaxPerSecond = 8, relayRangeStuds = 220 }, -- QUEUE-6h-b R3 F4: 사람당 초당 합계 8 · 중계 거리 220(AttackServer MOTION_SEND_STUDS와 같게)
 
 	-- 점프력 옵션(펫 두 번째 옵션 예정 - 아직 출처 없음): "점프 높이 +%"로 정의한다(속도 %면 높이가 제곱으로 커진다). 합산 상한 +10%. 공중 점프도 이 높이의 비율이라 같이 커진다(최대 발 21.38).
 	-- M1-0: 보스 아레나도 적용한다(G2a의 아레나 무시는 벽 14 · 한 체공 두 박자 여유 때문이었다 - 공중 점프 자유화로 둘 다 전제가 사라졌다).

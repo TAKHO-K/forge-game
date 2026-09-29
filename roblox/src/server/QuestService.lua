@@ -235,9 +235,13 @@ function QuestService.start()
 	updateRemote = ReplicatedStorage:FindFirstChild("QuestUpdate") or Instance.new("RemoteEvent")
 	updateRemote.Name = "QuestUpdate"
 	updateRemote.Parent = ReplicatedStorage
+	local QUEST_ACTIONS = { view = true, claim = true, train = true }
 	remote.OnServerEvent:Connect(function(player, action, a, b)
+		if type(action) ~= "string" or not QUEST_ACTIONS[action] then -- QUEUE-6h-b R3 F5(보안): 허용 동작만 제한 표에(임의 문자열로 표가 커지지 않게)
+			return
+		end
 		local now = os.clock()
-		local key = tostring(action) -- 리뷰 4: 요청 제한을 동작별로(창 열 때 view 직후의 [받기]가 버려지지 않게)
+		local key = action -- 리뷰 4: 요청 제한을 동작별로(창 열 때 view 직후의 [받기]가 버려지지 않게)
 		lastRequest[player] = lastRequest[player] or {}
 		if lastRequest[player][key] and now - lastRequest[player][key] < 0.2 then
 			return

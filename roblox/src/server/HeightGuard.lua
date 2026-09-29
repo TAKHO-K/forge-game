@@ -236,7 +236,7 @@ function HeightGuard.horizontalContext(st, character, root, humanoid, now)
 	if character:GetAttribute("Gliding") then
 		rate = math.max(rate, MovementConfig.glide.forwardSpeed * MG.glideMargin)
 	end
-	if humanoid:GetState() == Enum.HumanoidStateType.Swimming or require(script.Parent.WorldHazards).inWater(root.Position) then
+	if require(script.Parent.WorldHazards).inWater(root.Position) then -- QUEUE-6h-b R3 F2(보안): 헤엄 상태는 클라가 정한다 → 실제 물속일 때만(아래 높이 검사와 같은 규칙)
 		rate = math.max(rate, walk + MG.flowMaxStuds)
 	end
 	if st.permit and st.permit.hRate and now <= st.permit.expiresAt then -- 리뷰 4: 설계 체공 안만(내려가기 단계 = 걷기 · 활강 속도) · S1 후속 0-4: 허가마다 수평 상한

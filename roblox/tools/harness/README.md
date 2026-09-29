@@ -7,4 +7,5 @@ python deps.py PlayerProfile,PetService,QuestService,SaveSystem > deps.txt   # �
 LUAU=<luau.exe 경로> PRELUDE=server_prelude.luau EXTRA_SERVER=$(cat deps.txt) ECON_RES=res.txt python build_run.py dupe_test.luau   # 결과 = %TEMP%/res.txt
 ```
 - `dupe_test.luau` = 복사(dupe) 경로 7가지(판매 · 잠금 · 일괄 분해 · 부화 · 받기 · 보상 수령 · 튕김 직전 수령) · `multiplayer_test.luau` = 2 ~ 4인 규칙 10가지(전멸 · 기믹 대상 · 성역 · 기도 · 재접속 · 파티 기여 · 스틸) - 첫 줄에 `Random` 대역(dupe_test 첫 줄)을 붙여 실행.
+- `attack_test.luau` = 공격 하네스 6가지(서버 Remote 핸들러에 잘못된 인자 · 연타 · 위조 표시 - prelude의 Instance.new가 RemoteEvent 핸들러를 `REMOTES[이름]`에 모은다). 의존 = `python deps.py PlayerProfile,PetService,QuestService,SaveSystem,SettingsService,FallServer,InventoryServer.server`
 - luau CLI = https://github.com/luau-lang/luau 릴리스(luau.exe · luau-analyze.exe · luau-compile.exe).

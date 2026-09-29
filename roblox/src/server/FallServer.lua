@@ -171,7 +171,9 @@ function FallServer.start()
 	landed.Name = "FallLanded"
 	landed.Parent = ReplicatedStorage
 	landed.OnServerEvent:Connect(function(player, speed, flags)
-		FallServer.onLanded(player, speed, flags)
+		-- QUEUE-6h-b R3 F1(보안): 클라 flags는 표시(water · ladder)만 새 표로 옮긴다 - server 표시는 서버 내부 호출(onServerLanded)만 쓴다(위조하면 낙하 피해 면제였다)
+		local clean = type(flags) == "table" and { water = flags.water == true, ladder = flags.ladder == true } or {}
+		FallServer.onLanded(player, speed, clean)
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		lastReportAt[player] = nil

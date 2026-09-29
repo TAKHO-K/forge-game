@@ -26,7 +26,7 @@ local game = {
 			return setmetatable({ IsStudio = function() return true end, IsServer = function() return true end, IsRunning = function() return true end }, { __index = function() return P end })
 		end
 		if name == "ReplicatedStorage" then
-			return setmetatable({ GetAttribute = function(_, k) return ATTR[k] end }, { __index = function() return P end })
+			return setmetatable({ GetAttribute = function(_, k) return ATTR[k] end, FindFirstChild = function() return nil end }, { __index = function() return P end })
 		end
 		if name == "ServerScriptService" or name == "ServerStorage" then return setmetatable({ FindFirstChild = function() return nil end }, { __index = function() return P end }) end
 		return P
@@ -54,7 +54,26 @@ local NumberSequenceKeypoint = { new = function() return {} end }
 local NumberRange = { new = function() return {} end }
 local CFrame = { new = function() return {} end }
 local Enum = setmetatable({}, { __index = function(t, k) return setmetatable({}, { __index = function(_, k2) return k .. "." .. k2 end }) end })
-local Instance = { new = function() return setmetatable({}, { __index = function() return P end }) end }
+REMOTES = {} -- 공격 하네스: 서버가 만든 RemoteEvent · RemoteFunction(이름 → { onEvent, onInvoke })
+local Instance = { new = function(className)
+	if className == "RemoteEvent" or className == "RemoteFunction" or className == "BindableFunction" or className == "BindableEvent" then
+		local rec = {}
+		local obj
+		obj = setmetatable({ ClassName = className }, {
+			__index = function(_, k)
+				if k == "OnServerEvent" or k == "Event" then return { Connect = function(_, f) rec.onEvent = f return P end } end
+				return P
+			end,
+			__newindex = function(t, k, v)
+				if k == "Name" then REMOTES[v] = rec end
+				if k == "OnServerInvoke" or k == "OnInvoke" then rec.onInvoke = v end
+				rawset(t, k, v)
+			end,
+		})
+		return obj
+	end
+	return setmetatable({}, { __index = function() return P end })
+end }
 local Random = {
 	new = function(seed)
 		local state = (seed or 12345) % 2147483647
