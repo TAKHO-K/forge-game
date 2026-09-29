@@ -13,6 +13,12 @@
 
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ArtV1FxData = require(ReplicatedStorage.Shared.data.ArtV1FxData) -- A2-N2 2-4 타격 링(ArtStyleV1 스위치 뒤)
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local ArtV1Fx = require(script.Parent.ArtV1Fx)
 
 local HitEffects = {}
 
@@ -99,10 +105,25 @@ function HitEffects.playHit(monsterModel, isCrit, holdSeconds)
 		return
 	end
 
+	local art = ArtV1Fx.isOn()
 	if isCrit then
-		burst(head.Position, CRIT_COLOR, CRIT_MAX_SIZE, CRIT_DURATION)
+		burst(head.Position, art and ArtV1FxData.combat.critCore or CRIT_COLOR, CRIT_MAX_SIZE, CRIT_DURATION)
 	else
 		burst(head.Position, NORMAL_COLOR, NORMAL_MAX_SIZE, NORMAL_DURATION)
+	end
+	if art then
+		-- A2-N2 2-4 통일: 옆으로 퍼지는 링(카메라를 향함) = 타격 · 일반 = 직업 강조색 · 치명 = 금노랑(주황빨강 = 보스 경고색이라 아군 치명에서 뺐다) · 강공격 = 한 겹 더
+		local K = ArtV1FxData.combat
+		local classId = Players.LocalPlayer:GetAttribute("ClassId")
+		local accent = UIColors.classAccent[classId or ""] or NORMAL_COLOR
+		local camera = Workspace.CurrentCamera
+		local face = camera and CFrame.lookAt(head.Position, camera.CFrame.Position) or CFrame.new(head.Position)
+		local ring = ArtV1Fx.ring(head.Position, isCrit and K.critRingSize or K.hitRingSize, K.hitRingSeconds, isCrit and K.critRim or accent, K.ringThick, 0.1)
+		ring.CFrame = face * CFrame.Angles(0, math.rad(90), 0) -- 원기둥 높이 축(X)을 카메라 쪽으로
+		if holdSeconds and holdSeconds > 0 then
+			local outer = ArtV1Fx.ring(head.Position, K.heavyRingSize, K.heavyRingSeconds, accent, K.ringThick, 0.2)
+			outer.CFrame = ring.CFrame
+		end
 	end
 	flashMonster(monsterModel, holdSeconds)
 end

@@ -13,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossFx = require(script.Parent.BossFx)
+local TelegraphStyle = require(script.Parent.TelegraphStyle) -- A2-N2 2-4 전조 공통 테두리(ArtStyleV1 스위치 뒤)
 
 local BossBR1View = {}
 
@@ -42,6 +43,9 @@ local function newPart(size, color, transparency, shape)
 	end
 	part.Parent = Workspace
 	live[part] = true
+	if color == DANGER then
+		task.defer(TelegraphStyle.register, part)
+	end
 	return part
 end
 

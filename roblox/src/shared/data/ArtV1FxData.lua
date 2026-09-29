@@ -46,20 +46,18 @@ return {
 		smokeTexture = "rbxasset://textures/particles/smoke_main.dds",
 	},
 
-	-- 2-4 보스 전조 공통 규칙(가독성 최우선 - 모든 전조 모양이 같은 언어): 채움 = 반투명 위험색 · 테두리 = 진한 위험색 두께 고정 · 깜빡임 = 터지기 직전만
+	-- 2-4 보스 전조 공통 규칙(가독성 최우선 - client/TelegraphStyle): 채움 = 각 연출 그대로(옅게 시작 → 진해짐) · 테두리 = 진한 위험색 · 두께 고정 · 처음부터 보임 · 터지기 직전만 깜빡
 	telegraph = {
-		color = C(226, 59, 59), -- UIColors.danger와 같은 값(style-bible §8 위험색)
-		rimColor = C(255, 96, 80),
-		fillTransparency = 0.62, -- 채움(바닥이 비쳐 보인다)
-		rimTransparency = 0.1,
-		rimStuds = 0.6, -- 원 · 선 테두리 두께(크기와 상관없이 같은 두께 = 폰에서 읽히는 최소)
-		rimHeight = 0.06, -- 채움보다 이만큼 위(깜빡임 z-싸움 방지)
-		blinkLastSeconds = 0.45, blinkHz = 8, -- 터지기 전 마지막 구간만 테두리가 깜빡인다
+		rimColor = C(255, 84, 70), -- 위험색(UIColors.danger 226, 59, 59)보다 한 단계 밝게 - 채움 위에서 선으로 읽힌다
+		rimTransparency = 0.05,
+		rimStuds = 0.55, -- 원 · 선 테두리 두께(크기와 상관없이 같은 두께 = 폰 800 × 360에서 읽히는 최소)
+		rimHeight = 0.08, -- 채움보다 이만큼 두껍게(겹침 깜빡임 방지)
+		blinkBelow = 0.35, blinkHz = 7, -- 채움 투명도가 이 아래(= 예고가 거의 끝남)면 테두리가 깜빡인다
 	},
 
-	-- 2-4 전투 이펙트 통일(색 = 직업 강조색 UIColors.classAccent 하나 · 치명 = 흰 심 + 주황 테 · 강공격 = 링 한 겹 더)
+	-- 2-4 전투 이펙트 통일(client/HitEffects - 옆으로 퍼지는 링 = 타격): 일반 = 흰 심 + 직업 강조색 링 · 치명 = 흰 심 + 금노랑 링 · 강공격(3타) = 링 한 겹 더 · 궁극기 = UltGauge(강조색 2겹 - 기존)
 	combat = {
-		hitRingSeconds = 0.18, hitRingSize = 3.2, critRingSize = 4.6, critCore = C(255, 250, 240), critRim = C(255, 120, 50),
+		hitRingSeconds = 0.18, hitRingSize = 3.2, critRingSize = 4.6, critCore = C(255, 250, 240), critRim = C(255, 226, 110), -- 치명 테 = 금노랑(색상 51° - 위험색 330 ~ 50° 밖)
 		heavyRingSize = 6, heavyRingSeconds = 0.26, ultRingSize = 14, ultRingSeconds = 0.45, ringThick = 0.12,
 		allyOpacityInBoss = 0.5, -- 보스전 중 아군 연출 불투명도 상한(§5)
 	},

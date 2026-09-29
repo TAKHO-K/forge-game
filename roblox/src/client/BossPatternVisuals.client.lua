@@ -26,6 +26,7 @@ local Workspace = game:GetService("Workspace")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 -- 29-1: 힌트 화살표(기믹 예고에 안전지대 좌표가 실려 오면 그 위에 흰 ▼) - 그리기는 그 모듈에 있다.
 local BossGateView = require(script.Parent.BossGateView)
+local TelegraphStyle = require(script.Parent.TelegraphStyle) -- A2-N2 2-4 전조 공통 테두리(ArtStyleV1 스위치 뒤)
 -- 29-3: 동적 지형(얼음 기둥)·전역 기믹 전조(빨강 바닥 + 그림자)와 보스 태세(빨강 고리·반사 선) - 그리기는 각 모듈에 있다.
 local BossArenaPropsView = require(script.Parent.BossArenaPropsView)
 local BossStanceView = require(script.Parent.BossStanceView)
@@ -87,6 +88,9 @@ local function newPart(size, color, transparency)
 	part.Size = size
 	part.Transparency = transparency or 0.4
 	part.Parent = Workspace
+	if color == DANGER_COLOR then
+		task.defer(TelegraphStyle.register, part) -- 모양(원판 Shape) · 자리를 정한 뒤
+	end
 	return track(part)
 end
 

@@ -12,6 +12,7 @@ local Text = require(ReplicatedStorage.Shared.Text)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local UIManager = require(script.Parent.Parent.UIManager)
+local GradeFrame = require(script.Parent.Parent.GradeFrame) -- A2-N2 2-5: 등급 이름을 등급 색으로(ArtStyleV1 스위치 뒤)
 
 local ProbabilityPanel = {}
 ProbabilityPanel.id = "probability"
@@ -28,6 +29,7 @@ local function line(text, sizeName, colorName)
 	label.Name = "Line" .. order
 	label.LayoutOrder = order
 	label.TextWrapped = true
+	label.RichText = GradeFrame.isOn() -- 등급 이름 색(<font>) - 확률 문구에는 < > 가 없다
 	label.AutomaticSize = Enum.AutomaticSize.Y
 	label.Size = UDim2.new(1, 0, 0, Theme.textSize(sizeName) + 6)
 	return label
@@ -47,7 +49,11 @@ local function gradeRowsText(rows)
 	local parts = {}
 	for _, r in ipairs(rows) do
 		local g = ArmorData.grades[r.id]
-		table.insert(parts, ("%s %s"):format(g and g.displayName or r.id, pct(r.chance)))
+		local name = g and g.displayName or r.id
+		if GradeFrame.isOn() then
+			name = ('<font color="#%s"><b>%s</b></font>'):format(GradeFrame.colorOf(r.id):ToHex(), name)
+		end
+		table.insert(parts, ("%s %s"):format(name, pct(r.chance)))
 	end
 	return table.concat(parts, " · ")
 end

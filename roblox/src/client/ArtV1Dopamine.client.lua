@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local FxData = require(ReplicatedStorage.Shared.data.ArtV1FxData)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local Fx = require(script.Parent.ArtV1Fx)
+local GradeFrame = require(script.Parent.GradeFrame)
 
 local D = FxData.drop
 local player = Players.LocalPlayer
@@ -44,6 +45,51 @@ local function beam(folder, ground, height, width, color, transparency)
 	b.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, transparency), NumberSequenceKeypoint.new(0.6, math.min(1, transparency + 0.25)), NumberSequenceKeypoint.new(1, 1) })
 	b.Parent = host
 	return release
+end
+
+-- 2-5 드랍 이름표 = 등급 프레임 칩(어두운 바탕 + 등급 테두리 · 글자 = 등급 색 - 서버 이름표 TextLabel을 이 화면에서만 꾸민다)
+local INK = Color3.fromRGB(30, 27, 46)
+local function styleNameplate(model, on)
+	local gui = model:FindFirstChild("NameplateGui", true)
+	local label = gui and gui:FindFirstChildOfClass("TextLabel")
+	if not label then
+		return
+	end
+	if on then
+		if label:FindFirstChild("ArtV1Chip") then
+			return
+		end
+		label:SetAttribute("ArtV1OrigColor", label.TextColor3)
+		local marker = Instance.new("UICorner")
+		marker.Name = "ArtV1Chip"
+		marker.CornerRadius = UDim.new(0.3, 0)
+		marker.Parent = label
+		local pad = Instance.new("UIPadding")
+		pad.Name = "ArtV1Pad"
+		pad.PaddingLeft, pad.PaddingRight = UDim.new(0.06, 0), UDim.new(0.06, 0)
+		pad.PaddingTop, pad.PaddingBottom = UDim.new(0.12, 0), UDim.new(0.12, 0)
+		pad.Parent = label
+		label.BackgroundColor3 = INK
+		label.BackgroundTransparency = 0.2
+		local stroke = Instance.new("UIStroke")
+		stroke.Name = "ArtV1Stroke"
+		stroke.Parent = label
+		local grade = model:GetAttribute("DropGrade")
+		GradeFrame.apply(nil, stroke, nil, grade)
+		GradeFrame.applyText(label, grade)
+	else
+		for _, n in ipairs({ "ArtV1Chip", "ArtV1Pad", "ArtV1Stroke", "GradeSheen" }) do
+			local c = label:FindFirstChild(n)
+			if c then
+				c:Destroy()
+			end
+		end
+		label.BackgroundTransparency = 1
+		local orig = label:GetAttribute("ArtV1OrigColor")
+		if orig then
+			label.TextColor3 = orig
+		end
+	end
 end
 
 local function colorOf(grade)
@@ -99,6 +145,7 @@ local function build(model)
 		end
 	end
 	drops[model] = st
+	styleNameplate(model, true)
 	-- 등장(가까이 있을 때만 - 스트리밍으로 다시 들어온 먼 드랍은 조용히)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if root and (root.Position - ground).Magnitude < 150 then
@@ -125,6 +172,7 @@ local function unbuild(model)
 		end
 		st.folder:Destroy()
 		drops[model] = nil
+		styleNameplate(model, false)
 	end
 end
 

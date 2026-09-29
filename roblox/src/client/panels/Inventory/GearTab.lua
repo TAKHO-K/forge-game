@@ -11,6 +11,7 @@ local Gem = require(ReplicatedStorage.Shared.Gem)
 local HelpTooltip = require(script.Parent.Parent.Parent.HelpTooltip)
 local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
+local GradeFrame = require(script.Parent.Parent.Parent.GradeFrame) -- A2-N2 2-5 등급 프레임(ArtStyleV1 스위치 뒤)
 local Layout = require(script.Parent.Layout)
 local ItemActions = require(script.Parent.ItemActions)
 
@@ -311,11 +312,17 @@ local function rebuildGearSlots()
 				color = visual and visual.color or UIColors.textPrimary
 				stroke.Color = color
 				stroke.Transparency = 0
+				if GradeFrame.isOn() then
+					GradeFrame.apply(slot, stroke, nil, S.weaponGradeId())
+				end
 			else
 				local visual = ItemVisualData.gradeVisuals[equipped[part].grade]
 				color = visual and visual.color or UIColors.textPrimary
 				stroke.Color = color
 				stroke.Transparency = 0
+				if GradeFrame.isOn() then
+					GradeFrame.apply(slot, stroke, nil, equipped[part].grade)
+				end
 			end
 		else
 			-- 빈 슬롯은 점선(지시 - "아직 못 채운 칸이 눈에 보여야 파밍 동기가 생긴다").

@@ -8,6 +8,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
+local GradeFrame = require(script.Parent.Parent.Parent.GradeFrame) -- A2-N2 2-5 등급 프레임(ArtStyleV1 스위치 뒤)
 
 -- 장비창 공용 상태 · 순수 계산(S20b: InventoryUI를 탭별 파일로 쪼개며 만들었다). 모든 탭 모듈이 이 표 S 하나로 서버 스냅샷 · 선택 · 정렬 상태를 나눈다.
 -- 값 저장소이자 헬퍼 모음이다(창 · 칸을 만들지 않는다 - makeSectionLabel만 라벨 하나를 만들어 돌려주는 부품이다). 탭 모듈이 서로 부르는 함수(refreshDetail · refreshStats · rebuildGrid · rebuildGearSlots · gemState)는
@@ -145,6 +146,9 @@ local RAINBOW_SEQUENCE = ColorSequence.new({
 local function applyGradeVisual(cellFrame, gradeStroke, glowFrame, gradeId)
 	local visual = ItemVisualData.gradeVisuals[gradeId]
 	if not visual then
+		return
+	end
+	if GradeFrame.isOn() and GradeFrame.apply(cellFrame, gradeStroke, glowFrame, gradeId) then
 		return
 	end
 
