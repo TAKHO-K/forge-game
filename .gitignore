@@ -11,3 +11,5 @@ docs/art/ref/
 
 # Python 캐시(Blender 스크립트 실행 산출물)
 __pycache__/
+# Blender 자동 백업(저장 때마다 생김)
+*.blend1
