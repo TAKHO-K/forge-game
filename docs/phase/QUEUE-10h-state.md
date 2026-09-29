@@ -157,7 +157,8 @@
 | 추가 대기열 마무리 | (이 커밋) | 보고서 §8 ~ 12(항목 표 · 이름 규칙 · 결정 필요 12 선택지별 결과표 · 사용자 확인 · 다음 Play) · STATE · open-plan |
 
 ## 지금
-- **전부 끝** - 새 작업 없음(지시: 결정 필요 선택지별 결과표까지 만들고 멈춤 = 보고서 §10)
+- **재개 시작 2026-09-29 12:41(KST)** · 상한 18:41 · 대기열 Q0 ~ Q15 전부 끝(9fdf849)
+- 재개 구간 끝(13:20): 결정 필요 선택지별 EconSim 결과표 = 보고서 §13 ~ 15(7안 × 3프로필) · 코드 변경 0 → **멈춤**(새 작업 없음)
 
 ## Play A 계획(12분 이내 · 재Play 금지)
 0. 체크리스트: ① Rojo 동기화(script_grep launchPlayer · [Q0][알림] O) ② 지연 0(IncomingReplicationLag 기본) ③ 순간이동 = /gg stage · TeleportArrival 경로 ④ 표본 몹 = /gg m2 windup(DevFrozen · C3Immortal) ⑤ 계정 = 개발 계정 그대로(검증 켬 = _verify 저장)

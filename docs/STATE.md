@@ -29,6 +29,8 @@
 
 ## 3. 다음 단계
 
+> **QUEUE-10h 재개 구간(2026-09-29 12:41 ~ 13:20)**: 코드 변경 0 · 결정 필요 선택지별 EconSim 결과표(보고서 §14) - 환생 무료권 (가) = 환생 1만 34 → 31분(곡선 무해) · 캐주얼 1,000은 초반 드랍 칸 · 강화 비용으로 안 움직임(27.5 → 최대 28.9h - 경험치 곡선 쪽) · 수련 단계 ×2로는 후반 골드가 안 줄어듦.
+
 > **QUEUE-10h 추가 대기열 끝(2026-09-29)**: Q8 K3 영혼(`SoulService`) · Q9 K4 스킬 변형(`SkillVariant` · 멀리 틀) · Q10 K5 재조정 · Q11 펫(`PetService` · `PetView` · 자동 줍기 Lv 200) · Q12 이정표 8단계 + 7일 출석(퀘스트 상태 하나) · Q13 가방 30 스위치 · 일괄 분해 · 확률 공개 한 소스(`shared/Disclosure`) · Q14 설정 저장(`SettingsService`) + 직업 변경 폰 숨김 · Q15 용어집 · 하드코딩 목록(`docs/i18n/`) · 통계(`server/Telemetry` - Studio 드라이런). Play E · F · G 각 1회. **다음 = 결정 필요 12개(보고서 §10 선택지별 결과표) → 다음 Play 목록(§12 - 메뉴바 × 대시 · 파티 2클라 부활)**. 개발 명령: `/gg soul die|revive|hold|state` · `/gg skillvar give|reroll|show` · `/gg pet egg|hatch|ff|claim|equip` · `/gg q12 reset|note` · `/gg bag dismantle|cap` · `/gg t1 flush`.
 
 > **QUEUE-10h 앞부분 끝(2026-09-29 07:30)**: Q0 결정 1 · 2(드랍 개수 = killUnits × 티어 보정 · 태초 2/3/3 · 첫 클리어 0.1%) · 알림 규칙(태초 = 같은 서버만 · 초월 = 전 서버) · Q1 푸른 드래곤(`blue_dragon` · 모양 공격 조각 `MobAttackShape`) · Q2 · Q3 드랍표 문서 · Q4 장비 감사 · Q5 BR2(세트 스위치 끔 · SAVE v49 setZone · 토벌 입장 솔로 · 토벌 시간 공정성) · Q6 G3(수련 · 직업 능력 · 퀘스트 · SAVE v50) · Q7 U1 일부(퀘스트 창 J · CP · 알림 분리 · 성기사 칸 · 순위 목업 3안). Play A ~ D 각 1회. **다음 = 추가 대기열 Q8(K3 영혼)부터**(`QUEUE-10h-extra-prompt.md`). 개발 명령: `/gg tp tierN` · `/gg set on|off|equip` · `/gg raid <보스> [remote]` · `/gg q6 view|note|claim|train` · `/gg drop force <등급> [부위] [boss|field]`.
