@@ -624,6 +624,20 @@ local function frameFull(threshold)
 	return frameUsedId == frameId and frameUsed >= threshold
 end
 
+-- QUEUE-6h-b 후속(R7 1위): 파트를 만드는 일(솟기 · 상한 교체 붕괴)도 나눠 도는 계산과 같은 장부로 - 이번 프레임이 차 있으면 최대 spawnWaitMaxFrames만큼 미루고, 쓴 시간을 장부에 더한다.
+local function runInFrameBudget(fn)
+	local threshold = REGROW.frameBudgetMs / 1000 * REGROW.yieldAtFraction
+	local waited = 0
+	while frameFull(threshold) and waited < REGROW.spawnWaitMaxFrames do
+		RunService.Heartbeat:Wait()
+		waited += 1
+	end
+	local t0 = os.clock()
+	local result, why = fn()
+	addFrameUsed(os.clock() - t0)
+	return result, why
+end
+
 -- 검증용: 나눠 도는 계산이 한 프레임에 쓴 합의 최댓값(ms) - reset이면 0으로.
 function BossArenaMap.debugFrameUsedPeakMs(reset)
 	local peak = math.max(frameUsedPeak, frameUsedId == frameId and frameUsed or 0) * 1000
@@ -728,13 +742,24 @@ function BossArenaMap.planRegrow(zoneKey, context)
 		return nil, why -- 새 자리가 없으면 옛것도 그대로 둔다(리뷰 1 - 먼저 부수면 하나가 그냥 사라졌다)
 	end
 	if oldest then
-		BossArenaMap.breakObstacle(zoneKey, oldest, "cap") -- 새 자리가 정해진 뒤 무너뜨린다(전조 1.5초 뒤 새것이 솟는다)
+		if context.sliced then
+			runInFrameBudget(function() -- QUEUE-6h-b 후속: 붕괴도 프레임 장부에
+				if active[zoneKey] == state then
+					BossArenaMap.breakObstacle(zoneKey, oldest, "cap")
+				end
+			end)
+			if active[zoneKey] ~= state or context.token and context.token ~= state.regrowToken then
+				return nil, "cancelled"
+			end
+		else
+			BossArenaMap.breakObstacle(zoneKey, oldest, "cap") -- 새 자리가 정해진 뒤 무너뜨린다(전조 1.5초 뒤 새것이 솟는다)
+		end
 	end
 	local worldColliders = {}
 	for _, c in ipairs(item.colliders) do
 		table.insert(worldColliders, { center = Vector3.new(zone.center.X + c.x, FLOOR_TOP_Y, zone.center.Z + c.z), r = c.r, h = c.h })
 	end
-	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries, replaced = oldest, frames = frames, maxSliceMs = maxSliceMs }, nil
+	return { item = item, token = state.regrowToken, worldColliders = worldColliders, tries = tries, replaced = oldest, frames = frames, maxSliceMs = maxSliceMs, sliced = context.sliced }, nil
 end
 
 -- 전조가 끝나 실제로 솟는다(리셋 · 보스전 끝으로 토큰이 바뀌었으면 nil). context(선택 - planRegrow와 같은 모양, 멤버는 안 본다) = 솟기 직전에 자리를 다시 본다(리뷰 6 -
@@ -767,7 +792,20 @@ function BossArenaMap.spawnRegrown(zoneKey, plan, context)
 		end
 	end
 	local item = table.clone(plan.item)
-	local obstacle = spawnObstacle(state, zoneOfKey(zoneKey), item)
+	local obstacle
+	if plan.sliced then
+		obstacle = runInFrameBudget(function() -- QUEUE-6h-b 후속: 파트 생성도 프레임 장부에(차 있으면 최대 spawnWaitMaxFrames 미룸)
+			if active[zoneKey] ~= state or state.regrowToken ~= plan.token then
+				return nil
+			end
+			return spawnObstacle(state, zoneOfKey(zoneKey), item)
+		end)
+		if not obstacle then
+			return nil, "cancelled"
+		end
+	else
+		obstacle = spawnObstacle(state, zoneOfKey(zoneKey), item)
+	end
 	obstacle.regrown = true
 	print(("[forge-game] 지형 재생성: %s #%d %s(%.0f, %.0f)%s"):format(zoneKey, item.id, item.kind, item.x, item.z, item.underMember and " - 멤버 발밑" or ""))
 	return obstacle

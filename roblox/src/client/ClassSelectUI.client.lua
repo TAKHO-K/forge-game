@@ -5,7 +5,7 @@
 -- 있을 때 다른 직업을 고르면 확인창(ClassConfirmPanel)을 먼저 띄운다. 최초 선택(아직
 -- 아무 직업도 없을 때)은 잃을 게 없으므로 확인 없이 바로 전환한다.
 -- S20b 사전 작업 1: 첫 접속 화면이라 모바일 기준 해상도(800 × 360 → ScreenGui 800 × 302)에서도 안전 여백 8을 지킨다 - UIManager.fitToScreen이 패널 높이를 (화면 높이 - 16) 이하로 줄이고,
--- 제목은 고정 · 안내 + 직업 버튼 4개는 그 아래 ScrollingFrame이다(내용 248 = 302에서 남는 자리 248이라 스크롤 없이 다 보인다 - 더 낮은 화면에서만 안내부터 스크롤로 밀린다).
+-- 제목은 고정 · 안내 + 직업 버튼 4개(+ 준비 중 카드)는 그 아래 ScrollingFrame이다(QUEUE-6h-b 후속: 내용 320 - 폰 302에서는 fitToScreen이 줄이고 본문이 스크롤된다 · PC 1024 × 768은 스크롤 없음).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -28,7 +28,7 @@ local panel = Instance.new("Frame")
 panel.Name = "ClassSelectPanel"
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-panel.Size = UDim2.new(0, 380, 0, 300) -- 260 + 안내 한 줄(S12)
+panel.Size = UDim2.new(0, 380, 0, 364) -- 260 + 안내 한 줄(S12) + 64(QUEUE-6h-b 후속 결정 9: Q7-8 성기사 카드가 늘린 내용 320 = 안내 32 + 버튼 4 × 46 + 카드 64 + 간격 5 × 8 → 제목 38 + 320 ≤ 364라 1024 × 768에서 스크롤 없이 다 보인다)
 panel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 panel.BackgroundTransparency = 0.05
 panel.Visible = false
