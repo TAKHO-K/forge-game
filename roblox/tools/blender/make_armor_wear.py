@@ -77,8 +77,9 @@ def _bolt(h, w, d):
 
 
 # ────────────────────────── 조각 기본형(파트 로컬) ──────────────────────────
-def chest_base():  # 몸통 2 × 1.6 × 1을 0.07 감싸는 껍데기 · 가슴 앞으로 볼록 · 목 둘레는 좁혀 열어 둠
-    return yl([(-0.8, 2.1, 1.12, 0.0), (-0.25, 2.16, 1.16, -0.03), (0.4, 2.2, 1.2, -0.06), (0.82, 1.7, 1.02, 0.0)], 0.3)
+def chest_base():  # 몸통 2 × 1.6 × 1을 감싸는 껍데기 · 가슴 앞으로 볼록 · 목 둘레는 좁혀 열어 둠
+    # 2차(검토 - 앞치마처럼 옆구리가 드러났다): 폭 ×1.08 · 옆 두께도 감싼다
+    return A.xform(yl([(-0.8, 2.1, 1.14, 0.0), (-0.25, 2.16, 1.18, -0.03), (0.4, 2.2, 1.22, -0.06), (0.82, 1.74, 1.04, 0.0)], 0.3), s=(1.08, 1, 1))
 
 
 def shoulder_base(side, big):  # 윗팔 위 절반을 덮는 둥근 받이(바깥쪽으로 넓게)
@@ -94,8 +95,8 @@ def belt_base():  # 허리띠 + 앞 · 옆 드림 4(얇게 - 허벅지 위 0.35�
 
 def glove_base(side):  # 손 1 × 0.3 × 1 덮개 · 앞 마디 띠 · 안쪽 엄지(장갑으로 읽히게) · 손바닥(아래)은 얇게
     shell = yl([(-0.19, 1.08, 1.06, 0), (0.05, 1.12, 1.1, 0), (0.21, 1.02, 1.0, 0)], 0.18)
-    knuckle = A.merge(*[A.ellipsoid((0.13, 0.2, 0.16), n=6, rings=2, center=(x, -0.12, -0.5)) for x in (-0.33, -0.11, 0.11, 0.33)])  # 말아 쥔 손가락 4(손 아래 · 앞으로 불룩 = 주먹 실루엣)
-    thumb = A.tube([(-side * 0.42, 0.0, -0.15), (-side * 0.62, -0.02, -0.38), (-side * 0.58, 0.02, -0.6)], lambda u: 0.14 - 0.03 * u, sides=5)
+    knuckle = A.merge(*[A.ellipsoid((0.14, 0.21, 0.24), n=6, rings=2, center=(x, -0.12, -0.62)) for x in (-0.33, -0.11, 0.11, 0.33)])  # 2차: 말아 쥔 손가락 4를 앞으로 ×1.5(주먹 실루엣)
+    thumb = A.tube([(-side * 0.46, 0.0, -0.12), (-side * 0.74, -0.02, -0.34), (-side * 0.7, 0.04, -0.56)], lambda u: 0.15 - 0.03 * u, sides=5)  # 엄지를 옆으로 빼냄
     return A.merge(shell, knuckle, thumb)
 
 
@@ -104,8 +105,10 @@ def bracer_base():  # 아래팔 아래 60%를 감싸고 손목 쪽이 나팔처�
 
 
 def boot_base():  # 발 껍데기(앞 −Z 길게 · 앞코 살짝 들림) + 발목 턱
-    shell = A.loft([[(x, y + yc, z) for x, y in A.chamfer_rect(w, h, 0.1)] for z, w, h, yc in ((0.55, 1.1, 0.46, 0.04), (-0.1, 1.14, 0.46, 0.0), (-0.55, 1.08, 0.4, -0.02), (-0.68, 0.9, 0.26, 0.02))])
-    return shell
+    # 2차(검토 - 둥근 상자로 퇴보): 앞코 +0.35 · 굽 +0.12 → 장화 L자 윤곽
+    shell = A.loft([[(x, y + yc, z) for x, y in A.chamfer_rect(w, h, 0.1)] for z, w, h, yc in ((0.55, 1.1, 0.46, 0.04), (-0.2, 1.14, 0.44, 0.0), (-0.85, 1.0, 0.32, -0.04), (-1.03, 0.72, 0.18, 0.0))])
+    heel = A.box(1.06, 0.12, 0.42, center=(0, -0.29, 0.34))
+    return A.merge(shell, heel)
 
 
 def greave_base():  # 정강이 판(앞 두껍게) + 무릎 받이
@@ -167,7 +170,7 @@ def zone_features(zone, piece, big):
         elif kind in ("Bracer", "Greave"):
             t += [ring_y(y, 0.54, 0.54, 0.08, 0.1) for y in ((-0.3, 0.0) if kind == "Bracer" else (-0.3, 0.15))]
         elif kind == "Boot":
-            b.append(A.tube(A.bezier((0, 0.0, -0.62), (0, 0.02, -0.9), (0, 0.3, -0.95), (0, 0.34, -0.78), n=4), lambda u: 0.13 * (1 - u) + 0.04, sides=5, tip_end=True))
+            b.append(A.tube(A.bezier((0, 0.0, -0.9), (0, 0.02, -1.12), (0, 0.3, -1.16), (0, 0.34, -1.0), n=4), lambda u: 0.13 * (1 - u) + 0.04, sides=4, tip_end=True))  # 2차: 늘린 앞코 끝에서 말림
     elif zone == "tier5":  # 폭풍 첨탑: 번개 날 · 작은 날개
         if kind == "Shoulder":
             b.append(A.ellipsoid((0.6 * big, 0.26, 0.6 * big), n=8, rings=3, center=(side * 0.1, 0.62, 0), squash_bottom=0.25))
@@ -230,7 +233,8 @@ def grade_extra(slot, piece, grade):
             crack = {"armor": [(-0.4, 0.55, -0.64), (0.1, 0.2, -0.68), (-0.15, -0.2, -0.66), (0.3, -0.55, -0.62)],
                      "gloves": [(side * 0.58, 0.05, -0.2), (side * 0.6, -0.2, 0.1), (side * 0.58, -0.45, -0.1)],
                      "shoes": [(-0.15, 0.3, -0.6), (0.1, 0.0, -0.62), (-0.05, -0.35, -0.6)]}[slot]
-            gl.append(W.crack_line(crack, 0.1, 0.05))
+            if slot == "armor":  # 2차: 금빛 균열은 가슴에만 · 가늘고 짧게(구역 형태가 주인공)
+                gl.append(W.crack_line(crack[1:3], 0.06, 0.04))
     return g, gl, b
 
 
@@ -238,9 +242,13 @@ def piece_meshes(zone, slot, grade, piece):
     kind = piece.split("_")[0]
     side = -1 if piece.endswith("_L") else 1
     big = 1.18 if at_least(grade, "legendary") else 1.0
+    if kind == "Shoulder":
+        big *= 1.35  # 2차(검토 - 어깨 주인공이 A2-N1보다 작았다): 윗팔 폭 1 대비 가로 약 1.4
     base = {"Chest": chest_base, "Belt": belt_base, "Glove": glove_base, "Bracer": bracer_base, "Boot": boot_base, "Greave": greave_base}.get(kind)
     base = shoulder_base(side, big) if kind == "Shoulder" else (glove_base(side) if kind == "Glove" else base())
     add_b, trim = zone_features(zone, piece, big)
+    if grade == "transcendent":  # 2차(검토 - 6구역 초월이 같은 "검은 판 + 금 번개"): 구역 형태 조각을 금 테로 옮겨 검은 본체 위에서 구역 실루엣이 금으로 읽히게
+        trim, add_b = trim + add_b, []
     g, gl, b2 = grade_extra(slot, piece, grade)
     out = [("", A.merge(base, *add_b, *b2), "base", False)]
     if trim:
@@ -275,7 +283,7 @@ def mannequin(slot):
     return out
 
 
-ICON_VIEW = {"armor": (["Chest", "Shoulder_L", "Shoulder_R", "Belt"], 25.0), "gloves": (["Glove_R", "Bracer_R"], 60.0), "shoes": (["Boot_R", "Greave_R"], 300.0)}  # 장갑 = 안쪽(엄지) 옆 · 신발 = 옆(앞코 실루엣)
+ICON_VIEW = {"armor": (["Chest", "Shoulder_L", "Shoulder_R", "Belt"], 25.0), "gloves": (["Glove_R", "Bracer_R"], 30.0), "shoes": (["Boot_R", "Greave_R"], 300.0)}  # 2차: 장갑 = 옆 30°  # 장갑 = 안쪽(엄지) 옆 · 신발 = 옆(앞코 실루엣)
 
 
 def parse():
@@ -320,7 +328,13 @@ def main():
                 if opt["icons"]:
                     names, turn = ICON_VIEW[slot]
                     sel = [o for o in objs if o.name.split("_Trim")[0].split("_Grade")[0].split("_Glow")[0] in names]
+                    if slot == "gloves":  # 2차: 아이콘에서 팔찌 : 주먹 = 0.7 : 1(렌더 전용 - FBX는 위에서 이미 내보냄)
+                        for o in sel:
+                            if o.name.startswith("Bracer"):
+                                o.scale = (0.72, 0.72, 0.72)
                     I.render_icon(sel, os.path.join(ICON_OUT, "%s.png" % key), base_rot=(0, 0, 0), roll=0.0, tilt=(-10.0 if slot != "shoes" else -25.0, turn), hull=0.03, pad=1.02)
+                    for o in sel:
+                        o.scale = (1, 1, 1)
                 if opt["render"] and grade in ("normal", "legendary", "transcendent"):
                     man = mannequin(slot)
                     A.render_views(objs + man, os.path.join(opt["render"], key), views=("front", "34"), kinds=("game",), sil=False, hull=0.03, res=(520, 700))
