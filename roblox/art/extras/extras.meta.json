@@ -1,0 +1,17 @@
+{
+ "version": "A2-N1",
+ "tris": {
+  "TelegraphCircle": 384,
+  "TelegraphCone": 128,
+  "ShockRing": 144,
+  "WarnPillar": 336,
+  "ImpactStar": 64,
+  "transcend_crystal": 291,
+  "gate_decor_section_guardian": 316,
+  "gate_decor_frost_giant": 364,
+  "gate_decor_abyssal_lord": 568,
+  "gate_decor_crystal_queen": 256,
+  "gate_decor_scorpion_queen": 682,
+  "gate_decor_storm_lord": 244
+ }
+}
