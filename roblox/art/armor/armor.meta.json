@@ -154,5 +154,6 @@
   "tier4": "모래 유적",
   "tier5": "폭풍 첨탑",
   "tier6": "빙하 동굴"
- }
+ },
+ "supersededBy": "armor_wear.meta.json (A2-N2 착용형 - make_armor_wear.py · 같은 FBX 이름을 덮어씀)"
 }
