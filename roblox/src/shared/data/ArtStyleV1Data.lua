@@ -79,7 +79,7 @@ return {
 	-- ③ 강화대(클라 겉모습 - 서버 Base · AnvilTop은 LocalTransparencyModifier로 숨기고 충돌 · 거리 판정 자리는 그대로). 로컬 축: −Z = 허브 쪽(앞) · 바닥 = y 0.
 	forge = {
 		hideParts = { "Base", "AnvilTop" },
-		wood = C(104, 66, 40), woodTop = C(140, 96, 58), -- (139, 90, 43)은 조명 아래 주황 호박처럼 떴다(Play 실측) iron = C(78, 82, 100), ironTop = C(150, 156, 176), ironShade = C(52, 54, 68),
+		wood = C(104, 66, 40), woodTop = C(140, 96, 58), iron = C(78, 82, 100), ironTop = C(150, 156, 176), ironShade = C(52, 54, 68), -- 나무: (139, 90, 43)은 조명 아래 주황 호박처럼 떴다(Play 실측)
 		stone = C(128, 120, 118), stoneShade = C(86, 80, 84), ember = C(255, 140, 50), ingot = C(255, 170, 60), sign = C(255, 230, 90), signBoard = C(96, 62, 40),
 		light = { range = 9, brightness = 0.7, color = C(255, 170, 90) }, -- 16 · 1.6은 받침 · 굴뚝을 주황으로 물들였다(Play 실측)
 		embers = { rate = 4, lifetime = 1.6, speed = 3, size = 0.25, color = C(255, 160, 70) }, -- 굴뚝 불씨 ≤ 6(폰 예산)
