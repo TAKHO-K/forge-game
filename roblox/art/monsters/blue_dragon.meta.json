@@ -1,0 +1,151 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 180,
+   "origin": [
+    0.0,
+    0.9,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Leg_FL": {
+   "tris": 102,
+   "origin": [
+    -1.1,
+    -0.1,
+    -1.5
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Leg_FR": {
+   "tris": 102,
+   "origin": [
+    1.1,
+    -0.1,
+    -1.5
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Leg_BL": {
+   "tris": 102,
+   "origin": [
+    -1.1,
+    -0.1,
+    1.5
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Leg_BR": {
+   "tris": 102,
+   "origin": [
+    1.1,
+    -0.1,
+    1.5
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Neck1": {
+   "tris": 184,
+   "origin": [
+    0.0,
+    1.8,
+    -2.0
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Head": {
+   "tris": 204,
+   "origin": [
+    0.0,
+    4.4311,
+    -2.9577
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Jaw": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    4.1311,
+    -3.2577
+   ],
+   "neon": false,
+   "color": "#AFE1FA"
+  },
+  "Eyes": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    4.9311,
+    -4.6577
+   ],
+   "neon": true,
+   "color": "#C8F0FF"
+  },
+  "Wing_L": {
+   "tris": 86,
+   "origin": [
+    -1.5,
+    1.7,
+    -0.4
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Wing_R": {
+   "tris": 86,
+   "origin": [
+    1.5,
+    1.7,
+    -0.4
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Tail1": {
+   "tris": 44,
+   "origin": [
+    0.0,
+    1.2,
+    2.3
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Tail2": {
+   "tris": 44,
+   "origin": [
+    0.0,
+    0.7485,
+    4.8605
+   ],
+   "neon": false,
+   "color": "#4682CD"
+  },
+  "Tail3": {
+   "tris": 48,
+   "origin": [
+    0.0,
+    0.3318,
+    7.224
+   ],
+   "neon": false,
+   "color": "#C8F0FF"
+  }
+ },
+ "partCount": 14,
+ "totalTris": 1436,
+ "triBudget": 1500,
+ "budgetUse": 0.957,
+ "version": "A2-N1",
+ "rigId": "blue_dragon",
+ "kind": "monster"
+}

@@ -1,0 +1,91 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 324,
+   "origin": [
+    0.0,
+    -0.1,
+    0.0
+   ],
+   "neon": false,
+   "color": "#F0F2F8"
+  },
+  "Wool": {
+   "tris": 282,
+   "origin": [
+    0.0,
+    0.6,
+    0.5
+   ],
+   "neon": false,
+   "color": "#F0F2F8"
+  },
+  "Head": {
+   "tris": 248,
+   "origin": [
+    0.0,
+    0.2,
+    -1.45
+   ],
+   "neon": false,
+   "color": "#A8A9AE"
+  },
+  "Eyes": {
+   "tris": 120,
+   "origin": [
+    0.0,
+    0.35,
+    -2.27
+   ],
+   "neon": false,
+   "color": "#FDF3C5"
+  },
+  "Leg_FL": {
+   "tris": 68,
+   "origin": [
+    -0.6,
+    -1.0,
+    -0.8
+   ],
+   "neon": false,
+   "color": "#A8A9AE"
+  },
+  "Leg_FR": {
+   "tris": 68,
+   "origin": [
+    0.6,
+    -1.0,
+    -0.8
+   ],
+   "neon": false,
+   "color": "#A8A9AE"
+  },
+  "Leg_BL": {
+   "tris": 68,
+   "origin": [
+    -0.6,
+    -1.0,
+    0.8
+   ],
+   "neon": false,
+   "color": "#A8A9AE"
+  },
+  "Leg_BR": {
+   "tris": 68,
+   "origin": [
+    0.6,
+    -1.0,
+    0.8
+   ],
+   "neon": false,
+   "color": "#A8A9AE"
+  }
+ },
+ "partCount": 8,
+ "totalTris": 1246,
+ "triBudget": 1500,
+ "budgetUse": 0.831,
+ "version": "A2-N1",
+ "rigId": "cloud_sheep",
+ "kind": "monster"
+}

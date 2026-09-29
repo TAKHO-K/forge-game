@@ -1,0 +1,111 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    -0.1,
+    0.0
+   ],
+   "neon": false,
+   "color": "#5A3C96"
+  },
+  "Head": {
+   "tris": 260,
+   "origin": [
+    0.0,
+    0.5,
+    0.0
+   ],
+   "neon": false,
+   "color": "#5A3C96"
+  },
+  "Eyes": {
+   "tris": 120,
+   "origin": [
+    0.0,
+    1.0,
+    -0.46
+   ],
+   "neon": false,
+   "color": "#D0F6FF"
+  },
+  "Horn_L": {
+   "tris": 28,
+   "origin": [
+    -0.35,
+    1.5,
+    0.0
+   ],
+   "neon": true,
+   "color": "#78E6FF"
+  },
+  "Horn_R": {
+   "tris": 28,
+   "origin": [
+    0.35,
+    1.5,
+    0.0
+   ],
+   "neon": true,
+   "color": "#78E6FF"
+  },
+  "Arm_L": {
+   "tris": 74,
+   "origin": [
+    -0.75,
+    0.3,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3F2A69"
+  },
+  "Arm_R": {
+   "tris": 74,
+   "origin": [
+    0.75,
+    0.3,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3F2A69"
+  },
+  "Leg_L": {
+   "tris": 80,
+   "origin": [
+    -0.3,
+    -0.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3F2A69"
+  },
+  "Leg_R": {
+   "tris": 80,
+   "origin": [
+    0.3,
+    -0.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3F2A69"
+  },
+  "Tail": {
+   "tris": 52,
+   "origin": [
+    0.0,
+    -0.5,
+    0.45
+   ],
+   "neon": false,
+   "color": "#78E6FF"
+  }
+ },
+ "partCount": 10,
+ "totalTris": 892,
+ "triBudget": 1500,
+ "budgetUse": 0.595,
+ "version": "A2-N1",
+ "rigId": "bolt_imp",
+ "kind": "monster"
+}

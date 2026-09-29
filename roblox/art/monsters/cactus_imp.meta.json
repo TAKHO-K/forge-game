@@ -1,0 +1,71 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 242,
+   "origin": [
+    0.0,
+    -0.3,
+    0.0
+   ],
+   "neon": false,
+   "color": "#469646"
+  },
+  "Head": {
+   "tris": 138,
+   "origin": [
+    0.0,
+    1.2,
+    0.0
+   ],
+   "neon": false,
+   "color": "#469646"
+  },
+  "Flower": {
+   "tris": 144,
+   "origin": [
+    0.0,
+    1.65,
+    0.0
+   ],
+   "neon": false,
+   "color": "#F596BE"
+  },
+  "Eyes": {
+   "tris": 120,
+   "origin": [
+    0.0,
+    0.3,
+    -0.62
+   ],
+   "neon": false,
+   "color": "#191216"
+  },
+  "Arm_L": {
+   "tris": 136,
+   "origin": [
+    -0.85,
+    -0.1,
+    0.0
+   ],
+   "neon": false,
+   "color": "#469646"
+  },
+  "Arm_R": {
+   "tris": 136,
+   "origin": [
+    0.85,
+    -0.1,
+    0.0
+   ],
+   "neon": false,
+   "color": "#469646"
+  }
+ },
+ "partCount": 6,
+ "totalTris": 916,
+ "triBudget": 1500,
+ "budgetUse": 0.611,
+ "version": "A2-N1",
+ "rigId": "cactus_imp",
+ "kind": "monster"
+}

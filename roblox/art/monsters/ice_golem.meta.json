@@ -1,0 +1,101 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 154,
+   "origin": [
+    0.0,
+    0.4,
+    0.0
+   ],
+   "neon": false,
+   "color": "#AAD7F5"
+  },
+  "Head": {
+   "tris": 66,
+   "origin": [
+    0.0,
+    1.4,
+    -0.1
+   ],
+   "neon": false,
+   "color": "#C8E6FA"
+  },
+  "Eyes": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    1.85,
+    -0.56
+   ],
+   "neon": false,
+   "color": "#191216"
+  },
+  "Arm_L": {
+   "tris": 66,
+   "origin": [
+    -1.6,
+    1.0,
+    0.0
+   ],
+   "neon": false,
+   "color": "#AAD7F5"
+  },
+  "Arm_R": {
+   "tris": 66,
+   "origin": [
+    1.6,
+    1.0,
+    0.0
+   ],
+   "neon": false,
+   "color": "#AAD7F5"
+  },
+  "Fist_L": {
+   "tris": 44,
+   "origin": [
+    -1.6,
+    -0.4,
+    0.0
+   ],
+   "neon": false,
+   "color": "#509BD7"
+  },
+  "Fist_R": {
+   "tris": 44,
+   "origin": [
+    1.6,
+    -0.4,
+    0.0
+   ],
+   "neon": false,
+   "color": "#509BD7"
+  },
+  "Leg_L": {
+   "tris": 66,
+   "origin": [
+    -0.6,
+    -0.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#7796AC"
+  },
+  "Leg_R": {
+   "tris": 66,
+   "origin": [
+    0.6,
+    -0.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#7796AC"
+  }
+ },
+ "partCount": 9,
+ "totalTris": 668,
+ "triBudget": 1500,
+ "budgetUse": 0.445,
+ "version": "A2-N1",
+ "rigId": "ice_golem",
+ "kind": "monster"
+}
