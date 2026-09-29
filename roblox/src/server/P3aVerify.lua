@@ -401,12 +401,20 @@ function P3aVerify.runLive(player, env)
 		PlayerProfile.setLeaderboardTaintedForDevTools(player, false)
 		local statsBefore = Leaderboard.stats()
 		local stage = base + interval
+		-- QUEUE-6h-b 후속: S1(40be64d)부터 eligibility에 속도 봉투(AcquisitionAudit.velocityHold - 플레이 시간 대비 계정 최고 스테이지)가 붙었다.
+		-- 검증 계정은 Play 몇 분 만에 이 블록에 와서 봉투(1시간 540 · 0시간 1 × 1.1)에 걸려 개인 쓰기 0건이 됐다. 봉투는 S1(나) ③이 따로 재므로
+		-- 여기서는 S1(나) ③ "합법 시간"과 같은 값(hoursForStage + 1시간)을 잠깐 넣고 쓰기 경로만 잰다(뒤에서 원래 값으로).
+		local AuditMath = require(ReplicatedStorage.Shared.AuditMath)
+		profile.audit = profile.audit or { lambda = 0, primordialRolls = 0, playSeconds = 0 }
+		local savedPlaySeconds = profile.audit.playSeconds
+		profile.audit.playSeconds = math.floor(AuditMath.hoursForStage(math.max(stage, PlayerProfile.getAccountBestStage(player))) * 3600) + 3600
 		killBoss(ctx, stage, 600)
+		profile.audit.playSeconds = savedPlaySeconds
 		local judgement = Leaderboard.lastJudgement()
 		local wrote = waitWrites(Leaderboard)
 		local statsAfter = Leaderboard.stats()
-		r.check(("B 기록 처치(스테이지 %d · 600초) → 판정 %s · 개인 쓰기 %d건 · 정렬 쓰기 +%d · 일반 쓰기 +%d(기대 +2 · +2 = 개인 · 직업 / 카드 2) · 대기 끝=%s"):format(stage,
-			judgement and (judgement.rejected or "통과") or "없음", judgement and #judgement.writes or 0,
+		r.check(("B 기록 처치(스테이지 %d · 600초) → 판정 %s · 자격 %s · 개인 쓰기 %d건 · 정렬 쓰기 +%d · 일반 쓰기 +%d(기대 +2 · +2 = 개인 · 직업 / 카드 2) · 대기 끝=%s"):format(stage,
+			judgement and (judgement.rejected or "통과") or "없음", tostring(judgement and judgement.reasons[player]), judgement and #judgement.writes or 0,
 			statsAfter.orderedWrite - statsBefore.orderedWrite, statsAfter.plainWrite - statsBefore.plainWrite, tostring(wrote)),
 			judgement and not judgement.rejected and #judgement.writes == 1 and statsAfter.orderedWrite - statsBefore.orderedWrite == 2
 				and statsAfter.plainWrite - statsBefore.plainWrite == 2 and wrote and statsAfter.failures == statsBefore.failures)

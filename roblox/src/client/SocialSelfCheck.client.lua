@@ -203,17 +203,29 @@ local function selfTest()
 
 	-- 새 HUD 버튼(MR.partyToggle) 겹침: 화면에 보이는 다른 슬롯 · 투표 패널 자리(계획) · 중앙 금지 구역
 	if partyButton then
-		local buttonRect = rectOf(partyButton)
-		local hits, tested = {}, 0
-		for zone, name, slot in ScreenMap.each() do
-			local inst = slot.instanceName and slot.instanceName ~= "PartyToggleButton" and playerGui:FindFirstChild(slot.instanceName, true)
-			if inst and inst:IsA("GuiObject") and inst.Visible and inst.AbsoluteSize.X > 0 and inst.AbsoluteSize.Y > 0 then
-				tested += 1
-				if intersects(buttonRect, rectOf(inst)) then
-					table.insert(hits, zone .. "." .. name)
+		-- QUEUE-6h-b 후속: 버튼은 칩 스택의 AbsoluteSize · AbsolutePosition 변경 신호로 따라간다(panels/Party.lua followChipStack). 칩 스택 폭은
+		-- 전투력 칩(1초마다) · 골드 칩(검증이 골드를 바꾼다)으로 수시로 바뀌어, 바뀐 그 프레임에 재면 따라가기 전 자리가 잡힐 수 있다.
+		-- 그래서 한 번 재고 0.3초 뒤 다시 잰다 - 판정은 다시 잰 값, 첫 측정 · 겹친 슬롯 사각형은 둘 다 찍는다(p1-regression.log X의 원인 가르기).
+		local function scanSlots()
+			local buttonRect = rectOf(partyButton)
+			local hits, tested = {}, 0
+			for zone, name, slot in ScreenMap.each() do
+				local inst = slot.instanceName and slot.instanceName ~= "PartyToggleButton" and playerGui:FindFirstChild(slot.instanceName, true)
+				if inst and inst:IsA("GuiObject") and inst.Visible and inst.AbsoluteSize.X > 0 and inst.AbsoluteSize.Y > 0 then
+					tested += 1
+					local rect = rectOf(inst)
+					if intersects(buttonRect, rect) then
+						table.insert(hits, ("%s.%s(%d, %d ~ %d, %d)"):format(zone, name, rect.min.X, rect.min.Y, rect.max.X, rect.max.Y))
+					end
 				end
 			end
+			return buttonRect, hits, tested
 		end
+		local firstButton, firstHits = scanSlots()
+		task.wait(0.3)
+		local buttonRect, hits, tested = scanSlots()
+		print(("[S12b][UI][측정] 파티 버튼 첫 측정 (%d, %d) · 겹침 [%s] → 0.3초 뒤 (%d, %d) · 겹침 [%s]"):format(firstButton.min.X, firstButton.min.Y, table.concat(firstHits, ","),
+			buttonRect.min.X, buttonRect.min.Y, table.concat(hits, ",")))
 		-- 투표 패널은 평소 숨어 있다 - 슬롯 표(고정 크기)의 자리를 그대로 계산해 본다.
 		local vote = ScreenMap.slot("MR", "requestBanner")
 		local viewport = partyButton:FindFirstAncestorOfClass("ScreenGui").AbsoluteSize

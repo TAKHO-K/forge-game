@@ -450,7 +450,7 @@ local function selfTestS12b()
 end
 
 if RunService:IsStudio() and (DevToolsConfig.verify.regression or table.find(DevToolsConfig.verify.current, "S12b(UI)")) then
-	task.delay(32, function()
+	task.delay(38, function() -- QUEUE-B1 B1-5: S15(UI) 30초 ~ 약 36초의 closeAll과 겹쳐 이름 메뉴가 닫혔다(옛 32초) - SocialSelfCheck 50초 전에 끝난다
 		local ok, err = pcall(selfTestS12b)
 		if not ok then
 			warn("[S12b][UI] 알림 자체 점검 에러: " .. tostring(err))

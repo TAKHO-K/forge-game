@@ -494,14 +494,27 @@ function P2Verify.runLive(player, env)
 		DropTableData.armorGradeByTier[1].primordial = 1
 		local drops = {}
 		local spot = WorldConfig.zones[WorldConfig.tierZoneOrder[1]].center + Vector3.new(0, 5, 0)
+		-- QUEUE-6h-b 후속: D1(b304f9e)부터 필드 태초는 땅이 아니라 가방 직행(CombatResolution isNumberedGrade 분기 →
+		-- PlayerProfile.addArmorDrop force) - 땅만 보면 태초가 나와도 0개로 셌다. 가방에 새로 들어온 아이템도 드랍으로 센다
+		-- (가방은 env.restore가 되돌린다).
+		local inventory = PlayerProfile.getProfile(player).inventory
 		for _ = 1, 60 do
 			local seen = modelSet(ItemDropState.getAllModels())
+			local seenBag = {}
+			for _, item in ipairs(inventory) do
+				seenBag[item] = true
+			end
 			local model = MonsterSpawner.spawn(MonsterData.tier1, spot, nil, {})
 			local isDead = MonsterState.applyDamage(model, 1e300, stage, player)
 			CombatResolution.resolveHit(player, model, isDead)
 			for _, dropModel in ipairs(ItemDropState.getAllModels()) do
 				if not seen[dropModel] and ItemDropState.getOwnerId(dropModel) == player.UserId then
 					table.insert(drops, ItemDropState.getItem(dropModel))
+				end
+			end
+			for _, item in ipairs(inventory) do
+				if not seenBag[item] then
+					table.insert(drops, item)
 				end
 			end
 			if #drops > 0 then

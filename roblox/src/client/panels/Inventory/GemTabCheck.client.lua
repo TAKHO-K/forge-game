@@ -19,7 +19,11 @@ local UIManager = require(script.Parent.Parent.Parent.UIManager)
 local Gem = require(ReplicatedStorage.Shared.Gem)
 
 local player = Players.LocalPlayer
-local START_DELAY = 78 -- 창을 여는 다른 점검(S12(UI) 패널 전수 · S12b(UI) 장비창 글씨)과 S20(UI) 요청 배너 점검이 끝난 뒤
+-- 창을 여는 다른 점검(S12(UI) 패널 전수 · S12b(UI) 장비창 글씨)과 S20(UI) 요청 배너 점검이 끝난 뒤.
+-- QUEUE-6h-b 후속: 78초는 S16(UI)(MenuBar 75초 ~ 약 90초 - 가방 토글 · closeAll)과 겹쳤다(p1-regression.log: 이 점검이 연 가방을 S16이
+-- 토글로 닫아 S16 "규칙 그대로" X, 닫힌 창은 GemTab.update가 건너뛰어 보석 칸이 서버 복원(GemSync) 전 수로 남아 "보유 보석 칸 1 = 스냅샷 0" X).
+-- → 장비창 재구성 점검(96초 · 약 10초) 뒤 · S20c(UI)(122초) 앞.
+local START_DELAY = 110
 
 local function run()
 	local results, passed = {}, 0

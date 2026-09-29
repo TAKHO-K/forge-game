@@ -383,6 +383,15 @@ local function runLive(player, env)
 	-- 시계는 어그로가 붙는 순간 다시 시작된다(MonsterAI → BossPatterns.onAggro) - 그래서 os.clock 절대 시각이 아니라
 	-- BossPatterns.debugClocks가 돌려주는 시계 시작 시각을 기준으로 잰다(29-1 Play의 교훈, 20.74 [6]).
 	r.section("스케줄러 실시간", function()
+		-- QUEUE-6h-b 후속: 이 블록은 체인 첫 단계라 서버 시작 때 도는 무거운 (가) 블록(S03(가) 380만 롤 · S14(가) · P3c(가) 100시드 등)과 겹친다.
+		-- p1-regression.log: 10초 루프에 Heartbeat 18틱(틱당 약 0.6초) → 첫 기믹 10.40초 · 예고 0.95초 · step 평균 128µs(18틱 표본)가 전부 프레임 간격 오차였다.
+		-- 실시간 측정은 서버 프레임이 고른 뒤에 시작한다(최대 120초 대기 - 못 고르면 그대로 재고 프레임 간격을 같이 적는다).
+		local calm, calmWaited = 0, os.clock()
+		while calm < 60 and os.clock() - calmWaited < 120 do
+			local dt = RunService.Heartbeat:Wait()
+			calm = dt < 1 / 30 and calm + 1 or 0
+		end
+		print(("[29-1][나] 실시간 측정 전 서버 프레임 안정 대기: %.1f초(연속 고른 프레임 %d/60)"):format(os.clock() - calmWaited, calm))
 		local model, data = spawnGuardian(player, env) -- 위 구역의 힌트 2단계가 이어진다(같은 보스) - 예고 x1.5 확인
 		BossMechanics.registerJudge("verify29", function()
 			return true
@@ -392,9 +401,9 @@ local function runLive(player, env)
 		local loopStartedAt = os.clock()
 		local gimmickAt, telegraphEndAt, earlier, restarts = nil, nil, nil, 0
 		local _, clockStartedAt = BossPatterns.debugClocks(model)
-		local stepSeconds, stepCount = 0, 0
+		local stepSeconds, stepCount, maxFrame = 0, 0, 0
 		while os.clock() - loopStartedAt < firstAt * 4 do
-			RunService.Heartbeat:Wait()
+			maxFrame = math.max(maxFrame, RunService.Heartbeat:Wait())
 			local before = os.clock()
 			BossPatterns.step(model, data, model.PrimaryPart.Position, player, root, 1 / 60, members)
 			stepSeconds += os.clock() - before
@@ -415,8 +424,8 @@ local function runLive(player, env)
 				break
 			end
 		end
-		r.check(("첫 기믹 시작 = 시계 시작 + %.2f초(기대 %d, 허용 +-0.25) - 그 전에 끼어든 스킬=%s(자리 비우기), 어그로 재시작 %d회"):format(
-			gimmickAt or -1, firstAt, tostring(earlier), restarts),
+		r.check(("첫 기믹 시작 = 시계 시작 + %.2f초(기대 %d, 허용 +-0.25) - 그 전에 끼어든 스킬=%s(자리 비우기), 어그로 재시작 %d회 · 루프 %d틱 · 최대 프레임 %.3f초"):format(
+			gimmickAt or -1, firstAt, tostring(earlier), restarts, stepCount, maxFrame),
 			near(gimmickAt, firstAt, 0.25) and earlier == nil)
 		local telegraph = (telegraphEndAt or 0) - (gimmickAt or 0)
 		r.check(("힌트 2단계 예고 시간: %.2f초(기대 0.4 x %.1f = %.2f)"):format(telegraph, mechanics.hint.telegraphMultiplier, 0.4 * mechanics.hint.telegraphMultiplier),

@@ -276,9 +276,23 @@ function P3aArenaVerify.runLiveC(player, env)
 				payload = data_
 			end
 		end
+		-- QUEUE-6h-b 후속: BR1-2(f9157e6)부터 서리 거인 포효는 primitive "sonic"(server/BossSonic - gimmickTelegraph를 안 보낸다)이고,
+		-- 지금 BossData의 실제 보스 기믹은 전부 전용 primitive(sonic · colorMatch · orgel · sandSearch · lightningRods)다.
+		-- 빨강 바닥(gimmickTelegraph → client/BossArenaPropsView)을 보내는 HANDLERS.gimmick 경로를 재려면 29-1(나)의
+		-- injectGimmick(BossMechanicsVerify)처럼 이 보스 인스턴스에만 공통 기믹 스킬을 얹는다(스킬표는 복사본 - BossData 원본 불변).
+		local skills = table.clone(data.skills)
+		skills.gimmick = {
+			primitive = "gimmick", bubble = "gimmick", role = "gimmick", kind = "verifyP3a",
+			cooldownSeconds = 20, priority = BossData.mechanics.priority.gimmick,
+			telegraphSeconds = 3.0, damage = { kind = "maxHp", fraction = BossData.mechanics.gimmickFailMaxHpFraction }, damageLabel = "기믹 실패(검증)",
+		}
+		local order = table.clone(data.skillOrder)
+		table.insert(order, "gimmick")
+		data.skills, data.skillOrder = skills, order
+		BossPatterns.onAggro(model, data) -- 새 스킬표로 시계를 다시 잰다(force가 이 스킬 id를 찾는다)
 		root.Anchored = true
 		place(root, Vector3.new(zone.center.X + 40, FLOOR_TOP + 3, zone.center.Z))
-		BossPatterns.force(model, data, "roar")
+		BossPatterns.force(model, data, "gimmick")
 		drive(player, root, model, data, 1, function()
 			return payload ~= nil
 		end)
