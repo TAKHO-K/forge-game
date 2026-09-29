@@ -86,21 +86,32 @@ end
 
 -- QUEUE-6h-b R3 F3(보안): 동작별 요청 간격(초대 · 원격 초대 · 생성 · 코드 합류 = 크로스서버 메시지 · MemoryStore를 쓰는 것은 길게) - 알 수 없는 동작은 표에 넣기 전에 버린다
 local lastPartyAction = setmetatable({}, { __mode = "k" })
-local function partyThrottled(player, action)
+local function partyThrottled(player, action, arg)
 	local gap = PartyConfig.requestGapSeconds[action] or PartyConfig.requestGapSeconds.default
 	local now = os.clock()
 	local rec = lastPartyAction[player] or {}
 	lastPartyAction[player] = rec
-	if rec[action] and now - rec[action] < gap then
+	local key = (action == "invite" or action == "invite_remote") and (action .. ":" .. tostring(arg)) or action -- 리뷰: 초대는 대상별(A · B 연달아 초대가 버려지지 않게)
+	if rec[key] and now - rec[key] < gap then
 		return true
 	end
-	rec[action] = now
+	rec[key] = now
+	-- 초대 전체 합계(대상을 바꿔 가며 스팸): 초당 PartyConfig.inviteMaxPerSecond
+	if action == "invite" or action == "invite_remote" then
+		if not rec.inviteWindowAt or now - rec.inviteWindowAt >= 1 then
+			rec.inviteWindowAt, rec.inviteCount = now, 0
+		end
+		rec.inviteCount += 1
+		if rec.inviteCount > PartyConfig.inviteMaxPerSecond then
+			return true
+		end
+	end
 	return false
 end
 local PARTY_ACTIONS = { invite = true, invite_remote = true, create = true, joincode = true, cancel_join = true, accept = true, decline = true, leave = true, kick = true, vote_agree = true, vote_reject = true }
 
 partyRequest.OnServerEvent:Connect(function(player, action, arg)
-	if type(action) ~= "string" or not PARTY_ACTIONS[action] or partyThrottled(player, action) then
+	if type(action) ~= "string" or not PARTY_ACTIONS[action] or partyThrottled(player, action, arg) then
 		return
 	end
 	if action == "invite" then

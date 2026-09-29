@@ -112,5 +112,6 @@ return {
 	memberMapName = "ForgePartyMember_v1",
 	messagingTopic = "ForgeParty_v1",
 	-- QUEUE-6h-b R3 F3: 파티 요청 동작별 최소 간격(초) - 크로스서버 메시지 · MemoryStore를 쓰는 동작은 길게(서버 한도 보호)
-	requestGapSeconds = { invite = 2, invite_remote = 2, create = 2, joincode = 2, leave = 1, default = 0.3 },
+	requestGapSeconds = { invite = 2, invite_remote = 2, create = 2, joincode = 2, leave = 1, default = 0.3 }, -- 초대 = 같은 대상에게 2초
+	inviteMaxPerSecond = 3, -- 초대 전체 합계(대상을 바꿔 가며 보내는 스팸 - 크로스서버 메시지 한도 보호)
 }

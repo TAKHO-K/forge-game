@@ -174,11 +174,11 @@ AttackResult · AttackLaunched · AttackMotion · AttackShotRelay · HitboxDebug
 |---|---|---|
 | F1 | 수정 - Remote 핸들러가 flags를 `{ water, ladder }` 새 표로만 넘김(server 표시 위조 불가) | FallServer.lua `FallServer.start` |
 | F2 | 수정 - 수평 상한 = 실제 물속(`WorldHazards.inWater`)일 때만(헤엄 상태 무시) | HeightGuard.lua |
-| F3 | 수정 - 파티 요청 허용 동작 목록 + 동작별 간격(`PartyConfig.requestGapSeconds` - 초대 · 원격 초대 · 생성 · 코드 합류 2초 · 나감 1초 · 나머지 0.3초) + 원격 초대 = 친구 목록(PartyFriendsFetch 캐시)에 든 사람만 | PartyServer.server.lua · PartyConfig.lua |
+| F3 | 수정(리뷰 반영: 초대 간격은 대상별 + 초대 전체 초당 3) - 파티 요청 허용 동작 목록 + 동작별 간격(`PartyConfig.requestGapSeconds` - 초대 · 원격 초대 · 생성 · 코드 합류 2초 · 나감 1초 · 나머지 0.3초) + 원격 초대 = 친구 목록(PartyFriendsFetch 캐시)에 든 사람만 | PartyServer.server.lua · PartyConfig.lua |
 | F4 | 수정 - 공중 모션 중계 사람당 초당 8건 + 거리 220 stud 안 사람에게만(`MovementConfig.airMotion.relayMaxPerSecond · relayRangeStuds`) | MovementServer.server.lua · MovementConfig.lua |
 | F5 | 수정 - 퀘스트 요청 허용 동작 확인 뒤에만 제한 표(Leaderboard는 같은 모양이지만 간격 표에 없는 동작이 이미 거절돼 표 증가 폭이 작음 - 기록만) | QuestService.lua |
 | F15 | 수정 - 모서리 잡기 좌표 NaN · inf 거절 | MovementServer.server.lua |
-| (R2) 판매 칸 밀림 | 수정 - 판매 · 일괄 판매 · 일괄 분해 요청 사이 0.3초 | InventoryServer.server.lua |
+| (R2) 판매 칸 밀림 | 수정 - 판매 요청에 장비 확인값(`Loot.itemSignature` - 등급 · 부위 · 레벨 · 옵션 · 주운 스테이지)을 같이 보내 서버가 대조(리뷰: 0.3초 간격은 지연이 길면 못 막고 정상 연속 판매를 버려 교체) | InventoryServer.server.lua · DetailSheet.lua · Loot.lua |
 | F6 · F7 · F8 · F9 · F10 · F11 · F12 · F13 | 기록만(낮음 - 결정 필요 목록) | - |
-- 공격 하네스(로컬 · 실제 서버 핸들러 호출): `roblox/tools/harness/attack_test.luau` 6/6 - 판매 잘못된 인자 8종 · 판매 연타 100회 = 1개 · 퀘스트 잘못된 인자 6종 · 펫 NaN · 거대 · 음수 · 남의 알 7종 · 설정 잘못된 값 3종 · 낙하 server 표시 위조.
+- 공격 하네스(로컬 · 실제 서버 핸들러 호출): `roblox/tools/harness/attack_test.luau` 7/7 - 판매 잘못된 인자 8종 · 판매 연타 100회 = 1개 · 정상 연속 판매 · 확인값 위조 거부 · 퀘스트 잘못된 인자 6종 · 펫 NaN · 거대 · 음수 · 남의 알 7종 · 설정 잘못된 값 3종 · 낙하 server 표시 위조.
 - Studio 실측(Play)은 Rojo 연결이 끊겨 이번 대기열에서 못 함(Studio 코드 = 1ba5273 일부 이전) - 다음 Play 목록.

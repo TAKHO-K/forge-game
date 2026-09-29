@@ -831,10 +831,11 @@ sellButton.Activated:Connect(function()
 		return
 	end
 	local index = S.selectedValue
+	local signature = require(ReplicatedStorage.Shared.Loot).itemSignature(item) -- 서버가 같은 장비인지 대조(칸 밀림 방지)
 	local function doSell()
 		S.selectedKind, S.selectedValue = nil, nil
 		S.rebuildGrid()
-		sellRequest:FireServer("sell", index)
+		sellRequest:FireServer("sell", index, signature)
 	end
 	if S.isDismantleEligibleGrade(item.grade) then -- 영웅 등급 이상(B2 - 분해 문턱과 같다)
 		confirmItemAction("판매", item, doSell)

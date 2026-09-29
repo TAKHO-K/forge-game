@@ -410,4 +410,13 @@ function Loot.isBulkDismantleTarget(item, cutoffGradeId)
 	return idx ~= nil and cutoff ~= nil and cutoff <= maxIdx and idx >= ArmorData.dismantleMinGradeIndex and idx <= cutoff
 end
 
+-- QUEUE-6h-b 리뷰: 칸 번호 요청(판매)이 가리키는 장비가 클라가 본 그 장비인지 대조하는 확인값(등급 · 부위 · 레벨 · 옵션 · 주운 스테이지 · 획득 시각).
+function Loot.itemSignature(item)
+	if type(item) ~= "table" then
+		return ""
+	end
+	local opt = type(item.option) == "table" and (tostring(item.option.id) .. ":" .. tostring(item.option.roll)) or "-"
+	return table.concat({ tostring(item.grade), tostring(item.part), tostring(item.itemLevel), opt, tostring(item.dropStage), tostring(item.acquiredAt or item.at) }, "|")
+end
+
 return Loot

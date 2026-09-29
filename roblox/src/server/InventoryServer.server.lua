@@ -62,19 +62,19 @@ end)
 -- (ImmediateSave.request)를 그대로 재사용한다. 가격 계산·잠금 검증은 전부
 -- PlayerProfile.sellItem/sellItemsBulkUpTo 안에서 서버가 한다 - 클라이언트는 "이
 -- 슬롯을(또는 이 등급 이하를) 팔겠다"는 의사만 보낸다.
-local lastSellAt = setmetatable({}, { __mode = "k" }) -- QUEUE-6h-b R2: 판매 연타 = 칸 번호가 밀려 다른 장비가 팔리던 것(저장 감사) → 판매 · 일괄 요청 사이 최소 간격
-sellRequest.OnServerEvent:Connect(function(player, action, arg)
-	if not PlayerProfile.getProfile(player) then
+sellRequest.OnServerEvent:Connect(function(player, action, arg, signature)
+	local profile = PlayerProfile.getProfile(player)
+	if not profile then
 		return
 	end
-	local now = os.clock()
-	if lastSellAt[player] and now - lastSellAt[player] < 0.3 then
-		return
-	end
-	lastSellAt[player] = now
 
 	if action == "sell" then
 		if type(arg) ~= "number" then
+			return
+		end
+		-- QUEUE-6h-b R2 · 리뷰: 칸 번호가 밀려(연타 · 지연) 다른 장비가 팔리지 않게 클라가 본 장비의 확인값과 대조(시간 간격은 지연이 길면 못 막고 정상 연속 판매를 버렸다)
+		local item = profile.inventory[math.floor(arg)]
+		if type(signature) ~= "string" or require(ReplicatedStorage.Shared.Loot).itemSignature(item) ~= signature then
 			return
 		end
 		local price = PlayerProfile.sellItem(player, math.floor(arg))

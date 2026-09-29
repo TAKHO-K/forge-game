@@ -491,7 +491,7 @@ function StageRewardBand.selfTest(report)
 	local deltas = ArmorData.bossItemLevelDelta
 	local lvRange = ("Lv %d~%d"):format(S50 + deltas[1].delta, S50 + deltas[#deltas].delta) -- P2.5c 결정 6: +0 ~ +15
 	local titleHead = ("스테이지 %d 보스 · "):format(S50)
-	-- QUEUE-6h-b R1: 기대 '20마리분'은 그대로 맞다(골드 · 경험치 = BossData goldMultiplier · expMultiplier 20). 띠가 hpMultiplier(≈34.88 날것)를 찍는 것은 진짜 버그로 보고 - X로 남는다
+	-- QUEUE-6h-b R1: 기대 '20마리분'은 그대로 맞다(골드 · 경험치 = BossData goldMultiplier · expMultiplier 20). 띠가 hpMultiplier(≈34.88 날것)를 찍던 버그는 QUEUE-6h-b에서 goldMultiplier로 고침
 	report(("제목 · 매번 · Lv 범위: [%s] · %d: [%s] (기대 '%s…' · '20마리분' · '%s' · '???' 없음)"):format(d50.title, S50, t50, titleHead, lvRange),
 		string.sub(d50.title, 1, #titleHead) == titleHead and has(t50, "골드·경험치 20마리분") and has(t50, lvRange) and not has(d50.title .. t50, "???"))
 	-- G1-1: 매번 줄에 장비가 없다(첫 클리어 때 2개로 읽히던 것) · 재도전 줄 = 장비 1개 + 등급 확률(D1: 토벌 표 - 영웅 78% · … · 태초 0.002%)

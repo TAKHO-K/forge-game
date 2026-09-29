@@ -47,10 +47,15 @@ local ok, err = pcall(function()
 		if r ~= "ok" then table.insert(bad, tostring(args[1]) .. "/" .. tostring(args[2]) .. "=" .. r) end
 	end
 	check("판매 잘못된 인자 8종 = 에러 없이 무시", #bad == 0 and #p.inventory == 5, table.concat(bad, " · "))
-	local t0 = os.clock()
-	while os.clock() - t0 < 0.32 do end -- 앞 요청의 0.3초 간격 창이 지나게
-	for _ = 1, 100 do fire("SellRequest", "sell", 1) end
-	check("판매 연타 100회(같은 순간) = 1개만 팔림", #p.inventory == 4, ("남은 %d"):format(#p.inventory))
+	p.inventory[1].option = nil
+	p.inventory[2].itemLevel = 6 -- 칸마다 다른 장비(확인값이 달라지게)
+	local sig = MODS.Loot.itemSignature(p.inventory[1])
+	for _ = 1, 100 do fire("SellRequest", "sell", 1, sig) end
+	check("판매 연타 100회(같은 칸 · 같은 확인값) = 1개만 팔림(밀려 올라온 다른 장비는 확인값 불일치로 거부)", #p.inventory == 4, ("남은 %d"):format(#p.inventory))
+	local sig2 = MODS.Loot.itemSignature(p.inventory[1])
+	fire("SellRequest", "sell", 1, sig2)
+	fire("SellRequest", "sell", 2, "위조")
+	check("정상 연속 판매는 바로 됨 · 확인값 위조는 거부", #p.inventory == 3, ("남은 %d"):format(#p.inventory))
 
 	-- ② 퀘스트: 모르는 동작 · 임의 문자열 · 없는 칸
 	local qbad = {}

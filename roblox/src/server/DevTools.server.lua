@@ -4598,7 +4598,9 @@ end
 
 if RunService:IsStudio() and verifyEnabled("R2(가)") then -- QUEUE-6h-b R2: 저장 안전 감사(이관 체인 · 멱등 · 새 계정 기본값 · 손상 입력 · NaN 저장 보호)
 	task.spawn(function()
-		local ok, err = pcall(require(script.Parent.SaveAuditVerify).runPure)
+		local ok, err = pcall(function()
+			require(script.Parent.SaveAuditVerify).runPure() -- 리뷰: require도 pcall 안(모듈 로드 에러여도 끝 줄이 찍히게 - 로그 폴링)
+		end)
 		if not ok then
 			print("===R2 검증 끝(가)=== 에러: " .. tostring(err))
 		end
