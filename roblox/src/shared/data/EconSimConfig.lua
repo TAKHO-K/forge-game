@@ -9,6 +9,7 @@ return {
 	-- 시뮬 전체 공통
 	partyExpRequiresPresence = true, -- P2 G: 게임 규칙(파티 경험치 보너스 = 조건 충족 파티원만)
 	seed = 20260923, -- 강화 시도 · 몬테카를로 난수 시드(같은 입력 → 같은 결과)
+	commonRandom = true, -- QUEUE-6h-b R4: 강화 굴림 = (단계 · n번째 시도)마다 고정(안 비교 흔들림 제거 - EconSim.commonDraw). 끄면 옛 한 흐름
 	yieldSeconds = 0.25, -- 계산이 이만큼(초) 이어지면 레벨업 사이에서 task.wait() 한 번(한 번에 계산하되 스크립트 시간 초과를 피한다 - 매 프레임 계산이 아니다)
 	-- P3c C5(사용자 확정 "첫 가방 점검 전 장비 착용 반영"): 첫 가방 점검 시각(분) - 견습 1단계(슬라임 25마리 ≈ 2분)가 가방을 열어 착용하라고 가르친다.
 	firstGearCheckMinutes = 2,

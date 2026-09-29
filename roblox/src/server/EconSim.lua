@@ -694,6 +694,27 @@ local function checkBag(state, profile, tierIndex, stage, kills, whatIf, killSec
 	return replaced, replaced > 0 or state.gemReplacements > gemsBefore
 end
 
+-- QUEUE-6h-b R4 공통 난수(common random numbers): 강화 굴림 = (시작 단계, 그 단계의 n번째 시도)마다 고정된 수. 한 흐름(rng)을 순서대로 쓰면
+-- 장비 획득 시점이 조금만 달라져도 뒤의 강화 결과가 전부 밀려 안 비교가 ±3% 흔들렸다. 스위치 EconSimConfig.commonRandom(끄면 옛 한 흐름).
+local function mul32(a, b) -- 32비트 정수 곱(2^53을 넘지 않게 16비트로 나눠 곱한다)
+	local lo, hi = a % 65536, (a - a % 65536) / 65536
+	return (lo * b + ((hi * b) % 65536) * 65536) % 4294967296
+end
+local function mix32(x) -- 정수 해시(murmur3 마무리) - Random 구현(Studio · 하네스)과 무관하게 고른 분포
+	x = bit32.bxor(x, bit32.rshift(x, 16))
+	x = mul32(x, 0x85EBCA6B)
+	x = bit32.bxor(x, bit32.rshift(x, 13))
+	x = mul32(x, 0xC2B2AE35)
+	return bit32.bxor(x, bit32.rshift(x, 16))
+end
+function EconSim.commonDraw(state, level)
+	state.drawCount = state.drawCount or {}
+	local n = (state.drawCount[level] or 0) + 1
+	state.drawCount[level] = n
+	local h = mix32(bit32.bxor(mix32(EconSimConfig.seed % 4294967296), mix32(level * 65537 + n)))
+	return h / 4294967296
+end
+
 local function tryEnhanceWithGold(state, profile, rng)
 	local guard = 0
 	while state.weaponLevel < math.min(profile.enhanceTarget, EnhanceConfig.maxLevel) and guard < 5000 do
@@ -724,7 +745,7 @@ local function tryEnhanceWithGold(state, profile, rng)
 			state.materials[mat.id] -= mat.count
 		end
 		state.enhanceAttempts += 1
-		local result = Enhance.tryEnhance(level, state.gauge, { useDrop, useReset }, rng:NextNumber())
+		local result = Enhance.tryEnhance(level, state.gauge, { useDrop, useReset }, EconSimConfig.commonRandom and EconSim.commonDraw(state, level) or rng:NextNumber())
 		if result.blockedBy then
 			state.tickets[result.blockedBy] -= 1
 		end
