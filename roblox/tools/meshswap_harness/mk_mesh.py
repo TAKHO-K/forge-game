@@ -1,6 +1,8 @@
-# MeshSwap 하네스 조립: 실제 모듈 소스를 sources.<이름>으로 감싸 한 파일로
+# A2-N2 3절 MeshSwap 하네스 조립: 실제 모듈 소스를 sources.<이름>으로 감싸 한 파일로(Play 없이 메타 정렬 · 회전 파트 관절 검사).
+# 사용: python mk_mesh.py test_mesh.luau && luau mesh_run.luau  (luau.exe = github.com/luau-lang/luau 릴리스 - 저장소에 두지 않는다)
+#   test_mesh.luau 첫 줄 REALMETA = roblox/art/monsters/*.meta.json 값(메타가 바뀌면 다시 뽑는다).
 import sys, os
-SRC = r"C:\Users\xkrgh\vibe\game\roblox\src"
+SRC = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))
 mods = {
     "MeshImportCheckData": "shared/data/MeshImportCheckData.lua",
     "MonsterRigSpec": "shared/data/MonsterRigSpec.lua",
