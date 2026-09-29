@@ -1,0 +1,44 @@
+{
+ "parts": {
+  "Base": {
+   "tris": 560,
+   "origin": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "neon": false,
+   "color": "#E6E2F0",
+   "codeName": "Base"
+  },
+  "Orb": {
+   "tris": 32,
+   "origin": [
+    0.0,
+    3.6,
+    0.0
+   ],
+   "neon": true,
+   "color": "#8C6EE6",
+   "codeName": "Orb"
+  },
+  "Ring": {
+   "tris": 340,
+   "origin": [
+    0.0,
+    3.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#8C6EE6",
+   "codeName": "Ring"
+  }
+ },
+ "partCount": 3,
+ "totalTris": 932,
+ "triBudget": 1500,
+ "budgetUse": 0.621,
+ "version": "A2-N1",
+ "item": "rebirth_altar",
+ "partCap": 8
+}

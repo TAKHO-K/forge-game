@@ -1,0 +1,176 @@
+{
+ "parts": {
+  "GateStep_1": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.1,
+    0.0
+   ],
+   "neon": false,
+   "color": "#78767C",
+   "codeName": "GateStep"
+  },
+  "GateStep_2": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "neon": false,
+   "color": "#A8A6AC",
+   "codeName": "GateStep"
+  },
+  "BossGatePostBase_L": {
+   "tris": 60,
+   "origin": [
+    -20.0,
+    3.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#78767C",
+   "codeName": "BossGatePostBase"
+  },
+  "BossGatePost_L": {
+   "tris": 300,
+   "origin": [
+    -20.0,
+    23.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4A4656",
+   "codeName": "BossGatePost"
+  },
+  "BossGatePostBand_L": {
+   "tris": 44,
+   "origin": [
+    -20.0,
+    24.2,
+    0.0
+   ],
+   "neon": false,
+   "color": "#A8A6AC",
+   "codeName": "BossGatePostBand"
+  },
+  "BossGateCapital_L": {
+   "tris": 44,
+   "origin": [
+    -20.0,
+    43.5,
+    0.0
+   ],
+   "neon": false,
+   "color": "#78767C",
+   "codeName": "BossGateCapital"
+  },
+  "BossGatePostBase_R": {
+   "tris": 60,
+   "origin": [
+    20.0,
+    3.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#78767C",
+   "codeName": "BossGatePostBase"
+  },
+  "BossGatePost_R": {
+   "tris": 376,
+   "origin": [
+    20.0,
+    23.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4A4656",
+   "codeName": "BossGatePost"
+  },
+  "BossGatePostBand_R": {
+   "tris": 44,
+   "origin": [
+    20.0,
+    24.2,
+    0.0
+   ],
+   "neon": false,
+   "color": "#A8A6AC",
+   "codeName": "BossGatePostBand"
+  },
+  "BossGateCapital_R": {
+   "tris": 44,
+   "origin": [
+    20.0,
+    43.5,
+    0.0
+   ],
+   "neon": false,
+   "color": "#78767C",
+   "codeName": "BossGateCapital"
+  },
+  "BossGateTop": {
+   "tris": 348,
+   "origin": [
+    0.0,
+    48.5,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4A4656",
+   "codeName": "BossGateTop"
+  },
+  "BossGateCornice": {
+   "tris": 252,
+   "origin": [
+    0.0,
+    52.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#A8A6AC",
+   "codeName": "BossGateCornice"
+  },
+  "BossGateKeystone": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    58.35,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4A4656",
+   "codeName": "BossGateKeystone"
+  },
+  "BossGateGable_L": {
+   "tris": 48,
+   "origin": [
+    -14.5,
+    58.9,
+    0.0
+   ],
+   "neon": false,
+   "color": "#78767C",
+   "codeName": "BossGateGable"
+  },
+  "BossGateGable_R": {
+   "tris": 48,
+   "origin": [
+    14.5,
+    58.9,
+    0.0
+   ],
+   "neon": false,
+   "color": "#78767C",
+   "codeName": "BossGateGable"
+  }
+ },
+ "partCount": 15,
+ "totalTris": 1748,
+ "triBudget": 3000,
+ "budgetUse": 0.583,
+ "version": "A2-N1",
+ "item": "boss_gate",
+ "partCap": 30
+}

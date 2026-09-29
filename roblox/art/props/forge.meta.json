@@ -1,0 +1,231 @@
+{
+ "parts": {
+  "Stump": {
+   "tris": 328,
+   "origin": [
+    0.0,
+    0.85,
+    0.0
+   ],
+   "neon": false,
+   "color": "#684228",
+   "codeName": "Stump"
+  },
+  "StumpTop": {
+   "tris": 200,
+   "origin": [
+    0.0,
+    1.78,
+    0.0
+   ],
+   "neon": false,
+   "color": "#8C603A",
+   "codeName": "StumpTop"
+  },
+  "AnvilFoot": {
+   "tris": 44,
+   "origin": [
+    0.0,
+    2.15,
+    0.0
+   ],
+   "neon": false,
+   "color": "#343644",
+   "codeName": "AnvilFoot"
+  },
+  "AnvilWaist": {
+   "tris": 44,
+   "origin": [
+    0.0,
+    2.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4E5264",
+   "codeName": "AnvilWaist"
+  },
+  "AnvilFace": {
+   "tris": 44,
+   "origin": [
+    0.2,
+    3.5,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4E5264",
+   "codeName": "AnvilFace"
+  },
+  "AnvilTopShine": {
+   "tris": 28,
+   "origin": [
+    0.2,
+    3.9,
+    0.0
+   ],
+   "neon": false,
+   "color": "#969CB0",
+   "codeName": "AnvilTopShine"
+  },
+  "AnvilHorn": {
+   "tris": 142,
+   "origin": [
+    -1.9,
+    3.5,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4E5264",
+   "codeName": "AnvilHorn"
+  },
+  "HotIngot": {
+   "tris": 28,
+   "origin": [
+    0.5,
+    4.05,
+    0.0
+   ],
+   "neon": true,
+   "color": "#FFAA3C",
+   "codeName": "HotIngot"
+  },
+  "HammerHandle": {
+   "tris": 32,
+   "origin": [
+    2.05,
+    2.6,
+    -0.4
+   ],
+   "neon": false,
+   "color": "#684228",
+   "codeName": "HammerHandle"
+  },
+  "HammerHead": {
+   "tris": 60,
+   "origin": [
+    2.35,
+    3.45,
+    -0.4
+   ],
+   "neon": false,
+   "color": "#343644",
+   "codeName": "HammerHead"
+  },
+  "Hearth": {
+   "tris": 220,
+   "origin": [
+    0.0,
+    1.2,
+    3.4
+   ],
+   "neon": false,
+   "color": "#9C6046",
+   "codeName": "Hearth"
+  },
+  "HearthTop": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    2.55,
+    3.4
+   ],
+   "neon": false,
+   "color": "#684036",
+   "codeName": "HearthTop"
+  },
+  "HearthMouth": {
+   "tris": 40,
+   "origin": [
+    0.0,
+    1.05,
+    2.18
+   ],
+   "neon": true,
+   "color": "#FF8C32",
+   "codeName": "HearthMouth"
+  },
+  "Chimney": {
+   "tris": 124,
+   "origin": [
+    0.6,
+    5.8,
+    3.7
+   ],
+   "neon": false,
+   "color": "#684036",
+   "codeName": "Chimney"
+  },
+  "ChimneyCap": {
+   "tris": 44,
+   "origin": [
+    0.6,
+    9.1,
+    3.7
+   ],
+   "neon": false,
+   "color": "#343644",
+   "codeName": "ChimneyCap"
+  },
+  "ChimneyGlow": {
+   "tris": 32,
+   "origin": [
+    0.6,
+    9.35,
+    3.7
+   ],
+   "neon": true,
+   "color": "#FF8C32",
+   "codeName": "ChimneyGlow"
+  },
+  "SignPole": {
+   "tris": 48,
+   "origin": [
+    -2.9,
+    3.6,
+    1.2
+   ],
+   "neon": false,
+   "color": "#684228",
+   "codeName": "SignPole"
+  },
+  "SignBoard": {
+   "tris": 24,
+   "origin": [
+    -2.9,
+    6.2,
+    1.0
+   ],
+   "neon": false,
+   "color": "#603E28",
+   "codeName": "SignBoard"
+  },
+  "EmblemHandle": {
+   "tris": 12,
+   "origin": [
+    -2.9,
+    6.05,
+    0.83
+   ],
+   "neon": true,
+   "color": "#FFE65A",
+   "codeName": "EmblemHandle"
+  },
+  "EmblemHead": {
+   "tris": 16,
+   "origin": [
+    -2.62,
+    6.5,
+    0.83
+   ],
+   "neon": true,
+   "color": "#FFE65A",
+   "codeName": "EmblemHead"
+  }
+ },
+ "partCount": 20,
+ "totalTris": 1538,
+ "triBudget": 3000,
+ "budgetUse": 0.513,
+ "version": "A2-N1",
+ "item": "forge",
+ "partCap": 24
+}
