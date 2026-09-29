@@ -1,0 +1,63 @@
+{
+ "rigId": "greatsword",
+ "source": "blender 5.2.2 LTS",
+ "pivot": "Grip",
+ "attachments": {
+  "Grip": [
+   0,
+   0,
+   0
+  ],
+  "Tip": [
+   0,
+   0,
+   4.670000000000001
+  ],
+  "Support": [
+   0,
+   0,
+   -0.48
+  ]
+ },
+ "triBudget": 800,
+ "looks": {
+  "normal": {
+   "parts": {
+    "Blade": 22,
+    "Fuller": 28,
+    "Guard": 28,
+    "Grip": 28,
+    "Pommel": 20
+   },
+   "totalTris": 126
+  },
+  "legendary": {
+   "parts": {
+    "Blade": 22,
+    "Fuller": 28,
+    "Guard": 28,
+    "Grip": 28,
+    "Pommel": 20,
+    "Wing_R": 8,
+    "Wing_L": 8,
+    "Gem": 20
+   },
+   "totalTris": 162
+  },
+  "transcendent": {
+   "parts": {
+    "Blade": 22,
+    "Fuller": 28,
+    "Guard": 28,
+    "Grip": 28,
+    "Pommel": 20,
+    "Wing_R": 8,
+    "Wing_L": 8,
+    "Gem": 20,
+    "Crack1": 12,
+    "Crack2": 12
+   },
+   "totalTris": 186
+  }
+ }
+}

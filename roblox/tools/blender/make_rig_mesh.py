@@ -86,7 +86,8 @@ def material_for(name, rgb):
         for key in ("Specular IOR Level", "Specular"):
             if key in bsdf.inputs:
                 bsdf.inputs[key].default_value = 0.0
-    mat["PaletteRGB"] = list(rgb)
+    # 정수 목록 속성은 FBX 내보내기(use_custom_props)가 float64 단정에서 멈춘다(Blender 5.2 첫 실행 - A2-S2) → 16진 문자열
+    mat["PaletteRGB"] = "#%02X%02X%02X" % tuple(int(c) for c in rgb)
     return mat
 
 
