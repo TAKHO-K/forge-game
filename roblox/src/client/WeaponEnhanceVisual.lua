@@ -174,8 +174,14 @@ local function applyHighlight(weapon, fx, highlight)
 end
 
 local function applyBody(weapon, state)
-	local baseColor = weapon.model.color
 	for _, part in ipairs(bodyParts(weapon)) do
+		-- 기준 색 = 지은 직후 파트 색(첫 적용 때 기억). weapon.model.color(WeaponModelData)로 칠하면 교체 모델(A2-S 아트 · Blender 메시)의 날 색이
+		-- 기본 은색으로 덮였다(A2-S2 Play 2: 초월 look Blade #262230 → #B4B6C0). 지금 메시는 지을 때 model.color로 칠하므로 결과가 같다.
+		local baseColor = part:GetAttribute("EnhanceBaseColor")
+		if typeof(baseColor) ~= "Color3" then
+			baseColor = part.Color
+			part:SetAttribute("EnhanceBaseColor", baseColor)
+		end
 		part.Color = state.tint and baseColor:Lerp(colorOf(state.tint.color), state.tint.alpha) or baseColor
 	end
 	-- Trail은 근접 무기(mesh · mesh_pair)에만 있다 - 활 · 지팡이는 motion.trailWidth 자체가 없어 trailsOf가 빈 목록이다.
