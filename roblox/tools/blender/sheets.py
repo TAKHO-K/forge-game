@@ -59,8 +59,15 @@ def icons():
                 continue
             path = os.path.join(folder, fn)
             im = Image.open(path).convert("RGBA")
-            if im.size != (256, 256):
+            if im.size != (256, 256):  # 갓 렌더한 512만: 256으로 줄이고 흰 40% 림 2px(어두운 UI 배경에서 짙은 물체가 묻히지 않게 - 한 번만)
                 im = im.resize((256, 256), Image.LANCZOS)
+                from PIL import ImageFilter
+                a = im.getchannel("A").point(lambda v: 255 if v > 24 else 0)
+                rim = a.filter(ImageFilter.MaxFilter(5))
+                layer = Image.new("RGBA", im.size, (255, 255, 255, 0))
+                layer.putalpha(rim.point(lambda v: 102 if v else 0))
+                layer.alpha_composite(im)
+                im = layer
                 im.save(path)
             rows.append((kind, fn[:-4], im))
     GC = {"normal": (230, 230, 230), "rare": (77, 166, 255), "epic": (166, 77, 255), "legendary": (255, 153, 51), "relic": (255, 215, 0), "ancient": (224, 57, 62), "primordial": (255, 60, 200), "transcendent": (214, 176, 62)}

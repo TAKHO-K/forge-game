@@ -89,21 +89,26 @@ def zone_features(zone, slot, big=1.0):
         if slot == "armor":
             for s in (-1, 1):
                 x, y, z = pauldron_pos(s)
-                b.append(A.xform(yl([(-0.2, 0.9 * big, 1.1 * big, 0), (0.15, 1.05 * big, 1.2 * big, 0), (0.35, 0.8 * big, 0.95 * big, 0)], 0.2), m=A.rot(rz=-s * 15), t=(x, y, z)))
+                k = 1.45 if s > 0 else 0.85  # 오른 어깨만 큰 바위판(비대칭 · 두께 0.3 판이 위로 솟음)
+                b.append(A.xform(yl([(-0.2, 0.9 * big * k, 1.1 * big * k, 0), (0.15, 1.05 * big * k, 1.2 * big * k, 0), (0.35, 0.8 * big * k, 0.95 * big * k, 0)], 0.2), m=A.rot(rz=-s * 15), t=(x, y, z)))
+                if s > 0:
+                    b.append(A.xform(A.box(0.3, 1.1 * big, 1.0 * big, b=0.08), m=A.rot(rz=-25), t=(x + 0.35, y + 0.75, z)))
                 t.append(A.ellipsoid((0.32 * big, 0.12, 0.4 * big), n=8, rings=3, center=(x - s * 0.05, y + 0.4 * big, z), squash_bottom=0.3))
             t.append(A.box(1.7, 0.2, 1.12, b=0.06, center=(0, -0.72, 0)))
         elif slot == "gloves":
             b.append(A.box(0.8, 0.26, 0.3, b=0.08, center=(0, -0.8, -0.3)))
+            b.append(A.xform(A.box(0.62, 0.5, 0.2, b=0.06), m=A.rot(rx=15), t=(0, 0.35, 0.42)))  # 손목 돌판
             t.append(A.ellipsoid((0.3, 0.1, 0.3), n=8, rings=3, center=(0, 0.72, 0.1), squash_bottom=0.3))
         else:
             b.append(A.box(0.74, 0.22, 0.5, b=0.08, center=(0, -0.08, -0.82)))
+            b.append(A.xform(A.box(0.62, 0.6, 0.2, b=0.06), m=A.rot(rx=-10), t=(0, 0.7, -0.38)))  # 정강이 돌판
             t.append(A.box(0.78, 0.12, 1.45, b=0.04, center=(0, -0.3, -0.25)))
     elif zone == "tier2":  # 수정: 어깨 · 손등 · 뒤꿈치 결정
         if slot == "armor":
             for s in (-1, 1):
                 x, y, z = pauldron_pos(s)
                 b.append(A.ellipsoid((0.5 * big, 0.36, 0.55 * big), n=10, rings=5, center=(x, y, z), squash_bottom=0.3))
-                t += [A.crystal(h * big, 0.13, sides=5, tip_h=0.25, base_h=0.05, center=(x + s * dx, y + 0.3, dz), m=A.rot(rz=-s * ang)) for h, dx, dz, ang in ((0.9, 0.0, 0.0, 12), (0.6, 0.22, 0.2, 35), (0.5, -0.15, -0.2, -8))]
+                t += [A.crystal(h * big * 1.3, 0.16, sides=5, tip_h=0.3, base_h=0.05, center=(x + s * dx, y + 0.35, dz), m=A.rot(rz=-s * ang)) for h, dx, dz, ang in ((0.9, 0.0, 0.0, 12), (0.6, 0.22, 0.2, 35), (0.5, -0.15, -0.2, -8))]  # 결정 = 몸 높이의 약 40%
             t.append(A.crystal(0.5, 0.2, sides=6, tip_h=0.18, base_h=0.15, center=(0, 0.2, -0.66), m=A.rot(rx=90)))
         elif slot == "gloves":
             t += [A.crystal(h, 0.1, sides=5, tip_h=0.2, base_h=0.05, center=(dx, -0.5, 0.3), m=A.rot(rx=-60)) for h, dx in ((0.6, 0.0), (0.42, 0.2), (0.4, -0.2))]
@@ -113,9 +118,10 @@ def zone_features(zone, slot, big=1.0):
         if slot == "armor":
             for s in (-1, 1):
                 x, y, z = pauldron_pos(s)
-                b.append(A.ellipsoid((0.58 * big, 0.3, 0.62 * big), n=12, rings=4, center=(x, y + 0.05, z), squash_bottom=0.2))
-                t += [A.tube([(x + 0.5 * math.cos(a) * big, y + 0.08, 0.52 * math.sin(a) * big), (x, y + 0.36, 0)], 0.06, sides=4) for a in (0.3, 1.1, 1.9, 2.7, 3.5, 4.3, 5.1, 5.9)]
-            t.append(A.xform(W.feather_wing((0, 0.3, 0.55), 1, (0.7, 0.55, 0.4), (-40, 0, 40), up=(0, 1, 0), side=(1, 0, 0), width=0.16), t=(0, 0, 0)))  # 등 지느러미(산호 색)
+                shell = A.xform(A.ellipsoid((0.8 * big, 0.5, 0.75 * big), n=12, rings=5, squash_bottom=0.15), m=A.rot(rz=-s * 35), t=(x + s * 0.1, y + 0.2, z))  # 반원 조개(바깥으로 기울어 세움)
+                b.append(shell)
+                t += [A.xform(A.tube([(0.7 * math.cos(a) * big, 0.05, 0.66 * math.sin(a) * big), (0, 0.48, 0)], 0.06, sides=4), m=A.rot(rz=-s * 35), t=(x + s * 0.1, y + 0.2, z)) for a in (0.3, 1.1, 1.9, 2.7, 3.5, 4.3, 5.1, 5.9)]
+            t.append(A.xform(A.merge(*[W.feather_wing((0, 0.85, 0.2), sgn, (0.8, 0.62, 0.45), (15, 40, 65), up=(0, 1, 0), side=(1, 0, 0), width=0.18) for sgn in (-1, 1)]), t=(0, 0, 0)))  # 목 지느러미 깃(산호 색)
         elif slot == "gloves":
             t.append(W.feather_wing((0.38, 0.2, 0.05), 1, (0.55, 0.42, 0.3), (40, 70, 100), up=(0, 1, 0), side=(1, 0, 0), width=0.12))
         else:
@@ -156,6 +162,7 @@ def zone_features(zone, slot, big=1.0):
                 x, y, z = pauldron_pos(s)
                 b.append(A.ellipsoid((0.5 * big, 0.36, 0.52 * big), n=10, rings=4, center=(x, y, z), squash_bottom=0.3))
                 t += [A.crystal(0.5 * big, 0.1, sides=4, tip_h=0.25, base_h=0.04, center=(x + s * dx, y - 0.32, 0), m=A.rot(rx=180)) for dx in (-0.2, 0.05, 0.28)]
+            t += [A.crystal(0.45 + 0.12 * ((k * 7) % 3), 0.09, sides=4, tip_h=0.25, base_h=0.04, center=(0.78 * math.sin(a), -1.05, -0.5 * math.cos(a)), m=A.rot(rx=180)) for k, a in enumerate(math.radians(d) for d in range(-72, 73, 36))]  # 밑단 고드름 줄(5)
         elif slot == "gloves":
             b += [A.ellipsoid((0.2, 0.16, 0.2), n=6, rings=3, center=(0.46 * math.cos(a), 0.75, 0.46 * math.sin(a))) for a in (2 * math.pi * i / 7 for i in range(7))]
             t += [A.crystal(0.35, 0.07, sides=4, tip_h=0.14, base_h=0.03, center=(dx, -0.75, -0.32), m=A.rot(rx=-100)) for dx in (-0.18, 0.02, 0.2)]
@@ -193,7 +200,7 @@ def grade_parts(zone, slot, grade, P):
     c = {"armor": (0, 0.2, 0), "gloves": (0, 0.0, 0), "shoes": (0, 0.4, 0)}[slot]
     if grade == "primordial":  # 태초 = 결정 2 + 빛 테
         parts.append(("Fx", A.merge(W.float_crystals([(c[0] - 1.0, c[1] + 0.9, 0), (c[0] + 1.05, c[1] + 0.5, 0)], 0.5, 0.12),
-                                    W.halo_ring((c[0], c[1] + (1.25 if slot == "armor" else 1.0), 0), 0.55, axis="Z", tilt=20, thick=0.06)), A.GRADE_COLOR["primordial"], True))
+                                    W.halo_ring((c[0], c[1] + (1.25 if slot == "armor" else 1.0), 0), 0.38, axis="Z", tilt=20, thick=0.05)), A.GRADE_COLOR["primordial"], True))
     if grade == "transcendent":  # 초월 = 흑금 조각 3 + 금빛 균열
         parts.append(("Fx", W.float_shards([(c[0] - 1.0, c[1] + 0.8, 0), (c[0] + 1.0, c[1] + 0.3, 0), (c[0] + 0.3, c[1] + 1.3, 0)], 0.3), A.BLACK_BODY, False))
         crack = {"armor": [(-0.4, 0.7, -0.62), (0.1, 0.3, -0.66), (-0.15, -0.1, -0.64), (0.3, -0.5, -0.6)], "gloves": [(-0.2, 0.6, -0.36), (0.1, 0.2, -0.38), (-0.1, -0.3, -0.34)],
@@ -246,7 +253,7 @@ def main():
                 if opt["export"] and grade in ("normal", "legendary", "transcendent"):
                     A.export_fbx(os.path.join(OUT, "%s_%s_%s.fbx" % (slot, zone, grade)), objs)
                 if opt["icons"]:
-                    I.render_icon(objs, os.path.join(ICON_OUT, "%s_%s_%s.png" % (slot, zone, grade)), base_rot=(0, 0, 0), roll=0.0, tilt=(-12.0, ICON_TURN[slot]), hull=0.03, pad=1.12)
+                    I.render_icon(objs, os.path.join(ICON_OUT, "%s_%s_%s.png" % (slot, zone, grade)), base_rot=(0, 0, 0), roll=0.0, tilt=(-12.0, ICON_TURN[slot]), hull=0.03, pad=1.0)
                 if opt["render"] and grade in ("normal", "legendary", "transcendent"):
                     A.render_views(objs, os.path.join(opt["render"], "%s_%s_%s" % (slot, zone, grade)), views=("front", "34"), kinds=("game",), sil=True, hull=0.03, res=(500, 500))
     over = {k: v for k, v in stats.items() if v > BUDGET}
