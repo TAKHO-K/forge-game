@@ -1,7 +1,7 @@
 -- A2-S 아트 샘플 클라 연출(스위치 Workspace.ArtStyleV1 뒤 · 판정 없음 · 값 = shared/data/ArtStyleV1Data).
 --   ① 아트 몸체 몬스터(모델 Attribute ArtV1): 대기 숨쉬기 · 걷기 통통 · 쓰러짐(데굴 + 흐려짐) - 관절 Transform(PreSimulation · 전조 포즈 중에는 손대지 않음)
 --   ② 강화대: 서버 도형(Base · AnvilTop)을 이 화면에서만 숨기고(LocalTransparencyModifier - 충돌 · 거리 판정 자리 그대로) 모루 · 화덕 · 굴뚝 · 표지판을 놓는다
---   ③ 강화 성공 / 대성공 연출(EnhanceResult를 같이 듣는다 - 결과 판정 · 문구는 강화 패널 그대로)
+--   ③ 강화 성공 / 대성공 / 실패 연출(EnhanceResult를 같이 듣는다 - 결과 판정 · 문구는 강화 패널 그대로)
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
@@ -14,6 +14,8 @@ local Lighting = game:GetService("Lighting")
 local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local ArtV1Models = require(ReplicatedStorage.Shared.ArtV1Models)
+local ArtV1FxData = require(ReplicatedStorage.Shared.data.ArtV1FxData)
+local ArtV1Fx = require(script.Parent.ArtV1Fx)
 local CameraShake = require(script.Parent.CameraShake)
 
 local M = ArtStyleV1Data.monsterMotion
@@ -282,11 +284,32 @@ local function playEnhance(great)
 	end
 end
 
+-- A2-N2 2-2 강화 실패(아래로 = 실패): 유지 = 회색 연기 조금 · 하락 · 초기화 = 어두운 링 + 연기 + 떨어지는 쇳조각. 흰 번쩍 · 섬광 없음(성공과 헷갈리지 않게)
+local FAIL_KIND = { maintain = "maintain", down1 = "down", down2 = "down", reset = "down" }
+local function playFail(kind)
+	local pos = anvilTop()
+	if not pos then
+		return
+	end
+	local F2 = ArtV1FxData.enhanceFail
+	local s = F2[kind]
+	ArtV1Fx.burst(pos, s.smoke, { color = F2.smokeColor, size = F2.smokeSize, sizeEnd = F2.smokeSize * 1.8, speed = F2.smokeSpeed, spread = 35, gravity = -1, lifetime = { F2.seconds * 0.7, F2.seconds * 1.4 },
+		texture = F2.smokeTexture, lightEmission = 0, transparency = NumberSequence.new(0.35, 1), drag = 2 })
+	if s.pieces > 0 then
+		ArtV1Fx.burst(pos, s.pieces, { color = F2.pieceColor, size = F2.pieceSize, speed = F2.pieceSpeed, spread = 70, gravity = 30, lifetime = { 0.5, F2.seconds }, lightEmission = 0 })
+	end
+	if s.ring then
+		ArtV1Fx.ring(pos - Vector3.new(0, 0.25, 0), s.ring, F2.seconds * 0.6, F2.ringColor, 0.1, 0.3)
+	end
+end
+
 task.spawn(function()
 	local result = ReplicatedStorage:WaitForChild("EnhanceResult")
 	result.OnClientEvent:Connect(function(payload)
 		if isOn() and type(payload) == "table" and payload.result == "success" then
 			playEnhance(type(payload.level) == "number" and payload.level % X.greatEvery == 0)
+		elseif isOn() and type(payload) == "table" and FAIL_KIND[payload.result] then
+			playFail(FAIL_KIND[payload.result])
 		end
 	end)
 end)
@@ -318,6 +341,8 @@ if RunService:IsStudio() then
 		local v = ReplicatedStorage:GetAttribute("ArtV1FxTest")
 		if v == "success" or v == "great" then
 			playEnhance(v == "great")
+		elseif v == "maintain" or v == "down" then
+			playFail(v)
 		end
 	end)
 end

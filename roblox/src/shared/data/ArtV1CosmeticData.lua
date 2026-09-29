@@ -1,0 +1,34 @@
+-- A2-N2 2-3 치장 외형(4칸 × 테마 3 - CosmeticSlotData.sets의 looks 자리가 가리키는 값). 외형만 - 능력치 · 판정 0(판매 금지 규칙 docs/design/monetization-p4c.md §1).
+--   그리기 = client/ArtV1Cosmetics(ArtStyleV1 스위치 뒤 · 내 캐릭터 + 남의 캐릭터(입자 × 0.5 · 거리 120 안)) · 장착 = Player Attribute Cosmetic_<칸>(서버 CosmeticService) = 세트 id.
+--   색 규칙 = 공격 궤적 스킨과 같은 금지(shared/TrailSkin.check: 주황 · 빨강 330 ~ 50° 채도 ≥ 0.35 = 보스 경고색 · 흰 + 자홍 = 태초) · 초월(검정 + 금) 흉내 금지.
+--   불씨 = 금노랑 불씨(색상 51 ~ 56° - 위험색 경계 밖) · 별빛 = 남색 → 보라 + 흰 별 · 서리꽃 = 옅은 청록 + 흰 결정.
+local C = Color3.fromRGB
+
+return {
+	themes = {
+		ember = {
+			core = C(255, 246, 200), edge = C(255, 232, 96), particle = C(255, 238, 120),
+			dash = { width = 1.6, lifetime = 0.32, transparency = { 0.15, 1 } },
+			jump = { ring = 4.5, particles = 8, speed = 7, gravity = -3, size = 0.3, spread = 60 }, -- 불씨가 위로 흩날린다
+			glide = { width = 0.8, lifetime = 0.9, particles = 5, particleLife = 0.9, gravity = -1.5, size = 0.22 },
+			footstep = { size = 1.0, seconds = 1.0, shape = "disc", neon = true },
+		},
+		starlight = {
+			core = C(214, 226, 255), edge = C(96, 110, 230), particle = C(240, 244, 255),
+			dash = { width = 1.6, lifetime = 0.36, transparency = { 0.1, 1 } },
+			jump = { ring = 5, particles = 10, speed = 9, gravity = 2, size = 0.34, spread = 180 }, -- 별이 사방으로 반짝
+			glide = { width = 0.9, lifetime = 1.1, particles = 6, particleLife = 1.2, gravity = 0, size = 0.26 },
+			footstep = { size = 0.9, seconds = 1.2, shape = "star", neon = true },
+		},
+		frost = {
+			core = C(236, 252, 255), edge = C(120, 214, 236), particle = C(206, 246, 255),
+			dash = { width = 1.5, lifetime = 0.3, transparency = { 0.15, 1 } },
+			jump = { ring = 4.5, particles = 8, speed = 6, gravity = 8, size = 0.3, spread = 80 }, -- 결정이 튀었다 떨어진다
+			glide = { width = 0.8, lifetime = 1.0, particles = 5, particleLife = 1.0, gravity = 4, size = 0.24 },
+			footstep = { size = 1.1, seconds = 1.4, shape = "disc", neon = false },
+		},
+	},
+	-- 감지(남의 캐릭터도 같은 식 - 입력 신호가 없어 속도로 읽는다): 대시 = 수평 속도 ≥ dashSpeed(대시 ≈ 73 · 활강 30 · 걷기 ≤ 24) · 점프 = 위 속도가 한 틱에 jumpImpulse 넘게 늘어남
+	detect = { dashSpeed = 50, dashHoldSeconds = 0.3, jumpImpulse = 18, footstepStuds = 3.4, footstepMinSpeed = 6, footstepMax = 10 },
+	bossOpacity = 0.5, -- 보스전 중 투명도 하한(아군 연출 ≤ 50% - §5)
+}

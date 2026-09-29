@@ -13,12 +13,12 @@ return {
 	},
 	-- 트레일 세트 1개 = unlock "set" 칸 전부(4). 세트 항목 모양 = { id, name, looks = { dashTrail = …, jumpFx = …, glideTrail = …, footstep = … } }
 	setSlots = { "dashTrail", "jumpFx", "glideTrail", "footstep" },
-	-- QUEUE-B1 B2(P4c 골격): 테마 세트 목록 - 외형(looks) = 에셋 자리(A가 채움 - "" = 기본 모습으로 그림). 사는 법 = 반짝 조각(MonetizationData.shardPrices.theme) 또는
+	-- QUEUE-B1 B2(P4c 골격): 테마 세트 목록 - 외형(looks) = 에셋 자리(A2-N2: ArtV1CosmeticData.themes 키 - ArtStyleV1 스위치 뒤에서만 그림 · "" = 기본 모습). 사는 법 = 반짝 조각(MonetizationData.shardPrices.theme) 또는
 	--   로벅스 상품(MonetizationData.products.theme_<id>) · 시즌 패스 줄. 산 세트의 4칸은 칸마다 다른 세트와 섞어 장착한다(profile.cosmetics.equipped).
 	sets = {
-		{ id = "starlight", name = "별빛", looks = { dashTrail = "", jumpFx = "", glideTrail = "", footstep = "" } },
-		{ id = "ember", name = "불씨", looks = { dashTrail = "", jumpFx = "", glideTrail = "", footstep = "" } },
-		{ id = "frost", name = "서리꽃", looks = { dashTrail = "", jumpFx = "", glideTrail = "", footstep = "" } },
+		{ id = "starlight", name = "별빛", looks = { dashTrail = "starlight", jumpFx = "starlight", glideTrail = "starlight", footstep = "starlight" } },
+		{ id = "ember", name = "불씨", looks = { dashTrail = "ember", jumpFx = "ember", glideTrail = "ember", footstep = "ember" } },
+		{ id = "frost", name = "서리꽃", looks = { dashTrail = "frost", jumpFx = "frost", glideTrail = "frost", footstep = "frost" } },
 	},
 	-- 글라이더 스킨 상품 = 칸 하나(gliderSkin)만. 항목 모양 = { id, name, look }
 	gliderSkins = { -- QUEUE-B1 B2: 글라이더 스킨(칸 하나 · look = 에셋 자리)
