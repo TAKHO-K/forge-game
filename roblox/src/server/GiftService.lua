@@ -69,7 +69,7 @@ function GiftService.send(targetUserId, kind, value, note, fromName)
 			return "full"
 		end
 		table.insert(s.mailbox.gifts, gift)
-		require(script.Parent.ImmediateSave).request(target)
+		require(script.Parent.ImmediateSave).flush(target) -- 리뷰 사소: 바로 저장(서버가 곧 죽어도 "delivered"가 거짓이 되지 않게)
 		pushPopup(target)
 		return "delivered_online " .. gift.id
 	end
@@ -98,25 +98,42 @@ function GiftService.onLoaded(player)
 		local s = PlayerProfile.getMonetizationState(player)
 		local ds = store()
 		if s and ds then
-			local moved = {}
-			local ok = pcall(function()
-				ds:UpdateAsync(queueKey(player.UserId), function(list)
-					moved = type(list) == "table" and list or {}
-					return {} -- 비움(옮긴 건 선물함 저장에 들어간다 - 옮긴 뒤 저장 전에 서버가 죽으면 잃을 수 있다: 즉시 저장 요청)
-				end)
+			-- 리뷰 중요 1: 대기열은 읽기만 → 선물함에 합침(같은 id 한 번) → **저장이 성공했을 때만** 옮긴 id를 대기열에서 지운다
+			-- (로드 실패 · 저장 중단 · 도중 퇴장이면 대기열에 남아 다음 접속 때 다시 옮긴다 - 선물함은 id로 중복을 거른다).
+			local okRead, queued = pcall(function()
+				return ds:GetAsync(queueKey(player.UserId))
 			end)
-			if ok and #moved > 0 and player.Parent then
+			queued = okRead and type(queued) == "table" and queued or {}
+			if #queued > 0 and player.Parent then
 				local have = {}
 				for _, g in ipairs(s.mailbox.gifts) do
 					have[g.id] = true
 				end
-				for _, g in ipairs(moved) do
-					if type(g) == "table" and type(g.id) == "string" and not have[g.id] then
-						table.insert(s.mailbox.gifts, g)
+				local movedIds = {}
+				for _, g in ipairs(queued) do
+					if type(g) == "table" and type(g.id) == "string" then
+						movedIds[g.id] = true
+						if not have[g.id] then
+							table.insert(s.mailbox.gifts, g)
+						end
 					end
 				end
-				require(script.Parent.ImmediateSave).flush(player)
-				print(("[B2] 선물함: %s - 쌓인 선물 %d건 옮김"):format(player.Name, #moved))
+				if require(script.Parent.ImmediateSave).flush(player) then
+					pcall(function()
+						ds:UpdateAsync(queueKey(player.UserId), function(list)
+							local kept = {}
+							for _, g in ipairs(type(list) == "table" and list or {}) do
+								if type(g) ~= "table" or not movedIds[g.id] then
+									table.insert(kept, g) -- 읽은 뒤 새로 쌓인 선물은 남긴다
+								end
+							end
+							return kept
+						end)
+					end)
+					print(("[B2] 선물함: %s - 쌓인 선물 %d건 옮김"):format(player.Name, #queued))
+				else
+					print(("[B2] 선물함: %s - 저장 실패 · 중단 - 대기열 %d건 그대로 둠(다음 접속)"):format(player.Name, #queued))
+				end
 			end
 		end
 		if player.Parent then

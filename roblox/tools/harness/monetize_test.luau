@@ -116,12 +116,18 @@ local ok, err = pcall(function()
 
 	-- ③ 프롬프트: 자리값 0 = 준비 중 · 판매 목록 밖 거부 · 정책
 	local okP1, whyP1 = MS.promptProduct(player, "theme_starlight")
-	local okP2 = MS.promptProduct(player, "theme_ember")
+	local okP2o, whyP2o = MS.promptProduct(player, "theme_ember") -- 리뷰 중요 3: 이미 가진 테마 = 창 안 엶
+	Data.products.glider_kite.productId = 9003
+	MS.validProducts.glider_kite = true
+	local okP2 = MS.promptProduct(player, "glider_kite")
 	local okP3, whyP3 = MS.promptProduct(player, "nope")
-	check("프롬프트: id 0 → not_ready · 시험 id → 열림 · 없는 상품 → 거부", not okP1 and whyP1 == "not_ready" and okP2 and not okP3 and #prompts == 1, ("%s · %s · %s"):format(tostring(whyP1), tostring(okP2), tostring(whyP3)))
-	Data.products.theme_ember.paidRandom, Data.products.theme_ember.odds = true, { ember = 1 }
-	local okR1 = MS.promptProduct(player, "theme_ember") -- 정책 모름 = failClosed → 막힘
-	Data.products.theme_ember.paidRandom, Data.products.theme_ember.odds = nil, nil
+	check("프롬프트: id 0 → not_ready · 이미 가진 것 → owned · 시험 id → 열림 · 없는 상품 → 거부", not okP1 and whyP1 == "not_ready" and not okP2o and whyP2o == "owned" and okP2 and not okP3 and #prompts == 1,
+		("%s · %s · %s · %s"):format(tostring(whyP1), tostring(whyP2o), tostring(okP2), tostring(whyP3)))
+	Data.products.glider_kite.productId = 0
+	Data.products.glider_petal.productId, Data.products.glider_petal.paidRandom, Data.products.glider_petal.odds = 9004, true, { petal = 1 }
+	MS.validProducts.glider_petal = true
+	local okR1 = MS.promptProduct(player, "glider_petal") -- 정책 모름 = failClosed → 막힘
+	Data.products.glider_petal.productId, Data.products.glider_petal.paidRandom, Data.products.glider_petal.odds = 0, nil, nil
 	check("유료 랜덤 상품 + 정책 모름 → 프롬프트 막힘", not okR1)
 
 	-- ④ 치장: 조각 구매(골드 불가) · 장착 섞기 · 소유 안 한 것 거부
@@ -166,6 +172,15 @@ local ok, err = pcall(function()
 	MS.processReceipt({ PlayerId = 77, ProductId = 9002, PurchaseId = "P-9", CurrencySpent = 399 }, deps)
 	local c6 = SP.claim(player, "paid", 1)
 	check("유료 줄 구매 뒤 받기", s.seasonPass.premium and c6)
+	local okPrem, whyPrem = MS.promptProduct(player, "season_premium")
+	check("이번 시즌 유료 줄 가진 채 다시 구매 창 = owned", not okPrem and whyPrem == "owned", tostring(whyPrem))
+	local saved2 = Season.rows.paid[2]
+	Season.rows.paid[2] = { gold = 100 }
+	local cBad, whyBad = SP.claim(player, "paid", 2)
+	Season.rows.paid[2] = { egg = 1 }
+	local cBad2 = SP.claim(player, "paid", 2)
+	Season.rows.paid[2] = saved2
+	check("유료 줄 데이터에 골드 · 알이 들어가도 받기에서 막힘(리뷰 중요 2)", not cBad and not cBad2 and not s.seasonPass.claimedPaid["2"], tostring(whyBad))
 	local season0 = s.seasonPass.season
 	s.seasonPass.season = season0 - 1 -- 지난 시즌 기록
 	SP.ensure(player)
@@ -181,6 +196,22 @@ local ok, err = pcall(function()
 		("%s | %s | %s | %s"):format(r1, r2, r3, r4))
 	local got = GS.claim(player, "all")
 	check("선물 받기 전부: 글라이더 소유 · 선물함 비움", got == 1 and s.cosmetics.gliderSkins.kite == true and #s.mailbox.gifts == 0)
+	-- 리뷰 중요 1: 대기열 옮김 = 저장 성공 뒤에만 비운다(저장 실패 = 대기열 그대로 · 두 번 옮겨도 선물함 id 중복 없음)
+	local queueStore = DS[Data.gifts.storeName]
+	queueStore.u77 = { { id = "Q1", kind = "sparkleShard", amount = 5, from = "ops", note = "", at = 0 } }
+	local ImmediateSave = MODS.ImmediateSave
+	local realFlush = ImmediateSave.flush
+	ImmediateSave.flush = function() return false end
+	local realSpawn = task.spawn
+	task.spawn = function(fn, ...) fn(...) end
+	GS.onLoaded(player)
+	local keptOnFail = queueStore.u77 and #queueStore.u77 == 1 and #s.mailbox.gifts == 1
+	ImmediateSave.flush = function() return true end
+	GS.onLoaded(player)
+	ImmediateSave.flush = realFlush
+	task.spawn = realSpawn
+	check("선물 대기열: 저장 실패 → 대기열 남김 · 성공 → 비움 · 선물함 1건(중복 없음)", keptOnFail and #queueStore.u77 == 0 and #s.mailbox.gifts == 1,
+		("대기열 %d · 선물함 %d"):format(queueStore.u77 and #queueStore.u77 or -1, #s.mailbox.gifts))
 
 	-- ⑧ 저장 이관 v56: 빈 표 · v55 옛 표본(필드 없음) · 문자열 키 왕복
 	local fresh = SaveSystem.migrate({})

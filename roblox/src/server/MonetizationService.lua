@@ -1,6 +1,7 @@
 -- QUEUE-B1 B2 수익화 서버(P4c 골격). 가격 · 상품 ID = shared/data/MonetizationData(자리값 0 = 준비 중) · 규칙 = shared/Monetization · 설계 = docs/design/monetization-p4c.md.
 --   ① 구매 처리: MarketplaceService.ProcessReceipt(이 게임의 유일한 콜백) - 구매 ID 기록(profile.purchases.receipts)으로 중복 지급 방지 → 지급 → **저장 성공을 확인한 뒤에만**
 --      PurchaseGranted(실패 = 기록 · 지급 되돌림 없이 NotProcessedYet → Roblox가 다음 접속 · 재시도 때 다시 부른다 - 지급은 멱등이라 두 번 불러도 같다). 구매 기록 = purchases.log.
+--      **상품 grant는 멱등 종류만**(allowedKinds - 치장 소유 · 유료 줄 켜기). 수량형(조각 · 알)을 상품에 넣으려면 저장 실패 때 되돌림이 먼저 필요하다(리뷰).
 --   ② 판매 금지 목록: 서버 시작 때 Monetization.checkCatalog - 걸린 상품은 판매 목록에서 빠지고(구매 프롬프트 거부) 로그에 남는다.
 --   ③ 유료 랜덤: PolicyService ArePaidRandomItemsRestricted를 접속 때 캐시(조회 실패 = 제한) - paidRandom 상품은 제한 대상에게 프롬프트 자체를 막는다(지금 paidRandom 0개).
 --   ④ 게임패스(편의): 접속 때 UserOwnsGamePassAsync로 profile.gamepasses 캐시 갱신(조회 실패면 캐시 유지) · 구매 완료 이벤트로 즉시 반영 · 효과 = 각 시스템이 hasPass로 읽는다.
@@ -32,6 +33,7 @@ if not catalogOk then
 	end
 end
 
+local inFlight = {} -- 리뷰 의심: 처리 중(저장 대기) PurchaseId - 겹친 두 번째 호출은 NotProcessedYet
 local restricted = {} -- [Player] = bool(유료 랜덤 제한 - nil = 아직 모름 → failClosed면 제한)
 local syncRemote = nil
 
@@ -48,6 +50,11 @@ function MonetizationService.applyReward(player, reward, source)
 	for _, grant in ipairs(Monetization.rewardToGrants(reward)) do
 		if source == "product" then
 			local ok, why = Monetization.checkGrant(MonetizationData, grant)
+			if not ok then
+				return false, why
+			end
+		elseif source == "seasonPaid" then -- 리뷰 중요 2: 유료 줄 = 로벅스로 산 보상 - 판매 금지 · 알(랜덤) 거부(데이터가 잘못돼도 지급 안 함)
+			local ok, why = Monetization.checkGrant(MonetizationData, grant, Monetization.PAID_ROW_KINDS)
 			if not ok then
 				return false, why
 			end
@@ -83,6 +90,9 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 		return Decision.NotProcessedYet -- 접속 전 · 로드 전: 다음 접속 때 Roblox가 다시 부른다
 	end
 	local purchaseId = tostring(receiptInfo.PurchaseId)
+	if inFlight[purchaseId] then
+		return Decision.NotProcessedYet
+	end
 	if Monetization.hasReceipt(s.purchases, purchaseId) then
 		return Decision.PurchaseGranted -- 이미 지급(중복 호출)
 	end
@@ -113,9 +123,12 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 		return Decision.NotProcessedYet
 	end
 	log("granted " .. tostring(summary))
-	local saved = (deps and deps.save or function(p)
+	inFlight[purchaseId] = true
+	local okSave, saved = pcall(deps and deps.save or function(p)
 		return require(script.Parent.ImmediateSave).flush(p)
-	end)(player)
+	end, player)
+	inFlight[purchaseId] = nil
+	saved = okSave and saved
 	if not saved then
 		-- 저장 실패: 기록을 빼고 NotProcessedYet → 다음 재시도가 다시 지급(멱등 - 치장 소유 · 유료 줄은 켜진 채라 같은 결과) · 그때 저장되면 Granted
 		Monetization.forgetReceipt(s.purchases, purchaseId)
@@ -212,6 +225,22 @@ function MonetizationService.push(player)
 	end
 end
 
+-- 상품의 grant를 전부 이미 가졌나(치장 소유 · 이번 시즌 유료 줄)
+function MonetizationService.ownsAll(player, product)
+	local s = PlayerProfile.getMonetizationState(player)
+	if not s then
+		return false
+	end
+	for _, grant in ipairs(product.grants) do
+		local owned = (grant.kind == "cosmeticTheme" and s.cosmetics.themes[grant.id]) or (grant.kind == "gliderSkin" and s.cosmetics.gliderSkins[grant.id])
+			or (grant.kind == "seasonPremium" and SeasonPassService.ensure(player) and s.seasonPass.premium)
+		if not owned then
+			return false
+		end
+	end
+	return true
+end
+
 -- 로벅스 구매 프롬프트(서버가 연다 - 판매 목록 · 정책 확인 뒤). 반환: ok, 이유
 function MonetizationService.promptProduct(player, key)
 	local product = MonetizationData.products[key]
@@ -223,6 +252,9 @@ function MonetizationService.promptProduct(player, key)
 	end
 	if not Monetization.paidRandomAllowed(product, MonetizationService.isRestricted(player)) then
 		return false, "restricted"
+	end
+	if MonetizationService.ownsAll(player, product) then -- 리뷰 중요 3: 이미 가진 치장 · 이번 시즌 유료 줄을 다시 사지 않게(결제만 되고 받는 것 없음)
+		return false, "owned"
 	end
 	MarketplaceService:PromptProductPurchase(player, product.productId)
 	return true
@@ -301,9 +333,18 @@ function MonetizationService.start()
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
 		local key = Monetization.passKeyById(MonetizationData, passId)
 		local s = key and purchased and PlayerProfile.getMonetizationState(player)
-		if s then
+		if s then -- 리뷰 의심: 완료 신호만 믿지 않고 소유 조회로 확인(조회 실패 = 다음 접속 refresh에 맡김)
+			local okOwn, owns = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
+			end)
+			if not (okOwn and owns) then
+				return
+			end
 			s.gamepasses[key] = true
 			applyPassAttributes(player)
+			if key == "bagExpand" then
+				PlayerProfile.pushInventory(player) -- 리뷰 사소: 칸 수 표시 즉시
+			end
 			require(script.Parent.ImmediateSave).request(player)
 			Monetization.appendLog(s.purchases, { at = os.time(), key = "pass_" .. key, purchaseId = "pass", robux = MonetizationData.gamePasses[key].robux, result = "pass_owned" }, MonetizationData.logKeep)
 			MonetizationService.push(player)

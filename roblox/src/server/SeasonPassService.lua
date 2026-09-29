@@ -91,7 +91,7 @@ function SeasonPassService.claim(player, rowName, tier)
 		return false, why
 	end
 	local reward = SeasonPassData.rows[rowName][tier]
-	local okReward, summary = require(script.Parent.MonetizationService).applyReward(player, reward, "season")
+	local okReward, summary = require(script.Parent.MonetizationService).applyReward(player, reward, rowName == "paid" and "seasonPaid" or "season")
 	if not okReward then
 		return false, summary
 	end

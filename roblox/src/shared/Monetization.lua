@@ -74,6 +74,7 @@ end
 
 -- 시즌 패스 줄 규칙: 유료 줄 = 판매 금지 밖 + 치장 · 치장 재화만 · 알(랜덤) 없음 / 무료 줄 = 알 허용(무료 랜덤) · 판매 금지 종류도 무료 보상이라 막지 않는다(골드 등은 지금 없음).
 local PAID_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true }
+Monetization.PAID_ROW_KINDS = PAID_ROW_KINDS -- 리뷰 중요 2: 서버가 유료 줄을 지급할 때도 같은 표로 막는다
 local FREE_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, egg = true }
 function Monetization.checkSeasonPass(data, season, cosmetics)
 	local reasons = {}
