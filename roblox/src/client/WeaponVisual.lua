@@ -27,6 +27,8 @@ local SkillVfx = require(script.Parent.SkillVfx) -- W3c 공중 내려찍기 먼�
 local VfxData = require(ReplicatedStorage.Shared.data.VfxData)
 local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data) -- A2-S 아트 샘플(스위치 뒤 - 대검 등급 3단계 겉모습)
 local ArtV1Models = require(ReplicatedStorage.Shared.ArtV1Models)
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit) -- A2-N3 Open Cloud 무기 메시
+local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules) -- W3c 공중 공격 해금(칼 들어 올림)
@@ -326,8 +328,8 @@ local function rebuild(st)
 		return
 	end
 	local grade = attrOf(st, "WeaponGrade") or 0
-	local artModel = nil
-	if classId == "greatsword" and Workspace:GetAttribute(ArtStyleV1Data.attribute) then -- A2-S 대검 겉모습(같은 형태 · 등급 3단계) - 미리보기 = Attribute ArtV1WeaponLook
+	local artModel = ArtMeshKit.weaponModel(classId, ArmorData.gradeOrder[grade + 1] or "normal") -- A2-N3 Open Cloud 메시(ArtStyleV1 뒤 · 캐시에 있을 때만 - 없으면 아래 샘플 · 지금 메시)
+	if not artModel and classId == "greatsword" and Workspace:GetAttribute(ArtStyleV1Data.attribute) then -- A2-S 대검 겉모습(같은 형태 · 등급 3단계) - 미리보기 = Attribute ArtV1WeaponLook
 		local preview = attrOf(st, "ArtV1WeaponLook")
 		local look = ArtStyleV1Data.greatsword.looks[preview] and preview or ArtStyleV1Data.greatsword.gradeLook[grade + 1] or "normal"
 		local gradeId = (ArtStyleV1Data.greatsword.looks[preview] and preview ~= "normal") and preview or ArmorData.gradeOrder[grade + 1]
@@ -1151,6 +1153,15 @@ local function bindPlayer(p)
 	end
 	Workspace:GetAttributeChangedSignal(ArtStyleV1Data.attribute):Connect(function() -- A2-S 스위치
 		if rigs[p] == st then
+			refresh()
+		end
+	end)
+	task.spawn(function() -- A2-N3: 메시 캐시가 늦게 차면(서버 로드 완료) 한 번 다시 짓는다
+		local cache = ReplicatedStorage:WaitForChild(ArtImportData.cacheFolder, 120)
+		while cache and not cache:GetAttribute(ArtImportData.readyAttribute) do
+			cache:GetAttributeChangedSignal(ArtImportData.readyAttribute):Wait()
+		end
+		if cache and rigs[p] == st then
 			refresh()
 		end
 	end)

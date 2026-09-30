@@ -13,6 +13,8 @@ local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 local BossLook = require(ReplicatedStorage.Shared.BossLook)
 local BossRig = require(ReplicatedStorage.Shared.BossRig)
 local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data) -- A2-S 아트 샘플 몸체(스위치 뒤 · 겉모습만)
+local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData) -- A2-N3 Open Cloud 메시(스위치 뒤)
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
@@ -129,6 +131,15 @@ local function buildModel(data, position, variant)
 		look.detail = workspace:GetAttribute(ArtStyleV1Data.attribute) == true -- A2-M1 보스 디테일(장식 · 새 관절 · 테마 색) = ArtStyleV1 스위치 뒤
 		root, body, head = BossRig.build(model, rig, look, position)
 		model:SetAttribute("BossRig", data.isBoss and data.id or data.rigId)
+		local rigId = data.isBoss and data.id or data.rigId
+		local meshKey = "bosses/" .. tostring(rigId)
+		if ArtMeshKit.get(meshKey) then -- A2-N3 Open Cloud 메시(ArtStyleV1 뒤 · 겉모습만 - 루트 · 조준 파트 판정 그대로)
+			local n, lines = ArtMeshKit.applyRig(model, meshKey, rigId, sizeScale, BossRig.rootLift(rig, sizeScale))
+			body, head = model:FindFirstChild("Body") or body, model:FindFirstChild("Head") or head
+			if n == 0 and lines then
+				warn(lines[#lines])
+			end
+		end
 		-- A2-M1 덩치: 몸이 커진 만큼만 플레이어 공격 도달을 넓힌다(Reach.bodyRadius - 조준 · 평타 · 스킬 · 화살) = 몸통 반폭 × (지금 배율 − 옛 배율). 배율이 같으면 0 = 옛 판정.
 		if data.baseSizeScale and sizeScale > data.baseSizeScale + 1e-6 then
 			for _, j in ipairs(rig.joints) do
@@ -144,6 +155,14 @@ local function buildModel(data, position, variant)
 		local artRig = workspace:GetAttribute(ArtStyleV1Data.attribute) and ArtStyleV1Data.monsterRigs[data.speciesId] or nil
 		root, body, head = BossRig.build(model, artRig or data.rig, look, position)
 		model:SetAttribute("MonsterRig", data.speciesId)
+		local meshKey = "monsters/" .. tostring(data.speciesId)
+		if not artRig and not ArtImportData.monsterSkip[data.speciesId] and ArtMeshKit.get(meshKey) then -- A2-N3 Open Cloud 메시(ArtStyleV1 뒤 · 아래 Hitbox = 판정 그대로)
+			local n, lines = ArtMeshKit.applyRig(model, meshKey, data.speciesId, sizeScale, 0)
+			body, head = model:FindFirstChild("Body") or body, model:FindFirstChild("Head") or head
+			if n == 0 and lines then
+				warn(lines[#lines])
+			end
+		end
 		if artRig then
 			model:SetAttribute("ArtV1", true) -- 클라 ArtV1View가 대기 · 걷기 · 쓰러짐 움직임을 붙인다
 		end

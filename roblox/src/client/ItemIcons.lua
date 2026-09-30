@@ -83,6 +83,28 @@ function ItemIcons.boots(parent, size, color)
 	return canvas
 end
 
+-- A2-N3: Open Cloud 아이콘 이미지(ArtStyleV1 스위치 뒤). key = ArtAssetIds 키("icons/weapons/greatsword_legendary").
+--   이미지가 있으면 칸의 88%로 ImageLabel을 깔고 true(테두리 = 코드 GradeFrame - 이미지 안에 테두리 없음) · 없으면 false → 부르는 쪽이 도형 아이콘.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
+local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
+function ItemIcons.image(parent, size, key)
+	local e = key and ArtAssetIds[key]
+	if not (e and e.image and workspace:GetAttribute(ArtStyleV1Data.attribute)) then
+		return false
+	end
+	local img = Instance.new("ImageLabel")
+	img.Name = "ArtIcon"
+	img.BackgroundTransparency = 1
+	img.AnchorPoint = Vector2.new(0.5, 0.5)
+	img.Position = UDim2.new(0.5, 0, 0.5, 0)
+	img.Size = UDim2.new(0, size * 0.88, 0, size * 0.88)
+	img.Image = "rbxassetid://" .. tostring(e.image)
+	img.ScaleType = Enum.ScaleType.Fit
+	img.Parent = parent
+	return true
+end
+
 ItemIcons.byPart = {
 	weapon = ItemIcons.weapon,
 	armor = ItemIcons.armor,

@@ -103,7 +103,7 @@ function OutlinePool.collect(cameraPosition, extra)
 			end
 		end
 		for _, model in ipairs(CollectionService:GetTagged("Monster")) do
-			if not CollectionService:HasTag(model, "ArenaObstacle") then
+			if not CollectionService:HasTag(model, "ArenaObstacle") and not model:GetAttribute("MeshOutline") then -- A2-N3: 껍데기 메시(_Outline)가 있는 보스는 Highlight 외곽선 끔(조준은 위 add(aim)로 그대로)
 				add(model, model:GetAttribute("BossName") and cats.boss or cats.monster)
 			end
 		end

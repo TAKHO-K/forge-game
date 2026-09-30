@@ -340,7 +340,10 @@ local function rebuildGearSlots()
 		iconHolder.Size = UDim2.new(0, 26, 0, 26)
 		iconHolder.BackgroundTransparency = 1
 		iconHolder.Parent = slot
-		ItemIcons.byPart[part](iconHolder, 26, color)
+		local iconKey = (filled and part == "weapon") and ("icons/weapons/%s_%s"):format(tostring(player:GetAttribute("ClassId")), tostring(S.weaponGradeId())) or nil
+		if not ItemIcons.image(iconHolder, 26, iconKey) then -- A2-N3 Open Cloud 아이콘(ArtStyleV1 뒤 · 없으면 도형)
+			ItemIcons.byPart[part](iconHolder, 26, color)
+		end
 
 		local nameLabel = Instance.new("TextLabel")
 		nameLabel.AnchorPoint = Vector2.new(0.5, 1)

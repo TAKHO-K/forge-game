@@ -5,7 +5,8 @@
 --        → 모션(관절 이름 · 계층)은 그대로 · 메시의 피벗이 가져오기에서 어긋나도 관절은 규격 자리에서 돈다.
 --     ③ 물리 속성(CanCollide · CanTouch 끔 · CanQuery = 옛 파트 그대로 · Massless)과 색(MeshImportCheckData.swap.recolor)을 옛 파트에서 옮긴다.
 --     가져온 모델에 없는 파트는 옛 파트 그대로 둔다(반쯤 만든 모델도 미리볼 수 있다).
---   반환: count(끼운 수), lines(결과 줄 - "[MeshSwap] …").
+--   반환: count(끼운 수), lines(결과 줄 - "[MeshSwap] …"), refCF(가져온 모델 기준 프레임 - 남는 메시를 같은 자리에 둘 때).
+--   opts.lift(A2-N3) = 보스 접지 높이(BossRig.rootLift) · 스폰 연결 = shared/ArtMeshKit.applyRig(ArtStyleV1 뒤).
 --   스폰(MonsterSpawner · BossRig.build)에는 아직 연결하지 않는다 - 연결 자리 = docs/art/blender-to-studio.md §8.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -54,7 +55,7 @@ function MeshSwap.swap(rigModel, importModel, rigId, opts)
 		return 0, lines
 	end
 	local refCF, ref = MeshImportCheck.referenceFrame(importModel)
-	local rootCF = root.CFrame
+	local rootCF = root.CFrame * CFrame.new(0, opts.lift or 0, 0) -- A2-N3: 보스 접지(BossRig.rootLift) - 루트에 붙는 관절이 올라간 만큼 메시 · 관절 자리도 올린다
 	local sources = {}
 	for _, d in ipairs(importModel:GetDescendants()) do
 		if d:IsA("BasePart") and d ~= ref and not Data.ignoreNames[d.Name] then
@@ -104,6 +105,7 @@ function MeshSwap.swap(rigModel, importModel, rigId, opts)
 			mesh.CastShadow = old.CastShadow
 			if Data.swap.recolor then
 				mesh.Color = old.Color
+				mesh.Material = old.Material -- A2-N3: 리그 재질(Neon 눈 · 룬)도 같이
 			end
 			mesh:SetAttribute("MeshSwapFrom", importModel:GetFullName())
 			mesh.Parent = rigModel
@@ -147,7 +149,7 @@ function MeshSwap.swap(rigModel, importModel, rigId, opts)
 	rigModel:SetAttribute("MeshSwapped", count)
 	table.insert(lines, ("[MeshSwap] %s ← %s(%s): 끼움 %d/%d · 관절 다시 걸기 %d%s %s"):format(rigId, importModel:GetFullName(), ref and "기준 루트" or (metaShift and "메타" or "모델 피벗"), count, #exp.order, rejoined,
 		#kept > 0 and (" · 그대로(파트) " .. table.concat(kept, ", ")) or "", count == #exp.order and "O" or "X"))
-	return count, lines
+	return count, lines, refCF
 end
 
 return MeshSwap

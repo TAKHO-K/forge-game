@@ -37,9 +37,36 @@ def convert(path):
     return out
 
 
+# A2-N3: 무기 메타 → MeshMeta.<직업>(부착점 · 등급 look별 파트 색 · 네온) - client/WeaponVisual이 Open Cloud 메시에 부착점을 달고 칠한다(shared/ArtMeshKit.weaponModel).
+def convert_weapon(path):
+    d = json.load(open(path, encoding="utf-8"))
+    rig = d.get("rigId") or os.path.basename(path).split(".")[0]
+    lines = [
+        "-- 자동 생성(roblox/tools/blender/meta_to_luau.py) - 손으로 고치지 말 것. 원본 = roblox/art/%s" % os.path.relpath(path, os.path.join(ROOT, "art")).replace("\\", "/"),
+        "return {",
+        '	rigId = "%s", version = "%s", pivot = "%s",' % (rig, d.get("version", ""), d.get("pivot", "")),
+        "	attachments = { %s }," % ", ".join('%s = %s' % (k, vec(v)) for k, v in d.get("attachments", {}).items()),
+        "	looks = {",
+    ]
+    for look, l in d["looks"].items():
+        lines.append('		%s = { totalTris = %d, parts = {' % (look, l.get("totalTris", 0)))
+        for name, p in l["parts"].items():
+            lines.append('			["%s"] = { color = "%s", neon = %s },' % (name, p.get("color", "#FFFFFF"), "true" if p.get("neon") else "false"))
+        lines.append("		} },")
+    lines += ["	},", "}", ""]
+    out = os.path.join(OUT, rig + ".lua")
+    open(out, "w", encoding="utf-8", newline="\n").write("\n".join(lines))
+    return out
+
+
 def main():
     only = set(sys.argv[1:])
     n = 0
+    wfolder = os.path.join(ROOT, "art", "weapons")
+    for f in sorted(os.listdir(wfolder)):
+        if f.endswith(".meta.json") and (not only or f.split(".")[0] in only):
+            print(convert_weapon(os.path.join(wfolder, f)))
+            n += 1
     for kind in KINDS:
         folder = os.path.join(ROOT, "art", kind)
         for f in sorted(os.listdir(folder)):

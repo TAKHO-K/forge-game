@@ -1,0 +1,27 @@
+{
+ "bosses/section_guardian.fbx": {
+  "sha256": "52bd3225124a419425396f72f744ad7e83f3d0854e51983841375b8a5a663247",
+  "assetType": "Model",
+  "assetId": 73336907208395,
+  "status": "Approved"
+ },
+ "icons/weapons/greatsword_legendary.png": {
+  "sha256": "0ba2988b41abce87480c8e123c67f60825476c47053cbfa749e6298ced2c3a1b",
+  "assetType": "Decal",
+  "assetId": 112639992572700,
+  "status": "Approved",
+  "imageId": 94841319929838
+ },
+ "monsters/rock_boar.fbx": {
+  "sha256": "fa562f38f7187db10a04cc077f4fc9f8e8958e67f27dd10e5747d94bc5480c37",
+  "assetType": "Model",
+  "assetId": 87912718220821,
+  "status": "Approved"
+ },
+ "weapons/greatsword_legendary.fbx": {
+  "sha256": "bc0a76988049b240d50b88cd4bcafb12d4b2f7aa6621e9e5c03659cf5d343679",
+  "assetType": "Model",
+  "assetId": 139020931783711,
+  "status": "Approved"
+ }
+}
