@@ -17,6 +17,54 @@ local Easing = require(ReplicatedStorage.Shared.Easing)
 
 local player = Players.LocalPlayer
 local event = ReplicatedStorage:WaitForChild("BossIntroCinema")
+local ContentProvider = game:GetService("ContentProvider")
+local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
+local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
+
+-- A2-N4 P0-4: 입장 전 보스 메시 미리 불러오기(캐시 준비 뒤 한 번 - 보스 6종 · 뒤에서)
+task.spawn(function()
+	local cache = ReplicatedStorage:WaitForChild(ArtImportData.cacheFolder, 120)
+	if not cache then
+		return
+	end
+	while not cache:GetAttribute(ArtImportData.readyAttribute) do
+		cache:GetAttributeChangedSignal(ArtImportData.readyAttribute):Wait()
+	end
+	local list = {}
+	for _, m in ipairs(cache:GetChildren()) do
+		if m.Name:sub(1, 7) == "bosses/" then
+			table.insert(list, m)
+		end
+	end
+	pcall(function()
+		ContentProvider:PreloadAsync(list)
+	end)
+end)
+
+-- A2-N4 P0-4: 보스 메시(MeshPart)가 이 클라에 다 내려올 때까지(최대 maxSeconds) 기다린다 - 못 오면 있는 모델(대체) 그대로 연출
+local function awaitMeshes(model, maxSeconds)
+	local parts = {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("MeshPart") then
+			table.insert(parts, d)
+		end
+	end
+	if #parts == 0 then
+		return 0
+	end
+	local done = false
+	local t0 = os.clock()
+	task.spawn(function()
+		pcall(function()
+			ContentProvider:PreloadAsync(parts)
+		end)
+		done = true
+	end)
+	while not done and os.clock() - t0 < maxSeconds do
+		task.wait()
+	end
+	return os.clock() - t0
+end
 
 local token = 0
 local ROAR_SHAKE = { seconds = 0.55, studs = 0.55 }
@@ -138,6 +186,8 @@ event.OnClientEvent:Connect(function(data)
 	if not data.model then
 		return
 	end
+	local waited = awaitMeshes(data.model, 2)
+	player:SetAttribute("BossIntroMeshWait", math.floor(waited * 100 + 0.5) / 100) -- 측정용(A2-N4)
 	token += 1
 	local my = token
 	local camera = Workspace.CurrentCamera
@@ -235,7 +285,13 @@ event.OnClientEvent:Connect(function(data)
 		local back = seconds - 0.55
 		if t > back and my_ then
 			local focus = my_.Position + Vector3.new(0, 1.5, 0)
-			local dist = math.max(player.CameraMinZoomDistance, (BossData.bosses[data.bossId or ""] or {}).cameraZoomStuds or 26)
+			-- A2-N4 P0-4: 연출 끝 거리 = CameraRig가 연출 끝에 붙잡는 거리(보스별 배율)와 같게 - 옛 = 배율 없는 거리 + 연출 중 붙잡기가 먼저 풀려 줌아웃
+			local zoomCfg = MovementConfig.camera
+			local factor = Workspace:GetAttribute("ArtStyleV1") and ((zoomCfg.bossZoomFactorOf and zoomCfg.bossZoomFactorOf[data.bossId or ""]) or zoomCfg.bossZoomFactor) or 1
+			local dist = ((BossData.bosses[data.bossId or ""] or {}).cameraZoomStuds or 26) * factor
+			if not Workspace:GetAttribute("ArtStyleV1") then
+				dist = math.max(player.CameraMinZoomDistance, dist) -- 끔 = 옛 식 그대로
+			end
 			local pitch = math.rad(30)
 			local from = focus + front * dist * math.cos(pitch) + Vector3.new(0, dist * math.sin(pitch), 0)
 			shotCf = shotCf:Lerp(CFrame.lookAt(from, focus), Easing.get("inout", (t - back) / 0.55))

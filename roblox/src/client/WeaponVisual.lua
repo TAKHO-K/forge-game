@@ -145,6 +145,30 @@ local function overrideModel(classId, pieceName, artModel)
 	return entry
 end
 
+-- 활 시위 두 줄 + 화살(지금 활 · 교체 활 공용 - A2-N4: 교체 활은 시위를 메시에서 빼고 코드가 그린다)
+local function buildBowExtras(folder, model, p)
+	local function stringPart(name)
+		local s = Instance.new("Part")
+		s.Name = name
+		s.Shape = Enum.PartType.Cylinder
+		s.Size = Vector3.new(1, model.stringThickness, model.stringThickness)
+		s.Color = model.stringColor
+		s.Material = Enum.Material.SmoothPlastic
+		s.Anchored, s.CanCollide, s.CanQuery, s.CanTouch, s.CastShadow = true, false, false, false, false
+		s.Parent = folder
+		return s
+	end
+	p.stringTop, p.stringBottom = stringPart("Weapon_StringTop"), stringPart("Weapon_StringBottom")
+	local arrow = Instance.new("Part")
+	arrow.Name = "Weapon_Arrow"
+	arrow.Size = model.arrowSize
+	arrow.Color = model.arrowColor
+	arrow.Material = Enum.Material.SmoothPlastic
+	arrow.Anchored, arrow.CanCollide, arrow.CanQuery, arrow.CanTouch, arrow.CastShadow = true, false, false, false, false
+	arrow.Parent = folder
+	p.arrow = arrow
+end
+
 local function buildWeapon(classId, colorOverride, parentFolder, artModel)
 	local model = WeaponModelData[classId]
 	local rig = WeaponRigSpec.weapons[classId]
@@ -195,6 +219,14 @@ local function buildWeapon(classId, colorOverride, parentFolder, artModel)
 			p.supportLocal = localOf(WeaponRigSpec.attachments.support)
 			p.nockLocal = localOf(WeaponRigSpec.attachments.stringNock)
 			p.scale = 1
+			if model.kind == "bow" then -- A2-N4 P0-2: 교체 활도 시위 · 화살(옛 = 교체 경로가 p.root 없이 끝나 시위 · 화살이 없었다) · 시위 끝 = Tip과 좌우 대칭
+				local tip = localOf(WeaponRigSpec.attachments.tip)
+				p.limbs = {}
+				if tip then
+					p.stringTips = { top = tip, bottom = Vector3.new(-tip.X, tip.Y, tip.Z) }
+				end
+				buildBowExtras(folder, model, p)
+			end
 		elseif model.kind == "mesh" or model.kind == "mesh_pair" then
 			local part = buildMeshPart(folder, spec.name or "Blade", model.meshId, model.size, model.color)
 			part:FindFirstChildOfClass("SpecialMesh").Scale = Vector3.one * scale
@@ -232,26 +264,7 @@ local function buildWeapon(classId, colorOverride, parentFolder, artModel)
 				part.Parent = folder
 				table.insert(p.limbs, { part = part, spec = limb })
 			end
-			local function stringPart(name)
-				local s = Instance.new("Part")
-				s.Name = name
-				s.Shape = Enum.PartType.Cylinder
-				s.Size = Vector3.new(1, model.stringThickness, model.stringThickness)
-				s.Color = model.stringColor
-				s.Material = Enum.Material.SmoothPlastic
-				s.Anchored, s.CanCollide, s.CanQuery, s.CanTouch, s.CastShadow = true, false, false, false, false
-				s.Parent = folder
-				return s
-			end
-			p.stringTop, p.stringBottom = stringPart("Weapon_StringTop"), stringPart("Weapon_StringBottom")
-			local arrow = Instance.new("Part")
-			arrow.Name = "Weapon_Arrow"
-			arrow.Size = model.arrowSize
-			arrow.Color = model.arrowColor
-			arrow.Material = Enum.Material.SmoothPlastic
-			arrow.Anchored, arrow.CanCollide, arrow.CanQuery, arrow.CanTouch, arrow.CastShadow = true, false, false, false, false
-			arrow.Parent = folder
-			p.arrow = arrow
+			buildBowExtras(folder, model, p)
 		end
 		p.gripLocal = p.gripLocal or spec.grip * scale
 		p.supportLocal = p.supportLocal or (spec.support and spec.support * scale)
@@ -855,8 +868,8 @@ local function updateBow(weapon, p, bowCF, draw, showArrow, palmW, drawScale)
 		part.Size = Vector3.new((b - a).Magnitude, part.Size.Y, part.Size.Z)
 		part.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.Angles(0, math.rad(90), 0)
 	end
-	seg(p.stringTop, model.stringTopTip, nock)
-	seg(p.stringBottom, model.stringBottomTip, nock)
+	seg(p.stringTop, p.stringTips and p.stringTips.top or model.stringTopTip, nock)
+	seg(p.stringBottom, p.stringTips and p.stringTips.bottom or model.stringBottomTip, nock)
 	p.arrow.Transparency = showArrow and 0 or 1
 	if showArrow then
 		local nockW = bowCF:PointToWorldSpace(nock)
@@ -1091,7 +1104,7 @@ local function placeWeapon(st, now, camPos)
 		end
 		if wcf then
 			placePiece(p, wcf)
-			if p.root then
+			if p.root or p.stringTips then
 				local a = st.attack
 				local showArrow = f.inHand and not (a and a.ranged and ((a.lastRelease and now - a.lastRelease < a.tm.act) or a.recovering or a.returning))
 				local rh = f.inHand and character:FindFirstChild(p.spec.stringHand or "RightHand")

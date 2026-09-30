@@ -121,7 +121,7 @@ local BOSS_ARENA_SLOT_COUNT = 12
 local BossArenaMapData = require(script.Parent.BossArenaMapData)
 local BOSS_ARENA_RADIUS_STUDS = BossArenaMapData.geometry.radiusStuds
 local BOSS_ARENA_HALF_SIZE_STUDS = BOSS_ARENA_RADIUS_STUDS
-local BOSS_ARENA_BASE_Z_STUDS = -3500 -- M1: 세계 끝(반경 2960 벽 + 능선 44) 밖 - 옛 -3000은 새 세계 끝과 겹친다
+local BOSS_ARENA_BASE_Z_STUDS = -6500 -- M1: 세계 끝(반경 2960 벽 + 능선 44) 밖 - 옛 -3000은 새 세계 끝과 겹친다 · A2-N4 P0-5: −3500은 외곽 설산 지형(540 stud)이 아레나 안에서 크게 보였다 → 3,500 stud 밖(대기에 묻힘)
 -- 슬롯끼리 안 겹치는 간격 = 벽 · 테라스까지의 지름 + 여유.
 local BOSS_ARENA_SPACING_STUDS = (BOSS_ARENA_RADIUS_STUDS + BossArenaMapData.geometry.wallThicknessStuds + BossArenaMapData.geometry.rimWidthStuds) * 2
 	+ BossArenaMapData.geometry.slotSpacingExtraStuds

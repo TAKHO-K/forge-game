@@ -101,7 +101,8 @@ P.body = body
 -- ───────── 대검(양손 · W3a) - 어깨 위로 크게 들었다가 체중을 실어 내려베기 · 가로베기 · 3타 = 몸을 크게 돌려 내려찍기 ─────────
 -- 칼 방향 θ ≈ 오른 어깨 x + 팔꿈치 x + 손목 x(옆으로 벌림 z가 작을 때). 왼손 = 보조 손 IK(자루 아래 - WeaponRigSpec.greatsword support).
 -- 무게: 전조 = 앞 타의 회복(settle = 다음 타의 들어 올림) · 동작 = 무게에 끌려가듯 길게(outCubic) · 무릎을 굽혀 루트를 내린다 · 따라 휘두름이 몸 반대편 아래까지.
-local GS_READY = with(body(0.12, 8, 0, 0), { Waist = { 0, -20, 0 }, Neck = { 0, 15, 0 }, RightShoulder = { 40, 0, 10 }, RightElbow = { 60, 0, 0 }, RightWrist = { -40, 0, 0 } }) -- 중단(θ 60) · 살짝 굽힘
+-- A2-N4 P0-2: 두 손 중단 - 옛 대기(오른 어깨 벌림 10 · 허리 −20)는 오른손이 몸 옆이라 왼손 IK가 자루에 못 닿아(1.5 stud) 한 손 자세였다 → 오른손을 몸 앞 가운데로(어깨 안쪽 −28 · 허리 −8)
+local GS_READY = with(body(0.12, 8, 0, 0), { Waist = { 0, -8, 0 }, Neck = { 0, 6, 0 }, RightShoulder = { 42, 0, -28 }, RightElbow = { 58, 0, 0 }, RightWrist = { -42, 0, 0 } }) -- 중단(θ 60) · 두 손
 local GS_UP_R = with(body(0.08, -10, -12, 0), { Waist = { 12, -60, 0 }, Neck = { -5, 45, 0 }, RightShoulder = { 170, -15, 40 }, RightElbow = { 70, 0, 0 }, RightWrist = { -5, 0, 0 } }) -- 오른 어깨 위로 젖힘(θ 235 - 칼이 등 뒤로 늘어진다)
 local GS_LOW_L = with(body(0.42, 22, 18, 8), { Waist = { -25, 50, 0 }, Neck = { 12, -40, 0 }, RightShoulder = { 35, 0, -45 }, RightElbow = { 15, 0, 0 }, RightWrist = { -80, 0, 0 } }) -- 왼쪽 아래까지 끌려감(θ −30)
 local GS_LOAD_L = with(body(0.22, -6, 18, 0), { Waist = { 0, 55, 0 }, Neck = { 0, -40, 0 }, RightShoulder = { 80, 0, -60 }, RightElbow = { 30, 0, 0 }, RightWrist = { -100, 0, 0 } }) -- 왼 허리 옆에 칼을 눕혀 장전(θ 10)

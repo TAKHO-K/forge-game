@@ -85,6 +85,9 @@ local function clear()
 	if atmo and c.atmoWas then
 		atmo.Density, atmo.Color, atmo.Decay, atmo.Haze = c.atmoWas.density, c.atmoWas.color, c.atmoWas.decay, c.atmoWas.haze
 	end
+	if c.clockWas then
+		Lighting.ClockTime = c.clockWas
+	end
 end
 
 local function dress(boss)
@@ -182,6 +185,47 @@ local function dress(boss)
 			end
 		end
 	end
+	-- A2-N4 P0-5 배경 링(아레나 밖 사냥터 · 이웃 아레나 가림 - 층마다 한 바퀴 · 폰도 개수 그대로(틈이 생기면 안 된다) · 그림자 끔)
+	local fogColor = spec.atmosphere and colorOf(spec.atmosphere.color, C):Lerp(WHITE, 0.55) or C.light
+	for li, L in ipairs(spec.backdrop or {}) do
+		for i = 1, L.count do
+			local a = (i / L.count) * math.pi * 2 + rng:NextNumber(-0.12, 0.12)
+			local r = rng:NextNumber(L.radius[1], L.radius[2])
+			local h = rng:NextNumber(L.height[1], L.height[2])
+			local d = Vector3.new(math.cos(a), 0, math.sin(a))
+			local base = center + d * r + Vector3.new(0, L.lift or 0, 0)
+			local face = CFrame.lookAt(base, base - d) -- 앞면이 아레나 쪽
+			local color = colorOf(L.color, C):Lerp(fogColor, L.fog or 0)
+			local name = ("Dress_Backdrop_%d_%d"):format(li, i)
+			local part
+			if L.shape == "peak" then -- 45° 돌린 상자의 윗반 = 산 삼각(높이 h · 밑변 2h)
+				local side = h * math.sqrt(2)
+				part = newPart(folder, name, Vector3.new(side, side, h * 0.5), face * CFrame.Angles(0, 0, math.rad(45)), color, L.material)
+			elseif L.shape == "dome" then
+				part = newPart(folder, name, Vector3.one * h * 2, CFrame.new(base), color, L.material)
+				part.Shape = Enum.PartType.Ball
+			elseif L.shape == "spire" then
+				local w = (L.width or 16) * rng:NextNumber(0.75, 1.25)
+				part = newPart(folder, name, Vector3.new(w, h, w), face * CFrame.new(0, h / 2 - 6, 0), color, L.material)
+				local cap = newPart(folder, name .. "_Top", Vector3.new(w * 0.72, w * 0.72, w * 0.72), face * CFrame.new(0, h - 6, 0) * CFrame.Angles(0, 0, math.rad(45)) * CFrame.Angles(math.rad(45), 0, 0), color, L.material)
+				cap.CastShadow = false
+			else -- cliff
+				local w = (L.width or 50) * rng:NextNumber(0.8, 1.2)
+				part = newPart(folder, name, Vector3.new(w, h, w * 0.5), face * CFrame.new(0, h / 2 - 6, 0), color, L.material)
+				local top = Instance.new("WedgePart")
+				top.Name = name .. "_Top"
+				top.Anchored, top.CanCollide, top.CanQuery, top.CanTouch, top.CastShadow = true, false, false, false, false
+				top.Size = Vector3.new(w, h * 0.22, w * 0.5)
+				top.CFrame = face * CFrame.new(0, h - 6 + h * 0.11, 0)
+				top.Color, top.Material = color, L.material or Enum.Material.Slate
+				top.Parent = folder
+			end
+			part.CastShadow = false
+			if L.material == Enum.Material.Glass then
+				part.Transparency = 0.1
+			end
+		end
+	end
 	-- 바닥 가장자리 선(벽 안쪽 · 바닥 위 얇은 고리 = 24조각)
 	local E = spec.edge
 	if E then
@@ -212,6 +256,11 @@ local function dress(boss)
 		atmo.Color = colorOf(A.color, C):Lerp(WHITE, 0.55)
 		atmo.Decay = colorOf(A.decay, C):Lerp(BLACK, 0.2)
 		atmo.Haze = A.haze
+	end
+	-- A2-N4 P0-5 아레나 하늘(이 클라만 - 끝나면 되돌림)
+	if spec.sky and spec.sky.clockTime then
+		current.clockWas = Lighting.ClockTime
+		Lighting.ClockTime = spec.sky.clockTime
 	end
 	print(("[A2M1Dress] %s · 파트 %d · 폰 %s"):format(rigId, #folder:GetDescendants(), tostring(phone)))
 end

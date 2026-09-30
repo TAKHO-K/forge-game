@@ -95,7 +95,7 @@ local function bossZoomFor(encounterId)
 	for _, m in ipairs(CollectionService:GetTagged("Monster")) do
 		if m:GetAttribute("BossEncounterId") == encounterId then
 			local boss = BossData.bosses[m:GetAttribute("BossRig") or ""]
-			return boss and boss.cameraZoomStuds, m:GetAttribute("BossRig")
+			return boss and boss.cameraZoomStuds, m:GetAttribute("BossRig"), m
 		end
 	end
 	return nil
@@ -120,16 +120,27 @@ player:GetAttributeChangedSignal("BossEncounterId"):Connect(function()
 		return
 	end
 	task.spawn(function() -- 보스 모델 복제를 기다린다(A2-N3: 0.5초 한 번 → 0.25초 간격 최대 4초 - 진입 직후 보스가 아직 안 와서 거리 맞춤을 건너뛰던 일)
-		local zoom, rigId
+		local zoom, rigId, bossModel
 		local tries = Workspace:GetAttribute("ArtStyleV1") and 16 or 1 -- 끔 = 옛 동작(0.5초 한 번)
 		for _ = 1, tries do
 			task.wait(tries > 1 and 0.25 or 0.5)
 			if player:GetAttribute("BossEncounterId") ~= id then
 				return
 			end
-			zoom, rigId = bossZoomFor(id)
+			zoom, rigId, bossModel = bossZoomFor(id)
 			if zoom then
 				break
+			end
+		end
+		-- A2-N4 P0-4: 등장 연출 중(카메라 Scriptable)에 붙잡으면 1초 뒤 풀려, 연출이 끝나 기본 카메라가 이어받을 때 옛 줌으로 튀었다(줌아웃) → 연출 끝에 맞춰 붙잡는다(연출 끝 샷도 같은 거리)
+		local introUntil = bossModel and bossModel:GetAttribute("BossIntroUntil")
+		if Workspace:GetAttribute("ArtStyleV1") and type(introUntil) == "number" then
+			local waitFor = introUntil - Workspace:GetServerTimeNow()
+			if waitFor > 0 then
+				task.wait(math.min(waitFor, 6))
+				if player:GetAttribute("BossEncounterId") ~= id then
+					return
+				end
 			end
 		end
 		local camera = Workspace.CurrentCamera

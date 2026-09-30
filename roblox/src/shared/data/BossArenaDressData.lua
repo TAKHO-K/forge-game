@@ -11,6 +11,10 @@
 --   edge        = { color, width, transparency } - 벽 안쪽 바닥 가장자리 선(반경 138.5)
 --   floor       = { material, tint(바닥색에 섞을 색 역할), amount } - 바닥 재질(이 클라만)
 --   atmosphere  = { density, color, decay, haze } - 보스전 동안 대기(이 클라만 - 끝나면 되돌림)
+--   backdrop    = 배경 링 층 목록(A2-N4 P0-5 - 아레나 밖 사냥터 · 다른 아레나를 가린다 · 충돌 · 조준 · 그림자 없음 · 폰도 개수 그대로 = 틈 없음):
+--                 { shape("peak" 45° 돌린 상자 = 산 삼각 실루엣 | "cliff" 상자 + 윗면 쐐기 | "spire" 가는 첨탑 | "dome" 둔덕 · 구름 공), count, radius = { 최소, 최대 }, height = { 최소, 최대 },
+--                   width(cliff · spire 폭 - peak · dome은 높이에서), color(역할), fog(0 ~ 1 - 대기색 쪽으로 섞기 = 멀수록 흐림), material, lift(바닥 위로 띄움 - 구름) }
+--   sky         = { clockTime } - 보스전 동안 하늘 시각(이 클라만 - 끝나면 되돌림)
 -- 폰(짧은 변 < 500 · 터치)은 phone = { … 개수 배율 } 만큼 줄인다.
 local BossArenaDressData = {}
 
@@ -28,6 +32,10 @@ BossArenaDressData.bosses = {
 		edge = { color = "accent", width = 0.9, transparency = 0.35 },
 		floor = { material = Enum.Material.Slate, tint = Color3.fromRGB(150, 152, 162), amount = 0.35 }, -- A2-M1 2차: 보라 보스가 보라 바닥에 묻힘(리뷰) → 밝은 중성 회색 쪽으로
 		atmosphere = { density = 0.32, color = "accent", decay = "body", haze = 1.2 },
+		backdrop = {
+			{ shape = "cliff", count = 22, radius = { 188, 205 }, height = { 34, 56 }, width = 58, color = "stone", fog = 0.15, material = Enum.Material.Slate },
+			{ shape = "peak", count = 16, radius = { 300, 330 }, height = { 90, 140 }, color = "body", fog = 0.55, material = Enum.Material.Slate },
+		},
 	},
 	-- 빙하 동굴(서리 거인): 떠 있는 얼음 조각 · 테라스 얼음 가시 · 먼 얼음 폭포 기둥 · 눈 내림 · 차가운 안개
 	frost_giant = {
@@ -38,6 +46,10 @@ BossArenaDressData.bosses = {
 		edge = { color = "accent", width = 0.9, transparency = 0.4 },
 		floor = { material = Enum.Material.Glacier, tint = Color3.fromRGB(96, 124, 158), amount = 0.35 }, -- A2-M1 2차: 흰 바닥에 흰 포효 전조가 묻힘(리뷰) → 푸른 회색 얼음
 		atmosphere = { density = 0.36, color = "light", decay = "accent", haze = 1.6 },
+		backdrop = {
+			{ shape = "peak", count = 22, radius = { 188, 205 }, height = { 40, 64 }, color = "light", fog = 0.1, material = Enum.Material.Glacier },
+			{ shape = "peak", count = 16, radius = { 300, 330 }, height = { 100, 150 }, color = Color3.fromRGB(236, 244, 252), fog = 0.45, material = Enum.Material.Snow },
+		},
 	},
 	-- 수몰 사원(심해 군주): 가라앉은 기둥 조각이 물속처럼 떠 있음 · 테라스 산호 · 먼 신전 기둥 · 떠오르는 물방울 · 깊은 청록 안개
 	abyssal_lord = {
@@ -48,6 +60,10 @@ BossArenaDressData.bosses = {
 		edge = { color = "accent", width = 0.9, transparency = 0.35 },
 		floor = { material = Enum.Material.Cobblestone, tint = "accent", amount = 0.1 },
 		atmosphere = { density = 0.38, color = "accent", decay = "body", haze = 1.4 },
+		backdrop = {
+			{ shape = "cliff", count = 22, radius = { 188, 205 }, height = { 30, 50 }, width = 58, color = "stone", fog = 0.2, material = Enum.Material.Rock },
+			{ shape = "spire", count = 18, radius = { 290, 320 }, height = { 80, 130 }, width = 22, color = "body", fog = 0.6, material = Enum.Material.Rock },
+		},
 	},
 	-- 수정 동굴(수정 여왕): 떠 있는 결정 · 테라스 청록 결정 · 먼 결정 첨탑 · 반짝임 · 분홍 안개
 	crystal_queen = {
@@ -58,6 +74,10 @@ BossArenaDressData.bosses = {
 		edge = { color = "accent", width = 0.9, transparency = 0.3 },
 		floor = { material = Enum.Material.Marble, tint = "head", amount = 0.08 },
 		atmosphere = { density = 0.3, color = "head", decay = "accent", haze = 1.2 },
+		backdrop = {
+			{ shape = "cliff", count = 22, radius = { 188, 205 }, height = { 30, 50 }, width = 58, color = "stone", fog = 0.15, material = Enum.Material.Rock },
+			{ shape = "spire", count = 18, radius = { 290, 320 }, height = { 90, 150 }, width = 20, color = "accent", fog = 0.45, material = Enum.Material.Glass },
+		},
 	},
 	-- 모래 유적(전갈 여왕): 떠 있는 것 없음 · 테라스 사암 바위 · 먼 폐허 기둥 · 모래바람 줄 · 따뜻한 먼지 안개
 	scorpion_queen = {
@@ -67,6 +87,10 @@ BossArenaDressData.bosses = {
 		edge = { color = "accent", width = 0.9, transparency = 0.45 },
 		floor = { material = Enum.Material.Sand, tint = "floor", amount = 0 },
 		atmosphere = { density = 0.42, color = "pillar", decay = "accent", haze = 2.2 },
+		backdrop = {
+			{ shape = "dome", count = 22, radius = { 190, 210 }, height = { 26, 40 }, color = "pillar", fog = 0.15, material = Enum.Material.Sand },
+			{ shape = "cliff", count = 16, radius = { 300, 330 }, height = { 70, 110 }, width = 110, color = "pillar", fog = 0.5, material = Enum.Material.Sandstone },
+		},
 	},
 	-- 폭풍 첨탑(폭풍 군주): 떠 있는 번개 바위 · 테라스 피뢰 가시 · 먼 검은 첨탑 · 빗줄기 · 먼 번개
 	storm_lord = {
@@ -78,6 +102,12 @@ BossArenaDressData.bosses = {
 		edge = { color = "accent", width = 0.9, transparency = 0.35 },
 		floor = { material = Enum.Material.Slate, tint = "accent", amount = 0.04 },
 		atmosphere = { density = 0.4, color = "stone", decay = "body", haze = 1.8 },
+		backdrop = {
+			{ shape = "peak", count = 22, radius = { 188, 205 }, height = { 40, 66 }, color = "stone", fog = 0.15, material = Enum.Material.Slate },
+			{ shape = "spire", count = 18, radius = { 290, 320 }, height = { 110, 170 }, width = 18, color = "stone", fog = 0.5, material = Enum.Material.Basalt },
+			{ shape = "dome", count = 14, radius = { 260, 300 }, height = { 34, 50 }, color = "body", fog = 0.7, material = Enum.Material.SmoothPlastic, lift = 150 },
+		},
+		sky = { clockTime = 18.4 },
 	},
 }
 
