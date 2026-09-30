@@ -238,6 +238,9 @@ event.OnClientEvent:Connect(function(data)
 	for _, g in ipairs(data.model:GetDescendants()) do
 		hideBillboard(g)
 	end
+	-- A2-N4 P0-4: 연출 끝 거리(= CameraRig가 연출 끝에 붙잡는 거리)
+	local zoomCfg = MovementConfig.camera
+	local endDist = ((BossData.bosses[data.bossId or ""] or {}).cameraZoomStuds or 26) * (Workspace:GetAttribute("ArtStyleV1") and ((zoomCfg.bossZoomFactorOf and zoomCfg.bossZoomFactorOf[data.bossId or ""]) or zoomCfg.bossZoomFactor) or 1)
 	RunService:BindToRenderStep("BossIntroCinema", Enum.RenderPriority.Camera.Value + 1, function()
 		local t = serverNow() - startServer
 		if #hidden > 0 and (t > seconds - 0.55 or my ~= token) then
@@ -247,6 +250,11 @@ event.OnClientEvent:Connect(function(data)
 			restoreHud()
 			RunService:UnbindFromRenderStep("BossIntroCinema")
 			if my == token then
+				-- A2-N4 P0-4: 기본 카메라는 Custom으로 돌아올 때 자기 옛 줌에서 시작한다(Play 실측 20 → CameraRig 32.3로 줌아웃) → 돌려주기 직전에 줌을 연출 끝 거리로 묶는다(CameraRig가 1초 뒤 푼다)
+				if Workspace:GetAttribute("ArtStyleV1") and endDist then
+					player.CameraMinZoomDistance = endDist
+					player.CameraMaxZoomDistance = endDist
+				end
 				camera.CameraType = oldType
 				camera.CameraSubject = oldSubject
 			end
@@ -286,9 +294,7 @@ event.OnClientEvent:Connect(function(data)
 		if t > back and my_ then
 			local focus = my_.Position + Vector3.new(0, 1.5, 0)
 			-- A2-N4 P0-4: 연출 끝 거리 = CameraRig가 연출 끝에 붙잡는 거리(보스별 배율)와 같게 - 옛 = 배율 없는 거리 + 연출 중 붙잡기가 먼저 풀려 줌아웃
-			local zoomCfg = MovementConfig.camera
-			local factor = Workspace:GetAttribute("ArtStyleV1") and ((zoomCfg.bossZoomFactorOf and zoomCfg.bossZoomFactorOf[data.bossId or ""]) or zoomCfg.bossZoomFactor) or 1
-			local dist = ((BossData.bosses[data.bossId or ""] or {}).cameraZoomStuds or 26) * factor
+			local dist = endDist
 			if not Workspace:GetAttribute("ArtStyleV1") then
 				dist = math.max(player.CameraMinZoomDistance, dist) -- 끔 = 옛 식 그대로
 			end

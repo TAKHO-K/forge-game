@@ -10,7 +10,7 @@
 --   지진파가 없는 보스(서리 거인 · 수정 여왕 · 전갈 여왕)는 slam이 없다 - 그대로 둔다.
 return {
 	-- A2-N4 §2-4 휘두름 궤적(부채꼴 판정 · 원형 평타): 판정 반경 · 폭과 같은 크기를 seconds 동안 쓸고 fadeSeconds에 사라진다(판정보다 크게 그리지 않는다) · stepDeg = 조각 간격
-	swingTrail = { seconds = 0.12, fadeSeconds = 0.15, stepDeg = 6, maxSlices = 30, width = 0.25, transparency = 0.25 },
+	swingTrail = { seconds = 0.12, fadeSeconds = 0.15, stepDeg = 6, maxSlices = 30, width = 0.7, transparency = 0.25 },
 	bosses = {
 		section_guardian = { slam = "twoFistSlam", charge = "hoofScrape" },
 		abyssal_lord = { slam = "tailSwipe" },
@@ -50,8 +50,8 @@ return {
 	--   상단(공중 파동) = 머리 높이 얇은 칼날 고리(blade - 네온 · 두께 bladeHeight) + 판정 띠는 아주 옅게(bandTransparency) + 흰 테두리 두 줄(판정 위 · 아래). 인형 방식 · 파티클 0.
 	quakeLook = { minLumaGap = 0.4, groundTransparency = 0.05, bladeHeight = 0.5, bandTransparency = 0.88,
 		heave = { segments = 28, amplitude = 0.9, behindStuds = 5, width = 4, waves = 5, speed = 14 },
-		-- A2-N4 §2-5: 다가오는 먼지 · 연기(파동 앞줄 - everySeconds마다 perTick개 · 바깥으로 밀림 · 폰 phoneScale) · 링만으로는 안 읽혔다
-		dustFront = { everySeconds = 0.06, perTick = 5, size = { 2.2, 3.6 }, life = 0.7, outward = 7, rise = 2.5, smokeEvery = 3, smokeSize = { 4, 6 }, smokeLife = 1.2, phoneScale = 0.5 },
+		-- A2-N4 §2-5: 다가오는 먼지 · 연기(파동 앞줄 - everySeconds마다 perTick개 · 바깥으로 밀림 · 폰 phoneScale) · 링만으로는 안 읽혔다 · 동시 약 20개(풀 상한 maxActive 90 - 폭풍 빗줄기와 나눠 쓴다)
+		dustFront = { everySeconds = 0.08, perTick = 3, size = { 3.2, 5.0 }, life = 0.6, outward = 7, rise = 2.5, smokeEvery = 3, smokeSize = { 4, 6 }, smokeLife = 1.2, phoneScale = 0.5 },
 		-- A2-N4 §2-5: 찍은 자리 얕은 구덩이 흔적(클라 파트만 - 충돌 · 조준 · 판정 없음 = 충돌 변화 0) · 아레나당 maxCraters(넘으면 옛 것부터) · 보스전이 끝나면 전부 치움
 		crater = { radius = 5.5, depthLook = 0.35, rimRocks = 7, rockSize = { 0.8, 1.5 }, maxCraters = 8, fadeInSeconds = 0.25 } },
 

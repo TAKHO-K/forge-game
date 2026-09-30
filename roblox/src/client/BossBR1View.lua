@@ -80,7 +80,7 @@ function BossBR1View.swingTrail(center, angleDeg, widthDeg, inner, outer, color,
 			local a = math.rad(from + widthDeg * i / n)
 			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 			local at = center + dir * mid + Vector3.new(0, 0.35, 0)
-			local blade = newPart(Vector3.new(T.width, 0.12, outer - inner), color or WHITE, transparency or T.transparency)
+			local blade = newPart(Vector3.new(T.width, 0.18, outer - inner), color or WHITE, transparency or T.transparency)
 			blade.CFrame = CFrame.lookAt(at, at + dir)
 			fadeOut(blade, T.fadeSeconds)
 		end)

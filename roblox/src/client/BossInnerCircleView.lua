@@ -69,9 +69,18 @@ end)
 function BossInnerCircleView.sweep(data)
 	-- A2-N4 §2-4: 판정 띠(원 inner ~ 사거리 outer 한 바퀴)와 같은 크기의 궤적이 0.12초에 한 바퀴 쓸고 사라진다 · 원 안 약한 휘두름(평타 줄)은 옅게
 	local BossBR1View = require(script.Parent.BossBR1View)
-	BossBR1View.swingTrail(data.center - Vector3.new(0, 2.6, 0), math.random() * 360, 360, data.inner, data.outer, DANGER, 0.35)
+	-- 바닥 높이 = 원형 구역 표시가 재 둔 floorY(가장 가까운 보스) - 루트 높이는 보스 덩치마다 달라 루트 − 상수로는 바닥 아래로 들어갔다(Play 캡처)
+	local floorY, best = nil, math.huge
+	for model, entry in pairs(rings) do
+		local d = model.Parent and (model:GetPivot().Position - data.center).Magnitude or math.huge
+		if d < best and entry.floorY then
+			floorY, best = entry.floorY, d
+		end
+	end
+	local base = Vector3.new(data.center.X, floorY or (data.center.Y - 1.5), data.center.Z)
+	BossBR1View.swingTrail(base, math.random() * 360, 360, data.inner, data.outer, DANGER, 0.3)
 	if data.innerSwing then
-		BossBR1View.swingTrail(data.center - Vector3.new(0, 2.6, 0), math.random() * 360, 360, 0, data.inner, DANGER, 0.7)
+		BossBR1View.swingTrail(base, math.random() * 360, 360, 0, data.inner, DANGER, 0.6)
 	end
 end
 
