@@ -149,7 +149,20 @@ local function buildCompactMember(list, order)
 	classLabel.Size = UDim2.new(0, m.gaugeWidth, 0, CHIP_HEIGHT - 6)
 
 	local refs = { block = button, gauge = gauge, dot = dot, tip = tip, tipLabel = tipLabel, classLabel = classLabel, shield = shield, tipToken = 0 }
+	-- QUEUE-ALL2 P4 ④: 왼쪽 파티원 색 띠(보스 적중 불꽃 · 피해 숫자 · 이름표 점과 같은 색)
+	local colorBar = Instance.new("Frame")
+	colorBar.Name = "PartyColorBar"
+	colorBar.BorderSizePixel = 0
+	colorBar.Size = UDim2.new(0, 4, 1, -8)
+	colorBar.Position = UDim2.new(0, 2, 0, 4)
+	colorBar.Visible = false
+	colorBar.ZIndex = 5
+	colorBar.Parent = button
 	function refs.apply(data)
+		colorBar.Visible = data.partyColor ~= nil
+		if data.partyColor then
+			colorBar.BackgroundColor3 = data.partyColor
+		end
 		dot.Visible = data.isLeader == true
 		classLabel.Text = data.awayText or data.className
 		classLabel.TextColor3 = data.awayText and UIColors.textSecondary or (UIColors.classAccent[data.classId] or UIColors.textSecondary)

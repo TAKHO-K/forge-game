@@ -169,6 +169,9 @@ function HitEffects.playHit(monsterModel, isCrit, holdSeconds)
 		local K = ArtV1FxData.combat
 		local classId = Players.LocalPlayer:GetAttribute("ClassId")
 		local accent = UIColors.classAccent[classId or ""] or NORMAL_COLOR
+		if monsterModel:GetAttribute("BossRig") then -- QUEUE-ALL2 P4 ④: 보스 = 내 파티원 색(파티일 때 - 이름표 · 파티 창과 같은 색)
+			accent = require(script.Parent.PartyColors).of(Players.LocalPlayer) or accent
+		end
 		local camera = Workspace.CurrentCamera
 		local face = camera and CFrame.lookAt(head.Position, camera.CFrame.Position) or CFrame.new(head.Position)
 		local ring = ArtV1Fx.ring(head.Position, isCrit and K.critRingSize or K.hitRingSize, K.hitRingSeconds, isCrit and K.critRim or accent, K.ringThick, 0.1)

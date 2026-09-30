@@ -5,6 +5,8 @@
 local D = {}
 
 D.enabled = false -- 프로토타입 플래그(서버 방송 + 클라 표시 둘 다). 켜는 시점 = U1(옛 DamageNumbers는 그대로 둔다 - 켜면 옛 것은 끈다)
+-- QUEUE-ALL2 P4 ④(09 B-2 보스 "누가 언제 때렸는지"): 보스 대상만 방송 · 클라는 남의 피해만 그린다(내 피해 = 옛 DamageNumbers 크고 밝게) · 남 = 작고 옅게 + 파티원 색(PartyColors) + 작은 적중 불꽃
+D.bossFeed = true
 
 D.sendStuds = 120 -- 대상에서 이 거리 안의 사람에게만(대역폭 - PrimordialGlovesBolt와 같은 원칙)
 D.mergeSeconds = 0.1 -- 같은 대상 · 같은 공격자에게 이 시간 안에 들어온 피해는 한 숫자로 합친다

@@ -29,8 +29,9 @@ function DamageFeed.emit(target, hitPosition, amount, kind, attacker, isCrit)
 	if DamageFeed.debugHook then
 		DamageFeed.debugHook(record)
 	end
-	if not DamageNumberData.enabled then
-		return
+	local isBoss = DamageNumberData.bossFeed and typeof(target) == "Instance" and (target:GetAttribute("BossRig") ~= nil or target:GetAttribute("IsBoss") == true)
+	if not DamageNumberData.enabled and not isBoss then
+		return -- QUEUE-ALL2 P4 ④: 꺼짐이어도 보스 대상은 보낸다(bossFeed)
 	end
 	for _, other in ipairs(Players:GetPlayers()) do
 		local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart")

@@ -13,9 +13,11 @@ local Workspace = game:GetService("Workspace")
 local D = require(ReplicatedStorage.Shared.data.DamageNumberData)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 
-if not D.enabled then
+if not D.enabled and not D.bossFeed then
 	return
 end
+local bossOnly = not D.enabled -- QUEUE-ALL2 P4 ④: 보스 대상 · 남의 피해만(내 피해 = 옛 DamageNumbers)
+local PartyColors = require(script.Parent.PartyColors)
 
 local player = Players.LocalPlayer
 local event = ReplicatedStorage:WaitForChild("DamageFeed")
@@ -68,16 +70,45 @@ end
 local function paint(slot)
 	local e = slot.entry
 	slot.label.Text = NumberFormat.format(e.amount)
-	slot.label.TextColor3 = e.isCrit and CRIT_COLOR or KIND_COLOR[e.kind] or KIND_COLOR.normal
+	slot.label.TextColor3 = (not e.mine and e.partyColor) or (e.isCrit and CRIT_COLOR) or KIND_COLOR[e.kind] or KIND_COLOR.normal
 	local px = D.minePx * (e.mine and 1 or D.others.scale) * (e.kind == "heavy" and 1.25 or 1)
 	slot.label.TextSize = math.floor(px)
 	slot.label.TextTransparency = e.mine and 0 or D.others.transparency
+end
+
+-- 남의 보스 적중 = 파티원 색 작은 불꽃(아트 켬 · 연출 세기 × 0.6 · 내 것보다 작고 옅게)
+local function otherSpark(at, color)
+	if Workspace:GetAttribute("ArtStyleV1") ~= true or (player:GetAttribute("FxScale") or 1) <= 0 then
+		return
+	end
+	local p = Instance.new("Part")
+	p.Name = "PartyHitSpark"
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+	p.Shape = Enum.PartType.Ball
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	p.Transparency = 0.35
+	p.Size = Vector3.one * 0.8
+	p.Position = at
+	p.Parent = anchorFolder
+	local tw = game:GetService("TweenService"):Create(p, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 3 * (player:GetAttribute("FxScale") or 1), Transparency = 1 })
+	tw.Completed:Connect(function()
+		p:Destroy()
+	end)
+	tw:Play()
 end
 
 local function show(target, hitPosition, amount, kind, attackerUserId, isCrit)
 	local mine = attackerUserId == player.UserId
 	if not mine and D.others.mode == "off" then
 		return
+	end
+	if bossOnly and mine then
+		return -- 내 피해 숫자는 옛 DamageNumbers가 크게 그린다
+	end
+	local partyColor = not mine and PartyColors.ofUserId(attackerUserId) or nil
+	if not mine then
+		otherSpark(hitPosition, partyColor or Color3.fromRGB(200, 200, 210))
 	end
 	local now = os.clock()
 	open[target] = open[target] or {}
@@ -89,7 +120,7 @@ local function show(target, hitPosition, amount, kind, attackerUserId, isCrit)
 		return
 	end
 	slot = takeSlot()
-	slot.entry = { target = target, attacker = attackerUserId, amount = amount, kind = kind, isCrit = isCrit, mine = mine, firstAt = now, base = hitPosition + Vector3.new(0, 2.6, 0) }
+	slot.entry = { target = target, attacker = attackerUserId, amount = amount, kind = kind, isCrit = isCrit, mine = mine, firstAt = now, base = hitPosition + Vector3.new(0, 2.6, 0), partyColor = partyColor }
 	open[target][attackerUserId] = slot
 	slot.anchor.Position = slot.entry.base
 	slot.gui.Enabled = true

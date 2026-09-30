@@ -72,6 +72,7 @@ local function readMember(member)
 		buffActive = buffActive == true,
 		isLeader = member.isLeader == true,
 		awayText = awayText,
+		partyColor = member.userId and require(script.Parent.Parent.PartyColors).ofUserId(member.userId) or nil, -- QUEUE-ALL2 P4 ④ 파티원 색(보스 적중 · 이름표 점과 같은 색)
 	}
 end
 
