@@ -1,5 +1,5 @@
 -- BR1-2 근접 원형 구역(서리 거인 · 폭풍 군주 · 구간 수호자 - 보스 모델 Attribute BossInnerCircle = 반경): 보스 발밑 바닥에 원(파랑 테 - 안 = 평타가 안 닿는 곳)이 늘 따라간다.
--- 평타(basicSweep) = 원 밖을 낫처럼 쓰는 반투명 붉은 호(0.25초에 한 바퀴 반) - 판정은 서버(원 밖 · 사거리 안 전원).
+-- 평타(basicSweep) = 원 밖 판정 띠와 같은 크기의 궤적이 한 바퀴 쓸고 사라진다(A2-N4 - BossBR1View.swingTrail) - 판정은 서버(원 밖 · 사거리 안 전원 · 평타 줄이면 원 안은 약하게).
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
@@ -66,24 +66,13 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- 낫 휘두르기: 원(inner) ~ 사거리(outer) 띠를 붉은 호가 한 바퀴 반 돈다.
 function BossInnerCircleView.sweep(data)
-	local mid = (data.inner + data.outer) / 2
-	local blade = newPart(Vector3.new(data.outer - data.inner, 0.3, 3), DANGER, 0.35)
-	local start = math.random() * 2 * math.pi
-	local steps = 10
-	for i = 0, steps do
-		task.delay(0.025 * i, function()
-			if blade.Parent then
-				local a = start + i / steps * math.pi * 1.5
-				local at = Vector3.new(data.center.X + math.cos(a) * mid, data.center.Y - 2.6, data.center.Z + math.sin(a) * mid)
-				blade.CFrame = CFrame.lookAt(at, Vector3.new(data.center.X, at.Y, data.center.Z)) * CFrame.Angles(0, math.rad(90), 0)
-			end
-		end)
+	-- A2-N4 §2-4: 판정 띠(원 inner ~ 사거리 outer 한 바퀴)와 같은 크기의 궤적이 0.12초에 한 바퀴 쓸고 사라진다 · 원 안 약한 휘두름(평타 줄)은 옅게
+	local BossBR1View = require(script.Parent.BossBR1View)
+	BossBR1View.swingTrail(data.center - Vector3.new(0, 2.6, 0), math.random() * 360, 360, data.inner, data.outer, DANGER, 0.35)
+	if data.innerSwing then
+		BossBR1View.swingTrail(data.center - Vector3.new(0, 2.6, 0), math.random() * 360, 360, 0, data.inner, DANGER, 0.7)
 	end
-	task.delay(0.3, function()
-		blade:Destroy()
-	end)
 end
 
 return BossInnerCircleView

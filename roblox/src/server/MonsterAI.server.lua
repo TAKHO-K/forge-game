@@ -447,7 +447,7 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 		applyHitToPlayer(v.player, MonsterState.getAttackFor(model, TutorialState.getMonsterStage(v.player)), nil, multiplier)
 	end
 	if data.innerSafeRadiusStuds then
-		BossPatterns.sendEvent(model, "basicSweep", { center = monsterPosition, inner = data.innerSafeRadiusStuds, outer = data.attackRangeStuds })
+		BossPatterns.sendEvent(model, "basicSweep", { center = monsterPosition, inner = data.innerSafeRadiusStuds, outer = data.attackRangeStuds, innerSwing = lanesOn or nil })
 	end
 end
 

@@ -9,6 +9,8 @@
 --   charge(돌진 - A4): "hoofScrape"(발 긁기 → 돌진) · "burrow"(잠행 - 몸은 땅속, 꼬리 먼지만)
 --   지진파가 없는 보스(서리 거인 · 수정 여왕 · 전갈 여왕)는 slam이 없다 - 그대로 둔다.
 return {
+	-- A2-N4 §2-4 휘두름 궤적(부채꼴 판정 · 원형 평타): 판정 반경 · 폭과 같은 크기를 seconds 동안 쓸고 fadeSeconds에 사라진다(판정보다 크게 그리지 않는다) · stepDeg = 조각 간격
+	swingTrail = { seconds = 0.12, fadeSeconds = 0.15, stepDeg = 6, maxSlices = 30, width = 0.25, transparency = 0.25 },
 	bosses = {
 		section_guardian = { slam = "twoFistSlam", charge = "hoofScrape" },
 		abyssal_lord = { slam = "tailSwipe" },

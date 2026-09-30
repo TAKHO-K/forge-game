@@ -63,6 +63,30 @@ local function fadeOut(part, seconds)
 	end)
 end
 
+-- A2-N4 §2-4 휘두름 궤적: 판정 부채꼴(center · 가운데 각 angleDeg · 폭 widthDeg · 반경 inner ~ outer)과 같은 크기를 fromSide 쪽에서 반대쪽으로 쓸고 사라진다.
+--   조각 = 반지름 방향 얇은 판(길이 outer − inner) - 각 조각의 바깥 끝이 정확히 outer(판정보다 크게 그리지 않는다).
+local BossFxData = require(ReplicatedStorage.Shared.data.BossFxData)
+function BossBR1View.swingTrail(center, angleDeg, widthDeg, inner, outer, color, transparency)
+	local T = BossFxData.swingTrail
+	inner = math.max(inner or 0, 0)
+	if outer - inner < 0.2 then
+		return
+	end
+	local n = math.clamp(math.ceil(widthDeg / T.stepDeg), 2, T.maxSlices)
+	local from = angleDeg - widthDeg / 2
+	local mid = (inner + outer) / 2
+	for i = 0, n do
+		task.delay(T.seconds * i / n, function()
+			local a = math.rad(from + widthDeg * i / n)
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local at = center + dir * mid + Vector3.new(0, 0.35, 0)
+			local blade = newPart(Vector3.new(T.width, 0.12, outer - inner), color or WHITE, transparency or T.transparency)
+			blade.CFrame = CFrame.lookAt(at, at + dir)
+			fadeOut(blade, T.fadeSeconds)
+		end)
+	end
+end
+
 local function disc(center, radius, color, transparency)
 	local part = newPart(Vector3.new(0.2, radius * 2, radius * 2), color, transparency, Enum.PartType.Cylinder)
 	part.CFrame = CFrame.new(center + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, 0, math.rad(90))
@@ -145,9 +169,10 @@ function BossBR1View.sector(data)
 end
 
 function BossBR1View.sectorImpact(data)
-	for _, part in ipairs(sectorParts(data, WHITE, 0.15)) do
-		fadeOut(part, 0.3)
+	for _, part in ipairs(sectorParts(data, WHITE, 0.55)) do -- A2-N4: 부채꼴 번쩍임은 옅게 · 휘두름 궤적이 주인공
+		fadeOut(part, 0.2)
 	end
+	BossBR1View.swingTrail(data.center, data.angleDeg, data.widthDeg, data.innerRadius, data.radius)
 	BossFx.shake(data.center, 0.5)
 end
 
