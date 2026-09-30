@@ -136,6 +136,67 @@ function V.runPure()
 		table.sort(design)
 		r.check(("떨어지는 · 날아가는 투사체 인당 %d개 · 한 명만 노리는 투사체 %d개(%s) · 보스 몸 · 경로 기준(설계) %s"):format(#per, #single, table.concat(single, ", "), table.concat(design, ", ")), #single == 0)
 	end)
+	r.section("전갈 야바위", function()
+		local SandShell = require(ReplicatedStorage.Shared.SandShell)
+		local spec = BossData.bosses.scorpion_queen.skills.sandSearch.mound
+		local S = spec.shell
+		local worstOverlap, maxSpeed, maxR, holds, bursts = 0, 0, 0, {}, 0
+		for seed = 1, 20 do
+			local rng = Random.new(seed)
+			local count = spec.countByParty[math.min(4, 1 + seed % 4)]
+			local sand = { center = Vector3.zero, realIndex = 1 + seed % count }
+			local mounds = {}
+			for i = 1, count do
+				local a = (i - 1) / count * 2 * math.pi
+				mounds[i] = { position = Vector3.new(math.cos(a), 0, math.sin(a)) * spec.wanderRadiusStuds * 0.55 }
+			end
+			local overlapSince, lastPhase, holdStart = {}, nil, 0
+			local dt = 1 / 60
+			for k = 0, 14 * 60 do
+				local now = k * dt
+				local before = {}
+				for i, m in ipairs(mounds) do
+					before[i] = m.position
+				end
+				SandShell.step(sand, spec, mounds, now, dt, rng)
+				local phase = sand.shell.phase
+				if phase ~= lastPhase then
+					if phase == "move" then
+						bursts += 1
+						if lastPhase == "hold" and holdStart > 0 then
+							table.insert(holds, now - holdStart)
+						end
+					else
+						holdStart = now
+					end
+					lastPhase = phase
+				end
+				for i, m in ipairs(mounds) do
+					local moved = (m.position - before[i]).Magnitude
+					if moved < S.pushStuds * 0.5 then -- 비켜 세우기(순간)는 속도에서 뺀다
+						maxSpeed = math.max(maxSpeed, moved / dt)
+					end
+					maxR = math.max(maxR, m.position.Magnitude)
+					if i ~= sand.realIndex then
+						local d = (m.position - mounds[sand.realIndex].position).Magnitude
+						if d < S.overlapStuds then
+							overlapSince[i] = overlapSince[i] or now
+							worstOverlap = math.max(worstOverlap, now - overlapSince[i])
+						else
+							overlapSince[i] = nil
+						end
+					end
+				end
+			end
+		end
+		local hMin, hMax = math.huge, 0
+		for _, h in ipairs(holds) do
+			hMin, hMax = math.min(hMin, h), math.max(hMax, h)
+		end
+		r.check(("야바위 20판 × 14초: 자리 바꾸기 %d번 · 최고 속도 %.1f(%g ~ %g) · 멈춤 %.2f ~ %.2f초(%g ~ %g) · 진짜 ↔ 가짜 최장 겹침 %.2f초(≤ %.1f) · 중심에서 최대 %.1f(떠돌기 %d)"):format(
+			bursts, maxSpeed, S.burstSpeed[1], S.burstSpeed[2], hMin, hMax, S.holdSeconds[1], S.holdSeconds[2], worstOverlap, S.maxOverlapSeconds, maxR, spec.wanderRadiusStuds),
+			maxSpeed <= S.burstSpeed[2] + 0.01 and maxSpeed >= S.burstSpeed[1] - 0.01 and hMin >= S.holdSeconds[1] - 0.02 and hMax <= S.holdSeconds[2] + 0.02 and worstOverlap <= S.maxOverlapSeconds and maxR <= spec.wanderRadiusStuds + 0.01)
+	end)
 	r.section("대표 전력 역산", function()
 		local off = BalanceSim.solveKillOffset()
 		local rows, ok = {}, true

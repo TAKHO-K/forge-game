@@ -1168,7 +1168,11 @@ local SPECIES = {
 				cooldownSeconds = 30, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				conditions = { { type = "notAfter", skills = { "stab" } }, { type = "memberWithin", studs = 60 } },
 				telegraphSeconds = 1.5, limitSeconds = 14, limitSecondsParty = 12, depthStuds = 8, -- M1 BR1-3 후속(A안): 파티(2인 이상) 제한 12초
-				mound = { countByParty = { 3, 4, 5, 5 }, speedStuds = 7, wanderRadiusStuds = 40, sizeScale = 3.4, bodyAspect = Vector3.new(1.7, 0.5, 1.7), color = scorpionHead },
+				mound = { countByParty = { 3, 4, 5, 5 }, speedStuds = 7, wanderRadiusStuds = 40, sizeScale = 3.4, bodyAspect = Vector3.new(1.7, 0.5, 1.7), color = scorpionHead,
+					-- A2-N4 §2-7(★ 기믹): 야바위 이동 - 둔덕끼리 자리를 바꾸며 burstSpeed로 빠르게 → holdSeconds 멈춤 반복(speedStuds = 옛 떠돌기 · 끄면 옛 규칙) ·
+					--   추적 보장: 진짜가 가짜와 overlapStuds 안에 maxOverlapSeconds 넘게 있지 않게(넘으면 가짜를 비켜 세운다) · 꼬리 = 모든 둔덕(가짜 = 모래색) · 진짜만 켜짐 onSeconds / 꺼짐 offSeconds
+					shell = { enabled = true, burstSpeed = { 14, 16 }, holdSeconds = { 0.5, 0.8 }, overlapStuds = 5, maxOverlapSeconds = 0.8, pushStuds = 9 },
+					tail = { onSeconds = 1.0, offSeconds = 2.0, glowColor = Color3.fromRGB(255, 214, 90) } },
 				clue = { footprintEverySeconds = 0.3, footprintSeconds = 2.4 },
 				decoyBlast = { multiplier = 1.0, radiusStuds = 7, damageLabel = "모래 폭발", partyShareMaxHpByParty = { 0, 0.35, 0.33, 0.3 }, partyShareLabel = "공동 책임" }, -- M1-2 C안 = 오르골 wrongShock 주석
 				stunSeconds = 4, breakWindow = { seconds = 4, damageTakenMultiplier = 1.3 },

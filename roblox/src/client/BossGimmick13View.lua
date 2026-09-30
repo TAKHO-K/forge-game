@@ -148,9 +148,21 @@ end
 function BossGimmick13View.sandStart(data)
 	clearSand()
 	sand = { realIndex = data.realIndex, lastAt = 0, endsAt = os.clock() + data.seconds, floorY = data.floorY }
+	local tailSpec = data.tail -- A2-N4 §2-7: { onSeconds, offSeconds, glowColor, sandColor } - 서버 sandStart가 스킬 데이터에서 싣는다
+	local startedAt = os.clock()
 	sand.connection = RunService.RenderStepped:Connect(function()
 		local now = os.clock()
 		setHud(("빛나는 꼬리를 찾아 때려라! %d"):format(math.max(0, math.ceil(sand.endsAt - now))), Color3.fromRGB(255, 214, 90))
+		-- A2-N4 §2-7: 진짜 꼬리만 전구처럼 켜짐 onSeconds · 꺼짐 offSeconds(가짜 꼬리 = 서버가 모래색으로 둔다)
+		if tailSpec then
+			local real = taggedWith("SandMound", sand.realIndex)
+			local tip = real and real:FindFirstChild("TailTip")
+			if tip then
+				local on = (now - startedAt) % (tailSpec.onSeconds + tailSpec.offSeconds) < tailSpec.onSeconds
+				tip.Material = on and Enum.Material.Neon or Enum.Material.Sand
+				tip.Color = on and tailSpec.glowColor or tailSpec.sandColor
+			end
+		end
 		if now - sand.lastAt < data.footprintEvery then
 			return
 		end

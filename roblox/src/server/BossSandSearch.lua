@@ -9,6 +9,7 @@ local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossMechanics = require(script.Parent.BossMechanics)
 local BossSkillMath = require(game:GetService("ReplicatedStorage").Shared.BossSkillMath)
+local SandShell = require(game:GetService("ReplicatedStorage").Shared.SandShell)
 
 local BossSandSearch = {}
 
@@ -87,15 +88,16 @@ local function spawnMounds(c)
 		if head then
 			head.Transparency = 1
 		end
-		if i == sand.realIndex and body then
-			-- 빛나는 꼬리 끝(작지만 알면 보인다 - 폰에서도 보이게 몸 위로 솟은 네온 쐐기)
+		if (i == sand.realIndex or (spec.shell and spec.shell.enabled)) and body then
+			-- 빛나는 꼬리 끝(작지만 알면 보인다 - 폰에서도 보이게 몸 위로 솟은 네온 쐐기) · A2-N4: 가짜에도 같은 꼬리(모래색 · 안 빛남) - 진짜만 클라가 켰다 껐다(BossGimmick13View)
 			local tip = Instance.new("WedgePart")
 			tip.Name = "TailTip"
 			tip.Anchored = true
 			tip.CanCollide = false
 			tip.CanQuery = false
-			tip.Material = Enum.Material.Neon
-			tip.Color = Color3.fromRGB(255, 214, 90)
+			local shellOn = spec.shell and spec.shell.enabled
+			tip.Material = shellOn and Enum.Material.Sand or Enum.Material.Neon
+			tip.Color = shellOn and spec.color or Color3.fromRGB(255, 214, 90)
 			tip.Size = Vector3.new(1.2, 3.4, 2.2)
 			tip.CFrame = body.CFrame * CFrame.new(0, body.Size.Y / 2 + 0.8, body.Size.Z * 0.3) * CFrame.Angles(math.rad(-20), 0, 0)
 			tip.Parent = entry.model
@@ -107,7 +109,8 @@ local function spawnMounds(c)
 	local limit = BossSkillMath.gimmickLimitSeconds(skill, #st.members)
 	sand.endsAt = c.now + limit
 	sand.blastAt = {}
-	kit.send(st, "sandStart", { realIndex = sand.realIndex, count = count, seconds = limit, footprintEvery = skill.clue.footprintEverySeconds, footprintSeconds = skill.clue.footprintSeconds, floorY = st.floorY })
+	local tail = (spec.shell and spec.shell.enabled and spec.tail) and { onSeconds = spec.tail.onSeconds, offSeconds = spec.tail.offSeconds, glowColor = spec.tail.glowColor, sandColor = spec.color } or nil
+	kit.send(st, "sandStart", { realIndex = sand.realIndex, count = count, seconds = limit, footprintEvery = skill.clue.footprintEverySeconds, footprintSeconds = skill.clue.footprintSeconds, floorY = st.floorY, tail = tail })
 	print(("[forge-game] 진짜 전갈 찾기: 둔덕 %d개(진짜 %d번) · 제한 %.1f초"):format(count, sand.realIndex, limit))
 end
 
@@ -200,10 +203,13 @@ BossSandSearch.handler = {
 			end
 			return
 		end
-		-- 둔덕이 돌아다닌다(걷기보다 느리게 - 웨이포인트를 차례로)
+		-- 둔덕이 돌아다닌다(걷기보다 느리게 - 웨이포인트를 차례로) · A2-N4: 야바위(자리 바꾸기 → 멈춤)
 		local spec = skill.mound
+		if spec.shell and spec.shell.enabled then
+			BossSandSearch.stepShell(c, sand, spec, moundsOf[c.model] or {})
+		end
 		local step = spec.speedStuds * (st.dt or 1 / 60)
-		for _, m in ipairs(moundsOf[c.model] or {}) do
+		for _, m in ipairs((spec.shell and spec.shell.enabled) and {} or (moundsOf[c.model] or {})) do
 			local to = m.waypoint - m.position
 			if to.Magnitude <= step then
 				m.position = m.waypoint
@@ -232,6 +238,16 @@ BossSandSearch.handler = {
 		end
 	end,
 }
+
+-- A2-N4 §2-7 야바위 이동 = shared/SandShell(순수 - 검증이 같은 함수를 부른다) + 모델 자리 맞춤
+function BossSandSearch.stepShell(c, sand, spec, mounds, dt)
+	SandShell.step(sand, spec, mounds, c.now, dt or c.st.dt or 1 / 60, rng)
+	for _, m in ipairs(mounds) do
+		if m.model and m.model.Parent then
+			m.model:PivotTo(CFrame.new(Vector3.new(m.position.X, c.position.Y, m.position.Z)) * m.model:GetPivot().Rotation)
+		end
+	end
+end
 
 -- 보스전이 끝나면(처치 · 이탈) 둔덕을 남기지 않는다(BossPatterns.clearProps).
 function BossSandSearch.clear(model)
