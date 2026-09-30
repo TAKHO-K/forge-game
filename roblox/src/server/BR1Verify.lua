@@ -534,6 +534,21 @@ function BR1Verify.runLive(player, env)
 				local partsAfter = BossEnvironment.debugGarden(model)
 				r.check(("%s 수정 부수기 성공: 끝 신호 %d · 보호막 %s(기대 해제) · 파트 %d(기대 0)"):format(bossId, countKind("envEnd"), tostring(model:GetAttribute("BossShielded")), partsAfter),
 					countKind("envEnd") == 1 and model:GetAttribute("BossShielded") == nil and partsAfter == 0)
+			elseif not envData.tick then
+				-- QUEUE-ALL1 00 결정 5: 판 털기 = 낙사 없음 - 활성 동안 들린 절반 한가운데에 서도 voidFall 0 · 끝 신호 1
+				local z1 = st.env.zones and st.env.zones[1]
+				if z1 then
+					victimRoot.Position = Vector3.new(z1.center.X, FLOOR + 3, z1.center.Z)
+				end
+				fullHeal(victim)
+				drive(player, root, model, data, 0.8)
+				local fallsDuring = countKind("voidFall")
+				st.env.phaseEndsAt = os.clock()
+				drive(player, root, model, data, 0.5, function()
+					return countKind("envEnd") > 0
+				end)
+				r.check(("%s 환경 %s: 전조 %.1f초 → 구역 %d개 · 들린 판 위 0.8초 낙사 %d(기대 0 - 결정 5) · 끝 신호 %d"):format(bossId, envData.id, envData.telegraphSeconds, #telegraphPayload.zones, fallsDuring, countKind("envEnd")),
+					#telegraphPayload.zones >= 1 and fallsDuring == 0 and countKind("envEnd") == 1)
 			else
 				local expected = math.floor(1.6 / envData.tick.seconds) * envData.tick.fraction * PlayerState.getMaxHp(victim)
 				r.check(("%s 환경 %s: 전조 %.1f초 → 구역 %d개 · 구역 안 1.6초 도트 %.1f(기대 약 %.1f - %.0f%%/%.1f초)%s"):format(bossId, envData.id, envData.telegraphSeconds, #telegraphPayload.zones,
