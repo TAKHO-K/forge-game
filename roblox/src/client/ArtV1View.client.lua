@@ -110,6 +110,20 @@ end)
 -- ─────────────── ② 강화대 ───────────────
 local F = ArtStyleV1Data.forge
 local forgeModel = nil
+-- A2-N3 Open Cloud 강화대 메시(순서표 7): 같은 이름 코드 파트 자리에 겹치고 코드 파트는 투명(불빛 · 연기 · 불씨 = 코드 그대로). 캐시가 늦으면 준비 신호 때.
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
+local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
+local function skinForge()
+	if forgeModel and not forgeModel:GetAttribute("ArtMesh") then
+		ArtMeshKit.skin(forgeModel, "props/forge", forgeModel:GetPivot(), Vector3.one * (ArtStyleV1Data.forge.scale or 1))
+	end
+end
+task.spawn(function()
+	local cache = ReplicatedStorage:WaitForChild(ArtImportData.cacheFolder, 120)
+	if cache then
+		cache:GetAttributeChangedSignal(ArtImportData.readyAttribute):Connect(skinForge)
+	end
+end)
 
 local function setForge(on)
 	local station = Workspace:FindFirstChild("EnhanceStation")
@@ -145,6 +159,7 @@ local function setForge(on)
 	local face = Vector3.new(hub.X, ground.Y, hub.Z)
 	forgeModel = ArtV1Models.forge()
 	forgeModel:PivotTo((face - ground).Magnitude > 1 and CFrame.lookAt(ground, face) or CFrame.new(ground))
+	skinForge()
 	if F.outlineTag then
 		CollectionService:AddTag(forgeModel, "OutlineTarget")
 	end
