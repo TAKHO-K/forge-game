@@ -399,7 +399,7 @@ return {
 		--   lookAheadStuds 앞 점으로 걷는다 · stuckSeconds 동안 stuckStuds 못 가면 점프 → jumpsBeforeRecompute번 뒤 경로 재계산 → maxRecomputes번 넘으면 멈춤.
 		--   dropAheadStuds 안에 낙하 피해 높이(MovementConfig.fall.safeHeight)를 넘는 내려감이 있으면 그 앞에서 멈춘다(나무 둘레 · 물 제외) · stepJumpStuds 넘게 올라가는 점 앞 = 점프.
 		autoWalk = {
-			owners = { bossGate = true, tutorial = true, bossSelect = true, debug = true },
+			owners = { bossGate = true, tutorial = true, bossSelect = true, debug = true, mapPin = true }, -- QUEUE-ALL3 Q4: mapPin = 지도에서 고른 장소 · 플레이어가 찍은 핀(둥지 · 탐험 지점은 목록에 없다)
 			lookAheadStuds = 8, tickSeconds = 0.1, stuckSeconds = 1.5, stuckStuds = 1.5, jumpsBeforeRecompute = 2, maxRecomputes = 3,
 			dropAheadStuds = 10, maxDropFraction = 0.12, fallGraceSeconds = 1.2, stepJumpStuds = 2.5, selfJumpIgnoreSeconds = 0.3, -- 절벽: 낙하 피해가 최대 체력 × maxDropFraction 이하면 계속 걷는다(그 피해는 피격 멈춤에서 뺀다) · 넘으면 멈춤 · 스스로 점프 직후 selfJumpIgnoreSeconds는 JumpRequest(사람 점프 입력)를 무시 · 허용 낙하 뒤 fallGraceSeconds(떨어지는 동안 연장) 체력 감소는 피격 아님
 		},
@@ -437,5 +437,7 @@ return {
 	atmosphere = { density = 0.08, offset = 0 },
 
 	-- 검증 · 이동 시간 표용 지점 이름(보고서)
+	-- QUEUE-ALL3 Q4 전체 지도(panels/WorldMapPanel) · 미니맵(hud/Minimap) · 핀(client/MapPins). image = 위에서 본 지도 PNG(roblox/art 기준 - 업로드 전 nil = 지형 데이터로 그림)
+	map = { image = nil, maxPins = 3, pinBeaconHeight = 60, zoomMin = 1, zoomMax = 6, pinPickStuds = 120, minimap = { pc = 150, phone = 96, rangeStuds = 420 } },
 	boss = { entry = "gate" }, -- 보스 입장 = 관문(보스 스테이지를 고르면 관문까지 길 안내 → 관문을 밟으면 입장). "direct" = 옛 즉시 입장
 }
