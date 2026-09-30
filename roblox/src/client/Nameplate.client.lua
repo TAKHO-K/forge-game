@@ -174,7 +174,13 @@ local function applyOwnHidden()
 	for _, name in ipairs({ BILLBOARD_NAME, "PlayerTitle" }) do
 		local gui = character and character:FindFirstChild(name)
 		if gui then
-			gui.Enabled = not hide
+			if hide and gui.Enabled then
+				gui.Enabled = false
+				gui:SetAttribute("BossHidden", true) -- 숨긴 것만 되돌린다(칭호 없는 칭호 빌보드는 원래 꺼져 있다 - 켜면 기본 글자 "Label"이 뜬다)
+			elseif not hide and gui:GetAttribute("BossHidden") then
+				gui.Enabled = true
+				gui:SetAttribute("BossHidden", nil)
+			end
 		end
 	end
 end
