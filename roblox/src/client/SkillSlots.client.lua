@@ -449,6 +449,59 @@ slotHandles["dash"] = buildSlot(dashHolder, 1, { id = "dash", key = "SHIFT", ico
 slotHandles["dash"].slot.AnchorPoint = Vector2.new(0, 1)
 slotHandles["dash"].slot.Position = UDim2.new(0, 0, 1, 0)
 
+-- QUEUE-ALL1 01 B(아트 켬): 대시 충전 점 = Shift 칸 안 아래(충전 수 1 · 태초 신발 2) - 가득이면 숨김(쓸 때만) · 따로 떠 있는 게이지 없음
+do
+	local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
+	local slot = slotHandles["dash"].slot
+	local row = Instance.new("Frame")
+	row.Name = "DashChargeDots"
+	row.BackgroundTransparency = 1
+	row.AnchorPoint = Vector2.new(0.5, 1)
+	row.Position = UDim2.new(0.5, 0, 1, -4)
+	row.Size = UDim2.fromOffset(40, 8)
+	row.ZIndex = 10
+	row.Visible = false
+	row.Parent = slot
+	local dotsList = {}
+	for i = 1, DashConfig.primordialShoes.charges do
+		local d = Instance.new("Frame")
+		d.AnchorPoint = Vector2.new(0.5, 0.5)
+		d.Size = UDim2.fromOffset(7, 7)
+		d.BorderSizePixel = 0
+		d.ZIndex = 10
+		d.Parent = row
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(1, 0)
+		c.Parent = d
+		dotsList[i] = d
+	end
+	local acc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		acc += dt
+		if acc < 0.1 then
+			return
+		end
+		acc = 0
+		local character = player.Character
+		if not character or workspace:GetAttribute("ArtStyleV1") ~= true then
+			row.Visible = false
+			return
+		end
+		local parts = player:GetAttribute("PrimordialParts")
+		local total = (type(parts) == "string" and parts:find("shoes", 1, true)) and DashConfig.primordialShoes.charges or 1
+		local now = os.clock()
+		local readyAt = character:GetAttribute("DashReadyAt") or 0
+		local secondUntil = character:GetAttribute("DashSecondUntil") or 0
+		local available = now >= readyAt and total or (now <= secondUntil and math.max(total - 1, 0) or 0)
+		row.Visible = available < total
+		for i, d in ipairs(dotsList) do
+			d.Visible = i <= total
+			d.Position = UDim2.new(0.5, (i - (total + 1) / 2) * 11, 0.5, 0)
+			d.BackgroundColor3 = i <= available and UIColors.success or UIColors.lockedIcon
+		end
+	end)
+end
+
 -- 에뮬레이션용 모의 점프 버튼(Studio + ForceTouchLayout에서만 생성).
 local jumpMock = nil
 

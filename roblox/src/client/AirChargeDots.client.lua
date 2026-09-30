@@ -86,6 +86,8 @@ local function primordialShoes()
 end
 
 local AIR = { [Enum.HumanoidStateType.Jumping] = true, [Enum.HumanoidStateType.Freefall] = true }
+local ART_SIDE_STUDS = 1.9 -- 아트 켬: 발 옆(화면 오른쪽)
+local hasCells = true -- 보일 칸이 있나(아트 켬 + 공중 점프 해금 0 = 줄 숨김)
 
 local function render(character)
 	local unlocked = (MoveRules.tierOf(player)).airJumps
@@ -104,8 +106,12 @@ local function render(character)
 	local secondUntil = character:GetAttribute("DashSecondUntil") or 0
 	local used = character:GetAttribute("AirDashesUsed") or 0
 	local now = os.clock()
+	-- QUEUE-ALL1 01 B(아트 켬): 대시 표시는 Shift 칸(SkillSlots - 원형 쿨 + 칸 아래 충전 점)으로 - 발 옆에는 공중 점프 점만 · 끔 = 옛 줄
+	local art = workspace:GetAttribute("ArtStyleV1") == true
+	gui.StudsOffset = art and Vector3.new(ART_SIDE_STUDS, -MovementConfig.rootAboveFeetStuds + 0.4, 0) or Vector3.new(0, -MovementConfig.rootAboveFeetStuds - 0.6, 0)
+	hasCells = not art or unlocked > 0
 	for d, arrow in ipairs(dashArrows) do
-		arrow.holder.Visible = d <= dashes
+		arrow.holder.Visible = d <= dashes and not art
 		if arrow.holder.Visible then
 			slot += 1
 			arrow.holder.Position = UDim2.new(0, GAP + (slot - 1) * (DOT + GAP) + DOT / 2, 0.5, 0)
@@ -149,7 +155,8 @@ local function bind(character)
 		render(character)
 	end)
 	humanoid.StateChanged:Connect(function(_, new)
-		gui.Enabled = AIR[new] == true and humanoid.Health > 0
+		render(character)
+		gui.Enabled = AIR[new] == true and humanoid.Health > 0 and hasCells
 	end)
 end
 

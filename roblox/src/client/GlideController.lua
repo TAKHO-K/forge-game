@@ -134,15 +134,34 @@ for i = 1, UI.dots do
 	dots[i] = dot
 end
 
+-- QUEUE-ALL1 01 B(아트 켬): 점 고리 → 매끈한 링(ui/kit/RingGauge) · 활강 중에만(다시 차는 동안은 숨김) · 적으면 노랑 → 빨강 깜빡 · 끔 = 옛 점 고리
+local ring = nil
 local function renderGauge(root, maxS)
 	local fraction = maxS > 0 and state.gauge / maxS or 0
 	local color = fraction <= UI.dangerFraction and UIColors.danger or (fraction <= UI.warnFraction and UIColors.xp or UIColors.success)
-	local lit = math.ceil(fraction * UI.dots - 1e-6)
-	for i, dot in ipairs(dots) do
-		dot.BackgroundColor3 = i <= lit and color or UIColors.lockedIcon
+	local art = workspace:GetAttribute("ArtStyleV1") == true
+	if art and not ring then
+		ring = require(script.Parent.ui.kit.RingGauge).build(gui, UI.sizePx - 6, 5, 48)
+	end
+	if ring then
+		ring.root.Visible = art
+	end
+	for _, dot in ipairs(dots) do
+		dot.Visible = not art
+	end
+	if art then
+		if fraction <= UI.dangerFraction and math.floor(os.clock() * 6) % 2 == 0 then
+			color = UIColors.xp -- 빨강 ↔ 노랑 깜빡(초당 3회)
+		end
+		ring.set(fraction, color, UIColors.lockedIcon)
+	else
+		local lit = math.ceil(fraction * UI.dots - 1e-6)
+		for i, dot in ipairs(dots) do
+			dot.BackgroundColor3 = i <= lit and color or UIColors.lockedIcon
+		end
 	end
 	gui.Adornee = root
-	gui.Enabled = MoveRules.tierOf(player).glide and (state.gliding or fraction < 0.999)
+	gui.Enabled = MoveRules.tierOf(player).glide and (state.gliding or (not art and fraction < 0.999))
 end
 
 -- ── 물리 스텝 ──
