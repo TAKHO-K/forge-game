@@ -59,7 +59,7 @@ TutorialData.steps = {
 	[1] = {
 		grade = "normal",
 		tierIndex = 1,
-		killTarget = 25,
+		killTarget = 18, -- QUEUE-ALL1 초반 곡선(사용자 09-30 첫 보스 ≤ 10분): 25 → 18 · 2 ~ 7단계 28 → 21(193 → 144마리 · 견습 11.3 → 9.5분 - EconSim 캐주얼)
 		lessonText = "이동(WASD/조이스틱)과 클릭·탭 공격을 배워보세요. 슬라임을 처치하면 드랍이 떨어집니다 - B키로 가방을 열어 착용하세요.",
 		-- 안내 뒤에 한 줄 더(S12, PRD 20.73 [7-1]) - 클라 안내 토스트가 lessonText 아래에 붙이고, 같은 단계에서 [친구 부르기] 버튼이 강조된다. 다른 단계는 필드가 없다.
 		friendHintText = "친구가 있다면 지금 불러도 됩니다 - 레벨이 달라도 같은 슬라임을 같이 잡을 수 있어요.",
@@ -70,7 +70,7 @@ TutorialData.steps = {
 	[2] = {
 		grade = "rare",
 		tierIndex = 2,
-		killTarget = 28,
+		killTarget = 21,
 		lessonText = "등급마다 색이 다릅니다. 장갑(공격력%)을 착용하고, 강화대에서 첫 강화를 해보세요. Shift로 대시할 수 있습니다.",
 		grant = { part = "gloves", grade = "rare" },
 		lend = nil,
@@ -79,7 +79,7 @@ TutorialData.steps = {
 	[3] = {
 		grade = "epic",
 		tierIndex = 3,
-		killTarget = 28,
+		killTarget = 21,
 		lessonText = "신발(이동+공속%)까지 착용하면 3부위 완성입니다. Q로 스킬을 써보세요.",
 		grant = { part = "shoes", grade = "epic" },
 		lend = nil,
@@ -88,7 +88,7 @@ TutorialData.steps = {
 	[4] = {
 		grade = "legendary",
 		tierIndex = 4,
-		killTarget = 28,
+		killTarget = 21,
 		lessonText = "무기 등급은 강화가 아니라 환생으로만 오릅니다. 전설 무기를 잠시 빌려드립니다 - E 스킬도 써보세요.",
 		grant = nil,
 		lend = { weaponGrade = 3 },
@@ -97,7 +97,7 @@ TutorialData.steps = {
 	[5] = {
 		grade = "relic",
 		tierIndex = 5,
-		killTarget = 28,
+		killTarget = 21,
 		lessonText = "유물 무기와 3부위 풀세트를 빌려드립니다 - 처치 속도가 얼마나 달라지는지 느껴보세요.",
 		grant = nil,
 		lend = { weaponGrade = 4, armorGrade = "relic" },
@@ -106,7 +106,7 @@ TutorialData.steps = {
 	[6] = {
 		grade = "ancient",
 		tierIndex = 6,
-		killTarget = 28,
+		killTarget = 21,
 		lessonText = "고대 무기와 3부위를 빌려드립니다. 보스 체력이 낮아지면(격노) 패턴이 더 자주 나옵니다.",
 		grant = nil,
 		lend = { weaponGrade = 5, armorGrade = "ancient" },
@@ -115,7 +115,7 @@ TutorialData.steps = {
 	[7] = {
 		grade = "primordial",
 		tierIndex = 6,
-		killTarget = 28,
+		killTarget = 21,
 		lessonText = "마지막 단계입니다. 태초 무기와 3부위를 빌려드립니다 - 환생 5회 + 보석 5개를 모으면 당신 것이 됩니다.",
 		grant = nil,
 		lend = { weaponGrade = 6, armorGrade = "primordial" },

@@ -90,6 +90,12 @@ local function run()
 	end
 
 	print("===S19b(UI) 검증 시작===")
+	if workspace:GetAttribute("ArtStyleV1") == true then
+		-- QUEUE-ALL1 01 A-1: 아트 켬 = 하단 가운데 새 틀(BossBarBottom · hud/BossHudLayout) - 이 점검은 옛 상단 틀(끔) 기준이라 건너뛴다
+		print("[S19b][UI] 아트 켬 - 옛 상단 틀 점검 건너뜀(하단 틀은 QUEUE-ALL1 보고서 캡처로 확인)")
+		print("===S19b(UI) 검증 끝=== 건너뜀")
+		return
+	end
 	local gui = playerGui:FindFirstChild("BossBarGui")
 	local root = gui and gui:FindFirstChild("BossBar")
 	check("HUD가 있다(BossBarGui.BossBar)", root ~= nil)

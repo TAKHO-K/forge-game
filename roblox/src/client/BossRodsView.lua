@@ -72,8 +72,8 @@ local function ensureHud()
 	gui.DisplayOrder = 30
 	local label = Instance.new("TextLabel")
 	label.Name = "Status"
-	label.AnchorPoint = Vector2.new(0.5, 0)
-	label.Position = (workspace:GetAttribute("ArtStyleV1") == true and UDim2.new(0.5, 0, require(game:GetService("ReplicatedStorage").Shared.data.ArtV1UiData).bossHud.gimmickHudY, 0) or UDim2.new(0.5, 0, 0, Theme.isMobile and 66 or 96)) -- A2-N4 §3-3: 아트 켬 = 화면 중앙 아래(보스 머리를 덮지 않게)
+	-- QUEUE-ALL1 01 A-1: 아트 켬 = 하단 보스 바 바로 위 한 줄(hud/BossHudLayout · 2초 뒤 흐려짐) · 끔 = 옛 자리
+	require(script.Parent.hud.BossHudLayout).gimmickLabel(label, UDim2.new(0.5, 0, 0, Theme.isMobile and 66 or 96), Vector2.new(0.5, 0))
 	label.Size = UDim2.new(0, Theme.isMobile and 300 or 340, 0, Theme.isMobile and 36 or 38)
 	label.BackgroundColor3 = Theme.color("panel")
 	label.BackgroundTransparency = 0.15

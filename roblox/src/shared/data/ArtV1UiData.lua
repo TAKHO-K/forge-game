@@ -20,7 +20,17 @@ return {
 	},
 	glowPad = 8, -- 바깥 빛 여백(px)
 	-- A2-N4 §3-3 결정(A2-N3 8-1 메이플식): 보스바 = 화면 맨 위 얇은 전체 폭(이름은 막대 안 왼쪽) · 기믹 안내 = 화면 중앙 아래(화면 높이 gimmickHudY 비율). ArtStyleV1 뒤(끔 = 옛 자리).
-	bossHud = { barHeight = 20, barMargin = 12, barTop = 4, gimmickHudY = 0.62 },
+	bossHud = { barHeight = 20, barMargin = 12, barTop = 4, gimmickHudY = 0.62,
+		-- QUEUE-ALL1 01 A-1(사용자 09-30: 보스 체력바 = 화면 하단 가운데 · 소울류 - 메이플식 맨 위 · 로블록스 버튼 옆 줄은 폐기): 아래부터 내 체력바 윗변(healthBarTopFromBottom = ScreenMap healthBar 94 + 19) ·
+		--   gapAboveHealth · 보스 바(PC 14 · 폰 12) · nameGap · 이름/% 줄 nameHeight · gimmickGap · 기믹 한 줄 gimmickHeight(글씨가 바뀐 뒤 gimmickFadeSeconds면 흐려짐)
+		--   폭 = 스킬 줄 폭(궁극기 버튼을 안 덮게 · 없으면 화면 widthFraction · widthMin ~ widthMax) · 폰 = 좌우 phoneSideReserve(조이스틱 · 버튼 자리)는 비움 · 색 = 진홍 채움 + 금 테두리 · 맞은 만큼 흰 잔상이 lagHoldSeconds 뒤 lagSeconds 동안 줄어듦
+		healthBarTopFromBottom = 113, gapAboveHealth = 8, barHeightPc = 14, barHeightMobile = 12, nameGap = 2, nameHeight = 16, gimmickGap = 6, gimmickHeight = 44,
+		gimmickFadeSeconds = 2, gimmickFadedTransparency = 0.45,
+		widthFraction = 0.45, widthMin = 360, widthMax = 720, phoneSideReserve = 230,
+		fill = C(196, 30, 46), fillTop = C(232, 64, 72), track = C(52, 12, 18), border = C(214, 176, 62), lag = C(255, 255, 255), lagTransparency = 0.25,
+		lagHoldSeconds = 0.45, lagSeconds = 0.6,
+		chat = { heightScale = 0.55, widthScale = 0.8, backgroundTransparency = 0.85 }, -- 보스전 동안 로블록스 채팅 창 = 작고 투명하게(끄지 않음)
+	},
 	-- A2-N4 §4-6 GUI 트렌드 1차(client/ArtV1GuiTrend - ArtStyleV1 뒤): 대상 = ScreenMap 인스턴스 이름 · 보스바 · 장비창 창. 굵은 잉크 외곽선 · 둥근 모서리 최소 · 위 → 아래 그라데이션(아래 색을 곱한다) · 글씨 외곽선 불투명 상한.
 	guiTrend = {
 		targets = { "MenuBar", "TopChipsRow", "PartyToggleButton", "LeaderboardToggleButton", "TravelHubButton", "TravelBackButton", "TravelPartyButton", "ClassReopenButton",

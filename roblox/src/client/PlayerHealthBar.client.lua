@@ -57,6 +57,8 @@ local MINOR_TICK_LIMIT = 20
 
 local NORMAL_FILL_TOP, NORMAL_FILL_BOTTOM = Color3.fromRGB(255, 90, 90), Color3.fromRGB(198, 40, 40)
 local DANGER_FILL_COLOR = Color3.fromRGB(255, 30, 30)
+local ART_FILL_TOP, ART_FILL_BOTTOM = Color3.fromRGB(116, 222, 110), Color3.fromRGB(46, 152, 64) -- QUEUE-ALL1 A-1 아트 켬 평시(초록)
+local ART_REGEN_TOP, ART_REGEN_BOTTOM = Color3.fromRGB(150, 245, 225), Color3.fromRGB(40, 170, 150) -- 아트 켬 회복 중(청록)
 -- 자동회복 중 표시(17-1) - 서버 Regenerating Attribute가 켜져 있을 때만 초록 계열로
 -- 바꾼다. 위험 상태(isDanger)가 더 급한 정보라 danger가 우선한다(아래 RenderStepped 참고).
 local REGEN_FILL_TOP, REGEN_FILL_BOTTOM = Color3.fromRGB(120, 230, 130), Color3.fromRGB(56, 160, 70)
@@ -298,10 +300,15 @@ RunService.RenderStepped:Connect(function()
 		fillGradient.Enabled = true
 		dangerStroke.Transparency = 1
 		dealingModeStroke.Transparency = 1
+		-- QUEUE-ALL1 01 A-1(아트 켬): 내 체력바 = 초록(보스 바 진홍과 헷갈리지 않게) · 회복 중 = 밝은 청록(평시 초록과 구분) · 끔 = 옛 빨강 · 초록
+		local art = workspace:GetAttribute("ArtStyleV1") == true
+		if art then
+			fill.BackgroundColor3 = Color3.new(1, 1, 1) -- UIGradient는 바탕색에 곱해진다(끔 = 옛 바탕 그대로)
+		end
 		if player:GetAttribute("Regenerating") then
-			fillGradient.Color = ColorSequence.new(REGEN_FILL_TOP, REGEN_FILL_BOTTOM)
+			fillGradient.Color = art and ColorSequence.new(ART_REGEN_TOP, ART_REGEN_BOTTOM) or ColorSequence.new(REGEN_FILL_TOP, REGEN_FILL_BOTTOM)
 		else
-			fillGradient.Color = ColorSequence.new(NORMAL_FILL_TOP, NORMAL_FILL_BOTTOM)
+			fillGradient.Color = art and ColorSequence.new(ART_FILL_TOP, ART_FILL_BOTTOM) or ColorSequence.new(NORMAL_FILL_TOP, NORMAL_FILL_BOTTOM)
 		end
 	end
 end)
