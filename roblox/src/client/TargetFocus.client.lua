@@ -553,6 +553,13 @@ local function refresh()
 	end
 	-- 겹침 풀기: 화면에서 앞 순위 이름표와 겹치면 위로 한 칸씩(SizeOffset = 화면 기준 · 최대 STACK_MAX칸 - 사막 몹 무리에서 3장이 겹쳐 안 읽힘 · Play 실측)
 	local placed = {}
+	local myPlate = character and character:FindFirstChild("PlayerNameplate")
+	if myPlate and root and myPlate.Enabled then -- 내 이름표 자리도 먼저 차지(곁에 붙은 몹 이름표가 내 이름을 가렸다 - 균열 2구역 Play 실측) · 이름표 = 루트 + StudsOffsetWorldSpace(client/Nameplate)
+		local p, onScreen = cam:WorldToViewportPoint(root.Position + myPlate.StudsOffsetWorldSpace)
+		if onScreen then
+			table.insert(placed, { x = p.X, y = p.Y, w = myPlate.AbsoluteSize.X, h = myPlate.AbsoluteSize.Y })
+		end
+	end
 	for i = 1, limit do
 		local slot = slotOf[candidates[i].model]
 		local p, onScreen = cam:WorldToViewportPoint(candidates[i].rec.head.Position + slot.gui.StudsOffset)
