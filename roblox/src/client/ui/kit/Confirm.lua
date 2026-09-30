@@ -1,7 +1,8 @@
 -- 확인창(30-0 S06, PRD 20.81 [D-3]). overlay 하나를 만들어 두고 재사용한다 - 환생 확인창 · 강화 구간 진입 · 구매가 같은 부품이다.
 -- Confirm.ask({ title, body, primaryText, secondaryText, danger, parentId, primaryEnabled, reason }, callback) : callback(true) = 주 버튼, callback(false) = 보조 버튼 · X · Backspace · 부모 패널이 닫힘.
 --   primaryEnabled = false면 주 버튼이 비활성이다(눌러도 답이 안 나간다). reason = 버튼 위에 danger색으로 적는 한 줄(비활성 이유 - 주지 않으면 줄이 없다).
---   danger = true면 주 버튼이 위험(danger) 모양이다. parentId의 패널이 닫히면 이 확인창도 같이 닫힌다(UIManager). 확인창이 떠 있는 동안 뒤의 패널 입력은 딤이 막는다.
+--   danger = true면 주 버튼이 위험(danger - 빨강으로 채움) 모양이고 제목이 경고색이다. danger는 되돌릴 수 없는 동작(분해 · 판매 · 환생 · 계승 · 포기)에만 쓴다(ref 18).
+--   버튼 자리(ref 18): 취소(보조) = 왼쪽 · 확인(주 · 위험) = 오른쪽 - 같은 폭. parentId의 패널이 닫히면 이 확인창도 같이 닫힌다(UIManager). 확인창이 떠 있는 동안 뒤의 패널 입력은 딤이 막는다.
 -- 처음 ask할 때 만든다(Theme.recompute()를 그때 다시 부르지 않는다 - 전시장이 열릴 때 부르므로 같은 값이다).
 
 local Button = require(script.Parent.Button)
@@ -14,6 +15,7 @@ local Confirm = {}
 Confirm.id = "confirm"
 local PANEL_SIZE = Vector2.new(380, 210)
 local PAD = 16
+local BUTTON_W = math.floor((PANEL_SIZE.X - PAD * 2 - 8) / 2) -- QUEUE-ALL2 P2(ref 18): 두 버튼 같은 폭 - 취소 = 왼쪽 · 확인(위험) = 오른쪽
 
 local built -- { panel = refs, bodyLabel, primary, danger, secondary }
 local pending -- 아직 답이 안 나온 callback
@@ -53,7 +55,7 @@ local function build()
 			name = name,
 			kind = kind,
 			text = "",
-			width = 120,
+			width = BUTTON_W,
 			anchorPoint = Vector2.new(anchorX, 1),
 			position = UDim2.new(anchorX, xOffset, 1, -PAD),
 			onActivated = onActivated,
@@ -65,9 +67,26 @@ local function build()
 	end
 	local primary = makeButton("primary", "Primary", 1, -PAD, accept)
 	local danger = makeButton("danger", "PrimaryDanger", 1, -PAD, accept)
-	local secondary = makeButton("secondary", "Secondary", 1, -(PAD + 120 + 8), function()
+	local secondary = makeButton("secondary", "Secondary", 0, PAD, function()
 		UIManager.close(Confirm.id) -- onClose가 callback(false)를 낸다
 	end)
+	-- QUEUE-ALL2 P2(ref 18): 위험 버튼 = 빨강으로 채운다(kit Button의 danger는 빨간 테두리뿐 - 다른 창의 danger 버튼은 그대로 두고 확인 창만).
+	-- Button이 상태마다 색을 다시 칠하므로 기본 · 진행 중 상태일 때만 덮는다(눌림 · 비활성 색은 kit 그대로).
+	local dangerFill = Theme.color("danger")
+	local function paintDanger()
+		local visual = danger.getVisual()
+		if visual == "default" or visual == "busy" then
+			if danger.root.BackgroundColor3 ~= dangerFill then
+				danger.root.BackgroundColor3 = dangerFill
+			end
+			if danger.root.BackgroundTransparency ~= 0 then
+				danger.root.BackgroundTransparency = 0
+			end
+		end
+	end
+	danger.root:GetPropertyChangedSignal("BackgroundColor3"):Connect(paintDanger)
+	danger.root:GetPropertyChangedSignal("BackgroundTransparency"):Connect(paintDanger)
+	paintDanger()
 
 	local reasonLabel = Theme.label(content, "", "caption", "danger")
 	reasonLabel.Name = "Reason"
@@ -99,6 +118,7 @@ function Confirm.ask(props, callback)
 	pending = callback
 
 	built.panel.titleLabel.Text = props.title or ""
+	built.panel.titleLabel.TextColor3 = Theme.color(props.danger == true and "danger" or "textPrimary") -- ref 18: 되돌릴 수 없는 물음은 제목도 경고색
 	built.bodyLabel.Text = props.body or ""
 	built.primary.setText(props.primaryText or "확인")
 	built.danger.setText(props.primaryText or "확인")
