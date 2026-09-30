@@ -1,0 +1,10 @@
+boss,switch,fps,p95ms,bossAnimUs,parts,meshParts,trisEst,emitters,highlights,condition
+storm_lord,off,60.0,18.6,150,189,51,5908,6,3,PC 4인(가짜 파티 3) 교전 stage 15 창 초점
+storm_lord,on,59.5,18.3,139,256,110,5448,8,4,같음
+section_guardian,on,60.0,18.2,186,334,137,5656,8,4,같음
+frost_giant,on,60.0,18.5,152,371,129,11940,8,4,같음
+abyssal_lord,on,60.0,18.8,235,290,137,8264,8,4,같음
+crystal_queen,on,60.0,18.2,150,297,130,8876,8,4,같음
+scorpion_queen,on,60.0,18.7,221,326,142,7552,8,7,같음
+storm_lord,off(unfocused),15.0,68.3,273,213,64,6252,6,3,창 초점 없음(Studio 렌더 제한) - 참고
+storm_lord,on(unfocused),26.2,68.0,189,308,129,7780,8,7,창 초점 없음 - 참고

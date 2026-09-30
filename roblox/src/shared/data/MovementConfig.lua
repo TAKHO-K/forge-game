@@ -132,6 +132,7 @@ return {
 		bossPitchMinDeg = 30,
 		-- A2-N3 결정 ①(사용자 승인 · ArtStyleV1 뒤): 보스전 진입 기본 거리 = 보스 cameraZoomStuds(크기 배율에 맞춘 값) × 이 배율(조금 가깝게 - 가까우면 물리고 멀면 당김 · 그 뒤 휠 자유)
 		bossZoomFactor = 0.88,
+		bossZoomHoldSeconds = 1.0, -- 그 거리로 붙잡는 시간(줌 스프링이 따라올 만큼 - Play 실측 0.3초는 22 stud에서 멈춤)
 		-- 내 공격이 보스에 맞는 순간 FOV 킥(줌 펀치 아님 - 시야각만 · 설정 "화면 흔들림" 끔 = 없음)
 		bossHitFovKick = { degrees = 2.5, seconds = 0.1 },
 	},

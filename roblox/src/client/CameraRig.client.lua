@@ -100,12 +100,12 @@ local function bossZoomFor(encounterId)
 	end
 	return nil
 end
-local function snapTo(zoom)
+local function snapTo(zoom, holdSeconds)
 	snapToken += 1
 	local token = snapToken
 	player.CameraMinZoomDistance = zoom
 	player.CameraMaxZoomDistance = zoom
-	task.delay(cfg.spawnSnapSeconds, function()
+	task.delay(holdSeconds or cfg.spawnSnapSeconds, function()
 		if token ~= snapToken then
 			return
 		end
@@ -134,7 +134,7 @@ player:GetAttributeChangedSignal("BossEncounterId"):Connect(function()
 		end
 		local camera = Workspace.CurrentCamera
 		if zoom and camera and Workspace:GetAttribute("ArtStyleV1") then
-			snapTo(zoom * cfg.bossZoomFactor) -- A2-N3 결정 ①: 보스 크기에 맞춘 거리 × 0.88로 맞춘다(가깝게도 멀게도 - 그 뒤 휠 자유)
+			snapTo(zoom * cfg.bossZoomFactor, cfg.bossZoomHoldSeconds) -- A2-N3 결정 ①: 보스 크기에 맞춘 거리 × 0.88로 맞춘다(가깝게도 멀게도 - 그 뒤 휠 자유 · 0.3초면 줌 스프링이 다 못 와 22에서 멈췄다 → 1초)
 		elseif zoom and camera and (camera.CFrame.Position - camera.Focus.Position).Magnitude < zoom - 1 then
 			snapTo(zoom)
 		end
