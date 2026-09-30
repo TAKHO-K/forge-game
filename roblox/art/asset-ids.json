@@ -3718,6 +3718,54 @@
   "assetId": 113920939958401,
   "status": "Approved"
  },
+ "props/bevel/bevel_beam.fbx": {
+  "sha256": "6c5a001a7a72afbde359f8667c09a539ae08f70aeecc301108023f67eaa4cff4",
+  "assetType": "Model",
+  "assetId": 83427041674094,
+  "status": "Approved"
+ },
+ "props/bevel/bevel_cube.fbx": {
+  "sha256": "4751a6809e32f0a7ca63004c008e89cf44968a3599bf72d5ba94c02eaef0251e",
+  "assetType": "Model",
+  "assetId": 103358552645909,
+  "status": "Approved"
+ },
+ "props/bevel/bevel_pillar.fbx": {
+  "sha256": "1c581f2646cdf775cbaffce9fc5db622e61ce42da33c3b9502f2632d6211deff",
+  "assetType": "Model",
+  "assetId": 135466802665667,
+  "status": "Approved"
+ },
+ "props/bevel/bevel_plate.fbx": {
+  "sha256": "d5dae788d218e8a021f14c5b946a74b91659f578677c7f332f05cb3034c996bb",
+  "assetType": "Model",
+  "assetId": 73991625693976,
+  "status": "Approved"
+ },
+ "props/bevel/bevel_slab.fbx": {
+  "sha256": "8dac703f2d463db100528e363e9f92eca1fcf2b3d5499954bb725285de39cbba",
+  "assetType": "Model",
+  "assetId": 107698739789349,
+  "status": "Approved"
+ },
+ "props/bevel/bevel_wall.fbx": {
+  "sha256": "6c89b752275a2b754f3b7ec44bb04d2222d07c3d18764d0a4fea026937cd319a",
+  "assetType": "Model",
+  "assetId": 88829296046412,
+  "status": "Approved"
+ },
+ "props/bevel/bevel_wedge.fbx": {
+  "sha256": "8d8b4fd7f10734dcec97789b7e4cdb6430a09a7b1a7afc8dcb890e0d3b630cc3",
+  "assetType": "Model",
+  "assetId": 90577883035712,
+  "status": "Approved"
+ },
+ "props/bevel/bevel_wedge_ramp.fbx": {
+  "sha256": "4a32d06f827de4994a554c38854f429cb0d1e1632b15cd7138f1c288016ad97b",
+  "assetType": "Model",
+  "assetId": 125800089800259,
+  "status": "Approved"
+ },
  "props/boss_gate.fbx": {
   "sha256": "1cfca612ad1473b322607382b7242c4926965ba7cc93ea88868e1ce144599fee",
   "assetType": "Model",
@@ -3932,6 +3980,186 @@
   "sha256": "e69cd21ed65b4f0eb259fadcc6774cea0a597677b38f5d4a6c910cf0a1ff3137",
   "assetType": "Model",
   "assetId": 105032362489900,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier1_a.fbx": {
+  "sha256": "56809c7e17f91061f8458e438ea123867134eb58bc3065704a6af917ff531cbc",
+  "assetType": "Model",
+  "assetId": 139212706047208,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier1_a_lod.fbx": {
+  "sha256": "96fb5fe521532e337fbf63a7b80f7524839104f9334ba47ccea579f3c2fdaaf2",
+  "assetType": "Model",
+  "assetId": 103464867653182,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier1_b.fbx": {
+  "sha256": "f799c0100a6e0bf88b2db04713bc40aab7a58b67963cefcb79a504f992113b24",
+  "assetType": "Model",
+  "assetId": 84114125832976,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier1_b_lod.fbx": {
+  "sha256": "d049702db228be7d83de40d8d25d00e569ba68563fb32b673fdbe92a255e1d1c",
+  "assetType": "Model",
+  "assetId": 75436298136691,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier1_c.fbx": {
+  "sha256": "fe1f3412177ba052837f9415ca6efe2a8ae74ee409c373d5042f1380f12168fa",
+  "assetType": "Model",
+  "assetId": 121864911582918,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier1_c_lod.fbx": {
+  "sha256": "17eb058c311a1d9e4f79a65410f653bdba47d77f28b7bf847c828b6556145534",
+  "assetType": "Model",
+  "assetId": 108789088652814,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier2_a.fbx": {
+  "sha256": "19473eff858a67b3f1b2b63d4a83c58c9076afc57b9c911e0d8e7174b410e880",
+  "assetType": "Model",
+  "assetId": 116130601087252,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier2_a_lod.fbx": {
+  "sha256": "5e843c9570fffe666b533ef7917740c62a49a5240097d2a5f4c1fc3ec0e04840",
+  "assetType": "Model",
+  "assetId": 136728889098861,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier2_b.fbx": {
+  "sha256": "31e1a59fd904d47dee93b5646805228467fe58b92ef1e5e137f0a55f1f16aedc",
+  "assetType": "Model",
+  "assetId": 90694641661976,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier2_b_lod.fbx": {
+  "sha256": "a478b5bb0c6d3993f1b78b28348e48b62ee9f36d64917999149981b98fd76e5e",
+  "assetType": "Model",
+  "assetId": 80567785360585,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier3_a.fbx": {
+  "sha256": "aa8366b5a3834621607729e144b612ccd737aaae537ab8b0b907ead8da266a4e",
+  "assetType": "Model",
+  "assetId": 123758326923286,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier3_a_lod.fbx": {
+  "sha256": "c5bab64314bf7ce6edd423309bc8d3b1f5b4a024614ee568e107b8d65c1b4cde",
+  "assetType": "Model",
+  "assetId": 99489144671077,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier3_b.fbx": {
+  "sha256": "5cb34aa39b9ad1efa20cd638bb3d7ff1c259e0b4ec79d576a39b90735d248a22",
+  "assetType": "Model",
+  "assetId": 77573755925718,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier3_b_lod.fbx": {
+  "sha256": "06a7099709ef5eb403b6339580235168ff109b95e2becd366d54a372804eaf12",
+  "assetType": "Model",
+  "assetId": 126496000967790,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier4_a.fbx": {
+  "sha256": "4dd60a3c568feb037c521d7b1632f1822090110f28567b0a90998dc98e4592e4",
+  "assetType": "Model",
+  "assetId": 92268057233327,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier4_a_lod.fbx": {
+  "sha256": "4f1daff58d5869bd5132ad670ef1033df52b2967907a370112e5dfa3841937e5",
+  "assetType": "Model",
+  "assetId": 116093066084225,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier4_b.fbx": {
+  "sha256": "2af01f505ad6177e542f90c52a63bb0dab46039957b5e370a3167250d7b26bb4",
+  "assetType": "Model",
+  "assetId": 115161349609991,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier4_b_lod.fbx": {
+  "sha256": "8290dccab5e8db73847bcd9d882e30087eae064c267a2cdb16ab452e7ab5d62f",
+  "assetType": "Model",
+  "assetId": 131941046510006,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier4_c.fbx": {
+  "sha256": "cfc0e5a653bbc91062a87b5d6eb44652fc8808ccc9f8cf884fe4c4f041715e72",
+  "assetType": "Model",
+  "assetId": 140140087506041,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier4_c_lod.fbx": {
+  "sha256": "52179bdfd092c26dae5ffe2f2d3ffdb48cb99be6d2bc0a02ea7287f41f3cb7fb",
+  "assetType": "Model",
+  "assetId": 78510953029958,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier5_a.fbx": {
+  "sha256": "7e5180c0543942f3d42e0c08f7d6e891005dabf8af314a80cff46fd9e6338eeb",
+  "assetType": "Model",
+  "assetId": 89365413547542,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier5_a_lod.fbx": {
+  "sha256": "6ada2c3437b84f36264547399a87bb8ffe34de90367669d6b2201a81c56c8af2",
+  "assetType": "Model",
+  "assetId": 121416850309768,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier5_b.fbx": {
+  "sha256": "fe060b5f9d6d5f56a0f2537646ea4d4cb8beeabfe38cbd05136d02af0246c793",
+  "assetType": "Model",
+  "assetId": 130947842301438,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier5_b_lod.fbx": {
+  "sha256": "5562467599df436508d9d0c5ccb3003680c3e63ae8a4a323a49f025412e31a51",
+  "assetType": "Model",
+  "assetId": 93250347524827,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier6_a.fbx": {
+  "sha256": "615988a046c7cec8ce91e162078ebbf40ccfd83788adc9f91c9e2fde0d10e545",
+  "assetType": "Model",
+  "assetId": 77133764602897,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier6_a_lod.fbx": {
+  "sha256": "ee3c708e5b72c342ba1a9c2daa5518fc8bbfd428b82d3b12cbef0af9fd30aec7",
+  "assetType": "Model",
+  "assetId": 80100424088707,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier6_b.fbx": {
+  "sha256": "ecda7616694414e1608da31ecce1b99c508898fe5ff02beb6fc5e5c10a291b94",
+  "assetType": "Model",
+  "assetId": 73565112260916,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier6_b_lod.fbx": {
+  "sha256": "2723715a53106ec193712b73d4ee2016591abb63df304723f494c3abe86b6280",
+  "assetType": "Model",
+  "assetId": 81228080980145,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier6_c.fbx": {
+  "sha256": "caaaa8f48e8f83453a57e9e4d0debc4c1e83979e3d07d6a0dec2961252ef3175",
+  "assetType": "Model",
+  "assetId": 86419716433272,
+  "status": "Approved"
+ },
+ "props/mountains/mountain_tier6_c_lod.fbx": {
+  "sha256": "d617e8a7039dfed9f4e27a1ac4c69582a574f47dc37412b2997872115a9b8bb8",
+  "assetType": "Model",
+  "assetId": 129734300223942,
   "status": "Approved"
  },
  "props/rebirth_altar.fbx": {
