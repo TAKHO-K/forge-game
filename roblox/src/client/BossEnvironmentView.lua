@@ -443,19 +443,26 @@ end
 local slabFall, abyssClouds, edgeStones
 local SLAB = { fallStuds = 46, tiltDeg = 14, seconds = 1.1 }
 local CLOUD = Color3.fromRGB(150, 158, 176) -- 깊은 곳 구름(위 층 너머로 희미하게)
-local function sliceWedges(index)
-	for _, model in ipairs(Workspace:GetDescendants()) do
+-- 리뷰 4: 조각 바닥 = Workspace.Ground(서버 GroundProbe.folder)의 자식 BossArenaSliceFloor_<구역> - 전체 월드를 훑지 않고, 여러 아레나가 보이면 가운데(허브)가 z.center에 가장 가까운 것
+local function sliceWedges(index, center)
+	local ground = Workspace:FindFirstChild("Ground")
+	local best, bestD = nil, math.huge
+	for _, model in ipairs(ground and ground:GetChildren() or {}) do
 		if model:IsA("Model") and model.Name:sub(1, 20) == "BossArenaSliceFloor_" then
-			local list = {}
-			for _, w in ipairs(model:GetChildren()) do
-				if w:IsA("WedgePart") and w:GetAttribute("SliceIndex") == index then
-					table.insert(list, w)
-				end
+			local hub = model:FindFirstChild("BossArenaSliceHub")
+			local d = hub and center and (Vector3.new(hub.Position.X, 0, hub.Position.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude or 0
+			if d < bestD then
+				best, bestD = model, d
 			end
-			return list
 		end
 	end
-	return {}
+	local list = {}
+	for _, w in ipairs(best and best:GetChildren() or {}) do
+		if w:IsA("WedgePart") and w:GetAttribute("SliceIndex") == index then
+			table.insert(list, w)
+		end
+	end
+	return list
 end
 
 slabFall = function(z)
@@ -466,7 +473,7 @@ slabFall = function(z)
 	local outward = Vector3.new(math.cos(mid), 0, math.sin(mid))
 	local axis = Vector3.new(-outward.Z, 0, outward.X) -- 바깥쪽이 먼저 꺼지게 기운다
 	local pivot = z.center + outward * z.hub
-	for _, w in ipairs(sliceWedges(z.index)) do
+	for _, w in ipairs(sliceWedges(z.index, z.center)) do
 		local copy = Instance.new("WedgePart")
 		copy.Anchored, copy.CanCollide, copy.CanQuery, copy.CanTouch, copy.CastShadow = true, false, false, false, false
 		copy.Size, copy.CFrame, copy.Color, copy.Material = w.Size, w.CFrame, w.Color, w.Material

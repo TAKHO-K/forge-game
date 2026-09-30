@@ -240,6 +240,7 @@ BossSandSearch.handler = {
 			kit.send(st, "sandDark", { seconds = sand.stopAt - c.now })
 		elseif sand.mode == "dark" and c.now >= sand.stopAt then
 			sand.mode = "stopped"
+			BossSandSearch.stepShell(c, sand, spec, moundsOf[c.model] or {}, 0) -- 멈추는 순간의 겹침 풀기(SandShell settle)를 먼저 - 도달 시간은 그 자리로 잰다(리뷰 3)
 			-- 도달 시간 보장: 산 멤버 각자에서 가장 먼 둔덕까지(회피 부등식과 같은 식)
 			local D = BossData.mechanics.dodge
 			local far = 0

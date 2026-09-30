@@ -21,6 +21,7 @@ function SandShell.step(sand, spec, mounds, now, dt, rng)
 			end
 			shell.phase = "hold"
 			shell.untilAt = math.huge
+			shell.settle = true -- 멈추는 순간 한 번: 진짜와 겹친 가짜를 바로 비켜 세운다(리뷰 3 - 멈춘 뒤에는 아무것도 안 움직인다)
 		elseif shell.phase == "hold" then
 			shell.untilAt = math.min(shell.untilAt, now) -- 불이 꺼지면 바로 섞기 시작
 		end
@@ -100,9 +101,9 @@ function SandShell.step(sand, spec, mounds, now, dt, rng)
 		for i, m in ipairs(mounds) do
 			if i ~= sand.realIndex then
 				local d = Vector3.new(m.position.X - real.position.X, 0, m.position.Z - real.position.Z)
-				if d.Magnitude < S.overlapStuds then
+				if d.Magnitude < S.overlapStuds and (mode ~= "stopped" or shell.settle) then
 					shell.overlapSince[i] = shell.overlapSince[i] or now
-					if now - shell.overlapSince[i] >= S.maxOverlapSeconds - 0.1 then
+					if shell.settle or now - shell.overlapSince[i] >= S.maxOverlapSeconds - 0.1 then
 						local away = d.Magnitude > 1e-3 and d.Unit or Vector3.new(1, 0, 0)
 						m.position = real.position + away * S.pushStuds
 						local fromCenter = Vector3.new(m.position.X - sand.center.X, 0, m.position.Z - sand.center.Z)
@@ -118,6 +119,7 @@ function SandShell.step(sand, spec, mounds, now, dt, rng)
 			end
 		end
 	end
+	shell.settle = nil
 end
 
 return SandShell

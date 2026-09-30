@@ -224,11 +224,13 @@ function V.runPure()
 				end
 				for i, m in ipairs(mounds) do
 					local moved = (m.position - before[i]).Magnitude
-					if moved < S.pushStuds * 0.5 then -- 비켜 세우기(순간)는 속도에서 뺀다
+					if sand.mode == "stopped" and now >= stopAt + dt then -- 멈춘 뒤(멈추는 순간의 겹침 풀기 한 번은 뺀다) = 비켜 세우기 포함 모든 이동
+						stopMoved = math.max(stopMoved, moved)
+					elseif moved < S.pushStuds * 0.5 then -- 비켜 세우기(순간)는 속도에서 뺀다
 						if sand.mode == "dark" then
 							darkSpeed = math.max(darkSpeed, moved / dt)
 						elseif sand.mode == "stopped" then
-							stopMoved = math.max(stopMoved, moved)
+							-- 멈추는 순간 프레임
 						else
 							maxSpeed = math.max(maxSpeed, moved / dt)
 						end

@@ -37,7 +37,13 @@ function BossHudLayout.gimmickLabel(label, fallbackPosition, fallbackAnchor)
 		if not label:GetAttribute("BossHudFade") then
 			label:SetAttribute("BossHudFade", true)
 			local serial = 0
+			local lastKey = nil
 			local function fresh()
+				local key = label.Text:gsub("%d", "") -- 리뷰 5: 남은 초만 바뀌는 글씨(매초 카운트다운)는 새 안내가 아니다 - 흐림 시계를 다시 세지 않는다
+				if key == lastKey then
+					return
+				end
+				lastKey = key
 				serial += 1
 				local mine = serial
 				label.TextTransparency = 0

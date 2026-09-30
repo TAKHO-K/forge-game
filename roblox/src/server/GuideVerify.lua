@@ -188,6 +188,7 @@ end
 --   도착(목적지 arriveStuds + 2 안) · 멈춤(stillSeconds 동안 1 stud 미만 이동) · 시간 초과(경로 길이 ÷ 10 + 40초). 한 명(Studio Play 개발 계정)으로 돈다.
 --   반환 { rows = { zone, kind, arrived, seconds, left } } - 멈춘 이유는 클라 Attribute AutoWalkStop(로컬)이라 클라 쪽에서 따로 모은다.
 function GuideVerify.walkBot(opts)
+	opts = opts or {}
 	local player = Players:GetPlayers()[1]
 	local character = player and player.Character
 	if not character then

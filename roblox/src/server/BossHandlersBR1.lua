@@ -969,6 +969,9 @@ BossHandlersBR1.boomerang = {
 		local origin = kit.xz(c.position)
 		local spread = skill.centered and skill.stepDeg * ((skill.directions or 1) - 1) / 2 or 0
 		local bases = { angleToTarget(c) - spread }
+		if skill.perMember and not c.targetRoot then
+			bases = {} -- 대상 없음 = 쓸모없는 0° 줄을 만들지 않는다(리뷰 2)
+		end
 		if skill.perMember then -- QUEUE-ALL1 01 D-2: 인당 조준 - 대상 말고도 안 잡힌 멤버마다 같은 모양을 그 사람 쪽으로
 			for _, v in ipairs(kit.victims(st)) do
 				local to = kit.xz(v.root.Position) - origin
@@ -978,13 +981,14 @@ BossHandlersBR1.boomerang = {
 			end
 		end
 		local lines, payload = {}, {}
+		local sharedHit = skill.perMember and { out = {}, back = {} } or nil -- 인당 줄은 맞음 기록을 같이 쓴다: 붙어 선 두 사람의 줄이 겹쳐도 1인 가는 길 · 오는 길 1회씩(리뷰 2)
 		for _, base in ipairs(bases) do
 			for k = 0, (skill.directions or 1) - 1 do
 				local deg = base + skill.stepDeg * k
 				local a = math.rad(deg)
 				local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 				local length = kit.clipToZone(origin, dir, zone, skill.arenaMarginStuds or 4)
-				table.insert(lines, { dir = dir, length = length, hit = { out = {}, back = {} } })
+				table.insert(lines, { dir = dir, length = length, hit = sharedHit or { out = {}, back = {} } })
 				table.insert(payload, { angleDeg = deg, length = length })
 			end
 		end

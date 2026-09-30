@@ -157,9 +157,14 @@ end
 -- 보스 블록이 보이는 동안 BC의 다른 슬롯(콤보 점 · 버프 줄 · 획득 팝업 · 잡기 패널)을 위로 올린다(끝나면 제자리)
 local SHIFTED_NAMES = { "BuffHudAnchor", "ComboPipsAnchor", "ToastLane_BC", "BossTrapPanel" }
 local shifted = {} -- [GuiObject] = 원래 Position
+local shiftSearchAt = nil -- 리뷰 6: PlayerGui 재귀 탐색은 1초에 한 번(늦게 생기는 잡기 패널 때문에 한 번으로 끝내지는 않는다)
 local function shiftOthers(on)
 	local gui = player:FindFirstChild("PlayerGui")
 	if on then
+		if shiftSearchAt and os.clock() - shiftSearchAt < 1 then
+			return
+		end
+		shiftSearchAt = os.clock()
 		local dy = BossHudLayout.shift()
 		for _, n in ipairs(SHIFTED_NAMES) do
 			local o = gui and gui:FindFirstChild(n, true)
@@ -175,6 +180,7 @@ local function shiftOthers(on)
 			end
 		end
 		table.clear(shifted)
+		shiftSearchAt = nil
 	end
 end
 
@@ -282,7 +288,7 @@ local function refresh()
 		shownRatio = nil
 	end
 	if not boss then
-		refs.root.Visible = false
+		hide() -- 잔류(처치 뒤 모델만 없음) · 다시 도전 사이: 하단 바 · 밀린 슬롯 · 채팅 · 타이머까지 되돌린다(리뷰 1)
 		return
 	end
 	local ratio = math.clamp(boss:GetAttribute("BossHpRatio") or 1, 0, 1)
