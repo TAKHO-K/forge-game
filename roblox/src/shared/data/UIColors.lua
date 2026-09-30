@@ -85,4 +85,12 @@ return {
 		bow = Color3.fromRGB(59, 209, 192),
 		healer = Color3.fromRGB(242, 196, 61),
 	},
+	-- QUEUE-ALL3 Q8: 파티원 색(최대 4명 - PartyConfig maxMembers). 순서 = 같은 PartyId 사람을 UserId 오름차순으로 세운 자리(모든 화면에서 같은 사람 = 같은 색).
+	-- 몬스터 이름표의 "파티원이 때리는 대상" 점이 쓴다 - 보스 쪽 파티원 색도 이 표를 쓴다. 체력 빨강 · 잠김 회색과 겹치지 않고 어두운 이름표 바탕 위에서 서로 구분되는 4색.
+	partyColors = {
+		Color3.fromRGB(80, 170, 255), -- 하늘
+		Color3.fromRGB(95, 225, 120), -- 연두
+		Color3.fromRGB(255, 120, 200), -- 분홍
+		Color3.fromRGB(255, 225, 90), -- 노랑
+	},
 }
