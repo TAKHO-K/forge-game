@@ -95,7 +95,7 @@ local function bossZoomFor(encounterId)
 	for _, m in ipairs(CollectionService:GetTagged("Monster")) do
 		if m:GetAttribute("BossEncounterId") == encounterId then
 			local boss = BossData.bosses[m:GetAttribute("BossRig") or ""]
-			return boss and boss.cameraZoomStuds
+			return boss and boss.cameraZoomStuds, m:GetAttribute("BossRig")
 		end
 	end
 	return nil
@@ -120,21 +120,21 @@ player:GetAttributeChangedSignal("BossEncounterId"):Connect(function()
 		return
 	end
 	task.spawn(function() -- 보스 모델 복제를 기다린다(A2-N3: 0.5초 한 번 → 0.25초 간격 최대 4초 - 진입 직후 보스가 아직 안 와서 거리 맞춤을 건너뛰던 일)
-		local zoom
+		local zoom, rigId
 		local tries = Workspace:GetAttribute("ArtStyleV1") and 16 or 1 -- 끔 = 옛 동작(0.5초 한 번)
 		for _ = 1, tries do
 			task.wait(tries > 1 and 0.25 or 0.5)
 			if player:GetAttribute("BossEncounterId") ~= id then
 				return
 			end
-			zoom = bossZoomFor(id)
+			zoom, rigId = bossZoomFor(id)
 			if zoom then
 				break
 			end
 		end
 		local camera = Workspace.CurrentCamera
 		if zoom and camera and Workspace:GetAttribute("ArtStyleV1") then
-			snapTo(zoom * cfg.bossZoomFactor, cfg.bossZoomHoldSeconds) -- A2-N3 결정 ①: 보스 크기에 맞춘 거리 × 0.88로 맞춘다(가깝게도 멀게도 - 그 뒤 휠 자유 · 0.3초면 줌 스프링이 다 못 와 22에서 멈췄다 → 1초)
+			snapTo(zoom * ((cfg.bossZoomFactorOf and cfg.bossZoomFactorOf[rigId or ""]) or cfg.bossZoomFactor), cfg.bossZoomHoldSeconds) -- A2-N3 결정 ①: 보스 크기에 맞춘 거리 × 0.88로 맞춘다(가깝게도 멀게도 - 그 뒤 휠 자유 · 0.3초면 줌 스프링이 다 못 와 22에서 멈췄다 → 1초)
 		elseif zoom and camera and (camera.CFrame.Position - camera.Focus.Position).Magnitude < zoom - 1 then
 			snapTo(zoom)
 		end

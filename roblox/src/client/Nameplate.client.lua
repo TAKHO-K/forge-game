@@ -165,3 +165,21 @@ Players.PlayerAdded:Connect(watch)
 for _, player in ipairs(Players:GetPlayers()) do
 	watch(player)
 end
+
+-- A2-N3(1차 보스 리뷰): 보스전 중 내 머리 위 이름표 · 칭호를 숨긴다(ArtStyleV1 뒤) - 실전 카메라에서 보스 몸 한가운데를 가렸다. 남의 이름표 · 끔 = 그대로.
+local localPlayer = Players.LocalPlayer
+local function applyOwnHidden()
+	local character = localPlayer.Character
+	local hide = workspace:GetAttribute("ArtStyleV1") == true and localPlayer:GetAttribute("BossEncounterId") ~= nil
+	for _, name in ipairs({ BILLBOARD_NAME, "PlayerTitle" }) do
+		local gui = character and character:FindFirstChild(name)
+		if gui then
+			gui.Enabled = not hide
+		end
+	end
+end
+localPlayer:GetAttributeChangedSignal("BossEncounterId"):Connect(applyOwnHidden)
+localPlayer.CharacterAdded:Connect(function()
+	task.wait(1)
+	applyOwnHidden()
+end)
