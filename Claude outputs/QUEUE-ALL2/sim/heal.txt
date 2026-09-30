@@ -1,0 +1,5 @@
+start
+tiers	0
+mult 1.624 avgAP 0.561 topAP 0.742 uns 0.888 | top r=1.0995 healerAP=0.742 share=0.126
+mult 1.624 avgAP 0.561 topAP 0.742 uns 0.888 | average r=0.8752 healerAP=0.561 share=0.124
+mult 1.624 avgAP 0.561 topAP 0.742 uns 0.888 | none r=0.8636 healerAP=0.366 share=0.124

@@ -248,20 +248,21 @@ local SkillData = {
 			-- P2 F3(결정 8A "딜링모드를 검사 기준으로 하향"): 3.13 → 1.615 - 치유사 atk 0.66(F2)에서 딜링모드 60초 로테이션 = 검사 × 0.875(목표 0.85 ~ 0.9, 장비 없음 앵커,
 			-- EconSim E6 풀이 1.6154). 딜링모드 딜 = 평타 × 이 배율(치유모드는 1).
 			-- P2.5a D(결정 8): 1.615 → 1.574 - 기준을 "장비 없음"에서 "평균 투자"(+20 · E6 평균 보석)로 옮겨 그 자리에서 검사 × 0.875(EconSim E6 F3 풀이 1.5743).
-			attackMultiplier = 1.574,
+			-- QUEUE-ALL2 P0-5: 1.574 → 1.624 · 기준점 공격력% 평균 0.666 → 0.561 · 최상위 0.64 → 0.742 · unscaledTopRatio 0.918 → 0.888 - 원인 = 장비 표(보석 · 세트 등)가 바뀌어 치유사 실제 공격력%가 기준점과 어긋남(P0 표본 5.6 0.848 · 5.7 1.043 X) → 기준점을 지금 E6 실측값으로 옮기고 평균 0.875 · 최상위 1.10에서 다시 풂(판정 · 스킬 시간 불변 · 수치만)
+			attackMultiplier = 1.624,
 			-- P2.5a D(결정 8 - "무조건 딜러보다 약하게"가 아니다): 투자 기울기. 딜링모드 배율 × (I ÷ I_평균)^β(PlayerCombat.getInvestmentScale), I = 강화 누적 배율 ×
 			-- (1 + 공격력% 합). 평균 투자(+20 · 공격력% average.attackPercent)에서 1, 최상위 투자(+30 · top.attackPercent)에서 검사 대비 비가 topScale(= HealerTopScale 1.1 -
 			-- 사용자 지정 기본값)이 되도록 β를 푼다. unscaledTopRatio = 기울기 없이 최상위 투자의 검사 대비 비(E6 측정 0.918 - 치유사는 모든 피해가 평타라 치명 · 신속
 			-- 보석을 딜러보다 더 받는다). 기준점 공격력% = E6 평균 · 최상위 장비의 치유사 값(장갑 + 보석).
 			investmentScaling = {
 				topScale = 1.1, -- HealerTopScale
-				unscaledTopRatio = 0.918,
+				unscaledTopRatio = 0.888,
 				floor = 1, -- 평균 아래 투자는 기울기 없이 배율 그대로(리뷰 4 - 신규 · 환생 직후 치유사의 딜링모드가 평타 수준으로 떨어지지 않게)
 				-- P2.5c 결정 5: 보석 등급 몫(OptionData.gradeStep 1.45 → 1.35)으로 보석 위력 합이 약 ×0.70이 되어 최상위 기준점 공격력%를 같은 비율로 옮겼다(옛 0.912).
 				-- 안 옮기면 최상위 딜링모드 ÷ 검사 1.103 → 1.070(HealerTopScale 1.1 이탈) - 옮기면 1.100. 평균 기준점(0.666)은 그대로 둔다: 평균 투자 E6(+20 · 공격력% 0.195)은
 				-- 하한(floor) 아래라 기준점과 무관하게 0.880이고(0.46으로 옮기면 0.891로 표본 0.875 ± 0.01을 벗어났다), 치유모드 비중도 그대로(P25c-after E6).
-				average = { enhance = 20, attackPercent = 0.666 },
-				top = { enhance = 30, attackPercent = 0.64 },
+				average = { enhance = 20, attackPercent = 0.561 },
+				top = { enhance = 30, attackPercent = 0.742 },
 			},
 			-- 초당 최대체력 소모율 - 새로 만드는 상수라 기존 관계식(PlayerRegen.server.lua의
 			-- regenPercentPerSecond=0.04)에서 역산한다. 목표 가동률 60%(지시 [6])라면

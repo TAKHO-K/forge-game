@@ -334,8 +334,8 @@ function P2Verify.runPure()
 		end
 		r.check(("F1 치유사 평타 식의 옵션 자리(모드 무관 - AttackServer가 그대로 넘긴다): 위력 +50%% → atk ×%.4f(기대 1.5) · 신속 +30%% → 쿨다운 %.3f → %.3f(줄어듦) · 치명 +100%% → 200번 중 치명 %d(기대 200)"):format(
 			boosted / base, cooldown, fast, crits), near(boosted / base, 1.5, 1e-12) and fast < cooldown and crits == 200)
-		r.check(("F2 · F3 데이터: ClassData.healer.atk %.3f(기대 0.66) · SkillData.healer.E.attackMultiplier %.3f(기대 1.574 - P2.5a 평균 투자 기준)"):format(ClassData.classes.healer.atk, SkillData.healer.E.attackMultiplier),
-			ClassData.classes.healer.atk == 0.66 and SkillData.healer.E.attackMultiplier == 1.574)
+		r.check(("F2 · F3 데이터: ClassData.healer.atk %.3f(기대 0.66) · SkillData.healer.E.attackMultiplier %.3f(기대 1.624 - QUEUE-ALL2 P0-5 기준점 재측정 · 옛 1.574)"):format(ClassData.classes.healer.atk, SkillData.healer.E.attackMultiplier),
+			ClassData.classes.healer.atk == 0.66 and SkillData.healer.E.attackMultiplier == 1.624)
 		local EconSim = require(script.Parent.EconSim)
 		if EconSim.isAllowed() then
 			local healer = require(script.Parent.EconSimTables).healer()
