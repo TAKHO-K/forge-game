@@ -269,8 +269,30 @@ function Travel.toZoneGround(player, zoneKey, why)
 end
 
 -- QUEUE-ALL1 R1: 견습 졸업 = 첫 보스 구역(firstSpawn.towardZone) 사냥 지대 1로 → 거기서 첫 관문까지만 걸어서(관문 안내 · 자동 이동)
+-- QUEUE-ALL2 P0-2: 첫 보스 10분대 = 관문에서 본길을 따라 afterTutorialWalkStuds(자동 이동 14.4 stud/초 기준 약 1분) 앞에 내려 준다(마지막 걷기 = 길 안내 · 자동 이동 학습은 그대로)
 function Travel.placeAfterTutorial(player)
-	return Travel.toZoneGround(player, WorldMapData.hub.firstSpawn.towardZone, "tutorialDone")
+	local spawn = WorldMapData.hub.firstSpawn
+	local zone = WorldMapLayout.zoneByKey(spawn.towardZone)
+	local path = zone and require(ReplicatedStorage.Shared.RoadNet).zonePath(zone)
+	local gateIndex = path and path.marks.gate
+	if not gateIndex or not spawn.afterTutorialWalkStuds then
+		return Travel.toZoneGround(player, spawn.towardZone, "tutorialDone")
+	end
+	local want = path.pts[gateIndex].s - spawn.afterTutorialWalkStuds
+	local q = path.pts[1]
+	for i = 1, gateIndex do
+		q = path.pts[i]
+		if q.s >= want then
+			break
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { player.Character }
+	params.RespectCanCollide = true
+	local hit = workspace:Raycast(Vector3.new(q.x, q.y + 400, q.z), Vector3.new(0, -900, 0), params)
+	Travel.teleport(player, Vector3.new(q.x, (hit and hit.Position.Y or q.y) + 3, q.z), "tutorialDone")
+	return true
 end
 
 -- QUEUE-B1 B2: 귀환 쿨(도착 뒤) - 게임패스 recallCooldown이면 × cooldownMultiplier(편의 · 캐시 = profile.gamepasses)
