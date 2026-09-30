@@ -267,6 +267,8 @@ function ArtMeshKit.weaponModel(classId, gradeId)
 		model:SetAttribute("TrailBottom", primary.CFrame:PointToObjectSpace(t * 0.25))
 	end
 	model.PrimaryPart = primary
+	-- A2-N4 P0-2: PrimaryPart가 있으면 피벗 = PrimaryPart.CFrame × PivotOffset이다 - 정규화(Y180)로 돈 파트 회전이 피벗에 남아 칼끝 · 날 · 시위 쪽이 180° 뒤집혔다(옛 WorldPivot 대입은 무시됨) → 피벗을 리그 원점으로 못 박는다
+	primary.PivotOffset = primary.CFrame:Inverse()
 	model.WorldPivot = CFrame.identity
 	for _, name in ipairs(Data.weaponDropParts[classId] or {}) do -- 코드가 그리는 부분(활 시위)은 메시에서 뺀다
 		local d = model:FindFirstChild(name)
