@@ -146,13 +146,18 @@ local function stepMotion(dt)
 	end
 	r.frames += 1
 	local label = actionLabel(r)
+	-- 전시 리그(/gg boss anim)는 동작을 바꿀 때 상태를 한 프레임에 갈아 끼운다(실전엔 없는 확인 도구의 경계) - 바뀐 뒤 0.4초는 뺀다
+	if label ~= r.lastLabel then
+		r.lastLabel, r.labelAt = label, os.clock()
+	end
+	local previewSwitch = r.model.Name == "BossAnimPreview" and r.labelAt and os.clock() - r.labelAt < 0.4
 	local s = r.stats[label]
 	if not s then
 		s = { frames = 0, jumps = 0, worst = 0, worstPart = nil }
 		r.stats[label] = s
 	end
 	s.frames += 1
-	local excluded = inWindow(impactWindows(r.model), serverNow())
+	local excluded = previewSwitch or inWindow(impactWindows(r.model), serverNow())
 	local rootCf = r.root and r.root.CFrame or CFrame.identity
 	local bad = false
 	for _, part in ipairs(r.model:GetDescendants()) do

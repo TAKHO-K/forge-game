@@ -42,9 +42,7 @@ local function newPart(j, S, look, rig)
 		part = Instance.new("Part")
 		if j.shape == "ball" then
 			part.Shape = Enum.PartType.Ball
-		elseif j.shape == "cyl" then
-			part.Shape = Enum.PartType.Cylinder
-		end
+		end -- "cyl"은 옛날부터 상자로 짓는다(로블록스 원기둥은 X축이 길이라 세로 무기가 원반이 된다 - A2-M1에서 확인)
 	end
 	part.Name = j.part or j.name -- 장식(A2-M1)은 name
 	part.Size = j.size * S

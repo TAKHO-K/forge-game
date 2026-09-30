@@ -565,9 +565,12 @@ local function updateEntry(e, now, dt, camPos)
 	-- 눈 모양(기절 · 사망 = 빙글) - A2-M1: 한 프레임에 돌지 않고 0.1초 남짓 굴러간다(튐 없음)
 	local eyeT = info.eyes or { 0, 0, 0 }
 	e.eyeCur = e.eyeCur or { 0, 0, 0 }
-	local ek = 1 - math.exp(-dt * 22)
+	if not e.eyeTo or e.eyeTo[1] ~= eyeT[1] or e.eyeTo[2] ~= eyeT[2] or e.eyeTo[3] ~= eyeT[3] then
+		e.eyeFrom, e.eyeTo, e.eyeAt = { e.eyeCur[1], e.eyeCur[2], e.eyeCur[3] }, { eyeT[1], eyeT[2], eyeT[3] }, now
+	end
+	local ek = BossMotion.ease("sine", (now - e.eyeAt) / 0.2) -- 시작 · 끝 속도 0(옛 지수 따라가기는 첫 프레임이 가장 빨랐다)
 	for i = 1, 3 do
-		e.eyeCur[i] += (eyeT[i] - e.eyeCur[i]) * ek
+		e.eyeCur[i] = e.eyeFrom[i] + (e.eyeTo[i] - e.eyeFrom[i]) * ek
 	end
 	if math.abs(e.eyeCur[1]) + math.abs(e.eyeCur[2]) + math.abs(e.eyeCur[3]) > 0.05 then
 		pose.Eyes = { e.eyeCur[1], e.eyeCur[2], e.eyeCur[3], 0, 0, 0 }

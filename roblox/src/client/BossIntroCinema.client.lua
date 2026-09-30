@@ -112,8 +112,30 @@ local function nameCard(bossId, displayName, accent, showAt, hideAt, full)
 	return gui
 end
 
+-- A2-M1: 서버가 보스를 만든 그 프레임에 보내 모델 참조가 아직 복제 전이면 nil로 온다(옛 연출이 첫 입장에서 조용히 안 나온 원인) → 조우 id로 모델을 잠깐 기다린다
+local CollectionService = game:GetService("CollectionService")
+local function awaitModel(data)
+	if data.model then
+		return data.model
+	end
+	local deadline = os.clock() + 1.5
+	while os.clock() < deadline do
+		for _, m in ipairs(CollectionService:GetTagged("Monster")) do
+			if m:GetAttribute("BossIntroUntil") == data.untilServer and m.PrimaryPart then
+				return m
+			end
+		end
+		task.wait()
+	end
+	return nil
+end
+
 event.OnClientEvent:Connect(function(data)
-	if type(data) ~= "table" or not data.model then
+	if type(data) ~= "table" then
+		return
+	end
+	data.model = awaitModel(data)
+	if not data.model then
 		return
 	end
 	token += 1
