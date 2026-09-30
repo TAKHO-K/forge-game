@@ -186,6 +186,9 @@ function V.runPure()
 		local spec = BossData.bosses.scorpion_queen.skills.sandSearch.mound
 		local S = spec.shell
 		local worstOverlap, maxSpeed, maxR, holds, bursts = 0, 0, 0, {}, 0
+		local darkSpeed, stopMoved, darkBursts = 0, 0, 0 -- QUEUE-ALL1 D-1: 불 꺼짐(7.5 ~ 10.5초) · 멈춤(10.5초 ~)
+		local stopAt = 14 - S.stopSeconds
+		local darkAt = stopAt - S.dark.seconds
 		for seed = 1, 20 do
 			local rng = Random.new(seed)
 			local count = spec.countByParty[math.min(4, 1 + seed % 4)]
@@ -203,10 +206,13 @@ function V.runPure()
 				for i, m in ipairs(mounds) do
 					before[i] = m.position
 				end
+				sand.mode = now >= stopAt and "stopped" or now >= darkAt and "dark" or "reveal"
+				local movesBefore = sand.shell and sand.shell.darkMoves or 0
 				SandShell.step(sand, spec, mounds, now, dt, rng)
+				darkBursts += (sand.shell.darkMoves or 0) - movesBefore
 				local phase = sand.shell.phase
 				if phase ~= lastPhase then
-					if phase == "move" then
+					if phase == "move" and sand.mode ~= "dark" then
 						bursts += 1
 						if lastPhase == "hold" and holdStart > 0 then
 							table.insert(holds, now - holdStart)
@@ -219,7 +225,13 @@ function V.runPure()
 				for i, m in ipairs(mounds) do
 					local moved = (m.position - before[i]).Magnitude
 					if moved < S.pushStuds * 0.5 then -- 비켜 세우기(순간)는 속도에서 뺀다
-						maxSpeed = math.max(maxSpeed, moved / dt)
+						if sand.mode == "dark" then
+							darkSpeed = math.max(darkSpeed, moved / dt)
+						elseif sand.mode == "stopped" then
+							stopMoved = math.max(stopMoved, moved)
+						else
+							maxSpeed = math.max(maxSpeed, moved / dt)
+						end
 					end
 					maxR = math.max(maxR, m.position.Magnitude)
 					if i ~= sand.realIndex then
@@ -241,6 +253,8 @@ function V.runPure()
 		r.check(("야바위 20판 × 14초: 자리 바꾸기 %d번 · 최고 속도 %.1f(%g ~ %g) · 멈춤 %.2f ~ %.2f초(%g ~ %g) · 진짜 ↔ 가짜 최장 겹침 %.2f초(≤ %.1f) · 중심에서 최대 %.1f(떠돌기 %d)"):format(
 			bursts, maxSpeed, S.burstSpeed[1], S.burstSpeed[2], hMin, hMax, S.holdSeconds[1], S.holdSeconds[2], worstOverlap, S.maxOverlapSeconds, maxR, spec.wanderRadiusStuds),
 			maxSpeed <= S.burstSpeed[2] + 0.01 and maxSpeed >= S.burstSpeed[1] - 0.01 and hMin >= S.holdSeconds[1] - 0.02 and hMax <= S.holdSeconds[2] + 0.02 and worstOverlap <= S.maxOverlapSeconds and maxR <= spec.wanderRadiusStuds + 0.01)
+		r.check(("불 꺼짐 %.1f초(힌트 %.1f) · 둔덕 이동 %d번(20판) · 최고 속도 %.1f(상한 %g) · 멈춤 뒤 이동 %.2f"):format(S.dark.seconds, S.dark.hintSeconds, darkBursts, darkSpeed, S.dark.burstSpeed[2], stopMoved),
+			darkBursts >= 20 * 3 * 2 and darkSpeed <= S.dark.burstSpeed[2] + 0.01 and darkSpeed > S.burstSpeed[2] and stopMoved == 0)
 	end)
 	r.section("대표 전력 역산", function()
 		local off = BalanceSim.solveKillOffset()

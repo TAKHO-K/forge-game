@@ -1503,8 +1503,26 @@ HANDLERS.charge = {
 		return c.skill.telegraphSeconds
 	end,
 	start = function(c)
-		if c.skill.burrow then
+		local burrow = c.skill.burrow
+		if burrow then
 			c.st.burrowLogical = c.position
+			-- QUEUE-ALL1 01 D-1: sinkToVisible = 보이는 파트(꼬리 끝 마디)의 가장 낮은 곳이 바닥 - emergeStuds에 닿을 만큼 가라앉는다
+			--   (Play 실측: 아트 리그 꼬리 끝은 바닥 위 높이 있어 고정 depthStuds 2.0이면 꼬리 끝만 공중에 떠 달렸다). 모자라면 depthStuds.
+			local depth = burrow.depthStuds
+			if burrow.sinkToVisible then
+				local lowest = math.huge
+				for _, part in ipairs(c.model:GetDescendants()) do
+					if part:IsA("BasePart") and table.find(burrow.visibleParts, part.Name) then
+						local cf, size = part.CFrame, part.Size / 2
+						local halfY = math.abs(cf.RightVector.Y) * size.X + math.abs(cf.UpVector.Y) * size.Y + math.abs(cf.LookVector.Y) * size.Z
+						lowest = math.min(lowest, cf.Position.Y - halfY)
+					end
+				end
+				if lowest < math.huge then
+					depth = math.max(depth, lowest - c.st.floorY + (burrow.emergeStuds or 0))
+				end
+			end
+			c.st.burrowDepth = depth
 		end
 		startDash(c, c.position, 1)
 	end,
@@ -1514,7 +1532,7 @@ HANDLERS.charge = {
 		if st.phase == "focus" then
 			if burrow and st.chargeDashIndex == 1 then -- 들어가는 모션: 첫 예고의 앞 enterSeconds 동안 내려간다
 				local progress = math.min((c.now - st.focusStartedAt) / burrow.enterSeconds, 1)
-				c.model:PivotTo(CFrame.new(st.burrowLogical - Vector3.new(0, burrow.depthStuds * progress, 0)))
+				c.model:PivotTo(CFrame.new(st.burrowLogical - Vector3.new(0, (st.burrowDepth or burrow.depthStuds) * progress, 0)))
 				if progress >= 1 then
 					setBurrowHidden(c, true)
 				end
@@ -1544,7 +1562,7 @@ HANDLERS.charge = {
 			end
 			if burrow then
 				st.burrowLogical = newPos
-				c.model:PivotTo(CFrame.new(newPos - Vector3.new(0, burrow.depthStuds, 0)))
+				c.model:PivotTo(CFrame.new(newPos - Vector3.new(0, st.burrowDepth or burrow.depthStuds, 0)))
 			else
 				c.model:PivotTo(CFrame.new(newPos))
 			end
@@ -1598,7 +1616,8 @@ HANDLERS.charge = {
 			endSkill(c.model, st, c.data, c.now)
 		elseif st.emergeFrom then
 			local progress = math.min((c.now - st.emergeFrom) / burrow.exitSeconds, 1)
-			local sink = burrow.depthStuds + (skill.dazeSinkStuds - burrow.depthStuds) * progress
+			local depth = st.burrowDepth or burrow.depthStuds
+			local sink = depth + (skill.dazeSinkStuds - depth) * progress
 			c.model:PivotTo(CFrame.new(st.dazeBase - Vector3.new(0, sink, 0)) * CFrame.Angles(0, 0, math.rad(skill.dazeTiltDeg)))
 			if progress >= 1 then
 				st.emergeFrom = nil

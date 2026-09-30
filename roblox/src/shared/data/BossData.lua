@@ -1163,7 +1163,9 @@ local SPECIES = {
 				recoverInZone = { tag = "quicksand", seconds = 6.0 },
 				-- depthStuds 2.0: 보스 루트는 바닥 + 1.5라 몸통 윗면이 바닥 위 2.76, 꼬리 끝이 3.8이다(sizeScale 2.8) → 2.0 내려가면
 				-- 몸통은 0.76만 남은 순간 가려지고 꼬리가 1.8stud 솟은 채 달린다. 더 내리면 꼬리까지 바닥 밑으로 들어간다.
-				burrow = { depthStuds = 2.0, enterSeconds = 0.5, exitSeconds = 0.4, visibleParts = { "Tail1_5", "Tail1_6", "Tail1_7", "Tail1_8", "Tail2_5", "Tail2_6", "Tail2_7", "Tail2_8", "Tail3_5", "Tail3_6", "Tail3_7", "Tail3_8" } }, -- BR1-4b: 리그 꼬리 3개의 끝 4마디(옛 TailSpike)
+				-- QUEUE-ALL1 01 D-1: 아트 리그(A2-M1)는 꼬리 끝 4마디가 바닥 위 높이 있어 2.0이면 끝만 공중에 떠 달렸다 → sinkToVisible = 보이는 마디의 가장 낮은 곳이
+				--   바닥 − emergeStuds(0.4)에 닿도록 모델에서 재어 가라앉힌다(depthStuds는 하한).
+				burrow = { depthStuds = 2.0, sinkToVisible = true, emergeStuds = 0.4, enterSeconds = 0.5, exitSeconds = 0.4, visibleParts = { "Tail1_5", "Tail1_6", "Tail1_7", "Tail1_8", "Tail2_5", "Tail2_6", "Tail2_7", "Tail2_8", "Tail3_5", "Tail3_6", "Tail3_7", "Tail3_8" } }, -- BR1-4b: 리그 꼬리 3개의 끝 4마디(옛 TailSpike)
 				onStart = { { type = "spawnPropsAround", prop = "pit", count = 3, minStuds = 14, maxStuds = 26, clearStuds = 6 } },
 				onEnd = { { type = "destroyProps", prop = "pit", which = "all" } },
 				arenaMarginStuds = 5, -- 몸통 반폭 1.2 × 2.8 × 1.3 = 4.4보다 조금 크게
@@ -1182,11 +1184,15 @@ local SPECIES = {
 				primitive = "sandSearch", bubble = "sandSearch", role = "gimmick",
 				cooldownSeconds = 30, firstAvailableSeconds = 10, reserveFirstUse = true, priority = P.gimmick,
 				conditions = { { type = "notAfter", skills = { "stab" } }, { type = "memberWithin", studs = 60 } },
-				telegraphSeconds = 1.5, limitSeconds = 14, limitSecondsParty = 12, depthStuds = 8, -- M1 BR1-3 후속(A안): 파티(2인 이상) 제한 12초
+				telegraphSeconds = 1.5, limitSeconds = 14, limitSecondsParty = 12, depthStuds = 18, -- QUEUE-ALL1 D-1: 8 → 18(Play: 아트 메시 여왕은 피벗 위 15.1까지 - 8이면 집게 · 꼬리가 모래 위로 보였다) -- M1 BR1-3 후속(A안): 파티(2인 이상) 제한 12초
 				mound = { countByParty = { 3, 4, 5, 5 }, speedStuds = 7, wanderRadiusStuds = 40, sizeScale = 3.4, bodyAspect = Vector3.new(1.7, 0.5, 1.7), color = scorpionHead,
 					-- A2-N4 §2-7(★ 기믹): 야바위 이동 - 둔덕끼리 자리를 바꾸며 burstSpeed로 빠르게 → holdSeconds 멈춤 반복(speedStuds = 옛 떠돌기 · 끄면 옛 규칙) ·
 					--   추적 보장: 진짜가 가짜와 overlapStuds 안에 maxOverlapSeconds 넘게 있지 않게(넘으면 가짜를 비켜 세운다) · 꼬리 = 모든 둔덕(가짜 = 모래색) · 진짜만 켜짐 onSeconds / 꺼짐 offSeconds
-					shell = { enabled = true, burstSpeed = { 14, 16 }, holdSeconds = { 0.5, 0.8 }, overlapStuds = 5, maxOverlapSeconds = 0.8, pushStuds = 9 },
+					shell = { enabled = true, burstSpeed = { 14, 16 }, holdSeconds = { 0.5, 0.8 }, overlapStuds = 5, maxOverlapSeconds = 0.8, pushStuds = 9,
+						-- QUEUE-ALL1 01 D-1: 제한 시간의 마지막 = 불 꺼짐 dark.seconds(힌트 1단계부터 hintSeconds) + 멈춤 stopSeconds. 불 꺼짐 = 꼬리 전부 꺼짐 · 둔덕마다 속도 burstSpeed(상한 22 - 눈으로 따라간다) ·
+						--   둔덕마다 따로 목표 = 다른 둔덕 자리(swapChance) 또는 hopStuds 도약 · 도착마다 멈춤 holdSeconds(짧고 불규칙). 멈춘 순간 가장 먼 둔덕까지 걸어갈 시간(0.5 + 거리 ÷ 16 × 1.25)이 남은 시간보다 길면 제한을 늘린다.
+						dark = { seconds = 3, hintSeconds = 2, burstSpeed = { 17, 22 }, holdSeconds = { 0.1, 0.4 }, swapChance = 0.4, hopStuds = { 8, 18 } },
+						stopSeconds = 3.5 },
 					tail = { onSeconds = 1.0, offSeconds = 2.0, glowColor = Color3.fromRGB(255, 214, 90) } },
 				clue = { footprintEverySeconds = 0.3, footprintSeconds = 2.4 },
 				decoyBlast = { multiplier = 1.0, radiusStuds = 7, damageLabel = "모래 폭발", partyShareMaxHpByParty = { 0, 0.35, 0.33, 0.3 }, partyShareLabel = "공동 책임" }, -- M1-2 C안 = 오르골 wrongShock 주석

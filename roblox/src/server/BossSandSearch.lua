@@ -10,6 +10,8 @@ local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local BossMechanics = require(script.Parent.BossMechanics)
 local BossSkillMath = require(game:GetService("ReplicatedStorage").Shared.BossSkillMath)
 local SandShell = require(game:GetService("ReplicatedStorage").Shared.SandShell)
+local BossData = require(game:GetService("ReplicatedStorage").Shared.data.BossData)
+local WorldConfig = require(game:GetService("ReplicatedStorage").Shared.data.WorldConfig)
 
 local BossSandSearch = {}
 
@@ -84,23 +86,44 @@ local function spawnMounds(c)
 		local body, head = entry.model:FindFirstChild("Body"), entry.model:FindFirstChild("Head")
 		if body then
 			body.Material = Enum.Material.Sand
+			-- QUEUE-ALL1 01 D-1: 네모 판 → 둥근 모래 언덕(판정 몸은 그대로 - 겉 메시만 · 아래쪽은 바닥에 묻힌다)
+			local dome = Instance.new("SpecialMesh")
+			dome.MeshType = Enum.MeshType.Sphere
+			dome.Scale = Vector3.new(1.15, 2.6, 1.15) -- 꼭대기 = 몸 가운데 + 몸 높이(Play 캡처: 1.5는 납작한 원판)
+			dome.Offset = Vector3.new(0, -body.Size.Y * 0.3, 0)
+			dome.Parent = body
 		end
 		if head then
 			head.Transparency = 1
 		end
 		if (i == sand.realIndex or (spec.shell and spec.shell.enabled)) and body then
-			-- 빛나는 꼬리 끝(작지만 알면 보인다 - 폰에서도 보이게 몸 위로 솟은 네온 쐐기) · A2-N4: 가짜에도 같은 꼬리(모래색 · 안 빛남) - 진짜만 클라가 켰다 껐다(BossGimmick13View)
-			local tip = Instance.new("WedgePart")
-			tip.Name = "TailTip"
-			tip.Anchored = true
-			tip.CanCollide = false
-			tip.CanQuery = false
+			-- 빛나는 꼬리 끝(작지만 알면 보인다 - 폰에서도 보이게 몸 위로 솟은 침) · A2-N4: 가짜에도 같은 꼬리(모래색 · 안 빛남) - 진짜만 클라가 켰다 껐다(BossGimmick13View)
+			-- QUEUE-ALL1 01 D-1: 쐐기 하나 → 모래에서 튀어나와 앞으로 휘는 꼬리(마디 TailSeg 4 + 침 TailTip - 빛나는 건 침만)
 			local shellOn = spec.shell and spec.shell.enabled
+			local function piece(className, name, size, cf)
+				local part = Instance.new(className)
+				part.Name = name
+				part.Anchored = true
+				part.CanCollide = false
+				part.CanQuery = false
+				part.Material = Enum.Material.Sand
+				part.Color = spec.color
+				part.Size = size
+				part.CFrame = cf
+				part.Parent = entry.model
+				return part
+			end
+			local root = body.CFrame * CFrame.new(0, body.Size.Y * 0.72, body.Size.Z * 0.3) -- 언덕 뒤쪽 비탈에서 솟는다
+			local cf = root
+			local segColor = spec.color:Lerp(Color3.new(0, 0, 0), 0.25) -- 언덕보다 조금 어둡게(꼬리 윤곽)
+			for k = 1, 5 do -- 뒤에서 솟아 위로 · 앞으로 말린다(마디마다 30°씩 앞으로)
+				cf = cf * CFrame.Angles(math.rad(k == 1 and 10 or -30), 0, 0) * CFrame.new(0, 0.9, 0)
+				piece("Part", "TailSeg", Vector3.new(2.0 - k * 0.2, 1.9, 2.0 - k * 0.2), cf).Color = segColor
+				cf = cf * CFrame.new(0, 0.9, 0)
+			end
+			local tip = piece("WedgePart", "TailTip", Vector3.new(1.0, 2.4, 1.4), cf * CFrame.Angles(math.rad(-45), 0, 0) * CFrame.new(0, 0.9, 0))
 			tip.Material = shellOn and Enum.Material.Sand or Enum.Material.Neon
 			tip.Color = shellOn and spec.color or Color3.fromRGB(255, 214, 90)
-			tip.Size = Vector3.new(1.2, 3.4, 2.2)
-			tip.CFrame = body.CFrame * CFrame.new(0, body.Size.Y / 2 + 0.8, body.Size.Z * 0.3) * CFrame.Angles(math.rad(-20), 0, 0)
-			tip.Parent = entry.model
 		end
 		list[i] = entry
 	end
@@ -109,6 +132,13 @@ local function spawnMounds(c)
 	local limit = BossSkillMath.gimmickLimitSeconds(skill, #st.members)
 	sand.endsAt = c.now + limit
 	sand.blastAt = {}
+	local S = spec.shell
+	if S and S.enabled and S.dark then -- QUEUE-ALL1 01 D-1: 공개 → 불 꺼짐 → 멈춤
+		local darkSeconds = (st.hintLevel or 0) >= 1 and S.dark.hintSeconds or S.dark.seconds
+		sand.mode = "reveal"
+		sand.stopAt = sand.endsAt - S.stopSeconds
+		sand.darkAt = sand.stopAt - darkSeconds
+	end
 	local tail = (spec.shell and spec.shell.enabled and spec.tail) and { onSeconds = spec.tail.onSeconds, offSeconds = spec.tail.offSeconds, glowColor = spec.tail.glowColor, sandColor = spec.color } or nil
 	kit.send(st, "sandStart", { realIndex = sand.realIndex, count = count, seconds = limit, footprintEvery = skill.clue.footprintEverySeconds, footprintSeconds = skill.clue.footprintSeconds, floorY = st.floorY, tail = tail })
 	print(("[forge-game] 진짜 전갈 찾기: 둔덕 %d개(진짜 %d번) · 제한 %.1f초"):format(count, sand.realIndex, limit))
@@ -205,6 +235,26 @@ BossSandSearch.handler = {
 		end
 		-- 둔덕이 돌아다닌다(걷기보다 느리게 - 웨이포인트를 차례로) · A2-N4: 야바위(자리 바꾸기 → 멈춤)
 		local spec = skill.mound
+		if sand.mode == "reveal" and c.now >= sand.darkAt then
+			sand.mode = "dark"
+			kit.send(st, "sandDark", { seconds = sand.stopAt - c.now })
+		elseif sand.mode == "dark" and c.now >= sand.stopAt then
+			sand.mode = "stopped"
+			-- 도달 시간 보장: 산 멤버 각자에서 가장 먼 둔덕까지(회피 부등식과 같은 식)
+			local D = BossData.mechanics.dodge
+			local far = 0
+			for _, v in ipairs(aliveVictims(st)) do
+				for _, m in ipairs(moundsOf[c.model] or {}) do
+					far = math.max(far, (kit.xz(v.root.Position) - kit.xz(m.position)).Magnitude)
+				end
+			end
+			local reach = D.perceptionSeconds + far / WorldConfig.playerWalkSpeedStuds * D.marginFactor
+			if c.now + reach > sand.endsAt then
+				print(("[forge-game] 진짜 전갈 찾기: 멈춤 - 가장 먼 둔덕 %.0f · 도달 %.1f초 > 남은 %.1f초 → 제한 연장"):format(far, reach, sand.endsAt - c.now))
+				sand.endsAt = c.now + reach
+			end
+			kit.send(st, "sandStop", { seconds = sand.endsAt - c.now })
+		end
 		if spec.shell and spec.shell.enabled then
 			BossSandSearch.stepShell(c, sand, spec, moundsOf[c.model] or {})
 		end

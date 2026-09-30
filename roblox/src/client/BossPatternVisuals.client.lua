@@ -899,6 +899,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossGimmick13View.sandDig(data)
 	elseif kind == "sandStart" then
 		BossGimmick13View.sandStart(data)
+	elseif kind == "sandDark" then
+		BossGimmick13View.sandDark(data)
+	elseif kind == "sandStop" then
+		BossGimmick13View.sandStop(data)
 	elseif kind == "sandBlast" then
 		BossGimmick13View.sandBlast(data)
 	elseif kind == "sandEnd" then

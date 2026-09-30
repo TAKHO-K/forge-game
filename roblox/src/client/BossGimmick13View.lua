@@ -147,18 +147,20 @@ end
 
 function BossGimmick13View.sandStart(data)
 	clearSand()
-	sand = { realIndex = data.realIndex, lastAt = 0, endsAt = os.clock() + data.seconds, floorY = data.floorY }
+	sand = { realIndex = data.realIndex, lastAt = 0, endsAt = os.clock() + data.seconds, floorY = data.floorY, lastPos = {} }
 	local tailSpec = data.tail -- A2-N4 §2-7: { onSeconds, offSeconds, glowColor, sandColor } - 서버 sandStart가 스킬 데이터에서 싣는다
 	local startedAt = os.clock()
 	sand.connection = RunService.RenderStepped:Connect(function()
 		local now = os.clock()
-		setHud(("빛나는 꼬리를 찾아 때려라! %d"):format(math.max(0, math.ceil(sand.endsAt - now))), Color3.fromRGB(255, 214, 90))
-		-- A2-N4 §2-7: 진짜 꼬리만 전구처럼 켜짐 onSeconds · 꺼짐 offSeconds(가짜 꼬리 = 서버가 모래색으로 둔다)
+		local left = math.max(0, math.ceil(sand.endsAt - now))
+		setHud(sand.mode == "stopped" and ("멈췄다! 진짜를 때려라! %d"):format(left) or sand.mode == "dark" and ("불이 꺼졌다 - 눈으로 따라가라! %d"):format(left)
+			or ("빛나는 꼬리를 찾아 때려라! %d"):format(left), Color3.fromRGB(255, 214, 90))
+		-- A2-N4 §2-7: 진짜 꼬리만 전구처럼 켜짐 onSeconds · 꺼짐 offSeconds(가짜 꼬리 = 서버가 모래색으로 둔다) · QUEUE-ALL1 D-1: 불 꺼짐부터는 계속 꺼짐
 		if tailSpec then
 			local real = taggedWith("SandMound", sand.realIndex)
 			local tip = real and real:FindFirstChild("TailTip")
 			if tip then
-				local on = (now - startedAt) % (tailSpec.onSeconds + tailSpec.offSeconds) < tailSpec.onSeconds
+				local on = sand.mode == nil and (now - startedAt) % (tailSpec.onSeconds + tailSpec.offSeconds) < tailSpec.onSeconds
 				tip.Material = on and Enum.Material.Neon or Enum.Material.Sand
 				tip.Color = on and tailSpec.glowColor or tailSpec.sandColor
 			end
@@ -167,6 +169,21 @@ function BossGimmick13View.sandStart(data)
 			return
 		end
 		sand.lastAt = now
+		-- QUEUE-ALL1 D-1: 움직이는 둔덕마다 모래 먼지 줄(모두 같다 - 단서 아님)
+		for _, model in ipairs(CollectionService:GetTagged("RescueTarget")) do
+			local body = model:GetAttribute("SandMound") and model:FindFirstChild("Body")
+			if body then
+				local last = sand.lastPos[model]
+				sand.lastPos[model] = body.Position
+				if last and (body.Position - last).Magnitude > 0.8 then
+					local back = (last - body.Position).Unit
+					BossFx.puff(Vector3.new(body.Position.X, sand.floorY + 0.8, body.Position.Z) + back * (body.Size.X * 0.5), 2.2, DUST, 0.6, back * 2 + Vector3.new(0, 2, 0))
+				end
+			end
+		end
+		if sand.mode then
+			return -- 불 꺼짐 · 멈춤: 진짜 발자국(단서)도 없다
+		end
 		local mound = taggedWith("SandMound", sand.realIndex)
 		local body = mound and mound:FindFirstChild("Body")
 		if body then
@@ -181,6 +198,20 @@ function BossGimmick13View.sandStart(data)
 			end
 		end
 	end)
+end
+
+-- QUEUE-ALL1 01 D-1: 불 꺼짐(꼬리 전부 꺼짐 · 빠른 섞기) → 멈춤(서버가 도달 시간을 보장한 남은 초)
+function BossGimmick13View.sandDark(data)
+	if sand then
+		sand.mode = "dark"
+	end
+end
+
+function BossGimmick13View.sandStop(data)
+	if sand then
+		sand.mode = "stopped"
+		sand.endsAt = os.clock() + data.seconds
+	end
 end
 
 function BossGimmick13View.sandBlast(data)
