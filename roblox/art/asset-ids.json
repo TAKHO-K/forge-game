@@ -575,6 +575,24 @@
   "assetId": 124949023350921,
   "status": "Approved"
  },
+ "audio/sfx_combat.wav": {
+  "sha256": "9668574ba832aac8846bd644f7fd378928e53226ac55923561b6953b4b32dca1",
+  "assetType": "Audio",
+  "assetId": 139471271245384,
+  "status": "Reviewing"
+ },
+ "audio/sfx_loot.wav": {
+  "sha256": "a5707879eafd8a0e3c2087aa72495573707ea43301c56cb97b3422b000c31e55",
+  "assetType": "Audio",
+  "assetId": 73841264968173,
+  "status": "Reviewing"
+ },
+ "audio/sfx_ui.wav": {
+  "sha256": "004024e834df51988345745d2233c6e71ba1e515416bf47af2a3b10d838e254f",
+  "assetType": "Audio",
+  "assetId": 132247497769699,
+  "status": "Reviewing"
+ },
  "bosses/abyssal_lord.fbx": {
   "sha256": "3e7972e9f3bf48f2ed2bde46d721e85a95d6a3b64c2d0c13f3efc01dad93462f",
   "assetType": "Model",

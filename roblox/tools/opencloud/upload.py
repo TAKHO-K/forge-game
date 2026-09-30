@@ -27,7 +27,9 @@ IDS = os.path.join(ART, "asset-ids.json")
 LUA = os.path.join(ROOT, "src", "shared", "data", "ArtAssetIds.lua")
 API = "https://apis.roblox.com/assets/v1"
 CREATOR_USER_ID = "11595243049"  # game.CreatorId (사전 확인 4)
-TYPES = {".fbx": ("Model", "model/fbx"), ".png": ("Decal", "image/png")}
+TYPES = {".fbx": ("Model", "model/fbx"), ".png": ("Decal", "image/png"),
+         # QUEUE-ALL2 P5 사운드 시트(효과음 여러 개를 한 파일에 - Sound.PlaybackRegion). 한도: ID 인증 월 100 · 미인증 월 10 · 업로드 뒤 수정 불가
+         ".wav": ("Audio", "audio/wav"), ".ogg": ("Audio", "audio/ogg"), ".mp3": ("Audio", "audio/mpeg"), ".flac": ("Audio", "audio/flac")}
 
 
 def api_key():
@@ -184,6 +186,9 @@ def upload_one(rel, ids, key, dry):
         if code != 200:
             print("X 업로드 %s: %d %s" % (rel, code, op.get("error")))
             ids[rel] = {"sha256": h, "assetType": atype, "assetId": None, "status": "failed:%d %s" % (code, (op.get("error") or "")[:120])}
+            if atype == "Audio":  # QUEUE-ALL2 P5: 오디오 한도 · 거절 = 바로 멈춘다(억지로 나누지 않음 - 남은 · 필요 개수는 보고서)
+                save_ids(ids)
+                sys.exit("오디오 업로드 실패 - 멈춤(한도 · 권한 확인): %s" % rel)
             return
     op_id = op.get("operationId") or (op.get("path") or "").split("/")[-1]
     done = poll(op_id, key)
