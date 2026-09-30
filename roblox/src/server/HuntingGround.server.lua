@@ -257,6 +257,7 @@ removeDefaultSpawns("HuntingGroundSpawn")
 removeDefaultBaseplate()
 createPlayerSpawn(WorldConfig.zones.spawn.arrival)
 createRebirthAltar(WorldConfig.zones.community)
+workspace:SetAttribute("WorldMapBuilt", true) -- A2-N3: 맵 · 제단 완성 신호(ArtAssetLoader가 소품 메시를 이 뒤에 입힌다 - 표시만)
 createGemMerchant(WorldConfig.zones.community)
 
 SpawnSites.start()

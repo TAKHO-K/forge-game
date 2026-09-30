@@ -340,8 +340,12 @@ local function rebuildGearSlots()
 		iconHolder.Size = UDim2.new(0, 26, 0, 26)
 		iconHolder.BackgroundTransparency = 1
 		iconHolder.Parent = slot
-		local iconKey = filled and (part == "weapon" and ItemIcons.keyFor("weapon", S.weaponGradeId(), nil, player:GetAttribute("ClassId"))
-			or ItemIcons.keyFor(part, equipped[part].grade, equipped[part].itemLevel, nil, equipped[part].setZone)) or nil
+		local iconKey = nil
+		if part == "weapon" then
+			iconKey = ItemIcons.keyFor("weapon", S.weaponGradeId(), nil, player:GetAttribute("ClassId"))
+		elseif filled then
+			iconKey = ItemIcons.keyFor(part, equipped[part].grade, equipped[part].itemLevel, nil, equipped[part].setZone)
+		end
 		if not ItemIcons.image(iconHolder, 26, iconKey, 0.56) then -- A2-N3 Open Cloud 아이콘(ArtStyleV1 뒤 · 없으면 도형) · 칸 높이의 56%(아래 이름 줄 자리)
 			ItemIcons.byPart[part](iconHolder, 26, color)
 		end

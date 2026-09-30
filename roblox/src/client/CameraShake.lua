@@ -31,14 +31,19 @@ RunService:BindToRenderStep("CameraShake", Enum.RenderPriority.Camera.Value + 1,
 end)
 
 -- A2-N3 결정 ①: 타격 FOV 킥(시야각을 degrees만큼 넓혔다가 seconds 동안 선형으로 되돌림 - 위치는 안 움직인다). 다른 코드가 FOV를 바꿔도 더한 몫만 빼고 더한다.
-local kickUntil, kickSeconds, kickDegrees, kickApplied = 0, 0, 0, 0
+local kickUntil, kickSeconds, kickDegrees, kickApplied, lastSet = 0, 0, 0, 0, nil
 RunService:BindToRenderStep("CameraFovKick", Enum.RenderPriority.Camera.Value + 1, function()
+	if lastSet and math.abs(camera.FieldOfView - lastSet) > 1e-3 then
+		kickApplied = 0 -- 다른 코드가 FOV를 새로 썼다(사망 줌 · 태초 연출 등) → 그 값이 새 기준(더한 몫을 빼지 않는다)
+		kickUntil = 0
+	end
 	local remaining = kickUntil - os.clock()
 	local want = remaining > 0 and kickDegrees * (remaining / kickSeconds) or 0
 	if want ~= kickApplied then
 		camera.FieldOfView += want - kickApplied
 		kickApplied = want
 	end
+	lastSet = (want ~= 0 or kickApplied ~= 0) and camera.FieldOfView or nil
 end)
 function CameraShake.fovKick(degrees, seconds)
 	local localPlayer = game:GetService("Players").LocalPlayer

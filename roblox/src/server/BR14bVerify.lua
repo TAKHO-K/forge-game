@@ -334,7 +334,7 @@ function V.runLive(player, env)
 					parts += 1
 					anchored += d.Anchored and 1 or 0
 					collide += d.CanCollide and 1 or 0
-					query += (d.CanQuery and d.Name ~= "HumanoidRootPart" and d.Name ~= "Body" and d.Name ~= "Head") and 1 or 0
+					query += (d.CanQuery and d.Name ~= "HumanoidRootPart" and d.Name ~= "Body" and d.Name ~= "Head" and d.Name ~= "Body_Query" and d.Name ~= "Head_Query") and 1 or 0 -- A2-N3: 메시 보스는 조준 파트를 투명 사본(<이름>_Query)으로 둔다
 				end
 			end
 			local rig = BossRigSpec.rigs[id]

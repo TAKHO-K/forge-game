@@ -54,7 +54,7 @@ local function build(player)
 				part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch = true, false, false, false
 				part.CastShadow = true
 				part.Parent = model
-				parts[src.Name] = { part = part, offset = CFrame.new(src.Position) }
+				parts[src.Name] = { part = part, offset = CFrame.new(src.Position) * src.CFrame.Rotation } -- 정규화(Y180)가 CFrame 회전에 들어 있다 - 빼면 조각마다 뒤집힌다
 			end
 		end
 		local gp = look == "rare" and ArtImportData.petGlowPoint[bodyId]
@@ -89,7 +89,8 @@ local function build(player)
 end
 
 local function refresh(player)
-	local key = tostring(player:GetAttribute("PetBody")) .. "|" .. tostring(player:GetAttribute("PetZone")) .. "|" .. tostring(player:GetAttribute("PetGrade")) .. "|" .. tostring(ArtMeshKit.get("pets/" .. tostring(player:GetAttribute("PetBody")) .. "_normal") ~= nil)
+	local look = ArtImportData.petLookOfGrade[player:GetAttribute("PetGrade") or ""] or "normal"
+	local key = tostring(player:GetAttribute("PetBody")) .. "|" .. tostring(player:GetAttribute("PetZone")) .. "|" .. tostring(player:GetAttribute("PetGrade")) .. "|" .. tostring(ArtMeshKit.get("pets/" .. tostring(player:GetAttribute("PetBody")) .. "_" .. look) ~= nil)
 	local cur = pets[player]
 	if cur and cur.key == key then
 		return

@@ -670,7 +670,7 @@ attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, 
 		SkillVfx.darkImpact(at) -- W3c-3 터졌다 → 빨려 듦
 	end
 	showResult(monsterModel, damage, isCrit, died, isComboHit, isBuffedShot, fin ~= nil)
-	if monsterModel and monsterModel:GetAttribute("BossRig") and workspace:GetAttribute("ArtStyleV1") then -- A2-N3 결정 ①: 보스 타격 FOV 킥(설정 "화면 흔들림" 끔 = 없음)
+	if not died and monsterModel and monsterModel:GetAttribute("BossRig") and workspace:GetAttribute("ArtStyleV1") then -- A2-N3 결정 ①: 보스 타격 FOV 킥(설정 "화면 흔들림" 끔 = 없음 · 처치 타격 제외 - 사망 줌이 그 순간 FOV를 기준으로 읽는다)
 		local k = MovementConfig.camera.bossHitFovKick
 		CameraShake.fovKick(k.degrees, k.seconds)
 	end

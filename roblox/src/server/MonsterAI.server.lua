@@ -347,7 +347,7 @@ end
 -- 방지)는 전부 BossPatterns의 스케줄러가 정한다.
 -- BR1-2 보스 평타(BossData BASIC_RANGE · INNER_CIRCLE): 사거리 attackRangeStuds까지 그대로 · 그 밖 ~ attackFarRangeStuds는 attackFarMultiplier(반감).
 -- innerSafeRadiusStuds가 있는 보스(근접 원형 구역)는 원 밖을 낫처럼 쓸어 원 밖의 멤버 전원을 친다 - 원 안은 평타를 안 맞는다(가끔 원 안 강공격 innerSmash).
-local prepSentFor = setmetatable({}, { __mode = "k" }) -- A2-N3: [보스 모델] = 예비 신호를 보낸 주기(마지막 평타 틱)
+local prepSentFor = {} -- A2-N3: [보스 모델] = 예비 신호를 보낸 주기(마지막 평타 틱) · 약한 키는 조용히 사라진다 → 강한 표 + Destroying 정리
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot)
 	local now = os.clock()
@@ -357,7 +357,12 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 		-- A2-N3 결정 ②: 예비 동작 신호만(판정 · 타이밍 무관) - 쿨 끝 basicPrepSeconds 전 · 이번 주기 1회 · 대상이 지금 사거리 안이면
 		local lead = BossData.basicPrepSeconds
 		local remaining = data.attackCooldownSeconds - (now - last)
-		if lead and remaining <= lead and prepSentFor[model] ~= last and PlayerState.getHp(targetPlayer) > 0 and Reach.within(targetRoot.Position, monsterPosition, farRange) then
+		if lead and remaining <= lead and prepSentFor[model] ~= last and (PlayerState.getHp(targetPlayer) or 0) > 0 and Reach.within(targetRoot.Position, monsterPosition, farRange) then
+			if prepSentFor[model] == nil then
+				model.Destroying:Once(function()
+					prepSentFor[model] = nil
+				end)
+			end
 			prepSentFor[model] = last
 			model:SetAttribute("BossSwingPrepAt", workspace:GetServerTimeNow() + remaining)
 		end

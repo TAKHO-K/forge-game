@@ -49,6 +49,9 @@ local function loadAll()
 				result:Destroy()
 				ok += 1
 			else
+				if success and result then
+					result:Destroy()
+				end
 				table.insert(failed, item.key)
 			end
 		end
@@ -66,14 +69,25 @@ local function loadAll()
 	end
 	runAll(first)
 	folder:SetAttribute(Data.propsReadyAttribute, true)
-	-- 소품 메시 입히기(맵 · 제단은 이미 지어졌다 - 맵을 기다리게 하지 않는다): 킷 틀 소품 + 환생 제단
-	local skinned = require(script.Parent.PropLibrary).applyArtMeshes()
-	local altar = workspace:FindFirstChild("RebirthAltar")
-	local frame = altar and altar:GetAttribute("ArtMeshFrame")
-	if frame then
-		ArtMeshKit.skin(altar, "props/rebirth_altar", frame)
-	end
-	print(("[ArtAssetLoader] 소품 메시 입힘 %d · 제단 %s"):format(skinned, tostring(altar and altar:GetAttribute("ArtMesh") ~= nil)))
+	-- 소품 메시 입히기(맵 완성 신호 뒤 - 맵을 기다리게 하지 않는다): 킷 틀 소품 + 환생 제단 · 실패해도 2단계 · 준비 신호는 계속 간다
+	task.spawn(function()
+		local t = os.clock()
+		while not workspace:GetAttribute(Data.mapBuiltAttribute) and os.clock() - t < 90 do
+			task.wait(0.2)
+		end
+		local okSkin, err = pcall(function()
+			local skinned = require(script.Parent.PropLibrary).applyArtMeshes()
+			local altar = workspace:FindFirstChild("RebirthAltar")
+			local frame = altar and altar:GetAttribute("ArtMeshFrame")
+			if frame then
+				ArtMeshKit.skin(altar, "props/rebirth_altar", frame)
+			end
+			print(("[ArtAssetLoader] 소품 메시 입힘 %d · 제단 %s"):format(skinned, tostring(altar and altar:GetAttribute("ArtMesh") ~= nil)))
+		end)
+		if not okSkin then
+			warn("[ArtAssetLoader] 소품 메시 입히기 실패(지금 모습 그대로): " .. tostring(err))
+		end
+	end)
 	runAll(rest)
 	folder:SetAttribute("Loaded", ok)
 	folder:SetAttribute(Data.readyAttribute, true)
