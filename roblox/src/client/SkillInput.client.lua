@@ -63,7 +63,7 @@ local function playHits(hits)
 	for _, hit in ipairs(hits) do
 		DamageNumbers.show(hit.target, hit.damage, hit.isCrit)
 		if hit.isDead then
-			HitEffects.playDeath(hit.target)
+			HitEffects.playDeath(hit.target, hit.isCrit) -- QUEUE-ALL2 P4 ③: 스킬 치명 처치 = 로켓단식(내 화면)
 		else
 			HitEffects.playHit(hit.target, hit.isCrit, HEAVY_HITSTOP_SECONDS)
 		end

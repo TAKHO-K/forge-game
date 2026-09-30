@@ -553,7 +553,7 @@ local function showResult(monsterModel, damage, isCrit, died, isComboHit, isBuff
 		return
 	end
 	if died then
-		HitEffects.playDeath(monsterModel)
+		HitEffects.playDeath(monsterModel, isComboHit or isCrit or isFinisher) -- QUEUE-ALL2 P4 ③: 마무리 강공격 · 치명 처치 = 로켓단식(내 화면)
 	else
 		HitEffects.playHit(monsterModel, isCrit, holdSeconds)
 	end

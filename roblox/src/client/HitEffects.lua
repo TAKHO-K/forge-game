@@ -14,6 +14,7 @@
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArtV1FxData = require(ReplicatedStorage.Shared.data.ArtV1FxData) -- A2-N2 2-4 타격 링(ArtStyleV1 스위치 뒤)
@@ -186,7 +187,89 @@ end
 -- 고정) 자리를 다시 계산해 옮기려 하지 않는다, 그러면 "흩어짐"이 아니라 "겹쳐짐"이
 -- 될 위험이 있다). MonsterSpawner.despawn이 damageNumberLifetimeSeconds(0.8초) 뒤에
 -- 실제로 Destroy하므로, 이 연출(0.35초)이 그 안에 여유 있게 끝난다.
-function HitEffects.playDeath(monsterModel)
+-- QUEUE-ALL2 P4 ③ 로켓단식(09 B-2 클립 순간): 마무리 강공격 · 치명 처치면 내 화면에서만 몸을 복제해 하늘로 날린다(포물선 · 회전) → 꼭대기에서 "반짝" 별빛과 함께 사라짐.
+--   원본은 LocalTransparencyModifier로 숨김(서버 모델 · 드랍 · 판정 그대로 - 드랍은 원래 자리). 아트 켬 · 연출 세기 끔이 아닐 때만. 수치 = LAUNCH(연출 전용).
+local LAUNCH = { seconds = 0.7, away = 30, up = 60, gravity = 20, spinDeg = 720, sparkleSeconds = 0.3, sparkleStuds = 7 }
+local function hideLocally(model)
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") or d:IsA("Decal") then
+			d.LocalTransparencyModifier = 1
+		elseif d:IsA("BillboardGui") then
+			d.Enabled = false
+		end
+	end
+end
+local function sparkle(at)
+	for i = 0, 1 do
+		local p = Instance.new("Part")
+		p.Name = "LaunchStar"
+		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+		p.Material = Enum.Material.Neon
+		p.Color = Color3.fromRGB(255, 244, 200)
+		p.Size = Vector3.new(0.4, LAUNCH.sparkleStuds * 0.2, 0.4)
+		p.CFrame = CFrame.new(at) * CFrame.Angles(0, 0, math.rad(45 + i * 90))
+		p.Parent = Workspace
+		local tw = TweenService:Create(p, TweenInfo.new(LAUNCH.sparkleSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.15, LAUNCH.sparkleStuds, 0.15), Transparency = 1 })
+		tw.Completed:Connect(function()
+			p:Destroy()
+		end)
+		tw:Play()
+	end
+	pcall(function()
+		require(script.Parent.SoundSheet).play("reward_fly", { volume = 0.8 })
+	end)
+end
+function HitEffects.launch(monsterModel)
+	local fx = Players.LocalPlayer:GetAttribute("FxScale")
+	if not ArtV1Fx.isOn() or fx == 0 or not monsterModel or not monsterModel.Parent then
+		return false
+	end
+	local me = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	local okClone, clone = pcall(function()
+		monsterModel.Archivable = true
+		return monsterModel:Clone()
+	end)
+	if not okClone or not clone or not me then
+		return false
+	end
+	for _, d in ipairs(clone:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Anchored, d.CanCollide, d.CanQuery, d.CanTouch = true, false, false, false
+		elseif d:IsA("Script") or d:IsA("LocalScript") or d:IsA("BillboardGui") or d:IsA("Highlight") then
+			d:Destroy()
+		end
+	end
+	clone.Name = "LaunchedMonster"
+	local start = monsterModel:GetPivot()
+	local away = start.Position - me.Position
+	away = Vector3.new(away.X, 0, away.Z)
+	away = away.Magnitude > 0.01 and away.Unit or Vector3.new(0, 0, -1)
+	local axis = away:Cross(Vector3.yAxis)
+	clone.Parent = Workspace
+	hideLocally(monsterModel)
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		if t >= LAUNCH.seconds or not clone.Parent then
+			conn:Disconnect()
+			local at = clone.Parent and clone:GetPivot().Position
+			clone:Destroy()
+			if at then
+				sparkle(at)
+			end
+			return
+		end
+		local pos = start.Position + away * LAUNCH.away * t + Vector3.yAxis * (LAUNCH.up * t - LAUNCH.gravity * t * t)
+		clone:PivotTo(CFrame.new(pos) * CFrame.fromAxisAngle(axis.Magnitude > 0 and axis.Unit or Vector3.xAxis, math.rad(LAUNCH.spinDeg * t)) * start.Rotation)
+	end)
+	return true
+end
+
+function HitEffects.playDeath(monsterModel, launch)
+	if launch and HitEffects.launch(monsterModel) then
+		return
+	end
 	local body = monsterModel and monsterModel:FindFirstChild("Body")
 	local head = monsterModel and monsterModel:FindFirstChild("Head")
 	if not body then
