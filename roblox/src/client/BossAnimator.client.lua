@@ -481,6 +481,21 @@ local function updateEntry(e, now, dt, camPos)
 		e.visPos = prev + e.visVel * h
 	end
 	local yawT = yawOf(root.CFrame)
+	-- A2-N4 P0-1: 서버 루트 yaw 0 = 추격 · 패턴이 방향을 안 정했다(PivotTo(CFrame.new)) → 옛 = 늘 월드 −Z를 봤다.
+	--   보이는 방향 = 움직이면 가는 쪽 · 서 있으면 대상(BossFaceUserId) 쪽 · 없으면 그대로. 루트를 돌린 패턴(잡기 · 오르골 · 모래 탐색)은 루트 방향 그대로.
+	if not e.isClone and math.abs(yawT) < 1e-3 then
+		local v = e.estVel or Vector3.zero
+		local flat = Vector3.new(v.X, 0, v.Z)
+		if flat.Magnitude > BossMotionData.faceMoveMinSpeed then
+			yawT = math.atan2(-flat.X, -flat.Z)
+		else
+			local uid = e.model:GetAttribute("BossFaceUserId")
+			local p = uid and Players:GetPlayerByUserId(uid)
+			local r = p and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+			local d = r and Vector3.new(r.Position.X - e.visPos.X, 0, r.Position.Z - e.visPos.Z)
+			yawT = (d and d.Magnitude > 0.5) and math.atan2(-d.X, -d.Z) or e.visYaw
+		end
+	end
 	-- A2-M1 등장 동안 보이는 몸은 나(파티) 쪽을 본다(서버 루트 방향 = 판정은 그대로 - 스폰 방향이 입장 반대쪽이라 옛 연출은 등을 보였다). 등장 첫 프레임은 바로 그 방향으로.
 	local st0 = e.st
 	if st0.introAt and st0.introSeconds and now < st0.introAt + st0.introSeconds + 0.15 then

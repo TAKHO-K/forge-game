@@ -176,7 +176,8 @@ end
 -- 반환: "목표 쪽으로 전진했는가"(true/false). 정면이 막혀 옆으로 비켜 간 틱은 false다 -
 -- 호출부의 "막힘 시간" 계산에 옆걸음도 포함시키기 위해서다(22-4 실측: 도랑 가장자리에서
 -- 옆걸음만 8초 넘게 반복 - 전진이 아니면 진행이 아니다). 실제로 위치가 바뀌었는지와는 다르다.
-local function stepToward(model, currentPosition, targetPosition, speedStuds, dt)
+-- A2-N4 P0-1: 잡몹은 가는 쪽을 본다(옛 = CFrame.new만 써서 모든 몹이 월드 −Z를 봤다 - 메시 정면이 드러나며 보임). 보스(noFace)는 클라 BossAnimator가 보이는 방향을 정한다(패턴이 루트 회전을 지운다).
+local function stepToward(model, currentPosition, targetPosition, speedStuds, dt, noFace)
 	local delta = Vector3.new(targetPosition.X - currentPosition.X, 0, targetPosition.Z - currentPosition.Z)
 	local distance = delta.Magnitude
 	if distance < 0.01 then
@@ -193,7 +194,13 @@ local function stepToward(model, currentPosition, targetPosition, speedStuds, dt
 	local targetY = ground.groundY + TerrainConfig.monsterFootOffsetStuds
 	local maxDy = speedStuds * TerrainConfig.maxSlopeTangent * dt
 	local dy = math.clamp(targetY - currentPosition.Y, -maxDy, maxDy)
-	model:PivotTo(CFrame.new(horizontal.X, currentPosition.Y + dy, horizontal.Z))
+	local at = Vector3.new(horizontal.X, currentPosition.Y + dy, horizontal.Z)
+	local dir = Vector3.new(ground.moveDir.X, 0, ground.moveDir.Z)
+	if noFace or dir.Magnitude < 1e-3 then
+		model:PivotTo(CFrame.new(at))
+	else
+		model:PivotTo(CFrame.lookAt(at, at + dir.Unit))
+	end
 	return ground.moveDir == ground.dir
 end
 
@@ -229,6 +236,22 @@ local function faceToward(model, position, point)
 	end
 	model:PivotTo(CFrame.lookAt(position, position + d.Unit))
 	return d.Unit
+end
+
+-- A2-N4 P0-1: 멈춰 선 잡몹(정지 거리 안 평타)은 대상 쪽을 본다 - 5° 넘게 어긋났을 때만 돌린다(복제 줄이기).
+local function faceIfTurned(model, position, point)
+	local d = Vector3.new(point.X - position.X, 0, point.Z - position.Z)
+	local look = model.PrimaryPart and model.PrimaryPart.CFrame.LookVector
+	if d.Magnitude < 0.05 or not look or Vector3.new(look.X, 0, look.Z):Dot(d.Unit) > 0.996 then
+		return
+	end
+	faceToward(model, position, point)
+end
+
+local function keepYaw(model, position)
+	local look = model.PrimaryPart and model.PrimaryPart.CFrame.LookVector
+	local flat = look and Vector3.new(look.X, 0, look.Z)
+	return (flat and flat.Magnitude > 1e-3) and CFrame.lookAt(position, position + flat.Unit) or CFrame.new(position)
 end
 
 local function clearShaped(model)
@@ -401,6 +424,11 @@ local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetR
 	if introUntil and workspace:GetServerTimeNow() < introUntil then
 		return
 	end
+	-- A2-N4 P0-1: 보이는 방향용(클라 BossAnimator - 판정 무관) - 대상이 바뀔 때만 쓴다
+	local targetId = typeof(targetPlayer) == "Instance" and targetPlayer:IsA("Player") and targetPlayer.UserId or nil
+	if model:GetAttribute("BossFaceUserId") ~= targetId then
+		model:SetAttribute("BossFaceUserId", targetId)
+	end
 	if BossPatterns.step(model, data, monsterPosition, targetPlayer, targetRoot, dt, BossEncounter.getMembersOfModel(model)) then
 		return
 	end
@@ -411,7 +439,7 @@ local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetR
 		local toward = Vector3.new(targetRoot.Position.X - monsterPosition.X, 0, targetRoot.Position.Z - monsterPosition.Z)
 		local ahead = monsterPosition + (toward.Magnitude > 1e-3 and toward.Unit or Vector3.zero) * math.max(data.moveSpeedStuds * dt, 1)
 		if not BossEnvironment.blocksBoss(model, ahead) then
-			stepToward(model, monsterPosition, targetRoot.Position, data.moveSpeedStuds, dt)
+			stepToward(model, monsterPosition, targetRoot.Position, data.moveSpeedStuds, dt, true)
 		end
 	end
 	tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot) -- BR1-2
@@ -554,6 +582,7 @@ RunService.Heartbeat:Connect(function(dt)
 					clearShaped(model) -- Q1: 모양 공격 전조도 같이 끝
 					if data.isBoss then
 						BossPatterns.interrupt(model, data)
+						model:SetAttribute("BossFaceUserId", nil)
 					end
 					if target then
 						PlayerState.setTickDamageSource(target, model, nil) -- 전투 종료 - 눈금 기준을 지운다
@@ -591,6 +620,8 @@ RunService.Heartbeat:Connect(function(dt)
 						if data.species and data.species.attacks and model.PrimaryPart then -- Q1: 모양 공격 종은 가는 쪽을 본다(판정 방향 = 보이는 방향)
 							faceToward(model, model.PrimaryPart.Position, goal)
 						end
+					elseif not (data.species and data.species.attacks) and not isHolding(model) and not MonsterState.isRooted(model) then
+						faceIfTurned(model, position, goal) -- A2-N4 P0-1: 정지 거리 안(평타) = 대상 쪽(모양 공격 종은 제외 - 등 뒤 공격 선택이 방향을 본다)
 					end
 					if decoyPosition and data.species and data.species.attacks then
 						tryShapedAttack(model, data, position, target, targetRoot, true) -- Q1 리뷰: 분신에 끌려도 이미 건 전조는 끝낸다(새 전조는 안 건다)
@@ -619,7 +650,7 @@ RunService.Heartbeat:Connect(function(dt)
 				end
 			elseif state == "returning" then
 				if Reach.horizontalDistance(position, home) <= 0.5 then
-					model:PivotTo(CFrame.new(home))
+					model:PivotTo(keepYaw(model, home)) -- A2-N4: 도착해도 보던 쪽 그대로
 					MonsterState.setAiState(model, "idle")
 					blockedSince[model] = nil
 					Temperament.onReturnedHome(model, data) -- M2: 복귀 = 체력 회복
