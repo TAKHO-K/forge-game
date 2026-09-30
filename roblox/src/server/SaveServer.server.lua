@@ -42,6 +42,8 @@ local function loadForPlayer(player)
 	-- 인벤토리 UI(InventoryUI.client.lua)는 Attribute가 아니라 이 이벤트로 초기 상태를
 	-- 받는다 - 접속 직후에도 한 번 밀어준다(이후 변경은 PlayerProfile의 각 뮤테이터가 push).
 	InventorySync.push(player, profile)
+	-- A2-N3 버그 수정(가방 보석 탭 0 vs 서버 1): 클라 보석 탭의 첫 GemFetch가 로드 전에 돌면 빈 스냅샷(무기 없음)을 받고, 접속 때 보석은 밀지 않아 다음 보석 변경 전까지 0에 머물렀다.
+	require(script.Parent.GemSync).push(player)
 	if PlayerProfile.grantComebackIfAway(player) then -- C5-5 복귀 부스트(7일 이상 뒤 접속 → 60분 ×1.5) - 토스트
 		require(script.Parent.Telemetry).custom(player, "Comeback", 1) -- Q15 T1: 복귀(7일 이상 뒤 접속)
 		task.spawn(function() -- 묶음 A 리뷰: AutoStage.server가 SystemNotice를 만들기 전 첫 접속자 경합 - 로드를 막지 않고 기다린다

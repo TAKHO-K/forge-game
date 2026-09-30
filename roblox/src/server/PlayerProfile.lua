@@ -860,6 +860,7 @@ function PlayerProfile.setClassId(player, classId)
 	PlayerProfile.claimMilestones(player, false) -- P2.5b D: 그 직업의 지금 회차 기록을 채운다(알림 없음)
 	syncActiveClassAttributes(player, profile)
 	InventorySync.push(player, profile)
+	GemSync.push(player) -- A2-N3: 보석 홈 · 보석 가방은 직업별(classState) - 직업이 바뀌면 보석 스냅샷도 바뀐다(옛 코드는 안 밀어 보석 탭이 전 직업 상태에 남았다)
 end
 
 function PlayerProfile.getInfiniteStage(player)

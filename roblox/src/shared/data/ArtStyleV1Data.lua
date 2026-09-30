@@ -45,6 +45,12 @@ return {
 
 	-- ① 몬스터(서버 MonsterSpawner가 스폰 때 스위치를 보고 고른다 - 켠 뒤 새로 나는 몹부터)
 	monsterRigs = monsterRigs,
+	-- A2-N3 T4 · T6 몬스터 ↔ 바닥 대비(A2-N2 결정 2 - 스위치 뒤 몸 · 머리 색만 덮는다 · 종 데이터 그대로): 모래(황토) 위 전갈 = 적갈 · 선인장 = 짙은 녹 · 눈 · 얼음 위 얼음 골렘 = 짙은 청
+	monsterColors = {
+		sand_scorpion = { body = C(150, 64, 38), head = C(178, 88, 54) },
+		cactus_imp = { body = C(38, 118, 58), head = C(56, 142, 70) },
+		ice_golem = { body = C(78, 140, 200), head = C(112, 172, 222) },
+	},
 	monsterMotion = {
 		lodStuds = 160, -- 카메라에서 이보다 멀면 움직임 생략(MonsterRigAnimator와 같은 거리)
 		idle = { bobStuds = 0.07, hz = 0.45, capLagStuds = 0.05 }, -- 대기: 숨쉬기(몸 위아래 + 모자 늦게 따라옴)

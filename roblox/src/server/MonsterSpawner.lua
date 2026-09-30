@@ -104,6 +104,10 @@ local function buildModel(data, position, variant)
 	local sizeScale = (data.sizeScale or 1) * (variant.prefix and variant.prefix.sizeMultiplier or 1)
 	local bodyColor = data.bodyColor or DEFAULT_BODY_COLOR
 	local headColor = data.headColor or DEFAULT_HEAD_COLOR
+	local artColor = workspace:GetAttribute(ArtStyleV1Data.attribute) and ArtStyleV1Data.monsterColors[data.speciesId or ""] -- A2-N3 T4 · T6 바닥 대비(스위치 뒤 · 색만)
+	if artColor and not data.isBoss then
+		bodyColor, headColor = artColor.body, artColor.head
+	end
 	local bodyAspect = data.bodyAspect or Vector3.new(1, 1, 1)
 	local displayName = displayNameFor(data, variant)
 
