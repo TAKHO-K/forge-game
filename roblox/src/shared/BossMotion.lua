@@ -5,35 +5,29 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local D = require(ReplicatedStorage.Shared.data.BossMotionData)
+local Easing = require(ReplicatedStorage.Shared.Easing)
 
 local BossMotion = {}
 
 local TAU = math.pi * 2
 
-local function clamp01(x)
-	return x < 0 and 0 or (x > 1 and 1 or x)
-end
+local clamp01 = Easing.clamp01
 
--- 이징(직선 보간 없음)
-local function ease(kind, t)
-	t = clamp01(t)
-	if kind == "in" then
-		return t * t * t
-	elseif kind == "out" then
-		return 1 - (1 - t) ^ 3
-	elseif kind == "back" then
-		local c = 1.6
-		return 1 + (c + 1) * (t - 1) ^ 3 + c * (t - 1) ^ 2
-	end
-	return t < 0.5 and 4 * t * t * t or 1 - (-2 * t + 2) ^ 3 / 2 -- inout
-end
+-- 이징(직선 보간 없음) - A2-M1: 공용 shared/Easing(옛 in · out · inout · back 식 그대로 + strike · settle · sine …)
+local ease = Easing.get
 BossMotion.ease = ease
 
 local function val(v, i)
 	return v and v[i] or 0
 end
 
--- out = out + (layer − out) × w(덮기) · 관절별 가중치 mask(선택)
+-- 자세 값 = { rx, ry, rz, px, py, pz, [7] = 관절 가중치(없으면 1) }. A2-M1: 키 사이에 관절이 빠지거나 새로 들어올 때 값을 0(기준 자세)으로 끌고 가지 않고
+--   **가중치**를 1 → 0(0 → 1)으로 줄인다 - 빠지는 순간 밑 층(두리번 · 호흡 · 준비 자세)이 한 프레임에 튀어나오던 문제(목 −13° 튐)를 없앤다.
+local function jw(v)
+	return v[7] or 1
+end
+
+-- out = out + (layer − out) × w × 관절 가중치(덮기) · 관절 필터(선택)
 local function blend(out, layer, w, filter)
 	if w <= 0 then
 		return
@@ -45,13 +39,15 @@ local function blend(out, layer, w, filter)
 				o = { 0, 0, 0, 0, 0, 0 }
 				out[joint] = o
 			end
+			local k = w * jw(v)
 			for i = 1, 6 do
-				o[i] += (val(v, i) - o[i]) * w
+				o[i] += (val(v, i) - o[i]) * k
 			end
 		end
 	end
 end
 
+-- 더하기 층: 없는 관절 = 0 기여 · 관절 가중치를 곱한다(옛 "0으로 보간"과 같은 값)
 local function add(out, layer, w)
 	if w == 0 then
 		return
@@ -62,8 +58,9 @@ local function add(out, layer, w)
 			o = { 0, 0, 0, 0, 0, 0 }
 			out[joint] = o
 		end
+		local k = w * jw(v)
 		for i = 1, 6 do
-			o[i] += val(v, i) * w
+			o[i] += val(v, i) * k
 		end
 	end
 end
@@ -81,12 +78,16 @@ local function lerpPose(a, b, t)
 	local out = {}
 	for joint, v in pairs(a) do
 		local w = b[joint]
-		out[joint] = { val(v, 1) + (val(w, 1) - val(v, 1)) * t, val(v, 2) + (val(w, 2) - val(v, 2)) * t, val(v, 3) + (val(w, 3) - val(v, 3)) * t,
-			val(v, 4) + (val(w, 4) - val(v, 4)) * t, val(v, 5) + (val(w, 5) - val(v, 5)) * t, val(v, 6) + (val(w, 6) - val(v, 6)) * t }
+		if w then
+			out[joint] = { val(v, 1) + (val(w, 1) - val(v, 1)) * t, val(v, 2) + (val(w, 2) - val(v, 2)) * t, val(v, 3) + (val(w, 3) - val(v, 3)) * t,
+				val(v, 4) + (val(w, 4) - val(v, 4)) * t, val(v, 5) + (val(w, 5) - val(v, 5)) * t, val(v, 6) + (val(w, 6) - val(v, 6)) * t, jw(v) + (jw(w) - jw(v)) * t }
+		else -- b에 없는 관절 = 값은 그대로 · 가중치만 줄어든다
+			out[joint] = { val(v, 1), val(v, 2), val(v, 3), val(v, 4), val(v, 5), val(v, 6), jw(v) * (1 - t) }
+		end
 	end
 	for joint, w in pairs(b) do
-		if not a[joint] then
-			out[joint] = { val(w, 1) * t, val(w, 2) * t, val(w, 3) * t, val(w, 4) * t, val(w, 5) * t, val(w, 6) * t }
+		if not a[joint] then -- a에 없던 관절 = b 값 · 가중치만 늘어난다
+			out[joint] = { val(w, 1), val(w, 2), val(w, 3), val(w, 4), val(w, 5), val(w, 6), jw(w) * t }
 		end
 	end
 	return out
@@ -118,23 +119,63 @@ function BossMotion.clipNameForSkill(rigId, rig, skillId, skill)
 	return skill and defaults[skill.primitive] or nil
 end
 
+-- A2-M1 타격 정렬: 전조(pre)가 있는 동작은 post 첫 키(접촉 · 쏘는 순간 자세)가 **판정 순간(hit)에** 오게 한다.
+--   옛 방식 = 전조 키가 hit에 끝나고(치켜든 자세) 히트스톱이 치켜든 자세를 멈춘 뒤 post 첫 키(s ≈ 0.07 ~ 0.12)에 내려쳤다 → 보이는 타격이 판정보다 0.1 ~ 0.2초 늦었다
+--   (공정성 규칙 "보이기 전에 맞는 일 금지" 위반). 지금 = 전조 키를 [0, hit − strike]로 당기고(strike = post 첫 키 s · 전조의 40%까지) 접촉 키 = hit ·
+--   히트스톱 = **접촉 자세**에서 멈춤 · 나머지 post 키 = hit + (s − strike). 판정 시각(hit)은 그대로 - 겉모습만 앞당긴다.
+--   clip.align = false면 옛 방식(전조 없는 층 · 더하는 층은 원래 정렬할 것이 없다).
+--   접촉 키의 ease가 "out"이면 "strike"로 읽는다(치켜든 자세에서 속도 0으로 출발 - 한 프레임 속도 튐 없음 · 빠르기는 거의 같다).
+BossMotion.alignMaxFraction = 0.4
+
+local keyCache = setmetatable({}, { __mode = "k" }) -- [clip] = { hit, keys, preEnd, lastT }
+
+local function buildKeys(clip, hit)
+	local c = keyCache[clip]
+	if c and c.hit == hit then
+		return c
+	end
+	local post1 = clip.post and clip.post[1]
+	local strike = 0
+	if clip.align ~= false and clip.pre and #clip.pre > 0 and post1 and (post1.s or 0) > 0 and hit > 0 then
+		strike = math.min(post1.s, hit * BossMotion.alignMaxFraction)
+	end
+	local preEnd = hit - strike
+	local keys = {}
+	for _, k in ipairs(clip.pre or {}) do
+		table.insert(keys, { t = k.f * preEnd, pose = k.pose, ease = k.ease })
+	end
+	for i, k in ipairs(clip.post or {}) do
+		local e = k.ease
+		if i == 1 and strike > 0 and e == "out" then
+			e = "strike"
+		end
+		table.insert(keys, { t = hit + k.s - strike, pose = k.pose, ease = e })
+	end
+	c = { hit = hit, keys = keys, preEnd = preEnd, strike = strike, lastT = #keys > 0 and keys[#keys].t or hit }
+	keyCache[clip] = c
+	return c
+end
+BossMotion.clipKeys = buildKeys
+
+-- 접촉 시각(tRel 기준 - 검사 · 하네스용): 정렬된 동작 = hit · 옛 방식 = hit + post 첫 키 s
+function BossMotion.contactTime(clip, hit)
+	local c = buildKeys(clip, hit)
+	local post1 = clip.post and clip.post[1]
+	return post1 and (hit + post1.s - c.strike) or hit
+end
+
 -- 동작 표본: clip을 시작 뒤 tRel초(때리는 순간 = hit초)에서. 반환 = pose, 끝 시각(tRel 기준 - 되풀이면 nil), info
 function BossMotion.sampleClip(clip, tRel, hit, weight)
 	weight = weight or 1
 	local hitstop = (clip.hitstop or 0) * weight
+	local K = buildKeys(clip, hit)
+	local keys, lastT, preEnd = K.keys, K.lastT, K.preEnd
+	local contact = hit + ((clip.post and clip.post[1] and (clip.post[1].s - K.strike)) or 0)
 	local t = tRel
-	if hitstop > 0 and t > hit then
-		t = t < hit + hitstop and hit or t - hitstop
-	end
-	local keys = {}
-	for _, k in ipairs(clip.pre or {}) do
-		table.insert(keys, { t = k.f * hit, pose = k.pose, ease = k.ease })
-	end
-	for _, k in ipairs(clip.post or {}) do
-		table.insert(keys, { t = hit + k.s, pose = k.pose, ease = k.ease })
+	if hitstop > 0 and t > contact then
+		t = t < contact + hitstop and contact or t - hitstop
 	end
 	local pose
-	local lastT = #keys > 0 and keys[#keys].t or hit
 	if #keys == 0 then
 		pose = {}
 	elseif t <= keys[1].t then
@@ -163,13 +204,15 @@ function BossMotion.sampleClip(clip, tRel, hit, weight)
 		pose = pose or keys[#keys].pose
 	end
 	local info = {}
-	-- 떨림(강화 평타 전조 끝 - 팔을 휘두를 듯) + 번쩍
-	if clip.tremble and hit > 0 and tRel >= clip.tremble.from * hit and tRel < hit then
-		local ramp = clamp01((tRel - clip.tremble.from * hit) / math.max(hit * (1 - clip.tremble.from), 1e-3))
+	-- 떨림(강화 평타 전조 끝 - 팔을 휘두를 듯) + 번쩍. A2-M1: 떨림은 휘두르기 시작(preEnd)까지 · 주파수 9 / 7Hz(옛 17 / 13Hz는 60fps에서 프레임마다 방향이 바뀌는 잡음이었다)
+	local trembleEnd = K.strike > 0 and preEnd or hit
+	if clip.tremble and hit > 0 and tRel >= clip.tremble.from * trembleEnd and tRel < trembleEnd then
+		local ramp = clamp01((tRel - clip.tremble.from * trembleEnd) / math.max(trembleEnd * (1 - clip.tremble.from), 1e-3))
+		local fade = clamp01((trembleEnd - tRel) / 0.06) -- 휘두르기 직전 부드럽게 멎는다
 		local copy = lerpPose(pose, {}, 0)
 		for _, joint in ipairs(clip.tremble.joints) do
-			addTo(copy, joint, 1, math.sin(tRel * TAU * 17) * clip.tremble.amp * ramp)
-			addTo(copy, joint, 3, math.cos(tRel * TAU * 13) * clip.tremble.amp * 0.6 * ramp)
+			addTo(copy, joint, 1, math.sin(tRel * TAU * 9) * clip.tremble.amp * ramp * fade)
+			addTo(copy, joint, 3, math.cos(tRel * TAU * 7) * clip.tremble.amp * 0.6 * ramp * fade)
 		end
 		pose = copy
 		info.flash = clip.flash
@@ -182,20 +225,21 @@ function BossMotion.sampleClip(clip, tRel, hit, weight)
 	if clip.glare and hit > 0 and tRel < hit + 0.1 then
 		info.glare = clamp01(tRel / hit)
 	end
-	-- 몸 눌림(무게감) · 제자리 돌기
+	-- 몸 눌림(무게감 - 접촉 순간부터) · 제자리 돌기
 	if (clip.squash or clip.spin or clip.spinPre) then
 		local copy = lerpPose(pose, {}, 0)
-		if clip.squash and tRel >= hit and tRel < hit + hitstop + 0.3 then
-			addTo(copy, "RootJoint", 5, -clip.squash * weight * math.sin(math.pi * clamp01((tRel - hit) / (hitstop + 0.3))))
+		if clip.squash and tRel >= contact and tRel < contact + hitstop + 0.3 then
+			addTo(copy, "RootJoint", 5, -clip.squash * weight * math.sin(math.pi * clamp01((tRel - contact) / (hitstop + 0.3))))
 		end
 		if clip.spin and tRel > hit then
 			addTo(copy, "RootJoint", 2, (clip.spin * (tRel - hit)) % 360)
 		end
 		if clip.spinPre and hit > 0 and tRel < hit then
-			addTo(copy, "RootJoint", 2, clip.spinPre * ease("inout", tRel / hit))
+			addTo(copy, "RootJoint", 2, clip.spinPre * ease("inout", tRel / math.max(trembleEnd, 1e-3)))
 		end
 		pose = copy
 	end
+	info.contact = contact
 	return pose, (not clip.loop) and (lastT + hitstop) or nil, info
 end
 
@@ -241,7 +285,7 @@ local function baseBiped(ctx, st, now, pose)
 	}, 1)
 	-- 걷기 · 달리기
 	local W = ctx.walk
-	local walkW = clamp01((st.speed or 0) / 2)
+	local walkW = ease("sine", (st.speed or 0) / 2.5) -- A2-M1: 속도 → 걷기 가중치를 사인으로(옛 직선은 걷기 시작 · 멈춤에서 다리 각속도가 꺾였다)
 	if walkW > 0 then
 		local legLen = ctx.legLen or 1.6
 		local run = clamp01(((st.speed or 0) / math.max(ctx.moveSpeed or 8, 1) - 1) / math.max(W.runAt - 1, 0.1))
@@ -273,7 +317,7 @@ local function baseScorpion(ctx, st, now, pose)
 		Shoulder_R = { 3 * b, 0, 0 }, Shoulder_L = { 3 * b, 0, 0 },
 	}, 1)
 	local W = ctx.walk
-	local walkW = clamp01((st.speed or 0) / 2)
+	local walkW = ease("sine", (st.speed or 0) / 2.5) -- A2-M1: 속도 → 걷기 가중치를 사인으로(옛 직선은 걷기 시작 · 멈춤에서 다리 각속도가 꺾였다)
 	if walkW > 0 then
 		local legs = {}
 		for k = 1, 3 do
@@ -329,15 +373,19 @@ function BossMotion.evaluate(ctx, st, now)
 
 	-- 전투 준비 자세(평타 뒤 4초 · BR1-4c c-10: 보스전 중(st.inCombat)이면 늘 - 패턴 사이에 대기 자세로 돌아갔다 다시 드는 순간이 없게)
 	local combat = st.inCombat and 1 or (st.swingAt and clamp01(1 - (now - st.swingAt - 3) / 1) or 0)
+	-- A2-M1: 걷는 동안 다리는 걸음이 그린다 - 옛 "속도 > 1이면 다리 끔" 필터가 속도 1을 넘나들 때 다리 자세를 한 프레임에 바꿨다 → 다리 가중치를 속도로 부드럽게
+	local legK = 1 - ease("sine", ((st.speed or 0) - 0.3) / 1.6)
 	if combat > 0 and P.guard then
-		blend(pose, P.guard, combat * 0.85, (st.speed or 0) > 1 and isUpper or nil)
+		blend(pose, P.guard, combat * 0.85, isUpper)
+		blend(pose, P.guard, combat * 0.85 * legK, isLeg)
 	end
 	-- 평타(좌우 번갈아)
 	if st.swingAt and now - st.swingAt < 1.0 then
 		local clip = P.clips[(st.swingN or 0) % 2 == 0 and "basic_R" or "basic_L"]
 		local p, endT = BossMotion.sampleClip(clip, now - st.swingAt, 0, weight)
 		local w = ease("out", (now - st.swingAt) / 0.05) * (1 - ease("inout", (now - st.swingAt - (endT or 0.6)) / 0.3))
-		blend(pose, p, w, (st.speed or 0) > 1 and isUpper or nil)
+		blend(pose, p, w, isUpper)
+		blend(pose, p, w * legK, isLeg)
 	end
 
 	-- 환경 변화(두 번째 시계)와 스킬: 동작 층
@@ -348,7 +396,31 @@ function BossMotion.evaluate(ctx, st, now)
 		end
 		local tRel = now - at
 		local p, endT, cinfo = BossMotion.sampleClip(clip, tRel, hit or 0, weight)
-		local w = ease("out", tRel / (clip.blendIn or 0.18))
+		-- A2-M1 여운 · 겹침(follow-through · overlap): 팔 끝 · 목 · 꼬리 밑동은 몸보다 조금 늦게 같은 궤적을 따른다(관절 묶음별 지연 표본)
+		--   휘두르는 구간(전조 끝 0.15초 전 ~ 접촉 + 히트스톱)에서는 지연을 0으로 줄인다 - 때리는 부위(손 · 꼬리 끝)가 판정보다 늦게 닿지 않게(공정성). 경계는 sine으로 이어 튐 없음.
+		local lagK = 1
+		if P.overlap and not st.noOverlap and (hit or 0) > 0 then
+			local K = BossMotion.clipKeys(clip, hit)
+			local c0, c1 = K.preEnd - 0.15, cinfo.contact + (clip.hitstop or 0) * weight
+			if tRel > c0 and tRel < c1 + 0.12 then
+				lagK = tRel < K.preEnd and 1 - ease("sine", (tRel - c0) / 0.15) or (tRel < c1 and 0 or ease("sine", (tRel - c1) / 0.12))
+			end
+		end
+		if P.overlap and not st.noOverlap and lagK > 0 then
+			local copy = nil
+			for _, g in ipairs(P.overlap) do
+				local lagged = BossMotion.sampleClip(clip, tRel - g.delay * weight * lagK, hit or 0, weight)
+				for _, joint in ipairs(g.joints) do
+					if lagged[joint] or p[joint] then
+						copy = copy or lerpPose(p, {}, 0)
+						copy[joint] = lagged[joint] or { 0, 0, 0, 0, 0, 0, 0 } -- 늦은 표본에 아직 없는 관절 = 가중치 0
+					end
+				end
+			end
+			p = copy or p
+		end
+		-- A2-M1: 섞어 들어가기 = sine(시작 속도 0 - 옛 "out"은 동작마다 첫 프레임에 속도가 튀었다)
+		local w = ease("sine", tRel / (clip.blendIn or 0.18))
 		if endT then
 			w *= 1 - ease("inout", (tRel - endT) / 0.3)
 		end
@@ -356,8 +428,12 @@ function BossMotion.evaluate(ctx, st, now)
 			w *= 1 - ease("inout", (now - endAt) / 0.3)
 		end
 		if w > 0 then
-			local filter = ((clip.upper and tRel > (hit or 0)) or upperOnly) and isUpper or nil
-			blend(pose, p, w, filter)
+			-- upper(돌진 · 쫓기) = 때리는 순간부터 다리는 걸음이 그린다 - A2-M1: 다리 넘김을 0.15초 사인으로(옛 = 한 프레임 전환)
+			local legW = upperOnly and 0 or (clip.upper and 1 - ease("sine", (tRel - (hit or 0)) / 0.15) or 1)
+			blend(pose, p, w, isUpper)
+			if legW > 0 then
+				blend(pose, p, w * legW, isLeg)
+			end
 			if cinfo.flash then
 				info.flash, info.flashAmount = cinfo.flash, cinfo.flashAmount * w
 			end
@@ -414,9 +490,12 @@ function BossMotion.evaluate(ctx, st, now)
 		add(pose, p, 1)
 	end
 
-	-- 피격 움찔(작게)
-	if st.flinchAt and now - st.flinchAt < P.flinch.seconds then
-		add(pose, P.flinch.pose, math.sin(math.pi * (now - st.flinchAt) / P.flinch.seconds))
+	-- 피격 움찔(더하는 층 · 판정 없음) - A2-M1: 세기 = st.flinchAmp(클라가 체력 감소 크기로 정한다 - 작은 타격 0.7 · 강공격 · 치명 최대 2) · 모양 = 빨리 밀렸다가 천천히 돌아옴
+	if st.flinchAt and now - st.flinchAt < P.flinch.seconds * (st.flinchAmp and st.flinchAmp > 1.2 and 1.4 or 1) then
+		local dur = P.flinch.seconds * (st.flinchAmp and st.flinchAmp > 1.2 and 1.4 or 1)
+		local u = (now - st.flinchAt) / dur
+		local shape = u < 0.25 and ease("quadOut", u / 0.25) or 1 - ease("settle", (u - 0.25) / 0.75)
+		add(pose, P.flinch.pose, shape * (st.flinchAmp or 1))
 	end
 
 	-- 사슬 흔들림(여운의 결정적 부분)
@@ -461,7 +540,8 @@ function BossMotion.evaluate(ctx, st, now)
 		info.slow = (now - st.deadAt) < (Dd.slowSeconds or 0)
 		info.stars = Dd.stars and t > (Dd.hitstopAt or 1) - 0.3 or nil
 		local hitstop = t > Dd.hitstopAt and t < Dd.hitstopAt + 0.08 * weight
-		local p = BossMotion.sampleClip({ post = Dd.keys }, hitstop and Dd.hitstopAt or (t > Dd.hitstopAt and t - 0.08 * weight or t), 0)
+		Dd.clip = Dd.clip or { post = Dd.keys, align = false }
+		local p = BossMotion.sampleClip(Dd.clip, hitstop and Dd.hitstopAt or (t > Dd.hitstopAt and t - 0.08 * weight or t), 0)
 		blend(pose, p, ease("out", t / 0.12))
 		info.eyes = Dd.eyes
 		info.fade = clamp01((t - Dd.fadeFrom) / Dd.fadeSeconds)

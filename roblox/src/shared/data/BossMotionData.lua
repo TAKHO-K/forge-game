@@ -68,6 +68,13 @@ B.idle = {
 --   knee = 앞으로 옮기는 발의 무릎 굽힘 · arm = 팔 흔들 · bob = 몸 위아래 · lean = 달릴수록 앞으로 숙임(속도 비) · turnLean = 방향 전환 때 몸을 먼저 기울임(도 / (rad/s))
 B.walk = { stride = 0.75, knee = 38, arm = 18, bob = 0.06, lean = 8, twist = 5, turnLean = 7, runAt = 1.6 }
 
+-- A2-M1 여운 · 겹침(12원칙 follow-through · overlapping action): 동작 층을 이 관절 묶음만 delay초 늦게 한 번 더 표본 - 팔꿈치 → 손목 · 목 → 턱 · 꼬리 끝으로 갈수록 늦다.
+--   휘두르는 구간(전조 끝 ~ 접촉 + 히트스톱)에서는 지연이 0으로 줄어든다(shared/BossMotion - 때리는 부위가 판정보다 늦게 닿지 않게). delay × 보스 무게(weight).
+B.overlap = {
+	{ delay = 0.035, joints = { "Elbow_R", "Elbow_L", "Neck", "Tail2", "Tail3" } },
+	{ delay = 0.07, joints = { "Wrist_R", "Wrist_L", "Jaw", "Tail4", "Tail5", "Tail6" } },
+}
+
 -- 전투 준비 자세(평타 사이 - 이전 타의 회복이 다음 타의 전조)
 B.guard = {
 	Waist = { -6, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.08, 0 },
@@ -417,6 +424,11 @@ S.idle = {
 -- 세 다리씩 번갈아 딛기(1L · 2R · 3L ↔ 1R · 2L · 3R) - 위상 = 이동 거리 ÷ 보폭
 S.walk = { stride = 0.55, swing = 22, lift = 18, bob = 0.04, runAt = 1.6, turnLean = 4, groupA = { "1_L", "2_R", "3_L" } }
 
+S.overlap = {
+	{ delay = 0.035, joints = { "Elbow_R", "Elbow_L", "Neck", "Tail1_3", "Tail2_3", "Tail3_3", "Tail1_4", "Tail2_4", "Tail3_4" } },
+	{ delay = 0.07, joints = { "Pincer_R", "Pincer_L", "Jaw", "Tail1_6", "Tail2_6", "Tail3_6", "Tail1_7", "Tail2_7", "Tail3_7", "Tail1_8", "Tail2_8", "Tail3_8" } },
+}
+
 S.guard = merge(
 	{ RootJoint = { 0, 0, 0, 0, -0.05, 0 }, Shoulder_R = { 10, 0, 0 }, Shoulder_L = { 10, 0, 0 }, Pincer_R = { 0, 0, 25 }, Pincer_L = { 0, 0, -25 } },
 	tails(function(_, i)
@@ -652,6 +664,14 @@ D.defaults = {
 	biped = { circleBoss = "slam", ring = "stomp", circleTarget = "cast", charge = "charge", line = "punch", sector = "swipe", projectile = "cast", reflect = "cast", sweep = "beam", vortex = "cast", sonic = "roar", colorMatch = "cast", orgel = "cast", boomerang = "charge", lightningRods = "cast", sandSearch = "cast" },
 	scorpion = { circleBoss = "clawSweep", ring = "clawSweep", circleTarget = "sting", charge = "dig", line = "sting", sector = "clawSweep", projectile = "sting", reflect = "curl", sandSearch = "dig" },
 }
+
+-- A2-M1 피격 반응 세기(클라 BossAnimator - 체력 감소 비율로): 세기 = clamp(base + 감소 비율 × perHpRatio, base, max) · 1.2 넘으면 길이 ×1.4(강공격 · 치명 = 크게 · 판정 무관)
+D.flinchAmp = { base = 0.7, perHpRatio = 60, max = 2.0 }
+
+-- A2-M1 보이는 루트 보간(클라 BossAnimator - 서버 루트는 판정 자리 그대로): 2차 임계 감쇠 스프링(omega - 클수록 빨리 따라감 · 지연 ≈ 2 / omega초) +
+--   복제 틱 사이 속도 보정(estVel = 새 자리 ÷ 틱 간격을 velBlend로 섞음 · 앞당김 = min(마지막 틱 뒤 시간, maxLeadSeconds) + 스프링 지연 × springLeadFraction) ·
+--   staleSeconds 동안 새 자리가 안 오면 멈춘 것 - estVel을 stopDecay(1/초)로 거둔다.
+D.interp = { omega = 16, velBlend = 0.5, staleSeconds = 0.08, stopDecay = 18, maxLeadSeconds = 0.05, springLeadFraction = 0.85 }
 
 -- 무게(4b-2 무게감): 보스 rig.weight × 이 값으로 히트스톱 · 몸 눌림을 키운다
 D.weightScale = { hitstop = 1, squash = 1 }

@@ -120,6 +120,9 @@ local function readState(e, now)
 	local hp = m:GetAttribute("BossHpRatio") or e.hpRatio
 	if hp < e.hpRatio - 1e-4 and (not st.flinchAt or now - st.flinchAt > 0.35) then
 		st.flinchAt = now
+		-- A2-M1 피격 반응 세기(판정 무관): 이번에 줄어든 체력 비율로 - 평타 한 대 ≈ 0.7 · 강공격 · 치명 · 스킬 몰아치기 = 최대 2(BossMotionData.flinchAmp)
+		local A = BossMotionData.flinchAmp
+		st.flinchAmp = math.clamp(A.base + (e.hpRatio - hp) * A.perHpRatio, A.base, A.max)
 	end
 	e.hpRatio = hp
 	if hp <= 0 and not st.deadAt then
@@ -329,11 +332,28 @@ local function updateEntry(e, now, dt, camPos)
 		target = Vector3.new(target.X, e.groundY, target.Z) -- 서버 헤롱은 1.2 내려 앉힌다 - 주저앉기 모션이 대신
 	end
 	local prev = e.visPos
-	local a = 1 - math.exp(-dt * 18)
+	-- A2-M1 보간: 1차 지수(옛 - 복제 틱마다 속도가 톱니처럼 튐) → 2차 임계 감쇠 스프링(속도 연속) + 복제 틱 사이 속도 보정(스프링 지연만큼 앞쪽 = 서버 자리와 어긋나지 않게)
+	local I = BossMotionData.interp
+	local clock = os.clock()
+	if not e.lastTarget or (target - e.lastTarget).Magnitude > 1e-3 then
+		local gap = e.lastTargetAt and clock - e.lastTargetAt or 0
+		if e.lastTarget and gap > 0.004 and gap < 0.5 and (target - e.lastTarget).Magnitude < 30 then
+			e.estVel = (e.estVel or Vector3.zero):Lerp((target - e.lastTarget) / gap, I.velBlend)
+		end
+		e.lastTarget, e.lastTargetAt = target, clock
+	elseif clock - e.lastTargetAt > I.staleSeconds then
+		e.estVel = (e.estVel or Vector3.zero) * math.exp(-dt * I.stopDecay) -- 서버가 멈췄다 - 예측을 빨리 거둔다(지나쳤다 돌아오는 폭 최소)
+	end
+	local lead = math.min(clock - e.lastTargetAt, I.maxLeadSeconds) + I.springLeadFraction * 2 / I.omega
+	local goal = target + (e.estVel or Vector3.zero) * lead
 	if (target - prev).Magnitude > 30 then
 		e.visPos = target -- 순간 이동(복귀 · 잡기 곁 순간 이동)은 보간하지 않는다
+		e.visVel = Vector3.zero
 	else
-		e.visPos = prev:Lerp(target, a)
+		local h = math.min(dt, 1 / 20)
+		local w = I.omega
+		e.visVel = (e.visVel or Vector3.zero) + (w * w * (goal - prev) - 2 * w * (e.visVel or Vector3.zero)) * h
+		e.visPos = prev + e.visVel * h
 	end
 	local yawT = yawOf(root.CFrame)
 	local dy = (yawT - e.visYaw + math.pi) % (2 * math.pi) - math.pi
@@ -357,6 +377,7 @@ local function updateEntry(e, now, dt, camPos)
 	local t0 = os.clock()
 	local st = e.st
 	st.speed, st.gait, st.turn = e.speed, e.gait, e.turn
+	st.noOverlap = distance > LOD.fullStuds -- A2-M1 겹침 지연 표본은 가까울 때만(먼 보스는 비용 절약)
 	st.lookYaw = distance <= LOD.fullStuds and lookYawFor(e) or nil
 	if st.lookYaw then
 		e.lookSmooth = (e.lookSmooth or 0) + (st.lookYaw - (e.lookSmooth or 0)) * (1 - math.exp(-dt * 6))
