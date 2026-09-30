@@ -197,8 +197,12 @@ end
 -- 치명 전용 집계 - id="crit"인 원소만 모아 {critRate, critDmg} 두 값을 각각 sumWithCap한다
 -- (BR1-4b 파트 0-2부터 둘 다 OptionData.crit.cap 1.79 - 도달 최대 위). Option.valueOf가 crit id에는
 -- 이미 {critRate, critDmg} 테이블을 돌려주므로 그 값을 축별로 나눠 모으기만 한다.
-function Option.critBonus(sources, classId)
+function Option.critBonus(sources, classId, extraValues)
 	local critRates, critDmgs = {}, {}
+	for _, v in ipairs(extraValues or {}) do -- A2-N4 §4-1: 세트 치명(확률 · 피해 같은 값 - SetBonus.extraValues(…, "crit"))
+		table.insert(critRates, v)
+		table.insert(critDmgs, v)
+	end
 	for _, source in ipairs(sources) do
 		if source and source.option and source.option.id == "crit" then
 			local value = Option.valueOf(source.option, source.grade, source.itemLevel, classId)

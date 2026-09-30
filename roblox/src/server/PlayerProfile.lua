@@ -128,7 +128,7 @@ function PlayerProfile.getCritBonus(player)
 	if not classState then
 		return 0, 0
 	end
-	local optionRate, critDmg = Option.critBonus(buildOptionSources(classState), profile.classId)
+	local optionRate, critDmg = Option.critBonus(buildOptionSources(classState), profile.classId, SetBonus.extraValues(classState.equipment, "crit"))
 	optionRate = PlayerProfile.debugOptionCritRate[player] or optionRate -- C4 검증(/gg c4 overcrit - Studio 전용)
 	-- C4-2 · C4-3: 레벨 곡선 + 환생 보상 + 옵션 → 직업 기본과 합쳐 100%에서 자름(넘친 몫은 getAttackPercentBonus가 위력으로)
 	local critRate = PlayerCombat.resolveCrit(profile.classId, CharacterLevel.getLevelFromExp(classState.characterExp), classState.rebirthCount, optionRate)
@@ -142,7 +142,7 @@ function PlayerProfile.getOverCritAttackPercent(player)
 	if not classState then
 		return 0
 	end
-	local optionRate = PlayerProfile.debugOptionCritRate[player] or Option.critBonus(buildOptionSources(classState), profile.classId)
+	local optionRate = PlayerProfile.debugOptionCritRate[player] or Option.critBonus(buildOptionSources(classState), profile.classId, SetBonus.extraValues(classState.equipment, "crit"))
 	local _, over = PlayerCombat.resolveCrit(profile.classId, CharacterLevel.getLevelFromExp(classState.characterExp), classState.rebirthCount, optionRate)
 	return over
 end

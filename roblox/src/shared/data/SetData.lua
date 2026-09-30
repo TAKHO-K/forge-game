@@ -12,4 +12,16 @@ return {
 		{ pieces = 3, axis = "finalDamage", value = 0.05 },
 	},
 	nameSuffix = " 세트",
+	-- A2-N4 §4-1(결정 필요 - 기본 끔): 구역마다 고유 3부위 효과(축이 다르고 가치는 같게). 켜면(uniqueThreePiece = true · enabled도 켜야 돈다) 위 tiers의 3부위 효과 대신 이 표를 쓴다 · 2부위(최대 체력 +5%)는 공통 그대로.
+	--   가치 = 지금 3부위(최종 피해 +5%)와 같은 DPS 몫: 평균 프로필(레벨 100 · 1,000 · 무기 +20 · 보석 평균 3칸 - EconSimConfig healer.gearTiers.average) 60초 로테이션에서 최종 피해 +5% = DPS ×1.0294 →
+	--   같은 ×1.0294가 되는 값을 역산(Claude outputs/A2-N4/sim/set_equiv.txt · 활 · 대검 · 쌍검 평균). 생존 축(방어 · 흡혈)은 BalanceSim 생존 눈금이 게임 전투 공식(C2)과 달라 같은 가치로 못 맞췄다 = [가정] 값.
+	uniqueThreePiece = false,
+	zoneThreePiece = {
+		tier1 = { axis = "attackPercent", value = 0.047 }, -- 석조 평원: 위력(묵직한 돌 주먹)
+		tier2 = { axis = "crit", value = 0.030 }, -- 수정 동굴: 치명(확률 · 피해 같은 값 - 옵션 치명과 같은 규칙)
+		tier3 = { axis = "lifesteal", value = 0.01 }, -- 수몰 사원: 흡혈 [가정 - 옵션 기본값 0.03의 1/3]
+		tier4 = { axis = "speedPercent", value = 0.050 }, -- 모래 유적: 신속(모래바람)
+		tier5 = { axis = "finalDamage", value = 0.05 }, -- 폭풍 첨탑: 최종 피해(지금 3부위 그대로)
+		tier6 = { axis = "defensePercent", value = 0.10 }, -- 빙하 동굴: 방어 [가정]
+	},
 }

@@ -74,10 +74,15 @@ function SetBonus.extraValues(equipment, axisId)
 		return nil
 	end
 	local values
+	local unique = SetData.uniqueThreePiece and SetData.zoneThreePiece and SetData.zoneThreePiece[zone] -- A2-N4 §4-1: 구역 고유 3부위(기본 끔)
 	for _, tier in ipairs(SetData.tiers) do
-		if count >= tier.pieces and tier.axis == axisId then
+		local axis, value = tier.axis, tier.value
+		if unique and tier.pieces == #SetData.parts then
+			axis, value = unique.axis, unique.value
+		end
+		if count >= tier.pieces and axis == axisId then
 			values = values or {}
-			table.insert(values, tier.value * scale)
+			table.insert(values, value * scale)
 		end
 	end
 	return values
