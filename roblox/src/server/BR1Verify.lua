@@ -112,6 +112,7 @@ function BR1Verify.runPure()
 			local known = BossDifficultySim.monteCarlo(id, { partySize = 1, role = "ranged", familiar = true }, 150)
 			local fresh = BossDifficultySim.monteCarlo(id, { partySize = 1, role = "ranged", familiar = false }, 150)
 			r.note(("모형 %s 솔로(원거리): 아는 보스 = 처치 p50 %.0f초 · 피해 %.0f%% · 전멸 %.0f%% · 겹침 미룸 %.2f/판 | 처음 보는 보스 = 전멸 %.0f%%"):format(id, known.p50, known.takenMean * 100, known.wipeRate * 100, known.deferredPerRun, fresh.wipeRate * 100))
+			-- QUEUE-ALL1 결정 1: 기대 범위 그대로 - A2-N4 3줄 분리 뒤 떨어졌던 수호자 전멸 73% · 수정 여왕 처치 102초가 전조 간격 X = 6.0초로 57% · 98초(모형 150판)가 되어 옛 범위 안
 			r.check(("모형 범위 %s: 아는 보스 전멸 %.0f%%(허용 20 ~ 65) · 처치 %.0f초(45 ~ 100)"):format(id, known.wipeRate * 100, known.p50),
 				known.wipeRate >= 0.2 and known.wipeRate <= 0.65 and known.p50 >= 45 and known.p50 <= 100)
 		end

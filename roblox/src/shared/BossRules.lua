@@ -182,7 +182,7 @@ function BossRules.buildInstanceData(stage, bossId, partySize)
 	if not boss then
 		return nil
 	end
-	return BossRules.buildInstanceDataFrom(MonsterData.tier1, stage, boss, 1, 1, partySize or 1, BossRules.densityExtra(stage))
+	return BossRules.applyEarlyRelief(BossRules.buildInstanceDataFrom(MonsterData.tier1, stage, boss, 1, 1, partySize or 1, BossRules.densityExtra(stage)), stage)
 end
 
 -- 23-1 견습 모드 전용(BossData에 새 항목을 만들지 않는다 - 같은 보스 id에 patterns
@@ -225,6 +225,44 @@ end
 -- hpMultiplierExtra(견습 전용 배율, 일반 무한 모드는 1)만 다르다. partySize(24-1)는
 -- partySizeHpMultiplier 전용 - 견습 호출부는 nil(=1)을 넘긴다(견습은 항상 싱글). densityExtra(S14)는 스킬표 사본에 더하는 낙하 원 개수 -
 -- 견습 호출부는 안 넘겨서 0이다(견습 보스는 밀도 0).
+-- QUEUE-ALL1 결정 1 초반 완화 구간(BossData.mechanics.earlyRelief - 무한 모드 보스만 · 견습 보스 제외: 견습 1단계가 강공격을 가르친다):
+--   스테이지 ≤ maxStage = 강공격 줄 끔(scheduler.heavyOff) + 보스 공격력 기반 피해 × damageScale(평타 배율 · 스킬 표 사본의 multiplier 전부).
+--   최대 체력 비율 피해(전멸기 · 기믹 실패 · 환경 변화)는 그대로 - 기믹이 가르치는 몫. 실전 · BossSim · 난이도 모형이 같은 인스턴스 데이터를 읽는다.
+local function scaledCopy(t, k)
+	local out = {}
+	for key, v in pairs(t) do
+		if key == "multiplier" and type(v) == "number" then
+			out[key] = v * k
+		elseif type(v) == "table" and getmetatable(v) == nil then
+			out[key] = scaledCopy(v, k)
+		else
+			out[key] = v
+		end
+	end
+	return out
+end
+function BossRules.isEarlyRelief(stage)
+	local R = BossData.mechanics.earlyRelief
+	return R ~= nil and R.enabled and stage ~= nil and stage <= R.maxStage
+end
+function BossRules.applyEarlyRelief(data, stage)
+	if not BossRules.isEarlyRelief(stage) then
+		return data
+	end
+	local k = BossData.mechanics.earlyRelief.damageScale
+	data.earlyRelief = true
+	data.basicAttackDamageMultiplier = (data.basicAttackDamageMultiplier or 1) * k
+	local skills = {}
+	for id, skill in pairs(data.skills) do
+		skills[id] = scaledCopy(skill, k)
+	end
+	data.skills = skills
+	local sched = table.clone(data.scheduler)
+	sched.heavyOff = true
+	data.scheduler = sched
+	return data
+end
+
 function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra, partySize, densityExtra)
 	local trashHp = InfiniteStage.getMonsterHp(trashBase.hpUnscaled or trashBase.hp, stage) -- C3-3: 보스 = 잡몹 tier 비 압축 전 HP(보스 처치 시간 불변)
 	local trashAttack = InfiniteStage.getMonsterAttack(trashBase.attack, stage)

@@ -102,8 +102,10 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 	local gap = ctx.enraged and config.enragedGlobalCooldownSeconds or config.globalCooldownSeconds
 	local lanes = lanesOf(config)
 	-- 패턴 줄 = 전역 쿨(+ 강공격 줄이 켜져 있으면 강공격 끝 + patternAfterHeavySeconds) · 강공격 줄 = 전 강공격 전조 끝 + heavyMinGapSeconds만
-	local patternOpen = now >= state.lastEndAt + gap and (not lanes or now >= (state.heavyEndAt or -math.huge) + lanes.patternAfterHeavySeconds)
-	local heavyOpen = lanes ~= nil and now >= (state.heavyGapUntil or -math.huge)
+	-- QUEUE-ALL1 결정 1: 전조 있는 공격(강공격 · 패턴 공통 - 평타 제외) 사이 최소 간격 = 전 전조 끝 + telegraphMinGapSeconds(없으면 끔)
+	local telegraphOpen = not (lanes and lanes.telegraphMinGapSeconds) or now >= (state.telegraphGapUntil or -math.huge)
+	local patternOpen = telegraphOpen and now >= state.lastEndAt + gap and (not lanes or now >= (state.heavyEndAt or -math.huge) + lanes.patternAfterHeavySeconds)
+	local heavyOpen = telegraphOpen and lanes ~= nil and not config.heavyOff and now >= (state.heavyGapUntil or -math.huge)
 	if now < (ctx.graceUntil or 0) or not (patternOpen or heavyOpen) then
 		return nil
 	end
@@ -121,7 +123,7 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 		local skill = skills[id]
 		local readyAt = state.readyAt[id]
 		local heavy = lanes ~= nil and skill ~= nil and skill.bubble == lanes.heavyBubble
-		local laneOpen = (heavy and heavyOpen) or (not heavy and patternOpen)
+		local laneOpen = (heavy and heavyOpen) or (not heavy and patternOpen) -- config.heavyOff(초반 완화 구간) = 강공격 줄 끔
 		if readyAt and laneOpen and now >= readyAt and conditionsMet(state, skill, ctx) then
 			local holdsReservation = skill.reserveFirstUse and not state.seen[id]
 			local blocked = not holdsReservation and reserved ~= nil and now + ctx.boundSeconds(id) + (heavy and lanes.patternAfterHeavySeconds or gap) > reserved
@@ -194,6 +196,10 @@ function BossScheduler.onSkillStart(state, id, now, skills, config)
 		state.heavyGapUntil = now + (skill.telegraphSeconds or 0) + lanesOf(config).heavyMinGapSeconds
 		state.heavyRunning = true
 	end
+	local lanes = lanesOf(config)
+	if now and skill and lanes and lanes.telegraphMinGapSeconds then
+		state.telegraphGapUntil = now + (skill.telegraphSeconds or 0) + lanes.telegraphMinGapSeconds
+	end
 	if id ~= state.substituteId then
 		state.substitutedFor, state.substituteId = nil, nil
 	end
@@ -225,6 +231,7 @@ function BossScheduler.force(state, id)
 	state.readyAt[id] = -math.huge
 	state.lastEndAt = -math.huge
 	state.heavyGapUntil, state.heavyEndAt = nil, nil -- A2-N4
+	state.telegraphGapUntil = nil
 	state.lastSkillId = nil
 	state.forced = id
 end

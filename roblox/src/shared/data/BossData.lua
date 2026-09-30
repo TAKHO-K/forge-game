@@ -237,7 +237,13 @@ local MECHANICS = {
 	--   평타 줄 = 매 타 basicPrepSeconds 예비 뒤(쿨이 이미 찼어도) · 스킬 끝이 평타 주기를 리셋하지 않는다 · 안쪽 원(innerSafeRadiusStuds) 안 = innerSwingScale 배 약한 휘두름
 	lanes = { enabled = true, heavyBubble = "heavy", heavyMinGapSeconds = 1.5, patternAfterHeavySeconds = 0.8, firstHeavySeconds = 2.5, innerSwingScale = 0.5,
 		-- §2-2(지시: 첫 도전 전멸이 BR1-2 기준 +10%p를 넘으면 강공격 피해를 5%씩 최대 20%): 모형 6보스 평균 60 · 57 · 60 · 66% → 줄 켬 76 · 78 · 84 · 91%(×1.00) → 72 · 74 · 81 · 89%(×0.80) - 상한까지 내려도 넘는다(결정 필요 · docs/phase/A2-N4-report.md §3)
-		heavyDamageScale = 0.8 },
+		heavyDamageScale = 0.8,
+		-- QUEUE-ALL1 결정 1(docs/design/v2/00): 전조 있는 공격(강공격 · 패턴) 사이 최소 간격 = 전 전조 끝 + 이 초(BossScheduler) - 격자 2.5 · 3.5 · 4.5 · 5.5 · 6.0에서
+		--   1 · 2 · 4인 · 솔로 근접/원거리 모두 옛 규칙(58.8 · 52.6 · 69.2 · 84.4%) + 10%p 이하인 가장 작은 값(난이도 모형 300 · 600판 - docs/phase/QUEUE-ALL1-report.md §5):
+		--   5.5 = 근접 63.4 · 63.2%(기준 62.6) 두 번 넘음 · 5.75 = 62.2%(한 번 · 여유 0.4 < 잡음) · 6.0 = 61.9 · 61.9%(두 번 통과) → 6.0
+		telegraphMinGapSeconds = 6.0 },
+	-- QUEUE-ALL1 결정 1 초반 완화 구간: 스테이지 ≤ maxStage = 강공격 줄 끔 + 보스 공격력 기반 피해 × damageScale(BossRules.applyEarlyRelief · 무한 모드만)
+	earlyRelief = { enabled = true, maxStage = 50, damageScale = 0.7 },
 
 	-- 29-2 B: 회피 부등식  telegraphSeconds ≥ perceptionSeconds + (회피 거리 ÷ 이동 속도) × marginFactor
 	--   perceptionSeconds 0.5 = 시각 반응 0.25 + 터치 입력 지연 0.10 + 서버→클라 전조 표시 지연 0.15(20.44의 세 항 그대로)

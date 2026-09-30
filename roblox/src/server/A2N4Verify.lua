@@ -5,6 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossScheduler = require(ReplicatedStorage.Shared.BossScheduler)
+local BossRules = require(ReplicatedStorage.Shared.BossRules)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 
 local V = {}
@@ -32,13 +34,16 @@ local function newRecorder(tag)
 end
 
 -- 합성 스킬 표: heavy 1개(전조 1.0 · 쿨 5) · 패턴 1개(쿨 4)
-local function synth()
+local function synth(withGap)
 	local skills = {
 		H = { bubble = BossData.mechanics.lanes.heavyBubble, cooldownSeconds = 5, telegraphSeconds = 1.0, priority = 0 },
 		P = { bubble = "pattern", cooldownSeconds = 4, telegraphSeconds = 1.2, priority = 0 },
 	}
 	local order = { "H", "P" }
-	local config = { globalCooldownSeconds = 6, enragedGlobalCooldownSeconds = 2.5, enragedHpFraction = 0.2, entryGraceSeconds = 0, starvationPriorityBonus = 1000, lanes = BossData.mechanics.lanes }
+	-- QUEUE-ALL1 결정 1: 줄 규칙 검사는 전조 간격 X를 뺀 사본으로(X는 아래 "전조 간격 · 초반 완화" 절이 따로 본다)
+	local lanes = table.clone(BossData.mechanics.lanes)
+	lanes.telegraphMinGapSeconds = withGap and BossData.mechanics.lanes.telegraphMinGapSeconds or nil
+	local config = { globalCooldownSeconds = 6, enragedGlobalCooldownSeconds = 2.5, enragedHpFraction = 0.2, entryGraceSeconds = 0, starvationPriorityBonus = 1000, lanes = lanes }
 	local ctx = { now = 0, conditionMet = function()
 		return true
 	end, boundSeconds = function()
@@ -84,6 +89,44 @@ function V.runPure()
 		ctx.now = 10.8
 		local after = BossScheduler.pick(st2, skills, order, config, ctx)
 		r.check(("패턴은 강공격 끝 + %.1f초 뒤로: 10.7초 %s · 10.8초 %s"):format(L.patternAfterHeavySeconds, tostring(deferred), tostring(after)), deferred == nil and after == "P")
+	end)
+	r.section("전조 간격 · 초반 완화", function()
+		-- 전조 공격(강공격 · 패턴 공통) 사이 = 전 전조 끝 + X: 패턴 t=4 시작(전조 1.2) → 다음 전조 공격은 4 + 1.2 + X 뒤
+		local X = L.telegraphMinGapSeconds
+		local skills, order, config, ctx = synth(true)
+		local st = BossScheduler.newState(skills, order, 0, false, config)
+		st.lastEndAt = -100
+		ctx.now = 4
+		local p1 = BossScheduler.pick(st, skills, order, config, ctx)
+		BossScheduler.onSkillStart(st, p1, 4, skills, config)
+		BossScheduler.onSkillEnd(st, skills, p1, 6, config)
+		local open = 4 + skills.P.telegraphSeconds + X
+		ctx.now = open - 0.1
+		local early = BossScheduler.pick(st, skills, order, config, ctx)
+		ctx.now = open
+		local onTime = BossScheduler.pick(st, skills, order, config, ctx)
+		r.check(("전조 간격 X = %.1f초: 패턴 %s 뒤 %.1f초 %s · %.1f초 %s(강공격)"):format(X or -1, tostring(p1), open - 0.1, tostring(early), open, tostring(onTime)), X ~= nil and p1 == "P" and early == nil and onTime == "H")
+		-- 강공격 줄 끔(heavyOff): 강공격이 준비돼 있어도 안 나가고 패턴만
+		local s2, o2, c2, x2 = synth(false)
+		c2.heavyOff = true
+		local st2 = BossScheduler.newState(s2, o2, 0, false, c2)
+		st2.lastEndAt = -100
+		x2.now = 3
+		local h = BossScheduler.pick(st2, s2, o2, c2, x2)
+		x2.now = 4
+		local p = BossScheduler.pick(st2, s2, o2, c2, x2)
+		r.check(("heavyOff: t=3 강공격 준비됨 → %s · t=4 → %s"):format(tostring(h), tostring(p)), h == nil and p == "P")
+		-- 초반 완화 구간(스테이지 ≤ maxStage): 무한 모드 인스턴스 = 강공격 줄 끔 + 피해 × damageScale · 구간 밖 = 그대로
+		local R = BossData.mechanics.earlyRelief
+		local boss = BossData.bosses.section_guardian
+		local plain = BossRules.buildInstanceDataFrom(MonsterData.tier1, 25, boss, 1, 1, 1, BossRules.densityExtra(25))
+		local relief = BossRules.buildInstanceData(25, "section_guardian", 1)
+		local outside = BossRules.buildInstanceData(R.maxStage + BossData.stageInterval, "section_guardian", 1)
+		local ratio = relief.skills.heavy.damage.multiplier / plain.skills.heavy.damage.multiplier
+		local basicRatio = relief.basicAttackDamageMultiplier / plain.basicAttackDamageMultiplier
+		r.check(("초반 완화 스테이지 25: 표시 %s · 강공격 줄 끔 %s · 스킬 피해 ×%.2f · 평타 ×%.2f(기대 %.2f) · 스테이지 %d = 완화 %s"):format(tostring(relief.earlyRelief), tostring(relief.scheduler.heavyOff), ratio, basicRatio, R.damageScale,
+			R.maxStage + BossData.stageInterval, tostring(outside.earlyRelief)),
+			relief.earlyRelief == true and relief.scheduler.heavyOff == true and math.abs(ratio - R.damageScale) < 1e-6 and math.abs(basicRatio - R.damageScale) < 1e-6 and outside.earlyRelief == nil)
 	end)
 	r.section("끄면 옛 규칙", function()
 		local skills, order, config, ctx = synth()
