@@ -13,6 +13,8 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ScreenMap = require(script.Parent.ui.ScreenMap)
 local Theme = require(script.Parent.ui.kit.Theme)
 local Wayfinder = require(script.Parent.Wayfinder)
+local RoadNet = require(ReplicatedStorage.Shared.RoadNet)
+local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData)
 
 local player = Players.LocalPlayer
 local B = WorldMapData.barrier
@@ -319,6 +321,7 @@ local function regionName(position)
 	return zone and zone.theme or "들판"
 end
 local lastGate = nil
+local lastTutorialStep = nil
 local elapsed = 0
 RunService.Heartbeat:Connect(function(dt)
 	elapsed += dt
@@ -341,9 +344,26 @@ RunService.Heartbeat:Connect(function(dt)
 	if gate ~= lastGate then
 		lastGate = gate
 		if gate then
-			Wayfinder.setPoints("bossGate", WorldMapLayout.bossGateRoute(gate))
+			local info = WorldMapLayout.bossGate(gate)
+			Wayfinder.setPoints("bossGate", WorldMapLayout.bossGateRoute(gate), { label = info and (info.name .. " 관문") })
 		else
 			Wayfinder.clear("bossGate")
+		end
+	end
+	-- QUEUE-ALL1 ★0 첫 안내: 견습 단계가 바뀌면 그 단계 구역 사냥 지대 1까지 자동 안내(이미 그 사냥터면 안 켬 · 도착하면 지움)
+	local tStep = not player:GetAttribute("TutorialCompleted") and player:GetAttribute("TutorialStep") or nil
+	if tStep ~= lastTutorialStep then
+		lastTutorialStep = tStep
+		local step = tStep and TutorialData.steps[tStep]
+		local zone = step and WorldMapLayout.zoneByKey(step.zoneKey)
+		local hereZone = nil
+		if root then
+			_, hereZone = WorldMapLayout.huntRangeAt(root.Position)
+		end
+		if zone and not (hereZone and hereZone.key == zone.key) then
+			Wayfinder.setPoints("tutorial", RoadNet.guidePoints(zone, nil, "ground1"), { label = zone.hunt.name, clearOnArrive = true })
+		else
+			Wayfinder.clear("tutorial")
 		end
 	end
 	local g = gate and WorldMapLayout.bossGate(gate)

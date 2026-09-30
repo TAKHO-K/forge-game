@@ -352,14 +352,22 @@ function RoadNet.length(zone, fromId, toId)
 end
 
 -- 길 안내 점(간격 약 24 - 길목 포함)
-function RoadNet.guidePoints(zone, spacing)
+--   untilMark = 이 길목(예 "ground1")에서 끝(QUEUE-ALL1 견습 안내 - 그 단계 사냥 지대까지)
+function RoadNet.guidePoints(zone, spacing, untilMark)
 	local p = RoadNet.zonePath(zone)
 	local out, last = {}, -math.huge
+	local stop = untilMark and p.marks[untilMark] or #p.pts
 	for i, q in ipairs(p.pts) do
-		if q.s - last >= (spacing or 24) or i == #p.pts then
+		if i > stop then
+			break
+		end
+		if q.s - last >= (spacing or 24) or i == stop then
 			table.insert(out, Vector3.new(q.x, q.y, q.z))
 			last = q.s
 		end
+	end
+	if untilMark and p.marks[untilMark] then
+		return out
 	end
 	if not p.marks.gate then -- 물 위 관문: 둑길 끝(관문)까지
 		table.insert(out, require(ReplicatedStorage.Shared.WorldMapLayout).gate(zone))

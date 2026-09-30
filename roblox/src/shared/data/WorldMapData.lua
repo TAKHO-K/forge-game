@@ -379,7 +379,18 @@ return {
 	},
 
 	-- 길 안내(바닥 빛줄기 · 화살표 - 튜토리얼과 공유하는 client/Wayfinder). 표시만.
-	guide = { beamWidth = 2.5, arrowEvery = 24, arrowsShown = 6, arriveStuds = 20, refreshSeconds = 0.5 },
+	-- QUEUE-ALL1 ★0: 경로 = 길찾기(agent) → 길 합류 · 점 sampleStuds 간격 · 지면(위 probeUp에서 아래 probeDown까지 레이캐스트) + groundLift ·
+	--   빛줄기 = 가까운 drawStuds만(조각 drawSegments개) · 경로에서 offPathStuds 넘게 벗어나면 다시 계산(recomputeSeconds 간격 상한) ·
+	--   목적지 빛기둥(beacon - 멀리서도 · 지형에 가려도 보이는 표시 + 거리) · 화면 밖이면 가장자리 화살표(edgeMargin px)
+	guide = {
+		beamWidth = 2.5, arrowEvery = 24, arrowsShown = 6, arriveStuds = 20, refreshSeconds = 0.25,
+		sampleStuds = 4, groundLift = 1.5, probeUp = 60, probeDown = 260, groundNear = 160,
+		columnHits = 6, climbStuds = 8, buriedStuds = 10, steepRatio = 1.5, maxHiddenStuds = 12, -- 세로 줄 표면 수 · 예상 높이 위로 이만큼까지만 지면(아치 · 다리 위 제외) · 점 위 이 안에 표면 = 묻힘 · 높이 차 > 수평 × steepRatio = 절벽 선분(꺾은 선으로) · 그래도 묻힌 조각은 안 그림(검사: 연속 숨김 ≤ maxHiddenStuds)
+		drawStuds = 90, drawSegments = 30, offPathStuds = 16, recomputeSeconds = 1, pathMaxStuds = 600,
+		agent = { AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, AgentCanClimb = false, WaypointSpacing = 4 },
+		beacon = { width = 3, height = 220, billboardStuds = 12, color = { 120, 220, 255 } },
+		edgeInset = { top = 0.16, bottom = 0.3, left = 0.08, right = 0.1 }, edgeArrowSize = 44, -- 가장자리 화살표가 설 사각형(화면 비율 - 아래 = 스킬 줄 · 체력바 · 왼쪽 = 메뉴 · 오른쪽 = HUD 버튼 피함)
+	},
 
 	-- ═══ 최적화 ═══
 	-- 몬스터 스폰 범위(M1-2 - 사용자: 넓은 범위 + 지나가면 생성). 구역마다 넓은 원(huntRange - 구역 좌표 중심 · 반경) 안에 스폰 지점을 흩어 둔다(최소 간격 pointSpacing ·
