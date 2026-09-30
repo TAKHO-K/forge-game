@@ -392,10 +392,14 @@ function BossMotion.evaluate(ctx, st, now)
 
 	-- 두리번(머리가 먼저 → 몸이 따라감) · 방향 전환 때 몸을 먼저 기울임
 	local neckYaw, bodyYaw
+	-- A2-M1: 바라보기 대상이 생기고 사라질 때 두리번 ↔ 바라보기를 가중치(st.lookW - 클라가 부드럽게 올리고 내린다)로 섞는다(옛 = 한 프레임에 전환)
+	local idleNeck, idleBody = idleLook(P.idle.look, now)
 	if st.lookYaw then
-		neckYaw, bodyYaw = st.lookYaw, st.lookYaw * P.idle.look.bodyFollow
+		local k = st.lookW or 1
+		neckYaw = idleNeck + (st.lookYaw - idleNeck) * k
+		bodyYaw = idleBody + (st.lookYaw * P.idle.look.bodyFollow - idleBody) * k
 	else
-		neckYaw, bodyYaw = idleLook(P.idle.look, now)
+		neckYaw, bodyYaw = idleNeck, idleBody
 	end
 	addTo(pose, "Neck", 2, math.clamp(neckYaw - bodyYaw, -55, 55))
 	addTo(pose, ctx.rig.plan == "scorpion" and "RootJoint" or "Waist", 2, bodyYaw)

@@ -19,8 +19,9 @@ BossArenaDressData.bosses = {
 	-- 공허의 제단(구간 수호자): 공중에 뜬 고대 룬석 · 테라스의 보라 수정 무리 · 먼 폐허 기둥 · 떠오르는 룬 불티
 	section_guardian = {
 		floatStones = { count = 10, radius = { 168, 215 }, height = { 12, 34 }, size = Vector3.new(7, 9, 5), color = "stone", inlay = "accent", bob = 2.2, spin = 6 },
-		clusters = { count = 9, radius = { 150, 172 }, shards = { 3, 5 }, size = Vector3.new(3.2, 12, 3.2), color = "accent", material = Enum.Material.Glass },
-		pillars = { count = 8, radius = { 230, 290 }, height = { 34, 60 }, width = 11, color = "stone", broken = true },
+		-- 결정은 벽(높이 14) 위로 10 이상 솟게(Play 3: 높이 12는 벽에 가려 안에서 안 보였다)
+		clusters = { count = 9, radius = { 150, 170 }, shards = { 3, 5 }, size = Vector3.new(4.4, 26, 4.4), color = "accent", material = Enum.Material.Glass },
+		pillars = { count = 8, radius = { 230, 290 }, height = { 34, 60 }, width = 11, color = "pillar", broken = true },
 		motes = { every = 0.22, life = 3.2, rise = 9, size = 0.45, color = "light", phoneScale = 0.5 },
 		edge = { color = "accent", width = 0.9, transparency = 0.35 },
 		floor = { material = Enum.Material.Slate, tint = "accent", amount = 0.08 },

@@ -101,7 +101,13 @@ local function dress(boss)
 	end
 	local phone = isPhone()
 	local countK = phone and BossArenaDressData.phone.countScale or 1
-	local center = Vector3.new(floor.Position.X, floor.Position.Y + floor.Size.Y / 2, floor.Position.Z)
+	-- 바닥 윗면 = 발밑 광선(아레나 바닥은 눕힌 원기둥이라 Size.Y가 두께가 아니다 - Play 3에서 140 stud 위로 계산됐다)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { floor }
+	local hit = Workspace:Raycast(Vector3.new(floor.Position.X, root.Position.Y + 20, floor.Position.Z), Vector3.new(0, -80, 0), params)
+	local topY = hit and hit.Position.Y or (root.Position.Y - 1.5)
+	local center = Vector3.new(floor.Position.X, topY, floor.Position.Z)
 	local rig = BossRigSpec.rigs[rigId]
 	local theme = rig and rig.themeColors or {}
 	local data = BossData.bosses[rigId]
@@ -109,6 +115,7 @@ local function dress(boss)
 	local C = {
 		accent = accent, light = accent:Lerp(WHITE, 0.45), head = theme.head or data.headColor, body = theme.body or data.bodyColor,
 		floor = floor.Color, stone = floor.Color:Lerp(BLACK, 0.25):Lerp(theme.body or data.bodyColor, 0.25),
+		pillar = floor.Color:Lerp(WHITE, 0.3):Lerp(theme.head or data.headColor, 0.2),
 	}
 	local folder = Instance.new("Folder")
 	folder.Name = "BossArenaDress"

@@ -110,4 +110,202 @@ do
 	}
 end
 
+-- ─────────────────────────── 서리 거인: 얼음 갑옷 · 털 망토의 거인 ───────────────────────────
+-- 콘셉트: 설산의 거인 족장. 흰 털 망토(등 · 2차 움직임) · 털 허리띠와 다리 감개 · 얼음 갑주(가슴 · 어깨 · 무릎) · 머리 얼음 관 · 등 고드름 · 곤봉에 박힌 얼음 가시.
+-- 실루엣 = 높고 넓은 어깨(얼음 어깨 갑주 + 가시) + 등 망토 + 곤봉 끝 가시. 무게감 = 두꺼운 털 장화 · 무릎 얼음.
+do
+	local J = {}
+	chain(J, { prefix = "Mantle", parent = "Body", count = 3, length = 0.6, w0 = 1.7, w1 = 1.95, thick = 0.14, at = V(0, 0.78, 0.64), rot0 = V(6, 0, 0), rotStep = V(4, 0, 0), color = "light", material = "Fabric" })
+	chain(J, { prefix = "Loin", parent = "Hips", count = 2, length = 0.45, w0 = 0.85, w1 = 0.75, thick = 0.08, at = V(0, -0.16, -0.5), rot0 = V(-4, 0, 0), rotStep = V(-3, 0, 0), color = "light", material = "Fabric" })
+	local D = {
+		deco("Head", "Deco_Head_Brow", V(1.08, 0.22, 0.32), V(0, 0.26, -0.46), V(-10, 0, 0), "light", { material = "Fabric" }),
+		deco("Head", "Deco_Head_IceCrown", V(0.26, 0.66, 0.26), V(0, 0.7, 0), V(0, 45, 0), "accent", { material = "Ice" }),
+		deco("Head", "Deco_Head_IceCrownSide_L", V(0.2, 0.46, 0.2), V(-0.28, 0.62, 0.06), V(0, 45, 16), "accent", { material = "Ice" }),
+		deco("Body", "Deco_Collar_Fur", V(2.15, 0.48, 1.42), V(0, 0.9, 0.05), V(0, 0, 0), "light", { material = "Fabric" }),
+		deco("Body", "Deco_Chest_Ice", V(1.35, 0.95, 0.22), V(0, 0.2, -0.66), V(0, 0, 0), "accent", { material = "Ice" }),
+		deco("Body", "Deco_Chest_Rune", V(0.95, 0.06, 0.04), V(0, 0.2, -0.78), V(0, 0, 0), "accent", { material = "Neon", lod = 2 }),
+		deco("Body", "Deco_Back_Icicle", V(0.3, 1.0, 0.3), V(0, 0.45, 0.78), V(-28, 45, 0), "accent", { material = "Ice" }),
+		deco("Body", "Deco_Back_IcicleSide_L", V(0.24, 0.75, 0.24), V(-0.52, 0.3, 0.74), V(-22, 45, 20), "accent", { material = "Ice", lod = 2 }),
+		deco("UpperArm_L", "Deco_Pauldron_Ice_L", V(0.98, 0.52, 0.98), V(-0.08, 0.46, 0), V(0, 0, 10), "accent", { material = "Ice" }),
+		deco("UpperArm_L", "Deco_Pauldron_Spike_L", V(0.24, 0.62, 0.24), V(-0.32, 0.82, 0), V(0, 45, 26), "accent", { material = "Ice" }),
+		deco("UpperArm_L", "Deco_Shoulder_Fur_L", V(0.72, 0.3, 0.72), V(0, 0.12, 0), V(0, 0, 0), "light", { material = "Fabric", lod = 2 }),
+		deco("Forearm_L", "Deco_Forearm_Fur_L", V(0.74, 0.36, 0.74), V(0, 0.12, 0), V(0, 0, 0), "light", { material = "Fabric" }),
+		deco("Hand_L", "Deco_Hand_Ice_L", V(0.62, 0.22, 0.22), V(0, -0.22, -0.4), V(0, 0, 0), "accent", { material = "Ice", lod = 2 }),
+		deco("Hips", "Deco_Belt_Fur", V(1.58, 0.32, 1.08), V(0, 0.1, 0), V(0, 0, 0), "light", { material = "Fabric" }),
+		deco("Hips", "Deco_Belt_Buckle", V(0.42, 0.42, 0.2), V(0, 0.1, -0.56), V(0, 0, 45), "accent", { material = "Ice" }),
+		deco("Thigh_L", "Deco_Knee_Ice_L", V(0.52, 0.42, 0.22), V(0, -0.48, -0.36), V(-10, 0, 0), "accent", { material = "Ice" }),
+		deco("Shin_L", "Deco_Shin_Fur_L", V(0.72, 0.58, 0.72), V(0, -0.16, 0), V(0, 0, 0), "light", { material = "Fabric" }),
+		deco("Foot_L", "Deco_Boot_L", V(0.84, 0.38, 1.1), V(0, 0.04, -0.02), V(0, 0, 0), "shadow"),
+		deco("IceClub", "Deco_Club_SpikeA", V(0.22, 0.6, 0.22), V(0, 1.05, -0.32), V(-40, 45, 0), "accent", { material = "Ice" }),
+		deco("IceClub", "Deco_Club_SpikeB", V(0.22, 0.6, 0.22), V(0.3, 0.85, 0.15), V(30, 45, -40), "accent", { material = "Ice" }),
+		deco("IceClub", "Deco_Club_SpikeC", V(0.2, 0.5, 0.2), V(-0.3, 0.7, 0.12), V(25, 45, 40), "accent", { material = "Ice", lod = 2 }),
+		deco("Beard3", "Deco_Beard_Icicle", V(0.14, 0.4, 0.14), V(0, -0.3, 0), V(0, 45, 0), "accent", { material = "Ice", lod = 2 }),
+	}
+	BossDetailSpec.bosses.frost_giant = {
+		joints = J,
+		chains = { { "Mantle1", "Mantle2", "Mantle3", lag = 0.55, sway = 4 }, { "Loin1", "Loin2", lag = 0.5, sway = 3 } },
+		deco = mirrorX(D),
+		recolor = { Hips = "shadow" },
+		themeColors = { body = Color3.fromRGB(96, 150, 204), head = Color3.fromRGB(226, 240, 250), accent = Color3.fromRGB(170, 232, 255) },
+	}
+end
+
+-- ─────────────────────────── 심해 군주: 산호 왕관 · 조개 갑주의 인어 왕 ───────────────────────────
+-- 콘셉트: 가라앉은 신전의 왕. 산호 왕관 · 조개 어깨 · 비늘 가슴판 · 진주 목걸이 · 수염 촉수 3(2차 움직임) · 꼬리 지느러미 · 삼지창 곁날.
+do
+	local J = {}
+	chain(J, { prefix = "TentL", parent = "Head", count = 3, length = 0.34, w0 = 0.2, w1 = 0.1, thick = 0.2, at = V(-0.26, -0.44, -0.36), rot0 = V(8, 0, 4), rotStep = V(6, 0, 0), color = "head", tipColor = "accent", tipMaterial = "Neon" })
+	chain(J, { prefix = "TentM", parent = "Head", count = 3, length = 0.38, w0 = 0.22, w1 = 0.1, thick = 0.22, at = V(0, -0.46, -0.42), rot0 = V(10, 0, 0), rotStep = V(6, 0, 0), color = "head", tipColor = "accent", tipMaterial = "Neon" })
+	chain(J, { prefix = "TentR", parent = "Head", count = 3, length = 0.34, w0 = 0.2, w1 = 0.1, thick = 0.2, at = V(0.26, -0.44, -0.36), rot0 = V(8, 0, -4), rotStep = V(6, 0, 0), color = "head", tipColor = "accent", tipMaterial = "Neon" })
+	local D = {
+		deco("Head", "Deco_Head_Coral", V(0.18, 0.72, 0.18), V(0, 0.66, 0.02), V(0, 0, 0), "accent", { material = "Glass" }),
+		deco("Head", "Deco_Head_CoralSide_L", V(0.15, 0.52, 0.15), V(-0.26, 0.58, 0.02), V(0, 0, 22), "accent", { material = "Glass" }),
+		deco("Head", "Deco_Head_CoralTwig_L", V(0.1, 0.32, 0.1), V(-0.42, 0.74, 0.02), V(0, 0, 48), "accent", { material = "Glass", lod = 2 }),
+		deco("Head", "Deco_Head_Visor", V(1.16, 0.2, 0.32), V(0, 0.22, -0.5), V(-8, 0, 0), "shadow"),
+		deco("UpperArm_L", "Deco_Pauldron_Shell_L", V(1.02, 0.46, 1.02), V(-0.08, 0.42, 0), V(0, 0, 15), "light"),
+		deco("UpperArm_L", "Deco_Pauldron_Ridge_L", V(0.12, 0.5, 0.92), V(-0.2, 0.6, 0), V(0, 0, 15), "accent", { lod = 2 }),
+		deco("Body", "Deco_Chest_ScaleTop", V(1.65, 0.3, 0.14), V(0, 0.45, -0.73), V(0, 0, 0), "head"),
+		deco("Body", "Deco_Chest_ScaleMid", V(1.4, 0.3, 0.14), V(0, 0.1, -0.73), V(0, 0, 0), "light"),
+		deco("Body", "Deco_Chest_ScaleLow", V(1.1, 0.3, 0.14), V(0, -0.25, -0.73), V(0, 0, 0), "head"),
+		deco("Body", "Deco_Pearl_L", V(0.24, 0.24, 0.24), V(-0.36, 0.7, -0.72), V(0, 0, 0), "light", { shape = "ball" }),
+		deco("Body", "Deco_Pearl_Center", V(0.3, 0.3, 0.3), V(0, 0.6, -0.8), V(0, 0, 0), "accent", { shape = "ball", material = "Neon" }),
+		deco("Forearm_L", "Deco_Forearm_Fin_L", V(0.1, 0.62, 0.52), V(-0.34, 0, 0.1), V(0, 0, 0), "accent", { shape = "wedge", material = "Glass" }),
+		deco("Hips", "Deco_Belt", V(1.6, 0.22, 1.2), V(0, 0.15, 0), V(0, 0, 0), "shadow"),
+		deco("Hips", "Deco_Belt_Shell", V(0.52, 0.42, 0.18), V(0, 0.1, -0.6), V(0, 0, 0), "light"),
+		deco("Tail2", "Deco_Tail_Fin2", V(0.1, 0.5, 0.5), V(0, 0, 0.42), V(0, 0, 0), "accent", { shape = "wedge", material = "Glass" }),
+		deco("Tail3", "Deco_Tail_Fin3", V(0.1, 0.45, 0.45), V(0, 0, 0.38), V(0, 0, 0), "accent", { shape = "wedge", material = "Glass" }),
+		deco("Tail4", "Deco_Tail_Fin4", V(0.1, 0.4, 0.4), V(0, 0, 0.32), V(0, 0, 0), "accent", { shape = "wedge", material = "Glass", lod = 2 }),
+		deco("Tail5", "Deco_Tail_Fin5", V(0.1, 0.35, 0.35), V(0, 0, 0.28), V(0, 0, 0), "accent", { shape = "wedge", material = "Glass", lod = 2 }),
+		deco("Shin_L", "Deco_Shin_Scale_L", V(0.68, 0.5, 0.2), V(0, 0.05, -0.33), V(0, 0, 0), "head"),
+		deco("Trident", "Deco_Trident_ProngL", V(0.1, 0.62, 0.1), V(-0.32, 2.25, 0), V(0, 0, 12), "accent", { material = "Neon" }),
+		deco("Trident", "Deco_Trident_ProngR", V(0.1, 0.62, 0.1), V(0.32, 2.25, 0), V(0, 0, -12), "accent", { material = "Neon" }),
+		deco("Trident", "Deco_Trident_Ring", V(0.5, 0.14, 0.5), V(0, 1.8, 0), V(0, 0, 0), "light"),
+	}
+	BossDetailSpec.bosses.abyssal_lord = {
+		joints = J,
+		chains = { { "TentL1", "TentL2", "TentL3", lag = 0.35, sway = 7 }, { "TentM1", "TentM2", "TentM3", lag = 0.35, sway = 7, phase = 1.1 }, { "TentR1", "TentR2", "TentR3", lag = 0.35, sway = 7, phase = 2.3 } },
+		deco = mirrorX(D),
+		recolor = {},
+		themeColors = { body = Color3.fromRGB(24, 66, 112), head = Color3.fromRGB(36, 140, 146), accent = Color3.fromRGB(70, 226, 214) },
+	}
+end
+
+-- ─────────────────────────── 수정 여왕: 수정궁의 여왕(분홍 몸 · 청록 결정) ───────────────────────────
+-- 콘셉트: 우아한 결정 여왕. 머리 뒤 후광 · 왕관 가시 · 이마 보석 · 옷깃 · 어깨 결정 · 팔찌 · 허리 보석 · 치마 끝 결정(세밀) · 날개 2단(2차 움직임) · 뒤 옷자락.
+do
+	local J = {}
+	table.insert(J, { name = "Wing2_L", parent = "LeftShard", part = "LeftShard2", size = V(0.28, 1.25, 0.28), shape = "wedge", color = "accent", material = "Glass", at = V(0, 0.2, 0.08), pivot = V(0, -0.55, 0), rot = V(-8, 0, 22), detail = true })
+	table.insert(J, { name = "Wing2_R", parent = "RightShard", part = "RightShard2", size = V(0.28, 1.25, 0.28), shape = "wedge", color = "accent", material = "Glass", at = V(0, 0.2, 0.08), pivot = V(0, -0.55, 0), rot = V(-8, 0, 22), detail = true })
+	chain(J, { prefix = "Train", parent = "Body", count = 3, length = 0.62, w0 = 1.05, w1 = 1.3, thick = 0.06, at = V(0, 0.55, 0.48), rot0 = V(6, 0, 0), rotStep = V(5, 0, 0), color = "head", tipColor = "accent", tipMaterial = "Glass" })
+	local D = {
+		deco("Head", "Deco_Halo_Top", V(1.3, 0.1, 0.1), V(0, 0.95, 0.5), V(0, 0, 0), "accent", { material = "Neon" }),
+		deco("Head", "Deco_Halo_Side_L", V(0.1, 1.0, 0.1), V(-0.65, 0.45, 0.5), V(0, 0, 0), "accent", { material = "Neon" }),
+		deco("Head", "Deco_Halo_Corner_L", V(0.1, 0.5, 0.1), V(-0.5, 0.88, 0.5), V(0, 0, -45), "accent", { material = "Neon", lod = 2 }),
+		deco("Head", "Deco_Head_Jewel", V(0.16, 0.16, 0.08), V(0, 0.2, -0.46), V(0, 0, 45), "accent", { material = "Neon" }),
+		deco("Crown", "Deco_Crown_Spike", V(0.14, 0.6, 0.14), V(0, 0.5, -0.3), V(0, 45, 0), "accent", { material = "Glass" }),
+		deco("Crown", "Deco_Crown_SpikeSide_L", V(0.12, 0.46, 0.12), V(-0.3, 0.42, -0.1), V(0, 45, 10), "accent", { material = "Glass" }),
+		deco("Crown", "Deco_Crown_SpikeBack_L", V(0.1, 0.36, 0.1), V(-0.24, 0.36, 0.26), V(0, 45, 14), "accent", { material = "Glass", lod = 2 }),
+		deco("Body", "Deco_Collar", V(1.34, 0.2, 0.84), V(0, 0.88, 0), V(0, 0, 0), "light"),
+		deco("Body", "Deco_Chest_Gem", V(0.36, 0.36, 0.12), V(0, 0.35, -0.5), V(0, 0, 45), "accent", { material = "Neon" }),
+		deco("UpperArm_L", "Deco_Shoulder_Crystal_L", V(0.18, 0.6, 0.18), V(-0.16, 0.6, 0), V(0, 45, 22), "accent", { material = "Glass" }),
+		deco("UpperArm_L", "Deco_Shoulder_Crystal2_L", V(0.14, 0.42, 0.14), V(-0.1, 0.52, 0.16), V(0, 45, 12), "accent", { material = "Glass", lod = 2 }),
+		deco("UpperArm_L", "Deco_Epaulet_L", V(0.62, 0.18, 0.56), V(0, 0.42, 0), V(0, 0, 8), "light"),
+		deco("Forearm_L", "Deco_Bracelet_L", V(0.52, 0.14, 0.52), V(0, -0.3, 0), V(0, 0, 0), "accent", { material = "Glass" }),
+		deco("Hips", "Deco_Belt", V(1.3, 0.14, 1.0), V(0, 0.2, 0), V(0, 0, 0), "light"),
+		deco("Hips", "Deco_Belt_Gem", V(0.26, 0.26, 0.1), V(0, 0.15, -0.5), V(0, 0, 45), "accent", { material = "Neon" }),
+		deco("SkirtF2", "Deco_Hem_F_L", V(0.14, 0.42, 0.14), V(-0.42, -0.45, 0), V(0, 45, 0), "accent", { material = "Glass", lod = 2 }),
+		deco("SkirtB2", "Deco_Hem_B_L", V(0.14, 0.42, 0.14), V(-0.42, -0.45, 0), V(0, 45, 0), "accent", { material = "Glass", lod = 2 }),
+		deco("SkirtL2", "Deco_Hem_Side_L", V(0.14, 0.4, 0.14), V(0, -0.45, -0.3), V(0, 45, 0), "accent", { material = "Glass", lod = 2 }),
+		deco("ScepterGem", "Deco_Scepter_Prong_L", V(0.08, 0.42, 0.08), V(-0.28, 0.16, 0), V(0, 0, 25), "accent", { material = "Glass" }),
+		deco("ScepterGem", "Deco_Scepter_ProngTop", V(0.08, 0.45, 0.08), V(0, 0.38, 0), V(0, 0, 0), "accent", { material = "Glass" }),
+	}
+	BossDetailSpec.bosses.crystal_queen = {
+		joints = J,
+		chains = { { "Wing2_L", lag = 0.5, sway = 4 }, { "Wing2_R", lag = 0.5, sway = 4, phase = 1.3 }, { "Train1", "Train2", "Train3", lag = 0.45, sway = 4 } },
+		deco = mirrorX(D),
+		recolor = {},
+		themeColors = { body = Color3.fromRGB(222, 120, 172), head = Color3.fromRGB(246, 204, 224), accent = Color3.fromRGB(84, 226, 214) },
+	}
+end
+
+-- ─────────────────────────── 폭풍 군주: 두건 쓴 폭풍 마법사 ───────────────────────────
+-- 콘셉트: 천둥 첨탑의 군주. 두건(얼굴 그늘) · 높은 옷깃 · 가슴 번개 무늬(노란 빛) · 어깨 판 · 팔 보호대 · 허리 구슬 · 앞 · 뒤 옷자락(2차 움직임) · 지팡이 초승달 날.
+do
+	local J = {}
+	chain(J, { prefix = "RobeF", parent = "Hips", count = 2, length = 0.55, w0 = 1.0, w1 = 1.12, thick = 0.08, at = V(0, -0.2, -0.48), rot0 = V(-4, 0, 0), rotStep = V(-3, 0, 0), color = "head" })
+	chain(J, { prefix = "RobeB", parent = "Hips", count = 2, length = 0.62, w0 = 1.1, w1 = 1.2, thick = 0.08, at = V(0, -0.2, 0.48), rot0 = V(4, 0, 0), rotStep = V(3, 0, 0), color = "head" })
+	local D = {
+		deco("Head", "Deco_Hood_Shell", V(1.15, 0.62, 0.92), V(0, 0.34, 0.18), V(0, 0, 0), "shadow"),
+		deco("Head", "Deco_Hood_Side_L", V(0.14, 0.84, 0.92), V(-0.56, 0, 0.12), V(0, 0, 0), "shadow"),
+		deco("Head", "Deco_Hood_Peak", V(0.42, 0.32, 0.42), V(0, 0.64, -0.18), V(30, 45, 0), "shadow"),
+		deco("Head", "Deco_Face_Mask", V(0.82, 0.36, 0.06), V(0, -0.24, -0.49), V(0, 0, 0), "shadow"),
+		deco("Body", "Deco_Collar", V(1.5, 0.52, 0.26), V(0, 0.95, -0.32), V(-15, 0, 0), "head"),
+		deco("Body", "Deco_Collar_Spike_L", V(0.12, 0.52, 0.12), V(-0.62, 1.12, -0.22), V(0, 0, 20), "accent", { material = "Neon", lod = 2 }),
+		deco("Body", "Deco_Bolt_A", V(0.09, 0.52, 0.04), V(0, 0.42, -0.52), V(0, 0, 25), "accent", { material = "Neon" }),
+		deco("Body", "Deco_Bolt_B", V(0.09, 0.42, 0.04), V(0.08, 0.06, -0.52), V(0, 0, -25), "accent", { material = "Neon" }),
+		deco("Body", "Deco_Bolt_C", V(0.09, 0.42, 0.04), V(0, -0.28, -0.52), V(0, 0, 25), "accent", { material = "Neon" }),
+		deco("UpperArm_L", "Deco_Shoulder_Plate_L", V(0.78, 0.3, 0.72), V(-0.05, 0.46, 0), V(0, 0, 15), "head"),
+		deco("UpperArm_L", "Deco_Shoulder_Edge_L", V(0.72, 0.06, 0.06), V(-0.05, 0.62, -0.37), V(0, 0, 15), "accent", { material = "Neon", lod = 2 }),
+		deco("Forearm_L", "Deco_Bracer_L", V(0.6, 0.42, 0.6), V(0, 0.05, 0), V(0, 0, 0), "shadow"),
+		deco("Forearm_L", "Deco_Bracer_Rune_L", V(0.06, 0.34, 0.04), V(0, 0.05, -0.31), V(0, 0, 20), "accent", { material = "Neon", lod = 2 }),
+		deco("Hips", "Deco_Belt", V(1.42, 0.26, 1.0), V(0, 0.15, 0), V(0, 0, 0), "shadow"),
+		deco("Hips", "Deco_Belt_Orb", V(0.32, 0.32, 0.32), V(0, 0.12, -0.52), V(0, 0, 0), "accent", { shape = "ball", material = "Neon" }),
+		deco("StaffOrb", "Deco_Staff_CrescentL", V(0.12, 0.72, 0.12), V(-0.46, 0.1, 0), V(0, 0, 25), "accent", { material = "Neon" }),
+		deco("StaffOrb", "Deco_Staff_CrescentR", V(0.12, 0.72, 0.12), V(0.46, 0.1, 0), V(0, 0, -25), "accent", { material = "Neon" }),
+		deco("StaffOrb", "Deco_Staff_Spike", V(0.1, 0.5, 0.1), V(0, 0.56, 0), V(0, 45, 0), "accent", { material = "Neon" }),
+		deco("Shin_L", "Deco_Shin_Guard_L", V(0.56, 0.5, 0.16), V(0, 0.1, -0.3), V(0, 0, 0), "shadow"),
+		deco("Thigh_L", "Deco_Knee_L", V(0.46, 0.32, 0.18), V(0, -0.46, -0.3), V(-10, 0, 0), "head"),
+		deco("Foot_L", "Deco_Boot_L", V(0.66, 0.3, 1.0), V(0, 0.03, 0), V(0, 0, 0), "shadow"),
+	}
+	BossDetailSpec.bosses.storm_lord = {
+		joints = J,
+		chains = { { "RobeF1", "RobeF2", lag = 0.5, sway = 4 }, { "RobeB1", "RobeB2", lag = 0.5, sway = 5, phase = 1.4 } },
+		deco = mirrorX(D),
+		recolor = {},
+		themeColors = { body = Color3.fromRGB(92, 97, 128), head = Color3.fromRGB(118, 124, 156), accent = Color3.fromRGB(255, 224, 64) },
+	}
+end
+
+-- ─────────────────────────── 전갈 여왕: 모래 무덤의 여제(금 장신구) ───────────────────────────
+-- 콘셉트: 사막 여제. 겹겹 등딱지 · 금 테두리 · 금 왕관 가시 · 큰 턱 · 옆 눈(세밀) · 집게 톱니(세밀) · 팔 금 띠 · 다리 가시(세밀) · 꼬리 금 고리 · 목걸이 보석 · 등 비단 베일(2차 움직임).
+do
+	local J = {}
+	chain(J, { prefix = "Veil", parent = "Body", count = 3, length = 0.4, w0 = 1.0, w1 = 0.8, thick = 0.05, at = V(0, 0.55, 0.2), rot0 = V(70, 0, 0), rotStep = V(8, 0, 0), color = "accent", material = "Fabric" })
+	local D = {
+		deco("Body", "Deco_Carapace_Front", V(2.0, 0.22, 0.8), V(0, 0.52, -0.6), V(-6, 0, 0), "head"),
+		deco("Body", "Deco_Carapace_Mid", V(2.1, 0.22, 0.8), V(0, 0.56, 0.05), V(-6, 0, 0), "head"),
+		deco("Body", "Deco_Carapace_Back", V(1.9, 0.22, 0.75), V(0, 0.52, 0.7), V(-6, 0, 0), "head"),
+		deco("Body", "Deco_Carapace_TrimF", V(2.04, 0.07, 0.09), V(0, 0.62, -0.98), V(0, 0, 0), "accent", { material = "Metal", lod = 2 }),
+		deco("Body", "Deco_Carapace_TrimM", V(2.14, 0.07, 0.09), V(0, 0.66, -0.32), V(0, 0, 0), "accent", { material = "Metal", lod = 2 }),
+		deco("Body", "Deco_Carapace_TrimB", V(1.94, 0.07, 0.09), V(0, 0.62, 0.34), V(0, 0, 0), "accent", { material = "Metal", lod = 2 }),
+		deco("Body", "Deco_Side_Ridge_L", V(0.16, 0.32, 1.8), V(-1.26, 0.2, 0), V(0, 0, 0), "head"),
+		deco("Body", "Deco_Necklace", V(1.2, 0.09, 0.09), V(0, 0.2, -1.13), V(0, 0, 0), "accent", { material = "Metal" }),
+		deco("Body", "Deco_Necklace_Gem", V(0.22, 0.32, 0.1), V(0, 0.04, -1.15), V(0, 0, 0), "accent", { material = "Neon" }),
+		deco("Head", "Deco_Crown_Band", V(1.1, 0.12, 0.6), V(0, 0.38, 0.15), V(0, 0, 0), "accent", { material = "Metal" }),
+		deco("Head", "Deco_Crown_Spike", V(0.13, 0.5, 0.13), V(0, 0.62, 0.1), V(0, 45, 0), "accent", { material = "Metal" }),
+		deco("Head", "Deco_Crown_SpikeSide_L", V(0.11, 0.4, 0.11), V(-0.36, 0.54, 0.16), V(0, 45, 14), "accent", { material = "Metal" }),
+		deco("Head", "Deco_Mandible_L", V(0.14, 0.18, 0.48), V(-0.35, -0.25, -0.62), V(0, -20, 0), "light", { shape = "wedge" }),
+		deco("Head", "Deco_Eye_Side_L", V(0.12, 0.12, 0.05), V(-0.46, 0.22, -0.46), V(0, 0, 0), "eye", { material = "Neon", lod = 2 }),
+		deco("Hand_L", "Deco_Claw_Tooth_L", V(0.12, 0.32, 0.12), V(0.22, -0.3, -0.2), V(0, 45, 0), "light", { lod = 2 }),
+		deco("Hand_L", "Deco_Claw_Tooth2_L", V(0.12, 0.28, 0.12), V(0.22, -0.02, -0.22), V(0, 45, 0), "light", { lod = 2 }),
+		deco("Forearm_L", "Deco_Arm_Band_L", V(0.5, 0.14, 0.5), V(0, 0.2, 0), V(0, 0, 0), "accent", { material = "Metal" }),
+		deco("Thigh1_L", "Deco_Leg_Spike1_L", V(0.1, 0.36, 0.1), V(0, 0.2, 0.15), V(0, 45, 0), "light", { lod = 2 }),
+		deco("Thigh2_L", "Deco_Leg_Spike2_L", V(0.1, 0.36, 0.1), V(0, 0.2, 0.15), V(0, 45, 0), "light", { lod = 2 }),
+		deco("Thigh3_L", "Deco_Leg_Spike3_L", V(0.1, 0.36, 0.1), V(0, 0.2, 0.15), V(0, 45, 0), "light", { lod = 2 }),
+		deco("Tail1_7", "Deco_Tail1_Ring", V(0.36, 0.1, 0.36), V(0, 0, 0), V(0, 0, 0), "accent", { material = "Metal" }),
+		deco("Tail2_7", "Deco_Tail2_Ring", V(0.36, 0.1, 0.36), V(0, 0, 0), V(0, 0, 0), "accent", { material = "Metal" }),
+		deco("Tail3_7", "Deco_Tail3_Ring", V(0.36, 0.1, 0.36), V(0, 0, 0), V(0, 0, 0), "accent", { material = "Metal" }),
+		deco("Tail1_3", "Deco_Tail1_Plate", V(0.52, 0.12, 0.44), V(0, 0, 0.22), V(0, 0, 0), "head", { lod = 2 }),
+		deco("Tail2_3", "Deco_Tail2_Plate", V(0.52, 0.12, 0.44), V(0, 0, 0.22), V(0, 0, 0), "head", { lod = 2 }),
+		deco("Tail3_3", "Deco_Tail3_Plate", V(0.52, 0.12, 0.44), V(0, 0, 0.22), V(0, 0, 0), "head", { lod = 2 }),
+	}
+	BossDetailSpec.bosses.scorpion_queen = {
+		joints = J,
+		chains = { { "Veil1", "Veil2", "Veil3", lag = 0.5, sway = 6 } },
+		deco = mirrorX(D),
+		recolor = {},
+		themeColors = { body = Color3.fromRGB(168, 95, 38), head = Color3.fromRGB(206, 150, 104), accent = Color3.fromRGB(255, 196, 60) },
+	}
+end
+
 return BossDetailSpec

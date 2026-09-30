@@ -47,7 +47,7 @@ local function nameCard(bossId, displayName, accent, showAt, hideAt, full)
 	holder.Name = "Card"
 	holder.BackgroundTransparency = 1
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, 0.74)
+	holder.Position = UDim2.fromScale(0.5, 0.6) -- A2-M1: 하단 HUD(체력바 · 스킬 줄) 위
 	holder.Size = UDim2.fromScale(0.8, full and 0.2 or 0.13)
 	holder.Parent = gui
 	local function label(name, text, y, h, color, font)

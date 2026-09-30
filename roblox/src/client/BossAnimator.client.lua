@@ -338,6 +338,20 @@ local function noteImpacts(e, st)
 		end
 		changed = true
 	end
+	-- 등장: 솟기 시작 · 착지 · 포효 접촉 = 의도된 타격 순간(오프라인 하네스와 같은 창)
+	if st.introAt and st.introAt ~= e.seen.introAt then
+		e.seen.introAt = st.introAt
+		if st.introFull and st.introSeconds then
+			local I = (e.ctx.boss and e.ctx.boss.intro) or {}
+			local riseT = st.introSeconds * (I.riseFrac or 0.42)
+			local roarContact = st.introAt + riseT + 0.05 + 0.35
+			push(st.introAt - 0.03, st.introAt + 0.06)
+			push(st.introAt + riseT - 0.06, st.introAt + riseT + 0.12)
+			push(roarContact - 0.47, roarContact + 0.35)
+		elseif st.introSeconds then
+			push(st.introAt + 0.5 - 0.15, st.introAt + 0.5 + 0.35)
+		end
+	end
 	for _, k in ipairs(impactKeys) do
 		local v = st[k]
 		if v and v ~= e.seen[k] then
@@ -508,11 +522,14 @@ local function updateEntry(e, now, dt, camPos)
 	st.speed, st.gait, st.turn = e.speed, e.gait, e.turn
 	-- A2-M1 겹침 지연 표본은 가까울 때만(먼 보스는 비용 절약) · 잡기 중에는 끔(서버 잡기 FK와 같은 부착점 - server/BossAirGrab도 끈다)
 	st.noOverlap = distance > LOD.fullStuds or (st.act ~= nil and e.ctx.skills ~= nil and e.ctx.skills[st.act] ~= nil and e.ctx.skills[st.act].primitive == "grab")
-	st.lookYaw = distance <= LOD.fullStuds and lookYawFor(e) or nil
-	if st.lookYaw then
-		e.lookSmooth = (e.lookSmooth or 0) + (st.lookYaw - (e.lookSmooth or 0)) * (1 - math.exp(-dt * 6))
-		st.lookYaw = e.lookSmooth
+	local lookT = distance <= LOD.fullStuds and lookYawFor(e) or nil
+	if lookT then
+		e.lookSmooth = (e.lookSmooth or lookT) + (lookT - (e.lookSmooth or lookT)) * (1 - math.exp(-dt * 6))
 	end
+	-- A2-M1: 대상이 생기고 사라질 때 가중치를 천천히(0.3초 남짓) - 마지막 바라본 각에서 두리번으로 넘어간다
+	e.lookW = (e.lookW or 0) + ((lookT and 1 or 0) - (e.lookW or 0)) * (1 - math.exp(-dt * 7))
+	st.lookYaw = (e.lookW > 1e-3 and e.lookSmooth) or nil
+	st.lookW = e.lookW
 	local pose, info = BossMotion.evaluate(e.ctx, st, now)
 	noteImpacts(e, st)
 	-- A2-M1 몸 효과: 접촉 순간 충격(가까울 때만) · 등장 · 등장 포효
