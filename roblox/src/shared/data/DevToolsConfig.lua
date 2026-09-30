@@ -165,8 +165,9 @@ local config = {
 		--   S1(가)(나)(서버 궤적 낙하 · 대시) · D1-2(가)(나)(공격 간격 = getTotalSpeedMultiplier).
 		-- C4(2026-09-28): 이번 블록 C4(가) + 바꾼 모듈을 쓰는 옛 블록 - C2(가)(CombatFormula 권장 · 곡선) · W1(가)(W3c가 PlayerMotionData 대검 공중 · 활 동작을 바꿔서 - 타격 프레임 검사).
 		-- C5(2026-09-28): 이번 블록 C5(가) + 바꾼 모듈을 쓰는 옛 블록 - C4(가)(C4Verify 루프 수정 · 대표 곡선) · C2(가)(CombatFormula) · P25a(가)(CharacterLevel 성장부 · 처치 앵커 C1.5 기대값 갱신) · P25c(가)(무기 성장 구간 비).
+		-- A2-N4(2026-09-30): 이번 블록 A2-N4(가)(보스 행동 3줄 · 강공격 피해 배율 · 대표 전력 역산) + 동반: BossScheduler · BossDifficultySim · BossData를 쓰는 BR1-4a(가)(스케줄러 pick) · BR1(가)(난이도 모형 - 기대값 갱신 필요 후보).
 		current = {
-			"C5(가)", "C4(가)", "C2(가)", "P25a(가)", "P25c(가)",
+			"A2-N4(가)", "BR1-4a(가)", "BR1(가)",
 		},
 	},
 }

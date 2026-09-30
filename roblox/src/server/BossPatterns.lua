@@ -422,7 +422,7 @@ end
 -- 시계를 "지금"부터 새로 잰다 - 스폰·어그로 시작·사망 리셋 때 부른다(재도전 = 처음부터).
 -- 견습 모드는 data.skills가 부분집합이다(BossRules.buildTutorialInstanceData) - 없는 스킬은 시계 자체가 없다.
 local function restartClocks(st, data, now)
-	st.sched = BossScheduler.newState(data.skills, data.skillOrder, now)
+	st.sched = BossScheduler.newState(data.skills, data.skillOrder, now, false, data.scheduler)
 end
 
 local function ensureState(model, data)
@@ -471,8 +471,10 @@ local function endSkill(model, st, data, now, interrupted)
 	st.skill = nil
 	model:SetAttribute("BossAct", nil) -- BR1-4b 모션: 스킬 끝(클라가 동작을 풀어 제자리로)
 	model:SetAttribute("BossActPhase", nil)
-	BossScheduler.onSkillEnd(st.sched, data.skills, id, now)
-	MonsterState.setLastAttackTick(model, now) -- 스킬 직후 바로 평타가 또 나가지 않게(15-1과 같다)
+	BossScheduler.onSkillEnd(st.sched, data.skills, id, now, data.scheduler)
+	if not (BossData.mechanics.lanes and BossData.mechanics.lanes.enabled) then
+		MonsterState.setLastAttackTick(model, now) -- 스킬 직후 바로 평타가 또 나가지 않게(15-1과 같다) · A2-N4 평타 줄: 스킬이 평타 주기를 리셋하지 않는다(예비 0.25초가 대신)
+	end
 end
 
 -- ─────────────────────────── 결과 조각(29-3) ───────────────────────────
@@ -2157,7 +2159,7 @@ local function startSkill(model, st, data, id, now, position, targetRoot)
 	st.current = id
 	st.skill = skill
 	st.currentStartedAt = now
-	BossScheduler.onSkillStart(st.sched, id)
+	BossScheduler.onSkillStart(st.sched, id, now, data.skills, data.scheduler)
 	BossMechanics.beginActivation(model) -- %최대체력 피해의 발동당 1인 누적을 비운다
 	print(("[forge-game] 보스 패턴 시작: %s (직전 종료 후 %.2f초)"):format(id, now - st.sched.lastEndAt))
 	local c = context(model, st, data, now, position, targetRoot)

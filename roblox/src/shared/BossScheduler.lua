@@ -38,9 +38,20 @@ local function isLive(skill, includeDesign)
 	return skill ~= nil and (skill.enabled ~= false or includeDesign == true)
 end
 
+-- A2-N4 §2-1 강공격 줄(config.lanes - BossData.mechanics.lanes). lanes가 없거나 꺼져 있으면 옛 규칙(전역 쿨 하나)과 완전히 같다.
+local function lanesOf(config)
+	local lanes = config and config.lanes
+	return (lanes and lanes.enabled) and lanes or nil
+end
+
+function BossScheduler.isHeavy(skill, config)
+	local lanes = lanesOf(config)
+	return lanes ~= nil and skill ~= nil and skill.bubble == lanes.heavyBubble
+end
+
 -- 전투 시작(스폰·어그로·전멸 리셋) 시각 now 기준으로 시계를 새로 잰다.
--- includeDesign(모형 전용): enabled=false인 설계 스킬도 포함한다.
-function BossScheduler.newState(skills, skillOrder, now, includeDesign)
+-- includeDesign(모형 전용): enabled=false인 설계 스킬도 포함한다. config(A2-N4 - 선택): 강공격 줄이 켜져 있으면 강공격의 첫 준비를 firstHeavySeconds 안으로 당긴다.
+function BossScheduler.newState(skills, skillOrder, now, includeDesign, config)
 	local state = {
 		startedAt = now,
 		readyAt = {},
@@ -54,6 +65,9 @@ function BossScheduler.newState(skills, skillOrder, now, includeDesign)
 		local skill = skills[id]
 		if isLive(skill, includeDesign) then
 			state.readyAt[id] = now + (skill.firstAvailableSeconds or skill.cooldownSeconds)
+			if BossScheduler.isHeavy(skill, config) then
+				state.readyAt[id] = math.min(state.readyAt[id], now + lanesOf(config).firstHeavySeconds)
+			end
 			state.lastUsedAt[id] = now
 		end
 	end
@@ -86,7 +100,11 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 		return forced
 	end
 	local gap = ctx.enraged and config.enragedGlobalCooldownSeconds or config.globalCooldownSeconds
-	if now < (ctx.graceUntil or 0) or now < state.lastEndAt + gap then
+	local lanes = lanesOf(config)
+	-- 패턴 줄 = 전역 쿨(+ 강공격 줄이 켜져 있으면 강공격 끝 + patternAfterHeavySeconds) · 강공격 줄 = 전 강공격 전조 끝 + heavyMinGapSeconds만
+	local patternOpen = now >= state.lastEndAt + gap and (not lanes or now >= (state.heavyEndAt or -math.huge) + lanes.patternAfterHeavySeconds)
+	local heavyOpen = lanes ~= nil and now >= (state.heavyGapUntil or -math.huge)
+	if now < (ctx.graceUntil or 0) or not (patternOpen or heavyOpen) then
 		return nil
 	end
 
@@ -102,9 +120,11 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 	for _, id in ipairs(skillOrder) do
 		local skill = skills[id]
 		local readyAt = state.readyAt[id]
-		if readyAt and now >= readyAt and conditionsMet(state, skill, ctx) then
+		local heavy = lanes ~= nil and skill ~= nil and skill.bubble == lanes.heavyBubble
+		local laneOpen = (heavy and heavyOpen) or (not heavy and patternOpen)
+		if readyAt and laneOpen and now >= readyAt and conditionsMet(state, skill, ctx) then
 			local holdsReservation = skill.reserveFirstUse and not state.seen[id]
-			local blocked = not holdsReservation and reserved ~= nil and now + ctx.boundSeconds(id) + gap > reserved
+			local blocked = not holdsReservation and reserved ~= nil and now + ctx.boundSeconds(id) + (heavy and lanes.patternAfterHeavySeconds or gap) > reserved
 			if not blocked then
 				local priority = skill.priority or 0
 				-- ⑥-2(BR1-4a): lowerAfter = { skills, priority } - 직전 스킬이 목록에 있으면 우선순위를 그만큼 낮춘다(후보에서 빼지는 않는다 - notAfter와 다르다)
@@ -114,8 +134,21 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 				if skill.starvationSeconds and now - state.lastUsedAt[id] >= skill.starvationSeconds then
 					priority += config.starvationPriorityBonus
 				end
-				table.insert(candidates, { id = id, priority = priority, readyAt = readyAt })
+				table.insert(candidates, { id = id, priority = priority, readyAt = readyAt, heavy = heavy })
 			end
+		end
+	end
+
+	-- A2-N4: 두 줄 다 후보가 있으면 패턴 먼저(강공격이 패턴을 굶기지 않게)
+	if lanes then
+		local patterns = {}
+		for _, candidate in ipairs(candidates) do
+			if not candidate.heavy then
+				table.insert(patterns, candidate)
+			end
+		end
+		if #patterns > 0 then
+			candidates = patterns
 		end
 	end
 
@@ -153,16 +186,27 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 	return best.id
 end
 
-function BossScheduler.onSkillStart(state, id)
+-- now · skills · config(A2-N4 - 선택): 강공격이면 다음 강공격은 이 전조 끝 + heavyMinGapSeconds 뒤부터.
+function BossScheduler.onSkillStart(state, id, now, skills, config)
 	state.seen[id] = true
+	local skill = skills and skills[id]
+	if now and BossScheduler.isHeavy(skill, config) then
+		state.heavyGapUntil = now + (skill.telegraphSeconds or 0) + lanesOf(config).heavyMinGapSeconds
+		state.heavyRunning = true
+	end
 	if id ~= state.substituteId then
 		state.substitutedFor, state.substituteId = nil, nil
 	end
 end
 
 -- 스킬이 끝난 시각 now - 내부 쿨·전역 쿨·굶주림 시계가 전부 여기서 다시 돈다.
-function BossScheduler.onSkillEnd(state, skills, id, now)
-	state.lastEndAt = now
+function BossScheduler.onSkillEnd(state, skills, id, now, config)
+	if id and BossScheduler.isHeavy(skills[id], config) then
+		state.heavyEndAt = now -- A2-N4: 강공격은 전역 쿨(lastEndAt)을 다시 걸지 않는다 - 패턴은 이 끝 + patternAfterHeavySeconds부터
+		state.heavyRunning = false
+	else
+		state.lastEndAt = now
+	end
 	if id and skills[id] then
 		state.readyAt[id] = now + skills[id].cooldownSeconds
 		state.lastUsedAt[id] = now
@@ -180,6 +224,7 @@ end
 function BossScheduler.force(state, id)
 	state.readyAt[id] = -math.huge
 	state.lastEndAt = -math.huge
+	state.heavyGapUntil, state.heavyEndAt = nil, nil -- A2-N4
 	state.lastSkillId = nil
 	state.forced = id
 end

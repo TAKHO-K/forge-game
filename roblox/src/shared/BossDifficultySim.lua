@@ -136,7 +136,7 @@ function BossDifficultySim.run(bossId, options)
 	for i = 1, n do
 		members[i] = { hp = 1, taken = 0, alive = true, airUntil = -1, airSince = nil, evadeUntil = 0, trappedUntil = 0 }
 	end
-	local state = BossScheduler.newState(skills, order, 0, false)
+	local state = BossScheduler.newState(skills, order, 0, false, config)
 	local t = 0
 	local current, currentEnd, pending = nil, 0, {}
 	local armed, gateStarted, windowMultiplier, windowUntil = false, false, 1, 0
@@ -283,7 +283,7 @@ function BossDifficultySim.run(bossId, options)
 			end
 			if pick then
 				local skill = skills[pick]
-				BossScheduler.onSkillStart(state, pick)
+				BossScheduler.onSkillStart(state, pick, t, skills, config)
 				counts[pick] = (counts[pick] or 0) + 1
 				local bound = BossSkillMath.boundSeconds(skill, 96, 1.5)
 				current, currentEnd = pick, t + bound
@@ -465,7 +465,7 @@ function BossDifficultySim.run(bossId, options)
 			end
 		end
 		if current and t >= currentEnd then
-			BossScheduler.onSkillEnd(state, skills, current, t)
+			BossScheduler.onSkillEnd(state, skills, current, t, config)
 			current = nil
 		end
 		for _, m in ipairs(members) do
@@ -481,9 +481,14 @@ function BossDifficultySim.run(bossId, options)
 				basicTimer = 0
 				local share = boss.basicAttack.damageMultiplier / surviveHits
 				if innerCircle then
+					local lanes = BossData.mechanics.lanes
 					for _, m in ipairs(members) do
-						if m.alive and t >= m.trappedUntil and rng() < exposure * (t < shieldUntil and cfg.courseGroundHitScale or 1) then
+						local roll = rng()
+						local ground = t < shieldUntil and cfg.courseGroundHitScale or 1
+						if m.alive and t >= m.trappedUntil and roll < exposure * ground then
 							damage(m, share, nil, "평타")
+						elseif m.alive and t >= m.trappedUntil and lanes and lanes.enabled and role == "melee" and roll < (exposure + exposureCfg.innerSwingMelee) * ground then
+							damage(m, share * lanes.innerSwingScale, nil, "평타(원 안)") -- A2-N4 원 안 약한 휘두름
 						end
 					end
 				else

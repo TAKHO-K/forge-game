@@ -4718,6 +4718,15 @@ if RunService:IsStudio() and verifyEnabled("W2(가)") then -- W2: 스킨 금지 
 	end)
 end
 
+if RunService:IsStudio() and verifyEnabled("A2-N4(가)") then -- A2-N4: 보스 행동 3줄(강공격 줄) · 강공격 피해 배율 · 대표 전력 역산
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.A2N4Verify).runPure)
+		if not ok then
+			print("===A2-N4 검증 끝(가)=== 에러: " .. tostring(err))
+		end
+	end)
+end
+
 if RunService:IsStudio() and verifyEnabled("A2-M1(가)") then -- A2-M1: 이징 · 접촉 = 판정 · 사망 ≤ 3초 · 등장 · 파트 예산 · 정면 판정 · 접지 · 몸 반경
 	task.spawn(function()
 		local ok, err = pcall(require(script.Parent.A2M1Verify).runPure)

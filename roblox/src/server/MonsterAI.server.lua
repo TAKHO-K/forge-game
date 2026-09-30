@@ -372,11 +372,38 @@ end
 -- innerSafeRadiusStuds가 있는 보스(근접 원형 구역)는 원 밖을 낫처럼 쓸어 원 밖의 멤버 전원을 친다 - 원 안은 평타를 안 맞는다(가끔 원 안 강공격 innerSmash).
 local prepSentFor = {} -- A2-N3: [보스 모델] = 예비 신호를 보낸 주기(마지막 평타 틱) · 약한 키는 조용히 사라진다 → 강한 표 + Destroying 정리
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
+-- A2-N4 §2-1 평타 줄(BossData.mechanics.lanes): [보스 모델] = 예정 타격 os.clock(예비 신호를 보낸 뒤) - 패턴이 시작되면 지운다(tryBossAttack)
+local pendingSwing = {}
 local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot)
 	local now = os.clock()
 	local last = MonsterState.getLastAttackTick(model)
 	local farRange = data.attackFarRangeStuds or data.attackRangeStuds
-	if last and now - last < data.attackCooldownSeconds then
+	local lanes = BossData.mechanics.lanes
+	local lanesOn = lanes and lanes.enabled
+	if lanesOn then
+		-- 매 타 예비(basicPrepSeconds) 뒤 타격 - 쿨이 이미 찼어도(스킬 직후 · 전투 시작) 먼저 알린다. 주기 = 마지막 타격 + 쿨(스킬이 리셋하지 않는다)
+		local due = pendingSwing[model]
+		if not due then
+			local lead = BossData.basicPrepSeconds
+			if now >= (last or -math.huge) + data.attackCooldownSeconds - lead and (PlayerState.getHp(targetPlayer) or 0) > 0 and Reach.within(targetRoot.Position, monsterPosition, farRange) then
+				due = math.max(now + lead, (last or -math.huge) + data.attackCooldownSeconds)
+				if prepSentFor[model] == nil then
+					model.Destroying:Once(function()
+						prepSentFor[model] = nil
+						pendingSwing[model] = nil
+					end)
+				end
+				prepSentFor[model] = last or 0
+				pendingSwing[model] = due
+				model:SetAttribute("BossSwingPrepAt", workspace:GetServerTimeNow() + (due - now))
+			end
+			return
+		end
+		if now < due then
+			return
+		end
+		pendingSwing[model] = nil
+	elseif last and now - last < data.attackCooldownSeconds then
 		-- A2-N3 결정 ②: 예비 동작 신호만(판정 · 타이밍 무관) - 쿨 끝 basicPrepSeconds 전 · 이번 주기 1회 · 대상이 지금 사거리 안이면
 		local lead = BossData.basicPrepSeconds
 		local remaining = data.attackCooldownSeconds - (now - last)
@@ -395,8 +422,13 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 	if data.innerSafeRadiusStuds then
 		for _, member in ipairs(BossEncounter.getMembersOfModel(model)) do
 			local root = typeof(member) == "Instance" and member.Character and member.Character:FindFirstChild("HumanoidRootPart")
-			if root and PlayerState.getHp(member) > 0 and Reach.within(root.Position, monsterPosition, farRange) and Reach.horizontalDistance(root.Position, monsterPosition) > data.innerSafeRadiusStuds then
-				table.insert(victims, { player = member, root = root })
+			if root and PlayerState.getHp(member) > 0 and Reach.within(root.Position, monsterPosition, farRange) then
+				local inside = Reach.horizontalDistance(root.Position, monsterPosition) <= data.innerSafeRadiusStuds
+				if not inside then
+					table.insert(victims, { player = member, root = root })
+				elseif lanesOn then
+					table.insert(victims, { player = member, root = root, scale = lanes.innerSwingScale }) -- A2-N4: 원 안 = 예비 뒤 약한 휘두름(옛 = 안 맞음)
+				end
 			end
 		end
 	elseif PlayerState.getHp(targetPlayer) > 0 and Reach.within(targetRoot.Position, monsterPosition, farRange) then
@@ -411,7 +443,7 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 	model:SetAttribute("BossSwingN", (model:GetAttribute("BossSwingN") or 0) + 1)
 	for _, v in ipairs(victims) do
 		local far = Reach.horizontalDistance(v.root.Position, monsterPosition) > data.attackRangeStuds
-		local multiplier = (data.basicAttackDamageMultiplier or 1) * (far and (data.attackFarMultiplier or 1) or 1)
+		local multiplier = (data.basicAttackDamageMultiplier or 1) * (far and (data.attackFarMultiplier or 1) or 1) * (v.scale or 1)
 		applyHitToPlayer(v.player, MonsterState.getAttackFor(model, TutorialState.getMonsterStage(v.player)), nil, multiplier)
 	end
 	if data.innerSafeRadiusStuds then
@@ -430,6 +462,7 @@ local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetR
 		model:SetAttribute("BossFaceUserId", targetId)
 	end
 	if BossPatterns.step(model, data, monsterPosition, targetPlayer, targetRoot, dt, BossEncounter.getMembersOfModel(model)) then
+		pendingSwing[model] = nil -- A2-N4: 패턴 · 강공격이 시작되면 예비한 평타는 취소(끝난 뒤 다시 예비부터)
 		return
 	end
 	-- 정지 거리(BossData.chaseStopDistanceStuds) 밖에서만 다가간다 - 몸통 충돌이 없는 보스가

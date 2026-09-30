@@ -95,7 +95,7 @@ function BossSim.run(bossId, options)
 
 	local maxHp = sim.referenceKillSeconds * BossRules.partySizeHpMultiplier(n)
 	local hp = maxHp
-	local state = BossScheduler.newState(skills, order, 0, design)
+	local state = BossScheduler.newState(skills, order, 0, design, config)
 	local t = 0
 	local current, currentEnd, evadeUntil = nil, 0, 0
 	local armed, armedSince, gateStarted = false, nil, false
@@ -157,7 +157,7 @@ function BossSim.run(bossId, options)
 			local pick = BossScheduler.pick(state, skills, order, config, ctx)
 			if pick then
 				local skill = skills[pick]
-				BossScheduler.onSkillStart(state, pick)
+				BossScheduler.onSkillStart(state, pick, t, skills, config)
 				local jitter = rng and (1 + (rng() * 2 - 1) * mc.evadeJitter) or 1
 				if rng and skill.primitive == "charge" then
 					chargeTravel = mc.chargeTravelMinSeconds + rng() * (mc.chargeTravelMaxSeconds - mc.chargeTravelMinSeconds)
@@ -234,7 +234,7 @@ function BossSim.run(bossId, options)
 			end
 		end
 		if current and t >= currentEnd then
-			BossScheduler.onSkillEnd(state, skills, current, t)
+			BossScheduler.onSkillEnd(state, skills, current, t, config)
 			previousEnd, previousId = t, current
 			current = nil
 		end

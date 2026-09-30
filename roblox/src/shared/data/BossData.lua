@@ -231,6 +231,14 @@ local MECHANICS = {
 	priority = { normal = 0, signature = 50, gimmick = 100 },
 	starvationPriorityBonus = 1000,
 
+	-- A2-N4 §2-1(★ 난이도 - 사용자 지시): 보스 행동 3줄. enabled = false면 옛 규칙(모든 스킬이 전역 쿨 하나 · 평타는 원 안 없음 · 스킬 뒤 평타 리셋).
+	--   강공격 줄 = bubble이 heavyBubble인 스킬: 전역 쿨과 분리(자기 쿨만) · 패턴 전조 · 진행 중 금지(한 번에 하나) · 강공격끼리 전조 끝 + heavyMinGapSeconds · 전투 시작 뒤 첫 준비 ≤ firstHeavySeconds
+	--   패턴 줄 = 나머지: 전역 쿨 그대로 · 강공격 중에 준비되면 강공격 끝 + patternAfterHeavySeconds 뒤로 · 둘 다 준비면 패턴 먼저
+	--   평타 줄 = 매 타 basicPrepSeconds 예비 뒤(쿨이 이미 찼어도) · 스킬 끝이 평타 주기를 리셋하지 않는다 · 안쪽 원(innerSafeRadiusStuds) 안 = innerSwingScale 배 약한 휘두름
+	lanes = { enabled = true, heavyBubble = "heavy", heavyMinGapSeconds = 1.5, patternAfterHeavySeconds = 0.8, firstHeavySeconds = 2.5, innerSwingScale = 0.5,
+		-- §2-2(지시: 첫 도전 전멸이 BR1-2 기준 +10%p를 넘으면 강공격 피해를 5%씩 최대 20%): 모형 6보스 평균 60 · 57 · 60 · 66% → 줄 켬 76 · 78 · 84 · 91%(×1.00) → 72 · 74 · 81 · 89%(×0.80) - 상한까지 내려도 넘는다(결정 필요 · docs/phase/A2-N4-report.md §3)
+		heavyDamageScale = 0.8 },
+
 	-- 29-2 B: 회피 부등식  telegraphSeconds ≥ perceptionSeconds + (회피 거리 ÷ 이동 속도) × marginFactor
 	--   perceptionSeconds 0.5 = 시각 반응 0.25 + 터치 입력 지연 0.10 + 서버→클라 전조 표시 지연 0.15(20.44의 세 항 그대로)
 	--   이동 속도 = WorldConfig.playerWalkSpeedStuds(신속 옵션 0, 대시 없음 - 대시는 쿨이 있는 보너스다)
@@ -290,7 +298,7 @@ local MECHANICS = {
 			--   reflectHit: 원거리가 반사를 보고도 쏘다 되돌아온 것에 맞을 확률(처음 · 두 번째부터). sonicSafeTicks: 음파 실패 때 그래도 가려진 틱 수(균등 min ~ max).
 			--   grabEscape: 잡힌 뒤 발악으로 풀려날 확률(솔로 18회 · 인원마다 더 필요하지만 같이 누른다). courseSeconds: 수정 부수기(보스 보호막) 동안 딜 0인 시간(솔로 두 코스 · 파티 나눠서).
 			--   colorPartyPenalty: 색 맞추기 실패 확률 × (1 + 이 값 × (인원 − 1)) - 남이 밟아 내 발판이 뒤집힌다.
-			basicExposureBR12 = { ranged = 0.6, melee = 0.7, innerCircleMelee = 0.12 },
+			basicExposureBR12 = { ranged = 0.6, melee = 0.7, innerCircleMelee = 0.12, innerSwingMelee = 0.7 }, -- A2-N4 innerSwingMelee: 근접이 원 안에서 약한 휘두름(예비 0.25초)에 맞는 몫(평타 줄 켬일 때)
 			extraProjectileHit = 0.35,
 			reflectHit = { first = 0.35, later = 0.15 },
 			sonicSafeTicks = { min = 0, max = 3 },
@@ -543,6 +551,7 @@ local function scheduler(globalCooldownSeconds)
 		enragedGlobalCooldownSeconds = 2.5,
 		entryGraceSeconds = 2, -- 입장·재도전 유예(20.44 [3](다)) - 텔레포트 직후 예고 없이 맞지 않게
 		starvationPriorityBonus = MECHANICS.starvationPriorityBonus,
+		lanes = MECHANICS.lanes, -- A2-N4 §2-1(BossScheduler 강공격 줄)
 	}
 end
 
@@ -1407,6 +1416,20 @@ for _, species in ipairs(SPECIES) do
 	-- arenaKit(29-2 훅): 보스별 정적 지형지물 목록. 전갈 여왕·심해 군주·폭풍 군주가 갖는다 - BossArenaKit.lua. tag가 붙은 파트는 스킬이 읽는 논리 구역(shared/BossPropMath.kitZones).
 	bosses[species.id] = boss
 	table.insert(rotationBossIds, species.id)
+end
+
+-- A2-N4 §2-2: 강공격 줄이 켜져 있으면 강공격(bubble = heavyBubble) 피해 배율에 heavyDamageScale을 곱한다(실전 · 모형 · 보스 표가 같은 값을 읽는다)
+if MECHANICS.lanes.enabled and MECHANICS.lanes.heavyDamageScale ~= 1 then
+	local scaled = {}
+	for _, boss in pairs(bosses) do
+		for _, skill in pairs(boss.skills) do
+			if not scaled[skill] and skill.bubble == MECHANICS.lanes.heavyBubble and type(skill.damage) == "table" and skill.damage.multiplier then
+				scaled[skill] = true
+				skill.damage = table.clone(skill.damage) -- 여러 보스가 공유하는 표(innerSmash 등)는 한 번만 곱히게 사본
+				skill.damage.multiplier *= MECHANICS.lanes.heavyDamageScale
+			end
+		end
+	end
 end
 
 return {
