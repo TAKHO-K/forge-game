@@ -53,8 +53,8 @@ local function buildBoard()
 	local b = Instance.new("BillboardGui")
 	b.Name = "UpdateBoard"
 	b.Size = UDim2.fromOffset(300, 170)
-	b.StudsOffsetWorldSpace = Vector3.new(14, 10, 0)
-	b.MaxDistance = 120
+	b.StudsOffsetWorldSpace = Vector3.new(0, 26, 0) -- QUEUE-ALL3 Q5: 새 배치에서 옆 이름표(명예의 전당 · 순위판 · 부화장)를 가려 위로 올림
+	b.MaxDistance = 80
 	b.Adornee = adornee
 	b.Parent = gui
 	local bg = Instance.new("Frame")

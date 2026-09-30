@@ -4,6 +4,7 @@
 --   대상 = 재질이 stoneMaterials이고 짧은 변 ≥ minSide · 긴 변 ≤ maxSide · 이름에 excludeNames가 없는 Block(바닥 타일 · 길 · 판정용 판 제외). 쐐기(WedgePart)는 이번 제외(방향 확인 전).
 return {
 	maxParts = 700,
+	refreshSeconds = 2, -- 상한 안에서 카메라에 가까운 것부터 다시 고르는 주기
 	minSide = 1.5,
 	maxSide = 160,
 	classes = {

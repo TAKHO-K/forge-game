@@ -27,6 +27,7 @@ end
 
 local templates = {} -- key -> MeshPart
 local skinned = {} -- [원래 파트] = 겹친 MeshPart
+local candidates = {} -- [원래 파트] = true(대상 전부 - 상한 안에서 카메라에 가까운 것부터 입힌다)
 local count = 0
 
 -- 축 순서 6가지(원래 x · y · z가 메시의 어느 축으로 가나) + 그 회전
@@ -89,8 +90,18 @@ local function candidate(part)
 	return not excluded(part)
 end
 
+local function unskin(part)
+	local m = skinned[part]
+	if m then
+		m:Destroy()
+		skinned[part] = nil
+		count -= 1
+		part.LocalTransparencyModifier = 0
+	end
+end
+
 local function skin(part)
-	if skinned[part] or count >= D.maxParts or not candidate(part) then
+	if skinned[part] or count >= D.maxParts then
 		return
 	end
 	local class, perm = pick(part.Size)
@@ -106,21 +117,56 @@ local function skin(part)
 	m.Size = Vector3.new(dims[perm[1][1]], dims[perm[1][2]], dims[perm[1][3]])
 	m.CFrame = part.CFrame * perm[2]
 	m.Parent = folder
-	part.LocalTransparencyModifier = 1
+	local off = RunService:IsStudio() and player:GetAttribute("BevelSkinOff") == true
+	part.LocalTransparencyModifier = off and 0 or 1
+	m.Transparency = off and 1 or 0
 	skinned[part] = m
 	count += 1
+	local conn
+	conn = part:GetPropertyChangedSignal("CFrame"):Connect(function()
+		if skinned[part] == m then
+			m.CFrame = part.CFrame * perm[2]
+		else
+			conn:Disconnect()
+		end
+	end)
+end
+
+local function register(part)
+	if candidates[part] or not candidate(part) then
+		return
+	end
+	candidates[part] = true
 	part.AncestryChanged:Connect(function(_, parent)
-		if not parent and skinned[part] then
-			skinned[part]:Destroy()
-			skinned[part] = nil
-			count -= 1
+		if not parent then
+			candidates[part] = nil
+			unskin(part)
 		end
 	end)
-	part:GetPropertyChangedSignal("CFrame"):Connect(function()
-		if skinned[part] then
-			skinned[part].CFrame = part.CFrame * perm[2]
-		end
+end
+
+-- 상한 안에서 카메라에 가까운 것부터: 먼 것은 벗기고(원래 파트 다시 보임) 가까운 것을 입힌다(허브 파트가 상한을 다 써서 구역에는 하나도 안 입혀지던 것 - Studio Play 확인)
+local function refresh()
+	local at = Workspace.CurrentCamera.CFrame.Position
+	local list = {}
+	for part in pairs(candidates) do
+		table.insert(list, { part, (part.Position - at).Magnitude })
+	end
+	table.sort(list, function(a, b)
+		return a[2] < b[2]
 	end)
+	local want = {}
+	for i = 1, math.min(D.maxParts, #list) do
+		want[list[i][1]] = true
+	end
+	for part in pairs(skinned) do
+		if not want[part] then
+			unskin(part)
+		end
+	end
+	for part in pairs(want) do
+		skin(part)
+	end
 end
 
 local function loadTemplates(cache)
@@ -148,12 +194,20 @@ task.spawn(function()
 	end
 	for _, d in ipairs(Workspace:GetDescendants()) do
 		if d:IsA("Part") then
-			skin(d)
+			register(d)
 		end
 	end
 	Workspace.DescendantAdded:Connect(function(d)
 		if d:IsA("Part") then
-			task.defer(skin, d)
+			task.defer(register, d)
+		end
+	end)
+	refresh()
+	task.spawn(function()
+		while true do
+			task.wait(D.refreshSeconds)
+			refresh()
+			player:SetAttribute("BevelSkinned", count)
 		end
 	end)
 	if RunService:IsStudio() and player:GetAttribute("BevelDebug") then

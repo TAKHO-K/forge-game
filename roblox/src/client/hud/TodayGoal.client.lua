@@ -43,6 +43,7 @@ title.Size = UDim2.new(1, 0, 0, 18)
 
 local view
 local lines = {}
+local presses = {} -- 줄 번호 → 누르면 할 일(인스턴스에 필드를 못 붙인다)
 local lastHp, hitAt = nil, -math.huge
 
 local function line(i, text, n, target, onPress)
@@ -70,7 +71,7 @@ local function line(i, text, n, target, onPress)
 			if b:GetAttribute("Busy") then
 				return
 			end
-			local fn = lines[i] and lines[i].press
+			local fn = presses[i]
 			if fn then
 				fn()
 			end
@@ -80,7 +81,7 @@ local function line(i, text, n, target, onPress)
 	b.Visible = true
 	b.Label.Text = text
 	b.Count.Text = target and ("%d/%d"):format(n or 0, target) or ""
-	b.press = onPress
+	presses[i] = onPress
 end
 
 local function collapsed()
