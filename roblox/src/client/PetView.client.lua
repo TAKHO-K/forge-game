@@ -8,6 +8,8 @@ local RunService = game:GetService("RunService")
 local PetData = require(ReplicatedStorage.Shared.data.PetData)
 local EggData = require(ReplicatedStorage.Shared.data.EggData)
 local NestState = require(script.Parent.NestState)
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit) -- A2-N3 Open Cloud 펫 메시
+local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
 
 local localPlayer = Players.LocalPlayer
 for _ = 1, 50 do -- 구역 색은 NestView가 NestState에 붙인다(먼저 돌면 잠깐 기다림)
@@ -37,6 +39,35 @@ local function build(player)
 	local model = Instance.new("Model")
 	model.Name = "Pet_" .. player.Name
 	local parts = {}
+	-- A2-N3 Open Cloud 펫 메시(ArtStyleV1 뒤): 펫 등급 → 외형 등급(ArtImportData.petLookOfGrade) · 파트 색 = 같은 이름 리그 역할(구역 색) · Deco = 메타 대비색
+	local look = ArtImportData.petLookOfGrade[player:GetAttribute("PetGrade") or ""] or "normal"
+	local mesh = ArtMeshKit.get("pets/" .. bodyId .. "_" .. look)
+	if mesh then
+		local role = {}
+		for _, spec in ipairs(rig) do
+			role[spec.name] = spec.color
+		end
+		for _, src in ipairs(mesh:GetChildren()) do
+			if src:IsA("BasePart") then
+				local part = src:Clone()
+				part.Color = colors[role[src.Name]] or (src.Name == "Deco" and Color3.fromHex(ArtImportData.petDecoColor[bodyId][look] or "#FFFFFF")) or base
+				part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch = true, false, false, false
+				part.CastShadow = true
+				part.Parent = model
+				parts[src.Name] = { part = part, offset = CFrame.new(src.Position) }
+			end
+		end
+		local gp = look == "rare" and ArtImportData.petGlowPoint[bodyId]
+		if gp and parts.Body then
+			local at = Instance.new("Attachment")
+			at.Position = parts.Body.part.CFrame:PointToObjectSpace(Vector3.new(gp[1], gp[2], gp[3]))
+			at.Parent = parts.Body.part
+			local light = Instance.new("PointLight")
+			light.Color, light.Brightness, light.Range = base, ArtImportData.petGlow.brightness, ArtImportData.petGlow.range
+			light.Parent = at
+		end
+		rig = {}
+	end
 	for _, spec in ipairs(rig) do
 		local part = Instance.new(spec.wedge and "WedgePart" or "Part")
 		part.Name = spec.name
@@ -48,17 +79,17 @@ local function build(player)
 		part.Parent = model
 		parts[spec.name] = { part = part, offset = CFrame.new(spec.pos) }
 	end
-	if player:GetAttribute("PetGrade") == "epic" then -- 영웅 = 몸에 약한 빛(구분용)
+	if player:GetAttribute("PetGrade") == "epic" and not mesh then -- 영웅 = 몸에 약한 빛(구분용) · 메시 외형은 희귀 외형 빛(위)
 		local light = Instance.new("PointLight")
 		light.Color, light.Brightness, light.Range = base, 1, 6
 		light.Parent = parts.Body.part
 	end
 	model.Parent = folder
-	return { model = model, parts = parts, key = tostring(bodyId) .. "|" .. tostring(zone) .. "|" .. tostring(player:GetAttribute("PetGrade")), body = bodyId, pos = nil, yaw = 0, joyUntil = 0 }
+	return { model = model, parts = parts, key = tostring(bodyId) .. "|" .. tostring(zone) .. "|" .. tostring(player:GetAttribute("PetGrade")) .. "|" .. tostring(mesh ~= nil), body = bodyId, pos = nil, yaw = 0, joyUntil = 0 }
 end
 
 local function refresh(player)
-	local key = tostring(player:GetAttribute("PetBody")) .. "|" .. tostring(player:GetAttribute("PetZone")) .. "|" .. tostring(player:GetAttribute("PetGrade"))
+	local key = tostring(player:GetAttribute("PetBody")) .. "|" .. tostring(player:GetAttribute("PetZone")) .. "|" .. tostring(player:GetAttribute("PetGrade")) .. "|" .. tostring(ArtMeshKit.get("pets/" .. tostring(player:GetAttribute("PetBody")) .. "_normal") ~= nil)
 	local cur = pets[player]
 	if cur and cur.key == key then
 		return
@@ -82,6 +113,19 @@ for _, p in ipairs(Players:GetPlayers()) do
 	watch(p)
 end
 Players.PlayerAdded:Connect(watch)
+local function refreshAll()
+	for player in pairs(pets) do
+		refresh(player)
+	end
+end
+task.spawn(function() -- A2-N3: 메시 캐시가 차거나 스위치가 바뀌면 다시 짓는다
+	local cache = ReplicatedStorage:WaitForChild(ArtImportData.cacheFolder, 120)
+	if cache then
+		cache:GetAttributeChangedSignal(ArtImportData.readyAttribute):Connect(refreshAll)
+		refreshAll()
+	end
+end)
+workspace:GetAttributeChangedSignal("ArtStyleV1"):Connect(refreshAll)
 Players.PlayerRemoving:Connect(function(player)
 	if pets[player] then
 		pets[player].model:Destroy()

@@ -4,7 +4,7 @@
 #   굵은 외곽선 = 뒤집은 껍데기 실제 메시(<파트>_Outline · art-direction §4 결정) - 파트 상한 30 안에서 큰 파트에만(OUTLINE_PARTS).
 #   이전 버전 = 같은 관절 표의 상자 · 공 · 쐐기 · 원기둥(도형 리그).
 #   좌표 = sizeScale 1(게임이 BossData sizeScale을 곱한다) · 루트 = 원점 · 발바닥 y −1.5 · 앞 = −Z.
-# 실행: bash bl.sh make_boss.py --bosses section_guardian [--render 폴더] [--old] [--no-export]
+# 실행: bash bl.sh make_boss.py --bosses section_guardian [--render 폴더] [--old] [--no-export] [--merge-deco(A2-N3 결정 ③ - 장식을 몸 파트에 합침)]
 import bpy
 import io
 import json
@@ -591,7 +591,27 @@ def load_detail(boss):
     return data.get(boss)
 
 
-def build(boss, old=False, hull=True, detail=True):
+def deco_groups(det, rig, world):
+    """A2-N3 결정 ③(--merge-deco): 움직이지 않는 장식을 붙은 몸 파트 메시에 합친다. 부모와 색 역할 · 재질이 같은 장식 = 부모 메시에 합침,
+    다른 장식 = (부모 · 색 · 재질 · LOD)마다 한 덩어리 <부모>_Deco<n>(색 · 네온 보존 - 게임은 부모 부위에 용접). 관절이 있는 것(망토 · 꼬리 · 떠 있는 결정 = detail 관절)은 그대로 따로."""
+    joint_of = {j["part"]: j for j in rig["joints"]}
+    into, groups = {}, {}
+    for d in det["deco"]:
+        P = world.get(d["parent"])
+        if P is None:
+            continue
+        W = P @ Matrix.Translation(V(d["at"])) @ angles(tuple(d["rot"]) if d.get("rot") else None)
+        geo = A.xform(old_shape({"size": d["size"], "shape": d.get("shape", "block")}), m=W.to_3x3(), t=tuple(W.translation))
+        jp = joint_of.get(d["parent"], {})
+        mat = d.get("material") or "SmoothPlastic"
+        if d["color"] == jp.get("color") and mat == (jp.get("material") or "SmoothPlastic"):
+            into.setdefault(d["parent"], []).append(geo)
+        else:
+            groups.setdefault((d["parent"], d["color"], mat, int(d.get("lod", 1))), []).append(geo)
+    return into, groups
+
+
+def build(boss, old=False, hull=True, detail=True, merge_deco=False):
     rig = RIGS[boss]()
     det = load_detail(boss) if (detail and not old) else None
     if det:
@@ -604,6 +624,7 @@ def build(boss, old=False, hull=True, detail=True):
     world, jpos = fk(rig["joints"])
     col = A.new_collection(("old_" if old else "") + boss)
     objs, hulls = [], []
+    into, groups = deco_groups(det, rig, world) if (det and merge_deco) else ({}, {})
     for j in rig["joints"]:
         part = j["part"]
         local = old_shape(j) if (old or j.get("detail")) else SHAPES[boss](part, j)
@@ -611,6 +632,8 @@ def build(boss, old=False, hull=True, detail=True):
         R = W.to_3x3()
         t = W.translation
         geo = A.xform(local, m=R, t=tuple(t))
+        if into.get(part):
+            geo = A.merge(geo, *into[part])
         o = A.make_obj(part, geo, color_of(j["color"], rig), col, neon=j.get("material") == "Neon", origin=jpos[part],
                        bevel=0.0, mat_name="%s%s_%s" % ("old_" if old else "", boss, part))
         o["Joint"] = j["name"]
@@ -618,7 +641,17 @@ def build(boss, old=False, hull=True, detail=True):
         if hull and not old and part in OUTLINE_PARTS.get(boss, []):
             hulls.append(A.add_hull(o, thickness=0.06, export=True, col=col))
     # A2-M1 장식(관절 없음 - 게임에서는 부모 부위에 용접): 이름 · 크기 · 자리 = BossDetailSpec 그대로 · 원점 = 장식 가운데
-    if det:
+    if det and merge_deco:
+        count = {}
+        for (parent, color, mat, lod), geos in sorted(groups.items()):
+            count[parent] = count.get(parent, 0) + 1
+            name = "%s_Deco%d" % (parent, count[parent])
+            o = A.make_obj(name, A.merge(*geos), color_of(color, rig), col, neon=mat == "Neon", origin=jpos[parent], bevel=0.0, mat_name="%s_%s" % (boss, name))
+            o["Deco"] = parent
+            o["DetailLod"] = lod
+            o["DecoMaterial"] = mat
+            objs.append(o)
+    elif det:
         for d in det["deco"]:
             P = world.get(d["parent"])
             if P is None:
@@ -635,7 +668,7 @@ def build(boss, old=False, hull=True, detail=True):
 
 def parse():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    opt = {"bosses": [], "render": None, "export": True, "old": False}
+    opt = {"bosses": [], "render": None, "export": True, "old": False, "merge": False}
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -647,6 +680,8 @@ def parse():
             opt["export"] = False
         elif a == "--old":
             opt["old"] = True
+        elif a == "--merge-deco":
+            opt["merge"] = True
         i += 1
     return opt
 
@@ -655,7 +690,7 @@ def main():
     opt = parse()
     for boss in opt["bosses"]:
         A.reset()
-        rig, col, objs, hulls = build(boss)
+        rig, col, objs, hulls = build(boss, merge_deco=opt["merge"])
         allo = objs + hulls
         total = sum(A.tri_count(o) for o in allo)
         cap = PART_CAP_OF.get(boss, PART_CAP)
@@ -667,7 +702,7 @@ def main():
             A.export_fbx(os.path.join(OUT, "%s.fbx" % boss), allo)
             meta = A.meta_of(allo, budget, {"version": "A2-M1", "rigId": boss, "partCap": cap,
                                             "themeColors": {k: list(rig[k]) for k in ("body", "head", "accent")}, "joints": {o.name: o["Joint"] for o in objs if "Joint" in o},
-                                            "deco": {o.name: o["Deco"] for o in objs if "Deco" in o}, "lod2": [o.name for o in objs if o.get("DetailLod") == 2],
+                                            "deco": {o.name: o["Deco"] for o in objs if "Deco" in o}, "decoMaterial": {o.name: o["DecoMaterial"] for o in objs if "DecoMaterial" in o}, "mergedDeco": opt["merge"], "lod2": [o.name for o in objs if o.get("DetailLod") == 2],
                                             "outlineParts": [h.name for h in hulls], "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z"})
             A.write_json(os.path.join(OUT, "%s.meta.json" % boss), meta)
             bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "%s.blend" % boss))

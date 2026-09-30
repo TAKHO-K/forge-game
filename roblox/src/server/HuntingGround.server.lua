@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit) -- A2-N3 Open Cloud 소품 메시(제단)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
@@ -106,6 +107,9 @@ local function createRebirthAltar(communityZone)
 	prompt.Parent = orb
 
 	model.PrimaryPart = base
+	if ArtMeshKit.enabled() and ArtMeshKit.waitProps() then -- A2-N3 Open Cloud 제단 메시(Base · Orb 자리 - 코드 파트 = 충돌 · 프롬프트 · 이름표 그대로 투명)
+		ArtMeshKit.skin(model, "props/rebirth_altar", CFrame.new(position.X, floorTop, position.Z))
+	end
 	model.Parent = Workspace
 	return model
 end
@@ -204,6 +208,10 @@ end
 
 -- ═══ 실행 ═══
 
+do -- A2-N3: 아트 스위치를 맵 짓기 전에 정한다(소품 메시 = PropLibrary 라이브러리 단계에서 입힘 - ArtAssetLoader가 소품부터 부른다). 아래 A2-S 블록과 같은 식.
+	local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
+	workspace:SetAttribute(ArtStyleV1Data.attribute, ArtStyleV1Data.enabled or (game:GetService("RunService"):IsStudio() and ReplicatedStorage:GetAttribute("ArtStyleV1Force") ~= false))
+end
 local meta, counts = WorldMap.build()
 -- M1-3: 굽힌 지형 표식(버전 · 표본 서명)이 데이터와 같은가 - 다르면 경고만(런타임 생성 금지 · 다시 굽기 = Studio edit)
 task.spawn(function()

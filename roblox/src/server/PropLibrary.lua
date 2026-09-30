@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PropData = require(ReplicatedStorage.Shared.data.PropData)
 local PropKit = require(ReplicatedStorage.Shared.PropKit)
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 
 local PropLibrary = {}
 
@@ -112,6 +113,9 @@ function PropLibrary.model(name)
 				makePart(p).Parent = m
 			end
 			m:SetAttribute("PropSource", "template")
+			if ArtMeshKit.enabled() and ArtMeshKit.waitProps() then -- A2-N3 Open Cloud 킷 메시(ArtStyleV1 뒤 · 틀 파트 = 충돌 그대로 투명 · 배치 복제에 같이 실림)
+				ArtMeshKit.skin(m, "props/kit/" .. name, CFrame.new())
+			end
 		end
 		m.Name = name
 		m.WorldPivot = CFrame.new() -- 피벗 = 바닥 가운데(틀 원점)

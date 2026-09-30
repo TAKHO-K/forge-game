@@ -4,6 +4,8 @@
 -- 클라이언트가 놓치는 변경이 생기지 않는다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData) -- A2-N3 착용 표시 Attribute 이름
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 
 local inventorySync = Instance.new("RemoteEvent")
 inventorySync.Name = "InventorySync"
@@ -88,6 +90,11 @@ function InventorySync.push(player, profile)
 	if typeof(player) == "Instance" and player:IsA("Player") then
 		player:SetAttribute("PrimordialEquipped", InventorySync.primordialEquipped(profile))
 		player:SetAttribute("PrimordialParts", InventorySync.primordialParts(profile))
+		local equipment = activeEquipment(profile) -- A2-N3 방어구 착용 표시(화면 전용 복사본 · 저장 아님): ArmorLook_<부위> = "<구역>|<등급>" · 안 입음 = nil
+		for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+			local item = equipment[part]
+			player:SetAttribute(ArtImportData.armorLookAttribute .. part, item and (ArtMeshKit.armorZone(item) .. "|" .. tostring(item.grade)) or nil)
+		end
 	end
 end
 

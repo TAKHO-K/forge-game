@@ -29,8 +29,16 @@ def convert(path):
     for name, p in d["parts"].items():
         if "center" not in p:
             continue
-        lines.append('\t\t["%s"] = { tris = %d, origin = %s, center = %s },' % (name, p.get("tris", 0), vec(p["origin"]), vec(p["center"])))
-    lines += ["\t},", "}", ""]
+        extra = ""
+        if p.get("color"):  # A2-N3: 남는 메시(장식 묶음) 색 · 네온
+            extra = ', color = "%s", neon = %s' % (p["color"], "true" if p.get("neon") else "false")
+        lines.append('\t\t["%s"] = { tris = %d, origin = %s, center = %s%s },' % (name, p.get("tris", 0), vec(p["origin"]), vec(p["center"]), extra))
+    lines.append("\t},")
+    if d.get("deco"):  # A2-N3: 장식 메시 → 붙는 부위 · 재질 · LOD 2(폰 · 먼 거리에서 숨김)
+        lines.append("\tdeco = { %s }," % ", ".join('["%s"] = "%s"' % kv for kv in d["deco"].items()))
+        lines.append("\tdecoMaterial = { %s }," % ", ".join('["%s"] = "%s"' % kv for kv in (d.get("decoMaterial") or {}).items()))
+        lines.append("\tlod2 = { %s }," % ", ".join('["%s"] = true' % k for k in (d.get("lod2") or [])))
+    lines += ["}", ""]
     os.makedirs(OUT, exist_ok=True)
     out = os.path.join(OUT, rig + ".lua")
     open(out, "w", encoding="utf-8", newline="\n").write("\n".join(lines))
@@ -59,9 +67,35 @@ def convert_weapon(path):
     return out
 
 
+# A2-N3: 방어구 착용 메타 → MeshMeta.armor_wear(조각마다 붙는 R15 파트 · offset · refSize - client/ArmorWearView가 용접 자리 · 체형 배율에 쓴다)
+def convert_armor(path):
+    d = json.load(open(path, encoding="utf-8"))
+    lines = [
+        "-- 자동 생성(roblox/tools/blender/meta_to_luau.py) - 손으로 고치지 말 것. 원본 = roblox/art/armor/armor_wear.meta.json",
+        "return {",
+        '\tversion = "%s",' % d.get("version", ""),
+        "\trefBody = {",
+    ]
+    for name, b in d["refBody"].items():
+        lines.append('\t\t%s = { center = %s, size = %s },' % (name, vec(b["center"]), vec(b["size"])))
+    lines += ["\t},", "\tpieces = {"]
+    for model, pieces in d["pieces"].items():
+        lines.append('\t\t["%s"] = {' % model)
+        for name, p in pieces.items():
+            lines.append('\t\t\t["%s"] = { attach = "%s", offset = %s, refSize = %s, neon = %s },' % (name, p["attach"], vec(p["offset"]), vec(p["refSize"]), "true" if p.get("neon") else "false"))
+        lines.append("\t\t},")
+    lines += ["\t},", "}", ""]
+    out = os.path.join(OUT, "armor_wear.lua")
+    open(out, "w", encoding="utf-8", newline="\n").write("\n".join(lines))
+    return out
+
+
 def main():
     only = set(sys.argv[1:])
     n = 0
+    if not only or "armor_wear" in only:
+        print(convert_armor(os.path.join(ROOT, "art", "armor", "armor_wear.meta.json")))
+        n += 1
     wfolder = os.path.join(ROOT, "art", "weapons")
     for f in sorted(os.listdir(wfolder)):
         if f.endswith(".meta.json") and (not only or f.split(".")[0] in only):

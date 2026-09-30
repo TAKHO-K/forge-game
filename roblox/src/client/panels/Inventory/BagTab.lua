@@ -183,8 +183,10 @@ local function rebuildGrid()
 		iconHolder.Size = UDim2.new(0, 30, 0, 30)
 		iconHolder.BackgroundTransparency = 1
 		iconHolder.Parent = cell
-		local builder = ItemIcons.byPart[item.part or "armor"] or ItemIcons.byPart.armor
-		builder(iconHolder, 30, iconColor)
+		if not ItemIcons.image(iconHolder, 30, ItemIcons.keyFor(item.part or "armor", item.grade, item.itemLevel, nil, item.setZone), 0.62) then -- A2-N3 Open Cloud 아이콘(ArtStyleV1 뒤)
+			local builder = ItemIcons.byPart[item.part or "armor"] or ItemIcons.byPart.armor
+			builder(iconHolder, 30, iconColor)
+		end
 
 		if item.locked then
 			local lockHolder = Instance.new("Frame")

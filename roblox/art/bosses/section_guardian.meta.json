@@ -1,7 +1,7 @@
 {
  "parts": {
   "Hips": {
-   "tris": 88,
+   "tris": 100,
    "origin": [
     0.0,
     0.65,
@@ -9,7 +9,7 @@
    ],
    "center": [
     0.0,
-    0.375,
+    0.4,
     0.0
    ],
    "neon": false,
@@ -76,7 +76,7 @@
    "color": "#1E0A23"
   },
   "Foot_L": {
-   "tris": 44,
+   "tris": 56,
    "origin": [
     -0.5,
     -1.2,
@@ -85,7 +85,7 @@
    "center": [
     -0.5,
     -1.35,
-    -0.248
+    -0.367
    ],
    "neon": false,
    "color": "#5E4568"
@@ -166,7 +166,7 @@
    "color": "#1E0A23"
   },
   "Foot_R": {
-   "tris": 44,
+   "tris": 56,
    "origin": [
     0.5,
     -1.2,
@@ -175,7 +175,7 @@
    "center": [
     0.5,
     -1.35,
-    -0.248
+    -0.367
    ],
    "neon": false,
    "color": "#5E4568"
@@ -420,12 +420,207 @@
    "neon": true,
    "color": "#BE6EFF"
   },
-  "Deco_Head_Brow": {
+  "Body_Deco1": {
+   "tris": 36,
+   "origin": [
+    0.0,
+    0.9,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.45,
+    0.86
+   ],
+   "neon": false,
+   "color": "#BE6EFF"
+  },
+  "Body_Deco2": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.9,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.85,
+    0.72
+   ],
+   "neon": false,
+   "color": "#BE6EFF"
+  },
+  "Body_Deco3": {
+   "tris": 48,
+   "origin": [
+    0.0,
+    0.9,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.745,
+    -0.72
+   ],
+   "neon": true,
+   "color": "#BE6EFF"
+  },
+  "Body_Deco4": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.9,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.769,
+    -0.74
+   ],
+   "neon": false,
+   "color": "#886292"
+  },
+  "Body_Deco5": {
+   "tris": 36,
+   "origin": [
+    0.0,
+    0.9,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.8,
+    -0.026
+   ],
+   "neon": false,
+   "color": "#5E4568"
+  },
+  "Forearm_L_Deco1": {
+   "tris": 12,
+   "origin": [
+    -1.581,
+    1.4917,
+    0.0
+   ],
+   "center": [
+    -1.622,
+    1.103,
+    -0.055
+   ],
+   "neon": false,
+   "color": "#886292"
+  },
+  "Forearm_L_Deco2": {
+   "tris": 12,
+   "origin": [
+    -1.581,
+    1.4917,
+    0.0
+   ],
+   "center": [
+    -1.591,
+    1.396,
+    0.289
+   ],
+   "neon": false,
+   "color": "#5E4568"
+  },
+  "Forearm_R_Deco1": {
+   "tris": 12,
+   "origin": [
+    1.581,
+    1.4917,
+    0.0
+   ],
+   "center": [
+    1.622,
+    1.103,
+    -0.055
+   ],
+   "neon": false,
+   "color": "#886292"
+  },
+  "Forearm_R_Deco2": {
+   "tris": 12,
+   "origin": [
+    1.581,
+    1.4917,
+    0.0
+   ],
+   "center": [
+    1.591,
+    1.396,
+    0.289
+   ],
+   "neon": false,
+   "color": "#5E4568"
+  },
+  "Hand_L_Deco1": {
+   "tris": 12,
+   "origin": [
+    -1.6793,
+    0.5561,
+    -0.1322
+   ],
+   "center": [
+    -1.752,
+    -0.135,
+    -0.795
+   ],
+   "neon": false,
+   "color": "#5E4568"
+  },
+  "Hand_R_Deco1": {
+   "tris": 12,
+   "origin": [
+    1.6793,
+    0.5561,
+    -0.1322
+   ],
+   "center": [
+    1.752,
+    -0.135,
+    -0.795
+   ],
+   "neon": false,
+   "color": "#5E4568"
+  },
+  "Head_Deco1": {
+   "tris": 36,
+   "origin": [
+    0.0,
+    2.6,
+    0.0
+   ],
+   "center": [
+    0.0,
+    3.799,
+    0.088
+   ],
+   "neon": false,
+   "color": "#BE6EFF"
+  },
+  "Head_Deco2": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    2.6,
+    0.0
+   ],
+   "center": [
+    0.0,
+    3.577,
+    0.12
+   ],
+   "neon": false,
+   "color": "#BE6EFF"
+  },
+  "Head_Deco3": {
    "tris": 12,
    "origin": [
     0.0,
-    3.2875,
-    -0.44
+    2.6,
+    0.0
    ],
    "center": [
     0.0,
@@ -435,341 +630,71 @@
    "neon": false,
    "color": "#886292"
   },
-  "Deco_Head_Jaw": {
-   "tris": 12,
+  "Head_Deco4": {
+   "tris": 36,
    "origin": [
     0.0,
-    2.6275,
-    -0.32
+    2.6,
+    0.0
    ],
    "center": [
     0.0,
-    2.627,
-    -0.32
+    2.85,
+    -0.238
    ],
    "neon": false,
    "color": "#5E4568"
   },
-  "Deco_Head_Cheek_L": {
+  "Hips_Deco1": {
    "tris": 12,
    "origin": [
-    -0.58,
-    2.9775,
-    -0.2
+    0.0,
+    0.65,
+    0.0
    ],
    "center": [
-    -0.58,
-    2.977,
-    -0.2
+    0.0,
+    0.7,
+    -0.56
+   ],
+   "neon": false,
+   "color": "#BE6EFF"
+  },
+  "Hips_Deco2": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.65,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.67,
+    0.0
    ],
    "neon": false,
    "color": "#5E4568"
   },
-  "Deco_Head_Cheek_R": {
+  "LeftPauldron_Deco1": {
    "tris": 12,
    "origin": [
-    0.58,
-    2.9775,
-    -0.2
+    -1.5812,
+    2.447,
+    0.0
    ],
    "center": [
-    0.58,
-    2.977,
-    -0.2
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Head_Crown": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    3.8075,
-    0.05
-   ],
-   "center": [
-    0.0,
-    3.807,
-    0.05
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Head_CrownSide_L": {
-   "tris": 12,
-   "origin": [
-    -0.3,
-    3.6875,
-    0.1
-   ],
-   "center": [
-    -0.3,
-    3.688,
-    0.1
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Head_CrownSide_R": {
-   "tris": 12,
-   "origin": [
-    0.3,
-    3.6875,
-    0.1
-   ],
-   "center": [
-    0.3,
-    3.688,
-    0.1
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Head_CrownOuter_L": {
-   "tris": 12,
-   "origin": [
-    -0.5,
-    3.5775,
-    0.12
-   ],
-   "center": [
-    -0.5,
-    3.577,
-    0.12
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Head_CrownOuter_R": {
-   "tris": 12,
-   "origin": [
-    0.5,
-    3.5775,
-    0.12
-   ],
-   "center": [
-    0.5,
-    3.577,
-    0.12
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Chest_Top": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    2.39,
-    -0.74
-   ],
-   "center": [
-    0.0,
-    2.39,
-    -0.74
-   ],
-   "neon": false,
-   "color": "#886292"
-  },
-  "Deco_Chest_Side_L": {
-   "tris": 12,
-   "origin": [
-    -0.92,
-    1.77,
-    -0.72
-   ],
-   "center": [
-    -0.92,
-    1.77,
-    -0.72
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Chest_Side_R": {
-   "tris": 12,
-   "origin": [
-    0.92,
-    1.77,
-    -0.72
-   ],
-   "center": [
-    0.92,
-    1.77,
-    -0.72
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Chest_Belly": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    1.15,
-    -0.72
-   ],
-   "center": [
-    0.0,
-    1.15,
-    -0.72
-   ],
-   "neon": false,
-   "color": "#886292"
-  },
-  "Deco_Chest_Ray_L": {
-   "tris": 12,
-   "origin": [
-    -0.5,
-    1.95,
-    -0.72
-   ],
-   "center": [
-    -0.5,
-    1.95,
-    -0.72
+    -1.579,
+    2.467,
+    -0.66
    ],
    "neon": true,
    "color": "#BE6EFF"
   },
-  "Deco_Chest_Ray_R": {
+  "LeftPauldron_Deco2": {
    "tris": 12,
    "origin": [
-    0.5,
-    1.95,
-    -0.72
-   ],
-   "center": [
-    0.5,
-    1.95,
-    -0.72
-   ],
-   "neon": true,
-   "color": "#BE6EFF"
-  },
-  "Deco_Chest_RayLow_L": {
-   "tris": 12,
-   "origin": [
-    -0.3,
-    1.63,
-    -0.72
-   ],
-   "center": [
-    -0.3,
-    1.63,
-    -0.72
-   ],
-   "neon": true,
-   "color": "#BE6EFF"
-  },
-  "Deco_Chest_RayLow_R": {
-   "tris": 12,
-   "origin": [
-    0.3,
-    1.63,
-    -0.72
-   ],
-   "center": [
-    0.3,
-    1.63,
-    -0.72
-   ],
-   "neon": true,
-   "color": "#BE6EFF"
-  },
-  "Deco_Back_Crystal": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    2.45,
-    0.86
-   ],
-   "center": [
-    0.0,
-    2.45,
-    0.86
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Back_CrystalSide_L": {
-   "tris": 12,
-   "origin": [
-    -0.6,
-    2.2,
-    0.8
-   ],
-   "center": [
-    -0.6,
-    2.2,
-    0.8
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Back_CrystalSide_R": {
-   "tris": 12,
-   "origin": [
-    0.6,
-    2.2,
-    0.8
-   ],
-   "center": [
-    0.6,
-    2.2,
-    0.8
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Back_CrystalSmall_L": {
-   "tris": 12,
-   "origin": [
-    -0.95,
-    1.85,
-    0.72
-   ],
-   "center": [
-    -0.95,
-    1.85,
-    0.72
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Back_CrystalSmall_R": {
-   "tris": 12,
-   "origin": [
-    0.95,
-    1.85,
-    0.72
-   ],
-   "center": [
-    0.95,
-    1.85,
-    0.72
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Back_Slab": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    1.8,
-    0.72
-   ],
-   "center": [
-    0.0,
-    1.8,
-    0.72
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Pauldron_Cap_L": {
-   "tris": 12,
-   "origin": [
-    -1.5995,
-    2.7506,
+    -1.5812,
+    2.447,
     0.0
    ],
    "center": [
@@ -780,11 +705,41 @@
    "neon": false,
    "color": "#886292"
   },
-  "Deco_Pauldron_Cap_R": {
+  "LeftPauldron_Deco3": {
+   "tris": 24,
+   "origin": [
+    -1.5812,
+    2.447,
+    0.0
+   ],
+   "center": [
+    -1.802,
+    3.023,
+    0.017
+   ],
+   "neon": false,
+   "color": "#5E4568"
+  },
+  "RightPauldron_Deco1": {
    "tris": 12,
    "origin": [
-    1.5995,
-    2.7506,
+    1.5812,
+    2.447,
+    0.0
+   ],
+   "center": [
+    1.579,
+    2.467,
+    -0.66
+   ],
+   "neon": true,
+   "color": "#BE6EFF"
+  },
+  "RightPauldron_Deco2": {
+   "tris": 12,
+   "origin": [
+    1.5812,
+    2.447,
     0.0
    ],
    "center": [
@@ -795,101 +750,116 @@
    "neon": false,
    "color": "#886292"
   },
-  "Deco_Pauldron_Spike_L": {
-   "tris": 12,
+  "RightPauldron_Deco3": {
+   "tris": 24,
    "origin": [
-    -1.8021,
-    3.0232,
-    0.24
-   ],
-   "center": [
-    -1.802,
-    3.023,
-    0.24
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Pauldron_Spike_R": {
-   "tris": 12,
-   "origin": [
-    1.8021,
-    3.0232,
-    0.24
+    1.5812,
+    2.447,
+    0.0
    ],
    "center": [
     1.802,
     3.023,
-    0.24
+    0.017
    ],
    "neon": false,
    "color": "#5E4568"
   },
-  "Deco_Pauldron_Spike2_L": {
+  "Shin_L_Deco1": {
    "tris": 12,
    "origin": [
-    -1.7498,
-    2.9474,
-    -0.28
+    -0.5,
+    -0.4,
+    0.0
    ],
    "center": [
-    -1.75,
-    2.947,
-    -0.28
+    -0.5,
+    -0.78,
+    -0.38
    ],
    "neon": false,
    "color": "#5E4568"
   },
-  "Deco_Pauldron_Spike2_R": {
+  "Shin_R_Deco1": {
    "tris": 12,
    "origin": [
-    1.7498,
-    2.9474,
-    -0.28
+    0.5,
+    -0.4,
+    0.0
    ],
    "center": [
-    1.75,
-    2.947,
-    -0.28
+    0.5,
+    -0.78,
+    -0.38
    ],
    "neon": false,
    "color": "#5E4568"
   },
-  "Deco_Pauldron_Rune_L": {
+  "Thigh_L_Deco1": {
    "tris": 12,
    "origin": [
-    -1.5791,
-    2.4669,
-    -0.66
+    -0.5,
+    0.4,
+    0.0
    ],
    "center": [
-    -1.579,
-    2.467,
-    -0.66
+    -0.5,
+    -0.38,
+    -0.4
    ],
-   "neon": true,
-   "color": "#BE6EFF"
+   "neon": false,
+   "color": "#886292"
   },
-  "Deco_Pauldron_Rune_R": {
+  "Thigh_L_Deco2": {
    "tris": 12,
    "origin": [
-    1.5791,
-    2.4669,
-    -0.66
+    -0.5,
+    0.4,
+    0.0
    ],
    "center": [
-    1.579,
-    2.467,
-    -0.66
+    -0.5,
+    0.14,
+    0.0
    ],
-   "neon": true,
-   "color": "#BE6EFF"
+   "neon": false,
+   "color": "#5E4568"
   },
-  "Deco_UpperArm_Rune_L": {
+  "Thigh_R_Deco1": {
    "tris": 12,
    "origin": [
-    -1.937,
-    1.9314,
+    0.5,
+    0.4,
+    0.0
+   ],
+   "center": [
+    0.5,
+    -0.38,
+    -0.4
+   ],
+   "neon": false,
+   "color": "#886292"
+  },
+  "Thigh_R_Deco2": {
+   "tris": 12,
+   "origin": [
+    0.5,
+    0.4,
+    0.0
+   ],
+   "center": [
+    0.5,
+    0.14,
+    0.0
+   ],
+   "neon": false,
+   "color": "#5E4568"
+  },
+  "UpperArm_L_Deco1": {
+   "tris": 12,
+   "origin": [
+    -1.5,
+    2.2625,
     0.0
    ],
    "center": [
@@ -900,11 +870,11 @@
    "neon": true,
    "color": "#BE6EFF"
   },
-  "Deco_UpperArm_Rune_R": {
+  "UpperArm_R_Deco1": {
    "tris": 12,
    "origin": [
-    1.937,
-    1.9314,
+    1.5,
+    2.2625,
     0.0
    ],
    "center": [
@@ -914,276 +884,6 @@
    ],
    "neon": true,
    "color": "#BE6EFF"
-  },
-  "Deco_Forearm_Elbow_L": {
-   "tris": 12,
-   "origin": [
-    -1.5911,
-    1.3961,
-    0.2894
-   ],
-   "center": [
-    -1.591,
-    1.396,
-    0.289
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Forearm_Elbow_R": {
-   "tris": 12,
-   "origin": [
-    1.5911,
-    1.3961,
-    0.2894
-   ],
-   "center": [
-    1.591,
-    1.396,
-    0.289
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Forearm_Band_L": {
-   "tris": 12,
-   "origin": [
-    -1.6219,
-    1.1027,
-    -0.055
-   ],
-   "center": [
-    -1.622,
-    1.103,
-    -0.055
-   ],
-   "neon": false,
-   "color": "#886292"
-  },
-  "Deco_Forearm_Band_R": {
-   "tris": 12,
-   "origin": [
-    1.6219,
-    1.1027,
-    -0.055
-   ],
-   "center": [
-    1.622,
-    1.103,
-    -0.055
-   ],
-   "neon": false,
-   "color": "#886292"
-  },
-  "Deco_Hand_Knuckle_L": {
-   "tris": 12,
-   "origin": [
-    -1.7519,
-    -0.1345,
-    -0.7953
-   ],
-   "center": [
-    -1.752,
-    -0.135,
-    -0.795
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Hand_Knuckle_R": {
-   "tris": 12,
-   "origin": [
-    1.7519,
-    -0.1345,
-    -0.7953
-   ],
-   "center": [
-    1.752,
-    -0.135,
-    -0.795
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Belt": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    0.85,
-    0.0
-   ],
-   "center": [
-    0.0,
-    0.85,
-    0.0
-   ],
-   "neon": false,
-   "color": "#1E0A23"
-  },
-  "Deco_Belt_Buckle": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    0.7,
-    -0.56
-   ],
-   "center": [
-    0.0,
-    0.7,
-    -0.56
-   ],
-   "neon": false,
-   "color": "#BE6EFF"
-  },
-  "Deco_Belt_Side_L": {
-   "tris": 12,
-   "origin": [
-    -0.86,
-    0.67,
-    0.0
-   ],
-   "center": [
-    -0.86,
-    0.67,
-    0.0
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Belt_Side_R": {
-   "tris": 12,
-   "origin": [
-    0.86,
-    0.67,
-    0.0
-   ],
-   "center": [
-    0.86,
-    0.67,
-    0.0
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Thigh_Plate_L": {
-   "tris": 12,
-   "origin": [
-    -0.5,
-    0.14,
-    0.0
-   ],
-   "center": [
-    -0.5,
-    0.14,
-    0.0
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Thigh_Plate_R": {
-   "tris": 12,
-   "origin": [
-    0.5,
-    0.14,
-    0.0
-   ],
-   "center": [
-    0.5,
-    0.14,
-    0.0
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Knee_L": {
-   "tris": 12,
-   "origin": [
-    -0.5,
-    -0.38,
-    -0.4
-   ],
-   "center": [
-    -0.5,
-    -0.38,
-    -0.4
-   ],
-   "neon": false,
-   "color": "#886292"
-  },
-  "Deco_Knee_R": {
-   "tris": 12,
-   "origin": [
-    0.5,
-    -0.38,
-    -0.4
-   ],
-   "center": [
-    0.5,
-    -0.38,
-    -0.4
-   ],
-   "neon": false,
-   "color": "#886292"
-  },
-  "Deco_Shin_L": {
-   "tris": 12,
-   "origin": [
-    -0.5,
-    -0.78,
-    -0.38
-   ],
-   "center": [
-    -0.5,
-    -0.78,
-    -0.38
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Shin_R": {
-   "tris": 12,
-   "origin": [
-    0.5,
-    -0.78,
-    -0.38
-   ],
-   "center": [
-    0.5,
-    -0.78,
-    -0.38
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Toe_L": {
-   "tris": 12,
-   "origin": [
-    -0.5,
-    -1.37,
-    -0.915
-   ],
-   "center": [
-    -0.5,
-    -1.37,
-    -0.915
-   ],
-   "neon": false,
-   "color": "#5E4568"
-  },
-  "Deco_Toe_R": {
-   "tris": 12,
-   "origin": [
-    0.5,
-    -1.37,
-    -0.915
-   ],
-   "center": [
-    0.5,
-    -1.37,
-    -0.915
-   ],
-   "neon": false,
-   "color": "#5E4568"
   },
   "Body_Outline": {
    "tris": 148,
@@ -1336,7 +1036,7 @@
    "color": "#1E1B2E"
   }
  },
- "partCount": 89,
+ "partCount": 69,
  "totalTris": 4512,
  "triBudget": 9000,
  "budgetUse": 0.501,
@@ -1391,75 +1091,82 @@
   "BannerR3": "BannerR3"
  },
  "deco": {
-  "Deco_Head_Brow": "Head",
-  "Deco_Head_Jaw": "Head",
-  "Deco_Head_Cheek_L": "Head",
-  "Deco_Head_Cheek_R": "Head",
-  "Deco_Head_Crown": "Head",
-  "Deco_Head_CrownSide_L": "Head",
-  "Deco_Head_CrownSide_R": "Head",
-  "Deco_Head_CrownOuter_L": "Head",
-  "Deco_Head_CrownOuter_R": "Head",
-  "Deco_Chest_Top": "Body",
-  "Deco_Chest_Side_L": "Body",
-  "Deco_Chest_Side_R": "Body",
-  "Deco_Chest_Belly": "Body",
-  "Deco_Chest_Ray_L": "Body",
-  "Deco_Chest_Ray_R": "Body",
-  "Deco_Chest_RayLow_L": "Body",
-  "Deco_Chest_RayLow_R": "Body",
-  "Deco_Back_Crystal": "Body",
-  "Deco_Back_CrystalSide_L": "Body",
-  "Deco_Back_CrystalSide_R": "Body",
-  "Deco_Back_CrystalSmall_L": "Body",
-  "Deco_Back_CrystalSmall_R": "Body",
-  "Deco_Back_Slab": "Body",
-  "Deco_Pauldron_Cap_L": "LeftPauldron",
-  "Deco_Pauldron_Cap_R": "RightPauldron",
-  "Deco_Pauldron_Spike_L": "LeftPauldron",
-  "Deco_Pauldron_Spike_R": "RightPauldron",
-  "Deco_Pauldron_Spike2_L": "LeftPauldron",
-  "Deco_Pauldron_Spike2_R": "RightPauldron",
-  "Deco_Pauldron_Rune_L": "LeftPauldron",
-  "Deco_Pauldron_Rune_R": "RightPauldron",
-  "Deco_UpperArm_Rune_L": "UpperArm_L",
-  "Deco_UpperArm_Rune_R": "UpperArm_R",
-  "Deco_Forearm_Elbow_L": "Forearm_L",
-  "Deco_Forearm_Elbow_R": "Forearm_R",
-  "Deco_Forearm_Band_L": "Forearm_L",
-  "Deco_Forearm_Band_R": "Forearm_R",
-  "Deco_Hand_Knuckle_L": "Hand_L",
-  "Deco_Hand_Knuckle_R": "Hand_R",
-  "Deco_Belt": "Hips",
-  "Deco_Belt_Buckle": "Hips",
-  "Deco_Belt_Side_L": "Hips",
-  "Deco_Belt_Side_R": "Hips",
-  "Deco_Thigh_Plate_L": "Thigh_L",
-  "Deco_Thigh_Plate_R": "Thigh_R",
-  "Deco_Knee_L": "Thigh_L",
-  "Deco_Knee_R": "Thigh_R",
-  "Deco_Shin_L": "Shin_L",
-  "Deco_Shin_R": "Shin_R",
-  "Deco_Toe_L": "Foot_L",
-  "Deco_Toe_R": "Foot_R"
+  "Body_Deco1": "Body",
+  "Body_Deco2": "Body",
+  "Body_Deco3": "Body",
+  "Body_Deco4": "Body",
+  "Body_Deco5": "Body",
+  "Forearm_L_Deco1": "Forearm_L",
+  "Forearm_L_Deco2": "Forearm_L",
+  "Forearm_R_Deco1": "Forearm_R",
+  "Forearm_R_Deco2": "Forearm_R",
+  "Hand_L_Deco1": "Hand_L",
+  "Hand_R_Deco1": "Hand_R",
+  "Head_Deco1": "Head",
+  "Head_Deco2": "Head",
+  "Head_Deco3": "Head",
+  "Head_Deco4": "Head",
+  "Hips_Deco1": "Hips",
+  "Hips_Deco2": "Hips",
+  "LeftPauldron_Deco1": "LeftPauldron",
+  "LeftPauldron_Deco2": "LeftPauldron",
+  "LeftPauldron_Deco3": "LeftPauldron",
+  "RightPauldron_Deco1": "RightPauldron",
+  "RightPauldron_Deco2": "RightPauldron",
+  "RightPauldron_Deco3": "RightPauldron",
+  "Shin_L_Deco1": "Shin_L",
+  "Shin_R_Deco1": "Shin_R",
+  "Thigh_L_Deco1": "Thigh_L",
+  "Thigh_L_Deco2": "Thigh_L",
+  "Thigh_R_Deco1": "Thigh_R",
+  "Thigh_R_Deco2": "Thigh_R",
+  "UpperArm_L_Deco1": "UpperArm_L",
+  "UpperArm_R_Deco1": "UpperArm_R"
  },
+ "decoMaterial": {
+  "Body_Deco1": "Glass",
+  "Body_Deco2": "Glass",
+  "Body_Deco3": "Neon",
+  "Body_Deco4": "SmoothPlastic",
+  "Body_Deco5": "SmoothPlastic",
+  "Forearm_L_Deco1": "SmoothPlastic",
+  "Forearm_L_Deco2": "SmoothPlastic",
+  "Forearm_R_Deco1": "SmoothPlastic",
+  "Forearm_R_Deco2": "SmoothPlastic",
+  "Hand_L_Deco1": "SmoothPlastic",
+  "Hand_R_Deco1": "SmoothPlastic",
+  "Head_Deco1": "Glass",
+  "Head_Deco2": "Glass",
+  "Head_Deco3": "SmoothPlastic",
+  "Head_Deco4": "SmoothPlastic",
+  "Hips_Deco1": "Glass",
+  "Hips_Deco2": "SmoothPlastic",
+  "LeftPauldron_Deco1": "Neon",
+  "LeftPauldron_Deco2": "SmoothPlastic",
+  "LeftPauldron_Deco3": "SmoothPlastic",
+  "RightPauldron_Deco1": "Neon",
+  "RightPauldron_Deco2": "SmoothPlastic",
+  "RightPauldron_Deco3": "SmoothPlastic",
+  "Shin_L_Deco1": "SmoothPlastic",
+  "Shin_R_Deco1": "SmoothPlastic",
+  "Thigh_L_Deco1": "SmoothPlastic",
+  "Thigh_L_Deco2": "SmoothPlastic",
+  "Thigh_R_Deco1": "SmoothPlastic",
+  "Thigh_R_Deco2": "SmoothPlastic",
+  "UpperArm_L_Deco1": "Neon",
+  "UpperArm_R_Deco1": "Neon"
+ },
+ "mergedDeco": true,
  "lod2": [
-  "Deco_Head_CrownOuter_L",
-  "Deco_Head_CrownOuter_R",
-  "Deco_Chest_Ray_L",
-  "Deco_Chest_Ray_R",
-  "Deco_Chest_RayLow_L",
-  "Deco_Chest_RayLow_R",
-  "Deco_Back_CrystalSmall_L",
-  "Deco_Back_CrystalSmall_R",
-  "Deco_Pauldron_Rune_L",
-  "Deco_Pauldron_Rune_R",
-  "Deco_UpperArm_Rune_L",
-  "Deco_UpperArm_Rune_R",
-  "Deco_Hand_Knuckle_L",
-  "Deco_Hand_Knuckle_R",
-  "Deco_Toe_L",
-  "Deco_Toe_R"
+  "Body_Deco2",
+  "Body_Deco3",
+  "Hand_L_Deco1",
+  "Hand_R_Deco1",
+  "Head_Deco2",
+  "LeftPauldron_Deco1",
+  "RightPauldron_Deco1",
+  "UpperArm_L_Deco1",
+  "UpperArm_R_Deco1"
  ],
  "outlineParts": [
   "Body_Outline",

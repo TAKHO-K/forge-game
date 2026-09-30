@@ -37,6 +37,19 @@ function ArtMeshKit.normalize(model)
 	return model
 end
 
+-- 서버 부팅 전용: 소품 캐시(로더 1단계)가 찰 때까지 잠깐 기다린다(맵 · 제단은 한 번 짓고 끝 - 늦으면 지금 모습). 반환 준비됨 여부.
+function ArtMeshKit.waitProps()
+	local t0 = os.clock()
+	while os.clock() - t0 < Data.propsWaitSeconds do
+		local folder = ReplicatedStorage:FindFirstChild(Data.cacheFolder)
+		if folder and folder:GetAttribute(Data.propsReadyAttribute) then
+			return true
+		end
+		task.wait(0.1)
+	end
+	return false
+end
+
 function ArtMeshKit.get(key)
 	if not ArtMeshKit.enabled() then
 		return nil
@@ -118,7 +131,13 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 				m.Anchored, m.Massless = false, true
 				m.CanCollide, m.CanTouch, m.CanQuery = false, false, false
 				m.CastShadow = false
-				m.Color = isOutline and ArtStyleV1Data.ink or host.Color
+				local pm = meta and meta.parts and meta.parts[p.Name]
+				local mat = meta and meta.decoMaterial and meta.decoMaterial[p.Name]
+				m.Color = isOutline and ArtStyleV1Data.ink or (pm and pm.color and Color3.fromHex(pm.color)) or host.Color -- 장식 묶음 색 = 메타(테마 색 기준 Blender 색)
+				m.Material = isOutline and Enum.Material.SmoothPlastic or (mat and Enum.Material[mat]) or host.Material
+				if meta and meta.lod2 and meta.lod2[p.Name] then
+					m:SetAttribute("DetailLod", 2) -- 폰 · 먼 거리에서 숨김(BossAnimator updateDetailLod)
+				end
 				local w = Instance.new("WeldConstraint")
 				w.Part0, w.Part1 = host, m
 				w.Parent = m
@@ -134,6 +153,58 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 	end
 	model:SetAttribute("ArtMesh", key)
 	return count, lines
+end
+
+-- 소품 겉모습 입히기(킷 · 제단): 같은 이름 코드 파트 자리에 메시를 겹치고 코드 파트는 투명(충돌 · 조준 · 프롬프트 자리 그대로 = 판정 불변).
+--   frame = 메시 공간 원점이 오는 자리(라이브러리 틀 = 원점 · 제단 = 바닥 가운데). 색 · 재질 = 코드 파트 그대로. 반환 입힌 수.
+function ArtMeshKit.skin(model, key, frame)
+	local src = ArtMeshKit.get(key)
+	if not src then
+		return 0
+	end
+	local n = 0
+	for _, p in ipairs(src:GetChildren()) do
+		local target = p:IsA("BasePart") and model:FindFirstChild(p.Name, true)
+		if target and target:IsA("BasePart") then
+			local m = p:Clone()
+			m.Name = p.Name .. "_Mesh"
+			m.CFrame = frame * p.CFrame
+			m.Color, m.Material = target.Color, target.Material
+			m.Anchored = target.Anchored
+			m.CanCollide, m.CanTouch, m.CanQuery = false, false, false
+			m.CastShadow = target.CastShadow
+			if not target.Anchored then
+				local w = Instance.new("WeldConstraint")
+				w.Part0, w.Part1 = target, m
+				w.Parent = m
+			end
+			target.Transparency = 1
+			m.Parent = target.Parent
+			n += 1
+		end
+	end
+	model:SetAttribute("ArtMesh", key)
+	return n
+end
+
+-- 방어구 구역(아이콘 · 착용 표시 공용): item.setZone(세트 계열 - SAVE v49) · 없으면 그 itemLevel이 닿는 보스 스테이지(보스 간격 올림)의 보스 구역. 겉모습만.
+function ArtMeshKit.armorZone(item)
+	local setZone = type(item) == "table" and item.setZone or nil
+	if type(setZone) == "string" and setZone:match("^tier%d$") then
+		return setZone
+	end
+	local BossRules = require(ReplicatedStorage.Shared.BossRules)
+	local BossData = require(ReplicatedStorage.Shared.data.BossData)
+	local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+	local interval = BossData.stageInterval or 5
+	local level = type(item) == "table" and item.itemLevel or 1
+	local bossId = BossRules.bossIdForStage(math.max(1, math.ceil(level / interval)) * interval)
+	for _, z in ipairs(WorldMapData.zones or {}) do
+		if z.bossId == bossId then
+			return z.key
+		end
+	end
+	return "tier1"
 end
 
 local function hex(s)

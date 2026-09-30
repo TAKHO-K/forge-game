@@ -271,7 +271,7 @@
    "color": "#F6CCE0"
   },
   "SkirtF2": {
-   "tris": 30,
+   "tris": 54,
    "origin": [
     0.0,
     -0.0336,
@@ -301,7 +301,7 @@
    "color": "#F6CCE0"
   },
   "SkirtB2": {
-   "tris": 30,
+   "tris": 54,
    "origin": [
     0.0,
     -0.0336,
@@ -331,7 +331,7 @@
    "color": "#F6CCE0"
   },
   "SkirtL2": {
-   "tris": 30,
+   "tris": 42,
    "origin": [
     -0.7559,
     -0.0336,
@@ -340,7 +340,7 @@
    "center": [
     -0.922,
     -0.535,
-    0.0
+    -0.108
    ],
    "neon": false,
    "color": "#54E2D6"
@@ -525,176 +525,26 @@
    "neon": false,
    "color": "#54E2D6"
   },
-  "Deco_Halo_Top": {
+  "Body_Deco1": {
    "tris": 12,
    "origin": [
     0.0,
-    4.1275,
-    0.5
+    1.05,
+    0.0
    ],
    "center": [
     0.0,
-    4.128,
-    0.5
+    2.25,
+    -0.5
    ],
    "neon": true,
    "color": "#54E2D6"
   },
-  "Deco_Halo_Side_L": {
-   "tris": 12,
-   "origin": [
-    -0.65,
-    3.6275,
-    0.5
-   ],
-   "center": [
-    -0.65,
-    3.628,
-    0.5
-   ],
-   "neon": true,
-   "color": "#54E2D6"
-  },
-  "Deco_Halo_Side_R": {
-   "tris": 12,
-   "origin": [
-    0.65,
-    3.6275,
-    0.5
-   ],
-   "center": [
-    0.65,
-    3.628,
-    0.5
-   ],
-   "neon": true,
-   "color": "#54E2D6"
-  },
-  "Deco_Halo_Corner_L": {
-   "tris": 12,
-   "origin": [
-    -0.5,
-    4.0575,
-    0.5
-   ],
-   "center": [
-    -0.5,
-    4.057,
-    0.5
-   ],
-   "neon": true,
-   "color": "#54E2D6"
-  },
-  "Deco_Halo_Corner_R": {
-   "tris": 12,
-   "origin": [
-    0.5,
-    4.0575,
-    0.5
-   ],
-   "center": [
-    0.5,
-    4.057,
-    0.5
-   ],
-   "neon": true,
-   "color": "#54E2D6"
-  },
-  "Deco_Head_Jewel": {
+  "Body_Deco2": {
    "tris": 12,
    "origin": [
     0.0,
-    3.3775,
-    -0.46
-   ],
-   "center": [
-    0.0,
-    3.378,
-    -0.46
-   ],
-   "neon": true,
-   "color": "#54E2D6"
-  },
-  "Deco_Crown_Spike": {
-   "tris": 12,
-   "origin": [
-    -0.7,
-    3.6775,
-    -0.3
-   ],
-   "center": [
-    -0.7,
-    3.678,
-    -0.3
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Crown_SpikeSide_L": {
-   "tris": 12,
-   "origin": [
-    -0.62,
-    3.3775,
-    -0.1
-   ],
-   "center": [
-    -0.62,
-    3.378,
-    -0.1
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Crown_SpikeSide_R": {
-   "tris": 12,
-   "origin": [
-    -0.62,
-    3.9775,
-    -0.1
-   ],
-   "center": [
-    -0.62,
-    3.977,
-    -0.1
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Crown_SpikeBack_L": {
-   "tris": 12,
-   "origin": [
-    -0.56,
-    3.4375,
-    0.26
-   ],
-   "center": [
-    -0.56,
-    3.438,
-    0.26
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Crown_SpikeBack_R": {
-   "tris": 12,
-   "origin": [
-    -0.56,
-    3.9175,
-    0.26
-   ],
-   "center": [
-    -0.56,
-    3.918,
-    0.26
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Collar": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    2.78,
+    1.05,
     0.0
    ],
    "center": [
@@ -705,26 +555,146 @@
    "neon": false,
    "color": "#F9DEEB"
   },
-  "Deco_Chest_Gem": {
-   "tris": 12,
+  "Crown_Deco1": {
+   "tris": 36,
    "origin": [
     0.0,
-    2.25,
-    -0.5
+    3.6775,
+    0.0
+   ],
+   "center": [
+    -0.692,
+    3.678,
+    -0.193
+   ],
+   "neon": false,
+   "color": "#54E2D6"
+  },
+  "Crown_Deco2": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    3.6775,
+    0.0
+   ],
+   "center": [
+    -0.56,
+    3.677,
+    0.26
+   ],
+   "neon": false,
+   "color": "#54E2D6"
+  },
+  "Forearm_L_Deco1": {
+   "tris": 12,
+   "origin": [
+    -1.0352,
+    1.737,
+    0.0
+   ],
+   "center": [
+    -1.113,
+    0.998,
+    -0.104
+   ],
+   "neon": false,
+   "color": "#54E2D6"
+  },
+  "Forearm_R_Deco1": {
+   "tris": 12,
+   "origin": [
+    1.0352,
+    1.737,
+    0.0
+   ],
+   "center": [
+    1.113,
+    0.998,
+    -0.104
+   ],
+   "neon": false,
+   "color": "#54E2D6"
+  },
+  "Head_Deco1": {
+   "tris": 48,
+   "origin": [
+    0.0,
+    2.75,
+    0.0
    ],
    "center": [
     0.0,
-    2.25,
+    3.653,
+    0.025
+   ],
+   "neon": true,
+   "color": "#54E2D6"
+  },
+  "Head_Deco2": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    2.75,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.057,
+    0.5
+   ],
+   "neon": true,
+   "color": "#54E2D6"
+  },
+  "Hips_Deco1": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.8,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.95,
     -0.5
    ],
    "neon": true,
    "color": "#54E2D6"
   },
-  "Deco_Shoulder_Crystal_L": {
+  "Hips_Deco2": {
    "tris": 12,
    "origin": [
-    -1.0819,
-    2.8228,
+    0.0,
+    0.8,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "neon": false,
+   "color": "#F9DEEB"
+  },
+  "ScepterGem_Deco1": {
+   "tris": 36,
+   "origin": [
+    1.0041,
+    2.0324,
+    0.0418
+   ],
+   "center": [
+    0.97,
+    2.297,
+    0.081
+   ],
+   "neon": false,
+   "color": "#54E2D6"
+  },
+  "UpperArm_L_Deco1": {
+   "tris": 12,
+   "origin": [
+    -0.95,
+    2.5475,
     0.0
    ],
    "center": [
@@ -735,27 +705,12 @@
    "neon": false,
    "color": "#54E2D6"
   },
-  "Deco_Shoulder_Crystal_R": {
+  "UpperArm_L_Deco2": {
    "tris": 12,
    "origin": [
-    1.0819,
-    2.8228,
+    -0.95,
+    2.5475,
     0.0
-   ],
-   "center": [
-    1.082,
-    2.823,
-    0.0
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Shoulder_Crystal2_L": {
-   "tris": 12,
-   "origin": [
-    -1.0306,
-    2.737,
-    0.16
    ],
    "center": [
     -1.031,
@@ -765,26 +720,11 @@
    "neon": false,
    "color": "#54E2D6"
   },
-  "Deco_Shoulder_Crystal2_R": {
+  "UpperArm_L_Deco3": {
    "tris": 12,
    "origin": [
-    1.0306,
-    2.737,
-    0.16
-   ],
-   "center": [
-    1.031,
-    2.737,
-    0.16
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Epaulet_L": {
-   "tris": 12,
-   "origin": [
-    -0.9416,
-    2.6271,
+    -0.95,
+    2.5475,
     0.0
    ],
    "center": [
@@ -795,11 +735,41 @@
    "neon": false,
    "color": "#F9DEEB"
   },
-  "Deco_Epaulet_R": {
+  "UpperArm_R_Deco1": {
    "tris": 12,
    "origin": [
-    0.9416,
-    2.6271,
+    0.95,
+    2.5475,
+    0.0
+   ],
+   "center": [
+    1.082,
+    2.823,
+    0.0
+   ],
+   "neon": false,
+   "color": "#54E2D6"
+  },
+  "UpperArm_R_Deco2": {
+   "tris": 12,
+   "origin": [
+    0.95,
+    2.5475,
+    0.0
+   ],
+   "center": [
+    1.031,
+    2.737,
+    0.16
+   ],
+   "neon": false,
+   "color": "#54E2D6"
+  },
+  "UpperArm_R_Deco3": {
+   "tris": 12,
+   "origin": [
+    0.95,
+    2.5475,
     0.0
    ],
    "center": [
@@ -809,201 +779,6 @@
    ],
    "neon": false,
    "color": "#F9DEEB"
-  },
-  "Deco_Bracelet_L": {
-   "tris": 12,
-   "origin": [
-    -1.1128,
-    0.9983,
-    -0.1044
-   ],
-   "center": [
-    -1.113,
-    0.998,
-    -0.104
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Bracelet_R": {
-   "tris": 12,
-   "origin": [
-    1.1128,
-    0.9983,
-    -0.1044
-   ],
-   "center": [
-    1.113,
-    0.998,
-    -0.104
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Belt": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    1.0,
-    0.0
-   ],
-   "center": [
-    0.0,
-    1.0,
-    0.0
-   ],
-   "neon": false,
-   "color": "#F9DEEB"
-  },
-  "Deco_Belt_Gem": {
-   "tris": 12,
-   "origin": [
-    0.0,
-    0.95,
-    -0.5
-   ],
-   "center": [
-    0.0,
-    0.95,
-    -0.5
-   ],
-   "neon": true,
-   "color": "#54E2D6"
-  },
-  "Deco_Hem_F_L": {
-   "tris": 12,
-   "origin": [
-    -0.42,
-    -0.8182,
-    -0.8609
-   ],
-   "center": [
-    -0.42,
-    -0.818,
-    -0.861
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Hem_F_R": {
-   "tris": 12,
-   "origin": [
-    0.42,
-    -0.8182,
-    -0.8609
-   ],
-   "center": [
-    0.42,
-    -0.818,
-    -0.861
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Hem_B_L": {
-   "tris": 12,
-   "origin": [
-    -0.42,
-    -0.8182,
-    0.8609
-   ],
-   "center": [
-    -0.42,
-    -0.818,
-    0.861
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Hem_B_R": {
-   "tris": 12,
-   "origin": [
-    0.42,
-    -0.8182,
-    0.8609
-   ],
-   "center": [
-    0.42,
-    -0.818,
-    0.861
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Hem_Side_L": {
-   "tris": 12,
-   "origin": [
-    -1.0109,
-    -0.8182,
-    -0.3
-   ],
-   "center": [
-    -1.011,
-    -0.818,
-    -0.3
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Hem_Side_R": {
-   "tris": 12,
-   "origin": [
-    -1.0109,
-    -0.8182,
-    -0.3
-   ],
-   "center": [
-    -1.011,
-    -0.818,
-    -0.3
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Scepter_Prong_L": {
-   "tris": 12,
-   "origin": [
-    0.7091,
-    2.1607,
-    0.064
-   ],
-   "center": [
-    0.709,
-    2.161,
-    0.064
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Scepter_Prong_R": {
-   "tris": 12,
-   "origin": [
-    1.266,
-    2.2193,
-    0.064
-   ],
-   "center": [
-    1.266,
-    2.219,
-    0.064
-   ],
-   "neon": false,
-   "color": "#54E2D6"
-  },
-  "Deco_Scepter_ProngTop": {
-   "tris": 12,
-   "origin": [
-    0.9648,
-    2.4067,
-    0.0946
-   ],
-   "center": [
-    0.965,
-    2.407,
-    0.095
-   ],
-   "neon": false,
-   "color": "#54E2D6"
   },
   "Hips_Outline": {
    "tris": 88,
@@ -1156,10 +931,10 @@
    "color": "#1E1B2E"
   }
  },
- "partCount": 77,
- "totalTris": 3128,
+ "partCount": 62,
+ "totalTris": 3116,
  "triBudget": 9000,
- "budgetUse": 0.348,
+ "budgetUse": 0.346,
  "version": "A2-M1",
  "rigId": "crystal_queen",
  "partCap": 95,
@@ -1218,52 +993,49 @@
   "Train3": "Train3"
  },
  "deco": {
-  "Deco_Halo_Top": "Head",
-  "Deco_Halo_Side_L": "Head",
-  "Deco_Halo_Side_R": "Head",
-  "Deco_Halo_Corner_L": "Head",
-  "Deco_Halo_Corner_R": "Head",
-  "Deco_Head_Jewel": "Head",
-  "Deco_Crown_Spike": "Crown",
-  "Deco_Crown_SpikeSide_L": "Crown",
-  "Deco_Crown_SpikeSide_R": "Crown",
-  "Deco_Crown_SpikeBack_L": "Crown",
-  "Deco_Crown_SpikeBack_R": "Crown",
-  "Deco_Collar": "Body",
-  "Deco_Chest_Gem": "Body",
-  "Deco_Shoulder_Crystal_L": "UpperArm_L",
-  "Deco_Shoulder_Crystal_R": "UpperArm_R",
-  "Deco_Shoulder_Crystal2_L": "UpperArm_L",
-  "Deco_Shoulder_Crystal2_R": "UpperArm_R",
-  "Deco_Epaulet_L": "UpperArm_L",
-  "Deco_Epaulet_R": "UpperArm_R",
-  "Deco_Bracelet_L": "Forearm_L",
-  "Deco_Bracelet_R": "Forearm_R",
-  "Deco_Belt": "Hips",
-  "Deco_Belt_Gem": "Hips",
-  "Deco_Hem_F_L": "SkirtF2",
-  "Deco_Hem_F_R": "SkirtF2",
-  "Deco_Hem_B_L": "SkirtB2",
-  "Deco_Hem_B_R": "SkirtB2",
-  "Deco_Hem_Side_L": "SkirtL2",
-  "Deco_Hem_Side_R": "SkirtL2",
-  "Deco_Scepter_Prong_L": "ScepterGem",
-  "Deco_Scepter_Prong_R": "ScepterGem",
-  "Deco_Scepter_ProngTop": "ScepterGem"
+  "Body_Deco1": "Body",
+  "Body_Deco2": "Body",
+  "Crown_Deco1": "Crown",
+  "Crown_Deco2": "Crown",
+  "Forearm_L_Deco1": "Forearm_L",
+  "Forearm_R_Deco1": "Forearm_R",
+  "Head_Deco1": "Head",
+  "Head_Deco2": "Head",
+  "Hips_Deco1": "Hips",
+  "Hips_Deco2": "Hips",
+  "ScepterGem_Deco1": "ScepterGem",
+  "UpperArm_L_Deco1": "UpperArm_L",
+  "UpperArm_L_Deco2": "UpperArm_L",
+  "UpperArm_L_Deco3": "UpperArm_L",
+  "UpperArm_R_Deco1": "UpperArm_R",
+  "UpperArm_R_Deco2": "UpperArm_R",
+  "UpperArm_R_Deco3": "UpperArm_R"
  },
+ "decoMaterial": {
+  "Body_Deco1": "Neon",
+  "Body_Deco2": "SmoothPlastic",
+  "Crown_Deco1": "Glass",
+  "Crown_Deco2": "Glass",
+  "Forearm_L_Deco1": "Glass",
+  "Forearm_R_Deco1": "Glass",
+  "Head_Deco1": "Neon",
+  "Head_Deco2": "Neon",
+  "Hips_Deco1": "Neon",
+  "Hips_Deco2": "SmoothPlastic",
+  "ScepterGem_Deco1": "Glass",
+  "UpperArm_L_Deco1": "Glass",
+  "UpperArm_L_Deco2": "Glass",
+  "UpperArm_L_Deco3": "SmoothPlastic",
+  "UpperArm_R_Deco1": "Glass",
+  "UpperArm_R_Deco2": "Glass",
+  "UpperArm_R_Deco3": "SmoothPlastic"
+ },
+ "mergedDeco": true,
  "lod2": [
-  "Deco_Halo_Corner_L",
-  "Deco_Halo_Corner_R",
-  "Deco_Crown_SpikeBack_L",
-  "Deco_Crown_SpikeBack_R",
-  "Deco_Shoulder_Crystal2_L",
-  "Deco_Shoulder_Crystal2_R",
-  "Deco_Hem_F_L",
-  "Deco_Hem_F_R",
-  "Deco_Hem_B_L",
-  "Deco_Hem_B_R",
-  "Deco_Hem_Side_L",
-  "Deco_Hem_Side_R"
+  "Crown_Deco2",
+  "Head_Deco2",
+  "UpperArm_L_Deco2",
+  "UpperArm_R_Deco2"
  ],
  "outlineParts": [
   "Hips_Outline",

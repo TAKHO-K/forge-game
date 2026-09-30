@@ -28,6 +28,11 @@ local function loadAll()
 	table.sort(queue, function(a, b)
 		return a.key < b.key
 	end)
+	-- 1단계 = 소품(맵 · 제단이 부팅 때 기다린다) → PropsReady · 2단계 = 나머지
+	local first, rest = {}, {}
+	for _, item in ipairs(queue) do
+		table.insert(item.key:sub(1, #Data.propsFirstPrefix) == Data.propsFirstPrefix and first or rest, item)
+	end
 	local t0 = os.clock()
 	local ok, failed, running = 0, {}, 0
 	local nextIndex = 1
@@ -49,16 +54,22 @@ local function loadAll()
 		end
 		running -= 1
 	end
-	for _ = 1, math.min(Data.loadConcurrency, #queue) do
-		running += 1
-		task.spawn(worker)
+	local function runAll(list)
+		queue, nextIndex = list, 1
+		for _ = 1, math.min(Data.loadConcurrency, #queue) do
+			running += 1
+			task.spawn(worker)
+		end
+		while running > 0 do
+			task.wait(0.05)
+		end
 	end
-	while running > 0 do
-		task.wait(0.1)
-	end
+	runAll(first)
+	folder:SetAttribute(Data.propsReadyAttribute, true)
+	runAll(rest)
 	folder:SetAttribute("Loaded", ok)
 	folder:SetAttribute(Data.readyAttribute, true)
-	print(("[ArtAssetLoader] 메시 캐시 %d/%d · %.1f초"):format(ok, #queue, os.clock() - t0))
+	print(("[ArtAssetLoader] 메시 캐시 %d/%d(소품 %d 먼저) · %.1f초"):format(ok, #first + #rest, #first, os.clock() - t0))
 	if #failed > 0 then
 		warn(("[ArtAssetLoader] 로드 실패 %d개(지금 모델 그대로): %s"):format(#failed, table.concat(failed, ", ")))
 	end

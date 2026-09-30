@@ -7,6 +7,9 @@ return {
 	unitScale = 0.01,
 	yawDegrees = 180,
 	loadConcurrency = 4, -- 동시에 부르는 LoadAsset 수
+	propsFirstPrefix = "props/", -- 로더 1단계(맵 · 제단이 부팅 때 한 번 짓는다 - 이것부터 불러 PropsReady)
+	propsReadyAttribute = "PropsReady",
+	propsWaitSeconds = 15, -- 서버 부팅이 소품 캐시를 기다리는 상한(넘기면 지금 모습 그대로 - 경고 없음)
 	-- 몬스터: 가져오기 순서표 6(슬라임 · 양 제외 - 아트 샘플 몸체 · 옛 몸체 유지)
 	monsterSkip = { moss_slime = true, cloud_sheep = true },
 	outlineSuffix = "_Outline", -- 보스 껍데기 메시(같은 뼈 용접 · 색 = ArtStyleV1Data.ink) → 그 보스는 외곽선 풀 Highlight를 끈다(Attribute MeshOutline)
@@ -14,6 +17,31 @@ return {
 	weaponClasses = { greatsword = true, dualblade = true, bow = true, healer = true },
 	weaponPieces = { dualblade = { "BladeRight", "BladeLeft" } }, -- WeaponRigSpec 조각 이름(같은 메시 복제 - 순서표 2)
 	weaponDropParts = { bow = { "String" } }, -- 시위 = 코드(순서표 3)
+	-- 펫(순서표 11): 저장된 펫 등급(부화 결과 EggData.hatchGrades 4단계) → 외형 등급(roblox/art/pets/<몸>_<외형>.fbx 3단계). 알 등급은 저장되지 않아 부화 결과 등급으로 잇는다.
+	petLookOfGrade = { common = "normal", uncommon = "good", rare = "rare", epic = "rare" },
+	petDecoColor = { -- 좋은 · 희귀 장식(Deco) 색 = 메타 looks(구역 색을 따르지 않는 대비색)
+		dog = { good = "#3FC9B5", rare = "#F2C94C" },
+		cat = { good = "#FFB547", rare = "#F2C94C" },
+		dragon = { good = "#3FC9B5", rare = "#F2C94C" },
+	},
+	petGlowPoint = { dog = { 0, -0.02, -0.74 }, cat = { 0, 0.22, -0.74 }, dragon = { 0.1, 0.3, -0.68 } }, -- 희귀 외형 = 이 자리(몸 기준)에 PointLight(메타 glowPoint)
+	petGlow = { range = 4, brightness = 1 },
+	-- 방어구 착용 표시(순서표 14 · docs/art/armor-wear-spec.md 2안 = 클라 조각 + WeldConstraint). 모델 = armor/<부위>_<구역>_<외형>(외형 FBX 3종)
+	armorLookOfGrade = { normal = "normal", rare = "normal", epic = "normal", legendary = "legendary", relic = "legendary", ancient = "legendary", primordial = "transcendent", transcendent = "transcendent" },
+	armorScaleClamp = { min = 0.8, max = 1.35 }, -- 체형 배율(붙는 파트 Size ÷ refSize) 자르기 - 명세 §5
+	armorLookAttribute = "ArmorLook_", -- Player Attribute ArmorLook_<부위> = "<구역>|<등급>"(서버 InventorySync.push - 화면 전용 복사본 · 저장 아님)
+	-- 조각 색(make_armor_wear.py palette와 같은 규칙): 본체 = 구역 base · _Trim = 구역 강조(영웅 이상 = 등급 색) · _Grade = 등급 색 · _Glow = Neon(보석 빛)
+	armorZoneColors = {
+		tier1 = { base = { 168, 162, 154 }, accent = { 92, 224, 138 } },
+		tier2 = { base = { 120, 96, 190 }, accent = { 210, 108, 240 } },
+		tier3 = { base = { 201, 228, 234 }, accent = { 235, 110, 90 } },
+		tier4 = { base = { 217, 186, 140 }, accent = { 205, 150, 60 } },
+		tier5 = { base = { 88, 92, 128 }, accent = { 120, 230, 255 } },
+		tier6 = { base = { 236, 240, 246 }, accent = { 111, 200, 255 } },
+	},
+	armorGlow = { 255, 244, 214 },
+	armorPrimordialBase = { 244, 242, 250 },
+	armorTranscendent = { base = { 38, 34, 48 }, grade = { 214, 176, 62 }, glow = { 255, 208, 92 } }, -- 흑금(artlib BLACK_BODY · GOLD · GOLD_GLOW)
 	-- 무기 등급(ArmorData.gradeOrder) → 파일 이름 등급(roblox/art/weapons/<직업>_<등급>.fbx)
 	weaponGradeFile = { normal = "normal", rare = "rare", epic = "epic", legendary = "legendary", ancient = "ancient", relic = "relic", primordial = "primordial", transcendent = "transcendent" },
 }

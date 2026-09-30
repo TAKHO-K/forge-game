@@ -88,7 +88,8 @@ end
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
 local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
-function ItemIcons.image(parent, size, key)
+--   cellScale(선택) = 아이콘 자리(parent) 대신 그 칸(parent.Parent) 크기 비율로 - 칸이 커도 도형 자리(26 ~ 30px)에 갇히지 않게(정사각 유지).
+function ItemIcons.image(parent, size, key, cellScale)
 	local e = key and ArtAssetIds[key]
 	if not (e and e.image and workspace:GetAttribute(ArtStyleV1Data.attribute)) then
 		return false
@@ -101,8 +102,29 @@ function ItemIcons.image(parent, size, key)
 	img.Size = UDim2.new(0, size * 0.88, 0, size * 0.88)
 	img.Image = "rbxassetid://" .. tostring(e.image)
 	img.ScaleType = Enum.ScaleType.Fit
+	if cellScale and parent.Parent and parent.Parent:IsA("GuiObject") then
+		img.AnchorPoint = parent.AnchorPoint
+		img.Position = parent.Position
+		img.Size = UDim2.fromScale(cellScale, cellScale)
+		local ar = Instance.new("UIAspectRatioConstraint")
+		ar.AspectRatio = 1
+		ar.DominantAxis = Enum.DominantAxis.Height
+		ar.Parent = img
+		img.Parent = parent.Parent
+		parent.Visible = false
+		return true
+	end
 	img.Parent = parent
 	return true
+end
+
+-- 아이콘 키(ArtAssetIds): 무기 = icons/weapons/<직업>_<등급> · 방어구 = icons/armor/<부위>_<구역 키>_<등급>(구역 = ArtMeshKit.armorZone - setZone 우선).
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
+function ItemIcons.keyFor(part, grade, itemLevel, classId, setZone)
+	if part == "weapon" then
+		return classId and ("icons/weapons/%s_%s"):format(classId, tostring(grade)) or nil
+	end
+	return ("icons/armor/%s_%s_%s"):format(part, ArtMeshKit.armorZone({ setZone = setZone, itemLevel = itemLevel }), tostring(grade))
 end
 
 ItemIcons.byPart = {

@@ -260,7 +260,7 @@ function MeshImportCheck.check(desc, rigId, opts)
 		end
 	end
 	for name in pairs(byName) do
-		if not exp.parts[name] then
+		if not exp.parts[name] and not (desc.attached and desc.attached[name]) then -- A2-N3: 껍데기(_Outline) · 메타 장식 묶음(deco)은 부위에 용접되는 정상 파트
 			table.insert(extra, name)
 		end
 	end
@@ -463,7 +463,7 @@ function MeshImportCheck.describe(model, opts)
 	opts = opts or {}
 	local meta = opts.meta
 	local refCF, ref = MeshImportCheck.referenceFrame(model)
-	local desc = { name = model.Name, reference = ref ~= nil, parts = {} }
+	local desc = { name = model.Name, reference = ref ~= nil, parts = {}, attached = {} }
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") and d ~= ref then
 			local att = d:FindFirstChild(Data.jointAttachmentName)
@@ -478,6 +478,9 @@ function MeshImportCheck.describe(model, opts)
 			local tri = d:GetAttribute(Data.triAttribute)
 			if type(tri) ~= "number" and meta and meta.parts and meta.parts[d.Name] then
 				tri = meta.parts[d.Name].tris
+			end
+			if d.Name:match("_Outline$") or (meta and meta.deco and meta.deco[d.Name]) then
+				desc.attached[d.Name] = true
 			end
 			table.insert(desc.parts, {
 				name = d.Name, className = d.ClassName, joint = v3(refCF:PointToObjectSpace(jointWorld)), center = v3(refCF:PointToObjectSpace(d.Position)),
