@@ -122,9 +122,9 @@ def dog(grade):
     if g >= 1:  # 좋은 = 두꺼운 목줄 + 둥근 이름표
         c, r, tilt = NECK["dog"]
         tag = A.xform(A.lathe([(0.0, -0.035), (0.18, -0.035), (0.18, 0.035), (0.0, 0.035)], 10, axis="Z"), t=(0, -0.02, -0.72))  # 2차: 이름표 지름 ×1.8 · 목줄 두께 ×1.6
-        o["Leg_F"] = A.merge(o["Leg_F"], ring_at(c, r * 1.08, tilt, 0.13), *([tag] if g < 2 else []))
-    if g >= 2:  # 희귀 = 금 Deco(왕관 + 이름표 자리 보석) - 무늬는 뺐다(모음 크기에서 안 보였다 · 예산)
-        o["Deco"] = A.merge(small_crown("dog"), gem_on("dog", (0, -0.02, -0.74)))
+        o["Deco"] = A.merge(ring_at(c, r * 1.08, tilt, 0.17), *([tag] if g < 2 else []))  # 3차: 목줄 = 따로 칠하는 Deco 파트(몸 강조색에 묻혔다 - 총괄 검토) · 두께 ×1.3
+    if g >= 2:  # 희귀 = 금 Deco(목줄 + 왕관 + 이름표 자리 보석) - 무늬는 뺐다(모음 크기에서 안 보였다 · 예산)
+        o["Deco"] = A.merge(o["Deco"], small_crown("dog"), gem_on("dog", (0, -0.02, -0.74)))
     k = 1.0
     tip = (0, 0.12 + 0.24 * k, 0.5 + 0.24 * k)  # 짧은 꼬리(≤ 0.35) · 45° 위 - 고양이의 긴 S자와 구별
     tail = A.tube([(0, 0.1, 0.46), (0, 0.2, 0.6), tip], lambda u: 0.085 * (1 - 0.4 * u) + 0.02, sides=6, tip_end=False)
@@ -150,9 +150,9 @@ def cat(grade):
         c = (0, 0.22, -0.64)
         lobes = [A.ellipsoid((0.19, 0.12, 0.07), n=6, rings=2, center=(c[0] + sgn * 0.19, c[1] + 0.03, c[2] - 0.02)) for sgn in (-1, 1)]  # 2차: 나비 ×1.6
         tails = [A.xform(A.box(0.09, 0.23, 0.05, b=0.015), m=A.rot(rz=sgn * 25), t=(c[0] + sgn * 0.09, c[1] - 0.17, c[2] - 0.02)) for sgn in (-1, 1)]  # 늘어짐 ×1.8
-        o["Leg_F"] = A.merge(o["Leg_F"], ring_at(*NECK["cat"], thick=0.075), A.ellipsoid((0.09, 0.09, 0.07), n=5, rings=2, center=c), *lobes, *tails)
-    if g >= 2:  # 희귀 = 금 Deco(왕관 + 리본 가운데 보석) - 줄무늬는 뺐다
-        o["Deco"] = A.merge(small_crown("cat"), gem_on("cat", (0, 0.22, -0.74)))
+        o["Deco"] = A.merge(ring_at(*NECK["cat"], thick=0.1), A.ellipsoid((0.09, 0.09, 0.07), n=5, rings=2, center=c), *lobes, *tails)  # 3차: 리본 = Deco 파트(대비 색) · 띠 두께 ×1.3
+    if g >= 2:  # 희귀 = 금 Deco(리본 + 왕관 + 리본 가운데 보석) - 줄무늬는 뺐다
+        o["Deco"] = A.merge(o["Deco"], small_crown("cat"), gem_on("cat", (0, 0.22, -0.74)))
     k = 1.0
     tail_path = A.bezier((0, 0.05, 0.5), (0, 0.2, 0.75), (0, 0.55 * k, 0.55), (0.12, 0.78 * k, 0.72), n=7)  # 위로 선 S자 긴 꼬리
     o["Tail"] = A.tube(tail_path, lambda u: 1.2 * (0.07 * (1 - 0.3 * u) + 0.02), sides=5, tip_end=False)
@@ -199,9 +199,9 @@ def dragon(grade):
         c, r, tilt = NECK["dragon"]
         ends = [A.tube(A.bezier((0.18, 0.26, -0.36), (0.45, 0.3, -0.12), (0.6 + 0.1 * k_, 0.16 - 0.16 * k_, 0.2), (0.72 + 0.12 * k_, 0.06 - 0.24 * k_, 0.55), n=5),
                        lambda u: 0.13 * (1 - 0.4 * u) + 0.03, sides=4, flat=0.35, tip_end=True) for k_ in (0, 1)]  # 2차: 두께 ×1.6 · 날림 ×1.8
-        tail = A.merge(tail, ring_at(c, r * 1.06, tilt, 0.14), *ends)
-    if g >= 2:  # 희귀 = 금 Deco(뿔 사이 왕관 + 스카프 매듭 보석) - 비늘 무늬는 뺐다
-        o["Deco"] = A.merge(small_crown("dragon"), gem_on("dragon", (0.1, 0.3, -0.68)))
+        o["Deco"] = A.merge(ring_at(c, r * 1.06, tilt, 0.18), *ends)  # 3차: 스카프 = Deco 파트(대비 색)
+    if g >= 2:  # 희귀 = 금 Deco(스카프 + 뿔 사이 왕관 + 스카프 매듭 보석) - 비늘 무늬는 뺐다
+        o["Deco"] = A.merge(o["Deco"], small_crown("dragon"), gem_on("dragon", (0.1, 0.3, -0.68)))
     o["Tail"] = tail
     o["Eyes"] = eyes((0, 0.48, -0.86), 0.13, r=(0.07, 0.09, 0.04))
     return o
@@ -215,6 +215,7 @@ def old_geo(size, pos, wedge=False):
 
 
 DECO_GOLD = (242, 201, 76)  # 2차: 희귀 장식 = 금(구역 강조색에 묻혔다 - 검토)
+DECO_GOOD = {"dog": (63, 201, 181), "cat": (255, 181, 71), "dragon": (63, 201, 181)}  # 3차: 좋은 장식 = 몸(구역 색)과 대비 - 강아지 · 용 청록 #3FC9B5 · 고양이 살구 #FFB547(렌더 예시 색 기준 · 게임은 코드가 구역 색 보색을 고른다)
 
 
 def build(body, grade, old=False):
@@ -229,7 +230,7 @@ def build(body, grade, old=False):
         rig.append(("Deco", None, HEAD_TOP[body], "deco"))
     for name, size, pos, role in rig:
         geo = old_geo(size, pos) if old else geos[name]
-        c = DECO_GOLD if role == "deco" else color(role, body)
+        c = (DECO_GOLD if grade == "rare" else DECO_GOOD[body]) if role == "deco" else color(role, body)
         objs.append(A.make_obj(name, geo, c, col, origin=pos, mat_name="%s%s_%s_%s" % ("old_" if old else "", body, grade, name)))
     return col, objs
 
@@ -276,7 +277,7 @@ def main():
     if opt["export"]:
         for body, looks in metas.items():
             A.write_json(os.path.join(OUT, "%s.meta.json" % body), {"version": "A2-N2", "body": body, "pivot": "파트 중심(PetData pos)", "triBudget": BUDGET, "looks": looks,
-                                                                   "gradeDeco": "좋은 = 장식(Leg_F · 용 Tail - 두께 ×1.6) · 희귀 = 새 파트 Deco(금 #F2C94C - 왕관 가시 3 + 보석 · 원점 = 머리 위) · 강아지 · 고양이 희귀는 Tail을 Leg_B에 합침(파트 8 유지 - PetData.rigs 희귀 표 필요)",
+                                                                   "gradeDeco": "3차: 좋은 · 희귀 모두 새 파트 Deco(좋은 = 목줄 · 리본 · 스카프를 몸과 대비 색 - 예 청록 #3FC9B5 · 살구 #FFB547 / 희귀 = 장식 + 왕관 가시 3 + 보석 금 #F2C94C · 원점 = 머리 위) · 강아지 · 고양이는 좋은 · 희귀 둘 다 Tail을 Leg_B에 합침(파트 8 유지 - PetData.rigs 좋은 · 희귀 표 필요) · 눈 흰자 + 점은 파트 상한 8이라 불가(결정 후보)",
                                                                    "glowPoint": list(GLOW.get(body, (0, 0, 0))), "glowNote": "희귀 알 펫 = 이 자리(몸 기준)에 PointLight(범위 4 · 밝기 1 · 구역 색) - 코드"})
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "pets.blend"))
     print("[make_pets] 끝")
