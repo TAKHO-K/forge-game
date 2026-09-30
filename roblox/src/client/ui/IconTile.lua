@@ -54,7 +54,7 @@ function IconTile.apply(button, name, hotkeyText, opts)
 		chip.Size = UDim2.fromOffset(16, 16)
 		chip.BackgroundColor3 = INK
 		chip.Font = Theme.font
-		chip.TextSize = 11
+		chip.TextSize = 12 -- QUEUE-ALL2: 실효 12 이상(COMMON §2)
 		chip.TextColor3 = Color3.new(1, 1, 1)
 		chip.Text = hotkeyText
 		chip.ZIndex = button.ZIndex + 2

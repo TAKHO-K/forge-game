@@ -1710,12 +1710,1160 @@
   "status": "Approved",
   "imageId": 135000936032808
  },
+ "icons/codex/armor3_armor_bow_legendary.png": {
+  "sha256": "5640414604b3f354389aca71529a8bbe24e46f0cdb8d2ce0cc8e87489387b7ea",
+  "assetType": "Decal",
+  "assetId": 93232338045523,
+  "status": "Approved",
+  "imageId": 76385754613516
+ },
+ "icons/codex/armor3_armor_bow_normal.png": {
+  "sha256": "95af5c8230ea5fde34843527d6cf75c6ea62403a2aff53fe284be3b80c9b3f98",
+  "assetType": "Decal",
+  "assetId": 88867500479553,
+  "status": "Approved",
+  "imageId": 101116720024629
+ },
+ "icons/codex/armor3_armor_bow_transcendent.png": {
+  "sha256": "68ac2c76e4fb7872e71e043851ab7cf4846165bd24f3491e3c8a46736ab71176",
+  "assetType": "Decal",
+  "assetId": 110620562096962,
+  "status": "Approved",
+  "imageId": 125386239842324
+ },
+ "icons/codex/armor3_armor_dualblade_legendary.png": {
+  "sha256": "5bec40f26c76129447be49b579068eec33c8680a118e4fb65de20fb932d7ae22",
+  "assetType": "Decal",
+  "assetId": 138938734551795,
+  "status": "Approved",
+  "imageId": 106039160048164
+ },
+ "icons/codex/armor3_armor_dualblade_normal.png": {
+  "sha256": "4e3447ac088d06185996da8682330dc3b76731fc52cf4f2da5c30ae8ac865de2",
+  "assetType": "Decal",
+  "assetId": 86489110282917,
+  "status": "Approved",
+  "imageId": 118380451865378
+ },
+ "icons/codex/armor3_armor_dualblade_transcendent.png": {
+  "sha256": "3c51f8f1b9c6a0cbc8039fbf224c30d68ecda3896d690d4589cef8ef467802fb",
+  "assetType": "Decal",
+  "assetId": 120723784334312,
+  "status": "Approved",
+  "imageId": 75843913723299
+ },
+ "icons/codex/armor3_armor_greatsword_legendary.png": {
+  "sha256": "88cce4241b07998135a97126995221520b6d49bfd996c44eb09b50e3f90aed4b",
+  "assetType": "Decal",
+  "assetId": 114325812981100,
+  "status": "Approved",
+  "imageId": 101409300467968
+ },
+ "icons/codex/armor3_armor_greatsword_normal.png": {
+  "sha256": "1302c0a37fa63c45b6b9b231f83a5728e875c10aa3c1f7b4de1aa3bea3087722",
+  "assetType": "Decal",
+  "assetId": 126492516729506,
+  "status": "Approved",
+  "imageId": 90511818703251
+ },
+ "icons/codex/armor3_armor_greatsword_transcendent.png": {
+  "sha256": "2152db04a4484e8b00c311a0ac18e0559ef62df89434d83f62a428afdcd63ba3",
+  "assetType": "Decal",
+  "assetId": 134824922256146,
+  "status": "Approved",
+  "imageId": 98953564990608
+ },
+ "icons/codex/armor3_armor_healer_legendary.png": {
+  "sha256": "b7cf05dd97889a37403ee20e09beb7c41e3ada1ff0839618383edae5fe55f02e",
+  "assetType": "Decal",
+  "assetId": 118221129429470,
+  "status": "Approved",
+  "imageId": 104438078848639
+ },
+ "icons/codex/armor3_armor_healer_normal.png": {
+  "sha256": "4dbb797a3d4d2c5ef07912b8c2d59f93427183c1bc267738d92d53285d24248f",
+  "assetType": "Decal",
+  "assetId": 130394432187813,
+  "status": "Approved",
+  "imageId": 116063207230068
+ },
+ "icons/codex/armor3_armor_healer_transcendent.png": {
+  "sha256": "7d898214b43fe4c6429a89e6914ca5a5a4a0f26ace3dba470f1da1e31c30ca24",
+  "assetType": "Decal",
+  "assetId": 82389375275606,
+  "status": "Approved",
+  "imageId": 126969701038605
+ },
+ "icons/codex/armor3_gloves_bow_legendary.png": {
+  "sha256": "ab9f45e06cce426358cee4109b0656bfeaaf12ee908b31aea3e89af502656872",
+  "assetType": "Decal",
+  "assetId": 101930508231274,
+  "status": "Approved",
+  "imageId": 94045206103323
+ },
+ "icons/codex/armor3_gloves_bow_normal.png": {
+  "sha256": "5e6d51359fa25d02563cf6ffc68c6119f86d9272b82278e332366f2605ca6128",
+  "assetType": "Decal",
+  "assetId": 130617251274996,
+  "status": "Approved",
+  "imageId": 71186106544036
+ },
+ "icons/codex/armor3_gloves_bow_transcendent.png": {
+  "sha256": "ab9f45e06cce426358cee4109b0656bfeaaf12ee908b31aea3e89af502656872",
+  "assetType": "Decal",
+  "assetId": 137602102425474,
+  "status": "Approved",
+  "imageId": 76678012360661
+ },
+ "icons/codex/armor3_gloves_dualblade_legendary.png": {
+  "sha256": "6861e8cf81543ffb830d7add9d6cedde076f4b23e8fd7ffe94286875c21158c4",
+  "assetType": "Decal",
+  "assetId": 101275211814620,
+  "status": "Approved",
+  "imageId": 110423504480509
+ },
+ "icons/codex/armor3_gloves_dualblade_normal.png": {
+  "sha256": "53394bf5c10ad16e508948576cafde544a1302322dcf2bad3231813ce0cd9fb3",
+  "assetType": "Decal",
+  "assetId": 134004438438509,
+  "status": "Approved",
+  "imageId": 97882236386075
+ },
+ "icons/codex/armor3_gloves_dualblade_transcendent.png": {
+  "sha256": "6861e8cf81543ffb830d7add9d6cedde076f4b23e8fd7ffe94286875c21158c4",
+  "assetType": "Decal",
+  "assetId": 111852750636944,
+  "status": "Approved",
+  "imageId": 84115149316473
+ },
+ "icons/codex/armor3_gloves_greatsword_legendary.png": {
+  "sha256": "23925593013de7a8aba51c443f71ee47980851e955d67978dcfa966e0b4885c7",
+  "assetType": "Decal",
+  "assetId": 103420905864911,
+  "status": "Approved",
+  "imageId": 82443735432320
+ },
+ "icons/codex/armor3_gloves_greatsword_normal.png": {
+  "sha256": "74d9d7bddcb292efb4961346521b7d183f31f4d15bfbbea0b589c305701b1c12",
+  "assetType": "Decal",
+  "assetId": 138422382717085,
+  "status": "Approved",
+  "imageId": 95541108988942
+ },
+ "icons/codex/armor3_gloves_greatsword_transcendent.png": {
+  "sha256": "23925593013de7a8aba51c443f71ee47980851e955d67978dcfa966e0b4885c7",
+  "assetType": "Decal",
+  "assetId": 93141739655559,
+  "status": "Approved",
+  "imageId": 86481574613872
+ },
+ "icons/codex/armor3_gloves_healer_legendary.png": {
+  "sha256": "5d15842b55c3535d129496c2bad367fc85cb46aca87ebc721619d9fd269549d3",
+  "assetType": "Decal",
+  "assetId": 135494854868430,
+  "status": "Approved",
+  "imageId": 102489399448127
+ },
+ "icons/codex/armor3_gloves_healer_normal.png": {
+  "sha256": "c5fa8024f50752ff3cef989f681c9e2c253ef5f1c829f9c9cdab98c43b5fbb5e",
+  "assetType": "Decal",
+  "assetId": 104109417263516,
+  "status": "Approved",
+  "imageId": 92456249982570
+ },
+ "icons/codex/armor3_gloves_healer_transcendent.png": {
+  "sha256": "5d15842b55c3535d129496c2bad367fc85cb46aca87ebc721619d9fd269549d3",
+  "assetType": "Decal",
+  "assetId": 117796994519958,
+  "status": "Approved",
+  "imageId": 74111884371885
+ },
+ "icons/codex/armor3_shoes_bow_legendary.png": {
+  "sha256": "9c29a01d74ed6f26d394a26c92f69de4526d69a91690a10fa86104cd32cbfda4",
+  "assetType": "Decal",
+  "assetId": 103008068999912,
+  "status": "Approved",
+  "imageId": 124067303136132
+ },
+ "icons/codex/armor3_shoes_bow_normal.png": {
+  "sha256": "1206a48010d7beee0ce05553d97afe5298e7a0c59981ce87938edc280b87e794",
+  "assetType": "Decal",
+  "assetId": 117281313669859,
+  "status": "Approved",
+  "imageId": 79121530958179
+ },
+ "icons/codex/armor3_shoes_bow_transcendent.png": {
+  "sha256": "9c29a01d74ed6f26d394a26c92f69de4526d69a91690a10fa86104cd32cbfda4",
+  "assetType": "Decal",
+  "assetId": 112779084470533,
+  "status": "Approved",
+  "imageId": 85552761027872
+ },
+ "icons/codex/armor3_shoes_dualblade_legendary.png": {
+  "sha256": "095dd5c39b7ae14e6d24e280b8d004e9dfee49e4deff8eea8d9485c9a118f727",
+  "assetType": "Decal",
+  "assetId": 122725563863597,
+  "status": "Approved",
+  "imageId": 132614154588223
+ },
+ "icons/codex/armor3_shoes_dualblade_normal.png": {
+  "sha256": "e93ec3faa610f6be288fa4a9710088c1666a929c551597e5815bd500b18135d5",
+  "assetType": "Decal",
+  "assetId": 81671485021444,
+  "status": "Approved",
+  "imageId": 89364893221410
+ },
+ "icons/codex/armor3_shoes_dualblade_transcendent.png": {
+  "sha256": "095dd5c39b7ae14e6d24e280b8d004e9dfee49e4deff8eea8d9485c9a118f727",
+  "assetType": "Decal",
+  "assetId": 125796317161049,
+  "status": "Approved",
+  "imageId": 126733837083378
+ },
+ "icons/codex/armor3_shoes_greatsword_legendary.png": {
+  "sha256": "7edb794dc0a40011aa0f47f08daf2118ac03b1b4a13512d23d806814a9a46022",
+  "assetType": "Decal",
+  "assetId": 121222782306705,
+  "status": "Approved",
+  "imageId": 88174951573112
+ },
+ "icons/codex/armor3_shoes_greatsword_normal.png": {
+  "sha256": "2626cac946b141f6bf7dac53d5b76ce21bbb5e80cc6f1fecc9424bcb4796f22c",
+  "assetType": "Decal",
+  "assetId": 124006637221127,
+  "status": "Approved",
+  "imageId": 87233992723405
+ },
+ "icons/codex/armor3_shoes_greatsword_transcendent.png": {
+  "sha256": "7edb794dc0a40011aa0f47f08daf2118ac03b1b4a13512d23d806814a9a46022",
+  "assetType": "Decal",
+  "assetId": 89271438687067,
+  "status": "Approved",
+  "imageId": 135889315286063
+ },
+ "icons/codex/armor3_shoes_healer_legendary.png": {
+  "sha256": "462532caa522a916e765cacf7d6256fe5ee52e7ef7a3e48afbfaf3e3fb4402c3",
+  "assetType": "Decal",
+  "assetId": 139672062779766,
+  "status": "Approved",
+  "imageId": 94327168234136
+ },
+ "icons/codex/armor3_shoes_healer_normal.png": {
+  "sha256": "8c636970cb3d9684da07c25d9552fb0047e3a6b1737f5a2a5997e24499677991",
+  "assetType": "Decal",
+  "assetId": 97389491016273,
+  "status": "Approved",
+  "imageId": 128624934946685
+ },
+ "icons/codex/armor3_shoes_healer_transcendent.png": {
+  "sha256": "462532caa522a916e765cacf7d6256fe5ee52e7ef7a3e48afbfaf3e3fb4402c3",
+  "assetType": "Decal",
+  "assetId": 88071281644906,
+  "status": "Approved",
+  "imageId": 89656174031598
+ },
+ "icons/codex/boss_abyssal_lord.png": {
+  "sha256": "6b0fcb0fe4de40bf21da46900425780e1ef6b8ccad2ed74fea092bc96a9813f7",
+  "assetType": "Decal",
+  "assetId": 103306041072302,
+  "status": "Approved",
+  "imageId": 140141420352327
+ },
+ "icons/codex/boss_crystal_queen.png": {
+  "sha256": "2c2080d722174895473b59a89ea92b6795cccbf80116435a8791f412bc337648",
+  "assetType": "Decal",
+  "assetId": 124652980774576,
+  "status": "Approved",
+  "imageId": 84813522245669
+ },
+ "icons/codex/boss_frost_giant.png": {
+  "sha256": "ff02076f3cfe9f39725bb247e360bba7b34b992139dc1f7706d2bb2ebf796cd6",
+  "assetType": "Decal",
+  "assetId": 87256162073526,
+  "status": "Approved",
+  "imageId": 121356676804517
+ },
+ "icons/codex/boss_scorpion_queen.png": {
+  "sha256": "c00e25221a4dd34535bea988e2d397de65374a41acf7ba7a17c6bdc0b832859e",
+  "assetType": "Decal",
+  "assetId": 89574276176034,
+  "status": "Approved",
+  "imageId": 104919963611180
+ },
+ "icons/codex/boss_section_guardian.png": {
+  "sha256": "07aa04f90bcf95909799ba3b3de4c07a87fe6504b623cfd5426553aa0e09098a",
+  "assetType": "Decal",
+  "assetId": 93125151732506,
+  "status": "Approved",
+  "imageId": 76423033314980
+ },
+ "icons/codex/boss_storm_lord.png": {
+  "sha256": "732f6c1c914d6ebce0c816c9f5fe428b0c307d7d6195d681d9b75a0fc47139c3",
+  "assetType": "Decal",
+  "assetId": 122359985036549,
+  "status": "Approved",
+  "imageId": 105577215542011
+ },
+ "icons/codex/class_bow.png": {
+  "sha256": "a42b43ef38fda64d515c73bdd55741d79b31c24467e7ac01b53332c254d4e928",
+  "assetType": "Decal",
+  "assetId": 91801597796230,
+  "status": "Approved",
+  "imageId": 95253996942536
+ },
+ "icons/codex/class_dualblade.png": {
+  "sha256": "1ba055f0bf49acea8e1ce7a3d7942cd55a1aafa717682bc9d68d943df9531de0",
+  "assetType": "Decal",
+  "assetId": 116694758616828,
+  "status": "Approved",
+  "imageId": 84325910087924
+ },
+ "icons/codex/class_greatsword.png": {
+  "sha256": "dee570a0324d24b09a5fac9d6ccea67e00d4a01f9e07d5c2910576f266289a14",
+  "assetType": "Decal",
+  "assetId": 105289180368700,
+  "status": "Approved",
+  "imageId": 89470489490930
+ },
+ "icons/codex/class_healer.png": {
+  "sha256": "363c4d2c00a80323db5617f4b4ca5e26d6bc5700b0d6b5563c50c4c997dd769c",
+  "assetType": "Decal",
+  "assetId": 136124113436341,
+  "status": "Approved",
+  "imageId": 89879117395240
+ },
+ "icons/codex/monster_amethyst_bat.png": {
+  "sha256": "7f961abd7a19ff07502ed0c80e8420a8095fbf6ea5a400d30ae2fe744ce697a2",
+  "assetType": "Decal",
+  "assetId": 126433152165644,
+  "status": "Approved",
+  "imageId": 104452849996419
+ },
+ "icons/codex/monster_blue_dragon.png": {
+  "sha256": "db2eead17b49022c7fb479a40ca1a4828524990545c1bb1c037d3f3f75d313dd",
+  "assetType": "Decal",
+  "assetId": 112911699946613,
+  "status": "Approved",
+  "imageId": 114112497131536
+ },
+ "icons/codex/monster_bolt_imp.png": {
+  "sha256": "06a7e18f2cbb5a38d60bce41d74acee09d580a773fa76013d4f673805837bfd0",
+  "assetType": "Decal",
+  "assetId": 103529177221393,
+  "status": "Approved",
+  "imageId": 76630410978621
+ },
+ "icons/codex/monster_bubble_jelly.png": {
+  "sha256": "f51c65bc869e6c9de4bdabe6fad6af18fa33b7b52dcad2becce68a5b639c93a9",
+  "assetType": "Decal",
+  "assetId": 95933006373198,
+  "status": "Approved",
+  "imageId": 82129933356332
+ },
+ "icons/codex/monster_cactus_imp.png": {
+  "sha256": "ca09129b4f53f75eafbdc53397b4049d3067b6b177d2586a8eadbb7260484f06",
+  "assetType": "Decal",
+  "assetId": 104057799539562,
+  "status": "Approved",
+  "imageId": 102601872126574
+ },
+ "icons/codex/monster_cloud_sheep.png": {
+  "sha256": "773ff794f7be21b56c8bf2a1ccd1a99c045bf7ea7de827eaf08c2dfb5d5be65f",
+  "assetType": "Decal",
+  "assetId": 101664060516514,
+  "status": "Approved",
+  "imageId": 122057489119048
+ },
+ "icons/codex/monster_crystal_beetle.png": {
+  "sha256": "eaa24eb7f7b9b37c3c0bdfeb1f867c1f59c2cd8908206db54c14b2eea370f39c",
+  "assetType": "Decal",
+  "assetId": 97566360077625,
+  "status": "Approved",
+  "imageId": 139003912180972
+ },
+ "icons/codex/monster_hermit_knight.png": {
+  "sha256": "5df2212f884fcd3c0262e11ac61eb7db4ad49956a1dfa9cd2d8212b1bb525df7",
+  "assetType": "Decal",
+  "assetId": 84453261977421,
+  "status": "Approved",
+  "imageId": 132563991623738
+ },
+ "icons/codex/monster_ice_golem.png": {
+  "sha256": "629b6b1d7a8dc99b187c4c2fb823cb6af34b7b70099b1450d022cae05d7a23b5",
+  "assetType": "Decal",
+  "assetId": 137124573669063,
+  "status": "Approved",
+  "imageId": 81634510883535
+ },
+ "icons/codex/monster_moss_slime.png": {
+  "sha256": "05149e18e7b09f5b3cb25df6cd40a7ed4b3353923d5828d9396324e088beaa03",
+  "assetType": "Decal",
+  "assetId": 92034085966843,
+  "status": "Approved",
+  "imageId": 97975881669427
+ },
+ "icons/codex/monster_rock_boar.png": {
+  "sha256": "ba5d683fa6e37e68dc6ad13e17abab1c2b7a388131ddd7d9ef3ec0084807d6d3",
+  "assetType": "Decal",
+  "assetId": 139316850314829,
+  "status": "Approved",
+  "imageId": 89495666748015
+ },
+ "icons/codex/monster_sand_scorpion.png": {
+  "sha256": "d682fadcaf226de73a8a7a1f557934209a9f165fb445c23b2525f7744ba36def",
+  "assetType": "Decal",
+  "assetId": 137190746309212,
+  "status": "Approved",
+  "imageId": 109921938027713
+ },
+ "icons/codex/pet_auroraFox_common.png": {
+  "sha256": "e3aa6d314e846744e250f5df2b73115d7dff3645d72e48737bc95432d49def17",
+  "assetType": "Decal",
+  "assetId": 139841781704652,
+  "status": "Approved",
+  "imageId": 104066604380470
+ },
+ "icons/codex/pet_auroraFox_epic.png": {
+  "sha256": "7c95beb16cbf9a31e9efa8b73bc75962d4c85460c7ea75c0c5f0cc47299da8f5",
+  "assetType": "Decal",
+  "assetId": 101836711873729,
+  "status": "Approved",
+  "imageId": 131835231149318
+ },
+ "icons/codex/pet_auroraFox_rare.png": {
+  "sha256": "0484202706567e4be2c9a2f877a87c4dbda2d89206f25e923208bd45e4b3344b",
+  "assetType": "Decal",
+  "assetId": 125814857546382,
+  "status": "Approved",
+  "imageId": 128997358707373
+ },
+ "icons/codex/pet_auroraFox_uncommon.png": {
+  "sha256": "0cfb96e5de923d9c3013531fcb16ba2e529f12f2eb8e9812679ba8aacfb89ab6",
+  "assetType": "Decal",
+  "assetId": 118701310945726,
+  "status": "Approved",
+  "imageId": 70456915277389
+ },
+ "icons/codex/pet_cactusHedgehog_common.png": {
+  "sha256": "b4defe3dd7a4357478d573fda898f97f17a9afaa4e75ba3c63465328cd3c1ea0",
+  "assetType": "Decal",
+  "assetId": 86666258907875,
+  "status": "Approved",
+  "imageId": 85148902390063
+ },
+ "icons/codex/pet_cactusHedgehog_epic.png": {
+  "sha256": "7c9a1c38ba6a905f7b12862dcd6943c01ccff7c09354eda98985d403c75d260e",
+  "assetType": "Decal",
+  "assetId": 140279360455067,
+  "status": "Approved",
+  "imageId": 121150491285819
+ },
+ "icons/codex/pet_cactusHedgehog_rare.png": {
+  "sha256": "c606934b9e0f150566d358c7c94b32f34119fe65eaea48c512b5daf75b4d6283",
+  "assetType": "Decal",
+  "assetId": 108372629081474,
+  "status": "Approved",
+  "imageId": 82178460149164
+ },
+ "icons/codex/pet_cactusHedgehog_uncommon.png": {
+  "sha256": "adfcc16fe37b343cda6e636d17043fc249984428bbf67ce5c970d542bb3ef710",
+  "assetType": "Decal",
+  "assetId": 91275257068315,
+  "status": "Approved",
+  "imageId": 131350135313591
+ },
+ "icons/codex/pet_cloudSheep_common.png": {
+  "sha256": "a5197cd8b82afe4210a1c19ad4c3944d88d2035585b08a949b43981642be5c95",
+  "assetType": "Decal",
+  "assetId": 90958755798465,
+  "status": "Approved",
+  "imageId": 94107820697415
+ },
+ "icons/codex/pet_cloudSheep_epic.png": {
+  "sha256": "2f137c63c3a7e9f31f6b887935c39b79cbec83f2470b8c95bb26969fd161c5ba",
+  "assetType": "Decal",
+  "assetId": 140587649367583,
+  "status": "Approved",
+  "imageId": 84235861017850
+ },
+ "icons/codex/pet_cloudSheep_rare.png": {
+  "sha256": "08a41b3fddd1998f0d385cf946ea184a71294fa13eaf75e4fbcf9a31b9947637",
+  "assetType": "Decal",
+  "assetId": 116328745508615,
+  "status": "Approved",
+  "imageId": 86747782369067
+ },
+ "icons/codex/pet_cloudSheep_uncommon.png": {
+  "sha256": "9e87e03d40223a3f56eeb7583dfe029b429d3e319add43ed1f376913970593be",
+  "assetType": "Decal",
+  "assetId": 79138782076495,
+  "status": "Approved",
+  "imageId": 80591500251036
+ },
+ "icons/codex/pet_crystalBat_common.png": {
+  "sha256": "0178055021f3200da7dbe69c64044794a55bc402c8959cb3ea68a0528b6623e9",
+  "assetType": "Decal",
+  "assetId": 82091510949131,
+  "status": "Approved",
+  "imageId": 106355133813253
+ },
+ "icons/codex/pet_crystalBat_epic.png": {
+  "sha256": "17c207a89362c5922e5f7a4bb4e67e0ca62c42af297bde9261f603bdf2805c2e",
+  "assetType": "Decal",
+  "assetId": 126303573971607,
+  "status": "Approved",
+  "imageId": 102853418941997
+ },
+ "icons/codex/pet_crystalBat_rare.png": {
+  "sha256": "dd84f71a278e91f02b4d91cf93e7c490901ede2e9d5225dba3d24ce689422442",
+  "assetType": "Decal",
+  "assetId": 88278850720101,
+  "status": "Approved",
+  "imageId": 91357701721710
+ },
+ "icons/codex/pet_crystalBat_uncommon.png": {
+  "sha256": "7d25ba70d5fd2af3916f32a4fd7ad8f070f22660d62574ef35ee5fd72bcda04c",
+  "assetType": "Decal",
+  "assetId": 79778259000271,
+  "status": "Approved",
+  "imageId": 121873439599406
+ },
+ "icons/codex/pet_duneFennec_common.png": {
+  "sha256": "179fd796e6cc756cbd963028931f295f1083b488d612fd7f5d504f0fddaadd28",
+  "assetType": "Decal",
+  "assetId": 108948778286561,
+  "status": "Approved",
+  "imageId": 82672932369419
+ },
+ "icons/codex/pet_duneFennec_epic.png": {
+  "sha256": "d6c49d25846e2d5e992b306588aa524b687f34271c62b64d20655fab0a87158f",
+  "assetType": "Decal",
+  "assetId": 118786104921600,
+  "status": "Approved",
+  "imageId": 118752220124160
+ },
+ "icons/codex/pet_duneFennec_rare.png": {
+  "sha256": "3fc7a4a8013dbdab497d2fea78ad8a303e7f27d69a00e46642266bb8dfdba1c4",
+  "assetType": "Decal",
+  "assetId": 75464387126858,
+  "status": "Approved",
+  "imageId": 118625309790593
+ },
+ "icons/codex/pet_duneFennec_uncommon.png": {
+  "sha256": "04cb0e943edec5020f466fcc384bf49af0f5d0f1777a7e73ce85613c79655f59",
+  "assetType": "Decal",
+  "assetId": 98048330558594,
+  "status": "Approved",
+  "imageId": 139643054173877
+ },
+ "icons/codex/pet_frostPenguin_common.png": {
+  "sha256": "0eabda46fd13383fddd8940bc5e3eaaf6796c087ff9128fd82af8d4cf6b9ac10",
+  "assetType": "Decal",
+  "assetId": 129827243268656,
+  "status": "Approved",
+  "imageId": 138827661223486
+ },
+ "icons/codex/pet_frostPenguin_epic.png": {
+  "sha256": "11fc088d003c5ddc32efc6430d9697e6c38f59971381a945310fc4addcfb06cd",
+  "assetType": "Decal",
+  "assetId": 127355312423515,
+  "status": "Approved",
+  "imageId": 110993434395183
+ },
+ "icons/codex/pet_frostPenguin_rare.png": {
+  "sha256": "adbde37dc1e18209887acc5400377f30614830e34875e5fe5dc02280b34b3c57",
+  "assetType": "Decal",
+  "assetId": 131008352294009,
+  "status": "Approved",
+  "imageId": 127128097694337
+ },
+ "icons/codex/pet_frostPenguin_uncommon.png": {
+  "sha256": "25af3abe9b48d81d1e62892b0a4dcc52951db1f318c434fde75b6ce374bced25",
+  "assetType": "Decal",
+  "assetId": 117207068874326,
+  "status": "Approved",
+  "imageId": 92682419448947
+ },
+ "icons/codex/pet_galeSquirrel_common.png": {
+  "sha256": "80e17a59070fc84a4a0d343400f454707cb829e32775822d50603f28172d4564",
+  "assetType": "Decal",
+  "assetId": 79772645963807,
+  "status": "Approved",
+  "imageId": 129002175973836
+ },
+ "icons/codex/pet_galeSquirrel_epic.png": {
+  "sha256": "84437657091565639115b214a217e7e125378677e205f36a9603284abb1868c1",
+  "assetType": "Decal",
+  "assetId": 99876433804853,
+  "status": "Approved",
+  "imageId": 110978981799789
+ },
+ "icons/codex/pet_galeSquirrel_rare.png": {
+  "sha256": "2a466cbd1ea3d77dbf8b99bcfd077c9ff4af98ee28412cc0e032a2e25325d135",
+  "assetType": "Decal",
+  "assetId": 111096827619398,
+  "status": "Approved",
+  "imageId": 113859634162146
+ },
+ "icons/codex/pet_galeSquirrel_uncommon.png": {
+  "sha256": "68b99f494d37196d258d33573bd8f06500183fe60b70d235a63eae031a49a63d",
+  "assetType": "Decal",
+  "assetId": 101084123455721,
+  "status": "Approved",
+  "imageId": 97469352122148
+ },
+ "icons/codex/pet_gleamSnail_common.png": {
+  "sha256": "df638b9b7fcae3552bc441012ecf5329dd7ddbf6cd8d1697cf90cb5b6b0b92d4",
+  "assetType": "Decal",
+  "assetId": 112629071245324,
+  "status": "Approved",
+  "imageId": 77908017726599
+ },
+ "icons/codex/pet_gleamSnail_epic.png": {
+  "sha256": "a390336cc7b446149de96937ff93fee73d870e3f12318ed77a8e157c80b434a9",
+  "assetType": "Decal",
+  "assetId": 98291702298946,
+  "status": "Approved",
+  "imageId": 128060455026620
+ },
+ "icons/codex/pet_gleamSnail_rare.png": {
+  "sha256": "ccde0eb571f9a2f65d3c27506b778dea3d2509a6b47c8fcc7238256e1e583131",
+  "assetType": "Decal",
+  "assetId": 114122830067471,
+  "status": "Approved",
+  "imageId": 114121944382441
+ },
+ "icons/codex/pet_gleamSnail_uncommon.png": {
+  "sha256": "d52ed5dede3bda918054630147ff6a6fd1312138a9b84d4ff9ba20896f93ab07",
+  "assetType": "Decal",
+  "assetId": 77285649439879,
+  "status": "Approved",
+  "imageId": 105030445174830
+ },
+ "icons/codex/pet_iceSeal_common.png": {
+  "sha256": "0eabda46fd13383fddd8940bc5e3eaaf6796c087ff9128fd82af8d4cf6b9ac10",
+  "assetType": "Decal",
+  "assetId": 74225750514521,
+  "status": "Approved",
+  "imageId": 97940455310837
+ },
+ "icons/codex/pet_iceSeal_epic.png": {
+  "sha256": "11fc088d003c5ddc32efc6430d9697e6c38f59971381a945310fc4addcfb06cd",
+  "assetType": "Decal",
+  "assetId": 115080835338720,
+  "status": "Approved",
+  "imageId": 99897614467129
+ },
+ "icons/codex/pet_iceSeal_rare.png": {
+  "sha256": "adbde37dc1e18209887acc5400377f30614830e34875e5fe5dc02280b34b3c57",
+  "assetType": "Decal",
+  "assetId": 70857541675822,
+  "status": "Approved",
+  "imageId": 102991800583217
+ },
+ "icons/codex/pet_iceSeal_uncommon.png": {
+  "sha256": "25af3abe9b48d81d1e62892b0a4dcc52951db1f318c434fde75b6ce374bced25",
+  "assetType": "Decal",
+  "assetId": 112015979880557,
+  "status": "Approved",
+  "imageId": 101672115257973
+ },
+ "icons/codex/pet_lotusFish_common.png": {
+  "sha256": "522d03934b68ea552fca30984aa6b5012934f449821e99aaf9089d3180d5ccf1",
+  "assetType": "Decal",
+  "assetId": 95134090098214,
+  "status": "Approved",
+  "imageId": 113278863324175
+ },
+ "icons/codex/pet_lotusFish_epic.png": {
+  "sha256": "1117f3bfb8755c7417fd4d99920885440f969256acb4418f78bdcfb37efe9ffb",
+  "assetType": "Decal",
+  "assetId": 110263798843244,
+  "status": "Approved",
+  "imageId": 123338980984894
+ },
+ "icons/codex/pet_lotusFish_rare.png": {
+  "sha256": "30a8223cb27c077a5de0f77d93cef7937e1d92581f4f6993de876f167c47b0fa",
+  "assetType": "Decal",
+  "assetId": 133048835359329,
+  "status": "Approved",
+  "imageId": 73000391806800
+ },
+ "icons/codex/pet_lotusFish_uncommon.png": {
+  "sha256": "f777805169bf3191c08f1fe50a8887d9b0c78d7e1e6b6a4fda8fda2b4827100e",
+  "assetType": "Decal",
+  "assetId": 106781640002000,
+  "status": "Approved",
+  "imageId": 76890250145531
+ },
+ "icons/codex/pet_mossHare_common.png": {
+  "sha256": "633bb82717c269c75d57d813f852778398d386c39009121b134eab82fbd8986f",
+  "assetType": "Decal",
+  "assetId": 100210494180527,
+  "status": "Approved",
+  "imageId": 121497595720240
+ },
+ "icons/codex/pet_mossHare_epic.png": {
+  "sha256": "d0fca86207d10836765e5ba25540f91d6dc9f8dd7ee416ec37484d17fbbb9f99",
+  "assetType": "Decal",
+  "assetId": 79502650155213,
+  "status": "Approved",
+  "imageId": 126928946916996
+ },
+ "icons/codex/pet_mossHare_rare.png": {
+  "sha256": "e4a4ae312e803dbfd42f2e301464ed034a42a29e427e47a34c2a361b0ce54c61",
+  "assetType": "Decal",
+  "assetId": 82904253581315,
+  "status": "Approved",
+  "imageId": 82831430038858
+ },
+ "icons/codex/pet_mossHare_uncommon.png": {
+  "sha256": "8286908fa90e896303205dfaa9db9e04db2d205878ab1d9bb1702a068ca00ad7",
+  "assetType": "Decal",
+  "assetId": 101249631467826,
+  "status": "Approved",
+  "imageId": 128000140410655
+ },
+ "icons/codex/pet_pebbleMole_common.png": {
+  "sha256": "2672701e05b7ccc40c6164886f38b030ca35b1d48f676820a369e1d3be384c25",
+  "assetType": "Decal",
+  "assetId": 75563988973257,
+  "status": "Approved",
+  "imageId": 105042907686461
+ },
+ "icons/codex/pet_pebbleMole_epic.png": {
+  "sha256": "99fa7df88d3241bb9b2dbb5dce6ea2d84a6e54c8e52abe861324305f1ee19955",
+  "assetType": "Decal",
+  "assetId": 70473007332473,
+  "status": "Approved",
+  "imageId": 79183850803176
+ },
+ "icons/codex/pet_pebbleMole_rare.png": {
+  "sha256": "1bca5dbd988514718d03e950ef9fc2e2672aeda37481e2c37f51ef01e580a38d",
+  "assetType": "Decal",
+  "assetId": 86341060459522,
+  "status": "Approved",
+  "imageId": 104348400611443
+ },
+ "icons/codex/pet_pebbleMole_uncommon.png": {
+  "sha256": "05bb1b1bb0db80d0047f4e5245986b03c0c6ce70822f7b3db5989bc6c4b943ed",
+  "assetType": "Decal",
+  "assetId": 76901054625188,
+  "status": "Approved",
+  "imageId": 120458765153091
+ },
+ "icons/codex/pet_prismLizard_common.png": {
+  "sha256": "8992f407a277b825f44a434ca6d79a340c7d7422200408a9b6babdd4422e0cce",
+  "assetType": "Decal",
+  "assetId": 124584166858192,
+  "status": "Approved",
+  "imageId": 84632802318234
+ },
+ "icons/codex/pet_prismLizard_epic.png": {
+  "sha256": "84fea43909a8280b2eb799391ed57f69a1c25e85dd941981e71fb682558ee165",
+  "assetType": "Decal",
+  "assetId": 99510220155662,
+  "status": "Approved",
+  "imageId": 108417519518987
+ },
+ "icons/codex/pet_prismLizard_rare.png": {
+  "sha256": "fc46ea3badd2c7b367348172cbd1642553401dbedb05088adfd565a7e3590d7c",
+  "assetType": "Decal",
+  "assetId": 118201218877754,
+  "status": "Approved",
+  "imageId": 120394234393295
+ },
+ "icons/codex/pet_prismLizard_uncommon.png": {
+  "sha256": "3d486db028775ecc1318e0288073ec61c26764a0efd8557e399b41e85c28e741",
+  "assetType": "Decal",
+  "assetId": 116020174492370,
+  "status": "Approved",
+  "imageId": 109825974209239
+ },
+ "icons/codex/pet_quartzFox_common.png": {
+  "sha256": "df638b9b7fcae3552bc441012ecf5329dd7ddbf6cd8d1697cf90cb5b6b0b92d4",
+  "assetType": "Decal",
+  "assetId": 137131473206546,
+  "status": "Approved",
+  "imageId": 136762439512510
+ },
+ "icons/codex/pet_quartzFox_epic.png": {
+  "sha256": "a390336cc7b446149de96937ff93fee73d870e3f12318ed77a8e157c80b434a9",
+  "assetType": "Decal",
+  "assetId": 117175748515925,
+  "status": "Approved",
+  "imageId": 82117498193323
+ },
+ "icons/codex/pet_quartzFox_rare.png": {
+  "sha256": "ccde0eb571f9a2f65d3c27506b778dea3d2509a6b47c8fcc7238256e1e583131",
+  "assetType": "Decal",
+  "assetId": 124222015924904,
+  "status": "Approved",
+  "imageId": 95287115052521
+ },
+ "icons/codex/pet_quartzFox_uncommon.png": {
+  "sha256": "d52ed5dede3bda918054630147ff6a6fd1312138a9b84d4ff9ba20896f93ab07",
+  "assetType": "Decal",
+  "assetId": 77297737931644,
+  "status": "Approved",
+  "imageId": 140233805956809
+ },
+ "icons/codex/pet_reefOtter_common.png": {
+  "sha256": "594627cbeb583be78923ea27976a104501032a26c826a24fdbd474f5c975503a",
+  "assetType": "Decal",
+  "assetId": 96332230607214,
+  "status": "Approved",
+  "imageId": 78065605271206
+ },
+ "icons/codex/pet_reefOtter_epic.png": {
+  "sha256": "97d4fb75e69be6160b7c0e43dc30580bb5985fb50f8efc4607f8de72fba1f870",
+  "assetType": "Decal",
+  "assetId": 106254845728063,
+  "status": "Approved",
+  "imageId": 118641910644398
+ },
+ "icons/codex/pet_reefOtter_rare.png": {
+  "sha256": "895178fc2bf4d53c297cd8b071005c9e0de9ee1a04bbf6096069af5f016bed05",
+  "assetType": "Decal",
+  "assetId": 136257898856643,
+  "status": "Approved",
+  "imageId": 108532360272691
+ },
+ "icons/codex/pet_reefOtter_uncommon.png": {
+  "sha256": "8a1738ff0c9a2718d51930bb2e4b7ff99720d8009ee6950eb8f25413b4adfeee",
+  "assetType": "Decal",
+  "assetId": 97794173290181,
+  "status": "Approved",
+  "imageId": 90530015991494
+ },
+ "icons/codex/pet_ruinOwl_common.png": {
+  "sha256": "f573e0a7132b5c1aa45ec2cee1af54552ac36ad590139b2dfd2a78c765072e88",
+  "assetType": "Decal",
+  "assetId": 139624147263829,
+  "status": "Approved",
+  "imageId": 118050441444636
+ },
+ "icons/codex/pet_ruinOwl_epic.png": {
+  "sha256": "060c239c1ee9000791052c1c870d4a452e523b74fe7bfdc4c2014fde6589d788",
+  "assetType": "Decal",
+  "assetId": 100740594924478,
+  "status": "Approved",
+  "imageId": 102045561840650
+ },
+ "icons/codex/pet_ruinOwl_rare.png": {
+  "sha256": "60ef1627e3113e4bcc3248edef98cacdfe23cb2d9f9014d8a6008a607fb606e4",
+  "assetType": "Decal",
+  "assetId": 95552989505589,
+  "status": "Approved",
+  "imageId": 137265608831350
+ },
+ "icons/codex/pet_ruinOwl_uncommon.png": {
+  "sha256": "908d6290d9669f2230442b7e27631aeb2bc1200fbe73a082a1b87a68f11f157c",
+  "assetType": "Decal",
+  "assetId": 123688231597028,
+  "status": "Approved",
+  "imageId": 108798522280456
+ },
+ "icons/codex/pet_scarabBeetle_common.png": {
+  "sha256": "179fd796e6cc756cbd963028931f295f1083b488d612fd7f5d504f0fddaadd28",
+  "assetType": "Decal",
+  "assetId": 136922913973638,
+  "status": "Approved",
+  "imageId": 112305713198651
+ },
+ "icons/codex/pet_scarabBeetle_epic.png": {
+  "sha256": "d6c49d25846e2d5e992b306588aa524b687f34271c62b64d20655fab0a87158f",
+  "assetType": "Decal",
+  "assetId": 127190049201401,
+  "status": "Approved",
+  "imageId": 77969347837201
+ },
+ "icons/codex/pet_scarabBeetle_rare.png": {
+  "sha256": "3fc7a4a8013dbdab497d2fea78ad8a303e7f27d69a00e46642266bb8dfdba1c4",
+  "assetType": "Decal",
+  "assetId": 126984845883937,
+  "status": "Approved",
+  "imageId": 89712368461045
+ },
+ "icons/codex/pet_scarabBeetle_uncommon.png": {
+  "sha256": "04cb0e943edec5020f466fcc384bf49af0f5d0f1777a7e73ce85613c79655f59",
+  "assetType": "Decal",
+  "assetId": 90251283712262,
+  "status": "Approved",
+  "imageId": 92132495844825
+ },
+ "icons/codex/pet_shellCrab_common.png": {
+  "sha256": "cd82d37094bc50780e439cd79837b095d515d682379a770406954877c79fc783",
+  "assetType": "Decal",
+  "assetId": 116624010210627,
+  "status": "Approved",
+  "imageId": 99596625246741
+ },
+ "icons/codex/pet_shellCrab_epic.png": {
+  "sha256": "0663ced2532c8db4f3683e8513a8a6708e21dbe823fcdb424d110e3193df2b73",
+  "assetType": "Decal",
+  "assetId": 71547951124614,
+  "status": "Approved",
+  "imageId": 90557939355489
+ },
+ "icons/codex/pet_shellCrab_rare.png": {
+  "sha256": "f9db2ffa738612f3755eea824cef6cc0873bad63e1d490e7d13656beb39fe590",
+  "assetType": "Decal",
+  "assetId": 121704747163221,
+  "status": "Approved",
+  "imageId": 81131065318256
+ },
+ "icons/codex/pet_shellCrab_uncommon.png": {
+  "sha256": "1fe7c42e0c8f192a2fee319a779abdda096256a30c8a4363aa4e3de629d77451",
+  "assetType": "Decal",
+  "assetId": 80606497208539,
+  "status": "Approved",
+  "imageId": 127240142121236
+ },
+ "icons/codex/pet_snowOwl_common.png": {
+  "sha256": "f6d2dc8f9943508279e08108befdb04654ac94d051d8484048440e229206a52b",
+  "assetType": "Decal",
+  "assetId": 72406949146969,
+  "status": "Approved",
+  "imageId": 92545154036754
+ },
+ "icons/codex/pet_snowOwl_epic.png": {
+  "sha256": "4fef97246b2533c718605c2a6037a8d410018a2d4eb8b8c262be4e445d1d82c1",
+  "assetType": "Decal",
+  "assetId": 115563460177751,
+  "status": "Approved",
+  "imageId": 134340284145922
+ },
+ "icons/codex/pet_snowOwl_rare.png": {
+  "sha256": "67e2403d6850d625ea13ce9c7f5f13085f0e93c31aed88df77f59e9dfd11e7a1",
+  "assetType": "Decal",
+  "assetId": 131255722459837,
+  "status": "Approved",
+  "imageId": 78653669943254
+ },
+ "icons/codex/pet_snowOwl_uncommon.png": {
+  "sha256": "719dc12a2a1fad22aae8471d411c1343a8c0b8c34f26e8883570ace6a9eb0b0e",
+  "assetType": "Decal",
+  "assetId": 138106577666535,
+  "status": "Approved",
+  "imageId": 135716428234840
+ },
+ "icons/codex/pet_sparkFerret_common.png": {
+  "sha256": "80e17a59070fc84a4a0d343400f454707cb829e32775822d50603f28172d4564",
+  "assetType": "Decal",
+  "assetId": 96390068954252,
+  "status": "Approved",
+  "imageId": 125045898629908
+ },
+ "icons/codex/pet_sparkFerret_epic.png": {
+  "sha256": "84437657091565639115b214a217e7e125378677e205f36a9603284abb1868c1",
+  "assetType": "Decal",
+  "assetId": 127557802285653,
+  "status": "Approved",
+  "imageId": 104309286203171
+ },
+ "icons/codex/pet_sparkFerret_rare.png": {
+  "sha256": "2a466cbd1ea3d77dbf8b99bcfd077c9ff4af98ee28412cc0e032a2e25325d135",
+  "assetType": "Decal",
+  "assetId": 115650489558791,
+  "status": "Approved",
+  "imageId": 124644957157373
+ },
+ "icons/codex/pet_sparkFerret_uncommon.png": {
+  "sha256": "68b99f494d37196d258d33573bd8f06500183fe60b70d235a63eae031a49a63d",
+  "assetType": "Decal",
+  "assetId": 134127934634388,
+  "status": "Approved",
+  "imageId": 105324760633391
+ },
+ "icons/codex/pet_stoneTurtle_common.png": {
+  "sha256": "2672701e05b7ccc40c6164886f38b030ca35b1d48f676820a369e1d3be384c25",
+  "assetType": "Decal",
+  "assetId": 115332473403697,
+  "status": "Approved",
+  "imageId": 130341991984377
+ },
+ "icons/codex/pet_stoneTurtle_epic.png": {
+  "sha256": "99fa7df88d3241bb9b2dbb5dce6ea2d84a6e54c8e52abe861324305f1ee19955",
+  "assetType": "Decal",
+  "assetId": 94122207274002,
+  "status": "Approved",
+  "imageId": 75101532419436
+ },
+ "icons/codex/pet_stoneTurtle_rare.png": {
+  "sha256": "1bca5dbd988514718d03e950ef9fc2e2672aeda37481e2c37f51ef01e580a38d",
+  "assetType": "Decal",
+  "assetId": 131205126236442,
+  "status": "Approved",
+  "imageId": 77407245488140
+ },
+ "icons/codex/pet_stoneTurtle_uncommon.png": {
+  "sha256": "05bb1b1bb0db80d0047f4e5245986b03c0c6ce70822f7b3db5989bc6c4b943ed",
+  "assetType": "Decal",
+  "assetId": 122720797064126,
+  "status": "Approved",
+  "imageId": 78180518094229
+ },
+ "icons/codex/pet_sunGecko_common.png": {
+  "sha256": "72cc1acbcf0e66a84918d86cf5e782ae5650761c37e9c1aa5256b50c01466ae6",
+  "assetType": "Decal",
+  "assetId": 113810835138041,
+  "status": "Approved",
+  "imageId": 111431556003167
+ },
+ "icons/codex/pet_sunGecko_epic.png": {
+  "sha256": "edaf364b8fab5b43152cbcedde02b5649077bc79b6416aba42cfaf3937a35c2f",
+  "assetType": "Decal",
+  "assetId": 135404592090727,
+  "status": "Approved",
+  "imageId": 108148135010467
+ },
+ "icons/codex/pet_sunGecko_rare.png": {
+  "sha256": "3b4e8384b32d4007171293bf76c1480755eec3b69d5d3131b8f66334cb09b0c2",
+  "assetType": "Decal",
+  "assetId": 120060245609999,
+  "status": "Approved",
+  "imageId": 127070532776301
+ },
+ "icons/codex/pet_sunGecko_uncommon.png": {
+  "sha256": "3df4b04d566b719fe3a9d7e138139e613bed53efc77b7f0d0cdd9fa99220c3cf",
+  "assetType": "Decal",
+  "assetId": 108129230945959,
+  "status": "Approved",
+  "imageId": 138039156606879
+ },
+ "icons/codex/pet_thunderHawk_common.png": {
+  "sha256": "942840dc68deac1a26e0d9741cebd7b187174ba2b5e22302cdf07d284091ff64",
+  "assetType": "Decal",
+  "assetId": 119782751527456,
+  "status": "Approved",
+  "imageId": 87797711565963
+ },
+ "icons/codex/pet_thunderHawk_epic.png": {
+  "sha256": "1c2c697fc07818f1b538985fe3c8da03e0dbcaba94b5abbd65085f52162c44a1",
+  "assetType": "Decal",
+  "assetId": 115050914844093,
+  "status": "Approved",
+  "imageId": 116380857435284
+ },
+ "icons/codex/pet_thunderHawk_rare.png": {
+  "sha256": "9dc2b68ebe591de334166604662588e2084d7260595c06041fbe050858856ccf",
+  "assetType": "Decal",
+  "assetId": 101130758132160,
+  "status": "Approved",
+  "imageId": 93774767241002
+ },
+ "icons/codex/pet_thunderHawk_uncommon.png": {
+  "sha256": "9568bbd29053ab5023a0d041537cf861ba2fb855bf1a045ac6915d6f42b156c5",
+  "assetType": "Decal",
+  "assetId": 133651998385195,
+  "status": "Approved",
+  "imageId": 99068751330242
+ },
+ "icons/codex/pet_tideFrog_common.png": {
+  "sha256": "594627cbeb583be78923ea27976a104501032a26c826a24fdbd474f5c975503a",
+  "assetType": "Decal",
+  "assetId": 84990629182616,
+  "status": "Approved",
+  "imageId": 87996610339867
+ },
+ "icons/codex/pet_tideFrog_epic.png": {
+  "sha256": "97d4fb75e69be6160b7c0e43dc30580bb5985fb50f8efc4607f8de72fba1f870",
+  "assetType": "Decal",
+  "assetId": 95447517063879,
+  "status": "Approved",
+  "imageId": 119237217088883
+ },
+ "icons/codex/pet_tideFrog_rare.png": {
+  "sha256": "895178fc2bf4d53c297cd8b071005c9e0de9ee1a04bbf6096069af5f016bed05",
+  "assetType": "Decal",
+  "assetId": 136510460758988,
+  "status": "Approved",
+  "imageId": 84783685704680
+ },
+ "icons/codex/pet_tideFrog_uncommon.png": {
+  "sha256": "8a1738ff0c9a2718d51930bb2e4b7ff99720d8009ee6950eb8f25413b4adfeee",
+  "assetType": "Decal",
+  "assetId": 83296051658074,
+  "status": "Approved",
+  "imageId": 116009625884906
+ },
+ "icons/codex/tab_boss.png": {
+  "sha256": "e05b8ef46c47685b7e848ea99fff7abf026f8029d683a16a9fdbb832d5f26d28",
+  "assetType": "Decal",
+  "assetId": 126880937851650,
+  "status": "Approved",
+  "imageId": 81903235676353
+ },
+ "icons/codex/tab_class.png": {
+  "sha256": "0e8f21cc6f5346c2b7734c3d01419f2cc85f27358b36999acfdca753674e3ed5",
+  "assetType": "Decal",
+  "assetId": 113987382463717,
+  "status": "Approved",
+  "imageId": 93177297873838
+ },
+ "icons/codex/tab_equipment.png": {
+  "sha256": "a02ebfae74e7bfbddecc29da30396b74438df89f1c0bc069433fabee38db5db7",
+  "assetType": "Decal",
+  "assetId": 93097512776269,
+  "status": "Approved",
+  "imageId": 106004003620012
+ },
+ "icons/codex/tab_explore.png": {
+  "sha256": "9c14e844c1d4e306b405dbd8ce3d2c7fc663acd73d6642b08fc32f8fad72689f",
+  "assetType": "Decal",
+  "assetId": 140652028959989,
+  "status": "Approved",
+  "imageId": 117832867768618
+ },
+ "icons/codex/tab_monster.png": {
+  "sha256": "e2e64df39d3700384150a8a332a6a695951326f7cfa171bddf111e1768b723d6",
+  "assetType": "Decal",
+  "assetId": 117355246474437,
+  "status": "Approved",
+  "imageId": 112028130962732
+ },
+ "icons/codex/tab_pet.png": {
+  "sha256": "982052921770974875d2b1e5ed413dbb6684f2b324ca3c87b4e608dae1d10ac0",
+  "assetType": "Decal",
+  "assetId": 131160020489055,
+  "status": "Approved",
+  "imageId": 78689106440642
+ },
+ "icons/codex/tab_rewards.png": {
+  "sha256": "18f03faab7dfaf687905faf5fe365c6988f04ddb0cff80a1269117eb065e4ea5",
+  "assetType": "Decal",
+  "assetId": 133499206366216,
+  "status": "Approved",
+  "imageId": 107350703691149
+ },
+ "icons/codex/tab_title.png": {
+  "sha256": "5bd851f4e0a36cadb67578255445cb0b01ae5952c1d040b0c8f92a8743813fe3",
+  "assetType": "Decal",
+  "assetId": 79680856484025,
+  "status": "Approved",
+  "imageId": 136985282912886
+ },
+ "icons/hud/attendance.png": {
+  "sha256": "8605a16f8b29215ce9a3b33a10ebaae3df58d0800ac8961850757c352f1c91c5",
+  "assetType": "Decal",
+  "assetId": 79051638067661,
+  "status": "Approved",
+  "imageId": 75113247446846
+ },
  "icons/hud/bag.png": {
   "sha256": "058ed4ad4f0cb2a5b52a4203dc8e6b0bc82d4669cb9c1d3e1fccac57b1ffc42b",
   "assetType": "Decal",
   "assetId": 127260847133776,
   "status": "Approved",
   "imageId": 100176756201803
+ },
+ "icons/hud/character.png": {
+  "sha256": "db5b033bc7fd1ffa57fa0022e33b831523becad8fe44cfdb9619827d22eaeb07",
+  "assetType": "Decal",
+  "assetId": 85585907312909,
+  "status": "Approved",
+  "imageId": 91729669492445
  },
  "icons/hud/codex.png": {
   "sha256": "8179597eab495a205fcc2026fc1ad0cc044a7c2d31b1f4b1b140d96af5c970e6",
@@ -1731,6 +2879,13 @@
   "status": "Approved",
   "imageId": 137666869132080
  },
+ "icons/hud/friend_invite.png": {
+  "sha256": "0a31b851aefeac24a6f0b4042ad892f7628304d69b001420074f3dee872d491d",
+  "assetType": "Decal",
+  "assetId": 85094393537114,
+  "status": "Approved",
+  "imageId": 101357088794489
+ },
  "icons/hud/growth.png": {
   "sha256": "4bbd3889c19a86fc576ea2a234d8c429e8173aa96554534dba0f7e3e9db7dd4f",
   "assetType": "Decal",
@@ -1744,6 +2899,13 @@
   "assetId": 101909732716180,
   "status": "Approved",
   "imageId": 74117913612163
+ },
+ "icons/hud/more.png": {
+  "sha256": "2f6b7ee2773fa0a6d49b0457048a037a6c6f20b8c86603ce0896021f1faff87b",
+  "assetType": "Decal",
+  "assetId": 88926740946939,
+  "status": "Approved",
+  "imageId": 96526916325772
  },
  "icons/hud/party.png": {
   "sha256": "7f94e41f4df228b1b4ba6a05be110dffd52daff4219e8d92ec99e18a8199f366",
@@ -1800,6 +2962,349 @@
   "assetId": 138897611618201,
   "status": "Approved",
   "imageId": 129799146563428
+ },
+ "icons/hud/training.png": {
+  "sha256": "5b86177d0b97e227ceaf8eb567c41986cff19c8fb62184944d103d395fe6d912",
+  "assetType": "Decal",
+  "assetId": 118015289914547,
+  "status": "Approved",
+  "imageId": 109288330476437
+ },
+ "icons/hud/zone_select.png": {
+  "sha256": "3cb697d37a9753fffa208088f242381eeeb98ed9bd5885ea6bb3847218c5f946",
+  "assetType": "Decal",
+  "assetId": 92114557828762,
+  "status": "Approved",
+  "imageId": 77975639416026
+ },
+ "icons/reward/cosmeticTheme.png": {
+  "sha256": "3c744ca90a6c1577a34dcc9e97bdc918266f86bb772625e07e9a3e89bd2f2b45",
+  "assetType": "Decal",
+  "assetId": 93539501922762,
+  "status": "Approved",
+  "imageId": 109732496142151
+ },
+ "icons/reward/egg.png": {
+  "sha256": "bc2ef11c7f33ff12c5d0f0c76e767fc95d1f6cf82745f80fe64e9c8e70b52f5c",
+  "assetType": "Decal",
+  "assetId": 100447452118548,
+  "status": "Approved",
+  "imageId": 105846128904514
+ },
+ "icons/reward/enhanceStone.png": {
+  "sha256": "b1cbd6ad8bec2ce0697023981a62a32802d15c3300d3b26125d10e0d1dea69bc",
+  "assetType": "Decal",
+  "assetId": 87306625570630,
+  "status": "Approved",
+  "imageId": 116210750817186
+ },
+ "icons/reward/gemDust.png": {
+  "sha256": "8381dbba173708b95c972cba706027bc0f25421493a5c519afb15d37f51b3d45",
+  "assetType": "Decal",
+  "assetId": 126630926440790,
+  "status": "Approved",
+  "imageId": 90097398774531
+ },
+ "icons/reward/gliderSkin.png": {
+  "sha256": "ef334d67923f3545d594056ae95e9a9539e52c1a7bd93533e0254194243c8015",
+  "assetType": "Decal",
+  "assetId": 91698981987889,
+  "status": "Approved",
+  "imageId": 108024096106126
+ },
+ "icons/reward/gold.png": {
+  "sha256": "adaee7b5ba99acc2bb29fcae85da3c3a48fabafc807de97b162595a1eebb52e5",
+  "assetType": "Decal",
+  "assetId": 107150177341531,
+  "status": "Approved",
+  "imageId": 84183042933125
+ },
+ "icons/reward/highEnhanceStone.png": {
+  "sha256": "90d1245f054f7055efe179929fb6cd7dcf922891dee6e961b9094d464d1a8b21",
+  "assetType": "Decal",
+  "assetId": 93542023629852,
+  "status": "Approved",
+  "imageId": 103623718481806
+ },
+ "icons/reward/passExp.png": {
+  "sha256": "3264532739722ce0449c179b24c7ec538f2b46ce9b67fa7d936d6150476d6374",
+  "assetType": "Decal",
+  "assetId": 74540735833258,
+  "status": "Approved",
+  "imageId": 118630268863555
+ },
+ "icons/reward/protectDrop.png": {
+  "sha256": "4e48b38ae3ecfade73321ddf501812885c6248d6b6aba06e30e6334225fb98a4",
+  "assetType": "Decal",
+  "assetId": 94197671649042,
+  "status": "Approved",
+  "imageId": 110863624236646
+ },
+ "icons/reward/protectReset.png": {
+  "sha256": "1ad448fdf2eb39f2102d515e085cf0766748b3cd2d8b83d074f909cf215871f4",
+  "assetType": "Decal",
+  "assetId": 116444115524947,
+  "status": "Approved",
+  "imageId": 89064641175049
+ },
+ "icons/reward/rebirthTicket.png": {
+  "sha256": "9054208987faf0a544d2b407fd42e9c9b42c39b18376b22cca493b1ec62cc3f9",
+  "assetType": "Decal",
+  "assetId": 121618883031754,
+  "status": "Approved",
+  "imageId": 121231013114041
+ },
+ "icons/reward/rerollTicket.png": {
+  "sha256": "a508b503d466ed07743f408174dc3ee343bec63ac6e6f2260f8b09ebb5111a40",
+  "assetType": "Decal",
+  "assetId": 80508619376159,
+  "status": "Approved",
+  "imageId": 112050736540430
+ },
+ "icons/reward/sparkleShard.png": {
+  "sha256": "12fc13b221bd2ef2d4580e8230144640280c30b6b71d3ee8e2258c13a1eaef89",
+  "assetType": "Decal",
+  "assetId": 91813516854333,
+  "status": "Approved",
+  "imageId": 131761393626268
+ },
+ "icons/reward/title.png": {
+  "sha256": "623bca2947817496d1e0154fd75e56ce64c25d687942d1a7decbddc3f5346f63",
+  "assetType": "Decal",
+  "assetId": 100713131080216,
+  "status": "Approved",
+  "imageId": 81330212737690
+ },
+ "icons/skills/bow_e.png": {
+  "sha256": "f1f7ade77e77cf327b5193686ff8b3eb4b9c11c952f928d910233d4f1b36ce8c",
+  "assetType": "Decal",
+  "assetId": 86235206661475,
+  "status": "Approved",
+  "imageId": 89723444381491
+ },
+ "icons/skills/bow_q.png": {
+  "sha256": "32285e58d5eaa72aff04b91a5280ed4036c346d508f45c328280464c4ba945e8",
+  "assetType": "Decal",
+  "assetId": 92754042919250,
+  "status": "Approved",
+  "imageId": 137967243813493
+ },
+ "icons/skills/bow_r.png": {
+  "sha256": "a8d1bc0d6cc915569060821c4f22eebe83d57d5dd7c8e5355d6bd6bad010792a",
+  "assetType": "Decal",
+  "assetId": 103243067708428,
+  "status": "Approved",
+  "imageId": 110880697352098
+ },
+ "icons/skills/bow_t.png": {
+  "sha256": "dfd7a25a9ba1a6e186cbaf2941abebbc7bc3b516e5d9a2205446cb7800397df1",
+  "assetType": "Decal",
+  "assetId": 114980035563428,
+  "status": "Approved",
+  "imageId": 94785342779191
+ },
+ "icons/skills/dash_bow.png": {
+  "sha256": "64c5301656b5ca9eb1be5fadba791bfe5590f44e9c1d8dcbdb16899c3bc7b422",
+  "assetType": "Decal",
+  "assetId": 107829806958957,
+  "status": "Approved",
+  "imageId": 112945710601488
+ },
+ "icons/skills/dash_dualblade.png": {
+  "sha256": "962968a7eedfd593e8824d481c8de9dc5be344b496cda6e7ff5c95985b5813d2",
+  "assetType": "Decal",
+  "assetId": 86254612886621,
+  "status": "Approved",
+  "imageId": 116503825602154
+ },
+ "icons/skills/dash_greatsword.png": {
+  "sha256": "efcabc87a56b43961aa64afae62f71fcab85151448c6ab7a128b7e7c69be430f",
+  "assetType": "Decal",
+  "assetId": 117574599670090,
+  "status": "Approved",
+  "imageId": 106726551227461
+ },
+ "icons/skills/dash_healer.png": {
+  "sha256": "6b6418382f9cead318c81bafeec14ec3fee437879ad6f598804aec766cfa1b16",
+  "assetType": "Decal",
+  "assetId": 129624587926492,
+  "status": "Approved",
+  "imageId": 112465443678785
+ },
+ "icons/skills/dualblade_e.png": {
+  "sha256": "c47e1bc100d6d3cb173f64f786c83d9aca21e59569173f06c5cee5253aeccaf8",
+  "assetType": "Decal",
+  "assetId": 89518384223062,
+  "status": "Approved",
+  "imageId": 97658952647570
+ },
+ "icons/skills/dualblade_q.png": {
+  "sha256": "4bfddd7e29c54bc8684b4e852777138bb93a6f777427e1a4f4c00c7314e991ea",
+  "assetType": "Decal",
+  "assetId": 129787997227244,
+  "status": "Approved",
+  "imageId": 118373782805941
+ },
+ "icons/skills/dualblade_r.png": {
+  "sha256": "971cfa20553276d964c0181ce95426d38879b07cf48b6079c1d20089389e10c0",
+  "assetType": "Decal",
+  "assetId": 106162554348811,
+  "status": "Approved",
+  "imageId": 114040412668647
+ },
+ "icons/skills/dualblade_t.png": {
+  "sha256": "9795dfc985a88c2935bbad2fc3b7a1702ccd4b06276d178784abae033538d5dc",
+  "assetType": "Decal",
+  "assetId": 101638710602228,
+  "status": "Approved",
+  "imageId": 98139189786770
+ },
+ "icons/skills/greatsword_e.png": {
+  "sha256": "3a21800367935ce35be7fe50893a19a87cbef55a0cffa17c1ea8a64102834bb9",
+  "assetType": "Decal",
+  "assetId": 106475774181849,
+  "status": "Approved",
+  "imageId": 99320382879454
+ },
+ "icons/skills/greatsword_q.png": {
+  "sha256": "6e31c1abc8608cccb4a69bb63d781a7c4ed8784ec91357db6883896728ff791a",
+  "assetType": "Decal",
+  "assetId": 111816484638521,
+  "status": "Approved",
+  "imageId": 124885139081041
+ },
+ "icons/skills/greatsword_r.png": {
+  "sha256": "972b4d8647683f9e2a7452df2e8386216cf3207abd19d3554934f7fd15ee9122",
+  "assetType": "Decal",
+  "assetId": 87553552723602,
+  "status": "Approved",
+  "imageId": 101492589920764
+ },
+ "icons/skills/greatsword_t.png": {
+  "sha256": "92b33210a6423153874e1603e00e87963cf954953f8a0553f19e687aac1b2aa6",
+  "assetType": "Decal",
+  "assetId": 73387847560975,
+  "status": "Approved",
+  "imageId": 91937876090497
+ },
+ "icons/skills/healer_e.png": {
+  "sha256": "fee4c1b628584f121f504dbeab51300fc3d1f5174a65ca9645e68c0bba06a0a5",
+  "assetType": "Decal",
+  "assetId": 73989068962050,
+  "status": "Approved",
+  "imageId": 131111109496372
+ },
+ "icons/skills/healer_q.png": {
+  "sha256": "9cdde6116517eb7ae185ae82c14acee2fd57d6da45e03ec7d89b67660f4e710e",
+  "assetType": "Decal",
+  "assetId": 84389347952560,
+  "status": "Approved",
+  "imageId": 108318309754008
+ },
+ "icons/skills/healer_r.png": {
+  "sha256": "e4891889d018acc4ea211cf517595480431659fa17d81c0cc2068d5706fd3129",
+  "assetType": "Decal",
+  "assetId": 75492020877070,
+  "status": "Approved",
+  "imageId": 110841431211040
+ },
+ "icons/skills/healer_t.png": {
+  "sha256": "a85d87bf970a29c2e23b110d6fa3eb8ceb6b0542a3d116f7f3b590b9c35b7a00",
+  "assetType": "Decal",
+  "assetId": 85256468068847,
+  "status": "Approved",
+  "imageId": 74869280688091
+ },
+ "icons/ui/guide_chevron.png": {
+  "sha256": "65e6b16667e5834fb5fb0dd1c9dc1968f67c46c57ac8fa4f4e3ddb905c7f62d6",
+  "assetType": "Decal",
+  "assetId": 115623086335955,
+  "status": "Approved",
+  "imageId": 86118523197528
+ },
+ "icons/ui/guide_dot.png": {
+  "sha256": "a0340a6c8188f11109c97699c4b1174b97b8ed981b0ad2d493aca204e1f97af1",
+  "assetType": "Decal",
+  "assetId": 123556042970742,
+  "status": "Approved",
+  "imageId": 123325187555939
+ },
+ "icons/ui/lock_badge.png": {
+  "sha256": "b8fef7cd238684ab31e44f1e5a02b8b6cb61ff0c102f91003afa2ae934137aee",
+  "assetType": "Decal",
+  "assetId": 78870548719075,
+  "status": "Approved",
+  "imageId": 77261605503440
+ },
+ "icons/ui/pin_boss.png": {
+  "sha256": "6d37e53d40ee5ed4430af2a32cd57163a6ce7d32f5edbb8276016d5df9f40642",
+  "assetType": "Decal",
+  "assetId": 118833818169369,
+  "status": "Approved",
+  "imageId": 96813412450294
+ },
+ "icons/ui/pin_checkpoint.png": {
+  "sha256": "4e1f774d404a9b777d140e54f98c69297c43fc24418ee76bdc442775499281de",
+  "assetType": "Decal",
+  "assetId": 139061971115213,
+  "status": "Approved",
+  "imageId": 72198989981613
+ },
+ "icons/ui/pin_forge.png": {
+  "sha256": "b0f189fce80a454c3c0b5b6e667aa547ba859b297aa69157c37493210286478a",
+  "assetType": "Decal",
+  "assetId": 98484883282066,
+  "status": "Approved",
+  "imageId": 78649378066202
+ },
+ "icons/ui/pin_gate.png": {
+  "sha256": "e2229c44f86ec4457152d61c62da68abb52ec2984d3421cd77ce6431282a2995",
+  "assetType": "Decal",
+  "assetId": 126293007507247,
+  "status": "Approved",
+  "imageId": 124064536995290
+ },
+ "icons/ui/pin_hub.png": {
+  "sha256": "e716fdb5f44851ea9856f650651bf05265063669961202f93590dfff8dee1638",
+  "assetType": "Decal",
+  "assetId": 74116270340655,
+  "status": "Approved",
+  "imageId": 106883060378679
+ },
+ "icons/ui/pin_party.png": {
+  "sha256": "1ad901ca156461323dcc3d4c2ab48c2401f87be9bb535e8d7f3b8cd447fe0739",
+  "assetType": "Decal",
+  "assetId": 100029416162819,
+  "status": "Approved",
+  "imageId": 107971998848341
+ },
+ "icons/ui/pin_player.png": {
+  "sha256": "8602cb726dbfe26098295e5587faa082b65f0c2521f9736db777cbc942caa657",
+  "assetType": "Decal",
+  "assetId": 118594142212974,
+  "status": "Approved",
+  "imageId": 104419202762902
+ },
+ "icons/ui/pin_quest.png": {
+  "sha256": "81b9571a104d1640662e876ab0f14e0cac5fb91f79d88d864e7ddfbbec317310",
+  "assetType": "Decal",
+  "assetId": 117769903463109,
+  "status": "Approved",
+  "imageId": 125025406801795
+ },
+ "icons/ui/pin_user.png": {
+  "sha256": "d7ff31bf768735db0be05bf0c9ff7df65dcc49ee9dcd59d85bc82903fa528989",
+  "assetType": "Decal",
+  "assetId": 117793594585450,
+  "status": "Approved",
+  "imageId": 92708795814700
+ },
+ "icons/ui/target_ring.png": {
+  "sha256": "b5c237970481875b0898a2c0a241940b96d1dd8d772ea7f1def1e4cd6b85d9a2",
+  "assetType": "Decal",
+  "assetId": 91506690566600,
+  "status": "Approved",
+  "imageId": 85326063276067
  },
  "icons/weapons/bow_ancient.png": {
   "sha256": "81982879b10f761d2396bb31eb18b4dc876484efdbc951062c83165cef70d389",
