@@ -656,8 +656,8 @@ local lastLayout = nil
 local function layout(L)
 	lastLayout = L
 	local phone = L.mode == "phone"
-	gemBody.Position = UDim2.new(0, 0, 0, L.bodyTop)
-	gemBody.Size = UDim2.new(1, 0, 0, L.bodyH - deps.sheetInset()) -- 폰: 상세 시트가 올라와 있으면 그만큼 짧다
+	gemBody.Position = UDim2.new(0, L.bodyX, 0, L.bodyTop) -- QUEUE-ALL2 P2: PC는 왼쪽 + 가운데 단 자리(오른쪽 상세 카드는 그대로 보인다)
+	gemBody.Size = UDim2.new(0, L.bodyW, 0, math.max(0, L.bodyH - deps.sheetInset())) -- 폰: 상세 시트가 올라와 있으면 그만큼 짧다
 	local rowHeight = phone and 76 or 42
 	local buttonHeight = phone and 44 or 17
 	for _, entry in ipairs(slotRows) do

@@ -14,7 +14,7 @@ local player = Players.LocalPlayer
 
 function PrimordialActions.create(makeActionButton, setHint)
 	local self = {}
-	local button = makeActionButton(8, 96, "primary")
+	local button = makeActionButton(2, 96, "awaken") -- QUEUE-ALL2 P2(ref 17): 흰 바탕 각성 버튼
 	button.Name = "AwakenButton"
 	button.Text = "각성"
 	button.Visible = false
@@ -35,7 +35,7 @@ function PrimordialActions.create(makeActionButton, setHint)
 		end
 	end)
 
-	-- kind = "bag" | "equip" | nil(숨김). 태초면 각성 버튼 + 각인 줄(힌트 - 이유 힌트가 이미 있으면 그대로 둔다).
+	-- kind = "bag" | "equip" | nil(숨김). 태초 · 초월이면 각성 버튼.
 	function self.refresh(kind, key, item, hintBusy)
 		target = nil
 		button.Visible = false
@@ -50,12 +50,8 @@ function PrimordialActions.create(makeActionButton, setHint)
 		button.AutoButtonColor = reason == nil
 		button.TextTransparency = reason == nil and 0 or 0.6
 		button.Text = reason == nil and (Awaken.cost(best, item) == 0 and "각성(무료)" or ("각성 %s"):format(NumberFormat.format(Awaken.cost(best, item)))) or "각성"
-		if not hintBusy then
-			local line = PrimordialStamp.detailLine(item.primordial)
-			if line then
-				setHint(line)
-			end
-		end
+		-- QUEUE-ALL2 P2: 태초 각인 줄(세계 번호 · 최초 획득 · 출처)은 상세 카드의 세계 번호 칸(DetailCard)이 보여 준다 - 이유 줄(hint)에는 더 쓰지 않는다(hintBusy는 옛 호출 모양 유지용).
+		local _ = hintBusy
 	end
 
 	function self.button()

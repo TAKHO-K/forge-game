@@ -15,6 +15,8 @@ local CHAT_RIGHT_CLEARANCE = 500 -- 기본 채팅창 폭(~475px) + 여유
 local HUD_RIGHT_CLEARANCE = 90 -- TopChipsGui 칩 열(~70px) + 여유
 local TOP_MARGIN = 30 -- 지시 "조금만 더 위로" - 60에서 줄였다.
 local HEADER_HEIGHT = 44 -- 초기값(applyLayout이 Layout의 값으로 다시 정한다)
+local HEADER_INK = Color3.fromRGB(34, 24, 10) -- 금색 제목줄 위 글씨(어두운 갈색)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 function Shell.create(S, R)
 local player = S.player
@@ -158,8 +160,9 @@ end
 local header = Instance.new("Frame")
 header.Name = "Header"
 header.Size = UDim2.new(1, 0, 0, HEADER_HEIGHT)
-header.BackgroundColor3 = Color3.new(0, 0, 0)
-header.BackgroundTransparency = 0.78
+header.BackgroundColor3 = UIColors.gold -- QUEUE-ALL2 P2(ref 17): 제목줄 = 금색 띠 + 어두운 제목
+header.BackgroundTransparency = 0.12
+header.BorderSizePixel = 0
 header.Parent = content
 
 local headerBottomLine = Instance.new("Frame")
@@ -256,8 +259,8 @@ title.BackgroundTransparency = 1
 title.AutomaticSize = Enum.AutomaticSize.X
 title.Size = UDim2.new(0, 0, 1, 0)
 title.Font = Enum.Font.GothamBold
-title.TextSize = Theme.textSize("header")
-title.TextColor3 = UIColors.textPrimary
+title.TextSize = Theme.textSize("title")
+title.TextColor3 = HEADER_INK
 title.Text = "가방"
 title.Parent = headerLeft
 
@@ -268,7 +271,8 @@ countLabel.AutomaticSize = Enum.AutomaticSize.X
 countLabel.Size = UDim2.new(0, 0, 1, 0)
 countLabel.Font = Enum.Font.Gotham
 countLabel.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
-countLabel.TextColor3 = UIColors.textTertiary
+countLabel.TextColor3 = HEADER_INK
+countLabel.TextTransparency = 0.25
 countLabel.Text = "0 / 0"
 countLabel.Parent = headerLeft
 
@@ -338,16 +342,17 @@ closeButton.LayoutOrder = 4
 closeButton.Text = ""
 closeButton.AutoButtonColor = false
 closeButton.Size = UDim2.new(0, 26, 0, 26)
-closeButton.BackgroundColor3 = UIColors.panel
-closeButton.BackgroundTransparency = UIColors.panelTransparency
+closeButton.BackgroundColor3 = UIColors.danger -- ref 17: 빨간 원 + 흰 X
+closeButton.BackgroundTransparency = 0
 closeButton.Parent = headerRight
 do
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(1, 0)
 	corner.Parent = closeButton
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = UIColors.rim
-	stroke.Transparency = UIColors.rimTransparency
+	stroke.Color = Color3.new(1, 1, 1)
+	stroke.Thickness = 2
+	stroke.Transparency = 0.2
 	stroke.Parent = closeButton
 	-- X 표시 - 이모지·유니코드 글리프 대신 회전한 막대 2개(GoldHud 이후 이 프로젝트의
 	-- 일관된 선택, 폰트 두부 문제를 원천 차단한다).
@@ -357,7 +362,7 @@ do
 		bar.Position = UDim2.new(0.5, 0, 0.5, 0)
 		bar.Size = UDim2.new(0, 13, 0, 2)
 		bar.Rotation = rotation
-		bar.BackgroundColor3 = UIColors.textSecondary
+		bar.BackgroundColor3 = Color3.new(1, 1, 1)
 		bar.BorderSizePixel = 0
 		bar.Parent = closeButton
 	end
@@ -374,11 +379,13 @@ local function layoutHeader(L)
 end
 
 -- ═══ 탭 ═══
--- 23-4 신설: 헤더와 본문 사이에 탭 줄 하나. 색 규칙은 EnhanceUI.client.lua 탭과 같다(선택=강조색, 나머지=패널색). S20b: PC = [장비 · 보석](장비 탭이 장비 칸 + 가방 2단),
--- 폰 = [장비 · 가방 · 보석](각각 1단). 어느 프레임이 어느 탭에 속하는지는 배치가 바뀔 때마다 applyLayout이 정한다.
+-- 23-4 신설: 헤더 아래 탭 줄 하나. 색 규칙은 EnhanceUI.client.lua 탭과 같다(선택=강조색, 나머지=패널색).
+-- QUEUE-ALL2 P2(ref 17): 탭 id = 가방 필터(all · armor · gloves · shoes) · 보석(gem) · 폰 장비(gear) · 도감(codex). PC = 가운데 가방 칸 위에 [전체 · 갑옷 · 장갑 · 신발 · 보석](장신구 · 무기 필터 없음 - 가방에 들어오는 부위는 갑옷 · 장갑 · 신발뿐),
+-- 폰 = 창 폭 전체에 [장비 · 전체 · 갑옷 · 장갑 · 신발 · 보석]. 옛 이름("장비" · "가방" · "보석" · 도감 이름)으로 불러도 된다(자체 점검 · 보석 토스트가 부른다).
+-- 필터 탭을 고르면 S.bagFilter(nil = 전체 · 부위 id)를 바꾸고 가방 격자를 다시 그린다. 어느 프레임이 어느 탭에 속하는지는 배치가 바뀔 때마다 applyLayout이 정한다. 상세 카드(R.detail)는 탭과 무관하다(PC 항상 · 폰 선택 시).
 local tabButtons = {}
-local tabPanels = {} -- 탭 이름 -> { 프레임 … }
-local activeTab = "장비"
+local tabPanels = {} -- 탭 id -> { 프레임 … }
+local activeTab = "all"
 
 local tabRow = Instance.new("Frame")
 tabRow.Name = "TabRow"
@@ -394,72 +401,150 @@ tabRowLine.BackgroundTransparency = UIColors.rimTransparency
 tabRowLine.BorderSizePixel = 0
 tabRowLine.Parent = tabRow
 
+-- 옛 탭 이름 → id(폰의 "장비"는 장비 칸 · PC의 "장비"는 3단 전체 보기)
+local function resolveTab(name)
+	if name == "장비" then
+		return S.mode == "phone" and "gear" or "all"
+	elseif name == "가방" then
+		return "all"
+	elseif name == "보석" then
+		return "gem"
+	elseif name == R.codexTabName then
+		return "codex"
+	end
+	return name
+end
+
 local function selectTab(name)
+	name = resolveTab(name)
 	if not tabPanels[name] then
-		name = "장비"
+		name = S.mode == "phone" and "gear" or "all"
 	end
 	activeTab = name
 	for tabName, btn in pairs(tabButtons) do
 		local selected = tabName == name
-		btn.BackgroundColor3 = selected and UIColors.gold or UIColors.panel
-		btn.BackgroundTransparency = selected and 0.1 or UIColors.panelTransparency
-		btn.TextColor3 = selected and Color3.new(0, 0, 0) or UIColors.textSecondary
+		btn.BackgroundColor3 = selected and UIColors.gold or UIColors.slot
+		btn.BackgroundTransparency = selected and 0.05 or 0.2
+		btn.TextColor3 = selected and HEADER_INK or UIColors.textSecondary
+		local stroke = btn:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Transparency = selected and 1 or UIColors.rimTransparency
+		end
 	end
 	for tabName, frames in pairs(tabPanels) do
 		for _, frame in ipairs(frames) do
-			frame.Visible = tabName == name
+			frame.Visible = false
 		end
+	end
+	for _, frame in ipairs(tabPanels[name] or {}) do
+		frame.Visible = true -- 폰에서 여러 필터 탭이 같은 가방 프레임을 쓴다 - 숨긴 뒤 고른 탭 것만 켠다
+	end
+	if Layout.filterTabs[name] then
+		local filter = name ~= "all" and name or nil
+		if filter ~= S.bagFilter then
+			S.bagFilter = filter
+			if S.rebuildGrid then
+				S.rebuildGrid()
+			end
+		end
+	end
+	if S.isOpen and R.bagFrame and R.bagFrame.Visible then
+		S.bagViewed = true -- 새 아이템 점: 가방 칸을 본 창은 닫을 때 "본 것"으로 친다(NewItems)
 	end
 end
 R.selectTab = selectTab
+R.activeTab = function()
+	return activeTab
+end
+
+-- 새 아이템 빨간 점(필터 탭 · NewItems가 부위별 수를 준다). 탭을 다시 지을 때도 부른다.
+function R.paintTabDots()
+	for id, btn in pairs(tabButtons) do
+		local dot = btn:FindFirstChild("NewDot")
+		if dot then
+			dot.Visible = S.newItems ~= nil and Layout.filterTabs[id] == true and S.newItems.countFor(id ~= "all" and id or nil) > 0
+		end
+	end
+end
 
 local function rebuildTabs(L)
 	for _, btn in pairs(tabButtons) do
 		btn:Destroy()
 	end
 	tabButtons = {}
-	local buttonWidth = L.mode == "phone" and 110 or 96
-	for i, name in ipairs(L.tabNames) do
+	local count = #L.tabNames
+	local gap = 6
+	local inner = L.mode == "phone" and (L.tabW - 28) or L.tabW
+	local buttonWidth = math.clamp(math.floor((inner - (count - 1) * gap) / count), 56, L.mode == "phone" and 110 or 96)
+	for i, id in ipairs(L.tabNames) do
 		local btn = Instance.new("TextButton")
+		btn.Name = "Tab_" .. id
+		btn.AutoButtonColor = false
 		btn.Size = UDim2.new(0, buttonWidth, 0, L.tabButtonH)
-		btn.Position = UDim2.new(0, 14 + (i - 1) * (buttonWidth + 8), 0, (L.tabH - L.tabButtonH) / 2)
-		btn.Text = name
+		btn.Position = UDim2.new(0, (L.mode == "phone" and 14 or 0) + (i - 1) * (buttonWidth + gap), 0, (L.tabH - L.tabButtonH) / 2)
+		btn.Text = id == "codex" and R.codexTabName or Text.get("inv.tab." .. id)
 		btn.Font = Enum.Font.GothamBold
 		btn.TextSize = Theme.textSize("body")
-		btn.BackgroundColor3 = UIColors.panel
-		btn.BackgroundTransparency = UIColors.panelTransparency
+		btn.TextTruncate = Enum.TextTruncate.AtEnd
+		btn.BackgroundColor3 = UIColors.slot
 		btn.TextColor3 = UIColors.textSecondary
 		btn.Parent = tabRow
 		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 6)
+		corner.CornerRadius = UDim.new(0, 8)
 		corner.Parent = btn
-		tabButtons[name] = btn
+		local stroke = Instance.new("UIStroke")
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Color = UIColors.rim
+		stroke.Transparency = UIColors.rimTransparency
+		stroke.Parent = btn
+		if Layout.filterTabs[id] then
+			local dot = Instance.new("Frame")
+			dot.Name = "NewDot"
+			dot.AnchorPoint = Vector2.new(1, 0)
+			dot.Position = UDim2.new(1, -4, 0, 4)
+			dot.Size = UDim2.new(0, 8, 0, 8)
+			dot.BackgroundColor3 = UIColors.danger
+			dot.BorderSizePixel = 0
+			dot.Visible = false
+			dot.Parent = btn
+			local dotCorner = Instance.new("UICorner")
+			dotCorner.CornerRadius = UDim.new(1, 0)
+			dotCorner.Parent = dot
+		end
+		tabButtons[id] = btn
 		btn.Activated:Connect(function()
-			selectTab(name)
+			selectTab(id)
 		end)
 	end
+	R.paintTabDots()
 end
 
 -- 화면 크기에서 배치를 정해 전부에 적용한다. 화면 크기가 바뀔 때 · 창을 열 때 부른다. 반환: 배치 L.
 function R.applyLayout()
 	local size = screenSize()
 	local L = Layout.compute(size.X, size.Y)
+	local modeChanged = S.mode ~= L.mode
 	S.mode, R.layout = L.mode, L
 	positionWindow(L)
 	layoutHeader(L)
-	tabRow.Position = UDim2.new(0, 0, 0, L.headerH)
-	tabRow.Size = UDim2.new(1, 0, 0, L.tabH)
+	tabRow.Position = UDim2.new(0, L.tabX, 0, L.tabY)
+	tabRow.Size = UDim2.new(0, L.tabW, 0, L.tabH)
+	tabPanels = { gem = { R.gemFrame } }
+	for id in pairs(Layout.filterTabs) do
+		tabPanels[id] = L.mode == "phone" and { R.bagFrame } or { R.gearFrame, R.bagFrame }
+	end
 	if L.mode == "phone" then
-		tabPanels = { ["장비"] = { R.gearFrame }, ["가방"] = { R.bagFrame }, ["보석"] = { R.gemFrame } }
-	else
-		tabPanels = { ["장비"] = { R.gearFrame, R.bagFrame }, ["보석"] = { R.gemFrame } }
+		tabPanels.gear = { R.gearFrame }
 	end
 	if R.codexFrame and R.codexEnabled and R.codexEnabled() then -- A2-N4 §4-2 세트 도감(스위치 뒤)
-		tabPanels[R.codexTabName] = { R.codexFrame }
+		tabPanels.codex = { R.codexFrame }
 		L.tabNames = table.clone(L.tabNames)
-		table.insert(L.tabNames, R.codexTabName)
+		table.insert(L.tabNames, "codex")
 	elseif R.codexFrame then
 		R.codexFrame.Visible = false
+	end
+	if modeChanged and activeTab == "gear" then
+		activeTab = "all" -- PC에는 장비 탭이 따로 없다(3단 전체 보기에 들어 있다)
 	end
 	rebuildTabs(L)
 	for _, fn in ipairs(R.layouts) do
@@ -504,7 +589,7 @@ player:GetAttributeChangedSignal("DebugInventoryScreen"):Connect(function()
 	end
 end)
 
-R.header, R.countLabel = header, countLabel
+R.header, R.countLabel, R.headerRight = header, countLabel, headerRight
 R.sortButton, R.cutoffButton, R.bulkSellButton, R.closeButton = sortButton, cutoffButton, bulkSellButton, closeButton
 R.toggleButton, R.dim = toggleButton, dim
 end

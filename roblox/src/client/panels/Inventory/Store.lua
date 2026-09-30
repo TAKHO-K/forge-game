@@ -64,6 +64,11 @@ S.isOpen = false
 S.rainbowGradients = {} -- 매 프레임 회전시켜야 하는 태초 등급 테두리 그라디언트 목록.
 S.sheetInset = 0 -- 폰: 상세 시트가 올라와 있으면 그 높이(본문 프레임이 그만큼 짧아져 시트와 겹치지 않는다) · 아니면 0
 S.mode = "pc" -- Layout.compute의 판정("pc" | "phone") - Shell.applyLayout이 매번 갱신한다.
+-- QUEUE-ALL2 P2(ref 17): 가방 보기 필터(클라 전용 - 서버 왕복 없음). bagFilter = nil(전체) | 부위 id · lockedOnly = 잠긴 것만 · bagViewed = 이번에 연 창에서 가방 칸을 봤는가(새 아이템 점 - NewItems) · newItems = NewItems 객체(InventoryUI가 붙인다)
+S.bagFilter = nil
+S.lockedOnly = false
+S.bagViewed = false
+S.newItems = nil
 
 -- 탭 방식인가(S20d - GemTab.tapMode와 같은 판정): 폰 배치이거나 마지막 입력이 터치면 더블클릭 · 우클릭 없이 "탭 = 선택 → 상세의 [장착] / [해제] 버튼"이다.
 function S.tapMode()

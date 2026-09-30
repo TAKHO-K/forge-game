@@ -16,7 +16,7 @@
 -- 상세바에 정보만 보여주고 해제 버튼은 비활성).
 --
 -- S20b: 이 파일은 배선만 한다 - 창 껍데기(panels/Inventory/Shell) · 장비 칸(GearTab) · 가방 칸(BagTab) · 상세(DetailSheet) · 일괄판매(BulkSell) · 보석 탭(GemTab)이 각자 파일이고,
--- 공용 상태는 Store(S) · 프레임 참조는 R 표 하나로 나눈다. 배율(UIScale)은 없다 - 화면이 좁으면 Layout이 배치를 바꾼다(폰 = 1단 + 탭 3개 + 하단 시트).
+-- 공용 상태는 Store(S) · 프레임 참조는 R 표 하나로 나눈다. 배율(UIScale)은 없다 - 화면이 좁으면 Layout이 배치를 바꾼다(QUEUE-ALL2 P2 ref 17: PC = 3단(착용 중 · 가방 · 상세 카드) · 폰 = 1단 + 상단 탭 + 하단 시트).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -35,6 +35,7 @@ local CodexTab = require(script.Parent.panels.Inventory.CodexTab)
 local Shell = require(script.Parent.panels.Inventory.Shell)
 local Store = require(script.Parent.panels.Inventory.Store)
 local ItemActions = require(script.Parent.panels.Inventory.ItemActions)
+local NewItems = require(script.Parent.panels.Inventory.NewItems)
 
 local inventorySync = ReplicatedStorage:WaitForChild("InventorySync")
 local inventoryFetch = ReplicatedStorage:WaitForChild("InventoryFetch")
@@ -46,6 +47,10 @@ local R = {}
 S.R = R -- 점검(InventoryLayoutCheck)이 R.debugForceScreen · R.selectTab을 부른다
 
 Shell.create(S, R)
+-- QUEUE-ALL2 P2(ref 17): 새 아이템 알림(가방 버튼 빨간 점 = LocalPlayer InventoryNewCount → 칸 · 필터 탭 빨간 점 → 한 번 보면 사라짐)
+S.newItems = NewItems.create(S, function()
+	R.paintTabDots()
+end)
 ItemActions.attach(S, R) -- S20d: 착용 · 해제 입력의 유일한 통로(S.equipFromBag · S.unequipToBag) - 세 탭이 만들어지기 전에 붙는다
 GearTab.create(S, R)
 BagTab.create(S, R)
@@ -132,6 +137,11 @@ UIManager.register("inventory", {
 			R.cutoffDropdownDim.Visible = false
 		end
 		gemTab.cancelDrag()
+		S.compareTip.hide()
+		if S.bagViewed then
+			S.newItems.markAllSeen() -- 가방 칸을 본 창을 닫았다 = 새 아이템을 본 것
+		end
+		S.bagViewed = false
 	end,
 })
 
@@ -152,6 +162,7 @@ local function onStateChanged(state)
 	S.equippedArmor = state.armor
 	S.equippedGloves = state.gloves
 	S.equippedShoes = state.shoes
+	S.newItems.update() -- 서버 스냅샷만 센다(점검이 넣는 가짜 가방은 세지 않는다)
 	-- 칸 수는 서버가 알린 값(slots - 프로필이 아직 없을 때의 첫 응답에는 없다). 바뀌면 격자 높이가 칸 수에서 나오므로 배치를 다시 한다.
 	if type(state.slots) == "number" and state.slots ~= S.bagSlots then
 		S.bagSlots = state.slots

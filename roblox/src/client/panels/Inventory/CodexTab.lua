@@ -160,8 +160,8 @@ function CodexTab.create(S, R)
 	S.rebuildCodex = rebuild
 
 	table.insert(R.layouts, function(L)
-		frame.Position = UDim2.new(0, 0, 0, L.bodyTop)
-		frame.Size = UDim2.new(1, 0, 0, L.bodyH)
+		frame.Position = UDim2.new(0, L.bodyX, 0, L.bodyTop) -- QUEUE-ALL2 P2: PC는 왼쪽 + 가운데 단 자리
+		frame.Size = UDim2.new(0, L.bodyW, 0, math.max(0, L.bodyH - S.sheetInset))
 	end)
 	frame:GetPropertyChangedSignal("Visible"):Connect(function()
 		if frame.Visible then

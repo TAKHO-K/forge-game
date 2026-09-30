@@ -199,6 +199,10 @@ local function run()
 		-- 텍스트 라벨이 시트 밖으로 안 나간다(이름 · 메타 · 옵션 줄)
 		local textOutside = 0
 		for _, inst in ipairs(TextAudit.visibleTexts(detail)) do
+			local scroller = inst:FindFirstAncestorWhichIsA("ScrollingFrame") -- QUEUE-ALL2 P2: 카드 본문은 시트 안 스크롤이다 - 스크롤 아래로 가려진 글은 밖으로 나간 게 아니다
+			if scroller and scroller:IsDescendantOf(detail) then
+				continue
+			end
 			if inst.AbsolutePosition.X + inst.AbsoluteSize.X > detail.AbsolutePosition.X + detail.AbsoluteSize.X + 0.5 or inst.AbsolutePosition.Y + inst.AbsoluteSize.Y > detail.AbsolutePosition.Y + detail.AbsoluteSize.Y + 0.5 then
 				textOutside += 1
 			end
