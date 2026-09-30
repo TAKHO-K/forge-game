@@ -21,4 +21,10 @@ return {
 	glowPad = 8, -- 바깥 빛 여백(px)
 	-- A2-N4 §3-3 결정(A2-N3 8-1 메이플식): 보스바 = 화면 맨 위 얇은 전체 폭(이름은 막대 안 왼쪽) · 기믹 안내 = 화면 중앙 아래(화면 높이 gimmickHudY 비율). ArtStyleV1 뒤(끔 = 옛 자리).
 	bossHud = { barHeight = 20, barMargin = 12, barTop = 4, gimmickHudY = 0.62 },
+	-- A2-N4 §4-6 GUI 트렌드 1차(client/ArtV1GuiTrend - ArtStyleV1 뒤): 대상 = ScreenMap 인스턴스 이름 · 보스바 · 장비창 창. 굵은 잉크 외곽선 · 둥근 모서리 최소 · 위 → 아래 그라데이션(아래 색을 곱한다) · 글씨 외곽선 불투명 상한.
+	guiTrend = {
+		targets = { "MenuBar", "TopChipsRow", "PartyToggleButton", "LeaderboardToggleButton", "TravelHubButton", "TravelBackButton", "TravelPartyButton", "ClassReopenButton",
+			"InventoryToggleButton", "HealthBar", "CentralRow", "ExpTrack", "BossBar", "InventoryGui/Window" }, -- "부모/이름" = 그 부모 아래의 그 이름만
+		ink = C(30, 27, 46), strokeThickness = 2.5, cornerRadius = 12, gradientBottom = C(200, 205, 215), textStroke = 0.35,
+	},
 }
