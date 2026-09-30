@@ -63,11 +63,13 @@ local function humanoidAndRoot()
 	return character and character:FindFirstChildOfClass("Humanoid"), character and character:FindFirstChild("HumanoidRootPart")
 end
 
--- 켤 수 있나(버튼 표시용): 안내가 보이고 · 허용 대상이고 · 경로가 있고 · 보스전이 아니고 · 살아 있음
+-- 켤 수 있나(버튼 표시용): 안내가 보이고 · 허용 대상이고 · 경로가 있고 · 아직 도착 전이고 · 보스전이 아니고 · 살아 있음
 function AutoWalk.canStart()
 	local route, _, who = Wayfinder.route()
-	local humanoid = humanoidAndRoot()
-	return route ~= nil and A.owners[who] == true and humanoid ~= nil and humanoid.Health > 0 and player:GetAttribute("BossEncounterId") == nil
+	local humanoid, root = humanoidAndRoot()
+	local dest = Wayfinder.destination()
+	local near = dest and root and (Vector3.new(dest.X - root.Position.X, 0, dest.Z - root.Position.Z)).Magnitude <= WorldMapData.guide.arriveStuds -- 이미 도착(버튼 숨김)
+	return route ~= nil and not near and A.owners[who] == true and humanoid ~= nil and humanoid.Health > 0 and player:GetAttribute("BossEncounterId") == nil
 end
 
 function AutoWalk.isActive()

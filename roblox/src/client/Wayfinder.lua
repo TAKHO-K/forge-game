@@ -170,6 +170,12 @@ function Wayfinder.destination()
 	return r and r.points[#r.points] or nil
 end
 
+-- 지금 안내의 이름(setPoints opts.label - 목표 표시 글씨)
+function Wayfinder.label()
+	local r = current()
+	return r and r.label
+end
+
 function Wayfinder.isHidden()
 	return hidden
 end

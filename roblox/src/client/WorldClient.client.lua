@@ -423,7 +423,8 @@ RunService.Heartbeat:Connect(function(dt)
 		objectiveLabel.TextColor3 = Color3.fromRGB(g.color[1], g.color[2], g.color[3])
 	elseif dest and root then
 		local d = Vector3.new(dest.X - root.Position.X, 0, dest.Z - root.Position.Z).Magnitude
-		objectiveLabel.Text = ("안내 · %dm"):format(math.floor(d * TREE.metersPerStud + 0.5))
+		local label = Wayfinder.label()
+		objectiveLabel.Text = label and ("다음 목표: %s · %dm"):format(label, math.floor(d * TREE.metersPerStud + 0.5)) or ("안내 · %dm"):format(math.floor(d * TREE.metersPerStud + 0.5))
 		objectiveLabel.TextColor3 = UIColors.textPrimary
 	end
 	placeObjective()
