@@ -29,6 +29,9 @@ return {
 	-- 방어구 착용 표시(순서표 14 · docs/art/armor-wear-spec.md 2안 = 클라 조각 + WeldConstraint). 모델 = armor/<부위>_<구역>_<외형>(외형 FBX 3종)
 	armorLookOfGrade = { normal = "normal", rare = "normal", epic = "normal", legendary = "legendary", relic = "legendary", ancient = "legendary", primordial = "transcendent", transcendent = "transcendent" },
 	armorScaleClamp = { min = 0.8, max = 1.35 }, -- 체형 배율(붙는 파트 Size ÷ refSize) 자르기 - 명세 §5
+	-- A2-N4 P0-3 A안: 붙는 R15 파트 실측 맞춤(armorScaleClamp 대신). 파트마다 조각 묶음 경계를 목표 = 손 · 발은 파트 × (1 + handFootPad), 나머지는 파트 + 껍데기 shellStuds × 2 에 맞춘다.
+	--   둘레(X · Z) = 목표에 딱 맞춤(늘리기 · 줄이기) · 길이(Y) = 목표보다 크면 줄이기만(어깨판이 팔 길이로 늘어나지 않게).
+	armorFit = { shellStuds = 0.15, handFootPad = 0.10, handFootParts = { LeftHand = true, RightHand = true, LeftFoot = true, RightFoot = true } },
 	armorLookAttribute = "ArmorLook_", -- Player Attribute ArmorLook_<부위> = "<구역>|<등급>"(서버 InventorySync.push - 화면 전용 복사본 · 저장 아님)
 	-- 조각 색(make_armor_wear.py palette와 같은 규칙): 본체 = 구역 base · _Trim = 구역 강조(영웅 이상 = 등급 색) · _Grade = 등급 색 · _Glow = Neon(보석 빛)
 	armorZoneColors = {

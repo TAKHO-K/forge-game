@@ -3020,6 +3020,12 @@ local function handleCommand(player, args)
 			print(("[ArtV1] 스위치 %s · 조명 %s"):format(args[2], profile))
 			reply(player, ("아트 샘플 %s(조명 %s · 몬스터는 새로 나는 몹부터)"):format(args[2], profile))
 		end
+	elseif sub == "body" and args[2] == "std" and (args[3] == "on" or args[3] == "off") then
+		-- A2-N4 P0-3 B안 비교: 표준 체형 스위치(Workspace StandardBodyV1) → 캐릭터 다시 불러 적용
+		local cfg = require(game:GetService("ReplicatedStorage").Shared.data.ArtStyleV1Data).standardBody
+		workspace:SetAttribute(cfg.attribute, args[3] == "on")
+		player:LoadCharacter()
+		reply(player, "표준 체형 " .. args[3])
 	elseif sub == "stealhint" and args[2] == "reset" then
 		PlayerProfile.debugResetStealLockSeen(player) -- C1 마무리: 잠긴 몹 말풍선을 다시 보게(세션 메모리 - 백업 복원 대상)
 		reply(player, "잠긴 몹 말풍선 기록을 비웠습니다")
