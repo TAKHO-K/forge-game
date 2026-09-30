@@ -305,7 +305,13 @@ event.OnClientEvent:Connect(function(data)
 			end
 			local pitch = math.rad(30)
 			local from = focus + front * dist * math.cos(pitch) + Vector3.new(0, dist * math.sin(pitch), 0)
-			shotCf = shotCf:Lerp(CFrame.lookAt(from, focus), Easing.get("inout", (t - back) / 0.55))
+			-- A2-N4: 캐릭터 기준 극좌표 보간(거리 · 방향 따로) - 직선 보간은 카메라가 캐릭터 곁(16.5)을 스쳐 줌인 → 줌아웃처럼 보였다
+			local k = Easing.get("inout", (t - back) / 0.55)
+			local a0, a1 = shotCf.Position - focus, from - focus
+			local dirK = a0.Unit:Lerp(a1.Unit, k)
+			local pos = focus + (dirK.Magnitude > 1e-3 and dirK.Unit or a1.Unit) * (a0.Magnitude + (a1.Magnitude - a0.Magnitude) * k)
+			local look0 = shotCf.Position + shotCf.LookVector * a0.Magnitude
+			shotCf = CFrame.lookAt(pos, look0:Lerp(focus, k))
 		end
 		camera.CFrame = shotCf
 	end)

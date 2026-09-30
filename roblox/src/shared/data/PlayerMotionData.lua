@@ -102,7 +102,7 @@ P.body = body
 -- 칼 방향 θ ≈ 오른 어깨 x + 팔꿈치 x + 손목 x(옆으로 벌림 z가 작을 때). 왼손 = 보조 손 IK(자루 아래 - WeaponRigSpec.greatsword support).
 -- 무게: 전조 = 앞 타의 회복(settle = 다음 타의 들어 올림) · 동작 = 무게에 끌려가듯 길게(outCubic) · 무릎을 굽혀 루트를 내린다 · 따라 휘두름이 몸 반대편 아래까지.
 -- A2-N4 P0-2: 두 손 중단 - 옛 대기(오른 어깨 벌림 10 · 허리 −20)는 오른손이 몸 옆이라 왼손 IK가 자루에 못 닿아(1.5 stud) 한 손 자세였다 → 오른손을 몸 앞 가운데로(어깨 안쪽 −28 · 허리 −8)
-local GS_READY = with(body(0.12, 8, 0, 0), { Waist = { 0, 6, 0 }, Neck = { 0, -4, 0 }, RightShoulder = { 40, 0, -62 }, RightElbow = { 52, 0, 0 }, RightWrist = { -68, 0, 0 } }) -- 중단 · 두 손(Play: −28은 오른손 x 1.17로 왼손이 0.9 못 미침 · −62 = 왼손 0.23 O · 손목 −42는 칼날이 얼굴을 가려 −68로 칼끝을 앞으로)
+local GS_READY = with(body(0.12, 8, 0, 0), { Waist = { 0, 6, 0 }, Neck = { 0, -4, 0 }, RightShoulder = { 40, 0, -62 }, RightElbow = { 52, 0, 0 }, RightWrist = { -15, 0, 0 } }) -- 중단 · 두 손(Play: −28은 오른손 x 1.17로 왼손이 0.9 못 미침 · −62 = 왼손 0.22 O · 손목 −42 · −68은 칼날이 얼굴 앞에 섰다(−쪽 = 칼끝이 위로) → −15)
 local GS_UP_R = with(body(0.08, -10, -12, 0), { Waist = { 12, -60, 0 }, Neck = { -5, 45, 0 }, RightShoulder = { 170, -15, 40 }, RightElbow = { 70, 0, 0 }, RightWrist = { -5, 0, 0 } }) -- 오른 어깨 위로 젖힘(θ 235 - 칼이 등 뒤로 늘어진다)
 local GS_LOW_L = with(body(0.42, 22, 18, 8), { Waist = { -25, 50, 0 }, Neck = { 12, -40, 0 }, RightShoulder = { 35, 0, -45 }, RightElbow = { 15, 0, 0 }, RightWrist = { -80, 0, 0 } }) -- 왼쪽 아래까지 끌려감(θ −30)
 local GS_LOAD_L = with(body(0.22, -6, 18, 0), { Waist = { 0, 55, 0 }, Neck = { 0, -40, 0 }, RightShoulder = { 80, 0, -60 }, RightElbow = { 30, 0, 0 }, RightWrist = { -100, 0, 0 } }) -- 왼 허리 옆에 칼을 눕혀 장전(θ 10)
