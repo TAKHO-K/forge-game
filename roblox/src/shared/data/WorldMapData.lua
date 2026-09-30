@@ -59,6 +59,8 @@ return {
 		displayName = "큰 나무 마을",
 		safeRadius = 400, -- = 잎 덮개 반경 = 경계(등불 줄) · M1-2 사용자: 300 → 400(더 넓게 - 수관 baseRadius도 같이)
 		spawn = { r = 120, angleDeg = -60 }, -- 리스폰 자리(나무 앞 · 뿌리 사이 - 가장 가까운 뿌리 = 코스 뿌리 −30°)
+		-- QUEUE-ALL1 R1(사용자): 신규 계정 첫 스폰 = 밝은 허브 광장(첫 관문 구역 쪽 덮개 가장자리) · 첫 관문 방향(바깥)을 바라봄 - 새 프로필의 첫 캐릭터만(리스폰은 위 spawn 그대로)
+		firstSpawn = { r = 360, towardZone = "tier1" },
 		-- 시설 = 기능이 비슷한 것끼리 한 거리(M1-2 사용자). 가운데 자리(r · angleDeg) = 기능 물체(강화대 · 보석상인 · 환생 제단 - WorldConfig가 이 점을 읽는다) ·
 		--   양옆 spots = 자리 표시(along = 거리 방향 옆 거리 · side = 나무 쪽 −/바깥 +) · 뒤(바깥쪽) = 건물 줄(row) · 발밑 = 거리 바닥(street - 광장은 plaza 원판).
 		--   배치도 = docs/design/world-map-m1.md §1 허브.
@@ -385,6 +387,8 @@ return {
 	guide = {
 		beamWidth = 2.5, arrowEvery = 24, arrowsShown = 6, arriveStuds = 20, refreshSeconds = 0.25,
 		joinTries = { 2, -2, 4, -4, 6 }, -- 길찾기 경로에 낙하 피해 절벽이 있으면 이 번호 차의 합류점으로 다시 찾는다(GuidePath.build)
+		-- QUEUE-ALL1 R1: 그래도 절벽이면 격자 A*(GuidePath.safeDescent) - 칸 spacing · 반경 radius 안 · 칸 사이 내려감 ≤ 안전 높이 · 오름 ≤ rise · 가슴 높이(probe) 선이 막히면 못 감 · 길 점 goalStuds 안 칸 = 도착 · 칸 상한 maxNodes
+		safeGrid = { spacing = 6, radius = 320, rise = 7, probe = 2.5, goalStuds = 10, maxNodes = 9000, relaxMaxDrop = 120, dropPenalty = 400, dropPenaltyPerStud = 30 }, -- relax = 안전 내리막이 없을 때(고립 꼭대기) 벌점 붙여 가장 낮은 낙하 한 번
 		sampleStuds = 4, groundLift = 1.5, probeUp = 60, probeDown = 260, groundNear = 160,
 		columnHits = 6, climbStuds = 8, buriedStuds = 10, steepRatio = 1.5, maxHiddenStuds = 12, -- 세로 줄 표면 수 · 예상 높이 위로 이만큼까지만 지면(아치 · 다리 위 제외) · 점 위 이 안에 표면 = 묻힘 · 높이 차 > 수평 × steepRatio = 절벽 선분(꺾은 선으로) · 그래도 묻힌 조각은 안 그림(검사: 연속 숨김 ≤ maxHiddenStuds)
 		drawStuds = 90, drawSegments = 30, offPathStuds = 16, recomputeSeconds = 1, pathMaxStuds = 600,

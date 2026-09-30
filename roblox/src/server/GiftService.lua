@@ -44,6 +44,9 @@ function GiftService.normalize(kind, value, note, from)
 		if not Monetization.findCosmetic(CosmeticSlotData, kind, value) then
 			return nil, "unknown_cosmetic"
 		end
+		if Monetization.seasonOnly(CosmeticSlotData, kind, value) then
+			return nil, "season_only" -- QUEUE-ALL1 R1: 시즌 한정 치장은 선물 X
+		end
 		gift.itemId = value
 	end
 	return gift

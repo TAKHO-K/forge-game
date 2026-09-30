@@ -626,11 +626,18 @@ local function buildToggleButton()
 	Theme.corner(button, 8)
 	Theme.stroke(button)
 	button.Activated:Connect(Leaderboard.toggle)
+	-- QUEUE-ALL1 R1: 단축키 L(PanelRegistry.actionKeys - 채팅 입력 중 = gameProcessed로 무시)
+	local lKey = require(script.Parent.Parent.ui.PanelRegistry).actionKey("leaderboard")
+	game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == lKey then
+			Leaderboard.toggle()
+		end
+	end)
 	-- QUEUE-ALL1 01 A-4: 아트 켬 = 아이콘 타일(순위 - 단축키 없음)
 	local IconTile = require(script.Parent.Parent.ui.IconTile)
 	local function tile()
 		if not button:FindFirstChild("IconTile") then
-			IconTile.apply(button, "rank", nil, { size = 40 })
+			IconTile.apply(button, "rank", "L", { size = 40 }) -- QUEUE-ALL1 R1 단축키 L
 		end
 	end
 	tile()

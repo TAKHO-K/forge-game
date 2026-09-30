@@ -28,6 +28,12 @@ PanelRegistry.panels = {
 	-- 예약(창이 없어 아직 등록하지 않는다 - 창을 만드는 세션이 한 줄 넣는다. PRD 20.81 [D-1] · [D-2]): O 상점(menuOrder 4) · K 펫(5) · J 보상(6번째부터는 "보상" 창의 탭으로 들어간다 - 출석 · 복귀 · 시즌패스 · 계절 토큰).
 }
 
+-- QUEUE-ALL1 R1: 창이 아닌 단축키(버튼 동작) - 패널 단축키 · 금지 키와 겹치면 validate가 error. 처리 = 그 버튼 코드(순위 = panels/Leaderboard · 귀환 = WorldClient).
+PanelRegistry.actionKeys = {
+	{ id = "leaderboard", hotkey = Enum.KeyCode.L }, -- 순위 창 열기/닫기
+	{ id = "hubReturn", hotkey = Enum.KeyCode.H }, -- 허브 귀환
+}
+
 -- 메뉴바 칸 상한(PRD 20.81 [D-2]): 상시 5칸(가방 · 파티 · 상점 · 펫 · 보상). menuOrder가 있는 항목만 센다.
 PanelRegistry.menuSlotLimit = 5
 
@@ -37,8 +43,13 @@ function PanelRegistry.assertAllowed(keyCode, ownerId)
 end
 
 -- 표 검사: id 겹침 · 금지 키 · 단축키 겹침 · 메뉴 칸 상한. 어긋나면 error. 자체 점검이 합성 표로 이 함수를 그대로 부른다.
-function PanelRegistry.validate(panels)
+function PanelRegistry.validate(panels, actionKeys)
 	local seenIds, seenKeys, menuCount = {}, {}, 0
+	for _, a in ipairs(actionKeys or {}) do
+		PanelRegistry.assertAllowed(a.hotkey, a.id)
+		assert(not seenKeys[a.hotkey], ("PanelRegistry: 단축키가 겹친다 - %s"):format(tostring(a.hotkey)))
+		seenKeys[a.hotkey] = true
+	end
 	for _, entry in ipairs(panels) do
 		assert(not seenIds[entry.id], "PanelRegistry: id가 겹친다 - " .. entry.id)
 		seenIds[entry.id] = true
@@ -54,7 +65,16 @@ function PanelRegistry.validate(panels)
 	end
 end
 
-PanelRegistry.validate(PanelRegistry.panels)
+PanelRegistry.validate(PanelRegistry.panels, PanelRegistry.actionKeys)
+
+function PanelRegistry.actionKey(id)
+	for _, a in ipairs(PanelRegistry.actionKeys) do
+		if a.id == id then
+			return a.hotkey
+		end
+	end
+	return nil
+end
 
 local byId = {}
 local byHotkey = {}

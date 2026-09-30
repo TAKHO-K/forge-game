@@ -161,22 +161,164 @@ function GuidePath.maxDrop(list)
 	return worst
 end
 
-function GuidePath.build(from, road, params, groundNear)
-	local i = GuidePath.nextIndex(road, from)
-	local legs, pathfound = GuidePath.approach(from, road[i])
-	-- 길찾기가 낙하 피해 높이를 넘는 절벽으로 뛰어내리면 다른 합류점(joinTries - 길 점 번호 차)으로 다시 찾아 절벽 없는 쪽을 쓴다(없으면 처음 것)
-	if GuidePath.maxDrop(legs) > SAFE_DROP then
-		for _, off in ipairs(G.joinTries) do
-			local j = math.clamp(i + off, 1, #road)
-			if j ~= i then
-				local other, found = GuidePath.approach(from, road[j])
-				if found and GuidePath.maxDrop(other) <= SAFE_DROP then
-					legs, pathfound, i = other, found, j
+-- QUEUE-ALL1 R1: 안전 내리막 찾기(격자 A*) - 길찾기(PathfindingService)는 뛰어내림 높이 제한이 없어 절벽으로 내려간다.
+--   from 둘레 격자 칸의 지면(이웃 칸 높이를 예상으로 읽음 - 아치 · 다리 위 제외)을 필요할 때만 레이캐스트 · 칸 사이 = 내려감 ≤ SAFE_DROP · 오름 ≤ rise · 가슴 높이 선 막힘 없음.
+--   도착 = 길 점(joinFrom 번호부터) goalStuds 안 칸. 반환 = 경유점 목록 · 합류한 길 점 번호(못 찾으면 nil)
+function GuidePath.safeDescent(from, road, params, joinFrom, relaxed)
+	local S = G.safeGrid
+	local sp = S.spacing
+	local function key(ix, iz)
+		return ix * 100003 + iz
+	end
+	local ox, oz = from.X, from.Z
+	local heights, open, came, gScore = {}, {}, {}, {}
+	local startY = GuidePath.groundY(from, params) or from.Y
+	local sk = key(0, 0)
+	heights[sk] = startY
+	gScore[sk] = 0
+	local goals = {}
+	for k = joinFrom or 1, #road do
+		local p = road[k]
+		if (flat(p) - flat(from)).Magnitude <= S.radius + S.goalStuds then
+			table.insert(goals, { p = p, k = k })
+		end
+	end
+	if #goals == 0 then
+		return nil
+	end
+	local function h(x, z)
+		local best = math.huge
+		for _, g in ipairs(goals) do
+			best = math.min(best, (Vector3.new(g.p.X - x, 0, g.p.Z - z)).Magnitude)
+		end
+		return best
+	end
+	local function goalAt(x, z, y)
+		for _, g in ipairs(goals) do
+			if (Vector3.new(g.p.X - x, 0, g.p.Z - z)).Magnitude <= S.goalStuds then
+				if g.ground == nil then
+					g.ground = GuidePath.groundY(g.p, params) or false -- 길 점의 실제 지면(바로 위 절벽 턱에서 뛰어내리는 합류 막기)
+				end
+				if g.ground and math.abs(g.ground - y) <= SAFE_DROP then
+					return g.k
+				end
+			end
+		end
+		return nil
+	end
+	-- 이진 힙(f 작은 것 먼저)
+	local function push(node)
+		table.insert(open, node)
+		local i = #open
+		while i > 1 do
+			local parent = i // 2
+			if open[parent].f <= open[i].f then
+				break
+			end
+			open[parent], open[i] = open[i], open[parent]
+			i = parent
+		end
+	end
+	local function pop()
+		local top = open[1]
+		local last = table.remove(open)
+		if #open > 0 then
+			open[1] = last
+			local i = 1
+			while true do
+				local l, r, m = i * 2, i * 2 + 1, i
+				if l <= #open and open[l].f < open[m].f then
+					m = l
+				end
+				if r <= #open and open[r].f < open[m].f then
+					m = r
+				end
+				if m == i then
 					break
+				end
+				open[m], open[i] = open[i], open[m]
+				i = m
+			end
+		end
+		return top
+	end
+	push({ f = h(ox, oz), ix = 0, iz = 0 })
+	local visited, count = {}, 0
+	while #open > 0 and count < S.maxNodes do
+		local cur = pop()
+		local ck = key(cur.ix, cur.iz)
+		if not visited[ck] then
+			visited[ck] = true
+			count += 1
+			local cx, cz, cy = ox + cur.ix * sp, oz + cur.iz * sp, heights[ck]
+			local hit = goalAt(cx, cz, cy)
+			if hit then
+				local list, k = {}, ck
+				while k do
+					local ix, iz = math.floor((k + 50001) / 100003), nil
+					iz = k - ix * 100003
+					table.insert(list, 1, Vector3.new(ox + ix * sp, heights[k], oz + iz * sp))
+					k = came[k]
+				end
+				list[1] = from
+				table.insert(list, road[hit])
+				return list, hit
+			end
+			for dx = -1, 1 do
+				for dz = -1, 1 do
+					if dx ~= 0 or dz ~= 0 then
+						local nx, nz = cur.ix + dx, cur.iz + dz
+						local nk = key(nx, nz)
+						local px, pz = ox + nx * sp, oz + nz * sp
+						if not visited[nk] and (Vector3.new(px - ox, 0, pz - oz)).Magnitude <= S.radius then
+							local ny = heights[nk]
+							if ny == nil then
+								ny = GuidePath.groundY(Vector3.new(px, cy, pz), params) or false
+								heights[nk] = ny
+							end
+							if ny then
+								local dy = ny - cy
+								local run = sp * math.sqrt(dx * dx + dz * dz)
+								local over = -dy - SAFE_DROP -- 안전 높이를 넘는 내려감(relaxed = 벌점 붙여 허용 - 고립된 바위 · 턱 꼭대기에서 가장 낮은 곳으로 한 번)
+								if (over <= 0 or (relaxed and -dy <= S.relaxMaxDrop)) and dy <= S.rise * run / sp then
+									local a, b = Vector3.new(cx, cy + S.probe, cz), Vector3.new(px, ny + S.probe, pz)
+									local blocked = Workspace:Raycast(a, b - a, params)
+									if not blocked and over <= 0 then -- 칸 사이 가운데가 꺼진 틈(경로 점은 4 stud마다 다시 지면에 붙는다) = 못 감
+										local mid = GuidePath.groundY(Vector3.new((cx + px) / 2, math.max(cy, ny), (cz + pz) / 2), params)
+										blocked = mid == nil or math.max(cy, ny) - mid > SAFE_DROP
+									end
+									if not blocked then
+										local g = gScore[ck] + run + math.max(0, -dy) * 0.5 + (over > 0 and (S.dropPenalty + over * S.dropPenaltyPerStud) or 0)
+										if gScore[nk] == nil or g < gScore[nk] then
+											gScore[nk], came[nk] = g, ck
+											push({ f = g + h(px, pz), ix = nx, iz = nz })
+										end
+									end
+								end
+							end
+						end
+					end
 				end
 			end
 		end
 	end
+	return nil
+end
+
+-- 경로 안의 낙하 피해 내려감 수 · 가장 큰 내려감(나무 둘레 제외 · 지면 읽은 점만)
+function GuidePath.dropCount(route)
+	local n, worst = 0, 0
+	for k = 2, #route.points do
+		local a, b = route.points[k - 1], route.points[k]
+		if route.ok[k - 1] and route.ok[k] and a.Y - b.Y > SAFE_DROP and Vector3.new(a.X, 0, a.Z).Magnitude > WorldMapData.progress.treeRadius then
+			n += 1
+			worst = math.max(worst, a.Y - b.Y)
+		end
+	end
+	return n, worst
+end
+
+local function finish(from, road, params, groundNear, legs, pathfound, i)
 	local raw = {}
 	for _, p in ipairs(legs) do
 		table.insert(raw, p)
@@ -202,6 +344,45 @@ function GuidePath.build(from, road, params, groundNear)
 	end
 	GuidePath.liftRange(route, params)
 	GuidePath.liftRange(route, params)
+	return route
+end
+
+function GuidePath.build(from, road, params, groundNear)
+	local i = GuidePath.nextIndex(road, from)
+	local legs, pathfound = GuidePath.approach(from, road[i])
+	-- 길찾기가 낙하 피해 높이를 넘는 절벽으로 뛰어내리면 다른 합류점(joinTries - 길 점 번호 차)으로 다시 찾아 절벽 없는 쪽을 쓴다(없으면 처음 것)
+	if GuidePath.maxDrop(legs) > SAFE_DROP then
+		for _, off in ipairs(G.joinTries) do
+			local j = math.clamp(i + off, 1, #road)
+			if j ~= i then
+				local other, found = GuidePath.approach(from, road[j])
+				if found and GuidePath.maxDrop(other) <= SAFE_DROP then
+					legs, pathfound, i = other, found, j
+					break
+				end
+			end
+		end
+	end
+	local route = finish(from, road, params, groundNear, legs, pathfound, i)
+	-- QUEUE-ALL1 R1: 지면에 붙인 뒤에도 낙하 피해 내려감이 남으면 격자 A*로 안전 내리막을 찾아 다시 만든다(줄어들 때만 바꾼다 · 못 찾으면 그대로 - 자동 이동은 큰 절벽 앞에서 멈춘다)
+	local drops, worst = GuidePath.dropCount(route)
+	if drops > 0 then
+		for _, relaxed in ipairs({ false, true }) do -- 먼저 낙하 0 · 없으면(고립 꼭대기) 가장 낮은 낙하
+			local safe, k = GuidePath.safeDescent(from, road, params, math.max(1, i - 6), relaxed)
+			if safe then
+				local other = finish(from, road, params, groundNear, safe, true, k)
+				local otherDrops, otherWorst = GuidePath.dropCount(other)
+				if otherDrops < drops or (otherDrops == drops and otherWorst < worst - 1) then
+					route, drops, worst = other, otherDrops, otherWorst
+					route.safeGrid = relaxed and "relaxed" or true
+				end
+				if drops == 0 then
+					break
+				end
+			end
+		end
+	end
+	route.dropWorst = worst
 	return route
 end
 

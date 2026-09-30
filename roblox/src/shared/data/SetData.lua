@@ -22,9 +22,9 @@ return {
 	zoneThreePiece = {
 		tier1 = { axis = "attackPercent", value = 0.047 }, -- 석조 평원: 위력(묵직한 돌 주먹)
 		tier2 = { axis = "crit", value = 0.030 }, -- 수정 동굴: 치명(확률 · 피해 같은 값 - 옵션 치명과 같은 규칙)
-		tier3 = { axis = "lifesteal", value = 0.01 }, -- 수몰 사원: 흡혈 [가정 - 옵션 기본값 0.03의 1/3 · EconSim이 흡혈을 모형에 안 넣어 값 맞춤 불가 - 결정 필요]
+		tier3 = { axis = "lifesteal", value = 0.01 }, -- 수몰 사원: 흡혈(QUEUE-ALL1 R1: EconSim에 흡혈을 넣어 보니 0.0001부터 초당 회복 상한 CombatConfig.lifestealMaxHpFractionPerSecond가 먼저 걸려 값과 무관 = 캐주얼 1000 24.8h(DPS 세트 25.8h보다 강함) - 비율로는 같은 가치 불가 · 결정 필요)
 		tier4 = { axis = "speedPercent", value = 0.050 }, -- 모래 유적: 신속(모래바람)
 		tier5 = { axis = "finalDamage", value = 0.05 }, -- 폭풍 첨탑: 최종 피해(지금 3부위 그대로)
-		tier6 = { axis = "defensePercent", value = 0.03 }, -- 빙하 동굴: 방어(QUEUE-ALL1 P5 EconSim 맞춤 - 0.03 = 27.5h · 0.05 = 26.8h · 0.10 = 25.9h)
+		tier6 = { axis = "defensePercent", value = 0.05 }, -- 빙하 동굴: 방어(QUEUE-ALL1 R1 다시 맞춤 - 보스 첫 클리어 모형 수정 뒤 DPS 세트 25.8h = 방어 0.05 25.8h · 0.03 = 26.8h)
 	},
 }

@@ -88,6 +88,9 @@ function CosmeticService.buyWithShards(player, kind, id)
 	if not price or not Monetization.findCosmetic(CosmeticSlotData, kind, id) then
 		return false, "unknown"
 	end
+	if Monetization.seasonOnly(CosmeticSlotData, kind, id) then
+		return false, "season_only" -- QUEUE-ALL1 R1: 시즌 한정(구름 고래) = 시즌 줄에서만
+	end
 	if (kind == "cosmeticTheme" and CosmeticService.ownsTheme(player, id)) or (kind == "gliderSkin" and CosmeticService.ownsGlider(player, id)) then
 		return false, "owned"
 	end

@@ -31,7 +31,28 @@ for tier = 1, TIERS do
 	rows.paid[tier] = paid
 end
 
+-- QUEUE-ALL1 R1: 시즌 한정 칸 - 그 시즌에만 이 보상 · 다른 시즌은 otherwise(다음 시즌 대표는 사용자 결정 - 자리값 반짝 조각)
+local seasonLimited = {
+	{ row = "paid", tier = 40, season = 1, reward = { gliderSkin = "cloudWhale" }, otherwise = { sparkleShard = 40 } },
+}
+for _, e in ipairs(seasonLimited) do
+	rows[e.row][e.tier] = e.otherwise -- 기본 표 = 한정 아님(rowsFor가 그 시즌에만 바꿔 넣는다)
+end
+
+-- 시즌 번호의 표(한정 칸 반영 · 새 표 - 서버 받기 · 화면 · 검사가 같은 함수)
+local function rowsFor(season)
+	local out = { free = table.clone(rows.free), paid = table.clone(rows.paid) }
+	for _, e in ipairs(seasonLimited) do
+		if e.season == season then
+			out[e.row][e.tier] = e.reward
+		end
+	end
+	return out
+end
+
 return {
+	seasonLimited = seasonLimited,
+	rowsFor = rowsFor,
 	enabled = true,
 	tiers = TIERS,
 	expPerTier = 250, -- 하루 약 120(일간 3 × 20 + 접속 10 + 상자 50) + 주 500(주간) → 8주 약 10,700 ≈ 40칸 × 250(모두 매일 하면 끝까지)

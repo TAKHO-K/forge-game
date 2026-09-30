@@ -922,15 +922,27 @@ local function fightBosses(state, profile, loadout, run)
 		-- (잡몹 모형의 "점검 한 번에 기대 1개 이상" 규칙은 0.39% 같은 확률을 영영 못 잡는다). itemLevel = 보스 스테이지(편차 +0 · 보수적).
 		if EconSimConfig.modelBossDrops then
 			local count = EconSimConfig.bossFirstClearDrops or 1 -- D1-2 레버 3(기대 개수)
-			for _, gradeId in ipairs(ArmorData.gradeOrder) do
-				local chance = riftMix(DropTable.bossFirstClearGradeTable(state.rebirth))[gradeId] -- QUEUE-ALL1 P3 균열 비중
-				if chance then
-					state.bossTally[gradeId] = (state.bossTally[gradeId] or 0) + chance * count
-					while state.bossTally[gradeId] >= 1 do
-						state.bossTally[gradeId] -= 1
-						state.bossPartTurn += 1
-						table.insert(state.bossPending, { grade = gradeId, itemLevel = bossStage + nextBossDelta(state), part = EquipSlots.order[(state.bossPartTurn - 1) % #EquipSlots.order + 1] })
-					end
+			-- QUEUE-ALL1 R1: "등급 이상" 누적으로 센다(옛 = 등급마다 따로 누적 → 전설이 늘고 영웅이 줄면 영웅 도착이 늦어져 균열이 오히려 느리게 나왔다 - 실제 게임은 전설 ≥ 영웅).
+			--   n번째 보스까지 등급 ≥ g 장비 수 = floor(Σ P(≥ g)) · 높은 등급부터 채운다(bossGiven = 등급별 준 개수).
+			local row = riftMix(DropTable.bossFirstClearGradeTable(state.rebirth)) -- QUEUE-ALL1 P3 균열 비중
+			state.bossCumGE = state.bossCumGE or {}
+			state.bossGiven = state.bossGiven or {}
+			local pge = 0
+			for index = #ArmorData.gradeOrder, 1, -1 do
+				local gradeId = ArmorData.gradeOrder[index]
+				pge += row[gradeId] or 0
+				state.bossCumGE[gradeId] = (state.bossCumGE[gradeId] or 0) + pge * count
+			end
+			local have = 0 -- 지금까지(모든 보스) 준 등급 ≥ g 장비 수
+			for index = #ArmorData.gradeOrder, 1, -1 do
+				local gradeId = ArmorData.gradeOrder[index]
+				have += state.bossGiven[gradeId] or 0
+				local should = math.floor(state.bossCumGE[gradeId] + 1e-9)
+				for _ = 1, should - have do
+					state.bossGiven[gradeId] = (state.bossGiven[gradeId] or 0) + 1
+					have += 1
+					state.bossPartTurn += 1
+					table.insert(state.bossPending, { grade = gradeId, itemLevel = bossStage + nextBossDelta(state), part = EquipSlots.order[(state.bossPartTurn - 1) % #EquipSlots.order + 1] })
 				end
 			end
 		end
@@ -1024,6 +1036,7 @@ end
 -- 레벨업 1회분(청크). 레벨 하나를 "가방 점검 간격" 단위로 쪼개 돈다 - 점검마다 장비가 바뀌면 사냥 선택 · 보스 도전을 다시 한다.
 -- 반환: 청크 기록 표, 또는 진행 정지 사유 문자열.
 local function stepLevel(state, profile, run, rng, whatIf)
+	DropTable.gainOnly = state.rebirth == 0 -- QUEUE-ALL1 R1: 첫 환생 전 = 균열 이득만(게임 CombatResolution과 같은 규칙)
 	local bossSecondsBefore, bossGoldBefore = state.bossSeconds, state.bossGold
 	local bossExpBefore = state.bossExp
 	local loadout, hunt, tier, expPerKill, perKillSeconds, goldPerKill, killUnits, primordialPerKill
@@ -1272,6 +1285,7 @@ function EconSim.runProgress(profileId, whatIf)
 		end
 	end
 	run.final = state
+	DropTable.gainOnly = false -- QUEUE-ALL1 R1: 모형이 끝나면 서버 굴림 값으로 남기지 않는다
 	return run
 end
 

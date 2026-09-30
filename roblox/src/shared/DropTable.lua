@@ -17,6 +17,10 @@ local TRANSCENDENT = "transcendent" -- C5-7
 
 -- QUEUE-ALL1 P3 §3 균열: 지금 적용 중인 등급 배율({ [등급] = 배수 } | nil). 서버 = RiftService가 켜고 끈다 · 클라 = RiftView(Workspace RiftActive)가 같은 값으로 - 확률 공개 = 서버 굴림.
 DropTable.activeBoost = nil
+-- QUEUE-ALL1 R1: 첫 환생 전 = 균열 이득만(true면 늘어난 몫을 가장 낮은 등급부터 뺀다 - 희귀 이상 확률은 절대 안 준다). 서버 = CombatResolution이 굴림 동안만 받는 사람 기준으로 켠다 · 클라 = RiftView(내 RebirthCount).
+--   원인(EconSim 캐주얼): 비율대로 빼면 영웅 몫이 약 2% 줄어 "레벨 높은 영웅 방어구" 기대 개수가 1 밑 → 첫 1시간 사냥 스테이지 59 → 37 · 첫 환생 33.5 → 44.6분.
+DropTable.gainOnly = false
+local ORDER = require(ReplicatedStorage.Shared.data.ArmorData).gradeOrder
 
 -- 등급표에 배율을 건 새 표(합 1 유지): 배율 등급 × m · 늘어난 몫은 배율 없는 보통 등급(태초 · 초월 제외)에서 비율대로 뺀다. boost 생략 = activeBoost.
 function DropTable.boosted(row, boost)
@@ -38,6 +42,20 @@ function DropTable.boosted(row, boost)
 	end
 	if rest <= 0 or add <= 0 then
 		return row
+	end
+	if DropTable.gainOnly then -- 가장 낮은 등급부터(일반 → …) 늘어난 몫만큼 뺀다
+		local left = add
+		for _, gradeId in ipairs(ORDER) do
+			if left <= 0 then
+				break
+			end
+			if out[gradeId] and not boost[gradeId] and gradeId ~= PRIMORDIAL and gradeId ~= TRANSCENDENT then
+				local take = math.min(out[gradeId], left)
+				out[gradeId] -= take
+				left -= take
+			end
+		end
+		return out
 	end
 	local k = math.max(0, (rest - add) / rest)
 	for gradeId, c in pairs(out) do

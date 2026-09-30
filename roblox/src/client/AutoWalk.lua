@@ -31,6 +31,16 @@ local function selfJump(humanoid)
 end
 local lastHealth, lastPos, lastProgressAt, jumps, recomputes, owner, goal = nil, nil, 0, 0, 0, nil, nil
 AutoWalk.log = {} -- 검사용: 멈춤 기록 { reason, at, position }
+-- QUEUE-ALL1 R1 검사용: 켜짐 · 멈춤 사건 줄(로컬 Attribute AutoWalkEvents - 최근 10개 "시각:사건") · AutoWalkActive(지금 켜졌나)
+local events = {}
+local function note(text)
+	table.insert(events, ("%.1f:%s"):format(os.clock(), text))
+	if #events > 10 then
+		table.remove(events, 1)
+	end
+	player:SetAttribute("AutoWalkEvents", table.concat(events, " "))
+	player:SetAttribute("AutoWalkActive", active)
+end
 
 local STOP_TEXT = {
 	input = nil, -- 사람이 직접 움직임 · 버튼으로 끔 = 조용히 끔(input-move · input-key · input-jump · input-skill도 같음 - 표에 없으면 문구 없음)
@@ -90,6 +100,7 @@ function AutoWalk.stop(reason)
 	end
 	table.insert(AutoWalk.log, { reason = reason, at = os.clock(), position = root and root.Position })
 	player:SetAttribute("AutoWalkStop", reason) -- 검사용(로컬 Attribute)
+	note("stop-" .. tostring(reason))
 	changed:Fire(false, reason, reasonText)
 end
 
@@ -103,6 +114,7 @@ function AutoWalk.start()
 	owner = select(3, Wayfinder.route())
 	goal = Wayfinder.destination()
 	player:SetAttribute("AutoWalkStop", nil)
+	note("start-" .. tostring(owner))
 	-- 걷기 = 매 프레임 Humanoid:Move(방향 - 조작 모듈 뒤 순서 Input + 1). MoveTo도 되지만(실측 2초 19 stud) 8초 제한 · 틱마다 다시 부를 필요 없이 프레임마다 방향을 틀어 부드럽다.
 	RunService:BindToRenderStep("AutoWalkMove", Enum.RenderPriority.Input.Value + 1, function()
 		local h, r = humanoidAndRoot()

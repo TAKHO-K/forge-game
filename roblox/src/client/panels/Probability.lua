@@ -88,7 +88,8 @@ local function render()
 				table.insert(parts, ("%s ×%g"):format(require(ReplicatedStorage.Shared.data.ArmorData).grades[gradeId].displayName, m))
 			end
 		end
-		line("균열 시간: " .. table.concat(parts, " · ") .. "(늘어난 몫은 아래 등급에서 뺌 · 태초 · 초월 제외) - 아래 표는 균열 중 확률", "body", "textPrimary")
+		local rule = require(ReplicatedStorage.Shared.DropTable).gainOnly and "늘어난 몫은 일반에서만 뺌 - 첫 환생 전이라 희귀 이상은 줄지 않음" or "늘어난 몫은 아래 등급에서 뺌" -- QUEUE-ALL1 R1
+		line("균열 시간: " .. table.concat(parts, " · ") .. "(" .. rule .. " · 태초 · 초월 제외) - 아래 표는 균열 중 확률", "body", "textPrimary")
 	end
 	line(Text.get("prob.field"), "body", "textPrimary")
 	for tier, rows in ipairs(d.drop.field) do

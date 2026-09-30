@@ -27,6 +27,6 @@ return {
 		{ id = "kite", name = "연 글라이더", look = "" },
 		-- QUEUE-ALL1 P6(07 문서): look = client/GlideView가 그리는 모양 id(판정 · 속도 불변 - 겉모습만)
 		{ id = "dragonWing", name = "푸른 드래곤 날개", look = "dragonWing" }, -- 149 · 등에 T6 푸른 드래곤 날개(monsters/blue_dragon Wing_L · Wing_R 메시 재사용) · 천천히 날갯짓
-		{ id = "cloudWhale", name = "구름 고래", look = "cloudWhale" }, -- 시즌 유료 줄 40칸 대표 · 작은 구름 고래를 타고 활강 + 물보라 궤적(extras/cloud_whale · 시즌 한정 여부 = 사용자 결정 대기)
+		{ id = "cloudWhale", name = "구름 고래", look = "cloudWhale", seasonOnly = 1 }, -- 시즌 1 유료 줄 40칸 대표 · 작은 구름 고래를 타고 활강 + 물보라 궤적(extras/cloud_whale) · QUEUE-ALL1 R1(사용자): 시즌 1 한정 · 재판매 없음(상품 · 반짝 조각 · 선물 X) · 조급함 연출 금지(남은 시간 강조 · "곧 사라짐" 문구 없음)
 	},
 }

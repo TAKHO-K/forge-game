@@ -152,10 +152,12 @@ local active = false
 local function apply()
 	active = Workspace:GetAttribute("RiftActive") == true
 	DropTable.activeBoost = active and RiftData.gradeMultiplier or nil -- ① 이 화면의 확률 공개 = 서버 굴림 표
+	DropTable.gainOnly = (Players.LocalPlayer:GetAttribute("RebirthCount") or 0) == 0 -- QUEUE-ALL1 R1: 첫 환생 전 = 이득만(서버 굴림과 같은 규칙)
 	setMood(active)
 	timer.Visible = active
 end
 Workspace:GetAttributeChangedSignal("RiftActive"):Connect(apply)
+player:GetAttributeChangedSignal("RebirthCount"):Connect(apply) -- QUEUE-ALL1 R1 첫 환생 뒤 = 보통 균열 표
 player:GetAttributeChangedSignal("BossEncounterId"):Connect(function()
 	setMood(false)
 	if active then

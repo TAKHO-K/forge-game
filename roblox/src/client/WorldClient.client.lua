@@ -222,10 +222,24 @@ AutoWalk.changed:Connect(function(on, _, text)
 		Toast.push("TC", { text = text, colorName = "textPrimary", seconds = 2.5 })
 	end
 end)
+-- QUEUE-ALL1 R1: 견습 사냥터 안내 = [바로 가기](순간이동 - 서버 Travel.requestTutorialZone) · 첫 관문 안내(bossGate)에는 없다(걸어서 - 자동 이동 · 길 안내 익히기)
+local teleButton = autoButton:Clone()
+teleButton.Name = "TutorialTeleportButton"
+teleButton.Text = "바로 가기"
+teleButton.Parent = hud
+teleButton.Activated:Connect(function()
+	AutoWalk.stop("input")
+	local travel = ReplicatedStorage:FindFirstChild("TravelRequest") -- (아래 request 지역 변수보다 먼저 선언된 줄)
+	if travel then
+		travel:FireServer("tutorialZone")
+	end
+end)
 local function placeObjective()
 	objectiveLabel.Position = UDim2.new(0, regionLabel.AbsolutePosition.X - 6, 0, regionLabel.AbsolutePosition.Y)
 	autoButton.Position = UDim2.new(0, objectiveLabel.AbsolutePosition.X - 6, 0, objectiveLabel.AbsolutePosition.Y)
 	autoButton.Visible = objectiveLabel.Visible and (AutoWalk.isActive() or AutoWalk.canStart())
+	teleButton.Visible = objectiveLabel.Visible and Wayfinder.activeOwner() == "tutorial" and not Wayfinder.isHidden()
+	teleButton.Position = UDim2.new(0, (autoButton.Visible and autoButton.AbsolutePosition.X or objectiveLabel.AbsolutePosition.X) - 6, 0, objectiveLabel.AbsolutePosition.Y)
 end
 regionLabel:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeObjective)
 regionLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeObjective)
@@ -276,7 +290,7 @@ hubButton.Size = UDim2.new(0, 84, 0, Theme.isMobile and Theme.touchMin or 36) --
 local IconTile = require(script.Parent.ui.IconTile)
 local hubTiled = false
 local function tileHub()
-	if hubTiled or not IconTile.apply(hubButton, "return", nil, { size = 40, keepText = true }) then
+	if hubTiled or not IconTile.apply(hubButton, "return", "H", { size = 40, keepText = true }) then
 		return
 	end
 	hubTiled = true
@@ -340,7 +354,7 @@ partyButton.Activated:Connect(function()
 	end
 end)
 UserInputService.InputBegan:Connect(function(input, processed)
-	if not processed and input.KeyCode == Enum.KeyCode.H and request then
+	if not processed and input.KeyCode == require(script.Parent.ui.PanelRegistry).actionKey("hubReturn") and request then
 		request:FireServer("hub") -- PC 단축키 H = 허브 귀환
 	end
 end)

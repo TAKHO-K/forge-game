@@ -86,6 +86,9 @@ function CosmeticTab.render(ctx, env)
 	end
 	ctx.section(Text.get("shop.cos.gliderSection"), "GliderSection")
 	for _, skin in ipairs(CosmeticSlotData.gliderSkins) do
+		if skin.seasonOnly then
+			continue -- QUEUE-ALL1 R1: 시즌 한정(구름 고래) = 판매 줄 없음(시즌 탭 · 장착 칩에만)
+		end
 		saleRow(ctx, env, view, "gliderSkin", skin, view.gliderSkins and view.gliderSkins[skin.id] == true, view.shardPrices.gliderSkin, "glider_" .. skin.id, "shop.cos.gliderSub")
 	end
 

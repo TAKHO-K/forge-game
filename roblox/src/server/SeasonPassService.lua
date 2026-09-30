@@ -58,7 +58,7 @@ function SeasonPassService.view(player)
 		premium = pass.premium,
 		claimedFree = table.clone(pass.claimedFree),
 		claimedPaid = table.clone(pass.claimedPaid),
-		rows = SeasonPassData.rows,
+		rows = SeasonPassData.rowsFor(pass.season), -- QUEUE-ALL1 R1 시즌 한정 칸
 	}
 end
 
@@ -90,7 +90,7 @@ function SeasonPassService.claim(player, rowName, tier)
 	if not ok then
 		return false, why
 	end
-	local reward = SeasonPassData.rows[rowName][tier]
+	local reward = SeasonPassData.rowsFor(pass.season)[rowName][tier] -- QUEUE-ALL1 R1 시즌 한정 칸
 	local okReward, summary = require(script.Parent.MonetizationService).applyReward(player, reward, rowName == "paid" and "seasonPaid" or "season")
 	if not okReward then
 		return false, summary

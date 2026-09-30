@@ -211,6 +211,68 @@ function Travel.requestHub(player, now)
 	return true, "casting"
 end
 
+-- QUEUE-ALL1 R1: 신규 첫 스폰(WorldMapData.hub.firstSpawn) - 그 구역 방향 허브 점 · 지면 광선 + 3 · 바깥(관문 쪽)을 바라봄
+function Travel.placeFirstSpawn(player)
+	local spec = WorldMapData.hub.firstSpawn
+	local zone = spec and WorldMapLayout.zoneByKey(spec.towardZone)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not (zone and root) then
+		return false
+	end
+	local p = WorldMapLayout.hubPoint(zone.angleDeg, spec.r)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character }
+	params.RespectCanCollide = true
+	local hit = workspace:Raycast(Vector3.new(p.X, WorldMapData.floorTopY + 300, p.Z), Vector3.new(0, -400, 0), params)
+	local pos = Vector3.new(p.X, (hit and hit.Position.Y or WorldMapData.floorTopY) + 3, p.Z)
+	local out = Vector3.new(p.X, 0, p.Z).Unit
+	Travel.teleport(player, pos, "firstSpawn")
+	root.CFrame = CFrame.lookAt(pos, pos + out)
+	return true
+end
+
+-- QUEUE-ALL1 R1(사용자): 견습 이동 = 그 단계 구역 사냥 지대 1로 순간이동 허용(첫 관문 구간은 걸어서 - 이 요청은 견습 중에만).
+--   목적지 = 클라 안내와 같은 점(RoadNet.guidePoints(zone, nil, "ground1") 끝) · 높이 = 위에서 쏜 지면 광선 + 3. 보스전 · 견습 끝 = 거절.
+function Travel.requestTutorialZone(player)
+	if BossEncounter.getEncounter(player) then
+		return false, "in_boss"
+	end
+	if PlayerProfile.getTutorialCompleted(player) then
+		return false, "not_tutorial"
+	end
+	local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData)
+	local step = TutorialData.steps[PlayerProfile.getTutorialStep(player) or 0]
+	if not (step and WorldMapLayout.zoneByKey(step.zoneKey)) then
+		return false, "not_tutorial"
+	end
+	return Travel.toZoneGround(player, step.zoneKey, "tutorial"), "ok"
+end
+
+-- 구역 사냥 지대 1(클라 안내와 같은 점 · 지면 광선 + 3)으로 순간이동
+function Travel.toZoneGround(player, zoneKey, why)
+	local zone = WorldMapLayout.zoneByKey(zoneKey)
+	if not zone then
+		return false
+	end
+	local points = require(ReplicatedStorage.Shared.RoadNet).guidePoints(zone, nil, "ground1")
+	local goal = points[#points]
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { player.Character }
+	params.RespectCanCollide = true
+	local hit = workspace:Raycast(Vector3.new(goal.X, goal.Y + 400, goal.Z), Vector3.new(0, -900, 0), params)
+	local y = hit and hit.Position.Y or goal.Y
+	Travel.teleport(player, Vector3.new(goal.X, y + 3, goal.Z), why)
+	return true
+end
+
+-- QUEUE-ALL1 R1: 견습 졸업 = 첫 보스 구역(firstSpawn.towardZone) 사냥 지대 1로 → 거기서 첫 관문까지만 걸어서(관문 안내 · 자동 이동)
+function Travel.placeAfterTutorial(player)
+	return Travel.toZoneGround(player, WorldMapData.hub.firstSpawn.towardZone, "tutorialDone")
+end
+
 -- QUEUE-B1 B2: 귀환 쿨(도착 뒤) - 게임패스 recallCooldown이면 × cooldownMultiplier(편의 · 캐시 = profile.gamepasses)
 function Travel.recallCooldownSeconds(player)
 	local s = PlayerProfile.getMonetizationState(player)
@@ -613,6 +675,8 @@ function Travel.start(downPads)
 			ok, why = Travel.requestHub(player)
 		elseif kind == "back" then
 			ok, why = Travel.requestBack(player)
+		elseif kind == "tutorialZone" then -- QUEUE-ALL1 R1 견습 바로 가기
+			ok, why = Travel.requestTutorialZone(player)
 		elseif kind == "party" then
 			ok, why = Travel.requestParty(player, type(targetUserId) == "number" and Players:GetPlayerByUserId(targetUserId) or Travel.defaultPartyTarget(player))
 		else
@@ -620,7 +684,7 @@ function Travel.start(downPads)
 		end
 		if not ok then
 			local text = ({ in_boss = "보스전 중에는 못 간다", cooldown = "아직 쿨타임", combat = "전투 중(최근 피해)에는 못 간다", locked_zone = "그 사람은 나에게 잠긴 구역에 있다",
-				not_party = "파티원만", no_target = "대상을 찾지 못했다",
+				not_party = "파티원만", no_target = "대상을 찾지 못했다", not_tutorial = "견습 중에만 바로 갈 수 있다",
 				casting_already = "이미 귀환 중", no_back = "돌아갈 자리가 없다(5분 · 1회)", no_character = "캐릭터가 없다" })[why] or why
 			PartyState.notify(player, "이동 불가 - " .. text)
 		end

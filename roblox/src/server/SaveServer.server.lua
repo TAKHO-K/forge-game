@@ -67,6 +67,14 @@ local function loadForPlayer(player)
 	WeeklyChallengeService.onLoaded(player) -- QUEUE-ALL1 P4 §3: 지난주 순위 보상
 	SocialRewardService.onLoaded(player) -- QUEUE-ALL1 P4 §1: 초대받은 첫 접속 보상
 	CodexService.onLoaded(player) -- QUEUE-ALL1 P5: 도감 칸 판정 · 고른 칭호 Attribute
+	if PlayerProfile.isFreshProfile(player) then -- QUEUE-ALL1 R1: 신규 첫 스폰 = 밝은 허브 광장(첫 캐릭터만)
+		task.spawn(function()
+			local character = player.Character or player.CharacterAdded:Wait()
+			character:WaitForChild("HumanoidRootPart", 10)
+			task.wait(0.5)
+			require(script.Parent.Travel).placeFirstSpawn(player)
+		end)
+	end
 	SettingsService.onLoaded(player) -- Q14: 저장된 설정을 Attribute로
 	MonetizationService.onLoaded(player) -- QUEUE-B1 B2: 시즌 넘김 · 치장 Attribute · 게임패스 · 정책 · 선물함 팝업
 end

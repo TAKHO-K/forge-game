@@ -242,6 +242,11 @@ function TutorialState.onBossCleared(player, target)
 		})
 		ImmediateSave.request(player)
 		print(("[forge-game] 견습 완료: %s"):format(player.Name))
+		task.delay(1.5, function() -- QUEUE-ALL1 R1(사용자): 견습 이동은 순간이동 · 마지막 첫 관문 구간만 걸어서 → 졸업하면 첫 보스 구역 사냥 지대 1로(거기서 관문 안내 + 자동 이동 · 1,843 stud)
+			if player.Parent and not BossEncounter.getEncounter(player) then
+				require(script.Parent.Travel).placeAfterTutorial(player)
+			end
+		end)
 		return
 	end
 

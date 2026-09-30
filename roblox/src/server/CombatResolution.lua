@@ -189,6 +189,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	local bossFirstClear = false
 	local primordialP = 0 -- S1 2-6: 이번 굴림 한 개가 태초일 확률(λ · 원장)
 	local transcendentP = 0 -- 묶음 A 리뷰: 초월 원장 p(보스 표 · 반짝이 · 잡몹 굴림 확률)
+	DropTable.gainOnly = PlayerProfile.getRebirthCount(recipient) == 0 -- QUEUE-ALL1 R1: 첫 환생 전 = 균열 이득만(굴림 동안만 - 아래에서 끔)
 	if isBoss then
 		-- 20-4 [1]: "그 스테이지 보스를 처음 깼는가"로 분기한다. 첫 처치는 등급을 끌어올린 확정 드랍
 		-- (Loot.rollBossFirstClearDrop), 재도전은 확정 1개(Loot.rollBossRetryDrop, 28-1 [2-2] - D1부터 토벌 표).
@@ -225,6 +226,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		primordialP = primordialRate or 0
 		transcendentP = transcendentRate or 0
 	end
+	DropTable.gainOnly = false
 	AcquisitionAudit.addLambda(recipient, primordialP, #armorDrops) -- S1 2-6: λ += 굴림마다 태초 확률
 	AcquisitionAudit.noteKill(recipient) -- S1 2-7 처치 속도
 	-- D1: 출처 태그(M2 출처 태그와 같은 구조 - 태초 각인이 복사한다). 보스 = 첫 클리어 "boss" / 토벌(반복) "raid" · 반짝이 · 잡몹 = 구역.
