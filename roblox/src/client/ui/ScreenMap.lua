@@ -42,7 +42,7 @@ ScreenMap.windowNames = { ClassSelectPanel = true, ClassConfirmPanel = true }
 ScreenMap.zones = {
 	TL = { anchor = Vector2.new(0, 0), note = "로블록스 채팅창 - 손대지 않는다" },
 	TC = { anchor = Vector2.new(0.5, 0), note = "시스템 토스트 줄(저장 · 레벨업 · 구역 차단 · 보물상자 - S17부터 hud/SystemToasts) · 태초 서버 전체 알림 배너(4초) · 드랍 피드가 자리 없을 때 옮겨 오는 띠" },
-	TR = { anchor = Vector2.new(1, 0), note = "칩 스택(골드 · 레벨 · 스테이지 · 설정 · 견습) · 그 왼쪽 파티 버튼(S12b) · 칩 스택 아래 드랍 피드" },
+	TR = { anchor = Vector2.new(1, 0), note = "칩 스택(골드 · 레벨 · 스테이지 · 설정 · 견습) · 그 왼쪽 파티 버튼(S12b) · 칩 스택 아래 미니맵(Q4 - 폰은 왼쪽 열 옆) · 그 아래 드랍 피드" },
 	ML = { anchor = Vector2.new(0, 0.5), note = "파티 목록 · 메뉴바" },
 	MR = { anchor = Vector2.new(1, 0.5), note = "가방 버튼 · 요청 배너(파티 투표 · 초대)" },
 	C = { anchor = Vector2.new(0.5, 0.5), note = "전투 시야 - 비운다(화면 중앙 40% × 50%에 2D UI 없음)" },
@@ -77,8 +77,15 @@ ScreenMap.slots = {
 		travelBack = slot("new", 1, 0, UDim2.new(1, -191, 0, 140), UDim2.new(0, 104, 0, 36), "TravelBackButton", "WorldClient.client.lua(M1-2) - 귀환 버튼 왼쪽 · 귀환 뒤 5분만 · 글씨 = 돌아가기 4:12"),
 		travelParty = slot("new", 1, 0, UDim2.new(1, -99, 0, 184), UDim2.new(0, 72, 0, 36), "TravelPartyButton", "WorldClient.client.lua(M1) - 귀환 버튼 아래 끝 + 8 · 파티일 때만"),
 		dropFeed = slot("new", 1, 0, UDim2.new(1, -14, 0, 52), UDim2.new(0, 300, 0, 78), "ToastLane_TR",
-			"Toast 줄 TR(드랍 피드 · 최대 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 넘치면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93 · 보완): 칩 스택 바로 아래(아래 끝 + 8)에 남은 자리만큼(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 구역 위 끝까지, 최대 3줄), 0줄이면 상단 가운데 띠 1줄(태초 배너가 있으면 그 아래 3)",
+			"Toast 줄 TR(드랍 피드 · 최대 3줄 · 새 알림이 위 · 4초 뒤 흐려짐 · 넘치면 오래된 줄 밀림) - 사용자 결정 2026-09-20(PRD 20.93 · 보완): 칩 스택 바로 아래(아래 끝 + 8 - Q4부터 칩 스택 아래 미니맵이 있으면 그 아래 끝 + 8 · minimapColumn)에 남은 자리만큼(가방 버튼 · 투표 패널 · 터치 구역 · 중앙 구역 위 끝까지, 최대 3줄), 0줄이면 상단 가운데 띠 1줄(태초 배너가 있으면 그 아래 3)",
+			{ zone = "TR", slot = "minimapColumn", gap = 8 }),
+		-- QUEUE-ALL3 Q4 미니맵(10 문서 4절): 칩 스택 아래 끝 + 8 · 오른쪽 끝 = 칩 스택 오른쪽 끝(PC 150). 자리가 모자라면(폰 800 × 302 - 칩 스택 아래 = BR 터치 예약 구역)
+		--   칩 스택 왼쪽 열(귀환 · 돌아가기 · 파티 곁 버튼) 왼쪽 - 8 · 위 끝 = 칩 스택 위 끝(폰 96). 두 자리 모두 중앙 금지 구역 · 터치 예약 구역 · 그 버튼들과 겹치면 4px씩 줄이고(최소 64) 그래도 안 되면 숨긴다.
+		--   보스 아레나(BossEncounterId)에서 숨김. 누르면 전체 지도(worldMap). 자리 계산 = hud/Minimap.client.lua place() · 수치 = WorldMapData.map.minimap.
+		minimap = slot("new", 1, 0, UDim2.new(1, -14, 0, 240), UDim2.new(0, 150, 0, 150), "Minimap", "hud/Minimap.client.lua(Q4) - 원형(CanvasGroup) 미니맵 · 북쪽 위 · 내 화살표만 돈다",
 			{ zone = "TR", slot = "chipStack", gap = 8 }),
+		-- 드랍 피드 기준 칸(투명 - 겹침 검사에 안 잡힌다): 미니맵이 칩 스택 아래에 있으면 칩 스택 위 끝 ~ 미니맵 아래 끝, 아니면 칩 스택과 같은 칸. 드랍 피드는 이 칸 아래 끝 + 8에 놓인다(FeedLayout이 따라 잰다).
+		minimapColumn = slot("new", 1, 0, UDim2.new(1, -14, 0, 52), nil, "MinimapFeedAnchor", "hud/Minimap.client.lua(Q4) - 칩 스택 + 그 아래 미니맵을 덮는 투명 칸(드랍 피드 dropFeed.below)"),
 	},
 	ML = {
 		-- S16: 파티 목록은 메뉴바 오른쪽 옆(x = 14 + 48 + 8 - 모바일 버튼 폭 48 기준이라 PC(44)에서는 4px 더 뜬다)으로 옮겼다.

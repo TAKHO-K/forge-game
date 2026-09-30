@@ -459,6 +459,6 @@ return {
 			{ id = "tier6", zone = "tier6", name = "빙하 동굴 입구" },
 		},
 	},
-	map = { image = nil, maxPins = 3, pinBeaconHeight = 60, zoomMin = 1, zoomMax = 6, pinPickStuds = 120, minimap = { pc = 150, phone = 96, rangeStuds = 420 } },
+	map = { image = nil, maxPins = 3, pinBeaconHeight = 60, zoomMin = 1, zoomMax = 6, pinPickStuds = 120, minimap = { pc = 150, phone = 96, rangeStuds = 420, corner = 12, minSize = 64, sizeStep = 4, gap = 8, updateHz = 10, icon = 14, iconPhone = 12, dot = 8, dotPhone = 7 } }, -- 미니맵(hud/Minimap): 크기 = pc · phone(자리가 모자라면 sizeStep씩 줄여 minSize까지 · 그래도 안 되면 숨김) · 반경 rangeStuds · 아이콘 px
 	boss = { entry = "gate" }, -- 보스 입장 = 관문(보스 스테이지를 고르면 관문까지 길 안내 → 관문을 밟으면 입장). "direct" = 옛 즉시 입장
 }
