@@ -1851,6 +1851,12 @@
   "assetId": 137042537600061,
   "status": "Approved"
  },
+ "props/grass_tuft.fbx": {
+  "sha256": "809640e0eee59f798e329a137145fa387b211879f0fc5c74c82a7c4c86f7db2d",
+  "assetType": "Model",
+  "assetId": 128827342742246,
+  "status": "Approved"
+ },
  "props/kit/T1_BalancedRock.fbx": {
   "sha256": "6f5075af52393b3ea410a01e9b29186449bf1e46f8de919825392936478f16ee",
   "assetType": "Model",
@@ -2054,6 +2060,13 @@
   "assetType": "Model",
   "assetId": 109571419023957,
   "status": "Approved"
+ },
+ "terrain/grass_v1.png": {
+  "sha256": "38bb26d1f426cc4379ca06e565b861b74afbae88b7accc92e2b9823d2280d91c",
+  "assetType": "Decal",
+  "assetId": 72202465493370,
+  "status": "Approved",
+  "imageId": 89106913778439
  },
  "weapons/bow_ancient.fbx": {
   "sha256": "742f05a890664cd259cc7dd622d39ba8216ae168234344937ed13b13b41f6853",

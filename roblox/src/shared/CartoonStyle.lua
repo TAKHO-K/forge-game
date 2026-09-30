@@ -142,6 +142,14 @@ function CartoonStyle.apply(profileName)
 			counts.materials += 1
 		end
 		local override = P.materialOverrides and flatVariant(material) or baseOverride(material)
+		local tex = P.textureOverrides and P.textureOverrides[material] -- A2-N4 §3-2: 텍스처 변형(같은 Rojo 모델 파일 - 이름 ArtV1Tex_<재질>)이 평면 변형보다 먼저
+		if tex and flatVariant(material) ~= nil then
+			local folder = MaterialService:FindFirstChild("CartoonStyle")
+			local v = folder and folder:FindFirstChild(tex)
+			if v then
+				override = v.Name
+			end
+		end
 		MaterialService:SetBaseMaterialOverride(Enum.Material[material], override)
 		counts.overrides += override ~= "" and 1 or 0
 	end

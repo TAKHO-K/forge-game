@@ -1,0 +1,25 @@
+{
+ "parts": {
+  "Tuft": {
+   "tris": 70,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -0.037,
+    0.84,
+    -0.023
+   ],
+   "neon": false,
+   "color": "#6FC04A"
+  }
+ },
+ "partCount": 1,
+ "totalTris": 70,
+ "triBudget": 120,
+ "budgetUse": 0.583,
+ "version": "A2-N4",
+ "item": "grass_tuft"
+}

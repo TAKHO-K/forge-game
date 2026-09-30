@@ -78,4 +78,8 @@ return {
 			sky = { stars = 0, sun = 9 },
 		}),
 	},
+	-- A2-N4 §3-2 슬라임 구역 가장자리 풀 덤불(client/GrassTuftView - ArtStyleV1 뒤 · 메시 props/grass_tuft · 그림자 · 충돌 · 조준 끔): 그 구역 본길 · 갈림길(RoadNet) 가장자리 양옆에만.
+	--   spacing = 길 표본 간격 · offset = 길 가장자리(RoadData.half + shoulder) 밖으로 · onMaterials = 이 지형 재질 위에만 · maxCount = 상한(성능 예산 p95 +1ms 안) · nearStuds = 스트리밍 - 내 주변에서만 차례로 놓는다.
+	edgeTufts = { zones = { "tier1" }, spacing = 7, offset = { 0.2, 3.2 }, perSide = 2, scale = { 0.9, 1.5 }, maxCount = 420, nearStuds = 260, checkSeconds = 1.5,
+		onMaterials = { Grass = true, LeafyGrass = true }, colors = { { 92, 168, 62 }, { 110, 186, 72 }, { 128, 200, 84 } } },
 }

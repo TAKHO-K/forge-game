@@ -153,6 +153,17 @@
           "Enum": 1376
         }
       }
+    },
+    {
+      "Name": "ArtV1Tex_Grass",
+      "ClassName": "MaterialVariant",
+      "Properties": {
+        "BaseMaterial": {
+          "Enum": 1280
+        },
+        "ColorMap": "rbxassetid://89106913778439",
+        "StudsPerTile": 14
+      }
     }
   ]
 }
