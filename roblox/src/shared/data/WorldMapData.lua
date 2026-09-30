@@ -438,6 +438,22 @@ return {
 
 	-- 검증 · 이동 시간 표용 지점 이름(보고서)
 	-- QUEUE-ALL3 Q4 전체 지도(panels/WorldMapPanel) · 미니맵(hud/Minimap) · 핀(client/MapPins). image = 위에서 본 지도 PNG(roblox/art 기준 - 업로드 전 nil = 지형 데이터로 그림)
+	-- QUEUE-ALL3 Q5 체크포인트 순간이동(시험판 - 10 문서 5절 · 사용자 "아직 고민 중" → 스위치 Workspace Attribute CheckpointTeleport · 개발 기본 켬(enabledByDefault)).
+	--   7곳 = 허브 1(스폰 앞 광장) + 구역 입구 캠프 6. 처음 discoverStuds 안에 들어가면 발견(저장 profile.checkpoints - SAVE v61 · 빛 · 소리 · 지도에 새로 표시).
+	--   쓰기 = 지도(M)에서 발견한 곳 → 정신 집중 channelSeconds(이동 입력 · 피격 = 취소 - 귀환과 같은 규칙) → 순간이동 · 돌아오기 없음(편도) · 쿨 cooldownSeconds · 보스전 · 전투 중(최근 피해) 불가.
+	--   귀환(허브로 + 돌아오기 · 게임패스 쿨 ×0.5)과 역할이 다르다 = 체크포인트는 "발견한 곳으로 편도"만.
+	checkpoints = {
+		attribute = "CheckpointTeleport", enabledByDefault = true, discoverStuds = 40, channelSeconds = 3, cooldownSeconds = 30,
+		list = {
+			{ id = "hub", name = "큰 나무 마을", hub = true },
+			{ id = "tier1", zone = "tier1", name = "석조 평원 입구" },
+			{ id = "tier2", zone = "tier2", name = "수정 동굴 입구" },
+			{ id = "tier3", zone = "tier3", name = "수몰 사원 입구" },
+			{ id = "tier4", zone = "tier4", name = "모래 유적 입구" },
+			{ id = "tier5", zone = "tier5", name = "폭풍 첨탑 입구" },
+			{ id = "tier6", zone = "tier6", name = "빙하 동굴 입구" },
+		},
+	},
 	map = { image = nil, maxPins = 3, pinBeaconHeight = 60, zoomMin = 1, zoomMax = 6, pinPickStuds = 120, minimap = { pc = 150, phone = 96, rangeStuds = 420 } },
 	boss = { entry = "gate" }, -- 보스 입장 = 관문(보스 스테이지를 고르면 관문까지 길 안내 → 관문을 밟으면 입장). "direct" = 옛 즉시 입장
 }

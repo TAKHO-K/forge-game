@@ -68,7 +68,7 @@ local function places()
 	if D.checkpoints and type(found) == "string" and found ~= "" then
 		for _, cp in ipairs(D.checkpoints.list) do
 			if string.find("," .. found .. ",", "," .. cp.id .. ",", 1, true) then
-				local pos = cp.zone and WorldMapLayout.toWorld(WorldMapLayout.zoneByKey(cp.zone), cp.r, cp.lat or 0) or WorldMapLayout.hubPoint(cp.angleDeg or 0, cp.r or 0)
+				local pos = cp.hub and WorldMapLayout.spawnPoint() or WorldMapLayout.camp(WorldMapLayout.zoneByKey(cp.zone))
 				table.insert(list, { kind = "checkpoint", icon = "pin_checkpoint", name = Text.get("map.checkpoint", { name = cp.name }), position = pos, checkpointId = cp.id })
 			end
 		end

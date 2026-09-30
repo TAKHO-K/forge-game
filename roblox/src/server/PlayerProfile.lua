@@ -2337,6 +2337,18 @@ function PlayerProfile.getQuestState(player)
 end
 
 -- 메인 퀘스트 조건 사실(shared/Quest.mainDone이 읽는다)
+-- QUEUE-ALL3 Q5 체크포인트 발견 기록(v61) - 없으면 만든다
+function PlayerProfile.getCheckpoints(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	if type(profile.checkpoints) ~= "table" then
+		profile.checkpoints = { found = {} }
+	end
+	return profile.checkpoints
+end
+
 function PlayerProfile.getQuestFacts(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
@@ -2527,6 +2539,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		world = deepCopy(profile.world), -- M1(v38): 포탈 개방 - 새 저장 필드는 백업 대상(COMMON §1)
 		training = deepCopy(profile.training), -- Q6(v50): 새 저장 필드 = 백업 대상(COMMON §1)
 		quests = deepCopy(profile.quests), -- Q6(v50)
+		checkpoints = deepCopy(profile.checkpoints), -- QUEUE-ALL3 Q5(v61)
 		pets = deepCopy(profile.pets), -- Q11(v52)
 		settings = deepCopy(profile.settings), -- Q14(v54)
 		peakLevel = profile.peakLevel, -- M1(v38)

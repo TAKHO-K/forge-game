@@ -200,6 +200,93 @@ function Travel.cancelRecall(player, why)
 	return true
 end
 
+-- ═══ QUEUE-ALL3 Q5 체크포인트(시험판) ═══
+local CP = WorldMapData.checkpoints
+function Travel.checkpointPosition(cp)
+	if cp.hub then
+		return WorldMapLayout.spawnPoint()
+	end
+	return WorldMapLayout.camp(WorldMapLayout.zoneByKey(cp.zone))
+end
+function Travel.checkpointEnabled()
+	return workspace:GetAttribute(CP.attribute) == true
+end
+local function cpById(id)
+	for _, cp in ipairs(CP.list) do
+		if cp.id == id then
+			return cp
+		end
+	end
+	return nil
+end
+local function publishFound(player, found)
+	player:SetAttribute("CheckpointsFound", table.concat(found, ","))
+end
+-- 발견(서버 1초마다 - 가까이 가면 저장 · 알림 이벤트 CheckpointFound)
+function Travel.scanCheckpoints(player, root)
+	local rec = PlayerProfile.getCheckpoints(player)
+	if not rec then
+		return
+	end
+	if player:GetAttribute("CheckpointsFound") == nil then
+		publishFound(player, rec.found) -- 접속 뒤 첫 판정 = 지도 · 퀘스트가 읽는 목록
+	end
+	for _, cp in ipairs(CP.list) do
+		if not table.find(rec.found, cp.id) then
+			local p = Travel.checkpointPosition(cp)
+			if Vector3.new(root.Position.X - p.X, 0, root.Position.Z - p.Z).Magnitude <= CP.discoverStuds then
+				table.insert(rec.found, cp.id)
+				publishFound(player, rec.found)
+				local remote = ReplicatedStorage:FindFirstChild("CheckpointFound")
+				if remote then
+					remote:FireClient(player, cp.id)
+				end
+				require(script.Parent.ImmediateSave).request(player)
+				print(("[Q5] 체크포인트 발견: %s - %s(%d/%d)"):format(player.Name, cp.id, #rec.found, #CP.list))
+			end
+		end
+	end
+end
+function Travel.onCheckpointsLoaded(player)
+	local rec = PlayerProfile.getCheckpoints(player)
+	if rec then
+		publishFound(player, rec.found)
+	end
+end
+-- 쓰기: 정신 집중(귀환과 같은 시전 · 같은 취소 규칙) → 편도
+function Travel.requestCheckpoint(player, id, now)
+	now = now or os.clock()
+	local st = stateOf(player)
+	local cp = type(id) == "string" and cpById(id)
+	local rec = PlayerProfile.getCheckpoints(player)
+	if not Travel.checkpointEnabled() then
+		return false, "cp_off"
+	end
+	if not cp or not rec or not table.find(rec.found, cp.id) then
+		return false, "cp_unknown"
+	end
+	if BossEncounter.getEncounter(player) then
+		return false, "in_boss"
+	end
+	if now - st.hurtAt < T.combatLockSeconds then
+		return false, "combat"
+	end
+	if st.recall then
+		return false, "casting_already"
+	end
+	if st.checkpointTeleportAt and now - st.checkpointTeleportAt < CP.cooldownSeconds then
+		return false, "cooldown"
+	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return false, "no_character"
+	end
+	st.recall = { startAt = now, hp = PlayerState.getHp(player), origin = root.Position, dest = Travel.checkpointPosition(cp), cpId = cp.id, castSeconds = CP.channelSeconds }
+	player:SetAttribute("RecallCastUntil", serverNow() + CP.channelSeconds)
+	player:SetAttribute("RecallCastKind", "checkpoint")
+	return true, "casting"
+end
+
 function Travel.requestHub(player, now)
 	now = now or os.clock()
 	local st = stateOf(player)
@@ -218,6 +305,7 @@ function Travel.requestHub(player, now)
 	end
 	st.recall = { startAt = now, hp = PlayerState.getHp(player), origin = root.Position }
 	player:SetAttribute("RecallCastUntil", serverNow() + T.recall.castSeconds)
+	player:SetAttribute("RecallCastKind", "hub")
 	return true, "casting"
 end
 
@@ -329,8 +417,14 @@ function Travel.pollRecall(player, now)
 		return "hit"
 	end
 	cast.hp = hp or cast.hp -- 회복은 괜찮다(줄어들 때만 취소)
-	if now - cast.startAt < T.recall.castSeconds then
+	if now - cast.startAt < (cast.castSeconds or T.recall.castSeconds) then
 		return nil
+	end
+	if cast.dest then -- QUEUE-ALL3 Q5 체크포인트 = 편도(돌아가기 · 귀환 쿨 없음 · 체크포인트 쿨만)
+		clearCast(player, st, nil)
+		st.checkpointTeleportAt = now
+		Travel.teleport(player, cast.dest + Vector3.new(0, 3, 0), "체크포인트 " .. tostring(cast.cpId))
+		return "done"
 	end
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	local from = root and root.Position or cast.origin
@@ -701,10 +795,18 @@ function Travel.start(downPads)
 	local request = Instance.new("RemoteEvent")
 	request.Name = "TravelRequest"
 	request.Parent = ReplicatedStorage
+	local found = Instance.new("RemoteEvent") -- QUEUE-ALL3 Q5 체크포인트 발견 알림(서버 → 클라: 빛 · 소리 · 토스트)
+	found.Name = "CheckpointFound"
+	found.Parent = ReplicatedStorage
+	if workspace:GetAttribute(CP.attribute) == nil then
+		workspace:SetAttribute(CP.attribute, CP.enabledByDefault)
+	end
 	request.OnServerEvent:Connect(function(player, kind, targetUserId)
 		local ok, why
 		if kind == "hub" then
 			ok, why = Travel.requestHub(player)
+		elseif kind == "checkpoint" then -- QUEUE-ALL3 Q5(targetUserId 자리 = 체크포인트 id)
+			ok, why = Travel.requestCheckpoint(player, targetUserId)
 		elseif kind == "cancelRecall" then -- QUEUE-ALL2 Q6 귀환 취소(targetUserId 자리 = 이유 "key" | "move")
 			Travel.cancelRecall(player, targetUserId)
 			return
@@ -720,7 +822,7 @@ function Travel.start(downPads)
 		if not ok then
 			local text = ({ in_boss = "보스전 중에는 못 간다", cooldown = "아직 쿨타임", combat = "전투 중(최근 피해)에는 못 간다", locked_zone = "그 사람은 나에게 잠긴 구역에 있다",
 				not_party = "파티원만", no_target = "대상을 찾지 못했다", not_tutorial = "견습 중에만 바로 갈 수 있다",
-				casting_already = "이미 귀환 중", no_back = "돌아갈 자리가 없다(5분 · 1회)", no_character = "캐릭터가 없다" })[why] or why
+				casting_already = "이미 귀환 중", cp_off = "체크포인트 이동이 꺼져 있다", cp_unknown = "아직 찾지 않은 체크포인트", no_back = "돌아갈 자리가 없다(5분 · 1회)", no_character = "캐릭터가 없다" })[why] or why
 			PartyState.notify(player, "이동 불가 - " .. text)
 		end
 	end)
@@ -775,6 +877,7 @@ function Travel.start(downPads)
 				if not Travel.checkStationDown(player, root.Position - Vector3.new(0, 3, 0), grounded) then
 					Travel.pollPlayer(player, root, humanoid, now)
 				end
+				Travel.scanCheckpoints(player, root) -- QUEUE-ALL3 Q5
 				local recall = Travel.pollRecall(player, now)
 				if recall == "boss" then
 					PartyState.notify(player, "귀환 취소 - 보스전") -- 맞아서 취소 = 세계 정보 카드 귀환 줄(M1-2 후속 - 한 틀) · 보스전 중엔 카드가 숨어 토스트로

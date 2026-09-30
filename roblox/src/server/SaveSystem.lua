@@ -290,6 +290,7 @@ local function defaultProfile()
 		audit = { lambda = 0, primordialRolls = 0, playSeconds = 0 }, -- S1(v44): 획득 감사(AcquisitionAudit)
 		training = { attack = 0, hp = 0, defense = 0 }, -- QUEUE-10h Q6(v50): 공용 수련 단계(계정 - TrainingData.stats)
 		quests = nil, -- QUEUE-10h Q6(v50): 퀘스트 상태(shared/Quest.newState - 로드 때 채움)
+		checkpoints = { found = {} }, -- QUEUE-ALL3 Q5(v61): 체크포인트 발견 id 목록(WorldMapData.checkpoints.list)
 		pets = nil, -- QUEUE-10h Q11(v52): 펫 상태(shared/Pet.newState - { list, equipped, hatchCount, hatching })
 		settings = nil, -- QUEUE-10h Q14(v54): 설정({ [SettingsData 키] = 값 } - 없는 키 = 기본값 · SettingsService가 검증)
 		comeback = { untilAt = 0 }, -- C5-5(v48): 복귀 부스트 만료 unix 초(0 = 없음) - SaveServer가 로드 직후 마지막 저장 savedAt과 비교해 준다
@@ -1318,6 +1319,14 @@ local function migrate(data)
 			data.quests.mainN = 0
 		end
 		data.version = 60
+	end
+
+	if data.version < 61 then
+		-- QUEUE-ALL3 Q5: checkpoints(체크포인트 발견 기록 - 옛 계정 = 아무것도 안 찾음 · 허브는 가까이 가면 곧 찾는다)
+		if type(data.checkpoints) ~= "table" then
+			data.checkpoints = { found = {} }
+		end
+		data.version = 61
 	end
 
 	data.savedAt = data.savedAt or 0
