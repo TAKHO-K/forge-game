@@ -383,6 +383,10 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 	if lanesOn then
 		-- 매 타 예비(basicPrepSeconds) 뒤 타격 - 쿨이 이미 찼어도(스킬 직후 · 전투 시작) 먼저 알린다. 주기 = 마지막 타격 + 쿨(스킬이 리셋하지 않는다)
 		local due = pendingSwing[model]
+		if due and now - due > 1 then -- A2-N4 리뷰: 전멸 리셋 · 추격 중단으로 쓰지 못한 오래된 예약 = 버린다(재도전 첫 타도 예비부터)
+			due = nil
+			pendingSwing[model] = nil
+		end
 		if not due then
 			local lead = BossData.basicPrepSeconds
 			if now >= (last or -math.huge) + data.attackCooldownSeconds - lead and (PlayerState.getHp(targetPlayer) or 0) > 0 and Reach.within(targetRoot.Position, monsterPosition, farRange) then
@@ -682,12 +686,13 @@ RunService.Heartbeat:Connect(function(dt)
 					-- 피격판정이 없다, 웹 main.js의 "target.isPlayer일 때만 데미지" 분기와 같다).
 				end
 			elseif state == "returning" then
+				pendingSwing[model] = nil -- A2-N4 리뷰: 추격을 놓은 보스의 예약 평타가 재도전 첫 타에 예비 없이 나가지 않게
 				if Reach.horizontalDistance(position, home) <= 0.5 then
 					model:PivotTo(keepYaw(model, home)) -- A2-N4: 도착해도 보던 쪽 그대로
 					MonsterState.setAiState(model, "idle")
 					blockedSince[model] = nil
 					Temperament.onReturnedHome(model, data) -- M2: 복귀 = 체력 회복
-				elseif stepToward(model, position, home, MonsterState.getMoveSpeed(model), dt) then
+				elseif stepToward(model, position, home, MonsterState.getMoveSpeed(model), dt, data.isBoss) then -- A2-N4 리뷰: 보스 방향은 클라가 정한다(루트 yaw 0 유지)
 					blockedSince[model] = nil
 				else
 					-- 22-4: 복귀 직선이 절벽·심연에 막혔다 - 나갈 때 비켜 간 경로가 돌아올 때는 없다.

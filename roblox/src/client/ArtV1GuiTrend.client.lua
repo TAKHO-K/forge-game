@@ -72,11 +72,11 @@ local function styleButton(b)
 end
 
 local function styleText(t)
-	if t:GetAttribute("TrendDone") then
+	if t:GetAttribute("TrendText") then -- 버튼은 styleButton이 TrendDone을 먼저 세운다 - 글씨는 따로 표시(A2-N4 리뷰: 버튼 글씨에 외곽선이 안 붙었다)
 		return
 	end
-	t:SetAttribute("TrendDone", true)
-	t:SetAttribute("TrendWas", t.TextStrokeTransparency)
+	t:SetAttribute("TrendText", true)
+	t:SetAttribute("TrendTextWas", ("%g|%s"):format(t.TextStrokeTransparency, t.TextStrokeColor3:ToHex()))
 	t.TextStrokeColor3 = G.ink
 	t.TextStrokeTransparency = math.min(t.TextStrokeTransparency, G.textStroke)
 end
@@ -97,18 +97,18 @@ end
 
 local function revert()
 	for _, d in ipairs(playerGui:GetDescendants()) do
-		if d:GetAttribute("TrendDone") then
-			d:SetAttribute("TrendDone", nil)
-			if (d:IsA("TextLabel") or d:IsA("TextButton")) and d:GetAttribute("TrendWas") then
-				d.TextStrokeTransparency = d:GetAttribute("TrendWas")
-				d:SetAttribute("TrendWas", nil)
-			end
+		d:SetAttribute("TrendDone", nil)
+		if d:GetAttribute("TrendText") then
+			local tr, hex = d:GetAttribute("TrendTextWas"):match("^([^|]+)|([^|]+)$")
+			d.TextStrokeTransparency, d.TextStrokeColor3 = tonumber(tr), Color3.fromHex(hex)
+			d:SetAttribute("TrendText", nil)
+			d:SetAttribute("TrendTextWas", nil)
 		end
 		if d.Name == "TrendStroke" or d.Name == "TrendCorner" or d.Name == "TrendGradient" then
 			d:Destroy()
 		elseif d:IsA("UIStroke") and d:GetAttribute("TrendWas") then
-			local th, hex, tr = d:GetAttribute("TrendWas"):match("^([^|]+)|([^|]+)|([^|]+)$")
-			d.Thickness, d.Color, d.Transparency = tonumber(th), Color3.fromHex(hex), tonumber(tr)
+			-- 기존 테는 굵기만 올렸다 - 굵기만 되돌린다(색 · 투명도는 그사이 바뀐 등급 · 선택 표시일 수 있다)
+			d.Thickness = tonumber((d:GetAttribute("TrendWas"):match("^([^|]+)")))
 			d:SetAttribute("TrendWas", nil)
 		elseif d:IsA("UICorner") and d:GetAttribute("TrendWas") then
 			d.CornerRadius = UDim.new(0, d:GetAttribute("TrendWas"))

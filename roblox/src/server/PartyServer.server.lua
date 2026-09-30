@@ -129,6 +129,15 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 			fail(player, "in_boss")
 			return
 		end
+		-- A2-N4 리뷰: 파티 만들기(create)와 같은 자기 검사 - 프로필 · 다른 서버 합류 대기(견습은 같은 서버 모집이라 허용)
+		if not PlayerProfile.getProfile(player) then
+			fail(player, "no_profile")
+			return
+		end
+		if PartyCrossServer.isJoining(player) then
+			fail(player, "joining")
+			return
+		end
 		local ok, reason = PartyBoard.post(player, arg)
 		if not ok then
 			fail(player, reason)

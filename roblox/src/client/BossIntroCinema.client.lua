@@ -242,9 +242,16 @@ event.OnClientEvent:Connect(function(data)
 	local zoomCfg = MovementConfig.camera
 	local endDist = ((BossData.bosses[data.bossId or ""] or {}).cameraZoomStuds or 26) * (Workspace:GetAttribute("ArtStyleV1") and ((zoomCfg.bossZoomFactorOf and zoomCfg.bossZoomFactorOf[data.bossId or ""]) or zoomCfg.bossZoomFactor) or 1)
 	-- A2-N4 P0-4: 연출 시작부터 줌을 끝 거리로 묶는다 - 기본 카메라의 줌 스프링은 Custom으로 돌아온 뒤 옛 값에서 출발해(20 → 32.3) 줌아웃처럼 보였다. 연출 동안 미리 끝 거리로 가 있게(CameraRig가 연출 끝 + 1초에 푼다)
+	local zoomWas = { player.CameraMinZoomDistance, player.CameraMaxZoomDistance }
 	if Workspace:GetAttribute("ArtStyleV1") and endDist then
 		player.CameraMinZoomDistance = endDist
 		player.CameraMaxZoomDistance = endDist
+		-- A2-N4 리뷰: 푸는 쪽(CameraRig snapTo)이 안 오면(연출 중 보스전이 바뀜 · 줌 값 없음) 휠 줌이 리스폰까지 묶인다 → 연출 끝 + 2초에도 내가 묶은 값 그대로면 원래 범위로
+		task.delay(seconds + 2, function()
+			if player.CameraMinZoomDistance == endDist and player.CameraMaxZoomDistance == endDist then
+				player.CameraMinZoomDistance, player.CameraMaxZoomDistance = zoomWas[1], zoomWas[2]
+			end
+		end)
 	end
 	RunService:BindToRenderStep("BossIntroCinema", Enum.RenderPriority.Camera.Value + 1, function()
 		local t = serverNow() - startServer
