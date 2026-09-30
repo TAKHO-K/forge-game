@@ -286,6 +286,13 @@ local function build()
 		FriendInvite.prompt()
 	end)
 
+	-- A2-N4 §4-4: [모집 게시판] - 같은 서버 파티 모집(panels/PartyBoard)
+	local boardButton = makePillButton(myColumn, Text.get("party.board.open"), 168, friendY, 110, false)
+	boardButton.Name = "PartyBoardButton"
+	boardButton.Activated:Connect(function()
+		UIManager.open("partyBoard")
+	end)
+
 	local function ensureRows(rowsTable, parent, count)
 		for i = #rowsTable + 1, count do
 			rowsTable[i] = makeRow(parent, i)

@@ -112,6 +112,14 @@ return {
 	memberMapName = "ForgePartyMember_v1",
 	messagingTopic = "ForgeParty_v1",
 	-- QUEUE-6h-b R3 F3: 파티 요청 동작별 최소 간격(초) - 크로스서버 메시지 · MemoryStore를 쓰는 동작은 길게(서버 한도 보호)
-	requestGapSeconds = { invite = 2, invite_remote = 2, create = 2, joincode = 2, leave = 1, default = 0.3 }, -- 초대 = 같은 대상에게 2초
-	inviteMaxPerSecond = 3, -- 초대 전체 합계(대상을 바꿔 가며 보내는 스팸 - 크로스서버 메시지 한도 보호)
+	requestGapSeconds = { invite = 2, invite_remote = 2, create = 2, joincode = 2, leave = 1, board_post = 2, board_join = 1, default = 0.3 }, -- A2-N4: 게시판 올리기 2초 · 참가 1초 -- 초대 = 같은 대상에게 2초
+	inviteMaxPerSecond = 3,
+	-- A2-N4 §4-4 같은 서버 모집 게시판(server/PartyBoard · client/panels/PartyBoard). 태그만(자유 글 없음): 스테이지 = 올린 사람의 지금 스테이지(서버가 채운다) · 역할 · 목표 인원.
+	--   roles[i] = { label, classId(이 직업만) | notClass(이 직업 빼고) } · sizes = 목표 인원 · ttlSeconds = 글 수명 · sweepSeconds = 지우기 주기
+	board = {
+		roles = { { label = "누구나" }, { label = "딜러", notClass = "healer" }, { label = "치유사", classId = "healer" } },
+		sizes = { 2, 3, 4 },
+		ttlSeconds = 300,
+		sweepSeconds = 2,
+	}, -- 초대 전체 합계(대상을 바꿔 가며 보내는 스팸 - 크로스서버 메시지 한도 보호)
 }

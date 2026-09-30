@@ -23,6 +23,7 @@ local PartyCrossServer = require(script.Parent.PartyCrossServer)
 local PartyVote = require(script.Parent.PartyVote)
 local PartyJoinRules = require(script.Parent.PartyJoinRules)
 local FriendNotice = require(script.Parent.FriendNotice)
+local PartyBoard = require(script.Parent.PartyBoard) -- A2-N4 §4-4 같은 서버 모집 게시판
 
 local partyRequest = Instance.new("RemoteEvent")
 partyRequest.Name = "PartyRequest"
@@ -47,6 +48,9 @@ local REASON_TEXT = {
 	no_profile = "아직 준비되지 않은 플레이어입니다",
 	joining = "합류 중에는 할 수 없습니다",
 	service_unavailable = "파티 서비스에 연결할 수 없습니다. 잠시 후 다시 시도하세요",
+	board_bad_tags = "모집 조건을 다시 골라 주세요",
+	board_gone = "그 모집은 이미 끝났습니다",
+	board_role = "모집 역할과 직업이 맞지 않습니다",
 }
 
 local function fail(player, reason)
@@ -109,13 +113,50 @@ local function partyThrottled(player, action, arg)
 	end
 	return false
 end
-local PARTY_ACTIONS = { invite = true, invite_remote = true, create = true, joincode = true, cancel_join = true, accept = true, decline = true, leave = true, kick = true, vote_agree = true, vote_reject = true }
+local PARTY_ACTIONS = { invite = true, invite_remote = true, create = true, joincode = true, cancel_join = true, accept = true, decline = true, leave = true, kick = true, vote_agree = true, vote_reject = true,
+	board_post = true, board_remove = true, board_join = true } -- A2-N4 §4-4
 
 partyRequest.OnServerEvent:Connect(function(player, action, arg)
 	if not RequestGate.allow(player, "PartyRequest") then
 		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
 	end
 	if type(action) ~= "string" or not PARTY_ACTIONS[action] or partyThrottled(player, action, arg) then
+		return
+	end
+	if action == "board_post" then
+		-- A2-N4 §4-4: 태그만(PartyBoard.validTags) · 리더 또는 솔로 · 보스전 중엔 파티 구성을 못 바꾸므로 막는다
+		if BossEncounter.getActive(player) then
+			fail(player, "in_boss")
+			return
+		end
+		local ok, reason = PartyBoard.post(player, arg)
+		if not ok then
+			fail(player, reason)
+		else
+			PartyState.notify(player, Text.get("party.board.posted"))
+		end
+		return
+	elseif action == "board_remove" then
+		PartyBoard.remove(player)
+		return
+	elseif action == "board_join" then
+		local ok, reason = PartyBoard.join(player, arg, function(p)
+			if BossEncounter.getActive(p) then
+				return "in_boss"
+			end
+			if not PlayerProfile.getProfile(p) then
+				return "no_profile"
+			end
+			if PartyCrossServer.isJoining(p) then
+				return "joining"
+			end
+			return nil -- 견습 · 대상 규칙은 같은 서버 초대 · 수락과 같은 PartyJoinRules.checkJoinable이 본다
+		end)
+		if not ok then
+			fail(player, reason)
+		elseif BossEncounter.isLingering(player) then
+			BossEncounter.leaveFor(player)
+		end
 		return
 	end
 	if action == "invite" then

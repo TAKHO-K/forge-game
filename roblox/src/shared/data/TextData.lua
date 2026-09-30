@@ -3,6 +3,18 @@
 -- G1-1부터 새로 쓰거나 고친 문장만 여기 있다. 옛 문장은 L(번역) 단계에서 옮긴다.
 return {
 	ko = {
+		-- A2-N4 §4-4 파티 모집 게시판
+		["party.board.title"] = "파티 모집",
+		["party.board.open"] = "모집 게시판",
+		["party.board.posted"] = "모집을 올렸습니다 - 다른 사람이 빠른 참가로 들어옵니다",
+		["party.board.row"] = "스테이지 {stage} · {role} · {count}/{size}명",
+		["party.board.empty"] = "지금 이 서버에 올라온 모집이 없습니다",
+		["party.board.post"] = "모집 올리기",
+		["party.board.remove"] = "모집 내리기",
+		["party.board.join"] = "참가",
+		["party.board.role"] = "역할",
+		["party.board.size"] = "인원",
+
 		-- A2-N4 §4-2 세트 도감(장비창 탭 - SetData.codex 스위치 뒤)
 		["codex.tab"] = "도감",
 		["codex.summary"] = "완성 세트 {done} / {total} · 모은 조각 {pieces} / {allPieces}",
