@@ -88,6 +88,21 @@ def armor():
     compose(os.path.join(N2, "armor-icons-v2.png"), icons, cols=9, title="방어구 아이콘 v2(144 중 54)", cell=150)
 
 
+def props():
+    """3차: 총괄 검토가 고른 소품 2(수정 첨탑 · 피뢰 기둥) 이전(A2-N1) / 이후"""
+    items = []
+    for t, ko in (("T2_CrystalSpire", "수정 첨탑"), ("T5_RodPillar", "피뢰 기둥")):
+        items += [(os.path.join(NIGHT, "kit", "%s_game_34.png" % t), "%s 이전(A2-N1)" % ko), (os.path.join(N2, "props", "%s_game_34.png" % t), "%s 3차" % ko),
+                  (os.path.join(N2, "props", "%s_sil_front.png" % t), "실루엣")]
+    compose(os.path.join(N2, "props-v2.png"), items, cols=3, title="소품 3차 - 수정 첨탑 3단 테이퍼 + 밑동 결정 + 끝 수정 · 피뢰 기둥 받침 2단", cell=300)
+
+
+def dragon():
+    items = [(os.path.join(NIGHT, "monsters", "blue_dragon_game_34.png"), "이전(A2-N1)")]
+    items += [(os.path.join(N2, "monsters", "blue_dragon_game_%s.png" % v), "3차 %s" % v) for v in ("front", "34", "side")]
+    compose(os.path.join(N2, "dragon-v3.png"), items, cols=4, title="푸른 드래곤 3차 - 날개 6.4 · 몸 ×1.2 · 목 · 꼬리 ×1.3", cell=300)
+
+
 if __name__ == "__main__":
     for n in sys.argv[1:]:
         globals()[n]()
