@@ -24,6 +24,8 @@ return {
 		theme_frost = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "frost" } } },
 		glider_petal = { productId = 0, robux = 149, grants = { { kind = "gliderSkin", id = "petal" } } },
 		glider_kite = { productId = 0, robux = 149, grants = { { kind = "gliderSkin", id = "kite" } } },
+		theme_jelly = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "jelly" } } }, -- QUEUE-ALL1 P6 말랑 젤리
+		glider_dragonWing = { productId = 0, robux = 149, grants = { { kind = "gliderSkin", id = "dragonWing" } } }, -- QUEUE-ALL1 P6 푸른 드래곤 날개
 		season_premium = { productId = 0, robux = 399, grants = { { kind = "seasonPremium" } } }, -- 이번 시즌 유료 줄(시즌마다 다시 산다)
 	},
 	-- 게임패스(편의만 - 전투력 · 획득량 없음). passId = Creator Hub 번호(자리 0). 효과 수치도 여기(편의 값).
@@ -32,6 +34,7 @@ return {
 		pickupRadius = { passId = 0, robux = 99, radiusMultiplier = 1.5 }, -- 펫 자동 줍기 반경 ×1.5(PetService.pickupRange - 해금 기준은 그대로)
 		recallCooldown = { passId = 0, robux = 99, cooldownMultiplier = 0.5 }, -- 마을 귀환 도착 뒤 쿨 ×0.5(Travel - hubReturnCooldownSeconds)
 		nameplateColor = { passId = 0, robux = 49, colors = { "gold", "success", "stealShield", "ember" } }, -- 이름표 색(UIColors 기존 이름 - 새 색 금지 · 전투력 없음)
+		nameplateBadge = { passId = 0, robux = 49, badges = { "hammer", "slime", "star", "heart" } }, -- QUEUE-ALL1 P6 이름표 배지: 이름 앞 작은 정지 아이콘 1개(고르기) · 칭호 흐름 띠와 안 겹침 · 전투력 없음
 	},
 	-- 반짝 조각 가격(로벅스 대신 조각으로 살 때 - 골드 불가). 조각을 **상품으로 직접** 팔지 않는다(유료 재화 상품 없음 - 시즌 유료 줄 보상에는 조각이 있다 · 조각은 치장만 산다 - 설계 문서 §3 · §10-2).
 	shardPrices = { theme = 120, gliderSkin = 80 },

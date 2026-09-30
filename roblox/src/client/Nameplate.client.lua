@@ -115,6 +115,27 @@ local function attach(player, character)
 		label.TextColor3 = typeof(color) == "Color3" and color or Color3.new(1, 1, 1)
 	end
 	applyNameColor()
+	-- QUEUE-ALL1 P6 이름표 배지: 이름 글자 왼쪽에 작은 정지 아이콘(칭호 줄은 위 따로 - 안 겹침)
+	local HudIcons = require(script.Parent.HudIcons)
+	local badgeHolder = Instance.new("Frame")
+	badgeHolder.Name = "NameBadge"
+	badgeHolder.BackgroundTransparency = 1
+	badgeHolder.AnchorPoint = Vector2.new(1, 0.5)
+	badgeHolder.Size = UDim2.new(0, settings.textSize, 0, settings.textSize)
+	badgeHolder.Parent = billboard
+	local function applyBadge()
+		for _, c in ipairs(badgeHolder:GetChildren()) do
+			c:Destroy()
+		end
+		local id = player:GetAttribute("NameplateBadge")
+		badgeHolder.Visible = type(id) == "string" and id ~= ""
+		if badgeHolder.Visible then
+			HudIcons.badge(badgeHolder, settings.textSize, id)
+		end
+		badgeHolder.Position = UDim2.new(0.5, -label.TextBounds.X / 2 - 3, 0.5, 0)
+	end
+	applyBadge()
+	label:GetPropertyChangedSignal("TextBounds"):Connect(applyBadge)
 
 	local titleGui = Instance.new("BillboardGui")
 	titleGui.Name = "PlayerTitle"
@@ -151,6 +172,7 @@ local function attach(player, character)
 			refresh(player, label)
 		end),
 		player:GetAttributeChangedSignal("NameplateColor"):Connect(applyNameColor),
+		player:GetAttributeChangedSignal("NameplateBadge"):Connect(applyBadge), -- QUEUE-ALL1 P6
 	}
 	billboard.Destroying:Connect(function()
 		for _, connection in ipairs(connections) do

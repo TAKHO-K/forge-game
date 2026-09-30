@@ -218,6 +218,40 @@ function HudIcons.quest(parent, size, color)
 	return canvas
 end
 
+-- QUEUE-ALL1 P6 이름표 배지(정지 아이콘 4종 - 도형만 · 색 = 위험색 · 태초 · 초월 밖)
+function HudIcons.badge(parent, size, badgeId)
+	local canvas = Instance.new("Frame")
+	canvas.Name = "Badge_" .. tostring(badgeId)
+	canvas.BackgroundTransparency = 1
+	canvas.Size = UDim2.new(0, size, 0, size)
+	canvas.Parent = parent
+	local function f(sz, pos, rotation, color, radius)
+		local fr = newFrame(canvas, UDim2.new(0, size * sz.X, 0, size * sz.Y), Vector2.new(0.5, 0.5), UDim2.new(pos.X, 0, pos.Y, 0), rotation, color)
+		if radius then
+			round(fr, size * radius)
+		end
+		return fr
+	end
+	if badgeId == "hammer" then
+		f(Vector2.new(0.16, 0.7), Vector2.new(0.52, 0.58), 35, Color3.fromRGB(170, 120, 80), 0.05)
+		f(Vector2.new(0.56, 0.3), Vector2.new(0.38, 0.32), 35, Color3.fromRGB(190, 196, 210), 0.06)
+	elseif badgeId == "slime" then
+		f(Vector2.new(0.86, 0.62), Vector2.new(0.5, 0.6), 0, Color3.fromRGB(120, 220, 120), 0.3)
+		f(Vector2.new(0.12, 0.16), Vector2.new(0.36, 0.56), 0, Color3.fromRGB(30, 40, 30), 0.06)
+		f(Vector2.new(0.12, 0.16), Vector2.new(0.64, 0.56), 0, Color3.fromRGB(30, 40, 30), 0.06)
+	elseif badgeId == "star" then
+		for _, a in ipairs({ 0, 36 }) do
+			f(Vector2.new(0.6, 0.6), Vector2.new(0.5, 0.52), a + 9, Color3.fromRGB(255, 226, 110))
+		end
+	elseif badgeId == "heart" then
+		local pink = Color3.fromRGB(255, 150, 190)
+		f(Vector2.new(0.46, 0.46), Vector2.new(0.36, 0.38), 0, pink, 0.23)
+		f(Vector2.new(0.46, 0.46), Vector2.new(0.64, 0.38), 0, pink, 0.23)
+		f(Vector2.new(0.5, 0.5), Vector2.new(0.5, 0.56), 45, pink, 0.06)
+	end
+	return canvas
+end
+
 -- QUEUE-ALL1 P5 도감(책 - 두 쪽 + 가운데 줄)
 function HudIcons.codex(parent, size, color)
 	local iconColor = color or UIColors.textPrimary

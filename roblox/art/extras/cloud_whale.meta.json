@@ -1,0 +1,99 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 224,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    -2.15,
+    -0.15
+   ],
+   "neon": false,
+   "color": "#7EBAF0"
+  },
+  "Belly": {
+   "tris": 120,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    -3.41,
+    -0.6
+   ],
+   "neon": false,
+   "color": "#F0EEE2"
+  },
+  "Fins": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    -3.2,
+    -1.0
+   ],
+   "neon": false,
+   "color": "#68A4E2"
+  },
+  "Tail": {
+   "tris": 140,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    -1.635,
+    5.32
+   ],
+   "neon": false,
+   "color": "#7EBAF0"
+  },
+  "Eyes": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    -1.95,
+    -3.0
+   ],
+   "neon": false,
+   "color": "#222C46"
+  },
+  "Cloud": {
+   "tris": 480,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    -4.61,
+    0.064
+   ],
+   "neon": false,
+   "color": "#ECF4FC"
+  }
+ },
+ "partCount": 6,
+ "totalTris": 1156,
+ "triBudget": 2400,
+ "budgetUse": 0.482,
+ "kind": "cosmetic"
+}

@@ -223,3 +223,13 @@
   - 도감 골드 = EconSim 잡몹 골드 × 1.2 상한 가정(CodexData.econ.goldShare): 캐주얼 1000 27.5h 그대로 · 상위 1000 4.4 → 4.0h · 5000 78.0 → 71.9h(−8% · ±10% 안).
   - QueueVerify(가) 95/95(고유 3부위 검사 추가 · 이관 v59 · 설정 키 10 기대값 갱신 - P3 초월 알림 설정 추가분).
 - 부분: 흡혈 값 맞춤(EconSim이 흡혈을 모형에 안 넣음) · 도감 골드 실측 몫(상한 가정만) · 실제 키보드 K(가상 입력만) · 폰 배치 캡처 · 옛 A2-N4 장비창 도감 탭은 스위치 끔 그대로(코드 남김).
+
+## P6 로벅스 치장 4종(docs/design/v2/07 · Claude outputs/QUEUE-ALL1/cosmetics)
+- 말랑 젤리(테마 세트 199 · theme_jelly): CosmeticSlotData.sets.jelly · ArtV1CosmeticData.themes.jelly(라임 · 민트) · ArtV1Cosmetics 데이터 옵션 3개 추가 = dash.drops(대시 중 젤리 방울이 튀어 0.9초 남음) · jump.squash(발밑 고리가 납작하게 튕기며 퍼짐 - Fx.ring 퍼짐 트윈과 같은 속성이라 한 트윈으로 합침) · footstep shape "puddle"(삐뚤한 납작 타원 + 가운데 밝은 방울) · 활강 = 거품 입자(위로 뜸). Play: 실제 대시(LeftShift) → 방울 4개 · 발밑 웅덩이 2개(jelly-footstep.jpg).
+- 푸른 드래곤 날개(글라이더 149 · glider_dragonWing): gliderSkins.dragonWing(look) · GlideView가 look을 읽어 monsters/blue_dragon 캐시 모델의 Wing_L · Wing_R 메시를 등에 붙이고 롤 ±16° · 0.7Hz 날갯짓(새 업로드 없이 T6 메시 재사용 · 캐시 메시가 회색이라 몬스터 메타 색 #4682CD를 데이터로). 판정 · 속도 불변(GlideController 그대로). Play: 활강 모양 캡처(dragon-wing.jpg).
+- 이름표 배지(게임패스 49 · nameplateBadge): 망치 · 슬라임 · 별 · 하트(HudIcons.badge 도형) · 서버 CosmeticService.equip("nameplateBadge") 패스 검사 → Attribute NameplateBadge → 이름표 글자 폭 왼쪽에 아이콘(칭호 줄은 위 따로 - 안 겹침) · 상점 치장 탭 칩 + 편의 탭 줄 · 문구 TextData. Play: 슬라임 · 별 배지 표시.
+- 구름 고래(시즌 유료 줄 40칸 대표): tools/blender/make_cosmetics.py(파트 6 · 1,156삼각형 · 하늘색 몸 + 크림 배 + 구름) → art/extras/cloud_whale.fbx → upload.py 1개(Approved) · gliderSkins.cloudWhale · GlideView = 캐릭터 밑 고래(×0.62 · 위아래 살랑) + 꼬리 물보라 입자. 시즌 줄: 유료 40 = 구름 고래 · 서리꽃 테마는 40 → 20칸으로(시즌 한정 여부 = 사용자 결정 대기 - 일단 시즌 줄 보상으로만). Play: 탑승 캡처(whale-ride.jpg).
+- 상품 ID 전부 자리값 0(Creator Hub에서 만든 뒤 채움 → 그 전엔 "준비 중"). Monetization.checkCatalog(서버 Play) = 통과 · valid 8(theme_jelly · glider_dragonWing 포함).
+- 개발 명령 /gg cos grant|equip|pass(Studio).
+- 발견: Play 중 고친 코드는 실행 중 세션에 안 들어간다(Rojo = Edit만) → Play 재시작 필요 · 캐시 메시 색은 회색(몬스터는 리그가 색을 입힘) · 첫 활강이 캐시 로드(약 27초) 전이면 기본 잎으로 대체.
+- 부분: 젤리 점프 · 활강 거품 캡처(시간 맞추기 어려움 - 코드 경로만) · 남의 캐릭터 시점 · 폰 · 성능(고래 = 활강 중 파트 +7 · 입자 28/초).

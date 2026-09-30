@@ -61,6 +61,7 @@ function CosmeticService.applyAttributes(player)
 	end
 	local color = s.cosmetics.equipped.nameplateColor
 	player:SetAttribute("NameplateColor", s.gamepasses.nameplateColor and color or nil)
+	player:SetAttribute("NameplateBadge", s.gamepasses.nameplateBadge and s.cosmetics.equipped.nameplateBadge or nil) -- QUEUE-ALL1 P6 이름표 배지(패스 있을 때만)
 end
 
 -- 지급(상품 · 시즌 줄 · 선물 공통). 반환: 새로 얻었나, 이유. 이미 있으면 false("owned") - 멱등(영수증 재시도가 두 번 불러도 같다).
@@ -109,6 +110,13 @@ function CosmeticService.equip(player, slot, id)
 			return false, "no_pass"
 		end
 		if id ~= nil and not table.find(MonetizationData.gamePasses.nameplateColor.colors, id) then
+			return false, "unknown"
+		end
+	elseif slot == "nameplateBadge" then -- QUEUE-ALL1 P6
+		if not s.gamepasses.nameplateBadge then
+			return false, "no_pass"
+		end
+		if id ~= nil and not table.find(MonetizationData.gamePasses.nameplateBadge.badges, id) then
 			return false, "unknown"
 		end
 	elseif SET_SLOTS[slot] then

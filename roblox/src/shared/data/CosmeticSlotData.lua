@@ -19,10 +19,14 @@ return {
 		{ id = "starlight", name = "별빛", looks = { dashTrail = "starlight", jumpFx = "starlight", glideTrail = "starlight", footstep = "starlight" } },
 		{ id = "ember", name = "불씨", looks = { dashTrail = "ember", jumpFx = "ember", glideTrail = "ember", footstep = "ember" } },
 		{ id = "frost", name = "서리꽃", looks = { dashTrail = "frost", jumpFx = "frost", glideTrail = "frost", footstep = "frost" } },
+		{ id = "jelly", name = "말랑 젤리", looks = { dashTrail = "jelly", jumpFx = "jelly", glideTrail = "jelly", footstep = "jelly" } }, -- QUEUE-ALL1 P6(07 문서 · 199)
 	},
 	-- 글라이더 스킨 상품 = 칸 하나(gliderSkin)만. 항목 모양 = { id, name, look }
 	gliderSkins = { -- QUEUE-B1 B2: 글라이더 스킨(칸 하나 · look = 에셋 자리)
 		{ id = "petal", name = "꽃잎 글라이더", look = "" },
 		{ id = "kite", name = "연 글라이더", look = "" },
+		-- QUEUE-ALL1 P6(07 문서): look = client/GlideView가 그리는 모양 id(판정 · 속도 불변 - 겉모습만)
+		{ id = "dragonWing", name = "푸른 드래곤 날개", look = "dragonWing" }, -- 149 · 등에 T6 푸른 드래곤 날개(monsters/blue_dragon Wing_L · Wing_R 메시 재사용) · 천천히 날갯짓
+		{ id = "cloudWhale", name = "구름 고래", look = "cloudWhale" }, -- 시즌 유료 줄 40칸 대표 · 작은 구름 고래를 타고 활강 + 물보라 궤적(extras/cloud_whale · 시즌 한정 여부 = 사용자 결정 대기)
 	},
 }

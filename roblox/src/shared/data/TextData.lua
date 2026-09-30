@@ -375,6 +375,12 @@ return {
 		["shop.pass.pickupRadius.desc"] = "펫 자동 줍기 반경 ×{mult}",
 		["shop.pass.recallCooldown.name"] = "빠른 귀환",
 		["shop.pass.recallCooldown.desc"] = "마을 귀환 대기 시간 ×{mult}",
+		["shop.pass.nameplateBadge.name"] = "이름표 배지", -- QUEUE-ALL1 P6
+		["shop.pass.nameplateBadge.desc"] = "이름 앞 작은 아이콘 {count}가지 중 고르기",
+		["shop.cos.badgeSection"] = "이름표 배지",
+		["shop.cos.badgeLocked"] = "편의 탭의 이름표 배지 패스가 있으면 고를 수 있습니다",
+		["shop.slot.nameplateBadge"] = "배지",
+		["shop.badge.hammer"] = "망치", ["shop.badge.slime"] = "슬라임", ["shop.badge.star"] = "별", ["shop.badge.heart"] = "하트",
 		["shop.pass.nameplateColor.name"] = "이름표 색",
 		["shop.pass.nameplateColor.desc"] = "이름표 색 {count}가지 중 고르기",
 		-- QUEUE-B1 B2 시즌 패스 탭

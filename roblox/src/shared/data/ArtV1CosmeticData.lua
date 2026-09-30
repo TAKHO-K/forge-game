@@ -6,6 +6,14 @@ local C = Color3.fromRGB
 
 return {
 	themes = {
+		-- QUEUE-ALL1 P6 말랑 젤리(07 문서 · 199): 라임 + 민트(색상 80 ~ 160° - 위험색 · 태초 · 초월 밖). 대시 = 방울이 튀며 잠깐 남음(dash.drops) · 점프 = 발밑 "뽀잉" 찌그러지는 고리(jump.squash) · 활강 = 방울 거품 줄 · 발자국 = 작은 젤리 웅덩이(shape puddle)
+		jelly = {
+			core = C(206, 250, 150), edge = C(120, 226, 170), particle = C(190, 250, 200),
+			dash = { width = 2.0, lifetime = 0.3, transparency = { 0.1, 1 }, drops = { every = 0.07, size = 0.7, seconds = 0.9 } },
+			jump = { ring = 5.5, particles = 10, speed = 7, gravity = 10, size = 0.5, spread = 70, squash = { widen = 1.5, seconds = 0.3 } },
+			glide = { width = 0.7, lifetime = 0.9, particles = 7, particleLife = 1.1, gravity = -2, size = 0.34 },
+			footstep = { size = 1.4, seconds = 1.3, shape = "puddle", neon = false },
+		},
 		ember = {
 			core = C(255, 238, 130), edge = C(250, 222, 60), particle = C(255, 236, 110), -- 2차 패스: 크림색이 불씨로 안 읽혔다 → 금노랑(테 색상 51° - 위험색 밖)
 			dash = { width = 2.2, lifetime = 0.35, transparency = { 0, 1 } },
@@ -30,6 +38,13 @@ return {
 	},
 	-- 감지(남의 캐릭터도 같은 식 - 입력 신호가 없어 속도로 읽는다): 대시 = 수평 속도 ≥ dashSpeed(대시 ≈ 73 · 활강 30 · 걷기 ≤ 24) · 점프 = 위 속도가 한 틱에 jumpImpulse 넘게 늘어남
 	detect = { dashSpeed = 50, dashHoldSeconds = 0.3, jumpImpulse = 18, footstepStuds = 3.4, footstepMinSpeed = 6, footstepMax = 10 },
+	-- QUEUE-ALL1 P6 글라이더 스킨 모양(client/GlideView - look id · 판정 · 속도 불변 · ArtStyleV1 꺼짐 = 기본 잎)
+	gliders = {
+		dragonWing = { mesh = "monsters/blue_dragon", parts = { "Wing_L", "Wing_R" }, color = C(70, 130, 205), wingLength = 3.4, side = 0.55, up = 0.9, back = 0.55, flapDeg = 16, flapHz = 0.7 }, -- 천천히 날갯짓
+		cloudWhale = { mesh = "extras/cloud_whale", scale = 0.62, colors = { Body = C(126, 186, 240), Tail = C(126, 186, 240), Belly = C(240, 238, 226), Fins = C(104, 164, 226), Eyes = C(34, 44, 70), Cloud = C(236, 244, 252) }, -- 파트 색 = tools/blender/make_cosmetics.py와 같게(캐시 메시 = 회색)
+			 offset = { 0, -1.6, 0.4 }, bobStuds = 0.25, bobHz = 0.5,
+			splash = { color = C(200, 236, 255), rate = 28, size = 0.35, life = 0.8, speed = 5 } }, -- 물보라 궤적 = 꼬리 입자
+	},
 	bossOpacity = 0.5, -- 보스전 중 투명도 하한(아군 연출 ≤ 50% - §5)
 	trailEmission = 0.6, jumpRingThick = 0.25, -- Play 3: 가산 발광 1 · 두께 0.1은 잔디 위에서 거의 안 보였다
 }

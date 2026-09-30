@@ -4,7 +4,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local RunService = game:GetService("RunService")
+
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
+local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
+local CosData = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData)
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 local AirMotion = require(script.Parent.AirMotion)
 
 local GlideView = {}
@@ -27,9 +32,132 @@ local function weld(a, b, c0)
 	w.Parent = b
 end
 
+-- QUEUE-ALL1 P6: 장착한 글라이더 스킨의 look(CosmeticSlotData.gliderSkins) → 모양 메시(없거나 아트 꺼짐 = nil = 기본 잎)
+local function skinLook(character)
+	local player = Players:GetPlayerFromCharacter(character)
+	local skinId = player and player:GetAttribute("Cosmetic_gliderSkin")
+	for _, s in ipairs(CosmeticSlotData.gliderSkins) do
+		if s.id == skinId and s.look ~= "" and CosData.gliders[s.look] then
+			local spec = CosData.gliders[s.look]
+			local src = ArtMeshKit.get(spec.mesh)
+			return src and s.look or nil, spec, src
+		end
+	end
+	return nil
+end
+
+local function loosePart(p, parent)
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow, p.Massless = false, false, false, false, false, true
+	p.Parent = parent
+end
+
+-- 드래곤 날개: 몸 뒤 양쪽에 날개 메시(관절 = 메시 원점) · C0 롤을 사인으로 흔든다
+local function buildWings(model, root, spec, src)
+	local welds = {}
+	for i, name in ipairs(spec.parts) do
+		local w = src:FindFirstChild(name, true)
+		if w and w:IsA("BasePart") then
+			local c = w:Clone()
+			local k = spec.wingLength / math.max(c.Size.X, c.Size.Z, 0.01)
+			local pivot = c.PivotOffset
+			c.Size *= k
+			c.Color = spec.color or c.Color -- 캐시 메시는 회색(몬스터 색은 리그가 입힌다) → T6 드래곤 파랑
+			loosePart(c, model)
+			local sx = i == 1 and -1 or 1
+			local weldObj = Instance.new("Weld")
+			weldObj.Part0, weldObj.Part1 = root, c
+			weldObj.C0 = CFrame.new(sx * spec.side, spec.up, spec.back) * w.CFrame.Rotation
+			weldObj.C1 = CFrame.new(pivot.Position * k) * pivot.Rotation
+			weldObj.Parent = c
+			table.insert(welds, { weld = weldObj, base = weldObj.C0, sx = sx })
+		end
+	end
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		if not model.Parent then
+			conn:Disconnect()
+			return
+		end
+		local a = math.rad(spec.flapDeg) * math.sin((os.clock() - t0) * spec.flapHz * math.pi * 2)
+		for _, e in ipairs(welds) do
+			e.weld.C0 = e.base * CFrame.Angles(0, 0, e.sx * a)
+		end
+	end)
+end
+
+-- 구름 고래: 캐릭터 밑에 타는 고래(모델째 · 루트에 용접) + 위아래 살랑 + 꼬리 물보라 입자
+local function buildWhale(model, root, spec, src)
+	local whale = src:Clone()
+	whale.Name = "CloudWhale"
+	whale:ScaleTo(spec.scale)
+	whale:PivotTo(root.CFrame * CFrame.new(spec.offset[1], spec.offset[2], spec.offset[3]))
+	local anchor = Instance.new("Part")
+	anchor.Name = "WhaleAnchor"
+	anchor.Size = Vector3.one * 0.2
+	anchor.Transparency = 1
+	anchor.CFrame = whale:GetPivot()
+	loosePart(anchor, model)
+	for _, d in ipairs(whale:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Color = spec.colors and spec.colors[d.Name] or d.Color
+			loosePart(d, d.Parent)
+			local wc = Instance.new("WeldConstraint")
+			wc.Part0, wc.Part1 = anchor, d
+			wc.Parent = d
+		end
+	end
+	whale.Parent = model
+	local base = root.CFrame:ToObjectSpace(anchor.CFrame)
+	local weldObj = Instance.new("Weld")
+	weldObj.Part0, weldObj.Part1, weldObj.C0 = root, anchor, base
+	weldObj.Parent = anchor
+	local tail = whale:FindFirstChild("Tail", true)
+	if tail and tail:IsA("BasePart") then
+		local att = Instance.new("Attachment")
+		att.Position = Vector3.new(0, 0, tail.Size.Z * 0.45)
+		att.Parent = tail
+		local e = Instance.new("ParticleEmitter")
+		e.Name = "WhaleSplash"
+		e.Color = ColorSequence.new(spec.splash.color)
+		e.Size = NumberSequence.new(spec.splash.size, 0)
+		e.Transparency = NumberSequence.new(0.2, 1)
+		e.Lifetime = NumberRange.new(spec.splash.life * 0.6, spec.splash.life)
+		e.Rate = spec.splash.rate
+		e.Speed = NumberRange.new(spec.splash.speed * 0.5, spec.splash.speed)
+		e.SpreadAngle = Vector2.new(40, 40)
+		e.Acceleration = Vector3.new(0, -12, 0)
+		e.Parent = att
+	end
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		if not model.Parent then
+			conn:Disconnect()
+			return
+		end
+		weldObj.C0 = base * CFrame.new(0, spec.bobStuds * math.sin((os.clock() - t0) * spec.bobHz * math.pi * 2), 0)
+	end)
+end
+
 function GlideView.show(character)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root or character:FindFirstChild("MV1Glider") then
+		return
+	end
+	local look, spec, src = skinLook(character)
+	if look then
+		local model = Instance.new("Model")
+		model.Name = "MV1Glider"
+		model:SetAttribute("GliderLook", look)
+		model.Parent = character
+		if look == "dragonWing" then
+			buildWings(model, root, spec, src)
+		elseif look == "cloudWhale" then
+			buildWhale(model, root, spec, src)
+		end
+		AirMotion.hold(character, "glide", LOOK.poseLeanDeg)
+		require(script.Parent.WeaponVisual).playOverlay(Players:GetPlayerFromCharacter(character), "glideIn")
 		return
 	end
 	local model = Instance.new("Model")

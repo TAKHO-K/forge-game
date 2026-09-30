@@ -123,6 +123,20 @@ function CosmeticTab.render(ctx, env)
 	else
 		ctx.line(Text.get("shop.cos.nameplateLocked"), "textSecondary", 1, "NameplateLocked")
 	end
+	-- QUEUE-ALL1 P6 이름표 배지(패스 있을 때 4개 중 고르기 · 없음 = 기본)
+	ctx.section(Text.get("shop.cos.badgeSection"), "BadgeSection")
+	local badgePass = view.passes and view.passes.nameplateBadge
+	if badgePass and badgePass.owned then
+		local options = {}
+		for _, badgeId in ipairs(view.nameplateBadges or {}) do
+			table.insert(options, { id = badgeId, text = Text.get("shop.badge." .. badgeId) })
+		end
+		ctx.line(Text.get("shop.cos.slotLine", { slot = Text.get("shop.slot.nameplateBadge"),
+			current = equipped.nameplateBadge and Text.get("shop.badge." .. equipped.nameplateBadge) or Text.get("shop.cos.default") }), "textPrimary", 1, "Slot_nameplateBadge")
+		equipChips(ctx, env, "nameplateBadge", equipped.nameplateBadge, options)
+	else
+		ctx.line(Text.get("shop.cos.badgeLocked"), "textSecondary", 1, "BadgeLocked")
+	end
 end
 
 return CosmeticTab

@@ -245,6 +245,7 @@ function MonetizationService.view(player)
 		products = products,
 		passes = passes,
 		nameplateColors = MonetizationData.gamePasses.nameplateColor.colors,
+		nameplateBadges = MonetizationData.gamePasses.nameplateBadge.badges, -- QUEUE-ALL1 P6
 		season = SeasonPassService.view(player),
 		gifts = #s.mailbox.gifts,
 		paidRandomRestricted = MonetizationService.isRestricted(player),

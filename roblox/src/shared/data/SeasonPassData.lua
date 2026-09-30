@@ -17,14 +17,16 @@ for tier = 1, TIERS do
 		free = { gliderSkin = "petal" }
 	end
 	rows.free[tier] = free
-	-- 유료 줄: 조각 4 · 10 · 30칸 = 치장 · 40칸 = 시즌 한정 테마
+	-- 유료 줄: 조각 4 · 10 · 20 · 30칸 = 치장 · 40칸 = 대표 구름 고래(QUEUE-ALL1 P6 - 서리꽃 테마는 40 → 20칸으로)
 	local paid = { sparkleShard = 4 }
 	if tier == 10 then
 		paid = { gliderSkin = "kite" }
+	elseif tier == 20 then
+		paid = { cosmeticTheme = "frost" }
 	elseif tier == 30 then
 		paid = { cosmeticTheme = "ember" }
 	elseif tier == 40 then
-		paid = { cosmeticTheme = "frost" }
+		paid = { gliderSkin = "cloudWhale" }
 	end
 	rows.paid[tier] = paid
 end

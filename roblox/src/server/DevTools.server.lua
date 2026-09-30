@@ -1101,6 +1101,7 @@ local HELP_TEXT = table.concat({
 	"/gg rebirthdo - 실제 환생 실행(PlayerProfile.rebirth 그대로 - 레벨 조건 검증 + 무기 등급·보석 자동 지급까지 전체 흐름 검증용)",
 	"/gg gem <slot 1-5> <id|-> - 그 슬롯에 보석을 강제로 채운다(23-2 검증용, id=-면 옵션 없이)",
 	"/gg bossreset [stage] - 보스 첫 처치 확정 드랍 기록 초기화(생략 시 전부, 재검증용)",
+	"/gg cos <grant 종류 id | equip 칸 id|none | pass 키> - QUEUE-ALL1 P6 치장 확인(Studio)",
 	"/gg codex <test|state> - QUEUE-ALL1 P5 도감 v2: 합성 사건 기록(실제 기록 함수) · 점수 · 완료 · 받음 수",
 	"/gg weekly <check|start> - QUEUE-ALL1 P4 주간 도전: 4주 변형의 회피 부등식 검사 · 이번 주 도전 시작",
 	"/gg invitetest <초대자 userId> - QUEUE-ALL1 P4 초대 보상 경로 시험(쌍 키 = Studio 저장소)",
@@ -3096,6 +3097,21 @@ local function handleCommand(player, args)
 		else
 			reply(player, "가둠 스킬이 있는 보스(심해 · 폭풍)가 아닙니다")
 		end
+	elseif sub == "cos" and args[2] then
+		-- QUEUE-ALL1 P6 치장 확인(Studio 수동 Play - 개발 저장 키): grant <cosmeticTheme|gliderSkin> <id> · equip <칸> <id|none> · pass <게임패스 키>(이 세션 소유로 표시)
+		local CosmeticService = require(script.Parent.CosmeticService)
+		local ok, why
+		if args[2] == "grant" and args[3] and args[4] then
+			ok, why = CosmeticService.grant(player, args[3], args[4])
+		elseif args[2] == "equip" and args[3] then
+			ok, why = CosmeticService.equip(player, args[3], args[4] ~= "none" and args[4] or nil)
+		elseif args[2] == "pass" and args[3] and require(ReplicatedStorage.Shared.data.MonetizationData).gamePasses[args[3]] then
+			PlayerProfile.getMonetizationState(player).gamepasses[args[3]] = true
+			player:SetAttribute("Pass_" .. args[3], true)
+			ok = true
+		end
+		CosmeticService.applyAttributes(player)
+		reply(player, ("치장 %s: %s %s"):format(table.concat(args, " ", 2), tostring(ok), tostring(why or "")))
 	elseif sub == "codex" and (args[2] == "test" or args[2] == "state") then
 		-- QUEUE-ALL1 P5 도감 v2: test = 실제 기록 함수로 합성 사건(석조 일반 갑옷 6 · 장갑 2 · 이끼 슬라임 10 + 반짝이 · 수호자 1 · 돌 거북 일반 · 수정 초월 1) · state = 점수 · 완료 · 받음 수
 		local CodexService = require(script.Parent.CodexService)

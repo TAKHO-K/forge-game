@@ -7,14 +7,14 @@ local Text = require(ReplicatedStorage.Shared.Text)
 
 local ConvenienceTab = {}
 
-ConvenienceTab.order = { "bagExpand", "pickupRadius", "recallCooldown", "nameplateColor" }
+ConvenienceTab.order = { "bagExpand", "pickupRadius", "recallCooldown", "nameplateColor", "nameplateBadge" }
 
 local function describeArgs(key)
 	local pass = MonetizationData.gamePasses[key]
 	return {
 		slots = tostring(pass.bonusSlots or 0),
 		mult = ("%g"):format(pass.radiusMultiplier or pass.cooldownMultiplier or 1),
-		count = tostring(pass.colors and #pass.colors or 0),
+		count = tostring((pass.colors and #pass.colors) or (pass.badges and #pass.badges) or 0),
 	}
 end
 

@@ -611,6 +611,12 @@
   "assetId": 114400850367342,
   "status": "Approved"
  },
+ "extras/cloud_whale.fbx": {
+  "sha256": "0f6b907f0a8b2d65206d5b574fc84c7665239cf262a934a6a534b787bb19714a",
+  "assetType": "Model",
+  "assetId": 88361825867912,
+  "status": "Approved"
+ },
  "extras/gate_decor/abyssal_lord.fbx": {
   "sha256": "7033ae6dabb2e6005cb061207ee3fa84820ef6f1f8811e184acb812dfef7c53f",
   "assetType": "Model",

@@ -124,6 +124,11 @@ local function jumpFx(st, theme)
 	end
 	local ring = Fx.ring(feet, j.ring, 0.35, theme.edge, CosData.jumpRingThick, 1 - (1 - 0.1) * opacityScale())
 	ring.Material = Enum.Material.Neon
+	if j.squash and ring:IsA("BasePart") then -- QUEUE-ALL1 P6 젤리 "뽀잉": 고리가 납작하게 퍼졌다 사라진다
+		-- Fx.ring의 퍼짐 트윈(Size · Transparency)을 같은 속성 트윈으로 대신한다(겹치면 앞 트윈이 취소된다) - 고리 두께(X)는 납작하게 · 지름은 widen배로 튕기듯
+		local seconds = j.squash.seconds * Fx.slow()
+		TweenService:Create(ring, TweenInfo.new(seconds, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(ring.Size.X * 0.4, j.ring * j.squash.widen, j.ring * j.squash.widen), Transparency = 1 }):Play()
+	end
 	Fx.burst(feet + Vector3.new(0, 0.3, 0), particleCount(j.particles, st.isLocal), { color = theme.particle, size = j.size, speed = j.speed, spread = j.spread, gravity = j.gravity, lifetime = { 0.4, 0.8 } })
 end
 
@@ -135,7 +140,14 @@ local function footprint(st, theme)
 	end
 	local cf = CFrame.new(feet - Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.atan2(-st.root.CFrame.LookVector.X, -st.root.CFrame.LookVector.Z), 0)
 	local p
-	if f.shape == "star" then -- 별 = 45° 겹친 납작한 네모 두 장
+	if f.shape == "puddle" then -- QUEUE-ALL1 P6 젤리 웅덩이 = 삐뚤한 납작 타원 + 가운데 밝은 방울
+		local stretch = 0.75 + math.random() * 0.5
+		p = Fx.part("ArtV1Step", Vector3.new(0.06, f.size * stretch, f.size), theme.edge, cf * CFrame.Angles(0, math.random() * math.pi, 0) * CFrame.Angles(0, 0, math.pi / 2), Enum.PartType.Cylinder, Enum.Material.Glass)
+		local q = Fx.part("ArtV1Step", Vector3.new(0.08, f.size * 0.4, f.size * 0.4), theme.core, cf * CFrame.new(0.15, 0, 0.1) * CFrame.Angles(0, 0, math.pi / 2), Enum.PartType.Cylinder, Enum.Material.SmoothPlastic)
+		q.Transparency = 1 - 0.7 * opacityScale()
+		TweenService:Create(q, TweenInfo.new(f.seconds), { Transparency = 1 }):Play()
+		Debris:AddItem(q, f.seconds + 0.05)
+	elseif f.shape == "star" then -- 별 = 45° 겹친 납작한 네모 두 장
 		p = Fx.part("ArtV1Step", Vector3.new(f.size * 0.7, 0.06, f.size * 0.7), theme.edge, cf * CFrame.Angles(0, math.rad(45), 0), Enum.PartType.Block, Enum.Material.Neon)
 		local q = Fx.part("ArtV1Step", Vector3.new(f.size * 0.7, 0.07, f.size * 0.7), theme.core, cf, Enum.PartType.Block, Enum.Material.Neon)
 		q.Transparency = 1 - 0.7 * opacityScale()
@@ -174,6 +186,15 @@ RunService.Heartbeat:Connect(function(dt)
 				styleTrail(st.dash, dashTheme, dashTheme.dash)
 			end
 			st.dashUntil = now + D.dashHoldSeconds * Fx.slow()
+			local drops = dashTheme.dash.drops -- QUEUE-ALL1 P6 젤리: 대시 중 방울이 튀어 잠깐 남는다
+			if drops and now >= (st.nextDrop or 0) then
+				st.nextDrop = now + drops.every
+				local b = Fx.part("ArtV1Drop", Vector3.one * drops.size * (0.6 + math.random() * 0.6), math.random() < 0.5 and dashTheme.core or dashTheme.edge,
+					CFrame.new(st.root.Position + Vector3.new((math.random() - 0.5) * 1.6, -1.8 + math.random() * 1.2, (math.random() - 0.5) * 1.6)), Enum.PartType.Ball, Enum.Material.Glass)
+				b.Transparency = 1 - 0.85 * opacityScale()
+				TweenService:Create(b, TweenInfo.new(drops.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = b.Size * 0.3, Position = b.Position - Vector3.new(0, 0.8, 0) }):Play()
+				Debris:AddItem(b, drops.seconds + 0.05)
+			end
 		end
 		st.dash.Enabled = dashTheme ~= nil and dashTheme ~= false and now < st.dashUntil
 		-- ② 점프 이펙트(위 속도가 갑자기 늘어남 = 지상 점프 · 공중 점프)
