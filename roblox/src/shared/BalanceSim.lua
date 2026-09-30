@@ -193,7 +193,7 @@ function BalanceSim.getSurviveHits(loadout, monsterAttack, incomingDamageMultipl
 	--   몬스터 한 번 칠 동안(tier1 attackCooldownSeconds) 회복한 만큼 한 대 피해에서 뺀다(하한 = 한 대 피해 × 0.05). 없으면 옛 식 그대로.
 	local L = loadout.lifesteal or 0
 	if L > 0 then
-		local heal = math.min(L * BalanceSim.simulateAutoAttack(loadout, 1).totalDamage, CombatConfig.lifestealMaxHpFractionPerSecond * loadout.maxHp) * (MonsterData.tier1.attackCooldownSeconds or 1)
+		local heal = math.min(L * BalanceSim.simulateAutoAttack(loadout, 1).totalDamage, (loadout.lifestealCap or CombatConfig.lifestealMaxHpFractionPerSecond) * loadout.maxHp) * (MonsterData.tier1.attackCooldownSeconds or 1)
 		local effective = math.max(dmgPerHit - heal, dmgPerHit * 0.05)
 		return loadout.maxHp / effective, dmgPerHit
 	end

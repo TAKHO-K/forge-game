@@ -88,4 +88,17 @@ function SetBonus.extraValues(equipment, axisId)
 	return values
 end
 
+-- QUEUE-ALL2 P0-1: 세트 고유 효과가 이 축이면 그 효과의 따로 둔 초당 상한(capPerSecond - 흡혈). 없으면 nil
+function SetBonus.axisCap(equipment, axisId)
+	if not (SetData.enabled and SetData.uniqueThreePiece and SetData.zoneThreePiece) then
+		return nil
+	end
+	local zone, count = SetBonus.state(equipment)
+	local unique = zone and SetData.zoneThreePiece[zone]
+	if unique and unique.axis == axisId and count >= #SetData.parts then
+		return unique.capPerSecond
+	end
+	return nil
+end
+
 return SetBonus

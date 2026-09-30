@@ -353,18 +353,20 @@ end
 -- min(피해×Σls, 잔량)만 회복"(20.67 [6-1] 구현 문구 그대로). 처음 쓰는 순간은 가득 찬
 -- 버킷으로 취급한다(lifestealTokens=nil). maxHp는 그때그때(장비 교체로 바뀔 수 있다) 다시
 -- 읽는다 - 캐싱하지 않는다.
-function PlayerState.tryLifesteal(player, requestedAmount)
+-- QUEUE-ALL2 P0-1: bucket(선택 · 예 "Set") · capFraction(선택) = 따로 둔 버킷과 그 초당 상한(세트 흡혈 - SetData capPerSecond)
+function PlayerState.tryLifesteal(player, requestedAmount, bucket, capFraction)
 	local entry = players[player]
 	if not entry or not entry.maxHp then
 		return 0
 	end
-	local capacity = entry.maxHp * CombatConfig.lifestealMaxHpFractionPerSecond
+	local tokensKey, atKey = "lifestealTokens" .. (bucket or ""), "lifestealTokensUpdatedAt" .. (bucket or "")
+	local capacity = entry.maxHp * (capFraction or CombatConfig.lifestealMaxHpFractionPerSecond)
 	local now = os.clock()
-	local elapsed = entry.lifestealTokensUpdatedAt and (now - entry.lifestealTokensUpdatedAt) or 0
-	local available = math.min(capacity, (entry.lifestealTokens or capacity) + capacity * elapsed)
+	local elapsed = entry[atKey] and (now - entry[atKey]) or 0
+	local available = math.min(capacity, (entry[tokensKey] or capacity) + capacity * elapsed)
 	local granted = math.min(requestedAmount, available)
-	entry.lifestealTokens = available - granted
-	entry.lifestealTokensUpdatedAt = now
+	entry[tokensKey] = available - granted
+	entry[atKey] = now
 	return granted
 end
 

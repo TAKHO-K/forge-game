@@ -102,13 +102,13 @@ end
 -- classId 불일치인 직업 특화 옵션은 Option.valueOf가 이미 0으로 처리한다(20.67 [8]).
 -- 위력·신속·방어·건강 4축(아래 getAttackPercentBonus 등)과 성장·재생·흡혈·직업 특화 8종이
 -- 전부 이 함수 하나로 계산된다 - Option.lua 밖에 새 계산식을 두지 않는다.
-function PlayerProfile.getOptionBonus(player, axisId)
+function PlayerProfile.getOptionBonus(player, axisId, withoutSet)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
 		return 0
 	end
-	local extra = SetBonus.extraValues(classState.equipment, axisId) -- Q5 세트(공통 입구)
+	local extra = not withoutSet and SetBonus.extraValues(classState.equipment, axisId) or nil -- Q5 세트(공통 입구) · withoutSet = 세트 몫 빼고(QUEUE-ALL2 P0-1 세트 흡혈 따로 상한)
 	local trained = Training.axisValues(profile.training, classState.abilities, profile.classId, axisId) -- Q6 수련 · 직업 능력(방어 · 속도 · 치유 축)
 	if trained then
 		extra = extra or {}
@@ -1732,12 +1732,25 @@ end
 -- PlayerState.tryLifesteal의 토큰 버킷(초당 상한 CombatConfig.lifestealMaxHpFractionPerSecond)
 -- 을 거친다 - %가 아무리 커도 결과량 상한을 못 넘는다(20.67 [6-1] "회복량 자체에 초당
 -- 상한을 둔다").
+-- QUEUE-ALL2 P0-1: 세트 흡혈(SetBonus.axisCap이 있는 세트 효과)은 따로 둔 낮은 초당 상한 버킷("set")으로 - 옵션 · 보석 흡혈은 옛 버킷 그대로.
 function PlayerProfile.applyLifesteal(player, damage)
-	local fraction = PlayerProfile.getOptionBonus(player, "lifesteal")
-	if fraction <= 0 or not damage or damage <= 0 then
+	if not damage or damage <= 0 then
 		return
 	end
-	local granted = PlayerState.tryLifesteal(player, damage * fraction)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	local setCap = classState and SetBonus.axisCap(classState.equipment, "lifesteal")
+	local fraction = PlayerProfile.getOptionBonus(player, "lifesteal", setCap ~= nil)
+	local granted = fraction > 0 and PlayerState.tryLifesteal(player, damage * fraction) or 0
+	if setCap then
+		local setFraction = 0
+		for _, v in ipairs(SetBonus.extraValues(classState.equipment, "lifesteal") or {}) do
+			setFraction += v
+		end
+		if setFraction > 0 then
+			granted += PlayerState.tryLifesteal(player, damage * setFraction, "Set", setCap)
+		end
+	end
 	if granted <= 0 then
 		return
 	end
