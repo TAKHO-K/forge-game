@@ -68,7 +68,7 @@ local function makeTrail(root, name, spread)
 	t.Name = name
 	t.Attachment0, t.Attachment1 = a0, a1
 	t.Enabled = false
-	t.FaceCamera = true
+	t.FaceCamera = false -- 2차 패스: 카메라를 보면 옆에서 바닥에 누운 판자처럼 보였다 → 세로 리본(부착점 = 루트 위아래)
 	t.LightEmission = 1
 	t.MinLength = 0.05
 	t.Parent = root
@@ -144,7 +144,7 @@ local function footprint(st, theme)
 	else
 		p = Fx.part("ArtV1Step", Vector3.new(0.06, f.size, f.size), theme.edge, cf * CFrame.Angles(0, 0, math.pi / 2), Enum.PartType.Cylinder, f.neon and Enum.Material.Neon or Enum.Material.SmoothPlastic)
 	end
-	p.Transparency = 1 - 0.7 * opacityScale()
+	p.Transparency = 1 - 0.8 * opacityScale()
 	TweenService:Create(p, TweenInfo.new(f.seconds), { Transparency = 1 }):Play()
 	Debris:AddItem(p, f.seconds + 0.05)
 end

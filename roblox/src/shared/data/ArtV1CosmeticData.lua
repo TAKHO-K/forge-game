@@ -7,25 +7,25 @@ local C = Color3.fromRGB
 return {
 	themes = {
 		ember = {
-			core = C(255, 246, 200), edge = C(255, 232, 96), particle = C(255, 238, 120),
+			core = C(255, 238, 130), edge = C(250, 222, 60), particle = C(255, 236, 110), -- 2차 패스: 크림색이 불씨로 안 읽혔다 → 금노랑(테 색상 51° - 위험색 밖)
 			dash = { width = 2.2, lifetime = 0.35, transparency = { 0, 1 } },
 			jump = { ring = 6, particles = 12, speed = 8, gravity = -3, size = 0.42, spread = 60 }, -- 불씨가 위로 흩날린다
 			glide = { width = 0.8, lifetime = 0.9, particles = 5, particleLife = 0.9, gravity = -1.5, size = 0.22 },
-			footstep = { size = 1.0, seconds = 1.0, shape = "disc", neon = true },
+			footstep = { size = 1.2, seconds = 1.0, shape = "disc", neon = true },
 		},
 		starlight = {
 			core = C(214, 226, 255), edge = C(96, 110, 230), particle = C(240, 244, 255),
 			dash = { width = 2.2, lifetime = 0.38, transparency = { 0, 1 } },
 			jump = { ring = 6.5, particles = 12, speed = 9, gravity = 2, size = 0.45, spread = 180 }, -- 별이 사방으로 반짝
 			glide = { width = 0.9, lifetime = 1.1, particles = 6, particleLife = 1.2, gravity = 0, size = 0.26 },
-			footstep = { size = 0.9, seconds = 1.2, shape = "star", neon = true },
+			footstep = { size = 1.3, seconds = 1.2, shape = "star", neon = true },
 		},
 		frost = {
 			core = C(236, 252, 255), edge = C(120, 214, 236), particle = C(206, 246, 255),
 			dash = { width = 2.1, lifetime = 0.33, transparency = { 0, 1 } },
 			jump = { ring = 6, particles = 12, speed = 6, gravity = 8, size = 0.42, spread = 80 }, -- 결정이 튀었다 떨어진다
 			glide = { width = 0.8, lifetime = 1.0, particles = 5, particleLife = 1.0, gravity = 4, size = 0.24 },
-			footstep = { size = 1.1, seconds = 1.4, shape = "disc", neon = false },
+			footstep = { size = 1.3, seconds = 1.4, shape = "disc", neon = false },
 		},
 	},
 	-- 감지(남의 캐릭터도 같은 식 - 입력 신호가 없어 속도로 읽는다): 대시 = 수평 속도 ≥ dashSpeed(대시 ≈ 73 · 활강 30 · 걷기 ≤ 24) · 점프 = 위 속도가 한 틱에 jumpImpulse 넘게 늘어남

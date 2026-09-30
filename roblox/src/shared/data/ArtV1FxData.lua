@@ -33,7 +33,7 @@ return {
 		common = { color = C(240, 240, 232), ring = 5, particles = 8, pillar = nil },
 		uncommon = { color = C(126, 214, 110), ring = 7, particles = 12, pillar = nil },
 		rare = { color = C(90, 170, 255), ring = 9, particles = 16, pillar = { height = 8, width = 1.0 } },
-		epic = { color = C(150, 80, 255), ring = 11, particles = 20, pillar = { height = 12, width = 1.3 }, flash = 3 }, -- Neon 링이 분홍으로 번져 보여 보라 쪽으로
+		epic = { color = C(120, 90, 255), ring = 11, particles = 20, pillar = { height = 12, width = 1.3 }, flash = 3 }, -- Neon 링이 분홍으로 번져 보여 보라 쪽으로
 		seconds = 1.2, speed = 8, spread = 60, gravity = 10, size = 0.4,
 	},
 

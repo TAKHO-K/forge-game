@@ -36,7 +36,7 @@ return {
 		}),
 		-- T2 수정 동굴: 보라 늦은 오후 - 먼 곳은 짙은 보라 안개 · 수정(청록)만 튄다
 		tier2 = preset({
-			clock = 15.2, brightness = 1.9, ambient = { 104, 100, 120 }, outdoor = { 140, 134, 156 }, shiftTop = { 240, 232, 252 },
+			clock = 15.2, brightness = 2.1, ambient = { 112, 110, 132 }, outdoor = { 146, 142, 162 }, shiftTop = { 240, 232, 252 }, -- 2차 패스: 바닥이 검정에 가까웠다 → 회청 슬레이트가 읽히게 밝기 · 환경광 한 단계
 			atmosphere = { density = 0.24, offset = 0.1, color = { 150, 130, 196 }, decay = { 96, 76, 150 }, haze = 1.6, glare = 0 },
 			cc = { brightness = 0.02, contrast = 0.1, saturation = -0.08, tint = { 248, 244, 255 } },
 			bloom = { intensity = 0.5, size = 20, threshold = 1.4 },
