@@ -36,6 +36,12 @@ local BossFloodView = require(script.Parent.BossFloodView) -- 29-4: 심해 군�
 local BossRhythmView = require(script.Parent.BossRhythmView) -- P3c A: 점프 틈 · 돌진 대상 표식 · 번개 추적 원
 local BossRegrowView = require(script.Parent.BossRegrowView) -- P3d D: 지형 재생성 전조(그림자 + 금 빛) · 솟음 · 끼임 표시
 local BossMotionView = require(script.Parent.BossMotionView) -- P3d A1 · A2 · A4: 보스 찍기 · 돌진 모션(인형) · 풍압 · 속도감
+local BossCraterView = require(script.Parent.BossCraterView) -- A2-N4 §2-5 지진파 구덩이 흔적
+local function isPhoneLook() -- A2-N4: 폰(터치 · 짧은 변 < 500)은 먼지를 줄인다(BossArenaDressing과 같은 잣대)
+	local cam = workspace.CurrentCamera
+	local vp = cam and cam.ViewportSize or Vector2.new(1920, 1080)
+	return game:GetService("UserInputService").TouchEnabled and math.min(vp.X, vp.Y) < 500
+end
 local BossFx = require(script.Parent.BossFx) -- P3d A5: 연출 조각 풀
 local BossFxData = require(ReplicatedStorage.Shared.data.BossFxData)
 -- BR1: 새 조각(부채꼴 · 투사체 · 소용돌이 · 연쇄 · 잠행) · 대공 잡기 · 환경 변화 - 그리기는 각 모듈에 있다.
@@ -450,6 +456,27 @@ local function shockwave(data)
 				end
 			end
 		end
+		-- A2-N4 §2-5: 다가오는 먼지 · 연기(땅 파동 첫 겹 - 앞줄에서 피어올라 바깥으로 밀림)
+		if #heave > 0 and look.dustFront then
+			local F = look.dustFront
+			local now = os.clock()
+			if now >= (data.__dustAt or 0) then
+				data.__dustAt = now + F.everySeconds
+				data.__dustN = (data.__dustN or 0) + 1
+				local count = math.max(1, math.floor(F.perTick * (isPhoneLook() and F.phoneScale or 1)))
+				for _ = 1, count do
+					local a = math.random() * 2 * math.pi
+					local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+					local at = data.center + dir * radius + Vector3.new(0, 0.8, 0)
+					BossFx.puff(at, F.size[1] + math.random() * (F.size[2] - F.size[1]), floorColor:Lerp(Color3.new(1, 1, 1), 0.35), F.life, dir * F.outward + Vector3.new(0, F.rise, 0))
+				end
+				if data.__dustN % F.smokeEvery == 0 then
+					local a = math.random() * 2 * math.pi
+					local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+					BossFx.puff(data.center + dir * radius + Vector3.new(0, 1.5, 0), F.smokeSize[1] + math.random() * (F.smokeSize[2] - F.smokeSize[1]), floorColor:Lerp(Color3.fromRGB(90, 86, 82), 0.5), F.smokeLife, dir * F.outward * 0.5 + Vector3.new(0, F.rise, 0))
+				end
+			end
+		end
 		if #heave > 0 then
 			local H = look.heave
 			local t = Workspace:GetServerTimeNow() - data.serverStart
@@ -757,6 +784,9 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossRhythmView.waveCue(data)
 		if (data.layer or 1) == 1 then
 			BossMotionView.slamImpact(data) -- P3d A2: 내려찍는 순간 풍압 · 흔들림
+			if not data.air then
+				BossCraterView.add(data.center, data.floorColor) -- A2-N4 §2-5: 찍은 자리 얕은 구덩이 흔적(겉모습만)
+			end
 		end
 	elseif kind == "focus" then
 		focus(data)
