@@ -200,7 +200,7 @@ local BUBBLES = {
 	-- BR1-3: 에네르기파 = 반원(휩쓰는 쪽) · 아르마딜로 = 손바닥(때리지 마 - 노랑) · 진짜 전갈 찾기 = 모래 물결 · 수정 오르골 = 음표
 	sweep = { icon = "◐", color = Color3.fromRGB(230, 40, 40) },
 	armadillo = { icon = "✋", color = Color3.fromRGB(255, 200, 40) },
-	sandSearch = { icon = "≋", color = Color3.fromRGB(230, 40, 40) },
+	sandSearch = { icon = "〰", color = Color3.fromRGB(230, 40, 40) }, -- A2-N4: "≋"는 GothamBlack에 없어 □로 나왔다(19기호 중 이것만 - Play 글꼴 표)
 	orgel = { icon = "♪", color = Color3.fromRGB(230, 40, 40) },
 }
 

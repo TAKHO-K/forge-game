@@ -1069,7 +1069,7 @@ local SPECIES = {
 	},
 	{
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
-		intro = { title = "진짜 전갈 찾기", line = "빛나는 꼬리를 찾아 때려라!", icon = "≋", diagram = "mound" },
+		intro = { title = "진짜 전갈 찾기", line = "빛나는 꼬리를 찾아 때려라!", icon = "〰", diagram = "mound" },
 		id = "scorpion_queen", displayName = "전갈 여왕", bodyColor = scorpionBody, headColor = scorpionHead,
 		gate = { zone = "tier4", color = { 255, 170, 40 } },
 		-- 빠른 보스: 낮고 넓고(2.8) 빠르다(10 - 잡몹과 같다). 평타가 잦고(0.75초) 가볍다(×0.75). 전역 쿨 5초.

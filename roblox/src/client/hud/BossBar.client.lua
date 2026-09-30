@@ -47,7 +47,7 @@ local function build()
 		position = UDim2.new(0, 0, 0, NAME_HEIGHT + GAP),
 		value = 1,
 	})
-	return { root = root, nameLabel = nameLabel, gauge = gauge, screenGui = screenGui, slotWidth = slot.size.X.Offset }
+	return { root = root, nameLabel = nameLabel, gauge = gauge, screenGui = screenGui, slotWidth = slot.size.X.Offset, slotHeight = slot.size.Y.Offset }
 end
 
 local refs = build()
@@ -56,6 +56,7 @@ local refs = build()
 -- PC는 슬롯 폭 그대로. 좁아도 160 아래로는 안 줄인다.
 local MIN_MOBILE_WIDTH = 160
 local Workspace = game:GetService("Workspace")
+local GuiService = game:GetService("GuiService")
 local ArtV1UiData = require(game:GetService("ReplicatedStorage").Shared.data.ArtV1UiData)
 local ArtStyleV1Data = require(game:GetService("ReplicatedStorage").Shared.data.ArtStyleV1Data)
 local nameInBar = nil -- A2-N4 메이플식: 막대 안 이름(아트 켬)
@@ -63,13 +64,23 @@ local function applyWidth()
 	-- A2-N4 §3-3(A2-N3 결정 ①): 아트 켬 = 화면 맨 위 얇은 전체 폭 · 이름은 막대 안 왼쪽(큰 보스 머리를 덮지 않게)
 	if Workspace:GetAttribute(ArtStyleV1Data.attribute) == true then
 		local H = ArtV1UiData.bossHud
-		local width = refs.screenGui.AbsoluteSize.X - 2 * H.barMargin
-		if Theme.isMobile then
-			local listRight = ScreenMap.edgeMargin + ScreenMap.menuBar.mobileButton + 8 + PartyListView.compact.width
-			width = math.max(refs.screenGui.AbsoluteSize.X - 2 * (listRight + 8), MIN_MOBILE_WIDTH)
+		-- A2-N4 §3-4 재채점(리뷰 3회 공통): 인셋 아래 barTop이면 로블록스 버튼 줄 "아래" = 큰 보스 머리 높이와 겹친다 → 버튼 오른쪽 상단 칸(GuiService.TopbarInset) 안에 넣는다
+		refs.screenGui.IgnoreGuiInset = true
+		local tb = GuiService.TopbarInset
+		local left, right = tb.Min.X + H.barMargin, tb.Max.X - H.barMargin
+		local width = right - left
+		local centerX, top = (left + right) / 2, tb.Min.Y + math.max(0, (tb.Height - H.barHeight) / 2)
+		if width < MIN_MOBILE_WIDTH then -- 상단 칸이 없거나 좁으면 옛 자리(인셋 아래)
+			refs.screenGui.IgnoreGuiInset = false
+			width = refs.screenGui.AbsoluteSize.X - 2 * H.barMargin
+			if Theme.isMobile then
+				local listRight = ScreenMap.edgeMargin + ScreenMap.menuBar.mobileButton + 8 + PartyListView.compact.width
+				width = math.max(refs.screenGui.AbsoluteSize.X - 2 * (listRight + 8), MIN_MOBILE_WIDTH)
+			end
+			centerX, top = refs.screenGui.AbsoluteSize.X / 2, H.barTop
 		end
 		refs.root.AnchorPoint = Vector2.new(0.5, 0)
-		refs.root.Position = UDim2.new(0.5, 0, 0, H.barTop)
+		refs.root.Position = UDim2.new(0, centerX, 0, top)
 		refs.root.Size = UDim2.new(0, width, 0, H.barHeight)
 		refs.gauge.root.Size = UDim2.new(0, width, 0, H.barHeight)
 		refs.gauge.root.Position = UDim2.new(0, 0, 0, 0)
@@ -90,18 +101,22 @@ local function applyWidth()
 	if nameInBar then
 		nameInBar.Visible = false
 	end
+	refs.screenGui.IgnoreGuiInset = false
+	ScreenMap.place(refs.root, "TC", "bossBar") -- 아트 켬 자리(상단 칸)에서 옛 자리로
 	refs.nameLabel.Visible = true
 	local width = refs.slotWidth
 	if Theme.isMobile then
 		local listRight = ScreenMap.edgeMargin + ScreenMap.menuBar.mobileButton + 8 + PartyListView.compact.width
 		width = math.clamp(refs.screenGui.AbsoluteSize.X - 2 * (listRight + 8), MIN_MOBILE_WIDTH, refs.slotWidth)
 	end
-	refs.root.Size = UDim2.new(0, width, 0, refs.root.Size.Y.Offset)
-	refs.gauge.root.Size = UDim2.new(0, width, 0, refs.gauge.root.Size.Y.Offset)
+	refs.root.Size = UDim2.new(0, width, 0, refs.slotHeight)
+	refs.gauge.root.Position = UDim2.new(0, 0, 0, NAME_HEIGHT + GAP)
+	refs.gauge.root.Size = UDim2.new(0, width, 0, 16)
 end
 applyWidth()
 refs.screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(applyWidth)
 Workspace:GetAttributeChangedSignal(ArtStyleV1Data.attribute):Connect(applyWidth)
+GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(applyWidth)
 -- Studio에서 폰 화면을 흉내 낼 때(ForceTouchLayout - MenuBar가 Theme.recompute를 한 뒤)만 다시 잰다. 실제 기기는 접속 때 판정이 정해진다.
 player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(function()
 	task.delay(0.1, applyWidth)
