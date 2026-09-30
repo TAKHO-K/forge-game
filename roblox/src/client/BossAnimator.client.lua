@@ -383,7 +383,7 @@ local UserInputService = game:GetService("UserInputService")
 local function isPhone()
 	local cam = Workspace.CurrentCamera
 	local vp = cam and cam.ViewportSize or Vector2.new(1920, 1080)
-	return UserInputService.TouchEnabled and math.min(vp.X, vp.Y) < 500
+	return (UserInputService.TouchEnabled and math.min(vp.X, vp.Y) < 500) or Players.LocalPlayer:GetAttribute("A2M1ForcePhone") == true -- 측정용 강제(Studio)
 end
 local function updateDetailLod(e, distance, now)
 	if not e.lod2 or #e.lod2 == 0 or (e.lodAt and now - e.lodAt < 0.5) then

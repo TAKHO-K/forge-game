@@ -22,7 +22,7 @@ local current = nil -- { folder, floats = {}, floor, floorWas = { material, colo
 local function isPhone()
 	local cam = Workspace.CurrentCamera
 	local vp = cam and cam.ViewportSize or Vector2.new(1920, 1080)
-	return UserInputService.TouchEnabled and math.min(vp.X, vp.Y) < 500
+	return (UserInputService.TouchEnabled and math.min(vp.X, vp.Y) < 500) or Players.LocalPlayer:GetAttribute("A2M1ForcePhone") == true -- 측정용 강제(Studio)
 end
 
 local function bossOf(encounterId)
