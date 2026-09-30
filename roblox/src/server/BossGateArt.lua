@@ -1,5 +1,5 @@
 -- A2-N4 §3-3(A2-N3 결정 ⑧): 보스 관문 틀 메시(props/boss_gate) + 보스별 관문 장식(extras/gate_decor/<보스 id>) 연결 - ArtStyleV1 뒤 · 겉모습만.
---   관문 모델 = 월드 "BossGate_<보스 id>"(shared/BossGateKit 공통 틀). 메시는 틀의 절반 크기(폭 20.48 = WorldMapData.bossGate.width 40)로 만들어졌다 → 배율 = width ÷ meshWidth.
+--   관문 모델 = 월드 "BossGate_<보스 id>"(shared/BossGateKit 공통 틀). 메시 기둥 중심 간격 12.8 ↔ 틀 WorldMapData.bossGate.width 40 → 배율 = width ÷ ArtImportData.gateMeshWidth.
 --   틀 메시 조각 이름 = 코드 도형 이름 + _L · _R · _n(BossGatePost_L ↔ BossGatePost) → 같은 이름 도형 중 가장 가까운 것의 색 · 재질을 받고, 그 도형은 투명(충돌 · 판정 그대로).
 --   문양 · 빛 막 · 발판 · 프롬프트 · 빛 테는 메시에 없어 코드 그대로(등록 표시가 여기 묶여 있다). 장식 = 관문 바닥 가운데(−Z = 바깥) 같은 공간에 얹는다(충돌 · 조준 없음).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

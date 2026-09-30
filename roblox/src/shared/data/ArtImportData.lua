@@ -13,7 +13,7 @@ return {
 	-- 몬스터: 가져오기 순서표 6(슬라임 · 양 제외 - 아트 샘플 몸체 · 옛 몸체 유지)
 	monsterSkip = { moss_slime = true, cloud_sheep = true },
 	outlineSuffix = "_Outline",
-	gateMeshWidth = 20.48, -- A2-N4: props/boss_gate · extras/gate_decor 메시의 관문 폭(Blender 반 크기) - 배율 = WorldMapData.bossGate.width ÷ 이 값(server/BossGateArt)
+	gateMeshWidth = 12.8, -- A2-N4: props/boss_gate · extras/gate_decor 메시의 기둥 중심 간격(코드 틀 WorldMapData.bossGate.width 40 = 기둥 중심 간격과 대응 - Play: 전체 폭 20.48로 맞추면 기둥이 빛 테 안쪽으로 작았다) - 배율 = width ÷ 이 값(server/BossGateArt)
 	-- A2-N4 §3-3(A2-N3 결정 ③): 어두운 보스(남색 바닥 · 망토)는 잉크색 껍데기가 바닥에 묻힌다 → 보스별 밝은 외곽선 색(키 = 리그 id)
 	outlineColorOf = { abyssal_lord = Color3.fromRGB(120, 230, 235), storm_lord = Color3.fromRGB(235, 240, 255) }, -- 보스 껍데기 메시(같은 뼈 용접 · 색 = ArtStyleV1Data.ink) → 그 보스는 외곽선 풀 Highlight를 끈다(Attribute MeshOutline)
 	-- 무기: 게임 연결 = 이 직업만(성기사 paladin = 업로드 · id 기록만 - 순서표 5)
