@@ -950,11 +950,36 @@ local function updatePose(st, now, camPos)
 	if key ~= st.blendKey then
 		st.from, st.fromW = st.applied, st.appliedW
 		st.blendKey, st.blendStart, st.blendDur = key, now, math.clamp(dur, 0.01, M.blend.max)
+		-- A2-M1 관성 섞기: 전환 순간 관절이 돌던 속도(직전 두 프레임)를 이어받아 지수로 줄이며 새 자세로 - 옛 = 정지 사진에서 출발해 속도가 한 프레임에 0으로 끊겼다
+		st.fromVel = nil
+		local I = M.inertia
+		if I and st.prevApplied and st.prevDt and st.prevDt > 1e-3 and not player:GetAttribute("A2M1InertiaOff") then
+			st.fromVel = {}
+			for name, cf in pairs(st.applied) do
+				local prev = st.prevApplied[name]
+				if prev then
+					local axis, angle = (prev:Inverse() * cf):ToAxisAngle()
+					local rate = angle / st.prevDt
+					if rate > I.minRate and rate < I.maxRate then
+						st.fromVel[name] = { axis = axis, rate = rate }
+					end
+				end
+			end
+		end
 	end
 	local e = smoother((now - st.blendStart) / st.blendDur)
+	local carryT = nil
+	if st.fromVel then
+		local k = M.inertia.decay
+		carryT = (1 - math.exp(-k * (now - st.blendStart))) / k -- ∫ e^(−k t) = 지금까지 이어 돈 양(초 × 속도)
+	end
 	local applied, appliedW = {}, {}
 	for name, cf in pairs(pose) do
 		local f = st.from[name] or cf
+		local fv = carryT and st.fromVel[name]
+		if fv then
+			f = f * CFrame.fromAxisAngle(fv.axis, fv.rate * carryT)
+		end
 		applied[name] = f:Lerp(cf, e)
 		appliedW[name] = (st.fromW[name] or 0) + (1 - (st.fromW[name] or 0)) * e
 	end
@@ -966,7 +991,8 @@ local function updatePose(st, now, camPos)
 			end
 		end
 	end
-	st.applied, st.appliedW = applied, appliedW
+	st.prevApplied, st.prevDt = st.applied, now - (st.appliedAt or now) -- A2-M1 관성 섞기용(직전 프레임)
+	st.applied, st.appliedW, st.appliedAt = applied, appliedW, now
 	-- W3a: 다리 · 발 키는 서 있을 때만 - 걷는 동안은 이동 속도만큼 가중치를 줄여 애니메이터 걸음을 살린다(공중 = 그대로)
 	local applyW = appliedW
 	local v = root.AssemblyLinearVelocity
@@ -1315,7 +1341,7 @@ function WeaponVisual.playStun(key, seconds)
 	end
 end
 
--- W3b 스킬 모션(나 = SkillInput · 남 = 중계 "skillQ" · "skillE"). 채널 길이 · 틱 간격 = SkillData(서버 틱과 같은 값).
+-- W3b 스킬 모션(나 = SkillInput · 남 = 중계 "skillQ" · "skillE" · A2-M1 "skillR" · "skillT"). 채널 길이 · 틱 간격 = SkillData(서버 틱과 같은 값).
 function WeaponVisual.playSkill(key, slot)
 	local st = stateFor(key or player)
 	local set = st and st.classId and M.skills[st.classId]
@@ -1712,6 +1738,9 @@ do
 				if clip == "getup" then
 					WeaponVisual.playGetup(player)
 					task.wait(getupTotal() + 0.4)
+				elseif clip == "skillr" or clip == "skillt" then -- A2-M1 R · T 모션(판정 없음)
+					WeaponVisual.playSkill(player, clip == "skillr" and "R" or "T")
+					task.wait((st.attack and st.attack.tm.total or 0.8) + 0.5)
 				elseif clip == "skillq" or clip == "skille" then -- W3b 스킬(채널 = SkillData 길이)
 					if clip == "skille" and st.classId == "healer" then
 						SkillVfx.darkCast(st.character) -- W3c-3 딜링모드 켜는 순간(실제 = DealingModeActive 변화 - SkillVfx.watchDealingMode)

@@ -23,7 +23,7 @@ local PlayerMotionData = require(ReplicatedStorage.Shared.data.PlayerMotionData)
 AirState.start()
 FallServer.start()
 
-local KINDS = { flip = true, lean = true, dash = true, dash2 = true, skillQ = true, skillE = true } -- W1: dash = 대시 무기 자세(표시만) · W3b dash2 = 2단 대시 · skillQ/E = 스킬 모션(그리기만 - 판정 무관)
+local KINDS = { flip = true, lean = true, dash = true, dash2 = true, skillQ = true, skillE = true, skillR = true, skillT = true } -- W1: dash = 대시 무기 자세(표시만) · W3b dash2 = 2단 대시 · skillQ/E/R/T = 스킬 모션(그리기만 - 판정 무관 · A2-M1 R · T 추가)
 
 local airMoveFx = Instance.new("RemoteEvent")
 airMoveFx.Name = "AirMoveFx"

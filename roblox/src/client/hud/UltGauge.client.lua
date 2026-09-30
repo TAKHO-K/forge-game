@@ -102,6 +102,14 @@ local function request()
 		return
 	end
 	local mouse = player:GetMouse()
+	-- A2-M1: 궁극기 몸 모션(내 화면 즉시 · 남 = 중계 skillT - 그리기만 · 판정은 서버 SkillCastResult)
+	local WeaponVisual = require(script.Parent.Parent.WeaponVisual)
+	if WeaponVisual.playSkill(nil, "T") then
+		local fx = game:GetService("ReplicatedStorage"):FindFirstChild("AirMoveFx")
+		if fx then
+			fx:FireServer("skillT")
+		end
+	end
 	skillRequest:FireServer("T", mouse and mouse.Hit and mouse.Hit.Position or nil) -- 활 = 클릭 지점(서버가 거리 검사) · 나머지는 무시
 end
 button.Activated:Connect(request)

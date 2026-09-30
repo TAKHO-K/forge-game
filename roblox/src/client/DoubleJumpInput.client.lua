@@ -185,8 +185,8 @@ airMoveFx.OnClientEvent:Connect(function(who, kind)
 		if other then
 			AirMotion.play(other, "lean", DashConfig.durationSeconds)
 		end
-	elseif kind == "skillQ" or kind == "skillE" then
-		WeaponVisual.playSkill(who, kind == "skillQ" and "Q" or "E") -- W3b 스킬 모션
+	elseif kind == "skillQ" or kind == "skillE" or kind == "skillR" or kind == "skillT" then
+		WeaponVisual.playSkill(who, kind:sub(6)) -- W3b 스킬 모션 · A2-M1 R · T
 	elseif kind == "getup" then
 		WeaponVisual.playGetup(who) -- W1 넘어짐 → 일어나기
 	elseif other then

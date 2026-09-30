@@ -21,6 +21,9 @@ local MELEE_CONTACT = 1 / 60
 
 -- 공통 수치
 P.blend = { min = 0.15, max = 0.3, default = 0.2, attackIn = 0.06 } -- attackIn = 공격 시작 때 지금 자세 → cocked(전조 안에 들어가야 타격 프레임이 늦지 않는다)
+-- A2-M1 관성 섞기(client/WeaponVisual): 상태가 바뀔 때 관절이 돌던 속도를 이어받아 decay(1/초)로 줄인다(C1 - 전환 순간 속도 튐 없음) ·
+--   minRate(라디안/초)보다 느린 관절은 무시 · maxRate(라디안/초 - 순간 이동 · 되돌림 같은 비정상 값)는 버린다. 판정 · 시각 불변(보이는 자세만).
+P.inertia = { decay = 14, minRate = 0.2, maxRate = 40 }
 P.hitstopSeconds = 0.05 -- 타격 순간 클라 히트스톱(모든 타 - 3타 강공격은 WeaponVisual 강공격 값이 더 길다)
 P.combatHoldSeconds = 8 -- 마지막 전투 행동 뒤 이만큼 지나면 무기를 수납(서버 Player Attribute CombatUntil)
 P.drawSeconds = 0.35 -- 꺼내기 · 수납 동작
@@ -320,6 +323,32 @@ S.healer = {
 	Q = { ant = 0.16, act = 0.36, rec = 0.3, cocked = ST_GATHER, contact = ST_HEAL, through = with(ST_HEAL, { Root = { 4, 0, 0, 0, 0.08, 0 } }), settle = ST_STANCE },
 	E = { ant = 0.12, act = 0.14, rec = 0.3, cocked = ST_GATHER, contact = ST_PLANT, through = with(ST_PLANT, { Root = { -12, 0, 0, 0, -0.45, 0 }, Waist = { -18, 10, 0 } }), settle = ST_STANCE, trail = true },
 }
+-- ───────── A2-M1 R(K2) · T(K1 궁극기) 모션 - 옛 = R은 강공격 휘두르기로 대신 · T는 몸 모션 없음. 판정 · 시각은 서버 그대로(R · T 모두 시전 순간 즉시 판정 · 버프 · 표식 · 설치) →
+--   전조를 짧게(0.05 ~ 0.22) · 동작 = 위세(포효 · 기도 · 하늘 조준)를 보여 주는 자세 · 회복 = 전투 대기. ik = false(한 손이 무기에서 떨어지는 자세 - 보조 손 · 시위 IK를 끈다).
+-- 대검 R 전장의 포효: 숨 들이켜 웅크림 → 가슴 펴고 고개 젖혀 포효(두 팔 벌림 · 칼은 오른손 아래로) / T 파괴의 화신: 주먹 쥐고 웅크림 → 칼을 하늘로 치켜들고 포효
+local GS_WARCRY_IN = with(body(0.3, 10, 0, 8), { Waist = { -14, 0, 0 }, Neck = { -12, 0, 0 }, RightShoulder = { 35, 0, 25 }, RightElbow = { 40, 0, 0 }, RightWrist = { -60, 0, 0 }, LeftShoulder = { 30, 0, -25 }, LeftElbow = { 60, 0, 0 }, LeftWrist = { 0, 0, 0 } })
+local GS_WARCRY = with(body(0.1, 14, 0, -6), { Waist = { 18, 0, 0 }, Neck = { 24, 0, 0 }, RightShoulder = { 60, 0, 70 }, RightElbow = { 10, 0, 0 }, RightWrist = { -70, 0, 0 }, LeftShoulder = { 60, 0, -70 }, LeftElbow = { 15, 0, 0 }, LeftWrist = { 0, 0, 0 } })
+local GS_TRANS_IN = with(body(0.35, 0, 0, 12), { Waist = { -20, 0, 0 }, Neck = { -15, 0, 0 }, RightShoulder = { 20, 0, 20 }, RightElbow = { 90, 0, 0 }, RightWrist = { -40, 0, 0 }, LeftShoulder = { 20, 0, -20 }, LeftElbow = { 90, 0, 0 }, LeftWrist = { 0, 0, 0 } })
+local GS_TRANS = with(body(0, 0, 0, -8), { Waist = { 22, 0, 0 }, Neck = { 26, 0, 0 }, RightShoulder = { 175, 0, 20 }, RightElbow = { 20, 0, 0 }, RightWrist = { -10, 0, 0 }, LeftShoulder = { 140, 0, -45 }, LeftElbow = { 20, 0, 0 }, LeftWrist = { 0, 0, 0 } })
+S.greatsword.R = { ant = 0.18, act = 0.3, rec = 0.4, cocked = GS_WARCRY_IN, contact = GS_WARCRY, through = with(GS_WARCRY, { Waist = { 20, 0, 0 }, Neck = { 28, 0, 0 } }), settle = GS_READY, ik = false }
+S.greatsword.T = { ant = 0.22, act = 0.35, rec = 0.45, cocked = GS_TRANS_IN, contact = GS_TRANS, through = with(GS_TRANS, { Waist = { 24, 0, 0 } }), settle = GS_READY, ik = false, trail = true }
+-- 쌍검 R 암영 표식(대상 뒤로 순간이동 · 서버 0.08초): 몸을 낮춰 사라짐 → 뒤에서 한 칼 찌름 / T 죽음의 계약: 칼 끝으로 대상을 가리키고 다른 칼은 머리 위(표식 선언)
+local DB_VANISH = db({ DB_R_LOW, DB_L_LOW, body(0.45, 0, 0, 14) }, { Waist = { -20, 0, 0 }, Neck = { 10, 0, 0 } })
+local DB_BACKSTAB = db({ { RightShoulder = { 100, 0, 5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -90, 0, 0 } }, { LeftShoulder = { 70, 0, -30 }, LeftElbow = { 40, 0, 0 }, LeftWrist = { -60, 0, 0 } }, body(0.3, 26, 10, 10) }, { Waist = { -12, 20, 0 }, Neck = { 6, -15, 0 } })
+local DB_MARK = db({ { RightShoulder = { 95, 0, 0 }, RightElbow = { 0, 0, 0 }, RightWrist = { -90, 0, 0 } }, { LeftShoulder = { 150, 0, -20 }, LeftElbow = { 40, 0, 0 }, LeftWrist = { -30, 0, 0 } }, body(0.25, 20, 0, 4) }, { Waist = { -4, -10, 0 }, Neck = { 2, 8, 0 } })
+S.dualblade.R = { ant = 0.05, act = 0.14, rec = 0.3, cocked = DB_VANISH, contact = DB_BACKSTAB, through = with(DB_BACKSTAB, { Waist = { -16, 28, 0 } }), settle = DB_STANCE, trail = true }
+S.dualblade.T = { ant = 0.12, act = 0.25, rec = 0.35, cocked = DB_CROSS, contact = DB_MARK, through = with(DB_MARK, { Neck = { 4, 10, 0 } }), settle = DB_STANCE, trail = true }
+-- 활 R 사냥꾼의 덫: 한쪽 무릎 꿇고 오른손으로 땅에 덫을 놓음 / T 천궁의 폭우: 몸을 뒤로 젖혀 하늘로 깊게 당겨 쏨(비처럼 떨어질 화살)
+local BOW_TRAP = with(body(0.8, 24, 0, 18), { Waist = { -24, 0, 0 }, Neck = { 16, 0, 0 }, RightShoulder = { 60, 0, 10 }, RightElbow = { 20, 0, 0 }, RightWrist = { 0, 0, 0 } })
+local BOW_SKY = with(with(BOW_AIM, body(0.18, 16, 0, -10)), { Waist = { 26, -90, 0 }, Neck = { -22, 85, 0 } })
+S.bow.R = { ant = 0.12, act = 0.22, rec = 0.32, cocked = BOW_STANCE, contact = BOW_TRAP, through = with(BOW_TRAP, { RightShoulder = { 50, 0, 20 } }), settle = BOW_STANCE, ik = false }
+S.bow.T = { ant = 0.2, act = 0.3, rec = 0.35, cocked = BOW_STANCE, contact = BOW_SKY, through = with(BOW_SKY, { Waist = { 30, -90, 0 } }), settle = BOW_STANCE, draw = { 0, 1, 1, 0 }, heavyShot = true }
+-- 치유사 R 구원의 기도: 지팡이를 앞에 세우고 두 손을 모았다가 하늘로 펼침 / T 생명의 성역: 지팡이를 높이 들었다가 발밑 땅에 세게 꽂아 성역을 편다
+local ST_PRAY = with(body(0.2, 4, 0, 6), { Waist = { -8, 0, 0 }, Neck = { -18, 0, 0 }, RightShoulder = { 60, 0, 5 }, RightElbow = { 80, 0, 0 }, RightWrist = { -20, 0, 0 }, LeftShoulder = { 60, 0, 25 }, LeftElbow = { 95, 0, 0 }, LeftWrist = { 20, 0, 0 } })
+local ST_BLESS = with(body(0, 0, 0, -6), { Waist = { 14, 0, 0 }, Neck = { 20, 0, 0 }, RightShoulder = { 160, 0, 25 }, RightElbow = { 10, 0, 0 }, RightWrist = { -90, 0, 0 }, LeftShoulder = { 160, 0, -35 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -40, 0, 0 } })
+local ST_SANCT = with(body(0.45, 16, 0, 10), { Waist = { -16, 0, 0 }, Neck = { 10, 0, 0 }, RightShoulder = { 75, 0, 5 }, RightElbow = { 30, 0, 0 }, RightWrist = { -160, 0, 0 }, LeftShoulder = { 55, 0, -40 }, LeftElbow = { 20, 0, 0 }, LeftWrist = { -50, 0, 0 } })
+S.healer.R = { ant = 0.2, act = 0.35, rec = 0.4, cocked = ST_PRAY, contact = ST_BLESS, through = with(ST_BLESS, { Root = { 4, 0, 0, 0, 0.1, 0 } }), settle = ST_STANCE }
+S.healer.T = { ant = 0.18, act = 0.16, rec = 0.45, cocked = ST_GATHER, contact = ST_SANCT, through = with(ST_SANCT, { Root = { -10, 0, 0, 0, -0.4, 0 }, Waist = { -20, 0, 0 } }), settle = ST_STANCE, trail = true }
 P.skills = S
 
 -- ───────── 덧씌움 반응(피격 · 착지 · 도약 · 공중 점프 · 활강 시작/끝 - 지금 포즈 위에 곱한다) ─────────

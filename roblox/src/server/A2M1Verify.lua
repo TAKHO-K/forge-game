@@ -144,6 +144,24 @@ function V.runPure()
 		end
 		r.check("접지(발바닥 = 루트 − 1.5 · 기준 자세 + 클라 보정) · 덩치 몸 반경 증가분(배율 1 = 0): " .. table.concat(rows, " · "), ok)
 	end)
+	r.section("캐릭터 R · T 모션 · 관성 섞기", function()
+		local PlayerMotionData = require(ReplicatedStorage.Shared.data.PlayerMotionData)
+		local rows, ok = {}, true
+		for _, classId in ipairs({ "greatsword", "dualblade", "bow", "healer" }) do
+			local set = PlayerMotionData.skills[classId] or {}
+			for _, slot in ipairs({ "Q", "E", "R", "T" }) do
+				local c = set[slot]
+				local good = c ~= nil and c.cocked ~= nil and c.contact ~= nil and c.settle ~= nil and (c.ant + c.act + c.rec) <= 1.2
+				ok = ok and good
+				if not good then
+					table.insert(rows, classId .. "." .. slot)
+				end
+			end
+		end
+		local I = PlayerMotionData.inertia
+		ok = ok and I ~= nil and I.decay > 0
+		r.check(("4직업 Q · E · R · T 모션(전조 + 동작 + 회복 ≤ 1.2초) · 관성 섞기 decay %s%s"):format(tostring(I and I.decay), #rows > 0 and (" · 빠짐 " .. table.concat(rows, ",")) or ""), ok)
+	end)
 	local pass, total = r.summary()
 	print(("===A2-M1 검증 끝(가)=== %d/%d 통과"):format(pass, total))
 end
