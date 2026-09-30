@@ -61,7 +61,11 @@ def icons():
             im = Image.open(path).convert("RGBA")
             if im.size != (256, 256):  # 갓 렌더한 512만: 256으로 줄이고 흰 40% 림 2px(어두운 UI 배경에서 짙은 물체가 묻히지 않게 - 한 번만)
                 im = im.resize((256, 256), Image.LANCZOS)
-                from PIL import ImageFilter
+                from PIL import ImageChops, ImageFilter
+                # A2-N2 3차: 윤곽 밖 점 노이즈 제거 - 1px 열기(침식 → 팽창)로 외톨이 반투명 점을 지우고, 지운 자리의 색도 0(premultiplied처럼 가장자리 번짐 없음)
+                keep = im.getchannel("A").point(lambda v: 255 if v > 24 else 0).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(3))
+                im.putalpha(ImageChops.multiply(im.getchannel("A"), keep))
+                im = Image.composite(im, Image.new("RGBA", im.size, (0, 0, 0, 0)), keep)
                 a = im.getchannel("A").point(lambda v: 255 if v > 24 else 0)
                 rim = a.filter(ImageFilter.MaxFilter(5))
                 layer = Image.new("RGBA", im.size, (255, 255, 255, 0))

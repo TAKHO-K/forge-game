@@ -501,7 +501,7 @@ def st_shaft(grade):
     ys = [ST["bottomY"] + 0.2 + (ST["neckY"] - ST["bottomY"] - 0.2) * k / K for k in range(K + 1)]
     for k, y in enumerate(ys):
         u = k / K
-        r = 0.17 + 0.08 * u ** 1.4  # 아래로 가늘게(두툼함 - 밑동도 0.34 지름)
+        r = 0.21 + 0.07 * u ** 1.4  # 아래로 가늘게 · 3차: 밑동 지름 0.42(폰에서 선이 아니라 판 - 총괄 검토)
         cx = 0.07 * math.sin(math.pi * u)  # 살짝 휜 나무
         rings.append([(x + cx, y, z) for x, z in A.circle2d(r, n, start=2 * math.pi * u * 0.9)])
     return A.loft(rings)
@@ -515,8 +515,8 @@ def st_hooks(grade):
     sides = 5 if RANK[grade] <= RANK["legendary"] else 4
     k = 1.25  # 머리 = 전체 길이의 약 18%(구슬 중심 기준 확대)
     left, right = [[(x * k, oy + (y - oy) * k, z) for x, y, z in pts] for pts in (left, right)]
-    g = A.merge(A.tube(left, lambda u: 0.17 - 0.13 * u, sides=sides, flat=0.8, tip_end=True),
-                A.tube(right, lambda u: 0.16 - 0.12 * u, sides=sides, flat=0.8, tip_end=True))
+    g = A.merge(A.tube(left, lambda u: (0.17 - 0.13 * u) * 1.3, sides=sides, flat=0.8, tip_end=True),  # 3차: 머리 갈고리 굵기 ×1.3
+                A.tube(right, lambda u: (0.16 - 0.12 * u) * 1.3, sides=sides, flat=0.8, tip_end=True))
     if at_least(grade, "rare"):  # 희귀 = 머리 고리 바깥 가시 2(0.25)
         g = A.merge(g, spike((-0.82, oy + 0.15, 0), (-0.9, 0.44, 0), 0.5, 0.1), spike((0.72, oy - 0.05, 0), (0.95, 0.3, 0), 0.46, 0.1))  # A2-N2 ×1.55
     if at_least(grade, "epic"):  # 영웅 = 두 갈고리 끝이 안쪽 나선으로 한 번 더 감김
@@ -553,6 +553,9 @@ def healer_parts(grade):
              ("Orb", A.ellipsoid((0.42, 0.42, 0.42), n=detail(grade), rings=5, center=(0, ST["orbY"], 0)), orb, grade != "normal", 0.0),
              ("Leaf", st_leaf(grade), (126, 196, 70) if grade != "transcendent" else A.GOLD, False, 0.0),
              ("Ferrule", A.xform(A.lathe([(0.0, -0.12), (0.07, -0.08), (0.11, 0.1), (0.1, 0.22)], detail(grade) - 2), t=(0, ST["bottomY"], 0)), P["trim"] if grade != "normal" else A.IRON, False, 0.0)]
+    if at_least(grade, "rare") and not at_least(grade, "legendary"):  # 3차: 희귀 · 영웅 = 자루 위쪽 등급 색 밴드 2줄(폭 0.3 - 색 띠 한 단계)
+        bands = [A.xform(A.lathe([(0.27, -0.15), (0.31, -0.08), (0.31, 0.08), (0.27, 0.15)], 6, axis="Y"), t=(0.06, y, 0)) for y in (1.55, 2.05)]
+        parts.append(("Bands", A.merge(*bands), P["accent"], False, 0.0))
     if at_least(grade, "legendary"):
         ring = [(0.2 * math.cos(2 * math.pi * k / 8), ST["neckY"] - 0.08, 0.2 * math.sin(2 * math.pi * k / 8)) for k in range(9)]
         side_fins = [A.tube([(s * 0.3, ST["neckY"] + 0.1, 0), (s * 0.78, ST["neckY"] + 0.35, 0), (s * 1.0, ST["neckY"] + 0.85, 0)], lambda u: 0.11 * (1 - u) + 0.02, sides=3, flat=0.5, tip_end=True) for s in (-1, 1)]
@@ -636,7 +639,7 @@ def ph_collar(grade):
 
 def paladin_parts(grade):
     P = common_palette(grade, (238, 228, 206), A.WOOD_TOP)  # 본체 = 크림 주름 통(장난감 망치) · 마개 = 나무 → 영웅부터 등급 색
-    cap_col = P["trim"] if grade in ("primordial", "transcendent") else (140, 96, 58)  # 2차: 마개 겉면 = 나무 #8C603A(영웅 ~ 고대에 등급 색이 머리 50% 넘게 덮었다)
+    cap_col = P["trim"] if grade == "primordial" else (A.BLACK_BODY if grade == "transcendent" else (140, 96, 58))  # 3차: 초월 마개 = 검정(금은 테 · 띠 · 균열만 - 대검 초월 해석과 통일)  # 2차: 마개 겉면 = 나무 #8C603A(영웅 ~ 고대에 등급 색이 머리 50% 넘게 덮었다)
     parts = [("Head", ph_bellows(grade), P["base"], False, 0.0), ("Caps", ph_caps(grade), cap_col, False, 0.0),
              ("Grip", ph_grip(grade), P["grip"], False, 0.0), ("Pommel", ph_pommel(grade), P["trim"], False, 0.0)]
     hz, R = PH["headZ"], PH["headR"]
@@ -646,7 +649,7 @@ def paladin_parts(grade):
         parts.append(("Fuller", A.xform(A.lathe([(R * 1.02, -0.11), (R * 1.16, 0.0), (R * 1.02, 0.11)], 8 if RANK[grade] <= RANK["rare"] else 7, axis="X"), t=(0, 0, hz)),
                       P["accent"] if grade != "transcendent" else A.GOLD, False, 0.0))
     if at_least(grade, "epic"):
-        parts.append(("Guard", ph_collar(grade), P["trim"], False, 0.0))
+        parts.append(("Guard", ph_collar(grade), P["trim"] if grade != "transcendent" else A.BLACK_BODY, False, 0.0))
     if at_least(grade, "legendary"):  # 전설 = 통 앞 보석(마개 ×1.25는 Caps에)
         parts.append(("Gem", A.crystal(0.34, 0.15, sides=4, tip_h=0.12, base_h=0.1, center=(0, -R * 1.05, hz), m=A.rot(rx=90)), P["gem"], True, 0.0))
     if at_least(grade, "relic"):  # 유물 = 마개 바깥 면 룬 가시 2 × 2(유물만 발광)
