@@ -300,6 +300,9 @@ function PrimordialRegistry.onRolled(player, item, position, inBossFight, deps, 
 		spawnBeacon(position, item.grade)
 		if typeof(player) == "Instance" and player:IsA("Player") then
 			fxRemote:FireClient(player, { grade = item.grade, position = position, inBoss = inBossFight == true })
+			if item.grade == TranscendentData.gradeId then
+				require(script.Parent.CommunityGoalService).note(player, "transcendent") -- QUEUE-ALL1 P3 §4 합동 목표(큰 칸)
+			end
 			if item.grade == TranscendentData.gradeId then -- QUEUE-ALL1 P3 §2 ④: 획득자 흑금 오라 수 분(착용 안 해도 - 클라 PrimordialFx 오라가 읽는다)
 				player:SetAttribute("TranscendentAuraUntil", os.time() + TranscendentData.announce.clip.auraMinutes * 60)
 			end

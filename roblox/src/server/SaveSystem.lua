@@ -216,6 +216,9 @@ local function defaultProfile()
 		-- (조회 실패면 이 값을 쓴다 - 산 사람이 혜택을 잃지 않게). 진실 = Roblox 소유 기록.
 		gamepasses = {},
 
+		-- QUEUE-ALL1 P3 §4(v57): 주간 합동 목표 - week = Quest.weekOf(월요일 UTC) · contributed = 그 주 내 기여(받을 자격 ≥ 1) · claimed = { [칸 번호 문자열] = true }(주가 바뀌면 CommunityGoalService가 비운다)
+		communityGoal = { week = 0, contributed = 0, claimed = {} },
+
 		-- 옵션 변환권(23-2, PRD 20.37 [6] "계정 공유(신규)"). 골드로만 구매(20.5-1 - 로벅스
 		-- 판매 금지)하고 등급별로 따로 센다(고대 보석엔 고대 변환권만, 태초는 태초만) -
 		-- 두 등급만 있는 이유는 GemData.optionPoolByGrade가 그 둘만 옵션 풀을 갖기 때문이다
@@ -1232,6 +1235,14 @@ local function migrate(data)
 			data.purchases.log = {}
 		end
 		data.version = 56
+	end
+
+	if data.version < 57 then
+		-- QUEUE-ALL1 P3 §4: communityGoal(주간 합동 목표) - 옛 계정 = 기여 0 · 받은 칸 없음(이번 주부터 센다)
+		if type(data.communityGoal) ~= "table" then
+			data.communityGoal = { week = 0, contributed = 0, claimed = {} }
+		end
+		data.version = 57
 	end
 
 	data.savedAt = data.savedAt or 0

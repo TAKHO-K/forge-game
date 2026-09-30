@@ -266,6 +266,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	local QuestService = require(script.Parent.QuestService)
 	if isBoss then
 		QuestService.note(recipient, "bossClear", 1)
+		require(script.Parent.CommunityGoalService).note(recipient, "bossKill") -- QUEUE-ALL1 P3 §4 합동 목표
 		if monsterData.isRaid then
 			QuestService.note(recipient, "raidClear", 1)
 		end

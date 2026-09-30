@@ -55,6 +55,58 @@ end
 local clipFx = { lastCrackAt = -math.huge } -- 아래 클립 절에서 채운다(skyCrack · rumble) · lastCrackAt = 본인 연출이 이미 갈라짐을 띄운 시각(배너가 겹쳐 띄우지 않게)
 local DENSITY = TranscendentData.announce.density
 local remoteRecent = {} -- 다른 서버 초월(풀 연출 아님) { at, no } - 묶음 배너
+-- QUEUE-ALL1 P3 §2 "구경 가기"(마지막 후보): 다른 서버 초월 뒤 빛기둥이 서 있는 동안(pillarSeconds) 버튼 하나 → 서버 SpectateService가 그 서버로 이동
+local spectateGui = nil
+local function showSpectate(entry)
+	if type(entry.jobId) ~= "string" then
+		return
+	end
+	if spectateGui then
+		spectateGui:Destroy()
+	end
+	spectateGui = Instance.new("ScreenGui")
+	spectateGui.Name = "SpectateGui"
+	spectateGui.ResetOnSpawn = false
+	spectateGui.DisplayOrder = 30
+	spectateGui.Parent = player:WaitForChild("PlayerGui")
+	local btn = Instance.new("TextButton")
+	btn.Name = "SpectateButton"
+	btn.AnchorPoint = Vector2.new(0.5, 0)
+	btn.Position = UDim2.new(0.5, 0, 0, 92)
+	btn.Size = UDim2.fromOffset(220, 30)
+	btn.BackgroundColor3 = TranscendentData.announce.darkColor
+	btn.TextColor3 = TranscendentData.announce.color
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 14
+	btn.Text = ("%s 구경 가기(세계 %s번째 초월)"):format(TranscendentData.announce.glyph, tostring(entry.no or "?"))
+	btn.Parent = spectateGui
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = TranscendentData.announce.color
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = btn
+	local mine = spectateGui
+	btn.Activated:Connect(function()
+		ReplicatedStorage:WaitForChild("SpectateRequest"):FireServer(entry.jobId)
+		btn.Text = "이동 중…"
+	end)
+	task.delay(TranscendentData.announce.pillarSeconds, function()
+		if spectateGui == mine then
+			spectateGui:Destroy()
+			spectateGui = nil
+		end
+	end)
+end
+ReplicatedStorage:WaitForChild("SpectateResult").OnClientEvent:Connect(function(info)
+	if type(info) == "table" and info.message then
+		Toast.push("TC", { richParts = { { text = tostring(info.message), colorName = "textPrimary", bold = true } }, seconds = 3, fadeSeconds = 0.3 })
+	end
+	if spectateGui then
+		spectateGui:Destroy()
+		spectateGui = nil
+	end
+end)
+
 local function noticeMode()
 	local m = player:GetAttribute("TranscendNotice")
 	return (m == "banner" or m == "off") and m or "full"
@@ -100,6 +152,7 @@ ReplicatedStorage:WaitForChild("PrimordialBanner").OnClientEvent:Connect(functio
 			end
 		end
 		Toast.push("TC", { richParts = bannerParts(entry), seconds = entry.full and PrimordialData.bannerSeconds or 4, fadeSeconds = 0.4, rainbow = entry.full == true })
+		showSpectate(entry) -- "구경 가기"(빛기둥이 서 있는 동안)
 		if entry.full and mode == "full" and clipFx.skyCrack then -- 전 서버 풀 연출(시즌 첫 · 부위 첫 · 이정표 · 30분 공백)
 			clipFx.skyCrack(player:GetAttribute("BossEncounterId") and TranscendentData.announce.clip.bossScale or 1)
 			clipFx.rumble(TranscendentData.announce.clip.rumbleSeconds * 0.6, TranscendentData.announce.clip.rumbleStuds * 0.5)

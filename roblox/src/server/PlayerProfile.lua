@@ -1453,6 +1453,20 @@ end
 -- 서버만 호출한다(CombatResolution.grantKillReward, 확정 드랍을 이미 지급한 직후).
 -- bossFirstClearStages · tutorial.granted의 키는 문자열(tostring)이다(v28) - DataStore 왕복이 숫자 키를 문자열로 바꿔 돌려주므로 숫자 키로 조회하면 재접속 뒤 못 찾는다
 -- (hasClaimedProtectionStage 주석). 바깥 API는 그대로 숫자를 받는다.
+-- QUEUE-ALL1 P3 §4: 주간 합동 목표 기록(계정 - SAVE v57) · 없으면(옛 프로필 이관 전) 만든다
+function PlayerProfile.getCommunityGoal(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	if type(profile.communityGoal) ~= "table" then
+		profile.communityGoal = { week = 0, contributed = 0, claimed = {} }
+	end
+	profile.communityGoal.claimed = type(profile.communityGoal.claimed) == "table" and profile.communityGoal.claimed or {}
+	profile.communityGoal.contributed = tonumber(profile.communityGoal.contributed) or 0
+	return profile.communityGoal
+end
+
 -- QUEUE-ALL1 P3: 지금 직업의 보스 첫 클리어 수(0 = 첫 보스 - 확정 전설)
 function PlayerProfile.bossFirstClearCount(player)
 	local profile = profiles[player]
@@ -2467,6 +2481,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		gamepasses = deepCopy(profile.gamepasses), -- v56 캐시
 		receipts = deepCopy(profile.purchases.receipts), -- v56
 		purchaseLog = deepCopy(profile.purchases.log), -- v56
+		communityGoal = deepCopy(profile.communityGoal), -- QUEUE-ALL1 P3 §4(v57): 새 저장 필드 = 백업 대상(COMMON §1)
 	}
 end
 
@@ -2511,6 +2526,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.gamepasses = snapshot.gamepasses and deepCopy(snapshot.gamepasses) or profile.gamepasses
 	profile.purchases.receipts = snapshot.receipts and deepCopy(snapshot.receipts) or profile.purchases.receipts
 	profile.purchases.log = snapshot.purchaseLog and deepCopy(snapshot.purchaseLog) or profile.purchases.log
+	profile.communityGoal = snapshot.communityGoal and deepCopy(snapshot.communityGoal) or profile.communityGoal -- QUEUE-ALL1 P3 §4(v57)
 	task.defer(function() -- 결정 9: 복원한 치장 · 패스를 Attribute로(늦은 require - 순환 방지)
 		if profiles[player] then
 			require(script.Parent.MonetizationService).reapplyAttributes(player)
