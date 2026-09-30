@@ -192,10 +192,16 @@ function Fx.pillar(pos, o)
 end
 
 -- 짧은 화면 반짝임(섬광 줄이기 켜면 없음)
-function Fx.screenFlash(brightness, seconds)
+-- QUEUE-ALL2 P4 ①: kind = "climax"면 3초 규칙 예외(화면 전체 번쩍임 = 클라이맥스만 - 09 B-2) · 세기 × 연출 세기(FxScale)
+function Fx.screenFlash(brightness, seconds, kind)
 	if Fx.reduceFlashes() then
 		return
 	end
+	local scale = require(script.Parent.CameraShake).allow("flash", kind or "climax")
+	if scale <= 0 then
+		return
+	end
+	brightness *= scale
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Name = "ArtV1ScreenFlash"
 	grade.Brightness = brightness

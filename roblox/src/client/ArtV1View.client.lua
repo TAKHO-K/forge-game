@@ -294,7 +294,7 @@ local function playEnhance(great)
 			back:Play()
 		end
 		if S.shake then
-			CameraShake.trigger(S.shake.seconds, S.shake.studs)
+			CameraShake.trigger(S.shake.seconds, S.shake.studs, "climax") -- 강화 대성공 = 클라이맥스(3초 규칙 예외 · 연출 세기는 곱함)
 		end
 	end
 end

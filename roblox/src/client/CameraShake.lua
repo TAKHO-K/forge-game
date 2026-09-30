@@ -7,10 +7,35 @@
 
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local FxPolicyData = require(game:GetService("ReplicatedStorage").Shared.data.FxPolicyData)
 
 local camera = Workspace.CurrentCamera
 
 local CameraShake = {}
+
+-- QUEUE-ALL2 P4 ①: 종류별 규칙(FxPolicyData) · 연출 세기(FxScale) · 흔들림/번쩍임 = 같은 3초 안에 1번(클라이맥스 예외). 반환 = 이번 호출에 곱할 배율(0 = 하지 않음)
+local lastBudgetAt = { shake = -math.huge, flash = -math.huge }
+function CameraShake.allow(channel, kind)
+	local localPlayer = Players.LocalPlayer
+	local def = FxPolicyData.kinds[kind or "heavy"] or FxPolicyData.kinds.heavy
+	local fx = localPlayer and localPlayer:GetAttribute("FxScale")
+	local scale = def.scale * (type(fx) == "number" and fx or 1)
+	if scale <= 0 then
+		return 0
+	end
+	if channel == "shake" and localPlayer and localPlayer:GetAttribute("SettingScreenShake") == false and kind ~= "climax" then
+		return 0
+	end
+	if def.budget then
+		local now = os.clock()
+		if now - lastBudgetAt[channel] < FxPolicyData.budgetSeconds then
+			return 0
+		end
+		lastBudgetAt[channel] = now
+	end
+	return scale
+end
 
 local shakeUntil = 0
 local shakeDurationSeconds = 0
@@ -46,23 +71,24 @@ RunService:BindToRenderStep("CameraFovKick", Enum.RenderPriority.Camera.Value + 
 	lastSet = (want ~= 0 or kickApplied ~= 0) and camera.FieldOfView or nil
 end)
 function CameraShake.fovKick(degrees, seconds)
-	local localPlayer = game:GetService("Players").LocalPlayer
-	if localPlayer and localPlayer:GetAttribute("SettingScreenShake") == false then
+	local scale = CameraShake.allow("shake", "heavy") -- QUEUE-ALL2 P4: 보스 적중 FOV 킥도 흔들림 몫(3초에 1번 · × 연출 세기)
+	if scale <= 0 then
 		return
 	end
-	kickDegrees, kickSeconds, kickUntil = degrees, seconds, os.clock() + seconds
+	kickDegrees, kickSeconds, kickUntil = degrees * scale, seconds, os.clock() + seconds
 end
 
 -- durationSeconds 동안 studsAmplitude 크기로 흔든다(원본 AttackInput.client.lua의
 -- CAMERA_SHAKE_SECONDS=0.15/CAMERA_SHAKE_STUDS=0.35와 같은 기본값을 호출부가 넘긴다).
 -- W3c: 설정 "화면 흔들림" 끔(LocalPlayer Attribute SettingScreenShake = false - client/panels/Settings)이면 아무것도 안 한다.
-function CameraShake.trigger(durationSeconds, studsAmplitude)
-	local localPlayer = game:GetService("Players").LocalPlayer
-	if localPlayer and localPlayer:GetAttribute("SettingScreenShake") == false then
+-- kind = FxPolicyData.kinds 이름(heavy · hurt · boss · climax - 없으면 heavy)
+function CameraShake.trigger(durationSeconds, studsAmplitude, kind)
+	local scale = CameraShake.allow("shake", kind)
+	if scale <= 0 then
 		return
 	end
 	shakeDurationSeconds = durationSeconds
-	shakeAmplitudeStuds = studsAmplitude
+	shakeAmplitudeStuds = studsAmplitude * scale
 	shakeUntil = os.clock() + durationSeconds
 end
 

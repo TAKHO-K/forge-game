@@ -79,8 +79,8 @@ local function burst(position, color, count, speed, size, lifetime, direction, s
 	e:Emit(count)
 end
 
-local function shake(def)
-	CameraShake.trigger(def.seconds, def.studs)
+local function shake(def, kind)
+	CameraShake.trigger(def.seconds, def.studs, kind or "heavy")
 end
 
 -- ── 고리(납작한 원통 - 축 = 방향) ──
@@ -202,7 +202,7 @@ function SkillVfx.bowRelease(muzzle, direction, isMine)
 		ring(muzzle + dir * (R.gapStuds * i), dir, R, (i - 1) * 0.04)
 	end
 	if isMine then
-		shake(V.bowFinisher.shake)
+		-- QUEUE-ALL2 P4 ①: 발사 순간 흔들림 없앰(적중 때 한 번만 - 피로 기준)
 	end
 end
 

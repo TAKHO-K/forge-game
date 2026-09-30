@@ -151,7 +151,7 @@ function BossFx.shake(position, weight)
 	if d > cfg.nearStuds then
 		return false
 	end
-	CameraShake.trigger(cfg.seconds, cfg.amplitudeStuds * (1 - d / cfg.nearStuds) * (weight or 1))
+	CameraShake.trigger(cfg.seconds, cfg.amplitudeStuds * (1 - d / cfg.nearStuds) * (weight or 1), "boss")
 	return true
 end
 

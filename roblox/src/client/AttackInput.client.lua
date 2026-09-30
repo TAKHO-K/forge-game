@@ -538,14 +538,15 @@ local function showResult(monsterModel, damage, isCrit, died, isComboHit, isBuff
 	if isComboHit then
 		holdSeconds = HEAVY_HITSTOP_SECONDS
 		WeaponVisual.applyHitstop(HEAVY_HITSTOP_SECONDS)
-		CameraShake.trigger(CAMERA_SHAKE_SECONDS, CAMERA_SHAKE_STUDS)
+		CameraShake.trigger(CAMERA_SHAKE_SECONDS, CAMERA_SHAKE_STUDS, "heavy") -- 내 3타 강공격만(아주 약하게 · 3초에 1번)
 	elseif isFinisher then -- W3c-2: 흔들림은 SkillVfx.bowImpact(적중 충격과 같이)
 		holdSeconds = VfxData.bowFinisher.hitstopSeconds
 		WeaponVisual.applyHitstop(holdSeconds)
 	elseif isBuffedShot then
 		holdSeconds = BUFFED_HITSTOP_SECONDS
 		WeaponVisual.applyHitstop(BUFFED_HITSTOP_SECONDS)
-		CameraShake.trigger(BUFFED_CAMERA_SHAKE_SECONDS, BUFFED_CAMERA_SHAKE_STUDS)
+		-- QUEUE-ALL2 P4 ①: 강화 화살(백스텝샷 충전) 흔들림 없앰 - 강공격 아님(피로 기준)
+		local _ = BUFFED_CAMERA_SHAKE_SECONDS + BUFFED_CAMERA_SHAKE_STUDS
 	end
 
 	if not monsterModel then

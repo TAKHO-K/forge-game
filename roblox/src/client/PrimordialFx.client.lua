@@ -341,6 +341,12 @@ local function rumble(seconds, studs)
 	if not hum then
 		return
 	end
+	-- QUEUE-ALL2 P4 ①: 땅울림도 흔들림 통로 규칙(설정 "화면 흔들림" · 연출 세기 - 클라이맥스라 3초 규칙 예외)
+	local scale = require(script.Parent.CameraShake).allow("shake", "climax")
+	if scale <= 0 or player:GetAttribute("SettingScreenShake") == false then
+		return
+	end
+	studs *= scale
 	local t0 = os.clock()
 	local conn
 	conn = RunService.RenderStepped:Connect(function()

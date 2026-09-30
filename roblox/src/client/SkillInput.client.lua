@@ -152,8 +152,8 @@ skillCastResult.OnClientEvent:Connect(function(slot, data)
 	elseif data.kind == "tick" then
 		SkillEffects.expandingRing(data.casterPosition, data.radiusStuds, color, 0.4)
 		playHits(data.hits)
-		-- 광역(대회전)에만 카메라 흔들림(지시 [4] - "돌진마다 흔들리면 멀미가 난다").
-		CameraShake.trigger(E_CAMERA_SHAKE_SECONDS, E_CAMERA_SHAKE_STUDS)
+		-- QUEUE-ALL2 P4 ①(09 B-2 "일반 사냥 흔들림 0"): 광역 틱마다 흔들림 없앰(3초 안에 여러 번 · 가장 셈 - docs/visual-audit.md 1-2)
+		local _ = E_CAMERA_SHAKE_SECONDS + E_CAMERA_SHAKE_STUDS
 	elseif data.kind == "summon" then
 		-- 그림자분신(20-6 [2]) - Model 자체는 서버가 만들어 Workspace에 Parent하는 순간
 		-- 모든 클라에 자동 복제된다(SkillServer.server.lua) - 여기선 소환 순간을 강조하는

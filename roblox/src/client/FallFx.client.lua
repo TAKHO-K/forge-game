@@ -104,7 +104,7 @@ local function setKnocked(character, root, on, isSelf)
 		gui.Parent = player:WaitForChild("PlayerGui")
 		knocked[character] = gui
 		if isSelf then
-			CameraShake.trigger(0.35, 0.8)
+			CameraShake.trigger(0.35, 0.8, "hurt") -- QUEUE-ALL2 P4: 큰 피격(× 0.7 · 3초 1번 · 연출 세기)
 		end
 	elseif not on and knocked[character] then
 		AirMotion.release(character, "knockdown")
