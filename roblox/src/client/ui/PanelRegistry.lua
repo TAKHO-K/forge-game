@@ -17,25 +17,49 @@ PanelRegistry.forbiddenKeys = {
 -- (KeyUp만 온다 - Shift + I는 온다. 한/영 상태와 무관하고 P · M · U · K는 정상). 가상 입력(MCP)은 통과해서 자동 입력 테스트가 이 결함을 못 잡았다. 그래서 단축키로 등록할 수 없다.
 PanelRegistry.swallowedKeys = { [Enum.KeyCode.I] = true, [Enum.KeyCode.O] = true }
 
+-- QUEUE-ALL2 P2(09 문서 B-3 최종 단축키 표 · 사용자 10-01): G 가방 · C 캐릭터 · M 지도 · N 구역 선택(옛 "맵 선택" M) · J 퀘스트 · K 도감 · U 수련 · P 파티 · L 순위 · B 귀환(행동 키).
+--   왼쪽 메뉴 = menuOrder 순 7칸(가방 · 캐릭터 · 지도 상시 - menuPinned) · menuMore = "더보기"(…) 안으로(파티 · 순위 · 설정). 모든 창 = 같은 키로 열고 닫기 + X · Backspace 닫기(Esc = 로블록스 메뉴 전용 - 18-1 [2]).
+--   opener(선택) = 등록 전(처음 열 때 짓는) 창을 여는 모듈 이름(panels/<이름>.toggle) - 메뉴 버튼 · 단축키가 그 함수를 부른다.
 PanelRegistry.panels = {
-	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.B, menuOrder = 1, iconKey = "bag", menuLabel = "가방" },
-	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, iconKey = "party", menuLabel = "파티" }, -- S12b: 파티창(panels/Party.lua). 채팅 입력 중 P는 UIManager가 gameProcessed로 무시한다.
-	-- M1-2 후속(사용자): 메뉴바 파티 칸 삭제 - 여는 곳이 둘일 필요 없다(오른쪽 위 [파티] 버튼 · P 키만). menuOrder를 빼면 메뉴바 칸에서 빠진다.
-	-- S15: 스테이지 선택(StageSelectPanel.lua). 견습 중에는 UIManager의 canOpen이 막는다. S16: 메뉴바도 견습 중 · 직업 선택 전에는 이 버튼을 숨긴다(menuHiddenWhile).
-	{ id = "stageSelect", kind = "station", hotkey = Enum.KeyCode.M, menuOrder = 3, iconKey = "stage", menuLabel = "스테이지", menuHiddenWhile = { "tutorial", "noClass" } },
-	{ id = "codex", kind = "window", hotkey = Enum.KeyCode.K, menuOrder = 4, iconKey = "codex", menuLabel = "도감", menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL1 P5 도감 v2(panels/Codex - 예약 K 펫 자리 → 도감 · 펫 창이 생기면 다른 키)
-	{ id = "quests", kind = "window", hotkey = Enum.KeyCode.J, menuOrder = 5, iconKey = "quest", menuLabel = "퀘스트", menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-10h Q7: 퀘스트 · 수련(panels/Quests - 보상 창 자리 J)
-	-- 예약(창이 없어 아직 등록하지 않는다 - 창을 만드는 세션이 한 줄 넣는다. PRD 20.81 [D-1] · [D-2]): O 상점(menuOrder 4) · K 펫(5) · J 보상(6번째부터는 "보상" 창의 탭으로 들어간다 - 출석 · 복귀 · 시즌패스 · 계절 토큰).
+	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.G, menuOrder = 1, iconKey = "bag", menuLabel = "가방", menuPinned = true },
+	{ id = "character", kind = "window", hotkey = Enum.KeyCode.C, menuOrder = 2, iconKey = "character", menuLabel = "캐릭터", menuPinned = true, menuHiddenWhile = { "noClass" } }, -- 성장 · 능력치 · 직업 변경(panels/Character)
+	{ id = "worldMap", kind = "window", hotkey = Enum.KeyCode.M, menuOrder = 3, iconKey = "map", menuLabel = "지도", menuPinned = true }, -- 전체 지도 · 핀 · 자동 이동 · 체크포인트(panels/WorldMapPanel)
+	-- S15: 구역(스테이지) 선택(StageSelectPanel.lua) - QUEUE-ALL2: 키 M → N · 이름 "구역 선택". 견습 중에는 UIManager의 canOpen이 막는다.
+	{ id = "stageSelect", kind = "station", hotkey = Enum.KeyCode.N, menuOrder = 4, iconKey = "zone_select", menuLabel = "구역 선택", menuHiddenWhile = { "tutorial", "noClass" } },
+	{ id = "quests", kind = "window", hotkey = Enum.KeyCode.J, menuOrder = 5, iconKey = "quest", menuLabel = "퀘스트", menuHiddenWhile = { "noClass" } }, -- QUEUE-10h Q7(panels/Quests) · QUEUE-ALL3 Q3 탭
+	{ id = "codex", kind = "window", hotkey = Enum.KeyCode.K, menuOrder = 6, iconKey = "codex", menuLabel = "도감", menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL1 P5 도감 v2(panels/Codex)
+	{ id = "training", kind = "window", hotkey = Enum.KeyCode.U, menuOrder = 7, iconKey = "training", menuLabel = "수련", menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL3 Q2(panels/Training - 옛 퀘스트 창 수련 줄)
+	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, menuOrder = 8, iconKey = "party", menuLabel = "파티", menuMore = true }, -- S12b 파티창(panels/Party.lua) · 친구 초대 = 창 맨 위
+	{ id = "leaderboard", kind = "window", hotkey = Enum.KeyCode.L, menuOrder = 9, iconKey = "rank", menuLabel = "순위", menuMore = true, opener = "Leaderboard" }, -- panels/Leaderboard(처음 열 때 짓는다)
+	{ id = "settings", kind = "window", menuOrder = 10, iconKey = "settings", menuLabel = "설정", menuMore = true, opener = "Settings" }, -- panels/Settings(분류 탭 · 단축키 보기)
 }
 
--- QUEUE-ALL1 R1: 창이 아닌 단축키(버튼 동작) - 패널 단축키 · 금지 키와 겹치면 validate가 error. 처리 = 그 버튼 코드(순위 = panels/Leaderboard · 귀환 = WorldClient).
+-- 창이 아닌 단축키(버튼 동작) - 패널 단축키 · 금지 키와 겹치면 validate가 error. 처리 = 그 버튼 코드(귀환 = WorldClient - 시전 중 다시 누르면 취소).
 PanelRegistry.actionKeys = {
-	{ id = "leaderboard", hotkey = Enum.KeyCode.L }, -- 순위 창 열기/닫기
-	{ id = "hubReturn", hotkey = Enum.KeyCode.H }, -- 허브 귀환
+	{ id = "hubReturn", hotkey = Enum.KeyCode.B }, -- QUEUE-ALL2: H → B(리그 오브 레전드 귀환 키)
 }
 
--- 메뉴바 칸 상한(PRD 20.81 [D-2]): 상시 5칸(가방 · 파티 · 상점 · 펫 · 보상). menuOrder가 있는 항목만 센다.
-PanelRegistry.menuSlotLimit = 5
+-- 메뉴 칸 상한(ref 16 "7개 넘으면 더보기"): menuMore가 아닌 menuOrder 항목만 센다.
+PanelRegistry.menuSlotLimit = 7
+
+-- 설정 "단축키 보기" 표(09 문서 B-3) - 패널 · 행동 키 + 전투 키(글자 = TextData)
+PanelRegistry.hotkeySheet = {
+	{ keys = "WASD · Space · Shift", text = "hotkeys.move" },
+	{ keys = "Q · E · R · T", text = "hotkeys.skills" },
+	{ keys = "Ctrl", text = "hotkeys.lock" },
+	{ keys = "F", text = "hotkeys.interact" },
+	{ keys = "B", text = "hotkeys.recall" },
+	{ keys = "G", text = "hotkeys.bag" },
+	{ keys = "C", text = "hotkeys.character" },
+	{ keys = "U", text = "hotkeys.training" },
+	{ keys = "M", text = "hotkeys.map" },
+	{ keys = "N", text = "hotkeys.zone" },
+	{ keys = "J", text = "hotkeys.quests" },
+	{ keys = "K", text = "hotkeys.codex" },
+	{ keys = "P", text = "hotkeys.party" },
+	{ keys = "L", text = "hotkeys.rank" },
+	{ keys = "X · Backspace", text = "hotkeys.close" },
+}
 
 function PanelRegistry.assertAllowed(keyCode, ownerId)
 	assert(not PanelRegistry.swallowedKeys[keyCode], ("PanelRegistry: %s는 엔진(기본 카메라 줌 키)이 먼저 가져가 단축키로 못 쓴다 - '%s'"):format(tostring(keyCode), tostring(ownerId)))
@@ -58,9 +82,9 @@ function PanelRegistry.validate(panels, actionKeys)
 			assert(not seenKeys[entry.hotkey], ("PanelRegistry: 단축키가 겹친다 - %s"):format(tostring(entry.hotkey)))
 			seenKeys[entry.hotkey] = true
 		end
-		if entry.menuOrder then
+		if entry.menuOrder and not entry.menuMore then
 			menuCount += 1
-			assert(menuCount <= PanelRegistry.menuSlotLimit, ("PanelRegistry: 메뉴바 칸이 %d개를 넘는다('%s') - 보상 창의 탭으로 넣어라 - PRD 20.81 [D-2]"):format(PanelRegistry.menuSlotLimit, entry.id))
+			assert(menuCount <= PanelRegistry.menuSlotLimit, ("PanelRegistry: 메뉴바 칸이 %d개를 넘는다('%s') - 더보기(menuMore)로 넣어라"):format(PanelRegistry.menuSlotLimit, entry.id))
 		end
 	end
 end
@@ -94,11 +118,11 @@ function PanelRegistry.hotkeyOf(id)
 	return entry and entry.hotkey or nil
 end
 
--- 메뉴바에 놓을 항목(menuOrder 순서, 사본 목록).
-function PanelRegistry.menuEntries()
+-- 메뉴바에 놓을 항목(menuOrder 순서, 사본 목록). more = true면 더보기 안 항목만 · 아니면 줄 위 항목만.
+function PanelRegistry.menuEntries(more)
 	local list = {}
 	for _, entry in ipairs(PanelRegistry.panels) do
-		if entry.menuOrder then
+		if entry.menuOrder and (entry.menuMore == true) == (more == true) then
 			table.insert(list, entry)
 		end
 	end

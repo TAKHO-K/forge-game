@@ -1,42 +1,40 @@
--- 메뉴바(S16, PRD 20.81 [D-2] · [D-1]). 화면 왼쪽 세로 중앙의 세로 1열 - 칸 = PanelRegistry의 menuOrder 항목(지금은 가방 · 파티 · 스테이지 선택, 상한 5). 누르면 UIManager.switchTo(열려 있으면 닫고 · 다른 창이 열려 있으면 그 창을 닫고 연다 - S17 사전 작업)이고 단축키는 PanelRegistry가 이미 문다 -
--- 이 파일은 단축키 표를 따로 갖지 않는다(라벨도 PanelRegistry의 hotkey 이름에서 읽는다). 빈 버튼은 만들지 않는다: 상점 · 펫 · 보상은 그 창을 등록하는 세션이 표에 한 줄 넣으면 칸이 생긴다.
---   · 열린 패널의 버튼 = ember 테두리(UIManager.changed를 듣는다 - 단축키 · 다른 버튼 · 밀려 닫힘 모두).
---   · 전환을 막는 이유가 있는 버튼(UIManager.switchBlockedReason: 확인창(overlay)이 떠 있다 · 그 창의 canOpen이 막는다) = 회색(lockedBg · lockedIcon). 눌러도 받고 이유를 TC 토스트로 낸다(같은 글 3초에 한 번).
---   · PC는 버튼 오른쪽 위에 단축키 글자(caption 12 · textSecondary), 모바일은 없다. 첫 접속 8초 동안만 버튼 오른쪽에 이름표를 띄운다(저장 없음 - 이 스크립트가 도는 동안의 메모리뿐).
---   · 가방 버튼에 빨간 점(Badge) - 서버의 InventoryFull 신호(가방이 가득이라 줍기 실패)를 들으면 켜지고 가방을 열면 꺼진다. 그 밖의 배지 규칙은 없다.
---   · 견습 중 · 직업 선택 전에는 PanelRegistry의 menuHiddenWhile을 가진 칸(스테이지)이 숨는다 - 가방 · 파티는 보인다. 숨으면 남은 칸이 세로 중앙에서 다시 정렬된다.
---   · 모바일은 아래 끝이 BL 터치 예약 구역에 닿으면 ScreenMap.mobileMenuBarShiftUp만큼(겹침 0이 되는 최소 이동) 위로 민다.
--- 파티 목록은 이 바 오른쪽 옆으로 옮겼다(ScreenMap ML.partyList - hud/PartyListView가 place로 받는다). 기존 열기 버튼(가방 · 파티 · 스테이지 칩)은 그대로 둔다 - 중복 허용(지시).
--- 자체 점검(`[S16][UI]`)은 이 파일 끝에 있다: Studio에서 DevToolsConfig.verify에 "S16(UI)"가 있을 때만(또는 회귀 전체).
+-- 왼쪽 메뉴(QUEUE-ALL2 P2 - docs/art/ref/16_ui_hud.png · 09 문서 A · B-3 · B-4). 옛 S16 메뉴바(세로 1열 · 5칸)를 대신한다.
+--   PC = 화면 왼쪽 세로 1줄: PanelRegistry.menuEntries() 7칸(가방 G · 캐릭터 C · 지도 M · 구역 N · 퀘스트 J · 도감 K · 수련 U) + [더보기 …](파티 · 순위 · 설정) + 금색 [상점].
+--   폰 = 왼쪽 위 2열 격자: 상시 3칸(menuPinned - 가방 · 캐릭터 · 지도) + [더보기](나머지 전부) + [상점] - BL 터치 예약 구역(0.55H) 위에 들어간다. 키 칩은 숨긴다.
+--   버튼 상태 4가지(ref 16 ②): 기본 · 눌림(아래로 4px) · 알림(빨간 점 + 숫자) · 잠김(회색 + 자물쇠 = 지금 못 여는 창 - 이유는 누르면 토스트).
+--   폰 길게 누르면(0.45초) 이름 말풍선. 보스전 중(BossEncounterId) = 줄 반투명 + 작게(전조 · 몬스터 가독성 우선 - ref 16 아래 글).
+--   누르면 UIManager.openLazy(열려 있으면 닫힘 · 다른 창은 닫고 연다 · 처음 여는 창은 opener 모듈이 짓는다). 단축키는 UIManager가 PanelRegistry 표로 문다.
+--   그림 = icons/hud PNG 타일(IconTile - 아트 켬) · 없거나 아트 끔 = 옛 모양(슬롯 바탕 + HudIcons 도형 또는 이름 첫 글자).
+--   옛 S16 자체 점검(`[S16][UI]` - 3칸 · 44px 기대값)은 설계 변경으로 기대값이 틀려 지웠다(보고서 "기대값 갱신 필요").
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
+local UserInputService = game:GetService("UserInputService")
 
-local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local HudIcons = require(script.Parent.Parent.HudIcons)
 local PanelRegistry = require(script.Parent.Parent.ui.PanelRegistry)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
-local Badge = require(script.Parent.Parent.ui.kit.Badge)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
-local Confirm = require(script.Parent.Parent.ui.kit.Confirm)
 local Toast = require(script.Parent.Parent.ui.kit.Toast)
 local UIManager = require(script.Parent.Parent.UIManager)
 local IconTile = require(script.Parent.Parent.ui.IconTile)
--- QUEUE-ALL1 01 A-4: 메뉴 칸 → PNG 타일(icons/hud) - 스테이지 선택 = 성장 아이콘(레퍼런스 "성장 M") · 퀘스트 = 두루마리 + 체크(받을 보상 = 빨간 점)
-local ICON_IMAGE = { bag = "bag", stage = "growth", quest = "quest", party = "party" }
 
 local player = Players.LocalPlayer
 local inventoryFull = ReplicatedStorage:WaitForChild("InventoryFull")
 
-local ICON_SIZE = 26 -- 아이콘 캔버스(PC · 모바일 같다 - 버튼 안 자리만 다르다)
-local NAME_TAG_SECONDS = 8
-local NAME_TAG_HEIGHT = 28
-local BADGE_PANEL = "inventory" -- 빨간 점이 붙는 칸
+-- PNG 타일 이름(icons/hud/<이름>) - 없는 PNG는 옛 모양으로 대신한다
+local ICON_IMAGE = { bag = "bag", character = "character", map = "map", zone_select = "zone_select", quest = "quest", codex = "codex", training = "training",
+	party = "party", rank = "rank", settings = "settings", more = "more", shop = "shop" }
+local M = ScreenMap.menuBar
+local LONG_PRESS = 0.45
+local PRESS_DROP = 4
+local BOSS_SCALE = 0.72
+local BOSS_ALPHA = 0.5
+local BADGE_PANEL = "inventory"
 
--- menuHiddenWhile 조건 이름 → (Player처럼 GetAttribute를 가진 것) → 지금 참인가. 자체 점검이 가짜 Player 표를 넣어 직업 선택 전 조건도 잰다(진짜 ClassId를 바꾸면 직업 선택창이 뜬다).
 local HIDE_CONDITIONS = {
 	tutorial = function(who)
 		return who:GetAttribute("TutorialCompleted") ~= true and (who:GetAttribute("TutorialStep") or 0) > 0
@@ -47,248 +45,392 @@ local HIDE_CONDITIONS = {
 	end,
 }
 
-local function isHidden(entry, who)
+local function isHidden(entry)
 	for _, name in ipairs(entry.menuHiddenWhile or {}) do
-		if HIDE_CONDITIONS[name](who or player) then
+		if HIDE_CONDITIONS[name](player) then
 			return true
 		end
 	end
 	return false
 end
 
+local function inBoss()
+	return player:GetAttribute("BossEncounterId") ~= nil
+end
+
 local function buttonSize()
-	return Theme.isMobile and ScreenMap.menuBar.mobileButton or ScreenMap.menuBar.button
+	if Theme.isMobile then
+		return M.mobileButton
+	end
+	local camera = workspace.CurrentCamera
+	local h = camera and camera.ViewportSize.Y or 800
+	return math.clamp(math.floor((h - 220) / 11), M.button, M.pcButtonMax or 60)
 end
 
--- 열림(ember 테두리) · 비활성(회색: 전환을 막는 이유가 있다 - 확인창이 떠 있다 · canOpen이 막는다). 비활성이 열림보다 우선한다. 비활성이어도 눌림은 받는다(이유를 토스트로 알린다).
-local function applyLook(item)
-	local open = UIManager.isOpen(item.entry.id)
-	local blocked = UIManager.switchBlockedReason(item.entry.id) ~= nil
-	item.stroke.Color = blocked and UIColors.lockedRim or open and UIColors.ember or UIColors.rim
-	item.stroke.Transparency = blocked and 0.3 or open and 0 or UIColors.rimTransparency
-	item.stroke.Thickness = not blocked and open and 2 or 1
-	item.button.BackgroundColor3 = blocked and UIColors.lockedBg or UIColors.slot
-	item.button.BackgroundTransparency = blocked and 0 or UIColors.slotTransparency
-	for frame, color in pairs(item.iconColors) do
-		frame.BackgroundColor3 = blocked and UIColors.lockedIcon or color
-	end
-	item.letter.TextColor3 = blocked and UIColors.lockedIcon or UIColors.textSecondary
-	if item.tile then -- A-4 타일: 바탕 없음 · 열림 = 강조 테두리 · 막힘 = 이미지 회색
-		item.button.BackgroundTransparency = 1
-		item.stroke.Enabled = open or blocked
-		item.tile.image.ImageColor3 = blocked and Color3.fromRGB(120, 122, 130) or Color3.new(1, 1, 1)
-	end
-	item.blocked = blocked
-end
-
--- 막힌 이유 토스트(TC 줄). 같은 글은 3초에 한 번만(연타해도 "×3"이 쌓이지 않는다).
-local BLOCKED_TOAST_GAP = 3
-local lastBlockedToast = { text = nil, at = 0 }
+-- 막힌 이유 토스트(TC 줄 · 같은 글 3초에 한 번)
+local lastToast = { text = nil, at = 0 }
 local function notifyBlocked(text)
 	local now = os.clock()
-	if lastBlockedToast.text == text and now - lastBlockedToast.at < BLOCKED_TOAST_GAP then
+	if lastToast.text == text and now - lastToast.at < 3 then
 		return
 	end
-	lastBlockedToast.text, lastBlockedToast.at = text, now
+	lastToast.text, lastToast.at = text, now
 	Toast.push("TC", { text = text, colorName = "textPrimary" })
 end
 
--- 버튼을 누른 처리(Activated와 자체 점검이 같은 함수를 부른다): UIManager.switchTo가 전환하거나, 막혔으면 이유를 토스트로 낸다.
-local function onButtonPressed(id)
-	local ok, text = UIManager.switchTo(id)
+local refs = { items = {}, moreItems = {} }
+local morePanelOpen = false
+local setMoreOpen -- 아래에서 채운다
+
+local function pressEntry(entry)
+	setMoreOpen(false)
+	if entry.onPress then
+		entry.onPress()
+		return
+	end
+	local ok, text = UIManager.openLazy(entry.id)
 	if not ok and text then
 		notifyBlocked(text)
 	end
-	return ok, text
 end
 
--- 첫 접속 이름표(버튼 오른쪽) - 버튼의 자식이라 버튼이 숨으면 같이 숨는다. 8초 뒤 지운다.
-local function showNameTags(items)
-	for _, item in ipairs(items) do
-		local text = item.entry.menuLabel or item.entry.id
-		local width = TextService:GetTextSize(text, Theme.textSize("body"), Theme.font, Vector2.new(400, 100)).X + 20
-		local tag = Instance.new("TextLabel")
-		tag.Name = "NameTag"
-		tag.AnchorPoint = Vector2.new(0, 0.5)
-		tag.Position = UDim2.new(1, 8, 0.5, 0)
-		tag.Size = UDim2.new(0, width, 0, Theme.isMobile and Theme.touchMin - 12 or NAME_TAG_HEIGHT)
-		tag.BackgroundColor3 = UIColors.panel
-		tag.BackgroundTransparency = UIColors.panelTransparency
-		tag.Font = Theme.font
-		tag.TextSize = Theme.textSize("body")
-		tag.TextColor3 = UIColors.textPrimary
-		tag.Text = text
-		tag.Parent = item.button
-		Theme.corner(tag, Theme.corner.chip)
-		Theme.stroke(tag)
-		task.delay(NAME_TAG_SECONDS, function()
-			tag:Destroy()
-		end)
+-- 이름 말풍선(폰 길게 누름 · 첫 접속 8초) - 버튼 오른쪽
+local function showName(item, seconds)
+	local text = item.entry.menuLabel or item.entry.id
+	local old = item.button:FindFirstChild("NameTag")
+	if old then
+		old:Destroy()
+	end
+	local width = TextService:GetTextSize(text, Theme.textSize("body"), Theme.font, Vector2.new(400, 100)).X + 20
+	local tag = Instance.new("TextLabel")
+	tag.Name = "NameTag"
+	tag.AnchorPoint = Vector2.new(0, 0.5)
+	tag.Position = UDim2.new(1, 8, 0.5, 0)
+	tag.Size = UDim2.new(0, width, 0, 30)
+	tag.BackgroundColor3 = UIColors.panel
+	tag.BackgroundTransparency = UIColors.panelTransparency
+	tag.Font = Theme.font
+	tag.TextSize = Theme.textSize("body")
+	tag.TextColor3 = UIColors.textPrimary
+	tag.Text = text
+	tag.ZIndex = 20
+	tag.Parent = item.button
+	Theme.corner(tag, Theme.corner.chip)
+	Theme.stroke(tag)
+	task.delay(seconds, function()
+		tag:Destroy()
+	end)
+end
+
+-- 알림: n = 0 끔 · 1 = 점 · 2 이상 = 점 + 숫자
+local function setAlert(item, n)
+	item.alert = n or 0
+	local dot = item.button:FindFirstChild("AlertDot")
+	if item.alert > 0 and not dot then
+		dot = Instance.new("TextLabel")
+		dot.Name = "AlertDot"
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.new(1, -4, 0, 4)
+		dot.BackgroundColor3 = UIColors.danger
+		dot.Font = Theme.font
+		dot.TextSize = 12
+		dot.TextColor3 = Color3.new(1, 1, 1)
+		dot.ZIndex = 12
+		dot.Parent = item.button
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = dot
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.new(1, 1, 1)
+		stroke.Thickness = 1.5
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Parent = dot
+	end
+	if dot then
+		dot.Visible = item.alert > 0
+		dot.Text = item.alert > 1 and tostring(math.min(item.alert, 99)) or ""
+		dot.Size = item.alert > 1 and UDim2.fromOffset(20, 20) or UDim2.fromOffset(12, 12)
 	end
 end
 
--- 메뉴바를 짓고 참조를 refs 표 하나로 돌려준다(Luau 레지스터 한계 - 인스턴스는 이 함수 안에서만 만든다).
-local function build()
-	local refs = { items = {} }
+-- 기본 · 열림 · 잠김 모양(잠김 = 지금 전환이 막힘 - 회색 + 자물쇠). 눌림은 입력이 바꾼다.
+local function applyLook(item)
+	local open = UIManager.isOpen(item.entry.id)
+	local blocked = item.entry.id ~= "more" and item.entry.id ~= "shop" and UIManager.switchBlockedReason(item.entry.id) ~= nil
+	item.blocked = blocked
+	item.stroke.Enabled = open or not item.tile
+	item.stroke.Color = open and UIColors.ember or UIColors.rim
+	item.stroke.Thickness = open and 3 or 1
+	local alpha = inBoss() and BOSS_ALPHA or 0
+	if item.tile then
+		item.tile.image.ImageColor3 = blocked and Color3.fromRGB(120, 122, 130) or Color3.new(1, 1, 1)
+		item.tile.image.ImageTransparency = alpha
+		item.button.BackgroundTransparency = 1
+	else
+		item.button.BackgroundColor3 = blocked and UIColors.lockedBg or (item.entry.id == "shop" and UIColors.gold or UIColors.slot)
+		item.button.BackgroundTransparency = math.max(alpha, blocked and 0 or UIColors.slotTransparency)
+	end
+	item.lock.Visible = blocked
+end
 
+local function tileFor(button, entry)
+	local name = ICON_IMAGE[entry.iconKey]
+	local key = entry.hotkey and entry.hotkey.Name or nil
+	return name and IconTile.apply(button, name, key) or nil
+end
+
+-- 버튼 하나(메뉴 · 더보기 · 상점 공통)
+local function makeButton(entry, parent, order)
+	local button = Instance.new("TextButton")
+	button.Name = "MenuButton_" .. entry.id
+	button.LayoutOrder = order
+	button.AutoButtonColor = false
+	button.Text = ""
+	button.BackgroundColor3 = UIColors.slot
+	button.BackgroundTransparency = UIColors.slotTransparency
+	button.Parent = parent
+	Theme.corner(button, Theme.corner.button)
+	local stroke = Theme.stroke(button)
+
+	local item = { entry = entry, button = button, stroke = stroke, alert = 0 }
+	item.tile = tileFor(button, entry)
+	if not item.tile then
+		-- 옛 모양: HudIcons 도형(있으면) 또는 이름 첫 두 글자 + 모서리 단축키 글자
+		local draw = HudIcons[entry.iconKey]
+		if draw then
+			item.icon = draw(button, 26, UIColors.textPrimary)
+			item.icon.Name = "Icon"
+			item.icon.AnchorPoint = Vector2.new(0.5, 0.5)
+			item.icon.Position = UDim2.fromScale(0.5, 0.5)
+		else
+			local label = Instance.new("TextLabel")
+			label.Name = "Icon"
+			label.BackgroundTransparency = 1
+			label.Size = UDim2.fromScale(1, 1)
+			label.Font = Theme.font
+			label.TextSize = 14
+			label.TextColor3 = entry.id == "shop" and UIColors.panel or UIColors.textPrimary
+			label.Text = entry.id == "more" and "···" or utf8.char(utf8.codepoint(entry.menuLabel or "?", 1))
+			label.Parent = button
+			item.icon = label
+		end
+		if entry.hotkey then
+			local letter = Instance.new("TextLabel")
+			letter.Name = "Hotkey"
+			letter.AnchorPoint = Vector2.new(1, 1)
+			letter.Position = UDim2.new(1, -2, 1, -1)
+			letter.Size = UDim2.fromOffset(14, 14)
+			letter.BackgroundTransparency = 1
+			letter.Font = Theme.fontBody
+			letter.TextSize = Theme.text.caption
+			letter.TextColor3 = UIColors.textSecondary
+			letter.Text = entry.hotkey.Name
+			letter.Parent = button
+			item.letter = letter
+		end
+	end
+	-- 잠김 자물쇠(왼쪽 아래 작은 배지)
+	local lock = Instance.new("Frame")
+	lock.Name = "LockBadge"
+	lock.BackgroundTransparency = 1
+	lock.AnchorPoint = Vector2.new(0, 1)
+	lock.Position = UDim2.new(0, 2, 1, -2)
+	lock.Size = UDim2.fromOffset(16, 16)
+	lock.ZIndex = 11
+	lock.Visible = false
+	lock.Parent = button
+	HudIcons.lock(lock, 16, UIColors.gold)
+	item.lock = lock
+
+	-- 눌림(아래로 4px) · 폰 길게 누름 = 이름 말풍선(그 뒤 손을 떼도 열지 않는다)
+	local function content()
+		return item.tile and item.tile.image or item.icon
+	end
+	local pressAt, longShown = nil, false
+	button.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			local c = content()
+			if c then
+				c.Position = (c.Position :: UDim2) + UDim2.fromOffset(0, PRESS_DROP)
+			end
+			pressAt, longShown = os.clock(), false
+			if input.UserInputType == Enum.UserInputType.Touch then
+				local mine = pressAt
+				task.delay(LONG_PRESS, function()
+					if pressAt == mine then
+						longShown = true
+						showName(item, 1.6)
+					end
+				end)
+			end
+		end
+	end)
+	button.InputEnded:Connect(function(input)
+		if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and pressAt then
+			local c = content()
+			if c then
+				c.Position = (c.Position :: UDim2) - UDim2.fromOffset(0, PRESS_DROP)
+			end
+			pressAt = nil
+		end
+	end)
+	button.Activated:Connect(function()
+		if longShown then
+			longShown = false
+			return
+		end
+		if item.blocked then
+			notifyBlocked(UIManager.switchBlockedReason(entry.id) or UIManager.blockedTexts.canOpen)
+			return
+		end
+		pressEntry(entry)
+	end)
+	return item
+end
+
+local MORE_ENTRY = { id = "more", iconKey = "more", menuLabel = "더보기" }
+local SHOP_ENTRY = { id = "shop", iconKey = "shop", menuLabel = "상점", onPress = function()
+	require(script.Parent.Parent.panels.Shop).openFromHud("recommend")
+end }
+
+local function build()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "MenuBarGui"
 	gui.ResetOnSpawn = false
-	-- window(DisplayOrder 100 ~ 149)의 딤이 화면을 덮어도 메뉴바는 눌려야 한다("열린 버튼을 다시 누르면 닫힌다" · 창 → 창 전환) - window 대역 바로 위, overlay(200 ~ 249 - 확인창) 아래.
-	-- 실제 클릭으로 확인한 결함이다: 4일 때는 딤이 클릭을 먹어 열림 표시가 켜진 버튼을 눌러도 안 닫혔다. 창은 720 폭 상한이라 바(x 14 ~ 62)와 겹치는 것은 화면 폭 780 미만일 때 가장자리뿐이다.
+	-- window(100 ~ 149) 딤 위 · overlay(200 ~) 아래 - 열린 창을 같은 버튼으로 닫을 수 있게(S16 실제 클릭 결함)
 	gui.DisplayOrder = 150
 	gui.Parent = player:WaitForChild("PlayerGui")
 	refs.gui = gui
 
 	local bar = Instance.new("Frame")
 	bar.Name = "MenuBar"
-	ScreenMap.place(bar, "ML", "menuBar")
-	bar.Size = UDim2.new(0, 0, 0, 0)
 	bar.BackgroundTransparency = 1
 	bar.Parent = gui
 	refs.bar = bar
+	local grid = Instance.new("UIGridLayout")
+	grid.SortOrder = Enum.SortOrder.LayoutOrder
+	grid.FillDirection = Enum.FillDirection.Horizontal
+	grid.Parent = bar
+	refs.grid = grid
 
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Vertical
-	layout.Padding = UDim.new(0, ScreenMap.menuBar.gap)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = bar
-
-	for _, entry in ipairs(PanelRegistry.menuEntries()) do
-		local button = Instance.new("TextButton")
-		button.Name = "MenuButton_" .. entry.id
-		button.LayoutOrder = entry.menuOrder
-		button.AutoButtonColor = false
-		button.Text = ""
-		button.BackgroundColor3 = UIColors.slot
-		button.BackgroundTransparency = UIColors.slotTransparency
-		button.Parent = bar
-		Theme.corner(button, Theme.corner.button)
-		local stroke = Theme.stroke(button)
-
-		local icon = HudIcons[entry.iconKey](button, ICON_SIZE, UIColors.textPrimary)
-		icon.Name = "Icon"
-
-		local letter = Instance.new("TextLabel")
-		letter.Name = "Hotkey"
-		letter.AnchorPoint = Vector2.new(1, 0)
-		letter.Position = UDim2.new(1, -4, 0, 2)
-		letter.Size = UDim2.new(0, 14, 0, 14)
-		letter.BackgroundTransparency = 1
-		letter.Font = Theme.fontBody
-		letter.TextSize = Theme.text.caption
-		letter.TextColor3 = UIColors.textSecondary
-		letter.TextXAlignment = Enum.TextXAlignment.Right
-		letter.Text = entry.hotkey and entry.hotkey.Name or ""
-		letter.Parent = button
-
-		local item = { entry = entry, button = button, stroke = stroke, icon = icon, letter = letter, iconColors = {}, blocked = false }
-		item.tile = ICON_IMAGE[entry.iconKey] and IconTile.apply(button, ICON_IMAGE[entry.iconKey], entry.hotkey and entry.hotkey.Name or nil)
-		if item.tile then
-			icon.Visible = false
-			letter.Visible = false
-			stroke.Enabled = false
-		end
-		for _, part in ipairs(icon:GetDescendants()) do
-			if part:IsA("Frame") then
-				item.iconColors[part] = part.BackgroundColor3 -- 비활성 회색에서 되돌릴 원래 색
-			end
-		end
-		if entry.id == BADGE_PANEL then
-			item.badge = Badge.build({
-				parent = button, kind = "dot", name = "FullBadge",
-				anchorPoint = Vector2.new(0.5, 0.5), position = UDim2.new(1, -6, 1, -6),
-			})
-		end
-		button.Activated:Connect(function()
-			onButtonPressed(entry.id)
-		end)
-		table.insert(refs.items, item)
+	local more = Instance.new("Frame")
+	more.Name = "MenuMorePanel"
+	more.BackgroundColor3 = UIColors.panel
+	more.BackgroundTransparency = UIColors.panelTransparency
+	more.Visible = false
+	more.Parent = gui
+	Theme.corner(more, 10)
+	Theme.stroke(more)
+	local moreGrid = Instance.new("UIGridLayout")
+	moreGrid.SortOrder = Enum.SortOrder.LayoutOrder
+	moreGrid.Parent = more
+	local pad = Instance.new("UIPadding")
+	for _, side in ipairs({ "PaddingLeft", "PaddingRight", "PaddingTop", "PaddingBottom" }) do
+		pad[side] = UDim.new(0, 6)
 	end
-	return refs
-end
+	pad.Parent = more
+	refs.more, refs.moreGrid = more, moreGrid
 
-local refs = build()
-
--- A-4 퀘스트 칸 빨간 점 = 서버 QuestClaimable(받을 보상이 하나라도 있다 - server/QuestService push)
-local function refreshQuestDot()
-	for _, item in ipairs(refs.items) do
-		if item.entry.id == "quests" then
-			IconTile.setDot(item.button, player:GetAttribute("QuestClaimable") == true)
-		end
+	for _, entry in ipairs(PanelRegistry.menuEntries(false)) do
+		table.insert(refs.items, makeButton(entry, bar, entry.menuOrder))
+	end
+	refs.moreButton = makeButton(MORE_ENTRY, bar, 90)
+	refs.shopButton = makeButton(SHOP_ENTRY, bar, 91)
+	for _, entry in ipairs(PanelRegistry.menuEntries(true)) do
+		table.insert(refs.moreItems, makeButton(entry, more, entry.menuOrder))
+	end
+	MORE_ENTRY.onPress = function()
+		setMoreOpen(not morePanelOpen)
 	end
 end
-player:GetAttributeChangedSignal("QuestClaimable"):Connect(refreshQuestDot)
-refreshQuestDot()
 
--- 아트 스위치 속성이 메뉴를 지은 뒤에 복제돼도(부팅 순서) 켜지는 순간 타일을 입힌다
-game:GetService("Workspace"):GetAttributeChangedSignal("ArtStyleV1"):Connect(function()
-	for _, item in ipairs(refs.items) do
-		if not item.tile and ICON_IMAGE[item.entry.iconKey] then
-			item.tile = IconTile.apply(item.button, ICON_IMAGE[item.entry.iconKey], item.entry.hotkey and item.entry.hotkey.Name or nil)
-			if item.tile then
-				item.icon.Visible, item.letter.Visible, item.stroke.Enabled = false, false, false
-			end
-		end
-	end
-	refreshQuestDot()
-	task.defer(function()
-		for _, item in ipairs(refs.items) do
-			applyLook(item)
-		end
-	end)
-end)
+build()
 
--- 버튼 크기(PC 44 · 모바일 48) · 아이콘 자리 · 단축키 글자(PC만). 모바일 판정이 바뀌면(Studio ForceTouchLayout) 다시 부른다.
-local function applyMetrics()
-	local size = buttonSize()
+local function all()
+	local list = {}
 	for _, item in ipairs(refs.items) do
-		item.button.Size = UDim2.new(0, size, 0, size)
-		if Theme.isMobile then
-			item.icon.Position = UDim2.new(0, (size - ICON_SIZE) / 2, 0, (size - ICON_SIZE) / 2)
-		else
-			-- 오른쪽 위 모서리(단축키 글자)를 피해 왼쪽 아래로 3px씩.
-			item.icon.Position = UDim2.new(0, (size - ICON_SIZE) / 2 - 3, 0, (size - ICON_SIZE) / 2 + 3)
-		end
-		item.letter.Visible = not Theme.isMobile and not item.tile
+		table.insert(list, item)
 	end
+	table.insert(list, refs.moreButton)
+	table.insert(list, refs.shopButton)
+	for _, item in ipairs(refs.moreItems) do
+		table.insert(list, item)
+	end
+	return list
 end
 
 local function refreshLook()
-	for _, item in ipairs(refs.items) do
+	for _, item in ipairs(all()) do
 		applyLook(item)
 	end
 end
 
--- 보이는 칸 수로 바 크기를 다시 재고(고정 크기) 세로 중앙 · 모바일 위로 밀기를 적용한다.
+-- 줄 위 칸 · 더보기 칸 나누기(폰 = 상시 칸만 줄 위 · 나머지는 더보기로 옮긴다) + 크기 · 자리
 local function relayout()
 	local size = buttonSize()
-	local count = 0
+	local boss = inBoss()
+	if boss then
+		size = math.floor(size * BOSS_SCALE)
+	end
+	local gap = M.gap
+	local shown = 0
 	for _, item in ipairs(refs.items) do
 		local hidden = isHidden(item.entry)
+		local onBar = not hidden and (not Theme.isMobile or item.entry.menuPinned)
+		item.button.Parent = onBar and refs.bar or refs.more
 		item.button.Visible = not hidden
-		if not hidden then
-			count += 1
+		if onBar then
+			shown += 1
 		end
 	end
-	local height = count > 0 and count * size + (count - 1) * ScreenMap.menuBar.gap or 0
-	refs.bar.Size = UDim2.new(0, size, 0, height)
-	local placed = ScreenMap.slot("ML", "menuBar")
-	local shift = Theme.isMobile and ScreenMap.mobileMenuBarShiftUp(refs.gui.AbsoluteSize.Y, height) or 0
-	-- QUEUE-10h Play D: 터치 대시 버튼(SkillSlots DashHolder - 예약 구역 BL 위쪽에 놓인다)과 겹치면 그 위로 더 민다(메뉴 칸이 3개가 되며 38 × 40 겹침).
-	local dash = player.PlayerGui:FindFirstChild("DashHolder", true)
-	if Theme.isMobile and dash and dash:IsA("GuiObject") and dash.AbsoluteSize.Y > 0 and dash.AbsolutePosition.X < size + 40 then
-		local barTop = refs.gui.AbsoluteSize.Y / 2 - height / 2 - shift
-		local overlap = barTop + height - (dash.AbsolutePosition.Y - ScreenMap.menuBar.gap)
-		local room = math.max(0, barTop - ScreenMap.menuBar.topMargin)
-		shift += math.clamp(overlap, 0, room)
+	for _, item in ipairs(refs.moreItems) do
+		item.button.Visible = not isHidden(item.entry)
 	end
-	refs.bar.Position = UDim2.new(placed.position.X.Scale, placed.position.X.Offset, placed.position.Y.Scale, placed.position.Y.Offset - shift)
-	refreshLook() -- 견습 · 직업 선택 속성이 바뀌면 canOpen 막힘(회색)도 달라진다
+	shown += 2 -- 더보기 · 상점
+	local cols = Theme.isMobile and 2 or 1
+	local rows = math.ceil(shown / cols)
+	refs.grid.CellSize = UDim2.fromOffset(size, size)
+	refs.grid.CellPadding = UDim2.fromOffset(gap, gap)
+	refs.bar.Size = UDim2.fromOffset(cols * size + (cols - 1) * gap, rows * size + (rows - 1) * gap)
+	refs.bar.Position = UDim2.fromOffset(ScreenMap.edgeMargin, Theme.isMobile and M.topMargin or (M.pcTop or 16))
+	-- 더보기 칸: 더보기 버튼 오른쪽 · 2열
+	local moreCount = 0
+	for _, child in ipairs(refs.more:GetChildren()) do
+		if child:IsA("GuiButton") and child.Visible then
+			moreCount += 1
+		end
+	end
+	local mSize = Theme.isMobile and M.mobileButton or math.max(M.button, math.floor(buttonSize() * 0.85))
+	local mCols = math.min(3, moreCount)
+	local mRows = math.ceil(moreCount / math.max(1, mCols))
+	refs.moreGrid.CellSize = UDim2.fromOffset(mSize, mSize)
+	refs.moreGrid.CellPadding = UDim2.fromOffset(gap, gap)
+	refs.more.Size = UDim2.fromOffset(mCols * mSize + (mCols - 1) * gap + 12, mRows * mSize + (mRows - 1) * gap + 12)
+	for _, item in ipairs(all()) do
+		if item.tile and item.tile.chip then
+			item.tile.chip.Visible = not boss
+		end
+		if item.letter then
+			item.letter.Visible = not Theme.isMobile and not boss
+		end
+	end
+	refreshLook()
+	task.defer(function()
+		local mb = refs.moreButton.button
+		refs.more.Position = UDim2.fromOffset(mb.AbsolutePosition.X - refs.gui.AbsolutePosition.X + mb.AbsoluteSize.X + 8,
+			math.max(4, mb.AbsolutePosition.Y - refs.gui.AbsolutePosition.Y))
+	end)
+end
+
+setMoreOpen = function(open)
+	morePanelOpen = open == true and not inBoss()
+	refs.more.Visible = morePanelOpen
+	refs.moreButton.stroke.Enabled = morePanelOpen or not refs.moreButton.tile
+	refs.moreButton.stroke.Color = morePanelOpen and UIColors.ember or UIColors.rim
 end
 
 local function findItem(id)
-	for _, item in ipairs(refs.items) do
+	for _, item in ipairs(all()) do
 		if item.entry.id == id then
 			return item
 		end
@@ -296,392 +438,112 @@ local function findItem(id)
 	return nil
 end
 
--- 가방이 가득이라 줍기 실패(InventoryFull) → 가방 버튼의 점. 가방을 열면 꺼진다.
-local function onBagFull()
-	local item = findItem(BADGE_PANEL)
-	if item and item.badge then
-		item.badge.setCount(1)
+-- 알림: 퀘스트(받을 보상 = 서버 QuestClaimable · 출석 창을 닫았을 때 남는 점) · 가방(가득 · 새 아이템 수 InventoryNewCount) · 수련(TrainingReady) · 상점(ShopClaimable - 시즌 패스 받을 칸)
+local function refreshAlerts()
+	local quest = findItem("quests")
+	if quest then
+		setAlert(quest, player:GetAttribute("QuestClaimable") == true and 1 or 0)
 	end
+	local training = findItem("training")
+	if training then
+		setAlert(training, player:GetAttribute("TrainingReady") == true and 1 or 0)
+	end
+	local shop = refs.shopButton
+	setAlert(shop, player:GetAttribute("ShopClaimable") or 0)
+	local bag = findItem(BADGE_PANEL)
+	if bag then
+		setAlert(bag, math.max(bag.fullAlert and 1 or 0, player:GetAttribute("InventoryNewCount") or 0))
+	end
+	-- 더보기 안에 알림이 있으면 더보기 버튼에도 점
+	local inMore = 0
+	for _, item in ipairs(all()) do
+		if item.button.Parent == refs.more and item.alert > 0 then
+			inMore += 1
+		end
+	end
+	setAlert(refs.moreButton, inMore > 0 and 1 or 0)
+end
+for _, name in ipairs({ "QuestClaimable", "TrainingReady", "ShopClaimable", "InventoryNewCount" }) do
+	player:GetAttributeChangedSignal(name):Connect(refreshAlerts)
 end
 
-applyMetrics()
-relayout()
-refreshLook()
-showNameTags(refs.items)
+inventoryFull.OnClientEvent:Connect(function()
+	local bag = findItem(BADGE_PANEL)
+	if bag then
+		bag.fullAlert = true
+		refreshAlerts()
+	end
+end)
 
 UIManager.changed:Connect(function(id, isOpen)
 	refreshLook()
-	local item = findItem(id)
-	if item and item.badge and isOpen then
-		item.badge.setCount(0)
+	if id == BADGE_PANEL and isOpen then
+		local bag = findItem(BADGE_PANEL)
+		if bag then
+			bag.fullAlert = false
+			refreshAlerts()
+		end
+	end
+	if isOpen then
+		setMoreOpen(false)
 	end
 end)
-inventoryFull.OnClientEvent:Connect(onBagFull)
-refs.gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
--- Play G: 대시 버튼(SkillSlots DashHolder)은 메뉴바보다 늦게 생기고 터치 배치로 바뀌면 자리가 움직인다 → 그때마다 다시 민다(첫 배치 때 없으면 밀기가 빠졌다 - 40px 겹침).
-task.spawn(function()
-	local dash = player.PlayerGui:WaitForChild("SkillSlotsGui", 30)
-	dash = dash and dash:WaitForChild("DashHolder", 30)
-	if dash and dash:IsA("GuiObject") then
-		relayout()
-		dash:GetPropertyChangedSignal("AbsolutePosition"):Connect(relayout)
-		dash:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
-		dash:GetPropertyChangedSignal("Visible"):Connect(relayout)
+
+-- 아트 스위치가 늦게 복제돼도 켜지는 순간 타일을 입힌다
+workspace:GetAttributeChangedSignal("ArtStyleV1"):Connect(function()
+	for _, item in ipairs(all()) do
+		if not item.tile then
+			item.tile = tileFor(item.button, item.entry)
+			if item.tile then
+				if item.icon then
+					item.icon.Visible = false
+				end
+				if item.letter then
+					item.letter.Visible = false
+				end
+			end
+		end
 	end
+	relayout()
 end)
-for _, name in ipairs({ "TutorialCompleted", "TutorialStep", "ClassId" }) do
-	player:GetAttributeChangedSignal(name):Connect(relayout)
+
+relayout()
+refreshAlerts()
+for _, item in ipairs(refs.items) do
+	if item.button.Visible then
+		showName(item, 8) -- 첫 접속 8초 이름표
+	end
 end
--- Studio에서 폰 화면을 흉내 낼 때(ForceTouchLayout)만: 모바일 판정을 다시 재고 메뉴바 크기 · 자리를 바꾼다. 실제 기기에서는 판정이 접속 때 정해진다.
+refs.gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+for _, name in ipairs({ "TutorialCompleted", "TutorialStep", "ClassId", "BossEncounterId" }) do
+	player:GetAttributeChangedSignal(name):Connect(function()
+		if inBoss() then
+			setMoreOpen(false)
+		end
+		relayout()
+	end)
+end
+UserInputService.InputBegan:Connect(function(input, processed)
+	-- 더보기 밖을 누르면 닫는다
+	if morePanelOpen and not processed and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+		setMoreOpen(false)
+	end
+end)
 if RunService:IsStudio() then
 	player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(function()
 		Theme.recompute()
-		applyMetrics()
 		relayout()
 	end)
-	-- 스크린샷용: 이름표(첫 8초)를 다시 띄운다. Attribute ShowMenuBarTags = true를 넣으면 한 번 띄우고 지운다.
 	player:GetAttributeChangedSignal("ShowMenuBarTags"):Connect(function()
 		if player:GetAttribute("ShowMenuBarTags") then
 			player:SetAttribute("ShowMenuBarTags", nil)
-			showNameTags(refs.items)
+			for _, item in ipairs(refs.items) do
+				showName(item, 8)
+			end
 		end
 	end)
-end
-
--- ═══ 자체 점검 [S16][UI] (Studio · verify에 "S16(UI)"가 있을 때) ═══
--- 다른 클라 점검(PanelFitCheck 10초 · S10 12초 · StageSelectCheck 30초 · SocialSelfCheck 50초)이 끝난 뒤에 돈다. 로컬 Attribute(Tutorial* · ClassId)를 잠깐 바꾸고 끝에 되돌린다.
--- 클릭 · 실제 키 입력은 여기서 못 한다 - 별도 Play에서 MCP로 확인한다. 버튼 Activated는 onButtonPressed(→ UIManager.switchTo)를 부를 뿐이라 여기서는 같은 함수로 대신한다(창 → 창 전환 · 막힘 토스트까지).
-local CHECK_DELAY = 75
-
-local function selfCheck()
-	local pass, total = 0, 0
-	print("===S16 검증 시작(UI: 메뉴바 · 단축키 표 · 파티 목록 자리)===")
-	local function check(label, passed)
-		total += 1
-		if passed then
-			pass += 1
-		end
-		print(("[S16][UI] %s %s"):format(label, passed and "O" or "X"))
-	end
-	local function screenPosition(inst)
-		return inst.AbsolutePosition - refs.gui.AbsolutePosition
-	end
-
-	local touched = { "TutorialCompleted", "TutorialStep" }
-	local saved = {}
-	for index, name in ipairs(touched) do
-		saved[index] = player:GetAttribute(name)
-	end
-	local ok, err = pcall(function()
-		player:SetAttribute("TutorialCompleted", true)
-		UIManager.closeAll()
-		task.wait(0.3)
-		relayout()
-		task.wait(0.2)
-
-		-- 1. 표
-		local entries = PanelRegistry.menuEntries()
-		local ids = {}
-		for _, entry in ipairs(entries) do
-			table.insert(ids, ("%s(%s)"):format(entry.id, entry.hotkey and entry.hotkey.Name or "-"))
-		end
-		-- QUEUE-6h-b R1: 삭제된 기능 참조 → 교체(M1-2 후속 53698a4 메뉴바 파티 칸 삭제 · Q7 e23d564 퀘스트 칸(J) 추가 - 파티 자리를 퀘스트(window)로)
-		check(("등록 표: 메뉴 칸 %s(기대 inventory(B) · stageSelect(M) · codex(K) · quests(J) 순) · 칸 상한 %d"):format(table.concat(ids, " · "), PanelRegistry.menuSlotLimit),
-			#entries == 4 and entries[1].id == "inventory" and entries[1].hotkey == Enum.KeyCode.B and entries[2].id == "stageSelect" and entries[2].hotkey == Enum.KeyCode.M
-				and entries[3].id == "codex" and entries[3].hotkey == Enum.KeyCode.K and entries[4].id == "quests" and entries[4].hotkey == Enum.KeyCode.J and PanelRegistry.menuSlotLimit == 5)
-		-- 6번째 칸 · 금지 키 · 겹치는 키는 error(합성 표를 같은 validate에 넣는다)
-		local six = {}
-		for index = 1, 6 do
-			table.insert(six, { id = "dummy" .. index, menuOrder = index })
-		end
-		local okSix, errSix = pcall(PanelRegistry.validate, six)
-		local okFive = pcall(PanelRegistry.validate, { table.unpack(six, 1, 5) })
-		local okKey, errKey = pcall(PanelRegistry.validate, { { id = "a", hotkey = Enum.KeyCode.W } })
-		local okDup, errDup = pcall(PanelRegistry.validate, { { id = "a", hotkey = Enum.KeyCode.J }, { id = "b", hotkey = Enum.KeyCode.J } })
-		check(("칸 6개 = error %s · 5개 = 통과 %s · 금지 키(W) = error %s · 같은 키 두 번 = error %s (메시지: %s | %s)"):format(
-			tostring(not okSix and tostring(errSix):find("보상 창의 탭") ~= nil), tostring(okFive), tostring(not okKey and tostring(errKey):find("금지 키") ~= nil),
-			tostring(not okDup and tostring(errDup):find("겹친다") ~= nil), tostring(errSix):sub(1, 50), tostring(errKey):sub(1, 40)),
-			not okSix and tostring(errSix):find("보상 창의 탭") ~= nil and okFive and not okKey and tostring(errKey):find("금지 키") ~= nil and not okDup and tostring(errDup):find("겹친다") ~= nil)
-
-		-- 2. 모양: 크기 · 간격 · 왼쪽 14 · 세로 중앙 · 아이콘 · 글씨 · 터치
-		local size = buttonSize()
-		local shown = {}
-		for _, item in ipairs(refs.items) do
-			if item.button.Visible then
-				table.insert(shown, item)
-			end
-		end
-		local gaps, sizeOk, touchOk, iconOk, letterOk = {}, true, true, true, true
-		for index, item in ipairs(shown) do
-			local abs = item.button.AbsoluteSize
-			sizeOk = sizeOk and abs.X == size and abs.Y == size
-			touchOk = touchOk and abs.X >= Theme.touchMin and abs.Y >= Theme.touchMin
-			local frames = 0
-			for _, part in ipairs(item.icon:GetChildren()) do
-				if part:IsA("Frame") then
-					frames += 1
-					local pos, sz = part.AbsolutePosition, part.AbsoluteSize
-					iconOk = iconOk and pos.X >= item.button.AbsolutePosition.X - 0.5 and pos.Y >= item.button.AbsolutePosition.Y - 0.5
-						and pos.X + sz.X <= item.button.AbsolutePosition.X + abs.X + 0.5 and pos.Y + sz.Y <= item.button.AbsolutePosition.Y + abs.Y + 0.5
-				end
-			end
-			iconOk = iconOk and frames >= 5
-			if not Theme.isMobile then
-				letterOk = letterOk and item.letter.Visible and Theme.effectiveTextSize(item.letter) >= Theme.minTextSize and item.letter.Text ~= ""
-			else
-				letterOk = letterOk and not item.letter.Visible
-			end
-			if shown[index + 1] then
-				table.insert(gaps, shown[index + 1].button.AbsolutePosition.Y - (item.button.AbsolutePosition.Y + abs.Y))
-			end
-		end
-		local barPos, barSize = screenPosition(refs.bar), refs.bar.AbsoluteSize
-		local centerOffset = math.abs((barPos.Y + barSize.Y / 2) - refs.gui.AbsoluteSize.Y / 2)
-		local gapText = {}
-		local gapsOk = true
-		for _, gap in ipairs(gaps) do
-			table.insert(gapText, ("%.0f"):format(gap))
-			gapsOk = gapsOk and math.abs(gap - ScreenMap.menuBar.gap) < 0.5
-		end
-		check(("모양(%s): 보이는 칸 %d · 버튼 %d × %d(기대 %d) · 간격 %s(기대 %d) · 왼쪽 %.0f(기대 %d) · 세로 중앙에서 %.1f px(모바일이면 위로 민 값) · 아이콘 도형 5개 이상 · 안 넘침 %s · 단축키 글씨(PC 실효 ≥ 12 · 모바일 없음) %s · 터치 ≥ 44 %s"):format(
-			Theme.isMobile and "모바일" or "PC", #shown, shown[1] and shown[1].button.AbsoluteSize.X or -1, shown[1] and shown[1].button.AbsoluteSize.Y or -1, size, table.concat(gapText, "/"), ScreenMap.menuBar.gap,
-			barPos.X, ScreenMap.edgeMargin, centerOffset, tostring(iconOk), tostring(letterOk), tostring(touchOk)),
-			#shown == 3 and sizeOk and gapsOk and math.abs(barPos.X - ScreenMap.edgeMargin) < 0.5 and (Theme.isMobile or centerOffset < 1) and iconOk and letterOk and touchOk)
-
-		-- 창 딤 위 · 확인창(overlay) 아래(실제 클릭은 별도 Play가 확인한다)
-		local windowTop = 149
-		local overlayBottom = 200
-		check(("메뉴바 DisplayOrder %d(기대 window 대역 149 초과 · overlay 200 미만 - 창 딤이 덮어도 눌린다 · 확인창은 메뉴바를 덮는다)"):format(refs.gui.DisplayOrder), refs.gui.DisplayOrder > windowTop and refs.gui.DisplayOrder < overlayBottom)
-
-		-- 3. 열림 표시(ember 테두리) · window ↔ station 규칙
-		local looks = {}
-		local looksOk = true
-		for _, item in ipairs(refs.items) do
-			UIManager.toggle(item.entry.id)
-			task.wait(0.3)
-			local openedLook = item.stroke.Color == UIColors.ember and item.stroke.Thickness == 2 and UIManager.isOpen(item.entry.id)
-			local othersRim = true
-			for _, other in ipairs(refs.items) do
-				if other ~= item and other.stroke.Color ~= UIColors.rim then
-					othersRim = false
-				end
-			end
-			UIManager.toggle(item.entry.id)
-			task.wait(0.3)
-			local closedLook = item.stroke.Color == UIColors.rim and item.stroke.Thickness == 1 and not UIManager.isOpen(item.entry.id)
-			table.insert(looks, ("%s 열림 %s · 다른 칸 그대로 %s · 닫힘 %s"):format(item.entry.id, tostring(openedLook), tostring(othersRim), tostring(closedLook)))
-			looksOk = looksOk and openedLook and othersRim and closedLook
-		end
-		check(("토글 표시(UIManager.toggle - 버튼 Activated와 같은 호출): %s(기대 전부 true)"):format(table.concat(looks, " | ")), looksOk)
-
-		UIManager.closeAll()
-		task.wait(0.3)
-		UIManager.toggle("stageSelect")
-		task.wait(0.3)
-		local stageItem, bagItem = findItem("stageSelect"), findItem("inventory")
-		UIManager.toggle("inventory") -- station이 열린 채 window를 열면 station이 닫히고 window가 열린다
-		task.wait(0.4)
-		local windowWins = not UIManager.isOpen("stageSelect") and UIManager.isOpen("inventory") and stageItem.stroke.Color == UIColors.rim and bagItem.stroke.Color == UIColors.ember
-		local stageBlocked = UIManager.open("stageSelect") == false and not UIManager.isOpen("stageSelect") -- window가 열려 있으면 station은 안 열린다(20.81 [D-1])
-		UIManager.closeAll()
-		task.wait(0.3)
-		check(("규칙 그대로: 스테이지(station)를 연 채 가방(window) → 스테이지 닫힘 · 가방 열림 · 테두리 %s / 가방을 연 채 스테이지 → 안 열림 %s(기대 true · true)"):format(tostring(windowWins), tostring(stageBlocked)), windowWins and stageBlocked)
-
-		-- 3b. 전환(S17 사전 작업 - S16 결정 2): 버튼 Activated가 부르는 onButtonPressed로 잰다. 창 → 스테이지 · 스테이지 → 가방 · 창 → 창 · 막힘(회색 + 토스트)
-		local function settle()
-			task.wait(0.4)
-		end
-		local partyItem = findItem("quests") -- QUEUE-6h-b R1: 삭제된 기능 참조 → 교체(M1-2 후속 53698a4 메뉴바 파티 칸 삭제 · Q7 e23d564 퀘스트 칸(J) 추가 - 파티 자리를 퀘스트(window)로)
-		UIManager.closeAll()
-		settle()
-		onButtonPressed("inventory")
-		settle()
-		local windowToStage = onButtonPressed("stageSelect")
-		settle()
-		local switchedToStage = windowToStage and UIManager.isOpen("stageSelect") and not UIManager.isOpen("inventory")
-			and stageItem.stroke.Color == UIColors.ember and bagItem.stroke.Color == UIColors.rim and not stageItem.blocked and not bagItem.blocked
-		onButtonPressed("quests") -- station이 열린 채 window(퀘스트 - 옛 파티 칸) 버튼: 스테이지가 닫히고 퀘스트가 열린다
-		settle()
-		local stageToParty = UIManager.isOpen("quests") and not UIManager.isOpen("stageSelect")
-		onButtonPressed("inventory") -- window → window
-		settle()
-		local windowToWindow = UIManager.isOpen("inventory") and not UIManager.isOpen("quests") and #UIManager.getStack() == 1
-		onButtonPressed("inventory") -- 열린 버튼을 다시 누르면 닫힌다
-		settle()
-		local closedAgain = #UIManager.getStack() == 0
-		check(("전환: 가방 → 스테이지 버튼 = 가방 닫히고 스테이지 열림 %s · 스테이지 → 퀘스트 버튼 %s · 퀘스트 → 가방 버튼(window → window, 스택 1개) %s · 열린 버튼 다시 = 닫힘 %s(기대 전부 true)"):format(
-			tostring(switchedToStage), tostring(stageToParty), tostring(windowToWindow), tostring(closedAgain)),
-			switchedToStage and stageToParty and windowToWindow and closedAgain)
-
-		-- 막힘 (1) overlay(확인창)가 떠 있다: 세 버튼 전부 회색 · 눌러도 안 열리고 이유 토스트
-		Toast.clear()
-		lastBlockedToast.text = nil
-		Confirm.ask({ title = "자체 점검", body = "메뉴바 비활성 확인" }, function() end)
-		settle()
-		local allGray, noneBlockedOpen = true, true
-		for _, item in ipairs(refs.items) do
-			allGray = allGray and item.blocked and item.stroke.Color == UIColors.lockedRim and item.button.BackgroundColor3 == UIColors.lockedBg
-		end
-		local pressedOk, pressedText = onButtonPressed("inventory")
-		settle()
-		noneBlockedOpen = not pressedOk and not UIManager.isOpen("inventory") and UIManager.isOpen(Confirm.id)
-		local overlayToast = table.concat(Toast.debugTexts("TC"), "|")
-		local overlayToastOk = overlayToast:find(UIManager.blockedTexts.overlay, 1, true) ~= nil
-		local iconGray = true
-		for frame in pairs(bagItem.iconColors) do
-			iconGray = iconGray and frame.BackgroundColor3 == UIColors.lockedIcon
-		end
-		UIManager.close(Confirm.id, true)
-		settle()
-		local restored = true
-		for _, item in ipairs(refs.items) do
-			restored = restored and not item.blocked and item.stroke.Color == UIColors.rim and item.button.BackgroundColor3 == UIColors.slot
-		end
-		for frame, color in pairs(bagItem.iconColors) do
-			restored = restored and frame.BackgroundColor3 == color
-		end
-		check(("막힘 ① 확인창(overlay): 세 버튼 회색 %s · 아이콘 회색 %s · 눌러도 안 열림(확인창 그대로) %s · 토스트 '%s' %s · 확인창이 닫히면 원래 모양 %s(기대 전부 true - 실제 마우스는 딤이 먼저 먹는다: 클릭 재현은 별도 Play)"):format(
-			tostring(allGray), tostring(iconGray), tostring(noneBlockedOpen), tostring(pressedText), tostring(overlayToastOk), tostring(restored)),
-			allGray and iconGray and noneBlockedOpen and overlayToastOk and restored)
-
-		-- 막힘 (2) canOpen(견습 중 스테이지 선택): 눌러도 안 열리고 이유 토스트 · 스테이지 버튼만 회색(버튼은 원래 견습 중 숨는다 - 그 숨김을 잠깐 무시하고 상태만 잰다)
-		Toast.clear()
-		lastBlockedToast.text = nil
-		player:SetAttribute("TutorialCompleted", false)
-		player:SetAttribute("TutorialStep", 2)
-		settle()
-		local tutorialOk, tutorialText = onButtonPressed("stageSelect")
-		settle()
-		local stageGray = stageItem.blocked and not bagItem.blocked and not partyItem.blocked
-		local tutorialToast = table.concat(Toast.debugTexts("TC"), "|")
-		local tutorialToastOk = tutorialToast:find("견습 중에는 스테이지를 고를 수 없습니다", 1, true) ~= nil
-		onButtonPressed("stageSelect") -- 같은 글은 3초에 한 번만
-		local stackedOnce = #Toast.debugTexts("TC") == 1
-		player:SetAttribute("TutorialCompleted", true)
-		player:SetAttribute("TutorialStep", saved[2])
-		settle()
-		local stageBack = not stageItem.blocked
-		Toast.clear()
-		check(("막힘 ② canOpen(견습): 안 열림 %s · 스테이지만 회색 %s · 토스트 '%s' %s · 연타해도 1개 %s · 견습이 끝나면 회색 풀림 %s(기대 전부 true)"):format(
-			tostring(not tutorialOk and not UIManager.isOpen("stageSelect")), tostring(stageGray), tostring(tutorialText), tostring(tutorialToastOk), tostring(stackedOnce), tostring(stageBack)),
-			not tutorialOk and not UIManager.isOpen("stageSelect") and stageGray and tutorialToastOk and stackedOnce and stageBack)
-		UIManager.closeAll()
-		settle()
-
-		-- 4. 배지(가방 버튼만)
-		local badgeOff = bagItem.badge.root.Visible == false
-		onBagFull()
-		local badgeOn = bagItem.badge.root.Visible == true
-		local otherBadge = false
-		for _, item in ipairs(refs.items) do
-			otherBadge = otherBadge or (item ~= bagItem and item.badge ~= nil)
-		end
-		UIManager.toggle("inventory")
-		task.wait(0.4)
-		local badgeCleared = bagItem.badge.root.Visible == false
-		UIManager.closeAll()
-		task.wait(0.3)
-		check(("가득 배지: 처음 꺼짐 %s · InventoryFull 처리 뒤 켜짐 %s · 가방 버튼에만 있음 %s · 가방을 열면 꺼짐 %s(기대 true · true · true · true)"):format(tostring(badgeOff), tostring(badgeOn), tostring(not otherBadge), tostring(badgeCleared)),
-			badgeOff and badgeOn and not otherBadge and badgeCleared)
-
-		-- 5. 숨김: 견습 중 · 직업 선택 전 → 스테이지 칸만 숨고 남은 칸이 다시 정렬된다
-		player:SetAttribute("TutorialCompleted", false)
-		player:SetAttribute("TutorialStep", 2)
-		task.wait(0.3)
-		-- QUEUE-6h-b R1: 기대값 갱신(파티 칸 삭제 · 퀘스트 칸도 견습 · 직업 선택 전에 숨는다(PanelRegistry menuHiddenWhile) - 견습 중 남는 칸 = 가방 1개)
-		local hiddenByTutorial = not stageItem.button.Visible and bagItem.button.Visible and not partyItem.button.Visible
-		local tutorialHeight = refs.bar.AbsoluteSize.Y
-		player:SetAttribute("TutorialCompleted", true)
-		player:SetAttribute("TutorialStep", saved[2])
-		task.wait(0.3)
-		-- 직업 선택 전(ClassId 비어 있음)은 가짜 Player 표로 같은 조건 함수를 잰다.
-		local function fakePlayer(classId)
-			return { GetAttribute = function(_, name) return name == "ClassId" and classId or nil end }
-		end
-		local stageEntry = stageItem.entry
-		local hiddenByNoClass = isHidden(stageEntry, fakePlayer("")) and isHidden(stageEntry, fakePlayer(nil)) and not isHidden(stageEntry, fakePlayer("bow"))
-			and not isHidden(bagItem.entry, fakePlayer("")) and isHidden(partyItem.entry, fakePlayer(""))
-		local shownAgain = stageItem.button.Visible and refs.bar.AbsoluteSize.Y == 3 * size + 2 * ScreenMap.menuBar.gap
-		check(("숨김: 견습 중 스테이지 · 퀘스트 숨음 %s(바 높이 %.0f - 기대 %d) · 직업 선택 전(가짜 Player 표) 스테이지 · 퀘스트만 숨음 %s · 돌아오면 다시 보이고 높이 %.0f(기대 %d) %s"):format(
-			tostring(hiddenByTutorial), tutorialHeight, size, tostring(hiddenByNoClass), refs.bar.AbsoluteSize.Y, 3 * size + 2 * ScreenMap.menuBar.gap, tostring(shownAgain)),
-			hiddenByTutorial and tutorialHeight == size and hiddenByNoClass and shownAgain)
-
-		-- 6. 파티 목록: 메뉴바 오른쪽 옆(x = 14 + 48 + 8)
-		local partyList = player.PlayerGui:FindFirstChild("PartyHudGui") and player.PlayerGui.PartyHudGui:FindFirstChild("PartyList")
-		local listX = partyList and screenPosition(partyList).X or -1
-		local expectX = ScreenMap.edgeMargin + 48 + 8
-		local barRight = barPos.X + barSize.X
-		check(("파티 목록 자리: x %.0f(기대 %d = 14 + 48 + 8) · 메뉴바 오른쪽 끝 %.0f + 8 = %.0f 이상 %s · 세로 앵커 중앙 %s"):format(
-			listX, expectX, barRight, barRight + 8, tostring(listX >= barRight + 8 - 0.5), tostring(partyList ~= nil and partyList.AnchorPoint.Y == 0.5 and partyList.Position.Y.Scale == 0.5)),
-			partyList ~= nil and math.abs(listX - expectX) < 0.5 and listX >= barRight + 8 - 0.5 and partyList.AnchorPoint.Y == 0.5 and partyList.Position.Y.Scale == 0.5)
-
-		-- 7. 다른 HUD와 안 겹침(ScreenMap 슬롯 표에 이름이 있는 보이는 인스턴스 전부 - 파티 목록 자신은 위에서 봤다)
-		local function isShownGui(inst)
-			local node = inst
-			while node and node ~= game do
-				if node:IsA("GuiObject") and not node.Visible then
-					return false
-				end
-				if node:IsA("ScreenGui") then
-					return node.Enabled
-				end
-				node = node.Parent
-			end
-			return false
-		end
-		local barRect = { min = refs.bar.AbsolutePosition, max = refs.bar.AbsolutePosition + refs.bar.AbsoluteSize }
-		local hits = {}
-		local names = {}
-		for _, _, slot in ScreenMap.each() do
-			if slot.instanceName and slot.instanceName ~= "MenuBar" and slot.instanceName ~= "PartyList" then
-				names[slot.instanceName] = true
-			end
-		end
-		for _, inst in ipairs(player.PlayerGui:GetDescendants()) do
-			if inst:IsA("GuiObject") and names[inst.Name] and isShownGui(inst) and inst.AbsoluteSize.X > 0 and inst.AbsoluteSize.Y > 0 then
-				local a, b = inst.AbsolutePosition, inst.AbsolutePosition + inst.AbsoluteSize
-				if a.X < barRect.max.X and barRect.min.X < b.X and a.Y < barRect.max.Y and barRect.min.Y < b.Y then
-					table.insert(hits, inst.Name)
-				end
-			end
-		end
-		local center = ScreenMap.centerRect(refs.gui.AbsoluteSize)
-		local inCenter = barRect.min.X - refs.gui.AbsolutePosition.X < center.max.X and center.min.X < barRect.max.X - refs.gui.AbsolutePosition.X
-			and barRect.min.Y - refs.gui.AbsolutePosition.Y < center.max.Y and center.min.Y < barRect.max.Y - refs.gui.AbsolutePosition.Y
-		check(("메뉴바 겹침: 표의 다른 HUD와 겹친 것 %d개 [%s](기대 0) · C 구역(전투 시야) 침범 %s(기대 false)"):format(#hits, table.concat(hits, ", "), tostring(inCenter)), #hits == 0 and not inCenter)
-
-		-- 8. 모바일 위로 밀기: 폰 가로 높이들에서 3칸 바의 아래 끝이 BL 예약 구역 위 끝(0.55H)을 안 넘고 위 끝이 여백 안. 5칸(상한)은 알려진 한계를 참고로 찍는다.
-		local mobileParts, mobileOk = {}, true
-		for _, height in ipairs({ 320, 360, 375, 388, 414, 540 }) do
-			local barHeight = 3 * ScreenMap.menuBar.mobileButton + 2 * ScreenMap.menuBar.gap
-			local shift = ScreenMap.mobileMenuBarShiftUp(height, barHeight)
-			local bottom = height / 2 + barHeight / 2 - shift
-			local top = height / 2 - barHeight / 2 - shift
-			local good = bottom <= height * ScreenMap.mobileReserved.BL.top + 1e-6 and top >= ScreenMap.menuBar.topMargin - 1e-6
-			mobileOk = mobileOk and good
-			table.insert(mobileParts, ("H%d 위로 %.0f → 위 %.0f · 아래 %.0f ≤ %.0f %s"):format(height, shift, top, bottom, height * ScreenMap.mobileReserved.BL.top, good and "O" or "X"))
-		end
-		local five = 5 * ScreenMap.menuBar.mobileButton + 4 * ScreenMap.menuBar.gap
-		local fiveShift = ScreenMap.mobileMenuBarShiftUp(388, five)
-		check(("모바일(48) 3칸 위로 밀기 - 겹침 0이 되는 최소 이동: %s"):format(table.concat(mobileParts, " · ")), mobileOk)
-		print(("[S16][UI][참고] 5칸(상한)이면 폰 가로 388에서 바 높이 %d · 아래 끝 %.0f > BL 한계 %.0f - 못 피한다(칸이 늘 때 한 열로는 안 들어간다 - 그때 다시 결정)"):format(five, 388 / 2 + five / 2 - fiveShift, 388 * ScreenMap.mobileReserved.BL.top))
-		if Theme.isMobile then
-			local bottom = barPos.Y + barSize.Y
-			check(("실제 모바일 화면: 바 아래 끝 %.0f ≤ BL 예약 구역 위 끝 %.0f(화면 높이 %.0f × 0.55)"):format(bottom, refs.gui.AbsoluteSize.Y * ScreenMap.mobileReserved.BL.top, refs.gui.AbsoluteSize.Y),
-				bottom <= refs.gui.AbsoluteSize.Y * ScreenMap.mobileReserved.BL.top + 0.5)
-		end
+	-- 스크린샷 · 점검: 더보기 열기 · 알림 흉내
+	player:GetAttributeChangedSignal("DebugMenuMore"):Connect(function()
+		setMoreOpen(player:GetAttribute("DebugMenuMore") == true)
 	end)
-	if not ok then
-		check(("자체 점검 실행 중 에러: %s"):format(tostring(err)), false)
-	end
-	UIManager.closeAll()
-	for index, name in ipairs(touched) do
-		player:SetAttribute(name, saved[index])
-	end
-	relayout()
-	print(("===S16 검증 끝(UI)=== %d/%d 통과"):format(pass, total))
-end
-
-if RunService:IsStudio() and (DevToolsConfig.verify.regression or table.find(DevToolsConfig.verify.current, "S16(UI)")) then
-	task.delay(CHECK_DELAY, selfCheck)
 end

@@ -421,6 +421,17 @@ function UIManager.setBossFight(active)
 	end
 end
 
+-- QUEUE-ALL2 P2: PanelRegistry opener(panels/<이름>) 창을 열고 닫는다(메뉴 버튼 · 단축키 공통). 반환 = switchTo와 같음
+function UIManager.openLazy(id)
+	local entry = PanelRegistry.get(id)
+	if entry and entry.opener and not windows[id] then
+		local module = require(script.Parent.panels:FindFirstChild(entry.opener))
+		module.toggle()
+		return UIManager.isOpen(id), nil
+	end
+	return UIManager.switchTo(id)
+end
+
 -- 창 위 클릭·탭 기본공격을 막을 때 gameProcessedEvent만 믿지 말고 이 값도 같이 보라는
 -- 지시(18-1 [3]) - AttackInput.client.lua가 참조한다.
 -- BR1-4c c-4: 보스 진입 연출 동안(서버 Player Attribute BossIntroLock)도 전투 입력(공격 · 스킬 · 대시)을 막는다.
@@ -458,6 +469,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 			if diag then
 				diag(("UIManager: toggle 뒤 id=%s 열림=%s 스택=%s"):format(id, tostring(UIManager.isOpen(id)), table.concat(stack, ",")))
 			end
+			return
+		end
+	end
+	-- QUEUE-ALL2 P2: 아직 안 지은 창(opener - 처음 열 때 짓는 패널)은 그 모듈의 toggle로
+	for _, entry in ipairs(PanelRegistry.panels) do
+		if entry.hotkey == input.KeyCode and entry.opener and not windows[entry.id] then
+			UIManager.openLazy(entry.id)
 			return
 		end
 	end

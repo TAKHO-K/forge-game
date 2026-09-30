@@ -83,8 +83,8 @@ ScreenMap.slots = {
 	ML = {
 		-- S16: 파티 목록은 메뉴바 오른쪽 옆(x = 14 + 48 + 8 - 모바일 버튼 폭 48 기준이라 PC(44)에서는 4px 더 뜬다)으로 옮겼다.
 		-- S18: hud/PartyList.client.lua(뷰 = hud/PartyListView.lua) - PC 폭 220 · 멤버 블록 = ListRow(40) + Gauge(10) / 모바일 축약형 폭 96 · 체력 줄만(행 44) - 모바일은 아래 끝이 BL 터치 예약 구역에 닿으면 위로 밀린다(메뉴바와 같은 규칙).
-		partyList = slot("existing", 0, 0.5, UDim2.new(0, ScreenMap.edgeMargin + 48 + 8, 0.5, 0), nil, "PartyList", "hud/PartyList.client.lua - 세로 중앙 · 메뉴바 오른쪽 옆(S16) · 크기는 멤버 수 · 경험치 칩으로 정해진다(AutomaticSize)"),
-		menuBar = slot("existing", 0, 0.5, UDim2.new(0, ScreenMap.edgeMargin, 0.5, 0), nil, "MenuBar",
+		partyList = slot("existing", 0, 0.5, UDim2.new(0, ScreenMap.edgeMargin + 60 + 8, 0.5, 0), nil, "PartyList", "hud/PartyList.client.lua - 세로 중앙 · 메뉴바 오른쪽 옆(S16) · 크기는 멤버 수 · 경험치 칩으로 정해진다(AutomaticSize)"),
+		menuBar = slot("existing", 0, 0, UDim2.new(0, ScreenMap.edgeMargin, 0, 16), nil, "MenuBar", -- QUEUE-ALL2 P2: 왼쪽 위부터(7칸 + 더보기 + 상점 · 폰 2열 5칸)
 			"hud/MenuBar.client.lua(S16) - 세로 1열 · 버튼 44(모바일 48) · 간격 6 · 칸 = PanelRegistry의 menuOrder(상한 5) · 크기는 보이는 칸 수로 정해진다(고정 크기 - 칸이 숨거나 나타날 때 다시 잰다). 모바일은 아래 끝이 BL 터치 예약 구역(위 끝 = 화면 높이 × 0.55)에 닿으면 mobileMenuBarShiftUp만큼 위로 민다"),
 	},
 	BL = {
@@ -118,7 +118,7 @@ ScreenMap.mobileReserved = {
 }
 
 -- 메뉴바 규격(PRD 20.81 [D-2]): 버튼 44 × 44(모바일 48) · 간격 6 · 위로 밀 때 화면 위 끝에서 남기는 여백.
-ScreenMap.menuBar = { button = 44, mobileButton = 48, gap = 6, topMargin = 8 }
+ScreenMap.menuBar = { button = 44, mobileButton = 48, gap = 6, topMargin = 8, pcTop = 16, pcButtonMax = 60 } -- QUEUE-ALL2 P2: PC 버튼 = 화면 높이로 44 ~ 60 · 왼쪽 위(pcTop)부터 · 폰 = 왼쪽 위 2열
 
 -- 모바일에서 세로 중앙에 놓인 메뉴바(높이 barHeight)의 아래 끝이 BL 터치 예약 구역 위 끝(화면 높이 × mobileReserved.BL.top)에 닿으면, 닿지 않을 만큼(= 겹침이 0이 되는 최소 이동)만 위로 민다.
 -- 위 끝이 topMargin 아래로는 못 올라간다 - 그래도 못 피하면(칸이 많고 화면이 낮을 때) 밀 수 있는 만큼만 민다(그 경우는 자체 점검이 X로 찍는다). 반환 = 올릴 px(0 이상).
