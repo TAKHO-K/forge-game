@@ -5,6 +5,8 @@ return {
 	ko = {
 		-- A2-N4 §4-4 파티 모집 게시판
 		["party.board.title"] = "파티 모집",
+		["party.inviteTop"] = "친구 초대 · 둘 다 보상",
+		["party.invitePrompt"] = "첫 보스 처치! 친구를 초대하면 둘 다 보상을 받아요 (P)",
 		["party.board.open"] = "모집 게시판",
 		["party.board.posted"] = "모집을 올렸습니다 - 다른 사람이 빠른 참가로 들어옵니다",
 		["party.board.row"] = "스테이지 {stage} · {role} · {count}/{size}명",

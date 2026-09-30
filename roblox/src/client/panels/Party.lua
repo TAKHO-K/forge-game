@@ -19,6 +19,7 @@ local PlayerMenu = require(script.Parent.PlayerMenu)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local PartyAway = require(script.Parent.Parent.hud.PartyAway)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
+local Toast = require(script.Parent.Parent.ui.kit.Toast)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 
 local Party = {}
@@ -48,6 +49,19 @@ end
 local function isMeLeader()
 	return partyState ~= nil and partyState.leaderUserId == player.UserId
 end
+
+-- QUEUE-ALL2 P2 B-4 ②: 첫 보스(스테이지 5) 처치 뒤 1회 안내(이번 접속 · 계정당 한 번 넘어가는 순간) - 누르면 파티 창
+player:GetAttributeChangedSignal("BestBossCleared"):Connect(function()
+	local best = player:GetAttribute("BestBossCleared") or 0
+	if best >= 5 and not Party.invitePromptShown and (Party.lastBest or 0) < 5 and Party.lastBest ~= nil then
+		Party.invitePromptShown = true
+		Toast.push("TC", { text = Text.get("party.invitePrompt"), colorName = "gold" })
+	end
+	Party.lastBest = best
+end)
+task.defer(function()
+	Party.lastBest = player:GetAttribute("BestBossCleared") or 0
+end)
 
 local function build()
 	local ROW_HEIGHT = Theme.isMobile and 52 or 38
@@ -276,8 +290,12 @@ local function build()
 	end)
 
 	-- S12: [친구 부르기] - 로블록스 기본 초대 창. 견습 1단계에서는 TutorialHud의 같은 버튼이 강조되고, 여기는 상시다(장비창 파티 탭에서 이 창으로 옮겨 왔다 - 역할이 겹치지 않는다). 초대를 못 보내는 환경이면 숨긴다.
-	local inviteFriendButton = makePillButton(myColumn, "친구 부르기", 0, friendY, 160, true)
+	-- QUEUE-ALL2 P2 B-4 ②: 친구 초대 = 창 맨 위(제목줄 오른쪽 - 금색 · 초대 보상 안내 · 05 문서 SocialReward와 같은 초대) · 옛 본문 자리는 비운다(중복 삭제)
+	local inviteFriendButton = makePillButton(panel.frame, Text.get("party.inviteTop"), 0, 0, 200, true)
 	inviteFriendButton.Name = "InviteFriendButton"
+	inviteFriendButton.AnchorPoint = Vector2.new(1, 0)
+	inviteFriendButton.Position = UDim2.new(1, -(Panel.closeSize + 12), 0, 8)
+	inviteFriendButton.ZIndex = 20
 	inviteFriendButton.Visible = false
 	FriendInvite.onAvailability(function(canShow)
 		inviteFriendButton.Visible = canShow
