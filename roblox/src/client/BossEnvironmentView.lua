@@ -473,10 +473,24 @@ slabFall = function(z)
 	local outward = Vector3.new(math.cos(mid), 0, math.sin(mid))
 	local axis = Vector3.new(-outward.Z, 0, outward.X) -- 바깥쪽이 먼저 꺼지게 기운다
 	local pivot = z.center + outward * z.hub
+	local falling = {}
 	for _, w in ipairs(sliceWedges(z.index, z.center)) do
 		local copy = Instance.new("WedgePart")
 		copy.Anchored, copy.CanCollide, copy.CanQuery, copy.CanTouch, copy.CastShadow = true, false, false, false, false
 		copy.Size, copy.CFrame, copy.Color, copy.Material = w.Size, w.CFrame, w.Color, w.Material
+		table.insert(falling, copy)
+	end
+	-- QUEUE-ALL1 P2 바닥 v2: 석판 메시 조각(아트 켬 - client/BossArenaDressing)도 같은 판으로 떨어진다
+	for _, art in ipairs(game:GetService("CollectionService"):GetTagged("ArtFloorSlice")) do
+		if art:GetAttribute("SliceIndex") == z.index and (Vector3.new(art.Position.X, 0, art.Position.Z) - Vector3.new(z.center.X, 0, z.center.Z)).Magnitude < z.radius then
+			local copy = art:Clone()
+			copy.Transparency = 0
+			game:GetService("CollectionService"):RemoveTag(copy, "ArtFloorSlice")
+			table.insert(falling, copy)
+		end
+	end
+	for _, copy in ipairs(falling) do
+		local w = copy
 		copy.Parent = Workspace
 		live[copy] = true
 		local rel = CFrame.new(pivot):ToObjectSpace(w.CFrame)

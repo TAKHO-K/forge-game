@@ -1,6 +1,12 @@
 -- 생성 파일(roblox/tools/opencloud/upload.py) - 손으로 고치지 않는다. 원본 = roblox/art/asset-ids.json.
 -- 키 = roblox/art 기준 경로(확장자 뺌) · id = Open Cloud assetId(Model · Decal) · image = Decal의 이미지 id(ImageLabel용) · status = 업로드 · 심사 상태.
 return {
+	["arena/floor_abyssal"] = { id = 97655809194745, kind = "Model", status = "Approved" },
+	["arena/floor_crystal"] = { id = 103897861894929, kind = "Model", status = "Approved" },
+	["arena/floor_frost"] = { id = 104304450464571, kind = "Model", status = "Approved" },
+	["arena/floor_guardian"] = { id = 136620550006823, kind = "Model", status = "Approved" },
+	["arena/floor_scorpion"] = { id = 97647122796132, kind = "Model", status = "Approved" },
+	["arena/floor_storm"] = { id = 90735611949211, kind = "Model", status = "Approved" },
 	["armor/armor_bow_legendary"] = { id = 139063995451320, kind = "Model", status = "Approved" },
 	["armor/armor_bow_normal"] = { id = 80540651899105, kind = "Model", status = "Approved" },
 	["armor/armor_bow_transcendent"] = { id = 131520016642560, kind = "Model", status = "Approved" },

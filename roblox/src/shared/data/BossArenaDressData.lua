@@ -15,6 +15,8 @@
 --                 { shape("peak" 45° 돌린 상자 = 산 삼각 실루엣 | "cliff" 상자 + 윗면 쐐기 | "spire" 가는 첨탑 | "dome" 둔덕 · 구름 공), count, radius = { 최소, 최대 }, height = { 최소, 최대 },
 --                   width(cliff · spire 폭 - peak · dome은 높이에서), color(역할), fog(0 ~ 1 - 대기색 쪽으로 섞기 = 멀수록 흐림), material, lift(바닥 위로 띄움 - 구름) }
 --   sky         = { clockTime } - 보스전 동안 하늘 시각(이 클라만 - 끝나면 되돌림)
+--   floorMesh   = { mesh(ArtMeshCache 키), scaleXZ, material, slabLighten, slabBDarken, groutDarken | grout(역할 · 색), runes | detail(색), runeTransparency | detailTransparency, detailMaterial, hideDecor }
+--                 - QUEUE-ALL1 바닥 v2 석판 메시: 구간 수호자 = Slice1~8 · Hub · Runes(붕괴 조각별 보임) · 나머지 = SlabA · SlabB(두 톤) · Grout(줄눈 원판) · Detail(무늬)
 -- 폰(짧은 변 < 500 · 터치)은 phone = { … 개수 배율 } 만큼 줄인다.
 local BossArenaDressData = {}
 
@@ -31,6 +33,9 @@ BossArenaDressData.bosses = {
 		motes = { every = 0.22, life = 3.2, rise = 9, size = 0.45, color = "light", phoneScale = 0.5 },
 		edge = { color = "accent", width = 0.9, transparency = 0.35 },
 		floor = { material = Enum.Material.Slate, tint = Color3.fromRGB(150, 152, 162), amount = 0.35 }, -- A2-M1 2차: 보라 보스가 보라 바닥에 묻힘(리뷰) → 밝은 중성 회색 쪽으로
+		-- QUEUE-ALL1 P2 바닥 v2: 동심원 석판(8조각 = 붕괴 조각 · 허브 · 룬) - 석판 = 바닥색을 밝게 · 줄눈(서버 바닥) = 어둡게 · 룬 = 옅은 청록(빨강 · 주황 금지)
+		floorMesh = { mesh = "arena/floor_guardian", scaleXZ = 10, material = Enum.Material.Slate, slabLighten = 0.12, groutDarken = 0.45, runes = Color3.fromRGB(120, 210, 200), runeTransparency = 0.35,
+			hideDecor = { ArenaFloorRing = true, ArenaFloorRingInner = true, ArenaFloorDisc = true } }, -- 석판을 덮는 서버 바닥 장식(이 클라에서만 숨김)
 		atmosphere = { density = 0.32, color = "accent", decay = "body", haze = 1.2 },
 		backdrop = {
 			{ shape = "cliff", count = 22, radius = { 188, 205 }, height = { 34, 56 }, width = 58, color = "stone", fog = 0.15, material = Enum.Material.Slate },
@@ -45,6 +50,7 @@ BossArenaDressData.bosses = {
 		motes = { every = 0.07, life = 4.5, rise = 28, size = 0.5, color = Color3.fromRGB(248, 252, 255), phoneScale = 0.5, fall = true, fromHeight = 30, wind = Vector3.new(3, 0, 1.5), material = Enum.Material.SmoothPlastic, shape = "block" }, -- 눈송이 = 작은 판(공은 삼각형이 많다 - Play 4 추정 1.9만)
 		edge = { color = "accent", width = 0.9, transparency = 0.4 },
 		floor = { material = Enum.Material.Glacier, tint = Color3.fromRGB(96, 124, 158), amount = 0.35 }, -- A2-M1 2차: 흰 바닥에 흰 포효 전조가 묻힘(리뷰) → 푸른 회색 얼음
+		floorMesh = { mesh = "arena/floor_frost", scaleXZ = 10, material = Enum.Material.Glacier, slabLighten = 0.12, slabBDarken = 0.08, grout = Color3.fromRGB(232, 240, 250), detail = Color3.fromRGB(214, 236, 255), detailTransparency = 0.45, hideDecor = { ArenaFloorRing = true, ArenaFloorRingInner = true, ArenaFloorDisc = true } }, -- QUEUE-ALL1 P2 바닥 v2: 두꺼운 얼음 판 · 눈 쌓인 이음매 · 얼음 금
 		atmosphere = { density = 0.36, color = "light", decay = "accent", haze = 1.6 },
 		backdrop = {
 			{ shape = "peak", count = 22, radius = { 188, 205 }, height = { 40, 64 }, color = "light", fog = 0.1, material = Enum.Material.Glacier },
@@ -59,6 +65,7 @@ BossArenaDressData.bosses = {
 		motes = { every = 0.16, life = 3.6, rise = 14, size = 0.55, color = "light", phoneScale = 0.5, material = Enum.Material.Glass },
 		edge = { color = "accent", width = 0.9, transparency = 0.35 },
 		floor = { material = Enum.Material.Cobblestone, tint = "accent", amount = 0.1 },
+		floorMesh = { mesh = "arena/floor_abyssal", scaleXZ = 10, material = Enum.Material.Slate, slabLighten = 0.1, slabBDarken = 0.1, grout = "stone", detail = Color3.fromRGB(96, 176, 196), detailTransparency = 0.3, detailMaterial = Enum.Material.Glass, hideDecor = { ArenaFloorRing = true, ArenaFloorRingInner = true, ArenaFloorDisc = true } }, -- 젖은 산호석 · 얕은 물웅덩이
 		atmosphere = { density = 0.38, color = "accent", decay = "body", haze = 1.4 },
 		backdrop = {
 			{ shape = "cliff", count = 22, radius = { 188, 205 }, height = { 30, 50 }, width = 58, color = "stone", fog = 0.2, material = Enum.Material.Rock },
@@ -73,6 +80,7 @@ BossArenaDressData.bosses = {
 		motes = { every = 0.14, life = 2.4, rise = 5, size = 0.4, color = "light", phoneScale = 0.5 },
 		edge = { color = "accent", width = 0.9, transparency = 0.3 },
 		floor = { material = Enum.Material.Marble, tint = "head", amount = 0.08 },
+		floorMesh = { mesh = "arena/floor_crystal", scaleXZ = 10, material = Enum.Material.SmoothPlastic, slabLighten = 0.22, slabBDarken = 0.08, grout = "stone", detail = Color3.fromRGB(206, 170, 255), detailTransparency = 0.4, hideDecor = { ArenaFloorRing = true, ArenaFloorRingInner = true, ArenaFloorDisc = true } }, -- 자수정 결정 판 · 옅은 보라 결정 맥(Play: Marble 재질은 잔무늬가 많고 어두웠다 → 매끈 + 밝게)
 		atmosphere = { density = 0.3, color = "head", decay = "accent", haze = 1.2 },
 		backdrop = {
 			{ shape = "cliff", count = 22, radius = { 188, 205 }, height = { 30, 50 }, width = 58, color = "stone", fog = 0.15, material = Enum.Material.Rock },
@@ -86,6 +94,7 @@ BossArenaDressData.bosses = {
 		motes = { every = 0.06, life = 1.6, rise = 0, size = 0.3, color = "pillar", phoneScale = 0.4, shape = "streak", wind = Vector3.new(34, 0, 10) },
 		edge = { color = "accent", width = 0.9, transparency = 0.45 },
 		floor = { material = Enum.Material.Sand, tint = "floor", amount = 0 },
+		floorMesh = { mesh = "arena/floor_scorpion", scaleXZ = 10, material = Enum.Material.Sandstone, slabLighten = 0.06, slabBDarken = 0.1, grout = Color3.fromRGB(222, 196, 140), hideDecor = { ArenaFloorRing = true, ArenaFloorRingInner = true, ArenaFloorDisc = true } }, -- 모래가 이음매를 메운 유적 타일
 		atmosphere = { density = 0.42, color = "pillar", decay = "accent", haze = 2.2 },
 		backdrop = {
 			{ shape = "dome", count = 22, radius = { 190, 210 }, height = { 26, 40 }, color = "pillar", fog = 0.15, material = Enum.Material.Sand },
@@ -101,6 +110,7 @@ BossArenaDressData.bosses = {
 		bolts = { every = 5, radius = { 190, 260 }, color = "accent" },
 		edge = { color = "accent", width = 0.9, transparency = 0.35 },
 		floor = { material = Enum.Material.Slate, tint = "accent", amount = 0.04 },
+		floorMesh = { mesh = "arena/floor_storm", scaleXZ = 10, material = Enum.Material.Basalt, slabLighten = 0.12, slabBDarken = 0.1, grout = "stone", detail = Color3.fromRGB(150, 210, 255), detailTransparency = 0.3, hideDecor = { ArenaFloorRing = true, ArenaFloorRingInner = true, ArenaFloorDisc = true } }, -- 떠 있는 섬 바위 · 번개 문양 동심원
 		atmosphere = { density = 0.4, color = "stone", decay = "body", haze = 1.8 },
 		backdrop = {
 			{ shape = "peak", count = 22, radius = { 188, 205 }, height = { 40, 66 }, color = "stone", fog = 0.15, material = Enum.Material.Slate },

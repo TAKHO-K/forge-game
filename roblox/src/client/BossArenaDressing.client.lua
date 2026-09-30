@@ -14,6 +14,7 @@ local BossArenaDressData = require(ReplicatedStorage.Shared.data.BossArenaDressD
 local BossRigSpec = require(ReplicatedStorage.Shared.data.BossRigSpec)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossFx = require(script.Parent.BossFx)
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 
 local player = Players.LocalPlayer
 local WHITE, BLACK = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
@@ -77,6 +78,12 @@ local function clear()
 	end
 	local c = current
 	current = nil
+	for _, cn in ipairs(c.connections or {}) do
+		cn:Disconnect()
+	end
+	for _, p in ipairs(c.localHidden or {}) do
+		p.LocalTransparencyModifier = 0
+	end
 	c.folder:Destroy()
 	-- A2-N4: 서버가 그새 바닥을 다시 칠했으면(같은 슬롯에 다음 보스 테마) 되돌리지 않는다 - 옛 = 이전 보스 색으로 덮어 전갈 모래 바닥이 남색이 됐다
 	if c.floor and c.floorWas and c.floor.Color == c.floorSet.color and c.floor.Material == c.floorSet.material then
@@ -248,6 +255,117 @@ local function dress(boss)
 		floor.Material = FL.material
 		floor.Color = floor.Color:Lerp(colorOf(FL.tint, C), FL.amount)
 		current.floorSet = { material = floor.Material, color = floor.Color }
+	end
+	-- QUEUE-ALL1 P2 바닥 v2(docs/design/v2/03): 동심원 석판 메시(ArtMeshCache) = 석판 색 · 서버 바닥 = 어둡게(이음매 틈으로 보이는 줄눈) · 판정 · 충돌 = 서버 바닥 그대로.
+	--   붕괴 조각 바닥(Ground.BossArenaSliceFloor_<구역>)이 생기면 그 쐐기도 줄눈 색으로 · 조각 k 메시(Slice<k>)의 보임 = 그 조각 쐐기의 보임(무너지면 같이 사라진다).
+	local FM = spec.floorMesh
+	local src = FM and ArtMeshKit.get(FM.mesh)
+	if src and current.floorSet then
+		local slab = floor.Color:Lerp(WHITE, FM.slabLighten)
+		local grout = floor.Color:Lerp(BLACK, FM.groutDarken or 0.45)
+		floor.Color = grout
+		current.floorSet.color = grout
+		-- Play 실측: 석판(+0.06)과 서버 바닥 윗면이 멀리서 깊이 정밀도 싸움(가운데 반경 25 밖은 바닥만 보였다) → 서버 바닥은 이 클라에서 숨기고 줄눈 = 틈 아래 테라스(−0.5) 그늘
+		current.localHidden = current.localHidden or {}
+		floor.LocalTransparencyModifier = 1
+		table.insert(current.localHidden, floor)
+		local m = src:Clone()
+		m.Name = "Dress_FloorMesh"
+		for _, p in ipairs(m:GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.CastShadow = false
+				p.Material = FM.material
+				p.Color = slab
+				if p.Name == "Runes" or p.Name == "Detail" then -- 무늬(룬 · 금 · 물웅덩이 · 결정 맥 · 번개) - 빨강 · 주황 금지(전조 색)
+					p.Color = colorOf(FM.runes or FM.detail, C)
+					p.Material = FM.detailMaterial or Enum.Material.Neon
+					p.Transparency = FM.runeTransparency or FM.detailTransparency or 0
+				elseif p.Name == "SlabB" then
+					p.Color = slab:Lerp(BLACK, FM.slabBDarken or 0.08) -- 두 번째 톤(판마다 명도 차)
+				elseif p.Name == "Grout" then
+					p.Color = FM.grout and colorOf(FM.grout, C) or grout
+				end
+				local k = tonumber(p.Name:match("^Slice(%d+)$"))
+				if k then
+					p:SetAttribute("SliceIndex", k)
+					CollectionService:AddTag(p, "ArtFloorSlice") -- 붕괴 연출(BossEnvironmentView.slabFall)이 이 조각의 사본을 떨어뜨린다
+				end
+			end
+		end
+		for _, p in ipairs(m:GetDescendants()) do -- 가로 되돌리기(가져오기 2,048 한도 때문에 1/10로 내보냈다 - make_arena_floor.py XZ_EXPORT)
+			if p:IsA("BasePart") then
+				local k = FM.scaleXZ
+				p.Size = Vector3.new(p.Size.X * k, p.Size.Y, p.Size.Z * k)
+				p.CFrame = CFrame.new(p.Position.X * k, p.Position.Y, p.Position.Z * k) * p.CFrame.Rotation
+			end
+		end
+		m:PivotTo(CFrame.new(center))
+		m.Parent = folder
+		-- 서버 바닥 장식(빛 고리 · 안쪽 원판 · 원판 무늬 - 바닥 +0.04 ~ +0.07 원기둥)이 석판을 덮고 큰 원기둥은 다각형 모서리로 보인다 → 이 클라에서만 숨김(끝나면 되돌림)
+		for _, d in ipairs(Workspace:GetChildren()) do
+			if d:IsA("Model") and d.Name:find("^BossArenaDressing_") then
+				for _, p in ipairs(d:GetDescendants()) do
+					if p:IsA("BasePart") and FM.hideDecor[p.Name] and (Vector3.new(p.Position.X, 0, p.Position.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude < 150 then
+						p.LocalTransparencyModifier = 1
+						table.insert(current.localHidden, p)
+					end
+				end
+			end
+		end
+		local slices = {}
+		for _, p in ipairs(m:GetDescendants()) do
+			local k = p:GetAttribute("SliceIndex")
+			if k then
+				slices[k] = p
+			end
+		end
+		local ground = Workspace:FindFirstChild("Ground")
+		-- 조각 바닥 = Ground.BossArenaSliceFloor_<구역>(구역 = 바닥 파트의 부모 BossArenaBase_<구역>) · 쐐기는 늦게 복제될 수 있어 하나씩 묶는다(Play: 첫 전조 순간엔 허브 · 쐐기가 아직 없어 묶기가 빠졌다)
+		local function bindSliceFloor(model)
+			local at = model:IsA("Model") and model.Name:sub(1, 20) == "BossArenaSliceFloor_" and model:GetAttribute("ArenaCenter")
+			if not (typeof(at) == "Vector3" and (Vector3.new(at.X, 0, at.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude < 20) then
+				return -- 다른 아레나(서버가 부모 연결 전에 단 ArenaCenter로 고른다 - 바닥 파트 부모는 Ground라 구역 이름이 없다)
+			end
+			local bound = {}
+			local function bindPart(w)
+				if not w:IsA("BasePart") then
+					return
+				end
+				w.LocalTransparencyModifier = 1 -- 겉모습 = 석판 메시(판정 · 보임 동기 = 서버 Transparency 그대로)
+				w.Color = grout
+				table.insert(current.localHidden, w)
+				local k = w:IsA("WedgePart") and w:GetAttribute("SliceIndex") -- 판정 쐐기만(같은 조각의 고리 호 등 보조 파트는 원래 투명할 수 있다)
+				local art = k and slices[k]
+				if art and not bound[k] then
+					bound[k] = true
+					local function sync()
+						if art.Parent then
+							art.Transparency = w.Transparency > 0.5 and 1 or 0
+						end
+					end
+					table.insert(current.connections, w:GetPropertyChangedSignal("Transparency"):Connect(sync))
+					sync()
+				end
+			end
+			for _, w in ipairs(model:GetChildren()) do
+				bindPart(w)
+			end
+			table.insert(current.connections, model.ChildAdded:Connect(bindPart))
+			table.insert(current.connections, model.AncestryChanged:Connect(function()
+				if not model.Parent then
+					for _, art in pairs(slices) do
+						art.Transparency = 0 -- 조각 바닥 → 원판(보스전 끝 · 리셋)
+					end
+				end
+			end))
+		end
+		current.connections = current.connections or {}
+		if ground then
+			for _, child in ipairs(ground:GetChildren()) do
+				bindSliceFloor(child)
+			end
+			table.insert(current.connections, ground.ChildAdded:Connect(bindSliceFloor))
+		end
 	end
 	-- 대기(이 클라만 - 끝나면 되돌림)
 	local A = spec.atmosphere

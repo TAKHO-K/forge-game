@@ -1,4 +1,40 @@
 {
+ "arena/floor_abyssal.fbx": {
+  "sha256": "df0ccf7bce9d30a9626c9c880a974097bf21fd5fd750342faa98499d66ce1402",
+  "assetType": "Model",
+  "assetId": 97655809194745,
+  "status": "Approved"
+ },
+ "arena/floor_crystal.fbx": {
+  "sha256": "11784b4f4f71a48902295d28c68d562cbcc5c6857c8e88495b54fc7b6f611200",
+  "assetType": "Model",
+  "assetId": 103897861894929,
+  "status": "Approved"
+ },
+ "arena/floor_frost.fbx": {
+  "sha256": "599a685a888928c6f9fda648b079ec9e0dc6cbc855b5d81c9c8579a6aefd61c0",
+  "assetType": "Model",
+  "assetId": 104304450464571,
+  "status": "Approved"
+ },
+ "arena/floor_guardian.fbx": {
+  "sha256": "9dd7aea25db2edaf74441d3d1fb201096a3bacd192dbf20adcc77762ef4563c0",
+  "assetType": "Model",
+  "assetId": 136620550006823,
+  "status": "Approved"
+ },
+ "arena/floor_scorpion.fbx": {
+  "sha256": "5822f29610291433d742c56ad603ad4cf5ef33abcde508aeea055a2cff7bbb1d",
+  "assetType": "Model",
+  "assetId": 97647122796132,
+  "status": "Approved"
+ },
+ "arena/floor_storm.fbx": {
+  "sha256": "04eaeddaa7b22e38dca558b057ec33dbd6ac100f34b08774d4e6424e8d2f6db7",
+  "assetType": "Model",
+  "assetId": 90735611949211,
+  "status": "Approved"
+ },
  "armor/armor_bow_legendary.fbx": {
   "sha256": "8432e973a415434c35eecb34bd1fd671af10e0d0fdd85966add4c6d136b0fc85",
   "assetType": "Model",

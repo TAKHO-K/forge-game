@@ -274,6 +274,7 @@ function BossArenaMap.enableSliceFloor(zoneKey, count, hubRadius)
 	local model = Instance.new("Model")
 	model.Name = "BossArenaSliceFloor_" .. zoneKey
 	model:SetAttribute("SliceCount", count)
+	model:SetAttribute("ArenaCenter", Vector3.new(zone.center.X, FLOOR_TOP_Y, zone.center.Z)) -- QUEUE-ALL1 P2: 클라 석판 메시(BossArenaDressing)가 자기 아레나의 조각 바닥을 고른다(부모 연결 전 = 복제와 같이 온다)
 	model.Parent = GroundProbe.folder()
 	local color, material = base.floor.Color, base.floor.Material
 	local center = Vector3.new(zone.center.X, y, zone.center.Z)
