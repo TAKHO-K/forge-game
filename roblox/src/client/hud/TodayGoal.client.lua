@@ -92,10 +92,12 @@ local function place()
 	local width = Theme.isMobile and WIDTH_PHONE or WIDTH_PC
 	if menu and menu.AbsoluteSize.Y > 0 then
 		local offset = gui.AbsolutePosition
-		if Theme.isMobile then -- 폰 = 메뉴 격자 오른쪽 위
-			box.Position = UDim2.fromOffset(menu.AbsolutePosition.X - offset.X + menu.AbsoluteSize.X + 8, menu.AbsolutePosition.Y - offset.Y)
+		local below = menu.AbsolutePosition.Y - offset.Y + menu.AbsoluteSize.Y + 10
+		local need = 26 + 3 * (LINE_H + 2)
+		if Theme.isMobile or below + need > gui.AbsoluteSize.Y - 40 then -- 폰 · 메뉴 아래 자리가 모자라면 = 메뉴 오른쪽 위
+			box.Position = UDim2.fromOffset(menu.AbsolutePosition.X - offset.X + menu.AbsoluteSize.X + 10, menu.AbsolutePosition.Y - offset.Y)
 		else
-			box.Position = UDim2.fromOffset(menu.AbsolutePosition.X - offset.X, menu.AbsolutePosition.Y - offset.Y + menu.AbsoluteSize.Y + 10)
+			box.Position = UDim2.fromOffset(menu.AbsolutePosition.X - offset.X, below)
 		end
 	end
 	local shown = 0

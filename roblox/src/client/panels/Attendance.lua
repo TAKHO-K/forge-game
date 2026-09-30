@@ -38,7 +38,7 @@ local function build()
 	layout.CellPadding = UDim2.fromOffset(6, 0)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = grid
-	local login = Button.build({ parent = panel.content, kind = "primary", width = 220, height = Theme.isMobile and 60 or 48, text = Text.get("attendance.login"),
+	local login = Button.build({ parent = panel.content, kind = "claim", width = 220, height = Theme.isMobile and 60 or 48, text = Text.get("attendance.login"),
 		position = UDim2.new(0.5, 0, 1, -12), anchorPoint = Vector2.new(0.5, 1), onActivated = function()
 			requestRemote:FireServer("claim", "login")
 		end })
@@ -77,15 +77,12 @@ function Attendance.render()
 		local icons = RewardIcons.row(cell, entry.reward, 28, { frameSize = UDim2.new(1, -8, 0, 64), position = UDim2.fromOffset(4, 30) })
 		icons.UIListLayout.FillDirection = Enum.FillDirection.Vertical
 		icons.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		local b = Button.build({ parent = cell, kind = "primary", width = 80, height = 44, text = claimed and "✓" or Text.get("quests.claim"),
+		local b = Button.build({ parent = cell, kind = "claim", width = 80, height = 44, text = claimed and "✓" or Text.get("quests.claim"),
 			position = UDim2.new(0.5, 0, 1, -6), anchorPoint = Vector2.new(0.5, 1), onActivated = function()
 				requestRemote:FireServer("claim", "attendance", key)
 			end })
 		b.root.Name = "Claim"
 		b.root.Size = UDim2.new(1, -8, 0, 44)
-		if ready then
-			b.root.BackgroundColor3 = GREEN
-		end
 		b.setEnabled(ready == true)
 	end
 	built.login.setEnabled(view.loginReady == true)

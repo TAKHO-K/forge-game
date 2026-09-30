@@ -37,6 +37,11 @@ function QuestGuide.target(guide)
 		end
 	elseif guide == "hunt" then
 		local zone = currentZone()
+		local BossRules = require(ReplicatedStorage.Shared.BossRules)
+		local best = player:GetAttribute("BestBossCleared") or 0
+		local bossId = BossRules.bossIdForStage(best - best % 5 + 5)
+		local gate = bossId and WorldMapLayout.bossGate(bossId)
+		zone = (gate and gate.zoneKey and WorldMapLayout.zoneByKey(gate.zoneKey)) or zone -- 다음 보스 관문 구역 = 지금 스테이지의 사냥터
 		return WorldMapLayout.grounds(zone)[1].center, zone.hunt.name
 	elseif guide == "forge" then
 		return WorldMapLayout.facility("forge"), WorldMapData.hub.facilities.forge.displayName

@@ -43,7 +43,7 @@ local function claimHeight()
 end
 
 local function build()
-	local panel = Panel.create({ id = QuestsPanel.id, kind = "window", title = Text.get("quests.title"), size = PANEL_SIZE,
+	local panel = Panel.create({ id = QuestsPanel.id, kind = "window", title = Text.get("quests.titleV2"), size = PANEL_SIZE,
 		onOpen = function()
 			task.defer(function()
 				QuestsPanel.render()
@@ -110,12 +110,10 @@ end
 
 -- 큰 초록 [받기]
 local function claimButton(parent, enabled, claimed, onPress, name)
-	local b = Button.build({ parent = parent, kind = "primary", width = 128, height = claimHeight(),
+	local b = Button.build({ parent = parent, kind = "claim", width = 128, height = claimHeight(),
 		text = claimed and Text.get("quests.claimed") or Text.get("quests.claim"), position = UDim2.new(1, -8, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = onPress })
 	b.root.Name = name or "ClaimButton"
-	if enabled then
-		b.root.BackgroundColor3 = GREEN
-	end
+	b.root.Font = Enum.Font.GothamBlack
 	b.setEnabled(enabled)
 	return b
 end

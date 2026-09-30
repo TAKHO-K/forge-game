@@ -1267,6 +1267,9 @@ local function handleCommand(player, args)
 		else
 			local points = Layout.huntPoints(zone)
 			local point = points[math.clamp(math.floor(tonumber(args[3]) or 1), 1, #points)]
+			if args[3] == "camp" then -- QUEUE-ALL3 Q5: 입구 캠프(체크포인트) 옆
+				point = { position = Layout.camp(zone) + Vector3.new(-30, 0, 0) }
+			end
 			local ok = require(script.Parent.Travel).teleport(player, point.position + Vector3.new(30, 4, 0), "개발 /gg tp")
 			reply(player, ("%s 사냥 지점 %s(곁 30) 순간이동 %s"):format(zone.key, tostring(args[3] or 1), tostring(ok)))
 		end
