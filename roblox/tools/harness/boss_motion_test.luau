@@ -189,6 +189,19 @@ for _, rigId in ipairs(ids) do
 			end
 		end
 	end
+	-- A2-M1 등장(첫 조우 3초 · 짧은 판 1.2초): 내려찍듯 착지하는 방식(번개 강하)은 착지 순간이 타격, 포효 접촉도 타격 순간
+	do
+		local I = BossData.mechanics.intro
+		local bi = (MODS.BossMotionData.bosses[rigId] or {}).intro or {}
+		local riseT = I.firstSeconds * (bi.riseFrac or 0.42)
+		local roarContact = 0.3 + riseT + 0.05 + 0.35
+		ev, w, p, t = run(rigId, function() return { inCombat = true, speed = 0, introAt = 0.3, introSeconds = I.firstSeconds, introFull = true } end, I.firstSeconds + 1.2,
+			{ { 0.3 - 0.03, 0.3 + 0.06 }, { 0.3 + riseT - 0.06, 0.3 + riseT + 0.12 }, { roarContact - 0.47, roarContact + 0.35 } })
+		add(rigId, "intro", ev, w, p, t)
+		ev, w, p, t = run(rigId, function() return { inCombat = true, speed = 0, introAt = 0.3, introSeconds = I.shortSeconds, introFull = false } end, I.shortSeconds + 1.0,
+			{ { 0.3 + 0.5 - 0.15, 0.3 + 0.5 + 0.35 } })
+		add(rigId, "introShort", ev, w, p, t)
+	end
 	-- 피격(약 · 강) · 기절 · 사망
 	ev, w, p, t = run(rigId, function() return { inCombat = true, speed = 0, flinchAt = 0.2, flinchAmp = 0.7 } end, 1, { { 0.2 - 0.03, 0.2 + 0.1 } })
 	add(rigId, "flinch", ev, w, p, t)

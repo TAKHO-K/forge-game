@@ -364,6 +364,12 @@ B.clips.rest = {
 }
 B.phaseClips = { finish = "quake_finish", rest = "rest" }
 
+-- A2-M1 등장 웅크림(땅 · 물 · 모래에서 솟을 때 - 한쪽 무릎 · 주먹으로 땅 짚음 · 고개 숙임 → 일어서며 포효)
+B.introCrouch = { RootJoint = { 8, 0, 0, 0, -0.9, 0 }, Waist = { -34, 0, 0 }, Neck = { -24, 0, 0 },
+	Hip_L = { 70, 0, -6 }, Knee_L = { -95, 0, 0 }, Ankle_L = { 25, 0, 0 }, Hip_R = { 20, 0, 6 }, Knee_R = { -110, 0, 0 }, Ankle_R = { -10, 0, 0 },
+	Shoulder_R = { 20, 0, 14 }, Elbow_R = { 30, 0, 0 }, Shoulder_L = { 45, 0, -10 }, Elbow_L = { 20, 0, 0 } }
+B.introRoar = "roar"
+
 -- 피격(작게 움찔 - 더하는 층)
 B.flinch = { seconds = 0.26, pose = { Waist = { 7, 0, 3 }, Neck = { 10, 0, 0 }, RootJoint = { 0, 0, 0, 0, 0, 0.05 } } }
 
@@ -562,6 +568,22 @@ S.clips.throw_tail = {
 	hitstop = 0.08, squash = 0.1,
 }
 S.throwWindup = 0.6
+-- A2-M1 등장: 모래 속에서 튀어나옴 - 웅크림(다리 오므림 · 꼬리 말림) → 집게 · 꼬리를 치켜들고 쉭(hiss)
+S.introCrouch = merge(legs(function(_, x)
+	return { 0, 0, -x * 20 }, { 0, 0, x * 18 }
+end), tails(function(_, i)
+	return { i == 1 and -18 or -10, 0, 0 }
+end), { RootJoint = { -10, 0, 0, 0, -0.35, 0 }, Shoulder_R = { -35, 25, 0 }, Shoulder_L = { -35, -25, 0 } })
+local HISS = merge(S.guard, tails(function(_, i)
+	return { i == 1 and 16 or 7, 0, 0 }
+end), { Shoulder_R = { -55, -30, 0 }, Shoulder_L = { -55, 30, 0 }, Pincer_R = { 0, 0, 50 }, Pincer_L = { 0, 0, -50 }, RootJoint = { 10, 0, 0, 0, 0.12, 0.06 }, Neck = { 18, 0, 0 }, Jaw = { 0, 0, 0, 0, -0.08, 0 } })
+S.clips.hiss = {
+	pre = { { f = 1.0, ease = "inout", pose = merge(S.guard, { RootJoint = { -4, 0, 0, 0, -0.1, 0 }, Shoulder_R = { -20, 10, 0 }, Shoulder_L = { -20, -10, 0 } }) } },
+	post = { { s = 0.12, ease = "out", pose = HISS }, { s = 0.3, ease = "back", pose = merge(HISS, { Pincer_R = { 0, 0, 56 }, Pincer_L = { 0, 0, -56 } }) } },
+	loop = { period = 0.14, poses = { HISS, merge(HISS, { RootJoint = { 10, 0, 1, 0, 0.12, 0.06 } }) } },
+	hitstop = 0.05, tremble = { from = 0.6, amp = 3, joints = { "Shoulder_R", "Shoulder_L" } },
+}
+S.introRoar = "hiss"
 S.flinch = { seconds = 0.24, pose = { RootJoint = { 6, 0, 3, 0, 0.05, 0.06 }, Neck = { 10, 0, 0 } } }
 S.stun = {
 	stagger = merge(legs(function(k, x)
@@ -591,36 +613,42 @@ D.bosses = {
 		skills = { heavy = "slam", shockwave = "stomp", meteor = "cast", charge = "charge", cross = "punch", swipe = "swipe", fists = "punch", orbs = "cast", earthSplit = "punch", mirror = "cast", innerSmash = "slam" },
 		env = "slam", throw = "throw_overhead",
 		signature = { "heavy", "charge" },
+		intro = { style = "rise", depth = 3.4, riseFrac = 0.44, riseEase = "out" }, -- A2-M1: 땅을 가르고 솟는 석상
 	},
 	frost_giant = {
 		walk = { stride = 0.8, knee = 30, arm = 12, bob = 0.09, lean = 6 },
 		skills = { slam = "slam", icefall = "cast", spike = "stomp", roar = "roar", swipe = "swipe", spear = "cast", stomp = "stomp", snowball = "cast", mirror = "cast", innerSmash = "slam" },
 		env = "roar", throw = "throw_spin",
 		signature = { "slam", "roar" },
+		intro = { style = "iceBreak", depth = 0.9, riseFrac = 0.4, riseEase = "back" }, -- A2-M1: 얼음 덩어리를 깨고 일어섬
 	},
 	abyssal_lord = {
 		walk = { stride = 0.65, knee = 34, arm = 16, bob = 0.06 },
 		skills = { sweep = "slam", tide = "stomp", spout = "cast", colors = "cast", swipe = "swipe", tailSweep = "tailSweep", vortex = "vortex", bubbles = "cast", mirror = "cast" },
 		env = "beam", throw = "throw_tail",
 		signature = { "tailSweep", "vortex" },
+		intro = { style = "emerge", depth = 3.8, riseFrac = 0.46, riseEase = "sine" }, -- A2-M1: 물에서 천천히 떠오름
 	},
 	crystal_queen = {
 		walk = { stride = 0.62, knee = 32, arm = 14, bob = 0.05, twist = 8 },
 		skills = { burst = "cast", drop = "cast", energyBeam = "beam", orgel = "orgel", swipe = "swipe", spikes = "punch", shards = "cast", mirrorDash = "charge", mirror = "cast" },
 		env = "cast", throw = "throw_push",
 		signature = { "energyBeam", "orgel" },
+		intro = { style = "assemble", depth = 1.2, riseFrac = 0.44, riseEase = "back", fromAbove = true, spinDeg = 180, crouch = {} }, -- A2-M1: 결정이 모여 조립되며 내려앉음
 	},
 	scorpion_queen = {
 		walk = { stride = 0.55, swing = 22, lift = 18 },
 		skills = { claw = "clawSweep", sting = "sting", stab = "dig", sandSearch = "dig", swipe = "swipe", stingJab = "sting", ambush = "dig", clawSweep = "clawSweep", armadillo = "curl" },
 		env = "dig", throw = "throw_tail",
 		signature = { "clawSweep", "stab" },
+		intro = { style = "burrow", depth = 2.2, riseFrac = 0.36, riseEase = "back" }, -- A2-M1: 모래 속에서 튀어나옴
 	},
 	storm_lord = {
 		walk = { stride = 0.66, knee = 34, arm = 14, bob = 0.06, twist = 6 },
 		skills = { discharge = "stomp", whirl = "spin", strike = "cast", rods = "cast", swipe = "swipe", tornado = "cast", thunderRing = "stomp", boltSpear = "cast", mirror = "cast", innerSmash = "punch" },
 		env = "beam", throw = "throw_staff",
 		signature = { "whirl", "strike" },
+		intro = { style = "descend", depth = 6, riseFrac = 0.34, riseEase = "in", fromAbove = true, crouch = {} }, -- A2-M1: 번개와 함께 하늘에서 내리꽂힘
 	},
 }
 
@@ -675,6 +703,35 @@ D.flinchAmp = { base = 0.7, perHpRatio = 60, max = 2.0 }
 --   복제 틱 사이 속도 보정(estVel = 새 자리 ÷ 틱 간격을 velBlend로 섞음 · 앞당김 = min(마지막 틱 뒤 시간, maxLeadSeconds) + 스프링 지연 × springLeadFraction) ·
 --   staleSeconds 동안 새 자리가 안 오면 멈춘 것 - estVel을 stopDecay(1/초)로 거둔다.
 D.interp = { omega = 16, velBlend = 0.5, staleSeconds = 0.08, stopDecay = 18, maxLeadSeconds = 0.05, springLeadFraction = 0.85 }
+
+-- A2-M1 몸 충격 효과(클라 client/BossBodyFx - 판정 무관 · 접촉 순간 = 판정 순간): 동작 이름 → { kind, parts(효과 자리 부위), size, shake(가까운 화면 흔들림 배율 - 설정 존중) }
+--   kind: ground = 땅 치기(갈라진 고리 · 흙먼지 · 파편) · whoosh = 휘두름(바람 줄기) · spark = 시전(손의 빛 방울) · roar = 포효(가슴 높이 음파 고리 · 발밑 먼지)
+D.impacts = {
+	slam = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.1, shake = 1.0 },
+	quake_finish = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.3, shake = 1.2 },
+	stomp = { kind = "ground", parts = { "Foot_R" }, size = 0.9, shake = 0.8 },
+	hopSlam = { kind = "ground", parts = { "Foot_L", "Foot_R" }, size = 1.0, shake = 1.0 },
+	punch = { kind = "ground", parts = { "Hand_R" }, size = 0.8, shake = 0.6 },
+	swipe = { kind = "whoosh", parts = { "Hand_R" }, size = 1.0 },
+	basic_R = { kind = "whoosh", parts = { "Hand_R" }, size = 0.55 },
+	basic_L = { kind = "whoosh", parts = { "Hand_L" }, size = 0.55 },
+	cast = { kind = "spark", parts = { "Hand_R" }, size = 0.8 },
+	beam = { kind = "spark", parts = { "Hand_R", "Hand_L" }, size = 0.7 },
+	orgel = { kind = "spark", parts = { "Hand_R" }, size = 0.9 },
+	vortex = { kind = "spark", parts = { "Hand_R", "Hand_L" }, size = 0.8 },
+	roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.7 },
+	hiss = { kind = "roar", parts = { "Head" }, size = 0.8, shake = 0.4 },
+	tailSweep = { kind = "whoosh", parts = { "Tail5", "Tail6" }, size = 1.2 },
+	clawSweep = { kind = "whoosh", parts = { "Pincer_R", "Pincer_L" }, size = 1.0 },
+	sting = { kind = "ground", parts = { "Tail2_8" }, size = 0.6, shake = 0.5 },
+	throw_overhead = { kind = "whoosh", parts = { "Hand_R", "Hand_L" }, size = 1.0 },
+	throw_spin = { kind = "whoosh", parts = { "Hand_R" }, size = 1.1 },
+	throw_tail = { kind = "whoosh", parts = { "Tail6", "Tail1_8" }, size = 1.1 },
+	throw_push = { kind = "spark", parts = { "Hand_R", "Hand_L" }, size = 0.9 },
+	throw_staff = { kind = "whoosh", parts = { "Hand_R" }, size = 1.0 },
+}
+-- A2-M1 무거운 발걸음(클라): 보스 무게(rig.weight) ≥ minWeight면 발 디딤마다 먼지 · 가까우면(nearStuds) 작은 흔들림(설정 존중)
+D.footsteps = { dustWeight = 0.9, shakeWeight = 1.25, nearStuds = 38, shakeScale = 0.35 }
 
 -- 무게(4b-2 무게감): 보스 rig.weight × 이 값으로 히트스톱 · 몸 눌림을 키운다
 D.weightScale = { hitstop = 1, squash = 1 }

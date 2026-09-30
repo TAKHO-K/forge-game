@@ -313,7 +313,6 @@ bossIntroEvent.Parent = game:GetService("ReplicatedStorage")
 local bossIntroCinema = Instance.new("RemoteEvent")
 bossIntroCinema.Name = "BossIntroCinema"
 bossIntroCinema.Parent = game:GetService("ReplicatedStorage")
-local introSeenStages = {} -- [userId] = { [stage] = true } - 이번 세션에 이 스테이지 보스 연출을 전부 봤다(다음은 짧은 버전)
 
 local function startIntro(encounter, full)
 	if encounter.isTutorial or not encounter.model then
@@ -326,14 +325,15 @@ local function startIntro(encounter, full)
 			table.insert(realMembers, member)
 		end
 	end
-	local seconds = full and math.min(cfg.bossSeconds + cfg.memberSeconds * #realMembers, cfg.maxSeconds) or cfg.shortSeconds
-	local memberSeconds = full and #realMembers > 0 and (seconds - cfg.bossSeconds) / #realMembers or 0
+	local seconds = full and cfg.firstSeconds or cfg.shortSeconds -- A2-M1: 첫 조우 3초 · 두 번째부터 1.2초
 	local now = os.clock()
 	encounter.introUntil = now + seconds
 	encounter.startedAt = now + seconds -- 리더보드 기록 시간은 연출 뒤부터
 	local model = encounter.model
 	local introEndServer = workspace:GetServerTimeNow() + seconds
 	model:SetAttribute("BossIntroUntil", introEndServer)
+	model:SetAttribute("BossIntroAt", introEndServer - seconds) -- A2-M1: 클라 등장 동작(BossAnimator) · 카메라(BossIntroCinema)가 같은 시간표로
+	model:SetAttribute("BossIntroFull", full == true)
 	BossPatterns.setGrace(model, encounter.data, seconds + encounter.data.scheduler.entryGraceSeconds)
 	local ids = {}
 	for _, member in ipairs(realMembers) do
@@ -343,7 +343,7 @@ local function startIntro(encounter, full)
 		member:SetAttribute("BossIntroLock", true)
 		PlayerState.setAnchorHold(member, "intro", true)
 		bossIntroCinema:FireClient(member, { model = model, displayName = encounter.data.displayName, bossId = encounter.data.id, members = ids,
-			seconds = seconds, bossSeconds = full and cfg.bossSeconds or seconds, memberSeconds = memberSeconds, full = full, untilServer = introEndServer })
+			seconds = seconds, full = full, untilServer = introEndServer })
 	end
 	task.delay(seconds, function()
 		for _, member in ipairs(realMembers) do
@@ -353,7 +353,7 @@ local function startIntro(encounter, full)
 			end
 		end
 	end)
-	print(("[forge-game] 보스 진입 연출: %s · %s %.1f초(아군 컷 %.2f초 × %d)"):format(encounter.data.displayName, full and "전체" or "짧게", seconds, memberSeconds, #realMembers))
+	print(("[forge-game] 보스 진입 연출: %s · %s %.1f초(멤버 %d)"):format(encounter.data.displayName, full and "첫 조우" or "짧게", seconds, #realMembers))
 	return seconds
 end
 BossEncounter.startIntro = startIntro
@@ -412,14 +412,11 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	end
 	BossArenaContainment.track(encounter)
 	fireListeners(startedListeners, encounter)
-	-- BR1-4c c-4: 진입 연출 - 이번 세션에 이 스테이지를 처음 도전하는 멤버가 있으면 전체, 아니면 보스 컷만
+	-- A2-M1 진입 연출: 이 보스(종)를 처음 만나는 멤버(저장 hints.bossIntroSeen - 아래 첫 만남 카드와 같은 기록)가 있으면 첫 조우판(3초), 아니면 짧은 판(1.2초)
 	local full = false
 	for _, member in ipairs(members) do
-		if typeof(member) == "Instance" then
-			local seen = introSeenStages[member.UserId] or {}
-			introSeenStages[member.UserId] = seen
-			full = full or not seen[stage]
-			seen[stage] = true
+		if typeof(member) == "Instance" and not PlayerProfile.hasSeenBoss(member, data.id) then
+			full = true
 		end
 	end
 	local introSeconds = startIntro(encounter, full)
@@ -915,7 +912,6 @@ Players.PlayerRemoving:Connect(function(player)
 	end
 	BossEncounter.leaveFor(player)
 	hintWipes[player] = nil
-	introSeenStages[player.UserId] = nil
 end)
 
 -- 파티 이탈(탈퇴·추방·견습 진입·해산) - 파티 보스전 중이었으면 그 사람만 빠진다. "disband"(마지막

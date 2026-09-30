@@ -237,13 +237,38 @@ function BossRigSpec.colorOf(role, look, rig)
 		return Color3.new(1, 1, 1):Lerp(rig.accent or Color3.new(1, 1, 1), 0.35)
 	elseif role == "mouth" then
 		return Color3.fromRGB(25, 18, 22)
+	elseif role == "light" then -- A2-M1 디테일 색 역할(새 색 없이 보스 색에서 파생)
+		return look.headColor:Lerp(Color3.new(1, 1, 1), 0.35)
+	elseif role == "shadow" then
+		return look.bodyColor:Lerp(Color3.new(0, 0, 0), 0.5)
+	elseif role == "stone" then
+		return look.bodyColor:Lerp(Color3.fromRGB(140, 136, 150), 0.42)
+	elseif role == "slab" then -- 밝은 판석(명도 대비 - 머리색을 회백으로)
+		return look.headColor:Lerp(Color3.fromRGB(205, 200, 215), 0.4)
+	elseif role == "metal" then
+		return look.headColor:Lerp(Color3.fromRGB(150, 150, 160), 0.6)
 	end
 	return look.bodyColor
 end
 
 -- A2-M1 접지: 보스 리그 전부 발바닥을 바닥에 맞춘다(shared/BossRig.rootLift - 루트 판정 자리는 그대로)
-for _, rig in pairs(BossRigSpec.rigs) do
+-- A2-M1 디테일(shared/data/BossDetailSpec - ArtStyleV1 스위치 뒤): 새 관절(detail = true · 스위치 끔이면 안 짓는다) · 2차 움직임 사슬 · 장식 · 테마 색을 얹는다.
+local BossDetailSpec = require(script.Parent.BossDetailSpec)
+for id, rig in pairs(BossRigSpec.rigs) do
 	rig.groundLift = true
+	local detail = BossDetailSpec.bosses[id]
+	if detail then
+		for _, j in ipairs(detail.joints or {}) do
+			table.insert(rig.joints, j)
+		end
+		for _, c in ipairs(detail.chains or {}) do
+			c.detail = true
+			table.insert(rig.chains, c)
+		end
+		rig.deco = detail.deco
+		rig.themeColors = detail.themeColors
+		rig.recolor = detail.recolor
+	end
 end
 
 -- 대공 잡기 들기 자리(4b-3 · 4b-5): 잡힌 순서대로 이 부착점에 매단다(서버 server/BossAirGrab · 클라 BossAnimator 같은 FK) · 두 발 몸 = 오른손 · 왼손 · 어깨 · 전갈 = 꼬리 끝 · 가운데 · 밑 → 넷째부터 집게.

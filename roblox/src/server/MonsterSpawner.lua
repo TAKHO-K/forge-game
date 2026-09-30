@@ -126,6 +126,7 @@ local function buildModel(data, position, variant)
 	local rig = (data.isBoss and BossRig.specFor(data.id)) or (data.isDecoy and BossRig.specFor(data.rigId)) or nil
 	local root, body, head
 	if rig then
+		look.detail = workspace:GetAttribute(ArtStyleV1Data.attribute) == true -- A2-M1 보스 디테일(장식 · 새 관절 · 테마 색) = ArtStyleV1 스위치 뒤
 		root, body, head = BossRig.build(model, rig, look, position)
 		model:SetAttribute("BossRig", data.isBoss and data.id or data.rigId)
 		-- A2-M1 덩치: 몸이 커진 만큼만 플레이어 공격 도달을 넓힌다(Reach.bodyRadius - 조준 · 평타 · 스킬 · 화살) = 몸통 반폭 × (지금 배율 − 옛 배율). 배율이 같으면 0 = 옛 판정.

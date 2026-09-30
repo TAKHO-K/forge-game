@@ -160,9 +160,11 @@ local MECHANICS = {
 	-- BR1-4c c-3 보스 유도 투사체 공통 규칙(사용자): 대상 = 처음 조준한 사람 고정 · retargetSeconds마다 그 사람의 지금 자리로 목표 갱신 · homingSeconds까지만 따라가고 그 뒤 마지막 방향으로 직진.
 	--   회전 상한 = 스킬마다 turnRateDeg(초당 최대 회전 각) - 옆으로 달리거나 대시하면 피한다(회피 검사 BossSkillMath.dodgeChecks "옆으로 달려 따돌리기").
 	homing = { retargetSeconds = 0.5, homingSeconds = 3.0 },
-	-- BR1-4c c-4 보스 진입 연출(사용자): 첫 도전 = 보스 줌인(이름) bossSeconds → 아군 한 명씩 memberSeconds(전체 maxSeconds 안 - 많으면 아군 컷이 짧아진다) · 재도전 · 재입장 = 보스 컷만 shortSeconds.
+	-- BR1-4c c-4 보스 진입 연출(사용자 - 옛 규칙: 첫 도전 = 보스 줌인 → 아군 한 명씩 · 재도전 = 보스 컷만) → A2-M1에서 개정(아래 줄).
 	--   연출 동안 보스 행동 · 피해 없음 · 입력 잠금(루트 고정) · 리더보드 기록 시간은 연출이 끝난 뒤부터(서버 시각).
-	intro = { bossSeconds = 1.4, memberSeconds = 0.6, maxSeconds = 3.8, shortSeconds = 1.2 },
+	-- A2-M1(사용자 지시): 첫 조우(플레이어별 · 보스 종별 - 저장 hints.bossIntroSeen) = firstSeconds(최대 3초) · 두 번째부터 = shortSeconds(최대 1.2초). 파티에 처음인 사람이 한 명이라도 있으면 첫 조우판.
+	--   연출 동안 보스 행동 · 피해 없음 · 입력 잠금 · 리더보드 기록 시작 = 연출 끝(BossEncounter.startIntro). 옛 아군 컷(0.6초 × 인원)은 뺐다(3초 안에 보스 등장 동작 · 이름 카드 · 포효가 먼저).
+	intro = { firstSeconds = 3.0, shortSeconds = 1.2 },
 	bossAirborne = { liftStuds = 10, riseSeconds = 0.35, fallSeconds = 0.35, stunSeconds = 3.0, damageMaxHpFraction = 0.05, fixedDamage = true, cooldownSeconds = 12, hitRadiusStuds = 4 },
 
 	-- BR1-3 플레이어 기절(강화 평타 onHit "stun" · server/PlayerStun): 맞으면 seconds 동안 제자리(루트 고정 - 출처 "stun"). 기절이 풀린 뒤 immuneSeconds 동안은

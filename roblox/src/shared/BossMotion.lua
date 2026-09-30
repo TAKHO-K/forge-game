@@ -570,6 +570,37 @@ function BossMotion.evaluate(ctx, st, now)
 		end
 	end
 
+	-- A2-M1 등장(서버 BossIntroAt · 연출 시간 = 서버 BossIntroUntil − At · 첫 조우 = 등장 동작 + 포효 / 짧은 판 = 포효만). 보스별 방식 = D.bosses[id].intro:
+	--   depth(단위 · 루트가 이만큼 아래(fromAbove면 위)에서 시작) · riseFrac(연출 중 등장 동작 몫) · riseEase · crouch(등장 중 웅크린 자세 - 없으면 plan.introCrouch) · roar(포효 동작 이름).
+	--   info.intro = { style, rise(0 ~ 1), roarAt } - 클라 BossAnimator가 등장 효과(흙 · 얼음 · 물 · 결정 · 번개 · 모래)를 그린다.
+	if st.introAt and st.introSeconds and now < st.introAt + st.introSeconds + 0.5 then
+		local I = (ctx.boss and ctx.boss.intro) or {}
+		local t = now - st.introAt
+		local dur = st.introSeconds
+		local roarName = I.roar or P.introRoar or "roar"
+		if st.introFull then
+			local riseT = dur * (I.riseFrac or 0.42)
+			local k = ease(I.riseEase or "out", t / riseT)
+			local crouch = I.crouch or P.introCrouch
+			if crouch and t < riseT * 1.3 then
+				blend(pose, crouch, 1 - ease("inout", (t - riseT * 0.55) / (riseT * 0.75)))
+			end
+			addTo(pose, "RootJoint", 5, (1 - k) * (I.depth or 3) * (I.fromAbove and 1 or -1))
+			if I.spinDeg then
+				addTo(pose, "RootJoint", 2, (1 - k) * I.spinDeg)
+			end
+			local roarAt = st.introAt + riseT + 0.05
+			actLayer(roarName, roarAt, 0.35, st.introAt + dur - 0.3)
+			info.intro = { style = I.style or "rise", rise = k, roarAt = roarAt + 0.35, t = t, riseT = riseT }
+			if t < riseT then
+				info.airborne = true -- 솟는 동안 발 접지 보정 끔(발이 땅 아래 · 위에 있는 게 맞다)
+			end
+		else
+			actLayer(roarName, st.introAt, 0.5, st.introAt + dur - 0.2) -- 짧은 판: 0.5초 들이마시고 포효
+			info.intro = { style = "short", rise = 1, roarAt = st.introAt + 0.5, t = t }
+		end
+	end
+
 	-- 사망(쓰러짐 - 모든 층 위)
 	if st.deadAt then
 		local Dd = P.death

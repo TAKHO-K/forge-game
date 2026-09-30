@@ -338,7 +338,11 @@ function V.runLive(player, env)
 				end
 			end
 			local rig = BossRigSpec.rigs[id]
-			local good = model:GetAttribute("BossRig") == id and motors == #rig.joints and anchored == 1 and collide == 0 and query == 0 and model:FindFirstChild("Body") and model:FindFirstChild("Head")
+			local builtJoints = 0 -- A2-M1: 디테일 관절(detail)은 ArtStyleV1 켬일 때만 짓는다
+			for _, j in ipairs(rig.joints) do
+				builtJoints += (not j.detail or workspace:GetAttribute("ArtStyleV1")) and 1 or 0
+			end
+			local good = model:GetAttribute("BossRig") == id and motors == builtJoints and anchored == 1 and collide == 0 and query == 0 and model:FindFirstChild("Body") and model:FindFirstChild("Head")
 			-- 대표 패턴 2개: 알림(BossAct · 전조) = 서버 판정 시각
 			for _, sid in ipairs(BossMotionData.bosses[id].signature) do
 				local skill = data.skills[sid]

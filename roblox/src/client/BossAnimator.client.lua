@@ -16,6 +16,7 @@ local BossMotion = require(ReplicatedStorage.Shared.BossMotion)
 local BossRig = require(ReplicatedStorage.Shared.BossRig)
 local BossMotionData = require(ReplicatedStorage.Shared.data.BossMotionData)
 local BossFx = require(script.Parent.BossFx)
+local BossBodyFx = require(script.Parent.BossBodyFx) -- A2-M1 타격 충격 · 등장 · 발걸음 효과
 
 local localPlayer = Players.LocalPlayer
 local LOD = BossRigSpec.lod
@@ -74,6 +75,13 @@ local function register(model)
 	for i in ipairs(rig.chains or {}) do
 		entry.springs[i] = { x = 0, z = 0, vx = 0, vz = 0 }
 	end
+	-- A2-M1 세밀 장식(lod 2): 폰(작은 화면 · 터치) 또는 먼 거리에서 숨긴다(LocalTransparencyModifier - 이 클라만)
+	entry.lod2 = {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d:GetAttribute("DetailLod") == 2 then
+			table.insert(entry.lod2, d)
+		end
+	end
 	rigs[model] = entry
 end
 
@@ -104,6 +112,11 @@ local function readState(e, now)
 	st.swingAt, st.swingN = m:GetAttribute("BossSwingAt"), m:GetAttribute("BossSwingN")
 	st.hopAt, st.hopSeconds = m:GetAttribute("BossHopAt"), m:GetAttribute("BossHopSeconds")
 	st.inCombat = m:GetAttribute("BossEncounterId") ~= nil -- BR1-4c c-10: 보스전 중 기본 자세 = 전투 준비
+	-- A2-M1 등장(서버 BossEncounter.startIntro가 적는다 - 판정 무관)
+	local introAt, introUntil = m:GetAttribute("BossIntroAt"), m:GetAttribute("BossIntroUntil")
+	st.introAt = introAt
+	st.introSeconds = (introAt and introUntil) and (introUntil - introAt) or nil
+	st.introFull = m:GetAttribute("BossIntroFull") == true
 	st.actPhase, st.actPhaseAt = m:GetAttribute("BossActPhase"), m:GetAttribute("BossActPhaseAt")
 	st.pickAt = m:GetAttribute("BossPickAt")
 	local plan, thrown = m:GetAttribute("BossThrowPlan"), m:GetAttribute("BossThrowAt")
@@ -309,6 +322,7 @@ end
 local impactKeys = { "actAt", "swingAt", "flinchAt", "stunAt", "pickAt", "throwAt", "hopAt", "deadAt" }
 local function noteImpacts(e, st)
 	e.seen = e.seen or {}
+	e.fxQueue = e.fxQueue or {}
 	local changed = false
 	local w = e.rig.weight or 1
 	local function push(a, b)
@@ -330,11 +344,14 @@ local function noteImpacts(e, st)
 				if clip then
 					local contact = v + BossMotion.contactTime(clip, hit)
 					push(v + BossMotion.clipKeys(clip, hit).preEnd - 0.03, contact + (clip.hitstop or 0) * w + 0.25)
+					table.insert(e.fxQueue, { at = contact, clip = BossMotion.clipNameForSkill(e.rigId, e.rig, st.act, skill) })
 				end
 			elseif k == "swingAt" then
 				push(v - 0.03, v + 0.07 + 0.04 * w + 0.25)
+				table.insert(e.fxQueue, { at = v + 0.07, clip = (st.swingN or 0) % 2 == 0 and "basic_R" or "basic_L" })
 			elseif k == "hopAt" then
 				push(v + (st.hopSeconds or 0) - 0.35, v + (st.hopSeconds or 0) + 0.35)
+				table.insert(e.fxQueue, { at = v + (st.hopSeconds or 0), clip = "hopSlam" })
 			elseif k == "deadAt" then
 				local Dd = e.ctx.plan.death
 				local slowEnd = Dd.slowSeconds and (Dd.slowSeconds + (Dd.hitstopAt - Dd.slowSeconds * Dd.slowRate)) or Dd.hitstopAt
@@ -348,9 +365,34 @@ local function noteImpacts(e, st)
 	if st.throwPlan and st.throwPlan ~= e.seen.throwPlan then
 		e.seen.throwPlan = st.throwPlan
 		push(st.throwPlan - 0.12, st.throwPlan + 0.35)
+		table.insert(e.fxQueue, { at = st.throwPlan, clip = e.ctx.boss and e.ctx.boss.throw or "throw_overhead" })
 	end
 	if changed then
 		e.model:SetAttribute("ClientImpacts", table.concat(e.impacts, ";"))
+	end
+end
+
+-- A2-M1 세밀 장식 LOD: 폰 = DETAIL_LOD.phoneStuds 밖 · PC = pcStuds 밖이면 숨김(0.5초마다 판정)
+local DETAIL_LOD = { phoneStuds = 55, pcStuds = 150 }
+local UserInputService = game:GetService("UserInputService")
+local function isPhone()
+	local cam = Workspace.CurrentCamera
+	local vp = cam and cam.ViewportSize or Vector2.new(1920, 1080)
+	return UserInputService.TouchEnabled and math.min(vp.X, vp.Y) < 500
+end
+local function updateDetailLod(e, distance, now)
+	if not e.lod2 or #e.lod2 == 0 or (e.lodAt and now - e.lodAt < 0.5) then
+		return
+	end
+	e.lodAt = now
+	local hide = distance > (isPhone() and DETAIL_LOD.phoneStuds or DETAIL_LOD.pcStuds)
+	if hide ~= e.lodHidden then
+		e.lodHidden = hide
+		for _, p in ipairs(e.lod2) do
+			if p.Parent then
+				p.LocalTransparencyModifier = hide and 1 or 0
+			end
+		end
 	end
 end
 
@@ -413,10 +455,31 @@ local function updateEntry(e, now, dt, camPos)
 	e.speed += (speedNow - e.speed) * (1 - math.exp(-dt * 8))
 	e.turn += (((e.visYaw - prevYaw + math.pi) % (2 * math.pi) - math.pi) / math.max(dt, 1e-3) - e.turn) * (1 - math.exp(-dt * 6))
 	local stride = (e.ctx.walk.stride or 0.7) * e.S * BossMotion.strideScale(e.ctx, e.speed) -- A2-M1: 달릴수록 보폭이 는다(BossMotion과 같은 배율 - 발 미끄러짐 없음)
+	local prevGait = e.gait
 	e.gait = (e.gait + moved.Magnitude / (2 * stride)) % 1
+	-- A2-M1 발 디딤(걸음 위상 0.25 = 왼발 · 0.75 = 오른발이 땅에 닿는 순간) → 먼지 · 무거운 보스는 작은 흔들림
+	if e.speed > 1.5 and e.rig.plan == "biped" and not e.isClone then
+		local function crossed(p)
+			if prevGait <= e.gait then
+				return prevGait < p and e.gait >= p
+			end
+			return p > prevGait or p <= e.gait
+		end
+		if crossed(0.25) then
+			e.stepFeet = e.stepFeet or {}
+			table.insert(e.stepFeet, "Foot_L")
+		end
+		if crossed(0.75) then
+			e.stepFeet = e.stepFeet or {}
+			table.insert(e.stepFeet, "Foot_R")
+		end
+	end
 
 	-- LOD
 	local distance = (camPos - e.visPos).Magnitude
+	if not e.isClone then
+		updateDetailLod(e, distance, now)
+	end
 	if distance > LOD.farStuds and not e.isClone then
 		return
 	end
@@ -435,6 +498,36 @@ local function updateEntry(e, now, dt, camPos)
 	end
 	local pose, info = BossMotion.evaluate(e.ctx, st, now)
 	noteImpacts(e, st)
+	-- A2-M1 몸 효과: 접촉 순간 충격(가까울 때만) · 등장 · 등장 포효
+	if not e.isClone then
+		for i = #e.fxQueue, 1, -1 do
+			local q = e.fxQueue[i]
+			if now >= q.at then
+				table.remove(e.fxQueue, i)
+				if now - q.at < 0.3 and distance <= LOD.fullStuds then
+					BossBodyFx.impact(e, q.clip)
+				end
+			end
+		end
+		if info.intro then
+			e.introStamp = st.introAt
+			e.introActive = true
+			BossBodyFx.intro(e, info.intro)
+			if info.intro.roarAt and now >= info.intro.roarAt and e.introRoared ~= st.introAt then
+				e.introRoared = st.introAt
+				BossBodyFx.impact(e, e.ctx.plan.introRoar or "roar")
+			end
+		elseif e.introActive then
+			e.introActive = false
+			BossBodyFx.introEnd(e)
+		end
+		if e.stepFeet then
+			for _, foot in ipairs(e.stepFeet) do
+				BossBodyFx.footstep(e, foot)
+			end
+			e.stepFeet = nil
+		end
+	end
 
 	-- 2차 움직임 스프링(가까울 때만 · 잡기 중에는 끔 - 서버 FK와 같은 꼬리 자리)
 	local grabbing = st.act and e.ctx.skills and e.ctx.skills[st.act] and e.ctx.skills[st.act].primitive == "grab"
@@ -605,7 +698,7 @@ end
 local function cycleOf(e, action)
 	local data = BossData.bosses[e.rigId]
 	local skill = data and data.skills[action]
-	local fixed = { idle = 4, walk = 6, run = 4, basic = 3, flinch = 2.4, stun = 4.8, death = 3.4, grab = 10.1, throw = 3.2 }
+	local fixed = { idle = 4, walk = 6, run = 4, basic = 3, flinch = 2.4, stun = 4.8, death = 4.4, grab = 10.1, throw = 3.2, intro = 4.2, introShort = 2.2 }
 	if fixed[action] then
 		return fixed[action]
 	elseif skill then
@@ -617,7 +710,7 @@ end
 
 local function allActions(rigId)
 	local boss = BossMotionData.bosses[rigId]
-	local list = { "idle", "walk", "run", "basic", "swipe" }
+	local list = { "intro", "idle", "walk", "run", "basic", "swipe" }
 	for _, id in ipairs(boss and boss.signature or {}) do
 		table.insert(list, id)
 	end
@@ -671,6 +764,10 @@ local function previewStep(e, now, dt)
 		st.stunAt, st.stunUntil = P.cycleAt + 0.2, P.cycleAt + 4.2
 	elseif action == "death" then
 		st.deadAt = P.cycleAt + 0.3
+	elseif action == "intro" or action == "introShort" then -- A2-M1 등장(첫 조우 3초 · 짧은 판 1.2초 - 서버 BossData.mechanics.intro와 같은 길이)
+		local I = BossData.mechanics.intro
+		st.introAt, st.introSeconds, st.introFull = P.cycleAt + 0.3, action == "intro" and I.firstSeconds or I.shortSeconds, action == "intro"
+		st.inCombat = true
 	elseif action == "grab" or action == "throw" then
 		local tele = action == "grab" and 5 or 0
 		st.act, st.actAt, st.actHit = "grab", P.cycleAt - (5 - tele), 5
@@ -735,7 +832,7 @@ local function startPreview(payload)
 	center = Vector3.new(center.X, ground + 1.5 * S - BossRig.rootLift(rig, S), center.Z) -- A2-M1: 접지 리그 = 루트 바닥 + 1.5(실전과 같은 높이)
 	local model = Instance.new("Model")
 	model.Name = "BossAnimPreview"
-	local root = BossRig.build(model, rig, { sizeScale = S, bodyColor = data.bodyColor, headColor = data.headColor }, center)
+	local root = BossRig.build(model, rig, { sizeScale = S, bodyColor = data.bodyColor, headColor = data.headColor, detail = Workspace:GetAttribute("ArtStyleV1") == true }, center)
 	root.CFrame = CFrame.lookAt(center, Vector3.new(myRoot.Position.X, center.Y, myRoot.Position.Z))
 	model.PrimaryPart = root
 	model:SetAttribute("BossRig", payload.bossId)
