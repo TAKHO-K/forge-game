@@ -434,7 +434,8 @@ function CodexPanel.init()
 		CodexPanel.render()
 	end)
 	ReplicatedStorage:WaitForChild("CodexNotice").OnClientEvent:Connect(function(text)
-		if type(text) == "string" then
+		local linePrefix = CodexData.text.lineDone:match("^[^%%]*")
+		if type(text) == "string" and not (workspace:GetAttribute("ArtStyleV1") == true and text:sub(1, #linePrefix) == linePrefix) then -- QUEUE-ALL2 P4: 아트 켬 = 줄 칭호는 CodexMoments 배너가 알림(중복 막기)
 			Toast.push("TC", { richParts = { { text = text, color = Theme.colors.gold, bold = true } }, seconds = 4, fadeSeconds = 0.3 })
 		end
 	end)

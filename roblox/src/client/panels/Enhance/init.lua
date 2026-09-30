@@ -23,6 +23,7 @@ local CostView = require(script.CostView)
 local OddsView = require(script.OddsView)
 local RebirthView = require(script.RebirthView)
 local TicketView = require(script.TicketView)
+local ResultFx = require(script.ResultFx)
 
 local EnhancePanel = {}
 
@@ -94,15 +95,21 @@ local function buyResultLine(data)
 	return BUY_FAIL_REASONS[data.reason] or tostring(data.reason), "danger"
 end
 
+-- P2.5a R4: 최대 단계를 제목에 항상 적는다("최대 +30" - EnhanceConfig.maxLevel).
+local function titleText(gradeName, level, maxed)
+	return maxed and ("%s 등급 · +%d (최대)"):format(gradeName, level)
+		or ("%s 등급 · +%d → +%d · 최대 +%d"):format(gradeName, level, level + 1, EnhanceConfig.maxLevel)
+end
+
 local function refresh()
 	if not built then
 		return
 	end
 	local state = Controller.getState()
 	if built.tab == "enhance" then
-		-- P2.5a R4: 최대 단계를 제목에 항상 적는다("최대 +30" - EnhanceConfig.maxLevel).
-		built.panel.titleLabel.Text = state.maxed and ("%s 등급 · +%d (최대)"):format(state.gradeName, state.level)
-			or ("%s 등급 · +%d → +%d · 최대 +%d"):format(state.gradeName, state.level, state.level + 1, EnhanceConfig.maxLevel)
+		if not ResultFx.rolling() then -- QUEUE-ALL2 P4: 하락 · 초기화 숫자 굴림 중에는 굴림이 제목을 쓴다(끝나면 다시 refresh)
+			built.panel.titleLabel.Text = titleText(state.gradeName, state.level, state.maxed)
+		end
 	else
 		built.panel.titleLabel.Text = "환생"
 	end
@@ -387,6 +394,12 @@ local function build()
 		refs.resultLabel.Text = text
 		refs.resultLabel.TextColor3 = Theme.color(colorName)
 		refresh()
+		if refs.tab == "enhance" then
+			local gradeName = Controller.getState().gradeName
+			ResultFx.play(refs, data, function(level)
+				return titleText(gradeName, level, false)
+			end, refresh)
+		end
 	end))
 	connect(Controller.connectBuyResult(function(data)
 		local text, colorName = buyResultLine(data)

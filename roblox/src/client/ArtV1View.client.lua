@@ -300,16 +300,59 @@ local function playEnhance(great)
 end
 
 -- A2-N2 2-2 강화 실패(아래로 = 실패): 유지 = 회색 연기 조금 · 하락 · 초기화 = 어두운 링 + 연기 + 떨어지는 쇳조각. 흰 번쩍 · 섬광 없음(성공과 헷갈리지 않게)
-local FAIL_KIND = { maintain = "maintain", down1 = "down", down2 = "down", reset = "down" }
+-- QUEUE-ALL2 P4 1순위 ⑥: 22강 이상 → 12강 초기화 = 하락과 다른 전용 순간(FxMomentData.enhanceReset): 무기 빛 공이 떨어지며 꺼짐 · 금빛 파편 · 쇳조각 2배 · 어두운 링 1.5배 ·
+--   채도 빠짐 0.4초(밝기 변화 없음 = 번쩍임 아님) · 짧은 클라이맥스 흔들림(설정 "화면 흔들림" 끔 = 없음). 세기 × FxScale · 끔(0)이면 옛 하락 모습 그대로.
+local FAIL_KIND = { maintain = "maintain", down1 = "down", down2 = "down", reset = "reset" }
+local FxMomentData = require(ReplicatedStorage.Shared.data.FxMomentData)
+local FxMoment = require(script.Parent.FxMoment)
+
+local function playResetExtras(pos, R, k)
+	local g = R.glow
+	local ball = ArtV1Fx.part("ArtV1ResetGlow", Vector3.one * g.size, g.color, CFrame.new(pos + Vector3.new(0, 0.6, 0)))
+	ball.Transparency = 0.15
+	local sec = g.seconds * ArtV1Fx.slow()
+	TweenService:Create(ball, TweenInfo.new(sec, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		CFrame = CFrame.new(pos - Vector3.new(0, g.dropStuds, 0)), Color = Color3.fromRGB(40, 36, 44), Transparency = 1, Size = Vector3.one * g.size * 0.5,
+	}):Play()
+	Debris:AddItem(ball, sec + 0.05)
+	ArtV1Fx.burst(pos + Vector3.new(0, 0.4, 0), math.max(1, math.floor(R.shards * k)), { color = R.shardColor, size = R.shardSize, speed = R.shardSpeed, spread = 90, gravity = 40, lifetime = { 0.4, 0.8 }, lightEmission = 0.6 })
+	-- 채도 빠짐(ColorCorrection Saturation만 - Brightness 0). ReduceFlashes = 절반
+	local d = R.desaturate
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "FxMomentResetGrade"
+	cc.Saturation = 0
+	cc.Parent = Lighting
+	local amount = d.saturation * k * (FxMoment.reduceFlashes() and 0.5 or 1)
+	TweenService:Create(cc, TweenInfo.new(d.seconds * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Saturation = amount }):Play()
+	task.delay(d.seconds * 0.4 + d.holdSeconds, function()
+		local back = TweenService:Create(cc, TweenInfo.new(d.seconds * 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Saturation = 0 })
+		back.Completed:Connect(function()
+			cc:Destroy()
+		end)
+		back:Play()
+	end)
+	if Players.LocalPlayer:GetAttribute("SettingScreenShake") ~= false then
+		CameraShake.trigger(R.shake.seconds, R.shake.studs, "climax") -- × FxScale는 CameraShake.allow가 곱한다
+	end
+end
+
 local function playFail(kind)
 	local pos = anvilTop()
 	if not pos then
 		return
 	end
 	local F2 = ArtV1FxData.enhanceFail
-	local s = F2[kind]
+	local k = kind == "reset" and FxMoment.scale() or 0
+	local R = k > 0 and FxMomentData.enhanceReset or nil
+	local s = F2[kind == "reset" and "down" or kind]
 	ArtV1Fx.burst(pos, s.smoke, { color = F2.smokeColor, size = F2.smokeSize, sizeEnd = F2.smokeSize * 1.8, speed = F2.smokeSpeed, spread = 35, gravity = -1, lifetime = { F2.seconds * 0.7, F2.seconds * 1.4 },
 		texture = F2.smokeTexture, lightEmission = 0, transparency = NumberSequence.new(0.35, 1), drag = 2 })
+	if R then
+		ArtV1Fx.burst(pos, math.max(s.pieces, math.floor(R.pieces * k)), { color = R.pieceColor, size = R.pieceSize, speed = R.pieceSpeed, spread = 80, gravity = 34, lifetime = { 0.5, F2.seconds * 1.2 }, lightEmission = 0 })
+		ArtV1Fx.ring(pos - Vector3.new(0, 0.25, 0), s.ring * (1 + (R.ringScale - 1) * k), R.ringSeconds, F2.ringColor, 0.14, 0.2)
+		playResetExtras(pos, R, k)
+		return
+	end
 	if s.pieces > 0 then
 		ArtV1Fx.burst(pos, s.pieces, { color = F2.pieceColor, size = F2.pieceSize, speed = F2.pieceSpeed, spread = 70, gravity = 30, lifetime = { 0.5, F2.seconds }, lightEmission = 0 })
 	end
@@ -325,6 +368,16 @@ task.spawn(function()
 			playEnhance(type(payload.level) == "number" and payload.level % X.greatEvery == 0)
 		elseif isOn() and type(payload) == "table" and FAIL_KIND[payload.result] then
 			playFail(FAIL_KIND[payload.result])
+		end
+		-- QUEUE-ALL2 P4 2순위: 방지권이 막음 = 모루 위 푸른 방패 링(유지 연기 위에 겹침) · 세기 × FxScale
+		local k = FxMoment.scale()
+		local pos = type(payload) == "table" and payload.blockedBy and k > 0 and anvilTop()
+		if pos then
+			local SH = FxMomentData.enhancePanel.shield
+			ArtV1Fx.ring(pos, SH.size * (0.6 + 0.4 * k), SH.seconds, SH.color, SH.thick, 0.1)
+			if not FxMoment.reduceFlashes() then
+				ArtV1Fx.flash(pos + Vector3.new(0, 0.3, 0), SH.size * 0.35, SH.seconds * 0.6, SH.color)
+			end
 		end
 	end)
 end)
@@ -350,13 +403,13 @@ task.spawn(function()
 	end)
 end)
 
--- 개발 확인용(Studio 전용 · 판정 없음): ReplicatedStorage Attribute ArtV1FxTest = "success" | "great"로 연출만 재생
+-- 개발 확인용(Studio 전용 · 판정 없음): ReplicatedStorage Attribute ArtV1FxTest = "success" | "great" | "maintain" | "down" | "reset"으로 연출만 재생
 if RunService:IsStudio() then
 	ReplicatedStorage:GetAttributeChangedSignal("ArtV1FxTest"):Connect(function()
 		local v = ReplicatedStorage:GetAttribute("ArtV1FxTest")
 		if v == "success" or v == "great" then
 			playEnhance(v == "great")
-		elseif v == "maintain" or v == "down" then
+		elseif v == "maintain" or v == "down" or v == "reset" then
 			playFail(v)
 		end
 	end)

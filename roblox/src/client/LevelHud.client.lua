@@ -62,5 +62,26 @@ local function update()
 	levelLabel.Text = tostring(player:GetAttribute("CharacterLevel") or 1)
 end
 
-player:GetAttributeChangedSignal("CharacterLevel"):Connect(update)
+-- QUEUE-ALL2 P4 2순위: 레벨업(같은 직업에서 오를 때 - SoundHooks와 같은 판정) = 칩 팝 + 테두리 잠깐 밝게(ReduceFlashes = 팝만). 아트 끔 · 연출 세기 끔 = 없음.
+local FxMoment = require(script.Parent.FxMoment)
+local SoundCue = require(ReplicatedStorage.Shared.SoundCue)
+local LU = require(ReplicatedStorage.Shared.data.FxMomentData).levelUp
+local TweenService = game:GetService("TweenService")
+local lastLevel, lastClass = player:GetAttribute("CharacterLevel"), player:GetAttribute("ClassId")
+local function onLevel()
+	update()
+	local level, classId = player:GetAttribute("CharacterLevel"), player:GetAttribute("ClassId")
+	local up = SoundCue.isLevelUp(lastLevel, level, lastClass, classId)
+	lastLevel, lastClass = level, classId
+	if not up or FxMoment.scale() <= 0 then
+		return
+	end
+	FxMoment.pop(chip, LU.chipPop.scale, LU.chipPop.seconds)
+	if rimStroke and not FxMoment.reduceFlashes() then
+		rimStroke.Color = LU.rimFlash
+		TweenService:Create(rimStroke, TweenInfo.new(LU.chipPop.seconds * 1.5), { Color = UIColors.xp }):Play()
+	end
+end
+
+player:GetAttributeChangedSignal("CharacterLevel"):Connect(onLevel)
 update()

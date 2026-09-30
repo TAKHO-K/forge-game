@@ -136,6 +136,18 @@ dealingModeStroke.Color = DEALING_MODE_FILL_TOP
 dealingModeStroke.Transparency = 1
 dealingModeStroke.Parent = container
 
+-- QUEUE-ALL2 P4 2순위: 피해 잔상(보스바 lag와 같은 방식) - 맞으면 흰 잔상이 holdSeconds 뒤 seconds 동안 따라 줄어든다. 채움 아래(ZIndex 0). 아트 끔 · 연출 세기 끔 = 숨김(옛 모습).
+local LAG = require(ReplicatedStorage.Shared.data.FxMomentData).hpLag
+local lagBar = Instance.new("Frame")
+lagBar.Name = "DamageLag"
+lagBar.BorderSizePixel = 0
+lagBar.BackgroundColor3 = LAG.color
+lagBar.BackgroundTransparency = LAG.transparency
+lagBar.Size = UDim2.new(1, 0, 1, 0)
+lagBar.ZIndex = 0
+lagBar.Visible = false
+lagBar.Parent = container
+
 local fill = Instance.new("Frame")
 fill.Name = "Fill"
 fill.BorderSizePixel = 0
@@ -230,6 +242,33 @@ end
 
 local isDanger = false
 
+local FxMoment = require(script.Parent.FxMoment)
+local TweenService = game:GetService("TweenService")
+local lagRatio, lagToken = nil, 0
+local function updateLag(ratio)
+	local strength = FxMoment.scale()
+	if strength <= 0 then
+		lagBar.Visible = false
+		lagRatio = ratio
+		return
+	end
+	lagBar.Visible = true
+	lagBar.BackgroundTransparency = 1 - (1 - LAG.transparency) * strength
+	lagToken += 1
+	if not lagRatio or ratio >= lagRatio - LAG.minDelta then
+		lagRatio = ratio -- 회복 · 작은 변화 = 잔상 없이 같이 간다
+		lagBar.Size = UDim2.new(ratio, 0, 1, 0)
+		return
+	end
+	local mine = lagToken
+	task.delay(LAG.holdSeconds, function()
+		if mine == lagToken then
+			lagRatio = ratio
+			TweenService:Create(lagBar, TweenInfo.new(LAG.seconds, Enum.EasingStyle.Quad), { Size = UDim2.new(ratio, 0, 1, 0) }):Play()
+		end
+	end)
+end
+
 local function updateFillAndLabel()
 	local hp = player:GetAttribute("Hp")
 	local maxHp = player:GetAttribute("MaxHp")
@@ -239,6 +278,7 @@ local function updateFillAndLabel()
 
 	local ratio = math.clamp(hp / maxHp, 0, 1)
 	fill.Size = UDim2.new(ratio, 0, 1, 0)
+	updateLag(ratio)
 	hpLabel.Text = ("%s / %s"):format(NumberFormat.format(hp), NumberFormat.format(maxHp))
 
 	local tickDamage = player:GetAttribute("TickDamage") or 0

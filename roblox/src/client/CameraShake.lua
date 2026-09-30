@@ -24,7 +24,7 @@ function CameraShake.allow(channel, kind)
 	if scale <= 0 then
 		return 0
 	end
-	if channel == "shake" and localPlayer and localPlayer:GetAttribute("SettingScreenShake") == false and kind ~= "climax" then
+	if channel == "shake" and localPlayer and localPlayer:GetAttribute("SettingScreenShake") == false then -- 설정 끔 = 모든 종류(climax 포함) 안 흔든다
 		return 0
 	end
 	if def.budget then

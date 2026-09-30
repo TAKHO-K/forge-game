@@ -98,6 +98,9 @@ percentLabelStroke.Thickness = 1.5
 percentLabelStroke.Color = Color3.new(0, 0, 0)
 percentLabelStroke.Parent = percentLabel
 
+local sweepUntil = 0 -- QUEUE-ALL2 P4: 레벨업 스윕 중에는 채움 폭을 스윕이 끝날 때 넣는다
+local pendingRatio = nil
+
 local function update()
 	local level = player:GetAttribute("CharacterLevel") or 1
 	local exp = player:GetAttribute("CharacterExp") or 0
@@ -105,10 +108,67 @@ local function update()
 	local progress = CharacterLevel.getProgress(exp, level)
 	local ratio = math.clamp(progress.ratio, 0, 1)
 
-	fill.Size = UDim2.new(ratio, 0, 1, 0)
+	if os.clock() < sweepUntil then
+		pendingRatio = ratio
+	else
+		fill.Size = UDim2.new(ratio, 0, 1, 0)
+	end
 	percentLabel.Text = ("%d%%"):format(math.floor(ratio * 100))
 end
 
+-- QUEUE-ALL2 P4 2순위: 레벨업 = 바가 가득 → 흰 스윕 → 0에서 새 진행률로(약 0.57초). 아트 끔 · 연출 세기 끔 = 옛 동작(즉시). ReduceFlashes = 흰 띠 없이 채움만.
+local TweenService = game:GetService("TweenService")
+local FxMoment = require(script.Parent.FxMoment)
+local SoundCue = require(ReplicatedStorage.Shared.SoundCue)
+local SW = require(ReplicatedStorage.Shared.data.FxMomentData).levelUp.sweep
+local FILL_SECONDS, BACK_SECONDS = 0.12, 0.15
+local lastLevel, lastClass = player:GetAttribute("CharacterLevel"), player:GetAttribute("ClassId")
+
+local function sweep()
+	sweepUntil = os.clock() + FILL_SECONDS + SW.seconds + 0.02
+	TweenService:Create(fill, TweenInfo.new(FILL_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(1, 0, 1, 0) }):Play()
+	if not FxMoment.reduceFlashes() then
+		local band = Instance.new("Frame")
+		band.Name = "LevelSweep"
+		band.BackgroundColor3 = Color3.new(1, 1, 1)
+		band.BackgroundTransparency = 1 - (1 - SW.transparency) * FxMoment.scale()
+		band.BorderSizePixel = 0
+		band.Size = UDim2.new(SW.width, 0, 1, 0)
+		band.Position = UDim2.new(-SW.width, 0, 0, 0)
+		band.ZIndex = 2
+		local g = Instance.new("UIGradient")
+		g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.6, 0), NumberSequenceKeypoint.new(1, 1) })
+		g.Parent = band
+		band.Parent = track
+		local t = TweenService:Create(band, TweenInfo.new(SW.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.new(1, 0, 0, 0) })
+		t.Completed:Connect(function()
+			band:Destroy()
+		end)
+		task.delay(FILL_SECONDS, function()
+			t:Play()
+		end)
+	end
+	task.delay(FILL_SECONDS + SW.seconds, function()
+		sweepUntil = 0
+		fill.Size = UDim2.new(0, 0, 1, 0)
+		local target = pendingRatio
+		pendingRatio = nil
+		if target then
+			TweenService:Create(fill, TweenInfo.new(BACK_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(target, 0, 1, 0) }):Play()
+		else
+			update()
+		end
+	end)
+end
+
 player:GetAttributeChangedSignal("CharacterExp"):Connect(update)
-player:GetAttributeChangedSignal("CharacterLevel"):Connect(update)
+player:GetAttributeChangedSignal("CharacterLevel"):Connect(function()
+	local level, classId = player:GetAttribute("CharacterLevel"), player:GetAttribute("ClassId")
+	local up = SoundCue.isLevelUp(lastLevel, level, lastClass, classId)
+	lastLevel, lastClass = level, classId
+	if up and FxMoment.scale() > 0 then
+		sweep()
+	end
+	update()
+end)
 update()

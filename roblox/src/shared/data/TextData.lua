@@ -502,6 +502,13 @@ return {
 		["quests.challengeRow"] = "{rank}. {name}  {seconds}초",
 		["quests.challengeMine"] = "내 기록 {seconds}초",
 		["today.title"] = "오늘의 목표",
+		-- QUEUE-ALL2 P4 2순위 연출
+		["moment.bossStamp"] = "처치!",
+		["moment.cellDone"] = "도감 칸 완성: {name}",
+		["moment.cellDoneMore"] = "도감 칸 완성: {name} 외 {n}",
+		["moment.lineTitle"] = "칭호 획득 「{name}」",
+		["moment.transTitle"] = "◆ 초월 세트 완성 ◆",
+		["moment.transSub"] = "{zone} 세트 · 칭호 「{name}」",
 		["skillCard.rebirthGuide"] = "환생 안내",
 		["skillCard.unlock"] = "환생 {n}에서 열려요 · 지금 환생 {a} / {n}",
 		["skillCard.ultGauge"] = "게이지가 가득 차면(적을 치면 찬다)",
