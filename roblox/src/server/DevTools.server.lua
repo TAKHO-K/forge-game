@@ -302,6 +302,37 @@ local function applyStage(player, stage)
 	PlayerProfile.setInfiniteStageDirect(player, stage)
 end
 
+-- A2-N4 §0: "/gg loadout <스테이지>" - 그 스테이지의 대표 전력(BalanceAnchorConfig 앵커 곡선과 같은 기준)을 한 번에 입힌다.
+-- 레벨 L = rec(L) 역산(stage - solveKillOffset) · 무기 등급 0 · +0강 · 3부위 gearGrade itemLevel L · 세트 구역 = 그 스테이지 보스 구역 · 보석 비움(앵커 = 보석 없음) · 무한 스테이지 = stage.
+local function applyLoadout(player, stage)
+	stage = math.max(1, stage)
+	local level = math.max(1, math.floor(stage - BalanceSim.solveKillOffset() + 0.5))
+	local interval = require(ReplicatedStorage.Shared.data.BossData).stageInterval or 5
+	local bossId = BossRules.bossIdForStage(math.max(1, math.ceil(stage / interval)) * interval)
+	local zoneKey = "tier1"
+	for _, z in ipairs(require(ReplicatedStorage.Shared.data.WorldMapData).zones or {}) do
+		if z.bossId == bossId then
+			zoneKey = z.key
+		end
+	end
+	applyLevel(player, level)
+	PlayerProfile.setWeaponGrade(player, 0)
+	applyEnhance(player, BalanceAnchorConfig.weaponLevel)
+	applyGear(player, BalanceAnchorConfig.gearGrade, level)
+	PlayerProfile.debugStampEquipmentSet(player, zoneKey)
+	local weapon = PlayerProfile.getWeapon(player)
+	if weapon then
+		table.clear(weapon.gems)
+	end
+	applyStage(player, stage)
+	local profile = PlayerProfile.getProfile(player)
+	if profile then
+		InventorySync.push(player, profile)
+	end
+	GemSync.push(player)
+	return level, zoneKey
+end
+
 -- "/gg rebirth <0-5>" - rebirthCount만 강제로 바꾼다(20-4 [1]에서 신설된 스텁 용도 그대로
 -- 유지 - 보스 첫 처치 드랍표 분기, 보석 슬롯 개방 표시를 무기 등급·레벨과 무관하게 빠르게
 -- 확인할 때 쓴다). 실제 환생 전체 흐름(레벨 조건·무기 등급·보석 자동 지급)을 검증하려면
@@ -1054,6 +1085,7 @@ local HELP_TEXT = table.concat({
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
 	"/gg hitbox <on|off> - W2-2 실제 판정 표시(평타 사거리 원 · 서버 투사체 경로 · 허용 폭 · 적중 지점 - 나에게만)",
 	"/gg trail <스킨 id> - W2 궤적 스킨 교체(서버 소유 확인 - default · devMint · devIndigo(개발 전용))",
+	"/gg loadout <스테이지> - 그 스테이지 대표 전력(앵커 곡선: 레벨 · 무기 등급 0 +0 · 3부위 · 세트 구역 · 보석 없음 · 무한 스테이지)을 한 번에(A2-N4)",
 	"/gg stage <n> - 무한 스테이지 지정(생존타수/보상 배율 계산용, 물리적 이동 아님)",
 	"/gg measure [stage] - 지금 조건의 생존 타수·60초 총딜·처치 시간·권장 스테이지를 콘솔에 출력",
 	"/gg curve - 레벨 1~125의 레벨당 목표 마릿수·실제 계산 마릿수·+25% 가정 마릿수 표를 콘솔에 출력(25-1)",
@@ -1385,6 +1417,12 @@ local function handleCommand(player, args)
 		ensureBackup(player)
 		applyLevel(player, math.floor(tonumber(args[2])))
 		reply(player, "레벨 " .. args[2] .. " 적용")
+	elseif sub == "loadout" and tonumber(args[2]) then
+		ensureBackup(player)
+		local stage = math.floor(tonumber(args[2]))
+		local level, zoneKey = applyLoadout(player, stage)
+		reply(player, ("대표 전력 적용: 스테이지 %d · 레벨 %d · 무기 등급 0 +%d · 3부위 %s itemLevel %d · 세트 %s · 보석 없음"):format(
+			stage, level, BalanceAnchorConfig.weaponLevel, BalanceAnchorConfig.gearGrade, level, zoneKey))
 	elseif sub == "gear" and args[2] and tonumber(args[3]) then
 		ensureBackup(player)
 		if applyGear(player, args[2], math.floor(tonumber(args[3])), args[4]) then
