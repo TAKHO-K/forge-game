@@ -1,0 +1,1683 @@
+{
+ "_summary": {
+  "meshTrisTotal": 13680,
+  "meshTrisBudget": 20000,
+  "lodTrisTotal": 2029,
+  "allTrisTotal": 15709,
+  "units": "1 Blender 단위 = 1 stud · FBX 축 −Z 앞 / Y 위 · FBX_SCALE_NONE(make_trees.py와 같음) · Open Cloud LoadAsset은 cm(×100) · Y180으로 온다 → ArtMeshKit.normalize 또는 MeshPart.Size = sizeStuds로 맞춘다"
+ },
+ "mountain_tier1_a": {
+  "parts": {
+   "Body": {
+    "tris": 778,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     12.366,
+     150.0,
+     17.227
+    ],
+    "neon": false,
+    "color": "#70B056"
+   }
+  },
+  "partCount": 1,
+  "totalTris": 778,
+  "triBudget": 1500,
+  "budgetUse": 0.519,
+  "file": "mountain_tier1_a.fbx",
+  "zone": "tier1",
+  "zoneName": "석조 평원",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier1_a_lod.fbx",
+  "sizeStuds": [
+   1183.01,
+   300.0,
+   759.59
+  ],
+  "bboxMin": [
+   -579.14,
+   0.0,
+   -362.57
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#70B056"
+  }
+ },
+ "mountain_tier1_a_lod": {
+  "parts": {
+   "Body": {
+    "tris": 104,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     31.229,
+     150.0,
+     9.818
+    ],
+    "neon": false,
+    "color": "#70B056"
+   }
+  },
+  "partCount": 1,
+  "totalTris": 104,
+  "triBudget": 300,
+  "budgetUse": 0.347,
+  "file": "mountain_tier1_a_lod.fbx",
+  "zone": "tier1",
+  "zoneName": "석조 평원",
+  "lod": true,
+  "lodOf": "mountain_tier1_a",
+  "lodFile": null,
+  "sizeStuds": [
+   1145.28,
+   300.0,
+   732.15
+  ],
+  "bboxMin": [
+   -541.41,
+   0.0,
+   -356.26
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#70B056"
+  }
+ },
+ "mountain_tier1_b": {
+  "parts": {
+   "Body": {
+    "tris": 596,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     41.814,
+     180.0,
+     3.389
+    ],
+    "neon": false,
+    "color": "#70B056"
+   }
+  },
+  "partCount": 1,
+  "totalTris": 596,
+  "triBudget": 1500,
+  "budgetUse": 0.397,
+  "file": "mountain_tier1_b.fbx",
+  "zone": "tier1",
+  "zoneName": "석조 평원",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier1_b_lod.fbx",
+  "sizeStuds": [
+   830.39,
+   360.0,
+   620.11
+  ],
+  "bboxMin": [
+   -373.38,
+   0.0,
+   -306.67
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#70B056"
+  }
+ },
+ "mountain_tier1_b_lod": {
+  "parts": {
+   "Body": {
+    "tris": 84,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     40.294,
+     180.0,
+     8.947
+    ],
+    "neon": false,
+    "color": "#70B056"
+   }
+  },
+  "partCount": 1,
+  "totalTris": 84,
+  "triBudget": 300,
+  "budgetUse": 0.28,
+  "file": "mountain_tier1_b_lod.fbx",
+  "zone": "tier1",
+  "zoneName": "석조 평원",
+  "lod": true,
+  "lodOf": "mountain_tier1_b",
+  "lodFile": null,
+  "sizeStuds": [
+   827.35,
+   360.0,
+   607.77
+  ],
+  "bboxMin": [
+   -373.38,
+   0.0,
+   -294.94
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#70B056"
+  }
+ },
+ "mountain_tier1_c": {
+  "parts": {
+   "Body": {
+    "tris": 864,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -2.31,
+     130.0,
+     1.709
+    ],
+    "neon": false,
+    "color": "#70B056"
+   }
+  },
+  "partCount": 1,
+  "totalTris": 864,
+  "triBudget": 1500,
+  "budgetUse": 0.576,
+  "file": "mountain_tier1_c.fbx",
+  "zone": "tier1",
+  "zoneName": "석조 평원",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier1_c_lod.fbx",
+  "sizeStuds": [
+   1200.55,
+   260.0,
+   527.39
+  ],
+  "bboxMin": [
+   -602.58,
+   0.0,
+   -261.99
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#70B056"
+  }
+ },
+ "mountain_tier1_c_lod": {
+  "parts": {
+   "Body": {
+    "tris": 124,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -3.573,
+     130.0,
+     9.794
+    ],
+    "neon": false,
+    "color": "#70B056"
+   }
+  },
+  "partCount": 1,
+  "totalTris": 124,
+  "triBudget": 300,
+  "budgetUse": 0.413,
+  "file": "mountain_tier1_c_lod.fbx",
+  "zone": "tier1",
+  "zoneName": "석조 평원",
+  "lod": true,
+  "lodOf": "mountain_tier1_c",
+  "lodFile": null,
+  "sizeStuds": [
+   1187.06,
+   260.0,
+   511.22
+  ],
+  "bboxMin": [
+   -597.1,
+   0.0,
+   -245.82
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#70B056"
+  }
+ },
+ "mountain_tier2_a": {
+  "parts": {
+   "Body": {
+    "tris": 894,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     8.367,
+     260.0,
+     3.687
+    ],
+    "neon": false,
+    "color": "#7054AA"
+   },
+   "Crystal": {
+    "tris": 192,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -10.825,
+     301.181,
+     -18.408
+    ],
+    "neon": false,
+    "color": "#D26CF0"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 1086,
+  "triBudget": 1500,
+  "budgetUse": 0.724,
+  "file": "mountain_tier2_a.fbx",
+  "zone": "tier2",
+  "zoneName": "수정 동굴",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier2_a_lod.fbx",
+  "sizeStuds": [
+   979.94,
+   520.0,
+   646.12
+  ],
+  "bboxMin": [
+   -481.6,
+   0.0,
+   -319.37
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#7054AA",
+   "Crystal": "#D26CF0"
+  }
+ },
+ "mountain_tier2_a_lod": {
+  "parts": {
+   "Body": {
+    "tris": 144,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     9.302,
+     260.0,
+     4.657
+    ],
+    "neon": false,
+    "color": "#7054AA"
+   },
+   "Crystal": {
+    "tris": 64,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -10.341,
+     309.941,
+     31.121
+    ],
+    "neon": false,
+    "color": "#D26CF0"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 208,
+  "triBudget": 300,
+  "budgetUse": 0.693,
+  "file": "mountain_tier2_a_lod.fbx",
+  "zone": "tier2",
+  "zoneName": "수정 동굴",
+  "lod": true,
+  "lodOf": "mountain_tier2_a",
+  "lodFile": null,
+  "sizeStuds": [
+   978.07,
+   520.0,
+   640.56
+  ],
+  "bboxMin": [
+   -479.73,
+   0.0,
+   -315.62
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#7054AA",
+   "Crystal": "#D26CF0"
+  }
+ },
+ "mountain_tier2_b": {
+  "parts": {
+   "Body": {
+    "tris": 564,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     54.036,
+     220.0,
+     18.143
+    ],
+    "neon": false,
+    "color": "#7054AA"
+   },
+   "Crystal": {
+    "tris": 144,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     39.619,
+     217.745,
+     28.99
+    ],
+    "neon": false,
+    "color": "#D26CF0"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 708,
+  "triBudget": 1500,
+  "budgetUse": 0.472,
+  "file": "mountain_tier2_b.fbx",
+  "zone": "tier2",
+  "zoneName": "수정 동굴",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier2_b_lod.fbx",
+  "sizeStuds": [
+   701.77,
+   440.0,
+   525.65
+  ],
+  "bboxMin": [
+   -296.85,
+   0.0,
+   -244.68
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#7054AA",
+   "Crystal": "#D26CF0"
+  }
+ },
+ "mountain_tier2_b_lod": {
+  "parts": {
+   "Body": {
+    "tris": 78,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     53.923,
+     220.0,
+     16.838
+    ],
+    "neon": false,
+    "color": "#7054AA"
+   },
+   "Crystal": {
+    "tris": 64,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     1.926,
+     171.205,
+     -7.866
+    ],
+    "neon": false,
+    "color": "#D26CF0"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 142,
+  "triBudget": 300,
+  "budgetUse": 0.473,
+  "file": "mountain_tier2_b_lod.fbx",
+  "zone": "tier2",
+  "zoneName": "수정 동굴",
+  "lod": true,
+  "lodOf": "mountain_tier2_b",
+  "lodFile": null,
+  "sizeStuds": [
+   684.78,
+   440.0,
+   524.55
+  ],
+  "bboxMin": [
+   -288.46,
+   0.0,
+   -245.43
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#7054AA",
+   "Crystal": "#D26CF0"
+  }
+ },
+ "mountain_tier3_a": {
+  "parts": {
+   "Body": {
+    "tris": 716,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     7.987,
+     190.0,
+     22.264
+    ],
+    "neon": false,
+    "color": "#288E98"
+   },
+   "Cap": {
+    "tris": 220,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     73.081,
+     319.899,
+     13.557
+    ],
+    "neon": false,
+    "color": "#80D6C8"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 936,
+  "triBudget": 1500,
+  "budgetUse": 0.624,
+  "file": "mountain_tier3_a.fbx",
+  "zone": "tier3",
+  "zoneName": "수몰 신전",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier3_a_lod.fbx",
+  "sizeStuds": [
+   891.12,
+   384.56,
+   849.8
+  ],
+  "bboxMin": [
+   -437.57,
+   0.0,
+   -402.64
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#288E98",
+   "Cap": "#80D6C8"
+  }
+ },
+ "mountain_tier3_a_lod": {
+  "parts": {
+   "Body": {
+    "tris": 118,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     6.51,
+     190.0,
+     14.072
+    ],
+    "neon": false,
+    "color": "#288E98"
+   },
+   "Cap": {
+    "tris": 17,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     69.487,
+     319.913,
+     14.868
+    ],
+    "neon": false,
+    "color": "#80D6C8"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 135,
+  "triBudget": 300,
+  "budgetUse": 0.45,
+  "file": "mountain_tier3_a_lod.fbx",
+  "zone": "tier3",
+  "zoneName": "수몰 신전",
+  "lod": true,
+  "lodOf": "mountain_tier3_a",
+  "lodFile": null,
+  "sizeStuds": [
+   888.16,
+   384.56,
+   834.64
+  ],
+  "bboxMin": [
+   -437.57,
+   0.0,
+   -403.25
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#288E98",
+   "Cap": "#80D6C8"
+  }
+ },
+ "mountain_tier3_b": {
+  "parts": {
+   "Body": {
+    "tris": 818,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -32.545,
+     170.0,
+     -13.261
+    ],
+    "neon": false,
+    "color": "#288E98"
+   },
+   "Cap": {
+    "tris": 210,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -17.376,
+     285.782,
+     15.402
+    ],
+    "neon": false,
+    "color": "#80D6C8"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 1028,
+  "triBudget": 1500,
+  "budgetUse": 0.685,
+  "file": "mountain_tier3_b.fbx",
+  "zone": "tier3",
+  "zoneName": "수몰 신전",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier3_b_lod.fbx",
+  "sizeStuds": [
+   908.55,
+   344.08,
+   600.03
+  ],
+  "bboxMin": [
+   -486.82,
+   0.0,
+   -313.28
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#288E98",
+   "Cap": "#80D6C8"
+  }
+ },
+ "mountain_tier3_b_lod": {
+  "parts": {
+   "Body": {
+    "tris": 124,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -22.017,
+     170.0,
+     -12.04
+    ],
+    "neon": false,
+    "color": "#288E98"
+   },
+   "Cap": {
+    "tris": 17,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -12.944,
+     290.4,
+     19.066
+    ],
+    "neon": false,
+    "color": "#80D6C8"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 141,
+  "triBudget": 300,
+  "budgetUse": 0.47,
+  "file": "mountain_tier3_b_lod.fbx",
+  "zone": "tier3",
+  "zoneName": "수몰 신전",
+  "lod": true,
+  "lodOf": "mountain_tier3_b",
+  "lodFile": null,
+  "sizeStuds": [
+   887.49,
+   344.08,
+   597.59
+  ],
+  "bboxMin": [
+   -465.76,
+   0.0,
+   -310.83
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#288E98",
+   "Cap": "#80D6C8"
+  }
+ },
+ "mountain_tier4_a": {
+  "parts": {
+   "Body": {
+    "tris": 502,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     24.068,
+     140.0,
+     25.482
+    ],
+    "neon": false,
+    "color": "#CC8E48"
+   },
+   "Cap": {
+    "tris": 140,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     23.486,
+     266.008,
+     18.905
+    ],
+    "neon": false,
+    "color": "#EEC67C"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 642,
+  "triBudget": 1500,
+  "budgetUse": 0.428,
+  "file": "mountain_tier4_a.fbx",
+  "zone": "tier4",
+  "zoneName": "모래 유적",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier4_a_lod.fbx",
+  "sizeStuds": [
+   1077.32,
+   283.36,
+   1064.27
+  ],
+  "bboxMin": [
+   -514.59,
+   0.0,
+   -506.65
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#CC8E48",
+   "Cap": "#EEC67C"
+  }
+ },
+ "mountain_tier4_a_lod": {
+  "parts": {
+   "Body": {
+    "tris": 86,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     10.264,
+     140.0,
+     30.477
+    ],
+    "neon": false,
+    "color": "#CC8E48"
+   },
+   "Cap": {
+    "tris": 11,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     11.599,
+     266.195,
+     -13.606
+    ],
+    "neon": false,
+    "color": "#EEC67C"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 97,
+  "triBudget": 300,
+  "budgetUse": 0.323,
+  "file": "mountain_tier4_a_lod.fbx",
+  "zone": "tier4",
+  "zoneName": "모래 유적",
+  "lod": true,
+  "lodOf": "mountain_tier4_a",
+  "lodFile": null,
+  "sizeStuds": [
+   1022.53,
+   283.36,
+   1047.73
+  ],
+  "bboxMin": [
+   -501.0,
+   0.0,
+   -493.39
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#CC8E48",
+   "Cap": "#EEC67C"
+  }
+ },
+ "mountain_tier4_b": {
+  "parts": {
+   "Body": {
+    "tris": 680,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -66.838,
+     220.0,
+     -15.368
+    ],
+    "neon": false,
+    "color": "#CC8E48"
+   },
+   "Cap": {
+    "tris": 210,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -79.142,
+     308.102,
+     6.296
+    ],
+    "neon": false,
+    "color": "#EEC67C"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 890,
+  "triBudget": 1500,
+  "budgetUse": 0.593,
+  "file": "mountain_tier4_b.fbx",
+  "zone": "tier4",
+  "zoneName": "모래 유적",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier4_b_lod.fbx",
+  "sizeStuds": [
+   771.29,
+   445.28,
+   589.11
+  ],
+  "bboxMin": [
+   -452.48,
+   0.0,
+   -309.92
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#CC8E48",
+   "Cap": "#EEC67C"
+  }
+ },
+ "mountain_tier4_b_lod": {
+  "parts": {
+   "Body": {
+    "tris": 118,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -53.919,
+     220.0,
+     -15.383
+    ],
+    "neon": false,
+    "color": "#CC8E48"
+   },
+   "Cap": {
+    "tris": 17,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -68.002,
+     308.508,
+     7.183
+    ],
+    "neon": false,
+    "color": "#EEC67C"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 135,
+  "triBudget": 300,
+  "budgetUse": 0.45,
+  "file": "mountain_tier4_b_lod.fbx",
+  "zone": "tier4",
+  "zoneName": "모래 유적",
+  "lod": true,
+  "lodOf": "mountain_tier4_b",
+  "lodFile": null,
+  "sizeStuds": [
+   744.16,
+   445.28,
+   584.23
+  ],
+  "bboxMin": [
+   -426.0,
+   0.0,
+   -307.5
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#CC8E48",
+   "Cap": "#EEC67C"
+  }
+ },
+ "mountain_tier4_c": {
+  "parts": {
+   "Body": {
+    "tris": 700,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     1.324,
+     150.0,
+     6.689
+    ],
+    "neon": false,
+    "color": "#CC8E48"
+   },
+   "Cap": {
+    "tris": 220,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     2.934,
+     267.966,
+     9.38
+    ],
+    "neon": false,
+    "color": "#EEC67C"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 920,
+  "triBudget": 1500,
+  "budgetUse": 0.613,
+  "file": "mountain_tier4_c.fbx",
+  "zone": "tier4",
+  "zoneName": "모래 유적",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier4_c_lod.fbx",
+  "sizeStuds": [
+   1145.03,
+   303.6,
+   629.3
+  ],
+  "bboxMin": [
+   -571.19,
+   0.0,
+   -307.96
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#CC8E48",
+   "Cap": "#EEC67C"
+  }
+ },
+ "mountain_tier4_c_lod": {
+  "parts": {
+   "Body": {
+    "tris": 104,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     1.918,
+     150.0,
+     -6.184
+    ],
+    "neon": false,
+    "color": "#CC8E48"
+   },
+   "Cap": {
+    "tris": 18,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     0.796,
+     268.109,
+     14.966
+    ],
+    "neon": false,
+    "color": "#EEC67C"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 122,
+  "triBudget": 300,
+  "budgetUse": 0.407,
+  "file": "mountain_tier4_c_lod.fbx",
+  "zone": "tier4",
+  "zoneName": "모래 유적",
+  "lod": true,
+  "lodOf": "mountain_tier4_c",
+  "lodFile": null,
+  "sizeStuds": [
+   1143.84,
+   303.6,
+   598.08
+  ],
+  "bboxMin": [
+   -570.0,
+   0.0,
+   -305.22
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#CC8E48",
+   "Cap": "#EEC67C"
+  }
+ },
+ "mountain_tier5_a": {
+  "parts": {
+   "Body": {
+    "tris": 994,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     6.182,
+     292.5,
+     -2.587
+    ],
+    "neon": false,
+    "color": "#2E3660"
+   },
+   "Snow": {
+    "tris": 230,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     2.064,
+     458.394,
+     -0.189
+    ],
+    "neon": false,
+    "color": "#DEE6F6"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 1224,
+  "triBudget": 1500,
+  "budgetUse": 0.816,
+  "file": "mountain_tier5_a.fbx",
+  "zone": "tier5",
+  "zoneName": "폭풍 첨탑",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier5_a_lod.fbx",
+  "sizeStuds": [
+   630.21,
+   592.02,
+   712.6
+  ],
+  "bboxMin": [
+   -308.92,
+   0.0,
+   -358.89
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#2E3660",
+   "Snow": "#DEE6F6"
+  }
+ },
+ "mountain_tier5_a_lod": {
+  "parts": {
+   "Body": {
+    "tris": 172,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     14.649,
+     292.5,
+     -4.87
+    ],
+    "neon": false,
+    "color": "#2E3660"
+   },
+   "Snow": {
+    "tris": 21,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     4.772,
+     458.914,
+     -0.674
+    ],
+    "neon": false,
+    "color": "#DEE6F6"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 193,
+  "triBudget": 300,
+  "budgetUse": 0.643,
+  "file": "mountain_tier5_a_lod.fbx",
+  "zone": "tier5",
+  "zoneName": "폭풍 첨탑",
+  "lod": true,
+  "lodOf": "mountain_tier5_a",
+  "lodFile": null,
+  "sizeStuds": [
+   613.28,
+   592.02,
+   708.13
+  ],
+  "bboxMin": [
+   -291.99,
+   0.0,
+   -358.94
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#2E3660",
+   "Snow": "#DEE6F6"
+  }
+ },
+ "mountain_tier5_b": {
+  "parts": {
+   "Body": {
+    "tris": 658,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -6.632,
+     260.0,
+     13.787
+    ],
+    "neon": false,
+    "color": "#2E3660"
+   },
+   "Snow": {
+    "tris": 160,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     53.698,
+     406.178,
+     12.071
+    ],
+    "neon": false,
+    "color": "#DEE6F6"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 818,
+  "triBudget": 1500,
+  "budgetUse": 0.545,
+  "file": "mountain_tier5_b.fbx",
+  "zone": "tier5",
+  "zoneName": "폭풍 첨탑",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier5_b_lod.fbx",
+  "sizeStuds": [
+   632.45,
+   526.24,
+   581.52
+  ],
+  "bboxMin": [
+   -322.86,
+   0.0,
+   -276.97
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#2E3660",
+   "Snow": "#DEE6F6"
+  }
+ },
+ "mountain_tier5_b_lod": {
+  "parts": {
+   "Body": {
+    "tris": 106,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -0.512,
+     260.0,
+     -1.612
+    ],
+    "neon": false,
+    "color": "#2E3660"
+   },
+   "Snow": {
+    "tris": 14,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     58.445,
+     406.178,
+     16.14
+    ],
+    "neon": false,
+    "color": "#DEE6F6"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 120,
+  "triBudget": 300,
+  "budgetUse": 0.4,
+  "file": "mountain_tier5_b_lod.fbx",
+  "zone": "tier5",
+  "zoneName": "폭풍 첨탑",
+  "lod": true,
+  "lodOf": "mountain_tier5_b",
+  "lodFile": null,
+  "sizeStuds": [
+   620.21,
+   526.24,
+   546.6
+  ],
+  "bboxMin": [
+   -310.62,
+   0.0,
+   -274.91
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#2E3660",
+   "Snow": "#DEE6F6"
+  }
+ },
+ "mountain_tier6_a": {
+  "parts": {
+   "Body": {
+    "tris": 894,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     14.393,
+     290.0,
+     -4.638
+    ],
+    "neon": false,
+    "color": "#AAC0DA"
+   },
+   "Snow": {
+    "tris": 300,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     10.086,
+     376.541,
+     -9.508
+    ],
+    "neon": false,
+    "color": "#F8FBFF"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 1194,
+  "triBudget": 1500,
+  "budgetUse": 0.796,
+  "file": "mountain_tier6_a.fbx",
+  "zone": "tier6",
+  "zoneName": "빙하",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier6_a_lod.fbx",
+  "sizeStuds": [
+   1179.16,
+   586.96,
+   799.84
+  ],
+  "bboxMin": [
+   -575.19,
+   0.0,
+   -404.56
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#AAC0DA",
+   "Snow": "#F8FBFF"
+  }
+ },
+ "mountain_tier6_a_lod": {
+  "parts": {
+   "Body": {
+    "tris": 144,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     28.426,
+     290.0,
+     -8.91
+    ],
+    "neon": false,
+    "color": "#AAC0DA"
+   },
+   "Snow": {
+    "tris": 24,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     12.068,
+     376.941,
+     -10.528
+    ],
+    "neon": false,
+    "color": "#F8FBFF"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 168,
+  "triBudget": 300,
+  "budgetUse": 0.56,
+  "file": "mountain_tier6_a_lod.fbx",
+  "zone": "tier6",
+  "zoneName": "빙하",
+  "lod": true,
+  "lodOf": "mountain_tier6_a",
+  "lodFile": null,
+  "sizeStuds": [
+   1151.1,
+   586.96,
+   792.3
+  ],
+  "bboxMin": [
+   -547.12,
+   0.0,
+   -405.06
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#AAC0DA",
+   "Snow": "#F8FBFF"
+  }
+ },
+ "mountain_tier6_b": {
+  "parts": {
+   "Body": {
+    "tris": 890,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -9.161,
+     250.0,
+     7.92
+    ],
+    "neon": false,
+    "color": "#AAC0DA"
+   },
+   "Snow": {
+    "tris": 300,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -10.836,
+     323.848,
+     31.747
+    ],
+    "neon": false,
+    "color": "#F8FBFF"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 1190,
+  "triBudget": 1500,
+  "budgetUse": 0.793,
+  "file": "mountain_tier6_b.fbx",
+  "zone": "tier6",
+  "zoneName": "빙하",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier6_b_lod.fbx",
+  "sizeStuds": [
+   1101.66,
+   506.0,
+   702.21
+  ],
+  "bboxMin": [
+   -559.99,
+   0.0,
+   -343.18
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#AAC0DA",
+   "Snow": "#F8FBFF"
+  }
+ },
+ "mountain_tier6_b_lod": {
+  "parts": {
+   "Body": {
+    "tris": 130,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -15.708,
+     250.0,
+     8.032
+    ],
+    "neon": false,
+    "color": "#AAC0DA"
+   },
+   "Snow": {
+    "tris": 25,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -7.754,
+     324.853,
+     25.273
+    ],
+    "neon": false,
+    "color": "#F8FBFF"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 155,
+  "triBudget": 300,
+  "budgetUse": 0.517,
+  "file": "mountain_tier6_b_lod.fbx",
+  "zone": "tier6",
+  "zoneName": "빙하",
+  "lod": true,
+  "lodOf": "mountain_tier6_b",
+  "lodFile": null,
+  "sizeStuds": [
+   1079.46,
+   506.0,
+   698.81
+  ],
+  "bboxMin": [
+   -555.44,
+   0.0,
+   -341.37
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#AAC0DA",
+   "Snow": "#F8FBFF"
+  }
+ },
+ "mountain_tier6_c": {
+  "parts": {
+   "Body": {
+    "tris": 596,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -68.919,
+     190.0,
+     -1.832
+    ],
+    "neon": false,
+    "color": "#AAC0DA"
+   },
+   "Snow": {
+    "tris": 210,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -111.12,
+     247.498,
+     -0.411
+    ],
+    "neon": false,
+    "color": "#F8FBFF"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 806,
+  "triBudget": 1500,
+  "budgetUse": 0.537,
+  "file": "mountain_tier6_c.fbx",
+  "zone": "tier6",
+  "zoneName": "빙하",
+  "lod": false,
+  "lodOf": null,
+  "lodFile": "mountain_tier6_c_lod.fbx",
+  "sizeStuds": [
+   895.66,
+   384.56,
+   904.71
+  ],
+  "bboxMin": [
+   -516.75,
+   0.0,
+   -454.19
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#AAC0DA",
+   "Snow": "#F8FBFF"
+  }
+ },
+ "mountain_tier6_c_lod": {
+  "parts": {
+   "Body": {
+    "tris": 84,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -73.549,
+     190.0,
+     -11.454
+    ],
+    "neon": false,
+    "color": "#AAC0DA"
+   },
+   "Snow": {
+    "tris": 17,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "center": [
+     -110.064,
+     247.579,
+     -1.596
+    ],
+    "neon": false,
+    "color": "#F8FBFF"
+   }
+  },
+  "partCount": 2,
+  "totalTris": 101,
+  "triBudget": 300,
+  "budgetUse": 0.337,
+  "file": "mountain_tier6_c_lod.fbx",
+  "zone": "tier6",
+  "zoneName": "빙하",
+  "lod": true,
+  "lodOf": "mountain_tier6_c",
+  "lodFile": null,
+  "sizeStuds": [
+   883.04,
+   384.56,
+   868.4
+  ],
+  "bboxMin": [
+   -515.07,
+   0.0,
+   -445.65
+  ],
+  "origin": "바닥 가운데(y = 0 바닥)",
+  "suggestedColors": {
+   "Body": "#AAC0DA",
+   "Snow": "#F8FBFF"
+  }
+ }
+}

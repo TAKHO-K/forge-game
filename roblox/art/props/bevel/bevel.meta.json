@@ -1,0 +1,143 @@
+{
+ "_summary": {
+  "units": "1 Blender 단위 = 1 stud · FBX 축 −Z 앞 / Y 위 · FBX_SCALE_NONE(make_trees.py와 같음) · Open Cloud LoadAsset은 cm(×100) · Y180으로 온다 → MeshPart.Size = 원래 파트 Size로 덮어 쓰면 단위와 무관",
+  "wedge": "Roblox WedgePart와 같은 방향: 경사면이 −Z(앞)와 +Y를 본다 · 높은 모서리 = +Z 위",
+  "pick": "원래 파트 Size를 가장 짧은 변으로 나눈 비율과 ratio의 로그 거리가 가장 가까운 등급(같은 모양) - 축 순서가 다르면 겉모습 메시를 돌려 붙인다"
+ },
+ "bevel_cube": {
+  "file": "bevel_cube.fbx",
+  "shape": "Block",
+  "ratio": "1:1:1",
+  "sizeStuds": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "tris": 108,
+  "triBudget": 200,
+  "bevelFraction": 0.1,
+  "bevelStuds": 0.1,
+  "bevelSegments": 2,
+  "origin": "경계 상자 가운데",
+  "part": "Block"
+ },
+ "bevel_slab": {
+  "file": "bevel_slab.fbx",
+  "shape": "Block",
+  "ratio": "4:1:4",
+  "sizeStuds": [
+   4.0,
+   1.0,
+   4.0
+  ],
+  "tris": 108,
+  "triBudget": 200,
+  "bevelFraction": 0.1,
+  "bevelStuds": 0.1,
+  "bevelSegments": 2,
+  "origin": "경계 상자 가운데",
+  "part": "Block"
+ },
+ "bevel_plate": {
+  "file": "bevel_plate.fbx",
+  "shape": "Block",
+  "ratio": "12:1:12",
+  "sizeStuds": [
+   12.0,
+   1.0,
+   12.0
+  ],
+  "tris": 108,
+  "triBudget": 200,
+  "bevelFraction": 0.1,
+  "bevelStuds": 0.1,
+  "bevelSegments": 2,
+  "origin": "경계 상자 가운데",
+  "part": "Block"
+ },
+ "bevel_pillar": {
+  "file": "bevel_pillar.fbx",
+  "shape": "Block",
+  "ratio": "1:4:1",
+  "sizeStuds": [
+   1.0,
+   4.0,
+   1.0
+  ],
+  "tris": 108,
+  "triBudget": 200,
+  "bevelFraction": 0.1,
+  "bevelStuds": 0.1,
+  "bevelSegments": 2,
+  "origin": "경계 상자 가운데",
+  "part": "Block"
+ },
+ "bevel_beam": {
+  "file": "bevel_beam.fbx",
+  "shape": "Block",
+  "ratio": "4:1:1",
+  "sizeStuds": [
+   4.0,
+   1.0,
+   1.0
+  ],
+  "tris": 108,
+  "triBudget": 200,
+  "bevelFraction": 0.1,
+  "bevelStuds": 0.1,
+  "bevelSegments": 2,
+  "origin": "경계 상자 가운데",
+  "part": "Block"
+ },
+ "bevel_wall": {
+  "file": "bevel_wall.fbx",
+  "shape": "Block",
+  "ratio": "4:4:1",
+  "sizeStuds": [
+   4.0,
+   4.0,
+   1.0
+  ],
+  "tris": 108,
+  "triBudget": 200,
+  "bevelFraction": 0.1,
+  "bevelStuds": 0.1,
+  "bevelSegments": 2,
+  "origin": "경계 상자 가운데",
+  "part": "Block"
+ },
+ "bevel_wedge": {
+  "file": "bevel_wedge.fbx",
+  "shape": "Wedge",
+  "ratio": "1:1:1",
+  "sizeStuds": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "tris": 80,
+  "triBudget": 200,
+  "bevelFraction": 0.1,
+  "bevelStuds": 0.1,
+  "bevelSegments": 2,
+  "origin": "경계 상자 가운데",
+  "part": "Block"
+ },
+ "bevel_wedge_ramp": {
+  "file": "bevel_wedge_ramp.fbx",
+  "shape": "Wedge",
+  "ratio": "2:1:3",
+  "sizeStuds": [
+   2.0,
+   1.0,
+   3.0
+  ],
+  "tris": 80,
+  "triBudget": 200,
+  "bevelFraction": 0.1,
+  "bevelStuds": 0.1,
+  "bevelSegments": 2,
+  "origin": "경계 상자 가운데",
+  "part": "Block"
+ }
+}
