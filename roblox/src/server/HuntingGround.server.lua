@@ -6,7 +6,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
-local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit) -- A2-N3 Open Cloud 소품 메시(제단)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
@@ -107,9 +106,7 @@ local function createRebirthAltar(communityZone)
 	prompt.Parent = orb
 
 	model.PrimaryPart = base
-	if ArtMeshKit.enabled() and ArtMeshKit.waitProps() then -- A2-N3 Open Cloud 제단 메시(Base · Orb 자리 - 코드 파트 = 충돌 · 프롬프트 · 이름표 그대로 투명)
-		ArtMeshKit.skin(model, "props/rebirth_altar", CFrame.new(position.X, floorTop, position.Z))
-	end
+	model:SetAttribute("ArtMeshFrame", CFrame.new(position.X, floorTop, position.Z)) -- A2-N3: 제단 메시 자리(바닥 가운데 - ArtAssetLoader가 소품 캐시 뒤 입힌다)
 	model.Parent = Workspace
 	return model
 end

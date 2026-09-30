@@ -66,6 +66,14 @@ local function loadAll()
 	end
 	runAll(first)
 	folder:SetAttribute(Data.propsReadyAttribute, true)
+	-- 소품 메시 입히기(맵 · 제단은 이미 지어졌다 - 맵을 기다리게 하지 않는다): 킷 틀 소품 + 환생 제단
+	local skinned = require(script.Parent.PropLibrary).applyArtMeshes()
+	local altar = workspace:FindFirstChild("RebirthAltar")
+	local frame = altar and altar:GetAttribute("ArtMeshFrame")
+	if frame then
+		ArtMeshKit.skin(altar, "props/rebirth_altar", frame)
+	end
+	print(("[ArtAssetLoader] 소품 메시 입힘 %d · 제단 %s"):format(skinned, tostring(altar and altar:GetAttribute("ArtMesh") ~= nil)))
 	runAll(rest)
 	folder:SetAttribute("Loaded", ok)
 	folder:SetAttribute(Data.readyAttribute, true)

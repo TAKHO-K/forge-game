@@ -39,19 +39,6 @@ function ArtMeshKit.normalize(model)
 	return model
 end
 
--- 서버 부팅 전용: 소품 캐시(로더 1단계)가 찰 때까지 잠깐 기다린다(맵 · 제단은 한 번 짓고 끝 - 늦으면 지금 모습). 반환 준비됨 여부.
-function ArtMeshKit.waitProps()
-	local t0 = os.clock()
-	while os.clock() - t0 < Data.propsWaitSeconds do
-		local folder = ReplicatedStorage:FindFirstChild(Data.cacheFolder)
-		if folder and folder:GetAttribute(Data.propsReadyAttribute) then
-			return true
-		end
-		task.wait(0.1)
-	end
-	return false
-end
-
 function ArtMeshKit.get(key)
 	if not ArtMeshKit.enabled() then
 		return nil
@@ -159,7 +146,7 @@ end
 
 -- 소품 겉모습 입히기(킷 · 제단): 같은 이름 코드 파트 자리에 메시를 겹치고 코드 파트는 투명(충돌 · 조준 · 프롬프트 자리 그대로 = 판정 불변).
 --   frame = 메시 공간 원점이 오는 자리(라이브러리 틀 = 원점 · 제단 = 바닥 가운데). 색 · 재질 = 코드 파트 그대로. 반환 입힌 수.
-function ArtMeshKit.skin(model, key, frame)
+function ArtMeshKit.skin(model, key, frame, scale)
 	local src = ArtMeshKit.get(key)
 	if not src then
 		return 0
@@ -170,7 +157,12 @@ function ArtMeshKit.skin(model, key, frame)
 		if target and target:IsA("BasePart") then
 			local m = p:Clone()
 			m.Name = p.Name .. "_Mesh"
-			m.CFrame = frame * p.CFrame
+			if scale and scale ~= Vector3.one then -- 배치 배율(축마다 - PropLibrary applyScale과 같은 식 · 메시는 회전 0으로 구워져 축 = 배율 성분)
+				m.Size = p.Size * scale
+				m.CFrame = frame * (CFrame.new(p.Position * scale) * p.CFrame.Rotation)
+			else
+				m.CFrame = frame * p.CFrame
+			end
 			m.Color, m.Material = target.Color, target.Material
 			m.Anchored = target.Anchored
 			m.CanCollide, m.CanTouch, m.CanQuery = false, false, false

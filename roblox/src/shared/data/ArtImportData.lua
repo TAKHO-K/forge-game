@@ -7,9 +7,8 @@ return {
 	unitScale = 0.01,
 	yawDegrees = 180,
 	loadConcurrency = 4, -- 동시에 부르는 LoadAsset 수
-	propsFirstPrefix = "props/", -- 로더 1단계(맵 · 제단이 부팅 때 한 번 짓는다 - 이것부터 불러 PropsReady)
+	propsFirstPrefix = "props/", -- 로더 1단계(맵 소품 · 제단에 먼저 입힌다 → PropsReady)
 	propsReadyAttribute = "PropsReady",
-	propsWaitSeconds = 15, -- 서버 부팅이 소품 캐시를 기다리는 상한(넘기면 지금 모습 그대로 - 경고 없음)
 	-- 몬스터: 가져오기 순서표 6(슬라임 · 양 제외 - 아트 샘플 몸체 · 옛 몸체 유지)
 	monsterSkip = { moss_slime = true, cloud_sheep = true },
 	outlineSuffix = "_Outline", -- 보스 껍데기 메시(같은 뼈 용접 · 색 = ArtStyleV1Data.ink) → 그 보스는 외곽선 풀 Highlight를 끈다(Attribute MeshOutline)

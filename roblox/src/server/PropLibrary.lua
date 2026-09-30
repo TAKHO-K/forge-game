@@ -13,6 +13,7 @@ local PropLibrary = {}
 local folder = nil
 local cache = {} -- [name] = Model(라이브러리)
 local placed = {} -- [name] = 개수(부팅 로그 · 검증)
+local placedModels = {} -- A2-N3: { model, prop, scale } - 배치 뒤 메시 입히기(applyArtMeshes)
 
 local function color3(c)
 	return Color3.fromRGB(c[1], c[2], c[3])
@@ -113,9 +114,6 @@ function PropLibrary.model(name)
 				makePart(p).Parent = m
 			end
 			m:SetAttribute("PropSource", "template")
-			if ArtMeshKit.enabled() and ArtMeshKit.waitProps() then -- A2-N3 Open Cloud 킷 메시(ArtStyleV1 뒤 · 틀 파트 = 충돌 그대로 투명 · 배치 복제에 같이 실림)
-				ArtMeshKit.skin(m, "props/kit/" .. name, CFrame.new())
-			end
 		end
 		m.Name = name
 		m.WorldPivot = CFrame.new() -- 피벗 = 바닥 가운데(틀 원점)
@@ -188,7 +186,20 @@ function PropLibrary.instantiate(entry)
 		m:SetAttribute(k, v)
 	end
 	placed[entry.prop] = (placed[entry.prop] or 0) + 1
+	table.insert(placedModels, { model = m, prop = entry.prop, scale = entry.scale or Vector3.one })
 	return m
+end
+
+-- A2-N3 Open Cloud 킷 메시(ArtStyleV1 뒤): 로더(ArtAssetLoader)가 소품 캐시를 받은 뒤 부른다 - 이미 배치된 틀 소품마다 같은 이름 파트 자리에 메시를 겹친다
+--   (틀 파트 = 충돌 · 조준 그대로 투명). 맵 짓기를 캐시 때문에 기다리게 하면 캐릭터가 맵보다 먼저 스폰돼 나무에 끼었다(A2-N3 Play 실측) → 뒤에 입힌다. 반환 입힌 소품 수.
+function PropLibrary.applyArtMeshes()
+	local n = 0
+	for _, e in ipairs(placedModels) do
+		if e.model.Parent and not e.model:GetAttribute("ArtMesh") and ArtMeshKit.skin(e.model, "props/kit/" .. e.prop, e.model:GetPivot(), e.scale) > 0 then
+			n += 1
+		end
+	end
+	return n
 end
 
 function PropLibrary.counts()
