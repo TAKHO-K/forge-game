@@ -40,6 +40,11 @@ local function place(cache, key, colors, position, yaw, scale, haze, folder, nam
 			d.Material = Enum.Material.SmoothPlastic
 		end
 	end
+	local _, size = m:GetBoundingBox()
+	local want = D.heights[key:gsub("_lod$", "")] -- 가져온 크기 ≠ 원래 크기(단위) → 원래 높이 × scale로
+	if want and size.Y > 0.01 then
+		scale *= want / size.Y
+	end
 	m:ScaleTo(scale)
 	m:PivotTo(CFrame.new(position) * CFrame.Angles(0, yaw, 0))
 	m.ModelStreamingMode = Enum.ModelStreamingMode.Persistent -- 스트리밍 반경(1,024) 밖이라 항상 보내야 보인다(부모 연결 전에 - M1 기록)

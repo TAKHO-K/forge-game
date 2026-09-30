@@ -8,6 +8,9 @@ return {
 	near = { r = 3450, jitterR = 250, angleOffsets = { -20, 0, 20 }, scale = { 0.85, 1.25 } },
 	far = { r = 5300, jitterR = 300, count = 18, scale = { 1.6, 2.1 }, hazeColor = { 150, 180, 215 }, hazeLerp = 0.45 },
 	seed = 20261001,
+	-- 메시 원래 높이(stud - mountains.meta.json sizeStuds Y): 가져오기 단위(ArtImportData.unitScale)와 무관하게 이 높이 × scale로 맞춘다
+	heights = { mountain_tier1_a = 300, mountain_tier1_b = 360, mountain_tier1_c = 260, mountain_tier2_a = 520, mountain_tier2_b = 440, mountain_tier3_a = 385, mountain_tier3_b = 344,
+		mountain_tier4_a = 283, mountain_tier4_b = 445, mountain_tier4_c = 304, mountain_tier5_a = 592, mountain_tier5_b = 526, mountain_tier6_a = 587, mountain_tier6_b = 506, mountain_tier6_c = 385 },
 	-- 구역 → 메시 이름(순환) · 파트 색(메타 suggestedColors)
 	zones = {
 		tier1 = { meshes = { "mountain_tier1_a", "mountain_tier1_b", "mountain_tier1_c" }, colors = { Body = { 112, 176, 86 } } },

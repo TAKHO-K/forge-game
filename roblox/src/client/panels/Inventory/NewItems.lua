@@ -16,6 +16,7 @@ NewItems.attribute = "InventoryNewCount"
 function NewItems.create(S, onChanged)
 	local player = Players.LocalPlayer
 	local known -- 열쇠 -> 아는 개수. nil = 첫 스냅샷 전
+	local createdAt = os.clock()
 	local flags = {} -- 가방 index -> true
 	local self = {}
 
@@ -48,6 +49,10 @@ function NewItems.create(S, onChanged)
 		local current = currentCounts()
 		flags = {}
 		if not known then
+			-- Play 3 수정: 접속 직후 빈 가방(서버 스냅샷 전 기본값)으로 기준을 잡으면 첫 실제 스냅샷이 전부 "새 것"(19)이 됐다 → 처음 10초 안의 빈 스냅샷은 기준으로 안 쓴다
+			if #S.inventory == 0 and next(current) == nil and os.clock() - createdAt < 10 then
+				return
+			end
 			known = current
 			publish()
 			return
