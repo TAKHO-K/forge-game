@@ -54,7 +54,7 @@ def palette(zone, grade):
     if grade == "primordial":
         p.update(base=(244, 242, 250), glow=A.GRADE_COLOR["primordial"])
     if grade == "transcendent":
-        p.update(base=A.BLACK_BODY, trim=A.GOLD, grade=A.GOLD, glow=A.GOLD_GLOW)
+        p.update(base=A.BLACK_BODY, trim=Z["accent"], grade=A.GOLD, glow=A.GOLD_GLOW)  # 3차(총괄 검토 - 6구역 초월이 같은 흑금 덩어리): 구역 모티프 조각 = 그 구역 강조색 · 금 = 등급 띠 · 균열만
     return p
 
 
@@ -108,7 +108,8 @@ def boot_base():  # 발 껍데기(앞 −Z 길게 · 앞코 살짝 들림) + 발
     # 2차(검토 - 둥근 상자로 퇴보): 앞코 +0.35 · 굽 +0.12 → 장화 L자 윤곽
     shell = A.loft([[(x, y + yc, z) for x, y in A.chamfer_rect(w, h, 0.1)] for z, w, h, yc in ((0.55, 1.1, 0.46, 0.04), (-0.2, 1.14, 0.44, 0.0), (-0.85, 1.0, 0.32, -0.04), (-1.03, 0.72, 0.18, 0.0))])
     heel = A.box(1.06, 0.12, 0.42, center=(0, -0.29, 0.34))
-    return A.merge(shell, heel)
+    sole = A.box(1.18, 0.16, 1.62, center=(0, -0.3, -0.24))  # 3차: 밑창 판(앞으로 나온 두꺼운 밑창 = 옆에서 장화 L자)
+    return A.merge(shell, heel, sole)
 
 
 def greave_base():  # 정강이 판(앞 두껍게) + 무릎 받이
@@ -168,7 +169,7 @@ def zone_features(zone, piece, big):
             t += [yl([(y, 2.2, 1.22, -0.04), (y + 0.1, 2.22, 1.24, -0.04)], 0.1) for y in (-0.45, -0.1)]
             t.append(A.xform(A.ellipsoid((0.26, 0.2, 0.09), n=8, rings=3), t=(0, 0.35, -0.64)))
         elif kind in ("Bracer", "Greave"):
-            t += [ring_y(y, 0.54, 0.54, 0.08, 0.1) for y in ((-0.3, 0.0) if kind == "Bracer" else (-0.3, 0.15))]
+            t += [ring_y(y, 0.54, 0.54, 0.08, 0.1) for y in ((-0.3, 0.0) if kind == "Bracer" else (0.15,))]  # 3차: 정강이 감개 1(밑창 추가분 - 800 이하)
         elif kind == "Boot":
             b.append(A.tube(A.bezier((0, 0.0, -0.9), (0, 0.02, -1.12), (0, 0.3, -1.16), (0, 0.34, -1.0), n=4), lambda u: 0.13 * (1 - u) + 0.04, sides=4, tip_end=True))  # 2차: 늘린 앞코 끝에서 말림
     elif zone == "tier5":  # 폭풍 첨탑: 번개 날 · 작은 날개
@@ -187,7 +188,8 @@ def zone_features(zone, piece, big):
             b += [A.ellipsoid((0.3, 0.22, 0.28), n=6, rings=2, center=(0.66 * math.cos(a), 0.86, 0.42 * math.sin(a))) for a in (2 * math.pi * i / 6 for i in range(6))]  # 털 깃
         elif kind in ("Bracer", "Boot"):
             y = 0.1 if kind == "Bracer" else 0.3
-            b += [A.ellipsoid((0.2, 0.15, 0.2), n=6, rings=2, center=(0.5 * math.cos(a), y, 0.5 * math.sin(a))) for a in (2 * math.pi * i / 5 for i in range(5))]
+            nf = 5 if kind == "Bracer" else 4  # 3차: 신발 털 4(밑창 판 추가분 - 태초 800 이하)
+            b += [A.ellipsoid((0.2, 0.15, 0.2), n=6, rings=2, center=(0.5 * math.cos(a), y, 0.5 * math.sin(a))) for a in (2 * math.pi * i / nf for i in range(nf))]
             t += [A.crystal(0.32, 0.06, sides=4, tip_h=0.14, base_h=0.03, center=(0.5 * math.sin(a_), y - 0.12, -0.5 * math.cos(a_)), m=A.rot(rx=180)) for a_ in (-0.6, 0.0, 0.6)]
         elif kind == "Greave":
             t.append(A.crystal(0.4, 0.09, sides=4, tip_h=0.16, base_h=0.03, center=(0, 0.3, -0.56), m=A.rot(rx=180)))
@@ -251,12 +253,15 @@ def piece_meshes(zone, slot, grade, piece):
         trim, add_b = trim + add_b, []
     g, gl, b2 = grade_extra(slot, piece, grade)
     out = [("", A.merge(base, *add_b, *b2), "base", False)]
+    k = 1.15 if kind in ("Glove", "Bracer", "Boot", "Greave") else 1.0  # 3차: 장갑 · 신발 조각 ×1.15(R15 몸에 비해 작아 안 보였다)
     if trim:
         out.append(("_Trim", A.merge(*trim), "trim", False))
     if g:
         out.append(("_Grade", A.merge(*g), "grade", False))
     if gl:
         out.append(("_Glow", A.merge(*gl), "glow", True))
+    if k != 1.0:
+        out = [(sfx, A.xform(geo, s=(k, k, k)), role, neon) for sfx, geo, role, neon in out]
     return out
 
 
@@ -283,7 +288,7 @@ def mannequin(slot):
     return out
 
 
-ICON_VIEW = {"armor": (["Chest", "Shoulder_L", "Shoulder_R", "Belt"], 25.0), "gloves": (["Glove_R", "Bracer_R"], 30.0), "shoes": (["Boot_R", "Greave_R"], 300.0)}  # 2차: 장갑 = 옆 30°  # 장갑 = 안쪽(엄지) 옆 · 신발 = 옆(앞코 실루엣)
+ICON_VIEW = {"armor": (["Chest", "Shoulder_L", "Shoulder_R", "Belt"], 25.0), "gloves": (["Glove_R", "Bracer_R"], 35.0), "shoes": (["Boot_R", "Greave_R"], 272.0)}  # 3차: 장갑 yaw 35 · pitch 20 · 신발 = 옆모습(밑창 L자)  # 2차: 장갑 = 옆 30°  # 장갑 = 안쪽(엄지) 옆 · 신발 = 옆(앞코 실루엣)
 
 
 def parse():
@@ -332,7 +337,7 @@ def main():
                         for o in sel:
                             if o.name.startswith("Bracer"):
                                 o.scale = (0.72, 0.72, 0.72)
-                    I.render_icon(sel, os.path.join(ICON_OUT, "%s.png" % key), base_rot=(0, 0, 0), roll=0.0, tilt=(-10.0 if slot != "shoes" else -25.0, turn), hull=0.03, pad=1.02)
+                    I.render_icon(sel, os.path.join(ICON_OUT, "%s.png" % key), base_rot=(0, 0, 0), roll=0.0, tilt=({"armor": -10.0, "gloves": -20.0, "shoes": -12.0}[slot], turn), hull=0.03, pad=1.02)
                     for o in sel:
                         o.scale = (1, 1, 1)
                 if opt["render"] and grade in ("normal", "legendary", "transcendent"):
