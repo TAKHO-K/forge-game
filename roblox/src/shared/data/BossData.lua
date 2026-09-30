@@ -831,12 +831,12 @@ local SPECIES = {
 		moveSpeedStuds = 8, chaseStopDistanceStuds = 8,
 		basicAttack = { cooldownSeconds = 1.0, damageMultiplier = 0.35 * BASIC_RANGE.damageScale, rangeStuds = BASIC_RANGE.fullStuds, farRangeStuds = BASIC_RANGE.farStuds, farMultiplier = BASIC_RANGE.farMultiplier }, -- BR1: 피할 수 없는 평타는 낮게 ×1 → ×0.35(초당 5% - 6종 같음 · 난이도 모형 조정)
 		scheduler = scheduler(6),
-		skillOrder = { "sweep", "tide", "spout", "colors", "swipe", "grab", "tailSweep", "vortex", "bubbles", "mirror" },
+		skillOrder = { "sweep", "tide", "spout", "colors", "swipe", "grab", "tailSweep", "vortex", "bubbles", "mirror", "tridentThrow" },
 		-- BR1-3 환경 변화 "판 털기"(사용자 - 밥상뒤집기 대체 · 체력 50%부터): 보스가 맵 **절반**(zones.halfMap - 방향 무작위)의 판 가장자리를 손으로 잡는다.
 		-- 전조 telegraphSeconds = 잡힐 절반 위험색 + 가장자리 금 + 흔들림(보이는 판 = 판정). 방향은 무작위로 고르되 **판 위 멤버가 모두 walkOutStuds 안에서 나갈 수 있는 방향**만
 		-- (dirTries번 뽑아 가장 나은 것 - 회피 부등식: 0.5 + (45 + 1) ÷ 16 × 1.25 = 4.1초 ≤ 4.2). 활성 = 판을 통째로 들어 올려 shakes번 턴다(인형 방식 - 클라 연출):
 		-- 첫 털기 순간 판 위의 **전원**이 팝콘처럼 날아간다(onStart.pan - 기존 발사 규칙: 판 가운데 → 바깥 · 공중이면 더 멀리 · 멀리 가면 별 반짝 · 맵 밖이면 복귀 · 피해 받고 날아감).
-		-- 판이 들린 동안(durationSeconds) 그 절반은 **빈 공간** - 걸어 들어가면 낙사(voidFall - 구간 수호자 피자 조각과 같은 규칙: 최대 체력 25% + 복귀) · 날아간 사람은 그 발동 동안 낙사 면제.
+		-- 판이 들린 동안(durationSeconds) 그 절반은 **빈 공간** - (QUEUE-ALL1 00 결정 5: 낙사 없앰 - 추락은 구간 수호자 붕괴만. 옛 = voidFall + fall{최대 체력 25% · 14 아래})
 		-- 끝 = 판을 "쿵" 내려놓는다(착지 흔들림 - envEnd).
 		environment = {
 			id = "plateShake", style = "shake", motion = "fin", damageLabel = "판 털기",
@@ -844,7 +844,6 @@ local SPECIES = {
 			zones = { shape = "rect", halfMap = true, walkOutStuds = 45, dirTries = 16, walkOutChance = 0.8 }, -- M1: 80%만 나갈 수 있는 방향 · 20% 완전 무작위(연달아 두 번은 안 나온다)
 			shakes = 3,
 			onStart = { pan = { heightStuds = 22, distanceStuds = 70, distanceJitter = 20, scatterDeg = 25, airborneDistanceScale = 1.4, airborneHeightBonus = 6, multiplier = 2.0, starDistanceStuds = 85 } },
-			voidFall = true, fall = { maxHpFraction = 0.25, dropStuds = 14 },
 			dodge = { distanceStuds = 46 },
 		},
 		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단(P3c: 11곳)
@@ -934,6 +933,16 @@ local SPECIES = {
 				-- 점프 연타 presses회(1인 초당 6회) 또는 동료 F 홀드로 탈출 · 갇힌 동안은 "공중" - 대공 잡기가 오면 얼림 · 잡기로 이어진다. 개수는 곡선(인당)을 따른다.
 				trapOnHits = { hits = 2, windowSeconds = 6, liftStuds = 8, seconds = 5, presses = 10, style = "bubble" },
 				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "거품탄",
+			},
+			-- QUEUE-ALL1 01 D-2 삼지창 던지기(원거리 · 인당 조준 - primitive "boomerang" + perMember · 그림 projectileStyle "trident"): 멤버마다 보스 → 그 사람 쪽 직선 전조 1.0초(바닥 띠 - 평타 예외)
+			--   → 삼지창이 벽 앞까지 날아가 박힌다(turnSeconds 1.0) → 같은 선으로 끌려 돌아오며 다시 판정(가는 길 · 오는 길 1인 1회씩). 강공격 줄(bubble heavy - 원거리 이중 부담 금지).
+			--   회피: 선 옆으로 반폭 2.5 + 1 → 0.5 + 3.5 ÷ 16 × 1.25 = 0.77초 ≤ 1.0 · 돌아올 때는 선 밖이면 된다(띠가 그대로 남는다).
+			tridentThrow = {
+				primitive = "boomerang", bubble = "heavy", motion = "fin", projectileStyle = "trident", perMember = true,
+				cooldownSeconds = 14, priority = P.normal, starvationSeconds = 45,
+				telegraphSeconds = 1.0, directions = 1, stepDeg = 0, halfWidthStuds = 2.5,
+				outSpeedStuds = 70, backSpeedStuds = 55, turnSeconds = 1.0, arenaMarginStuds = 4,
+				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "삼지창", -- 난이도 모형(600판): 끔 60.8/61.0% → ×1.4 58.3/61.0%(솔로 원거리/근접 - 강공격 줄 몫을 나눠 가져 거의 불변) · ×1.8은 근접 63.3%
 			},
 		},
 	},

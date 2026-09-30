@@ -329,6 +329,24 @@ local function cloneBody(color)
 	return body
 end
 
+-- QUEUE-ALL1 01 D-2 삼지창(style "trident"): 자루 하나(판정 자리) + 가로대 · 날 셋(자루 기준 오프셋 - 매 프레임 자루를 따라간다)
+local TRIDENT_GOLD = Color3.fromRGB(255, 214, 90)
+local function tridentBody(parts)
+	local shaft = newPart(Vector3.new(0.45, 0.45, 7), TRIDENT_GOLD, 0, nil, Enum.Material.Metal)
+	table.insert(parts, shaft)
+	local extras = {}
+	local function add(size, offset)
+		local p = newPart(size, TRIDENT_GOLD, 0, nil, Enum.Material.Neon)
+		table.insert(parts, p)
+		table.insert(extras, { part = p, offset = offset })
+	end
+	add(Vector3.new(2.6, 0.35, 0.35), CFrame.new(0, 0, -3.3))
+	for _, x in ipairs({ -1.15, 0, 1.15 }) do
+		add(Vector3.new(0.3, 0.3, x == 0 and 2.2 or 1.6), CFrame.new(x, 0, x == 0 and -4.5 or -4.2))
+	end
+	return shaft, extras
+end
+
 function BossBR13View.boomTelegraph(data)
 	clearBoom()
 	boom = { data = data, parts = {}, clones = {}, lines = {} }
@@ -341,9 +359,12 @@ function BossBR13View.boomTelegraph(data)
 		table.insert(boom.parts, band)
 		-- 선 끝: 분신 실루엣(준비 자세) + 화살표(선 끝 삼각 - 오는 길도 같은 선)
 		local tip = data.center + dir * line.length
-		local silhouette = cloneBody(color)
-		silhouette.CFrame = CFrame.lookAt(tip + Vector3.new(0, 2.6, 0), data.center + Vector3.new(0, 2.6, 0))
-		table.insert(boom.parts, silhouette)
+		local silhouette = nil
+		if data.style ~= "trident" then -- 삼지창은 보스 손에서 날아간다(선 끝 실루엣 없음 - 화살표만)
+			silhouette = cloneBody(color)
+			silhouette.CFrame = CFrame.lookAt(tip + Vector3.new(0, 2.6, 0), data.center + Vector3.new(0, 2.6, 0))
+			table.insert(boom.parts, silhouette)
+		end
 		local side = Vector3.new(-dir.Z, 0, dir.X)
 		for _, s in ipairs({ 1, -1 }) do
 			table.insert(boom.parts, segment(tip - dir * 5 + side * 3 * s, tip - dir * 1, 1, WHITE, 0.05, 0.4))
@@ -358,11 +379,17 @@ function BossBR13View.boomRun()
 	end
 	boom.startedAt = os.clock()
 	for _, line in ipairs(boom.lines) do
-		destroy(line.silhouette) -- 실루엣은 사라지고 보스 곁에서 분신이 달려 나간다
-		local clone = cloneBody(boom.data.color or DANGER)
-		clone.Transparency = 0.3
-		table.insert(boom.parts, clone)
-		line.clone = clone
+		if line.silhouette then
+			destroy(line.silhouette) -- 실루엣은 사라지고 보스 곁에서 분신이 달려 나간다
+		end
+		if boom.data.style == "trident" then
+			line.clone, line.extras = tridentBody(boom.parts)
+		else
+			local clone = cloneBody(boom.data.color or DANGER)
+			clone.Transparency = 0.3
+			table.insert(boom.parts, clone)
+			line.clone = clone
+		end
 	end
 end
 
@@ -511,14 +538,21 @@ RunService.RenderStepped:Connect(function()
 			if line.clone and live[line.clone] then
 				local distance, leg = BossSkillMath.boomerangAt(skill, line.length, os.clock() - boom.startedAt)
 				if distance then
-					local at = d.center + line.dir * distance + Vector3.new(0, 2.6, 0)
-					local face = leg == "back" and -line.dir or line.dir
-					line.clone.CFrame = CFrame.lookAt(at, at + face)
+					local trident = line.extras ~= nil
+					local at = d.center + line.dir * distance + Vector3.new(0, trident and (leg == "turn" and 0.8 or 2.2) or 2.6, 0) -- 삼지창: 박힌 동안 낮게(바닥에 꽂힘)
+					local face = (leg == "back" and not trident) and -line.dir or line.dir -- 삼지창은 날이 앞인 채로 끌려 돌아온다
+					line.clone.CFrame = trident and leg == "turn" and CFrame.lookAt(at, at + face - Vector3.new(0, 0.6, 0)) or CFrame.lookAt(at, at + face)
+					for _, e in ipairs(line.extras or {}) do
+						e.part.CFrame = line.clone.CFrame * e.offset
+					end
 					if math.random() < 0.3 then
 						BossFx.streak(at, -face, 4, 1, WHITE, 0.25, 0)
 					end
 				else
 					destroy(line.clone)
+					for _, e in ipairs(line.extras or {}) do
+						destroy(e.part)
+					end
 				end
 			end
 		end

@@ -127,21 +127,28 @@ function BossRodsView.target(data)
 	local head = target and target.Character and target.Character:FindFirstChild("Head")
 	local mark = nil
 	if head then
+		-- QUEUE-ALL1 01 D(폭풍 군주): "내가 표적!" 글씨 삭제 → 표적인 사람 머리 위 노란 "!"(두근거림) · 파티원에게도 같은 사람 위에 · 번개가 떨어지면 사라진다(strike → clearScope)
 		local mine = target == player
 		mark = Instance.new("BillboardGui")
-		mark.Size = UDim2.new(0, mine and 130 or 90, 0, mine and 44 or 32)
-		mark.StudsOffset = Vector3.new(0, 5, 0)
+		mark.Size = UDim2.new(0, mine and 56 or 44, 0, mine and 72 or 56)
+		mark.StudsOffset = Vector3.new(0, 4.2, 0)
 		mark.AlwaysOnTop = true
+		mark.LightInfluence = 0
 		mark.Adornee = head
 		mark.Parent = head
 		local label = Instance.new("TextLabel")
+		label.AnchorPoint = Vector2.new(0.5, 0.5)
+		label.Position = UDim2.fromScale(0.5, 0.5)
 		label.Size = UDim2.fromScale(1, 1)
-		label.BackgroundColor3 = RED
+		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.GothamBlack
 		label.TextScaled = true
-		label.TextColor3 = WHITE
-		label.Text = mine and "⚡ 내가 표적!" or "⚡ 표적"
+		label.TextColor3 = YELLOW
+		label.TextStrokeColor3 = Color3.fromRGB(30, 27, 46)
+		label.TextStrokeTransparency = 0
+		label.Text = "!"
 		label.Parent = mark
+		TweenService:Create(label, TweenInfo.new(0.32, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Size = UDim2.fromScale(1.25, 1.25) }):Play() -- 두근거림
 		live[mark] = true
 	end
 	local ring = disc(Vector3.zero, 6, RED, 0.45)

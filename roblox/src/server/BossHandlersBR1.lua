@@ -968,15 +968,25 @@ BossHandlersBR1.boomerang = {
 		local zone = kit.zoneOf(c.model)
 		local origin = kit.xz(c.position)
 		local spread = skill.centered and skill.stepDeg * ((skill.directions or 1) - 1) / 2 or 0
-		local base = angleToTarget(c) - spread
+		local bases = { angleToTarget(c) - spread }
+		if skill.perMember then -- QUEUE-ALL1 01 D-2: 인당 조준 - 대상 말고도 안 잡힌 멤버마다 같은 모양을 그 사람 쪽으로
+			for _, v in ipairs(kit.victims(st)) do
+				local to = kit.xz(v.root.Position) - origin
+				if v.root ~= c.targetRoot and not BossTrap.isTrapped(v.player) and to.Magnitude > 1e-3 then
+					table.insert(bases, math.deg(math.atan2(to.Z, to.X)) - spread)
+				end
+			end
+		end
 		local lines, payload = {}, {}
-		for k = 0, (skill.directions or 1) - 1 do
-			local deg = base + skill.stepDeg * k
-			local a = math.rad(deg)
-			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-			local length = kit.clipToZone(origin, dir, zone, skill.arenaMarginStuds or 4)
-			table.insert(lines, { dir = dir, length = length, hit = { out = {}, back = {} } })
-			table.insert(payload, { angleDeg = deg, length = length })
+		for _, base in ipairs(bases) do
+			for k = 0, (skill.directions or 1) - 1 do
+				local deg = base + skill.stepDeg * k
+				local a = math.rad(deg)
+				local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+				local length = kit.clipToZone(origin, dir, zone, skill.arenaMarginStuds or 4)
+				table.insert(lines, { dir = dir, length = length, hit = { out = {}, back = {} } })
+				table.insert(payload, { angleDeg = deg, length = length })
+			end
 		end
 		st.boomOrigin = origin
 		st.boomLines = lines
@@ -984,7 +994,7 @@ BossHandlersBR1.boomerang = {
 		st.phaseEndsAt = c.now + skill.telegraphSeconds
 		kit.send(st, "boomTelegraph", {
 			center = Vector3.new(origin.X, st.floorY, origin.Z), lines = payload, halfWidth = skill.halfWidthStuds, seconds = skill.telegraphSeconds,
-			outSpeed = skill.outSpeedStuds, backSpeed = skill.backSpeedStuds, turnSeconds = skill.turnSeconds, bossId = c.data.id, color = c.data.headColor,
+			outSpeed = skill.outSpeedStuds, backSpeed = skill.backSpeedStuds, turnSeconds = skill.turnSeconds, bossId = c.data.id, color = c.data.headColor, style = skill.projectileStyle,
 		})
 	end,
 	step = function(c)

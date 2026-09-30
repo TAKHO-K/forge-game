@@ -164,6 +164,8 @@ function V.runPure()
 				local name = id .. "." .. sid
 				if sk.primitive == "projectile" then
 					table.insert(per, name .. "(" .. tostring(sk.targetRule or "target") .. ")")
+				elseif sk.primitive == "boomerang" and sk.perMember then -- QUEUE-ALL1 01 D-2 삼지창(멤버마다 한 줄)
+					table.insert(per, name)
 				elseif sk.primitive == "circleTarget" then
 					if sk.perMember then
 						table.insert(per, name)
