@@ -88,6 +88,46 @@ local function snap()
 	end)
 end
 
+-- A2-M1 보스별 카메라 거리: 보스전에 들어서면(BossEncounterId) 지금 거리가 그 보스의 cameraZoomStuds보다 가까울 때만 한 번 그 거리로 물린다(큰 보스가 화면을 넘치지 않게) → 곧 원래 범위로 푼다(휠 자유).
+local CollectionService = game:GetService("CollectionService")
+local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local function bossZoomFor(encounterId)
+	for _, m in ipairs(CollectionService:GetTagged("Monster")) do
+		if m:GetAttribute("BossEncounterId") == encounterId then
+			local boss = BossData.bosses[m:GetAttribute("BossRig") or ""]
+			return boss and boss.cameraZoomStuds
+		end
+	end
+	return nil
+end
+local function snapTo(zoom)
+	snapToken += 1
+	local token = snapToken
+	player.CameraMinZoomDistance = zoom
+	player.CameraMaxZoomDistance = zoom
+	task.delay(cfg.spawnSnapSeconds, function()
+		if token ~= snapToken then
+			return
+		end
+		local now = current()
+		player.CameraMinZoomDistance = now.zoomMinStuds
+		player.CameraMaxZoomDistance = math.max(now.zoomMaxStuds, zoom)
+	end)
+end
+player:GetAttributeChangedSignal("BossEncounterId"):Connect(function()
+	local id = player:GetAttribute("BossEncounterId")
+	if not id then
+		return
+	end
+	task.delay(0.5, function() -- 보스 모델 복제를 잠깐 기다린다
+		local zoom = player:GetAttribute("BossEncounterId") == id and bossZoomFor(id)
+		local camera = Workspace.CurrentCamera
+		if zoom and camera and (camera.CFrame.Position - camera.Focus.Position).Magnitude < zoom - 1 then
+			snapTo(zoom)
+		end
+	end)
+end)
+
 player.CharacterAdded:Connect(snap)
 player:GetAttributeChangedSignal("CameraTopDown"):Connect(snap)
 player.CameraMinZoomDistance = cfg.free.zoomMinStuds

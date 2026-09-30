@@ -128,6 +128,15 @@ local function buildModel(data, position, variant)
 	if rig then
 		root, body, head = BossRig.build(model, rig, look, position)
 		model:SetAttribute("BossRig", data.isBoss and data.id or data.rigId)
+		-- A2-M1 덩치: 몸이 커진 만큼만 플레이어 공격 도달을 넓힌다(Reach.bodyRadius - 조준 · 평타 · 스킬 · 화살) = 몸통 반폭 × (지금 배율 − 옛 배율). 배율이 같으면 0 = 옛 판정.
+		if data.baseSizeScale and sizeScale > data.baseSizeScale + 1e-6 then
+			for _, j in ipairs(rig.joints) do
+				if j.part == "Body" then
+					model:SetAttribute("BodyRadius", j.size.X / 2 * (sizeScale - data.baseSizeScale))
+					break
+				end
+			end
+		end
 	elseif data.rig then
 		-- M2 잡몹 몸체(MonsterRigSpec - 같은 조립 함수) · 외형 파트는 조준 광선에 안 걸린다(CanQuery 끔) → 옛 몸통 + 머리 크기의 투명 Hitbox가 조준 · 판정 자리를 그대로 지킨다.
 		-- A2-S: 스위치(Workspace.ArtStyleV1)가 켜져 있으면 아트 샘플 몸체(관절 이름 같음 · 아래 Hitbox는 그대로 = 판정 불변)

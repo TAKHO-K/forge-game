@@ -305,6 +305,55 @@ local function startDeathClone(e)
 	deathZoom(e.visPos)
 end
 
+-- A2-M1 측정 보조(판정 무관): 의도된 타격 창(접촉 − 0.03 ~ 접촉 + 히트스톱 + 0.25)을 모델 Attribute ClientImpacts에 적는다(이 클라에만 - client/A2M1Probe가 튐 검출에서 뺀다).
+local impactKeys = { "actAt", "swingAt", "flinchAt", "stunAt", "pickAt", "throwAt", "hopAt", "deadAt" }
+local function noteImpacts(e, st)
+	e.seen = e.seen or {}
+	local changed = false
+	local w = e.rig.weight or 1
+	local function push(a, b)
+		e.impacts = e.impacts or {}
+		table.insert(e.impacts, ("%.3f,%.3f"):format(a, b))
+		if #e.impacts > 12 then
+			table.remove(e.impacts, 1)
+		end
+		changed = true
+	end
+	for _, k in ipairs(impactKeys) do
+		local v = st[k]
+		if v and v ~= e.seen[k] then
+			e.seen[k] = v
+			if k == "actAt" and st.act then
+				local skill = e.ctx.skills and e.ctx.skills[st.act]
+				local clip = BossMotion.clip(e.rigId, e.rig, BossMotion.clipNameForSkill(e.rigId, e.rig, st.act, skill) or "")
+				local hit = st.actHit or 0
+				if clip then
+					local contact = v + BossMotion.contactTime(clip, hit)
+					push(v + BossMotion.clipKeys(clip, hit).preEnd - 0.03, contact + (clip.hitstop or 0) * w + 0.25)
+				end
+			elseif k == "swingAt" then
+				push(v - 0.03, v + 0.07 + 0.04 * w + 0.25)
+			elseif k == "hopAt" then
+				push(v + (st.hopSeconds or 0) - 0.35, v + (st.hopSeconds or 0) + 0.35)
+			elseif k == "deadAt" then
+				local Dd = e.ctx.plan.death
+				local slowEnd = Dd.slowSeconds and (Dd.slowSeconds + (Dd.hitstopAt - Dd.slowSeconds * Dd.slowRate)) or Dd.hitstopAt
+				push(v - 0.03, v + 0.15)
+				push(v + slowEnd - 0.05, v + slowEnd + 0.3)
+			else
+				push(v - 0.03, v + (k == "pickAt" and 0.35 or 0.14))
+			end
+		end
+	end
+	if st.throwPlan and st.throwPlan ~= e.seen.throwPlan then
+		e.seen.throwPlan = st.throwPlan
+		push(st.throwPlan - 0.12, st.throwPlan + 0.35)
+	end
+	if changed then
+		e.model:SetAttribute("ClientImpacts", table.concat(e.impacts, ";"))
+	end
+end
+
 local function updateEntry(e, now, dt, camPos)
 	local m, root = e.model, e.root
 	if not root or not root.Parent then
@@ -384,6 +433,7 @@ local function updateEntry(e, now, dt, camPos)
 		st.lookYaw = e.lookSmooth
 	end
 	local pose, info = BossMotion.evaluate(e.ctx, st, now)
+	noteImpacts(e, st)
 
 	-- 2차 움직임 스프링(가까울 때만 · 잡기 중에는 끔 - 서버 FK와 같은 꼬리 자리)
 	local grabbing = st.act and e.ctx.skills and e.ctx.skills[st.act] and e.ctx.skills[st.act].primitive == "grab"
@@ -595,6 +645,7 @@ local function previewStep(e, now, dt)
 		end
 		print(("[BossAnim] %s · %s"):format(e.rigId, action))
 	end
+	localPlayer:SetAttribute("BossAnimAction", action) -- A2-M1 측정기가 동작별로 나눠 센다
 	local st = {}
 	local data = BossData.bosses[e.rigId]
 	local move = data.moveSpeedStuds or 8
@@ -665,7 +716,10 @@ local function startPreview(payload)
 	if not rig or not data or not myRoot then
 		return
 	end
-	local S = data.sizeScale or 3
+	local S = data.visualScale or data.sizeScale or 3 -- A2-M1 덩치(켜진 보스 = sizeScale × bodyScale)
+	if payload.scale then
+		S = (data.sizeScale or 3) * payload.scale -- A2-M1 시범: 전시 리그만 배율 강제(/gg boss anim <보스> <동작> [반복] [배율])
+	end
 	local look = Vector3.new(myRoot.CFrame.LookVector.X, 0, myRoot.CFrame.LookVector.Z)
 	local ahead = look.Magnitude > 1e-3 and look.Unit or Vector3.new(0, 0, -1)
 	local ground = myRoot.Position.Y - 3

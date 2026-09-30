@@ -257,7 +257,9 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		expReward = math.floor(trashExp * boss.expMultiplier),
 
 		radiusPx = trashBase.radiusPx * boss.sizeScale,
-		sizeScale = boss.sizeScale,
+		-- A2-M1 덩치: 모델 = sizeScale × bodyScale(visualScale - 켜진 보스만) · baseSizeScale = 옛 크기(몸 피격 반경 증가분 계산 · MonsterSpawner)
+		sizeScale = boss.visualScale or boss.sizeScale,
+		baseSizeScale = boss.sizeScale,
 		bodyColor = boss.bodyColor,
 		headColor = boss.headColor,
 		-- 23-6 [3]: MonsterSpawner.buildModel이 실루엣(bodyAspect)·부착물(attachments)을

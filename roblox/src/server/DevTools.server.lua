@@ -1878,7 +1878,7 @@ local function handleCommand(player, args)
 			reply(player, "보스 id: section_guardian · frost_giant · abyssal_lord · crystal_queen · scorpion_queen · storm_lord")
 		else
 			local action = args[4] or "all"
-			event:FireClient(player, { bossId = args[3], action = action, rep = tonumber(args[5]) })
+			event:FireClient(player, { bossId = args[3], action = action, rep = tonumber(args[5]), scale = tonumber(args[6]) }) -- A2-M1: 6번째 = 전시 리그 배율(덩치 시범)
 			reply(player, ("모션 확인: %s · %s%s"):format(args[3], action, args[5] and (" × " .. args[5]) or " (끄기 = /gg boss anim off)"))
 		end
 	elseif sub == "boss" and args[2] == "pattern" and args[3] then

@@ -634,6 +634,10 @@ end
 -- 속도 - 전부 플레이어 걷기 16보다 느리다: 걸어서 벗어날 수 있어야 한다) / scheduler(전역 쿨 - 느린 보스 7 ·
 -- 보통 6 · 빠른 보스 5) / skills의 쿨 분포 / role="signature".
 -- chaseStopDistanceStuds(21-3): 몸통 충돌이 꺼진 보스가 플레이어와 겹치지 않게 서는 거리 = 몸통 반폭 + 캐릭터 1 + 여유.
+-- A2-M1 덩치(사용자 확정 2026-09-30 "보스는 특성에 맞게 덩치를 키워도 됨"): bodyScale = 모델 전체 배율(리그 · 부위 · 관절 · 부착점 = sizeScale × bodyScale로 지음 -
+--   Blender 메시 재내보내기 불필요 · 서버 잡기 FK와 클라 모션은 루트 크기에서 배율을 읽어 같이 커진다). 몸 피격 판정(플레이어가 때리는 쪽)은 몸과 같이 = 모델 Attribute
+--   BodyRadius에 **커진 몸 반폭 증가분만**(배율 1이면 0 = 옛 판정). 보스 공격 판정(범위 · 시각 · 피해) · 추격 정지 거리 · 이동 속도는 그대로(A2-M1 절대 규칙).
+--   cameraZoomStuds = 보스전 진입 때 카메라가 이보다 가까우면 한 번 이 거리로 물린다(그 뒤 휠 자유 - client/CameraRig).
 -- skillOrder는 같은 우선순위·같은 대기 시간일 때의 결정 순서(순회 순서 보장 - ArmorData.gradeOrder와 같은 이유).
 local SPECIES = {
 	{
@@ -648,6 +652,7 @@ local SPECIES = {
 		bodyColor = Color3.fromRGB(60, 20, 70), headColor = Color3.fromRGB(90, 30, 100),
 		-- 기본형(기준선) - 21-3부터 검증돼 온 그 보스다. 다른 5종이 쓰는 전조 어휘의 사전이고 견습 보스다.
 		sizeScale = 3, bodyAspect = Vector3.new(1.0, 1.0, 1.0),
+		bodyScale = 1.3, cameraZoomStuds = 34, -- A2-M1 덩치: 돌 골렘 - 크고 묵직(시범 보스)
 		attachments = {
 			{ anchor = "body", offset = Vector3.new(1.2, 0.9, 0), size = Vector3.new(0.5, 0.5, 0.9), kind = "block", color = "head", name = "LeftPauldron" },
 			{ anchor = "body", offset = Vector3.new(-1.2, 0.9, 0), size = Vector3.new(0.5, 0.5, 0.9), kind = "block", color = "head", name = "RightPauldron" },
@@ -678,6 +683,7 @@ local SPECIES = {
 		gate = { zone = "tier6", color = { 190, 240, 255 } },
 		-- 느린 거인: 크고(3.3) 느리고(6) 한 방이 무겁다(평타 1.5초에 ×1.5). 전역 쿨도 7초로 길다.
 		sizeScale = 3.3, bodyAspect = Vector3.new(0.85, 1.35, 0.85),
+		bodyScale = 1.35, cameraZoomStuds = 38, -- A2-M1 덩치: 거인 - 가장 크고 느리게
 		attachments = {
 			{ anchor = "head", offset = Vector3.new(0.5, 0.6, 0), size = Vector3.new(0.3, 1.4, 0.3), rotationDeg = Vector3.new(0, 0, -25), kind = "wedge", color = "head", name = "LeftHorn" },
 			{ anchor = "head", offset = Vector3.new(-0.5, 0.6, 0), size = Vector3.new(0.3, 1.4, 0.3), rotationDeg = Vector3.new(0, 180, 25), kind = "wedge", color = "head", name = "RightHorn" },
@@ -797,6 +803,7 @@ local SPECIES = {
 		id = "abyssal_lord", displayName = "심해 군주", bodyColor = abyssalBody, headColor = abyssalHead,
 		gate = { zone = "tier3", color = { 40, 140, 255 }, style = "abyss" }, -- M1-4: 장식 모듈(shared/BossGateKit) · 자리 = WorldMapData.layout.gateSites.tier3(만 위 신전)
 		sizeScale = 3, bodyAspect = Vector3.new(1.05, 0.95, 1.15),
+		bodyScale = 1.2, cameraZoomStuds = 32, -- A2-M1 덩치: 심해 군주 - 꼬리 길이로 위압감
 		attachments = {
 			{ anchor = "body", offset = Vector3.new(1.3, 0.9, 0), size = Vector3.new(0.9, 0.5, 0.9), rotationDeg = Vector3.new(0, 0, -30), kind = "wedge", color = "head", name = "LeftFin" },
 			{ anchor = "body", offset = Vector3.new(-1.3, 0.9, 0), size = Vector3.new(0.9, 0.5, 0.9), rotationDeg = Vector3.new(0, 180, 30), kind = "wedge", color = "head", name = "RightFin" },
@@ -917,6 +924,7 @@ local SPECIES = {
 		id = "crystal_queen", displayName = "수정 여왕", bodyColor = crystalBody, headColor = crystalHead,
 		gate = { zone = "tier2", color = { 120, 230, 255 } },
 		sizeScale = 3, bodyAspect = Vector3.new(1.0, 1.15, 1.0),
+		bodyScale = 1.2, cameraZoomStuds = 32, -- A2-M1 덩치: 수정 여왕 - 키 · 날개로 위압감
 		attachments = {
 			{ anchor = "body", offset = Vector3.new(0.9, 1.0, 0.2), size = Vector3.new(0.4, 1.3, 0.4), rotationDeg = Vector3.new(0, 0, -20), kind = "wedge", color = "head", name = "LeftShard" },
 			{ anchor = "body", offset = Vector3.new(-0.9, 1.0, 0.2), size = Vector3.new(0.4, 1.3, 0.4), rotationDeg = Vector3.new(0, 180, 20), kind = "wedge", color = "head", name = "RightShard" },
@@ -1053,6 +1061,7 @@ local SPECIES = {
 		gate = { zone = "tier4", color = { 255, 170, 40 } },
 		-- 빠른 보스: 낮고 넓고(2.8) 빠르다(10 - 잡몹과 같다). 평타가 잦고(0.75초) 가볍다(×0.75). 전역 쿨 5초.
 		sizeScale = 2.8, bodyAspect = Vector3.new(1.3, 0.65, 1.2),
+		bodyScale = 1.25, cameraZoomStuds = 34, -- A2-M1 덩치: 전갈 여왕 - 넓게(다리 · 꼬리 3)
 		attachments = {
 			{ anchor = "body", offset = Vector3.new(1.1, 0, -0.9), size = Vector3.new(0.9, 0.4, 0.9), rotationDeg = Vector3.new(0, -30, 0), kind = "wedge", color = "head", name = "LeftClaw" },
 			{ anchor = "body", offset = Vector3.new(-1.1, 0, -0.9), size = Vector3.new(0.9, 0.4, 0.9), rotationDeg = Vector3.new(0, 210, 0), kind = "wedge", color = "head", name = "RightClaw" },
@@ -1215,6 +1224,7 @@ local SPECIES = {
 		gate = { zone = "tier5", color = { 255, 240, 80 }, style = "storm" }, -- M1-4: 장식 모듈 · 폭풍 첨탑 발치
 		-- 가장 바쁜 보스: 전역 쿨 5초에 쿨이 짧은 스킬들. 평타도 잦고 가볍다.
 		sizeScale = 3, bodyAspect = Vector3.new(0.9, 1.2, 0.9),
+		bodyScale = 1.25, cameraZoomStuds = 34, -- A2-M1 덩치: 폭풍 군주 - 키 · 망토로 위압감
 		attachments = {
 			{ anchor = "body", offset = Vector3.new(1.2, 1.3, 0), size = Vector3.new(0.3, 1.8, 0.3), rotationDeg = Vector3.new(0, 0, -15), kind = "wedge", color = "head", name = "LeftBlade" },
 			{ anchor = "body", offset = Vector3.new(-1.2, 1.3, 0), size = Vector3.new(0.3, 1.8, 0.3), rotationDeg = Vector3.new(0, 180, 15), kind = "wedge", color = "head", name = "RightBlade" },
@@ -1375,6 +1385,9 @@ for _, species in ipairs(SPECIES) do
 	end
 end
 
+-- A2-M1 덩치 켜기(보스마다 작업 · 확인이 끝난 보스부터 - 시범 = 구간 수호자). 켜진 보스만 visualScale = sizeScale × bodyScale(나머지 = sizeScale 그대로 = 옛 모습).
+local BODY_SCALE_LIVE = { section_guardian = true }
+
 local bosses = {}
 local rotationBossIds = {}
 for _, species in ipairs(SPECIES) do
@@ -1386,6 +1399,7 @@ for _, species in ipairs(SPECIES) do
 		boss[key] = value
 	end
 	boss.mechanics = SPECIES_MECHANICS[species.id]
+	boss.visualScale = boss.sizeScale * ((BODY_SCALE_LIVE[species.id] and boss.bodyScale) or 1)
 	-- arenaKit(29-2 훅): 보스별 정적 지형지물 목록. 전갈 여왕·심해 군주·폭풍 군주가 갖는다 - BossArenaKit.lua. tag가 붙은 파트는 스킬이 읽는 논리 구역(shared/BossPropMath.kitZones).
 	bosses[species.id] = boss
 	table.insert(rotationBossIds, species.id)
@@ -1393,6 +1407,7 @@ end
 
 return {
 	stageInterval = STAGE_INTERVAL,
+	bodyScaleLive = BODY_SCALE_LIVE, -- A2-M1(검증 · 보고용)
 	-- G1-4(D0 결정 5 · 사용자 확정): 보스를 잡아도 보스맵에 남는다 - [다음 스테이지] · [다시 도전](파티 = 재투표 · 보스 재생성) · [마을]을 고른다.
 	-- lingerSeconds 동안 아무것도 안 고르면 다음 스테이지로 자동 이동(잠수 대비 - 슬롯 12개 · 서버 16명이라 무제한 잔류는 안 된다).
 	lingerSeconds = 90,
