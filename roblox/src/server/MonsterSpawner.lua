@@ -548,6 +548,7 @@ function MonsterSpawner.spawnRescueTarget(def, zoneKey)
 	local position = def.position or (def.footPosition + Vector3.new(0, 1.5, 0)) -- buildModel은 몸통 밑면을 position.Y − 1.5에 둔다
 	local model = buildModel(data, position, {})
 	CollectionService:AddTag(model, "RescueTarget") -- 클라가 "보스"를 찾을 때 이 모델을 건너뛴다(BossPatternVisuals)
+	model:SetAttribute("RescueKind", def.kind) -- A2-N4 §2-6: 클라 겉모습 덧입힘(ArtV1PatternDress)이 종류를 고른다
 	if not look then
 		model.Body.Material = Enum.Material.Ice
 		model.Body.Transparency = 0.45

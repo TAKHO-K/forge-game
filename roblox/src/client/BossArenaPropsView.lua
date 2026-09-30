@@ -16,6 +16,8 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
+local ArtV1PatternData = require(ReplicatedStorage.Shared.data.ArtV1PatternData)
 
 local BossArenaPropsView = {}
 
@@ -91,6 +93,13 @@ local function spawnPit(data)
 		pebble.Shape = Enum.PartType.Ball
 		pebble.CFrame = CFrame.new(data.position + Vector3.new(math.cos(a) * (data.radius + 0.5), 0.3, math.sin(a) * (data.radius + 0.5)))
 		table.insert(pebbles, pebble)
+	end
+	-- A2-N4 §2-6(ArtStyleV1 뒤): 비탈 안쪽 깔때기 고리 - 가운데로 갈수록 짙은 모래(판정 반경 그대로 · 겉모습만)
+	if Workspace:GetAttribute(ArtStyleV1Data.attribute) == true then
+		for _, r in ipairs(ArtV1PatternData.pit.rings) do
+			local ring = newFlatDisc(data.position, math.max(data.coreRadius + 0.4, data.radius * r.fraction), data.color:Lerp(Color3.new(0, 0, 0), r.darken), Enum.Material.Sand, r.lift)
+			table.insert(pebbles, ring)
+		end
 	end
 	local info = TweenInfo.new(data.armSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	TweenService:Create(slope, info, { Transparency = 0.15 }):Play()

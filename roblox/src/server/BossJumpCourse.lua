@@ -108,6 +108,7 @@ function BossJumpCourse.build(model, plan, center, floorY, arenaRadius, zoneKey,
 				state.crystals[site] = crystal
 				crystal.model = MonsterSpawner.spawnRescueTarget({
 					displayName = "수정",
+					kind = "crystal",
 					color = spec.color,
 					bodyAspect = Vector3.new(1.2, 1.6, 1.2),
 					footPosition = p.position,

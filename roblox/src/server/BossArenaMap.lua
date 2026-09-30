@@ -190,6 +190,7 @@ function BossArenaMap.enableSliceFloor(zoneKey, count, hubRadius)
 	local y = FLOOR_TOP_Y - thickness / 2
 	local model = Instance.new("Model")
 	model.Name = "BossArenaSliceFloor_" .. zoneKey
+	model:SetAttribute("SliceCount", count)
 	model.Parent = GroundProbe.folder()
 	local color, material = base.floor.Color, base.floor.Material
 	local center = Vector3.new(zone.center.X, y, zone.center.Z)
@@ -203,6 +204,7 @@ function BossArenaMap.enableSliceFloor(zoneKey, count, hubRadius)
 			local p0 = center + Vector3.new(math.cos(a0), 0, math.sin(a0)) * radius
 			local p1 = center + Vector3.new(math.cos(a1), 0, math.sin(a1)) * radius
 			for _, w in ipairs(wedgeTriangle(model, center, p0, p1, thickness, color, material)) do
+				w:SetAttribute("SliceIndex", k) -- A2-N4 §2-6 클라 겉모습(ArtV1PatternDress)이 조각 경계 줄을 조각별로 숨긴다
 				table.insert(parts, w)
 			end
 		end
