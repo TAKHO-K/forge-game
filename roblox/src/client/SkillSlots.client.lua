@@ -580,12 +580,49 @@ local function refreshClassIcons()
 		return
 	end
 	local accentColor = UIColors.classAccent[classId]
-	for _, slotId in ipairs({ "q", "e" }) do
+	local ArtImage = require(script.Parent.ui.ArtImage)
+	for _, slotId in ipairs({ "q", "e", "r" }) do
 		local handle = slotHandles[slotId]
-		handle.iconImage.Image = iconSet[slotId]
-		if accentColor then
+		-- QUEUE-ALL3 Q9: 새 아이콘(업로드 이미지) 우선 · 없으면 옛 rbxassetid(q · e)
+		local path = SkillIconData.images[classId] and SkillIconData.images[classId][slotId]
+		local img = path and ArtImage.get(path) or iconSet[slotId]
+		if handle and handle.iconImage and img then
+			handle.iconImage.Image = img
+		end
+		if handle and accentColor then
 			handle.innerHighlightStroke.Color = accentColor
 		end
+	end
+	-- 대시 칸 · T 칸(궁극기 게이지 버튼 = hud/UltGauge) 그림
+	local dashHandle = slotHandles["dash"]
+	local dashImg = ArtImage.get(SkillIconData.images[classId].dash)
+	if dashHandle and dashImg then
+		local holder = dashHandle.slot or dashHandle.button
+		local overlay = holder and (holder:FindFirstChild("SkillArt") or Instance.new("ImageLabel"))
+		if overlay then
+			overlay.Name = "SkillArt"
+			overlay.BackgroundTransparency = 1
+			overlay.AnchorPoint = Vector2.new(0.5, 0.5)
+			overlay.Position = UDim2.fromScale(0.5, 0.5)
+			overlay.Size = UDim2.fromScale(0.78, 0.78)
+			overlay.Image = dashImg
+			overlay.ZIndex = holder.ZIndex + 2
+			overlay.Parent = holder
+		end
+	end
+	local ultButton = player.PlayerGui:FindFirstChild("UltButton", true)
+	local tImg = ArtImage.get(SkillIconData.images[classId].t)
+	if ultButton and tImg then
+		local art = ultButton:FindFirstChild("SkillArt") or Instance.new("ImageLabel")
+		art.Name = "SkillArt"
+		art.BackgroundTransparency = 1
+		art.AnchorPoint = Vector2.new(0.5, 0.5)
+		art.Position = UDim2.fromScale(0.5, 0.45)
+		art.Size = UDim2.fromScale(0.7, 0.7)
+		art.Image = tImg
+		art.ImageTransparency = 0.15
+		art.ZIndex = ultButton.ZIndex + 1
+		art.Parent = ultButton
 	end
 end
 

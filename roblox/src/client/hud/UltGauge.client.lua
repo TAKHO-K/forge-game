@@ -95,6 +95,10 @@ task.spawn(function()
 	label.TextSize = 14
 	button.Parent = slot
 	slot.Name = "Slot_t" -- 칸 이름도 T로(점검 · 캡처)
+	-- QUEUE-ALL3 Q9: T 칸도 정보 카드(PC 마우스 올림 · 폰 길게 누름 - 짧게 누름 = 발동 그대로)
+	require(script.Parent.SkillTooltip).attach(button, "t", nil, function()
+		return require(script.Parent.Parent.ui.kit.Theme).isMobile
+	end)
 end)
 
 -- 가득 참 발광(묶음 F1): 테두리 맥동

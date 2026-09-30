@@ -12,6 +12,10 @@ local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")
 
 local SkillTooltipText = require(ReplicatedStorage.Shared.SkillTooltipText)
+local SkillIconData = require(ReplicatedStorage.Shared.data.SkillIconData)
+local UltimateData = require(ReplicatedStorage.Shared.data.UltimateData)
+local Text = require(ReplicatedStorage.Shared.Text)
+local ArtImage = require(script.Parent.Parent.ui.ArtImage)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local UIManager = require(script.Parent.Parent.UIManager)
@@ -22,6 +26,8 @@ SkillTooltip.longPressSeconds = 0.4
 local INFO_MAX_AGE = 1
 local PAD = 10
 local LABEL_WIDTH = 84
+local ICON = 56
+local KEEP = { ["쿨타임"] = true, ["예상 피해"] = true, ["효과"] = true, ["회복량"] = true, ["쉴드량"] = true } -- 카드 = 핵심 수치 1 ~ 2개(QUEUE-ALL3 Q9)
 local MARGIN = 8
 
 local player = Players.LocalPlayer
@@ -51,10 +57,19 @@ local function build()
 	Theme.corner(root, Theme.corner.button)
 	Theme.stroke(root)
 
+	-- QUEUE-ALL3 Q9 정보 카드: 왼쪽 위 스킬 그림(56) + 이름
+	local icon = Instance.new("ImageLabel")
+	icon.Name = "Icon"
+	icon.BackgroundTransparency = 1
+	icon.Position = UDim2.new(0, PAD, 0, PAD)
+	icon.Size = UDim2.fromOffset(ICON, ICON)
+	icon.ScaleType = Enum.ScaleType.Fit
+	icon.Parent = root
 	local title = Theme.label(root, "", "header", "textPrimary")
 	title.Name = "Title"
-	title.Position = UDim2.new(0, PAD, 0, PAD)
-	title.Size = UDim2.new(1, -PAD * 2, 0, Theme.textSize("header") + 4)
+	title.Position = UDim2.new(0, PAD + ICON + 8, 0, PAD)
+	title.Size = UDim2.new(1, -(PAD * 2 + ICON + 8), 0, ICON)
+	title.TextWrapped = true
 
 	local body = Instance.new("ScrollingFrame")
 	body.Name = "Body"
@@ -63,10 +78,27 @@ local function build()
 	body.ScrollBarThickness = 3
 	body.ScrollBarImageColor3 = UIColors.rim
 	body.AutomaticCanvasSize = Enum.AutomaticSize.None
-	body.Position = UDim2.new(0, PAD, 0, PAD + Theme.textSize("header") + 10)
+	body.Position = UDim2.new(0, PAD, 0, PAD + ICON + 8)
 	body.Parent = root
 
-	refs = { gui = gui, root = root, title = title, body = body, lines = {} }
+	local guideButton = Instance.new("TextButton") -- 잠긴 칸: [환생 안내](환생 제단 길 안내)
+	guideButton.Name = "RebirthGuide"
+	guideButton.AnchorPoint = Vector2.new(1, 1)
+	guideButton.Position = UDim2.new(1, -PAD, 1, -PAD)
+	guideButton.Size = UDim2.fromOffset(130, 44)
+	guideButton.BackgroundColor3 = UIColors.ember
+	guideButton.Font = Theme.font
+	guideButton.TextSize = 14
+	guideButton.TextColor3 = UIColors.textPrimary
+	guideButton.Text = Text.get("skillCard.rebirthGuide")
+	guideButton.Visible = false
+	guideButton.Parent = root
+	Theme.corner(guideButton, 8)
+	guideButton.Activated:Connect(function()
+		require(script.Parent.Parent.QuestGuide).go("altar", false)
+		SkillTooltip.hide()
+	end)
+	refs = { gui = gui, root = root, title = title, body = body, lines = {}, icon = icon, guideButton = guideButton }
 end
 
 local function width()
@@ -79,11 +111,44 @@ local function render()
 		return
 	end
 	local classId = player:GetAttribute("ClassId")
-	local built = classId and classId ~= "" and SkillTooltipText.build(classId, current.slotId:upper(), cache.info and cache.info.classId == classId and cache.info or nil)
+	local slotId = current.slotId
+	local built = classId and classId ~= "" and SkillTooltipText.build(classId, slotId:upper(), cache.info and cache.info.classId == classId and cache.info or nil)
+	if not built and classId and classId ~= "" then -- T(궁극기) · 대시 = 짧은 카드
+		local ult = slotId == "t" and UltimateData.skills[classId]
+		built = { keyText = slotId == "dash" and "Shift" or slotId:upper(), title = ult and ult.name or Text.get("skillCard.dash"), lines = {} }
+		if ult then
+			table.insert(built.lines, { label = "쿨타임", text = Text.get("skillCard.ultGauge") })
+			if ult.durationSeconds then
+				table.insert(built.lines, { label = "효과", text = Text.get("skillCard.duration", { n = tostring(ult.durationSeconds) }), colorName = "ember" })
+			end
+		end
+	end
 	if not built then
 		refs.root.Visible = false
 		return
 	end
+	-- QUEUE-ALL3 Q9 카드 = 그림 · 이름 · 40자 한 줄 · 쿨타임 · 핵심 수치 1 ~ 2개 · 잠겼으면 "환생 n에서 열려요 · 지금 a / n" + [환생 안내]
+	local short = classId and SkillIconData.short[classId] and SkillIconData.short[classId][slotId]
+	local compact = {}
+	if short then
+		table.insert(compact, { label = "", text = short })
+	end
+	for _, entry in ipairs(built.lines) do
+		if KEEP[entry.label] and #compact < 3 then
+			table.insert(compact, entry)
+		end
+	end
+	local need = SkillIconData.unlockRebirth[slotId] or 0
+	local have = player:GetAttribute("MoveTier") or player:GetAttribute("RebirthCount") or 0
+	local locked = need > have
+	if locked then
+		table.insert(compact, { label = "", text = Text.get("skillCard.unlock", { n = tostring(need), a = tostring(have) }), colorName = "gold" })
+	end
+	built.lines = compact
+	refs.guideButton.Visible = locked
+	local path = classId and SkillIconData.images[classId] and SkillIconData.images[classId][slotId]
+	refs.icon.Image = path and ArtImage.get(path) or ""
+	refs.icon.ImageColor3 = locked and Color3.fromRGB(120, 122, 130) or Color3.new(1, 1, 1)
 	local w = width()
 	refs.title.Text = ("[%s] %s"):format(built.keyText, built.title)
 	for _, label in ipairs(refs.lines) do
@@ -108,10 +173,10 @@ local function render()
 		y += height + 2
 	end
 	local screen = refs.gui.AbsoluteSize
-	local header = PAD + Theme.textSize("header") + 10
-	local height = math.min(header + y + PAD, screen.Y - MARGIN * 2)
+	local header = PAD + ICON + 8
+	local height = math.min(header + y + PAD + (refs.guideButton.Visible and 52 or 0), screen.Y - MARGIN * 2)
 	refs.root.Size = UDim2.new(0, w, 0, height)
-	refs.body.Size = UDim2.new(1, -PAD * 2, 1, -(header + PAD))
+	refs.body.Size = UDim2.new(1, -PAD * 2, 1, -(header + PAD + (refs.guideButton.Visible and 52 or 0)))
 	refs.body.CanvasSize = UDim2.new(0, 0, 0, y)
 
 	-- 자리(ScreenGui 좌표 - 칸과 같은 인셋 ScreenGui라 AbsolutePosition을 그대로 쓴다)
@@ -253,7 +318,9 @@ function SkillTooltip.attach(button, slotId, onTap, isTouchLayout)
 		if RunService:IsStudio() then
 			player:SetAttribute("P3bSkillTaps", (player:GetAttribute("P3bSkillTaps") or 0) + 1)
 		end
-		onTap()
+		if onTap then -- T 칸(UltGauge)은 발동을 자기 버튼이 한다
+			onTap()
+		end
 	end)
 	button.MouseEnter:Connect(function()
 		if not isTouchLayout() then
