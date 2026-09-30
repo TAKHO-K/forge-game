@@ -3,7 +3,7 @@
 --   B4 사운드: kind volume(0 ~ 1 숫자) = 카테고리별 음량(SoundData.categories가 settingKey로 가리킨다 · 클라 SoundHooks가 Attribute로 읽는다). 저장은 같은 settings 표(없는 키 = 기본값 - 이관 없음).
 --   reduceFlashes = 번개 · 태초 화면 섬광 끄기(관문 날씨 섬광 끔 · 피뢰침 방전은 흰 번쩍 대신 밝기만 · 태초 연출의 화면 밝아짐 없음 - 보스 경고 표시는 그대로).
 return {
-	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice" },
+	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "graphics" },
 	keys = {
 		cameraTopDown = { kind = "boolean", default = false, attrs = { "CameraTopDown" } },
 		reduceFlashes = { kind = "boolean", default = false, attrs = { "ReduceFlashes" } },
@@ -16,6 +16,10 @@ return {
 		volumeBossCue = { kind = "volume", default = 1, attrs = { "SoundVolumeBossCue" } }, -- B4 보스 전조
 		-- QUEUE-ALL1 P3 §1: 다른 서버 초월 알림 = full(전체 - 풀 연출 조건이면 하늘 갈라짐까지) · banner(배너만) · off(끔 - 채팅 한 줄만) · kind choice(값 = options 중 하나)
 		transcendNotice = { kind = "choice", default = "full", options = { "full", "banner", "off" }, attrs = { "TranscendNotice" } },
+		-- QUEUE-ALL2 P2 B-4 ⑤ · 09 문서 B-2: 연출 세기 하나로 흔들림 · 번쩍임 · 남의 효과를 함께 줄인다(client/FxSettings가 옛 Attribute로 풀어 준다 - 흔들림 끔 = 옛 screenShake false와 같음)
+		fxLevel = { kind = "choice", default = "normal", options = { "normal", "low", "off" }, attrs = { "FxLevel" } },
+		volumeAmbient = { kind = "volume", default = 1, attrs = { "SoundVolumeAmbient" } }, -- QUEUE-ALL2 P5 환경음(SoundGroup Ambient)
+		graphics = { kind = "choice", default = "normal", options = { "normal", "lite" }, attrs = { "GraphicsMode" } }, -- 가벼움 = 먼 산 LOD · 나무 바람 · 풀 끔(게임 쪽 부담만 - 로블록스 품질 설정은 그대로)
 	},
 	volumeStep = 0.1, -- B4 설정 창 [−] [+] 한 번에 바뀌는 양
 }

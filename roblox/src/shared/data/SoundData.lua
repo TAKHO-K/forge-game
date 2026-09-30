@@ -8,8 +8,10 @@ return {
 		music = { settingKey = "volumeMusic" },
 		ui = { settingKey = "volumeUi" },
 		bossCue = { settingKey = "volumeBossCue" },
+		ambient = { settingKey = "volumeAmbient" }, -- QUEUE-ALL2 P5 환경(귀환 · 체크포인트 집중 등)
 	},
-	categoryOrder = { "sfx", "music", "ui", "bossCue" }, -- 설정 창 줄 순서
+	-- QUEUE-ALL2 P5 · 09 문서 C: 설정 창 음량 4줄 = 효과 · UI · 환경 · 음악(보스 전조 bossCue는 효과 줄이 함께 - SoundHooks가 sfx 음량을 곱한다)
+	categoryOrder = { "sfx", "ui", "ambient", "music" }, -- 설정 창 줄 순서
 	spatialMaxDistance = 80, -- 자리가 있는 소리(땅 드랍)가 들리는 최대 거리(스터드 - Sound.RollOffMaxDistance)
 	events = {
 		hit = { category = "sfx", soundId = "", volume = 0.5, pitch = 1, minInterval = 0.05 }, -- 기본 공격 적중(AttackResult)
