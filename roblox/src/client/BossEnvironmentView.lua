@@ -397,11 +397,13 @@ local function clearVoids(withDust)
 end
 
 -- BR1-4b 4b-6 심연 층: 무너진 조각 아래 깊이마다 어두워지는 판(위 = 흙빛 반투명 → 아래 = 검정) - 바닥이 "꺼진" 깊이감. 판정 없음(서버 조각 바닥이 실제로 꺼진다).
+-- QUEUE-ALL1 ★0-1: 층 재질 = Neon(어두운 색 Neon은 아레나 조명을 받아도 밝아지지 않는다 - Play: 플라스틱 층이 가운데 조명에 회색으로 떠 구멍이 바닥보다 밝아 보였다) ·
+--   구름은 셋째 층 아래 깊이(abyssClouds)라 희미하게만 · 불투명 허공은 가장 깊이.
 local ABYSS_LAYERS = {
-	{ depth = 1.2, color = Color3.fromRGB(52, 42, 36), transparency = 0.6 }, -- 가장자리 흙(반투명 - 아래가 비쳐 깊어 보인다)
-	{ depth = 5, color = Color3.fromRGB(28, 22, 24), transparency = 0.45 },
-	{ depth = 12, color = Color3.fromRGB(14, 11, 15), transparency = 0.25 },
-	{ depth = 24, color = VOID, transparency = 0 },
+	{ depth = 1.2, color = Color3.fromRGB(40, 32, 28), transparency = 0.5 }, -- 가장자리 흙(반투명 - 아래가 비쳐 깊어 보인다)
+	{ depth = 6, color = Color3.fromRGB(20, 16, 18), transparency = 0.35 },
+	{ depth = 14, color = Color3.fromRGB(10, 8, 12), transparency = 0.4 },
+	{ depth = 40, color = VOID, transparency = 0 },
 }
 local ROCK = Color3.fromRGB(58, 50, 46)
 
@@ -436,6 +438,83 @@ local function structureColumns(z, parts)
 	end
 end
 
+-- QUEUE-ALL1 ★0-1(사용자: 구멍이 안 보여 모르고 떨어짐): 금 → 흔들림(전조) → **조각이 통째로 기울며 떨어져 사라짐** → 허공 + 구름 · 가장자리 부서진 돌(무너진 동안).
+--   떨어지는 판 = 서버 조각 바닥(SliceIndex 쐐기)의 모양 사본(판정 조각은 서버가 같은 순간 꺼 두었다 - 사본은 보이기만). 아트 스위치와 무관(구멍 표시 = 끔에서도).
+local slabFall, abyssClouds, edgeStones
+local SLAB = { fallStuds = 46, tiltDeg = 14, seconds = 1.1 }
+local CLOUD = Color3.fromRGB(150, 158, 176) -- 깊은 곳 구름(위 층 너머로 희미하게)
+local function sliceWedges(index)
+	for _, model in ipairs(Workspace:GetDescendants()) do
+		if model:IsA("Model") and model.Name:sub(1, 20) == "BossArenaSliceFloor_" then
+			local list = {}
+			for _, w in ipairs(model:GetChildren()) do
+				if w:IsA("WedgePart") and w:GetAttribute("SliceIndex") == index then
+					table.insert(list, w)
+				end
+			end
+			return list
+		end
+	end
+	return {}
+end
+
+slabFall = function(z)
+	if not z.index then
+		return
+	end
+	local mid = math.rad(z.startDeg + z.widthDeg / 2)
+	local outward = Vector3.new(math.cos(mid), 0, math.sin(mid))
+	local axis = Vector3.new(-outward.Z, 0, outward.X) -- 바깥쪽이 먼저 꺼지게 기운다
+	local pivot = z.center + outward * z.hub
+	for _, w in ipairs(sliceWedges(z.index)) do
+		local copy = Instance.new("WedgePart")
+		copy.Anchored, copy.CanCollide, copy.CanQuery, copy.CanTouch, copy.CastShadow = true, false, false, false, false
+		copy.Size, copy.CFrame, copy.Color, copy.Material = w.Size, w.CFrame, w.Color, w.Material
+		copy.Parent = Workspace
+		live[copy] = true
+		local rel = CFrame.new(pivot):ToObjectSpace(w.CFrame)
+		local goal = CFrame.new(pivot - Vector3.new(0, SLAB.fallStuds, 0)) * CFrame.fromAxisAngle(axis, -math.rad(SLAB.tiltDeg)) * rel
+		-- Studio 캡처용 슬로모션(ReplicatedStorage Attribute ArtV1FxSlow - ArtV1Fx와 같은 값 · 실제 게임은 항상 1)
+		local seconds = SLAB.seconds * (game:GetService("RunService"):IsStudio() and tonumber(game:GetService("ReplicatedStorage"):GetAttribute("ArtV1FxSlow")) or 1)
+		local info = TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		TweenService:Create(copy, info, { CFrame = goal, Transparency = 1 }):Play()
+		task.delay(seconds + 0.05, function()
+			destroy(copy)
+		end)
+	end
+end
+
+-- 허공 깊은 곳 구름(흐린 흰 덩어리 몇 개 - 천천히 흐른다)
+abyssClouds = function(z, parts)
+	for i = 1, 3 do
+		local a = math.rad(z.startDeg + z.widthDeg * (0.15 + 0.7 * math.random()))
+		local r = z.hub + (z.radius - z.hub) * (0.25 + 0.6 * math.random())
+		local size = Vector3.new(8 + math.random() * 5, 2 + math.random(), 6 + math.random() * 4)
+		local cloud = newPart(size, CLOUD, 0.45, Enum.Material.SmoothPlastic, Enum.PartType.Ball)
+		cloud.CFrame = CFrame.new(z.center + Vector3.new(math.cos(a) * r, -26 - i * 3, math.sin(a) * r))
+		TweenService:Create(cloud, TweenInfo.new(6 + i, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { CFrame = cloud.CFrame + Vector3.new(math.random(-4, 4), 1.5, math.random(-4, 4)) }):Play()
+		table.insert(parts, cloud)
+	end
+end
+
+-- 구멍 두 경계선 · 바깥 호를 따라 부서진 돌(무너진 동안 남는다 - 어디까지 서 있어도 되는지 보이게)
+edgeStones = function(z, parts)
+	local function stone(at)
+		local size = Vector3.new(1.2 + math.random() * 1.6, 0.8 + math.random() * 0.9, 1.2 + math.random() * 1.6)
+		local rock = newPart(size, ROCK, 0, Enum.Material.Slate)
+		rock.CFrame = CFrame.new(at - Vector3.new(0, 0.35, 0)) * CFrame.Angles(math.rad(math.random(-25, 25)), math.rad(math.random(0, 359)), math.rad(math.random(-25, 25)))
+		table.insert(parts, rock)
+	end
+	local len = z.radius - z.hub
+	for _, edgeDeg in ipairs({ z.startDeg, z.startDeg + z.widthDeg }) do
+		local e = math.rad(edgeDeg)
+		local dir = Vector3.new(math.cos(e), 0, math.sin(e))
+		for k = 0, math.floor(len / 5) do
+			stone(z.center + dir * (z.hub + k * 5 + math.random() * 2))
+		end
+	end
+end
+
 -- BR1-3 무너진 조각: 바닥이 사라진 구멍(조각 모양) + 무너지는 파편. 이전 조각은 먼지와 함께 돌아온다(구멍을 치운다).
 -- BR1-4b 4b-6: 평면 검은 판 → 깊이 층(어둠 그라데이션) + 아래로 떨어지는 파편 · 가장자리 부스러기 + 심연에서 올라오는 먼지(무너진 동안).
 local function collapse(data)
@@ -444,12 +523,15 @@ local function collapse(data)
 	for _, z in ipairs(data.zones) do
 		local parts = {}
 		for _, layer in ipairs(ABYSS_LAYERS) do
-			for _, part in ipairs(arcParts(z.center, z.startDeg + z.widthDeg / 2, z.widthDeg, z.hub, z.radius, layer.color, layer.transparency, Enum.Material.SmoothPlastic)) do
+			for _, part in ipairs(arcParts(z.center, z.startDeg + z.widthDeg / 2, z.widthDeg, z.hub, z.radius, layer.color, layer.transparency, Enum.Material.Neon)) do
 				part.CFrame = part.CFrame - Vector3.new(0, layer.depth, 0)
 				table.insert(parts, part)
 			end
 		end
 		structureColumns(z, parts)
+		slabFall(z)
+		abyssClouds(z, parts)
+		edgeStones(z, parts)
 		table.insert(voids, { zone = z, parts = parts })
 		local mid = math.rad(z.startDeg + z.widthDeg / 2)
 		local dir = Vector3.new(math.cos(mid), 0, math.sin(mid))

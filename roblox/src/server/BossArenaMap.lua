@@ -179,6 +179,89 @@ local function wedgeTriangle(parent, a, b, c, thickness, color, material)
 	return parts
 end
 
+-- QUEUE-ALL1 ★0-1 구멍이 보이게(Play 실측 - 무너진 조각 자리를 두 가지가 덮고 있었다):
+--   ① 테라스 원판(아레나 전체 밑 · 윗면 바닥 − 0.5)이 클라 구멍 깊이 층(바닥 − 1.2 ~ − 24)을 통째로 가렸다 → 겉모습을 숨기고 벽 바깥 고리만 박스 조각으로 다시 깐다.
+--   ② 바닥에 깔린 장식(빛 고리 = 빛 원판 + 그 위 바닥색 원판 · 원판 무늬)이 조각과 따로 남아 구멍 위를 덮었다 → 원판은 숨기고 빛 고리는 조각별 호 조각(SliceIndex)으로
+--      다시 만든다 · 원판 무늬는 걸친 조각에 묶는다 → setSliceCollapsed가 판정 조각과 같은 호출에서 숨기고 돌린다(겉모습 · 판정 시각 차 0).
+local function sliceArc(parent, center, k, count, rIn, rOut, y, thickness, look, index)
+	local width = 360 / count
+	local steps = math.max(2, math.ceil(width / 4))
+	local parts = {}
+	for s = 0, steps - 1 do
+		local a = math.rad((k - 1) * width + width * (s + 0.5) / steps)
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local tangent = Vector3.new(-dir.Z, 0, dir.X)
+		local at = Vector3.new(center.X, y, center.Z) + dir * (rIn + rOut) / 2
+		local p = Instance.new("Part")
+		p.Name = "BossArenaSliceDecor"
+		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+		p.Size = Vector3.new(rOut - rIn, thickness, 2 * rOut * math.tan(math.rad(width / steps) / 2) + 0.1)
+		p.CFrame = CFrame.lookAt(at, at + tangent)
+		p.Color, p.Material, p.Transparency = look.Color, look.Material, look.Transparency
+		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+		if index then
+			p:SetAttribute("SliceIndex", index)
+		end
+		p.Parent = parent
+		table.insert(parts, p)
+	end
+	return parts
+end
+
+function BossArenaMap.clearSliceCovers(zoneKey, state, base, radius)
+	local zone = WorldConfig.zones[zoneKey]
+	local center = zone.center
+	local sliceIndexOf = require(ReplicatedStorage.Shared.BossSkillMath).sliceIndexOf
+	-- ① 테라스: 겉모습 숨김 + 벽 바깥 고리(반경 radius ~ 테라스 끝)만 조각 없이 다시(판정 없음 - 원판 충돌은 이미 꺼져 있다)
+	local rim = base.rim
+	state.rimTransparency = rim.Transparency
+	local rimLook = { Color = rim.Color, Material = rim.Material, Transparency = rim.Transparency }
+	rim.Transparency = 1
+	for k = 1, state.count do
+		sliceArc(state.model, center, k, state.count, radius, rim.Size.Y / 2, rim.Position.Y, rim.Size.X, rimLook, nil)
+	end
+	-- ② 바닥에 깔린 장식(윗면이 바닥 + 0.3 안 · 아레나 안)
+	state.decor, state.hiddenDecor, state.decorShown = {}, {}, {} -- decorShown[part] = 보일 때 투명도
+	local dressing = Workspace:FindFirstChild("BossArenaDressing_" .. zoneKey)
+	local ringInner = dressing and dressing:FindFirstChild("ArenaFloorRingInner")
+	for _, part in ipairs(dressing and dressing:GetChildren() or {}) do
+		if part:IsA("BasePart") and part.Shape == Enum.PartType.Cylinder and math.abs(part.Position.Y - FLOOR_TOP_Y) < 0.3 then
+			table.insert(state.hiddenDecor, { part = part, transparency = part.Transparency })
+			if part.Name == "ArenaFloorRing" and ringInner then
+				local look = { Color = part.Color, Material = part.Material, Transparency = part.Transparency }
+				part.Transparency = 1
+				for k = 1, state.count do
+					state.decor[k] = state.decor[k] or {}
+					for _, p in ipairs(sliceArc(state.model, center, k, state.count, ringInner.Size.Y / 2, part.Size.Y / 2, part.Position.Y, part.Size.X, look, k)) do
+						table.insert(state.decor[k], p)
+						state.decorShown[p] = look.Transparency
+					end
+				end
+			elseif part.Name == "ArenaFloorRingInner" then
+				part.Transparency = 1
+			else
+				-- 원판 무늬: 걸친 조각 전부에 묶는다(하나라도 무너지면 숨김)
+				local r = part.Size.Y / 2
+				local over = {}
+				for s = 0, 15 do
+					local a = s / 16 * 2 * math.pi
+					for _, f in ipairs({ 0, 0.6, 0.98 }) do
+						local i = sliceIndexOf(center, part.Position + Vector3.new(math.cos(a) * r * f, 0, math.sin(a) * r * f), state.count, state.hubRadius, 0)
+						if i then
+							over[i] = true
+						end
+					end
+				end
+				for i in pairs(over) do
+					state.decor[i] = state.decor[i] or {}
+					table.insert(state.decor[i], part)
+					state.decorShown[part] = part.Transparency
+				end
+			end
+		end
+	end
+end
+
 function BossArenaMap.enableSliceFloor(zoneKey, count, hubRadius)
 	if sliceFloors[zoneKey] then
 		return sliceFloors[zoneKey]
@@ -219,6 +302,7 @@ function BossArenaMap.enableSliceFloor(zoneKey, count, hubRadius)
 	base.floor.CanCollide, base.floor.CanQuery, base.floor.Transparency = false, false, 1
 	base.rim.CanCollide, base.rim.CanQuery = false, false -- 테라스 원판(바닥 − 1.5)이 아레나 전체 아래에 깔려 있다 - 켜 두면 구멍으로 떨어진 사람이 그 위에 선다(BR1-4a Play 1)
 	local state = { model = model, slices = slices, hub = hub, count = count, hubRadius = hubRadius }
+	BossArenaMap.clearSliceCovers(zoneKey, state, base, radius)
 	sliceFloors[zoneKey] = state
 	return state
 end
@@ -237,6 +321,16 @@ function BossArenaMap.setSliceCollapsed(zoneKey, index, collapsed)
 	if state then
 		state.collapsed = state.collapsed or {}
 		state.collapsed[index] = collapsed or nil
+		-- ★0-1: 바닥 장식 = 걸친 조각이 하나라도 무너졌으면 숨김(판정 조각과 같은 호출 - 같은 프레임에 복제)
+		local hide = {}
+		for k, list in pairs(state.decor or {}) do
+			for _, p in ipairs(list) do
+				hide[p] = hide[p] or state.collapsed[k] == true
+			end
+		end
+		for p, h in pairs(hide) do
+			p.Transparency = h and 1 or state.decorShown[p]
+		end
 	end
 	-- 리뷰 4: 같은 둔덕(같은 중심)의 층들은 가장 넓은 아래층 반경으로 함께 판정한다(위층만 남아 공중에 뜨지 않게)
 	local moundList = state and BossArenaMap.moundsOf(zoneKey) or {}
@@ -293,6 +387,12 @@ function BossArenaMap.disableSliceFloor(zoneKey)
 	if base then
 		base.floor.CanCollide, base.floor.CanQuery, base.floor.Transparency = true, true, 0
 		base.rim.CanCollide, base.rim.CanQuery = true, true
+		base.rim.Transparency = state.rimTransparency or 0 -- ★0-1: 테라스 · 바닥 장식 겉모습 되돌림(조각 호는 모델과 함께 사라진다)
+	end
+	for _, h in ipairs(state.hiddenDecor or {}) do
+		if h.part.Parent then
+			h.part.Transparency = h.transparency
+		end
 	end
 	for _, mound in ipairs(BossArenaMap.moundsOf(zoneKey)) do -- BR1-4b 리뷰 2: 무너진 조각 위 둔덕도 되돌린다(전멸 리셋은 다시 dress하지 않는다)
 		mound.CanCollide, mound.CanQuery, mound.Transparency = true, true, 0
