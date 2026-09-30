@@ -1411,6 +1411,9 @@ end
 
 return {
 	stageInterval = STAGE_INTERVAL,
+	-- A2-N3 결정 ②(사용자 승인): 보스 평타 예비 동작 - 쿨이 끝나기 이만큼 전에 서버가 "곧 친다"를 알린다(Attribute BossSwingPrepAt = 예정 타격 서버 시각 · 대상 조건 = 평타와 같은 식).
+	--   타격 시각 · 공격 간격 · 피해 · 판정은 그대로(타격 순간 대상 재판정 - 그 사이 빠지면 헛동작). 클라 BossMotion이 이 시간 동안 팔을 들어 올린다(BossMotionData basicPrep).
+	basicPrepSeconds = 0.25,
 	bodyScaleLive = BODY_SCALE_LIVE, -- A2-M1(검증 · 보고용)
 	-- G1-4(D0 결정 5 · 사용자 확정): 보스를 잡아도 보스맵에 남는다 - [다음 스테이지] · [다시 도전](파티 = 재투표 · 보스 재생성) · [마을]을 고른다.
 	-- lingerSeconds 동안 아무것도 안 고르면 다음 스테이지로 자동 이동(잠수 대비 - 슬롯 12개 · 서버 16명이라 무제한 잔류는 안 된다).

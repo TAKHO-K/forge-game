@@ -16,6 +16,7 @@ local Projectiles = require(script.Parent.Projectiles)
 local AimTarget = require(script.Parent.AimTarget)
 local UIManager = require(script.Parent.UIManager)
 local CameraShake = require(script.Parent.CameraShake)
+local MovementConfig = require(game:GetService("ReplicatedStorage").Shared.data.MovementConfig) -- A2-N3 보스 타격 FOV 킥 값
 local SkillVfx = require(script.Parent.SkillVfx) -- W3c 비장의 한 발 · 어둠 구슬 적중
 local VfxData = require(ReplicatedStorage.Shared.data.VfxData)
 SkillVfx.watchDealingMode() -- W3c-3 딜링모드 켜는 순간 검보라 소용돌이(모든 플레이어)
@@ -669,4 +670,8 @@ attackResult.OnClientEvent:Connect(function(monsterModel, damage, isCrit, died, 
 		SkillVfx.darkImpact(at) -- W3c-3 터졌다 → 빨려 듦
 	end
 	showResult(monsterModel, damage, isCrit, died, isComboHit, isBuffedShot, fin ~= nil)
+	if monsterModel and monsterModel:GetAttribute("BossRig") and workspace:GetAttribute("ArtStyleV1") then -- A2-N3 결정 ①: 보스 타격 FOV 킥(설정 "화면 흔들림" 끔 = 없음)
+		local k = MovementConfig.camera.bossHitFovKick
+		CameraShake.fovKick(k.degrees, k.seconds)
+	end
 end)

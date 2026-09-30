@@ -30,6 +30,24 @@ RunService:BindToRenderStep("CameraShake", Enum.RenderPriority.Camera.Value + 1,
 	camera.CFrame *= CFrame.new(offset)
 end)
 
+-- A2-N3 결정 ①: 타격 FOV 킥(시야각을 degrees만큼 넓혔다가 seconds 동안 선형으로 되돌림 - 위치는 안 움직인다). 다른 코드가 FOV를 바꿔도 더한 몫만 빼고 더한다.
+local kickUntil, kickSeconds, kickDegrees, kickApplied = 0, 0, 0, 0
+RunService:BindToRenderStep("CameraFovKick", Enum.RenderPriority.Camera.Value + 1, function()
+	local remaining = kickUntil - os.clock()
+	local want = remaining > 0 and kickDegrees * (remaining / kickSeconds) or 0
+	if want ~= kickApplied then
+		camera.FieldOfView += want - kickApplied
+		kickApplied = want
+	end
+end)
+function CameraShake.fovKick(degrees, seconds)
+	local localPlayer = game:GetService("Players").LocalPlayer
+	if localPlayer and localPlayer:GetAttribute("SettingScreenShake") == false then
+		return
+	end
+	kickDegrees, kickSeconds, kickUntil = degrees, seconds, os.clock() + seconds
+end
+
 -- durationSeconds 동안 studsAmplitude 크기로 흔든다(원본 AttackInput.client.lua의
 -- CAMERA_SHAKE_SECONDS=0.15/CAMERA_SHAKE_STUDS=0.35와 같은 기본값을 호출부가 넘긴다).
 -- W3c: 설정 "화면 흔들림" 끔(LocalPlayer Attribute SettingScreenShake = false - client/panels/Settings)이면 아무것도 안 한다.

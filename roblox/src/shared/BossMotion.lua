@@ -413,6 +413,17 @@ function BossMotion.evaluate(ctx, st, now)
 		blend(pose, P.guard, combat * 0.85, isUpper)
 		blend(pose, P.guard, combat * 0.85 * legK, isLeg)
 	end
+	-- A2-N3 결정 ②: 평타 예비 동작(서버 BossSwingPrepAt = 예정 타격 시각 · 그 전 BossData.basicPrepSeconds 동안 다음에 휘두를 팔을 들어 올림 - 판정 무관)
+	--   다음 휘두름 = swingN + 1(좌우 번갈아) · 휘두름이 오면(swingAt ≥ 예정 − 0.2) 평타 층이 넘겨받는다 · 안 오면(대상이 빠짐) 0.4초에 걸쳐 내린다.
+	if P.basicPrep and st.prepAt and not (st.swingAt and st.swingAt >= st.prepAt - 0.2) then
+		local lead = ctx.prepSeconds or 0.25
+		local u = (now - (st.prepAt - lead)) / lead
+		if u > 0 and u < 2 then
+			local w = ease("out", clamp01(u)) * (1 - clamp01((u - 1.2) / 0.4))
+			local lift = P.basicPrep[((st.swingN or 0) + 1) % 2 == 0 and "R" or "L"]
+			blend(pose, lift, w, isUpper)
+		end
+	end
 	-- 평타(좌우 번갈아)
 	if st.swingAt and now - st.swingAt < 1.0 then
 		local clip = P.clips[(st.swingN or 0) % 2 == 0 and "basic_R" or "basic_L"]

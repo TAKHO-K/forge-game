@@ -38,6 +38,7 @@ local function contextFor(rigId)
 	if not ctx then
 		local data = BossData.bosses[rigId]
 		ctx = BossMotion.context(rigId, BossRigSpec.rigs[rigId], data and data.skills, data and data.moveSpeedStuds)
+		ctx.prepSeconds = BossData.basicPrepSeconds -- A2-N3 결정 ② 평타 예비 동작 길이(서버 신호와 같은 값)
 		contexts[rigId] = ctx
 	end
 	return ctx
@@ -110,6 +111,7 @@ local function readState(e, now)
 		st.env, st.envEndAt = nil, nil
 	end
 	st.swingAt, st.swingN = m:GetAttribute("BossSwingAt"), m:GetAttribute("BossSwingN")
+	st.prepAt = Workspace:GetAttribute("ArtStyleV1") and m:GetAttribute("BossSwingPrepAt") or nil -- A2-N3 결정 ②: 평타 예비 동작(예정 타격 서버 시각 · ArtStyleV1 뒤)
 	st.hopAt, st.hopSeconds = m:GetAttribute("BossHopAt"), m:GetAttribute("BossHopSeconds")
 	st.inCombat = m:GetAttribute("BossEncounterId") ~= nil -- BR1-4c c-10: 보스전 중 기본 자세 = 전투 준비
 	-- A2-M1 리뷰 2: 보스전 중 머리 위 이름표를 숨긴다(이름 · 체력이 상단 보스 체력바와 겹쳐 두 번 나옴 · 스트리밍으로 늦게 오면 그때 찾는다)

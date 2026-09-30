@@ -122,7 +122,9 @@ player:GetAttributeChangedSignal("BossEncounterId"):Connect(function()
 	task.delay(0.5, function() -- 보스 모델 복제를 잠깐 기다린다
 		local zoom = player:GetAttribute("BossEncounterId") == id and bossZoomFor(id)
 		local camera = Workspace.CurrentCamera
-		if zoom and camera and (camera.CFrame.Position - camera.Focus.Position).Magnitude < zoom - 1 then
+		if zoom and camera and Workspace:GetAttribute("ArtStyleV1") then
+			snapTo(zoom * cfg.bossZoomFactor) -- A2-N3 결정 ①: 보스 크기에 맞춘 거리 × 0.88로 맞춘다(가깝게도 멀게도 - 그 뒤 휠 자유)
+		elseif zoom and camera and (camera.CFrame.Position - camera.Focus.Position).Magnitude < zoom - 1 then
 			snapTo(zoom)
 		end
 	end)

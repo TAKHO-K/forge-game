@@ -94,6 +94,9 @@ local basicR = {
 B.clips = {}
 B.clips.basic_R = basicR
 B.clips.basic_L = mirrorClip(basicR)
+-- A2-N3 결정 ②: 평타 예비 동작(서버 BossSwingPrepAt 전 0.25초) - 휘두를 팔을 뒤 위로 들고 몸을 반대로 비튼다(타격 자세 Waist −28 · Shoulder_R 100의 반대쪽)
+local prepR = merge(B.guard, { Waist = { 6, 20, 0 }, Shoulder_R = { 150, 0, 24 }, Elbow_R = { 70, 0, 0 }, Neck = { 2, -8, 0 }, RootJoint = { 0, 0, 0, 0, -0.1, 0 } })
+B.basicPrep = { R = prepR, L = mirror(prepR) }
 
 -- 강화 평타(스킬 swipe · 큰 휘두름): 팔을 휘두를 듯 떨림 + 무기 번쩍(전조 끝 40%) → 가로 휩쓸기 → 지나침 → 회복
 B.clips.swipe = {
@@ -456,6 +459,9 @@ local snapR = {
 }
 S.clips.basic_R = snapR
 S.clips.basic_L = mirrorClip(snapR)
+-- A2-N3 결정 ②: 집게 평타 예비 동작 - 집게를 옆으로 벌려 뒤로 당김
+local prepS = merge(S.guard, { Shoulder_R = { 22, -24, 0 }, Elbow_R = { 18, 0, 0 }, Pincer_R = { 0, 0, 42 }, RootJoint = { 0, -8, 0, 0, -0.06, 0 } })
+S.basicPrep = { R = prepS, L = mirror(prepS) }
 
 -- 강화 평타(집게 찰싹): 집게를 옆으로 크게 벌려 떨다가 가로로 후려침
 S.clips.swipe = {

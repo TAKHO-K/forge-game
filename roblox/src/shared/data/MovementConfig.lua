@@ -130,6 +130,10 @@ return {
 		spawnSnapSeconds = 0.3,
 		-- M1-0 결정 ②(사용자 확정): 보스전 중에만(Player Attribute BossEncounterId) 내려다보는 각 최소 30° - 누운 카메라에서 장판이 납작해지고 앞 장판이 뒤를 가린다. 필드는 자유.
 		bossPitchMinDeg = 30,
+		-- A2-N3 결정 ①(사용자 승인 · ArtStyleV1 뒤): 보스전 진입 기본 거리 = 보스 cameraZoomStuds(크기 배율에 맞춘 값) × 이 배율(조금 가깝게 - 가까우면 물리고 멀면 당김 · 그 뒤 휠 자유)
+		bossZoomFactor = 0.88,
+		-- 내 공격이 보스에 맞는 순간 FOV 킥(줌 펀치 아님 - 시야각만 · 설정 "화면 흔들림" 끔 = 없음)
+		bossHitFovKick = { degrees = 2.5, seconds = 0.1 },
 	},
 
 	-- 시점 고정(자체 구현 - 기본 Shift Lock은 끈다 · 대시 LeftShift와 충돌 0): 켜면 마우스를 화면 가운데에 묶고 캐릭터가 카메라 방향을 본다. 카메라는 오른쪽 어깨 너머(cameraOffsetStuds).
