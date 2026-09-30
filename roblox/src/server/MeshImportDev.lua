@@ -64,7 +64,7 @@ local function metaFor(model)
 end
 
 local function runCheck(model, rigId)
-	local ok, lines = MeshImportCheck.check(MeshImportCheck.describe(model, { meta = metaFor(model) }), rigId, { scale = 1 })
+	local ok, lines = MeshImportCheck.check(MeshImportCheck.describe(model, { meta = metaFor(model) or metaFor({ Name = rigId }) }), rigId, { scale = 1 }) -- A2-N3: 캐시 모델 이름("monsters/rock_boar")이면 리그 id 메타
 	for _, line in ipairs(lines) do
 		print(line)
 	end

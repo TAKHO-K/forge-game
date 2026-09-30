@@ -24,7 +24,9 @@ function ArtMeshKit.normalize(model)
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then
 			local cf = d.CFrame
+			local pivot = d.PivotOffset -- Blender 원점(= 관절 자리)이 cm로 남아 있다 → 같이 줄인다(MeshImportCheck ② 관절 = 파트 피벗)
 			d.Size = d.Size * S
+			d.PivotOffset = CFrame.new(pivot.Position * S) * pivot.Rotation
 			d.CFrame = turn * (CFrame.new(cf.Position * S) * cf.Rotation)
 			d.Anchored = true
 			d.CanCollide, d.CanTouch, d.CanQuery = false, false, false
@@ -69,7 +71,32 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 			d:Destroy()
 		end
 	end
+	-- 판정 불변: 조준 · 판정 파트(규격 query = true - 보스 Body · Head)는 옛 상자를 투명 사본(<이름>_Query)으로 남겨 새 메시에 용접하고, 새 메시는 조준에 안 걸린다
+	local queryKeep = {}
+	for name, e in pairs(rigNames) do
+		local old = e.query and model:FindFirstChild(name)
+		if old and old:IsA("BasePart") then
+			local q = old:Clone()
+			q:ClearAllChildren()
+			q.Name = name .. "_Query"
+			q.Transparency = 1
+			q.CastShadow = false
+			queryKeep[name] = q
+		end
+	end
 	local count, lines, refCF = MeshSwap.swap(model, src, rigId, { scale = S, meta = metaFor(rigId), lift = lift })
+	for name, q in pairs(queryKeep) do
+		local mesh = model:FindFirstChild(name)
+		if mesh and mesh ~= q then
+			mesh.CanQuery = false
+			local w = Instance.new("WeldConstraint")
+			w.Part0, w.Part1 = mesh, q
+			w.Parent = q
+			q.Parent = model
+		else
+			q:Destroy()
+		end
+	end
 	if not refCF then
 		return count, lines
 	end
