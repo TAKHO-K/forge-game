@@ -5,7 +5,7 @@
 --   floatStones = { count, radius = { 최소, 최대 }, height = { 최소, 최대 }, size, color, inlay(빛 줄 색), bob(위아래 stud), spin(도/초) } - 떠다니며 천천히 도는 돌(매 프레임 · 개수 적게)
 --   clusters    = { count, radius, shards = { 최소, 최대 }, size(큰 조각 크기), color, material } - 테라스 위 결정 · 가시 무리(고정)
 --   pillars     = { count, radius, height = { 최소, 최대 }, width, color, broken(윗부분 기울어진 조각) } - 먼 배경 기둥(고정)
---   motes       = { every(초), life, rise, size, color, phoneScale, fall(true = 위에서 떨어짐 · 높이 fromHeight), wind(Vector3 - 옆으로 흐름), shape("ball" | "streak" - 빗줄기 · 모래바람 줄), material }
+--   motes       = { every(초), life, rise, size, color, phoneScale, fall(true = 위에서 떨어짐 · 높이 fromHeight), wind(Vector3 - 옆으로 흐름), shape("ball" | "block" | "streak" - 빗줄기 · 모래바람 줄), material }
 --                 - 아레나 안 환경 효과(BossFx 풀 - 동시 상한): 떠오르는 빛 · 눈 내림 · 물방울 · 결정 반짝임 · 모래바람 · 빗줄기
 --   bolts       = { every(초 - 평균), radius = { 최소, 최대 }, color } - 먼 번개(플레이 영역 밖 · 설정 "섬광 줄이기"면 옅게 · 화면 번쩍임 없음)
 --   edge        = { color, width, transparency } - 벽 안쪽 바닥 가장자리 선(반경 138.5)
@@ -34,7 +34,7 @@ BossArenaDressData.bosses = {
 		floatStones = { count = 8, radius = { 170, 215 }, height = { 14, 36 }, size = Vector3.new(6, 9, 6), color = "light", inlay = "accent", bob = 1.6, spin = 4, material = Enum.Material.Ice },
 		clusters = { count = 10, radius = { 150, 170 }, shards = { 3, 5 }, size = Vector3.new(4.6, 28, 4.6), color = "light", material = Enum.Material.Ice },
 		pillars = { count = 8, radius = { 230, 290 }, height = { 40, 70 }, width = 12, color = "light", broken = false, material = Enum.Material.Glacier },
-		motes = { every = 0.07, life = 4.5, rise = 28, size = 0.5, color = Color3.fromRGB(248, 252, 255), phoneScale = 0.5, fall = true, fromHeight = 30, wind = Vector3.new(3, 0, 1.5), material = Enum.Material.SmoothPlastic },
+		motes = { every = 0.07, life = 4.5, rise = 28, size = 0.5, color = Color3.fromRGB(248, 252, 255), phoneScale = 0.5, fall = true, fromHeight = 30, wind = Vector3.new(3, 0, 1.5), material = Enum.Material.SmoothPlastic, shape = "block" }, -- 눈송이 = 작은 판(공은 삼각형이 많다 - Play 4 추정 1.9만)
 		edge = { color = "accent", width = 0.9, transparency = 0.4 },
 		floor = { material = Enum.Material.Glacier, tint = "light", amount = 0.15 },
 		atmosphere = { density = 0.36, color = "light", decay = "accent", haze = 1.6 },

@@ -1,0 +1,5938 @@
+{
+ "abyssal_lord": {
+  "deco": [
+   {
+    "at": [
+     0.0,
+     0.66,
+     0.02
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Head_Coral",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.18,
+     0.72,
+     0.18
+    ]
+   },
+   {
+    "at": [
+     -0.26,
+     0.58,
+     0.02
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Head_CoralSide_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     22.0
+    ],
+    "shape": "block",
+    "size": [
+     0.15,
+     0.52,
+     0.15
+    ]
+   },
+   {
+    "at": [
+     0.26,
+     0.58,
+     0.02
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Head_CoralSide_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -0.0,
+     -22.0
+    ],
+    "shape": "block",
+    "size": [
+     0.15,
+     0.52,
+     0.15
+    ]
+   },
+   {
+    "at": [
+     -0.42,
+     0.74,
+     0.02
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Head_CoralTwig_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     48.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.32,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.42,
+     0.74,
+     0.02
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Head_CoralTwig_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -0.0,
+     -48.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.32,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.22,
+     -0.5
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Head_Visor",
+    "parent": "Head",
+    "rot": [
+     -8.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.16,
+     0.2,
+     0.32
+    ]
+   },
+   {
+    "at": [
+     -0.08,
+     0.42,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Shell_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     0.0,
+     15.0
+    ],
+    "shape": "block",
+    "size": [
+     1.02,
+     0.46,
+     1.02
+    ]
+   },
+   {
+    "at": [
+     0.08,
+     0.42,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Shell_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -15.0
+    ],
+    "shape": "block",
+    "size": [
+     1.02,
+     0.46,
+     1.02
+    ]
+   },
+   {
+    "at": [
+     -0.2,
+     0.6,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Ridge_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     0.0,
+     15.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.5,
+     0.92
+    ]
+   },
+   {
+    "at": [
+     0.2,
+     0.6,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Ridge_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -15.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.5,
+     0.92
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.45,
+     -0.73
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Chest_ScaleTop",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.65,
+     0.3,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.1,
+     -0.73
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Chest_ScaleMid",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.4,
+     0.3,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.25,
+     -0.73
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Chest_ScaleLow",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.1,
+     0.3,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     -0.36,
+     0.7,
+     -0.72
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pearl_L",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "ball",
+    "size": [
+     0.24,
+     0.24,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     0.36,
+     0.7,
+     -0.72
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pearl_R",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "ball",
+    "size": [
+     0.24,
+     0.24,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.6,
+     -0.8
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Pearl_Center",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "ball",
+    "size": [
+     0.3,
+     0.3,
+     0.3
+    ]
+   },
+   {
+    "at": [
+     -0.34,
+     0.0,
+     0.1
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Forearm_Fin_L",
+    "parent": "Forearm_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.1,
+     0.62,
+     0.52
+    ]
+   },
+   {
+    "at": [
+     0.34,
+     0.0,
+     0.1
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Forearm_Fin_R",
+    "parent": "Forearm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.1,
+     0.62,
+     0.52
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.15,
+     0.0
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Belt",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.6,
+     0.22,
+     1.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.1,
+     -0.6
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Belt_Shell",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.52,
+     0.42,
+     0.18
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.42
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Tail_Fin2",
+    "parent": "Tail2",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.1,
+     0.5,
+     0.5
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.38
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Tail_Fin3",
+    "parent": "Tail3",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.1,
+     0.45,
+     0.45
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.32
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Tail_Fin4",
+    "parent": "Tail4",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.1,
+     0.4,
+     0.4
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.28
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Tail_Fin5",
+    "parent": "Tail5",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.1,
+     0.35,
+     0.35
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.05,
+     -0.33
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Shin_Scale_L",
+    "parent": "Shin_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.68,
+     0.5,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.05,
+     -0.33
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Shin_Scale_R",
+    "parent": "Shin_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.68,
+     0.5,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     -0.32,
+     2.25,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Trident_ProngL",
+    "parent": "Trident",
+    "rot": [
+     0.0,
+     0.0,
+     12.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.62,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.32,
+     2.25,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Trident_ProngR",
+    "parent": "Trident",
+    "rot": [
+     0.0,
+     0.0,
+     -12.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.62,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     1.8,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Trident_Ring",
+    "parent": "Trident",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.5,
+     0.14,
+     0.5
+    ]
+   }
+  ],
+  "joints": [
+   {
+    "at": [
+     -0.26,
+     -0.44,
+     -0.36
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "TentL1",
+    "parent": "Head",
+    "part": "TentL1",
+    "pivot": [
+     0.0,
+     0.17,
+     0.0
+    ],
+    "rot": [
+     8.0,
+     0.0,
+     4.0
+    ],
+    "shape": "block",
+    "size": [
+     0.2,
+     0.34,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.17,
+     0.0
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "TentL2",
+    "parent": "TentL1",
+    "part": "TentL2",
+    "pivot": [
+     0.0,
+     0.17,
+     0.0
+    ],
+    "rot": [
+     6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.15,
+     0.34,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.17,
+     0.0
+    ],
+    "color": "accent",
+    "material": "Neon",
+    "name": "TentL3",
+    "parent": "TentL2",
+    "part": "TentL3",
+    "pivot": [
+     0.0,
+     0.17,
+     0.0
+    ],
+    "rot": [
+     6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.34,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.46,
+     -0.42
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "TentM1",
+    "parent": "Head",
+    "part": "TentM1",
+    "pivot": [
+     0.0,
+     0.19,
+     0.0
+    ],
+    "rot": [
+     10.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.22,
+     0.38,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.19,
+     0.0
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "TentM2",
+    "parent": "TentM1",
+    "part": "TentM2",
+    "pivot": [
+     0.0,
+     0.19,
+     0.0
+    ],
+    "rot": [
+     6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.16,
+     0.38,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.19,
+     0.0
+    ],
+    "color": "accent",
+    "material": "Neon",
+    "name": "TentM3",
+    "parent": "TentM2",
+    "part": "TentM3",
+    "pivot": [
+     0.0,
+     0.19,
+     0.0
+    ],
+    "rot": [
+     6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.38,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.26,
+     -0.44,
+     -0.36
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "TentR1",
+    "parent": "Head",
+    "part": "TentR1",
+    "pivot": [
+     0.0,
+     0.17,
+     0.0
+    ],
+    "rot": [
+     8.0,
+     0.0,
+     -4.0
+    ],
+    "shape": "block",
+    "size": [
+     0.2,
+     0.34,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.17,
+     0.0
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "TentR2",
+    "parent": "TentR1",
+    "part": "TentR2",
+    "pivot": [
+     0.0,
+     0.17,
+     0.0
+    ],
+    "rot": [
+     6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.15,
+     0.34,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.17,
+     0.0
+    ],
+    "color": "accent",
+    "material": "Neon",
+    "name": "TentR3",
+    "parent": "TentR2",
+    "part": "TentR3",
+    "pivot": [
+     0.0,
+     0.17,
+     0.0
+    ],
+    "rot": [
+     6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.34,
+     0.2
+    ]
+   }
+  ],
+  "recolor": [],
+  "themeColors": {
+   "accent": {
+    "B": 0.839216,
+    "G": 0.886275,
+    "R": 0.27451
+   },
+   "body": {
+    "B": 0.439216,
+    "G": 0.258824,
+    "R": 0.094118
+   },
+   "head": {
+    "B": 0.572549,
+    "G": 0.54902,
+    "R": 0.141176
+   }
+  }
+ },
+ "crystal_queen": {
+  "deco": [
+   {
+    "at": [
+     0.0,
+     0.95,
+     0.5
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Halo_Top",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.3,
+     0.1,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     -0.65,
+     0.45,
+     0.5
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Halo_Side_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     1.0,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.65,
+     0.45,
+     0.5
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Halo_Side_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     1.0,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     -0.5,
+     0.88,
+     0.5
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Halo_Corner_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     -45.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.5,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.5,
+     0.88,
+     0.5
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Halo_Corner_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -0.0,
+     45.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.5,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     -0.46
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Head_Jewel",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     45.0
+    ],
+    "shape": "block",
+    "size": [
+     0.16,
+     0.16,
+     0.08
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.5,
+     -0.3
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Crown_Spike",
+    "parent": "Crown",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.6,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     -0.3,
+     0.42,
+     -0.1
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Crown_SpikeSide_L",
+    "parent": "Crown",
+    "rot": [
+     0.0,
+     45.0,
+     10.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.46,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     0.3,
+     0.42,
+     -0.1
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Crown_SpikeSide_R",
+    "parent": "Crown",
+    "rot": [
+     0.0,
+     -45.0,
+     -10.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.46,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     -0.24,
+     0.36,
+     0.26
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Crown_SpikeBack_L",
+    "parent": "Crown",
+    "rot": [
+     0.0,
+     45.0,
+     14.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.36,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.24,
+     0.36,
+     0.26
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Crown_SpikeBack_R",
+    "parent": "Crown",
+    "rot": [
+     0.0,
+     -45.0,
+     -14.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.36,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.88,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Collar",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.34,
+     0.2,
+     0.84
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.35,
+     -0.5
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Chest_Gem",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     45.0
+    ],
+    "shape": "block",
+    "size": [
+     0.36,
+     0.36,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     -0.16,
+     0.6,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Shoulder_Crystal_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     45.0,
+     22.0
+    ],
+    "shape": "block",
+    "size": [
+     0.18,
+     0.6,
+     0.18
+    ]
+   },
+   {
+    "at": [
+     0.16,
+     0.6,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Shoulder_Crystal_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -45.0,
+     -22.0
+    ],
+    "shape": "block",
+    "size": [
+     0.18,
+     0.6,
+     0.18
+    ]
+   },
+   {
+    "at": [
+     -0.1,
+     0.52,
+     0.16
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Shoulder_Crystal2_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     45.0,
+     12.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.42,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.1,
+     0.52,
+     0.16
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Shoulder_Crystal2_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -45.0,
+     -12.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.42,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.42,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Epaulet_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     0.0,
+     8.0
+    ],
+    "shape": "block",
+    "size": [
+     0.62,
+     0.18,
+     0.56
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.42,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Epaulet_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -8.0
+    ],
+    "shape": "block",
+    "size": [
+     0.62,
+     0.18,
+     0.56
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.3,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Bracelet_L",
+    "parent": "Forearm_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.52,
+     0.14,
+     0.52
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     -0.3,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Bracelet_R",
+    "parent": "Forearm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.52,
+     0.14,
+     0.52
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Belt",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.3,
+     0.14,
+     1.0
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.15,
+     -0.5
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Belt_Gem",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     45.0
+    ],
+    "shape": "block",
+    "size": [
+     0.26,
+     0.26,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     -0.42,
+     -0.45,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Hem_F_L",
+    "parent": "SkirtF2",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.42,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.42,
+     -0.45,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Hem_F_R",
+    "parent": "SkirtF2",
+    "rot": [
+     0.0,
+     -45.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.42,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     -0.42,
+     -0.45,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Hem_B_L",
+    "parent": "SkirtB2",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.42,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.42,
+     -0.45,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Hem_B_R",
+    "parent": "SkirtB2",
+    "rot": [
+     0.0,
+     -45.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.42,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.45,
+     -0.3
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Hem_Side_L",
+    "parent": "SkirtL2",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.4,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     -0.45,
+     -0.3
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Hem_Side_R",
+    "parent": "SkirtL2",
+    "rot": [
+     0.0,
+     -45.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.4,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     -0.28,
+     0.16,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Scepter_Prong_L",
+    "parent": "ScepterGem",
+    "rot": [
+     0.0,
+     0.0,
+     25.0
+    ],
+    "shape": "block",
+    "size": [
+     0.08,
+     0.42,
+     0.08
+    ]
+   },
+   {
+    "at": [
+     0.28,
+     0.16,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Scepter_Prong_R",
+    "parent": "ScepterGem",
+    "rot": [
+     0.0,
+     -0.0,
+     -25.0
+    ],
+    "shape": "block",
+    "size": [
+     0.08,
+     0.42,
+     0.08
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.38,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Scepter_ProngTop",
+    "parent": "ScepterGem",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.08,
+     0.45,
+     0.08
+    ]
+   }
+  ],
+  "joints": [
+   {
+    "at": [
+     0.0,
+     0.2,
+     0.08
+    ],
+    "color": "accent",
+    "material": "Glass",
+    "name": "Wing2_L",
+    "parent": "LeftShard",
+    "part": "LeftShard2",
+    "pivot": [
+     0.0,
+     -0.55,
+     0.0
+    ],
+    "rot": [
+     -8.0,
+     0.0,
+     22.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.28,
+     1.25,
+     0.28
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     0.08
+    ],
+    "color": "accent",
+    "material": "Glass",
+    "name": "Wing2_R",
+    "parent": "RightShard",
+    "part": "RightShard2",
+    "pivot": [
+     0.0,
+     -0.55,
+     0.0
+    ],
+    "rot": [
+     -8.0,
+     0.0,
+     22.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.28,
+     1.25,
+     0.28
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.55,
+     0.48
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "Train1",
+    "parent": "Body",
+    "part": "Train1",
+    "pivot": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "rot": [
+     6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.05,
+     0.62,
+     0.06
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.31,
+     0.0
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "Train2",
+    "parent": "Train1",
+    "part": "Train2",
+    "pivot": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "rot": [
+     5.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.175,
+     0.62,
+     0.06
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.31,
+     0.0
+    ],
+    "color": "accent",
+    "material": "Glass",
+    "name": "Train3",
+    "parent": "Train2",
+    "part": "Train3",
+    "pivot": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "rot": [
+     5.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.3,
+     0.62,
+     0.06
+    ]
+   }
+  ],
+  "recolor": [],
+  "themeColors": {
+   "accent": {
+    "B": 0.839216,
+    "G": 0.886275,
+    "R": 0.329412
+   },
+   "body": {
+    "B": 0.67451,
+    "G": 0.470588,
+    "R": 0.870588
+   },
+   "head": {
+    "B": 0.878431,
+    "G": 0.8,
+    "R": 0.964706
+   }
+  }
+ },
+ "frost_giant": {
+  "deco": [
+   {
+    "at": [
+     0.0,
+     0.26,
+     -0.46
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "Fabric",
+    "name": "Deco_Head_Brow",
+    "parent": "Head",
+    "rot": [
+     -10.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.08,
+     0.22,
+     0.32
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.7,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Head_IceCrown",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.26,
+     0.66,
+     0.26
+    ]
+   },
+   {
+    "at": [
+     -0.28,
+     0.62,
+     0.06
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Head_IceCrownSide_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     45.0,
+     16.0
+    ],
+    "shape": "block",
+    "size": [
+     0.2,
+     0.46,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.28,
+     0.62,
+     0.06
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Head_IceCrownSide_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -45.0,
+     -16.0
+    ],
+    "shape": "block",
+    "size": [
+     0.2,
+     0.46,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.9,
+     0.05
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "Fabric",
+    "name": "Deco_Collar_Fur",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     2.15,
+     0.48,
+     1.42
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     -0.66
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Chest_Ice",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.35,
+     0.95,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     -0.78
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Chest_Rune",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.95,
+     0.06,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.45,
+     0.78
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Back_Icicle",
+    "parent": "Body",
+    "rot": [
+     -28.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.3,
+     1.0,
+     0.3
+    ]
+   },
+   {
+    "at": [
+     -0.52,
+     0.3,
+     0.74
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Ice",
+    "name": "Deco_Back_IcicleSide_L",
+    "parent": "Body",
+    "rot": [
+     -22.0,
+     45.0,
+     20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.24,
+     0.75,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     0.52,
+     0.3,
+     0.74
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Ice",
+    "name": "Deco_Back_IcicleSide_R",
+    "parent": "Body",
+    "rot": [
+     -22.0,
+     -45.0,
+     -20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.24,
+     0.75,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     -0.08,
+     0.46,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Pauldron_Ice_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     0.0,
+     10.0
+    ],
+    "shape": "block",
+    "size": [
+     0.98,
+     0.52,
+     0.98
+    ]
+   },
+   {
+    "at": [
+     0.08,
+     0.46,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Pauldron_Ice_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -10.0
+    ],
+    "shape": "block",
+    "size": [
+     0.98,
+     0.52,
+     0.98
+    ]
+   },
+   {
+    "at": [
+     -0.32,
+     0.82,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Pauldron_Spike_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     45.0,
+     26.0
+    ],
+    "shape": "block",
+    "size": [
+     0.24,
+     0.62,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     0.32,
+     0.82,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Pauldron_Spike_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -45.0,
+     -26.0
+    ],
+    "shape": "block",
+    "size": [
+     0.24,
+     0.62,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.12,
+     0.0
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "Fabric",
+    "name": "Deco_Shoulder_Fur_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.72,
+     0.3,
+     0.72
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.12,
+     0.0
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "Fabric",
+    "name": "Deco_Shoulder_Fur_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.72,
+     0.3,
+     0.72
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.12,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "Fabric",
+    "name": "Deco_Forearm_Fur_L",
+    "parent": "Forearm_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.74,
+     0.36,
+     0.74
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.12,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "Fabric",
+    "name": "Deco_Forearm_Fur_R",
+    "parent": "Forearm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.74,
+     0.36,
+     0.74
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.22,
+     -0.4
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Ice",
+    "name": "Deco_Hand_Ice_L",
+    "parent": "Hand_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.62,
+     0.22,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     -0.22,
+     -0.4
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Ice",
+    "name": "Deco_Hand_Ice_R",
+    "parent": "Hand_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.62,
+     0.22,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.1,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "Fabric",
+    "name": "Deco_Belt_Fur",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.58,
+     0.32,
+     1.08
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.1,
+     -0.56
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Belt_Buckle",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     45.0
+    ],
+    "shape": "block",
+    "size": [
+     0.42,
+     0.42,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.48,
+     -0.36
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Knee_Ice_L",
+    "parent": "Thigh_L",
+    "rot": [
+     -10.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.52,
+     0.42,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     -0.48,
+     -0.36
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Knee_Ice_R",
+    "parent": "Thigh_R",
+    "rot": [
+     -10.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.52,
+     0.42,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.16,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "Fabric",
+    "name": "Deco_Shin_Fur_L",
+    "parent": "Shin_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.72,
+     0.58,
+     0.72
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     -0.16,
+     0.0
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "Fabric",
+    "name": "Deco_Shin_Fur_R",
+    "parent": "Shin_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.72,
+     0.58,
+     0.72
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.04,
+     -0.02
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Boot_L",
+    "parent": "Foot_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.84,
+     0.38,
+     1.1
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.04,
+     -0.02
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Boot_R",
+    "parent": "Foot_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.84,
+     0.38,
+     1.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     1.05,
+     -0.32
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Club_SpikeA",
+    "parent": "IceClub",
+    "rot": [
+     -40.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.22,
+     0.6,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.3,
+     0.85,
+     0.15
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Ice",
+    "name": "Deco_Club_SpikeB",
+    "parent": "IceClub",
+    "rot": [
+     30.0,
+     45.0,
+     -40.0
+    ],
+    "shape": "block",
+    "size": [
+     0.22,
+     0.6,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     -0.3,
+     0.7,
+     0.12
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Ice",
+    "name": "Deco_Club_SpikeC",
+    "parent": "IceClub",
+    "rot": [
+     25.0,
+     45.0,
+     40.0
+    ],
+    "shape": "block",
+    "size": [
+     0.2,
+     0.5,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.3,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Ice",
+    "name": "Deco_Beard_Icicle",
+    "parent": "Beard3",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.4,
+     0.14
+    ]
+   }
+  ],
+  "joints": [
+   {
+    "at": [
+     0.0,
+     0.78,
+     0.64
+    ],
+    "color": "light",
+    "material": "Fabric",
+    "name": "Mantle1",
+    "parent": "Body",
+    "part": "Mantle1",
+    "pivot": [
+     0.0,
+     0.3,
+     0.0
+    ],
+    "rot": [
+     6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.7,
+     0.6,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.3,
+     0.0
+    ],
+    "color": "light",
+    "material": "Fabric",
+    "name": "Mantle2",
+    "parent": "Mantle1",
+    "part": "Mantle2",
+    "pivot": [
+     0.0,
+     0.3,
+     0.0
+    ],
+    "rot": [
+     4.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.825,
+     0.6,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.3,
+     0.0
+    ],
+    "color": "light",
+    "material": "Fabric",
+    "name": "Mantle3",
+    "parent": "Mantle2",
+    "part": "Mantle3",
+    "pivot": [
+     0.0,
+     0.3,
+     0.0
+    ],
+    "rot": [
+     4.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.95,
+     0.6,
+     0.14
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.16,
+     -0.5
+    ],
+    "color": "light",
+    "material": "Fabric",
+    "name": "Loin1",
+    "parent": "Hips",
+    "part": "Loin1",
+    "pivot": [
+     0.0,
+     0.225,
+     0.0
+    ],
+    "rot": [
+     -4.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.85,
+     0.45,
+     0.08
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.225,
+     0.0
+    ],
+    "color": "light",
+    "material": "Fabric",
+    "name": "Loin2",
+    "parent": "Loin1",
+    "part": "Loin2",
+    "pivot": [
+     0.0,
+     0.225,
+     0.0
+    ],
+    "rot": [
+     -3.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.75,
+     0.45,
+     0.08
+    ]
+   }
+  ],
+  "recolor": {
+   "Hips": "shadow"
+  },
+  "themeColors": {
+   "accent": {
+    "B": 1.0,
+    "G": 0.909804,
+    "R": 0.666667
+   },
+   "body": {
+    "B": 0.8,
+    "G": 0.588235,
+    "R": 0.376471
+   },
+   "head": {
+    "B": 0.980392,
+    "G": 0.941176,
+    "R": 0.886275
+   }
+  }
+ },
+ "scorpion_queen": {
+  "deco": [
+   {
+    "at": [
+     0.0,
+     0.52,
+     -0.6
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Carapace_Front",
+    "parent": "Body",
+    "rot": [
+     -6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     2.0,
+     0.22,
+     0.8
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.56,
+     0.05
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Carapace_Mid",
+    "parent": "Body",
+    "rot": [
+     -6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     2.1,
+     0.22,
+     0.8
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.52,
+     0.7
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Carapace_Back",
+    "parent": "Body",
+    "rot": [
+     -6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.9,
+     0.22,
+     0.75
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.62,
+     -0.98
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Metal",
+    "name": "Deco_Carapace_TrimF",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     2.04,
+     0.07,
+     0.09
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.66,
+     -0.32
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Metal",
+    "name": "Deco_Carapace_TrimM",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     2.14,
+     0.07,
+     0.09
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.62,
+     0.34
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Metal",
+    "name": "Deco_Carapace_TrimB",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.94,
+     0.07,
+     0.09
+    ]
+   },
+   {
+    "at": [
+     -1.26,
+     0.2,
+     0.0
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Side_Ridge_L",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.16,
+     0.32,
+     1.8
+    ]
+   },
+   {
+    "at": [
+     1.26,
+     0.2,
+     0.0
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Side_Ridge_R",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.16,
+     0.32,
+     1.8
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     -1.13
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Necklace",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.2,
+     0.09,
+     0.09
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.04,
+     -1.15
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Necklace_Gem",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.22,
+     0.32,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.38,
+     0.15
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Crown_Band",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.1,
+     0.12,
+     0.6
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.62,
+     0.1
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Crown_Spike",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.13,
+     0.5,
+     0.13
+    ]
+   },
+   {
+    "at": [
+     -0.36,
+     0.54,
+     0.16
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Crown_SpikeSide_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     45.0,
+     14.0
+    ],
+    "shape": "block",
+    "size": [
+     0.11,
+     0.4,
+     0.11
+    ]
+   },
+   {
+    "at": [
+     0.36,
+     0.54,
+     0.16
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Crown_SpikeSide_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -45.0,
+     -14.0
+    ],
+    "shape": "block",
+    "size": [
+     0.11,
+     0.4,
+     0.11
+    ]
+   },
+   {
+    "at": [
+     -0.35,
+     -0.25,
+     -0.62
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Mandible_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -20.0,
+     0.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.14,
+     0.18,
+     0.48
+    ]
+   },
+   {
+    "at": [
+     0.35,
+     -0.25,
+     -0.62
+    ],
+    "color": "light",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Mandible_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     20.0,
+     -0.0
+    ],
+    "shape": "wedge",
+    "size": [
+     0.14,
+     0.18,
+     0.48
+    ]
+   },
+   {
+    "at": [
+     -0.46,
+     0.22,
+     -0.46
+    ],
+    "color": "eye",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Eye_Side_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.12,
+     0.05
+    ]
+   },
+   {
+    "at": [
+     0.46,
+     0.22,
+     -0.46
+    ],
+    "color": "eye",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Eye_Side_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.12,
+     0.05
+    ]
+   },
+   {
+    "at": [
+     0.22,
+     -0.3,
+     -0.2
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Claw_Tooth_L",
+    "parent": "Hand_L",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.32,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     -0.22,
+     -0.3,
+     -0.2
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Claw_Tooth_R",
+    "parent": "Hand_R",
+    "rot": [
+     0.0,
+     -45.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.32,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     0.22,
+     -0.02,
+     -0.22
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Claw_Tooth2_L",
+    "parent": "Hand_L",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.28,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     -0.22,
+     -0.02,
+     -0.22
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Claw_Tooth2_R",
+    "parent": "Hand_R",
+    "rot": [
+     0.0,
+     -45.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.28,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Arm_Band_L",
+    "parent": "Forearm_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.5,
+     0.14,
+     0.5
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.2,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Arm_Band_R",
+    "parent": "Forearm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.5,
+     0.14,
+     0.5
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     0.15
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Leg_Spike1_L",
+    "parent": "Thigh1_L",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.36,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.2,
+     0.15
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Leg_Spike1_R",
+    "parent": "Thigh1_R",
+    "rot": [
+     0.0,
+     -45.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.36,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     0.15
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Leg_Spike2_L",
+    "parent": "Thigh2_L",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.36,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.2,
+     0.15
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Leg_Spike2_R",
+    "parent": "Thigh2_R",
+    "rot": [
+     0.0,
+     -45.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.36,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     0.15
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Leg_Spike3_L",
+    "parent": "Thigh3_L",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.36,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.2,
+     0.15
+    ],
+    "color": "light",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Leg_Spike3_R",
+    "parent": "Thigh3_R",
+    "rot": [
+     0.0,
+     -45.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.36,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Tail1_Ring",
+    "parent": "Tail1_7",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.36,
+     0.1,
+     0.36
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Tail2_Ring",
+    "parent": "Tail2_7",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.36,
+     0.1,
+     0.36
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Metal",
+    "name": "Deco_Tail3_Ring",
+    "parent": "Tail3_7",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.36,
+     0.1,
+     0.36
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.22
+    ],
+    "color": "head",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Tail1_Plate",
+    "parent": "Tail1_3",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.52,
+     0.12,
+     0.44
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.22
+    ],
+    "color": "head",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Tail2_Plate",
+    "parent": "Tail2_3",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.52,
+     0.12,
+     0.44
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.0,
+     0.22
+    ],
+    "color": "head",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Tail3_Plate",
+    "parent": "Tail3_3",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.52,
+     0.12,
+     0.44
+    ]
+   }
+  ],
+  "joints": [
+   {
+    "at": [
+     0.0,
+     0.55,
+     0.2
+    ],
+    "color": "accent",
+    "material": "Fabric",
+    "name": "Veil1",
+    "parent": "Body",
+    "part": "Veil1",
+    "pivot": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "rot": [
+     70.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.0,
+     0.4,
+     0.05
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "color": "accent",
+    "material": "Fabric",
+    "name": "Veil2",
+    "parent": "Veil1",
+    "part": "Veil2",
+    "pivot": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "rot": [
+     8.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.9,
+     0.4,
+     0.05
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "color": "accent",
+    "material": "Fabric",
+    "name": "Veil3",
+    "parent": "Veil2",
+    "part": "Veil3",
+    "pivot": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "rot": [
+     8.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.8,
+     0.4,
+     0.05
+    ]
+   }
+  ],
+  "recolor": [],
+  "themeColors": {
+   "accent": {
+    "B": 0.235294,
+    "G": 0.768627,
+    "R": 1.0
+   },
+   "body": {
+    "B": 0.14902,
+    "G": 0.372549,
+    "R": 0.658824
+   },
+   "head": {
+    "B": 0.407843,
+    "G": 0.588235,
+    "R": 0.807843
+   }
+  }
+ },
+ "section_guardian": {
+  "deco": [
+   {
+    "at": [
+     0.0,
+     0.26,
+     -0.44
+    ],
+    "color": "slab",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Head_Brow",
+    "parent": "Head",
+    "rot": [
+     -12.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.2,
+     0.26,
+     0.34
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.4,
+     -0.32
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Head_Jaw",
+    "parent": "Head",
+    "rot": [
+     8.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.96,
+     0.26,
+     0.38
+    ]
+   },
+   {
+    "at": [
+     -0.58,
+     -0.05,
+     -0.2
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Head_Cheek_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.2,
+     0.5,
+     0.5
+    ]
+   },
+   {
+    "at": [
+     0.58,
+     -0.05,
+     -0.2
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Head_Cheek_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.2,
+     0.5,
+     0.5
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.78,
+     0.05
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Head_Crown",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.3,
+     0.85,
+     0.3
+    ]
+   },
+   {
+    "at": [
+     -0.3,
+     0.66,
+     0.1
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Head_CrownSide_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     45.0,
+     20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.24,
+     0.6,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     0.3,
+     0.66,
+     0.1
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Head_CrownSide_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -45.0,
+     -20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.24,
+     0.6,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     -0.5,
+     0.55,
+     0.12
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Head_CrownOuter_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     45.0,
+     34.0
+    ],
+    "shape": "block",
+    "size": [
+     0.18,
+     0.4,
+     0.18
+    ]
+   },
+   {
+    "at": [
+     0.5,
+     0.55,
+     0.12
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Head_CrownOuter_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -45.0,
+     -34.0
+    ],
+    "shape": "block",
+    "size": [
+     0.18,
+     0.4,
+     0.18
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.64,
+     -0.74
+    ],
+    "color": "slab",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Chest_Top",
+    "parent": "Body",
+    "rot": [
+     -4.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     2.05,
+     0.38,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     -0.92,
+     0.02,
+     -0.72
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Chest_Side_L",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     -8.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.62,
+     1.02,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.92,
+     0.02,
+     -0.72
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Chest_Side_R",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     8.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.62,
+     1.02,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.6,
+     -0.72
+    ],
+    "color": "slab",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Chest_Belly",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.36,
+     0.4,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     -0.5,
+     0.2,
+     -0.72
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Chest_Ray_L",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.34,
+     0.06,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     0.5,
+     0.2,
+     -0.72
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Chest_Ray_R",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.34,
+     0.06,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     -0.3,
+     -0.12,
+     -0.72
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Chest_RayLow_L",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     -40.0
+    ],
+    "shape": "block",
+    "size": [
+     0.3,
+     0.06,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     0.3,
+     -0.12,
+     -0.72
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Chest_RayLow_R",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     -0.0,
+     40.0
+    ],
+    "shape": "block",
+    "size": [
+     0.3,
+     0.06,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.7,
+     0.86
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Back_Crystal",
+    "parent": "Body",
+    "rot": [
+     -22.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.46,
+     1.7,
+     0.46
+    ]
+   },
+   {
+    "at": [
+     -0.6,
+     0.45,
+     0.8
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Back_CrystalSide_L",
+    "parent": "Body",
+    "rot": [
+     -16.0,
+     45.0,
+     24.0
+    ],
+    "shape": "block",
+    "size": [
+     0.36,
+     1.2,
+     0.36
+    ]
+   },
+   {
+    "at": [
+     0.6,
+     0.45,
+     0.8
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Back_CrystalSide_R",
+    "parent": "Body",
+    "rot": [
+     -16.0,
+     -45.0,
+     -24.0
+    ],
+    "shape": "block",
+    "size": [
+     0.36,
+     1.2,
+     0.36
+    ]
+   },
+   {
+    "at": [
+     -0.95,
+     0.1,
+     0.72
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Back_CrystalSmall_L",
+    "parent": "Body",
+    "rot": [
+     -10.0,
+     45.0,
+     40.0
+    ],
+    "shape": "block",
+    "size": [
+     0.26,
+     0.7,
+     0.26
+    ]
+   },
+   {
+    "at": [
+     0.95,
+     0.1,
+     0.72
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Glass",
+    "name": "Deco_Back_CrystalSmall_R",
+    "parent": "Body",
+    "rot": [
+     -10.0,
+     -45.0,
+     -40.0
+    ],
+    "shape": "block",
+    "size": [
+     0.26,
+     0.7,
+     0.26
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.05,
+     0.72
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Back_Slab",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.6,
+     1.1,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     -0.05,
+     0.3,
+     0.0
+    ],
+    "color": "slab",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Cap_L",
+    "parent": "LeftPauldron",
+    "rot": [
+     0.0,
+     0.0,
+     12.0
+    ],
+    "shape": "block",
+    "size": [
+     1.2,
+     0.3,
+     1.3
+    ]
+   },
+   {
+    "at": [
+     0.05,
+     0.3,
+     0.0
+    ],
+    "color": "slab",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Cap_R",
+    "parent": "RightPauldron",
+    "rot": [
+     0.0,
+     -0.0,
+     -12.0
+    ],
+    "shape": "block",
+    "size": [
+     1.2,
+     0.3,
+     1.3
+    ]
+   },
+   {
+    "at": [
+     -0.28,
+     0.55,
+     0.24
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Spike_L",
+    "parent": "LeftPauldron",
+    "rot": [
+     0.0,
+     45.0,
+     20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.28,
+     0.62,
+     0.28
+    ]
+   },
+   {
+    "at": [
+     0.28,
+     0.55,
+     0.24
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Spike_R",
+    "parent": "RightPauldron",
+    "rot": [
+     0.0,
+     -45.0,
+     -20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.28,
+     0.62,
+     0.28
+    ]
+   },
+   {
+    "at": [
+     -0.22,
+     0.48,
+     -0.28
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Spike2_L",
+    "parent": "LeftPauldron",
+    "rot": [
+     0.0,
+     45.0,
+     14.0
+    ],
+    "shape": "block",
+    "size": [
+     0.22,
+     0.46,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.22,
+     0.48,
+     -0.28
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Pauldron_Spike2_R",
+    "parent": "RightPauldron",
+    "rot": [
+     0.0,
+     -45.0,
+     -14.0
+    ],
+    "shape": "block",
+    "size": [
+     0.22,
+     0.46,
+     0.22
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.02,
+     -0.66
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Pauldron_Rune_L",
+    "parent": "LeftPauldron",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.5,
+     0.08,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.02,
+     -0.66
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Pauldron_Rune_R",
+    "parent": "RightPauldron",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.5,
+     0.08,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     -0.4,
+     -0.1,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_UpperArm_Rune_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.05,
+     0.56,
+     0.05
+    ]
+   },
+   {
+    "at": [
+     0.4,
+     -0.1,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_UpperArm_Rune_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.05,
+     0.56,
+     0.05
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.42,
+     0.3
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Forearm_Elbow_L",
+    "parent": "Forearm_L",
+    "rot": [
+     20.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.5,
+     0.36,
+     0.42
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.42,
+     0.3
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Forearm_Elbow_R",
+    "parent": "Forearm_R",
+    "rot": [
+     20.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.5,
+     0.36,
+     0.42
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.08,
+     0.0
+    ],
+    "color": "slab",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Forearm_Band_L",
+    "parent": "Forearm_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.96,
+     0.38,
+     0.96
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.08,
+     0.0
+    ],
+    "color": "slab",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Forearm_Band_R",
+    "parent": "Forearm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.96,
+     0.38,
+     0.96
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.28,
+     -0.56
+    ],
+    "color": "stone",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Hand_Knuckle_L",
+    "parent": "Hand_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.95,
+     0.26,
+     0.26
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     -0.28,
+     -0.56
+    ],
+    "color": "stone",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Hand_Knuckle_R",
+    "parent": "Hand_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.95,
+     0.26,
+     0.26
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Belt",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.72,
+     0.2,
+     1.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.05,
+     -0.56
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Glass",
+    "name": "Deco_Belt_Buckle",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     45.0
+    ],
+    "shape": "block",
+    "size": [
+     0.52,
+     0.52,
+     0.24
+    ]
+   },
+   {
+    "at": [
+     -0.86,
+     0.02,
+     0.0
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Belt_Side_L",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.38,
+     0.44,
+     1.0
+    ]
+   },
+   {
+    "at": [
+     0.86,
+     0.02,
+     0.0
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Belt_Side_R",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.38,
+     0.44,
+     1.0
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.14,
+     0.0
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Thigh_Plate_L",
+    "parent": "Thigh_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.86,
+     0.52,
+     0.86
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.14,
+     0.0
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Thigh_Plate_R",
+    "parent": "Thigh_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.86,
+     0.52,
+     0.86
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.38,
+     -0.4
+    ],
+    "color": "slab",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Knee_L",
+    "parent": "Thigh_L",
+    "rot": [
+     -10.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.6,
+     0.44,
+     0.26
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     -0.38,
+     -0.4
+    ],
+    "color": "slab",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Knee_R",
+    "parent": "Thigh_R",
+    "rot": [
+     -10.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.6,
+     0.44,
+     0.26
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.02,
+     -0.38
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Shin_L",
+    "parent": "Shin_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.72,
+     0.6,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.02,
+     -0.38
+    ],
+    "color": "stone",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Shin_R",
+    "parent": "Shin_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.72,
+     0.6,
+     0.2
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.02,
+     -0.64
+    ],
+    "color": "stone",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Toe_L",
+    "parent": "Foot_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.86,
+     0.24,
+     0.3
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     -0.02,
+     -0.64
+    ],
+    "color": "stone",
+    "lod": 2.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Toe_R",
+    "parent": "Foot_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.86,
+     0.24,
+     0.3
+    ]
+   }
+  ],
+  "joints": [
+   {
+    "at": [
+     0.0,
+     -0.16,
+     -0.56
+    ],
+    "color": "slab",
+    "material": "SmoothPlastic",
+    "name": "TassetF",
+    "parent": "Hips",
+    "part": "TassetF",
+    "pivot": [
+     0.0,
+     0.34,
+     0.0
+    ],
+    "rot": [
+     -6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.05,
+     0.7,
+     0.16
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.16,
+     0.56
+    ],
+    "color": "slab",
+    "material": "SmoothPlastic",
+    "name": "TassetB",
+    "parent": "Hips",
+    "part": "TassetB",
+    "pivot": [
+     0.0,
+     0.34,
+     0.0
+    ],
+    "rot": [
+     6.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.05,
+     0.7,
+     0.16
+    ]
+   },
+   {
+    "at": [
+     -0.78,
+     -0.1,
+     0.34
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "BannerL1",
+    "parent": "Hips",
+    "part": "BannerL1",
+    "pivot": [
+     0.0,
+     0.23,
+     0.0
+    ],
+    "rot": [
+     4.0,
+     0.0,
+     6.0
+    ],
+    "shape": "block",
+    "size": [
+     0.5,
+     0.46,
+     0.07
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.23,
+     0.0
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "BannerL2",
+    "parent": "BannerL1",
+    "part": "BannerL2",
+    "pivot": [
+     0.0,
+     0.23,
+     0.0
+    ],
+    "rot": [
+     3.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.46,
+     0.46,
+     0.07
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.23,
+     0.0
+    ],
+    "color": "accent",
+    "material": "Neon",
+    "name": "BannerL3",
+    "parent": "BannerL2",
+    "part": "BannerL3",
+    "pivot": [
+     0.0,
+     0.23,
+     0.0
+    ],
+    "rot": [
+     3.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.42,
+     0.46,
+     0.07
+    ]
+   },
+   {
+    "at": [
+     0.78,
+     -0.1,
+     0.34
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "BannerR1",
+    "parent": "Hips",
+    "part": "BannerR1",
+    "pivot": [
+     0.0,
+     0.23,
+     0.0
+    ],
+    "rot": [
+     4.0,
+     0.0,
+     -6.0
+    ],
+    "shape": "block",
+    "size": [
+     0.5,
+     0.46,
+     0.07
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.23,
+     0.0
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "BannerR2",
+    "parent": "BannerR1",
+    "part": "BannerR2",
+    "pivot": [
+     0.0,
+     0.23,
+     0.0
+    ],
+    "rot": [
+     3.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.46,
+     0.46,
+     0.07
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.23,
+     0.0
+    ],
+    "color": "accent",
+    "material": "Neon",
+    "name": "BannerR3",
+    "parent": "BannerR2",
+    "part": "BannerR3",
+    "pivot": [
+     0.0,
+     0.23,
+     0.0
+    ],
+    "rot": [
+     3.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.42,
+     0.46,
+     0.07
+    ]
+   }
+  ],
+  "recolor": {
+   "Foot_L": "stone",
+   "Foot_R": "stone",
+   "Hips": "shadow",
+   "Shin_L": "shadow",
+   "Shin_R": "shadow",
+   "UpperArm_L": "stone",
+   "UpperArm_R": "stone"
+  },
+  "themeColors": {
+   "accent": {
+    "B": 1.0,
+    "G": 0.431373,
+    "R": 0.745098
+   },
+   "body": {
+    "B": 0.27451,
+    "G": 0.078431,
+    "R": 0.235294
+   },
+   "head": {
+    "B": 0.392157,
+    "G": 0.117647,
+    "R": 0.352941
+   }
+  }
+ },
+ "storm_lord": {
+  "deco": [
+   {
+    "at": [
+     0.0,
+     0.34,
+     0.18
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Hood_Shell",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.15,
+     0.62,
+     0.92
+    ]
+   },
+   {
+    "at": [
+     -0.56,
+     0.0,
+     0.12
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Hood_Side_L",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.84,
+     0.92
+    ]
+   },
+   {
+    "at": [
+     0.56,
+     0.0,
+     0.12
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Hood_Side_R",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.14,
+     0.84,
+     0.92
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.64,
+     -0.18
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Hood_Peak",
+    "parent": "Head",
+    "rot": [
+     30.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.42,
+     0.32,
+     0.42
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.24,
+     -0.49
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Face_Mask",
+    "parent": "Head",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.82,
+     0.36,
+     0.06
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.95,
+     -0.32
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Collar",
+    "parent": "Body",
+    "rot": [
+     -15.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.5,
+     0.52,
+     0.26
+    ]
+   },
+   {
+    "at": [
+     -0.62,
+     1.12,
+     -0.22
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Collar_Spike_L",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.52,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     0.62,
+     1.12,
+     -0.22
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Collar_Spike_R",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     -0.0,
+     -20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.52,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.42,
+     -0.52
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Bolt_A",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     25.0
+    ],
+    "shape": "block",
+    "size": [
+     0.09,
+     0.52,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     0.08,
+     0.06,
+     -0.52
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Bolt_B",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     -25.0
+    ],
+    "shape": "block",
+    "size": [
+     0.09,
+     0.42,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.28,
+     -0.52
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Bolt_C",
+    "parent": "Body",
+    "rot": [
+     0.0,
+     0.0,
+     25.0
+    ],
+    "shape": "block",
+    "size": [
+     0.09,
+     0.42,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     -0.05,
+     0.46,
+     0.0
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Shoulder_Plate_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     0.0,
+     15.0
+    ],
+    "shape": "block",
+    "size": [
+     0.78,
+     0.3,
+     0.72
+    ]
+   },
+   {
+    "at": [
+     0.05,
+     0.46,
+     0.0
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Shoulder_Plate_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -15.0
+    ],
+    "shape": "block",
+    "size": [
+     0.78,
+     0.3,
+     0.72
+    ]
+   },
+   {
+    "at": [
+     -0.05,
+     0.62,
+     -0.37
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Shoulder_Edge_L",
+    "parent": "UpperArm_L",
+    "rot": [
+     0.0,
+     0.0,
+     15.0
+    ],
+    "shape": "block",
+    "size": [
+     0.72,
+     0.06,
+     0.06
+    ]
+   },
+   {
+    "at": [
+     0.05,
+     0.62,
+     -0.37
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Shoulder_Edge_R",
+    "parent": "UpperArm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -15.0
+    ],
+    "shape": "block",
+    "size": [
+     0.72,
+     0.06,
+     0.06
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.05,
+     0.0
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Bracer_L",
+    "parent": "Forearm_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.6,
+     0.42,
+     0.6
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.05,
+     0.0
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Bracer_R",
+    "parent": "Forearm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.6,
+     0.42,
+     0.6
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.05,
+     -0.31
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Bracer_Rune_L",
+    "parent": "Forearm_L",
+    "rot": [
+     0.0,
+     0.0,
+     20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.06,
+     0.34,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.05,
+     -0.31
+    ],
+    "color": "accent",
+    "lod": 2.0,
+    "material": "Neon",
+    "name": "Deco_Bracer_Rune_R",
+    "parent": "Forearm_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -20.0
+    ],
+    "shape": "block",
+    "size": [
+     0.06,
+     0.34,
+     0.04
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.15,
+     0.0
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Belt",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.42,
+     0.26,
+     1.0
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.12,
+     -0.52
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Belt_Orb",
+    "parent": "Hips",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "ball",
+    "size": [
+     0.32,
+     0.32,
+     0.32
+    ]
+   },
+   {
+    "at": [
+     -0.46,
+     0.1,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Staff_CrescentL",
+    "parent": "StaffOrb",
+    "rot": [
+     0.0,
+     0.0,
+     25.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.72,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     0.46,
+     0.1,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Staff_CrescentR",
+    "parent": "StaffOrb",
+    "rot": [
+     0.0,
+     0.0,
+     -25.0
+    ],
+    "shape": "block",
+    "size": [
+     0.12,
+     0.72,
+     0.12
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.56,
+     0.0
+    ],
+    "color": "accent",
+    "lod": 1.0,
+    "material": "Neon",
+    "name": "Deco_Staff_Spike",
+    "parent": "StaffOrb",
+    "rot": [
+     0.0,
+     45.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.1,
+     0.5,
+     0.1
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.1,
+     -0.3
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Shin_Guard_L",
+    "parent": "Shin_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.56,
+     0.5,
+     0.16
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.1,
+     -0.3
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Shin_Guard_R",
+    "parent": "Shin_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.56,
+     0.5,
+     0.16
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.46,
+     -0.3
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Knee_L",
+    "parent": "Thigh_L",
+    "rot": [
+     -10.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.46,
+     0.32,
+     0.18
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     -0.46,
+     -0.3
+    ],
+    "color": "head",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Knee_R",
+    "parent": "Thigh_R",
+    "rot": [
+     -10.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.46,
+     0.32,
+     0.18
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     0.03,
+     0.0
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Boot_L",
+    "parent": "Foot_L",
+    "rot": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.66,
+     0.3,
+     1.0
+    ]
+   },
+   {
+    "at": [
+     -0.0,
+     0.03,
+     0.0
+    ],
+    "color": "shadow",
+    "lod": 1.0,
+    "material": "SmoothPlastic",
+    "name": "Deco_Boot_R",
+    "parent": "Foot_R",
+    "rot": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "shape": "block",
+    "size": [
+     0.66,
+     0.3,
+     1.0
+    ]
+   }
+  ],
+  "joints": [
+   {
+    "at": [
+     0.0,
+     -0.2,
+     -0.48
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "RobeF1",
+    "parent": "Hips",
+    "part": "RobeF1",
+    "pivot": [
+     0.0,
+     0.275,
+     0.0
+    ],
+    "rot": [
+     -4.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.0,
+     0.55,
+     0.08
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.275,
+     0.0
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "RobeF2",
+    "parent": "RobeF1",
+    "part": "RobeF2",
+    "pivot": [
+     0.0,
+     0.275,
+     0.0
+    ],
+    "rot": [
+     -3.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.12,
+     0.55,
+     0.08
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.2,
+     0.48
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "RobeB1",
+    "parent": "Hips",
+    "part": "RobeB1",
+    "pivot": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "rot": [
+     4.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.1,
+     0.62,
+     0.08
+    ]
+   },
+   {
+    "at": [
+     0.0,
+     -0.31,
+     0.0
+    ],
+    "color": "head",
+    "material": "SmoothPlastic",
+    "name": "RobeB2",
+    "parent": "RobeB1",
+    "part": "RobeB2",
+    "pivot": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "rot": [
+     3.0,
+     0.0,
+     0.0
+    ],
+    "shape": "block",
+    "size": [
+     1.2,
+     0.62,
+     0.08
+    ]
+   }
+  ],
+  "recolor": [],
+  "themeColors": {
+   "accent": {
+    "B": 0.25098,
+    "G": 0.878431,
+    "R": 1.0
+   },
+   "body": {
+    "B": 0.501961,
+    "G": 0.380392,
+    "R": 0.360784
+   },
+   "head": {
+    "B": 0.611765,
+    "G": 0.486275,
+    "R": 0.462745
+   }
+  }
+ }
+}

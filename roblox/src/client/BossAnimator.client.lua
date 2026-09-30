@@ -168,6 +168,9 @@ local function lookYawFor(e)
 	end
 	local rel = math.atan2(-(best.X - e.visPos.X), -(best.Z - e.visPos.Z)) - e.visYaw
 	rel = (rel + math.pi) % (2 * math.pi) - math.pi
+	if math.abs(rel) > math.rad(110) then
+		return nil -- A2-M1: 등 뒤는 안 본다(±180°에서 각이 뒤집혀 목 · 허리가 한 번에 반대로 돌았다) - 가중치가 줄며 두리번으로
+	end
 	return math.deg(rel)
 end
 

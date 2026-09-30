@@ -111,30 +111,30 @@ do
 end
 
 -- ─────────────────────────── 서리 거인: 얼음 갑옷 · 털 망토의 거인 ───────────────────────────
--- 콘셉트: 설산의 거인 족장. 흰 털 망토(등 · 2차 움직임) · 털 허리띠와 다리 감개 · 얼음 갑주(가슴 · 어깨 · 무릎) · 머리 얼음 관 · 등 고드름 · 곤봉에 박힌 얼음 가시.
+-- 콘셉트: 설산의 거인 족장. 푸른 회색 털 망토(등 · 2차 움직임 - Play 4: 흰 털은 흰 얼음 아레나에서 묻혀 돌색으로) · 털 허리띠와 다리 감개 · 얼음 갑주(가슴 · 어깨 · 무릎) · 머리 얼음 관 · 등 고드름 · 곤봉에 박힌 얼음 가시.
 -- 실루엣 = 높고 넓은 어깨(얼음 어깨 갑주 + 가시) + 등 망토 + 곤봉 끝 가시. 무게감 = 두꺼운 털 장화 · 무릎 얼음.
 do
 	local J = {}
-	chain(J, { prefix = "Mantle", parent = "Body", count = 3, length = 0.6, w0 = 1.7, w1 = 1.95, thick = 0.14, at = V(0, 0.78, 0.64), rot0 = V(6, 0, 0), rotStep = V(4, 0, 0), color = "light", material = "Fabric" })
-	chain(J, { prefix = "Loin", parent = "Hips", count = 2, length = 0.45, w0 = 0.85, w1 = 0.75, thick = 0.08, at = V(0, -0.16, -0.5), rot0 = V(-4, 0, 0), rotStep = V(-3, 0, 0), color = "light", material = "Fabric" })
+	chain(J, { prefix = "Mantle", parent = "Body", count = 3, length = 0.6, w0 = 1.7, w1 = 1.95, thick = 0.14, at = V(0, 0.78, 0.64), rot0 = V(6, 0, 0), rotStep = V(4, 0, 0), color = "stone", material = "Fabric" })
+	chain(J, { prefix = "Loin", parent = "Hips", count = 2, length = 0.45, w0 = 0.85, w1 = 0.75, thick = 0.08, at = V(0, -0.16, -0.5), rot0 = V(-4, 0, 0), rotStep = V(-3, 0, 0), color = "stone", material = "Fabric" })
 	local D = {
 		deco("Head", "Deco_Head_Brow", V(1.08, 0.22, 0.32), V(0, 0.26, -0.46), V(-10, 0, 0), "light", { material = "Fabric" }),
 		deco("Head", "Deco_Head_IceCrown", V(0.26, 0.66, 0.26), V(0, 0.7, 0), V(0, 45, 0), "accent", { material = "Ice" }),
 		deco("Head", "Deco_Head_IceCrownSide_L", V(0.2, 0.46, 0.2), V(-0.28, 0.62, 0.06), V(0, 45, 16), "accent", { material = "Ice" }),
-		deco("Body", "Deco_Collar_Fur", V(2.15, 0.48, 1.42), V(0, 0.9, 0.05), V(0, 0, 0), "light", { material = "Fabric" }),
+		deco("Body", "Deco_Collar_Fur", V(2.15, 0.48, 1.42), V(0, 0.9, 0.05), V(0, 0, 0), "stone", { material = "Fabric" }),
 		deco("Body", "Deco_Chest_Ice", V(1.35, 0.95, 0.22), V(0, 0.2, -0.66), V(0, 0, 0), "accent", { material = "Ice" }),
 		deco("Body", "Deco_Chest_Rune", V(0.95, 0.06, 0.04), V(0, 0.2, -0.78), V(0, 0, 0), "accent", { material = "Neon", lod = 2 }),
 		deco("Body", "Deco_Back_Icicle", V(0.3, 1.0, 0.3), V(0, 0.45, 0.78), V(-28, 45, 0), "accent", { material = "Ice" }),
 		deco("Body", "Deco_Back_IcicleSide_L", V(0.24, 0.75, 0.24), V(-0.52, 0.3, 0.74), V(-22, 45, 20), "accent", { material = "Ice", lod = 2 }),
 		deco("UpperArm_L", "Deco_Pauldron_Ice_L", V(0.98, 0.52, 0.98), V(-0.08, 0.46, 0), V(0, 0, 10), "accent", { material = "Ice" }),
 		deco("UpperArm_L", "Deco_Pauldron_Spike_L", V(0.24, 0.62, 0.24), V(-0.32, 0.82, 0), V(0, 45, 26), "accent", { material = "Ice" }),
-		deco("UpperArm_L", "Deco_Shoulder_Fur_L", V(0.72, 0.3, 0.72), V(0, 0.12, 0), V(0, 0, 0), "light", { material = "Fabric", lod = 2 }),
-		deco("Forearm_L", "Deco_Forearm_Fur_L", V(0.74, 0.36, 0.74), V(0, 0.12, 0), V(0, 0, 0), "light", { material = "Fabric" }),
+		deco("UpperArm_L", "Deco_Shoulder_Fur_L", V(0.72, 0.3, 0.72), V(0, 0.12, 0), V(0, 0, 0), "stone", { material = "Fabric", lod = 2 }),
+		deco("Forearm_L", "Deco_Forearm_Fur_L", V(0.74, 0.36, 0.74), V(0, 0.12, 0), V(0, 0, 0), "stone", { material = "Fabric" }),
 		deco("Hand_L", "Deco_Hand_Ice_L", V(0.62, 0.22, 0.22), V(0, -0.22, -0.4), V(0, 0, 0), "accent", { material = "Ice", lod = 2 }),
-		deco("Hips", "Deco_Belt_Fur", V(1.58, 0.32, 1.08), V(0, 0.1, 0), V(0, 0, 0), "light", { material = "Fabric" }),
+		deco("Hips", "Deco_Belt_Fur", V(1.58, 0.32, 1.08), V(0, 0.1, 0), V(0, 0, 0), "stone", { material = "Fabric" }),
 		deco("Hips", "Deco_Belt_Buckle", V(0.42, 0.42, 0.2), V(0, 0.1, -0.56), V(0, 0, 45), "accent", { material = "Ice" }),
 		deco("Thigh_L", "Deco_Knee_Ice_L", V(0.52, 0.42, 0.22), V(0, -0.48, -0.36), V(-10, 0, 0), "accent", { material = "Ice" }),
-		deco("Shin_L", "Deco_Shin_Fur_L", V(0.72, 0.58, 0.72), V(0, -0.16, 0), V(0, 0, 0), "light", { material = "Fabric" }),
+		deco("Shin_L", "Deco_Shin_Fur_L", V(0.72, 0.58, 0.72), V(0, -0.16, 0), V(0, 0, 0), "stone", { material = "Fabric" }),
 		deco("Foot_L", "Deco_Boot_L", V(0.84, 0.38, 1.1), V(0, 0.04, -0.02), V(0, 0, 0), "shadow"),
 		deco("IceClub", "Deco_Club_SpikeA", V(0.22, 0.6, 0.22), V(0, 1.05, -0.32), V(-40, 45, 0), "accent", { material = "Ice" }),
 		deco("IceClub", "Deco_Club_SpikeB", V(0.22, 0.6, 0.22), V(0.3, 0.85, 0.15), V(30, 45, -40), "accent", { material = "Ice" }),

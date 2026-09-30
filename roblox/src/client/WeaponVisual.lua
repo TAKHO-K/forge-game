@@ -690,6 +690,7 @@ local function targetPose(st, now, root)
 		if not a.hitDone and tau >= a.tm.ant then
 			a.hitDone = true
 			a.freezeUntil, a.frozeAt = now + (a.hitstop or M.hitstopSeconds), now
+			noteImpact(st, 0.03, (a.hitstop or M.hitstopSeconds) + 0.25) -- A2-M1 측정: 접촉 + 히트스톱 + 동작 시작(의도된 타격)
 			local pose, draw = sampleAttack(a.clip, a.tm, a.tm.ant)
 			return withTurn(a, pose, now), a.blendKey, a.blendDur, true, draw, true, true
 		end
@@ -1082,6 +1083,22 @@ local function placeWeapon(st, now, camPos)
 end
 
 -- ─────────────────────────── 등록 · 공격 시작 ───────────────────────────
+-- A2-M1 측정 보조(판정 무관): 의도된 타격 · 반응 순간(공격 접촉 + 히트스톱 · 피격 · 착지 · 도약 · 대시 · 기절 · 넘어짐)을 캐릭터 모델 Attribute ClientImpacts("시작,끝;…" 서버 시각)에
+--   적는다(이 클라에만) - client/A2M1Probe가 부드러움 측정에서 뺀다(보스 BossAnimator와 같은 약속).
+local function noteImpact(st, before, after)
+	local character = st and st.character
+	if not character or not character.Parent then
+		return
+	end
+	local sn = workspace:GetServerTimeNow()
+	st.impacts = st.impacts or {}
+	table.insert(st.impacts, ("%.3f,%.3f"):format(sn - before, sn + after))
+	if #st.impacts > 12 then
+		table.remove(st.impacts, 1)
+	end
+	character:SetAttribute("ClientImpacts", table.concat(st.impacts, ";"))
+end
+
 local function stateFor(key)
 	return rigs[key]
 end
@@ -1258,6 +1275,7 @@ function WeaponVisual.playDash(key, seconds, second)
 	local st = stateFor(key or player)
 	if st then
 		st.dashUntil = os.clock() + (seconds or 0.3)
+		noteImpact(st, 0.03, 0.12) -- A2-M1 측정: 대시 박참(의도된 순간 가속)
 		if second then
 			WeaponVisual.playOverlay(key or player, "dash2")
 		end
@@ -1270,6 +1288,9 @@ function WeaponVisual.playOverlay(key, name)
 	local def = M.overlay[name]
 	if not st or type(def) ~= "table" or not def.pose or st.deathStart then
 		return
+	end
+	if name ~= "glideIn" and name ~= "glideOut" then
+		noteImpact(st, 0.03, 0.15) -- A2-M1 측정: 반응 시작(피격 · 착지 · 도약 · 공중 점프 · 2단 대시)
 	end
 	for i = #st.overlays, 1, -1 do -- 같은 반응은 새로 시작(쌓지 않는다)
 		if st.overlays[i].def == def then
@@ -1290,6 +1311,7 @@ function WeaponVisual.playStun(key, seconds)
 	local st = stateFor(key or player)
 	if st and not st.deathStart then
 		st.stun = { start = os.clock(), seconds = math.max(seconds or 1, M.overlay.stun.staggerSeconds + M.overlay.stun.recoverSeconds) }
+		noteImpact(st, 0.03, 0.14) -- A2-M1 측정: 기절 시작
 	end
 end
 
@@ -1355,6 +1377,7 @@ function WeaponVisual.playGetup(key, onDone)
 	end
 	st.attack = nil
 	st.getupStart = os.clock()
+	noteImpact(st, 0.03, 0.2) -- A2-M1 측정: 넘어짐 튕김(의도된 충격)
 	st.onGetupDone = function()
 		if onDone then
 			onDone()

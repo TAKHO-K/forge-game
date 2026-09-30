@@ -6,6 +6,8 @@
 #   좌표 = sizeScale 1(게임이 BossData sizeScale을 곱한다) · 루트 = 원점 · 발바닥 y −1.5 · 앞 = −Z.
 # 실행: bash bl.sh make_boss.py --bosses section_guardian [--render 폴더] [--old] [--no-export]
 import bpy
+import io
+import json
 import math
 import os
 import sys
@@ -16,8 +18,12 @@ from mathutils import Matrix, Vector  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.normpath(os.path.join(HERE, "..", "..", "art", "bosses"))
-BUDGET, PART_CAP = 6000, 40  # A2-N2 사용자 결정: 보스 파트 상한 40(전갈 여왕 48 예외 - PART_CAP_OF)
-PART_CAP_OF = {"scorpion_queen": 48}
+# A2-M1 사용자 지시(2026-09-30 "보스 파트 제한을 풀어 정성 들였다고 알 수 있게 · 폰 4인 렉 없이 적당히"): 게임 도형 파트 ≤ 80(전갈 110) + 외곽선 껍데기 10 → 95 · 120.
+#   옛 = A2-N2 40 · 전갈 48. 삼각형 예산은 디테일만큼 늘린다(두 발 9,000 · 전갈 11,000 - art-direction §6 A2-M1 개정).
+BUDGET, PART_CAP = 9000, 95
+PART_CAP_OF = {"scorpion_queen": 120}
+BUDGET_OF = {"scorpion_queen": 11000}
+DETAIL_JSON = os.path.join(HERE, "rigs", "boss_detail.json")  # A2-M1: python detail_dump.py가 Lua 규격(BossDetailSpec)에서 뽑는다 - 손으로 옮겨 적지 않는다
 V = Vector
 
 
@@ -173,6 +179,19 @@ def color_of(role, rig):
         return (25, 18, 22)
     if role == "lining":  # 2차 폭풍 군주 망토 끝(#E8C040 - 발광 아님)
         return (232, 192, 64)
+    # A2-M1 디테일 색 역할(BossRigSpec.colorOf와 같은 식)
+    if role == "light":
+        return A.mix(rig["head"], (255, 255, 255), 0.35)
+    if role == "shadow":
+        return A.mul(rig["body"], 0.5)
+    if role == "stone":
+        return A.mix(rig["body"], (140, 136, 150), 0.42)
+    if role == "slab":
+        return A.mix(rig["head"], (205, 200, 215), 0.4)
+    if role == "metal":
+        return A.mix(rig["head"], (150, 150, 160), 0.6)
+    if isinstance(role, (list, tuple)):
+        return tuple(role)
     return rig["body"]
 
 
@@ -564,14 +583,30 @@ OUTLINE_PARTS = {"section_guardian": ["Body", "Head", "UpperArm_L", "UpperArm_R"
                  "storm_lord": ["Body", "Head", "Hips", "UpperArm_L", "UpperArm_R", "LeftBlade", "RightBlade", "CapeL3", "CapeR3", "Staff"]}
 
 
-def build(boss, old=False, hull=True):
+def load_detail(boss):
+    """A2-M1 디테일(새 관절 · 장식 · 부위 색) - rigs/boss_detail.json(detail_dump.py)"""
+    if not os.path.exists(DETAIL_JSON):
+        return None
+    data = json.load(io.open(DETAIL_JSON, encoding="utf-8"))
+    return data.get(boss)
+
+
+def build(boss, old=False, hull=True, detail=True):
     rig = RIGS[boss]()
+    det = load_detail(boss) if (detail and not old) else None
+    if det:
+        for j in det["joints"]:
+            rig["joints"].append(dict(name=j["name"], parent=j["parent"], part=j["part"], size=tuple(j["size"]), shape=j.get("shape", "block"), color=j["color"],
+                                      material=j.get("material"), at=tuple(j["at"]), pivot=tuple(j["pivot"]), rot=tuple(j["rot"]) if j.get("rot") else None, detail=True))
+        for j in rig["joints"]:
+            if j["part"] in det.get("recolor", {}):
+                j["color"] = det["recolor"][j["part"]]
     world, jpos = fk(rig["joints"])
     col = A.new_collection(("old_" if old else "") + boss)
     objs, hulls = [], []
     for j in rig["joints"]:
         part = j["part"]
-        local = old_shape(j) if old else SHAPES[boss](part, j)
+        local = old_shape(j) if (old or j.get("detail")) else SHAPES[boss](part, j)
         W = world[part]
         R = W.to_3x3()
         t = W.translation
@@ -582,6 +617,19 @@ def build(boss, old=False, hull=True):
         objs.append(o)
         if hull and not old and part in OUTLINE_PARTS.get(boss, []):
             hulls.append(A.add_hull(o, thickness=0.06, export=True, col=col))
+    # A2-M1 장식(관절 없음 - 게임에서는 부모 부위에 용접): 이름 · 크기 · 자리 = BossDetailSpec 그대로 · 원점 = 장식 가운데
+    if det:
+        for d in det["deco"]:
+            P = world.get(d["parent"])
+            if P is None:
+                continue
+            W = P @ Matrix.Translation(V(d["at"])) @ angles(tuple(d["rot"]) if d.get("rot") else None)
+            geo = A.xform(old_shape({"size": d["size"], "shape": d.get("shape", "block")}), m=W.to_3x3(), t=tuple(W.translation))
+            o = A.make_obj(d["name"], geo, color_of(d["color"], rig), col, neon=d.get("material") == "Neon", origin=tuple(W.translation),
+                           bevel=0.0, mat_name="%s_%s" % (boss, d["name"]))
+            o["Deco"] = d["parent"]
+            o["DetailLod"] = int(d.get("lod", 1))
+            objs.append(o)
     return rig, col, objs, hulls
 
 
@@ -611,13 +659,15 @@ def main():
         allo = objs + hulls
         total = sum(A.tri_count(o) for o in allo)
         cap = PART_CAP_OF.get(boss, PART_CAP)
+        budget = BUDGET_OF.get(boss, BUDGET)
         assert len(allo) <= cap, (boss, len(allo), cap)
-        print("[make_boss] %s 파트 %d(+외곽선 %d = %d / %d) · 삼각형 %d(외곽선 포함) / %d = %.0f%% · %s" % (boss, len(objs), len(hulls), len(allo), cap, total, BUDGET, 100 * total / BUDGET,
+        print("[make_boss] %s 파트 %d(+외곽선 %d = %d / %d) · 삼각형 %d(외곽선 포함) / %d = %.0f%% · %s" % (boss, len(objs), len(hulls), len(allo), cap, total, budget, 100 * total / budget,
                                                                                          {o.name: A.tri_count(o) for o in objs}))
         if opt["export"]:
             A.export_fbx(os.path.join(OUT, "%s.fbx" % boss), allo)
-            meta = A.meta_of(allo, BUDGET, {"version": "A2-N2", "rigId": boss, "partCap": cap,
-                                            "themeColors": {k: list(rig[k]) for k in ("body", "head", "accent")}, "joints": {o.name: o["Joint"] for o in objs},
+            meta = A.meta_of(allo, budget, {"version": "A2-M1", "rigId": boss, "partCap": cap,
+                                            "themeColors": {k: list(rig[k]) for k in ("body", "head", "accent")}, "joints": {o.name: o["Joint"] for o in objs if "Joint" in o},
+                                            "deco": {o.name: o["Deco"] for o in objs if "Deco" in o}, "lod2": [o.name for o in objs if o.get("DetailLod") == 2],
                                             "outlineParts": [h.name for h in hulls], "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z"})
             A.write_json(os.path.join(OUT, "%s.meta.json" % boss), meta)
             bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "%s.blend" % boss))

@@ -243,7 +243,7 @@ RunService.RenderStepped:Connect(function()
 		if M.shape == "streak" then
 			BossFx.streak(at, v, math.max(v.Magnitude * 0.09, 1.2), M.size, colorOf(M.color, c.colors), M.life, v.Magnitude)
 		else
-			BossFx.spawn({ shape = "ball", position = at, velocity = v, size0 = Vector3.one * M.size, size1 = Vector3.one * M.size * 0.3,
+			BossFx.spawn({ shape = M.shape or "ball", position = at, velocity = v, size0 = Vector3.one * M.size, size1 = Vector3.one * M.size * 0.3, spin = M.shape == "block" and 3 or nil,
 				color = colorOf(M.color, c.colors), transparency0 = 0.35, transparency1 = 1, life = M.life, material = M.material or Enum.Material.Neon })
 		end
 	end

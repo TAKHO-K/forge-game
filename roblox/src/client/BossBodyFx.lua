@@ -52,8 +52,9 @@ local function ground(e, at, size, shakeW)
 	local y = floorY(e)
 	local p = Vector3.new(at.X, y + 0.15, at.Z)
 	local S = e.S * size
-	BossFx.ring(p, 0.6 * S, 3.2 * S, c.dust, 0.42, 0.25)
-	BossFx.ring(p + Vector3.new(0, 0.05, 0), 0.3 * S, 1.8 * S, c.accent, 0.28, 0.35)
+	-- 옅게(투명 0.5 ~ 0.6) - 바닥 전조 · 다음 공격 표시를 가리지 않게(Play 4: 짙은 원판이 바닥을 덮었다)
+	BossFx.ring(p, 0.6 * S, 3.2 * S, c.dust, 0.42, 0.5)
+	BossFx.ring(p + Vector3.new(0, 0.05, 0), 0.3 * S, 1.8 * S, c.accent, 0.28, 0.6)
 	for i = 1, 7 do
 		local a = i / 7 * math.pi * 2 + rnd(-0.3, 0.3)
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
@@ -90,18 +91,28 @@ local function spark(e, at, size)
 	BossFx.puff(at, 1.4 * e.S * size * 0.5, c.accent:Lerp(WHITE, 0.4), 0.3, Vector3.zero)
 end
 
--- 포효: 가슴 높이 음파 고리 둘 · 발밑 먼지 고리
+-- 포효: 발밑 옅은 먼지 고리 두 겹 · 입 앞 음파 줄기 · 발밑 먼지(Play 4: 가슴 높이의 꽉 찬 원판은 화면 · 바닥 전조를 덮어 뺐다)
 local function roar(e, at, size, shakeW)
 	local c = colorsOf(e)
-	local center = Vector3.new(e.visPos.X, at.Y - 0.8 * e.S, e.visPos.Z)
-	BossFx.ring(center, 1.5 * e.S, 7 * e.S * size, c.accent:Lerp(WHITE, 0.3), 0.5, 0.45)
+	local base = Vector3.new(e.visPos.X, floorY(e) + 0.15, e.visPos.Z)
+	BossFx.ring(base, 1.5 * e.S, 5 * e.S * size, c.dust, 0.6, 0.55)
 	task.delay(0.12, function()
-		BossFx.ring(center, 1.2 * e.S, 5.5 * e.S * size, c.accent, 0.45, 0.55)
+		BossFx.ring(base, 1.2 * e.S, 3.6 * e.S * size, c.accent, 0.45, 0.65)
 	end)
-	BossFx.ring(Vector3.new(e.visPos.X, floorY(e) + 0.15, e.visPos.Z), 1.5 * e.S, 5 * e.S * size, c.dust, 0.6, 0.35)
-	if shakeW and shakeW > 0 then
-		BossFx.shake(center, shakeW)
+	local look = e.root and e.root.CFrame.LookVector or Vector3.new(0, 0, -1)
+	local fwd = Vector3.new(math.sin(-e.visYaw), 0, -math.cos(e.visYaw))
+	for i = 1, 6 do
+		local spread = Vector3.new(0, 1, 0):Cross(fwd) * rnd(-0.6, 0.6) + Vector3.new(0, rnd(-0.2, 0.3), 0)
+		BossFx.streak(at + fwd * 0.6 * e.S, fwd + spread, rnd(2, 3.2) * e.S * size * 0.5, 0.12 * e.S, c.accent:Lerp(WHITE, 0.5), 0.3, 12)
 	end
+	for i = 1, 6 do
+		local a = i / 6 * math.pi * 2
+		BossFx.puff(base + Vector3.new(math.cos(a), 0, math.sin(a)) * e.S, rnd(0.6, 0.9) * e.S, c.dust, 0.55, Vector3.new(math.cos(a), 0.3, math.sin(a)) * 6)
+	end
+	if shakeW and shakeW > 0 then
+		BossFx.shake(at, shakeW)
+	end
+	return look
 end
 
 local KINDS = { ground = ground, whoosh = whoosh, spark = spark, roar = roar }
@@ -199,8 +210,8 @@ end
 function INTRO.iceBreak(e, info, first)
 	local c = colorsOf(e)
 	local ice = c.accent:Lerp(WHITE, 0.4)
-	if first then
-		-- 얼음 껍데기(이 클라 파트 - 몸을 감싼다 · 깨질 때 치운다)
+	if first and not e.introShell and info.t < (info.riseT or 1) * 0.3 then
+		-- 얼음 껍데기(이 클라 파트 - 몸을 감싼다 · 깨질 때 치운다 · 보스 모델 안 = 모델이 사라지면 같이 사라진다)
 		local shell = Instance.new("Part")
 		shell.Name = "IntroIceShell"
 		shell.Anchored, shell.CanCollide, shell.CanQuery, shell.CanTouch, shell.CastShadow = true, false, false, false, false
@@ -209,7 +220,7 @@ function INTRO.iceBreak(e, info, first)
 		shell.Transparency = 0.25
 		shell.Size = Vector3.new(3.2, 5.2, 2.6) * e.S
 		shell.CFrame = CFrame.new(e.visPos + Vector3.new(0, 1.5 * e.S - 1.5 - 0.2 * e.S, 0)) * CFrame.Angles(0, math.rad(12), math.rad(4))
-		shell.Parent = Workspace
+		shell.Parent = e.model
 		e.introShell = shell
 	end
 	if e.introShell and info.t >= (info.riseT or 1) * 0.35 then
@@ -264,8 +275,12 @@ function BossBodyFx.intro(e, info)
 		return
 	end
 	local f = INTRO[info.style]
-	local first = e.introStyleSeen ~= e.introStamp
+	-- 첫 효과는 등장 한 번에 한 번(전시 리그 멈춤 촬영은 등장 시각이 매 프레임 바뀐다 - 1.5초에 한 번으로 막는다)
+	local first = e.introStyleSeen ~= e.introStamp and (not e.introFirstAt or os.clock() - e.introFirstAt > 1.5)
 	e.introStyleSeen = e.introStamp
+	if first then
+		e.introFirstAt = os.clock()
+	end
 	if f then
 		f(e, info, first)
 	end
