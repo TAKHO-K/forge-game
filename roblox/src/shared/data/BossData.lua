@@ -459,7 +459,7 @@ local function guardianSkills()
 		-- 낙석. 표적 장판 count개(첫 장판은 대상 현재 위치, 나머지는 scatterStuds 안 랜덤). 좌표 고정형이라
 		-- "계속 움직이는 사람은 안 맞는다". 회피 = 반경 6 + 1 = 7stud.
 		meteor = {
-			primitive = "circleTarget", bubble = "meteor",
+			primitive = "circleTarget", bubble = "meteor", perMember = true, -- A2-N4 §2-3: 파티 인당 조준(옛 = 대상 한 명 주변만 - 모형은 원래 전원이 맞는다고 가정)
 			cooldownSeconds = 13, priority = P.normal,
 			telegraphSeconds = 1.5, count = 3, radiusStuds = 6, scatterStuds = 10, densityScalable = true,
 			damage = { kind = "attack", multiplier = 2 }, damageLabel = "낙석",
@@ -877,7 +877,7 @@ local SPECIES = {
 			-- 물기둥. 기본형 낙석(동시 3개 산개)과 달리 **연발** - 하나가 터지면 그 순간의 대상 위치에 다음 것이
 			-- 예고된다. 한 번 피하고 서 있으면 다음 것을 맞는다(계속 걸어라).
 			spout = {
-				primitive = "circleTarget", bubble = "meteor",
+				primitive = "circleTarget", bubble = "meteor", perMember = true, -- A2-N4 §2-3: 파티 인당 조준(옛 = 대상 한 명 주변만 - 모형은 원래 전원이 맞는다고 가정)
 				cooldownSeconds = 15, priority = P.normal, starvationSeconds = 45,
 				-- BR1 수정 "발밑 따라오는 물기둥": 3 → 5발 · 반경 6 → 5 · 연발 전조 1.2 → 1.05 · 발당 ×2 → ×1.4(작음). 최대 범위 배율에서 5.76 + 1 = 1.03초 ≤ 1.05.
 				telegraphSeconds = 1.5, count = 5, sequential = true, repeatTelegraphSeconds = 1.05, radiusStuds = 5, scatterStuds = 0,
@@ -975,7 +975,7 @@ local SPECIES = {
 			-- 수정 낙하(23-6 "낙석 1개" 흡수). 하나지만 크다 - 기본형 낙석의 옆걸음으로는 못 나온다(11stud). 23-6의 반경
 			-- 6√3 = 10.39는 스테이지 범위 배율 최대(×1.152)에서 회피 부등식을 0.01초 넘겨 10으로 내렸다(PRD 20.75 B).
 			drop = {
-				primitive = "circleTarget", bubble = "meteor", role = "signature",
+				primitive = "circleTarget", bubble = "meteor", role = "signature", perMember = true, -- A2-N4 §2-3: 파티 인당 조준(옛 = 대상 한 명 주변만 - 모형은 원래 전원이 맞는다고 가정)
 				cooldownSeconds = 11, priority = P.signature,
 				telegraphSeconds = 1.5, count = 1, radiusStuds = 10, scatterStuds = 0,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "수정 낙하",
@@ -1127,7 +1127,7 @@ local SPECIES = {
 			},
 			-- 독침 낙하. 기본형 낙석보다 작고(반경 5) 빠르다(1.2초) - 빠른 보스의 템포.
 			sting = {
-				primitive = "circleTarget", bubble = "meteor",
+				primitive = "circleTarget", bubble = "meteor", perMember = true, -- A2-N4 §2-3: 파티 인당 조준(옛 = 대상 한 명 주변만 - 모형은 원래 전원이 맞는다고 가정)
 				cooldownSeconds = 12, priority = P.normal, starvationSeconds = 40,
 				telegraphSeconds = 1.2, count = 3, radiusStuds = 5, scatterStuds = 10, densityScalable = true,
 				damage = { kind = "attack", multiplier = 2 }, damageLabel = "독침 낙하",

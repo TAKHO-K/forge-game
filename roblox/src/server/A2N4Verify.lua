@@ -1,6 +1,6 @@
 -- A2-N4 자동 검증.
 --   (가) 순수: 보스 행동 3줄(BossScheduler 강공격 줄 - 전역 쿨 분리 · 강공격 간격 · 패턴 뒤로 미룸 · 첫 강공격 준비 · 둘 다 준비면 패턴 먼저 · 끄면 옛 규칙) ·
---        강공격 피해 배율(heavyDamageScale) · 방향(faceMoveMinSpeed 데이터) · 대표 전력(/gg loadout 역산 = 앵커 곡선).
+--        투사체 인당(조준형 스킬 분류) · 강공격 피해 배율(heavyDamageScale) · 방향(faceMoveMinSpeed 데이터) · 대표 전력(/gg loadout 역산 = 앵커 곡선).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
@@ -111,6 +111,30 @@ function V.runPure()
 			end
 		end
 		r.check(("heavyDamageScale %.2f 적용(보스 표): %s"):format(L.heavyDamageScale, table.concat(rows, " · ")), ok and #rows > 0)
+	end)
+	r.section("투사체 인당", function()
+		-- projectile = 대상 목록마다 count발(BossHandlersBR1.projectile - targetRule: target 전원 · airborne 뜬 사람 · airbornePreferred 뜬 사람 있으면 그들)
+		-- circleTarget = perMember면 멤버마다 발밑 1개(BossPatterns aimPositions) · chain · ambush · shots는 보스 몸 · 경로 기준(설계상 한 줄)
+		local per, single, design = {}, {}, {}
+		for _, id in ipairs({ "section_guardian", "frost_giant", "abyssal_lord", "crystal_queen", "scorpion_queen", "storm_lord" }) do
+			for sid, sk in pairs(BossData.bosses[id].skills) do
+				local name = id .. "." .. sid
+				if sk.primitive == "projectile" then
+					table.insert(per, name .. "(" .. tostring(sk.targetRule or "target") .. ")")
+				elseif sk.primitive == "circleTarget" then
+					if sk.perMember then
+						table.insert(per, name)
+					elseif sk.chain or sk.ambush or sk.shots or sk.bubble ~= "meteor" then
+						table.insert(design, name)
+					else
+						table.insert(single, name)
+					end
+				end
+			end
+		end
+		table.sort(per)
+		table.sort(design)
+		r.check(("떨어지는 · 날아가는 투사체 인당 %d개 · 한 명만 노리는 투사체 %d개(%s) · 보스 몸 · 경로 기준(설계) %s"):format(#per, #single, table.concat(single, ", "), table.concat(design, ", ")), #single == 0)
 	end)
 	r.section("대표 전력 역산", function()
 		local off = BalanceSim.solveKillOffset()
