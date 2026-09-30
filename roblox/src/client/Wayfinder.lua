@@ -55,11 +55,23 @@ local function ensureParts()
 		s.Size = Vector3.new(G.beamWidth, 0.2, 1)
 		segments[i] = s
 	end
+	-- QUEUE-ALL3 Q11: 노란 쐐기 → 두 겹 꺾쇠 그림(바닥 판 윗면 Decal) · 폰은 개수 상한
 	arrows = {}
-	for i = 1, G.arrowsShown do
-		local a = localPart("GuideArrow", "WedgePart")
-		a.Color = Color3.fromRGB(255, 230, 120)
-		a.Size = Vector3.new(4, 0.6, 5)
+	local chevronImage = require(script.Parent.ui.ArtImage).get("icons/ui/guide_chevron")
+	local count = require(script.Parent.ui.kit.Theme).isMobile and G.chevronsShownPhone or G.chevronsShown
+	for i = 1, count do
+		local a = localPart("GuideChevron")
+		a.Size = Vector3.new(G.chevronSize, 0.05, G.chevronSize)
+		local d = Instance.new("Decal")
+		d.Name = "Chevron"
+		d.Face = Enum.NormalId.Top
+		d.Texture = chevronImage or ""
+		d.Color3 = Color3.fromRGB(150, 235, 255)
+		d.Transparency = 1
+		d.Parent = a
+		if not chevronImage then -- 그림이 없으면 옛 쐐기 모양을 대신 보이게(빛 판)
+			a.Color = Color3.fromRGB(120, 220, 255)
+		end
 		arrows[i] = a
 	end
 	local B = G.beacon
@@ -271,6 +283,9 @@ local function hideAll()
 	end
 	for _, a in ipairs(arrows) do
 		a.Transparency = 1
+		if a:FindFirstChild("Chevron") then
+			a.Chevron.Transparency = 1
+		end
 	end
 	if beacon then
 		beacon.Transparency = 1
@@ -358,7 +373,10 @@ local function refresh()
 		GuidePath.liftRange(built, params, i, hi + #segments)
 	end
 	local pts = built.points
-	local used, walked, placed, nextAt = 0, 0, 0, G.arrowEvery * 0.5
+	-- QUEUE-ALL3 Q11: 꺾쇠 = 발밑부터 chevronEvery 간격 · 흐름(시간 위상) · 빛줄기 = 꺾쇠를 잇는 얇은 청록 선 · 모퉁이 = 꺾쇠가 다음 조각 방향을 본다
+	local phase = (os.clock() * G.chevronFlow) % G.chevronEvery
+	local used, walked, placed, nextAt = 0, 0, 0, phase
+	local lift = Vector3.new(0, G.chevronLift, 0)
 	for k = i + 1, #pts do
 		if used >= #segments or walked >= G.drawStuds then
 			break
@@ -366,22 +384,29 @@ local function refresh()
 		local a, b = pts[k - 1], pts[k]
 		local len = (b - a).Magnitude
 		if len > 0.05 and not GuidePath.segmentVisible(a, b, params) then
-			while nextAt <= walked + len do -- 묻힌 조각(기둥 속 · 아치 아래) = 안 그림 · 그 자리 화살표도 건너뜀
-				nextAt += G.arrowEvery
+			while nextAt <= walked + len do -- 묻힌 조각(기둥 속 · 아치 아래) = 안 그림 · 그 자리 꺾쇠도 건너뜀
+				nextAt += G.chevronEvery
 			end
 		elseif len > 0.05 then
 			used += 1
 			local s = segments[used]
-			s.Size = Vector3.new(G.beamWidth, 0.2, len)
-			s.CFrame = CFrame.lookAt((a + b) / 2, b)
-			s.Transparency = 0.25 + 0.5 * (walked / G.drawStuds)
-			while placed < #arrows and nextAt <= walked + len do
+			s.Size = Vector3.new(G.beamWidth, 0.12, len)
+			s.CFrame = CFrame.lookAt((a + b) / 2 + lift * 0.5, b + lift * 0.5)
+			s.Transparency = 0.35 + 0.55 * (walked / G.drawStuds)
+			while placed < #arrows and nextAt <= walked + len and nextAt <= G.drawStuds do
 				local at = a:Lerp(b, (nextAt - walked) / len)
 				placed += 1
-				-- 쐐기 높은 면(+Z)이 뒤 - 앞(-Z)으로 뾰족하게 누운 화살표(비탈 기울기 따라)
-				arrows[placed].CFrame = CFrame.lookAt(at + Vector3.new(0, 0.3, 0), b + Vector3.new(0, 0.3, 0))
-				arrows[placed].Transparency = 0.2
-				nextAt += G.arrowEvery
+				local c = arrows[placed]
+				-- 판 윗면(+Y)이 지면 경사를 따라 눕고 -Z(그림 위쪽 = 꺾쇠 끝)가 가는 방향
+				c.CFrame = CFrame.lookAt(at + lift, b + lift)
+				local fade = nextAt / G.drawStuds
+				if c:FindFirstChild("Chevron") and c.Chevron.Texture ~= "" then
+					c.Transparency = 1
+					c.Chevron.Transparency = 0.05 + 0.75 * fade
+				else
+					c.Transparency = 0.2 + 0.6 * fade
+				end
+				nextAt += G.chevronEvery
 			end
 		end
 		walked += len
@@ -391,6 +416,9 @@ local function refresh()
 	end
 	for k = placed + 1, #arrows do
 		arrows[k].Transparency = 1
+		if arrows[k]:FindFirstChild("Chevron") then
+			arrows[k].Chevron.Transparency = 1
+		end
 	end
 end
 

@@ -385,7 +385,10 @@ return {
 	--   빛줄기 = 가까운 drawStuds만(조각 drawSegments개) · 경로에서 offPathStuds 넘게 벗어나면 다시 계산(recomputeSeconds 간격 상한) ·
 	--   목적지 빛기둥(beacon - 멀리서도 · 지형에 가려도 보이는 표시 + 거리) · 화면 밖이면 가장자리 화살표(edgeMargin px)
 	guide = {
-		beamWidth = 2.5, arrowEvery = 24, arrowsShown = 6, arriveStuds = 20, refreshSeconds = 0.25,
+		beamWidth = 0.45, arrowEvery = 24, arrowsShown = 6, arriveStuds = 20, refreshSeconds = 0.25, -- QUEUE-ALL3 Q11: 빛줄기 2.5 → 0.45(흰 네모 띠 → 꺾쇠를 잇는 얇은 선)
+		-- QUEUE-ALL3 Q11 두 겹 꺾쇠(≫ - icons/ui/guide_chevron): 경로를 따라 바닥에 붙여(지면 + chevronLift · 경사 따라) chevronEvery 간격 · 목적지 쪽으로 chevronFlow stud/초 흐름 ·
+		--   가까운 곳 밝게 · 멀수록 옅게 · 앞 drawStuds만 · 폰 = chevronsShownPhone(입자 없음). 색 = 안내 하늘 청록(빨강 · 주황 금지 = 전조색).
+		chevronEvery = 6, chevronsShown = 15, chevronsShownPhone = 10, chevronSize = 3.2, chevronFlow = 3, chevronLift = 0.18,
 		jumpHintSeconds = 5, -- QUEUE-ALL2 P0-3: 고립 꼭대기 "여기서 뛰어내려요" 말풍선 표시 시간(접속당 1회)
 		joinTries = { 2, -2, 4, -4, 6 }, -- 길찾기 경로에 낙하 피해 절벽이 있으면 이 번호 차의 합류점으로 다시 찾는다(GuidePath.build)
 		-- QUEUE-ALL1 R1: 그래도 절벽이면 격자 A*(GuidePath.safeDescent) - 칸 spacing · 반경 radius 안 · 칸 사이 내려감 ≤ 안전 높이 · 오름 ≤ rise · 가슴 높이(probe) 선이 막히면 못 감 · 길 점 goalStuds 안 칸 = 도착 · 칸 상한 maxNodes
