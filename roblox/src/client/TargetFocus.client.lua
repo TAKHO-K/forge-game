@@ -45,6 +45,7 @@ local TARGET_HOLD = 3
 local PARTY_HOLD = 3
 local GHOST_DELAY, GHOST_SECONDS = 0.35, 0.45
 local PLATE_W, PLATE_H = 176, 46
+local STACK_MAX = 3 -- 겹친 이름표를 위로 올리는 최대 칸
 local NAME_SIZE = 16
 local PILL_COLOR, PILL_ALPHA = Color3.fromRGB(10, 12, 18), 0.62 -- 알파(1 - 투명도)
 local EDGE_COLOR, EDGE_ALPHA = Color3.new(0, 0, 0), 0.55
@@ -549,6 +550,29 @@ local function refresh()
 				dot.BackgroundColor3 = color
 			end
 		end
+	end
+	-- 겹침 풀기: 화면에서 앞 순위 이름표와 겹치면 위로 한 칸씩(SizeOffset = 화면 기준 · 최대 STACK_MAX칸 - 사막 몹 무리에서 3장이 겹쳐 안 읽힘 · Play 실측)
+	local placed = {}
+	for i = 1, limit do
+		local slot = slotOf[candidates[i].model]
+		local p, onScreen = cam:WorldToViewportPoint(candidates[i].rec.head.Position + slot.gui.StudsOffset)
+		local shift = 0
+		if onScreen then
+			local w, h = slot.gui.Size.X.Offset, slot.gui.Size.Y.Offset
+			local function hits(k)
+				for _, r in ipairs(placed) do
+					if math.abs(p.X - r.x) < (w + r.w) / 2 and math.abs(p.Y - k * h - r.y) < (h + r.h) / 2 then
+						return true
+					end
+				end
+				return false
+			end
+			while shift < STACK_MAX and hits(shift) do
+				shift += 1
+			end
+			table.insert(placed, { x = p.X, y = p.Y - shift * h, w = w, h = h })
+		end
+		slot.gui.SizeOffset = Vector2.new(0, shift)
 	end
 	if target then
 		updateGround()
