@@ -24,3 +24,22 @@ end
 
 player:GetAttributeChangedSignal("FxLevel"):Connect(apply)
 apply()
+
+-- QUEUE-ALL3 Q10: 그래픽 "가벼움" = 먼 산 LOD 줄(Workspace.DistantMountains.Far)을 내 화면에서 숨김
+local function applyGraphics()
+	local lite = player:GetAttribute("GraphicsMode") == "lite"
+	local far = workspace:FindFirstChild("DistantMountains") and workspace.DistantMountains:FindFirstChild("Far")
+	for _, d in ipairs(far and far:GetDescendants() or {}) do
+		if d:IsA("BasePart") then
+			d.LocalTransparencyModifier = lite and 1 or 0
+		end
+	end
+end
+player:GetAttributeChangedSignal("GraphicsMode"):Connect(applyGraphics)
+workspace.ChildAdded:Connect(function(c)
+	if c.Name == "DistantMountains" then
+		task.wait(2)
+		applyGraphics()
+	end
+end)
+task.defer(applyGraphics)
