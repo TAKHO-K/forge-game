@@ -32,6 +32,9 @@ local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKe
 					env.send("buyShards", kind, entry.id)
 				end },
 			env.robuxButton(productKey, "Robux_" .. entry.id),
+			{ name = "Try_" .. entry.id, text = Text.get("shop.cos.try"), width = 84, enabled = true, onActivated = function() -- QUEUE-ALL2 P2 B-4 ①: 내 캐릭터에 입혀 보기(로컬 · 잠깐)
+				env.preview(kind, entry)
+			end },
 		}
 	end
 	ctx.row({
@@ -42,6 +45,8 @@ local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKe
 		buttons = buttons,
 	})
 end
+
+CosmeticTab.saleRow = saleRow
 
 -- 장착 칩 줄: 기본 + 산 것. current = 지금 장착 id(nil = 기본)
 local function equipChips(ctx, env, slotId, current, options)

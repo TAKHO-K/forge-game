@@ -23,6 +23,7 @@ local GoldTab = require(script.GoldTab)
 local CosmeticTab = require(script.CosmeticTab)
 local ConvenienceTab = require(script.ConvenienceTab)
 local SeasonTab = require(script.SeasonTab)
+local RecommendTab = require(script.RecommendTab)
 local GiftPopup = require(script.GiftPopup)
 
 local R = {}
@@ -31,8 +32,9 @@ R.id = "shop"
 R.promptName = "ShopPrompt"
 R.GiftPopup = GiftPopup
 R.Layout = Layout
-local TAB_ORDER = { "gold", "cosmetic", "convenience", "season" }
-local TAB_MODULES = { gold = GoldTab, cosmetic = CosmeticTab, convenience = ConvenienceTab, season = SeasonTab }
+-- QUEUE-ALL2 P2 B-4 ①: 추천 · 치장 · 시즌 패스 · 편의 + 골드(보석상인 좌판 소모처 - 좌판에서 열 때 첫 탭)
+local TAB_ORDER = { "recommend", "cosmetic", "season", "convenience", "gold" }
+local TAB_MODULES = { recommend = RecommendTab, gold = GoldTab, cosmetic = CosmeticTab, convenience = ConvenienceTab, season = SeasonTab }
 local PENDING_LIMIT = 3 -- 초. 서버 응답(ShopSync · 결과 Remote)이 안 오면 이 뒤에 입력이 풀린다
 local RANGE_MARGIN = 2 -- 서버 반경보다 이만큼 더 벗어나면 창을 닫는다(보석 공방과 같은 값)
 local ROBUX_WIDTH = 104 -- "로벅스 199"가 모바일 글씨(16)에서도 한 줄
@@ -48,6 +50,7 @@ local selectedTab = "gold"
 local pendingSince, pendingCheck = nil, nil
 local statusText, statusColor = "", "textSecondary"
 local debugSkipRangeClose = false
+local openedFromHud = false -- 왼쪽 메뉴 상점 버튼으로 열었다 = 어디서든(좌판 반경 밖이어도 닫지 않는다 - 골드 소모는 서버가 반경을 다시 잰다)
 
 local function busy()
 	return pendingSince ~= nil and os.clock() - pendingSince < PENDING_LIMIT
@@ -201,7 +204,30 @@ local function openGemTools()
 	require(script.Parent.GemWorkshop).open() -- 같은 station 자리 - 상점은 UIManager가 닫는다
 end
 
-R.env = { state = state, send = send, busy = busy, robuxButton = robuxButton, requestProtection = requestProtection, buyReroll = buyReroll, openGemTools = openGemTools }
+-- QUEUE-ALL2 P2 B-4 ①: 치장 입혀 보기 - 내 Player Attribute Cosmetic_<칸>을 로컬에서만 잠깐 바꾼다(복제 안 됨 · 서버 값 그대로) → PREVIEW_SECONDS 뒤 원래 값
+local PREVIEW_SECONDS = 10
+local previewToken = 0
+local function preview(kind, entry)
+	previewToken += 1
+	local mine = previewToken
+	local saved = {}
+	local slots = kind == "gliderSkin" and { "gliderSkin" } or { "dashTrail", "jumpFx", "glideTrail", "footstep" }
+	for _, slot in ipairs(slots) do
+		saved[slot] = player:GetAttribute("Cosmetic_" .. slot)
+		player:SetAttribute("Cosmetic_" .. slot, entry.id)
+	end
+	setStatus(Text.get("shop.cos.trying", { name = entry.name, n = tostring(PREVIEW_SECONDS) }), "success")
+	task.delay(PREVIEW_SECONDS, function()
+		if mine ~= previewToken then
+			return
+		end
+		for slot, value in pairs(saved) do
+			player:SetAttribute("Cosmetic_" .. slot, value)
+		end
+	end)
+end
+
+R.env = { state = state, send = send, busy = busy, robuxButton = robuxButton, requestProtection = requestProtection, buyReroll = buyReroll, openGemTools = openGemTools, preview = preview }
 
 local function layoutKey(L)
 	return ("%s:%d:%d:%s"):format(L.mode, L.winW, L.winH, tostring(Theme.isMobile))
@@ -322,6 +348,22 @@ function R.open(tabId)
 	return UIManager.open(R.id)
 end
 
+-- QUEUE-ALL2 P2: 왼쪽 메뉴 금색 [상점] - 어디서든 연다(열린 window는 먼저 닫는다 - station 규칙) · 같은 버튼 다시 = 닫기
+function R.openFromHud(tabId)
+	if built and UIManager.isOpen(R.id) then
+		UIManager.close(R.id)
+		return false
+	end
+	for _, id in ipairs(UIManager.getStack()) do
+		if UIManager.getKind(id) == "window" then
+			UIManager.close(id, true)
+		end
+	end
+	openedFromHud = true
+	task.spawn(R.fetchGemTickets)
+	return R.open(tabId or "recommend")
+end
+
 function R.close()
 	UIManager.close(R.id)
 end
@@ -353,10 +395,12 @@ local function fetchGemTickets()
 	end
 end
 
+R.fetchGemTickets = fetchGemTickets
+
 -- 걸어서 보석상인 반경을 벗어나면 닫는다(표시 편의 - 판정은 서버. 상점 프롬프트는 보석상인 좌판에 있다)
 local merchantGuide
 local function step()
-	if debugSkipRangeClose or not built or not UIManager.isOpen(R.id) then
+	if debugSkipRangeClose or openedFromHud or not built or not UIManager.isOpen(R.id) then
 		return
 	end
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -392,7 +436,8 @@ function R.start()
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, triggeringPlayer)
 		if prompt.Name == R.promptName and triggeringPlayer == player then
 			task.spawn(fetchGemTickets)
-			R.open()
+			openedFromHud = false
+			R.open("gold")
 		end
 	end)
 	shopSync.OnClientEvent:Connect(function(view)
@@ -434,6 +479,16 @@ function R.start()
 		player:GetAttributeChangedSignal(name):Connect(R.render)
 	end
 	RunService.Heartbeat:Connect(step)
+	UIManager.changed:Connect(function(id, isOpen)
+		if id == R.id and not isOpen then
+			openedFromHud = false
+		end
+	end)
+	-- 시즌 패스 받을 칸 수 → 왼쪽 메뉴 상점 빨간 점(로컬 Attribute ShopClaimable)
+	shopSync.OnClientEvent:Connect(function(view)
+		local season = type(view) == "table" and view.season
+		player:SetAttribute("ShopClaimable", season and SeasonTab.claimableCount(season) or 0)
+	end)
 	GiftPopup.start(send)
 	R.applyLayout()
 	shopRequest:FireServer("view")

@@ -99,6 +99,19 @@ local function tierRow(ctx, env, season, tier)
 	end
 end
 
+-- QUEUE-ALL2 P2: 받을 수 있는 칸 수(왼쪽 메뉴 상점 빨간 점) - cellState와 같은 판정(표시용 · 서버가 다시 잰다)
+function SeasonTab.claimableCount(season)
+	local n = 0
+	for tier = 1, math.min(season.tier or 0, 200) do
+		for _, rowName in ipairs({ "free", "paid" }) do
+			if SeasonTab.cellState(season, rowName, tier) == "ready" then
+				n += 1
+			end
+		end
+	end
+	return n
+end
+
 function SeasonTab.render(ctx, env)
 	local view = env.state.view
 	local season = view and view.season

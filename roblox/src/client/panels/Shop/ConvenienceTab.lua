@@ -18,14 +18,17 @@ local function describeArgs(key)
 	}
 end
 
-function ConvenienceTab.render(ctx, env)
+-- keys(선택) = 이 게임패스만(추천 탭) · 없으면 전부 + 안내 줄
+function ConvenienceTab.render(ctx, env, keys)
 	local view = env.state.view
 	if not view then
 		ctx.line(Text.get("shop.loading"), "textSecondary", 1, "Loading")
 		return
 	end
-	ctx.line(Text.get("shop.pass.note"), "textSecondary", 2, "PassNote")
-	for _, key in ipairs(ConvenienceTab.order) do
+	if not keys then
+		ctx.line(Text.get("shop.pass.note"), "textSecondary", 2, "PassNote")
+	end
+	for _, key in ipairs(keys or ConvenienceTab.order) do
 		local pass = view.passes and view.passes[key]
 		if pass then
 			local button
