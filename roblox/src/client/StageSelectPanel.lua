@@ -194,7 +194,7 @@ title.Font = Enum.Font.GothamBold
 title.TextSize = 15
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.TextColor3 = UIColors.textPrimary
-title.Text = "스테이지 선택"
+title.Text = "구역 선택 (N)" -- QUEUE-ALL2 P2: 옛 "맵 선택" → N 키 · 이름 통일
 title.Parent = panel
 
 -- S16 사전 작업 2: 터치 영역 44 × 44(모바일 하한). 보이는 원은 예전 그대로 26 × 26이고 같은 중심에 뒤 형제로 그린다(눌리는 것은 투명한 44 × 44 버튼).

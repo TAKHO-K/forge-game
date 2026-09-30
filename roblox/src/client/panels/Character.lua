@@ -39,7 +39,7 @@ local function format(kind, v)
 	elseif kind == "plus" then
 		return "+" .. tostring(math.floor(v))
 	elseif kind == "pct" then
-		return ("%+.1f%%"):format(v * 100)
+		return ("%+.1f%%"):format(v) -- SpeedPercentBonus = 이미 % 단위
 	elseif kind == "mult" then
 		return ("×%.2f"):format(v == 0 and 1 or v)
 	end

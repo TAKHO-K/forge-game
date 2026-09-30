@@ -25,6 +25,17 @@ local ROW_H = 56
 local requestRemote = ReplicatedStorage:WaitForChild("QuestRequest")
 local updateRemote = ReplicatedStorage:WaitForChild("QuestUpdate")
 
+-- 줄 그림(작게): 공격 = 교차 검 · 체력 · 방어 = 갑옷 · 그 밖(직업 축) = 수련 아이콘
+local ICON_OF = { attack = "icons/codex/tab_class", hp = "icons/codex/tab_equipment", defense = "icons/codex/tab_equipment" }
+for _, suffix in ipairs({ "might" }) do
+	for _, c in ipairs({ "gs", "db", "bow", "heal" }) do
+		ICON_OF[c .. "_" .. suffix] = "icons/codex/tab_class"
+	end
+end
+for _, c in ipairs({ "gs_iron", "db_iron", "bow_iron", "heal_iron", "gs_guard" }) do
+	ICON_OF[c] = "icons/codex/tab_equipment"
+end
+
 local built, view
 local hintShown = false
 
@@ -95,7 +106,7 @@ local function row(t, order)
 	f.Parent = built.scroll
 	Theme.corner(f, 10)
 	-- 작은 그림(보상 · 수련 아이콘 - 없으면 이름 첫 글자)
-	local icon = ArtImage.label(f, "icons/reward/" .. (t.icon or "gold"), UDim2.fromOffset(40, 40), utf8.char(utf8.codepoint(t.name or "?", 1)))
+	local icon = ArtImage.label(f, ICON_OF[t.id] or ICON_OF[t.kind] or "icons/hud/training", UDim2.fromOffset(40, 40), utf8.char(utf8.codepoint(t.name or "?", 1)))
 	icon.Position = UDim2.fromOffset(8, 8)
 	local name = Theme.label(f, t.name, "body", "textPrimary")
 	name.Position = UDim2.fromOffset(56, 4)
@@ -103,8 +114,8 @@ local function row(t, order)
 	local now = t.level * (t.perLevel or 0) * 100
 	local nxt = (t.level + 1) * (t.perLevel or 0) * 100
 	local atCap = t.level >= t.cap
-	local change = Theme.label(f, atCap and Text.get("training.valueCap", { now = ("%.1f"):format(now) })
-		or Text.get("training.value", { now = ("%.1f"):format(now), next = ("%.1f"):format(nxt) }), "body", atCap and "textSecondary" or "success")
+	local change = Theme.label(f, atCap and Text.get("training.valueCap", { now = ("%.2f"):format(now) })
+		or Text.get("training.value", { now = ("%.2f"):format(now), next = ("%.2f"):format(nxt) }), "body", atCap and "textSecondary" or "success")
 	change.Name = "Change"
 	change.Position = UDim2.fromOffset(56, 28)
 	change.Size = UDim2.new(0.5, 0, 0, 22)

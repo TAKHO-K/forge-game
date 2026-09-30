@@ -294,8 +294,8 @@ local function tileHub()
 		return
 	end
 	hubTiled = true
-	hubLabel.AnchorPoint = Vector2.new(0.5, 1)
-	hubLabel.Position = UDim2.new(0.5, 0, 1, 2)
+	hubLabel.AnchorPoint = Vector2.new(0.5, 0) -- QUEUE-ALL2: 타일 아래(모서리 B 칩과 안 겹치게)
+	hubLabel.Position = UDim2.new(0.5, 0, 1, 4)
 	hubLabel.Size = UDim2.new(1, 16, 0, 14)
 	hubLabel.TextSize = 12
 	hubLabel.TextStrokeTransparency = 0.2

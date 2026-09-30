@@ -25,7 +25,7 @@ local D = WorldMapData
 local MAP = D.map
 local PANEL_SIZE = Vector2.new(720, 480)
 local SIDE_W = 210
-local EDGE = D.layout.edge.radius -- 세계 반경(지도 한 변 = 2 × EDGE)
+local EDGE = D.edge.radius -- 세계 반경(지도 한 변 = 2 × EDGE)
 
 local built
 local zoom, offset = 1, Vector2.zero -- 확대 배율 · 지도 가운데 이동(px)
