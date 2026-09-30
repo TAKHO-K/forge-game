@@ -2061,6 +2061,60 @@
   "assetId": 109571419023957,
   "status": "Approved"
  },
+ "props/trees/clump_a.fbx": {
+  "sha256": "de9627f61789e5313f701b31a4fcbae60eb86e4286d96dcfc7925732e20cfc7f",
+  "assetType": "Model",
+  "assetId": 139857785039191,
+  "status": "Approved"
+ },
+ "props/trees/clump_b.fbx": {
+  "sha256": "d7d084f85e0a7aae530377ffebaff381fe745dddb3d040e8c596722b0a6e33dc",
+  "assetType": "Model",
+  "assetId": 71856119746092,
+  "status": "Approved"
+ },
+ "props/trees/clump_c.fbx": {
+  "sha256": "32e40473c2735383524e78842da01941934c88d91d58870395e80573073c45fe",
+  "assetType": "Model",
+  "assetId": 133996622058922,
+  "status": "Approved"
+ },
+ "props/trees/hub_shrub.fbx": {
+  "sha256": "f3ee47e448b10d52d2335c4613d390c377681f3d2ff2759673d89fe086941b87",
+  "assetType": "Model",
+  "assetId": 125886731384774,
+  "status": "Approved"
+ },
+ "props/trees/hub_topiary.fbx": {
+  "sha256": "c9321d41a284dba72684a8016f56134648fa77dbd28839ab5da2c3bbfe5782f3",
+  "assetType": "Model",
+  "assetId": 139450425176481,
+  "status": "Approved"
+ },
+ "props/trees/tree_coast.fbx": {
+  "sha256": "26bb7e27d250d9651f6efdb69f4f99c640b09e28e7f40fcdb3acdcd47aafe9f6",
+  "assetType": "Model",
+  "assetId": 95783231126097,
+  "status": "Approved"
+ },
+ "props/trees/tree_oak.fbx": {
+  "sha256": "af8d7cbc1966670358aae23bf56e87bf8cbde448f1eb436c154965a0ff0972f7",
+  "assetType": "Model",
+  "assetId": 84248868368775,
+  "status": "Approved"
+ },
+ "props/trees/tree_round.fbx": {
+  "sha256": "d90613a9ed7d74a9a1ce21139ddba87ca8e6f5de2977280062ceb84016058086",
+  "assetType": "Model",
+  "assetId": 114233894158658,
+  "status": "Approved"
+ },
+ "props/trees/tree_twin.fbx": {
+  "sha256": "842f88110659328b864966b27c9f3cf44140c0812e1169b85b04ea06d3432f21",
+  "assetType": "Model",
+  "assetId": 112533355832360,
+  "status": "Approved"
+ },
  "terrain/grass_v1.png": {
   "sha256": "38bb26d1f426cc4379ca06e565b861b74afbae88b7accc92e2b9823d2280d91c",
   "assetType": "Decal",

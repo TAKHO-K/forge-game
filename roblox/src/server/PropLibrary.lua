@@ -192,14 +192,23 @@ end
 
 -- A2-N3 Open Cloud 킷 메시(ArtStyleV1 뒤): 로더(ArtAssetLoader)가 소품 캐시를 받은 뒤 부른다 - 이미 배치된 틀 소품마다 같은 이름 파트 자리에 메시를 겹친다
 --   (틀 파트 = 충돌 · 조준 그대로 투명). 맵 짓기를 캐시 때문에 기다리게 하면 캐릭터가 맵보다 먼저 스폰돼 나무에 끼었다(A2-N3 Play 실측) → 뒤에 입힌다. 반환 입힌 소품 수.
+--   QUEUE-ALL1 ★0-2: 들판 나무(Common_Tree) = 카툰 나무 세트(server/TreeSkin - 구역 변형) · 허브 임시 자리 나무 · 허브 큰 나무 잎 뭉치 덮개도 여기서.
 function PropLibrary.applyArtMeshes()
-	local n = 0
+	local TreeSkin = require(script.Parent.TreeSkin)
+	local n, trees = 0, 0
 	for _, e in ipairs(placedModels) do
-		if e.model.Parent and not e.model:GetAttribute("ArtMesh") and ArtMeshKit.skin(e.model, "props/kit/" .. e.prop, e.model:GetPivot(), e.scale) > 0 then
-			n += 1
+		if e.model.Parent and not e.model:GetAttribute("ArtMesh") then
+			if e.prop == "Common_Tree" and TreeSkin.field(e) then
+				trees += 1
+			elseif ArtMeshKit.skin(e.model, "props/kit/" .. e.prop, e.model:GetPivot(), e.scale) > 0 then
+				n += 1
+			end
 		end
 	end
-	return n
+	local hubPlaced, hubSkipped = TreeSkin.hubTrees()
+	local clumps = TreeSkin.bigTree()
+	print(("[PropLibrary] 카툰 나무: 들판 %d · 허브 %d(건너뜀 %d) · 큰 나무 잎 덮개 %d"):format(trees, hubPlaced, hubSkipped, clumps))
+	return n + trees
 end
 
 function PropLibrary.counts()
