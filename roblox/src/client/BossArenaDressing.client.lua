@@ -134,7 +134,10 @@ local function dress(boss)
 			local base = center + Vector3.new(math.cos(a) * r, h, math.sin(a) * r)
 			local model = Instance.new("Model")
 			model.Name = "Dress_FloatStone_" .. i
-			local stone = newPart(model, "Stone", s, CFrame.new(base), colorOf(F.color, C), Enum.Material.Slate)
+			local stone = newPart(model, "Stone", s, CFrame.new(base), colorOf(F.color, C), F.material or Enum.Material.Slate)
+			if F.material == Enum.Material.Glass then
+				stone.Transparency = 0.15
+			end
 			local inlay = newPart(model, "Inlay", Vector3.new(s.X * 0.7, s.Y * 0.08, s.Z * 1.02), CFrame.new(base + Vector3.new(0, s.Y * 0.12, 0)), colorOf(F.inlay, C), Enum.Material.Neon)
 			model.PrimaryPart = stone
 			model.Parent = folder
@@ -154,6 +157,9 @@ local function dress(boss)
 				local cf = CFrame.new(base + off + Vector3.new(0, s.Y * 0.4, 0)) * CFrame.Angles(rng:NextNumber(-0.35, 0.35), rng:NextNumber(0, 6.28), rng:NextNumber(-0.35, 0.35)) * CFrame.Angles(0, math.rad(45), 0)
 				local p = newPart(folder, ("Dress_Cluster_%d_%d"):format(i, j), s, cf, colorOf(K.color, C), K.material)
 				p.Transparency = K.material == Enum.Material.Glass and 0.15 or 0
+				if K.tip then -- 끝 빛(피뢰 가시)
+					newPart(folder, ("Dress_ClusterTip_%d_%d"):format(i, j), Vector3.new(s.X * 1.4, s.X * 1.4, s.X * 1.4), cf * CFrame.new(0, s.Y / 2, 0), colorOf(K.tip, C), Enum.Material.Neon)
+				end
 			end
 		end
 	end
@@ -165,8 +171,10 @@ local function dress(boss)
 			local r = rng:NextNumber(P.radius[1], P.radius[2])
 			local h = rng:NextNumber(P.height[1], P.height[2])
 			local base = center + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
-			newPart(folder, "Dress_Pillar_" .. i, Vector3.new(P.width, h, P.width), CFrame.new(base + Vector3.new(0, h / 2 - 4, 0)) * CFrame.Angles(0, a, 0), colorOf(P.color, C), Enum.Material.Slate)
-			newPart(folder, "Dress_PillarCap_" .. i, Vector3.new(P.width * 1.35, P.width * 0.35, P.width * 1.35), CFrame.new(base + Vector3.new(0, h - 4 + P.width * 0.17, 0)) * CFrame.Angles(0, a, 0), colorOf(P.color, C):Lerp(WHITE, 0.08), Enum.Material.Slate)
+			local pm = P.material or Enum.Material.Slate
+			local pillar = newPart(folder, "Dress_Pillar_" .. i, Vector3.new(P.width, h, P.width), CFrame.new(base + Vector3.new(0, h / 2 - 4, 0)) * CFrame.Angles(0, a, 0), colorOf(P.color, C), pm)
+			pillar.Transparency = pm == Enum.Material.Glass and 0.2 or 0
+			newPart(folder, "Dress_PillarCap_" .. i, Vector3.new(P.width * 1.35, P.width * 0.35, P.width * 1.35), CFrame.new(base + Vector3.new(0, h - 4 + P.width * 0.17, 0)) * CFrame.Angles(0, a, 0), colorOf(P.color, C):Lerp(WHITE, 0.08), pm)
 			if P.broken then
 				local topH = h * rng:NextNumber(0.2, 0.35)
 				newPart(folder, "Dress_PillarBroken_" .. i, Vector3.new(P.width * 0.9, topH, P.width * 0.9),
@@ -226,10 +234,33 @@ RunService.RenderStepped:Connect(function()
 	local M = c.spec.motes
 	if M and now - c.moteAt > M.every / (c.phone and (M.phoneScale or 0.5) or 1) then
 		c.moteAt = now
-		local a, r = math.random() * math.pi * 2, math.sqrt(math.random()) * (BossArenaDressData.playRadius - 4)
-		local at = c.center + Vector3.new(math.cos(a) * r, 0.5, math.sin(a) * r)
-		BossFx.spawn({ shape = "ball", position = at, velocity = Vector3.new(0, M.rise / M.life, 0), size0 = Vector3.one * M.size, size1 = Vector3.one * M.size * 0.3,
-			color = colorOf(M.color, c.colors), transparency0 = 0.35, transparency1 = 1, life = M.life, material = Enum.Material.Neon })
+		-- 내 둘레(카메라가 보는 곳)에 몰아 뿌린다 - 반경 140 전체에 뿌리면 대부분 화면 밖이다
+		local me = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local around = me and Vector3.new(me.Position.X, c.center.Y, me.Position.Z) or c.center
+		local a, r = math.random() * math.pi * 2, math.sqrt(math.random()) * 60
+		local at = around + Vector3.new(math.cos(a) * r, M.fall and (M.fromHeight or 30) or 0.5, math.sin(a) * r)
+		local v = Vector3.new(0, (M.fall and -math.abs(M.rise) or M.rise) / M.life, 0) + (M.wind or Vector3.zero)
+		if M.shape == "streak" then
+			BossFx.streak(at, v, math.max(v.Magnitude * 0.09, 1.2), M.size, colorOf(M.color, c.colors), M.life, v.Magnitude)
+		else
+			BossFx.spawn({ shape = "ball", position = at, velocity = v, size0 = Vector3.one * M.size, size1 = Vector3.one * M.size * 0.3,
+				color = colorOf(M.color, c.colors), transparency0 = 0.35, transparency1 = 1, life = M.life, material = M.material or Enum.Material.Neon })
+		end
+	end
+	-- 먼 번개(플레이 영역 밖 - 화면 번쩍임 없음 · 섬광 줄이기면 옅게)
+	local B = c.spec.bolts
+	if B and now > (c.boltAt or 0) then
+		c.boltAt = now + B.every * (0.5 + math.random())
+		local a = math.random() * math.pi * 2
+		local r = B.radius[1] + (B.radius[2] - B.radius[1]) * math.random()
+		local base = c.center + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+		local reduce = player:GetAttribute("ReduceFlashes") == true
+		for k = 0, 3 do -- 지그재그 4마디
+			local p0 = base + Vector3.new(math.random(-8, 8), 120 - k * 30, math.random(-8, 8))
+			local p1 = base + Vector3.new(math.random(-8, 8), 120 - (k + 1) * 30, math.random(-8, 8))
+			BossFx.spawn({ shape = "block", position = (p0 + p1) / 2, size0 = Vector3.new(1.2, 1.2, (p1 - p0).Magnitude), size1 = Vector3.new(0.3, 0.3, (p1 - p0).Magnitude),
+				rotation = CFrame.lookAt(p0, p1).Rotation, color = colorOf(B.color, c.colors):Lerp(WHITE, 0.4), transparency0 = reduce and 0.6 or 0, transparency1 = 1, life = 0.35, material = Enum.Material.Neon })
+		end
 	end
 end)
 

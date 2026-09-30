@@ -1390,7 +1390,7 @@ for _, species in ipairs(SPECIES) do
 end
 
 -- A2-M1 덩치 켜기(보스마다 작업 · 확인이 끝난 보스부터 - 시범 = 구간 수호자). 켜진 보스만 visualScale = sizeScale × bodyScale(나머지 = sizeScale 그대로 = 옛 모습).
-local BODY_SCALE_LIVE = { section_guardian = true }
+local BODY_SCALE_LIVE = { section_guardian = true, frost_giant = true, abyssal_lord = true, crystal_queen = true, scorpion_queen = true, storm_lord = true }
 
 local bosses = {}
 local rotationBossIds = {}
