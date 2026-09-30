@@ -13,6 +13,7 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local ItemDropState = require(script.Parent.ItemDropState)
 local GroundProbe = require(script.Parent.GroundProbe)
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 
 local ItemDropSpawner = {}
 
@@ -193,6 +194,7 @@ function ItemDropSpawner.spawn(item, deathPosition, owner)
 	if visual then
 		model:SetAttribute("DropGrade", item.grade)
 		model:SetAttribute("DropPart", item.part or "armor")
+		model:SetAttribute("DropZone", ArtMeshKit.armorZone(item)) -- QUEUE-ALL1 P2 드랍 v2: 클라 이름표 "<세트> <부위> (<등급>)"
 		addPillar(model, groundPosition, item.grade, dropColor(item.grade))
 	end
 

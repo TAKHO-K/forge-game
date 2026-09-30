@@ -11,6 +11,7 @@ local FxData = require(ReplicatedStorage.Shared.data.ArtV1FxData)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local Fx = require(script.Parent.ArtV1Fx)
 local GradeFrame = require(script.Parent.GradeFrame)
+local DropLookV2 = require(script.Parent.DropLookV2)
 
 local D = FxData.drop
 local player = Players.LocalPlayer
@@ -114,6 +115,17 @@ local function build(model)
 	folder.Parent = model -- 줍기 · 만료 때 같이 사라진다
 	local st = { folder = folder, ground = ground, releases = {} }
 	local g = spec.glow
+	-- QUEUE-ALL1 P2 드랍 v2: 실루엣 · 빛기둥 가닥 · 바닥 번짐 · 이름표(태초 · 초월은 옛 빛 띠 그대로)
+	local V2 = FxData.dropV2
+	if V2 and V2.enabled then
+		for _, r in ipairs(DropLookV2.build(model, folder, grade, ground, glowColor)) do
+			table.insert(st.releases, r)
+		end
+		st.v2 = true
+		if not V2.skipStrands[grade] then
+			g = nil
+		end
+	end
 	if g then
 		if g.core then -- 두 줄: 넓고 옅은 테(등급 색) + 좁고 진한 심(흰 · 검정)
 			table.insert(st.releases, beam(folder, ground, g.height, g.width * 1.6, g.rim, math.min(1, g.transparency + 0.15)))
@@ -183,6 +195,7 @@ local function unbuild(model)
 		end
 		st.folder:Destroy()
 		drops[model] = nil
+		DropLookV2.unbuild(model)
 		styleNameplate(model, false)
 		for _, light in ipairs(model:GetDescendants()) do
 			local b = light:IsA("PointLight") and light:GetAttribute("ArtV1Brightness")

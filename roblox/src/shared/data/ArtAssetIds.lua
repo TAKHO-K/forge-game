@@ -116,6 +116,7 @@ return {
 	["extras/vfx/TelegraphCone"] = { id = 81468530579734, kind = "Model", status = "Approved" },
 	["extras/vfx/TelegraphLine"] = { id = 110504585989678, kind = "Model", status = "Approved" },
 	["extras/vfx/WarnPillar"] = { id = 115551353990807, kind = "Model", status = "Approved" },
+	["fx/soft_glow"] = { id = 95819361311277, kind = "Decal", image = 105594125885210, status = "Approved" },
 	["icons/armor/armor_tier1_ancient"] = { id = 129638369993566, kind = "Decal", image = 92174673785229, status = "Approved" },
 	["icons/armor/armor_tier1_epic"] = { id = 105892052694140, kind = "Decal", image = 100895415609701, status = "Approved" },
 	["icons/armor/armor_tier1_legendary"] = { id = 137927141138665, kind = "Decal", image = 105455532184051, status = "Approved" },

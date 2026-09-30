@@ -689,6 +689,13 @@
   "assetId": 115551353990807,
   "status": "Approved"
  },
+ "fx/soft_glow.png": {
+  "sha256": "481cf7c7dad64d02b0c1cf97e2a8f0c053d633a94a78342b1e25614663c3fc94",
+  "assetType": "Decal",
+  "assetId": 95819361311277,
+  "status": "Approved",
+  "imageId": 105594125885210
+ },
  "icons/armor/armor_tier1_ancient.png": {
   "sha256": "00b7799bbcd167955a09ad4fa4789ad7a5aa333915c272b7b1c1054c1402159e",
   "assetType": "Decal",

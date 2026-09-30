@@ -27,6 +27,29 @@ return {
 		glowEmission = 0.4, -- 색 빛 띠 발광(1 = 가산이면 블룸에서 전설 주황이 노랑으로 번져 유물 금과 겹쳤다) · 흰 심 = 1 · 검은 심 = 0
 	},
 
+	-- QUEUE-ALL1 P2 바닥 드랍 v2(docs/design/v2/08 · client/DropLookV2): 검은 실루엣(방어구 v3 대표 조각) + 등급색 빛기둥 가닥 + 경계 없는 바닥 번짐 + 이름표.
+	--   유물 = 참고 사진(디아4 선조) 수준: 높고 가는 기둥 여러 가닥 · 살짝 흔들림. 고대 = 유물 + 바깥 옅은 두 겹. 태초 · 초월 = 04 문서 클립 규칙(빛기둥은 기존 glow 그대로 - skipStrands).
+	dropV2 = {
+		enabled = true,
+		silhouette = C(20, 20, 24),
+		meshPieces = { armor = { "Chest" }, gloves = { "Glove_R", "Bracer_R" }, shoes = { "Boot_R", "Greave_R" } }, -- 조각 이름(+ _역할 접미사 전부)
+		meshMaxStuds = 2.6, tiltDeg = 18, spinDegPerSec = 40, bobStuds = 0.15, landDelaySeconds = 0.45, hopSeconds = 0.25, hopStuds = 0.6,
+		strandEmission = 0.45, phoneStrandScale = 0.5, glowLift = 0.08,
+		nameplateAlwaysFrom = "epic", nameplateFarStuds = 150, stackStuds = 4, stackLineStuds = 0.9,
+		highlightFrom = "epic", highlightMax = 6, highlightStuds = 90, -- 엔진 Highlight 동시 한도 31 - 아레나 외곽선(12슬롯 × 2 = 24)과 같이 쓴다 → 드랍은 6
+		skipStrands = { primordial = true, transcendent = true },
+		grades = {
+			normal = { glow = { size = 3, transparency = 0.85 }, nameScale = 1 },
+			rare = { strands = { count = 1, height = 6, width = 0.3, transparency = 0.35, spread = 0 }, glow = { size = 4, transparency = 0.75 }, nameScale = 1 },
+			epic = { strands = { count = 1, height = 10, width = 0.35, transparency = 0.3, spread = 0 }, glow = { size = 5, transparency = 0.65 }, nameScale = 1 },
+			legendary = { strands = { count = 1, height = 16, width = 0.45, transparency = 0.25, spread = 0 }, glow = { size = 6, transparency = 0.55 }, nameScale = 1.15, landFlash = 2 },
+			relic = { strands = { count = 3, height = 32, width = 0.32, transparency = 0.2, spread = 0.45, sway = 1.2 }, glow = { size = 8, transparency = 0.45 }, nameScale = 1.3, landFlash = 3 },
+			ancient = { strands = { count = 3, height = 34, width = 0.34, transparency = 0.2, spread = 0.5, sway = 1.2 }, outer = { count = 1, height = 40, width = 2.4, transparency = 0.8, spread = 0 }, glow = { size = 10, transparency = 0.4 }, nameScale = 1.4, landFlash = 3.5 },
+			primordial = { glow = { size = 10, transparency = 0.4 }, nameScale = 1.4 },
+			transcendent = { glow = { size = 10, transparency = 0.4 }, nameScale = 1.4 },
+		},
+	},
+
 	levelUp = { seconds = 1.0, ringSize = 6, ringColor = C(255, 244, 170), flashColor = C(255, 255, 255), particles = 16, particleColor = C(255, 226, 90), speed = 9, spread = 25, gravity = 4, size = 0.35 },
 
 	hatch = { -- 부화 결과 펫 등급(EggData.hatchGrades) - 한 단계씩 커진다(링 · 입자 · 기둥)
