@@ -119,8 +119,19 @@ player:GetAttributeChangedSignal("BossEncounterId"):Connect(function()
 	if not id then
 		return
 	end
-	task.delay(0.5, function() -- 보스 모델 복제를 잠깐 기다린다
-		local zoom = player:GetAttribute("BossEncounterId") == id and bossZoomFor(id)
+	task.spawn(function() -- 보스 모델 복제를 기다린다(A2-N3: 0.5초 한 번 → 0.25초 간격 최대 4초 - 진입 직후 보스가 아직 안 와서 거리 맞춤을 건너뛰던 일)
+		local zoom
+		local tries = Workspace:GetAttribute("ArtStyleV1") and 16 or 1 -- 끔 = 옛 동작(0.5초 한 번)
+		for _ = 1, tries do
+			task.wait(tries > 1 and 0.25 or 0.5)
+			if player:GetAttribute("BossEncounterId") ~= id then
+				return
+			end
+			zoom = bossZoomFor(id)
+			if zoom then
+				break
+			end
+		end
 		local camera = Workspace.CurrentCamera
 		if zoom and camera and Workspace:GetAttribute("ArtStyleV1") then
 			snapTo(zoom * cfg.bossZoomFactor) -- A2-N3 결정 ①: 보스 크기에 맞춘 거리 × 0.88로 맞춘다(가깝게도 멀게도 - 그 뒤 휠 자유)
