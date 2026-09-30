@@ -204,7 +204,7 @@ end
 local CP = WorldMapData.checkpoints
 function Travel.checkpointPosition(cp)
 	if cp.hub then
-		return WorldMapLayout.spawnPoint()
+		return cp.angleDeg and WorldMapLayout.hubPoint(cp.angleDeg, cp.r) or WorldMapLayout.spawnPoint()
 	end
 	return WorldMapLayout.camp(WorldMapLayout.zoneByKey(cp.zone))
 end

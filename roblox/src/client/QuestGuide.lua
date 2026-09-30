@@ -60,7 +60,7 @@ function QuestGuide.target(guide)
 		local best, bestD, bestName
 		for _, cp in ipairs(WorldMapData.checkpoints.list) do
 			if not found:find("," .. cp.id .. ",", 1, true) then
-				local pos = cp.zone and WorldMapLayout.camp(WorldMapLayout.zoneByKey(cp.zone)) or WorldMapLayout.spawnPoint()
+				local pos = cp.zone and WorldMapLayout.camp(WorldMapLayout.zoneByKey(cp.zone)) or (cp.angleDeg and WorldMapLayout.hubPoint(cp.angleDeg, cp.r)) or WorldMapLayout.spawnPoint()
 				local d = root and (pos - root.Position).Magnitude or 0
 				if not bestD or d < bestD then
 					best, bestD, bestName = pos, d, cp.name

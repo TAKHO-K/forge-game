@@ -96,7 +96,7 @@ end)
 -- ② 체크포인트 기둥
 local markers = {}
 local function cpPosition(cp)
-	return cp.hub and WorldMapLayout.spawnPoint() or WorldMapLayout.camp(WorldMapLayout.zoneByKey(cp.zone))
+	return cp.hub and (cp.angleDeg and WorldMapLayout.hubPoint(cp.angleDeg, cp.r) or WorldMapLayout.spawnPoint()) or WorldMapLayout.camp(WorldMapLayout.zoneByKey(cp.zone))
 end
 local function isFound(id)
 	return string.find("," .. tostring(player:GetAttribute("CheckpointsFound") or "") .. ",", "," .. id .. ",", 1, true) ~= nil

@@ -65,11 +65,13 @@ return {
 		--   양옆 spots = 자리 표시(along = 거리 방향 옆 거리 · side = 나무 쪽 −/바깥 +) · 뒤(바깥쪽) = 건물 줄(row) · 발밑 = 거리 바닥(street - 광장은 plaza 원판).
 		--   배치도 = docs/design/world-map-m1.md §1 허브.
 		facilities = {
-			forge = { angleDeg = -25, r = 255, displayName = "대장간 거리", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 18, h = 16, gap = 10 }, -- 가운데 = 강화대
+			-- QUEUE-ALL3 Q5 허브 NPC 안 C(추천 · 적용 - Claude outputs/QUEUE-ALL3/hub_layout): 체크포인트(−65° r180) 둘레 걸어서 10초(160 stud) 안에 대장간 · 시장 · 커뮤니티(제단 · 부화장 · 게시판 · 명예의 전당) · 포탈
+			--   옛 = 대장간 −25° r255 · 시장 90° r255 · 커뮤니티 210° r255(나무 둘레 120° 간격 - 어디서나 가장 먼 곳 약 32초)
+			forge = { angleDeg = -20, r = 170, displayName = "대장간 거리", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 18, h = 16, gap = 10 }, -- 가운데 = 강화대
 				spots = { { id = "refine", label = "재련대(준비 · 가방에서도 된다)", along = -38, side = 0 }, { id = "gemcraft", label = "보석 가공대(준비 · 가방에서도 된다)", along = 38, side = 0 } } },
-			market = { angleDeg = 90, r = 255, displayName = "시장", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 16, h = 12, gap = 10 }, -- 가운데 = 보석상인(보석 공방)
+			market = { angleDeg = -115, r = 175, displayName = "시장", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 16, h = 12, gap = 10 }, -- 가운데 = 보석상인(보석 공방)
 				spots = { { id = "shop", label = "상점(준비)", along = -38, side = 0 }, { id = "sell", label = "판매", along = 38, side = 0 } } },
-			community = { angleDeg = 210, r = 255, displayName = "커뮤니티 광장", plaza = 50, row = { count = 3, w = 24, d = 18, h = 18, gap = 12 }, -- 가운데 = 환생 제단
+			community = { angleDeg = -60, r = 250, displayName = "커뮤니티 광장", plaza = 50, row = { count = 3, w = 24, d = 18, h = 18, gap = 12 }, -- 가운데 = 환생 제단
 				spots = { { id = "hatchery", label = "부화장(펫 단계)", along = -34, side = -8 }, { id = "partyBoard", label = "파티 게시판", along = 34, side = -8 }, { id = "rankBoard", label = "순위판", along = 0, side = -30 },
 					{ id = "hallOfFame", label = "명예의 전당", along = -30, side = -30 } } }, -- D1 ④: 태초 석판(server/HallOfFame이 이 자리 옆에 세운다)
 			portal = { angleDeg = -90, r = 250, displayName = "포탈 광장", radius = 46 },
@@ -448,7 +450,7 @@ return {
 	checkpoints = {
 		attribute = "CheckpointTeleport", enabledByDefault = true, discoverStuds = 40, channelSeconds = 3, cooldownSeconds = 30,
 		list = {
-			{ id = "hub", name = "큰 나무 마을", hub = true },
+			{ id = "hub", name = "큰 나무 마을", hub = true, angleDeg = -65, r = 180 }, -- Q5 NPC 안 C 가운데
 			{ id = "tier1", zone = "tier1", name = "석조 평원 입구" },
 			{ id = "tier2", zone = "tier2", name = "수정 동굴 입구" },
 			{ id = "tier3", zone = "tier3", name = "수몰 사원 입구" },
