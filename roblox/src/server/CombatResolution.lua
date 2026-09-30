@@ -154,6 +154,9 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		local baseGold = InfiniteStage.getGoldReward(monsterData.goldDrop, recipientStage)
 		goldDrop = math.floor(goldDrop * RareMonsterConfig.goldMultiplier + baseGold * RareMonsterConfig.goldBonusKillEquivalent)
 	end
+	if workspace:GetAttribute("RiftActive") == true then -- QUEUE-ALL1 P3 §3 균열: 처치 골드 배율(RiftService가 켠다)
+		goldDrop *= require(ReplicatedStorage.Shared.data.RiftData).goldMultiplier
+	end
 	goldDrop = math.floor(goldDrop)
 	PlayerProfile.addGold(recipient, goldDrop)
 	CombatResolution.goldGained:FireClient(recipient, goldDrop)

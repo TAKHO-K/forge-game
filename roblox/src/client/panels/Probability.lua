@@ -80,6 +80,16 @@ local function render()
 	order = 0
 	local d = Disclosure.build()
 	local classId = Players.LocalPlayer:GetAttribute("ClassId")
+	if d.drop.riftBoost then -- QUEUE-ALL1 P3 §3: 균열 중 = 아래 표가 균열 표(서버 굴림과 같다)
+		local parts = {}
+		for _, gradeId in ipairs(require(ReplicatedStorage.Shared.data.ArmorData).gradeOrder) do
+			local m = d.drop.riftBoost[gradeId]
+			if m then
+				table.insert(parts, ("%s ×%g"):format(require(ReplicatedStorage.Shared.data.ArmorData).grades[gradeId].displayName, m))
+			end
+		end
+		line("균열 시간: " .. table.concat(parts, " · ") .. "(늘어난 몫은 아래 등급에서 뺌 · 태초 · 초월 제외) - 아래 표는 균열 중 확률", "body", "textPrimary")
+	end
 	line(Text.get("prob.field"), "body", "textPrimary")
 	for tier, rows in ipairs(d.drop.field) do
 		line(("T%d: %s"):format(tier, gradeRowsText(rows)), "caption", "textSecondary")

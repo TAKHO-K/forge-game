@@ -175,7 +175,7 @@ end
 -- primordialRate가 nil이면 옛 굴림 그대로(기본 표 - tier6 태초 0.1% 포함).
 -- C5-7 transcendentRate(DropTable.effectiveTranscendentRate - 호출부): 초월을 태초보다 먼저 굴린다(itemLevel = 사냥 스테이지 - 태초와 같다).
 function Loot.rollArmorDrop(monsterStage, tierIndex, rewardMultiplier, classId, primordialRate, killSeconds, transcendentRate)
-	local gradeTable = MonsterData.dropGradeTableByTier[tierIndex] or MonsterData.dropGradeTableByTier[1]
+	local gradeTable = DropTable.boosted(MonsterData.dropGradeTableByTier[tierIndex] or MonsterData.dropGradeTableByTier[1]) -- QUEUE-ALL1 P3: 균열 중 = 균열 표(확률 공개와 같은 함수)
 	local items = {}
 	for _ = 1, Loot.rollCount(Loot.expectedArmorDropCount(tierIndex, rewardMultiplier, killSeconds)) do -- G1-2: 처치 시간 공정성 보정
 		local gradeId
@@ -254,7 +254,7 @@ end
 -- 같은 축을 그대로 쓴다(단일 출처 유지 - 반짝이 전용 별도 계산식을 만들지 않는다).
 function Loot.rollSparkleArmorDrop(monsterStage, tierIndex, classId)
 	-- D1-2: 표가 영웅 ~ 태초 5칸이 됐다 - 등급 순서(ArmorData.gradeOrder)로 굴린다(옛 pairs는 순서가 없었다 - 합이 1이라 분포는 같지만 경계 검증이 흔들린다).
-	local grade = rollGrade(RareMonsterConfig.sparkleGradeChances) or "epic" -- 확률 합이 부동소수 오차로 1 미만이 되는 극단적인 경우의 방어적 기본값(표의 가장 낮은 등급)
+	local grade = rollGrade(DropTable.sparkleGradeTable()) or "epic" -- QUEUE-ALL1 P3: 균열 중 = 균열 표 -- 확률 합이 부동소수 오차로 1 미만이 되는 극단적인 경우의 방어적 기본값(표의 가장 낮은 등급)
 
 	return buildDropItem(grade, monsterStage, Loot.rollItemLevel(monsterStage, ArmorData.itemLevelDelta), tierIndex or 1, classId)
 end

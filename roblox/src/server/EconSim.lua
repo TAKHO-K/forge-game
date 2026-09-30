@@ -53,10 +53,33 @@ local Awaken = require(ReplicatedStorage.Shared.Awaken) -- D1: 태초 각성 비
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
+local RiftData = require(ReplicatedStorage.Shared.data.RiftData) -- QUEUE-ALL1 P3 §3 균열
+
 local CombatFormulaData = require(ReplicatedStorage.Shared.data.CombatFormulaData) -- C2 전투 공식 스위치(what-if combatFormulaV2)
 local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula)
 
 local EconSim = {}
+EconSim.riftShare = nil -- QUEUE-ALL1 P3 균열 참여 비중(nil = RiftData.participationShare)
+-- QUEUE-ALL1 P3 §3: 균열 참여 비중(노는 시간 중 균열 시간 몫) - 등급표 = (1 − s) × 기준 + s × 균열 표 · 골드 = × (1 + s × (배율 − 1)).
+--   기본 = RiftData.participationShare · 하네스 전후 비교 = EconSim.riftShare = 0(균열 없음). 모형 실행 중에는 DropTable.activeBoost(서버 시계)를 끈다(결과가 시각에 따라 달라지지 않게).
+local function riftShare()
+	return EconSim.riftShare or RiftData.participationShare or 0
+end
+local function riftMix(row)
+	local s = riftShare()
+	if s <= 0 or not row then
+		return row
+	end
+	local boosted = DropTable.boosted(row, RiftData.gradeMultiplier)
+	local out = {}
+	for gradeId, c in pairs(row) do
+		out[gradeId] = c * (1 - s) + (boosted[gradeId] or 0) * s
+	end
+	return out
+end
+local function riftGoldFactor()
+	return 1 + riftShare() * ((RiftData.goldMultiplier or 1) - 1)
+end
 
 function EconSim.isAllowed()
 	return RunService:IsStudio() and DevToolsConfig.econSim == true
@@ -396,7 +419,7 @@ end
 -- (Loot.rollArmorDrop이 굴리는 표 그대로). 등급과 편차는 독립으로 굴린다(Loot) - 그래서 곱이다.
 -- P2 E: 등급 분포 = DropTable.gradeRow(tier, 태초 확률 = DropTable.effectiveRate - 서버 굴림과 같은 함수). 태초는 편차가 없다(itemLevel = 사냥 스테이지, E4).
 local function expectedCandidates(tierIndex, drops, minGradeIndex, primordialRate)
-	local row = DropTable.gradeRow(tierIndex, primordialRate)
+	local row = riftMix(DropTable.gradeRow(tierIndex, primordialRate)) -- QUEUE-ALL1 P3 균열 비중
 	local deltas = table.clone(ArmorData.itemLevelDelta)
 	table.sort(deltas, function(a, b)
 		return a.delta > b.delta
@@ -834,8 +857,9 @@ local function sparkleArrivals(state, kills, stage)
 	end
 	local sparkles = kills * RareMonsterConfig.sparkleChance
 	state.sparkles = (state.sparkles or 0) + sparkles
+	local sparkleRow = riftMix(RareMonsterConfig.sparkleGradeChances) -- QUEUE-ALL1 P3 균열 비중
 	for _, gradeId in ipairs(ArmorData.gradeOrder) do
-		local chance = RareMonsterConfig.sparkleGradeChances[gradeId]
+		local chance = sparkleRow[gradeId]
 		if chance then
 			state.sparkleTally[gradeId] = (state.sparkleTally[gradeId] or 0) + sparkles * chance
 			state.sparkleGot[gradeId] = (state.sparkleGot[gradeId] or 0) + sparkles * chance
@@ -893,7 +917,7 @@ local function fightBosses(state, profile, loadout, run)
 		if EconSimConfig.modelBossDrops then
 			local count = EconSimConfig.bossFirstClearDrops or 1 -- D1-2 레버 3(기대 개수)
 			for _, gradeId in ipairs(ArmorData.gradeOrder) do
-				local chance = DropTable.bossFirstClearGradeTable(state.rebirth)[gradeId]
+				local chance = riftMix(DropTable.bossFirstClearGradeTable(state.rebirth))[gradeId] -- QUEUE-ALL1 P3 균열 비중
 				if chance then
 					state.bossTally[gradeId] = (state.bossTally[gradeId] or 0) + chance * count
 					while state.bossTally[gradeId] >= 1 do
@@ -1014,7 +1038,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * expGapMultiplier(state.level, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth)
 			* CharacterLevel.getReclaimMultiplier(state.rebirth, state.level, state.reclaimLevel) * CharacterLevel.getExpScale(state.level) -- C5-2 되찾기 · P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
-		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * sparkleGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때)
+		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * sparkleGoldFactor() * riftGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때) · QUEUE-ALL1 P3 균열 비중
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)
 		killUnits = tier.killUnits -- C3-3
 		-- P2 E5: 처치 1마리당 태초 장비 기대 개수(서버 굴림과 같은 effectiveRate - 레벨 감쇠 포함)
@@ -1203,6 +1227,7 @@ end
 -- 프로필 하나의 진행 시뮬. 반환: { profileId, reached = { [이정표] = 기록 }, chunks = { 청크 }, stall = 사유 or nil, final = state }.
 function EconSim.runProgress(profileId, whatIf)
 	assert(EconSim.isAllowed(), "EconSim: Studio · DevToolsConfig.econSim 전용")
+	DropTable.activeBoost = nil -- QUEUE-ALL1 P3: 모형은 서버 시계의 균열 상태를 쓰지 않는다(균열은 riftShare로 섞는다 · 서버 RiftService가 1초 안에 다시 켠다)
 	local profile = EconSimConfig.profiles[profileId]
 	assert(profile, "알 수 없는 프로필: " .. tostring(profileId))
 	local cap = InfiniteStageConfig.safeStageCap

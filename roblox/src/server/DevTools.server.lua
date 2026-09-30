@@ -1101,6 +1101,7 @@ local HELP_TEXT = table.concat({
 	"/gg rebirthdo - 실제 환생 실행(PlayerProfile.rebirth 그대로 - 레벨 조건 검증 + 무기 등급·보석 자동 지급까지 전체 흐름 검증용)",
 	"/gg gem <slot 1-5> <id|-> - 그 슬롯에 보석을 강제로 채운다(23-2 검증용, id=-면 옵션 없이)",
 	"/gg bossreset [stage] - 보스 첫 처치 확정 드랍 기록 초기화(생략 시 전부, 재검증용)",
+	"/gg rift <on|off|auto> - QUEUE-ALL1 P3 균열 시간 강제(on = 지금부터 20분 · off = 끔 · auto = 시간표 UTC 11:00 · 01:00)",
 	"/gg variant <sparkle|chest|frail|sturdy|giant|none> - 가장 가까운 잡몹을 그 변종으로 즉시 교체(22-2 검증용)",
 	"/gg chesttest - 가장 가까운 잡몹을 상자로 바꾼 뒤 피격 간격·다중 타격자·기록 정리를 서버 로그로 검증(22-2)",
 	"/gg killtest - 가장 가까운 잡몹을 실제 처치 경로(applyDamage→resolveHit)로 즉시 잡고 골드·경험치·드랍 변화를 로그로 출력(22-2)",
@@ -3092,6 +3093,11 @@ local function handleCommand(player, args)
 		else
 			reply(player, "가둠 스킬이 있는 보스(심해 · 폭풍)가 아닙니다")
 		end
+	elseif sub == "rift" and (args[2] == "on" or args[2] == "off" or args[2] == "auto") then
+		-- QUEUE-ALL1 P3 §3: 균열 강제(on = 지금부터 20분 · off = 강제 끔 · auto = 시간표) - RiftService가 1초 안에 반영
+		workspace:SetAttribute("RiftForceEndsAt", nil)
+		workspace:SetAttribute("RiftForce", args[2] == "on" and true or (args[2] == "off" and false or nil))
+		reply(player, "균열 강제: " .. args[2])
 	elseif sub == "god" and (args[2] == "on" or args[2] == "off") then
 		-- BR1-2 스크린샷용: 받는 피해 ×0(출처 칸 devGod - 1시간). 연출 · 판정은 그대로 돈다.
 		if args[2] == "on" then

@@ -15,6 +15,39 @@ local DropTable = {}
 local PRIMORDIAL = "primordial"
 local TRANSCENDENT = "transcendent" -- C5-7
 
+-- QUEUE-ALL1 P3 §3 균열: 지금 적용 중인 등급 배율({ [등급] = 배수 } | nil). 서버 = RiftService가 켜고 끈다 · 클라 = RiftView(Workspace RiftActive)가 같은 값으로 - 확률 공개 = 서버 굴림.
+DropTable.activeBoost = nil
+
+-- 등급표에 배율을 건 새 표(합 1 유지): 배율 등급 × m · 늘어난 몫은 배율 없는 보통 등급(태초 · 초월 제외)에서 비율대로 뺀다. boost 생략 = activeBoost.
+function DropTable.boosted(row, boost)
+	boost = boost or DropTable.activeBoost
+	if not (boost and row) then
+		return row
+	end
+	local out, add, rest = table.clone(row), 0, 0
+	for gradeId, m in pairs(boost) do
+		if out[gradeId] then
+			add += out[gradeId] * (m - 1)
+			out[gradeId] *= m
+		end
+	end
+	for gradeId, c in pairs(out) do
+		if not boost[gradeId] and gradeId ~= PRIMORDIAL and gradeId ~= TRANSCENDENT then
+			rest += c
+		end
+	end
+	if rest <= 0 or add <= 0 then
+		return row
+	end
+	local k = math.max(0, (rest - add) / rest)
+	for gradeId, c in pairs(out) do
+		if not boost[gradeId] and gradeId ~= PRIMORDIAL and gradeId ~= TRANSCENDENT then
+			out[gradeId] = c * k
+		end
+	end
+	return out
+end
+
 -- G1-2: 처치 시간 공정성 보정(규칙 = DropTableData.fairness 주석). killSeconds가 nil이면 1(보정 없음 - 옛 호출). hpUnits ≤ 1이면 1.
 function DropTable.timeFairnessFactor(killSeconds, hpUnits)
 	if killSeconds == nil or hpUnits == nil or hpUnits <= 1 then
@@ -31,18 +64,18 @@ end
 -- G1-1 보스 확정 장비 등급표(보상 목록 단일 소스 - 서버 굴림 Loot와 스테이지 선택 보상 띠가 같은 함수를 부른다).
 -- D1: 첫 클리어 = 영웅 이상 보장 표 하나(환생 0회 상향표 폐지 - rebirthCount는 호출 호환용으로만 받는다). 재도전 = 토벌 표(반복 보스).
 function DropTable.bossFirstClearGradeTable(_rebirthCount)
-	return DropTableData.bossGrades.firstClear
+	return DropTable.boosted(DropTableData.bossGrades.firstClear) -- QUEUE-ALL1 P3: 균열 중 = 균열 표
 end
 
 function DropTable.bossRetryGradeTable(fightSeconds)
 	local base = DropTableData.bossGrades.raid
 	local fair = DropTableData.raidTimeFairness
 	if fightSeconds == nil or not fair then
-		return base -- 표시(보상 띠 · 확률 공개) = 기준 표
+		return DropTable.boosted(base) -- 표시(보상 띠 · 확률 공개) = 기준 표(균열 중 = 균열 표)
 	end
 	local scale = math.clamp(fightSeconds / fair.referenceSeconds, 0, 1)
 	if scale >= 1 then
-		return base
+		return DropTable.boosted(base)
 	end
 	local row, moved = table.clone(base), 0 -- QUEUE-10h 리뷰: 짧은 토벌은 상위 등급을 영웅으로(합 1 유지)
 	for _, gradeId in ipairs(fair.grades) do
@@ -52,7 +85,12 @@ function DropTable.bossRetryGradeTable(fightSeconds)
 		end
 	end
 	row.epic = (row.epic or 0) + moved
-	return row
+	return DropTable.boosted(row)
+end
+
+-- 반짝이 확정 1개 등급표(균열 중 = 균열 표) - Loot.rollSparkleArmorDrop · 확률 공개가 같이 부른다
+function DropTable.sparkleGradeTable()
+	return DropTable.boosted(RareMonsterConfig.sparkleGradeChances)
 end
 
 -- D1 ⑩ 확률 공개(정보창 데이터 - 창 UI는 U1): 드랍표 3종 = 보스 첫 클리어 · 토벌 · 잡몹(tier마다 태초 별도 굴림 포함 · 감쇠 전).
@@ -60,13 +98,14 @@ end
 function DropTable.disclosure()
 	local field = {}
 	for tierIndex = 1, #DropTableData.armorGradeByTier do
-		field[tierIndex] = DropTable.gradeRows(DropTable.gradeRow(tierIndex))
+		field[tierIndex] = DropTable.gradeRows(DropTable.boosted(DropTable.gradeRow(tierIndex))) -- QUEUE-ALL1 P3: 균열 중 = 균열 표(서버 굴림 Loot.rollArmorDrop과 같은 boosted)
 	end
 	return {
-		firstClear = DropTable.gradeRows(DropTableData.bossGrades.firstClear),
-		raid = DropTable.gradeRows(DropTableData.bossGrades.raid),
+		firstClear = DropTable.gradeRows(DropTable.bossFirstClearGradeTable()),
+		raid = DropTable.gradeRows(DropTable.bossRetryGradeTable()),
 		field = field,
-		sparkle = DropTable.gradeRows(RareMonsterConfig.sparkleGradeChances), -- D1-2: 반짝이 확정 1개(출현 = RareMonsterConfig.sparkleChance)
+		sparkle = DropTable.gradeRows(DropTable.sparkleGradeTable()), -- D1-2: 반짝이 확정 1개(출현 = RareMonsterConfig.sparkleChance)
+		riftBoost = DropTable.activeBoost, -- QUEUE-ALL1 P3: 균열 중이면 배율 표(창이 한 줄 보인다)
 	}
 end
 
