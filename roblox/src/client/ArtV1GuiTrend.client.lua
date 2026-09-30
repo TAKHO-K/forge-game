@@ -39,16 +39,17 @@ local function styleButton(b)
 	b:SetAttribute("TrendDone", true)
 	local stroke = b:FindFirstChildOfClass("UIStroke")
 	if stroke then
+		-- 기존 테는 굵기만: 색 · 투명도는 등급 · 선택 표시라 그대로(A2-N4 Play - 잉크로 덮자 착용 칸 노란 테가 사라졌다)
 		stroke:SetAttribute("TrendWas", ("%g|%s|%g"):format(stroke.Thickness, stroke.Color:ToHex(), stroke.Transparency))
 	else
 		stroke = Instance.new("UIStroke")
 		stroke.Name = "TrendStroke"
 		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Color = G.ink
+		stroke.Transparency = 0
 		stroke.Parent = b
 	end
 	stroke.Thickness = math.max(stroke.Thickness, G.strokeThickness)
-	stroke.Color = G.ink
-	stroke.Transparency = 0
 	local corner = b:FindFirstChildOfClass("UICorner")
 	if corner then
 		if corner.CornerRadius.Scale == 0 then
