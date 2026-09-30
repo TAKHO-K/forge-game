@@ -1,0 +1,341 @@
+﻿출처,대상,동작,프레임,튐,최악점수,최악부위
+오프라인 하네스(전후 동일 기준),abyssal_lord,idle,,0,0.01,TentR3
+오프라인 하네스(전후 동일 기준),abyssal_lord,walk,,0,0.38,Shin_L
+오프라인 하네스(전후 동일 기준),abyssal_lord,run,,0,0.99,Shin_R
+오프라인 하네스(전후 동일 기준),abyssal_lord,grab,,0,0.98,Shin_R
+오프라인 하네스(전후 동일 기준),abyssal_lord,basic,,0,0.12,UpperArm_R
+오프라인 하네스(전후 동일 기준),abyssal_lord,skill:bubbles(cast),,0,0.32,Hand_R
+오프라인 하네스(전후 동일 기준),abyssal_lord,skill:colors(cast),,0,0.09,Hand_R
+오프라인 하네스(전후 동일 기준),abyssal_lord,skill:mirror(cast),,0,0.32,Hand_R
+오프라인 하네스(전후 동일 기준),abyssal_lord,skill:spout(cast),,0,0.24,Hand_R
+오프라인 하네스(전후 동일 기준),abyssal_lord,skill:sweep(slam),,0,0.31,Hips
+오프라인 하네스(전후 동일 기준),abyssal_lord,skill:swipe(swipe),,0,0.76,Hand_R
+오프라인 하네스(전후 동일 기준),abyssal_lord,skill:tailSweep(tailSweep),,0,0.20,TentL2
+오프라인 하네스(전후 동일 기준),abyssal_lord,skill:tide(stomp),,0,0.40,Hips
+오프라인 하네스(전후 동일 기준),abyssal_lord,skill:vortex(vortex),,0,0.40,UpperArm_L
+오프라인 하네스(전후 동일 기준),abyssal_lord,intro,,0,0.32,Hand_R
+오프라인 하네스(전후 동일 기준),abyssal_lord,introShort,,0,0.51,Hand_L
+오프라인 하네스(전후 동일 기준),abyssal_lord,flinch,,0,0.12,TentL3
+오프라인 하네스(전후 동일 기준),abyssal_lord,flinchBig,,0,0.25,TentR3
+오프라인 하네스(전후 동일 기준),abyssal_lord,stun,,0,0.30,Hips
+오프라인 하네스(전후 동일 기준),abyssal_lord,death,,0,0.16,TentR3
+오프라인 하네스(전후 동일 기준),crystal_queen,idle,,0,0.01,Head
+오프라인 하네스(전후 동일 기준),crystal_queen,walk,,0,0.28,Shin_L
+오프라인 하네스(전후 동일 기준),crystal_queen,run,,0,0.69,Shin_L
+오프라인 하네스(전후 동일 기준),crystal_queen,grab,,0,0.67,Shin_L
+오프라인 하네스(전후 동일 기준),crystal_queen,basic,,0,0.12,UpperArm_R
+오프라인 하네스(전후 동일 기준),crystal_queen,skill:burst(cast),,0,0.24,Hand_R
+오프라인 하네스(전후 동일 기준),crystal_queen,skill:drop(cast),,0,0.24,Hand_R
+오프라인 하네스(전후 동일 기준),crystal_queen,skill:energyBeam(beam),,0,0.35,Hand_R
+오프라인 하네스(전후 동일 기준),crystal_queen,skill:mirror(cast),,0,0.32,Hand_R
+오프라인 하네스(전후 동일 기준),crystal_queen,skill:mirrorDash(charge),,0,0.70,Hand_R
+오프라인 하네스(전후 동일 기준),crystal_queen,skill:orgel(orgel),,0,0.61,UpperArm_R
+오프라인 하네스(전후 동일 기준),crystal_queen,skill:shards(cast),,0,0.38,Hand_R
+오프라인 하네스(전후 동일 기준),crystal_queen,skill:spikes(punch),,0,0.12,Hips
+오프라인 하네스(전후 동일 기준),crystal_queen,skill:swipe(swipe),,0,0.71,Hand_R
+오프라인 하네스(전후 동일 기준),crystal_queen,intro,,0,0.33,UpperArm_L
+오프라인 하네스(전후 동일 기준),crystal_queen,introShort,,0,0.49,Hand_L
+오프라인 하네스(전후 동일 기준),crystal_queen,flinch,,0,0.12,Head
+오프라인 하네스(전후 동일 기준),crystal_queen,flinchBig,,0,0.25,Crown
+오프라인 하네스(전후 동일 기준),crystal_queen,stun,,0,0.30,Hips
+오프라인 하네스(전후 동일 기준),crystal_queen,death,,0,0.16,Head
+오프라인 하네스(전후 동일 기준),frost_giant,idle,,0,0.01,Beard3
+오프라인 하네스(전후 동일 기준),frost_giant,walk,,0,0.11,Shin_R
+오프라인 하네스(전후 동일 기준),frost_giant,run,,0,0.29,Shin_L
+오프라인 하네스(전후 동일 기준),frost_giant,grab,,0,0.57,Hand_L
+오프라인 하네스(전후 동일 기준),frost_giant,basic,,0,0.12,UpperArm_L
+오프라인 하네스(전후 동일 기준),frost_giant,skill:icefall(cast),,0,0.24,Hand_R
+오프라인 하네스(전후 동일 기준),frost_giant,skill:innerSmash(slam),,0,0.41,UpperArm_L
+오프라인 하네스(전후 동일 기준),frost_giant,skill:mirror(cast),,0,0.32,Hand_R
+오프라인 하네스(전후 동일 기준),frost_giant,skill:roar(roar),,0,0.61,Beard3
+오프라인 하네스(전후 동일 기준),frost_giant,skill:slam(slam),,0,0.36,Hips
+오프라인 하네스(전후 동일 기준),frost_giant,skill:snowball(cast),,0,0.24,Hand_R
+오프라인 하네스(전후 동일 기준),frost_giant,skill:spear(cast),,0,0.32,Hand_R
+오프라인 하네스(전후 동일 기준),frost_giant,skill:spike(stomp),,0,0.28,Hips
+오프라인 하네스(전후 동일 기준),frost_giant,skill:stomp(stomp),,0,0.28,Hips
+오프라인 하네스(전후 동일 기준),frost_giant,skill:swipe(swipe),,0,0.78,Hand_R
+오프라인 하네스(전후 동일 기준),frost_giant,intro,,0,0.32,Hand_L
+오프라인 하네스(전후 동일 기준),frost_giant,introShort,,0,0.53,Hand_L
+오프라인 하네스(전후 동일 기준),frost_giant,flinch,,0,0.12,Mouth
+오프라인 하네스(전후 동일 기준),frost_giant,flinchBig,,0,0.25,LeftHorn
+오프라인 하네스(전후 동일 기준),frost_giant,stun,,0,0.30,Hips
+오프라인 하네스(전후 동일 기준),frost_giant,death,,0,0.16,Beard2
+오프라인 하네스(전후 동일 기준),scorpion_queen,idle,,0,0.05,Head
+오프라인 하네스(전후 동일 기준),scorpion_queen,walk,,0,0.53,Thigh2_L
+오프라인 하네스(전후 동일 기준),scorpion_queen,run,,0,0.94,Thigh2_L
+오프라인 하네스(전후 동일 기준),scorpion_queen,grab,,0,0.94,Thigh2_R
+오프라인 하네스(전후 동일 기준),scorpion_queen,basic,,0,0.32,Pincer_R
+오프라인 하네스(전후 동일 기준),scorpion_queen,skill:ambush(dig),,0,0.58,Forearm_L
+오프라인 하네스(전후 동일 기준),scorpion_queen,skill:armadillo(curl),,0,0.45,Tail2_8
+오프라인 하네스(전후 동일 기준),scorpion_queen,skill:claw(clawSweep),,0,0.45,Hand_R
+오프라인 하네스(전후 동일 기준),scorpion_queen,skill:clawSweep(clawSweep),,0,0.45,Hand_R
+오프라인 하네스(전후 동일 기준),scorpion_queen,skill:sandSearch(dig),,0,0.22,UpperArm_R
+오프라인 하네스(전후 동일 기준),scorpion_queen,skill:stab(dig),,0,0.22,Forearm_R
+오프라인 하네스(전후 동일 기준),scorpion_queen,skill:sting(sting),,0,0.13,Tail2_8
+오프라인 하네스(전후 동일 기준),scorpion_queen,skill:stingJab(sting),,0,0.17,Tail2_8
+오프라인 하네스(전후 동일 기준),scorpion_queen,skill:swipe(swipe),,0,0.70,Pincer_R
+오프라인 하네스(전후 동일 기준),scorpion_queen,intro,,0,0.45,Tail1_8
+오프라인 하네스(전후 동일 기준),scorpion_queen,introShort,,0,0.51,Tail2_8
+오프라인 하네스(전후 동일 기준),scorpion_queen,flinch,,0,0.14,Head
+오프라인 하네스(전후 동일 기준),scorpion_queen,flinchBig,,0,0.21,Head
+오프라인 하네스(전후 동일 기준),scorpion_queen,stun,,0,0.32,Tail3_8
+오프라인 하네스(전후 동일 기준),scorpion_queen,death,,0,0.07,Head
+오프라인 하네스(전후 동일 기준),section_guardian,idle,,0,0.01,Mouth
+오프라인 하네스(전후 동일 기준),section_guardian,walk,,0,0.34,Shin_L
+오프라인 하네스(전후 동일 기준),section_guardian,run,,0,0.91,Shin_R
+오프라인 하네스(전후 동일 기준),section_guardian,grab,,0,0.86,Shin_R
+오프라인 하네스(전후 동일 기준),section_guardian,basic,,0,0.12,RightPauldron
+오프라인 하네스(전후 동일 기준),section_guardian,skill:charge(charge),,0,0.70,Hand_R
+오프라인 하네스(전후 동일 기준),section_guardian,skill:cross(punch),,0,0.19,Hips
+오프라인 하네스(전후 동일 기준),section_guardian,skill:earthSplit(punch),,0,0.19,Hips
+오프라인 하네스(전후 동일 기준),section_guardian,skill:fists(punch),,0,0.19,Hips
+오프라인 하네스(전후 동일 기준),section_guardian,skill:heavy(slam),,0,0.48,Hips
+오프라인 하네스(전후 동일 기준),section_guardian,skill:innerSmash(slam),,0,0.48,Hips
+오프라인 하네스(전후 동일 기준),section_guardian,skill:meteor(cast),,0,0.24,Hand_R
+오프라인 하네스(전후 동일 기준),section_guardian,skill:mirror(cast),,0,0.32,Hand_R
+오프라인 하네스(전후 동일 기준),section_guardian,skill:orbs(cast),,0,0.32,Hand_R
+오프라인 하네스(전후 동일 기준),section_guardian,skill:shockwave(stomp),,0,0.23,Hips
+오프라인 하네스(전후 동일 기준),section_guardian,skill:swipe(swipe),,0,0.74,Hand_R
+오프라인 하네스(전후 동일 기준),section_guardian,intro,,0,0.33,UpperArm_L
+오프라인 하네스(전후 동일 기준),section_guardian,introShort,,0,0.50,Hand_L
+오프라인 하네스(전후 동일 기준),section_guardian,flinch,,0,0.12,Mouth
+오프라인 하네스(전후 동일 기준),section_guardian,flinchBig,,0,0.25,Mouth
+오프라인 하네스(전후 동일 기준),section_guardian,stun,,0,0.30,Hips
+오프라인 하네스(전후 동일 기준),section_guardian,death,,0,0.16,Mouth
+오프라인 하네스(전후 동일 기준),storm_lord,idle,,0,0.01,Mouth
+오프라인 하네스(전후 동일 기준),storm_lord,walk,,0,0.41,Shin_L
+오프라인 하네스(전후 동일 기준),storm_lord,run,,0,1.00,Shin_R
+오프라인 하네스(전후 동일 기준),storm_lord,grab,,0,1.00,Shin_R
+오프라인 하네스(전후 동일 기준),storm_lord,basic,,0,0.13,UpperArm_R
+오프라인 하네스(전후 동일 기준),storm_lord,skill:boltSpear(cast),,0,0.39,StaffOrb
+오프라인 하네스(전후 동일 기준),storm_lord,skill:discharge(stomp),,0,0.31,Hips
+오프라인 하네스(전후 동일 기준),storm_lord,skill:innerSmash(punch),,0,0.17,Hips
+오프라인 하네스(전후 동일 기준),storm_lord,skill:mirror(cast),,0,0.32,StaffOrb
+오프라인 하네스(전후 동일 기준),storm_lord,skill:rods(cast),,0,0.39,StaffOrb
+오프라인 하네스(전후 동일 기준),storm_lord,skill:strike(cast),,0,0.24,StaffOrb
+오프라인 하네스(전후 동일 기준),storm_lord,skill:swipe(swipe),,0,0.73,StaffOrb
+오프라인 하네스(전후 동일 기준),storm_lord,skill:thunderRing(stomp),,0,0.31,Hips
+오프라인 하네스(전후 동일 기준),storm_lord,skill:tornado(cast),,0,0.38,StaffOrb
+오프라인 하네스(전후 동일 기준),storm_lord,skill:whirl(spin),,0,0.36,Hand_L
+오프라인 하네스(전후 동일 기준),storm_lord,intro,,0,0.32,StaffOrb
+오프라인 하네스(전후 동일 기준),storm_lord,introShort,,0,0.50,Hand_L
+오프라인 하네스(전후 동일 기준),storm_lord,flinch,,0,0.12,Mouth
+오프라인 하네스(전후 동일 기준),storm_lord,flinchBig,,0,0.25,Mouth
+오프라인 하네스(전후 동일 기준),storm_lord,stun,,0,0.30,Hips
+오프라인 하네스(전후 동일 기준),storm_lord,death,,0,0.16,Mouth
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,airjump,115,0,0.19,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,bighit,115,0,0.10,LeftFoot
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,combo,271,10,45.88,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,dash,217,2,1.11,RightHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,dash2,115,1,1.14,RightHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,death,265,4,24.85,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,draw,182,7,22.16,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,flinch,205,0,0.07,UpperTorso
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,getup,91,3,20.64,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,heavy,211,3,43.73,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,land,115,0,0.22,RightFoot
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,landheavy,115,0,0.17,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,skille,217,3,6.10,RightHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,skillq,157,1,5.85,RightUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,skillr,115,3,21.78,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,skillt,126,3,21.86,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,stun,193,1,4.56,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),greatsword-inertiaoff,takeoff,115,0,0.20,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,airjump,115,0,0.18,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,bighit,115,0,0.05,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,combo,270,9,48.67,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,dash,217,2,1.10,RightHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,dash2,115,1,1.14,RightHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,death,265,4,23.88,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,draw,186,7,25.41,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,flinch,205,0,0.07,UpperTorso
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,getup,91,3,24.60,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,heavy,211,3,43.96,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,land,115,0,0.22,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,landheavy,115,0,0.15,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,skille,217,2,6.24,RightHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,skillq,157,1,5.55,RightUpperArm
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,skillr,115,3,23.27,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,skillt,126,3,23.26,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,stun,192,1,4.32,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),greatsword-inertiaon,takeoff,114,0,0.20,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,airjump,114,0,0.18,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,bighit,115,0,0.05,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,combo,270,15,33.20,LeftLowerArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,dash,218,1,1.04,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,dash2,115,1,1.01,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,death,265,3,16.27,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,draw,183,0,0.65,LeftLowerArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,flinch,204,0,0.07,UpperTorso
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,getup,91,2,3.65,RightLowerArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,heavy,212,2,28.87,LeftLowerArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,land,116,0,0.23,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,landheavy,115,0,0.14,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,skille,217,7,20.43,LeftUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,skillq,157,2,5.60,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,skillr,114,1,6.05,LeftUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,skillt,127,2,4.83,RightHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,stun,193,1,4.07,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),dualblade-inertiaoff,takeoff,114,0,0.22,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,airjump,114,0,0.18,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,bighit,115,0,0.09,LeftFoot
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,combo,271,17,39.72,LeftLowerArm
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,dash,217,1,1.03,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,dash2,115,0,0.80,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,death,264,3,18.11,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,draw,184,0,0.80,LeftLowerArm
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,flinch,205,0,0.07,UpperTorso
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,getup,91,3,3.58,RightLowerArm
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,heavy,211,2,28.24,LeftLowerArm
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,land,115,0,0.21,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,landheavy,115,0,0.16,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,skille,217,7,29.78,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,skillq,156,2,5.68,RightHand
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,skillr,114,1,5.71,LeftUpperArm
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,skillt,128,2,4.80,RightHand
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,stun,193,1,4.08,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),dualblade-inertiaon,takeoff,115,0,0.27,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,airjump,114,0,0.11,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,bighit,115,0,0.05,RightLowerArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,combo,271,21,10.68,RightUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,dash,217,0,0.75,LeftUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,dash2,115,0,0.82,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,death,265,4,19.35,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,draw,182,8,20.88,RightUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,flinch,205,0,0.07,UpperTorso
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,getup,91,3,22.83,RightHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,heavy,212,8,11.64,RightUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,land,115,0,0.21,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,landheavy,115,0,0.70,RightLowerArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,skille,218,6,10.96,RightUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,skillq,155,2,13.79,RightUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,skillr,115,4,16.85,RightUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,skillt,127,4,15.23,RightUpperArm
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,stun,193,1,3.99,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),bow-inertiaoff,takeoff,115,0,0.17,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,airjump,115,0,0.12,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,bighit,115,0,0.05,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,combo,271,14,11.26,RightUpperArm
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,dash,217,0,0.79,LeftUpperArm
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,dash2,115,0,0.77,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,death,265,4,20.62,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,draw,182,8,23.22,RightUpperArm
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,flinch,205,0,0.07,UpperTorso
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,getup,90,3,19.15,RightHand
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,heavy,211,6,13.61,RightUpperArm
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,land,115,0,0.21,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,landheavy,115,0,0.67,RightLowerArm
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,skille,217,7,10.19,RightUpperArm
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,skillq,157,2,13.00,RightUpperArm
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,skillr,115,5,18.04,RightUpperArm
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,skillt,127,4,15.58,RightUpperArm
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,stun,193,1,4.07,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),bow-inertiaon,takeoff,115,0,0.18,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,airjump,115,0,0.17,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,bighit,115,0,0.05,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,combo,271,21,7.24,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,dash,217,2,1.31,RightHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,dash2,115,1,1.28,RightHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,death,265,3,21.03,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,draw,181,7,3.48,RightHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,flinch,205,0,0.07,UpperTorso
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,getup,91,2,4.20,RightHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,heavy,211,5,7.50,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,land,115,0,0.20,RightFoot
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,landheavy,115,0,0.14,RightFoot
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,skille,217,4,7.34,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,skillq,157,2,6.84,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,skillr,115,2,5.80,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,skillt,127,2,7.44,LeftHand
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,stun,193,1,4.40,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 끔 = 옛),healer-inertiaoff,takeoff,115,0,0.21,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,airjump,115,0,0.17,RightUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,bighit,115,0,0.05,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,combo,270,16,7.44,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,dash,217,2,1.33,RightHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,dash2,115,1,1.36,RightHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,death,265,3,21.40,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,draw,184,6,3.67,RightHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,flinch,205,0,0.08,UpperTorso
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,getup,91,2,4.49,RightHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,heavy,211,4,7.34,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,land,115,0,0.21,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,landheavy,115,0,0.13,RightLowerLeg
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,skille,217,5,7.01,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,skillq,157,2,6.88,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,skillr,115,2,5.79,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,skillt,127,3,7.20,LeftHand
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,stun,192,1,4.09,LeftUpperLeg
+게임 안 Play 5(캐릭터 관성 켬),healer-inertiaon,takeoff,115,0,0.21,LeftUpperLeg
+게임 안 Play 5(보스 전시 리그),section_guardian,basic,181,0,0.13,Deco_Pauldron_Spike2_L
+게임 안 Play 5(보스 전시 리그),section_guardian,charge,313,0,0.67,Deco_Forearm_Band_R
+게임 안 Play 5(보스 전시 리그),section_guardian,death,265,0,0.20,Deco_Head_CrownSide_L
+게임 안 Play 5(보스 전시 리그),section_guardian,flinch,145,0,0.18,Deco_Head_CrownSide_L
+게임 안 Play 5(보스 전시 리그),section_guardian,grab,606,0,0.94,Hips
+게임 안 Play 5(보스 전시 리그),section_guardian,heavy,228,0,0.40,Deco_Forearm_Band_R
+게임 안 Play 5(보스 전시 리그),section_guardian,idle,240,0,0.01,BannerR3
+게임 안 Play 5(보스 전시 리그),section_guardian,intro,193,0,0.38,Deco_Pauldron_Spike2_L
+게임 안 Play 5(보스 전시 리그),section_guardian,run,240,1,1.43,Deco_Head_CrownSide_R
+게임 안 Play 5(보스 전시 리그),section_guardian,stun,289,0,0.43,Hips
+게임 안 Play 5(보스 전시 리그),section_guardian,swipe,187,0,0.72,Deco_Forearm_Band_R
+게임 안 Play 5(보스 전시 리그),section_guardian,walk,361,0,0.80,Deco_Forearm_Band_L
+게임 안 Play 5(보스 전시 리그),frost_giant,basic,180,0,0.17,Beard3
+게임 안 Play 5(보스 전시 리그),frost_giant,death,264,0,0.21,RightHorn
+게임 안 Play 5(보스 전시 리그),frost_giant,flinch,145,0,0.18,Beard1
+게임 안 Play 5(보스 전시 리그),frost_giant,grab,607,1,1.38,Forearm_R
+게임 안 Play 5(보스 전시 리그),frost_giant,idle,241,0,0.01,Deco_Club_SpikeA
+게임 안 Play 5(보스 전시 리그),frost_giant,intro,193,0,0.32,Deco_Shoulder_Fur_L
+게임 안 Play 5(보스 전시 리그),frost_giant,roar,384,0,0.63,Deco_Forearm_Fur_L
+게임 안 Play 5(보스 전시 리그),frost_giant,run,241,0,0.87,Beard3
+게임 안 Play 5(보스 전시 리그),frost_giant,slam,243,0,0.49,Deco_Forearm_Fur_R
+게임 안 Play 5(보스 전시 리그),frost_giant,stun,289,0,0.43,Eyes
+게임 안 Play 5(보스 전시 리그),frost_giant,swipe,187,0,0.80,Deco_Club_SpikeA
+게임 안 Play 5(보스 전시 리그),frost_giant,walk,360,0,0.53,Beard3
+게임 안 Play 5(보스 전시 리그),abyssal_lord,basic,180,0,0.15,Deco_Pauldron_Shell_L
+게임 안 Play 5(보스 전시 리그),abyssal_lord,death,264,0,0.17,TentR3
+게임 안 Play 5(보스 전시 리그),abyssal_lord,flinch,145,0,0.18,TentR3
+게임 안 Play 5(보스 전시 리그),abyssal_lord,grab,607,1,1.01,Shin_L
+게임 안 Play 5(보스 전시 리그),abyssal_lord,idle,241,0,0.01,Tail6
+게임 안 Play 5(보스 전시 리그),abyssal_lord,intro,192,0,0.33,UpperArm_R
+게임 안 Play 5(보스 전시 리그),abyssal_lord,run,241,5,1.17,Shin_R
+게임 안 Play 5(보스 전시 리그),abyssal_lord,stun,289,0,0.42,Hips
+게임 안 Play 5(보스 전시 리그),abyssal_lord,swipe,186,0,0.70,Deco_Trident_ProngR
+게임 안 Play 5(보스 전시 리그),abyssal_lord,tailSweep,193,0,0.36,Deco_Trident_ProngL
+게임 안 Play 5(보스 전시 리그),abyssal_lord,vortex,498,0,0.77,Deco_Forearm_Fin_R
+게임 안 Play 5(보스 전시 리그),abyssal_lord,walk,360,0,0.85,Shin_R
+게임 안 Play 5(보스 전시 리그),crystal_queen,basic,181,0,0.17,Deco_Epaulet_R
+게임 안 Play 5(보스 전시 리그),crystal_queen,death,264,0,0.19,Deco_Crown_SpikeBack_L
+게임 안 Play 5(보스 전시 리그),crystal_queen,energyBeam,330,0,0.41,UpperArm_R
+게임 안 Play 5(보스 전시 리그),crystal_queen,flinch,144,0,0.18,Deco_Crown_SpikeBack_L
+게임 안 Play 5(보스 전시 리그),crystal_queen,grab,607,0,0.99,Deco_Shoulder_Crystal_L
+게임 안 Play 5(보스 전시 리그),crystal_queen,idle,240,0,0.01,Train3
+게임 안 Play 5(보스 전시 리그),crystal_queen,intro,192,0,0.36,Deco_Epaulet_R
+게임 안 Play 5(보스 전시 리그),crystal_queen,orgel,270,0,0.92,Deco_Bracelet_R
+게임 안 Play 5(보스 전시 리그),crystal_queen,run,240,1,1.28,Head
+게임 안 Play 5(보스 전시 리그),crystal_queen,stun,288,0,0.48,Hips
+게임 안 Play 5(보스 전시 리그),crystal_queen,swipe,186,0,0.71,Forearm_R
+게임 안 Play 5(보스 전시 리그),crystal_queen,walk,360,0,0.67,Head
+게임 안 Play 5(보스 전시 리그),scorpion_queen,basic,181,0,0.34,Pincer_L
+게임 안 Play 5(보스 전시 리그),scorpion_queen,clawSweep,198,0,0.43,Hand_R
+게임 안 Play 5(보스 전시 리그),scorpion_queen,death,264,0,0.10,Tail3_8
+게임 안 Play 5(보스 전시 리그),scorpion_queen,flinch,144,0,0.17,Deco_Crown_SpikeSide_L
+게임 안 Play 5(보스 전시 리그),scorpion_queen,grab,606,2,1.98,Deco_Leg_Spike1_L
+게임 안 Play 5(보스 전시 리그),scorpion_queen,idle,241,0,0.04,Tail1_8
+게임 안 Play 5(보스 전시 리그),scorpion_queen,intro,192,0,0.48,Tail3_8
+게임 안 Play 5(보스 전시 리그),scorpion_queen,run,240,0,0.92,Thigh1_L
+게임 안 Play 5(보스 전시 리그),scorpion_queen,stab,313,0,0.21,Pincer_L
+게임 안 Play 5(보스 전시 리그),scorpion_queen,stun,289,0,0.43,Eyes
+게임 안 Play 5(보스 전시 리그),scorpion_queen,swipe,187,0,0.65,Pincer_R
+게임 안 Play 5(보스 전시 리그),scorpion_queen,walk,361,0,0.61,Deco_Leg_Spike1_R
+게임 안 Play 5(보스 전시 리그),storm_lord,basic,180,0,0.16,Deco_Knee_L
+게임 안 Play 5(보스 전시 리그),storm_lord,death,265,0,0.18,Head
+게임 안 Play 5(보스 전시 리그),storm_lord,flinch,145,0,0.17,Head
+게임 안 Play 5(보스 전시 리그),storm_lord,grab,607,2,1.16,Hips
+게임 안 Play 5(보스 전시 리그),storm_lord,idle,240,0,0.01,Deco_Bracer_L
+게임 안 Play 5(보스 전시 리그),storm_lord,intro,193,0,0.37,Deco_Bracer_R
+게임 안 Play 5(보스 전시 리그),storm_lord,run,240,5,1.63,Head
+게임 안 Play 5(보스 전시 리그),storm_lord,strike,198,0,0.40,Deco_Staff_CrescentR
+게임 안 Play 5(보스 전시 리그),storm_lord,stun,288,0,0.49,Hips
+게임 안 Play 5(보스 전시 리그),storm_lord,swipe,187,0,0.74,Deco_Bracer_R
+게임 안 Play 5(보스 전시 리그),storm_lord,walk,361,0,0.62,UpperArm_L
+게임 안 Play 5(보스 전시 리그),storm_lord,whirl,271,0,0.39,Deco_Shoulder_Plate_L
