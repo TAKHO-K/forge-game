@@ -35,4 +35,20 @@ function Reach.withinModel(model, targetPosition, originPosition, rangeStuds, to
 	return Reach.within(targetPosition, originPosition, rangeStuds + Reach.bodyRadius(model), toleranceStuds)
 end
 
+-- A2-M1(사용자 결정 2026-09-30 "구출은 F로 몹 정면이면"): 보스 정면 부채꼴 안인가 - 보스 루트 방향(수평) 기준 ±halfAngleDeg · 루트에서 수평 maxStuds 안.
+-- 서버 구출 판정(BossAirGrab canHold) · 클라 프롬프트 켜기 · 바닥 안내(BossTrapView)가 같은 함수를 쓴다.
+function Reach.inFront(bossCFrame, position, halfAngleDeg, maxStuds)
+	local look = bossCFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	local to = Vector3.new(position.X - bossCFrame.Position.X, 0, position.Z - bossCFrame.Position.Z)
+	local d = to.Magnitude
+	if maxStuds and d > maxStuds then
+		return false
+	end
+	if d < 1e-3 or flat.Magnitude < 1e-3 then
+		return true
+	end
+	return flat.Unit:Dot(to / d) >= math.cos(math.rad(halfAngleDeg))
+end
+
 return Reach

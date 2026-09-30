@@ -19,6 +19,8 @@ local Workspace = game:GetService("Workspace")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local Text = require(ReplicatedStorage.Shared.Text)
+local Reach = require(ReplicatedStorage.Shared.Reach)
+local CollectionService = game:GetService("CollectionService")
 
 local BossTrapView = {}
 
@@ -45,7 +47,7 @@ local RESCUE_ICONS = {
 	gimmick = "?",
 	push = "✋",
 	touch = "✋",
-	grab = "✋ ⚔", -- BR1 대공 잡기: 곁에서 F 홀드 또는 손을 때린다
+	grab = "✋ ⚔", -- BR1 대공 잡기: 보스 정면에서 F 홀드(A2-M1) 또는 손을 때린다
 	bubble = "✋", -- BR1-2 공중 가둠: 곁에서 F 홀드
 }
 local PROMPT_NAME = "BossRescuePrompt" -- 서버 BossTrap.createPrompt와 같은 이름
@@ -231,8 +233,90 @@ function BossTrapView.start()
 		return entry
 	end
 
+	-- A2-M1(사용자 결정): 대공 잡기 구출 = 보스 정면에서 F. 내 보스전의 보스(서버 루트 = 판정과 같은 방향) · 정면 부채꼴 바닥 안내(기회색 - 선 두 줄 + 호)
+	local GRAB = BossData.mechanics.rescue.grab
+	local function myBoss()
+		local id = localPlayer:GetAttribute("BossEncounterId")
+		if not id then
+			return nil
+		end
+		for _, m in ipairs(CollectionService:GetTagged("Monster")) do
+			if m:GetAttribute("BossEncounterId") == id and m:GetAttribute("BossRig") then
+				return m.PrimaryPart
+			end
+		end
+		return nil
+	end
+	local fan = nil
+	local FAN_SEGMENTS = 10
+	local function showFan(bossRoot)
+		if not bossRoot then
+			if fan then
+				fan.Parent = nil
+			end
+			return
+		end
+		if not fan then
+			fan = Instance.new("Folder")
+			fan.Name = "GrabRescueFrontFan"
+			for i = 1, FAN_SEGMENTS + 2 do
+				local p = Instance.new("Part")
+				p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+				p.Material = Enum.Material.Neon
+				p.Color = OPPORTUNITY_COLOR
+				p.Transparency = 0.35
+				p.Size = Vector3.new(0.5, 0.12, 1)
+				p.Parent = fan
+			end
+			local mid = fan:GetChildren()[math.ceil(FAN_SEGMENTS / 2)]
+			local bb = Instance.new("BillboardGui")
+			bb.Name = "RescueFrontLabel"
+			bb.Size = UDim2.fromOffset(220, 36)
+			bb.StudsOffset = Vector3.new(0, 3, 0)
+			bb.AlwaysOnTop = true
+			bb.Adornee = mid
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.fromScale(1, 1)
+			label.BackgroundTransparency = 1
+			label.Font = Enum.Font.GothamBold
+			label.TextSize = 16
+			label.TextColor3 = OPPORTUNITY_COLOR
+			label.TextStrokeTransparency = 0.3
+			label.Text = Text.get("boss.grab.rescueFront")
+			label.Parent = bb
+			bb.Parent = mid
+		end
+		fan.Parent = Workspace
+		local look = bossRoot.CFrame.LookVector
+		local base = math.atan2(look.X, look.Z)
+		local half = math.rad(GRAB.frontHalfAngleDeg)
+		local R = GRAB.frontReachStuds
+		local c = bossRoot.Position
+		local y = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") and localPlayer.Character.HumanoidRootPart.Position.Y - 2.9 or c.Y - 1.4
+		local parts = fan:GetChildren()
+		local pulse = 0.3 + 0.2 * math.sin(os.clock() * 5)
+		for i = 1, FAN_SEGMENTS do -- 호
+			local a0, a1 = base - half + (i - 1) / FAN_SEGMENTS * 2 * half, base - half + i / FAN_SEGMENTS * 2 * half
+			local p0 = Vector3.new(c.X + math.sin(a0) * R, y, c.Z + math.cos(a0) * R)
+			local p1 = Vector3.new(c.X + math.sin(a1) * R, y, c.Z + math.cos(a1) * R)
+			parts[i].Size = Vector3.new(0.5, 0.12, (p1 - p0).Magnitude)
+			parts[i].CFrame = CFrame.lookAt((p0 + p1) / 2, p1)
+			parts[i].Transparency = pulse
+		end
+		for k, a in ipairs({ base - half, base + half }) do -- 양쪽 선
+			local p0 = Vector3.new(c.X + math.sin(a) * 4, y, c.Z + math.cos(a) * 4)
+			local p1 = Vector3.new(c.X + math.sin(a) * R, y, c.Z + math.cos(a) * R)
+			local part = parts[FAN_SEGMENTS + k]
+			part.Size = Vector3.new(0.5, 0.12, (p1 - p0).Magnitude)
+			part.CFrame = CFrame.lookAt((p0 + p1) / 2, p1)
+			part.Transparency = pulse
+		end
+	end
+
 	RunService.RenderStepped:Connect(function()
 		local canRescue = localPlayer:GetAttribute("BossTrapKind") == nil and os.clock() >= promptsOffUntil
+		local bossRoot, grabbedSeen = nil, false
+		local myRoot = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
 		for _, target in ipairs(Players:GetPlayers()) do
 			local kind = target:GetAttribute("BossTrapKind")
 			updateGrave(target, kind)
@@ -241,7 +325,13 @@ function BossTrapView.start()
 				local root = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
 				local prompt = root and root:FindFirstChild(PROMPT_NAME)
 				if prompt then
-					prompt.Enabled = canRescue and target ~= localPlayer
+					local ok = canRescue and target ~= localPlayer
+					if ok and target:GetAttribute("BossTrapRescueType") == "grab" then
+						grabbedSeen = true
+						bossRoot = bossRoot or myBoss()
+						ok = not (bossRoot and myRoot) or Reach.inFront(bossRoot.CFrame, myRoot.Position, GRAB.frontHalfAngleDeg, GRAB.frontReachStuds)
+					end
+					prompt.Enabled = ok
 				end
 			end
 			if target == localPlayer then
@@ -266,6 +356,7 @@ function BossTrapView.start()
 				removeBillboard(target)
 			end
 		end
+		showFan(grabbedSeen and bossRoot or nil) -- A2-M1: 잡힌 동료가 있으면 보스 정면(구출 자리) 안내
 	end)
 
 	Players.PlayerRemoving:Connect(function(target)

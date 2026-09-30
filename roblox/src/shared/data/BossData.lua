@@ -109,7 +109,9 @@ local MECHANICS = {
 		-- 받고, 체력이 그 이하면 풀리지 않는다(구출로 죽는 일은 없다) - 경로는 남겨 두고 값만 0이다.
 		touch = { reachStuds = 3, rescuerMaxHpFraction = 0 },
 		-- BR1 대공 잡기: 잡힌 사람은 보스 곁 공중(발 +7)에 들려 있다 - 땅에서 보스 곁(수평 16 안)이면 F 홀드. 프롬프트 거리는 3D라 높이만큼 넉넉하게.
-		grab = { reachStuds = 16 },
+		-- A2-M1(사용자 결정 2026-09-30): 대공 잡기 구출 = **보스 정면**에서 F 홀드 - 구출자가 보스 루트 방향 ±frontHalfAngleDeg · 루트에서 수평 frontReachStuds 안(+ 옛 곁 reachStuds).
+		--   클라는 정면이 아니면 F 프롬프트를 숨기고 바닥에 정면 부채꼴(기회색)을 그린다(BossTrapView). 손을 때리는 구출(rescueHits)은 그대로.
+		grab = { reachStuds = 16, frontHalfAngleDeg = 60, frontReachStuds = 30 },
 		-- BR1-2 공중 가둠(거품 · 회오리): 갇힌 사람은 발 + liftStuds 공중 - 땅의 동료가 곁(수평 8 + 높이)에서 F 홀드. 프롬프트 거리는 3D라 높이만큼 넉넉하게.
 		bubble = { reachStuds = 12 },
 	},

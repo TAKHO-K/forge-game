@@ -242,9 +242,11 @@ B.clips.grab_tele = {
 	},
 	tremble = { from = 0.75, amp = 2.5, joints = { "Shoulder_R", "Shoulder_L" } },
 }
-B.clips.grab_reach = { -- 쫓는 동안(윗몸만 · 다리는 달리기)
-	post = { { s = 0.15, ease = "out", pose = { Waist = { -22, 0, 0 }, Neck = { 20, 0, 0 }, Shoulder_R = { 95, 0, 25 }, Shoulder_L = { 95, 0, -25 }, Elbow_R = { 12, 0, 0 }, Elbow_L = { 12, 0, 0 } } } },
-	upper = true,
+local REACH = { Waist = { -22, 0, 0 }, Neck = { 20, 0, 0 }, Shoulder_R = { 95, 0, 25 }, Shoulder_L = { 95, 0, -25 }, Elbow_R = { 12, 0, 0 }, Elbow_L = { 12, 0, 0 } }
+B.clips.grab_reach = { -- 쫓는 동안(윗몸만 · 다리는 달리기) - A2-M1: 되풀이 추가(옛 = 되풀이가 없어 0.45초 뒤 층이 꺼져 달리는 내내 팔이 내려가 있다가 낚아챌 때 한 번에 올라갔다)
+	post = { { s = 0.15, ease = "out", pose = REACH } },
+	loop = { period = 0.32, poses = { REACH, merge(REACH, { Shoulder_R = { 100, 0, 22 }, Shoulder_L = { 90, 0, -28 }, Waist = { -24, 3, 0 } }) } }, -- 달리며 팔이 조금씩 흔들림
+	upper = true, blendIn = 0.35,
 }
 B.clips.grab_snatch = { -- 낚아채는 순간(BossPickAt) - 더하는 층(지금 자세에 더한다 - 작은 값): 팔을 바깥으로 뺐다가 안으로 휘둘러 낚아챔 + 눈 치켜뜸 · 입 벌림
 	post = {
@@ -278,7 +280,7 @@ B.clips.throw_overhead = { -- 수호자: 두 손 머리 뒤로 → 앞으로 내
 }
 B.clips.throw_spin = { -- 서리 거인: 한 바퀴 돌며 옆으로 내던짐(해머 던지기)
 	pre = {
-		{ f = 0.5, ease = "inout", pose = merge(HOLD, { Waist = { 6, 60, 0 }, Shoulder_R = { 60, 0, 85 }, Shoulder_L = { 60, 0, -85 }, RootJoint = { 0, 0, 0, 0, -0.2, 0 } }) },
+		{ f = 0.5, ease = "sine", pose = merge(HOLD, { Waist = { 6, 60, 0 }, Shoulder_R = { 60, 0, 85 }, Shoulder_L = { 60, 0, -85 }, RootJoint = { 0, 0, 0, 0, -0.2, 0 } }) },
 		{ f = 1.0, ease = "in", pose = merge(HOLD, { Waist = { 8, 80, 0 }, Shoulder_R = { 40, 0, 95 }, Shoulder_L = { 40, 0, -95 }, RootJoint = { 0, 0, 0, 0, -0.25, 0 } }) },
 	},
 	post = {
@@ -525,7 +527,8 @@ local S_UP = merge(S.guard, tails(function(_, i)
 	return { i == 1 and 12 or 5, 0, 0 }
 end), { Shoulder_R = { -50, -20, 0 }, Shoulder_L = { -50, 20, 0 }, Pincer_R = { 0, 0, 45 }, Pincer_L = { 0, 0, -45 }, RootJoint = { 8, 0, 0, 0, 0.1, 0.05 }, Neck = { 15, 0, 0 } })
 S.clips.grab_tele = { pre = { { f = 0.2, ease = "out", pose = S_UP }, { f = 1.0, ease = "inout", pose = merge(S_UP, { RootJoint = { 4, 0, 0, 0, -0.1, 0 } }) } }, tremble = { from = 0.75, amp = 3, joints = { "Shoulder_R", "Shoulder_L" } } }
-S.clips.grab_reach = { post = { { s = 0.15, ease = "out", pose = { Shoulder_R = { -10, -10, 0 }, Shoulder_L = { -10, 10, 0 }, Pincer_R = { 0, 0, 45 }, Pincer_L = { 0, 0, -45 } } } }, upper = true }
+local S_REACH = { Shoulder_R = { -10, -10, 0 }, Shoulder_L = { -10, 10, 0 }, Pincer_R = { 0, 0, 45 }, Pincer_L = { 0, 0, -45 } }
+S.clips.grab_reach = { post = { { s = 0.15, ease = "out", pose = S_REACH } }, loop = { period = 0.3, poses = { S_REACH, merge(S_REACH, { Pincer_R = { 0, 0, 38 }, Pincer_L = { 0, 0, -38 } }) } }, upper = true } -- A2-M1: 되풀이 추가(쫓는 내내 집게 벌림)
 S.clips.grab_snatch = {
 	post = {
 		{ s = 0.0, ease = "out", pose = merge(tails(function(_, i)

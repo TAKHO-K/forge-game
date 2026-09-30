@@ -74,8 +74,23 @@ local function addTo(out, joint, i, amount)
 	o[i] += amount
 end
 
-local function lerpPose(a, b, t)
+-- only = 관절 이름 목록(선택 - 겹침 지연 표본처럼 몇 관절만 필요할 때: 그 관절만 계산한다)
+local function lerpPose(a, b, t, only)
 	local out = {}
+	if only then
+		for _, joint in ipairs(only) do
+			local v, w = a[joint], b[joint]
+			if v and w then
+				out[joint] = { val(v, 1) + (val(w, 1) - val(v, 1)) * t, val(v, 2) + (val(w, 2) - val(v, 2)) * t, val(v, 3) + (val(w, 3) - val(v, 3)) * t,
+					val(v, 4) + (val(w, 4) - val(v, 4)) * t, val(v, 5) + (val(w, 5) - val(v, 5)) * t, val(v, 6) + (val(w, 6) - val(v, 6)) * t, jw(v) + (jw(w) - jw(v)) * t }
+			elseif v then
+				out[joint] = { val(v, 1), val(v, 2), val(v, 3), val(v, 4), val(v, 5), val(v, 6), jw(v) * (1 - t) }
+			elseif w then
+				out[joint] = { val(w, 1), val(w, 2), val(w, 3), val(w, 4), val(w, 5), val(w, 6), jw(w) * t }
+			end
+		end
+		return out
+	end
 	for joint, v in pairs(a) do
 		local w = b[joint]
 		if w then
@@ -165,7 +180,7 @@ function BossMotion.contactTime(clip, hit)
 end
 
 -- 동작 표본: clip을 시작 뒤 tRel초(때리는 순간 = hit초)에서. 반환 = pose, 끝 시각(tRel 기준 - 되풀이면 nil), info
-function BossMotion.sampleClip(clip, tRel, hit, weight)
+function BossMotion.sampleClip(clip, tRel, hit, weight, only)
 	weight = weight or 1
 	local hitstop = (clip.hitstop or 0) * weight
 	local K = buildKeys(clip, hit)
@@ -181,7 +196,7 @@ function BossMotion.sampleClip(clip, tRel, hit, weight)
 	elseif t <= keys[1].t then
 		pose = keys[1].pose
 		if keys[1].t > 0 then -- 첫 키까지는 시작 자세(빈 자세 = 바탕)에서 이징으로
-			pose = lerpPose({}, keys[1].pose, ease(keys[1].ease, t / keys[1].t))
+			pose = lerpPose({}, keys[1].pose, ease(keys[1].ease, t / keys[1].t), only)
 		end
 	elseif t >= lastT then
 		pose = keys[#keys].pose
@@ -190,14 +205,14 @@ function BossMotion.sampleClip(clip, tRel, hit, weight)
 			local u = (t - lastT) / L.period
 			local n = #L.poses
 			local i = math.floor(u) % n
-			local loopPose = lerpPose(L.poses[i + 1], L.poses[(i + 1) % n + 1], ease("inout", u - math.floor(u)))
-			pose = lerpPose(pose, loopPose, ease("inout", (t - lastT) / 0.2))
+			local loopPose = lerpPose(L.poses[i + 1], L.poses[(i + 1) % n + 1], ease("inout", u - math.floor(u)), only)
+			pose = lerpPose(pose, loopPose, ease("inout", (t - lastT) / 0.2), only)
 		end
 	else
 		for i = 1, #keys - 1 do
 			local a, b = keys[i], keys[i + 1]
 			if t >= a.t and t < b.t then
-				pose = lerpPose(a.pose, b.pose, ease(b.ease, (t - a.t) / math.max(b.t - a.t, 1e-3)))
+				pose = lerpPose(a.pose, b.pose, ease(b.ease, (t - a.t) / math.max(b.t - a.t, 1e-3)), only)
 				break
 			end
 		end
@@ -266,11 +281,22 @@ local function gaitLeg(u, halfStride, reach)
 	if u >= 0.25 and u < 0.75 then
 		d, bell = halfStride * (1 - 2 * (u - 0.25) / 0.5), 0
 	else
+		-- A2-M1: 흔드는 발 = 3차 에르미트(양 끝 기울기 = 딛는 발 속도 -2h) - 옛 inout은 발을 떼는 순간 속도가 0으로 꺾였다(빠른 걸음 · 달리기에서 튐).
+		--   들기 = sin²(시작 · 끝 속도 0). 발은 떼며 살짝 더 뒤로 갔다가 앞으로 - 실제 걸음과 같다.
 		local f = ((u + 0.25) % 1) / 0.5
-		d, bell = -halfStride + 2 * halfStride * ease("inout", f), math.sin(math.pi * f)
+		local h = halfStride
+		local f2, f3 = f * f, f * f * f
+		d = (2 * f3 - 3 * f2 + 1) * -h + (f3 - 2 * f2 + f) * (-2 * h) + (-2 * f3 + 3 * f2) * h + (f3 - f2) * (-2 * h)
+		bell = math.sin(math.pi * f) ^ 2
 	end
 	return math.deg(math.asin(math.clamp(d / reach, -0.95, 0.95))), bell
 end
+-- A2-M1 보폭 배율: 빨리 갈수록 보폭도 는다(보폭 ∝ 속도^0.75 · 걷기 속도 이하 = 1) - 옛 = 보폭 고정이라 달리기(× 2.5)에서 초당 3 ~ 4걸음 종종걸음(다리 튐).
+--   걸음 위상(클라 BossAnimator · 검사)도 같은 배율의 보폭으로 진행해야 발이 안 미끄러진다.
+function BossMotion.strideScale(ctx, speed)
+	return math.clamp((speed or 0) / math.max(ctx.moveSpeed or 8, 1), 1, 3) ^ 0.75
+end
+
 local function baseBiped(ctx, st, now, pose)
 	local P = ctx.plan
 	local I = P.idle
@@ -290,9 +316,10 @@ local function baseBiped(ctx, st, now, pose)
 		local legLen = ctx.legLen or 1.6
 		local run = clamp01(((st.speed or 0) / math.max(ctx.moveSpeed or 8, 1) - 1) / math.max(W.runAt - 1, 0.1))
 		local s = math.sin(TAU * (st.gait or 0))
-		local knee = W.knee * (1 + 0.6 * run)
-		local aL, bL = gaitLeg(st.gait or 0, W.stride / 2, legLen)
-		local aR, bR = gaitLeg((st.gait or 0) + 0.5, W.stride / 2, legLen)
+		local knee = W.knee * (1 + 0.3 * run) -- A2-M1: 0.6 → 0.3(큰 보폭 달리기 - 무릎을 덜 접어도 발이 뜬다)
+		local k = BossMotion.strideScale(ctx, st.speed)
+		local aL, bL = gaitLeg(st.gait or 0, W.stride * k / 2, legLen)
+		local aR, bR = gaitLeg((st.gait or 0) + 0.5, W.stride * k / 2, legLen)
 		blend(pose, {
 			-- 흔드는 다리는 엉덩이도 더 굽혀 발을 든다(bell) - 딛는 다리는 곧게 뒤로 민다
 			Hip_L = { aL + 0.45 * knee * bL, 0, 0 }, Hip_R = { aR + 0.45 * knee * bR, 0, 0 },
@@ -320,14 +347,17 @@ local function baseScorpion(ctx, st, now, pose)
 	local walkW = ease("sine", (st.speed or 0) / 2.5) -- A2-M1: 속도 → 걷기 가중치를 사인으로(옛 직선은 걷기 시작 · 멈춤에서 다리 각속도가 꺾였다)
 	if walkW > 0 then
 		local legs = {}
+		local run = clamp01(((st.speed or 0) / math.max(ctx.moveSpeed or 8, 1) - 1) / math.max(W.runAt - 1, 0.1))
+		local liftK = 1 - 0.3 * run -- A2-M1: 빠르게 달릴수록 다리를 낮게(잰걸음 - 다리 튐 없음)
 		for k = 1, 3 do
 			for _, side in ipairs({ "L", "R" }) do
 				local x = side == "R" and 1 or -1
 				local key = ("%d_%s"):format(k, side)
 				local phase = (st.gait or 0) + (table.find(W.groupA, key) and 0 or 0.5)
-				local a, bell = gaitLeg(phase, W.stride / 2, ctx.legReach or 1.3)
-				legs["Hip" .. key] = { 0, x * a, x * W.lift * bell }
-				legs["Knee" .. key] = { 0, 0, -x * W.lift * 0.5 * bell }
+				local a, bell = gaitLeg(phase, W.stride * BossMotion.strideScale(ctx, st.speed) / 2, ctx.legReach or 1.3)
+				local lift = W.lift * liftK
+				legs["Hip" .. key] = { 0, x * a, x * lift * bell }
+				legs["Knee" .. key] = { 0, 0, -x * lift * 0.5 * bell }
 			end
 		end
 		legs.RootJoint = { 0, 0, 0, 0, -W.bob * math.abs(math.sin(TAU * 2 * (st.gait or 0))), 0 }
@@ -389,7 +419,7 @@ function BossMotion.evaluate(ctx, st, now)
 	end
 
 	-- 환경 변화(두 번째 시계)와 스킬: 동작 층
-	local function actLayer(name, at, hit, endAt, upperOnly)
+	local function actLayer(name, at, hit, endAt, upperOnly, fade)
 		local clip = name and BossMotion.clip(ctx.rigId, ctx.rig, name)
 		if not clip or not at then
 			return 0
@@ -409,7 +439,7 @@ function BossMotion.evaluate(ctx, st, now)
 		if P.overlap and not st.noOverlap and lagK > 0 then
 			local copy = nil
 			for _, g in ipairs(P.overlap) do
-				local lagged = BossMotion.sampleClip(clip, tRel - g.delay * weight * lagK, hit or 0, weight)
+				local lagged = BossMotion.sampleClip(clip, tRel - g.delay * weight * lagK, hit or 0, weight, g.joints)
 				for _, joint in ipairs(g.joints) do
 					if lagged[joint] or p[joint] then
 						copy = copy or lerpPose(p, {}, 0)
@@ -427,6 +457,7 @@ function BossMotion.evaluate(ctx, st, now)
 		if endAt then
 			w *= 1 - ease("inout", (now - endAt) / 0.3)
 		end
+		w *= fade or 1
 		if w > 0 then
 			-- upper(돌진 · 쫓기) = 때리는 순간부터 다리는 걸음이 그린다 - A2-M1: 다리 넘김을 0.15초 사인으로(옛 = 한 프레임 전환)
 			local legW = upperOnly and 0 or (clip.upper and 1 - ease("sine", (tRel - (hit or 0)) / 0.15) or 1)
@@ -453,18 +484,27 @@ function BossMotion.evaluate(ctx, st, now)
 		local skill = ctx.skills and ctx.skills[st.act]
 		if skill and skill.primitive == "grab" then
 			-- 대공 잡기: 전조 → (쫓기 = 달리며 팔 앞으로 | 들기) → 던지기
+			-- A2-M1: 단계 사이는 시간 · 속도로 교차 페이드(상태 없음 - 서버 잡기 FK와 같은 값) - 옛 = 한 프레임에 층이 바뀌어 팔이 튀었다
 			local hit = st.actHit or 5
 			local tRel = now - st.actAt
-			if tRel < hit + 0.05 then
-				actLayer("grab_tele", st.actAt, hit, st.actEndAt)
-			elseif st.throwAt and now >= st.throwAt then
-				-- 던진 뒤는 아래 층이 이어서 그린다(스킬이 던지는 순간 끝난다)
-			elseif st.throwPlan and now >= st.throwPlan - P.throwWindup then
+			local thrown = st.throwAt and now >= st.throwAt
+			local throwK = (st.throwPlan and not thrown) and ease("sine", (now - (st.throwPlan - P.throwWindup)) / 0.2) or 0
+			local holdKeep = (st.throwPlan and not thrown) and 1 - ease("sine", (now - (st.throwPlan - P.throwWindup)) / P.throwWindup) or 1 -- 들기는 던지기 전조 내내 천천히 넘긴다(전조 첫 키가 들기 자세 위로 차오름)
+			if tRel < hit + 0.4 then
+				actLayer("grab_tele", st.actAt, hit, st.actEndAt, nil, 1 - ease("sine", (tRel - hit) / 0.4))
+			end
+			if tRel >= hit and not thrown then
+				local runK = ease("sine", ((st.speed or 0) - 1) / math.max(ctx.moveSpeed or 8, 4)) -- 쫓기 ↔ 들기: 속도 폭을 넓게(멈출 때 팔이 천천히 올라감)
+				local keep = holdKeep
+				if runK > 0 and keep > 0 then
+					actLayer("grab_reach", st.actAt + hit, 0, st.actEndAt, true, runK * keep)
+				end
+				if runK < 1 and keep > 0 then
+					actLayer("grab_hold", st.actAt + hit, 0, st.actEndAt, nil, (1 - runK) * keep)
+				end
+			end
+			if throwK > 0 then
 				actLayer(ctx.boss and ctx.boss.throw or "throw_overhead", st.throwPlan - P.throwWindup, P.throwWindup)
-			elseif (st.speed or 0) > 2 then
-				actLayer("grab_reach", st.actAt + hit, 0, st.actEndAt, true)
-			else
-				actLayer("grab_hold", st.actAt + hit, 0, st.actEndAt)
 			end
 		else
 			actLayer(BossMotion.clipNameForSkill(ctx.rigId, ctx.rig, st.act, skill), st.actAt, st.actHit, st.actEndAt)

@@ -154,7 +154,8 @@ function V.runPure()
 				for _, f in ipairs(rig.feet) do
 					minY = math.min(minY, (frames[f.part] * CFrame.new(f.at * S)).Position.Y)
 				end
-				local err = minY - (-1.5 * S)
+				local footY = -1.5 * S + BossRig.rootLift(rig, S) -- A2-M1 접지: 발 기준 = 루트 − 1.5(stud)
+				local err = minY - footY
 				local fix = info.airborne and 0 or math.clamp(-err, -0.6 * S, 0.6 * S)
 				if not info.airborne and not st.deadAt then
 					worstFloat = math.max(worstFloat, err + fix) -- 보정 뒤 남는 뜬 발(단위 stud)
@@ -163,7 +164,7 @@ function V.runPure()
 				for _, hand in ipairs({ "Hand_R", "Hand_L" }) do
 					local h = frames[hand]
 					if h and not st.deadAt then
-						handBelow = math.max(handBelow, (-1.5 * S) - (h.Position.Y + fix) - 0.5 * S) -- 손이 바닥을 반 단위 넘게 뚫음
+						handBelow = math.max(handBelow, footY - (h.Position.Y + fix) - 0.5 * S) -- 손이 바닥을 반 단위 넘게 뚫음
 					end
 				end
 				return frames

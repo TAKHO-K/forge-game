@@ -175,11 +175,12 @@ function V.runPure()
 						end
 					end
 				end
-				-- 타격 프레임: 첫 post 키(때리는 순간 뒤 s초) - 판정 = 전조 끝(hit) · 동작이 판정에 맞는다
+				-- 타격 프레임: A2-M1 타격 정렬 뒤 = BossMotion.contactTime(접촉 자세 시각) − 판정(hit) - 전조가 있는 동작은 0(보이는 타격 = 판정 순간)
 				local clip = BossMotion.clip(id, rig, BossMotion.clipNameForSkill(id, rig, sid, skill) or "")
 				if clip and clip.post and clip.post[1] and table.find(BossMotionData.bosses[id].signature, sid) then
-					table.insert(timing, ("%s.%s 판정 %.2f초 → 타격 프레임 +%.2f"):format(id, sid, hit, clip.post[1].s + (clip.hitstop or 0) * 0))
-					if clip.post[1].s > 0.12 then
+					local off = BossMotion.contactTime(clip, hit) - hit
+					table.insert(timing, ("%s.%s 판정 %.2f초 → 타격 프레임 %+.2f"):format(id, sid, hit, off))
+					if off > 0.12 or off < -0.001 then
 						bad += 1
 					end
 				end
@@ -248,7 +249,7 @@ function V.runPure()
 				for k = 0, 11 do -- 들고 있는 동안 여러 시각(흔들림 · 두리번 · 발버둥 흔들림) 중 가장 낮은 발
 					local now = 1000 + k * 0.37
 					local pose = BossMotion.evaluate(ctx, { act = "grab", actAt = now - 8, actHit = 5, speed = 0, pickAt = now - 2.5 }, now)
-					local at = BossRig.attachPoint(rig, CFrame.new(0, 1.5 * S, 0), S, BossMotion.toTransforms(rest, S, pose), slot)
+					local at = BossRig.attachPoint(rig, CFrame.new(0, 1.5 * S - BossRig.rootLift(rig, S), 0), S, BossMotion.toTransforms(rest, S, pose), slot) -- A2-M1 접지: 루트 = 바닥 + 1.5 × S − 들어 올림(= 실전 루트 바닥 + 1.5)
 					minY = math.min(minY, at.Position.Y - BossRigSpec.holdHangStuds - 3) -- 잡힌 사람 발(루트 − 3)
 					far = math.max(far, Vector3.new(at.Position.X, 0, at.Position.Z).Magnitude)
 				end
@@ -272,7 +273,7 @@ function V.runPure()
 			BossMotion.toTransforms(rest, data.sizeScale, BossMotion.evaluate(ctx, st, 1 + k * 0.01))
 		end
 		local us = (os.clock() - t0) / 400 * 1e6
-		local st2 = { act = "grab", actAt = 0, actHit = 5, speed = 0, pickAt = 5.2 }
+		local st2 = { act = "grab", actAt = 0, actHit = 5, speed = 0, pickAt = 5.2, noOverlap = true } -- A2-M1: 서버 잡기 FK는 겹침 지연 끔(server/BossAirGrab과 같게)
 		local t1 = os.clock()
 		for k = 1, 400 do
 			BossRig.attachPoint(rig, CFrame.identity, data.sizeScale, BossMotion.toTransforms(rest, data.sizeScale, BossMotion.evaluate(ctx, st2, 8 + k * 0.01)), "Tail1")

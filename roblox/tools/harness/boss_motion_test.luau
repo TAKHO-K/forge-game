@@ -116,10 +116,45 @@ for _, rigId in ipairs(ids) do
 	local stride = (BossMotion.context(rigId, rig, data.skills, move).walk.stride or 0.7) * (data.sizeScale or 3)
 	ev, w, p, t = run(rigId, function(tt)
 		local sp = move * math.clamp(tt / 0.8, 0, 1) * math.clamp((5 - tt) / 0.8, 0, 1)
-		gait = (gait + sp * DT / (2 * stride)) % 1
+		gait = (gait + sp * DT / (2 * stride * (BossMotion.strideScale and BossMotion.strideScale(BossMotion.context(rigId, rig, data.skills, move), sp) or 1))) % 1
 		return { inCombat = true, speed = sp, gait = gait }
 	end, 5, {})
 	add(rigId, "walk", ev, w, p, t)
+	-- 달리기(이동 × 2.5 - 대공 잡기 쫓기 · 돌진) · 걷기 ↔ 달리기 전환
+	gait = 0
+	DETAIL = (DETAIL_FOR == rigId .. ":run") and "run" or nil
+	ev, w, p, t = run(rigId, function(tt)
+		local sp = move * (1 + 1.5 * math.clamp((tt - 0.5) / 0.6, 0, 1)) * math.clamp(tt / 0.6, 0, 1) * math.clamp((5 - tt) / 0.8, 0, 1)
+		gait = (gait + sp * DT / (2 * stride * (BossMotion.strideScale and BossMotion.strideScale(BossMotion.context(rigId, rig, data.skills, move), sp) or 1))) % 1
+		return { inCombat = true, speed = sp, gait = gait }
+	end, 5, {})
+	add(rigId, "run", ev, w, p, t)
+	DETAIL = nil
+	-- 대공 잡기 흐름: 전조(5초) → 쫓기(달리기 1초) → 낚아챔 → 들기 → 던지기 전조 → 던짐
+	do
+		gait = 0
+		local tele, pickAt, throwPlan = 5, 6.2, 9.0
+		local plan = BossMotion.planOf(rigId, rig)
+		local smooth = 0
+		DETAIL = (DETAIL_FOR == rigId .. ":grab") and "grab" or nil
+		ev, w, p, t = run(rigId, function(tt)
+			local raw = (tt > tele + 0.05 and tt < pickAt) and move * 2.5 or 0
+			smooth += (raw - smooth) * (1 - math.exp(-DT * 8)) -- 클라 BossAnimator의 속도 매끈하게와 같은 식
+			local sp = smooth
+			gait = (gait + sp * DT / (2 * stride * (BossMotion.strideScale and BossMotion.strideScale(BossMotion.context(rigId, rig, data.skills, move), sp) or 1))) % 1
+			local st = { inCombat = true, speed = sp, gait = gait, act = "grab", actAt = 0, actHit = tele, noOverlap = true }
+			if tt >= pickAt then
+				st.pickAt = pickAt
+			end
+			st.throwPlan = throwPlan
+			if tt >= throwPlan then
+				st.throwAt, st.act = throwPlan, nil
+			end
+			return st
+		end, throwPlan + 1.8, { { tele - 0.03, tele + 0.12 }, { pickAt - 0.03, pickAt + 0.35 }, { throwPlan - 0.12, throwPlan + 0.35 } })
+		add(rigId, "grab", ev, w, p, t)
+		DETAIL = nil
+	end
 	-- 평타 2번(좌 · 우)
 	ev, w, p, t = run(rigId, function(tt)
 		local n = tt < 1.2 and 1 or 2

@@ -241,6 +241,11 @@ function BossRigSpec.colorOf(role, look, rig)
 	return look.bodyColor
 end
 
+-- A2-M1 접지: 보스 리그 전부 발바닥을 바닥에 맞춘다(shared/BossRig.rootLift - 루트 판정 자리는 그대로)
+for _, rig in pairs(BossRigSpec.rigs) do
+	rig.groundLift = true
+end
+
 -- 대공 잡기 들기 자리(4b-3 · 4b-5): 잡힌 순서대로 이 부착점에 매단다(서버 server/BossAirGrab · 클라 BossAnimator 같은 FK) · 두 발 몸 = 오른손 · 왼손 · 어깨 · 전갈 = 꼬리 끝 · 가운데 · 밑 → 넷째부터 집게.
 BossRigSpec.holdSlots = { biped = { "HandR", "HandL", "ShoulderR", "ShoulderL" }, scorpion = { "Tail1", "Tail2", "Tail3", "HandR", "HandL" } }
 BossRigSpec.holdHangStuds = 1.3 -- 부착점 아래 잡힌 사람 루트까지(stud)

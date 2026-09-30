@@ -127,6 +127,7 @@ return {
 		-- BR1 대공 잡기
 		["boss.grab.struggle"] = "대공 잡기 - 다 같이 점프를 연타해 발악!",
 		["boss.grab.warn"] = "착지!",
+		["boss.grab.rescueFront"] = "보스 정면에서 F - 친구 구출", -- A2-M1(사용자 결정): 대공 잡기 구출 = 보스 정면 F
 		["boss.bubble.struggle"] = "공중에 갇혔다 - 점프를 연타해 탈출!",
 
 		-- 설정 · 시점(M1-0)

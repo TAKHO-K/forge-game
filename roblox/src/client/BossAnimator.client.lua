@@ -412,7 +412,7 @@ local function updateEntry(e, now, dt, camPos)
 	local speedNow = moved.Magnitude / math.max(dt, 1e-3)
 	e.speed += (speedNow - e.speed) * (1 - math.exp(-dt * 8))
 	e.turn += (((e.visYaw - prevYaw + math.pi) % (2 * math.pi) - math.pi) / math.max(dt, 1e-3) - e.turn) * (1 - math.exp(-dt * 6))
-	local stride = (e.ctx.walk.stride or 0.7) * e.S
+	local stride = (e.ctx.walk.stride or 0.7) * e.S * BossMotion.strideScale(e.ctx, e.speed) -- A2-M1: 달릴수록 보폭이 는다(BossMotion과 같은 배율 - 발 미끄러짐 없음)
 	e.gait = (e.gait + moved.Magnitude / (2 * stride)) % 1
 
 	-- LOD
@@ -426,7 +426,8 @@ local function updateEntry(e, now, dt, camPos)
 	local t0 = os.clock()
 	local st = e.st
 	st.speed, st.gait, st.turn = e.speed, e.gait, e.turn
-	st.noOverlap = distance > LOD.fullStuds -- A2-M1 겹침 지연 표본은 가까울 때만(먼 보스는 비용 절약)
+	-- A2-M1 겹침 지연 표본은 가까울 때만(먼 보스는 비용 절약) · 잡기 중에는 끔(서버 잡기 FK와 같은 부착점 - server/BossAirGrab도 끈다)
+	st.noOverlap = distance > LOD.fullStuds or (st.act ~= nil and e.ctx.skills ~= nil and e.ctx.skills[st.act] ~= nil and e.ctx.skills[st.act].primitive == "grab")
 	st.lookYaw = distance <= LOD.fullStuds and lookYawFor(e) or nil
 	if st.lookYaw then
 		e.lookSmooth = (e.lookSmooth or 0) + (st.lookYaw - (e.lookSmooth or 0)) * (1 - math.exp(-dt * 6))
@@ -451,8 +452,15 @@ local function updateEntry(e, now, dt, camPos)
 			end
 		end
 	end
-	if info.eyes then
-		pose.Eyes = { info.eyes[1], info.eyes[2], info.eyes[3], 0, 0, 0 }
+	-- 눈 모양(기절 · 사망 = 빙글) - A2-M1: 한 프레임에 돌지 않고 0.1초 남짓 굴러간다(튐 없음)
+	local eyeT = info.eyes or { 0, 0, 0 }
+	e.eyeCur = e.eyeCur or { 0, 0, 0 }
+	local ek = 1 - math.exp(-dt * 22)
+	for i = 1, 3 do
+		e.eyeCur[i] += (eyeT[i] - e.eyeCur[i]) * ek
+	end
+	if math.abs(e.eyeCur[1]) + math.abs(e.eyeCur[2]) + math.abs(e.eyeCur[3]) > 0.05 then
+		pose.Eyes = { e.eyeCur[1], e.eyeCur[2], e.eyeCur[3], 0, 0, 0 }
 	end
 
 	-- 쓰기: RootJoint = 보간 오프셋 · 자세
@@ -469,7 +477,7 @@ local function updateEntry(e, now, dt, camPos)
 			end
 		end
 		if minY < math.huge then
-			fix = math.clamp(-1.5 * e.S - minY, -0.6 * e.S, 0.6 * e.S)
+			fix = math.clamp(-1.5 * e.S + BossRig.rootLift(e.rig, e.S) - minY, -0.6 * e.S, 0.6 * e.S) -- A2-M1: 접지 리그는 발 기준 = 루트 − 1.5(stud)
 		end
 	end
 	e.footFix = (e.footFix or 0) + (fix - (e.footFix or 0)) * (1 - math.exp(-dt * 20))
@@ -724,7 +732,7 @@ local function startPreview(payload)
 	local ahead = look.Magnitude > 1e-3 and look.Unit or Vector3.new(0, 0, -1)
 	local ground = myRoot.Position.Y - 3
 	local center = myRoot.Position + ahead * (16 + 4 * S)
-	center = Vector3.new(center.X, ground + 1.5 * S, center.Z)
+	center = Vector3.new(center.X, ground + 1.5 * S - BossRig.rootLift(rig, S), center.Z) -- A2-M1: 접지 리그 = 루트 바닥 + 1.5(실전과 같은 높이)
 	local model = Instance.new("Model")
 	model.Name = "BossAnimPreview"
 	local root = BossRig.build(model, rig, { sizeScale = S, bodyColor = data.bodyColor, headColor = data.headColor }, center)

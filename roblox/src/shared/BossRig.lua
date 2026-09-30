@@ -17,9 +17,20 @@ function BossRig.specFor(bossId)
 	return bossId and BossRigSpec.rigs[bossId] or nil
 end
 
--- 관절 하나의 C0 · C1(sizeScale 적용).
-function BossRig.jointFrames(j, S)
-	return CFrame.new(j.at * S) * angles(j.rot), CFrame.new(j.pivot * S)
+-- A2-M1 접지: 보스 리그(rig.groundLift)는 발바닥 = 루트 − 1.5(stud)가 되게 루트에 붙는 관절만 1.5 × (S − 1) 올린다.
+--   옛 = 발바닥 루트 − 1.5 × S · 루트 = 바닥 + 1.5(판정 자리 - 그대로) → 크기 3에서 발이 바닥 아래 3 stud(정강이까지 묻힘 · Play 1 실측 4.35 stud @ 3.9).
+--   모든 FK(서버 잡기 부착점 · 클라 모션 · 검사)가 이 함수를 거쳐 같이 올라간다. 잡몹 리그(MonsterRigSpec)는 표시가 없어 그대로.
+function BossRig.rootLift(rig, S)
+	return (rig and rig.groundLift) and 1.5 * (S - 1) or 0
+end
+
+-- 관절 하나의 C0 · C1(sizeScale 적용). lift = 루트 관절만 올리는 높이(BossRig.rootLift).
+function BossRig.jointFrames(j, S, lift)
+	local at = j.at * S
+	if lift and lift ~= 0 and j.parent == "HumanoidRootPart" then
+		at += Vector3.new(0, lift, 0)
+	end
+	return CFrame.new(at) * angles(j.rot), CFrame.new(j.pivot * S)
 end
 
 local function newPart(j, S, look, rig)
@@ -57,9 +68,10 @@ function BossRig.build(model, rig, look, position)
 	root.Position = position
 	root.Parent = model
 	local parts = { HumanoidRootPart = root }
+	local lift = BossRig.rootLift(rig, S)
 	for _, j in ipairs(rig.joints) do
 		local p0 = parts[j.parent]
-		local c0, c1 = BossRig.jointFrames(j, S)
+		local c0, c1 = BossRig.jointFrames(j, S, lift)
 		local part = newPart(j, S, look, rig)
 		part.CFrame = p0.CFrame * c0 * c1:Inverse()
 		part.Parent = model
@@ -87,8 +99,9 @@ end
 -- FK: 루트 CFrame · 자세(pose[관절 이름] = CFrame - Motor6D.Transform과 같은 뜻 · 없으면 기준 자세)로 부위 CFrame 표. 부착점 이름을 주면 그 점의 CFrame만.
 function BossRig.solve(rig, rootCFrame, S, pose)
 	local out = { HumanoidRootPart = rootCFrame }
+	local lift = BossRig.rootLift(rig, S)
 	for _, j in ipairs(rig.joints) do
-		local c0, c1 = BossRig.jointFrames(j, S)
+		local c0, c1 = BossRig.jointFrames(j, S, lift)
 		out[j.part] = out[j.parent] * c0 * ((pose and pose[j.name]) or CFrame.identity) * c1:Inverse()
 	end
 	return out

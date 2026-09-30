@@ -13,6 +13,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local Reach = require(ReplicatedStorage.Shared.Reach) -- A2-M1 구출 정면 판정
 local BossTrap = require(script.Parent.BossTrap)
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
@@ -163,7 +164,7 @@ local function rigHoldPoint(c, index)
 	local slot = slots[math.min(index, #slots)]
 	local m = c.model
 	local st = { act = m:GetAttribute("BossAct"), actAt = m:GetAttribute("BossActAt"), actHit = m:GetAttribute("BossActHit"), speed = 0,
-		pickAt = m:GetAttribute("BossPickAt"), inCombat = true } -- BR1-4c: 클라와 같은 보스전 기본 자세
+		pickAt = m:GetAttribute("BossPickAt"), inCombat = true, noOverlap = true } -- BR1-4c: 클라와 같은 보스전 기본 자세 · A2-M1: 잡기 중 겹침 지연 끔(클라도 잡기 중 끔 - 같은 부착점)
 	local plan = m:GetAttribute("BossThrowPlan") -- 4b 리뷰 1: 지난 회차의 던지기 예정은 버린다(클라 readState와 같은 거르기)
 	st.throwPlan = (plan and st.actAt and plan > st.actAt) and plan or nil
 	local S = root.Size.X / 2
@@ -572,7 +573,19 @@ BossTrap.onTrapped(function(player, record)
 end)
 
 -- F 홀드(보스 곁 - BossData.mechanics.rescue.grab.reachStuds). 조각 없음 - 공통 홀드 규칙 그대로.
-BossTrap.registerRescueHandler("grab", {})
+-- A2-M1(사용자 결정): 잡힌 사람 구출은 보스 정면에서만(Reach.inFront - 클라 프롬프트 · 바닥 안내와 같은 식)
+BossTrap.registerRescueHandler("grab", {
+	canHold = function(_, record, rescuer)
+		local cfg = BossData.mechanics.rescue.grab
+		local boss = record.context and record.context.bossModel
+		local bossRoot = boss and boss.PrimaryPart
+		local root = typeof(rescuer) == "Instance" and rescuer.Character and rescuer.Character:FindFirstChild("HumanoidRootPart")
+		if not (bossRoot and root) then
+			return true -- 보스 · 루트 없음(검증 스탠드인 등) = 옛 규칙
+		end
+		return Reach.inFront(bossRoot.CFrame, root.Position, cfg.frontHalfAngleDeg, cfg.frontReachStuds + BossData.mechanics.rescue.hold.reachSlackStuds)
+	end,
+})
 BossTrap.registerRescueHandler("bubble", {}) -- BR1-2 공중 가둠: 곁에서 F 홀드(공통 규칙)
 
 -- 발악: 잡힌 사람의 점프(클라 BossGrabView가 JumpRequest를 보낸다) = 게이지 하나를 1회 줄인다. 1인당 초당 maxPressesPerSecond회까지만 센다.
