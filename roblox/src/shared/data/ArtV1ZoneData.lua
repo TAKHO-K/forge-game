@@ -37,7 +37,7 @@ return {
 		-- T2 수정 동굴: 보라 늦은 오후 - 먼 곳은 짙은 보라 안개 · 수정(청록)만 튄다
 		tier2 = preset({
 			clock = 15.2, brightness = 2.3, ambient = { 118, 114, 140 }, outdoor = { 152, 146, 170 }, shiftTop = { 244, 234, 252 }, -- 2차 패스: 바닥이 검정에 가까웠다 → 회청 슬레이트가 읽히게 밝기 · 환경광 한 단계 · A2-N3: 바닥 · 절벽 · 하늘이 한 청보라 덩어리(캡처 T2-before) → 한 단계 더 밝게
-			atmosphere = { density = 0.17, offset = 0.1, color = { 156, 136, 200 }, decay = { 96, 76, 150 }, haze = 1.15, glare = 0 }, -- A2-N3: 안개를 걷어 원경 절벽 · 수정 실루엣이 읽히게
+			atmosphere = { density = 0.22, offset = 0.06, color = { 178, 142, 222 }, decay = { 118, 84, 178 }, haze = 1.8, glare = 0 }, -- A2-N3: 안개를 걷어 원경 절벽 · 수정 실루엣이 읽히게 · A2-N4 §3-3(결정 ⑨): 하늘이 맑은 파랑이 됐다 → 보라 하늘 되돌림(하늘 쪽 haze · 색만 올리고 원경 밀도는 0.22로 조금만)
 			cc = { brightness = 0.02, contrast = 0.14, saturation = 0.02, tint = { 248, 244, 255 } }, -- A2-N3: 채도 −0.08 → +0.02(수정 청록 · 보라가 튀게) · 대비 +0.04
 			bloom = { intensity = 0.5, size = 20, threshold = 1.4 },
 			sky = { stars = 0, sun = 6 },

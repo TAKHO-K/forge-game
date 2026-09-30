@@ -141,12 +141,55 @@ local function localPillar(position, color, height, width, seconds)
 	end)
 end
 
+-- A2-N4 §3-3(A2-N3 결정 ⑧): 초월 결정(extras/transcend_crystal) - 드랍 자리에서 떠오르며 돌다 사라진다(겉모습만 · 캐시 없으면 없음)
+local function transcendCrystal(position)
+	local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
+	local src = ArtMeshKit.get("extras/transcend_crystal")
+	local T = TranscendentData.crystalFx
+	if not (src and T) then
+		return
+	end
+	local model = src:Clone()
+	model.Name = "TranscendCrystalFx"
+	local parts = {}
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") then
+			p.Size *= T.scale
+			p.CFrame = CFrame.new(p.Position * T.scale) * p.CFrame.Rotation
+			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+			table.insert(parts, { part = p, rel = p.CFrame, base = p.Transparency })
+		end
+	end
+	model.Parent = workspace
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		if t >= T.seconds or not model.Parent then
+			conn:Disconnect()
+			model:Destroy()
+			return
+		end
+		local k = t / T.seconds
+		local rise = T.riseStuds * math.sin(math.min(k * 2, 1) * math.pi / 2)
+		local frame = CFrame.new(position + Vector3.new(0, rise, 0)) * CFrame.Angles(0, t * math.rad(T.spinDegPerSecond), 0)
+		local fade = k > 0.75 and (k - 0.75) / 0.25 or 0
+		for _, e in ipairs(parts) do
+			e.part.CFrame = frame * e.rel
+			e.part.Transparency = e.base + (1 - e.base) * fade
+		end
+	end)
+end
+
 ReplicatedStorage:WaitForChild("PrimordialFx").OnClientEvent:Connect(function(info)
 	if type(info) ~= "table" then
 		return
 	end
 	if info.grade == "transcendent" then -- C5-7: 흑금 섬광 + 긴 슬로우(필드에서만)
 		flash(TranscendentData.announce.color, 0, PrimordialData.flashSeconds * 1.5)
+		if typeof(info.position) == "Vector3" then
+			transcendCrystal(info.position) -- A2-N4 §3-3(A2-N3 결정 ⑧): 초월 결정 메시(ArtStyleV1 뒤)
+		end
 		if not info.inBoss then
 			slowMotion(TranscendentData.announce.slowSeconds)
 		end

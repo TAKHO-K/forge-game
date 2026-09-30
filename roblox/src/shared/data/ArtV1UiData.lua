@@ -19,4 +19,6 @@ return {
 		breatheHz = 0.6, -- 금빛 숨쉬기(바깥 빛 투명도가 오르내린다)
 	},
 	glowPad = 8, -- 바깥 빛 여백(px)
+	-- A2-N4 §3-3 결정(A2-N3 8-1 메이플식): 보스바 = 화면 맨 위 얇은 전체 폭(이름은 막대 안 왼쪽) · 기믹 안내 = 화면 중앙 아래(화면 높이 gimmickHudY 비율). ArtStyleV1 뒤(끔 = 옛 자리).
+	bossHud = { barHeight = 20, barMargin = 12, barTop = 4, gimmickHudY = 0.62 },
 }

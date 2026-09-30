@@ -715,6 +715,8 @@ D.flinchAmp = { base = 0.7, perHpRatio = 60, max = 2.0 }
 D.interp = { omega = 16, velBlend = 0.5, staleSeconds = 0.08, stopDecay = 18, maxLeadSeconds = 0.05, springLeadFraction = 0.85 }
 -- A2-N4 P0-1: 보이는 방향 - 이 속도(stud/초)를 넘게 움직이면 가는 쪽 · 아니면 대상 쪽(클라 BossAnimator)
 D.faceMoveMinSpeed = 2
+-- A2-N4 §3-3(A2-N3 결정 ④): 평타 예비(basicPrepSeconds) 동안 몸 전체 약한 흰 번쩍임 - 최대 채움 불투명 peak(사인 곡선 · 예비 한가운데가 가장 밝다)
+D.prepFlash = { color = Color3.fromRGB(255, 255, 255), peak = 0.28 }
 
 -- A2-M1 몸 충격 효과(클라 client/BossBodyFx - 판정 무관 · 접촉 순간 = 판정 순간): 동작 이름 → { kind, parts(효과 자리 부위), size, shake(가까운 화면 흔들림 배율 - 설정 존중) }
 --   kind: ground = 땅 치기(갈라진 고리 · 흙먼지 · 파편) · whoosh = 휘두름(바람 줄기) · spark = 시전(손의 빛 방울) · roar = 포효(가슴 높이 음파 고리 · 발밑 먼지)

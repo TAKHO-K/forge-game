@@ -91,6 +91,19 @@ local function loadAll()
 	runAll(rest)
 	folder:SetAttribute("Loaded", ok)
 	folder:SetAttribute(Data.readyAttribute, true)
+	-- A2-N4 §3-3(A2-N3 결정 ⑧): 관문 틀 메시 · 보스별 관문 장식(장식 = 2단계 extras라 전부 준비된 뒤)
+	task.spawn(function()
+		local t = os.clock()
+		while not workspace:GetAttribute(Data.mapBuiltAttribute) and os.clock() - t < 90 do
+			task.wait(0.2)
+		end
+		local okGate, frames, decors = pcall(require(script.Parent.BossGateArt).apply)
+		if okGate then
+			print(("[ArtAssetLoader] 관문 틀 메시 %d · 관문 장식 %d"):format(frames, decors))
+		else
+			warn("[ArtAssetLoader] 관문 메시 실패(지금 모습 그대로): " .. tostring(frames))
+		end
+	end)
 	print(("[ArtAssetLoader] 메시 캐시 %d/%d(소품 %d 먼저) · %.1f초"):format(ok, #first + #rest, #first, os.clock() - t0))
 	if #failed > 0 then
 		warn(("[ArtAssetLoader] 로드 실패 %d개(지금 모델 그대로): %s"):format(#failed, table.concat(failed, ", ")))

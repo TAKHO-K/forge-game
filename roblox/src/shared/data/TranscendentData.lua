@@ -41,6 +41,8 @@ return {
 	soar = { resetCooldownSeconds = 4 },
 
 	-- 알림 · 낭만(태초 = 같은 서버만 · 초월 = 전 서버): 세계 번호 카운터 · 최근 목록 · 토픽 · 칭호 · 색.
+	-- A2-N4 §3-3(A2-N3 결정 ⑧): 초월 획득 연출에 초월 결정 메시(client/PrimordialFx - ArtStyleV1 뒤) - 드랍 자리에서 riseStuds 떠오르며 돈다 · 마지막 1/4에 사라짐
+	crystalFx = { scale = 1.4, seconds = 3.0, riseStuds = 5, spinDegPerSecond = 120 },
 	announce = {
 		counterKey = "transcendentCounter",
 		recentKey = "recentTranscendent",

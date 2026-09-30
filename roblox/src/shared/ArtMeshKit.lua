@@ -122,7 +122,7 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 				m.CastShadow = false
 				local pm = meta and meta.parts and meta.parts[p.Name]
 				local mat = meta and meta.decoMaterial and meta.decoMaterial[p.Name]
-				m.Color = isOutline and ArtStyleV1Data.ink or (pm and pm.color and Color3.fromHex(pm.color)) or host.Color -- 장식 묶음 색 = 메타(테마 색 기준 Blender 색)
+				m.Color = isOutline and (Data.outlineColorOf and Data.outlineColorOf[rigId] or ArtStyleV1Data.ink) or (pm and pm.color and Color3.fromHex(pm.color)) or host.Color -- 장식 묶음 색 = 메타(테마 색 기준 Blender 색)
 				m.Material = isOutline and Enum.Material.SmoothPlastic or (mat and Enum.Material[mat]) or host.Material
 				if meta and meta.lod2 and meta.lod2[p.Name] then
 					m:SetAttribute("DetailLod", 2) -- 폰 · 먼 거리에서 숨김(BossAnimator updateDetailLod)

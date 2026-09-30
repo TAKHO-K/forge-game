@@ -442,6 +442,24 @@ local function updateEntry(e, now, dt, camPos)
 		end
 	elseif not e.isClone then
 		readState(e, now)
+		-- A2-N4 §3-3(A2-N3 결정 ④): 평타 예비 동안 약한 흰 번쩍임(팔이 화면 밖이어도 전조가 읽히게 - 겉모습만)
+		local prepAt, flash = e.st.prepAt, BossMotionData.prepFlash
+		local u = prepAt and flash and (now - (prepAt - BossData.basicPrepSeconds)) / BossData.basicPrepSeconds
+		if u and u >= 0 and u <= 1 then
+			if not e.prepHighlight then
+				local h = Instance.new("Highlight")
+				h.Name = "PrepFlash"
+				h.FillColor, h.OutlineTransparency = flash.color, 1
+				h.DepthMode = Enum.HighlightDepthMode.Occluded
+				h.Adornee = e.model
+				h.Parent = e.model
+				e.prepHighlight = h
+			end
+			e.prepHighlight.Enabled = true
+			e.prepHighlight.FillTransparency = 1 - flash.peak * math.sin(math.pi * u)
+		elseif e.prepHighlight and e.prepHighlight.Enabled then
+			e.prepHighlight.Enabled = false
+		end
 		if e.st.deadAt then
 			startDeathClone(e)
 			return

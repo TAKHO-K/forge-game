@@ -55,7 +55,42 @@ local refs = build()
 -- 폰(모바일 축약형 파티 목록: 메뉴바 오른쪽 옆 x = 여백 14 + 버튼 48 + 8, 폭 96)에서는 화면 폭이 좁으면 슬롯 폭(360)이 목록과 겹친다 - 목록 오른쪽 끝 + 8보다 안쪽으로만 폭을 줄인다(가운데 정렬).
 -- PC는 슬롯 폭 그대로. 좁아도 160 아래로는 안 줄인다.
 local MIN_MOBILE_WIDTH = 160
+local Workspace = game:GetService("Workspace")
+local ArtV1UiData = require(game:GetService("ReplicatedStorage").Shared.data.ArtV1UiData)
+local ArtStyleV1Data = require(game:GetService("ReplicatedStorage").Shared.data.ArtStyleV1Data)
+local nameInBar = nil -- A2-N4 메이플식: 막대 안 이름(아트 켬)
 local function applyWidth()
+	-- A2-N4 §3-3(A2-N3 결정 ①): 아트 켬 = 화면 맨 위 얇은 전체 폭 · 이름은 막대 안 왼쪽(큰 보스 머리를 덮지 않게)
+	if Workspace:GetAttribute(ArtStyleV1Data.attribute) == true then
+		local H = ArtV1UiData.bossHud
+		local width = refs.screenGui.AbsoluteSize.X - 2 * H.barMargin
+		if Theme.isMobile then
+			local listRight = ScreenMap.edgeMargin + ScreenMap.menuBar.mobileButton + 8 + PartyListView.compact.width
+			width = math.max(refs.screenGui.AbsoluteSize.X - 2 * (listRight + 8), MIN_MOBILE_WIDTH)
+		end
+		refs.root.AnchorPoint = Vector2.new(0.5, 0)
+		refs.root.Position = UDim2.new(0.5, 0, 0, H.barTop)
+		refs.root.Size = UDim2.new(0, width, 0, H.barHeight)
+		refs.gauge.root.Size = UDim2.new(0, width, 0, H.barHeight)
+		refs.gauge.root.Position = UDim2.new(0, 0, 0, 0)
+		refs.nameLabel.Visible = false
+		if not nameInBar then
+			nameInBar = Theme.label(refs.gauge.root, "", "caption", "textPrimary")
+			nameInBar.Name = "BossNameInBar"
+			nameInBar.Font = Theme.font
+			nameInBar.TextXAlignment = Enum.TextXAlignment.Left
+			nameInBar.TextStrokeTransparency = 0.3
+			nameInBar.Position = UDim2.new(0, 8, 0, 0)
+			nameInBar.Size = UDim2.new(0.5, 0, 1, 0)
+			nameInBar.ZIndex = 20
+		end
+		nameInBar.Visible = true
+		return
+	end
+	if nameInBar then
+		nameInBar.Visible = false
+	end
+	refs.nameLabel.Visible = true
 	local width = refs.slotWidth
 	if Theme.isMobile then
 		local listRight = ScreenMap.edgeMargin + ScreenMap.menuBar.mobileButton + 8 + PartyListView.compact.width
@@ -66,6 +101,7 @@ local function applyWidth()
 end
 applyWidth()
 refs.screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(applyWidth)
+Workspace:GetAttributeChangedSignal(ArtStyleV1Data.attribute):Connect(applyWidth)
 -- Studio에서 폰 화면을 흉내 낼 때(ForceTouchLayout - MenuBar가 Theme.recompute를 한 뒤)만 다시 잰다. 실제 기기는 접속 때 판정이 정해진다.
 player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(function()
 	task.delay(0.1, applyWidth)
@@ -104,6 +140,9 @@ local function refresh()
 	end
 	local ratio = math.clamp(boss:GetAttribute("BossHpRatio") or 1, 0, 1)
 	refs.nameLabel.Text = boss:GetAttribute("BossName") or boss.Name
+	if nameInBar then
+		nameInBar.Text = refs.nameLabel.Text
+	end
 	if ratio ~= shownRatio then
 		shownRatio = ratio
 		refs.gauge.setValue(ratio, ("%d%%"):format(math.ceil(ratio * 100))) -- 올림: 남아 있는 보스가 0%로 보이지 않는다
