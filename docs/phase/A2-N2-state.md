@@ -1,9 +1,9 @@
 # A2-N2 상태 파일 (끊기면 여기서 재개)
 
 ## 진행 요약 (폰 확인용 3줄)
-1. 2절 Studio 5묶음 · 3절(메시 메타 정렬 · 하네스 · 순서표 v2) · Blender 1 · 4절 + 외부 검토 2회 반영 완료 · Play 5/8 사용(스위치 끔 = 지금 게임과 같음 확인).
-2. 모음 = `Claude outputs/ART-N2/` zones-lighting · studio-vfx · cosmetics · bosses-v2 · pets-v2 · weapons-ladder-v2 · hammer-ladder · armor-v2.
-3. 다음 = 5절 2차 패스(전체 약한 10 - 검토 중) → 보고서 `docs/phase/A2-N2-report.md`.
+1. **A2-N2 완료**: Studio 5묶음(게임 안 · Play 6/8) · 가져오기 준비(메타 정렬 하네스 O · 순서표 v2 · 방어구 명세) · Blender 결정 반영 + 추가 + 2차 패스 3회 → 보고서 `docs/phase/A2-N2-report.md`.
+2. 스위치 끔 = 지금 게임과 같음(Play 4 대조) · Studio edit 부팅 강제 속성(ArtStyleV1Force) 해제함.
+3. 다음 = 사용자 결정 3개(보고서 §6) · 가져오기(순서표).
 
 > 지시 = A2-N2(사용자 채팅 · [바로 실행] · [속도 우선 모드] · COMMON §0 · §7-1 ~ §7-6) + 추가: "블렌더 없이 되는 배경 · 맵도 디자인 통일".
 > 스위치 = `Workspace.ArtStyleV1`(꺼짐 = 지금 게임과 동일). Play 합계 상한 8회.
@@ -32,4 +32,4 @@
 | 5 | 대시 · 점프 치장 · 전설 번개 · 폰 드랍 | O · 스크립트 오류 0(Play 4 · 5) |
 
 ## 다음 할 일
-- Play 2: 구역 후 7 · 드랍 8단계 · 레벨업 · 부화 · 환생 · 강화 실패 · 치장 섞어 장착 · 전조 · 타격 링 · UI 프레임 · 폰 800 × 360.
+- 없음(완료). 재개 시 = 보고서 §6 결정 반영 또는 가져오기(`docs/art/import-order-n2.md`).
