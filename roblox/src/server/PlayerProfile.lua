@@ -1467,6 +1467,32 @@ function PlayerProfile.getCommunityGoal(player)
 	return profile.communityGoal
 end
 
+-- QUEUE-ALL1 P4 §1: 한 번도 저장된 적 없는 프로필(새 계정 첫 접속 - 초대 보상 판정)
+function PlayerProfile.isFreshProfile(player)
+	local profile = profiles[player]
+	return profile ~= nil and (tonumber(profile.savedAt) or 0) == 0
+end
+
+-- QUEUE-ALL1 P4(v58): 코드 기록 · 주간 도전 기록(계정)
+function PlayerProfile.getRedeemedCodes(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	profile.redeemedCodes = type(profile.redeemedCodes) == "table" and profile.redeemedCodes or {}
+	return profile.redeemedCodes
+end
+function PlayerProfile.getWeeklyChallenge(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	if type(profile.weeklyChallenge) ~= "table" then
+		profile.weeklyChallenge = { week = 0, rewarded = false, rankClaimedWeek = 0 }
+	end
+	return profile.weeklyChallenge
+end
+
 -- QUEUE-ALL1 P3: 지금 직업의 보스 첫 클리어 수(0 = 첫 보스 - 확정 전설)
 function PlayerProfile.bossFirstClearCount(player)
 	local profile = profiles[player]
@@ -2482,6 +2508,8 @@ function PlayerProfile.snapshotForDevTools(player)
 		receipts = deepCopy(profile.purchases.receipts), -- v56
 		purchaseLog = deepCopy(profile.purchases.log), -- v56
 		communityGoal = deepCopy(profile.communityGoal), -- QUEUE-ALL1 P3 §4(v57): 새 저장 필드 = 백업 대상(COMMON §1)
+		redeemedCodes = deepCopy(profile.redeemedCodes), -- QUEUE-ALL1 P4(v58)
+		weeklyChallenge = deepCopy(profile.weeklyChallenge), -- QUEUE-ALL1 P4(v58)
 	}
 end
 
@@ -2527,6 +2555,8 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.purchases.receipts = snapshot.receipts and deepCopy(snapshot.receipts) or profile.purchases.receipts
 	profile.purchases.log = snapshot.purchaseLog and deepCopy(snapshot.purchaseLog) or profile.purchases.log
 	profile.communityGoal = snapshot.communityGoal and deepCopy(snapshot.communityGoal) or profile.communityGoal -- QUEUE-ALL1 P3 §4(v57)
+	profile.redeemedCodes = snapshot.redeemedCodes and deepCopy(snapshot.redeemedCodes) or profile.redeemedCodes -- QUEUE-ALL1 P4(v58)
+	profile.weeklyChallenge = snapshot.weeklyChallenge and deepCopy(snapshot.weeklyChallenge) or profile.weeklyChallenge
 	task.defer(function() -- 결정 9: 복원한 치장 · 패스를 Attribute로(늦은 require - 순환 방지)
 		if profiles[player] then
 			require(script.Parent.MonetizationService).reapplyAttributes(player)

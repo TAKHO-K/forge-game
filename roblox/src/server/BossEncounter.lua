@@ -479,6 +479,24 @@ function BossEncounter.spawnRaidFor(player, bossId, stage)
 	return encounter
 end
 
+-- QUEUE-ALL1 P4 §3 주간 도전(솔로): 이번 주 보스 · 고정 스테이지 · 변형(WeeklyChallenge.apply - 인스턴스 사본만). 토벌과 같은 규칙(isRaid - 진도 · 시즌 리더보드 · 첫 클리어 드랍 없음) + isWeekly(처치 시간 순위).
+function BossEncounter.spawnWeeklyFor(player, bossId, stage, mods)
+	if encounterOf[player] or not BossData.bosses[bossId] or type(stage) ~= "number" or stage < 1 then
+		return nil
+	end
+	local data = BossRules.buildInstanceData(stage, bossId, 1)
+	if not data then
+		return nil
+	end
+	data = require(ReplicatedStorage.Shared.WeeklyChallenge).apply(data, mods)
+	data.isRaid = true
+	local encounter = spawnEncounter(data, stage, { player }, nil, 1, player, false)
+	encounter.raid = true
+	encounter.weekly = true
+	print(("[forge-game] 주간 도전 등장: %s - 스테이지 %d, 대상 %s"):format(data.displayName, stage, player.Name))
+	return encounter
+end
+
 -- 파티 보스에서 뺄 멤버를 가리는 함수(S12, PRD 20.73 [7-2] - 견습 중인 멤버). TutorialState가 자기를 등록한다(TutorialState → BossEncounter 방향이라 여기서 require하면 순환).
 local entryExclusion = function()
 	return false

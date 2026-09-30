@@ -218,6 +218,9 @@ local function defaultProfile()
 
 		-- QUEUE-ALL1 P3 §4(v57): 주간 합동 목표 - week = Quest.weekOf(월요일 UTC) · contributed = 그 주 내 기여(받을 자격 ≥ 1) · claimed = { [칸 번호 문자열] = true }(주가 바뀌면 CommunityGoalService가 비운다)
 		communityGoal = { week = 0, contributed = 0, claimed = {} },
+		-- QUEUE-ALL1 P4(v58): 코드(대문자 코드 → 받은 unix 초 - 계정당 1회) · 주간 도전(week · best = 그 주 최고 처치 초 · rewarded = 참여 보상 · rankClaimedWeek = 순위 보상을 확인한 주)
+		redeemedCodes = {},
+		weeklyChallenge = { week = 0, rewarded = false, rankClaimedWeek = 0 },
 
 		-- 옵션 변환권(23-2, PRD 20.37 [6] "계정 공유(신규)"). 골드로만 구매(20.5-1 - 로벅스
 		-- 판매 금지)하고 등급별로 따로 센다(고대 보석엔 고대 변환권만, 태초는 태초만) -
@@ -1243,6 +1246,17 @@ local function migrate(data)
 			data.communityGoal = { week = 0, contributed = 0, claimed = {} }
 		end
 		data.version = 57
+	end
+
+	if data.version < 58 then
+		-- QUEUE-ALL1 P4: redeemedCodes · weeklyChallenge - 옛 계정 = 받은 코드 없음 · 주간 기록 없음
+		if type(data.redeemedCodes) ~= "table" then
+			data.redeemedCodes = {}
+		end
+		if type(data.weeklyChallenge) ~= "table" then
+			data.weeklyChallenge = { week = 0, rewarded = false, rankClaimedWeek = 0 }
+		end
+		data.version = 58
 	end
 
 	data.savedAt = data.savedAt or 0

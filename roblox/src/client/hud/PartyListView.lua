@@ -242,7 +242,7 @@ function PartyListView.build(opts)
 	function view.setExpBonus(bonus)
 		chipHolder.Visible = bonus > 0
 		if bonus > 0 then
-			chipText.Text = ("경험치 +%d%%"):format(math.floor(bonus * 100 + 0.5))
+			chipText.Text = ("경험치 +%d%%%s"):format(math.floor(bonus * 100 + 0.5), game:GetService("Players").LocalPlayer:GetAttribute("PartyFriendBonus") and " · 친구 보너스" or "") -- QUEUE-ALL1 P4 §1
 		end
 	end
 

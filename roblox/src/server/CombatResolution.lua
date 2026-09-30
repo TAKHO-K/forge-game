@@ -267,6 +267,11 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	if isBoss then
 		QuestService.note(recipient, "bossClear", 1)
 		require(script.Parent.CommunityGoalService).note(recipient, "bossKill") -- QUEUE-ALL1 P3 §4 합동 목표
+		if monsterData.isWeekly then -- QUEUE-ALL1 P4 §3 주간 도전: 처치 시간 기록 · 참여 보상
+			local weeklyEncounter = BossEncounter.getEncounterByModel(target)
+			local seconds = weeklyEncounter and weeklyEncounter.startedAt and (os.clock() - weeklyEncounter.startedAt) or nil
+			require(script.Parent.WeeklyChallengeService).onCleared(recipient, seconds)
+		end
 		if monsterData.isRaid then
 			QuestService.note(recipient, "raidClear", 1)
 		end

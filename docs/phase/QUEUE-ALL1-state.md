@@ -196,3 +196,13 @@
 - Play: 시험 목표 4(Studio 키) · 보스 처치 3회 → 기여 3 · 45초 합산 → 75% · 1칸 받기 성공(강화석 40) · 다시 = 받음 · 2칸 = 미달성(community-goal-panel.jpg) · 시험 키 되돌림.
 - "구경 가기": 다른 서버 초월 배너 뒤 빛기둥 60초 동안 버튼 → SpectateService(TeleportToPlaceInstance · 쿨 20초 · 보스전 금지 · 실패 안내). Play: 가짜 알림 3건 - #77 풀 연출 = 하늘 갈라짐 + 버튼 · #78 = 배너 + 버튼 · #79 = 1시간 2번째 → 묶음 배너 · 버튼 요청 → "Studio에서는 서버 이동이 안 돼요(요청은 정상)". 실제 이동은 라이브에서만(사용자 확인 목록).
 - 부분: MemoryStore · MessagingService 한도 실측 수치(문서 값만 기록) · 다중 서버 합산(단일 Studio 서버).
+
+## P4 소셜(05 문서) - 친구 보상 3종 · 코드 + 업데이트 게시판 · 주간 도전
+- §1 같이 하기: 보너스 조건을 만족한 파티원 중 로블록스 친구가 있으면 경험치 +10%(PartyConfig.friendExpBonus · 파티 보너스와 합) · PartyState 친구 캐시 · PartyFriendBonus 속성 → 파티 목록 칩 " · 친구 보너스". 단일 클라라 실측 불가(사용자 확인 목록).
+- §1 초대 보상: ReferredByPlayerId + 저장 없는 첫 접속 → 초대받은 쪽 강화석 20 · 알 1 · 반짝 조각 30 · 초대자 반짝 조각 30(초대받은 계정 나이 ≥ 7일 · 초대자 하루 5번 · 1쌍 1회 DataStore 쌍 키 · 오프라인 = 선물함). Play(/gg invitetest <가짜 id>): 첫 시도 = 지급 + "초대자 보상 true"(오프라인 → Gifts 선물) · 같은 쌍 두 번째 = 지급 없음.
+- §2 코드: 설정 창 맨 아래 코드 입력 + [받기] → RedeemCode(대소문자 · 앞뒤 공백 무시 · 3초 쿨 · 분당 8번 · 계정당 1회 = 저장 v58 redeemedCodes · 모든 시도 print + Telemetry). Play: " forge2026 " 지급 · 다시 = 이미 받은 코드 · NOPE123 = 없는 코드 · RIFTOPEN 지급 · 연속 입력 = "조금 뒤에 다시". 허브 업데이트 게시판(명예의 전당 옆 · 새 소식 + 만료 안 된 코드) · docs/store/description-template.md(게임 설명란 틀).
+- 저장 v58: Edit 검사(모듈 새 사본 - 같은 세션 require는 캐시라 v57로 보임) migrate({}) → v58 · v57 표 → v58(communityGoal 유지 · redeemedCodes · weeklyChallenge 표).
+- §3 주간 도전: WeeklyChallengeData(스테이지 40 · 4주 순환 변형) · WeeklyChallenge.apply/check(회피 부등식 = BossSkillMath.dodgeChecks) · 서버 WeeklyChallengeService(OrderedDataStore 주 스코프 · 처치 초 오름차순 · 그 주 첫 처치 = 반짝 조각 20 · 지난주 1위 = 칭호 「주간 챔피언」 + 100 · 10위까지 50). 기본 리더보드 · 시즌 기록과 분리(encounter.weekly는 기본 기록 경로를 타지 않음). 저장 v58 weeklyChallenge.
+  - /gg weekly check: [1] 수정 여왕 분신 3 → 6 · [2] 폭풍 번개 2 → 4 · [3] 수호자 붕괴 쿨 35 → 25 · [4] 수정 파편 선회 45 → 68 - 4주 모두 회피 부등식 통과.
+  - /gg weekly start → 수정 여왕(스테이지 40 · 분신 2배) 등장 → bosskilltest → WeeklyChallengeTop = 1위 HoddyForge 20.3초 · myBest 20.29.
+- 부분: 친구 보너스 실측(다중 계정) · 초대 실제 링크 경로(라이브) · 주간 순위 보상 수령(다음 주 로그인) · 12인 성능(P4는 UI · 서버 로직만 - 렌더 부하 증가 없음).

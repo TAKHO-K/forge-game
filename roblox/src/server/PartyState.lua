@@ -172,18 +172,56 @@ end
 
 -- 받는 사람 기준 보너스 = 조건을 만족한 실제 멤버 수(받는 사람 포함)의 보너스. PlayerProfile.getExpGainMultiplier(경험치 · 재료 지급)가 부른다.
 -- 판정 함수가 아직 없으면(서버 시작 전) 아무도 세지 않는다(보너스 0 - 조건 없는 옛 보너스로 새지 않게).
+-- QUEUE-ALL1 P4 §1: 친구 판정 캐시([player][userId] = bool) - IsFriendsWith는 웹 호출이라 비동기로 채운다(채우기 전 = 친구 아님)
+local friendCache = {}
+local function isFriend(player, member)
+	if typeof(player) ~= "Instance" or typeof(member) ~= "Instance" or not member:IsA("Player") then
+		return false
+	end
+	local c = friendCache[player]
+	if not c then
+		c = {}
+		friendCache[player] = c
+	end
+	local v = c[member.UserId]
+	if v == nil then
+		c[member.UserId] = false
+		task.spawn(function()
+			local ok, yes = pcall(function()
+				return player:IsFriendsWith(member.UserId)
+			end)
+			if friendCache[player] then
+				friendCache[player][member.UserId] = ok and yes == true
+			end
+		end)
+		return false
+	end
+	return v
+end
+game:GetService("Players").PlayerRemoving:Connect(function(p)
+	friendCache[p] = nil
+end)
+
 function PartyState.getExpBonusFor(player)
 	local party = partyOf[player]
 	if not party then
+		if typeof(player) == "Instance" then
+			player:SetAttribute("PartyFriendBonus", nil)
+		end
 		return 0
 	end
 	local count = 1
+	local friend = false
 	for _, member in ipairs(PartyState.getMemberPlayers(party)) do
 		if member ~= player and expEligibility and expEligibility(player, member) then
 			count += 1
+			friend = friend or isFriend(player, member)
 		end
 	end
-	return PartyState.getExpBonusForCount(count)
+	if typeof(player) == "Instance" then
+		player:SetAttribute("PartyFriendBonus", friend or nil) -- 파티 칩 "친구 보너스"
+	end
+	return PartyState.getExpBonusForCount(count) + (friend and PartyConfig.friendExpBonus or 0)
 end
 
 -- ═══ 24-2 크로스서버 보조 ═══

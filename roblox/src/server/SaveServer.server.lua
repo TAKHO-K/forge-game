@@ -19,6 +19,10 @@ local PetService = require(script.Parent.PetService) -- Q11 펫 Remote
 PetService.start()
 local CommunityGoalService = require(script.Parent.CommunityGoalService) -- QUEUE-ALL1 P3 §4 주간 합동 목표
 CommunityGoalService.start()
+local WeeklyChallengeService = require(script.Parent.WeeklyChallengeService) -- QUEUE-ALL1 P4 §3 주간 도전
+WeeklyChallengeService.start()
+local SocialRewardService = require(script.Parent.SocialRewardService) -- QUEUE-ALL1 P4 §1 · §2 초대 보상 · 코드
+SocialRewardService.start()
 local SettingsService = require(script.Parent.SettingsService) -- Q14 설정 저장 Remote
 SettingsService.start()
 local MonetizationService = require(script.Parent.MonetizationService) -- QUEUE-B1 B2 수익화(영수증 · 게임패스 · 정책 · 상점 창구 · 선물함)
@@ -59,6 +63,8 @@ local function loadForPlayer(player)
 	QuestService.onLoaded(player) -- Q6: 날짜 넘김 · 화면 표
 	PetService.onLoaded(player) -- Q11: 데리고 다니는 펫 Attribute · 화면 표
 	CommunityGoalService.onLoaded(player) -- QUEUE-ALL1 P3 §4: 내 기여 · 받은 칸 Attribute
+	WeeklyChallengeService.onLoaded(player) -- QUEUE-ALL1 P4 §3: 지난주 순위 보상
+	SocialRewardService.onLoaded(player) -- QUEUE-ALL1 P4 §1: 초대받은 첫 접속 보상
 	SettingsService.onLoaded(player) -- Q14: 저장된 설정을 Attribute로
 	MonetizationService.onLoaded(player) -- QUEUE-B1 B2: 시즌 넘김 · 치장 Attribute · 게임패스 · 정책 · 선물함 팝업
 end

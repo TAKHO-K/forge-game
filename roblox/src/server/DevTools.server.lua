@@ -1101,6 +1101,8 @@ local HELP_TEXT = table.concat({
 	"/gg rebirthdo - 실제 환생 실행(PlayerProfile.rebirth 그대로 - 레벨 조건 검증 + 무기 등급·보석 자동 지급까지 전체 흐름 검증용)",
 	"/gg gem <slot 1-5> <id|-> - 그 슬롯에 보석을 강제로 채운다(23-2 검증용, id=-면 옵션 없이)",
 	"/gg bossreset [stage] - 보스 첫 처치 확정 드랍 기록 초기화(생략 시 전부, 재검증용)",
+	"/gg weekly <check|start> - QUEUE-ALL1 P4 주간 도전: 4주 변형의 회피 부등식 검사 · 이번 주 도전 시작",
+	"/gg invitetest <초대자 userId> - QUEUE-ALL1 P4 초대 보상 경로 시험(쌍 키 = Studio 저장소)",
 	"/gg rift <on|off|auto> - QUEUE-ALL1 P3 균열 시간 강제(on = 지금부터 20분 · off = 끔 · auto = 시간표 UTC 11:00 · 01:00)",
 	"/gg variant <sparkle|chest|frail|sturdy|giant|none> - 가장 가까운 잡몹을 그 변종으로 즉시 교체(22-2 검증용)",
 	"/gg chesttest - 가장 가까운 잡몹을 상자로 바꾼 뒤 피격 간격·다중 타격자·기록 정리를 서버 로그로 검증(22-2)",
@@ -3093,6 +3095,32 @@ local function handleCommand(player, args)
 		else
 			reply(player, "가둠 스킬이 있는 보스(심해 · 폭풍)가 아닙니다")
 		end
+	elseif sub == "weekly" and args[2] == "check" then
+		-- QUEUE-ALL1 P4 §3: 주간 도전 변형 4주 전부 - 회피 부등식(BossSkillMath.dodgeChecks) 검사
+		local WeeklyChallenge = require(ReplicatedStorage.Shared.WeeklyChallenge)
+		local WD = require(ReplicatedStorage.Shared.data.WeeklyChallengeData)
+		for i, e in ipairs(WD.cycle) do
+			local base = BossRules.buildInstanceData(WD.stage, e.bossId, 1)
+			local data = WeeklyChallenge.apply(base, e.mods)
+			local ok, fails = WeeklyChallenge.check(data)
+			local m = e.mods[1]
+			local node0, node1 = base, data
+			for _, k in ipairs(m.path) do
+				node0 = type(node0) == "table" and node0[k] or nil
+				node1 = type(node1) == "table" and node1[k] or nil
+			end
+			reply(player, ("[주간 %d] %s · %s: %s %s → %s · 회피 부등식 %s %s"):format(i, e.bossId, e.label, table.concat(m.path, "."), tostring(node0), tostring(node1), ok and "통과" or "실패", table.concat(fails, ", ")))
+		end
+	elseif sub == "weekly" and args[2] == "start" then
+		local WeeklyChallenge = require(ReplicatedStorage.Shared.WeeklyChallenge)
+		local WD = require(ReplicatedStorage.Shared.data.WeeklyChallengeData)
+		local e = WeeklyChallenge.entryOf(WeeklyChallenge.weekOf())
+		require(script.Parent.BossEncounter).spawnWeeklyFor(player, e.bossId, WD.stage, e.mods)
+		reply(player, "주간 도전 시작: " .. e.bossId .. " · " .. e.label)
+	elseif sub == "invitetest" and args[2] then
+		-- QUEUE-ALL1 P4 §1: 초대 보상 경로 시험(초대자 userId를 넣어 첫 접속 보상을 흉내 - 쌍 키는 Studio 저장소)
+		require(script.Parent.SocialRewardService).onLoaded(player, tonumber(args[2]))
+		reply(player, "초대 보상 시험: 초대자 " .. tostring(args[2]))
 	elseif sub == "rift" and (args[2] == "on" or args[2] == "off" or args[2] == "auto") then
 		-- QUEUE-ALL1 P3 §3: 균열 강제(on = 지금부터 20분 · off = 강제 끔 · auto = 시간표) - RiftService가 1초 안에 반영
 		workspace:SetAttribute("RiftForceEndsAt", nil)

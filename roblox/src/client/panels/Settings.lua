@@ -46,7 +46,7 @@ local function build()
 	body.Size = UDim2.new(1, 0, 1, 0)
 	body.ScrollBarThickness = 4
 	body.ScrollBarImageColor3 = Theme.color("rim")
-	body.CanvasSize = UDim2.new(0, 0, 0, PAD + 376 + #SoundData.categoryOrder * 52 + PAD) -- B4: 음량 제목(348) + 카테고리 줄 52씩
+	body.CanvasSize = UDim2.new(0, 0, 0, PAD + 376 + #SoundData.categoryOrder * 52 + 56 + PAD) -- B4: 음량 제목(348) + 카테고리 줄 52씩 · QUEUE-ALL1 P4 코드 줄 56
 	body.Parent = panel.content
 	local toggle = Toggle.build({
 		parent = body, name = "CameraTopDownToggle", text = Text.get("settings.cameraTopDown"),
@@ -174,6 +174,39 @@ local function build()
 			end
 		end
 	end)
+	-- QUEUE-ALL1 P4 §2 코드 입력(맨 아래 줄 - 서버 RedeemCode가 검증 · 대소문자 무시)
+	do
+		local y = PAD + 376 + #SoundData.categoryOrder * 52 + 8
+		local box = Instance.new("TextBox")
+		box.Name = "CodeBox"
+		box.Position = UDim2.new(0, PAD, 0, y)
+		box.Size = UDim2.new(1, -PAD * 2 - 100, 0, 36)
+		box.BackgroundColor3 = Color3.fromRGB(40, 36, 58)
+		box.TextColor3 = Color3.new(1, 1, 1)
+		box.PlaceholderText = "코드 입력"
+		box.PlaceholderColor3 = Color3.fromRGB(150, 146, 170)
+		box.Font = Theme.font
+		box.TextSize = 16
+		box.Text = ""
+		box.ClearTextOnFocus = false
+		box.Parent = body
+		Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
+		Button.build({
+			parent = body, name = "CodeRedeemButton", kind = "primary", width = 90,
+			position = UDim2.new(1, -PAD - 90, 0, y),
+			text = "받기",
+			onActivated = function()
+				local ok, result = pcall(function()
+					return ReplicatedStorage:WaitForChild("RedeemCode"):InvokeServer(box.Text)
+				end)
+				local Toast = require(script.Parent.Parent.ui.kit.Toast)
+				Toast.push("TC", { richParts = { { text = ok and type(result) == "table" and tostring(result.message) or "잠시 뒤에 다시", colorName = "textPrimary", bold = true } }, seconds = 3, fadeSeconds = 0.3 })
+				if ok and type(result) == "table" and result.ok then
+					box.Text = ""
+				end
+			end,
+		})
+	end
 	-- B4 소리 음량(카테고리 4줄: 이름 · [−] · 값 · [+] - 버튼 높이 = Theme.buttonHeight(폰 44) · 저장 = 같은 SettingsSave)
 	local soundHeader = Theme.label(body, Text.get("settings.soundHeader"), "body", "textSecondary")
 	soundHeader.Name = "SoundHeader"
