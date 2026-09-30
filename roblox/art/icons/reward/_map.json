@@ -1,0 +1,88 @@
+{
+  "gold": {
+    "meaning": "골드",
+    "dataKeys": [
+      "gold",
+      "goldKills"
+    ]
+  },
+  "enhanceStone": {
+    "meaning": "강화석",
+    "dataKeys": [
+      "enhanceStone"
+    ]
+  },
+  "highEnhanceStone": {
+    "meaning": "상급 강화석",
+    "dataKeys": [
+      "highEnhanceStone"
+    ]
+  },
+  "egg": {
+    "meaning": "알(구역 알 - 색은 UI가 구역색으로 바꿀 수 있음)",
+    "dataKeys": [
+      "egg",
+      "eggZone"
+    ]
+  },
+  "sparkleShard": {
+    "meaning": "반짝 조각",
+    "dataKeys": [
+      "sparkleShard"
+    ]
+  },
+  "gemDust": {
+    "meaning": "보석 가루",
+    "dataKeys": [
+      "gemDust"
+    ]
+  },
+  "passExp": {
+    "meaning": "시즌 패스 경험치",
+    "dataKeys": [
+      "passExp"
+    ]
+  },
+  "rebirthTicket": {
+    "meaning": "환생 무료권",
+    "dataKeys": [
+      "rebirthTicket"
+    ]
+  },
+  "protectDrop": {
+    "meaning": "하락 방지권(EnhanceConfig.protection.drop - 10 문서 §3 구간 도움 재화 후보)",
+    "dataKeys": [
+      "protection.drop"
+    ]
+  },
+  "protectReset": {
+    "meaning": "초기화 방지권(EnhanceConfig.protection.reset)",
+    "dataKeys": [
+      "protection.reset"
+    ]
+  },
+  "rerollTicket": {
+    "meaning": "옵션 변환권(GemData dust.ticketDust)",
+    "dataKeys": [
+      "rerollTicket"
+    ]
+  },
+  "title": {
+    "meaning": "칭호(도감 줄 · 합동 목표 등)",
+    "dataKeys": [
+      "title"
+    ]
+  },
+  "cosmeticTheme": {
+    "meaning": "치장 테마(시즌 패스)",
+    "dataKeys": [
+      "cosmeticTheme"
+    ]
+  },
+  "gliderSkin": {
+    "meaning": "글라이더 외형(시즌 패스)",
+    "dataKeys": [
+      "gliderSkin"
+    ]
+  }
+}
