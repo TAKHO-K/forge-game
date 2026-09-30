@@ -55,12 +55,19 @@ local function ground(e, at, size, shakeW)
 	-- 옅게(투명 0.5 ~ 0.6) - 바닥 전조 · 다음 공격 표시를 가리지 않게(Play 4: 짙은 원판이 바닥을 덮었다)
 	BossFx.ring(p, 0.6 * S, 3.2 * S, c.dust, 0.42, 0.5)
 	BossFx.ring(p + Vector3.new(0, 0.05, 0), 0.3 * S, 1.8 * S, c.accent, 0.28, 0.6)
+	-- A2-M1 2차: 보스 강조색 충격파 테두리 = 바깥으로 퍼지는 조각 12개(리뷰: 흰 충격판이 밝은 바닥에 묻히고 보스마다 같아 보임 · 원판이 아니라 테두리만 - 바닥 전조를 안 가린다)
+	for i = 1, 12 do
+		local a = i / 12 * math.pi * 2
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		BossFx.spawn({ shape = "block", position = p + dir * 1.2 * S + Vector3.new(0, 0.1, 0), velocity = dir * 7 * S, size0 = Vector3.new(0.5 * S, 0.15, 0.25 * S), size1 = Vector3.new(1.2 * S, 0.1, 0.1 * S),
+			rotation = CFrame.lookAt(Vector3.zero, dir).Rotation, color = c.accent, transparency0 = 0.15, transparency1 = 1, life = 0.35, material = Enum.Material.Neon })
+	end
 	for i = 1, 7 do
 		local a = i / 7 * math.pi * 2 + rnd(-0.3, 0.3)
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 		BossFx.puff(p + dir * S * 0.6, rnd(0.55, 0.85) * S, c.dust, rnd(0.45, 0.65), dir * rnd(5, 9) * size + Vector3.new(0, rnd(1, 3), 0))
 	end
-	for _ = 1, 5 do
+	for _ = 1, 8 do
 		local a = math.random() * math.pi * 2
 		BossFx.chunk(p + Vector3.new(0, 0.3, 0), Vector3.new(math.cos(a) * rnd(6, 12), rnd(12, 20), math.sin(a) * rnd(6, 12)) * math.sqrt(size), rnd(0.25, 0.5) * S * 0.35, c.debris, rnd(0.6, 0.9))
 	end
@@ -128,6 +135,18 @@ function BossBodyFx.impact(e, clipName)
 		local at = partPos(e, name)
 		if at and f then
 			f(e, at, spec.size or 1, spec.shake)
+			if spec.floorDust then -- A2-M1 2차: 휩쓴 자리 바닥에 먼지 호(리뷰: 꼬리 궤적이 몸에 가려 안 읽힘)
+				local c = colorsOf(e)
+				local center = e.visPos or e.root.Position
+				local out = Vector3.new(at.X - center.X, 0, at.Z - center.Z)
+				local r = math.max(out.Magnitude, e.S)
+				local a0 = math.atan2(out.Z, out.X)
+				for i = -2, 2 do
+					local a = a0 + i * 0.22
+					local p = Vector3.new(center.X + math.cos(a) * r, floorY(e) + 0.3, center.Z + math.sin(a) * r)
+					BossFx.puff(p, rnd(0.5, 0.8) * e.S * (spec.size or 1), c.dust, rnd(0.4, 0.6), Vector3.new(-math.sin(a), 0.3, math.cos(a)) * 5)
+				end
+			end
 		end
 	end
 end
@@ -390,7 +409,8 @@ function BossBodyFx.death(e, info)
 	if sc > 0 and not e.rewardBurst then
 		e.rewardBurst = true
 		local center = Vector3.new(e.visPos.X, floorY(e) + 0.3, e.visPos.Z)
-		BossFx.ring(center, 1 * e.S, 6 * e.S, UIColors.gold, 0.7, 0.2)
+		BossFx.ring(center, 1 * e.S, 6 * e.S, c.accent:Lerp(WHITE, 0.25), 0.7, 0.6) -- A2-M1 2차: 보스 강조색 · 옅게(리뷰: 모든 보스에 같은 짙은 황토 원판)
+		BossFx.ring(center + Vector3.new(0, 0.05, 0), 0.5 * e.S, 2.5 * e.S, UIColors.gold, 0.5, 0.55)
 		BossFx.ring(center + Vector3.new(0, 1.5 * e.S, 0), 0.5 * e.S, 4 * e.S, c.accent:Lerp(WHITE, 0.4), 0.55, 0.3)
 		for i = 1, 12 do
 			local a = i / 12 * math.pi * 2

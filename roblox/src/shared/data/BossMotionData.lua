@@ -679,12 +679,14 @@ local vortex = {
 }
 local ORGEL = { Waist = { 6, 0, 0 }, Neck = { 14, 0, 0 }, Shoulder_R = { 150, 0, 12 }, Elbow_R = { 12, 0, 0 }, Shoulder_L = { 35, 0, -25 }, Elbow_L = { 70, 0, 0 } }
 local orgel = { -- 수정 여왕: 홀을 높이 들어 종을 울리듯 흔든다
+	-- A2-M1 2차(리뷰: 자세 변화가 작아 안 읽힘): 먼저 홀을 아래로 모으며 몸을 낮췄다가(예비) 발끝으로 솟으며 머리 위로 크게 치켜든다 · 흔들기 폭 ±15 → ±25 · 시간 칸(pre 비율)은 그대로
 	pre = {
-		{ f = 0.5, ease = "inout", pose = merge(B.guard, ORGEL) },
-		{ f = 1.0, ease = "out", pose = merge(B.guard, ORGEL, { Shoulder_R = { 165, 0, 8 } }) },
+		{ f = 0.3, ease = "inout", pose = merge(B.guard, { Waist = { 18, 0, 0 }, Neck = { -6, 0, 0 }, Shoulder_R = { 20, 0, 30 }, Elbow_R = { 60, 0, 0 }, Shoulder_L = { 30, 0, -30 }, Elbow_L = { 60, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.25, 0 } }) },
+		{ f = 0.7, ease = "inout", pose = merge(B.guard, ORGEL, { RootJoint = { 0, 0, 0, 0, 0.15, 0 } }) },
+		{ f = 1.0, ease = "out", pose = merge(B.guard, ORGEL, { Shoulder_R = { 172, 0, 6 }, Waist = { -8, 0, 0 }, Neck = { 22, 0, 0 }, RootJoint = { 0, 0, 0, 0, 0.2, 0 } }) },
 	},
 	post = { { s = 0.12, ease = "out", pose = merge(ORGEL, { Shoulder_R = { 130, 0, 20 }, Waist = { -4, 0, 0 } }) } },
-	loop = { period = 0.6, poses = { merge(ORGEL, { Shoulder_R = { 140, 0, 25 } }), merge(ORGEL, { Shoulder_R = { 150, 0, -5 } }) } },
+	loop = { period = 0.6, poses = { merge(ORGEL, { Shoulder_R = { 138, 0, 35 }, Waist = { 6, -8, 0 } }), merge(ORGEL, { Shoulder_R = { 152, 0, -15 }, Waist = { 6, 8, 0 } }) } },
 	hitstop = 0.04,
 }
 D.bossClips = {
@@ -723,8 +725,8 @@ D.impacts = {
 	vortex = { kind = "spark", parts = { "Hand_R", "Hand_L" }, size = 0.8 },
 	roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.7 },
 	hiss = { kind = "roar", parts = { "Head" }, size = 0.8, shake = 0.4 },
-	tailSweep = { kind = "whoosh", parts = { "Tail5", "Tail6" }, size = 1.2 },
-	clawSweep = { kind = "whoosh", parts = { "Pincer_R", "Pincer_L" }, size = 1.0 },
+	tailSweep = { kind = "whoosh", parts = { "Tail5", "Tail6" }, size = 1.2, floorDust = true },
+	clawSweep = { kind = "whoosh", parts = { "Pincer_R", "Pincer_L" }, size = 1.0, floorDust = true },
 	sting = { kind = "ground", parts = { "Tail2_8" }, size = 0.6, shake = 0.5 },
 	throw_overhead = { kind = "whoosh", parts = { "Hand_R", "Hand_L" }, size = 1.0 },
 	throw_spin = { kind = "whoosh", parts = { "Hand_R" }, size = 1.1 },

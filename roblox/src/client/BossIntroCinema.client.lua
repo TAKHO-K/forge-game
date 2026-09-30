@@ -156,9 +156,35 @@ event.OnClientEvent:Connect(function(data)
 	local root = data.model.PrimaryPart
 	local size = data.model:GetExtentsSize()
 	local height = math.max(size.Y, 6)
+	-- A2-M1 2차: 연출 동안 다른 HUD를 숨긴다(리뷰: 스킬 줄 · 메뉴가 떠 있어 연출이 싸 보임) · 게임 시점 복귀(마지막 0.55초)가 시작될 때 되돌림
+	local hidden = {}
+	local function restoreHud()
+		for _, g in ipairs(hidden) do
+			if g.Parent then
+				g.Enabled = true
+			end
+		end
+		table.clear(hidden)
+	end
+	for _, g in ipairs(player.PlayerGui:GetChildren()) do
+		if g:IsA("ScreenGui") and g.Enabled and g ~= banner and g.Name ~= "BossIntroCard" then
+			g.Enabled = false
+			table.insert(hidden, g)
+		end
+	end
+	for _, g in ipairs(data.model:GetDescendants()) do -- 보스 머리 위 이름표 · 체력(빌보드)이 이름 카드 칭호와 겹친다
+		if g:IsA("BillboardGui") and g.Enabled then
+			g.Enabled = false
+			table.insert(hidden, g)
+		end
+	end
 	RunService:BindToRenderStep("BossIntroCinema", Enum.RenderPriority.Camera.Value + 1, function()
 		local t = serverNow() - startServer
+		if #hidden > 0 and (t > seconds - 0.55 or my ~= token) then
+			restoreHud()
+		end
 		if my ~= token or t >= seconds or not data.model.Parent or not root then
+			restoreHud()
 			RunService:UnbindFromRenderStep("BossIntroCinema")
 			if my == token then
 				camera.CameraType = oldType

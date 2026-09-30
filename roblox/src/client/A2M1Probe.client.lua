@@ -126,6 +126,14 @@ local function finishMotion(r)
 		total += s.jumps
 		table.insert(lines, ("%s;%s;%d;%d;%.2f;%s"):format(r.name, k, s.frames, s.jumps, s.worst, tostring(s.worstPart)))
 		print(("[MotionProbe] %s · %s · 프레임 %d · 튐 %d · 최악 %.2f(%s)"):format(r.name, k, s.frames, s.jumps, s.worst, tostring(s.worstPart)))
+		if s.jumps > 0 then
+			table.sort(s.events, function(a, b) return a.score > b.score end)
+			local ev = {}
+			for i = 1, math.min(4, #s.events) do
+				table.insert(ev, ("%.2fs %s %.1f"):format(s.events[i].t, s.events[i].part, s.events[i].score))
+			end
+			print(("[MotionProbe]   └ 튐 위치(동작 시작 뒤): %s"):format(table.concat(ev, " · ")))
+		end
 	end
 	print(("[MotionProbe] 끝 %s · 튐 합계 %d · 프레임 %d"):format(r.name, total, r.frames))
 	player:SetAttribute("MotionProbeResult", table.concat(lines, "\n"))
@@ -153,7 +161,7 @@ local function stepMotion(dt)
 	local previewSwitch = r.model.Name == "BossAnimPreview" and r.labelAt and os.clock() - r.labelAt < 0.4
 	local s = r.stats[label]
 	if not s then
-		s = { frames = 0, jumps = 0, worst = 0, worstPart = nil }
+		s = { frames = 0, jumps = 0, worst = 0, worstPart = nil, events = {}, startAt = os.clock() }
 		r.stats[label] = s
 	end
 	s.frames += 1
@@ -173,6 +181,9 @@ local function stepMotion(dt)
 					local score = math.max(dw / ANG_JUMP, (part.Name == "Hips" and not r.rel) and dv / (LIN_JUMP * r.S) or 0)
 					if score > 1 then
 						bad = true
+						if #s.events < 40 then
+							table.insert(s.events, { t = os.clock() - (r.labelAt or s.startAt), part = part.Name, score = score })
+						end
 					end
 					if score > s.worst then
 						s.worst, s.worstPart = score, part.Name

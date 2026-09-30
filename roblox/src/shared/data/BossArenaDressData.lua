@@ -26,7 +26,7 @@ BossArenaDressData.bosses = {
 		pillars = { count = 8, radius = { 230, 290 }, height = { 34, 60 }, width = 11, color = "pillar", broken = true },
 		motes = { every = 0.22, life = 3.2, rise = 9, size = 0.45, color = "light", phoneScale = 0.5 },
 		edge = { color = "accent", width = 0.9, transparency = 0.35 },
-		floor = { material = Enum.Material.Slate, tint = "accent", amount = 0.08 },
+		floor = { material = Enum.Material.Slate, tint = Color3.fromRGB(150, 152, 162), amount = 0.35 }, -- A2-M1 2차: 보라 보스가 보라 바닥에 묻힘(리뷰) → 밝은 중성 회색 쪽으로
 		atmosphere = { density = 0.32, color = "accent", decay = "body", haze = 1.2 },
 	},
 	-- 빙하 동굴(서리 거인): 떠 있는 얼음 조각 · 테라스 얼음 가시 · 먼 얼음 폭포 기둥 · 눈 내림 · 차가운 안개
@@ -36,7 +36,7 @@ BossArenaDressData.bosses = {
 		pillars = { count = 8, radius = { 230, 290 }, height = { 40, 70 }, width = 12, color = "light", broken = false, material = Enum.Material.Glacier },
 		motes = { every = 0.07, life = 4.5, rise = 28, size = 0.5, color = Color3.fromRGB(248, 252, 255), phoneScale = 0.5, fall = true, fromHeight = 30, wind = Vector3.new(3, 0, 1.5), material = Enum.Material.SmoothPlastic, shape = "block" }, -- 눈송이 = 작은 판(공은 삼각형이 많다 - Play 4 추정 1.9만)
 		edge = { color = "accent", width = 0.9, transparency = 0.4 },
-		floor = { material = Enum.Material.Glacier, tint = "light", amount = 0.15 },
+		floor = { material = Enum.Material.Glacier, tint = Color3.fromRGB(96, 124, 158), amount = 0.35 }, -- A2-M1 2차: 흰 바닥에 흰 포효 전조가 묻힘(리뷰) → 푸른 회색 얼음
 		atmosphere = { density = 0.36, color = "light", decay = "accent", haze = 1.6 },
 	},
 	-- 수몰 사원(심해 군주): 가라앉은 기둥 조각이 물속처럼 떠 있음 · 테라스 산호 · 먼 신전 기둥 · 떠오르는 물방울 · 깊은 청록 안개
