@@ -468,7 +468,9 @@ local function shockwave(data)
 					local a = math.random() * 2 * math.pi
 					local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 					local at = data.center + dir * radius + Vector3.new(0, 0.8, 0)
-					BossFx.puff(at, F.size[1] + math.random() * (F.size[2] - F.size[1]), floorColor:Lerp(Color3.new(1, 1, 1), 0.35), F.life, dir * F.outward + Vector3.new(0, F.rise, 0))
+					local size = F.size[1] + math.random() * (F.size[2] - F.size[1])
+					BossFx.spawn({ shape = "ball", position = at, velocity = dir * F.outward + Vector3.new(0, F.rise, 0), size0 = Vector3.one * size * 0.55, size1 = Vector3.one * size,
+						color = floorColor:Lerp(Color3.new(1, 1, 1), F.lighten), transparency0 = F.transparency, transparency1 = 1, life = F.life }) -- Play: 반투명 0.45 · 바닥색에 가까워 안 읽혔다
 				end
 				if data.__dustN % F.smokeEvery == 0 then
 					local a = math.random() * 2 * math.pi
