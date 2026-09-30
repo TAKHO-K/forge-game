@@ -1,0 +1,460 @@
+{
+ "sampleRate": 44100,
+ "peakDbfs": -1,
+ "gapSeconds": 0.3,
+ "sheets": {
+  "combat": {
+   "file": "sfx_combat.wav",
+   "length": 9.64
+  },
+  "loot": {
+   "file": "sfx_loot.wav",
+   "length": 24.4244
+  },
+  "ui": {
+   "file": "sfx_ui.wav",
+   "length": 8.2854
+  }
+ },
+ "cues": {
+  "hit_light": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 0.25,
+   "duration": 0.18,
+   "startSample": 11025,
+   "samples": 7938,
+   "volume": 0.55,
+   "group": "Effects",
+   "description": "일반 타격 - 톡 튀는 둔탁음"
+  },
+  "hit_heavy": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 0.73,
+   "duration": 0.37,
+   "startSample": 32193,
+   "samples": 16316,
+   "volume": 0.7,
+   "group": "Effects",
+   "description": "내 강공격 적중 - 더 낮고 묵직함"
+  },
+  "hit_crit": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 1.4,
+   "duration": 0.43,
+   "startSample": 61739,
+   "samples": 18963,
+   "volume": 0.7,
+   "group": "Effects",
+   "description": "치명타 - 타격음 위에 반짝이는 종"
+  },
+  "swing": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 2.13,
+   "duration": 0.24,
+   "startSample": 93932,
+   "samples": 10586,
+   "volume": 0.4,
+   "group": "Effects",
+   "description": "휘두름 바람 소리"
+  },
+  "hurt_small": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 2.67,
+   "duration": 0.2,
+   "startSample": 117748,
+   "samples": 8820,
+   "volume": 0.45,
+   "group": "Effects",
+   "description": "내가 작은 피해를 받음 - 부드럽게"
+  },
+  "hurt_big": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 3.17,
+   "duration": 0.52,
+   "startSample": 139798,
+   "samples": 22932,
+   "volume": 0.75,
+   "group": "Effects",
+   "description": "전조 있는 큰 공격에 맞음 - 무거운 쿵"
+  },
+  "heartbeat": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 3.99,
+   "duration": 0.47,
+   "startSample": 175960,
+   "samples": 20727,
+   "volume": 0.35,
+   "group": "Effects",
+   "description": "체력 낮음 심장 박동 - 낮은 두 번 쿵(은은하게)"
+  },
+  "warning": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 4.76,
+   "duration": 0.36,
+   "startSample": 209917,
+   "samples": 15875,
+   "volume": 0.6,
+   "group": "Effects",
+   "description": "보스 전조 주의 - 짧은 두 음(사이렌 아님)"
+  },
+  "boss_appear": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 5.42,
+   "duration": 1.14,
+   "startSample": 239022,
+   "samples": 50274,
+   "volume": 0.85,
+   "group": "Effects",
+   "description": "보스 등장 - 저음 뿔 + 북"
+  },
+  "boss_death": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 6.86,
+   "duration": 2.08,
+   "startSample": 302526,
+   "samples": 91728,
+   "volume": 0.9,
+   "group": "Effects",
+   "description": "보스 처치 - 큰 충격 + 하강 + 차임"
+  },
+  "footstep_soft": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 9.24,
+   "duration": 0.1,
+   "startSample": 407484,
+   "samples": 4410,
+   "volume": 0.2,
+   "group": "Effects",
+   "description": "부드러운 발소리(선택)"
+  },
+  "pickup": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 0.25,
+   "duration": 0.2101,
+   "startSample": 11025,
+   "samples": 9265,
+   "volume": 0.5,
+   "group": "Effects",
+   "description": "아이템 줍기 - 짧은 두 음 삑"
+  },
+  "drop_common": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 0.7601,
+   "duration": 0.37,
+   "startSample": 33520,
+   "samples": 16319,
+   "volume": 0.4,
+   "group": "Effects",
+   "description": "일반 등급 드랍"
+  },
+  "drop_rare": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 1.4301,
+   "duration": 0.43,
+   "startSample": 63069,
+   "samples": 18963,
+   "volume": 0.45,
+   "group": "Effects",
+   "description": "희귀 등급 드랍"
+  },
+  "drop_epic": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 2.1601,
+   "duration": 0.94,
+   "startSample": 95262,
+   "samples": 41455,
+   "volume": 0.55,
+   "group": "Effects",
+   "description": "영웅 등급 드랍 - 종 추가"
+  },
+  "drop_legendary": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 3.4002,
+   "duration": 0.975,
+   "startSample": 149947,
+   "samples": 42997,
+   "volume": 0.6,
+   "group": "Effects",
+   "description": "전설 등급 드랍"
+  },
+  "drop_relic": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 4.6751,
+   "duration": 1.0071,
+   "startSample": 206174,
+   "samples": 44412,
+   "volume": 0.7,
+   "group": "Effects",
+   "description": "유물 등급 드랍 - 반짝이 층 추가"
+  },
+  "drop_ancient": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 5.9822,
+   "duration": 1.1595,
+   "startSample": 263816,
+   "samples": 51135,
+   "volume": 0.8,
+   "group": "Effects",
+   "description": "고대 등급 드랍 - 반짝이 + 화음 층"
+  },
+  "drop_primordial": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 7.4417,
+   "duration": 1.2869,
+   "startSample": 328181,
+   "samples": 56753,
+   "volume": 0.9,
+   "group": "Effects",
+   "description": "태초 등급 드랍 - 반짝이 + 화음 + 저음 부풀기"
+  },
+  "drop_transcendent": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 9.0287,
+   "duration": 2.52,
+   "startSample": 398164,
+   "samples": 111131,
+   "volume": 1.0,
+   "group": "Effects",
+   "description": "초월 등급 드랍 - 암전 저음 쿵 → 상승 스윕 → 밝은 화음"
+  },
+  "enhance_success": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 11.8486,
+   "duration": 0.78,
+   "startSample": 522525,
+   "samples": 34399,
+   "volume": 0.8,
+   "group": "UI",
+   "description": "강화 성공 - 오르는 세 음 + 종"
+  },
+  "enhance_fail": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 12.9287,
+   "duration": 0.47,
+   "startSample": 570154,
+   "samples": 20727,
+   "volume": 0.7,
+   "group": "UI",
+   "description": "강화 실패(유지) - 둔탁음 + 내려가는 두 음"
+  },
+  "enhance_drop": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 13.6987,
+   "duration": 0.82,
+   "startSample": 604111,
+   "samples": 36162,
+   "volume": 0.75,
+   "group": "UI",
+   "description": "강화 등급 하락 - 슬픈 하강"
+  },
+  "enhance_reset": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 14.8187,
+   "duration": 1.4278,
+   "startSample": 653503,
+   "samples": 62968,
+   "volume": 0.85,
+   "group": "UI",
+   "description": "강화 초기화 - 긴 추락 + 무거운 쿵"
+  },
+  "protect_ticket": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 16.5465,
+   "duration": 0.78,
+   "startSample": 729701,
+   "samples": 34399,
+   "volume": 0.7,
+   "group": "UI",
+   "description": "보호권 사용 - 방패 딩"
+  },
+  "level_up": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 17.6265,
+   "duration": 1.12,
+   "startSample": 777330,
+   "samples": 49391,
+   "volume": 0.8,
+   "group": "UI",
+   "description": "레벨업 - 오르는 아르페지오"
+  },
+  "codex_cell": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 19.0465,
+   "duration": 0.62,
+   "startSample": 839951,
+   "samples": 27343,
+   "volume": 0.6,
+   "group": "UI",
+   "description": "도감 칸 채움 - 수집 딩"
+  },
+  "title_get": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 19.9665,
+   "duration": 0.9591,
+   "startSample": 880524,
+   "samples": 42297,
+   "volume": 0.8,
+   "group": "UI",
+   "description": "칭호 획득 - 짧은 팡파르"
+  },
+  "quest_complete": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 21.2256,
+   "duration": 0.7787,
+   "startSample": 936051,
+   "samples": 34339,
+   "volume": 0.7,
+   "group": "UI",
+   "description": "퀘스트 완료 - 짧은 징글"
+  },
+  "reward_fly": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 22.3043,
+   "duration": 0.3,
+   "startSample": 983620,
+   "samples": 13232,
+   "volume": 0.45,
+   "group": "UI",
+   "description": "보상 아이콘 날아감 - 쉭 + 삑"
+  },
+  "skill_unlock": {
+   "sheet": "loot",
+   "file": "sfx_loot.wav",
+   "start": 22.9044,
+   "duration": 1.22,
+   "startSample": 1010082,
+   "samples": 53804,
+   "volume": 0.8,
+   "group": "UI",
+   "description": "스킬 해금 - 반짝이는 공개음"
+  },
+  "button_press": {
+   "sheet": "ui",
+   "file": "sfx_ui.wav",
+   "start": 0.25,
+   "duration": 0.09,
+   "startSample": 11025,
+   "samples": 3969,
+   "volume": 0.35,
+   "group": "UI",
+   "description": "UI 버튼 누름 - 부드러운 딸깍"
+  },
+  "button_close": {
+   "sheet": "ui",
+   "file": "sfx_ui.wav",
+   "start": 0.64,
+   "duration": 0.08,
+   "startSample": 28224,
+   "samples": 3529,
+   "volume": 0.3,
+   "group": "UI",
+   "description": "창 닫기 - 더 낮고 부드러운 딸깍"
+  },
+  "recall_channel": {
+   "sheet": "ui",
+   "file": "sfx_ui.wav",
+   "start": 1.02,
+   "duration": 1.52,
+   "startSample": 44983,
+   "samples": 67032,
+   "volume": 0.4,
+   "group": "Ambient",
+   "description": "귀환 시전 중 - 반복 가능한 반짝 웅(약 1.5초)"
+  },
+  "recall_done": {
+   "sheet": "ui",
+   "file": "sfx_ui.wav",
+   "start": 2.84,
+   "duration": 0.95,
+   "startSample": 125245,
+   "samples": 41897,
+   "volume": 0.7,
+   "group": "Effects",
+   "description": "귀환 완료 - 순간이동 쉭"
+  },
+  "checkpoint_found": {
+   "sheet": "ui",
+   "file": "sfx_ui.wav",
+   "start": 4.0901,
+   "duration": 0.6553,
+   "startSample": 180372,
+   "samples": 28898,
+   "volume": 0.7,
+   "group": "Effects",
+   "description": "체크포인트 발견 - 발견 차임"
+  },
+  "checkpoint_channel": {
+   "sheet": "ui",
+   "file": "sfx_ui.wav",
+   "start": 5.0454,
+   "duration": 1.52,
+   "startSample": 222500,
+   "samples": 67032,
+   "volume": 0.4,
+   "group": "Ambient",
+   "description": "체크포인트 등록 중 - 집중 웅(약 1.5초 · 반복 가능)"
+  },
+  "rift_start": {
+   "sheet": "ui",
+   "file": "sfx_ui.wav",
+   "start": 6.8654,
+   "duration": 1.12,
+   "startSample": 302762,
+   "samples": 49392,
+   "volume": 0.8,
+   "group": "Effects",
+   "description": "균열 시작 - 뒤틀리는 스윕"
+  }
+ },
+ "dropGradeCues": {
+  "normal": "drop_common",
+  "rare": "drop_rare",
+  "epic": "drop_epic",
+  "legendary": "drop_legendary",
+  "relic": "drop_relic",
+  "ancient": "drop_ancient",
+  "primordial": "drop_primordial",
+  "transcendent": "drop_transcendent"
+ },
+ "legacyEvents": {
+  "hit": "hit_light",
+  "hitCrit": "hit_crit",
+  "enhanceSuccess": "enhance_success",
+  "enhanceGreat": "enhance_success",
+  "enhanceFail": "enhance_fail",
+  "levelUp": "level_up",
+  "bossCue": "warning",
+  "rebirth": "title_get",
+  "petHatch": "codex_cell"
+ }
+}
