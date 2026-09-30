@@ -111,6 +111,17 @@ bestLabel.TextSize = 12
 bestLabel.TextColor3 = UIColors.textTertiary
 bestLabel.Text = "최고 기록 -"
 bestLabel.Parent = wrapper
+-- QUEUE-ALL1 01 A-5(아트 켬): 작은 글씨 대비 - 굵게 13 · 한 단계 밝게 · 어두운 외곽선(3D 화면 위) · 끔 = 옛 모습
+local function bestLook()
+	local art = workspace:GetAttribute("ArtStyleV1") == true
+	bestLabel.Font = art and Enum.Font.GothamBold or Enum.Font.Gotham
+	bestLabel.TextSize = art and 13 or 12
+	bestLabel.TextColor3 = art and UIColors.textSecondary or UIColors.textTertiary
+	bestLabel.TextStrokeColor3 = Color3.fromRGB(30, 27, 46)
+	bestLabel.TextStrokeTransparency = art and 0.35 or 1
+end
+bestLook()
+workspace:GetAttributeChangedSignal("ArtStyleV1"):Connect(bestLook)
 
 -- 25-4: ▲▼ 한 칸씩 이동 버튼을 지우고 칩 자체를 눌러 스테이지 선택 패널을 연다(한눈에
 -- 보고 고르는 형태로 교체 - 지시). 견습 중엔 안 연다 - S15부터 그 검사는 패널의 UIManager 등록(canOpen)이 맡는다

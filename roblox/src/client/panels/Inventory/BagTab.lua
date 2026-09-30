@@ -267,7 +267,7 @@ local function rebuildGrid()
 	countLabel.Text = ("%d / %d"):format(#S.inventory, totalSlots)
 	local _, sellTotal = S.bulkSellEstimate()
 	bulkEstimatePillLabel.Text = ("일괄판매 예상 +%s"):format(NumberFormat.format(sellTotal))
-	cutoffButton.Text = ArmorData.grades[S.bulkSellCutoffGrade].displayName .. " 이하 ▾"
+	cutoffButton.Text = "자동 처리: " .. ArmorData.grades[S.bulkSellCutoffGrade].displayName .. " 이하" -- QUEUE-ALL1 A-2(꺾쇠 = 도형)
 	goldPillLabel.Text = "보유 골드 " .. NumberFormat.format(player:GetAttribute("Gold") or 0)
 
 	if S.selectedKind == "bag" and not S.inventory[S.selectedValue] then
@@ -290,7 +290,7 @@ end)
 sortButton.Activated:Connect(function()
 	local currentIndex = table.find(S.SORT_MODES, S.sortMode) or 1
 	S.sortMode = S.SORT_MODES[currentIndex % #S.SORT_MODES + 1]
-	sortButton.Text = S.SORT_LABELS[S.sortMode] .. " ▾"
+	sortButton.Text = S.SORT_LABELS[S.sortMode]
 	S.rebuildGrid()
 end)
 

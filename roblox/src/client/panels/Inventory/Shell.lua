@@ -41,6 +41,7 @@ toggleButton.TextSize = Theme.textSize("body")
 toggleButton.TextColor3 = UIColors.textPrimary
 toggleButton.BackgroundColor3 = UIColors.panel
 toggleButton.BackgroundTransparency = UIColors.panelTransparency
+toggleButton.Visible = false -- QUEUE-ALL1 01 A-3: 오른쪽 "가방" 버튼 중복 제거 - 메뉴는 왼쪽 세로 줄 한 곳(가방 B · MenuBar) · 연결은 그대로(다른 곳이 참조)
 toggleButton.Parent = screenGui
 
 do
@@ -271,7 +272,28 @@ countLabel.TextColor3 = UIColors.textTertiary
 countLabel.Text = "0 / 0"
 countLabel.Parent = headerLeft
 
-local function makeHeaderPill(text, order, widthPadding)
+-- QUEUE-ALL1 01 A-2: 드롭다운 표시 = 도형 꺾쇠(돌린 막대 두 개 - "▾" 같은 기호 글자는 GothamBold에 없어 두부로 나왔다) · 글씨 오른쪽 여백 안에
+local function addChevron(pill)
+	local box = Instance.new("Frame")
+	box.Name = "Chevron"
+	box.BackgroundTransparency = 1
+	box.AnchorPoint = Vector2.new(0, 0.5)
+	box.Position = UDim2.new(1, 5, 0.5, 1)
+	box.Size = UDim2.fromOffset(10, 8)
+	box.Parent = pill
+	for _, side in ipairs({ -1, 1 }) do
+		local bar = Instance.new("Frame")
+		bar.BorderSizePixel = 0
+		bar.BackgroundColor3 = UIColors.textSecondary
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Size = UDim2.fromOffset(7, 2)
+		bar.Position = UDim2.new(0.5, side * 2.2, 0.5, 0)
+		bar.Rotation = side * -45
+		bar.Parent = box
+	end
+end
+
+local function makeHeaderPill(text, order, widthPadding, dropdown)
 	local pill = Instance.new("TextButton")
 	pill.LayoutOrder = order
 	pill.AutomaticSize = Enum.AutomaticSize.X
@@ -288,24 +310,28 @@ local function makeHeaderPill(text, order, widthPadding)
 	corner.CornerRadius = UDim.new(1, 0)
 	corner.Parent = pill
 	local stroke = Instance.new("UIStroke")
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- QUEUE-ALL1 A-2: 기본 Contextual은 버튼 테두리가 아니라 글씨에 회색 외곽선(회색 판)을 그렸다
 	stroke.Color = UIColors.rim
 	stroke.Transparency = UIColors.rimTransparency
 	stroke.Parent = pill
 	local padding = Instance.new("UIPadding")
 	padding.PaddingLeft = UDim.new(0, widthPadding or 11)
-	padding.PaddingRight = UDim.new(0, widthPadding or 11)
+	padding.PaddingRight = UDim.new(0, (widthPadding or 11) + (dropdown and 16 or 0))
 	padding.Parent = pill
+	if dropdown then
+		addChevron(pill)
+	end
 
 	return pill
 end
 
-local sortButton = makeHeaderPill(S.SORT_LABELS[S.sortMode] .. " ▾", 1)
+local sortButton = makeHeaderPill(S.SORT_LABELS[S.sortMode], 1, nil, true)
 
 -- 일괄판매 기준 등급 선택 버튼(20-3) - 클릭하면 등급 목록(색 점 포함)이 드롭다운으로 열린다.
 -- 라벨은 rebuildGrid에서 bulkSellCutoffGrade가 바뀔 때마다 다시 맞춘다.
-local cutoffButton = makeHeaderPill("", 2)
+local cutoffButton = makeHeaderPill("", 2, nil, true)
 
-local bulkSellButton = makeHeaderPill("일괄판매", 3)
+local bulkSellButton = makeHeaderPill("일괄 판매", 3)
 
 local closeButton = Instance.new("TextButton")
 closeButton.LayoutOrder = 4

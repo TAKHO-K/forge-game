@@ -272,6 +272,26 @@ hubLabel.ZIndex = 2
 hubLabel.Parent = hubButton
 hubButton.Text = ""
 hubButton.Size = UDim2.new(0, 84, 0, Theme.isMobile and Theme.touchMin or 36) -- "귀환 0:42"가 들어가게
+-- QUEUE-ALL1 01 A-4: 아트 켬 = 귀환 아이콘 타일 · 시전 · 쿨 시간은 아이콘 아래쪽 작은 글씨(평소엔 글씨 없음) · 게이지 = 아래 띠
+local IconTile = require(script.Parent.ui.IconTile)
+local hubTiled = false
+local function tileHub()
+	if hubTiled or not IconTile.apply(hubButton, "return", nil, { size = 40, keepText = true }) then
+		return
+	end
+	hubTiled = true
+	hubLabel.AnchorPoint = Vector2.new(0.5, 1)
+	hubLabel.Position = UDim2.new(0.5, 0, 1, 2)
+	hubLabel.Size = UDim2.new(1, 16, 0, 14)
+	hubLabel.TextSize = 12
+	hubLabel.TextStrokeTransparency = 0.2
+	hubLabel.ZIndex = 5
+	castFill.AnchorPoint = Vector2.new(0, 1)
+	castFill.Position = UDim2.new(0, 0, 1, 0)
+	castFill.ZIndex = 4
+end
+tileHub()
+Workspace:GetAttributeChangedSignal("ArtStyleV1"):Connect(tileHub)
 backButton.Activated:Connect(function()
 	if request then
 		request:FireServer("back")
@@ -305,8 +325,8 @@ RunService.RenderStepped:Connect(function()
 	elseif readyAt and readyAt > now then
 		text, dim = "귀환 " .. mmss(readyAt - now), true
 	end
-	castFill.Size = UDim2.fromScale(fill, 1)
-	hubLabel.Text = text
+	castFill.Size = hubTiled and UDim2.new(fill, 0, 0, 5) or UDim2.fromScale(fill, 1)
+	hubLabel.Text = (hubTiled and text == "귀환") and "" or (hubTiled and text:gsub("^귀환 ", "") or text) -- 타일이면 평소 글씨 없음 · 시간만
 	hubLabel.TextTransparency = dim and 0.45 or 0
 end)
 hubButton.Activated:Connect(function()

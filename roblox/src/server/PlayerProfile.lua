@@ -2018,7 +2018,7 @@ function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 	local soldCount = 0
 	for _, item in ipairs(profile.inventory) do
 		local itemGradeIndex = gradeIndex(item.grade)
-		if not item.locked and itemGradeIndex and itemGradeIndex <= cutoffIndex then
+		if not item.locked and not item.skillVariant and itemGradeIndex and itemGradeIndex <= cutoffIndex then -- QUEUE-ALL1 01 A-2: 스킬 변형 장비 · 잠금 제외(착용 중 = 가방 밖)
 			totalGold += Loot.getSellPrice(item)
 			soldCount += 1
 		else

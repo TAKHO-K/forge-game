@@ -233,7 +233,7 @@ function BossBR13View.sweepTelegraph(data)
 	local head = boss and boss:FindFirstChild("Head")
 	if head then
 		-- 위에서 보면 +각 = 시계 방향(X → Z) - 화면 기준 화살표 · 한 바퀴 반
-		sweep.gui = billboard(head, (data.dirSign > 0 and "↻" or "↺") .. "×1.5", WHITE, nil, UDim2.new(0, 120, 0, 90))
+		sweep.gui = billboard(head, (data.dirSign > 0 and "→" or "←") --[[ QUEUE-ALL1 A-6: ↻ ↺ = GothamBold 두부 ]] .. "×1.5", WHITE, nil, UDim2.new(0, 120, 0, 90))
 	end
 end
 
@@ -475,7 +475,7 @@ function BossBR13View.playerStun(data)
 	local target = data.userId and playerByUserId(data.userId)
 	local head = target and target.Character and target.Character:FindFirstChild("Head")
 	if head then
-		local gui = billboard(head, "✦ ✦ ✦", Color3.fromRGB(255, 225, 80), data.seconds, UDim2.new(0, 110, 0, 36))
+		local gui = billboard(head, "★ ★ ★" --[[ QUEUE-ALL1 A-6: ✦ = 두부 ]], Color3.fromRGB(255, 225, 80), data.seconds, UDim2.new(0, 110, 0, 36))
 		gui.StudsOffset = Vector3.new(0, 2.2, 0)
 	end
 end

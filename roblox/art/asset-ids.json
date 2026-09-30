@@ -1445,6 +1445,97 @@
   "status": "Approved",
   "imageId": 135000936032808
  },
+ "icons/hud/bag.png": {
+  "sha256": "058ed4ad4f0cb2a5b52a4203dc8e6b0bc82d4669cb9c1d3e1fccac57b1ffc42b",
+  "assetType": "Decal",
+  "assetId": 127260847133776,
+  "status": "Approved",
+  "imageId": 100176756201803
+ },
+ "icons/hud/codex.png": {
+  "sha256": "8179597eab495a205fcc2026fc1ad0cc044a7c2d31b1f4b1b140d96af5c970e6",
+  "assetType": "Decal",
+  "assetId": 126189379072463,
+  "status": "Approved",
+  "imageId": 76248427018596
+ },
+ "icons/hud/forge.png": {
+  "sha256": "0c84e240fb8bdeedcb83468db4ec682a2145732b29196250ddd578004af8ecb7",
+  "assetType": "Decal",
+  "assetId": 113534793011452,
+  "status": "Approved",
+  "imageId": 137666869132080
+ },
+ "icons/hud/growth.png": {
+  "sha256": "4bbd3889c19a86fc576ea2a234d8c429e8173aa96554534dba0f7e3e9db7dd4f",
+  "assetType": "Decal",
+  "assetId": 139253351703550,
+  "status": "Approved",
+  "imageId": 108208335453866
+ },
+ "icons/hud/map.png": {
+  "sha256": "ae2dca14e53c436f361c1b506d62bcff12560bacb66a27de5c736ea25370ca0f",
+  "assetType": "Decal",
+  "assetId": 101909732716180,
+  "status": "Approved",
+  "imageId": 74117913612163
+ },
+ "icons/hud/party.png": {
+  "sha256": "7f94e41f4df228b1b4ba6a05be110dffd52daff4219e8d92ec99e18a8199f366",
+  "assetType": "Decal",
+  "assetId": 111361084333074,
+  "status": "Approved",
+  "imageId": 77997314797248
+ },
+ "icons/hud/pet.png": {
+  "sha256": "a9c3dd35291d1c1bf9cd2bf3f142623c2e3c204152a69867f74b0d4428501538",
+  "assetType": "Decal",
+  "assetId": 135277278939397,
+  "status": "Approved",
+  "imageId": 85240728195781
+ },
+ "icons/hud/quest.png": {
+  "sha256": "6ee4e9de4a38253f2046fd7effcb28427d60857a90c431182e3bb66b116e6d5e",
+  "assetType": "Decal",
+  "assetId": 90070591046714,
+  "status": "Approved",
+  "imageId": 106618604254010
+ },
+ "icons/hud/rank.png": {
+  "sha256": "36a7ff29ae63b19d762a11cbf994fe3ef0a3ea1ddf55cd7d349a118eb3f35551",
+  "assetType": "Decal",
+  "assetId": 123680938943800,
+  "status": "Approved",
+  "imageId": 78292135195856
+ },
+ "icons/hud/rebirth.png": {
+  "sha256": "2cc9c76483e7611712d25209f297984ac0de8baa8989a2f3b79a23b7c47c2689",
+  "assetType": "Decal",
+  "assetId": 116019920104449,
+  "status": "Approved",
+  "imageId": 77937441531575
+ },
+ "icons/hud/return.png": {
+  "sha256": "08cfcf2430855157be8022eed7532cf7bbad9eb900f3dde723dd3dd4f9430213",
+  "assetType": "Decal",
+  "assetId": 107475979136993,
+  "status": "Approved",
+  "imageId": 117678829379099
+ },
+ "icons/hud/settings.png": {
+  "sha256": "829cbab6eba35668c046981220d2bbbeec974b81e737352948151447c6fe91e9",
+  "assetType": "Decal",
+  "assetId": 82156515058652,
+  "status": "Approved",
+  "imageId": 72177947529035
+ },
+ "icons/hud/shop.png": {
+  "sha256": "6436b6ca5127e2fa4da5527eb8b45253ca6271e6f1ad53c07307015ea798a9aa",
+  "assetType": "Decal",
+  "assetId": 138897611618201,
+  "status": "Approved",
+  "imageId": 129799146563428
+ },
  "icons/weapons/bow_ancient.png": {
   "sha256": "81982879b10f761d2396bb31eb18b4dc876484efdbc951062c83165cef70d389",
   "assetType": "Decal",

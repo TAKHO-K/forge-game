@@ -51,7 +51,7 @@ return {
 		bannerSeconds = 8,
 		slowSeconds = 1.0,
 		pillarSeconds = 45,
-		glyph = "✦",
+		glyph = "◆", -- QUEUE-ALL1 A-6: ✦는 GothamBold에 없어 두부(□) - Play 기호 격자 실측
 		color = Color3.fromRGB(214, 176, 62), -- 옅은 금
 		darkColor = Color3.fromRGB(16, 13, 10), -- 검은 본체
 		chatText = "★ {name}님이 세계 {no}번째 초월 [{part}]를 획득했습니다!", -- TextData transcendent.worldChat과 같은 문장(서버 배너 payload가 이름 · 번호 · 부위를 준다)

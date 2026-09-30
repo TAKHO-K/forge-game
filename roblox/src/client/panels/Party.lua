@@ -543,6 +543,15 @@ local function buildToggleButton()
 	button.Parent = gui
 	Theme.corner(button, 8)
 	Theme.stroke(button)
+	-- QUEUE-ALL1 01 A-4: 아트 켬 = 아이콘 타일(파티 · 단축키 칩 P) - 아트 속성이 늦게 와도 켜지는 순간 입힌다
+	local IconTile = require(script.Parent.Parent.ui.IconTile)
+	local function tile()
+		if not button:FindFirstChild("IconTile") then
+			IconTile.apply(button, "party", "P", { size = 40 })
+		end
+	end
+	tile()
+	workspace:GetAttributeChangedSignal("ArtStyleV1"):Connect(tile)
 	button.Activated:Connect(function()
 		UIManager.toggle(Party.id)
 	end)

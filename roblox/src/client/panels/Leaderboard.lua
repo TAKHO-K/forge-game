@@ -626,6 +626,15 @@ local function buildToggleButton()
 	Theme.corner(button, 8)
 	Theme.stroke(button)
 	button.Activated:Connect(Leaderboard.toggle)
+	-- QUEUE-ALL1 01 A-4: 아트 켬 = 아이콘 타일(순위 - 단축키 없음)
+	local IconTile = require(script.Parent.Parent.ui.IconTile)
+	local function tile()
+		if not button:FindFirstChild("IconTile") then
+			IconTile.apply(button, "rank", nil, { size = 40 })
+		end
+	end
+	tile()
+	workspace:GetAttributeChangedSignal("ArtStyleV1"):Connect(tile)
 	player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(function()
 		task.defer(function() -- MenuBar가 Theme.recompute를 한 뒤
 			button.Size = UDim2.new(0, 72, 0, Theme.isMobile and Theme.touchMin or 36)

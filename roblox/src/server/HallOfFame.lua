@@ -45,7 +45,7 @@ local function makeFace(face)
 	title.Font = Enum.Font.GothamBlack
 	title.TextSize = 44
 	title.TextColor3 = PrimordialData.accentColor
-	title.Text = "✦ 명예의 전당 · 초월 ✦"
+	title.Text = "★ 명예의 전당 · 초월 ★" -- QUEUE-ALL1 A-6: ✦ = GothamBold 두부
 	title.Parent = gui
 	local labels = {}
 	for i = 1, PrimordialData.recentKeep do

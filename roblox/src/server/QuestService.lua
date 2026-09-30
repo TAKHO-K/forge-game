@@ -77,13 +77,47 @@ function QuestService.view(player)
 	}
 end
 
+-- QUEUE-ALL1 01 A-4 퀘스트 아이콘 빨간 점: 지금 받을 보상이 하나라도 있나(창을 안 열어도 - Player Attribute QuestClaimable). 견습 중엔 메인만 받는다(claim 규칙과 같다).
+local function claimableOf(player, v)
+	if not v then
+		return false
+	end
+	if v.main and v.main.done then
+		return true
+	end
+	if not PlayerProfile.getTutorialCompleted(player) then
+		return false
+	end
+	if v.loginReady or v.chestReady then
+		return true
+	end
+	for _, list in ipairs({ v.daily or {}, v.weekly or {} }) do
+		for _, q in ipairs(list) do
+			if q.n >= q.target and not q.claimed then
+				return true
+			end
+		end
+	end
+	if v.attendance then
+		for _, entry in ipairs(v.attendance.rewards) do
+			if entry.day <= v.attendance.count and v.attendance.claimed[tostring(entry.day)] ~= true then
+				return true
+			end
+		end
+	end
+	return false
+end
+QuestService.claimableOf = claimableOf
+
 local function push(player)
+	local v = QuestService.view(player)
 	if updateRemote and typeof(player) == "Instance" and player.Parent then
-		updateRemote:FireClient(player, QuestService.view(player))
+		updateRemote:FireClient(player, v)
 	end
 	local state = PlayerProfile.getQuestState(player)
 	if state and typeof(player) == "Instance" then -- HUD 칩(메인 퀘스트 단계 · 받을 것 있음) - 클라 길 안내 · 점
 		player:SetAttribute("MainQuestStep", state.main)
+		player:SetAttribute("QuestClaimable", claimableOf(player, v))
 	end
 end
 QuestService.push = push

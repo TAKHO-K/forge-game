@@ -24,6 +24,9 @@ local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local Confirm = require(script.Parent.Parent.ui.kit.Confirm)
 local Toast = require(script.Parent.Parent.ui.kit.Toast)
 local UIManager = require(script.Parent.Parent.UIManager)
+local IconTile = require(script.Parent.Parent.ui.IconTile)
+-- QUEUE-ALL1 01 A-4: 메뉴 칸 → PNG 타일(icons/hud) - 스테이지 선택 = 성장 아이콘(레퍼런스 "성장 M") · 퀘스트 = 두루마리 + 체크(받을 보상 = 빨간 점)
+local ICON_IMAGE = { bag = "bag", stage = "growth", quest = "quest", party = "party" }
 
 local player = Players.LocalPlayer
 local inventoryFull = ReplicatedStorage:WaitForChild("InventoryFull")
@@ -70,6 +73,11 @@ local function applyLook(item)
 		frame.BackgroundColor3 = blocked and UIColors.lockedIcon or color
 	end
 	item.letter.TextColor3 = blocked and UIColors.lockedIcon or UIColors.textSecondary
+	if item.tile then -- A-4 타일: 바탕 없음 · 열림 = 강조 테두리 · 막힘 = 이미지 회색
+		item.button.BackgroundTransparency = 1
+		item.stroke.Enabled = open or blocked
+		item.tile.image.ImageColor3 = blocked and Color3.fromRGB(120, 122, 130) or Color3.new(1, 1, 1)
+	end
 	item.blocked = blocked
 end
 
@@ -175,6 +183,12 @@ local function build()
 		letter.Parent = button
 
 		local item = { entry = entry, button = button, stroke = stroke, icon = icon, letter = letter, iconColors = {}, blocked = false }
+		item.tile = ICON_IMAGE[entry.iconKey] and IconTile.apply(button, ICON_IMAGE[entry.iconKey], entry.hotkey and entry.hotkey.Name or nil)
+		if item.tile then
+			icon.Visible = false
+			letter.Visible = false
+			stroke.Enabled = false
+		end
 		for _, part in ipairs(icon:GetDescendants()) do
 			if part:IsA("Frame") then
 				item.iconColors[part] = part.BackgroundColor3 -- 비활성 회색에서 되돌릴 원래 색
@@ -196,6 +210,35 @@ end
 
 local refs = build()
 
+-- A-4 퀘스트 칸 빨간 점 = 서버 QuestClaimable(받을 보상이 하나라도 있다 - server/QuestService push)
+local function refreshQuestDot()
+	for _, item in ipairs(refs.items) do
+		if item.entry.id == "quests" then
+			IconTile.setDot(item.button, player:GetAttribute("QuestClaimable") == true)
+		end
+	end
+end
+player:GetAttributeChangedSignal("QuestClaimable"):Connect(refreshQuestDot)
+refreshQuestDot()
+
+-- 아트 스위치 속성이 메뉴를 지은 뒤에 복제돼도(부팅 순서) 켜지는 순간 타일을 입힌다
+game:GetService("Workspace"):GetAttributeChangedSignal("ArtStyleV1"):Connect(function()
+	for _, item in ipairs(refs.items) do
+		if not item.tile and ICON_IMAGE[item.entry.iconKey] then
+			item.tile = IconTile.apply(item.button, ICON_IMAGE[item.entry.iconKey], item.entry.hotkey and item.entry.hotkey.Name or nil)
+			if item.tile then
+				item.icon.Visible, item.letter.Visible, item.stroke.Enabled = false, false, false
+			end
+		end
+	end
+	refreshQuestDot()
+	task.defer(function()
+		for _, item in ipairs(refs.items) do
+			applyLook(item)
+		end
+	end)
+end)
+
 -- 버튼 크기(PC 44 · 모바일 48) · 아이콘 자리 · 단축키 글자(PC만). 모바일 판정이 바뀌면(Studio ForceTouchLayout) 다시 부른다.
 local function applyMetrics()
 	local size = buttonSize()
@@ -207,7 +250,7 @@ local function applyMetrics()
 			-- 오른쪽 위 모서리(단축키 글자)를 피해 왼쪽 아래로 3px씩.
 			item.icon.Position = UDim2.new(0, (size - ICON_SIZE) / 2 - 3, 0, (size - ICON_SIZE) / 2 + 3)
 		end
-		item.letter.Visible = not Theme.isMobile
+		item.letter.Visible = not Theme.isMobile and not item.tile
 	end
 end
 

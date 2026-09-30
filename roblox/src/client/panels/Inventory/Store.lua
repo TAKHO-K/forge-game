@@ -43,7 +43,7 @@ S.GEAR_ORDER, S.PART_ORDER_INDEX = GEAR_ORDER, PART_ORDER_INDEX
 
 S.sortMode = "grade" -- "grade" | "level" | "part" - 클라 전용 표시 순서, 서버 왕복 없음.
 S.SORT_MODES = { "grade", "level", "part" }
-S.SORT_LABELS = { grade = "등급순", level = "레벨순", part = "부위순" }
+S.SORT_LABELS = { grade = "정렬: 등급", level = "정렬: 레벨", part = "정렬: 부위" } -- QUEUE-ALL1 01 A-2 문구(등급 → 레벨 → 부위)
 
 -- 일괄판매 기준 등급 선택지(20-3) - ArmorData.gradeOrder에서 bulkSellMaxGrade까지만 잘라낸다(단일 출처 - 서버도 같은 두 값으로 같은 상한을 강제한다).
 local BULK_SELL_GRADE_CHOICES = {}
@@ -230,7 +230,7 @@ local function bulkSellEstimate()
 	local count, total = 0, 0
 	local highestSoldGradeId, highestSoldGradeIndex = nil, 0
 	for _, item in ipairs(S.inventory) do
-		if not item.locked and isSellableGrade(item.grade, S.bulkSellCutoffGrade) then
+		if not item.locked and not item.skillVariant and isSellableGrade(item.grade, S.bulkSellCutoffGrade) then -- 서버 sellItemsBulkUpTo와 같은 조건(QUEUE-ALL1 A-2 스킬 변형 제외)
 			count += 1
 			total += Loot.getSellPrice(item)
 			for i, id in ipairs(ArmorData.gradeOrder) do
