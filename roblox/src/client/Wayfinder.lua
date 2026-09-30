@@ -398,6 +398,20 @@ player:GetAttributeChangedSignal("GuideDebugZone"):Connect(function()
 	end
 end)
 
+-- 검사 훅 2(자동 이동 도착률): GuideDebugPoints = "x,y,z;x,y,z;…"(서버가 복제 Attribute로 준다) → 그 점 목록으로 안내(빈 문자열 = 지움)
+player:GetAttributeChangedSignal("GuideDebugPoints"):Connect(function()
+	local text = player:GetAttribute("GuideDebugPoints")
+	local pts = {}
+	for x, y, z in string.gmatch(text or "", "([%-%d%.]+),([%-%d%.]+),([%-%d%.]+)") do
+		table.insert(pts, Vector3.new(tonumber(x), tonumber(y), tonumber(z)))
+	end
+	if #pts > 0 then
+		Wayfinder.setPoints("debug", pts, { label = "검사" })
+	else
+		Wayfinder.clear("debug")
+	end
+end)
+
 local elapsed = 0
 RunService.Heartbeat:Connect(function(dt)
 	elapsed += dt
@@ -407,6 +421,24 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 end)
 RunService.RenderStepped:Connect(updateEdge)
+
+-- 자동 이동(client/AutoWalk)이 같은 경로를 따라간다: 지금 경로(GuidePath.build 결과) · 진행 번호 · owner. 경로가 아직 없으면 nil.
+function Wayfinder.route()
+	local r = current()
+	if not r or builtFor ~= r or not built or not Wayfinder.isShowing() then
+		return nil
+	end
+	return built, cursor, r.owner
+end
+
+-- 끼임 대책: 지금 자리에서 경로를 새로 계산(상한 없이 - AutoWalk가 횟수를 센다)
+function Wayfinder.recomputeNow()
+	local r = current()
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if r and root then
+		recompute(r, root.Position - Vector3.new(0, 3, 0))
+	end
+end
 
 -- 검사용: 지금 보이는 안내(빛줄기 조각 · 화살표 수 · 경로 owner · 길찾기 성공 · 그린 구간의 지면 최소 여유 · 파고든 점 수)
 function Wayfinder.debugState()

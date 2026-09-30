@@ -183,8 +183,49 @@ end)
 guideToggle.MouseLeave:Connect(function()
 	guideTip.Visible = false
 end)
+-- QUEUE-ALL1 ★0+ 자동 이동 버튼(목표 · 거리 표시 왼쪽 같은 줄): 누르면 길 안내 경로를 따라 걷는다(client/AutoWalk) · 켜진 동안 "자동 이동 중 · 멈춤" · 멈추면 이유 한 줄(Toast TC)
+local AutoWalk = require(script.Parent.AutoWalk)
+local Toast = require(script.Parent.ui.kit.Toast)
+local autoButton = Instance.new("TextButton")
+autoButton.Name = "AutoWalkButton"
+autoButton.AnchorPoint = Vector2.new(1, 0)
+autoButton.AutomaticSize = Enum.AutomaticSize.X
+autoButton.Size = UDim2.new(0, 0, 0, Theme.isMobile and Theme.touchMin or 28)
+autoButton.BackgroundColor3 = UIColors.panel
+autoButton.BackgroundTransparency = UIColors.panelTransparency
+autoButton.Font = Theme.font
+autoButton.TextSize = Theme.textSize("caption")
+autoButton.TextColor3 = UIColors.textPrimary
+autoButton.Text = "자동 이동"
+autoButton.Visible = false
+autoButton.Parent = hud
+Theme.corner(autoButton, 6)
+local autoPad = Instance.new("UIPadding")
+autoPad.PaddingLeft, autoPad.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
+autoPad.Parent = autoButton
+local autoStroke = Instance.new("UIStroke")
+autoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+autoStroke.Color = UIColors.success
+autoStroke.Thickness = 1.5
+autoStroke.Parent = autoButton
+autoButton.Activated:Connect(function()
+	if AutoWalk.isActive() then
+		AutoWalk.stop("input")
+	else
+		AutoWalk.start()
+	end
+end)
+AutoWalk.changed:Connect(function(on, _, text)
+	autoButton.Text = on and "자동 이동 중 · 멈춤" or "자동 이동"
+	autoStroke.Color = on and UIColors.xp or UIColors.success
+	if not on and text then
+		Toast.push("TC", { text = text, colorName = "textPrimary", seconds = 2.5 })
+	end
+end)
 local function placeObjective()
 	objectiveLabel.Position = UDim2.new(0, regionLabel.AbsolutePosition.X - 6, 0, regionLabel.AbsolutePosition.Y)
+	autoButton.Position = UDim2.new(0, objectiveLabel.AbsolutePosition.X - 6, 0, objectiveLabel.AbsolutePosition.Y)
+	autoButton.Visible = objectiveLabel.Visible and (AutoWalk.isActive() or AutoWalk.canStart())
 end
 regionLabel:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeObjective)
 regionLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeObjective)

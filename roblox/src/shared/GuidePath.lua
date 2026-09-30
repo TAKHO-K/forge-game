@@ -7,7 +7,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
 
-local G = require(ReplicatedStorage.Shared.data.WorldMapData).guide
+local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+local G = WorldMapData.guide
+local SAFE_DROP = require(ReplicatedStorage.Shared.data.MovementConfig).fall.safeHeight
 
 local GuidePath = {}
 
@@ -148,9 +150,33 @@ end
 
 -- 경로 만들기. road = 길 점 목록(목적지가 마지막) · from = 발 위치. 반환 { points, ok, pathfound, joinIndex }
 --   groundNear = from에서 이 거리 안의 점만 지금 지면을 읽는다(나머지는 가까워지면 - 스트리밍 · 계산량)
+-- 경유점 사이 가장 큰 내려감(나무 둘레 밖 - 나무 둘레는 낙하 판정 제외)
+function GuidePath.maxDrop(list)
+	local worst = 0
+	for k = 2, #list do
+		if Vector3.new(list[k - 1].X, 0, list[k - 1].Z).Magnitude > WorldMapData.progress.treeRadius then
+			worst = math.max(worst, list[k - 1].Y - list[k].Y)
+		end
+	end
+	return worst
+end
+
 function GuidePath.build(from, road, params, groundNear)
 	local i = GuidePath.nextIndex(road, from)
 	local legs, pathfound = GuidePath.approach(from, road[i])
+	-- 길찾기가 낙하 피해 높이를 넘는 절벽으로 뛰어내리면 다른 합류점(joinTries - 길 점 번호 차)으로 다시 찾아 절벽 없는 쪽을 쓴다(없으면 처음 것)
+	if GuidePath.maxDrop(legs) > SAFE_DROP then
+		for _, off in ipairs(G.joinTries) do
+			local j = math.clamp(i + off, 1, #road)
+			if j ~= i then
+				local other, found = GuidePath.approach(from, road[j])
+				if found and GuidePath.maxDrop(other) <= SAFE_DROP then
+					legs, pathfound, i = other, found, j
+					break
+				end
+			end
+		end
+	end
 	local raw = {}
 	for _, p in ipairs(legs) do
 		table.insert(raw, p)
@@ -159,7 +185,7 @@ function GuidePath.build(from, road, params, groundNear)
 		table.insert(raw, road[k])
 	end
 	-- sampleStuds 간격으로 나눔(수평 거리 기준)
-	local route = { points = { raw[1] }, ok = { false }, pathfound = pathfound, joinIndex = #legs }
+	local route = { points = { raw[1] }, ok = { false }, pathfound = pathfound, joinIndex = #legs, maxDrop = GuidePath.maxDrop(legs) }
 	for k = 2, #raw do
 		local a, b = raw[k - 1], raw[k]
 		local n = math.max(1, math.ceil((flat(b) - flat(a)).Magnitude / G.sampleStuds))

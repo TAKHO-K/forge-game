@@ -184,4 +184,69 @@ function GuideVerify.run(opts)
 	return { rows = rows, fails = fails }
 end
 
+-- 자동 이동 도착률(봇 = 실제 client/AutoWalk): 시작점마다 순간이동 → 목적지 = 길 합류점 + roadAhead점(약 24 stud 간격) → 복제 Attribute로 클라 안내 · 자동 이동 켜기 →
+--   도착(목적지 arriveStuds + 2 안) · 멈춤(stillSeconds 동안 1 stud 미만 이동) · 시간 초과(경로 길이 ÷ 10 + 40초). 한 명(Studio Play 개발 계정)으로 돈다.
+--   반환 { rows = { zone, kind, arrived, seconds, left } } - 멈춘 이유는 클라 Attribute AutoWalkStop(로컬)이라 클라 쪽에서 따로 모은다.
+function GuideVerify.walkBot(opts)
+	local player = Players:GetPlayers()[1]
+	local character = player and player.Character
+	if not character then
+		return { error = "no character" }
+	end
+	local root = character:WaitForChild("HumanoidRootPart")
+	local rng = Random.new(opts.seed or 20260930)
+	local rp = params()
+	local rows = {}
+	for _, zone in ipairs(WorldMapData.zones) do
+		if not opts.zone or opts.zone == zone.key then
+			local road = RoadNet.guidePoints(zone)
+			local starts = GuideVerify.pickStarts(zone, road, opts.perZone or 5, rng, rp, {})
+			for n, s in ipairs(starts) do
+				if n > (opts.perZone or 5) then
+					break
+				end
+				root.Anchored = true
+				character:PivotTo(CFrame.new(s.pos + Vector3.new(0, 3.5, 0)))
+				task.wait(2.5)
+				root.Anchored = false
+				local i = GuidePath.nextIndex(road, s.pos)
+				local parts, len = {}, 0
+				local last = math.min(#road, i + (opts.roadAhead or 10))
+				for k = 1, last do
+					table.insert(parts, ("%.2f,%.2f,%.2f"):format(road[k].X, road[k].Y, road[k].Z))
+					if k > i then
+						len += (road[k] - road[k - 1]).Magnitude
+					end
+				end
+				len += (road[i] - s.pos).Magnitude
+				local goal = road[last]
+				player:SetAttribute("GuideDebugPoints", table.concat(parts, ";"))
+				task.wait(1.5)
+				player:SetAttribute("AutoWalkDebug", os.clock())
+				local t0, stillAt, stillPos = os.clock(), os.clock(), root.Position
+				local limit = len / 10 + 40
+				local result = "timeout"
+				while os.clock() - t0 < limit do
+					task.wait(0.5)
+					if (Vector3.new(goal.X - root.Position.X, 0, goal.Z - root.Position.Z)).Magnitude <= WorldMapData.guide.arriveStuds + 2 then
+						result = "arrived"
+						break
+					end
+					if (root.Position - stillPos).Magnitude >= 1 then
+						stillPos, stillAt = root.Position, os.clock()
+					elseif os.clock() - stillAt >= (opts.stillSeconds or 12) then
+						result = "stopped"
+						break
+					end
+				end
+				table.insert(rows, { zone = zone.key, kind = s.kind, result = result, seconds = os.clock() - t0, left = (Vector3.new(goal.X - root.Position.X, 0, goal.Z - root.Position.Z)).Magnitude, len = len, start = s.pos })
+				player:SetAttribute("AutoWalkDebug", nil)
+				player:SetAttribute("GuideDebugPoints", "")
+				task.wait(0.5)
+			end
+		end
+	end
+	return { rows = rows }
+end
+
 return GuideVerify

@@ -171,6 +171,12 @@ local function readStored(player)
 	if raw ~= nil then
 		return raw
 	end
+	-- QUEUE-ALL1 ★0 신규 계정 재현(Studio 전용 - studioSuffix가 있을 때만): edit 모드에서 ReplicatedStorage Attribute StudioFreshProfile = true →
+	--   실제 프로필을 시드로 읽지 않고 빈 프로필(처음 들어온 계정)로 시작한다. 쓰기는 위 _manual · _verify 키뿐이라 실제 프로필은 그대로다.
+	if ReplicatedStorage:GetAttribute("StudioFreshProfile") == true then
+		print(("[SaveSystem] %s: StudioFreshProfile - 신규 계정으로 시작(%s)"):format(player.Name, storeKey(player)))
+		return nil
+	end
 	return store:GetAsync(profileKey(player))
 end
 

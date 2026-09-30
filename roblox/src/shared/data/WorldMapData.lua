@@ -384,11 +384,20 @@ return {
 	--   목적지 빛기둥(beacon - 멀리서도 · 지형에 가려도 보이는 표시 + 거리) · 화면 밖이면 가장자리 화살표(edgeMargin px)
 	guide = {
 		beamWidth = 2.5, arrowEvery = 24, arrowsShown = 6, arriveStuds = 20, refreshSeconds = 0.25,
+		joinTries = { 2, -2, 4, -4, 6 }, -- 길찾기 경로에 낙하 피해 절벽이 있으면 이 번호 차의 합류점으로 다시 찾는다(GuidePath.build)
 		sampleStuds = 4, groundLift = 1.5, probeUp = 60, probeDown = 260, groundNear = 160,
 		columnHits = 6, climbStuds = 8, buriedStuds = 10, steepRatio = 1.5, maxHiddenStuds = 12, -- 세로 줄 표면 수 · 예상 높이 위로 이만큼까지만 지면(아치 · 다리 위 제외) · 점 위 이 안에 표면 = 묻힘 · 높이 차 > 수평 × steepRatio = 절벽 선분(꺾은 선으로) · 그래도 묻힌 조각은 안 그림(검사: 연속 숨김 ≤ maxHiddenStuds)
 		drawStuds = 90, drawSegments = 30, offPathStuds = 16, recomputeSeconds = 1, pathMaxStuds = 600,
 		agent = { AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, AgentCanClimb = false, WaypointSpacing = 4 },
 		beacon = { width = 3, height = 220, billboardStuds = 12, color = { 120, 220, 255 } },
+		-- 자동 이동(client/AutoWalk - 길 안내 경로를 Humanoid:MoveTo로 따라감 · 자동 전투 없음). owners = 켤 수 있는 안내(관문 · 견습 사냥터 · 보스 선택 [여기로 안내] · 검사).
+		--   lookAheadStuds 앞 점으로 걷는다 · stuckSeconds 동안 stuckStuds 못 가면 점프 → jumpsBeforeRecompute번 뒤 경로 재계산 → maxRecomputes번 넘으면 멈춤.
+		--   dropAheadStuds 안에 낙하 피해 높이(MovementConfig.fall.safeHeight)를 넘는 내려감이 있으면 그 앞에서 멈춘다(나무 둘레 · 물 제외) · stepJumpStuds 넘게 올라가는 점 앞 = 점프.
+		autoWalk = {
+			owners = { bossGate = true, tutorial = true, bossSelect = true, debug = true },
+			lookAheadStuds = 8, tickSeconds = 0.1, stuckSeconds = 1.5, stuckStuds = 1.5, jumpsBeforeRecompute = 2, maxRecomputes = 3,
+			dropAheadStuds = 10, maxDropFraction = 0.12, fallGraceSeconds = 1.2, stepJumpStuds = 2.5, selfJumpIgnoreSeconds = 0.3, -- 절벽: 낙하 피해가 최대 체력 × maxDropFraction 이하면 계속 걷는다(그 피해는 피격 멈춤에서 뺀다) · 넘으면 멈춤 · 스스로 점프 직후 selfJumpIgnoreSeconds는 JumpRequest(사람 점프 입력)를 무시 · 허용 낙하 뒤 fallGraceSeconds(떨어지는 동안 연장) 체력 감소는 피격 아님
+		},
 		edgeInset = { top = 0.16, bottom = 0.3, left = 0.08, right = 0.1 }, edgeArrowSize = 44, -- 가장자리 화살표가 설 사각형(화면 비율 - 아래 = 스킬 줄 · 체력바 · 왼쪽 = 메뉴 · 오른쪽 = HUD 버튼 피함)
 	},
 
