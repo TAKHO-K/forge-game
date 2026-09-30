@@ -171,8 +171,8 @@ function QuestsPanel.render()
 				end, "Train_" .. t.id)
 		end
 	end
-	trainRows(view.training, Text.get("quests.training"))
-	trainRows(view.abilities, Text.get("quests.abilities"))
+	-- QUEUE-ALL3 Q2: 수련 · 직업 능력 줄은 수련 창(U - panels/Training)으로 옮겼다(중복 삭제)
+	local _ = trainRows
 	label(Text.get("quests.currencies", { shard = tostring(view.currencies and view.currencies.sparkleShard or 0), pass = tostring(view.currencies and view.currencies.passExp or 0) }), 14,
 		Theme.color("textSecondary"))
 end
