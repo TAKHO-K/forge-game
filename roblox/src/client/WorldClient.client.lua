@@ -290,7 +290,7 @@ hubButton.Size = UDim2.new(0, 84, 0, Theme.isMobile and Theme.touchMin or 36) --
 local IconTile = require(script.Parent.ui.IconTile)
 local hubTiled = false
 local function tileHub()
-	if hubTiled or not IconTile.apply(hubButton, "return", "H", { size = 40, keepText = true }) then
+	if hubTiled or not IconTile.apply(hubButton, "return", "B", { size = 40, keepText = true }) then
 		return
 	end
 	hubTiled = true
@@ -343,9 +343,32 @@ RunService.RenderStepped:Connect(function()
 	hubLabel.Text = (hubTiled and text == "귀환") and "" or (hubTiled and text:gsub("^귀환 ", "") or text) -- 타일이면 평소 글씨 없음 · 시간만
 	hubLabel.TextTransparency = dim and 0.45 or 0
 end)
-hubButton.Activated:Connect(function()
-	if request then
+-- QUEUE-ALL2 Q6: 시전 중이면 취소(같은 버튼 · 같은 키) · 아니면 시작
+local function casting()
+	local untilAt = player:GetAttribute("RecallCastUntil")
+	return untilAt ~= nil and untilAt > Workspace:GetServerTimeNow()
+end
+local function pressRecall()
+	if not request then
+		return
+	end
+	if casting() then
+		request:FireServer("cancelRecall", "key")
+	else
 		request:FireServer("hub")
+	end
+end
+hubButton.Activated:Connect(pressRecall)
+-- 이동 입력(WASD · 조이스틱 = Humanoid.MoveDirection) · 점프 · 대시(DashInput이 쏘는 LocalPlayer Attribute DashAt) = 취소
+local lastMoveCancel = 0
+RunService.Heartbeat:Connect(function()
+	if not casting() or os.clock() - lastMoveCancel < 0.5 then
+		return
+	end
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid and (humanoid.MoveDirection.Magnitude > 0.1 or humanoid.Jump) then
+		lastMoveCancel = os.clock()
+		request:FireServer("cancelRecall", "move")
 	end
 end)
 partyButton.Activated:Connect(function()
@@ -355,24 +378,25 @@ partyButton.Activated:Connect(function()
 end)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if not processed and input.KeyCode == require(script.Parent.ui.PanelRegistry).actionKey("hubReturn") and request then
-		request:FireServer("hub") -- PC 단축키 H = 허브 귀환
+		pressRecall() -- PC 단축키 B = 허브 귀환(QUEUE-ALL2: H → B) · 시전 중 다시 = 취소
 	end
 end)
 -- [순위] 버튼 아래로 이어 붙인다(순위 버튼이 파티 버튼 · 칩 스택을 따라 움직인다)
 task.spawn(function()
-	local gui = player.PlayerGui:WaitForChild("LeaderboardToggleGui", 20)
-	local anchor = gui and gui:WaitForChild("LeaderboardToggleButton", 10)
+	-- QUEUE-ALL2 P2 중복 삭제: 오른쪽 [파티] · [순위] 글자 버튼은 없앴다(왼쪽 메뉴 더보기 · P · L) → 귀환은 칩 스택(TopChipsRow) 왼쪽 옆 위에 붙는다
+	local gui = player.PlayerGui:WaitForChild("TopChipsGui", 20)
+	local anchor = gui and gui:WaitForChild("TopChipsRow", 10)
 	if not anchor then
 		return
 	end
 	local function reposition()
-		local pos, size = anchor.AbsolutePosition, anchor.AbsoluteSize
+		local pos = anchor.AbsolutePosition
 		hubButton.AnchorPoint = Vector2.new(1, 0)
-		hubButton.Position = UDim2.new(0, pos.X + size.X, 0, pos.Y + size.Y + 8)
+		hubButton.Position = UDim2.new(0, pos.X - 8, 0, pos.Y)
 		partyButton.AnchorPoint = Vector2.new(1, 0)
-		partyButton.Position = UDim2.new(0, pos.X + size.X, 0, pos.Y + size.Y * 2 + 16)
+		partyButton.Position = UDim2.new(0, pos.X - 8, 0, pos.Y + hubButton.AbsoluteSize.Y + 24)
 		backButton.AnchorPoint = Vector2.new(1, 0)
-		backButton.Position = UDim2.new(0, pos.X + size.X - hubButton.AbsoluteSize.X - 8, 0, pos.Y + size.Y + 8)
+		backButton.Position = UDim2.new(0, pos.X - 16 - hubButton.AbsoluteSize.X, 0, pos.Y)
 	end
 	reposition()
 	anchor:GetPropertyChangedSignal("AbsolutePosition"):Connect(reposition)

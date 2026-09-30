@@ -190,6 +190,16 @@ local function clearCast(player, st, why)
 	end
 end
 
+-- QUEUE-ALL2 Q6: 시전 중 취소(B 다시 · 이동 입력 · 점프 · 대시 - 클라가 보낸다). 쿨 소모 없음. 반환 ok
+function Travel.cancelRecall(player, why)
+	local st = stateOf(player)
+	if not st.recall then
+		return false, "not_casting"
+	end
+	clearCast(player, st, why == "move" and "move" or "key")
+	return true
+end
+
 function Travel.requestHub(player, now)
 	now = now or os.clock()
 	local st = stateOf(player)
@@ -695,6 +705,9 @@ function Travel.start(downPads)
 		local ok, why
 		if kind == "hub" then
 			ok, why = Travel.requestHub(player)
+		elseif kind == "cancelRecall" then -- QUEUE-ALL2 Q6 귀환 취소(targetUserId 자리 = 이유 "key" | "move")
+			Travel.cancelRecall(player, targetUserId)
+			return
 		elseif kind == "back" then
 			ok, why = Travel.requestBack(player)
 		elseif kind == "tutorialZone" then -- QUEUE-ALL1 R1 견습 바로 가기
