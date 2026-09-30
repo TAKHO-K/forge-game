@@ -78,7 +78,10 @@ local function build(owner, character)
 	end
 	for _, part in ipairs(PARTS) do
 		local v = owner:GetAttribute(Data.armorLookAttribute .. part)
-		local zone, grade = type(v) == "string" and v:match("^(tier%d)|(%w+)$")
+		local zone, grade
+		if type(v) == "string" then
+			zone, grade = v:match("^(tier%d)|(%w+)$") -- (`a and f()`는 값 하나로 잘려 grade가 nil이 된다 - 분리)
+		end
 		local modelKey = zone and ("%s_%s_%s"):format(part, zone, Data.armorLookOfGrade[grade] or "normal")
 		local src = modelKey and ArtMeshKit.get("armor/" .. modelKey)
 		local metaPieces = modelKey and Wear.pieces[modelKey]
