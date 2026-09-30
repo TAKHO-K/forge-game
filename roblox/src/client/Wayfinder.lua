@@ -29,6 +29,7 @@ local edgeGui, edgeArrow, edgeLabel = nil, nil, nil
 
 -- 지금 그리는 경로(GuidePath.build 결과) · 어느 경로로 만들었나 · 계산 중 표 · 마지막 계산 시각 · 진행 번호
 local built, builtFor, token, lastCompute, cursor = nil, nil, 0, -math.huge, 1
+local showJumpHint
 
 local function localPart(name, class)
 	local p = Instance.new(class or "Part")
@@ -215,6 +216,41 @@ local function rayParams()
 	return GuidePath.rayParams(list)
 end
 
+-- QUEUE-ALL2 P0-3: 고립 꼭대기(사방 절벽 - 안전 내리막 없음)에서는 가장 낮은 낙하 지점에 "여기서 뛰어내려요" 말풍선(접속당 1회 · 짧게) - 고장처럼 보이지 않게
+local jumpHintShown = false
+function showJumpHint(route)
+	local at = not jumpHintShown and route.safeGrid == "relaxed" and GuidePath.worstDropPoint(route)
+	if not at then
+		return
+	end
+	jumpHintShown = true
+	ensureParts()
+	local anchor = localPart("GuideJumpHint")
+	anchor.Size = Vector3.new(0.2, 0.2, 0.2)
+	anchor.CFrame = CFrame.new(at + Vector3.new(0, 4, 0))
+	local bb = Instance.new("BillboardGui")
+	bb.AlwaysOnTop = true
+	bb.Size = UDim2.fromOffset(190, 36)
+	bb.LightInfluence = 0
+	bb.Adornee = anchor
+	bb.Parent = anchor
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundColor3 = Color3.fromRGB(20, 30, 40)
+	text.BackgroundTransparency = 0.25
+	text.Font = Enum.Font.GothamBold
+	text.TextSize = 16
+	text.TextColor3 = Color3.fromRGB(255, 245, 200)
+	text.Text = require(ReplicatedStorage.Shared.Text).get("guide.jumpHere")
+	text.Parent = bb
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = text
+	task.delay(G.jumpHintSeconds or 5, function()
+		anchor:Destroy()
+	end)
+end
+
 local function recompute(r, feet)
 	token += 1
 	local mine = token
@@ -224,6 +260,7 @@ local function recompute(r, feet)
 		local route = GuidePath.build(feet, r.points, rayParams(), G.groundNear)
 		if mine == token then
 			built, cursor = route, 1
+			showJumpHint(route)
 		end
 	end)
 end

@@ -224,6 +224,7 @@ return {
 		["guide.enhance"] = "무기를 한 번 강화해 보세요",
 		["guide.gem"] = "무기에 보석을 장착해 보세요",
 		["guide.ult"] = "궁극기가 가득 찼어요! T를 눌러 써 보세요",
+		["guide.jumpHere"] = "여기서 뛰어내려요",
 		["guide.boss"] = "스테이지 5의 첫 보스에 도전하세요",
 		["guide.done"] = "첫 걸음 완료! 이제 퀘스트 창(J)의 메인 퀘스트를 따라가세요",
 		["attendance.title"] = "7일 출석 ({count}/7일)",

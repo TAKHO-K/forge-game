@@ -318,6 +318,18 @@ function GuidePath.dropCount(route)
 	return n, worst
 end
 
+-- QUEUE-ALL2 P0-3: 가장 큰 낙하의 윗점(고립 꼭대기 = 안전 내리막 없음 → "여기서 뛰어내려요" 말풍선 자리). 낙하 피해 내려감이 없으면 nil
+function GuidePath.worstDropPoint(route)
+	local best, worst = nil, SAFE_DROP
+	for k = 2, #route.points do
+		local a, b = route.points[k - 1], route.points[k]
+		if route.ok[k - 1] and route.ok[k] and a.Y - b.Y > worst and Vector3.new(a.X, 0, a.Z).Magnitude > WorldMapData.progress.treeRadius then
+			best, worst = a, a.Y - b.Y
+		end
+	end
+	return best
+end
+
 local function finish(from, road, params, groundNear, legs, pathfound, i)
 	local raw = {}
 	for _, p in ipairs(legs) do
