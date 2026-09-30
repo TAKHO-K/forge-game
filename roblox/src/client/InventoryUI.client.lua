@@ -31,6 +31,7 @@ local BulkSell = require(script.Parent.panels.Inventory.BulkSell)
 local DetailSheet = require(script.Parent.panels.Inventory.DetailSheet)
 local GearTab = require(script.Parent.panels.Inventory.GearTab)
 local GemTab = require(script.Parent.panels.Inventory.GemTab)
+local CodexTab = require(script.Parent.panels.Inventory.CodexTab)
 local Shell = require(script.Parent.panels.Inventory.Shell)
 local Store = require(script.Parent.panels.Inventory.Store)
 local ItemActions = require(script.Parent.panels.Inventory.ItemActions)
@@ -50,6 +51,12 @@ GearTab.create(S, R)
 BagTab.create(S, R)
 DetailSheet.create(S, R)
 BulkSell.create(S, R)
+CodexTab.create(S, R) -- A2-N4 §4-2 세트 도감(SetData.codex 스위치 뒤)
+R.codexEnabled = CodexTab.enabled
+R.codexTabName = require(ReplicatedStorage.Shared.Text).get("codex.tab")
+workspace:GetAttributeChangedSignal(require(ReplicatedStorage.Shared.data.SetData).codex.attribute):Connect(function()
+	R.applyLayout()
+end)
 
 -- ═══ 보석 탭(S20b: panels/Inventory/GemTab.lua로 옮김 - 23-4 · 26-3 주석은 그쪽에 있다) ═══
 local gemTab = GemTab.create({
@@ -154,6 +161,9 @@ local function onStateChanged(state)
 		S.rebuildGearSlots()
 		S.rebuildGrid()
 		S.refreshStats()
+		if R.codexFrame and R.codexFrame.Visible then
+			S.rebuildCodex()
+		end
 	end
 end
 

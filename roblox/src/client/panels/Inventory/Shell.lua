@@ -428,6 +428,13 @@ function R.applyLayout()
 	else
 		tabPanels = { ["장비"] = { R.gearFrame, R.bagFrame }, ["보석"] = { R.gemFrame } }
 	end
+	if R.codexFrame and R.codexEnabled and R.codexEnabled() then -- A2-N4 §4-2 세트 도감(스위치 뒤)
+		tabPanels[R.codexTabName] = { R.codexFrame }
+		L.tabNames = table.clone(L.tabNames)
+		table.insert(L.tabNames, R.codexTabName)
+	elseif R.codexFrame then
+		R.codexFrame.Visible = false
+	end
 	rebuildTabs(L)
 	for _, fn in ipairs(R.layouts) do
 		fn(L)

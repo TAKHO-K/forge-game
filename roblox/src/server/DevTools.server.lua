@@ -1274,6 +1274,10 @@ local function handleCommand(player, args)
 		elseif args[2] == "equip" and args[3] then
 			ensureBackup(player)
 			PlayerProfile.debugStampEquipmentSet(player, args[3])
+		elseif args[2] == "codex" and (args[3] == "on" or args[3] == "off") then -- A2-N4 §4-2 세트 도감 탭(Workspace SetCodexV1)
+			workspace:SetAttribute(SetData.codex.attribute, args[3] == "on")
+		elseif args[2] == "unique" and (args[3] == "on" or args[3] == "off") then -- A2-N4 §4-1 구역 고유 3부위(이번 서버 동안)
+			SetData.uniqueThreePiece = args[3] == "on"
 		end
 		local eq = PlayerProfile.debugEquipment(player) or {}
 		local zone, count, scale = SetBonus.state(eq)

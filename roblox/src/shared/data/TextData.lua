@@ -3,6 +3,11 @@
 -- G1-1부터 새로 쓰거나 고친 문장만 여기 있다. 옛 문장은 L(번역) 단계에서 옮긴다.
 return {
 	ko = {
+		-- A2-N4 §4-2 세트 도감(장비창 탭 - SetData.codex 스위치 뒤)
+		["codex.tab"] = "도감",
+		["codex.summary"] = "완성 세트 {done} / {total} · 모은 조각 {pieces} / {allPieces}",
+		["codex.reward"] = "구역 세트를 모두 완성하면 칭호 · 치장 보상(준비 중)",
+
 		-- ? 도움말 2단(HelpTooltip)
 		["help.more"] = "눌러서 자세히 ▼",
 		["help.less"] = "접기 ▲",
