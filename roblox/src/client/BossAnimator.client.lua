@@ -112,6 +112,16 @@ local function readState(e, now)
 	st.swingAt, st.swingN = m:GetAttribute("BossSwingAt"), m:GetAttribute("BossSwingN")
 	st.hopAt, st.hopSeconds = m:GetAttribute("BossHopAt"), m:GetAttribute("BossHopSeconds")
 	st.inCombat = m:GetAttribute("BossEncounterId") ~= nil -- BR1-4c c-10: 보스전 중 기본 자세 = 전투 준비
+	-- A2-M1 리뷰 2: 보스전 중 머리 위 이름표를 숨긴다(이름 · 체력이 상단 보스 체력바와 겹쳐 두 번 나옴 · 스트리밍으로 늦게 오면 그때 찾는다)
+	local plate = st.nameplate
+	if not (plate and plate.Parent) and now - (st.plateSearchAt or -1) > 0.5 then
+		st.plateSearchAt = now
+		plate = m:FindFirstChild("NameplateGui", true)
+		st.nameplate = plate
+	end
+	if plate and plate.Enabled == st.inCombat then
+		plate.Enabled = not st.inCombat
+	end
 	-- A2-M1 등장(서버 BossEncounter.startIntro가 적는다 - 판정 무관)
 	local introAt, introUntil = m:GetAttribute("BossIntroAt"), m:GetAttribute("BossIntroUntil")
 	st.introAt = introAt

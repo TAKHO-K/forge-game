@@ -60,8 +60,10 @@ local function ground(e, at, size, shakeW)
 		local a = i / 12 * math.pi * 2
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 		BossFx.spawn({ shape = "block", position = p + dir * 1.2 * S + Vector3.new(0, 0.1, 0), velocity = dir * 7 * S, size0 = Vector3.new(0.5 * S, 0.15, 0.25 * S), size1 = Vector3.new(1.2 * S, 0.1, 0.1 * S),
-			rotation = CFrame.lookAt(Vector3.zero, dir).Rotation, color = c.accent, transparency0 = 0.15, transparency1 = 1, life = 0.35, material = Enum.Material.Neon })
+			rotation = CFrame.lookAt(Vector3.zero, dir).Rotation, color = c.accent, transparency0 = 0.15, transparency1 = 1, life = 0.45, material = Enum.Material.Neon })
 	end
+	-- A2-M1 2차 리뷰 2: 접촉 순간 번쩍임(0.12초 · 반구 - 타격 프레임이 한눈에 읽히게)
+	BossFx.spawn({ shape = "ball", position = p, size0 = Vector3.one * 1.2 * S, size1 = Vector3.one * 2.6 * S, color = c.accent:Lerp(WHITE, 0.6), transparency0 = 0.2, transparency1 = 1, life = 0.12, material = Enum.Material.Neon })
 	for i = 1, 7 do
 		local a = i / 7 * math.pi * 2 + rnd(-0.3, 0.3)
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
@@ -69,7 +71,7 @@ local function ground(e, at, size, shakeW)
 	end
 	for _ = 1, 8 do
 		local a = math.random() * math.pi * 2
-		BossFx.chunk(p + Vector3.new(0, 0.3, 0), Vector3.new(math.cos(a) * rnd(6, 12), rnd(12, 20), math.sin(a) * rnd(6, 12)) * math.sqrt(size), rnd(0.25, 0.5) * S * 0.35, c.debris, rnd(0.6, 0.9))
+		BossFx.chunk(p + Vector3.new(0, 0.3, 0), Vector3.new(math.cos(a) * rnd(6, 12), rnd(12, 20), math.sin(a) * rnd(6, 12)) * math.sqrt(size), rnd(0.35, 0.7) * S * 0.35, c.debris, rnd(0.8, 1.2)) -- 리뷰 2: 파편 크게 · 오래
 	end
 	if shakeW and shakeW > 0 then
 		BossFx.shake(p, shakeW)
@@ -141,10 +143,10 @@ function BossBodyFx.impact(e, clipName)
 				local out = Vector3.new(at.X - center.X, 0, at.Z - center.Z)
 				local r = math.max(out.Magnitude, e.S)
 				local a0 = math.atan2(out.Z, out.X)
-				for i = -2, 2 do
-					local a = a0 + i * 0.22
+				for i = -3, 3 do -- 리뷰 2: 먼지 호가 잘 안 보임 → 7개 · 크게 · 보스 색 섞은 물보라
+					local a = a0 + i * 0.2
 					local p = Vector3.new(center.X + math.cos(a) * r, floorY(e) + 0.3, center.Z + math.sin(a) * r)
-					BossFx.puff(p, rnd(0.5, 0.8) * e.S * (spec.size or 1), c.dust, rnd(0.4, 0.6), Vector3.new(-math.sin(a), 0.3, math.cos(a)) * 5)
+					BossFx.puff(p, rnd(0.8, 1.2) * e.S * (spec.size or 1), c.accent:Lerp(c.dust, 0.45), rnd(0.45, 0.65), Vector3.new(-math.sin(a), 0.4, math.cos(a)) * 6)
 				end
 			end
 		end
