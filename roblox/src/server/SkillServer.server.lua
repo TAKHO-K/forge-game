@@ -52,6 +52,7 @@ local function sendResult(player, slot, payload)
 	skillCastResult:FireClient(player, slot, payload)
 	if payload.ok and slot ~= "T" and payload.tickIndex == nil and payload.kind ~= "tick" and payload.kind ~= "ultHit" and payload.kind ~= "flurryTick" then -- Q12 이정표: 스킬 시전(틱 · 적중 · 덫 발동 빼고 - 리뷰) · 궁극기는 T 시전 성공 한 곳(아래)
 		require(script.Parent.QuestService).note(player, "skill", 1)
+		require(script.Parent.QuestService).note(player, "skill:" .. tostring(slot), 1) -- QUEUE-ALL3 Q3 초반 여정(새 스킬 E · R 써 보기)
 	end
 	local sink = debugCapture[player]
 	if sink then

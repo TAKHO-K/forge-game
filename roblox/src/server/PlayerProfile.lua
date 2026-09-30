@@ -2360,6 +2360,8 @@ function PlayerProfile.getQuestFacts(player)
 		gemSocketed = socketed,
 		eggs = #(profile.eggs or {}),
 		rebirth = maxRebirth,
+		level = CharacterLevel.getLevelFromExp(classState.characterExp), -- QUEUE-ALL3 Q3
+		checkpoints = profile.checkpoints and #profile.checkpoints.found or 0, -- QUEUE-ALL3 Q5(v61)
 	}
 end
 

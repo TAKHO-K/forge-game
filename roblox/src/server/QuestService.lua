@@ -58,7 +58,11 @@ function QuestService.view(player)
 		loginReady = state.loginDay ~= state.day,
 		chestReady = chestReady and state.chestDay ~= state.day,
 		chestClaimed = state.chestDay == state.day, -- Play C: 받은 뒤 버튼 글 = 받음
-		main = step and { index = state.main, total = #QuestData.main, id = step.id, name = step.name, unlock = step.unlock, done = Quest.mainDone(step, facts), reward = step.reward } or nil,
+		main = step and (function()
+			local n, need = Quest.mainProgress(step, facts, state)
+			return { index = state.main, total = #QuestData.main, id = step.id, name = Quest.nameOf(step), unlock = step.unlock, done = Quest.mainDone(step, facts, state), reward = step.reward,
+				n = n, target = need, guide = step.guide } -- QUEUE-ALL3 Q3: 진행 · [길 안내] 목적지
+		end)() or nil,
 		currencies = state.currencies,
 		guide = state.guide and QuestData.ftue[state.guide] and { index = state.guide, total = #QuestData.ftue, id = QuestData.ftue[state.guide].id, text = QuestData.ftue[state.guide].text, card = QuestData.ftue[state.guide].card } or nil, -- Q12
 		attendance = (function() -- Q12 · 리뷰: 7칸 다 받으면 창에서 숨김
@@ -160,6 +164,14 @@ function QuestService.grant(player, reward)
 		state.currencies.rebirthTicket = (state.currencies.rebirthTicket or 0) + reward.rebirthTicket
 		table.insert(parts, ("환생 무료권 %d"):format(reward.rebirthTicket))
 	end
+	if reward.gemDust then -- QUEUE-ALL3 Q3: 보석 첫 장착 = 보석 가루(기존 재화)
+		PlayerProfile.addGemDust(player, reward.gemDust)
+		table.insert(parts, ("보석 가루 %d"):format(reward.gemDust))
+	end
+	if reward.protectDrop then -- QUEUE-ALL3 Q3: 하락 구간 앞 = 하락 방지권(기존 재화)
+		PlayerProfile.addProtectionTicket(player, "drop", reward.protectDrop)
+		table.insert(parts, ("하락 방지권 %d"):format(reward.protectDrop))
+	end
 	if state and reward.passExp then
 		state.currencies.passExp = (state.currencies.passExp or 0) + reward.passExp
 		table.insert(parts, ("패스 경험치 %d"):format(reward.passExp))
@@ -169,9 +181,11 @@ end
 
 -- 서버 이벤트 → 진행
 local usedEvents = {} -- 리뷰: 일간 · 주간 · 이정표 어디에도 없는 이벤트는 바로 돌아간다(스킬 · 줍기는 자주 온다)
-for _, list in ipairs({ QuestData.dailyPool, QuestData.weekly, QuestData.ftue }) do
+for _, list in ipairs({ QuestData.dailyPool, QuestData.weekly, QuestData.ftue, QuestData.main }) do
 	for _, q in ipairs(list) do
-		usedEvents[q.event] = true
+		if q.event then
+			usedEvents[q.event] = true
+		end
 	end
 end
 
@@ -180,8 +194,9 @@ function QuestService.note(player, event, amount)
 	if not state or not usedEvents[event] then
 		return
 	end
-	if not state.guide and (event == "skill" or event == "ult" or event == "pickup" or event == "equip") then
-		return -- 이정표를 마쳤으면 이 넷은 일간 · 주간에 없다(위 표) - dailyFor 셔플을 매번 돌지 않게
+	local mainStep = QuestData.main[state.main]
+	if not state.guide and (event == "skill" or event == "ult" or event == "pickup" or event == "equip") and not (mainStep and mainStep.event == event) then
+		return -- 이정표를 마쳤으면 이 넷은 일간 · 주간에 없다(위 표) - dailyFor 셔플을 매번 돌지 않게(메인 단계가 세는 이벤트면 센다)
 	end
 	local reached, advanced = Quest.note(state, event, amount or 1, os.time())
 	if #reached > 0 then
@@ -254,6 +269,40 @@ function QuestService.train(player, kind, id)
 	return ok, levelOrWhy
 end
 
+-- QUEUE-ALL3 Q3 탐험 단계: 2초마다 위치 → "zone:<구역>"(구역 원 안) · "ground"(사냥 지대 원 안 - 곳마다 접속 동안 1번) · "lookout"(큰 나무 전망대 높이). 판정 = 서버(클라 보고 없음)
+local visitedGrounds = {}
+local function scanPlaces()
+	local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
+	local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+	local deck = WorldMapData.hub.tree.course and WorldMapData.hub.tree.course.deck
+	for _, player in ipairs(Players:GetPlayers()) do
+		local state = PlayerProfile.getQuestState(player)
+		local step = state and QuestData.main[state.main]
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if step and step.cond == "event" and root then
+			local pos = root.Position
+			if step.event:sub(1, 5) == "zone:" then
+				local zone = WorldMapLayout.zoneAt(pos)
+				if zone and "zone:" .. zone.key == step.event then
+					QuestService.note(player, step.event, 1)
+				end
+			elseif step.event == "ground" then
+				local zone = WorldMapLayout.zoneAt(pos)
+				for _, g in ipairs(zone and WorldMapLayout.grounds(zone) or {}) do
+					local key = zone.key .. g.index
+					visitedGrounds[player] = visitedGrounds[player] or {}
+					if not visitedGrounds[player][key] and Vector3.new(pos.X - g.center.X, 0, pos.Z - g.center.Z).Magnitude <= g.radius then
+						visitedGrounds[player][key] = true
+						QuestService.note(player, "ground", 1)
+					end
+				end
+			elseif step.event == "lookout" and deck and pos.Y >= WorldMapData.floorTopY + deck.y - 12 and Vector3.new(pos.X, 0, pos.Z).Magnitude <= 120 then
+				QuestService.note(player, "lookout", 1)
+			end
+		end
+	end
+end
+
 function QuestService.onLoaded(player)
 	local state = PlayerProfile.getQuestState(player)
 	if state then
@@ -291,6 +340,16 @@ function QuestService.start()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		lastRequest[player] = nil
+		visitedGrounds[player] = nil
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(2)
+			local ok, err = pcall(scanPlaces)
+			if not ok then
+				warn("[Q3] 탐험 단계 판정 오류: " .. tostring(err))
+			end
+		end
 	end)
 end
 

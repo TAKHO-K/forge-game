@@ -36,7 +36,7 @@ end
 
 function Quest.newState(now)
 	return { day = Quest.dayOf(now), daily = {}, week = Quest.weekOf(now), weekly = {}, loginDay = -1, chestDay = -1, main = 1, currencies = { sparkleShard = 0, passExp = 0 },
-		guide = 1, attendance = { count = 0, lastDay = -1, claimed = {} } } -- Q12(v53): 첫 5분 이정표 · 7일 출석(새 계정만 - 옛 계정은 이관에서 nil)
+		guide = 1, attendance = { count = 0, lastDay = -1, claimed = {} }, mainN = 0 } -- QUEUE-ALL3 Q3(v60): mainN = 지금 메인 단계(cond event)에 들어선 뒤 센 수 -- Q12(v53): 첫 5분 이정표 · 7일 출석(새 계정만 - 옛 계정은 이관에서 nil)
 end
 
 -- 날짜 · 주가 바뀌었으면 진행을 비운다(되돌리기 없음 - 받은 보상은 이미 들어갔다). 반환 = 바뀌었는가
@@ -79,6 +79,15 @@ function Quest.note(state, event, amount, now)
 	end
 	bump(Quest.dailyFor(state.day), state.daily)
 	bump(QuestData.weekly, state.weekly)
+	-- QUEUE-ALL3 Q3: 지금 메인 단계가 이 이벤트를 세면 mainN(목표에서 멈춤)
+	local mainStep = QuestData.main[state.main]
+	if mainStep and mainStep.cond == "event" and mainStep.event == event then
+		local before = state.mainN or 0
+		state.mainN = math.min(mainStep.target, before + (amount or 1))
+		if before < mainStep.target and state.mainN >= mainStep.target then
+			table.insert(reached, mainStep.id)
+		end
+	end
 	local guideStep = state.guide and QuestData.ftue[state.guide] -- Q12 이정표: 지금 단계의 이벤트면 다음 단계로
 	local advanced = nil
 	if guideStep and guideStep.event == event then
@@ -139,10 +148,11 @@ function Quest.claim(state, kind, id, now, facts)
 		if not step then
 			return nil, "finished"
 		end
-		if not Quest.mainDone(step, facts) then
+		if not Quest.mainDone(step, facts, state) then
 			return nil, "not_done"
 		end
 		state.main += 1
+		state.mainN = 0 -- 다음 단계는 새로 센다
 		return step.reward
 	elseif kind == "attendance" then -- Q12: id = 날짜 칸 번호(문자열) · 센 날까지만 · 한 번씩
 		local att = state.attendance
@@ -163,10 +173,26 @@ function Quest.claim(state, kind, id, now, facts)
 	return nil, "unknown"
 end
 
--- 메인 단계 조건(facts = { tutorialDone, bestBossCleared, weaponLevel, gemSocketed, eggs, rebirth } - 서버가 프로필에서 채운다)
-function Quest.mainDone(step, facts)
+-- 메인 단계 진행(표시 · 판정 공용): 반환 n, 목표. state = 퀘스트 상태(cond event의 mainN)
+function Quest.mainProgress(step, facts, state)
 	facts = facts or {}
-	if step.cond == "tutorial" then
+	local need = step.target or step.value or 1
+	if step.cond == "event" then
+		return math.min(state and state.mainN or 0, need), need
+	elseif step.cond == "tutorial" then
+		return facts.tutorialDone and 1 or 0, 1
+	end
+	local key = ({ bossCleared = "bestBossCleared", weaponLevel = "weaponLevel", gemSocketed = "gemSocketed", eggs = "eggs", rebirth = "rebirth", level = "level", checkpoints = "checkpoints" })[step.cond]
+	return math.min(key and facts[key] or 0, need), need
+end
+
+-- 메인 단계 조건(facts = { tutorialDone, bestBossCleared, weaponLevel, gemSocketed, eggs, rebirth, level, checkpoints } - 서버가 프로필에서 채운다 · state = event 단계의 mainN)
+function Quest.mainDone(step, facts, state)
+	facts = facts or {}
+	if step.cond == "event" or step.cond == "level" or step.cond == "checkpoints" then -- QUEUE-ALL3 Q3
+		local n, need = Quest.mainProgress(step, facts, state)
+		return n >= need
+	elseif step.cond == "tutorial" then
 		return facts.tutorialDone == true
 	elseif step.cond == "bossCleared" then
 		return (facts.bestBossCleared or 0) >= step.value
@@ -185,6 +211,19 @@ end
 -- 표시용 문장("몬스터 150마리 처치")
 function Quest.nameOf(q)
 	return (q.name:gsub("{n}", tostring(q.target or q.value or "")))
+end
+
+-- QUEUE-ALL3 Q3 v60 이관: 옛 메인 번호(QuestData.legacyMainIds 순) → 새 번호(같은 id · 없으면 그다음 옛 단계의 id) · 다 끝났으면 #main + 1
+function Quest.migrateMainIndex(oldIndex)
+	local legacy = QuestData.legacyMainIds
+	for k = oldIndex, #legacy do
+		for i, step in ipairs(QuestData.main) do
+			if step.id == legacy[k] then
+				return i
+			end
+		end
+	end
+	return #QuestData.main + 1
 end
 
 return Quest

@@ -212,6 +212,7 @@ local function claimCell(player, r, id)
 		return false
 	end
 	r.claimed[id] = true
+	require(script.Parent.QuestService).note(player, "codexClaim", 1) -- QUEUE-ALL3 Q3 초반 여정(도감 칸 받기)
 	return summary
 end
 

@@ -1310,6 +1310,16 @@ local function migrate(data)
 		data.version = 59
 	end
 
+	if data.version < 60 then
+		-- QUEUE-ALL3 Q3: 초반 여정(메인 사슬 10 → 32단계) - quests.main = 옛 번호 → 같은 id의 새 번호(Quest.migrateMainIndex · 옛 단계가 없어졌으면 그다음 옛 단계) · mainN = 0(지금 단계 이벤트 수)
+		if type(data.quests) == "table" then
+			local oldMain = tonumber(data.quests.main) or 1
+			data.quests.main = require(ReplicatedStorage.Shared.Quest).migrateMainIndex(oldMain)
+			data.quests.mainN = 0
+		end
+		data.version = 60
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data

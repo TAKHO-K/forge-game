@@ -268,6 +268,10 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	local QuestService = require(script.Parent.QuestService)
 	if isBoss then
 		QuestService.note(recipient, "bossClear", 1)
+		local party = require(script.Parent.PartyState).getParty(recipient)
+		if party and #party.members >= 2 then
+			QuestService.note(recipient, "partyBoss", 1) -- QUEUE-ALL3 Q3 초반 여정(파티로 보스)
+		end
 		require(script.Parent.CommunityGoalService).note(recipient, "bossKill") -- QUEUE-ALL1 P3 §4 합동 목표
 		if monsterData.isWeekly then -- QUEUE-ALL1 P4 §3 주간 도전: 처치 시간 기록 · 참여 보상
 			local weeklyEncounter = BossEncounter.getEncounterByModel(target)
@@ -279,6 +283,9 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		end
 	else
 		QuestService.note(recipient, "kill", 1)
+		if workspace:GetAttribute("RiftActive") == true then
+			QuestService.note(recipient, "riftKill", 1) -- QUEUE-ALL3 Q3 초반 여정(균열 시간 참여)
+		end
 		if isSparkle then
 			QuestService.note(recipient, "sparkle", 1)
 		end
