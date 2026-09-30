@@ -737,7 +737,7 @@ function BossSkillMath.scaleSkills(skills, scale)
 	for id, skill in pairs(skills) do
 		local copy = table.clone(skill)
 		for _, field in ipairs(SCALED_FIELDS) do
-			if copy[field] then
+			if copy[field] and not copy.fixedRadius then -- QUEUE-ALL1 C-3: fixedRadius = 바닥 구역과 같은 크기(원 안 강공격 = 안쪽 원 12 - 배율로 15.9까지 커져 바닥 원과 어긋났다)
 				copy[field] *= scale
 			end
 		end

@@ -111,7 +111,8 @@ local function readState(e, now)
 		st.env, st.envEndAt = nil, nil
 	end
 	st.swingAt, st.swingN = m:GetAttribute("BossSwingAt"), m:GetAttribute("BossSwingN")
-	st.prepAt = Workspace:GetAttribute("ArtStyleV1") and m:GetAttribute("BossSwingPrepAt") or nil -- A2-N3 결정 ②: 평타 예비 동작(예정 타격 서버 시각 · ArtStyleV1 뒤)
+	st.prepAt = m:GetAttribute("BossSwingPrepAt") -- A2-N3 결정 ②: 평타 예비 동작(예정 타격 서버 시각) · QUEUE-ALL1 C-1: 전투 가독성 = 아트 끔에서도(스위치 예외)
+	st.nextN = m:GetAttribute("BossSwingNextN") -- QUEUE-ALL1 C-1: 다음 휘두를 쪽(서버가 불규칙으로 정함)
 	st.hopAt, st.hopSeconds = m:GetAttribute("BossHopAt"), m:GetAttribute("BossHopSeconds")
 	st.inCombat = m:GetAttribute("BossEncounterId") ~= nil -- BR1-4c c-10: 보스전 중 기본 자세 = 전투 준비
 	-- A2-M1 리뷰 2: 보스전 중 머리 위 이름표를 숨긴다(이름 · 체력이 상단 보스 체력바와 겹쳐 두 번 나옴 · 스트리밍으로 늦게 오면 그때 찾는다)
@@ -525,6 +526,10 @@ local function updateEntry(e, now, dt, camPos)
 				e.visYaw = yawT
 			end
 		end
+	end
+	-- QUEUE-ALL1 01 C-2: 꼬리로 대상 쪽을 치는 스킬(BossMotionData.tailToTarget - 심해 군주 꼬리 반원) = 보이는 몸을 대상 반대로 돌려 꼬리가 대상 쪽으로 휘두른다(판정 · 서버 루트 그대로)
+	if st0.act and BossMotionData.tailToTarget and BossMotionData.tailToTarget[st0.act] then
+		yawT += math.pi
 	end
 	local dy = (yawT - e.visYaw + math.pi) % (2 * math.pi) - math.pi
 	local prevYaw = e.visYaw

@@ -399,7 +399,7 @@ local INNER_CIRCLE = { radiusStuds = 12 }
 local function innerSmash(label)
 	-- 원 안 강공격: 보스 중심 원(= 구역 원) · 전조 1.3초(무기를 머리 위로 - 중간 무게) · ×2.4(34%) · 원 안에 누가 있을 때만. 피하기 = 원 밖으로 12 − 8(근접 자리) + 1 = 5 → 0.89초 ≤ 1.3.
 	return {
-		primitive = "circleBoss", bubble = "heavy", motion = "fist",
+		primitive = "circleBoss", bubble = "heavy", motion = "fist", fixedRadius = true, -- QUEUE-ALL1 C-3: 반경 = 바닥의 안쪽 원 그대로(스테이지 배율 제외)
 		cooldownSeconds = 10, priority = P.normal,
 		conditions = { { type = "targetWithin", studs = INNER_CIRCLE.radiusStuds } },
 		telegraphSeconds = 1.3, radiusStuds = INNER_CIRCLE.radiusStuds,
@@ -1447,6 +1447,8 @@ return {
 	-- A2-N3 결정 ②(사용자 승인): 보스 평타 예비 동작 - 쿨이 끝나기 이만큼 전에 서버가 "곧 친다"를 알린다(Attribute BossSwingPrepAt = 예정 타격 서버 시각 · 대상 조건 = 평타와 같은 식).
 	--   타격 시각 · 공격 간격 · 피해 · 판정은 그대로(타격 순간 대상 재판정 - 그 사이 빠지면 헛동작). 클라 BossMotion이 이 시간 동안 팔을 들어 올린다(BossMotionData basicPrep).
 	basicPrepSeconds = 0.25,
+	-- QUEUE-ALL1 01 C-1: 평타 좌우 변형 불규칙(같은 쪽 연속 최대) · 궤적 부채꼴 폭(안쪽 원 없는 보스 - 대상 쪽) · 피해 = 휘두름 시작 + 접촉 시각(화면 접촉 실측 0.07 - STATUS ⑥)
+	basicSwingMaxRepeat = 2, basicSweepWidthDeg = 120, basicContactSeconds = 0.07,
 	bodyScaleLive = BODY_SCALE_LIVE, -- A2-M1(검증 · 보고용)
 	-- G1-4(D0 결정 5 · 사용자 확정): 보스를 잡아도 보스맵에 남는다 - [다음 스테이지] · [다시 도전](파티 = 재투표 · 보스 재생성) · [마을]을 고른다.
 	-- lingerSeconds 동안 아무것도 안 고르면 다음 스테이지로 자동 이동(잠수 대비 - 슬롯 12개 · 서버 16명이라 무제한 잔류는 안 된다).

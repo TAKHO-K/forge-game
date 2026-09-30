@@ -753,4 +753,6 @@ D.footsteps = { dustWeight = 0.9, shakeWeight = 1.25, nearStuds = 38, shakeScale
 -- 무게(4b-2 무게감): 보스 rig.weight × 이 값으로 히트스톱 · 몸 눌림을 키운다
 D.weightScale = { hitstop = 1, squash = 1 }
 
+-- QUEUE-ALL1 01 C-2(STATUS ⑥ "꼬리가 대상 쪽으로 최대 0.9만 나옴"): 꼬리로 대상 쪽 판정을 치는 스킬 id = 그 동작 동안 보이는 몸을 180° 돌린다(client/BossAnimator)
+D.tailToTarget = { tailSweep = true }
 return D

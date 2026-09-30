@@ -72,7 +72,7 @@ function BossBR1View.swingTrail(center, angleDeg, widthDeg, inner, outer, color,
 	if outer - inner < 0.2 then
 		return
 	end
-	local n = math.clamp(math.ceil(widthDeg / T.stepDeg), 2, T.maxSlices)
+	local n = math.clamp(math.ceil(math.abs(widthDeg) / T.stepDeg), 2, T.maxSlices) -- 음수 폭 = 반대 방향으로 쓸기(QUEUE-ALL1 평타 좌우)
 	local from = angleDeg - widthDeg / 2
 	local mid = (inner + outer) / 2
 	for i = 0, n do

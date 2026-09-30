@@ -374,6 +374,34 @@ local prepSentFor = {} -- A2-N3: [보스 모델] = 예비 신호를 보낸 주�
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 -- A2-N4 §2-1 평타 줄(BossData.mechanics.lanes): [보스 모델] = 예정 타격 os.clock(예비 신호를 보낸 뒤) - 패턴이 시작되면 지운다(tryBossAttack)
 local pendingSwing = {}
+-- QUEUE-ALL1 01 C-1 평타 변형: 좌 → 우 · 우 → 좌 불규칙(같은 쪽 연속 BossData.basicSwingMaxRepeat번까지) - 모션 칸 = BossSwingN 홀짝(클라 BossMotion) · 피해 · 간격 불변.
+--   예비 때 다음 번호를 정해 BossSwingNextN으로 알린다(예비 자세가 같은 팔을 든다) · 휘두를 때 그 번호를 쓴다.
+local swingSide = {} -- [보스 모델] = { next = 번호, repeat = 같은 쪽 연속 수 }
+local function planNextSwing(model)
+	local st = swingSide[model]
+	if not st then
+		st = { repeatCount = 1 }
+		swingSide[model] = st
+		model.Destroying:Once(function()
+			swingSide[model] = nil
+		end)
+	end
+	local last = model:GetAttribute("BossSwingN") or 0
+	local same = st.repeatCount < BossData.basicSwingMaxRepeat and math.random() < 0.5
+	st.next = last + (same and 2 or 1)
+	model:SetAttribute("BossSwingNextN", st.next)
+	return st.next
+end
+local function takeSwingN(model)
+	local st = swingSide[model]
+	local last = model:GetAttribute("BossSwingN") or 0
+	local n = (st and st.next) or (last + 1)
+	if st then
+		st.repeatCount = (n - last) % 2 == 0 and st.repeatCount + 1 or 1
+		st.next = nil
+	end
+	return n
+end
 local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot)
 	local now = os.clock()
 	local last = MonsterState.getLastAttackTick(model)
@@ -399,6 +427,7 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 				end
 				prepSentFor[model] = last or 0
 				pendingSwing[model] = due
+				planNextSwing(model)
 				model:SetAttribute("BossSwingPrepAt", workspace:GetServerTimeNow() + (due - now))
 			end
 			return
@@ -418,6 +447,7 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 				end)
 			end
 			prepSentFor[model] = last
+			planNextSwing(model)
 			model:SetAttribute("BossSwingPrepAt", workspace:GetServerTimeNow() + remaining)
 		end
 		return
@@ -442,17 +472,31 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 		return
 	end
 	MonsterState.setLastAttackTick(model, now)
-	-- BR1-4b 모션(판정과 무관): 평타 휘두름 - 클라 BossAnimator가 이 순간을 타격 프레임으로(좌우 번갈아 = 횟수)
+	-- BR1-4b 모션(판정과 무관): 평타 휘두름 - 클라 BossAnimator가 이 순간을 타격 프레임으로(칸 = 번호 홀짝 - QUEUE-ALL1 불규칙)
+	local swingN = takeSwingN(model)
 	model:SetAttribute("BossSwingAt", workspace:GetServerTimeNow())
-	model:SetAttribute("BossSwingN", (model:GetAttribute("BossSwingN") or 0) + 1)
-	for _, v in ipairs(victims) do
-		local far = Reach.horizontalDistance(v.root.Position, monsterPosition) > data.attackRangeStuds
-		local multiplier = (data.basicAttackDamageMultiplier or 1) * (far and (data.attackFarMultiplier or 1) or 1) * (v.scale or 1)
-		applyHitToPlayer(v.player, MonsterState.getAttackFor(model, TutorialState.getMonsterStage(v.player)), nil, multiplier)
-	end
-	if data.innerSafeRadiusStuds then
-		BossPatterns.sendEvent(model, "basicSweep", { center = monsterPosition, inner = data.innerSafeRadiusStuds, outer = data.attackRangeStuds, innerSwing = lanesOn or nil })
-	end
+	model:SetAttribute("BossSwingN", swingN)
+	-- QUEUE-ALL1 01 C-1 · C-2: 휘두름 궤적 = 휘두르는 순간(피해 전)에 6종 모두 - 판정 끝(attackRangeStuds)까지 닿는 쓸기 · 안쪽 원 보스 = 원 밖 띠 한 바퀴 · 나머지 = 대상 쪽 부채꼴
+	local face = targetRoot.Position - monsterPosition
+	BossPatterns.sendEvent(model, "basicSweep", {
+		center = monsterPosition, inner = data.innerSafeRadiusStuds or 0, outer = data.attackRangeStuds, innerSwing = (lanesOn and data.innerSafeRadiusStuds) and true or nil,
+		angleDeg = math.deg(math.atan2(face.Z, face.X)), widthDeg = data.innerSafeRadiusStuds and 360 or BossData.basicSweepWidthDeg, side = swingN % 2 == 0 and "R" or "L",
+	})
+	-- 피해 = 화면 접촉 순간(휘두름 시작 + basicContactSeconds - STATUS ⑩-7 "0.07초 먼저" 정렬) · 양 · 간격 불변
+	task.delay(BossData.basicContactSeconds, function()
+		if not model.Parent then
+			return
+		end
+		for _, v in ipairs(victims) do
+			if typeof(v.player) ~= "Instance" or v.player.Parent then
+				if (PlayerState.getHp(v.player) or 0) > 0 then
+					local far = Reach.horizontalDistance(v.root.Position, monsterPosition) > data.attackRangeStuds
+					local multiplier = (data.basicAttackDamageMultiplier or 1) * (far and (data.attackFarMultiplier or 1) or 1) * (v.scale or 1)
+					applyHitToPlayer(v.player, MonsterState.getAttackFor(model, TutorialState.getMonsterStage(v.player)), nil, multiplier)
+				end
+			end
+		end
+	end)
 end
 
 local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetRoot, dt)

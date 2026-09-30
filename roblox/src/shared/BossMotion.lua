@@ -420,7 +420,7 @@ function BossMotion.evaluate(ctx, st, now)
 		local u = (now - (st.prepAt - lead)) / lead
 		if u > 0 and u < 2 then
 			local w = ease("out", clamp01(u)) * (1 - clamp01((u - 1.2) / 0.4))
-			local lift = P.basicPrep[((st.swingN or 0) + 1) % 2 == 0 and "R" or "L"]
+			local lift = P.basicPrep[(st.nextN or ((st.swingN or 0) + 1)) % 2 == 0 and "R" or "L"] -- QUEUE-ALL1: 서버가 정한 다음 쪽(없으면 번갈아)
 			blend(pose, lift, w, isUpper)
 		end
 	end

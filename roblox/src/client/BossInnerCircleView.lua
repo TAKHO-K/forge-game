@@ -77,10 +77,30 @@ function BossInnerCircleView.sweep(data)
 			floorY, best = entry.floorY, d
 		end
 	end
+	if not floorY then -- QUEUE-ALL1 C-2: 안쪽 원이 없는 보스 = 원 표시가 없다 → 아래로 광선(보스 · 캐릭터 제외)
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Exclude
+		local ex = {}
+		for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+			if p.Character then
+				table.insert(ex, p.Character)
+			end
+		end
+		for _, m in ipairs(game:GetService("CollectionService"):GetTagged("Monster")) do
+			table.insert(ex, m)
+		end
+		rp.FilterDescendantsInstances = ex
+		local hit = workspace:Raycast(data.center + Vector3.new(0, 4, 0), Vector3.new(0, -40, 0), rp)
+		floorY = hit and hit.Position.Y
+	end
 	local base = Vector3.new(data.center.X, floorY or (data.center.Y - 1.5), data.center.Z)
-	BossBR1View.swingTrail(base, math.random() * 360, 360, data.inner, data.outer, DANGER, 0.3)
+	-- QUEUE-ALL1 C-1 · C-2: 휘두르는 순간 그린다(서버가 피해 전에 보냄) · 판정 끝(outer)까지 · 좌 → 우 / 우 → 좌 = 휘두른 팔 쪽(side)
+	local width = data.widthDeg or 360
+	local signed = (data.side == "L") and -width or width
+	local angle = data.widthDeg and data.widthDeg < 360 and data.angleDeg or (data.angleDeg or math.random() * 360)
+	BossBR1View.swingTrail(base, angle, signed, data.inner or 0, data.outer, DANGER, 0.3)
 	if data.innerSwing then
-		BossBR1View.swingTrail(base, math.random() * 360, 360, 0, data.inner, DANGER, 0.6)
+		BossBR1View.swingTrail(base, angle, signed, 0, data.inner, DANGER, 0.6)
 	end
 end
 
