@@ -111,8 +111,8 @@
    "new": false
   },
   "T2_CrystalSpire": {
-   "parts": 1,
-   "tris": 72,
+   "parts": 2,
+   "tris": 154,
    "new": false
   },
   "T3_CoastRock": {
@@ -182,7 +182,7 @@
   },
   "T5_RodPillar": {
    "parts": 3,
-   "tris": 222,
+   "tris": 234,
    "new": true
   },
   "T5_FloatStone": {
