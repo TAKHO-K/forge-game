@@ -81,7 +81,7 @@ local function setText(sourceItem, onItem)
 		table.insert(texts, line.text)
 	end
 	local span = OptionData.rollMax - OptionData.rollMin
-	return ("%s · 굴림 %d%%"):format(table.concat(texts, " · "), math.floor((option.roll - OptionData.rollMin) / span * 100 + 0.5))
+	return ("%s · 품질 %d%%"):format(table.concat(texts, " · "), math.floor((option.roll - OptionData.rollMin) / span * 100 + 0.5))
 end
 
 local function refundText(refund)

@@ -28,9 +28,9 @@ local function rollText(item)
 		return ""
 	end
 	if option.id == "crit" then
-		return (" · 굴림 %.0f%% / %.0f%%"):format(EquipCompare.rollPercent(option.roll), EquipCompare.rollPercent(option.roll2 or option.roll))
+		return (" · 품질 %.0f%% / %.0f%%"):format(EquipCompare.rollPercent(option.roll), EquipCompare.rollPercent(option.roll2 or option.roll))
 	end
-	return (" · 굴림 %.0f%%"):format(EquipCompare.rollPercent(option.roll))
+	return (" · 품질 %.0f%%"):format(EquipCompare.rollPercent(option.roll))
 end
 
 -- "착용 대비" 한 줄(부위 기본 효과 차이). equipped가 없으면 nil.

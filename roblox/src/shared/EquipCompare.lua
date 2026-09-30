@@ -182,7 +182,7 @@ function EquipCompare.lines(slotName, theirItem, mineItem, theirClassId, myClass
 	if t.option and t.option.roll then
 		local tr = EquipCompare.rollPercent(t.option.roll)
 		local mr = m and m.option and m.option.roll and EquipCompare.rollPercent(m.option.roll)
-		table.insert(out, line("굴림 위치", ("%.0f%%"):format(tr), mineOr(mr and ("%.0f%%"):format(mr)), mr and ("%+.0f%%p"):format(tr - mr) or nil, mr and signOf(tr - mr) or nil))
+		table.insert(out, line("품질", ("%.0f%%"):format(tr), mineOr(mr and ("%.0f%%"):format(mr)), mr and ("%+.0f%%p"):format(tr - mr) or nil, mr and signOf(tr - mr) or nil))
 	end
 	return out
 end

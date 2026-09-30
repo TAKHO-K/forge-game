@@ -82,7 +82,7 @@ function P3bVerify.runPure()
 			grade.diff == "+1단계" and grade.sign == 1 and level.diff == "+5" and level.sign == 1 and relNear(EquipCompare.weaponMultiplier(theirs.weapon), expectT)
 				and mult.diff == ("%+.1f%%"):format((expectT / expectM - 1) * 100) and mult.sign == 1 and gems.theirs == "2 / 5칸" and gems.diff == "+1")
 		local glove = EquipCompare.lines("gloves", theirs.equipment.gloves, mine.equipment.gloves, "greatsword", "greatsword", true)
-		local base, option, roll = findLine(glove, "기본 효과"), findLine(glove, "옵션"), findLine(glove, "굴림 위치")
+		local base, option, roll = findLine(glove, "기본 효과"), findLine(glove, "옵션"), findLine(glove, "품질") -- A2-N4: 표기 "굴림 위치" → "품질"
 		local baseDelta = Inherit.baseStat(theirs.equipment.gloves) - Inherit.baseStat(mine.equipment.gloves)
 		r.check(("B2 장갑 비교: 기본 효과 %s vs %s 차이 %s(기대 %+.1f%%p = Inherit.baseStat) · 옵션 %s vs %s 차이 %s · 굴림 %s vs %s"):format(base.theirs, base.mine, base.diff, baseDelta * 100,
 			option.theirs, option.mine, tostring(option.diff), roll.theirs, roll.mine),

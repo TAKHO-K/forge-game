@@ -15,6 +15,7 @@
 | 강화 · 강화석 · 방지권 | Enhance · Enhance Stone · Protection Ticket | 무기 강화 |
 | 보석 · 재련 · 보석 가루 | Gem · Refine · Gem Dust | 무기 보석 칸 |
 | 계승 | Inherit | 장비 옵션 · 레벨 넘기기 |
+| 품질 | Quality | 장비 · 보석 옵션 수치가 그 등급의 무작위 폭(최소 ~ 최대)에서 어디쯤인가(0 ~ 100%). 옛 표기 "굴림" · "굴림 위치"(A2-N4에서 통일 - 확률표의 "서버 굴림" = 추첨 자체는 그대로) |
 | 스킬 변형 | Skill Variant | 장비에 붙는 ±5% 맞교환 옵션(넓게 Wide · 재빠르게 Swift · 묵직하게 Heavy · 멀리 Far) |
 | 수련 · 직업 능력 | Training · Class Ability | 골드로 올리는 계정 · 직업 성장 |
 | 둥지 · 알 · 부화 · 펫 | Nest · Egg · Hatch · Pet | 알 등급 보통 Normal · 좋은 Good · 희귀 Rare |
