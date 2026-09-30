@@ -46,7 +46,8 @@ function DamageNumbers.show(monsterModel, damage, isCrit, isHeal)
 	local stackIndex = activeStacks[monsterModel] or 0
 	activeStacks[monsterModel] = stackIndex + 1
 
-	local scale = isCrit and CRIT_SIZE_SCALE or 1
+	local art = workspace:GetAttribute("ArtStyleV1") == true
+	local scale = (isCrit and CRIT_SIZE_SCALE or 1) * ((art and not isHeal) and 1.2 or 1) -- QUEUE-ALL2 P4 ②: 내 피해 숫자 크게(아트 켬)
 	local finalSize = UDim2.new(3 * scale, 0, 1 * scale, 0)
 
 	local gui = Instance.new("BillboardGui")
@@ -70,6 +71,15 @@ function DamageNumbers.show(monsterModel, damage, isCrit, isHeal)
 	end
 	label.TextScaled = true
 	label.Font = isCrit and Enum.Font.GothamBlack or Enum.Font.GothamMedium
+	if art and isCrit and not isHeal and label.Text ~= "무효" then -- QUEUE-ALL2 P4 ②: 치명 = 모양 · 색 다르게(흰 몸 + 금 외곽선 + 기울기 + "!")
+		label.Text = label.Text .. "!"
+		label.TextColor3 = Color3.fromRGB(255, 250, 235) -- 흰 몸 + 금색 외곽선(주황 · 빨강 = 보스 경고색이라 피함)
+		label.TextStrokeColor3 = Color3.fromRGB(200, 140, 0)
+		label.TextStrokeTransparency = 0
+		label.Rotation = math.random(-6, 6)
+	elseif art and not isHeal then
+		label.TextStrokeTransparency = 0.3
+	end
 	label.Parent = gui
 
 	if isCrit then

@@ -81,7 +81,59 @@ end
 -- holdSeconds(16-7, 3타 강타 전용) - 흰 플래시를 곧바로 되돌리지 않고 그만큼 붙들었다가
 -- 되돌린다. 몬스터는 서버가 매 프레임 위치를 되돌리는 파트라 CFrame으로 "멈췄다"를
 -- 표현할 수 없으니(위 주석), 색 되돌림을 지연시키는 것으로 피격자 쪽 히트스톱을 흉내낸다.
+-- QUEUE-ALL2 P4 ②(09 B-2 "맞은 몹 흰 번쩍임 0.06초 · 작은 뒤로 밀림 - 보이는 것만"): 아트 켬 = 몸 전체 Highlight 흰 채움 0.06초 + 루트 관절 C0를 내 반대쪽으로 0.3 stud 0.1초(전조 포즈 중이면 건너뜀).
+--   판정 · 서버 위치 불변(로컬 C0만 · 끝나면 원래 값). 아트 끔 = 옛 동작 그대로.
+local HIT_FLASH = { hold = 0.06, back = 0.06, fill = 0.25 }
+local PUSH = { studs = 0.3, out = 0.05, back = 0.1 }
+local pushing = setmetatable({}, { __mode = "k" })
+local function artHitFeel(monsterModel)
+	local hl = monsterModel:FindFirstChild("HitFlash")
+	if not hl then
+		hl = Instance.new("Highlight")
+		hl.Name = "HitFlash"
+		hl.FillColor = Color3.new(1, 1, 1)
+		hl.OutlineTransparency = 1
+		hl.DepthMode = Enum.HighlightDepthMode.Occluded
+		hl.FillTransparency = 1
+		hl.Parent = monsterModel
+	end
+	hl.FillTransparency = HIT_FLASH.fill
+	task.delay(HIT_FLASH.hold, function()
+		if hl.Parent then
+			TweenService:Create(hl, TweenInfo.new(HIT_FLASH.back), { FillTransparency = 1 }):Play()
+		end
+	end)
+	if monsterModel:GetAttribute("MobWindup") or pushing[monsterModel] then
+		return -- 전조 포즈 중 = 밀지 않는다(전조 읽기 우선)
+	end
+	local joint = monsterModel:FindFirstChild("RootJoint", true)
+	local root = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not (joint and joint:IsA("Motor6D") and joint.Part0 and root) then
+		return
+	end
+	local away = joint.Part0.Position - root.Position
+	away = Vector3.new(away.X, 0, away.Z)
+	if away.Magnitude < 0.01 then
+		return
+	end
+	local localDir = joint.Part0.CFrame:VectorToObjectSpace(away.Unit * PUSH.studs)
+	local base = joint.C0
+	pushing[monsterModel] = true
+	TweenService:Create(joint, TweenInfo.new(PUSH.out, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { C0 = CFrame.new(localDir) * base }):Play()
+	task.delay(PUSH.out, function()
+		local tw = TweenService:Create(joint, TweenInfo.new(PUSH.back, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { C0 = base })
+		tw.Completed:Connect(function()
+			pushing[monsterModel] = nil
+		end)
+		tw:Play()
+	end)
+end
+
 local function flashMonster(monsterModel, holdSeconds)
+	if ArtV1Fx.isOn() and monsterModel:FindFirstChild("RootJoint", true) then
+		artHitFeel(monsterModel)
+		return
+	end
 	for _, partName in ipairs({ "Body", "Head" }) do
 		local part = monsterModel:FindFirstChild(partName)
 		if part then
