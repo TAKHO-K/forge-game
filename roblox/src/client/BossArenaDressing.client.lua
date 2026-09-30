@@ -78,7 +78,8 @@ local function clear()
 	local c = current
 	current = nil
 	c.folder:Destroy()
-	if c.floor and c.floorWas then
+	-- A2-N4: 서버가 그새 바닥을 다시 칠했으면(같은 슬롯에 다음 보스 테마) 되돌리지 않는다 - 옛 = 이전 보스 색으로 덮어 전갈 모래 바닥이 남색이 됐다
+	if c.floor and c.floorWas and c.floor.Color == c.floorSet.color and c.floor.Material == c.floorSet.material then
 		c.floor.Material, c.floor.Color = c.floorWas.material, c.floorWas.color
 	end
 	local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
@@ -246,6 +247,7 @@ local function dress(boss)
 		current.floorWas = { material = floor.Material, color = floor.Color }
 		floor.Material = FL.material
 		floor.Color = floor.Color:Lerp(colorOf(FL.tint, C), FL.amount)
+		current.floorSet = { material = floor.Material, color = floor.Color }
 	end
 	-- 대기(이 클라만 - 끝나면 되돌림)
 	local A = spec.atmosphere

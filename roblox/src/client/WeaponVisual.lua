@@ -146,6 +146,8 @@ local function overrideModel(classId, pieceName, artModel)
 end
 
 -- 활 시위 두 줄 + 화살(지금 활 · 교체 활 공용 - A2-N4: 교체 활은 시위를 메시에서 빼고 코드가 그린다)
+local noteImpact -- A2-N4: 아래(측정 도우미)에서 정의 · 공격 포즈 함수가 먼저 참조
+
 local function buildBowExtras(folder, model, p)
 	local function stringPart(name)
 		local s = Instance.new("Part")
@@ -1126,7 +1128,7 @@ end
 -- ─────────────────────────── 등록 · 공격 시작 ───────────────────────────
 -- A2-M1 측정 보조(판정 무관): 의도된 타격 · 반응 순간(공격 접촉 + 히트스톱 · 피격 · 착지 · 도약 · 대시 · 기절 · 넘어짐)을 캐릭터 모델 Attribute ClientImpacts("시작,끝;…" 서버 시각)에
 --   적는다(이 클라에만) - client/A2M1Probe가 부드러움 측정에서 뺀다(보스 BossAnimator와 같은 약속).
-local function noteImpact(st, before, after)
+function noteImpact(st, before, after) -- A2-N4: 앞 선언(위 공격 포즈 함수가 먼저 부른다 - 옛 = 첫 접촉 프레임마다 nil 호출 에러)
 	local character = st and st.character
 	if not character or not character.Parent then
 		return

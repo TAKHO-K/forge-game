@@ -105,9 +105,8 @@ BossArenaDressData.bosses = {
 		backdrop = {
 			{ shape = "peak", count = 22, radius = { 188, 205 }, height = { 40, 66 }, color = "stone", fog = 0.15, material = Enum.Material.Slate },
 			{ shape = "spire", count = 18, radius = { 290, 320 }, height = { 110, 170 }, width = 18, color = "stone", fog = 0.5, material = Enum.Material.Basalt },
-			{ shape = "dome", count = 14, radius = { 260, 300 }, height = { 34, 50 }, color = "body", fog = 0.7, material = Enum.Material.SmoothPlastic, lift = 150 },
 		},
-		sky = { clockTime = 18.4 },
+		sky = { clockTime = 17.3 }, -- 해질녘(Play: 18.4는 달밤처럼 어두워 보스가 묻혔다)
 	},
 }
 
