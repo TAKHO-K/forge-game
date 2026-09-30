@@ -142,6 +142,38 @@ local function build()
 		end,
 	})
 	classButton.root.Name = "ClassChangeButton"
+	-- QUEUE-ALL1 P3 §1 다른 서버 초월 알림(전체 → 배너만 → 끔 순환 · 저장 = 같은 SettingsSave)
+	local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData)
+	local noticeLabel = Theme.label(body, "다른 서버 초월 알림", "body", "textPrimary")
+	noticeLabel.Name = "TranscendNoticeLabel"
+	noticeLabel.Position = UDim2.new(0, PAD + 120, 0, PAD + 292)
+	noticeLabel.Size = UDim2.new(1, -PAD * 2 - 240, 0, 32)
+	local function noticeName()
+		return TranscendentData.announce.noticeModeNames[player:GetAttribute("TranscendNotice") or "full"] or TranscendentData.announce.noticeModeNames.full
+	end
+	local noticeButton
+	noticeButton = Button.build({
+		parent = body, name = "TranscendNoticeButton", kind = "secondary", width = 110,
+		position = UDim2.new(1, -PAD - 110, 0, PAD + 292),
+		text = noticeName(),
+		onActivated = function()
+			local modes = TranscendentData.announce.noticeModes
+			local cur = table.find(modes, player:GetAttribute("TranscendNotice") or "full") or 1
+			local nextMode = modes[cur % #modes + 1]
+			player:SetAttribute("TranscendNotice", nextMode)
+			save("transcendNotice", nextMode)
+		end,
+	})
+	player:GetAttributeChangedSignal("TranscendNotice"):Connect(function()
+		if noticeButton and noticeButton.setText then
+			noticeButton.setText(noticeName())
+		elseif noticeButton and noticeButton.root then
+			local t = noticeButton.root:IsA("TextButton") and noticeButton.root or noticeButton.root:FindFirstChildWhichIsA("TextButton", true)
+			if t then
+				t.Text = noticeName()
+			end
+		end
+	end)
 	-- B4 소리 음량(카테고리 4줄: 이름 · [−] · 값 · [+] - 버튼 높이 = Theme.buttonHeight(폰 44) · 저장 = 같은 SettingsSave)
 	local soundHeader = Theme.label(body, Text.get("settings.soundHeader"), "body", "textSecondary")
 	soundHeader.Name = "SoundHeader"

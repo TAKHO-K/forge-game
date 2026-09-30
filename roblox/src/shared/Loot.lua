@@ -228,10 +228,14 @@ end
 -- 28-1 [2-2]: itemLevel = 보스 스테이지 + δ(0 / +1 / +2, 3:2:1 - 음수 없음). roll이 표 끝까지 안 걸리는
 -- 부동소수 오차 극단값에도 확정 지급이 깨지면 안 되므로 방어적 기본값(rollSparkleArmorDrop과 같은 패턴)을
 -- 둔다 - 두 표 모두 실제로는 정확히 1.0으로 맞아떨어진다.
-function Loot.rollBossFirstClearDrop(bossStage, rebirthCount, classId)
+function Loot.rollBossFirstClearDrop(bossStage, rebirthCount, classId, minGrade)
 	local gradeTable = DropTable.bossFirstClearGradeTable(rebirthCount) -- G1-1: 보상 띠와 같은 함수
 
 	local grade = rollGrade(gradeTable) or "primordial" -- C5-7: 방어적 기본값은 태초(초월은 확률로만)
+	local rank = table.find(ArmorData.gradeOrder, grade) or 1
+	if minGrade and rank < (table.find(ArmorData.gradeOrder, minGrade) or 1) then -- QUEUE-ALL1 P3: 첫 보스 확정 전설
+		grade = minGrade
+	end
 	return buildDropItem(grade, bossStage, Loot.rollItemLevel(bossStage, ArmorData.bossItemLevelDelta), 1, classId)
 end
 

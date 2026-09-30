@@ -56,6 +56,7 @@ function Disclosure.build()
 		variants = SkillVariant.disclosure(),
 		variantRerollKills = SkillVariantData.rerollKills,
 		hatch = Pet.disclosure(),
+		firstBossMinGrade = require(game:GetService("ReplicatedStorage").Shared.data.DropTableData).firstBossMinGrade, -- QUEUE-ALL1 P3: 첫 보스 확정 등급(공개 = 실제 굴림)
 	}
 	out.version = Disclosure.fingerprint(out)
 	return out

@@ -18,8 +18,9 @@ return {
 
 	-- ① 획득 순간
 	flashSeconds = 0.45,
-	slowSeconds = 0.6, -- 필드에서만(보스전 중 없음) - 화면 연출(시야 · 색) · 게임 시간은 멈추지 않는다
-	pillarSeconds = 30, -- 드랍 지점 흰 빛기둥(같은 서버 전원)
+	slowSeconds = 0.4, -- QUEUE-ALL1 P3 §2(04 문서): 0.6 → 0.4 · 필드에서만(보스전 중 없음) - 화면 연출(시야 · 색) · 게임 시간은 멈추지 않는다
+	pillarSeconds = 10, -- QUEUE-ALL1 P3 §2: 30 → 10초(멀리서도 보이는 흰 빛기둥 · 같은 서버 전원)
+	lookUp = { degrees = 28, seconds = 0.55, holdSeconds = 0.5 }, -- QUEUE-ALL1 P3 §2 태초 본인: 카메라가 빛기둥을 올려다봄(필드에서만)
 	soundId = nil, -- 전용 효과음 자리(지금 게임에 효과음 에셋이 하나도 없다 - 사운드 단계에서 id를 넣으면 PrimordialFx가 재생한다)
 
 	-- ④ 명예의 전당(허브 커뮤니티 광장 석판)

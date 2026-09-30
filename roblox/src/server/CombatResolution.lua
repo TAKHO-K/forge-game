@@ -6,6 +6,7 @@
 -- 한다). applyDamage 자체(HP 차감)는 호출부가 각자 하고, "죽었으면 그다음"만 여기로 온다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData) -- QUEUE-ALL1 P3 첫 보스 확정 전설
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
@@ -199,9 +200,13 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		else
 			primordialP = DropTable.bossFirstClearGradeTable(PlayerProfile.getRebirthCount(recipient)).primordial or 0
 			transcendentP = DropTable.bossFirstClearGradeTable(PlayerProfile.getRebirthCount(recipient)).transcendent or 0
-			armorDrops = { Loot.rollBossFirstClearDrop(dropStage, PlayerProfile.getRebirthCount(recipient), classId) }
+			local firstBoss = PlayerProfile.bossFirstClearCount(recipient) == 0 -- QUEUE-ALL1 P3 §2: 그 직업의 첫 보스 = 확정 전설 + 풀 연출
+			armorDrops = { Loot.rollBossFirstClearDrop(dropStage, PlayerProfile.getRebirthCount(recipient), classId, firstBoss and DropTableData.firstBossMinGrade or nil) }
 			PlayerProfile.markBossFirstClearReward(recipient, stage)
 			bossFirstClear = true
+			if firstBoss and armorDrops[1] and armorDrops[1].grade == DropTableData.firstBossMinGrade then
+				ReplicatedStorage:WaitForChild("PrimordialFx"):FireClient(recipient, { grade = "legendary", firstBoss = true, position = deathPosition })
+			end
 		end
 	elseif isSparkle then
 		armorDrops = { Loot.rollSparkleArmorDrop(dropStage, monsterData.tierIndex, classId) }

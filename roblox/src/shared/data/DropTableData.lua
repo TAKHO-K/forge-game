@@ -80,6 +80,8 @@ local DropTableData = {
 		firstClear = { epic = 0.62 - 0.00001 - 0.0009, legendary = 0.326, relic = 0.05, ancient = 0.0039, primordial = 0.001, transcendent = 0.00001 },
 		raid = nil, -- 묶음 F2: 아래 raidWeights(정수 가중치 · 합 검사)로 만든다
 	},
+	-- QUEUE-ALL1 P3 §2(04 문서): 첫 보스 처치(그 직업의 첫 보스 첫 클리어) = 확정 전설 이상(굴림이 아래면 전설로 올린다) + 풀 연출(첫 대박 맛보기)
+	firstBossMinGrade = "legendary",
 	-- 묶음 F2(BR2 데이터 정리 - 추천값): 토벌 = 태초 0.002 · 고대 0.048 · 유물 0.95 · 전설 21 · 영웅 78%(초월 0.0002% = 영웅 몫에서) - 분모 fieldWeightDenominator.
 	--   옛 값: 전설 20.948 · 유물 1 · 고대 0.05 · 태초 0.002 · 영웅 78 − 초월. 보상 목록(스테이지 선택 띠 · 확률 공개)은 이 표를 그대로 읽는다(DropTable.bossRetryGradeTable).
 	-- QUEUE-10h 리뷰 3 치명(토벌 반복 악용): 토벌 표의 고대 · 태초 · 초월 확률 × min(1, 전투 초 ÷ referenceSeconds) - 빠진 몫은 영웅(잡몹 처치 시간 공정성과 같은 원리).

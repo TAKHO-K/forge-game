@@ -86,6 +86,10 @@ local function render()
 	end
 	line(Text.get("prob.boss"), "body", "textPrimary")
 	line(Text.get("prob.firstClear") .. gradeRowsText(d.drop.firstClear), "caption", "textSecondary")
+	if d.firstBossMinGrade then -- QUEUE-ALL1 P3: 그 직업의 첫 보스 첫 클리어 = 이 등급 이상 확정(굴림이 아래면 올린다)
+		local g = require(ReplicatedStorage.Shared.data.ArmorData).grades[d.firstBossMinGrade]
+		line(("  · 직업마다 첫 보스 첫 클리어 = %s 이상 확정(위 표 굴림이 아래면 %s으로)"):format(g and g.displayName or d.firstBossMinGrade, g and g.displayName or d.firstBossMinGrade), "caption", "textSecondary")
+	end
 	line(Text.get("prob.raid", { sec = tostring(require(ReplicatedStorage.Shared.data.DropTableData).raidTimeFairness.referenceSeconds) }) .. gradeRowsText(d.drop.raid), "caption", "textSecondary")
 	line(Text.get("prob.sparkle") .. gradeRowsText(d.drop.sparkle), "caption", "textSecondary")
 	line(Text.get("prob.enhance"), "body", "textPrimary")

@@ -51,15 +51,65 @@ local function chatLine(entry)
 		sourceText and (" · " .. sourceText) or "")
 end
 
+-- QUEUE-ALL1 P3 §1 · §2: 다른 서버 초월 = 설정(TranscendNotice: full · banner · off) · 풀 연출(entry.full) · 몰림 묶음 / 떨어진 서버(이 서버) = 항상 최대 연출(하늘 갈라짐 · 땅 울림)
+local clipFx = { lastCrackAt = -math.huge } -- 아래 클립 절에서 채운다(skyCrack · rumble) · lastCrackAt = 본인 연출이 이미 갈라짐을 띄운 시각(배너가 겹쳐 띄우지 않게)
+local DENSITY = TranscendentData.announce.density
+local remoteRecent = {} -- 다른 서버 초월(풀 연출 아님) { at, no } - 묶음 배너
+local function noticeMode()
+	local m = player:GetAttribute("TranscendNotice")
+	return (m == "banner" or m == "off") and m or "full"
+end
+
 ReplicatedStorage:WaitForChild("PrimordialBanner").OnClientEvent:Connect(function(entry)
 	if type(entry) ~= "table" then
 		return
 	end
-	Toast.push("TC", { richParts = bannerParts(entry), seconds = isTranscendent(entry) and PrimordialData.bannerSeconds or math.max(3, PrimordialData.bannerSeconds - 2), fadeSeconds = 0.4, rainbow = isTranscendent(entry) }) -- Q7-10
 	local channels = TextChatService:FindFirstChild("TextChannels")
 	local general = channels and channels:FindFirstChild("RBXGeneral")
 	if general then
-		general:DisplaySystemMessage(chatLine(entry))
+		general:DisplaySystemMessage(chatLine(entry)) -- 항상: 채팅 한 줄(끔이어도)
+	end
+	local transcendent = isTranscendent(entry)
+	local here = entry.jobId == nil or entry.jobId == game.JobId
+	if transcendent and not here then
+		local mode = noticeMode()
+		if mode == "off" then
+			return
+		end
+		if not entry.full then
+			local now = os.clock()
+			for i = #remoteRecent, 1, -1 do
+				if now - remoteRecent[i].at > DENSITY.batchWindowSeconds then
+					table.remove(remoteRecent, i)
+				end
+			end
+			table.insert(remoteRecent, { at = now, no = entry.no })
+			if #remoteRecent >= DENSITY.batchFrom then -- 몰림: 한 장으로 묶는다
+				local lo, hi = math.huge, 0
+				for _, r in ipairs(remoteRecent) do
+					if type(r.no) == "number" then
+						lo, hi = math.min(lo, r.no), math.max(hi, r.no)
+					end
+				end
+				Toast.push("TC", { richParts = {
+					{ text = "[전 서버] ", colorName = "textSecondary", bold = true },
+					{ text = ("%s 최근 1시간 초월 %d개"):format(TranscendentData.announce.glyph, #remoteRecent), color = TranscendentData.announce.color, bold = true },
+					{ text = hi > 0 and (" · #%d~#%d"):format(lo, hi) or "", colorName = "textPrimary" },
+				}, seconds = 4, fadeSeconds = 0.4 })
+				return
+			end
+		end
+		Toast.push("TC", { richParts = bannerParts(entry), seconds = entry.full and PrimordialData.bannerSeconds or 4, fadeSeconds = 0.4, rainbow = entry.full == true })
+		if entry.full and mode == "full" and clipFx.skyCrack then -- 전 서버 풀 연출(시즌 첫 · 부위 첫 · 이정표 · 30분 공백)
+			clipFx.skyCrack(player:GetAttribute("BossEncounterId") and TranscendentData.announce.clip.bossScale or 1)
+			clipFx.rumble(TranscendentData.announce.clip.rumbleSeconds * 0.6, TranscendentData.announce.clip.rumbleStuds * 0.5)
+		end
+		return
+	end
+	Toast.push("TC", { richParts = bannerParts(entry), seconds = transcendent and PrimordialData.bannerSeconds or math.max(3, PrimordialData.bannerSeconds - 2), fadeSeconds = 0.4, rainbow = transcendent }) -- Q7-10
+	if transcendent and clipFx.skyCrack and os.clock() - clipFx.lastCrackAt > 10 then -- 떨어진 서버 = 전원 최대 연출(본인은 암전 직후 이미 띄웠다 - PrimordialFx)
+		clipFx.skyCrack(player:GetAttribute("BossEncounterId") and TranscendentData.announce.clip.bossScale or 1)
+		clipFx.rumble(TranscendentData.announce.clip.rumbleSeconds, TranscendentData.announce.clip.rumbleStuds)
 	end
 end)
 
@@ -181,24 +231,184 @@ local function transcendCrystal(position)
 	end)
 end
 
+-- ── QUEUE-ALL1 P3 §2 클립 순간(로컬 연출만 - 서버 시간 · 판정 불변) ──
+local CLIP = TranscendentData.announce.clip
+local function reduce()
+	return player:GetAttribute("ReduceFlashes") == true
+end
+
+-- 하늘이 흑금으로 갈라짐: 카메라 앞 하늘 먼 곳에 금 · 검정 금(Neon 지그재그) + 화면 색조 · crackSeconds 뒤 사라짐
+local function skyCrack(scale)
+	scale = scale or 1
+	local cam = Workspace.CurrentCamera
+	if not cam then
+		return
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "TranscendSkyCrack"
+	folder.Parent = Workspace
+	local look = cam.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	flat = flat.Magnitude > 1e-3 and flat.Unit or Vector3.new(0, 0, -1)
+	local right = Vector3.new(-flat.Z, 0, flat.X)
+	local center = cam.CFrame.Position + flat * CLIP.crackDistance + Vector3.new(0, CLIP.crackDistance * 0.45, 0)
+	local rng = Random.new()
+	for i = 1, math.max(1, math.floor(CLIP.crackCount * scale + 0.5)) do
+		local p = center + right * rng:NextNumber(-420, 420) + Vector3.new(0, rng:NextNumber(-80, 160), 0)
+		local dir = (Vector3.new(0, -1, 0) + right * rng:NextNumber(-0.6, 0.6)).Unit
+		for _ = 1, CLIP.crackSegments do
+			local q = p + (dir + right * rng:NextNumber(-0.7, 0.7)).Unit * rng:NextNumber(40, 90)
+			local seg = Instance.new("Part")
+			seg.Anchored, seg.CanCollide, seg.CanQuery, seg.CanTouch, seg.CastShadow = true, false, false, false, false
+			seg.Material = Enum.Material.Neon
+			seg.Color = i % 2 == 0 and TranscendentData.announce.color or TranscendentData.announce.darkColor
+			local w = i % 2 == 0 and 5 or 9
+			seg.Size = Vector3.new(w, w, (q - p).Magnitude)
+			seg.CFrame = CFrame.lookAt((p + q) / 2, q)
+			seg.Parent = folder
+			TweenService:Create(seg, TweenInfo.new(CLIP.crackSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 }):Play()
+			p = q
+		end
+	end
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "TranscendTint"
+	cc.TintColor = Color3.new(1, 1, 1):Lerp(CLIP.crackTint, CLIP.tintAmount * scale * (reduce() and 0.4 or 1))
+	cc.Contrast = 0.15 * scale
+	cc.Parent = Lighting
+	TweenService:Create(cc, TweenInfo.new(CLIP.crackSeconds, Enum.EasingStyle.Sine, Enum.EasingDirection.In), { TintColor = Color3.new(1, 1, 1), Contrast = 0 }):Play()
+	task.delay(CLIP.crackSeconds + 0.1, function()
+		folder:Destroy()
+		cc:Destroy()
+	end)
+end
+
+-- 땅 울림: 내 카메라 오프셋 흔들기(Humanoid.CameraOffset - 판정 무관)
+local function rumble(seconds, studs)
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if not hum then
+		return
+	end
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		if t >= seconds or not hum.Parent then
+			conn:Disconnect()
+			if hum.Parent then
+				hum.CameraOffset = Vector3.zero
+			end
+			return
+		end
+		hum.CameraOffset = Vector3.new(math.random() * 2 - 1, math.random() * 2 - 1, 0) * studs * (1 - t / seconds)
+	end)
+end
+
+-- 카메라 한 바퀴(본인 · 필드): 드랍 자리 둘레를 orbitSeconds에 한 바퀴 → 원래 카메라
+local function orbit(target)
+	local cam = Workspace.CurrentCamera
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not (cam and root) then
+		return
+	end
+	local was = cam.CameraType
+	cam.CameraType = Enum.CameraType.Scriptable
+	local t0 = os.clock()
+	local name = "TranscendOrbit"
+	RunService:BindToRenderStep(name, Enum.RenderPriority.Camera.Value + 1, function()
+		local t = (os.clock() - t0) / CLIP.orbitSeconds
+		if t >= 1 or not root.Parent then
+			RunService:UnbindFromRenderStep(name)
+			cam.CameraType = was
+			return
+		end
+		local a = t * math.pi * 2
+		local center = typeof(target) == "Vector3" and target or root.Position
+		local pos = center + Vector3.new(math.cos(a) * CLIP.orbitRadius, CLIP.orbitHeight + math.sin(t * math.pi) * 3, math.sin(a) * CLIP.orbitRadius)
+		cam.CFrame = CFrame.lookAt(pos, center + Vector3.new(0, 6 + t * 10, 0))
+	end)
+end
+
+-- 암전(검은 화면 - 섬광 줄이기면 반투명)
+local function blackout(seconds)
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.fromScale(1, 1)
+	frame.BackgroundColor3 = Color3.new(0, 0, 0)
+	frame.BackgroundTransparency = reduce() and 0.5 or 0
+	frame.BorderSizePixel = 0
+	frame.ZIndex = 10
+	frame.Parent = fxGui
+	task.delay(seconds, function()
+		local tw = TweenService:Create(frame, TweenInfo.new(0.25), { BackgroundTransparency = 1 })
+		tw:Play()
+		tw.Completed:Connect(function()
+			frame:Destroy()
+		end)
+	end)
+end
+
+-- 태초 본인: 카메라가 빛기둥을 올려다봄
+local function lookUp()
+	local L = PrimordialData.lookUp
+	local cam = Workspace.CurrentCamera
+	if not (L and cam) then
+		return
+	end
+	local was = cam.CameraType
+	cam.CameraType = Enum.CameraType.Scriptable
+	local base = cam.CFrame
+	local t0 = os.clock()
+	local name = "PrimordialLookUp"
+	RunService:BindToRenderStep(name, Enum.RenderPriority.Camera.Value + 1, function()
+		local t = os.clock() - t0
+		if t >= L.seconds * 2 + L.holdSeconds then
+			RunService:UnbindFromRenderStep(name)
+			cam.CameraType = was
+			return
+		end
+		local k = t < L.seconds and t / L.seconds or (t < L.seconds + L.holdSeconds and 1 or 1 - (t - L.seconds - L.holdSeconds) / L.seconds)
+		cam.CFrame = base * CFrame.Angles(math.rad(L.degrees) * math.sin(k * math.pi / 2), 0, 0)
+	end)
+end
+clipFx.skyCrack, clipFx.rumble = skyCrack, rumble -- 배너 처리(위)가 풀 연출에 쓴다
+
 ReplicatedStorage:WaitForChild("PrimordialFx").OnClientEvent:Connect(function(info)
 	if type(info) ~= "table" then
 		return
 	end
-	if info.grade == "transcendent" then -- C5-7: 흑금 섬광 + 긴 슬로우(필드에서만)
-		flash(TranscendentData.announce.color, 0, PrimordialData.flashSeconds * 1.5)
-		if typeof(info.position) == "Vector3" then
-			transcendCrystal(info.position) -- A2-N4 §3-3(A2-N3 결정 ⑧): 초월 결정 메시(ArtStyleV1 뒤)
+	if info.grade == "transcendent" then -- C5-7: 흑금 섬광 + 긴 슬로우(필드에서만) · QUEUE-ALL1 P3 §2: 암전 → 갈라짐 · 울림 → 슬로 + 카메라 한 바퀴(보스전 = 축소판)
+		local boss = info.inBoss == true
+		if not boss then
+			blackout(CLIP.blackoutSeconds)
 		end
-		if not info.inBoss then
-			slowMotion(TranscendentData.announce.slowSeconds)
-		end
-		playSound()
+		task.delay(boss and 0 or CLIP.blackoutSeconds, function()
+			clipFx.lastCrackAt = os.clock()
+			skyCrack(boss and CLIP.bossScale or 1) -- 순서(04 문서): 암전 → 하늘 갈라짐 · 땅 울림 → 빛기둥 · 슬로 + 한 바퀴 → 배너
+			flash(TranscendentData.announce.color, 0, PrimordialData.flashSeconds * 1.5)
+			rumble(CLIP.rumbleSeconds, CLIP.rumbleStuds * (boss and CLIP.bossScale or 1))
+			if typeof(info.position) == "Vector3" then
+				transcendCrystal(info.position) -- A2-N4 §3-3(A2-N3 결정 ⑧): 초월 결정 메시(ArtStyleV1 뒤)
+			end
+			if not boss then
+				slowMotion(TranscendentData.announce.slowSeconds)
+				task.delay(CLIP.crackSeconds * 0.5, function()
+					orbit(info.position)
+				end)
+			end
+			playSound()
+		end)
 	elseif info.grade == "primordial" then
 		flash(PrimordialData.auraColor, 0, PrimordialData.flashSeconds)
 		if not info.inBoss then
 			slowMotion(PrimordialData.slowSeconds)
+			lookUp() -- QUEUE-ALL1 P3 §2: 빛기둥을 올려다봄
 		end
+		playSound()
+	elseif info.grade == "legendary" and info.firstBoss and typeof(info.position) == "Vector3" then -- QUEUE-ALL1 P3 §2: 첫 보스 처치 확정 전설 = 풀 연출(첫 대박 맛보기)
+		local color = ItemVisualData.gradeVisuals.legendary.color
+		flash(color, 0.2, 0.5)
+		slowMotion(PrimordialData.slowSeconds)
+		lookUp()
+		localPillar(info.position, color, PrimordialData.pillarHeights.ancient * 2, PrimordialData.ancientPillarWidth, PrimordialData.ancientPillarSeconds)
 		playSound()
 	elseif info.grade == "ancient" and typeof(info.position) == "Vector3" then
 		local color = ItemVisualData.gradeVisuals.ancient.color
@@ -244,7 +454,7 @@ RunService.RenderStepped:Connect(function(dt)
 	for _, other in ipairs(Players:GetPlayers()) do
 		local character = other.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		local transcendent = (other:GetAttribute("TranscendentParts") or 0) > 0 -- C5-7 흑금 오라(초월 착용 - 태초 흰 오라보다 우선)
+		local transcendent = (other:GetAttribute("TranscendentParts") or 0) > 0 or (tonumber(other:GetAttribute("TranscendentAuraUntil")) or 0) > os.time() -- C5-7 흑금 오라(초월 착용 - 태초 흰 오라보다 우선) · QUEUE-ALL1 P3: 획득 뒤 수 분
 		local wants = root and eye and (other:GetAttribute("PrimordialEquipped") == true or transcendent) and (root.Position - eye).Magnitude <= PrimordialData.auraMaxDistance
 		if wants then
 			local aura = auras[other] or makeAura()

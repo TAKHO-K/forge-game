@@ -50,10 +50,25 @@ return {
 		titleId = "transcendentOne",
 		bannerSeconds = 8,
 		slowSeconds = 1.0,
-		pillarSeconds = 45,
+		pillarSeconds = 60, -- QUEUE-ALL1 P3 §2: 45 → 60초(맵 어디서든 · "구경 가기" 이동 시간)
+		-- QUEUE-ALL1 P3 §2 클립(클라 로컬 연출만 - 서버 시간 · 판정 불변): 떨어진 서버 = 전원 하늘 갈라짐 · 땅 울림 / 본인 = 암전 → 갈라짐 → 슬로 + 카메라 한 바퀴.
+		--   보스전 중 = 축소판(암전 · 카메라 없음 · 갈라짐 옅게). ReduceFlashes = 암전 · 색조 약하게. auraMinutes = 획득자 흑금 오라(착용 안 해도).
+		clip = { blackoutSeconds = 0.3, crackSeconds = 1.5, crackCount = 7, crackSegments = 6, crackDistance = 700, crackTint = Color3.fromRGB(255, 214, 120), tintAmount = 0.35,
+			rumbleSeconds = 1.5, rumbleStuds = 0.35, orbitSeconds = 3.2, orbitRadius = 14, orbitHeight = 5, bossScale = 0.4, auraMinutes = 5 },
 		glyph = "◆", -- QUEUE-ALL1 A-6: ✦는 GothamBold에 없어 두부(□) - Play 기호 격자 실측
 		color = Color3.fromRGB(214, 176, 62), -- 옅은 금
 		darkColor = Color3.fromRGB(16, 13, 10), -- 검은 본체
 		chatText = "★ {name}님이 세계 {no}번째 초월 [{part}]를 획득했습니다!", -- TextData transcendent.worldChat과 같은 문장(서버 배너 payload가 이름 · 번호 · 부위를 준다)
+		-- QUEUE-ALL1 P3 §1 밀도(docs/design/v2/04): 항상 = 전 서버 채팅 한 줄 + 작은 배너 + 명예의 전당 · 떨어진 서버 = 항상 최대 연출.
+		--   전 서버 풀 연출(entry.full) = 시즌 첫 초월 · 부위별 첫 초월 · 세계 번호 milestones(10 · 50) 또는 milestoneEvery(100)의 배수 · 최근 cooldownSeconds 동안 풀 연출 없음.
+		--   판정 = 떨어진 서버 한 곳(TranscendentPolicy - DataStore UpdateAsync 원자 키 · 초월은 드물어 호출 한도와 무관). 받는 서버는 entry.full만 본다.
+		--   몰림: 받는 화면에서 batchWindowSeconds 안에 풀 연출 아닌 알림이 batchFrom개 이상이면 배너 한 장으로 묶는다("최근 1시간 초월 n개 · #a~#b").
+		density = {
+			milestones = { 10, 50 }, milestoneEvery = 100, cooldownSeconds = 1800,
+			batchWindowSeconds = 3600, batchFrom = 2,
+			firstPartKeyPrefix = "transcendentFirstPart_", seasonKeyPrefix = "transcendentSeason_", lastFullKey = "transcendentLastFullAt",
+		},
+		-- 설정(이 화면): 다른 서버 초월 알림 = full(전체) · banner(배너만) · off(끔 - 채팅 한 줄만). Player Attribute TranscendNotice(설정 저장 = 기존 설정 경로)
+		noticeModes = { "full", "banner", "off" }, noticeModeNames = { full = "전체", banner = "배너만", off = "끔" },
 	},
 }

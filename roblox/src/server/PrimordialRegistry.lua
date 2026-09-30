@@ -174,6 +174,9 @@ function PrimordialRegistry.claim(player, item, options)
 		end
 		local shownName = PrimordialRegistry.filterName(ownerName, player and player.UserId or 0)
 		local entry = { no = no, name = shownName, userId = stamp.ownerId, at = stamp.at, part = item.part, source = item.source, jobId = game.JobId, grade = item.grade }
+		if item.grade == TranscendentData.gradeId then -- QUEUE-ALL1 P3 §1: 전 서버 풀 연출 여부(떨어진 서버가 한 번 판정 - 받는 서버는 entry.full을 따른다)
+			require(script.Parent.TranscendentPolicy).decide(entry, keyFor, options.test)
+		end
 		if no and gradeConfig(item.grade).global then -- Q0-6: 명예의 전당(최근 목록) = 전 서버 등급만(초월부터)
 			appendRecent(entry, options.test)
 		end
@@ -297,6 +300,9 @@ function PrimordialRegistry.onRolled(player, item, position, inBossFight, deps, 
 		spawnBeacon(position, item.grade)
 		if typeof(player) == "Instance" and player:IsA("Player") then
 			fxRemote:FireClient(player, { grade = item.grade, position = position, inBoss = inBossFight == true })
+			if item.grade == TranscendentData.gradeId then -- QUEUE-ALL1 P3 §2 ④: 획득자 흑금 오라 수 분(착용 안 해도 - 클라 PrimordialFx 오라가 읽는다)
+				player:SetAttribute("TranscendentAuraUntil", os.time() + TranscendentData.announce.clip.auraMinutes * 60)
+			end
 		end
 		return wait
 	elseif item.grade == "ancient" then

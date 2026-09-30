@@ -1453,6 +1453,17 @@ end
 -- 서버만 호출한다(CombatResolution.grantKillReward, 확정 드랍을 이미 지급한 직후).
 -- bossFirstClearStages · tutorial.granted의 키는 문자열(tostring)이다(v28) - DataStore 왕복이 숫자 키를 문자열로 바꿔 돌려주므로 숫자 키로 조회하면 재접속 뒤 못 찾는다
 -- (hasClaimedProtectionStage 주석). 바깥 API는 그대로 숫자를 받는다.
+-- QUEUE-ALL1 P3: 지금 직업의 보스 첫 클리어 수(0 = 첫 보스 - 확정 전설)
+function PlayerProfile.bossFirstClearCount(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	local n = 0
+	for _ in pairs(classState and classState.stageProgress.bossFirstClearStages or {}) do
+		n += 1
+	end
+	return n
+end
+
 function PlayerProfile.markBossFirstClearReward(player, stage)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
