@@ -218,6 +218,24 @@ function HudIcons.quest(parent, size, color)
 	return canvas
 end
 
+-- QUEUE-ALL1 P5 도감(책 - 두 쪽 + 가운데 줄)
+function HudIcons.codex(parent, size, color)
+	local iconColor = color or UIColors.textPrimary
+	local canvas = Instance.new("Frame")
+	canvas.BackgroundTransparency = 1
+	canvas.Size = UDim2.new(0, size, 0, size)
+	canvas.Parent = parent
+	for i = 0, 1 do
+		local page = newFrame(canvas, UDim2.new(0, size * 0.36, 0, size * 0.7), Vector2.new(i == 0 and 1 or 0, 0.5), UDim2.new(0.5, i == 0 and -size * 0.03 or size * 0.03, 0.5, 0), i == 0 and -6 or 6, iconColor)
+		page.BackgroundTransparency = 0.7
+		round(page, size * 0.06)
+		for k = 0, 2 do
+			round(newFrame(page, UDim2.new(0.6, 0, 0, size * 0.06), Vector2.new(0.5, 0.5), UDim2.new(0.5, 0, 0, size * (0.18 + k * 0.16)), 0, iconColor), size * 0.02)
+		end
+	end
+	return canvas
+end
+
 -- 쿨다운 링 - 위 모듈 설명 참고("스톱워치 눈금" 방식). diameter는 슬롯 지름과 같게 준다.
 -- 반환값은 update(remainingRatio) 함수 하나 - remainingRatio=1이면 전부 어둡게(막 씀),
 -- 0이면 전부 밝게(사용 가능). SkillSlots.client.lua의 setCooldown이 이 update를 부른다.

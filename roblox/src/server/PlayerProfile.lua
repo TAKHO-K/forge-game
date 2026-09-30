@@ -1059,6 +1059,7 @@ function PlayerProfile.rebirth(player)
 	if classState.rebirthCount == GemData.maxRebirthCount and Gem.allSlotsFilled(classState.weapon.gems) then
 		classState.weapon.grade = ArmorData.maxWeaponGradeIndex -- Q4: 하드코딩 6 → 데이터(태초)
 	end
+	require(script.Parent.CodexService).noteClass(player, profile.classId, classState.weapon.grade) -- QUEUE-ALL1 P5 도감 직업 줄(환생으로 오른 등급만)
 
 	-- 레벨·무기 등급·보석 슬롯 Attribute를 한 번에 맞춘다(setClassId와 같은 지점 - 과거
 	-- InventorySync.push를 빠뜨렸던 버그와 같은 종류의 실수를 막는다). 장비(갑옷/장갑/
@@ -1473,6 +1474,23 @@ function PlayerProfile.isFreshProfile(player)
 	return profile ~= nil and (tonumber(profile.savedAt) or 0) == 0
 end
 
+-- QUEUE-ALL1 P5(v59): 도감 v2 기록(계정) - 서버 CodexService만 쓴다. 빠진 칸은 채워서 돌려준다.
+function PlayerProfile.getCodex(player)
+	local profile = profiles[player]
+	if not profile then
+		return nil
+	end
+	if type(profile.codex) ~= "table" then
+		profile.codex = require(script.Parent.SaveSystem).newCodex()
+	end
+	for k, v in pairs(require(script.Parent.SaveSystem).newCodex()) do
+		if type(profile.codex[k]) ~= "table" and type(v) == "table" then
+			profile.codex[k] = v
+		end
+	end
+	return profile.codex
+end
+
 -- QUEUE-ALL1 P4(v58): 코드 기록 · 주간 도전 기록(계정)
 function PlayerProfile.getRedeemedCodes(player)
 	local profile = profiles[player]
@@ -1804,6 +1822,7 @@ function PlayerProfile.addArmorDrop(player, item, options)
 	end
 	-- G1-2: 자동 처리 대상이면 가방에 넣지 않고 바로 분해 · 판매(가방이 가득이어도 처리된다 - 줍기 성공)
 	local processed = not (options and options.noAutoProcess) and PlayerProfile.autoProcessDrop(player, item) or nil
+	require(script.Parent.CodexService).noteArmor(player, item) -- QUEUE-ALL1 P5 도감: 주운 순간(자동 처리 포함 · 출처 없는 개발 지급 제외 - 가방 가득으로 못 넣은 것은 땅에 남아 다시 주울 때 센다)
 	if processed then
 		InventorySync.notifyAutoProcessed(player, processed)
 		return true, processed
@@ -2509,6 +2528,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		purchaseLog = deepCopy(profile.purchases.log), -- v56
 		communityGoal = deepCopy(profile.communityGoal), -- QUEUE-ALL1 P3 §4(v57): 새 저장 필드 = 백업 대상(COMMON §1)
 		redeemedCodes = deepCopy(profile.redeemedCodes), -- QUEUE-ALL1 P4(v58)
+		codex = profile.codex and deepCopy(profile.codex) or nil, -- QUEUE-ALL1 P5(v59)
 		weeklyChallenge = deepCopy(profile.weeklyChallenge), -- QUEUE-ALL1 P4(v58)
 	}
 end
@@ -2556,6 +2576,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.purchases.log = snapshot.purchaseLog and deepCopy(snapshot.purchaseLog) or profile.purchases.log
 	profile.communityGoal = snapshot.communityGoal and deepCopy(snapshot.communityGoal) or profile.communityGoal -- QUEUE-ALL1 P3 §4(v57)
 	profile.redeemedCodes = snapshot.redeemedCodes and deepCopy(snapshot.redeemedCodes) or profile.redeemedCodes -- QUEUE-ALL1 P4(v58)
+	profile.codex = snapshot.codex and deepCopy(snapshot.codex) or profile.codex -- QUEUE-ALL1 P5(v59)
 	profile.weeklyChallenge = snapshot.weeklyChallenge and deepCopy(snapshot.weeklyChallenge) or profile.weeklyChallenge
 	task.defer(function() -- 결정 9: 복원한 치장 · 패스를 Attribute로(늦은 require - 순환 방지)
 		if profiles[player] then

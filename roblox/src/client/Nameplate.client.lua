@@ -37,6 +37,10 @@ local function shownTitle(player)
 			return TitleData.titles[id]
 		end
 	end
+	local selected = player:GetAttribute("SelectedTitle") -- QUEUE-ALL1 P5 칭호 선택 창(초월자 > 태초의 선택 > 고른 칭호)
+	if type(selected) == "string" and owned[selected] and TitleData.titles[selected] then
+		return TitleData.titles[selected]
+	end
 	return nil
 end
 
@@ -129,6 +133,9 @@ local function attach(player, character)
 
 	local connections = {
 		player:GetAttributeChangedSignal("Titles"):Connect(function()
+			refreshTitle(player, titleGui, titleLabel)
+		end),
+		player:GetAttributeChangedSignal("SelectedTitle"):Connect(function() -- QUEUE-ALL1 P5 칭호 선택
 			refreshTitle(player, titleGui, titleLabel)
 		end),
 		player:GetAttributeChangedSignal("CharacterLevel"):Connect(function()

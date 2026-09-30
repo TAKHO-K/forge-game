@@ -97,6 +97,7 @@ function PetService.claim(player, index, rng)
 	table.remove(state.hatching, index)
 	table.insert(state.list, pet)
 	state.hatchCount += 1
+	require(script.Parent.CodexService).notePet(player, pet) -- QUEUE-ALL1 P5 도감(종 × 부화 등급)
 	if not state.equipped then
 		state.equipped = #state.list -- 첫 펫은 바로 데리고 다닌다
 		applyAttributes(player, state)

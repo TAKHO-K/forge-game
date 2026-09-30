@@ -204,15 +204,21 @@ function V.runPure()
 		local function eq(z1, z2, z3, stage)
 			return { armor = { setZone = z1, dropStage = stage or 100 }, gloves = { setZone = z2, dropStage = stage or 100 }, shoes = { setZone = z3, dropStage = stage or 100 } }
 		end
-		local was = SetData.enabled
+		local was, wasUnique = SetData.enabled, SetData.uniqueThreePiece
 		SetData.enabled = true
+		SetData.uniqueThreePiece = true -- QUEUE-ALL1 P5: 구역 고유 3부위(빙하 = 방어)
+		local def6 = SetBonus.extraValues(eq("tier6", "tier6", "tier6"), "defensePercent")
+		local fd6 = SetBonus.extraValues(eq("tier6", "tier6", "tier6"), "finalDamage")
+		SetData.uniqueThreePiece = false -- 아래는 공통 3부위 규칙 검사
 		local hp2 = SetBonus.extraValues(eq("tier1", "tier1", "tier2"), "maxHpPercent")
 		local fd2 = SetBonus.extraValues(eq("tier1", "tier1", "tier2"), "finalDamage")
 		local fd3 = SetBonus.extraValues(eq("tier1", "tier1", "tier1"), "finalDamage")
 		local fdGen = SetBonus.extraValues(eq("tier1", "tier1", "tier1", 17500), "finalDamage")
 		SetData.enabled = false
 		local off = SetBonus.extraValues(eq("tier1", "tier1", "tier1"), "finalDamage")
-		SetData.enabled = was
+		SetData.enabled, SetData.uniqueThreePiece = was, wasUnique
+		check(("고유 3부위(QUEUE-ALL1 P5): 빙하 3부위 = 방어 %.2f · 최종 피해 없음"):format(def6 and def6[1] or -1),
+			def6 ~= nil and math.abs(def6[1] - SetData.zoneThreePiece.tier6.value) < 1e-9 and fd6 == nil)
 		check(("2부위 = 최대 체력 %.2f · 최종 피해 없음 / 3부위 최종 피해 %.2f · 세대 1 %.3f · 스위치 끔 = 없음"):format(hp2 and hp2[1] or -1, fd3 and fd3[1] or -1, fdGen and fdGen[1] or -1),
 			hp2 and hp2[1] == 0.05 and fd2 == nil and fd3 and fd3[1] == 0.05 and fdGen and math.abs(fdGen[1] - 0.055) < 1e-9 and off == nil)
 		-- 저장 이관 왕복(v48 → v49): setZone은 없는 필드만 채우고 한 번 더 돌려도 같다
@@ -583,7 +589,7 @@ function V.runPure()
 		for _, key in ipairs(SettingsData.order) do
 			attrsOk = attrsOk and SettingsData.keys[key] ~= nil and #SettingsData.keys[key].attrs >= 1
 		end
-		check("설정 키 9 = 적용 Attribute(카메라 · 섬광 · 흔들림 · 궤적 · 자동 이동 · B4 음량 4)", attrsOk and #SettingsData.order == 9)
+		check(("설정 키 %d(기대 10) = 적용 Attribute(카메라 · 섬광 · 흔들림 · 궤적 · 자동 이동 · B4 음량 4 · QUEUE-ALL1 P3 초월 알림)"):format(#SettingsData.order), attrsOk and #SettingsData.order == 10)
 		local SaveSystem = require(script.Parent.SaveSystem)
 		local ok, m = pcall(SaveSystem.migrate, { version = 53, gold = 0, classes = {}, inventory = {}, quests = { main = 1 } })
 		check(("이관 v53 → v%s: settings 빈 표(= 기본값)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 54 and type(m.settings) == "table" and next(m.settings) == nil)

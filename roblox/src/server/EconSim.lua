@@ -54,6 +54,7 @@ local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local RiftData = require(ReplicatedStorage.Shared.data.RiftData) -- QUEUE-ALL1 P3 §3 균열
+local CodexData = require(ReplicatedStorage.Shared.data.CodexData) -- QUEUE-ALL1 P5 도감 골드
 
 local CombatFormulaData = require(ReplicatedStorage.Shared.data.CombatFormulaData) -- C2 전투 공식 스위치(what-if combatFormulaV2)
 local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula)
@@ -79,6 +80,11 @@ local function riftMix(row)
 end
 local function riftGoldFactor()
 	return 1 + riftShare() * ((RiftData.goldMultiplier or 1) - 1)
+end
+-- QUEUE-ALL1 P5: 도감 칸 · 점수판 골드 = 잡몹 골드 × (1 + 몫) 상한 가정(CodexData.econ.goldShare - 모든 칸 골드를 받는 때의 스테이지로 쳐 부풀린 값) · 하네스 전후 = EconSim.codexGoldShare = 0
+EconSim.codexGoldShare = nil
+local function codexGoldFactor()
+	return 1 + (EconSim.codexGoldShare or (CodexData.enabled and CodexData.econ.goldShare) or 0)
 end
 
 function EconSim.isAllowed()
@@ -1038,7 +1044,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * expGapMultiplier(state.level, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth)
 			* CharacterLevel.getReclaimMultiplier(state.rebirth, state.level, state.reclaimLevel) * CharacterLevel.getExpScale(state.level) -- C5-2 되찾기 · P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
-		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * sparkleGoldFactor() * riftGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때) · QUEUE-ALL1 P3 균열 비중
+		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * sparkleGoldFactor() * riftGoldFactor() * codexGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때) · QUEUE-ALL1 P3 균열 비중
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)
 		killUnits = tier.killUnits -- C3-3
 		-- P2 E5: 처치 1마리당 태초 장비 기대 개수(서버 굴림과 같은 effectiveRate - 레벨 감쇠 포함)

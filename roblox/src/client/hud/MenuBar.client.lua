@@ -386,9 +386,9 @@ local function selfCheck()
 			table.insert(ids, ("%s(%s)"):format(entry.id, entry.hotkey and entry.hotkey.Name or "-"))
 		end
 		-- QUEUE-6h-b R1: 삭제된 기능 참조 → 교체(M1-2 후속 53698a4 메뉴바 파티 칸 삭제 · Q7 e23d564 퀘스트 칸(J) 추가 - 파티 자리를 퀘스트(window)로)
-		check(("등록 표: 메뉴 칸 %s(기대 inventory(B) · stageSelect(M) · quests(J) 순) · 칸 상한 %d"):format(table.concat(ids, " · "), PanelRegistry.menuSlotLimit),
-			#entries == 3 and entries[1].id == "inventory" and entries[1].hotkey == Enum.KeyCode.B and entries[2].id == "stageSelect" and entries[2].hotkey == Enum.KeyCode.M
-				and entries[3].id == "quests" and entries[3].hotkey == Enum.KeyCode.J and PanelRegistry.menuSlotLimit == 5)
+		check(("등록 표: 메뉴 칸 %s(기대 inventory(B) · stageSelect(M) · codex(K) · quests(J) 순) · 칸 상한 %d"):format(table.concat(ids, " · "), PanelRegistry.menuSlotLimit),
+			#entries == 4 and entries[1].id == "inventory" and entries[1].hotkey == Enum.KeyCode.B and entries[2].id == "stageSelect" and entries[2].hotkey == Enum.KeyCode.M
+				and entries[3].id == "codex" and entries[3].hotkey == Enum.KeyCode.K and entries[4].id == "quests" and entries[4].hotkey == Enum.KeyCode.J and PanelRegistry.menuSlotLimit == 5)
 		-- 6번째 칸 · 금지 키 · 겹치는 키는 error(합성 표를 같은 validate에 넣는다)
 		local six = {}
 		for index = 1, 6 do

@@ -183,6 +183,11 @@ end
 -- 저장 구조 기본값. 지금 실제로 쓰는 필드는 gold·equipment.weapon뿐이지만, 곧 들어올
 -- 필드(클래스·나머지 장비·스테이지 진행도·인벤토리 칸 수·게임패스)의 자리를 미리
 -- 만들어 둔다 - 그래야 그 기능이 생길 때 SAVE_VERSION을 또 올리지 않고 채워 넣을 수 있다.
+-- QUEUE-ALL1 P5(v59) 도감 v2 빈 기록
+function SaveSystem.newCodex()
+	return { armor = {}, prim = {}, trans = {}, pet = {}, mkill = {}, msparkle = {}, boss = {}, cls = {}, done = {}, claimed = {}, boardDone = {}, boardClaimed = {}, title = nil }
+end
+
 local function defaultProfile()
 	return {
 		version = SaveConfig.saveVersion,
@@ -221,6 +226,8 @@ local function defaultProfile()
 		-- QUEUE-ALL1 P4(v58): 코드(대문자 코드 → 받은 unix 초 - 계정당 1회) · 주간 도전(week · best = 그 주 최고 처치 초 · rewarded = 참여 보상 · rankClaimedWeek = 순위 보상을 확인한 주)
 		redeemedCodes = {},
 		weeklyChallenge = { week = 0, rewarded = false, rankClaimedWeek = 0 },
+		-- QUEUE-ALL1 P5(v59): 도감 v2 기록(shared/CodexRules 머리 주석) · done/boardDone = { [칸] = 완료 순간 계정 최고 스테이지 } · claimed/boardClaimed = 받음 · title = 고른 칭호 id(nil = 없음)
+		codex = SaveSystem.newCodex(),
 
 		-- 옵션 변환권(23-2, PRD 20.37 [6] "계정 공유(신규)"). 골드로만 구매(20.5-1 - 로벅스
 		-- 판매 금지)하고 등급별로 따로 센다(고대 보석엔 고대 변환권만, 태초는 태초만) -
@@ -1257,6 +1264,50 @@ local function migrate(data)
 			data.weeklyChallenge = { week = 0, rewarded = false, rankClaimedWeek = 0 }
 		end
 		data.version = 58
+	end
+
+	if data.version < 59 then
+		-- QUEUE-ALL1 P5: codex(도감 v2) - 옛 계정 소급 = 지금 남은 기록으로 채울 수 있는 것만(docs/phase/QUEUE-ALL1-state.md P5 규칙):
+		--   장비 = 가방 + 모든 직업 착용 중 드랍 출처(source) · 세트(setZone)가 있는 것 1개 = 1회 · 펫 = 지금 가진 펫(종 · 부화 등급) · 보스 = 도장(bossCodex) 찍힌 보스 1회
+		--   직업 = 지금 무기 등급 · 둥지 = nestDex 그대로(따로 안 옮김) · 몬스터 처치 수 = 기록이 없어 0부터. 완료 스테이지 = 첫 확인 때의 계정 최고.
+		if type(data.codex) ~= "table" then
+			local c = SaveSystem.newCodex()
+			local function addItem(item)
+				if type(item) == "table" and type(item.source) == "table" and item.source.kind ~= "dev" and type(item.setZone) == "string" and item.part then
+					if item.grade == "transcendent" then
+						c.trans[item.setZone] = true
+					elseif item.grade == "primordial" then
+						c.prim[item.setZone] = true
+					else
+						local key = ("%s|%s|%s"):format(item.setZone, tostring(item.grade), item.part)
+						c.armor[key] = (c.armor[key] or 0) + 1
+					end
+				end
+			end
+			for _, item in ipairs(type(data.inventory) == "table" and data.inventory or {}) do
+				addItem(item)
+			end
+			for classId, cs in pairs(type(data.classes) == "table" and data.classes or {}) do
+				for _, item in pairs(type(cs) == "table" and type(cs.equipment) == "table" and cs.equipment or {}) do
+					addItem(item)
+				end
+				if type(cs) == "table" and type(cs.weapon) == "table" and type(cs.weapon.grade) == "number" then
+					c.cls[classId] = cs.weapon.grade
+				end
+			end
+			for _, pet in ipairs(type(data.pets) == "table" and type(data.pets.list) == "table" and data.pets.list or {}) do
+				if type(pet) == "table" and pet.species and pet.grade then
+					c.pet[pet.species .. "|" .. pet.grade] = true
+				end
+			end
+			for bossId, stamped in pairs(type(data.purchases) == "table" and type(data.purchases.bossCodex) == "table" and data.purchases.bossCodex or {}) do
+				if stamped == true then
+					c.boss[bossId] = 1
+				end
+			end
+			data.codex = c
+		end
+		data.version = 59
 	end
 
 	data.savedAt = data.savedAt or 0

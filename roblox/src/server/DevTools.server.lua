@@ -1101,6 +1101,7 @@ local HELP_TEXT = table.concat({
 	"/gg rebirthdo - 실제 환생 실행(PlayerProfile.rebirth 그대로 - 레벨 조건 검증 + 무기 등급·보석 자동 지급까지 전체 흐름 검증용)",
 	"/gg gem <slot 1-5> <id|-> - 그 슬롯에 보석을 강제로 채운다(23-2 검증용, id=-면 옵션 없이)",
 	"/gg bossreset [stage] - 보스 첫 처치 확정 드랍 기록 초기화(생략 시 전부, 재검증용)",
+	"/gg codex <test|state> - QUEUE-ALL1 P5 도감 v2: 합성 사건 기록(실제 기록 함수) · 점수 · 완료 · 받음 수",
 	"/gg weekly <check|start> - QUEUE-ALL1 P4 주간 도전: 4주 변형의 회피 부등식 검사 · 이번 주 도전 시작",
 	"/gg invitetest <초대자 userId> - QUEUE-ALL1 P4 초대 보상 경로 시험(쌍 키 = Studio 저장소)",
 	"/gg rift <on|off|auto> - QUEUE-ALL1 P3 균열 시간 강제(on = 지금부터 20분 · off = 끔 · auto = 시간표 UTC 11:00 · 01:00)",
@@ -3095,6 +3096,38 @@ local function handleCommand(player, args)
 		else
 			reply(player, "가둠 스킬이 있는 보스(심해 · 폭풍)가 아닙니다")
 		end
+	elseif sub == "codex" and (args[2] == "test" or args[2] == "state") then
+		-- QUEUE-ALL1 P5 도감 v2: test = 실제 기록 함수로 합성 사건(석조 일반 갑옷 6 · 장갑 2 · 이끼 슬라임 10 + 반짝이 · 수호자 1 · 돌 거북 일반 · 수정 초월 1) · state = 점수 · 완료 · 받음 수
+		local CodexService = require(script.Parent.CodexService)
+		if args[2] == "test" then
+			for i = 1, 6 do
+				CodexService.noteArmor(player, { grade = "normal", part = "armor", setZone = "tier1", source = { kind = "field", zone = "tier1" } })
+			end
+			for i = 1, 2 do
+				CodexService.noteArmor(player, { grade = "normal", part = "gloves", setZone = "tier1", source = { kind = "field", zone = "tier1" } })
+			end
+			for i = 1, 10 do
+				CodexService.noteMonster(player, "moss_slime", i == 10)
+			end
+			CodexService.noteBoss(player, "section_guardian")
+			CodexService.notePet(player, { species = "stoneTurtle", grade = "common" })
+			CodexService.noteArmor(player, { grade = "transcendent", part = "shoes", setZone = "tier2", source = { kind = "boss", bossId = "crystal_queen" } })
+			CodexService.noteArmor(player, { grade = "normal", part = "armor", setZone = "tier1", source = { kind = "dev" } }) -- 개발 출처 = 안 센다
+		end
+		task.wait(0.8)
+		local r = PlayerProfile.getCodex(player)
+		local done, claimed, boardDone = 0, 0, 0
+		for _ in pairs(r.done) do
+			done += 1
+		end
+		for _ in pairs(r.claimed) do
+			claimed += 1
+		end
+		for _ in pairs(r.boardDone) do
+			boardDone += 1
+		end
+		reply(player, ("도감: 점수 %s / %d · 완료 %d · 받음 %d · 점수판 %d · 석조 일반 갑옷 %s · 슬라임 %s · 초월 수정 %s · 칭호 %s"):format(tostring(player:GetAttribute("CodexScore")), CodexService.built.totalScore, done, claimed, boardDone,
+			tostring(r.armor["tier1|normal|armor"]), tostring(r.mkill.moss_slime), tostring(r.trans.tier2), tostring(PlayerProfile.hasTitle(player, "codex_armorZone_tier2"))))
 	elseif sub == "weekly" and args[2] == "check" then
 		-- QUEUE-ALL1 P4 §3: 주간 도전 변형 4주 전부 - 회피 부등식(BossSkillMath.dodgeChecks) 검사
 		local WeeklyChallenge = require(ReplicatedStorage.Shared.WeeklyChallenge)

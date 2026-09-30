@@ -21,6 +21,7 @@ local CommunityGoalService = require(script.Parent.CommunityGoalService) -- QUEU
 CommunityGoalService.start()
 local WeeklyChallengeService = require(script.Parent.WeeklyChallengeService) -- QUEUE-ALL1 P4 §3 주간 도전
 WeeklyChallengeService.start()
+local CodexService = require(script.Parent.CodexService) -- QUEUE-ALL1 P5 도감 v2
 local SocialRewardService = require(script.Parent.SocialRewardService) -- QUEUE-ALL1 P4 §1 · §2 초대 보상 · 코드
 SocialRewardService.start()
 local SettingsService = require(script.Parent.SettingsService) -- Q14 설정 저장 Remote
@@ -65,6 +66,7 @@ local function loadForPlayer(player)
 	CommunityGoalService.onLoaded(player) -- QUEUE-ALL1 P3 §4: 내 기여 · 받은 칸 Attribute
 	WeeklyChallengeService.onLoaded(player) -- QUEUE-ALL1 P4 §3: 지난주 순위 보상
 	SocialRewardService.onLoaded(player) -- QUEUE-ALL1 P4 §1: 초대받은 첫 접속 보상
+	CodexService.onLoaded(player) -- QUEUE-ALL1 P5: 도감 칸 판정 · 고른 칭호 Attribute
 	SettingsService.onLoaded(player) -- Q14: 저장된 설정을 Attribute로
 	MonetizationService.onLoaded(player) -- QUEUE-B1 B2: 시즌 넘김 · 치장 Attribute · 게임패스 · 정책 · 선물함 팝업
 end

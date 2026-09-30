@@ -280,6 +280,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		if isSparkle then
 			QuestService.note(recipient, "sparkle", 1)
 		end
+		require(script.Parent.CodexService).noteMonster(recipient, monsterData.speciesId, isSparkle) -- QUEUE-ALL1 P5 도감(처치 수 · 반짝이)
 	end
 end
 
@@ -309,6 +310,7 @@ local function handleBossDeath(attacker, target)
 			end
 			-- 30-0 S11: 보스 도감 도장 - 새로 찍힌 것은 아래 즉시 저장 요청에 실린다(견습 보스는 이 함수를 안 탄다).
 			PlayerProfile.markBossCodex(member, monsterData.id)
+			require(script.Parent.CodexService).noteBoss(member, monsterData.id) -- QUEUE-ALL1 P5 도감 v2 보스 처치 수(같은 기여 조건)
 			ImmediateSave.request(member)
 			table.insert(rewarded, ("%s(%.0f%%)"):format(member.Name, ratio * 100))
 		elseif member.Parent then
