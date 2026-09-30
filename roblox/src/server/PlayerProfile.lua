@@ -2079,6 +2079,22 @@ function PlayerProfile.markBossIntroSeen(player, bossId)
 	return true
 end
 
+-- A2-M1 개발 명령(/gg boss introreset): 보스 첫 만남 기록을 지운다(첫 조우 진입 연출 · 첫 만남 카드를 다시 보려고). bossId = nil이면 전부. 저장 구조는 그대로(값만).
+function PlayerProfile.debugClearBossIntroSeen(player, bossId)
+	local profile = profiles[player]
+	if not profile or not profile.hints.bossIntroSeen then
+		return 0
+	end
+	local n = 0
+	for id in pairs(profile.hints.bossIntroSeen) do
+		if bossId == nil or id == bossId then
+			profile.hints.bossIntroSeen[id] = nil
+			n += 1
+		end
+	end
+	return n
+end
+
 -- C1 마무리(v42): 잠긴 몹을 처음 때렸는가 - 처음이면 본 것으로 적고 true(말풍선 1회 · 저장은 다음 정기 · 퇴장 저장).
 function PlayerProfile.markStealLockSeen(player)
 	local profile = profiles[player]

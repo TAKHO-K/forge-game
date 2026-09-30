@@ -392,7 +392,9 @@ B.death = {
 		{ s = 1.25, ease = "in", pose = B.stun.sit },
 		{ s = 1.45, ease = "out", pose = merge(B.stun.sit, { RootJoint = { -12, 0, 0, 0, -1.65, -0.2 }, Waist = { -22, 0, 0 } }) },
 	},
-	hitstopAt = 1.25, fadeFrom = 3.2, fadeSeconds = 0.8, eyes = { 0, 0, 90 }, stars = true, slowSeconds = 1.2, slowRate = 0.4,
+	-- A2-M1: 사망 연출 ≤ 3초(사용자 지시) - 슬로모션 0.8초(× 0.4) → 털썩(실시간 약 1.7초) → 별 · X X 눈 → 빛으로 흩어짐(scatterFrom) → 사라짐(fadeFrom + fadeSeconds = 실시간 약 3.0초).
+	--   옛 = 슬로모션 1.2초 · 사라짐 3.2 + 0.8(실시간 약 3.9초).
+	hitstopAt = 1.25, fadeFrom = 2.0, fadeSeconds = 0.5, scatterFrom = 1.75, eyes = { 0, 0, 90 }, stars = true, slowSeconds = 0.8, slowRate = 0.4,
 }
 -- ═══════════════════════════ 전갈(scorpion) ═══════════════════════════
 local S = {}
@@ -602,7 +604,7 @@ S.death = { -- 비틀 → 다리 풀려 털썩 → 별 빙빙
 		{ s = 1.25, ease = "in", pose = S.stun.sit },
 		{ s = 1.45, ease = "out", pose = merge(S.stun.sit, { RootJoint = { 0, 0, 0, 0, -0.85, 0 } }) },
 	},
-	hitstopAt = 1.25, fadeFrom = 3.2, fadeSeconds = 0.8, eyes = { 0, 0, 90 }, stars = true, slowSeconds = 1.2, slowRate = 0.4,
+	hitstopAt = 1.25, fadeFrom = 2.0, fadeSeconds = 0.5, scatterFrom = 1.75, eyes = { 0, 0, 90 }, stars = true, slowSeconds = 0.8, slowRate = 0.4, -- A2-M1 ≤ 3초(위 두 발 몸과 같다)
 }
 
 -- ═══════════════════════════ 보스별(스킬 id → 동작 · 걷기 · 던지기 · 무게) ═══════════════════════════
@@ -730,6 +732,9 @@ D.impacts = {
 	throw_push = { kind = "spark", parts = { "Hand_R", "Hand_L" }, size = 0.9 },
 	throw_staff = { kind = "whoosh", parts = { "Hand_R" }, size = 1.0 },
 }
+-- A2-M1 분노(체력이 phaseAt 아래로 - 모든 보스 공통 겉모습 · 판정 무관): 한 번 포효 효과 + 빛나는 부위(수정 · 룬 · 눈)가 위험색 쪽으로 짙어진다(tint - UIColors.danger로 섞는 비율)
+D.enrage = { phaseAt = 0.5, tint = 0.45, eyeTint = 0.7, seconds = 0.6 }
+
 -- A2-M1 무거운 발걸음(클라): 보스 무게(rig.weight) ≥ minWeight면 발 디딤마다 먼지 · 가까우면(nearStuds) 작은 흔들림(설정 존중)
 D.footsteps = { dustWeight = 0.9, shakeWeight = 1.25, nearStuds = 38, shakeScale = 0.35 }
 

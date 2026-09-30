@@ -616,6 +616,10 @@ function BossMotion.evaluate(ctx, st, now)
 		blend(pose, p, ease("out", t / 0.12))
 		info.eyes = Dd.eyes
 		info.fade = clamp01((t - Dd.fadeFrom) / Dd.fadeSeconds)
+		if Dd.scatterFrom then -- A2-M1 빛으로 흩어짐(0 → 1 - 클라 BossBodyFx.death)
+			info.scatter = clamp01((t - Dd.scatterFrom) / math.max(Dd.fadeFrom + Dd.fadeSeconds - Dd.scatterFrom, 0.1))
+		end
+		info.dead = true
 	end
 	return pose, info
 end

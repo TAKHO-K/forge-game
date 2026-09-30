@@ -128,6 +128,13 @@ return {
 		["boss.grab.struggle"] = "대공 잡기 - 다 같이 점프를 연타해 발악!",
 		["boss.grab.warn"] = "착지!",
 		["boss.grab.rescueFront"] = "보스 정면에서 F - 친구 구출", -- A2-M1(사용자 결정): 대공 잡기 구출 = 보스 정면 F
+		-- A2-M1 보스 칭호(등장 카드 - 이름 위 한 줄)
+		["boss.title.section_guardian"] = "구간을 지키는 고대 석상",
+		["boss.title.frost_giant"] = "만년설의 거인",
+		["boss.title.abyssal_lord"] = "가라앉은 신전의 왕",
+		["boss.title.crystal_queen"] = "수정궁의 여왕",
+		["boss.title.scorpion_queen"] = "모래 무덤의 여제",
+		["boss.title.storm_lord"] = "천둥 첨탑의 군주",
 		["boss.bubble.struggle"] = "공중에 갇혔다 - 점프를 연타해 탈출!",
 
 		-- 설정 · 시점(M1-0)

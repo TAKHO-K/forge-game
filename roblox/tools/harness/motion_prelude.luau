@@ -114,6 +114,17 @@ CFrame = {
 		return math.deg(math.acos(math.clamp((tr - 1) / 2, -1, 1)))
 	end,
 }
+CFrame.lookAt = function(p, t)
+	local f = (t - p).Unit
+	local up = Vector3.new(0, 1, 0)
+	local r = f:Cross(up)
+	if r.Magnitude < 1e-6 then
+		r = Vector3.new(1, 0, 0)
+	end
+	r = r.Unit
+	local u = r:Cross(f)
+	return mk(p.X, p.Y, p.Z, { r.X, u.X, -f.X, r.Y, u.Y, -f.Y, r.Z, u.Z, -f.Z })
+end
 CFrame.identity = CFrame.new(0, 0, 0)
 CFrame.fromEulerAnglesXYZ = CFrame.Angles
 local Enum = setmetatable({}, { __index = function(t, k) return setmetatable({}, { __index = function(_, k2) return k .. "." .. k2 end }) end })

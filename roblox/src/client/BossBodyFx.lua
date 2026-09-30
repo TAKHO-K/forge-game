@@ -289,4 +289,115 @@ function BossBodyFx.introEnd(e)
 	e.introLanded = nil
 end
 
+-- ─────────────────────────── 분노(체력 절반) ───────────────────────────
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+function BossBodyFx.enrage(e)
+	local E = BossMotionData.enrage
+	local c = colorsOf(e)
+	local hot = c.accent:Lerp(UIColors.danger, E.tint)
+	e.enragedColor = hot
+	for _, d in ipairs(e.model:GetDescendants()) do
+		if d:IsA("BasePart") and (d.Material == Enum.Material.Neon or d.Material == Enum.Material.Glass) and d.Name ~= "Eyes" then
+			game:GetService("TweenService"):Create(d, TweenInfo.new(E.seconds), { Color = d.Color:Lerp(UIColors.danger, E.tint) }):Play()
+		end
+	end
+	local eyes = e.model:FindFirstChild("Eyes")
+	if eyes then
+		game:GetService("TweenService"):Create(eyes, TweenInfo.new(E.seconds), { Color = eyes.Color:Lerp(UIColors.danger, E.eyeTint) }):Play()
+		e.eyeColor = eyes.Color:Lerp(UIColors.danger, E.eyeTint) -- 노려봄(돌진 전조)이 되돌릴 기준 색
+	end
+	roar(e, partPos(e, "Head") or e.visPos, 1.2, 0.9)
+	for _ = 1, 10 do
+		local a = math.random() * math.pi * 2
+		BossFx.spawn({ shape = "ball", position = e.visPos + Vector3.new(math.cos(a), rnd(0.5, 2.5), math.sin(a)) * e.S, velocity = Vector3.new(math.cos(a) * 6, rnd(6, 12), math.sin(a) * 6),
+			size0 = Vector3.one * 0.3 * e.S * 0.5, size1 = Vector3.one * 0.05, color = hot, transparency0 = 0.1, transparency1 = 1, life = 0.7, material = Enum.Material.Neon })
+	end
+end
+
+-- ─────────────────────────── 사망(비폭력: 어지러움 · X X 눈 · 주저앉음 · 빛으로 흩어짐 · 보상 빛 폭발) ───────────────────────────
+-- e = 사망 복제 항목(client/BossAnimator startDeathClone) · info = BossMotion info(stars · scatter · fade)
+function BossBodyFx.death(e, info)
+	local c = colorsOf(e)
+	-- X X 눈: 별이 돌기 시작할 때 눈 막대를 숨기고 머리 앞에 X 두 개(이 클라 파트 - 복제와 함께 사라진다)
+	if info.stars and not e.xEyes then
+		e.xEyes = true
+		local head = e.model:FindFirstChild("Head")
+		local eyes = e.model:FindFirstChild("Eyes")
+		if head and eyes then
+			eyes.LocalTransparencyModifier = 1
+			local w = eyes.Size.X
+			for _, side in ipairs({ -1, 1 }) do
+				for _, rz in ipairs({ 45, -45 }) do
+					local bar = Instance.new("Part")
+					bar.Name = "DeathXEye"
+					bar.Anchored, bar.CanCollide, bar.CanQuery, bar.CanTouch, bar.CastShadow = false, false, false, false, false
+					bar.Massless = true
+					bar.Material = Enum.Material.SmoothPlastic
+					bar.Color = Color3.fromRGB(25, 18, 22)
+					bar.Size = Vector3.new(w * 0.34, w * 0.07, 0.06)
+					bar.CFrame = eyes.CFrame * CFrame.new(side * w * 0.26, 0, -0.03) * CFrame.Angles(0, 0, math.rad(rz))
+					local weld = Instance.new("WeldConstraint")
+					weld.Part0, weld.Part1 = head, bar
+					weld.Parent = bar
+					bar.Parent = e.model
+					local bt = e.baseTransparency or (e.preview and e.preview.baseTransparency)
+					if bt then
+						bt[bar] = 0
+					end
+				end
+			end
+		end
+	end
+	-- 빛으로 흩어짐: 몸 여기저기서 빛 방울이 떠오른다(흩어지는 동안)
+	local sc = info.scatter or 0
+	if sc > 0 and sc < 1 and (not e.scatterTick or os.clock() - e.scatterTick > 0.05) then
+		e.scatterTick = os.clock()
+		local parts = e.scatterParts
+		if not parts then
+			parts = {}
+			for _, d in ipairs(e.model:GetDescendants()) do
+				if d:IsA("BasePart") and d.Name ~= "HumanoidRootPart" and d.Name ~= "Hitbox" and d.Size.Magnitude > 0.8 then
+					table.insert(parts, d)
+				end
+			end
+			e.scatterParts = parts
+		end
+		for _ = 1, 4 do
+			local p = parts[math.random(1, math.max(#parts, 1))]
+			if p then
+				BossFx.spawn({ shape = "ball", position = p.Position + Vector3.new(rnd(-0.5, 0.5), rnd(-0.5, 0.5), rnd(-0.5, 0.5)) * p.Size.Magnitude * 0.4,
+					velocity = Vector3.new(rnd(-2, 2), rnd(6, 12), rnd(-2, 2)), size0 = Vector3.one * rnd(0.25, 0.5) * e.S * 0.4, size1 = Vector3.one * 0.05,
+					color = (math.random() < 0.3 and UIColors.gold or c.accent):Lerp(WHITE, 0.35), transparency0 = 0.05, transparency1 = 1, life = rnd(0.7, 1.1), material = Enum.Material.Neon })
+			end
+		end
+	end
+	-- 보상 빛 폭발: 흩어짐이 시작하는 순간 한 번(금 · 강조색 고리 + 사방으로 튀는 빛 - 드랍 연출 D1과 이어진다 · 줍기는 막지 않는다: 전부 충돌 · 조준 없음)
+	if sc > 0 and not e.rewardBurst then
+		e.rewardBurst = true
+		local center = Vector3.new(e.visPos.X, floorY(e) + 0.3, e.visPos.Z)
+		BossFx.ring(center, 1 * e.S, 6 * e.S, UIColors.gold, 0.7, 0.2)
+		BossFx.ring(center + Vector3.new(0, 1.5 * e.S, 0), 0.5 * e.S, 4 * e.S, c.accent:Lerp(WHITE, 0.4), 0.55, 0.3)
+		for i = 1, 12 do
+			local a = i / 12 * math.pi * 2
+			BossFx.spawn({ shape = "ball", position = center + Vector3.new(0, 1.2 * e.S, 0), velocity = Vector3.new(math.cos(a) * rnd(14, 22), rnd(10, 18), math.sin(a) * rnd(14, 22)),
+				gravity = Workspace.Gravity * 0.35, size0 = Vector3.one * 0.6, size1 = Vector3.one * 0.15, color = i % 3 == 0 and c.accent or UIColors.gold,
+				transparency0 = 0, transparency1 = 1, life = 1.0, material = Enum.Material.Neon })
+		end
+	end
+end
+
+-- 전시 리그(/gg boss anim)가 사망 동작을 되풀이할 때 다음 회차 전에 되돌린다
+function BossBodyFx.resetDeath(e)
+	e.xEyes, e.rewardBurst, e.scatterParts = nil, nil, nil
+	for _, d in ipairs(e.model:GetChildren()) do
+		if d.Name == "DeathXEye" then
+			d:Destroy()
+		end
+	end
+	local eyes = e.model:FindFirstChild("Eyes")
+	if eyes then
+		eyes.LocalTransparencyModifier = 0
+	end
+end
+
 return BossBodyFx

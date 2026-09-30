@@ -1917,6 +1917,10 @@ local function handleCommand(player, args)
 		else
 			reply(player, "실패: 보스를 부르지 못했습니다")
 		end
+	elseif sub == "boss" and args[2] == "introreset" then
+		-- A2-M1: 보스 첫 만남 기록 지우기 - 다음 입장이 첫 조우 진입 연출(3초) · 첫 만남 카드. "/gg boss introreset [보스 id | all]"
+		local id = (args[3] and args[3] ~= "all") and args[3] or nil
+		reply(player, ("첫 만남 기록 %d개를 지웠습니다(%s)"):format(PlayerProfile.debugClearBossIntroSeen(player, id), id or "전부"))
 	elseif sub == "boss" and args[2] == "force" and args[3] then
 		-- 29-5: 보스 id는 스테이지만의 함수다 - 강제 지정은 Studio 전용 예외이고 세션 메모리다(다음 스폰 한 번, 저장 안 함).
 		if BossEncounter.setDebugForcedBoss(player, args[3]) then
@@ -4215,6 +4219,7 @@ if RunService:IsStudio() then
 				{ "BR1-4a(나)", function() require(script.Parent.BR14aVerify).runLive(player, env) end }, -- BR1-4a: 고정 % 피해 · 에네르기파 · 회오리 되돌림 0 · 대공 잡기 강제 체공 · 붕괴 실제 낙하 · 아레나 낙하 제외
 				{ "BR1-4b(나)", function() require(script.Parent.BR14bVerify).runLive(player, env) end },
 				{ "BR1-4c(나)", function() require(script.Parent.BR14cVerify).runLive(player, env) end }, -- BR1-4c: 붕괴 원인 · 3점 낙하 · 진입 연출 · 유도 규칙 · 처치 정리 · 지진파 단계 -- BR1-4b: 리그 6종 스폰 · 알림 = 판정 시각 · 잡기 부착점
+				{ "A2-M1(나)", function() require(script.Parent.A2M1Verify).runLive(player, env) end }, -- A2-M1: 수호자 첫 조우 3초 · 짧은 판 1.2초 · 접지 · 몸 반경 · 기록 시작 = 연출 끝
 				{ "BR1-4b0(나)", function() require(script.Parent.BR14b0Verify).runLive(player, env) end }, -- BR1-4b 파트 0: 공중 대시 낙하 최고점 · 수호자 잡기 → 돌진 연속 금지(실제 step)
 				{ "W2(나)", function() require(script.Parent.W2Verify).runLive(player, env) end },
 				{ "C2(나)", function() require(script.Parent.C2Verify).runLive(player, env) end }, -- C2: 전투력 동기화 · 스테이지 5 · 100 · 1,000 × 비율 0.7 · 1.0 · 1.5 처치 타수 · 받는 피해 배율 -- W2: 파트 0 회오리 지연 되돌림 · 피해 이벤트 구조 · 클라 표본 창(근접 궤적 시각 · 투사체 화면 ↔ 서버)
@@ -4665,6 +4670,15 @@ if RunService:IsStudio() and verifyEnabled("W2(가)") then -- W2: 스킨 금지 
 		local ok, err = pcall(require(script.Parent.W2Verify).runPure)
 		if not ok then
 			print("===W2 검증 끝(가)=== 에러: " .. tostring(err))
+		end
+	end)
+end
+
+if RunService:IsStudio() and verifyEnabled("A2-M1(가)") then -- A2-M1: 이징 · 접촉 = 판정 · 사망 ≤ 3초 · 등장 · 파트 예산 · 정면 판정 · 접지 · 몸 반경
+	task.spawn(function()
+		local ok, err = pcall(require(script.Parent.A2M1Verify).runPure)
+		if not ok then
+			print("===A2-M1 검증 끝(가)=== 에러: " .. tostring(err))
 		end
 	end)
 end

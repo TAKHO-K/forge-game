@@ -141,6 +141,11 @@ local function readState(e, now)
 	if hp <= 0 and not st.deadAt then
 		st.deadAt = now
 	end
+	-- A2-M1 분노(체력 절반 - 겉모습 · 판정 무관): 한 번만
+	if hp > 0 and hp < BossMotionData.enrage.phaseAt and not e.enraged and not e.isClone then
+		e.enraged = true
+		BossBodyFx.enrage(e)
+	end
 end
 
 -- 가까운 사람 쪽으로 머리가 먼저(몸 기준 각 · 도) - 잡기 중에는 없음(서버 FK와 같은 자세)
@@ -447,6 +452,18 @@ local function updateEntry(e, now, dt, camPos)
 		e.visPos = prev + e.visVel * h
 	end
 	local yawT = yawOf(root.CFrame)
+	-- A2-M1 등장 동안 보이는 몸은 나(파티) 쪽을 본다(서버 루트 방향 = 판정은 그대로 - 스폰 방향이 입장 반대쪽이라 옛 연출은 등을 보였다). 등장 첫 프레임은 바로 그 방향으로.
+	local st0 = e.st
+	if st0.introAt and st0.introSeconds and now < st0.introAt + st0.introSeconds + 0.15 then
+		local me = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if me then
+			yawT = math.atan2(-(me.Position.X - e.visPos.X), -(me.Position.Z - e.visPos.Z))
+			if e.introYawStamp ~= st0.introAt then
+				e.introYawStamp = st0.introAt
+				e.visYaw = yawT
+			end
+		end
+	end
 	local dy = (yawT - e.visYaw + math.pi) % (2 * math.pi) - math.pi
 	local prevYaw = e.visYaw
 	e.visYaw += dy * (1 - math.exp(-dt * 10))
@@ -595,6 +612,9 @@ local function updateEntry(e, now, dt, camPos)
 	end
 	if e.isClone or e.preview then
 		updateStars(e, info.stars and (info.fade or 0) < 1, now)
+		if info.dead then
+			BossBodyFx.death(e, info) -- A2-M1 X X 눈 · 빛으로 흩어짐 · 보상 빛 폭발
+		end
 	end
 	if (e.isClone or e.preview) and info.fade then
 		for part, base in pairs(e.isClone and e.baseTransparency or e.preview.baseTransparency) do
@@ -744,6 +764,7 @@ local function previewStep(e, now, dt)
 				part.Transparency = base
 			end
 		end
+		BossBodyFx.resetDeath(e)
 		print(("[BossAnim] %s · %s"):format(e.rigId, action))
 	end
 	localPlayer:SetAttribute("BossAnimAction", action) -- A2-M1 측정기가 동작별로 나눠 센다
