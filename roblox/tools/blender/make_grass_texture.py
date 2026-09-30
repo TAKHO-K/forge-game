@@ -1,6 +1,6 @@
 """A2-N4 §3-2 슬라임 구역 카툰 잔디 텍스처(이음매 없음 · 512 × 512) - Blender 안에서 numpy로 그려 PNG로 저장.
 
-실행: bash roblox/tools/blender/bl.sh roblox/tools/blender/make_grass_texture.py -- [--out roblox/art/terrain/grass_v1.png] [--seed 7]
+실행: bash roblox/tools/blender/bl.sh roblox/tools/blender/make_grass_texture.py -- [--out roblox/art/terrain/grass_v1.png] [--seed 7] [--gray]
 모양(art-direction-v1 카툰 규칙): 밝은 잔디 바탕 · 넓은 명암 얼룩(저주파 · 2톤) · 짧은 풀잎 획(3톤 - 밝은 끝 · 어두운 뿌리) · 작은 꽃 점 약간. 모든 도형은 가장자리를 감싸 그린다(타일 이음매 0).
 """
 import os
@@ -12,6 +12,7 @@ import numpy as np
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = "roblox/art/terrain/grass_v1.png"
 SEED = 7
+GRAY = "--gray" in argv  # A2-N4 Play: 색 텍스처 × 지형 재질 색(MaterialColors)이 곱해져 짙어지고 다른 구역(T3 이끼) 색까지 바뀌었다 → 명암 결만(색 = 구역 재질 색)
 for i, a in enumerate(argv):
     if a == "--out":
         OUT = argv[i + 1]
@@ -33,6 +34,12 @@ BLADE_DARK = hexc("4E9A38")
 BLADE_MID = hexc("6FC04A")
 BLADE_TIP = hexc("B4EA7C")
 FLOWER = [hexc("FFF4C8"), hexc("FFD2E6")]
+
+if GRAY:  # 밝은 회색 명암만(평균 ≈ 0.9 - 재질 색을 거의 그대로 보이게)
+    g = lambda v: np.array([v, v, v])
+    BASE, SHADE, LIGHT = g(0.9), g(0.8), g(0.97)
+    BLADE_DARK, BLADE_MID, BLADE_TIP = g(0.72), g(0.86), g(1.0)
+    FLOWER = [g(1.0)]
 
 img = np.zeros((N, N, 3))
 img[:] = BASE

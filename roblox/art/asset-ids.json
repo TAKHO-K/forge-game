@@ -2068,6 +2068,13 @@
   "status": "Approved",
   "imageId": 89106913778439
  },
+ "terrain/grass_v2.png": {
+  "sha256": "9aae2abed8b532adfabb64e7d706cb3c74e9f909d85706fc0d31147dca7645a0",
+  "assetType": "Decal",
+  "assetId": 138632611508765,
+  "status": "Approved",
+  "imageId": 102054407406703
+ },
  "weapons/bow_ancient.fbx": {
   "sha256": "742f05a890664cd259cc7dd622d39ba8216ae168234344937ed13b13b41f6853",
   "assetType": "Model",

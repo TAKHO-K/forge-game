@@ -104,7 +104,7 @@ artV1.effects = {
 }
 -- A2-S2: 잔디를 조금 더 노랗고 어둡게(민트 슬라임 #68E0A0과 색상 · 명도 대비) - 나머지 재질은 cartoon 그대로
 artV1.materialColors = table.clone(cartoon.materialColors)
--- A2-N4 §3-2: 슬라임 구역 카툰 잔디 텍스처(roblox/art/terrain/grass_v1.png - Blender make_grass_texture.py · Open Cloud Decal 이미지) - 평면 변형 대신 Grass에만
+-- A2-N4 §3-2: 슬라임 구역 카툰 잔디 텍스처(roblox/art/terrain/grass_v2.png = 명암 결만 - 색은 구역 재질 색 · v1 색 텍스처는 재질 색과 곱해져 짙었다 - Blender make_grass_texture.py · Open Cloud Decal 이미지) - 평면 변형 대신 Grass에만
 artV1.textureOverrides = { Grass = "ArtV1Tex_Grass" }
 artV1.materialColors.Grass = rgb("#688E44") -- cartoon #6DBA46보다 노랑 쪽 · 어둡게(A2-N2 Play 1: A2-S2 #7FA640도 평면 재질에서 형광으로 떴다 → 한 단계 더)
 artV1.materialColors.LeafyGrass = rgb("#5A803C") -- cartoon #5DAE45
