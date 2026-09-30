@@ -100,6 +100,7 @@ btn.Font = Theme.font
 btn.TextSize = 13
 btn.Text = WD.text.button
 btn.Parent = gui
+btn.Visible = false -- QUEUE-ALL3 Q3 중복 삭제: 주간 도전 = 퀘스트 창(J) [주간 도전] 탭
 Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
 local panel = Instance.new("Frame")
 panel.Name = "WeeklyChallengePanel"

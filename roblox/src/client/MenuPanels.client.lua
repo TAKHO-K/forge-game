@@ -2,3 +2,4 @@
 require(script.Parent.panels.Character).init()
 require(script.Parent.panels.Training).init()
 require(script.Parent.panels.WorldMapPanel).init()
+require(script.Parent.panels.Attendance).init() -- 7일 출석 · 첫 접속 보상(하루 첫 접속 자동 1회)

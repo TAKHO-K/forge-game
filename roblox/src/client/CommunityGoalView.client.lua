@@ -30,6 +30,7 @@ pill.BackgroundTransparency = 0.25
 pill.AutoButtonColor = true
 pill.Text = ""
 pill.Parent = gui
+pill.Visible = false -- QUEUE-ALL3 Q3 중복 삭제: 합동 목표 = 퀘스트 창(J) [전 서버 협동] 탭 · 허브 게이지 · 달성 배너는 그대로
 Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
 local fill = Instance.new("Frame")
 fill.Name = "Fill"
