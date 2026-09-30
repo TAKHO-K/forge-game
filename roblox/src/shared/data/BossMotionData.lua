@@ -99,11 +99,26 @@ local prepR = merge(B.guard, { Waist = { 6, 20, 0 }, Shoulder_R = { 150, 0, 24 }
 B.basicPrep = { R = prepR, L = mirror(prepR) }
 
 -- 강화 평타(스킬 swipe · 큰 휘두름): 팔을 휘두를 듯 떨림 + 무기 번쩍(전조 끝 40%) → 가로 휩쓸기 → 지나침 → 회복
+local SWIPE_PRE = {
+	{ f = 0.35, ease = "inout", pose = merge(B.guard, { Waist = { 2, -40, 0 }, Shoulder_R = { 40, 0, 75 }, Elbow_R = { 35, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.14, 0 } }) },
+	{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { 4, -55, 0 }, Shoulder_R = { 30, 0, 95 }, Elbow_R = { 25, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.18, 0 }, Neck = { 0, 20, 0 } }) },
+}
+-- QUEUE-ALL1 01 C-2(모션 > 판정 - 판정 부채꼴 반경 14 그대로): 접촉 · 지나침에서 팔을 굽혀 몸 쪽으로 휘두른다(옛 = 어깨 90 · 80 · 팔꿈치 8 · 15 - 팔을 쭉 뻗어
+--   수호자 15.8 · 심해 17.4 · 폭풍 19.0 stud까지 닿았다 → 14.7 · 15.0 · 16.5(폭풍 = 대기 자세 16.0이 하한) · FK 하네스 앞 100° 안 최대).
 B.clips.swipe = {
-	pre = {
-		{ f = 0.35, ease = "inout", pose = merge(B.guard, { Waist = { 2, -40, 0 }, Shoulder_R = { 40, 0, 75 }, Elbow_R = { 35, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.14, 0 } }) },
-		{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { 4, -55, 0 }, Shoulder_R = { 30, 0, 95 }, Elbow_R = { 25, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.18, 0 }, Neck = { 0, 20, 0 } }) },
+	pre = SWIPE_PRE,
+	post = {
+		{ s = 0.09, ease = "out", pose = merge(B.guard, { Waist = { -10, 45, 0 }, Shoulder_R = { 50, 0, 5 }, Elbow_R = { 75, 0, 0 }, Neck = { 0, -15, 0 } }) },
+		{ s = 0.22, ease = "back", pose = merge(B.guard, { Waist = { -12, 58, 0 }, Shoulder_R = { 45, 0, -35 }, Elbow_R = { 80, 0, 0 }, Neck = { 0, -18, 0 } }) },
+		{ s = 0.85, ease = "inout", pose = B.guard },
 	},
+	hitstop = 0.07, squash = 0.1,
+	tremble = { from = 0.6, amp = 3.5, joints = { "Shoulder_R", "Elbow_R" } },
+	flash = "weapon", -- 무기(없으면 오른손)를 번쩍
+}
+-- 팔을 쭉 뻗는 옛 휘두름 - 수정 여왕만(몸이 작아 굽히면 13.3 → 11.5 = 판정의 0.82로 모자란다 · D.bossClips)
+local swipeWide = {
+	pre = SWIPE_PRE,
 	post = {
 		{ s = 0.09, ease = "out", pose = merge(B.guard, { Waist = { -10, 45, 0 }, Shoulder_R = { 90, 0, 5 }, Elbow_R = { 8, 0, 0 }, Neck = { 0, -15, 0 } }) },
 		{ s = 0.22, ease = "back", pose = merge(B.guard, { Waist = { -12, 58, 0 }, Shoulder_R = { 80, 0, -35 }, Elbow_R = { 15, 0, 0 }, Neck = { 0, -18, 0 } }) },
@@ -111,7 +126,7 @@ B.clips.swipe = {
 	},
 	hitstop = 0.07, squash = 0.1,
 	tremble = { from = 0.6, amp = 3.5, joints = { "Shoulder_R", "Elbow_R" } },
-	flash = "weapon", -- 무기(없으면 오른손)를 번쩍
+	flash = "weapon",
 }
 
 -- 두 손 내려찍기(큰 모션 = 긴 전조 · 큰 피해): 들어 올려 뒤로 젖힘(웅크림) → 내려찍기 → 몸 눌림 + 히트스톱 → 천천히 일어남
@@ -132,6 +147,18 @@ B.clips.slam = {
 	},
 	hitstop = 0.1, squash = 0.25,
 }
+-- QUEUE-ALL1 01 C-2: 원 안 강공격(innerSmash · 판정 원 12)용 내려찍기 - 전조는 slam 그대로 · 발 앞 가까이 찍는다(허리 −38 → −15 · 어깨 55 → 20).
+--   수호자 손 14.7 → 14.0(대기 자세 13.3이 하한) · 서리 거인은 곤봉이 대기 자세부터 21.8이라 몸 크기가 하한.
+local SMASH_IN = merge(SLAM_HIT, { Waist = { -15, 0, 0 }, Shoulder_R = { 20, 0, 8 }, Shoulder_L = { 20, 0, -8 }, Elbow_R = { 20, 0, 0 }, Elbow_L = { 20, 0, 0 } })
+B.clips.smash_in = {
+	pre = B.clips.slam.pre,
+	post = {
+		{ s = 0.09, ease = "in", pose = SMASH_IN },
+		{ s = 0.3, ease = "out", pose = merge(SMASH_IN, { Waist = { -21, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.48, -0.12 } }) },
+		{ s = 1.1, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.1, squash = 0.25,
+}
 
 -- 한 손 주먹 내리꽂기(fist)
 B.clips.punch = {
@@ -142,6 +169,17 @@ B.clips.punch = {
 	post = {
 		{ s = 0.08, ease = "out", pose = merge(B.guard, { Waist = { -22, -30, 0 }, Shoulder_R = { 105, 0, 5 }, Elbow_R = { 5, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.25, -0.15 } }) },
 		{ s = 0.2, ease = "back", pose = merge(B.guard, { Waist = { -26, -36, 0 }, Shoulder_R = { 95, 0, -5 }, Elbow_R = { 2, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.28, -0.18 } }) },
+		{ s = 0.9, ease = "inout", pose = B.guard },
+	},
+	hitstop = 0.07, squash = 0.12,
+}
+-- QUEUE-ALL1 01 C-2: 폭풍 군주 원 안 낙뢰(innerSmash · 판정 원 12)용 - 전조는 punch 그대로 · 지팡이를 발 곁 바닥에 내리꽂는다(어깨 105 → 20 · 팔꿈치 5 → 45).
+--   지팡이 끝 19.1 → 15.2(대기 자세 16.0보다 안쪽 - 몸 크기가 하한).
+B.clips.punch_in = {
+	pre = B.clips.punch.pre,
+	post = {
+		{ s = 0.08, ease = "out", pose = merge(B.guard, { Waist = { -8, -30, 0 }, Shoulder_R = { 20, 0, 5 }, Elbow_R = { 45, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.25, -0.15 } }) },
+		{ s = 0.2, ease = "back", pose = merge(B.guard, { Waist = { -12, -36, 0 }, Shoulder_R = { 10, 0, -5 }, Elbow_R = { 45, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.28, -0.18 } }) },
 		{ s = 0.9, ease = "inout", pose = B.guard },
 	},
 	hitstop = 0.07, squash = 0.12,
@@ -618,21 +656,21 @@ S.death = { -- 비틀 → 다리 풀려 털썩 → 별 빙빙
 D.bosses = {
 	section_guardian = {
 		walk = { stride = 0.7, knee = 36, arm = 16, bob = 0.07 },
-		skills = { heavy = "slam", shockwave = "stomp", meteor = "cast", charge = "charge", cross = "punch", swipe = "swipe", fists = "punch", orbs = "cast", earthSplit = "punch", mirror = "cast", innerSmash = "slam" },
+		skills = { heavy = "slam", shockwave = "stomp", meteor = "cast", charge = "charge", cross = "punch", swipe = "swipe", fists = "punch", orbs = "cast", earthSplit = "punch", mirror = "cast", innerSmash = "smash_in" },
 		env = "slam", throw = "throw_overhead",
 		signature = { "heavy", "charge" },
 		intro = { style = "rise", depth = 3.4, riseFrac = 0.44, riseEase = "out" }, -- A2-M1: 땅을 가르고 솟는 석상
 	},
 	frost_giant = {
 		walk = { stride = 0.8, knee = 30, arm = 12, bob = 0.09, lean = 6 },
-		skills = { slam = "slam", icefall = "cast", spike = "stomp", roar = "roar", swipe = "swipe", spear = "cast", stomp = "stomp", snowball = "cast", mirror = "cast", innerSmash = "slam" },
+		skills = { slam = "slam", icefall = "cast", spike = "stomp", roar = "roar", swipe = "swipe", spear = "cast", stomp = "stomp", snowball = "cast", mirror = "cast", innerSmash = "smash_in" },
 		env = "roar", throw = "throw_spin",
 		signature = { "slam", "roar" },
 		intro = { style = "iceBreak", depth = 0.9, riseFrac = 0.4, riseEase = "back" }, -- A2-M1: 얼음 덩어리를 깨고 일어섬
 	},
 	abyssal_lord = {
 		walk = { stride = 0.65, knee = 34, arm = 16, bob = 0.06 },
-		skills = { sweep = "slam", tide = "stomp", spout = "cast", colors = "cast", swipe = "swipe", tailSweep = "tailSweep", vortex = "vortex", bubbles = "cast", mirror = "cast" },
+		skills = { sweep = "slam_wide", tide = "stomp", spout = "cast", colors = "cast", swipe = "swipe", tailSweep = "tailSweep", vortex = "vortex", bubbles = "cast", mirror = "cast" },
 		env = "beam", throw = "throw_tail",
 		signature = { "tailSweep", "vortex" },
 		intro = { style = "emerge", depth = 3.8, riseFrac = 0.46, riseEase = "sine" }, -- A2-M1: 물에서 천천히 떠오름
@@ -653,7 +691,7 @@ D.bosses = {
 	},
 	storm_lord = {
 		walk = { stride = 0.66, knee = 34, arm = 14, bob = 0.06, twist = 6 },
-		skills = { discharge = "stomp", whirl = "spin", strike = "cast", rods = "cast", swipe = "swipe", tornado = "cast", thunderRing = "stomp", boltSpear = "cast", mirror = "cast", innerSmash = "punch" },
+		skills = { discharge = "stomp", whirl = "spin", strike = "cast", rods = "cast", swipe = "swipe", tornado = "cast", thunderRing = "stomp", boltSpear = "cast", mirror = "cast", innerSmash = "punch_in" },
 		env = "beam", throw = "throw_staff",
 		signature = { "whirl", "strike" },
 		intro = { style = "descend", depth = 6, riseFrac = 0.34, riseEase = "in", fromAbove = true, crouch = {} }, -- A2-M1: 번개와 함께 하늘에서 내리꽂힘
@@ -696,8 +734,8 @@ local orgel = { -- 수정 여왕: 홀을 높이 들어 종을 울리듯 흔든�
 	hitstop = 0.04,
 }
 D.bossClips = {
-	abyssal_lord = { tailSweep = tailSweep, vortex = vortex },
-	crystal_queen = { orgel = orgel },
+	abyssal_lord = { tailSweep = tailSweep, vortex = vortex, slam_wide = B.clips.slam }, -- slam_wide = slam과 같은 동작 · 땅 치기 효과만 옛 크기(impacts - 판정 원 24)
+	crystal_queen = { orgel = orgel, swipe = swipeWide },
 }
 
 -- 스킬이 표에 없을 때: primitive · motion → 동작
@@ -720,8 +758,13 @@ D.prepFlash = { color = Color3.fromRGB(255, 255, 255), peak = 0.28 }
 
 -- A2-M1 몸 충격 효과(클라 client/BossBodyFx - 판정 무관 · 접촉 순간 = 판정 순간): 동작 이름 → { kind, parts(효과 자리 부위), size, shake(가까운 화면 흔들림 배율 - 설정 존중) }
 --   kind: ground = 땅 치기(갈라진 고리 · 흙먼지 · 파편) · whoosh = 휘두름(바람 줄기) · spark = 시전(손의 빛 방울) · roar = 포효(가슴 높이 음파 고리 · 발밑 먼지)
+--   QUEUE-ALL1 01 C-2(판정보다 큰 이펙트): 땅 치기는 부위 자리에서 약 4.35 × S × size까지 퍼진다(네온 조각 1.2 + 속도 7 × 0.45초 · 고리 3.2). 원 판정 보스 스킬은
+--   부위 거리 + 퍼짐 ≤ max(판정 × 1.1, 몸 도달)로 맞춤 - slam(수호자 강공격 14 · 서리 빙결 강타 18) 1.1 → 0.26 · 원 안 강공격(smash_in · punch_in) 0.26.
 D.impacts = {
-	slam = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.1, shake = 1.0 },
+	slam = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 0.26, shake = 1.0 },
+	slam_wide = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.1, shake = 1.0 }, -- 심해 군주 sweep(원 24 - 옛 크기 그대로 1.11)
+	smash_in = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 0.26, shake = 1.0 },
+	punch_in = { kind = "ground", parts = { "Hand_R" }, size = 0.26, shake = 0.6 },
 	quake_finish = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.3, shake = 1.2 },
 	stomp = { kind = "ground", parts = { "Foot_R" }, size = 0.9, shake = 0.8 },
 	hopSlam = { kind = "ground", parts = { "Foot_L", "Foot_R" }, size = 1.0, shake = 1.0 },
