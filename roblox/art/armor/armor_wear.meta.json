@@ -7823,6 +7823,6483 @@
     "tris": 20,
     "neon": true
    }
+  },
+  "armor_greatsword_normal": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.01
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Chest_Steel": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.055,
+     -0.05
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 104,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.25,
+     -0.69
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Shoulder_L_Steel": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     -0.05,
+     0.384,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 100,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.0,
+     -0.08,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_R_Steel": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.05,
+     0.384,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 100,
+    "neon": false
+   },
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.0,
+     -0.08,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Belt_Steel": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Leather": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.02,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_L": {
+    "attach": "LeftUpperLeg",
+    "offset": [
+     0.22,
+     0.26,
+     -0.6
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_L_Steel": {
+    "attach": "LeftUpperLeg",
+    "offset": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_R": {
+    "attach": "RightUpperLeg",
+    "offset": [
+     -0.22,
+     0.26,
+     -0.6
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_R_Steel": {
+    "attach": "RightUpperLeg",
+    "offset": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   }
+  },
+  "armor_greatsword_legendary": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.01
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Chest_Steel": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.055,
+     -0.05
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 104,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.165,
+     -0.056
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   },
+   "Chest_Glow": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.01,
+     0.3,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   },
+   "Shoulder_L_Steel": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     -0.05,
+     0.384,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 100,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.0,
+     -0.08,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_L_Grade": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.02,
+     0.498,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 70,
+    "neon": false
+   },
+   "Shoulder_R_Steel": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.05,
+     0.384,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 100,
+    "neon": false
+   },
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.0,
+     -0.08,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_R_Grade": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.02,
+     0.498,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 70,
+    "neon": false
+   },
+   "Belt_Steel": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Leather": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.02,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Glow": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.007,
+     0.02,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   },
+   "Tasset_L": {
+    "attach": "LeftUpperLeg",
+    "offset": [
+     0.22,
+     0.26,
+     -0.6
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_L_Steel": {
+    "attach": "LeftUpperLeg",
+    "offset": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_R": {
+    "attach": "RightUpperLeg",
+    "offset": [
+     -0.22,
+     0.26,
+     -0.6
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_R_Steel": {
+    "attach": "RightUpperLeg",
+    "offset": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   }
+  },
+  "armor_greatsword_transcendent": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.01
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Chest_Steel": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.055,
+     -0.05
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 104,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.115,
+     -0.056
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 108,
+    "neon": false
+   },
+   "Chest_Glow": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.102,
+     -0.073,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 32,
+    "neon": true
+   },
+   "Shoulder_L_Steel": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     -0.05,
+     0.384,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 100,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.0,
+     -0.08,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_L_Grade": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.02,
+     0.537,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 82,
+    "neon": false
+   },
+   "Shoulder_R_Steel": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.05,
+     0.384,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 100,
+    "neon": false
+   },
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.0,
+     -0.08,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_R_Grade": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.02,
+     0.537,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 82,
+    "neon": false
+   },
+   "Belt_Steel": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Leather": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.02,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Glow": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.007,
+     0.02,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   },
+   "Tasset_L": {
+    "attach": "LeftUpperLeg",
+    "offset": [
+     0.22,
+     0.26,
+     -0.6
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_L_Steel": {
+    "attach": "LeftUpperLeg",
+    "offset": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_R": {
+    "attach": "RightUpperLeg",
+    "offset": [
+     -0.22,
+     0.26,
+     -0.6
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_R_Steel": {
+    "attach": "RightUpperLeg",
+    "offset": [
+     0.0,
+     0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   }
+  },
+  "gloves_greatsword_normal": {
+   "Glove_L_Steel": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Leather": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.12,
+     -0.44
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Steel": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Leather": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.12,
+     -0.44
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Steel": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.21,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Trim": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.46,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R_Steel": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.21,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Trim": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.46,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "gloves_greatsword_legendary": {
+   "Glove_L_Steel": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Leather": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.12,
+     -0.44
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Grade": {
+    "attach": "LeftHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Glove_R_Steel": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Leather": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.12,
+     -0.44
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Grade": {
+    "attach": "RightHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Bracer_L_Steel": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.21,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Trim": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.46,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_L_Grade": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R_Steel": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.21,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Trim": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.46,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R_Grade": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "gloves_greatsword_transcendent": {
+   "Glove_L_Steel": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Leather": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.12,
+     -0.44
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Grade": {
+    "attach": "LeftHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Glove_R_Steel": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Leather": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.12,
+     -0.44
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Grade": {
+    "attach": "RightHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Bracer_L_Steel": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.21,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Trim": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.46,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_L_Grade": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R_Steel": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.21,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Trim": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.46,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R_Grade": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "shoes_greatsword_normal": {
+   "Boot_L_Steel": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.01,
+     -0.31
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Boot_L_Leather": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Steel": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.01,
+     -0.31
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Boot_R_Leather": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_L_Steel": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.06,
+     -0.074
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 60,
+    "neon": false
+   },
+   "Greave_L_Trim": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R_Steel": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.06,
+     -0.074
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 60,
+    "neon": false
+   },
+   "Greave_R_Trim": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "shoes_greatsword_legendary": {
+   "Boot_L_Steel": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.01,
+     -0.31
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Boot_L_Leather": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Grade": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Boot_R_Steel": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.01,
+     -0.31
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Boot_R_Leather": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Grade": {
+    "attach": "RightFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Greave_L_Steel": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.06,
+     -0.074
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 60,
+    "neon": false
+   },
+   "Greave_L_Trim": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_L_Grade": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R_Steel": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.06,
+     -0.074
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 60,
+    "neon": false
+   },
+   "Greave_R_Trim": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R_Grade": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "shoes_greatsword_transcendent": {
+   "Boot_L_Steel": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.01,
+     -0.31
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Boot_L_Leather": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Grade": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Boot_R_Steel": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.01,
+     -0.31
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Boot_R_Leather": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Grade": {
+    "attach": "RightFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Greave_L_Steel": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.06,
+     -0.074
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 60,
+    "neon": false
+   },
+   "Greave_L_Trim": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_L_Grade": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R_Steel": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.06,
+     -0.074
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 60,
+    "neon": false
+   },
+   "Greave_R_Trim": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R_Grade": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "armor_dualblade_normal": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.09,
+     -0.015
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Chest_Steel": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     0.0
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Chest_Leather": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.05,
+     -0.62
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 24,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.78,
+     0.0
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.05,
+     -0.66
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Shoulder_L": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     -0.024,
+     0.48,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_L_Leather": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.019,
+     0.04,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_R": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.056,
+     0.48,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_R_Leather": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.019,
+     0.04,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Belt": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.06,
+     -0.62
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Belt_Leather": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.01,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   }
+  },
+  "armor_dualblade_legendary": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.09,
+     -0.015
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Chest_Steel": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     0.0
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Chest_Leather": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.05,
+     -0.62
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 24,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.78,
+     0.0
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.315,
+     -0.046
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   },
+   "Chest_Glow": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.01,
+     0.3,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   },
+   "Shoulder_L": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     -0.024,
+     0.48,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_L_Leather": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.019,
+     0.04,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_L_Grade": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.02,
+     0.498,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 70,
+    "neon": false
+   },
+   "Shoulder_R": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.056,
+     0.48,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_R_Leather": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.019,
+     0.04,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_R_Grade": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.02,
+     0.498,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 70,
+    "neon": false
+   },
+   "Belt": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.06,
+     -0.62
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Belt_Leather": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.01,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Glow": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.007,
+     0.02,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   }
+  },
+  "armor_dualblade_transcendent": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.09,
+     -0.015
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Chest_Steel": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     0.0
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Chest_Leather": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.05,
+     -0.62
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 24,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.78,
+     0.0
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.115,
+     -0.046
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 108,
+    "neon": false
+   },
+   "Chest_Glow": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.102,
+     -0.073,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 32,
+    "neon": true
+   },
+   "Shoulder_L": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     -0.024,
+     0.48,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_L_Leather": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.019,
+     0.04,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_L_Grade": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.02,
+     0.537,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 82,
+    "neon": false
+   },
+   "Shoulder_R": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.056,
+     0.48,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_R_Leather": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.019,
+     0.04,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_R_Grade": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.02,
+     0.537,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 82,
+    "neon": false
+   },
+   "Belt": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.06,
+     -0.62
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Belt_Leather": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.01,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Glow": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.007,
+     0.02,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   }
+  },
+  "gloves_dualblade_normal": {
+   "Glove_L_Leather": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Trim": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     -0.12
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Glove_R_Leather": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Trim": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     -0.12
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.16,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Leather": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.11,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.16,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Leather": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.11,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   }
+  },
+  "gloves_dualblade_legendary": {
+   "Glove_L_Leather": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Trim": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     -0.12
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Glove_L_Grade": {
+    "attach": "LeftHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Glove_R_Leather": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Trim": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     -0.12
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Glove_R_Grade": {
+    "attach": "RightHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.16,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Leather": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.11,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Bracer_L_Grade": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.16,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Leather": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.11,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Bracer_R_Grade": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "gloves_dualblade_transcendent": {
+   "Glove_L_Leather": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Trim": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     -0.12
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Glove_L_Grade": {
+    "attach": "LeftHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Glove_R_Leather": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Trim": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     -0.12
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Glove_R_Grade": {
+    "attach": "RightHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.16,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Leather": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.11,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Bracer_L_Grade": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.16,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Leather": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.11,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Bracer_R_Grade": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "shoes_dualblade_normal": {
+   "Boot_L_Leather": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Trim": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_R_Leather": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Trim": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.46,
+     -0.54
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 32,
+    "neon": false
+   },
+   "Greave_L_Leather": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.46,
+     -0.54
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 32,
+    "neon": false
+   },
+   "Greave_R_Leather": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   }
+  },
+  "shoes_dualblade_legendary": {
+   "Boot_L_Leather": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Trim": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_L_Grade": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Boot_R_Leather": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Trim": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_R_Grade": {
+    "attach": "RightFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.46,
+     -0.54
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 32,
+    "neon": false
+   },
+   "Greave_L_Leather": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Grade": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.46,
+     -0.54
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 32,
+    "neon": false
+   },
+   "Greave_R_Leather": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Grade": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "shoes_dualblade_transcendent": {
+   "Boot_L_Leather": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Trim": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_L_Grade": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Boot_R_Leather": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Trim": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_R_Grade": {
+    "attach": "RightFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.46,
+     -0.54
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 32,
+    "neon": false
+   },
+   "Greave_L_Leather": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Grade": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.46,
+     -0.54
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 32,
+    "neon": false
+   },
+   "Greave_R_Leather": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Grade": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "armor_bow_normal": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.028
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 80,
+    "neon": false
+   },
+   "Chest_Leather": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.06,
+     0.03,
+     0.0
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 24,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.824,
+     0.34
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 40,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.28,
+     0.35,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Shoulder_L": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.016,
+     0.425,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.019,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_R": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.016,
+     0.425,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.019,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Belt_Leather": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.01,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Trim": {
+    "attach": "LowerTorso",
+    "offset": [
+     1.08,
+     -0.06,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   }
+  },
+  "armor_bow_legendary": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.028
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 80,
+    "neon": false
+   },
+   "Chest_Leather": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.06,
+     0.03,
+     0.0
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 24,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.824,
+     0.34
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 40,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.175,
+     -0.036
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   },
+   "Chest_Glow": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.01,
+     0.3,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   },
+   "Shoulder_L": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.016,
+     0.425,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.019,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_L_Grade": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.02,
+     0.498,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 70,
+    "neon": false
+   },
+   "Shoulder_R": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.016,
+     0.425,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.019,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_R_Grade": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.02,
+     0.498,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 70,
+    "neon": false
+   },
+   "Belt_Leather": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.01,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Trim": {
+    "attach": "LowerTorso",
+    "offset": [
+     1.08,
+     -0.06,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Glow": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.007,
+     0.02,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   }
+  },
+  "armor_bow_transcendent": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.028
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 80,
+    "neon": false
+   },
+   "Chest_Leather": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.06,
+     0.03,
+     0.0
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 24,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.824,
+     0.34
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 40,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.115,
+     -0.036
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 108,
+    "neon": false
+   },
+   "Chest_Glow": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.102,
+     -0.073,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 32,
+    "neon": true
+   },
+   "Shoulder_L": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.016,
+     0.425,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.019,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_L_Grade": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.02,
+     0.537,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 82,
+    "neon": false
+   },
+   "Shoulder_R": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.016,
+     0.425,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.019,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 50,
+    "neon": false
+   },
+   "Shoulder_R_Grade": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.02,
+     0.537,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 82,
+    "neon": false
+   },
+   "Belt_Leather": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.01,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Trim": {
+    "attach": "LowerTorso",
+    "offset": [
+     1.08,
+     -0.06,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Glow": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.007,
+     0.02,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   }
+  },
+  "gloves_bow_normal": {
+   "Glove_L_Leather": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.35
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Leather": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Trim": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.12,
+     -0.36
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.58,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Leather": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.11,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Trim": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Bracer_R_Leather": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   }
+  },
+  "gloves_bow_legendary": {
+   "Glove_L_Leather": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.35
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Grade": {
+    "attach": "LeftHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Glove_R_Leather": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Trim": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.12,
+     -0.36
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Glove_R_Grade": {
+    "attach": "RightHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.58,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Leather": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.11,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Trim": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Bracer_L_Grade": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R_Leather": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Grade": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "gloves_bow_transcendent": {
+   "Glove_L_Leather": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.35
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Grade": {
+    "attach": "LeftHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Glove_R_Leather": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Trim": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.12,
+     -0.36
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 36,
+    "neon": false
+   },
+   "Glove_R_Grade": {
+    "attach": "RightHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.58,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Leather": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.11,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Trim": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Bracer_L_Grade": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R_Leather": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Grade": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "shoes_bow_normal": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.12,
+     -0.1
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_L_Leather": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Trim": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.12,
+     -0.1
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_R_Leather": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Trim": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Leather": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Trim": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Leather": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Trim": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "shoes_bow_legendary": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.12,
+     -0.1
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_L_Leather": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Trim": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_L_Grade": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.12,
+     -0.1
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_R_Leather": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Trim": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_R_Grade": {
+    "attach": "RightFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Leather": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Trim": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_L_Grade": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Leather": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Trim": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R_Grade": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "shoes_bow_transcendent": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.12,
+     -0.1
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_L_Leather": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Trim": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_L_Grade": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.12,
+     -0.1
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_R_Leather": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Trim": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 12,
+    "neon": false
+   },
+   "Boot_R_Grade": {
+    "attach": "RightFoot",
+    "offset": [
+     0.005,
+     0.12,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Leather": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Trim": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_L_Grade": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Leather": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.15,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Trim": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R_Grade": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "armor_healer_normal": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.015
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.02,
+     -0.63
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.376,
+     -0.128
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   },
+   "Shoulder_L": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.0,
+     0.34,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.0,
+     0.12,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_R": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.0,
+     0.34,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.0,
+     0.12,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Belt_Trim": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.01,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Tasset_L": {
+    "attach": "LeftUpperLeg",
+    "offset": [
+     -0.075,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   },
+   "Tasset_R": {
+    "attach": "RightUpperLeg",
+    "offset": [
+     0.075,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   }
+  },
+  "armor_healer_legendary": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.015
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.02,
+     -0.63
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.06,
+     -0.049
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 140,
+    "neon": false
+   },
+   "Chest_Glow": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.01,
+     0.3,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   },
+   "Shoulder_L": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.0,
+     0.34,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.0,
+     0.12,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_L_Grade": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.02,
+     0.578,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 70,
+    "neon": false
+   },
+   "Shoulder_R": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.0,
+     0.34,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.0,
+     0.12,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_R_Grade": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.02,
+     0.578,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 70,
+    "neon": false
+   },
+   "Belt_Trim": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.01,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Glow": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.007,
+     0.02,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   },
+   "Tasset_L": {
+    "attach": "LeftUpperLeg",
+    "offset": [
+     -0.075,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   },
+   "Tasset_R": {
+    "attach": "RightUpperLeg",
+    "offset": [
+     0.075,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   }
+  },
+  "armor_healer_transcendent": {
+   "Chest": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.015
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.02,
+     -0.63
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Chest_Grade": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.06,
+     -0.049
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Chest_Glow": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.102,
+     -0.073,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 32,
+    "neon": true
+   },
+   "Shoulder_L": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.0,
+     0.34,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.0,
+     0.12,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_L_Grade": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     0.02,
+     0.617,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 82,
+    "neon": false
+   },
+   "Shoulder_R": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.0,
+     0.34,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.0,
+     0.12,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 56,
+    "neon": false
+   },
+   "Shoulder_R_Grade": {
+    "attach": "RightUpperArm",
+    "offset": [
+     0.02,
+     0.617,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 82,
+    "neon": false
+   },
+   "Belt_Trim": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.01,
+     0.0
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Grade": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     0.0,
+     -0.64
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Belt_Glow": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.007,
+     0.02,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 20,
+    "neon": true
+   },
+   "Tasset_L": {
+    "attach": "LeftUpperLeg",
+    "offset": [
+     -0.075,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   },
+   "Tasset_R": {
+    "attach": "RightUpperLeg",
+    "offset": [
+     0.075,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.22,
+     1
+    ],
+    "tris": 84,
+    "neon": false
+   }
+  },
+  "gloves_healer_normal": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.275
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.275
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Grade": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.4,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Grade": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.4,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "gloves_healer_legendary": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.275
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Grade": {
+    "attach": "LeftHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.275
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Grade": {
+    "attach": "RightHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Grade": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.192,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Grade": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.192,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   }
+  },
+  "gloves_healer_transcendent": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.275
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_L_Grade": {
+    "attach": "LeftHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     0.0,
+     0.0,
+     0.275
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Glove_R_Grade": {
+    "attach": "RightHand",
+    "offset": [
+     0.005,
+     0.14,
+     -0.2
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_L_Grade": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.192,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     0.1,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Bracer_R_Grade": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.192,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   }
+  },
+  "shoes_healer_normal": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Grade": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     -0.41
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Grade": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     -0.41
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.325,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Trim": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.325,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Trim": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   }
+  },
+  "shoes_healer_legendary": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Grade": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     -0.343
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 48,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Grade": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     -0.343
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 48,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.325,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Trim": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Greave_L_Grade": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.325,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Trim": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Greave_R_Grade": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
+  },
+  "shoes_healer_transcendent": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_L_Grade": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     0.0,
+     -0.343
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 48,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Boot_R_Grade": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     0.0,
+     -0.343
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 48,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.325,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_L_Trim": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Greave_L_Grade": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.325,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Trim": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     -0.31,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 88,
+    "neon": false
+   },
+   "Greave_R_Grade": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.2,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 44,
+    "neon": false
+   }
   }
  },
  "tris": {
@@ -8401,6 +14878,150 @@
   "shoes_tier6_transcendent": {
    "tris": 740,
    "parts": 12
+  },
+  "armor_greatsword_normal": {
+   "tris": 696,
+   "parts": 14
+  },
+  "armor_greatsword_legendary": {
+   "tris": 932,
+   "parts": 18
+  },
+  "armor_greatsword_transcendent": {
+   "tris": 992,
+   "parts": 18
+  },
+  "gloves_greatsword_normal": {
+   "tris": 256,
+   "parts": 8
+  },
+  "gloves_greatsword_legendary": {
+   "tris": 384,
+   "parts": 12
+  },
+  "gloves_greatsword_transcendent": {
+   "tris": 384,
+   "parts": 12
+  },
+  "shoes_greatsword_normal": {
+   "tris": 352,
+   "parts": 8
+  },
+  "shoes_greatsword_legendary": {
+   "tris": 480,
+   "parts": 12
+  },
+  "shoes_greatsword_transcendent": {
+   "tris": 480,
+   "parts": 12
+  },
+  "armor_dualblade_normal": {
+   "tris": 452,
+   "parts": 12
+  },
+  "armor_dualblade_legendary": {
+   "tris": 688,
+   "parts": 16
+  },
+  "armor_dualblade_transcendent": {
+   "tris": 748,
+   "parts": 16
+  },
+  "gloves_dualblade_normal": {
+   "tris": 400,
+   "parts": 8
+  },
+  "gloves_dualblade_legendary": {
+   "tris": 528,
+   "parts": 12
+  },
+  "gloves_dualblade_transcendent": {
+   "tris": 528,
+   "parts": 12
+  },
+  "shoes_dualblade_normal": {
+   "tris": 232,
+   "parts": 8
+  },
+  "shoes_dualblade_legendary": {
+   "tris": 360,
+   "parts": 12
+  },
+  "shoes_dualblade_transcendent": {
+   "tris": 360,
+   "parts": 12
+  },
+  "armor_bow_normal": {
+   "tris": 428,
+   "parts": 11
+  },
+  "armor_bow_legendary": {
+   "tris": 664,
+   "parts": 15
+  },
+  "armor_bow_transcendent": {
+   "tris": 724,
+   "parts": 15
+  },
+  "gloves_bow_normal": {
+   "tris": 264,
+   "parts": 7
+  },
+  "gloves_bow_legendary": {
+   "tris": 392,
+   "parts": 11
+  },
+  "gloves_bow_transcendent": {
+   "tris": 392,
+   "parts": 11
+  },
+  "shoes_bow_normal": {
+   "tris": 336,
+   "parts": 12
+  },
+  "shoes_bow_legendary": {
+   "tris": 464,
+   "parts": 16
+  },
+  "shoes_bow_transcendent": {
+   "tris": 464,
+   "parts": 16
+  },
+  "armor_healer_normal": {
+   "tris": 548,
+   "parts": 11
+  },
+  "armor_healer_legendary": {
+   "tris": 784,
+   "parts": 15
+  },
+  "armor_healer_transcendent": {
+   "tris": 844,
+   "parts": 15
+  },
+  "gloves_healer_normal": {
+   "tris": 200,
+   "parts": 6
+  },
+  "gloves_healer_legendary": {
+   "tris": 328,
+   "parts": 8
+  },
+  "gloves_healer_transcendent": {
+   "tris": 328,
+   "parts": 8
+  },
+  "shoes_healer_normal": {
+   "tris": 376,
+   "parts": 8
+  },
+  "shoes_healer_legendary": {
+   "tris": 504,
+   "parts": 10
+  },
+  "shoes_healer_transcendent": {
+   "tris": 504,
+   "parts": 10
   }
  },
  "zones": {
@@ -8410,5 +15031,11 @@
   "tier4": "모래 유적",
   "tier5": "폭풍 첨탑",
   "tier6": "빙하 동굴"
- }
+ },
+ "classes": [
+  "greatsword",
+  "dualblade",
+  "bow",
+  "healer"
+ ]
 }

@@ -50,8 +50,35 @@ local function colorOf(pieceName, zone, grade)
 	return base, false
 end
 
+-- QUEUE-ALL1 P2 v3: 직업 메시(<부위>_<직업>_<외형>)의 색 = 세트 3색(ArtImportData.armorSetColors)
+local function colorOfV3(pieceName, zone, grade)
+	local Z = Data.armorSetColors[zone] or Data.armorSetColors.tier1
+	local main, sub, accent, glow = rgb(Z.main), rgb(Z.sub), rgb(Z.accent), rgb(Data.armorGlow)
+	if grade == "transcendent" then
+		local T = Data.armorTranscendent
+		main, sub, accent, glow = rgb(T.base), rgb(Z.main), rgb(T.grade), rgb(T.glow)
+	elseif grade == "primordial" then
+		main, accent, glow = rgb(Data.armorPrimordialBase), GradeColor.of(grade), GradeColor.of(grade)
+	elseif rank(grade) >= rank("legendary") then
+		glow = GradeColor.of(grade) -- 보석 = 등급 색
+	end
+	local N = Data.armorNeutral[grade] or Data.armorNeutral
+	if pieceName:match("_Glow$") then
+		return glow, true
+	elseif pieceName:match("_Grade$") then
+		return accent, false
+	elseif pieceName:match("_Trim$") then
+		return sub, false
+	elseif pieceName:match("_Steel$") then
+		return rgb(N.steel), false
+	elseif pieceName:match("_Leather$") then
+		return rgb(N.leather), false
+	end
+	return main, false
+end
+
 local function lookOf(owner)
-	local parts = {}
+	local parts = { tostring(owner:GetAttribute(Data.armorClassAttribute)) }
 	for _, part in ipairs(PARTS) do
 		table.insert(parts, tostring(owner:GetAttribute(Data.armorLookAttribute .. part)))
 	end
@@ -68,11 +95,23 @@ local function clear(owner)
 	worn[owner] = nil
 end
 
+local refresh
 local function build(owner, character)
+	local retries = worn[owner] and worn[owner].character == character and (worn[owner].retries or 0) or 0
 	clear(owner)
 	local key = lookOf(owner) .. "|" .. tostring(ArtMeshKit.enabled())
-	local w = { key = key, character = character, pieces = {} }
+	local w = { key = key, character = character, pieces = {}, retries = retries }
 	worn[owner] = w
+	task.defer(function()
+		if w.missing and worn[owner] == w and retries < 10 then
+			task.delay(1, function()
+				if worn[owner] == w then
+					w.retries = retries + 1
+					refresh(owner, character, true)
+				end
+			end)
+		end
+	end)
 	if not (character and ArtMeshKit.enabled()) then
 		return
 	end
@@ -82,7 +121,15 @@ local function build(owner, character)
 		if type(v) == "string" then
 			zone, grade = v:match("^(tier%d)|(%w+)$") -- (`a and f()`는 값 하나로 잘려 grade가 nil이 된다 - 분리)
 		end
-		local modelKey = zone and ("%s_%s_%s"):format(part, zone, Data.armorLookOfGrade[grade] or "normal")
+		local look = Data.armorLookOfGrade[grade] or "normal"
+		local modelKey = zone and ("%s_%s_%s"):format(part, zone, look)
+		-- QUEUE-ALL1 P2 v3: 지금 직업 모양이 있으면 그것(세트 = 색) · 없으면 옛 구역 모양
+		local classId = owner:GetAttribute(Data.armorClassAttribute)
+		local classKey = zone and type(classId) == "string" and ("%s_%s_%s"):format(part, classId, look)
+		local v3 = classKey and ArtMeshKit.get("armor/" .. classKey) and Wear.pieces[classKey] and true or false
+		if v3 then
+			modelKey = classKey
+		end
 		local src = modelKey and ArtMeshKit.get("armor/" .. modelKey)
 		local metaPieces = modelKey and Wear.pieces[modelKey]
 		if src and metaPieces then
@@ -91,6 +138,9 @@ local function build(owner, character)
 			for _, piece in ipairs(src:GetChildren()) do
 				local m = piece:IsA("BasePart") and metaPieces[piece.Name]
 				local body = m and character:FindFirstChild(m.attach)
+				if m and not body then
+					w.missing = true -- 붙을 파트가 아직 안 옴(스트리밍 · 복제 중 - Play: 서버가 만든 더미에서 조각이 무작위로 빠졌다) → 아래에서 다시 입힌다
+				end
 				if body and body:IsA("BasePart") then
 					if not groups[body] then
 						groups[body] = {}
@@ -102,7 +152,19 @@ local function build(owner, character)
 			local F = Data.armorFit
 			for _, body in ipairs(order) do
 				local lo, hi = Vector3.one * math.huge, -Vector3.one * math.huge
-				for _, g in ipairs(groups[body]) do
+				-- QUEUE-ALL1 P2 v3: 둘레는 묶음에서 가장 큰 껍데기 하나로 맞춘다(후드 · 망토 · 끈까지 묶으면 껍데기가 몸 안으로 줄어 셔츠가 비쳤다 - Play 실측)
+				local fitList = groups[body]
+				if v3 then
+					local big, vol = nil, -1
+					for _, g in ipairs(groups[body]) do
+						local v = g.piece.Size.X * g.piece.Size.Y * g.piece.Size.Z
+						if v > vol then
+							big, vol = g, v
+						end
+					end
+					fitList = { big }
+				end
+				for _, g in ipairs(fitList) do
 					local R = g.piece.CFrame.Rotation
 					local h = g.piece.Size / 2
 					local ext = Vector3.new(
@@ -115,6 +177,10 @@ local function build(owner, character)
 				local size = hi - lo
 				local target = F.handFootParts[body.Name] and body.Size * (1 + F.handFootPad) or body.Size + Vector3.one * (2 * F.shellStuds)
 				local s = Vector3.new(target.X / math.max(size.X, 1e-3), math.min(1, target.Y / math.max(size.Y, 1e-3)), target.Z / math.max(size.Z, 1e-3))
+				if v3 then -- 길이 = 파트 길이 비율(기준 체형 대비 - 윗몸통 1.9인 아바타에 1.6 껍데기가 남던 것)
+					local refY = fitList[1].m.refSize and fitList[1].m.refSize[2] or body.Size.Y
+					s = Vector3.new(s.X, math.clamp(body.Size.Y / refY, F.v3LengthClamp[1], F.v3LengthClamp[2]), s.Z)
+				end
 				local mid = (lo + hi) / 2
 				for _, g in ipairs(groups[body]) do
 					local piece, m = g.piece, g.m
@@ -130,7 +196,7 @@ local function build(owner, character)
 					-- 묶음 가운데는 둘레(X · Z)만 파트 가운데로 모으고 높이는 비율대로(어깨판은 어깨 위 · 벨트는 허리 아래 그대로)
 					local at = Vector3.new((off.X - mid.X) * s.X, off.Y * s.Y, (off.Z - mid.Z) * s.Z)
 					p.CFrame = body.CFrame * CFrame.new(at) * R
-					local color, neon = colorOf(piece.Name, zone, grade)
+					local color, neon = (v3 and colorOfV3 or colorOf)(piece.Name, zone, grade)
 					p.Color = color
 					p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
 					p.Anchored, p.Massless = false, true
@@ -148,10 +214,10 @@ local function build(owner, character)
 	end
 end
 
-local function refresh(owner, character)
+function refresh(owner, character, force)
 	local w = worn[owner]
 	local key = lookOf(owner) .. "|" .. tostring(ArtMeshKit.enabled())
-	if w and w.key == key and w.character == character and #w.pieces > 0 and w.pieces[1].Parent then
+	if not force and w and w.key == key and w.character == character and #w.pieces > 0 and w.pieces[1].Parent then
 		return
 	end
 	-- R15만(명세 §5): UpperTorso가 없으면 표시 안 함
@@ -172,6 +238,7 @@ local function bindPlayer(player)
 	for _, part in ipairs(PARTS) do
 		player:GetAttributeChangedSignal(Data.armorLookAttribute .. part):Connect(go)
 	end
+	player:GetAttributeChangedSignal(Data.armorClassAttribute):Connect(go) -- 직업을 바꾸면 같은 장비도 그 직업 모양
 	go()
 end
 
@@ -190,6 +257,9 @@ local function bindDummy(model)
 				refresh(model, model)
 			end)
 		end
+		model:GetAttributeChangedSignal(Data.armorClassAttribute):Connect(function()
+			refresh(model, model)
+		end)
 		model.AncestryChanged:Connect(function()
 			if not model.Parent then
 				clear(model)
@@ -201,13 +271,14 @@ workspace.ChildAdded:Connect(function(c)
 	task.defer(bindDummy, c)
 end)
 
+-- 캐시 완료 · 아트 스위치 = 강제로 다시 입힌다(QUEUE-ALL1 P2: 캐시가 다 차기 전에 갑옷만 입힌 채 "같은 키"라 장갑 · 신발이 끝내 안 붙었다)
 local function refreshAll()
 	for _, p in ipairs(Players:GetPlayers()) do
-		refresh(p, p.Character)
+		refresh(p, p.Character, true)
 	end
 	for owner in pairs(worn) do
 		if typeof(owner) == "Instance" and owner:IsA("Model") then
-			refresh(owner, owner)
+			refresh(owner, owner, true)
 		end
 	end
 end
