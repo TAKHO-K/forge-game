@@ -239,7 +239,9 @@ end
 do
 	-- A2-S: 아트 샘플 스위치(기본 꺼짐 - ArtStyleV1Data.enabled). 켜져 있으면 조명도 샘플 프로필
 	local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
-	local artOn = ArtStyleV1Data.enabled or (game:GetService("RunService"):IsStudio() and ReplicatedStorage:GetAttribute("ArtStyleV1Force") == true) -- Studio 확인용: edit 모드에서 RS Attribute로 부팅부터 켬
+	-- A2-M1(사용자 지시 "ArtStyleV1 = 개발 기본 켬"): Studio에서는 기본 켬 · edit 모드 RS Attribute ArtStyleV1Force = false면 끔(끔 = 지금 라이브 게임과 같다) · 라이브 = ArtStyleV1Data.enabled 그대로
+	local isStudio = game:GetService("RunService"):IsStudio()
+	local artOn = ArtStyleV1Data.enabled or (isStudio and ReplicatedStorage:GetAttribute("ArtStyleV1Force") ~= false)
 	workspace:SetAttribute(ArtStyleV1Data.attribute, artOn)
 	local profile = artOn and ArtStyleV1Data.lightingProfile or require(ReplicatedStorage.Shared.data.CartoonStyleData).active
 	local counts = require(ReplicatedStorage.Shared.CartoonStyle).apply(profile)
