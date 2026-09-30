@@ -11,6 +11,8 @@ local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
 local MeshImportCheckData = require(ReplicatedStorage.Shared.data.MeshImportCheckData)
 local MeshSwap = require(ReplicatedStorage.Shared.MeshSwap)
 local MeshImportCheck = require(ReplicatedStorage.Shared.MeshImportCheck)
+local WeaponRigSpec = require(ReplicatedStorage.Shared.data.WeaponRigSpec)
+local WeaponRigCheck = require(ReplicatedStorage.Shared.WeaponRigCheck)
 
 local ArtMeshKit = {}
 
@@ -235,15 +237,40 @@ function ArtMeshKit.weaponModel(classId, gradeId)
 			p.CastShadow = false
 		end
 	end
+	-- 규격 길이 맞춤: A2-N1 메시는 WeaponRigSpec refLength와 길이가 다를 수 있다(쌍검 3.30 vs 2.60) → 손잡이(원점) 기준으로 같은 비율로 줄여 규격 길이에 맞춘다(모양 비율 · 손잡이 자리 그대로)
+	local f = 1
+	local piece = WeaponRigSpec.weapons[classId] and WeaponRigSpec.weapons[classId].pieces[1]
+	local axis = piece and WeaponRigCheck.AXES[piece.tipAxis]
+	if axis then
+		local lo, hi = math.huge, -math.huge
+		for _, p in ipairs(model:GetDescendants()) do
+			if p:IsA("BasePart") then
+				local h = p.Size / 2
+				local ext = math.abs(p.CFrame.RightVector:Dot(axis)) * h.X + math.abs(p.CFrame.UpVector:Dot(axis)) * h.Y + math.abs(p.CFrame.LookVector:Dot(axis)) * h.Z
+				local c = p.Position:Dot(axis)
+				lo, hi = math.min(lo, c - ext), math.max(hi, c + ext)
+			end
+		end
+		local length = hi - lo
+		if length > 0 and math.abs(length - piece.refLength) > piece.refLength * WeaponRigSpec.check.lengthTolerance * 0.5 then
+			f = piece.refLength / length
+			for _, p in ipairs(model:GetDescendants()) do
+				if p:IsA("BasePart") then
+					p.Size *= f
+					p.CFrame = CFrame.new(p.Position * f) * p.CFrame.Rotation
+				end
+			end
+		end
+	end
 	for name, at in pairs(meta.attachments or {}) do
 		local a = Instance.new("Attachment")
 		a.Name = name
-		a.Position = primary.CFrame:PointToObjectSpace(Vector3.new(at[1], at[2], at[3]))
+		a.Position = primary.CFrame:PointToObjectSpace(Vector3.new(at[1], at[2], at[3]) * f)
 		a.Parent = primary
 	end
 	local tip = meta.attachments and meta.attachments.Tip
 	if tip then -- 칼날 리본(WeaponVisual attachTrail - PrimaryPart 로컬): 손잡이 → Tip 선의 92% · 25% 자리
-		local t = Vector3.new(tip[1], tip[2], tip[3])
+		local t = Vector3.new(tip[1], tip[2], tip[3]) * f
 		model:SetAttribute("TrailTop", primary.CFrame:PointToObjectSpace(t * 0.92))
 		model:SetAttribute("TrailBottom", primary.CFrame:PointToObjectSpace(t * 0.25))
 	end

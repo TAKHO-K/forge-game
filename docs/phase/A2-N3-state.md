@@ -10,10 +10,10 @@
 | 1 | 업로드 도구 `roblox/tools/opencloud/` | O | 19fa52e |
 | 2 | 로더(InsertService → 캐시) · ArtStyleV1 뒤 | O | 19fa52e |
 | 3 | 세로 절단 4개 | O(아래) | 07e9a7c |
-| 4 | 일괄 가져오기 1 ~ 16 | 대기 | |
-| 5 | 방어구 착용 표시 | 대기 | |
-| 6 | 보스 결정 ① ② ③ | 대기 | |
-| 7 | 조명 · 보석 탭 버그 | 대기 | |
+| 4 | 일괄 가져오기 1 ~ 16 | 코드 O · 업로드 진행 · Play 확인 대기 | f1cfa46 |
+| 5 | 방어구 착용 표시 | 코드 O · Play 확인 대기 | f1cfa46 |
+| 6 | 보스 결정 ① ② ③ | ③ O(Play) · ② 신호 O(Play) · ① 코드 O | 91c854b · f1cfa46 |
+| 7 | 조명 · 보석 탭 버그 | 버그 원인 O · T4/T6 색 O · T2/T3/T5 조명 = 캡처 뒤 | c553abe |
 | 8 | 보스 재채점 · 성능 | 대기 | |
 | 9 | 보고서 · STATE · 푸시 | 대기 | |
 
@@ -44,6 +44,14 @@
 | 아이콘 | O(크기는 4단계) | 장비창 무기 칸 ArtIcon IsLoaded true · 22px로 작음 |
 | 끔 = 지금 게임 | O | ArtStyleV1Force=false Play: 캐시 없음 · ArtMesh 몹 0/9 · 무기 = `Weapon_Blade` 1개(옛 SpecialMesh) · 캡처 rock_boar-off |
 | 알려진 것 | - | 보스 코드 장식은 메시 교체 때 지움(용접 끊김 방지) → 4단계 ③ 합치기 전까지 장식 없음 · 옛 MeshMeta(A2-N2) → 보스 메타 재생성 필요 |
+
+## 4 ~ 7 중간 기록
+- 결정 ③: `make_boss.py --merge-deco` - 부모와 색 역할 · 재질이 같은 장식 = 부모 메시에 합침 · 다른 장식 = (부모 · 색 · 재질 · LOD)별 `<부모>_Deco<n>` 묶음(색 · 네온 · 유리 · LOD2 보존). 파트 수 수호자 89 → 69 · 서리 61 · 심연 69 · 수정 62 · 폭풍 61 · 전갈 74. 색 보존하면 40 이하 불가(최소 약 58) → 결정 필요.
+- 결정 ②: 서버 `tryBossBasic` 쿨 안 분기에서 쿨 끝 0.25초 전 1회 `BossSwingPrepAt`(예정 타격 서버 시각) · 대상 조건 = 평타와 같음. Play 실측(수호자 6회): 신호 0.23 ~ 0.25초 앞 · 휘두름 주기 1.00초 그대로 · 예정 대비 +0.01 ~ 0.02초(AI 틱) · 패턴 끼면 신호만(클라 0.4초에 내림).
+- 보석 탭 0 vs 서버 1: 원인 = ① 접속 때 `SaveServer`가 인벤토리만 push하고 보석 스냅샷은 안 밀었다 + 클라 보석 탭의 첫 `GemFetch`가 프로필 로드 전이면 빈 스냅샷(무기 없음) ② `setClassId`가 직업별 보석을 바꾸고 push 없음. 수정 = 두 곳에 `GemSync.push`. Play: 직업 전환 뒤 `1@dualblade` 수신 · 실제 창(B 키) 칸 1 = 서버 1. **주의**: `execute_luau`의 `require(UIManager)`는 모듈 사본이라 실제 창을 못 연다(칸 0으로 잘못 보였다).
+- 쌍검 A2-N1 메시 길이 3.30 > 규격 2.60 ± 10% → 무기 규격 검사가 막음 → `ArtMeshKit.weaponModel`이 손잡이 기준 비율 축소로 규격 길이에 맞춤.
+- 방어구 아이콘 구역 = `item.setZone`(없으면 itemLevel이 닿는 보스 스테이지의 보스 구역).
+- 펫 외형 = 저장된 펫 등급(common → normal · uncommon → good · rare · epic → rare) - 알 등급은 저장 안 됨.
 
 ## 에셋 진행
 (업로드 상태의 원본 = `roblox/art/asset-ids.json`)

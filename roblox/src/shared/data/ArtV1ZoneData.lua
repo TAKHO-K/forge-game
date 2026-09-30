@@ -36,20 +36,20 @@ return {
 		}),
 		-- T2 수정 동굴: 보라 늦은 오후 - 먼 곳은 짙은 보라 안개 · 수정(청록)만 튄다
 		tier2 = preset({
-			clock = 15.2, brightness = 2.1, ambient = { 112, 110, 132 }, outdoor = { 146, 142, 162 }, shiftTop = { 240, 232, 252 }, -- 2차 패스: 바닥이 검정에 가까웠다 → 회청 슬레이트가 읽히게 밝기 · 환경광 한 단계
-			atmosphere = { density = 0.24, offset = 0.1, color = { 150, 130, 196 }, decay = { 96, 76, 150 }, haze = 1.6, glare = 0 },
-			cc = { brightness = 0.02, contrast = 0.1, saturation = -0.08, tint = { 248, 244, 255 } },
+			clock = 15.2, brightness = 2.3, ambient = { 118, 114, 140 }, outdoor = { 152, 146, 170 }, shiftTop = { 244, 234, 252 }, -- 2차 패스: 바닥이 검정에 가까웠다 → 회청 슬레이트가 읽히게 밝기 · 환경광 한 단계 · A2-N3: 바닥 · 절벽 · 하늘이 한 청보라 덩어리(캡처 T2-before) → 한 단계 더 밝게
+			atmosphere = { density = 0.17, offset = 0.1, color = { 156, 136, 200 }, decay = { 96, 76, 150 }, haze = 1.15, glare = 0 }, -- A2-N3: 안개를 걷어 원경 절벽 · 수정 실루엣이 읽히게
+			cc = { brightness = 0.02, contrast = 0.14, saturation = 0.02, tint = { 248, 244, 255 } }, -- A2-N3: 채도 −0.08 → +0.02(수정 청록 · 보라가 튀게) · 대비 +0.04
 			bloom = { intensity = 0.5, size = 20, threshold = 1.4 },
 			sky = { stars = 0, sun = 6 },
 		}),
 		-- T3 수몰 사원: 밝은 청록 한낮
 		tier3 = preset({
-			clock = 12, brightness = 2.2, ambient = { 92, 112, 124 }, outdoor = { 140, 160, 170 }, shiftTop = { 232, 250, 255 },
-			atmosphere = { density = 0.16, offset = 0.06, color = { 170, 226, 238 }, decay = { 88, 170, 204 }, haze = 1.0, glare = 0 },
-			cc = { brightness = -0.01, contrast = 0.08, saturation = -0.06, tint = { 238, 252, 255 } },
+			clock = 12, brightness = 2.0, ambient = { 88, 106, 118 }, outdoor = { 134, 152, 162 }, shiftTop = { 232, 250, 255 }, -- A2-N3: 바닥 청록이 한 판으로 밝게 떴다(캡처 T3-before) → 밝기 −0.2 · 환경광 한 단계 아래
+			atmosphere = { density = 0.2, offset = 0.06, color = { 170, 226, 238 }, decay = { 88, 170, 204 }, haze = 1.3, glare = 0 }, -- A2-N3: 물안개 조금 더(원경 깊이)
+			cc = { brightness = -0.02, contrast = 0.14, saturation = -0.12, tint = { 238, 252, 255 } }, -- A2-N3: 대비 +0.06 · 채도 −0.06(형광 청록 누름)
 			bloom = { intensity = 0.4, size = 18, threshold = 1.5 },
 			sky = { stars = 0, sun = 11 },
-			terrain = { Grass = { 80, 126, 110 }, LeafyGrass = { 68, 112, 100 } }, -- 검토: T3 사냥터가 T1과 같은 잔디라 구역 정체성이 없었다 → 물가 청록 이끼(이 구역 안에서만)
+			terrain = { Grass = { 72, 112, 100 }, LeafyGrass = { 62, 98, 90 } }, -- A2-N3: 한 단계 어둡게(이끼 결이 보이게) -- 검토: T3 사냥터가 T1과 같은 잔디라 구역 정체성이 없었다 → 물가 청록 이끼(이 구역 안에서만)
 		}),
 		-- T4 모래 유적: 오후 - 따뜻한 햇빛 · 모래먼지 원경(해 반사 줄기가 생겨 Glare 0)
 		tier4 = preset({
@@ -61,13 +61,13 @@ return {
 		}),
 		-- T5 폭풍 첨탑: 먹구름 늦은 오후 - 가장 어둡지만 캐릭터 · 몬스터는 읽히게(환경광 유지)
 		tier5 = preset({
-			clock = 16.6, brightness = 1.9, ambient = { 112, 114, 142 }, outdoor = { 142, 146, 178 }, shiftTop = { 220, 225, 255 },
-			atmosphere = { density = 0.2, offset = 0.12, color = { 132, 136, 170 }, decay = { 70, 70, 120 }, haze = 1.2, glare = 0 },
-			cc = { brightness = 0.03, contrast = 0.12, saturation = -0.1, tint = { 236, 238, 255 } },
+			clock = 16.6, brightness = 1.8, ambient = { 112, 114, 142 }, outdoor = { 142, 146, 178 }, shiftTop = { 220, 225, 255 },
+			atmosphere = { density = 0.34, offset = 0.2, color = { 118, 122, 150 }, decay = { 60, 62, 92 }, haze = 2.2, glare = 0 }, -- A2-N3: 맑은 파란 하늘 · 흰 바닥이라 폭풍이 안 읽혔다(캡처 T5-before) → 회청 먹구름 안개가 하늘까지 덮게
+			cc = { brightness = 0.02, contrast = 0.16, saturation = -0.14, tint = { 228, 232, 255 } },
 			bloom = { intensity = 0.4, size = 18, threshold = 1.5 },
 			sky = { stars = 0, sun = 4 },
 			-- T5 바닥 = Ground(흙길과 공유 재질). 검토: 회청 바닥 + 남보라 안개 + 파랑 임프가 한 덩어리 → 바닥만 따뜻한 회색(색상 반대쪽)으로 이 구역 안에서만
-			terrain = { Ground = { 118, 112, 110 }, Cobblestone = { 88, 84, 86 } },
+			terrain = { Ground = { 104, 98, 98 }, Cobblestone = { 80, 76, 78 } }, -- A2-N3: 한 단계 어둡게(흰 반사 띠 누름)
 		}),
 		-- T6 빙하 동굴: 차가운 오전 - 눈 과노출을 대비 · 밝기로 누른다
 		tier6 = preset({
