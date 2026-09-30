@@ -65,6 +65,38 @@ end
 player:GetAttributeChangedSignal("UltGauge"):Connect(refresh)
 refresh()
 
+-- QUEUE-ALL2 P2 중복 삭제: 따로 떠 있던 "T 0%" 원 → 스킬 줄 T 칸(SkillSlotsGui Slot_locked2 - Q · E · R 다음 칸) 안 게이지로 합친다(같은 버튼 · T 키 · 컷인 그대로)
+task.spawn(function()
+	local slots = player.PlayerGui:WaitForChild("SkillSlotsGui", 30)
+	local slot = slots and slots:FindFirstChild("Slot_locked2", true)
+	while slots and not slot do
+		slots.DescendantAdded:Wait()
+		slot = slots:FindFirstChild("Slot_locked2", true)
+	end
+	if not slot then
+		return
+	end
+	button.AnchorPoint = Vector2.new(0, 0)
+	button.Position = UDim2.fromScale(0, 0)
+	button.Size = UDim2.fromScale(1, 1)
+	button.ZIndex = slot.ZIndex + 5
+	for _, c in ipairs(button:GetChildren()) do
+		if c:IsA("UICorner") then
+			c.CornerRadius = UDim.new(0, 10)
+		end
+	end
+	for _, c in ipairs(fill:GetChildren()) do
+		if c:IsA("UICorner") then
+			c.CornerRadius = UDim.new(0, 10)
+		end
+	end
+	fill.ZIndex = button.ZIndex + 1
+	label.ZIndex = button.ZIndex + 2
+	label.TextSize = 14
+	button.Parent = slot
+	slot.Name = "Slot_t" -- 칸 이름도 T로(점검 · 캡처)
+end)
+
 -- 가득 참 발광(묶음 F1): 테두리 맥동
 game:GetService("RunService").RenderStepped:Connect(function()
 	local full = (player:GetAttribute("UltGauge") or 0) >= UltimateData.max

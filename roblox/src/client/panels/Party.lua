@@ -532,6 +532,7 @@ local function buildToggleButton()
 
 	local button = Instance.new("TextButton")
 	button.Name = "PartyToggleButton"
+	button.Visible = false -- QUEUE-ALL2 P2 중복 삭제: 왼쪽 메뉴 더보기 [파티] · P 키가 연다(자리 계산은 그대로 - 다른 버튼이 기준으로 읽던 자리)
 	ScreenMap.place(button, "TR", "partyToggle")
 	button.Size = UDim2.new(0, 72, 0, Theme.isMobile and Theme.touchMin or 36)
 	button.Text = "파티"

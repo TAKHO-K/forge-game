@@ -626,6 +626,7 @@ local function buildToggleButton()
 	Theme.corner(button, 8)
 	Theme.stroke(button)
 	button.Activated:Connect(Leaderboard.toggle)
+	button.Visible = false -- QUEUE-ALL2 P2 중복 삭제: 왼쪽 메뉴 더보기 [순위] · L 키가 연다
 	-- QUEUE-ALL1 R1: 단축키 L(PanelRegistry.actionKeys - 채팅 입력 중 = gameProcessed로 무시)
 	local lKey = require(script.Parent.Parent.ui.PanelRegistry).actionKey("leaderboard")
 	game:GetService("UserInputService").InputBegan:Connect(function(input, processed)

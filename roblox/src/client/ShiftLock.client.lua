@@ -139,7 +139,7 @@ task.spawn(function()
 	chip.Parent = gui:FindFirstChild("CentralRow")
 	local function refresh()
 		button.Visible = isTouchLayout()
-		chip.Visible = not isTouchLayout()
+		chip.Visible = false -- QUEUE-ALL2 P2 중복 삭제: PC = Ctrl 키로 충분(칸 숨김) · 폰 = 대시 옆 "고정" 버튼 유지
 	end
 	refresh()
 	player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(refresh)

@@ -279,7 +279,7 @@ openSignal.Event:Connect(openClassSelect)
 local Theme = require(script.Parent.ui.kit.Theme)
 local function applyMobileHide()
 	Theme.recompute()
-	reopenButton.Visible = not Theme.isMobile
+	reopenButton.Visible = false -- QUEUE-ALL2 P2 중복 삭제: 캐릭터 창(C) [직업 변경]이 OpenClassSelect를 쏜다(옛 = PC만 보임)
 end
 applyMobileHide()
 player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(applyMobileHide)
