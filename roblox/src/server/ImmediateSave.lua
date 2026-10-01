@@ -36,15 +36,17 @@ function ImmediateSave.request(player)
 	requestCount += 1
 	local now = os.clock()
 	local last = lastSaveAt[player]
+	if pendingSaveScheduled[player] then
+		return -- 이미 이번 창 끝에 저장이 예약돼 있다(QUEUE-ALL5 D②: leading보다 먼저 본다 - 예약 시각과 같은 순간의 요청이 leading으로 한 번 더 쓰던 것)
+	end
 	if not last or now - last >= IMMEDIATE_SAVE_THROTTLE_SECONDS then
 		lastSaveAt[player] = now
-		SaveCoordinator.saveForPlayer(player)
+		-- QUEUE-ALL5 D②: 부른 쪽을 멈추지 않는다(옛 = 그 자리에서 UpdateAsync를 기다렸다 - 처치 처리(resolveHit)가 MonsterAI · 덫 Heartbeat 안에서
+		--   멈춰 죽은 보스가 저장 대기 동안 계속 휘두르고 · 낡은 목록 · 낡은 인덱스로 이어졌다). 저장 겹침은 SaveCoordinator의 saving 잠금이 그대로 막는다.
+		task.spawn(SaveCoordinator.saveForPlayer, player)
 		return
 	end
 
-	if pendingSaveScheduled[player] then
-		return -- 이미 이번 창 끝에 저장이 예약돼 있다 - 최신 상태는 그 저장이 알아서 반영한다
-	end
 	pendingSaveScheduled[player] = true
 	pendingSaveThread[player] = task.delay(IMMEDIATE_SAVE_THROTTLE_SECONDS - (now - last), function()
 		pendingSaveScheduled[player] = nil
