@@ -11,6 +11,7 @@ local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local Gauge = require(script.Parent.Parent.ui.kit.Gauge)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local PartyListView = require(script.Parent.PartyListView)
+local Text = require(game:GetService("ReplicatedStorage").Shared.Text)
 
 local REFRESH_SECONDS = 0.1
 local NAME_HEIGHT = 22
@@ -298,7 +299,7 @@ local function refresh()
 			layoutArt() -- 보스전에 들어갈 때마다 스킬 줄 · 궁극기 버튼 자리를 다시 잰다
 		end
 		refs.root.Visible = false
-		a.name.Text = boss:GetAttribute("BossName") or boss.Name
+		a.name.Text = Text.name(boss:GetAttribute("BossName") or boss.Name)
 		setArtRatio(ratio)
 		a.root.Visible = true
 		a.startedAt = a.startedAt or os.clock()
@@ -314,7 +315,7 @@ local function refresh()
 		shiftOthers(false)
 		chatSmall(false)
 	end
-	refs.nameLabel.Text = boss:GetAttribute("BossName") or boss.Name
+	refs.nameLabel.Text = Text.name(boss:GetAttribute("BossName") or boss.Name)
 	if nameInBar then
 		nameInBar.Text = refs.nameLabel.Text
 	end

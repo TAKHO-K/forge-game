@@ -66,7 +66,7 @@ local function cycleRow(body, y, labelText, key, names, refs, resolve)
 		end
 		return player:GetAttribute(def.attrs[1]) or def.default
 	end
-	local b = Button.build({ parent = body, kind = "secondary", width = 120, position = UDim2.new(1, -PAD - 120, 0, y), text = names[current()] or tostring(current()),
+	local b = Button.build({ parent = body, kind = "secondary", width = 120, position = UDim2.new(1, -PAD - 120, 0, y), text = Text.name(names[current()] or tostring(current())),
 		onActivated = function()
 			local i = table.find(def.options, current()) or 1
 			local nextValue = def.options[i % #def.options + 1]
@@ -75,7 +75,7 @@ local function cycleRow(body, y, labelText, key, names, refs, resolve)
 		end })
 	b.root.Name = "Cycle_" .. key
 	player:GetAttributeChangedSignal(def.attrs[1]):Connect(function()
-		b.setText(names[current()] or tostring(current()))
+		b.setText(Text.name(names[current()] or tostring(current())))
 	end)
 	refs[key] = b
 end
@@ -179,10 +179,10 @@ local function build()
 	local function presetName(id)
 		for _, preset in ipairs(AutoStageData.presets) do
 			if preset.id == id then
-				return preset.name
+				return Text.name(preset.name)
 			end
 		end
-		return AutoStageData.presets[1].name
+		return Text.name(AutoStageData.presets[1].name)
 	end
 	local autoButton = Button.build({ parent = g, name = "AutoStageButton", kind = "secondary", width = 120, position = UDim2.new(1, -PAD - 120, 0, PAD),
 		text = presetName(player:GetAttribute("AutoStage") or AutoStageData.default), onActivated = function()

@@ -106,9 +106,9 @@ local function row(t, order)
 	f.Parent = built.scroll
 	Theme.corner(f, 10)
 	-- 작은 그림(보상 · 수련 아이콘 - 없으면 이름 첫 글자)
-	local icon = ArtImage.label(f, ICON_OF[t.id] or ICON_OF[t.kind] or "icons/hud/training", UDim2.fromOffset(40, 40), utf8.char(utf8.codepoint(t.name or "?", 1)))
+	local icon = ArtImage.label(f, ICON_OF[t.id] or ICON_OF[t.kind] or "icons/hud/training", UDim2.fromOffset(40, 40), utf8.char(utf8.codepoint(Text.name(t.name or "?"), 1)))
 	icon.Position = UDim2.fromOffset(8, 8)
-	local name = Theme.label(f, t.name, "body", "textPrimary")
+	local name = Theme.label(f, Text.name(t.name), "body", "textPrimary")
 	name.Position = UDim2.fromOffset(56, 4)
 	name.Size = UDim2.new(0.4, 0, 0, 22)
 	local now = t.level * (t.perLevel or 0) * 100

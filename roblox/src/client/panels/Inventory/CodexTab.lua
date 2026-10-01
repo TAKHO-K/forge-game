@@ -91,7 +91,7 @@ function CodexTab.create(S, R)
 			name.TextColor3 = UIColors.textSecondary
 			name.TextXAlignment = Enum.TextXAlignment.Left
 			name.TextWrapped = true
-			name.Text = zone.theme
+			name.Text = Text.name(zone.theme)
 			name.Position = UDim2.new(0, 12, 0, y)
 			name.Size = UDim2.new(0, LABEL_W - 8, 0, CELL)
 			name.Parent = frame

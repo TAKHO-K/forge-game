@@ -5,11 +5,15 @@
 --   클라 = 내 설정 · 서버 = Text.getFor(player, ...)로 그 플레이어 설정(서버가 보내는 문장) · 서버 Text.get = ko(여러 사람에게 같은 문장).
 --   Studio 전용 확인: Workspace Attribute TextLanguageDev("ko" | "en")가 있으면 그 값이 우선(캡처용 - 창을 짓기 전에 정해진다).
 --   en에 없는 키 = ko로 대체 + 경고 1회.
+-- QUEUE-ALL6 A4 데이터 이름(보스 · 구역 · 몬스터 · 펫 · 등급 · 칭호 · 스킬 · 퀘스트 · 상품 …): 데이터에는 한국어 원문 그대로 두고 shared/data/TextData_names.lua
+--   (원문 → 영어 사전 · 용어집 docs/i18n/glossary.md와 같은 말)로 화면에서 바꾼다. Text.name(원문) = 지금 언어의 이름(사전에 없으면 원문).
+--   Text.get · getFor의 인자 값이 사전에 있는 원문이면 자동으로 바꾼다({boss} · {grade} · {part} 자리에 한국어가 들어가던 것).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local LocalizationService = game:GetService("LocalizationService")
 local TextData = require(ReplicatedStorage.Shared.data.TextData)
+local NameData = require(ReplicatedStorage.Shared.data.TextData_names)
 local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData)
 
 local LANGUAGE_DEF = SettingsData.keys.language
@@ -65,6 +69,42 @@ function Text.languageFor(player)
 	return resolve(setting, player.LocaleId)
 end
 
+-- 데이터 이름 바꾸기(언어를 정해 놓고). 통째로 없으면 " · "로 나뉜 조각을 하나씩(조각이 전부 사전에 있을 때만).
+function Text.nameIn(language, s)
+	if type(s) ~= "string" or language == "ko" then
+		return s
+	end
+	local dict = NameData[language]
+	if not dict then
+		return s
+	end
+	local hit = dict[s]
+	if hit then
+		return hit
+	end
+	if s:find(" · ", 1, true) then
+		local parts = s:split(" · ")
+		for i, part in ipairs(parts) do
+			parts[i] = dict[part]
+			if parts[i] == nil then
+				return s
+			end
+		end
+		return table.concat(parts, " · ")
+	end
+	return s
+end
+
+-- 지금(내) 언어의 데이터 이름
+function Text.name(s)
+	return Text.nameIn(Text.languageFor(nil), s)
+end
+
+-- 그 플레이어 언어의 데이터 이름(서버)
+function Text.nameFor(player, s)
+	return Text.nameIn(Text.languageFor(player), s)
+end
+
 -- 언어를 정해 놓고 채우기(테스트 · 넘침 점검이 쓴다)
 function Text.format(language, key, args)
 	local template = TextData[language] and TextData[language][key]
@@ -84,6 +124,9 @@ function Text.format(language, key, args)
 	end
 	return (template:gsub("{([%w_]+)}", function(name)
 		local value = args[name]
+		if type(value) == "string" then
+			value = Text.nameIn(language, value) -- QUEUE-ALL6 A4: 데이터 이름 인자 자동 번역
+		end
 		return value ~= nil and tostring(value) or ("{" .. name .. "}")
 	end))
 end

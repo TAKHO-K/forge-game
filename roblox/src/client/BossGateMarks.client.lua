@@ -162,5 +162,5 @@ ReplicatedStorage:WaitForChild("BossGateRegistered").OnClientEvent:Connect(funct
 		flashing[bossId] = nil
 		paintAll()
 	end)
-	Toast.push("TC", { text = G.registerText:format(g.name), grade = "important", seconds = 4 })
+	Toast.push("TC", { text = Text.name(G.registerText):format(Text.name(g.name)), grade = "important", seconds = 4 })
 end)

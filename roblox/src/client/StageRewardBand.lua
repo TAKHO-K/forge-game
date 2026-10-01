@@ -229,7 +229,7 @@ function StageRewardBand.build(props)
 		end
 		local gimmickN = Text.get("hud.band.gimmickN")
 		gimmickText.Text = Text.get(boss.intro.sub and "hud.band.gimmickSub" or "hud.band.gimmick", { boss = boss.displayName, title = boss.intro.title,
-			line = (boss.intro.line:gsub("{N}", function()
+			line = (Text.name(boss.intro.line):gsub("{N}", function()
 				return gimmickN
 			end)), sub = boss.intro.sub }) -- BR1-3 보조 한 줄
 	end
@@ -325,7 +325,7 @@ function StageRewardBand.build(props)
 			if input and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
 				picked = StageRewardBand.dotIndexAt(input.Position.X, dots[1].AbsolutePosition.X + overhang, CODEX_DOT, #codexBossIds)
 			end
-			nameLabel.Text = BossData.bosses[codexBossIds[picked]].displayName
+			nameLabel.Text = Text.name(BossData.bosses[codexBossIds[picked]].displayName)
 			gimmickBossId = codexBossIds[picked]
 			refreshGimmick()
 		end)

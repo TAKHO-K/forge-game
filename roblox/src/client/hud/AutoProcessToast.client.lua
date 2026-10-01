@@ -16,7 +16,7 @@ autoProcessed.OnClientEvent:Connect(function(info)
 		return
 	end
 	local grade = ArmorData.grades[info.grade]
-	local item = ("%s %s"):format(grade and grade.displayName or tostring(info.grade), ItemVisualData.partDisplayNames[info.part or "armor"] or "")
+	local item = ("%s %s"):format(grade and Text.name(grade.displayName) or tostring(info.grade), Text.name(ItemVisualData.partDisplayNames[info.part or "armor"] or ""))
 	local text = info.kind == "dismantle" and Text.get("toast.autoDismantle", { item = item })
 		or Text.get("toast.autoSell", { item = item, gold = NumberFormat.format(info.gold or 0) })
 	Toast.push("TR", { text = text, colorName = "textSecondary", seconds = 1.5, fadeSeconds = 0.3, groupKey = "autoProcess:" .. text }) -- 리뷰 5: 같은 문장끼리만 묶는다(골드 · 종류가 다른 줄이 한 줄로 합쳐지지 않게)

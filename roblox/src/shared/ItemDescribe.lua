@@ -87,7 +87,7 @@ function ItemDescribe.optionTag(item, classId)
 		return nil
 	end
 	local mismatched = def.classId ~= nil and def.classId ~= classId
-	return { text = optionName(option.id), mismatched = mismatched, accentClassId = not mismatched and def.classId or nil }
+	return { text = Text.name(optionName(option.id)), mismatched = mismatched, accentClassId = not mismatched and def.classId or nil }
 end
 
 local PART_META = {

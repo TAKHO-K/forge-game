@@ -151,7 +151,7 @@ local function petSection()
 	end
 	line(Text.get("pet.listHeader", { n = #petView.pets, cap = petView.petCap, auto = petView.autoPickup and Text.get("pet.autoOn") or Text.get("pet.autoOff", { level = tostring(petView.unlocks.autoPickup) }) }), "body", "textPrimary", "PetHeader")
 	for _, p in ipairs(petView.pets) do
-		petRow(("%s · %s"):format(p.name, EggData.hatchGradeNames[p.grade] or p.grade), PetData.bodyNames[p.body] or p.body,
+		petRow(("%s · %s"):format(Text.name(p.name), Text.name(EggData.hatchGradeNames[p.grade] or p.grade)), Text.name(PetData.bodyNames[p.body] or p.body),
 			p.equipped and Text.get("pet.unequip") or Text.get("pet.equip"), function()
 				petRequest:FireServer("equip", (not p.equipped) and p.index or nil)
 			end, "Pet" .. p.index)
@@ -161,7 +161,7 @@ local function petSection()
 		local parts = {}
 		for _, eggGrade in ipairs(EggData.gradeOrder) do
 			local t = Pet.hatchTable(eggGrade, level)
-			table.insert(parts, ("%s %.1f/%.1f/%.1f/%.1f"):format(EggData.gradeNames[eggGrade], t.common, t.uncommon, t.rare, t.epic))
+			table.insert(parts, ("%s %.1f/%.1f/%.1f/%.1f"):format(Text.name(EggData.gradeNames[eggGrade]), t.common, t.uncommon, t.rare, t.epic))
 		end
 		line(Text.get("pet.levelRow", { level = level, hatches = row.hatches, rows = table.concat(parts, " · ") }), "caption", level == petView.hatchLevel and "textPrimary" or "textSecondary", "LevelRow" .. level)
 	end
@@ -188,7 +188,7 @@ local function hatchTable()
 			elseif r == 1 then
 				text = Text.get("egg.hatchCol", { grade = EggData.gradeNames[EggData.gradeOrder[c - 1]] })
 			elseif c == 1 then
-				text = EggData.hatchGradeNames[EggData.hatchGrades[r - 1]]
+				text = Text.name(EggData.hatchGradeNames[EggData.hatchGrades[r - 1]])
 			else
 				local v = EggData.hatch[EggData.gradeOrder[c - 1]][EggData.hatchGrades[r - 1]]
 				text = (v % 1 == 0) and ("%d%%"):format(v) or ("%.1f%%"):format(v)

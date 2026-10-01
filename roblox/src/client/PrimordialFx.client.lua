@@ -36,7 +36,7 @@ local function bannerParts(entry)
 		{ text = ("%s "):format(Text.get(global and "scene.primordial.serverAll" or "scene.primordial.serverThis")), colorName = "textSecondary", bold = true },
 		{ text = entry.no and Text.get("scene.primordial.bannerNth", { glyph = global and TranscendentData.announce.glyph or "★", no = ("%d"):format(entry.no), grade = gradeWord })
 			or ("★ %s ★ "):format(gradeWord), color = global and TranscendentData.announce.color or PrimordialData.auraColor, bold = true },
-		{ text = tostring(entry.name or PrimordialData.fallbackName), color = PrimordialData.accentColor, bold = true },
+		{ text = tostring(entry.name or Text.name(PrimordialData.fallbackName)), color = PrimordialData.accentColor, bold = true },
 	}
 	local sourceText = PrimordialStamp.sourceText(entry.source)
 	if sourceText then
@@ -48,7 +48,7 @@ end
 local function chatLine(entry)
 	local sourceText = PrimordialStamp.sourceText(entry.source)
 	local gradeWord = Text.get(isTranscendent(entry) and "scene.primordial.gradeTranscendent" or "scene.primordial.gradePrimordial")
-	return ('%s ★ %s - <font color="#%s">%s</font>%s'):format(Text.get(isTranscendent(entry) and "scene.primordial.serverAll" or "scene.primordial.serverThis"), entry.no and Text.get("scene.primordial.chatNth", { no = ("%d"):format(entry.no), grade = gradeWord }) or gradeWord, ACCENT_HEX, tostring(entry.name or PrimordialData.fallbackName),
+	return ('%s ★ %s - <font color="#%s">%s</font>%s'):format(Text.get(isTranscendent(entry) and "scene.primordial.serverAll" or "scene.primordial.serverThis"), entry.no and Text.get("scene.primordial.chatNth", { no = ("%d"):format(entry.no), grade = gradeWord }) or gradeWord, ACCENT_HEX, tostring(entry.name or Text.name(PrimordialData.fallbackName)),
 		sourceText and (" · " .. sourceText) or "")
 end
 

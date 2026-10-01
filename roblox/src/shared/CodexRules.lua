@@ -10,9 +10,11 @@ local EggData = require(ReplicatedStorage.Shared.data.EggData)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local MonsterSpeciesData = require(ReplicatedStorage.Shared.data.MonsterSpeciesData)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local CodexRules = {}
 local PARTS = { "armor", "gloves", "shoes" }
+local titleParts = {} -- [칭호 id] = { 틀 종류, 이름 원문 } - titleText(화면용)가 틀과 이름을 따로 바꿔 끼운다
 
 local function zones()
 	local out = {}
@@ -30,6 +32,7 @@ function CodexRules.titles()
 	local function add(kind, key, label)
 		local id = ("codex_%s_%s"):format(kind, key)
 		out[id] = { id = id, name = CodexData.titleFormat[kind]:format(label), grade = CodexData.titleGrade[kind], condition = "도감 줄 완성", grantedBy = "server/CodexService" }
+		titleParts[id] = { kind, label }
 		return id
 	end
 	for _, g in ipairs(CodexData.armor.grades) do
@@ -47,6 +50,19 @@ function CodexRules.titles()
 		add("class", classId, ClassData.classes[classId].displayName)
 	end
 	return out
+end
+
+-- 화면용 칭호 이름(지금 언어 - QUEUE-ALL6 A4). 도감 줄 칭호 = 틀("%s 수집가")과 이름(직업 · 구역 · 등급 · 보스)을 따로 바꿔 끼운다(합친 이름은 사전에 없다).
+--   칭호 id · TitleData name · 서버가 보내는 name(한국어)은 그대로 둔다 - 보여 줄 때만 쓴다. 도감 칭호가 아니면 name을 Text.name으로.
+function CodexRules.titleText(titleId, name)
+	if next(titleParts) == nil then
+		CodexRules.titles()
+	end
+	local p = titleParts[titleId]
+	if p then
+		return Text.name(CodexData.titleFormat[p[1]]):format(Text.name(p[2]))
+	end
+	return Text.name(name)
 end
 
 -- 칸 · 줄 만들기. nestsByZone = { [구역] = { 둥지 id, ... } }(서버만 안다 - 클라에는 칸 id만 간다)
@@ -166,7 +182,7 @@ function CodexRules.reward(c, stage, goldPerKill)
 		r = CodexData.boardReward(c.threshold)
 	end
 	if r and r.goldKills then
-		r.gold = math.floor(r.goldKills * goldPerKill(stage or 1))
+		r.gold = require(ReplicatedStorage.Shared.GoldCost).niceReward(math.floor(r.goldKills * goldPerKill(stage or 1))) -- QUEUE-ALL6 D: 보기 좋은 숫자(서버 지급 · 도감 창 미리보기 같은 함수)
 		r.goldKills = nil
 	end
 	return r

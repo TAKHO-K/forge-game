@@ -15,6 +15,7 @@ local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Fx = require(script.Parent.ArtV1Fx)
 
 local V = FxData.dropV2
@@ -189,7 +190,7 @@ function DropLookV2.build(model, folder, grade, ground, color)
 		local zone = zoneName(model:GetAttribute("DropZone"))
 		local g = ArmorData.grades[grade]
 		local partName = ItemVisualData.partDisplayNames[model:GetAttribute("DropPart") or "armor"] or ""
-		label.Text = ("%s%s (%s)"):format(zone and (zone .. " ") or "", partName, g and g.displayName or grade)
+		label.Text = ("%s%s (%s)"):format(zone and (Text.name(zone) .. " ") or "", Text.name(partName), g and Text.name(g.displayName) or grade)
 		if st.rank >= rankOf(V.nameplateAlwaysFrom) then
 			gui.MaxDistance = V.nameplateFarStuds
 			gui.Size = UDim2.new(gui.Size.X.Scale * spec.nameScale, 0, gui.Size.Y.Scale * spec.nameScale, 0)

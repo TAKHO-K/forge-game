@@ -20,7 +20,7 @@ reached.OnClientEvent:Connect(function(payload)
 		table.insert(parts, { text = Text.get("scene.milestone.stat", { stat = Milestone.statText(), bonus = ("%.1f"):format((payload.bonus or 0) * 100) }), colorName = "success" })
 	end
 	for _, unlock in ipairs(payload.unlocks or {}) do
-		table.insert(parts, { text = ("%s "):format(unlock.name), colorName = "gold", bold = true })
+		table.insert(parts, { text = ("%s "):format(Text.name(unlock.name)), colorName = "gold", bold = true })
 	end
 	table.insert(parts, { text = Text.get("scene.milestone.list"), colorName = "success", bold = true, onActivate = function()
 		MilestonesPanel.open()

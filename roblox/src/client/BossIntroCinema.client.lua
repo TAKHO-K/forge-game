@@ -122,7 +122,7 @@ local function nameCard(bossId, displayName, accent, showAt, hideAt, full)
 	if full then
 		table.insert(labels, label("Title", Text.get("boss.title." .. tostring(bossId)), 0, 0.3, accent:Lerp(Color3.new(1, 1, 1), 0.35), Enum.Font.GothamBold))
 	end
-	table.insert(labels, label("Name", displayName or "", full and 0.3 or 0, full and 0.58 or 0.8, Color3.new(1, 1, 1), Enum.Font.GothamBlack))
+	table.insert(labels, label("Name", Text.name(displayName or ""), full and 0.3 or 0, full and 0.58 or 0.8, Color3.new(1, 1, 1), Enum.Font.GothamBlack))
 	local line = Instance.new("Frame")
 	line.Name = "Underline"
 	line.BorderSizePixel = 0

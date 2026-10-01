@@ -170,7 +170,7 @@ function MilestonesPanel.render()
 		else
 			stateText = Text.get("ui.milestone.afterRebirth")
 		end
-		row("Unlock_" .. entry.id, ("Lv.%d"):format(at), entry.name, stateText, stateColor, not got)
+		row("Unlock_" .. entry.id, ("Lv.%d"):format(at), Text.name(entry.name), stateText, stateColor, not got)
 	end
 end
 

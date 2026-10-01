@@ -21,11 +21,11 @@ local QuestService = {}
 local updateRemote
 local lastRequest = {}
 
-local function questNames(list, progress)
+local function questNames(player, list, progress)
 	local rows = {}
 	for _, q in ipairs(list) do
 		local p = progress[q.id]
-		table.insert(rows, { id = q.id, name = Quest.nameOf(q), n = p and p.n or 0, target = q.target, claimed = p and p.claimed == true, reward = q.reward })
+		table.insert(rows, { id = q.id, name = Quest.nameOf(q, Text.nameFor(player, q.name)), n = p and p.n or 0, target = q.target, claimed = p and p.claimed == true, reward = q.reward })
 	end
 	return rows
 end
@@ -54,14 +54,14 @@ function QuestService.view(player)
 		chestReady = chestReady and p ~= nil and p.n >= q.target
 	end
 	return {
-		daily = questNames(Quest.dailyFor(state.day), state.daily),
-		weekly = questNames(QuestData.weekly, state.weekly),
+		daily = questNames(player, Quest.dailyFor(state.day), state.daily), -- QUEUE-ALL6 A4: 이름 = 그 플레이어 언어(틀을 바꾼 뒤 {n} 채움)
+		weekly = questNames(player, QuestData.weekly, state.weekly),
 		loginReady = state.loginDay ~= state.day,
 		chestReady = chestReady and state.chestDay ~= state.day,
 		chestClaimed = state.chestDay == state.day, -- Play C: 받은 뒤 버튼 글 = 받음
 		main = step and (function()
 			local n, need = Quest.mainProgress(step, facts, state)
-			return { index = state.main, total = #QuestData.main, id = step.id, name = Quest.nameOf(step), unlock = step.unlock, done = Quest.mainDone(step, facts, state), reward = step.reward,
+			return { index = state.main, total = #QuestData.main, id = step.id, name = Quest.nameOf(step, Text.nameFor(player, step.name)), unlock = step.unlock, done = Quest.mainDone(step, facts, state), reward = step.reward,
 				n = n, target = need, guide = step.guide } -- QUEUE-ALL3 Q3: 진행 · [길 안내] 목적지
 		end)() or nil,
 		currencies = state.currencies,
@@ -115,6 +115,7 @@ end
 QuestService.claimableOf = claimableOf
 
 local function push(player)
+	QuestService.syncWallet(player)
 	local v = QuestService.view(player)
 	if updateRemote and typeof(player) == "Instance" and player.Parent then
 		updateRemote:FireClient(player, v)
@@ -127,6 +128,16 @@ local function push(player)
 end
 QuestService.push = push
 
+-- QUEUE-ALL6 C: 지갑 Attribute(보상 칸 펼쳐 보기의 "가진 것" - 클라 ItemInfoData.owned.attr). 반짝 조각 · 환생 무료권 · 시즌 경험치(나머지 재화는 PlayerProfile이 이미 내린다)
+function QuestService.syncWallet(player)
+	local state = PlayerProfile.getQuestState(player)
+	if state and state.currencies and typeof(player) == "Instance" then
+		player:SetAttribute("SparkleShard", state.currencies.sparkleShard or 0)
+		player:SetAttribute("RebirthTicket", state.currencies.rebirthTicket or 0)
+		player:SetAttribute("PassExp", state.currencies.passExp or 0)
+	end
+end
+
 -- 보상 지급(한 곳). 반환 = 지급 요약 문자열(로그)
 function QuestService.grant(player, reward)
 	local parts = {}
@@ -135,7 +146,7 @@ function QuestService.grant(player, reward)
 	end
 	local state = PlayerProfile.getQuestState(player)
 	if reward.gold then
-		local gold = GoldCost.cost(MonsterData.tier1.goldDrop * reward.gold, PlayerProfile.getAccountBestStage(player), "quest")
+		local gold = GoldCost.rewardGold(MonsterData.tier1.goldDrop, reward.gold, PlayerProfile.getAccountBestStage(player)) -- QUEUE-ALL6 D: 보기 좋은 숫자(지급 = 표시)
 		PlayerProfile.addGold(player, gold)
 		table.insert(parts, Text.getFor(player, "srv.reward.gold", { n = ("%d"):format(gold) }))
 	end
@@ -177,6 +188,7 @@ function QuestService.grant(player, reward)
 		state.currencies.passExp = (state.currencies.passExp or 0) + reward.passExp
 		table.insert(parts, Text.getFor(player, "srv.reward.passExp", { n = ("%d"):format(reward.passExp) }))
 	end
+	QuestService.syncWallet(player)
 	return table.concat(parts, " · ")
 end
 

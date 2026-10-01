@@ -127,7 +127,7 @@ ReplicatedStorage:WaitForChild("SkillCastResult").OnClientEvent:Connect(function
 	end
 	local classId = player:GetAttribute("ClassId")
 	local def = classId and UltimateData.skills[classId]
-	cutin.Text = def and def.name or Text.get("hud.ult.name")
+	cutin.Text = def and Text.name(def.name) or Text.get("hud.ult.name")
 	cutin.Visible = true
 	task.delay(0.3, function()
 		cutin.Visible = false

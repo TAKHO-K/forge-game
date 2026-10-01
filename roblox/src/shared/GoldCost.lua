@@ -25,4 +25,27 @@ function GoldCost.cost(baseCost, stage, kind)
 	return Sanitize.number(math.floor(baseCost * GoldCost.scale(stage, kind)), math.huge)
 end
 
+-- QUEUE-ALL6 D 보상 골드 = "보기 좋은 숫자"(지급값 자체 - 표시만 반올림하지 않는다 · 서버 지급 · 클라 미리보기가 같은 함수):
+--   1,000 미만 = 100 단위(최소 100) · 1,000 ~ 99,999 = 천 단위 · 100,000 이상 = 앞 두 자리만(12,345 → 12,000 · 1,234,567 → 1,200,000). 반올림 = 가까운 쪽(반은 올림).
+function GoldCost.niceReward(n)
+	n = Sanitize.number(n, 0)
+	if n <= 0 or n == math.huge then
+		return n
+	end
+	local step
+	if n < 1000 then
+		step = 100
+	elseif n < 100000 then
+		step = 1000
+	else
+		step = 10 ^ (math.floor(math.log10(n)) - 1)
+	end
+	return math.max(100, math.floor(n / step + 0.5) * step)
+end
+
+-- 퀘스트 · 출석 · 초반 여정 · 시즌 패스 보상 골드(QuestService.grant · RewardIcons 미리보기 - 같은 값). kills = 데이터의 "잡몹 몇 마리 몫"
+function GoldCost.rewardGold(goldPerKill, kills, stage)
+	return GoldCost.niceReward(GoldCost.cost(goldPerKill * kills, stage, "quest"))
+end
+
 return GoldCost

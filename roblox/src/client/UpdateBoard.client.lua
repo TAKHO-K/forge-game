@@ -100,7 +100,7 @@ btn.BackgroundColor3 = Color3.fromRGB(90, 40, 60)
 btn.TextColor3 = Color3.new(1, 1, 1)
 btn.Font = Theme.font
 btn.TextSize = 13
-btn.Text = WD.text.button
+btn.Text = Text.name(WD.text.button)
 btn.Parent = gui
 btn.Visible = false -- QUEUE-ALL3 Q3 중복 삭제: 주간 도전 = 퀘스트 창(J) [주간 도전] 탭
 Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
@@ -124,10 +124,10 @@ go.BackgroundColor3 = Color3.fromRGB(200, 70, 90)
 go.TextColor3 = Color3.new(1, 1, 1)
 go.Font = Theme.font
 go.TextSize = 14
-go.Text = WD.text.start
+go.Text = Text.name(WD.text.start)
 go.Parent = panel
 Instance.new("UICorner", go).CornerRadius = UDim.new(0, 8)
-local rankTitle = label(panel, WD.text.rank, 13, Color3.fromRGB(200, 200, 214))
+local rankTitle = label(panel, Text.name(WD.text.rank), 13, Color3.fromRGB(200, 200, 214))
 rankTitle.Position, rankTitle.Size = UDim2.fromOffset(12, 54), UDim2.new(1, -24, 0, 18)
 local rankRows = {}
 for i = 1, WD.topShown do
@@ -147,7 +147,7 @@ local function refreshPanel()
 	end)
 	for i, l in ipairs(rankRows) do
 		local row = ok and type(r) == "table" and r.rows and r.rows[i]
-		l.Text = row and Text.get("scene.weekly.row", { rank = ("%d"):format(row.rank), name = tostring(row.name), seconds = ("%.1f"):format(row.seconds) }) or (i == 1 and WD.text.none or "")
+		l.Text = row and Text.get("scene.weekly.row", { rank = ("%d"):format(row.rank), name = tostring(row.name), seconds = ("%.1f"):format(row.seconds) }) or (i == 1 and Text.name(WD.text.none) or "")
 	end
 	mine.Text = (ok and type(r) == "table" and r.myBest) and Text.get("scene.weekly.mine", { seconds = ("%.1f"):format(r.myBest) }) or ""
 end

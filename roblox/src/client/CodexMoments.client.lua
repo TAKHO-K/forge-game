@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CodexData = require(ReplicatedStorage.Shared.data.CodexData)
+local CodexRules = require(ReplicatedStorage.Shared.CodexRules)
 local Text = require(ReplicatedStorage.Shared.Text)
 local CX = require(ReplicatedStorage.Shared.data.FxMomentData).codex
 local FxMoment = require(script.Parent.FxMoment)
@@ -29,7 +30,7 @@ end
 local function cellName(view, id)
 	local c = view.cells[id]
 	if c and c.label then
-		return c.label
+		return Text.name(c.label)
 	end
 	local m = Info.meta(id)
 	return m and (Info.detailName(view, m)) or id
@@ -59,7 +60,7 @@ end
 
 local function onLineDone(view, id, l)
 	local zone = id:match("^armorZone:(.+)$")
-	local name = l.titleName or l.titleId or id
+	local name = l.titleName and CodexRules.titleText(l.titleId, l.titleName) or l.titleId or id
 	local strength = FxMoment.scale()
 	if zone and type(view.trans) == "table" and view.trans[zone] then
 		FxMoment.banner("trans", Text.get("moment.transTitle"), Text.get("moment.transSub", { zone = CodexData.zoneShort[zone] or zone, name = name }))

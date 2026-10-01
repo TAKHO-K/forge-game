@@ -37,6 +37,9 @@ local function spendShards(player, amount)
 		return false
 	end
 	quests.currencies.sparkleShard -= amount
+	if typeof(player) == "Instance" then
+		player:SetAttribute("SparkleShard", quests.currencies.sparkleShard) -- QUEUE-ALL6 C: 지갑 Attribute(QuestService.syncWallet과 같은 값)
+	end
 	require(script.Parent.Telemetry).economy(player, "sparkleShard", "sink", amount, "Shop")
 	return true
 end

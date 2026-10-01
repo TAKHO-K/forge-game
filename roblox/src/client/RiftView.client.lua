@@ -16,6 +16,7 @@ local Layout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local BossFx = require(script.Parent.BossFx)
 local Toast = require(script.Parent.ui.kit.Toast)
 local Theme = require(script.Parent.ui.kit.Theme)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local player = Players.LocalPlayer
 local moodWas = nil
@@ -170,7 +171,7 @@ ReplicatedStorage:WaitForChild("RiftBanner").OnClientEvent:Connect(function(info
 	if type(info) ~= "table" then
 		return
 	end
-	Toast.push("TC", { richParts = { { text = info.kind == "start" and RiftData.text.start or RiftData.text.finish, color = Color3.fromRGB(214, 180, 255), bold = true } },
+	Toast.push("TC", { richParts = { { text = Text.name(info.kind == "start" and RiftData.text.start or RiftData.text.finish), color = Color3.fromRGB(214, 180, 255), bold = true } },
 		seconds = RiftData.bannerSeconds, fadeSeconds = 0.4 })
 end)
 
@@ -182,7 +183,7 @@ RunService.RenderStepped:Connect(function()
 	local endsAt = Workspace:GetAttribute("RiftEndsAt")
 	if type(endsAt) == "number" then
 		local left = math.max(0, endsAt - os.time())
-		timer.Text = RiftData.text.timer:format(left // 60, left % 60)
+		timer.Text = Text.name(RiftData.text.timer):format(left // 60, left % 60)
 	end
 	weatherStep(now)
 end)

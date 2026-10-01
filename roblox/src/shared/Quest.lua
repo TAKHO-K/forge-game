@@ -208,9 +208,9 @@ function Quest.mainDone(step, facts, state)
 	return false
 end
 
--- 표시용 문장("몬스터 150마리 처치")
-function Quest.nameOf(q)
-	return (q.name:gsub("{n}", tostring(q.target or q.value or "")))
+-- 표시용 문장("몬스터 150마리 처치"). template = 번역한 틀(QUEUE-ALL6 A4 - 서버가 Text.nameFor로 바꾼 틀에 채운다 · 생략 = 원문)
+function Quest.nameOf(q, template)
+	return ((template or q.name):gsub("{n}", tostring(q.target or q.value or "")))
 end
 
 -- QUEUE-ALL3 Q3 v60 이관: 옛 메인 번호(QuestData.legacyMainIds 순) → 새 번호(같은 id · 없으면 그다음 옛 단계의 id) · 다 끝났으면 #main + 1

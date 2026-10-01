@@ -13,6 +13,7 @@ local Button = require(script.Parent.Parent.Parent.ui.kit.Button)
 local ArtImage = require(script.Parent.Parent.Parent.ui.ArtImage)
 local RewardIcons = require(script.Parent.Parent.Parent.ui.RewardIcons)
 local Info = require(script.Parent.Info)
+local CodexRules = require(ReplicatedStorage.Shared.CodexRules)
 
 local Grid = {}
 
@@ -158,7 +159,7 @@ local function lineHead(S, parent, lineId, l, y)
 	f.Parent = parent
 	local icon = ArtImage.label(f, "icons/reward/title", UDim2.fromOffset(24, 24), "")
 	icon.Name = "Icon"
-	local t = label(f, Text.get("codex.v2.lineTitle", { name = l.titleName or l.titleId }), "body", l.done and Theme.colors.gold or Theme.colors.textPrimary,
+	local t = label(f, Text.get("codex.v2.lineTitle", { name = l.titleName and CodexRules.titleText(l.titleId, l.titleName) or l.titleId }), "body", l.done and Theme.colors.gold or Theme.colors.textPrimary,
 		UDim2.fromOffset(30, 0), UDim2.new(1, -60, 1, 0), Enum.TextXAlignment.Left)
 	t.Name = "Title"
 	if l.done then
@@ -208,16 +209,16 @@ local function renderArmor(S, scroll)
 		local line = view.lines["armorZone:" .. z.key]
 		local x = PAD + LABEL_W + (col - 1) * (CW + GAP)
 		local done = line and line.done
-		label(scroll, CodexData.zoneShort[z.key], "caption", done and Theme.colors.gold or Theme.colors.textPrimary, UDim2.fromOffset(x, 2), UDim2.fromOffset(CW, ts + 4)).Name = "ColHead_" .. z.key
+		label(scroll, Text.name(CodexData.zoneShort[z.key]), "caption", done and Theme.colors.gold or Theme.colors.textPrimary, UDim2.fromOffset(x, 2), UDim2.fromOffset(CW, ts + 4)).Name = "ColHead_" .. z.key
 		if view.trans and view.trans[z.key] then
-			label(scroll, CodexData.text.transcendBorder, "caption", Theme.colors.gold, UDim2.fromOffset(x, ts + 6), UDim2.fromOffset(CW, ts + 2)).Name = "Trans_" .. z.key
+			label(scroll, Text.name(CodexData.text.transcendBorder), "caption", Theme.colors.gold, UDim2.fromOffset(x, ts + 6), UDim2.fromOffset(CW, ts + 2)).Name = "Trans_" .. z.key
 		end
 	end
 	local y0 = ts * 2 + 14
 	for row, g in ipairs(CodexData.armor.grades) do
 		local y = y0 + (row - 1) * (CH + GAP)
 		local line = view.lines["armorGrade:" .. g]
-		label(scroll, ArmorData.grades[g].displayName, "caption", line and line.done and Theme.colors.gold or Info.gradeColor(g), UDim2.fromOffset(PAD, y), UDim2.fromOffset(LABEL_W - 4, CH), Enum.TextXAlignment.Left).Name = "RowHead_" .. g
+		label(scroll, Text.name(ArmorData.grades[g].displayName), "caption", line and line.done and Theme.colors.gold or Info.gradeColor(g), UDim2.fromOffset(PAD, y), UDim2.fromOffset(LABEL_W - 4, CH), Enum.TextXAlignment.Left).Name = "RowHead_" .. g
 		for col, z in ipairs(Info.zones) do
 			local key = ("bingo:%s:%s"):format(z.key, g)
 			local doneParts, claim, v, need = 0, false, 0, 0
@@ -253,7 +254,7 @@ local function renderArmor(S, scroll)
 	end
 	-- 태초 보너스 줄(세트당 1칸)
 	local y = y0 + #CodexData.armor.grades * (CH + GAP) + 4
-	label(scroll, ArmorData.grades.primordial.displayName, "caption", Info.gradeColor("primordial"), UDim2.fromOffset(PAD, y), UDim2.fromOffset(LABEL_W - 4, CH), Enum.TextXAlignment.Left).Name = "RowHead_prim"
+	label(scroll, Text.name(ArmorData.grades.primordial.displayName), "caption", Info.gradeColor("primordial"), UDim2.fromOffset(PAD, y), UDim2.fromOffset(LABEL_W - 4, CH), Enum.TextXAlignment.Left).Name = "RowHead_prim"
 	for col, z in ipairs(Info.zones) do
 		local id = "prim:" .. z.key
 		local cv = view.cells[id]
@@ -384,7 +385,7 @@ end
 local function renderTitles(S, scroll)
 	local view = S.view
 	local ts = Theme.textSize("caption")
-	local hint = label(scroll, CodexData.text.titleHint, "caption", Theme.colors.textSecondary, UDim2.fromOffset(PAD, 2), UDim2.new(1, -PAD * 2, 0, ts * 2 + 4), Enum.TextXAlignment.Left)
+	local hint = label(scroll, Text.name(CodexData.text.titleHint), "caption", Theme.colors.textSecondary, UDim2.fromOffset(PAD, 2), UDim2.new(1, -PAD * 2, 0, ts * 2 + 4), Enum.TextXAlignment.Left)
 	hint.TextWrapped = true
 	local y = ts * 2 + 10
 	local rows = { { id = "", name = CodexData.text.titleNone } }
@@ -405,7 +406,7 @@ local function renderTitles(S, scroll)
 		local icon = ArtImage.label(f, "icons/reward/title", UDim2.fromOffset(32, 32), "")
 		icon.Name = "Icon"
 		icon.Position = UDim2.fromOffset(8, (ROW - 4 - 32) / 2)
-		label(f, t.name, "body", t.grade and Info.gradeColor(t.grade) or Theme.colors.textPrimary, UDim2.fromOffset(48, 0), UDim2.new(1, -160, 1, 0), Enum.TextXAlignment.Left).Name = "Name"
+		label(f, CodexRules.titleText(t.id, t.name), "body", t.grade and Info.gradeColor(t.grade) or Theme.colors.textPrimary, UDim2.fromOffset(48, 0), UDim2.new(1, -160, 1, 0), Enum.TextXAlignment.Left).Name = "Name"
 		local b = Button.build({ parent = f, kind = selected and "secondary" or "primary", text = selected and Text.get("codex.v2.usingTitle") or Text.get("codex.v2.useTitle"), width = 96, height = 44,
 			position = UDim2.new(1, -2, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = function()
 				S.send("title", t.id)

@@ -51,7 +51,7 @@ local function places()
 	}
 	for _, name in ipairs(WorldMapLayout.facilityOrder) do
 		local f = D.hub.facilities[name]
-		table.insert(list, { kind = "facility", icon = name == "forge" and "pin_forge" or "pin_hub", name = f.displayName, position = WorldMapLayout.facility(name) })
+		table.insert(list, { kind = "facility", icon = name == "forge" and "pin_forge" or "pin_hub", name = Text.name(f.displayName), position = WorldMapLayout.facility(name) })
 	end
 	local unlocked = player:GetAttribute("ZonesUnlocked") or D.progress.startUnlocked
 	for index, zone in ipairs(D.zones) do
@@ -120,7 +120,7 @@ local function drawVectorMap(canvas)
 		disc.BackgroundColor3 = Color3.fromRGB(tint[1], tint[2], tint[3]):Lerp(Color3.fromRGB(96, 160, 90), 0.35)
 		disc.Parent = canvas
 		Theme.corner(disc, 9999)
-		local name = Theme.label(disc, zone.theme, "header", "textPrimary")
+		local name = Theme.label(disc, Text.name(zone.theme), "header", "textPrimary")
 		name.Name = "ZoneName"
 		name.AnchorPoint = Vector2.new(0.5, 0.5)
 		name.Position = UDim2.fromScale(0.5, 0.5)

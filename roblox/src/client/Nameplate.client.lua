@@ -10,6 +10,7 @@ local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local TitleData = require(ReplicatedStorage.Shared.data.TitleData)
+local CodexRules = require(ReplicatedStorage.Shared.CodexRules) -- QUEUE-ALL6 A4 칭호 이름 화면용(titleText)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors) -- QUEUE-B1 B2: 이름표 색 게임패스(UIColors 기존 이름만)
 local RunService = game:GetService("RunService")
@@ -51,7 +52,7 @@ local function refreshTitle(player, titleGui, titleLabel)
 	if not title then
 		return
 	end
-	titleLabel.Text = title.name
+	titleLabel.Text = CodexRules.titleText(title.id, title.name)
 	if TitleData.topGrades[title.grade] then
 		titleLabel.TextColor3 = Color3.new(1, 1, 1)
 		if not gradient then

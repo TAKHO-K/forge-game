@@ -139,14 +139,14 @@ function Info.shortName(view, m)
 	if k == "prim" then
 		return Text.get("codex.v2.primName", { zone = CodexData.zoneShort[m.zone] })
 	elseif k == "pet" then
-		return Info.unknown(view, m) and "?" or EggData.species[m.species]
+		return Info.unknown(view, m) and "?" or Text.name(EggData.species[m.species])
 	elseif k == "monster" then
 		if Info.unknown(view, m) then
 			return "?"
 		end
 		for _, s in ipairs(CodexData.monster.steps) do
 			if s.id == m.step then
-				return s.label
+				return Text.name(s.label)
 			end
 		end
 	elseif k == "boss" then
@@ -154,7 +154,7 @@ function Info.shortName(view, m)
 	elseif k == "class" then
 		return Text.get("codex.v2.weapon", { grade = ArmorData.grades[ArmorData.gradeOrder[m.weaponGrade + 1]].displayName })
 	elseif k == "nest" then
-		return cellV(view, m.id) >= 1 and Text.get("codex.v2.nest", { n = tostring(m.index) }) or CodexData.zoneShort[m.zone]
+		return cellV(view, m.id) >= 1 and Text.get("codex.v2.nest", { n = tostring(m.index) }) or Text.name(CodexData.zoneShort[m.zone])
 	end
 	return m.id
 end
@@ -163,22 +163,22 @@ end
 function Info.detailName(view, m)
 	local k = m.kind
 	if k == "armor" then
-		return Text.get("codex.v2.bingoName", { zone = CodexData.zoneShort[m.zone], grade = ArmorData.grades[m.grade].displayName }), ArmorData.grades[m.grade].displayName, Info.gradeColor(m.grade)
+		return Text.get("codex.v2.bingoName", { zone = CodexData.zoneShort[m.zone], grade = ArmorData.grades[m.grade].displayName }), Text.name(ArmorData.grades[m.grade].displayName), Info.gradeColor(m.grade)
 	elseif k == "prim" then
-		return Info.shortName(view, m), ArmorData.grades.primordial.displayName, Info.gradeColor("primordial")
+		return Info.shortName(view, m), Text.name(ArmorData.grades.primordial.displayName), Info.gradeColor("primordial")
 	elseif k == "pet" then
-		return Info.shortName(view, m), EggData.hatchGradeNames[m.hatch], Info.gradeColor(HATCH_COLOR[m.hatch])
+		return Info.shortName(view, m), Text.name(EggData.hatchGradeNames[m.hatch]), Info.gradeColor(HATCH_COLOR[m.hatch])
 	elseif k == "monster" then
 		local spec = MonsterSpeciesData.species[m.species]
-		return Info.unknown(view, m) and "?" or (spec and spec.displayName or m.species), Info.unknown(view, m) and "?" or Info.shortName(view, m), m.big and Info.gradeColor("legendary") or Info.gradeColor("rare")
+		return Info.unknown(view, m) and "?" or (spec and Text.name(spec.displayName) or m.species), Info.unknown(view, m) and "?" or Info.shortName(view, m), m.big and Info.gradeColor("legendary") or Info.gradeColor("rare")
 	elseif k == "boss" then
-		return Info.unknown(view, m) and "?" or BossData.bosses[m.bossId].displayName, Text.get("codex.v2.bossStep", { n = tostring(m.need) }), Info.gradeColor("epic")
+		return Info.unknown(view, m) and "?" or Text.name(BossData.bosses[m.bossId].displayName), Text.get("codex.v2.bossStep", { n = tostring(m.need) }), Info.gradeColor("epic")
 	elseif k == "class" then
 		local g = ArmorData.gradeOrder[m.weaponGrade + 1]
 		return Text.get("class.name." .. m.classId), Info.shortName(view, m), Info.gradeColor(g)
 	elseif k == "nest" then
 		local found = cellV(view, m.id) >= 1
-		return found and Info.shortName(view, m) or Text.get("codex.v2.nestUnknown"), CodexData.zoneShort[m.zone], Info.gradeColor("rare")
+		return found and Info.shortName(view, m) or Text.get("codex.v2.nestUnknown"), Text.name(CodexData.zoneShort[m.zone]), Info.gradeColor("rare")
 	end
 	return m.id, "", Info.gradeColor("normal")
 end
@@ -187,7 +187,7 @@ end
 function Info.hint(view, m)
 	if m.kind == "monster" and not Info.unknown(view, m) then
 		local e = MonsterCodexData.entries[m.species]
-		return e and e.hint or nil
+		return e and Text.name(e.hint) or nil
 	end
 	return nil
 end

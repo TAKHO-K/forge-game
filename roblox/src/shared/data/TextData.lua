@@ -718,6 +718,7 @@ for _, parts in ipairs({
 	require(script.Parent.TextData_panels),
 	require(script.Parent.TextData_shared),
 	require(script.Parent.TextData_server),
+	require(script.Parent.TextData_items), -- QUEUE-ALL6 C 아이템 이름 · 설명
 }) do
 	for lang, part in pairs(parts) do
 		for key, template in pairs(part) do

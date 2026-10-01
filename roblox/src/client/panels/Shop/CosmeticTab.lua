@@ -13,7 +13,7 @@ local function nameOf(kind, id)
 	local list = kind == "cosmeticTheme" and CosmeticSlotData.sets or CosmeticSlotData.gliderSkins
 	for _, entry in ipairs(list) do
 		if entry.id == id then
-			return entry.name
+			return Text.name(entry.name)
 		end
 	end
 	return tostring(id)
@@ -39,7 +39,7 @@ local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKe
 	end
 	ctx.row({
 		name = "Sale_" .. entry.id,
-		title = entry.name,
+		title = Text.name(entry.name),
 		titleColor = owned and "success" or nil,
 		subtitle = Text.get(owned and "shop.cos.ownedSub" or subtitleKey),
 		buttons = buttons,
@@ -105,7 +105,7 @@ function CosmeticTab.render(ctx, env)
 		for _, entry in ipairs(isGlider and CosmeticSlotData.gliderSkins or CosmeticSlotData.sets) do
 			local owned = isGlider and view.gliderSkins[entry.id] or (not isGlider and view.themes[entry.id])
 			if owned then
-				table.insert(options, { id = entry.id, text = entry.name })
+				table.insert(options, { id = entry.id, text = Text.name(entry.name) })
 			end
 		end
 		local current = equipped[slot.id]

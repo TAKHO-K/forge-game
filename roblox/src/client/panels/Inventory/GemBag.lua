@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local GemReplaceTip = require(script.Parent.GemReplaceTip)
 
@@ -88,7 +89,7 @@ function GemBag.create(parent, deps)
 			gradeLabel.Font = Enum.Font.GothamBold
 			gradeLabel.TextSize = Theme.textSize("caption")
 			gradeLabel.TextColor3 = UIColors.textPrimary
-			gradeLabel.Text = ArmorData.grades[gem.grade].displayName
+			gradeLabel.Text = Text.name(ArmorData.grades[gem.grade].displayName)
 			gradeLabel.Parent = cell
 
 			-- 선택 · 홈 먼저 모드에서 끼울 수 있는 보석(링)

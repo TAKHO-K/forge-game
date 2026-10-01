@@ -120,7 +120,7 @@ local function refreshPortals()
 	end
 	for _, zone in ipairs(WorldMapData.zones) do
 		local label = portalLabels[zone.key]
-		label.Text = (open[zone.key] and "→ " or "🔒 ") .. zone.theme
+		label.Text = (open[zone.key] and "→ " or "🔒 ") .. Text.name(zone.theme)
 		label.TextColor3 = open[zone.key] and Color3.new(1, 1, 1) or Color3.fromRGB(170, 170, 170)
 	end
 end
@@ -414,14 +414,14 @@ local function treeText(meters)
 end
 local function regionName(position)
 	if WorldMapLayout.inHub(position) then
-		return WorldMapData.hub.displayName
+		return Text.name(WorldMapData.hub.displayName)
 	end
 	local range, rangeZone = WorldMapLayout.huntRangeAt(position)
 	if range then
-		return ("%s · %s"):format(rangeZone.theme, range.name)
+		return ("%s · %s"):format(Text.name(rangeZone.theme), Text.name(range.name))
 	end
 	local zone = WorldMapLayout.zoneAt(position)
-	return zone and zone.theme or Text.get("scene.world.field")
+	return zone and Text.name(zone.theme) or Text.get("scene.world.field")
 end
 local lastGate = nil
 local lastTutorialStep = nil

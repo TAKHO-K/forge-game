@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local materialGained = ReplicatedStorage:WaitForChild("MaterialGained")
 local protectionTicketGranted = ReplicatedStorage:WaitForChild("ProtectionTicketGranted")
@@ -64,7 +65,7 @@ end
 materialGained.OnClientEvent:Connect(function(materialId, count)
 	local material = EnhanceMaterialData.materials[materialId]
 	if material then
-		showPopup(("+%d %s"):format(count, material.displayName))
+		showPopup(("+%d %s"):format(count, Text.name(material.displayName)))
 	end
 end)
 
@@ -72,6 +73,6 @@ end)
 protectionTicketGranted.OnClientEvent:Connect(function(kind, count)
 	local config = EnhanceConfig.protection[kind]
 	if config and kind ~= "bossGrant" then
-		showPopup(("+%d %s"):format(count, config.displayName))
+		showPopup(("+%d %s"):format(count, Text.name(config.displayName)))
 	end
 end)

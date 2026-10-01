@@ -161,6 +161,9 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 			local quests = PlayerProfile.getQuestState(player)
 			if quests then
 				quests.currencies.sparkleShard = math.max(0, (quests.currencies.sparkleShard or 0) - refund)
+				if typeof(player) == "Instance" then
+					player:SetAttribute("SparkleShard", quests.currencies.sparkleShard) -- QUEUE-ALL6 C: 지갑 Attribute
+				end
 			end
 		end
 		log("save_failed_retry")

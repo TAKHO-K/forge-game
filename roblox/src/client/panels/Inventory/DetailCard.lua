@@ -410,8 +410,8 @@ function DetailCard.build(parent, S)
 		chip.Visible = grade ~= nil
 		local chipW = 0
 		if grade then
-			chipLabel.Text = grade.displayName
-			chipW = TextService:GetTextSize(grade.displayName, chipLabel.TextSize, chipLabel.Font, Vector2.new(400, 40)).X + 22
+			chipLabel.Text = Text.name(grade.displayName)
+			chipW = TextService:GetTextSize(chipLabel.Text, chipLabel.TextSize, chipLabel.Font, Vector2.new(400, 40)).X + 22
 			chip.Size = UDim2.new(0, chipW, 0, phone and 22 or 26)
 			chip.BackgroundColor3 = color
 			chipLabel.TextColor3 = inkOn(color)

@@ -72,7 +72,7 @@ local function ticketState(kind, level, gaugeFull, maxed)
 	elseif gaugeFull then
 		reason = Text.get("forge.enhance.ticket.gaugeFull")
 	end
-	return { name = config.displayName, have = have, want = toggles[kind], enabled = reason == nil, reason = reason }
+	return { name = Text.name(config.displayName), have = have, want = toggles[kind], enabled = reason == nil, reason = reason }
 end
 
 local function gradeDisplayName()
@@ -119,7 +119,7 @@ function Controller.getState()
 		local material = EnhanceMaterialData.materials[materialCost.id]
 		state.material = {
 			id = materialCost.id,
-			name = material and material.displayName or materialCost.id,
+			name = material and Text.name(material.displayName) or materialCost.id,
 			need = materialCost.count,
 			have = player:GetAttribute(materialAttributeName(materialCost.id)) or 0,
 		}

@@ -123,7 +123,7 @@ local function refreshMarkers()
 			l.TextSize = 14
 			l.TextColor3 = Color3.new(1, 1, 1)
 			l.TextStrokeTransparency = 0.3
-			l.Text = cp.name
+			l.Text = Text.name(cp.name)
 			l.Parent = tag
 			markers[cp.id] = m
 		end

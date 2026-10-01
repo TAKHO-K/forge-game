@@ -454,7 +454,7 @@ local function makeSlot(part, order, equipped)
 		ItemCell.paint(slot, { part = part, iconColor = UIColors.textTertiary, iconSize = 26 }, S.applyGradeVisual) -- 빈 칸: 옅은 테두리 + 흐린 부위 그림
 	end
 
-	local nameLabel = Theme.label(slot, ItemVisualData.partDisplayNames[part], "caption", filled and "textSecondary" or "textTertiary")
+	local nameLabel = Theme.label(slot, Text.name(ItemVisualData.partDisplayNames[part]), "caption", filled and "textSecondary" or "textTertiary")
 	nameLabel.Name = "PartName"
 	nameLabel.Font = Enum.Font.GothamBold
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Center

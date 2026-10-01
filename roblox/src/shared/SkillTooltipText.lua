@@ -190,7 +190,7 @@ function SkillTooltipText.build(classId, slot, info)
 		add("rule", t("rule.toggle"))
 	end
 
-	return { title = def.name, keyText = slot, lines = lines }
+	return { title = Text.name(def.name), keyText = slot, lines = lines }
 end
 
 return SkillTooltipText

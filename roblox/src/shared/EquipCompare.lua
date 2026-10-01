@@ -35,7 +35,7 @@ end
 
 local function gradeName(gradeId)
 	local grade = ArmorData.grades[gradeId]
-	return grade and grade.displayName or "-"
+	return grade and Text.name(grade.displayName) or "-"
 end
 
 local function signOf(delta)

@@ -24,6 +24,8 @@ def load_tables():
     for name in sorted(os.listdir(DATA)):
         if not (name.startswith('TextData') and name.endswith('.lua')):
             continue
+        if name == 'TextData_names.lua':  # QUEUE-ALL6 A4 데이터 이름 사전(원문 키 - check_names.py가 따로 본다)
+            continue
         path = os.path.join(DATA, name)
         if name == 'TextData.lua':
             lang = 'ko'

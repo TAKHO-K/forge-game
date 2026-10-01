@@ -342,7 +342,7 @@ local function refresh()
 	local meters = math.floor((Vector3.new(finalP.X - feet.X, 0, finalP.Z - feet.Z)).Magnitude * METERS + 0.5)
 	local label = beaconTip.BeaconLabel
 	label.Enabled = true
-	label.Caption.Text = r.label and ("%s · %dm"):format(r.label, meters) or ("%dm"):format(meters)
+	label.Caption.Text = r.label and ("%s · %dm"):format(require(ReplicatedStorage.Shared.Text).name(r.label), meters) or ("%dm"):format(meters)
 	edgeLabel.Text = ("%dm"):format(meters)
 	if not built then
 		for _, s in ipairs(segments) do

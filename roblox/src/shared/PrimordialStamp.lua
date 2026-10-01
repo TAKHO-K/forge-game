@@ -37,7 +37,7 @@ function PrimordialStamp.sourceText(source)
 	if not where then
 		return nil
 	end
-	return source.stage and Text.get("desc.stamp.withStage", { where = where, stage = ("%d"):format(source.stage) }) or where
+	return source.stage and Text.get("desc.stamp.withStage", { where = where, stage = ("%d"):format(source.stage) }) or Text.name(where)
 end
 
 -- 번호 줄: "세계 37번째 태초" · 옛 태초 = "이전 태초" · 번호 확정 실패 = "태초(번호 없음)"

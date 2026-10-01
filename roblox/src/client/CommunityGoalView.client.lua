@@ -79,7 +79,7 @@ title.Font = Theme.font
 title.TextSize = 16
 title.TextColor3 = GOLD
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.Text = D.text.panelTitle
+title.Text = Text.name(D.text.panelTitle)
 title.Parent = panel
 local metric = Instance.new("TextLabel")
 metric.BackgroundTransparency = 1
@@ -89,7 +89,7 @@ metric.Font = Theme.fontBody
 metric.TextSize = 12
 metric.TextColor3 = Color3.fromRGB(200, 200, 214)
 metric.TextXAlignment = Enum.TextXAlignment.Left
-metric.Text = D.text.metric
+metric.Text = Text.name(D.text.metric)
 metric.Parent = panel
 local rows = {}
 for i, t in ipairs(D.tiers) do
@@ -101,7 +101,7 @@ for i, t in ipairs(D.tiers) do
 	label.TextSize = 14
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Text = ("%d%% · %s"):format(math.floor(t.fraction * 100 + 0.5), t.label)
+	label.Text = ("%d%% · %s"):format(math.floor(t.fraction * 100 + 0.5), Text.name(t.label))
 	label.Parent = panel
 	local btn = Instance.new("TextButton")
 	btn.Name = "Claim" .. i
@@ -179,14 +179,14 @@ local function refresh()
 	local target = Workspace:GetAttribute("CommunityGoalTarget")
 	local frac = (type(target) == "number" and target > 0) and math.clamp(total / target, 0, 1) or 0
 	fill.Size = UDim2.fromScale(frac, 1)
-	pillText.Text = (type(target) == "number" and target > 0) and D.text.hud:format(math.floor(frac * 100)) or D.text.measuring
+	pillText.Text = (type(target) == "number" and target > 0) and Text.name(D.text.hud):format(math.floor(frac * 100)) or Text.name(D.text.measuring)
 	local reached = Rules.tiersReached(total, target)
 	local claimed = {}
 	for k in tostring(player:GetAttribute("CommunityGoalClaimed") or ""):gmatch("[^,]+") do
 		claimed[tonumber(k) or 0] = true
 	end
 	for i, btn in ipairs(rows) do
-		btn.Text = claimed[i] and D.text.claimed or (i <= reached and D.text.claim or D.text.locked)
+		btn.Text = Text.name(claimed[i] and D.text.claimed or (i <= reached and D.text.claim or D.text.locked))
 		btn.AutoButtonColor = i <= reached and not claimed[i]
 		btn.BackgroundTransparency = (i <= reached and not claimed[i]) and 0 or 0.5
 	end
@@ -212,6 +212,6 @@ refresh()
 
 ReplicatedStorage:WaitForChild("CommunityGoalBanner").OnClientEvent:Connect(function(info)
 	if type(info) == "table" then
-		Toast.push("TC", { richParts = { { text = D.text.tierBanner:format(info.percent or 0, tostring(info.label or "")), color = GOLD, bold = true } }, seconds = 6, fadeSeconds = 0.4, rainbow = info.tier == #D.tiers })
+		Toast.push("TC", { richParts = { { text = Text.name(D.text.tierBanner):format(info.percent or 0, Text.name(tostring(info.label or ""))), color = GOLD, bold = true } }, seconds = 6, fadeSeconds = 0.4, rainbow = info.tier == #D.tiers })
 	end
 end)

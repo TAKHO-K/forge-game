@@ -245,7 +245,7 @@ local function renderCommunity()
 	card.BackgroundTransparency = 1
 	card.Size = UDim2.new(1, 0, 0, 120)
 	card.Parent = built.scroll
-	local head = label(card, target and Text.get("quests.communityHead", { pct = tostring(math.floor(total / target * 100)) }) or CommunityGoalData.text.measuring, "header")
+	local head = label(card, target and Text.get("quests.communityHead", { pct = tostring(math.floor(total / target * 100)) }) or Text.name(CommunityGoalData.text.measuring), "header")
 	head.Size = UDim2.new(1, 0, 0, 26)
 	gauge(card, target and total / target or 0, UDim2.fromOffset(0, 34), UDim2.new(1, 0, 0, 24), Color3.fromRGB(255, 214, 90))
 	for i, t in ipairs(CommunityGoalData.tiers) do
@@ -286,18 +286,18 @@ local function renderChallenge()
 		stage = tostring(WeeklyChallengeData.stage) }), "header", "gold")
 	head.LayoutOrder = nextOrder()
 	head.Size = UDim2.new(1, 0, 0, 48)
-	local go = Button.build({ parent = built.scroll, kind = "primary", width = 200, height = claimHeight(), text = WeeklyChallengeData.text.start, onActivated = function()
+	local go = Button.build({ parent = built.scroll, kind = "primary", width = 200, height = claimHeight(), text = Text.name(WeeklyChallengeData.text.start), onActivated = function()
 		ReplicatedStorage:WaitForChild("WeeklyChallengeStart"):FireServer()
 		UIManager.close(QuestsPanel.id)
 	end })
 	go.root.Name = "ChallengeStart"
 	go.root.LayoutOrder = nextOrder()
-	local rankTitle = label(built.scroll, WeeklyChallengeData.text.rank, "body", "textSecondary")
+	local rankTitle = label(built.scroll, Text.name(WeeklyChallengeData.text.rank), "body", "textSecondary")
 	rankTitle.LayoutOrder = nextOrder()
 	rankTitle.Size = UDim2.new(1, 0, 0, 22)
 	local rows = {}
 	for i = 1, WeeklyChallengeData.topShown do
-		local l = label(built.scroll, i == 1 and WeeklyChallengeData.text.none or "", "body")
+		local l = label(built.scroll, i == 1 and Text.name(WeeklyChallengeData.text.none) or "", "body")
 		l.LayoutOrder = nextOrder()
 		l.Size = UDim2.new(1, 0, 0, 22)
 		rows[i] = l
@@ -312,7 +312,7 @@ local function renderChallenge()
 		for i, l in ipairs(rows) do
 			local row = ok and type(r) == "table" and r.rows and r.rows[i]
 			if l.Parent then
-				l.Text = row and Text.get("quests.challengeRow", { rank = tostring(row.rank), name = row.name, seconds = ("%.1f"):format(row.seconds) }) or (i == 1 and WeeklyChallengeData.text.none or "")
+				l.Text = row and Text.get("quests.challengeRow", { rank = tostring(row.rank), name = row.name, seconds = ("%.1f"):format(row.seconds) }) or (i == 1 and Text.name(WeeklyChallengeData.text.none) or "")
 			end
 		end
 		if mine.Parent then

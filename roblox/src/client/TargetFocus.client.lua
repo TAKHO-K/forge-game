@@ -527,7 +527,7 @@ local function refresh()
 		local key = nameText .. "|" .. stage
 		if slot.textKey ~= key then
 			slot.textKey = key
-			slot.label.Text = ('<font color="#%s">%s</font> %s'):format(LEVEL_HEX, escape(Text.get("nameplate.mob.level", { level = tostring(stage) })), escape(nameText))
+			slot.label.Text = ('<font color="#%s">%s</font> %s'):format(LEVEL_HEX, escape(Text.get("nameplate.mob.level", { level = tostring(stage) })), escape(Text.name(nameText)))
 		end
 		-- 크기(카메라 거리) · 투명도(내 캐릭터 거리)
 		local camDist = (c.rec.head.Position - cam.CFrame.Position).Magnitude

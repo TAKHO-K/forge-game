@@ -9,6 +9,7 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.kit.Theme)
 local ArtImage = require(script.Parent.ArtImage)
+local RewardDetail = require(script.Parent.RewardDetail)
 
 local RewardIcons = {}
 
@@ -22,10 +23,11 @@ local SHORT_KEY = { enhanceStone = "ui.reward.short.enhanceStone", egg = "ui.rew
 -- 몇 마리분 → 실제 골드 글자(서버 grant와 같은 식)
 function RewardIcons.goldText(kills)
 	local best = Players.LocalPlayer:GetAttribute("AccountBestStage") or 1
-	return NumberFormat.format(GoldCost.cost(MonsterData.tier1.goldDrop * kills, best, "quest"))
+	return NumberFormat.format(GoldCost.rewardGold(MonsterData.tier1.goldDrop, kills, best)) -- QUEUE-ALL6 D: 서버 지급과 같은 값
 end
 
 -- parent 안에 가로 줄(UIListLayout)로 그린다. size = 아이콘 한 변(px). 반환 = 줄 Frame
+--   QUEUE-ALL6 C: 칸 = 투명 버튼 - 누르면 상세 카드(RewardDetail - 이름 · 한 줄 설명 · 가진 개수) · PC 마우스 올림도 같은 카드. opts.noDetail = 끔.
 function RewardIcons.row(parent, reward, size, opts)
 	opts = opts or {}
 	size = size or 28
@@ -46,10 +48,14 @@ function RewardIcons.row(parent, reward, size, opts)
 	for i, key in ipairs(RewardIcons.order) do
 		local v = reward and reward[key]
 		if v and v ~= 0 then
-			local cell = Instance.new("Frame")
+			local cell = Instance.new(opts.noDetail and "Frame" or "TextButton")
 			cell.Name = "R_" .. key
 			cell.LayoutOrder = i
 			cell.BackgroundTransparency = 1
+			if cell:IsA("TextButton") then
+				cell.Text = ""
+				cell.AutoButtonColor = false
+			end
 			cell.Size = UDim2.fromOffset(key == "title" and size or size + 34, size)
 			cell.Parent = row
 			local img = ArtImage.label(cell, "icons/reward/" .. (RewardIcons.icon[key] or key), UDim2.fromOffset(size, size), SHORT[key] or (SHORT_KEY[key] and Text.get(SHORT_KEY[key])) or "?")
@@ -67,6 +73,10 @@ function RewardIcons.row(parent, reward, size, opts)
 				qty.TextXAlignment = Enum.TextXAlignment.Left
 				qty.Text = (key == "gold" or key == "goldKills") and (opts.goldText or RewardIcons.goldText(v)) or ("×" .. tostring(v))
 				qty.Parent = cell
+			end
+			if not opts.noDetail then
+				local qtyText = key ~= "title" and ((key == "gold" or key == "goldKills") and (opts.goldText or RewardIcons.goldText(v)) or ("×" .. tostring(v))) or nil
+				RewardDetail.attach(cell, key, qtyText)
 			end
 		end
 	end

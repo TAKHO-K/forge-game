@@ -300,7 +300,7 @@ function S.select(sel)
 end
 
 local function build()
-	local panel = Panel.create({ id = CodexPanel.id, kind = "window", title = CodexData.text.title, size = PANEL_SIZE,
+	local panel = Panel.create({ id = CodexPanel.id, kind = "window", title = Text.name(CodexData.text.title), size = PANEL_SIZE,
 		onOpen = function()
 			task.defer(function()
 				CodexPanel.render()
@@ -387,7 +387,7 @@ function CodexPanel.render()
 	end
 	local view = S.view
 	if not view then
-		built.panel.titleLabel.Text = CodexData.text.title
+		built.panel.titleLabel.Text = Text.name(CodexData.text.title)
 		return
 	end
 	built.panel.titleLabel.Text = Text.get("codex.v2.titleScore", { score = tostring(view.score), total = tostring(view.total) })

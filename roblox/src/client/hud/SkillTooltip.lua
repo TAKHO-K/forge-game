@@ -115,7 +115,7 @@ local function render()
 	local built = classId and classId ~= "" and SkillTooltipText.build(classId, slotId:upper(), cache.info and cache.info.classId == classId and cache.info or nil)
 	if not built and classId and classId ~= "" then -- T(궁극기) · 대시 = 짧은 카드
 		local ult = slotId == "t" and UltimateData.skills[classId]
-		built = { keyText = slotId == "dash" and "Shift" or slotId:upper(), title = ult and ult.name or Text.get("skillCard.dash"), lines = {} }
+		built = { keyText = slotId == "dash" and "Shift" or slotId:upper(), title = ult and Text.name(ult.name) or Text.get("skillCard.dash"), lines = {} }
 		if ult then
 			table.insert(built.lines, { id = "cooldown", label = Text.get("desc.skill.label.cooldown"), text = Text.get("skillCard.ultGauge") })
 			if ult.durationSeconds then
@@ -131,7 +131,7 @@ local function render()
 	local short = classId and SkillIconData.short[classId] and SkillIconData.short[classId][slotId]
 	local compact = {}
 	if short then
-		table.insert(compact, { label = "", text = short })
+		table.insert(compact, { label = "", text = Text.name(short) })
 	end
 	for _, entry in ipairs(built.lines) do
 		if KEEP[entry.id] and #compact < 3 then

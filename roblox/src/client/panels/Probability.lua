@@ -49,7 +49,7 @@ local function gradeRowsText(rows)
 	local parts = {}
 	for _, r in ipairs(rows) do
 		local g = ArmorData.grades[r.id]
-		local name = g and g.displayName or r.id
+		local name = g and Text.name(g.displayName) or r.id
 		if GradeFrame.isOn() then
 			name = ('<font color="#%s"><b>%s</b></font>'):format(GradeFrame.colorOf(r.id):ToHex(), name)
 		end
@@ -61,11 +61,11 @@ end
 local function optionName(id)
 	local def = OptionData.options[id]
 	if def and def.displayName then
-		return def.displayName
+		return Text.name(def.displayName)
 	end
 	local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 	local s = def and def.classId and SkillData[def.classId] and SkillData[def.classId][def.slot]
-	return s and s.name or id
+	return s and Text.name(s.name) or id
 end
 
 local function render()
@@ -85,7 +85,7 @@ local function render()
 		for _, gradeId in ipairs(require(ReplicatedStorage.Shared.data.ArmorData).gradeOrder) do
 			local m = d.drop.riftBoost[gradeId]
 			if m then
-				table.insert(parts, ("%s ×%g"):format(require(ReplicatedStorage.Shared.data.ArmorData).grades[gradeId].displayName, m))
+				table.insert(parts, ("%s ×%g"):format(Text.name(require(ReplicatedStorage.Shared.data.ArmorData).grades[gradeId].displayName), m))
 			end
 		end
 		local ruleKey = require(ReplicatedStorage.Shared.DropTable).gainOnly and "ui.prob.riftGainOnly" or "ui.prob.riftBelow" -- QUEUE-ALL1 R1
@@ -124,14 +124,14 @@ local function render()
 	line(Text.get("prob.variant", { appear = pct(d.variants.appearChance), kills = tostring(d.variantRerollKills) }), "body", "textPrimary")
 	for _, r in ipairs(d.variants.classes[classId] or {}) do
 		local t = SkillVariantData.templates[r.id]
-		line(("%s %s %s"):format(r.slot, t and t.name or r.id, pct(r.chance)), "caption", "textSecondary")
+		line(("%s %s %s"):format(r.slot, t and Text.name(t.name) or r.id, pct(r.chance)), "caption", "textSecondary")
 	end
 	line(Text.get("prob.hatch"), "body", "textPrimary")
 	for _, lv in ipairs(d.hatch.levels) do
 		local parts = {}
 		for _, eggGrade in ipairs(EggData.gradeOrder) do
 			local t = lv.byEgg[eggGrade]
-			table.insert(parts, ("%s %.1f/%.1f/%.1f/%.1f"):format(EggData.gradeNames[eggGrade], t.common, t.uncommon, t.rare, t.epic))
+			table.insert(parts, ("%s %.1f/%.1f/%.1f/%.1f"):format(Text.name(EggData.gradeNames[eggGrade]), t.common, t.uncommon, t.rare, t.epic))
 		end
 		line(Text.get("ui.prob.hatchRow", { level = ("%d"):format(lv.level), hatches = ("%d"):format(lv.hatches), list = table.concat(parts, " · ") }), "caption", "textSecondary")
 	end
