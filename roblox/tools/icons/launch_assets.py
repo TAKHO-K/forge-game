@@ -4,7 +4,7 @@
 import os
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "..", "Claude outputs", "QUEUE-ALL2", "launch")
+ROOT = os.environ.get("LAUNCH_ROOT") or os.path.join(os.path.dirname(__file__), "..", "..", "..", "Claude outputs", "QUEUE-ALL2", "launch")  # QUEUE-STUDIO: 재촬영 폴더를 따로 줄 수 있게
 SRC = os.path.join(ROOT, "src")
 FONT = "C:/Windows/Fonts/malgunbd.ttf"
 TAGLINE = "뜨는 순간, 전 서버가 본다"
@@ -26,6 +26,8 @@ def outlined(draw, xy, text, font, fill, stroke, width, anchor="mm"):
 
 
 def thumb(name, src, cx, cy):
+    if not os.path.exists(os.path.join(SRC, src)):
+        return
     img = cover(Image.open(os.path.join(SRC, src)).convert("RGB"), 1920, 1080, cx, cy)
     img.save(os.path.join(ROOT, "thumb_%s_plain.png" % name))
     # 글자판: 아래 띠(어두운 그라데이션) + 금 글자 굵은 외곽선
@@ -41,6 +43,8 @@ def thumb(name, src, cx, cy):
 
 
 def icon(name, src, box, tint):
+    if not os.path.exists(os.path.join(SRC, src)):  # QUEUE-STUDIO: 그 원본을 안 찍은 재촬영 폴더면 건너뜀
+        return
     img = Image.open(os.path.join(SRC, src)).convert("RGB").crop(box).resize((512, 512), Image.LANCZOS)
     # 가장자리 살짝 어둡게(가운데 캐릭터 강조) + 굵은 외곽선 둥근 테두리
     vignette = Image.new("L", (512, 512), 0)
