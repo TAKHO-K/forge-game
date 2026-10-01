@@ -261,7 +261,8 @@ B.clips.charge = {
 		{ f = 0.4, ease = "inout", pose = merge(B.guard, { Waist = { -30, 0, 0 }, Neck = { 22, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.32, 0.1 }, Hip_R = { 10, 0, 3 }, Knee_R = { -20, 0, 0 } }) },
 		{ f = 0.6, ease = "inout", pose = merge(B.guard, { Waist = { -25, 0, 0 }, Neck = { 18, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.3, 0.1 }, Hip_R = { -30, 0, 3 }, Knee_R = { -40, 0, 0 } }) },
 		{ f = 0.8, ease = "inout", pose = merge(B.guard, { Waist = { -30, 0, 0 }, Neck = { 22, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.32, 0.1 }, Hip_R = { 10, 0, 3 }, Knee_R = { -20, 0, 0 } }) },
-		{ f = 1.0, ease = "out", pose = merge(B.guard, { Waist = { -34, 0, 0 }, Neck = { 26, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.35, 0.12 }, Shoulder_R = { -20, 0, 15 }, Shoulder_L = { -20, 0, -15 } }) },
+		-- QUEUE-ALL5 C: "out" → "inout"(앞 키가 속도 0으로 끝나는데 "out"은 최대 속도로 출발 - 전조 1.0초 삼지창 던지기에서 어깨가 한 프레임에 1.85배 튐) · 키 자세 · 시각 그대로
+		{ f = 1.0, ease = "inout", pose = merge(B.guard, { Waist = { -34, 0, 0 }, Neck = { 26, 0, 0 }, RootJoint = { 0, 0, 0, 0, -0.35, 0.12 }, Shoulder_R = { -20, 0, 15 }, Shoulder_L = { -20, 0, -15 } }) },
 	},
 	post = { { s = 0.12, ease = "out", pose = { Waist = { -32, 0, 0 }, Neck = { 26, 0, 0 }, Shoulder_R = { -30, 0, 18 }, Shoulder_L = { -30, 0, -18 }, Elbow_R = { 40, 0, 0 }, Elbow_L = { 40, 0, 0 } } } },
 	loop = { period = 0.3, poses = { { Waist = { -32, 0, 0 }, Neck = { 26, 0, 0 }, Shoulder_R = { -30, 0, 18 }, Shoulder_L = { -30, 0, -18 } }, { Waist = { -30, 0, 2 }, Neck = { 24, 0, 0 }, Shoulder_R = { -26, 0, 18 }, Shoulder_L = { -34, 0, -18 } } } },
