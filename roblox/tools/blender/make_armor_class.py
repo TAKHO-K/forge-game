@@ -50,7 +50,8 @@ def strap(p0, p1, w=0.14, t=0.05):
 
 
 def studs(pts, r=0.05):
-    return A.merge(*[A.ellipsoid((r, r, r * 0.7), n=5, rings=2, center=p) for p in pts])
+    # QUEUE-ALL6 E: 공(삼각형 ~40) → 납작한 상자 징(12) - 같은 자리 · 예산을 판 겹침 · 리벳에 쓴다
+    return A.merge(*[A.box(r * 2, r * 2, r * 1.2, center=p) for p in pts])
 
 
 def gem(center, r=0.1, m=None):
@@ -95,15 +96,15 @@ def chest(cls):
         r["base"].append(yl([(-0.8, 2.12, 1.16, 0.0), (0.3, 2.16, 1.18, -0.02), (0.8, 1.78, 1.06, 0.0)], 0.3))
         r["trim"].append(A.box(0.8, 1.5, 0.06, b=0.05, center=(0, -0.02, -0.63)))
         r["grade"].append(A.xform(A.box(0.4, 0.4, 0.05, b=0.02), m=A.rot(rz=45), t=(0, 0.12, -0.67)))
-        r["grade"].append(ring_y(0.82, 0.54, 0.42, 0.1, 0.16, n=10))
+        r["grade"].append(ring_y(0.82, 0.54, 0.42, 0.1, 0.16, n=8))
     return r
 
 
 def shoulder(cls, side):  # UpperArm(1 × 1.17 × 1) 위쪽 - 팔 움직임에 안 박히게 윗팔에 붙는다
     r = R()
     if cls == "greatsword":  # 판금 어깨판 두 겹(강철) + 세트 보조 테
-        r["steel"].append(A.ellipsoid((0.64, 0.46, 0.62), n=10, rings=4, center=(side * 0.05, 0.36, 0), squash_bottom=0.25))
-        r["steel"].append(A.ellipsoid((0.62, 0.24, 0.6), n=10, rings=3, center=(side * 0.05, 0.02, 0), squash_bottom=0.3))
+        r["steel"].append(A.ellipsoid((0.64, 0.46, 0.62), n=8, rings=3, center=(side * 0.05, 0.36, 0), squash_bottom=0.25))  # QUEUE-ALL6 E: 해상도 10·4 → 8·3(셋째 겹 예산)
+        r["steel"].append(A.ellipsoid((0.62, 0.24, 0.6), n=8, rings=2, center=(side * 0.05, 0.02, 0), squash_bottom=0.3))
         r["trim"].append(ring_y(-0.08, 0.63, 0.61, 0.04, 0.07, n=10))
     elif cls == "dualblade":  # 짧은 어깨 망토(세트 색) + 가죽 테
         r["base"].append(A.ellipsoid((0.62, 0.4, 0.6), n=9, rings=3, center=(side * 0.04, 0.34, 0), squash_bottom=0.3))
@@ -257,8 +258,78 @@ def look_extra(cls, kind, side, look, r):
             g.append(A.box(0.06, 1.1, 0.04, center=(-0.5, 0.0, -0.64)))
             g.append(A.box(0.06, 1.1, 0.04, center=(0.5, 0.0, -0.64)))
             gl.append(A.xform(A.box(0.04, 0.5, 0.03), m=A.rot(rz=20), t=(-0.2, -0.3, -0.66)))
-        elif kind == "Shoulder":
+        elif kind == "Shoulder" and cls != "greatsword":  # QUEUE-ALL6 E: 대검은 v3.1 날개 판이 대신
             g.append(A.xform(A.box(0.04, 0.04, 0.5), t=(side * 0.2, 0.74, 0)))
+
+
+# ────────────────────────── QUEUE-ALL6 E 외형 v3.1: 디테일 한 단계 위 ──────────────────────────
+# 판금 겹침(얇은 판 줄) · 리벳(작은 상자 - 공 대신 삼각형 12) · 가죽 끈 · 테두리 · 모서리 베벨(기존 yl 베벨 유지).
+# 직업 실루엣(멀리서도 구분): 대검 = 넓은 어깨판 겹 · 쌍검 = 등 짧은 망토 · 활 = 큰 후드 · 치유사 = 긴 로브 자락. 등급 장식 = 일반 < 전설(새김 테 · 보석) < 초월(날개 판 · 금 줄 · 빛 균열).
+# 크기 규칙 그대로(착용 코드가 파트 실측으로 맞춘다 · 껍데기 ≤ 0.15) · 예산 = BUDGET(삼각형) · PART_CAP(조각 - 역할별로 합치므로 늘지 않는다).
+def rivets(pts, s=0.07):
+    return A.merge(*[A.box(s, s, s * 0.6, center=c) for c in pts])
+
+
+def lame(y, w, d=0.05, h=0.06, z=-0.62):
+    """가슴 · 치마 앞면 가로 판 줄(겹친 판 끝)"""
+    return A.box(w, h, d, center=(0, y, z))
+
+
+def detail_v31(cls, kind, side, look, r):
+    st, lt, tr, g, gl, base = r["steel"], r["leather"], r["trim"], r["grade"], r["glow"], r["base"]
+    if cls == "greatsword":
+        if kind == "Chest":
+            st += [lame(-0.48, 1.9), lame(-0.66, 1.84)]  # 아래 가슴 판 겹침 두 줄
+            g.append(rivets([(x, 0.62, -0.62) for x in (-0.8, 0.8)]))
+        elif kind == "Shoulder":
+            st.append(A.xform(A.box(0.72, 0.08, 1.3), m=A.rot(rz=-side * 18), t=(side * 0.26, -0.2, 0)))  # 셋째 겹(넓은 어깨판 - 바깥으로 기운 판)
+            g.append(rivets([(side * 0.42, 0.42, z) for z in (-0.35, 0.35)]))
+        elif kind == "Tasset":
+            st.append(A.box(1.12, 0.05, 1.12, center=(0, 0.3, 0)))  # 치마 판 겹침 한 줄(리벳 · 둘째 줄은 예산 · 조각 상한으로 뺐다)
+        elif kind == "Glove":
+            st.append(A.box(0.8, 0.08, 0.16, b=0.02, center=(0, 0.16, -0.36)))  # 손등 마디 판
+            g.append(rivets([(x, 0.18, -0.2) for x in (-0.3, 0.3)]))
+        elif kind == "Greave":
+            lt.append(ring_y(-0.35, 0.56, 0.56, 0.03, 0.06))
+            g.append(rivets([(x, 0.5, -0.66) for x in (-0.18, 0.18)]))
+    elif cls == "dualblade":
+        if kind == "Chest":
+            base.append(A.xform(A.box(1.7, 1.9, 0.05), m=A.rot(rx=-8), t=(0, -0.25, 0.66)))  # 등 짧은 망토(날렵한 실루엣)
+            g.append(rivets([(x, y, -0.66) for x, y in ((-0.5, 0.3), (0.5, 0.3), (-0.5, -0.3), (0.5, -0.3))], 0.06))  # 교차 벨트 고리
+            lt.append(A.box(0.5, 0.08, 0.06, center=(0, 0.6, -0.62)))
+        elif kind == "Shoulder":
+            lt.append(A.xform(A.box(0.5, 0.06, 0.06), t=(side * 0.1, 0.2, -0.5)))
+        elif kind == "Glove":
+            lt += [A.box(1.02, 0.05, 0.08, center=(0, 0.02, z)) for z in (0.25, 0.45)]  # 손목 감은 끈
+        elif kind == "Greave":
+            lt.append(ring_y(0.05, 0.55, 0.55, 0.03, 0.06))
+            g.append(rivets([(0, 0.46, -0.66)], 0.06))
+    elif cls == "bow":
+        if kind == "Chest":
+            tr.append(A.xform(A.ellipsoid((0.82, 0.5, 0.44), n=9, rings=3, squash_bottom=0.5), t=(0, 0.9, 0.42)))  # 큰 후드(목 뒤로 내린 - 멀리서 활 직업)
+            base += [A.box(0.05, 1.1, 0.05, center=(x, -0.05, -0.6)) for x in (-0.5, 0.5)]  # 누빔 세로 줄
+            g.append(rivets([(0.4, 0.3, -0.64), (-0.4, -0.3, -0.64)], 0.06))  # 화살통 끈 고리
+        elif kind == "Bracer" and side < 0:
+            g.append(rivets([(0.62, y, 0) for y in (-0.35, 0.05)], 0.06))
+        elif kind == "Boot":
+            lt.append(A.box(1.06, 0.06, 0.08, center=(0, 0.16, 0.25)))
+    else:  # healer
+        if kind == "Tasset":
+            base.append(A.box(0.92, 0.7, 0.06, b=0.04, center=(0, -0.72, -0.62)))  # 긴 로브 자락(앞 - 무릎 아래까지)
+            base.append(A.box(0.92, 0.7, 0.06, b=0.04, center=(0, -0.72, 0.62)))
+            tr.append(A.box(0.94, 0.08, 0.07, center=(0, -1.04, -0.63)))  # 밑단 테
+        elif kind == "Chest":
+            g.append(A.box(0.08, 0.5, 0.05, center=(0, 0.12, -0.7)))  # 문양 세로 획(십자)
+        elif kind == "Bracer":
+            tr.append(ring_y(0.3, 0.6, 0.6, 0.03, 0.06))
+    # 등급 장식 단계(일반 < 전설 < 초월) - 전설: 새김 테 · 초월: 날개 판 + 금 줄 + 빛 균열
+    if look != "normal" and kind in ("Greave", "Bracer"):  # 가슴 · 어깨는 look_extra 테가 이미 있다
+        g.append(ring_y({"Chest": 0.55, "Shoulder": 0.5, "Greave": 0.45, "Bracer": -0.2}[kind], {"Chest": 1.08, "Shoulder": 0.64}.get(kind, 0.57), {"Chest": 0.6, "Shoulder": 0.62}.get(kind, 0.57), 0.02, 0.04, n=8))
+    if look == "transcendent":
+        if kind == "Shoulder":
+            g.append(A.xform(A.box(0.05, 0.5, 0.34), m=A.rot(rz=-side * 35), t=(side * 0.6, 0.62, 0)))  # 날개 판(빛 줄은 조각 상한으로 가슴에만)
+        elif kind == "Chest" and cls != "greatsword":  # 대검 가슴은 look_extra 빛 균열로 충분(예산)
+            gl.append(A.xform(A.box(0.03, 0.42, 0.03), m=A.rot(rz=-25), t=(0.25, 0.1, -0.67)))
 
 
 def piece_meshes(cls, slot, look, piece):
@@ -268,6 +339,7 @@ def piece_meshes(cls, slot, look, piece):
           "Glove": lambda: glove(cls, side), "Bracer": lambda: bracer(cls, side), "Boot": lambda: boot(cls), "Greave": lambda: greave(cls)}[kind]
     r = fn()
     look_extra(cls, kind, side, look, r)
+    detail_v31(cls, kind, side, look, r)  # QUEUE-ALL6 E v3.1
     return [(ROLE_SUFFIX[role], A.merge(*r[role]), role, role == "glow") for role in ROLE_ORDER if r[role]]
 
 
