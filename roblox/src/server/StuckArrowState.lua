@@ -50,7 +50,7 @@ local nextId = 0
 -- 재현됐다(대검으로 바꾼 직후 화살 1개가 새로 붙는 것을 실측으로 확인). attach()가
 -- 요청 시점 타임스탬프를 받아 그 시점이 clearedAt보다 이르면(=이미 지나간 요청이면)
 -- 조용히 무시한다.
-local clearedAt = {}
+local clearedAt = setmetatable({}, { __mode = "k" }) -- QUEUE-ALL5 D②: 퇴장한 Player가 서버 수명 내내 남지 않게(약한 키)
 
 local function removeFromList(model, record)
 	local list = arrowsByModel[model]

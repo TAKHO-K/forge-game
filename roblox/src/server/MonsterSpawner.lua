@@ -574,6 +574,9 @@ end
 -- 스테이지에 다시 들어왔을 때"로 직접 관리한다.
 function MonsterSpawner.despawn(model)
 	local data = MonsterState.getData(model)
+	if not data then
+		return -- QUEUE-ALL5 D②: 이미 지워졌다(처치 처리 대기 중 보스전이 끝나 endEncounter가 clear · Destroy - 옛 = data.isBoss nil 인덱싱)
+	end
 	local spawnPosition = MonsterState.getSpawnPosition(model)
 	local zoneKey = MonsterState.getZoneKey(model)
 

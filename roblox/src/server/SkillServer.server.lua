@@ -292,7 +292,8 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 		character = player.Character
 		humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-		if not humanoid or not rootPart then
+		local hpNow = PlayerState.getHp(player)
+		if not humanoid or not rootPart or (hpNow and hpNow <= 0) then -- QUEUE-ALL5 D②: 죽은 뒤(리스폰 전 시체가 남아 있다) 남은 틱 피해 · 흡혈이 HP를 0 위로 되살렸다
 			endChannel()
 			return
 		end
@@ -421,7 +422,8 @@ local function castSingleChannel(player, slot, def, classId, atk, rootPart, atta
 
 		local character = player.Character
 		local rootNow = character and character:FindFirstChild("HumanoidRootPart")
-		if not rootNow then
+		local hpNow = PlayerState.getHp(player)
+		if not rootNow or (hpNow and hpNow <= 0) then -- QUEUE-ALL5 D②: 죽은 뒤 남은 틱(회전베기와 같은 가드)
 			PlayerState.clearChanneling(player)
 			return -- 캐스터가 사라졌다(사망·퇴장) - 조용히 멈춘다(castCircleChannel과 같은 가드)
 		end
@@ -672,6 +674,10 @@ local function handleSkill(player, slot, aimPoint)
 	end
 	if require(script.Parent.SoulService).rejectAction(player, "스킬 " .. slot) then -- Q8: 영혼 = 스킬 · 궁극기 불가(서버 거부)
 		return
+	end
+	local hpNow = PlayerState.getHp(player)
+	if hpNow and hpNow <= 0 then
+		return -- QUEUE-ALL5 D②: 필드 사망 뒤 리스폰 전(시체가 남아 있다) - 피해 · 흡혈 · 치유(Q가 HP 0을 되살렸다)를 받지 않는다(대시와 같은 규칙)
 	end
 
 	local classId = PlayerProfile.getClassId(player)

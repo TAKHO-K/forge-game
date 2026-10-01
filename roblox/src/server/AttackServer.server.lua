@@ -200,6 +200,10 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	if require(script.Parent.SoulService).rejectAction(player, "공격") then -- Q8: 영혼 = 공격 불가(서버 거부)
 		return
 	end
+	local hpNow = PlayerState.getHp(player)
+	if hpNow and hpNow <= 0 then
+		return -- QUEUE-ALL5 D②: 필드 사망 뒤 리스폰 전(시체가 남아 있다) - 피해 · 흡혈을 받지 않는다(대시와 같은 규칙)
+	end
 	-- 프로필 로드가 아직 안 끝난 접속 직후, 혹은 클래스를 아직 안 고른 상태에서 공격이
 	-- 들어올 수 있다 - 공격력·쿨다운 둘 다 클래스가 있어야 계산할 수 있으니 헛스윙으로
 	-- 처리한다(10-3 [3] - 클래스 배율이 실제로 평타에 반영되는 첫 지점).
@@ -561,6 +565,9 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 		task.delay(releaseDelay + hit.distance / speed, function()
 			-- 도달 시점 재검증. 몬스터가 이미 없어졌으면(다른 공격자가 먼저 죽였거나 despawn)
 			-- MonsterState.getData가 nil을 돌려준다 - 조용히 빗나간다.
+			if not player.Parent then
+				return -- QUEUE-ALL5 D②: 비행 중 퇴장 - 기여 · 참여 기록(clearPlayerContributions가 이미 지운)을 나간 Player로 다시 만들지 않는다
+			end
 			local currentRoot = hitTarget.Parent and hitTarget.PrimaryPart
 			if not currentRoot or not MonsterState.getData(hitTarget) then
 				attackResult:FireClient(player, hitTarget, 0, false, false, isComboHit, true, isBuffedShot, seq, nil)
