@@ -368,8 +368,9 @@ function handlers.rollback(args, player)
 				wait = task.wait,
 			})
 			if not released then
-				AuditTrail.note(p.userId, "ops_rollback", ("중단: 다른 서버가 저장을 놓지 않음(%s · %s)"):format(tostring(why), player.Name))
-				return "failed: " .. tostring(why) .. "(다른 서버 접속 중 - 내보내기 요청 뒤에도 저장 잠금이 안 풀렸다. 잠시 뒤 다시)"
+				-- QUEUE-ALL7 A2: 실행 안 함 = 운영자에게 정해진 문구 + 감사 기록에 실패 사유(대기 초 · 이유 · 누가)
+				AuditTrail.note(p.userId, "ops_rollback", ("실행 안 함: 저장 잠금 %d초 안에 안 풀림(%s · 버전 %s · %s)"):format(SecurityOps.rollback.releaseWaitSeconds, tostring(why), tostring(p.version), player.Name))
+				return ("not_run: 대상 저장 잠금이 아직 풀리지 않음 — 잠시 뒤 다시 실행(%d초 대기 · %s)"):format(SecurityOps.rollback.releaseWaitSeconds, tostring(why))
 			end
 		end
 		local backup = DataStoreService:GetDataStore(SecurityOps.rollback.backupStore .. (require(ReplicatedStorage.Shared.data.DevToolsConfig).verifyArmed and "_verify" or ""))
