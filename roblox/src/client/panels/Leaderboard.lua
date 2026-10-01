@@ -7,6 +7,7 @@
 -- 표시 글(스테이지 · 시간)은 서버가 LeaderboardRules.decode로 푼 값을 그대로 쓴다(화면용 복사 계산 없음).
 
 local Players = game:GetService("Players")
+local TextService = game:GetService("TextService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
@@ -25,7 +26,8 @@ Leaderboard.id = "leaderboard"
 local RAIL_WIDTH = 96
 local GAP = 6
 local PAD = 8
-local CHIP_WIDTH = 64
+local CHIP_WIDTH = 64 -- 칩 최소 폭(글이 길면 글 폭 + CHIP_TEXT_PAD - QUEUE-STUDIO S-5: 영어 "Swordsman"이 64를 넘쳤다)
+local CHIP_TEXT_PAD = 12
 local ME_CACHE_SECONDS = 60
 local ME_RETRY_SECONDS = 10.5 -- 서버 "me" 간격(LeaderboardConfig.requestIntervalSeconds.me = 10) 바로 뒤
 
@@ -187,11 +189,15 @@ local function build()
 	header.BackgroundTransparency = 1
 	header.Size = UDim2.new(1, 0, 0, rowHeight())
 	header.Parent = pane
-	for index, classId in ipairs(ClassData.order) do
+	local chipX = 0
+	for _, classId in ipairs(ClassData.order) do
 		local chip, stroke = makeButton(header, "Chip_" .. classId, Text.get("class.name." .. classId))
-		chip.Position = UDim2.new(0, (index - 1) * (CHIP_WIDTH + 4), 0, 0)
-		chip.Size = UDim2.new(0, CHIP_WIDTH, 1, 0)
+		local width = math.max(CHIP_WIDTH, math.ceil(TextService:GetTextSize(chip.Text, chip.TextSize, chip.Font, Vector2.new(1000, 100)).X) + CHIP_TEXT_PAD)
+		chip.Position = UDim2.new(0, chipX, 0, 0)
+		chip.Size = UDim2.new(0, width, 1, 0)
+		chipX += width + 4
 		r.chips[classId] = { button = chip, stroke = stroke }
+		r.chipsWidth = chipX
 		chip.Activated:Connect(function()
 			Leaderboard.selectClass(classId)
 		end)
@@ -313,7 +319,7 @@ local function paintTabs()
 		handle.stroke.Color = selected and UIColors.ember or UIColors.rim
 		handle.stroke.Transparency = selected and 0 or UIColors.rimTransparency
 	end
-	local chipsWidth = showChips and (#ClassData.order * (CHIP_WIDTH + 4) + 8) or 0
+	local chipsWidth = showChips and ((refs.chipsWidth or #ClassData.order * (CHIP_WIDTH + 4)) + 8) or 0
 	refs.meLabel.Position = UDim2.new(0, chipsWidth + 4, 0, 0)
 	refs.meLabel.Size = UDim2.new(1, -(chipsWidth + 4), 1, 0)
 	refs.meLabel.Visible = state.tab ~= "season"

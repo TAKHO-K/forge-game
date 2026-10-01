@@ -250,6 +250,7 @@ for i, info in ipairs(ClassData.comingSoon or {}) do
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextColor3 = UIColors.lockedText
 	label.Text = Text.get("ui.class.comingSoon", { class = Text.get("class.name." .. info.id), weapon = Text.get("class.weapon." .. info.id) })
+	label.TextWrapped = true -- QUEUE-STUDIO S-5: 영어 "Paladin (Squeaky Hammer) · Coming Soon"이 한 줄 276px를 넘침 → 카드 높이(64) 안 두 줄
 	label.Parent = card
 end
 
