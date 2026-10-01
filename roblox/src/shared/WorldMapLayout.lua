@@ -128,6 +128,20 @@ function Layout.facility(name)
 	return Layout.hubPoint(f.angleDeg, f.r)
 end
 Layout.facilityOrder = { "portal", "forge", "market", "community" } -- 짓는 순서(고정 - pairs 순서에 기대지 않는다)
+-- QUEUE-ALL7B 2: 시설 거리 자리 표시(spots) 한 칸의 월드 자리(buildHub의 Spot_<id> 기둥 바닥과 같은 식) · 없으면 nil
+function Layout.spot(spotId)
+	for _, name in ipairs(Layout.facilityOrder) do
+		local f = D.hub.facilities[name]
+		for _, sp in ipairs(f.spots or {}) do
+			if sp.id == spotId then
+				local p = Layout.facility(name)
+				local base = Vector3.new(p.X, FLOOR, p.Z)
+				return (CFrame.lookAt(base, base - dirOf(f.angleDeg)) * CFrame.new(sp.along, 0, sp.side)).Position
+			end
+		end
+	end
+	return nil
+end
 function Layout.spawnPoint()
 	return Layout.hubPoint(D.hub.spawn.angleDeg, D.hub.spawn.r)
 end

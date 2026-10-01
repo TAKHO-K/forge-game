@@ -125,7 +125,7 @@ ScreenMap.mobileReserved = {
 }
 
 -- 메뉴바 규격(PRD 20.81 [D-2]): 버튼 44 × 44(모바일 48) · 간격 6 · 위로 밀 때 화면 위 끝에서 남기는 여백.
-ScreenMap.menuBar = { button = 44, mobileButton = 48, gap = 6, topMargin = 8, pcTop = 16, pcButtonMax = 60 } -- QUEUE-ALL2 P2: PC 버튼 = 화면 높이로 44 ~ 60 · 왼쪽 위(pcTop)부터 · 폰 = 왼쪽 위 2열
+ScreenMap.menuBar = { button = 44, mobileButton = 48, gap = 6, topMargin = 8, pcTop = 16, pcButtonMax = 60, pcScale = 1.15, mobileScale = 1.10, touchMin = 44, pcBottom = 40 } -- QUEUE-ALL7B 2: 남은 아이콘 PC +15% · 폰 +10% · 폰 터치 영역 최소 44(보스전 축소 포함) -- QUEUE-ALL2 P2: PC 버튼 = 화면 높이로 44 ~ 60 · 왼쪽 위(pcTop)부터 · 폰 = 왼쪽 위 2열
 
 -- 모바일에서 세로 중앙에 놓인 메뉴바(높이 barHeight)의 아래 끝이 BL 터치 예약 구역 위 끝(화면 높이 × mobileReserved.BL.top)에 닿으면, 닿지 않을 만큼(= 겹침이 0이 되는 최소 이동)만 위로 민다.
 -- 위 끝이 topMargin 아래로는 못 올라간다 - 그래도 못 피하면(칸이 많고 화면이 낮을 때) 밀 수 있는 만큼만 민다(그 경우는 자체 점검이 X로 찍는다). 반환 = 올릴 px(0 이상).

@@ -20,7 +20,7 @@ PanelRegistry.forbiddenKeys = {
 PanelRegistry.swallowedKeys = { [Enum.KeyCode.I] = true, [Enum.KeyCode.O] = true }
 
 -- QUEUE-ALL2 P2(09 문서 B-3 최종 단축키 표 · 사용자 10-01): G 가방 · C 캐릭터 · M 지도 · N 구역 선택(옛 "맵 선택" M) · J 퀘스트 · K 도감 · U 수련 · P 파티 · L 순위 · B 귀환(행동 키).
---   왼쪽 메뉴 = menuOrder 순 7칸(가방 · 캐릭터 · 지도 상시 - menuPinned) · menuMore = "더보기"(…) 안으로(파티 · 순위 · 설정). 모든 창 = 같은 키로 열고 닫기 + X · Backspace 닫기(Esc = 로블록스 메뉴 전용 - 18-1 [2]).
+--   왼쪽 메뉴 = menuOrder 순 7칸(가방 · 캐릭터 · 지도 상시 - menuPinned) · menuMore = "더보기"(…) 안으로(파티 · 설정 - ALL7B 2: 순위는 허브 명예의 전당 · L 키). 모든 창 = 같은 키로 열고 닫기 + X · Backspace 닫기(Esc = 로블록스 메뉴 전용 - 18-1 [2]).
 --   opener(선택) = 등록 전(처음 열 때 짓는) 창을 여는 모듈 이름(panels/<이름>.toggle) - 메뉴 버튼 · 단축키가 그 함수를 부른다.
 PanelRegistry.panels = {
 	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.G, menuOrder = 1, iconKey = "bag", menuLabel = Text.get("ui.panel.menu.inventory"), menuPinned = true },
@@ -32,7 +32,7 @@ PanelRegistry.panels = {
 	{ id = "codex", kind = "window", hotkey = Enum.KeyCode.K, menuOrder = 6, iconKey = "codex", menuLabel = Text.get("ui.panel.menu.codex"), menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL1 P5 도감 v2(panels/Codex)
 	{ id = "training", kind = "window", hotkey = Enum.KeyCode.U, menuOrder = 7, iconKey = "training", menuLabel = Text.get("ui.panel.menu.training"), menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL3 Q2(panels/Training - 옛 퀘스트 창 수련 줄)
 	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, menuOrder = 8, iconKey = "party", menuLabel = Text.get("ui.panel.menu.party"), menuMore = true }, -- S12b 파티창(panels/Party.lua) · 친구 초대 = 창 맨 위
-	{ id = "leaderboard", kind = "window", hotkey = Enum.KeyCode.L, menuOrder = 9, iconKey = "rank", menuLabel = Text.get("ui.panel.menu.leaderboard"), menuMore = true, opener = "Leaderboard" }, -- panels/Leaderboard(처음 열 때 짓는다)
+	{ id = "leaderboard", kind = "window", hotkey = Enum.KeyCode.L, iconKey = "rank", menuLabel = Text.get("ui.panel.menu.leaderboard"), opener = "Leaderboard" }, -- QUEUE-ALL7B 2: 메뉴 칸 없음(허브 명예의 전당 · L 키) -- panels/Leaderboard(처음 열 때 짓는다)
 	{ id = "settings", kind = "window", menuOrder = 10, iconKey = "settings", menuLabel = Text.get("ui.panel.menu.settings"), menuMore = true, opener = "Settings" }, -- panels/Settings(분류 탭 · 단축키 보기)
 }
 

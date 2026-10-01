@@ -19,6 +19,7 @@ local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local ArtImage = require(script.Parent.Parent.ui.ArtImage)
 local SettingSave = require(script.Parent.Parent.ui.SettingSave)
+local HubServiceData = require(ReplicatedStorage.Shared.data.HubServiceData)
 local UIManager = require(script.Parent.Parent.UIManager)
 local MapPins = require(script.Parent.Parent.MapPins)
 local Wayfinder = require(script.Parent.Parent.Wayfinder)
@@ -66,7 +67,7 @@ end
 
 -- 아이콘 하나(이미지가 아직 없으면 색 점) - 겉 칸 px 자리
 local function icon(parent, iconName, px, fallbackColor)
-	local img = ArtImage.get("icons/ui/" .. iconName)
+	local img = ArtImage.get(iconName:find("/", 1, true) and iconName or ("icons/ui/" .. iconName)) -- ALL7B 2: 마을 기능 = 전체 경로
 	local inst
 	if img then
 		inst = Instance.new("ImageLabel")
@@ -96,6 +97,12 @@ local function rebuildPlaces()
 	end
 	put("pin_hub", Vector3.new(0, D.floorTopY, 0), Theme.color("gold"))
 	put("pin_forge", WorldMapLayout.facility("forge"), Theme.color("gold"))
+	for _, s in ipairs(HubServiceData.services) do -- QUEUE-ALL7B 2: 마을 기능 지점
+		local pos = WorldMapLayout.spot(s.spot)
+		if pos then
+			put(s.icon, pos, Theme.color("gold"))
+		end
+	end
 	for _, zone in ipairs(D.zones) do
 		put("pin_gate", WorldMapLayout.gate(zone), Color3.fromRGB(230, 90, 90)) -- 리뷰: 지도 창과 같게 관문은 늘(길 잃지 않게)
 	end

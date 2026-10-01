@@ -70,10 +70,12 @@ return {
 			forge = { angleDeg = -20, r = 170, displayName = "대장간 거리", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 18, h = 16, gap = 10 }, -- 가운데 = 강화대
 				spots = { { id = "refine", label = "재련대(준비 · 가방에서도 된다)", along = -38, side = 0 }, { id = "gemcraft", label = "보석 가공대(준비 · 가방에서도 된다)", along = 38, side = 0 } } },
 			market = { angleDeg = -115, r = 175, displayName = "시장", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 16, h = 12, gap = 10 }, -- 가운데 = 보석상인(보석 공방)
-				spots = { { id = "shop", label = "상점(준비)", along = -38, side = 0 }, { id = "sell", label = "판매", along = 38, side = 0 } } },
+				spots = { { id = "shop", label = "상점(준비)", along = -38, side = 0 }, { id = "sell", label = "판매", along = 38, side = 0 },
+					{ id = "tailor", label = "재봉사", along = -18, side = -10 } } }, -- QUEUE-ALL7B 2: 꾸미기(HubServiceData)
 			community = { angleDeg = -60, r = 250, displayName = "커뮤니티 광장", plaza = 50, row = { count = 3, w = 24, d = 18, h = 18, gap = 12 }, -- 가운데 = 환생 제단
 				spots = { { id = "hatchery", label = "부화장(펫 단계)", along = -34, side = -8 }, { id = "partyBoard", label = "파티 게시판", along = 34, side = -8 }, { id = "rankBoard", label = "순위판", along = 0, side = -30 },
-					{ id = "hallOfFame", label = "명예의 전당", along = -30, side = -30 } } }, -- D1 ④: 태초 석판(server/HallOfFame이 이 자리 옆에 세운다)
+					{ id = "hallOfFame", label = "명예의 전당", along = -30, side = -30 },
+					{ id = "noticeBoard", label = "마을 게시판", along = 30, side = -30 }, { id = "challengeKnight", label = "도전 기사", along = 0, side = 30 } } }, -- QUEUE-ALL7B 2: 코드 · 소식 · 주간 도전(HubServiceData) -- D1 ④: 태초 석판(server/HallOfFame이 이 자리 옆에 세운다)
 			portal = { angleDeg = -90, r = 250, displayName = "포탈 광장", radius = 46 },
 		},
 		portalRingRadius = 38, -- 포탈 광장 안 구역별 포탈 6개(이름표가 안 겹치게 - 이웃 간격 38)

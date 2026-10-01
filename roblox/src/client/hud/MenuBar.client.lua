@@ -61,11 +61,11 @@ end
 
 local function buttonSize()
 	if Theme.isMobile then
-		return M.mobileButton
+		return math.floor(M.mobileButton * M.mobileScale + 0.5) -- QUEUE-ALL7B 2: +10%
 	end
 	local camera = workspace.CurrentCamera
 	local h = camera and camera.ViewportSize.Y or 800
-	return math.clamp(math.floor((h - 220) / 11), M.button, M.pcButtonMax or 60)
+	return math.floor(math.clamp(math.floor((h - 220) / 11), M.button, M.pcButtonMax or 60) * M.pcScale + 0.5) -- QUEUE-ALL7B 2: +15%
 end
 
 -- 막힌 이유 토스트(TC 줄 · 같은 글 3초에 한 번)
@@ -371,7 +371,7 @@ local function relayout()
 	local size = buttonSize()
 	local boss = inBoss()
 	if boss then
-		size = math.floor(size * BOSS_SCALE)
+		size = math.max(Theme.isMobile and M.touchMin or 0, math.floor(size * BOSS_SCALE))
 	end
 	local gap = M.gap
 	local shown = 0
@@ -391,6 +391,17 @@ local function relayout()
 	-- QUEUE-ALL6 A3: 폰에서 창이 열려 있으면 1열로 접는다(창 제목 · 첫 탭을 덮지 않게 - 창은 UIManager.leftReserve 오른쪽으로 밀린다)
 	local cols = (Theme.isMobile and not UIManager.anyPanelOpen()) and 2 or 1
 	local rows = math.ceil(shown / cols)
+	if not Theme.isMobile and not boss then -- QUEUE-ALL7B 2: 키운 칸이 낮은 화면에서 아래 경험치 줄에 닿지 않게(줄 수로 맞춤 · 최소 44 · 높이 = 위 인셋을 뺀 HUD 높이)
+		local h = refs.gui.AbsoluteSize.Y > 0 and refs.gui.AbsoluteSize.Y or 800
+		size = math.max(M.button, math.min(size, math.floor((h - (M.pcTop or 16) - M.pcBottom - (rows - 1) * gap) / rows)))
+	elseif Theme.isMobile then -- QUEUE-ALL7B 2: 폰 = 키운 칸이 왼쪽 대시 버튼 위 끝에 닿지 않게(실제 자리로 - 화면 높이 · 인셋마다 다르다 · 최소 touchMin)
+		local sg = player.PlayerGui:FindFirstChild("SkillSlotsGui")
+		local dash = sg and sg:FindFirstChild("DashHolder", true)
+		if dash and dash.Visible and dash.AbsoluteSize.Y > 0 then
+			local room = dash.AbsolutePosition.Y - refs.gui.AbsolutePosition.Y - M.topMargin - gap - (rows - 1) * gap
+			size = math.max(M.touchMin, math.min(size, math.floor(room / rows)))
+		end
+	end
 	UIManager.leftReserve = Theme.isMobile and (ScreenMap.edgeMargin + size + gap) or 0
 	refs.grid.CellSize = UDim2.fromOffset(size, size)
 	refs.grid.CellPadding = UDim2.fromOffset(gap, gap)
@@ -403,7 +414,7 @@ local function relayout()
 			moreCount += 1
 		end
 	end
-	local mSize = Theme.isMobile and M.mobileButton or math.max(M.button, math.floor(buttonSize() * 0.85))
+	local mSize = Theme.isMobile and buttonSize() or math.max(M.button, math.floor(buttonSize() * 0.85))
 	local mCols = math.min(3, moreCount)
 	local mRows = math.ceil(moreCount / math.max(1, mCols))
 	refs.moreGrid.CellSize = UDim2.fromOffset(mSize, mSize)
@@ -518,6 +529,18 @@ for _, item in ipairs(refs.items) do
 	end
 end
 refs.gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+task.spawn(function() -- QUEUE-ALL7B 2: 폰 대시 버튼 자리가 바뀌면(터치 배치 전환) 다시 맞춘다
+	local sg = player.PlayerGui:WaitForChild("SkillSlotsGui", 30)
+	local dash = sg and sg:FindFirstChild("DashHolder", true)
+	while sg and not dash do
+		task.wait(1)
+		dash = sg:FindFirstChild("DashHolder", true)
+	end
+	if dash then
+		dash:GetPropertyChangedSignal("AbsolutePosition"):Connect(relayout)
+		relayout()
+	end
+end)
 for _, name in ipairs({ "TutorialCompleted", "TutorialStep", "ClassId", "BossEncounterId" }) do
 	player:GetAttributeChangedSignal(name):Connect(function()
 		if inBoss() then

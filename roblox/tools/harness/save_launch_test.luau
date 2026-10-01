@@ -349,6 +349,18 @@ local function main()
 		local withMap = SaveA.migrate({})
 		withMap.settings = { minimapOn = true, minimapFar = true, mapHintSeen = true }
 		check("MIG", "미니맵 켬 · 멀리 · 첫 안내 본 것 = 다시 이관해도 그대로", deepEqual(SaveA.migrate(deepCopy(withMap)).settings, withMap.settings))
+		-- QUEUE-ALL7B 2: 마을 기능 지점 첫 소개(서비스마다 boolean · 기본 안 봄 · 본 것 = 이관 뒤 그대로)
+		local intros = MODS.HubServiceData and MODS.HubServiceData.services or {}
+		local introOk = #intros == 4
+		local seen = {}
+		for _, s in ipairs(intros) do
+			local def = SD.keys[s.intro]
+			introOk = introOk and def ~= nil and def.default == false and def.attrs[1] == "HubIntroSeen_" .. s.id
+			seen[s.intro] = true
+		end
+		local withIntro = SaveA.migrate({})
+		withIntro.settings = seen
+		check("MIG", ("마을 첫 소개 키 %d개 = 기본 안 봄 · Attribute 이름 맞음 · 본 것 = 다시 이관해도 그대로"):format(#intros), introOk and deepEqual(SaveA.migrate(deepCopy(withIntro)).settings, seen))
 	end
 
 	-- ═══ 2. 손상 복구(loadProfile 전체 경로 - 가짜 DataStore에 손상 값을 넣고 읽는다) ═══

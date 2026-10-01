@@ -1,5 +1,5 @@
 -- QUEUE-ALL1 P4 §2 허브 업데이트 게시판(새 소식 + 지금 쓸 수 있는 코드 - 만료 지난 코드는 안 보인다) · §3 주간 도전 버튼 · 순위 창 · P4 알림 토스트.
---   게시판 = 명예의 전당 옆 빌보드(허브에 가면 보인다) · 주간 도전 = 합동 목표 알약 오른쪽 버튼 → 창(이번 주 보스 · 변형 · [도전] · 순위 top). 수치 · 문구 = SocialRewardData · WeeklyChallengeData.
+--   게시판 = 마을 게시판 자리 위 빌보드(허브에 가면 보인다 - ALL7B 2) · 주간 도전 = 합동 목표 알약 오른쪽 버튼 → 창(이번 주 보스 · 변형 · [도전] · 순위 top). 수치 · 문구 = SocialRewardData · WeeklyChallengeData.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -46,16 +46,17 @@ local function validCodes()
 	end
 	return out
 end
-local function buildBoard()
-	local hof = Workspace:FindFirstChild("HallOfFame")
-	local adornee = hof and (hof.PrimaryPart or hof:FindFirstChildWhichIsA("BasePart", true))
-	if not adornee or gui:FindFirstChild("UpdateBoard") then
+-- QUEUE-ALL7B 2: 소식 · 코드 = 마을 게시판 자리(HubServiceData noticeBoard - 누르면 코드 입력 탭 · 스트리밍으로 다시 들어오면 Adornee만 바꾼다)
+local function buildBoard(adornee)
+	local old = gui:FindFirstChild("UpdateBoard")
+	if old then
+		old.Adornee = adornee
 		return
 	end
 	local b = Instance.new("BillboardGui")
 	b.Name = "UpdateBoard"
 	b.Size = UDim2.fromOffset(300, 170)
-	b.StudsOffsetWorldSpace = Vector3.new(0, 26, 0) -- QUEUE-ALL3 Q5: 새 배치에서 옆 이름표(명예의 전당 · 순위판 · 부화장)를 가려 위로 올림
+	b.StudsOffsetWorldSpace = Vector3.new(0, 20, 0) -- QUEUE-ALL7B 2: 게시판 자리 기둥의 이름표 · 기능 아이콘 위
 	b.MaxDistance = 80
 	b.Adornee = adornee
 	b.Parent = gui
@@ -83,12 +84,15 @@ local function buildBoard()
 		y += 16
 	end
 end
-buildBoard()
-Workspace.ChildAdded:Connect(function(c)
-	if c.Name == "HallOfFame" then
-		task.defer(buildBoard)
+local function considerSpot(d)
+	if d:IsA("BasePart") and d:GetAttribute("Spot") == "noticeBoard" then
+		buildBoard(d)
 	end
-end)
+end
+for _, d in ipairs(Workspace:GetDescendants()) do
+	considerSpot(d)
+end
+Workspace.DescendantAdded:Connect(considerSpot)
 
 -- 주간 도전 버튼 + 창
 local btn = Instance.new("TextButton")

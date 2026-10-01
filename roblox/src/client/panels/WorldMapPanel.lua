@@ -19,6 +19,7 @@ local MapPins = require(script.Parent.Parent.MapPins)
 local MapImageData = require(ReplicatedStorage.Shared.data.MapImageData)
 local Toggle = require(script.Parent.Parent.ui.kit.Toggle)
 local SettingSave = require(script.Parent.Parent.ui.SettingSave)
+local HubServiceData = require(ReplicatedStorage.Shared.data.HubServiceData)
 local TweenService = game:GetService("TweenService")
 
 local WorldMapPanel = {}
@@ -57,6 +58,12 @@ local function places()
 		local f = D.hub.facilities[name]
 		table.insert(list, { kind = "facility", icon = name == "forge" and "pin_forge" or "pin_hub", name = Text.name(f.displayName), position = WorldMapLayout.facility(name) })
 	end
+	for _, s in ipairs(HubServiceData.services) do -- QUEUE-ALL7B 2: 마을 기능 지점(명예의 전당 · 게시판 · 도전 기사 · 재봉사)
+		local pos = WorldMapLayout.spot(s.spot)
+		if pos then
+			table.insert(list, { kind = "service", icon = s.icon, name = Text.get(s.nameKey), position = pos, small = true })
+		end
+	end
 	local unlocked = player:GetAttribute("ZonesUnlocked") or D.progress.startUnlocked
 	for index, zone in ipairs(D.zones) do
 		if index <= unlocked or visited[zone.key] then
@@ -89,7 +96,7 @@ local function marker(parent, place, size)
 	b.Size = UDim2.fromOffset(size, size)
 	b.BackgroundTransparency = 1
 	b.ZIndex = 5
-	local img = ArtImage.get("icons/ui/" .. place.icon)
+	local img = ArtImage.get(place.icon:find("/", 1, true) and place.icon or ("icons/ui/" .. place.icon)) -- ALL7B 2: 마을 기능 = 전체 경로
 	if img then
 		b.Image = img
 	else

@@ -245,6 +245,17 @@ function CharacterPanel.render()
 	end
 end
 
+-- QUEUE-ALL7B 2: 재봉사(HubServices)가 꾸미기 보기로 연다
+function CharacterPanel.open(focus)
+	if focus == "cosmetics" and not showCos then
+		showCos = true
+		ReplicatedStorage:WaitForChild("ShopRequest"):FireServer("view")
+	end
+	local ok = UIManager.isOpen(CharacterPanel.id) or UIManager.open(CharacterPanel.id)
+	CharacterPanel.render()
+	return ok
+end
+
 function CharacterPanel.init()
 	build()
 	for _, row in ipairs(ROWS) do

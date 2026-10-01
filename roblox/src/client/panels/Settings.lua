@@ -93,7 +93,7 @@ local function build()
 	end
 	local width = PANEL_SIZE.X - PAD * 2
 	local refs = {}
-	Tabs.build({ parent = content, tabs = tabList, selected = "screen", width = width, position = UDim2.fromOffset(PAD, 4), onSelect = function(id)
+	local tabs = Tabs.build({ parent = content, tabs = tabList, selected = "screen", width = width, position = UDim2.fromOffset(PAD, 4), onSelect = function(id)
 		for pid, p in pairs(pages) do
 			p.Visible = pid == id
 		end
@@ -252,10 +252,10 @@ local function build()
 	phoneNote.Position = UDim2.fromOffset(PAD, PAD + #PanelRegistry.hotkeySheet * 30 + 4)
 	phoneNote.Size = UDim2.new(1, -PAD * 2, 0, 36)
 
-	built = { panel = panel, refs = refs, volumeRows = volumeRows, pages = pages }
+	built = { panel = panel, refs = refs, volumeRows = volumeRows, pages = pages, tabs = tabs }
 end
 
-function SettingsPanel.toggle()
+local function refreshRefs()
 	if not built then
 		build()
 	end
@@ -265,7 +265,20 @@ function SettingsPanel.toggle()
 	for _, row in pairs(built.volumeRows) do
 		row.render()
 	end
+end
+
+function SettingsPanel.toggle()
+	refreshRefs()
 	UIManager.switchTo(SettingsPanel.id)
+end
+
+-- QUEUE-ALL7B 2: 마을 게시판(HubServices)이 [게임] 탭(코드 입력)으로 연다
+function SettingsPanel.open(tabId)
+	refreshRefs()
+	if tabId and built.pages[tabId] then
+		built.tabs.select(tabId)
+	end
+	return UIManager.isOpen(SettingsPanel.id) or UIManager.open(SettingsPanel.id)
 end
 
 function SettingsPanel.debugRefs()

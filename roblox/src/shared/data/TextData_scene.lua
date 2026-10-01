@@ -101,6 +101,19 @@ return {
 		["scene.map.pin"] = "핀 {n}",
 		["scene.guide.lookout"] = "큰 나무 오르기",
 		["scene.guide.hub"] = "허브",
+		-- QUEUE-ALL7B 2 마을 기능 지점(HubServiceData · client/HubServices)
+		["hub.service.hallOfFame"] = "명예의 전당",
+		["hub.service.hallOfFame.action"] = "순위 보기",
+		["hub.service.hallOfFame.intro"] = "명예의 전당: 보스 돌파 순위를 여기서 봐요(어디서나 L 키)",
+		["hub.service.noticeBoard"] = "마을 게시판",
+		["hub.service.noticeBoard.action"] = "코드 입력",
+		["hub.service.noticeBoard.intro"] = "마을 게시판: 업데이트 소식과 코드 - 눌러서 코드를 입력해요",
+		["hub.service.challengeKnight"] = "도전 기사",
+		["hub.service.challengeKnight.action"] = "주간 도전",
+		["hub.service.challengeKnight.intro"] = "도전 기사: 이번 주 보스 기록 도전을 여기서 시작해요",
+		["hub.service.tailor"] = "재봉사",
+		["hub.service.tailor.action"] = "꾸미기",
+		["hub.service.tailor.intro"] = "재봉사: 꾸미기를 여기서 갈아입어요",
 	},
 	en = {
 		-- 보스 구속 이름 · 상태 줄(client/BossTrapView)
@@ -203,5 +216,18 @@ return {
 		["scene.map.pin"] = "Pin {n}",
 		["scene.guide.lookout"] = "Climb the Big Tree",
 		["scene.guide.hub"] = "Hub",
+		-- QUEUE-ALL7B 2 hub services
+		["hub.service.hallOfFame"] = "Hall of Fame",
+		["hub.service.hallOfFame.action"] = "View ranks",
+		["hub.service.hallOfFame.intro"] = "Hall of Fame: see the boss ranks here (L key anywhere)",
+		["hub.service.noticeBoard"] = "Village Board",
+		["hub.service.noticeBoard.action"] = "Enter code",
+		["hub.service.noticeBoard.intro"] = "Village Board: news and codes - tap to enter a code",
+		["hub.service.challengeKnight"] = "Challenge Knight",
+		["hub.service.challengeKnight.action"] = "Weekly Challenge",
+		["hub.service.challengeKnight.intro"] = "Challenge Knight: start this week's boss time trial here",
+		["hub.service.tailor"] = "Tailor",
+		["hub.service.tailor.action"] = "Wardrobe",
+		["hub.service.tailor.intro"] = "Tailor: change your look here",
 	},
 }
