@@ -169,16 +169,24 @@ function Text.labelText(label)
 	local name = label:GetAttribute("TextName")
 	return type(name) == "string" and Text.name(name) or nil
 end
--- 클라: 한 번만 바꿔 쓴다(WorldTextApplied = 이 클라에만 - 복제 안 됨). 몹 이름표는 GenerationView가 세대 앞말을 붙이기 전에 이걸 먼저 부른다(뒤에서 앞말을 덮지 않게).
+-- 클라: 그 언어로 한 번만 바꿔 쓴다(WorldTextApplied = 적용한 언어 · 이 클라에만 - 복제 안 됨). 언어가 바뀌면(프로필 로드 뒤 Language 속성 · 설정 변경) 다시 쓴다.
+--   앞말(WorldTextPrefix - GenerationView 세대 앞말)이 있으면 "앞말 이름"으로 다시 붙인다(다시 써도 앞말이 안 사라진다).
 function Text.applyLabel(label)
-	if not label:IsA("TextLabel") or label:GetAttribute("WorldTextApplied") then
+	if not label:IsA("TextLabel") then
+		return
+	end
+	local language = Text.languageFor(nil)
+	if label:GetAttribute("WorldTextApplied") == language then
 		return
 	end
 	local text = Text.labelText(label)
 	if text then
-		label:SetAttribute("WorldTextApplied", true)
-		label.Text = text
+		label:SetAttribute("WorldTextApplied", language)
+		local prefix = label:GetAttribute("WorldTextPrefix")
+		label.Text = type(prefix) == "string" and (prefix .. " " .. text) or text
 	end
 end
+Text.languageAttribute = LANGUAGE_DEF.attrs[1] -- WorldTextView가 바뀜을 듣는다
+Text.devLanguageAttribute = DEV_ATTRIBUTE
 
 return Text

@@ -109,11 +109,11 @@ local function issueToken(entry)
 end
 local function takeToken(kind, token, player)
 	local p = pendingConfirm[tostring(token or "")]
-	if not p or p.kind ~= kind then
+	if not p or p.kind ~= kind or p.by ~= player.UserId then -- 리뷰: 남의 번호는 지우지 않는다(다른 운영자가 잘못 넣어도 그대로)
 		return nil
 	end
 	pendingConfirm[tostring(token)] = nil
-	if os.time() - p.at > SecurityOps.rollback.confirmSeconds or p.by ~= player.UserId then
+	if os.time() - p.at > SecurityOps.rollback.confirmSeconds then
 		return nil
 	end
 	return p
@@ -226,7 +226,9 @@ function handlers.revoke(args, player)
 		if not p then
 			return "no_pending(확인 번호가 없거나 시간이 지났다)"
 		end
-		return revokeTranscendent(p.userId, p.no)
+		local result = revokeTranscendent(p.userId, p.no)
+		AuditTrail.note(p.userId, "ops_revoke", ("t%s → %s(%s)"):format(tostring(p.no), tostring(result), player.Name)) -- 리뷰: 확인 실행 줄은 대상 칸이 "confirm"이라 아래 공통 기록에 안 잡힌다
+		return result
 	end
 	if ref:match("^t%d+$") then
 		if not SecurityOps.confirm.revokeTranscendent then
@@ -447,6 +449,9 @@ function handlers.ban(args, player)
 	local ok, err = pcall(function()
 		Players:BanAsync(config)
 	end)
+	if args[2] == "confirm" then -- 리뷰: 확인 실행 = 대상 감사 기록에 직접(공통 기록은 "confirm"에서 대상을 못 찾는다)
+		AuditTrail.note(config.UserIds[1], "ops_ban", ("%s → %s(%s)"):format(label, ok and "banned" or tostring(err), player.Name))
+	end
 	return ok and ("banned " .. label) or ("failed: " .. tostring(err))
 end
 function handlers.unban(args)

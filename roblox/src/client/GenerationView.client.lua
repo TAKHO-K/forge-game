@@ -30,6 +30,11 @@ local function restore(model)
 	end
 	if record.label and record.label.Parent and record.labelText then
 		record.label.Text = record.labelText
+		if record.label:GetAttribute("WorldTextPrefix") then -- QUEUE-ALL6R 3: 앞말을 떼고 지금 언어로 다시
+			record.label:SetAttribute("WorldTextPrefix", nil)
+			record.label:SetAttribute("WorldTextApplied", nil)
+			Text.applyLabel(record.label)
+		end
 	end
 	painted[model] = nil
 end
@@ -63,9 +68,15 @@ local function paint(model, generation)
 	local nameplate = model:FindFirstChild("NameplateGui", true)
 	local label = nameplate and nameplate:FindFirstChild("NameLabel")
 	if label and label:IsA("TextLabel") then
-		Text.applyLabel(label) -- QUEUE-ALL6R 3: 내 언어 이름을 먼저(WorldTextView가 뒤에서 앞말을 덮지 않게 - 한 번만)
+		label:SetAttribute("WorldTextPrefix", nil) -- QUEUE-ALL6R 3: 내 언어 이름(Text.applyLabel) 위에 앞말 - 언어가 바뀌어 다시 써도 앞말이 남게 속성으로
+		label:SetAttribute("WorldTextApplied", nil)
+		Text.applyLabel(label)
 		record.label, record.labelText = label, label.Text
-		if not label.Text:find(generation.prefix, 1, true) then
+		if label:GetAttribute("WorldTextApplied") then
+			label:SetAttribute("WorldTextPrefix", generation.prefix)
+			label:SetAttribute("WorldTextApplied", nil)
+			Text.applyLabel(label)
+		elseif not label.Text:find(generation.prefix, 1, true) then
 			label.Text = generation.prefix .. " " .. label.Text
 		end
 	end
