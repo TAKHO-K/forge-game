@@ -175,11 +175,11 @@ local function drawImageMap(canvas)
 		local name = Theme.label(canvas, Text.name(zone.theme), "header", "textPrimary")
 		name.Name = "ZoneName_" .. zone.key
 		name.AnchorPoint = Vector2.new(0.5, 0.5)
-		name.Position = UDim2.fromScale(c.X, c.Y)
+		name.Position = UDim2.fromScale(c.X, c.Y - 0.045) -- 구역 가운데의 사냥 지대 아이콘과 겹치지 않게 위로
 		name.Size = UDim2.fromOffset(220, 24)
 		name.TextXAlignment = Enum.TextXAlignment.Center
 		name.TextStrokeTransparency = 0.2
-		name.ZIndex = 3
+		name.ZIndex = 6 -- 아이콘(5) 위 - 글자는 입력을 안 막는다
 		name:SetAttribute("ZoneIndex", index)
 		for i, area in ipairs(D.subAreas.names[zone.key] or {}) do
 			local ac = toMap(WorldMapLayout.subAreaCenter(zone, i))

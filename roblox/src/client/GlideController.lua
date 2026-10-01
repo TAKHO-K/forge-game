@@ -245,4 +245,17 @@ player.CharacterAdded:Connect(function()
 	state.gauge = maxSeconds()
 end)
 
+-- QUEUE-ALL7 E1 개발 /gg glide(Studio 전용 - 라이브는 DevTools가 없어 이 속성이 안 생긴다): 서버가 높이 올린 뒤 DevGlideStart를 찍으면 떨어지기 시작할 때 활강을 켠다(키 입력 경로를 건너뛴 촬영용)
+if RunService:IsStudio() then
+	player:GetAttributeChangedSignal("DevGlideStart"):Connect(function()
+		task.spawn(function()
+			local t0 = os.clock()
+			while os.clock() - t0 < 4 and not GlideController.canStart() do
+				task.wait(0.05)
+			end
+			GlideController.start()
+		end)
+	end)
+end
+
 return GlideController

@@ -287,7 +287,7 @@ RunService.Heartbeat:Connect(function(dt)
 		if bats and flat >= D.dashSpeed and not gliding and now >= (st.nextBat or 0) then
 			st.nextBat = now + bats.every * (st.isLocal and 1 or 2)
 			st.batCount = (st.batCount or 0) + 1
-			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 2, -0.5 + math.random(), (math.random() - 0.5) * 2), dashTheme.edge, bats.size, bats.seconds, bats, dashTheme, st.batCount)
+			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 2, -0.5 + math.random(), (math.random() - 0.5) * 2), dashTheme.core, bats.size, bats.seconds, bats, dashTheme, st.batCount) -- QUEUE-ALL7 E2: 짙은 테 색은 풀 · 바위 위에서 안 보였다 → 밝은 본 색(크기는 기준 통과)
 		end
 		local gbats = gliding and on and near and themeOf(st.player, "glideTrail")
 		gbats = gbats and gbats.glide.bats
@@ -295,7 +295,7 @@ RunService.Heartbeat:Connect(function(dt)
 			st.nextGlideBat = now + gbats.every * (st.isLocal and 1 or 2)
 			st.batCount = (st.batCount or 0) + 1
 			local gtheme = themeOf(st.player, "glideTrail")
-			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 3, 1 + math.random(), (math.random() - 0.5) * 3), gtheme.edge, gbats.size, gbats.seconds, gbats, gtheme, st.batCount)
+			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 3, 1 + math.random(), (math.random() - 0.5) * 3), gtheme.core, gbats.size, gbats.seconds, gbats, gtheme, st.batCount)
 		end
 		st.dash.Enabled = dashTheme ~= nil and dashTheme ~= false and now < st.dashUntil
 		-- ② 점프 이펙트(위 속도가 갑자기 늘어남 = 지상 점프 · 공중 점프)
@@ -317,7 +317,7 @@ RunService.Heartbeat:Connect(function(dt)
 					e.Name = "ArtV1GlideSparkle"
 					e.Rate = n / g.particleLife
 					e.Lifetime = NumberRange.new(g.particleLife * 0.7, g.particleLife)
-					e.Speed = NumberRange.new(0.5, 1.5)
+					e.Speed = g.particleSpeed and NumberRange.new(g.particleSpeed[1], g.particleSpeed[2]) or NumberRange.new(0.5, 1.5) -- 테마가 정하면(젤리 = 몸 밖으로)
 					e.SpreadAngle = Vector2.new(180, 180)
 					e.Acceleration = Vector3.new(0, -g.gravity, 0)
 					e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, g.size), NumberSequenceKeypoint.new(1, 0) })

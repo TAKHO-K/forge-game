@@ -1257,6 +1257,14 @@ local function handleCommand(player, args)
 		reply(player, ("econ %s %s 계산 시작 - 끝나면 요약이 한 줄 더 온다"):format(args[2] or "all", args[3] or "baseline"))
 	elseif sub == "anchor" then
 		applyAnchor(player, args[2])
+	elseif sub == "glide" then
+		-- QUEUE-ALL7 E1: 활강 강제(촬영 · 확인용 - Studio 전용 · 이 스크립트 첫머리 가드). 이동 단계 덮어쓰기(활강 해금) → 지금 자리 + height(기본 80) 위로 순간이동(Travel - 높이 검사 예외) → 클라 GlideController가 떨어질 때 활강 시작
+		player:SetAttribute("MoveTierOverride", 5)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local up = tonumber(args[2]) or 80
+		local ok = root and require(script.Parent.Travel).teleport(player, root.Position + Vector3.new(0, up, 0), "개발 /gg glide")
+		player:SetAttribute("DevGlideStart", os.clock())
+		reply(player, ("활강 강제: +%d 순간이동 %s · 떨어지면 활강"):format(up, tostring(ok)))
 	elseif sub == "tp" and args[2] then
 		-- QUEUE-10h: 구역 사냥 지점 순간이동(실제 서버 경로 Travel.teleport - 높이 · 수평 검사 예외 · 도착 대기 포함). /gg tp tier6 [지점 번호]
 		local WMD = require(ReplicatedStorage.Shared.data.WorldMapData)
