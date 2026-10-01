@@ -48,6 +48,12 @@ function Rules.thresholds(target)
 	if not (type(target) == "number" and target > 0) then
 		return out
 	end
+	if target % D.roundTo ~= 0 then -- 리뷰: 이미 정해진 옛 목표(00 아님 - 배포 전 주) = 옛 문턱 그대로(주 중간에 닿은 칸이 뒤로 가지 않게)
+		for i, t in ipairs(D.tiers) do
+			out[i] = t.fraction * target
+		end
+		return out
+	end
 	for i, t in ipairs(D.tiers) do
 		local v = math.max(D.roundTo, Rules.round(t.fraction * target))
 		if i > 1 and v <= out[i - 1] then

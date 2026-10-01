@@ -70,4 +70,7 @@ check(("12,400 문턱 %s · 진행 7,399 = %d칸 · 7,400 = %d칸(60%% = 7,440 �
 local small = R.week1Target(1)
 local okS, thS = thresholdsOk(small)
 check(("최솟값 목표 %d · 문턱 %s(겹치면 위 칸 +100 · 목표 = 마지막 칸)"):format(small, fmt(thS)), okS)
+-- ⑦ 리뷰: 이미 정해진 옛 목표(00 아님)는 주 중간에 문턱이 안 바뀐다(닿은 칸이 뒤로 가지 않게)
+local old = R.thresholds(1260)
+check(("옛 목표 1,260 문턱 = %.0f · %.0f · %.0f(옛 식) · 합계 1,270 = %d칸 · 옛 목표 50 · 합계 60 = %d칸"):format(old[1], old[2], old[3], R.tiersReached(1270, 1260), R.tiersReached(60, 50)), R.tiersReached(1270, 1260) == 3 and R.tiersReached(60, 50) == 3 and old[3] == 1260)
 print(("[GOAL] 끝 %d/%d"):format(pass, total))

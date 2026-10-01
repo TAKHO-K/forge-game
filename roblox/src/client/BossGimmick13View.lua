@@ -63,7 +63,7 @@ end
 
 local function play(kind, pitch, volume)
 	-- QUEUE-ALL7 C: SoundGroup 없이 나던 임시 핑 · 클릭 → SoundSheet 공통 입구(SFX 그룹 · T2 보스 기믹 신호 · 동시 재생 제한)
-	require(script.Parent.SoundSheet).playRaw(TEMP_SOUND[kind], { tier = 2, pitch = pitch, volume = (volume or 0.6) / 0.6, seconds = 1 })
+	require(script.Parent.SoundSheet).playRaw(TEMP_SOUND[kind], { tier = 2, pitch = pitch, volume = (volume or 0.6) / 0.6 })
 end
 
 -- 화면 위 가운데 한 줄(폰에서도 읽히게 크게 - TextScaled · 화면 너비 비율).

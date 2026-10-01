@@ -232,7 +232,14 @@ function SoundSheet.playRaw(soundId, opts)
 	s.Volume = volumeOf(spec, opts)
 	s.PlaybackSpeed = opts.pitch or 1
 	place(s, opts, groupKey)
-	start(s, soundId, spec.tier, isSfx, opts.seconds or 2)
+	-- 리뷰: 길이를 모르는 소리는 끝날 때 지운다(정해 둔 초에 자르지 않는다 - 안전 상한 opts.maxSeconds 또는 10초)
+	start(s, soundId, spec.tier, isSfx, opts.seconds or (opts.maxSeconds or 10))
+	if not opts.seconds then
+		s.Ended:Connect(function()
+			removeActive(s)
+			s:Destroy()
+		end)
+	end
 	return s
 end
 

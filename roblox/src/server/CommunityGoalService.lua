@@ -101,7 +101,7 @@ end
 local function publish(rec, week)
 	Workspace:SetAttribute("CommunityGoalWeek", week)
 	Workspace:SetAttribute("CommunityGoalTotal", rec.total or 0)
-	local target = type(rec.target) == "number" and Rules.finalTarget(rec.target) or nil -- QUEUE-ALL7 B: 이번 주 이미 정해진 옛 목표(00 아님)도 보여 주는 값 · 칸 판정은 00으로(저장된 기록은 그대로)
+	local target = rec.target -- QUEUE-ALL7 B 리뷰: 정해진 목표는 주 중간에 안 바꾼다(옛 00 아닌 목표 = 옛 문턱 그대로 - Rules.thresholds) · 새 목표부터 00
 	Workspace:SetAttribute("CommunityGoalTarget", target)
 	local tier = Rules.tiersReached(rec.total or 0, target)
 	if lastTier ~= nil and tier > lastTier then

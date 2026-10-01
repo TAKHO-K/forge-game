@@ -3,7 +3,7 @@
 --   그림 = 구운 지도 한 장(MapImageData.mini - 1024²) · ImageLabel 하나의 ImageRect로 보이는 칸만 자르고 UICorner(반지름 0.5)로 원형 · 회전 = Rotation
 --     (ClipsDescendants는 사각형만 자르고 돌린 자식을 못 자른다 · CanvasGroup 금지 · ViewportFrame은 데칼을 안 그린다 - 2026-10-02 실측).
 --   기본 = 북쪽 위 고정 + 내 화살표가 돈다 · 설정 minimapRotate = 내 방향이 위(지도가 돈다) · 확대 2단계(minimapFar = 반경 × 2).
---   아이콘 = 글자 없이 모양 + 색(같은 크기) · 가까운 순 최대 30개 · 10 Hz · 허브 · 대장간 · 관문(열린 · 들른 구역) · 발견한 체크포인트 · 내 핀 · 파티원 · 길 안내 목적지(밖이면 테두리).
+--   아이콘 = 글자 없이 모양 + 색(같은 크기) · 가까운 순 최대 30개 · 10 Hz · 허브 · 대장간 · 관문(늘 - 지도 창과 같게) · 발견한 체크포인트 · 내 핀 · 파티원 · 길 안내 목적지(밖이면 테두리).
 --   둥지 · 탐험 지점은 안 그린다. 숨김 = 보스 아레나(BossEncounterId) · 입력 막힘(창 · 보스 등장 연출 - UIManager.isInputBlocked). 누르면 전체 지도(worldMap).
 --   드랍 피드(Toast TR)는 투명 칸 MinimapFeedAnchor(ScreenMap TR.minimapColumn) 아래에 놓인다.
 local Players = game:GetService("Players")
@@ -49,7 +49,6 @@ feedAnchor.Parent = gui
 
 local refs
 local size = 0 -- 지금 미니맵 한 변(px)
-local visited = {} -- [zoneKey] = true(이번 접속에 들른 구역 - 전체 지도와 같은 규칙)
 
 local function enabled()
 	return player:GetAttribute("MinimapOn") == true
@@ -59,10 +58,6 @@ local function rangeStuds()
 end
 local function rotating()
 	return player:GetAttribute("MinimapRotate") == true
-end
-
-local function zoneBright(zone, index)
-	return index <= (player:GetAttribute("ZonesUnlocked") or D.progress.startUnlocked) or visited[zone.key] == true
 end
 
 local function iconPx()
@@ -101,10 +96,8 @@ local function rebuildPlaces()
 	end
 	put("pin_hub", Vector3.new(0, D.floorTopY, 0), Theme.color("gold"))
 	put("pin_forge", WorldMapLayout.facility("forge"), Theme.color("gold"))
-	for index, zone in ipairs(D.zones) do
-		if zoneBright(zone, index) then
-			put("pin_gate", WorldMapLayout.gate(zone), Color3.fromRGB(230, 90, 90))
-		end
+	for _, zone in ipairs(D.zones) do
+		put("pin_gate", WorldMapLayout.gate(zone), Color3.fromRGB(230, 90, 90)) -- 리뷰: 지도 창과 같게 관문은 늘(길 잃지 않게)
 	end
 	local found = player:GetAttribute("CheckpointsFound")
 	if D.checkpoints and type(found) == "string" and found ~= "" then
@@ -546,11 +539,6 @@ RunService.Heartbeat:Connect(function(dt)
 	if not show then
 		refs.menu.Visible = false
 		return
-	end
-	local zone = WorldMapLayout.zoneAt(root.Position)
-	if zone and not visited[zone.key] then
-		visited[zone.key] = true
-		rebuildPlaces()
 	end
 	updateDynamic(root)
 end)
