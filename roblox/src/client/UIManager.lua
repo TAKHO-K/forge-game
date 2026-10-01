@@ -31,9 +31,12 @@ local CLOSE_TOP_KEYS = { [Enum.KeyCode.X] = true, [Enum.KeyCode.Backspace] = tru
 -- 패널 높이 제한(S12 사전 작업 2 - COMMON.md §2 영구 규칙): window · station은 열 때 높이를 (화면 높이 − 위아래 안전 여백) 이하로 줄이고, 위 · 아래 끝이 화면 밖이면 안으로 민다.
 -- 넘치는 내용은 패널 안 ScrollingFrame이 맡는다(이 함수는 바깥 틀만 다룬다). 폰 가로(844 × 388)에서 396 고정 패널의 위 3px · 아래 5px가 잘렸던 일이 계기다.
 UIManager.safeMargin = 8
+-- QUEUE-ALL6 A3: 폰에서 창(window · station)이 열리면 왼쪽 메뉴가 1열로 접히고, 창 왼쪽 끝은 이 값(px - 메뉴 오른쪽 끝 + 간격) 오른쪽으로 민다.
+--   hud/MenuBar가 relayout 때 채운다(PC · 메뉴 숨김 = 0 → X는 손대지 않음). 그래도 화면 폭이 모자라면 창 폭을 줄인다(본문은 창 안 배치가 받는다).
+UIManager.leftReserve = 0
 
 local windows = {} -- id -> config(register가 받은 것 그대로)
-local fitStates = setmetatable({}, { __mode = "k" }) -- frame -> { baseMaxY = 패널이 원래 정한 높이 상한, position = 내가 마지막에 넣은 Position, shift = 그때 민 px }
+local fitStates = setmetatable({}, { __mode = "k" }) -- frame -> { baseMaxY = 패널이 원래 정한 높이 상한, baseMaxX = 폭 상한, position = 내가 마지막에 넣은 Position, shift = 그때 민 px(세로), shiftX = 가로 }
 local stack = {} -- 열린 창 id들, LIFO(맨 뒤 = 맨 위)
 local debounce = {} -- id -> true(트윈 재생 중 - 이 동안 그 id의 열기/닫기 요청을 무시한다)
 local overlayParents = {} -- overlay id -> 지금 열려 있는 동안의 부모 패널 id(부모가 닫히면 같이 닫힌다)
@@ -119,6 +122,16 @@ function UIManager.isOpen(id)
 	return table.find(stack, id) ~= nil
 end
 
+-- QUEUE-ALL6 A3: window · station이 하나라도 열려 있는가(폰 메뉴 1열 접기)
+function UIManager.anyPanelOpen()
+	for _, id in ipairs(stack) do
+		if windows[id].kind ~= "overlay" then
+			return true
+		end
+	end
+	return false
+end
+
 -- frame의 높이를 (screenGui 높이 − 2 × safeMargin) 이하로 제한하고 위 · 아래 끝을 화면 안으로 민다. 계산은 Size · Position 값으로만 한다(레이아웃을 기다리지 않는다).
 -- 등록 없이 자기 ScreenGui를 쓰는 패널(StageSelectPanel)도 직접 부를 수 있다. 화면이 커져 여유가 생기면 다음 호출에서 원래 자리 · 높이로 돌아간다.
 -- 높이 상한은 UISizeConstraint로 건다(패널이 Size를 다시 정해도 안 부딪힌다) - Panel의 모바일 window가 이미 가진 상수 상한(720 × 480)은 그것을 그대로 쓰고 Y만 줄인다.
@@ -130,7 +143,7 @@ function UIManager.fitToScreen(frame, screenGui)
 	local state = fitStates[frame]
 	if not state then
 		local existing = frame:FindFirstChildOfClass("UISizeConstraint")
-		state = { baseMaxY = existing and existing.MaxSize.Y or math.huge, shift = 0 }
+		state = { baseMaxY = existing and existing.MaxSize.Y or math.huge, baseMaxX = existing and existing.MaxSize.X or math.huge, shift = 0, shiftX = 0 }
 		fitStates[frame] = state
 	end
 	local constraint = frame:FindFirstChildOfClass("UISizeConstraint")
@@ -145,13 +158,33 @@ function UIManager.fitToScreen(frame, screenGui)
 	local maxHeight = viewportHeight - 2 * margin
 	local natural = math.min(frame.Size.Y.Scale * viewportHeight + frame.Size.Y.Offset, state.baseMaxY)
 	local height = math.min(natural, maxHeight)
-	constraint.MaxSize = Vector2.new(constraint.MaxSize.X, math.min(state.baseMaxY, maxHeight))
 
 	-- 지난번에 내가 민 만큼 되돌려 패널이 정한 자리에서 다시 계산한다(그 사이 패널이 Position을 새로 정했으면 그 값이 원래 자리다).
 	local position = frame.Position
 	if state.position == position then
-		position = UDim2.new(position.X.Scale, position.X.Offset, position.Y.Scale, position.Y.Offset - state.shift)
+		position = UDim2.new(position.X.Scale, position.X.Offset - (state.shiftX or 0), position.Y.Scale, position.Y.Offset - state.shift)
 	end
+
+	-- QUEUE-ALL6 A3: 왼쪽 메뉴 자리(leftReserve)를 피한다 - 왼쪽 끝이 그 안이면 오른쪽으로 밀고, 오른쪽이 넘치면 폭을 줄인다
+	local maxX = state.baseMaxX or math.huge
+	local shiftX = 0
+	local viewportWidth = screenGui.AbsoluteSize.X
+	local reserve = UIManager.leftReserve
+	if reserve > 0 and viewportWidth > 0 then
+		local width = math.min(frame.Size.X.Scale * viewportWidth + frame.Size.X.Offset, maxX)
+		local left = position.X.Scale * viewportWidth + position.X.Offset - frame.AnchorPoint.X * width
+		if left < reserve then
+			local room = viewportWidth - margin - reserve
+			if width > room then
+				maxX = math.min(maxX, room)
+				width = room
+			end
+			-- 줄인 폭 기준으로 다시: 왼쪽 끝 = reserve
+			local leftAfter = position.X.Scale * viewportWidth + position.X.Offset - frame.AnchorPoint.X * width
+			shiftX = reserve - leftAfter
+		end
+	end
+	constraint.MaxSize = Vector2.new(maxX, math.min(state.baseMaxY, maxHeight))
 	local top = position.Y.Scale * viewportHeight + position.Y.Offset - frame.AnchorPoint.Y * height
 	local shift = 0
 	if top + height > viewportHeight - margin then
@@ -160,11 +193,12 @@ function UIManager.fitToScreen(frame, screenGui)
 	if top + shift < margin then
 		shift = margin - top
 	end
-	local fitted = UDim2.new(position.X.Scale, position.X.Offset, position.Y.Scale, position.Y.Offset + shift)
+	local fitted = UDim2.new(position.X.Scale, position.X.Offset + shiftX, position.Y.Scale, position.Y.Offset + shift)
 	if fitted ~= frame.Position then
 		frame.Position = fitted
 	end
 	state.shift = shift
+	state.shiftX = shiftX
 	state.position = frame.Position
 end
 

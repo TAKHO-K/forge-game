@@ -388,8 +388,10 @@ local function relayout()
 		item.button.Visible = not isHidden(item.entry)
 	end
 	shown += 2 -- 더보기 · 상점
-	local cols = Theme.isMobile and 2 or 1
+	-- QUEUE-ALL6 A3: 폰에서 창이 열려 있으면 1열로 접는다(창 제목 · 첫 탭을 덮지 않게 - 창은 UIManager.leftReserve 오른쪽으로 밀린다)
+	local cols = (Theme.isMobile and not UIManager.anyPanelOpen()) and 2 or 1
 	local rows = math.ceil(shown / cols)
+	UIManager.leftReserve = Theme.isMobile and (ScreenMap.edgeMargin + size + gap) or 0
 	refs.grid.CellSize = UDim2.fromOffset(size, size)
 	refs.grid.CellPadding = UDim2.fromOffset(gap, gap)
 	refs.bar.Size = UDim2.fromOffset(cols * size + (cols - 1) * gap, rows * size + (rows - 1) * gap)
@@ -477,7 +479,7 @@ inventoryFull.OnClientEvent:Connect(function()
 end)
 
 UIManager.changed:Connect(function(id, isOpen)
-	refreshLook()
+	relayout() -- QUEUE-ALL6 A3: 창 열림 · 닫힘에 따라 폰 1열 ↔ 2열(안에서 refreshLook도 부른다)
 	if id == BADGE_PANEL and isOpen then
 		local bag = findItem(BADGE_PANEL)
 		if bag then
