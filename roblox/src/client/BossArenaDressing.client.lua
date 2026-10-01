@@ -11,6 +11,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local BossArenaDressData = require(ReplicatedStorage.Shared.data.BossArenaDressData)
+local ARENA_GEOMETRY = require(ReplicatedStorage.Shared.data.BossArenaMapData).geometry
 local BossRigSpec = require(ReplicatedStorage.Shared.data.BossRigSpec)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossFx = require(script.Parent.BossFx)
@@ -247,6 +248,73 @@ local function dress(boss)
 			p.Transparency = E.transparency
 		end
 	end
+	-- QUEUE-ALL1 바닥 v2 가장자리(docs/design/v2/03 4 · 5절): 벽 밑 낮은 턱 · 벽 모서리 부서진 기둥 · 벽 위 화로(테마 불빛) · 가운데 조명. 플레이 영역 안에는 낮은 턱만(판정 · 전조 안 가림).
+	local RS = spec.rim
+	if RS then
+		local R = BossArenaDressData.rim
+		local G = ARENA_GEOMETRY
+		local seg = G.wallSegments
+		local half = math.pi / seg
+		local apothem = G.radiusStuds / math.cos(half) -- 벽 안쪽 면까지(서버 BossArenaMap.buildBase와 같은 식)
+		local wallMid = apothem + G.wallThicknessStuds / 2
+		local wallTop = center.Y + G.wallHeightStuds
+		local mat = RS.material or Enum.Material.Slate
+		local function dir(a)
+			return Vector3.new(math.cos(a), 0, math.sin(a))
+		end
+		-- 턱: 벽 면마다 1조각(벽과 같은 각) · 붕괴 조각이 무너지면 그 조각 위 턱도 숨긴다(current.curbs - 아래 bindSliceFloor)
+		current.curbs = {}
+		for i = 1, seg do
+			local a = (i - 0.5) * 2 * half
+			local at = center + dir(a) * (apothem - R.curbWidth / 2 + 0.1) + Vector3.new(0, (R.curbHeight - 0.2) / 2, 0)
+			local p = newPart(folder, "Dress_RimCurb_" .. i, Vector3.new(2 * apothem * math.tan(half) + 0.3, R.curbHeight + 0.2, R.curbWidth + 0.2),
+				CFrame.lookAt(at, Vector3.new(center.X, at.Y, center.Z)), colorOf(RS.curbColor, C), mat)
+			p.CastShadow = false
+			table.insert(current.curbs, { part = p, deg = math.deg(a) })
+		end
+		-- 부서진 기둥(벽 모서리에 박힘) + 테라스에 쓰러진 윗동
+		local nPillar = RS.pillars or R.pillars
+		for i = 1, nPillar do
+			local a = math.floor((i - 0.5) * seg / nPillar + 0.5) * 2 * half -- 벽 모서리 각
+			local h = rng:NextNumber(R.pillarHeight[1], R.pillarHeight[2])
+			local w = R.pillarWidth
+			local base = center + dir(a) * wallMid
+			local color = colorOf(RS.pillarColor, C)
+			newPart(folder, "Dress_RimPillar_" .. i, Vector3.new(w, h, w), CFrame.new(base + Vector3.new(0, h / 2 - 0.5, 0)) * CFrame.Angles(0, -a + math.rad(rng:NextNumber(-8, 8)), 0), color, mat).CastShadow = false
+			local fallen = center + dir(a + math.rad(rng:NextNumber(-3, 3))) * (wallMid + R.fallenOut) + Vector3.new(0, -G.rimDropStuds + w * 0.4, 0)
+			newPart(folder, "Dress_RimPillarFallen_" .. i, Vector3.new(w * 0.9, w * 1.8, w * 0.9),
+				CFrame.new(fallen) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0) * CFrame.Angles(math.rad(rng:NextNumber(70, 85)), 0, 0), color:Lerp(BLACK, 0.1), mat).CastShadow = false
+		end
+		-- 화로(벽 면 가운데 위) · 불빛 = 보스 테마 색
+		local nFire = RS.braziers or R.braziers
+		local lights = not phone or R.phoneLights
+		current.fires = {}
+		for i = 1, nFire do
+			local a = (math.floor((i - 1) * seg / nFire) + 0.5) * 2 * half
+			local at = center + dir(a) * wallMid
+			local bowl = newPart(folder, "Dress_RimBrazier_" .. i, R.bowlSize, CFrame.new(at.X, wallTop + R.bowlSize.X / 2, at.Z) * CFrame.Angles(0, 0, math.pi / 2), C.stone:Lerp(BLACK, 0.3), Enum.Material.Slate, "cyl")
+			bowl.CastShadow = false
+			local flame = newPart(folder, "Dress_RimFire_" .. i, Vector3.one * R.flameSize, CFrame.new(at.X, wallTop + R.bowlSize.X + R.flameSize * 0.3, at.Z), RS.fire, Enum.Material.Neon)
+			flame.Shape = Enum.PartType.Ball
+			flame.Transparency = R.flameTransparency
+			flame.CastShadow = false
+			if lights then
+				local L = Instance.new("PointLight")
+				L.Color, L.Brightness, L.Range, L.Shadows = RS.fire, R.fireLight.brightness, R.fireLight.range, false
+				L.Parent = flame
+				table.insert(current.fires, { light = L, phase = rng:NextNumber(0, 100) })
+			end
+		end
+		-- 가운데 조명(가운데 약간 밝고 가장자리 어둡게)
+		if lights then
+			local CL = R.centerLight
+			local anchor = newPart(folder, "Dress_CenterLight", Vector3.one, CFrame.new(center + Vector3.new(0, CL.height, 0)), WHITE)
+			anchor.Transparency, anchor.CastShadow = 1, false
+			local L = Instance.new("PointLight")
+			L.Color, L.Brightness, L.Range, L.Shadows = CL.color, CL.brightness, CL.range, false
+			L.Parent = anchor
+		end
+	end
 	-- 바닥 재질(이 클라만)
 	local FL = spec.floor
 	if FL then
@@ -326,7 +394,7 @@ local function dress(boss)
 			if not (typeof(at) == "Vector3" and (Vector3.new(at.X, 0, at.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude < 20) then
 				return -- 다른 아레나(서버가 부모 연결 전에 단 ArenaCenter로 고른다 - 바닥 파트 부모는 Ground라 구역 이름이 없다)
 			end
-			local bound = {}
+			local bound, curbBound = {}, {}
 			local function bindPart(w)
 				if not w:IsA("BasePart") then
 					return
@@ -346,6 +414,23 @@ local function dress(boss)
 					table.insert(current.connections, w:GetPropertyChangedSignal("Transparency"):Connect(sync))
 					sync()
 				end
+				if k and current.curbs and not curbBound[k] then -- 가장자리 턱: 무너진 조각 위 턱은 숨긴다(구멍 가독성 - 조각 k = 각 (k − 1) × 폭 ~ k × 폭, 서버 enableSliceFloor와 같은 식)
+					curbBound[k] = true
+					local width = 360 / (model:GetAttribute("SliceCount") or 8)
+					local mine = {}
+					for _, cb in ipairs(current.curbs) do
+						if math.floor(cb.deg / width) + 1 == k then
+							table.insert(mine, cb.part)
+						end
+					end
+					local function syncCurb()
+						for _, p in ipairs(mine) do
+							p.Transparency = w.Transparency > 0.5 and 1 or 0
+						end
+					end
+					table.insert(current.connections, w:GetPropertyChangedSignal("Transparency"):Connect(syncCurb))
+					syncCurb()
+				end
 			end
 			for _, w in ipairs(model:GetChildren()) do
 				bindPart(w)
@@ -355,6 +440,9 @@ local function dress(boss)
 				if not model.Parent then
 					for _, art in pairs(slices) do
 						art.Transparency = 0 -- 조각 바닥 → 원판(보스전 끝 · 리셋)
+					end
+					for _, cb in ipairs(current and current.curbs or {}) do
+						cb.part.Transparency = 0
 					end
 				end
 			end))
@@ -399,6 +487,10 @@ RunService.RenderStepped:Connect(function()
 		local cf = CFrame.new(f.base + Vector3.new(0, y, 0)) * CFrame.Angles(f.tilt, yaw, f.tilt * 0.5)
 		f.stone.CFrame = cf
 		f.inlay.CFrame = cf * CFrame.new(0, f.inlayOffset, 0)
+	end
+	local FL = BossArenaDressData.rim.fireLight -- 화로 불빛 흔들림
+	for _, fire in ipairs(c.fires or {}) do
+		fire.light.Brightness = FL.brightness * (1 + FL.flicker * math.noise(now * 3, fire.phase))
 	end
 	local M = c.spec.motes
 	if M and now - c.moteAt > M.every / (c.phone and (M.phoneScale or 0.5) or 1) then
