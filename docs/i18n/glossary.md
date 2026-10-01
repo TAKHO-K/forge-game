@@ -28,3 +28,24 @@
 | 이정표 | Guide | 첫 5분 안내(Q12) |
 | 7일 출석 | 7-Day Check-in | 새 계정 출석 |
 | 환생 무료권 | Free Rebirth Ticket | 출석 2일차(쓰임 결정 대기) |
+
+## QUEUE-ALL5 F에서 정한 용어(QUEUE-ALL4 미정분)
+
+| 한국어 | 영어(고정) | 뜻 · 쓰는 곳 · 결정 이유 |
+|---|---|---|
+| 분해 · 일괄 분해 · 자동 분해 | Salvage · Salvage All · Auto salvage | 장비 · 보석을 가루 · 보석으로 바꾸기. 옛 en에 "Dismantle"(보석 가공)과 "Salvage"(가방)가 섞여 있었다 → Salvage로 통일(짧고 게임에서 흔한 말 - "Dismantle All"은 버튼 칸 0.92로 빠듯했다) |
+| 변환권 · 변환 · 리롤 | Reroll Ticket · Reroll · Reroll | 고대 · 태초 옵션 다시 굴리기. ko의 "변환"과 "리롤"은 같은 동작이라 en은 Reroll 하나("Convert" 안 씀). 등급 붙은 줄은 "{grade} Reroll Ticket", 좁은 칸은 "{grade} Ticket" 허용 |
+| 불씨 | Ember | 강화 실패 게이지(가득 차면 다음 강화 확정 성공). 용어라 문장 중간에서도 대문자 Ember. "gauge" 표기 금지 |
+| 홈(보석 홈 · 보석 칸) | Socket | 무기 보석 자리. "Gem slot" 표기 금지(가방 "Slots"와 겹친다). 칸 이름 = "Socket {slot}" |
+| 기믹 · 보스 기믹 | Mechanic · Boss Mechanics | 보스 전멸 패턴과 해법. "Gimmick"(영어에서 깎아내리는 말) · "wipe move"(어려운 말) 안 씀 |
+| 펫 결과 등급 일반 · 고급 · 희귀 · 영웅 | Common · Uncommon · Rare · Epic | 부화 결과 등급(`EggData.hatchGradeNames` 키 uncommon과 같다) |
+| 알 등급 보통 · 좋은 · 희귀 | Normal · Good · Rare | 알 자체 등급. 펫 "고급"을 Uncommon으로 바꿔 "Good" 겹침을 없앴다 |
+| 강화대 | Forge | 강화하는 곳("Enhance station" · 소문자 "forge" 섞임 → Forge) |
+| 하락 방지권 · 초기화 방지권(좁은 칸 줄임) | Drop Guard · Reset Guard | 보상 띠(`hud.band.*`)처럼 한 줄 칸 전용 줄임. 상점 · 보상 목록 · 설명은 정식 이름 Drop/Reset Protection Ticket 유지 |
+| 받음(보상 받은 표시) | Claimed | 버튼 · 상태 글은 Claimed. 보상 띠(`hud.band.*Claimed`)는 칸이 좁아 "✓"만 쓴다. 성장 보상 `ui.milestone.got*`은 횟수 표기라 Got 유지 |
+| 도전(보상 띠 버튼) | Fight | 88px 버튼에서 "Challenge"가 폰 글씨로 넘쳐 Fight(견습 `scene.tutorial.challenge` "Fight Boss"와 같은 말). 주간 도전 탭 · 기록은 Challenge 그대로 |
+| 길 안내 · 위치 안내 · 여기로 안내 | Guide · Show Way · Show Way | 버튼은 "Show Way", 길 안내 토글은 "Guide" |
+| 자동 이동(지도 걷기) | Auto Walk | 지도 자동 걷기. 스테이지 자동 이동(`autoStage.*`)은 다른 기능이라 "Auto move" 그대로 |
+| 치명 확률 · 치명 피해 | Crit / Crit Rate · Crit DMG | "Dmg" · "%p" 표기 금지(en은 %p 대신 %) |
+
+> 정리 필요(결정 대기): 위 표의 "대검 · 쌍검 · 활 · 치유사 = Greatsword · Dual Blades · Bow · Healer"는 옛 표시 이름이다. 지금 `ClassData.displayName` = 검사 · 도적 · 궁수 · 치유사이고, 출시 설명 초안은 Swordsman · Rogue · Archer · Healer를 쓴다. 직업 · 보스 · 구역 · 등급 이름은 데이터의 한국어 `displayName`이라 TextData en이 없다(영어를 켜도 한국어로 나온다).
