@@ -95,8 +95,7 @@ local function worldTextSection(r)
 	r.check(("몹 이름(종 · 기본 · 접두사 · 보스) %d개 en - 한글 남음 %d%s"):format(mobCount, #mobMissing, #mobMissing > 0 and (": " .. table.concat(mobMissing, " / ")) or ""), mobCount > 0 and #mobMissing == 0)
 	local codex = {}
 	for _, key in ipairs({ "srv.codex.lineDone", "srv.codex.got", "srv.codex.eggFull", "srv.mob.prefixed", "srv.drop.plate", "srv.world.sealedPlaque" }) do
-		local anyTitle = next(require(ReplicatedStorage.Shared.data.TitleData).titles)
-		local en = Text.format("en", key, { title = anyTitle and require(ReplicatedStorage.Shared.data.TitleData).titles[anyTitle].name or "?", summary = "Gold 500", grade = "전설", part = "갑옷", level = "12", prefix = "단단한", name = "이끼 슬라임" })
+		local en = Text.format("en", key, { title = "초월자", summary = "Gold 500", grade = "전설", part = "갑옷", level = "12", prefix = "단단한", name = "이끼 슬라임" })
 		if hasHangul(en) or en == key then
 			table.insert(codex, key .. "=" .. en)
 		end

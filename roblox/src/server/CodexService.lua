@@ -135,7 +135,7 @@ function refresh(player)
 		end
 		if all and PlayerProfile.grantTitle(player, l.titleId) then
 			local t = TitleData.titles[l.titleId]
-			noticeRemote:FireClient(player, "srv.codex.lineDone", { title = t and t.name or l.titleId }) -- QUEUE-ALL6R 3: 키 + 인자(칭호 이름 = 데이터 이름 - 클라가 번역)
+			noticeRemote:FireClient(player, "srv.codex.lineDone", { title = t and t.name or l.titleId, titleId = l.titleId }) -- QUEUE-ALL6R 3: 키 + 인자(칭호 = 클라 CodexRules.titleText - 도감 칭호는 틀 + 이름을 따로 번역)
 			changed = true
 		end
 	end

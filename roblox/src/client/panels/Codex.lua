@@ -435,6 +435,9 @@ function CodexPanel.init()
 	end)
 	ReplicatedStorage:WaitForChild("CodexNotice").OnClientEvent:Connect(function(key, args)
 		-- QUEUE-ALL6R 3: 서버 = 키 + 인자 → 내 언어로 조합
+		if type(args) == "table" and type(args.titleId) == "string" then
+			args.title = require(ReplicatedStorage.Shared.CodexRules).titleText(args.titleId, args.title) -- 도감 칭호 = 틀 + 이름 따로(합친 이름은 사전에 없다)
+		end
 		local text = type(key) == "string" and Text.get(key, type(args) == "table" and args or nil)
 		if text and not (workspace:GetAttribute("ArtStyleV1") == true and key == "srv.codex.lineDone") then -- QUEUE-ALL2 P4: 아트 켬 = 줄 칭호는 CodexMoments 배너가 알림(중복 막기)
 			Toast.push("TC", { richParts = { { text = text, color = Theme.colors.gold, bold = true } }, seconds = 4, fadeSeconds = 0.3 })
