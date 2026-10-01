@@ -1,0 +1,4 @@
+stage25 relief=true heavyOff=true basic=0.073 | stage55 relief=nil heavyOff=nil basic=0.105
+stage 25 첫 도전: 1ranged 0.8% 강0.00 · 1melee 0.8% 강0.00 · 2ranged 0.3% 강0.00 · 4ranged 0.4% 강0.00
+stage 50 첫 도전: 1ranged 47.8% 강0.00 · 1melee 45.7% 강0.00 · 2ranged 53.7% 강0.00 · 4ranged 58.8% 강0.00
+stage 55 첫 도전: 1ranged 59.9% 강2.12 · 1melee 60.8% 강2.67 · 2ranged 69.0% 강2.02 · 4ranged 79.0% 강2.19
