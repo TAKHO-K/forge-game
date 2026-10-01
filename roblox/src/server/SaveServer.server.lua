@@ -32,6 +32,10 @@ require(script.Parent.Telemetry).start() -- Q15 T1 통계(몇 분마다 · 퇴�
 
 local function loadForPlayer(player)
 	local profile, err, loadInfo = SaveSystem.loadProfile(player)
+	if not player.Parent then
+		-- QUEUE-ALL5 D②: 읽는(잠금 대기 최대 10초) 동안 나갔다 - PlayerRemoving(flush · clear)은 이미 지나갔으므로 여기서 init하면 프로필이 서버 수명 내내 남았다
+		return
+	end
 	if loadInfo and loadInfo.negativeGold then -- QUEUE-6h-b 후속: 손상 저장 음수 골드 → 0(SaveSystem) - 통계 이벤트
 		require(script.Parent.Telemetry).custom(player, "SaveNegativeGold", loadInfo.negativeGold)
 	end

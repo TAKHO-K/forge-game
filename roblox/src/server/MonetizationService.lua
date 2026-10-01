@@ -183,7 +183,7 @@ local function cachePolicy(player)
 	local ok, info = pcall(function()
 		return PolicyService:GetPolicyInfoForPlayerAsync(player)
 	end)
-	if ok and type(info) == "table" and type(info.ArePaidRandomItemsRestricted) == "boolean" then
+	if ok and type(info) == "table" and type(info.ArePaidRandomItemsRestricted) == "boolean" and player.Parent then -- QUEUE-ALL5 D②: 조회 중 나갔으면 쓰지 않는다(PlayerRemoving이 지운 뒤 다시 남던 것)
 		restricted[player] = info.ArePaidRandomItemsRestricted
 	end
 end
@@ -213,7 +213,7 @@ local function refreshPasses(player)
 			local ok, owns = pcall(function()
 				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.passId)
 			end)
-			if ok then
+			if ok and PlayerProfile.getMonetizationState(player) == s then -- QUEUE-ALL5 D②: 조회(yield) 중 퇴장 · 프로필 교체면 낡은 표에 쓰지 않는다
 				s.gamepasses[key] = owns == true or nil
 			end -- 조회 실패 = 캐시 유지
 		end
@@ -284,6 +284,9 @@ function MonetizationService.promptProduct(player, key)
 	end
 	if not Monetization.paidRandomAllowed(product, MonetizationService.isRestricted(player)) then
 		return false, "restricted"
+	end
+	if not PlayerProfile.getMonetizationState(player) then
+		return false, "no_profile" -- QUEUE-ALL5 D②: 로드 전 - 아래 seasonPremium 줄이 nil을 인덱싱했다
 	end
 	if MonetizationService.ownsAll(player, product) then -- 리뷰 중요 3: 이미 가진 치장 · 이번 시즌 유료 줄을 다시 사지 않게(결제만 되고 받는 것 없음)
 		return false, "owned"
@@ -391,8 +394,8 @@ function MonetizationService.start()
 			local okOwn, owns = pcall(function()
 				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
 			end)
-			if not (okOwn and owns) then
-				return
+			if not (okOwn and owns) or PlayerProfile.getMonetizationState(player) ~= s then
+				return -- QUEUE-ALL5 D②: 조회(yield) 중 퇴장 · 프로필 교체면 낡은 표에 쓰지 않는다(다음 접속 refresh가 반영)
 			end
 			s.gamepasses[key] = true
 			applyPassAttributes(player)

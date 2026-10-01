@@ -235,7 +235,15 @@ end
 -- 코드 발급 - "비어 있을 때만 쓴다"를 UpdateAsync로 원자적으로 보장한다(충돌 시 재시도).
 local allocating = {} -- [party] = true
 function PartyCrossServer.ensureCode(party)
-	if party.code or allocating[party] then
+	if party.code then
+		return party.code
+	end
+	if allocating[party] then
+		-- QUEUE-ALL5 D②: 발급 중이면 끝날 때까지 기다린다(옛 = nil을 바로 돌려줬다 - "create" 리스너가 먼저 발급을 시작해
+		--   파티 만들기 · 다른 서버 초대가 매번 service_unavailable로 실패했다)
+		while allocating[party] do
+			task.wait()
+		end
 		return party.code
 	end
 	allocating[party] = true
@@ -422,9 +430,13 @@ end
 
 -- ═══ 합류(출발 서버) ═══
 
-local function finishJoin(player, reason)
-	local state = joinState[player]
-	joinState[player] = nil
+local function finishJoin(player, reason, own)
+	-- QUEUE-ALL5 D②: own = 이 합류 요청의 state. 예약(yield) 중 퇴장하면 PlayerRemoving이 joinState를 먼저 지워(그때는 seatReserved = false)
+	--   예약이 나중에 성공한 좌석 · 멤버 레코드가 seatTimeout까지 남았다 - 요청 자신의 state로 푼다(releaseSeat는 멱등).
+	local state = own or joinState[player]
+	if joinState[player] == state then
+		joinState[player] = nil
+	end
 	if state and state.seatReserved and reason ~= "teleporting" then
 		releaseSeat(state.code, player.UserId)
 	end
@@ -508,6 +520,9 @@ local function handleArrival(player, simulate)
 	local record = call("멤버 레코드 읽기", function()
 		return memberMap:GetAsync(tostring(player.UserId))
 	end)
+	if isInstance(player) and not player.Parent then
+		return false -- QUEUE-ALL5 D②: 읽는 동안 나갔다 - 붙이면 PlayerRemoving이 지나간 뒤라 유령 멤버로 남는다(좌석은 TTL로 회수)
+	end
 	if type(record) ~= "table" or seatExpired(record) then
 		return false
 	end
@@ -607,7 +622,11 @@ function PartyCrossServer.requestJoin(player, code, opts)
 
 	local record, err = readRecord(code)
 	if not record then
-		finishJoin(player, err)
+		finishJoin(player, err, state)
+		return false
+	end
+	if isInstance(player) and not player.Parent then
+		finishJoin(player, nil, state) -- QUEUE-ALL5 D②: 읽는 동안 나갔다(같은 서버 붙이기가 유령 멤버를 만들지 않게)
 		return false
 	end
 
@@ -616,10 +635,10 @@ function PartyCrossServer.requestJoin(player, code, opts)
 	if record.jobId == game.JobId and localParty then
 		local ok, why = attachLocal(player, localParty)
 		if ok then
-			finishJoin(player, "joined")
+			finishJoin(player, "joined", state)
 			return true
 		elseif why ~= "in_boss" then
-			finishJoin(player, why)
+			finishJoin(player, why, state)
 			return false
 		end
 	end
@@ -627,13 +646,13 @@ function PartyCrossServer.requestJoin(player, code, opts)
 	-- 좌석 예약(원자) + 멤버 레코드(두 파티 동시 합류 차단).
 	local outcome = reserveSeat(code, player)
 	if outcome ~= "ok" then
-		finishJoin(player, outcome)
+		finishJoin(player, outcome, state)
 		return false
 	end
 	state.seatReserved = true
 	local memberOutcome = writeMemberRecord(player, code, record.jobId)
 	if memberOutcome ~= "ok" then
-		finishJoin(player, memberOutcome)
+		finishJoin(player, memberOutcome, state)
 		return false
 	end
 	publish({ type = "seat", code = code, userId = player.UserId, name = player.Name, since = os.time() })
@@ -646,7 +665,7 @@ function PartyCrossServer.requestJoin(player, code, opts)
 	local noticed = nil
 	while true do
 		if state.cancelled or (isInstance(player) and not player.Parent) then
-			finishJoin(player, state.cancelled and "cancelled" or nil)
+			finishJoin(player, state.cancelled and "cancelled" or nil, state)
 			return false
 		end
 		local blocked = nil
@@ -666,7 +685,7 @@ function PartyCrossServer.requestJoin(player, code, opts)
 		task.wait(PartyConfig.joinPollSeconds)
 		record, err = readRecord(code)
 		if not record then
-			finishJoin(player, err == "party_not_found" and "party_gone" or err)
+			finishJoin(player, err == "party_not_found" and "party_gone" or err, state)
 			return false
 		end
 	end
@@ -675,11 +694,11 @@ function PartyCrossServer.requestJoin(player, code, opts)
 	if record.jobId == game.JobId then
 		local party = PartyState.getPartyByCode(code)
 		if not party then
-			finishJoin(player, "party_gone")
+			finishJoin(player, "party_gone", state)
 			return false
 		end
 		local ok, why = attachLocal(player, party)
-		finishJoin(player, ok and "joined" or why)
+		finishJoin(player, ok and "joined" or why, state)
 		return ok
 	end
 
@@ -688,8 +707,14 @@ function PartyCrossServer.requestJoin(player, code, opts)
 	state.phase = "saving"
 	if isInstance(player) then
 		SaveSystem.markReleasing(player, true) -- QUEUE-6h-b 후속: 이 flush가 출발 서버의 마지막 저장 - 세션 잠금을 놓는다
-		ImmediateSave.flush(player)
+		local saved = ImmediateSave.flush(player)
 		SaveSystem.markReleasing(player, false)
+		-- QUEUE-ALL5 D②: 마지막 저장이 실패(DataStore 에러)했으면 떠나지 않는다 - 옛 = 그대로 동결 + 텔레포트 → 도착 서버는 옛 저장을 읽고
+		--   출발 서버는 동결로 퇴장 저장까지 건너뛰어 마지막 성공 저장 뒤의 진행이 사라졌다. 저장 중단(isSuspended) · 시뮬레이션은 옛 동작 그대로.
+		if not saved and not opts.simulateArrival and PlayerProfile.getProfile(player) and not SaveCoordinator.isSuspended(player) then
+			finishJoin(player, "service_unavailable", state)
+			return false
+		end
 		SaveCoordinator.setTeleportFrozen(player, true)
 	end
 
@@ -715,7 +740,7 @@ function PartyCrossServer.requestJoin(player, code, opts)
 	end)
 	if not ok then
 		warn(("[forge-game] 크로스서버 텔레포트 호출 실패: %s - %s"):format(player.Name, tostring(teleportErr)))
-		finishJoin(player, "teleport_failed")
+		finishJoin(player, "teleport_failed", state)
 		return false
 	end
 	return true
@@ -917,19 +942,28 @@ task.spawn(function()
 				recentlyReleased[userId] = nil
 			end
 		end
-		for _, party in pairs(PartyState.getAllParties()) do
-			for _, seat in ipairs(table.clone(PartyState.getPendingSeats(party))) do
-				local holder = Players:GetPlayerByUserId(seat.userId)
-				if seatExpired(seat) and not (holder and arrivalWaiting[holder]) then
-					print(("[forge-game] 파티 원격 좌석 만료 회수: #%d %s"):format(party.id, seat.name))
-					recentlyReleased[seat.userId] = os.time()
-					PartyState.removePendingSeat(party, seat.userId)
-				end
+		-- QUEUE-ALL5 D②: 사본으로 돈다(발급 · 기록이 yield하는 동안 파티가 생기거나 해산돼도 순회가 깨지지 않게) · 파티 하나의 오류가 루프를 죽이지 않게 pcall
+		for id, party in pairs(table.clone(PartyState.getAllParties())) do
+			if PartyState.getAllParties()[id] ~= party then
+				continue -- 순회 중 해산됐다
 			end
-			if party.code then
-				publishRecord(party)
-			else
-				PartyCrossServer.ensureCode(party) -- 발급 실패했던 파티 재시도
+			local ok, err = pcall(function()
+				for _, seat in ipairs(table.clone(PartyState.getPendingSeats(party))) do
+					local holder = Players:GetPlayerByUserId(seat.userId)
+					if seatExpired(seat) and not (holder and arrivalWaiting[holder]) then
+						print(("[forge-game] 파티 원격 좌석 만료 회수: #%d %s"):format(party.id, seat.name))
+						recentlyReleased[seat.userId] = os.time()
+						PartyState.removePendingSeat(party, seat.userId)
+					end
+				end
+				if party.code then
+					publishRecord(party)
+				else
+					PartyCrossServer.ensureCode(party) -- 발급 실패했던 파티 재시도
+				end
+			end)
+			if not ok then
+				warn("[forge-game] 파티 하트비트 오류: " .. tostring(err))
 			end
 		end
 	end
