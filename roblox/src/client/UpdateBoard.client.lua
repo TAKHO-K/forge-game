@@ -39,7 +39,8 @@ local function validCodes()
 	local out = {}
 	for _, c in ipairs(SD.codes) do
 		local e = c.expires
-		if os.time() <= os.time({ year = e[1], month = e[2], day = e[3], hour = 23, min = 59, sec = 59 }) then
+		-- QUEUE-ALL5 C: 만료 = UTC 그날 끝(서버 SocialRewardService와 같은 뜻) - 클라의 os.time(표)는 기기 시간대로 읽힐 수 있어 UTC로 명시
+		if os.time() <= DateTime.fromUniversalTime(e[1], e[2], e[3], 23, 59, 59).UnixTimestamp then
 			table.insert(out, ("%s · %s(~%d.%d.%d)"):format(c.code, c.note or "", e[1], e[2], e[3]))
 		end
 	end
