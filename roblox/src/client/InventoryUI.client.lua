@@ -158,7 +158,9 @@ end)
 
 -- ═══ 서버 동기화 ═══
 
+local gotSnapshot = false -- QUEUE-STUDIO A3-1: 프로필이 든 스냅샷(slots 있음)을 한 번이라도 받았는가
 local function onStateChanged(state)
+	gotSnapshot = gotSnapshot or type(state.slots) == "number"
 	S.inventory = state.inventory
 	S.equippedArmor = state.armor
 	S.equippedGloves = state.gloves
@@ -186,6 +188,25 @@ local ok, initialState = pcall(function()
 end)
 if ok and initialState then
 	onStateChanged(initialState)
+end
+-- QUEUE-STUDIO A3-1(Studio 재현): 접속 직후 첫 응답이 프로필 로드 전 빈 스냅샷이고 로드 때의 push도 못 받으면 가방 · 착용 칸이 다음 가방 변경 전까지 비어 있었다
+-- (서버 로드 14:16:18 · 클라 준비 :24 · 가방 0 → 가방이 바뀐 push 뒤 19). 프로필이 든 스냅샷을 받을 때까지 1초마다 다시 받는다(최대 30번 - 보석 탭 A2-N3과 같은 종류).
+if not gotSnapshot then
+	task.spawn(function()
+		for _ = 1, 30 do
+			task.wait(1)
+			if gotSnapshot then
+				return
+			end
+			local okAgain, state = pcall(function()
+				return inventoryFetch:InvokeServer()
+			end)
+			if okAgain and state and type(state.slots) == "number" then
+				onStateChanged(state)
+				return
+			end
+		end
+	end)
 end
 
 player:GetAttributeChangedSignal("Gold"):Connect(function()
