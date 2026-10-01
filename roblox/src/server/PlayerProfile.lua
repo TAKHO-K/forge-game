@@ -2608,7 +2608,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.redeemedCodes = snapshot.redeemedCodes and deepCopy(snapshot.redeemedCodes) or profile.redeemedCodes -- QUEUE-ALL1 P4(v58)
 	profile.codex = snapshot.codex and deepCopy(snapshot.codex) or profile.codex -- QUEUE-ALL1 P5(v59)
 	profile.weeklyChallenge = snapshot.weeklyChallenge and deepCopy(snapshot.weeklyChallenge) or profile.weeklyChallenge
-	profile.quarantine = snapshot.quarantine and deepCopy(snapshot.quarantine) or profile.quarantine -- QUEUE-ALL5 A3(v63)
+	profile.quarantine = snapshot.quarantine and deepCopy(snapshot.quarantine) or {} -- QUEUE-ALL5 A3(v63) · 리뷰: 이 필드 전 스냅숏 = 빈 칸(가방 복원과 겹쳐 두 벌이 되지 않게)
 	task.defer(function() -- 결정 9: 복원한 치장 · 패스를 Attribute로(늦은 require - 순환 방지)
 		if profiles[player] then
 			require(script.Parent.MonetizationService).reapplyAttributes(player)

@@ -41,8 +41,10 @@ local function loadForPlayer(player)
 	if loadInfo and loadInfo.repaired then -- QUEUE-ALL4 C: 손상 저장 고침(SaveSystem.repairProfile) - 고친 칸 수
 		require(script.Parent.Telemetry).custom(player, "SaveRepaired", #loadInfo.repaired)
 	end
-	if loadInfo and loadInfo.quarantined then -- QUEUE-ALL5 A3: 모르는 id 보관(옮긴 수 · 되돌린 수는 SaveQuarantineRestored)
-		require(script.Parent.Telemetry).custom(player, "SaveQuarantined", #loadInfo.quarantined)
+	if loadInfo and loadInfo.quarantined then -- QUEUE-ALL5 A3: 모르는 id 보관(옮긴 수 · 되돌린 수는 SaveQuarantineRestored · 0이면 안 보냄)
+		if #loadInfo.quarantined > 0 then
+			require(script.Parent.Telemetry).custom(player, "SaveQuarantined", #loadInfo.quarantined)
+		end
 		if (loadInfo.quarantineRestored or 0) > 0 then
 			require(script.Parent.Telemetry).custom(player, "SaveQuarantineRestored", loadInfo.quarantineRestored)
 		end

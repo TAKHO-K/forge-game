@@ -31,6 +31,8 @@ local ok, err = pcall(function()
 		for _, id in ipairs(lists.gliderSkin) do p.cosmetics.gliderSkins[id] = true end
 		p.cosmetics.equipped.dashTrail = lists.cosmeticTheme[1]
 		p.cosmetics.equipped.gliderSkin = lists.gliderSkin[1]
+		p.cosmetics.equipped.nameplateColor = MODS.MonetizationData.gamePasses.nameplateColor.colors[1] -- 리뷰: 게임패스 선택값(테마 id 아님)
+		p.cosmetics.equipped.nameplateBadge = MODS.MonetizationData.gamePasses.nameplateBadge.badges[1]
 		for _, id in ipairs(lists.title) do p.titles[id] = true end
 		if type(p.codex) == "table" then p.codex.title = lists.title[1] end
 		return p
@@ -66,7 +68,9 @@ local ok, err = pcall(function()
 	if type(p.codex) == "table" then p.codex.title = "goneTitle" end
 	local before = #p.inventory
 	check("고치기 전: 모르는 옵션이면 isValidProfile = false(옛 = 계정 로드 실패)", not SaveSystem.isValidProfile(p))
-	local moved, restored = SaveSystem.quarantineUnknownIds(p)
+	local moved, restored, resets = SaveSystem.quarantineUnknownIds(p)
+	check("이름표 색 · 배지(게임패스 선택값)는 그대로 · 선택 해제 = 세트 칸 · 글라이더 · 칭호 3", p.cosmetics.equipped.nameplateColor ~= nil and p.cosmetics.equipped.nameplateBadge ~= nil and #resets == 3,
+		("%s · %s · 해제 [%s]"):format(tostring(p.cosmetics.equipped.nameplateColor), tostring(p.cosmetics.equipped.nameplateBadge), table.concat(resets, ",")))
 	local kinds = {}
 	for _, e in ipairs(p.quarantine) do kinds[e.kind] = (kinds[e.kind] or 0) + 1 end
 	check("모르는 id = 보관(장비 6 · 보석 2 · 재료 1 · 테마 1 · 글라이더 1 · 칭호 1) · 로드 가능", (kinds.item or 0) == 6 and (kinds.gem or 0) == 2 and kinds.material == 1 and kinds.cosmeticTheme == 1

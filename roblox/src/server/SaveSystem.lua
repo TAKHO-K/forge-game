@@ -1722,7 +1722,7 @@ end
 --   가진 값을 계정 로드 실패(invalid_schema) · 실행 중 에러 대신 보관 칸 data.quarantine으로 옮긴다(세트 구역 setZone은 모르면 "세트 아님"으로 동작해 옮기지 않는다). id 목록 = shared/IdRegistry(스냅숏 검사 = roblox/tools/ids/id_registry.py).
 --   먼저 보관 칸에서 지금은 아는 id가 된 것을 제자리로 돌린다(장비 = 가방 · 보석 = 그 직업 보석 가방 · 재료 = 더함 · 치장 · 칭호 = 다시 가짐 - 착용 · 장착 자리는 비운 채).
 --   착용 장비 · 박힌 보석을 옮기면 그 자리는 비운다(장비 nil · 보석 칸 false). 장착 중 치장 · 고른 칭호가 모르는 id면 기본값으로(자산이 아니라 선택이라 보관 안 함).
--- 반환: 옮긴 것 목록("종류:이유"), 되돌린 수. 순수(DataStore 안 씀 - 결과는 다음 저장 때 써진다). 진행 몸통이 표가 아니면 손대지 않는다(검사는 isValidProfile).
+-- 반환: 보관 칸에 넣은 것 목록("종류:이유"), 되돌린 수, 기본값으로 돌린 선택값 목록. 순수(DataStore 안 씀 - 결과는 다음 저장 때 써진다). 진행 몸통이 표가 아니면 손대지 않는다(검사는 isValidProfile).
 function SaveSystem.quarantineUnknownIds(data)
 	local IdRegistry = require(ReplicatedStorage.Shared.IdRegistry)
 	local known = IdRegistry.known()
@@ -1730,7 +1730,7 @@ function SaveSystem.quarantineUnknownIds(data)
 		data.quarantine = {}
 	end
 	local now = os.time()
-	local moved, restored = {}, 0
+	local moved, restored, resets = {}, 0, {} -- resets = 보관하지 않고 기본값으로 돌린 선택값(장착 치장 · 고른 칭호)
 	local function put(kind, why, value, classId)
 		table.insert(data.quarantine, { kind = kind, why = why, value = value, classId = classId, at = now })
 		table.insert(moved, kind .. ":" .. why)
@@ -1846,11 +1846,16 @@ function SaveSystem.quarantineUnknownIds(data)
 			end
 		end
 		if type(cosmetics.equipped) == "table" then
+			-- 리뷰(QUEUE-ALL5 A3): equipped에는 세트 칸 · 글라이더 말고도 이름표 색 · 배지(게임패스 선택값 - 테마 id 아님)가 있다 → 세트 칸 · 글라이더만 본다
+			local setSlot = {}
+			for _, slotId in ipairs(require(ReplicatedStorage.Shared.data.CosmeticSlotData).setSlots) do
+				setSlot[slotId] = true
+			end
 			for slot, id in pairs(table.clone(cosmetics.equipped)) do
-				local kind = slot == "gliderSkin" and "gliderSkin" or "cosmeticTheme"
-				if type(id) == "string" and not known[kind][id] then
+				local kind = slot == "gliderSkin" and "gliderSkin" or (setSlot[slot] and "cosmeticTheme" or nil)
+				if kind and type(id) == "string" and not known[kind][id] then
 					cosmetics.equipped[slot] = nil -- 기본 모습으로(선택값 - 보관 안 함)
-					table.insert(moved, "equipped:" .. id)
+					table.insert(resets, "equipped." .. tostring(slot) .. ":" .. id)
 				end
 			end
 		end
@@ -1864,10 +1869,10 @@ function SaveSystem.quarantineUnknownIds(data)
 		end
 	end
 	if type(data.codex) == "table" and type(data.codex.title) == "string" and not known.title[data.codex.title] then
-		table.insert(moved, "codexTitle:" .. data.codex.title)
+		table.insert(resets, "codexTitle:" .. data.codex.title)
 		data.codex.title = nil
 	end
-	return moved, restored
+	return moved, restored, resets
 end
 
 -- 불러오기. 성공하면 profile을 돌려준다(신규 플레이어면 defaultProfile 형태를 migrate에
@@ -1928,10 +1933,11 @@ function SaveSystem.loadProfile(player)
 				warn(("[SaveSystem] 손상 저장 고침: %s - %s"):format(player.Name, table.concat(repaired, " · ")))
 			end
 			-- QUEUE-ALL5 A3: 모르는 id = 보관 칸으로(로드 실패 대신) · 다시 생긴 id = 제자리로
-			local okQ, quarantined, restoredN = pcall(SaveSystem.quarantineUnknownIds, profile)
-			if okQ and (#quarantined > 0 or restoredN > 0) then
+			local okQ, quarantined, restoredN, resets = pcall(SaveSystem.quarantineUnknownIds, profile)
+			if okQ and (#quarantined > 0 or restoredN > 0 or #resets > 0) then
 				info.quarantined, info.quarantineRestored = quarantined, restoredN
-				warn(("[SaveSystem] 모르는 id 보관: %s - 옮김 %d(%s%s) · 되돌림 %d"):format(player.Name, #quarantined, table.concat(quarantined, " · ", 1, math.min(#quarantined, 10)), #quarantined > 10 and " …" or "", restoredN))
+				warn(("[SaveSystem] 모르는 id 보관: %s - 옮김 %d(%s%s) · 되돌림 %d · 선택 해제 %d(%s)"):format(player.Name, #quarantined, table.concat(quarantined, " · ", 1, math.min(#quarantined, 10)),
+					#quarantined > 10 and " …" or "", restoredN, #resets, table.concat(resets, " · ", 1, math.min(#resets, 10))))
 			elseif not okQ then
 				warn(("[SaveSystem] 보관 처리 에러: %s - %s"):format(player.Name, tostring(quarantined)))
 			end
