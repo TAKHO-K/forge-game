@@ -296,7 +296,7 @@ local function defaultProfile()
 		comeback = { untilAt = 0 }, -- C5-5(v48): 복귀 부스트 만료 unix 초(0 = 없음) - SaveServer가 로드 직후 마지막 저장 savedAt과 비교해 준다
 		-- QUEUE-B1 B2(v56) 수익화 골격: 치장(산 테마 세트 · 글라이더 스킨 · 칸별 장착 · 나무 정거장 조각 받은 기록 - 키는 전부 문자열) · 선물함 · 시즌 패스.
 		--   purchases.receipts(영수증 중복 방지 - 최근 PurchaseId) · purchases.log(구매 기록)는 아래 purchases 안.
-		cosmetics = { themes = {}, gliderSkins = {}, equipped = {}, treeStations = {} },
+		cosmetics = { themes = {}, gliderSkins = {}, equipped = {}, treeStations = {}, items = {} }, -- QUEUE-ALL6 H(v64) items = 꾸미기 소품
 		quarantine = {}, -- QUEUE-ALL5 A3(v63): 보관 칸 - 데이터에서 없어진 id를 가진 값({ kind, why, value, classId?, at }). 로드 실패 대신 여기로 · 그 id가 다시 생기면 제자리로(SaveSystem.quarantineUnknownIds)
 		mailbox = { gifts = {}, seq = 0, claimedIds = {} }, -- gifts = { { id, kind, itemId | amount, from, note, at } } · seq = 이 계정 안 선물 번호 · claimedIds(v62) = 받은 선물 id(최근 MonetizationData.gifts.claimedIdsKeep개 - 재지급 방지)
 		seasonPass = { season = 0, premium = false, claimedFree = {}, claimedPaid = {} }, -- season = 기록한 시즌 번호(바뀌면 경험치 · 받음 · 유료 초기화)
@@ -1346,6 +1346,14 @@ local function migrate(data)
 		data.version = 63
 	end
 
+	if data.version < 64 then
+		-- QUEUE-ALL6 H: cosmetics.items(꾸미기 소품 - 칸 하나짜리 · { [id] = true }) - 옛 계정 = 빈 표
+		if type(data.cosmetics) == "table" and type(data.cosmetics.items) ~= "table" then
+			data.cosmetics.items = {}
+		end
+		data.version = 64
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data
@@ -1753,8 +1761,8 @@ function SaveSystem.quarantineUnknownIds(data)
 			elseif e.kind == "material" and type(v) == "table" and known.material[tostring(v.id)] and type(data.materials) == "table" then
 				data.materials[v.id] = (tonumber(data.materials[v.id]) or 0) + (tonumber(v.amount) or 0)
 				back = true
-			elseif (e.kind == "cosmeticTheme" or e.kind == "gliderSkin") and cosmetics and known[e.kind][tostring(v)] then
-				local bag = e.kind == "cosmeticTheme" and cosmetics.themes or cosmetics.gliderSkins
+			elseif (e.kind == "cosmeticTheme" or e.kind == "gliderSkin" or e.kind == "cosmeticItem") and cosmetics and known[e.kind][tostring(v)] then
+				local bag = e.kind == "cosmeticTheme" and cosmetics.themes or e.kind == "gliderSkin" and cosmetics.gliderSkins or cosmetics.items
 				if type(bag) == "table" then
 					bag[v] = true
 					back = true
@@ -1835,7 +1843,7 @@ function SaveSystem.quarantineUnknownIds(data)
 		end
 	end
 	if cosmetics then
-		for _, pair in ipairs({ { "cosmeticTheme", cosmetics.themes }, { "gliderSkin", cosmetics.gliderSkins } }) do
+		for _, pair in ipairs({ { "cosmeticTheme", cosmetics.themes }, { "gliderSkin", cosmetics.gliderSkins }, { "cosmeticItem", cosmetics.items } }) do -- QUEUE-ALL6 H
 			if type(pair[2]) == "table" then
 				for id in pairs(table.clone(pair[2])) do
 					if not known[pair[1]][tostring(id)] then
@@ -1847,12 +1855,16 @@ function SaveSystem.quarantineUnknownIds(data)
 		end
 		if type(cosmetics.equipped) == "table" then
 			-- 리뷰(QUEUE-ALL5 A3): equipped에는 세트 칸 · 글라이더 말고도 이름표 색 · 배지(게임패스 선택값 - 테마 id 아님)가 있다 → 세트 칸 · 글라이더만 본다
-			local setSlot = {}
-			for _, slotId in ipairs(require(ReplicatedStorage.Shared.data.CosmeticSlotData).setSlots) do
+			local setSlot, itemSlot = {}, {}
+			local CSD = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
+			for _, slotId in ipairs(CSD.setSlots) do
 				setSlot[slotId] = true
 			end
+			for _, slotId in ipairs(CSD.itemSlots or {}) do
+				itemSlot[slotId] = true -- QUEUE-ALL6 H 꾸미기 소품 칸
+			end
 			for slot, id in pairs(table.clone(cosmetics.equipped)) do
-				local kind = slot == "gliderSkin" and "gliderSkin" or (setSlot[slot] and "cosmeticTheme" or nil)
+				local kind = slot == "gliderSkin" and "gliderSkin" or (setSlot[slot] and "cosmeticTheme" or (itemSlot[slot] and "cosmeticItem" or nil))
 				if kind and type(id) == "string" and not known[kind][id] then
 					cosmetics.equipped[slot] = nil -- 기본 모습으로(선택값 - 보관 안 함)
 					table.insert(resets, "equipped." .. tostring(slot) .. ":" .. id)

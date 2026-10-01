@@ -16,7 +16,7 @@ local TitleData = require(ReplicatedStorage.Shared.data.TitleData)
 
 local IdRegistry = {}
 
-IdRegistry.kinds = { "option", "material", "grade", "part", "setZone", "skillVariant", "special", "cosmeticTheme", "gliderSkin", "title" }
+IdRegistry.kinds = { "option", "material", "grade", "part", "setZone", "skillVariant", "special", "cosmeticTheme", "gliderSkin", "title", "cosmeticItem" } -- QUEUE-ALL6 H cosmeticItem
 
 local function keysOf(map)
 	local out = {}
@@ -39,6 +39,10 @@ function IdRegistry.lists()
 	for _, g in ipairs(CosmeticSlotData.gliderSkins) do
 		table.insert(gliders, g.id)
 	end
+	local items = {}
+	for _, it in ipairs(CosmeticSlotData.items or {}) do
+		table.insert(items, it.id)
+	end
 	local lists = {
 		option = keysOf(OptionData.options),
 		material = table.clone(EnhanceMaterialData.order),
@@ -49,6 +53,7 @@ function IdRegistry.lists()
 		special = keysOf(TranscendentData.specialNames),
 		cosmeticTheme = themes,
 		gliderSkin = gliders,
+		cosmeticItem = items,
 		title = keysOf(TitleData.titles),
 	}
 	for _, list in pairs(lists) do

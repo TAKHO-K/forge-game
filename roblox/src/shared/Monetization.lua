@@ -48,7 +48,7 @@ function Monetization.checkProduct(data, key, product, cosmetics)
 		local ok, why = Monetization.checkGrant(data, grant)
 		if not ok then
 			table.insert(reasons, ("%s: %s"):format(key, why))
-		elseif cosmetics and (grant.kind == "cosmeticTheme" or grant.kind == "gliderSkin") and not Monetization.findCosmetic(cosmetics, grant.kind, grant.id) then
+		elseif cosmetics and (grant.kind == "cosmeticTheme" or grant.kind == "gliderSkin" or grant.kind == "cosmeticItem") and not Monetization.findCosmetic(cosmetics, grant.kind, grant.id) then
 			table.insert(reasons, ("%s: 없는 치장 %s"):format(key, tostring(grant.id)))
 		elseif cosmetics and Monetization.seasonOnly(cosmetics, grant.kind, grant.id) then
 			table.insert(reasons, ("%s: 시즌 한정 치장 %s는 상품으로 못 판다(재판매 없음)"):format(key, tostring(grant.id))) -- QUEUE-ALL1 R1
@@ -63,15 +63,33 @@ function Monetization.checkProduct(data, key, product, cosmetics)
 	return #reasons == 0, reasons
 end
 
+-- QUEUE-ALL6 H: 지금 팔리는가(seasonMonth = 그 달(KST)에만 판매 - 할로윈 10월). 산 사람은 계속 가진다 · 장착도 된다(판매만 막음).
+function Monetization.onSale(cosmetics, kind, id, unixNow)
+	local entry = Monetization.findCosmetic(cosmetics, kind, id)
+	if type(entry) ~= "table" or not entry.seasonMonth then
+		return true
+	end
+	return tonumber(os.date("!%m", (unixNow or os.time()) + 9 * 3600)) == entry.seasonMonth
+end
+
+-- 상품 키 → 그 상품이 주는 치장(첫 grant) - 판매 기간 검사용
+function Monetization.productCosmetic(product)
+	local g = type(product) == "table" and type(product.grants) == "table" and product.grants[1]
+	if g and (g.kind == "cosmeticTheme" or g.kind == "gliderSkin" or g.kind == "cosmeticItem") then
+		return g.kind, g.id
+	end
+	return nil
+end
+
 -- QUEUE-ALL1 R1: 시즌 한정 치장(seasonOnly = 시즌 번호)이면 그 번호 · 아니면 nil - 상품 · 반짝 조각 · 선물로 못 준다(시즌 줄만)
 function Monetization.seasonOnly(cosmetics, kind, id)
 	local entry = Monetization.findCosmetic(cosmetics, kind, id)
 	return type(entry) == "table" and entry.seasonOnly or nil
 end
 
--- 치장 찾기(CosmeticSlotData). kind = cosmeticTheme | gliderSkin
+-- 치장 찾기(CosmeticSlotData). kind = cosmeticTheme | gliderSkin | cosmeticItem(QUEUE-ALL6 H 꾸미기 소품)
 function Monetization.findCosmetic(cosmetics, kind, id)
-	local list = kind == "cosmeticTheme" and cosmetics.sets or kind == "gliderSkin" and cosmetics.gliderSkins or nil
+	local list = kind == "cosmeticTheme" and cosmetics.sets or kind == "gliderSkin" and cosmetics.gliderSkins or kind == "cosmeticItem" and cosmetics.items or nil
 	for _, entry in ipairs(list or {}) do
 		if entry.id == id then
 			return entry
@@ -81,9 +99,9 @@ function Monetization.findCosmetic(cosmetics, kind, id)
 end
 
 -- 시즌 패스 줄 규칙: 유료 줄 = 판매 금지 밖 + 치장 · 치장 재화만 · 알(랜덤) 없음 / 무료 줄 = 알 허용(무료 랜덤) · 판매 금지 종류도 무료 보상이라 막지 않는다(골드 등은 지금 없음).
-local PAID_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true }
+local PAID_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, cosmeticItem = true }
 Monetization.PAID_ROW_KINDS = PAID_ROW_KINDS -- 리뷰 중요 2: 서버가 유료 줄을 지급할 때도 같은 표로 막는다
-local FREE_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, egg = true }
+local FREE_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, cosmeticItem = true, egg = true }
 function Monetization.checkSeasonPass(data, season, cosmetics)
 	local reasons = {}
 	for tier = 1, season.tiers do

@@ -1,7 +1,18 @@
 {
+ "cosmeticItem": [
+  "balloonPop",
+  "crystalBlade",
+  "forgeBrazier",
+  "goldenHammer",
+  "highFive",
+  "petCrown",
+  "rocketPop"
+ ],
  "cosmeticTheme": [
+  "anvil",
   "ember",
   "frost",
+  "halloween",
   "jelly",
   "starlight"
  ],
@@ -9,7 +20,8 @@
   "cloudWhale",
   "dragonWing",
   "kite",
-  "petal"
+  "petal",
+  "slimeParachute"
  ],
  "grade": [
   "ancient",

@@ -148,6 +148,21 @@ local ok, err = pcall(function()
 	-- (가짜 Player는 Instance가 아니라 Attribute 적용은 건너뛴다 - 장착 표로 확인 · Attribute는 다음 Play 목록)
 	check("칸별 섞어 장착(frost + ember) · 안 산 세트 거부 · 패스 없는 이름표 색 거부", e1 and e2 and not e3 and w4 == "not_owned" and not e4 and w5 == "no_pass"
 		and s.cosmetics.equipped.dashTrail == "frost" and s.cosmetics.equipped.jumpFx == "ember" and s.cosmetics.equipped.glideTrail == nil)
+	-- QUEUE-ALL6 H 꾸미기 소품(cosmeticItem): 조각 60 · 칸 맞춤 장착 · 다른 칸 거부 · 소품 상품 지급 멱등 · 할로윈 10월만
+	qs.currencies.sparkleShard = 100
+	local i1 = MODS.CosmeticService.buyWithShards(player, "cosmeticItem", "rocketPop")
+	local i2, wi2 = MODS.CosmeticService.buyWithShards(player, "cosmeticItem", "rocketPop")
+	local q1 = MODS.CosmeticService.equip(player, "killFx", "rocketPop")
+	local q2, wq2 = MODS.CosmeticService.equip(player, "weaponSkin", "rocketPop")
+	local q3, wq3 = MODS.CosmeticService.equip(player, "killFx", "balloonPop")
+	check("소품: 조각 60 차감 · 두 번째 owned · 처치 칸 장착 · 다른 칸 거부 · 안 산 소품 거부", i1 and not i2 and wi2 == "owned" and qs.currencies.sparkleShard == 40 and q1 and not q2 and wq2 == "unknown" and not q3 and wq3 == "not_owned"
+		and s.cosmetics.equipped.killFx == "rocketPop", ("조각 %d"):format(qs.currencies.sparkleShard))
+	local g1 = MODS.CosmeticService.grant(player, "cosmeticItem", "petCrown")
+	local g2, wg2 = MODS.CosmeticService.grant(player, "cosmeticItem", "petCrown")
+	check("소품 지급(상품 · 선물 공통 입구) 멱등 · 테마/글라이더 표에 안 섞임", g1 and not g2 and wg2 == "owned" and s.cosmetics.items.petCrown == true and s.cosmetics.gliderSkins.petCrown == nil and s.cosmetics.themes.petCrown == nil)
+	local oct = os.time({ year = 2026, month = 10, day = 15, hour = 3 })
+	local sep = os.time({ year = 2026, month = 9, day = 15, hour = 3 })
+	check("할로윈 테마 = 10월(KST)만 판매 · 다른 테마는 늘", Mon.onSale(Cos, "cosmeticTheme", "halloween", oct) and not Mon.onSale(Cos, "cosmeticTheme", "halloween", sep) and Mon.onSale(Cos, "cosmeticTheme", "anvil", sep))
 
 	-- ⑤ 조각 출처: 나무 정거장 1회 · 순간이동 도착 제외
 	local before = qs.currencies.sparkleShard

@@ -62,7 +62,7 @@ function MonetizationService.applyReward(player, reward, source)
 				return false, why
 			end
 		end
-		if grant.kind == "cosmeticTheme" or grant.kind == "gliderSkin" then
+		if grant.kind == "cosmeticTheme" or grant.kind == "gliderSkin" or grant.kind == "cosmeticItem" then -- QUEUE-ALL6 H 꾸미기 소품
 			local got, why = CosmeticService.grant(player, grant.kind, grant.id)
 			if not got and why ~= "owned" then
 				return false, why
@@ -245,6 +245,7 @@ function MonetizationService.view(player)
 		shardPrices = MonetizationData.shardPrices,
 		themes = table.clone(s.cosmetics.themes),
 		gliderSkins = table.clone(s.cosmetics.gliderSkins),
+		items = table.clone(type(s.cosmetics.items) == "table" and s.cosmetics.items or {}), -- QUEUE-ALL6 H 꾸미기 소품
 		equipped = table.clone(s.cosmetics.equipped),
 		products = products,
 		passes = passes,
@@ -269,6 +270,7 @@ function MonetizationService.ownsAll(player, product)
 	end
 	for _, grant in ipairs(product.grants) do
 		local owned = (grant.kind == "cosmeticTheme" and s.cosmetics.themes[grant.id]) or (grant.kind == "gliderSkin" and s.cosmetics.gliderSkins[grant.id])
+			or (grant.kind == "cosmeticItem" and type(s.cosmetics.items) == "table" and s.cosmetics.items[grant.id]) -- QUEUE-ALL6 H
 			or (grant.kind == "seasonPremium" and SeasonPassService.ensure(player) and s.seasonPass.premium)
 		if not owned then
 			return false
@@ -285,6 +287,10 @@ function MonetizationService.promptProduct(player, key)
 	end
 	if product.productId == 0 then
 		return false, "not_ready"
+	end
+	local ckind, cid = Monetization.productCosmetic(product)
+	if ckind and not Monetization.onSale(CosmeticSlotData, ckind, cid) then
+		return false, "off_season" -- QUEUE-ALL6 H: 할로윈 = 10월만 판매(산 사람은 계속 가짐)
 	end
 	if not Monetization.paidRandomAllowed(product, MonetizationService.isRestricted(player)) then
 		return false, "restricted"

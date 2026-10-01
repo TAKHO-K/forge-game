@@ -422,7 +422,7 @@ function R.start()
 	buyRerollRemote = ReplicatedStorage:WaitForChild("BuyRerollTicketRequest")
 
 	-- QUEUE-B1 결정 10: 서버 결과(action, ok, why) - 실패면 이유 한 줄(표 비교 추정보다 우선) · 성공이면 다음 ShopSync의 추정 문구를 그대로 쓴다
-	local SHOP_REASON = { shards = "shop.reason.shards", owned = "shop.reason.owned", not_ready = "shop.reason.notReady", not_owned = "shop.reason.notOwned",
+	local SHOP_REASON = { shards = "shop.reason.shards", owned = "shop.reason.owned", off_season = "item.reason.offSeason", not_ready = "shop.reason.notReady", not_owned = "shop.reason.notOwned",
 		no_pass = "shop.reason.noPass", not_reached = "shop.reason.notReached", claimed = "shop.reason.claimed", not_premium = "shop.reason.notPremium",
 		egg_full = "shop.reason.eggFull", restricted = "shop.reason.restricted", none = "shop.reason.none" }
 	ReplicatedStorage:WaitForChild("ShopResult").OnClientEvent:Connect(function(_, ok, why)

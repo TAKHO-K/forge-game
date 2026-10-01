@@ -112,8 +112,18 @@ local ok, err = pcall(function()
 	local v62 = SaveSystem.migrate({})
 	v62.version, v62.quarantine = 62, nil
 	local m63 = SaveSystem.migrate(v62)
-	check("v62 표본 → v63: quarantine 빈 목록", m63.version == 63 and type(m63.quarantine) == "table" and #m63.quarantine == 0)
-	check("IdRegistry 종류 10 · 빈 목록 없음", #IdRegistry.kinds == 10 and (function()
+	check("v62 표본 → 최신(v64): quarantine 빈 목록", m63.version == MODS.SaveConfig.saveVersion and type(m63.quarantine) == "table" and #m63.quarantine == 0)
+	-- QUEUE-ALL6 H: v63 표본(cosmetics.items 없음) → v64 = 빈 소품 표 · 모르는 소품 id = 보관 · 장착 칸 비움
+	local v63 = SaveSystem.migrate({})
+	v63.version, v63.cosmetics.items = 63, nil
+	local m64 = SaveSystem.migrate(v63)
+	check("v63 표본 → v64: cosmetics.items 빈 표", m64.version == 64 and type(m64.cosmetics.items) == "table" and next(m64.cosmetics.items) == nil)
+	local q = SaveSystem.migrate({})
+	q.cosmetics.items = { rocketPop = true, ghostItem = true }
+	q.cosmetics.equipped.killFx = "ghostItem"
+	local moved = SaveSystem.quarantineUnknownIds(q)
+	check(("모르는 소품 id 보관 · 아는 것 그대로 · 장착 칸 비움: 옮김 %d"):format(#moved), q.cosmetics.items.rocketPop == true and q.cosmetics.items.ghostItem == nil and q.cosmetics.equipped.killFx == nil and #moved >= 1)
+	check("IdRegistry 종류 11(cosmeticItem 추가) · 빈 목록 없음", #IdRegistry.kinds == 11 and (function()
 		for _, kind in ipairs(IdRegistry.kinds) do if not lists[kind] or #lists[kind] == 0 then return false end end
 		return true
 	end)())

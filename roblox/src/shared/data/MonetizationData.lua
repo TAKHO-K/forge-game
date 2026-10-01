@@ -14,7 +14,7 @@ return {
 		rebirthTicket = "expMultiplier", titleId = "title", expBoost = "expMultiplier", goldBoost = "goldMultiplier",
 	},
 	-- 팔 수 있는 종류(이 밖의 종류는 모르는 종류로 거부 - 새 종류는 여기와 검사에 같이 넣는다)
-	allowedKinds = { cosmeticTheme = true, gliderSkin = true, seasonPremium = true, gamePass = true },
+	allowedKinds = { cosmeticTheme = true, gliderSkin = true, seasonPremium = true, gamePass = true, cosmeticItem = true }, -- QUEUE-ALL6 H cosmeticItem = 꾸미기 소품(칸 하나 · 겉모습만)
 
 	-- 개발자 상품(Developer Product - ProcessReceipt). key = 코드 이름 · productId = Creator Hub 번호(자리 0) · robux = 표시 가격(자리 - 실제 가격은 Creator Hub 값이 우선).
 	--   grants = 산 사람이 받는 것(종류 · id). paidRandom = 유료 랜덤(지금 0개 - 넣으면 odds 필수 · 정책 제한 국가에서 구매 막힘).
@@ -27,6 +27,17 @@ return {
 		theme_jelly = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "jelly" } } }, -- QUEUE-ALL1 P6 말랑 젤리
 		glider_dragonWing = { productId = 0, robux = 149, grants = { { kind = "gliderSkin", id = "dragonWing" } } }, -- QUEUE-ALL1 P6 푸른 드래곤 날개
 		season_premium = { productId = 0, robux = 399, grants = { { kind = "seasonPremium" } } }, -- 이번 시즌 유료 줄(시즌마다 다시 산다)
+		-- QUEUE-ALL6 H 꾸미기 TOP 10(사용자 확정 · 유료 랜덤 없음 · 자리값 0). 키 규칙 = theme_<id> · glider_<id> · item_<id>
+		theme_anvil = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "anvil" } } },
+		theme_halloween = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "halloween" } } }, -- 10월만 판매(CosmeticSlotData seasonMonth)
+		glider_slimeParachute = { productId = 0, robux = 149, grants = { { kind = "gliderSkin", id = "slimeParachute" } } },
+		item_rocketPop = { productId = 0, robux = 99, grants = { { kind = "cosmeticItem", id = "rocketPop" } } },
+		item_balloonPop = { productId = 0, robux = 99, grants = { { kind = "cosmeticItem", id = "balloonPop" } } },
+		item_crystalBlade = { productId = 0, robux = 149, grants = { { kind = "cosmeticItem", id = "crystalBlade" } } },
+		item_goldenHammer = { productId = 0, robux = 99, grants = { { kind = "cosmeticItem", id = "goldenHammer" } } },
+		item_forgeBrazier = { productId = 0, robux = 99, grants = { { kind = "cosmeticItem", id = "forgeBrazier" } } },
+		item_highFive = { productId = 0, robux = 49, grants = { { kind = "cosmeticItem", id = "highFive" } } },
+		item_petCrown = { productId = 0, robux = 49, grants = { { kind = "cosmeticItem", id = "petCrown" } } },
 	},
 	-- 게임패스(편의만 - 전투력 · 획득량 없음). passId = Creator Hub 번호(자리 0). 효과 수치도 여기(편의 값).
 	gamePasses = {
@@ -37,9 +48,9 @@ return {
 		nameplateBadge = { passId = 0, robux = 49, badges = { "hammer", "slime", "star", "heart" } }, -- QUEUE-ALL1 P6 이름표 배지: 이름 앞 작은 정지 아이콘 1개(고르기) · 칭호 흐름 띠와 안 겹침 · 전투력 없음
 	},
 	-- 반짝 조각 가격(로벅스 대신 조각으로 살 때 - 골드 불가). 조각을 **상품으로 직접** 팔지 않는다(유료 재화 상품 없음 - 시즌 유료 줄 보상에는 조각이 있다 · 조각은 치장만 산다 - 설계 문서 §3 · §10-2).
-	shardPrices = { theme = 120, gliderSkin = 80 },
+	shardPrices = { theme = 120, gliderSkin = 80, item = 60 }, -- QUEUE-ALL6 H item = 꾸미기 소품 하나(도감 절반 120 = 테마 1 또는 소품 2)
 	-- QUEUE-B1 결정 8: 이미 가진 것을 (클라가 직접 연 구매 창으로) 산 영수증 · 지난 시즌에 연 유료 줄 영수증 = 반짝 조각으로 환산(자리값 - 조각 가격 기준).
-	ownedRefundShards = { cosmeticTheme = 120, gliderSkin = 80, seasonPremium = 120 },
+	ownedRefundShards = { cosmeticTheme = 120, gliderSkin = 80, seasonPremium = 120, cosmeticItem = 60 },
 	-- 반짝 조각 출처(퀘스트 · 출석 · 메인 퀘스트 보상은 QuestData에 이미 있다 - 여기는 새 출처만)
 	shardSources = {
 		treeStation = 2, -- 나무 정거장 처음 오르기(정거장마다 1회 · 리프트 · 순간이동 도착은 제외)
@@ -53,7 +64,7 @@ return {
 	logKeep = 100,
 	-- 선물함(우편함): 치장만 · 관리자 = server/OpsConfig.userIds(운영 명령과 같은 목록) · 유저 간 로벅스 선물 = 자리(enabled false)
 	gifts = {
-		allowedKinds = { cosmeticTheme = true, gliderSkin = true, sparkleShard = true }, -- 선물로 줄 수 있는 것(치장 · 치장 재화)
+		allowedKinds = { cosmeticTheme = true, gliderSkin = true, sparkleShard = true, cosmeticItem = true }, -- 선물로 줄 수 있는 것(치장 · 치장 재화)
 		maxPending = 50, -- 한 사람 받을 선물 상한(넘으면 관리자 명령이 거부)
 		claimedIdsKeep = 200, -- QUEUE-ALL5 A1(v62): 받은 선물 id 기록 개수(mailbox.claimedIds - 최근 것만 · 넘치면 가장 오래된 것부터 버림). 대기열에 남은 같은 id는 옮길 때마다 지우기를 다시 시도하므로 200개(= 상한 50의 4배) 밖으로 밀려날 때까지 남아 있을 수 없다
 		storeName = "Gifts_v1", -- 오프라인 대상에게 쌓는 DataStore(검증 무장 중 = _verify 접미사)

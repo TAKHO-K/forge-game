@@ -28,6 +28,7 @@ return {
 		["item.owned"] = "가진 것: {n}",
 		["item.collapseHint"] = "닫기",
 		["item.attendance.today"] = "오늘",
+		["item.reason.offSeason"] = "지금은 판매 기간이 아니에요(10월 한정)",
 	},
 	en = {
 		["item.name.gold"] = "Gold",
@@ -57,5 +58,6 @@ return {
 		["item.owned"] = "You have: {n}",
 		["item.collapseHint"] = "Close",
 		["item.attendance.today"] = "Today",
+		["item.reason.offSeason"] = "Not on sale right now (October only)",
 	},
 }

@@ -13,6 +13,10 @@ local PlayerProfile = require(script.Parent.PlayerProfile)
 local CosmeticService = {}
 
 local SET_SLOTS = {}
+local ITEM_SLOTS = {} -- QUEUE-ALL6 H
+for _, slotId in ipairs(CosmeticSlotData.itemSlots or {}) do
+	ITEM_SLOTS[slotId] = true
+end
 for _, slot in ipairs(CosmeticSlotData.setSlots) do
 	SET_SLOTS[slot] = true
 end
@@ -52,6 +56,23 @@ function CosmeticService.ownsGlider(player, id)
 	local s = state(player)
 	return s ~= nil and s.cosmetics.gliderSkins[id] == true
 end
+-- QUEUE-ALL6 H 꾸미기 소품(v64 cosmetics.items)
+function CosmeticService.ownsItem(player, id)
+	local s = state(player)
+	return s ~= nil and type(s.cosmetics.items) == "table" and s.cosmetics.items[id] == true
+end
+local function ownedBag(s, kind)
+	if kind == "cosmeticTheme" then
+		return s.cosmetics.themes
+	elseif kind == "gliderSkin" then
+		return s.cosmetics.gliderSkins
+	elseif kind == "cosmeticItem" then
+		s.cosmetics.items = type(s.cosmetics.items) == "table" and s.cosmetics.items or {}
+		return s.cosmetics.items
+	end
+	return nil
+end
+CosmeticService.ownedBag = ownedBag
 
 -- 장착 결과를 Attribute로(클라 훅이 읽는다)
 function CosmeticService.applyAttributes(player)
@@ -76,7 +97,10 @@ function CosmeticService.grant(player, kind, id)
 	if not Monetization.findCosmetic(CosmeticSlotData, kind, id) then
 		return false, "unknown"
 	end
-	local owned = kind == "cosmeticTheme" and s.cosmetics.themes or s.cosmetics.gliderSkins
+	local owned = ownedBag(s, kind) -- QUEUE-ALL6 H: 두 갈래 → 종류별(새 종류가 글라이더 칸에 들어가던 것 방지)
+	if not owned then
+		return false, "unknown"
+	end
 	if owned[id] then
 		return false, "owned"
 	end
@@ -87,14 +111,18 @@ end
 
 -- 반짝 조각으로 사기. 반환: ok, 이유
 function CosmeticService.buyWithShards(player, kind, id)
-	local price = kind == "cosmeticTheme" and MonetizationData.shardPrices.theme or kind == "gliderSkin" and MonetizationData.shardPrices.gliderSkin or nil
+	local price = kind == "cosmeticTheme" and MonetizationData.shardPrices.theme or kind == "gliderSkin" and MonetizationData.shardPrices.gliderSkin
+		or kind == "cosmeticItem" and MonetizationData.shardPrices.item or nil
 	if not price or not Monetization.findCosmetic(CosmeticSlotData, kind, id) then
 		return false, "unknown"
 	end
 	if Monetization.seasonOnly(CosmeticSlotData, kind, id) then
 		return false, "season_only" -- QUEUE-ALL1 R1: 시즌 한정(구름 고래) = 시즌 줄에서만
 	end
-	if (kind == "cosmeticTheme" and CosmeticService.ownsTheme(player, id)) or (kind == "gliderSkin" and CosmeticService.ownsGlider(player, id)) then
+	if not Monetization.onSale(CosmeticSlotData, kind, id) then
+		return false, "off_season" -- QUEUE-ALL6 H: 할로윈 = 10월만 판매
+	end
+	if (kind == "cosmeticTheme" and CosmeticService.ownsTheme(player, id)) or (kind == "gliderSkin" and CosmeticService.ownsGlider(player, id)) or (kind == "cosmeticItem" and CosmeticService.ownsItem(player, id)) then
 		return false, "owned"
 	end
 	if not spendShards(player, price) then
@@ -132,6 +160,14 @@ function CosmeticService.equip(player, slot, id)
 		end
 	elseif slot == "gliderSkin" then
 		if id ~= nil and not s.cosmetics.gliderSkins[id] then
+			return false, "not_owned"
+		end
+	elseif ITEM_SLOTS[slot] then -- QUEUE-ALL6 H 꾸미기 소품 칸: 가진 소품 · 그 칸의 소품만
+		local entry = id ~= nil and Monetization.findCosmetic(CosmeticSlotData, "cosmeticItem", id)
+		if id ~= nil and (not entry or entry.slot ~= slot) then
+			return false, "unknown"
+		end
+		if id ~= nil and not CosmeticService.ownsItem(player, id) then
 			return false, "not_owned"
 		end
 	else
