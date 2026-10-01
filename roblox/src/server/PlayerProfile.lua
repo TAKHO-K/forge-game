@@ -2559,6 +2559,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		redeemedCodes = deepCopy(profile.redeemedCodes), -- QUEUE-ALL1 P4(v58)
 		codex = profile.codex and deepCopy(profile.codex) or nil, -- QUEUE-ALL1 P5(v59)
 		weeklyChallenge = deepCopy(profile.weeklyChallenge), -- QUEUE-ALL1 P4(v58)
+		quarantine = deepCopy(profile.quarantine), -- QUEUE-ALL5 A3(v63): 새 저장 필드 = 백업 대상(COMMON §1)
 	}
 end
 
@@ -2607,6 +2608,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.redeemedCodes = snapshot.redeemedCodes and deepCopy(snapshot.redeemedCodes) or profile.redeemedCodes -- QUEUE-ALL1 P4(v58)
 	profile.codex = snapshot.codex and deepCopy(snapshot.codex) or profile.codex -- QUEUE-ALL1 P5(v59)
 	profile.weeklyChallenge = snapshot.weeklyChallenge and deepCopy(snapshot.weeklyChallenge) or profile.weeklyChallenge
+	profile.quarantine = snapshot.quarantine and deepCopy(snapshot.quarantine) or profile.quarantine -- QUEUE-ALL5 A3(v63)
 	task.defer(function() -- 결정 9: 복원한 치장 · 패스를 Attribute로(늦은 require - 순환 방지)
 		if profiles[player] then
 			require(script.Parent.MonetizationService).reapplyAttributes(player)

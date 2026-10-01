@@ -377,7 +377,7 @@ local function main()
 		{ "classes 문자열 → invalid_schema(고치지 않음)", function(d) d.classes = "broken" end, function(p, info, err) return p == nil and err == "invalid_schema" end },
 		{ "classes 빈 표 → invalid_schema(진행 덮어쓰기 방지)", function(d) d.classes = {} end, function(p, info, err) return p == nil and err == "invalid_schema" end },
 		{ "inventory nil → invalid_schema(고치지 않음)", function(d) d.inventory = nil end, function(p, info, err) return p == nil and err == "invalid_schema" end },
-		{ "모르는 옵션 id → invalid_schema(결정 필요)", function(d) d.inventory = { { grade = "epic", part = "armor", option = { id = "removedOption" } } } end, function(p, info, err) return p == nil and err == "invalid_schema" end },
+		{ "모르는 옵션 id → 로드 O · 그 장비만 보관 칸(QUEUE-ALL5 A3 - 옛 기대 = invalid_schema)", function(d) d.inventory = { { grade = "epic", part = "armor", option = { id = "removedOption" } } } end, function(p, info, err) return p ~= nil and #p.inventory == 0 and #p.quarantine == 1 and p.quarantine[1].why == "option:removedOption" and info.quarantined and #info.quarantined == 1 end },
 	}
 	for _, case in ipairs(BAD) do
 		local raw = corrupt(case[2])
@@ -392,7 +392,7 @@ local function main()
 		check("BAD", "저장값이 표가 아님(문자열) → invalid_schema", profile == nil and err == "invalid_schema", tostring(err))
 		local big = SaveA.migrate({})
 		for i = 1, 20000 do
-			big.inventory[i] = { grade = "epic", part = "armor", dropStage = 40, itemLevel = 42, tierIndex = 3, locked = false, option = { id = "attackPercent", roll = 0.9731 }, source = { kind = "field", zone = "meadow", stage = 40 }, setZone = "meadow" }
+			big.inventory[i] = { grade = "epic", part = "armor", dropStage = 40, itemLevel = 42, tierIndex = 3, locked = false, option = { id = "attackPercent", roll = 0.9731 }, source = { kind = "field", zone = "tier1", stage = 40 }, setZone = "tier1" }
 		end
 		for i = 1, 3000 do
 			big.classes.bow.gemInventory[i] = { grade = "ancient", option = { id = "crit", roll = 1.0 }, itemLevel = 300 }

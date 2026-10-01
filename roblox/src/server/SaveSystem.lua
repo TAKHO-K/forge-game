@@ -297,6 +297,7 @@ local function defaultProfile()
 		-- QUEUE-B1 B2(v56) 수익화 골격: 치장(산 테마 세트 · 글라이더 스킨 · 칸별 장착 · 나무 정거장 조각 받은 기록 - 키는 전부 문자열) · 선물함 · 시즌 패스.
 		--   purchases.receipts(영수증 중복 방지 - 최근 PurchaseId) · purchases.log(구매 기록)는 아래 purchases 안.
 		cosmetics = { themes = {}, gliderSkins = {}, equipped = {}, treeStations = {} },
+		quarantine = {}, -- QUEUE-ALL5 A3(v63): 보관 칸 - 데이터에서 없어진 id를 가진 값({ kind, why, value, classId?, at }). 로드 실패 대신 여기로 · 그 id가 다시 생기면 제자리로(SaveSystem.quarantineUnknownIds)
 		mailbox = { gifts = {}, seq = 0, claimedIds = {} }, -- gifts = { { id, kind, itemId | amount, from, note, at } } · seq = 이 계정 안 선물 번호 · claimedIds(v62) = 받은 선물 id(최근 MonetizationData.gifts.claimedIdsKeep개 - 재지급 방지)
 		seasonPass = { season = 0, premium = false, claimedFree = {}, claimedPaid = {} }, -- season = 기록한 시즌 번호(바뀌면 경험치 · 받음 · 유료 초기화)
 
@@ -1337,6 +1338,14 @@ local function migrate(data)
 		data.version = 62
 	end
 
+	if data.version < 63 then
+		-- QUEUE-ALL5 A3: quarantine(보관 칸) - 옛 계정 = 빈 목록(모르는 id 검사는 로드 때마다 SaveSystem.quarantineUnknownIds가 한다)
+		if type(data.quarantine) ~= "table" then
+			data.quarantine = {}
+		end
+		data.version = 63
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data
@@ -1709,6 +1718,158 @@ function SaveSystem.repairProfile(data)
 	return fixed
 end
 
+-- QUEUE-ALL5 A3(결정 - 출시 뒤 id 삭제 금지 + 안전 로드): 데이터에서 없어진 id(옵션 · 재료 · 장비 몸(등급 · 부위 · 세트 구역 · 직업옵션 · 초월 특수) · 치장 · 칭호)를
+--   가진 값을 계정 로드 실패(invalid_schema) · 실행 중 에러 대신 보관 칸 data.quarantine으로 옮긴다(세트 구역 setZone은 모르면 "세트 아님"으로 동작해 옮기지 않는다). id 목록 = shared/IdRegistry(스냅숏 검사 = roblox/tools/ids/id_registry.py).
+--   먼저 보관 칸에서 지금은 아는 id가 된 것을 제자리로 돌린다(장비 = 가방 · 보석 = 그 직업 보석 가방 · 재료 = 더함 · 치장 · 칭호 = 다시 가짐 - 착용 · 장착 자리는 비운 채).
+--   착용 장비 · 박힌 보석을 옮기면 그 자리는 비운다(장비 nil · 보석 칸 false). 장착 중 치장 · 고른 칭호가 모르는 id면 기본값으로(자산이 아니라 선택이라 보관 안 함).
+-- 반환: 옮긴 것 목록("종류:이유"), 되돌린 수. 순수(DataStore 안 씀 - 결과는 다음 저장 때 써진다). 진행 몸통이 표가 아니면 손대지 않는다(검사는 isValidProfile).
+function SaveSystem.quarantineUnknownIds(data)
+	local IdRegistry = require(ReplicatedStorage.Shared.IdRegistry)
+	local known = IdRegistry.known()
+	if type(data.quarantine) ~= "table" then
+		data.quarantine = {}
+	end
+	local now = os.time()
+	local moved, restored = {}, 0
+	local function put(kind, why, value, classId)
+		table.insert(data.quarantine, { kind = kind, why = why, value = value, classId = classId, at = now })
+		table.insert(moved, kind .. ":" .. why)
+	end
+	local classes = type(data.classes) == "table" and data.classes or {}
+	local cosmetics = type(data.cosmetics) == "table" and data.cosmetics or nil
+
+	-- ① 되돌리기(그 id가 데이터에 다시 생김)
+	local kept = {}
+	for _, e in ipairs(data.quarantine) do
+		local back = false
+		if type(e) == "table" then
+			local v = e.value
+			if e.kind == "item" and type(v) == "table" and type(data.inventory) == "table" and not IdRegistry.unknownInItem(v) then
+				table.insert(data.inventory, v)
+				back = true
+			elseif e.kind == "gem" and type(v) == "table" and not IdRegistry.unknownInGem(v) and type(classes[e.classId]) == "table" and type(classes[e.classId].gemInventory) == "table" then
+				table.insert(classes[e.classId].gemInventory, v)
+				back = true
+			elseif e.kind == "material" and type(v) == "table" and known.material[tostring(v.id)] and type(data.materials) == "table" then
+				data.materials[v.id] = (tonumber(data.materials[v.id]) or 0) + (tonumber(v.amount) or 0)
+				back = true
+			elseif (e.kind == "cosmeticTheme" or e.kind == "gliderSkin") and cosmetics and known[e.kind][tostring(v)] then
+				local bag = e.kind == "cosmeticTheme" and cosmetics.themes or cosmetics.gliderSkins
+				if type(bag) == "table" then
+					bag[v] = true
+					back = true
+				end
+			elseif e.kind == "title" and known.title[tostring(v)] and type(data.titles) == "table" then
+				data.titles[v] = true
+				back = true
+			end
+		end
+		if back then
+			restored += 1
+		else
+			table.insert(kept, e)
+		end
+	end
+	data.quarantine = kept
+
+	-- ② 옮기기
+	if type(data.inventory) == "table" then
+		local bag = {}
+		for _, item in ipairs(data.inventory) do
+			local why = IdRegistry.unknownInItem(item)
+			if why then
+				put("item", why, item)
+			else
+				table.insert(bag, item)
+			end
+		end
+		if #bag ~= #data.inventory then
+			table.clear(data.inventory)
+			for i, item in ipairs(bag) do
+				data.inventory[i] = item
+			end
+		end
+	end
+	for classId, cs in pairs(classes) do
+		if type(cs) == "table" then
+			if type(cs.equipment) == "table" then
+				for part, item in pairs(table.clone(cs.equipment)) do
+					local why = IdRegistry.unknownInItem(item)
+					if why then
+						cs.equipment[part] = nil
+						put("item", why, item, classId)
+					end
+				end
+			end
+			if type(cs.weapon) == "table" and type(cs.weapon.gems) == "table" then
+				for slot, gem in pairs(table.clone(cs.weapon.gems)) do
+					local why = IdRegistry.unknownInGem(gem)
+					if why then
+						cs.weapon.gems[slot] = false
+						put("gem", why, gem, classId)
+					end
+				end
+			end
+			if type(cs.gemInventory) == "table" then
+				local gems = {}
+				for _, gem in ipairs(cs.gemInventory) do
+					local why = IdRegistry.unknownInGem(gem)
+					if why then
+						put("gem", why, gem, classId)
+					else
+						table.insert(gems, gem)
+					end
+				end
+				if #gems ~= #cs.gemInventory then
+					cs.gemInventory = gems
+				end
+			end
+		end
+	end
+	if type(data.materials) == "table" then
+		for id, amount in pairs(table.clone(data.materials)) do
+			if not known.material[tostring(id)] then
+				data.materials[id] = nil
+				put("material", tostring(id), { id = id, amount = amount })
+			end
+		end
+	end
+	if cosmetics then
+		for _, pair in ipairs({ { "cosmeticTheme", cosmetics.themes }, { "gliderSkin", cosmetics.gliderSkins } }) do
+			if type(pair[2]) == "table" then
+				for id in pairs(table.clone(pair[2])) do
+					if not known[pair[1]][tostring(id)] then
+						pair[2][id] = nil
+						put(pair[1], tostring(id), id)
+					end
+				end
+			end
+		end
+		if type(cosmetics.equipped) == "table" then
+			for slot, id in pairs(table.clone(cosmetics.equipped)) do
+				local kind = slot == "gliderSkin" and "gliderSkin" or "cosmeticTheme"
+				if type(id) == "string" and not known[kind][id] then
+					cosmetics.equipped[slot] = nil -- 기본 모습으로(선택값 - 보관 안 함)
+					table.insert(moved, "equipped:" .. id)
+				end
+			end
+		end
+	end
+	if type(data.titles) == "table" then
+		for id in pairs(table.clone(data.titles)) do
+			if not known.title[tostring(id)] then
+				data.titles[id] = nil
+				put("title", tostring(id), id)
+			end
+		end
+	end
+	if type(data.codex) == "table" and type(data.codex.title) == "string" and not known.title[data.codex.title] then
+		table.insert(moved, "codexTitle:" .. data.codex.title)
+		data.codex.title = nil
+	end
+	return moved, restored
+end
+
 -- 불러오기. 성공하면 profile을 돌려준다(신규 플레이어면 defaultProfile 형태를 migrate에
 -- 통과시킨 값). 실패하면 nil + 이유를 돌려준다 - 호출부(SaveServer.server.lua)가 이유에
 -- 따라 다르게 안내한다.
@@ -1765,6 +1926,14 @@ function SaveSystem.loadProfile(player)
 			if okRepair and #repaired > 0 then
 				info.repaired = repaired
 				warn(("[SaveSystem] 손상 저장 고침: %s - %s"):format(player.Name, table.concat(repaired, " · ")))
+			end
+			-- QUEUE-ALL5 A3: 모르는 id = 보관 칸으로(로드 실패 대신) · 다시 생긴 id = 제자리로
+			local okQ, quarantined, restoredN = pcall(SaveSystem.quarantineUnknownIds, profile)
+			if okQ and (#quarantined > 0 or restoredN > 0) then
+				info.quarantined, info.quarantineRestored = quarantined, restoredN
+				warn(("[SaveSystem] 모르는 id 보관: %s - 옮김 %d(%s%s) · 되돌림 %d"):format(player.Name, #quarantined, table.concat(quarantined, " · ", 1, math.min(#quarantined, 10)), #quarantined > 10 and " …" or "", restoredN))
+			elseif not okQ then
+				warn(("[SaveSystem] 보관 처리 에러: %s - %s"):format(player.Name, tostring(quarantined)))
 			end
 			local okValid, valid = pcall(isValidProfile, profile) -- QUEUE-ALL4 리뷰 5: 칸 자리에 표 아닌 값이면 검사 자체가 에러
 			if not okRepair or not okValid or not valid then

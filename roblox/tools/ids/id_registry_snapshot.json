@@ -1,0 +1,119 @@
+{
+ "cosmeticTheme": [
+  "ember",
+  "frost",
+  "jelly",
+  "starlight"
+ ],
+ "gliderSkin": [
+  "cloudWhale",
+  "dragonWing",
+  "kite",
+  "petal"
+ ],
+ "grade": [
+  "ancient",
+  "epic",
+  "legendary",
+  "normal",
+  "primordial",
+  "rare",
+  "relic",
+  "transcendent"
+ ],
+ "material": [
+  "enhanceStone",
+  "highEnhanceStone"
+ ],
+ "option": [
+  "attackPercent",
+  "crit",
+  "defensePercent",
+  "expGain",
+  "healingPower",
+  "lifesteal",
+  "maxHpPercent",
+  "skill_bow_E",
+  "skill_bow_Q",
+  "skill_dualblade_E",
+  "skill_dualblade_Q",
+  "skill_greatsword_E",
+  "skill_greatsword_Q",
+  "skill_healer_E",
+  "skill_healer_Q",
+  "speedPercent"
+ ],
+ "part": [
+  "armor",
+  "gloves",
+  "shoes"
+ ],
+ "setZone": [
+  "tier1",
+  "tier2",
+  "tier3",
+  "tier4",
+  "tier5",
+  "tier6"
+ ],
+ "skillVariant": [
+  "far",
+  "heavy",
+  "swift",
+  "wide"
+ ],
+ "special": [
+  "frenzy",
+  "phantom",
+  "soar"
+ ],
+ "title": [
+  "codex_armorGrade_ancient",
+  "codex_armorGrade_epic",
+  "codex_armorGrade_legendary",
+  "codex_armorGrade_normal",
+  "codex_armorGrade_rare",
+  "codex_armorGrade_relic",
+  "codex_armorZone_tier1",
+  "codex_armorZone_tier2",
+  "codex_armorZone_tier3",
+  "codex_armorZone_tier4",
+  "codex_armorZone_tier5",
+  "codex_armorZone_tier6",
+  "codex_boss_abyssal_lord",
+  "codex_boss_crystal_queen",
+  "codex_boss_frost_giant",
+  "codex_boss_scorpion_queen",
+  "codex_boss_section_guardian",
+  "codex_boss_storm_lord",
+  "codex_class_bow",
+  "codex_class_dualblade",
+  "codex_class_greatsword",
+  "codex_class_healer",
+  "codex_monster_tier1",
+  "codex_monster_tier2",
+  "codex_monster_tier3",
+  "codex_monster_tier4",
+  "codex_monster_tier5",
+  "codex_monster_tier6",
+  "codex_nest_tier1",
+  "codex_nest_tier2",
+  "codex_nest_tier3",
+  "codex_nest_tier4",
+  "codex_nest_tier5",
+  "codex_nest_tier6",
+  "codex_pet_tier1",
+  "codex_pet_tier2",
+  "codex_pet_tier3",
+  "codex_pet_tier4",
+  "codex_pet_tier5",
+  "codex_pet_tier6",
+  "communityHero",
+  "curiousCaptain",
+  "nestSeeker",
+  "primordialChosen",
+  "secretKeeper",
+  "transcendentOne",
+  "weeklyChampion"
+ ]
+}
