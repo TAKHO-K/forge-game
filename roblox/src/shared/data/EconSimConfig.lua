@@ -33,6 +33,7 @@ return {
 		-- W3b 파트 0(사용자 확정 2026-09-28): 상위 1% 25,300 = 2,500h(허용 2,250 ~ 2,750 = ± 10%) · 캐주얼 1,000 약 39h(C3 38.5h를 기준으로 36 ~ 42).
 		casualStage1000Hours = { 0, 32 }, -- QUEUE-ALL2(사용자 10-01 성장 목표 10 문서 9-A): 32h 이하면 OK(짧아져도 됨 · 하한 없음) · 옛 R1 26 ~ 32 · C5 32 ~ 38
 		topDesignHours = 2500, topDesignTolerance = 0.10, modelNoise = 0.01,
+		topDesignMinHours = 2200, -- QUEUE-ALL6R 결정 7(사용자): 하한 = 2,200h(±10% 규칙 · 옛 식 2,227.5 경계에 2,227.4가 걸렸다 - 큐 전 소스와 같은 값) · 상한은 옛 식 그대로
 	},
 
 	-- E3 도달 시간 곡선의 이정표(마지막 = InfiniteStageConfig.designMaxStage를 EconSim이 붙인다 - P2.5a)

@@ -148,7 +148,7 @@ function EconSimVerify.runPure()
 			local design = InfiniteStageConfig.designMaxStage
 			local topDesign = top.reached[design] and top.reached[design].seconds / 3600 or math.huge
 			local goal = EconSimConfig.targets -- D1-3: 목표 = 현실 모형 기준(허용 = ±tolerance에 모형 오차 modelNoise를 더한 폭)
-			local lo, hi = goal.topDesignHours * (1 - goal.topDesignTolerance) * (1 - goal.modelNoise), goal.topDesignHours * (1 + goal.topDesignTolerance) * (1 + goal.modelNoise)
+			local lo, hi = goal.topDesignMinHours or goal.topDesignHours * (1 - goal.topDesignTolerance) * (1 - goal.modelNoise), goal.topDesignHours * (1 + goal.topDesignTolerance) * (1 + goal.modelNoise) -- QUEUE-ALL6R 결정 7: 하한 = topDesignMinHours
 			-- QUEUE-ALL2 P0-5(사용자 10-01 성장 목표 9-A "짧아져도 됨 · 하한 없음"): 환생 5회차 기대 9 ~ 11 → 11 이하(R1 뒤 8.0h = 초반 곡선 · 균열 이득으로 빨라진 것)
 			r.check(("9 P2.5a 일반: 환생 5회차 %.2f시간(기대 ≤ 11 - C5-2 목표 약 10h · 하한 없음) · 첫 12시간 레벨업 평균 %.2f분(기대 ≤ 5) · 스테이지 10 %.2f시간(기대 ≤ 0.5) / 상위 1%% 설계 최대 %d 도달 %.0f시간(기대 %.0f ~ %.0f)"):format(
 				rebirth5, avgMinutes, stage10, design, topDesign, lo, hi),
