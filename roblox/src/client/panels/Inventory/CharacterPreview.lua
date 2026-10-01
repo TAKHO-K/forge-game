@@ -35,11 +35,13 @@ function CharacterPreview.create(parent)
 	backdrop.Parent = parent
 	Instance.new("UICorner", backdrop).CornerRadius = UDim.new(1, 0)
 
-	local model, center, radius = nil, Vector3.zero, 3
+	local model, center, radius, halfWidth = nil, Vector3.zero, 3, 1.5
 	local angle, lastDragAt, dragX = math.rad(200), -math.huge, nil
 
 	local function place()
-		local dist = radius / math.tan(math.rad(camera.FieldOfView / 2)) * 1.05
+		local aspect = vf.AbsoluteSize.Y > 0 and vf.AbsoluteSize.X / vf.AbsoluteSize.Y or 1 -- 좁은 칸 = 가로 시야가 세로보다 좁다
+		local t = math.tan(math.rad(camera.FieldOfView / 2))
+		local dist = math.max(radius / t, halfWidth / (t * math.max(aspect, 0.2))) * 1.05
 		local dir = Vector3.new(math.sin(angle), 0.18, math.cos(angle)).Unit
 		camera.CFrame = CFrame.lookAt(center + dir * dist, center)
 	end
@@ -74,12 +76,29 @@ function CharacterPreview.create(parent)
 		if hum then
 			hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 		end
+		-- Play E5: 착용 방어구 조각은 캐릭터 밑이 아니라 workspace.ArmorWear에 용접돼 있다(ArmorWearView) → 이 캐릭터에 붙은 조각도 같이 복제
+		local wear = workspace:FindFirstChild("ArmorWear")
+		for _, piece in ipairs(wear and wear:GetChildren() or {}) do
+			local weld = piece:IsA("BasePart") and piece:FindFirstChildOfClass("WeldConstraint")
+			if weld and weld.Part0 and weld.Part0:IsDescendantOf(character) then
+				local copy = piece:Clone()
+				for _, w in ipairs(copy:GetChildren()) do
+					if w:IsA("WeldConstraint") then
+						w:Destroy()
+					end
+				end
+				copy.Anchored = true
+				copy.CFrame = piece.CFrame
+				copy.Parent = clone
+			end
+		end
 		clone:PivotTo(CFrame.new())
 		clone.Parent = vf
 		model = clone
 		local cf, size = clone:GetBoundingBox()
 		center = cf.Position
-		radius = math.max(size.Y * 0.55, size.X * 0.6, 2)
+		radius = math.max(size.Y * 0.55, 2) -- 세로 반(+여유) · 가로 반은 halfWidth(돌아도 잘리지 않게 X · Z 중 큰 쪽)
+		halfWidth = math.max(size.X, size.Z) * 0.33 -- Play E5: 그림 칸 폭 68 = 팔 끝까지 맞추면 키 약 90px → 몸통 폭 맞춤(팔 끝은 칸 끝에서 살짝 잘림)
 		place()
 		return true
 	end

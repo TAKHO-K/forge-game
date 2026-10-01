@@ -73,8 +73,22 @@ local function build()
 	local preview = require(script.Parent.CharacterPreview).create(figure)
 	preview.frame.AnchorPoint = Vector2.new(0.5, 1)
 	preview.frame.Position = UDim2.new(0.5, 0, 1, -6)
-	preview.frame.Size = UDim2.new(1.6, 0, 1, -6)
+	preview.frame.Size = UDim2.new(1.1, 0, 1, -6) -- Play E5: 1.6배 = 착용 칸 카드 밑으로 들어가 몸이 가려졌다 → 카드 사이 틈(76)까지
 	refs.preview = preview
+	local fallbacks = {} -- Play E5: 창이 캐릭터보다 먼저 지어지면 2D가 깔린 채 나중 3D가 위에 겹쳐 보였다 → 3D가 서면 숨김
+	local rawRefresh = preview.refresh
+	function preview.refresh()
+		local ok = rawRefresh()
+		if ok then
+			for _, f in ipairs(fallbacks) do
+				f.Visible = false
+			end
+		end
+		return ok
+	end
+	player.CharacterAdded:Connect(function() -- 첫 스폰 · 부활 뒤 다시(착용 코드가 방어구를 붙일 시간)
+		task.delay(1.5, preview.refresh)
+	end)
 	if preview.refresh() then
 		-- 3D가 섰다(아래 2D 대체는 건너뜀)
 	elseif player.UserId > 0 then
@@ -87,6 +101,7 @@ local function build()
 		avatar.ScaleType = Enum.ScaleType.Fit
 		avatar.Image = ("rbxthumb://type=Avatar&id=%d&w=150&h=150"):format(player.UserId)
 		avatar.Parent = figure
+		table.insert(fallbacks, avatar)
 	else
 		for _, piece in ipairs({
 			{ 0.5, 0.06, 0.42, 0.18, UIColors.textSecondary }, -- 머리
@@ -101,6 +116,7 @@ local function build()
 			part.BackgroundColor3 = piece[5]
 			part.BorderSizePixel = 0
 			part.Parent = figure
+			table.insert(fallbacks, part)
 			local partCorner = Instance.new("UICorner")
 			partCorner.CornerRadius = UDim.new(0, 4)
 			partCorner.Parent = part
