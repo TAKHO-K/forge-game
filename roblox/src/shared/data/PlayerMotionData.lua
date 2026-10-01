@@ -369,6 +369,9 @@ P.overlay = {
 	airJump = { seconds = 0.4, peak = 0.3, pose = { Waist = { -12, 0, 0 }, RightHip = { 75, 0, 0 }, RightKnee = { -110, 0, 0 }, LeftHip = { 60, 0, 0 }, LeftKnee = { -100, 0, 0 } } },
 	-- 2단 대시: 첫 대시 자세 위에 몸을 비틀어 한 번 더 박차는 모양(허리 · 루트 회전)
 	dash2 = { seconds = 0.3, peak = 0.3, pose = { Root = { -8, -25, 0 }, Waist = { -6, 25, 0 }, Neck = { 0, -15, 0 } } },
+	-- QUEUE-ALL6R 결정 6 하이파이브(꾸미기 이모트 - 두 사람 모두 · 서로 마주 본 뒤): 오른팔을 머리 위 앞으로 뻗어(어깨 안쪽 조금 - 마주 선 상대 오른손과 가운데서 만난다) 손바닥을 편다 ·
+	--   peak 순간 = 손이 만나는 때(client/CosmeticFx가 seconds × peak 뒤 "짝!" 효과) · 몸을 살짝 앞으로 실어 준다.
+	highFive = { seconds = 0.75, peak = 0.38, hold = 0.12, pose = { Root = { -4, 0, 0 }, Waist = { -6, 8, 0 }, Neck = { -10, 0, 0 }, RightShoulder = { 160, 0, -10 }, RightElbow = { 12, 0, 0 }, RightWrist = { -25, 0, 0 } } },
 	-- 활강 시작(몸을 쭉 펴 바람 받기 - 팔 = P.glide) · 끝(다리를 앞으로 내밀어 착지 준비)
 	glideIn = { seconds = 0.34, peak = 0.35, pose = { Waist = { 8, 0, 0 }, Neck = { -8, 0, 0 }, RightHip = { -15, 0, 0 }, LeftHip = { -15, 0, 0 }, RightKnee = { -10, 0, 0 }, LeftKnee = { -10, 0, 0 } } },
 	glideOut = { seconds = 0.4, peak = 0.3, pose = { Waist = { 12, 0, 0 }, Neck = { -6, 0, 0 }, RightHip = { 50, 0, 0 }, RightKnee = { -40, 0, 0 }, LeftHip = { 45, 0, 0 }, LeftKnee = { -35, 0, 0 } } },

@@ -282,8 +282,27 @@ if emoteEvent then
 			local pa, pb = Players:GetPlayerByUserId(a), Players:GetPlayerByUserId(b)
 			local ra = pa and pa.Character and pa.Character:FindFirstChild("HumanoidRootPart")
 			local rb = pb and pb.Character and pb.Character:FindFirstChild("HumanoidRootPart")
+			-- QUEUE-ALL6R 결정 6: 손 마주치기 자세(코드 포즈 - PlayerMotionData.overlay.highFive · 두 사람 모두 · 애니메이션 업로드 없음).
+			--   내 캐릭터만 상대 쪽으로 돌린다(내 물리 = 남에게 복제 · 위치는 그대로) → 손이 만나는 순간(seconds × peak) "짝!" 효과.
+			local def = require(ReplicatedStorage.Shared.data.PlayerMotionData).overlay.highFive
+			if ra and rb then
+				local WeaponVisual = require(script.Parent.WeaponVisual)
+				for _, pair in ipairs({ { pa, ra, rb }, { pb, rb, ra } }) do
+					local me, other = pair[2], pair[3]
+					if pair[1] == player then
+						local look = Vector3.new(other.Position.X - me.Position.X, 0, other.Position.Z - me.Position.Z)
+						if look.Magnitude > 0.1 then
+							me.CFrame = CFrame.lookAt(me.Position, me.Position + look)
+						end
+					end
+					WeaponVisual.playOverlay(pair[1], "highFive")
+				end
+				task.wait(def.seconds * def.peak)
+				ra = pa.Character and pa.Character:FindFirstChild("HumanoidRootPart")
+				rb = pb.Character and pb.Character:FindFirstChild("HumanoidRootPart")
+			end
 			if ra and rb and Fx.isOn() then
-				local mid = (ra.Position + rb.Position) / 2 + Vector3.new(0, 1.5, 0)
+				local mid = (ra.Position + rb.Position) / 2 + Vector3.new(0, 2.6, 0) -- 머리 위로 든 손이 만나는 높이
 				local s = scale(a == player.UserId or b == player.UserId)
 				Fx.flash(mid, 5 * s, 0.3, STAR)
 				Fx.burst(mid, math.floor(14 * s + 0.5), { color = STAR, size = 0.35 * s, speed = 10, spread = 180, gravity = 4, lifetime = { 0.4, 0.7 } })
