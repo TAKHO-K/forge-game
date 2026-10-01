@@ -7,47 +7,47 @@ return {
 	groupAlias = { Effects = "SFX" },
 	-- 중요도 단계 → 상대 크기(SFX 안) · ui = UI 그룹 안 · ambient = 환경 그룹 안
 	tierVolume = { [1] = 1.0, [2] = 0.85, [3] = 0.7, [4] = 0.5, [5] = 0.35, ui = 0.3, ambient = 1.0 },
-	-- 큐 → 단계 · gain(측정 맞춤 - sound-map.md) · jitter(음높이 ± 무작위 - 반복 피로)
+	-- 큐 → 단계 · gain(QUEUE-ALL7 C1 측정: 원본 PlaybackLoudness 평균을 140에 맞춘 값 · 0.5 ~ 1.5 · 0.1초 미만 버튼은 표본 부족이라 1 - sound-map.md) · jitter(음높이 ± 무작위 - 반복 피로)
 	cues = {
-		drop_transcendent = { tier = 1 },
-		drop_primordial = { tier = 2 },
-		boss_death = { tier = 2 },
-		warning = { tier = 2 }, -- 보스 강공격 · 패턴 예고(전조 있는 공격만 - BossPatternEvent bubble · envTelegraph · regrowTelegraph)
-		level_up = { tier = 3 },
-		enhance_success = { tier = 3 },
+		drop_transcendent = { tier = 1, gain = 1.4 },
+		drop_primordial = { tier = 2, gain = 1.15 },
+		boss_death = { tier = 2, gain = 1.05 },
+		warning = { tier = 2, gain = 0.5 }, -- 보스 강공격 · 패턴 예고(전조 있는 공격만 - BossPatternEvent bubble · envTelegraph · regrowTelegraph)
+		level_up = { tier = 3, gain = 0.75 },
+		enhance_success = { tier = 3, gain = 1.05 },
 		enhance_reset = { tier = 3 },
-		enhance_drop = { tier = 3 },
-		drop_legendary = { tier = 3 },
-		drop_relic = { tier = 3 },
-		drop_ancient = { tier = 3 },
-		quest_complete = { tier = 3 }, -- 퀘스트 완료 · 합동 목표 단계 달성
-		title_get = { tier = 3 },
-		skill_unlock = { tier = 3 },
-		rocket_twinkle = { tier = 3 }, -- E3 판 털기 로켓 반짝
-		rift_start = { tier = 3 },
-		checkpoint_found = { tier = 3 },
-		boss_appear = { tier = 3 },
-		codex_cell = { tier = 3 }, -- 도감 칸 · 펫 부화
-		hit_crit = { tier = 4, jitter = 0.05 },
-		hurt_big = { tier = 4, jitter = 0.05 }, -- 전조 있는 큰 공격에 맞음(작은 피격보다 한 단계 위)
-		drop_epic = { tier = 4 }, -- 영웅부터 차임
-		enhance_fail = { tier = 4 },
-		protect_ticket = { tier = 4 },
-		recall_done = { tier = 4 },
+		enhance_drop = { tier = 3, gain = 0.75 },
+		drop_legendary = { tier = 3, gain = 1.2 },
+		drop_relic = { tier = 3, gain = 1.05 },
+		drop_ancient = { tier = 3, gain = 0.95 },
+		quest_complete = { tier = 3, gain = 0.75 }, -- 퀘스트 완료 · 합동 목표 단계 달성
+		title_get = { tier = 3, gain = 0.85 },
+		skill_unlock = { tier = 3, gain = 1.45 },
+		rocket_twinkle = { tier = 3, gain = 1.2 }, -- E3 판 털기 로켓 반짝
+		rift_start = { tier = 3, gain = 0.5 },
+		checkpoint_found = { tier = 3, gain = 0.95 },
+		boss_appear = { tier = 3, gain = 0.65 },
+		codex_cell = { tier = 3, gain = 1.15 }, -- 도감 칸 · 펫 부화
+		hit_crit = { tier = 4, gain = 1.5, jitter = 0.05 },
+		hurt_big = { tier = 4, gain = 1.05, jitter = 0.05 }, -- 전조 있는 큰 공격에 맞음(작은 피격보다 한 단계 위)
+		drop_epic = { tier = 4, gain = 1.2 }, -- 영웅부터 차임
+		enhance_fail = { tier = 4, gain = 0.75 },
+		protect_ticket = { tier = 4, gain = 1.45 },
+		recall_done = { tier = 4, gain = 1.05 },
 		swing = { tier = 5, jitter = 0.05, gain = 0.7, maxSeconds = 0.14 }, -- 대시 · 회피(휘두름 바람 소리 재사용 - 새 업로드 없음) · 사용자: 자주 쓰니 거슬리지 않게 짧게 = T5 · × 0.7 · 앞 0.14초만
-		reward_fly = { tier = 5 }, -- 도감 · 보상 받기 날아감
-		hit_light = { tier = 5, jitter = 0.05 },
-		hit_heavy = { tier = 5, jitter = 0.05 },
-		hurt_small = { tier = 5, jitter = 0.05 },
-		heartbeat = { tier = 5 },
-		pickup = { tier = 5, jitter = 0.05 },
+		reward_fly = { tier = 5, gain = 1.2 }, -- 도감 · 보상 받기 날아감
+		hit_light = { tier = 5, gain = 1.25, jitter = 0.05 },
+		hit_heavy = { tier = 5, gain = 1.1, jitter = 0.05 },
+		hurt_small = { tier = 5, gain = 0.85, jitter = 0.05 },
+		heartbeat = { tier = 5, gain = 0.8 },
+		pickup = { tier = 5, gain = 0.65, jitter = 0.05 },
 		footstep_soft = { tier = 5, jitter = 0.05 },
-		drop_rare = { tier = 5 }, -- (안 씀 - 희귀 = drop_common 1음)
-		drop_common = { tier = 5 }, -- 희귀 드랍 = 아주 작은 1음 · 일반 = 소리 없음
+		drop_rare = { tier = 5, gain = 0.8 }, -- (안 씀 - 희귀 = drop_common 1음)
+		drop_common = { tier = 5, gain = 0.6 }, -- 희귀 드랍 = 아주 작은 1음(측정 맞춤 1.0 × 0.6) · 일반 = 소리 없음
 		button_press = { tier = "ui" },
 		button_close = { tier = "ui" },
-		recall_channel = { tier = "ambient" },
-		checkpoint_channel = { tier = "ambient" },
+		recall_channel = { tier = "ambient", gain = 0.65 },
+		checkpoint_channel = { tier = "ambient", gain = 0.5 },
 	},
 	otherScale = 0.5, -- 남이 낸 소리(같은 단계라도)
 	otherQuietScale = 0.25, -- 설정 "다른 플레이어 효과음 줄이기" 켬
