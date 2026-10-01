@@ -53,8 +53,8 @@ local function checkpointSection(r, player)
 	local hp0 = PlayerState.getHp(player)
 	PlayerState.setIncomingDamageMultiplierUntil(player, 1, 60, "all6cp") -- 다른 출처의 피해 배율(god 등)이 남아 있어도 이 시험 동안 실제 피해
 	-- ① 전투 중(방금 피격) 요청 = 거절
-	PlayerDamage.takeDamage(player, math.max(1, (PlayerState.getMaxHp(player) or 100) * 0.05), {})
-	task.wait(0.6) -- Travel 0.25초 순회가 피격(hurtAt)을 기록
+	-- 전투 상태 = 최근 적 명중(PartyState 활동 - busyReason의 두 입구 중 하나 · 실제 피해 입구는 자리에 따라 0 피해(안전 지대)라 이 Play에서 불안정)
+	require(script.Parent.PartyState).noteActivity(player)
 	local ok1, why1 = Travel.requestCheckpoint(player, target)
 	r.check(("① 전투 중 체크포인트 요청: %s(%s) · 기대 false · combat"):format(tostring(ok1), tostring(why1)), ok1 == false and why1 == "combat")
 	-- ② 전투가 끝난 뒤(가상 시각 +9초 = combatLockSeconds 8 밖) = 정신 집중 시작
@@ -144,9 +144,20 @@ local function rocketSection(r, player, env)
 	st.env = { phase = "armed", phaseEndsAt = 0, taken = {} }
 	st.graceUntil = os.clock() + 999 -- 기본 패턴은 멈춘다(환경만)
 	local t0 = os.clock()
-	while (st.env.phase ~= "telegraph") and os.clock() - t0 < 6 do
-		task.wait(0.1)
+	local members = BossEncounter.getMembersOfModel(model)
+	local function drive(seconds, untilFn) -- 보스 직접 step(BR1Verify drive와 같은 방식 - 추격 전이라 AI가 안 돌려도 환경이 돈다)
+		local startedAt = os.clock()
+		while os.clock() - startedAt < seconds and model.Parent do
+			game:GetService("RunService").Heartbeat:Wait()
+			BossPatterns.step(model, MonsterState.getData(model), model.PrimaryPart.Position, player, root, 1 / 60, members)
+			if untilFn and untilFn() then
+				break
+			end
+		end
 	end
+	drive(6, function()
+		return st.env.phase == "telegraph"
+	end)
 	local z = st.env.zones and st.env.zones[1]
 	assert(z, "판 털기 전조 없음")
 	local arena = BossEncounter.getEncounter(player)
@@ -158,10 +169,10 @@ local function rocketSection(r, player, env)
 	local center = require(script.Parent.MonsterState).getSpawnPosition(model) or Vector3.zero
 	fakeRoot.Position = Vector3.new(2 * center.X - z.center.X, st.floorY + 3, 2 * center.Z - z.center.Z)
 	local maxHp = PlayerState.getMaxHp(player)
-	while st.env.phase ~= "active" and os.clock() - t0 < 12 do
-		task.wait(0.05)
-	end
-	task.wait(0.2)
+	drive(8, function()
+		return st.env.phase == "active"
+	end)
+	drive(0.2)
 	local hpAfter = PlayerState.getHp(player)
 	local mine = events[1]
 	r.check(("① 첫 털기: 판 위 실제 Player 로켓 %s · 피해 %.1f%%(기대 25%%) · 최고 높이 = 바닥 + %d(%.1f)"):format(tostring(mine ~= nil), (maxHp - hpAfter) / maxHp * 100, rocketCfg.peakStuds, mine and (mine.peakY - st.floorY) or -1),
@@ -176,10 +187,10 @@ local function rocketSection(r, player, env)
 	-- ④ 활성 중 걸어 들어오면 같다(스탠드인을 털리는 절반으로)
 	local n0 = #events
 	fakeRoot.Position = Vector3.new(z.center.X, st.floorY + 3, z.center.Z) + Vector3.new(4, 0, 0)
-	task.wait(0.4)
+	drive(0.4)
 	r.check(("④ 판이 빈 동안 들어온 사람도 로켓: 새 로켓 %d"):format(#events - n0), #events - n0 == 1)
 	-- ⑤ 같은 발동에서 두 번 없음(실제 Player는 계속 그 자리 - 고정)
-	task.wait(0.6)
+	drive(0.6)
 	local mineCount = 0
 	for _, e in ipairs(events) do
 		mineCount += e.player == player and 1 or 0
