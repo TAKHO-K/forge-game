@@ -231,10 +231,34 @@ local function bindPlayer(player)
 	local function go()
 		task.defer(refresh, player, player.Character)
 	end
+	-- 아바타 배율이 바뀌면(몸 파트 Size) 다시 맞춘다: 조각 크기 = 입힐 때의 파트 실측이라, 입힌 뒤 배율이 적용되면 1.35배 몸통 안에 가슴판이 묻혔다(QUEUE-ALL2 P1 Play 실측)
+	local function watchScale(character)
+		local torso = character:WaitForChild("UpperTorso", 10)
+		if not torso then
+			return
+		end
+		local pending = false
+		torso:GetPropertyChangedSignal("Size"):Connect(function()
+			if pending then
+				return
+			end
+			pending = true
+			task.delay(0.2, function()
+				pending = false
+				if player.Character == character then
+					refresh(player, character, true)
+				end
+			end)
+		end)
+	end
 	player.CharacterAdded:Connect(function(character)
 		character:WaitForChild("HumanoidRootPart", 10)
 		go()
+		task.spawn(watchScale, character)
 	end)
+	if player.Character then
+		task.spawn(watchScale, player.Character)
+	end
 	for _, part in ipairs(PARTS) do
 		player:GetAttributeChangedSignal(Data.armorLookAttribute .. part):Connect(go)
 	end
