@@ -70,7 +70,7 @@ ReplicatedStorage:WaitForChild("PlayerHitFeedback").OnClientEvent:Connect(functi
 		return
 	end
 	local maxHp = player:GetAttribute("MaxHp") or 100
-	if damage >= maxHp * PlayerMotionData.bigHitFraction then
+	if damage >= maxHp * PlayerMotionData.overlay.bigHitFraction then -- QUEUE-ALL6 I: 값은 overlay 아래(WeaponVisual과 같은 줄) - 옛 = nil 곱하기 에러로 맞을 때마다 연출 · 소리가 안 났다
 		hit(1 - E.big.alpha, E.big.seconds)
 		CameraShake.trigger(E.big.shakeSeconds, E.big.shakeStuds, "hurt")
 		SoundSheet.play("hurt_big", { minInterval = 0.3 })

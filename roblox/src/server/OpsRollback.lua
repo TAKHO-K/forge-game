@@ -77,6 +77,83 @@ function OpsRollback.describe(s)
 end
 
 -- 실행. deps = { readCurrent(userId) → data|nil, err · readVersion(userId, version) → data|nil, err · writeBackup(key, data) → ok · writeProfile(userId, data) → ok, err · now }
+-- 순수: 되돌린 저장(old)에 지금 저장(current)의 "돈 · 한 번만" 기록을 얹는다(QUEUE-ALL6 I 리뷰: 통째로 덮으면 그 사이 로벅스 구매 ·
+--   치장 · 시즌 유료 줄이 사라지고 - 영수증은 이미 지급됨이라 로블록스가 다시 안 준다 - 코드 · 선물을 두 번 받을 수 있었다).
+--   유지 = purchases(영수증 · 산 소모품) · gamepasses · 산 치장(합집합) · 같은 시즌 유료 줄 · 받은 선물 id · 받은 코드. 나머지(골드 · 장비 · 진행)는 그 버전.
+function OpsRollback.keepPaid(old, current)
+	if type(old) ~= "table" or type(current) ~= "table" then
+		return old
+	end
+	local function tbl(v)
+		return type(v) == "table" and v or nil
+	end
+	if tbl(current.purchases) then
+		old.purchases = table.clone(current.purchases)
+	end
+	if tbl(current.gamepasses) then
+		old.gamepasses = table.clone(current.gamepasses)
+	end
+	local cc, oc = tbl(current.cosmetics), tbl(old.cosmetics)
+	if cc then
+		oc = oc and table.clone(oc) or {}
+		for _, bag in ipairs({ "themes", "gliderSkins", "items" }) do
+			local merged = table.clone(tbl(oc[bag]) or {})
+			for id, owned in pairs(tbl(cc[bag]) or {}) do
+				if owned then
+					merged[id] = owned
+				end
+			end
+			oc[bag] = merged
+		end
+		old.cosmetics = oc
+	end
+	local cs, os_ = tbl(current.seasonPass), tbl(old.seasonPass)
+	if cs then
+		if os_ and os_.season == cs.season then
+			os_ = table.clone(os_)
+			os_.premium = os_.premium == true or cs.premium == true
+			old.seasonPass = os_
+		elseif not os_ or (tonumber(cs.season) or 0) > (tonumber(os_.season) or 0) then
+			old.seasonPass = table.clone(cs) -- 그 사이 시즌이 바뀌었으면 지금 시즌 기록 그대로
+		end
+	end
+	local cm = tbl(current.mailbox)
+	if cm and tbl(cm.claimedIds) then
+		local om = table.clone(tbl(old.mailbox) or { gifts = {}, seq = 0 })
+		local seen, ids = {}, {}
+		for _, id in ipairs(cm.claimedIds) do
+			if not seen[id] then
+				seen[id] = true
+				table.insert(ids, id)
+			end
+		end
+		for _, id in ipairs(tbl(om.claimedIds) or {}) do
+			if not seen[id] then
+				seen[id] = true
+				table.insert(ids, id)
+			end
+		end
+		om.claimedIds = ids
+		om.seq = math.max(tonumber(om.seq) or 0, tonumber(cm.seq) or 0)
+		local gifts = {}
+		for _, gift in ipairs(tbl(om.gifts) or {}) do
+			if not (type(gift) == "table" and seen[gift.id]) then -- 그 버전 선물함에 남아 있었지만 그 뒤 받은 것 = 빼기(두 번 받기 방지)
+				table.insert(gifts, gift)
+			end
+		end
+		om.gifts = gifts
+		old.mailbox = om
+	end
+	if tbl(current.redeemedCodes) then
+		local merged = table.clone(tbl(old.redeemedCodes) or {})
+		for code, at in pairs(current.redeemedCodes) do
+			merged[code] = merged[code] or at
+		end
+		old.redeemedCodes = merged
+	end
+	return old
+end
+
 --   반환 ok, 이유 코드("rolled_back" · "backup_failed" · "no_version_data" · "write_failed")
 function OpsRollback.execute(deps, userId, version)
 	local current, errCur = deps.readCurrent(userId)
@@ -91,7 +168,7 @@ function OpsRollback.execute(deps, userId, version)
 	if type(old) ~= "table" then
 		return false, "no_version_data"
 	end
-	old = table.clone(old)
+	old = OpsRollback.keepPaid(table.clone(old), current)
 	old.savedAt = deps.now -- 다른 서버의 옛 세션 저장이 이 값을 보고 포기한다
 	old.sessionId = ""
 	local ok = deps.writeProfile(userId, old)

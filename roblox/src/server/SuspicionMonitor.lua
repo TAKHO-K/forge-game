@@ -9,7 +9,10 @@ local C = require(ReplicatedStorage.Shared.data.SecurityOpsConfig)
 local D = C.detect
 
 local SuspicionMonitor = {}
-local stats = setmetatable({}, { __mode = "k" }) -- [Player] = { gold, hits, drops, reverts0, flaggedAt = { [kind] = os.clock() } }
+local stats = {} -- [Player] = { gold, hits, drops, reverts0, flaggedAt = { [kind] = os.clock() } } · QUEUE-ALL6 I 리뷰: 약한 키 표는 Player 항목이 조용히 사라져(M1-2c 실측) 강한 표 + 퇴장 때 지움
+Players.PlayerRemoving:Connect(function(player)
+	stats[player] = nil
+end)
 
 local function st(player)
 	local s = stats[player]

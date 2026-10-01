@@ -393,8 +393,18 @@ function Ops.handle(player, text)
 	end)
 	result = ok and result or ("error: " .. tostring(result))
 	logOps(player, text, result)
-	if tonumber(args[2]) then -- QUEUE-ALL6 F3: 대상의 감사 기록에도 운영 명령 한 줄
-		AuditTrail.note(tonumber(args[2]), "ops", ("%s: %s → %s"):format(player.Name, tostring(text):sub(1, 60), tostring(result):sub(1, 40)))
+	local targetId = nil -- QUEUE-ALL6 I 리뷰: 대상 = 인자 중 첫 숫자(leaderboard remove <userId>처럼 둘째 칸이 아닌 명령도)
+	for i = 2, #args do
+		if args[i] == "confirm" then -- rollback confirm <확인 번호> = 숫자가 userId 아님(실행 줄은 rollback 미리보기 때 대상에 남는다)
+			break
+		end
+		if tonumber(args[i]) then
+			targetId = tonumber(args[i])
+			break
+		end
+	end
+	if targetId then -- QUEUE-ALL6 F3: 대상의 감사 기록에도 운영 명령 한 줄
+		AuditTrail.note(targetId, "ops", ("%s: %s → %s"):format(player.Name, AuditTrail.clip(text, 60), AuditTrail.clip(result, 40)))
 	end
 	replyRemote:FireClient(player, result)
 	return result

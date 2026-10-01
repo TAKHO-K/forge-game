@@ -46,13 +46,27 @@ function AuditTrail.merge(list, entries, now)
 	return out
 end
 
+-- 글자 수로 자르기(QUEUE-ALL6 I: 바이트 :sub(1, 120)이 한글 가운데를 잘라 DataStore가 "UTF-8 아님"으로 쓰기를 통째로 거절했다)
+function AuditTrail.clip(text, maxChars)
+	text = tostring(text or "")
+	local count = utf8.len(text)
+	if not count then -- 이미 깨진 글 = 아스키 밖 바이트를 ?로
+		text = text:gsub("[\128-\255]", "?")
+		count = #text
+	end
+	if count > maxChars then
+		text = text:sub(1, utf8.offset(text, maxChars + 1) - 1)
+	end
+	return text
+end
+
 -- 기록 하나(player = Player 또는 userId 숫자)
 function AuditTrail.note(player, kind, detail)
 	local userId = typeof(player) == "Instance" and player.UserId or tonumber(player)
 	if not userId or userId <= 0 then
 		return
 	end
-	local e = { k = tostring(kind), d = tostring(detail or ""):sub(1, 120), at = os.time() }
+	local e = { k = AuditTrail.clip(kind, 24), d = AuditTrail.clip(detail, 120), at = os.time() }
 	AuditTrail.pending[userId] = AuditTrail.pending[userId] or {}
 	table.insert(AuditTrail.pending[userId], e)
 	AuditTrail.memory[userId] = AuditTrail.memory[userId] or {}
@@ -84,6 +98,9 @@ function AuditTrail.flush(userId)
 		local again = AuditTrail.pending[userId] or {}
 		for i = #entries, 1, -1 do
 			table.insert(again, 1, entries[i])
+		end
+		while #again > C.keep do -- QUEUE-ALL6 I 리뷰: 저장소 장애가 길어도 서버 메모리가 끝없이 늘지 않게(오래된 줄부터 버림)
+			table.remove(again, 1)
 		end
 		AuditTrail.pending[userId] = again
 	end

@@ -48,6 +48,25 @@ local ok, why, key = R.execute(w.deps, 42, "v2")
 check(("정상: %s(%s) · 골드 999999 → %d · 백업 %s"):format(tostring(ok), tostring(why), w.profile.gold, tostring(key)), ok and why == "rolled_back" and w.profile.gold == 100 and w.backups[key] and w.backups[key].data.gold == 999999)
 check("덮은 저장: savedAt = 지금(1000 - 다른 서버 옛 세션 저장이 거절됨) · sessionId 빈칸", w.profile.savedAt == 1000 and w.profile.sessionId == "")
 check("버전 원본은 그대로(복사본을 고침)", w.versions.v2.savedAt == 200 and w.versions.v2.sessionId == "old")
+-- QUEUE-ALL6 I 리뷰: 되돌려도 돈 · 한 번만 기록은 지금 값 유지
+w = world()
+w.profile.purchases = { receipts = { r1 = true, r2 = true } }
+w.profile.gamepasses = { bagExpand = true }
+w.profile.cosmetics = { themes = { anvil = true }, gliderSkins = {}, items = { petCrown = true }, equipped = {} }
+w.profile.seasonPass = { season = 3, premium = true }
+w.profile.mailbox = { gifts = {}, seq = 5, claimedIds = { "g1", "g2" } }
+w.profile.redeemedCodes = { FORGE2026 = 1500 }
+w.versions.v2.purchases = { receipts = { r1 = true } }
+w.versions.v2.cosmetics = { themes = { ember = true }, gliderSkins = {}, items = {}, equipped = { dashTrail = "ember" } }
+w.versions.v2.seasonPass = { season = 3, premium = false }
+w.versions.v2.mailbox = { gifts = { { id = "g2", kind = "gold", amount = 9 }, { id = "g3", kind = "gold", amount = 1 } }, seq = 3, claimedIds = { "g1" } }
+w.versions.v2.redeemedCodes = {}
+R.execute(w.deps, 42, "v2")
+local p = w.profile
+check("되돌림 + 유지: 골드 = 그 버전 · 영수증 · 패스 = 지금 · 치장 합집합 · 같은 시즌 유료 · 받은 선물 빼기 · 코드 유지",
+	p.gold == 100 and p.purchases.receipts.r2 == true and p.gamepasses.bagExpand == true and p.cosmetics.themes.anvil and p.cosmetics.themes.ember
+	and p.cosmetics.items.petCrown and p.cosmetics.equipped.dashTrail == "ember" and p.seasonPass.premium == true
+	and #p.mailbox.gifts == 1 and p.mailbox.gifts[1].id == "g3" and p.mailbox.seq == 5 and p.redeemedCodes.FORGE2026 == 1500)
 w = world()
 w.failBackup = true
 ok, why = R.execute(w.deps, 42, "v2")

@@ -11,6 +11,8 @@ return {
 		SetInventoryWindowPosition = { perSecond = 20, burst = 20 },
 		-- QUEUE-B1 B2 상점 창구(구매 프롬프트 · 장착 · 받기) - 사람 손 속도면 닿지 않는다
 		ShopRequest = { perSecond = 4, burst = 8 },
+		-- QUEUE-ALL6 H 하이파이브: 요청마다 상대 화면에 제안 팝업 → 2초에 1번(괴롭힘 방지 - 리뷰)
+		EmoteRequest = { perSecond = 0.5, burst = 2 },
 		-- QUEUE-ALL4 B(security-audit-launch): 주간 도전 입장 = 보스 아레나 · 보스 스폰(무겁다) - 실패 뒤 다시 누르기는 되게 통 2
 		WeeklyChallengeStart = { perSecond = 0.5, burst = 2 },
 		-- 주간 순위 = 서버 공용 캐시(WeeklyChallengeData.topCacheSeconds)가 DataStore 읽기를 막고, 이 통은 한 사람의 연타만 막는다(넘치면 마지막 결과)
