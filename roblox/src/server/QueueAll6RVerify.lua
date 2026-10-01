@@ -65,9 +65,38 @@ local function worldTextSection(r)
 	end
 	table.sort(missing)
 	r.check(("월드 글자 %d개(키 %d · 이름 %d) en 조합 → 한글 남음 %d종%s"):format(count, keys, names, #missing, #missing > 0 and (": " .. table.concat(missing, " / ", 1, math.min(#missing, 40))) or ""), count > 0 and #missing == 0)
+	-- 몹 이름표는 스폰된 것만 workspace에 있다 → 데이터로 전부(종 · 구역 기본 이름 · 접두사 · 보스) en
+	local mobMissing, mobCount = {}, 0
+	local function sweep(name)
+		if type(name) == "string" then
+			mobCount += 1
+			local en = Text.nameIn("en", name)
+			if hasHangul(en) and not table.find(mobMissing, name) then
+				table.insert(mobMissing, name)
+			end
+		end
+	end
+	for _, s in pairs(require(ReplicatedStorage.Shared.data.MonsterSpeciesData).species) do
+		if type(s) == "table" then
+			sweep(s.displayName)
+		end
+	end
+	for _, t in pairs(require(ReplicatedStorage.Shared.data.MonsterData)) do
+		if type(t) == "table" then
+			sweep(t.displayName)
+		end
+	end
+	for _, p in ipairs(require(ReplicatedStorage.Shared.data.MonsterPrefixData).prefixes) do
+		sweep(p.displayName)
+	end
+	for _, b in pairs(require(ReplicatedStorage.Shared.data.BossData).bosses) do
+		sweep(b.displayName)
+	end
+	r.check(("몹 이름(종 · 기본 · 접두사 · 보스) %d개 en - 한글 남음 %d%s"):format(mobCount, #mobMissing, #mobMissing > 0 and (": " .. table.concat(mobMissing, " / ")) or ""), mobCount > 0 and #mobMissing == 0)
 	local codex = {}
 	for _, key in ipairs({ "srv.codex.lineDone", "srv.codex.got", "srv.codex.eggFull", "srv.mob.prefixed", "srv.drop.plate", "srv.world.sealedPlaque" }) do
-		local en = Text.format("en", key, { title = "도감 수집가", summary = "Gold 500", grade = "전설", part = "갑옷", level = "12", prefix = "단단한", name = "이끼 슬라임" })
+		local anyTitle = next(require(ReplicatedStorage.Shared.data.TitleData).titles)
+		local en = Text.format("en", key, { title = anyTitle and require(ReplicatedStorage.Shared.data.TitleData).titles[anyTitle].name or "?", summary = "Gold 500", grade = "전설", part = "갑옷", level = "12", prefix = "단단한", name = "이끼 슬라임" })
 		if hasHangul(en) or en == key then
 			table.insert(codex, key .. "=" .. en)
 		end
@@ -84,7 +113,7 @@ local function opsSection(r, player)
 	end
 	local uid = tostring(player.UserId)
 	local preview = hook:Invoke(player, "/ops ban " .. uid .. " perm 검증 미리보기")
-	r.check(("영구 차단 = 미리보기만(실행 안 함): %s"):format(tostring(preview):sub(1, 90)), type(preview) == "string" and preview:find("/ops ban confirm", 1, true) ~= nil and player.Parent ~= nil)
+	r.check(("영구 차단 = 미리보기만(실행 안 함): %s"):format(require(script.Parent.AuditTrail).clip(preview, 70)), type(preview) == "string" and preview:find("/ops ban confirm", 1, true) ~= nil and player.Parent ~= nil)
 	local noBan = hook:Invoke(player, "/ops ban confirm 000000")
 	r.check(("없는 확인 번호 = 차단 안 함: %s"):format(tostring(noBan)), tostring(noBan):find("no_pending", 1, true) ~= nil)
 	local noItem = hook:Invoke(player, "/ops revoke " .. uid .. " t999999")

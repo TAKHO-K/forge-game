@@ -57,6 +57,9 @@ local en = {
 	-- 큰 나무 구간 · 정거장
 	["뿌리 가지"] = "Root Branch", ["덩굴 숲"] = "Vine Woods", ["말랑 열매 골"] = "Squishy Fruit Gully", ["점프대 가지"] = "Bounce Branch", ["높은 가지"] = "High Branch", ["정상 오르기"] = "Climb to the Top",
 	["뿌리 정거장"] = "Root Stop", ["첫 가지 정거장"] = "First Branch Stop", ["구름 아래 정거장"] = "Below-Cloud Stop", ["구름층 정거장"] = "Cloud Stop", ["높은 가지 정거장"] = "High Branch Stop",
+	-- QUEUE-ALL6R 3: 서버가 짓는 월드 명판(강화대 · 제단 · 상인 = 용어집) · 길 표지판(shared/RoadNet)
+	["강화대"] = "Forge", ["환생의 제단"] = "Rebirth Altar", ["보석상인"] = "Gem Merchant",
+	["캠프 · 관문 →"] = "Camp · Gate →", ["관문 ↑ · 전망 ↗"] = "Gate ↑ · Lookout ↗",
 	-- 사냥터 둘러보기 자리(explore)
 	["절벽 위 전망"] = "Cliff Lookout", ["폐허 망루 꼭대기"] = "Ruined Tower Top", ["바위 굴"] = "Rock Cave", ["폭포 뒤"] = "Behind the Falls",
 	["수정 굴"] = "Crystal Hollow", ["큰 수정 기둥"] = "Giant Crystal Pillar", ["수정 언덕 위"] = "Crystal Hilltop", ["수정 탑 꼭대기"] = "Crystal Tower Top", ["빛 폭포 뒤"] = "Behind the Light Falls",

@@ -964,7 +964,7 @@ function Layout.buildTree(list)
 		local mid = (St.ringInner + St.ringOuter) / 2
 		local label = s.deck and Text.get("desc.world.deck") or Text.get("desc.world.stationSign", { name = s.name, level = ("%d"):format(s.unlockLevel) })
 		local sign = Vector3.new(math.cos(a) * mid, FLOOR + s.y + 0.2, math.sin(a) * mid)
-		prim(list, "TreeCourse", "StationSign", Vector3.new(3, 0.4, 3), CFrame.new(sign), D.colors.marker, { collide = false, neon = true, attrs = { Label = label } })
+		prim(list, "TreeCourse", "StationSign", Vector3.new(3, 0.4, 3), CFrame.new(sign), D.colors.marker, { collide = false, neon = true, attrs = { Label = label, LabelKey = s.deck and "desc.world.deck" or "desc.world.stationSign", LabelArg_name = (not s.deck) and s.name or nil, LabelArg_level = (not s.deck) and ("%d"):format(s.unlockLevel) or nil } })
 		if s.deck then
 			prim(list, "TreeCourse", "DailyEggSpot", Vector3.new(3, 0.4, 3), CFrame.new(sign + Vector3.new(0, 0, 10)), D.colors.marker,
 				{ collide = false, neon = true, attrs = { Spot = "dailyEgg", Label = C.dailyEgg.label } })

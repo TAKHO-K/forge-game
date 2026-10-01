@@ -332,6 +332,11 @@ function M1_2cVerify.runLive(player, env)
 	local LaunchPermit = require(script.Parent.LaunchPermit)
 	local Travel = require(script.Parent.Travel)
 	local WorldMap = require(script.Parent.WorldMap)
+	local waitedMap = os.clock() -- QUEUE-ALL6R Play 1: 필터로 이 블록이 체인 맨 앞이면 맵(WorldMap.build)이 다 지어지기 전에 시작했다(나무 절 nil · 허브 바닥 없음) → 맵을 기다린다
+	while not WorldMap.model("TreeCourse") and os.clock() - waitedMap < 60 do
+		task.wait(0.5)
+	end
+	task.wait(1)
 	local BossEncounter = require(script.Parent.BossEncounter)
 	local BossPatterns = require(script.Parent.BossPatterns)
 	local MonsterState = require(script.Parent.MonsterState)
