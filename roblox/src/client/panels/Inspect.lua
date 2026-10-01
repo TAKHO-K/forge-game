@@ -317,7 +317,7 @@ end
 local function headerLine(data)
 	local class = ClassData.classes[data.classId]
 	return PlayerLabelFormat.richText(data.displayName or data.name or "", data.level, data.rebirthCount, Theme.textSize("header"))
-		.. ('  <font size="%d" color="%s">%s</font>'):format(PlayerLabelFormat.levelSize(Theme.textSize("header")), Theme.colorHex("textSecondary"), class and class.displayName or "")
+		.. ('  <font size="%d" color="%s">%s</font>'):format(PlayerLabelFormat.levelSize(Theme.textSize("header")), Theme.colorHex("textSecondary"), class and Text.get("class.name." .. data.classId) or "")
 end
 
 local function showData(data, card)

@@ -119,14 +119,14 @@ function CharacterPanel.render()
 	end
 	local classId = player:GetAttribute("ClassId")
 	local class = classId and ClassData.classes[classId]
-	built.className.Text = class and class.displayName or "-"
+	built.className.Text = class and Text.get("class.name." .. classId) or "-"
 	local art = built.left:FindFirstChild("Art")
 	local path = classId and ("icons/codex/class_" .. classId) or ""
 	if not art or art:GetAttribute("Path") ~= path then
 		if art then
 			art:Destroy()
 		end
-		art = ArtImage.label(built.left, path, UDim2.new(1, -16, 1, -44), class and class.displayName or "")
+		art = ArtImage.label(built.left, path, UDim2.new(1, -16, 1, -44), class and Text.get("class.name." .. classId) or "")
 		art.Position = UDim2.fromOffset(8, 8)
 		art:SetAttribute("Path", path)
 	end

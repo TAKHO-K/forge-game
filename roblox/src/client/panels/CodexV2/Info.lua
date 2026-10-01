@@ -175,7 +175,7 @@ function Info.detailName(view, m)
 		return Info.unknown(view, m) and "?" or BossData.bosses[m.bossId].displayName, Text.get("codex.v2.bossStep", { n = tostring(m.need) }), Info.gradeColor("epic")
 	elseif k == "class" then
 		local g = ArmorData.gradeOrder[m.weaponGrade + 1]
-		return ClassData.classes[m.classId].displayName, Info.shortName(view, m), Info.gradeColor(g)
+		return Text.get("class.name." .. m.classId), Info.shortName(view, m), Info.gradeColor(g)
 	elseif k == "nest" then
 		local found = cellV(view, m.id) >= 1
 		return found and Info.shortName(view, m) or Text.get("codex.v2.nestUnknown"), CodexData.zoneShort[m.zone], Info.gradeColor("rare")

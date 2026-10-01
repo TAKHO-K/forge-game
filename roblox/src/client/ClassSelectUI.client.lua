@@ -146,7 +146,7 @@ end)
 -- 남아있다는 걸 알려주는 게 목적이다.
 local function showConfirm(classInfo)
 	pendingClassId = classInfo.id
-	confirmText.Text = Text.get("ui.class.confirmChecking", { class = classInfo.displayName })
+	confirmText.Text = Text.get("ui.class.confirmChecking", { class = Text.get("class.name." .. classInfo.id) })
 	confirmPanel.Visible = true
 
 	-- InvokeServer는 yield한다 - 그 사이 다른 직업을 다시 눌러 pendingClassId가 바뀌면
@@ -162,10 +162,10 @@ local function showConfirm(classInfo)
 	local summary = ok and summaries and summaries[requestedId]
 	if summary and summary.level > 1 then
 		confirmText.Text = Text.get("ui.class.confirmContinue", {
-			class = classInfo.displayName, level = ("%d"):format(summary.level), stage = ("%d"):format(summary.stageBest) })
+			class = Text.get("class.name." .. classInfo.id), level = ("%d"):format(summary.level), stage = ("%d"):format(summary.stageBest) })
 	else
 		confirmText.Text = Text.get("ui.class.confirmFresh", {
-			class = classInfo.displayName })
+			class = Text.get("class.name." .. classInfo.id) })
 	end
 end
 
@@ -192,7 +192,7 @@ local function makeButton(classInfo, order)
 	button.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 	button.LayoutOrder = order
 	button.Text = Text.get("ui.class.row", {
-		class = classInfo.displayName, atk = ("%.2f"):format(classInfo.atk), def = ("%.2f"):format(classInfo.def), speed = ("%.2f"):format(classInfo.atkSpeed) })
+		class = Text.get("class.name." .. classInfo.id), atk = ("%.2f"):format(classInfo.atk), def = ("%.2f"):format(classInfo.def), speed = ("%.2f"):format(classInfo.atkSpeed) })
 	button.Parent = body
 
 	button.Activated:Connect(function()
@@ -249,7 +249,7 @@ for i, info in ipairs(ClassData.comingSoon or {}) do
 	label.TextSize = 16
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextColor3 = UIColors.lockedText
-	label.Text = ("%s(%s) · Coming Soon"):format(info.displayName, info.weaponName)
+	label.Text = Text.get("ui.class.comingSoon", { class = Text.get("class.name." .. info.id), weapon = Text.get("class.weapon." .. info.id) })
 	label.Parent = card
 end
 

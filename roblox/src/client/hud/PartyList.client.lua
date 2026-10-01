@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local Text = require(ReplicatedStorage.Shared.Text)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local PartyListView = require(script.Parent.PartyListView)
@@ -31,8 +32,7 @@ local view = PartyListView.build({ parent = screenGui, compact = Theme.isMobile 
 local currentState = nil
 
 local function classNameOf(classId)
-	local class = classId and ClassData.classes[classId]
-	return class and class.displayName or "-"
+	return classId and ClassData.classes[classId] and Text.get("class.name." .. classId) or "-"
 end
 
 -- 멤버 하나의 표시 데이터. 실제 Player는 Attribute, 더미는 스냅샷 값.

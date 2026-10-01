@@ -57,7 +57,7 @@
 | 스킬은 Q · E · R, 궁극기는 T예요. 궁극기 게이지는 적을 치면 차요. | Skills are Q, E, R. T is your Ultimate. Hit enemies to fill its gauge. |
 | 직업은 언제든 바꿀 수 있어요. 골드와 가방은 그대로예요. | You can change class anytime. Your gold and bag stay. |
 
-> 메모: 직업 영어 이름(Swordsman · Rogue · Archer · Healer)은 출시 설명 초안(`Claude outputs/QUEUE-ALL2/launch/description-drafts.md`)의 표기를 따랐다. `glossary.md`의 "대검 · 쌍검 · 활 = Greatsword · Dual Blades · Bow"는 옛 표시 이름이라 정리 필요(결정 대기 - 직업 이름은 `ClassData.displayName`이라 TextData 밖).
+> 확정(QUEUE-STUDIO 0-1 · 사용자 10-01): 직업 영어 이름 = Swordsman · Rogue · Archer · Healer(다음 직업 Paladin과 같은 역할형). 게임 화면 키 = `class.name.<id>`(`docs/i18n/glossary.md`).
 
 ## 5. 보스 기믹 / Boss Mechanics
 근거: `shared/data/BossData.lua`(bosses · intro · stageInterval 5) · `shared/data/HelpCodexData.lua`(gimmickCards) · `shared/data/TextData_en.lua`(`gimmick.*`)

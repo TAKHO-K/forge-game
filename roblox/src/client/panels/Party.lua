@@ -42,8 +42,7 @@ local friendsElsewhere = {} -- 다른 서버의 온라인 친구(서버 응답 �
 local refs -- build가 채운다
 
 local function classNameOf(classId)
-	local class = classId and ClassData.classes[classId]
-	return class and class.displayName or "-"
+	return classId and ClassData.classes[classId] and Text.get("class.name." .. classId) or "-"
 end
 
 local function isMeLeader()

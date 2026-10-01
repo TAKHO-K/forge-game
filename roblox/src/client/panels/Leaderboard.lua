@@ -188,8 +188,7 @@ local function build()
 	header.Size = UDim2.new(1, 0, 0, rowHeight())
 	header.Parent = pane
 	for index, classId in ipairs(ClassData.order) do
-		local class = ClassData.classes[classId]
-		local chip, stroke = makeButton(header, "Chip_" .. classId, class.displayName)
+		local chip, stroke = makeButton(header, "Chip_" .. classId, Text.get("class.name." .. classId))
 		chip.Position = UDim2.new(0, (index - 1) * (CHIP_WIDTH + 4), 0, 0)
 		chip.Size = UDim2.new(0, CHIP_WIDTH, 1, 0)
 		r.chips[classId] = { button = chip, stroke = stroke }

@@ -90,7 +90,7 @@ function SkillVariant.describe(v, activeClassId)
 	end
 	local class = ClassData.classes[v.classId]
 	return {
-		text = Text.get("variant.line", { class = class and class.displayName or v.classId, slot = v.slot, name = t.name, parts = table.concat(parts, " · ") }),
+		text = Text.get("variant.line", { class = class and Text.get("class.name." .. v.classId) or v.classId, slot = v.slot, name = t.name, parts = table.concat(parts, " · ") }),
 		active = v.classId == activeClassId,
 	}
 end

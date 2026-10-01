@@ -74,8 +74,8 @@ local function build()
 	roleLabel.Position = UDim2.new(0, 14, 0, y)
 	roleLabel.Size = UDim2.new(0, 60, 0, H)
 	local roleChips = {}
-	for i, r in ipairs(B.roles) do
-		roleChips[i] = chip(body, r.label, 74 + (i - 1) * 96, y, 88, H)
+	for i in ipairs(B.roles) do
+		roleChips[i] = chip(body, Text.get("party.board.role" .. i), 74 + (i - 1) * 96, y, 88, H)
 		roleChips[i].Activated:Connect(function()
 			sel.role = i
 			refs.update()
@@ -149,8 +149,8 @@ local function build()
 			if p then
 				row.frame.Position = UDim2.new(0, 14, 0, listTop + (i - 1) * (ROW + 6))
 				local class = p.classId and ClassData.classes[p.classId]
-				row.name.Text = ("%s%s"):format(p.leaderName, class and (" · " .. class.displayName) or "")
-				row.meta.Text = Text.get("party.board.row", { stage = tostring(p.stage), role = (B.roles[p.role] or B.roles[1]).label, count = tostring(p.count), size = tostring(p.size) })
+				row.name.Text = ("%s%s"):format(p.leaderName, class and (" · " .. Text.get("class.name." .. p.classId)) or "")
+				row.meta.Text = Text.get("party.board.row", { stage = tostring(p.stage), role = Text.get("party.board.role" .. (B.roles[p.role] and p.role or 1)), count = tostring(p.count), size = tostring(p.size) })
 				row.join.Visible = p.leaderUserId ~= player.UserId
 				if row.conn then
 					row.conn:Disconnect()

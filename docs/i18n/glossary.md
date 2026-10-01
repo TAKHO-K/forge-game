@@ -22,7 +22,8 @@
 | 반짝이 몬스터 · 반짝 조각 | Sparkle Monster · Sparkle Shard | 드문 변종 · 재화 |
 | 구간 수호자 · 수정 여왕 · 심해 군주 · 전갈 여왕 · 폭풍 군주 · 서리 거인 | Section Guardian · Crystal Queen · Abyssal Lord · Scorpion Queen · Storm Lord · Frost Giant | 보스 이름 |
 | 푸른 드래곤 | Blue Dragon | T6 잡몹 |
-| 대검 · 쌍검 · 활 · 치유사 | Greatsword · Dual Blades · Bow · Healer | 직업(무기 이름 = 직업 이름) |
+| 검사 · 도적 · 궁수 · 치유사 · (준비 중) 성기사 | Swordsman · Rogue · Archer · Healer · Paladin | 직업(역할형 - 사용자 확정 10-01). 키 `class.name.<id>`(greatsword · dualblade · bow · healer · paladin). 무기는 대검 Greatsword · 쌍검 Dual Blades · 활 Bow · 뿅망치 Squeaky Hammer |
+| 누구나 · 딜러 · 치유사(파티 게시판 역할) | Anyone · DPS · Healer | `party.board.role1` ~ `3` |
 | 궁극기 | Ultimate | T 칸 |
 | 견습 | Apprentice | 튜토리얼 모드 |
 | 이정표 | Guide | 첫 5분 안내(Q12) |
@@ -48,4 +49,4 @@
 | 자동 이동(지도 걷기) | Auto Walk | 지도 자동 걷기. 스테이지 자동 이동(`autoStage.*`)은 다른 기능이라 "Auto move" 그대로 |
 | 치명 확률 · 치명 피해 | Crit / Crit Rate · Crit DMG | "Dmg" · "%p" 표기 금지(en은 %p 대신 %) |
 
-> 정리 필요(결정 대기): 위 표의 "대검 · 쌍검 · 활 · 치유사 = Greatsword · Dual Blades · Bow · Healer"는 옛 표시 이름이다. 지금 `ClassData.displayName` = 검사 · 도적 · 궁수 · 치유사이고, 출시 설명 초안은 Swordsman · Rogue · Archer · Healer를 쓴다. 직업 · 보스 · 구역 · 등급 이름은 데이터의 한국어 `displayName`이라 TextData en이 없다(영어를 켜도 한국어로 나온다).
+> 확정(QUEUE-STUDIO 0-1 · 사용자 10-01): 직업 영어 이름 = Swordsman · Rogue · Archer · Healer(다음 직업 Paladin과 같은 역할형). 화면은 `Text.get("class.name." .. classId)`로 읽는다(ko 값 = `ClassData.displayName`과 같게 유지 - 서버 로그 · 개발 도구는 displayName 그대로). 보스 · 구역 · 등급 · 수련 이름은 여전히 데이터의 한국어 `displayName`이라 영어를 켜도 한국어로 나온다(남은 일).
