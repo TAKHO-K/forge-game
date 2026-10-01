@@ -27,6 +27,7 @@ local HudIcons = require(script.Parent.HudIcons)
 local StageSelectPanel = require(script.Parent.StageSelectPanel)
 local SettingsPanel = require(script.Parent.panels.Settings)
 local Confirm = require(script.Parent.ui.kit.Confirm)
+local Theme = require(script.Parent.ui.kit.Theme)
 local Text = require(ReplicatedStorage.Shared.Text)
 
 local stageMoveResult = ReplicatedStorage:WaitForChild("StageMoveResult")
@@ -151,7 +152,8 @@ updateLabels()
 local settingsButton = Instance.new("TextButton")
 settingsButton.Name = "SettingsButton"
 settingsButton.LayoutOrder = 4
-settingsButton.Size = UDim2.new(0, 34, 0, 34)
+local SETTINGS_SIZE = Theme.isMobile and Theme.touchMin or 34 -- QUEUE-STUDIO S-1: 폰 터치 44 이상(옛 = 34 고정)
+settingsButton.Size = UDim2.new(0, SETTINGS_SIZE, 0, SETTINGS_SIZE)
 settingsButton.Text = ""
 settingsButton.AutoButtonColor = false
 settingsButton.BackgroundColor3 = UIColors.panel
