@@ -150,6 +150,18 @@ local function attach(player, character)
 	titleLabel.Size = UDim2.new(1, 0, 1, 0)
 	WorldLabelStyle.styleNameplateText(titleLabel, settings.textSize)
 	titleLabel.Parent = titleGui
+	-- QUEUE-ALL4 A3: 아바타 배율(1.35)에서 이름표가 머리에 겹쳤다(Play 캡처) → 머리 배율(Head.Size ÷ OriginalSize)만큼 높이를 키운다
+	local head = character:FindFirstChild("Head")
+	local function applyScaleOffset()
+		local original = head and head:FindFirstChild("OriginalSize")
+		local s = (original and original:IsA("Vector3Value") and original.Value.Y > 0) and head.Size.Y / original.Value.Y or 1
+		billboard.StudsOffsetWorldSpace = Vector3.new(0, settings.offsetStuds * s, 0)
+		titleGui.StudsOffsetWorldSpace = Vector3.new(0, settings.offsetStuds * s + TitleData.offsetStuds, 0)
+	end
+	if head then
+		applyScaleOffset()
+		head:GetPropertyChangedSignal("Size"):Connect(applyScaleOffset)
+	end
 	refreshTitle(player, titleGui, titleLabel)
 
 	local connections = {
