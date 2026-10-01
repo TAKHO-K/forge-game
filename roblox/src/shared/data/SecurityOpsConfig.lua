@@ -30,7 +30,13 @@ return {
 		confirmSeconds = 300,
 		backupStore = "OpsRollbackBackup_v1",
 		listVersions = 30, -- 시각으로 고를 때 훑는 버전 수
+		-- QUEUE-ALL6R 결정 8: 대상 저장을 다른 서버가 쥐고 있으면(SaveSystem.heldElsewhere) MessagingService로 그 서버에 내보내기를 부탁 → 잠금이 풀릴 때까지(최대 releaseWaitSeconds) 기다린 뒤 덮는다 · 안 풀리면 중단
+		kickTopic = "OpsKick_v1", -- 검증 무장 = _verify
+		releaseWaitSeconds = 30,
+		releasePollSeconds = 3,
 	},
+	-- 확인 번호가 필요한 명령(되돌리기와 같은 미리보기 → /ops <명령> confirm <번호>): 영구 차단 · 초월 회수(QUEUE-ALL6R 결정 8)
+	confirm = { banDurations = { perm = true }, revokeTranscendent = true },
 	-- 차단(/ops ban): 로블록스 Players:BanAsync - 경험 전체 · 부계정 포함(ExcludeAltAccounts = false)
 	ban = {
 		durations = { ["1d"] = 86400, ["3d"] = 259200, ["7d"] = 604800, ["30d"] = 2592000, perm = -1 },

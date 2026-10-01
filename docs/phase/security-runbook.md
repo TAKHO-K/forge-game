@@ -11,12 +11,12 @@
 | `/ops inspect <userId>` | 프로필 요약(레벨 · 스테이지 · 골드 · 태초/초월 수 · 환생) + 최근 의심 기록 + 감사 기록 | 접속 중이면 메모리 값 · 아니면 저장값 |
 | `/ops versions <userId>` | 저장 버전 목록(최근 10 · 30일 보관) | |
 | `/ops rollback <userId> <버전 또는 UTC 시각>` | 그 시점 저장으로 **미리보기**(지금 vs 그때 차이) + 확인 번호 | 아직 아무것도 안 바뀜 |
-| `/ops rollback confirm <확인 번호>` | 실행: 접속 중이면 이 서버에서 내보냄 → 지금 저장본을 백업 저장소에 복사 → 그 버전으로 덮기 → 다른 서버 저장은 낡은 세션으로 거절됨 | 백업 실패 = 실행 안 함 |
+| `/ops rollback confirm <확인 번호>` | 실행: 접속 중이면 이 서버에서 내보냄 · **다른 서버가 저장을 쥐고 있으면 MessagingService(`OpsKick_v1`)로 그 서버에서 내보내고 저장 잠금이 풀릴 때까지 기다림(최대 30초)** → 지금 저장본을 백업 저장소에 복사 → 그 버전으로 덮기 | 백업 실패 · 30초 안에 잠금이 안 풀림 = 실행 안 함(다시 시도) |
 | `/ops revoke <userId> <번호|rollId>` | 태초 회수(옛 명령 그대로 - 결번 · 칭호 정리) | |
-| `/ops revoke <userId> t<번호>` | **가짜 초월** 회수: 아이템 삭제 · 세계 번호 결번(명예의 전당에서 빠짐) · 초월자 칭호 · 도감 초월 줄 정리 | 접속 중일 때만(이 서버) |
+| `/ops revoke <userId> t<번호>` | **가짜 초월** 회수 **미리보기**(구역 · 부위) + 확인 번호 → `/ops revoke confirm <확인 번호>` = 실행: 아이템 삭제 · 세계 번호 결번(명예의 전당에서 빠짐) · 초월자 칭호 · 도감 초월 줄 정리 | 접속 중일 때만(이 서버) · 확인 번호 5분 |
 | `/ops revoke <userId> <재화> <수량>` | 재화 회수(gold · sparkleShard · enhanceStone · highEnhanceStone · gemDust) - 0 아래로는 안 내려감 | 접속 중일 때만 |
 | `/ops leaderboard remove <userId>` | 개인 · 직업 순위 + 이번 주 주간 도전 기록 제거 | 옛 `/ops lbremove`도 그대로 |
-| `/ops ban <userId> <기간> <사유>` | 로블록스 기본 차단(`Players:BanAsync` · 경험 전체 · 부계정 포함) · 기간 = `1d` · `7d` · `30d` · `perm` | 사유는 사용자에게 보이는 글(짧게) |
+| `/ops ban <userId> <기간> <사유>` | 로블록스 기본 차단(`Players:BanAsync` · 경험 전체 · 부계정 포함) · 기간 = `1d` · `7d` · `30d` · `perm` · **`perm`은 미리보기 + `/ops ban confirm <확인 번호>`** | 사유는 사용자에게 보이는 글(짧게 · 120자에서 자름) |
 | `/ops unban <userId>` | 차단 풀기(`Players:UnbanAsync`) | |
 
 ## 1. 핵 신고를 받았을 때

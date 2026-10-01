@@ -9,11 +9,11 @@
 --   /ops stats [all]                       알파 통계(C1 끌어오기 계측 - 이 서버 메모리 · all = 서버 종료 때 저장된 요약 합 - S1 후속 0-5)
 --   QUEUE-ALL6 F(절차 = docs/phase/security-runbook.md · 기준값 = shared/data/SecurityOpsConfig):
 --   /ops inspect <userId>                   프로필 요약 · 최근 의심 기록 · 감사 기록
---   /ops rollback <userId> <버전|UTC 시각>   미리보기 + 확인 번호 → /ops rollback confirm <번호> = 실행(접속 중이면 내보냄 · 지금 저장본 백업 · 그 사람만)
---   /ops revoke <userId> t<번호>            가짜 초월 회수(아이템 삭제 · 세계 번호 결번 · 초월자 칭호 · 도감 초월 줄)
+--   /ops rollback <userId> <버전|UTC 시각>   미리보기 + 확인 번호 → /ops rollback confirm <번호> = 실행(접속 중이면 내보냄 · 다른 서버가 저장을 쥐고 있으면 MessagingService로 그 서버에서 내보내고 놓을 때까지 대기 · 지금 저장본 백업 · 그 사람만)
+--   /ops revoke <userId> t<번호>            가짜 초월 회수 미리보기 + 확인 번호 → /ops revoke confirm <번호> = 실행(아이템 삭제 · 세계 번호 결번 · 초월자 칭호 · 도감 초월 줄 - QUEUE-ALL6R)
 --   /ops revoke <userId> <재화> <수량>       재화 회수(0 아래로 안 내려감)
 --   /ops leaderboard remove <userId>        개인 · 직업 순위 + 이번 주 주간 도전 기록 제거
---   /ops ban <userId> <1d|3d|7d|30d|perm> <사유>  ·  /ops unban <userId>   로블록스 기본 차단(Players:BanAsync · 경험 전체 · 부계정 포함)
+--   /ops ban <userId> <1d|3d|7d|30d|perm> <사유>  ·  /ops unban <userId>   로블록스 기본 차단(Players:BanAsync · 경험 전체 · 부계정 포함) · perm = 미리보기 + /ops ban confirm <번호>(QUEUE-ALL6R)
 -- 결과는 명령한 사람 채팅 줄(시스템 메시지)로 돌려준다. 자동 제재는 없다.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -95,6 +95,30 @@ end
 local SecurityOps = require(ReplicatedStorage.Shared.data.SecurityOpsConfig)
 local AuditTrail = require(script.Parent.AuditTrail)
 local OpsRollback = require(script.Parent.OpsRollback)
+
+-- 확인 번호(되돌리기 · 영구 차단 · 초월 회수 - 같은 표): [번호] = { kind, userId, at, by, … }
+local pendingConfirm = {}
+local function issueToken(entry)
+	local token
+	repeat
+		token = tostring(math.random(100000, 999999))
+	until not pendingConfirm[token]
+	entry.at = os.time()
+	pendingConfirm[token] = entry
+	return token
+end
+local function takeToken(kind, token, player)
+	local p = pendingConfirm[tostring(token or "")]
+	if not p or p.kind ~= kind then
+		return nil
+	end
+	pendingConfirm[tostring(token)] = nil
+	if os.time() - p.at > SecurityOps.rollback.confirmSeconds or p.by ~= player.UserId then
+		return nil
+	end
+	return p
+end
+
 
 -- QUEUE-ALL6 F: 가짜 초월 회수(t<번호>) · 재화 회수
 local function revokeTranscendent(userId, no)
@@ -178,11 +202,42 @@ local function revokeCurrency(userId, kind, amount)
 	return ("revoked %s %d → %d"):format(kind, before or 0, math.max(0, (before or 0) - amount))
 end
 
-function handlers.revoke(args)
+-- QUEUE-ALL6R 결정 8: 초월 회수 미리보기(지우지 않고 찾기만) - 있으면 몇 개 · 어느 구역
+local function previewTranscendent(userId, no)
+	local target = Players:GetPlayerByUserId(userId)
+	local profile = target and PlayerProfile.getProfile(target)
+	if not profile then
+		return nil, "not_online"
+	end
+	local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData)
+	for _, item in ipairs(AcquisitionAudit.primordialItems(profile)) do
+		if item.grade == TranscendentData.gradeId and type(item.primordial) == "table" and tostring(item.primordial.no) == no then
+			return item
+		end
+	end
+	return nil, "no_item"
+end
+
+function handlers.revoke(args, player)
 	local userId = tonumber(args[2]) or 0
 	local ref = tostring(args[3])
+	if args[2] == "confirm" then
+		local p = takeToken("revokeTranscendent", args[3], player)
+		if not p then
+			return "no_pending(확인 번호가 없거나 시간이 지났다)"
+		end
+		return revokeTranscendent(p.userId, p.no)
+	end
 	if ref:match("^t%d+$") then
-		return revokeTranscendent(userId, ref:sub(2))
+		if not SecurityOps.confirm.revokeTranscendent then
+			return revokeTranscendent(userId, ref:sub(2))
+		end
+		local item, why = previewTranscendent(userId, ref:sub(2))
+		if not item then
+			return why
+		end
+		local token = issueToken({ kind = "revokeTranscendent", userId = userId, no = ref:sub(2), by = player.UserId })
+		return ("미리보기: %d의 초월 %s(%s · %s) 삭제 · 세계 번호 결번 · 칭호 · 도감 줄 다시 판정 | 실행 = /ops revoke confirm %s(%d초 안)"):format(userId, ref, tostring(item.setZone), tostring(item.part), token, SecurityOps.rollback.confirmSeconds)
 	end
 	if SecurityOps.revokeCurrencies[ref] then
 		return revokeCurrency(userId, ref, tonumber(args[4]))
@@ -265,19 +320,55 @@ function handlers.inspect(args)
 	return table.concat(rows, " | ")
 end
 
-local pendingRollback = {} -- [확인 번호] = { userId, version, at, by }
+-- QUEUE-ALL6R 결정 8: 다른 서버 접속 중인 대상 = MessagingService로 그 서버에 내보내기 부탁(모든 서버가 듣는다 - 그 사람이 있는 서버만 Kick)
+local KICK_MESSAGE = "운영 점검으로 잠시 연결을 끊었어요. 다시 들어와 주세요."
+local kickTopic = SecurityOps.rollback.kickTopic .. (require(ReplicatedStorage.Shared.data.DevToolsConfig).verifyArmed and "_verify" or "")
+Ops.kickTopic = kickTopic -- 검증 훅
+local function onKickMessage(data)
+	local userId = type(data) == "table" and tonumber(data.userId)
+	local target = userId and Players:GetPlayerByUserId(userId)
+	print(("[forge-game] 운영 내보내기 요청 받음: userId %s · 이 서버 접속 %s"):format(tostring(userId), tostring(target ~= nil)))
+	if target then
+		target:Kick(KICK_MESSAGE)
+	end
+	return target ~= nil
+end
+Ops.onKickMessage = onKickMessage -- 검증 훅
+task.spawn(function()
+	pcall(function()
+		game:GetService("MessagingService"):SubscribeAsync(kickTopic, function(message)
+			onKickMessage(message.Data)
+		end)
+	end)
+end)
+
 function handlers.rollback(args, player)
 	if args[2] == "confirm" then
-		local token = tostring(args[3] or "")
-		local p = pendingRollback[token]
-		pendingRollback[token] = nil
-		if not p or os.time() - p.at > SecurityOps.rollback.confirmSeconds or p.by ~= player.UserId then
+		local p = takeToken("rollback", args[3], player)
+		if not p then
 			return "no_pending(확인 번호가 없거나 시간이 지났다)"
 		end
 		local online = Players:GetPlayerByUserId(p.userId)
 		if online then -- 먼저 내보내고 그 사람의 마지막 저장(놓기)이 끝난 뒤에 덮는다
-			online:Kick("운영 점검으로 잠시 연결을 끊었어요. 다시 들어와 주세요.")
+			online:Kick(KICK_MESSAGE)
 			task.wait(6)
+		else -- QUEUE-ALL6R 결정 8: 다른 서버가 저장을 쥐고 있으면 거기서 내보내고 놓을 때까지 기다린다(안 놓으면 덮지 않는다 - 늦게 온 그 서버 저장이 되돌리기를 덮어쓴다)
+			local released, why = OpsRollback.awaitRelease(p.userId, {
+				read = SaveSystem.opsReadCurrent,
+				held = function(raw)
+					return SaveSystem.heldElsewhere(raw, os.time())
+				end,
+				publish = function(userId)
+					pcall(function()
+						game:GetService("MessagingService"):PublishAsync(kickTopic, { userId = userId })
+					end)
+				end,
+				wait = task.wait,
+			})
+			if not released then
+				AuditTrail.note(p.userId, "ops_rollback", ("중단: 다른 서버가 저장을 놓지 않음(%s · %s)"):format(tostring(why), player.Name))
+				return "failed: " .. tostring(why) .. "(다른 서버 접속 중 - 내보내기 요청 뒤에도 저장 잠금이 안 풀렸다. 잠시 뒤 다시)"
+			end
 		end
 		local backup = DataStoreService:GetDataStore(SecurityOps.rollback.backupStore .. (require(ReplicatedStorage.Shared.data.DevToolsConfig).verifyArmed and "_verify" or ""))
 		local ok, why, backupKey = OpsRollback.execute({
@@ -309,8 +400,7 @@ function handlers.rollback(args, player)
 	end
 	local now = OpsRollback.summary((SaveSystem.opsReadCurrent(userId)))
 	local old = OpsRollback.summary(SaveSystem.opsReadVersion(userId, pick.version))
-	local token = tostring(math.random(100000, 999999))
-	pendingRollback[token] = { userId = userId, version = pick.version, at = os.time(), by = player.UserId }
+	local token = issueToken({ kind = "rollback", userId = userId, version = pick.version, by = player.UserId })
 	return ("미리보기 %s@%s | 지금: %s | 그때: %s | 실행 = /ops rollback confirm %s(%d초 안)"):format(pick.version, os.date("!%m-%d %H:%M", math.floor(pick.createdTime / 1000)),
 		OpsRollback.describe(now), OpsRollback.describe(old), token, SecurityOps.rollback.confirmSeconds)
 end
@@ -335,15 +425,29 @@ function handlers.leaderboard(args)
 	return "removed: " .. table.concat(done, ",")
 end
 
-function handlers.ban(args)
-	local config, why = OpsRollback.banConfig(tonumber(args[2]), args[3], table.concat(args, " ", 4))
-	if not config then
-		return why
+function handlers.ban(args, player)
+	local config, why, label
+	if args[2] == "confirm" then -- QUEUE-ALL6R 결정 8: 영구 차단 실행
+		local p = takeToken("ban", args[3], player)
+		if not p then
+			return "no_pending(확인 번호가 없거나 시간이 지났다)"
+		end
+		config, label = p.config, p.label
+	else
+		config, why = OpsRollback.banConfig(tonumber(args[2]), args[3], table.concat(args, " ", 4))
+		if not config then
+			return why
+		end
+		label = tostring(args[3])
+		if SecurityOps.confirm.banDurations[label] then
+			local token = issueToken({ kind = "ban", userId = config.UserIds[1], config = config, label = label, by = player.UserId })
+			return ("미리보기: %d 영구 차단(경험 전체 · 부계정 포함) · 사유 \"%s\" | 실행 = /ops ban confirm %s(%d초 안)"):format(config.UserIds[1], config.DisplayReason, token, SecurityOps.rollback.confirmSeconds)
+		end
 	end
 	local ok, err = pcall(function()
 		Players:BanAsync(config)
 	end)
-	return ok and ("banned " .. tostring(args[3])) or ("failed: " .. tostring(err))
+	return ok and ("banned " .. label) or ("failed: " .. tostring(err))
 end
 function handlers.unban(args)
 	local userId = tonumber(args[2])

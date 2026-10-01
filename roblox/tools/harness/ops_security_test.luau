@@ -91,6 +91,39 @@ local bad1, w1 = R.banConfig(123, "2y", "x")
 local bad2, w2 = R.banConfig(123, "1d", "")
 local bad3 = R.banConfig(0, "1d", "x")
 check("잘못된 기간 · 사유 없음 · userId 0 = 거절", bad1 == nil and w1 == "bad_args" and bad2 == nil and w2 == "need_reason" and bad3 == nil)
+-- QUEUE-ALL6R: 한글 사유 자르기 = 글자 수(옛 바이트 자르기는 UTF-8을 깨뜨렸다)
+local longKo = string.rep("가", C.ban.maxReasonChars + 7)
+local cut = R.banConfig(123, "1d", longKo).DisplayReason
+check(("한글 사유 %d자 → %s자 · UTF-8 온전 %s"):format(C.ban.maxReasonChars + 7, tostring(utf8.len(cut)), tostring(utf8.len(cut) ~= nil)), utf8.len(cut) == C.ban.maxReasonChars)
+check("확인 번호 대상: perm 차단 · 초월 회수(7d는 바로)", C.confirm.banDurations.perm == true and not C.confirm.banDurations["7d"] and C.confirm.revokeTranscendent == true)
+
+-- QUEUE-ALL6R 결정 8: 다른 서버가 저장을 쥐고 있을 때 - 내보내기 1번 부탁 → 놓을 때까지 기다림 · 안 놓으면 중단
+local function fakeIo(heldReads)
+	local io = { reads = 0, published = 0, waited = 0 }
+	io.read = function()
+		io.reads += 1
+		return io.reads
+	end
+	io.held = function(n)
+		return n <= heldReads
+	end
+	io.publish = function()
+		io.published += 1
+	end
+	io.wait = function(sec)
+		io.waited += sec
+	end
+	return io
+end
+local free = fakeIo(0)
+local okFree = R.awaitRelease(1, free)
+check(("안 쥐고 있음 = 바로 덮음(부탁 %d · 기다림 %d초)"):format(free.published, free.waited), okFree == true and free.published == 0 and free.waited == 0)
+local soon = fakeIo(3)
+local okSoon = R.awaitRelease(1, soon)
+check(("다른 서버가 쥠 → 부탁 %d번 → 읽기 %d번째에 놓음 · 기다림 %d초"):format(soon.published, soon.reads, soon.waited), okSoon == true and soon.published == 1 and soon.waited == C.rollback.releasePollSeconds * 3)
+local stuck = fakeIo(math.huge)
+local okStuck, whyStuck = R.awaitRelease(1, stuck)
+check(("끝까지 쥠 = 중단 %s · 기다림 %d초(상한 %d)"):format(tostring(whyStuck), stuck.waited, C.rollback.releaseWaitSeconds), okStuck == false and whyStuck == "still_held" and stuck.published == 1 and stuck.waited >= C.rollback.releaseWaitSeconds)
 
 -- 5. 탐지 판정(순수)
 local D = C.detect
