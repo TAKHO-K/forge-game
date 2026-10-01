@@ -722,7 +722,9 @@ function Travel.pollPlayer(player, root, humanoid, now)
 	end
 	-- 잠긴 구역 밀어내기
 	local zone = WorldMapLayout.zoneAt(feet)
-	if zone and zone.tierIndex > unlocked then
+	-- QUEUE-ALL6 B6(D-13): 순간이동 직후는 건너뛴다(떨어짐 판정과 같은 이유 - 옮겨지기 전 옛 위치를 읽어 한 번 더 밀고 알림이 반복될 수 있었다)
+	local movedJustNow = now - (st.teleportAt or -math.huge) < WorldMapData.travel.arrival.fallSkipAfterTeleportSeconds
+	if zone and zone.tierIndex > unlocked and not movedJustNow then
 		-- 허브 쪽으로(구역 원 밖 + pushOutStuds) - 꽃잎 부채꼴 안의 반지름 선은 이웃 구역 원을 지나지 않는다(핑퐁 없음)
 		local out = Travel.pushOutPoint(zone, feet)
 		st.pushes += 1
@@ -806,7 +808,7 @@ end
 -- 정거장 내려가기 판(Station 가장자리 원판) - 서 있으면 허브로 · 기록 지움
 function Travel.checkStationDown(player, feet, grounded)
 	local st = stateOf(player)
-	if not grounded then
+	if not grounded or os.clock() - (st.teleportAt or -math.huge) < WorldMapData.travel.arrival.fallSkipAfterTeleportSeconds then -- QUEUE-ALL6 B6(D-13): 순간이동 직후 옛 위치(판 위)로 한 번 더 옮기지 않게
 		return false
 	end
 	for _, part in ipairs(Travel.downPads or {}) do

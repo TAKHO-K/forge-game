@@ -9,7 +9,7 @@ return {
 		["hud.toast.pickup"] = "{grade} {part} 획득 (Lv.{level})",
 		["hud.toast.more"] = " 외 {count}",
 		["hud.band.gear"] = "장비 1개 확정({grade} 이상 · Lv {min}~{max}) [직업]",
-		["hud.band.gearClaimed"] = "장비 1개 확정({grade} 이상 · Lv {min}~{max}) [직업] ✓ 받음",
+		["hud.band.gearClaimed"] = "장비 1개 확정({grade} 이상 · Lv {min}~{max}) [직업] ✓", -- QUEUE-ALL6 B4: 폰 caption 14에서 1.03(… 잘림) → "받음" 빼기(✓가 같은 뜻)
 		["hud.band.firstHead"] = "첫 클리어",
 		["hud.band.dropTicket"] = "하락 방지권 ×{count}",
 		["hud.band.resetTicket"] = "초기화 방지권 ×{count}",
@@ -72,8 +72,8 @@ return {
 		["hud.toast.levelUp"] = "Level up! Lv.{level}",
 		["hud.toast.pickup"] = "Got {grade} {part} (Lv.{level})",
 		["hud.toast.more"] = " +{count} more",
-		["hud.band.gear"] = "Gear ×1 ({grade}+ · Lv {min}~{max}) [Class]",
-		["hud.band.gearClaimed"] = "Gear ×1 ({grade}+ · Lv {min}~{max}) [Class] ✓",
+		["hud.band.gear"] = "Gear ({grade}+ · Lv {min}~{max}) [Class]", -- QUEUE-ALL6 B4: 폰 Lv 3자리 1.05 → ×1 빼기
+		["hud.band.gearClaimed"] = "Gear ({grade}+ · Lv {min}~{max}) [Class] ✓",
 		["hud.band.firstHead"] = "First Clear",
 		["hud.band.dropTicket"] = "Drop Guard ×{count}",
 		["hud.band.resetTicket"] = "Reset Guard ×{count}",

@@ -13,10 +13,10 @@
 | B1 | 길 안내 시드 1 묻힌 점 | 완료 | 3시드 990곳 묻힌 점 0 · 숨김 0 · 실패 0 |
 | B2 | 체크포인트 전투 중 거절 | 완료(ALL6(나) 5/5) | /gg cp all|clear · ALL6(나) 4항목 |
 | B3 | 성능 남은 3 최적화 | 부분 | 86c2d8bf · #1 서버 몹 틱 0.275 → 0.113 ms(59%↓) · #3 렌더 · #4 클라 물리 = 안전한 변경 없음(폰 가벼움 기본 A2가 대응) |
-| B4 | 글자 넘침 상위 30 미확인 | 대기 | |
+| B4 | 글자 넘침 상위 30 미확인 | 완료 | 미확인 23키 TextService 실측(ko/en × PC/폰) · 넘침 2(hud.band.gearClaimed 폰 1.03/1.07 · hud.band.gear en 폰 1.05) → 문구 줄임(최악 0.96) · 경계 1(inv.act.reroll 3자리 1.00) · 표 B4_overflow_measure.txt |
 | B5 | BR1(나) 격리 규칙 | 완료(Play 확인은 I) | P0(가) → 체인 끝 · docs/phase/verify-isolation.md |
-| B6 | 코드 점검 D 보류 7 | 대기 | |
-| B7 | 활강 거품 캡처 | 대기 | |
+| B6 | 코드 점검 D 보류 7 | 완료(코드 판정 + 수정 2) | D-1 · D-10 수정 유지(경로 추적) · D-2 Destroying 경로 입자 몫 누수 → 고침 · D-13 순간이동 직후 잠긴 구역 · 내려가기 판 재발동 가능(지연 때) → 직후 건너뛰기 · D-3 체감(사용자) · D-5 저장 줄 = 하네스 save 58/58 |
+| B7 | 활강 거품 캡처 | 완료 | B7_glide_jelly_bubbles*.png(거품이 작고 옅음 - 사용자 확인) |
 | C | 보상 내용 펼쳐 보기 | 완료 | 4eabbc5a · e7d9fb7d · ItemInfoData · RewardDetail · 지갑 Attribute · 출석 오늘 띠 |
 | D | 깔끔한 골드 단위 | 완료 | 4eabbc5a · GoldCost.niceReward · EconSim 차이 0줄 |
 | E | 장비창 · 방어구 외형 다시 | 완료 | b4fcbbd5 · 19c6630d · E5 Play 수정(미리보기: 2D 썸네일이 3D 밑에 겹침 · 착용 방어구 조각이 복제에 없던 것 · 좁은 칸 틀) · 캡처 E5_worn_4class_2set_3grade.png(24) · E5_inventory_pc_after · 폰 가방/상세 |

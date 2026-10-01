@@ -99,6 +99,10 @@ local function track(player, character)
 	st.glide = makeTrail(root, "ArtV1GlideTrail", 0.4)
 	chars[character] = st
 	character.Destroying:Connect(function()
+		if st.glideRelease then -- QUEUE-ALL6 B6(D-2): Destroy로 지워지면 이 신호가 아래 Heartbeat 정리보다 먼저 와 빌린 입자 몫이 샜다
+			st.glideRelease()
+			st.glideRelease = nil
+		end
 		chars[character] = nil
 	end)
 end
