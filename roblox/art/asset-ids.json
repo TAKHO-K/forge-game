@@ -3604,6 +3604,41 @@
   "status": "Approved",
   "imageId": 110503464485228
  },
+ "map/world_0_0.png": {
+  "sha256": "fb15e1077112ccc2c78a75827a53bb777628a245a06a4fced0983197826d85a8",
+  "assetType": "Decal",
+  "assetId": 118164884250027,
+  "status": "Approved",
+  "imageId": 93304537163218
+ },
+ "map/world_0_1.png": {
+  "sha256": "bddc1d8c598e779632245fca99c96f2ea9572e149bc161c98df0038e434b73ff",
+  "assetType": "Decal",
+  "assetId": 90340026823027,
+  "status": "Approved",
+  "imageId": 102569254322881
+ },
+ "map/world_1_0.png": {
+  "sha256": "48c4cd5586a2de3d5901ff5868ba4be229fc126a29da8ceb0610fc0d81e2ee97",
+  "assetType": "Decal",
+  "assetId": 132249796196513,
+  "status": "Approved",
+  "imageId": 78105062411174
+ },
+ "map/world_1_1.png": {
+  "sha256": "db4a86e165b779fb18aaed395edc1e210aa875b9880b66740066bd59cd70e4e5",
+  "assetType": "Decal",
+  "assetId": 74022300037982,
+  "status": "Approved",
+  "imageId": 139214670917259
+ },
+ "map/world_mini.png": {
+  "sha256": "09a5c5bca30be623c31023d8c3696561eefb0c7dbe14126ce3cd9746237e4e76",
+  "assetType": "Decal",
+  "assetId": 121926840582695,
+  "status": "Approved",
+  "imageId": 87068358733565
+ },
  "monsters/amethyst_bat.fbx": {
   "sha256": "98430076d61b2274e3641c2b7188f3dfde8c6c0c92ba8cc7ca178c2c4dce3e96",
   "assetType": "Model",
