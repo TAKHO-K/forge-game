@@ -4392,6 +4392,7 @@ if RunService:IsStudio() then
 				{ "6hbF(나)", function() require(script.Parent.SaveLockVerify).runLive(player, env) end }, -- QUEUE-6h-b 후속: 새 계정 첫 로드 · 저장 왕복 · 약한 세션 잠금(실제 DataStore 대기 약 20초) · 음수 골드
 				{ "G1-0(나)", function() require(script.Parent.G1_0Verify).runLive(player, env) end }, -- G1-0: 받는 피해 하한 · 복귀 표본(벽 위 · 바깥 · 허공 · 연쇄) · 단상 점프 판정 · 12인 재생성 전후
 				{ "ALL6(나)", function() require(script.Parent.QueueAll6Verify).runLive(player, env) end }, -- QUEUE-ALL6: 체크포인트 거절 · 취소 · 쿨(B2) + 뒤 항목 절(extraSections) - VerifyOnly 단독
+				{ "ALL6R(나)", function() require(script.Parent.QueueAll6RVerify).runLive(player, env) end }, -- QUEUE-ALL6R: 월드 글자 en 한글 0 · 운영 확인 번호(영구 차단 · 초월 회수) · 내보내기 메시지 수신
 				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
 				{ "P3d(가E)", function() require(script.Parent.P3dVerify).runRegrowSeeds() end }, -- P3d: 재생성 100시드 × 6맵(무거운 계산 - 맨 끝)
 				{ "P3dF(가E)", function() require(script.Parent.P3dFVerify).runRegrowSeeds() end }, -- P3d-F B4: 상한 교체 100시드 × 6맵 · 면적 하한 · 닫힌 공간(무거운 계산 - 맨 끝)
