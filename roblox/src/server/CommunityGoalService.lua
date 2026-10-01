@@ -227,6 +227,11 @@ function CommunityGoalService.start()
 			task.wait(D.flushSeconds)
 		end
 	end)
+	game:BindToClose(function() -- QUEUE-ALL5 D②: 종료 때 마지막 주기의 기여분(pending)도 합계에 넣는다(개인 contributed는 저장되는데 합계만 빠졌다)
+		if pending > 0 then
+			pcall(flush)
+		end
+	end)
 end
 
 -- 검증 · 개발 전용

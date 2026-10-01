@@ -616,7 +616,8 @@ end
 -- 요청 하나. action = "board"(boardId) · "me"(boardId) · "card"(boardId, key). now는 검증이 시간을 주입할 때만.
 function Leaderboard.handle(player, action, boardId, key, now)
 	now = now or os.clock()
-	if type(action) ~= "string" or type(boardId) ~= "string" or not kindOf(boardId) then
+	-- QUEUE-ALL5 D②: action은 간격 표(requestIntervalSeconds)에 있는 것만 - 옛 = 아무 문자열이나 rateLimited가 lastRequestAt[player][action]을 만들어 표가 끝없이 커졌다
+	if type(action) ~= "string" or LeaderboardConfig.requestIntervalSeconds[action] == nil or type(boardId) ~= "string" or not kindOf(boardId) then
 		return { ok = false, reason = "bad_request" }
 	end
 	if rateLimited(player, action, now) then
@@ -833,7 +834,10 @@ end)
 task.spawn(function()
 	while true do
 		if #Players:GetPlayers() > 0 and Leaderboard.writeMode() ~= "off" then
-			Leaderboard.refreshAll()
+			local ok, err = pcall(Leaderboard.refreshAll) -- QUEUE-ALL5 D②: 한 번의 오류(예상 밖 저장값)가 이 서버의 주기 갱신을 영구히 멈추지 않게
+			if not ok then
+				warn("[Leaderboard] 주기 갱신 오류: " .. tostring(err))
+			end
 			task.wait(LeaderboardConfig.refreshSeconds)
 		else
 			task.wait(5)

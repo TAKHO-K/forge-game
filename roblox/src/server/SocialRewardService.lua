@@ -116,6 +116,7 @@ function SocialRewardService.onLoaded(player, inviterOverride)
 			return
 		end
 		grant(player, I.inviteeReward)
+		require(script.Parent.ImmediateSave).request(player) -- QUEUE-ALL5 D②: pairKey는 이미 써졌다 - 다음 주기 저장 전에 서버가 꺼지면 보상만 사라진다(코드 보상과 같게)
 		noticeRemote:FireClient(player, I.text.invitee)
 		local oldEnough = (player.AccountAge or 0) >= I.minAccountAgeDays
 		local day = math.floor(os.time() / 86400)

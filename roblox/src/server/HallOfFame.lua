@@ -206,7 +206,10 @@ function HallOfFame.start()
 			warn("[D1] 명예의 전당 자리(Spot = hallOfFame)를 60초 동안 못 찾음 - 석판 없음(목록은 계속 읽는다)")
 		end
 		while true do
-			HallOfFame.refresh()
+			local ok, err = pcall(HallOfFame.refresh) -- QUEUE-ALL5 D②: 한 번의 오류가 주기 복원을 영구히 멈추지 않게
+			if not ok then
+				warn("[D1] 명예의 전당 갱신 오류: " .. tostring(err))
+			end
 			task.wait(PrimordialData.hallRefreshSeconds)
 		end
 	end)

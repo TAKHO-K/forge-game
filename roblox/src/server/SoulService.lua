@@ -140,7 +140,13 @@ function SoulService.noteDisconnect(player, encounter)
 	if not SoulData.enabled or not encounter or encounter.isTutorial then
 		return
 	end
-	disconnected[player.UserId] = { encounter = encounter, at = os.clock(), oldPlayer = player }
+	local rec = { encounter = encounter, at = os.clock(), oldPlayer = player }
+	disconnected[player.UserId] = rec
+	task.delay(SoulData.reconnectGraceSeconds + 1, function() -- QUEUE-ALL5 D②: 안 돌아온 사람의 기록(옛 Player · encounter 참조)이 서버 수명 내내 남지 않게
+		if disconnected[player.UserId] == rec then
+			disconnected[player.UserId] = nil
+		end
+	end)
 	print(("[K3] 튕김 기록: %s - %d초 안에 다시 들어오면 영혼으로 관전 복귀"):format(tostring(player.Name), SoulData.reconnectGraceSeconds))
 	release(player)
 	lastReject[player] = nil
