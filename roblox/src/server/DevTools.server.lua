@@ -3189,7 +3189,7 @@ local function handleCommand(player, args)
 	elseif sub == "rift" and (args[2] == "on" or args[2] == "off" or args[2] == "auto") then
 		-- QUEUE-ALL1 P3 §3: 균열 강제(on = 지금부터 20분 · off = 강제 끔 · auto = 시간표) - RiftService가 1초 안에 반영
 		workspace:SetAttribute("RiftForceEndsAt", nil)
-		workspace:SetAttribute("RiftForce", args[2] == "on" and true or (args[2] == "off" and false or nil))
+		workspace:SetAttribute("RiftForce", if args[2] == "on" then true elseif args[2] == "off" then false else nil) -- QUEUE-ALL5 D②: 옛 `x and false or nil`은 off도 nil(= 시간표)이 됐다
 		reply(player, "균열 강제: " .. args[2])
 	elseif sub == "god" and (args[2] == "on" or args[2] == "off") then
 		-- BR1-2 스크린샷용: 받는 피해 ×0(출처 칸 devGod - 1시간). 연출 · 판정은 그대로 돈다.

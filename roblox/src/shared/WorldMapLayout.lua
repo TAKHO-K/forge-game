@@ -918,7 +918,7 @@ function Layout.buildTree(list)
 			local p = Vector3.new(math.cos(a) * mid, FLOOR + s.y - St.thickness / 2, math.sin(a) * mid)
 			local w = 2 * math.pi * St.ringOuter / St.segments + 1
 			prim(list, "TreeCourse", s.deck and "Deck" or "Station", Vector3.new(w, St.thickness, St.ringOuter - St.ringInner), CFrame.lookAt(p, Vector3.new(0, p.Y, 0)), barkDark,
-				{ attrs = { Station = s.deck and nil or s.index, CourseKind = s.deck and "deck" or "station" } })
+				{ attrs = { Station = if s.deck then nil else s.index, CourseKind = s.deck and "deck" or "station" } })
 		end
 		local a = math.rad(St.startAngleDeg)
 		local mid = (St.ringInner + St.ringOuter) / 2
