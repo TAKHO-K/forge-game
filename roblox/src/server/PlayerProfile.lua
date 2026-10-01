@@ -1737,6 +1737,10 @@ function PlayerProfile.applyLifesteal(player, damage)
 	if not damage or damage <= 0 then
 		return
 	end
+	local hpNow = PlayerState.getHp(player)
+	if not hpNow or hpNow <= 0 then
+		return -- QUEUE-ALL5 D② 지적: 쓰러진 사람이 남은 타격 · 투사체의 흡혈로 되살아나지 않게(입구 · 채널 틱은 D②가 막음 - 마지막 공통 출구)
+	end
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	local setCap = classState and SetBonus.axisCap(classState.equipment, "lifesteal")

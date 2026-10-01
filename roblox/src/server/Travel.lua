@@ -150,10 +150,17 @@ function Travel.teleport(player, position, why)
 	if not root then
 		return false
 	end
+	-- QUEUE-ALL5 D② 지적: 미리 불러오기(최대 streamTimeoutSeconds) 동안 0.25초 폴링이 같은 조건(밖 · 외곽 · 잠긴 구역 · 정거장)을 다시 보고 이동을 겹쳐 시작했다 → 한 사람에 한 번만
+	local st = stateOf(player)
+	if st.teleporting then
+		return false
+	end
+	st.teleporting = true
 	local t0 = os.clock()
 	local streamed = pcall(function()
 		player:RequestStreamAroundAsync(position, T.streamTimeoutSeconds)
 	end)
+	st.teleporting = nil
 	local waited = os.clock() - t0
 	if not root.Parent then
 		return false
@@ -896,7 +903,7 @@ function Travel.start(downPads)
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
 			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if root and PlayerProfile.getProfile(player) then
+			if root and PlayerProfile.getProfile(player) and not stateOf(player).teleporting then -- QUEUE-ALL5: 이동 중(미리 불러오기 대기)엔 같은 판정을 다시 하지 않는다
 				local grounded = humanoid and humanoid.FloorMaterial ~= Enum.Material.Air
 				if not Travel.checkStationDown(player, root.Position - Vector3.new(0, 3, 0), grounded) then
 					Travel.pollPlayer(player, root, humanoid, now)

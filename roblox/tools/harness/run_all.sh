@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# QUEUE-ALL5 G: 로컬 하네스 전부를 한 번에(Studio 없이). 사용: LUAU=<luau.exe> bash roblox/tools/harness/run_all.sh
+#   결과 = 하네스마다 "끝 n/m" 줄(boss_motion은 "total jumps") · 상세 = %TEMP%/res_*.txt
+set -u
+H="$(cd "$(dirname "$0")" && pwd)"
+cd "$H"
+: "${LUAU:?LUAU=<luau.exe 경로>를 주세요}"
+export LUAU PYTHONIOENCODING=utf-8
+T="${TEMP:-/tmp}"
+run() { # 이름 결과파일 의존 테스트파일 [prelude]
+	local name="$1" res="$2" deps="$3" test="$4" prelude="${5:-server_prelude.luau}"
+	PRELUDE="$prelude" EXTRA_SERVER="$deps" ECON_RES="$res" ECON_OUT="out_$res.luau" python build_run.py "$test" >/dev/null
+	printf "%-22s %s\n" "$name" "$(grep -a -E '끝 [0-9]+/[0-9]+|결과 [0-9]+/[0-9]+ 통과|total jumps|하네스 에러' "$T/$res" | tail -1) $(case "$name" in dupe) printf "O %s · X %s" "$(grep -a -c '^\[DUPE\].* O$' "$T/$res")" "$(grep -a -c '^\[DUPE\].* X$' "$T/$res")";; esac)"
+}
+ATTACK=$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,SettingsService,FallServer,InventoryServer.server)
+run security_launch res_sec.txt "$(python deps.py SocialRewardService,CodexService,CommunityGoalService,WeeklyChallengeService,SpectateService.server,RequestGate,QuestService,PlayerProfile,SaveSystem,Travel)" security_launch_test.luau
+run save_launch res_launch.txt SaveSystem,SaveCoordinator,ImmediateSave save_launch_test.luau
+run save_lock res_lock.txt SaveSystem save_lock_test.luau
+run migrate_curve res_curve.txt SaveSystem migrate_curve_test.luau
+run id_quarantine res_quar.txt SaveSystem id_quarantine_test.luau
+run monetize res_mon.txt "$(python deps.py MonetizationService,SaveSystem,OpsServer.server,InventorySync)" monetize_test.luau
+run dupe res_dupe.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" dupe_test.luau
+run multiplayer res_multi.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" multiplayer_test.luau
+run attack res_attack.txt "$ATTACK" attack_test.luau
+run request_gate res_gate.txt "$ATTACK,RequestGate" request_gate_test.luau
+run mesh_import res_mesh.txt "" mesh_import_test.luau
+run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau
+printf "%-22s %s\n" regrow_timing "$(python regrow_timing_test.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)"
+(cd ../meshswap_harness && python mk_mesh.py test_mesh.luau >/dev/null && printf "%-22s %s\n" meshswap "$("$LUAU" mesh_run.luau 2>&1 | grep -a -E '===MESH 하네스' | tail -1)")
+printf "%-22s %s\n" id_registry "$(python ../ids/id_registry.py | tail -1)"
