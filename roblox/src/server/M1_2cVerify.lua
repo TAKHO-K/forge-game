@@ -1,7 +1,7 @@
 -- M1-2c 자동 검증(점프대 × 높이 검사 · 발사 허가 · 도착 대기 · 덩굴 리프트). (가) = 서버 시작 때 순수 계산 · (나) = 검증 체인 끝(실제 Player · 실제 서버 경로).
 --   (가) 설계 정점 표(점프대 · 통통 열매 - 클라 궤적 적분과 대조) · 허가 합성 표본(점프대 + 공중 점프 2 + 대시 · 허가 없음 · 넘침 · 착지 · 최근 것만 · 활공 · 보스 공중 피격 · 던지기 속도 · 안 쓴 허가) ·
 --        위치 기록 판정(LaunchPermit.checkHistory) · 보스 발사 설계 높이 표
---   (나) 나무 점프대 · 통통 열매 전부 실제 발사(높이 검증 켬) → 되돌림 0 · 허가 없이 같은 높이 → 되돌림 · 보스 발사 최대(넉백 · 회오리 · 토네이도 · 던지기 · 판 털기(땅 · 공중) · 파편) → 되돌림 0 ·
+--   (나) 나무 점프대 · 통통 열매 전부 실제 발사(높이 검증 켬) → 되돌림 0 · 허가 없이 같은 높이 → 되돌림 · 보스 발사 최대(넉백 · 회오리 · 토네이도 · 던지기 · 판 털기 로켓(예외 - QUEUE-ALL6R) · 파편) → 되돌림 0 ·
 --        덩굴 리프트 [F] · 도착 대기(리프트 · 허브 귀환 · 포탈 · 관문 → 아레나 · 아레나 → 관문 앞 낙하 없음)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -60,7 +60,7 @@ local function bossLaunches()
 	local strike = storm.strike.onHit[1]
 	local whirl = storm.whirl.onHit[1]
 	local tornado = storm.tornado.onHit[1]
-	local pan = BossData.bosses.abyssal_lord.environment.onStart.pan
+	local rocket = BossData.bosses.abyssal_lord.environment.onStart.rocket -- QUEUE-ALL6R 2-2: 판 털기 = 로켓(옛 pan 포물선 대신)
 	local throw = BossData.mechanics.airGrab.throw
 	local topBreak = BossArenaMapData.obstacle.topBreak
 	local R = BossArenaMapData.geometry and BossArenaMapData.geometry.radiusStuds or 140
@@ -69,9 +69,8 @@ local function bossLaunches()
 		{ name = "회오리(붙잡힘 1.5초)", effect = whirl, coHits = 1, height = whirl.heightStuds },
 		{ name = "토네이도(붙잡힘)", effect = tornado, coHits = 1, height = tornado.heightStuds },
 		{ name = "잡아 던지기(최대 거리 · escape)", effect = { type = "launch", heightStuds = throw.heightStuds, distanceStuds = R * 2 - throw.wallMarginStuds, escape = true }, coHits = 1, height = throw.heightStuds },
-		{ name = "판 털기(땅 · 최대 거리)", effect = { type = "launch", heightStuds = pan.heightStuds, distanceStuds = pan.distanceStuds + pan.distanceJitter, escape = true }, coHits = 1, height = pan.heightStuds },
-		{ name = "판 털기(공중 피격 · 최대 세기)", effect = { type = "launch", heightStuds = pan.heightStuds + pan.airborneHeightBonus, distanceStuds = (pan.distanceStuds + pan.distanceJitter) * pan.airborneDistanceScale, escape = true },
-			coHits = 1, height = pan.heightStuds + pan.airborneHeightBonus, airborne = true },
+		-- 로켓 = 같은 최고 높이(편차 없음) · 높이 검사 예외(HeightGuard.exempt - 허가가 아니다) · 거리 = 털린 절반 가운데 → 반대쪽 절반(아레나 반지름 × 0.35 × 2 근처)
+		{ name = "판 털기 로켓(최고 높이 · 예외)", rocket = rocket, effect = { distanceStuds = R * 0.7 }, coHits = 1, height = rocket.peakStuds },
 		{ name = "구조물 파편 튕김", effect = { type = "launch", heightStuds = topBreak.heightStuds, distanceStuds = topBreak.distanceStuds }, coHits = 1, height = topBreak.heightStuds, debris = true },
 	}
 end
@@ -261,6 +260,38 @@ function M1_2cVerify.runPure()
 		for _, b in ipairs(bossLaunches()) do
 			local st = HeightGuard.newState()
 			HeightGuard.evaluate(st, { feetY = 0, pos = Vector3.new(0, 3, 0), grounded = true }, 100)
+			if b.rocket then
+				-- 로켓 곡선 표본(0.25초 - client/BossRocketView.positionAt과 같은 모양: 오름 감속 → 꼭대기 → 천천히 내려옴) · 예외 = 서버 launchRocket과 같은 길이(plan.total + 1)
+				local k = b.rocket
+				local total = k.upSeconds + k.hangSeconds + k.downSeconds
+				local function samplesOf()
+					local list = { { t = 0, feetY = 0, grounded = true, pos = Vector3.new(0, ROOT_ABOVE, 0) } }
+					local t = 0
+					repeat
+						t += 0.25
+						local y
+						if t <= k.upSeconds then
+							y = k.peakStuds * (1 - (1 - t / k.upSeconds) ^ 2)
+						elseif t <= k.upSeconds + k.hangSeconds then
+							y = k.peakStuds
+						else
+							local u = math.clamp((t - k.upSeconds - k.hangSeconds) / k.downSeconds, 0, 1)
+							y = k.peakStuds * (1 - u * u * (3 - 2 * u))
+						end
+						local x = b.effect.distanceStuds * math.min(t / total, 1)
+						table.insert(list, { t = t, feetY = y, grounded = t >= total, pos = Vector3.new(x, y + ROOT_ABOVE, 0) })
+					until t >= total
+					return list
+				end
+				st.exemptUntil = 100 + total + 1
+				local reverts = runGuard(samplesOf(), nil, st)
+				local bare = HeightGuard.newState()
+				HeightGuard.evaluate(bare, { feetY = 0, pos = Vector3.new(0, 3, 0), grounded = true }, 100)
+				local without = runGuard(samplesOf(), nil, bare)
+				r.check(("%s: 최고 높이 %d · %.2f초(오름 %.2f · 꼭대기 %.2f · 내려옴 %.2f) · 예외 %.2f초 → 되돌림 %d(기대 0) · 예외 없이 같은 곡선 → 되돌림 %d(기대 ≥ 1 - 예외가 실제로 받친다)"):format(
+					b.name, k.peakStuds, total, k.upSeconds, k.hangSeconds, k.downSeconds, total + 1, reverts, without), reverts == 0 and without >= 1)
+				continue
+			end
 			local actualFeet = b.airborne and allowance - 1 or 0
 			local seenFeet = b.airborne and 5 or 0
 			local base = HeightGuard.launchBaseFeet(st, seenFeet, not b.airborne)
@@ -431,7 +462,13 @@ function M1_2cVerify.runLive(player, env)
 				task.wait(0.3) -- 올라가는 중(서버가 본 발은 늦다)
 			end
 			local from = root.Position - Vector3.new(5, 0, 0)
-			if b.debris then
+			if b.rocket then
+				-- 실제 서버 길(BossEnvironment.launchRocket = 판 털기 rocketOne과 같은 함수: 예외 · 무적 · 클라 곡선 · 끝 도착 확인)
+				local BossEnvironment = require(script.Parent.BossEnvironment)
+				local floorY = st.floorY or zone.center.Y
+				local plan = BossEnvironment.rocketPlan(b.rocket, zone.center, zone.center + Vector3.new(zone.radius * 0.35, 0, 0), floorY)
+				BossEnvironment.launchRocket(player, root.Position, plan, b.rocket, os.clock())
+			elseif b.debris then
 				HeightGuard.grantLaunch(player, b.height, JumpMath.launchAirSeconds(b.height), "파편 튕김(검증)")
 				patternEvent:FireClient(player, "launch", { from = from, heightStuds = b.height, distanceStuds = b.effect.distanceStuds, zoneCenter = zone.center, zoneRadius = zone.radius })
 			else
@@ -455,6 +492,7 @@ function M1_2cVerify.runLive(player, env)
 		end
 	end)
 	-- 보스 절이 도중에 에러가 나도 보스 · 무적을 치운다(다음 절 - 보스전 중이면 리프트가 안 된다)
+	require(script.Parent.PlayerState).clearIncomingDamageMultiplierSource(player, "bossRocket") -- 로켓 무적 몫(launchRocket)
 	pcall(function()
 		ServerStorage.DevCommandHook:Invoke(player, "/gg god off")
 	end)

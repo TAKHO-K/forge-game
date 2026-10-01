@@ -465,16 +465,21 @@ local function rocketOne(model, st, data, env, e, v, z, now)
 	kit.applySkillDamage(model, data, { damage = rocket.damage, damageLabel = env.damageLabel }, v.player)
 	local plan = BossEnvironment.rocketPlan(rocket, kit.zoneOf(model).center, z.center, st.floorY)
 	local player = v.player
+	local from = v.root.Position
+	local peak = Vector3.new((from.X + plan.land.X) / 2, plan.peakY, (from.Z + plan.land.Z) / 2)
+	kit.debugEvent("rocket", { player = player, from = from, land = plan.land, peakY = plan.peakY, total = plan.total, at = now })
+	BossEnvironment.launchRocket(player, from, plan, rocket, now)
+	kit.send(st, "rocketTwinkle", { position = peak + Vector3.new(0, 4, 0), delay = rocket.upSeconds, userId = typeof(player) == "Instance" and player.UserId or nil, sound = rocket.sound })
+end
+
+-- 한 사람 날리기(서버 상태 + 내 클라 곡선 + 끝 도착 확인) - rocketOne과 M1-2c(나) 높이 검사 검증이 같은 길을 탄다(QUEUE-ALL6R 2-2)
+function BossEnvironment.launchRocket(player, from, plan, rocket, now)
 	if typeof(player) == "Instance" then
 		rocketUntil[player] = now + plan.total
 		HeightGuard.exempt(player, plan.total + 1)
 		PlayerState.setIncomingDamageMultiplierUntil(player, 0, plan.total, "bossRocket")
 	end
-	local from = v.root.Position
-	local peak = Vector3.new((from.X + plan.land.X) / 2, plan.peakY, (from.Z + plan.land.Z) / 2)
-	kit.debugEvent("rocket", { player = player, from = from, land = plan.land, peakY = plan.peakY, total = plan.total, at = now })
 	require(script.Parent.BossPatterns).sendTo(player, "rocket", { from = from, land = plan.land, peakY = plan.peakY, up = rocket.upSeconds, hang = rocket.hangSeconds, down = rocket.downSeconds })
-	kit.send(st, "rocketTwinkle", { position = peak + Vector3.new(0, 4, 0), delay = rocket.upSeconds, userId = typeof(player) == "Instance" and player.UserId or nil, sound = rocket.sound })
 	if typeof(player) == "Instance" then
 		task.delay(plan.total + 0.3, function() -- 끝: 도착 자리 확인(클라가 곡선을 안 그렸으면 서버가 옮긴다)
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")

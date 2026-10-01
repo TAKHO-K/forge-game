@@ -1,6 +1,6 @@
 -- BR1-4b 자동 검증 - 보스 모션(관절 리그 · 모션 계산 · 서버 알림 · 잡기 부착점). 판정 코드 경로는 바꾸지 않았다(알림 Attribute · 잡힌 사람 자리만).
 --   (가) 순수: 리그 무결성(보스별 부위 · 관절 수) · 쓰는 동작의 관절 이름 · 자세 범위(무릎 · 팔꿈치 꺾임) · 동작 = 판정 시각(타격 프레임 ≤ 0.12초 뒤) ·
---        발 미끄러짐(걷기 FK) · 잡기 부착점(손 · 어깨 · 꼬리 · 집게) · 계산 비용 · 판 털기 최대 거리.
+--        발 미끄러짐(걷기 FK) · 잡기 부착점(손 · 어깨 · 꼬리 · 집게) · 계산 비용 · 판 털기 로켓 시간표 · 착지(QUEUE-ALL6R).
 --   (나) 실제 서버: 보스 6종 리그 스폰(루트만 Anchored · 부위 충돌 · 쿼리) · 스킬 알림(BossAct · 전조 초 = 판정 시각) · 판정 시각 표(debugJudgeHook) · 잡기 부착점에 매달림(스탠드인).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,7 +9,6 @@ local BossRigSpec = require(ReplicatedStorage.Shared.data.BossRigSpec)
 local BossMotionData = require(ReplicatedStorage.Shared.data.BossMotionData)
 local BossRig = require(ReplicatedStorage.Shared.BossRig)
 local BossMotion = require(ReplicatedStorage.Shared.BossMotion)
-local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 
 local V = {}
 local ALL = { "section_guardian", "frost_giant", "abyssal_lord", "crystal_queen", "scorpion_queen", "storm_lord" }
@@ -290,19 +289,18 @@ function V.runPure()
 		r.check(("자세 계산 %.0fμs/보스(관절 48 · 클라 프레임당) · 서버 잡기 FK %.0fμs/보스 · 틱(잡힌 사람 수와 무관 - 보스당 1회) · 12아레나 동시 잡기 = %.2fms/틱 · 같은 입력 같은 자세 %s"):format(us, fk, fk * 12 / 1000, tostring(same)), same and fk * 12 < 4000)
 	end)
 
-	r.section("판 털기(프라이팬) 날아가는 거리", function()
-		local pan = BossData.bosses.abyssal_lord.environment.onStart.pan
-		local function at(u, airborne)
-			local _, height, distance, _, star = BossSkillMath.panLaunch(pan, Vector3.new(10, 0, 0), airborne, function()
-				return u
-			end)
-			return distance, height, star
-		end
-		local d0, h0 = at(0, false)
-		local d1, _, s1 = at(0.999, false)
-		local a1, ah1 = at(0.999, true)
-		r.note(("판 위에 서 있기만(땅): 거리 %.0f ~ %.0f(높이 %.0f) · 최대 %.0f에서 별 반짝 %s(별 = %d 이상 → 확률 %.0f%%) · 떠 있으면 최대 %.0f(높이 %.0f)"):format(
-			d0, d1, h0, d1, tostring(s1), pan.starDistanceStuds, math.clamp((pan.distanceStuds + pan.distanceJitter - pan.starDistanceStuds) / pan.distanceJitter, 0, 1) * 100, a1, ah1))
+	r.section("판 털기 로켓 시간표 · 착지(QUEUE-ALL6R 2-2 - 옛 프라이팬 포물선 대신)", function()
+		local rocket = BossData.bosses.abyssal_lord.environment.onStart.rocket
+		local BossEnvironment = require(script.Parent.BossEnvironment)
+		local center, floorY = Vector3.new(100, 0, -40), 10
+		local shaken = center + Vector3.new(30, 0, 0)
+		local plan = BossEnvironment.rocketPlan(rocket, center, shaken, floorY)
+		local plan2 = BossEnvironment.rocketPlan(rocket, center, center + Vector3.new(0, 0, -30), floorY)
+		local expectTotal = rocket.upSeconds + rocket.hangSeconds + rocket.downSeconds
+		local landSide = (plan.land.X - center.X) * (shaken.X - center.X) < 0
+		r.check(("최고 높이 = 바닥 + %d(%.1f · 편차 없음 - 두 방향 같음 %s) · 시간 %.2f초(기대 %.2f) · 착지 = 털린 절반 반대쪽 %s · 착지 높이 바닥 + 3(%.1f)"):format(
+			rocket.peakStuds, plan.peakY - floorY, tostring(plan.peakY == plan2.peakY), plan.total, expectTotal, tostring(landSide), plan.land.Y - floorY),
+			plan.peakY - floorY == rocket.peakStuds and plan.peakY == plan2.peakY and math.abs(plan.total - expectTotal) < 1e-6 and landSide and plan.land.Y - floorY == 3)
 	end)
 
 	local pass, total = r.summary()
