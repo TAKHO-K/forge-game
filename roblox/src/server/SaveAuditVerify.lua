@@ -75,7 +75,9 @@ function SaveAuditVerify.runPure()
 			if not (m.pets and #m.pets.list == 1 and m.pets.hatchCount == 3) then table.insert(miss, "pets") end
 			if not (m.settings and m.settings.reduceFlashes == true and m.settings.screenShake == false) then table.insert(miss, "settings") end
 			if not (m.training and m.training.attack == 5) then table.insert(miss, "training") end
-			if not (m.quests and m.quests.main == 4) then table.insert(miss, "quests") end
+			-- QUEUE-STUDIO V1: v60(QUEUE-ALL3 Q3 메인 사슬 10 → 32)은 옛 번호를 새 번호로 옮기는 게 설계 - v60 전 표본의 기대 = migrateMainIndex(4)
+			local wantMain = v < 60 and require(game:GetService("ReplicatedStorage").Shared.Quest).migrateMainIndex(4) or 4
+			if not (m.quests and m.quests.main == wantMain) then table.insert(miss, "quests") end
 			if not (m.eggs and #m.eggs == 1) then table.insert(miss, "eggs") end
 			if not (m.titles and m.titles.curious) then table.insert(miss, "titles") end
 			local it = m.inventory and m.inventory[1]
