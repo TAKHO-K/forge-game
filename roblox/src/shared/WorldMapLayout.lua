@@ -191,6 +191,45 @@ function Layout.zoneAt(position)
 	return nil
 end
 
+-- QUEUE-ALL6 L 세부 지역: 구역 축 거리 r(허브 중심에서 구역 방향으로 잰 거리 - toWorld의 r과 같은 축)
+function Layout.axisR(zone, position)
+	return dirOf(zone.angleDeg):Dot(Vector3.new(position.X, 0, position.Z))
+end
+-- r → 세부 지역 번호(1 ~ #bandsR + 1)
+function Layout.subAreaIndexForR(r)
+	local bands = D.subAreas.bandsR
+	for i, edge in ipairs(bands) do
+		if r < edge then
+			return i
+		end
+	end
+	return #bands + 1
+end
+-- 이 점의 (구역, 세부 지역 번호, 이름 원문 · 축 거리) - 구역 밖 = nil. keepIndex = 지금 지역(경계 안쪽 enterInsideStuds를 넘어야 바뀐다 - 깜빡임 방지)
+function Layout.subAreaAt(position, keepZoneKey, keepIndex)
+	local zone = Layout.zoneAt(position)
+	if not zone then
+		return nil
+	end
+	local r = Layout.axisR(zone, position)
+	local index = Layout.subAreaIndexForR(r)
+	if keepZoneKey == zone.key and keepIndex and keepIndex ~= index then
+		local bands, m = D.subAreas.bandsR, D.subAreas.enterInsideStuds
+		local lo, hi = bands[index - 1] or -math.huge, bands[index] or math.huge
+		if r < lo + m or r > hi - m then
+			index = keepIndex -- 아직 새 지역 안쪽으로 충분히 안 들어왔다
+		end
+	end
+	return zone, index, D.subAreas.names[zone.key][index], r
+end
+-- 세부 지역 가운데(지도 이름 자리) - 구역 축 위 그 구간 가운데
+function Layout.subAreaCenter(zone, index)
+	local bands = D.subAreas.bandsR
+	local lo = bands[index - 1] or (L.regionCenterR - L.regionRadius)
+	local hi = bands[index] or (L.regionCenterR + L.regionRadius)
+	return Layout.toWorld(zone, (lo + hi) / 2, 0)
+end
+
 function Layout.inHub(position)
 	return Vector3.new(position.X, 0, position.Z).Magnitude <= D.hub.safeRadius
 end

@@ -59,7 +59,16 @@ function MapPins.toggleAt(position, radius)
 	end
 	nextId += 1
 	local ground = position.Y ~= 0 and position.Y or WorldMapData.floorTopY
-	local pin = { id = nextId, position = Vector3.new(position.X, ground, position.Z), label = Text.get("scene.map.pin", { n = ("%d"):format(nextId) }) }
+	-- QUEUE-ALL6 L: 핀 · 자동 이동 목적지 이름 = 세부 지역명(허브 = 마을 이름 · 구역 밖 = 옛 "핀 n")
+	local place
+	if WorldMapLayout.inHub(position) then
+		place = WorldMapData.hub.displayName
+	else
+		local _, _, sub = WorldMapLayout.subAreaAt(position)
+		place = sub
+	end
+	local n = ("%d"):format(nextId)
+	local pin = { id = nextId, position = Vector3.new(position.X, ground, position.Z), label = place and Text.get("scene.map.pinPlace", { place = place, n = n }) or Text.get("scene.map.pin", { n = n }) }
 	beacon(pin)
 	table.insert(pins, pin)
 	changed:Fire()

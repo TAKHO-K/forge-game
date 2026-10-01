@@ -412,16 +412,30 @@ local function treeText(meters)
 	local cp = player:GetAttribute("TreeCheckpoint")
 	return cp and Text.get("scene.world.treeStation", { m = meters, station = ("%d"):format(cp) }) or Text.get("scene.world.tree", { m = meters })
 end
+-- QUEUE-ALL6 L: 큰 구역 · 세부 지역(WorldMapData.subAreas - 경계 안쪽으로 충분히 들어가야 바뀜) + 바뀌면 위 가운데 진입 배너(같은 지역 60초 안 다시 안 띄움 · 보스전 중 없음)
+local areaNow = { zoneKey = nil, index = nil }
+local areaShownAt = {} -- ["tier1:2"] = os.clock()
 local function regionName(position)
 	if WorldMapLayout.inHub(position) then
+		areaNow.zoneKey, areaNow.index = nil, nil
 		return Text.name(WorldMapData.hub.displayName)
 	end
-	local range, rangeZone = WorldMapLayout.huntRangeAt(position)
-	if range then
-		return ("%s · %s"):format(Text.name(rangeZone.theme), Text.name(range.name))
+	local zone, index, sub = WorldMapLayout.subAreaAt(position, areaNow.zoneKey, areaNow.index)
+	if not zone then
+		areaNow.zoneKey, areaNow.index = nil, nil
+		return Text.get("scene.world.field")
 	end
-	local zone = WorldMapLayout.zoneAt(position)
-	return zone and Text.name(zone.theme) or Text.get("scene.world.field")
+	if zone.key ~= areaNow.zoneKey or index ~= areaNow.index then
+		local first = areaNow.zoneKey == nil and areaNow.index == nil and not areaNow.started
+		areaNow.zoneKey, areaNow.index, areaNow.started = zone.key, index, true
+		local key = zone.key .. ":" .. index
+		local now = os.clock()
+		if not first and player:GetAttribute("BossEncounterId") == nil and now - (areaShownAt[key] or -math.huge) >= WorldMapData.subAreas.reshowSeconds then
+			areaShownAt[key] = now
+			Toast.push("TC", { text = Text.get("scene.world.areaEnter", { zone = zone.theme, area = sub }), colorName = "gold", seconds = WorldMapData.subAreas.bannerSeconds, fadeSeconds = 0.4 })
+		end
+	end
+	return Text.get("scene.world.areaLabel", { zone = zone.theme, area = sub })
 end
 local lastGate = nil
 local lastTutorialStep = nil

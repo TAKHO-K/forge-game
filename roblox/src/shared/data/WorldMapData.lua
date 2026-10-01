@@ -461,4 +461,21 @@ return {
 	},
 	map = { image = nil, maxPins = 3, pinBeaconHeight = 60, zoomMin = 1, zoomMax = 6, pinPickStuds = 120, minimap = { pc = 150, phone = 96, rangeStuds = 420, corner = 12, minSize = 64, sizeStep = 4, gap = 8, updateHz = 10, icon = 14, iconPhone = 12, dot = 8, dotPhone = 7 } }, -- 미니맵(hud/Minimap): 크기 = pc · phone(자리가 모자라면 sizeStep씩 줄여 minSize까지 · 그래도 안 되면 숨김) · 반경 rangeStuds · 아이콘 px
 	boss = { entry = "gate" }, -- 보스 입장 = 관문(보스 스테이지를 고르면 관문까지 길 안내 → 관문을 밟으면 입장). "direct" = 옛 즉시 입장
+	-- QUEUE-ALL6 L(사용자 결정) 세부 지역: 큰 구역(theme) 안을 길 구간(구역 축 거리 r - 입구 캠프 900 → 사냥 지대 1250 · 1650 · 2050 → 관문 2400)으로 5곳.
+	--   오른쪽 위 = "큰 구역 · 세부 지역" · 진입 배너 = 화면 위 가운데 bannerSeconds · 경계 안쪽 enterInsideStuds 넘게 들어가야 바뀜(경계 깜빡임 없음) · 같은 지역 reshowSeconds 안 다시 안 띄움 · 보스전 중 없음.
+	--   자동 이동 · 지도 핀 이름 = 이 지역명. 영어 = TextData_names. 이름 = 짧게(그 구간 몬스터 · 지형).
+	subAreas = {
+		bandsR = { 1080, 1450, 1850, 2250 }, -- 경계(r): 입구 | 사냥 지대 1 | 2 | 3 | 관문 앞
+		enterInsideStuds = 30,
+		reshowSeconds = 60,
+		bannerSeconds = 2,
+		names = {
+			tier1 = { "이끼 입구", "슬라임 연못", "멧돼지 들판", "망루 언덕", "돌기둥 마루" },
+			tier2 = { "반짝 입구", "딱정벌레 굴", "보라 수정 숲", "박쥐 골짜기", "여왕의 문" },
+			tier3 = { "물가 입구", "소라게 해변", "해파리 웅덩이", "잠긴 회랑", "신전 둑길" },
+			tier4 = { "모래 입구", "전갈 사막", "선인장 밭", "오벨리스크 길", "피라미드 앞" },
+			tier5 = { "바람 입구", "번개 들판", "구름 양 언덕", "낙뢰 절벽", "첨탑 아래" },
+			tier6 = { "눈 입구", "골렘 설원", "얼음 굴 길", "용의 빙원", "거인의 문" },
+		},
+	},
 }

@@ -129,6 +129,86 @@ local function renderMarkers()
 	end
 end
 
+-- QUEUE-ALL6 L 정적 상세 지도(캔버스 비율 자리 - 캔버스와 같이 움직인다 · 갱신 없음): 길(RoadNet 본길 · 갈림길) · 물(폭포 · 만) · 랜드마크(탐험 지형 · 구역 상징) ·
+--   세부 지역 경계(구역 축에 수직인 줄) · 세부 지역 이름(WorldMapData.subAreas - 글씨 12 · 외곽선). 판정과 무관한 그림만.
+local buildDetail
+local function segment(parent, a, b, px, color, transparency)
+	local pa, pb = toMap(a), toMap(b)
+	local mid, d = (pa + pb) / 2, pb - pa
+	local f = Instance.new("Frame")
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.Position = UDim2.fromScale(mid.X, mid.Y)
+	f.Size = UDim2.new(d.Magnitude, 0, 0, px)
+	f.Rotation = math.deg(math.atan2(d.Y, d.X))
+	f.BackgroundColor3 = color
+	f.BackgroundTransparency = transparency or 0
+	f.BorderSizePixel = 0
+	f.Parent = parent
+	return f
+end
+buildDetail = function(canvas)
+	local RoadNet = require(ReplicatedStorage.Shared.RoadNet)
+	local Text = require(ReplicatedStorage.Shared.Text)
+	local detail = Instance.new("Frame")
+	detail.Name = "Detail"
+	detail.BackgroundTransparency = 1
+	detail.Size = UDim2.fromScale(1, 1)
+	detail.ZIndex = 2
+	detail.Parent = canvas
+	local ROAD, WATER, LINE, MARK = Color3.fromRGB(214, 196, 150), Color3.fromRGB(72, 142, 204), Color3.fromRGB(235, 240, 245), Color3.fromRGB(70, 74, 84)
+	local SA = D.subAreas
+	for _, zone in ipairs(D.zones) do
+		-- 길(본길 · 갈림길) - 약 60 stud마다 한 조각
+		for _, path in ipairs({ RoadNet.zonePath(zone), RoadNet.branchPath(zone) }) do
+			local last
+			for _, q in ipairs(path and path.pts or {}) do
+				local p = Vector3.new(q.x, 0, q.z)
+				if not last then
+					last = p
+				elseif (p - last).Magnitude >= 60 then
+					segment(detail, last, p, 2, ROAD).Name = "Road"
+					last = p
+				end
+			end
+		end
+		-- 물: 폭포 지형 · 물 관문(만)
+		for _, f in ipairs(zone.features or {}) do
+			local at = WorldMapLayout.toWorld(zone, f.r, f.lat)
+			if f.kind == "falls" then
+				circle(detail, "Water", WATER, toMap(at), 45 / (2 * EDGE))
+			elseif f.explore then
+				circle(detail, "Landmark", MARK, toMap(at), 22 / (2 * EDGE)) -- 탐험 지형(탑 · 굴 · 언덕)
+			end
+		end
+		local site = D.layout.gateSites and D.layout.gateSites[zone.key]
+		if site and site.water then
+			circle(detail, "Water", WATER, toMap(WorldMapLayout.toWorld(zone, site.r, 0)), 140 / (2 * EDGE))
+		end
+		-- 세부 지역 경계(구역 원 안 현) · 이름
+		local R, C = D.layout.regionRadius, D.layout.regionCenterR
+		for _, edgeR in ipairs(SA.bandsR) do
+			local half = math.sqrt(math.max(0, R * R - (edgeR - C) ^ 2))
+			segment(detail, WorldMapLayout.toWorld(zone, edgeR, -half), WorldMapLayout.toWorld(zone, edgeR, half), 1, LINE, 0.55).Name = "AreaEdge"
+		end
+		for index, name in ipairs(SA.names[zone.key]) do
+			local c = toMap(WorldMapLayout.subAreaCenter(zone, index))
+			local label = Instance.new("TextLabel")
+			label.Name = "AreaName"
+			label.AnchorPoint = Vector2.new(0.5, 0.5)
+			label.Position = UDim2.fromScale(c.X, c.Y)
+			label.Size = UDim2.fromOffset(120, 14)
+			label.BackgroundTransparency = 1
+			label.Font = Theme.font
+			label.TextSize = 12
+			label.TextColor3 = Color3.new(1, 1, 1)
+			label.TextStrokeTransparency = 0.3
+			label.Text = Text.name(name)
+			label.ZIndex = 3
+			label.Parent = detail
+		end
+	end
+end
+
 local function build()
 	local root = Instance.new("TextButton")
 	root.Name = "Minimap"
@@ -161,6 +241,7 @@ local function build()
 		zoneDiscs[index] = circle(canvas, "Zone_" .. zone.key, color, toMap(WorldMapLayout.regionCenter(zone)), D.layout.regionRadius / (2 * EDGE))
 	end
 	circle(canvas, "Hub", Color3.fromRGB(120, 190, 100), Vector2.new(0.5, 0.5), D.hub.safeRadius / (2 * EDGE))
+	buildDetail(canvas) -- QUEUE-ALL6 L: 길 · 물 · 랜드마크 · 세부 지역 경계 · 이름(정적 - 한 번만 짓는다)
 	local markers = Instance.new("Frame")
 	markers.Name = "Markers"
 	markers.BackgroundTransparency = 1

@@ -64,6 +64,13 @@ local en = {
 	["모래 언덕 위"] = "Dune Top", ["무너진 지하 통로"] = "Fallen Tunnel", ["오벨리스크 꼭대기"] = "Obelisk Top", ["모래 폭포 뒤"] = "Behind the Sand Falls",
 	["바람 탑 꼭대기"] = "Wind Tower Top", ["낙뢰 절벽(아래에서 올려다보기)"] = "Lightning Cliff (look up)", ["구름 고원"] = "Cloud Plateau", ["번개 굴"] = "Thunder Cave",
 	["빙벽"] = "Ice Wall", ["얼음 굴"] = "Ice Cave", ["빙하 고원"] = "Glacier Plateau", ["언 폭포 뒤"] = "Behind the Frozen Falls", ["얼음 탑 꼭대기"] = "Ice Tower Top",
+	-- QUEUE-ALL6 L 세부 지역(WorldMapData.subAreas)
+	["이끼 입구"] = "Moss Gate", ["슬라임 연못"] = "Slime Pond", ["멧돼지 들판"] = "Boar Field", ["망루 언덕"] = "Watchtower Hill", ["돌기둥 마루"] = "Monolith Ridge",
+	["반짝 입구"] = "Sparkle Gate", ["딱정벌레 굴"] = "Beetle Hollow", ["보라 수정 숲"] = "Amethyst Grove", ["박쥐 골짜기"] = "Bat Valley", ["여왕의 문"] = "Queen's Door",
+	["물가 입구"] = "Shore Gate", ["소라게 해변"] = "Crab Beach", ["해파리 웅덩이"] = "Jelly Pool", ["잠긴 회랑"] = "Sunken Hall", ["신전 둑길"] = "Temple Causeway",
+	["모래 입구"] = "Sand Gate", ["전갈 사막"] = "Scorpion Dunes", ["선인장 밭"] = "Cactus Field", ["오벨리스크 길"] = "Obelisk Road", ["피라미드 앞"] = "Pyramid Steps",
+	["바람 입구"] = "Wind Gate", ["번개 들판"] = "Thunder Field", ["구름 양 언덕"] = "Cloud Sheep Hill", ["낙뢰 절벽"] = "Lightning Cliff", ["첨탑 아래"] = "Spire Base",
+	["눈 입구"] = "Snow Gate", ["골렘 설원"] = "Golem Snowfield", ["얼음 굴 길"] = "Ice Cave Path", ["용의 빙원"] = "Dragon Icefield", ["거인의 문"] = "Giant's Door",
 	-- 봉인 입구(아직 안 연 곳)
 	["태엽 시계탑"] = "Clockwork Tower", ["거인의 부엌"] = "Giant's Kitchen", ["인형 극장"] = "Puppet Theater", ["구름 고래 하늘섬"] = "Cloud Whale Isle", ["두더지 광산"] = "Mole Mine",
 	["…아직 잠들어 있다."] = "...Still asleep.",
