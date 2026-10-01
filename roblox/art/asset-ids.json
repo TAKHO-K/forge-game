@@ -721,1012 +721,1012 @@
   "imageId": 105594125885210
  },
  "icons/armor/armor_tier1_ancient.png": {
-  "sha256": "00b7799bbcd167955a09ad4fa4789ad7a5aa333915c272b7b1c1054c1402159e",
+  "sha256": "3bb51036df52eddf19ea0817705434ac24e4fd04040ae522146f69785945376a",
   "assetType": "Decal",
-  "assetId": 129638369993566,
+  "assetId": 123419041939493,
   "status": "Approved",
-  "imageId": 92174673785229
+  "imageId": 86677813601405
  },
  "icons/armor/armor_tier1_epic.png": {
-  "sha256": "ad53cf7d9312913f911d383f5e5e4f35fe761b1cf0c30bfb40794d0ed25fd578",
+  "sha256": "40f66a32ac90cbf4f3d4aa399c92c78735ecdf072a9a1cbdeb1286e92d2036e5",
   "assetType": "Decal",
-  "assetId": 105892052694140,
+  "assetId": 85843749493195,
   "status": "Approved",
-  "imageId": 100895415609701
+  "imageId": 134576817896008
  },
  "icons/armor/armor_tier1_legendary.png": {
-  "sha256": "68ead0c54913f6ef97b392ac24a04c5fd20ee4bb7707af60854fc868c04ae3f3",
+  "sha256": "c427dd836d5792525066bde977ec5b7a62db9c695033c34919969a61500b3a4c",
   "assetType": "Decal",
-  "assetId": 137927141138665,
+  "assetId": 126460466561416,
   "status": "Approved",
-  "imageId": 105455532184051
+  "imageId": 96601658403015
  },
  "icons/armor/armor_tier1_normal.png": {
-  "sha256": "31d5f2ed4999980bd5abc86da1c1a475bacab5699434faa63dedcb240ecb366e",
+  "sha256": "c1aa20dfe0ea9aa6cd6e73112d0ab6dc62431a652caca146cc2136c859a16d47",
   "assetType": "Decal",
-  "assetId": 104031486889671,
+  "assetId": 72033053432704,
   "status": "Approved",
-  "imageId": 106322992791293
+  "imageId": 101014489973765
  },
  "icons/armor/armor_tier1_primordial.png": {
-  "sha256": "3f2904c16e4e5d47968b0d02fd4342e1d8306141e44699759a8db0b7c9795cbe",
+  "sha256": "73659b515c0fa4745dc8364d922821bed4b3ff4bf41e40884e244628760f57aa",
   "assetType": "Decal",
-  "assetId": 102262239855966,
+  "assetId": 138257084955192,
   "status": "Approved",
-  "imageId": 114591690511448
+  "imageId": 135748487050506
  },
  "icons/armor/armor_tier1_rare.png": {
-  "sha256": "d2ad1ad715d8466c8d8a391c254f795dc33031e031650a3e77e49794e574dfd9",
+  "sha256": "627bd1ccb2e456725334bdd1d9665857756974d1632240734854d1a049c31c37",
   "assetType": "Decal",
-  "assetId": 106178761501624,
+  "assetId": 110161012215361,
   "status": "Approved",
-  "imageId": 111215188436099
+  "imageId": 124784187165020
  },
  "icons/armor/armor_tier1_relic.png": {
-  "sha256": "0d896cecef822b3455d6c5faebd9fa8a49b054cbc8306daf9ffca0b642842c85",
+  "sha256": "1b9e01b6c243f74cb5009cc676d38804b3ebac78cd3ac6e14c6e2948248fc462",
   "assetType": "Decal",
-  "assetId": 121040709570453,
+  "assetId": 104107262954063,
   "status": "Approved",
-  "imageId": 130674597783017
+  "imageId": 97596523608817
  },
  "icons/armor/armor_tier1_transcendent.png": {
-  "sha256": "3c1890c496d5731f98330d5bb141e329e686dbec6b0cfa0f0dc8e5d71df9e680",
+  "sha256": "47b994d2424a6c0d478303af7623b21eedec907894499962bced399fedc56bc1",
   "assetType": "Decal",
-  "assetId": 133244770090320,
+  "assetId": 137715083525711,
   "status": "Approved",
-  "imageId": 98779197169552
+  "imageId": 106776927139366
  },
  "icons/armor/armor_tier2_ancient.png": {
-  "sha256": "c4198cbf405980cd71fea9d073afd0bff30bcc5023086dedb02c807f97f0c3e0",
+  "sha256": "8b3a96bd6b26373bbfa38f54e83f77201d1f3d826d4a3b4e12d0ea9a7d1117d0",
   "assetType": "Decal",
-  "assetId": 114734516197765,
+  "assetId": 91442981798241,
   "status": "Approved",
-  "imageId": 82691514234472
+  "imageId": 137280521019737
  },
  "icons/armor/armor_tier2_epic.png": {
-  "sha256": "f17f4f45788e47c99a546ea0894dbb68d03c05112a3cef2e6855dfe731cd52b7",
+  "sha256": "d5407407acef44e24a17be51d103ac351f712ac6bbca506a2a384814da594088",
   "assetType": "Decal",
-  "assetId": 127450472004467,
+  "assetId": 88259241322691,
   "status": "Approved",
-  "imageId": 137102735908315
+  "imageId": 129025684782803
  },
  "icons/armor/armor_tier2_legendary.png": {
-  "sha256": "ef277419519aaa8b831969523bede7220943bcc334554ea497cc730b4d4b114e",
+  "sha256": "65f9e0128053d954303a22eed82560fcf6bdd0b2a5cae62aa46f55def1afda32",
   "assetType": "Decal",
-  "assetId": 74126663008530,
+  "assetId": 78293119404808,
   "status": "Approved",
-  "imageId": 119630051027359
+  "imageId": 82344548817009
  },
  "icons/armor/armor_tier2_normal.png": {
-  "sha256": "1dfbb9a6e76b9a779c5d89bc8c3f44596ecfcfb64ed88e4343695077882855af",
+  "sha256": "961c561cff40aa9184f7add5f0fee87430521212c6f10200e43a4f51998c463f",
   "assetType": "Decal",
-  "assetId": 81420763102879,
+  "assetId": 107766541362967,
   "status": "Approved",
-  "imageId": 70411291229031
+  "imageId": 114845008548919
  },
  "icons/armor/armor_tier2_primordial.png": {
-  "sha256": "af3bb86a13d6b75fcfc17887ef343227c11c915abc0878ea32986142e2ce1f50",
+  "sha256": "0d1bccff0ec6757159c7115c79ad7a4a1021c0a4bc1aaedefeddf646dd5d1b5d",
   "assetType": "Decal",
-  "assetId": 77719531542076,
+  "assetId": 74209861786460,
   "status": "Approved",
-  "imageId": 122713695668803
+  "imageId": 75124118577735
  },
  "icons/armor/armor_tier2_rare.png": {
-  "sha256": "d11a592ba04802ddc5ff4c43fa5596db2fd51cbaa3d894d75ce230e40198f4eb",
+  "sha256": "b80d8e3dd8f84acad6792a0686c42ba569cf716767b21a4a4033fb622a1a1b1b",
   "assetType": "Decal",
-  "assetId": 108137036681492,
+  "assetId": 127993212393993,
   "status": "Approved",
-  "imageId": 110046799537481
+  "imageId": 114826981859622
  },
  "icons/armor/armor_tier2_relic.png": {
-  "sha256": "6e11fb09c93726a2b516bab132ab3a542b3cfea1871a46392ff817d369a89c31",
+  "sha256": "a566a3952aae677233400138abb36beb246a3c5594be0e784df55eb4d42395e4",
   "assetType": "Decal",
-  "assetId": 134205819504159,
+  "assetId": 91520143095201,
   "status": "Approved",
-  "imageId": 115939298708688
+  "imageId": 124082874825423
  },
  "icons/armor/armor_tier2_transcendent.png": {
-  "sha256": "ed3343b39df7c4170fc26dceaf3c422ec387c6860929d70f18fe9049b5fc951d",
+  "sha256": "aa22909356e84384eb17ba922d31c61db83777b987e266925cfcf6334d31d0d8",
   "assetType": "Decal",
-  "assetId": 134519812812048,
+  "assetId": 90222826771481,
   "status": "Approved",
-  "imageId": 96055203559710
+  "imageId": 128890436909236
  },
  "icons/armor/armor_tier3_ancient.png": {
-  "sha256": "06b195f1831172ee0b091b1f2de30698ab6b1f82425568f3172d912e39adb8e9",
+  "sha256": "5817837fce4000c8e4804536858f8fd237e02af938c8fbec331e11f6b2860083",
   "assetType": "Decal",
-  "assetId": 95828284597434,
+  "assetId": 127386726266407,
   "status": "Approved",
-  "imageId": 118970540879068
+  "imageId": 93158021771819
  },
  "icons/armor/armor_tier3_epic.png": {
-  "sha256": "b0f3a15231a64a9052a9a02dec54d848c2191cba38959f5c8604f68d756a45f4",
+  "sha256": "3b86290a09668cb41ffd3f0a1208cebe42fed934661a86941ac65fa75715a016",
   "assetType": "Decal",
-  "assetId": 114895800067763,
+  "assetId": 85766894925432,
   "status": "Approved",
-  "imageId": 71095574725345
+  "imageId": 80728163101933
  },
  "icons/armor/armor_tier3_legendary.png": {
-  "sha256": "5dd8a7e5cff1971a55f5299069ef3c6433ce0bf6c5203b2ba65c664c5bc9f6f6",
+  "sha256": "d1065c84cd1be5adbf14847c1222c7836604aaa5d50355642d0d6b18aae2ebb8",
   "assetType": "Decal",
-  "assetId": 128255736931962,
+  "assetId": 138059337114037,
   "status": "Approved",
-  "imageId": 139779576153153
+  "imageId": 80904343960582
  },
  "icons/armor/armor_tier3_normal.png": {
-  "sha256": "100516dfe4962893ed9c984d1e33a1fc32b418727cd76431ff68af5528d31768",
+  "sha256": "6036ab1540a27282f010c05fc7683f77fe612509c21ba2bcab30714afe9ba3d1",
   "assetType": "Decal",
-  "assetId": 98210256327960,
+  "assetId": 93882052053738,
   "status": "Approved",
-  "imageId": 82021504775925
+  "imageId": 122392646594612
  },
  "icons/armor/armor_tier3_primordial.png": {
-  "sha256": "9bc7bdc9ef40598d8b793758684601986760c55694a8d1a9db29d81340463fbc",
+  "sha256": "6acb0e9fcecbd8fe30e350a442e1070588ae45f344bbe63a5ec4673400238e93",
   "assetType": "Decal",
-  "assetId": 73842296850553,
+  "assetId": 98212632950641,
   "status": "Approved",
-  "imageId": 122086524571326
+  "imageId": 97700279796424
  },
  "icons/armor/armor_tier3_rare.png": {
-  "sha256": "f62538a8ce26a0fe8198b5fd7fa30f602170baeefafbaa2d9fdab79271d241dc",
+  "sha256": "13c13176cbbac8474a36b640b3e14b5fbdb1266d57f14d870dc93744a93e6e06",
   "assetType": "Decal",
-  "assetId": 95839365216873,
+  "assetId": 89823064383445,
   "status": "Approved",
-  "imageId": 95706959858701
+  "imageId": 110951129862468
  },
  "icons/armor/armor_tier3_relic.png": {
-  "sha256": "8dbcc8b695d6ad0bcf83bd1b06ddc43438f020947473ce38038109a4a4d96f0e",
+  "sha256": "d4c0258e5a6312d34013e53f843b5f223d055b76c9914f9fb7a03f72b487cdf4",
   "assetType": "Decal",
-  "assetId": 101810227074689,
+  "assetId": 127175847977425,
   "status": "Approved",
-  "imageId": 88956008608992
+  "imageId": 113436491630099
  },
  "icons/armor/armor_tier3_transcendent.png": {
-  "sha256": "422a790aed25aca89829d1dd76bf5fd5063e507b52a6a97fc6574480b4649a84",
+  "sha256": "282fec93223193d723a8e31f5bcfb8f0e31ef4de7e9482f8268a6da1b8da2f95",
   "assetType": "Decal",
-  "assetId": 140034741919842,
+  "assetId": 79493967266704,
   "status": "Approved",
-  "imageId": 116931410146208
+  "imageId": 121584883704390
  },
  "icons/armor/armor_tier4_ancient.png": {
-  "sha256": "bfe9c58a2c653ac8d3de72c16128f40797c0a7d580e21542fdbd668e6590af60",
+  "sha256": "71518f0794a5607c33d139957eff1925355c7dc732fc3923ac04d9501a2dc3fd",
   "assetType": "Decal",
-  "assetId": 74653234611592,
+  "assetId": 105638925032892,
   "status": "Approved",
-  "imageId": 129893994005485
+  "imageId": 96411914244441
  },
  "icons/armor/armor_tier4_epic.png": {
-  "sha256": "dd4e9b326f2f3e73264245df44354f1a576c16db44c2a0ba362f46d0d54294e5",
+  "sha256": "254f4b6b9bb976dbf634952c244767b37a986af51e7d2defc9e6032b717f468e",
   "assetType": "Decal",
-  "assetId": 75865884119479,
+  "assetId": 75977468268724,
   "status": "Approved",
-  "imageId": 136086078187392
+  "imageId": 118874305346294
  },
  "icons/armor/armor_tier4_legendary.png": {
-  "sha256": "75da3a71c5b6b996cf041ff2ba358d5af532595e2d66c3e7304b940f6511c709",
+  "sha256": "e79dbaa3d1ce1109c14cccbce3a260f056eb83b59e7805083ff5c0536d0ad165",
   "assetType": "Decal",
-  "assetId": 130969347059902,
+  "assetId": 118948648973925,
   "status": "Approved",
-  "imageId": 77532743394680
+  "imageId": 138000960804882
  },
  "icons/armor/armor_tier4_normal.png": {
-  "sha256": "14eed88631fd793f76e88dc914f1fb03362f0f11c063257fdde97970d73f2640",
+  "sha256": "85202023de65899f61d33fd21f24f79cd9fcd2cb64fd17873345297300b4f9da",
   "assetType": "Decal",
-  "assetId": 85809738803100,
+  "assetId": 123786558443544,
   "status": "Approved",
-  "imageId": 139562009095731
+  "imageId": 100607660894978
  },
  "icons/armor/armor_tier4_primordial.png": {
-  "sha256": "dcf8580b8708928aefbe0ec311caad3122073e0e056b4e0c0eed0e3a01863ad7",
+  "sha256": "e357a3c8d5d0a7325c114ce6e8a955a6f7a8605884bd25c2b5532a1dbb15f688",
   "assetType": "Decal",
-  "assetId": 121851610635637,
+  "assetId": 102399249705179,
   "status": "Approved",
-  "imageId": 78282996615852
+  "imageId": 76411584173224
  },
  "icons/armor/armor_tier4_rare.png": {
-  "sha256": "2455112bbffe10160884fe3f1d06fc745e51314bd8c443309e17a935f836b9a5",
+  "sha256": "4cc30da7809ad3c4276130befed31c12574c94c24018c5f420346991c17f5834",
   "assetType": "Decal",
-  "assetId": 107188554650533,
+  "assetId": 75322363742077,
   "status": "Approved",
-  "imageId": 133888345858317
+  "imageId": 81339408837393
  },
  "icons/armor/armor_tier4_relic.png": {
-  "sha256": "7c358de96eb7b0882519555966ab9196d9e2cc96953e7d0c34554f97d79e311a",
+  "sha256": "0811156b6487cdeb6eefdd0cb231be2a06062888d190744463530659de0979c7",
   "assetType": "Decal",
-  "assetId": 111220022350161,
+  "assetId": 126657289385931,
   "status": "Approved",
-  "imageId": 93979413559451
+  "imageId": 118531199091577
  },
  "icons/armor/armor_tier4_transcendent.png": {
-  "sha256": "84aa096e2943d6eac9ca5484d4b95eef18c2634bdd99654871ee3af06609fe32",
+  "sha256": "2e133f66136dac94962224828440285ef7d9f924b1e7dc7918bde2592110c7fc",
   "assetType": "Decal",
-  "assetId": 120511002368749,
+  "assetId": 123067669556954,
   "status": "Approved",
-  "imageId": 98863019740058
+  "imageId": 99916784161442
  },
  "icons/armor/armor_tier5_ancient.png": {
-  "sha256": "5569c52e0e6bdaadc29f8af312966ed573a2277f5cf1f9918fed799e835d8258",
+  "sha256": "22bd1a08f6810dcfdb39359c0ef7a2b664ead4b9fbe581981c81c4c59bfec4d9",
   "assetType": "Decal",
-  "assetId": 99084243829746,
+  "assetId": 83859412776931,
   "status": "Approved",
-  "imageId": 98290231997525
+  "imageId": 73579537811841
  },
  "icons/armor/armor_tier5_epic.png": {
-  "sha256": "8024e6698c22aacad2e7b3c25321cf88d0da9b7d54920a54a3c1ebf055b7d64f",
+  "sha256": "da63cb11b6849dc8d54ddd046268c16a559109828253e6c93e8a2f36ec2cc254",
   "assetType": "Decal",
-  "assetId": 77732526803857,
+  "assetId": 126054308311736,
   "status": "Approved",
-  "imageId": 75141643914206
+  "imageId": 82758780679133
  },
  "icons/armor/armor_tier5_legendary.png": {
-  "sha256": "27933400740679737c6b4ab1c93b08695d915514fcf9051fdd9d8c3f71dee3ae",
+  "sha256": "7ab0598bbecdf924867d40599291c51ae87be48d7a0c0273c856f35d31dd0530",
   "assetType": "Decal",
-  "assetId": 136639650039216,
+  "assetId": 106040238646619,
   "status": "Approved",
-  "imageId": 80291868152347
+  "imageId": 76046656015347
  },
  "icons/armor/armor_tier5_normal.png": {
-  "sha256": "f5a8cc8cad3e89cb6773c045f54f35dd0be3953491df6a854b9a4a0e99693bc6",
+  "sha256": "47f297d20c4d7cff5f2e46309a4c6affa79ee472f53f3a928966462dab7da92f",
   "assetType": "Decal",
-  "assetId": 98563629820899,
+  "assetId": 92109153411435,
   "status": "Approved",
-  "imageId": 94435938425904
+  "imageId": 115794531265116
  },
  "icons/armor/armor_tier5_primordial.png": {
-  "sha256": "ee25fb29f48a26dd526c497ab8f52330fd856b592ae4d218e9de8755f922f005",
+  "sha256": "7ae5882536b9e86507180471861cb0280fdb09b9c93e3989a700327b34251bfd",
   "assetType": "Decal",
-  "assetId": 81742050416551,
+  "assetId": 77478499282198,
   "status": "Approved",
-  "imageId": 136834073100896
+  "imageId": 84434903964608
  },
  "icons/armor/armor_tier5_rare.png": {
-  "sha256": "2cafe25be9c11179dbc4d58aec547939859184f2397c028ee5bba40d2265baf4",
+  "sha256": "8381cd0b97996cb7d947ced88b9be4923b4c228e24ac99c8be87cbb0eaba4893",
   "assetType": "Decal",
-  "assetId": 73815555302704,
+  "assetId": 133328370238116,
   "status": "Approved",
-  "imageId": 93444093285154
+  "imageId": 78313431527358
  },
  "icons/armor/armor_tier5_relic.png": {
-  "sha256": "288fbea129bd6f163a88f20dc1d118c156c3a3c90cfedca9776f83fd02511aa3",
+  "sha256": "024880bd70924be195e81fec098db237c736b53b9cb61c69fe15c9b329798bf1",
   "assetType": "Decal",
-  "assetId": 73715141192676,
+  "assetId": 114054648420400,
   "status": "Approved",
-  "imageId": 102413230497864
+  "imageId": 129623706592220
  },
  "icons/armor/armor_tier5_transcendent.png": {
-  "sha256": "d3f98be952af9ddf5a703a2a9759ed74770bff20497151067c6534b5a7a1c0dc",
+  "sha256": "489cf69003f0adf0bd9f7fa4840bf5f5ffbd6a0b121db90ededb3cbd808bb799",
   "assetType": "Decal",
-  "assetId": 78510769585758,
+  "assetId": 113139773979962,
   "status": "Approved",
-  "imageId": 112630112783004
+  "imageId": 88749711497551
  },
  "icons/armor/armor_tier6_ancient.png": {
-  "sha256": "75e7ba01aa75f85a7ec42096279b9bf6c73dc13791b69c7b306fb5d7e1dbf806",
+  "sha256": "5fde418a54077b65c1c40064f146ceea70e0d318ad5113d77f6ed423cd4dbf25",
   "assetType": "Decal",
-  "assetId": 89740868460088,
+  "assetId": 96272727188224,
   "status": "Approved",
-  "imageId": 98714125274774
+  "imageId": 74076938977012
  },
  "icons/armor/armor_tier6_epic.png": {
-  "sha256": "e6eca2cf13a1f95bdbcb701fc5973ce0c148013cf01d8be4eab4b0af89959bd1",
+  "sha256": "564a55adc7694ad6bd42f85e7869eae73836bcb4880cc2375bf2ff8cc99b8ec9",
   "assetType": "Decal",
-  "assetId": 132853296822966,
+  "assetId": 81977753427821,
   "status": "Approved",
-  "imageId": 72601599464183
+  "imageId": 87040200787817
  },
  "icons/armor/armor_tier6_legendary.png": {
-  "sha256": "6dd0c66e8d40d613f7e8b51e547e38a60ae7d953869df66a900aed756dde580e",
+  "sha256": "19965106d46c60ef38038ad24ce693f934ca84df4acd92ebe4813571d77215c6",
   "assetType": "Decal",
-  "assetId": 79956939821297,
+  "assetId": 129062757437472,
   "status": "Approved",
-  "imageId": 108777382758528
+  "imageId": 87444742200989
  },
  "icons/armor/armor_tier6_normal.png": {
-  "sha256": "c11ecddd0f95b720ed9b33958cea8d93c84fa94674a58d2bc04997a85292a09d",
+  "sha256": "c286cfaadfa0356463f7829946e2a51eed0cecd3162c8ebdce96b5a5f83e2bf8",
   "assetType": "Decal",
-  "assetId": 120227672796067,
+  "assetId": 120322474504301,
   "status": "Approved",
-  "imageId": 114176829593610
+  "imageId": 98971371603926
  },
  "icons/armor/armor_tier6_primordial.png": {
-  "sha256": "a5e92f7b133355cdcf7594440c97beee5b538e6fbffdf60577d79c12b7ba93de",
+  "sha256": "829404ab3417fe475a715775a00ae710a8aac3fd5667ac0573e8de338252ffc8",
   "assetType": "Decal",
-  "assetId": 113987890205666,
+  "assetId": 120634407239137,
   "status": "Approved",
-  "imageId": 123452213550972
+  "imageId": 97122645490753
  },
  "icons/armor/armor_tier6_rare.png": {
-  "sha256": "5d5bb5c40b5ba8412a42a75187476e1a63c9231677f6a9a34dece5149c1cfc1d",
+  "sha256": "8674c8d7ab8dba708539830f55c3e2d01d0e7d0db86f024c0894071aa526c28b",
   "assetType": "Decal",
-  "assetId": 85987392893017,
+  "assetId": 103338725957976,
   "status": "Approved",
-  "imageId": 88671857844670
+  "imageId": 94374492103591
  },
  "icons/armor/armor_tier6_relic.png": {
-  "sha256": "5b7dfeadaa91060d2423497cf06a035a74d54265a60c7802a4ab9226a2ac83a6",
+  "sha256": "d3c330c398179e0c027dbb8e3c4f742ae18701baa3dfa1c39af165785225104b",
   "assetType": "Decal",
-  "assetId": 126759267276748,
+  "assetId": 79551121291891,
   "status": "Approved",
-  "imageId": 124152455904360
+  "imageId": 133713638284306
  },
  "icons/armor/armor_tier6_transcendent.png": {
-  "sha256": "14446cedf090c9b76c5cfd84559bd74df68b084324dd1a7dd0fb44b73f91c6c8",
+  "sha256": "aebf6b79c662dfbc1cab4b401f43dad724618817f35f2fc2c0c9cab0a217d9c4",
   "assetType": "Decal",
-  "assetId": 125019790701201,
+  "assetId": 114381442197687,
   "status": "Approved",
-  "imageId": 90161590810833
+  "imageId": 90146856984893
  },
  "icons/armor/gloves_tier1_ancient.png": {
-  "sha256": "9cafa6b53e9426a85907e4b4f1b7e3da66e18a9e7e8b81ee46e50f341870974b",
+  "sha256": "9f056cd1b43886be75d7ee93afaf6ae5e7dd9b769b42ccd497ecdea88316efc6",
   "assetType": "Decal",
-  "assetId": 98355964944556,
+  "assetId": 89182451246454,
   "status": "Approved",
-  "imageId": 137269797234005
+  "imageId": 77774857715201
  },
  "icons/armor/gloves_tier1_epic.png": {
-  "sha256": "615dfb7191a03bb0a37499fe7590e75bc26ca976e5e2c7c060c874fc9eb310ae",
+  "sha256": "0df625d82ae6bc425e2a9755f98ea859cfbe6f2bc8e0d1323bf54698ddfd5d8d",
   "assetType": "Decal",
-  "assetId": 99334759246174,
+  "assetId": 102005197379918,
   "status": "Approved",
-  "imageId": 76702687631245
+  "imageId": 83376153685305
  },
  "icons/armor/gloves_tier1_legendary.png": {
-  "sha256": "3dc43cefebaa7a82158b8966f294a57ee952ae4aed782b03192615c7baa7abc6",
+  "sha256": "e98ca25d9497c8f07a9437961028d23eebfd29b2bd85f1479164028e3cc2597b",
   "assetType": "Decal",
-  "assetId": 102373583706490,
+  "assetId": 115513670390236,
   "status": "Approved",
-  "imageId": 96770994870837
+  "imageId": 109705435843307
  },
  "icons/armor/gloves_tier1_normal.png": {
-  "sha256": "e50fb2abb878ac5efd0956b56f404223d5222abb1db99bede0fa5dd4dd6d24ad",
+  "sha256": "0d2494b499b67c44f5cc8a6a3ed8640f51473e050c9566ed77b4f9cbbd4220fa",
   "assetType": "Decal",
-  "assetId": 119483051172550,
+  "assetId": 76902357436629,
   "status": "Approved",
-  "imageId": 114551863921967
+  "imageId": 74233993081025
  },
  "icons/armor/gloves_tier1_primordial.png": {
-  "sha256": "e2e738cfd4d6dc66258b8084b3dcc7c7ddf3d3aca6998a2cabd09a52d19e3e94",
+  "sha256": "c5960e0591bbb33fd0621e7ecef77dcc26052637406b20e94d0c392e53e4bae5",
   "assetType": "Decal",
-  "assetId": 124924643489501,
+  "assetId": 100949249799384,
   "status": "Approved",
-  "imageId": 106248420824071
+  "imageId": 114712593251385
  },
  "icons/armor/gloves_tier1_rare.png": {
-  "sha256": "d2fa88904a607b603a99441e21157905c32230c4261a5962fc1568b5c4d15a58",
+  "sha256": "3c18572ce7fcd91a1a9f68a7525dcac30c5cefb90fc0e545988161be0d767d11",
   "assetType": "Decal",
-  "assetId": 70404153150602,
+  "assetId": 76742065442362,
   "status": "Approved",
-  "imageId": 95000474042352
+  "imageId": 72142817787381
  },
  "icons/armor/gloves_tier1_relic.png": {
-  "sha256": "9e7a2834e03ea6f9e7f806fab4be11adedf828db1d42bf406d7447f0e1366d83",
+  "sha256": "ceaf4750653ac2f4e17f75067d409b2a2c81704c7b127bc52d9f9af099e8fd38",
   "assetType": "Decal",
-  "assetId": 99336858492118,
+  "assetId": 88577211218562,
   "status": "Approved",
-  "imageId": 120925093377015
+  "imageId": 106157479000662
  },
  "icons/armor/gloves_tier1_transcendent.png": {
-  "sha256": "37970ac2c9bbcaacc1e96983e6778f20c472d8975908c4bbc4fd3516a9ff0950",
+  "sha256": "0a7d3556888d178c896d2a777940c8bb9afe33231333a6fa5cd6d0deb51bf99f",
   "assetType": "Decal",
-  "assetId": 74309274146489,
+  "assetId": 91045153000593,
   "status": "Approved",
-  "imageId": 118134521429618
+  "imageId": 79521454768899
  },
  "icons/armor/gloves_tier2_ancient.png": {
-  "sha256": "7b795486e184a6f9461b14dfc57569800ba33974029d236b9a43945e27eff097",
+  "sha256": "b814089d88163710c9522c2b6700aba5c198315fd4b7de63ccc3793f1cf34c67",
   "assetType": "Decal",
-  "assetId": 101332927764443,
+  "assetId": 105171649719140,
   "status": "Approved",
-  "imageId": 105710368750757
+  "imageId": 85221611968484
  },
  "icons/armor/gloves_tier2_epic.png": {
-  "sha256": "40b623d511103b77fb6a17208491267887a18251fdfef9241546ae5610cb3839",
+  "sha256": "8591ce2759c43293ff3b838616ec5a131d6d77bde7806f709f62b1db48532493",
   "assetType": "Decal",
-  "assetId": 94357974185355,
+  "assetId": 77443234640132,
   "status": "Approved",
-  "imageId": 109780523951401
+  "imageId": 97599314851615
  },
  "icons/armor/gloves_tier2_legendary.png": {
-  "sha256": "b52924e107ed5de41e7000b1b6ef92d1369703e66e17198c8b644443627d6f11",
+  "sha256": "b6d9466945a729ed2070d2d55e02620f041ad711c237db99167a103db5646c78",
   "assetType": "Decal",
-  "assetId": 100371883571766,
+  "assetId": 89178336768620,
   "status": "Approved",
-  "imageId": 94236072301100
+  "imageId": 117979897608486
  },
  "icons/armor/gloves_tier2_normal.png": {
-  "sha256": "467d9fcf71558d9e004b70ad84c741faefe5b8bef19ccb387ce2b410df5172cb",
+  "sha256": "e2e8b306ee04756979060873ec4f70c69f4c11da03ad93f2dabe294f5bc40ee0",
   "assetType": "Decal",
-  "assetId": 83786644486638,
+  "assetId": 139571593345428,
   "status": "Approved",
-  "imageId": 99524278544367
+  "imageId": 99532525586236
  },
  "icons/armor/gloves_tier2_primordial.png": {
-  "sha256": "96bb717d5fdcac5577b94677092b81b377e0083a1e47bd3ab13b47a6e82a1fae",
+  "sha256": "4236d3c4ee4d7d7506ea55396105ad909a50efbfbbc79424bcd90e974029b11b",
   "assetType": "Decal",
-  "assetId": 72873027397960,
+  "assetId": 107003675539827,
   "status": "Approved",
-  "imageId": 136333448829469
+  "imageId": 95584934860058
  },
  "icons/armor/gloves_tier2_rare.png": {
-  "sha256": "7bdf7d5e87c05bcf7e5d9ec009af273316f263cb257c40ab3f3fe1ee7f073dd0",
+  "sha256": "d7c9af9b95bd19e36d5283cc655f58bf58d1b2fd628bffb844b88043c05aed00",
   "assetType": "Decal",
-  "assetId": 123501260637915,
+  "assetId": 76508841853711,
   "status": "Approved",
-  "imageId": 106245323032035
+  "imageId": 85129068889853
  },
  "icons/armor/gloves_tier2_relic.png": {
-  "sha256": "f1e9e1c48c34f14741149bd1f6d322866aa5dc46fb581827de8c9a5eaf124610",
+  "sha256": "224db64ae879ffbc6467cd96780202309d7cb0906130fe67ac864c16593701a6",
   "assetType": "Decal",
-  "assetId": 138207395317841,
+  "assetId": 76474745698850,
   "status": "Approved",
-  "imageId": 111306599346225
+  "imageId": 135876652671163
  },
  "icons/armor/gloves_tier2_transcendent.png": {
-  "sha256": "4e7a8d365466b693e6c96080971b952980eb87f525354159529a0f2162d4f953",
+  "sha256": "11cb648255ca4fb5f1aee836e15b895eac7e8d5aeccfe32d0316621d2da3ed82",
   "assetType": "Decal",
-  "assetId": 98824272960408,
+  "assetId": 94801314452231,
   "status": "Approved",
-  "imageId": 113637411690058
+  "imageId": 128178584003270
  },
  "icons/armor/gloves_tier3_ancient.png": {
-  "sha256": "5ec84d4ba7660cf8a633a85cf135f950f9f23f3b42704a9de2867ee817fbf685",
+  "sha256": "707c0e158beacb8a00b0c452e3d92f60910b5019250e81fae1c8d3313ffa1071",
   "assetType": "Decal",
-  "assetId": 96061523174199,
+  "assetId": 90194959264508,
   "status": "Approved",
-  "imageId": 80775850710119
+  "imageId": 125804924813291
  },
  "icons/armor/gloves_tier3_epic.png": {
-  "sha256": "176ade0bae68ab22a76ac6715a1fa87b954429566368711d8f2af702fd5c435d",
+  "sha256": "78e7961cff42d8962fcfa9036d96cee7460d074fd947617a59febe5009255480",
   "assetType": "Decal",
-  "assetId": 135573822487325,
+  "assetId": 100392458533957,
   "status": "Approved",
-  "imageId": 90286913277954
+  "imageId": 120192934520231
  },
  "icons/armor/gloves_tier3_legendary.png": {
-  "sha256": "de3a05ec7191cf210a218d523d81aca95158711088e699d1611ab182bf00bdc4",
+  "sha256": "64185e9ec3c78cf1f643fae13f6c2c54596ffb01080caab63cae4a56a3979029",
   "assetType": "Decal",
-  "assetId": 127399388621570,
+  "assetId": 71330765793693,
   "status": "Approved",
-  "imageId": 89036734179023
+  "imageId": 127753617139240
  },
  "icons/armor/gloves_tier3_normal.png": {
-  "sha256": "27762000b191049d8ec6610272163ed6aa58366e041ceaae27dae73a465d6435",
+  "sha256": "f82607c4588f94065ad84c3a2c317ffd0d50b1353314aea689caf7cf4b296f41",
   "assetType": "Decal",
-  "assetId": 122467383373647,
+  "assetId": 94188564438241,
   "status": "Approved",
-  "imageId": 94943040236403
+  "imageId": 105368133704822
  },
  "icons/armor/gloves_tier3_primordial.png": {
-  "sha256": "4effed244f4057d1f880b058b554127ba0b33b4e66fdab451f13a08abb23305b",
+  "sha256": "fa9b4e0de6e163e0fed36cce663b9354b711fd957b2cfca01bdf595421c0fb23",
   "assetType": "Decal",
-  "assetId": 78220286188886,
+  "assetId": 71527259851449,
   "status": "Approved",
-  "imageId": 106594800338049
+  "imageId": 82329831947490
  },
  "icons/armor/gloves_tier3_rare.png": {
-  "sha256": "70804a4ee9173e706246edd4fd0ce15b90d5121ded1604ec537b661eecb1a953",
+  "sha256": "1c1594a2d80e02cd4dd8bf1ca002cd2ee39ecf5d9df5f1ddfa179619787b01d4",
   "assetType": "Decal",
-  "assetId": 119462391032862,
+  "assetId": 89267485214165,
   "status": "Approved",
-  "imageId": 90553563981274
+  "imageId": 113573842944679
  },
  "icons/armor/gloves_tier3_relic.png": {
-  "sha256": "5183440ac599ac2b178abb354e758cd4e4c81875fad310eae51dbe025bcab94c",
+  "sha256": "753f842062e2d2ef1cbb8e0b3990cf515d3b5dce725c7c71797b314ae6e26b90",
   "assetType": "Decal",
-  "assetId": 131463578189678,
+  "assetId": 92600282569157,
   "status": "Approved",
-  "imageId": 133251548512044
+  "imageId": 72630397733242
  },
  "icons/armor/gloves_tier3_transcendent.png": {
-  "sha256": "812f195a7c0b7c32a1584b2afb2b2b87bdd30c279569b5cdff75b0db0ed5f1cc",
+  "sha256": "962708260ec888e28190f456ecdf796e8bb72ab56f49fa4507a11c9691ee4e38",
   "assetType": "Decal",
-  "assetId": 91211687518411,
+  "assetId": 130839669123754,
   "status": "Approved",
-  "imageId": 133945130551648
+  "imageId": 78109923139605
  },
  "icons/armor/gloves_tier4_ancient.png": {
-  "sha256": "eb4a2a4707a26189151fec5e7a87aac8054897c89bd18a96a1a2e0452745ca46",
+  "sha256": "6b406895c14692e087f5602de3b3c8466e362106166a9f37399aaf87d23b63bf",
   "assetType": "Decal",
-  "assetId": 73551352723618,
+  "assetId": 106182272660133,
   "status": "Approved",
-  "imageId": 106598767417085
+  "imageId": 117488910105458
  },
  "icons/armor/gloves_tier4_epic.png": {
-  "sha256": "22738a7f5326c0c02d5b8200d4cb22c83a1ddcb0f2b798198457b0945ec69c8b",
+  "sha256": "68c72dc368c18c5d9f494178f8a1c169a92966cea900756eddc2d23c0385703e",
   "assetType": "Decal",
-  "assetId": 73891200550127,
+  "assetId": 94438110148894,
   "status": "Approved",
-  "imageId": 81913495973370
+  "imageId": 86482860913759
  },
  "icons/armor/gloves_tier4_legendary.png": {
-  "sha256": "ce057a8fb149a6e8c55591707520ba2a05afa38716118f85dcdeaf9df52db891",
+  "sha256": "82325b02e3bb536ef464fcbf7b2f8dd927c652805b94786f2ecfe77ddd8048de",
   "assetType": "Decal",
-  "assetId": 97524588357195,
+  "assetId": 136202076897108,
   "status": "Approved",
-  "imageId": 135067636193578
+  "imageId": 107000614870101
  },
  "icons/armor/gloves_tier4_normal.png": {
-  "sha256": "0afb7ff57706bfaf10bc9e1d0409673f794bfa28ca0316223adef22c7d462401",
+  "sha256": "2de29abb9d2aa10216ecb54cd589d565195f9c17f8a09c251f6eaaea49c2603a",
   "assetType": "Decal",
-  "assetId": 100461940706749,
+  "assetId": 131656243384516,
   "status": "Approved",
-  "imageId": 106558211839964
+  "imageId": 101801075621043
  },
  "icons/armor/gloves_tier4_primordial.png": {
-  "sha256": "3fa25a70f820a186428d730d229719913148788faef29609596694c33f5b5b5b",
+  "sha256": "5abaa6629a4d4368863bfd25b804a99bc3017281d86895e20b156cb1d6e2c526",
   "assetType": "Decal",
-  "assetId": 86265965827747,
+  "assetId": 114479799376602,
   "status": "Approved",
-  "imageId": 76777361899724
+  "imageId": 120985016546577
  },
  "icons/armor/gloves_tier4_rare.png": {
-  "sha256": "df7cc9ca0e9d3b325238d56dfdbb825f6529f29d5c28b35ae64d8135ad509d77",
+  "sha256": "af5943973c7d449a1abbd315f86a1931d74bcbfd1b5f7951411cd4d4b3ba3f0e",
   "assetType": "Decal",
-  "assetId": 96481549711173,
+  "assetId": 126813134805053,
   "status": "Approved",
-  "imageId": 91372083814124
+  "imageId": 105945408287116
  },
  "icons/armor/gloves_tier4_relic.png": {
-  "sha256": "267a75b239bea3a8706e9b5c50061e43f99ea261cdb6c3406797925b3323d965",
+  "sha256": "0e2cf4f360fce31caffce783dcb41e4c59049785b7238f99a3b9e082980511d3",
   "assetType": "Decal",
-  "assetId": 72848995010901,
+  "assetId": 75018431001362,
   "status": "Approved",
-  "imageId": 110406838636369
+  "imageId": 104434571599739
  },
  "icons/armor/gloves_tier4_transcendent.png": {
-  "sha256": "0f5f05cecf5498570bdfd7e9cd4fd3efc741f5b95aecbf67215366f617f4cf96",
+  "sha256": "90db1991ee971bf97850a293626c0f76f72fe3bd7d19b2e87bc3ccaa3484dcae",
   "assetType": "Decal",
-  "assetId": 106521075312892,
+  "assetId": 100977032333326,
   "status": "Approved",
-  "imageId": 71138566992787
+  "imageId": 128636657357943
  },
  "icons/armor/gloves_tier5_ancient.png": {
-  "sha256": "4f25b4982708f0ffeb943b82dd633636f5cc0b138c37d001052c02000c91c2e9",
+  "sha256": "253300fa08ea46c098b7917de7ec0555eb077ee3af1bdbc4adf83a6ab0d30be5",
   "assetType": "Decal",
-  "assetId": 134211353403574,
+  "assetId": 109301295359222,
   "status": "Approved",
-  "imageId": 86891481294745
+  "imageId": 117676937930868
  },
  "icons/armor/gloves_tier5_epic.png": {
-  "sha256": "f26a40e4f7f1904fc84b30f93919574f0e4c018c634cca3ea0b83efdc34f585a",
+  "sha256": "a37c43f372e82f39bc949069bab112ea3968a886984f64fdf2d45a0dc79ec858",
   "assetType": "Decal",
-  "assetId": 116366769993449,
+  "assetId": 102110163050481,
   "status": "Approved",
-  "imageId": 114256333763899
+  "imageId": 135301909814105
  },
  "icons/armor/gloves_tier5_legendary.png": {
-  "sha256": "1999b1080759426aa8bae4f3674f66580d1a8725d7b52eeaa8a8b7fac70c1a14",
+  "sha256": "5f9227235860f000773e530bd574330a6eb148bc475a85a69866589665129e7f",
   "assetType": "Decal",
-  "assetId": 116423658531298,
+  "assetId": 101480275650468,
   "status": "Approved",
-  "imageId": 119339511686391
+  "imageId": 95697864294821
  },
  "icons/armor/gloves_tier5_normal.png": {
-  "sha256": "3584ab31519f2031c2fdac1fb0d9b84ecba6798ea06ccadb351783ef9647e4dd",
+  "sha256": "aadbe476dee78eeb78b1ab724caace94a88091cf25f8df45bd56f8012a5bfbea",
   "assetType": "Decal",
-  "assetId": 82541937976491,
+  "assetId": 99299546694638,
   "status": "Approved",
-  "imageId": 89133292157707
+  "imageId": 82179068315997
  },
  "icons/armor/gloves_tier5_primordial.png": {
-  "sha256": "a4e9cde8ec319d2d9e2b00387eb4aa74a74a7a0004603cfc5b736f29fda9d534",
+  "sha256": "3f09626e891208d6069820cfa7fb10748716f20bbf29631c6273c9f12c359c10",
   "assetType": "Decal",
-  "assetId": 85349587773343,
+  "assetId": 94137012973536,
   "status": "Approved",
-  "imageId": 126149910933478
+  "imageId": 129362564321616
  },
  "icons/armor/gloves_tier5_rare.png": {
-  "sha256": "b6c7e8eda5c21a3b18b80aaa340f0f9f4646474a25dbe8a9269a952b97eefdd4",
+  "sha256": "f97f373a5f03d49f07dbe0118b34f9ecc0412d6db550b422e8374d7e15f17bf0",
   "assetType": "Decal",
-  "assetId": 99898821858143,
+  "assetId": 103512515240574,
   "status": "Approved",
-  "imageId": 116976436412036
+  "imageId": 128271533225444
  },
  "icons/armor/gloves_tier5_relic.png": {
-  "sha256": "79177a9f23ed2cdf829523d645f9250b716fe189f5447ce2db34daf7b8ce6d12",
+  "sha256": "b5f7253e624bb269c134136f74edd9512a40bc333a2ef5ebb48e0ef3ba60b28a",
   "assetType": "Decal",
-  "assetId": 100102259320670,
+  "assetId": 89864844834380,
   "status": "Approved",
-  "imageId": 115780910726453
+  "imageId": 86496136814778
  },
  "icons/armor/gloves_tier5_transcendent.png": {
-  "sha256": "2b1efecd63dd592ac7433679dba679e7365d2026fe9bc9d500aae26c07f0e0ce",
+  "sha256": "8e320cb8821813b2b663cb48c935516fa8e235b5a804dce913a25603e1d3e999",
   "assetType": "Decal",
-  "assetId": 116309452587831,
+  "assetId": 117672103876513,
   "status": "Approved",
-  "imageId": 110879035053966
+  "imageId": 77999448799802
  },
  "icons/armor/gloves_tier6_ancient.png": {
-  "sha256": "61df3611598eba317a28074e708ab7aa707b1f1329b213808a9b72fd38e5591e",
+  "sha256": "29141ce6e78ab6d80442dcbd7bcc54e345f71311f49bedb853f3fae65fe87070",
   "assetType": "Decal",
-  "assetId": 112040734128551,
+  "assetId": 136800641432820,
   "status": "Approved",
-  "imageId": 108384352554059
+  "imageId": 138201505601203
  },
  "icons/armor/gloves_tier6_epic.png": {
-  "sha256": "a6f18ee65e9d2116d837451c217670d0d47f96e50cd4416e75b1fd3bcc98b2bb",
+  "sha256": "7e5c4f057639d2a43234d0af6f22d2036e6905793f7f87b85f3b3d425f435be6",
   "assetType": "Decal",
-  "assetId": 120165209603922,
+  "assetId": 131726784759611,
   "status": "Approved",
-  "imageId": 99078926635336
+  "imageId": 116964831866122
  },
  "icons/armor/gloves_tier6_legendary.png": {
-  "sha256": "2af91e62e845a5c2ef17570165bbf0acc4f92f9f55a30fc632d4371366566e3f",
+  "sha256": "f0dea3d56a233bad5e177280540476cce7f2367e5f1737bae755e597722ff7c9",
   "assetType": "Decal",
-  "assetId": 89392621306973,
+  "assetId": 135837046165800,
   "status": "Approved",
-  "imageId": 82002589747384
+  "imageId": 95142432017717
  },
  "icons/armor/gloves_tier6_normal.png": {
-  "sha256": "9699559203a5cc1749e52c26d7458b094fc40740f4061cbb2b3897e3f2ef215f",
+  "sha256": "5fa3867045cb9f818be55cb58401523cbf13b0871db55c1257494cb4ffd58f69",
   "assetType": "Decal",
-  "assetId": 107562362314355,
+  "assetId": 138540548283289,
   "status": "Approved",
-  "imageId": 103894425804984
+  "imageId": 101028238609121
  },
  "icons/armor/gloves_tier6_primordial.png": {
-  "sha256": "205eb7d1b1a2b2853f803a179a66da2472a893884add43726cd64b70b4aa800e",
+  "sha256": "7e5b397903fd64845a6383d4923188f7544deedf3244795989698e275d1ce0f4",
   "assetType": "Decal",
-  "assetId": 86113836689964,
+  "assetId": 93766510839287,
   "status": "Approved",
-  "imageId": 138803793793160
+  "imageId": 73736070924208
  },
  "icons/armor/gloves_tier6_rare.png": {
-  "sha256": "6c9ea5d4686e8cd795c750fa80035d70c159b890308bcfd6003382506a8a1732",
+  "sha256": "c3107ce10c0c6305f8799311eb5b32e3371daf175a2e807d66694c72e775470a",
   "assetType": "Decal",
-  "assetId": 127851769097408,
+  "assetId": 137558052366981,
   "status": "Approved",
-  "imageId": 138700285428207
+  "imageId": 113921629932684
  },
  "icons/armor/gloves_tier6_relic.png": {
-  "sha256": "1068aeaf0ad0aeae5e8ccf257b333f7d7463b8dba283ebf186061ef91cbe78fe",
+  "sha256": "95f8e650ee5c0ad47d946124f5728e011f685a7f6c34afd12dc16f094c965952",
   "assetType": "Decal",
-  "assetId": 131093982179413,
+  "assetId": 102310741619503,
   "status": "Approved",
-  "imageId": 99456297347895
+  "imageId": 79674989449965
  },
  "icons/armor/gloves_tier6_transcendent.png": {
-  "sha256": "3e37b8fd3e397d428d6c80f549402629a58bb1563c4c075c91c877d237118496",
+  "sha256": "33c8ac939f5af3ca4c9ea9e7a95a4a78bb577006ef35751bacb4cdbb2b400221",
   "assetType": "Decal",
-  "assetId": 106762872128211,
+  "assetId": 91876914347811,
   "status": "Approved",
-  "imageId": 91604753968006
+  "imageId": 109928713573957
  },
  "icons/armor/shoes_tier1_ancient.png": {
-  "sha256": "844d069f8114bb7253fcaee1fff87d0872d4938122af50680cec5742e635d4e5",
+  "sha256": "afa32fc4aa962850d60cdaff420fc6294c3a7da5cb7d347fc0d46cce48bb55d6",
   "assetType": "Decal",
-  "assetId": 76685800104241,
+  "assetId": 111243232442470,
   "status": "Approved",
-  "imageId": 72957554636088
+  "imageId": 102447641781213
  },
  "icons/armor/shoes_tier1_epic.png": {
-  "sha256": "1df22d3be07612921bc7274e208566420373096483a048677cc0bd0f2dfec452",
+  "sha256": "3a6058788840a5d77565f3550965a5af1314df51d211285ed35baefbefa6f069",
   "assetType": "Decal",
-  "assetId": 131559447039981,
+  "assetId": 83215234991010,
   "status": "Approved",
-  "imageId": 139577060724555
+  "imageId": 112882631811642
  },
  "icons/armor/shoes_tier1_legendary.png": {
-  "sha256": "842c798f0f273cb4f7aaeeba6efce2226a94bb74d665128ecd194ab066a5e897",
+  "sha256": "e79986bd3621515b1c9c83bffa4efcc65283b5d490395f2bf5f50caa8cef8969",
   "assetType": "Decal",
-  "assetId": 134676904313733,
+  "assetId": 134642677576377,
   "status": "Approved",
-  "imageId": 84335992194433
+  "imageId": 117403474942768
  },
  "icons/armor/shoes_tier1_normal.png": {
-  "sha256": "de7ddf451e5743f0feae539fb27c7a7d36e3bbdc5b8719a833ac5920b5712c03",
+  "sha256": "aead89f19d2a758197a9b7ebbb20074b3f752a97b71eda21ea5aeb50aad0d0e8",
   "assetType": "Decal",
-  "assetId": 84188641243519,
+  "assetId": 73554909090790,
   "status": "Approved",
-  "imageId": 90658981495247
+  "imageId": 92115659457865
  },
  "icons/armor/shoes_tier1_primordial.png": {
-  "sha256": "ffcfbd78cbe5514d4a0017f6941ed7c82ef82fdc06dca8d54fe76aa8ee51acbc",
+  "sha256": "93ee05f07222626ff6b83b8dd59499499b0cccf7774fb2be855b545b82b34716",
   "assetType": "Decal",
-  "assetId": 140204492933647,
+  "assetId": 76158859472182,
   "status": "Approved",
-  "imageId": 98070280944993
+  "imageId": 88369489180313
  },
  "icons/armor/shoes_tier1_rare.png": {
-  "sha256": "772d23458e0e5108c7e11aaf8f0361701efeb2bb2cf170b19b8c531423e50584",
+  "sha256": "9304380d51c092dc7d32e9babf1c2e95ec47b994a00d033eaa55f2b102b6e57a",
   "assetType": "Decal",
-  "assetId": 123806421283448,
+  "assetId": 93385447452537,
   "status": "Approved",
-  "imageId": 90734789511463
+  "imageId": 97802961777598
  },
  "icons/armor/shoes_tier1_relic.png": {
-  "sha256": "b46935e8759a40b249588429a4c719118e92761d4f63daaf967aee9cb2841927",
+  "sha256": "8530fa66d128156fc28665c87fea14f6f70fc32188076e48bfe60e3ccd2d3053",
   "assetType": "Decal",
-  "assetId": 98124133393840,
+  "assetId": 91932328258927,
   "status": "Approved",
-  "imageId": 127804614412562
+  "imageId": 120385119730457
  },
  "icons/armor/shoes_tier1_transcendent.png": {
-  "sha256": "08345619ffdfce5c8b69f7e41c4534032d93936cc39715c6ccdb6b3003a113c2",
+  "sha256": "327853f535f08d9aa9ec573c5e43b95e44017618f6f587d38359d21074f5b505",
   "assetType": "Decal",
-  "assetId": 140595374088988,
+  "assetId": 90687347101120,
   "status": "Approved",
-  "imageId": 71383250313113
+  "imageId": 134583061280828
  },
  "icons/armor/shoes_tier2_ancient.png": {
-  "sha256": "336bba700012270ba25d2307a2d0cab2b7df8de0aa0639198e81ec7efd7c0914",
+  "sha256": "1bdcf90dd9d29243228365f3a0dc8a437b06c435f1ffbf3ae1edc809cc6bb0ab",
   "assetType": "Decal",
-  "assetId": 90433251333646,
+  "assetId": 114386621853692,
   "status": "Approved",
-  "imageId": 87777758751334
+  "imageId": 76697683647283
  },
  "icons/armor/shoes_tier2_epic.png": {
-  "sha256": "619c94af8a4d556d6e788681e1b0faceb03ba34948bfa8129d4e488435d365c3",
+  "sha256": "4406d9891b8dfda0db07bbd8e54095acaec439c7f617aef207758e69c2fca34d",
   "assetType": "Decal",
-  "assetId": 103482410081214,
+  "assetId": 121428960904277,
   "status": "Approved",
-  "imageId": 70821419296376
+  "imageId": 99056363465358
  },
  "icons/armor/shoes_tier2_legendary.png": {
-  "sha256": "d87f0de5ad2b6263d7b89200183444acc16fdca930e4ce9ed6834efacaf955e6",
+  "sha256": "32468e688d93d6f332be9ab19024b7d7d3707e1664f073b883c09ba16edeb534",
   "assetType": "Decal",
-  "assetId": 104376831202086,
+  "assetId": 98046538224325,
   "status": "Approved",
-  "imageId": 128611901781654
+  "imageId": 104008567015401
  },
  "icons/armor/shoes_tier2_normal.png": {
-  "sha256": "78884728e0cfd5830cf029bbb5f97cbda734c24376047e8453f3add7a7a4025d",
+  "sha256": "9ae56113f6f7bc126121d3839aa4a8d4d00f9313442674303671f3234d22bac4",
   "assetType": "Decal",
-  "assetId": 95200906121380,
+  "assetId": 104117690276697,
   "status": "Approved",
-  "imageId": 94064699399296
+  "imageId": 128533549028493
  },
  "icons/armor/shoes_tier2_primordial.png": {
-  "sha256": "2fb383e35c048094eaee7c16d55059106e2b57842e2d13f80d783408fe00dd33",
+  "sha256": "8421ef726b439bcbbbd142f19d381c665a853a591db900967223d19980c580f5",
   "assetType": "Decal",
-  "assetId": 87523180479011,
+  "assetId": 81526619089030,
   "status": "Approved",
-  "imageId": 101727434200045
+  "imageId": 112495496057354
  },
  "icons/armor/shoes_tier2_rare.png": {
-  "sha256": "a7a1168b5745e0aaeb18e3d385a32462b03a62b5d5029845766b56cc10d226a3",
+  "sha256": "0d8134afd7c6a149dedf4b440464a48a48e27c33ebe60d22d048d11b513aa7d5",
   "assetType": "Decal",
-  "assetId": 98923113901365,
+  "assetId": 91812393665675,
   "status": "Approved",
-  "imageId": 106893661960085
+  "imageId": 98308431927442
  },
  "icons/armor/shoes_tier2_relic.png": {
-  "sha256": "3ddc7a7c731653493d52e2429c62de3f11f3b3d7b1de06847d8e277050e6e879",
+  "sha256": "222695addc2548badcb389914a798f0a4a08fbdd847342b90f9163990d01d256",
   "assetType": "Decal",
-  "assetId": 123915835085088,
+  "assetId": 139096272017996,
   "status": "Approved",
-  "imageId": 92805308785818
+  "imageId": 90663995522095
  },
  "icons/armor/shoes_tier2_transcendent.png": {
-  "sha256": "88da1d74035007c40bbb38ead28a71509f85cf9dc5acf5eab39d9cbd95d52aa1",
+  "sha256": "25ab09711cbd8e8f50ed8d9508a92bd5315c0a35cfb78fedf5729c439fb89d8b",
   "assetType": "Decal",
-  "assetId": 105424289071296,
+  "assetId": 111123748160386,
   "status": "Approved",
-  "imageId": 84092411313030
+  "imageId": 87604476548007
  },
  "icons/armor/shoes_tier3_ancient.png": {
-  "sha256": "bcc1a245d57feef90f8395171ef414b9eb790975f4fd21aa4d7d7ea087779e3d",
+  "sha256": "231741d45d7efa227d226806011dad0238b5b47b65bf0967739e94a074953573",
   "assetType": "Decal",
-  "assetId": 130164986625542,
+  "assetId": 117125091419173,
   "status": "Approved",
-  "imageId": 136797536063611
+  "imageId": 122966737882981
  },
  "icons/armor/shoes_tier3_epic.png": {
-  "sha256": "920c09dcab2d64f84b8b63eb55ac170d0dac6fe44e4e2068c3e8ed5415a7e61b",
+  "sha256": "7e0948abb5e33d718f3139a4a2904f8b1c3feb8f8928fc5276c5693bc838cdff",
   "assetType": "Decal",
-  "assetId": 83993902405429,
+  "assetId": 85634718744995,
   "status": "Approved",
-  "imageId": 128386269649632
+  "imageId": 74527264308489
  },
  "icons/armor/shoes_tier3_legendary.png": {
-  "sha256": "d21ed27048f95d1261b46d2c58c2e5e8d946c34c440199f05c118da384cd1978",
+  "sha256": "efb31820db8c834f3409d056ce1c5d3c8903989527a3cccd0bfe41db7e90ce4f",
   "assetType": "Decal",
-  "assetId": 122364535982712,
+  "assetId": 88860660652729,
   "status": "Approved",
-  "imageId": 102537809917580
+  "imageId": 79672498294434
  },
  "icons/armor/shoes_tier3_normal.png": {
-  "sha256": "48075788963e05c48565ee9e1f3704ffe79b7aeb7813968471db52f6bb71291b",
+  "sha256": "8f066b82fccbe45792b00804143bb6c6af74b4352e1bbf58ab4a0690b31e94b8",
   "assetType": "Decal",
-  "assetId": 106000055413611,
+  "assetId": 85643450702177,
   "status": "Approved",
-  "imageId": 97433713369372
+  "imageId": 72535639517621
  },
  "icons/armor/shoes_tier3_primordial.png": {
-  "sha256": "1f89271f4de90f1d732372a1799c870a521ae9708d1573730f741561ace2fad9",
+  "sha256": "cfd5fc7d92c1c65df1fbda4d22b1a1dd071f6a62bfa5e367cafd11914274822c",
   "assetType": "Decal",
-  "assetId": 108117399669380,
+  "assetId": 129611843355470,
   "status": "Approved",
-  "imageId": 131173520340117
+  "imageId": 105768231807187
  },
  "icons/armor/shoes_tier3_rare.png": {
-  "sha256": "be39b8277e17e14056649b862c0c5e11bf3becf0e5ff9914320af29a55b20407",
+  "sha256": "6f3c1a0fde8df3b459661d0cffcb2da003f0b742e89a735d58eefd86559f9f9b",
   "assetType": "Decal",
-  "assetId": 109481173671887,
+  "assetId": 111442099041251,
   "status": "Approved",
-  "imageId": 97284987974593
+  "imageId": 90185130912539
  },
  "icons/armor/shoes_tier3_relic.png": {
-  "sha256": "085ad5af642a1473c171c740e4e7af44a83c2095b570c1305fd45d046d8a8fa3",
+  "sha256": "170ea249489af165808c377ed6a60ecb46112f6ae1f6ebd307dd0a62b97ee7a2",
   "assetType": "Decal",
-  "assetId": 107342517510133,
+  "assetId": 82468273547414,
   "status": "Approved",
-  "imageId": 138333408801508
+  "imageId": 91795579508026
  },
  "icons/armor/shoes_tier3_transcendent.png": {
-  "sha256": "96126c9daa0e14b381397344948c3cf33bc48cc9d327fa60c23f77fdac5dcd76",
+  "sha256": "324bcd001e1e46aeb8805aa6971716ebfddfc7e6d4a447427c79520e921de2cd",
   "assetType": "Decal",
-  "assetId": 75861333501882,
+  "assetId": 98428822869298,
   "status": "Approved",
-  "imageId": 99530620572688
+  "imageId": 140509643342774
  },
  "icons/armor/shoes_tier4_ancient.png": {
-  "sha256": "d408924eb1cb1eb88d9f3b3a78a02ab086095673afb128b312c2991ae310ace5",
+  "sha256": "41f29a2d42f31e46aaadb5ca4e59634af52564c53581feb45db9ffa16ded4e96",
   "assetType": "Decal",
-  "assetId": 90462703937890,
+  "assetId": 101462905982177,
   "status": "Approved",
-  "imageId": 71931945935663
+  "imageId": 84525310351318
  },
  "icons/armor/shoes_tier4_epic.png": {
-  "sha256": "57296eeb9c33a71b82fb2a65eb557c7e88be46599aa6a15c8e62738405955d4f",
+  "sha256": "64908d91a6aa58cb9e9b8ab91c0173dfef1fc78c62325aecaa895007761e4e5b",
   "assetType": "Decal",
-  "assetId": 76564516226895,
+  "assetId": 103079163828110,
   "status": "Approved",
-  "imageId": 75530343096408
+  "imageId": 139216089449254
  },
  "icons/armor/shoes_tier4_legendary.png": {
-  "sha256": "66f7ce1ebca9ab5acbfdec599fe22b8088fa9e5aba878d0d4f4c7d92d4a9d994",
+  "sha256": "fa25f5b51bbe432fddc5b0e9fa1ff562fcb4ad7dc048683b58039a26f5e11741",
   "assetType": "Decal",
-  "assetId": 85757376423295,
+  "assetId": 91344212386667,
   "status": "Approved",
-  "imageId": 123324635360232
+  "imageId": 112347448750017
  },
  "icons/armor/shoes_tier4_normal.png": {
-  "sha256": "41ab63133264a4768afedbb4823d2c42d555e9df3bcd3789db717f7a85edb955",
+  "sha256": "3de19acd0a71c33b3e86b2f909420d0678e5c6359828efd345d7c11e28be7f04",
   "assetType": "Decal",
-  "assetId": 85435319087506,
+  "assetId": 132196800321284,
   "status": "Approved",
-  "imageId": 134180565499076
+  "imageId": 87823284661376
  },
  "icons/armor/shoes_tier4_primordial.png": {
-  "sha256": "7d9ad89e70396411a8c8f5e06ce349c1b9529dff5addceb6c734090d58a9d4ff",
+  "sha256": "362cb0336dd13bb2979917cff0c6e806692c67b820df0ac7fdde53e33de5a36c",
   "assetType": "Decal",
-  "assetId": 122224886320326,
+  "assetId": 113407956685595,
   "status": "Approved",
-  "imageId": 138389389871785
+  "imageId": 72515735567828
  },
  "icons/armor/shoes_tier4_rare.png": {
-  "sha256": "1e4152968d989acf1d9f7e83bbb746b97c0b6a4a9fd1948259528ff43f635eef",
+  "sha256": "71fe7757cd61d3311bc8807ce65b816e2c675ecf92c02bbb7ab57a246b028830",
   "assetType": "Decal",
-  "assetId": 111701366800516,
+  "assetId": 100456159924789,
   "status": "Approved",
-  "imageId": 129011836806432
+  "imageId": 116614537782551
  },
  "icons/armor/shoes_tier4_relic.png": {
-  "sha256": "2040170fe504b49108ea1800b767bb3ac5daed109817a4178aedf494d8ed0c53",
+  "sha256": "c1cd49e60a6a9dadb65eacf863c34b6b2bbcfe8f423d023ed5d002dfa15f3f3e",
   "assetType": "Decal",
-  "assetId": 114741190173073,
+  "assetId": 83199567819400,
   "status": "Approved",
-  "imageId": 121101999444853
+  "imageId": 87945039976296
  },
  "icons/armor/shoes_tier4_transcendent.png": {
-  "sha256": "2230162b773d227bc687ea7ff87b7b2be5267b620ba2a00326eb86a2b75c8ee3",
+  "sha256": "1c3efc379aa74f49dd39a1d2e3652f7962496e9e00fd2926927cef972bf39fcc",
   "assetType": "Decal",
-  "assetId": 130768247846745,
+  "assetId": 82627326400347,
   "status": "Approved",
-  "imageId": 122573553769276
+  "imageId": 117925517596407
  },
  "icons/armor/shoes_tier5_ancient.png": {
-  "sha256": "bb55f7d99fce3a3210282b1312d870abaa9fb8debfdea25b1ef2fee54c4ea82c",
+  "sha256": "c69c3e393af94a00a2cb5e5a1d86b1890659ec1f6bac9a6fa6701adf8d6bbbc8",
   "assetType": "Decal",
-  "assetId": 101222492390254,
+  "assetId": 130401946934346,
   "status": "Approved",
-  "imageId": 93233610406009
+  "imageId": 104613337626572
  },
  "icons/armor/shoes_tier5_epic.png": {
-  "sha256": "f0b89abc5c1daf982810701cc0373bf4878342d9d7bc60959502ac5a844e3d3f",
+  "sha256": "1879b8f30d8af2c5bbc8d6364d40cf72e7141cbd3161a4637690a8e835ba812e",
   "assetType": "Decal",
-  "assetId": 80551997042603,
+  "assetId": 104758022619671,
   "status": "Approved",
-  "imageId": 76913617660078
+  "imageId": 134904735173367
  },
  "icons/armor/shoes_tier5_legendary.png": {
-  "sha256": "f9770ccb7b7462d4d55fb1027f11c4885d74260763161d683f123ba64e0d5468",
+  "sha256": "92c76015b31cc2965d3fedf4bb51cd146d14701296f72dbdddb7ff2fe253f0fe",
   "assetType": "Decal",
-  "assetId": 126335237077227,
+  "assetId": 74368496792259,
   "status": "Approved",
-  "imageId": 98783072384555
+  "imageId": 91998966646106
  },
  "icons/armor/shoes_tier5_normal.png": {
-  "sha256": "ccb3a2d7aaa88afbdbe5ba9c2f7ba9d0eb47f2f62a4ed2bd2d0ac77ced5caeae",
+  "sha256": "e09921b75dd2dd52e2c4868c1d3b6c466e5c9906188c3e90c4bd4f3b0fc7c90f",
   "assetType": "Decal",
-  "assetId": 104045960471376,
+  "assetId": 119965218259394,
   "status": "Approved",
-  "imageId": 114002894855672
+  "imageId": 118189156896656
  },
  "icons/armor/shoes_tier5_primordial.png": {
-  "sha256": "9d6135f1d11e9a4d37e87e52dc1b6b87c3f4a4572a19f05bb91edca3e03c4ec3",
+  "sha256": "1a00a5c0808eaf77a5448845f47ada32fbd7990603b957dea4a8d76598737007",
   "assetType": "Decal",
-  "assetId": 83843983106966,
+  "assetId": 75419686763364,
   "status": "Approved",
-  "imageId": 116874732008168
+  "imageId": 96479601678504
  },
  "icons/armor/shoes_tier5_rare.png": {
-  "sha256": "0fa751110b15292ca374bb1d16738df2b8bac97c5781ff1971bd3dad44c62cc8",
+  "sha256": "d0360765e6a6261fdb4175b09bdcd5ce5ae4be46c1733689ff2961fb8a6cfbfa",
   "assetType": "Decal",
-  "assetId": 111244441373840,
+  "assetId": 70475020365593,
   "status": "Approved",
-  "imageId": 92019467491829
+  "imageId": 126954271297312
  },
  "icons/armor/shoes_tier5_relic.png": {
-  "sha256": "f2892aef6e64777ae25b995115495ca8df1dc23fd23b1d3e9ac981a00f97f90e",
+  "sha256": "6f38db6583ff8bfe748d8ee4db87e06f63a6202ce89df9382582762a18e64dfe",
   "assetType": "Decal",
-  "assetId": 134256943831998,
+  "assetId": 131505461377507,
   "status": "Approved",
-  "imageId": 118372686028231
+  "imageId": 103431890422265
  },
  "icons/armor/shoes_tier5_transcendent.png": {
-  "sha256": "929d9a6809aa54821dd78645a578702c5af0fb7907575618fc6c3b52340fe9d8",
+  "sha256": "a6e1502d58f9ee42b1f3c35df86bf744f6879a14bd5e98610e3746b6c2e5637e",
   "assetType": "Decal",
-  "assetId": 92510803771363,
+  "assetId": 116743731400645,
   "status": "Approved",
-  "imageId": 129055952448863
+  "imageId": 133621659026083
  },
  "icons/armor/shoes_tier6_ancient.png": {
-  "sha256": "906de516c7533d67c7ebca71712590320d7ee3a93b50e712fb2d12a638f5e0e6",
+  "sha256": "f9c8a7e0a8412bbf40e417ada07cbea2455085045a96e209794d76c26b6e3435",
   "assetType": "Decal",
-  "assetId": 83397060426439,
+  "assetId": 103999219383457,
   "status": "Approved",
-  "imageId": 133796729894481
+  "imageId": 91097865186657
  },
  "icons/armor/shoes_tier6_epic.png": {
-  "sha256": "496a0042d6b1c729b66fc9f37bba96ef9f903586f851efc7140686fef970eeb4",
+  "sha256": "7c95bf8570decbcc1ad284a43b85637276f4fefa1afa87516f245e31aecdd14a",
   "assetType": "Decal",
-  "assetId": 127815433647282,
+  "assetId": 113321738289054,
   "status": "Approved",
-  "imageId": 116498689609173
+  "imageId": 97486537416214
  },
  "icons/armor/shoes_tier6_legendary.png": {
-  "sha256": "fcb99f05b0efd2ebcfb7fe19889d98bb04932e8dbb1a12173bdda59f33ec9a29",
+  "sha256": "06de782c7246e6ed489fb70bbfd266128fb8582e21b4ee9ab7bbce6b8db48d88",
   "assetType": "Decal",
-  "assetId": 80966657855712,
+  "assetId": 137050287583613,
   "status": "Approved",
-  "imageId": 83032374771777
+  "imageId": 129799612231293
  },
  "icons/armor/shoes_tier6_normal.png": {
-  "sha256": "8e59b1cbe2ebd4c43f1fb4854c0c1ed08407de82c826b08679b3c6fec9e35845",
+  "sha256": "f4d26700e5311212db4ea4849903f41e19d289b27a8f3211d97a32f7a6bff712",
   "assetType": "Decal",
-  "assetId": 72312652712730,
+  "assetId": 90939467058773,
   "status": "Approved",
-  "imageId": 82325201155441
+  "imageId": 126570505892589
  },
  "icons/armor/shoes_tier6_primordial.png": {
-  "sha256": "c3a44d3c017fb134d1a469333cac4c2d69935a23bef59b489397805ee440986b",
+  "sha256": "96c4ded63df20ce596ac6975a65e683662a8ec187b074ae4b75ee6e3975bd46f",
   "assetType": "Decal",
-  "assetId": 102650488064134,
+  "assetId": 121034289422188,
   "status": "Approved",
-  "imageId": 79100203325931
+  "imageId": 82210381255618
  },
  "icons/armor/shoes_tier6_rare.png": {
-  "sha256": "95aab829c3b5ae96c8a6daa7227f1f0a3f5cb845430b47e71e2ce32d22319079",
+  "sha256": "7d92b6e6540aab307b7bfce09427b33bb22044fa502d23e15fd6bf5db0ac2c1f",
   "assetType": "Decal",
-  "assetId": 117462265763309,
+  "assetId": 97593241494797,
   "status": "Approved",
-  "imageId": 90142763258045
+  "imageId": 118694766297094
  },
  "icons/armor/shoes_tier6_relic.png": {
-  "sha256": "920265809eba5ad08c1c14863f944275a2e31b5f50a49d0a756744637a9d80dd",
+  "sha256": "649d4615b3cc7bca640799a575258c39a49cbb1a22c92c1e07c1be2db4867d58",
   "assetType": "Decal",
-  "assetId": 137790527056419,
+  "assetId": 75638548172630,
   "status": "Approved",
-  "imageId": 130352090847902
+  "imageId": 126965990415106
  },
  "icons/armor/shoes_tier6_transcendent.png": {
-  "sha256": "881082709e0b7879ff597a3de176d551ca42e3f09fe1bb4240d0644b928e0971",
+  "sha256": "83abe6e35470f671a49e232d105ea518a4b1caab315f46f5ed63746e4e783d1f",
   "assetType": "Decal",
-  "assetId": 91436344088729,
+  "assetId": 103609134796826,
   "status": "Approved",
-  "imageId": 135000936032808
+  "imageId": 123921875494322
  },
  "icons/codex/armor3_armor_bow_legendary.png": {
   "sha256": "5640414604b3f354389aca71529a8bbe24e46f0cdb8d2ce0cc8e87489387b7ea",
@@ -3325,284 +3325,284 @@
   "imageId": 85326063276067
  },
  "icons/weapons/bow_ancient.png": {
-  "sha256": "81982879b10f761d2396bb31eb18b4dc876484efdbc951062c83165cef70d389",
+  "sha256": "fb8ae630d33892d21778aaac5c82db50f0635b0b7aa80ef7ff3beb4ca0fda5af",
   "assetType": "Decal",
-  "assetId": 139898460250560,
+  "assetId": 92899868473641,
   "status": "Approved",
-  "imageId": 71556408678322
+  "imageId": 75433855946993
  },
  "icons/weapons/bow_epic.png": {
-  "sha256": "1f90bbee3639e2568cddf647c4ac50732684c83406a0d5dfd3ddbfe0d0106a8a",
+  "sha256": "c530512dedf60526739a86c8d7609f889cb1ef1442b59931d38f039ee12ec2a7",
   "assetType": "Decal",
-  "assetId": 110198368794624,
+  "assetId": 134435340413117,
   "status": "Approved",
-  "imageId": 109622219433771
+  "imageId": 70831469464077
  },
  "icons/weapons/bow_legendary.png": {
-  "sha256": "ed19d0da56d972ec7d9b6818a391921878d7ec00bf8d49b02366030d9a5d0d15",
+  "sha256": "35ef63f69a04af56befe299c8242fbf389e6b45d97ec1cb641ff813cb1e309ee",
   "assetType": "Decal",
-  "assetId": 95278040021279,
+  "assetId": 106091176714474,
   "status": "Approved",
-  "imageId": 132960285438598
+  "imageId": 70927792486218
  },
  "icons/weapons/bow_normal.png": {
-  "sha256": "3c0e6d5c20d1988861d45127b66cb503ad61af200bc704b221bf33f611c14a9e",
+  "sha256": "e9f8ad5a86e925d25f6e28db21f412b4d75e32562a3cbb0455e8e766c96188ae",
   "assetType": "Decal",
-  "assetId": 105932924706076,
+  "assetId": 83487011404095,
   "status": "Approved",
-  "imageId": 115888331235993
+  "imageId": 74180556112671
  },
  "icons/weapons/bow_primordial.png": {
-  "sha256": "ffe1ec1e2aa953be7fa84bd21999097e49b3af30afbc6f062513ac52b82c3e3a",
+  "sha256": "51205fcea9acfaa29163ff742d6bd2773b2580cd17b956f159ab93e937706326",
   "assetType": "Decal",
-  "assetId": 102959275067692,
+  "assetId": 135079621363973,
   "status": "Approved",
-  "imageId": 72639805603599
+  "imageId": 118110444303323
  },
  "icons/weapons/bow_rare.png": {
-  "sha256": "fe71e48e2e506ed0bc2b1c0ddfd7ea8b7c4bbc8044419adfd9e2f65b20a85f69",
+  "sha256": "26565cbe303ed10e01b0ead566ea247a1e17b4471af1fb09eab29f7506c00aaa",
   "assetType": "Decal",
-  "assetId": 92663985952922,
+  "assetId": 82004673937669,
   "status": "Approved",
-  "imageId": 111543069362156
+  "imageId": 90859962152295
  },
  "icons/weapons/bow_relic.png": {
-  "sha256": "34b7a04dfd16ddadfac7b06a938f93e5cc03b6ba5033de14a8cbb252ceadf939",
+  "sha256": "d9317f8b3840c30b9e4674578c665c28901fc0dc5928f1ce752006f8da8b7573",
   "assetType": "Decal",
-  "assetId": 106220911650411,
+  "assetId": 111598830741917,
   "status": "Approved",
-  "imageId": 130546008919769
+  "imageId": 113335354608006
  },
  "icons/weapons/bow_transcendent.png": {
-  "sha256": "b65822f9bfde568940c494878fdccadd1aff527b18583767f85fbf45ba582d34",
+  "sha256": "3ab8aec38450b620ac05472182c9d52da75c1857353b5fce165931717b21f68e",
   "assetType": "Decal",
-  "assetId": 110484162133068,
+  "assetId": 74101890636595,
   "status": "Approved",
-  "imageId": 105944443357231
+  "imageId": 73971283247573
  },
  "icons/weapons/dualblade_ancient.png": {
-  "sha256": "5df7eca63bc66c06eeb54bc71f162c86d7a4e2dd008d0a4f3b447857a9eb37d7",
+  "sha256": "f8f78deb7237dbaa4c8d5ccca91a08b1bd13ea654063ec5165912c9883db0858",
   "assetType": "Decal",
-  "assetId": 90843044930762,
+  "assetId": 119231279678772,
   "status": "Approved",
-  "imageId": 117621015164288
+  "imageId": 111335402248480
  },
  "icons/weapons/dualblade_epic.png": {
-  "sha256": "9d4ae2fb718cf20f92b1a59ea2ce68c812f5eac1a4d6ab55004ad50a86ffa56a",
+  "sha256": "2ea11bd1be3b0bacd0c89fcbec700b6197809f97f60ba889b15c384641540e04",
   "assetType": "Decal",
-  "assetId": 100195487291613,
+  "assetId": 87001335367600,
   "status": "Approved",
-  "imageId": 119826049507709
+  "imageId": 120787047390970
  },
  "icons/weapons/dualblade_legendary.png": {
-  "sha256": "182ca758e2c34a3570a56447cb80ea83cd63dd480d8362ece741c9ee9bb6bbaf",
+  "sha256": "bf622c7ba1bdd662980866fa27ce10bb87244b170b86607a37c10e423ffee376",
   "assetType": "Decal",
-  "assetId": 87619564683931,
+  "assetId": 112734878154465,
   "status": "Approved",
-  "imageId": 76033064563855
+  "imageId": 81421242153963
  },
  "icons/weapons/dualblade_normal.png": {
-  "sha256": "dd0d66595866e874a3f4f6112fb79c874bb37d391fdc2cbc169f739df0928765",
+  "sha256": "02ced38a780ad47faecbda27d14b2a527091f03ac1b0ee1591c45723748f8ce6",
   "assetType": "Decal",
-  "assetId": 95695633570559,
+  "assetId": 114839000464334,
   "status": "Approved",
-  "imageId": 135098326022595
+  "imageId": 134228607175499
  },
  "icons/weapons/dualblade_primordial.png": {
-  "sha256": "ccfacc3c24cc9a041098cea06f424bcac4800e0427d407d39d8fec3b860b16b5",
+  "sha256": "9a4a249f21e2f012cf18b01c6ffb5481dbb0ad136671cd5c7c86b42a3e41eba7",
   "assetType": "Decal",
-  "assetId": 135041949088505,
+  "assetId": 100586789047382,
   "status": "Approved",
-  "imageId": 93407330684314
+  "imageId": 115633441440531
  },
  "icons/weapons/dualblade_rare.png": {
-  "sha256": "c03eb0b4512f08cddb9e33a6079893dd020d6e45f025ffa0a7b01a251826249b",
+  "sha256": "c640a7bdaaefd666ea33327d22c084697baa7d70c7212e10da1b2045094000f4",
   "assetType": "Decal",
-  "assetId": 85378232059294,
+  "assetId": 74677708684042,
   "status": "Approved",
-  "imageId": 110491253922678
+  "imageId": 133902188139270
  },
  "icons/weapons/dualblade_relic.png": {
-  "sha256": "e5bb7111c750ab67454155dcdcea721c241cbb4c03290edda6eee4b75ce1dfe7",
+  "sha256": "2034f15bcccd2b163e19653bea2869517e0c19c42afd1c2ec8ba3af579fed69c",
   "assetType": "Decal",
-  "assetId": 117086588890716,
+  "assetId": 114181865004687,
   "status": "Approved",
-  "imageId": 94793096019057
+  "imageId": 118923475843002
  },
  "icons/weapons/dualblade_transcendent.png": {
-  "sha256": "9949e4e969aefd51e4a2704981f36da16bfd27009f287843a0654c0223af87c6",
+  "sha256": "afc0b19364bcd4aa03be276656944ba49b3d52d29fe90e7081ab655884c9459f",
   "assetType": "Decal",
-  "assetId": 90909805045210,
+  "assetId": 114188002859193,
   "status": "Approved",
-  "imageId": 83141425058581
+  "imageId": 85068200325715
  },
  "icons/weapons/greatsword_ancient.png": {
-  "sha256": "ae373146803142db5f53da5d09c3688e6493a4c8534a97c602791d5ae779920c",
+  "sha256": "0f9aa16b2121981ca9c758c69834308b4d7c38816634ef4b16ff28ae480d51f1",
   "assetType": "Decal",
-  "assetId": 127825720321895,
+  "assetId": 86318601382896,
   "status": "Approved",
-  "imageId": 114714017741321
+  "imageId": 137588323147386
  },
  "icons/weapons/greatsword_epic.png": {
-  "sha256": "21402c222dd8970f8c8a0accb467668c7a58f3edbee950001225a15037b7ae56",
+  "sha256": "df1f842ac68f5b3ed60eb14300748be7fc798e806f555c3d33a71c690b2e2253",
   "assetType": "Decal",
-  "assetId": 75379222901003,
+  "assetId": 122600700415748,
   "status": "Approved",
-  "imageId": 107130604754588
+  "imageId": 79494152367032
  },
  "icons/weapons/greatsword_legendary.png": {
-  "sha256": "0ba2988b41abce87480c8e123c67f60825476c47053cbfa749e6298ced2c3a1b",
+  "sha256": "4bd9609e6ac800056101c898e22a975f85b6e2d235684733cb422cd8b94d71b2",
   "assetType": "Decal",
-  "assetId": 112639992572700,
+  "assetId": 81625844156330,
   "status": "Approved",
-  "imageId": 94841319929838
+  "imageId": 76914342286332
  },
  "icons/weapons/greatsword_normal.png": {
-  "sha256": "4b6f6010a9999e88734ba0ef5cd8a319918c0137ef4686e2ea34f1bacf5a8d98",
+  "sha256": "133855672934f9f6323e72b8d2b57664080b7bfbe988a5c0e657ff389fb3a944",
   "assetType": "Decal",
-  "assetId": 84676893424614,
+  "assetId": 78115217482409,
   "status": "Approved",
-  "imageId": 108716745668735
+  "imageId": 118015300382038
  },
  "icons/weapons/greatsword_primordial.png": {
-  "sha256": "e4447543c28b190ebb4691bf377e1a19c196ad915759ed8f91f96c0367f8e523",
+  "sha256": "2c63835ddb6f9dc6edb1b124c703878523bddc455da1593f59744af04ee88eb4",
   "assetType": "Decal",
-  "assetId": 106890513792466,
+  "assetId": 109610518067094,
   "status": "Approved",
-  "imageId": 136571812001675
+  "imageId": 130204784728973
  },
  "icons/weapons/greatsword_rare.png": {
-  "sha256": "bbc5768f67a906f1c96c90371622c324ee10d5a725bacf42f030ad4f4c0bd985",
+  "sha256": "d114a0c9d6414491e40e27615ae7f850cea6ca618aa77ea2e7c638aaa547ed12",
   "assetType": "Decal",
-  "assetId": 113037801548820,
+  "assetId": 105120707127488,
   "status": "Approved",
-  "imageId": 140134631959422
+  "imageId": 94886891928284
  },
  "icons/weapons/greatsword_relic.png": {
-  "sha256": "c1aca0363c72d0494f494e3603889917483201ccba263f0428354db6cd0e2f26",
+  "sha256": "5f84198600c5654f2ec06b8fbfe97570996985914e21064b87025eb0fa5c0597",
   "assetType": "Decal",
-  "assetId": 84668335668303,
+  "assetId": 130111772555200,
   "status": "Approved",
-  "imageId": 94100964253773
+  "imageId": 70767624299242
  },
  "icons/weapons/greatsword_transcendent.png": {
-  "sha256": "26fa1d4a19ae739bc097ad03583bf75f5c3c6452623a6b4fc201e6a3c0e68927",
+  "sha256": "374aef563c00f3f767d7fd53091d69c5b84cc6a77275a43f6ef87f8859ae8ba8",
   "assetType": "Decal",
-  "assetId": 130304958203206,
+  "assetId": 122553696535055,
   "status": "Approved",
-  "imageId": 80482712268609
+  "imageId": 110768511913507
  },
  "icons/weapons/healer_ancient.png": {
-  "sha256": "e9a78630bc14254c170b5f945220a3741e3449cbf17249c124d19ac4bfe663ed",
+  "sha256": "7c43fb40ee7850c228b76566e89bc5bc7cbf51e9767fa92a40376d5bdce2d7f3",
   "assetType": "Decal",
-  "assetId": 111011236359937,
+  "assetId": 115811904101317,
   "status": "Approved",
-  "imageId": 76246302347984
+  "imageId": 95852600242628
  },
  "icons/weapons/healer_epic.png": {
-  "sha256": "34455cb86d9c53a757337a1534b3008f108400e8148021b4198de66d9a749c1a",
+  "sha256": "b814a72ca560f35fde187e1aaae6c767b86d51d93c85d26f7d68a4362ab13021",
   "assetType": "Decal",
-  "assetId": 91662977481727,
+  "assetId": 125901941691228,
   "status": "Approved",
-  "imageId": 94120977985882
+  "imageId": 72004329656183
  },
  "icons/weapons/healer_legendary.png": {
-  "sha256": "851b21b62688a1b218f54ecde19e6fef6366e268c60917bc62e6a58cdf665b6f",
+  "sha256": "b88f0152369cbc1b0afb66a935464bf22841604be32866ac9f3b786ca076b0e7",
   "assetType": "Decal",
-  "assetId": 110027167742645,
+  "assetId": 78515551527562,
   "status": "Approved",
-  "imageId": 96124854817267
+  "imageId": 102215541536384
  },
  "icons/weapons/healer_normal.png": {
-  "sha256": "a4ac8c5adacdfa314c87b942bafad9719db1e168a9c2dc570637019a39a02114",
+  "sha256": "cc0a7624485121238d51ab0989ba147de56a6c4fcbbc5ac99c673ed6969f5f9d",
   "assetType": "Decal",
-  "assetId": 83542725897442,
+  "assetId": 125586623823629,
   "status": "Approved",
-  "imageId": 124210263201884
+  "imageId": 88226095729159
  },
  "icons/weapons/healer_primordial.png": {
-  "sha256": "a150a1a0b30bb5224c3568d29ff3cbc4b55fd978bc9108c93de2e84e9c4a9f45",
+  "sha256": "eb0befd936bdd756705be155c3f59e5a205285220386372a150337d3985b46fd",
   "assetType": "Decal",
-  "assetId": 119197203489742,
+  "assetId": 102499799368915,
   "status": "Approved",
-  "imageId": 80185254762943
+  "imageId": 93135839836831
  },
  "icons/weapons/healer_rare.png": {
-  "sha256": "5c8fbd10dd7ed5f50e0d140fc1108518a7e610ffe910f0fa0b541e294e23ab6c",
+  "sha256": "186cee2545db6e7a421e749fcd0d3eed3466d1280dcb617fc7582fda43d4a986",
   "assetType": "Decal",
-  "assetId": 128215934468077,
+  "assetId": 120195353458634,
   "status": "Approved",
-  "imageId": 105159450777700
+  "imageId": 73200217223542
  },
  "icons/weapons/healer_relic.png": {
-  "sha256": "1a6a4c58b99be54eeafcc7cb38087f03210d9057b7cca4b8587cb605b36f8e97",
+  "sha256": "45d883b4b5452de8425c51f9b86fe88b064a467028ee6c3240f01adf1fd3b1b5",
   "assetType": "Decal",
-  "assetId": 88917946519857,
+  "assetId": 102430594879642,
   "status": "Approved",
-  "imageId": 85722297768528
+  "imageId": 71196720312842
  },
  "icons/weapons/healer_transcendent.png": {
-  "sha256": "b2036b02f3dc97c6cd97d2fa9485c3cd30fb259956d41bd1c419ffe1a4bd8a67",
+  "sha256": "152a83d4bd02b754aa25f52b73310eccccee3340f1eed56a8e7172bb9a31968c",
   "assetType": "Decal",
-  "assetId": 97423570920621,
+  "assetId": 100077532993602,
   "status": "Approved",
-  "imageId": 125180100278893
+  "imageId": 110814917877410
  },
  "icons/weapons/paladin_ancient.png": {
-  "sha256": "34767f88481d91460cb4f4f4701ca615ca470a4f223ec0302a74de429dd1eb38",
+  "sha256": "1ea15f75500320e637d44f61245cb37b6faa9efe58e4d6c39b220b62ac5e4471",
   "assetType": "Decal",
-  "assetId": 130902114282941,
+  "assetId": 114694017080213,
   "status": "Approved",
-  "imageId": 138977427968567
+  "imageId": 132247381711259
  },
  "icons/weapons/paladin_epic.png": {
-  "sha256": "e1588ac5ca11bb2ad0fb6a087c019f27264e2ce08e6c17920f48c31ebf032561",
+  "sha256": "debb143e3bda5a2adcbdd1b905bfe1419660dc5e4f45237671132fc5e6db8164",
   "assetType": "Decal",
-  "assetId": 76897647618622,
+  "assetId": 132436996534521,
   "status": "Approved",
-  "imageId": 124045711869857
+  "imageId": 103697122026358
  },
  "icons/weapons/paladin_legendary.png": {
-  "sha256": "972c0f7ce89d220453bfcadaa122450f4e5988a690bc1f7a7f5e10bcc53949b1",
+  "sha256": "f44480c86b6723b0d8b80e186780333924bcd8026c6bf8b264904ce1a26b6930",
   "assetType": "Decal",
-  "assetId": 98695979016505,
+  "assetId": 130753602425610,
   "status": "Approved",
-  "imageId": 124276444011264
+  "imageId": 91455204336067
  },
  "icons/weapons/paladin_normal.png": {
-  "sha256": "c00ef4d47ea7847a046ef682c9165e73d72ea0e1395c3741352166310d479ca1",
+  "sha256": "fcbf8f4ed31a389279bd783b8c8bb29729cc6f8eb112c79b72fd5506c68a0527",
   "assetType": "Decal",
-  "assetId": 79225627865639,
+  "assetId": 90838966514581,
   "status": "Approved",
-  "imageId": 95904698578082
+  "imageId": 130744642479199
  },
  "icons/weapons/paladin_primordial.png": {
-  "sha256": "e04cdfd74cc602182e590ece6a9a00db22440f7bca16edf80530ea7428f49ede",
+  "sha256": "24f1b53bd08c90579aba7b3ca1ba6b3bc9b6553bb39bffd7c29af226611b7857",
   "assetType": "Decal",
-  "assetId": 72165225503305,
+  "assetId": 111825709176213,
   "status": "Approved",
-  "imageId": 85104226993143
+  "imageId": 126142744128679
  },
  "icons/weapons/paladin_rare.png": {
-  "sha256": "eee51ba8d10bd30ec040e617e9c6403be4d6be06b01c8113fb0bc10839ea8ae4",
+  "sha256": "988813ea71705eb133b1197556194df420eab1f58999dcf12e253421014ded4a",
   "assetType": "Decal",
-  "assetId": 133120229361022,
+  "assetId": 76756471031153,
   "status": "Approved",
-  "imageId": 111638035784670
+  "imageId": 76669454789297
  },
  "icons/weapons/paladin_relic.png": {
-  "sha256": "514a555e292d0c73d07a4e90a592cceab4257b2c1ba4f5ca7365953166ac2564",
+  "sha256": "ca92f9a07b5136a2b2263b6988bde6c11cb176b782465a7aec0f675d1e95928e",
   "assetType": "Decal",
-  "assetId": 122041530109112,
+  "assetId": 80465348636250,
   "status": "Approved",
-  "imageId": 73736578927136
+  "imageId": 106701268436342
  },
  "icons/weapons/paladin_transcendent.png": {
-  "sha256": "67b2a8486595dac8b3c626c7451be180b0e0c6d845572e848b87d7e28a4e3449",
+  "sha256": "1ba18aee039a44e84693077b564fcdcb2c5a0a4b6f0ed7224503db825ad91fcf",
   "assetType": "Decal",
-  "assetId": 119192273876426,
+  "assetId": 121915397161069,
   "status": "Approved",
-  "imageId": 94942673621903
+  "imageId": 110503464485228
  },
  "monsters/amethyst_bat.fbx": {
   "sha256": "98430076d61b2274e3641c2b7188f3dfde8c6c0c92ba8cc7ca178c2c4dce3e96",

@@ -29,6 +29,21 @@ def render_icon(objs, path, base_rot=(0, 0, 0), roll=ICON_ROLL, tilt=ICON_TILT, 
          @ (Matrix.Rotation(math.radians(base_rot[2]), 3, "Z") @ Matrix.Rotation(math.radians(base_rot[1]), 3, "Y") @ Matrix.Rotation(math.radians(base_rot[0]), 3, "X")))
     e.rotation_euler = R.to_euler()
     scene = A.setup_render("game", (RES, RES))
+    if os.environ.get("ICON_STYLE") == "v31":  # QUEUE-ALL6 E3: 왼쪽 위 주광 + 그림자 · 하이라이트 · 모서리 강조(외곽선 · 등급 뒤 빛 · 맞춤은 icon_post.py)
+        sh = scene.display.shading
+        sh.light = os.environ.get("ICON_LIGHT", "MATCAP")  # 매트캡 toon_light = 흰 몸은 희게 · 만화풍 면 음영(STUDIO는 전체가 어두워 태초가 회색)
+        sh.studio_light = os.environ.get("ICON_STUDIO", "toon_light.exr")
+        sh.show_specular_highlight = True
+        sh.show_shadows = True
+        sh.shadow_intensity = 0.35
+        sh.show_cavity = True
+        sh.cavity_type = "BOTH"
+        sh.cavity_ridge_factor = 1.2
+        sh.cavity_valley_factor = 0.8
+        sh.curvature_ridge_factor = 1.0
+        scene.display.light_direction = (-0.55, 0.45, 0.70)
+        scene.display.shadow_shift = 0.08
+        hull = 0  # 외곽선은 후처리(알파 팽창)로 - 고르게 굵게
     scene.render.film_transparent = True
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"

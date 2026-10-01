@@ -69,7 +69,15 @@ local function build()
 	local shadowCorner = Instance.new("UICorner")
 	shadowCorner.CornerRadius = UDim.new(1, 0)
 	shadowCorner.Parent = shadow
-	if player.UserId > 0 then
+	-- QUEUE-ALL6 E4: 3D 미리보기(내 캐릭터 복제 · 회전 · 끌기) - 캐릭터가 없을 때만 옛 2D 썸네일
+	local preview = require(script.Parent.CharacterPreview).create(figure)
+	preview.frame.AnchorPoint = Vector2.new(0.5, 1)
+	preview.frame.Position = UDim2.new(0.5, 0, 1, -6)
+	preview.frame.Size = UDim2.new(1.6, 0, 1, -6)
+	refs.preview = preview
+	if preview.refresh() then
+		-- 3D가 섰다(아래 2D 대체는 건너뜀)
+	elseif player.UserId > 0 then
 		local avatar = Instance.new("ImageLabel")
 		avatar.Name = "Avatar"
 		avatar.BackgroundTransparency = 1
@@ -476,6 +484,9 @@ local function makeSlot(part, order, equipped)
 end
 
 local function rebuildGearSlots()
+	if refs.preview then -- QUEUE-ALL6 E4: 장비가 바뀌면 착용 모습 다시(착용 코드가 방어구를 갈아 끼울 시간)
+		task.delay(0.6, refs.preview.refresh)
+	end
 	for _, child in ipairs(refs.slots:GetChildren()) do
 		if child:IsA("GuiObject") then
 			child:Destroy()
