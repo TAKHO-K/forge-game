@@ -11,6 +11,7 @@ local D = require(ReplicatedStorage.Shared.data.WeeklyChallengeData)
 local WeeklyChallenge = require(ReplicatedStorage.Shared.WeeklyChallenge)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local RequestGate = require(script.Parent.RequestGate) -- QUEUE-ALL4 B: 공통 요청 제한
+local Text = require(ReplicatedStorage.Shared.Text) -- QUEUE-ALL5 A2: 입장 거절 문구(그 사람 언어)
 
 local WeeklyChallengeService = {}
 local suffix = RunService:IsStudio() and D.studioSuffix or ""
@@ -50,19 +51,28 @@ local function publishWeek()
 	workspace:SetAttribute("WeeklyChallengeLabel", e.label)
 end
 
+-- QUEUE-ALL5 A2(보안 감사 D2): 입장 조건 = 견습 아님 + 체크포인트 순간이동과 같은 "바쁨" 규칙(Travel.busyReason - 보스전 · 아레나 안 · 전투 중 · 귀환/체크포인트 집중 중).
+-- 반환: 이유 코드(TextData srv.weekly.blocked.<이유>) | nil(입장 가능)
+function WeeklyChallengeService.entryBlocked(player, now)
+	if player:GetAttribute("TutorialActive") then
+		return "tutorial"
+	end
+	return require(script.Parent.Travel).busyReason(player, now)
+end
+
 startRemote.OnServerEvent:Connect(function(player)
 	if not RequestGate.allow(player, "WeeklyChallengeStart") then
 		return -- QUEUE-ALL4 B: 입장 = 아레나 · 보스 스폰(연타 = 서버 비용)
 	end
-	local BossEncounter = require(script.Parent.BossEncounter)
-	if BossEncounter.getEncounter(player) or player:GetAttribute("TutorialActive") then
-		noticeRemote:FireClient(player, "지금은 시작할 수 없어요")
+	local why = WeeklyChallengeService.entryBlocked(player)
+	if why then
+		noticeRemote:FireClient(player, Text.getFor(player, "srv.weekly.blocked." .. why))
 		return
 	end
 	local e = WeeklyChallenge.entryOf(WeeklyChallenge.weekOf())
-	local encounter = BossEncounter.spawnWeeklyFor(player, e.bossId, D.stage, e.mods)
+	local encounter = require(script.Parent.BossEncounter).spawnWeeklyFor(player, e.bossId, D.stage, e.mods)
 	if not encounter then
-		noticeRemote:FireClient(player, "지금은 시작할 수 없어요")
+		noticeRemote:FireClient(player, Text.getFor(player, "srv.weekly.blocked.failed"))
 	end
 end)
 

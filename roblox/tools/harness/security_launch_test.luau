@@ -116,7 +116,9 @@ LOADERS["TeleportArrival"] = function() return { mark = function() end, preloadA
 LOADERS["AirState"] = function() return { reset = function() end } end
 LOADERS["GroundProbe"] = function() return { folder = function() return nil end } end
 LOADERS["WorldMap"] = function() return { model = function() return nil end } end
-LOADERS["PartyState"] = function() return { notify = function() end, getParty = function() return nil end, getExpBonusForCount = function() return 0 end } end
+local partyActivity = {} -- QUEUE-ALL5 A2: 실제 PartyState의 활동 기록(os.clock)과 같은 뜻
+LOADERS["PartyState"] = function() return { notify = function() end, getParty = function() return nil end, getExpBonusForCount = function() return 0 end,
+	noteActivity = function(p, at) partyActivity[p] = at or os.clock() end, clearActivity = function(p) partyActivity[p] = nil end, getLastActivity = function(p) return partyActivity[p] end } end
 
 local function makePlayer(name, id, opts)
 	opts = opts or {}
@@ -317,6 +319,47 @@ local ok, err = pcall(function()
 	busyWait(2.1)
 	fire("WeeklyChallengeStart", w)
 	check("보스전 중 입장 = 거절", weeklySpawns == spawnsBefore)
+	-- QUEUE-ALL5 A2(D2): 입장 조건 = 체크포인트 순간이동과 같은 규칙(Travel.busyReason) + 견습
+	do
+		local TravelM = MODS.Travel
+		local st = TravelM.stateOf(w)
+		encounterOf[w] = { weekly = true }
+		local inBoss = WC.entryBlocked(w)
+		encounterOf[w] = nil
+		st.hurtAt = os.clock()
+		local hurt = WC.entryBlocked(w)
+		local hurtLater = WC.entryBlocked(w, os.clock() + MODS.WorldMapData.travel.combatLockSeconds + 0.5)
+		busyWait(2.1)
+		local sp0 = weeklySpawns
+		fire("WeeklyChallengeStart", w)
+		local hurtSpawn = weeklySpawns - sp0
+		st.hurtAt = -math.huge
+		MODS.PartyState.noteActivity(w)
+		local hit = WC.entryBlocked(w)
+		MODS.PartyState.clearActivity(w)
+		st.recall = { startAt = os.clock() }
+		local casting = WC.entryBlocked(w)
+		st.recall = nil
+		w:SetAttribute("TutorialActive", true)
+		local tut = WC.entryBlocked(w)
+		w:SetAttribute("TutorialActive", nil)
+		local free = WC.entryBlocked(w)
+		busyWait(2.1)
+		local sp1 = weeklySpawns
+		fire("WeeklyChallengeStart", w)
+		local okSpawn = weeklySpawns - sp1
+		encounterOf[w] = nil
+		check("주간 입장: 아레나 = in_boss · 방금 피격 = combat(스폰 0) · 8초 뒤 = 가능 · 방금 명중 = combat · 집중 중 = casting_already · 견습 = tutorial · 평소 = 스폰 1",
+			inBoss == "in_boss" and hurt == "combat" and hurtLater == nil and hurtSpawn == 0 and hit == "combat" and casting == "casting_already" and tut == "tutorial" and free == nil and okSpawn == 1,
+			("%s · %s · %s · 스폰 %d · %s · %s · %s · %s · 스폰 %d"):format(tostring(inBoss), tostring(hurt), tostring(hurtLater), hurtSpawn, tostring(hit), tostring(casting), tostring(tut), tostring(free), okSpawn))
+		local keys = MODS.TextData_server
+		local allKeys = true
+		for _, why in ipairs({ "in_boss", "combat", "casting_already", "tutorial", "failed" }) do
+			local k = "srv.weekly.blocked." .. why
+			allKeys = allKeys and type(keys.ko[k]) == "string" and type(keys.en[k]) == "string" and #keys.en[k] <= 40
+		end
+		check("주간 입장 거절 문구 ko/en 5종 · en 40자 이하", allKeys)
+	end
 	local ws0 = shards(w)
 	for _, v in ipairs({ 0 / 0, -1, 0, math.huge, "5", nil }) do WC.onCleared(w, v) end
 	check("처치 시간 NaN · 음수 · 0 · inf · 문자 · nil = 기록 · 보상 0", shards(w) == ws0 and PlayerProfile.getWeeklyChallenge(w).best == nil)
@@ -357,6 +400,9 @@ local ok, err = pcall(function()
 	Travel.stateOf(t).hurtAt = os.clock()
 	check("전투 중(방금 피해) = combat", cp("tier1") == "combat")
 	Travel.stateOf(t).hurtAt = -math.huge
+	MODS.PartyState.noteActivity(t)
+	check("전투 중(방금 적에게 명중) = combat(QUEUE-ALL5 A2 - 주간 도전과 같은 규칙)", cp("tier1") == "combat")
+	MODS.PartyState.clearActivity(t)
 	local w1 = cp("tier1")
 	local w2 = cp("tier1")
 	check("정상 = 시전 시작 · 바로 또 = casting_already", w1 == "casting" and w2 == "casting_already", w1 .. "," .. w2)

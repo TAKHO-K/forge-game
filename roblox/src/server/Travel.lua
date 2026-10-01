@@ -254,6 +254,25 @@ function Travel.onCheckpointsLoaded(player)
 		publishFound(player, rec.found)
 	end
 end
+-- QUEUE-ALL5 A2: 이동 · 입장 공통 "바쁨" 규칙(체크포인트 순간이동 · 주간 도전 입장이 같이 쓴다). 반환: 이유 코드 | nil(가능)
+--   "in_boss" = 보스전 중(아레나 안 - 처치 뒤 머무름 포함, encounter가 남아 있는 동안) · "combat" = 최근 combatLockSeconds 안에 피해를 받았거나(hurtAt) 적에게 명중(PartyState 활동 = CombatResolution.resolveHit)
+--   "casting_already" = 귀환 · 체크포인트 정신 집중 중
+function Travel.busyReason(player, now)
+	now = now or os.clock()
+	local st = stateOf(player)
+	if BossEncounter.getEncounter(player) then
+		return "in_boss"
+	end
+	local hitAt = PartyState.getLastActivity(player)
+	if now - st.hurtAt < T.combatLockSeconds or (hitAt and now - hitAt < T.combatLockSeconds) then
+		return "combat"
+	end
+	if st.recall then
+		return "casting_already"
+	end
+	return nil
+end
+
 -- 쓰기: 정신 집중(귀환과 같은 시전 · 같은 취소 규칙) → 편도
 function Travel.requestCheckpoint(player, id, now)
 	now = now or os.clock()
@@ -269,14 +288,9 @@ function Travel.requestCheckpoint(player, id, now)
 	if cp.zone and not Travel.isZoneOpen(player, cp.zone) then
 		return false, "cp_locked" -- QUEUE-ALL4 B: 견습(단계마다 구역이 잠깐 열린다) 중 찾은 체크포인트로 아직 잠긴 구역에 들어가지 않게([돌아가기]와 같은 규칙)
 	end
-	if BossEncounter.getEncounter(player) then
-		return false, "in_boss"
-	end
-	if now - st.hurtAt < T.combatLockSeconds then
-		return false, "combat"
-	end
-	if st.recall then
-		return false, "casting_already"
+	local busy = Travel.busyReason(player, now) -- QUEUE-ALL5 A2: 주간 도전 입장과 같은 규칙
+	if busy then
+		return false, busy
 	end
 	if st.checkpointTeleportAt and now - st.checkpointTeleportAt < CP.cooldownSeconds then
 		return false, "cooldown"

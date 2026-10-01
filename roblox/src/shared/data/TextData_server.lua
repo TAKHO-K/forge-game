@@ -70,6 +70,11 @@ return {
 		["srv.hof.title"] = "★ 명예의 전당 · 초월 ★",
 		["srv.hof.empty"] = "아직 기록이 없어요 - 첫 태초의 주인은?",
 		["srv.hof.headTranscend"] = "{glyph}초월 #{no} {name}",
+		["srv.weekly.blocked.in_boss"] = "보스전 중에는 주간 도전에 들어갈 수 없어요",
+		["srv.weekly.blocked.combat"] = "전투 중이에요. 잠시 뒤에 다시 눌러 주세요",
+		["srv.weekly.blocked.casting_already"] = "이동 집중 중에는 들어갈 수 없어요",
+		["srv.weekly.blocked.tutorial"] = "견습을 마치면 도전할 수 있어요",
+		["srv.weekly.blocked.failed"] = "지금은 시작할 수 없어요",
 	},
 	en = {
 		["srv.party.err.notFound"] = "No party with that code.",
@@ -141,5 +146,10 @@ return {
 		["srv.hof.title"] = "★ Hall of Fame · Transcendent ★",
 		["srv.hof.empty"] = "No records yet. Who will be first?",
 		["srv.hof.headTranscend"] = "{glyph}Transcendent #{no} {name}",
+		["srv.weekly.blocked.in_boss"] = "Can't join during a boss fight.",
+		["srv.weekly.blocked.combat"] = "You're in a fight. Try again soon.",
+		["srv.weekly.blocked.casting_already"] = "Can't join while teleporting.",
+		["srv.weekly.blocked.tutorial"] = "Finish training to join.",
+		["srv.weekly.blocked.failed"] = "Can't start right now.",
 	},
 }
