@@ -177,13 +177,17 @@ local function rocketSection(r, player, env)
 	local mine = events[1]
 	r.check(("① 첫 털기: 판 위 실제 Player 로켓 %s · 피해 %.1f%%(기대 25%%) · 최고 높이 = 바닥 + %d(%.1f)"):format(tostring(mine ~= nil), (maxHp - hpAfter) / maxHp * 100, rocketCfg.peakStuds, mine and (mine.peakY - st.floorY) or -1),
 		mine ~= nil and math.abs((maxHp - hpAfter) / maxHp - 0.25) < 0.02 and mine and math.abs(mine.peakY - st.floorY - rocketCfg.peakStuds) < 0.01)
-	r.check(("② 나는 동안: 표적 제외 %s · 무적(피해 시도 → %.0f)"):format(tostring(BossEnvironment.isRocketing(player)), (function()
-		local before = PlayerState.getHp(player)
-		PlayerDamage.takeDamage(player, maxHp * 0.3, {})
-		return before - PlayerState.getHp(player)
-	end)()), BossEnvironment.isRocketing(player) and BossEncounter.nearestLivingMember(model, root.Position) ~= player)
-	local landOk = mine and (Vector3.new(mine.land.X, 0, mine.land.Z) - Vector3.new(z.center.X, 0, z.center.Z)).Magnitude > z.halfLength
-	r.check(("③ 착지 = 털리지 않는 쪽(털린 절반 가운데에서 %.0f stud)"):format(mine and (Vector3.new(mine.land.X, 0, mine.land.Z) - Vector3.new(z.center.X, 0, z.center.Z)).Magnitude or -1), landOk == true)
+	local before = PlayerState.getHp(player)
+	PlayerDamage.takeDamage(player, maxHp * 0.3, {})
+	local taken = before - PlayerState.getHp(player)
+	r.check(("② 나는 동안: 표적 제외 %s · 무적(피해 시도 → %.0f)"):format(tostring(BossEnvironment.isRocketing(player)), taken),
+		BossEnvironment.isRocketing(player) and BossEncounter.nearestLivingMember(model, root.Position) ~= player and taken == 0)
+	local a = math.rad(z.angleDeg)
+	local alongDir = Vector3.new(math.cos(a), 0, math.sin(a))
+	local sideDir = Vector3.new(-alongDir.Z, 0, alongDir.X)
+	local rel = mine and (Vector3.new(mine.land.X, 0, mine.land.Z) - Vector3.new(z.center.X, 0, z.center.Z)) or Vector3.zero
+	local landInside = math.abs(rel:Dot(alongDir)) <= z.halfLength and math.abs(rel:Dot(sideDir)) <= z.halfWidth
+	r.check(("③ 착지 = 털리지 않는 쪽(털린 직사각형 밖 %s · 가운데에서 %.0f stud)"):format(tostring(not landInside), rel.Magnitude), mine ~= nil and not landInside)
 	-- ④ 활성 중 걸어 들어오면 같다(스탠드인을 털리는 절반으로)
 	local n0 = #events
 	fakeRoot.Position = Vector3.new(z.center.X, st.floorY + 3, z.center.Z) + Vector3.new(4, 0, 0)

@@ -61,6 +61,9 @@ function PlayerDamage.takeDamage(targetPlayer, damage, opts)
 	if require(script.Parent.SoulService).isSoul(targetPlayer) then -- Q8: 영혼은 피해를 안 받는다(서버 판정 한 곳)
 		return 0, 0, false
 	end
+	if require(script.Parent.BossEnvironment).isRocketing(targetPlayer) then -- QUEUE-ALL6 G: 판 털기 로켓 동안 무적(배율을 안 거치는 %피해 경로까지 - 한 곳)
+		return 0, 0, false
+	end
 	local hpDamage, absorbed = damage, 0
 	if not opts.ignoresShield then
 		hpDamage, absorbed = PlayerShield.absorb(targetPlayer, damage)
