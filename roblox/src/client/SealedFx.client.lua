@@ -89,6 +89,8 @@ RunService.Heartbeat:Connect(function()
 				mesh.Parent = part
 				whale = { part = part, from = from, to = to, startedAt = t, seconds = 9 }
 				break
+			else
+				whaleSpots[spot] = nil -- QUEUE-ALL5 D①: 스트리밍으로 빠진 자리(다시 들어오면 새 인스턴스로 등록된다) - 문장처럼 지운다
 			end
 		end
 		nextWhaleAt = t + 30 + math.random() * 20
@@ -105,7 +107,9 @@ RunService.Heartbeat:Connect(function()
 		end
 	elseif t >= nextMoundAt then
 		for spot in pairs(moundSpots) do
-			if spot.Parent and (spot.Position - root.Position).Magnitude < 120 then
+			if not spot.Parent then
+				moundSpots[spot] = nil -- QUEUE-ALL5 D①: 위 고래 자리와 같다
+			elseif (spot.Position - root.Position).Magnitude < 120 then
 				local offset = Vector3.new(math.random(-8, 8), 0, math.random(-8, 8))
 				local part = localPart(Vector3.new(4, 4, 4), Color3.fromRGB(120, 90, 60), 0, Enum.PartType.Ball)
 				mound = { part = part, base = spot.Position + offset, startedAt = t }

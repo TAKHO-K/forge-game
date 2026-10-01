@@ -1202,7 +1202,8 @@ local function bindPlayer(p)
 	for _, attr in ipairs({ "ClassId", "WeaponGrade", "ArtV1WeaponLook" }) do
 		p:GetAttributeChangedSignal(attr):Connect(refresh)
 	end
-	Workspace:GetAttributeChangedSignal(ArtStyleV1Data.attribute):Connect(function() -- A2-S 스위치
+	-- QUEUE-ALL5 D①: Workspace 신호는 나간 사람 것도 안 끊겨 st(옛 캐릭터 · 무기)를 붙잡았다 → st에 두고 PlayerRemoving에서 끊는다
+	st.artStyleConnection = Workspace:GetAttributeChangedSignal(ArtStyleV1Data.attribute):Connect(function() -- A2-S 스위치
 		if rigs[p] == st then
 			refresh()
 		end
@@ -1644,6 +1645,9 @@ Players.PlayerRemoving:Connect(function(p)
 	local st = rigs[p]
 	if st and st.weapon then
 		st.weapon.folder:Destroy()
+	end
+	if st and st.artStyleConnection then
+		st.artStyleConnection:Disconnect()
 	end
 	rigs[p] = nil
 end)

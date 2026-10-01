@@ -34,6 +34,7 @@ local STYLE_MATERIAL = {
 local live = {}
 local voidToken = 0 -- BR1-4b: 심연 먼지 루프(구멍이 바뀌면 끝)
 local voids = {} -- BR1-3 무너진 조각(검은 구멍) - 다음 붕괴 · 보스전 끝까지 남는다(전조가 current를 새로 만들어도 지우지 않는다)
+local fields = {} -- { center, radius, untilAt, part } - 빙판(아래 field). reset이 비우므로 reset보다 먼저 선언한다(QUEUE-ALL5 D①: 옛 자리에서는 reset의 `fields = {}`가 전역에 써서 빙판이 안 지워졌다)
 local VOID = Color3.fromRGB(12, 10, 14)
 local current = nil -- { zones, parts = { [zone index] = { parts } }, style, active, forces }
 
@@ -782,7 +783,6 @@ end
 -- 빙판(field kind "slippery" - 서리 거인 발 구르기): 원 안 지면에 서 있으면 미끄러진다(수평 속도가 한 프레임에 목표 쪽으로 SLIP_BLEND만큼만 - 관성).
 -- 판정 없음(서버는 알리기만 한다). 원 = 옅은 흰 판(Glass).
 local SLIP_BLEND = 0.06
-local fields = {} -- { center, radius, untilAt, part }
 local lastVelocity = Vector3.zero
 
 function BossEnvironmentView.field(data)

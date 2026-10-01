@@ -168,6 +168,10 @@ RunService.Heartbeat:Connect(function(dt)
 	local now = os.clock()
 	for character, st in pairs(chars) do
 		if not character.Parent or not st.root.Parent then
+			if st.glideRelease then -- QUEUE-ALL5 D①: 활강 중 캐릭터가 사라지면(죽음 · 리스폰 · 퇴장) 빌린 입자 몫을 못 돌려줘 예산이 영구히 줄었다
+				st.glideRelease()
+				st.glideRelease = nil
+			end
 			chars[character] = nil
 			continue
 		end
