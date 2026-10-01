@@ -26,14 +26,14 @@ function GoldCost.cost(baseCost, stage, kind)
 end
 
 -- QUEUE-ALL6 D 보상 골드 = "보기 좋은 숫자"(지급값 자체 - 표시만 반올림하지 않는다 · 서버 지급 · 클라 미리보기가 같은 함수):
---   QUEUE-ALL6R 결정 3: 500 ~ 9,999 = 500 단위 · 10,000 이상 = 앞 두 자리만(12,345 → 12,000 · 366,039 → 370,000 · 1,234,567 → 1,200,000) · 500 미만 = 100 단위(최소 100 - 도감 잡몹 3 ~ 10마리 몫 같은 작은 보상을 500으로 부풀리지 않는다). 반올림 = 가까운 쪽(반은 올림).
+--   QUEUE-ALL7 A1(최종 - 사용자): 1,000 미만 = 100 단위(최소 100) · 1,000 ~ 9,999 = 500 단위 · 10,000 이상 = 앞 두 자리만(12,345 → 12,000 · 366,039 → 370,000 · 1,234,567 → 1,200,000). 반올림 = 가까운 쪽(반은 올림).
 function GoldCost.niceReward(n)
 	n = Sanitize.number(n, 0)
 	if n <= 0 or n == math.huge then
 		return n
 	end
 	local step
-	if n < 500 then
+	if n < 1000 then
 		step = 100
 	elseif n < 10000 then
 		step = 500
