@@ -28,6 +28,9 @@ return {
 	glide = {
 		forwardSpeed = 30, descentSpeed = 5, turnDegPerSecond = 150,
 		gaugeSeconds = 8, refillSeconds = 2,
+		-- QUEUE-ALL5 C(활강 캡처 공중 고정): 클라가 땅을 떠난 직후 켠 활강 알림이 서버가 공중을 보기 전(복제 지연)에 오면 버려졌다 → 서버는 걷기 속도(26/s)로 수평을 재 나무 위로 계속 되돌렸다.
+		--   이 시간 안에 서버가 공중을 보면 그때 켠다(땅에서는 여전히 안 켠다 - 수평 상한 보안 그대로).
+		serverPendingSeconds = 0.6,
 		look = { leafColor = Color3.fromRGB(118, 165, 94), stemColor = Color3.fromRGB(108, 62, 44), -- 줄기 = 나무 껍질 어두운 색(WorldMapData barkDark) 재사용
 			leafSize = Vector3.new(7, 0.3, 3.6), aboveHeadStuds = 2.2, poseLeanDeg = 55 },
 		gaugeUi = { dots = 16, sizePx = 46, dotPx = 7, sideStuds = 2.6, warnFraction = 0.5, dangerFraction = 0.25 },

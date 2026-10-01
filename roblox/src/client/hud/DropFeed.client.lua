@@ -342,7 +342,8 @@ local function selfTestS12b()
 	local rows = Toast.debugRows("TR")
 	local text = Toast.debugTexts("TR")[1] or ""
 	check(("알림 글 [%s](기대 ★1 Lv.35 철수: 유물 장갑 Lv.52) · 누르는 조각 %d개(기대 2 - 이름 · 아이템)"):format(text, rows[1] and rows[1].hitCount() or 0),
-		text == "★1 Lv.35 철수: 유물 장갑 Lv.52" and rows[1] ~= nil and rows[1].hitCount() == 2)
+		(Text.languageFor(nil) == "ko" and text == "★1 Lv.35 철수: 유물 장갑 Lv.52" or Text.languageFor(nil) ~= "ko" and text:find("철수", 1, true) ~= nil and text:find("52", 1, true) ~= nil) -- QUEUE-ALL5 C: 영어 = 이름 · 레벨만
+		and rows[1] ~= nil and rows[1].hitCount() == 2)
 
 	-- 이름 클릭 → 메뉴(서버를 떠난 사람: 세 버튼 모두 비활성 + 이유)
 	if rows[1] then
@@ -353,7 +354,7 @@ local function selfTestS12b()
 		local menuOk = UIManager.isOpen("playerMenu") and friend ~= nil and whisper ~= nil and inspect ~= nil
 			and friend.visible and whisper.visible and inspect.visible
 			and not friend.enabled and not whisper.enabled and not inspect.enabled
-			and friend.reason == "서버를 떠난 플레이어" and inspect.reason == "서버를 떠난 플레이어"
+			and friend.reason == Text.get("ui.playerMenu.left") and inspect.reason == Text.get("ui.playerMenu.left") -- QUEUE-ALL5 C: 키로 비교
 		check(("이름 클릭 → 메뉴 열림 %s · 서버를 떠난 사람: 친구 %s/%s · 귓속말 %s/%s · 장비 보기 %s/%s(기대 모두 보임 · 비활성 · 이유 표시) · 제목 [%s]"):format(
 			tostring(UIManager.isOpen("playerMenu")), tostring(friend and friend.visible), tostring(friend and friend.enabled), tostring(whisper and whisper.visible), tostring(whisper and whisper.enabled),
 			tostring(inspect and inspect.visible), tostring(inspect and inspect.enabled), (tostring(state.title):gsub("<[^>]+>", ""))), menuOk)

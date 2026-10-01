@@ -12,6 +12,7 @@ if not RunService:IsStudio() then
 end
 
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
+local Text = require(ReplicatedStorage.Shared.Text) -- QUEUE-ALL5 C: 비교 글 = 키(영어 켜도 같은 판정)
 local current = DevToolsConfig.verify.current
 if not (DevToolsConfig.verify.regression or table.find(current, "P3b(UI)")) then
 	return
@@ -105,7 +106,7 @@ task.spawn(function()
 		Leaderboard.open()
 		local loaded = waitFor(function()
 			local state = Leaderboard.debugState()
-			return state.empty ~= "불러오는 중…" and state.me ~= "내 순위: 불러오는 중…"
+			return state.empty ~= Text.get("ui.rank.loading") and state.me ~= Text.get("ui.rank.me.loading")
 		end, 15)
 		task.wait(0.6) -- 여는 트윈(UIScale 0.94 → 1)이 끝난 뒤 잰다(Play 1: 트윈 중에 재서 11.3)
 		local state = Leaderboard.debugState()
@@ -120,14 +121,14 @@ task.spawn(function()
 			Leaderboard.selectTab(tabId)
 			task.wait(1.4) -- 서버 board 간격(1초) 뒤
 			waitFor(function()
-				return Leaderboard.debugState().empty ~= "불러오는 중…"
+				return Leaderboard.debugState().empty ~= Text.get("ui.rank.loading")
 			end, 5)
 			local s = Leaderboard.debugState()
 			local chips = frame:FindFirstChild("Chip_greatsword", true)
 			local chipVisible = chips and chips.Visible
 			table.insert(tabResults, ("%s: 줄 %d · 칩 %s · 내 순위 보임 %s"):format(tabId, #s.rows, tostring(chipVisible), tostring(s.meVisible)))
 			tabsOk = tabsOk and s.tab == tabId and (chipVisible == (tabId == "class")) and (s.meVisible == (tabId ~= "season"))
-				and (tabId ~= "season" or (s.empty or ""):find("시즌", 1, true) ~= nil)
+				and (tabId ~= "season" or ((s.empty or ""):find(Text.get("ui.rank.season.rule1"), 1, true) ~= nil or (s.empty or ""):find(Text.get("ui.rank.season.loading"), 1, true) ~= nil))
 		end
 		check(("A2 탭 전환 [%s]"):format(table.concat(tabResults, " / ")), tabsOk)
 
@@ -135,7 +136,7 @@ task.spawn(function()
 		Leaderboard.selectTab("all")
 		task.wait(1.4)
 		waitFor(function()
-			return Leaderboard.debugState().empty ~= "불러오는 중…"
+			return Leaderboard.debugState().empty ~= Text.get("ui.rank.loading")
 		end, 5)
 		local rows = Leaderboard.debugState().rows
 		if #rows > 0 then

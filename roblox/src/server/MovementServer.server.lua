@@ -116,6 +116,7 @@ local glideState = Instance.new("RemoteEvent")
 glideState.Name = "GlideState"
 glideState.Parent = ReplicatedStorage
 local glideOnAt = {} -- [Player] = os.clock()
+local glidePendingAt = {} -- QUEUE-ALL5 C: [Player] = 켜기 요청 시각(서버가 아직 공중을 못 봄 - serverPendingSeconds 안에 보면 켠다)
 local glideLastAt = {} -- 리뷰 4: 요청 간격(표시 스팸 방지)
 
 glideState.OnServerEvent:Connect(function(player, on)
@@ -130,9 +131,13 @@ glideState.OnServerEvent:Connect(function(player, on)
 		return
 	end
 	if on == true and MoveRules.tierOf(player).glide and AirState.session(player) ~= nil then -- S1 리뷰 9: 서버가 공중으로 볼 때만(땅에서 켜 수평 상한을 올리지 못하게)
+		glidePendingAt[player] = nil
 		glideOnAt[player] = os.clock()
 		character:SetAttribute("Gliding", true)
+	elseif on == true and MoveRules.tierOf(player).glide then
+		glidePendingAt[player] = now -- QUEUE-ALL5 C: 서버가 아직 땅으로 봄(복제 지연) - 곧 공중을 보면 Heartbeat가 켠다
 	else
+		glidePendingAt[player] = nil
 		glideOnAt[player] = nil
 		character:SetAttribute("Gliding", nil)
 	end
@@ -141,6 +146,15 @@ end)
 -- 서버가 땅을 본 뒤에도 켜져 있으면 끈다(클라가 끄는 신호를 놓친 경우 - 켠 직후 0.5초는 서버 착지 판정 지연이라 기다린다)
 RunService.Heartbeat:Connect(function()
 	local now = os.clock()
+	for player, at in pairs(glidePendingAt) do -- QUEUE-ALL5 C: 늦게 본 공중 = 그때 켬(시간 안에 못 보면 버림 - 땅 활강 불가 그대로)
+		if now - at > MovementConfig.glide.serverPendingSeconds or not player.Parent then
+			glidePendingAt[player] = nil
+		elseif AirState.session(player) and player.Character then
+			glidePendingAt[player] = nil
+			glideOnAt[player] = now
+			player.Character:SetAttribute("Gliding", true)
+		end
+	end
 	for player, at in pairs(glideOnAt) do
 		if now - at > 0.5 and not AirState.session(player) then
 			glideOnAt[player] = nil
@@ -243,6 +257,7 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	lastRelayAt[player] = nil
 	glideOnAt[player] = nil
+	glidePendingAt[player] = nil
 	glideLastAt[player] = nil
 	lastLedgeAt[player] = nil
 	lastGetupAt[player] = nil
