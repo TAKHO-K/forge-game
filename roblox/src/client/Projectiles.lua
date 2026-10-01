@@ -93,6 +93,7 @@ local function buildOrb()
 	local light = Instance.new("PointLight")
 	light.Brightness = 1.5
 	light.Range = 6
+	light.Enabled = false -- QUEUE-STUDIO P-3: 날 때만 켠다(옛 = 풀 24개가 투명한 채 마지막 도착 자리에서 늘 빛났다 - 모든 사람 화면에 광원 24)
 	light.Parent = part
 
 	local topAttach = Instance.new("Attachment")
@@ -269,6 +270,7 @@ function Projectiles.fire(kind, fromPosition, toPosition, isCrit, variant, onArr
 	end
 	if slot.light then
 		slot.light.Color = part.Color
+		slot.light.Enabled = true -- QUEUE-STUDIO P-3: 구슬도 날 때만(밝기 · 범위는 만들 때 값 그대로 - 겉모습 불변)
 		if kind == "arrow" then
 			-- W2-2: 화살촉 작은 빛(평타 = 은은하게 · 백스텝샷 = 옛 밝기)
 			local tip = TrailData.projectile.arrow.tipLight
@@ -312,8 +314,8 @@ RunService.Heartbeat:Connect(function()
 			end
 			slot.part.Transparency = 1
 			slot.trail.Enabled = false
-			if f.kind == "arrow" and slot.light then
-				slot.light.Enabled = false -- orb(힐러)의 항상 켜진 빛은 건드리지 않는다.
+			if slot.light then
+				slot.light.Enabled = false -- QUEUE-STUDIO P-3: 구슬도 도착하면 끈다(투명한 구슬이 남긴 빛 제거)
 			end
 			if slot.particles then
 				slot.particles.Enabled = false

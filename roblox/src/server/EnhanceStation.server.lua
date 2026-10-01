@@ -36,6 +36,7 @@ local function createEnhanceStation()
 	label.Size = UDim2.new(4, 0, 1, 0)
 	label.StudsOffset = Vector3.new(0, 1.2, 0)
 	label.AlwaysOnTop = true
+	label.MaxDistance = 220 -- QUEUE-STUDIO P-3: 먼 데서도 위에 그리던 이름표(옛 = 무한) - 월드 표지 LabelGui와 같은 거리(WorldMap)
 	label.Adornee = anvilTop
 	label.Parent = anvilTop
 
