@@ -97,7 +97,7 @@ return {
 	["armor/shoes_tier6_legendary"] = { id = 86199516279985, kind = "Model", status = "Approved" },
 	["armor/shoes_tier6_normal"] = { id = 112550973279499, kind = "Model", status = "Approved" },
 	["armor/shoes_tier6_transcendent"] = { id = 124949023350921, kind = "Model", status = "Approved" },
-	["audio/sfx_combat"] = { id = 139471271245384, kind = "Audio", status = "Reviewing" },
+	["audio/sfx_combat"] = { id = 102694590397594, kind = "Audio", status = "Reviewing" },
 	["audio/sfx_loot"] = { id = 73841264968173, kind = "Audio", status = "Reviewing" },
 	["audio/sfx_ui"] = { id = 132247497769699, kind = "Audio", status = "Reviewing" },
 	["bosses/abyssal_lord"] = { id = 91598985273376, kind = "Model", status = "Approved" },

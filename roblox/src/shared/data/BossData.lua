@@ -843,7 +843,10 @@ local SPECIES = {
 			hpBelow = 0.5, firstDelaySeconds = 3, cooldownSeconds = 35, telegraphSeconds = 4.2, durationSeconds = 3.6,
 			zones = { shape = "rect", halfMap = true, walkOutStuds = 45, dirTries = 16, walkOutChance = 0.8 }, -- M1: 80%만 나갈 수 있는 방향 · 20% 완전 무작위(연달아 두 번은 안 나온다)
 			shakes = 3,
-			onStart = { pan = { heightStuds = 22, distanceStuds = 70, distanceJitter = 20, scatterDeg = 25, airborneDistanceScale = 1.4, airborneHeightBonus = 6, multiplier = 2.0, starDistanceStuds = 85 } },
+			-- QUEUE-ALL6 G(사용자 결정) 로켓단: rocket이 있으면 pan 대신(옛 pan 값은 옛 검증 블록이 읽어 남겨 둠). 판정 · 전조 · 주기 불변 · 피해 = 최대 체력 25% 1회.
+			--   peakStuds = 항상 같은 최고 높이 · up/hang/down = 오름 · 꼭대기 멈춤(반짝) · 내려옴(합 2.5초) · landInset = 반대쪽 절반 가운데(아레나 중심에서 털린 쪽 반대로 같은 거리 × 값).
+			onStart = { pan = { heightStuds = 22, distanceStuds = 70, distanceJitter = 20, scatterDeg = 25, airborneDistanceScale = 1.4, airborneHeightBonus = 6, multiplier = 2.0, starDistanceStuds = 85 },
+				rocket = { peakStuds = 48, upSeconds = 0.75, hangSeconds = 0.3, downSeconds = 1.45, landInset = 1.0, landToleranceStuds = 14, damage = { kind = "maxHp", fraction = 0.25 }, sound = "rocket_twinkle" } },
 			dodge = { distanceStuds = 46 },
 		},
 		arenaKit = { parts = abyssalKitParts(abyssalBody, abyssalHead) }, -- 29-4 수몰 사원의 돌단(P3c: 11곳)

@@ -5,7 +5,7 @@
  "sheets": {
   "combat": {
    "file": "sfx_combat.wav",
-   "length": 9.64
+   "length": 10.84
   },
   "loot": {
    "file": "sfx_loot.wav",
@@ -137,6 +137,17 @@
    "volume": 0.2,
    "group": "Effects",
    "description": "부드러운 발소리(선택)"
+  },
+  "rocket_twinkle": {
+   "sheet": "combat",
+   "file": "sfx_combat.wav",
+   "start": 9.64,
+   "duration": 0.9,
+   "startSample": 425124,
+   "samples": 39691,
+   "volume": 0.6,
+   "group": "Effects",
+   "description": "QUEUE-ALL6 G 판 털기 로켓 꼭대기 반짝 - 휙 + 높은 종"
   },
   "pickup": {
    "sheet": "loot",

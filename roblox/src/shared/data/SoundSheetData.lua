@@ -6,7 +6,7 @@
 --   모든 큐는 피크 -1 dBFS로 맞췄다 - 크기 차이는 volume으로만 준다.
 return {
 	sheets = {
-		combat = { file = "audio/sfx_combat", length = 9.64 },
+		combat = { file = "audio/sfx_combat", length = 10.84 },
 		loot = { file = "audio/sfx_loot", length = 24.4244 },
 		ui = { file = "audio/sfx_ui", length = 8.2854 },
 	},
@@ -22,6 +22,7 @@ return {
 		boss_appear = { sheet = "combat", start = 5.42, duration = 1.14, volume = 0.85, group = "Effects" }, -- 보스 등장 - 저음 뿔 + 북
 		boss_death = { sheet = "combat", start = 6.86, duration = 2.08, volume = 0.9, group = "Effects" }, -- 보스 처치 - 큰 충격 + 하강 + 차임
 		footstep_soft = { sheet = "combat", start = 9.24, duration = 0.1, volume = 0.2, group = "Effects" }, -- 부드러운 발소리(선택)
+		rocket_twinkle = { sheet = "combat", start = 9.64, duration = 0.9, volume = 0.6, group = "Effects" }, -- QUEUE-ALL6 G 판 털기 로켓 꼭대기 반짝 - 휙 + 높은 종
 		pickup = { sheet = "loot", start = 0.25, duration = 0.2101, volume = 0.5, group = "Effects" }, -- 아이템 줍기 - 짧은 두 음 삑
 		drop_common = { sheet = "loot", start = 0.7601, duration = 0.37, volume = 0.4, group = "Effects" }, -- 일반 등급 드랍
 		drop_rare = { sheet = "loot", start = 1.4301, duration = 0.43, volume = 0.45, group = "Effects" }, -- 희귀 등급 드랍

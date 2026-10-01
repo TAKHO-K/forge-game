@@ -762,6 +762,10 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossStanceView.reflect(data)
 	elseif kind == "launch" then
 		BossStormView.launch(data)
+	elseif kind == "rocket" then -- QUEUE-ALL6 G 판 털기 로켓단(나만)
+		require(script.Parent.BossRocketView).rocket(data)
+	elseif kind == "rocketTwinkle" then -- 꼭대기 반짝(아레나 전원)
+		require(script.Parent.BossRocketView).twinkle(data)
 	elseif kind == "hintArrows" then
 		BossGateView.showHintArrows(data.positions, data.seconds)
 	elseif kind == "zoneCharge" then

@@ -411,6 +411,23 @@ def c_rift_start():
 	return mix(w, 0.5 * whoosh(d, 300, 3000, 0.5), 0.5 * thump(0.5, 90, 40, 0.15, 0.3), at=[0, 0, 0])
 
 
+def c_rocket_twinkle():
+	"""QUEUE-ALL6 G 판 털기 로켓단 꼭대기 "반짝" - 위로 휙 + 높은 종 반짝(전역 rng를 안 써서 다른 큐 소리가 그대로)"""
+	local = np.random.default_rng(20261002)
+	dur = 0.35  # 위로 휙(whoosh와 같은 모양 - 잡음만 이 큐의 난수로)
+	x = band(sweep_lp(local.uniform(-1, 1, int(dur * SR)), 400, 2400), 150, None)
+	t = np.linspace(0, 1, len(x))
+	up = x * np.where(t < 0.35, np.sin(np.pi / 2 * t / 0.35) ** 2, np.cos(np.pi / 2 * (t - 0.35) / 0.65) ** 2)
+	parts, at = [up], [0.0]
+	for i in range(7):
+		note = int(local.integers(86, 99))
+		parts.append(0.45 * bell(n2f(note), 0.3, 0.07))
+		at.append(0.22 + i * 0.045 + float(local.uniform(0, 0.02)))
+	parts.append(0.6 * bell(n2f(98), 0.6, 0.18))
+	at.append(0.3)
+	return mix(*parts, at=at)
+
+
 def c_footstep_soft():
 	return band(noise(0.08), 150, 1200) * env(0.08, 0.002, 0.018) + 0.5 * tone(0.08, 120, 70) * env(0.08, 0.001, 0.02)
 
@@ -429,6 +446,7 @@ SHEETS = {
 		("boss_appear", c_boss_appear, 0.85, "Effects", "보스 등장 - 저음 뿔 + 북"),
 		("boss_death", c_boss_death, 0.9, "Effects", "보스 처치 - 큰 충격 + 하강 + 차임"),
 		("footstep_soft", c_footstep_soft, 0.2, "Effects", "부드러운 발소리(선택)"),
+		("rocket_twinkle", c_rocket_twinkle, 0.6, "Effects", "QUEUE-ALL6 G 판 털기 로켓 꼭대기 반짝 - 휙 + 높은 종"),
 	],
 	"loot": [
 		("pickup", c_pickup, 0.5, "Effects", "아이템 줍기 - 짧은 두 음 삑"),

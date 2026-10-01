@@ -20,6 +20,7 @@ local PlayerDamage = require(script.Parent.PlayerDamage)
 local BossTrap = require(script.Parent.BossTrap)
 local GroundProbe = require(script.Parent.GroundProbe)
 local HeightGuard = require(script.Parent.HeightGuard)
+local PlayerState = require(script.Parent.PlayerState) -- QUEUE-ALL6 G: 로켓 동안 무적
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local BossJumpCourse = require(script.Parent.BossJumpCourse)
 local BossArenaMap = require(script.Parent.BossArenaMap) -- BR1-3 멤버 스폰(복귀) 자리 - 그 조각은 무너지지 않는다
@@ -436,6 +437,72 @@ local function begin(model, st, data, env, e, now)
 	kit.send(st, "envTelegraph", { id = env.id, style = env.style, zones = e.zones, seconds = env.telegraphSeconds, bossId = data.id, motion = env.motion, garden = e.garden, shakes = env.shakes })
 end
 
+-- ═══ QUEUE-ALL6 G 판 털기 = 로켓단(사용자 결정) ═══
+-- 규칙 하나: "털리는 절반 위에 있으면 날아간다" - 판이 들린 활성 시간(durationSeconds · 3번 털기) 내내 그 절반 위(떠 있어도)에 있으면 · 그쪽으로 들어와도 같다.
+-- 날아감 = 항상 같은 최고 높이(편차 · 확률 없음) 포물선 → 꼭대기 "반짝"(별 + 효과음 - 아레나 멤버 전원) → 털리지 않는 쪽 절반 입장 자리로 천천히 내려옴.
+-- 그동안 무적(받는 피해 ×0) · 조작 잠금(클라) · 보스 표적 제외(BossEnvironment.isRocketing - 넉백 높이 상한과 다른 별도 상태) · 피해 = 최대 체력 25% 1회(발동당).
+-- 이동 = 내 클라가 정해진 곡선을 그린다(내 캐릭터 = 내 물리 - 남에게도 그대로 복제) · 서버는 높이 검사 예외 + 끝에 도착 자리 확인(멀면 서버가 옮긴다).
+local rocketUntil = setmetatable({}, { __mode = "k" }) -- [Player] = os.clock() 끝
+function BossEnvironment.isRocketing(player)
+	return (rocketUntil[player] or 0) > os.clock()
+end
+
+-- 순수: 로켓 시간표(초) · 착지 자리 = 아레나 중심 기준 털리는 절반 가운데의 반대쪽(landInset만큼 중심 쪽)
+function BossEnvironment.rocketPlan(rocket, arenaCenter, shakenCenter, floorY)
+	local c, z = xz(arenaCenter), xz(shakenCenter)
+	local away = c - z
+	if away.Magnitude < 1e-3 then
+		away = Vector3.new(1, 0, 0)
+	end
+	local land = c + away.Unit * away.Magnitude * rocket.landInset
+	local total = rocket.upSeconds + rocket.hangSeconds + rocket.downSeconds
+	return { land = Vector3.new(land.X, floorY + 3, land.Z), peakY = floorY + rocket.peakStuds, total = total }
+end
+
+local function rocketOne(model, st, data, env, e, v, z, now)
+	local rocket = env.onStart.rocket
+	e.launched[v.player] = true -- 이번 발동에서 한 번(무한 반복 금지) · 빈 공간 낙하 면제
+	kit.applySkillDamage(model, data, { damage = rocket.damage, damageLabel = env.damageLabel }, v.player)
+	local plan = BossEnvironment.rocketPlan(rocket, kit.zoneOf(model).center, z.center, st.floorY)
+	local player = v.player
+	if typeof(player) == "Instance" then
+		rocketUntil[player] = now + plan.total
+		HeightGuard.exempt(player, plan.total + 1)
+		PlayerState.setIncomingDamageMultiplierUntil(player, 0, plan.total, "bossRocket")
+	end
+	local from = v.root.Position
+	local peak = Vector3.new((from.X + plan.land.X) / 2, plan.peakY, (from.Z + plan.land.Z) / 2)
+	kit.debugEvent("rocket", { player = player, from = from, land = plan.land, peakY = plan.peakY, total = plan.total, at = now })
+	require(script.Parent.BossPatterns).sendTo(player, "rocket", { from = from, land = plan.land, peakY = plan.peakY, up = rocket.upSeconds, hang = rocket.hangSeconds, down = rocket.downSeconds })
+	kit.send(st, "rocketTwinkle", { position = peak + Vector3.new(0, 4, 0), delay = rocket.upSeconds, userId = typeof(player) == "Instance" and player.UserId or nil, sound = rocket.sound })
+	if typeof(player) == "Instance" then
+		task.delay(plan.total + 0.3, function() -- 끝: 도착 자리 확인(클라가 곡선을 안 그렸으면 서버가 옮긴다)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root and (xz(root.Position) - xz(plan.land)).Magnitude > rocket.landToleranceStuds then
+				root.CFrame = CFrame.new(plan.land)
+			end
+		end)
+	end
+end
+
+local function rocketScan(model, st, data, env, e, now)
+	for _, z in ipairs(e.zones or {}) do
+		if z.shape == "rect" then
+			local a = math.rad(z.angleDeg)
+			local alongDir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local sideDir = Vector3.new(-alongDir.Z, 0, alongDir.X)
+			for _, v in ipairs(kit.victims(st)) do
+				if not e.launched[v.player] and not BossTrap.isTrapped(v.player) then
+					local rel = xz(v.root.Position) - xz(z.center)
+					if math.abs(rel:Dot(alongDir)) <= z.halfLength and math.abs(rel:Dot(sideDir)) <= z.halfWidth then
+						rocketOne(model, st, data, env, e, v, z, now)
+					end
+				end
+			end
+		end
+	end
+end
+
 local function activate(model, st, data, env, e, now)
 	e.phase = "active"
 	e.phaseEndsAt = now + env.durationSeconds
@@ -463,7 +530,9 @@ local function activate(model, st, data, env, e, now)
 	e.windTurnAt = now + (env.zones.rotateEverySeconds or math.huge)
 	-- 활성 순간 효과(onStart - 밥상뒤집기의 튕김 + 피해): 구역 안(발 기준 같은 층 - 떠 있으면 안 맞는다)의 사람.
 	local onStart = env.onStart
-	if onStart and onStart.pan then
+	if onStart and onStart.rocket then
+		rocketScan(model, st, data, env, e, now) -- QUEUE-ALL6 G: 첫 털기 순간(이후 활성 내내 step이 계속 본다)
+	elseif onStart and onStart.pan then
 		-- BR1-2 프라이팬: 판 위 전원(떠 있어도 - 더 멀리) · 판 바깥쪽 ± 흩어짐 · 높은 포물선 · 피해 뒤 발사 · 멀리 가면 별 반짝(아레나 멤버 전원)
 		local random01 = function()
 			return rng:NextNumber()
@@ -574,6 +643,9 @@ function BossEnvironment.step(model, st, data, now, _dt)
 		return
 	end
 	-- active: 도트 · 바람 회전
+	if env.onStart and env.onStart.rocket then
+		rocketScan(model, st, data, env, e, now) -- QUEUE-ALL6 G: 판이 빈 동안 그쪽으로 들어와도 날아간다
+	end
 	if env.tick then
 		for _, v in ipairs(kit.victims(st)) do
 			if not BossTrap.isTrapped(v.player) and Reach.sameLayer(v.groundFeet, Vector3.new(0, st.floorY, 0)) and inAnyHazard(e.zones, v.root.Position) then

@@ -254,7 +254,7 @@ function BossEncounter.nearestLivingMember(model, position)
 		if isAlive(member) then
 			local root = member.Character:FindFirstChild("HumanoidRootPart")
 			local d = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(position.X, 0, position.Z)).Magnitude
-			local trapped = BossTrap.isTrapped(member)
+			local trapped = BossTrap.isTrapped(member) or require(script.Parent.BossEnvironment).isRocketing(member) -- QUEUE-ALL6 G: 판 털기 로켓 중 = 표적 뒤순위(잡힌 사람과 같은 취급)
 			if (bestTrapped and not trapped) or (trapped == bestTrapped and d < bestDistance) then
 				best, bestDistance, bestTrapped = member, d, trapped
 			end

@@ -576,9 +576,9 @@
   "status": "Approved"
  },
  "audio/sfx_combat.wav": {
-  "sha256": "9668574ba832aac8846bd644f7fd378928e53226ac55923561b6953b4b32dca1",
+  "sha256": "1cb61e200e09ae755ba9a9a335af9ed0bbfc3ceb31403cc4dfb3818c070f2a96",
   "assetType": "Audio",
-  "assetId": 139471271245384,
+  "assetId": 102694590397594,
   "status": "Reviewing"
  },
  "audio/sfx_loot.wav": {
