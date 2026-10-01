@@ -182,17 +182,17 @@ def glider_dragonWing(img, p, c):  # 푸른 드래곤 날개: Blender 렌더(몬
     wing = model("dragon_wing")
     w2 = wing.width // 2
     halves = []
-    for box, ang in (((0, 0, w2, wing.height), -14), ((w2, 0, wing.width, wing.height), 14)):
+    for box, ang in (((0, 0, w2, wing.height), -18), ((w2, 0, wing.width, wing.height), 18)):
         h_ = wing.crop(box)
         h_ = h_.crop(h_.split()[3].getbbox()).rotate(ang, resample=Image.BICUBIC, expand=True)
         halves.append(h_.crop(h_.split()[3].getbbox()))
     left, right = halves
-    gap = 70  # 두 날개 뿌리 사이(등 자리)
+    gap = 30  # 두 날개 뿌리 사이(등 자리)
     both = Image.new("RGBA", (left.width + right.width + gap, max(left.height, right.height)), (0, 0, 0, 0))
     both.alpha_composite(left, (0, both.height - left.height))
     both.alpha_composite(right, (left.width + gap, both.height - right.height))
-    place(img, both, (80, 160, 944, 760))
-    p.rrect((470, 470, 554, 640), 30, (60, 100, 170, 255))  # 등에 메는 고리(날개 사이)
+    place(img, both, (56, 110, 968, 820))  # 타일 윗면(94 ~ 930)을 넘칠 만큼 크게 - 날개 끝은 타일 테 위로 살짝 나가도 된다
+    p.rrect((482, 560, 542, 700), 26, (60, 100, 170, 255))  # 등에 메는 고리(날개 사이)
 
 
 def season_premium(img, p, c):  # 시즌 패스 유료 줄: 구름 고래(시즌 1 대표 탈것) + 위 왕관 리본
@@ -215,28 +215,43 @@ def bagExpand(p, c):  # 가방 + 20칸: 큰 가방(HUD 가방 기호) + 더하�
     cross(p, 730, 690, 84, 26, WHITE)
 
 
-def pickupRadius(p, c):  # 자동 줍기 반경: 펫 발바닥 가운데 + 넓어진 점선 원 + 바깥으로 넓히는 화살 4 + 원 위 보석 2
-    cx, cy, r = 512, 480, 330
+def gem(p, x, y, s, g):
+    p.poly([(x, y - s * 1.2), (x + s, y), (x, y + s * 1.2), (x - s, y)], g)
+    p.poly([(x, y - s * 1.2), (x + s, y), (x, y + s * 1.2)], mul(g, 0.72), w=0)
+    p.d.line([(x, y - s * 1.2), (x + s, y), (x, y + s * 1.2), (x - s, y), (x, y - s * 1.2)], fill=INK, width=W, joint="curve")
+    p.ellipse((x - s * 0.45, y - s * 0.6, x - s * 0.1, y - s * 0.25), WHITE, w=0)
+
+
+def coin(p, x, y, r):
+    p.ellipse((x - r, y - r, x + r, y + r), GOLD, w=0)
+    p.d.chord((x - r, y - r, x + r, y + r), 20, 200, fill=GOLD_D)  # 아래 그늘
+    p.ellipse((x - r * 0.5, y - r * 0.5, x + r * 0.5, y + r * 0.5), lighten(GOLD, 0.4), w=14)
+    p.d.ellipse((x - r - W / 2, y - r - W / 2, x + r + W / 2, y + r + W / 2), outline=INK, width=W)  # 외곽선은 바깥에(채움이 묻히지 않게)
+
+
+def pickupRadius(img, p, c):  # 자동 줍기 반경: 가운데 펫(make_pets 강아지 렌더) + 점선 원 + 안쪽으로 끌려오는 보석 · 금화 3
+    cx, cy, r = 512, 470, 345
     for i in range(12):  # 점선 원(잉크 테 + 흰 조각)
         a0 = i * 30 + 4
         p.d.arc((cx - r - 24, cy - r - 24, cx + r + 24, cy + r + 24), a0, a0 + 20, fill=INK, width=60)
         p.d.arc((cx - r - 8, cy - r - 8, cx + r + 8, cy + r + 8), a0 + 2, a0 + 18, fill=WHITE, width=28)
-    pad = lighten(c, 0.8)
-    p.ellipse((cx - 105, cy - 5, cx + 105, cy + 150), pad)  # 발바닥(HUD 펫 기호와 같은 모양 · 발가락 사이 띄움)
-    for x, y, rr in ((-128, -60, 52), (-48, -128, 54), (48, -128, 54), (128, -60, 52)):
-        p.ellipse((cx + x - rr, cy + y - rr, cx + x + rr, cy + y + rr), pad)
-    for ang in (45, 135):  # 아래 양옆으로 넓히는 화살(위쪽은 발가락 자리)
-        a = math.radians(ang)
-        u = (math.cos(a), math.sin(a))
+    items = ((215, 300, "gem"), (830, 380, "coin"), (250, 690, "coin"))
+    for x, y, _ in items:  # 끌려오는 방향 = 펫 쪽 꺾쇠 2개(흰 + 잉크)
+        u = ((cx - x), (cy - y))
+        n = math.hypot(*u)
+        u = (u[0] / n, u[1] / n)
         v = (-u[1], u[0])
-        b = (cx + u[0] * 315, cy + u[1] * 315)
-        base = (b[0] - u[0] * 85, b[1] - u[1] * 85)
-        stroke(p, [(cx + u[0] * 200, cy + u[1] * 200), base], WHITE, 30)
-        p.poly([b, (base[0] + v[0] * 66, base[1] + v[1] * 66), (base[0] - v[0] * 66, base[1] - v[1] * 66)], WHITE, w=22)
-    for x, y, g in ((cx, cy - r, (110, 200, 255, 255)), (cx, cy + r, GOLD)):  # 원 위 보석(파랑) · 금화
-        p.poly([(x, y - 60), (x + 50, y), (x, y + 60), (x - 50, y)], g)
-        p.poly([(x, y - 60), (x + 50, y), (x, y + 60)], mul(g, 0.78), w=0)
-        p.d.line([(x, y - 60), (x + 50, y), (x, y + 60), (x - 50, y), (x, y - 60)], fill=INK, width=W, joint="curve")
+        for k in (100, 155):
+            t = (x + u[0] * (k + 40), y + u[1] * (k + 40))
+            b = (x + u[0] * k, y + u[1] * k)
+            stroke(p, [(b[0] + v[0] * 36, b[1] + v[1] * 36), t, (b[0] - v[0] * 36, b[1] - v[1] * 36)], WHITE, 20)
+    soft_shadow(img, (370, 610, 660, 690), 70)
+    place(img, model("pet"), (340, 250, 690, 680))
+    for x, y, kind in items:
+        if kind == "gem":
+            gem(p, x, y, 70, (110, 200, 255, 255))
+        else:
+            coin(p, x, y, 70)
 
 
 def recallCooldown(p, c):  # 빠른 귀환: 집 + 감싸는 화살 고리 + 번개(빠름)
@@ -310,7 +325,7 @@ ICONS = [
     ("glider_dragonWing", "product", SKY_TILE, glider_dragonWing, True),
     ("season_premium", "product", (150, 120, 232), season_premium, True),
     ("bagExpand", "pass", (50, 168, 160), bagExpand, False),
-    ("pickupRadius", "pass", (86, 186, 96), pickupRadius, False),
+    ("pickupRadius", "pass", (86, 186, 96), pickupRadius, True),
     ("recallCooldown", "pass", (64, 150, 230), recallCooldown, False),
     ("nameplateColor", "pass", (140, 92, 226), nameplateColor, True),
     ("nameplateBadge", "pass", (100, 110, 210), nameplateBadge, False),

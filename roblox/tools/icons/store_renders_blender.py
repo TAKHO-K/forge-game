@@ -6,6 +6,7 @@
 #     slime       = 이끼 슬라임(make_monsters) - 게임 아이콘 A 곁
 #     dragon_wing = 푸른 드래곤 날개 2장(make_monsters blue_dragon Wing_L · Wing_R · 색 = ArtV1CosmeticData.gliders.dragonWing.color) - glider_dragonWing
 #     cloud_whale = 구름 고래(make_cosmetics.parts - 시즌 1 유료 줄 대표) - season_premium
+#     pet         = 보통 강아지 펫(make_pets dog normal) - pickupRadius
 #   리포의 FBX · 메타는 건드리지 않는다(내보내기 없음 · 렌더만).
 # 실행: bash roblox/tools/blender/bl.sh roblox/tools/icons/store_renders_blender.py [--out 폴더](기본 = docs/release/icons/src)
 import bpy
@@ -19,6 +20,7 @@ REPO = os.path.normpath(os.path.join(HERE, "..", "..", ".."))
 sys.path.insert(0, BL)
 import artlib as A  # noqa: E402
 import make_monsters as MM  # noqa: E402
+import make_pets as MP  # noqa: E402
 import make_weapons as W  # noqa: E402
 import make_armor_wear as AW  # noqa: E402
 import make_armor_class as AC  # noqa: E402
@@ -172,7 +174,15 @@ def dragon_wing():
             bpy.data.objects.remove(o)
     for o in keep:
         recolor(o, (70, 130, 205))
+        o.scale = (1.0, 1.0, 1.6)  # 렌더 전용: 막 면을 위아래로 1.6배(정면에서 띠처럼 가늘어 타일 면적이 작았다 - 메시 · FBX는 그대로)
     return keep
+
+
+def pet():
+    """자동 줍기 패스: 보통 강아지 펫(make_pets 몸 틀 그대로 · 렌더 색)"""
+    A.reset()
+    _, objs = MP.build("dog", "normal")
+    return objs
 
 
 def cloud_whale():
@@ -194,6 +204,7 @@ def main():
     shoot(slime(), out, "slime", yaw=-30, pitch=16)
     shoot(dragon_wing(), out, "dragon_wing", yaw=0, pitch=0, pad=1.5)
     shoot(cloud_whale(), out, "cloud_whale", yaw=-125, pitch=14)
+    shoot(pet(), out, "pet", yaw=-28, pitch=18)
     print("[store_renders] 끝", out)
 
 

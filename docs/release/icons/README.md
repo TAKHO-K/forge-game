@@ -14,10 +14,10 @@ Creator Hub에 올릴 개발자 상품 8 · 게임패스 5 아이콘과 게임 �
 | `theme_jelly.png` | `theme_jelly` | 개발자 상품 | 테마 세트 「말랑 젤리」 - 민트 타일 · 라임 젤리 방울 | 같음 |
 | `glider_petal.png` | `glider_petal` | 개발자 상품 | 꽃잎 글라이더 - 하늘 타일 · 분홍 꽃잎 5장 캐노피 + 손잡이 | 같음 |
 | `glider_kite.png` | `glider_kite` | 개발자 상품 | 연 글라이더 - 하늘 타일 · 파랑/옅은 노랑 마름모 연 + 꼬리 리본 | 같음 |
-| `glider_dragonWing.png` | `glider_dragonWing` | 개발자 상품 | 푸른 드래곤 날개 - 하늘 타일 · T6 푸른 드래곤 날개 메시 Blender 렌더(V자) | 같음 |
+| `glider_dragonWing.png` | `glider_dragonWing` | 개발자 상품 | 푸른 드래곤 날개 - 하늘 타일 · T6 푸른 드래곤 날개 메시 Blender 렌더(막 면 위아래 1.6배 · 크게 V자 - 렌더 전용, 메시는 그대로) | 같음 |
 | `season_premium.png` | `season_premium` | 개발자 상품(시즌마다 다시 삼) | 시즌 패스 유료 줄 - 보라 타일 · 구름 고래(시즌 1 대표 탈것) Blender 렌더 + 왕관 | 같음 |
 | `bagExpand.png` | `bagExpand` | 게임패스 | 가방 확장(+20칸) - 청록 타일 · 가방(HUD 가방 기호) + 초록 더하기 배지 | Monetization → Passes → Create a Pass → Icon(만든 뒤 Sales → Item for Sale 켬) |
-| `pickupRadius.png` | `pickupRadius` | 게임패스 | 자동 줍기 반경 - 초록 타일 · 펫 발바닥 + 점선 원 + 바깥 화살 + 원 위 보석 · 금화 | 같음 |
+| `pickupRadius.png` | `pickupRadius` | 게임패스 | 자동 줍기 반경 - 초록 타일 · 가운데 펫(make_pets 강아지 Blender 렌더) + 점선 원 + 펫 쪽으로 끌려오는 보석 1 · 금화 2(꺾쇠) | 같음 |
 | `recallCooldown.png` | `recallCooldown` | 게임패스 | 빠른 귀환 - 파랑 타일 · 집 + 감싸는 화살 고리 + 번개 | 같음 |
 | `nameplateColor.png` | `nameplateColor` | 게임패스 | 이름표 색 - 보라 타일 · 캐릭터 머리 위 이름표(색 칸 4) + 붓 | 같음 |
 | `nameplateBadge.png` | `nameplateBadge` | 게임패스 | 이름표 배지 - 남보라 타일 · 크림 이름표 + 왼쪽 방패 배지(별) | 같음 |
@@ -44,7 +44,7 @@ Creator Hub에 올릴 개발자 상품 8 · 게임패스 5 아이콘과 게임 �
 ## 다시 만들기
 
 ```
-# 1) Blender 원본(모양이 바뀔 때만 - 캐릭터 · 슬라임 · 드래곤 날개 · 구름 고래 → docs/release/icons/src)
+# 1) Blender 원본(모양이 바뀔 때만 - 캐릭터 · 슬라임 · 드래곤 날개 · 구름 고래 · 펫 → docs/release/icons/src)
 bash roblox/tools/blender/bl.sh roblox/tools/icons/store_renders_blender.py
 
 # 2) 아이콘 16장 + _sheet.png(Pillow · numpy)
