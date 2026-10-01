@@ -201,7 +201,7 @@ if not gotSnapshot then
 			local okAgain, state = pcall(function()
 				return inventoryFetch:InvokeServer()
 			end)
-			if okAgain and state and type(state.slots) == "number" then
+			if okAgain and state and type(state.slots) == "number" and not gotSnapshot then -- 리뷰: 기다리는 사이 push가 먼저 왔으면 더 옛 응답으로 덮지 않는다
 				onStateChanged(state)
 				return
 			end
