@@ -130,6 +130,54 @@ local function jumpFx(st, theme)
 		TweenService:Create(ring, TweenInfo.new(seconds, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(ring.Size.X * 0.4, j.ring * j.squash.widen, j.ring * j.squash.widen), Transparency = 1 }):Play()
 	end
 	Fx.burst(feet + Vector3.new(0, 0.3, 0), particleCount(j.particles, st.isLocal), { color = theme.particle, size = j.size, speed = j.speed, spread = j.spread, gravity = j.gravity, lifetime = { 0.4, 0.8 } })
+	if j.labelKey then -- QUEUE-ALL6 H 망치와 모루 "깡!" - 발밑에서 위로 떠오르며 사라짐(0.5초 · 남의 것은 작게)
+		local gui = Instance.new("BillboardGui")
+		gui.Name = "ArtV1JumpLabel"
+		gui.Size = UDim2.fromOffset(st.isLocal and 80 or 52, st.isLocal and 36 or 24)
+		gui.StudsOffsetWorldSpace = Vector3.new(0, 0.6, 0)
+		gui.LightInfluence = 0
+		local holder = Instance.new("Part")
+		holder.Name = "ArtV1JumpLabelAnchor"
+		holder.Anchored, holder.CanCollide, holder.CanQuery, holder.CanTouch = true, false, false, false
+		holder.Transparency = 1
+		holder.Size = Vector3.one * 0.1
+		holder.CFrame = CFrame.new(feet)
+		holder.Parent = Workspace
+		gui.Adornee = holder
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.Size = UDim2.fromScale(1, 1)
+		label.Font = Enum.Font.GothamBlack
+		label.TextScaled = true
+		label.TextColor3 = theme.core
+		label.TextStrokeTransparency = 0.2
+		label.Text = require(ReplicatedStorage.Shared.Text).get(j.labelKey)
+		label.Parent = gui
+		gui.Parent = holder
+		TweenService:Create(holder, TweenInfo.new(0.5), { CFrame = CFrame.new(feet + Vector3.new(0, 2.4, 0)) }):Play()
+		TweenService:Create(label, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		Debris:AddItem(holder, 0.55)
+	end
+end
+
+-- QUEUE-ALL6 H 할로윈 박쥐 한 마리(겉모습만): 날개 두 장(V) · 퍼덕이며 위로 날아 사라짐
+local function bat(position, color, size, seconds)
+	local body = Fx.part("ArtV1Bat", Vector3.new(size * 0.25, size * 0.25, size * 0.35), color, CFrame.new(position), Enum.PartType.Ball, Enum.Material.SmoothPlastic)
+	local wings = {}
+	for i, side in ipairs({ -1, 1 }) do
+		local w = Fx.part("ArtV1BatWing", Vector3.new(size * 0.5, 0.05, size * 0.3), color, CFrame.new(position) * CFrame.new(side * size * 0.3, 0, 0) * CFrame.Angles(0, 0, side * 0.5), Enum.PartType.Block, Enum.Material.SmoothPlastic)
+		wings[i] = w
+	end
+	local drift = Vector3.new((math.random() - 0.5) * 4, 2.5 + math.random() * 2, (math.random() - 0.5) * 4)
+	for _, p in ipairs({ body, wings[1], wings[2] }) do
+		p.Transparency = 1 - 0.9 * opacityScale()
+		TweenService:Create(p, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = p.Position + drift, Transparency = 1 }):Play()
+		Debris:AddItem(p, seconds + 0.05)
+	end
+	for i, w in ipairs(wings) do -- 퍼덕임(각 3번)
+		local side = i == 1 and -1 or 1
+		TweenService:Create(w, TweenInfo.new(seconds / 6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 5, true), { Orientation = w.Orientation + Vector3.new(0, 0, side * -40) }):Play()
+	end
 end
 
 local function footprint(st, theme)
@@ -147,6 +195,24 @@ local function footprint(st, theme)
 		q.Transparency = 1 - 0.7 * opacityScale()
 		TweenService:Create(q, TweenInfo.new(f.seconds), { Transparency = 1 }):Play()
 		Debris:AddItem(q, f.seconds + 0.05)
+	elseif f.shape == "hammer" then -- QUEUE-ALL6 H 망치 자국 = 머리(가로 네모) + 자루(가는 네모) 납작 자국
+		p = Fx.part("ArtV1Step", Vector3.new(f.size * 0.8, 0.06, f.size * 0.38), theme.edge, cf, Enum.PartType.Block, Enum.Material.SmoothPlastic)
+		local q = Fx.part("ArtV1Step", Vector3.new(f.size * 0.14, 0.06, f.size * 0.7), theme.core, cf * CFrame.new(0, 0, f.size * 0.5), Enum.PartType.Block, Enum.Material.SmoothPlastic)
+		q.Transparency = 1 - 0.7 * opacityScale()
+		TweenService:Create(q, TweenInfo.new(f.seconds), { Transparency = 1 }):Play()
+		Debris:AddItem(q, f.seconds + 0.05)
+	elseif f.shape == "pumpkin" then -- QUEUE-ALL6 H 호박 = 납작 원 셋(가운데 큰 것 + 양옆) + 꼭지
+		p = Fx.part("ArtV1Step", Vector3.new(0.06, f.size * 0.75, f.size * 0.9), f.pumpkin, cf * CFrame.Angles(0, 0, math.pi / 2), Enum.PartType.Cylinder, Enum.Material.SmoothPlastic)
+		for _, side in ipairs({ -1, 1 }) do
+			local q = Fx.part("ArtV1Step", Vector3.new(0.05, f.size * 0.55, f.size * 0.6), f.pumpkin:Lerp(theme.edge, 0.2), cf * CFrame.new(side * f.size * 0.3, 0, 0) * CFrame.Angles(0, 0, math.pi / 2), Enum.PartType.Cylinder, Enum.Material.SmoothPlastic)
+			q.Transparency = 1 - 0.8 * opacityScale()
+			TweenService:Create(q, TweenInfo.new(f.seconds), { Transparency = 1 }):Play()
+			Debris:AddItem(q, f.seconds + 0.05)
+		end
+		local stem = Fx.part("ArtV1Step", Vector3.new(f.size * 0.12, 0.08, f.size * 0.25), f.stem, cf * CFrame.new(0, 0, -f.size * 0.5), Enum.PartType.Block, Enum.Material.SmoothPlastic)
+		stem.Transparency = 1 - 0.8 * opacityScale()
+		TweenService:Create(stem, TweenInfo.new(f.seconds), { Transparency = 1 }):Play()
+		Debris:AddItem(stem, f.seconds + 0.05)
 	elseif f.shape == "star" then -- 별 = 45° 겹친 납작한 네모 두 장
 		p = Fx.part("ArtV1Step", Vector3.new(f.size * 0.7, 0.06, f.size * 0.7), theme.edge, cf * CFrame.Angles(0, math.rad(45), 0), Enum.PartType.Block, Enum.Material.Neon)
 		local q = Fx.part("ArtV1Step", Vector3.new(f.size * 0.7, 0.07, f.size * 0.7), theme.core, cf, Enum.PartType.Block, Enum.Material.Neon)
@@ -194,11 +260,22 @@ RunService.Heartbeat:Connect(function(dt)
 			if drops and now >= (st.nextDrop or 0) then
 				st.nextDrop = now + drops.every
 				local b = Fx.part("ArtV1Drop", Vector3.one * drops.size * (0.6 + math.random() * 0.6), math.random() < 0.5 and dashTheme.core or dashTheme.edge,
-					CFrame.new(st.root.Position + Vector3.new((math.random() - 0.5) * 1.6, -1.8 + math.random() * 1.2, (math.random() - 0.5) * 1.6)), Enum.PartType.Ball, Enum.Material.Glass)
+					CFrame.new(st.root.Position + Vector3.new((math.random() - 0.5) * 1.6, -1.8 + math.random() * 1.2, (math.random() - 0.5) * 1.6)), Enum.PartType.Ball, drops.neon and Enum.Material.Neon or Enum.Material.Glass) -- QUEUE-ALL6 H 망치와 모루 = 빛나는 불꽃
 				b.Transparency = 1 - 0.85 * opacityScale()
 				TweenService:Create(b, TweenInfo.new(drops.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = b.Size * 0.3, Position = b.Position - Vector3.new(0, 0.8, 0) }):Play()
 				Debris:AddItem(b, drops.seconds + 0.05)
 			end
+		end
+		local bats = dashTheme and dashTheme.dash.bats -- QUEUE-ALL6 H 할로윈: 대시 중 박쥐 떼
+		if bats and flat >= D.dashSpeed and not gliding and now >= (st.nextBat or 0) then
+			st.nextBat = now + bats.every * (st.isLocal and 1 or 2)
+			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 2, -0.5 + math.random(), (math.random() - 0.5) * 2), dashTheme.edge, bats.size, bats.seconds)
+		end
+		local gbats = gliding and on and near and themeOf(st.player, "glideTrail")
+		gbats = gbats and gbats.glide.bats
+		if gbats and now >= (st.nextGlideBat or 0) then -- 활강 중 박쥐 몇 마리가 따라 날다 흩어짐
+			st.nextGlideBat = now + gbats.every * (st.isLocal and 1 or 2)
+			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 3, 1 + math.random(), (math.random() - 0.5) * 3), themeOf(st.player, "glideTrail").edge, gbats.size, gbats.seconds)
 		end
 		st.dash.Enabled = dashTheme ~= nil and dashTheme ~= false and now < st.dashUntil
 		-- ② 점프 이펙트(위 속도가 갑자기 늘어남 = 지상 점프 · 공중 점프)

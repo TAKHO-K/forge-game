@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
@@ -31,6 +32,18 @@ local ROWS = {
 }
 
 local built
+local cosView = nil -- QUEUE-ALL6 H 꾸미기 보기: ShopSync 표(MonetizationService.view - 산 것 · 장착) 그대로
+local showCos = false
+
+-- 칸 → 고를 수 있는 목록(테마 세트 · 글라이더 · 소품) · 산 것만
+local function optionsFor(slotId)
+	if slotId == "gliderSkin" then
+		return CosmeticSlotData.gliderSkins, "gliderSkins"
+	elseif table.find(CosmeticSlotData.itemSlots, slotId) then
+		return CosmeticSlotData.items, "items"
+	end
+	return CosmeticSlotData.sets, "themes"
+end
 
 local function format(kind, v)
 	v = v or 0
@@ -110,12 +123,109 @@ local function build()
 			UIManager.openLazy("training")
 		end })
 	train.root.Name = "TrainingButton"
-	built = { panel = panel, left = left, className = className, values = values }
+
+	-- QUEUE-ALL6 H 꾸미기 보기(능력치 자리를 바꿔 끼움): 칸마다 [기본] + 산 것 칩 · 하이파이브 단추
+	local cos = Instance.new("ScrollingFrame")
+	cos.Name = "Cosmetics"
+	cos.BackgroundTransparency = 1
+	cos.BorderSizePixel = 0
+	cos.Position = list.Position
+	cos.Size = list.Size
+	cos.ScrollBarThickness = 6
+	cos.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	cos.CanvasSize = UDim2.new()
+	cos.Visible = false
+	cos.Parent = content
+	local cosLayout = Instance.new("UIListLayout")
+	cosLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	cosLayout.Padding = UDim.new(0, 4)
+	cosLayout.Parent = cos
+	local toggle = Button.build({ parent = content, kind = "secondary", text = Text.get("character.cosmetics"), width = 120,
+		position = UDim2.new(0.5, 0, 1, -12), anchorPoint = Vector2.new(0.5, 1), onActivated = function()
+			showCos = not showCos
+			CharacterPanel.render()
+			if showCos then
+				ReplicatedStorage:WaitForChild("ShopRequest"):FireServer("view")
+			end
+		end })
+	toggle.root.Name = "CosmeticsToggle"
+	built = { panel = panel, left = left, className = className, values = values, list = list, cos = cos, toggle = toggle }
+end
+
+local function renderCos()
+	local cos = built.cos
+	for _, child in ipairs(cos:GetChildren()) do
+		if not child:IsA("UIListLayout") then
+			child:Destroy()
+		end
+	end
+	if not cosView then
+		Theme.label(cos, Text.get("shop.loading"), "body", "textSecondary").Size = UDim2.new(1, 0, 0, 24)
+		return
+	end
+	local equipped = cosView.equipped or {}
+	local order = 0
+	local function add(inst)
+		order += 1
+		inst.LayoutOrder = order
+		inst.Parent = cos
+	end
+	if equipped.emote == "highFive" then
+		local use = Button.build({ parent = cos, kind = "primary", text = Text.get("cos.emote.use"), width = 140, onActivated = function()
+			local fx = player.PlayerScripts:FindFirstChild("CosmeticFx", true)
+			local use = fx and fx:FindFirstChild("CosmeticEmoteUse")
+			if use then
+				use:Fire()
+			end
+		end })
+		use.root.Name = "EmoteUse"
+		add(use.root)
+	end
+	for _, slot in ipairs(CosmeticSlotData.slots) do
+		local list, ownedKey = optionsFor(slot.id)
+		local row = Instance.new("Frame")
+		row.Name = "CosSlot_" .. slot.id
+		row.BackgroundTransparency = 1
+		row.Size = UDim2.new(1, -8, 0, 0)
+		row.AutomaticSize = Enum.AutomaticSize.Y
+		local rowLayout = Instance.new("UIListLayout")
+		rowLayout.FillDirection = Enum.FillDirection.Horizontal
+		rowLayout.Wraps = true
+		rowLayout.Padding = UDim.new(0, 4)
+		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		rowLayout.Parent = row
+		local title = Theme.label(row, Text.get("shop.slot." .. slot.id), "body", "textSecondary")
+		title.Size = UDim2.new(1, 0, 0, 20)
+		title.LayoutOrder = 0
+		local function chip(id, text, n)
+			local selected = equipped[slot.id] == id
+			local b = Button.build({ parent = row, kind = selected and "primary" or "secondary", text = text, width = 104, height = 28, layoutOrder = n, onActivated = function()
+				if not selected then
+					ReplicatedStorage:WaitForChild("ShopRequest"):FireServer("equip", slot.id, id)
+				end
+			end })
+			b.root.Name = "Chip_" .. tostring(id)
+		end
+		chip(nil, Text.get("shop.cos.default"), 1)
+		local owned = cosView[ownedKey] or {}
+		for i, entry in ipairs(list) do
+			if owned[entry.id] and (ownedKey ~= "items" or entry.slot == slot.id) then
+				chip(entry.id, Text.name(entry.name), i + 1)
+			end
+		end
+		add(row)
+	end
 end
 
 function CharacterPanel.render()
 	if not built then
 		return
+	end
+	built.list.Visible = not showCos
+	built.cos.Visible = showCos
+	built.toggle.setText(Text.get(showCos and "character.stats" or "character.cosmetics"))
+	if showCos then
+		renderCos()
 	end
 	local classId = player:GetAttribute("ClassId")
 	local class = classId and ClassData.classes[classId]
@@ -145,6 +255,14 @@ function CharacterPanel.init()
 		end)
 	end
 	player:GetAttributeChangedSignal("ClassId"):Connect(CharacterPanel.render)
+	task.spawn(function() -- QUEUE-ALL6 H 꾸미기 보기 표
+		ReplicatedStorage:WaitForChild("ShopSync").OnClientEvent:Connect(function(view)
+			cosView = view
+			if showCos and UIManager.isOpen(CharacterPanel.id) then
+				CharacterPanel.render()
+			end
+		end)
+	end)
 end
 
 return CharacterPanel

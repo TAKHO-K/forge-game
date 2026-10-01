@@ -10,6 +10,7 @@ local EggData = require(ReplicatedStorage.Shared.data.EggData)
 local NestState = require(script.Parent.NestState)
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit) -- A2-N3 Open Cloud 펫 메시
 local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
+local CROWN = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData).items.crown -- QUEUE-ALL6 H 펫 꾸미기(왕관)
 
 local localPlayer = Players.LocalPlayer
 for _ = 1, 50 do -- 구역 색은 NestView가 NestState에 붙인다(먼저 돌면 잠깐 기다림)
@@ -84,13 +85,36 @@ local function build(player)
 		light.Color, light.Brightness, light.Range = base, 1, 6
 		light.Parent = parts.Body.part
 	end
+	local head = parts.Head
+	if head and player:GetAttribute("Cosmetic_petAccessory") == "petCrown" then -- QUEUE-ALL6 H 왕관 = 머리 위 금 테 + 뾰족 셋 + 보석(머리 크기에 맞춤 · 몸 3종 공통)
+		local w = head.part.Size.X * CROWN.width
+		local top = head.offset * CFrame.new(0, head.part.Size.Y / 2 + CROWN.height * w / 2, 0)
+		local function piece(name, size, cf, color, shape)
+			local part = Instance.new("Part")
+			part.Name = name
+			part.Shape = shape or Enum.PartType.Block
+			part.Size = size
+			part.Color = color
+			part.Material = name == "Crown_Gem" and Enum.Material.Neon or Enum.Material.Metal
+			part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch = true, false, false, false
+			part.CastShadow = false
+			part.Parent = model
+			parts[name] = { part = part, offset = cf }
+		end
+		piece("Crown_Band", Vector3.new(CROWN.height * w * 0.6, w, w), top * CFrame.Angles(0, 0, math.pi / 2), CROWN.color, Enum.PartType.Cylinder)
+		for i = 1, 3 do
+			local a = (i - 2) * 0.55
+			piece("Crown_Spike" .. i, Vector3.new(w * 0.18, w * 0.3, w * 0.18), top * CFrame.new(math.sin(a) * w * 0.4, CROWN.height * w * 0.45, -math.cos(a) * w * 0.4) * CFrame.Angles(0, 0, math.rad(45)), CROWN.color)
+		end
+		piece("Crown_Gem", Vector3.one * w * 0.16, top * CFrame.new(0, 0, -w * 0.5), CROWN.gem, Enum.PartType.Ball)
+	end
 	model.Parent = folder
-	return { model = model, parts = parts, key = tostring(bodyId) .. "|" .. tostring(zone) .. "|" .. tostring(player:GetAttribute("PetGrade")) .. "|" .. tostring(mesh ~= nil), body = bodyId, pos = nil, yaw = 0, joyUntil = 0 }
+	return { model = model, parts = parts, key = tostring(bodyId) .. "|" .. tostring(zone) .. "|" .. tostring(player:GetAttribute("PetGrade")) .. "|" .. tostring(mesh ~= nil) .. "|" .. tostring(player:GetAttribute("Cosmetic_petAccessory")), body = bodyId, pos = nil, yaw = 0, joyUntil = 0 }
 end
 
 local function refresh(player)
 	local look = ArtImportData.petLookOfGrade[player:GetAttribute("PetGrade") or ""] or "normal"
-	local key = tostring(player:GetAttribute("PetBody")) .. "|" .. tostring(player:GetAttribute("PetZone")) .. "|" .. tostring(player:GetAttribute("PetGrade")) .. "|" .. tostring(ArtMeshKit.get("pets/" .. tostring(player:GetAttribute("PetBody")) .. "_" .. look) ~= nil)
+	local key = tostring(player:GetAttribute("PetBody")) .. "|" .. tostring(player:GetAttribute("PetZone")) .. "|" .. tostring(player:GetAttribute("PetGrade")) .. "|" .. tostring(ArtMeshKit.get("pets/" .. tostring(player:GetAttribute("PetBody")) .. "_" .. look) ~= nil) .. "|" .. tostring(player:GetAttribute("Cosmetic_petAccessory"))
 	local cur = pets[player]
 	if cur and cur.key == key then
 		return
@@ -102,7 +126,7 @@ local function refresh(player)
 end
 
 local function watch(player)
-	for _, attr in ipairs({ "PetBody", "PetZone", "PetGrade" }) do
+	for _, attr in ipairs({ "PetBody", "PetZone", "PetGrade", "Cosmetic_petAccessory" }) do
 		player:GetAttributeChangedSignal(attr):Connect(function()
 			refresh(player)
 		end)
@@ -187,7 +211,7 @@ RunService.RenderStepped:Connect(function(dt)
 			if name == "Wing_L" or name == "Wing_R" then
 				local flap = math.sin(now * 10) * 0.5 * (name == "Wing_L" and 1 or -1)
 				offset = offset * CFrame.Angles(0, 0, flap)
-			elseif name == "Head" then -- 숨쉬기 = 머리만 살짝(크기 변경 없이)
+			elseif name == "Head" or name:sub(1, 6) == "Crown_" then -- 숨쉬기 = 머리만 살짝(크기 변경 없이) · 왕관도 머리와 같이
 				offset = offset * CFrame.new(0, (breathe - 1) * 2, 0)
 			end
 			p.part.CFrame = cf * offset

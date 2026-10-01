@@ -176,6 +176,11 @@ local en = {
 	["골드"] = "Gold", ["보석"] = "Gem", ["랜덤 옵션"] = "Random Option", ["전투력"] = "Power", ["강화 보호"] = "Enhance Protection", ["행운 부스트"] = "Luck Boost", ["경험치 배수"] = "EXP Multiplier", ["골드 배수"] = "Gold Multiplier",
 	-- 다른 서버 초월 알림 설정
 	["전체"] = "Full", ["배너만"] = "Banner only", ["끔"] = "Off",
+
+	-- ═══ QUEUE-ALL6 H 꾸미기(CosmeticSlotData) ═══
+	["망치와 모루"] = "Hammer & Anvil", ["할로윈 박쥐"] = "Halloween Bats", ["슬라임 낙하산"] = "Slime Parachute",
+	["로켓 반짝"] = "Rocket Twinkle", ["풍선 펑"] = "Balloon Pop", ["수정 결정 무기"] = "Crystal Weapon", ["황금 망치"] = "Golden Hammer",
+	["대장간 화로"] = "Forge Braziers", ["하이파이브"] = "High Five", ["펫 왕관"] = "Pet Crown",
 }
 
 return { en = en }

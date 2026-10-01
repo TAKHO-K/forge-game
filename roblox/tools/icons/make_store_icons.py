@@ -306,6 +306,155 @@ def nameplateBadge(p, c):  # 이름표 배지(QUEUE-STUDIO 0-4 다시): 타일 �
     p.d.line(sh + [sh[0]], fill=INK, width=W, joint="curve")
     p.poly(star_pts(512, 500, 190, 0.45), GOLD, w=18)
 
+# ── QUEUE-ALL6 H 꾸미기 TOP 10(테마 2 · 글라이더 1 · 소품 7) ──
+def hammer(p, cx, cy, s, head, handle, ang=-35):
+    """망치: 자루(나무) + 가로 머리(head 색) - ang도 기울임"""
+    a = math.radians(ang)
+    ux, uy = math.cos(a), math.sin(a)  # 머리 가로 방향
+    vx, vy = -uy, ux  # 자루 방향(아래)
+    stroke(p, [(cx, cy), (cx + vx * s * 1.5, cy + vy * s * 1.5)], handle, s * 0.22)
+    hw, hh = s * 0.75, s * 0.32
+    pts = [(cx - ux * hw - vx * hh, cy - uy * hw - vy * hh), (cx + ux * hw - vx * hh, cy + uy * hw - vy * hh),
+           (cx + ux * hw + vx * hh, cy + uy * hw + vy * hh), (cx - ux * hw + vx * hh, cy - uy * hw + vy * hh)]
+    p.poly(pts, head)
+    p.poly([pts[2], pts[3], ((pts[2][0] + pts[3][0]) / 2 - vx * hh * 0.6, (pts[2][1] + pts[3][1]) / 2 - vy * hh * 0.6)], lo(head), w=0)
+
+
+def theme_anvil(p, c):  # 망치와 모루: 모루(강철) + 금노랑 망치 + 불꽃 튐
+    streaks(p, c, 700)
+    anvil = [(300, 560), (760, 560), (820, 520), (840, 600), (700, 640), (640, 760), (720, 820), (380, 820), (450, 760), (400, 640), (300, 620)]
+    p.poly(anvil, (150, 160, 178, 255))
+    p.poly([(400, 640), (700, 640), (640, 760), (450, 760)], (112, 120, 140, 255), w=0)
+    p.d.line(anvil + [anvil[0]], fill=INK, width=W, joint="curve")
+    hammer(p, 560, 330, 190, (255, 236, 110, 255), WOOD)
+    for x, y, r in ((300, 380, 40), (800, 380, 34), (850, 250, 26), (250, 250, 24)):
+        p.poly(star_pts(x, y, r * 1.6, 0.42, 4), (255, 244, 170, 255), w=14)
+
+
+def bat_shape(p, cx, cy, s, col):
+    wing = [(cx, cy - s * 0.1), (cx - s * 0.35, cy - s * 0.45), (cx - s * 0.8, cy - s * 0.35), (cx - s * 1.1, cy - s * 0.6), (cx - s * 1.05, cy),
+            (cx - s * 0.75, cy - s * 0.08), (cx - s * 0.55, cy + s * 0.18), (cx - s * 0.3, cy + s * 0.05), (cx, cy + s * 0.3)]
+    pts = wing + [(2 * cx - x, y) for x, y in reversed(wing)]
+    p.poly(pts, col)
+    p.ellipse((cx - s * 0.2, cy - s * 0.3, cx + s * 0.2, cy + s * 0.25), mul(col, 0.8), w=0)
+    p.ellipse((cx - s * 0.12, cy - s * 0.15, cx - s * 0.04, cy - s * 0.07), (255, 244, 170, 255), w=0)
+    p.ellipse((cx + s * 0.04, cy - s * 0.15, cx + s * 0.12, cy - s * 0.07), (255, 244, 170, 255), w=0)
+
+
+def theme_halloween(p, c):  # 할로윈 박쥐: 보라 타일 + 박쥐 셋 + 아래 차분한 호박(채도 낮은 갈색 - 위험색 밖)
+    pk = (196, 166, 130, 255)
+    for dx in (-110, 110):
+        p.ellipse((512 + dx - 150, 600, 512 + dx + 150, 860), mul(pk, 0.9))
+    p.ellipse((362, 580, 662, 870), pk)
+    stroke(p, [(512, 590), (530, 520)], (76, 120, 76, 255), 30)
+    bat_shape(p, 512, 360, 260, (70, 44, 104, 255))
+    bat_shape(p, 230, 600, 110, (96, 64, 140, 255))
+    bat_shape(p, 820, 560, 120, (96, 64, 140, 255))
+
+
+def glider_slimeParachute(p, c):  # 슬라임 낙하산: 연두 슬라임 반원 캐노피 + 눈 + 줄
+    glider_frame(p)
+    green = (120, 214, 126, 255)
+    dome = [(512 + 330 * math.cos(math.radians(a)), 520 + 280 * math.sin(math.radians(a))) for a in range(180, 361, 6)]
+    drips = [(842, 520), (790, 570), (740, 530), (680, 585), (620, 530), (512, 590), (420, 530), (350, 580), (290, 530), (230, 575), (182, 520)]
+    p.poly(dome + drips, green)
+    for x in (300, 512, 724):
+        p.d.line([(x, 560), (512, 760)], fill=STEEL_D, width=10)
+    p.ellipse((410, 330, 470, 400), (30, 40, 30, 255), w=0)
+    p.ellipse((554, 330, 614, 400), (30, 40, 30, 255), w=0)
+    p.ellipse((424, 342, 446, 364), WHITE, w=0)
+    p.ellipse((568, 342, 590, 364), WHITE, w=0)
+    p.ellipse((300, 300, 380, 360), lighten(green, 0.6), w=0)
+
+
+def item_rocketPop(p, c):  # 로켓 반짝: 하늘로 날아가는 작은 슬라임 + 궤적 + 반짝 별
+    stroke(p, [(200, 840), (330, 700), (440, 600)], lighten(c, 0.5), 60)
+    stroke(p, [(300, 880), (420, 760)], lighten(c, 0.5), 36)
+    slime = [(560 + 190 * math.cos(math.radians(a)), 520 + 160 * math.sin(math.radians(a)) * (1.25 if a > 180 else 1.0)) for a in range(0, 360, 8)]
+    p.poly(slime, (150, 214, 140, 255))
+    p.ellipse((500, 440, 540, 490), INK, w=0)
+    p.ellipse((590, 440, 630, 490), INK, w=0)
+    p.ellipse((450, 380, 500, 420), WHITE, w=0)
+    p.poly(star_pts(760, 270, 190, 0.38, 4), (255, 244, 170, 255))
+    sparkle(p, 300, 300, 60)
+    sparkle(p, 840, 520, 48)
+
+
+def item_balloonPop(p, c):  # 풍선 펑: 터지는 풍선(하늘 · 보라) + 색종이
+    p.ellipse((330, 240, 640, 590), (150, 200, 255, 255))
+    p.poly([(470, 590), (500, 590), (485, 630)], (120, 170, 230, 255), w=16)
+    stroke(p, [(485, 630), (470, 760), (500, 860)], (240, 240, 230, 255), 10)
+    p.ellipse((390, 300, 450, 380), WHITE, w=0)
+    p.poly(star_pts(720, 430, 200, 0.45, 8), (255, 244, 170, 255))
+    for x, y, col in ((250, 220, (190, 160, 255, 255)), (830, 230, (170, 240, 190, 255)), (850, 720, (150, 200, 255, 255)), (640, 800, (190, 160, 255, 255))):
+        p.poly([(x - 30, y - 18), (x + 30, y - 30), (x + 34, y + 18), (x - 26, y + 28)], col, w=12)
+
+
+def item_crystalBlade(p, c):  # 수정 결정 무기: 반투명 자수정 칼날(면 셋) + 금 손잡이
+    blade = [(512, 140), (610, 300), (580, 680), (444, 680), (414, 300)]
+    p.poly(blade, (196, 160, 244, 255))
+    p.poly([(512, 140), (610, 300), (580, 680), (512, 680)], (160, 120, 220, 255), w=0)
+    p.poly([(512, 200), (540, 320), (512, 600), (484, 320)], (230, 214, 255, 255), w=0)
+    p.d.line(blade + [blade[0]], fill=INK, width=W, joint="curve")
+    p.rrect((360, 670, 664, 730), 20, GOLD)
+    p.rrect((482, 730, 542, 880), 16, WOOD)
+    p.ellipse((470, 860, 554, 940), GOLD)
+    sparkle(p, 300, 260, 60)
+    sparkle(p, 740, 480, 44)
+
+
+def item_goldenHammer(p, c):  # 황금 망치: 큰 금 망치 + 내려찍는 반짝 고리
+    ring(p, (230, 700, 790, 860), (255, 244, 170, 255), 26)
+    hammer(p, 520, 330, 240, (255, 226, 92, 255), (190, 150, 84, 255), -25)
+    sparkle(p, 250, 300, 64)
+    sparkle(p, 820, 560, 54)
+
+
+def item_forgeBrazier(p, c):  # 대장간 화로: 무쇠 화로 그릇 + 금노랑 불꽃
+    outer = flame_pts(512, 560, 170, 420)
+    p.poly(outer, (255, 238, 130, 255))
+    p.poly(flame_pts(512, 540, 90, 240), (255, 250, 214, 255), w=18)
+    bowl = [(260, 520), (764, 520), (700, 700), (324, 700)]
+    p.poly(bowl, (82, 78, 90, 255))
+    p.poly([(290, 600), (734, 600), (700, 700), (324, 700)], (60, 56, 66, 255), w=0)
+    p.d.line(bowl + [bowl[0]], fill=INK, width=W, joint="curve")
+    for x in (360, 664):
+        stroke(p, [(x, 700), (x + (-40 if x < 512 else 40), 860)], (82, 78, 90, 255), 30)
+    for x, y, r in ((260, 330, 30), (780, 300, 26), (820, 460, 20)):
+        p.poly(star_pts(x, y, r * 1.6, 0.42, 4), (255, 236, 110, 255), w=12)
+
+
+def hand(p, cx, cy, s, flip, col):
+    """손바닥(손가락 넷 + 엄지) - flip = 좌우 뒤집기"""
+    k = -1 if flip else 1
+    p.poly([(cx - k * s * 0.4, cy + s * 0.5), (cx - k * s * 0.45, cy - s * 0.1), (cx + k * s * 0.4, cy - s * 0.15), (cx + k * s * 0.45, cy + s * 0.5)], col)
+    for i in range(4):
+        x = cx - k * s * 0.33 + k * i * s * 0.24
+        p.rrect((x - s * 0.13, cy - s * 0.75 + abs(i - 1.5) * s * 0.08, x + s * 0.13, cy + s * 0.05), s * 0.12, col, w=16)
+    tx = cx - k * s * 0.62
+    p.rrect((tx - s * 0.14, cy, tx + s * 0.14, cy + s * 0.35), s * 0.12, col, w=16)
+
+
+def item_highFive(p, c):  # 하이파이브: 두 손바닥이 맞닿는 가운데 별 터짐
+    hand(p, 330, 580, 300, False, CREAM)
+    hand(p, 694, 580, 300, True, CREAM_D)
+    p.poly(star_pts(512, 330, 150, 0.42, 8), (255, 244, 170, 255))
+    sparkle(p, 250, 230, 54)
+    sparkle(p, 790, 230, 54)
+
+
+def item_petCrown(p, c):  # 펫 왕관: 금 왕관(뾰족 셋 + 파란 보석) - 강아지 귀 두 개 위에 얹힘
+    for x in (300, 724):
+        p.poly([(x - 110, 860), (x, 600), (x + 110, 860)], (232, 196, 150, 255))
+    crown = [(240, 700), (240, 360), (370, 500), (512, 260), (654, 500), (784, 360), (784, 700)]
+    p.poly(crown, (250, 216, 92, 255))
+    p.poly([(240, 610), (784, 610), (784, 700), (240, 700)], (226, 186, 66, 255), w=0)
+    p.d.line(crown + [crown[0]], fill=INK, width=W, joint="curve")
+    gem(p, 512, 560, 64, (120, 190, 255, 255))
+    for x, y in ((240, 360), (512, 260), (784, 360)):
+        p.ellipse((x - 34, y - 34, x + 34, y + 34), (255, 244, 170, 255), w=14)
+
+
 
 # 이름 → (종류, 타일 색, 그리기, 그리기가 img를 받는가)
 ICONS = [
@@ -322,6 +471,16 @@ ICONS = [
     ("recallCooldown", "pass", (64, 150, 230), recallCooldown, False),
     ("nameplateColor", "pass", (140, 92, 226), nameplateColor, True),
     ("nameplateBadge", "pass", (56, 74, 150), nameplateBadge, False),  # QUEUE-STUDIO 0-4: 남색(색 아이콘 보라와 한눈에 구분)
+    ("theme_anvil", "product", (120, 132, 156), theme_anvil, False),  # QUEUE-ALL6 H 꾸미기 TOP 10
+    ("theme_halloween", "product", (132, 96, 186), theme_halloween, False),
+    ("glider_slimeParachute", "product", SKY_TILE, glider_slimeParachute, False),
+    ("item_rocketPop", "product", (92, 132, 220), item_rocketPop, False),
+    ("item_balloonPop", "product", (120, 190, 210), item_balloonPop, False),
+    ("item_crystalBlade", "product", (98, 76, 150), item_crystalBlade, False),
+    ("item_goldenHammer", "product", (96, 110, 170), item_goldenHammer, False),
+    ("item_forgeBrazier", "product", (100, 92, 120), item_forgeBrazier, False),
+    ("item_highFive", "product", (90, 170, 150), item_highFive, False),
+    ("item_petCrown", "product", (150, 120, 220), item_petCrown, False),
 ]
 
 

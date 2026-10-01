@@ -211,7 +211,7 @@ local function preview(kind, entry)
 	previewToken += 1
 	local mine = previewToken
 	local saved = {}
-	local slots = kind == "gliderSkin" and { "gliderSkin" } or { "dashTrail", "jumpFx", "glideTrail", "footstep" }
+	local slots = kind == "gliderSkin" and { "gliderSkin" } or kind == "cosmeticItem" and { entry.slot } or { "dashTrail", "jumpFx", "glideTrail", "footstep" } -- QUEUE-ALL6 H 소품 = 그 칸 하나
 	for _, slot in ipairs(slots) do
 		saved[slot] = player:GetAttribute("Cosmetic_" .. slot)
 		player:SetAttribute("Cosmetic_" .. slot, entry.id)

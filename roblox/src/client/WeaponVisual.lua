@@ -31,6 +31,7 @@ local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit) -- A2-N3 Open Cl
 local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
+local CRYSTAL = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData).items.crystal -- QUEUE-ALL6 H 무기 꾸미기(수정 결정)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules) -- W3c 공중 공격 해금(칼 들어 올림)
 
 local WeaponVisual = {}
@@ -374,6 +375,17 @@ local function rebuild(st)
 	st.weapon = buildWeapon(classId, primordialWeapon and Color3.fromRGB(245, 245, 250) or nil, Workspace, artModel, st.bodyScale)
 	if artModel then
 		artModel:Destroy() -- 무기 폴더에는 복제본이 들어간다
+	end
+	if st.weapon and attrOf(st, "Cosmetic_weaponSkin") == "crystalBlade" then -- QUEUE-ALL6 H: 몸 파트만 반투명 자수정(Neon · 빛 = 등급 · 강화 연출은 손대지 않는다)
+		for _, d in ipairs(st.weapon.folder:GetDescendants()) do
+			if d:IsA("BasePart") and d.Material ~= Enum.Material.Neon and d.Transparency < 1 then
+				d.Color, d.Material, d.Reflectance = CRYSTAL.color, Enum.Material.Glass, CRYSTAL.reflectance
+				d.Transparency = math.max(d.Transparency, CRYSTAL.transparency)
+				if d:IsA("MeshPart") then
+					d.TextureID = ""
+				end
+			end
+		end
 	end
 	if st.weapon and st.key == player then
 		current = st.weapon
@@ -1199,7 +1211,7 @@ local function bindPlayer(p)
 	if p.Character then
 		task.spawn(watchHand, p.Character)
 	end
-	for _, attr in ipairs({ "ClassId", "WeaponGrade", "ArtV1WeaponLook" }) do
+	for _, attr in ipairs({ "ClassId", "WeaponGrade", "ArtV1WeaponLook", "Cosmetic_weaponSkin" }) do
 		p:GetAttributeChangedSignal(attr):Connect(refresh)
 	end
 	-- QUEUE-ALL5 D①: Workspace 신호는 나간 사람 것도 안 끊겨 st(옛 캐릭터 · 무기)를 붙잡았다 → st에 두고 PlayerRemoving에서 끊는다

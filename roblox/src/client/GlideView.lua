@@ -39,6 +39,9 @@ local function skinLook(character)
 	for _, s in ipairs(CosmeticSlotData.gliderSkins) do
 		if s.id == skinId and s.look ~= "" and CosData.gliders[s.look] then
 			local spec = CosData.gliders[s.look]
+			if spec.procedural then -- QUEUE-ALL6 H 파트로 짓는 모양(메시 없음)
+				return s.look, spec, nil
+			end
 			local src = ArtMeshKit.get(spec.mesh)
 			return src and s.look or nil, spec, src
 		end
@@ -140,6 +143,52 @@ local function buildWhale(model, root, spec, src)
 	end)
 end
 
+-- QUEUE-ALL6 H #55 슬라임 낙하산: 덮개(납작한 공 · 유리 젤리) + 눈 + 줄 넷 · 덮개가 천천히 출렁(가로 · 세로 크기 사인)
+local function buildParachute(model, root, spec)
+	local canopy = Instance.new("Part")
+	canopy.Name = "SlimeCanopy"
+	canopy.Shape = Enum.PartType.Ball
+	canopy.Material = Enum.Material.Glass
+	canopy.Color = spec.color
+	canopy.Transparency = 0.25
+	canopy.Size = Vector3.new(spec.width, spec.height, spec.width)
+	loosePart(canopy, model)
+	weld(root, canopy, CFrame.new(0, spec.above, 0))
+	for _, side in ipairs({ -1, 1 }) do
+		local eye = Instance.new("Part")
+		eye.Name = "SlimeEye"
+		eye.Shape = Enum.PartType.Ball
+		eye.Color = spec.eye
+		eye.Size = Vector3.one * 0.5
+		loosePart(eye, model)
+		weld(canopy, eye, CFrame.new(side * spec.width * 0.18, spec.height * 0.12, -spec.width * 0.44))
+	end
+	for _, x in ipairs({ -1, 1 }) do
+		for _, z in ipairs({ -1, 1 }) do
+			local top = Vector3.new(x * spec.width * 0.36, spec.above - spec.height * 0.25, z * spec.width * 0.36)
+			local bottom = Vector3.new(x * 0.8, 1.2, z * 0.3)
+			local len = (top - bottom).Magnitude
+			local rope = Instance.new("Part")
+			rope.Name = "SlimeRope"
+			rope.Color = spec.color:Lerp(Color3.new(1, 1, 1), 0.4)
+			rope.Size = Vector3.new(0.08, len, 0.08)
+			loosePart(rope, model)
+			weld(root, rope, CFrame.lookAt((top + bottom) / 2, top) * CFrame.Angles(math.rad(90), 0, 0))
+		end
+	end
+	local t0 = os.clock()
+	local base = canopy.Size
+	local conn
+	conn = game:GetService("RunService").RenderStepped:Connect(function()
+		if not canopy.Parent then
+			conn:Disconnect()
+			return
+		end
+		local k = math.sin((os.clock() - t0) * spec.wobbleHz * 2 * math.pi) * spec.wobble
+		canopy.Size = Vector3.new(base.X * (1 + k), base.Y * (1 - k), base.Z * (1 + k)) -- 말랑하게 출렁
+	end)
+end
+
 function GlideView.show(character)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root or character:FindFirstChild("MV1Glider") then
@@ -155,6 +204,8 @@ function GlideView.show(character)
 			buildWings(model, root, spec, src)
 		elseif look == "cloudWhale" then
 			buildWhale(model, root, spec, src)
+		elseif look == "slimeParachute" then
+			buildParachute(model, root, spec)
 		end
 		AirMotion.hold(character, "glide", LOOK.poseLeanDeg)
 		require(script.Parent.WeaponVisual).playOverlay(Players:GetPlayerFromCharacter(character), "glideIn")

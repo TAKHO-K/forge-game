@@ -12,6 +12,15 @@ local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local CosmeticService = {}
 
+-- QUEUE-ALL6 H 꾸미기 소품 중계 Remote(서버 → 클라 그림만): CosmeticKill(처치 이펙트 - CombatResolution) · EmoteEvent(이모트 요청 · 수락 · 재생)
+for _, name in ipairs({ "CosmeticKill" }) do
+	if not game:GetService("ReplicatedStorage"):FindFirstChild(name) then
+		local r = Instance.new("RemoteEvent")
+		r.Name = name
+		r.Parent = game:GetService("ReplicatedStorage")
+	end
+end
+
 local SET_SLOTS = {}
 local ITEM_SLOTS = {} -- QUEUE-ALL6 H
 for _, slotId in ipairs(CosmeticSlotData.itemSlots or {}) do

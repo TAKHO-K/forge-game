@@ -35,7 +35,7 @@
 
 ### 1-2. 만들 목록 (데이터 = `roblox/src/shared/data/MonetizationData.lua`)
 
-> 설계 문서(monetization-p4c.md §2 · §9)와 roadmap P6은 "상품 6 · 패스 4"라고 적혀 있지만 **지금 데이터는 상품 8 · 패스 5**다(QUEUE-ALL1 P6에서 `theme_jelly` · `glider_dragonWing` · `nameplateBadge` 추가). 이 표가 기준이다.
+> 설계 문서(monetization-p4c.md §2 · §9)와 roadmap P6은 "상품 6 · 패스 4"라고 적혀 있지만 **지금 데이터는 상품 18 · 패스 5**다(QUEUE-ALL1 P6에서 `theme_jelly` · `glider_dragonWing` · `nameplateBadge` 추가 · QUEUE-ALL6 H에서 꾸미기 10 추가 - 줄 29-1 ~ 29-10). 이 표가 기준이다.
 > 가격 = 데이터의 `robux` 값 그대로(표시용 자리값). **실제 청구 가격은 Creator Hub 값이 진실**이라 두 값을 같게 맞춘다. 표시 이름 = 게임 안 이름(`CosmeticSlotData.lua` · `TextData.lua shop.pass.*.name`).
 
 | 줄 | MonetizationData 키 | 종류 | 표시 이름(추천) | 가격 자리(로벅스) | 아이콘 512 파일 | 받은 ID를 넣을 칸 |
@@ -47,6 +47,16 @@
 | 25 | `glider_petal` | 개발자 상품 | 꽃잎 글라이더 | 149 | `docs/release/icons/glider_petal.png`(QUEUE-ALL5 E) | `products.glider_petal.productId` |
 | 26 | `glider_kite` | 개발자 상품 | 연 글라이더 | 149 | `docs/release/icons/glider_kite.png`(QUEUE-ALL5 E) | `products.glider_kite.productId` |
 | 28 | `glider_dragonWing` | 개발자 상품 | 푸른 드래곤 날개 | 149 | `docs/release/icons/glider_dragonWing.png`(QUEUE-ALL5 E) | `products.glider_dragonWing.productId` |
+| 29-1 | `theme_anvil` | 개발자 상품 | 테마 세트 「망치와 모루」 | 199 | `docs/release/icons/theme_anvil.png`(QUEUE-ALL6 H) | `products.theme_anvil.productId` |
+| 29-2 | `theme_halloween` | 개발자 상품 | 테마 세트 「할로윈 박쥐」(10월만 판매) | 199 | `docs/release/icons/theme_halloween.png`(QUEUE-ALL6 H) | `products.theme_halloween.productId` |
+| 29-3 | `glider_slimeParachute` | 개발자 상품 | 슬라임 낙하산 | 149 | `docs/release/icons/glider_slimeParachute.png`(QUEUE-ALL6 H) | `products.glider_slimeParachute.productId` |
+| 29-4 | `item_rocketPop` | 개발자 상품 | 처치 이펙트 「로켓 반짝」 | 99 | `docs/release/icons/item_rocketPop.png`(QUEUE-ALL6 H) | `products.item_rocketPop.productId` |
+| 29-5 | `item_balloonPop` | 개발자 상품 | 처치 이펙트 「풍선 펑」 | 99 | `docs/release/icons/item_balloonPop.png`(QUEUE-ALL6 H) | `products.item_balloonPop.productId` |
+| 29-6 | `item_crystalBlade` | 개발자 상품 | 무기 스킨 「수정 결정 무기」 | 149 | `docs/release/icons/item_crystalBlade.png`(QUEUE-ALL6 H) | `products.item_crystalBlade.productId` |
+| 29-7 | `item_goldenHammer` | 개발자 상품 | 강화 연출 「황금 망치」 | 99 | `docs/release/icons/item_goldenHammer.png`(QUEUE-ALL6 H) | `products.item_goldenHammer.productId` |
+| 29-8 | `item_forgeBrazier` | 개발자 상품 | 귀환 연출 「대장간 화로」 | 99 | `docs/release/icons/item_forgeBrazier.png`(QUEUE-ALL6 H) | `products.item_forgeBrazier.productId` |
+| 29-9 | `item_highFive` | 개발자 상품 | 이모트 「하이파이브」 | 49 | `docs/release/icons/item_highFive.png`(QUEUE-ALL6 H) | `products.item_highFive.productId` |
+| 29-10 | `item_petCrown` | 개발자 상품 | 펫 꾸미기 「펫 왕관」 | 49 | `docs/release/icons/item_petCrown.png`(QUEUE-ALL6 H) | `products.item_petCrown.productId` |
 | 29 | `season_premium` | 개발자 상품(시즌마다 다시 삼) | 시즌 패스 유료 줄 | 399 | `docs/release/icons/season_premium.png`(QUEUE-ALL5 E) | `products.season_premium.productId` |
 | 33 | `bagExpand` | 게임패스 | 가방 확장 | 149 | `docs/release/icons/bagExpand.png`(QUEUE-ALL5 E) | `gamePasses.bagExpand.passId` |
 | 34 | `pickupRadius` | 게임패스 | 자동 줍기 반경 | 99 | `docs/release/icons/pickupRadius.png`(QUEUE-ALL5 E) | `gamePasses.pickupRadius.passId` |
@@ -54,8 +64,8 @@
 | 36 | `nameplateColor` | 게임패스 | 이름표 색 | 49 | `docs/release/icons/nameplateColor.png`(QUEUE-ALL5 E) | `gamePasses.nameplateColor.passId` |
 | 37 | `nameplateBadge` | 게임패스 | 이름표 배지 | 49 | `docs/release/icons/nameplateBadge.png`(QUEUE-ALL5 E) | `gamePasses.nameplateBadge.passId` |
 
-- 아이콘(QUEUE-ALL5 E): **13장 제작 완료** = `docs/release/icons/<키>.png`(512 × 512 · 투명 바깥 · 3톤 · 굵은 외곽선 · 글자 없음 · 다시 만들기 = `docs/release/icons/README.md`). 업로드는 Creator Hub 각 상품 · 패스 화면의 아이콘 칸(사용자). 비교용 게임 아이콘 Blender판 = `game_icon_blender_{A,B,C}.png`. 아래는 옛 메모: `roblox/art/icons` 아래에 상품 · 패스 전용 512 아이콘은 **하나도 없었다**. 비슷한 것은 보상 아이콘 `roblox/art/icons/reward/cosmeticTheme.png` · `gliderSkin.png` · HUD `roblox/art/icons/hud/bag.png` · `return.png`뿐이고 모두 **256 × 256 범용**이라 임시로도 512 확대가 필요하다. → 13장 제작 필요(★ 사용자 결정: 직접 만들지 · 아트 단계에 맡길지 · 임시로 범용 아이콘 확대본을 쓸지).
-- 가격 13칸은 전부 자리값이다(monetization-p4c.md §10 "자리값 유지"로 닫혔지만 **실제 값 확정은 ★ 사용자 결정**).
+- 아이콘(QUEUE-ALL5 E): **13장 제작 완료** + QUEUE-ALL6 H 10장(`make_store_icons.py` 같은 스타일) = `docs/release/icons/<키>.png`(512 × 512 · 투명 바깥 · 3톤 · 굵은 외곽선 · 글자 없음 · 다시 만들기 = `docs/release/icons/README.md`). 업로드는 Creator Hub 각 상품 · 패스 화면의 아이콘 칸(사용자). 비교용 게임 아이콘 Blender판 = `game_icon_blender_{A,B,C}.png`. 아래는 옛 메모: `roblox/art/icons` 아래에 상품 · 패스 전용 512 아이콘은 **하나도 없었다**. 비슷한 것은 보상 아이콘 `roblox/art/icons/reward/cosmeticTheme.png` · `gliderSkin.png` · HUD `roblox/art/icons/hud/bag.png` · `return.png`뿐이고 모두 **256 × 256 범용**이라 임시로도 512 확대가 필요하다. → 13장 제작 필요(★ 사용자 결정: 직접 만들지 · 아트 단계에 맡길지 · 임시로 범용 아이콘 확대본을 쓸지).
+- 가격 23칸은 전부 자리값이다(monetization-p4c.md §10 "자리값 유지"로 닫혔지만 **실제 값 확정은 ★ 사용자 결정**).
 - 설명란(각 상품): 게임 안 설명과 같게 - 예) 가방 확장 "가방 칸 +20" · 자동 줍기 "펫 자동 줍기 반경 ×1.5" · 빠른 귀환 "마을 귀환 대기 시간 ×0.5" · 테마 "대시 · 점프 · 활강 · 발자국 4칸 치장(능력치 없음)". "전투력 · 획득량은 오르지 않습니다"를 함께 적는다(`TextData.lua:645`).
 
 ### 1-3. ID 채우기 → 확인

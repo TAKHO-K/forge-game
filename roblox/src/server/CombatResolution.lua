@@ -487,6 +487,14 @@ function CombatResolution.resolveHit(attacker, target, isDead)
 	elseif monsterData.isChest then
 		handleChestBreak(target)
 	else
+		-- QUEUE-ALL6 H 처치 이펙트(꾸미기 소품 killFx): 몹이 사라지기 전에 주변 사람에게 중계(겉모습만 - 처치 · 드랍은 그 자리 그대로 · 보스 · 상자 제외)
+		local look = typeof(attacker) == "Instance" and attacker:GetAttribute("Cosmetic_killFx")
+		if look then
+			local relay = game:GetService("ReplicatedStorage"):FindFirstChild("CosmeticKill")
+			if relay and target.PrimaryPart then
+				relay:FireAllClients(attacker.UserId, look, target, target.PrimaryPart.Position)
+			end
+		end
 		handleMobDeath(target)
 	end
 

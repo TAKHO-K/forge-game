@@ -4,13 +4,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
+local Monetization = require(ReplicatedStorage.Shared.Monetization)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Text = require(ReplicatedStorage.Shared.Text)
 
 local CosmeticTab = {}
 
 local function nameOf(kind, id)
-	local list = kind == "cosmeticTheme" and CosmeticSlotData.sets or CosmeticSlotData.gliderSkins
+	local list = kind == "cosmeticTheme" and CosmeticSlotData.sets or kind == "cosmeticItem" and CosmeticSlotData.items or CosmeticSlotData.gliderSkins
 	for _, entry in ipairs(list) do
 		if entry.id == id then
 			return Text.name(entry.name)
@@ -21,10 +22,13 @@ end
 CosmeticTab.nameOf = nameOf
 
 -- 판매 행 하나(테마 세트 · 글라이더 공통). kind = "cosmeticTheme" | "gliderSkin" · productKey = MonetizationData.products 키
+local TRY_ITEM_SLOTS = { weaponSkin = true, petAccessory = true } -- QUEUE-ALL6 H 입혀 보기 = 내 화면 Attribute만 바꿔 바로 보이는 칸(처치 · 강화 · 귀환 · 이모트는 서버 사건이 있어야 보임)
 local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKey, subtitleKey)
 	local buttons
 	if owned then
 		buttons = { { name = "Owned_" .. entry.id, text = Text.get("shop.owned"), enabled = false } }
+	elseif not Monetization.onSale(CosmeticSlotData, kind, entry.id) then -- QUEUE-ALL6 H 시즌 한정(할로윈 = 10월) 판매 기간 밖
+		buttons = { { name = "OffSeason_" .. entry.id, text = Text.get("shop.cos.offSeason", { month = tostring(entry.seasonMonth) }), width = 140, enabled = false } }
 	else
 		buttons = {
 			{ name = "Shards_" .. entry.id, text = Text.get("shop.shardPrice", { n = tostring(shardPrice) }), kind = "primary",
@@ -32,10 +36,12 @@ local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKe
 					env.send("buyShards", kind, entry.id)
 				end },
 			env.robuxButton(productKey, "Robux_" .. entry.id),
-			{ name = "Try_" .. entry.id, text = Text.get("shop.cos.try"), width = 84, enabled = true, onActivated = function() -- QUEUE-ALL2 P2 B-4 ①: 내 캐릭터에 입혀 보기(로컬 · 잠깐)
-				env.preview(kind, entry)
-			end },
 		}
+		if kind ~= "cosmeticItem" or TRY_ITEM_SLOTS[entry.slot] then
+			table.insert(buttons, { name = "Try_" .. entry.id, text = Text.get("shop.cos.try"), width = 84, enabled = true, onActivated = function() -- QUEUE-ALL2 P2 B-4 ①: 내 캐릭터에 입혀 보기(로컬 · 잠깐)
+				env.preview(kind, entry)
+			end })
+		end
 	end
 	ctx.row({
 		name = "Sale_" .. entry.id,
@@ -96,23 +102,39 @@ function CosmeticTab.render(ctx, env)
 		end
 		saleRow(ctx, env, view, "gliderSkin", skin, view.gliderSkins and view.gliderSkins[skin.id] == true, view.shardPrices.gliderSkin, "glider_" .. skin.id, "shop.cos.gliderSub")
 	end
+	-- QUEUE-ALL6 H 소품(칸 하나짜리) - 칸별 묶음
+	ctx.section(Text.get("shop.cos.itemSection"), "ItemSection")
+	for _, slotId in ipairs(CosmeticSlotData.itemSlots) do
+		ctx.line(Text.get("shop.slot." .. slotId), "textSecondary", 1, "ItemSlot_" .. slotId)
+		for _, item in ipairs(CosmeticSlotData.items) do
+			if item.slot == slotId then
+				saleRow(ctx, env, view, "cosmeticItem", item, view.items and view.items[item.id] == true, view.shardPrices.item, "item_" .. item.id, "shop.cos.itemSub." .. slotId)
+			end
+		end
+	end
 
 	ctx.section(Text.get("shop.cos.equipSection"), "EquipSection")
 	local equipped = view.equipped or {}
 	for _, slot in ipairs(CosmeticSlotData.slots) do
 		local isGlider = slot.id == "gliderSkin"
+		local isItem = table.find(CosmeticSlotData.itemSlots, slot.id) ~= nil -- QUEUE-ALL6 H 소품 칸
 		local options = {}
-		for _, entry in ipairs(isGlider and CosmeticSlotData.gliderSkins or CosmeticSlotData.sets) do
-			local owned = isGlider and view.gliderSkins[entry.id] or (not isGlider and view.themes[entry.id])
+		for _, entry in ipairs(isGlider and CosmeticSlotData.gliderSkins or isItem and CosmeticSlotData.items or CosmeticSlotData.sets) do
+			local owned
+			if isItem then
+				owned = entry.slot == slot.id and view.items and view.items[entry.id]
+			else
+				owned = isGlider and view.gliderSkins[entry.id] or (not isGlider and view.themes[entry.id])
+			end
 			if owned then
 				table.insert(options, { id = entry.id, text = Text.name(entry.name) })
 			end
 		end
 		local current = equipped[slot.id]
 		ctx.line(Text.get("shop.cos.slotLine", { slot = Text.get("shop.slot." .. slot.id),
-			current = current and nameOf(isGlider and "gliderSkin" or "cosmeticTheme", current) or Text.get("shop.cos.default") }), "textPrimary", 1, "Slot_" .. slot.id)
+			current = current and nameOf(isGlider and "gliderSkin" or isItem and "cosmeticItem" or "cosmeticTheme", current) or Text.get("shop.cos.default") }), "textPrimary", 1, "Slot_" .. slot.id)
 		if #options == 0 then
-			ctx.line(Text.get(isGlider and "shop.cos.noGlider" or "shop.cos.noTheme"), "textSecondary", 1, "SlotEmpty_" .. slot.id)
+			ctx.line(Text.get(isGlider and "shop.cos.noGlider" or isItem and "shop.cos.noItem" or "shop.cos.noTheme"), "textSecondary", 1, "SlotEmpty_" .. slot.id)
 		else
 			equipChips(ctx, env, slot.id, current, options)
 		end
