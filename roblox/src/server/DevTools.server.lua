@@ -3186,6 +3186,19 @@ local function handleCommand(player, args)
 		-- QUEUE-ALL1 P4 §1: 초대 보상 경로 시험(초대자 userId를 넣어 첫 접속 보상을 흉내 - 쌍 키는 Studio 저장소)
 		require(script.Parent.SocialRewardService).onLoaded(player, tonumber(args[2]))
 		reply(player, "초대 보상 시험: 초대자 " .. tostring(args[2]))
+	elseif sub == "cp" and (args[2] == "all" or args[2] == "clear") then
+		-- QUEUE-ALL6 B2: 체크포인트 강제 발견(all = 전부 찾음 · clear = 비움) - 거절 · 쿨 시험용(저장은 다음 저장 때 - 수동 Play는 백업 복원)
+		local rec = require(script.Parent.PlayerProfile).getCheckpoints(player)
+		if rec then
+			table.clear(rec.found)
+			if args[2] == "all" then
+				for _, cp in ipairs(require(ReplicatedStorage.Shared.data.WorldMapData).checkpoints.list) do
+					table.insert(rec.found, cp.id)
+				end
+			end
+			require(script.Parent.Travel).onCheckpointsLoaded(player)
+		end
+		reply(player, "체크포인트 발견: " .. args[2] .. " · " .. tostring(rec and #rec.found))
 	elseif sub == "rift" and (args[2] == "on" or args[2] == "off" or args[2] == "auto") then
 		-- QUEUE-ALL1 P3 §3: 균열 강제(on = 지금부터 20분 · off = 강제 끔 · auto = 시간표) - RiftService가 1초 안에 반영
 		workspace:SetAttribute("RiftForceEndsAt", nil)
@@ -4378,6 +4391,7 @@ if RunService:IsStudio() then
 				{ "G1-1(나)", function() require(script.Parent.G1_1Verify).runLive(player, env) end }, -- G1-1: 보상 띠 강화석 = 지급 식(경험치 배수)
 				{ "6hbF(나)", function() require(script.Parent.SaveLockVerify).runLive(player, env) end }, -- QUEUE-6h-b 후속: 새 계정 첫 로드 · 저장 왕복 · 약한 세션 잠금(실제 DataStore 대기 약 20초) · 음수 골드
 				{ "G1-0(나)", function() require(script.Parent.G1_0Verify).runLive(player, env) end }, -- G1-0: 받는 피해 하한 · 복귀 표본(벽 위 · 바깥 · 허공 · 연쇄) · 단상 점프 판정 · 12인 재생성 전후
+				{ "ALL6(나)", function() require(script.Parent.QueueAll6Verify).runLive(player, env) end }, -- QUEUE-ALL6: 체크포인트 거절 · 취소 · 쿨(B2) + 뒤 항목 절(extraSections) - VerifyOnly 단독
 				{ "P3a(가C2)", function() require(script.Parent.P3aVerify).runEdge() end }, -- P3a: 가장자리 회피 전 · 후(무거운 계산 - 실시간 검증과 겹치지 않게 맨 끝)
 				{ "P3d(가E)", function() require(script.Parent.P3dVerify).runRegrowSeeds() end }, -- P3d: 재생성 100시드 × 6맵(무거운 계산 - 맨 끝)
 				{ "P3dF(가E)", function() require(script.Parent.P3dFVerify).runRegrowSeeds() end }, -- P3d-F B4: 상한 교체 100시드 × 6맵 · 면적 하한 · 닫힌 공간(무거운 계산 - 맨 끝)
@@ -4631,13 +4645,10 @@ end
 
 -- ═══ P0 자동 검증 블록(가) - 경제 시뮬(EconSim) 기준선 전체 실행 + 표본 대조 + 덮어쓰기 복원(순수 계산) ═══
 -- 플레이어 불필요. 기준선 보고서([ECONMD] 줄)를 그대로 출력 창에 남긴다 - docs/econ/_extract.py가 이 줄을 E1-baseline.md로 옮긴다.
+-- QUEUE-ALL6 B5: 무거운 블록 → 체인 끝(deferHeavyPure). QUEUE-STUDIO에서 서버 시작 때 돈 P0(가)(EconSim 약 2분 연산)가 같은 Play의 BR1(나) 대공 잡기 체공 시간(실시간 Heartbeat)을
+--   밀어 6건 X(단독 66/66 · 같이 60/66 - 제품 코드 무변경 · 지연 원인 = 검증 연산)였다. 실시간 (나) 블록은 무거운 (가)와 시간이 겹치지 않아야 한다(docs/phase/verify-isolation.md).
 if RunService:IsStudio() and verifyEnabled("P0(가)") then
-	task.spawn(function()
-		local ok, err = pcall(require(script.Parent.EconSimVerify).runPure)
-		if not ok then
-			warn(("[P0(가)] 검증 블록 에러: %s"):format(tostring(err)))
-		end
-	end)
+	deferHeavyPure("P0(가)", require(script.Parent.EconSimVerify).runPure)
 end
 
 -- ═══ P2 자동 검증 블록(가) - 환생표 · GoldCost · 정밀도 · NumberFormat · 보석 곡선 · 드랍표 · 치유사 · 파티 경험치 조건(순수 계산) ═══
