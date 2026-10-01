@@ -165,15 +165,28 @@ local function jumpFx(st, theme)
 end
 
 -- QUEUE-ALL6 H 할로윈 박쥐 한 마리(겉모습만): 날개 두 장(V) · 퍼덕이며 위로 날아 사라짐
-local function bat(position, color, size, seconds)
-	local body = Fx.part("ArtV1Bat", Vector3.new(size * 0.25, size * 0.25, size * 0.35), color, CFrame.new(position), Enum.PartType.Ball, Enum.Material.SmoothPlastic)
-	local wings = {}
-	for i, side in ipairs({ -1, 1 }) do
-		local w = Fx.part("ArtV1BatWing", Vector3.new(size * 0.5, 0.05, size * 0.3), color, CFrame.new(position) * CFrame.new(side * size * 0.3, 0, 0) * CFrame.Angles(0, 0, side * 0.5), Enum.PartType.Block, Enum.Material.SmoothPlastic)
-		wings[i] = w
+--   QUEUE-ALL6R 결정 5: 주황 눈 둘(spec.eye) · spec.pumpkinEvery번째마다 박쥐 대신 작은 주황 호박 장식(theme.ornament)이 같은 길로 떠오른다(공중 요소만 주황).
+local function bat(position, color, size, seconds, spec, theme, count)
+	local ornament = spec and spec.pumpkinEvery and theme and theme.ornament and count % spec.pumpkinEvery == 0 and theme.ornament
+	local parts, wings = {}, {}
+	if ornament then
+		local s = ornament.size
+		table.insert(parts, Fx.part("ArtV1BatPumpkin", Vector3.new(s * 1.1, s * 0.85, s * 1.1), ornament.pumpkin, CFrame.new(position), Enum.PartType.Ball, Enum.Material.SmoothPlastic))
+		table.insert(parts, Fx.part("ArtV1BatPumpkin", Vector3.new(s * 0.14, s * 0.35, s * 0.14), ornament.stem, CFrame.new(position + Vector3.new(0, s * 0.5, 0)), Enum.PartType.Block, Enum.Material.SmoothPlastic))
+	else
+		local body = Fx.part("ArtV1Bat", Vector3.new(size * 0.25, size * 0.25, size * 0.35), color, CFrame.new(position), Enum.PartType.Ball, Enum.Material.SmoothPlastic)
+		table.insert(parts, body)
+		for i, side in ipairs({ -1, 1 }) do
+			local w = Fx.part("ArtV1BatWing", Vector3.new(size * 0.5, 0.05, size * 0.3), color, CFrame.new(position) * CFrame.new(side * size * 0.3, 0, 0) * CFrame.Angles(0, 0, side * 0.5), Enum.PartType.Block, Enum.Material.SmoothPlastic)
+			wings[i] = w
+			table.insert(parts, w)
+			if spec and spec.eye then -- 눈 = 몸 앞쪽 위 작은 점 둘(Neon - 어두운 하늘에서도 보인다)
+				table.insert(parts, Fx.part("ArtV1BatEye", Vector3.new(size * 0.07, size * 0.07, size * 0.07), spec.eye, CFrame.new(position + Vector3.new(side * size * 0.05, size * 0.06, -size * 0.16)), Enum.PartType.Ball, Enum.Material.Neon))
+			end
+		end
 	end
 	local drift = Vector3.new((math.random() - 0.5) * 4, 2.5 + math.random() * 2, (math.random() - 0.5) * 4)
-	for _, p in ipairs({ body, wings[1], wings[2] }) do
+	for _, p in ipairs(parts) do
 		p.Transparency = 1 - 0.9 * opacityScale()
 		TweenService:Create(p, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = p.Position + drift, Transparency = 1 }):Play()
 		Debris:AddItem(p, seconds + 0.05)
@@ -273,13 +286,16 @@ RunService.Heartbeat:Connect(function(dt)
 		local bats = dashTheme and dashTheme.dash.bats -- QUEUE-ALL6 H 할로윈: 대시 중 박쥐 떼
 		if bats and flat >= D.dashSpeed and not gliding and now >= (st.nextBat or 0) then
 			st.nextBat = now + bats.every * (st.isLocal and 1 or 2)
-			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 2, -0.5 + math.random(), (math.random() - 0.5) * 2), dashTheme.edge, bats.size, bats.seconds)
+			st.batCount = (st.batCount or 0) + 1
+			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 2, -0.5 + math.random(), (math.random() - 0.5) * 2), dashTheme.edge, bats.size, bats.seconds, bats, dashTheme, st.batCount)
 		end
 		local gbats = gliding and on and near and themeOf(st.player, "glideTrail")
 		gbats = gbats and gbats.glide.bats
 		if gbats and now >= (st.nextGlideBat or 0) then -- 활강 중 박쥐 몇 마리가 따라 날다 흩어짐
 			st.nextGlideBat = now + gbats.every * (st.isLocal and 1 or 2)
-			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 3, 1 + math.random(), (math.random() - 0.5) * 3), themeOf(st.player, "glideTrail").edge, gbats.size, gbats.seconds)
+			st.batCount = (st.batCount or 0) + 1
+			local gtheme = themeOf(st.player, "glideTrail")
+			bat(st.root.Position + Vector3.new((math.random() - 0.5) * 3, 1 + math.random(), (math.random() - 0.5) * 3), gtheme.edge, gbats.size, gbats.seconds, gbats, gtheme, st.batCount)
 		end
 		st.dash.Enabled = dashTheme ~= nil and dashTheme ~= false and now < st.dashUntil
 		-- ② 점프 이펙트(위 속도가 갑자기 늘어남 = 지상 점프 · 공중 점프)

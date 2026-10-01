@@ -14,13 +14,15 @@ return {
 			glide = { width = 0.5, lifetime = 0.8, particles = 8, particleLife = 0.9, gravity = 4, size = 0.25 },
 			footstep = { size = 1.3, seconds = 1.4, shape = "hammer", neon = false },
 		},
-		-- QUEUE-ALL6 H #50 할로윈 박쥐(10월 판매): 보라 · 짙은 보라(태초 흰+자홍 · 초월 검정+금 밖) · 대시 = 박쥐 떼(dash.bats) · 발자국 = 호박(채도 낮은 갈색 - 위험색 밖)
+		-- QUEUE-ALL6 H #50 할로윈 박쥐(10월 판매): 보라 · 짙은 보라(태초 흰+자홍 · 초월 검정+금 밖) · 대시 = 박쥐 떼(dash.bats) · 발자국 = 보라 호박 실루엣(QUEUE-ALL6R - 주황은 공중 박쥐 눈 · 작은 호박만)
 		halloween = {
 			core = C(150, 96, 200), edge = C(86, 52, 128), particle = C(120, 80, 170),
-			dash = { width = 1.8, lifetime = 0.3, transparency = { 0.2, 1 }, bats = { every = 0.1, size = 0.9, seconds = 0.9 } },
+			-- QUEUE-ALL6R 결정 5(사용자): 주황은 공중 요소에만 - 박쥐 눈(eye) · 박쥐 떼 사이 작은 호박 장식(ornament - pumpkinEvery번째마다 하나). 바닥 효과(발자국 · 점프 고리)는 보라.
+			dash = { width = 1.8, lifetime = 0.3, transparency = { 0.2, 1 }, bats = { every = 0.1, size = 0.9, seconds = 0.9, eye = C(255, 150, 40), pumpkinEvery = 4 } },
 			jump = { ring = 5, particles = 8, speed = 8, gravity = 6, size = 0.4, spread = 80 },
-			glide = { width = 0.6, lifetime = 1.0, particles = 6, particleLife = 1.2, gravity = -1, size = 0.35, bats = { every = 0.35, size = 0.8, seconds = 1.1 } },
-			footstep = { size = 1.3, seconds = 1.4, shape = "pumpkin", neon = false, pumpkin = C(132, 112, 96), stem = C(70, 110, 70) } -- Play 1: 옅은 갈색은 흙길 위에서 안 보였다 → 어둡게(채도 0.27 < 위험색 0.35),
+			glide = { width = 0.6, lifetime = 1.0, particles = 6, particleLife = 1.2, gravity = -1, size = 0.35, bats = { every = 0.35, size = 0.8, seconds = 1.1, eye = C(255, 150, 40), pumpkinEvery = 3 } },
+			ornament = { pumpkin = C(255, 140, 40), stem = C(70, 110, 70), size = 0.55 }, -- 공중 작은 호박(주황 - 공중이라 바닥 위험 표시와 안 겹친다)
+			footstep = { size = 1.3, seconds = 1.4, shape = "pumpkin", neon = false, pumpkin = C(112, 72, 156), stem = C(70, 42, 104) } -- QUEUE-ALL6R 결정 5: 보라 호박 실루엣(꼭지까지 짙은 보라) · 옛 Play 1 갈색(132, 112, 96),
 		},
 		-- QUEUE-ALL1 P6 말랑 젤리(07 문서 · 199): 라임 + 민트(색상 80 ~ 160° - 위험색 · 태초 · 초월 밖). 대시 = 방울이 튀며 잠깐 남음(dash.drops) · 점프 = 발밑 "뽀잉" 찌그러지는 고리(jump.squash) · 활강 = 방울 거품 줄 · 발자국 = 작은 젤리 웅덩이(shape puddle)
 		jelly = {
