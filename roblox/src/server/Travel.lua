@@ -153,7 +153,9 @@ function Travel.teleport(player, position, why)
 	-- QUEUE-ALL5 D② 지적: 미리 불러오기(최대 streamTimeoutSeconds) 동안 0.25초 폴링이 같은 조건(밖 · 외곽 · 잠긴 구역 · 정거장)을 다시 보고 이동을 겹쳐 시작했다 → 한 사람에 한 번만
 	local st = stateOf(player)
 	if st.teleporting then
-		return false
+		-- 리뷰: 버리면 부른 쪽(파티 곁으로 · 돌아가기 · 귀환 · 리프트 · 일어나기)이 쿨다운 · 상태만 쓰고 제자리에 남는다 → 마지막 요청을 기억했다가 지금 이동이 끝나면 그리로
+		st.teleportNext = { position = position, why = why }
+		return true
 	end
 	st.teleporting = true
 	local t0 = os.clock()
@@ -163,6 +165,7 @@ function Travel.teleport(player, position, why)
 	st.teleporting = nil
 	local waited = os.clock() - t0
 	if not root.Parent then
+		st.teleportNext = nil -- 캐릭터가 바뀌었으면 기다리던 요청도 버림(새 캐릭터는 제자리 스폰)
 		return false
 	end
 	root.AssemblyLinearVelocity = Vector3.zero
@@ -173,6 +176,11 @@ function Travel.teleport(player, position, why)
 	stateOf(player).teleportAt = os.clock()
 	print(("[forge-game] 이동(%s): %s → (%.0f, %.0f, %.0f) · 미리 불러오기 %s(%.2f초)"):format(why or "?", player.Name, position.X, position.Y, position.Z, streamed and "성공" or "실패", waited))
 	Travel.lastTeleport = { player = player, position = position, why = why, streamed = streamed, waited = waited }
+	local nextMove = st.teleportNext
+	if nextMove then
+		st.teleportNext = nil
+		return Travel.teleport(player, nextMove.position, nextMove.why) -- 미리 불러오는 동안 들어온 마지막 요청(마지막 요청 우선)
+	end
 	return streamed
 end
 

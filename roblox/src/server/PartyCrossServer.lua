@@ -241,7 +241,8 @@ function PartyCrossServer.ensureCode(party)
 	if allocating[party] then
 		-- QUEUE-ALL5 D②: 발급 중이면 끝날 때까지 기다린다(옛 = nil을 바로 돌려줬다 - "create" 리스너가 먼저 발급을 시작해
 		--   파티 만들기 · 다른 서버 초대가 매번 service_unavailable로 실패했다)
-		while allocating[party] do
+		local waitedUntil = os.clock() + 30 -- 리뷰: 발급 쪽이 pcall 밖에서 죽어도 영구 대기하지 않게
+		while allocating[party] and os.clock() < waitedUntil do
 			task.wait()
 		end
 		return party.code
