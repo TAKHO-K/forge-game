@@ -1637,8 +1637,12 @@ function SaveSystem.repairProfile(data)
 	for _, key in ipairs({ "portals", "bossGates", "nests", "nestDex" }) do
 		tableAt(world, key, "world." .. key, {})
 	end
-	tableAt(data, "titles", "titles", {})
-	tableAt(data, "eggs", "eggs", {})
+	-- QUEUE-ALL4 리뷰 6: titles · eggs는 소유 자산 - 빠짐(nil)만 빈 표로 채우고, 표 아닌 값은 비우지 않는다(invalid_schema → 저장 중단 + 운영 복구)
+	for _, key in ipairs({ "titles", "eggs" }) do
+		if data[key] == nil then
+			tableAt(data, key, key, {})
+		end
+	end
 	local auto = tableAt(data, "autoProcess", "autoProcess", { enabled = false, maxGrade = "epic" })
 	if type(auto.enabled) ~= "boolean" then
 		auto.enabled = false
@@ -1735,6 +1739,9 @@ function SaveSystem.loadProfile(player)
 			if type(raw) == "table" and type(raw.version) == "string" and tonumber(raw.version) then
 				raw.version = tonumber(raw.version) -- QUEUE-ALL4 C: 버전 숫자 문자열(손상)은 이관 전에 숫자로(안 그러면 migrate의 비교가 에러)
 			end
+			if raw ~= nil and type(raw) ~= "table" then
+				return nil, "invalid_schema" -- QUEUE-ALL4 리뷰 5: 표가 아닌 저장값(손상)
+			end
 			if raw ~= nil and type(raw.version) == "number" and raw.version > SaveConfig.saveVersion then
 				return nil, "future_version"
 			end
@@ -1751,7 +1758,8 @@ function SaveSystem.loadProfile(player)
 				info.repaired = repaired
 				warn(("[SaveSystem] 손상 저장 고침: %s - %s"):format(player.Name, table.concat(repaired, " · ")))
 			end
-			if not okRepair or not isValidProfile(profile) then
+			local okValid, valid = pcall(isValidProfile, profile) -- QUEUE-ALL4 리뷰 5: 칸 자리에 표 아닌 값이면 검사 자체가 에러
+			if not okRepair or not okValid or not valid then
 				return nil, "invalid_schema"
 			end
 			-- 손상 저장 음수 골드 → 0(save-audit-alpha 결정 3). 게임 경로로는 못 생긴다 - 생기면 로그 + 통계(SaveServer)로 알린다.
@@ -1890,6 +1898,7 @@ function SaveSystem.saveProfile(player, profile)
 
 		if ok then
 			if result == nil then
+				profile.savedAt = baselineSavedAt -- QUEUE-ALL4 리뷰 7: 콜백이 앞당긴 기준을 되돌린다(쓰기 안 됨)
 				return false, "stale_session"
 			end
 			profile.savedAt = newSavedAt
@@ -1902,6 +1911,7 @@ function SaveSystem.saveProfile(player, profile)
 		end
 	end
 
+	profile.savedAt = baselineSavedAt -- QUEUE-ALL4 리뷰 7: 실패 뒤 다음 주기에 다시 저장하므로 기준(stale 판정)을 읽은 값으로 되돌린다
 	return false, lastErr
 end
 

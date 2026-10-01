@@ -28,6 +28,7 @@ local noticeRemote = Instance.new("RemoteEvent")
 noticeRemote.Name = "WeeklyChallengeNotice" -- 서버 → 클라: 문구
 noticeRemote.Parent = ReplicatedStorage
 
+local rankReading = {} -- [player] = 지난주 순위 읽는 중(QUEUE-ALL4 리뷰 1)
 local function recordOf(player)
 	local r = PlayerProfile.getWeeklyChallenge(player)
 	if not r then
@@ -139,8 +140,10 @@ function WeeklyChallengeService.onLoaded(player)
 	if (r.rankClaimedWeek or 0) >= last then
 		return
 	end
-	local before = r.rankClaimedWeek
-	r.rankClaimedWeek = last -- QUEUE-ALL4 B: 읽기(yield) 전에 표시 = 두 번 불려도 한 번만 지급
+	if rankReading[player] then
+		return -- QUEUE-ALL4 B · 리뷰 1: 읽는 중(yield) 두 번째 호출 = 무시(서버 메모리 표 - 저장되지 않아 읽는 동안 나가도 표시가 남지 않는다)
+	end
+	rankReading[player] = true
 	task.spawn(function()
 		local rank = nil
 		local okRead = pcall(function()
@@ -152,10 +155,11 @@ function WeeklyChallengeService.onLoaded(player)
 				end
 			end
 		end)
-		if not okRead then
-			r.rankClaimedWeek = before -- 읽기 실패 = 받은 것으로 치지 않는다(다음 접속에 다시 본다 - 옛 코드는 보상이 사라졌다)
-			return
+		rankReading[player] = nil
+		if not okRead or player.Parent == nil or recordOf(player) ~= r then
+			return -- 읽기 실패 · 읽는 동안 나감 = 받은 것으로 치지 않는다(다음 접속에 다시 본다 - 옛 코드는 보상이 사라졌다)
 		end
+		r.rankClaimedWeek = last -- 성공한 읽기 뒤에만 표시(yield 없이 아래 지급까지 이어진다)
 		if not rank then
 			return
 		end

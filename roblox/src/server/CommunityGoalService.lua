@@ -177,7 +177,7 @@ local function claim(player, tierIndex)
 		return { ok = false, message = D.text.claimed }
 	end
 	if t.reward.egg and #PlayerProfile.getEggs(player) + t.reward.egg > NestData.eggCap then
-		return { ok = false, message = Text.get("shop.reason.eggFull") } -- QUEUE-ALL4 B: 받은 표시 전에(옛 코드 = 칸은 받음 · 알은 가방 가득으로 사라짐 - QuestService.claim과 같은 규칙)
+		return { ok = false, message = Text.getFor(player, "shop.reason.eggFull") } -- QUEUE-ALL4 B: 받은 표시 전에(옛 코드 = 칸은 받음 · 알은 가방 가득으로 사라짐 - QuestService.claim과 같은 규칙)
 	end
 	r.claimed[tostring(tierIndex)] = true
 	if t.reward.title then
