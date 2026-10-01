@@ -1841,6 +1841,10 @@ local function handleCommand(player, args)
 		-- P3b: 순위 창 화면 확인용 가짜 순위(수동 Play에서만 - 저장소 요청 0, Play가 끝나면 사라진다).
 		local filled = require(script.Parent.Leaderboard).debugFill(player)
 		reply(player, filled > 0 and ("가짜 순위표 %d개를 채웠다(개인 37위 · 내 직업 12위 · 파티 5위)"):format(filled) or "수동 Play에서만 된다(검증 모드 · 라이브 금지)")
+	elseif sub == "perf" and args[2] == "boss" then
+		-- QUEUE-ALL4 D: 4인(기본) 보스전 6종 서버 부하 - "/gg perf boss [인원]"
+		ensureBackup(player)
+		task.spawn(PerfProbe.runBoss, player, tonumber(args[3]) or 4, 12)
 	elseif sub == "perf" and args[2] == "world" then
 		-- M1: 인원별 서버 부하(가짜 플레이어) - "/gg perf world [crowd]"(crowd = 허브 밀집 복제본도)
 		ensureBackup(player)

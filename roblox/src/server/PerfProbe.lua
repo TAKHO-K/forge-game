@@ -79,7 +79,7 @@ local function sample(scene, seconds, tick)
 	workspace:SetAttribute("PerfScene", scene)
 	remoteCounts[scene] = 0
 	local dts, hbMs = {}, {}
-	local memMax = 0
+	local memMax, sendMax, sendSum, sendN = 0, 0, 0, 0
 	local conn = RunService.Heartbeat:Connect(function(dt)
 		table.insert(dts, dt * 1000)
 		table.insert(hbMs, Stats.HeartbeatTimeMs)
@@ -90,6 +90,8 @@ local function sample(scene, seconds, tick)
 	local t0 = os.clock()
 	while os.clock() - t0 < seconds do
 		memMax = math.max(memMax, Stats:GetTotalMemoryUsageMb())
+		local send = Stats.DataSendKbps -- QUEUE-ALL4 D: 서버 → 클라 송신(복제 + Remote) - 실제 클라 수만큼만 나간다(가짜 참가자 몫 없음)
+		sendMax, sendSum, sendN = math.max(sendMax, send), sendSum + send, sendN + 1
 		task.wait(0.5)
 	end
 	conn:Disconnect()
@@ -103,10 +105,10 @@ local function sample(scene, seconds, tick)
 	for _, v in ipairs(hbMs) do
 		hbSum += v
 	end
-	local line = ("[PERF] scene=%s seconds=%.1f frameMsAvg=%.2f frameMsP95=%.2f frameMsMax=%.2f heartbeatMsAvg=%.2f heartbeatMsP95=%.2f memMb=%.0f instances=%d parts=%d monsters=%d remotesInPerSec=%.1f"):format(
+	local line = ("[PERF] scene=%s seconds=%.1f frameMsAvg=%.2f frameMsP95=%.2f frameMsMax=%.2f heartbeatMsAvg=%.2f heartbeatMsP95=%.2f memMb=%.0f instances=%d parts=%d monsters=%d remotesInPerSec=%.1f sendKbpsAvg=%.1f sendKbpsMax=%.1f"):format(
 		scene, elapsed, sum / math.max(1, #dts), percentile(dts, 0.95), percentile(dts, 1),
 		hbSum / math.max(1, #hbMs), percentile(hbMs, 0.95), memMax, total, parts,
-		#CollectionService:GetTagged("Monster"), (remoteCounts[scene] or 0) / elapsed)
+		#CollectionService:GetTagged("Monster"), (remoteCounts[scene] or 0) / elapsed, sendSum / math.max(1, sendN), sendMax)
 	print(line)
 	return line
 end
@@ -384,6 +386,47 @@ function PerfProbe.runWorld(player, counts, seconds, crowd)
 	end
 	table.clear(SpawnSites.debugFoci)
 	print("[PERF] world 끝")
+	return results
+end
+
+-- ═══ QUEUE-ALL4 D: 4인 보스전 6종(나 + 더미 파티원 3 - 보스 HP 배수 · 기믹 대상 수가 4인 기준) ═══
+-- 보스마다: 강제 지정 → 스폰 → seconds 동안 표본(내 HP 유지) → 퇴장. 한계: 더미 파티원은 캐릭터가 없어 그들을 향한 판정 · 투사체는 돌지 않는다(서버 보스 틱 · 내 쪽 판정 · 아레나 · 복제만 실측).
+function PerfProbe.runBoss(player, partySize, seconds)
+	assert(RunService:IsStudio(), "PerfProbe: Studio 전용")
+	hookRemotes()
+	local PartyState = require(script.Parent.PartyState)
+	local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+	local originalStage = PlayerProfile.getInfiniteStage(player) or 1
+	if BossEncounter.getActive(player) then
+		BossEncounter.despawnFor(player)
+	end
+	PartyState.clearDummies(player)
+	if partySize > 1 then
+		local level = PlayerProfile.getCharacterLevel(player) or 1
+		PartyState.addDummies(player, partySize - 1, function(index)
+			return { classId = ClassData.order[(index - 1) % #ClassData.order + 1], level = level, stage = 15, hp = 1, maxHp = 1 }
+		end)
+	end
+	local results = {}
+	for _, id in ipairs({ "section_guardian", "crystal_queen", "abyssal_lord", "scorpion_queen", "storm_lord", "frost_giant" }) do
+		BossEncounter.setDebugForcedBoss(player, id)
+		PlayerProfile.setInfiniteStage(player, 15)
+		local t0 = os.clock()
+		BossEncounter.spawnFor(player, 15)
+		local spawnMs = (os.clock() - t0) * 1000
+		task.wait(3)
+		local line = sample(("boss%d_%s"):format(partySize, id), seconds or 12, function()
+			PlayerState.setHp(player, PlayerState.getMaxHp(player))
+		end)
+		print(("[PERF] boss%d %s spawnMs=%.1f"):format(partySize, id, spawnMs))
+		table.insert(results, line)
+		BossEncounter.despawnFor(player)
+		task.wait(2)
+	end
+	PartyState.clearDummies(player)
+	PlayerProfile.setInfiniteStage(player, originalStage)
+	workspace:SetAttribute("PerfScene", "done")
+	print("[PERF] boss 끝")
 	return results
 end
 
