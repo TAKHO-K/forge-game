@@ -18,6 +18,9 @@ return {
 	weeklyChangeCap = 0.25,
 	targetFactor = 0.95,
 	week1Factor = 0.7,
+	-- QUEUE-ALL7 B: 목표 · 칸 문턱 = 끝 두 자리 00(roundTo 단위 · 가장 가까운 값) · 순서 = 가중 평균 × targetFactor → ±weeklyChangeCap → 반올림(제한보다 반올림을 먼저 하지 않는다) · 최솟값 minTarget(접속자가 아주 적어도 0 · 100이 안 나오게)
+	roundTo = 100,
+	minTarget = 300,
 	tiers = {
 		{ fraction = 0.6, reward = { enhanceStone = 40 }, label = "강화석 40" },
 		{ fraction = 0.85, reward = { egg = 1 }, label = "알 1" },

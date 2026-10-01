@@ -82,6 +82,14 @@ local function warnOnce(kind, value)
 		kind, tostring(source), tostring(line), kind == "nan" and "\"—\"" or "\"∞\""))
 end
 
+-- QUEUE-ALL7 B4: 줄이지 않고 천 단위 쉼표만(1,300 · 12,400 - 합동 목표 진행 · 목표 · 문턱)
+function NumberFormat.commas(value)
+	if value ~= value or value == math.huge or value == -math.huge then
+		return NumberFormat.format(value)
+	end
+	return withCommas(math.floor(value))
+end
+
 function NumberFormat.format(value)
 	if value ~= value then
 		warnOnce("nan", value)

@@ -11,6 +11,8 @@ local Workspace = game:GetService("Workspace")
 local Text = require(ReplicatedStorage.Shared.Text)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local CommunityGoalData = require(ReplicatedStorage.Shared.data.CommunityGoalData)
+local CommunityGoalRules = require(ReplicatedStorage.Shared.CommunityGoalRules)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local WeeklyChallengeData = require(ReplicatedStorage.Shared.data.WeeklyChallengeData)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Button = require(script.Parent.Parent.ui.kit.Button)
@@ -245,14 +247,15 @@ local function renderCommunity()
 	card.BackgroundTransparency = 1
 	card.Size = UDim2.new(1, 0, 0, 120)
 	card.Parent = built.scroll
-	local head = label(card, target and Text.get("quests.communityHead", { pct = tostring(math.floor(total / target * 100)) }) or Text.name(CommunityGoalData.text.measuring), "header")
+	local th = CommunityGoalRules.thresholds(target) -- QUEUE-ALL7 B4: 목표 · 문턱 = 00 · 진행 = 실제 숫자 · 천 단위 쉼표
+	local head = label(card, target and Text.get("quests.communityHeadNum", { total = NumberFormat.commas(total), target = NumberFormat.commas(target), pct = tostring(math.floor(total / target * 100)) }) or Text.name(CommunityGoalData.text.measuring), "header")
 	head.Size = UDim2.new(1, 0, 0, 26)
 	gauge(card, target and total / target or 0, UDim2.fromOffset(0, 34), UDim2.new(1, 0, 0, 24), Color3.fromRGB(255, 214, 90))
 	for i, t in ipairs(CommunityGoalData.tiers) do
 		local tick = Instance.new("Frame")
 		tick.Name = "Tick" .. i
 		tick.BackgroundColor3 = Color3.new(1, 1, 1)
-		tick.Position = UDim2.new(math.min(t.fraction, 0.995), 0, 0, 30)
+		tick.Position = UDim2.new(math.min(th[i] and th[i] / target or t.fraction, 0.995), 0, 0, 30)
 		tick.Size = UDim2.fromOffset(3, 32)
 		tick.Parent = card
 		RewardIcons.row(card, t.reward, 26, { frameSize = UDim2.fromOffset(90, 28), position = UDim2.new(math.min(t.fraction, 0.9), -60, 0, 66) })
@@ -264,9 +267,9 @@ local function renderCommunity()
 	mine.Position, mine.Size = UDim2.fromOffset(0, 96), UDim2.new(1, 0, 0, 22)
 	local claimed = "," .. tostring(player:GetAttribute("CommunityGoalClaimed") or "") .. ","
 	for i, t in ipairs(CommunityGoalData.tiers) do
-		local reached = target and total >= target * t.fraction
+		local reached = target and th[i] and total >= th[i]
 		local got = claimed:find("," .. i .. ",", 1, true) ~= nil
-		questRow(Text.get("quests.communityTier", { pct = tostring(math.floor(t.fraction * 100 + 0.5)) }), reached and 1 or 0, 1, t.reward, got, function()
+		questRow(th[i] and Text.get("quests.communityTierAt", { n = NumberFormat.commas(th[i]), pct = tostring(math.floor(t.fraction * 100 + 0.5)) }) or Text.get("quests.communityTier", { pct = tostring(math.floor(t.fraction * 100 + 0.5)) }), reached and 1 or 0, 1, t.reward, got, function()
 			local ok, result = pcall(function()
 				return ReplicatedStorage:WaitForChild("CommunityGoalClaim"):InvokeServer(i)
 			end)

@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 
 local D = require(ReplicatedStorage.Shared.data.CommunityGoalData)
 local Rules = require(ReplicatedStorage.Shared.CommunityGoalRules)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Theme = require(script.Parent.ui.kit.Theme)
 local Toast = require(script.Parent.ui.kit.Toast)
 local Text = require(ReplicatedStorage.Shared.Text)
@@ -195,7 +196,7 @@ local function refresh()
 		local bg = b:FindFirstChildOfClass("Frame")
 		bg.Bar.Fill.Size = UDim2.fromScale(frac, 1)
 		bg.Text.Text = (type(target) == "number" and target > 0)
-				and Text.get("scene.community.boardProgress", { title = D.text.panelTitle, total = ("%d"):format(total), target = ("%d"):format(target) })
+				and Text.get("scene.community.boardProgress", { title = D.text.panelTitle, total = NumberFormat.commas(total), target = NumberFormat.commas(target) }) -- QUEUE-ALL7 B4: 쉼표
 			or Text.get("scene.community.boardPending", { title = D.text.panelTitle })
 	end
 end

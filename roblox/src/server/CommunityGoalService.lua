@@ -101,8 +101,9 @@ end
 local function publish(rec, week)
 	Workspace:SetAttribute("CommunityGoalWeek", week)
 	Workspace:SetAttribute("CommunityGoalTotal", rec.total or 0)
-	Workspace:SetAttribute("CommunityGoalTarget", rec.target)
-	local tier = Rules.tiersReached(rec.total or 0, rec.target)
+	local target = type(rec.target) == "number" and Rules.finalTarget(rec.target) or nil -- QUEUE-ALL7 B: 이번 주 이미 정해진 옛 목표(00 아님)도 보여 주는 값 · 칸 판정은 00으로(저장된 기록은 그대로)
+	Workspace:SetAttribute("CommunityGoalTarget", target)
+	local tier = Rules.tiersReached(rec.total or 0, target)
 	if lastTier ~= nil and tier > lastTier then
 		local t = D.tiers[tier]
 		bannerRemote:FireAllClients({ tier = tier, percent = math.floor(t.fraction * 100 + 0.5), label = t.label })

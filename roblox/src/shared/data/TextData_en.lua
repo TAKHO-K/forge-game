@@ -508,6 +508,8 @@ return {
 	["quests.communityHead"] = "Weekly Group Goal {pct}%",
 	["quests.communityMine"] = "My part {n} · Time left {left}",
 	["quests.communityTier"] = "{pct}% reward",
+	["quests.communityHeadNum"] = "Weekly Group Goal {total} / {target} ({pct}%)",
+	["quests.communityTierAt"] = "{n} reward ({pct}%)",
 	["quests.challengeHead"] = "{boss} · {variant} (Stage {stage})",
 	["quests.challengeRow"] = "{rank}. {name}  {seconds}s",
 	["quests.challengeMine"] = "My best {seconds}s",
