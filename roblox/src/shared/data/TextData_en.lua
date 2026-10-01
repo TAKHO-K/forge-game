@@ -342,6 +342,7 @@ return {
 	["settings.cameraTopDown"] = "Top-down camera (view from above)",
 	["settings.cameraTopDownHint"] = "Off = Roblox camera. Saved to account.",
 	["settings.dimOthersTrail"] = "Dim other players' attack trails",
+	["settings.quietOthersSfx"] = "Quieter sounds from other players",
 	["settings.screenShake"] = "Screen shake (hits · skills · bosses)",
 	["settings.reduceFlashes"] = "Fewer lightning · screen flashes (boss warnings dim only)",
 	["settings.classChange"] = "Change Class",

@@ -6,7 +6,6 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -63,14 +62,8 @@ local function fadeOut(part, seconds)
 end
 
 local function play(kind, pitch, volume)
-	local sound = Instance.new("Sound")
-	sound.SoundId = TEMP_SOUND[kind]
-	sound.PlaybackSpeed = pitch or 1
-	sound.Volume = volume or 0.6
-	SoundService:PlayLocalSound(sound)
-	task.delay(2, function()
-		sound:Destroy()
-	end)
+	-- QUEUE-ALL7 C: SoundGroup 없이 나던 임시 핑 · 클릭 → SoundSheet 공통 입구(SFX 그룹 · T2 보스 기믹 신호 · 동시 재생 제한)
+	require(script.Parent.SoundSheet).playRaw(TEMP_SOUND[kind], { tier = 2, pitch = pitch, volume = (volume or 0.6) / 0.6, seconds = 1 })
 end
 
 -- 화면 위 가운데 한 줄(폰에서도 읽히게 크게 - TextScaled · 화면 너비 비율).

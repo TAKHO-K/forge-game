@@ -85,7 +85,7 @@ function BossRocketView.twinkle(data)
 			parts[i] = p
 		end
 		local mine = data.userId == player.UserId
-		SoundSheet.play(data.sound, { volume = mine and 1 or 0.6 })
+		SoundSheet.play(data.sound, { other = not mine }) -- QUEUE-ALL7 E3: T3(SoundMixData) · 남의 로켓 = 남의 소리 배율
 		local started = os.clock()
 		local connection
 		connection = RunService.RenderStepped:Connect(function()

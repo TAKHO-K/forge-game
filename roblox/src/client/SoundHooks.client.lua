@@ -107,6 +107,18 @@ player:GetAttributeChangedSignal("RecallCastUntil"):Connect(function()
 	end)
 end)
 
+-- QUEUE-ALL7 C3: 대시 · 회피(필수 소리 자리 - 안 쓰던 휘두름 바람 소리 재사용) · 합동 목표 단계 달성(퀘스트 완료 징글 재사용)
+onRemote("DashResult", function(data)
+	if type(data) == "table" and data.ok then
+		play("swing", { pitch = 0.85 })
+	end
+end)
+onRemote("CommunityGoalBanner", function(info)
+	if type(info) == "table" then
+		play("quest_complete")
+	end
+end)
+
 -- 보스 등장(보스전 시작 순간)
 player:GetAttributeChangedSignal("BossEncounterId"):Connect(function()
 	if player:GetAttribute("BossEncounterId") ~= nil then
@@ -155,7 +167,10 @@ local function onDropGrade(model)
 		return false
 	end
 	local owner = model:GetAttribute("OwnerUserId")
-	play(SoundSheetData.dropGradeCues[grade], { part = model.PrimaryPart, other = owner ~= nil and owner ~= player.UserId, minInterval = 0.08 })
+	local cue = require(ReplicatedStorage.Shared.data.SoundMixData).dropGradeCues[grade] -- QUEUE-ALL7 C3: 일반 = 소리 없음 · 희귀 = 작은 1음 · 영웅부터 차임
+	if cue then
+		play(cue, { part = model.PrimaryPart, other = owner ~= nil and owner ~= player.UserId, minInterval = 0.08 })
+	end
 	return true
 end
 Workspace.ChildAdded:Connect(function(inst)

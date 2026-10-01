@@ -170,6 +170,12 @@ local function build()
 		render()
 		volumeRows[categoryId] = { render = render }
 	end
+	-- QUEUE-ALL7 C3: 다른 플레이어 효과음 줄이기(4인 보스전 피로 - 내 소리는 그대로)
+	refs.quietOthersToggle = Toggle.build({ parent = pages.sound, name = "QuietOthersSfxToggle", text = Text.get("settings.quietOthersSfx"), value = player:GetAttribute("QuietOthersSfx") == true,
+		width = width, position = UDim2.fromOffset(PAD, PAD + #SoundData.categoryOrder * 52 + 4), onChanged = function(v)
+			player:SetAttribute("QuietOthersSfx", v)
+			save("quietOthersSfx", v)
+		end })
 
 	-- [게임]
 	local g = pages.game

@@ -347,6 +347,7 @@ local TextData = {
 		["settings.cameraTopDown"] = "탑다운 시점(위에서 내려다보기)",
 		["settings.cameraTopDownHint"] = "끄면 로블록스 기본 카메라입니다. 설정은 계정에 저장됩니다.",
 		["settings.dimOthersTrail"] = "다른 유저 공격 궤적 흐리게",
+		["settings.quietOthersSfx"] = "다른 플레이어 효과음 줄이기", -- QUEUE-ALL7 C3
 		["settings.screenShake"] = "화면 흔들림(타격 · 스킬 · 보스)",
 		["settings.reduceFlashes"] = "번개 · 화면 섬광 줄이기(보스 경고는 밝기만)",
 		["settings.classChange"] = "직업 변경",

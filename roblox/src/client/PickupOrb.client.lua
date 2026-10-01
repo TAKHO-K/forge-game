@@ -127,7 +127,7 @@ local function fly(worldPos, grade)
 			orb:Destroy()
 			live -= 1
 			FxMoment.pop(button, O.arrivePop.scale, O.arrivePop.seconds, strength)
-			SoundSheet.play("pickup", { minInterval = 0.08 })
+			SoundSheet.play("pickup", { minInterval = require(game:GetService("ReplicatedStorage").Shared.data.SoundMixData).pickupBundleSeconds }) -- QUEUE-ALL7 C3: 낱개 줍기 0.2초 안 = 소리 1번
 		end
 	end)
 end

@@ -216,14 +216,7 @@ local function playSound()
 	if not PrimordialData.soundId then
 		return
 	end
-	local sound = Instance.new("Sound")
-	sound.SoundId = PrimordialData.soundId
-	sound.Volume = 0.8
-	sound.Parent = fxGui
-	sound:Play()
-	sound.Ended:Connect(function()
-		sound:Destroy()
-	end)
+	require(script.Parent.SoundSheet).playRaw(PrimordialData.soundId, { tier = 2, seconds = 4 }) -- QUEUE-ALL7 C: 공통 입구(SFX 그룹 · T2)
 end
 
 local function localPillar(position, color, height, width, seconds)
