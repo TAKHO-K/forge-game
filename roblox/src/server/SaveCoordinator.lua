@@ -5,6 +5,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local SaveSystem = require(script.Parent.SaveSystem)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
@@ -44,6 +45,20 @@ local teleportFrozen = setmetatable({}, { __mode = "k" })
 -- 끝날 때까지 기다린 뒤 갱신된 baseline으로 저장한다 - ImmediateSave.flush가 "예약된" trailing 저장을 취소하는
 -- 것과 별개로, "이미 나간" 저장과의 겹침은 여기서 막는다.
 local saving = setmetatable({}, { __mode = "k" })
+
+-- QUEUE-ALL4 C 출시 감사: 진행 중인 saveForPlayer 수(종료 대기용) · 에러 실패 누계(관측) · 실패 안내 마지막 시각(사람별 간격).
+local activeSaves = 0
+local saveFailures = 0
+local lastFailureNoticeAt = setmetatable({}, { __mode = "k" })
+function SaveCoordinator.activeSaves()
+	return activeSaves
+end
+function SaveCoordinator.failureCount()
+	return saveFailures
+end
+function SaveCoordinator.isSuspended(player)
+	return saveSuspended[player] == true
+end
 
 local function notify(player, message)
 	saveSuspended[player] = true
@@ -90,15 +105,21 @@ function SaveCoordinator.saveForPlayer(player)
 		return false
 	end
 
+	activeSaves += 1 -- QUEUE-ALL4 C: 종료(BindToClose)가 진행 중인 저장을 기다린다(앞 저장 대기 포함)
 	while saving[player] do
 		task.wait()
 	end
 	if PlayerProfile.getProfile(player) ~= profile or teleportFrozen[player] or saveSuspended[player] then
+		activeSaves -= 1
 		return false -- 기다리는 동안 프로필이 지워졌거나(퇴장) 동결·중단됐다
 	end
 	saving[player] = true
-	local ok, err = SaveSystem.saveProfile(player, profile)
+	local okCall, ok, err = pcall(SaveSystem.saveProfile, player, profile)
+	if not okCall then
+		ok, err = false, tostring(ok) -- 저장 함수 자체 에러도 잠금 · 카운터를 풀고 실패로 다룬다(옛 = saving이 안 풀려 그 사람 저장이 영영 멈춤)
+	end
 	saving[player] = nil
+	activeSaves -= 1
 	if ok then
 		-- 19-1: 무기는 이제 활성 직업(profile.classId)에 딸려 있다 - 아직 직업을 안 골랐으면
 		-- (classId=nil) weapon 자체가 없으니 로그에서도 그 상태를 그대로 보여준다.
@@ -109,8 +130,16 @@ function SaveCoordinator.saveForPlayer(player)
 		if err == "stale_session" then
 			notify(player, "다른 서버에 더 최근 저장이 있어 지금 상태는 저장하지 않았습니다. 다시 접속해 주세요.")
 		else
-			warn(("[forge-game] 저장 실패: %s - %s"):format(player.Name, tostring(err)))
-			notify(player, "저장에 반복 실패했습니다. 지금까지의 변경사항이 저장되지 않았을 수 있습니다.")
+			-- QUEUE-ALL4 C: 에러(DataStore 장애 · 한도 초과 · 크기 초과)는 저장을 멈추지 않는다 - 다음 주기 · 퇴장 때 다시 시도한다(옛 = 한 번 실패하면
+			-- 그 세션 저장이 전부 멈춰 퇴장 저장까지 빠졌다 - 일시 장애가 그 접속의 진행 전체 손실이 됐다). 다시 써도 안전하다: 다른 서버의 더 새 저장은
+			-- saveProfile의 savedAt 비교가 여전히 막는다(stale_session = 위 분기 · 중단 유지). 안내는 saveFailureNoticeGapSeconds에 한 번.
+			saveFailures += 1
+			warn(("[forge-game] 저장 실패(다음에 다시 시도): %s - %s"):format(player.Name, tostring(err)))
+			local now = os.clock()
+			if not lastFailureNoticeAt[player] or now - lastFailureNoticeAt[player] >= SaveConfig.saveFailureNoticeGapSeconds then
+				lastFailureNoticeAt[player] = now
+				saveNotice:FireClient(player, "저장에 반복 실패했습니다. 지금까지의 변경사항이 저장되지 않았을 수 있습니다.")
+			end
 		end
 	end
 	return ok == true -- QUEUE-B1 B2: 구매 처리(ProcessReceipt)가 저장 성공을 확인한 뒤에만 PurchaseGranted를 돌려준다

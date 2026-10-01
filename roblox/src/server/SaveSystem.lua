@@ -1506,6 +1506,197 @@ SaveSystem.sanitizeForSave = sanitizeForSave -- 검증(S21-0 (나))이 직접 �
 -- 25-1: DevTools "/gg curve migrate" 자체검증 전용(옛 곡선 값을 합성해 migrate에 넣는다).
 SaveSystem.legacyCurveV21 = LegacyCurveV21
 
+-- QUEUE-ALL4 C 손상 저장 고침(로드 때 · migrate 뒤 · isValidProfile 앞). "뜻이 분명한 것"만 고친다:
+--   NaN · inf → 0(트리 전체) · 숫자 칸의 숫자 문자열 → 숫자 · 개수 칸의 음수 · 소수 → 0 이상 정수 · 빠지거나 모양이 틀린 부가 표(안내 플래그 · 세계 기록 · 칭호 ·
+--   알 가방 · 재료 · 방지권 · 자동 처리) → 기본값 · 데이터에서 없어진 보스 id 도장 → 뺌 · ClassData에 새로 생긴 직업 → 그 직업 기본 상태(한 번도 안 한 직업).
+--   진행의 몸통(classes 자체 · 직업의 무기 · 장비 · 진도 · 보석 가방 · inventory · tutorial · purchases 자체)이 없거나 모양이 틀리면 고치지 않는다 -
+--   빈 값으로 채워 저장하면 남은 진행까지 덮어쓰므로 그대로 invalid_schema(저장 중단 + 안내 · 운영 복구 opsRestoreVersion).
+-- 반환: 고친 칸 경로 목록(정상 프로필이면 빈 목록 - 아무것도 바꾸지 않는다). 순수 함수(하네스 save_launch_test가 부른다).
+function SaveSystem.repairProfile(data)
+	local fixed = {}
+	local function note(path)
+		if #fixed < 50 then
+			table.insert(fixed, path)
+		end
+	end
+	local function scrub(node, path, depth)
+		if depth > 12 then
+			return
+		end
+		for key, value in pairs(node) do
+			if type(value) == "number" and isBadNumber(value) then
+				node[key] = 0
+				note(path .. "." .. tostring(key))
+			elseif type(value) == "table" then
+				scrub(value, path .. "." .. tostring(key), depth + 1)
+			end
+		end
+	end
+	scrub(data, "profile", 0)
+
+	-- kind: nil = 숫자로만 · "count" = 0 이상 정수 · "nonneg" = 0 이상
+	local function num(tbl, key, path, kind)
+		local v = tbl[key]
+		if type(v) == "string" and tonumber(v) and not isBadNumber(tonumber(v)) then
+			v = tonumber(v)
+			tbl[key] = v
+			note(path)
+		end
+		if type(v) ~= "number" then
+			return
+		end
+		local good = v
+		if kind == "count" then
+			good = math.max(0, math.floor(v))
+		elseif kind == "nonneg" then
+			good = math.max(0, v)
+		end
+		if good ~= v then
+			tbl[key] = good
+			note(path)
+		end
+	end
+	local function tableAt(parent, key, path, default)
+		if type(parent[key]) ~= "table" then
+			parent[key] = default
+			note(path)
+		end
+		return parent[key]
+	end
+
+	num(data, "version", "version")
+	num(data, "savedAt", "savedAt")
+	num(data, "gold", "gold") -- 음수는 loadProfile이 따로 0으로(통계 SaveNegativeGold)
+	num(data, "inventorySlots", "inventorySlots", "count")
+	num(data, "gemDust", "gemDust", "count")
+	num(data, "milestoneUnlocks", "milestoneUnlocks", "count")
+	num(data, "peakLevel", "peakLevel")
+	if type(data.peakLevel) == "number" and data.peakLevel < 1 then
+		data.peakLevel = 1
+		note("peakLevel")
+	end
+	if type(data.bulkSellCutoffGrade) ~= "string" then
+		data.bulkSellCutoffGrade = "normal"
+		note("bulkSellCutoffGrade")
+	end
+	if data.inventoryWindowPosition ~= false and type(data.inventoryWindowPosition) ~= "table" then
+		data.inventoryWindowPosition = false
+		note("inventoryWindowPosition")
+	end
+	tableAt(data, "gamepasses", "gamepasses", {}) -- 캐시(접속 때 Roblox 소유 기록으로 다시 맞춘다)
+	if type(data.leaderboardTainted) ~= "boolean" then
+		data.leaderboardTainted = true -- 모르면 기록 제외 쪽(안전)
+		note("leaderboardTainted")
+	end
+
+	local materials = tableAt(data, "materials", "materials", {})
+	for _, materialId in ipairs(EnhanceMaterialData.order) do
+		if materials[materialId] == nil then
+			materials[materialId] = 0
+			note("materials." .. materialId)
+		end
+		num(materials, materialId, "materials." .. materialId, "count")
+	end
+
+	if type(data.purchases) == "table" then
+		local p = data.purchases
+		local reroll = tableAt(p, "optionRerollTickets", "purchases.optionRerollTickets", {})
+		local tickets = tableAt(p, "protectionTickets", "purchases.protectionTickets", {})
+		for _, pair in ipairs({ { reroll, "ancient", "optionRerollTickets" }, { reroll, "primordial", "optionRerollTickets" }, { tickets, "drop", "protectionTickets" }, { tickets, "reset", "protectionTickets" } }) do
+			local t, k, name = pair[1], pair[2], pair[3]
+			if t[k] == nil then
+				t[k] = 0
+				note(("purchases.%s.%s"):format(name, k))
+			end
+			num(t, k, ("purchases.%s.%s"):format(name, k), "count")
+		end
+		tableAt(p, "protectionClaimedStages", "purchases.protectionClaimedStages", {})
+		local codex = tableAt(p, "bossCodex", "purchases.bossCodex", {})
+		for bossId, stamped in pairs(table.clone(codex)) do
+			if type(bossId) ~= "string" or BossData.bosses[bossId] == nil or stamped ~= true then
+				codex[bossId] = nil -- 표시 전용 도장(성능 보상 없음) - 없어진 보스 id 하나 때문에 계정 전체가 로드 실패하지 않게
+				note("purchases.bossCodex." .. tostring(bossId))
+			end
+		end
+	end
+
+	local hints = tableAt(data, "hints", "hints", {})
+	if hints.gemMerchantUsed ~= nil and type(hints.gemMerchantUsed) ~= "boolean" then
+		hints.gemMerchantUsed = false
+		note("hints.gemMerchantUsed")
+	end
+	if hints.bossIntroSeen ~= nil and type(hints.bossIntroSeen) ~= "table" then
+		hints.bossIntroSeen = {}
+		note("hints.bossIntroSeen")
+	end
+	if hints.stealLockSeen ~= nil and type(hints.stealLockSeen) ~= "boolean" then
+		hints.stealLockSeen = false
+		note("hints.stealLockSeen")
+	end
+	local world = tableAt(data, "world", "world", {})
+	for _, key in ipairs({ "portals", "bossGates", "nests", "nestDex" }) do
+		tableAt(world, key, "world." .. key, {})
+	end
+	tableAt(data, "titles", "titles", {})
+	tableAt(data, "eggs", "eggs", {})
+	local auto = tableAt(data, "autoProcess", "autoProcess", { enabled = false, maxGrade = "epic" })
+	if type(auto.enabled) ~= "boolean" then
+		auto.enabled = false
+		note("autoProcess.enabled")
+	end
+	if not table.find(ArmorData.autoProcessGradeChoices, auto.maxGrade) then
+		auto.maxGrade = table.find(ArmorData.autoProcessGradeChoices, "epic") and "epic" or ArmorData.autoProcessGradeChoices[1] -- defaultProfile과 같은 값
+		auto.enabled = false
+		note("autoProcess.maxGrade")
+	end
+
+	if type(data.tutorial) == "table" then
+		num(data.tutorial, "step", "tutorial.step", "count")
+		tableAt(data.tutorial, "granted", "tutorial.granted", {})
+	end
+
+	if type(data.classes) == "table" and next(data.classes) ~= nil then -- 빈 classes(전부 사라짐)는 고치지 않는다 - invalid_schema로 남긴다
+		for _, classId in ipairs(ClassData.order) do
+			local cs = data.classes[classId]
+			if cs == nil then
+				data.classes[classId] = defaultClassState() -- 데이터에 새로 생긴 직업 = 한 번도 안 한 직업
+				note("classes." .. classId)
+			elseif type(cs) == "table" then
+				local path = "classes." .. classId
+				num(cs, "characterExp", path .. ".characterExp", "nonneg")
+				num(cs, "rebirthCount", path .. ".rebirthCount", "count")
+				num(cs, "milestoneLevel", path .. ".milestoneLevel", "count")
+				num(cs, "reclaimLevel", path .. ".reclaimLevel", "nonneg")
+				if cs.milestoneLevel == nil then
+					cs.milestoneLevel = 0
+					note(path .. ".milestoneLevel")
+				end
+				if cs.reclaimLevel == nil then
+					cs.reclaimLevel = 0
+					note(path .. ".reclaimLevel")
+				end
+				if type(cs.bossRotation) ~= "table" then
+					cs.bossRotation = { order = {}, index = 1, pending = false, history = {}, debugForceNextId = false } -- 아무도 안 읽는 필드(29-5)
+					note(path .. ".bossRotation")
+				end
+				if type(cs.weapon) == "table" then
+					local w = cs.weapon
+					num(w, "level", path .. ".weapon.level", "count")
+					num(w, "grade", path .. ".weapon.grade", "count")
+					num(w, "enhanceGauge", path .. ".weapon.enhanceGauge", "count")
+					if type(w.enhanceGauge) == "number" and w.enhanceGauge > EnhanceConfig.gauge.max then
+						w.enhanceGauge = EnhanceConfig.gauge.max
+						note(path .. ".weapon.enhanceGauge")
+					end
+					tableAt(w, "gems", path .. ".weapon.gems", { false, false, false, false, false })
+					tableAt(w, "slotUnlocked", path .. ".weapon.slotUnlocked", { false, false, false, false, false })
+				end
+			end
+		end
+	end
+	return fixed
+end
+
 -- 불러오기. 성공하면 profile을 돌려준다(신규 플레이어면 defaultProfile 형태를 migrate에
 -- 통과시킨 값). 실패하면 nil + 이유를 돌려준다 - 호출부(SaveServer.server.lua)가 이유에
 -- 따라 다르게 안내한다.
@@ -1541,12 +1732,26 @@ function SaveSystem.loadProfile(player)
 				info.lockReleased = not SaveSystem.heldElsewhere(raw, os.time())
 				print(("[SaveSystem] 세션 잠금 대기: %s %d초 · 풀림=%s"):format(player.Name, waited, tostring(info.lockReleased)))
 			end
+			if type(raw) == "table" and type(raw.version) == "string" and tonumber(raw.version) then
+				raw.version = tonumber(raw.version) -- QUEUE-ALL4 C: 버전 숫자 문자열(손상)은 이관 전에 숫자로(안 그러면 migrate의 비교가 에러)
+			end
 			if raw ~= nil and type(raw.version) == "number" and raw.version > SaveConfig.saveVersion then
 				return nil, "future_version"
 			end
 
-			local profile = migrate(raw or {})
-			if not isValidProfile(profile) then
+			-- QUEUE-ALL4 C: 손상 저장(버전이 문자열 · 표 자리에 숫자 등)이면 migrate가 에러를 던져 loadProfile 자체가 터졌다(호출부에 프로필이 아예 안 생김).
+			-- 에러는 invalid_schema와 같게 다룬다(원본은 건드리지 않음 - 저장 중단 + 안내 · 운영 복구 opsRestoreVersion).
+			local okMigrate, profile = pcall(migrate, raw or {})
+			if not okMigrate then
+				warn(("[SaveSystem] 이관 중 에러(손상 저장): %s - %s"):format(player.Name, tostring(profile)))
+				return nil, "invalid_schema"
+			end
+			local okRepair, repaired = pcall(SaveSystem.repairProfile, profile)
+			if okRepair and #repaired > 0 then
+				info.repaired = repaired
+				warn(("[SaveSystem] 손상 저장 고침: %s - %s"):format(player.Name, table.concat(repaired, " · ")))
+			end
+			if not okRepair or not isValidProfile(profile) then
 				return nil, "invalid_schema"
 			end
 			-- 손상 저장 음수 골드 → 0(save-audit-alpha 결정 3). 게임 경로로는 못 생긴다 - 생기면 로그 + 통계(SaveServer)로 알린다.
@@ -1667,7 +1872,12 @@ function SaveSystem.saveProfile(player, profile)
 	for attempt = 1, totalAttempts do
 		local ok, result = pcall(function()
 			return store:UpdateAsync(key, function(old)
-				if old ~= nil and type(old.savedAt) == "number" and old.savedAt > baselineSavedAt then
+				-- QUEUE-ALL4 C: 앞 시도가 실제로는 써졌는데 호출이 에러로 끝난 경우(타임아웃 등) 재시도가 "내가 방금 쓴 값"을 다른 서버 저장으로 오판해
+				-- stale_session(그 세션 저장 중단)이 됐다. 저장값의 savedAt이 이번 저장의 시각과 같고 표식이 이 서버 것이면 내 메아리로 본다.
+				-- 놓음("")은 메아리로 치지 않는다 - 옮겨 간 서버의 퇴장 저장도 ""라 같은 초에 겹치면 남의 마지막 저장을 덮는다(하네스 [LOCK] 실측).
+				-- 퇴장 저장의 메아리는 그대로 stale로 끝나지만 첫 시도가 이미 써졌으므로 잃는 것은 없다.
+				local ownEcho = old ~= nil and old.savedAt == newSavedAt and old.sessionId == SERVER_SESSION_ID
+				if old ~= nil and type(old.savedAt) == "number" and old.savedAt > baselineSavedAt and not ownEcho then
 					return nil -- 콜백이 nil을 돌려주면 UpdateAsync가 쓰기를 취소한다(로블록스 API 규칙)
 				end
 				sanitizeForSave(profile, old, "profile") -- S21-0 A3: NaN·inf가 저장 전체를 실패시키기 전에 그 필드만 되돌린다.

@@ -599,6 +599,15 @@ local function rateLimited(player, action, now)
 	return false
 end
 
+-- QUEUE-ALL4 C 출시 감사: 사람이 부르는 선택 읽기(내 기록 · 무기 카드 - 사람당 10초 · 2초에 한 번이라 12명이 카드를 넘기면 분당 최대 360 읽기)는
+-- 이 서버의 GetAsync 남은 예산이 readBudgetReserve 아래면 읽지 않고 실패로 돌려준다 - 접속 프로필 로드(사람당 1 + 잠금 대기 최대 5)의 몫을 남긴다.
+local function readBudgetLow()
+	local ok, budget = pcall(function()
+		return DataStoreService:GetRequestBudgetForRequestType(Enum.DataStoreRequestType.GetAsync)
+	end)
+	return ok and type(budget) == "number" and budget < LeaderboardConfig.readBudgetReserve
+end
+
 local function seasonInfo()
 	local season = Leaderboard.currentSeason()
 	return { id = season, lengthDays = LeaderboardConfig.seasonLengthDays, endsAt = LeaderboardRules.seasonEndsAt(season, LeaderboardConfig) }
@@ -648,6 +657,9 @@ function Leaderboard.handle(player, action, boardId, key, now)
 			local fake = fakeMine and fakeMine[boardId]
 			return fake and table.clone(fake) or { ok = true, rank = nil, outOfTop = false }
 		end
+		if readBudgetLow() then
+			return { ok = false, reason = "store_error" }
+		end
 		stats.orderedRead += 1
 		local ok, value = withRetry("내 기록 읽기", function()
 			return ordered(kindOf(boardId)):GetAsync(playerKey(player.UserId))
@@ -683,6 +695,9 @@ function Leaderboard.handle(player, action, boardId, key, now)
 		local cached = cardCache[storeKey]
 		if cached and os.clock() - cached.at < LeaderboardConfig.cardCacheSeconds then
 			return { ok = true, card = cached.value }
+		end
+		if readBudgetLow() then
+			return { ok = false, reason = "store_error" }
 		end
 		stats.plainRead += 1
 		local ok, value = withRetry("카드 읽기", function()

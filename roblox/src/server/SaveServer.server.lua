@@ -38,6 +38,9 @@ local function loadForPlayer(player)
 	if loadInfo and loadInfo.lockWaitedSeconds then -- 약한 세션 잠금 대기(초 · 풀리지 않았으면 음수)
 		require(script.Parent.Telemetry).custom(player, "SaveSessionLockWait", loadInfo.lockReleased and loadInfo.lockWaitedSeconds or -loadInfo.lockWaitedSeconds)
 	end
+	if loadInfo and loadInfo.repaired then -- QUEUE-ALL4 C: 손상 저장 고침(SaveSystem.repairProfile) - 고친 칸 수
+		require(script.Parent.Telemetry).custom(player, "SaveRepaired", #loadInfo.repaired)
+	end
 	if not profile then
 		warn(("[forge-game] 저장 데이터 불러오기 실패: %s - %s"):format(player.Name, tostring(err)))
 		profile = SaveSystem.defaultProfile()
@@ -86,12 +89,17 @@ Players.PlayerAdded:Connect(loadForPlayer)
 -- 지금 이 저장과 겹쳐 경합할 수 있었다(낙관적 동시성 검사가 더 최신 저장을 stale로
 -- 오판하는 사례를 11-1 테스트 중 실제로 재현했다). flush는 그 예약을 취소하고 지금
 -- 한 번만 저장한다.
+local leavingCount = 0 -- QUEUE-ALL4 C: 퇴장 처리 중인 사람 수(종료 저장이 이것까지 기다린다 - 마지막 사람이 나가며 서버가 닫힐 때 퇴장 저장이 잘리지 않게)
 Players.PlayerRemoving:Connect(function(player)
-	require(script.Parent.Telemetry).onLeaving(player) -- Q15: 프로필을 지우기 전에 통계 전송
+	leavingCount += 1
+	pcall(function()
+		require(script.Parent.Telemetry).onLeaving(player) -- Q15: 프로필을 지우기 전에 통계 전송
+	end)
 	SaveSystem.markReleasing(player, true) -- QUEUE-6h-b 후속: 퇴장 저장 = 마지막 저장 - 세션 잠금을 놓는다
-	ImmediateSave.flush(player)
+	pcall(ImmediateSave.flush, player)
 	SaveSystem.markReleasing(player, false)
 	PlayerProfile.clear(player)
+	leavingCount -= 1
 end)
 
 -- 주기 자동저장. 간격 근거는 SaveConfig.autosaveIntervalSeconds 주석 참고.
@@ -106,9 +114,12 @@ end)
 
 -- 서버 종료 시 마지막 저장. BindToClose는 콜백이 끝날 때까지 서버 종료를 미룬다 - 그
 -- 안에 남은 플레이어를 전부 저장한다. PlayerRemoving과 같은 이유로 flush를 쓴다.
+-- QUEUE-ALL4 C: 동시에 내보내고 퇴장 저장 · 진행 중 저장까지 마감(SaveConfig.shutdownSaveDeadlineSeconds) 안에 기다린다(ImmediateSave.flushAllForShutdown).
 game:BindToClose(function()
-	for _, player in ipairs(Players:GetPlayers()) do
+	local done, seconds = ImmediateSave.flushAllForShutdown(Players:GetPlayers(), SaveConfig.shutdownSaveDeadlineSeconds, function(player)
 		SaveSystem.markReleasing(player, true) -- 서버 종료 저장도 잠금을 놓는다
-		ImmediateSave.flush(player)
-	end
+	end, function()
+		return leavingCount > 0
+	end)
+	print(("[forge-game] 종료 저장: %s · %.1f초"):format(done and "전부 끝" or "마감 넘음(남은 저장은 잘릴 수 있다)", seconds))
 end)

@@ -38,6 +38,9 @@ return {
 	-- 클라 요청 최소 간격(초, 요청자별). board = 캐시 읽기(저장소 요청 0) · me = 내 기록 1회 읽기 · card = 무기 카드 1회 읽기(캐시 cardCacheSeconds).
 	requestIntervalSeconds = { board = 1, me = 10, card = 2, hall = 2 }, -- hall(P3c E2) = 지난 시즌 순위표(서버 캐시 읽기)
 	cardCacheSeconds = 300,
+	-- QUEUE-ALL4 C: me · card 읽기 전 서버 GetAsync 남은 예산(DataStoreService:GetRequestBudgetForRequestType)이 이 값 아래면 읽지 않는다(실패 응답 - 다시 누르면 된다).
+	-- 30 = 동시 접속 5명의 프로필 로드(사람당 1 + 세션 잠금 대기 최대 5 = 6) 몫. docs/design/save-audit-launch.md §3.
+	readBudgetReserve = 30,
 
 	-- 쓰기 실패 재시도(초) - 3번 다 실패하면 로그만 남기고 버린다(다음 기록 때 다시 쓴다 - 개인 · 직업 값은 UpdateAsync로 "더 좋을 때만" 올린다).
 	writeRetryDelaysSeconds = { 1, 3, 6 },

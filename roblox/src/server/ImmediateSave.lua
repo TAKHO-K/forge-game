@@ -72,4 +72,27 @@ function ImmediateSave.flush(player)
 	return SaveCoordinator.saveForPlayer(player) -- QUEUE-B1 B2: 저장 성공 여부(구매 처리가 본다)
 end
 
+-- QUEUE-ALL4 C: 서버 종료(BindToClose) 전용. 남은 사람을 **동시에** flush하고(옛 = 한 명씩 - 재시도 대기가 사람 수만큼 쌓여 30초를 넘을 수 있었다),
+-- 이미 진행 중인 저장(퇴장 저장 포함 - SaveCoordinator.activeSaves)과 extraBusy()가 참인 동안 deadlineSeconds까지 기다린다.
+-- beforeEach(player) = 그 사람 flush 직전(세션 잠금 놓기 표시). 반환: 마감 전에 다 끝났는가, 걸린 초.
+function ImmediateSave.flushAllForShutdown(players, deadlineSeconds, beforeEach, extraBusy)
+	local started = os.clock()
+	local pending = 0
+	for _, player in ipairs(players) do
+		pending += 1
+		task.spawn(function()
+			if beforeEach then
+				beforeEach(player)
+			end
+			pcall(ImmediateSave.flush, player)
+			pending -= 1
+		end)
+	end
+	while (pending > 0 or SaveCoordinator.activeSaves() > 0 or (extraBusy and extraBusy())) and os.clock() - started < deadlineSeconds do
+		task.wait(0.1)
+	end
+	local done = pending == 0 and SaveCoordinator.activeSaves() == 0 and not (extraBusy and extraBusy())
+	return done, os.clock() - started
+end
+
 return ImmediateSave

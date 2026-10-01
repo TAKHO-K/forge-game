@@ -109,6 +109,13 @@ return {
 	saveRetryCount = 3,
 	saveRetryDelaysSeconds = { 1, 3, 6 },
 
+	-- QUEUE-ALL4 C 출시 감사: 서버 종료(BindToClose) 저장 마감(초). 로블록스는 BindToClose 콜백을 최대 30초 기다린다 - 여유 5초를 남긴다.
+	-- 종료 저장은 사람마다 동시에 내보내고(옛 = 한 명씩 차례 - 재시도 대기 1 + 3 + 6초가 사람 수만큼 쌓여 30초를 넘을 수 있었다),
+	-- 퇴장(PlayerRemoving) 저장이 아직 진행 중이면 그것까지 끝나기를 이 마감까지 기다린다(마지막 사람이 나가며 서버가 닫힐 때 저장이 잘리지 않게).
+	shutdownSaveDeadlineSeconds = 25,
+	-- 저장 실패(stale_session이 아닌 에러 - DataStore 장애 · 한도 초과) 안내를 같은 사람에게 다시 보내는 최소 간격(초). 실패해도 저장을 멈추지 않고 다음 주기 · 퇴장 때 다시 시도한다.
+	saveFailureNoticeGapSeconds = 300,
+
 	-- 인벤토리 칸 수 초기값. 웹에는 대응하는 상수가 없어 잠정값이다 - 상점에서 칸 확장을
 	-- 만들 때 실제 기준(가격 곡선 등)과 함께 재조정한다.
 	defaultInventorySlots = 20,
