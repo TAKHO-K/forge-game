@@ -276,42 +276,35 @@ def plate(p, box, fill):
     p.rrect(box, (box[3] - box[1]) // 2, fill)
 
 
-def head(p, cx, cy):
-    p.d.pieslice((cx - 230, cy + 120, cx + 230, cy + 520), 180, 360, fill=(110, 140, 220, 255), outline=INK, width=W)
-    p.rrect((cx - 120, cy - 90, cx + 120, cy + 150), 40, (246, 208, 168, 255))
-    p.ellipse((cx - 62, cy + 10, cx - 30, cy + 60), INK, w=0)
-    p.ellipse((cx + 30, cy + 10, cx + 62, cy + 60), INK, w=0)
-
-
-def nameplateColor(img, p, c):  # 이름표 색: 머리 위 이름표 띠가 무지개 색 칸 + 붓
-    head(p, 512, 560)
-    box = (190, 230, 834, 410)
+def nameplateColor(img, p, c):  # 이름표 색(QUEUE-STUDIO 0-4 다시): 타일 가득 큰 무지개 이름표 띠(비스듬한 색 줄) + 반짝임 - 배지 아이콘과 실루엣이 다르게(가로 띠 vs 세로 방패)
+    box = (110, 330, 914, 640)
     plate(p, box, WHITE)
-    cols = [(92, 156, 240), (90, 200, 120), (250, 236, 120), (170, 120, 240)]
-    w = (box[2] - box[0] - 2 * W) / len(cols)
+    cols = [(92, 156, 240), (80, 200, 220), (90, 200, 120), (250, 236, 120), (170, 120, 240)]  # 무지개(위험색 330 ~ 50° 뺌)
     inner = Image.new("L", (S, S), 0)
     ImageDraw.Draw(inner).rounded_rectangle((box[0] + W // 2, box[1] + W // 2, box[2] - W // 2, box[3] - W // 2), radius=(box[3] - box[1]) // 2 - W // 2, fill=255)
     bands = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     bd = ImageDraw.Draw(bands)
-    for i, col in enumerate(cols):
-        x0 = box[0] + W + i * w
-        bd.rectangle((x0 - 2, box[1], x0 + w + 2, box[3]), fill=rgba(col))
-        bd.rectangle((x0 - 2, box[1] + 30, x0 + w + 2, box[1] + 70), fill=lighten(col, 0.35))
+    step, slant = 190, 120
+    for i in range(-1, 7):
+        x0 = box[0] - 60 + i * step
+        col = cols[i % len(cols)]
+        bd.polygon([(x0, box[3]), (x0 + slant, box[1]), (x0 + slant + step, box[1]), (x0 + step, box[3])], fill=rgba(col))
+        bd.polygon([(x0 + slant * 0.86, box[1] + 30), (x0 + slant * 0.72, box[1] + 70), (x0 + slant * 0.72 + step, box[1] + 70), (x0 + slant * 0.86 + step, box[1] + 30)], fill=lighten(col, 0.35))
     img.paste(bands, (0, 0), Image.composite(bands, Image.new("RGBA", (S, S), (0, 0, 0, 0)), inner).split()[3])
     p.d.rounded_rectangle(box, radius=(box[3] - box[1]) // 2, outline=INK, width=W)
-    stroke(p, [(700, 560), (840, 430)], WOOD, 34)
-    p.poly([(820, 420), (880, 360), (900, 400), (860, 460)], (170, 120, 240, 255))
+    for x, y, r in ((220, 250, 52), (800, 720, 60), (880, 250, 36)):
+        p.poly(star_pts(x, y, r * 1.8, 0.3, 4), (255, 250, 214, 255), w=12)
 
 
-def nameplateBadge(p, c):  # 이름표 배지: 크림 이름표 + 왼쪽 끝 방패 배지(별)
-    head(p, 512, 560)
-    plate(p, (250, 250, 850, 400), CREAM)
-    p.rrect((400, 300, 760, 350), 25, CREAM_D, w=0)  # 이름 자리(글자 대신 빈 줄)
-    sh = [(250, 200), (340, 165), (430, 200), (430, 360), (340, 450), (250, 360)]
+def nameplateBadge(p, c):  # 이름표 배지(QUEUE-STUDIO 0-4 다시): 타일 가운데 큰 방패 배지(별) + 뒤로 지나가는 짧은 크림 이름표 띠 - 색 아이콘과 실루엣이 다르게
+    plate(p, (150, 470, 874, 600), CREAM)
+    p.rrect((560, 510, 800, 560), 25, CREAM_D, w=0)  # 이름 자리(글자 대신 빈 줄)
+    sh = [(512, 170), (760, 260), (760, 560), (512, 860), (264, 560), (264, 260)]
     p.poly(sh, (92, 156, 240, 255))
-    p.poly([(340, 165), (430, 200), (430, 360), (340, 450)], (66, 112, 190, 255), w=0)
+    p.poly([(512, 170), (760, 260), (760, 560), (512, 860)], (66, 112, 190, 255), w=0)
+    p.poly([(512, 230), (700, 300), (700, 340), (512, 280), (324, 340), (324, 300)], lighten((92, 156, 240), 0.35), w=0)  # 윗면 밝은 띠
     p.d.line(sh + [sh[0]], fill=INK, width=W, joint="curve")
-    p.poly(star_pts(340, 300, 90, 0.45), GOLD, w=16)
+    p.poly(star_pts(512, 500, 190, 0.45), GOLD, w=18)
 
 
 # 이름 → (종류, 타일 색, 그리기, 그리기가 img를 받는가)
@@ -328,7 +321,7 @@ ICONS = [
     ("pickupRadius", "pass", (86, 186, 96), pickupRadius, True),
     ("recallCooldown", "pass", (64, 150, 230), recallCooldown, False),
     ("nameplateColor", "pass", (140, 92, 226), nameplateColor, True),
-    ("nameplateBadge", "pass", (100, 110, 210), nameplateBadge, False),
+    ("nameplateBadge", "pass", (56, 74, 150), nameplateBadge, False),  # QUEUE-STUDIO 0-4: 남색(색 아이콘 보라와 한눈에 구분)
 ]
 
 
@@ -412,6 +405,15 @@ def glow_ring(img, box, col=(255, 240, 120)):
     img.alpha_composite(lay.filter(ImageFilter.GaussianBlur(10)))
 
 
+def bust_crop(im, top, bottom, width):
+    """원본 렌더에서 알파가 있는 곳 기준 세로 top ~ bottom 비율만 잘라 폭 width로 키운다"""
+    x0, y0, x1, y1 = im.getbbox()
+    h = y1 - y0
+    part = im.crop((x0, y0 + int(h * top), x1, y0 + int(h * bottom)))
+    k = width / part.width
+    return part.resize((int(part.width * k), int(part.height * k)), Image.LANCZOS)
+
+
 def game_icon(kind, hero, slime):
     img = Image.new("RGBA", (S, S), (0, 0, 0, 255))
     if kind == "A":  # 풀밭: 전신 + 곁의 이끼 슬라임 + 풀 덤불
@@ -429,6 +431,19 @@ def game_icon(kind, hero, slime):
         place(img, hero, (320, 170, 800, 920))
         for x, y, r in ((300, 300, 40), (800, 240, 32), (850, 560, 26), (250, 560, 24)):
             ImageDraw.Draw(img).polygon(star_pts(x, y, r * 1.8, 0.3, 4), fill=(255, 250, 214, 255), outline=INK, width=8)
+    elif kind == "D":  # QUEUE-STUDIO 0-4: C 구도(얼굴 가까이) + 초월(흑금) 대검을 치켜듦 + 뒤 빛기둥
+        field(img, 600)
+        beam(img, 400, 0, S, 210)
+        lay = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        d = ImageDraw.Draw(lay)
+        for i in range(12):  # 기둥 둘레 옅은 방사 빛살(C와 같은 빛살 - 더 옅게)
+            a = math.radians(i * 30 + 8)
+            d.polygon([(400, 300), (400 + 900 * math.cos(a - 0.08), 300 + 900 * math.sin(a - 0.08)), (400 + 900 * math.cos(a + 0.08), 300 + 900 * math.sin(a + 0.08))], fill=(255, 250, 220, 50))
+        img.alpha_composite(lay.filter(ImageFilter.GaussianBlur(6)))
+        bust = bust_crop(hero, 0.0, 0.66, 1180)  # 칼끝은 위로 나가도 된다 - 얼굴이 가운데 아래
+        img.alpha_composite(bust, ((S - bust.width) // 2 - 10, S - bust.height + 20))
+        for x, y, r in ((170, 300, 30), (880, 210, 26), (900, 520, 20)):
+            ImageDraw.Draw(img).polygon(star_pts(x, y, r * 1.8, 0.3, 4), fill=(255, 236, 150, 255), outline=INK, width=8)
     else:  # 근접: 상반신 · 쌍검이 화면 아래로
         field(img, 520)
         lay = Image.new("RGBA", (S, S), (0, 0, 0, 0))
@@ -475,9 +490,9 @@ def main():
         check(name, im, False)
         im.save(os.path.join(OUT, name + ".png"))
         made.append((name, im))
-    hero, slime = model("hero"), model("slime")
-    for k in ("A", "B", "C"):
-        im = game_icon(k, hero, slime)
+    hero, slime, raised = model("hero"), model("slime"), model("hero_raise")
+    for k in ("A", "B", "C", "D"):
+        im = game_icon(k, raised if k == "D" else hero, slime)
         check(k, im, True)
         im.save(os.path.join(OUT, "game_icon_blender_%s.png" % k))
         made.append(("game_icon_blender_" + k, im))

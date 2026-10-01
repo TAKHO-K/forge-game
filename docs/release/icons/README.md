@@ -19,13 +19,15 @@ Creator Hub에 올릴 개발자 상품 8 · 게임패스 5 아이콘과 게임 �
 | `bagExpand.png` | `bagExpand` | 게임패스 | 가방 확장(+20칸) - 청록 타일 · 가방(HUD 가방 기호) + 초록 더하기 배지 | Monetization → Passes → Create a Pass → Icon(만든 뒤 Sales → Item for Sale 켬) |
 | `pickupRadius.png` | `pickupRadius` | 게임패스 | 자동 줍기 반경 - 초록 타일 · 가운데 펫(make_pets 강아지 Blender 렌더) + 점선 원 + 펫 쪽으로 끌려오는 보석 1 · 금화 2(꺾쇠) | 같음 |
 | `recallCooldown.png` | `recallCooldown` | 게임패스 | 빠른 귀환 - 파랑 타일 · 집 + 감싸는 화살 고리 + 번개 | 같음 |
-| `nameplateColor.png` | `nameplateColor` | 게임패스 | 이름표 색 - 보라 타일 · 캐릭터 머리 위 이름표(색 칸 4) + 붓 | 같음 |
-| `nameplateBadge.png` | `nameplateBadge` | 게임패스 | 이름표 배지 - 남보라 타일 · 크림 이름표 + 왼쪽 방패 배지(별) | 같음 |
+| `nameplateColor.png` | `nameplateColor` | 게임패스 | 이름표 색 - 보라 타일 · **타일 가득 가로 무지개 이름표 띠**(비스듬한 색 줄) + 반짝임(QUEUE-STUDIO 0-4 다시 - 배지와 실루엣 구분) | 같음 |
+| `nameplateBadge.png` | `nameplateBadge` | 게임패스 | 이름표 배지 - 남색 타일 · **가운데 큰 세로 방패 배지(금별)** + 뒤로 지나가는 짧은 크림 이름표(QUEUE-STUDIO 0-4 다시) | 같음 |
 | `game_icon_blender_A.png` | - | 게임 아이콘 후보 | A 풀밭 - 쌍검 캐릭터 전신 + 이끼 슬라임 + 돌담 · 풀 | Creations → 경험 → Configure → Basic Settings → Icon → Upload Image |
 | `game_icon_blender_B.png` | - | 게임 아이콘 후보 | B 빛기둥 - 발밑 빛 고리 + 하늘로 뻗는 금빛 기둥 | 같음 |
 | `game_icon_blender_C.png` | - | 게임 아이콘 후보 | C 근접 - 상반신 크게 + 뒤 방사 빛살 | 같음 |
-| `_sheet.png` | - | 확인용 | 16장을 150px로 줄여 회색 · 어두운 바탕에 나란히(업로드 안 함) | - |
-| `src/*.png` | - | 원본 | Blender 렌더 원본(평면 조명 · `__shade` = 스튜디오 조명) - 재생성 입력 | - |
+| `game_icon_blender_D.png` | - | 게임 아이콘 후보(QUEUE-STUDIO 0-4 · 추천) | D = C 구도(얼굴 가까이) + 검사가 **초월(흑금) 대검을 치켜듦** + 뒤 빛기둥 · 방사 빛살 | 같음 |
+| `game_icon_capture_D.png` | - | 게임 아이콘 후보(D 게임 안 촬영판) | 같은 구도를 Studio `/gg capture on`으로(개발 계정 이름 없음) - `Claude outputs/QUEUE-STUDIO/S-4_icon_D_capture.png`에서 정사각 크롭 | 같음 |
+| `_sheet.png` | - | 확인용 | 17장(상품 · 패스 13 + 게임 아이콘 A ~ D)을 150px로 줄여 회색 · 어두운 바탕에 나란히(업로드 안 함) | - |
+| `src/*.png` | - | 원본 | Blender 렌더 원본(평면 조명 · `__shade` = 스튜디오 조명) - 재생성 입력 · `hero_raise` = D안 몸(검사 전설 외형 + 초월 대검) | - |
 
 - 상품 · 패스 13장 = 투명 배경(네 모서리 알파 0) · 둥근 사각 타일. 게임 아이콘 3장 = 꽉 찬 사각(로블록스 게임 아이콘 규칙 - 모서리는 로블록스가 둥글게 자른다).
 - 게임 아이콘 후보는 인게임 캡처판 `Claude outputs/QUEUE-ALL2/launch/icon_A_grass.png` · `icon_B_pillar.png` · `icon_C_tight.png`와 같은 구도(A 풀밭 · B 빛기둥 · C 근접)로 맞췄다. 캐릭터는 실제 아바타가 아니라 Blender 블록 체형(도감 직업 초상화와 같은 몸)이라 개발 계정 이름 · UI 글자가 없다.
@@ -45,9 +47,10 @@ Creator Hub에 올릴 개발자 상품 8 · 게임패스 5 아이콘과 게임 �
 
 ```
 # 1) Blender 원본(모양이 바뀔 때만 - 캐릭터 · 슬라임 · 드래곤 날개 · 구름 고래 · 펫 → docs/release/icons/src)
-bash roblox/tools/blender/bl.sh roblox/tools/icons/store_renders_blender.py
+bash roblox/tools/blender/bl.sh roblox/tools/icons/store_renders_blender.py            # 전부
+bash roblox/tools/blender/bl.sh roblox/tools/icons/store_renders_blender.py --only hero_raise   # D안 몸만
 
-# 2) 아이콘 16장 + _sheet.png(Pillow · numpy)
+# 2) 아이콘 17장 + _sheet.png(Pillow · numpy)
 python roblox/tools/icons/make_store_icons.py
 ```
 

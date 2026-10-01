@@ -3,6 +3,7 @@
 #   make_store_icons.py(Pillow)가 두 장을 합쳐 3톤 음영(render_codex_portraits.shade와 같은 방식)을 입히고 타일 · 배경에 얹는다.
 #   찍는 것(파일 = <이름>.png · <이름>__shade.png):
 #     hero        = 쌍검 캐릭터(render_codex_portraits "class" 몸 + make_armor_class 전설 외형 + make_weapons 쌍검 영웅) · 팔을 벌린 자세 - 게임 아이콘 A · B · C
+#     hero_raise  = 검사 캐릭터(같은 몸 + 검사 전설 외형) · 오른손으로 초월(흑금) 대검을 치켜든 자세 - 게임 아이콘 D(QUEUE-STUDIO 0-4: C 구도 + 초월 무기 + 빛기둥)
 #     slime       = 이끼 슬라임(make_monsters) - 게임 아이콘 A 곁
 #     dragon_wing = 푸른 드래곤 날개 2장(make_monsters blue_dragon Wing_L · Wing_R · 색 = ArtV1CosmeticData.gliders.dragonWing.color) - glider_dragonWing
 #     cloud_whale = 구름 고래(make_cosmetics.parts - 시즌 1 유료 줄 대표) - season_premium
@@ -107,10 +108,10 @@ def pivot_group(objs, pivot_roblox, rot_roblox_deg):
     return e
 
 
-def hero():
-    """쌍검 캐릭터 - 도감 직업 초상화(render_codex_portraits "class")와 같은 몸 + 전설 외형 + 영웅 쌍검 · 팔 벌린 전투 자세"""
+def body(class_id, name):
+    """도감 직업 초상화(render_codex_portraits "class")와 같은 블록 몸 + 얼굴 · 머리카락 + 그 직업 전설 외형 3부위. 반환 = objs, part_of(오브젝트 이름 → 몸 부위)"""
     A.reset()
-    col = A.new_collection("hero")
+    col = A.new_collection(name)
     objs, part_of = [], {}
     skin, pants, hair = (246, 208, 168), (70, 74, 104), (150, 88, 44)
     for part, (c, s) in AW.REF.items():
@@ -132,14 +133,22 @@ def hero():
         tufts.append(A.ellipsoid((r, r * 0.9, r), n=8, rings=4, center=(x, y, z)))
     objs.append(A.make_obj("B_Hair", A.merge(*tufts), hair, col, mat_name="hero_hair"))
     for slot in AC.SLOTS:
-        _, aobjs, info = AC.build("dualblade", slot, "legendary")
+        _, aobjs, info = AC.build(class_id, slot, "legendary")
         for o in aobjs:
             part_of[o.name] = info[o.name]
         objs += aobjs
+    return objs, part_of
+
+
+ARM_PARTS = {"R": ("RightUpperArm", "RightLowerArm", "RightHand"), "L": ("LeftUpperArm", "LeftLowerArm", "LeftHand")}
+
+
+def hero():
+    """쌍검 캐릭터 - 도감 직업 초상화(render_codex_portraits "class")와 같은 몸 + 전설 외형 + 영웅 쌍검 · 팔 벌린 전투 자세"""
+    objs, part_of = body("dualblade", "hero")
     # 팔 자세: 어깨 둘레로 바깥 · 앞으로
-    arm_parts = {"R": ("RightUpperArm", "RightLowerArm", "RightHand"), "L": ("LeftUpperArm", "LeftLowerArm", "LeftHand")}
     for side, sx in (("R", 1), ("L", -1)):
-        grp = [o for o in objs if part_of.get(o.name) in arm_parts[side]]
+        grp = [o for o in objs if part_of.get(o.name) in ARM_PARTS[side]]
         hand = Vector((sx * 1.5, -1.37, 0))
         wobj = []
         _, wobjs = W.build("dualblade", "epic")
@@ -156,6 +165,26 @@ def hero():
         wobj = wobjs
         objs += wobj
         pivot_group(grp + wobj, (sx * 1.5, 0.95, 0), (32, 0, sx * 14))  # 앞으로 들고(+X 회전 = 손이 앞 −Z) 살짝 바깥
+    return objs
+
+
+def hero_raise(lift=168):
+    """검사 캐릭터 + 초월(흑금) 대검을 오른손으로 치켜든 자세(게임 아이콘 D). 대검 = 손잡이 원점 · 날 = Roblox +Z(make_weapons GS) →
+    먼저 손에 날이 아래(−Y)로 가게 쥐인 뒤, 팔과 함께 어깨 둘레로 lift도 돌려 날이 위로 서게 한다. 왼팔은 살짝 앞으로."""
+    objs, part_of = body("greatsword", "hero_raise")
+    _, wobjs = W.build("greatsword", "transcendent")
+    e = A.stand(wobjs, "W_raise")
+    hand = Vector((1.5, -1.37, 0))
+    e.matrix_world = Matrix.Translation(A.C @ hand) @ (A.C @ A.rot(90, 0, 0) @ A.CT).to_4x4()  # 날(+Z) → 아래(−Y) · 날 면은 카메라 쪽 그대로
+    bpy.context.view_layer.update()
+    for o in wobjs:
+        mw = o.matrix_world.copy()
+        o.parent = None
+        o.matrix_world = mw
+    bpy.data.objects.remove(e)
+    objs += wobjs
+    pivot_group([o for o in objs if part_of.get(o.name) in ARM_PARTS["R"]] + wobjs, (1.5, 0.95, 0), (0, 0, lift))
+    pivot_group([o for o in objs if part_of.get(o.name) in ARM_PARTS["L"]], (-1.5, 0.95, 0), (24, 0, -10))
     return objs
 
 
@@ -200,7 +229,12 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     out = os.path.abspath(argv[argv.index("--out") + 1]) if "--out" in argv else os.path.join(REPO, "docs", "release", "icons", "src")
     os.makedirs(out, exist_ok=True)
+    only = argv[argv.index("--only") + 1].split(",") if "--only" in argv else None
+    if only and "hero_raise" in only:  # QUEUE-STUDIO 0-4: 새 안만 다시 찍기(다른 원본은 그대로)
+        shoot(hero_raise(), out, "hero_raise", yaw=18, pitch=8, res=1536)
+        return
     shoot(hero(), out, "hero", yaw=22, pitch=10, res=1536)
+    shoot(hero_raise(), out, "hero_raise", yaw=18, pitch=8, res=1536)
     shoot(slime(), out, "slime", yaw=-30, pitch=16)
     shoot(dragon_wing(), out, "dragon_wing", yaw=0, pitch=0, pad=1.5)
     shoot(cloud_whale(), out, "cloud_whale", yaw=-125, pitch=14)

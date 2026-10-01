@@ -85,7 +85,7 @@
 |---|---|---|
 | 이름 | ★ 사용자 결정(설명 초안도 `{게임 이름}`으로 비어 있음) | - |
 | 설명 | 초안 2안(한국어 · 영어) + 업데이트 게시판 첫 글 | `Claude outputs/QUEUE-ALL2/launch/description-drafts.md` · 틀 `docs/store/description-template.md` |
-| 아이콘(512 × 512) | 3안 중 1장 고르기 ★ | `Claude outputs/QUEUE-ALL2/launch/icon_A_grass.png` · `icon_B_pillar.png` · `icon_C_tight.png` |
+| 아이콘(512 × 512) | 1장 고르기 ★(추천 D) | Blender판 `docs/release/icons/game_icon_blender_{A,B,C,D}.png` · 게임 안 촬영판 D `docs/release/icons/game_icon_capture_D.png`(QUEUE-STUDIO S-4) · 옛 캡처 `Claude outputs/QUEUE-ALL2/launch/icon_{A_grass,B_pillar,C_tight}.png` |
 | 썸네일(1920 × 1080) | 3장 × 글자 있음/없음 - 보통 글자 있음 3장 업로드(순서 A → B → C 추천) ★ | `Claude outputs/QUEUE-ALL2/launch/thumb_A_transcend_text.png` · `thumb_B_codex_text.png` · `thumb_C_hub_text.png`(글자 없는 판 = `_plain`) |
 | 장르 | 추천: **RPG**(하위 장르가 있으면 액션 RPG 계열) ★ | - |
 
@@ -242,7 +242,7 @@
 1. 상품 · 패스 13개 **가격**(지금 자리값 199 · 149 · 399 · 99 · 49).
 2. 상품 · 패스 13개 **512 아이콘** - QUEUE-ALL5 E에서 13장 제작(`docs/release/icons/`) → 이대로 쓸지 · 다시 그릴지만 결정.
 3. **게임 이름**(설명 초안 `{게임 이름}`).
-4. 경험 **아이콘 1장**(A 풀밭 · B 빛기둥 · C 근접 - Blender 렌더판 비교 = `docs/release/icons/game_icon_blender_*.png`) · **썸네일 순서** · 장르(추천 RPG).
+4. 경험 **아이콘 1장**(A 풀밭 · B 빛기둥 · C 근접 · **D 근접 + 초월 대검 + 빛기둥(추천)** - Blender판 `docs/release/icons/game_icon_blender_*.png` · 게임 안 촬영판 `game_icon_capture_D.png`) · **썸네일 순서** · 장르(추천 RPG).
 5. **시즌 1 시작일** `LeaderboardConfig.firstSeasonDateKst`(추천 오픈일) - 합동 목표 때문에 **월요일 오픈** 추천.
 6. **체크포인트 순간이동** 출시 때 켤지(`WorldMapData.lua:451` - 지금 켬).
 7. **표준 체형**(`ArtStyleV1Data.lua:44`) · **세트 도감 탭**(`SetData.lua:21`) 켤지(둘 다 지금 끔).
