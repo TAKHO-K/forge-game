@@ -208,7 +208,7 @@ end
 
 do -- A2-N3: 아트 스위치를 맵 짓기 전에 정한다(소품 메시 = PropLibrary 라이브러리 단계에서 입힘 - ArtAssetLoader가 소품부터 부른다). 아래 A2-S 블록과 같은 식.
 	local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
-	workspace:SetAttribute(ArtStyleV1Data.attribute, ArtStyleV1Data.enabled or (game:GetService("RunService"):IsStudio() and ReplicatedStorage:GetAttribute("ArtStyleV1Force") ~= false))
+	workspace:SetAttribute(ArtStyleV1Data.attribute, ReplicatedStorage:GetAttribute("ArtStyleV1Force") ~= false and (ArtStyleV1Data.enabled or game:GetService("RunService"):IsStudio()))
 end
 local meta, counts = WorldMap.build()
 -- M1-3: 굽힌 지형 표식(버전 · 표본 서명)이 데이터와 같은가 - 다르면 경고만(런타임 생성 금지 · 다시 굽기 = Studio edit)
@@ -245,9 +245,10 @@ end
 do
 	-- A2-S: 아트 샘플 스위치(기본 꺼짐 - ArtStyleV1Data.enabled). 켜져 있으면 조명도 샘플 프로필
 	local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
-	-- A2-M1(사용자 지시 "ArtStyleV1 = 개발 기본 켬"): Studio에서는 기본 켬 · edit 모드 RS Attribute ArtStyleV1Force = false면 끔(끔 = 지금 라이브 게임과 같다) · 라이브 = ArtStyleV1Data.enabled 그대로
+	-- A2-M1(사용자 지시 "ArtStyleV1 = 개발 기본 켬"): Studio에서는 기본 켬 · 라이브 = ArtStyleV1Data.enabled(QUEUE-ALL5 B: 출시 = 켬).
+	--   비상 끔(QUEUE-ALL5 B): RS Attribute ArtStyleV1Force = false면 Studio · 라이브 모두 끔(옛 모습). 라이브에서 끄려면 enabled = false로 퍼블리시하거나 place에 이 Attribute를 false로 남겨 퍼블리시.
 	local isStudio = game:GetService("RunService"):IsStudio()
-	local artOn = ArtStyleV1Data.enabled or (isStudio and ReplicatedStorage:GetAttribute("ArtStyleV1Force") ~= false)
+	local artOn = ReplicatedStorage:GetAttribute("ArtStyleV1Force") ~= false and (ArtStyleV1Data.enabled or isStudio)
 	workspace:SetAttribute(ArtStyleV1Data.attribute, artOn)
 	local profile = artOn and ArtStyleV1Data.lightingProfile or require(ReplicatedStorage.Shared.data.CartoonStyleData).active
 	local counts = require(ReplicatedStorage.Shared.CartoonStyle).apply(profile)

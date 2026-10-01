@@ -117,6 +117,9 @@
 
 **Configure → Places** → 시작 장소 클릭 → **Server Fill / Access**(서버 인원) 화면:
 
+> ### ★ 서버 크기 = **Max Players 16 · 정원(Preferred) 12** (확정 - QUEUE-ALL5 B)
+> 16 = 12 + 파티 합류 여유 4. 정원 12로 채우고, 남은 4칸은 다른 서버의 파티원이 합류하는 자리다. **Max를 12로 두면 파티 합류가 `GameFull`로 거절된다.**
+
 - **Max Players(서버 최대 인원) = 16** · **매치메이킹 정원(Customize → 예약 칸 4) = 12** 추천.
   - 근거: `roblox/src/shared/data/PartyConfig.lua:94-95` - `serverPreferredPlayers = maxMembers × partiesPerServer`(4 × 3 = **12**) · `serverCapacity = 12 + crossServerExtraSlots`(파티 1팀 4 = **16**). 주석 `:47-52` "서버 정원 12 = 4인 × 3파티 · 서버 상한(Players.MaxPlayers로 대시보드에 설정해야 하는 값) = 12 + 4 = 16". roadmap-v2 P6 "MaxPlayers 16 · Preferred 12".
   - 즉 **보통 서버는 12명으로 채우고**, 남은 4칸은 다른 서버에서 파티원이 합류(크로스서버)할 자리다. 최대 인원을 12로만 두면 꽉 찬 서버로 오는 파티 합류가 `GameFull`로 거절된다(`PartyCrossServer.lua:104-107`).
@@ -168,7 +171,7 @@
 
 | # | 항목 | 파일:줄 | 현재 값 | 출시 값 추천 | 메모 |
 |---|---|---|---|---|---|
-| 1 | **아트 스위치** | `roblox/src/shared/data/ArtStyleV1Data.lua:41` | `enabled = false` | **`true`** | **중요**: Studio는 기본 켬(`HuntingGround.server.lua:249` - `IsStudio and ArtStyleV1Force ~= false`)이라 지금까지 본 화면은 전부 아트 켠 화면이다. 라이브는 이 값만 본다(`:210`) → false면 라이브는 옛 모습. 켜면 ArtAssetLoader가 에셋 677개를 받는다(2-7 · 2-8 확인 먼저) |
+| 1 | **아트 스위치** | `roblox/src/shared/data/ArtStyleV1Data.lua:41` | **`enabled = true`(QUEUE-ALL5 B · 사용자 결정 - 켬 완료)** | `true` 그대로 | 라이브도 지금까지 검증한 화면(아트 켬)과 같다. ArtAssetLoader가 에셋 677개를 받는다(2-7 · 2-8 확인). **비상 끔**: ① `enabled = false`로 고쳐 퍼블리시 또는 ② Studio edit에서 ReplicatedStorage Attribute `ArtStyleV1Force = false`를 둔 채 퍼블리시(`HuntingGround.server.lua` - 이 값이 false면 Studio · 라이브 모두 끔). 반대로 **평소 퍼블리시 전에는 `ArtStyleV1Force`가 false로 남아 있지 않은지 꼭 확인**(남아 있으면 라이브가 옛 모습) |
 | 2 | 표준 체형 | `ArtStyleV1Data.lua:44` | `standardBody.enabled = false` | ★ 사용자 결정(A2-N4 P0-3 B안 · 기본 끔) | 그대로면 각자 아바타 체형 |
 | 3 | 개발 명령 허용 계정 | `roblox/src/shared/data/DevToolsConfig.lua:23` | `allowedUserIds = {}` | 그대로(`{}`) | `/gg` 개발 명령은 라이브에서 스크립트가 첫 줄에서 끝난다(`DevTools.server.lua:20` `if not RunService:IsStudio() then return end`) → 라이브와 무관. Team Create로 남과 Studio를 같이 쓸 때만 `{ 11595243049 }`로 좁힌다 |
 | 4 | 운영 명령 허용 계정 | `roblox/src/server/OpsConfig.lua:3` | `userIds = { 11595243049 }`(HoddyForge) | 그대로 · 운영자를 더 둘 거면 UserId 추가 ★ | `/ops`(격리 해제 · 회수 · 리더보드 제거 · 저장 복구 · 선물)는 **라이브에서 동작**한다(`OpsServer.server.lua`). 선물함 관리자도 같은 목록 |
@@ -188,7 +191,7 @@
 | 18 | 시즌 패스 | `roblox/src/shared/data/SeasonPassData.lua:56` | `enabled = true` | 그대로 · 6번(시작일)과 한 세트 | 시작일 없으면 1시즌에 멈춤 |
 | 19 | 상품 · 패스 ID | `MonetizationData.lua:22-37` | 전부 `0` | Creator Hub 번호 | 1장 |
 
-- 그 밖에 찾아본 개발용 강제 값(모두 Studio 전용이라 출시 때 손댈 것 없음): Workspace `RiftForce`(균열 강제 - `/gg`만 씀) · ReplicatedStorage `DebugZonesUnlocked`(`Travel.lua:87` · Studio만) · `ArtStyleV1Force`(Studio만) · `VerifyArmedUntil`(Studio만 · `DevToolsConfig.lua:175-176`) · 궤적 스킨 `devOnly`(`TrailSkinService.lua:16` Studio만) · 검증 훅(AttackServer · DashServer · MovementServer · SkillServer · StageServer의 `if IsStudio()` 블록).
+- 그 밖에 찾아본 개발용 강제 값(모두 Studio 전용이라 출시 때 손댈 것 없음): Workspace `RiftForce`(균열 강제 - `/gg`만 씀) · ReplicatedStorage `DebugZonesUnlocked`(`Travel.lua:87` · Studio만) · `ArtStyleV1Force`(QUEUE-ALL5 B부터 **라이브에서도 읽는다** - false면 라이브 아트 끔. 비상 끔용) · `VerifyArmedUntil`(Studio만 · `DevToolsConfig.lua:175-176`) · 궤적 스킨 `devOnly`(`TrailSkinService.lua:16` Studio만) · 검증 훅(AttackServer · DashServer · MovementServer · SkillServer · StageServer의 `if IsStudio()` 블록).
 - 단 **Studio에서 edit 모드로 켠 Attribute는 퍼블리시 때 place 파일에 같이 실려 갈 수 있다**. 퍼블리시 직전 Studio 탐색기에서 ReplicatedStorage · Workspace Attribute에 `VerifyArmedUntil` · `VerifyOnly` · `ArtStyleV1Force` · `RiftForce` · `DebugZonesUnlocked`가 남아 있으면 지운다(라이브는 IsStudio로 무시하지만 `RiftForce`는 `RiftService.server.lua:20`이 라이브에서도 읽는다 - **꼭 지운다**).
 
 ---
@@ -239,7 +242,7 @@
 1. 상품 · 패스 13개 **가격**(지금 자리값 199 · 149 · 399 · 99 · 49).
 2. 상품 · 패스 13개 **512 아이콘** 제작 방식(지금 전용 아이콘 0개).
 3. **게임 이름**(설명 초안 `{게임 이름}`).
-4. 경험 **아이콘 1장**(A 풀밭 · B 빛기둥 · C 근접) · **썸네일 순서** · 장르(추천 RPG).
+4. 경험 **아이콘 1장**(A 풀밭 · B 빛기둥 · C 근접 - Blender 렌더판 비교 = `docs/release/icons/game_icon_blender_*.png`) · **썸네일 순서** · 장르(추천 RPG).
 5. **시즌 1 시작일** `LeaderboardConfig.firstSeasonDateKst`(추천 오픈일) - 합동 목표 때문에 **월요일 오픈** 추천.
 6. **체크포인트 순간이동** 출시 때 켤지(`WorldMapData.lua:451` - 지금 켬).
 7. **표준 체형**(`ArtStyleV1Data.lua:44`) · **세트 도감 탭**(`SetData.lua:21`) 켤지(둘 다 지금 끔).

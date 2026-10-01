@@ -38,7 +38,7 @@ local monsterRigs = {
 }
 
 return {
-	enabled = false, -- 기본 꺼짐(승인 전). 부팅 때 Workspace.ArtStyleV1 = 이 값
+	enabled = true, -- QUEUE-ALL5 B(사용자 결정): 출시 = 켬(지금까지 검증한 화면 = 켬). 부팅 때 Workspace.ArtStyleV1 = 이 값 · 비상 끔 = false로 퍼블리시 또는 RS Attribute ArtStyleV1Force = false(server/HuntingGround)
 	attribute = "ArtStyleV1",
 	-- A2-N4 P0-3 B안(기본 끔 · 결정 목록): 게임 안 표준 체형 - 몸 파트 id 0(기본 R15) · 배율 고정 · 머리 · 머리카락 · 액세서리 · 피부색은 그대로. 스위치 = Workspace Attribute(서버 server/StandardBody)
 	standardBody = { enabled = false, attribute = "StandardBodyV1", scales = { HeightScale = 1, WidthScale = 1, DepthScale = 1, HeadScale = 1, ProportionScale = 0, BodyTypeScale = 0 } },
