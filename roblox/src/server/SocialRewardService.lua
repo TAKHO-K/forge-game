@@ -37,7 +37,7 @@ end
 -- 순수: 코드 찾기 · 기한(UTC 그날 끝까지)
 function SocialRewardService.find(code, now)
 	for _, c in ipairs(D.codes) do
-		if c.code == code then
+		if c.code == code and not c.inactive then -- QUEUE-ALL6 A5: inactive = 아직 안 연 단계(없는 코드와 같음)
 			local e = c.expires
 			local endUnix = os.time({ year = e[1], month = e[2], day = e[3], hour = 23, min = 59, sec = 59 })
 			-- os.time(표)는 서버 지역 시간 해석 - 로블록스 서버는 UTC

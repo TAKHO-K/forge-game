@@ -9,16 +9,16 @@
 
 | 순서 | 할 일 | 어디(이 문서) | 메모 |
 |---|---|---|---|
-| 1 | 시즌 1 시작일 정하기 → `LeaderboardConfig.firstSeasonDateKst = { 년, 월, 일 }` 커밋 | 2-1 | 자리값 그대로면 시즌 · 시즌 패스가 안 넘어감(서버 시작 경고) ★ |
+| 1 | **시즌 1 시작일 = 오픈일**(QUEUE-ALL6 A5 사용자 결정) → 오픈일이 정해지면 `roblox/src/shared/data/LeaderboardConfig.lua`의 `firstSeasonDateKst = nil` 한 줄을 `firstSeasonDateKst = { 년, 월, 일 }`(한국 날짜)로 바꿔 커밋 | 2-1 | 자리값 그대로면 시즌 · 시즌 패스가 안 넘어감(서버 시작 경고) |
 | 2 | 개발자 상품 8 · 게임패스 5 만들기 → id를 `MonetizationData`에 채워 커밋 | 1-1 ~ 1-3 | 아이콘 = `docs/release/icons/<키>.png`(이름표 색 · 배지는 QUEUE-STUDIO에서 다시 그림 - 한눈에 구분) |
-| 3 | 경험 아이콘 1장 올리기 | 2-2 | 후보: Blender판 `docs/release/icons/game_icon_blender_{A,B,C,D}.png` · 게임 안 촬영판 `game_icon_capture_D.png` - 추천 D ★ |
+| 3 | 경험 아이콘 1장 올리기 = **D안 확정**(QUEUE-ALL6 A5) | 2-2 | 올릴 파일 = `docs/release/icons/game_icon_blender_D.png`(Blender판) - 게임 안 촬영판 `game_icon_capture_D.png`는 예비(A · B · C는 비교용) |
 | 4 | 썸네일 올리기(순서 = A 초월 → C 허브 → B 도감) | 2-2 | QUEUE-STUDIO 재촬영 = `Claude outputs/QUEUE-STUDIO/launch/thumb_*_{plain,text}.png`(개발 계정 이름 없음) |
 | 5 | 서버 크기 Max 16 · 정원 12 | 2-4 | 로그 `플랫폼 MaxPlayers=16 PreferredPlayers=12` 확인 |
 | 6 | 질문지 · 공개 범위 · 오디오 권한 | 2-3 · 2-5 · 2-7 | |
 | 7 | Studio `Workspace.PlayerCharacterDestroyBehavior` 값 확인(속성 창 - 스크립트로는 못 읽음) | 3절 아래 메모 | `Enabled`가 아니면 바꾸고 퍼블리시(리스폰마다 캐릭터별 연결이 쌓이는 것 방지) ★ |
 | 8 | 퍼블리시 직전: ReplicatedStorage · Workspace Attribute에 시험 값이 없는지(`VerifyArmedUntil` · `VerifyOnly` · `ArtStyleV1Force` · `TextLanguageDev` · `RiftForce` · `StudioFreshProfile`) | 3절 | QUEUE-STUDIO 끝에 Studio에서 전부 nil 확인함 |
 | 9 | 아트 켬 확인 = 라이브 접속 콘솔 `[forge-game] 카툰 스타일 artV1` | 4절 5 | Studio 확인: 기본 = artV1(B-1 O) · 비상 끔 `ArtStyleV1Force = false` → `base`(B-2 O) |
-| 10 | 좋아요 목표를 넘기면 `SocialRewardData` 코드 `LIKES1K`의 `hidden` 지우고 업데이트 | `docs/release/codes.md` | 출시 기념 `FORGE2026`는 처음부터 보임 |
+| 10 | 좋아요 목표 단계(QUEUE-ALL6 A5): **1단계 1,000** = `LIKES1K`(입력 가능 · 숨김) → 넘기면 `hidden` 지우고 업데이트 · 2단계 5,000 `LIKES5K` · 3단계 10,000 `LIKES10K`는 `inactive = true`(입력도 안 됨) - 앞 단계 달성 때 `inactive` 지우고(보상 · 기한 확정) 공지 때 `hidden` 지움 | `docs/release/codes.md` | 출시 기념 `FORGE2026`는 처음부터 보임 |
 
 ---
 

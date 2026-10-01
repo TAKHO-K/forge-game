@@ -40,7 +40,7 @@ local function validCodes()
 	for _, c in ipairs(SD.codes) do
 		local e = c.expires
 		-- QUEUE-ALL5 C: 만료 = UTC 그날 끝(서버 SocialRewardService와 같은 뜻) - 클라의 os.time(표)는 기기 시간대로 읽힐 수 있어 UTC로 명시
-		if not c.hidden and os.time() <= DateTime.fromUniversalTime(e[1], e[2], e[3], 23, 59, 59).UnixTimestamp then
+		if not c.hidden and not c.inactive and os.time() <= DateTime.fromUniversalTime(e[1], e[2], e[3], 23, 59, 59).UnixTimestamp then
 			table.insert(out, Text.get("update.board.codeLine", { code = c.code, note = c.noteKey and Text.get(c.noteKey) or (c.note or ""), date = ("%d.%d.%d"):format(e[1], e[2], e[3]) }))
 		end
 	end
