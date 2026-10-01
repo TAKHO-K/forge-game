@@ -111,9 +111,9 @@
 | 부화하면 펫이 나와요(일반 · 고급 · 희귀 · 영웅). | Hatching gives a pet (Common · Uncommon · Rare · Epic). |
 | 부화를 많이 할수록 좋은 등급이 잘 나와요. | Hatch more for better grades more often. |
 | 펫은 60마리까지 보관하고, 하나를 데리고 다녀요. | Keep up to 60 pets. One can follow you. |
-| Lv.200부터 펫이 근처 아이템을 주워요. | From Lv.200, your pet picks up nearby items. |
+| Lv.30부터 펫이 근처 아이템을 주워요. | From Lv.30, your pet picks up nearby items. |
 
-> 확인 필요: `PetData.unlocks.autoPickup = 200`이 "레벨"인지(도움말 `help.pet.pickup` 문구는 Lv.{level}) 출시 전에 한 번 확인.
+> 확인함(QUEUE-STUDIO 0-3): `PetData.unlocks.autoPickup`은 지금 직업의 **캐릭터 레벨**(`PetService` · `PlayerProfile.getCharacterLevel`). 200 → 30(EconSim 캐주얼 첫 도달 1.85시간). 도움말 문구는 데이터 값을 그대로 읽는다.
 
 ## 9. 시즌 패스 / Season Pass
 근거: `shared/data/SeasonPassData.lua`(tiers 40 · expPerTier 250 · rows) · `shared/data/MonetizationData.lua`(season_premium 399 Robux) · `shared/data/TextData_en.lua`(`shop.help.detail` - 8주)

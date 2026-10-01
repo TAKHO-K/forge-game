@@ -18,7 +18,8 @@ return {
 		{ hatches = 50, shift = 12 },
 	},
 	shiftSplit = { uncommon = 0.6, rare = 0.3, epic = 0.1 }, -- 옮긴 몫의 나눔(합 1)
-	unlocks = { autoPickup = 200, hatchQueuePlus = 300, nestHint = 400, storage = 500 },
+	unlocks = { autoPickup = 30, -- QUEUE-STUDIO 0-3(사용자 결정 10-01): 기준 = 지금 직업의 캐릭터 레벨(PetService) · 200은 환생 5회 뒤라 캐주얼 19.5h → 30(EconSim 캐주얼 첫 도달 1.85h ≤ 3h)
+		hatchQueuePlus = 300, nestHint = 400, storage = 500 },
 	autoPickupRange = 14, -- 자동 줍기 반경(stud · 수평) - 줍기 자체는 ItemDropServer 한 곳(칸 확인 + 바닥 제거)
 	autoPickupHeight = 8,
 	hatchery = { zone = "hub", place = "communityCenter", placeholder = true }, -- NPC 자리(H1 배치 뒤)

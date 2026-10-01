@@ -413,7 +413,7 @@ function V.runPure()
 			worst = math.max(worst, math.abs((counts[g] or 0) / N * 100 - t[g]))
 		end
 		check(("부화 {N}회 = 공개 표(최대 오차 %.2f%%p ≤ 1) · 종 반반 %.3f"):format(worst, first / N):gsub("{N}", tostring(N)), worst <= 1 and math.abs(first / N - 0.5) < 0.015)
-		check("해금: 자동 줍기 200 · 대기열 +1 300", not Pet.unlocked(199, "autoPickup") and Pet.unlocked(200, "autoPickup") and Pet.queueCap(299) == 1 and Pet.queueCap(300) == 2)
+		check(("해금: 자동 줍기 %d · 대기열 +1 300"):format(PetData.unlocks.autoPickup), not Pet.unlocked(PetData.unlocks.autoPickup - 1, "autoPickup") and Pet.unlocked(PetData.unlocks.autoPickup, "autoPickup") and Pet.queueCap(299) == 1 and Pet.queueCap(300) == 2)
 		local bodyOk, partsOk = true, true
 		for id in pairs(EggData.species) do
 			bodyOk = bodyOk and PetData.rigs[PetData.bodyOf[id] or ""] ~= nil
