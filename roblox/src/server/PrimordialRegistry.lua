@@ -166,6 +166,8 @@ function PrimordialRegistry.claim(player, item, options)
 				warn(("[forge-game] 태초 원장 쓰기 실패 - %s · 굴림 %s(다음 로드 때 격리될 수 있다 - 운영 해제)"):format(ownerName, stamp.rollId))
 			end
 		end
+		require(script.Parent.AuditTrail).note(stamp.ownerId, item.grade, ("세계 %s번 · %s · %s · %s"):format(tostring(no), tostring(item.part), -- QUEUE-ALL6 F3 감사
+			type(item.source) == "table" and tostring(item.source.kind) or "?", tostring(stamp.rollId)))
 		if options.onNumbered then
 			pcall(options.onNumbered, no)
 		end

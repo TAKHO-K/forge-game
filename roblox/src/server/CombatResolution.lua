@@ -315,6 +315,10 @@ local function handleBossDeath(attacker, target)
 			grantKillReward(member, target, monsterData, deathPosition, deferredBossDrops)
 			if not monsterData.isRaid then -- 리뷰: 토벌은 보스 클리어 속도 감사 · 방지권(보스 스테이지 첫 클리어 보상)을 안 탄다
 				AcquisitionAudit.noteBossClear(member) -- S1 2-7 보스 클리어 속도
+				local enc = BossEncounter.getEncounterByModel(target)
+				if enc and enc.startedAt then -- QUEUE-ALL6 F2: 진입 연출(무적) 끝 → 처치 시간
+					require(script.Parent.SuspicionMonitor).noteBossClear(member, os.clock() - enc.startedAt, monsterData.stageNumber)
+				end
 				-- 28-1 S05: 보스 방지권 - 계정 단위 첫 클리어(직업별 bossFirstClearStages와 별개). 기여 10%를 넘긴 수령자만 여기까지 온다. 지급은 바로 아래 즉시 저장 요청에 실린다.
 				ProtectionTickets.grantForBoss(member, monsterData.stageNumber)
 			end

@@ -101,6 +101,7 @@ function CosmeticService.buyWithShards(player, kind, id)
 		return false, "shards"
 	end
 	CosmeticService.grant(player, kind, id)
+	require(script.Parent.AuditTrail).note(player, "shardBuy", ("%s %s · %d조각"):format(kind, tostring(id), price)) -- QUEUE-ALL6 F3 감사
 	require(script.Parent.ImmediateSave).request(player)
 	return true
 end

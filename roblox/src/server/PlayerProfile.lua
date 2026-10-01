@@ -329,6 +329,9 @@ function PlayerProfile.addGold(player, amount)
 	local add = Sanitize.number(amount, 0)
 	profile.gold += add -- S21-0 A2: 보상 계산 출구 - 오염된 보상은 이번만 0으로 건너뛴다
 	player:SetAttribute("Gold", profile.gold)
+	if add > 0 then
+		require(script.Parent.SuspicionMonitor).noteGold(player, add) -- QUEUE-ALL6 F2: 골드/분 · 큰 골드 감사 기록
+	end
 	Telemetry.economy(player, "gold", "source", add)
 end
 

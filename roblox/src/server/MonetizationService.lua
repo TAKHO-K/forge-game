@@ -170,6 +170,7 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 		return Decision.NotProcessedYet
 	end
 	require(script.Parent.Telemetry).custom(player, "Purchase_" .. key, 1)
+	require(script.Parent.AuditTrail).note(player, "purchase", ("%s · %s"):format(key, tostring(purchaseId))) -- QUEUE-ALL6 F3 감사
 	MonetizationService.push(player)
 	return Decision.PurchaseGranted
 end

@@ -29,6 +29,9 @@ local function take(player, key, limit)
 	b.at = now
 	if b.tokens < 1 then
 		RequestGate.dropped[key] = (RequestGate.dropped[key] or 0) + 1
+		if typeof(player) == "Instance" then
+			require(script.Parent.SuspicionMonitor).noteGateDrop(player) -- QUEUE-ALL6 F2: 요청 폭주(버림/분)
+		end
 		return false
 	end
 	b.tokens -= 1

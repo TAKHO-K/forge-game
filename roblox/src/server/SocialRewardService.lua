@@ -18,8 +18,10 @@ local noticeRemote = Instance.new("RemoteEvent")
 noticeRemote.Name = "SocialRewardNotice"
 noticeRemote.Parent = ReplicatedStorage
 
-local function grant(player, reward)
-	return require(script.Parent.QuestService).grant(player, reward)
+local function grant(player, reward, why)
+	local summary = require(script.Parent.QuestService).grant(player, reward)
+	require(script.Parent.AuditTrail).note(player, "social", ("%s: %s"):format(tostring(why or "?"), tostring(summary))) -- QUEUE-ALL6 F3 감사(코드 · 초대)
+	return summary
 end
 
 -- 순수: 코드 정리(대소문자 · 공백 무시)
@@ -74,7 +76,7 @@ codeRemote.OnServerInvoke = function(player, text)
 		result = { ok = false, message = D.text.used }
 	else
 		used[code] = os.time()
-		local summary = grant(player, entry.reward)
+		local summary = grant(player, entry.reward, "code " .. tostring(entry.code))
 		require(script.Parent.ImmediateSave).request(player)
 		result = { ok = true, message = D.text.ok:format(summary) }
 	end
@@ -115,7 +117,7 @@ function SocialRewardService.onLoaded(player, inviterOverride)
 		if not first then
 			return
 		end
-		grant(player, I.inviteeReward)
+		grant(player, I.inviteeReward, "invitee")
 		require(script.Parent.ImmediateSave).request(player) -- QUEUE-ALL5 D②: pairKey는 이미 써졌다 - 다음 주기 저장 전에 서버가 꺼지면 보상만 사라진다(코드 보상과 같게)
 		noticeRemote:FireClient(player, I.text.invitee)
 		local oldEnough = (player.AccountAge or 0) >= I.minAccountAgeDays
@@ -139,7 +141,7 @@ function SocialRewardService.onLoaded(player, inviterOverride)
 		end
 		local inviter = Players:GetPlayerByUserId(inviterId)
 		if inviter and PlayerProfile.getRedeemedCodes(inviter) then
-			grant(inviter, I.inviterReward)
+			grant(inviter, I.inviterReward, "inviter")
 			noticeRemote:FireClient(inviter, I.text.inviter)
 		else
 			require(script.Parent.GiftService).send(inviterId, "sparkleShard", I.inviterReward.sparkleShard, I.text.inviter, "친구 초대")

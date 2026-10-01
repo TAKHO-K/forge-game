@@ -282,6 +282,15 @@ requestRemote.OnServerEvent:Connect(function(player, action, arg)
 	end
 end)
 
+-- QUEUE-ALL6 F4 운영 회수: 그 구역 초월 기록 지우기(가짜 초월 회수 - 그 세트 세로줄 즉시 완료가 풀린다 · 받은 칸 보상은 그대로)
+function CodexService.forgetTranscendent(player, zone)
+	local r = rec(player)
+	if r and r.trans and zone then
+		r.trans[zone] = nil
+		schedule(player)
+	end
+end
+
 -- ═══ 기록 ═══
 function CodexService.noteArmor(player, item)
 	local r = rec(player)

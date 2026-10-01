@@ -147,7 +147,9 @@ function HallOfFame.refresh()
 		entries = {}
 		for _, row in ipairs(transcendentList) do
 			row.grade = row.grade or TranscendentData.gradeId
-			table.insert(entries, row)
+			if not AcquisitionAudit.isNumberExcluded("t" .. tostring(row.no)) then -- QUEUE-ALL6 F4: 회수한 초월 번호("t" 접두사 - 태초 번호와 별도 카운터)
+				table.insert(entries, row)
+			end
 		end
 		for _, row in ipairs(list) do
 			if not AcquisitionAudit.isNumberExcluded(row.no) then
@@ -162,6 +164,9 @@ end
 -- 이 서버에 알림이 온 순간: 같은 번호가 없으면 앞에 넣는다.
 local function onAnnounce(entry)
 	if not require(ReplicatedStorage.Shared.data.DropNoticeData).globalGrades[entry.grade] then -- Q0-6: 태초 = 같은 서버 배너만(석판 안 올림)
+		return
+	end
+	if entry.grade == TranscendentData.gradeId and require(script.Parent.AcquisitionAudit).isNumberExcluded("t" .. tostring(entry.no)) then -- QUEUE-ALL6 F4
 		return
 	end
 	if entry.grade ~= TranscendentData.gradeId and require(script.Parent.AcquisitionAudit).isNumberExcluded(entry.no) then -- Q1 리뷰: 결번 목록 = 태초 번호(초월 번호는 별도 카운터 - refresh와 같게)

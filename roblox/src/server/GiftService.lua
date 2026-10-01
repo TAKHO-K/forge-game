@@ -184,6 +184,7 @@ function GiftService.claim(player, id)
 				got += 1
 				rememberClaimed(s, gift.id)
 				print(("[B2] 선물 받기: %s - %s %s(%s)"):format(player.Name, gift.kind, tostring(gift.itemId or gift.amount), gift.from))
+				require(script.Parent.AuditTrail).note(player, "gift", ("%s %s · %s"):format(gift.kind, tostring(gift.itemId or gift.amount), tostring(gift.from))) -- QUEUE-ALL6 F3 감사
 			else
 				claimed[gift.id] = nil
 				table.insert(kept, gift)

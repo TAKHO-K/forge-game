@@ -2011,6 +2011,28 @@ function SaveSystem.opsRestoreVersion(userId, version)
 	end)
 	return okSet, okSet and "ok" or tostring(err)
 end
+-- QUEUE-ALL6 F4 되돌리기(OpsRollback) 저장소 입구: 지금 값 · 버전 값 읽기 · 통째로 쓰기(같은 키 규칙 opsKey)
+function SaveSystem.opsReadCurrent(userId)
+	local ok, data = pcall(function()
+		return store:GetAsync(opsKey(userId))
+	end)
+	if not ok then
+		return nil, tostring(data)
+	end
+	return data, nil
+end
+function SaveSystem.opsReadVersion(userId, version)
+	local ok, data = pcall(function()
+		return store:GetVersionAsync(opsKey(userId), version)
+	end)
+	return ok and data or nil
+end
+function SaveSystem.opsWriteProfile(userId, data)
+	local ok, err = pcall(function()
+		store:SetAsync(opsKey(userId), data)
+	end)
+	return ok, ok and nil or tostring(err)
+end
 
 -- S1 2-1: 하드 상한을 넘는 스테이지 필드(직업마다 infinite · infiniteBest · bestBossCleared) 목록 - 있으면 그 저장을 거부한다(옛 값 유지 · 로그).
 function SaveSystem.stageCapViolations(profile)

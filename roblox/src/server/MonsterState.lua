@@ -307,6 +307,9 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	if not entry then
 		return false, 0
 	end
+	if typeof(attackerPlayer) == "Instance" then
+		require(script.Parent.SuspicionMonitor).noteHit(attackerPlayer) -- QUEUE-ALL6 F2: 명중/분(서버가 피해를 계산한 횟수)
+	end
 	local introUntil = model:GetAttribute("BossIntroUntil") -- BR1-4c c-4: 진입 연출 동안 보스는 피해를 받지 않는다
 	if introUntil and workspace:GetServerTimeNow() < introUntil then
 		return false, 0

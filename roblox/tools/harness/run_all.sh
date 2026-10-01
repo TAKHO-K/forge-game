@@ -24,6 +24,7 @@ run multiplayer res_multi.txt "$(python deps.py PlayerProfile,PetService,QuestSe
 run attack res_attack.txt "$ATTACK" attack_test.luau
 run request_gate res_gate.txt "$ATTACK,RequestGate" request_gate_test.luau
 run mesh_import res_mesh.txt "" mesh_import_test.luau
+run ops_security res_ops.txt OpsRollback,SuspicionMonitor,AuditTrail ops_security_test.luau # QUEUE-ALL6 F 되돌리기 · 차단 · 탐지 · 감사
 run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau
 printf "%-22s %s\n" regrow_timing "$(python regrow_timing_test.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)"
 (cd ../meshswap_harness && python mk_mesh.py test_mesh.luau >/dev/null && printf "%-22s %s\n" meshswap "$("$LUAU" mesh_run.luau 2>&1 | grep -a -E '===MESH 하네스' | tail -1)")

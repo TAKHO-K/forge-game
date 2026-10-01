@@ -7,6 +7,13 @@
 --   /ops review <userId>                  검토 대기 목록(최근)
 --   /ops gift <userId> <cosmeticTheme|gliderSkin|sparkleShard> <id|개수> [메모]   선물함에 치장 · 치장 재화 넣기(QUEUE-B1 B2 - 치장만 · 이 서버에 없으면 다음 접속 때)
 --   /ops stats [all]                       알파 통계(C1 끌어오기 계측 - 이 서버 메모리 · all = 서버 종료 때 저장된 요약 합 - S1 후속 0-5)
+--   QUEUE-ALL6 F(절차 = docs/phase/security-runbook.md · 기준값 = shared/data/SecurityOpsConfig):
+--   /ops inspect <userId>                   프로필 요약 · 최근 의심 기록 · 감사 기록
+--   /ops rollback <userId> <버전|UTC 시각>   미리보기 + 확인 번호 → /ops rollback confirm <번호> = 실행(접속 중이면 내보냄 · 지금 저장본 백업 · 그 사람만)
+--   /ops revoke <userId> t<번호>            가짜 초월 회수(아이템 삭제 · 세계 번호 결번 · 초월자 칭호 · 도감 초월 줄)
+--   /ops revoke <userId> <재화> <수량>       재화 회수(0 아래로 안 내려감)
+--   /ops leaderboard remove <userId>        개인 · 직업 순위 + 이번 주 주간 도전 기록 제거
+--   /ops ban <userId> <1d|3d|7d|30d|perm> <사유>  ·  /ops unban <userId>   로블록스 기본 차단(Players:BanAsync · 경험 전체 · 부계정 포함)
 -- 결과는 명령한 사람 채팅 줄(시스템 메시지)로 돌려준다. 자동 제재는 없다.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -85,8 +92,102 @@ function handlers.release(args)
 	require(script.Parent.ImmediateSave).request(target)
 	return "released"
 end
+local SecurityOps = require(ReplicatedStorage.Shared.data.SecurityOpsConfig)
+local AuditTrail = require(script.Parent.AuditTrail)
+local OpsRollback = require(script.Parent.OpsRollback)
+
+-- QUEUE-ALL6 F: 가짜 초월 회수(t<번호>) · 재화 회수
+local function revokeTranscendent(userId, no)
+	local target = Players:GetPlayerByUserId(userId)
+	local profile = target and PlayerProfile.getProfile(target)
+	if not profile then
+		return "not_online"
+	end
+	local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData)
+	local function matches(item)
+		return type(item) == "table" and item.grade == TranscendentData.gradeId and type(item.primordial) == "table" and tostring(item.primordial.no) == no
+	end
+	local zone
+	for i = #profile.inventory, 1, -1 do
+		if matches(profile.inventory[i]) then
+			zone = profile.inventory[i].setZone or zone or "?"
+			table.remove(profile.inventory, i)
+		end
+	end
+	for _, cs in pairs(profile.classes or {}) do
+		for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+			if cs.equipment and matches(cs.equipment[part]) then
+				zone = cs.equipment[part].setZone or zone or "?"
+				cs.equipment[part] = nil
+			end
+		end
+	end
+	if not zone then
+		return "no_item"
+	end
+	AcquisitionAudit.excludeNumber("t" .. no, "revoked") -- 명예의 전당(초월 번호 = 별도 카운터 → "t" 접두사로 결번)
+	-- 초월자 칭호 · 도감 초월 줄: 남은 초월이 없을 때만(같은 구역 초월이 남았으면 그 줄은 그대로)
+	local left, leftZone = 0, false
+	for _, item in ipairs(AcquisitionAudit.primordialItems(profile)) do
+		if item.grade == TranscendentData.gradeId then
+			left += 1
+			leftZone = leftZone or item.setZone == zone
+		end
+	end
+	if left == 0 then
+		PlayerProfile.revokeTitle(target, "transcendentOne")
+	end
+	if not leftZone then
+		require(script.Parent.CodexService).forgetTranscendent(target, zone)
+	end
+	PlayerProfile.pushInventory(target)
+	require(script.Parent.ImmediateSave).request(target)
+	return "revoked_transcendent"
+end
+Ops.revokeTranscendent = revokeTranscendent -- 검증 훅
+
+local function revokeCurrency(userId, kind, amount)
+	if not SecurityOps.revokeCurrencies[kind] or not amount or amount <= 0 or amount ~= amount then
+		return "bad_args"
+	end
+	local target = Players:GetPlayerByUserId(userId)
+	local profile = target and PlayerProfile.getProfile(target)
+	if not profile then
+		return "not_online"
+	end
+	local before
+	if kind == "gold" then
+		before = profile.gold
+		profile.gold = math.max(0, profile.gold - amount)
+		target:SetAttribute("Gold", profile.gold)
+	elseif kind == "gemDust" then
+		before = PlayerProfile.getGemDust(target)
+		PlayerProfile.addGemDust(target, -math.min(amount, before))
+	elseif kind == "sparkleShard" then
+		local q = PlayerProfile.getQuestState(target)
+		before = q and q.currencies.sparkleShard or 0
+		if q then
+			q.currencies.sparkleShard = math.max(0, before - amount)
+			target:SetAttribute("SparkleShard", q.currencies.sparkleShard)
+		end
+	else
+		before = PlayerProfile.getMaterial(target, kind)
+		PlayerProfile.addMaterial(target, kind, -math.min(amount, before))
+	end
+	require(script.Parent.ImmediateSave).request(target)
+	return ("revoked %s %d → %d"):format(kind, before or 0, math.max(0, (before or 0) - amount))
+end
+
 function handlers.revoke(args)
-	local target, item, why = findItem(tonumber(args[2]) or 0, tostring(args[3]))
+	local userId = tonumber(args[2]) or 0
+	local ref = tostring(args[3])
+	if ref:match("^t%d+$") then
+		return revokeTranscendent(userId, ref:sub(2))
+	end
+	if SecurityOps.revokeCurrencies[ref] then
+		return revokeCurrency(userId, ref, tonumber(args[4]))
+	end
+	local target, item, why = findItem(userId, ref)
 	if not item then
 		return why
 	end
@@ -139,6 +240,122 @@ function handlers.review(args)
 	return #rows > 0 and table.concat(rows, " / ") or "none(이 서버 기록)"
 end
 
+-- QUEUE-ALL6 F: inspect · rollback · leaderboard remove · ban · unban
+function handlers.inspect(args)
+	local userId = tonumber(args[2])
+	if not userId then
+		return "bad_args"
+	end
+	local target = Players:GetPlayerByUserId(userId)
+	local data = target and PlayerProfile.getProfile(target) or SaveSystem.opsReadCurrent(userId)
+	local rows = { "프로필: " .. OpsRollback.describe(OpsRollback.summary(data)) .. (target and "(접속 중)" or "") }
+	local flags = {}
+	for _, e in ipairs(AcquisitionAudit.log) do
+		if e.userId == userId then
+			table.insert(flags, ("%s(%s)"):format(e.kind, tostring(e.detail)))
+		end
+	end
+	table.insert(rows, "의심(이 서버): " .. (#flags > 0 and table.concat(flags, " / ", math.max(1, #flags - 4)) or "없음"))
+	local trail = AuditTrail.read(userId)
+	local t = {}
+	for i = 1, math.min(6, #trail) do
+		table.insert(t, ("%s %s %s"):format(os.date("!%m-%d %H:%M", trail[i].at), trail[i].k, trail[i].d))
+	end
+	table.insert(rows, "감사: " .. (#t > 0 and table.concat(t, " / ") or "없음"))
+	return table.concat(rows, " | ")
+end
+
+local pendingRollback = {} -- [확인 번호] = { userId, version, at, by }
+function handlers.rollback(args, player)
+	if args[2] == "confirm" then
+		local token = tostring(args[3] or "")
+		local p = pendingRollback[token]
+		pendingRollback[token] = nil
+		if not p or os.time() - p.at > SecurityOps.rollback.confirmSeconds or p.by ~= player.UserId then
+			return "no_pending(확인 번호가 없거나 시간이 지났다)"
+		end
+		local online = Players:GetPlayerByUserId(p.userId)
+		if online then -- 먼저 내보내고 그 사람의 마지막 저장(놓기)이 끝난 뒤에 덮는다
+			online:Kick("운영 점검으로 잠시 연결을 끊었어요. 다시 들어와 주세요.")
+			task.wait(6)
+		end
+		local backup = DataStoreService:GetDataStore(SecurityOps.rollback.backupStore .. (require(ReplicatedStorage.Shared.data.DevToolsConfig).verifyArmed and "_verify" or ""))
+		local ok, why, backupKey = OpsRollback.execute({
+			readCurrent = SaveSystem.opsReadCurrent,
+			readVersion = SaveSystem.opsReadVersion,
+			writeBackup = function(key, value)
+				return (pcall(function()
+					backup:SetAsync((isStudio and AuditConfig.testKeyPrefix or "") .. key, value)
+				end))
+			end,
+			writeProfile = SaveSystem.opsWriteProfile,
+			now = os.time(),
+		}, p.userId, p.version)
+		AuditTrail.note(p.userId, "ops_rollback", ("%s → %s(백업 %s · %s)"):format(tostring(ok), p.version, tostring(backupKey), player.Name))
+		return ok and ("rolled_back(백업 " .. tostring(backupKey) .. ")") or ("failed: " .. tostring(why))
+	end
+	local userId = tonumber(args[2])
+	local target = tostring(args[3] or "")
+	if not userId or target == "" then
+		return "bad_args"
+	end
+	local list, err = SaveSystem.opsListVersions(userId, SecurityOps.rollback.listVersions)
+	if not list then
+		return "failed: " .. tostring(err)
+	end
+	local pick = OpsRollback.pick(list, OpsRollback.parseTime(target) or target)
+	if not pick then
+		return "no_version"
+	end
+	local now = OpsRollback.summary((SaveSystem.opsReadCurrent(userId)))
+	local old = OpsRollback.summary(SaveSystem.opsReadVersion(userId, pick.version))
+	local token = tostring(math.random(100000, 999999))
+	pendingRollback[token] = { userId = userId, version = pick.version, at = os.time(), by = player.UserId }
+	return ("미리보기 %s@%s | 지금: %s | 그때: %s | 실행 = /ops rollback confirm %s(%d초 안)"):format(pick.version, os.date("!%m-%d %H:%M", math.floor(pick.createdTime / 1000)),
+		OpsRollback.describe(now), OpsRollback.describe(old), token, SecurityOps.rollback.confirmSeconds)
+end
+
+function handlers.leaderboard(args)
+	local userId = tonumber(args[3])
+	if args[2] ~= "remove" or not userId then
+		return "bad_args"
+	end
+	local done = {}
+	if Leaderboard.removeEntry("personal", userId) then
+		table.insert(done, "personal")
+	end
+	for _, classId in ipairs(require(ReplicatedStorage.Shared.data.ClassData).order) do
+		if Leaderboard.removeEntry("class_" .. classId, userId) then
+			table.insert(done, classId)
+		end
+	end
+	if require(script.Parent.WeeklyChallengeService).removeEntry(userId) then
+		table.insert(done, "weekly")
+	end
+	return "removed: " .. table.concat(done, ",")
+end
+
+function handlers.ban(args)
+	local config, why = OpsRollback.banConfig(tonumber(args[2]), args[3], table.concat(args, " ", 4))
+	if not config then
+		return why
+	end
+	local ok, err = pcall(function()
+		Players:BanAsync(config)
+	end)
+	return ok and ("banned " .. tostring(args[3])) or ("failed: " .. tostring(err))
+end
+function handlers.unban(args)
+	local userId = tonumber(args[2])
+	if not userId then
+		return "bad_args"
+	end
+	local ok, err = pcall(function()
+		Players:UnbanAsync({ UserIds = { userId }, ApplyToUniverse = true })
+	end)
+	return ok and "unbanned" or ("failed: " .. tostring(err))
+end
+
 function handlers.gift(args, player)
 	local userId, kind, value = tonumber(args[2]), tostring(args[3] or ""), args[4]
 	if not userId or kind == "" or value == nil then
@@ -176,11 +393,16 @@ function Ops.handle(player, text)
 	end)
 	result = ok and result or ("error: " .. tostring(result))
 	logOps(player, text, result)
+	if tonumber(args[2]) then -- QUEUE-ALL6 F3: 대상의 감사 기록에도 운영 명령 한 줄
+		AuditTrail.note(tonumber(args[2]), "ops", ("%s: %s → %s"):format(player.Name, tostring(text):sub(1, 60), tostring(result):sub(1, 40)))
+	end
 	replyRemote:FireClient(player, result)
 	return result
 end
 
 require(script.Parent.AlphaStats).start() -- S1 후속 0-5: 서버 종료 때 알파 통계 요약 저장
+require(script.Parent.SuspicionMonitor).start() -- QUEUE-ALL6 F2: 분 단위 의심 기록(자동 처벌 없음)
+AuditTrail.start() -- QUEUE-ALL6 F3: 감사 기록 모아 쓰기
 
 local command = Instance.new("TextChatCommand")
 command.Name = "ForgeOps"

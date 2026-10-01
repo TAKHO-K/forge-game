@@ -76,6 +76,14 @@ startRemote.OnServerEvent:Connect(function(player)
 	end
 end)
 
+-- QUEUE-ALL6 F4 운영: 이번 주(또는 지정 주) 주간 도전 기록 지우기(/ops leaderboard remove)
+function WeeklyChallengeService.removeEntry(userId, week)
+	week = week or require(ReplicatedStorage.Shared.WeeklyChallenge).weekOf()
+	return (pcall(function()
+		board(week):RemoveAsync(tostring(userId))
+	end))
+end
+
 function WeeklyChallengeService.onCleared(player, fightSeconds)
 	local r = recordOf(player)
 	if not r or type(fightSeconds) ~= "number" or fightSeconds ~= fightSeconds or fightSeconds <= 0 or fightSeconds == math.huge then -- QUEUE-ALL4 B: NaN · inf가 순위 저장소에 가지 않게
