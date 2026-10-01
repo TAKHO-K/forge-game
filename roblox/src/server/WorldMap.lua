@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
+local Text = require(ReplicatedStorage.Shared.Text)
 local GroundProbe = require(script.Parent.GroundProbe)
 local PropLibrary = require(script.Parent.PropLibrary)
 
@@ -94,7 +95,18 @@ local function makePart(p)
 		local text = Instance.new("TextLabel")
 		text.BackgroundTransparency = 1
 		text.Size = UDim2.fromScale(1, 1)
-		text.Text = p.attrs.Label
+		if p.attrs.LabelKey then -- QUEUE-ALL6R 3: 문장 명판 = 키 + 인자(LabelArg_<이름>) · 이름 명판 = 데이터 이름 - 클라가 내 언어로(client/WorldTextView)
+			local args = {}
+			for k, v in pairs(p.attrs) do
+				local name = k:match("^LabelArg_(.+)$")
+				if name then
+					args[name] = v
+				end
+			end
+			Text.bindLabel(text, p.attrs.LabelKey, args)
+		else
+			Text.bindName(text, p.attrs.Label)
+		end
 		text.TextColor3 = Color3.new(1, 1, 1)
 		text.TextStrokeTransparency = 0.4
 		text.TextScaled = true

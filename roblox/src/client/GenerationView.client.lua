@@ -63,6 +63,7 @@ local function paint(model, generation)
 	local nameplate = model:FindFirstChild("NameplateGui", true)
 	local label = nameplate and nameplate:FindFirstChild("NameLabel")
 	if label and label:IsA("TextLabel") then
+		Text.applyLabel(label) -- QUEUE-ALL6R 3: 내 언어 이름을 먼저(WorldTextView가 뒤에서 앞말을 덮지 않게 - 한 번만)
 		record.label, record.labelText = label, label.Text
 		if not label.Text:find(generation.prefix, 1, true) then
 			label.Text = generation.prefix .. " " .. label.Text

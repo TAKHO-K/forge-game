@@ -1229,7 +1229,7 @@ function Layout.buildZone(zone, list)
 	local raidcf = flatYaw(raid, dirOf(zone.angleDeg))
 	column(list, model, "RaidGatePost", raidcf * CFrame.new(-10, 0, 0), 4, 4, 22, D.colors.block)
 	column(list, model, "RaidGatePost", raidcf * CFrame.new(10, 0, 0), 4, 4, 22, D.colors.block)
-	prim(list, model, "RaidGateTop", Vector3.new(24, 3, 4), raidcf * CFrame.new(0, 23.5, 0), D.colors.block, { attrs = { RaidGate = zone.key, Label = Text.get("desc.world.raidGate") } })
+	prim(list, model, "RaidGateTop", Vector3.new(24, 3, 4), raidcf * CFrame.new(0, 23.5, 0), D.colors.block, { attrs = { RaidGate = zone.key, Label = Text.get("desc.world.raidGate"), LabelKey = "desc.world.raidGate" } })
 
 	local meta = { features = {}, eggs = {}, nests = {}, explore = {} } -- nests = M1-3 둥지 3트랙(WorldStructures - buildAll이 채운다)
 	for i, f in ipairs(zone.features) do
@@ -1469,7 +1469,7 @@ function Layout.buildSealed(list)
 		prim(list, model, "SealEmblem", Vector3.new(0.4, door.emblemSize, door.emblemSize), cf * CFrame.new(0, door.height / 2, -0.4) * CFrame.Angles(0, math.rad(90), 0), { 170, 150, 230 },
 			{ shape = "Cylinder", neon = true, collide = false, transparency = 0.5, attrs = { SealEmblem = e.id } })
 		prim(list, model, "Plaque", Vector3.new(8, 1.6, 0.4), cf * CFrame.new(0, door.height + 5, -1.6), { 110, 90, 70 },
-			{ material = "SmoothPlastic", attrs = { Label = e.name .. " ???", LabelSmall = true } })
+			{ material = "SmoothPlastic", attrs = { Label = e.name .. " ???", LabelSmall = true, LabelKey = "srv.world.sealedPlaque", LabelArg_name = e.name } })
 		-- 무너진 담 + 틈 선반(선반 높이 ledgeH · 위 구멍 holeH · 그 위 담)
 		local lx = door.width / 2 + door.frame + door.wallW / 2
 		prim(list, model, "CrumbledWall", Vector3.new(door.wallW, door.ledgeH, 6), cf * CFrame.new(lx, door.ledgeH / 2, -1), stoneDark, { material = "SmoothPlastic", attrs = { SealedLedge = e.id } })

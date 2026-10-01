@@ -13,6 +13,7 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local ItemDropState = require(script.Parent.ItemDropState)
 local GroundProbe = require(script.Parent.GroundProbe)
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
+local Text = require(ReplicatedStorage.Shared.Text)
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 
 local ItemDropSpawner = {}
@@ -88,7 +89,7 @@ local function buildModel(item)
 	label.TextScaled = true
 	label.TextColor3 = dropColor(item.grade)
 	label.TextStrokeTransparency = 0.4
-	label.Text = ("%s %s (Lv.%d)"):format(grade and grade.displayName or item.grade, partName, item.itemLevel)
+	Text.bindLabel(label, "srv.drop.plate", { grade = grade and grade.displayName or item.grade, part = partName, level = ("%d"):format(item.itemLevel) }) -- QUEUE-ALL6R 3: 등급 · 부위 = 데이터 이름(클라가 번역)
 	label.Parent = nameplateGui
 
 	model.PrimaryPart = root

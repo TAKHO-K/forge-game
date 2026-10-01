@@ -46,7 +46,7 @@ local function makeFace(face)
 	title.Font = Enum.Font.GothamBlack
 	title.TextSize = 44
 	title.TextColor3 = PrimordialData.accentColor
-	title.Text = Text.get("srv.hof.title") -- QUEUE-ALL1 A-6: ✦ = GothamBold 두부
+	Text.bindLabel(title, "srv.hof.title") -- QUEUE-ALL1 A-6: ✦ = GothamBold 두부 · QUEUE-ALL6R 3: 클라가 내 언어로
 	title.Parent = gui
 	local labels = {}
 	for i = 1, PrimordialData.recentKeep do
@@ -72,7 +72,7 @@ local function makeFace(face)
 	empty.Font = Enum.Font.GothamBold
 	empty.TextSize = 28
 	empty.TextColor3 = Color3.fromRGB(90, 84, 110)
-	empty.Text = Text.get("srv.hof.empty")
+	Text.bindLabel(empty, "srv.hof.empty") -- QUEUE-ALL6R 3
 	empty.Parent = gui
 	return labels, empty
 end

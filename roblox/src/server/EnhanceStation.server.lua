@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local function createEnhanceStation()
 	local position = WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset
@@ -43,7 +44,7 @@ local function createEnhanceStation()
 	local labelText = Instance.new("TextLabel")
 	labelText.BackgroundTransparency = 1
 	labelText.Size = UDim2.new(1, 0, 1, 0)
-	labelText.Text = "강화대"
+	Text.bindName(labelText, "강화대") -- QUEUE-ALL6R 3: 클라가 내 언어로(client/WorldTextView)
 	labelText.TextColor3 = Color3.new(1, 1, 1)
 	labelText.TextScaled = true
 	labelText.Parent = label

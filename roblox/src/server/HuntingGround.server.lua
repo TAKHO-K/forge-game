@@ -92,7 +92,7 @@ local function createRebirthAltar(communityZone)
 	local labelText = Instance.new("TextLabel")
 	labelText.BackgroundTransparency = 1
 	labelText.Size = UDim2.new(1, 0, 1, 0)
-	labelText.Text = altar.objectText
+	Text.bindName(labelText, altar.objectText) -- QUEUE-ALL6R 3
 	labelText.TextColor3 = Color3.new(1, 1, 1)
 	labelText.TextScaled = true
 	labelText.Parent = label
@@ -174,7 +174,7 @@ local function createGemMerchant(communityZone)
 	local labelText = Instance.new("TextLabel")
 	labelText.BackgroundTransparency = 1
 	labelText.Size = UDim2.new(1, 0, 1, 0)
-	labelText.Text = merchant.objectText
+	Text.bindName(labelText, merchant.objectText) -- QUEUE-ALL6R 3
 	labelText.TextColor3 = Color3.new(1, 1, 1)
 	labelText.TextScaled = true
 	labelText.Parent = label

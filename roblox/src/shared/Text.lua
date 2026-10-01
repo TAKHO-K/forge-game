@@ -140,4 +140,45 @@ function Text.getFor(player, key, args)
 	return Text.format(Text.languageFor(player), key, args)
 end
 
+-- QUEUE-ALL6R 3 월드 글자(서버가 짓는 BillboardGui · SurfaceGui의 TextLabel - 모든 클라에 같은 글로 복제된다): 서버는 키 + 인자(또는 데이터 이름)를 속성으로 붙이고
+--   기본 글 = ko로 채운다 · 클라(client/WorldTextView)가 내 언어로 한 번 다시 쓴다. 속성: TextKey + TextArg_<이름>(문자열) · 또는 TextName(데이터 이름 하나).
+function Text.bindLabel(label, key, args)
+	label:SetAttribute("TextKey", key)
+	for name, value in pairs(args or {}) do
+		label:SetAttribute("TextArg_" .. name, tostring(value))
+	end
+	label.Text = Text.format("ko", key, args)
+end
+function Text.bindName(label, name)
+	label:SetAttribute("TextName", name)
+	label.Text = name
+end
+-- 클라: 붙은 속성대로 내 언어 글을 만든다(없으면 nil - 손대지 않는다)
+function Text.labelText(label)
+	local key = label:GetAttribute("TextKey")
+	if type(key) == "string" then
+		local args = {}
+		for attr, value in pairs(label:GetAttributes()) do
+			local name = attr:match("^TextArg_(.+)$")
+			if name then
+				args[name] = value
+			end
+		end
+		return Text.get(key, args)
+	end
+	local name = label:GetAttribute("TextName")
+	return type(name) == "string" and Text.name(name) or nil
+end
+-- 클라: 한 번만 바꿔 쓴다(WorldTextApplied = 이 클라에만 - 복제 안 됨). 몹 이름표는 GenerationView가 세대 앞말을 붙이기 전에 이걸 먼저 부른다(뒤에서 앞말을 덮지 않게).
+function Text.applyLabel(label)
+	if not label:IsA("TextLabel") or label:GetAttribute("WorldTextApplied") then
+		return
+	end
+	local text = Text.labelText(label)
+	if text then
+		label:SetAttribute("WorldTextApplied", true)
+		label.Text = text
+	end
+end
+
 return Text

@@ -221,7 +221,11 @@ local function buildModel(data, position, variant)
 	nameLabel.Name = "NameLabel"
 	nameLabel.Size = UDim2.new(1, 0, 0, 20)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.Text = displayName
+	if variant.prefix then -- QUEUE-ALL6R 3: 합성 이름 = 키 + 인자(어순은 언어별 템플릿 · 이름은 사전) - 클라 WorldTextView
+		Text.bindLabel(nameLabel, "srv.mob.prefixed", { prefix = variant.prefix.displayName, name = data.displayName })
+	else
+		Text.bindName(nameLabel, displayName)
+	end
 	nameLabel.TextColor3 = Color3.new(1, 1, 1)
 	nameLabel.Visible = false -- 조준 대상일 때만 AimTarget.lua가 true로 바꾼다
 	nameLabel.Parent = nameplateGui
@@ -366,7 +370,7 @@ local function buildChestModel(position)
 	nameLabel.Name = "NameLabel"
 	nameLabel.Size = UDim2.new(1, 0, 0, 20)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.Text = model.Name
+	Text.bindName(nameLabel, model.Name) -- QUEUE-ALL6R 3
 	nameLabel.TextColor3 = cfg.trimColor
 	nameLabel.Visible = false
 	nameLabel.Parent = nameplateGui

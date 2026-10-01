@@ -100,8 +100,8 @@ C.econ = { goldShare = 0.2 }
 
 C.text = {
 	title = "도감", claimAll = "모두 받기", claim = "받기", claimed = "받음", locked = "진행 중",
-	score = "도감 점수 %d / %d", eggFull = "알 가방이 가득 차서 못 받은 칸이 있어요",
-	transcendBorder = "초월 완성", lineDone = "줄 완성! 칭호 「%s」", got = "도감 보상: %s",
+	score = "도감 점수 %d / %d", -- QUEUE-ALL6R 3: 알림 문장(eggFull · lineDone · got) = TextData_server srv.codex.*(키 + 인자)
+	transcendBorder = "초월 완성",
 	titleNone = "칭호 안 보이기", titleHint = "이름표 우선순위 = 초월자 > 태초의 선택 > 고른 칭호",
 	nestHidden = "비밀 둥지 %d",
 }

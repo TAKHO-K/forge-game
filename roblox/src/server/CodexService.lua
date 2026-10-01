@@ -135,7 +135,7 @@ function refresh(player)
 		end
 		if all and PlayerProfile.grantTitle(player, l.titleId) then
 			local t = TitleData.titles[l.titleId]
-			noticeRemote:FireClient(player, CodexData.text.lineDone:format(t and t.name or l.titleId))
+			noticeRemote:FireClient(player, "srv.codex.lineDone", { title = t and t.name or l.titleId }) -- QUEUE-ALL6R 3: 키 + 인자(칭호 이름 = 데이터 이름 - 클라가 번역)
 			changed = true
 		end
 	end
@@ -266,11 +266,11 @@ requestRemote.OnServerEvent:Connect(function(player, action, arg)
 		end
 		if #got > 0 then
 			print(("[forge-game] 도감 받기: %s %d칸"):format(player.Name, #got))
-			noticeRemote:FireClient(player, CodexData.text.got:format(#got == 1 and got[1] or Text.getFor(player, "srv.codex.cells", { count = tostring(#got) })))
+			noticeRemote:FireClient(player, "srv.codex.got", { summary = #got == 1 and got[1] or Text.getFor(player, "srv.codex.cells", { count = tostring(#got) }) }) -- QUEUE-ALL6R 3: 받은 내용 = 그 플레이어 언어로 만든 조각(Text.getFor)
 			require(script.Parent.ImmediateSave).request(player)
 		end
 		if eggFull then
-			noticeRemote:FireClient(player, CodexData.text.eggFull)
+			noticeRemote:FireClient(player, "srv.codex.eggFull")
 		end
 		refresh(player)
 	elseif action == "title" and type(arg) == "string" then
