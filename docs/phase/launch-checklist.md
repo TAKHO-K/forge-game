@@ -25,21 +25,21 @@
 
 | 줄 | MonetizationData 키 | 종류 | 표시 이름(추천) | 가격 자리(로벅스) | 아이콘 512 파일 | 받은 ID를 넣을 칸 |
 |---|---|---|---|---|---|---|
-| 22 | `theme_starlight` | 개발자 상품 | 테마 세트 「별빛」 | 199 | 없음 - 만들어야 함 | `products.theme_starlight.productId` |
-| 23 | `theme_ember` | 개발자 상품 | 테마 세트 「불씨」 | 199 | 없음 - 만들어야 함 | `products.theme_ember.productId` |
-| 24 | `theme_frost` | 개발자 상품 | 테마 세트 「서리꽃」 | 199 | 없음 - 만들어야 함 | `products.theme_frost.productId` |
-| 27 | `theme_jelly` | 개발자 상품 | 테마 세트 「말랑 젤리」 | 199 | 없음 - 만들어야 함 | `products.theme_jelly.productId` |
-| 25 | `glider_petal` | 개발자 상품 | 꽃잎 글라이더 | 149 | 없음 - 만들어야 함 | `products.glider_petal.productId` |
-| 26 | `glider_kite` | 개발자 상품 | 연 글라이더 | 149 | 없음 - 만들어야 함 | `products.glider_kite.productId` |
-| 28 | `glider_dragonWing` | 개발자 상품 | 푸른 드래곤 날개 | 149 | 없음 - 만들어야 함 | `products.glider_dragonWing.productId` |
-| 29 | `season_premium` | 개발자 상품(시즌마다 다시 삼) | 시즌 패스 유료 줄 | 399 | 없음 - 만들어야 함 | `products.season_premium.productId` |
-| 33 | `bagExpand` | 게임패스 | 가방 확장 | 149 | 없음 - 만들어야 함 | `gamePasses.bagExpand.passId` |
-| 34 | `pickupRadius` | 게임패스 | 자동 줍기 반경 | 99 | 없음 - 만들어야 함 | `gamePasses.pickupRadius.passId` |
-| 35 | `recallCooldown` | 게임패스 | 빠른 귀환 | 99 | 없음 - 만들어야 함 | `gamePasses.recallCooldown.passId` |
-| 36 | `nameplateColor` | 게임패스 | 이름표 색 | 49 | 없음 - 만들어야 함 | `gamePasses.nameplateColor.passId` |
-| 37 | `nameplateBadge` | 게임패스 | 이름표 배지 | 49 | 없음 - 만들어야 함 | `gamePasses.nameplateBadge.passId` |
+| 22 | `theme_starlight` | 개발자 상품 | 테마 세트 「별빛」 | 199 | `docs/release/icons/theme_starlight.png`(QUEUE-ALL5 E) | `products.theme_starlight.productId` |
+| 23 | `theme_ember` | 개발자 상품 | 테마 세트 「불씨」 | 199 | `docs/release/icons/theme_ember.png`(QUEUE-ALL5 E) | `products.theme_ember.productId` |
+| 24 | `theme_frost` | 개발자 상품 | 테마 세트 「서리꽃」 | 199 | `docs/release/icons/theme_frost.png`(QUEUE-ALL5 E) | `products.theme_frost.productId` |
+| 27 | `theme_jelly` | 개발자 상품 | 테마 세트 「말랑 젤리」 | 199 | `docs/release/icons/theme_jelly.png`(QUEUE-ALL5 E) | `products.theme_jelly.productId` |
+| 25 | `glider_petal` | 개발자 상품 | 꽃잎 글라이더 | 149 | `docs/release/icons/glider_petal.png`(QUEUE-ALL5 E) | `products.glider_petal.productId` |
+| 26 | `glider_kite` | 개발자 상품 | 연 글라이더 | 149 | `docs/release/icons/glider_kite.png`(QUEUE-ALL5 E) | `products.glider_kite.productId` |
+| 28 | `glider_dragonWing` | 개발자 상품 | 푸른 드래곤 날개 | 149 | `docs/release/icons/glider_dragonWing.png`(QUEUE-ALL5 E) | `products.glider_dragonWing.productId` |
+| 29 | `season_premium` | 개발자 상품(시즌마다 다시 삼) | 시즌 패스 유료 줄 | 399 | `docs/release/icons/season_premium.png`(QUEUE-ALL5 E) | `products.season_premium.productId` |
+| 33 | `bagExpand` | 게임패스 | 가방 확장 | 149 | `docs/release/icons/bagExpand.png`(QUEUE-ALL5 E) | `gamePasses.bagExpand.passId` |
+| 34 | `pickupRadius` | 게임패스 | 자동 줍기 반경 | 99 | `docs/release/icons/pickupRadius.png`(QUEUE-ALL5 E) | `gamePasses.pickupRadius.passId` |
+| 35 | `recallCooldown` | 게임패스 | 빠른 귀환 | 99 | `docs/release/icons/recallCooldown.png`(QUEUE-ALL5 E) | `gamePasses.recallCooldown.passId` |
+| 36 | `nameplateColor` | 게임패스 | 이름표 색 | 49 | `docs/release/icons/nameplateColor.png`(QUEUE-ALL5 E) | `gamePasses.nameplateColor.passId` |
+| 37 | `nameplateBadge` | 게임패스 | 이름표 배지 | 49 | `docs/release/icons/nameplateBadge.png`(QUEUE-ALL5 E) | `gamePasses.nameplateBadge.passId` |
 
-- 아이콘: `roblox/art/icons` 아래에 상품 · 패스 전용 512 아이콘은 **하나도 없다**. 비슷한 것은 보상 아이콘 `roblox/art/icons/reward/cosmeticTheme.png` · `gliderSkin.png` · HUD `roblox/art/icons/hud/bag.png` · `return.png`뿐이고 모두 **256 × 256 범용**이라 임시로도 512 확대가 필요하다. → 13장 제작 필요(★ 사용자 결정: 직접 만들지 · 아트 단계에 맡길지 · 임시로 범용 아이콘 확대본을 쓸지).
+- 아이콘(QUEUE-ALL5 E): **13장 제작 완료** = `docs/release/icons/<키>.png`(512 × 512 · 투명 바깥 · 3톤 · 굵은 외곽선 · 글자 없음 · 다시 만들기 = `docs/release/icons/README.md`). 업로드는 Creator Hub 각 상품 · 패스 화면의 아이콘 칸(사용자). 비교용 게임 아이콘 Blender판 = `game_icon_blender_{A,B,C}.png`. 아래는 옛 메모: `roblox/art/icons` 아래에 상품 · 패스 전용 512 아이콘은 **하나도 없었다**. 비슷한 것은 보상 아이콘 `roblox/art/icons/reward/cosmeticTheme.png` · `gliderSkin.png` · HUD `roblox/art/icons/hud/bag.png` · `return.png`뿐이고 모두 **256 × 256 범용**이라 임시로도 512 확대가 필요하다. → 13장 제작 필요(★ 사용자 결정: 직접 만들지 · 아트 단계에 맡길지 · 임시로 범용 아이콘 확대본을 쓸지).
 - 가격 13칸은 전부 자리값이다(monetization-p4c.md §10 "자리값 유지"로 닫혔지만 **실제 값 확정은 ★ 사용자 결정**).
 - 설명란(각 상품): 게임 안 설명과 같게 - 예) 가방 확장 "가방 칸 +20" · 자동 줍기 "펫 자동 줍기 반경 ×1.5" · 빠른 귀환 "마을 귀환 대기 시간 ×0.5" · 테마 "대시 · 점프 · 활강 · 발자국 4칸 치장(능력치 없음)". "전투력 · 획득량은 오르지 않습니다"를 함께 적는다(`TextData.lua:645`).
 
@@ -240,7 +240,7 @@
 ## 6. 사용자 결정 필요 칸 모음
 
 1. 상품 · 패스 13개 **가격**(지금 자리값 199 · 149 · 399 · 99 · 49).
-2. 상품 · 패스 13개 **512 아이콘** 제작 방식(지금 전용 아이콘 0개).
+2. 상품 · 패스 13개 **512 아이콘** - QUEUE-ALL5 E에서 13장 제작(`docs/release/icons/`) → 이대로 쓸지 · 다시 그릴지만 결정.
 3. **게임 이름**(설명 초안 `{게임 이름}`).
 4. 경험 **아이콘 1장**(A 풀밭 · B 빛기둥 · C 근접 - Blender 렌더판 비교 = `docs/release/icons/game_icon_blender_*.png`) · **썸네일 순서** · 장르(추천 RPG).
 5. **시즌 1 시작일** `LeaderboardConfig.firstSeasonDateKst`(추천 오픈일) - 합동 목표 때문에 **월요일 오픈** 추천.
