@@ -297,7 +297,7 @@ local function defaultProfile()
 		-- QUEUE-B1 B2(v56) 수익화 골격: 치장(산 테마 세트 · 글라이더 스킨 · 칸별 장착 · 나무 정거장 조각 받은 기록 - 키는 전부 문자열) · 선물함 · 시즌 패스.
 		--   purchases.receipts(영수증 중복 방지 - 최근 PurchaseId) · purchases.log(구매 기록)는 아래 purchases 안.
 		cosmetics = { themes = {}, gliderSkins = {}, equipped = {}, treeStations = {} },
-		mailbox = { gifts = {}, seq = 0 }, -- gifts = { { id, kind, itemId | amount, from, note, at } } · seq = 이 계정 안 선물 번호
+		mailbox = { gifts = {}, seq = 0, claimedIds = {} }, -- gifts = { { id, kind, itemId | amount, from, note, at } } · seq = 이 계정 안 선물 번호 · claimedIds(v62) = 받은 선물 id(최근 MonetizationData.gifts.claimedIdsKeep개 - 재지급 방지)
 		seasonPass = { season = 0, premium = false, claimedFree = {}, claimedPaid = {} }, -- season = 기록한 시즌 번호(바뀌면 경험치 · 받음 · 유료 초기화)
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
@@ -1327,6 +1327,14 @@ local function migrate(data)
 			data.checkpoints = { found = {} }
 		end
 		data.version = 61
+	end
+
+	if data.version < 62 then
+		-- QUEUE-ALL5 A1: mailbox.claimedIds(받은 선물 id - 재지급 방지) - 옛 계정 = 빈 목록(이미 받은 선물은 선물함에서 지워져 대기열에도 없다 · 대기열에 남은 건 아직 안 받은 것)
+		if type(data.mailbox) == "table" and type(data.mailbox.claimedIds) ~= "table" then
+			data.mailbox.claimedIds = {}
+		end
+		data.version = 62
 	end
 
 	data.savedAt = data.savedAt or 0

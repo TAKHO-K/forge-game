@@ -10,6 +10,7 @@ end
 
 -- 가짜 서비스: Players(UserId → 가짜 Player) · Marketplace(프롬프트 기록) · Policy · DataStore(선물 대기열) · HttpService(GUID)
 local PLAYERS, prompts, policyAnswer, DS, guid = {}, {}, nil, {}, 0
+local dsFailUpdate = false -- QUEUE-ALL5 A1: 대기열 지우기(UpdateAsync) 실패 주입
 local baseGetService = game.GetService
 game.GetService = function(self, name)
 	if name == "Players" then
@@ -22,7 +23,7 @@ game.GetService = function(self, name)
 		return { GetPolicyInfoForPlayerAsync = function() if policyAnswer == "error" then error("policy down") end return { ArePaidRandomItemsRestricted = policyAnswer } end }
 	elseif name == "DataStoreService" then
 		return { GetDataStore = function(_, storeName) DS[storeName] = DS[storeName] or {}; local t = DS[storeName]
-			return { UpdateAsync = function(_, key, fn) local v = fn(t[key]); if v ~= nil then t[key] = v end; return v end, GetAsync = function(_, key) return t[key] end } end }
+			return { UpdateAsync = function(_, key, fn) if dsFailUpdate then error("ds down") end local v = fn(t[key]); if v ~= nil then t[key] = v end; return v end, GetAsync = function(_, key) return t[key] end } end }
 	elseif name == "HttpService" then
 		return { GenerateGUID = function() guid += 1; return "G" .. guid end }
 	end
@@ -212,6 +213,79 @@ local ok, err = pcall(function()
 	task.spawn = realSpawn
 	check("선물 대기열: 저장 실패 → 대기열 남김 · 성공 → 비움 · 선물함 1건(중복 없음)", keptOnFail and #queueStore.u77 == 0 and #s.mailbox.gifts == 1,
 		("대기열 %d · 선물함 %d"):format(queueStore.u77 and #queueStore.u77 or -1, #s.mailbox.gifts))
+
+	-- ⑦-1 QUEUE-ALL5 A1(v62): 받은 선물 id 기록 - 대기열 지우기 실패 뒤 재접속 · 서버 이동 · 동시 받기에서 재지급 없음
+	do
+		local function deep(v)
+			if type(v) ~= "table" then return v end
+			local c = {}
+			for k, x in pairs(v) do c[k] = deep(x) end
+			return c
+		end
+		task.spawn = function(fn, ...) fn(...) end
+		GS.claim(player, "all") -- 앞 검사의 Q1 정리
+		local shardStart = qs.currencies.sparkleShard
+		queueStore.u77 = { { id = "Q2", kind = "sparkleShard", amount = 7, from = "ops", note = "", at = 0 } }
+		ImmediateSave.flush = function() return true end
+		dsFailUpdate = true -- 옮김 저장은 성공 · 대기열 지우기 실패
+		GS.onLoaded(player)
+		dsFailUpdate = false
+		local movedButQueued = #s.mailbox.gifts == 1 and #queueStore.u77 == 1
+		local got1 = GS.claim(player, "Q2")
+		local afterClaim = qs.currencies.sparkleShard
+		-- 재접속(같은 서버): 대기열에 남은 Q2를 다시 읽음
+		GS.onLoaded(player)
+		local reAdded = #s.mailbox.gifts
+		local got2 = GS.claim(player, "all")
+		check("재접속: 대기열 지우기 실패 뒤 다시 옮겨도 받은 선물 재지급 없음 · 대기열 비움", movedButQueued and got1 == 1 and reAdded == 0 and got2 == 0
+			and qs.currencies.sparkleShard == afterClaim and afterClaim == shardStart + 7 and #queueStore.u77 == 0,
+			("옮김 %s · 받음 %d · 다시 옮김 %d · 다시 받음 %d · 조각 %d → %d"):format(tostring(movedButQueued), got1, reAdded, got2, shardStart, qs.currencies.sparkleShard))
+		-- 서버 이동: 저장된 프로필(왕복 사본)을 다른 서버의 새 Player가 읽음 · 대기열에 같은 id가 다시 있음(지우기 실패가 남긴 상태)
+		queueStore.u77 = { { id = "Q2", kind = "sparkleShard", amount = 7, from = "ops", note = "", at = 0 } }
+		local saved = SaveSystem.migrate(deep(PlayerProfile.getProfile(player)))
+		local attrs2 = {}
+		local player2 = setmetatable({ Name = "Buyer@B", UserId = 77, Parent = true }, { __index = function(_, k)
+			if k == "SetAttribute" then return function(_, n, v) attrs2[n] = v end end
+			if k == "GetAttribute" then return function(_, n) return attrs2[n] end end
+			if k == "FindFirstChild" or k == "WaitForChild" or k == "FindFirstChildOfClass" then return function() return nil end end
+			if k == "IsA" then return function() return false end end
+			if k == "GetAttributeChangedSignal" then return function() return { Connect = function() end } end end
+			return nil
+		end })
+		PlayerProfile.init(player2, saved)
+		local s2 = PlayerProfile.getMonetizationState(player2)
+		local qs2 = PlayerProfile.getQuestState(player2)
+		local shardB = qs2.currencies.sparkleShard
+		GS.onLoaded(player2)
+		local gotB = GS.claim(player2, "all")
+		check("서버 이동: 왕복 저장의 claimedIds로 다른 서버에서도 재지급 없음", table.find(s2.mailbox.claimedIds, "Q2") ~= nil and #s2.mailbox.gifts == 0 and gotB == 0
+			and qs2.currencies.sparkleShard == shardB and #queueStore.u77 == 0, ("기록 %d · 선물함 %d · 받음 %d"):format(#s2.mailbox.claimedIds, #s2.mailbox.gifts, gotB))
+		-- 동시 받기: 같은 id가 선물함에 두 줄(옛 중복) + 같은 id를 두 번 연달아 요청 + "all"
+		local shardC = qs.currencies.sparkleShard
+		table.insert(s.mailbox.gifts, { id = "Q3", kind = "sparkleShard", amount = 4, from = "ops", note = "", at = 0 })
+		table.insert(s.mailbox.gifts, { id = "Q3", kind = "sparkleShard", amount = 4, from = "ops", note = "", at = 0 })
+		local c1 = GS.claim(player, "Q3")
+		local c2 = GS.claim(player, "Q3")
+		table.insert(s.mailbox.gifts, { id = "Q3", kind = "sparkleShard", amount = 4, from = "ops", note = "", at = 0 })
+		local c3 = GS.claim(player, "all")
+		check("동시 받기: 같은 id 두 줄 · 연타 · all = 한 번만 지급", c1 == 1 and c2 == 0 and c3 == 0 and qs.currencies.sparkleShard == shardC + 4 and #s.mailbox.gifts == 0,
+			("%d · %d · %d · 조각 +%d"):format(c1, c2, c3, qs.currencies.sparkleShard - shardC))
+		-- 정리 규칙: 최근 claimedIdsKeep개만
+		local keep = Data.gifts.claimedIdsKeep
+		for i = 1, keep + 5 do
+			table.insert(s.mailbox.gifts, { id = "K" .. i, kind = "sparkleShard", amount = 1, from = "ops", note = "", at = 0 })
+		end
+		GS.claim(player, "all")
+		check(("받은 id 기록 = 최근 %d개(오래된 것부터 버림)"):format(keep), #s.mailbox.claimedIds == keep and s.mailbox.claimedIds[keep] == "K" .. (keep + 5)
+			and table.find(s.mailbox.claimedIds, "Q2") == nil, ("%d개 · 끝 %s"):format(#s.mailbox.claimedIds, tostring(s.mailbox.claimedIds[#s.mailbox.claimedIds])))
+		local v61 = SaveSystem.migrate({})
+		v61.version = 61
+		v61.mailbox = { gifts = { { id = "OLD", kind = "sparkleShard", amount = 1 } }, seq = 3 }
+		local m62 = SaveSystem.migrate(v61)
+		check("v61 표본 → v62: claimedIds 빈 목록 · 선물 보존", m62.version >= 62 and type(m62.mailbox.claimedIds) == "table" and #m62.mailbox.claimedIds == 0 and m62.mailbox.gifts[1].id == "OLD")
+		ImmediateSave.flush = realFlush
+		task.spawn = realSpawn
+	end
 
 	-- ⑦-2 QUEUE-B1 결정 8 · 9: 이미 가진 것 영수증 = 조각 환산 · 저장 실패 = 조각 되돌림 · 지난 시즌 유료 줄 영수증 = 환산 · 같은 실패 줄 한 번 · 손상 표 복구
 	Data.products.theme_ember.productId = 9001

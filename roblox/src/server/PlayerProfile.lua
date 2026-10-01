@@ -2414,6 +2414,7 @@ function PlayerProfile.getMonetizationState(player)
 	profile.cosmetics = c
 	local m = tbl(profile.mailbox)
 	m.gifts, m.seq = tbl(m.gifts), type(m.seq) == "number" and m.seq or 0
+	m.claimedIds = tbl(m.claimedIds) -- QUEUE-ALL5 A1(v62)
 	profile.mailbox = m
 	local sp = tbl(profile.seasonPass)
 	sp.season, sp.premium = type(sp.season) == "number" and sp.season or 0, sp.premium == true

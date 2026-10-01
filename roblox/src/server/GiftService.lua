@@ -52,6 +52,21 @@ function GiftService.normalize(kind, value, note, from)
 	return gift
 end
 
+-- QUEUE-ALL5 A1(v62 · 보안 감사 D1): 받은 선물 id 기록(mailbox.claimedIds - 문자열 배열 · 오래된 것이 앞). 대기열 지우기가 실패해 같은 선물이 다시 옮겨져도 두 번 주지 않는다.
+local function claimedSet(s)
+	local set = {}
+	for _, id in ipairs(s.mailbox.claimedIds) do
+		set[id] = true
+	end
+	return set
+end
+local function rememberClaimed(s, id)
+	table.insert(s.mailbox.claimedIds, id)
+	while #s.mailbox.claimedIds > GIFTS.claimedIdsKeep do
+		table.remove(s.mailbox.claimedIds, 1)
+	end
+end
+
 local function pushPopup(player)
 	local s = PlayerProfile.getMonetizationState(player)
 	if popupRemote and s and #s.mailbox.gifts > 0 and typeof(player) == "Instance" then
@@ -108,18 +123,24 @@ function GiftService.onLoaded(player)
 			end)
 			queued = okRead and type(queued) == "table" and queued or {}
 			if #queued > 0 and player.Parent then
-				local have = {}
+				local have = claimedSet(s) -- QUEUE-ALL5 A1: 이미 받은 id도 다시 넣지 않는다(대기열에서는 지운다)
 				for _, g in ipairs(s.mailbox.gifts) do
 					have[g.id] = true
 				end
-				local movedIds = {}
+				local movedIds, skipped = {}, 0
 				for _, g in ipairs(queued) do
 					if type(g) == "table" and type(g.id) == "string" then
 						movedIds[g.id] = true
 						if not have[g.id] then
+							have[g.id] = true -- 대기열 안 같은 id 두 줄도 한 번만
 							table.insert(s.mailbox.gifts, g)
+						else
+							skipped += 1
 						end
 					end
+				end
+				if skipped > 0 then
+					print(("[B2] 선물함: %s - 이미 받았거나 선물함에 있는 선물 %d건 건너뜀(재지급 방지)"):format(player.Name, skipped))
 				end
 				if require(script.Parent.ImmediateSave).flush(player) then
 					pcall(function()
@@ -151,15 +172,20 @@ function GiftService.claim(player, id)
 	if not s then
 		return 0, "no_profile"
 	end
-	local kept, got = {}, 0
+	local kept, got, claimed = {}, 0, claimedSet(s)
 	for _, gift in ipairs(s.mailbox.gifts) do
-		if id == "all" or gift.id == id then
+		if claimed[gift.id] then
+			print(("[B2] 선물 받기: %s - 이미 받은 선물 %s 지움(지급 없음)"):format(player.Name, tostring(gift.id))) -- QUEUE-ALL5 A1
+		elseif id == "all" or gift.id == id then
 			local reward = gift.kind == "sparkleShard" and { sparkleShard = gift.amount } or { [gift.kind] = gift.itemId }
+			claimed[gift.id] = true -- 지급 전에 표시(같은 목록에 같은 id가 두 줄이어도 한 번)
 			local ok = require(script.Parent.MonetizationService).applyReward(player, reward, "gift")
 			if ok then
 				got += 1
+				rememberClaimed(s, gift.id)
 				print(("[B2] 선물 받기: %s - %s %s(%s)"):format(player.Name, gift.kind, tostring(gift.itemId or gift.amount), gift.from))
 			else
+				claimed[gift.id] = nil
 				table.insert(kept, gift)
 			end
 		else

@@ -55,6 +55,7 @@ return {
 	gifts = {
 		allowedKinds = { cosmeticTheme = true, gliderSkin = true, sparkleShard = true }, -- 선물로 줄 수 있는 것(치장 · 치장 재화)
 		maxPending = 50, -- 한 사람 받을 선물 상한(넘으면 관리자 명령이 거부)
+		claimedIdsKeep = 200, -- QUEUE-ALL5 A1(v62): 받은 선물 id 기록 개수(mailbox.claimedIds - 최근 것만 · 넘치면 가장 오래된 것부터 버림). 대기열에 남은 같은 id는 옮길 때마다 지우기를 다시 시도하므로 200개(= 상한 50의 4배) 밖으로 밀려날 때까지 남아 있을 수 없다
 		storeName = "Gifts_v1", -- 오프라인 대상에게 쌓는 DataStore(검증 무장 중 = _verify 접미사)
 		userToUser = { enabled = false, productKey = nil }, -- 유저 간 로벅스 선물 자리(P4c 뒤 - 대상 UserId를 프롬프트 전에 서버에 맡기는 방식)
 	},
