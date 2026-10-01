@@ -40,8 +40,8 @@ local function validCodes()
 	for _, c in ipairs(SD.codes) do
 		local e = c.expires
 		-- QUEUE-ALL5 C: 만료 = UTC 그날 끝(서버 SocialRewardService와 같은 뜻) - 클라의 os.time(표)는 기기 시간대로 읽힐 수 있어 UTC로 명시
-		if os.time() <= DateTime.fromUniversalTime(e[1], e[2], e[3], 23, 59, 59).UnixTimestamp then
-			table.insert(out, ("%s · %s(~%d.%d.%d)"):format(c.code, c.note or "", e[1], e[2], e[3]))
+		if not c.hidden and os.time() <= DateTime.fromUniversalTime(e[1], e[2], e[3], 23, 59, 59).UnixTimestamp then
+			table.insert(out, Text.get("update.board.codeLine", { code = c.code, note = c.noteKey and Text.get(c.noteKey) or (c.note or ""), date = ("%d.%d.%d"):format(e[1], e[2], e[3]) }))
 		end
 	end
 	return out
@@ -66,15 +66,15 @@ local function buildBoard()
 	bg.Parent = b
 	Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 10)
 	local y = 6
-	local t = label(bg, SD.text.board, 16, GOLD, Theme.font)
+	local t = label(bg, Text.get("update.board.title"), 16, GOLD, Theme.font)
 	t.Position, t.Size = UDim2.fromOffset(10, y), UDim2.new(1, -20, 0, 20)
 	y += 22
 	for _, n in ipairs(SD.news) do
-		local l = label(bg, ("%s  %s"):format(n.date, n.text), 12)
+		local l = label(bg, Text.get("update.board.newsLine", { date = n.date, text = Text.get(n.textKey) }), 12)
 		l.Position, l.Size = UDim2.fromOffset(10, y), UDim2.new(1, -20, 0, 30)
 		y += 30
 	end
-	local c = label(bg, SD.text.codes, 14, GOLD, Theme.font)
+	local c = label(bg, Text.get("update.board.codes"), 14, GOLD, Theme.font)
 	c.Position, c.Size = UDim2.fromOffset(10, y), UDim2.new(1, -20, 0, 18)
 	y += 18
 	for _, s in ipairs(validCodes()) do

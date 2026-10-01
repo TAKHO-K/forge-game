@@ -44,7 +44,7 @@
 | C-1 | | 심해 삼지창 · 수정 여왕 거울 돌진 · 수호자 돌진 전조 | `/gg loadout 30` → `/gg boss pattern abyssal_lord tridentThrow` · `crystal_queen mirrorDash` · `section_guardian charge`(각 1회) | 전조 끝 팔 젖힘이 한 프레임 튐 없이 이어짐 · 투척/돌진 순간 = 판정(바닥 띠 끝). 캡처 3장(전조 끝 프레임) `C-1_<보스>.png` |
 | C-2 | | 활강 공중 고정(원인 = 활강 알림이 서버 공중 판정보다 먼저 와서 버려짐 → 걷기 속도로 수평 되돌림) | 허브 나무 정거장 위에서 자동 걷기 + Space 유지로 뛰어내림 3회 | 콘솔 `[forge-game] 이동 보정 … 합법 속도 26/s` **0줄** · 정상 활강(내려감) · 캡처 `C-2_glide_bubble.png`(ALL4 A2 활강 거품 캡처도 여기서) |
 | C-3 | | 자체 점검 영어 | `TextLanguageDev = "en"` + 무장 Play(`VerifyOnly`에 DropFeed · P3b UI 점검이 도는 블록 - 없으면 생략) | DropFeed:356 · P3bUiCheck 탭 줄 O |
-| C-4 | | 게시판 코드 만료(UTC) | 허브 업데이트 게시판 | FORGE2026 · RIFTOPEN 두 줄 보임(오늘 2026-10 기준) |
+| C-4 | | 게시판 코드 만료(UTC) | 허브 업데이트 게시판 | FORGE2026 한 줄만 보임(LIKES1K = `hidden` - QUEUE-STUDIO 0-2) · 영어 켜면 게시판 글도 영어 |
 | C-5 | | 캐릭터 정리 설정 | Edit `print(workspace.PlayerCharacterDestroyBehavior)` | `Enabled`면 끝. `Default`/`Disabled`면 보고(D① 지적 - 리스폰마다 캐릭터별 연결 누적: Nameplate · GlideView · AirMotion · AttackInput · FallFx) → `default.project.json` Workspace `$properties` 추가 결정 필요(rojo 재시작 = 사용자) |
 
 ## 4. 코드 점검 후속(QUEUE-ALL5 D① 클라 · D② 서버)

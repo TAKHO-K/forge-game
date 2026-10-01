@@ -46,7 +46,7 @@
 - 폰 화면 버튼 · 길게 눌러 이름 보기 (`TextData` `settings.hotkeysPhone`)
 - 도움말 백과사전(보스 기믹 그림 카드 포함) (`HelpCodexData`)
 
-**출시 기념 코드**: `FORGE2026` · `RIFTOPEN` - 자세한 내용은 업데이트 게시판
+**출시 기념 코드**: `FORGE2026` - 자세한 내용은 업데이트 게시판(좋아요 목표를 넘기면 코드 하나 더!)
 
 ---
 
@@ -91,7 +91,7 @@
 - On-screen buttons for phones · hold a button to see its name
 - Help Guide (with picture cards for every boss Mechanic)
 
-**Launch codes**: `FORGE2026` · `RIFTOPEN` - see the update board for details
+**Launch code**: `FORGE2026` - see the update board for details (one more code when we hit our like goal!)
 
 ---
 

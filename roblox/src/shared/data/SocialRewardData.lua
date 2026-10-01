@@ -13,15 +13,17 @@ return {
 		text = { invitee = "친구 초대로 왔어요! 환영 보상", inviter = "초대한 친구가 처음 왔어요! 보상" },
 	},
 	codeCooldownSeconds = 3, codePerMinute = 8,
+	-- QUEUE-STUDIO 0-2(사용자 결정 10-01): 출시 코드 = "출시 기념" · "좋아요 목표" 2개(FIRSTBOSS 없음 · 옛 RIFTOPEN 뺌). 게시판 설명 = TextData noteKey(ko/en).
+	--   hidden = 게시판에 안 보임(입력은 됨) - 좋아요 목표를 달성해 공지할 때 false로 바꿔 업데이트한다.
 	codes = { -- 코드 표 한 곳(대문자 · 만료 = UTC 날짜 { 년, 월, 일 } 끝까지)
-		{ code = "FORGE2026", reward = { enhanceStone = 15, sparkleShard = 20 }, expires = { 2026, 12, 31 }, note = "출시 기념" },
-		{ code = "RIFTOPEN", reward = { sparkleShard = 30 }, expires = { 2026, 11, 30 }, note = "균열 시간 열림" },
+		{ code = "FORGE2026", reward = { enhanceStone = 15, sparkleShard = 20 }, expires = { 2026, 12, 31 }, note = "출시 기념", noteKey = "update.board.code.launch" },
+		{ code = "LIKES1K", reward = { enhanceStone = 10, sparkleShard = 10 }, expires = { 2027, 1, 31 }, note = "좋아요 목표", noteKey = "update.board.code.likes", hidden = true },
 	},
 	groupRewardEnabled = false,
 	-- 허브 업데이트 게시판(새 소식 + 지금 유효한 코드 - 만료 지난 코드는 안 보인다)
-	news = {
-		{ date = "2026-10-01", text = "균열 시간(매일 2번 · 20분) · 전 서버 합동 목표 · 주간 도전 추가!" },
-		{ date = "2026-10-01", text = "방어구 외형 v3 - 직업마다 다른 모습 · 보스 아레나 바닥 새 단장" },
+	news = { -- 글 = TextData textKey(ko/en)
+		{ date = "2026-10-01", textKey = "update.board.news1" },
+		{ date = "2026-10-01", textKey = "update.board.news2" },
 	},
-	text = { ok = "코드 보상: %s", bad = "없는 코드예요", expired = "기한이 지난 코드예요", used = "이미 받은 코드예요", slow = "조금 뒤에 다시 입력해 주세요", board = "업데이트 소식", codes = "지금 쓸 수 있는 코드" },
+	text = { ok = "코드 보상: %s", bad = "없는 코드예요", expired = "기한이 지난 코드예요", used = "이미 받은 코드예요", slow = "조금 뒤에 다시 입력해 주세요" }, -- 게시판 제목 · 코드 머리글 = TextData update.board.*
 }
