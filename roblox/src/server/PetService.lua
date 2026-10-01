@@ -1,7 +1,7 @@
 -- QUEUE-10h Q11 펫 서버(판정 · 부화 · 데리고 다니기 = 서버 · 모습 = 클라 PetView). 규칙 = shared/Pet.lua · 데이터 = PetData · EggData.
 --   Remote: PetRequest(action, a) - "view" · "hatch"(알 가방 번호) · "claim"(대기열 번호) · "equip"(펫 번호 | nil = 내려놓기) / PetSync(서버 → 클라: 화면 표)
 --   데리고 다니는 펫 = Player Attribute PetSpecies · PetBody · PetZone · PetGrade(모든 클라가 그 사람 옆에 그린다 - 서버는 위치를 보내지 않는다).
---   자동 줍기(캐릭터 레벨 PetData.unlocks.autoPickup 이상 + 펫 동행) = ItemDropServer가 PetService.pickupRange로 반경만 넓힌다(줍기 · 칸 확인 · 바닥 제거는 그쪽 한 곳).
+--   자동 줍기(계정 역대 최고 레벨 peakLevel이 PetData.unlocks.autoPickup 이상 + 펫 동행) = ItemDropServer가 PetService.pickupRange로 반경만 넓힌다(줍기 · 칸 확인 · 바닥 제거는 그쪽 한 곳).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -47,7 +47,7 @@ function PetService.view(player)
 		queueCap = Pet.queueCap(level),
 		hatchCount = state.hatchCount,
 		hatchLevel = Pet.levelOf(state.hatchCount),
-		autoPickup = Pet.unlocked(level, "autoPickup"),
+		autoPickup = Pet.unlocked(PlayerProfile.getPeakLevel(player), "autoPickup"), -- QUEUE-ALL6 A1: 계정 역대 최고 레벨(환생해도 유지)
 		unlocks = PetData.unlocks,
 		petCap = PetData.petCap,
 	}
@@ -129,7 +129,7 @@ function PetService.pickupRange(player)
 	if not PetData.enabled or not state or not state.equipped then
 		return 0, 0
 	end
-	if not Pet.unlocked(PlayerProfile.getCharacterLevel(player) or 1, "autoPickup") then
+	if not Pet.unlocked(PlayerProfile.getPeakLevel(player), "autoPickup") then -- QUEUE-ALL6 A1: 역대 최고 레벨(peakLevel v38) 기준
 		return 0, 0
 	end
 	-- QUEUE-B1 B2: 게임패스 pickupRadius(편의) = 반경 × radiusMultiplier(해금 기준 · 펫 동행 조건은 그대로)

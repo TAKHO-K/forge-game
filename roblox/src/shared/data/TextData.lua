@@ -126,7 +126,7 @@ local TextData = {
 		["help.pet.title"] = "펫",
 		["help.pet.hatch"] = "알을 부화하면 펫이 나와요.",
 		["help.pet.follow"] = "펫 하나를 데리고 다닐 수 있어요.",
-		["help.pet.pickup"] = "Lv.{level}부터 펫이 근처 아이템을 주워요.", -- level = PetData.unlocks.autoPickup
+		["help.pet.pickup"] = "한 번이라도 Lv.{level}에 닿으면 펫이 근처 아이템을 주워요. 환생해도 그대로예요.", -- level = PetData.unlocks.autoPickup
 		["help.pet.level"] = "부화를 많이 할수록 좋은 등급이 잘 나와요.",
 		["help.pet.cap"] = "펫은 {cap}마리까지 보관해요.", -- cap = PetData.petCap
 		["help.egg.title"] = "알 · 둥지",
@@ -440,7 +440,7 @@ local TextData = {
 		["pet.claim"] = "받기",
 		["pet.listHeader"] = "펫 {n}/{cap} · 자동 줍기 {auto}",
 		["pet.autoOn"] = "켜짐(펫 동행)",
-		["pet.autoOff"] = "Lv.{level}에 열림",
+		["pet.autoOff"] = "최고 Lv.{level}에 열림",
 		["pet.equip"] = "데리고 다니기",
 		["pet.unequip"] = "내려놓기",
 		["pet.levelHeader"] = "부화 레벨 {level}(누적 부화 {count}) - 레벨별 결과 확률(일반/고급/희귀/영웅 %)",
