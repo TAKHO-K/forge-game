@@ -240,8 +240,10 @@ local ok, err = pcall(function()
 	pr.cosmetics = keepCos
 
 	-- ⑧ 저장 이관 v56: 빈 표 · v55 옛 표본(필드 없음) · 문자열 키 왕복
+	-- QUEUE-ALL4 G: 기대 버전 = 지금 SaveConfig.saveVersion(옛 리터럴 56 - 이후 v57 ~ v61 이관이 더 붙어 끝 버전이 올라갔다. 이 검사의 뜻은 v56 칸이 끝까지 살아남는가)
+	local LATEST = MODS.SaveConfig.saveVersion
 	local fresh = SaveSystem.migrate({})
-	check("migrate({}) → v56 · 새 칸 모양", fresh.version == 56 and type(fresh.cosmetics.themes) == "table" and type(fresh.mailbox.gifts) == "table" and fresh.seasonPass.premium == false
+	check("migrate({}) → 최신(v" .. tostring(LATEST) .. ") · v56 새 칸 모양", fresh.version == LATEST and type(fresh.cosmetics.themes) == "table" and type(fresh.mailbox.gifts) == "table" and fresh.seasonPass.premium == false
 		and type(fresh.purchases.receipts) == "table" and type(fresh.purchases.log) == "table")
 	local old = SaveSystem.migrate({})
 	old.version = 55
@@ -249,7 +251,7 @@ local ok, err = pcall(function()
 	old.purchases.receipts, old.purchases.log = nil, nil
 	old.gamepasses = nil
 	local m = SaveSystem.migrate(old)
-	check("v55 옛 표본 → v56 빈 칸 채움", m.version == 56 and m.cosmetics and m.mailbox and m.seasonPass and m.purchases.receipts and m.purchases.log and type(m.gamepasses) == "table")
+	check("v55 옛 표본 → 최신 · v56 빈 칸 채움", m.version == LATEST and m.cosmetics and m.mailbox and m.seasonPass and m.purchases.receipts and m.purchases.log and type(m.gamepasses) == "table")
 	local snap = PlayerProfile.snapshotForDevTools(player)
 	check("백업 대상(snapshotForDevTools)에 새 칸", snap.cosmetics and snap.mailbox and snap.seasonPass and snap.receipts and snap.purchaseLog and snap.gamepasses)
 	-- 게임패스 효과: 가방 +20 · 귀환 쿨 × 0.5

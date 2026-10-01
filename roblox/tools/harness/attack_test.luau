@@ -24,7 +24,11 @@ local ok, err = pcall(function()
 	p.tutorial = p.tutorial or {}
 	p.tutorial.completed = true
 	local _ = MODS["InventoryServer.server"]
+	-- QUEUE-ALL4 G: QuestService.start가 탐험 판정 루프(while true + task.wait(2), Q3-1 c7de2e0)를 task.spawn한다 - 가짜 spawn은 바로 실행 · 가짜 wait는 양보 안 함 → 무한 루프. start 동안만 spawn을 비운다.
+	local spawn0 = task.spawn
+	task.spawn = function() end
 	MODS.QuestService.start()
+	task.spawn = spawn0
 	MODS.PetService.start()
 	MODS.SettingsService.start()
 	local captured

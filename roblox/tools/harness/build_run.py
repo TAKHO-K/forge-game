@@ -11,6 +11,7 @@ def read(path):
 def fix(src):
     src = re.sub(r"require\(ReplicatedStorage\.Shared\.(?:data\.)?(\w+)\)", r"MODS.\1", src)
     src = re.sub(r"require\(script\.Parent\.data\.(\w+)\)", r"MODS.\1", src)
+    src = re.sub(r"require\(script\.Parent\.Parent\.(\w+)\)", r"MODS.\1", src)  # TitleData(shared/data) → shared/CodexRules
     src = re.sub(r"require\(script\.Parent\.(\w+)\)", r"MODS.\1", src)
     src = re.sub(r"require\(game:GetService\(\"ReplicatedStorage\"\)\.Shared\.(?:data\.)?(\w+)\)", r"MODS.\1", src)
     src = re.sub(r"(?m)^(\s*)(MODS\.\w+)\s*(--.*)?$", lambda m: m.group(1) + "local _ = " + m.group(2), src)

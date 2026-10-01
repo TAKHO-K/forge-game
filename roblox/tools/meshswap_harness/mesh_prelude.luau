@@ -15,6 +15,7 @@ local function path(name)
 	return setmetatable({ __name = name }, { __index = function(t, k) return path(k) end })
 end
 game = { GetService = function() return path("svc") end }
+script = path("script") -- QUEUE-ALL4 G: BossRigSpec가 require(script.Parent.BossDetailSpec)를 부른다(A2-M1)
 local rawRequire = require
 require = function(tok)
 	local name = type(tok) == "table" and rawget(tok, "__name") or tok

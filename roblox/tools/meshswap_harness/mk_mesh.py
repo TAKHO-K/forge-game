@@ -7,6 +7,7 @@ mods = {
     "MeshImportCheckData": "shared/data/MeshImportCheckData.lua",
     "MonsterRigSpec": "shared/data/MonsterRigSpec.lua",
     "BossRigSpec": "shared/data/BossRigSpec.lua",
+    "BossDetailSpec": "shared/data/BossDetailSpec.lua",  # QUEUE-ALL4 G: BossRigSpec 의존(A2-M1)
     "MeshImportCheck": "shared/MeshImportCheck.lua",
     "MeshSwap": "shared/MeshSwap.lua",
 }

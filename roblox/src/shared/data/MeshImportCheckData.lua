@@ -38,7 +38,7 @@ MeshImportCheckData.defaultMonsterHitbox = { size = { 2.4, 4.6, 1.6 }, center = 
 MeshImportCheckData.palette = {
 	tones = { 1, 1.18, 0.72 },
 	toleranceRGB = 6, -- 채널(0 ~ 255)마다 차 상한
-	roles = { "body", "head", "dark", "accent", "eye", "mouth" },
+	roles = { "body", "head", "dark", "accent", "eye", "mouth", "light", "shadow", "stone", "slab", "metal" }, -- QUEUE-ALL4 G: A2-M1 디테일 색 역할(BossRigSpec.colorOf)도 허용(옛 = 수호자 메시가 팔레트 X)
 }
 
 -- ⑥ 투명 · 재질

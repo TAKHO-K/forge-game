@@ -8,7 +8,6 @@ local MODS = setmetatable({}, { __index = function(t, k)
 	return v
 end })
 local ATTR = {}
-workspace = P
 local RaycastParams = { new = function() return {} end }
 local OverlapParams = { new = function() return {} end }
 local TweenInfo = { new = function() return {} end }
@@ -20,6 +19,7 @@ local Font = { new = function() return {} end }
 local DateTime = { now = function() return { UnixTimestamp = os.time(), UnixTimestampMillis = os.time() * 1000 } end }
 local P
 P = setmetatable({}, { __index = function() return P end, __call = function() return P end, __iter = function() return next, {} end, __len = function() return 0 end })
+workspace = setmetatable({ GetAttribute = function(_, k) return ATTR[k] end }, { __index = function() return P end }) -- 옛 `workspace = P`는 P 정의 전이라 nil이었다(Text.devOverride가 workspace:GetAttribute를 부른다)
 local game = {
 	GetService = function(_, name)
 		if name == "RunService" then
@@ -45,6 +45,9 @@ V3MT.__div = function(a, b) return Vector3.new(a.X/b, a.Y/b, a.Z/b) end
 V3MT.__unm = function(a) return Vector3.new(-a.X, -a.Y, -a.Z) end
 Vector3.zero = Vector3.new(0,0,0)
 Vector3.one = Vector3.new(1,1,1)
+Vector3.xAxis = Vector3.new(1,0,0)
+Vector3.yAxis = Vector3.new(0,1,0)
+Vector3.zAxis = Vector3.new(0,0,1)
 local Vector2 = { new = function(x, y) return { X = x, Y = y } end }
 local UDim2 = { new = function() return {} end, fromScale = function() return {} end, fromOffset = function() return {} end }
 local NumberSequence = { new = function() return {} end }
@@ -52,7 +55,8 @@ local ColorSequence = { new = function() return {} end }
 local ColorSequenceKeypoint = { new = function() return {} end }
 local NumberSequenceKeypoint = { new = function() return {} end }
 local NumberRange = { new = function() return {} end }
-local CFrame = { new = function() return {} end }
+local CFrame = { new = function() return {} end, fromMatrix = function() return {} end, Angles = function() return {} end, fromEulerAnglesXYZ = function() return {} end, fromEulerAnglesYXZ = function() return {} end, fromAxisAngle = function() return {} end, lookAt = function() return {} end }
+CFrame.identity = CFrame.new()
 local Enum = setmetatable({}, { __index = function(t, k) return setmetatable({}, { __index = function(_, k2) return k .. "." .. k2 end }) end })
 REMOTES = {} -- 공격 하네스: 서버가 만든 RemoteEvent · RemoteFunction(이름 → { onEvent, onInvoke })
 local Instance = { new = function(className)
