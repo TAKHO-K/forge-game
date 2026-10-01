@@ -181,6 +181,10 @@ function CodexRules.reward(c, stage, goldPerKill)
 	elseif c.kind == "board" then
 		r = CodexData.boardReward(c.threshold)
 	end
+	local shards = CodexData.shardsFor(c) -- QUEUE-ALL6 K: 분류별 반짝 조각
+	if r and shards > 0 then
+		r.sparkleShard = (r.sparkleShard or 0) + shards
+	end
 	if r and r.goldKills then
 		r.gold = require(ReplicatedStorage.Shared.GoldCost).niceReward(math.floor(r.goldKills * goldPerKill(stage or 1))) -- QUEUE-ALL6 D: 보기 좋은 숫자(서버 지급 · 도감 창 미리보기 같은 함수)
 		r.goldKills = nil

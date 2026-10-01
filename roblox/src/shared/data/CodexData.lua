@@ -17,9 +17,9 @@ C.armor = {
 }
 
 -- 펫: 구역 알 4종 × 부화 등급 4(EggData.hatchGrades) = 구역 16칸 · 6구역 96
-C.pet = { reward = { egg = 1, sparkleShard = 3 } }
+C.pet = { reward = { egg = 1 } } -- 반짝 조각은 아래 C.shards(QUEUE-ALL6 K)
 -- 탐험(비밀 둥지): 구역마다 필드 1 + 숨은 5(마을 둥지 = 허브라 줄 밖 · 기존 둥지 칭호는 그대로)
-C.nest = { reward = { sparkleShard = 10 } }
+C.nest = { reward = {} } -- 반짝 조각은 아래 C.shards(QUEUE-ALL6 K - 옛 10개 → 분류별 배분)
 -- 몬스터: 사냥 구역 종(WorldMapData.zones[].hunt) × 5
 C.monster = {
 	steps = {
@@ -49,7 +49,36 @@ for t = 170, 330, 20 do
 	table.insert(C.board, t)
 end
 function C.boardReward(threshold)
-	return { goldKills = 30 + threshold, enhanceStone = 3 + math.floor(threshold / 10), sparkleShard = 5 }
+	return { goldKills = 30 + threshold, enhanceStone = 3 + math.floor(threshold / 10) } -- QUEUE-ALL6 K: 점수판 반짝 조각 5 → 0(칸 쪽 C.shards로 옮김)
+end
+
+-- QUEUE-ALL6 K(사용자 결정): 도감 반짝(꾸미기) 조각 = 도감 점수 절반(약 179점)에 닿으면 테마 세트 1개(MonetizationData.shardPrices.theme = 120)를 살 만큼.
+--   분류마다 나눠 배치 - 한 분류만 다 채워도 120 미만(쉬운 칸부터 채우는 흐름표 = docs/phase/QUEUE-ALL6-report.md K절 · 계산 roblox/tools/harness/codex_shard_flow.luau).
+--   값 = 그 칸 하나의 조각 수(없는 칸 = 0): 장비 = 부위 갑옷 칸만 · 펫 = 부화 등급 희귀/영웅 · 몬스터 = 100 · 1,000 · 반짝이 · 탐험 · 보스 · 직업 = 칸마다.
+C.shards = {
+	armor = { part = "armor", n = 2 },
+	pet = { uncommon = 1, rare = 1, epic = 2 },
+	nest = 1,
+	monster = { k10 = 1, k100 = 1, k1000 = 1, sparkle = 1 },
+	boss = 1,
+	class = 1,
+}
+function C.shardsFor(c)
+	local s = C.shards
+	if c.kind == "armor" then
+		return c.part == s.armor.part and s.armor.n or 0
+	elseif c.kind == "pet" then
+		return s.pet[c.hatch] or 0
+	elseif c.kind == "nest" then
+		return s.nest
+	elseif c.kind == "monster" then
+		return s.monster[c.step] or 0
+	elseif c.kind == "boss" then
+		return s.boss
+	elseif c.kind == "class" then
+		return s.class
+	end
+	return 0
 end
 
 -- 줄 칭호 이름(구역 이름 = WorldMapData.zones[].theme 앞 짧은 이름 · 등급 = ArmorData 이름 · 보스 = BossData 이름 · 직업 = ClassData 이름)
