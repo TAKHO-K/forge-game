@@ -387,13 +387,6 @@ BossAirGrab.handler = {
 			end
 			clearMarks(c)
 			if st.grabFrozenCount == 0 then
-				if game:GetService("RunService"):IsStudio() then -- TEMP-QS 진단(QUEUE-STUDIO V2 BR1(나) 대공 잡기 X): 아무도 안 걸렸을 때 멤버별 상태
-					for _, m in ipairs(st.members or {}) do
-						print(("[TEMP-QS] grabMiss 멤버 %s 표=%s 피해대상=%s 누적=%.2f 체공초=%.2f hp=%s 무적=%s 면역=%s 보호=%s"):format(tostring(m.Name), tostring(type(m) == "table"),
-							tostring(#kit.victims(st)), countedAir(c, m), kit.airSecondsOf(st, m, c.now), tostring(PlayerState.getHp(m)), tostring(PlayerState.isInvulnerable(m)),
-							tostring(PlayerStun.isImmune(m)), tostring(BossArenaContainment.isProtected(m))))
-					end
-				end
 				kit.send(st, "grabMiss", {})
 				beginStun(c, "아무도 안 걸림") -- BR1-4a: 전조를 읽고 아무도 안 떴으면 보스가 헛손질 → 기절
 				return
