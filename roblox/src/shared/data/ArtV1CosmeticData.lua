@@ -29,7 +29,8 @@ return {
 			core = C(206, 250, 150), edge = C(120, 226, 170), particle = C(190, 250, 200),
 			dash = { width = 2.0, lifetime = 0.3, transparency = { 0.1, 1 }, drops = { every = 0.07, size = 0.7, seconds = 0.9 } },
 			jump = { ring = 5.5, particles = 10, speed = 7, gravity = 10, size = 0.5, spread = 70, squash = { widen = 1.5, seconds = 0.3 } },
-			glide = { width = 0.7, lifetime = 0.9, particles = 7, particleLife = 1.1, gravity = -2, size = 0.34 },
+			-- QUEUE-ALL6R 5(사용자: 거품이 작고 옅다 - 조금 키우고 진하게 · 피로 금지 범위): 크기 0.34 → 0.46 · 발광 1 → 0.2(밝은 바닥에서 하얗게 날아가던 것) · 색 = 테 민트(옅은 particle 대신) · 개수 · 수명 그대로(번쩍임 · 흔들림 없음)
+			glide = { width = 0.7, lifetime = 0.9, particles = 7, particleLife = 1.1, gravity = -2, size = 0.46, particleLightEmission = 0.2, particleColor = C(120, 226, 170) },
 			footstep = { size = 1.4, seconds = 1.3, shape = "puddle", neon = false },
 		},
 		ember = {

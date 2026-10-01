@@ -321,9 +321,9 @@ RunService.Heartbeat:Connect(function(dt)
 					e.SpreadAngle = Vector2.new(180, 180)
 					e.Acceleration = Vector3.new(0, -g.gravity, 0)
 					e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, g.size), NumberSequenceKeypoint.new(1, 0) })
-					e.Color = ColorSequence.new(glideTheme.particle)
+					e.Color = ColorSequence.new(g.particleColor or glideTheme.particle) -- QUEUE-ALL6R 5: 테마가 정하면(젤리 = 진한 민트)
 					e.Transparency = seq(0, 1)
-					e.LightEmission = 1
+					e.LightEmission = g.particleLightEmission or 1
 					e.Parent = st.glide.Attachment1
 					st.glideEmitter = e
 				end
