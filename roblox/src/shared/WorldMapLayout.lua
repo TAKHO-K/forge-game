@@ -213,10 +213,11 @@ function Layout.subAreaAt(position, keepZoneKey, keepIndex)
 	end
 	local r = Layout.axisR(zone, position)
 	local index = Layout.subAreaIndexForR(r)
-	if keepZoneKey == zone.key and keepIndex and keepIndex ~= index then
+	-- 붙잡기 = 바로 옆 지역에서 공유 경계를 막 넘었을 때만(순간이동 · 먼 이동은 바로 바뀐다 - Play 확인)
+	if keepZoneKey == zone.key and keepIndex and math.abs(keepIndex - index) == 1 then
 		local bands, m = D.subAreas.bandsR, D.subAreas.enterInsideStuds
-		local lo, hi = bands[index - 1] or -math.huge, bands[index] or math.huge
-		if r < lo + m or r > hi - m then
+		local edge = bands[math.min(index, keepIndex)]
+		if math.abs(r - edge) < m then
 			index = keepIndex -- 아직 새 지역 안쪽으로 충분히 안 들어왔다
 		end
 	end
